@@ -1,4 +1,4 @@
 # $Id$
 
-ZROOTDIR:=${ZROOTDIR}../
-include ${ZROOTDIR}/Makefile.path
+SROOTDIR:=${SROOTDIR}../
+include ${SROOTDIR}/Makefile.path
