@@ -9,6 +9,7 @@ LINT=		splint +posixlib
 CTAGS=		ctags
 
 DEFINES+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
+INCLUDES+=	-I${ROOTDIR}/psc_fsutil_libs/include
 
 THREAD_LIBS?=	-lpthread
 LNET_BASE?=	${SROOTDIR}/lnet-lite
