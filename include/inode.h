@@ -42,8 +42,8 @@ struct slash_gencrc {
  * Slim block structure just holds a generation number and a validation bit.  The io server id is held in the block store array.
  */
 struct slash_block_desc {
-	int bl_gen:31; /* generation number     */
-	int bl_inv:1;  /* invalidated via ovwrt */
+	unsigned int bl_gen:31; /* generation number     */
+	unsigned int bl_inv:1;  /* invalidated via ovwrt */
 } sl_blkd_t;
 
 /*
