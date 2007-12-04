@@ -1,0 +1,4 @@
+# $Id$
+
+ZROOTDIR:=${ZROOTDIR}../
+include ${ZROOTDIR}/Makefile.path
