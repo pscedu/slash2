@@ -32,23 +32,23 @@ slash_journal_recover(struct slash_sb_mem *sbm)
 {
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_walker pjw;
-	u32 logen;
+	u32 logenid;
 	int loslot;
 
-	logen = -1;
+	logenid = -1;
 	loslot = 0; /* gcc */
 	memset(&pjw, 0, sizeof(pjw));
 	pje = pjournal_alloclog(pj);
 
 	/* Locate the start of the lowest gen ID. */
 	while ((rc = pjournal_walk(sbm->sbm_pj, &pjw, pje)) == 0) {
-		if ((int)(pje->pje_gen - logen) < 0) {
+		if ((int)(pje->pje_genid - logenid) < 0) {
 			/*
 			 * XXX if we wrapped, we should rescan from the
 			 * beginning to find even earlier generations.
 			 */
 			loslot = pjw->pjw_pos;
-			logen = pje->pje_gen;
+			logenid = pje->pje_genid;
 		}
 	}
 	if (rc == -1)
