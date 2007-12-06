@@ -2,6 +2,7 @@
 
 include ${SROOTDIR}/mk/local.mk
 
+INCLUDES+=	-I${PFL_BASE}/include
 INCLUDES+=	-I${SROOTDIR}/include -I.
 CFLAGS+=	-Wall -W -g ${INCLUDES} ${DEFINES}
 CFLAGS+=	-DYY_NO_UNPUT
