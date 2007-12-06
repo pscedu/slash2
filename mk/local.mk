@@ -12,6 +12,6 @@ DEFINES+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64
 INCLUDES+=	-I${ROOTDIR}/psc_fsutil_libs/include
 
 THREAD_LIBS?=	-lpthread
-LNET_BASE?=	${SROOTDIR}/lnet-lite
+LNET_BASE?=	${ROOTDIR}/lnet-lite
 LNET_LIBS?=	-L${LNET_BASE}/lib -lzlnet -lzcfs -lsocknal
 PFL_LIBS?=	-L${ROOTDIR}/psc_fsutil_libs -lpscutil
