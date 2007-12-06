@@ -5,7 +5,7 @@
 
 #include "psc_types.h"
 
-struct slash_fid {
+typedef struct slash_fid {
 	u64 fid_inum;  /* first 16 bits are the svr / fs id */
 	u64 fid_gen;
 } slash_fid_t;
