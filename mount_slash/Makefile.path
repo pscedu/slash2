@@ -1,0 +1,4 @@
+# $Id$
+
+SROOTDIR:=${SROOTDIR}../
+include ${SROOTDIR}/Makefile.path
