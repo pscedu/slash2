@@ -308,5 +308,7 @@ struct fuse_operations slashops = {
 int
 main(int argc, char *argv[])
 {
+	if (zclient_services_init())
+		pfatalx("zclient_services_init");
 	return (fuse_main(argc, argv, &slashops, NULL));
 }
