@@ -1,7 +1,10 @@
 /* $Id$ */
 
-#include "psc_util/journal.h"
+#include <sys/types.h>
 
+#include <stdlib.h>
+
+#include "psc_util/journal.h"
 
 #define SLASH_INUM_ALLOC_SZ	1024	/* allocate 1024 inums at a time */
 
