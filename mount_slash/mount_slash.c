@@ -14,98 +14,73 @@
 
 #include <fuse.h>
 
-const char *hello_str = "Hello World!\n";
-const char *hello_path = "/hello";
+#include "psc_util/log.h"
+
+#include "mount_slash.h"
 
 int
 slash_access(const char *path, int mask)
 {
-	int res;
-
-	res = access(path, mask);
-	if (res == -1)
-		return -errno;
-
-	return 0;
+	if (rpc_sendmsg(SRM_ACCESS, path, mask) == -1)
+		return (-errno);
+	return (0);
 }
 
 int
 slash_chmod(const char *path, mode_t mode)
 {
-	int res;
-
-	res = chmod(path, mode);
-	if (res == -1)
-		return -errno;
-
-	return 0;
+	if (rpc_sendmsg(SRM_CHMOD, path, mode) == -1)
+		return (-errno);
+	return (0);
 }
 
 int
 slash_chown(const char *path, uid_t uid, gid_t gid)
 {
-	int res;
-
-	res = lchown(path, uid, gid);
-	if (res == -1)
-		return -errno;
-
+	if (rpc_sendmsg(SRM_CHOWN, path, uid, gid) == -1)
+		return (-errno);
 	return 0;
-}
-
-int
-slash_fsync(const char *path, int isdatasync, struct fuse_file_info *fi)
-{
-    return 0;
 }
 
 int
 slash_getattr(const char *path, struct stat *stb)
 {
-	int res = 0;
+	int rc = 0;
 
 	memset(stb, 0, sizeof(*stb));
 	if (strcmp(path, "/") == 0) {
 		stb->st_mode = S_IFDIR | 0755;
 		stb->st_nlink = 1;
-	} else if (strcmp(path, hello_path) == 0) {
+	} else if (strcmp(path, "/hello") == 0) {
 		stb->st_mode = S_IFREG | 0444;
 		stb->st_nlink = 1;
-		stb->st_size = strlen(hello_str);
+		stb->st_size = strlen("hi");
 	} else
-		res = -ENOENT;
+		rc = -ENOENT;
 
-	return res;
+	return rc;
 }
 
 int
 slash_link(const char *from, const char *to)
 {
-	int res;
-
-	res = link(from, to);
-	if (res == -1)
-		return -errno;
-
+	if (rpc_sendmsg(SRM_LINK, from, to) == -1)
+		return (-errno);
 	return 0;
 }
 
 int
 slash_mkdir(const char *path, mode_t mode)
 {
-	int res;
-
-	res = mkdir(path, mode);
-	if (res == -1)
-		return -errno;
-
+	if (rpc_sendmsg(SRM_MKDIR, path, mode) == -1)
+		return (-errno);
 	return 0;
 }
 
 int
 slash_open(const char *path, struct fuse_file_info *fi)
 {
-	if (strcmp(path, hello_path) != 0)
+	if (strcmp(path, "/hello") != 0)
 		return -ENOENT;
 
 	if ((fi->flags & 3) != O_RDONLY)
@@ -120,14 +95,14 @@ slash_read(const char *path, char *buf, size_t size, off_t offset,
 {
 	size_t len;
 
-	if (strcmp(path, hello_path) != 0)
+	if (strcmp(path, "/hello") != 0)
 		return -ENOENT;
 
-	len = strlen(hello_str);
+	len = strlen("hi");
 	if (offset < len) {
 		if (offset + size > len)
 			size = len - offset;
-		memcpy(buf, hello_str + offset, size);
+		memcpy(buf, "hi" + offset, size);
 	} else
 		size = 0;
 
@@ -156,7 +131,7 @@ slash_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	memset(&st, 0, sizeof(st));
 	st.st_ino = 3;
 	st.st_mode = 0644;
-	filler(buf, hello_path + 1, &st, 0);
+	filler(buf, "/hello" + 1, &st, 0);
 
 	return 0;
 }
@@ -164,47 +139,39 @@ slash_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 int
 slash_readlink(const char *path, char *buf, size_t size)
 {
-	int res;
+	int rc;
 
-	res = readlink(path, buf, size - 1);
-	if (res == -1)
+	rc = readlink(path, buf, size - 1);
+	if (rc == -1)
 		return -errno;
 
-	buf[res] = '\0';
+	buf[rc] = '\0';
 	return 0;
 }
 
 int
 slash_rename(const char *from, const char *to)
 {
-	int res;
-
-	res = rename(from, to);
-	if (res == -1)
-		return -errno;
-
+	if (rpc_sendmsg(SRM_RENAME, from, to) == -1)
+		return (-errno);
 	return 0;
 }
 
 int
 slash_rmdir(const char *path)
 {
-	int res;
-
-	res = rmdir(path);
-	if (res == -1)
-		return -errno;
-
+	if (rpc_sendmsg(SRM_RMDIR, path) == -1)
+		return (-errno);
 	return 0;
 }
 
 int
 slash_statfs(const char *path, struct statvfs *stbuf)
 {
-	int res;
+	int rc;
 
-	res = statvfs(path, stbuf);
-	if (res == -1)
+	rc = statvfs(path, stbuf);
+	if (rc == -1)
 		return -errno;
 
 	return 0;
@@ -213,43 +180,31 @@ slash_statfs(const char *path, struct statvfs *stbuf)
 int
 slash_symlink(const char *from, const char *to)
 {
-	int res;
-
-	res = symlink(from, to);
-	if (res == -1)
-		return -errno;
-
+	if (rpc_sendmsg(SRM_SYMLINK, from, to) == -1)
+		return (-errno);
 	return 0;
 }
 
 int
 slash_truncate(const char *path, off_t size)
 {
-	int res;
-
-	res = truncate(path, size);
-	if (res == -1)
-		return -errno;
-
+	if (rpc_sendmsg(SRM_TRUNCATE, path, size) == -1)
+		return (-errno);
 	return 0;
 }
 
 int
 slash_unlink(const char *path)
 {
-	int res;
-
-	res = unlink(path);
-	if (res == -1)
-		return -errno;
-
+	if (rpc_sendmsg(SRM_UNLINK, path) == -1)
+		return (-errno);
 	return 0;
 }
 
 int
 slash_utime(const char *path, const struct timespec ts[2])
 {
-	int res;
+	int rc;
 	struct timeval tv[2];
 
 	tv[0].tv_sec = ts[0].tv_sec;
@@ -257,8 +212,8 @@ slash_utime(const char *path, const struct timespec ts[2])
 	tv[1].tv_sec = ts[1].tv_sec;
 	tv[1].tv_usec = ts[1].tv_nsec / 1000;
 
-	res = utimes(path, tv);
-	if (res == -1)
+	rc = utimes(path, tv);
+	if (rc == -1)
 		return -errno;
 
 	return 0;
@@ -269,25 +224,24 @@ slash_write(const char *path, const char *buf, size_t size,
     off_t offset, struct fuse_file_info *fi)
 {
 	int fd;
-	int res;
+	int rc;
 
 	fd = open(path, O_WRONLY);
 	if (fd == -1)
 		return -errno;
 
-	res = pwrite(fd, buf, size, offset);
-	if (res == -1)
-		res = -errno;
+	rc = pwrite(fd, buf, size, offset);
+	if (rc == -1)
+		rc = -errno;
 
 	close(fd);
-	return res;
+	return rc;
 }
 
 struct fuse_operations slashops = {
 	.access		= slash_access,
 	.chmod		= slash_chmod,
 	.chown		= slash_chown,
-	.fsync		= slash_fsync,
 	.getattr	= slash_getattr,
 	.link		= slash_link,
 	.mkdir		= slash_mkdir,
@@ -308,7 +262,7 @@ struct fuse_operations slashops = {
 int
 main(int argc, char *argv[])
 {
-	if (zclient_services_init())
-		pfatalx("zclient_services_init");
+	if (rpc_svc_init())
+		psc_fatalx("rpc_init");
 	return (fuse_main(argc, argv, &slashops, NULL));
 }
