@@ -21,7 +21,7 @@
 int
 slash_access(const char *path, int mask)
 {
-	if (rpc_sendmsg(SRM_ACCESS, path, mask) == -1)
+	if (rpc_sendmsg(SRMT_ACCESS, path, mask) == -1)
 		return (-errno);
 	return (0);
 }
@@ -29,7 +29,7 @@ slash_access(const char *path, int mask)
 int
 slash_chmod(const char *path, mode_t mode)
 {
-	if (rpc_sendmsg(SRM_CHMOD, path, mode) == -1)
+	if (rpc_sendmsg(SRMT_CHMOD, path, mode) == -1)
 		return (-errno);
 	return (0);
 }
@@ -37,7 +37,7 @@ slash_chmod(const char *path, mode_t mode)
 int
 slash_chown(const char *path, uid_t uid, gid_t gid)
 {
-	if (rpc_sendmsg(SRM_CHOWN, path, uid, gid) == -1)
+	if (rpc_sendmsg(SRMT_CHOWN, path, uid, gid) == -1)
 		return (-errno);
 	return 0;
 }
@@ -64,7 +64,7 @@ slash_getattr(const char *path, struct stat *stb)
 int
 slash_link(const char *from, const char *to)
 {
-	if (rpc_sendmsg(SRM_LINK, from, to) == -1)
+	if (rpc_sendmsg(SRMT_LINK, from, to) == -1)
 		return (-errno);
 	return 0;
 }
@@ -72,7 +72,7 @@ slash_link(const char *from, const char *to)
 int
 slash_mkdir(const char *path, mode_t mode)
 {
-	if (rpc_sendmsg(SRM_MKDIR, path, mode) == -1)
+	if (rpc_sendmsg(SRMT_MKDIR, path, mode) == -1)
 		return (-errno);
 	return 0;
 }
@@ -152,7 +152,7 @@ slash_readlink(const char *path, char *buf, size_t size)
 int
 slash_rename(const char *from, const char *to)
 {
-	if (rpc_sendmsg(SRM_RENAME, from, to) == -1)
+	if (rpc_sendmsg(SRMT_RENAME, from, to) == -1)
 		return (-errno);
 	return 0;
 }
@@ -160,7 +160,7 @@ slash_rename(const char *from, const char *to)
 int
 slash_rmdir(const char *path)
 {
-	if (rpc_sendmsg(SRM_RMDIR, path) == -1)
+	if (rpc_sendmsg(SRMT_RMDIR, path) == -1)
 		return (-errno);
 	return 0;
 }
@@ -180,7 +180,7 @@ slash_statfs(const char *path, struct statvfs *stbuf)
 int
 slash_symlink(const char *from, const char *to)
 {
-	if (rpc_sendmsg(SRM_SYMLINK, from, to) == -1)
+	if (rpc_sendmsg(SRMT_SYMLINK, from, to) == -1)
 		return (-errno);
 	return 0;
 }
@@ -188,7 +188,7 @@ slash_symlink(const char *from, const char *to)
 int
 slash_truncate(const char *path, off_t size)
 {
-	if (rpc_sendmsg(SRM_TRUNCATE, path, size) == -1)
+	if (rpc_sendmsg(SRMT_TRUNCATE, path, size) == -1)
 		return (-errno);
 	return 0;
 }
@@ -196,26 +196,16 @@ slash_truncate(const char *path, off_t size)
 int
 slash_unlink(const char *path)
 {
-	if (rpc_sendmsg(SRM_UNLINK, path) == -1)
+	if (rpc_sendmsg(SRMT_UNLINK, path) == -1)
 		return (-errno);
 	return 0;
 }
 
 int
-slash_utime(const char *path, const struct timespec ts[2])
+slash_utimens(const char *path, const struct timespec ts[2])
 {
-	int rc;
-	struct timeval tv[2];
-
-	tv[0].tv_sec = ts[0].tv_sec;
-	tv[0].tv_usec = ts[0].tv_nsec / 1000;
-	tv[1].tv_sec = ts[1].tv_sec;
-	tv[1].tv_usec = ts[1].tv_nsec / 1000;
-
-	rc = utimes(path, tv);
-	if (rc == -1)
-		return -errno;
-
+	if (rpc_sendmsg(SRMT_UTIMES, path, ts) == -1)
+		return (-errno);
 	return 0;
 }
 
@@ -255,7 +245,7 @@ struct fuse_operations slashops = {
 	.symlink	= slash_symlink,
 	.truncate	= slash_truncate,
 	.unlink		= slash_unlink,
-	.utime		= slash_utime,
+	.utimens	= slash_utimens,
 	.write		= slash_write,
 };
 
