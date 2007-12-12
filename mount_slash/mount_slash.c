@@ -15,6 +15,7 @@
 #include <fuse.h>
 
 #include "psc_util/log.h"
+#include "psc_rpc/rpc.h"
 
 #include "mount_slash.h"
 
@@ -39,26 +40,34 @@ slash_chown(const char *path, uid_t uid, gid_t gid)
 {
 	if (rpc_sendmsg(SRMT_CHOWN, path, uid, gid) == -1)
 		return (-errno);
-	return 0;
+	return (0);
 }
 
 int
 slash_getattr(const char *path, struct stat *stb)
 {
-	int rc = 0;
+	struct slashrpc_getattr_req *mq;
+	struct slashrpc_getattr_rep *mp;
+	struct pscrpc_request *rq;
+	int rc;
 
-	memset(stb, 0, sizeof(*stb));
-	if (strcmp(path, "/") == 0) {
-		stb->st_mode = S_IFDIR | 0755;
-		stb->st_nlink = 1;
-	} else if (strcmp(path, "/hello") == 0) {
-		stb->st_mode = S_IFREG | 0444;
-		stb->st_nlink = 1;
-		stb->st_size = strlen("hi");
-	} else
-		rc = -ENOENT;
-
-	return rc;
+	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_GETATTR,
+	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+		return (rc);
+	snprintf(mq->path, sizeof(mq->path), "%s", path);
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+		memset(stb, 0, sizeof(*stb));
+		stb->st_mode = mp->mode;
+		stb->st_nlink = mp->nlink;
+		stb->st_uid = mp->uid;
+		stb->st_gid = mp->gid;
+		stb->st_size = mp->size;
+		stb->st_atime = mp->atime;
+		stb->st_mtime = mp->mtime;
+		stb->st_ctime = mp->ctime;
+	}
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
 int
@@ -66,7 +75,7 @@ slash_link(const char *from, const char *to)
 {
 	if (rpc_sendmsg(SRMT_LINK, from, to) == -1)
 		return (-errno);
-	return 0;
+	return (0);
 }
 
 int
@@ -74,7 +83,7 @@ slash_mkdir(const char *path, mode_t mode)
 {
 	if (rpc_sendmsg(SRMT_MKDIR, path, mode) == -1)
 		return (-errno);
-	return 0;
+	return (0);
 }
 
 int
@@ -82,16 +91,14 @@ slash_open(const char *path, struct fuse_file_info *fi)
 {
 	if (strcmp(path, "/hello") != 0)
 		return -ENOENT;
-
 	if ((fi->flags & 3) != O_RDONLY)
 		return -EACCES;
-
-	return 0;
+	return (0);
 }
 
 int
 slash_read(const char *path, char *buf, size_t size, off_t offset,
-    struct fuse_file_info *fi)
+    __unusedx struct fuse_file_info *fi)
 {
 	size_t len;
 
@@ -111,7 +118,7 @@ slash_read(const char *path, char *buf, size_t size, off_t offset,
 
 int
 slash_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-    off_t offset, struct fuse_file_info *fi)
+    __unusedx off_t offset, __unusedx struct fuse_file_info *fi)
 {
 	struct stat st;
 
@@ -139,14 +146,20 @@ slash_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 int
 slash_readlink(const char *path, char *buf, size_t size)
 {
+	struct slashrpc_readlink_req *mq;
+	struct slashrpc_readlink_rep *mp;
+	struct pscrpc_request *rq;
 	int rc;
 
-	rc = readlink(path, buf, size - 1);
-	if (rc == -1)
-		return -errno;
-
-	buf[rc] = '\0';
-	return 0;
+	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_UTIMES,
+	    sizeof(*mq), size, &rq, &mq)) != 0)
+		return (rc);
+	snprintf(mq->path, sizeof(mq->path), "%s", path);
+	mq->size = size;
+	if ((rc = rpc_getrep(rq, size, &mp)) == 0)
+		rc = snprintf(buf, size, "%s", mp->buf);
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
 int
@@ -154,7 +167,7 @@ slash_rename(const char *from, const char *to)
 {
 	if (rpc_sendmsg(SRMT_RENAME, from, to) == -1)
 		return (-errno);
-	return 0;
+	return (0);
 }
 
 int
@@ -162,19 +175,26 @@ slash_rmdir(const char *path)
 {
 	if (rpc_sendmsg(SRMT_RMDIR, path) == -1)
 		return (-errno);
-	return 0;
+	return (0);
 }
 
 int
 slash_statfs(const char *path, struct statvfs *stbuf)
 {
+	struct slashrpc_statfs_req *mq;
+	struct slashrpc_statfs_rep *mp;
+	struct pscrpc_request *rq;
 	int rc;
 
-	rc = statvfs(path, stbuf);
-	if (rc == -1)
-		return -errno;
-
-	return 0;
+	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_UTIMES,
+	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+		return (rc);
+	snprintf(mq->path, sizeof(mq->path), "%s", path);
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+		/* XXX copy statfs */
+	}
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
 int
@@ -182,7 +202,7 @@ slash_symlink(const char *from, const char *to)
 {
 	if (rpc_sendmsg(SRMT_SYMLINK, from, to) == -1)
 		return (-errno);
-	return 0;
+	return (0);
 }
 
 int
@@ -190,7 +210,7 @@ slash_truncate(const char *path, off_t size)
 {
 	if (rpc_sendmsg(SRMT_TRUNCATE, path, size) == -1)
 		return (-errno);
-	return 0;
+	return (0);
 }
 
 int
@@ -198,7 +218,7 @@ slash_unlink(const char *path)
 {
 	if (rpc_sendmsg(SRMT_UNLINK, path) == -1)
 		return (-errno);
-	return 0;
+	return (0);
 }
 
 int
@@ -206,7 +226,7 @@ slash_utimens(const char *path, const struct timespec ts[2])
 {
 	if (rpc_sendmsg(SRMT_UTIMES, path, ts) == -1)
 		return (-errno);
-	return 0;
+	return (0);
 }
 
 int

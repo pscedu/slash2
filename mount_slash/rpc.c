@@ -188,6 +188,47 @@ rpc_svc_init(void)
 	return (0);
 }
 
+/*
+ * rpc_newreq - Create a new request and associate it with the import.
+ */
+int
+rpc_newreq(int ptl, int version, int op, int reqlen, int replen,
+    struct pscrpc_request **rqp, void *mqp)
+{
+	struct pscrpc_import *imp;
+	int rc;
+
+	rc = 0;
+	imp = rpcsvcs[ptl]->svc_import;
+	*rqp = pscrpc_prep_req(imp, version, op, 1, &reqlen, NULL);
+	if (*rqp == NULL)
+		return (-ENOMEM);
+
+	/* Setup request buffer. */
+	*(void **)mqp = psc_msg_buf((*rqp)->rq_reqmsg, 0, reqlen);
+	if (*(void **)mqp == NULL)
+		psc_fatalx("psc_msg_buf");
+
+	/* Setup reply buffer. */
+	(*rqp)->rq_replen = psc_msg_size(1, &replen);
+	return (0);
+}
+
+int
+rpc_getrep(struct pscrpc_request *rq, int replen, void *mpp)
+{
+	int rc;
+
+	/* Send the request and block on its completion. */
+	rc = pscrpc_queue_wait(rq);
+	if (rc)
+		return (rc);
+	*(void **)mpp = psc_msg_buf(rq->rq_repmsg, 0, replen);
+	if (*(void **)mpp == NULL)
+		return (-ENOMEM);
+	return (0);
+}
+
 int
 rpc_sendmsg(int op, ...)
 {
@@ -206,84 +247,109 @@ rpc_sendmsg(int op, ...)
 		void				*m;
 	} u;
 	struct pscrpc_request *rq;
-	struct pscrpc_import *imp;
-	int rc, msglen;
+	void *dummy;
 	va_list ap;
-
-	imp = rpcsvcs[RPCSVC_MDS]->svc_import;
-
-#define SRMT_ALLOC(var)							\
-	do {								\
-		msglen = sizeof(*(var));				\
-		(var) = psc_msg_buf(rq->rq_reqmsg, 0, msglen);	\
-	} while (0)
+	int rc;
 
 	va_start(ap, op);
 	switch (op) {
 	case SRMT_ACCESS:
-		SRMT_ALLOC(u.m_access);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_access), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_access->path, sizeof(u.m_access->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_access->mask = va_arg(ap, int);
 		break;
 	case SRMT_CHMOD:
-		SRMT_ALLOC(u.m_chmod);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_chmod), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_chmod->path, sizeof(u.m_chmod->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_chmod->mode = va_arg(ap, mode_t);
 		break;
 	case SRMT_CHOWN:
-		SRMT_ALLOC(u.m_chown);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_chown), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_chown->path, sizeof(u.m_chown->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_chown->uid = va_arg(ap, uid_t);
 		u.m_chown->gid = va_arg(ap, gid_t);
 		break;
 	case SRMT_LINK:
-		SRMT_ALLOC(u.m_link);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_link), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_link->from, sizeof(u.m_link->from),
 		    "%s", va_arg(ap, const char *));
 		snprintf(u.m_link->to, sizeof(u.m_link->to),
 		    "%s", va_arg(ap, const char *));
 		break;
 	case SRMT_MKDIR:
-		SRMT_ALLOC(u.m_mkdir);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_mkdir), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_mkdir->path, sizeof(u.m_mkdir->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_mkdir->mode = va_arg(ap, mode_t);
 		break;
 	case SRMT_RENAME:
-		SRMT_ALLOC(u.m_rename);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_rename), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_rename->from, sizeof(u.m_rename->from),
 		    "%s", va_arg(ap, const char *));
 		snprintf(u.m_rename->to, sizeof(u.m_rename->to),
 		    "%s", va_arg(ap, const char *));
 		break;
 	case SRMT_RMDIR:
-		SRMT_ALLOC(u.m_rmdir);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_rmdir), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_rmdir->path, sizeof(u.m_rmdir->path),
 		    "%s", va_arg(ap, const char *));
 		break;
 	case SRMT_SYMLINK:
-		SRMT_ALLOC(u.m_symlink);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_symlink), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_symlink->from, sizeof(u.m_symlink->from),
 		    "%s", va_arg(ap, const char *));
 		snprintf(u.m_symlink->to, sizeof(u.m_symlink->to),
 		    "%s", va_arg(ap, const char *));
 		break;
 	case SRMT_TRUNCATE:
-		SRMT_ALLOC(u.m_truncate);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_truncate), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_truncate->path, sizeof(u.m_truncate->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_truncate->size = va_arg(ap, size_t);
 		break;
 	case SRMT_UNLINK:
-		SRMT_ALLOC(u.m_unlink);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_unlink), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_unlink->path, sizeof(u.m_unlink->path),
 		    "%s", va_arg(ap, const char *));
 		break;
 	case SRMT_UTIMES:
-		SRMT_ALLOC(u.m_utimes);
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_utimes), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		snprintf(u.m_utimes->path, sizeof(u.m_utimes->path),
 		    "%s", va_arg(ap, const char *));
 		memcpy(u.m_utimes->times, va_arg(ap, struct timespec *),
@@ -294,17 +360,7 @@ rpc_sendmsg(int op, ...)
 	}
 	va_end(ap);
 
-	/* Create the request and associate it with the import.  */
-	rq = pscrpc_prep_req(imp, SMDS_VERSION, op, 1, &msglen, NULL);
-	if (rq == NULL)
-		return (-ENOMEM);
-
-	/* No reply buffer expected; only return code is needed. */
-	msglen = 0;
-	rq->rq_replen = psc_msg_size(1, &msglen);
-
-	/* Send the request and block on its completion. */
-	rc = pscrpc_queue_wait(rq);
+	rc = rpc_getrep(rq, 0, &dummy);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
