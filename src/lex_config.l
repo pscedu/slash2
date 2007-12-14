@@ -1,0 +1,188 @@
+/* $Id: lex_config.l 2041 2007-10-29 21:17:11Z pauln $ */
+
+%{
+#define YYSTYPE char *
+
+#include <stdio.h>
+#include <string.h>
+
+#include "psc_util/log.h"
+#include "yacc_config.h"
+
+extern int cfg_lineno;
+extern char *yylval;
+%}
+
+eq   [=]
+sep  [:]
+nsep [,]
+endl [;]
+
+num      [0-9]+
+hexnum   0x[0-9a-f]+
+char     [A-Za-z]
+name     [A-Za-z][0-9A-Za-z_.-]+
+floatv   [0-9]*\.?[0-9]+
+resname  [A-Za-z][0-9A-Za-z]+\@[A-Z]+
+sitename ^\@[A-Z]+
+ipquad   [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
+
+sizeval  [0-9]+[KMGTBkmgtb]
+pathname [/][a-zA-Z0-9/._-]+
+globpath [/][a-zA-Z0-9|/.\,_\[\]+?-]+
+quotedstr ["*"]
+
+%%
+
+none {
+        psc_trace("NONE");
+	return NONE;
+}
+
+NONE {
+        psc_trace("NONE");
+	return NONE;
+}
+
+";" {
+	return END;
+}
+
+":" {
+	return SEP;
+}
+
+"," {
+	return NSEP;
+}
+
+"=" {
+	return EQ;
+}
+
+global {
+        psc_trace("GLOBAL %s", yytext);
+        return GLOBAL;
+}
+
+site {
+	psc_trace("ZNODES %s", yytext);
+	return SITE_PROFILE;
+}
+
+resource {
+        psc_trace("RESOURCE_PROFILE %s", yytext);
+        return RESOURCE_PROFILE;           
+}
+
+peers {
+        psc_trace("PEERTAG %s", yytext);
+        return PEERTAG;
+}
+
+ifs {
+        psc_trace("INTERFACETAG %s", yytext);
+        return INTERFACETAG;      
+}
+
+
+"{" {
+	psc_trace("SUBSECT_START TAG %s", yytext);
+	return SUBSECT_START;
+}
+
+"}" {
+	psc_trace("SUBSECT_END TAG %s", yytext);
+	return SUBSECT_END;
+}
+
+yes {
+	psc_trace("BOOL %s", yytext);
+	yylval = strdup(yytext);
+	return BOOL;
+}
+
+no {
+	psc_trace("BOOL %s", yytext);
+	yylval = strdup(yytext);
+	return BOOL;
+}
+
+{num} {
+	psc_trace("NUM %s", yytext);
+	yylval = strdup(yytext);
+	return NUM;
+}
+
+{hexnum} {
+	psc_trace("HEXNUM %s", yytext);
+	yylval = strdup(yytext);
+	return HEXNUM;
+}
+
+{name} {
+	psc_trace("NAME %s", yytext);
+	yylval = strdup(yytext);
+	return NAME;
+}
+
+{pathname} {
+	psc_trace("PATHNAME %s", yytext);
+	yylval = strdup(yytext);
+	return PATHNAME;
+}
+
+{globpath} {
+        psc_trace("GLOBPATH %s", yytext);
+        yylval = strdup(yytext);
+        return GLOBPATH;
+}
+
+{floatv} {
+	psc_trace("FLOATVAL %s", yytext);
+        yylval = strdup(yytext);
+        return FLOATVAL;
+}
+
+{sizeval} {
+	psc_trace("SIZEVAL %s", yytext);
+        yylval = strdup(yytext);
+        return SIZEVAL;
+}
+
+{sitename} {
+        psc_trace("SITE_NAME %s", yytext);
+        yylval = strdup(yytext); 
+        return SITE_NAME;
+}
+
+{resname} {
+        psc_trace("RESOURCE_NAME %s", yytext);
+        yylval = strdup(yytext); 
+        return RESOURCE_NAME;
+}
+
+{ipquad} {
+        psc_trace("IPADRRESS %s", yytext);
+        yylval = strdup(yytext); 
+        return IPADDR;
+}
+
+{quotedstr} {
+        psc_trace("Quoted string %s", yytext);
+        yylval = strdup(yytext); 
+        return QUOTEDS;
+}
+
+[ \t]*#.*	;
+[ \t]+		;
+[\n]		cfg_lineno++;
+
+.		psc_warnx("Unrecognized character: ;%s;", yytext);
+
+%%
+
+int yywrap(void)
+{
+	return 1;
+}
