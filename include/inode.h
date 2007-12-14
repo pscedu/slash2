@@ -1,19 +1,24 @@
+/* $Id$ */
+
 #ifndef _SLASH_INODE_H
-#define _SLASH_INODE_H 1
+#define _SLASH_INODE_H
 
 #include "psc_types.h"
 #include "psc_util/crc.h"
+#include "psc_util/assert.h"
 
 #define SL_DEF_REPLICAS     4
 #define SL_DEF_SNAPSHOTS    16
-#define SL_MAX_GENS_PER_BLK 4 
- 
+#define SL_MAX_GENS_PER_BLK 4
+
 #define SL_SITE_BITS 16
 #define SL_RES_BITS  15
 #define SL_MDS_BITS  1
 
+typedef u32 sl_inum_t;
+
 typedef u32 sl_ios_id_t; /* io server id: 16 bit site id
-			  *               15 bit resource id 
+			  *               15 bit resource id
 			  *                1 bit metadata svr bool
 			  */
 
@@ -23,16 +28,16 @@ typedef u32 sl_ios_id_t; /* io server id: 16 bit site id
  * @site_id:  id number of the resource's site
  * @res_id:   id number within the site
  * @mds_bool: is this a metadata server?
- */ 
+ */
 static inline sl_ios_id_t
 sl_global_id_build(u32 site_id, u32 res_id, u32 mds_bool)
 {
 	sl_ios_id_t ios_id = 0;
-	
+
 	psc_assert(site_id  <= ((1 << SL_SITE_BITS))-1);
 	psc_assert(res_id   <= ((1 << SL_RES_BITS))-1);
 	psc_assert(mds_bool <= ((1 << SL_MDS_BITS))-1);
- 	
+
 	ios_id = site_id << SL_SITE_BITS;
 	ios_id |= (res_id + mds_bool);
 
@@ -43,9 +48,9 @@ static inline u32
 sl_glid_to_resid(sl_ios_id_t glid)
 {
 	sl_ios_id_t tmp = 0;
-	
+
 	tmp = ((1 << SL_SITE_BITS)-1) << (SL_RES_BITS + SL_MDS_BITS);
-	
+
 	return (u32)(glid & ~tmp);
 }
 
@@ -58,7 +63,7 @@ typedef struct slash_snapshot {
 	time_t sn_date;
 } sl_snap_t;
 
-/* 
+/*
  * Defines a storage system which holds a block or blocks of the respective file.  A number of these structures are statically allocated within the inode and are fixed for the life of the file and apply to snapshots as well as the active file.  This structure saves us from storing the iosystem id within each block at the cost of limiting the number of iosystems which may manage our blocks.
  */
 typedef struct slash_block_store {
