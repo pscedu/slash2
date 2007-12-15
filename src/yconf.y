@@ -96,12 +96,14 @@ sl_gconf_t globalConfig;
 int errors;
 int cfg_lineno;
 
+
 const char *cfg_filename;
 
 sl_site_t     *currentSite = NULL;
 sl_resource_t *currentRes  = NULL;
 sl_gconf_t    *currentConf = &globalConfig;
 
+int cfgMode = SL_STRUCT_GLOBAL;
 %}
 
 %start config
@@ -172,11 +174,16 @@ global         : GLOBAL statement;
 site_profiles  : site_profile            |
                  site_profile site_profiles;
 
-site_profile   : SITE_PROFILE SITE_NAME SUBSECT_START site_defs SUBSECT_END
+site_profile   : site_profile_start SITE_NAME SUBSECT_START site_defs SUBSECT_END
 {
 	psclist_add(&currentSite->site_list, 
 		    &currentConf->gconf_sites);
 	currentSite = PSCALLOC(sizeof(sl_site_t));
+};
+
+site_profile_start : SITE_PROFILE
+{
+	cfgMode = SL_STRUCT_SITE;
 };
 
 site_defs      : statements | site_resources
@@ -525,6 +532,8 @@ int run_yacc(const char *config_file)
 
 	return 0;
 }
+
+#define slashGetConfig run_yacc
 
 void
 yyerror(const char *fmt, ...)
