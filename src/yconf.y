@@ -1,4 +1,4 @@
-/* $Id: zestYaccConfig.y 2189 2007-11-07 22:18:18Z yanovich $ */
+/* $Id$ */
 
 %{
 #define YYSTYPE char *
@@ -18,7 +18,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/log.h"
-#include "config.h"
+#include "slconfig.h"
 
 enum sym_types {
 	SL_FUNCTION = 1,
