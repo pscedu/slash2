@@ -27,18 +27,29 @@ struct pscrpc_request;
 
 /* Slash RPC message types. */
 #define SRMT_CONNECT	0
+
 #define SRMT_ACCESS	1
 #define SRMT_CHMOD	2
 #define SRMT_CHOWN	3
-#define SRMT_GETATTR	4
-#define SRMT_LINK	5
-#define SRMT_MKDIR	6
-#define SRMT_RENAME	7
-#define SRMT_RMDIR	8
-#define SRMT_SYMLINK	9
-#define SRMT_TRUNCATE	10
-#define SRMT_UNLINK	11
-#define SRMT_UTIMES	12
+#define SRMT_CREATE	4
+#define SRMT_GETATTR	5
+#define SRMT_LINK	6
+#define SRMT_MKDIR	7
+#define SRMT_OPEN	8
+#define SRMT_READ	9
+#define SRMT_RELEASE	10
+#define SRMT_RENAME	11
+#define SRMT_RMDIR	12
+#define SRMT_SYMLINK	13
+#define SRMT_TRUNCATE	14
+#define SRMT_UNLINK	15
+#define SRMT_UTIMES	16
+#define SRMT_WRITE	17
+
+struct slashrpc_cred {
+	uid_t	sc_uid;
+	gid_t	sc_gid;
+};
 
 struct slashrpc_connect_req {
 	u64	magic;
@@ -62,6 +73,11 @@ struct slashrpc_chown_req {
 	char	path[PATH_MAX];
 	u32	uid;
 	u32	gid;
+};
+
+struct slashrpc_create_req {
+	char	path[PATH_MAX];
+	u32	mode;
 };
 
 struct slashrpc_getattr_req {
@@ -89,6 +105,25 @@ struct slashrpc_mkdir_req {
 	u32	mode;
 };
 
+struct slashrpc_open_req {
+	char	path[PATH_MAX];
+	u32	flags;
+};
+
+struct slashrpc_open_rep {
+	u64	cfd;
+};
+
+struct slashrpc_read_req {
+	u64	cfd;
+	u32	size;
+};
+
+struct slashrpc_read_rep {
+	u32	size;
+	unsigned char buf[0];
+};
+
 struct slashrpc_readlink_req {
 	char	path[PATH_MAX];
 	u32	size;
@@ -96,6 +131,10 @@ struct slashrpc_readlink_req {
 
 struct slashrpc_readlink_rep {
 	char	buf[0];			/* determined by request size */
+};
+
+struct slashrpc_release_req {
+	u64	cfd;
 };
 
 struct slashrpc_rename_req {
@@ -139,6 +178,16 @@ struct slashrpc_unlink_req {
 struct slashrpc_utimes_req {
 	char	path[PATH_MAX];
 	struct timeval times[2];
+};
+
+struct slashrpc_write_req {
+	u64		cfd;
+	u32		size;
+	unsigned char	buf[0];
+};
+
+struct slashrpc_write_rep {
+	u32	size;
 };
 
 int rpc_svc_init(void);

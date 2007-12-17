@@ -31,7 +31,7 @@ rpc_io_interpret_set(struct pscrpc_request_set *set, void *arg,
         int rc = 0;
 
         /*
-         * zestrpc_set_wait() already does this for us but it
+         * pscrpc_set_wait() already does this for us but it
          *  doesn't abort.
          */
         psclist_for_each_entry(req, &set->set_requests, rq_set_chain) {
@@ -238,6 +238,7 @@ rpc_sendmsg(int op, ...)
 		struct slashrpc_chown_req	*m_chown;
 		struct slashrpc_link_req	*m_link;
 		struct slashrpc_mkdir_req	*m_mkdir;
+		struct slashrpc_release_req	*m_release;
 		struct slashrpc_rename_req	*m_rename;
 		struct slashrpc_rmdir_req	*m_rmdir;
 		struct slashrpc_symlink_req	*m_symlink;
@@ -299,6 +300,13 @@ rpc_sendmsg(int op, ...)
 		snprintf(u.m_mkdir->path, sizeof(u.m_mkdir->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_mkdir->mode = va_arg(ap, mode_t);
+		break;
+	case SRMT_RELEASE:
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_release), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
+		u.m_release->cfd = va_arg(ap, u64);
 		break;
 	case SRMT_RENAME:
 		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
