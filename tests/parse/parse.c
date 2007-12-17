@@ -4,26 +4,32 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "psc_util/myrandom.h"
-#include "psc_util/cdefs.h"
+#include "slconfig.h"
+
+#define _PATH_SLASHCONF "../../src/config/example.conf"
 
 const char *progname;
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	fprintf(stderr, "usage: %s [conf-file]\n", progname);
 	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
+	const char *fn;
 	int c;
 
+	optarg = _PATH_SLASHCONF;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "")) != -1)
+	while ((c = getopt(argc, argv, "f:")) != -1)
 		switch (c) {
+		case 'f':
+			fn = optarg;
+			break;
 		default:
 			usage();
 		}
@@ -31,7 +37,6 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	printf("%u\n", myrandom32());
-	printf("%016"ZLPX64"\n", myrandom64());
+	run_yacc(fn);
 	exit(0);
 }
