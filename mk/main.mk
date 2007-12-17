@@ -1,9 +1,10 @@
 # $Id$
 
-include ${SROOTDIR}/mk/local.mk
+include ${SLASH_BASE}/mk/local.mk
 
+INCLUDES+=	-I${SLASH_BASE}/include -I.
 INCLUDES+=	-I${PFL_BASE}/include
-INCLUDES+=	-I${SROOTDIR}/include -I.
+INCLUDES+=	-I${LNET_BASE}/include
 CFLAGS+=	-Wall -W -g ${INCLUDES} ${DEFINES}
 CFLAGS+=	-DYY_NO_UNPUT
 #CFLAGS+=	-Wshadow -Wunused -Wuninitialized -O

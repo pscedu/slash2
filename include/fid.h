@@ -1,4 +1,4 @@
-/* $Id: slash_fid.h 1729 2007-09-21 21:29:10Z pauln $ */
+/* $Id$ */
 
 #ifndef _SLASH_FID_H
 #define _SLASH_FID_H 1

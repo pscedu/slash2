@@ -1,4 +1,4 @@
-/* $Id: zestConfig.h 2189 2007-11-07 22:18:18Z yanovich $ */
+/* $Id$ */
 
 #ifndef HAVE_SLASHCONFIG_INC
 #define HAVE_SLASHCONFIG_INC

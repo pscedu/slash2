@@ -1,5 +1,7 @@
+/* $Id$ */
+
 #ifndef SLASH_THREAD_H
-#define SLASH_THREAD_H 1
+#define SLASH_THREAD_H
 
 /* Must stay sync'd with ZTHRT_*. */
 const char *slashThreadTypeNames[] = {
@@ -8,8 +10,6 @@ const char *slashThreadTypeNames[] = {
 	"slash_mdsthr%d",
 	"slash_tcplndthr%d"
 };
-
-#define threadTypeNames slashThreadTypeNames
 
 #define SLASH_CTLTHR 0
 #define SLASH_IOTHR  1

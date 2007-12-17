@@ -1,4 +1,4 @@
-/* $Id: fidlink.c 2195 2007-11-08 16:35:41Z yanovich $ */
+/* $Id$ */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,17 +10,19 @@
 #include "psc_types.h"
 #include "psc_util/log.h"
 #include "psc_util/assert.h"
+
 #include "config.h"
 #include "fid.h"
 
 #define FID_PRINT_CHAR 16
+
 /**
  * fid_makepath() creates the path from the fid's
  *   inum, allowing the fs to easily access files via their
  *   inode number.
  */
-void fid_makepath(const slash_fid_t *fid,
-		  char *fid_path)
+void
+fid_makepath(const slash_fid_t *fid, char *fid_path)
 {
 	char  *c;
 	u64    mask = 0x000000000000000f;
@@ -57,7 +59,8 @@ void fid_makepath(const slash_fid_t *fid,
  * fid_link() places the fid (via inum) into the
  *   namespace server's filesystem.
  */
-int fid_link(const slash_fid_t *fid, const char *fnam)
+int
+fid_link(const slash_fid_t *fid, const char *fnam)
 {
 	char fid_path[FID_PATH_LEN+1];
 	int  rc = 0;
