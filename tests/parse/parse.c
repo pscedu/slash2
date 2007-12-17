@@ -20,23 +20,20 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	const char *fn;
 	int c;
 
-	optarg = _PATH_SLASHCONF;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "f:")) != -1)
+	while ((c = getopt(argc, argv, "")) != -1)
 		switch (c) {
-		case 'f':
-			fn = optarg;
-			break;
 		default:
 			usage();
 		}
 	argc -= optind;
-	if (argc)
+	argv += optind;
+	if (argc != 0 &&
+	    argc != 1)
 		usage();
 
-	run_yacc(fn);
+	run_yacc(argc ? *argv : _PATH_SLASHCONF);
 	exit(0);
 }
