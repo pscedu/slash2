@@ -1,4 +1,4 @@
-/* $Id: lex_config.l 2041 2007-10-29 21:17:11Z pauln $ */
+/* $Id$ */
 
 %{
 #define YYSTYPE char *
@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "psc_util/log.h"
-#include "yacc_config.h"
+#include "yconf.h"
 
 extern int cfg_lineno;
 extern char *yylval;
