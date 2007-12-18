@@ -20,17 +20,17 @@ endl [;]
 
 num      [0-9]+
 hexnum   0x[0-9a-f]+
+sitename [\@][A-Z]+
 char     [A-Za-z]
+ipquad   [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
 name     [A-Za-z][0-9A-Za-z_.-]+
 floatv   [0-9]*\.?[0-9]+
-resname  [A-Za-z][0-9A-Za-z]+\@[A-Z]+
-sitename ^\@[A-Z]+
-ipquad   [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
-
+resname  [A-Za-z][0-9A-Za-z]+[\@][A-Z]+
+lnettcp  tcp[0-9]+
 sizeval  [0-9]+[KMGTBkmgtb]
 pathname [/][a-zA-Z0-9/._-]+
 globpath [/][a-zA-Z0-9|/.\,_\[\]+?-]+
-quotedstr ["*"]
+quotedstr [\"].*[\"]
 
 %%
 
@@ -53,6 +53,7 @@ NONE {
 }
 
 "," {
+        psc_trace("Sep ','");
 	return NSEP;
 }
 
@@ -66,7 +67,7 @@ global {
 }
 
 site {
-	psc_trace("ZNODES %s", yytext);
+	psc_trace("SITETAG %s", yytext);
 	return SITE_PROFILE;
 }
 
@@ -114,10 +115,34 @@ no {
 	return NUM;
 }
 
+parallel_fs {
+        psc_trace("Resource type string %s", yytext);
+        yylval = strdup(yytext); 
+        return RESOURCE_TYPE;
+}
+
+archival_fs {
+        psc_trace("Resource type string %s", yytext);
+        yylval = strdup(yytext); 
+        return RESOURCE_TYPE;
+}
+
+compute {
+        psc_trace("Resource type string %s", yytext);
+        yylval = strdup(yytext); 
+        return RESOURCE_TYPE;
+}
+
 {hexnum} {
 	psc_trace("HEXNUM %s", yytext);
 	yylval = strdup(yytext);
 	return HEXNUM;
+}
+
+{lnettcp} {
+        psc_trace("Lnet tcp network string %s", yytext);  
+        yylval = strdup(yytext);        
+        return LNETTCP;      
 }
 
 {name} {
@@ -173,6 +198,8 @@ no {
         yylval = strdup(yytext); 
         return QUOTEDS;
 }
+
+
 
 [ \t]*#.*	;
 [ \t]+		;

@@ -39,9 +39,9 @@ enum sym_parameter_types {
 };
 
 enum sym_structure_types {
-	SL_STRUCT_SITE   = 0,
-	SL_STRUCT_RES    = 1,
-	SL_STRUCT_GLOBAL = 2
+	SL_STRUCT_SITE   = 1024,
+	SL_STRUCT_RES    = 1025,
+	SL_STRUCT_GLOBAL = 1026
 };
 
 #define BOOL_MAX 3
@@ -51,51 +51,49 @@ typedef u32 (*sym_handler)(char *);
 struct symtable {
 	char *name;
 	enum  sym_types sym_type;
-	enum  sym_parameter_types sym_param_type;
 	enum  sym_structure_types sym_struct_type;
+	enum  sym_parameter_types sym_param_type;
 	int   param;
 	int   offset;
 	sym_handler handler;
 };
 
+u32
+global_net_handler(char *net);
 /*
  * Define a table macro for each structure type filled in by the config
  */
 #define TABENT_GLOB(name, type, max, field, handler)				\
-        { name, SL_STRUCT_GLOBAL, SL_VARIABLE, type, max, offsetof(sl_gconf_t, field), handler }
+        { name, SL_VARIABLE, SL_STRUCT_GLOBAL, type, max, offsetof(sl_gconf_t, field), handler }
 
-#define TABENT_SITE(name, type, max, field)                             \
-        { name, SL_STRUCT_SITE, SL_VARIABLE, type, max, offsetof(sl_site_t, field), NULL }
+#define TABENT_SITE(name, type, max, field, handler)				\
+        { name, SL_VARIABLE, SL_STRUCT_SITE, type, max, offsetof(sl_site_t, field), handler }
 
-#define TABENT_RES(name, type, max, field)                              \
-        { name, SL_STRUCT_RES, SL_VARIABLE, type, max, offsetof(sl_resource_t, field), NULL }
+#define TABENT_RES(name, type, max, field, handler)				\
+        { name, SL_VARIABLE, SL_STRUCT_RES, type, max, offsetof(sl_resource_t, field), handler }
 
 /* declare and initialize the global table */
  struct symtable sym_table[] = {
 	 TABENT_GLOB("port",      SL_TYPE_INT,  INTSTR_MAX, gconf_port, NULL),
-	 TABENT_GLOB("net",       SL_TYPE_INT,  MAXNET,     gconf_net,  libcfs_str2net),
-	 TABENT_SITE("site_id",   SL_TYPE_INT,  INTSTR_MAX, site_id),
-	 TABENT_SITE("site_desc", SL_TYPE_STR,  DESC_MAX,   site_desc),
-	 TABENT_RES ("desc",      SL_TYPE_STR,  DESC_MAX,   res_desc),
-	 TABENT_RES ("type",      SL_TYPE_STR,  RTYPE_MAX,  res_type),
-	 TABENT_RES ("id",        SL_TYPE_INT,  INTSTR_MAX, res_id),  
-	 TABENT_RES ("mds",       SL_TYPE_BOOL, BOOL_MAX,   res_mds),
+	 TABENT_GLOB("net",       SL_TYPE_INT,  MAXNET,     gconf_netid, global_net_handler),
+	 TABENT_SITE("site_id",   SL_TYPE_INT,  INTSTR_MAX, site_id, NULL),
+	 TABENT_SITE("site_desc", SL_TYPE_STRP,  DESC_MAX,  site_desc, NULL),
+	 TABENT_RES ("desc",      SL_TYPE_STRP,  DESC_MAX,  res_desc, NULL),
+	 TABENT_RES ("type",      SL_TYPE_INT,  INTSTR_MAX, res_type, sl_str_to_restype),
+	 TABENT_RES ("id",        SL_TYPE_INT,  INTSTR_MAX, res_id, NULL),  
+	 TABENT_RES ("mds",       SL_TYPE_BOOL, BOOL_MAX,   res_mds, NULL),
 	 { NULL, 0, 0, 0, 0, 0, NULL }
 };
 
-
- //static struct symtable * get_symbol(const char *);
- //void store_tok_val(const char *, char *);
-	
 extern int  yylex(void);
 extern void yyerror(const char *, ...);
 extern int  yyparse(void);
+extern int  run_yacc(const char *);
 
 sl_gconf_t globalConfig;
 
 int errors;
 int cfg_lineno;
-
 
 const char *cfg_filename;
 
@@ -130,6 +128,7 @@ int cfgMode = SL_STRUCT_GLOBAL;
 %token GLOBAL
 %token RESOURCE_PROFILE
 %token RESOURCE_NAME
+%token RESOURCE_TYPE
 %token SITE_PROFILE
 %token SITE_NAME
 
@@ -137,12 +136,12 @@ int cfgMode = SL_STRUCT_GLOBAL;
 %token PEERTAG
 %token INTERFACETAG
 %token QUOTEDS
+%token LNETTCP
 
 %token NONE
 
 %%
-config         : globals                 | 
-		 site_profiles
+config         : globals site_profiles
 {
 	sl_site_t     *s=NULL;
 	sl_resource_t *r=NULL;	
@@ -174,50 +173,60 @@ global         : GLOBAL statement;
 site_profiles  : site_profile            |
                  site_profile site_profiles;
 
-site_profile   : site_profile_start SITE_NAME SUBSECT_START site_defs SUBSECT_END
+site_profile   : site_profile_start site_defs SUBSECT_END
 {
 	psclist_add(&currentSite->site_list, 
 		    &currentConf->gconf_sites);
 	currentSite = PSCALLOC(sizeof(sl_site_t));
+	INIT_SITE(currentSite);
 };
 
-site_profile_start : SITE_PROFILE
+site_profile_start : SITE_PROFILE SITE_NAME SUBSECT_START
 {
 	cfgMode = SL_STRUCT_SITE;
+	strncpy(currentSite->site_name, $2, SITE_NAME_MAX);
 };
 
-site_defs      : statements | site_resources
+site_defs      : statements site_resources
 {};
 
 site_resources : site_resource              |
                  site_resources site_resource
-{};
+{
+	cfgMode = SL_STRUCT_SITE;
+};
 
-site_resource  : RESOURCE_PROFILE NAME SUBSECT_START resource_def SUBSECT_END
+site_resource  : site_resource_start resource_def SUBSECT_END
 {
 	currentRes->res_id = sl_global_id_build(currentSite->site_id, 
 						currentRes->res_id, 
 						currentRes->res_mds);
-
-	if (snprintf(currentRes->res_name, RES_NAME_MAX, "%s%s", 
-		     $2, currentSite->site_name) > RES_NAME_MAX) 
-		psc_fatal("Resource name too long");
-
 	psclist_add(&currentRes->res_list, 
 		    &currentSite->site_resources);
 	currentRes = PSCALLOC(sizeof(sl_site_t));
+	INIT_RES(currentRes);
 };
 
-resource_def   : statements              |
-                 peerlist                |
-		 interfacelist
+site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
+{
+	cfgMode = SL_STRUCT_RES;
+	if (snprintf(currentRes->res_name, RES_NAME_MAX, "%s%s", 
+		     $2, currentSite->site_name) > RES_NAME_MAX) 
+		psc_fatal("Resource name too long");
+	psc_trace("ResName %s", currentRes->res_name);
+};
+
+resource_def   : statements interfacelist peerlist |
+                 statements interfacelist          |
+                 statements peerlist
 {};
 
 peerlist       : PEERTAG EQ peers END
 {};
 
-peers          : peer                    |
-                 peer NSEP peers  
+peers          : peer                              |
+                 peer NSEP peers
+
 {};
 
 peer           : RESOURCE_NAME
@@ -260,15 +269,25 @@ interface      : IPADDR
 statements        : /* NULL */               |
                     statement statements;
 
-statement         : path_stmt  |
+statement         : restype_stmt |
+                    path_stmt  |
                     num_stmt   |
                     bool_stmt  |
                     size_stmt  |
                     glob_stmt  |
                     hexnum_stmt|
                     float_stmt |
+                    lnettcp_stmt |
                     quoteds_stmt;
 
+restype_stmt : NAME EQ RESOURCE_TYPE END
+{
+	psc_notify("Found Fstype Statement: Tok '%s' Val '%s'",
+		   $1, $3);
+	store_tok_val($1, $3);
+	free($1);
+	free($3);
+}
 
 path_stmt : NAME EQ PATHNAME END
 {
@@ -343,12 +362,30 @@ quoteds_stmt : NAME EQ QUOTEDS END
 	/* Don't free the string itself, it's pointer has been copied */
 };
 
+
+lnettcp_stmt : NAME EQ LNETTCP END
+{
+	psc_notify("Found Lnettcp String Statement: Tok '%s' Val '%s'",
+		   $1, $3);
+	
+	store_tok_val($1, $3);
+	free($1);
+	free($3);
+};
+
 %%
+
+u32
+global_net_handler(char *net)
+{
+	strncpy(globalConfig.gconf_net, net, MAXNET);
+	return (libcfs_str2net(net));
+}
 
 static struct symtable *
 get_symbol(const char *name)
 {
-        struct symtable *e = NULL;
+        struct symtable *e;
 
         psc_notify("symbol lookup '%s'", name);
 
@@ -356,9 +393,10 @@ get_symbol(const char *name)
                 if (e->name && !strcmp(e->name, name))
                         break;
 	
-        if (e == NULL || e->name == NULL)
+        if (e == NULL || e->name == NULL) {
                 psc_warnx("Symbol '%s' was not found", name);
-	
+		return NULL;
+	}
         return e;
 }
 
@@ -371,8 +409,12 @@ store_tok_val(const char *tok, char *val)
 	psc_notify("val %s tok %s", val, tok);
 
 	e = get_symbol(tok);
-	psc_assert(e && (e->sym_type == SL_VARIABLE ||
-			 e->sym_type == SL_FLAG));
+	if (!e)
+		psc_fatalx("'%s' is an unknown symbol in the current context", 
+			   tok);
+	psc_trace("%p %d", e, e->sym_type );
+	psc_assert(e->sym_type == SL_VARIABLE ||
+		   e->sym_type == SL_FLAG);
 
 	psc_notify("sym entry %p, name %s, param_type %d",
 		   e, e->name, e->sym_param_type);	
@@ -406,8 +448,8 @@ store_tok_val(const char *tok, char *val)
 
 	case SL_TYPE_STRP:
 		ptr = val;
-		psc_trace("SL_TYPE_STRP Tok '%s' set to '%s'",
-		       e->name, (char *)ptr);
+		psc_trace("SL_TYPE_STRP Tok '%s' set to '%s' %p",
+			  e->name, (char *)ptr, ptr);
 		break;
 
 	case SL_TYPE_HEXU64:
@@ -510,6 +552,8 @@ store_tok_val(const char *tok, char *val)
 int run_yacc(const char *config_file)
 {
 	extern FILE *yyin;
+	
+	errors = 0;
 
 	yyin = fopen(config_file, "r");
 	if (yyin == NULL)
@@ -520,6 +564,10 @@ int run_yacc(const char *config_file)
 	/* Pre-allocate the first resource and site */
 	currentSite = PSCALLOC(sizeof(sl_site_t));
 	currentRes  = PSCALLOC(sizeof(sl_resource_t));
+
+	INIT_SITE(currentSite);
+	INIT_RES(currentRes);
+	INIT_GCONF(&globalConfig);
 
 	yyparse();
 
@@ -532,8 +580,6 @@ int run_yacc(const char *config_file)
 
 	return 0;
 }
-
-#define slashGetConfig run_yacc
 
 void
 yyerror(const char *fmt, ...)

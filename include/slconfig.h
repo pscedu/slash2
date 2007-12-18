@@ -12,6 +12,7 @@
 #include <sys/param.h>
 
 #include "lnet/types.h"
+#include "libcfs/kp30.h"
 #include "psc_ds/list.h"
 #include "psc_util/log.h"
 #include "psc_types.h"
@@ -25,6 +26,8 @@
 #define MAXNET     32
 #define DESC_MAX   255
 #define RTYPE_MAX  32
+
+#define slashGetConfig run_yacc
 
 enum res_type_t {
 	parallel_fs        = 1<<0,
@@ -48,6 +51,8 @@ typedef struct resource_profile {
 	struct psclist_head res_list;
 } sl_resource_t;
 
+#define INIT_RES(r) INIT_PSCLIST_HEAD(&(r)->res_list)
+
 typedef struct site_profile {
 	char                site_name[SITE_NAME_MAX];
 	char               *site_desc;
@@ -56,6 +61,9 @@ typedef struct site_profile {
 	struct psclist_head site_list;
 } sl_site_t;
 
+#define INIT_SITE(s) INIT_PSCLIST_HEAD(&(s)->site_list) ; \
+	             INIT_PSCLIST_HEAD(&(s)->site_resources)
+
 typedef struct node_info_handle {
 	sl_resource_t      *node_res;
 	sl_site_t          *node_site;
@@ -63,10 +71,13 @@ typedef struct node_info_handle {
 
 typedef struct global_config {
 	char                gconf_net[MAXNET];
+	u32                 gconf_netid;
 	int                 gconf_port;
 	int                 gconf_nsites;
 	struct psclist_head gconf_sites;
 } sl_gconf_t;
+
+#define INIT_GCONF(g) INIT_PSCLIST_HEAD(&(g)->gconf_sites)
 
 extern sl_nodeh_t nodeInfo;
 extern sl_gconf_t globalConfig;
@@ -171,6 +182,25 @@ node_profile_dump(void)
 			  i, (char *)libcfs_nid2str(z->node_res->res_nids[i]));	
 	}
 }
+
+static inline int
+sl_str_to_restype(const char *res_type)
+{
+	if (!strncmp(res_type, "parallel_fs", RES_NAME_MAX))
+		return (parallel_fs);
+
+	else if (!strncmp(res_type, "archival_fs", RES_NAME_MAX))
+		return (archival_fs);
+
+	else if (!strncmp(res_type, "cluster_noshare_fs", RES_NAME_MAX))
+		return (cluster_noshare_fs);
+
+	else if (strncmp(res_type, "compute", RES_NAME_MAX))
+                return (compute);
+	else 
+		return (-1);
+}
+
 
 int run_yacc(const char *config_file);
 
