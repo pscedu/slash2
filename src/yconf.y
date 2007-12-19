@@ -203,7 +203,7 @@ site_resource  : site_resource_start resource_def SUBSECT_END
 						currentRes->res_mds);
 	psclist_add(&currentRes->res_list, 
 		    &currentSite->site_resources);
-	currentRes = PSCALLOC(sizeof(sl_site_t));
+	currentRes = PSCALLOC(sizeof(sl_resource_t));
 	INIT_RES(currentRes);
 };
 

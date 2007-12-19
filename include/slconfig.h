@@ -51,11 +51,7 @@ typedef struct resource_profile {
 	struct psclist_head res_list;
 } sl_resource_t;
 
-#define INIT_RES(r)					\
-	do {						\
-		memset((r), 0, sizeof(*(r)));		\
-		INIT_PSCLIST_HEAD(&(r)->res_list);	\
-	} while (0)
+#define INIT_RES(r) INIT_PSCLIST_HEAD(&(r)->res_list)
 
 typedef struct site_profile {
 	char                site_name[SITE_NAME_MAX];
