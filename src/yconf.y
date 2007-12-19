@@ -74,14 +74,14 @@ global_net_handler(char *net);
 
 /* declare and initialize the global table */
  struct symtable sym_table[] = {
-	 TABENT_GLOB("port",      SL_TYPE_INT,  INTSTR_MAX, gconf_port, NULL),
+	 TABENT_GLOB("port",      SL_TYPE_INT,  INTSTR_MAX, gconf_port,  NULL),
 	 TABENT_GLOB("net",       SL_TYPE_INT,  MAXNET,     gconf_netid, global_net_handler),
-	 TABENT_SITE("site_id",   SL_TYPE_INT,  INTSTR_MAX, site_id, NULL),
-	 TABENT_SITE("site_desc", SL_TYPE_STRP,  DESC_MAX,  site_desc, NULL),
-	 TABENT_RES ("desc",      SL_TYPE_STRP,  DESC_MAX,  res_desc, NULL),
-	 TABENT_RES ("type",      SL_TYPE_INT,  INTSTR_MAX, res_type, sl_str_to_restype),
-	 TABENT_RES ("id",        SL_TYPE_INT,  INTSTR_MAX, res_id, NULL),  
-	 TABENT_RES ("mds",       SL_TYPE_BOOL, BOOL_MAX,   res_mds, NULL),
+	 TABENT_SITE("site_id",   SL_TYPE_INT,  INTSTR_MAX, site_id,     NULL),
+	 TABENT_SITE("site_desc", SL_TYPE_STRP, DESC_MAX,   site_desc,   NULL),
+	 TABENT_RES ("desc",      SL_TYPE_STRP, DESC_MAX,   res_desc,    NULL),
+	 TABENT_RES ("type",      SL_TYPE_INT,  INTSTR_MAX, res_type,    libsl_str2restype),
+	 TABENT_RES ("id",        SL_TYPE_INT,  INTSTR_MAX, res_id,      NULL),  
+	 TABENT_RES ("mds",       SL_TYPE_BOOL, BOOL_MAX,   res_mds,     NULL),
 	 { NULL, 0, 0, 0, 0, 0, NULL }
 };
 
@@ -151,16 +151,23 @@ config         : globals site_profiles
 	 */	
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_list) {
 		psclist_for_each_entry(r, &s->site_resources, res_list) {
-			int i;
+			u32 i;
+
 			r->res_peers = PSCALLOC(sizeof(sl_ios_id_t) * 
 						r->res_npeers);
 
 			for (i=0; i < r->res_npeers; i++) { 
-				r->res_peers[i] = ios_str_to_id(r->res_peertmp[i]);
+				r->res_peers[i] = libsl_str2id(r->res_peertmp[i]);
 				psc_assert(r->res_peers[i] != IOS_ID_ANY);
 				free(r->res_peertmp[i]);
 			}
 			free(r->res_peertmp);
+			/*
+			 * Associate nids with their respective resources, 
+			 *   and add the nids to the global hash table.
+			 */
+			for (i=0; i < r->res_nnids; i++)
+				libsl_nid_associate(r->res_nids[i], r);
 		}
 	}
 };
@@ -359,6 +366,7 @@ quoteds_stmt : NAME EQ QUOTEDS END
 	
 	store_tok_val($1, $3);
 	free($1);
+	free($3);
 	/* Don't free the string itself, it's pointer has been copied */
 };
 
@@ -438,6 +446,8 @@ store_tok_val(const char *tok, char *val)
 		psc_fatalx("Invalid structure type %d", e->sym_struct_type);
 	}
 
+	psc_trace("Type %d ptr %p", e->sym_struct_type, ptr);
+
 	switch (e->sym_param_type) {
 	case SL_TYPE_STR:
 		strncpy(ptr, val, e->param);
@@ -447,9 +457,9 @@ store_tok_val(const char *tok, char *val)
 		break;
 
 	case SL_TYPE_STRP:
-		ptr = val;
+		*(char **)ptr = strdup(val);
 		psc_trace("SL_TYPE_STRP Tok '%s' set to '%s' %p",
-			  e->name, (char *)ptr, ptr);
+			  e->name, *(char **)ptr, ptr);
 		break;
 
 	case SL_TYPE_HEXU64:
