@@ -12,6 +12,7 @@
 #include <sys/param.h>
 
 #include "lnet/types.h"
+#include "lnet/lib-lnet.h"
 #include "libcfs/kp30.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
@@ -108,6 +109,44 @@ libsl_nid_associate(lnet_nid_t nid, sl_resource_t *res)
 	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hashe);
 }
 
+/*
+ * libsl_resm_lookup - To be called after lnet initialization, determines a node's resource membership.
+ */
+static inline sl_resm_t *
+libsl_resm_lookup(void)
+{
+	int                nnids, i;
+	sl_resm_t         *resm=NULL;
+	sl_resource_t     *res=NULL;
+	lnet_nid_t        *nids=NULL;
+	struct hash_entry *e;
+
+	nnids = lnet_localnids_get(&nids);
+	if (!nnids)
+		return NULL;
+
+	for (i=0; i<nnids; i++) {
+		e = get_hash_entry(&globalConfig.gconf_nids_hash, 
+				   nids[i], NULL);
+		/* Every nid found by lnet must be a resource member.
+		 */
+		if (!e)
+			psc_fatalx("Nid ;%s; is not a member of any resource", 
+				   libcfs_nid2str(nids[i]));
+		
+		resm = (sl_resm_t *)e->private;
+		if (!i)
+			res = resm->resm_res;
+		/* All nids must belong to the same resource
+		 */
+		else if (res != resm->resm_res)
+			psc_fatalx("Nids must be members of same resource (%s)",
+                                   libcfs_nid2str(nids[i]));
+	}
+	free(nids);
+	return resm;
+}
+
 static inline sl_ios_id_t 
 libsl_node2id(sl_nodeh_t *n)
 {
@@ -202,10 +241,9 @@ libsl_profile_dump(void)
 		psc_warnx("\n\t\tPeer %d ;%s;\t%s", 
 		       i, r->res_name, *r->res_desc);		
 	}
-	for (i=0; i < z->node_res->res_nnids; i++) { 	
+	for (i=0; i < z->node_res->res_nnids; i++)
 		psc_warnx("\n\t\tNid %d ;%s;", 
-			  i, (char *)libcfs_nid2str(z->node_res->res_nids[i]));	
-	}
+			  i, (char *)libcfs_nid2str(z->node_res->res_nids[i]));
 }
 
 static inline u32

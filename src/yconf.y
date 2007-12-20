@@ -88,6 +88,7 @@ global_net_handler(char *net);
 extern int  yylex(void);
 extern void yyerror(const char *, ...);
 extern int  yyparse(void);
+void        store_tok_val(const char *tok, char *val);
 extern int  run_yacc(const char *);
 
 sl_gconf_t globalConfig;
@@ -259,31 +260,33 @@ interface      : IPADDR
 	char        nidstr[MAXNET];
 
 	i = realloc(currentRes->res_nids,
-		    (sizeof(lnet_nid_t) * (currentRes->res_nnids++)));
+		    (sizeof(lnet_nid_t) * (currentRes->res_nnids + 1)));
         psc_assert(i);
-
+	
 	if ((snprintf(nidstr, 32, "%s@%s", $1, currentConf->gconf_net))
 	    > MAXNET)
 		psc_fatalx("Interface to NID failed, ifname too long %s", $1);
-	      
-        i[(currentRes->res_nnids)-1] = libcfs_str2nid(nidstr);
-        currentRes->res_nids = i;
+	
+        i[currentRes->res_nnids] = libcfs_str2nid(nidstr);
 
 	psc_info("Got nidstr ;%s; nid2str ;%s;", 
-		 nidstr, libcfs_nid2str(i[(currentRes->res_nnids)-1]));
+		 nidstr, libcfs_nid2str(i[currentRes->res_nnids]));
+
+	currentRes->res_nnids++;
+        currentRes->res_nids = i;
 };
 
 statements        : /* NULL */               |
                     statement statements;
 
 statement         : restype_stmt |
-                    path_stmt  |
-                    num_stmt   |
-                    bool_stmt  |
-                    size_stmt  |
-                    glob_stmt  |
-                    hexnum_stmt|
-                    float_stmt |
+                    path_stmt    |
+                    num_stmt     |
+                    bool_stmt    |
+                    size_stmt    |
+                    glob_stmt    |
+                    hexnum_stmt  |
+                    float_stmt   |
                     lnettcp_stmt |
                     quoteds_stmt;
 

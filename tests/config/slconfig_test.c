@@ -11,28 +11,39 @@
 #include <unistd.h>
 
 #include "psc_util/log.h"
+#include "psc_rpc/rpc.h"
 #include "slconfig.h"
 
 char *f;
+int serverNode;
 
 int getOptions(int argc,  char *argv[]);
 
 int main(int argc,  char *argv[])
 {
+	sl_resm_t *resm;
+
 	psc_setloglevel(PLL_NOTICE);
-
 	getOptions(argc, argv);
-
 	slashGetConfig(f);
+	if (serverNode) {
+		pscrpc_init_portals(PSC_SERVER);
+		resm = libsl_resm_lookup();
+		if (!resm)
+			psc_fatalx("No resource for this node");
 
+		psc_errorx("Resource %s", resm->resm_res->res_name); 
+	}
 	exit(0);
 } 
 
 int getOptions(int argc,  char *argv[])
 {
-#define ARGS "i:l:"
+#define ARGS "i:l:S"
 	int c, err = 0;
-	optarg = NULL;
+
+	optarg     = NULL;
+	serverNode = 0;
 
 	while ( !err && ((c = getopt(argc, argv, ARGS)) != -1))
 		switch (c) {
@@ -43,6 +54,10 @@ int getOptions(int argc,  char *argv[])
 			
 		case 'i':
 			f = optarg;
+			break;
+			
+		case 'S':
+			serverNode = 1;
 			break;
 
 		default :
