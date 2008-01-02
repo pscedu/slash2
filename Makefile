@@ -1,6 +1,7 @@
 # $Id$
 
 SLASH_BASE=.
+PROJECT_BASE=${SLASH_BASE}
 include Makefile.path
 include ${SLASHMK}
 
