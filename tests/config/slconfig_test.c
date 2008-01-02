@@ -10,9 +10,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "slconfig.h"
 #include "psc_util/log.h"
 #include "psc_rpc/rpc.h"
-#include "slconfig.h"
 
 char *f;
 int serverNode;
