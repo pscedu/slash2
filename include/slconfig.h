@@ -196,9 +196,9 @@ libsl_str2id(const char *res_name)
 	sl_site_t     *s=NULL;
 	sl_resource_t *r=NULL;
 
-	while (*p != (char)'@') {
+	while (*p != '@') {
 		psc_assert((((int)(p-res_name)) < FULL_NAME_MAX) &&
-			   p != '\0');
+			   *p != '\0');
 		p++;
 	}
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_list) {
