@@ -26,6 +26,7 @@ int main(int argc,  char *argv[])
 	psc_setloglevel(PLL_NOTICE);
 	getOptions(argc, argv);
 	slashGetConfig(f);
+	pfl_init(19);
 	if (serverNode) {
 		pscrpc_init_portals(PSC_SERVER);
 		resm = libsl_resm_lookup();
