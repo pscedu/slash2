@@ -27,14 +27,7 @@ int main(int argc,  char *argv[])
 	getOptions(argc, argv);
 	slashGetConfig(f);
 	pfl_init(19);
-	if (serverNode) {
-		pscrpc_init_portals(PSC_SERVER);
-		resm = libsl_resm_lookup();
-		if (!resm)
-			psc_fatalx("No resource for this node");
-
-		psc_errorx("Resource %s", resm->resm_res->res_name); 
-	}
+	libsl_init(serverNode);
 	exit(0);
 } 
 

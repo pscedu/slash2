@@ -17,6 +17,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 #include "psc_ds/list.h"
+
 #include "psc_ds/hash.h"
 #include "psc_types.h"
 //#include "sb.h"
@@ -43,7 +44,7 @@ enum res_type_t {
 
 typedef struct resource_profile {
 	char                res_name[RES_NAME_MAX]; 
-	char              **res_desc;
+	char               *res_desc;
 	char              **res_peertmp;
 	unsigned int        res_id;
 	unsigned int        res_mds;	
@@ -59,7 +60,7 @@ typedef struct resource_profile {
 
 typedef struct site_profile {
 	char                site_name[SITE_NAME_MAX];
-	char              **site_desc;
+	char               *site_desc;
 	u32                 site_id;	
 	struct psclist_head site_resources;
 	struct psclist_head site_list;
@@ -75,19 +76,19 @@ typedef struct node_info_handle {
 } sl_nodeh_t;
 
 typedef struct global_config {
-	char                gconf_net[MAXNET];
-	u32                 gconf_netid;
-	int                 gconf_port;
-	int                 gconf_nsites;
-	struct psclist_head gconf_sites;
-	struct hash_table   gconf_nids_hash;
+	char                 gconf_net[MAXNET];
+	u32                  gconf_netid;
+	int                  gconf_port;
+	int                  gconf_nsites;
+	struct psclist_head  gconf_sites;
+	struct pschash_table gconf_nids_hash;
 } sl_gconf_t;
 
 #define GCONF_HASHTBL_SZ 63
 #define INIT_GCONF(g)							\
 		INIT_PSCLIST_HEAD(&(g)->gconf_sites);			\
 		init_hash_table(&(g)->gconf_nids_hash,			\
-				GCONF_HASHTBL_SZ, "gconf_htbl")
+				GCONF_HASHTBL_SZ, "gconf_htbl%d", 0)
 
 typedef struct resource_member {
 	lnet_nid_t        resm_nid;
@@ -109,6 +110,7 @@ libsl_nid_associate(lnet_nid_t nid, sl_resource_t *res)
 	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hashe);
 }
 
+#define MAX_LOCALNIDS 8
 /*
  * libsl_resm_lookup - To be called after lnet initialization, determines a node's resource membership.
  */
@@ -118,10 +120,10 @@ libsl_resm_lookup(void)
 	int                nnids, i;
 	sl_resm_t         *resm=NULL;
 	sl_resource_t     *res=NULL;
-	lnet_nid_t        *nids=NULL;
+	lnet_nid_t         nids[MAX_LOCALNIDS];
 	struct hash_entry *e;
 
-	nnids = lnet_localnids_get(&nids);
+	nnids = lnet_localnids_get(nids, 8);
 	if (!nnids)
 		return NULL;
 
@@ -143,7 +145,6 @@ libsl_resm_lookup(void)
 			psc_fatalx("Nids must be members of same resource (%s)",
                                    libcfs_nid2str(nids[i]));
 	}
-	free(nids);
 	return resm;
 }
 
@@ -179,10 +180,13 @@ libsl_id2res(sl_ios_id_t id)
 		return NULL;
 	else {
 		sl_resource_t *r=NULL;
-		sl_ios_id_t    rid = sl_glid_to_resid(id);
+		/* The global ID is now stored as the resource id (res_id). 
+		 *  local id's are deprecated for now.  
+		 */		
+		//sl_ios_id_t    rid = sl_glid_to_resid(id);
 		
 		psclist_for_each_entry(r, &s->site_resources, res_list)
-			if (rid == r->res_id) 
+			if (id == r->res_id) 
 				break;
 
 		return r;
@@ -221,11 +225,11 @@ libsl_profile_dump(void)
 	u32 i;
 
 	psc_warnx("\nNode Info: Resource ;%s;\n\tdesc: %s "
-	       "\n\t ID (global=%u, local=%u, mds=%u)"
+	       "\n\t ID (global=%u, mds=%u)"
 	       "\n\t Type %d, Npeers %u, Nnids %u",
 	       z->node_res->res_name,
-	       *z->node_res->res_desc,	       
-	       libsl_node2id(z),
+	       z->node_res->res_desc,	       
+		  //libsl_node2id(z),
 	       z->node_res->res_id,
 	       z->node_res->res_mds,	       
 	       z->node_res->res_type,
@@ -237,9 +241,9 @@ libsl_profile_dump(void)
 		
 		r = libsl_id2res(z->node_res->res_peers[i]);
 		if (!r)
-			continue;
+			continue;		
 		psc_warnx("\n\t\tPeer %d ;%s;\t%s", 
-		       i, r->res_name, *r->res_desc);		
+		       i, r->res_name, r->res_desc);		
 	}
 	for (i=0; i < z->node_res->res_nnids; i++)
 		psc_warnx("\n\t\tNid %d ;%s;", 
@@ -263,6 +267,31 @@ libsl_str2restype(char *res_type)
 	else 
 		return (res_any);
 }
+
+
+static inline void
+libsl_init(int server)
+{
+	extern sl_nodeh_t nodeInfo;
+
+	sl_resm_t  *resm;
+	sl_nodeh_t *z = &nodeInfo;
+
+	//tcpnal_acceptor_port = globalConfig.gconf_port;
+
+	pscrpc_init_portals(server);
+
+	resm = libsl_resm_lookup();
+	if (server) {
+		if (!resm)
+			psc_fatalx("No resource for this node");
+		psc_errorx("Resource %s", resm->resm_res->res_name);
+	}
+	z->node_res  = resm->resm_res;
+	z->node_site = libsl_id2site(z->node_res->res_id);
+	libsl_profile_dump();
+}
+
 
 
 int run_yacc(const char *config_file);

@@ -92,6 +92,7 @@ void        store_tok_val(const char *tok, char *val);
 extern int  run_yacc(const char *);
 
 sl_gconf_t globalConfig;
+sl_nodeh_t nodeInfo;
 
 int errors;
 int cfg_lineno;
@@ -460,9 +461,9 @@ store_tok_val(const char *tok, char *val)
 		break;
 
 	case SL_TYPE_STRP:
-		*(char **)ptr = strdup(val);
+		*(int *)ptr = strdup(val);
 		psc_trace("SL_TYPE_STRP Tok '%s' set to '%s' %p",
-			  e->name, *(char **)ptr, ptr);
+			  e->name, (char *)ptr, ptr);
 		break;
 
 	case SL_TYPE_HEXU64:
