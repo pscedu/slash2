@@ -34,20 +34,25 @@ struct pscrpc_request;
 #define SRMT_DESTROY	5
 #define SRMT_GETATTR	6
 #define SRMT_FGETATTR	7
-#define SRMT_LINK	8
-#define SRMT_MKDIR	9
-#define SRMT_OPEN	10
-#define SRMT_READ	11
-#define SRMT_READLINK	12
-#define SRMT_RELEASE	13
-#define SRMT_RENAME	14
-#define SRMT_RMDIR	15
-#define SRMT_STATFS	16
-#define SRMT_SYMLINK	17
-#define SRMT_TRUNCATE	18
-#define SRMT_UNLINK	19
-#define SRMT_UTIMES	20
-#define SRMT_WRITE	21
+#define SRMT_FTRUNCATE	8
+#define SRMT_LINK	9
+#define SRMT_LOCK	10
+#define SRMT_MKDIR	11
+#define SRMT_MKNOD	12
+#define SRMT_OPEN	13
+#define SRMT_OPENDIR	14
+#define SRMT_READ	15
+#define SRMT_READLINK	16
+#define SRMT_RELEASE	17
+#define SRMT_RELEASEDIR	18
+#define SRMT_RENAME	19
+#define SRMT_RMDIR	20
+#define SRMT_STATFS	21
+#define SRMT_SYMLINK	22
+#define SRMT_TRUNCATE	23
+#define SRMT_UNLINK	24
+#define SRMT_UTIMES	25
+#define SRMT_WRITE	26
 
 struct slashrpc_cred {
 	uid_t	sc_uid;
@@ -111,6 +116,11 @@ struct slashrpc_fgetattr_req {
 
 #define slashrpc_fgetattr_rep slashrpc_getattr_rep
 
+struct slashrpc_ftruncate_req {
+	u64	cfd;
+	u64	size;
+};
+
 struct slashrpc_link_req {
 	char	from[PATH_MAX];
 	char	to[PATH_MAX];
@@ -119,6 +129,12 @@ struct slashrpc_link_req {
 struct slashrpc_mkdir_req {
 	char	path[PATH_MAX];
 	u32	mode;
+};
+
+struct slashrpc_mknod_req {
+	char	path[PATH_MAX];
+	u32	mode;
+	u32	dev_t;
 };
 
 struct slashrpc_open_req {
@@ -130,9 +146,18 @@ struct slashrpc_open_rep {
 	u64	cfd;
 };
 
+struct slashrpc_opendir_req {
+	char	path[PATH_MAX];
+};
+
+struct slashrpc_opendir_rep {
+	u64	cfd;
+};
+
 struct slashrpc_read_req {
 	u64	cfd;
 	u32	size;
+	u32	offset;
 };
 
 struct slashrpc_read_rep {
@@ -199,6 +224,7 @@ struct slashrpc_utimes_req {
 struct slashrpc_write_req {
 	u64		cfd;
 	u32		size;
+	u32		offset;
 	unsigned char	buf[0];
 };
 

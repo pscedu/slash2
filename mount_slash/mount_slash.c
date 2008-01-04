@@ -124,6 +124,15 @@ slash_fgetattr(__unusedx const char *path, struct stat *stb,
 }
 
 int
+slash_ftruncate(__unusedx const char *path, off_t size,
+    struct fuse_file_info *fi)
+{
+	if (rpc_sendmsg(SRMT_FTRUNCATE, fi->fh, size) == -1)
+		return (-errno);
+	return (0);
+}
+
+int
 slash_link(const char *from, const char *to)
 {
 	if (rpc_sendmsg(SRMT_LINK, from, to) == -1)
@@ -132,9 +141,26 @@ slash_link(const char *from, const char *to)
 }
 
 int
+slash_lock(__unusedx const char *path, struct fuse_file_info *fi,
+    int cmd, struct flock *fl)
+{
+	if (rpc_sendmsg(SRMT_LOCK, fi->fh, cmd, fl) == -1)
+		return (-errno);
+	return (0);
+}
+
+int
 slash_mkdir(const char *path, mode_t mode)
 {
 	if (rpc_sendmsg(SRMT_MKDIR, path, mode) == -1)
+		return (-errno);
+	return (0);
+}
+
+int
+slash_mknod(const char *path, mode_t mode, dev_t dev)
+{
+	if (rpc_sendmsg(SRMT_MKNOD, path, mode, dev) == -1)
 		return (-errno);
 	return (0);
 }
@@ -159,6 +185,24 @@ slash_open(const char *path, struct fuse_file_info *fi)
 }
 
 int
+slash_opendir(const char *path, struct fuse_file_info *fi)
+{
+	struct slashrpc_opendir_req *mq;
+	struct slashrpc_opendir_rep *mp;
+	struct pscrpc_request *rq;
+	int rc;
+
+	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_OPENDIR,
+	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+		return (rc);
+	snprintf(mq->path, sizeof(mq->path), "%s", path);
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0)
+		fi->fh = mp->cfd;
+	pscrpc_req_finished(rq);
+	return (rc);
+}
+
+int
 slash_read(__unusedx const char *path, char *buf, size_t size,
     off_t offset, struct fuse_file_info *fi)
 {
@@ -172,6 +216,7 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->size = size;
+	mq->offset = offset;
 	if ((rc = rpc_getrep(rq, sizeof(*mp) + size, &mp)) == 0)
 		memcpy(buf, mp->buf, mp->size);
 	pscrpc_req_finished(rq);
@@ -226,11 +271,18 @@ slash_readlink(const char *path, char *buf, size_t size)
 	return (rc);
 }
 
-/* Not guarenteed to be called. */
 int
 slash_release(__unusedx const char *path, struct fuse_file_info *fi)
 {
 	if (rpc_sendmsg(SRMT_RELEASE, fi->fh) == -1)
+		return (-errno);
+	return (0);
+}
+
+int
+slash_releasedir(__unusedx const char *path, struct fuse_file_info *fi)
+{
+	if (rpc_sendmsg(SRMT_RELEASEDIR, fi->fh) == -1)
 		return (-errno);
 	return (0);
 }
@@ -317,6 +369,7 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	memcpy(mq->buf, buf, size);
 	mq->cfd = fi->fh;
 	mq->size = size;
+	mq->offset = offset;
 	rc = rpc_getrep(rq, sizeof(*mp), &mp);
 	pscrpc_req_finished(rq);
 	return (rc ? rc : (int)mp->size);
@@ -332,6 +385,12 @@ fill_slashcred(struct slashrpc_cred *sc)
 	sc->sc_gid = ctx->gid;
 }
 
+void *
+slash_init(struct fuse_conn_info *conn)
+{
+	return (NULL);
+}
+
 struct fuse_operations slashops = {
 	.access		= slash_access,
 	.chmod		= slash_chmod,
@@ -339,7 +398,6 @@ struct fuse_operations slashops = {
 	.create		= slash_create,
 	.destroy	= slash_destroy,
 	.fgetattr	= slash_fgetattr,
-	.fsync		= slash_fsync,
 	.ftruncate	= slash_ftruncate,
 	.getattr	= slash_getattr,
 	.init		= slash_init,
