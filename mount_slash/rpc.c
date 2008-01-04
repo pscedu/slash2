@@ -236,6 +236,7 @@ rpc_sendmsg(int op, ...)
 		struct slashrpc_access_req	*m_access;
 		struct slashrpc_chmod_req	*m_chmod;
 		struct slashrpc_chown_req	*m_chown;
+		struct slashrpc_destroy_req	*m_destroy;
 		struct slashrpc_link_req	*m_link;
 		struct slashrpc_mkdir_req	*m_mkdir;
 		struct slashrpc_release_req	*m_release;
@@ -281,6 +282,12 @@ rpc_sendmsg(int op, ...)
 		    "%s", va_arg(ap, const char *));
 		u.m_chown->uid = va_arg(ap, uid_t);
 		u.m_chown->gid = va_arg(ap, gid_t);
+		break;
+	case SRMT_DESTROY:
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_destroy), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
 		break;
 	case SRMT_LINK:
 		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,

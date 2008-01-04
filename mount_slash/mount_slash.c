@@ -44,6 +44,31 @@ slash_chown(const char *path, uid_t uid, gid_t gid)
 }
 
 int
+slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+{
+	struct slashrpc_create_req *mq;
+	struct slashrpc_create_rep *mp;
+	struct pscrpc_request *rq;
+	int rc;
+
+	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_CREATE,
+	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+		return (rc);
+	snprintf(mq->path, sizeof(mq->path), "%s", path);
+	mq->mode = mode;
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0)
+		fi->fh = mp->cfd;
+	pscrpc_req_finished(rq);
+	return (rc);
+}
+
+void
+slash_destroy(__unusedx void *arg)
+{
+	rpc_sendmsg(SRMT_DESTROY);
+}
+
+int
 slash_getattr(const char *path, struct stat *stb)
 {
 	struct slashrpc_getattr_req *mq;
@@ -55,6 +80,34 @@ slash_getattr(const char *path, struct stat *stb)
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+		memset(stb, 0, sizeof(*stb));
+		stb->st_mode = mp->mode;
+		stb->st_nlink = mp->nlink;
+		stb->st_uid = mp->uid;
+		stb->st_gid = mp->gid;
+		stb->st_size = mp->size;
+		stb->st_atime = mp->atime;
+		stb->st_mtime = mp->mtime;
+		stb->st_ctime = mp->ctime;
+	}
+	pscrpc_req_finished(rq);
+	return (rc);
+}
+
+int
+slash_fgetattr(__unusedx const char *path, struct stat *stb,
+    struct fuse_file_info *fi)
+{
+	struct slashrpc_fgetattr_req *mq;
+	struct slashrpc_fgetattr_rep *mp;
+	struct pscrpc_request *rq;
+	int rc;
+
+	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_FGETATTR,
+	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+		return (rc);
+	mq->cfd = fi->fh;
 	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		memset(stb, 0, sizeof(*stb));
 		stb->st_mode = mp->mode;
@@ -162,7 +215,7 @@ slash_readlink(const char *path, char *buf, size_t size)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_UTIMES,
+	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_READLINK,
 	    sizeof(*mq), size, &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -206,7 +259,7 @@ slash_statfs(const char *path, struct statvfs *stbuf)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_UTIMES,
+	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_STATFS,
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -283,14 +336,24 @@ struct fuse_operations slashops = {
 	.access		= slash_access,
 	.chmod		= slash_chmod,
 	.chown		= slash_chown,
+	.create		= slash_create,
+	.destroy	= slash_destroy,
+	.fgetattr	= slash_fgetattr,
+	.fsync		= slash_fsync,
+	.ftruncate	= slash_ftruncate,
 	.getattr	= slash_getattr,
+	.init		= slash_init,
 	.link		= slash_link,
+	.lock		= slash_lock,
 	.mkdir		= slash_mkdir,
+	.mknod		= slash_mknod,
 	.open		= slash_open,
+	.opendir	= slash_opendir,
 	.read		= slash_read,
 	.readdir	= slash_readdir,
 	.readlink	= slash_readlink,
 	.release	= slash_release,
+	.releasedir	= slash_releasedir,
 	.rename		= slash_rename,
 	.rmdir		= slash_rmdir,
 	.statfs		= slash_statfs,
@@ -298,7 +361,7 @@ struct fuse_operations slashops = {
 	.truncate	= slash_truncate,
 	.unlink		= slash_unlink,
 	.utimens	= slash_utimens,
-	.write		= slash_write,
+	.write		= slash_write
 };
 
 int

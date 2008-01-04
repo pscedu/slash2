@@ -26,25 +26,28 @@ struct pscrpc_request;
 #define SIO_CONNECT_MAGIC	0xaabbccddeeff0011ULL
 
 /* Slash RPC message types. */
-#define SRMT_CONNECT	0
-
-#define SRMT_ACCESS	1
-#define SRMT_CHMOD	2
-#define SRMT_CHOWN	3
+#define SRMT_ACCESS	0
+#define SRMT_CHMOD	1
+#define SRMT_CHOWN	2
+#define SRMT_CONNECT	3
 #define SRMT_CREATE	4
-#define SRMT_GETATTR	5
-#define SRMT_LINK	6
-#define SRMT_MKDIR	7
-#define SRMT_OPEN	8
-#define SRMT_READ	9
-#define SRMT_RELEASE	10
-#define SRMT_RENAME	11
-#define SRMT_RMDIR	12
-#define SRMT_SYMLINK	13
-#define SRMT_TRUNCATE	14
-#define SRMT_UNLINK	15
-#define SRMT_UTIMES	16
-#define SRMT_WRITE	17
+#define SRMT_DESTROY	5
+#define SRMT_GETATTR	6
+#define SRMT_FGETATTR	7
+#define SRMT_LINK	8
+#define SRMT_MKDIR	9
+#define SRMT_OPEN	10
+#define SRMT_READ	11
+#define SRMT_READLINK	12
+#define SRMT_RELEASE	13
+#define SRMT_RENAME	14
+#define SRMT_RMDIR	15
+#define SRMT_STATFS	16
+#define SRMT_SYMLINK	17
+#define SRMT_TRUNCATE	18
+#define SRMT_UNLINK	19
+#define SRMT_UTIMES	20
+#define SRMT_WRITE	21
 
 struct slashrpc_cred {
 	uid_t	sc_uid;
@@ -80,6 +83,13 @@ struct slashrpc_create_req {
 	u32	mode;
 };
 
+struct slashrpc_create_rep {
+	u64	cfd;
+};
+
+struct slashrpc_destroy_rep {
+};
+
 struct slashrpc_getattr_req {
 	char path[PATH_MAX];
 };
@@ -94,6 +104,12 @@ struct slashrpc_getattr_rep {
 	u64	mtime;
 	u64	ctime;
 };
+
+struct slashrpc_fgetattr_req {
+	u64	cfd;
+};
+
+#define slashrpc_fgetattr_rep slashrpc_getattr_rep
 
 struct slashrpc_link_req {
 	char	from[PATH_MAX];
