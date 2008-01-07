@@ -232,6 +232,10 @@ struct slashrpc_write_rep {
 	u32	size;
 };
 
+struct slashrpc_generic_rep {
+	u32 rc;
+};
+
 int rpc_svc_init(void);
 int rpc_newreq(int, int, int, int, int, struct pscrpc_request **, void *);
 int rpc_getrep(struct pscrpc_request *, int, void *);
