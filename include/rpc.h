@@ -29,14 +29,11 @@
 #define SRMT_UTIMES	25
 #define SRMT_WRITE	26
 
-struct slashrpc_cred {
-	uid_t	sc_uid;
-	gid_t	sc_gid;
-};
-
 struct slashrpc_connect_req {
 	u64	magic;
 	u32	version;
+	u32	uid;
+	u32	gid;
 };
 
 struct slashrpc_connect_rep {

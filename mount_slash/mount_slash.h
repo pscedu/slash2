@@ -25,6 +25,11 @@ struct pscrpc_request;
 #define SIO_VERSION		1
 #define SIO_CONNECT_MAGIC	0xaabbccddeeff0011ULL
 
+struct slashrpc_export {
+	uid_t	uid;
+	gid_t	gid;
+};
+
 int rpc_svc_init(void);
 int rpc_newreq(int, int, int, int, int, struct pscrpc_request **, void *);
 int rpc_getrep(struct pscrpc_request *, int, void *);

@@ -21,6 +21,18 @@
 #include "rpc.h"
 
 int
+slash_connect(void)
+{
+	struct fuse_context *ctx;
+
+	ctx = fuse_get_context();
+	if (rpc_sendmsg(SRMT_CONNECT, SMDS_VERSION, SMDS_CONNECT_MAGIC,
+	    ctx->uid, ctx->gid) == -1)
+		return (-errno);
+	return (0);
+}
+
+int
 slash_access(const char *path, int mask)
 {
 	if (rpc_sendmsg(SRMT_ACCESS, path, mask) == -1)
@@ -228,7 +240,7 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 
 int
 slash_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-    __unusedx off_t offset, __unusedx struct fuse_file_info *fi)
+    __unusedx off_t offset, struct fuse_file_info *fi)
 {
 	struct stat st;
 
@@ -374,16 +386,6 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	rc = rpc_getrep(rq, sizeof(*mp), &mp);
 	pscrpc_req_finished(rq);
 	return (rc ? rc : (int)mp->size);
-}
-
-void
-fill_slashcred(struct slashrpc_cred *sc)
-{
-	struct fuse_context *ctx;
-
-	ctx = fuse_get_context();
-	sc->sc_uid = ctx->uid;
-	sc->sc_gid = ctx->gid;
 }
 
 void *
