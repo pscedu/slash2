@@ -18,6 +18,7 @@
 #include "psc_rpc/rpc.h"
 
 #include "mount_slash.h"
+#include "rpc.h"
 
 int
 slash_access(const char *path, int mask)
