@@ -1,7 +1,5 @@
 /* $Id$ */
 
-#include <sys/param.h>
-
 #include <stdarg.h>
 
 #include "psc_types.h"

@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#include <sys/param.h>
+
 /* Slash RPC message types. */
 #define SRMT_ACCESS	0
 #define SRMT_CHMOD	1
@@ -17,17 +19,18 @@
 #define SRMT_OPEN	13
 #define SRMT_OPENDIR	14
 #define SRMT_READ	15
-#define SRMT_READLINK	16
-#define SRMT_RELEASE	17
-#define SRMT_RELEASEDIR	18
-#define SRMT_RENAME	19
-#define SRMT_RMDIR	20
-#define SRMT_STATFS	21
-#define SRMT_SYMLINK	22
-#define SRMT_TRUNCATE	23
-#define SRMT_UNLINK	24
-#define SRMT_UTIMES	25
-#define SRMT_WRITE	26
+#define SRMT_READDIR	16
+#define SRMT_READLINK	17
+#define SRMT_RELEASE	18
+#define SRMT_RELEASEDIR	19
+#define SRMT_RENAME	20
+#define SRMT_RMDIR	21
+#define SRMT_STATFS	22
+#define SRMT_SYMLINK	23
+#define SRMT_TRUNCATE	24
+#define SRMT_UNLINK	25
+#define SRMT_UTIMES	26
+#define SRMT_WRITE	27
 
 struct slashrpc_connect_req {
 	u64	magic;
@@ -135,6 +138,21 @@ struct slashrpc_read_req {
 struct slashrpc_read_rep {
 	u32	size;
 	unsigned char buf[0];
+};
+
+struct slashrpc_readdir_req {
+	u64	cfd;
+	u64	offset;
+};
+
+struct slashrpc_readdir_rep {
+	u32	nents;
+};
+
+struct slashrpc_readdir_ent {
+	char	name[NAME_MAX + 1];
+	u32	ino;
+	u32	mode;
 };
 
 struct slashrpc_readlink_req {

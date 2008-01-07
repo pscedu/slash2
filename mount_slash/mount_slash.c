@@ -239,30 +239,36 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 }
 
 int
-slash_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-    __unusedx off_t offset, struct fuse_file_info *fi)
+slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
+    off_t offset, struct fuse_file_info *fi)
 {
-	struct stat st;
+	struct slashrpc_readdir_req *mq;
+	struct slashrpc_readdir_rep *mp;
+	struct slashrpc_readdir_ent *me;
+	struct pscrpc_request *rq;
+	struct stat stb;
+	int rc, j;
 
-	if (strcmp(path, "/") != 0)
-		return -ENOENT;
-
-	memset(&st, 0, sizeof(st));
-	st.st_ino = 2;
-	st.st_mode = 0755;
-	filler(buf, ".", &st, 0);
-
-	memset(&st, 0, sizeof(st));
-	st.st_ino = 1;
-	st.st_mode = 0755;
-	filler(buf, "..", &st, 0);
-
-	memset(&st, 0, sizeof(st));
-	st.st_ino = 3;
-	st.st_mode = 0644;
-	filler(buf, "/hello" + 1, &st, 0);
-
-	return 0;
+	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_READDIR,
+	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+		return (rc);
+	mq->cfd = fi->fh;
+	mq->offset = offset;
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)))
+		goto done;
+	if ((rc = rpc_getrep(rq, mp->nents * sizeof(*me), &me)) == 0) {
+		for (j = 0; j < (int)mp->nents; j++) {
+			memset(&stb, 0, sizeof(stb));
+			stb.st_ino = me[j].ino;
+			stb.st_mode = me[j].mode;
+			filler(buf, me[j].name, &stb, 0);
+		}
+	}
+ done:
+	pscrpc_req_finished(rq);
+	if (rc)
+		return (rc);
+	return (0);
 }
 
 int
