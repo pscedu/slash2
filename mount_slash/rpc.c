@@ -1,10 +1,12 @@
 /* $Id$ */
 
-#include "mount_slash.h"
-
+#include "psc_types.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/cdefs.h"
 #include "psc_ds/list.h"
+
+#include "mount_slash.h"
+#include "rpc.h"
 
 #define SLASH_SVR_PID 54321
 
@@ -79,6 +81,7 @@ rpc_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	lnet_process_id_t server_id = { server, 0 };
 	struct slashrpc_connect_req *mq;
 	struct slashrpc_connect_rep *mp;
+	struct fuse_context *ctx;
 	struct pscrpc_request *rq;
 	struct pscrpc_import *imp;
 	lnet_process_id_t id;
@@ -91,31 +94,9 @@ rpc_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	imp->imp_connection = pscrpc_get_connection(server_id, id.nid, NULL);
 	imp->imp_connection->c_peer.pid = SLASH_SVR_PID;
 
-	size = sizeof(*mq);
-	rq = pscrpc_prep_req(imp, version, SRMT_CONNECT, 1, &size, NULL);
-	if (rq == NULL)
-                return (-ENOMEM);
-
-	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-        if (mq == NULL) {
-		/* XXX leak req */
-                psc_warnx("psc_msg_buf");
-		return -1;
-        }
-
-	mq->version = version;
-	mq->magic = magic;
-
-	/* Setup buffer for response. */
-	size = sizeof(*mp);
-        rq->rq_replen = psc_msg_size(1, &size);
-
-	rc = pscrpc_queue_wait(rq);
-	if (rc) {
-		errno = -rc;
-		psc_fatal("connect failed");
-		return (rc);
-	}
+	ctx = fuse_get_context();
+	if (rpc_sendmsg(SRMT_CONNECT, version, magic, ctx->uid, ctx->gid) == -1)
+		return (-errno);
 
 	/* Save server PID from reply callback and mark initialized.  */
 	imp->imp_connection->c_peer.pid = rq->rq_peer.pid;

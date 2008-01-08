@@ -67,7 +67,7 @@ struct slashrpc_create_rep {
 	u64	cfd;
 };
 
-struct slashrpc_destroy_rep {
+struct slashrpc_destroy_req {
 };
 
 struct slashrpc_getattr_req {

@@ -14,23 +14,12 @@
 
 #include <fuse.h>
 
+#include "psc_types.h"
 #include "psc_util/log.h"
 #include "psc_rpc/rpc.h"
 
 #include "mount_slash.h"
 #include "rpc.h"
-
-int
-slash_connect(void)
-{
-	struct fuse_context *ctx;
-
-	ctx = fuse_get_context();
-	if (rpc_sendmsg(SRMT_CONNECT, SMDS_VERSION, SMDS_CONNECT_MAGIC,
-	    ctx->uid, ctx->gid) == -1)
-		return (-errno);
-	return (0);
-}
 
 int
 slash_access(const char *path, int mask)
@@ -216,62 +205,6 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 }
 
 int
-slash_read(__unusedx const char *path, char *buf, size_t size,
-    off_t offset, struct fuse_file_info *fi)
-{
-	struct slashrpc_read_req *mq;
-	struct slashrpc_read_rep *mp;
-	struct pscrpc_request *rq;
-	int rc;
-
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_READ,
-	    sizeof(*mq), sizeof(*mp) + size, &rq, &mq)) != 0)
-		return (rc);
-	mq->cfd = fi->fh;
-	mq->size = size;
-	mq->offset = offset;
-	if ((rc = rpc_getrep(rq, sizeof(*mp) + size, &mp)) == 0)
-		memcpy(buf, mp->buf, mp->size);
-	pscrpc_req_finished(rq);
-	if (rc)
-		return (rc);
-	return (mp->size);
-}
-
-int
-slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
-    off_t offset, struct fuse_file_info *fi)
-{
-	struct slashrpc_readdir_req *mq;
-	struct slashrpc_readdir_rep *mp;
-	struct slashrpc_readdir_ent *me;
-	struct pscrpc_request *rq;
-	struct stat stb;
-	int rc, j;
-
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_READDIR,
-	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
-		return (rc);
-	mq->cfd = fi->fh;
-	mq->offset = offset;
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)))
-		goto done;
-	if ((rc = rpc_getrep(rq, mp->nents * sizeof(*me), &me)) == 0) {
-		for (j = 0; j < (int)mp->nents; j++) {
-			memset(&stb, 0, sizeof(stb));
-			stb.st_ino = me[j].ino;
-			stb.st_mode = me[j].mode;
-			filler(buf, me[j].name, &stb, 0);
-		}
-	}
- done:
-	pscrpc_req_finished(rq);
-	if (rc)
-		return (rc);
-	return (0);
-}
-
-int
 slash_readlink(const char *path, char *buf, size_t size)
 {
 	struct slashrpc_readlink_req *mq;
@@ -371,27 +304,6 @@ slash_utimens(const char *path, const struct timespec ts[2])
 	if (rpc_sendmsg(SRMT_UTIMES, path, ts) == -1)
 		return (-errno);
 	return (0);
-}
-
-int
-slash_write(__unusedx const char *path, const char *buf, size_t size,
-    off_t offset, struct fuse_file_info *fi)
-{
-	struct slashrpc_write_req *mq;
-	struct slashrpc_write_rep *mp;
-	struct pscrpc_request *rq;
-	int rc;
-
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_WRITE,
-	    sizeof(*mq) + size, sizeof(*mp), &rq, &mq)) != 0)
-		return (rc);
-	memcpy(mq->buf, buf, size);
-	mq->cfd = fi->fh;
-	mq->size = size;
-	mq->offset = offset;
-	rc = rpc_getrep(rq, sizeof(*mp), &mp);
-	pscrpc_req_finished(rq);
-	return (rc ? rc : (int)mp->size);
 }
 
 void *
