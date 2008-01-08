@@ -147,12 +147,21 @@ struct slashrpc_readdir_req {
 
 struct slashrpc_readdir_rep {
 	u32	nents;
+	u32	flags;
 };
+
+/* Slash RPC READDIR operation flags. */
+#define SRORF_END	(1<<0)
 
 struct slashrpc_readdir_ent {
 	char	name[NAME_MAX + 1];
 	u32	ino;
 	u32	mode;
+};
+
+/* Reply bulk data. */
+struct slashrpc_readdir_bulk {
+	struct slashrpc_readdir_ent ents[0];
 };
 
 struct slashrpc_readlink_req {
