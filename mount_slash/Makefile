@@ -4,10 +4,11 @@ include Makefile.path
 
 PROG=		mount_slash
 SRCS=		mount_slash.c
+SRCS+=		rc.c
 SRCS+=		rpc.c
 SRCS+=		rpcio.c
 LDFLAGS+=	`pkg-config --libs fuse`
-LDFLAGS+=	${LNET_LIBS} ${PFL_LIBS}
+LDFLAGS+=	${LNET_LIBS}
 CFLAGS+=	`pkg-config --cflags fuse`
 INCLUDES+=	-I${LNET_BASE}/include
 DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED

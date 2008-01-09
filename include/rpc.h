@@ -146,6 +146,11 @@ struct slashrpc_readdir_req {
 };
 
 struct slashrpc_readdir_rep {
+};
+
+struct slashrpc_readdir_res_req {
+	u64	cfd;
+	u64	offset;
 	u32	nents;
 	u32	flags;
 };
@@ -153,6 +158,7 @@ struct slashrpc_readdir_rep {
 /* Slash RPC READDIR operation flags. */
 #define SRORF_END	(1<<0)
 
+/* A directory entry in the bulk readdir data. */
 struct slashrpc_readdir_ent {
 	char	name[NAME_MAX + 1];
 	u32	ino;
@@ -163,6 +169,14 @@ struct slashrpc_readdir_ent {
 struct slashrpc_readdir_bulk {
 	struct slashrpc_readdir_ent ents[0];
 };
+
+/* Acknowledgment of reception of bulk data. */
+struct slashrpc_readdir_bulk_ack {
+	u32	flags;
+};
+
+/* Slash RPC READDIR operation bulk transfer flags. */
+#define SRORBF_STOP	(1<<0)
 
 struct slashrpc_readlink_req {
 	char	path[PATH_MAX];

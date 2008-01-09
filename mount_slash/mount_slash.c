@@ -205,6 +205,34 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 }
 
 int
+slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
+    off_t offset, struct fuse_file_info *fi)
+{
+	struct slashrpc_readdir_req *mq;
+	struct pscrpc_request *rq;
+	struct readdir_cache_ent rce;
+	int rc;
+
+	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_READDIR,
+	    sizeof(*mq), 0, &rq, &mq)) != 0)
+		return (rc);
+	mq->cfd = fi->fh;
+	mq->offset = offset;
+
+	memset(&rce, 0, sizeof(rce));
+	rce.buf = buf;
+	rce.filler = filler;
+	rce.cfd = fi->fh;
+	rce.offset = offset;
+	rc_add(&rce, rq->rq_export);
+	rc = rpc_getrep(rq, sizeof(*mp), &mp);
+	pscrpc_req_finished(rq);
+	rc_remove(&rce, rq->rq_export);
+
+	return (rc);
+}
+
+int
 slash_readlink(const char *path, char *buf, size_t size)
 {
 	struct slashrpc_readlink_req *mq;

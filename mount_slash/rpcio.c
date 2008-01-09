@@ -8,48 +8,75 @@
 #include "mount_slash.h"
 #include "rpc.h"
 
+#define OBD_TIMEOUT 20
+
 int
 slashrpc_timeout(__unusedx void *arg)
 {
 	return (0);
 }
 
+readdir_cache()
+{
+}
+
 int
-slash_readdir_fill(void *buf, fuse_fill_dir_t filler, int nents,
+slash_readdir_fill(struct slashrpc_readdir_rep *mp,
     struct slashrpc_readdir_bulk *mb)
 {
 	struct slashrpc_readdir_ent *me;
-	struct pscrpc_request *rq;
+	struct readdir_cache_ent *rce;
 	struct stat stb;
-	int rc, j;
+	int j;
 
+	/* Lookup the directory associated with the reply in memory. */
+	rce = SPLAY_FIND();
+	if (rce == NULL)
+		errx("couldn't find readdir cache entry");
+
+	/* Fill in the entries. */
 	for (j = 0; j < (int)mp->nents; j++) {
-		me = mb->ents[j];
+		me = &mb->ents[j];
 		memset(&stb, 0, sizeof(stb));
 		stb.st_ino = me->ino;
 		stb.st_mode = me->mode;
-		if (filler(buf, me->name, &stb, 1))
+		if (rce->filler(rce->buf, me->name, &stb, 1))
 			return (1);
 	}
 	return (0);
 }
 
 __inline int
-slashrpc_readdir(struct pscrpc_request *rq, struct ciod_ingest *ci)
+slashrpc_handle_readdir(struct pscrpc_request *rq)
 {
+	struct slashrpc_readdir_bulk_ack *mba;
 	struct slashrpc_readdir_bulk *mb;
 	struct slashrpc_readdir_rep *mp;
 	struct slashrpc_readdir_ent *me;
 	struct pscrpc_bulk_desc *desc;
 	struct l_wait_info lwi;
-	int i, rc, comms_error;
+	int i, sum, size, rc, comms_error;
 	u8 *v1;
+
+	/* Ensure we reply back to the server. */
+	size = sizeof(*mba);
+	rc = psc_pack_reply(rq, 1, &size, NULL);
+	if (rc) {
+		psc_assert(rc == -ENOMEM);
+		psc_notify("psc_pack_reply failed");
+		/* the client will probably bomb here */
+		return (rc);
+	}
+
+	mba = psc_msg_buf(rq->rq_repmsg, 0, size);
+	psc_assert(mba);
+	mba->flags = 0;
 
 	comms_error = 0;
 
-	mp = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*cw));
+	mp = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mp));
 	if (mp == NULL) {
-		zwarnx("readdir reply body is null");
+		psc_warnx("readdir reply body is null");
 		rc = errno;
 		goto out;
 	}
@@ -74,7 +101,7 @@ slashrpc_readdir(struct pscrpc_request *rq, struct ciod_ingest *ci)
 		rc = pscrpc_start_bulk_transfer(desc);
 	if (rc == 0) {
 		lwi = LWI_TIMEOUT_INTERVAL(OBD_TIMEOUT / 2,
-		    HZ, slashrpc_io_bulk_timeout, desc);
+		    HZ, slashrpc_timeout, desc);
 
 		rc = psc_svr_wait_event(&desc->bd_waitq,
 		    (!pscrpc_bulk_active(desc) || desc->bd_export->exp_failed),
@@ -125,8 +152,9 @@ slashrpc_readdir(struct pscrpc_request *rq, struct ciod_ingest *ci)
 
  out:
 	if (rc == 0) {
-		if (slash_readdir_fill(mb))
+		if (slash_readdir_fill(mp, mb))
 			/* Send back reply informing server to stop. */
+			mba->flags |= SRORBF_STOP;
 	} else if (!comms_error) {
 		/* Only reply if there were no comm problems with bulk. */
 		rq->rq_status = rc;
@@ -151,67 +179,6 @@ slashrpc_readdir(struct pscrpc_request *rq, struct ciod_ingest *ci)
 }
 
 int
-slashrpc_handle_readdir(struct pscrpc_request *rq)
-{
-	struct zestion_rpciothr *zri;
-	struct zestion_thread *zthr;
-	struct zio_reply_body *repbody;
-	struct ciod_wire *cw = NULL;
-	struct zlist_head *e;
-	struct zeil *zeil;
-	int size, rc;
-
-	zthr = zestion_threadtbl_get();
-	zri = &zthr->zthr_rpciothr;
-
-	if (zri->zri_ci == NULL) {
-		/* Save in case we bail from error to prevent leak. */
-		e = lc_getwait(&ciodiFreeList);
-	}
-
-	/* Ensure we reply back to the server. */
-	size = sizeof(*repbody);
-	rc = zest_pack_reply(req, 1, &size, NULL);
-	if (rc) {
-		zest_assert(rc == -ENOMEM);
-		znotify("zest_pack_reply failed");
-		/* the client will probably bomb here */
-		return rc;
-	}
-
-	rc = zio_handle_write_rpc(req, zri->zri_ci);
-	if (rc)
-		goto done;
-
-	cw = zest_msg_buf(req->rq_reqmsg, 0, sizeof(*cw));
-	zest_assert(cw);
-
-	/* Place the chunk on the inode's incoming list. */
-	rc = ciodi_put(zri->zri_ci, zeil);
-	/* Clear out ciod since it is now in use. */
-	if (rc == 0)
-		zri->zri_ci = NULL;
-
- done:
-	repbody = zest_msg_buf(req->rq_repmsg, 0, size);
-	zest_assert(repbody);
-	/*
-	 * If rc != 0 then cw was not assigned.
-	 */
-	if (cw != NULL) {
-		repbody->nbytes = cw->ciodw_len;
-		repbody->crc_meta_magic = cw->ciodw_crc_meta;
-	}
-	/* Grab a new ciodi for the next write(). */
-	if (zri->zri_ci == NULL) {
-		e = zlist_cache_get(&ciodiFreeList, 1);
-		zri->zri_ci = zlist_entry(e, struct ciod_ingest,
-					  ciodi_zig_entry);
-	}
-	return (rc);
-}
-
-int
 slashrpc_io_handler(struct pscrpc_request *rq)
 {
 	int rc;
@@ -219,7 +186,7 @@ slashrpc_io_handler(struct pscrpc_request *rq)
 	rc = 0;
 	switch (rq->rq_reqmsg->opc) {
 	case SLASH_IOP_READDIR:
-		rc = slashrpc_handle_write(req);
+		rc = slashrpc_handle_readdir(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
@@ -228,50 +195,9 @@ slashrpc_io_handler(struct pscrpc_request *rq)
 		return (rc);
 	}
 	rq->rq_status = rc;
-	target_send_reply_msg(req, rc, 0);
+	target_send_reply_msg(rq, rc, 0);
 	return (0);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 int
 slash_read(__unusedx const char *path, char *buf, size_t size,
@@ -325,14 +251,14 @@ slashrpc_init(void)
 	char *svrname;
 	int rc;
 
-	rc = zestrpc_init_portals(ZEST_CLIENT);
+	rc = pscrpc_init_portals(PSC_CLIENT);
 	if (rc)
 		zfatal("Failed to intialize portals rpc");
 
 	/* MDS channel */
 	svrname = getenv("SLASH_SERVER_NID");
 	if (svrname == NULL)
-		psc_fatalx("Please export ZEST_SERVER_NID");
+		psc_fatalx("Please export SLASH_SERVER_NID");
 
 	svrnid = libcfs_str2nid(svrname);
 	if (svrnid == LNET_NID_ANY)
@@ -352,7 +278,6 @@ slashrpc_init(void)
 
 	/* Init nb_req manager for single-block, non-blocking requests */
 	ioNbReqSet = nbreqset_init(slashrpc_io_interpret_set, slash_nbcallback);
-	zest_assert(ioNbReqSet);
+	psc_assert(ioNbReqSet);
 	return (0);
 }
-
