@@ -6,10 +6,11 @@
 
 #include <fuse.h>
 
-#include "psc_util/tree.h"
+#include "psc_ds/tree.h"
 #include "psc_types.h"
 
 struct pscrpc_request;
+struct pscrpc_export;
 
 /* RPC services. */
 #define RPCSVC_MDS		0
@@ -35,7 +36,7 @@ struct slashrpc_export {
 	uid_t				 uid;
 	gid_t				 gid;
 	psc_spinlock_t			 rclock;	/* readdir cache lock */
-	SPLAY_TREE(rctree)		 rctree;
+	struct rctree			 rctree;
 };
 
 struct readdir_cache_ent {
@@ -47,6 +48,8 @@ struct readdir_cache_ent {
 };
 
 int rce_cmp(const void *, const void *);
+void rc_add(struct readdir_cache_ent *, struct pscrpc_export *);
+void rc_add(struct readdir_cache_ent *, struct pscrpc_export *);
 
 int rpc_svc_init(void);
 int rpc_newreq(int, int, int, int, int, struct pscrpc_request **, void *);

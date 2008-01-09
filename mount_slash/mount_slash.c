@@ -209,6 +209,7 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
     off_t offset, struct fuse_file_info *fi)
 {
 	struct slashrpc_readdir_req *mq;
+	struct slashrpc_readdir_rep *mp;
 	struct pscrpc_request *rq;
 	struct readdir_cache_ent rce;
 	int rc;
