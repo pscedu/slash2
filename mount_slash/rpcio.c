@@ -11,6 +11,8 @@
 
 #define OBD_TIMEOUT 20
 
+struct slashrpc_service *svcs[NRPCSVC];
+
 int
 slashrpc_timeout(__unusedx void *arg)
 {
@@ -238,43 +240,4 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	rc = rpc_getrep(rq, sizeof(*mp), &mp);
 	pscrpc_req_finished(rq);
 	return (rc ? rc : (int)mp->size);
-}
-
-int
-slashrpc_init(void)
-{
-	struct slash_service *svc;
-	lnet_nid_t svrnid;
-	char *svrname;
-	int rc;
-
-	rc = pscrpc_init_portals(PSC_CLIENT);
-	if (rc)
-		zfatal("Failed to intialize portals rpc");
-
-	/* MDS channel */
-	svrname = getenv("SLASH_SERVER_NID");
-	if (svrname == NULL)
-		psc_fatalx("Please export SLASH_SERVER_NID");
-
-	svrnid = libcfs_str2nid(svrname);
-	if (svrnid == LNET_NID_ANY)
-		psc_fatalx("SLASH_SERVER_NID is invalid: %s", svrname);
-	psc_dbg("svrname %s, nid %"ZLPX64, svrname, svrnid);
-
-	svcs[SLASH_MDS_SVC] = slash_service_create(svrnid,
-	    RPCMDS_REQUEST_PORTAL, RPCMDS_REPLY_PORTAL, slashrpc_mds_connect);
-	if (slashrpc_mds_connect(svrnid))
-		psc_error("Failed to connect to %s", svrname);
-
-	/* I/O channel */
-	svcs[SLASH_IO_SVC] = slash_service_create(svrnid,
-	    RPCIO_REQUEST_PORTAL, RPCIO_REPLY_PORTAL, slashrpc_io_connect);
-	if (slashrpc_io_connect(svrnid))
-		psc_error("Failed to connect to %s", svrname);
-
-	/* Init nb_req manager for single-block, non-blocking requests */
-	ioNbReqSet = nbreqset_init(slashrpc_io_interpret_set, slash_nbcallback);
-	psc_assert(ioNbReqSet);
-	return (0);
 }

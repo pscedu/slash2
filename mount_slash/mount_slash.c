@@ -210,8 +210,8 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 {
 	struct slashrpc_readdir_req *mq;
 	struct slashrpc_readdir_rep *mp;
-	struct pscrpc_request *rq;
 	struct readdir_cache_ent rce;
+	struct pscrpc_request *rq;
 	int rc;
 
 	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_READDIR,

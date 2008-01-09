@@ -26,7 +26,7 @@ struct rpcsvc *rpcsvcs[NRPCSVC];
 struct pscrpc_nbreqset *ioNbReqSet;
 
 int
-rpc_io_interpret_set(struct pscrpc_request_set *set, void *arg,
+rpc_io_interpret_set(struct pscrpc_request_set *set, __unusedx void *arg,
     int status)
 {
         struct pscrpc_request *req;
@@ -53,8 +53,8 @@ rpc_io_interpret_set(struct pscrpc_request_set *set, void *arg,
  * rpc_nbcallback - async op completion callback
  */
 int
-rpc_nbcallback(struct pscrpc_request *req,
-    struct pscrpc_async_args *cb_args)
+rpc_nbcallback(__unusedx struct pscrpc_request *req,
+    __unusedx struct pscrpc_async_args *cb_args)
 {
 #if 0
         psc_stream_buffer_t *zsb;
@@ -79,13 +79,10 @@ int
 rpc_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 {
 	lnet_process_id_t server_id = { server, 0 };
-	struct slashrpc_connect_req *mq;
-	struct slashrpc_connect_rep *mp;
-	struct fuse_context *ctx;
 	struct pscrpc_request *rq;
 	struct pscrpc_import *imp;
+	struct fuse_context *ctx;
 	lnet_process_id_t id;
-        int size, rc;
 
 	if (LNetGetId(1, &id))
                 psc_fatalx("LNetGetId");
@@ -135,11 +132,13 @@ rpc_svc_create(__unusedx lnet_nid_t server, u32 rqptl, u32 rpptl,
 int
 rpc_svc_init(void)
 {
-	struct rpcsvc *svc;
 	lnet_nid_t nid;
 	char *snid;
 
-	/* Setup client MDS service */
+	rc = pscrpc_init_portals(PSC_CLIENT);
+	if (rc)
+		psc_fatal("Failed to intialize portals");
+
 	snid = getenv("SLASH_SERVER_NID");
 	if (snid == NULL)
 		psc_fatalx("SLASH_RPC_SERVER_NID not set");
@@ -147,19 +146,16 @@ rpc_svc_init(void)
 	if (nid == LNET_NID_ANY)
 		psc_fatalx("invalid SLASH_SERVER_NID: %s", snid);
 
-	svc = rpc_svc_create(nid, RPCMDS_REQ_PORTAL,
+	/* Setup client MDS service */
+	rpcsvcs[RPCSVC_MDS] = rpc_svc_create(nid, RPCMDS_REQ_PORTAL,
 	    RPCMDS_REP_PORTAL, rpc_connect);
-
-	rpcsvcs[RPCSVC_MDS] = svc;
-	if (rpc_connect(nid, RPCSVC_MDS, SMDS_CONNECT_MAGIC, SMDS_VERSION))
+	if (rpc_connect(RPCSVC_MDS, SMDS_MAGIC, SMDS_VERSION))
 		psc_error("rpc_mds_connect %s", snid);
 
 	/* Setup client I/O service */
-	svc = rpc_svc_create(nid, RPCIO_REQ_PORTAL,
+	rpcsvcs[RPCSVC_IO] = rpc_svc_create(nid, RPCIO_REQ_PORTAL,
 	    RPCIO_REP_PORTAL, rpc_connect);
-
-	rpcsvcs[RPCSVC_IO] = svc;
-	if (rpc_connect(nid, RPCSVC_IO, SIO_CONNECT_MAGIC, SIO_VERSION))
+	if (rpc_connect(RPCSVC_IO, SIO_MAGIC, SIO_VERSION))
 		psc_error("rpc_io_connect %s", snid);
 
 	/* Initialize manager for single-block, non-blocking requests */

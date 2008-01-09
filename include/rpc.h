@@ -2,6 +2,9 @@
 
 #include <sys/param.h>
 
+/* Asynchronous I/O operations. */
+#define SLASH_IOP_READDIR	0
+
 /* Slash RPC message types. */
 #define SRMT_ACCESS	0
 #define SRMT_CHMOD	1
@@ -37,9 +40,6 @@ struct slashrpc_connect_req {
 	u32	version;
 	u32	uid;
 	u32	gid;
-};
-
-struct slashrpc_connect_rep {
 };
 
 struct slashrpc_access_req {
@@ -171,7 +171,7 @@ struct slashrpc_readdir_bulk {
 };
 
 /* Acknowledgment of reception of bulk data. */
-struct slashrpc_readdir_bulk_ack {
+struct slashrpc_readdir_res_rep {
 	u32	flags;
 };
 
