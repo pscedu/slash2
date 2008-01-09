@@ -1,5 +1,6 @@
 /* $Id$ */
 
+#include <err.h>
 #include <stdio.h>
 
 #include "psc_rpc/rpc.h"
@@ -27,14 +28,23 @@ rce_cmp(const void *a, const void *b)
 	return (0);
 }
 
+struct slashrpc_export *
+slashrpc_export_get(struct pscrpc_export *exp)
+{
+	if (exp->exp_private == NULL)
+		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
+	return (exp->exp_private);
+}
+
 void
 rc_add(struct readdir_cache_ent *rce, struct pscrpc_export *exp)
 {
 	struct slashrpc_export *sexp;
 
-	sexp = exp->exp_private;
 	spinlock(&sexp->rclock);
-	SPLAY_INSERT();
+	sexp = slashrpc_export_get(exp);
+	if (SPLAY_INSERT(rctree, &sexp->rctree, rce))
+		errx(1, "added duplicate readdir_cache_ent to tree");
 	freelock(&sexp->rclock);
 }
 
@@ -43,8 +53,8 @@ rc_remove(struct readdir_cache_ent *rce, struct pscrpc_export *exp)
 {
 	struct slashrpc_export *sexp;
 
-	sexp = exp->exp_private;
 	spinlock(&sexp->rclock);
-	SPLAY_REMOVE();
+	sexp = exp->exp_private;
+	SPLAY_REMOVE(rctree, &sexp->rctree, rce);
 	freelock(&sexp->rclock);
 }

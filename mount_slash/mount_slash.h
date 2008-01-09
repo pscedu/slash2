@@ -47,9 +47,11 @@ struct readdir_cache_ent {
 	SPLAY_ENTRY(readdir_cache_ent)	 entry;
 };
 
-int rce_cmp(const void *, const void *);
+int  rce_cmp(const void *, const void *);
 void rc_add(struct readdir_cache_ent *, struct pscrpc_export *);
-void rc_add(struct readdir_cache_ent *, struct pscrpc_export *);
+void rc_remove(struct readdir_cache_ent *, struct pscrpc_export *);
+struct readdir_cache_ent *
+     rc_lookup(struct pscrpc_export *, u64, u64);
 
 int rpc_svc_init(void);
 int rpc_newreq(int, int, int, int, int, struct pscrpc_request **, void *);

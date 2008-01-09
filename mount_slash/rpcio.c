@@ -1,5 +1,6 @@
 /* $Id$ */
 
+#include <err.h>
 #include <stdio.h>
 
 #include "psc_rpc/rpc.h"
@@ -16,13 +17,9 @@ slashrpc_timeout(__unusedx void *arg)
 	return (0);
 }
 
-readdir_cache()
-{
-}
-
 int
-slash_readdir_fill(struct slashrpc_readdir_rep *mp,
-    struct slashrpc_readdir_bulk *mb)
+slash_readdir_fill(struct pscrpc_export *exp,
+    struct slashrpc_readdir_res_req *mrq, struct slashrpc_readdir_bulk *mb)
 {
 	struct slashrpc_readdir_ent *me;
 	struct readdir_cache_ent *rce;
@@ -30,12 +27,12 @@ slash_readdir_fill(struct slashrpc_readdir_rep *mp,
 	int j;
 
 	/* Lookup the directory associated with the reply in memory. */
-	rce = SPLAY_FIND();
+	rce = rc_lookup(exp, mrq->cfd, mrq->offset);
 	if (rce == NULL)
-		errx("couldn't find readdir cache entry");
+		errx(1, "couldn't find readdir cache entry");
 
 	/* Fill in the entries. */
-	for (j = 0; j < (int)mp->nents; j++) {
+	for (j = 0; j < (int)mrq->nents; j++) {
 		me = &mb->ents[j];
 		memset(&stb, 0, sizeof(stb));
 		stb.st_ino = me->ino;
@@ -49,9 +46,9 @@ slash_readdir_fill(struct slashrpc_readdir_rep *mp,
 __inline int
 slashrpc_handle_readdir(struct pscrpc_request *rq)
 {
-	struct slashrpc_readdir_bulk_ack *mba;
+	struct slashrpc_readdir_res_req *mrq;
+	struct slashrpc_readdir_res_rep *mrp;
 	struct slashrpc_readdir_bulk *mb;
-	struct slashrpc_readdir_rep *mp;
 	struct slashrpc_readdir_ent *me;
 	struct pscrpc_bulk_desc *desc;
 	struct l_wait_info lwi;
@@ -59,7 +56,7 @@ slashrpc_handle_readdir(struct pscrpc_request *rq)
 	u8 *v1;
 
 	/* Ensure we reply back to the server. */
-	size = sizeof(*mba);
+	size = sizeof(*mrp);
 	rc = psc_pack_reply(rq, 1, &size, NULL);
 	if (rc) {
 		psc_assert(rc == -ENOMEM);
@@ -68,20 +65,20 @@ slashrpc_handle_readdir(struct pscrpc_request *rq)
 		return (rc);
 	}
 
-	mba = psc_msg_buf(rq->rq_repmsg, 0, size);
-	psc_assert(mba);
-	mba->flags = 0;
+	mrp = psc_msg_buf(rq->rq_repmsg, 0, size);
+	psc_assert(mrp);
+	mrp->flags = 0;
 
 	comms_error = 0;
 
-	mp = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mp));
-	if (mp == NULL) {
+	mrq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mrq));
+	if (mrq == NULL) {
 		psc_warnx("readdir reply body is null");
 		rc = errno;
 		goto out;
 	}
 
-	mb = PSCALLOC(mp->nents * sizeof(*me));
+	mb = PSCALLOC(mrq->nents * sizeof(*me));
 
 	/* GET_SINK the data. */
 	desc = pscrpc_prep_bulk_exp(rq, 1, BULK_GET_SINK, RPCIO_BULK_PORTAL);
@@ -92,7 +89,7 @@ slashrpc_handle_readdir(struct pscrpc_request *rq)
 	}
 	desc->bd_iov_count = 1;
 	desc->bd_iov[0].iov_base = mb;
-	desc->bd_iov[0].iov_len = desc->bd_nob = mp->nents * sizeof(*me);
+	desc->bd_iov[0].iov_len = desc->bd_nob = mrq->nents * sizeof(*me);
 
 	/* Check for client eviction during previous I/O before proceeding. */
 	if (desc->bd_export->exp_failed)
@@ -152,9 +149,9 @@ slashrpc_handle_readdir(struct pscrpc_request *rq)
 
  out:
 	if (rc == 0) {
-		if (slash_readdir_fill(mp, mb))
+		if (slash_readdir_fill(rq->rq_export, mrq, mb))
 			/* Send back reply informing server to stop. */
-			mba->flags |= SRORBF_STOP;
+			mrp->flags |= SRORBF_STOP;
 	} else if (!comms_error) {
 		/* Only reply if there were no comm problems with bulk. */
 		rq->rq_status = rc;
