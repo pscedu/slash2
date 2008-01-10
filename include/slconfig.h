@@ -18,6 +18,7 @@
 #include "psc_util/log.h"
 #include "psc_ds/list.h"
 
+#include "psc_rpc/rpc.h"
 #include "psc_ds/hash.h"
 #include "psc_types.h"
 //#include "sb.h"
@@ -43,11 +44,11 @@ enum res_type_t {
 };
 
 typedef struct resource_profile {
-	char                res_name[RES_NAME_MAX]; 
+	char                res_name[RES_NAME_MAX];
 	char               *res_desc;
 	char              **res_peertmp;
 	unsigned int        res_id;
-	unsigned int        res_mds;	
+	unsigned int        res_mds;
 	enum res_type_t     res_type;
 	sl_ios_id_t        *res_peers;
 	u32                 res_npeers;
@@ -61,7 +62,7 @@ typedef struct resource_profile {
 typedef struct site_profile {
 	char                site_name[SITE_NAME_MAX];
 	char               *site_desc;
-	u32                 site_id;	
+	u32                 site_id;
 	struct psclist_head site_resources;
 	struct psclist_head site_list;
 } sl_site_t;
@@ -81,7 +82,7 @@ typedef struct global_config {
 	int                  gconf_port;
 	int                  gconf_nsites;
 	struct psclist_head  gconf_sites;
-	struct pschash_table gconf_nids_hash;
+	struct hash_table gconf_nids_hash;
 } sl_gconf_t;
 
 #define GCONF_HASHTBL_SZ 63
@@ -103,7 +104,7 @@ static inline void
 libsl_nid_associate(lnet_nid_t nid, sl_resource_t *res)
 {
 	sl_resm_t *resm = PSCALLOC(sizeof(sl_resm_t));
-	
+
 	resm->resm_nid = nid;
 	resm->resm_res = res;
 	init_hash_entry(&resm->resm_hashe, &resm->resm_nid, resm);
@@ -128,14 +129,14 @@ libsl_resm_lookup(void)
 		return NULL;
 
 	for (i=0; i<nnids; i++) {
-		e = get_hash_entry(&globalConfig.gconf_nids_hash, 
+		e = get_hash_entry(&globalConfig.gconf_nids_hash,
 				   nids[i], NULL);
 		/* Every nid found by lnet must be a resource member.
 		 */
 		if (!e)
-			psc_fatalx("Nid ;%s; is not a member of any resource", 
+			psc_fatalx("Nid ;%s; is not a member of any resource",
 				   libcfs_nid2str(nids[i]));
-		
+
 		resm = (sl_resm_t *)e->private;
 		if (!i)
 			res = resm->resm_res;
@@ -148,10 +149,10 @@ libsl_resm_lookup(void)
 	return resm;
 }
 
-static inline sl_ios_id_t 
+static inline sl_ios_id_t
 libsl_node2id(sl_nodeh_t *n)
 {
-	return (sl_global_id_build(n->node_site->site_id, 
+	return (sl_global_id_build(n->node_site->site_id,
 				   n->node_res->res_id,
 				   n->node_res->res_mds));
 }
@@ -161,11 +162,11 @@ libsl_id2site(sl_ios_id_t id)
 {
 	u32 tmp=(id >> (SL_RES_BITS + SL_MDS_BITS));
 	sl_site_t *s=NULL;
-	
+
 	psc_assert(tmp <= ((1 << SL_SITE_BITS))-1);
 
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_list)
-		if (tmp == s->site_id)			
+		if (tmp == s->site_id)
 			break;
 
 	return s;
@@ -175,18 +176,18 @@ static inline sl_resource_t *
 libsl_id2res(sl_ios_id_t id)
 {
 	sl_site_t *s=NULL;
-	
+
 	if ((s = libsl_id2site(id)) == NULL)
 		return NULL;
 	else {
 		sl_resource_t *r=NULL;
-		/* The global ID is now stored as the resource id (res_id). 
-		 *  local id's are deprecated for now.  
-		 */		
+		/* The global ID is now stored as the resource id (res_id).
+		 *  local id's are deprecated for now.
+		 */
 		//sl_ios_id_t    rid = sl_glid_to_resid(id);
-		
+
 		psclist_for_each_entry(r, &s->site_resources, res_list)
-			if (id == r->res_id) 
+			if (id == r->res_id)
 				break;
 
 		return r;
@@ -207,13 +208,13 @@ libsl_str2id(const char *res_name)
 	}
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_list) {
 		if (!strncmp(s->site_name, p, SITE_NAME_MAX)) {
-			psclist_for_each_entry(r, &s->site_resources, 
+			psclist_for_each_entry(r, &s->site_resources,
 					       res_list) {
-				if (!strncmp(r->res_name, res_name, 
+				if (!strncmp(r->res_name, res_name,
 					     FULL_NAME_MAX))
 					return r->res_id;
-			}				
-		}		
+			}
+		}
         }
         return IOS_ID_ANY;
 }
@@ -228,25 +229,25 @@ libsl_profile_dump(void)
 	       "\n\t ID (global=%u, mds=%u)"
 	       "\n\t Type %d, Npeers %u, Nnids %u",
 	       z->node_res->res_name,
-	       z->node_res->res_desc,	       
+	       z->node_res->res_desc,
 		  //libsl_node2id(z),
 	       z->node_res->res_id,
-	       z->node_res->res_mds,	       
+	       z->node_res->res_mds,
 	       z->node_res->res_type,
 	       z->node_res->res_npeers,
 	       z->node_res->res_nnids);
 
 	for (i=0; i < z->node_res->res_npeers; i++) {
 		sl_resource_t *r;
-		
+
 		r = libsl_id2res(z->node_res->res_peers[i]);
 		if (!r)
-			continue;		
-		psc_warnx("\n\t\tPeer %d ;%s;\t%s", 
-		       i, r->res_name, r->res_desc);		
+			continue;
+		psc_warnx("\n\t\tPeer %d ;%s;\t%s",
+		       i, r->res_name, r->res_desc);
 	}
 	for (i=0; i < z->node_res->res_nnids; i++)
-		psc_warnx("\n\t\tNid %d ;%s;", 
+		psc_warnx("\n\t\tNid %d ;%s;",
 			  i, (char *)libcfs_nid2str(z->node_res->res_nids[i]));
 }
 
@@ -264,7 +265,7 @@ libsl_str2restype(char *res_type)
 
 	else if (strncmp(res_type, "compute", RES_NAME_MAX))
                 return (compute);
-	else 
+	else
 		return (res_any);
 }
 

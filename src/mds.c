@@ -1,9 +1,12 @@
 #include <sys/syscall.h>
+#include <sys/fsuid.h>
+
 #include <unistd.h>
 #include <errno.h>
 
-#include "mount_slash.h"
+#include "rpc.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rpclog.h"
 #include "psc_util/slash_appthread.h"
 
 #define MDS_NTHREADS  8
@@ -14,11 +17,11 @@
 #define MDS_REPPORTAL RPCMDS_REP_PORTAL
 #define MDS_SVCNAME   "slash_mds_svc"
 
-int 
+int
 slmds_connect(struct pscrpc_request *req)
 {
 	int rc;
-	int sz = sizeof(struct slashrpc_connect_req);
+	int size = sizeof(struct slashrpc_connect_req);
         struct slashrpc_connect_req *body, *repbody;
 
 	body = psc_msg_buf(req->rq_reqmsg, 0, size);
@@ -28,13 +31,13 @@ slmds_connect(struct pscrpc_request *req)
                 goto fail;
         }
         psc_notify("magic %"ZLPX64" version %u",
-		   body->fsmagic, body->fsversion);
+		   body->magic, body->version);
 
-        if (body->magic   != SMDS_CONNECT_MAGIC ||
+        if (body->magic   != SMDS_MAGIC ||
             body->version != SMDS_VERSION) {
 		rc = -EINVAL;
 		goto fail;
-	}				
+	}
         rc = psc_pack_reply(req, 1, &size, NULL);
         if (rc) {
                 psc_assert(rc == -ENOMEM);
@@ -45,9 +48,9 @@ slmds_connect(struct pscrpc_request *req)
 	/* Malloc was done in psc_pack_reply() */
         psc_assert(repbody);
 
-	repbody->magic  = SMDS_CONNECT_MAGIC;
+	repbody->magic  = SMDS_MAGIC;
 	repbody->version = SMDS_VERSION;
-	
+
         psc_notify("Connect request from %"ZLPX64":%u",
 		   req->rq_peer.nid, req->rq_peer.pid);
 
@@ -67,7 +70,7 @@ slmds_access(struct pscrpc_request *req)
 	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
 		return (-EPROTO);
-	
+
 	rc = access(body->path, mask);
 	if (rc)
 		return (-errno);
@@ -83,12 +86,12 @@ slmds_chmod(struct pscrpc_request *req, int which_chmod)
 	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
 		return (-EPROTO);
-	
+
 	if (which_chmod == SYS_fchmod)
 		if (fid_makepath(&body->fid, body->path))
 			return (-EINVAL);
 
-	rc = chmod(body->path, mask); 
+	rc = chmod(body->path, mask);
 	if (rc)
 		return (-errno);
 
@@ -109,12 +112,12 @@ slmds_chown(struct pscrpc_request *req, int which_chown)
 	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
 		return (-EPROTO);
-	
+
 	if (which_chown == SYS_fchown)
 		if (fid_makepath(&body->fid, body->path))
 			return (-EINVAL);
 
-	rc = chown(body->path, mask); 
+	rc = chown(body->path, body->uid, body->gid);
 	if (rc)
 		return (-errno);
 
@@ -131,26 +134,23 @@ slmds_open(struct pscrpc_request *req)
         if (!body)
                 return (-EPROTO);
 
-	if (mode)
-		rc = open(body->path, body->flags, body->mode);
-	else
-		rc = open(body->path, body->flags);
+	rc = open(body->path, body->flags, body->mode);
 	if (rc)
 		return (-errno);
 
 	return (0);
 }
 
-int 
+int
 slmds_svc_handler(struct pscrpc_request *req)
 {
 	struct slashrpc_cred *cred;
         int rc = 0;
 	uid_t myuid;
-        gid_t mygid;       
-       
+        gid_t mygid;
+
         ENTRY;
-        DEBUG_REQ(PLL_TRACE, req, "new req");	
+        DEBUG_REQ(PLL_TRACE, req, "new req");
 	/*
 	 * Pop the credentials from the msg stack
 	 */
@@ -162,7 +162,7 @@ slmds_svc_handler(struct pscrpc_request *req)
                 RETURN(rc);
 	}
 	/*
-	 * Set fs credentials 
+	 * Set fs credentials
 	 */
 	myuid = getuid();
         mygid = getgid();
@@ -236,29 +236,29 @@ slmds_svc_handler(struct pscrpc_request *req)
 		req->rq_status = -ENOSYS;
 		rc = pscrpc_error(req);
 		goto done;
-	}	
-	psc_info("req->rq_status == %d", req->rq_status);	
+	}
+	psc_info("req->rq_status == %d", req->rq_status);
 	target_send_reply_msg (req, rc, 0);
-	
+
  done:
 	if (setfsuid(myuid) == -1)
                 psc_fatal("setfsuid %d", myuid);
         if (setfsgid(mygid) == -1)
                 psc_fatal("setfsgid %d", mygid);
 
-	RETURN(rc);	
+	RETURN(rc);
 }
 
 
 
 /**
- * slmds_init - start up the mds threads via pscrpc_thread_spawn() 
+ * slmds_init - start up the mds threads via pscrpc_thread_spawn()
  */
-void 
+void
 slmds_init(void)
 {
 	pscrpc_svc_handle_t *svh = PSCALLOC(sizeof(*svc));
-	
+
 	svh->svh_nbufs      = MDS_NBUFS;
 	svh->svh_bufsz      = MDS_BUFSZ;
 	svh->svh_reqsz      = MDS_BUFSZ;
@@ -270,6 +270,6 @@ slmds_init(void)
 	svh->svh_handler    = slmds_svc_handler;
 
 	strncpy(svh->svh_svn_name, MDS_SVCNAME, RPC_SVC_NAMEMAX);
-	
+
 	pscrpc_thread_spawn(svh);
 }

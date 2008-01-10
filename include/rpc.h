@@ -2,6 +2,8 @@
 
 #include <sys/param.h>
 
+#include "psc_types.h"
+
 /* Asynchronous I/O operations. */
 #define SLASH_IOP_READDIR	0
 
