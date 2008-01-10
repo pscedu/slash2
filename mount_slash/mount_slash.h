@@ -43,8 +43,6 @@ struct slashrpc_service {
 };
 
 struct slashrpc_export {
-	uid_t				 uid;
-	gid_t				 gid;
 	psc_spinlock_t			 rclock;	/* readdir cache lock */
 	struct rctree			 rctree;
 };

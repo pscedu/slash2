@@ -402,16 +402,3 @@ rpc_sendmsg(int op, ...)
 	pscrpc_req_finished(rq);
 	return (rc);
 }
-
-/*
- * slashrpc_export_get - access our application-specific variables associated
- *	with an LNET connection.
- * @exp: RPC export of peer.
- */
-struct slashrpc_export *
-slashrpc_export_get(struct pscrpc_export *exp)
-{
-	if (exp->exp_private == NULL)
-		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
-	return (exp->exp_private);
-}

@@ -12,6 +12,7 @@
 #include "slashrpc.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
+#include "psc_rpc/service.h"
 #include "psc_util/slash_appthread.h"
 
 #include "fid.h"
@@ -24,7 +25,9 @@
 #define MDS_REPPORTAL RPCMDS_REP_PORTAL
 #define MDS_SVCNAME   "slash_mds_svc"
 
-fid_t *
+psc_spinlock_t fsidlock = LOCK_INITIALIZER;
+
+slash_fid_t *
 cfd2fid(struct pscrpc_request *rq, u64 cfd)
 {
 	return (0);
@@ -154,15 +157,13 @@ slmds_open(struct pscrpc_request *req)
 	return (0);
 }
 
-psc_spinlock_t fsidlock = LOCK_INITIALIZER;
-
 int
 slmds_svc_handler(struct pscrpc_request *req)
 {
-	struct slashrpc_cred *cred;
-        int rc = 0;
+	struct slashrpc_export *sexp;
 	uid_t myuid, tuid;
         gid_t mygid, tgid;
+        int rc = 0;
 
         ENTRY;
         DEBUG_REQ(PLL_TRACE, req, "new req");
@@ -171,7 +172,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 	myuid = getuid();
 	mygid = getgid();
 	spinlock(&fsidlock);
-	sexp = slashrpc_export_get(exp);
+	sexp = slashrpc_export_get(req->rq_export);
 
 	if ((tuid = setfsuid(sexp->uid)) != myuid)
                 psc_fatal("invalid fsuid %u", tuid);

@@ -21,7 +21,7 @@
  *   inum, allowing the fs to easily access files via their
  *   inode number.
  */
-void
+int
 fid_makepath(const slash_fid_t *fid, char *fid_path)
 {
 	char  *c;
@@ -53,6 +53,7 @@ fid_makepath(const slash_fid_t *fid, char *fid_path)
 
 	psc_info("Fidpath ;%s; %016"ZLPX64,
 	      fid_path, fid->fid_inum);
+	return (0);
 }
 
 /**
