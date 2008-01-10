@@ -1,5 +1,16 @@
 /* $Id$ */
 
+/*
+ * Routines for manipulating the readdir cache.
+ *
+ * Since READDIR network I/O with slashd is done asynchronously,
+ * mount_slash maintains a cache of entries associated with
+ * expected READDIR-related network I/O.  It inserts entries when
+ * a request is issued to slashd, accesses entries asynchronously
+ * as needed during slashd network I/O, and removes entries when the
+ * request has been satisfied, but via the file system and slashd.
+ */
+
 #include <err.h>
 #include <stdio.h>
 
@@ -44,7 +55,7 @@ rc_add(struct readdir_cache_ent *rce, struct pscrpc_export *exp)
 	spinlock(&sexp->rclock);
 	sexp = slashrpc_export_get(exp);
 	if (SPLAY_INSERT(rctree, &sexp->rctree, rce))
-		errx(1, "added duplicate readdir_cache_ent to tree");
+		errx(1, "added duplicate readdir cache entry to tree");
 	freelock(&sexp->rclock);
 }
 
@@ -55,8 +66,11 @@ rc_remove(struct readdir_cache_ent *rce, struct pscrpc_export *exp)
 
 	spinlock(&sexp->rclock);
 	sexp = exp->exp_private;
-	SPLAY_REMOVE(rctree, &sexp->rctree, rce);
+	if (SPLAY_REMOVE(rctree, &sexp->rctree, rce) == NULL)
+		errx(1, "unable to find readdir cache entry");
 	freelock(&sexp->rclock);
+
+	free(rce);
 }
 
 struct readdir_cache_ent *
