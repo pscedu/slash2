@@ -1,7 +1,9 @@
 /* $Id$ */
 
 #ifndef _SLASH_FID_H
-#define _SLASH_FID_H 1
+#define _SLASH_FID_H
+
+#include <string.h>
 
 #include "psc_types.h"
 
@@ -27,7 +29,7 @@ typedef struct slash_fid {
 
 #define COPYFID(dest,src) (memcpy((dest),(src),FIDSZ))
 
-void fid_makepath(const slash_fid_t *, char *);
+int  fid_makepath(const slash_fid_t *, char *);
 int  fid_link(const slash_fid_t *, const char *);
 
 #endif

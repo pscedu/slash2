@@ -2,6 +2,7 @@
 
 #include <sys/param.h>
 
+#include "psc_rpc/rpc.h"
 #include "psc_types.h"
 #include "psc_util/cdefs.h"
 
@@ -260,7 +261,9 @@ struct slashrpc_generic_rep {
 static __inline struct slashrpc_export *
 slashrpc_export_get(struct pscrpc_export *exp)
 {
+	spinlock(&exp->exp_lock);
 	if (exp->exp_private == NULL)
 		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
+	freelock(&exp->exp_lock);
 	return (exp->exp_private);
 }
