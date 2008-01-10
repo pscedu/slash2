@@ -3,6 +3,7 @@
 #include <sys/param.h>
 
 #include "psc_types.h"
+#include "psc_util/cdefs.h"
 
 /* Asynchronous I/O operations. */
 #define SLASH_IOP_READDIR	0
@@ -250,3 +251,16 @@ struct slashrpc_write_rep {
 struct slashrpc_generic_rep {
 	u32 rc;
 };
+
+/*
+ * slashrpc_export_get - access our application-specific variables associated
+ *	with an LNET connection.
+ * @exp: RPC export of peer.
+ */
+static __inline struct slashrpc_export *
+slashrpc_export_get(struct pscrpc_export *exp)
+{
+	if (exp->exp_private == NULL)
+		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
+	return (exp->exp_private);
+}
