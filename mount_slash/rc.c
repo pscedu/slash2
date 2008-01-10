@@ -58,3 +58,20 @@ rc_remove(struct readdir_cache_ent *rce, struct pscrpc_export *exp)
 	SPLAY_REMOVE(rctree, &sexp->rctree, rce);
 	freelock(&sexp->rclock);
 }
+
+struct readdir_cache_ent *
+rc_lookup(struct pscrpc_export *exp, u64 cfd, u64 offset)
+{
+	struct slashrpc_export *sexp;
+	struct readdir_cache_ent q, *rce;
+
+	q.offset = offset;
+	q.cfd = cfd;
+
+	spinlock(&sexp->rclock);
+	sexp = exp->exp_private;
+	rce = SPLAY_FIND(rctree, &sexp->rctree, &q);
+	freelock(&sexp->rclock);
+
+	return (rce);
+}

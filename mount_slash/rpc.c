@@ -134,6 +134,7 @@ rpc_svc_init(void)
 {
 	lnet_nid_t nid;
 	char *snid;
+	int rc;
 
 	rc = pscrpc_init_portals(PSC_CLIENT);
 	if (rc)
@@ -149,13 +150,13 @@ rpc_svc_init(void)
 	/* Setup client MDS service */
 	rpcsvcs[RPCSVC_MDS] = rpc_svc_create(nid, RPCMDS_REQ_PORTAL,
 	    RPCMDS_REP_PORTAL, rpc_connect);
-	if (rpc_connect(RPCSVC_MDS, SMDS_MAGIC, SMDS_VERSION))
+	if (rpc_connect(nid, RPCSVC_MDS, SMDS_MAGIC, SMDS_VERSION))
 		psc_error("rpc_mds_connect %s", snid);
 
 	/* Setup client I/O service */
 	rpcsvcs[RPCSVC_IO] = rpc_svc_create(nid, RPCIO_REQ_PORTAL,
 	    RPCIO_REP_PORTAL, rpc_connect);
-	if (rpc_connect(RPCSVC_IO, SIO_MAGIC, SIO_VERSION))
+	if (rpc_connect(nid, RPCSVC_IO, SIO_MAGIC, SIO_VERSION))
 		psc_error("rpc_io_connect %s", snid);
 
 	/* Initialize manager for single-block, non-blocking requests */
