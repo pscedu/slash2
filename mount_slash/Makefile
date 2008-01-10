@@ -21,6 +21,7 @@ SRCS+=		${PFL_BASE}/psc_util/waitq.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/threadtable.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
+SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 LDFLAGS+=	`pkg-config --libs fuse`

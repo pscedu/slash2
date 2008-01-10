@@ -375,7 +375,8 @@ struct fuse_operations slashops = {
 int
 main(int argc, char *argv[])
 {
+	pfl_init();
 	if (rpc_svc_init())
-		psc_fatalx("rpc_init");
+		psc_fatalx("rpc_svc_init");
 	return (fuse_main(argc, argv, &slashops, NULL));
 }
