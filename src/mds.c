@@ -1,3 +1,7 @@
+/* $Id$ */
+
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/fsuid.h>
 
@@ -5,9 +9,12 @@
 #include <errno.h>
 
 #include "rpc.h"
+#include "slashrpc.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_util/slash_appthread.h"
+
+#include "fid.h"
 
 #define MDS_NTHREADS  8
 #define MDS_NBUFS     1024
@@ -16,6 +23,12 @@
 #define MDS_REQPORTAL RPCMDS_REQ_PORTAL
 #define MDS_REPPORTAL RPCMDS_REP_PORTAL
 #define MDS_SVCNAME   "slash_mds_svc"
+
+fid_t *
+cfd2fid(struct pscrpc_request *rq, u64 cfd)
+{
+	return (0);
+}
 
 int
 slmds_connect(struct pscrpc_request *req)
@@ -71,7 +84,7 @@ slmds_access(struct pscrpc_request *req)
 	if (!body)
 		return (-EPROTO);
 
-	rc = access(body->path, mask);
+	rc = access(body->path, body->mask);
 	if (rc)
 		return (-errno);
 	return (0);
@@ -88,10 +101,10 @@ slmds_chmod(struct pscrpc_request *req, int which_chmod)
 		return (-EPROTO);
 
 	if (which_chmod == SYS_fchmod)
-		if (fid_makepath(&body->fid, body->path))
+		if (fid_makepath(cfd2fid(req, body->cfd), body->path))
 			return (-EINVAL);
 
-	rc = chmod(body->path, mask);
+	rc = chmod(body->path, body->mode);
 	if (rc)
 		return (-errno);
 
@@ -114,7 +127,7 @@ slmds_chown(struct pscrpc_request *req, int which_chown)
 		return (-EPROTO);
 
 	if (which_chown == SYS_fchown)
-		if (fid_makepath(&body->fid, body->path))
+		if (fid_makepath(cfd2fid(req, body->cfd), body->path))
 			return (-EINVAL);
 
 	rc = chown(body->path, body->uid, body->gid);
@@ -134,49 +147,47 @@ slmds_open(struct pscrpc_request *req)
         if (!body)
                 return (-EPROTO);
 
-	rc = open(body->path, body->flags, body->mode);
+	rc = open(body->path, body->flags);
 	if (rc)
 		return (-errno);
 
 	return (0);
 }
 
+psc_spinlock_t fsidlock = LOCK_INITIALIZER;
+
 int
 slmds_svc_handler(struct pscrpc_request *req)
 {
 	struct slashrpc_cred *cred;
         int rc = 0;
-	uid_t myuid;
-        gid_t mygid;
+	uid_t myuid, tuid;
+        gid_t mygid, tgid;
 
         ENTRY;
         DEBUG_REQ(PLL_TRACE, req, "new req");
-	/*
-	 * Pop the credentials from the msg stack
-	 */
-	cred = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*cred));
-	if (!cred) {
-		psc_warnx("Rpc credentials null");
-		req->rq_status = -EPROTO;
-                rc = pscrpc_error(req);
-                RETURN(rc);
-	}
-	/*
-	 * Set fs credentials
-	 */
-	myuid = getuid();
-        mygid = getgid();
-	if (setfsuid(cred->sc_uid) != (int)myuid) {
-                psc_error("invalid uid U%u:G%u", uid, gid);
-		rc = -1;
-                goto done;
-        }
 
-        if (setfsgid(cred->sc_gid) != (int)mygid) {
-                psc_error("invalid gid U%u:G%u", uid, gid);
+	/* Set fs credentials */
+	myuid = getuid();
+	mygid = getgid();
+	spinlock(&fsidlock);
+	sexp = slashrpc_export_get(exp);
+
+	if ((tuid = setfsuid(sexp->uid)) != myuid)
+                psc_fatal("invalid fsuid %u", tuid);
+	if (setfsuid(sexp->uid) != sexp->uid) {
+                psc_error("setfsuid %u", sexp->uid);
 		rc = -1;
-                goto done;
-        }
+		goto done;
+	}
+
+	if ((tgid = setfsgid(sexp->gid)) != mygid)
+                psc_fatal("invalid fsgid %u", tgid);
+	if (setfsgid(sexp->gid) != sexp->gid) {
+                psc_error("setfsgid %u", sexp->gid);
+		rc = -1;
+		goto done;
+	}
 
 	switch (req->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
@@ -192,7 +203,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 		rc = slmds_chmod(req, SYS_fchmod);
 		break;
 	case SRMT_CHOWN:
-		rc = slmds_chown(req);
+		rc = slmds_chown(req, SYS_chmod);
 		break;
 	case SRMT_CREATE:
 	case SRMT_OPEN:
@@ -241,15 +252,15 @@ slmds_svc_handler(struct pscrpc_request *req)
 	target_send_reply_msg (req, rc, 0);
 
  done:
-	if (setfsuid(myuid) == -1)
+	setfsuid(myuid);
+	if (setfsuid(myuid) != myuid)
                 psc_fatal("setfsuid %d", myuid);
-        if (setfsgid(mygid) == -1)
+	setfsgid(mygid);
+        if (setfsgid(mygid) != mygid)
                 psc_fatal("setfsgid %d", mygid);
-
+	freelock(&fsidlock);
 	RETURN(rc);
 }
-
-
 
 /**
  * slmds_init - start up the mds threads via pscrpc_thread_spawn()
