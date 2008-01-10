@@ -375,6 +375,11 @@ struct fuse_operations slashops = {
 int
 main(int argc, char *argv[])
 {
+	if (getenv("LNET_NETWORKS") == NULL)
+		errx(1, "please export LNET_NETWORKS");
+	if (getenv("SLASH_SERVER_NID") == NULL)
+		errx(1, "please export SLASH_SERVER_NID");
+
 	pfl_init();
 	if (rpc_svc_init())
 		psc_fatalx("rpc_svc_init");
