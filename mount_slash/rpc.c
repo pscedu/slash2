@@ -75,6 +75,13 @@ rpc_nbcallback(__unusedx struct pscrpc_request *req,
 return 0;
 }
 
+/*
+ * rpc_connect - attempt connection initiation with a peer.
+ * @server: NID of server peer.
+ * @ptl: portal ID to initiate over.
+ * @magic: agreed-upon connection message key.
+ * @version: I/O message protocol version.
+ */
 int
 rpc_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 {
@@ -101,9 +108,14 @@ rpc_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	return (0);
 }
 
+/*
+ * rpc_svc_create - create a client RPC service.
+ * @rqptl: request portal ID.
+ * @rpptl: reply portal ID.
+ * @fconn: connection function.
+ */
 struct rpcsvc *
-rpc_svc_create(__unusedx lnet_nid_t server, u32 rqptl, u32 rpptl,
-    rpcsvc_connect_t fconn)
+rpc_svc_create(u32 rqptl, u32 rpptl, rpcsvc_connect_t fconn)
 {
 	struct rpcsvc *svc;
 
@@ -129,6 +141,9 @@ rpc_svc_create(__unusedx lnet_nid_t server, u32 rqptl, u32 rpptl,
 	return (svc);
 }
 
+/*
+ * rpc_svc_init: initialize client RPC services.
+ */
 int
 rpc_svc_init(void)
 {
@@ -148,13 +163,13 @@ rpc_svc_init(void)
 		psc_fatalx("invalid SLASH_SERVER_NID: %s", snid);
 
 	/* Setup client MDS service */
-	rpcsvcs[RPCSVC_MDS] = rpc_svc_create(nid, RPCMDS_REQ_PORTAL,
+	rpcsvcs[RPCSVC_MDS] = rpc_svc_create(RPCMDS_REQ_PORTAL,
 	    RPCMDS_REP_PORTAL, rpc_connect);
 	if (rpc_connect(nid, RPCSVC_MDS, SMDS_MAGIC, SMDS_VERSION))
 		psc_error("rpc_mds_connect %s", snid);
 
 	/* Setup client I/O service */
-	rpcsvcs[RPCSVC_IO] = rpc_svc_create(nid, RPCIO_REQ_PORTAL,
+	rpcsvcs[RPCSVC_IO] = rpc_svc_create(RPCIO_REQ_PORTAL,
 	    RPCIO_REP_PORTAL, rpc_connect);
 	if (rpc_connect(nid, RPCSVC_IO, SIO_MAGIC, SIO_VERSION))
 		psc_error("rpc_io_connect %s", snid);
@@ -168,6 +183,13 @@ rpc_svc_init(void)
 
 /*
  * rpc_newreq - Create a new request and associate it with the import.
+ * @ptl: which portal to create the request on, either RPCSVC_MDS or IO.
+ * @version: version of communication protocol of channel.
+ * @op: operation ID of command to send.
+ * @reqlen: length of request buffer.
+ * @replen: length of expected reply buffer.
+ * @rqp: value-result of pointer to RPC request.
+ * @mqp: value-result of pointer to start of request buffer.
  */
 int
 rpc_newreq(int ptl, int version, int op, int reqlen, int replen,
@@ -192,6 +214,12 @@ rpc_newreq(int ptl, int version, int op, int reqlen, int replen,
 	return (0);
 }
 
+/*
+ * rpc_getrep - Wait for a reply of a "simple" command, i.e. an error code.
+ * @rq: the RPC request we sent.
+ * @replen: anticipated size of response.
+ * @mpp: value-result pointer where reply buffer start will be set.
+ */
 int
 rpc_getrep(struct pscrpc_request *rq, int replen, void *mpp)
 {
@@ -207,6 +235,12 @@ rpc_getrep(struct pscrpc_request *rq, int replen, void *mpp)
 	return (0);
 }
 
+/*
+ * rpc_sendmsg - Initiate I/O for "simple" command, the request format
+ *	of which many commands have in common.
+ * @op: operation ID.
+ * Notes: Subsequent arguments depend on specific operation.
+ */
 int
 rpc_sendmsg(int op, ...)
 {
@@ -367,4 +401,17 @@ rpc_sendmsg(int op, ...)
 	rc = rpc_getrep(rq, 0, &dummy);
 	pscrpc_req_finished(rq);
 	return (rc);
+}
+
+/*
+ * slashrpc_export_get - access our application-specific variables associated
+ *	with an LNET connection.
+ * @exp: RPC export of peer.
+ */
+struct slashrpc_export *
+slashrpc_export_get(struct pscrpc_export *exp)
+{
+	if (exp->exp_private == NULL)
+		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
+	return (exp->exp_private);
 }

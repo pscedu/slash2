@@ -21,6 +21,11 @@
 
 __static SPLAY_GENERATE(rctree, readdir_cache_ent, entry, rce_cmp);
 
+/*
+ * rce_cmp - compare to readdir cache entries.
+ * @a: one entry.
+ * @b: another.
+ */
 int
 rce_cmp(const void *a, const void *b)
 {
@@ -37,14 +42,6 @@ rce_cmp(const void *a, const void *b)
 	else if (r1->cfd > r2->cfd)
 		return (1);
 	return (0);
-}
-
-struct slashrpc_export *
-slashrpc_export_get(struct pscrpc_export *exp)
-{
-	if (exp->exp_private == NULL)
-		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
-	return (exp->exp_private);
 }
 
 void
