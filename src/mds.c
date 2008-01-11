@@ -100,7 +100,7 @@ slmds_access(struct pscrpc_request *req)
 }
 
 int
-slmds_chmod(struct pscrpc_request *req, int which_chmod)
+slmds_chmod(struct pscrpc_request *req)
 {
         int rc;
         struct slashrpc_chmod_req *body;
@@ -109,10 +109,6 @@ slmds_chmod(struct pscrpc_request *req, int which_chmod)
 	if (!body)
 		return (-EPROTO);
 
-//	if (which_chmod == SYS_fchmod)
-//		if (fid_makepath(cfd2fid(req, body->cfd), body->path))
-//			return (-EINVAL);
-
 	rc = chmod(body->path, body->mode);
 	if (rc)
 		return (-errno);
@@ -120,13 +116,28 @@ slmds_chmod(struct pscrpc_request *req, int which_chmod)
 	return (0);
 }
 
-/**
- *
- * Notes:  fchown of a directory cannot be supported in this version since
- *          there is no immutable namespace for directories.
- */
+#if 0
 int
-slmds_chown(struct pscrpc_request *req, int which_chown)
+slmds_fchmod(struct pscrpc_request *rq)
+{
+        struct slashrpc_fchmod_req *body;
+	char fn[PATH_MAX];
+        int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+	if (fid_makepath(cfd2fid(rq, body->cfd), fn))
+		return (-EINVAL);
+	rc = chmod(fn, body->mode);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+#endif
+
+int
+slmds_chown(struct pscrpc_request *req)
 {
         int rc;
         struct slashrpc_chown_req *body;
@@ -145,6 +156,31 @@ slmds_chown(struct pscrpc_request *req, int which_chown)
 
 	return (0);
 }
+
+/**
+ *
+ * Notes:  fchown of a directory cannot be supported in this version since
+ *          there is no immutable namespace for directories.
+ */
+#if 0
+int
+slmds_fchown(struct pscrpc_request *rq)
+{
+        struct slashrpc_fchown_req *body;
+	char fn[PATH_MAX];
+        int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+	if (fid_makepath(cfd2fid(rq, body->cfd), fn))
+		return (-EINVAL);
+	rc = chown(fn, body->uid, body->gid);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+#endif
 
 int
 slmds_create(struct pscrpc_request *req)
@@ -280,6 +316,54 @@ slmds_rename(struct pscrpc_request *rq)
 }
 
 int
+slmds_mkdir(struct pscrpc_request *rq)
+{
+	struct slashrpc_mkdir_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = mkdir(body->path, body->mode);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_rmdir(struct pscrpc_request *rq)
+{
+	struct slashrpc_rmdir_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = rmdir(body->path);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_utimes(struct pscrpc_request *rq)
+{
+	struct slashrpc_utimes_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = utimes(body->path, body->times);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
 slmds_svc_handler(struct pscrpc_request *req)
 {
 	struct slashrpc_export *sexp;
@@ -298,7 +382,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 
 	if ((tuid = setfsuid(sexp->uid)) != myuid)
                 psc_fatal("invalid fsuid %u", tuid);
-	if (setfsuid(sexp->uid) != sexp->uid) {
+	if (setfsuid(sexp->uid) != (int)sexp->uid) {
                 psc_error("setfsuid %u", sexp->uid);
 		rc = -1;
 		goto done;
@@ -306,7 +390,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 
 	if ((tgid = setfsgid(sexp->gid)) != mygid)
                 psc_fatal("invalid fsgid %u", tgid);
-	if (setfsgid(sexp->gid) != sexp->gid) {
+	if (setfsgid(sexp->gid) != (int)sexp->gid) {
                 psc_error("setfsgid %u", sexp->gid);
 		rc = -1;
 		goto done;
@@ -320,14 +404,17 @@ slmds_svc_handler(struct pscrpc_request *req)
 		rc = slmds_access(req);
 		break;
 	case SRMT_CHMOD:
-		rc = slmds_chmod(req, SYS_chmod);
+		rc = slmds_chmod(req);
 		break;
 //	case SRMT_FCHMOD:
-//		rc = slmds_chmod(req, SYS_fchmod);
+//		rc = slmds_fchmod(req);
 //		break;
 	case SRMT_CHOWN:
-		rc = slmds_chown(req, SYS_chown);
+		rc = slmds_chown(req);
 		break;
+//	case SRMT_FCHOWN:
+//		rc = slmds_fchown(req);
+//		break;
 	case SRMT_CREATE:
 		rc = slmds_create(req);
 		break;
@@ -378,10 +465,10 @@ slmds_svc_handler(struct pscrpc_request *req)
 
  done:
 	setfsuid(myuid);
-	if (setfsuid(myuid) != myuid)
+	if (setfsuid(myuid) != (int)myuid)
                 psc_fatal("setfsuid %d", myuid);
 	setfsgid(mygid);
-        if (setfsgid(mygid) != mygid)
+        if (setfsgid(mygid) != (int)mygid)
                 psc_fatal("setfsgid %d", mygid);
 	freelock(&fsidlock);
 	RETURN(rc);
@@ -405,7 +492,7 @@ slmds_init(void)
 	svh->svh_nthreads   = MDS_NTHREADS;
 	svh->svh_handler    = slmds_svc_handler;
 
-	strncpy(svh->svh_svc_name, MDS_SVCNAME, RPC_SVC_NAMEMAX);
+	strncpy(svh->svh_svc_name, MDS_SVCNAME, PSCRPC_SVCNAME_MAX);
 
 	pscrpc_thread_spawn(svh);
 }
