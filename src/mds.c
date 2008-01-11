@@ -27,6 +27,12 @@
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
+/*
+ * cfd2fid - look up a client file descriptor in the export cfdtree
+ *	for the associated file ID.
+ * @rq: RPC request containing RPC export peer info.
+ * @cfd: client file descriptor.
+ */
 slash_fid_t *
 cfd2fid(struct pscrpc_request *rq, u64 cfd)
 {
@@ -103,9 +109,9 @@ slmds_chmod(struct pscrpc_request *req, int which_chmod)
 	if (!body)
 		return (-EPROTO);
 
-	if (which_chmod == SYS_fchmod)
-		if (fid_makepath(cfd2fid(req, body->cfd), body->path))
-			return (-EINVAL);
+//	if (which_chmod == SYS_fchmod)
+//		if (fid_makepath(cfd2fid(req, body->cfd), body->path))
+//			return (-EINVAL);
 
 	rc = chmod(body->path, body->mode);
 	if (rc)
@@ -129,11 +135,28 @@ slmds_chown(struct pscrpc_request *req, int which_chown)
 	if (!body)
 		return (-EPROTO);
 
-	if (which_chown == SYS_fchown)
-		if (fid_makepath(cfd2fid(req, body->cfd), body->path))
-			return (-EINVAL);
+//	if (which_chown == SYS_fchown)
+//		if (fid_makepath(cfd2fid(req, body->cfd), body->path))
+//			return (-EINVAL);
 
 	rc = chown(body->path, body->uid, body->gid);
+	if (rc)
+		return (-errno);
+
+	return (0);
+}
+
+int
+slmds_create(struct pscrpc_request *req)
+{
+	int rc;
+	struct slashrpc_create_req *body;
+
+	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = creat(body->path, body->mode);
 	if (rc)
 		return (-errno);
 
@@ -154,6 +177,105 @@ slmds_open(struct pscrpc_request *req)
 	if (rc)
 		return (-errno);
 
+	return (0);
+}
+
+int
+slmds_link(struct pscrpc_request *rq)
+{
+	struct slashrpc_link_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = link(body->from, body->to);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_symlink(struct pscrpc_request *rq)
+{
+	struct slashrpc_symlink_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = symlink(body->from, body->to);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_truncate(struct pscrpc_request *rq)
+{
+	struct slashrpc_truncate_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = truncate(body->path, body->size);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_ftruncate(struct pscrpc_request *rq)
+{
+	struct slashrpc_ftruncate_req *body;
+	char fn[PATH_MAX];
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	if (fid_makepath(cfd2fid(rq, body->cfd), fn))
+		return (-EINVAL);
+	rc = truncate(fn, body->size);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_unlink(struct pscrpc_request *rq)
+{
+	struct slashrpc_unlink_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = unlink(body->path);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_rename(struct pscrpc_request *rq)
+{
+	struct slashrpc_rename_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = rename(body->from, body->to);
+	if (rc)
+		return (-errno);
 	return (0);
 }
 
@@ -200,13 +322,15 @@ slmds_svc_handler(struct pscrpc_request *req)
 	case SRMT_CHMOD:
 		rc = slmds_chmod(req, SYS_chmod);
 		break;
-	case SRMT_FCHMOD:
-		rc = slmds_chmod(req, SYS_fchmod);
-		break;
+//	case SRMT_FCHMOD:
+//		rc = slmds_chmod(req, SYS_fchmod);
+//		break;
 	case SRMT_CHOWN:
-		rc = slmds_chown(req, SYS_chmod);
+		rc = slmds_chown(req, SYS_chown);
 		break;
 	case SRMT_CREATE:
+		rc = slmds_create(req);
+		break;
 	case SRMT_OPEN:
 		rc = slmds_open(req);
 		break;
@@ -232,10 +356,10 @@ slmds_svc_handler(struct pscrpc_request *req)
 		rc = slmds_symlink(req);
 		break;
 	case SRMT_TRUNCATE:
-		rc = slmds_truncate(req, SYS_truncate);
+		rc = slmds_truncate(req);
 		break;
 	case SRMT_FTRUNCATE:
-		rc = slmds_truncate(req, SYS_ftruncate);
+		rc = slmds_ftruncate(req);
 		break;
 	case SRMT_UNLINK:
 		rc = slmds_unlink(req);
@@ -269,7 +393,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 void
 slmds_init(void)
 {
-	pscrpc_svc_handle_t *svh = PSCALLOC(sizeof(*svc));
+	pscrpc_svc_handle_t *svh = PSCALLOC(sizeof(*svh));
 
 	svh->svh_nbufs      = MDS_NBUFS;
 	svh->svh_bufsz      = MDS_BUFSZ;
@@ -281,7 +405,7 @@ slmds_init(void)
 	svh->svh_nthreads   = MDS_NTHREADS;
 	svh->svh_handler    = slmds_svc_handler;
 
-	strncpy(svh->svh_svn_name, MDS_SVCNAME, RPC_SVC_NAMEMAX);
+	strncpy(svh->svh_svc_name, MDS_SVCNAME, RPC_SVC_NAMEMAX);
 
 	pscrpc_thread_spawn(svh);
 }
