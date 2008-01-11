@@ -1,8 +1,14 @@
 /* $Id$ */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "psc_util/cdefs.h"
+#include "psc_util/alloc.h"
+#include "psc_util/thread.h"
+
+#include "slash.h"
 
 const char *progname;
 
@@ -24,15 +30,17 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
+	exit(0);
 }
 
 void
 spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 {
+	extern int tcpnal_instances;
 	struct psc_thread *pt;
 
 	pt = PSCALLOC(sizeof(*pt));
-	pscthr_init(pt, SLASH_LNDTHR, startf, tcpnal_instances - 1);
+	pscthr_init(pt, SLTHRT_LND, startf, tcpnal_instances - 1);
 	*t = pt->pscthr_pthread;
 	pt->pscthr_private = arg;
 }

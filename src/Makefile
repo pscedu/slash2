@@ -3,12 +3,14 @@
 include Makefile.path
 
 PROG=		slashd
-SRCS+=		fidlink.c
+#SRCS+=		fidlink.c
 SRCS+=		journal.c
 SRCS+=		lconf.l
-SRCS+=		metadir.c
-SRCS+=		yconf.y
+SRCS+=		main.c
+SRCS+=		mds.c
+#SRCS+=		metadir.c
 SRCS+=		slash_appthread.c
+SRCS+=		yconf.y
 INCLUDES+=	-I${LNET_BASE}/include
 LDFLAGS+=	${THREAD_LIBS} ${LNET_LIBS} ${PFL_LIBS}
 DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
