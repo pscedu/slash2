@@ -6,6 +6,19 @@
 #include "psc_types.h"
 #include "psc_util/cdefs.h"
 
+/* RPC portals. */
+#define RPCMDS_REQ_PORTAL	20
+#define RPCMDS_REP_PORTAL	21
+#define RPCIO_REQ_PORTAL	22
+#define RPCIO_REP_PORTAL	23
+#define RPCIO_BULK_PORTAL	24
+
+#define SMDS_VERSION		1
+#define SMDS_MAGIC		0xaabbccddeeff0011ULL
+
+#define SIO_VERSION		1
+#define SIO_MAGIC		0xaabbccddeeff0011ULL
+
 /* Asynchronous I/O operations. */
 #define SLASH_IOP_READDIR	0
 
@@ -38,6 +51,7 @@
 #define SRMT_UNLINK	25
 #define SRMT_UTIMES	26
 #define SRMT_WRITE	27
+#define SNRMT		28
 
 struct slashrpc_connect_req {
 	u64	magic;
