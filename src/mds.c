@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/fsuid.h>
+#include <sys/vfs.h>
 
 #include <unistd.h>
 #include <errno.h>
@@ -365,6 +366,7 @@ slmds_opendir(struct pscrpc_request *rq)
 		return (rc);
 	}
 	mp = psc_msg_buf(rq->rq_repmsg, 0, size);
+	psc_assert(mp);
 	if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
 		return (-errno);
 	return (0);
@@ -396,6 +398,103 @@ slmds_readlink(struct pscrpc_request *rq)
 	rc = readlink(mq->path, mp->buf, mq->size);
 	if (rc)
 		return (-errno);
+	return (0);
+}
+
+int
+slmds_release(struct pscrpc_request *rq)
+{
+	struct slashrpc_release_req *body;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+	if (cfdfree(rq->rq_export, body->cfd))
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_releasedir(struct pscrpc_request *rq)
+{
+	struct slashrpc_releasedir_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = cfdfree(rq->rq_export, body->cfd);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_rename(struct pscrpc_request *rq)
+{
+	struct slashrpc_rename_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = rename(body->from, body->to);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_rmdir(struct pscrpc_request *rq)
+{
+	struct slashrpc_rmdir_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = rmdir(body->path);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_statfs(struct pscrpc_request *rq)
+{
+	struct slashrpc_statfs_req *mq;
+	struct slashrpc_statfs_rep *mp;
+	struct statfs sfb;
+	int rc, size;
+
+	mp = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mp));
+	if (!mp)
+		return (-EPROTO);
+
+	size = sizeof(*mp);
+	rc = psc_pack_reply(rq, 1, &size, NULL);
+	if (rc) {
+		psc_assert(rc == -ENOMEM);
+		psc_error("psc_pack_reply failed");
+		return (rc);
+	}
+	mp = psc_msg_buf(rq->rq_repmsg, 0, size);
+	psc_assert(mp);
+
+	rc = statfs(mq->path, &sfb);
+	if (rc)
+		return (-errno);
+	mp->f_type    = sfb.f_type;
+	mp->f_bsize   = sfb.f_bsize;
+	mp->f_blocks  = sfb.f_blocks;
+	mp->f_bfree   = sfb.f_bfree;
+	mp->f_bavail  = sfb.f_bavail;
+	mp->f_files   = sfb.f_files;
+	mp->f_ffree   = sfb.f_ffree;
+	mp->f_namelen = sfb.f_namelen;
 	return (0);
 }
 
@@ -442,54 +541,6 @@ slmds_unlink(struct pscrpc_request *rq)
 		return (-EPROTO);
 
 	rc = unlink(body->path);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_rename(struct pscrpc_request *rq)
-{
-	struct slashrpc_rename_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-	if (!body)
-		return (-EPROTO);
-
-	rc = rename(body->from, body->to);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_releasedir(struct pscrpc_request *rq)
-{
-	struct slashrpc_releasedir_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-	if (!body)
-		return (-EPROTO);
-
-	rc = cfdfree(rq->rq_export, body->cfd);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_rmdir(struct pscrpc_request *rq)
-{
-	struct slashrpc_rmdir_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-	if (!body)
-		return (-EPROTO);
-
-	rc = rmdir(body->path);
 	if (rc)
 		return (-errno);
 	return (0);
