@@ -13,17 +13,27 @@
 #include "slconfig.h"
 #include "pfl.h"
 #include "psc_util/log.h"
+#include "psc_util/cdefs.h"
 #include "psc_rpc/rpc.h"
 
+char *progname;
 char *f;
 int serverNode;
 
 int getOptions(int argc,  char *argv[]);
 
+__dead void
+usage(void)
+{
+	fprintf(stderr, "usage: %s [-S] [-l level] [-i file]\n", progname);
+	exit(1);
+}
+
 int main(int argc,  char *argv[])
 {
 	sl_resm_t *resm;
 
+	progname = argv[0];
 	psc_setloglevel(PLL_NOTICE);
 	getOptions(argc, argv);
 	slashGetConfig(f);
@@ -56,7 +66,7 @@ int getOptions(int argc,  char *argv[])
 			break;
 
 		default :
-			fprintf(stderr, "what?\n");
+			usage();
 		}
 
 	return 0;
