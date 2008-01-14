@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "slconfig.h"
+#include "pfl.h"
 #include "psc_util/log.h"
 #include "psc_rpc/rpc.h"
 
@@ -29,7 +30,7 @@ int main(int argc,  char *argv[])
 	pfl_init(19);
 	libsl_init(serverNode);
 	exit(0);
-} 
+}
 
 int getOptions(int argc,  char *argv[])
 {
@@ -45,11 +46,11 @@ int getOptions(int argc,  char *argv[])
 		case 'l':
 			psc_setloglevel(atoi(optarg));
                         break;
-			
+
 		case 'i':
 			f = optarg;
 			break;
-			
+
 		case 'S':
 			serverNode = 1;
 			break;
@@ -59,4 +60,4 @@ int getOptions(int argc,  char *argv[])
 		}
 
 	return 0;
-} 
+}
