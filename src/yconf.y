@@ -2,19 +2,19 @@
 
 %{
 #define YYSTYPE char *
-	
+
+#include <ctype.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdarg.h>
+#include <stddef.h> /* offsetof() */
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <stddef.h> /* offsetof() */
-#include <ctype.h>
 
 #include "libcfs/kp30.h"
 
-#include "psc_types.h"	
+#include "psc_types.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/log.h"
@@ -47,7 +47,7 @@ enum sym_structure_types {
 #define BOOL_MAX 3
 
 typedef u32 (*sym_handler)(char *);
- 
+
 struct symtable {
 	char *name;
 	enum  sym_types sym_type;
@@ -80,7 +80,7 @@ global_net_handler(char *net);
 	 TABENT_SITE("site_desc", SL_TYPE_STRP, DESC_MAX,   site_desc,   NULL),
 	 TABENT_RES ("desc",      SL_TYPE_STRP, DESC_MAX,   res_desc,    NULL),
 	 TABENT_RES ("type",      SL_TYPE_INT,  INTSTR_MAX, res_type,    libsl_str2restype),
-	 TABENT_RES ("id",        SL_TYPE_INT,  INTSTR_MAX, res_id,      NULL),  
+	 TABENT_RES ("id",        SL_TYPE_INT,  INTSTR_MAX, res_id,      NULL),
 	 TABENT_RES ("mds",       SL_TYPE_BOOL, BOOL_MAX,   res_mds,     NULL),
 	 { NULL, 0, 0, 0, 0, 0, NULL }
 };
@@ -146,26 +146,26 @@ int cfgMode = SL_STRUCT_GLOBAL;
 config         : globals site_profiles
 {
 	sl_site_t     *s=NULL;
-	sl_resource_t *r=NULL;	
+	sl_resource_t *r=NULL;
 	/*
 	 * Config has been loaded, iterate through the sites'
 	 *  peer lists and resolve the names to numerical id's.
-	 */	
+	 */
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_list) {
 		psclist_for_each_entry(r, &s->site_resources, res_list) {
 			u32 i;
 
-			r->res_peers = PSCALLOC(sizeof(sl_ios_id_t) * 
+			r->res_peers = PSCALLOC(sizeof(sl_ios_id_t) *
 						r->res_npeers);
 
-			for (i=0; i < r->res_npeers; i++) { 
+			for (i=0; i < r->res_npeers; i++) {
 				r->res_peers[i] = libsl_str2id(r->res_peertmp[i]);
 				psc_assert(r->res_peers[i] != IOS_ID_ANY);
 				free(r->res_peertmp[i]);
 			}
 			free(r->res_peertmp);
 			/*
-			 * Associate nids with their respective resources, 
+			 * Associate nids with their respective resources,
 			 *   and add the nids to the global hash table.
 			 */
 			for (i=0; i < r->res_nnids; i++)
@@ -184,7 +184,7 @@ site_profiles  : site_profile            |
 
 site_profile   : site_profile_start site_defs SUBSECT_END
 {
-	psclist_add(&currentSite->site_list, 
+	psclist_add(&currentSite->site_list,
 		    &currentConf->gconf_sites);
 	currentSite = PSCALLOC(sizeof(sl_site_t));
 	INIT_SITE(currentSite);
@@ -207,10 +207,10 @@ site_resources : site_resource              |
 
 site_resource  : site_resource_start resource_def SUBSECT_END
 {
-	currentRes->res_id = sl_global_id_build(currentSite->site_id, 
-						currentRes->res_id, 
+	currentRes->res_id = sl_global_id_build(currentSite->site_id,
+						currentRes->res_id,
 						currentRes->res_mds);
-	psclist_add(&currentRes->res_list, 
+	psclist_add(&currentRes->res_list,
 		    &currentSite->site_resources);
 	currentRes = PSCALLOC(sizeof(sl_resource_t));
 	INIT_RES(currentRes);
@@ -219,8 +219,8 @@ site_resource  : site_resource_start resource_def SUBSECT_END
 site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
 {
 	cfgMode = SL_STRUCT_RES;
-	if (snprintf(currentRes->res_name, RES_NAME_MAX, "%s%s", 
-		     $2, currentSite->site_name) > RES_NAME_MAX) 
+	if (snprintf(currentRes->res_name, RES_NAME_MAX, "%s%s",
+		     $2, currentSite->site_name) > RES_NAME_MAX)
 		psc_fatal("Resource name too long");
 	psc_trace("ResName %s", currentRes->res_name);
 };
@@ -241,7 +241,7 @@ peers          : peer                              |
 peer           : RESOURCE_NAME
 {
 	char **tmp;
-	tmp = realloc(currentRes->res_peertmp, 
+	tmp = realloc(currentRes->res_peertmp,
 		      (sizeof(char **) * (currentRes->res_npeers++)));
 	psc_assert(tmp);
 	tmp[(currentRes->res_npeers)-1] = strdup($1);
@@ -263,14 +263,14 @@ interface      : IPADDR
 	i = realloc(currentRes->res_nids,
 		    (sizeof(lnet_nid_t) * (currentRes->res_nnids + 1)));
         psc_assert(i);
-	
+
 	if ((snprintf(nidstr, 32, "%s@%s", $1, currentConf->gconf_net))
 	    > MAXNET)
 		psc_fatalx("Interface to NID failed, ifname too long %s", $1);
-	
+
         i[currentRes->res_nnids] = libcfs_str2nid(nidstr);
 
-	psc_info("Got nidstr ;%s; nid2str ;%s;", 
+	psc_info("Got nidstr ;%s; nid2str ;%s;",
 		 nidstr, libcfs_nid2str(i[currentRes->res_nnids]));
 
 	currentRes->res_nnids++;
@@ -367,7 +367,7 @@ quoteds_stmt : NAME EQ QUOTEDS END
 {
 	psc_notify("Found Quoted String Statement: Tok '%s' Val '%s'",
 		   $1, $3);
-	
+
 	store_tok_val($1, $3);
 	free($1);
 	free($3);
@@ -379,7 +379,7 @@ lnettcp_stmt : NAME EQ LNETTCP END
 {
 	psc_notify("Found Lnettcp String Statement: Tok '%s' Val '%s'",
 		   $1, $3);
-	
+
 	store_tok_val($1, $3);
 	free($1);
 	free($3);
@@ -404,7 +404,7 @@ get_symbol(const char *name)
         for (e = sym_table; e != NULL && e->name != NULL ; e++)
                 if (e->name && !strcmp(e->name, name))
                         break;
-	
+
         if (e == NULL || e->name == NULL) {
                 psc_warnx("Symbol '%s' was not found", name);
 		return NULL;
@@ -422,16 +422,16 @@ store_tok_val(const char *tok, char *val)
 
 	e = get_symbol(tok);
 	if (!e)
-		psc_fatalx("'%s' is an unknown symbol in the current context", 
+		psc_fatalx("'%s' is an unknown symbol in the current context",
 			   tok);
 	psc_trace("%p %d", e, e->sym_type );
 	psc_assert(e->sym_type == SL_VARIABLE ||
 		   e->sym_type == SL_FLAG);
 
 	psc_notify("sym entry %p, name %s, param_type %d",
-		   e, e->name, e->sym_param_type);	
+		   e, e->name, e->sym_param_type);
 	/*
-	 * Access the correct structure based on the 
+	 * Access the correct structure based on the
 	 *  type stored in the symtab entry.
 	 */
 	switch (e->sym_struct_type) {
@@ -461,7 +461,7 @@ store_tok_val(const char *tok, char *val)
 		break;
 
 	case SL_TYPE_STRP:
-		*(int *)ptr = strdup(val);
+		*(char **)ptr = strdup(val);
 		psc_trace("SL_TYPE_STRP Tok '%s' set to '%s' %p",
 			  e->name, (char *)ptr, ptr);
 		break;
@@ -566,7 +566,7 @@ store_tok_val(const char *tok, char *val)
 int run_yacc(const char *config_file)
 {
 	extern FILE *yyin;
-	
+
 	errors = 0;
 
 	yyin = fopen(config_file, "r");
@@ -586,7 +586,7 @@ int run_yacc(const char *config_file)
 	yyparse();
 
 	fclose(yyin);
-	
+
 	if (errors)
 		psc_fatalx("%d error(s) encountered", errors);
 
