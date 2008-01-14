@@ -388,6 +388,22 @@ slmds_opendir(struct pscrpc_request *rq)
 }
 
 int
+slmds_releasedir(struct pscrpc_request *rq)
+{
+	struct slashrpc_releasedir_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = cfdfree(rq->rq_export, body->cfd);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
 slmds_rmdir(struct pscrpc_request *rq)
 {
 	struct slashrpc_rmdir_req *body;
@@ -589,6 +605,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 	case SRMT_RELEASE:
 		break;
 	case SRMT_RELEASEDIR:
+		rc = slmds_releasedir(req);
 		break;
 	case SRMT_RENAME:
 		rc = slmds_rename(req);

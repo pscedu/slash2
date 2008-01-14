@@ -78,3 +78,32 @@ cfd2fid(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 	freelock(&exp->exp_lock);
 	return (rc);
 }
+
+int
+cfdfree(struct pscrpc_export *exp, u64 cfd)
+{
+	struct slashrpc_export *sexp;
+	struct cfdent *c, q;
+	int rc;
+
+	q.cfd = cfd;
+
+	rc = 0;
+	spinlock(&exp->exp_lock);
+	sexp = slashrpc_export_get(exp);
+	c = SPLAY_FIND(cfdtree, &sexp->cfdtree, &q);
+	if (c == NULL) {
+		errno = ENOENT;
+		rc = -1;
+		goto done;
+	}
+	if (SPLAY_REMOVE(cfdtree, &sexp->cfdtree, c))
+		free(c);
+	else {
+		errno = ENOENT;
+		rc = -1;
+	}
+ done:
+	freelock(&exp->exp_lock);
+	return (rc);
+}

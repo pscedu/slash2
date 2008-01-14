@@ -253,6 +253,7 @@ rpc_sendmsg(int op, ...)
 		struct slashrpc_link_req	*m_link;
 		struct slashrpc_mkdir_req	*m_mkdir;
 		struct slashrpc_release_req	*m_release;
+		struct slashrpc_releasedir_req	*m_releasedir;
 		struct slashrpc_rename_req	*m_rename;
 		struct slashrpc_rmdir_req	*m_rmdir;
 		struct slashrpc_symlink_req	*m_symlink;
@@ -337,6 +338,13 @@ rpc_sendmsg(int op, ...)
 		if (rc)
 			return (rc);
 		u.m_release->cfd = va_arg(ap, u64);
+		break;
+	case SRMT_RELEASEDIR:
+		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
+		    sizeof(*u.m_releasedir), 0, &rq, &u.m);
+		if (rc)
+			return (rc);
+		u.m_releasedir->cfd = va_arg(ap, u64);
 		break;
 	case SRMT_RENAME:
 		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,

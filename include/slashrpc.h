@@ -209,6 +209,10 @@ struct slashrpc_release_req {
 	u64	cfd;
 };
 
+struct slashrpc_releasedir_req {
+	u64	cfd;
+};
+
 struct slashrpc_rename_req {
 	char	from[PATH_MAX];
 	char	to[PATH_MAX];
