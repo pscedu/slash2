@@ -267,6 +267,8 @@ struct slashrpc_generic_rep {
 	u32 rc;
 };
 
+void slashrpc_export_destroy(void *);
+
 /*
  * slashrpc_export_get - access our application-specific variables associated
  *	with an LNET connection.
@@ -278,6 +280,7 @@ slashrpc_export_get(struct pscrpc_export *exp)
 	spinlock(&exp->exp_lock);
 	if (exp->exp_private == NULL)
 		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
+	exp->exp_destroyf = slashrpc_export_destroy;
 	freelock(&exp->exp_lock);
 	return (exp->exp_private);
 }
