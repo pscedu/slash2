@@ -17,7 +17,7 @@
 #include "psc_rpc/rpc.h"
 
 char *progname;
-char *f;
+char *f = "../../src/config/example.conf";
 int serverNode;
 
 int getOptions(int argc,  char *argv[]);
