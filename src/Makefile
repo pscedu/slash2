@@ -3,7 +3,8 @@
 include Makefile.path
 
 PROG=		slashd
-#SRCS+=		fidlink.c
+SRCS+=		cfd.c
+SRCS+=		fidlink.c
 #SRCS+=		journal.c
 SRCS+=		lconf.l
 SRCS+=		main.c

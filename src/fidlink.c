@@ -102,3 +102,15 @@ fid_link(const slash_fid_t *fid, const char *fnam)
 	}
 	return rc;
 }
+
+int
+fid_get(slash_fid_t *fidp, const char *path)
+{
+	struct stat stb;
+
+	if (stat(path, &stb) == -1)
+		return (-1);
+	fidp->fid_inum = stb.st_ino;
+	fidp->fid_gen = 0;
+	return (0);
+}

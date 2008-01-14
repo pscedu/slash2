@@ -31,5 +31,6 @@ typedef struct slash_fid {
 
 int  fid_makepath(const slash_fid_t *, char *);
 int  fid_link(const slash_fid_t *, const char *);
+int  fid_get(slash_fid_t *, const char *);
 
 #endif

@@ -12,6 +12,7 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/service.h"
 
+#include "cfd.h"
 #include "rpc.h"
 #include "slashrpc.h"
 #include "slash.h"
@@ -26,18 +27,6 @@
 #define MDS_SVCNAME   "slash_mds_svc"
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
-
-/*
- * cfd2fid - look up a client file descriptor in the export cfdtree
- *	for the associated file ID.
- * @rq: RPC request containing RPC export peer info.
- * @cfd: client file descriptor.
- */
-slash_fid_t *
-cfd2fid(struct pscrpc_request *rq, u64 cfd)
-{
-	return (0);
-}
 
 int
 slmds_connect(struct pscrpc_request *req)
@@ -122,13 +111,14 @@ slmds_fchmod(struct pscrpc_request *rq)
 {
         struct slashrpc_fchmod_req *body;
 	char fn[PATH_MAX];
+	slash_fid_t fid;
         int rc;
 
 	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
 		return (-EPROTO);
-	if (fid_makepath(cfd2fid(rq, body->cfd), fn))
-		return (-EINVAL);
+	if (cfd2fid(&fid, rq->rq_export, body->cfd) || fid_makepath(&fid, fn))
+		return (-errno);
 	rc = chmod(fn, body->mode);
 	if (rc)
 		return (-errno);
@@ -139,16 +129,12 @@ slmds_fchmod(struct pscrpc_request *rq)
 int
 slmds_chown(struct pscrpc_request *req)
 {
-        int rc;
         struct slashrpc_chown_req *body;
+        int rc;
 
 	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
 		return (-EPROTO);
-
-//	if (which_chown == SYS_fchown)
-//		if (fid_makepath(cfd2fid(req, body->cfd), body->path))
-//			return (-EINVAL);
 
 	rc = chown(body->path, body->uid, body->gid);
 	if (rc)
@@ -168,13 +154,14 @@ slmds_fchown(struct pscrpc_request *rq)
 {
         struct slashrpc_fchown_req *body;
 	char fn[PATH_MAX];
+	slash_fid_t fid;
         int rc;
 
 	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
 		return (-EPROTO);
-	if (fid_makepath(cfd2fid(rq, body->cfd), fn))
-		return (-EINVAL);
+	if (cfd2fid(&fid, rq->rq_export, body->cfd) || fid_makepath(&fid, fn))
+		return (-errno);
 	rc = chown(fn, body->uid, body->gid);
 	if (rc)
 		return (-errno);
@@ -298,14 +285,15 @@ slmds_ftruncate(struct pscrpc_request *rq)
 {
 	struct slashrpc_ftruncate_req *body;
 	char fn[PATH_MAX];
+	slash_fid_t fid;
 	int rc;
 
 	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
         if (!body)
                 return (-EPROTO);
 
-	if (fid_makepath(cfd2fid(rq, body->cfd), fn))
-		return (-EINVAL);
+	if (cfd2fid(&fid, rq->rq_export, body->cfd) || fid_makepath(&fid, fn))
+		return (-errno);
 	rc = truncate(fn, body->size);
 	if (rc)
 		return (-errno);
@@ -379,15 +367,22 @@ slmds_mknod(struct pscrpc_request *rq)
 int
 slmds_opendir(struct pscrpc_request *rq)
 {
-	struct slashrpc_opendir_req *body;
-	int rc;
+	struct slashrpc_opendir_req *mq;
+	struct slashrpc_opendir_rep *mp;
+	int rc, size;
 
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
+	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+        if (!mq)
                 return (-EPROTO);
-
-	rc = rmdir(body->path);
-	if (rc)
+	size = sizeof(*mp);
+        rc = psc_pack_reply(rq, 1, &size, NULL);
+        if (rc) {
+                psc_assert(rc == -ENOMEM);
+                psc_error("psc_pack_reply failed");
+		return (rc);
+        }
+        mp = psc_msg_buf(rq->rq_repmsg, 0, size);
+	if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
 		return (-errno);
 	return (0);
 }
@@ -466,6 +461,7 @@ slmds_fgetattr(struct pscrpc_request *rq)
 	struct slashrpc_fgetattr_req *mq;
 	struct slashrpc_fgetattr_rep *mp;
 	char fn[PATH_MAX];
+	slash_fid_t fid;
 	struct stat stb;
 	int rc, size;
 
@@ -473,8 +469,8 @@ slmds_fgetattr(struct pscrpc_request *rq)
         if (!mq)
                 return (-EPROTO);
 
-	if (fid_makepath(cfd2fid(rq, mq->cfd), fn))
-		return (-EINVAL);
+	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn))
+		return (-errno);
 	rc = stat(fn, &stb);
 	if (rc)
 		return (-errno);
