@@ -9,8 +9,11 @@
 #include "psc_util/thread.h"
 
 #include "slash.h"
+#include "slconfig.h"
 
 #define SLASH_THRTBL_SIZE 19
+//#define _PATH_SLASHCONF "/etc/slash.conf"
+#define _PATH_SLASHCONF "config/example.conf"
 
 const char *progname;
 
@@ -24,20 +27,26 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	const char *cfn;
 	int c;
 
+	progname = argv[0];
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
 	if (getenv("TCPLND_SERVER") == NULL)
 		psc_fatalx("please export TCPLND_SERVER");
 
-	progname = argv[0];
-	while ((c = getopt(argc, argv, "")) != -1)
+	cfn = _PATH_SLASHCONF;
+	while ((c = getopt(argc, argv, "f:")) != -1)
 		switch (c) {
+		case 'f':
+			cfn = optarg;
+			break;
 		default:
 			usage();
 		}
 	pfl_init(SLASH_THRTBL_SIZE);
+	slashGetConfig(cfn);
 	slmds_init();
 	exit(0);
 }
