@@ -127,7 +127,7 @@ struct slashrpc_mkdir_req {
 struct slashrpc_mknod_req {
 	char	path[PATH_MAX];
 	u32	mode;
-	u32	dev_t;
+	u32	dev;
 };
 
 struct slashrpc_open_req {

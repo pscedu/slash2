@@ -249,6 +249,35 @@ slmds_symlink(struct pscrpc_request *rq)
 }
 
 int
+slmds_readlink(struct pscrpc_request *rq)
+{
+	struct slashrpc_readlink_req *mq;
+	struct slashrpc_readlink_rep *mp;
+	int rc;
+
+	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+        if (!mq)
+                return (-EPROTO);
+        if (mq->size > PATH_MAX || mq->size == 0)
+                return (-EINVAL);
+
+        rc = psc_pack_reply(rq, 1, &mq->size, NULL);
+        if (rc) {
+                psc_assert(rc == -ENOMEM);
+                psc_error("psc_pack_reply failed");
+		return (rc);
+        }
+        mp = psc_msg_buf(rq->rq_repmsg, 0, mq->size);
+        if (!mp)
+                return (-EPROTO);
+
+	rc = readlink(mq->path, mp->buf, mq->size);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
 slmds_truncate(struct pscrpc_request *rq)
 {
 	struct slashrpc_truncate_req *body;
@@ -326,6 +355,38 @@ slmds_mkdir(struct pscrpc_request *rq)
                 return (-EPROTO);
 
 	rc = mkdir(body->path, body->mode);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_mknod(struct pscrpc_request *rq)
+{
+	struct slashrpc_mknod_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = mknod(body->path, body->mode, body->dev);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_opendir(struct pscrpc_request *rq)
+{
+	struct slashrpc_opendir_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+        if (!body)
+                return (-EPROTO);
+
+	rc = rmdir(body->path);
 	if (rc)
 		return (-errno);
 	return (0);
@@ -487,7 +548,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 	case SRMT_CREATE:
 		rc = slmds_create(req);
 		break;
-	case SRMT_DESTROY:
+	case SRMT_DESTROY: /* client has unmounted */
 		break;
 	case SRMT_GETATTR:
 		rc = slmds_getattr(req);
@@ -513,17 +574,21 @@ slmds_svc_handler(struct pscrpc_request *req)
 		rc = slmds_mkdir(req);
 		break;
 	case SRMT_MKNOD:
+		rc = slmds_mknod(req);
 		break;
 	case SRMT_OPEN:
 		rc = slmds_open(req);
 		break;
 	case SRMT_OPENDIR:
+		rc = slmds_opendir(req);
 		break;
 	case SRMT_READ:
 		break;
 	case SRMT_READDIR:
+		rc = slmds_readdir(req);
 		break;
 	case SRMT_READLINK:
+		rc = slmds_readlink(req);
 		break;
 	case SRMT_RELEASE:
 		break;
