@@ -8,13 +8,13 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "rpc.h"
-#include "slashrpc.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/service.h"
-#include "psc_util/slash_appthread.h"
 
+#include "rpc.h"
+#include "slashrpc.h"
+#include "slash.h"
 #include "fid.h"
 
 #define MDS_NTHREADS  8
@@ -488,7 +488,7 @@ slmds_init(void)
 	svh->svh_repsz      = MDS_REPSZ;
 	svh->svh_req_portal = MDS_REQPORTAL;
 	svh->svh_rep_portal = MDS_REPPORTAL;
-	svh->svh_type       = SLASH_MDSTHR;
+	svh->svh_type       = SLTHRT_RPCMDS;
 	svh->svh_nthreads   = MDS_NTHREADS;
 	svh->svh_handler    = slmds_svc_handler;
 
