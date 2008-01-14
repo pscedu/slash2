@@ -481,20 +481,13 @@ slmds_svc_handler(struct pscrpc_request *req)
 	case SRMT_CHMOD:
 		rc = slmds_chmod(req);
 		break;
-//	case SRMT_FCHMOD:
-//		rc = slmds_fchmod(req);
-//		break;
 	case SRMT_CHOWN:
 		rc = slmds_chown(req);
 		break;
-//	case SRMT_FCHOWN:
-//		rc = slmds_fchown(req);
-//		break;
 	case SRMT_CREATE:
 		rc = slmds_create(req);
 		break;
-	case SRMT_OPEN:
-		rc = slmds_open(req);
+	case SRMT_DESTROY:
 		break;
 	case SRMT_GETATTR:
 		rc = slmds_getattr(req);
@@ -502,14 +495,39 @@ slmds_svc_handler(struct pscrpc_request *req)
 	case SRMT_FGETATTR:
 		rc = slmds_fgetattr(req);
 		break;
+	case SRMT_FTRUNCATE:
+		rc = slmds_ftruncate(req);
+		break;
+//	case SRMT_FCHMOD:
+//		rc = slmds_fchmod(req);
+//		break;
+//	case SRMT_FCHOWN:
+//		rc = slmds_fchown(req);
+//		break;
 	case SRMT_LINK:
 		rc = slmds_link(req);
+		break;
+	case SRMT_LOCK:
 		break;
 	case SRMT_MKDIR:
 		rc = slmds_mkdir(req);
 		break;
+	case SRMT_MKNOD:
+		break;
+	case SRMT_OPEN:
+		rc = slmds_open(req);
+		break;
+	case SRMT_OPENDIR:
+		break;
+	case SRMT_READ:
+		break;
+	case SRMT_READDIR:
+		break;
+	case SRMT_READLINK:
+		break;
 	case SRMT_RELEASE:
-		rc = -EOPNOTSUPP;
+		break;
+	case SRMT_RELEASEDIR:
 		break;
 	case SRMT_RENAME:
 		rc = slmds_rename(req);
@@ -517,20 +535,21 @@ slmds_svc_handler(struct pscrpc_request *req)
 	case SRMT_RMDIR:
 		rc = slmds_rmdir(req);
 		break;
+	case SRMT_STATFS:
+		break;
 	case SRMT_SYMLINK:
 		rc = slmds_symlink(req);
 		break;
 	case SRMT_TRUNCATE:
 		rc = slmds_truncate(req);
 		break;
-	case SRMT_FTRUNCATE:
-		rc = slmds_ftruncate(req);
-		break;
 	case SRMT_UNLINK:
 		rc = slmds_unlink(req);
 		break;
 	case SRMT_UTIMES:
 		rc = slmds_utimes(req);
+		break;
+	case SRMT_WRITE:
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", req->rq_reqmsg->opc);
