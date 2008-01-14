@@ -33,50 +33,50 @@ slmds_connect(struct pscrpc_request *req)
 {
 	int rc;
 	int size = sizeof(struct slashrpc_connect_req);
-        struct slashrpc_connect_req *body, *repbody;
+	struct slashrpc_connect_req *body, *repbody;
 
 	body = psc_msg_buf(req->rq_reqmsg, 0, size);
-        if (body == NULL) {
-                psc_warnx("connect_body is null");
-                rc = -ENOMSG;
-                goto fail;
-        }
-        psc_notify("magic %"ZLPX64" version %u",
+	if (body == NULL) {
+		psc_warnx("connect_body is null");
+		rc = -ENOMSG;
+		goto fail;
+	}
+	psc_notify("magic %"ZLPX64" version %u",
 		   body->magic, body->version);
 
-        if (body->magic   != SMDS_MAGIC ||
-            body->version != SMDS_VERSION) {
+	if (body->magic   != SMDS_MAGIC ||
+	    body->version != SMDS_VERSION) {
 		rc = -EINVAL;
 		goto fail;
 	}
-        rc = psc_pack_reply(req, 1, &size, NULL);
-        if (rc) {
-                psc_assert(rc == -ENOMEM);
-                psc_error("psc_pack_reply failed");
-                goto fail;
-        }
-        repbody = psc_msg_buf(req->rq_repmsg, 0, size);
+	rc = psc_pack_reply(req, 1, &size, NULL);
+	if (rc) {
+		psc_assert(rc == -ENOMEM);
+		psc_error("psc_pack_reply failed");
+		goto fail;
+	}
+	repbody = psc_msg_buf(req->rq_repmsg, 0, size);
 	/* Malloc was done in psc_pack_reply() */
-        psc_assert(repbody);
+	psc_assert(repbody);
 
 	repbody->magic  = SMDS_MAGIC;
 	repbody->version = SMDS_VERSION;
 
-        psc_notify("Connect request from %"ZLPX64":%u",
+	psc_notify("Connect request from %"ZLPX64":%u",
 		   req->rq_peer.nid, req->rq_peer.pid);
 
-        return (0);
+	return (0);
  fail:
-        psc_notify("Failed connect request from %"ZLPX64":%u",
+	psc_notify("Failed connect request from %"ZLPX64":%u",
 		   req->rq_peer.nid, req->rq_peer.pid);
-        return (rc);
+	return (rc);
 }
 
 int
 slmds_access(struct pscrpc_request *req)
 {
-        int rc;
-        struct slashrpc_access_req *body;
+	int rc;
+	struct slashrpc_access_req *body;
 
 	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
@@ -91,8 +91,8 @@ slmds_access(struct pscrpc_request *req)
 int
 slmds_chmod(struct pscrpc_request *req)
 {
-        int rc;
-        struct slashrpc_chmod_req *body;
+	int rc;
+	struct slashrpc_chmod_req *body;
 
 	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
@@ -109,10 +109,10 @@ slmds_chmod(struct pscrpc_request *req)
 int
 slmds_fchmod(struct pscrpc_request *rq)
 {
-        struct slashrpc_fchmod_req *body;
+	struct slashrpc_fchmod_req *body;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
-        int rc;
+	int rc;
 
 	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
@@ -129,8 +129,8 @@ slmds_fchmod(struct pscrpc_request *rq)
 int
 slmds_chown(struct pscrpc_request *req)
 {
-        struct slashrpc_chown_req *body;
-        int rc;
+	struct slashrpc_chown_req *body;
+	int rc;
 
 	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
@@ -152,10 +152,10 @@ slmds_chown(struct pscrpc_request *req)
 int
 slmds_fchown(struct pscrpc_request *rq)
 {
-        struct slashrpc_fchown_req *body;
+	struct slashrpc_fchown_req *body;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
-        int rc;
+	int rc;
 
 	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
 	if (!body)
@@ -176,262 +176,13 @@ slmds_create(struct pscrpc_request *req)
 	struct slashrpc_create_req *body;
 
 	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
+	if (!body)
+		return (-EPROTO);
 
 	rc = creat(body->path, body->mode);
 	if (rc)
 		return (-errno);
 
-	return (0);
-}
-
-int
-slmds_open(struct pscrpc_request *req)
-{
-	int rc;
-	struct slashrpc_open_req *body;
-
-	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = open(body->path, body->flags);
-	if (rc)
-		return (-errno);
-
-	return (0);
-}
-
-int
-slmds_link(struct pscrpc_request *rq)
-{
-	struct slashrpc_link_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = link(body->from, body->to);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_symlink(struct pscrpc_request *rq)
-{
-	struct slashrpc_symlink_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = symlink(body->from, body->to);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_readlink(struct pscrpc_request *rq)
-{
-	struct slashrpc_readlink_req *mq;
-	struct slashrpc_readlink_rep *mp;
-	int rc;
-
-	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-        if (!mq)
-                return (-EPROTO);
-        if (mq->size > PATH_MAX || mq->size == 0)
-                return (-EINVAL);
-
-        rc = psc_pack_reply(rq, 1, &mq->size, NULL);
-        if (rc) {
-                psc_assert(rc == -ENOMEM);
-                psc_error("psc_pack_reply failed");
-		return (rc);
-        }
-        mp = psc_msg_buf(rq->rq_repmsg, 0, mq->size);
-        if (!mp)
-                return (-EPROTO);
-
-	rc = readlink(mq->path, mp->buf, mq->size);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_truncate(struct pscrpc_request *rq)
-{
-	struct slashrpc_truncate_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = truncate(body->path, body->size);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_ftruncate(struct pscrpc_request *rq)
-{
-	struct slashrpc_ftruncate_req *body;
-	char fn[PATH_MAX];
-	slash_fid_t fid;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	if (cfd2fid(&fid, rq->rq_export, body->cfd) || fid_makepath(&fid, fn))
-		return (-errno);
-	rc = truncate(fn, body->size);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_unlink(struct pscrpc_request *rq)
-{
-	struct slashrpc_unlink_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = unlink(body->path);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_rename(struct pscrpc_request *rq)
-{
-	struct slashrpc_rename_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = rename(body->from, body->to);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_mkdir(struct pscrpc_request *rq)
-{
-	struct slashrpc_mkdir_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = mkdir(body->path, body->mode);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_mknod(struct pscrpc_request *rq)
-{
-	struct slashrpc_mknod_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = mknod(body->path, body->mode, body->dev);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_opendir(struct pscrpc_request *rq)
-{
-	struct slashrpc_opendir_req *mq;
-	struct slashrpc_opendir_rep *mp;
-	int rc, size;
-
-	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-        if (!mq)
-                return (-EPROTO);
-	size = sizeof(*mp);
-        rc = psc_pack_reply(rq, 1, &size, NULL);
-        if (rc) {
-                psc_assert(rc == -ENOMEM);
-                psc_error("psc_pack_reply failed");
-		return (rc);
-        }
-        mp = psc_msg_buf(rq->rq_repmsg, 0, size);
-	if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_releasedir(struct pscrpc_request *rq)
-{
-	struct slashrpc_releasedir_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = cfdfree(rq->rq_export, body->cfd);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_rmdir(struct pscrpc_request *rq)
-{
-	struct slashrpc_rmdir_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = rmdir(body->path);
-	if (rc)
-		return (-errno);
-	return (0);
-}
-
-int
-slmds_utimes(struct pscrpc_request *rq)
-{
-	struct slashrpc_utimes_req *body;
-	int rc;
-
-	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
-        if (!body)
-                return (-EPROTO);
-
-	rc = utimes(body->path, body->times);
-	if (rc)
-		return (-errno);
 	return (0);
 }
 
@@ -444,22 +195,22 @@ slmds_getattr(struct pscrpc_request *rq)
 	int rc, size;
 
 	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-        if (!mq)
-                return (-EPROTO);
+	if (!mq)
+		return (-EPROTO);
 
 	rc = stat(mq->path, &stb);
 	if (rc)
 		return (-errno);
 
 	size = sizeof(*mp);
-        rc = psc_pack_reply(rq, 1, &size, NULL);
-        if (rc) {
-                psc_assert(rc == -ENOMEM);
-                psc_error("psc_pack_reply failed");
+	rc = psc_pack_reply(rq, 1, &size, NULL);
+	if (rc) {
+		psc_assert(rc == -ENOMEM);
+		psc_error("psc_pack_reply failed");
 		return (rc);
-        }
-        mp = psc_msg_buf(rq->rq_repmsg, 0, size);
-        psc_assert(mp);
+	}
+	mp = psc_msg_buf(rq->rq_repmsg, 0, size);
+	psc_assert(mp);
 	mp->mode = stb.st_mode;
 	mp->nlink = stb.st_nlink;
 	mp->uid = stb.st_uid;
@@ -482,8 +233,8 @@ slmds_fgetattr(struct pscrpc_request *rq)
 	int rc, size;
 
 	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-        if (!mq)
-                return (-EPROTO);
+	if (!mq)
+		return (-EPROTO);
 
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn))
 		return (-errno);
@@ -492,14 +243,14 @@ slmds_fgetattr(struct pscrpc_request *rq)
 		return (-errno);
 
 	size = sizeof(*mp);
-        rc = psc_pack_reply(rq, 1, &size, NULL);
-        if (rc) {
-                psc_assert(rc == -ENOMEM);
-                psc_error("psc_pack_reply failed");
+	rc = psc_pack_reply(rq, 1, &size, NULL);
+	if (rc) {
+		psc_assert(rc == -ENOMEM);
+		psc_error("psc_pack_reply failed");
 		return (rc);
-        }
-        mp = psc_msg_buf(rq->rq_repmsg, 0, size);
-        psc_assert(mp);
+	}
+	mp = psc_msg_buf(rq->rq_repmsg, 0, size);
+	psc_assert(mp);
 	mp->mode = stb.st_mode;
 	mp->nlink = stb.st_nlink;
 	mp->uid = stb.st_uid;
@@ -512,15 +263,264 @@ slmds_fgetattr(struct pscrpc_request *rq)
 }
 
 int
+slmds_ftruncate(struct pscrpc_request *rq)
+{
+	struct slashrpc_ftruncate_req *body;
+	char fn[PATH_MAX];
+	slash_fid_t fid;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	if (cfd2fid(&fid, rq->rq_export, body->cfd) || fid_makepath(&fid, fn))
+		return (-errno);
+	rc = truncate(fn, body->size);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_link(struct pscrpc_request *rq)
+{
+	struct slashrpc_link_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = link(body->from, body->to);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_mkdir(struct pscrpc_request *rq)
+{
+	struct slashrpc_mkdir_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = mkdir(body->path, body->mode);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_mknod(struct pscrpc_request *rq)
+{
+	struct slashrpc_mknod_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = mknod(body->path, body->mode, body->dev);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_open(struct pscrpc_request *req)
+{
+	int rc;
+	struct slashrpc_open_req *body;
+
+	body = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = open(body->path, body->flags);
+	if (rc)
+		return (-errno);
+
+	return (0);
+}
+
+int
+slmds_opendir(struct pscrpc_request *rq)
+{
+	struct slashrpc_opendir_req *mq;
+	struct slashrpc_opendir_rep *mp;
+	int rc, size;
+
+	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	if (!mq)
+		return (-EPROTO);
+	size = sizeof(*mp);
+	rc = psc_pack_reply(rq, 1, &size, NULL);
+	if (rc) {
+		psc_assert(rc == -ENOMEM);
+		psc_error("psc_pack_reply failed");
+		return (rc);
+	}
+	mp = psc_msg_buf(rq->rq_repmsg, 0, size);
+	if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_readlink(struct pscrpc_request *rq)
+{
+	struct slashrpc_readlink_req *mq;
+	struct slashrpc_readlink_rep *mp;
+	int rc;
+
+	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	if (!mq)
+		return (-EPROTO);
+	if (mq->size > PATH_MAX || mq->size == 0)
+		return (-EINVAL);
+
+	rc = psc_pack_reply(rq, 1, &mq->size, NULL);
+	if (rc) {
+		psc_assert(rc == -ENOMEM);
+		psc_error("psc_pack_reply failed");
+		return (rc);
+	}
+	mp = psc_msg_buf(rq->rq_repmsg, 0, mq->size);
+	if (!mp)
+		return (-EPROTO);
+
+	rc = readlink(mq->path, mp->buf, mq->size);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_symlink(struct pscrpc_request *rq)
+{
+	struct slashrpc_symlink_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = symlink(body->from, body->to);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_truncate(struct pscrpc_request *rq)
+{
+	struct slashrpc_truncate_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = truncate(body->path, body->size);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_unlink(struct pscrpc_request *rq)
+{
+	struct slashrpc_unlink_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = unlink(body->path);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_rename(struct pscrpc_request *rq)
+{
+	struct slashrpc_rename_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = rename(body->from, body->to);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_releasedir(struct pscrpc_request *rq)
+{
+	struct slashrpc_releasedir_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = cfdfree(rq->rq_export, body->cfd);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_rmdir(struct pscrpc_request *rq)
+{
+	struct slashrpc_rmdir_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = rmdir(body->path);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
+slmds_utimes(struct pscrpc_request *rq)
+{
+	struct slashrpc_utimes_req *body;
+	int rc;
+
+	body = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*body));
+	if (!body)
+		return (-EPROTO);
+
+	rc = utimes(body->path, body->times);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
 slmds_svc_handler(struct pscrpc_request *req)
 {
 	struct slashrpc_export *sexp;
 	uid_t myuid, tuid;
-        gid_t mygid, tgid;
-        int rc = 0;
+	gid_t mygid, tgid;
+	int rc = 0;
 
-        ENTRY;
-        DEBUG_REQ(PLL_TRACE, req, "new req");
+	ENTRY;
+	DEBUG_REQ(PLL_TRACE, req, "new req");
 
 	/* Set fs credentials */
 	myuid = getuid();
@@ -529,17 +529,17 @@ slmds_svc_handler(struct pscrpc_request *req)
 	sexp = slashrpc_export_get(req->rq_export);
 
 	if ((tuid = setfsuid(sexp->uid)) != myuid)
-                psc_fatal("invalid fsuid %u", tuid);
+		psc_fatal("invalid fsuid %u", tuid);
 	if (setfsuid(sexp->uid) != (int)sexp->uid) {
-                psc_error("setfsuid %u", sexp->uid);
+		psc_error("setfsuid %u", sexp->uid);
 		rc = -1;
 		goto done;
 	}
 
 	if ((tgid = setfsgid(sexp->gid)) != mygid)
-                psc_fatal("invalid fsgid %u", tgid);
+		psc_fatal("invalid fsgid %u", tgid);
 	if (setfsgid(sexp->gid) != (int)sexp->gid) {
-                psc_error("setfsgid %u", sexp->gid);
+		psc_error("setfsgid %u", sexp->gid);
 		rc = -1;
 		goto done;
 	}
@@ -641,10 +641,10 @@ slmds_svc_handler(struct pscrpc_request *req)
  done:
 	setfsuid(myuid);
 	if (setfsuid(myuid) != (int)myuid)
-                psc_fatal("setfsuid %d", myuid);
+		psc_fatal("setfsuid %d", myuid);
 	setfsgid(mygid);
-        if (setfsgid(mygid) != (int)mygid)
-                psc_fatal("setfsgid %d", mygid);
+	if (setfsgid(mygid) != (int)mygid)
+		psc_fatal("setfsgid %d", mygid);
 	freelock(&fsidlock);
 	RETURN(rc);
 }
