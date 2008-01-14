@@ -364,6 +364,81 @@ slmds_utimes(struct pscrpc_request *rq)
 }
 
 int
+slmds_getattr(struct pscrpc_request *rq)
+{
+	struct slashrpc_getattr_req *mq;
+	struct slashrpc_getattr_rep *mp;
+	struct stat stb;
+	int rc, size;
+
+	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+        if (!mq)
+                return (-EPROTO);
+
+	rc = stat(mq->path, &stb);
+	if (rc)
+		return (-errno);
+
+	size = sizeof(*mp);
+        rc = psc_pack_reply(rq, 1, &size, NULL);
+        if (rc) {
+                psc_assert(rc == -ENOMEM);
+                psc_error("psc_pack_reply failed");
+		return (rc);
+        }
+        mp = psc_msg_buf(rq->rq_repmsg, 0, size);
+        psc_assert(mp);
+	mp->mode = stb.st_mode;
+	mp->nlink = stb.st_nlink;
+	mp->uid = stb.st_uid;
+	mp->gid = stb.st_gid;
+	mp->size = stb.st_size; /* XXX */
+	mp->atime = stb.st_atime;
+	mp->mtime = stb.st_mtime;
+	mp->ctime = stb.st_ctime;
+	return (0);
+}
+
+int
+slmds_fgetattr(struct pscrpc_request *rq)
+{
+	struct slashrpc_fgetattr_req *mq;
+	struct slashrpc_fgetattr_rep *mp;
+	char fn[PATH_MAX];
+	struct stat stb;
+	int rc, size;
+
+	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+        if (!mq)
+                return (-EPROTO);
+
+	if (fid_makepath(cfd2fid(rq, mq->cfd), fn))
+		return (-EINVAL);
+	rc = stat(fn, &stb);
+	if (rc)
+		return (-errno);
+
+	size = sizeof(*mp);
+        rc = psc_pack_reply(rq, 1, &size, NULL);
+        if (rc) {
+                psc_assert(rc == -ENOMEM);
+                psc_error("psc_pack_reply failed");
+		return (rc);
+        }
+        mp = psc_msg_buf(rq->rq_repmsg, 0, size);
+        psc_assert(mp);
+	mp->mode = stb.st_mode;
+	mp->nlink = stb.st_nlink;
+	mp->uid = stb.st_uid;
+	mp->gid = stb.st_gid;
+	mp->size = stb.st_size; /* XXX */
+	mp->atime = stb.st_atime;
+	mp->mtime = stb.st_mtime;
+	mp->ctime = stb.st_ctime;
+	return (0);
+}
+
+int
 slmds_svc_handler(struct pscrpc_request *req)
 {
 	struct slashrpc_export *sexp;
@@ -423,6 +498,9 @@ slmds_svc_handler(struct pscrpc_request *req)
 		break;
 	case SRMT_GETATTR:
 		rc = slmds_getattr(req);
+		break;
+	case SRMT_FGETATTR:
+		rc = slmds_fgetattr(req);
 		break;
 	case SRMT_LINK:
 		rc = slmds_link(req);
