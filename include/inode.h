@@ -16,13 +16,14 @@
 #define SL_MDS_BITS  1
 
 typedef u32 sl_inum_t;
-
+typedef u32 sl_blkno_t;  /* block number type */
 typedef u32 sl_ios_id_t; /* io server id: 16 bit site id
 			  *               15 bit resource id
 			  *                1 bit metadata svr bool
 			  */
 
 #define IOS_ID_ANY (~(sl_ios_id_t)0)
+#define BLKNO_ANY  (~(sl_ios_id_t)0)
 /*
  * sl_global_id_build - produce a unique 32 bit identifier from the object's site and resource id's.
  * @site_id:  id number of the resource's site
@@ -94,6 +95,7 @@ typedef struct slash_block_desc {
  * A block container which holds blocks, their checksums, and the number of replicas.
  */
 typedef struct slash_block_handle {
+	u64       bh_magic;                        /* set if i'm not a hole */
 	u8        bh_nrepls;                       /* num replicas   */
 	sl_gcrc_t bh_gen_crc[SL_MAX_GENS_PER_BLK]; /* array of crcs  */
 	sl_blkd_t bh_blks[SL_DEF_REPLICAS];        /* blk structures */
@@ -103,13 +105,14 @@ typedef struct slash_block_handle {
  * The inode structure lives at the beginning of the metafile and holds the block store array along with snapshot pointers.
  */
 typedef struct slash_inode {
-	u64          ino_fid;                    /* inode number            */
+	slash_fid_t  ino_fid;                    /* inode number            */
 	off_t        ino_off;                    /* inode metadata offset   */
 	size_t       ino_bsz;                    /* file block size         */
 	size_t       ino_lblk;                   /* last block              */
 	u32          ino_lblk_sz;                /* last block size         */
 	sl_bstore_t  ino_repls[SL_DEF_REPLICAS]; /* io systems holding blks */
 	sl_snap_t    ino_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers       */
+	struct stat  ino_stb;                    /* stat buf, on disk       */
 	psc_crc_t    ino_crc;                    /* crc of the inode        */
 } sl_inode_t;
 
