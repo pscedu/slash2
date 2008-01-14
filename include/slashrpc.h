@@ -280,7 +280,7 @@ slashrpc_export_get(struct pscrpc_export *exp)
 	spinlock(&exp->exp_lock);
 	if (exp->exp_private == NULL)
 		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
-	exp->exp_destroyf = slashrpc_export_destroy;
+	exp->exp_destroycb = slashrpc_export_destroy;
 	freelock(&exp->exp_lock);
 	return (exp->exp_private);
 }

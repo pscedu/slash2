@@ -2,6 +2,11 @@
 
 #include <stdio.h>
 
+#include "psc_ds/tree.h"
+
+#include "rpc.h"
+#include "slashrpc.h"
+
 void
 slashrpc_export_destroy(void *data)
 {
