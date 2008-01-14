@@ -463,7 +463,7 @@ store_tok_val(const char *tok, char *val)
 	case SL_TYPE_STRP:
 		*(char **)ptr = strdup(val);
 		psc_trace("SL_TYPE_STRP Tok '%s' set to '%s' %p",
-			  e->name, (char *)ptr, ptr);
+			  e->name, *(char **)ptr, ptr);
 		break;
 
 	case SL_TYPE_HEXU64:
