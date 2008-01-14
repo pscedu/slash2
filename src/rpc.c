@@ -11,9 +11,12 @@ void
 slashrpc_export_destroy(void *data)
 {
 	struct slashrpc_export *sexp = data;
-	struct cfdent *t;
+	struct cfdent *c, *next;
 
-	SPLAY_FOREACH(t, cfdtree, &sexp->cfdtree)
-		free(t);
+	for (c = SPLAY_MIN(cfdtree, &sexp->cfdtree); c; c = next) {
+		next = SPLAY_NEXT(cfdtree, &sexp->cfdtree, c);
+		SPLAY_REMOVE(cfdtree, &sexp->cfdtree, c);
+		free(c);
+	}
 	free(sexp);
 }
