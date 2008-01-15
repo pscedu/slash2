@@ -19,7 +19,8 @@ struct mexpbcm {
         u32                     mexpbcm_flags;
         struct bmap_cache_memb *mexpbcm_bmap;
 	struct pscrpc_export   *mexpbcm_export;
-        SPLAY_ENTRY(mexpbcm)    mexpbcm_tentry;
+	struct psclist_head     mexpbcm_lentry; /* ref for client cb */
+        SPLAY_ENTRY(mexpbcm)    mexpbcm_tentry;				
 };
 
 SPLAY_HEAD(exp_bmaptree, mexpbcm);
@@ -47,6 +48,7 @@ struct mexpfc {
         struct exp_fidtree    mec_fids;   /* reference all fcm's via the
                                            * export */
         struct psclist_head   mec_lentry; /* sched export for revocations */
+	list_cache_t          mec_pndg_invals; /* pending invalidations   */
         psc_spinlock_t        mec_lock;	
 };
 

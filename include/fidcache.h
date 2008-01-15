@@ -76,18 +76,18 @@ struct bmap_info {
 /* 
  * bmap_info_handle - holder for bmap_info (which is a wire struct).
  */
-struct bmap_info_handle {
-	struct bmap_info      bmapih_info;
-	struct psc_list_head  bmapih_lentry;	
-};
+//struct bmap_info_handle {
+//	struct bmap_info      bmapih_info;
+//	struct psc_list_head  bmapih_lentry;	
+//};
 
 /*
  * bmap_cache_memb - central structure for block map caching used in all slash service contexts (mds, ios, client).  
  */
 struct bmap_cache_memb {
-	struct timeval          bcm_ts;	
-	struct bmap_info_handle bcm_bmap_info;
-	atomic_t                bcm_refcnt;  /* one ref per client (mds) */
+	struct timeval   bcm_ts;	
+	struct bmap_info bcm_bmap_info;
+	atomic_t         bcm_refcnt;  /* one ref per client (mds) */
 	union bcm_data {
 		struct bmap_cli_info *cli_info;
 		struct bmap_mds_info *mds_info;
@@ -157,10 +157,11 @@ struct sl_fsops {
 	int (*sl_read(struct fid_cache_memb *fcm, 
  	              const struct iovec *vector, int count));
 	/* sl_getmap - load the data placement map for a given file.
-	 * On the client 
+	 * On the client, the blk no's are determined by calculating the
+	 * request offset with the block size.
 	 */
-	int (*sl_getmap(struct fid_cache_memb *fcm,
-			const struct iovec *vector, int count));
+	int (*sl_getmap(struct fid_cache_memb  *fcm,
+			struct bmap_cache_memb *bcms, int count));
 
 	int (*sl_invmap(struct fid_cache_memb *fcm, struct bmap_refresh *bmr));
 };
