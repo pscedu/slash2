@@ -25,7 +25,7 @@ dircache_init(void)
 	psc_waitq_init(&dircache_wq);
 }
 
-void
+__static void
 dircache_move_lru(struct dircache *dc)
 {
 	if (psclist_first(&dircache_lru) == dc ||
@@ -50,7 +50,7 @@ dircache_ref(void *arg)
 }
 
 void
-dircache_release(struct dircache *dc)
+dircache_rel(struct dircache *dc)
 {
 	atomic_dec(&dc->dc_refcnt);
 	if (dc->dc_flags & DCF_WANTDESTROY)
@@ -77,7 +77,7 @@ dircache_free(struct dircache *dc)
 {
 	dc->dc_flags |= DCF_WANTDESTROY;
 
-	del_hash_entry(&dircache, &dc->dc_ent);
+	del_hash_entry(&dircache, &dc->dc_hent);
 
 	spinlock(&dircache_lru_lock);
 	psclist_del(&dircache_lru);
@@ -88,7 +88,7 @@ dircache_free(struct dircache *dc)
 		dircache_destroy(dc);
 }
 
-void
+__static void
 dircache_reap(void)
 {
 	struct dircache *dc, *next;

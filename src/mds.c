@@ -373,6 +373,30 @@ slmds_opendir(struct pscrpc_request *rq)
 }
 
 int
+slmds_readdir(struct pscrpc_request *rq)
+{
+	struct slashrpc_readdir_req *mq;
+	struct slashrpc_readdir_rep *mp;
+	struct dircache *dc;
+	char fn[PATH_MAX];
+	slash_fid_t fid;
+	int rc;
+
+	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	if (!mq)
+		return (-EPROTO);
+
+	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn))
+		return (-errno);
+	dc = dircache_get(fn);
+	dircache_read(dc, mq->off, );
+	dircache_rel(dc);
+	if (rc)
+		return (-errno);
+	return (0);
+}
+
+int
 slmds_readlink(struct pscrpc_request *rq)
 {
 	struct slashrpc_readlink_req *mq;
@@ -654,6 +678,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 		rc = slmds_readlink(req);
 		break;
 	case SRMT_RELEASE:
+		rc = slmds_release(req);
 		break;
 	case SRMT_RELEASEDIR:
 		rc = slmds_releasedir(req);
@@ -665,6 +690,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 		rc = slmds_rmdir(req);
 		break;
 	case SRMT_STATFS:
+		rc = slmds_statfs(req);
 		break;
 	case SRMT_SYMLINK:
 		rc = slmds_symlink(req);
