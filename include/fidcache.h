@@ -6,6 +6,7 @@
 #include "psc_ds/list.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/listcache.h"
+#include "psc_util/atomic.h"
 #include "fid.h"
 
 #define MDS_FID_CACHE_SZ 131071
@@ -17,8 +18,6 @@
 
 #define FCH_LOCK(m)  spinlock(&(m)->fcm_lock)
 #define FCH_ULOCK(m) freelock(&(m)->fcm_lock)
-
-SPLAY_HEAD(bmap_cache, bmap_cache_memb);
 
 extern struct hash_table fidCache;
 
@@ -38,57 +37,74 @@ struct sl_uid {
         gid_t sluid_sgid; /* site gid */
 };
 
+//struct bmap_refresh {
+//	slash_fid_t bmrfr_fid;
+//	sl_blkno_t  bmrfr_blk;
+//	u8          bmrfr_flags;
+//};
 
-struct bmap_refresh {
-	slash_fid_t bmrfr_fid;
-	sl_blkno_t  bmrfr_blk;
-	u8          bmrfr_flags;
-};
-
+struct mexpbcm;
 /*
- * bmap_mds_export_cache - stored in the export's private data, bmec_set is an array of bmap_cache_memb pointers.  This structure is traversed if the export is closed or if the file object is truncated.
+ * bmexpcr (bmap_export_cache_reference) - maintain back references to the exports which reference this bmap via their export bmap caches.  This reference allows for simple lookup and access to the export-specific bmap tree which represents the client's bmap cache.  Usage scenarios include single block invalidations to multiple clients.
  */
-struct bmap_mds_export_cache {
-	struct pscrpc_export *bmec_export;
-	struct dynarray       bmec_set; /* array of bmap_cache_memb pointers*/
-	SPLAY_ENTRY(bmap_cache_memb) bmec_tentry; /* fcm tree entry */
+struct bmexpcr {
+	struct mexpbcm *bmexpcr_ref;	
+	SPLAY_ENTRY(bmexpcr);
 };
 
-SPLAY_PROTOTYPE(fcm_bmap_cache, bmap_cache_memb, 
-		bmec_tentry, bmap_cache_cmp);
-
+/* Tree of bmexpcr's held by bmap_mds_info. */
+SPLAY_HEAD(bmap_exports, bmap_expcp);
+SPLAY_PROTOTYPE(bmap_exports, bmap_exp_memb, mecm_tentry, bmap_cache_cmp);
 
 /* 
  * bmap_mds_info - associate the fcache block to its respective export bmap caches.
  */
 struct bmap_mds_info {
-	struct bmap_mds_cache bmdsi_bmpcache; /* tree of cached bmaps */
-	struct dynarray       bmdsi_expcache; /* point to our exports */
+	atomic_t            bmdsi_refcnt;  /* count our references */
+	struct bmap_exports bmdsi_exports; /* point to our exports */
 };
+
 /* 
  * bmap_cli_info - for each block in the fcache, associate the set of possible i/o servers and the store the crc of the block.
  */
-struct bmap_cli_info {
-	sl_blkno_t   bcli_blkno;
-	sl_ios_id_t  bcli_info_ios[SL_DEF_REPLICAS];
-	sl_gcrc_t    bcli_info_gencrc;
+struct bmap_info {
+	sl_blkno_t   bmapi_blkno;
+	sl_ios_id_t  bmapi_ios[SL_DEF_REPLICAS];
+	sl_gcrc_t    bmapi_gencrc;
 };
 
+/* 
+ * bmap_info_handle - holder for bmap_info (which is a wire struct).
+ */
+struct bmap_info_handle {
+	struct bmap_info      bmapih_info;
+	struct psc_list_head  bmapih_lentry;	
+};
+
+/*
+ * bmap_cache_memb - central structure for block map caching used in all slash service contexts (mds, ios, client).  
+ */
 struct bmap_cache_memb {
-	struct timeval bcm_ts;	
-	sl_blkno_t     bcm_blkno;
-	atomic_t       bcm_refcnt;  /* one ref per client (mds) */
+	struct timeval          bcm_ts;	
+	struct bmap_info_handle bcm_bmap_info;
+	atomic_t                bcm_refcnt;  /* one ref per client (mds) */
 	union bcm_data {
 		struct bmap_cli_info *cli_info;
 		struct bmap_mds_info *mds_info;
-		//struct bmap_ios_info *ios_info;
+		void                 *ios_info;
 	};
-	struct psclist_head          bcm_lentry;      /* lru chain      */
+	struct psclist_head          bcm_lentry; /* lru chain      */
 	SPLAY_ENTRY(bmap_cache_memb) bcm_tentry; /* fcm tree entry */
 };
 
-SPLAY_PROTOTYPE(fcm_bmap_cache, bmap_cache_memb, 
-		bcm_cache_entry, bmap_cache_cmp);
+/* Tree definition for fcm tracking of clients (via their exports) */
+struct mexpfcm;
+SPLAY_HEAD(bmap_lessees, mexpfcm);
+SPLAY_PROTOTYPE(bmap_lessees, mexpfcm, mecm_fcm_tentry, bmap_cache_cmp);
+
+/* Tree definition for the fcm to enable tracking of leased bmaps */
+SPLAY_HEAD(bmap_cache, bmap_cache_memb);
+SPLAY_PROTOTYPE(bmap_cache, bmap_cache_memb, bcm_tentry, bmap_cache_cmp);
 
 typedef struct fid_cache_memb {
 	slash_fid_t          fcm_fid;
@@ -100,12 +116,15 @@ typedef struct fid_cache_memb {
 	size_t               fcm_objm_sz;  /* nbytes mapped for objm        */
 	psc_spinlock         fcm_lock;
 	struct sl_fsops     *fcm_fsops;
-	struct dynarray      fcm_bmap_lessees; /* mds only, client leases array
-						* of bmap_mds_export_cache
-						*/
+	struct bmap_lessees  fcm_lessees; /* mds only, client leases array
+					   * of bmap_mds_export_cache
+					   */
 	struct bmap_cache    fcm_bmap_cache;  /* splay tree of bmap cache  */
 } fcache_memb_t;
 
+/*
+ * fid_cache_memb_handle - container for the fid cache member.
+ */
 typedef struct fid_cache_memb_handle {
 	struct hash_entry    fch_hentry;
 	struct psclist_entry fch_lentry;

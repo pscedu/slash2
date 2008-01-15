@@ -78,10 +78,10 @@ typedef struct slash_block_store {
  * Associate a crc with a generation id for a block.
  */
 typedef struct slash_gencrc {
-	int       gc_gen;  /* generation number  */
-	psc_crc_t gc_crc;  /* crc for generation */
+	int       gc_gen:31;      /* generation number  */
+	int       gc_crc_valid:1; /* generation number  */
+	psc_crc_t gc_crc;         /* crc for generation */
 } sl_gcrc_t;
-
 
 /*
  * Slim block structure just holds a generation number and a validation bit.  The io server id is held in the block store array.
