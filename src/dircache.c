@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <sys/types.h>
+#include <sys/syscall.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -155,8 +156,6 @@ dircache_get(slash_fid_t *fidp)
 	return (e ? e->private : NULL);
 }
 
-int getdents(int, struct dirent *, unsigned int);
-
 int
 dircache_read(struct dircache *dc, int off, struct dirent *buf, int n)
 {
@@ -170,7 +169,7 @@ dircache_read(struct dircache *dc, int off, struct dirent *buf, int n)
 		rc = -1;
 		goto done;
 	}
-	rc = getdents(dc->dc_fd, buf, n);
+	rc = syscall(SYS_getdents, dc->dc_fd, buf, n);
  done:
 	freelock(&dc->dc_lock);
 	return (rc);
