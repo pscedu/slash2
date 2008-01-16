@@ -46,6 +46,7 @@ main(int argc, char *argv[])
 			usage();
 		}
 	pfl_init(SLASH_THRTBL_SIZE);
+	libsl_init(PSC_SERVER);
 	slashGetConfig(cfn);
 	slmds_init();
 	exit(0);
