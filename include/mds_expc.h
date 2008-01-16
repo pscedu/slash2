@@ -28,9 +28,13 @@ SPLAY_PROTOTYPE(exp_bmaptree, mexpbcm, mexpbcm_tentry, bmap_cache_cmp);
 /*
  * mexpfcm (mds_export_fidcache_memb) - 
  *
+ * Notes:  mecm_fcm_opcnt is used to detect changes in the fcm who keeps his update count in fcm_slfinfo.slf_opcnt.  At no time may mecm_fcm_opcnt be higher than the fcm (unless the fcm counter has flipped).  mecm_loc_opcnt and mecm_rem_opcnt serve a similar purpose but the update detection is between the client and the export.  So if client A updates the ctime or mode exp(cA) will inc mecm_fcm->fcm_slfinfo.slf_opcnt and desync the opcnt between the fcm and the other exports prompting the other exports to update their client's caches.  It may be the case that incrementing  mecm_fcm->fcm_slfinfo.slf_opcnt will cause rpc's to be sent to the set of clients using that fcm.
  */
 struct mexpfcm {
         fcache_memb_t        *mecm_fcm;        /* point to the fcm*/
+	u64                   mecm_fcm_opcnt;  /* detect fcm updates */
+	u64                   mecm_loc_opcnt;  /* count outstanding updates */
+	u64                   mecm_rem_opcnt;  /* detect remote updates */
         psc_spinlock_t        mecm_lock;
         struct exp_bmaptree   mecm_bmaps;      /* my tree of bmap pointers */
         struct pscrpc_export *mecm_export;     /* backpointer to our export */

@@ -26,6 +26,7 @@ struct sl_finfo {
         struct timeval  slf_opentime;      /* when we received client OPEN  */
         struct timeval  slf_closetime;     /* when we received client CLOSE */
 	struct timeval  slf_lattr_update;  /* last attribute update         */
+	u64             slf_opcnt;         /* count attr updates            */
         size_t          slf_readb;         /* num bytes read                */
         size_t          slf_writeb;        /* num bytes written             */ 
 };
@@ -109,7 +110,7 @@ SPLAY_PROTOTYPE(bmap_cache, bmap_cache_memb, bcm_tentry, bmap_cache_cmp);
 typedef struct fid_cache_memb {
 	slash_fid_t          fcm_fid;
 	struct stat          fcm_stb; 
-	struct sl_info       fcm_slfinfo;
+	struct sl_finfo      fcm_slfinfo;
 	struct sl_uid        fcm_uid;
 	int                  fcm_fd;
 	void                *fcm_objm;     /* mmap region for filemap md    */
