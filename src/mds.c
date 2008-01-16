@@ -417,10 +417,10 @@ slmds_readdir(struct pscrpc_request *rq)
 	    BULK_PUT_SOURCE, RPCMDS_BULK_PORTAL);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
-                return (-ENOMEM);
-        }
+		return (-ENOMEM);
+	}
 	desc->bd_iov[0].iov_base = ents;
-        desc->bd_iov[0].iov_len = mp->size;
+	desc->bd_iov[0].iov_len = mp->size;
 	desc->bd_iov_count = 1;
 	desc->bd_nob = mp->size;
 
@@ -429,31 +429,31 @@ slmds_readdir(struct pscrpc_request *rq)
 	else
 		rc = pscrpc_start_bulk_transfer(desc);
 
-        if (rc == 0) {
-                lwi = LWI_TIMEOUT_INTERVAL(20 * HZ / 2, HZ, NULL, desc);
+	if (rc == 0) {
+		lwi = LWI_TIMEOUT_INTERVAL(20 * HZ / 2, HZ, NULL, desc);
 
-                rc = psc_svr_wait_event(&desc->bd_waitq,
+		rc = psc_svr_wait_event(&desc->bd_waitq,
 		    !pscrpc_bulk_active(desc) || desc->bd_export->exp_failed,
 		    &lwi, NULL);
-                LASSERT(rc == 0 || rc == -ETIMEDOUT);
-                if (rc == -ETIMEDOUT) {
-                        psc_info("timeout on bulk PUT");
-                        pscrpc_abort_bulk(desc);
-                } else if (desc->bd_export->exp_failed) {
-                        psc_info("eviction on bulk PUT");
-                        rc = -ENOTCONN;
-                        pscrpc_abort_bulk(desc);
-                } else if (!desc->bd_success ||
+		LASSERT(rc == 0 || rc == -ETIMEDOUT);
+		if (rc == -ETIMEDOUT) {
+			psc_info("timeout on bulk PUT");
+			pscrpc_abort_bulk(desc);
+		} else if (desc->bd_export->exp_failed) {
+			psc_info("eviction on bulk PUT");
+			rc = -ENOTCONN;
+			pscrpc_abort_bulk(desc);
+		} else if (!desc->bd_success ||
 		    desc->bd_nob_transferred != desc->bd_nob) {
-                        psc_info("%s bulk PUT %d(%d)",
+			psc_info("%s bulk PUT %d(%d)",
 			    desc->bd_success ? "truncated" : "network err",
 			    desc->bd_nob_transferred, desc->bd_nob);
-                        /* XXX should this be a different errno? */
-                        rc = -ETIMEDOUT;
-                }
-        } else
-                psc_info("pscrpc bulk put failed: rc %d", rc);
-        comms_error = (rc != 0);
+			/* XXX should this be a different errno? */
+			rc = -ETIMEDOUT;
+		}
+	} else
+		psc_info("pscrpc bulk put failed: rc %d", rc);
+	comms_error = (rc != 0);
 	if (rc == 0) {
 		psc_info("put readdir contents successfully");
 	} else if (!comms_error) {
@@ -461,7 +461,7 @@ slmds_readdir(struct pscrpc_request *rq)
 		rq->rq_status = rc;
 		pscrpc_error(rq);
 	}
-        pscrpc_free_bulk(desc);
+	pscrpc_free_bulk(desc);
 	return rc;
 }
 
