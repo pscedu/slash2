@@ -6,7 +6,7 @@
 #include "psc_ds/list.h"
 
 #include "mount_slash.h"
-#include "rpc.h"
+#include "slashrpc.h"
 
 #define SLASH_SVR_PID 54321
 

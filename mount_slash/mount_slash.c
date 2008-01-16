@@ -4,6 +4,8 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
+#include <dirent.h>
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -14,12 +16,13 @@
 
 #include <fuse.h>
 
+#include "pfl.h"
 #include "psc_types.h"
 #include "psc_util/log.h"
 #include "psc_rpc/rpc.h"
 
 #include "mount_slash.h"
-#include "rpc.h"
+#include "slashrpc.h"
 
 int
 slash_access(const char *path, int mask)
@@ -204,32 +207,142 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 	return (rc);
 }
 
+#define OBD_TIMEOUT 15
+
+int
+slashrpc_timeout(__unusedx void *arg)
+{
+	return (0);
+}
+
 int
 slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
     off_t offset, struct fuse_file_info *fi)
 {
+	int i, sum, rc, comms_error;
 	struct slashrpc_readdir_req *mq;
 	struct slashrpc_readdir_rep *mp;
-	struct readdir_cache_ent rce;
+	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
-	int rc;
+	struct l_wait_info lwi;
+	struct dirent *d;
+	struct stat stb;
+	char *mb;
+	u64 off;
+	u8 *v1;
 
+	mb = NULL;
 	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_READDIR,
 	    sizeof(*mq), 0, &rq, &mq)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->offset = offset;
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) != 0) {
+		pscrpc_req_finished(rq);
+		return (rc);
+	}
 
-	memset(&rce, 0, sizeof(rce));
-	rce.buf = buf;
-	rce.filler = filler;
-	rce.cfd = fi->fh;
-	rce.offset = offset;
-	rc_add(&rce, rq->rq_export);
-	rc = rpc_getrep(rq, sizeof(*mp), &mp);
+	comms_error = 0;
+
+	desc = pscrpc_prep_bulk_exp(rq, 1, BULK_GET_SINK, RPCIO_BULK_PORTAL);
+	if (desc == NULL) {
+		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
+		pscrpc_req_finished(rq);
+		return (-ENOMEM); // errno
+	}
+	mb = PSCALLOC(mp->size);
+	desc->bd_iov_count = 1;
+	desc->bd_iov[0].iov_base = mb;
+	desc->bd_iov[0].iov_len = desc->bd_nob = mp->size;
+
+	/* Check for client eviction during previous I/O before proceeding. */
+	if (desc->bd_export->exp_failed)
+		rc = ENOTCONN;
+	else
+		rc = pscrpc_start_bulk_transfer(desc);
+	if (rc == 0) {
+		lwi = LWI_TIMEOUT_INTERVAL(OBD_TIMEOUT / 2,
+		    HZ, slashrpc_timeout, desc);
+
+		rc = psc_svr_wait_event(&desc->bd_waitq,
+		    (!pscrpc_bulk_active(desc) || desc->bd_export->exp_failed),
+		    &lwi, NULL);
+
+		LASSERT(rc == 0 || rc == -ETIMEDOUT);
+		if (rc == -ETIMEDOUT) {
+			psc_errorx("timeout on bulk GET");
+			pscrpc_abort_bulk(desc);
+		} else if (desc->bd_export->exp_failed) {
+			psc_warnx("eviction on bulk GET");
+			rc = -ENOTCONN;
+			pscrpc_abort_bulk(desc);
+		} else if (!desc->bd_success ||
+		    desc->bd_nob_transferred != desc->bd_nob) {
+			psc_errorx("%s bulk GET %d(%d)",
+			    desc->bd_success ? "truncated" : "network error on",
+			    desc->bd_nob_transferred, desc->bd_nob);
+			/* XXX should this be a different errno? */
+			rc = -ETIMEDOUT;
+		}
+	} else {
+		psc_errorx("pscrpc I/O bulk get failed: rc %d", rc);
+	}
+	comms_error = (rc != 0);
+
+	/* count the number of bytes sent, and hold for later... */
+	if (rc == 0) {
+		v1 = desc->bd_iov[0].iov_base;
+		if (v1 == NULL) {
+			psc_errorx("desc->bd_iov[0].iov_base is NULL");
+			rc = ENXIO;
+			goto out;
+		}
+
+		psc_info("got %u bytes of bulk data across %d IOVs: "
+		      "first byte is 0x%x",
+		      desc->bd_nob, desc->bd_iov_count, *v1);
+
+		sum = 0;
+		for (i = 0; i < desc->bd_iov_count; i++)
+			sum += desc->bd_iov[i].iov_len;
+		if (sum != desc->bd_nob)
+			psc_warnx("sum (%d) does not match bd_nob (%d)",
+			    sum, desc->bd_nob);
+		//rc = pscrpc_reply(rq);
+	}
+
+ out:
+	if (rc == 0) {
+		/* Pull down readdir contents slashd posted. */
+		for (off = 0; off < mp->size; off = d->d_off - offset) {
+			d = (void *)(off + mb);
+			memset(&stb, 0, sizeof(stb));
+			stb.st_ino = d->d_ino;
+			if (filler(buf, d->d_name, &stb, 1))
+				break;
+		}
+
+	} else if (!comms_error) {
+		/* Only reply if there were no comm problems with bulk. */
+		rq->rq_status = rc;
+		pscrpc_error(rq);
+	} else {
+#if 0
+		// For now let's not free the reply state..
+		if (rq->rq_reply_state != NULL) {
+			/* reply out callback would free */
+			pscrpc_rs_decref(rq->rq_reply_state);
+			rq->rq_reply_state = NULL;
+			rq->rq_repmsg      = NULL;
+		}
+#endif
+		CWARN("ignoring bulk I/O comm error; "
+		    "id %s - client will retry",
+		    libcfs_id2str(rq->rq_peer));
+	}
+	free(mb);
+	pscrpc_free_bulk(desc);
 	pscrpc_req_finished(rq);
-	rc_remove(&rce, rq->rq_export);
-
 	return (rc);
 }
 
@@ -285,7 +398,7 @@ slash_rmdir(const char *path)
 }
 
 int
-slash_statfs(const char *path, struct statvfs *stbuf)
+slash_statfs(const char *path, struct statvfs *sfb)
 {
 	struct slashrpc_statfs_req *mq;
 	struct slashrpc_statfs_rep *mp;
@@ -297,7 +410,12 @@ slash_statfs(const char *path, struct statvfs *stbuf)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
-		/* XXX copy statfs */
+		sfb->f_bsize = mp->f_bsize;
+		sfb->f_blocks = mp->f_blocks;
+		sfb->f_bfree = mp->f_bfree;
+		sfb->f_bavail = mp->f_bavail;
+		sfb->f_files = mp->f_files;
+		sfb->f_ffree = mp->f_ffree;
 	}
 	pscrpc_req_finished(rq);
 	return (rc);
@@ -380,7 +498,7 @@ main(int argc, char *argv[])
 	if (getenv("SLASH_SERVER_NID") == NULL)
 		errx(1, "please export SLASH_SERVER_NID");
 
-	pfl_init();
+	pfl_init(7);
 	if (rpc_svc_init())
 		psc_fatalx("rpc_svc_init");
 	return (fuse_main(argc, argv, &slashops, NULL));

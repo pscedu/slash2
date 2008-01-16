@@ -9,9 +9,11 @@
 /* RPC portals. */
 #define RPCMDS_REQ_PORTAL	20
 #define RPCMDS_REP_PORTAL	21
-#define RPCIO_REQ_PORTAL	22
-#define RPCIO_REP_PORTAL	23
-#define RPCIO_BULK_PORTAL	24
+#define RPCMDS_BULK_PORTAL	22
+
+#define RPCIO_REQ_PORTAL	30
+#define RPCIO_REP_PORTAL	31
+#define RPCIO_BULK_PORTAL	32
 
 #define SMDS_VERSION		1
 #define SMDS_MAGIC		0xaabbccddeeff0011ULL
@@ -164,37 +166,9 @@ struct slashrpc_readdir_req {
 };
 
 struct slashrpc_readdir_rep {
+	u64	size;
+	/* accompanied by bulk data in pure getdents(2) format */
 };
-
-struct slashrpc_readdir_res_req {
-	u64	cfd;
-	u64	offset;
-	u32	nents;
-	u32	flags;
-};
-
-/* Slash RPC READDIR operation flags. */
-#define SRORF_END	(1<<0)
-
-/* A directory entry in the bulk readdir data. */
-struct slashrpc_readdir_ent {
-	char	name[NAME_MAX + 1];
-	u32	ino;
-	u32	mode;
-};
-
-/* Reply bulk data. */
-struct slashrpc_readdir_bulk {
-	struct slashrpc_readdir_ent ents[0];
-};
-
-/* Acknowledgment of reception of bulk data. */
-struct slashrpc_readdir_res_rep {
-	u32	flags;
-};
-
-/* Slash RPC READDIR operation bulk transfer flags. */
-#define SRORBF_STOP	(1<<0)
 
 struct slashrpc_readlink_req {
 	char	path[PATH_MAX];
@@ -227,14 +201,12 @@ struct slashrpc_statfs_req {
 };
 
 struct slashrpc_statfs_rep {
-	u32	f_type;
 	u32	f_bsize;
 	u32	f_blocks;
 	u32	f_bfree;
 	u32	f_bavail;
 	u64	f_files;
 	u64	f_ffree;
-	u32	f_namelen;
 };
 
 struct slashrpc_symlink_req {

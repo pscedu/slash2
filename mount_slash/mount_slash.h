@@ -9,6 +9,7 @@
 #include "psc_types.h"
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/waitq.h"
 
 struct pscrpc_request;
 struct pscrpc_export;
@@ -17,8 +18,6 @@ struct pscrpc_export;
 #define RPCSVC_MDS		0
 #define RPCSVC_IO		1
 #define NRPCSVC			2
-
-SPLAY_HEAD(rctree, readdir_cache_ent);
 
 struct slashrpc_service {
 	struct pscrpc_import	 *svc_import;
@@ -30,23 +29,7 @@ struct slashrpc_service {
 };
 
 struct slashrpc_export {
-	psc_spinlock_t			 rclock;	/* readdir cache lock */
-	struct rctree			 rctree;
 };
-
-struct readdir_cache_ent {
-	void				*buf;
-	fuse_fill_dir_t			 filler;
-	off_t				 offset;
-	u64				 cfd;
-	SPLAY_ENTRY(readdir_cache_ent)	 entry;
-};
-
-int  rce_cmp(const void *, const void *);
-void rc_add(struct readdir_cache_ent *, struct pscrpc_export *);
-void rc_remove(struct readdir_cache_ent *, struct pscrpc_export *);
-struct readdir_cache_ent *
-     rc_lookup(struct pscrpc_export *, u64, u64);
 
 int rpc_svc_init(void);
 int rpc_newreq(int, int, int, int, int, struct pscrpc_request **, void *);
@@ -60,5 +43,3 @@ int slash_write(const char *, const char *, size_t, off_t, struct fuse_file_info
 
 #define slashrpc_mds_connect(svr) rpc_connect(svr, RPCSVC_MDS, SMDS_MAGIC, SMDS_VERSION)
 #define slashrpc_io_connect(svr)  rpc_connect(svr, RPCSVC_IO, SIO_MAGIC, SIO_VERSION)
-
-SPLAY_PROTOTYPE(rctree, readdir_cache_ent, entry, rce_cmp);

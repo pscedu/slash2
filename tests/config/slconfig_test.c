@@ -34,10 +34,10 @@ int main(int argc,  char *argv[])
 	sl_resm_t *resm;
 
 	progname = argv[0];
+	pfl_init(19);
 	psc_setloglevel(PLL_NOTICE);
 	getOptions(argc, argv);
 	slashGetConfig(f);
-	pfl_init(19);
 	libsl_init(serverNode);
 	exit(0);
 }

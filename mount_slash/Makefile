@@ -4,7 +4,6 @@ include Makefile.path
 
 PROG=		mount_slash
 SRCS=		mount_slash.c
-SRCS+=		rc.c
 SRCS+=		rpc.c
 SRCS+=		rpcio.c
 SRCS+=		${PFL_BASE}/psc_util/log.c

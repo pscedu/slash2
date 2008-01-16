@@ -130,7 +130,7 @@ libsl_resm_lookup(void)
 
 	for (i=0; i<nnids; i++) {
 		e = get_hash_entry(&globalConfig.gconf_nids_hash,
-				   nids[i], NULL);
+		    nids[i], NULL, NULL);
 		/* Every nid found by lnet must be a resource member.
 		 */
 		if (!e)

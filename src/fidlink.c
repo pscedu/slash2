@@ -30,8 +30,9 @@ fid_makepath(const slash_fid_t *fid, char *fid_path)
 
 	rc = snprintf(fid_path, FID_PATH_LEN,
 		      "%s/%016"ZLPX64"/",
-		      nodeProfile->znprof_objroot,
-		      nodeInfo->znode_set_uuid);
+//		      nodeProfile->znprof_objroot,
+//		      nodeInfo->znode_set_uuid);
+ "foo", 0UL);
 
 	psc_assert(rc >= 0 && rc < FID_PATH_LEN);
 

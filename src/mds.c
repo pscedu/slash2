@@ -14,10 +14,11 @@
 #include "psc_rpc/service.h"
 
 #include "cfd.h"
-#include "rpc.h"
-#include "slashrpc.h"
-#include "slash.h"
+#include "dircache.h"
 #include "fid.h"
+#include "rpc.h"
+#include "slash.h"
+#include "slashrpc.h"
 
 #define MDS_NTHREADS  8
 #define MDS_NBUFS     1024
@@ -372,28 +373,96 @@ slmds_opendir(struct pscrpc_request *rq)
 	return (0);
 }
 
+#define READDIR_BUFSZ (512 * 1024)
+
 int
 slmds_readdir(struct pscrpc_request *rq)
 {
+	struct dirent ents[READDIR_BUFSZ];
 	struct slashrpc_readdir_req *mq;
 	struct slashrpc_readdir_rep *mp;
+	struct pscrpc_bulk_desc *desc;
+	struct l_wait_info lwi;
 	struct dircache *dc;
-	char fn[PATH_MAX];
 	slash_fid_t fid;
-	int rc;
+	int comms_error, size, rc;
 
 	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	if (!mq)
 		return (-EPROTO);
 
-	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn))
+	size = sizeof(*mp);
+	rc = psc_pack_reply(rq, 1, &size, NULL);
+	if (rc) {
+		psc_assert(rc == -ENOMEM);
+		psc_error("psc_pack_reply failed");
+		return (rc);
+	}
+	mp = psc_msg_buf(rq->rq_repmsg, 0, size);
+	if (!mp)
+		return (-EPROTO);
+
+	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
 		return (-errno);
-	dc = dircache_get(fn);
-	dircache_read(dc, mq->off, );
+	dc = dircache_get(&fid);
+	rc = dircache_read(dc, mq->offset, ents, READDIR_BUFSZ);
 	dircache_rel(dc);
-	if (rc)
+	if (rc == -1)
 		return (-errno);
-	return (0);
+	if (rc == 0)
+		return (0);
+	mp->size = rc;
+
+	desc = pscrpc_prep_bulk_exp(rq, rc / pscPageSize,
+	    BULK_PUT_SOURCE, RPCMDS_BULK_PORTAL);
+	if (desc == NULL) {
+		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
+                return (-ENOMEM);
+        }
+	desc->bd_iov[0].iov_base = ents;
+        desc->bd_iov[0].iov_len = mp->size;
+	desc->bd_iov_count = 1;
+	desc->bd_nob = mp->size;
+
+	if (desc->bd_export->exp_failed)
+		rc = -ENOTCONN;
+	else
+		rc = pscrpc_start_bulk_transfer(desc);
+
+        if (rc == 0) {
+                lwi = LWI_TIMEOUT_INTERVAL(20 * HZ / 2, HZ, NULL, desc);
+
+                rc = psc_svr_wait_event(&desc->bd_waitq,
+		    !pscrpc_bulk_active(desc) || desc->bd_export->exp_failed,
+		    &lwi, NULL);
+                LASSERT(rc == 0 || rc == -ETIMEDOUT);
+                if (rc == -ETIMEDOUT) {
+                        psc_info("timeout on bulk PUT");
+                        pscrpc_abort_bulk(desc);
+                } else if (desc->bd_export->exp_failed) {
+                        psc_info("eviction on bulk PUT");
+                        rc = -ENOTCONN;
+                        pscrpc_abort_bulk(desc);
+                } else if (!desc->bd_success ||
+		    desc->bd_nob_transferred != desc->bd_nob) {
+                        psc_info("%s bulk PUT %d(%d)",
+			    desc->bd_success ? "truncated" : "network err",
+			    desc->bd_nob_transferred, desc->bd_nob);
+                        /* XXX should this be a different errno? */
+                        rc = -ETIMEDOUT;
+                }
+        } else
+                psc_info("pscrpc bulk put failed: rc %d", rc);
+        comms_error = (rc != 0);
+	if (rc == 0) {
+		psc_info("put readdir contents successfully");
+	} else if (!comms_error) {
+		/* Only reply if there was no comms problem with bulk */
+		rq->rq_status = rc;
+		pscrpc_error(rq);
+	}
+        pscrpc_free_bulk(desc);
+	return rc;
 }
 
 int
@@ -401,7 +470,7 @@ slmds_readlink(struct pscrpc_request *rq)
 {
 	struct slashrpc_readlink_req *mq;
 	struct slashrpc_readlink_rep *mp;
-	int rc;
+	int size, rc;
 
 	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	if (!mq)
@@ -409,13 +478,14 @@ slmds_readlink(struct pscrpc_request *rq)
 	if (mq->size > PATH_MAX || mq->size == 0)
 		return (-EINVAL);
 
-	rc = psc_pack_reply(rq, 1, &mq->size, NULL);
+	size = mq->size;
+	rc = psc_pack_reply(rq, 1, &size, NULL);
 	if (rc) {
 		psc_assert(rc == -ENOMEM);
 		psc_error("psc_pack_reply failed");
 		return (rc);
 	}
-	mp = psc_msg_buf(rq->rq_repmsg, 0, mq->size);
+	mp = psc_msg_buf(rq->rq_repmsg, 0, size);
 	if (!mp)
 		return (-EPROTO);
 
@@ -511,14 +581,12 @@ slmds_statfs(struct pscrpc_request *rq)
 	rc = statfs(mq->path, &sfb);
 	if (rc)
 		return (-errno);
-	mp->f_type    = sfb.f_type;
-	mp->f_bsize   = sfb.f_bsize;
-	mp->f_blocks  = sfb.f_blocks;
-	mp->f_bfree   = sfb.f_bfree;
-	mp->f_bavail  = sfb.f_bavail;
-	mp->f_files   = sfb.f_files;
-	mp->f_ffree   = sfb.f_ffree;
-	mp->f_namelen = sfb.f_namelen;
+	mp->f_bsize	= sfb.f_bsize;
+	mp->f_blocks	= sfb.f_blocks;
+	mp->f_bfree	= sfb.f_bfree;
+	mp->f_bavail	= sfb.f_bavail;
+	mp->f_files	= sfb.f_files;
+	mp->f_ffree	= sfb.f_ffree;
 	return (0);
 }
 

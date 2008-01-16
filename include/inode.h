@@ -3,9 +3,14 @@
 #ifndef _SLASH_INODE_H
 #define _SLASH_INODE_H
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "psc_types.h"
 #include "psc_util/crc.h"
 #include "psc_util/assert.h"
+
+#include "fid.h"
 
 #define SL_DEF_REPLICAS     4
 #define SL_DEF_SNAPSHOTS    16
