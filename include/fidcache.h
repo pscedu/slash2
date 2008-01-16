@@ -21,7 +21,7 @@
 
 extern struct hash_table fidCache;
 
-/* File info holder */
+/* sl_finfo - hold stats and lamport clock */
 struct sl_finfo {
         struct timeval  slf_opentime;      /* when we received client OPEN  */
         struct timeval  slf_closetime;     /* when we received client CLOSE */
@@ -47,6 +47,8 @@ struct sl_uid {
 struct mexpbcm;
 /*
  * bmexpcr (bmap_export_cache_reference) - maintain back references to the exports which reference this bmap via their export bmap caches.  This reference allows for simple lookup and access to the export-specific bmap tree which represents the client's bmap cache.  Usage scenarios include single block invalidations to multiple clients.
+ *
+ * bmexpcr are members of the bmap export tree - the lower tier in the GFC.
  */
 struct bmexpcr {
 	struct mexpbcm *bmexpcr_ref;	
@@ -84,6 +86,8 @@ struct bmap_info {
 
 /*
  * bmap_cache_memb - central structure for block map caching used in all slash service contexts (mds, ios, client).  
+ *
+ * bmap_cache_memb sits in the middle of the GFC stratum.
  */
 struct bmap_cache_memb {
 	struct timeval   bcm_ts;	
@@ -107,6 +111,9 @@ SPLAY_PROTOTYPE(bmap_lessees, mexpfcm, mecm_fcm_tentry, bmap_cache_cmp);
 SPLAY_HEAD(bmap_cache, bmap_cache_memb);
 SPLAY_PROTOTYPE(bmap_cache, bmap_cache_memb, bcm_tentry, bmap_cache_cmp);
 
+/* fid_cache_memb - the primary inode cache structure, all updates and lookups into the inode are done through here.  fid_cache_memb tracks cached bmaps (bmap_cache) and clients (via their exports) which hold cached bmaps (fcm_lessees).
+ *
+ */
 typedef struct fid_cache_memb {
 	slash_fid_t          fcm_fid;
 	struct stat          fcm_stb; 

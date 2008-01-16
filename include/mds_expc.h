@@ -1,7 +1,7 @@
 #ifndef MDSEXPC_H
 #define MDSEXPC_H 1
 
-/* These structures provide back pointers into the Fid Cache to facilitate client-wise operations within the cache.  Such ops would include dereferencing the entire tree of client bmap references on connection close.
+/* These structures provide back pointers into the Fid Cache to facilitate client-wise operations within the cache.  Such ops would include dereferencing the entire tree of client bmap references on connection close.  
  */
 
 #include "psc_types.h"
@@ -12,8 +12,11 @@
 struct pscrpc_export;
 
 /*
- * mexpbcm (mds_export_bmap_cache_member) -
- *
+ * mexpbcm (mds_export_bmap_cache_member) - mexpbcm references bmaps stored in the GFC (global fid cache) and acts as a bridge between GFC bmaps and the export(s) which reference them.  mexpbcm is tracked by the global fidcache (through the fcm's bmap export tree (at the bottom of the GFC's tree chain).  The bmexpcr struct (fidcache.h) points to it.
+ * 
+ * mexpbcm_lentry is used for scheduling revocation of the bmap via a listcache based queue.
+ * 
+ * mexpbcm is the lowest member of the exp fidcache chain and corresponds to the GFC's bmap tier.
  */
 struct mexpbcm {
         u32                     mexpbcm_flags;
@@ -26,9 +29,11 @@ struct mexpbcm {
 SPLAY_HEAD(exp_bmaptree, mexpbcm);
 SPLAY_PROTOTYPE(exp_bmaptree, mexpbcm, mexpbcm_tentry, bmap_cache_cmp);
 /*
- * mexpfcm (mds_export_fidcache_memb) - 
- *
- * Notes:  mecm_fcm_opcnt is used to detect changes in the fcm who keeps his update count in fcm_slfinfo.slf_opcnt.  At no time may mecm_fcm_opcnt be higher than the fcm (unless the fcm counter has flipped).  mecm_loc_opcnt and mecm_rem_opcnt serve a similar purpose but the update detection is between the client and the export.  So if client A updates the ctime or mode exp(cA) will inc mecm_fcm->fcm_slfinfo.slf_opcnt and desync the opcnt between the fcm and the other exports prompting the other exports to update their client's caches.  It may be the case that incrementing  mecm_fcm->fcm_slfinfo.slf_opcnt will cause rpc's to be sent to the set of clients using that fcm.
+ * mexpfcm (mds_export_fidcache_memb) - this structure interacts with the mds fid cache and the clients cache by mediation within the export.  It tracks which bmaps the client has cached, the operation (lamport) clocks of the fcm and the client.  mexpfcm is tracked by the export's fidcache and the fcm's bmap_lessees tree.
+
+ * mecm_fcm_opcnt is used to detect changes in the fcm who keeps his update count in fcm_slfinfo.slf_opcnt.  At no time may mecm_fcm_opcnt be higher than the fcm (unless the fcm counter has flipped).  mecm_loc_opcnt and mecm_rem_opcnt serve a similar purpose but the update detection is between the client and the export.  So if client A updates the ctime or mode, exp(clientA) will inc mecm_fcm->fcm_slfinfo.slf_opcnt and desync the opcnt between the fcm and the other exports prompting the other exports to update their client's caches.  It may be the case that incrementing  mecm_fcm->fcm_slfinfo.slf_opcnt will cause rpc's to be sent to the set of clients using that fcm.
+ * 
+ * mexpfcm is in the middle of the exp fc chain and corresponds with the GFC fcm tier.
  */
 struct mexpfcm {
         fcache_memb_t        *mecm_fcm;        /* point to the fcm*/
@@ -45,8 +50,10 @@ struct mexpfcm {
 SPLAY_HEAD(exp_fidtree, mexpfcm);
 SPLAY_PROTOTYPE(exp_fidtree, exp_fid_memb, mecm_exp_tentry, bmap_cache_cmp);
 /*  
- * mexpfc (mds_export_fidcache) - stored in the export's private data, bmec_set is an array of bmap_cache_memb pointers.  This structure is traversed if the export is closed or if the file object is truncated.  
-*/
+ * mexpfc (mds_export_fidcache) - stored in the export's private data, bmec_set is an array of bmap_cache_memb pointers.  This structure is traversed if the export is closed or if the file object is truncated.
+ *
+ * mexpfc is the upper most level of the exp fidcache.
+ */
 struct mexpfc {
         struct pscrpc_export *mec_export; /* backpointer to our export */
         struct exp_fidtree    mec_fids;   /* reference all fcm's via the
