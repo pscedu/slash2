@@ -20,7 +20,7 @@ char *progname;
 char *f = "../../src/config/example.conf";
 int serverNode;
 
-int getOptions(int argc,  char *argv[]);
+int getOptions(int argc, char *argv[]);
 
 __dead void
 usage(void)
@@ -29,11 +29,26 @@ usage(void)
 	exit(1);
 }
 
-int main(int argc,  char *argv[])
+void
+spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
+{
+	extern int tcpnal_instances;
+	struct psc_thread *pt;
+
+	pt = PSCALLOC(sizeof(*pt));
+	pscthr_init(pt, 7, startf, "sllndthr%d",
+	    tcpnal_instances - 1);
+	*t = pt->pscthr_pthread;
+	pt->pscthr_private = arg;
+}
+
+int
+main(int argc, char *argv[])
 {
 	sl_resm_t *resm;
 
 	progname = argv[0];
+	lnet_thrspawnf = spawn_lnet_thr;
 	pfl_init(19);
 	psc_setloglevel(PLL_NOTICE);
 	getOptions(argc, argv);
@@ -42,7 +57,8 @@ int main(int argc,  char *argv[])
 	exit(0);
 }
 
-int getOptions(int argc,  char *argv[])
+int
+getOptions(int argc, char *argv[])
 {
 #define ARGS "i:l:S"
 	int c, err = 0;
@@ -55,7 +71,7 @@ int getOptions(int argc,  char *argv[])
 
 		case 'l':
 			psc_setloglevel(atoi(optarg));
-                        break;
+			break;
 
 		case 'i':
 			f = optarg;
