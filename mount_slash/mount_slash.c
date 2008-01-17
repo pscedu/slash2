@@ -20,6 +20,7 @@
 #include "psc_types.h"
 #include "psc_util/log.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/cdefs.h"
 
 #include "mount_slash.h"
 #include "slashrpc.h"
@@ -489,15 +490,44 @@ struct fuse_operations slashops = {
 	.write		= slash_write
 };
 
+void
+spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
+{
+	int rc;
+
+	rc = pthread_create(t, NULL, startf, arg);
+	if (rc)
+		psc_fatalx("pthread_create: %s", strerror(rc));
+}
+
+const char *progname;
+
+__dead void
+usage(void)
+{
+	fprintf(stderr, "usage: %s\n", progname);
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
+	int c;
+
+	progname = argv[0];
 	if (getenv("LNET_NETWORKS") == NULL)
 		errx(1, "please export LNET_NETWORKS");
 	if (getenv("SLASH_SERVER_NID") == NULL)
 		errx(1, "please export SLASH_SERVER_NID");
 
+	while ((c = getopt(argc, argv, "")) != -1)
+		switch (c) {
+		default:
+			usage();
+		}
+
 	pfl_init(7);
+	lnet_thrspawnf = spawn_lnet_thr;
 	if (rpc_svc_init())
 		psc_fatalx("rpc_svc_init");
 	return (fuse_main(argc, argv, &slashops, NULL));
