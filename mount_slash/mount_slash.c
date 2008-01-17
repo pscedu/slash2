@@ -321,7 +321,6 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 			if (filler(buf, d->d_name, &stb, 1))
 				break;
 		}
-
 	} else if (!comms_error) {
 		/* Only reply if there were no comm problems with bulk. */
 		rq->rq_status = rc;

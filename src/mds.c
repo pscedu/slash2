@@ -405,6 +405,8 @@ slmds_readdir(struct pscrpc_request *rq)
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
 		return (-errno);
 	dc = dircache_get(&fid);
+	if (dc == NULL)
+		return (-errno);
 	rc = dircache_read(dc, mq->offset, ents, READDIR_BUFSZ);
 	dircache_rel(dc);
 	if (rc == -1)
