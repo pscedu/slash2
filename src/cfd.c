@@ -14,6 +14,11 @@
 
 SPLAY_GENERATE(cfdtree, cfdent, entry, cfdcmp);
 
+/*
+ * cfdcmp - compare to client file descriptors, for tree lookups.
+ * @a: one cfd.
+ * @b: another cfd.
+ */
 int
 cfdcmp(const void *a, const void *b)
 {
@@ -27,6 +32,12 @@ cfdcmp(const void *a, const void *b)
 	return (0);
 }
 
+/*
+ * cfdnew - allocate a new file descriptor for a client.
+ * @cfdp: value-result new client file descriptor.
+ * @exp: RPC peer info.
+ * @fn: filename to associate cfd with.
+ */
 int
 cfdnew(u64 *cfdp, struct pscrpc_export *exp, const char *fn)
 {
@@ -49,7 +60,6 @@ cfdnew(u64 *cfdp, struct pscrpc_export *exp, const char *fn)
 	*cfdp = c->cfd;
 	return (0);
 }
-
 
 /*
  * cfd2fid - look up a client file descriptor in the export cfdtree
@@ -79,6 +89,11 @@ cfd2fid(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 	return (rc);
 }
 
+/*
+ * cfdfree - release a client file descriptor.
+ * @exp: RPC peer info.
+ * @cfd: client fd to release.
+ */
 int
 cfdfree(struct pscrpc_export *exp, u64 cfd)
 {

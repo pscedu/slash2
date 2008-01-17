@@ -456,15 +456,15 @@ slmds_readdir(struct pscrpc_request *rq)
 	} else
 		psc_info("pscrpc bulk put failed: rc %d", rc);
 	comms_error = (rc != 0);
-	if (rc == 0) {
+	if (rc == 0)
 		psc_info("put readdir contents successfully");
-	} else if (!comms_error) {
+	else if (!comms_error) {
 		/* Only reply if there was no comms problem with bulk */
 		rq->rq_status = rc;
 		pscrpc_error(rq);
 	}
 	pscrpc_free_bulk(desc);
-	return rc;
+	return (rc);
 }
 
 int
