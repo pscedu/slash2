@@ -3,13 +3,14 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 
-#include <unistd.h>
-#include <stdio.h>
 #include <errno.h>
+#include <stdio.h>
+#include <unistd.h>
 
-#include "psc_util/assert.h"
 #include "psc_types.h"
-#include "slash_fid.h"
+#include "psc_util/assert.h"
+
+#include "fid.h"
 
 void
 _meta_dir_create(u32 curdepth, u32 maxdepth)
@@ -38,10 +39,9 @@ _meta_dir_create(u32 curdepth, u32 maxdepth)
  *  on a mapserver filesystem.
  */
 int
-meta_dir_create(const char *meta_root,
-		u64 fs_set_uuid, u32 meta_dir_depth)
+meta_dir_create(const char *meta_root, u64 fs_set_uuid, u32 meta_dir_depth)
 {
-	char wd[PATH_MAX], meta_fsid_str[16+1];
+	char wd[PATH_MAX], meta_fsid_str[FSID_LEN+1];
 	int  rc;
 
 	if (getcwd(wd, sizeof(wd)) == NULL)
@@ -52,8 +52,7 @@ meta_dir_create(const char *meta_root,
 	if (!meta_dir_depth)
 		meta_dir_depth = FID_PATH_DEPTH;
 
-	rc = snprintf(meta_fsid_str, FSID_LEN+1,
-		      FSID_FMT, (u64)fs_set_uuid);
+	rc = snprintf(meta_fsid_str, FSID_LEN+1, FSID_FMT, fs_set_uuid);
 	psc_assert(rc == FSID_LEN);
 
 	rc = mkdir(meta_fsid_str, 0700);
@@ -61,7 +60,7 @@ meta_dir_create(const char *meta_root,
 		psc_assert_perror(0);
 
 	psc_assert_perror(chdir(meta_fsid_str) == 0);
-	_meta_dir_create(1, psc_meta_dir_depth);
+	_meta_dir_create(1, meta_dir_depth);
 	psc_assert_perror(chdir(wd) == 0);
 
 	return (0);
