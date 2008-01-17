@@ -24,6 +24,19 @@ usage(void)
 	exit(1);
 }
 
+void
+spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
+{
+	extern int tcpnal_instances;
+	struct psc_thread *pt;
+
+	pt = PSCALLOC(sizeof(*pt));
+	pscthr_init(pt, SLTHRT_LND, startf, "sllndthr%d",
+	    tcpnal_instances - 1);
+	*t = pt->pscthr_pthread;
+	pt->pscthr_private = arg;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -35,6 +48,7 @@ main(int argc, char *argv[])
 		psc_fatalx("please export LNET_NETWORKS");
 	if (getenv("TCPLND_SERVER") == NULL)
 		psc_fatalx("please export TCPLND_SERVER");
+	lnet_thrspawnf = spawn_lnet_thr;
 
 	cfn = _PATH_SLASHCONF;
 	while ((c = getopt(argc, argv, "f:")) != -1)
@@ -51,28 +65,3 @@ main(int argc, char *argv[])
 	slmds_init();
 	exit(0);
 }
-
-void
-spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
-{
-	extern int tcpnal_instances;
-	struct psc_thread *pt;
-
-	pt = PSCALLOC(sizeof(*pt));
-	pscthr_init(pt, SLTHRT_LND, startf, "sllndthr%d",
-	    tcpnal_instances - 1);
-	*t = pt->pscthr_pthread;
-	pt->pscthr_private = arg;
-}
-
-#if 0
-void
-spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
-{
-	int rc;
-
-	rc = pthread_create(t, NULL, startf, arg);
-	if (rc)
-		psc_fatalx("pthread_create: %s", strerror(rc));
-}
-#endif
