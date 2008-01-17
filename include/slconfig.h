@@ -54,6 +54,7 @@ typedef struct resource_profile {
 	u32                 res_npeers;
 	lnet_nid_t         *res_nids;
 	u32                 res_nnids;
+	char		    res_objroot[PATH_MAX];
 	struct psclist_head res_list;
 } sl_resource_t;
 
