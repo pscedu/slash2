@@ -3,7 +3,10 @@
 #include <sys/types.h>
 #include <sys/syscall.h>
 
+#define __USE_GNU
 #include <fcntl.h>
+#undef __USE_GNU
+
 #include <stdio.h>
 #include <unistd.h>
 
@@ -140,7 +143,7 @@ dircache_get(slash_fid_t *fidp)
 	} else {
 		if (fid_makepath(fidp, fn))
 			goto done;
-		if ((fd = open(fn, O_RDONLY)) == -1)
+		if ((fd = open(fn, O_RDONLY | O_DIRECTORY)) == -1)
 			goto done;
 		dc = dircache_alloc();
 		LOCK_INIT(&dc->dc_lock);
