@@ -37,6 +37,8 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 	pt->pscthr_private = arg;
 }
 
+struct psc_thread slashControlThread;
+
 int
 main(int argc, char *argv[])
 {
@@ -44,6 +46,8 @@ main(int argc, char *argv[])
 	int c;
 
 	progname = argv[0];
+	pfl_init(SLASH_THRTBL_SIZE);
+	pscthr_init(&slashControlThread, SLTHRT_CTL, NULL, "ctl");
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
 	if (getenv("TCPLND_SERVER") == NULL)
@@ -59,7 +63,6 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
-	pfl_init(SLASH_THRTBL_SIZE);
 	slashGetConfig(cfn);
 	libsl_init(PSC_SERVER);
 	slmds_init();
