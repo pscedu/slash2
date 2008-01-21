@@ -87,10 +87,12 @@ typedef struct global_config {
 } sl_gconf_t;
 
 #define GCONF_HASHTBL_SZ 63
-#define INIT_GCONF(g)							\
-		INIT_PSCLIST_HEAD(&(g)->gconf_sites);			\
-		init_hash_table(&(g)->gconf_nids_hash,			\
-				GCONF_HASHTBL_SZ, "gconf_htbl%d", 0)
+#define INIT_GCONF(g)						\
+	do {							\
+		INIT_PSCLIST_HEAD(&(g)->gconf_sites);		\
+		init_hash_table(&(g)->gconf_nids_hash,		\
+				GCONF_HASHTBL_SZ, "gconf");	\
+	} while (0)
 
 typedef struct resource_member {
 	lnet_nid_t        resm_nid;
