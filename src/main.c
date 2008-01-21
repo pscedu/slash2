@@ -15,6 +15,8 @@
 //#define _PATH_SLASHCONF "/etc/slash.conf"
 #define _PATH_SLASHCONF "config/example.conf"
 
+struct psc_thread slashControlThread;
+
 const char *progname;
 
 __dead void
@@ -31,13 +33,10 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 	struct psc_thread *pt;
 
 	pt = PSCALLOC(sizeof(*pt));
-	pscthr_init(pt, SLTHRT_LND, startf, "sllndthr%d",
+	pscthr_init(pt, SLTHRT_LND, startf, arg, "sllndthr%d",
 	    tcpnal_instances - 1);
 	*t = pt->pscthr_pthread;
-	pt->pscthr_private = arg;
 }
-
-struct psc_thread slashControlThread;
 
 int
 main(int argc, char *argv[])
@@ -47,7 +46,7 @@ main(int argc, char *argv[])
 
 	progname = argv[0];
 	pfl_init(SLASH_THRTBL_SIZE);
-	pscthr_init(&slashControlThread, SLTHRT_CTL, NULL, "ctl");
+	pscthr_init(&slashControlThread, SLTHRT_CTL, NULL, NULL, "slctlthr");
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
 	if (getenv("TCPLND_SERVER") == NULL)
