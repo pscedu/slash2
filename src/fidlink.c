@@ -29,7 +29,7 @@ fid_makepath(const slash_fid_t *fid, char *fid_path)
 	int    i, rc;
 
 	rc = snprintf(fid_path, FID_PATH_LEN,
-		      "%s/%016"ZLPX64"/",
+		      "%s/%016"_P_LP64"x/",
 //		      nodeProfile->znprof_objroot,
 //		      nodeInfo->znode_set_uuid);
  "foo", 0UL);
@@ -47,12 +47,12 @@ fid_makepath(const slash_fid_t *fid, char *fid_path)
 		*c     = (char)j;
 		*(++c) = '/';
         }
-	rc = snprintf(c, FID_PRINT_CHAR + 1, "%016"ZLPX64,
+	rc = snprintf(c, FID_PRINT_CHAR + 1, "%016"_P_LP64"x",
 		      fid->fid_inum);
 
 	psc_assert_msg(rc == FID_PRINT_CHAR, "rc == %d", rc);
 
-	psc_info("Fidpath ;%s; %016"ZLPX64,
+	psc_info("Fidpath ;%s; %016"_P_LP64"x",
 	      fid_path, fid->fid_inum);
 	return (0);
 }
@@ -71,14 +71,14 @@ fid_link(const slash_fid_t *fid, const char *fnam)
 
 	rc = link(fnam, fid_path);
 	if (!rc)
-		psc_info("linked userf ;%s; to fid_path ;%s; for fid %"ZLPX64,
+		psc_info("linked userf ;%s; to fid_path ;%s; for fid %"_P_LP64"x",
 		      fnam, fid_path, fid->fid_inum);
 	else {
 		rc = -errno;
 		if (errno == EEXIST) {
 			struct stat stb;
 
-			psc_info("already linked fid_path %s for fid %"ZLPX64,
+			psc_info("already linked fid_path %s for fid %"_P_LP64"x",
 			      fid_path, fid->fid_inum);
 
 #ifdef ZEST
@@ -89,7 +89,7 @@ fid_link(const slash_fid_t *fid, const char *fnam)
 
 			if (stb.st_ino != fid->fid_inum) {
 				psc_error("BAD! Immutable namespace "
-					  "corruption! %"ZLPX64" != %"ZLPX64,
+					  "corruption! %"_P_LP64"x != %"_P_LP64"x",
 					  fid->fid_inum, stb.st_ino);
                                 return -EINVAL;
 			} else
@@ -97,7 +97,7 @@ fid_link(const slash_fid_t *fid, const char *fnam)
 				return 0;
 
 		} else {
-			psc_error("failed to link fid_path %s for fid %"ZLPX64,
+			psc_error("failed to link fid_path %s for fid %"_P_LP64"x",
 				  fid_path, fid->fid_inum);
 		}
 	}

@@ -43,7 +43,7 @@ slmds_connect(struct pscrpc_request *req)
 		rc = -ENOMSG;
 		goto fail;
 	}
-	psc_notify("magic %"ZLPX64" version %u",
+	psc_notify("magic %"_P_LP64"x version %u",
 		   body->magic, body->version);
 
 	if (body->magic   != SMDS_MAGIC ||
@@ -64,12 +64,12 @@ slmds_connect(struct pscrpc_request *req)
 	repbody->magic  = SMDS_MAGIC;
 	repbody->version = SMDS_VERSION;
 
-	psc_notify("Connect request from %"ZLPX64":%u",
+	psc_notify("Connect request from %"_P_LP64"x:%u",
 		   req->rq_peer.nid, req->rq_peer.pid);
 
 	return (0);
  fail:
-	psc_notify("Failed connect request from %"ZLPX64":%u",
+	psc_notify("Failed connect request from %"_P_LP64"x:%u",
 		   req->rq_peer.nid, req->rq_peer.pid);
 	return (rc);
 }

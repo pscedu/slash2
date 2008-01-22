@@ -99,7 +99,7 @@ rpcmds_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	imp->imp_connection->c_peer.pid = SLASH_SVR_PID;
 
 	ctx = fuse_get_context();
-	if (rpc_sendmsg(SRMT_CONNECT, version, magic, ctx->uid, ctx->gid) == -1)
+	if (rpc_sendmsg(SRMT_CONNECT, magic, version, ctx->uid, ctx->gid) == -1)
 		return (-errno);
 
 #if 0
@@ -318,7 +318,7 @@ rpc_sendmsg(int op, ...)
 		if (rc)
 			return (rc);
 		u.m_connect->magic = va_arg(ap, u64);
-		u.m_connect->version = va_arg(ap, u64);
+		u.m_connect->version = va_arg(ap, u32);
 		u.m_connect->uid = va_arg(ap, uid_t);
 		u.m_connect->gid = va_arg(ap, gid_t);
 		break;

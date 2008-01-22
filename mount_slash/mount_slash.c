@@ -530,5 +530,5 @@ main(int argc, char *argv[])
 	lnet_thrspawnf = spawn_lnet_thr;
 	if (rpc_svc_init())
 		psc_fatalx("rpc_svc_init");
-	return (fuse_main(argc, argv, &slashops, NULL));
+//	return (fuse_main(argc, argv, &slashops, NULL));
 }
