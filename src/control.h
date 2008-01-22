@@ -8,6 +8,7 @@
 #include <sys/param.h>
 
 #include "psc_ds/hash.h"
+#include "psc_ds/listcache.h"
 
 #include "slash.h"
 #include "inode.h"
@@ -15,7 +16,7 @@
 /* Path to control socket. */
 #define _PATH_SLCTLSOCK		"../slashd.sock"
 
-#define SLTHRNAME_EVERYONE	"everyone"
+#define STHRNAME_EVERYONE	"everyone"
 
 #define SLCTLMSG_ERRMSG_MAX	50
 
@@ -30,7 +31,7 @@ struct slctlmsg_subsys {
 };
 
 struct slctlmsg_loglevel {
-	char			sll_threadname[PSC_THRNAME_MAX];
+	char			sll_thrname[PSC_THRNAME_MAX];
 	int			sll_levels[0];
 };
 
@@ -43,6 +44,14 @@ struct slctlmsg_lc {
 
 #define SLC_NAME_ALL		"all"
 
+struct slctlmsg_stats {
+	char			sst_thrname[PSC_THRNAME_MAX];
+	int			sst_thrtype;
+	int			sst_nclients;
+	int			sst_nsent;
+	int			sst_nrecv;
+};
+
 struct slctlmsg_hashtable {
 	char			sht_name[HTNAME_MAX];
 	int			sht_totalbucks;
@@ -53,25 +62,16 @@ struct slctlmsg_hashtable {
 
 #define SHT_NAME_ALL		"all"
 
-struct slctlmsg_mlist {
-	char			zm_name[ZML_NAME_MAX];
-	u32			zm_size;
-	u32			zm_nseen;
-	u32			zm_waitors;
-};
-
-#define SML_NAME_ALL		"all"
-
 #define SP_FIELD_MAX		30
 #define SP_VALUE_MAX		50
 
 struct slctlmsg_param {
 	char			sp_thrname[PSC_THRNAME_MAX];
-	char			sp_field[ZP_FIELD_MAX];
-	char			sp_value[ZP_VALUE_MAX];
+	char			sp_field[SP_FIELD_MAX];
+	char			sp_value[SP_VALUE_MAX];
 };
 
-struct zctlmsg_iostats {
+struct slctlmsg_iostats {
 //	struct iostats		zist_ist;
 };
 
@@ -81,7 +81,7 @@ struct zctlmsg_iostats {
 #define SCMT_ERRMSG		0
 #define SCMT_GETINODE		1
 #define SCMT_GETLOGLEVEL	2
-#define SCMT_GETLIST		3
+#define SCMT_GETLC		3
 #define SCMT_GETSTATS		4
 #define SCMT_GETDISK		5
 #define SCMT_GETHASHTABLE	6

@@ -21,12 +21,14 @@
 
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
+#include "psc_ds/listcache.h"
 #include "psc_util/threadtable.h"
+#include "psc_util/thread.h"
 #include "psc_util/cdefs.h"
 
 #include "inode.h"
 #include "control.h"
-#include "zestion.h"
+#include "slash.h"
 
 struct psc_thread slashControlThread;
 
@@ -35,8 +37,8 @@ struct psc_thread slashControlThread;
 /*
  * slctlthr_sendmsgv - send a control message back to client.
  * @fd: client socket descriptor.
- * @zmch: already filled-out zestion control message header.
- * @zcm: zestion control message contents.
+ * @smch: already filled-out slash control message header.
+ * @scm: slash control message contents.
  */
 void
 slctlthr_sendmsgv(int fd, const struct slctlmsghdr *scmh, const void *scm)
@@ -130,9 +132,9 @@ void
 slctlthr_sendrep_getstats(int fd, struct slctlmsghdr *scmh,
     struct slctlmsg_stats *sst, struct psc_thread *thr, int probe)
 {
-	snprintf(sst->sst_threadname, sizeof(sst->sst_threadname),
-	    "%s", sthr->pscthr_name);
-	sst->sst_threadtype = thr->pscthr_type;
+	snprintf(sst->sst_thrname, sizeof(sst->sst_thrname),
+	    "%s", thr->pscthr_name);
+	sst->sst_thrtype = thr->pscthr_type;
 	switch (thr->pscthr_type) {
 	case SLTHRT_CTL:
 		sst->sst_nclients = slctlthr(thr)->sc_st_nclients;
@@ -158,7 +160,7 @@ void
 slctlthr_sendrep_getloglevel(int fd, struct slctlmsghdr *scmh,
     struct slctlmsg_loglevel *sll, struct psc_thread *thr)
 {
-	snprintf(sll->sll_threadname, sizeof(sll->sll_threadname),
+	snprintf(sll->sll_thrname, sizeof(sll->sll_thrname),
 	    "%s", thr->pscthr_name);
 	memcpy(sll->sll_levels, thr->pscthr_loglevels,
 	    sizeof(thr->pscthr_loglevels));
@@ -234,19 +236,19 @@ slctlthr_sendrep_getlc(int fd, struct slctlmsghdr *scmh,
 #define MAX_LEVELS 8
 
 void
-slctlthr_sendrep_param(int fd, struct slctlmsghdr *zcmh,
-    struct slctlmsg_param *zp, const char *thrname,
+slctlthr_sendrep_param(int fd, struct slctlmsghdr *scmh,
+    struct slctlmsg_param *sp, const char *thrname,
     char **levels, int nlevels, const char *value)
 {
 	char *s, othrname[PSC_THRNAME_MAX];
 	const char *p, *end;
 	int lvl;
 
-	snprintf(othrname, sizeof(othrname), "%s", zp->zp_thrname);
-	snprintf(zp->zp_thrname, sizeof(zp->zp_thrname), "%s", thrname);
+	snprintf(othrname, sizeof(othrname), "%s", sp->sp_thrname);
+	snprintf(sp->sp_thrname, sizeof(sp->sp_thrname), "%s", thrname);
 
-	s = zp->zp_field;
-	end = s + sizeof(zp->zp_field) - 1;
+	s = sp->sp_field;
+	end = s + sizeof(sp->sp_field) - 1;
 	for (lvl = 0; s < end && lvl < nlevels; lvl++) {
 		for (p = levels[lvl]; s < end && *p; s++, p++)
 			*s = *p;
@@ -255,10 +257,10 @@ slctlthr_sendrep_param(int fd, struct slctlmsghdr *zcmh,
 	}
 	*s = '\0';
 
-	snprintf(zp->zp_value, sizeof(zp->zp_value), "%s", value);
-	slctlthr_sendmsgv(fd, zcmh, zp);
+	snprintf(sp->sp_value, sizeof(sp->sp_value), "%s", value);
+	slctlthr_sendmsgv(fd, scmh, sp);
 
-	snprintf(zp->zp_thrname, sizeof(zp->zp_thrname), "%s", othrname);
+	snprintf(sp->sp_thrname, sizeof(sp->sp_thrname), "%s", othrname);
 }
 
 #define FOR_EACH_THREAD(i, thr, thrname, threads, nthreads)		\
@@ -268,26 +270,26 @@ slctlthr_sendrep_param(int fd, struct slctlmsghdr *zcmh,
 		    strcmp((thrname), STHRNAME_EVERYONE) == 0)
 
 void
-slctlthr_param_log_level(int fd, struct slctlmsghdr *zcmh,
-    struct slctlmsg_param *zp, char **levels, int nlevels)
+slctlthr_param_log_level(int fd, struct slctlmsghdr *scmh,
+    struct slctlmsg_param *sp, char **levels, int nlevels)
 {
 	int n, nthr, set, loglevel, subsys, start_ss, end_ss;
-	struct psc_thread **threads, *zthr;
+	struct psc_thread **threads, *thr;
 
 	levels[0] = "log";
 	levels[1] = "level";
 
 	loglevel = 0; /* gcc */
-	threads = dynarray_get(&zestionThreads);
-	nthr = dynarray_len(&zestionThreads);
+	threads = dynarray_get(&pscThreads);
+	nthr = dynarray_len(&pscThreads);
 
-	set = (zcmh->zcmh_type == ZCMT_SETPARAM);
+	set = (scmh->scmh_type == SCMT_SETPARAM);
 
 	if (set) {
-		loglevel = psclog_id(zp->zp_value);
+		loglevel = psclog_id(sp->sp_value);
 		if (loglevel == -1) {
-			slctlthr_senderrmsg(fd, zcmh,
-			    "invalid log.level value: %s", zp->zp_value);
+			slctlthr_senderrmsg(fd, scmh,
+			    "invalid log.level value: %s", sp->sp_value);
 			return;
 		}
 	}
@@ -296,7 +298,7 @@ slctlthr_param_log_level(int fd, struct slctlmsghdr *zcmh,
 		/* Subsys specified, use it. */
 		subsys = psc_subsys_id(levels[2]);
 		if (subsys == -1) {
-			slctlthr_senderrmsg(fd, zcmh,
+			slctlthr_senderrmsg(fd, scmh,
 			    "invalid log.level subsystem: %s", levels[2]);
 			return;
 		}
@@ -305,32 +307,32 @@ slctlthr_param_log_level(int fd, struct slctlmsghdr *zcmh,
 	} else {
 		/* No subsys specified, use all. */
 		start_ss = 0;
-		end_ss = ZNSUBSYS;
+		end_ss = psc_nsubsys;
 	}
 
-	FOR_EACH_THREAD(n, zthr, zp->zp_thrname, threads, nthr)
+	FOR_EACH_THREAD(n, thr, sp->sp_thrname, threads, nthr)
 		for (subsys = start_ss; subsys < end_ss; subsys++) {
 			levels[2] = psc_subsys_name(subsys);
 			if (set)
-				zthr->pscthr_loglevels[subsys] = loglevel;
+				thr->pscthr_loglevels[subsys] = loglevel;
 			else {
-				slctlthr_sendrep_param(fd, zcmh, zp,
-				    zthr->pscthr_name, levels, 3,
-				    psclog_name(zthr->pscthr_loglevels[subsys]));
+				slctlthr_sendrep_param(fd, scmh, sp,
+				    thr->pscthr_name, levels, 3,
+				    psclog_name(thr->pscthr_loglevels[subsys]));
 			}
 		}
 }
 
 void
-slctlthr_sendreps_param(int fd, struct slctlmsghdr *zcmh,
-    struct slctlmsg_param *zp)
+slctlthr_sendreps_param(int fd, struct slctlmsghdr *scmh,
+    struct slctlmsg_param *sp)
 {
 	char *t, *levels[MAX_LEVELS];
 	int nlevels, set;
 
-	set = (zcmh->zcmh_type == ZCMT_SETPARAM);
+	set = (scmh->scmh_type == SCMT_SETPARAM);
 
-	for (nlevels = 0, t = zp->zp_field;
+	for (nlevels = 0, t = sp->sp_field;
 	    nlevels < MAX_LEVELS && (levels[nlevels] = t) != NULL;
 	    nlevels++) {
 		if ((t = strchr(levels[nlevels], '.')) != NULL)
@@ -346,9 +348,9 @@ slctlthr_sendreps_param(int fd, struct slctlmsghdr *zcmh,
 		if (nlevels == 1) {
 			if (set)
 				goto invalid;
-			slctlthr_param_log_level(fd, zcmh, zp, levels, nlevels);
+			slctlthr_param_log_level(fd, scmh, sp, levels, nlevels);
 		} else if (strcmp(levels[1], "level") == 0)
-			slctlthr_param_log_level(fd, zcmh, zp, levels, nlevels);
+			slctlthr_param_log_level(fd, scmh, sp, levels, nlevels);
 		else
 			goto invalid;
 	} else
@@ -358,10 +360,11 @@ slctlthr_sendreps_param(int fd, struct slctlmsghdr *zcmh,
  invalid:
 	while (nlevels > 1)
 		levels[--nlevels][-1] = '.';
-	slctlthr_senderrmsg(fd, zcmh,
-	    "invalid field/value: %s", zp->zp_field);
+	slctlthr_senderrmsg(fd, scmh,
+	    "invalid field/value: %s", sp->sp_field);
 }
 
+#if 0
 /*
  * slctlthr_sendrep_iostat - send a response to a "getiostat" inquiry.
  * @fd: client socket descriptor.
@@ -398,6 +401,7 @@ slctlthr_sendrep_iostat(int fd, struct slctlmsghdr *scmh,
 		slctlthr_senderrmsg(fd, scmh,
 		    "unknown iostats: %s", name);
 }
+#endif
 
 /*
  * slctlthr_procmsg - process a message from a client.
@@ -416,13 +420,10 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 	struct psc_thread **threads;
 	struct slctlmsg_hashtable *sht;
 	struct slctlmsg_loglevel *sll;
-	struct slctlmsg_iostats *sist;
 	struct slctlmsg_stats *sst;
 	struct slctlmsg_param *sp;
 	struct slctlmsg_lc *slc;
-	struct psclist_head *e;
 	int n, nthr;
-	size_t j;
 
 	/* XXX lock or snapshot nthreads so it doesn't change underneath us */
 	nthr = dynarray_len(&pscThreads);
@@ -432,14 +433,14 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 		sll = scm;
 		if (scmh->scmh_size != sizeof(*sll))
 			goto badlen;
-		if (strcasecmp(sll->sll_threadname,
+		if (strcasecmp(sll->sll_thrname,
 		    STHRNAME_EVERYONE) == 0) {
 			for (n = 0; n < nthr; n++)
 				slctlthr_sendrep_getloglevel(fd,
 				    scmh, sll, threads[n]);
 		} else {
 			for (n = 0; n < nthr; n++)
-				if (strcasecmp(sll->sll_threadname,
+				if (strcasecmp(sll->sll_thrname,
 				    threads[n]->pscthr_name) == 0) {
 					slctlthr_sendrep_getloglevel(fd,
 					    scmh, sll, threads[n]);
@@ -448,7 +449,7 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 			if (n == nthr)
 				slctlthr_senderrmsg(fd, scmh,
 				    "unknown thread: %s",
-				    sll->sll_threadname);
+				    sll->sll_thrname);
 		}
 		break;
 	case SCMT_GETHASHTABLE: {
@@ -462,14 +463,14 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 		sst = scm;
 		if (scmh->scmh_size != sizeof(*sst))
 			goto badlen;
-		if (strcasecmp(sst->sst_threadname,
+		if (strcasecmp(sst->sst_thrname,
 		    STHRNAME_EVERYONE) == 0) {
 			for (n = 0; n < nthr; n++)
 				slctlthr_sendrep_getstats(fd,
 				    scmh, sst, threads[n], 1);
 		} else {
 			for (n = 0; n < nthr; n++)
-				if (strcasecmp(sst->sst_threadname,
+				if (strcasecmp(sst->sst_thrname,
 				    threads[n]->pscthr_name) == 0) {
 					slctlthr_sendrep_getstats(fd,
 					    scmh, sst, threads[n], 0);
@@ -478,7 +479,7 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 			if (n == nthr)
 				slctlthr_senderrmsg(fd, scmh,
 				    "unknown thread: %s",
-				    sst->sst_threadname);
+				    sst->sst_thrname);
 		}
 		break;
 	case SCMT_GETLC:
@@ -505,12 +506,14 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 			goto badlen;
 		slctlthr_sendreps_param(fd, scmh, sp);
 		break;
+#if 0
 	case SCMT_GETIOSTAT:
 		sist = scm;
-		if (scmh->zcmh_size != sizeof(*sist))
+		if (scmh->scmh_size != sizeof(*sist))
 			goto badlen;
 		slctlthr_sendrep_iostat(fd, scmh, sist);
 		break;
+#endif
 	default:
 		warnx("unexpected msg type; type=%d size=%zu",
 		    scmh->scmh_type, scmh->scmh_size);

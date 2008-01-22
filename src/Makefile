@@ -4,6 +4,7 @@ include Makefile.path
 
 PROG=		slashd
 SRCS+=		cfd.c
+SRCS+=		control.c
 SRCS+=		dircache.c
 SRCS+=		fidlink.c
 SRCS+=		journal.c
