@@ -569,7 +569,7 @@ main(int argc, char *argv[])
 	scmsiz = 0;
 	while ((n = read(s, &scmh, sizeof(scmh))) != -1 && n != 0) {
 		if (n != sizeof(scmh)) {
-			psc_warnx("short read");
+			warnx("short read");
 			continue;
 		}
 		if (scmh.scmh_size == 0)
