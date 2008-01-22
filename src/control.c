@@ -1,8 +1,8 @@
-/* $Id: control.c 2444 2008-01-08 17:49:30Z yanovich $ */
+/* $Id$ */
 
 /*
  * Control interface for querying and modifying
- * parameters of a currently-running zestiond.
+ * parameters of a currently-running slashd.
  */
 
 #include <sys/types.h>
@@ -19,358 +19,170 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "zestHash.h"
-#include "zestInode.h"
-#include "zestChunkMap.h"
-#include "zestInodeCache.h"
-#include "zestIoThread.h"
-#include "zestList.h"
-#include "zestMList.h"
-#include "zestParityGroupCache.h"
-#include "zestParityThr.h"
-#include "zestRead.h"
-#include "zestThreadTable.h"
+#include "psc_ds/hash.h"
+#include "psc_ds/list.h"
+#include "psc_util/threadtable.h"
+#include "psc_util/cdefs.h"
 
-#include "ciod.h"
+#include "inode.h"
 #include "control.h"
-#include "disk.h"
-#include "vbitmap.h"
 #include "zestion.h"
-#include "cdefs.h"
 
-struct psc_thread zestionControlThread;
+struct psc_thread slashControlThread;
 
 #define Q 15	/* listen() queue */
 
 /*
- * zctlthr_sendmsgv - send a control message back to client.
+ * slctlthr_sendmsgv - send a control message back to client.
  * @fd: client socket descriptor.
  * @zmch: already filled-out zestion control message header.
  * @zcm: zestion control message contents.
  */
 void
-zctlthr_sendmsgv(int fd, const struct zctlmsghdr *zcmh, const void *zcm)
+slctlthr_sendmsgv(int fd, const struct slctlmsghdr *scmh, const void *scm)
 {
 	struct iovec iov[2];
 	size_t tsiz;
 	ssize_t n;
 
-	iov[0].iov_base = (void *)zcmh;
-	iov[0].iov_len = sizeof(*zcmh);
+	iov[0].iov_base = (void *)scmh;
+	iov[0].iov_len = sizeof(*scmh);
 
-	iov[1].iov_base = (void *)zcm;
-	iov[1].iov_len = zcmh->zcmh_size;
+	iov[1].iov_base = (void *)scm;
+	iov[1].iov_len = scmh->scmh_size;
 
 	n = writev(fd, iov, NENTRIES(iov));
 	if (n == -1)
 		err(1, "write");
-	tsiz = sizeof(*zcmh) + zcmh->zcmh_size;
+	tsiz = sizeof(*scmh) + scmh->scmh_size;
 	if ((size_t)n != tsiz)
 		warn("short write");
-	zctlthr(&zestionControlThread)->zc_st_nsent++;
+	slctlthr(&slashControlThread)->sc_st_nsent++;
 	sched_yield();
 }
 
 /*
- * zctlthr_sendmsg - send a control message back to client.
+ * slctlthr_sendmsg - send a control message back to client.
  * @fd: client socket descriptor.
  * @type: type of message.
  * @siz: size of message.
- * @zcm: zestion control message contents.
- * Notes: a zestion control message header will be constructed and
+ * @scm: slash control message contents.
+ * Notes: a slash control message header will be constructed and
  * written to the client preceding the message contents.
  */
 void
-zctlthr_sendmsg(int fd, int type, size_t siz, const void *zcm)
+slctlthr_sendmsg(int fd, int type, size_t siz, const void *scm)
 {
+	struct slctlmsghdr scmh;
 	struct iovec iov[2];
-	struct zctlmsghdr zcmh;
 	size_t tsiz;
 	ssize_t n;
 
-	memset(&zcmh, 0, sizeof(zcmh));
-	zcmh.zcmh_type = type;
-	zcmh.zcmh_size = siz;
+	memset(&scmh, 0, sizeof(scmh));
+	scmh.scmh_type = type;
+	scmh.scmh_size = siz;
 
-	iov[0].iov_base = &zcmh;
-	iov[0].iov_len = sizeof(zcmh);
+	iov[0].iov_base = &scmh;
+	iov[0].iov_len = sizeof(scmh);
 
-	iov[1].iov_base = (void *)zcm;
+	iov[1].iov_base = (void *)scm;
 	iov[1].iov_len = siz;
 
 	n = writev(fd, iov, NENTRIES(iov));
 	if (n == -1)
 		err(1, "write");
-	tsiz = sizeof(zcmh) + siz;
+	tsiz = sizeof(scmh) + siz;
 	if ((size_t)n != tsiz)
 		warn("short write");
-	zctlthr(&zestionControlThread)->zc_st_nsent++;
+	slctlthr(&slashControlThread)->sc_st_nsent++;
 	sched_yield();
 }
 
 /*
- * zctlthr_senderrmsg - send an error message to client.
+ * slctlthr_senderrmsg - send an error message to client.
  * @fd: client socket descriptor.
  * @fmt: printf(3) format of error message.
  */
 void
-zctlthr_senderrmsg(int fd, struct zctlmsghdr *zcmh, const char *fmt, ...)
+slctlthr_senderrmsg(int fd, struct slctlmsghdr *scmh, const char *fmt, ...)
 {
-	struct zctlmsg_errmsg zem;
+	struct slctlmsg_errmsg sem;
 	va_list ap;
 
 	va_start(ap, fmt);
-	vsnprintf(zem.zem_errmsg, sizeof(zem.zem_errmsg), fmt, ap);
+	vsnprintf(sem.sem_errmsg, sizeof(sem.sem_errmsg), fmt, ap);
 	va_end(ap);
 
-	zcmh->zcmh_type = ZCMT_ERRMSG;
-	zcmh->zcmh_size = sizeof(zem);
-	zctlthr_sendmsgv(fd, zcmh, &zem);
+	scmh->scmh_type = SCMT_ERRMSG;
+	scmh->scmh_size = sizeof(sem);
+	slctlthr_sendmsgv(fd, scmh, &sem);
 }
 
 /*
- * zctlthr_sendrep_getstats - send a response to a "getstats" inquiry.
+ * slctlthr_sendrep_getstats - send a response to a "getstats" inquiry.
  * @fd: client socket descriptor.
- * @zcmh: already filled-in zestion control message header.
- * @zs: thread stats message structure to be filled in and sent out.
- * @zthr: zestion thread begin queried.
+ * @scmh: already filled-in slash control message header.
+ * @sst: thread stats message structure to be filled in and sent out.
+ * @thr: slash thread begin queried.
  * @probe: whether to send empty msgs for threads which do not track stats.
  */
 void
-zctlthr_sendrep_getstats(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_stats *zst, struct psc_thread *zthr, int probe)
+slctlthr_sendrep_getstats(int fd, struct slctlmsghdr *scmh,
+    struct slctlmsg_stats *sst, struct psc_thread *thr, int probe)
 {
-	snprintf(zst->zst_threadname, sizeof(zst->zst_threadname),
-	    "%s", zthr->pscthr_name);
-	zst->zst_threadtype = zthr->pscthr_type;
-	switch (zthr->pscthr_type) {
-	case ZTHRT_CTL:
-		zst->zst_nclients = zctlthr(zthr)->zc_st_nclients;
-		zst->zst_nsent    = zctlthr(zthr)->zc_st_nsent;
-		zst->zst_nrecv    = zctlthr(zthr)->zc_st_nrecv;
-		break;
-	case ZTHRT_RPCMDS:
-		zst->zst_nopen  = zrpcmdsthr(zthr)->zrm_st_nopen;
-		zst->zst_nclose = zrpcmdsthr(zthr)->zrm_st_nclose;
-		zst->zst_nstat  = zrpcmdsthr(zthr)->zrm_st_nstat;
-		break;
-	case ZTHRT_RPCIO:
-		zst->zst_nwrite = zrpciothr(zthr)->zri_st_nwrite;
+	snprintf(sst->sst_threadname, sizeof(sst->sst_threadname),
+	    "%s", sthr->pscthr_name);
+	sst->sst_threadtype = thr->pscthr_type;
+	switch (thr->pscthr_type) {
+	case SLTHRT_CTL:
+		sst->sst_nclients = slctlthr(thr)->sc_st_nclients;
+		sst->sst_nsent    = slctlthr(thr)->sc_st_nsent;
+		sst->sst_nrecv    = slctlthr(thr)->sc_st_nrecv;
 		break;
 	default:
 		if (probe)
 			return;
 		break;
 	}
-	zctlthr_sendmsgv(fd, zcmh, zst);
+	slctlthr_sendmsgv(fd, scmh, sst);
 }
 
 /*
- * zctlthr_sendreps_getmlist - respond to a "getmlist" inquiry.
+ * slctlthr_sendrep_getloglevel - send a response to a "getloglevel" inquiry.
  * @fd: client socket descriptor.
- * @zcmh: already filled-in zestion control message header.
- * @zm: mlist message structure to be filled in and sent out.
+ * @scmh: already filled-in slash control message header.
+ * @sll: loglevel message structure to be filled in and sent out.
+ * @thr: slash thread begin queried.
  */
 void
-zctlthr_sendreps_getmlist(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_mlist *zm)
+slctlthr_sendrep_getloglevel(int fd, struct slctlmsghdr *scmh,
+    struct slctlmsg_loglevel *sll, struct psc_thread *thr)
 {
-	char name[ZML_NAME_MAX];
-	struct zest_mlist *zml;
-	int found, all;
-
-	found = 0;
-	snprintf(name, sizeof(name), "%s", zm->zm_name);
-	all = (strcmp(name, ZML_NAME_ALL) == 0);
-
-	spinlock(&zestMultiListsLock);
-	psclist_for_each_entry(zml, &zestMultiLists, zml_index_lentry)
-		if (all || strncmp(zml->zml_name, name,
-		    strlen(name)) == 0) {
-			found = 1;
-
-			snprintf(zm->zm_name, sizeof(zm->zm_name),
-			    "%s", zml->zml_name);
-			zm->zm_size = zml->zml_size;
-			zm->zm_nseen = zml->zml_nseen;
-			zm->zm_waitors =
-			    multilock_cond_nwaitors(&zml->zml_mlockcond_empty);
-			zctlthr_sendmsgv(fd, zcmh, zm);
-
-			/*
-			 * Exact matches should terminate
-			 * further searching.
-			 */
-			if (strlen(name) == strlen(zml->zml_name))
-				break;
-		}
-	freelock(&zestMultiListsLock);
-	if (!found && !all)
-		zctlthr_senderrmsg(fd, zcmh,
-		    "unknown mlist: %s", name);
+	snprintf(sll->sll_threadname, sizeof(sll->sll_threadname),
+	    "%s", thr->pscthr_name);
+	memcpy(sll->sll_levels, thr->pscthr_loglevels,
+	    sizeof(thr->pscthr_loglevels));
+	slctlthr_sendmsgv(fd, scmh, sll);
 }
 
 /*
- * zctlthr_sendreps_getmeter - respond to a "getmeter" inquiry.
- * @fd: client socket descriptor.
- * @zcmh: already filled-in zestion control message header.
- * @zmtr: meter message structure to be filled in and sent out.
- */
-void
-zctlthr_sendreps_getmeter(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_meter *zmtr)
-{
-	char name[ZMETER_NAME_MAX];
-	struct zmeter *mi;
-	int found, all;
-
-	found = 0;
-	snprintf(name, sizeof(name), "%s", zmtr->zmtr_mtr.zmtr_name);
-	all = (strcmp(name, ZMTR_NAME_ALL) == 0);
-
-	spinlock(&zmetersLock);
-	psclist_for_each_entry(mi, &zmetersList, zmtr_lentry)
-		if (all || strncmp(mi->zmtr_name, name,
-		    strlen(name)) == 0) {
-			found = 1;
-
-			zmtr->zmtr_mtr = *mi;
-			zctlthr_sendmsgv(fd, zcmh, zmtr);
-
-			/* Terminate on exact match. */
-			if (strlen(name) == strlen(mi->zmtr_name))
-				break;
-		}
-	freelock(&zmetersLock);
-	if (!found && !all)
-		zctlthr_senderrmsg(fd, zcmh, "unknown meter: %s", name);
-}
-
-/*
- * zctlthr_sendrep_getloglevel - send a response to a "getloglevel" inquiry.
- * @fd: client socket descriptor.
- * @zcmh: already filled-in zestion control message header.
- * @zll: loglevel message structure to be filled in and sent out.
- * @zthr: zestion thread begin queried.
- */
-void
-zctlthr_sendrep_getloglevel(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_loglevel *zll, struct psc_thread *zthr)
-{
-	snprintf(zll->zll_threadname, sizeof(zll->zll_threadname),
-	    "%s", zthr->pscthr_name);
-	memcpy(zll->zll_levels, zthr->pscthr_loglevels,
-	    sizeof(zthr->pscthr_loglevels));
-	zctlthr_sendmsgv(fd, zcmh, zll);
-}
-
-/*
- * zctlthr_sendrep_getdisk - send a response to a "getdisk" inquiry.
- * @fd: client socket descriptor.
- * @zcmh: already filled-in zestion control message header.
- * @zthr: zestion I/O thread begin queried.
- */
-void
-zctlthr_sendrep_getdisk(int fd, struct zctlmsghdr *zcmh,
-    struct psc_thread *zthr)
-{
-	struct zctlmsg_disk *zd;
-	struct zestion_disk *disk;
-	struct vbitmap *vb;
-	int errno_save;
-	size_t tblsiz;
-
-	vb = NULL; /* gcc */
-	tblsiz = 0;
-	disk = ziothr(zthr)->zi_disk;
-	if (!disk->zd_failed) {
-		vb = disk->zd_usedtab;
-		tblsiz = vb->vb_end - vb->vb_start;
-	}
-	zcmh->zcmh_size = sizeof(*zd) + tblsiz;
-	if ((zd = malloc(zcmh->zcmh_size)) == NULL) {
-		errno_save = errno;
-		psc_error("malloc");
-		zctlthr_senderrmsg(fd, zcmh, "%s",
-		    strerror(errno_save));
-		return;
-	}
-	memset(zd, 0, zcmh->zcmh_size);
-	snprintf(zd->zd_threadname, sizeof(zd->zd_threadname),
-	    "%s", zthr->pscthr_name);
-	snprintf(zd->zd_diskdevice, sizeof(zd->zd_diskdevice),
-	    "%s", disk->zd_device ? disk->zd_device : "N/A");
-	if (!disk->zd_failed)
-		memcpy(zd->zd_usedtab, vb->vb_start, tblsiz);
-	zctlthr_sendmsgv(fd, zcmh, zd);
-	free(zd);
-}
-
-/*
- * zctlthr_sendrep_getinode - send a response to a "getinode" inquiry.
- * @fd: client socket descriptor.
- * @zcmh: already filled-in zestion control message header.
- * @zinom: inode message structure to be filled in and sent out.
- */
-void
-zctlthr_sendrep_getinode(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_inode *zinom)
-{
-	struct hash_entry_str *he;
-	struct hash_bucket *hb;
-	struct psclist_head *ent;
-	zinode_t *ino;
-	int n;
-
-	for (n = 0; n < zinodeHashTable.htable_size; n++) {
-		hb = &zinodeHashTable.htable_buckets[n];
-		LOCK_BUCKET(hb);
-		psclist_for_each(ent, &hb->hbucket_list) {
-			he = psclist_entry(ent, struct hash_entry_str,
-			    hentry_str_list);
-			ino = he->private;
-
-			/* XXX do not lock */
-			ZINODE_LOCK(ino);
-			COPYFID(&zinom->zi_fid, &ino->zinode_fid);
-			zinom->zi_state = ino->zinode_state;
-			zinom->zi_nptygrps = ino->zinode_nptygrps;
-			zinom->zi_opencount =
-			    atomic_read(&ino->zinode_opencount);
-			zinom->zi_ndirty_chunks =
-			    atomic_read(&ino->zinode_ndirty_chunks);
-			zinom->zi_guid = ino->zinode_guid;
-			zinom->zi_finfo = ino->zinode_info;
-			ZINODE_ULOCK(ino);
-
-			/*
-			 * XXX blocking this write will leave
-			 * the bucket locked and cause DoS.
-			 */
-			zctlthr_sendmsgv(fd, zcmh, zinom);
-		}
-		ULOCK_BUCKET(hb);
-	}
-}
-
-/*
- * zctlthr_sendreps_gethashtable - respond to a "gethashtable" inquiry.
+ * slctlthr_sendreps_gethashtable - respond to a "gethashtable" inquiry.
  *	This computes bucket usage statistics of a hash table and
  *	sends the results back to the client.
  * @fd: client socket descriptor.
- * @zcmh: already filled-in zestion control message header.
- * @zht: hash table message structure to be filled in and sent out.
+ * @scmh: already filled-in slash control message header.
+ * @sht: hash table message structure to be filled in and sent out.
  */
 void
-zctlthr_sendreps_gethashtable(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_hashtable *zht)
+slctlthr_sendreps_gethashtable(int fd, struct slctlmsghdr *scmh,
+    struct slctlmsg_hashtable *sht)
 {
 	char name[HTNAME_MAX];
 	struct hash_table *ht;
 	int found, all;
 
-	snprintf(name, sizeof(name), zht->zht_name);
-	all = (strcmp(name, ZHT_NAME_ALL) == 0);
+	snprintf(name, sizeof(name), sht->sht_name);
+	all = (strcmp(name, SHT_NAME_ALL) == 0);
 
 	found = 0;
 	spinlock(&hashTablesListLock);
@@ -378,12 +190,12 @@ zctlthr_sendreps_gethashtable(int fd, struct zctlmsghdr *zcmh,
 		if (all || strcmp(name, ht->htable_name) == 0) {
 			found = 1;
 
-			snprintf(zht->zht_name, sizeof(zht->zht_name),
+			snprintf(sht->sht_name, sizeof(sht->sht_name),
 			    "%s", ht->htable_name);
-			hash_table_stats(ht, &zht->zht_totalbucks,
-			    &zht->zht_usedbucks, &zht->zht_nents,
-			    &zht->zht_maxbucklen);
-			zctlthr_sendmsgv(fd, zcmh, zht);
+			hash_table_stats(ht, &sht->sht_totalbucks,
+			    &sht->sht_usedbucks, &sht->sht_nents,
+			    &sht->sht_maxbucklen);
+			slctlthr_sendmsgv(fd, scmh, sht);
 
 			if (!all)
 				break;
@@ -391,39 +203,39 @@ zctlthr_sendreps_gethashtable(int fd, struct zctlmsghdr *zcmh,
 	}
 	freelock(&hashTablesListLock);
 	if (!found && !all)
-		zctlthr_senderrmsg(fd, zcmh,
+		slctlthr_senderrmsg(fd, scmh,
 		    "unknown hash table: %s", name);
 }
 
 /*
- * zctlthr_sendrep_getzlc - send a response to a "getzlc" inquiry.
+ * slctlthr_sendrep_getlc - send a response to a "getlc" inquiry.
  * @fd: client socket descriptor.
- * @zcmh: already filled-in zestion control message header.
- * @zz: list cache message structure to be filled in and sent out.
- * @zlc: the zest_list_cache about which to reply with information.
+ * @scmh: already filled-in slash control message header.
+ * @slc: list cache message structure to be filled in and sent out.
+ * @lc: the list_cache about which to reply with information.
  */
 void
-zctlthr_sendrep_getzlc(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_zlc *zz, list_cache_t *zlc)
+slctlthr_sendrep_getlc(int fd, struct slctlmsghdr *scmh,
+    struct slctlmsg_lc *slc, list_cache_t *lc)
 {
-	if (zlc) {
-		snprintf(zz->zz_name, sizeof(zz->zz_name),
-		    "%s", zlc->lc_name);
-		zz->zz_size = zlc->lc_size;
-		zz->zz_max = zlc->lc_max;
-		zz->zz_nseen = zlc->lc_nseen;
-		LIST_CACHE_ULOCK(zlc);
-		zctlthr_sendmsgv(fd, zcmh, zz);
+	if (lc) {
+		snprintf(slc->slc_name, sizeof(slc->slc_name),
+		    "%s", lc->lc_name);
+		slc->slc_size = lc->lc_size;
+		slc->slc_max = lc->lc_max;
+		slc->slc_nseen = lc->lc_nseen;
+		LIST_CACHE_ULOCK(lc);
+		slctlthr_sendmsgv(fd, scmh, slc);
 	} else
-		zctlthr_senderrmsg(fd, zcmh,
-		    "unknown listcache: %s", zz->zz_name);
+		slctlthr_senderrmsg(fd, scmh,
+		    "unknown listcache: %s", slc->slc_name);
 }
 
 #define MAX_LEVELS 8
 
 void
-zctlthr_sendrep_param(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_param *zp, const char *thrname,
+slctlthr_sendrep_param(int fd, struct slctlmsghdr *zcmh,
+    struct slctlmsg_param *zp, const char *thrname,
     char **levels, int nlevels, const char *value)
 {
 	char *s, othrname[PSC_THRNAME_MAX];
@@ -444,20 +256,20 @@ zctlthr_sendrep_param(int fd, struct zctlmsghdr *zcmh,
 	*s = '\0';
 
 	snprintf(zp->zp_value, sizeof(zp->zp_value), "%s", value);
-	zctlthr_sendmsgv(fd, zcmh, zp);
+	slctlthr_sendmsgv(fd, zcmh, zp);
 
 	snprintf(zp->zp_thrname, sizeof(zp->zp_thrname), "%s", othrname);
 }
 
-#define FOR_EACH_THREAD(i, zthr, thrname, threads, nthreads)		\
-	for ((i) = 0; ((zthr) = (threads)[i]) && (i) < (nthreads); i++)	\
-		if (strncmp((zthr)->pscthr_name, (thrname),		\
+#define FOR_EACH_THREAD(i, thr, thrname, threads, nthreads)		\
+	for ((i) = 0; ((thr) = (threads)[i]) && (i) < (nthreads); i++)	\
+		if (strncmp((thr)->pscthr_name, (thrname),		\
 		    strlen(thrname)) == 0 ||				\
-		    strcmp((thrname), ZTHRNAME_EVERYONE) == 0)
+		    strcmp((thrname), STHRNAME_EVERYONE) == 0)
 
 void
-zctlthr_param_log_level(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_param *zp, char **levels, int nlevels)
+slctlthr_param_log_level(int fd, struct slctlmsghdr *zcmh,
+    struct slctlmsg_param *zp, char **levels, int nlevels)
 {
 	int n, nthr, set, loglevel, subsys, start_ss, end_ss;
 	struct psc_thread **threads, *zthr;
@@ -474,7 +286,7 @@ zctlthr_param_log_level(int fd, struct zctlmsghdr *zcmh,
 	if (set) {
 		loglevel = psclog_id(zp->zp_value);
 		if (loglevel == -1) {
-			zctlthr_senderrmsg(fd, zcmh,
+			slctlthr_senderrmsg(fd, zcmh,
 			    "invalid log.level value: %s", zp->zp_value);
 			return;
 		}
@@ -484,7 +296,7 @@ zctlthr_param_log_level(int fd, struct zctlmsghdr *zcmh,
 		/* Subsys specified, use it. */
 		subsys = psc_subsys_id(levels[2]);
 		if (subsys == -1) {
-			zctlthr_senderrmsg(fd, zcmh,
+			slctlthr_senderrmsg(fd, zcmh,
 			    "invalid log.level subsystem: %s", levels[2]);
 			return;
 		}
@@ -502,7 +314,7 @@ zctlthr_param_log_level(int fd, struct zctlmsghdr *zcmh,
 			if (set)
 				zthr->pscthr_loglevels[subsys] = loglevel;
 			else {
-				zctlthr_sendrep_param(fd, zcmh, zp,
+				slctlthr_sendrep_param(fd, zcmh, zp,
 				    zthr->pscthr_name, levels, 3,
 				    psclog_name(zthr->pscthr_loglevels[subsys]));
 			}
@@ -510,97 +322,8 @@ zctlthr_param_log_level(int fd, struct zctlmsghdr *zcmh,
 }
 
 void
-zctlthr_param_disk_fail(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_param *zp, char **levels, int nlevels)
-{
-	struct psc_thread **threads, *zthr;
-	int n, set, nthr, fail;
-	char *s;
-	long l;
-
-	nlevels = 2;
-	levels[0] = "disk";
-	levels[1] = "fail";
-
-	fail = 0; /* gcc */
-	threads = dynarray_get(&zestionThreads);
-	nthr = dynarray_len(&zestionThreads);
-
-	set = (zcmh->zcmh_type == ZCMT_SETPARAM);
-
-	if (set) {
-		l = strtol(zp->zp_value, &s, 10);
-		if (l == LONG_MAX || l == LONG_MIN ||
-		    *s != '\0' || s == zp->zp_value) {
-			zctlthr_senderrmsg(fd, zcmh,
-			    "invalid disk.fail value: %s", zp->zp_field);
-			return;
-		}
-		fail = !!l;
-	}
-
-	FOR_EACH_THREAD(n, zthr, zp->zp_thrname, threads, nthr) {
-		if (zthr->pscthr_type == ZTHRT_IO) {
-			if (set)
-				ziothr_setfailed(zthr, fail);
-			else
-				zctlthr_sendrep_param(fd, zcmh, zp,
-				    zthr->pscthr_name, levels, nlevels,
-				    ziothr(zthr)->zi_disk->zd_failed ?
-				    "1" : "0");
-		} else if (strcmp(zp->zp_thrname, ZTHRNAME_EVERYONE))
-			zctlthr_senderrmsg(fd, zcmh,
-			    "not an I/O thread: %s", zthr->pscthr_name);
-	}
-}
-
-void
-zctlthr_param_syncer_enable(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_param *zp, char **levels, int nlevels)
-{
-	struct psc_thread **threads, *zthr;
-	int n, set, nthr, enable;
-	char *s;
-	long l;
-
-	nlevels = 2;
-	levels[0] = "syncer";
-	levels[1] = "enable";
-
-	enable = 0; /* gcc */
-	threads = dynarray_get(&zestionThreads);
-	nthr = dynarray_len(&zestionThreads);
-
-	set = (zcmh->zcmh_type == ZCMT_SETPARAM);
-
-	if (set) {
-		l = strtol(zp->zp_value, &s, 10);
-		if (l == LONG_MAX || l == LONG_MIN ||
-		    *s != '\0' || s == zp->zp_value) {
-			zctlthr_senderrmsg(fd, zcmh,
-			    "invalid disk.fail value: %s", zp->zp_field);
-			return;
-		}
-		enable = !!l;
-	}
-
-	FOR_EACH_THREAD(n, zthr, zp->zp_thrname, threads, nthr) {
-		if (zthr->pscthr_type == ZTHRT_SYNCQ) {
-			if (set)
-				zsyncqthr_setenabled(zthr, enable);
-			else
-				zctlthr_sendrep_param(fd, zcmh, zp,
-				    zthr->pscthr_name, levels, nlevels,
-				    zthr->pscthr_run ?  "1" : "0");
-		} else if (strcmp(zp->zp_thrname, ZTHRNAME_EVERYONE))
-			zctlthr_senderrmsg(fd, zcmh,
-			    "not an I/O thread: %s", zthr->pscthr_name);
-	}
-}
-
-void
-zctlthr_sendreps_param(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_param *zp)
+slctlthr_sendreps_param(int fd, struct slctlmsghdr *zcmh,
+    struct slctlmsg_param *zp)
 {
 	char *t, *levels[MAX_LEVELS];
 	int nlevels, set;
@@ -623,27 +346,9 @@ zctlthr_sendreps_param(int fd, struct zctlmsghdr *zcmh,
 		if (nlevels == 1) {
 			if (set)
 				goto invalid;
-			zctlthr_param_log_level(fd, zcmh, zp, levels, nlevels);
+			slctlthr_param_log_level(fd, zcmh, zp, levels, nlevels);
 		} else if (strcmp(levels[1], "level") == 0)
-			zctlthr_param_log_level(fd, zcmh, zp, levels, nlevels);
-		else
-			goto invalid;
-	} else if (strcmp(levels[0], "disk") == 0) {
-		if (nlevels == 1) {
-			if (set)
-				goto invalid;
-			zctlthr_param_disk_fail(fd, zcmh, zp, levels, nlevels);
-		} else if (strcmp(levels[1], "fail") == 0)
-			zctlthr_param_disk_fail(fd, zcmh, zp, levels, nlevels);
-		else
-			goto invalid;
-	} else if (strcmp(levels[0], "syncer") == 0) {
-		if (nlevels == 1) {
-			if (set)
-				goto invalid;
-			zctlthr_param_syncer_enable(fd, zcmh, zp, levels, nlevels);
-		} else if (strcmp(levels[1], "enable") == 0)
-			zctlthr_param_syncer_enable(fd, zcmh, zp, levels, nlevels);
+			slctlthr_param_log_level(fd, zcmh, zp, levels, nlevels);
 		else
 			goto invalid;
 	} else
@@ -653,27 +358,27 @@ zctlthr_sendreps_param(int fd, struct zctlmsghdr *zcmh,
  invalid:
 	while (nlevels > 1)
 		levels[--nlevels][-1] = '.';
-	zctlthr_senderrmsg(fd, zcmh,
+	slctlthr_senderrmsg(fd, zcmh,
 	    "invalid field/value: %s", zp->zp_field);
 }
 
 /*
- * zctlthr_sendrep_iostat - send a response to a "getiostat" inquiry.
+ * slctlthr_sendrep_iostat - send a response to a "getiostat" inquiry.
  * @fd: client socket descriptor.
- * @zcmh: already filled-in zestion control message header.
- * @zist: iostat message structure to be filled in and sent out.
+ * @scmh: already filled-in slash control message header.
+ * @sist: iostat message structure to be filled in and sent out.
  */
 void
-zctlthr_sendrep_iostat(int fd, struct zctlmsghdr *zcmh,
-    struct zctlmsg_iostats *zist)
+slctlthr_sendrep_iostat(int fd, struct slctlmsghdr *scmh,
+    struct slctlmsg_iostats *sist)
 {
 	char name[IST_NAME_MAX];
 	struct iostats *ist;
 	int found, all;
 
 	found = 0;
-	snprintf(name, sizeof(name), "%s", zist->zist_ist.ist_name);
-	all = (strcmp(name, ZIST_NAME_ALL) == 0);
+	snprintf(name, sizeof(name), "%s", sist->sist_ist.ist_name);
+	all = (strcmp(name, SIST_NAME_ALL) == 0);
 
 	spinlock(&iostatsListLock);
 	psclist_for_each_entry(ist, &iostatsList, ist_lentry)
@@ -681,8 +386,8 @@ zctlthr_sendrep_iostat(int fd, struct zctlmsghdr *zcmh,
 		    strncmp(ist->ist_name, name, strlen(name)) == 0) {
 			found = 1;
 
-			zist->zist_ist = *ist;
-			zctlthr_sendmsgv(fd, zcmh, zist);
+			sist->sist_ist = *ist;
+			slctlthr_sendmsgv(fd, scmh, sist);
 
 			if (strlen(ist->ist_name) == strlen(name))
 				break;
@@ -690,182 +395,135 @@ zctlthr_sendrep_iostat(int fd, struct zctlmsghdr *zcmh,
 	freelock(&iostatsListLock);
 
 	if (!found && !all)
-		zctlthr_senderrmsg(fd, zcmh,
+		slctlthr_senderrmsg(fd, scmh,
 		    "unknown iostats: %s", name);
 }
 
 /*
- * zctlthr_procmsg - process a message from a client.
+ * slctlthr_procmsg - process a message from a client.
  * @fd: client socket descriptor.
- * @zcmh: zestion control message header from client.
- * @zcm: contents of zestion control message from client.
+ * @scmh: slash control message header from client.
+ * @scm: contents of slash control message from client.
  *
- * Notes: the length of the data buffer `zcm' has not yet
+ * Notes: the length of the data buffer `scm' has not yet
  * been verified for each message type case and must be
  * checked in each case before it can be dereferenced,
  * since there is no way to know until this point.
  */
 void
-zctlthr_procmsg(int fd, struct zctlmsghdr *zcmh, void *zcm)
+slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 {
 	struct psc_thread **threads;
-	struct zctlmsg_hashtable *zht;
-	struct zctlmsg_loglevel *zll;
-	struct zctlmsg_iostats *zist;
-	struct zctlmsg_inode *zinom;
-	struct zctlmsg_meter *zmtr;
-	struct zctlmsg_stats *zst;
-	struct zctlmsg_mlist *zm;
-	struct zctlmsg_param *zp;
-	struct zctlmsg_disk *zd;
-	struct zctlmsg_zlc *zz;
+	struct slctlmsg_hashtable *sht;
+	struct slctlmsg_loglevel *sll;
+	struct slctlmsg_iostats *sist;
+	struct slctlmsg_stats *sst;
+	struct slctlmsg_param *sp;
+	struct slctlmsg_lc *slc;
 	struct psclist_head *e;
 	int n, nthr;
 	size_t j;
 
 	/* XXX lock or snapshot nthreads so it doesn't change underneath us */
-	nthr = dynarray_len(&zestionThreads);
-	threads = dynarray_get(&zestionThreads);
-	switch (zcmh->zcmh_type) {
-	case ZCMT_GETLOGLEVEL:
-		zll = zcm;
-		if (zcmh->zcmh_size != sizeof(*zll))
+	nthr = dynarray_len(&pscThreads);
+	threads = dynarray_get(&pscThreads);
+	switch (scmh->scmh_type) {
+	case SCMT_GETLOGLEVEL:
+		sll = scm;
+		if (scmh->scmh_size != sizeof(*sll))
 			goto badlen;
-		if (strcasecmp(zll->zll_threadname,
-		    ZTHRNAME_EVERYONE) == 0) {
+		if (strcasecmp(sll->sll_threadname,
+		    STHRNAME_EVERYONE) == 0) {
 			for (n = 0; n < nthr; n++)
-				zctlthr_sendrep_getloglevel(fd,
-				    zcmh, zll, threads[n]);
+				slctlthr_sendrep_getloglevel(fd,
+				    scmh, sll, threads[n]);
 		} else {
 			for (n = 0; n < nthr; n++)
-				if (strcasecmp(zll->zll_threadname,
+				if (strcasecmp(sll->sll_threadname,
 				    threads[n]->pscthr_name) == 0) {
-					zctlthr_sendrep_getloglevel(fd,
-					    zcmh, zll, threads[n]);
+					slctlthr_sendrep_getloglevel(fd,
+					    scmh, sll, threads[n]);
 					break;
 				}
 			if (n == nthr)
-				zctlthr_senderrmsg(fd, zcmh,
+				slctlthr_senderrmsg(fd, scmh,
 				    "unknown thread: %s",
-				    zll->zll_threadname);
+				    sll->sll_threadname);
 		}
 		break;
-	case ZCMT_GETDISK:
-		zd = zcm;
-		if (zcmh->zcmh_size != sizeof(*zd))
+	case SCMT_GETHASHTABLE: {
+		sht = scm;
+		if (scmh->scmh_size != sizeof(*sht))
 			goto badlen;
-		if (strcasecmp(zd->zd_threadname,
-		    ZTHRNAME_EVERYONE) == 0) {
-			for (j = 0; j < zestionNIOThreads; j++)
-				zctlthr_sendrep_getdisk(fd, zcmh,
-				    zestionIOThreads[j]);
-		} else {
-			for (j = 0; j < zestionNIOThreads; j++)
-				if (strcasecmp(zd->zd_threadname,
-				    zestionIOThreads[j]->pscthr_name) == 0) {
-					zctlthr_sendrep_getdisk(fd,
-					    zcmh, zestionIOThreads[j]);
-					break;
-				}
-			if (j == zestionNIOThreads)
-				zctlthr_senderrmsg(fd, zcmh,
-				    "unknown I/O thread: %s",
-				    zd->zd_threadname);
-		}
-		break;
-	case ZCMT_GETINODE:
-		zinom = zcm;
-		if (zcmh->zcmh_size != sizeof(*zinom))
-			goto badlen;
-		zctlthr_sendrep_getinode(fd, zcmh, zinom);
-		break;
-	case ZCMT_GETHASHTABLE: {
-		zht = zcm;
-		if (zcmh->zcmh_size != sizeof(*zht))
-			goto badlen;
-		zctlthr_sendreps_gethashtable(fd, zcmh, zht);
+		slctlthr_sendreps_gethashtable(fd, scmh, sht);
 		break;
 	    }
-	case ZCMT_GETMLIST:
-		zm = zcm;
-		if (zcmh->zcmh_size != sizeof(*zm))
+	case SCMT_GETSTATS:
+		sst = scm;
+		if (scmh->scmh_size != sizeof(*sst))
 			goto badlen;
-		zctlthr_sendreps_getmlist(fd, zcmh, zm);
-		break;
-	case ZCMT_GETMETER:
-		zmtr = zcm;
-		if (zcmh->zcmh_size != sizeof(*zmtr))
-			goto badlen;
-		zctlthr_sendreps_getmeter(fd, zcmh, zmtr);
-		break;
-	case ZCMT_GETSTATS:
-		zst = zcm;
-		if (zcmh->zcmh_size != sizeof(*zst))
-			goto badlen;
-		if (strcasecmp(zst->zst_threadname,
-		    ZTHRNAME_EVERYONE) == 0) {
+		if (strcasecmp(sst->sst_threadname,
+		    STHRNAME_EVERYONE) == 0) {
 			for (n = 0; n < nthr; n++)
-				zctlthr_sendrep_getstats(fd,
-				    zcmh, zst, threads[n], 1);
+				slctlthr_sendrep_getstats(fd,
+				    scmh, sst, threads[n], 1);
 		} else {
 			for (n = 0; n < nthr; n++)
-				if (strcasecmp(zst->zst_threadname,
+				if (strcasecmp(sst->sst_threadname,
 				    threads[n]->pscthr_name) == 0) {
-					zctlthr_sendrep_getstats(fd,
-					    zcmh, zst, threads[n], 0);
+					slctlthr_sendrep_getstats(fd,
+					    scmh, sst, threads[n], 0);
 					break;
 				}
 			if (n == nthr)
-				zctlthr_senderrmsg(fd, zcmh,
+				slctlthr_senderrmsg(fd, scmh,
 				    "unknown thread: %s",
-				    zst->zst_threadname);
+				    sst->sst_threadname);
 		}
 		break;
-	case ZCMT_GETZLC:
-		zz = zcm;
-		if (zcmh->zcmh_size != sizeof(*zz))
+	case SCMT_GETLC:
+		slc = scm;
+		if (scmh->scmh_size != sizeof(*slc))
 			goto badlen;
-		if (strcmp(zz->zz_name, ZLC_NAME_ALL) == 0) {
-			list_cache_t *zlc;
+		if (strcmp(slc->slc_name, SLC_NAME_ALL) == 0) {
+			list_cache_t *lc;
 
-			spinlock(&zestListCachesLock);
-			psclist_for_each(e, &zestListCaches) {
-				zlc = psclist_entry(e, list_cache_t,
-				    lc_index_lentry);
-				LIST_CACHE_LOCK(zlc);
-				zctlthr_sendrep_getzlc(fd, zcmh, zz, zlc);
+			spinlock(&pscListCachesLock);
+			psclist_for_each_entry(lc, &pscListCaches, lc_index_lentry) {
+				LIST_CACHE_LOCK(lc);
+				slctlthr_sendrep_getlc(fd, scmh, slc, lc);
 			}
-			freelock(&zestListCachesLock);
+			freelock(&pscListCachesLock);
 		} else
-			zctlthr_sendrep_getzlc(fd, zcmh, zz,
-			    lc_lookup(zz->zz_name));
+			slctlthr_sendrep_getlc(fd, scmh, slc,
+			    lc_lookup(slc->slc_name));
 		break;
-	case ZCMT_GETPARAM:
-	case ZCMT_SETPARAM:
-		zp = zcm;
-		if (zcmh->zcmh_size != sizeof(*zp))
+	case SCMT_GETPARAM:
+	case SCMT_SETPARAM:
+		sp = scm;
+		if (scmh->scmh_size != sizeof(*sp))
 			goto badlen;
-		zctlthr_sendreps_param(fd, zcmh, zp);
+		slctlthr_sendreps_param(fd, scmh, sp);
 		break;
-	case ZCMT_GETIOSTAT:
-		zist = zcm;
-		if (zcmh->zcmh_size != sizeof(*zist))
+	case SCMT_GETIOSTAT:
+		sist = scm;
+		if (scmh->zcmh_size != sizeof(*sist))
 			goto badlen;
-		zctlthr_sendrep_iostat(fd, zcmh, zist);
+		slctlthr_sendrep_iostat(fd, scmh, sist);
 		break;
 	default:
 		warnx("unexpected msg type; type=%d size=%zu",
-		    zcmh->zcmh_type, zcmh->zcmh_size);
+		    scmh->scmh_type, scmh->scmh_size);
 		break;
 	}
 	return;
  badlen:
-	warnx("unexpected msg size; type=%d, siz=%zu", zcmh->zcmh_type,
-	    zcmh->zcmh_size);
+	warnx("unexpected msg size; type=%d, siz=%zu", scmh->scmh_type,
+	    scmh->scmh_size);
 }
 
 /*
- * zctlthr_service - satisfy a client connection.
+ * slctlthr_service - satisfy a client connection.
  * @fd: client socket descriptor.
  *
  * Notes: sched_yield() is not explicity called throughout this routine,
@@ -877,58 +535,58 @@ zctlthr_procmsg(int fd, struct zctlmsghdr *zcmh, void *zcm)
  *
  * Advantages: it might be nice to block all threads so processing by
  * other threads doesn't happen while control messages which modify
- * zestiond operation are being processed.
+ * slash operation are being processed.
  *
  * Disadvantages: if we don't go to sleep during processing of client
- * connection, anyone can denial the zestion service quite easily.
+ * connection, anyone can denial the slash service quite easily.
  */
 void
-zctlthr_service(int fd)
+slctlthr_service(int fd)
 {
-	struct zctlmsghdr zcmh;
-	size_t zcmsiz;
-	void *zcm;
+	struct slctlmsghdr scmh;
+	size_t scmsiz;
+	void *scm;
 	ssize_t n;
 
-	zcm = NULL;
-	zcmsiz = 0;
-	while ((n = read(fd, &zcmh, sizeof(zcmh))) != -1 && n != 0) {
-		if (n != sizeof(zcmh)) {
-			psc_notice("short read on zctlmsghdr; read=%zd", n);
+	scm = NULL;
+	scmsiz = 0;
+	while ((n = read(fd, &scmh, sizeof(scmh))) != -1 && n != 0) {
+		if (n != sizeof(scmh)) {
+			psc_notice("short read on slctlmsghdr; read=%zd", n);
 			continue;
 		}
-		if (zcmh.zcmh_size == 0) {
-			psc_warnx("empty zctlmsg; type=%d", zcmh.zcmh_type);
+		if (scmh.scmh_size == 0) {
+			psc_warnx("empty slctlmsg; type=%d", scmh.scmh_type);
 			continue;
 		}
-		if (zcmh.zcmh_size > zcmsiz) {
-			zcmsiz = zcmh.zcmh_size;
-			if ((zcm = realloc(zcm, zcmsiz)) == NULL)
+		if (scmh.scmh_size > scmsiz) {
+			scmsiz = scmh.scmh_size;
+			if ((scm = realloc(scm, scmsiz)) == NULL)
 				err(1, "realloc");
 		}
-		n = read(fd, zcm, zcmh.zcmh_size);
+		n = read(fd, scm, scmh.scmh_size);
 		if (n == -1)
 			err(1, "read");
-		if ((size_t)n != zcmh.zcmh_size) {
-			psc_warn("short read on zctlmsg contents; "
+		if ((size_t)n != scmh.scmh_size) {
+			psc_warn("short read on slctlmsg contents; "
 			    "read=%zu; expected=%zu",
-			    n, zcmh.zcmh_size);
+			    n, scmh.scmh_size);
 			break;
 		}
-		zctlthr_procmsg(fd, &zcmh, zcm);
+		slctlthr_procmsg(fd, &scmh, scm);
 		sched_yield();
 	}
 	if (n == -1)
 		err(1, "read");
-	free(zcm);
+	free(scm);
 }
 
 /*
- * zctlthr_main - main zestion control thread client-servicing loop.
- * @arg: zestion thread structure.
+ * slctlthr_main - main slash control thread client-servicing loop.
+ * @fn: path to control socket.
  */
 __dead void
-zctlthr_main(const char *fn)
+slctlthr_main(const char *fn)
 {
 	struct sockaddr_un sun;
 	mode_t old_umask;
@@ -974,8 +632,8 @@ zctlthr_main(const char *fn)
 		if ((fd = accept(s, (struct sockaddr *)&sun,
 		    &siz)) == -1)
 			err(1, "accept");
-		zctlthr(&zestionControlThread)->zc_st_nclients++;
-		zctlthr_service(fd);
+		slctlthr(&slashControlThread)->sc_st_nclients++;
+		slctlthr_service(fd);
 		close(fd);
 	}
 	/* NOTREACHED */
