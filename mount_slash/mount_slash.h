@@ -25,7 +25,6 @@ struct slashrpc_service {
 	struct psclist_head	  svc_old_imports;
 	int			  svc_failed;
 	int			  svc_initialized;
-	int			(*svc_connect)(lnet_nid_t);
 };
 
 struct slashrpc_export {

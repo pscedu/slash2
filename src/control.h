@@ -9,6 +9,7 @@
 
 #include "psc_ds/hash.h"
 #include "psc_ds/listcache.h"
+#include "psc_util/thread.h"
 
 #include "slash.h"
 #include "inode.h"
@@ -79,17 +80,13 @@ struct slctlmsg_iostats {
 
 /* Slash control message types. */
 #define SCMT_ERRMSG		0
-#define SCMT_GETINODE		1
-#define SCMT_GETLOGLEVEL	2
-#define SCMT_GETLC		3
-#define SCMT_GETSTATS		4
-#define SCMT_GETDISK		5
-#define SCMT_GETHASHTABLE	6
-#define SCMT_GETMLIST		7
-#define SCMT_GETPARAM		8
-#define SCMT_SETPARAM		9
-#define SCMT_GETIOSTAT		10
-#define SCMT_GETMETER		11
+#define SCMT_GETLOGLEVEL	1
+#define SCMT_GETLC		2
+#define SCMT_GETSTATS		3
+#define SCMT_GETSUBSYS		4
+#define SCMT_GETHASHTABLE	5
+#define SCMT_GETPARAM		6
+#define SCMT_SETPARAM		7
 
 /*
  * Slash control message header.

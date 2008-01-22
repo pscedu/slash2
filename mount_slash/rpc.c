@@ -76,14 +76,14 @@ return 0;
 }
 
 /*
- * rpc_connect - attempt connection initiation with a peer.
+ * rpcmds_connect - attempt connection initiation with a peer.
  * @server: NID of server peer.
  * @ptl: portal ID to initiate over.
  * @magic: agreed-upon connection message key.
- * @version: I/O message protocol version.
+ * @version: communication protocol version.
  */
 int
-rpc_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
+rpcmds_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 {
 	lnet_process_id_t server_id = { server, 0 };
 	struct pscrpc_request *rq;
@@ -102,6 +102,22 @@ rpc_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	if (rpc_sendmsg(SRMT_CONNECT, version, magic, ctx->uid, ctx->gid) == -1)
 		return (-errno);
 
+#if 0
+	struct slashrpc_connect_req *mq;
+
+	rc = rpc_newreq(ptl, version, op, sizeof(*mq), 0, &rq, &u.m);
+	if (rc)
+		return (rc);
+	mq->magic = magic;
+	mq->version = version;
+	mq->uid = ctx->uid;
+	mq->gid = ctx->gid;
+	rc = rpc_getrep(rq, 0, &dummy);
+	pscrpc_req_finished(rq);
+	if (rc)
+#endif
+
+
 	/* Save server PID from reply callback and mark initialized.  */
 	imp->imp_connection->c_peer.pid = rq->rq_peer.pid;
 	imp->imp_state = PSC_IMP_FULL;
@@ -112,10 +128,9 @@ rpc_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
  * rpc_svc_create - create a client RPC service.
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
- * @fconn: connection function.
  */
 struct rpcsvc *
-rpc_svc_create(u32 rqptl, u32 rpptl, rpcsvc_connect_t fconn)
+rpc_svc_create(u32 rqptl, u32 rpptl)
 {
 	struct rpcsvc *svc;
 
@@ -136,8 +151,6 @@ rpc_svc_create(u32 rqptl, u32 rpptl, rpcsvc_connect_t fconn)
 	svc->svc_import->imp_client->cli_reply_portal = rpptl;
 
 	svc->svc_import->imp_max_retries = 2;
-
-	svc->svc_connect = fconn;
 	return (svc);
 }
 
@@ -164,15 +177,17 @@ rpc_svc_init(void)
 
 	/* Setup client MDS service */
 	rpcsvcs[RPCSVC_MDS] = rpc_svc_create(RPCMDS_REQ_PORTAL,
-	    RPCMDS_REP_PORTAL, rpc_connect);
-	if (rpc_connect(nid, RPCSVC_MDS, SMDS_MAGIC, SMDS_VERSION))
+	    RPCMDS_REP_PORTAL);
+	if (rpcmds_connect(nid, RPCSVC_MDS, SMDS_MAGIC, SMDS_VERSION))
 		psc_error("rpc_mds_connect %s", snid);
 
+#if 0
 	/* Setup client I/O service */
 	rpcsvcs[RPCSVC_IO] = rpc_svc_create(RPCIO_REQ_PORTAL,
-	    RPCIO_REP_PORTAL, rpc_connect);
+	    RPCIO_REP_PORTAL);
 	if (rpc_connect(nid, RPCSVC_IO, SIO_MAGIC, SIO_VERSION))
 		psc_error("rpc_io_connect %s", snid);
+#endif
 
 	/* Initialize manager for single-block, non-blocking requests */
 	ioNbReqSet = nbreqset_init(rpc_io_interpret_set, rpc_nbcallback);
