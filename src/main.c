@@ -14,6 +14,7 @@
 #define SLASH_THRTBL_SIZE 19
 //#define _PATH_SLASHCONF "/etc/slash.conf"
 #define _PATH_SLASHCONF "config/example.conf"
+#define _PATH_SLCTLSOCK "../slashd.sock"
 
 struct psc_thread slashControlThread;
 
@@ -22,7 +23,7 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket]\n", progname);
 	exit(1);
 }
 
@@ -41,7 +42,7 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 int
 main(int argc, char *argv[])
 {
-	const char *cfn;
+	const char *cfn, *sfn;
 	int c;
 
 	progname = argv[0];
@@ -54,10 +55,14 @@ main(int argc, char *argv[])
 	lnet_thrspawnf = spawn_lnet_thr;
 
 	cfn = _PATH_SLASHCONF;
-	while ((c = getopt(argc, argv, "f:")) != -1)
+	sfn = _PATH_SLCTLSOCK;
+	while ((c = getopt(argc, argv, "f:S:")) != -1)
 		switch (c) {
 		case 'f':
 			cfn = optarg;
+			break;
+		case 'S':
+			sfn = optarg;
 			break;
 		default:
 			usage();
@@ -65,5 +70,6 @@ main(int argc, char *argv[])
 	slashGetConfig(cfn);
 	libsl_init(PSC_SERVER);
 	slmds_init();
+	slctlthr_main(sfn);
 	exit(0);
 }
