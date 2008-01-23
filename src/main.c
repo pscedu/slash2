@@ -42,12 +42,15 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 int
 main(int argc, char *argv[])
 {
+	struct slash_ctlthr *thr;
 	const char *cfn, *sfn;
 	int c;
 
 	progname = argv[0];
 	pfl_init(SLASH_THRTBL_SIZE);
-	pscthr_init(&slashControlThread, SLTHRT_CTL, NULL, NULL, "slctlthr");
+	thr = PSCALLOC(sizeof(*thr));
+	pscthr_init(&slashControlThread, SLTHRT_CTL, NULL, thr, "slctlthr");
+
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
 	if (getenv("TCPLND_SERVER") == NULL)
