@@ -456,6 +456,8 @@ slash_utimens(const char *path, const struct timespec ts[2])
 void *
 slash_init(struct fuse_conn_info *conn)
 {
+	if (rpc_svc_init())
+		psc_fatalx("rpc_svc_init");
 	return (NULL);
 }
 
@@ -519,19 +521,7 @@ main(int argc, char *argv[])
 		errx(1, "please export LNET_NETWORKS");
 	if (getenv("SLASH_SERVER_NID") == NULL)
 		errx(1, "please export SLASH_SERVER_NID");
-
-	while ((c = getopt(argc, argv, "")) != -1)
-		switch (c) {
-		default:
-			usage();
-		}
-	argc -= optind;
-	if (argc != 1)
-		usage();
-
 	pfl_init(7);
 	lnet_thrspawnf = spawn_lnet_thr;
-	if (rpc_svc_init())
-		psc_fatalx("rpc_svc_init");
 	return (fuse_main(argc, argv, &slashops, NULL));
 }
