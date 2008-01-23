@@ -26,7 +26,7 @@
 #define MDS_REPSZ     128
 #define MDS_REQPORTAL RPCMDS_REQ_PORTAL
 #define MDS_REPPORTAL RPCMDS_REP_PORTAL
-#define MDS_SVCNAME   "slash_mds_svc"
+#define MDS_SVCNAME   "slrpcmdsthr"
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
