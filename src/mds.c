@@ -33,9 +33,8 @@ psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 int
 slmds_connect(struct pscrpc_request *req)
 {
-	int rc;
-	int size = sizeof(struct slashrpc_connect_req);
-	struct slashrpc_connect_req *body, *repbody;
+	struct slashrpc_connect_req *body;
+	int rc, size;
 
 	body = psc_msg_buf(req->rq_reqmsg, 0, size);
 	if (body == NULL) {
@@ -51,19 +50,13 @@ slmds_connect(struct pscrpc_request *req)
 		rc = -EINVAL;
 		goto fail;
 	}
+	size = 0;
 	rc = psc_pack_reply(req, 1, &size, NULL);
 	if (rc) {
 		psc_assert(rc == -ENOMEM);
 		psc_error("psc_pack_reply failed");
 		goto fail;
 	}
-	repbody = psc_msg_buf(req->rq_repmsg, 0, size);
-	/* Malloc was done in psc_pack_reply() */
-	psc_assert(repbody);
-
-	repbody->magic  = SMDS_MAGIC;
-	repbody->version = SMDS_VERSION;
-
 	psc_notify("Connect request from %"_P_LP64"x:%u",
 		   req->rq_peer.nid, req->rq_peer.pid);
 
