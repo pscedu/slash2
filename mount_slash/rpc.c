@@ -282,6 +282,8 @@ rpc_sendmsg(int op, ...)
 	va_list ap;
 	int rc;
 
+printf("sending msg with opcode %d\n", op);
+return (0);
 	va_start(ap, op);
 	switch (op) {
 	case SRMT_ACCESS:
