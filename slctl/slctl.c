@@ -489,7 +489,7 @@ usage(void)
 {
 	fprintf(stderr,
 	    "usage: %s [-HI] [-h table] [-i iostat] [-L listspec]\n"
-	    "\t[-M mlistspec] [-p param[=value]] [-S socket] [-s value]\n",
+	    "\t[-p param[=value]] [-S socket] [-s value]\n",
 	    progname);
 	exit(1);
 }
