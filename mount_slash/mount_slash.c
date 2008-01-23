@@ -505,7 +505,7 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	fprintf(stderr, "usage: %s mountpoint\n", progname);
 	exit(1);
 }
 
@@ -525,10 +525,13 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
+	argc -= optind;
+	if (argc != 1)
+		usage();
 
 	pfl_init(7);
 	lnet_thrspawnf = spawn_lnet_thr;
 	if (rpc_svc_init())
 		psc_fatalx("rpc_svc_init");
-//	return (fuse_main(argc, argv, &slashops, NULL));
+	return (fuse_main(argc, argv, &slashops, NULL));
 }
