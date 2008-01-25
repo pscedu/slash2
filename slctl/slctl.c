@@ -244,7 +244,7 @@ loglevel_namelen(int n)
 	int j;
 
 	maxlen = strlen(&subsys_names[n * SSS_NAME_MAX]);
-	for (j = 0; j < PNLOGLEVELS; j++)
+	for (j = 0; j < PNLOGLEVELS + 1; j++)
 		maxlen = MAX(maxlen, strlen(psclog_name(j)));
 	return (maxlen);
 }
@@ -281,6 +281,19 @@ prscm(const struct slctlmsghdr *scmh, const void *scm)
 	const struct slctlmsg_lc *slc;
 	int type, n, len;
 
+	if (scmh->scmh_type == SCMT_GETSUBSYS) {
+		sss = scm;
+		if (scmh->scmh_size == 0 ||
+		    scmh->scmh_size % SSS_NAME_MAX)
+			errx(2, "invalid msg size; type=%d; sizeof=%zu "
+			    "minimal=%zu", scmh->scmh_type,
+			    scmh->scmh_size, sizeof(*sss));
+		nsubsys = scmh->scmh_size / SSS_NAME_MAX;
+		subsys_names = PSCALLOC(scmh->scmh_size);
+		memcpy(subsys_names, sss->sss_names, scmh->scmh_size);
+		return;
+	}
+
 	if (!noheader && lastmsgtype != scmh->scmh_type &&
 	    lastmsgtype != -1)
 		printf("\n");
@@ -293,20 +306,10 @@ prscm(const struct slctlmsghdr *scmh, const void *scm)
 			    scmh->scmh_size, sizeof(*sem));
 		printf("error: %s\n", sem->sem_errmsg);
 		break;
-	case SCMT_GETSUBSYS:
-		sss = scm;
-		if (scmh->scmh_size == 0 ||
-		    scmh->scmh_size % SSS_NAME_MAX)
-			errx(2, "invalid msg size; type=%d; sizeof=%zu "
-			    "minimal=%zu", scmh->scmh_type,
-			    scmh->scmh_size, sizeof(*sss));
-		nsubsys = scmh->scmh_size / SSS_NAME_MAX;
-		subsys_names = PSCALLOC(scmh->scmh_size);
-		memcpy(subsys_names, sss->sss_names, scmh->scmh_size);
-		break;
 	case SCMT_GETLOGLEVEL:
 		sll = scm;
-		if (scmh->scmh_size != sizeof(*sll))
+		if (scmh->scmh_size != sizeof(*sll) +
+		    nsubsys * sizeof(*sll->sll_levels))
 			errx(2, "invalid msg size; type=%d; sizeof=%zu "
 			    "expected=%zu", scmh->scmh_type,
 			    scmh->scmh_size, sizeof(*sll));

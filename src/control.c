@@ -55,7 +55,7 @@ slctlthr_sendmsgv(int fd, const struct slctlmsghdr *scmh, const void *scm)
 
 	n = writev(fd, iov, NENTRIES(iov));
 	if (n == -1)
-		err(1, "write");
+		psc_fatal("write");
 	tsiz = sizeof(*scmh) + scmh->scmh_size;
 	if ((size_t)n != tsiz)
 		warn("short write");
@@ -92,7 +92,7 @@ slctlthr_sendmsg(int fd, int type, size_t siz, const void *scm)
 
 	n = writev(fd, iov, NENTRIES(iov));
 	if (n == -1)
-		err(1, "write");
+		psc_fatal("write");
 	tsiz = sizeof(scmh) + siz;
 	if ((size_t)n != tsiz)
 		warn("short write");
@@ -160,14 +160,14 @@ slctlthr_sendrep_getsubsys(int fd, struct slctlmsghdr *scmh)
 	struct slctlmsg_subsys *sss;
 	const char **ss;
 	size_t siz;
-	int n, rc;
+	int n;
 
 	siz = SSS_NAME_MAX * psc_nsubsys;
 	sss = PSCALLOC(siz);
 	ss = dynarray_get(&psc_subsystems);
 	for (n = 0; n < psc_nsubsys; n++)
-		if ((rc = snprintf(&sss->sss_names[n * SSS_NAME_MAX],
-		    SSS_NAME_MAX, "%s", ss[n])) == -1) {
+		if (snprintf(&sss->sss_names[n * SSS_NAME_MAX],
+		    SSS_NAME_MAX, "%s", ss[n]) == -1) {
 			psc_warn("snprintf");
 			slctlthr_senderrmsg(fd, scmh,
 			    "unable to retrieve subsystems");
@@ -176,6 +176,7 @@ slctlthr_sendrep_getsubsys(int fd, struct slctlmsghdr *scmh)
 	scmh->scmh_size = siz;
 	slctlthr_sendmsgv(fd, scmh, sss);
  done:
+	scmh->scmh_size = 0;	/* reset because we used our own buffer */
 	free(sss);
 }
 
@@ -183,18 +184,25 @@ slctlthr_sendrep_getsubsys(int fd, struct slctlmsghdr *scmh)
  * slctlthr_sendrep_getloglevel - send a response to a "getloglevel" inquiry.
  * @fd: client socket descriptor.
  * @scmh: already filled-in slash control message header.
- * @sll: loglevel message structure to be filled in and sent out.
  * @thr: slash thread begin queried.
  */
 void
 slctlthr_sendrep_getloglevel(int fd, struct slctlmsghdr *scmh,
-    struct slctlmsg_loglevel *sll, struct psc_thread *thr)
+    struct psc_thread *thr)
 {
+	struct slctlmsg_loglevel *sll;
+	size_t siz;
+
+	siz = sizeof(*sll) + sizeof(*sll->sll_levels) * psc_nsubsys;
+	sll = PSCALLOC(siz);
 	snprintf(sll->sll_thrname, sizeof(sll->sll_thrname),
 	    "%s", thr->pscthr_name);
 	memcpy(sll->sll_levels, thr->pscthr_loglevels, psc_nsubsys *
 	    sizeof(*sll->sll_levels));
+	scmh->scmh_size = siz;
 	slctlthr_sendmsgv(fd, scmh, sll);
+	scmh->scmh_size = 0;	/* reset because we used our own buffer */
+	free(sll);
 }
 
 /*
@@ -470,13 +478,13 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 		    STHRNAME_EVERYONE) == 0) {
 			for (n = 0; n < nthr; n++)
 				slctlthr_sendrep_getloglevel(fd,
-				    scmh, sll, threads[n]);
+				    scmh, threads[n]);
 		} else {
 			for (n = 0; n < nthr; n++)
 				if (strcasecmp(sll->sll_thrname,
 				    threads[n]->pscthr_name) == 0) {
 					slctlthr_sendrep_getloglevel(fd,
-					    scmh, sll, threads[n]);
+					    scmh, threads[n]);
 					break;
 				}
 			if (n == nthr)
@@ -485,13 +493,12 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 				    sll->sll_thrname);
 		}
 		break;
-	case SCMT_GETHASHTABLE: {
+	case SCMT_GETHASHTABLE:
 		sht = scm;
 		if (scmh->scmh_size != sizeof(*sht))
 			goto badlen;
 		slctlthr_sendreps_gethashtable(fd, scmh, sht);
 		break;
-	    }
 	case SCMT_GETSTATS:
 		sst = scm;
 		if (scmh->scmh_size != sizeof(*sst))
@@ -591,18 +598,14 @@ slctlthr_service(int fd)
 			psc_notice("short read on slctlmsghdr; read=%zd", n);
 			continue;
 		}
-		if (scmh.scmh_size == 0) {
-			psc_warnx("empty slctlmsg; type=%d", scmh.scmh_type);
-			continue;
-		}
 		if (scmh.scmh_size > scmsiz) {
 			scmsiz = scmh.scmh_size;
 			if ((scm = realloc(scm, scmsiz)) == NULL)
-				err(1, "realloc");
+				psc_fatal("realloc");
 		}
 		n = read(fd, scm, scmh.scmh_size);
 		if (n == -1)
-			err(1, "read");
+			psc_fatal("read");
 		if ((size_t)n != scmh.scmh_size) {
 			psc_warn("short read on slctlmsg contents; "
 			    "read=%zu; expected=%zu",
@@ -610,10 +613,9 @@ slctlthr_service(int fd)
 			break;
 		}
 		slctlthr_procmsg(fd, &scmh, scm);
-		sched_yield();
 	}
 	if (n == -1)
-		err(1, "read");
+		psc_fatal("read");
 	free(scm);
 }
 
@@ -667,7 +669,7 @@ slctlthr_main(const char *fn)
 		siz = sizeof(sun);
 		if ((fd = accept(s, (struct sockaddr *)&sun,
 		    &siz)) == -1)
-			err(1, "accept");
+			psc_fatal("accept");
 		slctlthr(&slashControlThread)->sc_st_nclients++;
 		slctlthr_service(fd);
 		close(fd);
