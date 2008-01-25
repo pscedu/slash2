@@ -84,6 +84,7 @@ parseshowspec(char *showspec)
 {
 	char *thrlist, *thr, *thrnext;
 	struct slctlmsg_loglevel *sll;
+	struct slctlmsg_subsys *sss;
 	struct slctlmsg_stats *sst;
 	int n, type;
 
@@ -101,6 +102,8 @@ parseshowspec(char *showspec)
 
 		switch (type) {
 		case SCMT_GETLOGLEVEL:
+			sss = pushmsg(SCMT_GETSUBSYS, sizeof(*sss));
+
 			sll = pushmsg(type, sizeof(*sll));
 			n = snprintf(sll->sll_thrname,
 			   sizeof(sll->sll_thrname), "%s", thr);
@@ -272,6 +275,7 @@ prscm(const struct slctlmsghdr *scmh, const void *scm)
 	const struct slctlmsg_hashtable *sht;
 	const struct slctlmsg_loglevel *sll;
 	const struct slctlmsg_errmsg *sem;
+	const struct slctlmsg_subsys *sss;
 	const struct slctlmsg_stats *sst;
 	const struct slctlmsg_param *sp;
 	const struct slctlmsg_lc *slc;
@@ -290,6 +294,15 @@ prscm(const struct slctlmsghdr *scmh, const void *scm)
 		printf("error: %s\n", sem->sem_errmsg);
 		break;
 	case SCMT_GETSUBSYS:
+		sss = scm;
+		if (scmh->scmh_size == 0 ||
+		    scmh->scmh_size % SSS_NAME_MAX)
+			errx(2, "invalid msg size; type=%d; sizeof=%zu "
+			    "minimal=%zu", scmh->scmh_type,
+			    scmh->scmh_size, sizeof(*sss));
+		nsubsys = scmh->scmh_size / SSS_NAME_MAX;
+		subsys_names = PSCALLOC(scmh->scmh_size);
+		memcpy(subsys_names, sss->sss_names, scmh->scmh_size);
 		break;
 	case SCMT_GETLOGLEVEL:
 		sll = scm;
