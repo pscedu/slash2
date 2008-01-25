@@ -150,6 +150,36 @@ slctlthr_sendrep_getstats(int fd, struct slctlmsghdr *scmh,
 }
 
 /*
+ * slctlthr_sendrep_getsubsys - send a response to a "getsubsys" inquiry.
+ * @fd: client socket descriptor.
+ * @scmh: already filled-in slash control message header.
+ */
+void
+slctlthr_sendrep_getsubsys(int fd, struct slctlmsghdr *scmh)
+{
+	struct slctlmsg_subsys *sss;
+	const char **ss;
+	size_t siz;
+	int n, rc;
+
+	siz = SSS_NAME_MAX * psc_nsubsys;
+	sss = PSCALLOC(siz);
+	ss = dynarray_get(&psc_subsystems);
+	for (n = 0; n < psc_nsubsys; n++)
+		if ((rc = snprintf(&sss->sss_names[n * SSS_NAME_MAX],
+		    SSS_NAME_MAX, "%s", ss[n])) == -1) {
+			psc_warn("snprintf");
+			slctlthr_senderrmsg(fd, scmh,
+			    "unable to retrieve subsystems");
+			goto done;
+		}
+	scmh->scmh_size = siz;
+	slctlthr_sendmsgv(fd, scmh, sss);
+ done:
+	free(sss);
+}
+
+/*
  * slctlthr_sendrep_getloglevel - send a response to a "getloglevel" inquiry.
  * @fd: client socket descriptor.
  * @scmh: already filled-in slash control message header.
@@ -162,8 +192,8 @@ slctlthr_sendrep_getloglevel(int fd, struct slctlmsghdr *scmh,
 {
 	snprintf(sll->sll_thrname, sizeof(sll->sll_thrname),
 	    "%s", thr->pscthr_name);
-	memcpy(sll->sll_levels, thr->pscthr_loglevels,
-	    sizeof(thr->pscthr_loglevels));
+	memcpy(sll->sll_levels, thr->pscthr_loglevels, psc_nsubsys *
+	    sizeof(*sll->sll_levels));
 	slctlthr_sendmsgv(fd, scmh, sll);
 }
 
@@ -429,6 +459,9 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 	nthr = dynarray_len(&pscThreads);
 	threads = dynarray_get(&pscThreads);
 	switch (scmh->scmh_type) {
+	case SCMT_GETSUBSYS:
+		slctlthr_sendrep_getsubsys(fd, scmh);
+		break;
 	case SCMT_GETLOGLEVEL:
 		sll = scm;
 		if (scmh->scmh_size != sizeof(*sll))
