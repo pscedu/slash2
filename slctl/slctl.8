@@ -1,0 +1,220 @@
+.\" $Id$
+.Dd January 25, 2008
+.Dt SLCTL 8
+.ds volume Pittsburgh Supercomputing Center
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm slctl
+.Nd slash daemon runtime control
+.Sh SYNOPSIS
+.Nm slctl
+.Op Fl HI
+.Op Fl h Ar table
+.Op Fl L Ar listspec
+.\" Op Fl i Ar iostatspec
+.Op Fl p Ar paramspec
+.Op Fl S Ar socket
+.Op Fl s Ar showspec
+.Sh DESCRIPTION
+The
+.Nm
+utility examines and manipulates
+.Xr slashd 8
+behavior.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl H
+Suppress display of headers.
+.It Fl h Ar table
+Query bucket usage statistics for the given hash table(s).
+.Ar table
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width 12n
+.It Cm threads
+Slash threads
+.El
+.Pp
+The value
+.Cm all
+may be specified to query all hash table statistics.
+.It Fl I
+Do not use human-readable numbers for large numerical displays,
+e.g. show
+.Li 1MB
+.Pq one megabyte
+as
+.Li 1048576.
+.\" .It Fl i Ar iostatspec
+.\" Query I/O statistics.
+.\" .Ar iostatspec
+.\" has the following format:
+.\" .Pp
+.\" .Bd -unfilled -offset indent
+.\" .Ar iostat Ns Op , Ns Ar ...
+.\" .Ed
+.\" .Pp
+.\" .Ar iostat
+.\" may be one of the following:
+.\" .Pp
+.\" .Bl -tag -compact -offset indent -width 12n
+.\" .El
+.\" .Pp
+.\" The value
+.\" .Cm all
+.\" may be specified to query all I/O statistics.
+.It Fl L Ar listspec
+Query list cache information for the given list(s).
+.Ar listspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Sm off
+.Ar list
+.Op , Ar ...
+.Sm on
+.Ed
+.Pp
+.Ar list
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width 12n
+.It Cm fidcclean
+Used FID cache entries.
+.It Cm fidcdirty
+Dirty FID cache entries.
+.It Cm fidcfree
+Unused FID cache entries.
+.El
+.Pp
+The value
+.Cm all
+may be specified to retrieve information about all list caches.
+.It Fl p Ar paramspec
+Query/manipulate operational control parameters.
+.Ar paramspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Sm off
+.Oo Ar thread-name Ns . Oc Ar param
+.Op = Ar value
+.Sm on
+.Ed
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread-name .
+.Pp
+.Ar param
+may be one of the following:
+.Bl -tag -offset ind -width Ds
+.It Ic log.level Ns Op . Ns Ar subsystem
+The logging level of debug message output.
+Thread-specific.
+.Pp
+.Ar subsystem
+may be one of the following:
+.Pp
+.Bl -column addrcacheX addrcacheX addrcacheX -offset indent
+.It Cm addrcache Ta Cm chunkmap Ta Cm ciod
+.It Cm fileops Ta Cm inodecache Ta Cm lnet
+.It Cm other Ta Cm read Ta Cm svc
+.It Cm sync
+.El
+.Pp
+If
+.Ar subsystem
+is left unspecified, all subsystems will be affected.
+.Pp
+The logging level value may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width 12n
+.It Cm none
+No logging
+.It Cm error
+Recoverable failures
+.It Cm warn
+Something wrong which requires attention
+.It Cm notify
+Something unusual which recommends attention
+.It Cm info
+Informational messages
+.It Cm debug
+Debugging messages
+.It Cm trace , all
+All messages
+.El
+.El
+.Pp
+Fields applicable to all threads (i.e. global parameters) may
+be addressed by specifying
+.Dq everyone
+as the
+.Ar thread-name
+or by leaving
+.Ar thread-name
+unspecified altogether.
+.Pp
+.It Fl S Ar socket
+Specify an alternative socket file.
+Defaults to
+.Pa /var/run/slashd.sock .
+.It Fl s Ar showspec
+Query and show
+.Xr slashd 8
+parameter values.
+.Ar showspec
+has the following format:
+.Bd -unfilled -offset indent
+.Sm off
+.Ar param
+.Op : Ar thread-name Op , Ar ...
+.Sm on
+.Ed
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread-name .
+.Pp
+.Ar param
+may be specified as any non-ambiguous prefix abbreviation of the
+following:
+.Pp
+.Bl -tag -offset indent -width 12n -compact
+.It Cm loglevels
+Query thread logging levels.
+.It Cm stats
+Query thread activity statistics.
+.El
+.Pp
+This option may be specified multiple times.
+.El
+.Ss Thread Specification
+Options which take
+.Ar thread-name
+parameters may be specified by one or more of the following tokens,
+separated by commas:
+.Pp
+.Bl -tag -compact -offset indent -width 12n
+.It Cm slctlthr
+Control thread
+.It Cm sllndthr Ns Ar %d
+Lustre TCP network device threads
+.It Cm zrpcmdsthr Ns Ar %d
+RPC metadata service threads
+.It Cm everyone
+All threads (default and available where applicable)
+.El
+.Sh FILES
+.Bl -tag -width Pa
+.It Pa /var/run/slashd.sock
+default
+.Xr slashd 8
+control socket
+.El
+.Sh SEE ALSO
+.Xr slashd 8
