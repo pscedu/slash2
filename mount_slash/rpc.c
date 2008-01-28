@@ -29,24 +29,24 @@ int
 rpc_io_interpret_set(struct pscrpc_request_set *set, __unusedx void *arg,
     int status)
 {
-        struct pscrpc_request *req;
-        int rc = 0;
+	struct pscrpc_request *req;
+	int rc = 0;
 
-        /*
-         * pscrpc_set_wait() already does this for us but it
-         *  doesn't abort.
-         */
-        psclist_for_each_entry(req, &set->set_requests, rq_set_chain) {
-                LASSERT(req->rq_phase == ZRQ_PHASE_COMPLETE);
-                if (req->rq_status != 0) {
-                        /* sanity check */
-                        psc_assert(status);
-                        rc = req->rq_status;
-                }
-        }
-        if (rc)
-                psc_fatalx("Some I/O reqs could not be completed");
-        return (rc);
+	/*
+	 * pscrpc_set_wait() already does this for us but it
+	 * doesn't abort.
+	 */
+	psclist_for_each_entry(req, &set->set_requests, rq_set_chain_lentry) {
+		LASSERT(req->rq_phase == ZRQ_PHASE_COMPLETE);
+		if (req->rq_status != 0) {
+			/* sanity check */
+			psc_assert(status);
+			rc = req->rq_status;
+		}
+	}
+	if (rc)
+		psc_fatalx("Some I/O reqs could not be completed");
+	return (rc);
 }
 
 /**
@@ -57,20 +57,20 @@ rpc_nbcallback(__unusedx struct pscrpc_request *req,
     __unusedx struct pscrpc_async_args *cb_args)
 {
 #if 0
-        psc_stream_buffer_t *zsb;
+	psc_stream_buffer_t *zsb;
 
-        /*
-         * Catch bad status here, we can't proceed if a
-         *  nb buffer did not send properly.
-         */
-        if (req->rq_status)
-                zfatalx("I/O req could not be completed");
+	/*
+	 * Catch bad status here, we can't proceed if a
+	 *  nb buffer did not send properly.
+	 */
+	if (req->rq_status)
+		zfatalx("I/O req could not be completed");
 
-        zsb = cb_args->pointer_arg[ZSB_CB_POINTER_SLOT];
-        zest_assert(zsb);
-        zest_assert(zsb->zsb_zcf);
+	zsb = cb_args->pointer_arg[ZSB_CB_POINTER_SLOT];
+	zest_assert(zsb);
+	zest_assert(zsb->zsb_zcf);
 	zlist_del(zsb->zsb_ent);
-        return (zest_buffer_free(zsb));
+	return (zest_buffer_free(zsb));
 #endif
 return 0;
 }
@@ -92,7 +92,7 @@ rpcmds_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	lnet_process_id_t id;
 
 	if (LNetGetId(1, &id))
-                psc_fatalx("LNetGetId");
+		psc_fatalx("LNetGetId");
 
 	imp = rpcsvcs[ptl]->svc_import;
 	imp->imp_connection = pscrpc_get_connection(server_id, id.nid, NULL);
@@ -250,6 +250,40 @@ rpc_getrep(struct pscrpc_request *rq, int replen, void *mpp)
 	return (0);
 }
 
+int simpleop_sizes[] = {
+	sizeof(struct slashrpc_access_req),		/* 0 */
+	sizeof(struct slashrpc_chmod_req),		/* 1 */
+	sizeof(struct slashrpc_chown_req),		/* 2 */
+	sizeof(struct slashrpc_connect_req),		/* 3 */
+	0,						/* 4 - creat */
+	sizeof(struct slashrpc_destroy_req),		/* 5 */
+	0,						/* 6 - fgetattr */
+	sizeof(struct slashrpc_ftruncate_req),		/* 7 */
+	0,						/* 8 - getattr */
+	sizeof(struct slashrpc_link_req),		/* 9 */
+	0,						/* 10 - lock */
+	sizeof(struct slashrpc_mkdir_req),		/* 11 */
+	sizeof(struct slashrpc_mknod_req),		/* 12 */
+	0,						/* 13 - open */
+	0,						/* 14 - opendir */
+	0,						/* 15 - read */
+	0,						/* 16 - readdir */
+	0,						/* 17 - readlink */
+	sizeof(struct slashrpc_release_req),		/* 18 */
+	sizeof(struct slashrpc_releasedir_req),		/* 19 */
+	sizeof(struct slashrpc_rename_req),		/* 20 */
+	sizeof(struct slashrpc_rmdir_req),		/* 21 */
+	0,						/* 22 - statfs */
+	sizeof(struct slashrpc_symlink_req),		/* 23 */
+	sizeof(struct slashrpc_truncate_req),		/* 24 */
+	sizeof(struct slashrpc_unlink_req),		/* 25 */
+	sizeof(struct slashrpc_utimes_req),		/* 26 */
+	0						/* 27 - write */
+#if SNRMT != 28
+# error "RPC ops out of sync"
+#endif
+};
+
 /*
  * rpc_sendmsg - Initiate I/O for "simple" command, the request format
  *	of which many commands have in common.
@@ -265,8 +299,10 @@ rpc_sendmsg(int op, ...)
 		struct slashrpc_chown_req	*m_chown;
 		struct slashrpc_connect_req	*m_connect;
 		struct slashrpc_destroy_req	*m_destroy;
+		struct slashrpc_ftruncate_req	*m_ftruncate;
 		struct slashrpc_link_req	*m_link;
 		struct slashrpc_mkdir_req	*m_mkdir;
+		struct slashrpc_mknod_req	*m_mknod;
 		struct slashrpc_release_req	*m_release;
 		struct slashrpc_releasedir_req	*m_releasedir;
 		struct slashrpc_rename_req	*m_rename;
@@ -277,153 +313,109 @@ rpc_sendmsg(int op, ...)
 		struct slashrpc_utimes_req	*m_utimes;
 		void				*m;
 	} u;
+	struct slashrpc_generic_rep *mp;
 	struct pscrpc_request *rq;
-	void *dummy;
 	va_list ap;
 	int rc;
 
-printf("sending msg with opcode %d\n", op);
-return (0);
+	if (op < 0 || op > SNRMT || simpleop_sizes[op] == 0)
+		goto badop;
+
+	rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op, simpleop_sizes[op],
+	    sizeof(*mp), &rq, &u.m);
+	if (rc)
+		return (rc);
+
 	va_start(ap, op);
 	switch (op) {
 	case SRMT_ACCESS:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_access), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		snprintf(u.m_access->path, sizeof(u.m_access->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_access->mask = va_arg(ap, int);
 		break;
 	case SRMT_CHMOD:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_chmod), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		snprintf(u.m_chmod->path, sizeof(u.m_chmod->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_chmod->mode = va_arg(ap, mode_t);
 		break;
 	case SRMT_CHOWN:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_chown), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		snprintf(u.m_chown->path, sizeof(u.m_chown->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_chown->uid = va_arg(ap, uid_t);
 		u.m_chown->gid = va_arg(ap, gid_t);
 		break;
 	case SRMT_CONNECT:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_connect), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		u.m_connect->magic = va_arg(ap, u64);
 		u.m_connect->version = va_arg(ap, u32);
 		u.m_connect->uid = va_arg(ap, uid_t);
 		u.m_connect->gid = va_arg(ap, gid_t);
 		break;
 	case SRMT_DESTROY:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_destroy), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
+		break;
+	case SRMT_FTRUNCATE:
+		u.m_ftruncate->cfd = va_arg(ap, u64);
+		u.m_ftruncate->size = va_arg(ap, u64);
 		break;
 	case SRMT_LINK:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_link), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		snprintf(u.m_link->from, sizeof(u.m_link->from),
 		    "%s", va_arg(ap, const char *));
 		snprintf(u.m_link->to, sizeof(u.m_link->to),
 		    "%s", va_arg(ap, const char *));
 		break;
 	case SRMT_MKDIR:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_mkdir), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
+		snprintf(u.m_mkdir->path, sizeof(u.m_mkdir->path),
+		    "%s", va_arg(ap, const char *));
+		u.m_mkdir->mode = va_arg(ap, mode_t);
+		break;
+	case SRMT_MKNOD:
 		snprintf(u.m_mkdir->path, sizeof(u.m_mkdir->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_mkdir->mode = va_arg(ap, mode_t);
 		break;
 	case SRMT_RELEASE:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_release), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		u.m_release->cfd = va_arg(ap, u64);
 		break;
 	case SRMT_RELEASEDIR:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_releasedir), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		u.m_releasedir->cfd = va_arg(ap, u64);
 		break;
 	case SRMT_RENAME:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_rename), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		snprintf(u.m_rename->from, sizeof(u.m_rename->from),
 		    "%s", va_arg(ap, const char *));
 		snprintf(u.m_rename->to, sizeof(u.m_rename->to),
 		    "%s", va_arg(ap, const char *));
 		break;
 	case SRMT_RMDIR:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_rmdir), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		snprintf(u.m_rmdir->path, sizeof(u.m_rmdir->path),
 		    "%s", va_arg(ap, const char *));
 		break;
 	case SRMT_SYMLINK:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_symlink), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		snprintf(u.m_symlink->from, sizeof(u.m_symlink->from),
 		    "%s", va_arg(ap, const char *));
 		snprintf(u.m_symlink->to, sizeof(u.m_symlink->to),
 		    "%s", va_arg(ap, const char *));
 		break;
 	case SRMT_TRUNCATE:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_truncate), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		snprintf(u.m_truncate->path, sizeof(u.m_truncate->path),
 		    "%s", va_arg(ap, const char *));
 		u.m_truncate->size = va_arg(ap, size_t);
 		break;
 	case SRMT_UNLINK:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_unlink), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		snprintf(u.m_unlink->path, sizeof(u.m_unlink->path),
 		    "%s", va_arg(ap, const char *));
 		break;
 	case SRMT_UTIMES:
-		rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op,
-		    sizeof(*u.m_utimes), 0, &rq, &u.m);
-		if (rc)
-			return (rc);
 		snprintf(u.m_utimes->path, sizeof(u.m_utimes->path),
 		    "%s", va_arg(ap, const char *));
 		memcpy(u.m_utimes->times, va_arg(ap, struct timespec *),
 		    sizeof(u.m_utimes->times));
 		break;
 	default:
+ badop:
 		psc_fatalx("unknown op: %d", op);
 	}
 	va_end(ap);
 
-	rc = rpc_getrep(rq, 0, &dummy);
+	rc = rpc_getrep(rq, sizeof(*mp), &mp);
 	pscrpc_req_finished(rq);
-	return (rc);
+	return (rc ? rc : mp->rc);
 }
