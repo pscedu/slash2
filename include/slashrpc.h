@@ -100,6 +100,7 @@ struct slashrpc_getattr_rep {
 	u32	nlink;
 	u32	uid;
 	u32	gid;
+	u32	_pad;
 	u64	size;
 	u64	atime;
 	u64	mtime;
@@ -147,6 +148,8 @@ struct slashrpc_opendir_req {
 };
 
 struct slashrpc_opendir_rep {
+	u32	rc;
+	u32	_pad;
 	u64	cfd;
 };
 
@@ -158,6 +161,7 @@ struct slashrpc_read_req {
 
 struct slashrpc_read_rep {
 	u32	size;
+	u32	_pad;
 	unsigned char buf[0];
 };
 
@@ -167,6 +171,8 @@ struct slashrpc_readdir_req {
 };
 
 struct slashrpc_readdir_rep {
+	u32	rc;
+	u32	_pad;
 	u64	size;
 	/* accompanied by bulk data in pure getdents(2) format */
 };
@@ -177,6 +183,8 @@ struct slashrpc_readlink_req {
 };
 
 struct slashrpc_readlink_rep {
+	u32	rc;
+	u32	_pad;
 	char	buf[0];			/* determined by request size */
 };
 
@@ -202,10 +210,12 @@ struct slashrpc_statfs_req {
 };
 
 struct slashrpc_statfs_rep {
+	u32	rc;
 	u32	f_bsize;
 	u32	f_blocks;
 	u32	f_bfree;
 	u32	f_bavail;
+	u32	_pad;
 	u64	f_files;
 	u64	f_ffree;
 };
