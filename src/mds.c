@@ -22,7 +22,7 @@
 
 #define MDS_NTHREADS  8
 #define MDS_NBUFS     1024
-#define MDS_BUFSZ     256
+#define MDS_BUFSZ     (4096+256)
 #define MDS_REPSZ     128
 #define MDS_REQPORTAL RPCMDS_REQ_PORTAL
 #define MDS_REPPORTAL RPCMDS_REP_PORTAL
@@ -31,40 +31,40 @@
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
 int
-slmds_connect(struct pscrpc_request *req)
+slmds_connect(struct pscrpc_request *rq)
 {
-	struct slashrpc_connect_req *body;
+	struct slashrpc_connect_req *mq;
+	struct slashrpc_generic_rep *mp;
 	int rc, size;
 
-	body = psc_msg_buf(req->rq_reqmsg, 0, size);
-	if (body == NULL) {
-		psc_warnx("connect_body is null");
-		rc = -ENOMSG;
-		goto fail;
-	}
-	psc_notify("magic %"_P_LP64"x version %u",
-		   body->magic, body->version);
-
-	if (body->magic   != SMDS_MAGIC ||
-	    body->version != SMDS_VERSION) {
-		rc = -EINVAL;
-		goto fail;
-	}
-	size = 0;
-	rc = psc_pack_reply(req, 1, &size, NULL);
+	size = sizeof(*mp);
+	rc = psc_pack_reply(rq, 1, &size, NULL);
 	if (rc) {
 		psc_assert(rc == -ENOMEM);
-		psc_error("psc_pack_reply failed");
-		goto fail;
+		psc_errorx("psc_pack_reply failed: %s", strerror(rc));
+		return (rc);
 	}
-	psc_notify("Connect request from %"_P_LP64"x:%u",
-		   req->rq_peer.nid, req->rq_peer.pid);
+	mp = psc_msg_buf(rq->rq_repmsg, 0, size);
+	if (mp == NULL) {
+		psc_errorx("connect repbody is null");
+		return (-ENOMEM);
+	}
 
+	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	if (mq == NULL) {
+		psc_warnx("connect reqbody is null");
+		rc = -ENOMSG;
+		goto done;
+	}
+
+	if (mq->magic != SMDS_MAGIC || mq->version != SMDS_VERSION) {
+		rc = -EINVAL;
+		goto done;
+	}
+
+ done:
+	mp->rc = rc;
 	return (0);
- fail:
-	psc_notify("Failed connect request from %"_P_LP64"x:%u",
-		   req->rq_peer.nid, req->rq_peer.pid);
-	return (rc);
 }
 
 int
@@ -189,14 +189,6 @@ slmds_getattr(struct pscrpc_request *rq)
 	struct stat stb;
 	int rc, size;
 
-	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	if (!mq)
-		return (-EPROTO);
-
-	rc = stat(mq->path, &stb);
-	if (rc)
-		return (-errno);
-
 	size = sizeof(*mp);
 	rc = psc_pack_reply(rq, 1, &size, NULL);
 	if (rc) {
@@ -205,12 +197,28 @@ slmds_getattr(struct pscrpc_request *rq)
 		return (rc);
 	}
 	mp = psc_msg_buf(rq->rq_repmsg, 0, size);
-	psc_assert(mp);
+	if (!mq) {
+		psc_warn("psc_msg_buf");
+		mp->rc = -ENOMEM;
+		return (0);
+	}
+
+	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	if (!mq) {
+		mp->rc = -EPROTO;
+		return (0);
+	}
+
+	if (stat(mq->path, &stb) == -1) {
+		mp->rc = -errno;
+		return (0);
+	}
+
 	mp->mode = stb.st_mode;
 	mp->nlink = stb.st_nlink;
 	mp->uid = stb.st_uid;
 	mp->gid = stb.st_gid;
-	mp->size = stb.st_size; /* XXX */
+	mp->size = stb.st_size;	/* XXX */
 	mp->atime = stb.st_atime;
 	mp->mtime = stb.st_mtime;
 	mp->ctime = stb.st_ctime;
