@@ -87,15 +87,19 @@ slash_getattr(const char *path, struct stat *stb)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
-		memset(stb, 0, sizeof(*stb));
-		stb->st_mode = mp->mode;
-		stb->st_nlink = mp->nlink;
-		stb->st_uid = mp->uid;
-		stb->st_gid = mp->gid;
-		stb->st_size = mp->size;
-		stb->st_atime = mp->atime;
-		stb->st_mtime = mp->mtime;
-		stb->st_ctime = mp->ctime;
+		if (mp->rc)
+			rc = mp->rc;
+		else {
+			memset(stb, 0, sizeof(*stb));
+			stb->st_mode = mp->mode;
+			stb->st_nlink = mp->nlink;
+			stb->st_uid = mp->uid;
+			stb->st_gid = mp->gid;
+			stb->st_size = mp->size; /* XXX */
+			stb->st_atime = mp->atime;
+			stb->st_mtime = mp->mtime;
+			stb->st_ctime = mp->ctime;
+		}
 	}
 	pscrpc_req_finished(rq);
 	return (rc);
