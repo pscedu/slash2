@@ -46,7 +46,7 @@
 			return (-ENOMEM);						\
 		}									\
 		(_mp)->rc = (prc);							\
-		return ((prc) ? 0 : -1);						\
+		return (0);								\
 	} while (0)
 
 #define GET_CUSTOM_REPLY(rq, mp)							\
@@ -193,15 +193,13 @@ slmds_getattr(struct pscrpc_request *rq)
 	struct slashrpc_getattr_rep *mp;
 	struct stat stb;
 
+	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
+		return (-ENOMSG);
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL) {
-		mp->rc = -ENOMSG;
-		return (-1);
-	}
 	if (stat(mq->path, &stb) == -1) {
 		mp->rc = -errno;
-		return (-1);
+		return (0);
 	}
 	mp->mode = stb.st_mode;
 	mp->nlink = stb.st_nlink;
@@ -223,19 +221,17 @@ slmds_fgetattr(struct pscrpc_request *rq)
 	slash_fid_t fid;
 	struct stat stb;
 
+	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
+		return (-ENOMSG);
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL) {
-		mp->rc = -ENOMSG;
-		return (-1);
-	}
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn)) {
 		mp->rc = -errno;
-		return (-1);
+		return (0);
 	}
 	if (stat(fn, &stb) == -1) {
 		mp->rc = -errno;
-		return (-1);
+		return (0);
 	}
 	mp->mode = stb.st_mode;
 	mp->nlink = stb.st_nlink;
@@ -323,16 +319,12 @@ slmds_opendir(struct pscrpc_request *rq)
 	struct slashrpc_opendir_req *mq;
 	struct slashrpc_opendir_rep *mp;
 
+	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
+		return (-ENOMSG);
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL) {
-		mp->rc = -EPROTO;
-		return (-1);
-	}
-	if (cfdnew(&mp->cfd, rq->rq_export, mq->path)) {
+	if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
 		mp->rc = -errno;
-		return (-1);
-	}
 	return (0);
 }
 
@@ -350,26 +342,24 @@ slmds_readdir(struct pscrpc_request *rq)
 	int comms_error, rc;
 	slash_fid_t fid;
 
+	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
+		return (-ENOMSG);
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL) {
-		mp->rc = -EPROTO;
-		return (-1);
-	}
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd)) {
 		mp->rc = -errno;
-		return (-1);
+		return (0);
 	}
 	dc = dircache_get(&fid);
 	if (dc == NULL) {
 		mp->rc = -errno;
-		return (-1);
+		return (0);
 	}
 	rc = dircache_read(dc, mq->offset, ents, READDIR_BUFSZ);
 	dircache_rel(dc);
 	if (rc == -1) {
 		mp->rc = -errno;
-		return (-1);
+		return (0);
 	}
 	if (rc == 0) {
 		mp->size = 0;
@@ -382,7 +372,7 @@ slmds_readdir(struct pscrpc_request *rq)
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		mp->rc = -ENOMEM;
-		return (-1);
+		return (0);
 	}
 	desc->bd_iov[0].iov_base = ents;
 	desc->bd_iov[0].iov_len = mp->size;
@@ -428,7 +418,7 @@ slmds_readdir(struct pscrpc_request *rq)
 	}
 	pscrpc_free_bulk(desc);
 	mp->rc = rc;
-	return (rc ? -1 : 0);
+	return (0);
 }
 
 int
@@ -613,6 +603,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 		goto done;
 	}
 
+printf("recv op %d\n", req->rq_reqmsg->opc);
 	switch (req->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
 		rc = slmds_connect(req);
