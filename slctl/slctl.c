@@ -36,7 +36,7 @@ lookupshow(const char *name)
 		const char	*s_name;
 		int		 s_value;
 	} showtab[] = {
-		{ "log",		SCMT_GETLOGLEVEL },
+		{ "loglevels",		SCMT_GETLOGLEVEL },
 		{ "stats",		SCMT_GETSTATS },
 	};
 	int n;
