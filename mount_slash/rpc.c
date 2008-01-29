@@ -417,5 +417,14 @@ rpc_sendmsg(int op, ...)
 
 	rc = rpc_getrep(rq, sizeof(*mp), &mp);
 	pscrpc_req_finished(rq);
-	return (rc ? rc : mp->rc);
+	if (rc == 0) {
+		errno = mp->rc;
+		if (errno)
+			rc = -1;
+	}
+	else if (rc != -1) {
+		errno = rc;
+		rc = -1;
+	}
+	return (rc);
 }
