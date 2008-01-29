@@ -31,9 +31,9 @@
 #define SRMT_CONNECT	3
 #define SRMT_CREATE	4
 #define SRMT_DESTROY	5
-#define SRMT_GETATTR	6
-#define SRMT_FGETATTR	7
-#define SRMT_FTRUNCATE	8
+#define SRMT_FGETATTR	6
+#define SRMT_FTRUNCATE	7
+#define SRMT_GETATTR	8
 #define SRMT_LINK	9
 #define SRMT_LOCK	10
 #define SRMT_MKDIR	11
@@ -95,6 +95,7 @@ struct slashrpc_getattr_req {
 };
 
 struct slashrpc_getattr_rep {
+	u32	rc;
 	u32	mode;
 	u32	nlink;
 	u32	uid;
