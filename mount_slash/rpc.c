@@ -119,7 +119,7 @@ rpcmds_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 
 
 	/* Save server PID from reply callback and mark initialized.  */
-	imp->imp_connection->c_peer.pid = rq->rq_peer.pid;
+//	imp->imp_connection->c_peer.pid = rq->rq_peer.pid;
 	imp->imp_state = PSC_IMP_FULL;
 	return (0);
 }
