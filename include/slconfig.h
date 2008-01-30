@@ -21,9 +21,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_ds/hash.h"
 #include "psc_types.h"
-//#include "sb.h"
 #include "inode.h"
-
 
 #define MAX_PEERS  32
 #define MAX_IFS    256
@@ -55,6 +53,7 @@ typedef struct resource_profile {
 	lnet_nid_t         *res_nids;
 	u32                 res_nnids;
 	char		    res_objroot[PATH_MAX];
+	char		    res_fsroot[PATH_MAX];
 	struct psclist_head res_list;
 } sl_resource_t;
 
@@ -83,7 +82,7 @@ typedef struct global_config {
 	int                  gconf_port;
 	int                  gconf_nsites;
 	struct psclist_head  gconf_sites;
-	struct hash_table gconf_nids_hash;
+	struct hash_table    gconf_nids_hash;
 } sl_gconf_t;
 
 #define GCONF_HASHTBL_SZ 63
@@ -134,8 +133,7 @@ libsl_resm_lookup(void)
 	for (i=0; i<nnids; i++) {
 		e = get_hash_entry(&globalConfig.gconf_nids_hash,
 		    nids[i], NULL, NULL);
-		/* Every nid found by lnet must be a resource member.
-		 */
+		/* Every nid found by lnet must be a resource member.  */
 		if (!e)
 			psc_fatalx("Nid ;%s; is not a member of any resource",
 				   libcfs_nid2str(nids[i]));
@@ -143,8 +141,7 @@ libsl_resm_lookup(void)
 		resm = (sl_resm_t *)e->private;
 		if (!i)
 			res = resm->resm_res;
-		/* All nids must belong to the same resource
-		 */
+		/* All nids must belong to the same resource */
 		else if (res != resm->resm_res)
 			psc_fatalx("Nids must be members of same resource (%s)",
                                    libcfs_nid2str(nids[i]));
@@ -170,31 +167,28 @@ libsl_id2site(sl_ios_id_t id)
 
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_list)
 		if (tmp == s->site_id)
-			break;
-
-	return s;
+			return (s);
+	return (NULL);
 }
 
 static inline sl_resource_t *
 libsl_id2res(sl_ios_id_t id)
 {
+	sl_resource_t *r=NULL;
 	sl_site_t *s=NULL;
 
 	if ((s = libsl_id2site(id)) == NULL)
 		return NULL;
-	else {
-		sl_resource_t *r=NULL;
-		/* The global ID is now stored as the resource id (res_id).
-		 *  local id's are deprecated for now.
-		 */
-		//sl_ios_id_t    rid = sl_glid_to_resid(id);
 
-		psclist_for_each_entry(r, &s->site_resources, res_list)
-			if (id == r->res_id)
-				break;
+	/* The global ID is now stored as the resource id (res_id).
+	 *  local id's are deprecated for now.
+	 */
+	//sl_ios_id_t    rid = sl_glid_to_resid(id);
 
-		return r;
-	}
+	psclist_for_each_entry(r, &s->site_resources, res_list)
+		if (id == r->res_id)
+			return (r);
+	return (NULL);
 }
 
 static inline sl_ios_id_t
@@ -295,8 +289,6 @@ libsl_init(int server)
 	z->node_site = libsl_id2site(z->node_res->res_id);
 	libsl_profile_dump();
 }
-
-
 
 int run_yacc(const char *config_file);
 
