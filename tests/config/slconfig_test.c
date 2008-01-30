@@ -36,8 +36,7 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 	struct psc_thread *pt;
 
 	pt = PSCALLOC(sizeof(*pt));
-	pscthr_init(pt, 7, startf, "sllndthr%d",
-	    tcpnal_instances - 1);
+	pscthr_init(pt, 7, startf, NULL, "sllndthr%d", tcpnal_instances - 1);
 	*t = pt->pscthr_pthread;
 	pt->pscthr_private = arg;
 }
@@ -45,8 +44,6 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 int
 main(int argc, char *argv[])
 {
-	sl_resm_t *resm;
-
 	progname = argv[0];
 	lnet_thrspawnf = spawn_lnet_thr;
 	pfl_init(19);
