@@ -78,6 +78,31 @@
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
+/*
+ * translate_pathname - rewrite a pathname from a client to the location
+ *	it actually correponds with as known to slash in the server file system.
+ * @path: client-issued path which will contain the server path on successful return.
+ * Returns 0 on success or -1 on error.
+ */
+int
+translate_pathname(char *path)
+{
+	char buf[PATH_MAX];
+	int rc;
+
+	if (realpath(path, buf) == NULL)
+		return (-1);
+//	rc = snprintf(path, PATH_MAX, "%s/%s", nodeProfile->slnprof_fsroot, buf);
+	rc = snprintf(path, PATH_MAX, "%s/%s", "/slashfs", buf);
+	if (rc == -1)
+		return (-1);
+	if (rc >= sizeof(buf)) {
+		errno = ENAMETOOLONG;
+		return (-1);
+	}
+	return (0);
+}
+
 int
 slmds_connect(struct pscrpc_request *rq)
 {
