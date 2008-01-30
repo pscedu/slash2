@@ -83,6 +83,7 @@ global_net_handler(char *net);
 	 TABENT_RES ("id",        SL_TYPE_INT,  INTSTR_MAX, res_id,      NULL),
 	 TABENT_RES ("mds",       SL_TYPE_BOOL, BOOL_MAX,   res_mds,     NULL),
 	 TABENT_RES ("objroot",   SL_TYPE_STRP, PATH_MAX,   res_objroot, NULL),
+	 TABENT_RES ("fsroot",    SL_TYPE_STRP, PATH_MAX,   res_fsroot,  NULL),
 	 { NULL, 0, 0, 0, 0, 0, NULL }
 };
 
@@ -195,6 +196,7 @@ site_profile_start : SITE_PROFILE SITE_NAME SUBSECT_START
 {
 	cfgMode = SL_STRUCT_SITE;
 	strncpy(currentSite->site_name, $2, SITE_NAME_MAX);
+	free($2);
 };
 
 site_defs      : statements site_resources
@@ -221,9 +223,10 @@ site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
 {
 	cfgMode = SL_STRUCT_RES;
 	if (snprintf(currentRes->res_name, RES_NAME_MAX, "%s%s",
-		     $2, currentSite->site_name) > RES_NAME_MAX)
+		     $2, currentSite->site_name) >= RES_NAME_MAX)
 		psc_fatal("Resource name too long");
 	psc_trace("ResName %s", currentRes->res_name);
+	free($2);
 };
 
 resource_def   : statements interfacelist peerlist |
@@ -245,7 +248,7 @@ peer           : RESOURCE_NAME
 	tmp = realloc(currentRes->res_peertmp,
 		      (sizeof(char **) * (currentRes->res_npeers++)));
 	psc_assert(tmp);
-	tmp[(currentRes->res_npeers)-1] = strdup($1);
+	tmp[(currentRes->res_npeers)-1] = $1;
 	currentRes->res_peertmp = tmp;
 };
 
@@ -265,9 +268,10 @@ interface      : IPADDR
 		    (sizeof(lnet_nid_t) * (currentRes->res_nnids + 1)));
         psc_assert(i);
 
-	if ((snprintf(nidstr, 32, "%s@%s", $1, currentConf->gconf_net))
-	    > MAXNET)
+	if ((snprintf(nidstr, MAXNET, "%s@%s", $1, currentConf->gconf_net))
+	    >= MAXNET)
 		psc_fatalx("Interface to NID failed, ifname too long %s", $1);
+	free($1);
 
         i[currentRes->res_nnids] = libcfs_str2nid(nidstr);
 
@@ -372,9 +376,8 @@ quoteds_stmt : NAME EQ QUOTEDS END
 	store_tok_val($1, $3);
 	free($1);
 	free($3);
-	/* Don't free the string itself, it's pointer has been copied */
+	/* Don't free the string itself; its pointer has been copied. */
 };
-
 
 lnettcp_stmt : NAME EQ LNETTCP END
 {
