@@ -34,6 +34,8 @@
 		int _rc, _size;								\
 											\
 		_size = sizeof(*(_mp));							\
+		if (_size > MDS_REPSZ)							\
+			psc_fatalx("reply size greater than max");			\
 		_rc = psc_pack_reply((rq), 1, &_size, NULL);				\
 		if (_rc) {								\
 			psc_assert(_rc == -ENOMEM);					\
@@ -54,6 +56,8 @@
 		int _rc, _size;								\
 											\
 		_size = sz;								\
+		if (_size > MDS_REPSZ)							\
+			psc_fatalx("reply size greater than max");			\
 		_rc = psc_pack_reply((rq), 1, &_size, NULL);				\
 		if (_rc) {								\
 			psc_assert(_rc == -ENOMEM);					\
@@ -84,23 +88,48 @@ psc_spinlock_t fsidlock = LOCK_INITIALIZER;
  * translate_pathname - rewrite a pathname from a client to the location
  *	it actually correponds with as known to slash in the server file system.
  * @path: client-issued path which will contain the server path on successful return.
+ * @must_exist: whether this path must exist or not (e.g. if being created).
  * Returns 0 on success or -1 on error.
  */
 int
-translate_pathname(char *path)
+translate_pathname(char *path, int must_exist)
 {
-	char buf[PATH_MAX];
+	char *lastsep, buf[PATH_MAX];
 	int rc;
 
-	if (realpath(path, buf) == NULL)
-		return (-1);
 //	rc = snprintf(path, PATH_MAX, "%s/%s", nodeProfile->slnprof_fsroot, buf);
-	rc = snprintf(path, PATH_MAX, "%s/%s", "/slashfs", buf);
+	rc = snprintf(buf, PATH_MAX, "%s/%s", "/slashfs", path);
 	if (rc == -1)
 		return (-1);
 	if (rc >= (int)sizeof(buf)) {
 		errno = ENAMETOOLONG;
 		return (-1);
+	}
+	/*
+	 * As realpath(3) requires that the resolved pathname must exist,
+	 * if we are creating a new pathname, it obviously won't exist,
+	 * so trim the last component and append it later on.
+	 */
+	if (must_exist == 0 && (lastsep = strrchr(buf, '/')) != NULL) {
+		if (strncmp(lastsep, "/..", strlen("/..")) == 0) {
+			errno = -EINVAL;
+			return (-1);
+		}
+		*lastsep = '\0';
+	}
+	if (realpath(buf, path) == NULL)
+		return (-1);
+	if (strncmp(path, "/slashfs", strlen("/slashfs"))) {
+		/*
+		 * If they found some way around
+		 * realpath(3), try to catch it...
+		 */
+		errno = EINVAL;
+		return (-1);
+	}
+	if (lastsep) {
+		*lastsep = '/';
+		strncat(path, lastsep, PATH_MAX - 1 - strlen(path));
 	}
 	return (0);
 }
@@ -126,7 +155,7 @@ slmds_access(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (access(mq->path, mq->mask) == -1)
 		rc = -errno;
@@ -141,7 +170,7 @@ slmds_chmod(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (chmod(mq->path, mq->mode) == -1)
 		rc = -errno;
@@ -175,7 +204,7 @@ slmds_chown(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (chown(mq->path, mq->uid, mq->gid) == -1)
 		rc = -errno;
@@ -214,7 +243,7 @@ slmds_create(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 0) == -1)
 		rc = -errno;
 	else if ((fd = creat(mq->path, mq->mode)) == -1)
 		rc = -errno;
@@ -234,7 +263,7 @@ slmds_getattr(struct pscrpc_request *rq)
 		return (-ENOMSG);
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
-	if (translate_pathname(mq->path) == -1) {
+	if (translate_pathname(mq->path, 1) == -1) {
 		mp->rc = -errno;
 		return (0);
 	}
@@ -310,9 +339,9 @@ slmds_link(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->from) == -1)
+	if (translate_pathname(mq->from, 1) == -1)
 		rc = -errno;
-	else if (translate_pathname(mq->to) == -1)
+	else if (translate_pathname(mq->to, 0) == -1)
 		rc = -errno;
 	else if (link(mq->from, mq->to) == -1)
 		rc = -errno;
@@ -327,7 +356,7 @@ slmds_mkdir(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 0) == -1)
 		rc = -errno;
 	else if (mkdir(mq->path, mq->mode) == -1)
 		rc = -errno;
@@ -342,7 +371,7 @@ slmds_mknod(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 0) == -1)
 		rc = -errno;
 	else if (mknod(mq->path, mq->mode, mq->dev) == -1)
 		rc = -errno;
@@ -359,7 +388,7 @@ slmds_open(struct pscrpc_request *rq)
 		return (-ENOMSG);
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
 	else if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
 		mp->rc = -errno;
@@ -377,7 +406,7 @@ slmds_opendir(struct pscrpc_request *rq)
 		return (-ENOMSG);
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
 	else if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
 		mp->rc = -errno;
@@ -490,7 +519,7 @@ slmds_readlink(struct pscrpc_request *rq)
 		return (-EINVAL);
 	GET_CUSTOM_REPLY_SZ(rq, mp, mq->size);
 	mp->rc = 0;
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
 	else if (readlink(mq->path, mp->buf, mq->size) == -1)
 		mp->rc = -errno;
@@ -533,9 +562,9 @@ slmds_rename(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->from) == -1)
+	if (translate_pathname(mq->from, 1) == -1)
 		rc = -errno;
-	else if (translate_pathname(mq->to) == -1)
+	else if (translate_pathname(mq->to, 0) == -1)
 		rc = -errno;
 	else if (rename(mq->from, mq->to) == -1)
 		rc = -errno;
@@ -550,7 +579,7 @@ slmds_rmdir(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (rmdir(mq->path) == -1)
 		rc = -errno;
@@ -568,7 +597,7 @@ slmds_statfs(struct pscrpc_request *rq)
 	mp->rc = 0;
 	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
 		mp->rc = -EPROTO;
-	else if (translate_pathname(mq->path) == -1)
+	else if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
 	else if (statfs(mq->path, &sfb) == -1)
 		mp->rc = -errno;
@@ -591,9 +620,9 @@ slmds_symlink(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->from) == -1)
+	if (translate_pathname(mq->from, 1) == -1)
 		rc = -errno;
-	else if (translate_pathname(mq->to) == -1)
+	else if (translate_pathname(mq->to, 0) == -1)
 		rc = -errno;
 	else if (symlink(mq->from, mq->to) == -1)
 		rc = -errno;
@@ -608,7 +637,7 @@ slmds_truncate(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (truncate(mq->path, mq->size) == -1)
 		rc = -errno;
@@ -623,7 +652,7 @@ slmds_unlink(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (unlink(mq->path) == -1)
 		rc = -errno;
@@ -638,7 +667,7 @@ slmds_utimes(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (translate_pathname(mq->path) == -1)
+	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (utimes(mq->path, mq->times) == -1)
 		rc = -errno;
