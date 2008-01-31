@@ -82,6 +82,7 @@ slash_getattr(const char *path, struct stat *stb)
 	struct pscrpc_request *rq;
 	int rc;
 
+printf("doing getattr %s\n", path);
 	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_GETATTR,
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
@@ -162,6 +163,7 @@ slash_lock(__unusedx const char *path, struct fuse_file_info *fi,
 int
 slash_mkdir(const char *path, mode_t mode)
 {
+printf("doing mkdir %s\n", path);
 	if (rpc_sendmsg(SRMT_MKDIR, path, mode) == -1)
 		return (-errno);
 	return (0);
