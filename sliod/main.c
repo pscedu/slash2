@@ -16,6 +16,8 @@
 #define _PATH_SLIOCONF "config/example.conf"
 #define _PATH_SLIOCTLSOCK "../sliod.sock"
 
+extern void *nal_thread(void *);
+
 struct psc_thread slioControlThread;
 
 const char *progname;
@@ -27,14 +29,26 @@ usage(void)
 	exit(1);
 }
 
+void *
+sliolndthr_start(void *arg)
+{
+	struct psc_thread *thr;
+
+	thr = arg;
+	return (nal_thread(thr->pscthr_private));
+}
+
 void
 spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 {
 	extern int tcpnal_instances;
 	struct psc_thread *pt;
 
+	if (startf != nal_thread)
+		psc_fatalx("unexpected LND start routine");
+
 	pt = PSCALLOC(sizeof(*pt));
-	pscthr_init(pt, SLIOTHRT_LND, startf, arg, "sllndthr%d",
+	pscthr_init(pt, SLIOTHRT_LND, sliolndthr_start, arg, "sllndthr%d",
 	    tcpnal_instances - 1);
 	*t = pt->pscthr_pthread;
 }
