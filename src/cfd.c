@@ -1,5 +1,12 @@
 /* $Id$ */
 
+/*
+ * cfd - routines for manipulating the client file descriptor structures.
+ * The application-specific RPC export structure to client peers contains
+ * a tree comprised of associated file descriptors for open files the
+ * client is doing operations on.  These routines maintain this tree.
+ */
+
 #include <errno.h>
 #include <stdio.h>
 
@@ -36,7 +43,8 @@ cfdcmp(const void *a, const void *b)
  * cfdnew - allocate a new file descriptor for a client.
  * @cfdp: value-result new client file descriptor.
  * @exp: RPC peer info.
- * @fn: filename to associate cfd with.
+ * @fn: server-translated filename to associate cfd with (i.e. the file specified
+ *	by the client needs to be "translated" to the server's file system path).
  */
 int
 cfdnew(u64 *cfdp, struct pscrpc_export *exp, const char *fn)
