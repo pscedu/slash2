@@ -353,15 +353,18 @@ int
 slmds_open(struct pscrpc_request *rq)
 {
 	struct slashrpc_open_req *mq;
-	int rc;
+	struct slashrpc_open_rep *mp;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
+		return (-ENOMSG);
+	GET_CUSTOM_REPLY(rq, mp);
+	mp->rc = 0;
 	if (translate_pathname(mq->path) == -1)
-		rc = -errno;
-	else if (open(mq->path, mq->flags) == -1)	/* XXX dead wrong */
-		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+		mp->rc = -errno;
+	else if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
+		mp->rc = -errno;
+	/* XXX check access permissions */
+	return (0);
 }
 
 int
@@ -378,6 +381,7 @@ slmds_opendir(struct pscrpc_request *rq)
 		mp->rc = -errno;
 	else if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
 		mp->rc = -errno;
+	/* XXX check access permissions */
 	return (0);
 }
 

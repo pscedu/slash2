@@ -140,6 +140,8 @@ struct slashrpc_open_req {
 };
 
 struct slashrpc_open_rep {
+	u32	rc;
+	u32	_pad;
 	u64	cfd;
 };
 
