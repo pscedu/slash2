@@ -11,7 +11,7 @@
 
 #include "psc_ds/list.h"
 #include "psc_util/log.h"
-#include "../src/control.h"
+#include "../slashd/control.h"
 #include "psc_util/subsys.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/cdefs.h"
