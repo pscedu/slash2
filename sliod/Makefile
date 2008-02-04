@@ -4,6 +4,8 @@ include Makefile.path
 
 PROG=		sliod
 SRCS+=		main.c
+SRCS+=		control.c
+SRCS+=		rpc.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
