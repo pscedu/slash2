@@ -11,7 +11,7 @@
 
 #include "psc_ds/list.h"
 #include "psc_util/log.h"
-#include "../slashd/control.h"
+#include "../sliod/control.h"
 #include "psc_util/subsys.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/cdefs.h"
@@ -234,7 +234,7 @@ parseiostat(char *iostats)
 __inline int
 thread_namelen(void)
 {
-	return (12); /* "slrpcmdsthr%d" */
+	return (12); /* "sliorpcthr%d" */
 }
 
 int
@@ -369,9 +369,8 @@ prscm(const struct slctlmsghdr *scmh, const void *scm)
 
 		type = -1;
 		switch (sst->sst_thrtype) {
-		case SLTHRT_CTL:
-		case SLTHRT_RPCMDS:
-		case SLTHRT_RPCIO:
+		case SLIOTHRT_CTL:
+		case SLIOTHRT_RPC:
 			type = sst->sst_thrtype;
 			break;
 		}
@@ -382,16 +381,11 @@ prscm(const struct slctlmsghdr *scmh, const void *scm)
 				printf("\n");
 			len = 0;
 			switch (type) {
-			case SLTHRT_CTL:
+			case SLIOTHRT_CTL:
 				len += printf(" %-*s %8s", thread_namelen(),
 				     "thread", "#clients");
 				break;
-			case SLTHRT_RPCMDS:
-				len += printf(" %-*s %8s %8s %8s",
-				     thread_namelen(), "thread",
-				     "#open", "#close", "#stat");
-				break;
-			case SLTHRT_RPCIO:
+			case SLIOTHRT_RPC:
 				len += printf(" %-*s %8s", thread_namelen(),
 				    "thread", "#write");
 				break;
@@ -409,7 +403,7 @@ prscm(const struct slctlmsghdr *scmh, const void *scm)
 
 		/* print thread stats */
 		switch (type) {
-		case SLTHRT_CTL:
+		case SLIOTHRT_CTL:
 			len += printf(" %-*s %8u\n", thread_namelen(),
 			    sst->sst_thrname, sst->sst_nclients);
 			break;
@@ -523,7 +517,7 @@ main(int argc, char *argv[])
 	ssize_t n;
 	int c, s;
 
-	sockfn = _PATH_SLCTLSOCK;
+	sockfn = _PATH_SLIOCTLSOCK;
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "Hh:Ii:L:M:m:p:S:s:")) != -1)
 		switch (c) {
@@ -589,7 +583,7 @@ main(int argc, char *argv[])
 			continue;
 		}
 		if (scmh.scmh_size == 0)
-			errx(2, "received invalid message from slashd");
+			errx(2, "received invalid message from sliod");
 		if (scmh.scmh_size >= scmsiz) {
 			scmsiz = scmh.scmh_size;
 			if ((scm = realloc(scm, scmsiz)) == NULL)
@@ -599,7 +593,7 @@ main(int argc, char *argv[])
 		if (n == -1)
 			err(2, "read");
 		else if (n == 0)
-			errx(2, "received unexpected EOF from slashd");
+			errx(2, "received unexpected EOF from sliod");
 		prscm(&scmh, scm);
 	}
 	if (n == -1)
