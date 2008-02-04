@@ -95,7 +95,7 @@ struct slashrpc_getattr_req {
 };
 
 struct slashrpc_getattr_rep {
-	u32	rc;
+	s32	rc;
 	u32	mode;
 	u32	nlink;
 	u32	uid;
@@ -140,7 +140,7 @@ struct slashrpc_open_req {
 };
 
 struct slashrpc_open_rep {
-	u32	rc;
+	s32	rc;
 	u32	_pad;
 	u64	cfd;
 };
@@ -150,7 +150,7 @@ struct slashrpc_opendir_req {
 };
 
 struct slashrpc_opendir_rep {
-	u32	rc;
+	s32	rc;
 	u32	_pad;
 	u64	cfd;
 };
@@ -173,7 +173,7 @@ struct slashrpc_readdir_req {
 };
 
 struct slashrpc_readdir_rep {
-	u32	rc;
+	s32	rc;
 	u32	_pad;
 	u64	size;
 	/* accompanied by bulk data in pure getdents(2) format */
@@ -185,7 +185,7 @@ struct slashrpc_readlink_req {
 };
 
 struct slashrpc_readlink_rep {
-	u32	rc;
+	s32	rc;
 	u32	_pad;
 	char	buf[0];			/* determined by request size */
 };
@@ -212,7 +212,7 @@ struct slashrpc_statfs_req {
 };
 
 struct slashrpc_statfs_rep {
-	u32	rc;
+	s32	rc;
 	u32	f_bsize;
 	u32	f_blocks;
 	u32	f_bfree;
@@ -253,7 +253,7 @@ struct slashrpc_write_rep {
 };
 
 struct slashrpc_generic_rep {
-	u32 rc;
+	s32 rc;
 };
 
 void slashrpc_export_destroy(void *);
