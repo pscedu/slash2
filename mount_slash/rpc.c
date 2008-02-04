@@ -418,12 +418,12 @@ rpc_sendmsg(int op, ...)
 	rc = rpc_getrep(rq, sizeof(*mp), &mp);
 	pscrpc_req_finished(rq);
 	if (rc == 0) {
-		errno = mp->rc;
+		errno = -mp->rc;
 		if (errno)
 			rc = -1;
 	}
 	else if (rc != -1) {
-		errno = rc;
+		errno = -rc;
 		rc = -1;
 	}
 	return (rc);
