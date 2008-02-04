@@ -675,6 +675,45 @@ slmds_utimes(struct pscrpc_request *rq)
 }
 
 int
+setcred(uid_t uid, gid_t gid, uid_t *myuid, gid_t *mygid)
+{
+	uid_t tuid;
+	gid_t gid;
+
+	/* Set fs credentials */
+	spinlock(&fsidlock);
+	*myuid = getuid();
+	*mygid = getgid();
+
+	if ((tuid = setfsuid(uid)) != *myuid)
+		psc_fatal("invalid fsuid %u", tuid);
+	if (setfsuid(uid) != (int)uid) {
+		psc_error("setfsuid %u", uid);
+		return (-1);
+	}
+
+	if ((tgid = setfsgid(gid)) != *mygid)
+		psc_fatal("invalid fsgid %u", tgid);
+	if (setfsgid(gid) != (int)gid) {
+		psc_error("setfsgid %u", gid);
+		return (-1);
+	}
+	return (0);
+}
+
+void
+revokecred(uid_t uid, gid_t gid)
+{
+	setfsuid(uid);
+	if (setfsuid(uid) != (int)uid)
+		psc_fatal("setfsuid %d", uid);
+	setfsgid(gid);
+	if (setfsgid(gid) != (int)gid)
+		psc_fatal("setfsgid %d", gid);
+	freelock(&fsidlock);
+}
+
+int
 slmds_svc_handler(struct pscrpc_request *req)
 {
 	struct slashrpc_export *sexp;
@@ -685,32 +724,18 @@ slmds_svc_handler(struct pscrpc_request *req)
 	ENTRY;
 	DEBUG_REQ(PLL_TRACE, req, "new req");
 
-	/* Set fs credentials */
-	myuid = getuid();
-	mygid = getgid();
-	spinlock(&fsidlock);
-	sexp = slashrpc_export_get(req->rq_export);
-
-	if ((tuid = setfsuid(sexp->uid)) != myuid)
-		psc_fatal("invalid fsuid %u", tuid);
-	if (setfsuid(sexp->uid) != (int)sexp->uid) {
-		psc_error("setfsuid %u", sexp->uid);
-		rc = -1;
-		goto done;
-	}
-
-	if ((tgid = setfsgid(sexp->gid)) != mygid)
-		psc_fatal("invalid fsgid %u", tgid);
-	if (setfsgid(sexp->gid) != (int)sexp->gid) {
-		psc_error("setfsgid %u", sexp->gid);
-		rc = -1;
-		goto done;
-	}
-
 	switch (req->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
 		rc = slmds_connect(req);
-		break;
+		target_send_reply_msg(req, rc, 0);
+		RETURN(rc);
+	}
+
+	sexp = slashrpc_export_get(req->rq_export);
+	if (setcred(sexp->uid, sexp->gid, &myuid, &mygid) == -1)
+		goto done;
+
+	switch (req->rq_reqmsg->opc) {
 	case SRMT_ACCESS:
 		rc = slmds_access(req);
 		break;
@@ -804,13 +829,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 	target_send_reply_msg (req, rc, 0);
 
  done:
-	setfsuid(myuid);
-	if (setfsuid(myuid) != (int)myuid)
-		psc_fatal("setfsuid %d", myuid);
-	setfsgid(mygid);
-	if (setfsgid(mygid) != (int)mygid)
-		psc_fatal("setfsgid %d", mygid);
-	freelock(&fsidlock);
+	revokecred(myuid, mygid);
 	RETURN(rc);
 }
 
