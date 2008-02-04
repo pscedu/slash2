@@ -1,13 +1,9 @@
 # $Id$
 
-SLASH_BASE=.
-PROJECT_BASE=${SLASH_BASE}
 include Makefile.path
+
+PROG=		slioctl
+SRCS+=		slioctl.c
+SRCS+=		${PFL_BASE}/psc_util/log.c
+
 include ${SLASHMK}
-
-SUBDIRS=	slashd
-SUBDIRS+=	slctl
-SUBDIRS+=	mount_slash
-
-build:
-	${MAKE} clean depend all
