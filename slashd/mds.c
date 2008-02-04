@@ -678,7 +678,7 @@ int
 setcred(uid_t uid, gid_t gid, uid_t *myuid, gid_t *mygid)
 {
 	uid_t tuid;
-	gid_t gid;
+	gid_t tgid;
 
 	/* Set fs credentials */
 	spinlock(&fsidlock);
@@ -717,8 +717,8 @@ int
 slmds_svc_handler(struct pscrpc_request *req)
 {
 	struct slashrpc_export *sexp;
-	uid_t myuid, tuid;
-	gid_t mygid, tgid;
+	uid_t myuid;
+	gid_t mygid;
 	int rc = 0;
 
 	ENTRY;
