@@ -103,6 +103,7 @@ slio_read(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct slashrpc_read_req *mq;
 	struct slashrpc_read_rep *mp;
+	struct l_wait_info lwi;
 	int comms_error, fd, rc;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
@@ -128,16 +129,17 @@ slio_read(struct pscrpc_request *rq)
 	}
 	buf = PSCALLOC(mq->size);
 	nbytes = pread(fd, buf, mq->size, mq->offset);
-	close(fd);
 	if (nbytes == -1) {
 		mp->rc = -errno;
+		close(fd);
 		goto done;
 	}
+	close(fd);
 	mp->size = nbytes;
 	if (nbytes == 0)
 		goto done;
 
-	desc = pscrpc_prep_bulk_exp(rq, rc / pscPageSize,
+	desc = pscrpc_prep_bulk_exp(rq, mq->size / pscPageSize,
 	    BULK_PUT_SOURCE, RPCMDS_BULK_PORTAL);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
@@ -197,21 +199,93 @@ int
 slio_write(struct pscrpc_request *rq)
 {
 	struct slashrpc_write_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct slashrpc_write_rep *mp;
+	struct pscrpc_bulk_desc *desc;
+	struct l_wait_info lwi;
+	int fd, rc, comms_error;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
+	ssize_t nbytes;
+	void *buf;
 
-	GET_GEN_REQ(rq, mp);
+	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
+		return (-ENOMSG);
+	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn)) {
 		mp->rc = -errno;
 		return (0);
 	}
-	if (write(fn) == -1) {
-		mp->rc = -errno;
+	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
+		mp->rc = -EINVAL;
 		return (0);
 	}
-	GENERIC_REPLY(rq, 0);
+	buf = PSCALLOC(mq->size);
+
+	desc = pscrpc_prep_bulk_exp(rq, mq->size / pscPageSize,
+	    BULK_GET_SINK, RPCMDS_BULK_PORTAL);
+	if (desc == NULL) {
+		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
+		mp->rc = -ENOMEM;
+		goto done;
+	}
+	desc->bd_iov[0].iov_base = buf;
+	desc->bd_iov[0].iov_len = mq->size;
+	desc->bd_iov_count = 1;
+	desc->bd_nob = mq->size;
+
+	if (desc->bd_export->exp_failed)
+		rc = -ENOTCONN;
+	else
+		rc = pscrpc_start_bulk_transfer(desc);
+
+	if (rc == 0) {
+		lwi = LWI_TIMEOUT_INTERVAL(20 * HZ / 2, HZ, NULL, desc);
+
+		rc = psc_svr_wait_event(&desc->bd_waitq,
+		    !pscrpc_bulk_active(desc) || desc->bd_export->exp_failed,
+		    &lwi, NULL);
+		LASSERT(rc == 0 || rc == -ETIMEDOUT);
+		if (rc == -ETIMEDOUT) {
+			psc_info("timeout on bulk GET");
+			pscrpc_abort_bulk(desc);
+		} else if (desc->bd_export->exp_failed) {
+			psc_info("eviction on bulk GET");
+			rc = -ENOTCONN;
+			pscrpc_abort_bulk(desc);
+		} else if (!desc->bd_success ||
+		    desc->bd_nob_transferred != desc->bd_nob) {
+			psc_info("%s bulk GET %d(%d)",
+			    desc->bd_success ? "truncated" : "network err",
+			    desc->bd_nob_transferred, desc->bd_nob);
+			/* XXX should this be a different errno? */
+			rc = -ETIMEDOUT;
+		}
+	} else
+		psc_info("pscrpc bulk GET failed: rc %d", rc);
+	comms_error = (rc != 0);
+	if (rc == 0) {
+		if ((fd = open(fn, O_WRONLY)) == -1) {
+			rc = -errno;
+			goto done;
+		}
+		nbytes = pwrite(fd, buf, mq->size, mq->offset);
+		if (nbytes == -1)
+			rc = -errno;
+		else
+			mq->size = nbytes;
+		close(fd);
+	}
+	else if (!comms_error) {
+		/* Only reply if there was no comms problem with bulk */
+		rq->rq_status = rc;
+		pscrpc_error(rq);
+	}
+	pscrpc_free_bulk(desc);
+	mp->rc = rc;
+ done:
+	free(buf);
+	return (0);
 }
 
 int
@@ -251,22 +325,6 @@ revokecred(uid_t uid, gid_t gid)
 	if (setfsgid(gid) != (int)gid)
 		psc_fatal("setfsgid %d", gid);
 	freelock(&fsidlock);
-}
-
-int
-fidcache_opencb(struct fidcache_ent *fc, const char *fn, int flags, int mode)
-{
-	struct slashrpc_export *sexp;
-	uid_t myuid;
-	gid_t mygid;
-	int fd;
-
-	sexp = slashrpc_export_get(fc->fc_rq->rq_export);
-	if (setcred(sexp->uid, sexp->gid, &myuid, &mygid) == -1)
-		return (-1);
-	fd = open(fn, flags, mode);
-	revokecred(myuid, mygid);
-	return (fd);
 }
 
 int
