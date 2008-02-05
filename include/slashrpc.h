@@ -162,8 +162,8 @@ struct slashrpc_read_req {
 };
 
 struct slashrpc_read_rep {
+	s32	rc;
 	u32	size;
-	u32	_pad;
 	unsigned char buf[0];
 };
 
@@ -174,8 +174,7 @@ struct slashrpc_readdir_req {
 
 struct slashrpc_readdir_rep {
 	s32	rc;
-	u32	_pad;
-	u64	size;
+	u32	size;
 	/* accompanied by bulk data in pure getdents(2) format */
 };
 
@@ -253,7 +252,7 @@ struct slashrpc_write_rep {
 };
 
 struct slashrpc_generic_rep {
-	s32 rc;
+	s32	rc;
 };
 
 void slashrpc_export_destroy(void *);
