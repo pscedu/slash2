@@ -13,8 +13,6 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/service.h"
 
-#include "cfd.h"
-#include "dircache.h"
 #include "fid.h"
 #include "rpc.h"
 #include "slash.h"
@@ -84,107 +82,26 @@
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
-/*
- * translate_pathname - rewrite a pathname from a client to the location
- *	it actually correponds with as known to slash in the server file system.
- * @path: client-issued path which will contain the server path on successful return.
- * @must_exist: whether this path must exist or not (e.g. if being created).
- * Returns 0 on success or -1 on error.
- */
 int
-translate_pathname(char *path, int must_exist)
-{
-	char *lastsep, buf[PATH_MAX];
-	int rc;
-
-//	rc = snprintf(path, PATH_MAX, "%s/%s", nodeProfile->slnprof_fsroot, buf);
-	rc = snprintf(buf, PATH_MAX, "%s/%s", "/slashfs", path);
-	if (rc == -1)
-		return (-1);
-	if (rc >= (int)sizeof(buf)) {
-		errno = ENAMETOOLONG;
-		return (-1);
-	}
-	/*
-	 * As realpath(3) requires that the resolved pathname must exist,
-	 * if we are creating a new pathname, it obviously won't exist,
-	 * so trim the last component and append it later on.
-	 */
-	if (must_exist == 0 && (lastsep = strrchr(buf, '/')) != NULL) {
-		if (strncmp(lastsep, "/..", strlen("/..")) == 0) {
-			errno = -EINVAL;
-			return (-1);
-		}
-		*lastsep = '\0';
-	}
-	if (realpath(buf, path) == NULL)
-		return (-1);
-	if (strncmp(path, "/slashfs", strlen("/slashfs"))) {
-		/*
-		 * If they found some way around
-		 * realpath(3), try to catch it...
-		 */
-		errno = EINVAL;
-		return (-1);
-	}
-	if (lastsep) {
-		*lastsep = '/';
-		strncat(path, lastsep, PATH_MAX - 1 - strlen(path));
-	}
-	return (0);
-}
-
-int
-slmds_connect(struct pscrpc_request *rq)
+slio_connect(struct pscrpc_request *rq)
 {
 	struct slashrpc_connect_req *mq;
 	int rc;
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (mq->magic != SMDS_MAGIC || mq->version != SMDS_VERSION)
+	if (mq->magic != SIO_MAGIC || mq->version != SIO_VERSION)
 		rc = -EINVAL;
 	GENERIC_REPLY(rq, rc);
 }
 
 int
-slmds_read(struct pscrpc_request *rq)
+slio_read(struct pscrpc_request *rq)
 {
-	struct slashrpc_getattr_req *mq;
-	struct slashrpc_getattr_rep *mp;
-	struct stat stb;
-
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		return (-ENOMSG);
-	GET_CUSTOM_REPLY(rq, mp);
-	mp->rc = 0;
-	if (translate_pathname(mq->path, 1) == -1) {
-		mp->rc = -errno;
-		return (0);
-	}
-	if (stat(mq->path, &stb) == -1) {
-		mp->rc = -errno;
-		return (0);
-	}
-	mp->mode = stb.st_mode;
-	mp->nlink = stb.st_nlink;
-	mp->uid = stb.st_uid;
-	mp->gid = stb.st_gid;
-	mp->size = stb.st_size;	/* XXX */
-	mp->atime = stb.st_atime;
-	mp->mtime = stb.st_mtime;
-	mp->ctime = stb.st_ctime;
-	return (0);
-}
-
-int
-slmds_write(struct pscrpc_request *rq)
-{
-	struct slashrpc_fgetattr_req *mq;
-	struct slashrpc_fgetattr_rep *mp;
+	struct slashrpc_read_req *mq;
+	struct slashrpc_read_rep *mp;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
-	struct stat stb;
 
 	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
 		return (-ENOMSG);
@@ -194,19 +111,92 @@ slmds_write(struct pscrpc_request *rq)
 		mp->rc = -errno;
 		return (0);
 	}
-	if (stat(fn, &stb) == -1) {
+
+	desc = pscrpc_prep_bulk_exp(rq, rc / pscPageSize,
+	    BULK_GET_SINK, RPCMDS_BULK_PORTAL);
+	if (desc == NULL) {
+		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
+		mp->rc = -ENOMEM;
+		return (0);
+	}
+	desc->bd_iov[0].iov_base = ents;
+	desc->bd_iov[0].iov_len = mp->size;
+	desc->bd_iov_count = 1;
+	desc->bd_nob = mp->size;
+
+	if (desc->bd_export->exp_failed)
+		rc = -ENOTCONN;
+	else
+		rc = pscrpc_start_bulk_transfer(desc);
+
+	if (rc == 0) {
+		lwi = LWI_TIMEOUT_INTERVAL(20 * HZ / 2, HZ, NULL, desc);
+
+		rc = psc_svr_wait_event(&desc->bd_waitq,
+		    !pscrpc_bulk_active(desc) || desc->bd_export->exp_failed,
+		    &lwi, NULL);
+		LASSERT(rc == 0 || rc == -ETIMEDOUT);
+		if (rc == -ETIMEDOUT) {
+			psc_info("timeout on bulk PUT");
+			pscrpc_abort_bulk(desc);
+		} else if (desc->bd_export->exp_failed) {
+			psc_info("eviction on bulk PUT");
+			rc = -ENOTCONN;
+			pscrpc_abort_bulk(desc);
+		} else if (!desc->bd_success ||
+		    desc->bd_nob_transferred != desc->bd_nob) {
+			psc_info("%s bulk PUT %d(%d)",
+			    desc->bd_success ? "truncated" : "network err",
+			    desc->bd_nob_transferred, desc->bd_nob);
+			/* XXX should this be a different errno? */
+			rc = -ETIMEDOUT;
+		}
+	} else
+		psc_info("pscrpc bulk put failed: rc %d", rc);
+	comms_error = (rc != 0);
+	if (rc == 0)
+		psc_info("put readdir contents successfully");
+	else if (!comms_error) {
+		/* Only reply if there was no comms problem with bulk */
+		rq->rq_status = rc;
+		pscrpc_error(rq);
+	}
+	pscrpc_free_bulk(desc);
+	mp->rc = rc;
+
+
+
+
+
+
+
+
+
+
+
+
+	return (0);
+}
+
+int
+slio_write(struct pscrpc_request *rq)
+{
+	struct slashrpc_write_req *mq;
+	struct slashrpc_generic_rep *mp;
+	char fn[PATH_MAX];
+	slash_fid_t fid;
+
+	GET_GEN_REQ(rq, mp);
+	mp->rc = 0;
+	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn)) {
 		mp->rc = -errno;
 		return (0);
 	}
-	mp->mode = stb.st_mode;
-	mp->nlink = stb.st_nlink;
-	mp->uid = stb.st_uid;
-	mp->gid = stb.st_gid;
-	mp->size = stb.st_size;	/* XXX */
-	mp->atime = stb.st_atime;
-	mp->mtime = stb.st_mtime;
-	mp->ctime = stb.st_ctime;
-	return (0);
+	if (write(fn, &stb) == -1) {
+		mp->rc = -errno;
+		return (0);
+	}
+	GENERIC_REPLY(rq, 0);
 }
 
 int
@@ -304,14 +294,14 @@ slio_init(void)
 {
 	pscrpc_svc_handle_t *svh = PSCALLOC(sizeof(*svh));
 
-	svh->svh_nbufs      = RPCIO_NBUFS;
-	svh->svh_bufsz      = RPCIO_BUFSZ;
-	svh->svh_reqsz      = RPCIO_BUFSZ;
-	svh->svh_repsz      = RPCIO_REPSZ;
-	svh->svh_req_portal = RPCIO_REQPORTAL;
-	svh->svh_rep_portal = RPCIO_REPPORTAL;
+	svh->svh_nbufs      = SLIO_NBUFS;
+	svh->svh_bufsz      = SLIO_BUFSZ;
+	svh->svh_reqsz      = SLIO_BUFSZ;
+	svh->svh_repsz      = SLIO_REPSZ;
+	svh->svh_req_portal = SLIO_REQPORTAL;
+	svh->svh_rep_portal = SLIO_REPPORTAL;
 	svh->svh_type       = SLTHRT_RPCIO;
-	svh->svh_nthreads   = RPCIO_NTHREADS;
+	svh->svh_nthreads   = SLIO_NTHREADS;
 	svh->svh_handler    = slio_svc_handler;
 
 	strncpy(svh->svh_svc_name, RPCIO_SVCNAME, PSCRPC_SVCNAME_MAX);
