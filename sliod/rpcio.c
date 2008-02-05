@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#define _XOPEN_SOURCE 500
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
@@ -98,31 +100,54 @@ slio_connect(struct pscrpc_request *rq)
 int
 slio_read(struct pscrpc_request *rq)
 {
+	struct pscrpc_bulk_desc *desc;
 	struct slashrpc_read_req *mq;
 	struct slashrpc_read_rep *mp;
+	int comms_error, fd, rc;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
+	ssize_t nbytes;
+	void *buf;
 
 	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
 		return (-ENOMSG);
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
+#define MAX_BUFSIZ (1024 * 1024)
+	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn)) {
 		mp->rc = -errno;
 		return (0);
 	}
+	if ((fd = open(fn, O_RDONLY)) == -1) {
+		mp->rc = -errno;
+		return (0);
+	}
+	buf = PSCALLOC(mq->size);
+	nbytes = pread(fd, buf, mq->size, mq->offset);
+	close(fd);
+	if (nbytes == -1) {
+		mp->rc = -errno;
+		goto done;
+	}
+	mp->size = nbytes;
+	if (nbytes == 0)
+		goto done;
 
 	desc = pscrpc_prep_bulk_exp(rq, rc / pscPageSize,
-	    BULK_GET_SINK, RPCMDS_BULK_PORTAL);
+	    BULK_PUT_SOURCE, RPCMDS_BULK_PORTAL);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		mp->rc = -ENOMEM;
-		return (0);
+		goto done;
 	}
-	desc->bd_iov[0].iov_base = ents;
-	desc->bd_iov[0].iov_len = mp->size;
+	desc->bd_iov[0].iov_base = buf;
+	desc->bd_iov[0].iov_len = mq->size;
 	desc->bd_iov_count = 1;
-	desc->bd_nob = mp->size;
+	desc->bd_nob = mq->size;
 
 	if (desc->bd_export->exp_failed)
 		rc = -ENOTCONN;
@@ -152,10 +177,10 @@ slio_read(struct pscrpc_request *rq)
 			rc = -ETIMEDOUT;
 		}
 	} else
-		psc_info("pscrpc bulk put failed: rc %d", rc);
+		psc_info("pscrpc bulk PUT failed: rc %d", rc);
 	comms_error = (rc != 0);
 	if (rc == 0)
-		psc_info("put readdir contents successfully");
+		psc_info("PUT READ contents successfully");
 	else if (!comms_error) {
 		/* Only reply if there was no comms problem with bulk */
 		rq->rq_status = rc;
@@ -163,18 +188,8 @@ slio_read(struct pscrpc_request *rq)
 	}
 	pscrpc_free_bulk(desc);
 	mp->rc = rc;
-
-
-
-
-
-
-
-
-
-
-
-
+ done:
+	free(buf);
 	return (0);
 }
 
@@ -192,7 +207,7 @@ slio_write(struct pscrpc_request *rq)
 		mp->rc = -errno;
 		return (0);
 	}
-	if (write(fn, &stb) == -1) {
+	if (write(fn) == -1) {
 		mp->rc = -errno;
 		return (0);
 	}
@@ -203,7 +218,7 @@ int
 setcred(uid_t uid, gid_t gid, uid_t *myuid, gid_t *mygid)
 {
 	uid_t tuid;
-	gid_t guid;
+	gid_t tgid;
 
 	/* Set fs credentials */
 	spinlock(&fsidlock);
@@ -241,6 +256,7 @@ revokecred(uid_t uid, gid_t gid)
 int
 fidcache_opencb(struct fidcache_ent *fc, const char *fn, int flags, int mode)
 {
+	struct slashrpc_export *sexp;
 	uid_t myuid;
 	gid_t mygid;
 	int fd;
@@ -249,14 +265,13 @@ fidcache_opencb(struct fidcache_ent *fc, const char *fn, int flags, int mode)
 	if (setcred(sexp->uid, sexp->gid, &myuid, &mygid) == -1)
 		return (-1);
 	fd = open(fn, flags, mode);
-	revokecred(&myuid, &mygid);
+	revokecred(myuid, mygid);
 	return (fd);
 }
 
 int
 slio_svc_handler(struct pscrpc_request *rq)
 {
-	struct slashrpc_export *sexp;
 	int rc = 0;
 
 	ENTRY;
@@ -270,8 +285,6 @@ slio_svc_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_WRITE:
 		rc = slio_write(rq);
-		break;
-	case SRMT_WRITE:
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
@@ -304,7 +317,7 @@ slio_init(void)
 	svh->svh_nthreads   = SLIO_NTHREADS;
 	svh->svh_handler    = slio_svc_handler;
 
-	strncpy(svh->svh_svc_name, RPCIO_SVCNAME, PSCRPC_SVCNAME_MAX);
+	strncpy(svh->svh_svc_name, SLIO_SVCNAME, PSCRPC_SVCNAME_MAX);
 
 	pscrpc_thread_spawn(svh);
 }
