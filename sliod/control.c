@@ -624,7 +624,7 @@ slctlthr_service(int fd)
  * @fn: path to control socket.
  */
 __dead void
-slctlthr_main(const char *fn)
+slioctlthr_main(const char *fn)
 {
 	struct sockaddr_un sun;
 	mode_t old_umask;
