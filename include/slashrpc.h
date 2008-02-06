@@ -53,7 +53,8 @@
 #define SRMT_UNLINK	25
 #define SRMT_UTIMES	26
 #define SRMT_WRITE	27
-#define SNRMT		28
+#define SRMT_GETFID	28
+#define SNRMT		29
 
 struct slashrpc_connect_req {
 	u64	magic;
@@ -256,6 +257,18 @@ struct slashrpc_write_rep {
 
 struct slashrpc_generic_rep {
 	s32	rc;
+};
+
+struct slashrpc_getfid_req {
+	u64	nid;
+	u64	pid;
+	u64	cfd;
+};
+
+struct slashrpc_getfid_rep {
+	s32	rc;
+	u32	_pad;
+	u64	fid;
 };
 
 void slashrpc_export_destroy(void *);
