@@ -7,6 +7,6 @@
 #include "rpc.h"
 
 void
-sliorpc_export_destroy(void *data)
+slashrpc_export_destroy(void *data)
 {
 }
