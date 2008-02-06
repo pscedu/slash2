@@ -383,6 +383,7 @@ slmds_open(struct pscrpc_request *rq)
 {
 	struct slashrpc_open_req *mq;
 	struct slashrpc_open_rep *mp;
+	slash_fid_t fid;
 
 	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
 		return (-ENOMSG);
@@ -390,7 +391,9 @@ slmds_open(struct pscrpc_request *rq)
 	mp->rc = 0;
 	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
-	else if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
+	else if (fid_get(&fid, mq->path) == -1)
+		mp->rc = -errno;
+	else if (cfdnew(&mp->cfd, rq->rq_export, &fid))
 		mp->rc = -errno;
 	/* XXX check access permissions */
 	return (0);
@@ -401,6 +404,7 @@ slmds_opendir(struct pscrpc_request *rq)
 {
 	struct slashrpc_opendir_req *mq;
 	struct slashrpc_opendir_rep *mp;
+	slash_fid_t fid;
 
 	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
 		return (-ENOMSG);
@@ -408,7 +412,9 @@ slmds_opendir(struct pscrpc_request *rq)
 	mp->rc = 0;
 	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
-	else if (cfdnew(&mp->cfd, rq->rq_export, mq->path))
+	else if (fid_get(&fid, mq->path) == -1)
+		mp->rc = -errno;
+	else if (cfdnew(&mp->cfd, rq->rq_export, &fid))
 		mp->rc = -errno;
 	/* XXX check access permissions */
 	return (0);

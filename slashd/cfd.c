@@ -39,34 +39,43 @@ cfdcmp(const void *a, const void *b)
 	return (0);
 }
 
+struct cfdent *
+cfdinsert(u64 *cfdp, struct pscrpc_export *exp, const slash_fid_t *fidp)
+{
+	struct cfdent *c;
+	int locked;
+
+	c = PSCALLOC(sizeof(*c));
+	c->fid = *fidp;
+	c->cfd = *cfdp;
+
+	locked = reqlock(&exp->exp_lock);
+	if (SPLAY_INSERT(cfdtree, &sexp->cfdtree, c)) {
+		free(c);
+		c = NULL;
+	}
+	ureqlock(&exp->exp_lock, locked);
+	return (c);
+}
+
 /*
- * cfdnew - allocate a new file descriptor for a client.
+ * cfdinsert - allocate a new file descriptor for a client.
  * @cfdp: value-result new client file descriptor.
  * @exp: RPC peer info.
  * @fn: server-translated filename to associate cfd with (i.e. the file specified
  *	by the client needs to be "translated" to the server's file system path).
  */
 int
-cfdnew(u64 *cfdp, struct pscrpc_export *exp, const char *fn)
+cfdnew(u64 *cfdp, struct pscrpc_export *exp, const slash_fid_t *fidp)
 {
 	struct slashrpc_export *sexp;
-	struct cfdent *c;
-
-	c = PSCALLOC(sizeof(*c));
-	if (fid_get(&c->fid, fn)) {
-		errno = EINVAL;
-		free(c);
-		return (-1);
-	}
 
 	spinlock(&exp->exp_lock);
 	sexp = slashrpc_export_get(exp);
-	c->cfd = ++sexp->cfd;
-	if (SPLAY_INSERT(cfdtree, &sexp->cfdtree, c))
+	*cfdp = ++sexp->cfd;
+	if (cfdinsert(cfdp, exp, fidp))
 		psc_fatalx("cfdtree already has entry");
 	freelock(&exp->exp_lock);
-	*cfdp = c->cfd;
-	return (0);
 }
 
 /*

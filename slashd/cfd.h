@@ -19,7 +19,7 @@ struct cfdent {
 SPLAY_HEAD(cfdtree, cfdent);
 
 int cfdcmp(const void *, const void *);
-int cfdnew(u64 *, struct pscrpc_export *, const char *);
+int cfdnew(u64 *, struct pscrpc_export *, const slash_fid_t *);
 int cfd2fid(slash_fid_t *, struct pscrpc_export *rq, u64 cfd);
 int cfdfree(struct pscrpc_export *rq, u64 cfd);
 
