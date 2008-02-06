@@ -40,16 +40,18 @@ cfdcmp(const void *a, const void *b)
 }
 
 struct cfdent *
-cfdinsert(u64 *cfdp, struct pscrpc_export *exp, const slash_fid_t *fidp)
+cfdinsert(u64 cfd, struct pscrpc_export *exp, const slash_fid_t *fidp)
 {
+	struct slashrpc_export *sexp;
 	struct cfdent *c;
 	int locked;
 
 	c = PSCALLOC(sizeof(*c));
 	c->fid = *fidp;
-	c->cfd = *cfdp;
+	c->cfd = cfd;
 
 	locked = reqlock(&exp->exp_lock);
+	sexp = slashrpc_export_get(exp);
 	if (SPLAY_INSERT(cfdtree, &sexp->cfdtree, c)) {
 		free(c);
 		c = NULL;
@@ -73,7 +75,7 @@ cfdnew(u64 *cfdp, struct pscrpc_export *exp, const slash_fid_t *fidp)
 	spinlock(&exp->exp_lock);
 	sexp = slashrpc_export_get(exp);
 	*cfdp = ++sexp->cfd;
-	if (cfdinsert(cfdp, exp, fidp))
+	if (cfdinsert(*cfdp, exp, fidp))
 		psc_fatalx("cfdtree already has entry");
 	freelock(&exp->exp_lock);
 }
