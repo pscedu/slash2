@@ -62,8 +62,12 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 	mq->mode = mode;
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0)
-		fi->fh = mp->cfd;
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+		if (mp->rc)
+			rc = mp->rc;
+		else
+			fi->fh = mp->cfd;
+	}
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -119,15 +123,19 @@ slash_fgetattr(__unusedx const char *path, struct stat *stb,
 		return (rc);
 	mq->cfd = fi->fh;
 	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
-		memset(stb, 0, sizeof(*stb));
-		stb->st_mode = mp->mode;
-		stb->st_nlink = mp->nlink;
-		stb->st_uid = mp->uid;
-		stb->st_gid = mp->gid;
-		stb->st_size = mp->size;
-		stb->st_atime = mp->atime;
-		stb->st_mtime = mp->mtime;
-		stb->st_ctime = mp->ctime;
+		if (mp->rc)
+			rc = mp->rc;
+		else {
+			memset(stb, 0, sizeof(*stb));
+			stb->st_mode = mp->mode;
+			stb->st_nlink = mp->nlink;
+			stb->st_uid = mp->uid;
+			stb->st_gid = mp->gid;
+			stb->st_size = mp->size;
+			stb->st_atime = mp->atime;
+			stb->st_mtime = mp->mtime;
+			stb->st_ctime = mp->ctime;
+		}
 	}
 	pscrpc_req_finished(rq);
 	return (rc);
@@ -188,8 +196,12 @@ slash_open(const char *path, struct fuse_file_info *fi)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 	mq->flags = fi->flags;
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0)
-		fi->fh = mp->cfd;
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+		if (mp->rc)
+			rc = mp->rc;
+		else
+			fi->fh = mp->cfd;
+	}
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -206,8 +218,12 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0)
-		fi->fh = mp->cfd;
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+		if (mp->rc)
+			rc = mp->rc;
+		else
+			fi->fh = mp->cfd;
+	}
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -242,7 +258,7 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->offset = offset;
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) != 0) {
+	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) != 0 || (rc = mp->rc)) {
 		pscrpc_req_finished(rq);
 		return (rc);
 	}
@@ -363,8 +379,12 @@ slash_readlink(const char *path, char *buf, size_t size)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 	mq->size = size;
-	if ((rc = rpc_getrep(rq, size, &mp)) == 0)
-		rc = snprintf(buf, size, "%s", mp->buf);
+	if ((rc = rpc_getrep(rq, size, &mp)) == 0) {
+		if (mp->rc)
+			rc = mp->rc;
+		else
+			rc = snprintf(buf, size, "%s", mp->buf);
+	}
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -414,12 +434,16 @@ slash_statfs(const char *path, struct statvfs *sfb)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
-		sfb->f_bsize = mp->f_bsize;
-		sfb->f_blocks = mp->f_blocks;
-		sfb->f_bfree = mp->f_bfree;
-		sfb->f_bavail = mp->f_bavail;
-		sfb->f_files = mp->f_files;
-		sfb->f_ffree = mp->f_ffree;
+		if (mp->rc)
+			rc = mp->rc;
+		else {
+			sfb->f_bsize = mp->f_bsize;
+			sfb->f_blocks = mp->f_blocks;
+			sfb->f_bfree = mp->f_bfree;
+			sfb->f_bavail = mp->f_bavail;
+			sfb->f_files = mp->f_files;
+			sfb->f_ffree = mp->f_ffree;
+		}
 	}
 	pscrpc_req_finished(rq);
 	return (rc);

@@ -83,6 +83,12 @@ struct slashrpc_create_req {
 	u32	mode;
 };
 
+struct slashrpc_create_rep {
+	s32	rc;
+	u32	_pad;
+	u64	cfd;
+};
+
 struct slashrpc_destroy_req {
 };
 
