@@ -7,4 +7,6 @@
 struct slio_ctlthr {
 };
 
+void slio_init(void);
+
 extern struct psc_thread slioControlThread;
