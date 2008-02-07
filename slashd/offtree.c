@@ -18,7 +18,7 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	return (t);
 }
 
-static inline void
+static void
 offtree_iovs_check(struct offtree_iov *iovs, int niovs) {
 	int i;
 	off_t  prevfloff = 0;
@@ -37,7 +37,8 @@ offtree_iovs_check(struct offtree_iov *iovs, int niovs) {
 	}
 }
 
-static inline void
+
+static void
 offtree_preprw_internal(struct offtree_root *r, 
 			struct offtree_memb *m, 
 			struct dynarray     *a, 
@@ -50,10 +51,110 @@ offtree_preprw_internal(struct offtree_root *r,
 	size_t nblks = 1 + (tlen / r->oftr_minsz) +
 		((tlen % r->oftr_minsz) ? 1 : 0);
 #endif	
-
 	/* check this node first */
-	if (ATTR_TEST(m->oft_flags, OFT_LEAF)) {
-		if (v->oftiov_floff
+	psc_assert(!((ATTR_TEST(m->oft_flags, OFT_LEAF)) &&
+		     (ATTR_TEST(m->oft_flags, OFT_NODE))));
+
+	if (ATTR_TEST(m->oft_flags, OFT_NODE)) {
+		/* We are a parent node (therefore have no data pointers)
+		 *  Go to the correct child pointer (the pointer array must
+		 *  have been allocated).
+		 */
+		u16 tmpw = (OFT_REGIONSZ(r, d) / v->oftiov_floff);
+
+		psc_assert(m->norl.oft_children);
+
+		/* Lock the tree member while checking its child pointers
+		 */
+		spinlock(&m->oft_lock);
+		if (!m->norl.oft_children[tmpw]) {
+			/* allocate a child */
+			struct offtree_memb *tmemb = PSCALLOC(sizeof(*tmemb));
+
+			OFT_MEMB_INIT(tmemb);
+			ATTR_SET(tmemb->oft_flags, OFT_LEAF);
+
+			/* don't let others touch this yet */
+			ATTR_SET(tmemb->oft_flags, OFT_ALLOCPNDG);
+			atomic_inc(&tmemb->oft_ref);
+			m->norl.oft_children[tmpw] = tmemb;
+		}
+		freelock(&m->oft_lock);
+
+		offtree_preprw_internal(r, m->norl.oft_children[tmpw], 
+					a, v, d+1, tmpw, rw);
+	} else {
+		/* Leaf node, must have a data pointer and some memory */
+		
+		/* if we're at maxdepth then we have to have an allocation */
+
+		/* x = allocate(n)  where n is either iov_len or OFT_ENDOFF (which ever is smaller.  If x==n then N stays a leaf otherwise its allocation goes to a (newly created) child node and N becomes a Parent. 
+		 */
+
+		/* 
+		 * Handle a newly created tree node, at this point it is a 
+		 *  leaf but it may turn into a parent depending on the outcome
+		 *  of the allocation.
+		 */
+		  if (ATTR_TEST(m->oft_flags, OFT_ALLOCPNDG)) {
+			int    i, x=-1, niovs=0;
+			struct offtree_iovec *iovs = NULL;
+
+			/* have to round up for block alignment */		       
+			size_t nblks = ((v->oftiov_len / r->oftr_minsz) + 
+					((v->oftiov_floff % r->oftr_minsz) ? 1: 0));
+			
+			/* find the lesser of nblks or REGIONSZ */
+			nblks = MIN(nblks, OFT_REGIONBLKS(r, d));
+			
+			if (d == r->oftr_maxdepth)
+				/* only 1 block allowed at lowest depth */
+				psc_assert(nblks == 1);
+
+			/* allocate nblks */
+			x = (r->oftr_alloc)(nblks, &iovs, &niovs, (void *)r);
+			
+			if (x > 0)
+				psc_assert(niovs);
+			else {
+				// handle < case
+			}
+
+			for (i=0; i < niovs; i++) {
+				psc_assert(iovs[i]);
+				psc_assert(!(iovs[i].iov_len % r->oftr_minsz));
+			}
+
+			if (d == r->oftr_maxdepth)
+				/* only 1 block allowed at lowest depth */
+				psc_assert(niovs == x == 1);
+
+			if (x == nblks) {
+				if (niovs == 1) {
+					/* got a single contiguous region, remain a leaf */
+					m->norl.oft_iov = iovs[0];
+					spinlock(&m->oft_lock);
+					ATTR_UNSET(OFT_ALLOCPNDG, m->oft_flags);
+					if (rw == OFT_READOP) {
+						// prepare for read sink
+						ATTR_SET(OFT_READPNDG, m->oft_flags);
+					} else 
+						// prepare for data copy
+						ATTR_SET(OFT_WRITEPNDG, m->oft_flags);	
+
+					/* invalidate the file logical region w/ -1 */
+					/* done for us in malloc */
+					//m->norl.oft_iov.oftiov_fllen = -1;
+					freelock(&m->oft_lock);
+				}				
+			}
+		}
+
+
+		
+		if (v->oftiov_floff >= OFT_STARTOFF(r, d, w) &&
+		    v->oftiov_floff <= OFT_STARTOFF(r, d, w) &&
+		    
 	}
 
 	return;
