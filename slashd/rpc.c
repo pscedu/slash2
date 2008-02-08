@@ -18,5 +18,8 @@ slashrpc_export_destroy(void *data)
 		SPLAY_REMOVE(cfdtree, &sexp->cfdtree, c);
 		free(c);
 	}
+	spinlock(&explock);
+	SPLAY_REMOVE(exptree, &exptree, sexp);
+	freelock(&explock);
 	free(sexp);
 }

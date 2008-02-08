@@ -8,7 +8,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/thread.h"
 
-#include "slash.h"
+#include "slashd.h"
 #include "slconfig.h"
 
 #define SLASH_THRTBL_SIZE 19

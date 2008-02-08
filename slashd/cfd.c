@@ -74,7 +74,7 @@ cfdnew(u64 *cfdp, struct pscrpc_export *exp, const slash_fid_t *fidp)
 
 	spinlock(&exp->exp_lock);
 	sexp = slashrpc_export_get(exp);
-	*cfdp = ++sexp->cfd;
+	*cfdp = ++sexp->nextcfd;
 	if (cfdinsert(*cfdp, exp, fidp))
 		psc_fatalx("cfdtree already has entry");
 	freelock(&exp->exp_lock);

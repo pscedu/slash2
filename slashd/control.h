@@ -11,7 +11,7 @@
 #include "psc_ds/listcache.h"
 #include "psc_util/thread.h"
 
-#include "slash.h"
+#include "slashd.h"
 #include "inode.h"
 
 /* Path to control socket. */

@@ -28,7 +28,7 @@
 
 #include "inode.h"
 #include "control.h"
-#include "slash.h"
+#include "slashd.h"
 
 struct psc_thread slashControlThread;
 
