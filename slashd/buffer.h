@@ -38,6 +38,7 @@ struct sl_buffer {
 	psc_spinlock_t  slb_lock;
 	u32             slb_flags;
 	list_cache_t   *slb_lc_owner;
+	list_cache_t   *slb_lc_fcm;
 	struct psclist_head slb_iov_list;    /* list of iov backpointers    */ 
 	struct psclist_head slb_mgmt_lentry; /* attach to lru or outgoing q */ 
 	struct psclist_head slb_fcm_lentry;  /* chain to fidcm entry        */

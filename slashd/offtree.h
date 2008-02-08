@@ -38,7 +38,6 @@ power(size_t base, size_t exp)
 # define MAX(a,b) (((a)>(b)) ? (a): (b))
 #endif
 
-
 struct offtree_iov {
 	void   *oftiov_base;  /* point to our data buffer  */
 	size_t  oftiov_len;   /* length of respective data */
@@ -61,6 +60,7 @@ struct offtree_memb {
 	u32                   oft_flags;
 	atomic_t              oft_ref;
 	struct offtree_memb  *oft_parent;
+	psclist_head          oft_lentry; /* chain in the slb    */
 	union norl {
 		struct offtree_iov   *oft_iov;
 		struct offtree_memb **oft_children;

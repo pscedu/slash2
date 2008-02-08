@@ -18,8 +18,32 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	return (t);
 }
 
+void
+offtree_freeleaf(struct offtree_memb *oftm)
+{
+	spinlock(&oftm->oft_lock);
+	/* Only leaves have pages */
+	psc_assert(ATTR_TEST(oftm->oft_flags, OFT_LEAF));
+	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_NODE));
+	/* Allocate pages first, mark oftm second
+	 *  otherwise the oftm will think is owns pages
+	 *  which are in fact being reclaimed..
+	 *  the pages' slb must have been pinned before 
+	 *  the oftm can claim OFT_WRITEPNDG || READPNDG
+	 */
+	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_READPNDG));
+	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_WRITEPNDG));
+	/* This state would mean that we're freeing pages 
+	 *  that do not exist here.. surely this is bad.
+	 */
+	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_ALLOCPNDG));
+	
+	freelock(&oftm->oft_lock);
+}
+
 static void
-offtree_iovs_check(struct offtree_iov *iovs, int niovs) {
+offtree_iovs_check(struct offtree_iov *iovs, int niovs) 
+{
 	int i;
 	off_t  prevfloff = 0;
 	size_t prevlen   = 0;
@@ -100,7 +124,7 @@ offtree_preprw_internal(struct offtree_root *r,
 			int    i, x=-1, niovs=0;
 			struct offtree_iovec *iovs = NULL;
 
-			/* have to round up for block alignment */		       
+			/* have to round up for block alignment */
 			size_t nblks = ((v->oftiov_len / r->oftr_minsz) + 
 					((v->oftiov_floff % r->oftr_minsz) ? 1: 0));
 			
@@ -219,7 +243,6 @@ offtree_insert(struct offtree_root *r, struct offtree_iov *iovs, int niovs)
 	psc_assert((r->oftr_alloc)(tsz, r->oftr_pri, &myiovs, &i));
 	psc_assert(i > 0);
 	
-
+	
 	return;
 }
-

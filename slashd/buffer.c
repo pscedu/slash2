@@ -18,6 +18,23 @@ list_cache_t slBufsPin;
 u32 slCacheBlkSz=16384;
 u32 slCacheNblks=16;
 
+#define token_t list_cache_t
+
+static void
+sl_buffer_lru_assertions(struct sl_buffer *b)
+{
+	psc_assert(ATTR_TEST(b->slb_flags, SLB_LRU));
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_DIRTY));
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_PIN));
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_INFLIGHT));
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREEING));
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREE));
+	psc_assert(vbitmap_nfree(&b->slb_inuse) < b->slb_nblks);
+	psc_assert(psclist_empty(&b->slb_iov_list));
+	psc_assert(!PSCLIST_INIT_CHECK(&b->slb_fcm_lentry));
+	psc_assert(atomic_read(&b->slb_ref));
+}
+
 static void
 sl_buffer_put(struct sl_buffer *b, list_cache_t *lc)
 {
@@ -42,16 +59,7 @@ sl_buffer_put(struct sl_buffer *b, list_cache_t *lc)
 		break;
 
 	case (slBufsLru):
-		psc_assert(ATTR_TEST(b->slb_flags, SLB_LRU));
-		psc_assert(!ATTR_TEST(b->slb_flags, SLB_DIRTY));
-		psc_assert(!ATTR_TEST(b->slb_flags, SLB_PIN));
-		psc_assert(!ATTR_TEST(b->slb_flags, SLB_INFLIGHT));
-		psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREEING));
-		psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREE));
-		psc_assert(vbitmap_nfree(&b->slb_inuse) < b->slb_nblks);
-		psc_assert(psclist_empty(&b->slb_iov_list));
-		psc_assert(!PSCLIST_INIT_CHECK(&b->slb_fcm_lentry));
-		psc_assert(atomic_read(&b->slb_ref));
+		sl_buffer_lru_assertions(b);
 		break;
 
 	case (slBufsPin):
@@ -80,25 +88,92 @@ sl_buffer_put(struct sl_buffer *b, list_cache_t *lc)
 }
 
 /**
+ * sl_buffer_get - pull a buffer from the listcache
+ * @lc: the list cache in question
+ * @block: wait (or not)
+ */
+static struct sl_buffer *
+sl_buffer_get(list_cache_t *lc, int block)
+{
+	return ((block ? lc_getwait(lc) : lc_getnb(lc)));
+}
+
+
+static void
+sl_slab_reap(int nblks, token_t *tok) {
+	struct sl_buffer    *b;
+	struct offtree_memb *oftm;
+
+	do {
+		/* grab one off the lru */
+		b = sl_buffer_get(&slBufsLRU, 0);
+		if (!b) {
+			psc_warnx("Blocking get for LRU sl_buffer");
+			b = sl_buffer_get(&slBufsLRU, 1);
+			psc_assert(b);
+		}
+
+		spinlock(&b->slb_lock);	
+		/* is this slab still reapable? */
+		if (!ATTR_TEST(b->slb_flags, SLB_LRU) || 
+		    (tok != b->slb_lc_fcm)) {
+			freelock(&b->slb_lock);
+			continue;
+		}
+		/* yes, ensure slb sanity */
+		sl_buffer_lru_assertions(b);
+		/* it's safe to reclaim, notify fcmh_buffer_cache users */
+		ATTR_SET(b->slb_flags, SLB_FREEING);
+		freelock(&b->slb_lock);
+		/* remove ourselves from the fidcache slab list   */
+		lc_del(&b->slb_fcm_lentry, b->slb_lc_fcm);
+		/* ok, we should have it to ourselves now */
+		INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);
+		/* iteratively dereference the slb's iovectors */
+		psclist_for_each_entry(oftm, &b->slb_iov_list, oftiov_lentry) {
+			
+			sl_oftiov_bfree(oftm->norl.oft_iov);
+		}
+
+		
+		//psc_assert(vbitmap_nfree(&b->slb_inuse) == b->slb_nblks);
+                //psc_assert(PSCLIST_INIT_CHECK(&b->slb_fcm_lentry));
+		
+		nblks -= b->slb_nblks;
+		/* put it back in the pool */
+		sl_buffer_put(b, slBufsFree);
+	} while (nblks > 0);
+}
+
+static struct sl_buffer *
+sl_slab_alloc(int nblks, token_t *tok) {
+	
+	do {
+		
+		
+		sl_slab_reap(nblks, tok);
+	} while (nblks); 
+}
+/**
  * sl_oftiov_bfree - free blocks from the slab buffer pointed to by the offtree_iov. 
  * @iov: the offtree_iov using the slab's blocks
  * @r: tree root, used to get oftr_minsz
  * Notes: iov must be OFT_FREEING (but that is not enforced here)
  */
 static void
-sl_oftiov_bfree(struct offtree_iov *iov, struct offtree_root *r)
+sl_oftiov_bfree(struct offtree_iov *iov)
 {
 	struct sl_buffer *b = iov->oftiov_pri;
 	size_t sbit, ebit;
 	int locked=0;
 
 	/* sanity */
-	psc_assert(!((iov->oftiov_base / b->slb_base) % r->oftr_minsz));
-	psc_assert(!(iov->oftiov_len % r->oftr_minsz));
+	psc_assert(!((iov->oftiov_base / b->slb_base) % b->slb_blksz));
+	psc_assert(!(iov->oftiov_len % b->slb_blksz));
 
 	/* which bits? */	
-	sbit = (iov->oftiov_base - b->slb_base) / r->oftr_minsz;
-	ebit = iov->oftiov_len / r->oftr_minsz;
+	sbit = (iov->oftiov_base - b->slb_base) / b->slb_blksz;
+	ebit = iov->oftiov_len / b->slb_blksz;
 	psc_assert((ebit-sbit) > 0);
 
 	locked = reqlock(&b->slb_lock);
@@ -121,29 +196,33 @@ sl_oftiov_bfree(struct offtree_iov *iov, struct offtree_root *r)
  * @nblks: preffered number of blocks
  * @iovs: array of iov pointers which index the allocations
  * @niovs: the number of allocations
+ * @verifier: ensure that the slab still belongs to the requesting fid
  * Returns:  the total number of blocks returned
  */
 static size_t 
 sl_buffer_alloc_internal(struct sl_buffer *b, size_t nblks,
-			 struct offtree_iov **iovs, int *niovs) 
+			 struct offtree_iov **iovs, int *niovs, token_t *tok)
 {
 	int n=0,rc=0,locked=0;
 	ssize_t blks;
 
 	locked = reqlock(&b->slb_lock);
-	for (blks=0; (blks <= nblks) && !SLB_FULL(b);) {
-		/* this would mean that someone else is processing us */
-		psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREEING));
+	/* this would mean that someone else is processing us 
+	 *   or granted the slb to another fcmh
+	 */
+	if (ATTR_TEST(b->slb_flags, SLB_FREEING) || 
+	    (tok != b->slb_lc_fcm))
+		goto out;
 		
-		if (ATTR_TEST(b->slb_flags, SLB_LRU) ||
-		    ATTR_TEST(b->slb_flags, SLB_FREE)) {
+	for (blks=0; (blks <= nblks) && !SLB_FULL(b);) {
+		psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREE));
+		if (ATTR_TEST(b->slb_flags, SLB_LRU)) {
 			/* note that the LRU and FREE managers MUST use
 			 *  the listcache api for removing entries
 			 *  otherwise there will be race conditions
 			 */
 			lc_del(&b->slb_mgmt_lentry, b->slb_lc_owner);	
 			ATTR_UNSET(b->slb_flags, SLB_LRU);
-			ATTR_UNSET(b->slb_flags, SLB_FREE);		
 			ATTR_SET(b->slb_flags, SLB_PINNED);
 			sl_buffer_put(b, &slBufsPIN);
 		}
@@ -165,6 +244,7 @@ sl_buffer_alloc_internal(struct sl_buffer *b, size_t nblks,
 		/* just to make sure */
 		psc_assert(b->slb_lc_owner == &slBufsPIN);
 	}
+ out:
 	ureqlock(&b->slb_lock, locked);	
 	return (blks);
 }
@@ -198,7 +278,8 @@ sl_buffer_alloc(size_t nblks, struct offtree_iov **iovs, int *niovs, void *pri)
 	psclist_for_each_entry(b, &lc->lc_list, slb_fcm_lentry) {
 		if (SLB_FULL(b))
 			continue;
-		rblks -= sl_buffer_alloc_internal(b, rblks, iovs, niovs);
+		rblks -= sl_buffer_alloc_internal(b, rblks, iovs, niovs, 
+						  &f->fcmh_buffer_cache);
 		if (!rblks)
 			break;
 	}
@@ -214,13 +295,12 @@ sl_buffer_alloc(size_t nblks, struct offtree_iov **iovs, int *niovs, void *pri)
 		/* request a new slab from the main allocator */
 		if (!(b = sl_slab_alloc(rblks)))
 			goto enomem;
-		else {
-			psc_assert(!(b->slb_len % r->oftr_minsz));
-			rblks -= sl_buffer_alloc_internal(b, rblks, 
-							  iovs, niovs);
-			if (!rblks) 
-				break;
-		}
+		
+		psc_assert(!(b->slb_len % r->oftr_minsz));
+		rblks -= sl_buffer_alloc_internal(b, rblks, iovs, niovs, 
+						  &f->fcmh_buffer_cache);
+		if (!rblks) 
+			break;
 	}
 	return (0);
 
