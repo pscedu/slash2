@@ -16,8 +16,6 @@
 #include "control.h"
 
 #define SLIO_THRTBL_SIZE 19
-//#define _PATH_SLIOCONF "/etc/sliod.conf"
-#define _PATH_SLIOCONF "config/example.conf"
 #define _PATH_SLIOCTLSOCK "../sliod.sock"
 
 extern void *nal_thread(void *);
@@ -88,35 +86,9 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
-        pscrpc_init_portals(PSC_SERVER);
+	slashGetConfig(cfn);
+	libsl_init(PSC_SERVER);
 	slio_init();
 	slioctlthr_main(sfn);
 	exit(0);
-}
-
-int
-cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
-{
-	struct slashrpc_getfid_req *mq;
-	struct slashrpc_getfid_rep *mp;
-	struct pscrpc_request *rq;
-	struct cfdent *c;
-	int rc;
-
-	/* Check in cfdtree. */
-	if (cfd2fid(fidp, exp, cfd) == 0)
-		return (0);
-
-	/* Not there, contact slashd and populate it. */
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_GETFID,
-	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
-		return (rc);
-	mq->pid = exp->exp_connection->c_peer.pid;
-	mq->nid = exp->exp_connection->c_peer.nid;
-	mq->cfd = cfd;
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0)
-		if ((c = cfdinsert(cfd, exp, fidp)) != NULL)
-			*fidp = c->fid;
-	pscrpc_req_finished(rq);
-	return (rc);				/* XXX preserve errno */
 }

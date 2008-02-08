@@ -7,24 +7,27 @@
 #include "psc_util/cdefs.h"
 
 /* RPC portals. */
-#define RPCMDS_REQ_PORTAL	20
-#define RPCMDS_REP_PORTAL	21
-#define RPCMDS_BULK_PORTAL	22
+#define SR_MDS_REQ_PORTAL	20
+#define SR_MDS_REP_PORTAL	21
+#define SR_MDS_BULK_PORTAL	22
 
-#define RPCIO_REQ_PORTAL	30
-#define RPCIO_REP_PORTAL	31
-#define RPCIO_BULK_PORTAL	32
+#define SR_IO_REQ_PORTAL	30
+#define SR_IO_REP_PORTAL	31
+#define SR_IO_BULK_PORTAL	32
 
-#define SMDS_VERSION		1
-#define SMDS_MAGIC		0xaabbccddeeff0011ULL
+#define SR_BE_REQ_PORTAL	40
+#define SR_BE_REP_PORTAL	41
 
-#define SIO_VERSION		1
-#define SIO_MAGIC		0xaabbccddeeff0011ULL
+#define SR_MDS_VERSION		1
+#define SR_MDS_MAGIC		0xaabbccddeeff0011ULL
 
-/* Asynchronous I/O operations. */
-#define SLASH_IOP_READDIR	0
+#define SR_IO_VERSION		1
+#define SR_IO_MAGIC		0xaabbccddeeff0011ULL
 
-/* Slash RPC message types. */
+#define SR_BE_VERSION		1
+#define SR_BE_MAGIC		0xaabbccddeeff0011ULL
+
+/* Slash RPC message types - MDS, IO, and backend. */
 #define SRMT_ACCESS	0
 #define SRMT_CHMOD	1
 #define SRMT_CHOWN	2
@@ -40,21 +43,21 @@
 #define SRMT_MKNOD	12
 #define SRMT_OPEN	13
 #define SRMT_OPENDIR	14
-#define SRMT_READ	15
-#define SRMT_READDIR	16
-#define SRMT_READLINK	17
-#define SRMT_RELEASE	18
-#define SRMT_RELEASEDIR	19
-#define SRMT_RENAME	20
-#define SRMT_RMDIR	21
-#define SRMT_STATFS	22
-#define SRMT_SYMLINK	23
-#define SRMT_TRUNCATE	24
-#define SRMT_UNLINK	25
-#define SRMT_UTIMES	26
-#define SRMT_WRITE	27
-#define SRMT_GETFID	28
-#define SNRMT		29
+#define SRMT_READDIR	15
+#define SRMT_READLINK	16
+#define SRMT_RELEASE	17
+#define SRMT_RELEASEDIR	18
+#define SRMT_RENAME	19
+#define SRMT_RMDIR	20
+#define SRMT_STATFS	21
+#define SRMT_SYMLINK	22
+#define SRMT_TRUNCATE	23
+#define SRMT_UNLINK	24
+#define SRMT_UTIMES	25
+#define SRIT_READ	26
+#define SRIT_WRITE	27
+#define SRBT_GETFID	28
+#define SNMT		29
 
 struct slashrpc_connect_req {
 	u64	magic;

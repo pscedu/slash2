@@ -12,8 +12,6 @@
 #include "slconfig.h"
 
 #define SLASH_THRTBL_SIZE 19
-//#define _PATH_SLASHCONF "/etc/slash.conf"
-#define _PATH_SLASHCONF "config/example.conf"
 #define _PATH_SLCTLSOCK "../slashd.sock"
 
 extern void *nal_thread(void *);
