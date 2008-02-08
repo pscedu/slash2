@@ -6,6 +6,9 @@ list_cache_t slBufsFree;
 list_cache_t slBufsLru;
 list_cache_t slBufsPin;
 
+u32 slCacheBlkSz=16384;
+u32 slCacheNblks=16;
+
 static void
 sl_buffer_put(struct sl_buffer *b, list_cache_t *lc)
 {
@@ -58,8 +61,12 @@ sl_buffer_put(struct sl_buffer *b, list_cache_t *lc)
 		psc_fatalx("Invalid listcache address %p", lc);
 	}
 	ureqlock(&b->slb_lock, locked);	
+	
+	if (ATTR_TEST(b->slb_flags, SLB_INIT))
+		psc_assert(b->slb_lc_owner == NULL);
+	else
+		lc_del(&b->slb_mgmt_lentry, b->slb_lc_owner);
 
-	lc_del(&b->slb_mgmt_lentry, b->slb_lc_owner);
 	lc_queue(&b->slb_mgmt_lentry, lc);
 }
 
@@ -215,14 +222,33 @@ sl_buffer_alloc(size_t nblks, struct offtree_iov **iovs, int *niovs, void *pri)
 	return -ENOMEM;
 }
 
-void
-sl_buffer_init(void)
+static void
+sl_buffer_init(struct sl_buffer *b)
 {
-	
+	b->slb_inuse = vbitmap_new(slCacheNblks);
+	b->slb_blksz = slCacheBlkSz;
+	b->slb_nblks = slCacheNblks;
+	b->slb_base  = PSCALLOC(slCacheNblks * slCacheBlkSz);
+	atomic_set(&b->slb_ref, 0);
+	LOCK_INIT (&b->slb_lock);
+	ATTR_SET  (b->slb_flags, SLB_FREEING);
+	INIT_PSCLIST_HEAD(&b->slb_iov_list);
+	INIT_PSCLIST_ENTRY(&b->slb_mgmt_lentry);
+	INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);	
+}
+
+void
+sl_buffer_cache_init(void)
+{	
 	lc_reginit(&slBufsFree, struct sl_buffer, 
 		   slb_mgmt_lentry, "slabBufFree");
 	lc_reginit(&slBufsLru,  struct sl_buffer, 
 		   slb_mgmt_lentry, "slabBufLru");
 	lc_reginit(&slBufsPin,  struct sl_buffer, 
-		   slb_mgmt_lentry, "slabBufPin");	
+		   slb_mgmt_lentry, "slabBufPin");
+
+	slBufsFree.lc_max = SLB_FREE_MAX;
+
+	lc_grow(&slBufsFree, SLB_FREE_DEF, struct slb_buffer, 
+		slb_mgmt_lentry, sl_buffer_init);		
 }

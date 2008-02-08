@@ -14,6 +14,7 @@
 #define SLB_PINNED   0x08 /* not freeable             */
 #define SLB_LRU      0x10 /* on the lru, nothing pinned or dirty */
 #define SLB_FREE     0x20
+#define SLB_INIT     0x40
 
 #define SLB_FULL(b) (!vbitmap_nfree((b)->slb_inuse))
 
@@ -29,7 +30,7 @@ The slb_bmap list entry attaches to the bmap so that it may be freed with the bm
  */
 struct sl_buffer {
 	struct vbitmap *slb_inuse;  /* track which segments are busy   */
-	struct vbitmap *slb_dirty;  /* track which segments are dirty  */
+	//struct vbitmap *slb_dirty;  /* track which segments are dirty  */
 	u32             slb_nblks;  /* num blocks                      */
 	u32             slb_blksz;  /* blocksize                       */
 	void           *slb_base;   /* point to the data buffer        */

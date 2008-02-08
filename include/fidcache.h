@@ -13,13 +13,16 @@
 #define IOS_FID_CACHE_SZ 131071
 #define CLI_FID_CACHE_SZ 1023
 
+#define FID_CACHE_HTABLE_SZ 32767
+
 #define FCH_LOCK(h)  spinlock(&(h)->fch_lock)
 #define FCH_ULOCK(h) freelock(&(h)->fch_lock)
 
-#define FCH_LOCK(m)  spinlock(&(m)->fcm_lock)
-#define FCH_ULOCK(m) freelock(&(m)->fcm_lock)
-
 extern struct hash_table fidCache;
+
+#define FCM_CLEAN   (1 << 0)
+#define FCM_DIRTY   (1 << 1)
+#define FCM_FREEING (1 << 2)
 
 /* sl_finfo - hold stats and lamport clock */
 struct sl_finfo {
@@ -51,13 +54,13 @@ struct mexpbcm;
  * bmexpcr are members of the bmap export tree - the lower tier in the GFC.
  */
 struct bmexpcr {
-	struct mexpbcm *bmexpcr_ref;	
-	SPLAY_ENTRY(bmexpcr);
+	struct mexpbcm      *bmexpcr_ref;	
+	SPLAY_ENTRY(bmexpcr) bmexpcr_tentry;
 };
 
 /* Tree of bmexpcr's held by bmap_mds_info. */
-SPLAY_HEAD(bmap_exports, bmap_expcp);
-SPLAY_PROTOTYPE(bmap_exports, bmap_exp_memb, mecm_tentry, bmap_cache_cmp);
+SPLAY_HEAD(bmap_exports, bmexpcr);
+SPLAY_PROTOTYPE(bmap_exports, bmexpcr, bmexpcr_tentry, bmap_cache_cmp);
 
 /* 
  * bmap_mds_info - associate the fcache block to its respective export bmap caches.
@@ -98,8 +101,9 @@ struct bmap_cache_memb {
 		struct bmap_mds_info *mds_info;
 		void                 *ios_info;
 	};
-	struct psclist_head          bcm_lentry; /* lru chain      */
-	SPLAY_ENTRY(bmap_cache_memb) bcm_tentry; /* fcm tree entry */
+	struct psclist_head          bcm_lentry;  /* lru chain         */
+	struct psclist_head          bcm_buffers; /* track our buffers */
+	SPLAY_ENTRY(bmap_cache_memb) bcm_tentry;  /* fcm tree entry    */
 };
 
 /* Tree definition for fcm tracking of clients (via their exports) */
@@ -111,34 +115,35 @@ SPLAY_PROTOTYPE(bmap_lessees, mexpfcm, mecm_fcm_tentry, bmap_cache_cmp);
 SPLAY_HEAD(bmap_cache, bmap_cache_memb);
 SPLAY_PROTOTYPE(bmap_cache, bmap_cache_memb, bcm_tentry, bmap_cache_cmp);
 
-/* fid_cache_memb - the primary inode cache structure, all updates and lookups into the inode are done through here.  fid_cache_memb tracks cached bmaps (bmap_cache) and clients (via their exports) which hold cached bmaps (fcm_lessees).
- *
+/*
+ * fid_cache_memb - holds inode filesystem related data
  */
 typedef struct fid_cache_memb {
 	slash_fid_t          fcm_fid;
 	struct stat          fcm_stb; 
 	struct sl_finfo      fcm_slfinfo;
 	struct sl_uid        fcm_uid;
-	int                  fcm_fd;
-	void                *fcm_objm;     /* mmap region for filemap md    */
-	size_t               fcm_objm_sz;  /* nbytes mapped for objm        */
-	psc_spinlock         fcm_lock;
-	struct sl_fsops     *fcm_fsops;
-	struct bmap_lessees  fcm_lessees; /* mds only, client leases array
-					   * of bmap_mds_export_cache
-					   */
-	struct bmap_cache    fcm_bmap_cache;  /* splay tree of bmap cache  */
 } fcache_memb_t;
 
-/*
- * fid_cache_memb_handle - container for the fid cache member.
+/* fid_cache_memb_handle - the primary inode cache structure, all updates and lookups into the inode are done through here.  fid_cache_memb tracks cached bmaps (bmap_cache) and clients (via their exports) which hold cached bmaps (fcm_lessees).
+ *
  */
 typedef struct fid_cache_memb_handle {
-	struct hash_entry    fch_hentry;
-	struct psclist_entry fch_lentry;
-	struct timeval       fch_access;
-	psc_spinlock_t       fch_lock;       
-	fcache_memb_t       *fch_memb;	
+	fcache_memb_t        fcmh_memb; 
+	struct hash_entry    fcmh_hentry;
+	struct psclist_entry fcmh_lentry;
+	struct timeval       fcmh_access;
+	list_cache_t        *fcmh_cache_owner;	
+	int                  fcmh_fd;
+	u32                  fcmh_state;
+	atomic_t             fcmh_refcnt;
+	void                *fcmh_objm;     /* mmap region for filemap md    */
+	size_t               fcmh_objm_sz;  /* nbytes mapped for objm        */
+	struct bmap_lessees  fcmh_lessees;  /* mds only, client leases array
+					     * of bmap_mds_export_cache      */
+	struct bmap_cache    fcmh_bmap_cache; /* splay tree of bmap cache    */
+	list_cache_t         fcmh_buffer_cache; /* list of data buffers      */
+	psc_spinlock_t       fcmh_lock;
 } fcache_mhandle_t;
 
 struct sl_fsops {	
@@ -181,5 +186,45 @@ struct fid_cache {
 	list_cache_t      fc_dirty;
 	struct sl_fsops  *fc_fsops;
 };
+
+
+#define FCMH_FLAG(field, str) (field ? str : "")
+#define DEBUG_FCMH_FCMH_FLAGS(fcmh)					\
+	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_CLEAN), "C"),		\
+		FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_DIRTY), "D"),	\
+		FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_FREEING), "F")
+
+#define REQ_FCMH_FLAGS_FMT "%s%s%s"
+
+static inline const char *
+fcmh_lc_2_string(list_cache_t *lc)
+{
+        switch (lc) {
+	case (NULL):
+		return "Null";
+	case (fidcCleanList):
+		return "Clean";
+        case (fidcFreeList):
+                return "Free";
+        case (fidcDirtyList):
+                return "Dirty";
+        default:
+                return "?Unknown?";
+        }
+}
+
+#define DEBUG_FCMH(level, fcmh, fmt, ...)				\
+	do {								\
+		_psclog(__FILE__, __func__, __LINE__,			\
+			PSS_OTHER, level, 0,				\
+			" fcmh@%p inum+gen:"LPX64"+"LPX64" state:"	\
+			REQ_FCMH_FLAGS_FMT" cowner:%s fd:%d :: "fmt,	\
+			fcmh, fcmh->fcmh_memb.fcm_fid.fid_inum,		\
+			fcmh->fcmh_memb.fcm_fid.fid_gen,		\
+			DEBUG_FCMH_FCMH_FLAGS(fcmh), fcmh->fcmh_fd,	\
+			atomic_read(&fcmh->fcmh_refcnt),		\
+			## __VA_ARGS__);				\
+	} while(0)
+
 
 #endif
