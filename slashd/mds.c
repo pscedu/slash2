@@ -17,15 +17,15 @@
 #include "dircache.h"
 #include "fid.h"
 #include "rpc.h"
-#include "slash.h"
+#include "slashd.h"
 #include "slashrpc.h"
 
 #define MDS_NTHREADS  8
 #define MDS_NBUFS     1024
 #define MDS_BUFSZ     (4096+256)
 #define MDS_REPSZ     128
-#define MDS_REQPORTAL RPCMDS_REQ_PORTAL
-#define MDS_REPPORTAL RPCMDS_REP_PORTAL
+#define MDS_REQPORTAL SR_MDS_REQ_PORTAL
+#define MDS_REPPORTAL SR_MDS_REP_PORTAL
 #define MDS_SVCNAME   "slrpcmdsthr"
 
 #define GENERIC_REPLY(rq, prc)								\
@@ -142,7 +142,7 @@ slmds_connect(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (mq->magic != SMDS_MAGIC || mq->version != SMDS_VERSION)
+	if (mq->magic != SR_MDS_MAGIC || mq->version != SR_MDS_VERSION)
 		rc = -EINVAL;
 	GENERIC_REPLY(rq, rc);
 }
@@ -460,7 +460,7 @@ slmds_readdir(struct pscrpc_request *rq)
 	mp->size = rc;
 
 	desc = pscrpc_prep_bulk_exp(rq, rc / pscPageSize,
-	    BULK_PUT_SOURCE, RPCMDS_BULK_PORTAL);
+	    BULK_PUT_SOURCE, SR_MDS_BULK_PORTAL);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		mp->rc = -ENOMEM;
@@ -520,7 +520,7 @@ slmds_readlink(struct pscrpc_request *rq)
 	struct slashrpc_readlink_rep *mp;
 
 	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		return (-EPROTO);
+		return (-ENOMSG);
 	if (mq->size > PATH_MAX || mq->size == 0)
 		return (-EINVAL);
 	GET_CUSTOM_REPLY_SZ(rq, mp, mq->size);
@@ -602,7 +602,7 @@ slmds_statfs(struct pscrpc_request *rq)
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
 	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		mp->rc = -EPROTO;
+		mp->rc = -ENOMSG;
 	else if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
 	else if (statfs(mq->path, &sfb) == -1)
@@ -678,6 +678,68 @@ slmds_utimes(struct pscrpc_request *rq)
 	else if (utimes(mq->path, mq->times) == -1)
 		rc = -errno;
 	GENERIC_REPLY(rq, rc);
+}
+
+int
+sexp_cmp(const void *a, const void *b)
+{
+	const struct slashrpc_export *sa = a, *sb = b;
+
+	if (sa->exp->exp_connection->c_peer.nid <
+	    sb->exp->exp_connection->c_peer.nid)
+		return (-1);
+	else if (sa->exp->exp_connection->c_peer.nid >
+	    sb->exp->exp_connection->c_peer.nid)
+		return (1);
+
+	if (sa->exp->exp_connection->c_peer.pid <
+	    sb->exp->exp_connection->c_peer.pid)
+		return (-1);
+	else if (sa->exp->exp_connection->c_peer.pid >
+	    sb->exp->exp_connection->c_peer.pid)
+		return (1);
+
+	return (0);
+}
+
+psc_spinlock_t exptreelock = LOCK_INITIALIZER;
+
+int
+slbe_getfid(struct pscrpc_request *rq)
+{
+	struct slashrpc_export *sexp, qexp;
+	struct slashrpc_getfid_req *mq;
+	struct slashrpc_getfid_rep *mp;
+	struct pscrpc_connection conn;
+	struct cfdent *cfdent, qcfd;
+	struct pscrpc_export exp;
+
+	GET_CUSTOM_REPLY(rq, mp);
+	mp->rc = 0;
+	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
+		mp->rc = -ENOMSG;
+	else {
+		exp.exp_connection = &conn;
+		exp.exp_connection->c_peer.nid = mq->nid;
+		exp.exp_connection->c_peer.pid = mq->pid;
+		qexp.exp = &exp;
+
+		spinlock(&exptreelock);
+		sexp = SPLAY_FIND(sexptree, &sexptree, &qexp);
+		if (sexp) {
+			qcfd.cfd = mq->cfd;
+			spinlock(&sexp->exp->exp_lock);
+			cfdent = SPLAY_FIND(cfdtree, &sexp->cfdtree, &qcfd);
+			if (cfdent)
+				mp->fid = cfdent->fid;
+			else
+				mp->rc = -ENOENT;
+			freelock(&sexp->exp->exp_lock);
+		} else
+			mp->rc = -ENOENT;
+		freelock(&exptreelock);
+	}
+	return (0);
 }
 
 int
@@ -788,8 +850,6 @@ slmds_svc_handler(struct pscrpc_request *req)
 	case SRMT_OPENDIR:
 		rc = slmds_opendir(req);
 		break;
-	case SRMT_READ:
-		break;
 	case SRMT_READDIR:
 		rc = slmds_readdir(req);
 		break;
@@ -823,7 +883,8 @@ slmds_svc_handler(struct pscrpc_request *req)
 	case SRMT_UTIMES:
 		rc = slmds_utimes(req);
 		break;
-	case SRMT_WRITE:
+	case SRBT_GETFID:
+		rc = slbe_getfid(req);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", req->rq_reqmsg->opc);
