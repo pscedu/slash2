@@ -1,7 +1,7 @@
 #ifndef OFFTREE_H
 #define OFFTREE_H 1
 
-#include "psc_util/types.h"
+#include "psc_types.h"
 #include "psc_util/atomic.h"
 #include "psc_ds/list.h"
 #include "psc_util/cdefs.h"

@@ -1,3 +1,12 @@
+/* $Id$ */
+
+#include <errno.h>
+
+#include "psc_util/lock.h"
+#include "psc_util/cdefs.h"
+#include "psc_util/assert.h"
+#include "psc_ds/listcache.h"
+
 #include "buffer.h"
 #include "fidcache.h"
 #include "offtree.h"
@@ -249,6 +258,5 @@ sl_buffer_cache_init(void)
 
 	slBufsFree.lc_max = SLB_FREE_MAX;
 
-	lc_grow(&slBufsFree, SLB_FREE_DEF, struct slb_buffer, 
-		slb_mgmt_lentry, sl_buffer_init);		
+	lc_grow(&slBufsFree, SLB_FREE_DEF, slb_buffer, sl_buffer_init);		
 }
