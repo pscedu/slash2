@@ -2,7 +2,7 @@
 
 /*
  * Control interface for querying and modifying
- * parameters of a currently-running slashd.
+ * parameters of a currently-running sliod.
  */
 
 #include <sys/types.h>
@@ -28,20 +28,20 @@
 
 #include "inode.h"
 #include "control.h"
-#include "slash.h"
+#include "sliod.h"
 
-struct psc_thread slashControlThread;
+struct psc_thread slioControlThread;
 
 #define Q 15	/* listen() queue */
 
 /*
- * slctlthr_sendmsgv - send a control message back to client.
+ * slioctlthr_sendmsgv - send a control message back to client.
  * @fd: client socket descriptor.
  * @smch: already filled-out slash control message header.
  * @scm: slash control message contents.
  */
 void
-slctlthr_sendmsgv(int fd, const struct slctlmsghdr *scmh, const void *scm)
+slioctlthr_sendmsgv(int fd, const struct slctlmsghdr *scmh, const void *scm)
 {
 	struct iovec iov[2];
 	size_t tsiz;
@@ -59,12 +59,12 @@ slctlthr_sendmsgv(int fd, const struct slctlmsghdr *scmh, const void *scm)
 	tsiz = sizeof(*scmh) + scmh->scmh_size;
 	if ((size_t)n != tsiz)
 		warn("short write");
-	slctlthr(&slashControlThread)->sc_st_nsent++;
+	slioctlthr(&slioControlThread)->sc_st_nsent++;
 	sched_yield();
 }
 
 /*
- * slctlthr_sendmsg - send a control message back to client.
+ * slioctlthr_sendmsg - send a control message back to client.
  * @fd: client socket descriptor.
  * @type: type of message.
  * @siz: size of message.
@@ -73,7 +73,7 @@ slctlthr_sendmsgv(int fd, const struct slctlmsghdr *scmh, const void *scm)
  * written to the client preceding the message contents.
  */
 void
-slctlthr_sendmsg(int fd, int type, size_t siz, const void *scm)
+slioctlthr_sendmsg(int fd, int type, size_t siz, const void *scm)
 {
 	struct slctlmsghdr scmh;
 	struct iovec iov[2];
@@ -96,17 +96,17 @@ slctlthr_sendmsg(int fd, int type, size_t siz, const void *scm)
 	tsiz = sizeof(scmh) + siz;
 	if ((size_t)n != tsiz)
 		warn("short write");
-	slctlthr(&slashControlThread)->sc_st_nsent++;
+	slioctlthr(&slioControlThread)->sc_st_nsent++;
 	sched_yield();
 }
 
 /*
- * slctlthr_senderrmsg - send an error message to client.
+ * slioctlthr_senderrmsg - send an error message to client.
  * @fd: client socket descriptor.
  * @fmt: printf(3) format of error message.
  */
 void
-slctlthr_senderrmsg(int fd, struct slctlmsghdr *scmh, const char *fmt, ...)
+slioctlthr_senderrmsg(int fd, struct slctlmsghdr *scmh, const char *fmt, ...)
 {
 	struct slctlmsg_errmsg sem;
 	va_list ap;
@@ -117,11 +117,11 @@ slctlthr_senderrmsg(int fd, struct slctlmsghdr *scmh, const char *fmt, ...)
 
 	scmh->scmh_type = SCMT_ERRMSG;
 	scmh->scmh_size = sizeof(sem);
-	slctlthr_sendmsgv(fd, scmh, &sem);
+	slioctlthr_sendmsgv(fd, scmh, &sem);
 }
 
 /*
- * slctlthr_sendrep_getstats - send a response to a "getstats" inquiry.
+ * slioctlthr_sendrep_getstats - send a response to a "getstats" inquiry.
  * @fd: client socket descriptor.
  * @scmh: already filled-in slash control message header.
  * @sst: thread stats message structure to be filled in and sent out.
@@ -129,33 +129,33 @@ slctlthr_senderrmsg(int fd, struct slctlmsghdr *scmh, const char *fmt, ...)
  * @probe: whether to send empty msgs for threads which do not track stats.
  */
 void
-slctlthr_sendrep_getstats(int fd, struct slctlmsghdr *scmh,
+slioctlthr_sendrep_getstats(int fd, struct slctlmsghdr *scmh,
     struct slctlmsg_stats *sst, struct psc_thread *thr, int probe)
 {
 	snprintf(sst->sst_thrname, sizeof(sst->sst_thrname),
 	    "%s", thr->pscthr_name);
 	sst->sst_thrtype = thr->pscthr_type;
 	switch (thr->pscthr_type) {
-	case SLTHRT_CTL:
-		sst->sst_nclients = slctlthr(thr)->sc_st_nclients;
-		sst->sst_nsent    = slctlthr(thr)->sc_st_nsent;
-		sst->sst_nrecv    = slctlthr(thr)->sc_st_nrecv;
+	case SLIOTHRT_CTL:
+		sst->sst_nclients = slioctlthr(thr)->sc_st_nclients;
+		sst->sst_nsent    = slioctlthr(thr)->sc_st_nsent;
+		sst->sst_nrecv    = slioctlthr(thr)->sc_st_nrecv;
 		break;
 	default:
 		if (probe)
 			return;
 		break;
 	}
-	slctlthr_sendmsgv(fd, scmh, sst);
+	slioctlthr_sendmsgv(fd, scmh, sst);
 }
 
 /*
- * slctlthr_sendrep_getsubsys - send a response to a "getsubsys" inquiry.
+ * slioctlthr_sendrep_getsubsys - send a response to a "getsubsys" inquiry.
  * @fd: client socket descriptor.
  * @scmh: already filled-in slash control message header.
  */
 void
-slctlthr_sendrep_getsubsys(int fd, struct slctlmsghdr *scmh)
+slioctlthr_sendrep_getsubsys(int fd, struct slctlmsghdr *scmh)
 {
 	struct slctlmsg_subsys *sss;
 	const char **ss;
@@ -169,25 +169,25 @@ slctlthr_sendrep_getsubsys(int fd, struct slctlmsghdr *scmh)
 		if (snprintf(&sss->sss_names[n * SSS_NAME_MAX],
 		    SSS_NAME_MAX, "%s", ss[n]) == -1) {
 			psc_warn("snprintf");
-			slctlthr_senderrmsg(fd, scmh,
+			slioctlthr_senderrmsg(fd, scmh,
 			    "unable to retrieve subsystems");
 			goto done;
 		}
 	scmh->scmh_size = siz;
-	slctlthr_sendmsgv(fd, scmh, sss);
+	slioctlthr_sendmsgv(fd, scmh, sss);
  done:
 	scmh->scmh_size = 0;	/* reset because we used our own buffer */
 	free(sss);
 }
 
 /*
- * slctlthr_sendrep_getloglevel - send a response to a "getloglevel" inquiry.
+ * slioctlthr_sendrep_getloglevel - send a response to a "getloglevel" inquiry.
  * @fd: client socket descriptor.
  * @scmh: already filled-in slash control message header.
  * @thr: slash thread begin queried.
  */
 void
-slctlthr_sendrep_getloglevel(int fd, struct slctlmsghdr *scmh,
+slioctlthr_sendrep_getloglevel(int fd, struct slctlmsghdr *scmh,
     struct psc_thread *thr)
 {
 	struct slctlmsg_loglevel *sll;
@@ -200,13 +200,13 @@ slctlthr_sendrep_getloglevel(int fd, struct slctlmsghdr *scmh,
 	memcpy(sll->sll_levels, thr->pscthr_loglevels, psc_nsubsys *
 	    sizeof(*sll->sll_levels));
 	scmh->scmh_size = siz;
-	slctlthr_sendmsgv(fd, scmh, sll);
+	slioctlthr_sendmsgv(fd, scmh, sll);
 	scmh->scmh_size = 0;	/* reset because we used our own buffer */
 	free(sll);
 }
 
 /*
- * slctlthr_sendreps_gethashtable - respond to a "gethashtable" inquiry.
+ * slioctlthr_sendreps_gethashtable - respond to a "gethashtable" inquiry.
  *	This computes bucket usage statistics of a hash table and
  *	sends the results back to the client.
  * @fd: client socket descriptor.
@@ -214,7 +214,7 @@ slctlthr_sendrep_getloglevel(int fd, struct slctlmsghdr *scmh,
  * @sht: hash table message structure to be filled in and sent out.
  */
 void
-slctlthr_sendreps_gethashtable(int fd, struct slctlmsghdr *scmh,
+slioctlthr_sendreps_gethashtable(int fd, struct slctlmsghdr *scmh,
     struct slctlmsg_hashtable *sht)
 {
 	char name[HTNAME_MAX];
@@ -235,7 +235,7 @@ slctlthr_sendreps_gethashtable(int fd, struct slctlmsghdr *scmh,
 			hash_table_stats(ht, &sht->sht_totalbucks,
 			    &sht->sht_usedbucks, &sht->sht_nents,
 			    &sht->sht_maxbucklen);
-			slctlthr_sendmsgv(fd, scmh, sht);
+			slioctlthr_sendmsgv(fd, scmh, sht);
 
 			if (!all)
 				break;
@@ -243,19 +243,19 @@ slctlthr_sendreps_gethashtable(int fd, struct slctlmsghdr *scmh,
 	}
 	freelock(&hashTablesListLock);
 	if (!found && !all)
-		slctlthr_senderrmsg(fd, scmh,
+		slioctlthr_senderrmsg(fd, scmh,
 		    "unknown hash table: %s", name);
 }
 
 /*
- * slctlthr_sendrep_getlc - send a response to a "getlc" inquiry.
+ * slioctlthr_sendrep_getlc - send a response to a "getlc" inquiry.
  * @fd: client socket descriptor.
  * @scmh: already filled-in slash control message header.
  * @slc: list cache message structure to be filled in and sent out.
  * @lc: the list_cache about which to reply with information.
  */
 void
-slctlthr_sendrep_getlc(int fd, struct slctlmsghdr *scmh,
+slioctlthr_sendrep_getlc(int fd, struct slctlmsghdr *scmh,
     struct slctlmsg_lc *slc, list_cache_t *lc)
 {
 	if (lc) {
@@ -265,16 +265,16 @@ slctlthr_sendrep_getlc(int fd, struct slctlmsghdr *scmh,
 		slc->slc_max = lc->lc_max;
 		slc->slc_nseen = lc->lc_nseen;
 		LIST_CACHE_ULOCK(lc);
-		slctlthr_sendmsgv(fd, scmh, slc);
+		slioctlthr_sendmsgv(fd, scmh, slc);
 	} else
-		slctlthr_senderrmsg(fd, scmh,
+		slioctlthr_senderrmsg(fd, scmh,
 		    "unknown listcache: %s", slc->slc_name);
 }
 
 #define MAX_LEVELS 8
 
 void
-slctlthr_sendrep_param(int fd, struct slctlmsghdr *scmh,
+slioctlthr_sendrep_param(int fd, struct slctlmsghdr *scmh,
     struct slctlmsg_param *sp, const char *thrname,
     char **levels, int nlevels, const char *value)
 {
@@ -296,7 +296,7 @@ slctlthr_sendrep_param(int fd, struct slctlmsghdr *scmh,
 	*s = '\0';
 
 	snprintf(sp->sp_value, sizeof(sp->sp_value), "%s", value);
-	slctlthr_sendmsgv(fd, scmh, sp);
+	slioctlthr_sendmsgv(fd, scmh, sp);
 
 	snprintf(sp->sp_thrname, sizeof(sp->sp_thrname), "%s", othrname);
 }
@@ -308,7 +308,7 @@ slctlthr_sendrep_param(int fd, struct slctlmsghdr *scmh,
 		    strcmp((thrname), STHRNAME_EVERYONE) == 0)
 
 void
-slctlthr_param_log_level(int fd, struct slctlmsghdr *scmh,
+slioctlthr_param_log_level(int fd, struct slctlmsghdr *scmh,
     struct slctlmsg_param *sp, char **levels, int nlevels)
 {
 	int n, nthr, set, loglevel, subsys, start_ss, end_ss;
@@ -326,7 +326,7 @@ slctlthr_param_log_level(int fd, struct slctlmsghdr *scmh,
 	if (set) {
 		loglevel = psclog_id(sp->sp_value);
 		if (loglevel == -1) {
-			slctlthr_senderrmsg(fd, scmh,
+			slioctlthr_senderrmsg(fd, scmh,
 			    "invalid log.level value: %s", sp->sp_value);
 			return;
 		}
@@ -336,7 +336,7 @@ slctlthr_param_log_level(int fd, struct slctlmsghdr *scmh,
 		/* Subsys specified, use it. */
 		subsys = psc_subsys_id(levels[2]);
 		if (subsys == -1) {
-			slctlthr_senderrmsg(fd, scmh,
+			slioctlthr_senderrmsg(fd, scmh,
 			    "invalid log.level subsystem: %s", levels[2]);
 			return;
 		}
@@ -354,7 +354,7 @@ slctlthr_param_log_level(int fd, struct slctlmsghdr *scmh,
 			if (set)
 				thr->pscthr_loglevels[subsys] = loglevel;
 			else {
-				slctlthr_sendrep_param(fd, scmh, sp,
+				slioctlthr_sendrep_param(fd, scmh, sp,
 				    thr->pscthr_name, levels, 3,
 				    psclog_name(thr->pscthr_loglevels[subsys]));
 			}
@@ -362,7 +362,7 @@ slctlthr_param_log_level(int fd, struct slctlmsghdr *scmh,
 }
 
 void
-slctlthr_sendreps_param(int fd, struct slctlmsghdr *scmh,
+slioctlthr_sendreps_param(int fd, struct slctlmsghdr *scmh,
     struct slctlmsg_param *sp)
 {
 	char *t, *levels[MAX_LEVELS];
@@ -386,9 +386,9 @@ slctlthr_sendreps_param(int fd, struct slctlmsghdr *scmh,
 		if (nlevels == 1) {
 			if (set)
 				goto invalid;
-			slctlthr_param_log_level(fd, scmh, sp, levels, nlevels);
+			slioctlthr_param_log_level(fd, scmh, sp, levels, nlevels);
 		} else if (strcmp(levels[1], "level") == 0)
-			slctlthr_param_log_level(fd, scmh, sp, levels, nlevels);
+			slioctlthr_param_log_level(fd, scmh, sp, levels, nlevels);
 		else
 			goto invalid;
 	} else
@@ -398,19 +398,19 @@ slctlthr_sendreps_param(int fd, struct slctlmsghdr *scmh,
  invalid:
 	while (nlevels > 1)
 		levels[--nlevels][-1] = '.';
-	slctlthr_senderrmsg(fd, scmh,
+	slioctlthr_senderrmsg(fd, scmh,
 	    "invalid field/value: %s", sp->sp_field);
 }
 
 #if 0
 /*
- * slctlthr_sendrep_iostat - send a response to a "getiostat" inquiry.
+ * slioctlthr_sendrep_iostat - send a response to a "getiostat" inquiry.
  * @fd: client socket descriptor.
  * @scmh: already filled-in slash control message header.
  * @sist: iostat message structure to be filled in and sent out.
  */
 void
-slctlthr_sendrep_iostat(int fd, struct slctlmsghdr *scmh,
+slioctlthr_sendrep_iostat(int fd, struct slctlmsghdr *scmh,
     struct slctlmsg_iostats *sist)
 {
 	char name[IST_NAME_MAX];
@@ -428,7 +428,7 @@ slctlthr_sendrep_iostat(int fd, struct slctlmsghdr *scmh,
 			found = 1;
 
 			sist->sist_ist = *ist;
-			slctlthr_sendmsgv(fd, scmh, sist);
+			slioctlthr_sendmsgv(fd, scmh, sist);
 
 			if (strlen(ist->ist_name) == strlen(name))
 				break;
@@ -436,13 +436,13 @@ slctlthr_sendrep_iostat(int fd, struct slctlmsghdr *scmh,
 	freelock(&iostatsListLock);
 
 	if (!found && !all)
-		slctlthr_senderrmsg(fd, scmh,
+		slioctlthr_senderrmsg(fd, scmh,
 		    "unknown iostats: %s", name);
 }
 #endif
 
 /*
- * slctlthr_procmsg - process a message from a client.
+ * slioctlthr_procmsg - process a message from a client.
  * @fd: client socket descriptor.
  * @scmh: slash control message header from client.
  * @scm: contents of slash control message from client.
@@ -453,7 +453,7 @@ slctlthr_sendrep_iostat(int fd, struct slctlmsghdr *scmh,
  * since there is no way to know until this point.
  */
 void
-slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
+slioctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 {
 	struct psc_thread **threads;
 	struct slctlmsg_hashtable *sht;
@@ -468,7 +468,7 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 	threads = dynarray_get(&pscThreads);
 	switch (scmh->scmh_type) {
 	case SCMT_GETSUBSYS:
-		slctlthr_sendrep_getsubsys(fd, scmh);
+		slioctlthr_sendrep_getsubsys(fd, scmh);
 		break;
 	case SCMT_GETLOGLEVEL:
 		sll = scm;
@@ -477,18 +477,18 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 		if (strcasecmp(sll->sll_thrname,
 		    STHRNAME_EVERYONE) == 0) {
 			for (n = 0; n < nthr; n++)
-				slctlthr_sendrep_getloglevel(fd,
+				slioctlthr_sendrep_getloglevel(fd,
 				    scmh, threads[n]);
 		} else {
 			for (n = 0; n < nthr; n++)
 				if (strcasecmp(sll->sll_thrname,
 				    threads[n]->pscthr_name) == 0) {
-					slctlthr_sendrep_getloglevel(fd,
+					slioctlthr_sendrep_getloglevel(fd,
 					    scmh, threads[n]);
 					break;
 				}
 			if (n == nthr)
-				slctlthr_senderrmsg(fd, scmh,
+				slioctlthr_senderrmsg(fd, scmh,
 				    "unknown thread: %s",
 				    sll->sll_thrname);
 		}
@@ -497,7 +497,7 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 		sht = scm;
 		if (scmh->scmh_size != sizeof(*sht))
 			goto badlen;
-		slctlthr_sendreps_gethashtable(fd, scmh, sht);
+		slioctlthr_sendreps_gethashtable(fd, scmh, sht);
 		break;
 	case SCMT_GETSTATS:
 		sst = scm;
@@ -506,18 +506,18 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 		if (strcasecmp(sst->sst_thrname,
 		    STHRNAME_EVERYONE) == 0) {
 			for (n = 0; n < nthr; n++)
-				slctlthr_sendrep_getstats(fd,
+				slioctlthr_sendrep_getstats(fd,
 				    scmh, sst, threads[n], 1);
 		} else {
 			for (n = 0; n < nthr; n++)
 				if (strcasecmp(sst->sst_thrname,
 				    threads[n]->pscthr_name) == 0) {
-					slctlthr_sendrep_getstats(fd,
+					slioctlthr_sendrep_getstats(fd,
 					    scmh, sst, threads[n], 0);
 					break;
 				}
 			if (n == nthr)
-				slctlthr_senderrmsg(fd, scmh,
+				slioctlthr_senderrmsg(fd, scmh,
 				    "unknown thread: %s",
 				    sst->sst_thrname);
 		}
@@ -532,11 +532,11 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 			spinlock(&pscListCachesLock);
 			psclist_for_each_entry(lc, &pscListCaches, lc_index_lentry) {
 				LIST_CACHE_LOCK(lc);
-				slctlthr_sendrep_getlc(fd, scmh, slc, lc);
+				slioctlthr_sendrep_getlc(fd, scmh, slc, lc);
 			}
 			freelock(&pscListCachesLock);
 		} else
-			slctlthr_sendrep_getlc(fd, scmh, slc,
+			slioctlthr_sendrep_getlc(fd, scmh, slc,
 			    lc_lookup(slc->slc_name));
 		break;
 	case SCMT_GETPARAM:
@@ -544,14 +544,14 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 		sp = scm;
 		if (scmh->scmh_size != sizeof(*sp))
 			goto badlen;
-		slctlthr_sendreps_param(fd, scmh, sp);
+		slioctlthr_sendreps_param(fd, scmh, sp);
 		break;
 #if 0
 	case SCMT_GETIOSTAT:
 		sist = scm;
 		if (scmh->scmh_size != sizeof(*sist))
 			goto badlen;
-		slctlthr_sendrep_iostat(fd, scmh, sist);
+		slioctlthr_sendrep_iostat(fd, scmh, sist);
 		break;
 #endif
 	default:
@@ -566,7 +566,7 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
 }
 
 /*
- * slctlthr_service - satisfy a client connection.
+ * slioctlthr_service - satisfy a client connection.
  * @fd: client socket descriptor.
  *
  * Notes: sched_yield() is not explicity called throughout this routine,
@@ -584,7 +584,7 @@ slctlthr_procmsg(int fd, struct slctlmsghdr *scmh, void *scm)
  * connection, anyone can denial the slash service quite easily.
  */
 void
-slctlthr_service(int fd)
+slioctlthr_service(int fd)
 {
 	struct slctlmsghdr scmh;
 	size_t scmsiz;
@@ -612,7 +612,7 @@ slctlthr_service(int fd)
 			    n, scmh.scmh_size);
 			break;
 		}
-		slctlthr_procmsg(fd, &scmh, scm);
+		slioctlthr_procmsg(fd, &scmh, scm);
 	}
 	if (n == -1)
 		psc_fatal("read");
@@ -620,7 +620,7 @@ slctlthr_service(int fd)
 }
 
 /*
- * slctlthr_main - main slash control thread client-servicing loop.
+ * slioctlthr_main - main slash control thread client-servicing loop.
  * @fn: path to control socket.
  */
 __dead void
@@ -670,8 +670,8 @@ slioctlthr_main(const char *fn)
 		if ((fd = accept(s, (struct sockaddr *)&sun,
 		    &siz)) == -1)
 			psc_fatal("accept");
-		slctlthr(&slashControlThread)->sc_st_nclients++;
-		slctlthr_service(fd);
+		slioctlthr(&slioControlThread)->sc_st_nclients++;
+		slioctlthr_service(fd);
 		close(fd);
 	}
 	/* NOTREACHED */

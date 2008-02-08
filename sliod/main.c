@@ -7,13 +7,9 @@
 #include "pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/thread.h"
-#include "psc_rpc/rpc.h"
 
 #include "sliod.h"
-#include "fid.h"
-#include "../slashd/cfd.h"
-#include "slashrpc.h"
-#include "control.h"
+#include "slconfig.h"
 
 #define SLIO_THRTBL_SIZE 19
 #define _PATH_SLIOCTLSOCK "../sliod.sock"
@@ -73,7 +69,7 @@ main(int argc, char *argv[])
 		psc_fatalx("please export TCPLND_SERVER");
 	lnet_thrspawnf = spawn_lnet_thr;
 
-	cfn = _PATH_SLIOCONF;
+	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLIOCTLSOCK;
 	while ((c = getopt(argc, argv, "f:S:")) != -1)
 		switch (c) {

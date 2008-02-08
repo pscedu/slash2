@@ -27,7 +27,7 @@
 #define SR_BE_VERSION		1
 #define SR_BE_MAGIC		0xaabbccddeeff0011ULL
 
-/* Slash RPC message types - MDS, IO, and backend. */
+/* Slash RPC message types. */
 #define SRMT_ACCESS	0
 #define SRMT_CHMOD	1
 #define SRMT_CHOWN	2
@@ -54,9 +54,9 @@
 #define SRMT_TRUNCATE	23
 #define SRMT_UNLINK	24
 #define SRMT_UTIMES	25
-#define SRIT_READ	26
-#define SRIT_WRITE	27
-#define SRBT_GETFID	28
+#define SRMT_READ	26
+#define SRMT_WRITE	27
+#define SRMT_GETFID	28
 #define SNRT		29
 
 struct slashrpc_connect_req {

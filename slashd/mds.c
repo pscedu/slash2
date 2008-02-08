@@ -859,7 +859,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 	case SRMT_UTIMES:
 		rc = slmds_utimes(req);
 		break;
-	case SRBT_GETFID:
+	case SRMT_GETFID:
 		rc = slbe_getfid(req);
 		break;
 	default:

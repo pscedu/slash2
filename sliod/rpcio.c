@@ -17,15 +17,14 @@
 
 #include "fid.h"
 #include "rpc.h"
-#include "slash.h"
+#include "../slashd/cfd.h"
+#include "sliod.h"
 #include "slashrpc.h"
 
 #define SLIO_NTHREADS  8
 #define SLIO_NBUFS     1024
 #define SLIO_BUFSZ     (4096+256)
 #define SLIO_REPSZ     128
-#define SLIO_REQPORTAL RPCIO_REQ_PORTAL
-#define SLIO_REPPORTAL RPCIO_REP_PORTAL
 #define SLIO_SVCNAME   "slrpciothr"
 
 #define GENERIC_REPLY(rq, prc)								\
@@ -98,7 +97,7 @@ cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 		return (0);
 
 	/* Not there, contact slashd and populate it. */
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_GETFID,
+	if ((rc = rpc_newreq(RPCSVC_BE, SR_BE_VERSION, SRMT_GETFID,
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	mq->pid = exp->exp_connection->c_peer.pid;
@@ -119,7 +118,7 @@ slio_connect(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (mq->magic != SIO_MAGIC || mq->version != SIO_VERSION)
+	if (mq->magic != SR_IO_MAGIC || mq->version != SR_IO_VERSION)
 		rc = -EINVAL;
 	GENERIC_REPLY(rq, rc);
 }
@@ -167,7 +166,7 @@ slio_read(struct pscrpc_request *rq)
 		goto done;
 
 	desc = pscrpc_prep_bulk_exp(rq, mq->size / pscPageSize,
-	    BULK_PUT_SOURCE, RPCMDS_BULK_PORTAL);
+	    BULK_PUT_SOURCE, SR_IO_BULK_PORTAL);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		mp->rc = -ENOMEM;
@@ -250,7 +249,7 @@ slio_write(struct pscrpc_request *rq)
 	buf = PSCALLOC(mq->size);
 
 	desc = pscrpc_prep_bulk_exp(rq, mq->size / pscPageSize,
-	    BULK_GET_SINK, RPCMDS_BULK_PORTAL);
+	    BULK_GET_SINK, SR_IO_BULK_PORTAL);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		mp->rc = -ENOMEM;
@@ -396,9 +395,9 @@ slio_init(void)
 	svh->svh_bufsz      = SLIO_BUFSZ;
 	svh->svh_reqsz      = SLIO_BUFSZ;
 	svh->svh_repsz      = SLIO_REPSZ;
-	svh->svh_req_portal = SLIO_REQPORTAL;
-	svh->svh_rep_portal = SLIO_REPPORTAL;
-	svh->svh_type       = SLTHRT_RPCIO;
+	svh->svh_req_portal = SR_IO_REQ_PORTAL;
+	svh->svh_rep_portal = SR_IO_REP_PORTAL;
+	svh->svh_type       = SLIOTHRT_RPC;
 	svh->svh_nthreads   = SLIO_NTHREADS;
 	svh->svh_handler    = slio_svc_handler;
 

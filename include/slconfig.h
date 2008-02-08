@@ -3,6 +3,9 @@
 #ifndef HAVE_SLASHCONFIG_INC
 #define HAVE_SLASHCONFIG_INC
 
+//#define _PATH_SLASHCONF	"/etc/slash.conf"
+#define _PATH_SLASHCONF		"config/example.conf"
+
 #define SITE_NAME_MAX 64
 #define RES_NAME_MAX  64
 #define FULL_NAME_MAX (SITE_NAME_MAX+RES_NAME_MAX+2)
