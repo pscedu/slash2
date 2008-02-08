@@ -278,8 +278,9 @@ int simpleop_sizes[] = {
 	sizeof(struct slashrpc_truncate_req),		/* 24 */
 	sizeof(struct slashrpc_unlink_req),		/* 25 */
 	sizeof(struct slashrpc_utimes_req),		/* 26 */
-	0						/* 27 - write */
-#if SNRMT != 28
+	0,						/* 27 - write */
+	0						/* 28 - GETFID */
+#if SNRMT != 29
 # error "RPC ops out of sync"
 #endif
 };
