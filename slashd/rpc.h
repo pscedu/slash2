@@ -3,6 +3,7 @@
 #include <sys/types.h>
 
 #include "psc_ds/tree.h"
+#include "psc_util/lock.h"
 
 #include "cfd.h"
 
@@ -14,3 +15,11 @@ struct slashrpc_export {
 	struct cfdtree			 cfdtree;
 	SPLAY_ENTRY(slashrpc_export)	 entry;
 };
+
+int sexpcmp(const void *, const void *);
+
+SPLAY_HEAD(sexptree, slashrpc_export);
+SPLAY_PROTOTYPE(sexptree, slashrpc_export, entry, sexpcmp);
+
+extern struct sexptree	sexptree;
+extern psc_spinlock_t	sexptreelock;

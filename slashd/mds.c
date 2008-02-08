@@ -681,30 +681,6 @@ slmds_utimes(struct pscrpc_request *rq)
 }
 
 int
-sexp_cmp(const void *a, const void *b)
-{
-	const struct slashrpc_export *sa = a, *sb = b;
-
-	if (sa->exp->exp_connection->c_peer.nid <
-	    sb->exp->exp_connection->c_peer.nid)
-		return (-1);
-	else if (sa->exp->exp_connection->c_peer.nid >
-	    sb->exp->exp_connection->c_peer.nid)
-		return (1);
-
-	if (sa->exp->exp_connection->c_peer.pid <
-	    sb->exp->exp_connection->c_peer.pid)
-		return (-1);
-	else if (sa->exp->exp_connection->c_peer.pid >
-	    sb->exp->exp_connection->c_peer.pid)
-		return (1);
-
-	return (0);
-}
-
-psc_spinlock_t exptreelock = LOCK_INITIALIZER;
-
-int
 slbe_getfid(struct pscrpc_request *rq)
 {
 	struct slashrpc_export *sexp, qexp;
@@ -724,20 +700,20 @@ slbe_getfid(struct pscrpc_request *rq)
 		exp.exp_connection->c_peer.pid = mq->pid;
 		qexp.exp = &exp;
 
-		spinlock(&exptreelock);
+		spinlock(&sexptreelock);
 		sexp = SPLAY_FIND(sexptree, &sexptree, &qexp);
 		if (sexp) {
 			qcfd.cfd = mq->cfd;
 			spinlock(&sexp->exp->exp_lock);
 			cfdent = SPLAY_FIND(cfdtree, &sexp->cfdtree, &qcfd);
 			if (cfdent)
-				mp->fid = cfdent->fid;
+				COPYFID(&mp->fid, &cfdent->fid);
 			else
 				mp->rc = -ENOENT;
 			freelock(&sexp->exp->exp_lock);
 		} else
 			mp->rc = -ENOENT;
-		freelock(&exptreelock);
+		freelock(&sexptreelock);
 	}
 	return (0);
 }

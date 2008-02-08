@@ -275,19 +275,3 @@ struct slashrpc_getfid_rep {
 };
 
 void slashrpc_export_destroy(void *);
-
-/*
- * slashrpc_export_get - access our application-specific variables associated
- *	with an LNET connection.
- * @exp: RPC export of peer.
- */
-static __inline struct slashrpc_export *
-slashrpc_export_get(struct pscrpc_export *exp)
-{
-	spinlock(&exp->exp_lock);
-	if (exp->exp_private == NULL)
-		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
-	exp->exp_destroycb = slashrpc_export_destroy;
-	freelock(&exp->exp_lock);
-	return (exp->exp_private);
-}
