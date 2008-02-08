@@ -57,7 +57,7 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_CREATE,
+	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_CREATE,
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -86,7 +86,7 @@ slash_getattr(const char *path, struct stat *stb)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_GETATTR,
+	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_GETATTR,
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -118,7 +118,7 @@ slash_fgetattr(__unusedx const char *path, struct stat *stb,
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_FGETATTR,
+	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_FGETATTR,
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
@@ -191,7 +191,7 @@ slash_open(const char *path, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_OPEN,
+	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_OPEN,
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -214,7 +214,7 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_OPENDIR,
+	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_OPENDIR,
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -253,7 +253,7 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 	u8 *v1;
 
 	mb = NULL;
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_READDIR,
+	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_READDIR,
 	    sizeof(*mq), 0, &rq, &mq)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
@@ -265,7 +265,7 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 
 	comms_error = 0;
 
-	desc = pscrpc_prep_bulk_exp(rq, 1, BULK_GET_SINK, RPCIO_BULK_PORTAL);
+	desc = pscrpc_prep_bulk_exp(rq, 1, BULK_GET_SINK, SR_IO_BULK_PORTAL);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		pscrpc_req_finished(rq);
@@ -374,7 +374,7 @@ slash_readlink(const char *path, char *buf, size_t size)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_READLINK,
+	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_READLINK,
 	    sizeof(*mq), size, &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -429,7 +429,7 @@ slash_statfs(const char *path, struct statvfs *sfb)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, SRMT_STATFS,
+	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_STATFS,
 	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);

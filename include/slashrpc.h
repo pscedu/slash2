@@ -57,7 +57,7 @@
 #define SRIT_READ	26
 #define SRIT_WRITE	27
 #define SRBT_GETFID	28
-#define SNMT		29
+#define SNRT		29
 
 struct slashrpc_connect_req {
 	u64	magic;

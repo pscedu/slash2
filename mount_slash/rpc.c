@@ -176,9 +176,9 @@ rpc_svc_init(void)
 		psc_fatalx("invalid SLASH_SERVER_NID: %s", snid);
 
 	/* Setup client MDS service */
-	rpcsvcs[RPCSVC_MDS] = rpc_svc_create(RPCMDS_REQ_PORTAL,
-	    RPCMDS_REP_PORTAL);
-	if (rpcmds_connect(nid, RPCSVC_MDS, SMDS_MAGIC, SMDS_VERSION))
+	rpcsvcs[RPCSVC_MDS] = rpc_svc_create(SR_MDS_REQ_PORTAL,
+	    SR_MDS_REP_PORTAL);
+	if (rpcmds_connect(nid, RPCSVC_MDS, SR_MDS_MAGIC, SR_MDS_VERSION))
 		psc_error("rpc_mds_connect %s", snid);
 
 #if 0
@@ -266,21 +266,21 @@ int simpleop_sizes[] = {
 	sizeof(struct slashrpc_mknod_req),		/* 12 */
 	0,						/* 13 - open */
 	0,						/* 14 - opendir */
-	0,						/* 15 - read */
-	0,						/* 16 - readdir */
-	0,						/* 17 - readlink */
-	sizeof(struct slashrpc_release_req),		/* 18 */
-	sizeof(struct slashrpc_releasedir_req),		/* 19 */
-	sizeof(struct slashrpc_rename_req),		/* 20 */
-	sizeof(struct slashrpc_rmdir_req),		/* 21 */
-	0,						/* 22 - statfs */
-	sizeof(struct slashrpc_symlink_req),		/* 23 */
-	sizeof(struct slashrpc_truncate_req),		/* 24 */
-	sizeof(struct slashrpc_unlink_req),		/* 25 */
-	sizeof(struct slashrpc_utimes_req),		/* 26 */
+	0,						/* 15 - readdir */
+	0,						/* 16 - readlink */
+	sizeof(struct slashrpc_release_req),		/* 17 */
+	sizeof(struct slashrpc_releasedir_req),		/* 18 */
+	sizeof(struct slashrpc_rename_req),		/* 19 */
+	sizeof(struct slashrpc_rmdir_req),		/* 20 */
+	0,						/* 21 - statfs */
+	sizeof(struct slashrpc_symlink_req),		/* 22 */
+	sizeof(struct slashrpc_truncate_req),		/* 23 */
+	sizeof(struct slashrpc_unlink_req),		/* 24 */
+	sizeof(struct slashrpc_utimes_req),		/* 25 */
+	0,						/* 26 - read */
 	0,						/* 27 - write */
 	0						/* 28 - GETFID */
-#if SNRMT != 29
+#if SNRT != 29
 # error "RPC ops out of sync"
 #endif
 };
@@ -319,10 +319,10 @@ rpc_sendmsg(int op, ...)
 	va_list ap;
 	int rc;
 
-	if (op < 0 || op > SNRMT || simpleop_sizes[op] == 0)
+	if (op < 0 || op > SNRT || simpleop_sizes[op] == 0)
 		goto badop;
 
-	rc = rpc_newreq(RPCSVC_MDS, SMDS_VERSION, op, simpleop_sizes[op],
+	rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, op, simpleop_sizes[op],
 	    sizeof(*mp), &rq, &u.m);
 	if (rc)
 		return (rc);
