@@ -485,8 +485,7 @@ slash_utimens(const char *path, const struct timespec ts[2])
 void *
 slash_init(__unusedx struct fuse_conn_info *conn)
 {
-	if (rpc_svc_init())
-		psc_fatalx("rpc_svc_init");
+	rpc_svc_init();
 	return (NULL);
 }
 
