@@ -20,6 +20,7 @@
 #include "../slashd/cfd.h"
 #include "sliod.h"
 #include "slashrpc.h"
+#include "rsx.h"
 
 #define SLIO_NTHREADS  8
 #define SLIO_NBUFS     1024
@@ -97,13 +98,13 @@ cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 		return (0);
 
 	/* Not there, contact slashd and populate it. */
-	if ((rc = rpc_newreq(RPCSVC_BE, SR_BE_VERSION, SRMT_GETFID,
-	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_BE]->svc_import, SR_BE_VERSION,
+	    SRMT_GETFID, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	mq->pid = exp->exp_connection->c_peer.pid;
 	mq->nid = exp->exp_connection->c_peer.nid;
 	mq->cfd = cfd;
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0)
+	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0)
 		if ((c = cfdinsert(cfd, exp, fidp)) != NULL)
 			*fidp = c->fid;
 	pscrpc_req_finished(rq);
