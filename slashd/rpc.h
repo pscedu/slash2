@@ -16,7 +16,9 @@ struct slashrpc_export {
 	SPLAY_ENTRY(slashrpc_export)	 entry;
 };
 
-int sexpcmp(const void *, const void *);
+struct slashrpc_export *
+	slashrpc_export_get(struct pscrpc_export *);
+int	sexpcmp(const void *, const void *);
 
 SPLAY_HEAD(sexptree, slashrpc_export);
 SPLAY_PROTOTYPE(sexptree, slashrpc_export, entry, sexpcmp);

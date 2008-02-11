@@ -3,6 +3,8 @@
 #ifndef _SLASH_H_
 #define _SLASH_H_
 
+struct slash_sb_mem;
+
 /* Slash server thread types. */
 #define SLTHRT_CTL	0	/* control */
 #define SLTHRT_RPCMDS	1	/* metadata messages */
@@ -18,5 +20,7 @@ struct slash_ctlthr {
 #define slctlthr(thr) ((struct slash_ctlthr *)(thr)->pscthr_private)
 
 void slmds_init(void);
+
+extern struct slash_sb_mem *sbm;
 
 #endif /* _SLASH_H_ */

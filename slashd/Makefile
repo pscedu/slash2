@@ -13,6 +13,7 @@ SRCS+=		main.c
 SRCS+=		mds.c
 SRCS+=		metadir.c
 SRCS+=		rpc.c
+SRCS+=		sb.c
 SRCS+=		yconf.y
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c

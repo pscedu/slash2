@@ -1,7 +1,8 @@
 /* $Id$ */
 
-#include <sys/types.h>
+#include <sys/param.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -9,6 +10,12 @@
 
 #include "inode.h"
 #include "sb.h"
+#include "slconfig.h"
+#include "slashd.h"
+
+#define _PATH_SLJOURNAL "journal"
+
+#define SLJ_NENTS		200
 
 #define SLASH_INUM_ALLOC_SZ	1024	/* allocate 1024 inums at a time */
 
@@ -19,6 +26,8 @@ struct slash_jent_inum {
 	struct psc_journal_enthdr	sji_hdr;
 	sl_inum_t			sji_inum;
 };
+
+#define SLJ_ENTSIZE (sizeof(struct slash_jent_inum))
 
 sl_inum_t
 slash_get_inum(struct slash_sb_mem *sbm)
@@ -69,4 +78,17 @@ slash_journal_recover(struct slash_sb_mem *sbm)
 	if (rc == -1)
 		psc_fatal("pjournal_walk");
 	free(pje);
+}
+
+void
+slash_journal_init(void)
+{
+	char fn[PATH_MAX];
+	int rc;
+
+	rc = snprintf(fn, sizeof(fn), "%s/%s",
+	    nodeInfo.node_res->res_fsroot, _PATH_SLJOURNAL);
+	if (rc == -1)
+		psc_fatal("snprintf");
+	pjournal_init(&sbm->sbm_pj, fn, 0, SLJ_NENTS, SLJ_ENTSIZE);
 }
