@@ -8,8 +8,6 @@
 #include "mount_slash.h"
 #include "slashrpc.h"
 
-#define SLASH_SVR_PID 54321
-
 struct slashrpc_service *rpcsvcs[NRPCSVC];
 struct pscrpc_nbreqset *ioNbReqSet;
 
@@ -93,7 +91,7 @@ rpcmds_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 #if 0
 	struct slashrpc_connect_req *mq;
 
-	rc = rpc_newreq(ptl, version, op, sizeof(*mq), 0, &rq, &u.m);
+	rc = rpc_newreq(imp, version, op, sizeof(*mq), 0, &rq, &u.m);
 	if (rc)
 		return (rc);
 	mq->magic = magic;
@@ -102,7 +100,8 @@ rpcmds_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	mq->gid = ctx->gid;
 	rc = rpc_getrep(rq, 0, &dummy);
 	pscrpc_req_finished(rq);
-	if (rc)
+	if (rc == 0)
+		rc = mp->rc;
 #endif
 
 
@@ -117,7 +116,7 @@ rpcmds_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
  */
-struct rpcsvc *
+struct slashrpc_service *
 rpc_svc_create(u32 rqptl, u32 rpptl)
 {
 	struct slashrpc_service *svc;
@@ -145,7 +144,7 @@ rpc_svc_create(u32 rqptl, u32 rpptl)
 /*
  * rpc_svc_init: initialize client RPC services.
  */
-int
+void
 rpc_svc_init(void)
 {
 	lnet_nid_t nid;
@@ -181,7 +180,6 @@ rpc_svc_init(void)
 	ioNbReqSet = nbreqset_init(rpc_io_interpret_set, rpc_nbcallback);
 	if (ioNbReqSet == NULL)
 		psc_fatal("nbreqset_init");
-	return (0);
 }
 
 int simpleop_sizes[] = {

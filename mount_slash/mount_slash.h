@@ -22,9 +22,9 @@ struct slashrpc_service {
 	int			  svc_initialized;
 };
 
-int rpc_svc_init(void);
-int rpc_sendmsg(int, ...);
-int rpc_connect(lnet_nid_t, int, u64, u32);
+void rpc_svc_init(void);
+int  rpc_sendmsg(int, ...);
+int  rpc_connect(lnet_nid_t, int, u64, u32);
 
 int slash_read(const char *, char *, size_t, off_t, struct fuse_file_info *);
 int slash_readdir(const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *);

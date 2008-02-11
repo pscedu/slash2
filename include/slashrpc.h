@@ -6,6 +6,8 @@
 #include "psc_types.h"
 #include "psc_util/cdefs.h"
 
+#define SLASH_SVR_PID		54321
+
 /* RPC portals. */
 #define SR_MDS_REQ_PORTAL	20
 #define SR_MDS_REP_PORTAL	21
