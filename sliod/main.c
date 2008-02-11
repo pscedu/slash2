@@ -10,6 +10,7 @@
 
 #include "sliod.h"
 #include "slconfig.h"
+#include "control.h"
 
 #define SLIO_THRTBL_SIZE 19
 #define _PATH_SLIOCTLSOCK "../sliod.sock"
