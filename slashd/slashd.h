@@ -20,6 +20,7 @@ struct slash_ctlthr {
 #define slctlthr(thr) ((struct slash_ctlthr *)(thr)->pscthr_private)
 
 void slmds_init(void);
+void slash_journal_init(void);
 
 extern struct slash_sb_mem *sbm;
 

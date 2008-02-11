@@ -67,7 +67,7 @@ cfdinsert(u64 cfd, struct pscrpc_export *exp, const slash_fid_t *fidp)
  * @fn: server-translated filename to associate cfd with (i.e. the file specified
  *	by the client needs to be "translated" to the server's file system path).
  */
-int
+void
 cfdnew(u64 *cfdp, struct pscrpc_export *exp, const slash_fid_t *fidp)
 {
 	struct slashrpc_export *sexp;

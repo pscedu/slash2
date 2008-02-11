@@ -7,6 +7,7 @@
 
 #include "mount_slash.h"
 #include "slashrpc.h"
+#include "rsx.h"
 
 struct slashrpc_service *rpcsvcs[NRPCSVC];
 struct pscrpc_nbreqset *ioNbReqSet;
@@ -72,7 +73,6 @@ int
 rpcmds_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 {
 	lnet_process_id_t server_id = { server, 0 };
-	struct pscrpc_request *rq;
 	struct pscrpc_import *imp;
 	struct fuse_context *ctx;
 	lnet_process_id_t id;
@@ -88,25 +88,6 @@ rpcmds_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	if (rpc_sendmsg(SRMT_CONNECT, magic, version, ctx->uid, ctx->gid) == -1)
 		return (-errno);
 
-#if 0
-	struct slashrpc_connect_req *mq;
-
-	rc = rpc_newreq(imp, version, op, sizeof(*mq), 0, &rq, &u.m);
-	if (rc)
-		return (rc);
-	mq->magic = magic;
-	mq->version = version;
-	mq->uid = ctx->uid;
-	mq->gid = ctx->gid;
-	rc = rpc_getrep(rq, 0, &dummy);
-	pscrpc_req_finished(rq);
-	if (rc == 0)
-		rc = mp->rc;
-#endif
-
-
-	/* Save server PID from reply callback and mark initialized.  */
-//	imp->imp_connection->c_peer.pid = rq->rq_peer.pid;
 	imp->imp_state = PSC_IMP_FULL;
 	return (0);
 }

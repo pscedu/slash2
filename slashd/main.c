@@ -10,6 +10,8 @@
 
 #include "slashd.h"
 #include "slconfig.h"
+#include "control.h"
+#include "sb.h"
 
 #define SLASH_THRTBL_SIZE 19
 #define _PATH_SLCTLSOCK "../slashd.sock"

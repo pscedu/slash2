@@ -393,8 +393,8 @@ slmds_open(struct pscrpc_request *rq)
 		mp->rc = -errno;
 	else if (fid_get(&fid, mq->path) == -1)
 		mp->rc = -errno;
-	else if (cfdnew(&mp->cfd, rq->rq_export, &fid))
-		mp->rc = -errno;
+	else
+		cfdnew(&mp->cfd, rq->rq_export, &fid);
 	/* XXX check access permissions */
 	return (0);
 }
@@ -414,8 +414,8 @@ slmds_opendir(struct pscrpc_request *rq)
 		mp->rc = -errno;
 	else if (fid_get(&fid, mq->path) == -1)
 		mp->rc = -errno;
-	else if (cfdnew(&mp->cfd, rq->rq_export, &fid))
-		mp->rc = -errno;
+	else
+		cfdnew(&mp->cfd, rq->rq_export, &fid);
 	/* XXX check access permissions */
 	return (0);
 }

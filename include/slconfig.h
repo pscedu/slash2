@@ -269,7 +269,6 @@ libsl_str2restype(char *res_type)
 		return (res_any);
 }
 
-
 static inline void
 libsl_init(int server)
 {

@@ -8,6 +8,7 @@
 
 #include "mount_slash.h"
 #include "slashrpc.h"
+#include "rsx.h"
 
 #define OBD_TIMEOUT 20
 

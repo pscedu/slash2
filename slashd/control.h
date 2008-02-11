@@ -98,3 +98,5 @@ struct slctlmsghdr {
 	size_t			scmh_size;
 	unsigned char		scmh_data[0];
 };
+
+void slctlthr_main(const char *);
