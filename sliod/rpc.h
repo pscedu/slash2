@@ -22,4 +22,6 @@ struct slashrpc_export {
 	struct cfdtree cfdtree;
 };
 
+void rpc_svc_init(void);
+
 extern struct slashrpc_service *rpcsvcs[];

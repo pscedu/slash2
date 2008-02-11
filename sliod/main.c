@@ -11,6 +11,7 @@
 #include "sliod.h"
 #include "slconfig.h"
 #include "control.h"
+#include "rpc.h"
 
 #define SLIO_THRTBL_SIZE 19
 #define _PATH_SLIOCTLSOCK "../sliod.sock"
@@ -84,6 +85,7 @@ main(int argc, char *argv[])
 			usage();
 		}
 	slashGetConfig(cfn);
+	rpc_svc_init();
 	libsl_init(PSC_SERVER);
 	slio_init();
 	slioctlthr_main(sfn);
