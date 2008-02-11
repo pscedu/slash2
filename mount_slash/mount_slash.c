@@ -24,6 +24,7 @@
 
 #include "mount_slash.h"
 #include "slashrpc.h"
+#include "rsx.h"
 
 int
 slash_access(const char *path, int mask)
@@ -57,12 +58,12 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_CREATE,
-	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	    SRMT_CREATE, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 	mq->mode = mode;
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else
@@ -86,11 +87,11 @@ slash_getattr(const char *path, struct stat *stb)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_GETATTR,
-	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	    SRMT_GETATTR, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else {
@@ -118,11 +119,11 @@ slash_fgetattr(__unusedx const char *path, struct stat *stb,
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_FGETATTR,
-	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	    SRMT_FGETATTR, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else {
@@ -191,12 +192,12 @@ slash_open(const char *path, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_OPEN,
-	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	    SRMT_OPEN, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 	mq->flags = fi->flags;
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else
@@ -214,11 +215,11 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_OPENDIR,
-	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	    SRMT_OPENDIR, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else
@@ -253,12 +254,12 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 	u8 *v1;
 
 	mb = NULL;
-	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_READDIR,
-	    sizeof(*mq), 0, &rq, &mq)) != 0)
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	    SRMT_READDIR, sizeof(*mq), 0, &rq, &mq)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->offset = offset;
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) != 0 || (rc = mp->rc)) {
+	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) != 0 || (rc = mp->rc)) {
 		pscrpc_req_finished(rq);
 		return (rc);
 	}
@@ -374,12 +375,12 @@ slash_readlink(const char *path, char *buf, size_t size)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_READLINK,
-	    sizeof(*mq), size, &rq, &mq)) != 0)
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	    SRMT_READLINK, sizeof(*mq), size, &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 	mq->size = size;
-	if ((rc = rpc_getrep(rq, size, &mp)) == 0) {
+	if ((rc = rsx_getrep(rq, size, &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else
@@ -429,11 +430,11 @@ slash_statfs(const char *path, struct statvfs *sfb)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, SRMT_STATFS,
-	    sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	    SRMT_STATFS, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
-	if ((rc = rpc_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else {

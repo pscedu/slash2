@@ -6,6 +6,7 @@ PROG=		mount_slash
 SRCS=		mount_slash.c
 SRCS+=		rpc.c
 SRCS+=		rpcio.c
+SRCS+=		${SLASH_BASE}/share/rsx.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_rpc/connection.c
 SRCS+=		${PFL_BASE}/psc_rpc/import.c

@@ -10,19 +10,7 @@
 
 #define SLASH_SVR_PID 54321
 
-typedef int (*rpcsvc_connect_t)(lnet_nid_t, int, u64, u32);
-
-struct rpcsvc {
-	struct pscrpc_import	*svc_import;
-	lnet_nid_t		 svc_default_server_id;
-	struct psclist_head	 svc_old_imports;
-	psc_spinlock_t		 svc_lock;
-	int			 svc_failed;
-	int			 svc_initialized;
-	rpcsvc_connect_t	 svc_connect;
-};
-
-struct rpcsvc *rpcsvcs[NRPCSVC];
+struct slashrpc_service *rpcsvcs[NRPCSVC];
 struct pscrpc_nbreqset *ioNbReqSet;
 
 int
@@ -132,7 +120,7 @@ rpcmds_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 struct rpcsvc *
 rpc_svc_create(u32 rqptl, u32 rpptl)
 {
-	struct rpcsvc *svc;
+	struct slashrpc_service *svc;
 
 	svc = PSCALLOC(sizeof(*svc));
 
@@ -193,60 +181,6 @@ rpc_svc_init(void)
 	ioNbReqSet = nbreqset_init(rpc_io_interpret_set, rpc_nbcallback);
 	if (ioNbReqSet == NULL)
 		psc_fatal("nbreqset_init");
-	return (0);
-}
-
-/*
- * rpc_newreq - Create a new request and associate it with the import.
- * @ptl: which portal to create the request on, either RPCSVC_MDS or IO.
- * @version: version of communication protocol of channel.
- * @op: operation ID of command to send.
- * @reqlen: length of request buffer.
- * @replen: length of expected reply buffer.
- * @rqp: value-result of pointer to RPC request.
- * @mqp: value-result of pointer to start of request buffer.
- */
-int
-rpc_newreq(int ptl, int version, int op, int reqlen, int replen,
-    struct pscrpc_request **rqp, void *mqp)
-{
-	struct pscrpc_import *imp;
-	int rc;
-
-	rc = 0;
-	imp = rpcsvcs[ptl]->svc_import;
-	*rqp = pscrpc_prep_req(imp, version, op, 1, &reqlen, NULL);
-	if (*rqp == NULL)
-		return (-ENOMEM);
-
-	/* Setup request buffer. */
-	*(void **)mqp = psc_msg_buf((*rqp)->rq_reqmsg, 0, reqlen);
-	if (*(void **)mqp == NULL)
-		psc_fatalx("psc_msg_buf");
-
-	/* Setup reply buffer. */
-	(*rqp)->rq_replen = psc_msg_size(1, &replen);
-	return (0);
-}
-
-/*
- * rpc_getrep - Wait for a reply of a "simple" command, i.e. an error code.
- * @rq: the RPC request we sent.
- * @replen: anticipated size of response.
- * @mpp: value-result pointer where reply buffer start will be set.
- */
-int
-rpc_getrep(struct pscrpc_request *rq, int replen, void *mpp)
-{
-	int rc;
-
-	/* Send the request and block on its completion. */
-	rc = pscrpc_queue_wait(rq);
-	if (rc)
-		return (rc);
-	*(void **)mpp = psc_msg_buf(rq->rq_repmsg, 0, replen);
-	if (*(void **)mpp == NULL)
-		return (-ENOMEM);
 	return (0);
 }
 
@@ -322,8 +256,8 @@ rpc_sendmsg(int op, ...)
 	if (op < 0 || op > SNRT || simpleop_sizes[op] == 0)
 		goto badop;
 
-	rc = rpc_newreq(RPCSVC_MDS, SR_MDS_VERSION, op, simpleop_sizes[op],
-	    sizeof(*mp), &rq, &u.m);
+	rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	    op, simpleop_sizes[op], sizeof(*mp), &rq, &u.m);
 	if (rc)
 		return (rc);
 
@@ -416,7 +350,7 @@ rpc_sendmsg(int op, ...)
 	}
 	va_end(ap);
 
-	rc = rpc_getrep(rq, sizeof(*mp), &mp);
+	rc = rsx_getrep(rq, sizeof(*mp), &mp);
 	pscrpc_req_finished(rq);
 	if (rc == 0) {
 		errno = -mp->rc;
