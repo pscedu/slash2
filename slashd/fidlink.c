@@ -10,108 +10,175 @@
 #include "psc_types.h"
 #include "psc_util/log.h"
 #include "psc_util/assert.h"
+#include "psc_util/mkdirs.h"
 
 #include "config.h"
 #include "fid.h"
+#include "slconfig.h"
+#include "slashd.h"
 
-#define FID_PRINT_CHAR 16
+#define _PATH_OBJROOT	"fids"
+#define _PATH_NS	"ns"
 
-/**
- * fid_makepath() creates the path from the fid's
- *   inum, allowing the fs to easily access files via their
- *   inode number.
+/*
+ * translate_pathname - rewrite a pathname from a client to the location
+ *	it actually correponds with as known to slash in the server file system.
+ * @path: client-issued path which will contain the server path on successful return.
+ * @must_exist: whether this path must exist or not (e.g. if being created).
+ * Returns 0 on success or -1 on error.
  */
 int
-fid_makepath(const slash_fid_t *fid, char *fid_path)
+translate_pathname(char *path, int must_exist)
 {
-	char  *c;
-	u64    mask = 0x000000000000000f;
-	int    i, rc;
+	char *lastsep, buf[PATH_MAX], prefix[PATH_MAX];
+	int rc;
 
-	rc = snprintf(fid_path, FID_PATH_LEN,
-		      "%s/%016"_P_LP64"x/",
-//		      nodeProfile->znprof_objroot,
-//		      nodeInfo->znode_set_uuid);
- "foo", 0UL);
-
-	psc_assert(rc >= 0 && rc < FID_PATH_LEN);
-
-	for (i = 0, c = fid_path + rc; i < FID_PATH_DEPTH; i++, c++) {
-
-		u8 j = ( (fid->fid_inum & (mask << (i*4)) ) >> (i*4));
-
-		if (j < 10)
-			j += 0x30;
-		else
-			j += 0x57;
-		*c     = (char)j;
-		*(++c) = '/';
-        }
-	rc = snprintf(c, FID_PRINT_CHAR + 1, "%016"_P_LP64"x",
-		      fid->fid_inum);
-
-	psc_assert_msg(rc == FID_PRINT_CHAR, "rc == %d", rc);
-
-	psc_info("Fidpath ;%s; %016"_P_LP64"x",
-	      fid_path, fid->fid_inum);
-	return (0);
-}
-
-/**
- * fid_link() places the fid (via inum) into the
- *   namespace server's filesystem.
- */
-int
-fid_link(const slash_fid_t *fid, const char *fnam)
-{
-	char fid_path[FID_PATH_LEN+1];
-	int  rc = 0;
-
-	fid_makepath(fid, fid_path);
-
-	rc = link(fnam, fid_path);
-	if (!rc)
-		psc_info("linked userf ;%s; to fid_path ;%s; for fid %"_P_LP64"x",
-		      fnam, fid_path, fid->fid_inum);
-	else {
-		rc = -errno;
-		if (errno == EEXIST) {
-			struct stat stb;
-
-			psc_info("already linked fid_path %s for fid %"_P_LP64"x",
-			      fid_path, fid->fid_inum);
-
-#ifdef ZEST
-			if (stat(fid_path, &stb) == -1) {
-				psc_error("Failed stat() of ;%s;", fid_path);
-				return -errno;
-			}
-
-			if (stb.st_ino != fid->fid_inum) {
-				psc_error("BAD! Immutable namespace "
-					  "corruption! %"_P_LP64"x != %"_P_LP64"x",
-					  fid->fid_inum, stb.st_ino);
-                                return -EINVAL;
-			} else
-#endif
-				return 0;
-
-		} else {
-			psc_error("failed to link fid_path %s for fid %"_P_LP64"x",
-				  fid_path, fid->fid_inum);
-		}
-	}
-	return rc;
-}
-
-int
-fid_get(slash_fid_t *fidp, const char *path)
-{
-	struct stat stb;
-
-	if (stat(path, &stb) == -1)
+	rc = snprintf(prefix, sizeof(prefix), "%s/%s",
+	    nodeInfo.node_res->res_fsroot, _PATH_NS);
+	if (rc == -1)
 		return (-1);
-	fidp->fid_inum = stb.st_ino;
-	fidp->fid_gen = 0;
+	rc = snprintf(buf, sizeof(buf), "%s/%s", prefix, path);
+	if (rc == -1)
+		return (-1);
+	if (rc >= (int)sizeof(buf)) {
+		errno = ENAMETOOLONG;
+		return (-1);
+	}
+	/*
+	 * As realpath(3) requires that the resolved pathname must exist,
+	 * if we are creating a new pathname, it obviously won't exist,
+	 * so trim the last component and append it later on.
+	 */
+	if (must_exist == 0 && (lastsep = strrchr(buf, '/')) != NULL) {
+		if (strcmp(lastsep, "/..") == 0 ||
+		    strcmp(lastsep, "/.") == 0) {
+			errno = -EINVAL;
+			return (-1);
+		}
+		*lastsep = '\0';
+	}
+	if (realpath(buf, path) == NULL)
+		return (-1);
+	if (strncmp(path, prefix, strlen(prefix))) {
+		/*
+		 * If they found some way around
+		 * realpath(3), try to catch it...
+		 */
+		errno = EINVAL;
+		return (-1);
+	}
+	if (lastsep) {
+		*lastsep = '/';
+		strncat(path, lastsep, PATH_MAX - 1 - strlen(path));
+	}
 	return (0);
+}
+
+/**
+ * fid_makepath - build the pathname in the FID object root that corresponds
+ *	to a FID, allowing easily lookup of file metadata via FIDs.
+ */
+void
+fid_makepath(const slash_fid_t *fidp, char *fid_path)
+{
+	int rc;
+
+	rc = snprintf(fid_path, PATH_MAX,
+	    "%s/%s/%04x/%04x/%04x/%04x",
+	    nodeInfo.node_res->res_fsroot, _PATH_OBJROOT,
+	    (u32)((fidp->fid_inum & 0x000000000000ffffULL)),
+	    (u32)((fidp->fid_inum & 0x00000000ffff0000ULL) >> 16),
+	    (u32)((fidp->fid_inum & 0x0000ffff00000000ULL) >> 32),
+	    (u32)((fidp->fid_inum & 0xffff000000000000ULL) >> 48));
+	if (rc == -1)
+		psc_fatal("snprintf");
+}
+
+/**
+ * fid_link - create an entry in the FID object root corresponding to a
+ *	pathname in the file system.
+ * @fidp: FID of file.
+ * @fn: filename for which to create FID object entry.
+ */
+int
+fid_link(const slash_fid_t *fid, const char *fn)
+{
+	char *p, fidpath[PATH_MAX];
+
+	fid_makepath(fid, fidpath);
+	if ((p = strrchr(fidpath, '/')) != NULL) {
+		*p = '\0';
+		if (mkdirs(fidpath) == -1) /* XXX must be done as root */
+			return (-1);
+		*p = '/';
+	}
+	if (link(fn, fidpath) == -1) {
+		if (errno == EEXIST)
+			psc_error("tried to recreate already existing fidpath");
+		else
+			psc_fatal("link %s", fidpath);
+	}
+	return (0);
+}
+
+/*
+ * fid_get - lookup the FID for a pathname.
+ * @fidp: value-result FID pointer.
+ * @path: pathname to lookup, should have been passed to translate_pathname().
+ * @must_exist: whether this entry already exists in the namespace or is
+ *	being created.
+ * Notes: FID entry will be created if pathname does not exist.
+ */
+int
+fid_get(slash_fid_t *fidp, const char *path, int must_exist)
+{
+	static psc_spinlock_t createlock = LOCK_INITIALIZER;
+	char fn[PATH_MAX];
+	struct stat stb;
+	ssize_t sz;
+	int fd, rc;
+
+	rc = snprintf(fn, sizeof(fn), "%s", path);
+	if (rc == -1)
+		psc_fatal("snprintf");
+	rc = 0;
+	if (must_exist) {
+		fd = open(fn, O_RDONLY);
+		if (fd == -1)
+			return (-1);
+		sz = read(fd, fidp, sizeof(*fidp));
+		if (sz == -1)
+			rc = -1;
+		else if (sz != sizeof(*fidp)) {
+			psc_error("short write");
+			rc = -1;
+		}
+		close(fd);
+	} else {
+		spinlock(&createlock);
+		if (stat(fn, &stb) == -1) {
+			if (errno != ENOENT) {
+				psc_error("stat %s", fn);
+				return (-1);
+			}
+		} else {
+			errno = EEXIST;
+			return (-1);
+		}
+		fd = open(fn, O_CREAT | O_EXCL | O_WRONLY, 0644);
+		freelock(&createlock);
+		if (fd == -1)
+			return (-1);
+		fidp->fid_inum = slash_get_inum();
+		sz = write(fd, fidp, sizeof(*fidp));
+		if (sz == -1)
+			rc = -1;
+		else if (sz != sizeof(*fidp)) {
+			psc_error("short write");
+			rc = -1;
+		}
+		close(fd);
+	}
+	fidp->fid_gen = 0; /* XXX gen should not be here */
+	return (rc);
 }

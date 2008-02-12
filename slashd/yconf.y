@@ -82,7 +82,6 @@ global_net_handler(char *net);
 	 TABENT_RES ("type",      SL_TYPE_INT,  INTSTR_MAX, res_type,    libsl_str2restype),
 	 TABENT_RES ("id",        SL_TYPE_INT,  INTSTR_MAX, res_id,      NULL),
 	 TABENT_RES ("mds",       SL_TYPE_BOOL, BOOL_MAX,   res_mds,     NULL),
-	 TABENT_RES ("objroot",   SL_TYPE_STRP, PATH_MAX,   res_objroot, NULL),
 	 TABENT_RES ("fsroot",    SL_TYPE_STRP, PATH_MAX,   res_fsroot,  NULL),
 	 { NULL, 0, 0, 0, 0, 0, NULL }
 };

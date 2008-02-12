@@ -141,8 +141,7 @@ dircache_get(slash_fid_t *fidp)
 		dc = e->private;
 		psc_assert((dc->dc_flags & DCF_WANTDESTROY) == 0);
 	} else {
-		if (fid_makepath(fidp, fn))
-			goto done;
+		fid_makepath(fidp, fn);
 		if ((fd = open(fn, O_RDONLY | O_DIRECTORY)) == -1)
 			goto done;
 		dc = dircache_alloc();

@@ -30,7 +30,7 @@ struct slash_jent_inum {
 #define SLJ_ENTSIZE (sizeof(struct slash_jent_inum))
 
 sl_inum_t
-slash_get_inum(struct slash_sb_mem *sbm)
+slash_get_inum(void)
 {
 	struct slash_jent_inum *sji;
 
@@ -44,7 +44,7 @@ slash_get_inum(struct slash_sb_mem *sbm)
 }
 
 void
-slash_journal_recover(struct slash_sb_mem *sbm)
+slash_journal_recover(void)
 {
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_walker pjw;

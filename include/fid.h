@@ -28,8 +28,9 @@ typedef struct slash_fid {
 
 #define COPYFID(dest,src) (memcpy((dest),(src),FIDSZ))
 
-int  fid_makepath(const slash_fid_t *, char *);
+void fid_makepath(const slash_fid_t *, char *);
 int  fid_link(const slash_fid_t *, const char *);
-int  fid_get(slash_fid_t *, const char *);
+int  fid_get(slash_fid_t *, const char *, int);
+int  translate_pathname(char *, int);
 
 #endif

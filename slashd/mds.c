@@ -84,56 +84,6 @@
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
-/*
- * translate_pathname - rewrite a pathname from a client to the location
- *	it actually correponds with as known to slash in the server file system.
- * @path: client-issued path which will contain the server path on successful return.
- * @must_exist: whether this path must exist or not (e.g. if being created).
- * Returns 0 on success or -1 on error.
- */
-int
-translate_pathname(char *path, int must_exist)
-{
-	char *lastsep, buf[PATH_MAX];
-	int rc;
-
-//	rc = snprintf(path, PATH_MAX, "%s/%s", nodeProfile->slnprof_fsroot, buf);
-	rc = snprintf(buf, PATH_MAX, "%s/%s", "/slashfs", path);
-	if (rc == -1)
-		return (-1);
-	if (rc >= (int)sizeof(buf)) {
-		errno = ENAMETOOLONG;
-		return (-1);
-	}
-	/*
-	 * As realpath(3) requires that the resolved pathname must exist,
-	 * if we are creating a new pathname, it obviously won't exist,
-	 * so trim the last component and append it later on.
-	 */
-	if (must_exist == 0 && (lastsep = strrchr(buf, '/')) != NULL) {
-		if (strncmp(lastsep, "/..", strlen("/..")) == 0) {
-			errno = -EINVAL;
-			return (-1);
-		}
-		*lastsep = '\0';
-	}
-	if (realpath(buf, path) == NULL)
-		return (-1);
-	if (strncmp(path, "/slashfs", strlen("/slashfs"))) {
-		/*
-		 * If they found some way around
-		 * realpath(3), try to catch it...
-		 */
-		errno = EINVAL;
-		return (-1);
-	}
-	if (lastsep) {
-		*lastsep = '/';
-		strncat(path, lastsep, PATH_MAX - 1 - strlen(path));
-	}
-	return (0);
-}
-
 int
 slmds_connect(struct pscrpc_request *rq)
 {
@@ -188,10 +138,13 @@ slmds_fchmod(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn))
+	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
 		rc = -errno;
-	else if (chmod(fn, mq->mode) == -1)
-		rc = -errno;
+	else {
+		fid_makepath(&fid, fn);
+		if (chmod(fn, mq->mode) == -1)
+			rc = -errno;
+	}
 	GENERIC_REPLY(rq, rc);
 }
 #endif
@@ -227,10 +180,13 @@ slmds_fchown(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn))
+	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
 		rc = -errno;
-	else if (chown(fn, mq->uid, mq->gid) == -1)
-		rc = -errno;
+	else {
+		fid_makepath(&fid, fn);
+		if (chown(fn, mq->uid, mq->gid) == -1)
+			rc = -errno;
+	}
 	GENERIC_REPLY(rq, rc);
 }
 #endif
@@ -295,10 +251,11 @@ slmds_fgetattr(struct pscrpc_request *rq)
 		return (-ENOMSG);
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
-	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn)) {
+	if (cfd2fid(&fid, rq->rq_export, mq->cfd)) {
 		mp->rc = -errno;
 		return (0);
 	}
+	fid_makepath(&fid, fn);
 	if (stat(fn, &stb) == -1) {
 		mp->rc = -errno;
 		return (0);
@@ -324,10 +281,13 @@ slmds_ftruncate(struct pscrpc_request *rq)
 
 	rc = 0;
 	GET_GEN_REQ(rq, mq);
-	if (cfd2fid(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn))
+	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
 		rc = -errno;
-	else if (truncate(fn, mq->size) == -1)
-		rc = -errno;
+	else {
+		fid_makepath(&fid, fn);
+		if (truncate(fn, mq->size) == -1)
+			rc = -errno;
+	}
 	GENERIC_REPLY(rq, rc);
 }
 
@@ -391,7 +351,7 @@ slmds_open(struct pscrpc_request *rq)
 	mp->rc = 0;
 	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
-	else if (fid_get(&fid, mq->path) == -1)
+	else if (fid_get(&fid, mq->path, 1) == -1)
 		mp->rc = -errno;
 	else
 		cfdnew(&mp->cfd, rq->rq_export, &fid);
@@ -412,7 +372,7 @@ slmds_opendir(struct pscrpc_request *rq)
 	mp->rc = 0;
 	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
-	else if (fid_get(&fid, mq->path) == -1)
+	else if (fid_get(&fid, mq->path, 1) == -1)
 		mp->rc = -errno;
 	else
 		cfdnew(&mp->cfd, rq->rq_export, &fid);

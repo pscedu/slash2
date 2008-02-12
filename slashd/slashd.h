@@ -3,6 +3,8 @@
 #ifndef _SLASH_H_
 #define _SLASH_H_
 
+#include "inode.h"
+
 struct slash_sb_mem;
 
 /* Slash server thread types. */
@@ -19,8 +21,9 @@ struct slash_ctlthr {
 
 #define slctlthr(thr) ((struct slash_ctlthr *)(thr)->pscthr_private)
 
-void slmds_init(void);
-void slash_journal_init(void);
+void		slmds_init(void);
+void		slash_journal_init(void);
+sl_inum_t	slash_get_inum(void);
 
 extern struct slash_sb_mem *sbm;
 
