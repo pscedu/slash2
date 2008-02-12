@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #include <errno.h>
 
 #include "psc_util/lock.h"
@@ -196,7 +194,7 @@ sl_oftiov_bfree(struct offtree_iov *iov)
  * @nblks: preffered number of blocks
  * @iovs: array of iov pointers which index the allocations
  * @niovs: the number of allocations
- * @verifier: ensure that the slab still belongs to the requesting fid
+ * @tok: ensure that the slab still belongs to the requesting fid
  * Returns:  the total number of blocks returned
  */
 static size_t 
@@ -338,5 +336,5 @@ sl_buffer_cache_init(void)
 
 	slBufsFree.lc_max = SLB_FREE_MAX;
 
-	lc_grow(&slBufsFree, SLB_FREE_DEF, slb_buffer, sl_buffer_init);		
+	lc_grow(&slBufsFree, SLB_FREE_DEF, slb_buffer, sl_buffer_init);
 }

@@ -25,18 +25,27 @@ power(size_t base, size_t exp)
 	return p;
 }
 
-#define OFT_STARTOFF(root, d, w) (((root)->oftr_mapsz / (power((root)->oftr_width, d))) * w) 
-#define OFT_ENDOFF(root, d, w)   ((((root)->oftr_mapsz / (power((root)->oftr_width, d))) * (w+1)) - 1)
-#define OFT_REGIONSZ(root, d)    (OFT_ENDOFF(root, d+1, 0) + 1)
-#define OFT_REGIONBLKS(root, d)  ((OFT_REGIONSZ(root, d) / (root)->oftr_minsz)
+#define OFT_REGIONSZ(root, d)					\
+	((root)->oftr_mapsz / (power((root)->oftr_width, d)))
 
+#define OFT_REGIONBLKS(root, d)  \
+	(OFT_REGIONSZ(root, d) / (root)->oftr_minsz)
+
+/* abs_width is the global width position of the spoke, not the 
+ *  position relative to the parent
+ */
+#define OFT_STARTOFF(root, d, abs_width)	\
+	(OFT_REGIONSZ(root, d) * abs_width)
+
+#define OFT_ENDOFF(root, d, abs_width)				\
+	(OFT_REGIONSZ(root, d) * (abs_width + 1) - 1)
 
 #ifndef MIN
 # define MIN(a,b) (((a)<(b)) ? (a): (b))
 #endif
 #ifndef MAX
 # define MAX(a,b) (((a)>(b)) ? (a): (b))
-#endif
+#end
 
 struct offtree_iov {
 	void   *oftiov_base;  /* point to our data buffer  */
@@ -90,9 +99,40 @@ struct offtree_root {
 struct offtree_req {
 	struct offtree_root *oftrq_root;
 	struct offtree_memb *oftrq_memb;
-	struct dynarray      oftrq_darray;
+	struct dynarray     *oftrq_darray;
+	off_t                oftrq_floff; /* file-logical offset       */
+	ssize_t              oftrq_fllen; /* file-logical len          */
 	u8                   oftrq_op;
+	u8                   oftrq_depth;
+	u8                   oftrq_width;	
 };
+
+#define OFT_STARTCHILD(r, d, o)  (o / OFT_REGIONSZ(r, d))
+#define OFT_ENDCHILD(r, d, o, l) ((((o+l) / OFT_REGIONSZ(r, d)) +	\
+				  (((o+l) % OFT_REGIONSZ(r, d)) ? 1:0)) - 1)
+
+static inline int 
+oft_schild_get(off_t o, struct offtree_root *r, int d, int abs_width)
+{
+	off_t soff = OFT_STARTOFF(r, d, abs_width);
+	
+	if (!((o >= soff) && (o < OFT_ENDOFF(r, d, abs_width))))
+		return (-1);
+		
+	return ((o - soff) / OFT_REGIONSZ(r, d));
+}
+
+static inline int 
+oft_echild_get(off_t o, size_t l, struct offtree_root *r, int d, int abs_width)
+{
+	off_t soff = OFT_STARTOFF(r, d, abs_width);
+	
+	if (!((o >= soff) && (o <= OFT_ENDOFF(r, d, abs_width))))
+		return (-1);
+		
+	return ((((o + l) - soff) / OFT_REGIONSZ(r, (d+1))) + 
+		(((o + l) % OFT_REGIONSZ(r, (d+1))) ? 1:0) - 1)
+}
 
 
 
