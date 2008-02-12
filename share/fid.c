@@ -1,0 +1,51 @@
+/* $Id$ */
+
+#include <stdio.h>
+
+/**
+ * fid_makepath - build the pathname in the FID object root that corresponds
+ *	to a FID, allowing easily lookup of file metadata via FIDs.
+ */
+void
+fid_makepath(const slash_fid_t *fidp, char *fid_path)
+{
+	int rc;
+
+	rc = snprintf(fid_path, PATH_MAX,
+	    "%s/%s/%04x/%04x/%04x/%04x",
+	    nodeInfo.node_res->res_fsroot, _PATH_OBJROOT,
+	    (u32)((fidp->fid_inum & 0x000000000000ffffULL)),
+	    (u32)((fidp->fid_inum & 0x00000000ffff0000ULL) >> 16),
+	    (u32)((fidp->fid_inum & 0x0000ffff00000000ULL) >> 32),
+	    (u32)((fidp->fid_inum & 0xffff000000000000ULL) >> 48));
+	if (rc == -1)
+		psc_fatal("snprintf");
+}
+
+/**
+ * fid_link - create an entry in the FID object root corresponding to a
+ *	pathname in the file system.
+ * @fidp: FID of file.
+ * @fn: filename for which to create FID object entry.
+ */
+int
+fid_link(const slash_fid_t *fid, const char *fn)
+{
+	char *p, fidpath[PATH_MAX];
+
+	fid_makepath(fid, fidpath);
+	if ((p = strrchr(fidpath, '/')) != NULL) {
+		*p = '\0';
+		if (mkdirs(fidpath) == -1) /* XXX must be done as root */
+			return (-1);
+		*p = '/';
+	}
+	if (link(fn, fidpath) == -1) {
+		if (errno == EEXIST)
+			psc_error("tried to recreate already existing fidpath");
+		else
+			psc_fatal("link %s", fidpath);
+	}
+	return (0);
+}
+
