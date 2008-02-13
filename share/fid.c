@@ -1,6 +1,16 @@
 /* $Id$ */
 
+#include <sys/param.h>
+
 #include <stdio.h>
+
+#include "psc_util/log.h"
+#include "psc_util/mkdirs.h"
+
+#include "fid.h"
+#include "slconfig.h"
+
+#define _PATH_OBJROOT	"fids"
 
 /**
  * fid_makepath - build the pathname in the FID object root that corresponds
