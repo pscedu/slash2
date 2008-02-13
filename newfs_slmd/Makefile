@@ -9,6 +9,8 @@ SRCS+=		${SLASH_BASE}/slashd/lconf.l
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
 
+SRCS+=		${LNET_BASE}/libcfs/nidstrings.c
+
 DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
 DEFINES+=	-DHAVE_LIBPTHREAD_DEFINED
 
