@@ -146,10 +146,11 @@ slio_read(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		return (0);
 	}
-	if (cfd2fid_cache(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn)) {
+	if (cfd2fid_cache(&fid, rq->rq_export, mq->cfd)) {
 		mp->rc = -errno;
 		return (0);
 	}
+	fid_makepath(&fid, fn);
 	if ((fd = open(fn, O_RDONLY)) == -1) {
 		mp->rc = -errno;
 		return (0);
@@ -239,10 +240,11 @@ slio_write(struct pscrpc_request *rq)
 		return (-ENOMSG);
 	GET_CUSTOM_REPLY(rq, mp);
 	mp->rc = 0;
-	if (cfd2fid_cache(&fid, rq->rq_export, mq->cfd) || fid_makepath(&fid, fn)) {
+	if (cfd2fid_cache(&fid, rq->rq_export, mq->cfd)) {
 		mp->rc = -errno;
 		return (0);
 	}
+	fid_makepath(&fid, fn);
 	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
 		mp->rc = -EINVAL;
 		return (0);
