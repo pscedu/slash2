@@ -5,6 +5,7 @@
 
 #include "slconfig.h"
 #include "pathnames.h"
+#include "../slashd/sb.h"
 
 const char *progname;
 
@@ -18,10 +19,12 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	struct slash_sb_store sbs;
 	const char *cfgfn;
 	char fn[PATH_MAX];
 	int fd, rc, c;
 	sl_resm_t *r;
+	ssize_t sz;
 
 	progname = argv[0];
 	cfgfn = _PATH_SLASHCONF;
@@ -80,6 +83,12 @@ main(int argc, char *argv[])
 		psc_fatalx("name too long");
 	if ((fd = open(fn, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1)
 		psc_fatal("open %s", fn);
+	memset(&sbs, 0, sizeof(sbs));
+	sz = write(fd, &sbs, sizeof(sbs));
+	if (sz == -1)
+		psc_fatal("write");
+	else if (sz != sizeof(sbs))
+		psc_fatalx("short write");
 	close(fd);
 
 	/* journal */

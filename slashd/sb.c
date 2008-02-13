@@ -9,7 +9,7 @@
 #include "sb.h"
 #include "pathnames.h"
 
-struct slash_sb_mem	*sbm;
+struct slash_sb_mem	 sbm;
 int			 sbfd;
 
 void
@@ -25,8 +25,8 @@ slash_superblock_init(void)
 	sbfd = open(fn, O_RDONLY);
 	if (sbfd == -1)
 		psc_fatal("%s", fn);
-	sbm = mmap(NULL, sizeof(*sbm), PROT_READ | PROT_WRITE,
-	    MAP_SHARED, sbfd, 0);
-	if (sbm == MAP_FAILED)
+	sbm.sbm_sbs = mmap(NULL, sizeof(*sbm.sbm_sbs),
+	    PROT_READ | PROT_WRITE, MAP_SHARED, sbfd, 0);
+	if (sbm.sbm_sbs == MAP_FAILED)
 		psc_fatal("mmap");
 }
