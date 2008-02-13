@@ -7,8 +7,7 @@
 
 #include "slconfig.h"
 #include "sb.h"
-
-#define _PATH_SB "sb"
+#include "pathnames.h"
 
 struct slash_sb_mem	*sbm;
 int			 sbfd;

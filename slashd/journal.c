@@ -12,8 +12,7 @@
 #include "sb.h"
 #include "slconfig.h"
 #include "slashd.h"
-
-#define _PATH_SLJOURNAL "journal"
+#include "pathnames.h"
 
 #define SLJ_NENTS		200
 

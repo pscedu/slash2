@@ -20,8 +20,8 @@ main(int argc, char *argv[])
 {
 	const char *cfgfn;
 	char fn[PATH_MAX];
+	int fd, rc, c;
 	sl_resm_t *r;
-	int rc, c;
 
 	progname = argv[0];
 	cfgfn = _PATH_SLASHCONF;
@@ -42,6 +42,7 @@ main(int argc, char *argv[])
 	if (!r)
 		psc_fatalx("resource not found for this node");
 
+	/* main slash directory */
 	rc = snprintf(fn, sizeof(fn), "%s", r->resm_res->res_fsroot);
 	if (rc == -1)
 		psc_fatal("snprintf");
@@ -50,6 +51,7 @@ main(int argc, char *argv[])
 	if (mkdir(fn, 0755) == -1)
 		psc_fatal("mkdir %s", fn);
 
+	/* FID namespace */
 	rc = snprintf(fn, sizeof(fn), "%s/%s", r->resm_res->res_fsroot,
 	    _PATH_OBJROOT);
 	if (rc == -1)
@@ -59,6 +61,7 @@ main(int argc, char *argv[])
 	if (mkdir(fn, 0755) == -1)
 		psc_fatal("mkdir %s", fn);
 
+	/* real namespace */
 	rc = snprintf(fn, sizeof(fn), "%s/%s", r->resm_res->res_fsroot,
 	    _PATH_NS);
 	if (rc == -1)
@@ -67,6 +70,28 @@ main(int argc, char *argv[])
 		psc_fatalx("name too long");
 	if (mkdir(fn, 0755) == -1)
 		psc_fatal("mkdir %s", fn);
+
+	/* superblock */
+	rc = snprintf(fn, sizeof(fn), "%s/%s", r->resm_res->res_fsroot,
+	    _PATH_SB);
+	if (rc == -1)
+		psc_fatal("snprintf");
+	if (rc >= (int)sizeof(fn))
+		psc_fatalx("name too long");
+	if ((fd = open(fn, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1)
+		psc_fatal("open %s", fn);
+	close(fd);
+
+	/* journal */
+	rc = snprintf(fn, sizeof(fn), "%s/%s", r->resm_res->res_fsroot,
+	    _PATH_SLJOURNAL);
+	if (rc == -1)
+		psc_fatal("snprintf");
+	if (rc >= (int)sizeof(fn))
+		psc_fatalx("name too long");
+	if ((fd = open(fn, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1)
+		psc_fatal("open %s", fn);
+	close(fd);
 
 	exit(0);
 }
