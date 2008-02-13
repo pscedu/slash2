@@ -1,0 +1,36 @@
+.\" $Id$
+.Dd February 13, 2008
+.Dt NEWFS_SLMD 8
+.ds volume Pittsburgh Supercomputing Center
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm newfs_slmd
+.Nd slash file system creator
+.Sh SYNOPSIS
+.Nm newfs_slmd
+.Op Fl f Ar cfgfn
+.Sh DESCRIPTION
+The
+.Nm
+utility creates and initializes file systems for use with
+.Xr slashd 8 .
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl f Ar cfgfn
+Specify the path to the configuration file.
+By default,
+.Pa /etc/slash.conf
+is used.
+.El
+.Sh FILES
+.Bl -tag -width Pa
+.It Pa /etc/slash.conf
+default
+.Xr slashd 8
+configuration file
+.El
+.Sh SEE ALSO
+.Xr slash.conf 5 ,
+.Xr newfs_slio 8 ,
+.Xr slashd 8
