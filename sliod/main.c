@@ -48,7 +48,7 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 		psc_fatalx("unexpected LND start routine");
 
 	pt = PSCALLOC(sizeof(*pt));
-	pscthr_init(pt, SLIOTHRT_LND, sliolndthr_start, arg, "sllndthr%d",
+	pscthr_init(pt, SLIOTHRT_LND, sliolndthr_start, arg, "sliolndthr%d",
 	    tcpnal_instances - 1);
 	*t = pt->pscthr_pthread;
 }

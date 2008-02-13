@@ -271,8 +271,6 @@ libsl_str2restype(char *res_type)
 static inline void
 libsl_init(int server)
 {
-	extern sl_nodeh_t nodeInfo;
-
 	sl_resm_t  *resm;
 	sl_nodeh_t *z = &nodeInfo;
 

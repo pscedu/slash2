@@ -9,8 +9,7 @@
 
 #include "fid.h"
 #include "slconfig.h"
-
-#define _PATH_OBJROOT	"fids"
+#include "pathnames.h"
 
 /**
  * fid_makepath - build the pathname in the FID object root that corresponds

@@ -12,8 +12,7 @@
 #include "fid.h"
 #include "slconfig.h"
 #include "slashd.h"
-
-#define _PATH_NS	"ns"
+#include "pathnames.h"
 
 /*
  * translate_pathname - rewrite a pathname from a client to the location
