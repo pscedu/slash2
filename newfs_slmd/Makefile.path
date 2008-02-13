@@ -1,0 +1,4 @@
+# $Id$
+
+SLASH_BASE:=${SLASH_BASE}../
+include ${SLASH_BASE}/Makefile.path
