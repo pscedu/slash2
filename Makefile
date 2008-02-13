@@ -6,6 +6,8 @@ include Makefile.path
 include ${SLASHMK}
 
 SUBDIRS+=	mount_slash
+SUBDIRS+=	newfs_slio
+SUBDIRS+=	newfs_slmd
 SUBDIRS+=	slashd
 SUBDIRS+=	slctl
 SUBDIRS+=	slioctl
