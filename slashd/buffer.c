@@ -82,7 +82,7 @@ sl_buffer_put(struct sl_buffer *b, list_cache_t *lc)
 	else
 		lc_del(&b->slb_mgmt_lentry, b->slb_lc_owner);
 
-	lc_queue(&b->slb_mgmt_lentry, lc);
+	lc_queue(lc, &b->slb_mgmt_lentry);
 }
 
 /**

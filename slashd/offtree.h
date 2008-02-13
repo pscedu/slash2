@@ -1,6 +1,8 @@
 #ifndef OFFTREE_H
 #define OFFTREE_H 1
 
+#include <sys/types.h>
+
 #include "psc_types.h"
 #include "psc_util/atomic.h"
 #include "psc_ds/list.h"
@@ -69,11 +71,11 @@ struct offtree_memb {
 	u32                   oft_flags;
 	atomic_t              oft_ref;
 	struct offtree_memb  *oft_parent;
-	psclist_head          oft_lentry; /* chain in the slb    */
+	struct psclist_head   oft_lentry; /* chain in the slb    */
 	union norl {
 		struct offtree_iov   *oft_iov;
 		struct offtree_memb **oft_children;
-	};
+	}		      oft_norl;
 };
 
 /*

@@ -15,6 +15,7 @@ SRCS+=		metadir.c
 SRCS+=		rpc.c
 SRCS+=		sb.c
 SRCS+=		yconf.y
+SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
 SRCS+=		${PFL_BASE}/psc_util/init.c

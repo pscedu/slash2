@@ -1,23 +1,18 @@
 /* $Id$ */
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/stat.h>
 
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#include "psc_types.h"
 #include "psc_util/log.h"
-#include "psc_util/assert.h"
-#include "psc_util/mkdirs.h"
 
-#include "config.h"
 #include "fid.h"
 #include "slconfig.h"
 #include "slashd.h"
 
-#define _PATH_OBJROOT	"fids"
 #define _PATH_NS	"ns"
 
 /*
