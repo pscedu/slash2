@@ -9,6 +9,15 @@
 
 const char *progname;
 
+void
+spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
+{
+	int rc;
+
+	if ((rc = pthread_create(t, NULL, startf, arg)) != 0)
+		psc_fatalx("pthread_create: %s", strerror(rc));
+}
+
 __dead void
 usage(void)
 {
@@ -28,6 +37,13 @@ main(int argc, char *argv[])
 
 	progname = argv[0];
 	cfgfn = _PATH_SLASHCONF;
+
+	if (getenv("LNET_NETWORKS") == NULL)
+		psc_fatalx("please export LNET_NETWORKS");
+	if (getenv("TCPLND_SERVER") == NULL)
+		psc_fatalx("please export TCPLND_SERVER");
+	lnet_thrspawnf = spawn_lnet_thr;
+
 	while ((c = getopt(argc, argv, "f:")) != -1)
 		switch (c) {
 		case 'f':
@@ -39,6 +55,7 @@ main(int argc, char *argv[])
 	argc -= optind;
 	if (argc)
 		usage();
+
 	slashGetConfig(cfgfn);
 	libsl_init(PSC_SERVER);
 
