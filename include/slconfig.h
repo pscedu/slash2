@@ -53,22 +53,22 @@ typedef struct resource_profile {
 	lnet_nid_t         *res_nids;
 	u32                 res_nnids;
 	char		    res_fsroot[PATH_MAX];
-	struct psclist_head res_list;
+	struct psclist_head res_lentry;
 } sl_resource_t;
 
-#define INIT_RES(r) INIT_PSCLIST_HEAD(&(r)->res_list)
+#define INIT_RES(r) INIT_PSCLIST_ENTRY(&(r)->res_lentry)
 
 typedef struct site_profile {
 	char                site_name[SITE_NAME_MAX];
 	char               *site_desc;
 	u32                 site_id;
 	struct psclist_head site_resources;
-	struct psclist_head site_list;
+	struct psclist_head site_lentry;
 } sl_site_t;
 
 #define INIT_SITE(s)						\
 	do {							\
-		INIT_PSCLIST_HEAD(&(s)->site_list);		\
+		INIT_PSCLIST_ENTRY(&(s)->site_lentry);		\
 		INIT_PSCLIST_HEAD(&(s)->site_resources);	\
 	} while (0)
 
@@ -166,7 +166,7 @@ libsl_id2site(sl_ios_id_t id)
 
 	psc_assert(tmp <= ((1 << SL_SITE_BITS))-1);
 
-	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_list)
+	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry)
 		if (tmp == s->site_id)
 			return (s);
 	return (NULL);
@@ -186,7 +186,7 @@ libsl_id2res(sl_ios_id_t id)
 	 */
 	//sl_ios_id_t    rid = sl_glid_to_resid(id);
 
-	psclist_for_each_entry(r, &s->site_resources, res_list)
+	psclist_for_each_entry(r, &s->site_resources, res_lentry)
 		if (id == r->res_id)
 			return (r);
 	return (NULL);
@@ -204,10 +204,10 @@ libsl_str2id(const char *res_name)
 			   *p != '\0');
 		p++;
 	}
-	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_list) {
+	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry) {
 		if (!strncmp(s->site_name, p, SITE_NAME_MAX)) {
 			psclist_for_each_entry(r, &s->site_resources,
-					       res_list) {
+					       res_lentry) {
 				if (!strncmp(r->res_name, res_name,
 					     FULL_NAME_MAX))
 					return r->res_id;

@@ -152,8 +152,8 @@ config         : globals site_profiles
 	 * Config has been loaded, iterate through the sites'
 	 *  peer lists and resolve the names to numerical id's.
 	 */
-	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_list) {
-		psclist_for_each_entry(r, &s->site_resources, res_list) {
+	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry) {
+		psclist_for_each_entry(r, &s->site_resources, res_lentry) {
 			u32 i;
 
 			r->res_peers = PSCALLOC(sizeof(sl_ios_id_t) *
@@ -185,7 +185,7 @@ site_profiles  : site_profile            |
 
 site_profile   : site_profile_start site_defs SUBSECT_END
 {
-	psclist_add(&currentSite->site_list,
+	psclist_xadd(&currentSite->site_lentry,
 		    &currentConf->gconf_sites);
 	currentSite = PSCALLOC(sizeof(sl_site_t));
 	INIT_SITE(currentSite);
@@ -212,7 +212,7 @@ site_resource  : site_resource_start resource_def SUBSECT_END
 	currentRes->res_id = sl_global_id_build(currentSite->site_id,
 						currentRes->res_id,
 						currentRes->res_mds);
-	psclist_add(&currentRes->res_list,
+	psclist_xadd(&currentRes->res_lentry,
 		    &currentSite->site_resources);
 	currentRes = PSCALLOC(sizeof(sl_resource_t));
 	INIT_RES(currentRes);
