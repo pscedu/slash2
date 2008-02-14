@@ -10,6 +10,15 @@
 
 const char *progname;
 
+void
+spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
+{
+	int rc;
+
+	if ((rc = pthread_create(t, NULL, startf, arg)) != 0)
+		psc_fatalx("pthread_create: %s", strerror(rc));
+}
+
 __dead void
 usage(void)
 {
@@ -22,11 +31,15 @@ main(int argc, char *argv[])
 {
 	const char *cfgfn;
 	char fn[PATH_MAX];
-	sl_resm_t *r;
 	int rc, c;
 
 	progname = argv[0];
 	cfgfn = _PATH_SLASHCONF;
+
+	if (getenv("LNET_NETWORKS") == NULL)
+		psc_fatalx("please export LNET_NETWORKS");
+	lnet_thrspawnf = spawn_lnet_thr;
+
 	while ((c = getopt(argc, argv, "f:")) != -1)
 		switch (c) {
 		case 'f':
@@ -38,20 +51,12 @@ main(int argc, char *argv[])
 	argc -= optind;
 	if (argc)
 		usage();
+
 	slashGetConfig(cfgfn);
-	r = libsl_resm_lookup();
-	if (!r)
-		psc_fatalx("resource not found for this node");
+	libsl_init(PSC_SERVER);
 
-	rc = snprintf(fn, sizeof(fn), "%s", r->resm_res->res_fsroot);
-	if (rc == -1)
-		psc_fatal("snprintf");
-	if (rc >= (int)sizeof(fn))
-		psc_fatalx("name too long");
-	if (mkdir(fn, 0755) == -1)
-		psc_fatal("mkdir %s", fn);
-
-	rc = snprintf(fn, sizeof(fn), "%s/%s", r->resm_res->res_fsroot,
+	/* FID namespace */
+	rc = snprintf(fn, sizeof(fn), "%s/%s", nodeInfo.node_res->res_fsroot,
 	    _PATH_OBJROOT);
 	if (rc == -1)
 		psc_fatal("snprintf");
@@ -60,10 +65,4 @@ main(int argc, char *argv[])
 	if (mkdir(fn, 0755) == -1)
 		psc_fatal("mkdir %s", fn);
 	exit(0);
-}
-
-int
-lnet_localnids_get(__unusedx lnet_nid_t *nids, __unusedx size_t max)
-{
-	return (0);
 }
