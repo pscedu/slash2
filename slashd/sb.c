@@ -22,7 +22,7 @@ slash_superblock_init(void)
 	    nodeInfo.node_res->res_fsroot, _PATH_SB);
 	if (rc == -1)
 		psc_fatal("snprintf");
-	sbfd = open(fn, O_RDONLY);
+	sbfd = open(fn, O_RDWR);
 	if (sbfd == -1)
 		psc_fatal("%s", fn);
 	sbm.sbm_sbs = mmap(NULL, sizeof(*sbm.sbm_sbs),
