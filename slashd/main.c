@@ -85,11 +85,11 @@ main(int argc, char *argv[])
 			usage();
 		}
 	slashGetConfig(cfn);
+	libsl_init(PSC_SERVER);
 
 	slash_superblock_init();
 	slash_journal_init();
 
-	libsl_init(PSC_SERVER);
 	slmds_init();
 	slctlthr_main(sfn);
 	exit(0);
