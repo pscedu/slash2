@@ -162,22 +162,22 @@ static void
 sl_oftiov_bfree(struct offtree_iov *iov)
 {
 	struct sl_buffer *b = iov->oftiov_pri;
-	size_t sbit, ebit;
+	size_t sbit, nblks;
 	int locked=0;
 
 	/* sanity */
 	psc_assert(!((iov->oftiov_base / b->slb_base) % b->slb_blksz));
-	psc_assert(!(iov->oftiov_len % b->slb_blksz));
 
 	/* which bits? */	
-	sbit = (iov->oftiov_base - b->slb_base) / b->slb_blksz;
-	ebit = iov->oftiov_len / b->slb_blksz;
-	psc_assert((ebit-sbit) > 0);
+	sbit  = (iov->oftiov_base - b->slb_base) / b->slb_blksz;
+	nblks = iov->oftiov_nblks; 
+
+	psc_assert(nblks);
 
 	locked = reqlock(&b->slb_lock);
 	do {
-		vbitmap_unset(b->slb_inuse, sbit);
-	} while (ebit - (++sbit));
+		vbitmap_unset(b->slb_inuse, sbit++);
+	} while (nblks--);
 
 	/* is this buffer 'freeable'? */       
 	if (vbitmap_nfree(b->slb_inuse) == b->slb_nblks) {
@@ -236,9 +236,9 @@ sl_buffer_alloc_internal(struct sl_buffer *b, size_t nblks,
 		*iovs = realloc(*iovs, sizeof(struct offtree_iov *)*(*niovs));
 		psc_assert(*iovs);		
 		/* associate the slb with the offtree_iov */
-		*iovs[*niovs]->oftiov_pri  = b;
-		*iovs[*niovs]->oftiov_len  = b->slb_len  + (r->oftr_minsz*rc);
-		*iovs[*niovs]->oftiov_base = b->slb_base + (r->oftr_minsz*n);
+		*iovs[*niovs]->oftiov_pri   = b;
+		*iovs[*niovs]->oftiov_nblks = rc;
+		*iovs[*niovs]->oftiov_base  = b->slb_base + (r->oftr_minsz*n);
 		/* just to make sure */
 		psc_assert(b->slb_lc_owner == &slBufsPIN);
 	}

@@ -50,15 +50,26 @@ offtree_iovs_check(struct offtree_iov *iovs, int niovs)
 
 	for (i=0; i < niovs; i++) { 	
 		/* No empty iovs */
-		psc_assert(iovs[i]->oftiov_len);		
+		psc_assert(iovs[i]->oftiov_nblks);		
 		/* Ensure that floffs are increasing and non-overlapping */
 		if (iovs[i]->oftiov_floff)
 			psc_assert(iovs[i]->oftiov_floff >=
 				   (prevfloff + prevlen));
 		
 		prevfloff = iovs[i]->oftiov_floff;
-		prevlen   = iovs[i]->oftiov_len;	
+		//prevlen   = iovs[i]->oftiov_nblks * //XXX FIXME;	
 	}
+}
+
+static size_t
+offtree_calc_nblks(struct offtree_req *r)
+{
+	size_t nblks=0;
+
+	
+
+	
+	return (nblks);
 }
 
 /**
@@ -66,36 +77,81 @@ offtree_iovs_check(struct offtree_iov *iovs, int niovs)
  * @req: offtree request which contains root and member pointers.  
  * @d: tree depth 
  * @w: 'global' width (or horizontal position)
+ * Notes: returns the offtree_memb which is the head of the request.  The offtree_memb is tagged with OFT_REQPNDG so that it will not be freed.
  */
 int 
 offtree_requestroot_get(struct offtree_req *req, int d, int w)
 {
 	struct offtree_root *r = req->oftrq_root;
 	struct offtree_memb *m = req->oftrq_memb;
-	
+	struct offtree_iov  *iov;
+
+	DEBUG_OFFTREQ(PLL_TRACE, req, 
+		      "depth=%d width=%d, soff=%"ZLPX64" eoff=%"ZLPX64,
+		      d, w, OFT_STARTOFF(r, d, w), OFT_ENDOFF(r, d, w));
+       
 	psc_assert(OFT_REGIONSZ(r,d) >= req->oftrq_fllen + req->oftrq_floff);
 	
 	spinlock(&m->oft_lock);
 	if (ATTR_TEST(m->oft_flags, OFT_LEAF)) {
+		int have_buffer=0;
+		size_t nblks;
+
+		psc_assert((req->oftrq_floff >= OFT_STARTOFF(r, d, w)) &&
+			   (req->oftrq_floff + req->oftrq_fllen >= OFT_ENDOFF(r, d, w))); 
 		/* XXX not sure if both ALLOCPNDG and oft_ref are needed.. */
 		/* fence the uninitialized leaf */
-		ATTR_SET(m->oft_flags, OFT_ALLOCPNDG);
-		atomic_inc(&m->oft_ref);
+		ATTR_SET(m->oft_flags, OFT_REQPNDG);
+		iov = m->norl.oft_iov;
+
+		if (iov) {
+			/* do some simple sanity checks on the iov */
+			psc_assert((iov->oftiov_base) && (iov->oftiov_nblks) && 
+				   (iov->oftiov_fllen > 0));
+
+			have_buffer=1;
+
+			/* Already have the requested offset in the buffer */
+			if ((req->oftrq_floff >= iov->oftiov_floff) &&
+			    (req->oftrq_fllen <= iov->oftiov_fllen)) {
+				atomic_inc(&m->oft_ref);
+				goto done;
+			}		
+		}
+		//ATTR_SET(m->oft_flags, OFT_ALLOCPNDG);
+		//atomic_inc(&m->oft_ref);
+
+		/* Manage creation of children and preservation 
+		 * of attached buffer (if any) 
+		 */
+		ATTR_UNSET(m->oft_flags, OFT_LEAF);
+		ATTR_SET(m->oft_flags, OFT_NODE);
+
+		m->norl.oft_children = PSC_ALLOC(sizeof(struct offtree_memb **) * 
+						 r->oftr_width);
+		if (iov)
+			nblks = offtree_calc_overlap(req, iov);
+		else
+			nblks = offtree_calc_nblks(req);
+		
 		goto done;
 		
 	} else if (ATTR_TEST(m->oft_flags, OFT_NODE)) {
 		/* am I the root or is it one of my children? */
-		int schild = OFT_STARTCHILD(r, d, req->oftrq_floff);
-		int echild = OFT_ENDCHILD(r, d, req->oftrq_floff, req->oftrq_fllen);
+		int schild = oft_schild_get(req->oftrq_floff, r, d, w);
+		int echild = oft_echild_get(req->oftrq_floff, req->oftrq_fllen, r, d, w);
 		
 		if (schild == echild) {
-			if (!m->norl.oft_children[tmpw]) {
+			if (!m->norl.oft_children[schild]) {
 				/* allocate a child */
 				struct offtree_memb *tmemb = PSCALLOC(sizeof(*tmemb));
+
+				OFT_MEMB_INIT(tmemb);
 				/* fence the uninitialized leaf */
 				ATTR_SET(tmemb->oftm_flags, OFT_ALLOCPNDG);
 				m->norl.oft_children[schild] = tmemb;
 			}
+			/* increment for each child reference */
 			atomic_inc(&m->oft_ref);
 			freelock(&m->oft_lock);
 			/* request can be handled by one tree node */
@@ -111,9 +167,15 @@ offtree_requestroot_get(struct offtree_req *req, int d, int w)
 			 *  this node (m) is the request root 
 			 */
 			while (schild <= echild) {
-				if (m->norl.oft_children[schild])
+				if (m->norl.oft_children[schild]) {			
+					tmemb = m->norl.oft_children[schild];
+					spinlock(&tmemb->oft_lock);
+					ATTR_SET(tmemb->oftm_flags, OFT_REQPNDG);
 					continue;
+				}
 				tmemb = PSCALLOC(sizeof(*tmemb));
+				OFT_MEMB_INIT(tmemb);
+				/* increment for each child reference */
 				atomic_inc(&m->oft_ref);
 				ATTR_SET(tmemb->oftm_flags, OFT_ALLOCPNDG);
 				m->norl.oft_children[schild] = tmemb;
@@ -125,6 +187,7 @@ offtree_requestroot_get(struct offtree_req *req, int d, int w)
 		psc_fatalx("Invalid offtree node state %d", m->oft_flags);
 	
  done:
+	ATTR_SET(m->oft_flags, OFT_REQPNDG);
 	freelock(&m->oft_lock);
 	req->oftrq_depth = d;
 	req->oftrq_width = w;

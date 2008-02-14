@@ -14,8 +14,10 @@
 #define OFT_READPNDG   0x04
 #define OFT_WRITEPNDG  0x08
 #define OFT_ALLOCPNDG  0x10
-#define OFT_REAP       0x20
-#define OFT_FREEING    0x40
+#define OFT_REQPNDG    0x20
+#define OFT_REAP       0x40
+#define OFT_FREEING    0x80
+#define OFT_SPLITTING  0x100
 
 static inline size_t
 power(size_t base, size_t exp)
@@ -51,7 +53,7 @@ power(size_t base, size_t exp)
 
 struct offtree_iov {
 	void   *oftiov_base;  /* point to our data buffer  */
-	size_t  oftiov_len;   /* length of respective data */
+	size_t  oftiov_nblks; /* length of respective data */
 	off_t   oftiov_floff; /* file-logical offset       */
 	ssize_t oftiov_fllen; /* file-logical len          */
 	void   *oftiov_pri;   /* private data, in slash's case, point at the 
@@ -82,7 +84,7 @@ struct offtree_memb {
  * offtree_alloc_fn - allocate memory from slabs managed within the bmap.
  *  @size_t: number of blocks to allocate (void * pri) knows the block size
  *  @void *: opaque pointer (probably to the bmap)
-b *  @iovs *: array of iovecs allocated to handle the allocation (returned)
+ *  @iovs *: array of iovecs allocated to handle the allocation (returned)
  *  Return: the number of blocks allocated (and hence the number of iovec's in the array.
  */
 typedef int (*offtree_alloc_fn)(size_t, struct offtree_iov **, int *, void *);
@@ -109,10 +111,6 @@ struct offtree_req {
 	u8                   oftrq_width;	
 };
 
-#define OFT_STARTCHILD(r, d, o)  (o / OFT_REGIONSZ(r, d))
-#define OFT_ENDCHILD(r, d, o, l) ((((o+l) / OFT_REGIONSZ(r, d)) +	\
-				  (((o+l) % OFT_REGIONSZ(r, d)) ? 1:0)) - 1)
-
 static inline int 
 oft_schild_get(off_t o, struct offtree_root *r, int d, int abs_width)
 {
@@ -120,8 +118,8 @@ oft_schild_get(off_t o, struct offtree_root *r, int d, int abs_width)
 	
 	if (!((o >= soff) && (o < OFT_ENDOFF(r, d, abs_width))))
 		return (-1);
-		
-	return ((o - soff) / OFT_REGIONSZ(r, d));
+	
+	return ((o - soff) / OFT_REGIONSZ(r, (d+1)));
 }
 
 static inline int 
@@ -131,11 +129,22 @@ oft_echild_get(off_t o, size_t l, struct offtree_root *r, int d, int abs_width)
 	
 	if (!((o >= soff) && (o <= OFT_ENDOFF(r, d, abs_width))))
 		return (-1);
-		
+       	
 	return ((((o + l) - soff) / OFT_REGIONSZ(r, (d+1))) + 
-		(((o + l) % OFT_REGIONSZ(r, (d+1))) ? 1:0) - 1)
+		(((o + l) % OFT_REGIONSZ(r, (d+1))) ? 1:0) - 1);
 }
 
-
+#define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
+	do {								\
+		_psclog(__FILE__, __func__, __LINE__,			\
+			PSS_OTHER, level, 0,				\
+			" oftr@%p o:"LPX64" l:"LPX64" node:%p darray:%p"\
+			" root:%p op:%hh d:%hh w:%hh "fmt,	        \
+			oftr, oftr->oftrq_floff, oftr->oftrq_fllen,     \
+			oftr->oftrq_memb, oftr->oftrq_darray,	        \
+			oftr->oftrq_root, oftr->oftrq_op,               \
+			oftr->oftrq_depth, oftr->oftrq_width,           \
+			## __VA_ARGS__);  \
+	} while(0)
 
 #endif 
