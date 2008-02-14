@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#include <sys/param.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -32,7 +34,6 @@ main(int argc, char *argv[])
 	const char *cfgfn;
 	char fn[PATH_MAX];
 	int fd, rc, c;
-	sl_resm_t *r;
 	ssize_t sz;
 
 	progname = argv[0];
