@@ -81,11 +81,6 @@ peers {
         return PEERTAG;
 }
 
-fsroot {
-        psc_trace("FSROOT %s", yytext);
-        return FSROOT;
-}
-
 ifs {
         psc_trace("INTERFACETAG %s", yytext);
         return INTERFACETAG;      

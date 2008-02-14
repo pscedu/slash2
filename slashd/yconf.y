@@ -140,7 +140,6 @@ int cfgMode = SL_STRUCT_GLOBAL;
 %token INTERFACETAG
 %token QUOTEDS
 %token LNETTCP
-%token FSROOT
 
 %token NONE
 
@@ -229,16 +228,8 @@ site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
 	free($2);
 };
 
-fsroot         : FSROOT EQ PATHNAME END
-{
-	snprintf(currentRes->res_fsroot, sizeof(currentRes->res_fsroot),
-	    "%s", $2);
-	free($2);
-};
-
 resource_def   : statements interfacelist peerlist |
                  statements interfacelist          |
-                 statements fsroot		   |
                  statements peerlist
 {};
 
