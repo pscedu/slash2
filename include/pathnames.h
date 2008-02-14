@@ -10,3 +10,6 @@
 
 //#define _PATH_SLCTLSOCK	"/var/run/slashd.sock"
 #define _PATH_SLCTLSOCK "../slashd.sock"
+
+//#define _PATH_SLIOCTLSOCK "/var/run/sliod.sock"
+#define _PATH_SLIOCTLSOCK "../sliod.sock"

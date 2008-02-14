@@ -12,9 +12,9 @@
 #include "slconfig.h"
 #include "control.h"
 #include "rpc.h"
+#include "pathnames.h"
 
 #define SLIO_THRTBL_SIZE 19
-#define _PATH_SLIOCTLSOCK "../sliod.sock"
 
 extern void *nal_thread(void *);
 
