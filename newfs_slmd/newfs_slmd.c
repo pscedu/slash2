@@ -40,8 +40,6 @@ main(int argc, char *argv[])
 
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
-	if (getenv("TCPLND_SERVER") == NULL)
-		psc_fatalx("please export TCPLND_SERVER");
 	lnet_thrspawnf = spawn_lnet_thr;
 
 	while ((c = getopt(argc, argv, "f:")) != -1)
@@ -58,15 +56,6 @@ main(int argc, char *argv[])
 
 	slashGetConfig(cfgfn);
 	libsl_init(PSC_SERVER);
-
-	/* main slash directory */
-	rc = snprintf(fn, sizeof(fn), "%s", nodeInfo.node_res->res_fsroot);
-	if (rc == -1)
-		psc_fatal("snprintf");
-	if (rc >= (int)sizeof(fn))
-		psc_fatalx("name too long");
-	if (mkdir(fn, 0755) == -1)
-		psc_fatal("mkdir %s", fn);
 
 	/* FID namespace */
 	rc = snprintf(fn, sizeof(fn), "%s/%s", nodeInfo.node_res->res_fsroot,
