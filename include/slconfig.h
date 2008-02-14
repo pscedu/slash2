@@ -67,8 +67,10 @@ typedef struct site_profile {
 } sl_site_t;
 
 #define INIT_SITE(s)						\
-		INIT_PSCLIST_HEAD(&(s)->site_list) ;		\
-		INIT_PSCLIST_HEAD(&(s)->site_resources)
+	do {							\
+		INIT_PSCLIST_HEAD(&(s)->site_list);		\
+		INIT_PSCLIST_HEAD(&(s)->site_resources);	\
+	} while (0)
 
 typedef struct node_info_handle {
 	sl_resource_t      *node_res;
