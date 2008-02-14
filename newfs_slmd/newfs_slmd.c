@@ -40,13 +40,10 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 	slashGetConfig(cfgfn);
-
-	r = libsl_resm_lookup();
-	if (!r)
-		psc_fatalx("resource not found for this node");
+	libsl_init(PSC_SERVER);
 
 	/* main slash directory */
-	rc = snprintf(fn, sizeof(fn), "%s", r->resm_res->res_fsroot);
+	rc = snprintf(fn, sizeof(fn), "%s", nodeInfo.node_res->res_fsroot);
 	if (rc == -1)
 		psc_fatal("snprintf");
 	if (rc >= (int)sizeof(fn))
@@ -55,7 +52,7 @@ main(int argc, char *argv[])
 		psc_fatal("mkdir %s", fn);
 
 	/* FID namespace */
-	rc = snprintf(fn, sizeof(fn), "%s/%s", r->resm_res->res_fsroot,
+	rc = snprintf(fn, sizeof(fn), "%s/%s", nodeInfo.node_res->res_fsroot,
 	    _PATH_OBJROOT);
 	if (rc == -1)
 		psc_fatal("snprintf");
@@ -65,7 +62,7 @@ main(int argc, char *argv[])
 		psc_fatal("mkdir %s", fn);
 
 	/* real namespace */
-	rc = snprintf(fn, sizeof(fn), "%s/%s", r->resm_res->res_fsroot,
+	rc = snprintf(fn, sizeof(fn), "%s/%s", nodeInfo.node_res->res_fsroot,
 	    _PATH_NS);
 	if (rc == -1)
 		psc_fatal("snprintf");
@@ -75,7 +72,7 @@ main(int argc, char *argv[])
 		psc_fatal("mkdir %s", fn);
 
 	/* superblock */
-	rc = snprintf(fn, sizeof(fn), "%s/%s", r->resm_res->res_fsroot,
+	rc = snprintf(fn, sizeof(fn), "%s/%s", nodeInfo.node_res->res_fsroot,
 	    _PATH_SB);
 	if (rc == -1)
 		psc_fatal("snprintf");
@@ -92,7 +89,7 @@ main(int argc, char *argv[])
 	close(fd);
 
 	/* journal */
-	rc = snprintf(fn, sizeof(fn), "%s/%s", r->resm_res->res_fsroot,
+	rc = snprintf(fn, sizeof(fn), "%s/%s", nodeInfo.node_res->res_fsroot,
 	    _PATH_SLJOURNAL);
 	if (rc == -1)
 		psc_fatal("snprintf");
@@ -103,10 +100,4 @@ main(int argc, char *argv[])
 	close(fd);
 
 	exit(0);
-}
-
-int
-lnet_localnids_get(__unusedx lnet_nid_t *nids, __unusedx size_t max)
-{
-	return (0);
 }
