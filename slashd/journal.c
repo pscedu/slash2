@@ -33,13 +33,13 @@ slash_get_inum(void)
 {
 	struct slash_jent_inum *sji;
 
-	if (++sbm->sbm_inum % SLASH_INUM_ALLOC_SZ == 0) {
-		sji = pjournal_alloclog(&sbm->sbm_pj);
-		sji->sji_inum = sbm->sbm_inum;
-		pjournal_logwrite(&sbm->sbm_pj, SLASH_PJET_INUM, sji);
+	if (++sbm.sbm_sbs->sbs_inum % SLASH_INUM_ALLOC_SZ == 0) {
+		sji = pjournal_alloclog(&sbm.sbm_pj);
+		sji->sji_inum = sbm.sbm_sbs->sbs_inum;
+		pjournal_logwrite(&sbm.sbm_pj, SLASH_PJET_INUM, sji);
 		free(sji);
 	}
-	return (sbm->sbm_inum);
+	return (sbm.sbm_sbs->sbs_inum);
 }
 
 void
@@ -53,10 +53,10 @@ slash_journal_recover(void)
 	logenid = -1;
 	loslot = 0; /* gcc */
 	memset(&pjw, 0, sizeof(pjw));
-	pje = pjournal_alloclog(&sbm->sbm_pj);
+	pje = pjournal_alloclog(&sbm.sbm_pj);
 
 	/* Locate the start of the lowest gen ID. */
-	while ((rc = pjournal_walk(&sbm->sbm_pj, &pjw, pje)) == 0) {
+	while ((rc = pjournal_walk(&sbm.sbm_pj, &pjw, pje)) == 0) {
 		if ((int)(pje->pje_genid - logenid) < 0) {
 			/*
 			 * XXX if we wrapped, we should rescan from the
@@ -72,7 +72,7 @@ slash_journal_recover(void)
 	/* Walk starting from where the last unapplied entry was stored. */
 	memset(&pjw, 0, sizeof(pjw));
 	pjw.pjw_pos = pjw.pjw_stop = loslot;
-	while ((rc = pjournal_walk(&sbm->sbm_pj, &pjw, pje)) == 0) {
+	while ((rc = pjournal_walk(&sbm.sbm_pj, &pjw, pje)) == 0) {
 	}
 	if (rc == -1)
 		psc_fatal("pjournal_walk");
@@ -89,5 +89,5 @@ slash_journal_init(void)
 	    nodeInfo.node_res->res_fsroot, _PATH_SLJOURNAL);
 	if (rc == -1)
 		psc_fatal("snprintf");
-	pjournal_init(&sbm->sbm_pj, fn, 0, SLJ_NENTS, SLJ_ENTSIZE);
+	pjournal_init(&sbm.sbm_pj, fn, 0, SLJ_NENTS, SLJ_ENTSIZE);
 }

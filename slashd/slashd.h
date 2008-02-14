@@ -25,6 +25,6 @@ void		slmds_init(void);
 void		slash_journal_init(void);
 sl_inum_t	slash_get_inum(void);
 
-extern struct slash_sb_mem *sbm;
+extern struct slash_sb_mem sbm;
 
 #endif /* _SLASH_H_ */

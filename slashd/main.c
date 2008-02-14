@@ -12,9 +12,9 @@
 #include "slconfig.h"
 #include "control.h"
 #include "sb.h"
+#include "pathnames.h"
 
 #define SLASH_THRTBL_SIZE 19
-#define _PATH_SLCTLSOCK "../slashd.sock"
 
 extern void *nal_thread(void *);
 

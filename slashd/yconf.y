@@ -82,7 +82,7 @@ global_net_handler(char *net);
 	 TABENT_RES ("type",      SL_TYPE_INT,  INTSTR_MAX, res_type,    libsl_str2restype),
 	 TABENT_RES ("id",        SL_TYPE_INT,  INTSTR_MAX, res_id,      NULL),
 	 TABENT_RES ("mds",       SL_TYPE_BOOL, BOOL_MAX,   res_mds,     NULL),
-	 TABENT_RES ("fsroot",    SL_TYPE_STRP, PATH_MAX,   res_fsroot,  NULL),
+	 TABENT_RES ("fsroot",    SL_TYPE_STR,  PATH_MAX,   res_fsroot,  NULL),
 	 { NULL, 0, 0, 0, 0, 0, NULL }
 };
 
@@ -140,6 +140,7 @@ int cfgMode = SL_STRUCT_GLOBAL;
 %token INTERFACETAG
 %token QUOTEDS
 %token LNETTCP
+%token FSROOT
 
 %token NONE
 
@@ -228,8 +229,16 @@ site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
 	free($2);
 };
 
+fsroot         : FSROOT EQ PATHNAME END
+{
+	snprintf(currentRes->res_fsroot, sizeof(currentRes->res_fsroot),
+	    "%s", $2);
+	free($2);
+};
+
 resource_def   : statements interfacelist peerlist |
                  statements interfacelist          |
+                 statements fsroot		   |
                  statements peerlist
 {};
 
@@ -586,6 +595,7 @@ int run_yacc(const char *config_file)
 	INIT_RES(currentRes);
 	INIT_GCONF(&globalConfig);
 
+	cfg_lineno = 1;
 	yyparse();
 
 	fclose(yyin);
