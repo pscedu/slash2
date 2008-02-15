@@ -9,15 +9,18 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/waitq.h"
 
-#define OFT_NODE       0x01
-#define OFT_LEAF       0x02
-#define OFT_READPNDG   0x04
-#define OFT_WRITEPNDG  0x08
-#define OFT_ALLOCPNDG  0x10
-#define OFT_REQPNDG    0x20
-#define OFT_REAP       0x40
-#define OFT_FREEING    0x80
-#define OFT_SPLITTING  0x100
+enum oft_attributes {
+	OFT_NODE      = (1 << 0), /* Node not a leaf          */
+	OFT_LEAF      = (1 << 1), /* Leaf not a node          */
+	OFT_READPNDG  = (1 << 2), /* Read is about to occur   */
+	OFT_WRITEPNDG = (1 << 3), /* Write is about to occur  */
+	OFT_ALLOCPNDG = (1 << 4), /* Alloc is about to occur  */
+	OFT_REQPNDG   = (1 << 5), 
+	OFT_REAP      = (1 << 6), /* Process of being removed */
+	OFT_FREEING   = (1 << 7), /* Different from Reap?     */
+	OFT_SPLITTING = (1 << 8), /* Leaf becoming a parent   */
+	OFT_INVMEM    = (1 << 9)  /* Pages have not been 'filled in' yet */
+};
 
 static inline size_t
 power(size_t base, size_t exp)
@@ -28,7 +31,6 @@ power(size_t base, size_t exp)
 		p = p * base;
 	return p;
 }
-
 #define OFT_REGIONSZ(root, d)					\
 	((root)->oftr_mapsz / (power((root)->oftr_width, d)))
 
@@ -43,6 +45,10 @@ power(size_t base, size_t exp)
 
 #define OFT_ENDOFF(root, d, abs_width)				\
 	(OFT_REGIONSZ(root, d) * (abs_width + 1) - 1)
+
+/* Verify minsz is a power of 2 */
+#define OFT_BLKMASK_UPPER(root, o) ((r->oftr_minsz - 1) & o)
+#define OFT_BLKMASK_LOWER(root, o) ((~(r->oftr_minsz - 1)) & o)
 
 #ifndef MIN
 # define MIN(a,b) (((a)<(b)) ? (a): (b))
@@ -79,6 +85,33 @@ struct offtree_memb {
 		struct offtree_memb **oft_children;
 	}		      oft_norl;
 };
+
+#define OFTM_FLAG(field, str) (field ? str : "")
+#define DEBUG_OFTM_FLAGS(oft)					\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_NODE), "N"),		\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_LEAF), "L"),		\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_READPNDG), "R"),		\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_WRITEPNDG), "W"),		\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_ALLOCPNDG), "A"),		\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_REQPNDG), "r"),		\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_REAP), "p"),		\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_FREEING), "F"),		\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_SPLITTING), "S")
+
+#define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s"
+
+#define DEBUG_OFT(level, oft, fmt, ...)				\
+	do {								\
+		_psclog(__FILE__, __func__, __LINE__,			\
+			PSS_OTHER, level, 0,				\
+			" oft@%p p:%p r:%d "                            \
+			"fl:"REQ_OFTM_FLAGS_FMT" "fmt,	                \
+			oft, (oft)->oft_parent,                         \
+			atomic_read(&(oft)->oft_ref),                   \
+                        DEBUG_OFTM_FLAGS(oft),                          \
+			## __VA_ARGS__);  \
+	} while(0)
+
 
 /*
  * offtree_alloc_fn - allocate memory from slabs managed within the bmap.

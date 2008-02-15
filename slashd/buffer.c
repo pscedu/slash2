@@ -206,7 +206,10 @@ sl_buffer_alloc_internal(struct sl_buffer *b, size_t nblks,
 
 	locked = reqlock(&b->slb_lock);
 	/* this would mean that someone else is processing us 
-	 *   or granted the slb to another fcmh
+	 *   or granted the slb to another fcmh (in which case
+	 *   (tok != b->slb_lc_fcm)) - that would mean that the 
+	 *   slab had been freed and reassigned between now and 
+	 *   us removing it from the list.
 	 */
 	if (ATTR_TEST(b->slb_flags, SLB_FREEING) || 
 	    (tok != b->slb_lc_fcm))
@@ -238,7 +241,7 @@ sl_buffer_alloc_internal(struct sl_buffer *b, size_t nblks,
 		/* associate the slb with the offtree_iov */
 		*iovs[*niovs]->oftiov_pri   = b;
 		*iovs[*niovs]->oftiov_nblks = rc;
-		*iovs[*niovs]->oftiov_base  = b->slb_base + (r->oftr_minsz*n);
+		*iovs[*niovs]->oftiov_base  = b->slb_base + (b->slb_blksz * n);
 		/* just to make sure */
 		psc_assert(b->slb_lc_owner == &slBufsPIN);
 	}
@@ -295,7 +298,7 @@ sl_buffer_alloc(size_t nblks, struct offtree_iov **iovs, int *niovs, void *pri)
 			goto enomem;
 		
 		psc_assert(!(b->slb_len % r->oftr_minsz));
-		rblks -= sl_buffer_alloc_internal(b, rblks, iovs, niovs, 
+		rblks -= sl_buffer_alloc_internal(b, rblks, iovs, niovs,  
 						  &f->fcmh_buffer_cache);
 		if (!rblks) 
 			break;

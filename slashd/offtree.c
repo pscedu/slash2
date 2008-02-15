@@ -32,7 +32,7 @@ offtree_freeleaf(struct offtree_memb *oftm)
 	 *  the oftm can claim OFT_WRITEPNDG || READPNDG
 	 */
 	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_READPNDG));
-	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_WRITEPNDG));
+[	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_WRITEPNDG));
 	/* This state would mean that we're freeing pages 
 	 *  that do not exist here.. surely this is bad.
 	 */
@@ -61,14 +61,47 @@ offtree_iovs_check(struct offtree_iov *iovs, int niovs)
 	}
 }
 
+
 static size_t
-offtree_calc_nblks(struct offtree_req *r)
+offtree_calc_nblks(struct offtree_req *r, struct offtree_iov *v)
 {
-	size_t nblks=0;
+	size_t nblks;
+	off_t  o = req->oftrq_floff;
+	size_t l = req->oftrq_fllen;	
+	size_t m = req->oftrq_root->oftr_minsz;
 
-	
+	/* Align our offset with the minimum size */
+	o -= (o % m);
+	l += (o % m);
 
+	nblks = (l / m) + ((l % m) ? 1:0)
+
+	if (!v)
+		return (nblks);
 	
+	/* Calculate the overlap */
+	else {
+		/* Here's the 'physical' address of region start */
+		off_t  soff  = v->oftiov_floff - (v->oftiov_floff % m);
+		off_t  eoff  = v->oftiov_nblks * m;
+		size_t tblks = 0;
+
+		/* Otherwise we shouldn't be here */
+		psc_assert((o < soff) || (l > eoff));
+		
+		if (o < soff) {
+			/* Check my math */
+			psc_assert(!(soff - o) % m);
+			tblks = (soff - o) / m;
+		}
+		
+		if (l > eoff)
+			tblks += ((l - eoff) / m) + ((l % eoff) ? 1:0);
+		
+		psc_assert(tblks < nblks);
+		nblks = tblks;
+	}
+
 	return (nblks);
 }
 
@@ -80,25 +113,30 @@ offtree_calc_nblks(struct offtree_req *r)
  * Notes: returns the offtree_memb which is the head of the request.  The offtree_memb is tagged with OFT_REQPNDG so that it will not be freed.
  */
 int 
-offtree_requestroot_get(struct offtree_req *req, int d, int w)
+offtree_region_preprw(struct offtree_req *req, int d, int w)
 {
-	struct offtree_root *r = req->oftrq_root;
-	struct offtree_memb *m = req->oftrq_memb;
-	struct offtree_iov  *iov;
+	struct offtree_root  *r = req->oftrq_root;
+	struct offtree_memb  *m = req->oftrq_memb;
+	struct offtree_iov   *iov = NULL;
+	struct offtree_memb **c;
+	off_t  o = req->oftrq_floff;
+	size_t l = req->oftrq_fllen;
 
 	DEBUG_OFFTREQ(PLL_TRACE, req, 
 		      "depth=%d width=%d, soff=%"ZLPX64" eoff=%"ZLPX64,
 		      d, w, OFT_STARTOFF(r, d, w), OFT_ENDOFF(r, d, w));
        
-	psc_assert(OFT_REGIONSZ(r,d) >= req->oftrq_fllen + req->oftrq_floff);
+	psc_assert(OFT_REGIONSZ(r, d) >= req->oftrq_fllen + req->oftrq_floff);
 	
 	spinlock(&m->oft_lock);
 	if (ATTR_TEST(m->oft_flags, OFT_LEAF)) {
-		int have_buffer=0;
+		int    have_buffer=0;
 		size_t nblks;
+		size_t niovs=0;
+		struct offtree_iov *miovs;
 
-		psc_assert((req->oftrq_floff >= OFT_STARTOFF(r, d, w)) &&
-			   (req->oftrq_floff + req->oftrq_fllen >= OFT_ENDOFF(r, d, w))); 
+		psc_assert((o >= OFT_STARTOFF(r, d, w)) &&
+			   (o + l >= OFT_ENDOFF(r, d, w))); 
 		/* XXX not sure if both ALLOCPNDG and oft_ref are needed.. */
 		/* fence the uninitialized leaf */
 		ATTR_SET(m->oft_flags, OFT_REQPNDG);
@@ -106,46 +144,60 @@ offtree_requestroot_get(struct offtree_req *req, int d, int w)
 
 		if (iov) {
 			/* do some simple sanity checks on the iov */
-			psc_assert((iov->oftiov_base) && (iov->oftiov_nblks) && 
+			psc_assert((iov->oftiov_base && iov->oftiov_nblks) && 
 				   (iov->oftiov_fllen > 0));
 
 			have_buffer=1;
 
 			/* Already have the requested offset in the buffer */
-			if ((req->oftrq_floff >= iov->oftiov_floff) &&
-			    (req->oftrq_fllen <= iov->oftiov_fllen)) {
-				atomic_inc(&m->oft_ref);
+			if ((o >= iov->oftiov_floff) &&
+			    (l <= iov->oftiov_fllen)) {
+				//no use keeping refcnts here because 
+				//  io can be ongoing during split operations
+				//  and we'd have no way to push the ref
+				//  to the correct child node :(
+				//atomic_inc(&m->oft_ref);
 				goto done;
-			}		
+			} 
+			c = m->norl.oft_children;    
 		}
-		//ATTR_SET(m->oft_flags, OFT_ALLOCPNDG);
-		//atomic_inc(&m->oft_ref);
-
-		/* Manage creation of children and preservation 
-		 * of attached buffer (if any) 
+		/* hmm if have_buffer==1 then we must block other's 
+		 *  from allocating into this node / leaf
 		 */
-		ATTR_UNSET(m->oft_flags, OFT_LEAF);
-		ATTR_SET(m->oft_flags, OFT_NODE);
+		ATTR_SET(m->oft_flags, OFT_ALLOCPNDG);
+		nblks = offtree_calc_nblks(req, (iov ? iov : NULL));
 
-		m->norl.oft_children = PSC_ALLOC(sizeof(struct offtree_memb **) * 
-						 r->oftr_width);
-		if (iov)
-			nblks = offtree_calc_overlap(req, iov);
-		else
-			nblks = offtree_calc_nblks(req);
-		
-		goto done;
+		if ((r->oftr_alloc)(nblks, &miovs, &niovs, r) != nblks)
+			goto error;
+
+		if ((niovs + have_buffer) > 1) {
+			/* Manage creation of children and preservation 
+			 * of attached buffer (if any) 
+			 */
+			ATTR_SET(m->oft_flags, OFT_SPLITTING);
+			
+			c = PSC_ALLOC(sizeof(struct offtree_memb **) * 
+				      r->oftr_width);
+			
+			ATTR_UNSET(m->oft_flags, OFT_LEAF);
+			ATTR_SET(m->oft_flags, OFT_NODE);
+			/* Based on the iov's len and width, create the 
+			 *  necessary children recursively if needed 
+			 */
+			// make children here..
+		}
 		
 	} else if (ATTR_TEST(m->oft_flags, OFT_NODE)) {
 		/* am I the root or is it one of my children? */
-		int schild = oft_schild_get(req->oftrq_floff, r, d, w);
-		int echild = oft_echild_get(req->oftrq_floff, req->oftrq_fllen, r, d, w);
+		int schild = oft_schild_get(o, r, d, w);
+		int echild = oft_echild_get(o, l, r, d, w);
 		
 		if (schild == echild) {
 			if (!m->norl.oft_children[schild]) {
 				/* allocate a child */
-				struct offtree_memb *tmemb = PSCALLOC(sizeof(*tmemb));
+				struct offtree_memb *tmemb;
 
+				tmemb = PSCALLOC(sizeof(*tmemb));
 				OFT_MEMB_INIT(tmemb);
 				/* fence the uninitialized leaf */
 				ATTR_SET(tmemb->oftm_flags, OFT_ALLOCPNDG);
@@ -157,8 +209,8 @@ offtree_requestroot_get(struct offtree_req *req, int d, int w)
 			/* request can be handled by one tree node */
 			req->oftrq_memb = m->norl.oft_children[schild];
 
-			return (offtree_requestroot_get(req, d+1, 
-							(w * r->oftr_width) + schild));
+			return (offtree_region_prep(req, d+1, 
+						    (w * r->oftr_width) + schild));
 			
 		} else {
 			struct offtree_memb *tmemb;
@@ -167,7 +219,7 @@ offtree_requestroot_get(struct offtree_req *req, int d, int w)
 			 *  this node (m) is the request root 
 			 */
 			while (schild <= echild) {
-				if (m->norl.oft_children[schild]) {			
+				if (m->norl.oft_children[schild]) {
 					tmemb = m->norl.oft_children[schild];
 					spinlock(&tmemb->oft_lock);
 					ATTR_SET(tmemb->oftm_flags, OFT_REQPNDG);
@@ -192,6 +244,10 @@ offtree_requestroot_get(struct offtree_req *req, int d, int w)
 	req->oftrq_depth = d;
 	req->oftrq_width = w;
 	return (m);
+
+ error:
+	/* do the right node mgmt here.. */
+	return (-ENOMEM);
 }
 
 struct offtree_req *
