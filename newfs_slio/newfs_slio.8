@@ -1,19 +1,19 @@
 .\" $Id$
-.Dd February 13, 2008
-.Dt NEWFS_SLMD 8
+.Dd February 15, 2008
+.Dt NEWFS_SLIO 8
 .ds volume Pittsburgh Supercomputing Center
 .Os http://www.psc.edu/
 .Sh NAME
-.Nm newfs_slmd
-.Nd slashd metadata file system creator
+.Nm newfs_slio
+.Nd Slash sliod file system creator
 .Sh SYNOPSIS
-.Nm newfs_slmd
+.Nm newfs_slio
 .Op Fl f Ar cfgfn
 .Sh DESCRIPTION
 The
 .Nm
-utility creates and initializes metadata file systems for use with
-.Xr slashd 8 .
+utility creates and initializes file systems for use with
+.Xr sliod 8 .
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
@@ -30,5 +30,5 @@ default Slash configuration file
 .El
 .Sh SEE ALSO
 .Xr slash.conf 5 ,
-.Xr newfs_slio 8 ,
-.Xr slashd 8
+.Xr newfs_slmd 8 ,
+.Xr sliod 8
