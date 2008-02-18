@@ -67,10 +67,11 @@ struct offtree_iov {
 				region containing our base */
 };
 
-#define OFT_MEMB_INIT(m) {					\
+#define OFT_MEMB_INIT(m, p) {					\
 		psc_waitq_init(&(m)->oft_waitq);		\
 		LOCK_INIT(&(m)->oft_lock);			\
 		atomic_set(&(m)->oft_ref, 0);			\
+                (m)->oft_parent = p;                            \
 	}
 
 struct offtree_memb {

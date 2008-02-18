@@ -44,4 +44,11 @@ struct sl_buffer {
 	struct psclist_head slb_fcm_lentry;  /* chain to fidcm entry        */
 };
 
+
+struct sl_buffer_iovref {
+	off_t  slbir_off;
+	size_t slbir_nblks;
+	struct psclist_head slbir_lentry;
+};
+
 #endif

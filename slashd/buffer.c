@@ -144,14 +144,45 @@ sl_slab_reap(int nblks, token_t *tok) {
 }
 
 static struct sl_buffer *
-sl_slab_alloc(int nblks, token_t *tok) {
-	
+sl_slab_alloc(int nblks, token_t *tok) 
+{	
 	do {
 		
 		
 		sl_slab_reap(nblks, tok);
 	} while (nblks); 
 }
+
+
+void
+sl_oftiov_modref(struct offtree_iov *dest, struct offtree_iov *src, 
+		 int s, int n)
+{
+	struct sl_buffer        *b   = iov->oftiov_pri;
+	struct sl_buffer_iovref *new = PSC_ALLOC(sizeof(*r));
+	struct sl_buffer_iovref *old;
+	int f=0;
+
+	/* sanity */
+	psc_assert(!(src->oftiov_base % b->slb_blksz));
+	
+	spinlock(&b->slb_lock);
+	psclist_for_each_entry_safe(old, &b->slb_iov_list, slbir_lentry) {
+		if ((old->slbir_sblk  == (src->oftiov_base/slb_blksz)) && 
+		    (old->slbir_nblks == src->oftiov_nblks)) {
+			f = 1;
+			break;
+		}
+	}
+	/* To not find our tree reference would be bad */
+	psc_assert(f);
+	
+	
+	freelock(&b->slb_lock);
+	
+	
+}
+
 /**
  * sl_oftiov_bfree - free blocks from the slab buffer pointed to by the offtree_iov. 
  * @iov: the offtree_iov using the slab's blocks
@@ -167,7 +198,6 @@ sl_oftiov_bfree(struct offtree_iov *iov)
 
 	/* sanity */
 	psc_assert(!((iov->oftiov_base / b->slb_base) % b->slb_blksz));
-
 	/* which bits? */	
 	sbit  = (iov->oftiov_base - b->slb_base) / b->slb_blksz;
 	nblks = iov->oftiov_nblks; 
