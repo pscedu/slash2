@@ -10,13 +10,14 @@ offtree_node2leaf(struct offtree_memb *oftm)
 
 /**
  * offtree_leaf2node - must be called locked.
- *
+ * @oftm:  tree member to promote.
  */
 static void
 offtree_leaf2node(struct offtree_memb *oftm)
 {	
 	ATTR_SET(m->oft_flags, OFT_SPLITTING);	
-	m->norl.oft_children = PSC_ALLOC(sizeof(struct offtree_memb **) * r->oftr_width);	
+	m->norl.oft_children = PSC_ALLOC(sizeof(struct offtree_memb **) * 
+					 r->oftr_width);	
 	ATTR_UNSET(m->oft_flags, OFT_LEAF);
 	ATTR_SET(m->oft_flags, OFT_NODE);
 }
@@ -86,43 +87,66 @@ static size_t
 offtree_calc_nblks(struct offtree_req *r, struct offtree_iov *v)
 {
 	size_t nblks;
-	off_t  o = req->oftrq_floff;
+	off_t  nr_soffa = req->oftrq_floff;
 	size_t l = req->oftrq_fllen;	
 	size_t m = req->oftrq_root->oftr_minsz;
-
 	/* Align our offset with the minimum size, move
 	 *   the length back to the aligned offset
 	 */
-	o -= (o % m);
-	l += (o % m);
+	nr_soffa -= (nr_soffa % m);
+	l += (nr_soffa % m);
 
 	nblks = (l / m) + ((l % m) ? 1:0);
 
 	if (!v)
-		return (nblks);
-	
-	/* Calculate the overlap */
+		/* No existing iov to consider */
+		goto out;	
 	else {
+		/* Calculate overlap (there may be none) */
 		/* Align the soff to block boundary */
-		off_t  soff  = v->oftiov_floff - (v->oftiov_floff % m);
-		off_t  eoff  = v->oftiov_nblks * m;
-		size_t tblks = 0;
-
+		off_t  hb_soffa = v->oftiov_floff - (v->oftiov_floff % m);
+		off_t  hb_eoffa = (hb_soffa + (v->oftiov_nblks * m) - 1);
+		off_t  nr_eoffa = (o + (nblks * m) - 1);
+		size_t tblks    = 0;
+		
+		/* Sanity check */
+		psc_assert(!(hb_soffa % m) && !(hb_eoffa % m));
 		/* Otherwise we shouldn't be here */
-		psc_assert((o < soff) || (l > eoff));
+		psc_assert((nr_soffa < hb_soffa) || (nr_eoffa > hb_eoffa));
+		/* Unlikely, catch off-by-one */
+		psc_assert((nr_eoffa != hb_soffa) && (nr_soffa != hb_eoffa));
 		
-		if (o < soff) {
-			/* Check my math */
-			psc_assert(!((soff - o) % m));
-			tblks = (soff - o) / m;
+		if (nr_soffa < hb_soffa) {
+			/* Check my math - probably not needed */
+			psc_assert(!((hb_soffa - nr_soffa) % m));
+
+			if (nr_eoffa < hb_soffa)
+				/* Regions do not overlap */
+				goto out;
+			else {
+				/* Frontal overlap, also cover the case where
+				 *   the have_buffer is completely enveloped.
+				 */
+				tblks = (MIN(nr_eoffa, hb_eoffa) - hb_soffa) + 1;
+				tblks /= m;
+				psc_assert(!(tblks % m));
+				nblks -= tblks;
+				goto out;
+			}
+		} else { /* (nr_eoffa > hb_eoffa) */
+			if (nr_soffa > hb_eoffa)
+                                /* Regions do not overlap */
+				goto out;
+			else {
+				/* Rear overlap */
+				tblks = (((hb_eoffa + 1) - nr_soffa) / m);
+				psc_assert(!(tblks % m));
+				nblks -= tblks;
+				goto out;
+			}
 		}
-		
-		if (l > eoff)
-			tblks += ((l - eoff) / m) + ((l % eoff) ? 1:0);
-		
-		psc_assert(tblks < nblks);
-		nblks = tblks;
 	}
+ out:	
 	return (nblks);
 }
 
@@ -180,7 +204,7 @@ offtree_region_preprw(struct offtree_req *req, int d, int w)
 	size_t l = req->oftrq_fllen;
 	size_t rc;
 	size_t minsz = req->oftrq_root->oftr_minsz;
-	off_t  hb_soffa=0, hb_eoff=0, rg_soff, rg_eoff, nr_soffa, nr_eoffa;	
+	off_t  hb_soffa=0, hb_eoff=0, rg_soff, rg_eoff, nr_soffa, nr_eoffa; 
 	int    schild, echild, absw;
 	size_t tblks = 0;
 
@@ -208,22 +232,20 @@ offtree_region_preprw(struct offtree_req *req, int d, int w)
 		/* XXX not sure if both ALLOCPNDG and oft_ref are needed.. */
 		/* fence the uninitialized leaf */
 		ATTR_SET(m->oft_flags, OFT_REQPNDG);
-
+		/*
+		 * Check for the existence of an iov.  If present, the iov
+		 *  must be preserved through our offspring.
+		 */
 		iov = m->norl.oft_iov;
 		if (iov) {
 			/* Do some simple sanity checks on the iov */
 			psc_assert((iov->oftiov_base && iov->oftiov_nblks) && 
 				   (iov->oftiov_fllen > 0));
 
-			/* Our previous iov must be remapped properly, 
-			 *  align the offset.
-			 */
-			hb_soffa = iov->oftiov_floff - (iov->oftiov_floff % minsz);
-			hb_eoffa = iov->oftiov_nblks * minsz;
-
-			/* Already have the requested offset in the buffer */
+			/* Does the request vector fall in between? */
 			if ((o >= iov->oftiov_floff) &&
 			    (l <= iov->oftiov_fllen)) {
+				/* Already have the requested offset in the buffer */
 				//no use keeping refcnts here because 
 				//  io can be ongoing during split operations
 				//  and we'd have no way to push the ref
@@ -231,7 +253,14 @@ offtree_region_preprw(struct offtree_req *req, int d, int w)
 				// The owning slab will have to be pinned!
 				//atomic_inc(&m->oft_ref);
 				goto done;
-			} 
+			} else {
+				/* Our previous iov must be remapped properly, 
+				 *  align the offset.
+				 */
+				hb_soffa = iov->oftiov_floff - 
+					(iov->oftiov_floff % minsz);
+				hb_eoffa = iov->oftiov_nblks * minsz;
+			}
 		}
 		/* Block others from allocating into this node / leaf
 		 *  until we are done.
