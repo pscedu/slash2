@@ -4,6 +4,7 @@
 
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/cdefs.h"
 
 #include "rpc.h"
 #include "slashrpc.h"
@@ -24,7 +25,7 @@ slashrpc_export_get(struct pscrpc_export *exp)
 }
 
 void
-slashrpc_export_destroy(void *data)
+slashrpc_export_destroy(__unusedx void *data)
 {
 }
 

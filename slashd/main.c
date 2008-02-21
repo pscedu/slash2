@@ -90,6 +90,7 @@ main(int argc, char *argv[])
 	slash_superblock_init();
 	slash_journal_init();
 
+	slbe_init();
 	slmds_init();
 	slctlthr_main(sfn);
 	exit(0);

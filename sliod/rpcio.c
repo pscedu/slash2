@@ -28,62 +28,6 @@
 #define SLIO_REPSZ     128
 #define SLIO_SVCNAME   "slrpciothr"
 
-#define GENERIC_REPLY(rq, prc)								\
-	do {										\
-		struct slashrpc_generic_rep *_mp;					\
-		int _rc, _size;								\
-											\
-		_size = sizeof(*(_mp));							\
-		if (_size > SLIO_REPSZ)							\
-			psc_fatalx("reply size greater than max");			\
-		_rc = psc_pack_reply((rq), 1, &_size, NULL);				\
-		if (_rc) {								\
-			psc_assert(_rc == -ENOMEM);					\
-			psc_errorx("psc_pack_reply failed: %s", strerror(_rc));		\
-			return (_rc);							\
-		}									\
-		(_mp) = psc_msg_buf((rq)->rq_repmsg, 0, _size);				\
-		if ((_mp) == NULL) {							\
-			psc_errorx("connect repbody is null");				\
-			return (-ENOMEM);						\
-		}									\
-		(_mp)->rc = (prc);							\
-		return (0);								\
-	} while (0)
-
-#define GET_CUSTOM_REPLY_SZ(rq, mp, sz)							\
-	do {										\
-		int _rc, _size;								\
-											\
-		_size = sz;								\
-		if (_size > SLIO_REPSZ)							\
-			psc_fatalx("reply size greater than max");			\
-		_rc = psc_pack_reply((rq), 1, &_size, NULL);				\
-		if (_rc) {								\
-			psc_assert(_rc == -ENOMEM);					\
-			psc_errorx("psc_pack_reply failed: %s", strerror(_rc));		\
-			return (_rc);							\
-		}									\
-		(mp) = psc_msg_buf((rq)->rq_repmsg, 0, _size);				\
-		if ((mp) == NULL) {							\
-			psc_errorx("connect repbody is null");				\
-			return (-ENOMEM);						\
-		}									\
-	} while (0)
-
-#define GET_CUSTOM_REPLY(rq, mp) GET_CUSTOM_REPLY_SZ(rq, mp, sizeof(*(mp)))
-
-#define GET_GEN_REQ(rq, mq)								\
-	do {										\
-		(mq) = psc_msg_buf((rq)->rq_reqmsg, 0, sizeof(*(mq)));			\
-		if ((mq) == NULL) {							\
-			psc_warnx("reqbody is null");					\
-			GENERIC_REPLY((rq), -ENOMSG);					\
-		}									\
-	} while (0)
-
-psc_spinlock_t fsidlock = LOCK_INITIALIZER;
-
 int
 cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 {
@@ -315,45 +259,6 @@ slio_write(struct pscrpc_request *rq)
  done:
 	free(buf);
 	return (0);
-}
-
-int
-setcred(uid_t uid, gid_t gid, uid_t *myuid, gid_t *mygid)
-{
-	uid_t tuid;
-	gid_t tgid;
-
-	/* Set fs credentials */
-	spinlock(&fsidlock);
-	*myuid = getuid();
-	*mygid = getgid();
-
-	if ((tuid = setfsuid(uid)) != *myuid)
-		psc_fatal("invalid fsuid %u", tuid);
-	if (setfsuid(uid) != (int)uid) {
-		psc_error("setfsuid %u", uid);
-		return (-1);
-	}
-
-	if ((tgid = setfsgid(gid)) != *mygid)
-		psc_fatal("invalid fsgid %u", tgid);
-	if (setfsgid(gid) != (int)gid) {
-		psc_error("setfsgid %u", gid);
-		return (-1);
-	}
-	return (0);
-}
-
-void
-revokecred(uid_t uid, gid_t gid)
-{
-	setfsuid(uid);
-	if (setfsuid(uid) != (int)uid)
-		psc_fatal("setfsuid %d", uid);
-	setfsgid(gid);
-	if (setfsgid(gid) != (int)gid)
-		psc_fatal("setfsgid %d", gid);
-	freelock(&fsidlock);
 }
 
 int

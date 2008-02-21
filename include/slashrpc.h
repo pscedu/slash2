@@ -29,6 +29,60 @@
 #define SR_BE_VERSION		1
 #define SR_BE_MAGIC		0xaabbccddeeff0011ULL
 
+#define GENERIC_REPLY(rq, prc)								\
+	do {										\
+		struct slashrpc_generic_rep *_mp;					\
+		int _rc, _size;								\
+											\
+		_size = sizeof(*(_mp));							\
+		if (_size > (rq)->rq_rqbd->rqbd_service->srv_max_reply_size)		\
+			psc_fatalx("reply size greater than max");			\
+		_rc = psc_pack_reply((rq), 1, &_size, NULL);				\
+		if (_rc) {								\
+			psc_assert(_rc == -ENOMEM);					\
+			psc_errorx("psc_pack_reply failed: %s", strerror(_rc));		\
+			return (_rc);							\
+		}									\
+		(_mp) = psc_msg_buf((rq)->rq_repmsg, 0, _size);				\
+		if ((_mp) == NULL) {							\
+			psc_errorx("connect repbody is null");				\
+			return (-ENOMEM);						\
+		}									\
+		(_mp)->rc = (prc);							\
+		return (0);								\
+	} while (0)
+
+#define GET_CUSTOM_REPLY_SZ(rq, mp, sz)							\
+	do {										\
+		int _rc, _size;								\
+											\
+		_size = sz;								\
+		if (_size > (rq)->rq_rqbd->rqbd_service->srv_max_reply_size)		\
+			psc_fatalx("reply size greater than max");			\
+		_rc = psc_pack_reply((rq), 1, &_size, NULL);				\
+		if (_rc) {								\
+			psc_assert(_rc == -ENOMEM);					\
+			psc_errorx("psc_pack_reply failed: %s", strerror(_rc));		\
+			return (_rc);							\
+		}									\
+		(mp) = psc_msg_buf((rq)->rq_repmsg, 0, _size);				\
+		if ((mp) == NULL) {							\
+			psc_errorx("connect repbody is null");				\
+			return (-ENOMEM);						\
+		}									\
+	} while (0)
+
+#define GET_CUSTOM_REPLY(rq, mp) GET_CUSTOM_REPLY_SZ(rq, mp, sizeof(*(mp)))
+
+#define GET_GEN_REQ(rq, mq)								\
+	do {										\
+		(mq) = psc_msg_buf((rq)->rq_reqmsg, 0, sizeof(*(mq)));			\
+		if ((mq) == NULL) {							\
+			psc_warnx("reqbody is null");					\
+			GENERIC_REPLY((rq), -ENOMSG);					\
+		}									\
+	} while (0)
+
 /* Slash RPC message types. */
 #define SRMT_ACCESS	0
 #define SRMT_CHMOD	1

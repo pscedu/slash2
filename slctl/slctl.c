@@ -371,7 +371,7 @@ prscm(const struct slctlmsghdr *scmh, const void *scm)
 		switch (sst->sst_thrtype) {
 		case SLTHRT_CTL:
 		case SLTHRT_RPCMDS:
-		case SLTHRT_RPCIO:
+		case SLTHRT_RPCBE:
 			type = sst->sst_thrtype;
 			break;
 		}
@@ -391,7 +391,7 @@ prscm(const struct slctlmsghdr *scmh, const void *scm)
 				     thread_namelen(), "thread",
 				     "#open", "#close", "#stat");
 				break;
-			case SLTHRT_RPCIO:
+			case SLTHRT_RPCBE:
 				len += printf(" %-*s %8s", thread_namelen(),
 				    "thread", "#write");
 				break;

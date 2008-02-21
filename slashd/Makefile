@@ -9,6 +9,7 @@ SRCS+=		dircache.c
 SRCS+=		fidlink.c
 SRCS+=		journal.c
 SRCS+=		lconf.l
+SRCS+=		backend.c
 SRCS+=		main.c
 SRCS+=		mds.c
 SRCS+=		metadir.c

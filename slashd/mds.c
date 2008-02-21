@@ -28,60 +28,6 @@
 #define MDS_REPPORTAL SR_MDS_REP_PORTAL
 #define MDS_SVCNAME   "slrpcmdsthr"
 
-#define GENERIC_REPLY(rq, prc)								\
-	do {										\
-		struct slashrpc_generic_rep *_mp;					\
-		int _rc, _size;								\
-											\
-		_size = sizeof(*(_mp));							\
-		if (_size > MDS_REPSZ)							\
-			psc_fatalx("reply size greater than max");			\
-		_rc = psc_pack_reply((rq), 1, &_size, NULL);				\
-		if (_rc) {								\
-			psc_assert(_rc == -ENOMEM);					\
-			psc_errorx("psc_pack_reply failed: %s", strerror(_rc));		\
-			return (_rc);							\
-		}									\
-		(_mp) = psc_msg_buf((rq)->rq_repmsg, 0, _size);				\
-		if ((_mp) == NULL) {							\
-			psc_errorx("connect repbody is null");				\
-			return (-ENOMEM);						\
-		}									\
-		(_mp)->rc = (prc);							\
-		return (0);								\
-	} while (0)
-
-#define GET_CUSTOM_REPLY_SZ(rq, mp, sz)							\
-	do {										\
-		int _rc, _size;								\
-											\
-		_size = sz;								\
-		if (_size > MDS_REPSZ)							\
-			psc_fatalx("reply size greater than max");			\
-		_rc = psc_pack_reply((rq), 1, &_size, NULL);				\
-		if (_rc) {								\
-			psc_assert(_rc == -ENOMEM);					\
-			psc_errorx("psc_pack_reply failed: %s", strerror(_rc));		\
-			return (_rc);							\
-		}									\
-		(mp) = psc_msg_buf((rq)->rq_repmsg, 0, _size);				\
-		if ((mp) == NULL) {							\
-			psc_errorx("connect repbody is null");				\
-			return (-ENOMEM);						\
-		}									\
-	} while (0)
-
-#define GET_CUSTOM_REPLY(rq, mp) GET_CUSTOM_REPLY_SZ(rq, mp, sizeof(*(mp)))
-
-#define GET_GEN_REQ(rq, mq)								\
-	do {										\
-		(mq) = psc_msg_buf((rq)->rq_reqmsg, 0, sizeof(*(mq)));			\
-		if ((mq) == NULL) {							\
-			psc_warnx("reqbody is null");					\
-			GENERIC_REPLY((rq), -ENOMSG);					\
-		}									\
-	} while (0)
-
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
 int
@@ -641,44 +587,6 @@ slmds_utimes(struct pscrpc_request *rq)
 }
 
 int
-slbe_getfid(struct pscrpc_request *rq)
-{
-	struct slashrpc_export *sexp, qexp;
-	struct slashrpc_getfid_req *mq;
-	struct slashrpc_getfid_rep *mp;
-	struct pscrpc_connection conn;
-	struct cfdent *cfdent, qcfd;
-	struct pscrpc_export exp;
-
-	GET_CUSTOM_REPLY(rq, mp);
-	mp->rc = 0;
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		mp->rc = -ENOMSG;
-	else {
-		exp.exp_connection = &conn;
-		exp.exp_connection->c_peer.nid = mq->nid;
-		exp.exp_connection->c_peer.pid = mq->pid;
-		qexp.exp = &exp;
-
-		spinlock(&sexptreelock);
-		sexp = SPLAY_FIND(sexptree, &sexptree, &qexp);
-		if (sexp) {
-			qcfd.cfd = mq->cfd;
-			spinlock(&sexp->exp->exp_lock);
-			cfdent = SPLAY_FIND(cfdtree, &sexp->cfdtree, &qcfd);
-			if (cfdent)
-				COPYFID(&mp->fid, &cfdent->fid);
-			else
-				mp->rc = -ENOENT;
-			freelock(&sexp->exp->exp_lock);
-		} else
-			mp->rc = -ENOENT;
-		freelock(&sexptreelock);
-	}
-	return (0);
-}
-
-int
 setcred(uid_t uid, gid_t gid, uid_t *myuid, gid_t *mygid)
 {
 	uid_t tuid;
@@ -818,9 +726,6 @@ slmds_svc_handler(struct pscrpc_request *req)
 		break;
 	case SRMT_UTIMES:
 		rc = slmds_utimes(req);
-		break;
-	case SRMT_GETFID:
-		rc = slbe_getfid(req);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", req->rq_reqmsg->opc);

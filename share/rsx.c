@@ -1,5 +1,9 @@
 /* $Id$ */
 
+/*
+ * Routines for handling simple RPC message exchanges.
+ */
+
 #include <errno.h>
 #include <stdio.h>
 
