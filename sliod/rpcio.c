@@ -24,8 +24,8 @@
 
 #define SLIO_NTHREADS  8
 #define SLIO_NBUFS     1024
-#define SLIO_BUFSZ     (4096+256)
-#define SLIO_REPSZ     128
+#define SLIO_BUFSZ     256
+#define SLIO_REPSZ     256
 #define SLIO_SVCNAME   "slrpciothr"
 
 int
