@@ -153,12 +153,18 @@ sl_slab_alloc(int nblks, token_t *tok)
 	} while (nblks); 
 }
 
+void
+sl_oftiov_addref(struct offtree_iov *src)
+{
+
+}
 
 void
-sl_oftiov_modref(struct offtree_iov *dest, struct offtree_iov *src, 
+sl_oftiov_modref(struct offtree_iov *new, struct offtree_iov *cur, 
 		 int s, int n)
 {
-	struct sl_buffer        *b   = iov->oftiov_pri;
+	struct sl_buffer        *nb   = new->oftiov_pri;
+	struct sl_buffer        *cb   = cur->oftiov_pri;
 	struct sl_buffer_iovref *new = PSC_ALLOC(sizeof(*r));
 	struct sl_buffer_iovref *old;
 	int f=0;
@@ -248,7 +254,8 @@ sl_buffer_alloc_internal(struct sl_buffer *b, size_t nblks,
 	for (blks=0; (blks <= nblks) && !SLB_FULL(b);) {
 		psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREE));
 		if (ATTR_TEST(b->slb_flags, SLB_LRU)) {
-			/* note that the LRU and FREE managers MUST use
+			/* Move from LRU to PINNED.
+			 * Note: the LRU and FREE managers MUST use
 			 *  the listcache api for removing entries
 			 *  otherwise there will be race conditions
 			 */

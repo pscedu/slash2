@@ -43,7 +43,7 @@ power(size_t base, size_t exp)
 #define OFT_STARTOFF(root, d, abs_width)	\
 	(OFT_REGIONSZ(root, d) * abs_width)
 
-#define OFT_ENDOFF(root, d, abs_width)				\
+#define OFT_ENDOFF(root, d, abs_width)			\
 	(OFT_REGIONSZ(root, d) * (abs_width + 1) - 1)
 
 /* Verify minsz is a power of 2 */
@@ -57,11 +57,19 @@ power(size_t base, size_t exp)
 # define MAX(a,b) (((a)>(b)) ? (a): (b))
 #end
 
+enum oft_iov_flags {
+	OFTIOV_DATARDY   = (1 << 0), /* Buffer contains no data       */
+	OFTIOV_FAULTING  = (1 << 1), /* Buffer is being retrieved    */
+	OFTIOV_COLLISION = (1 << 2), /* Collision ops must take place */
+	OFTIOV_IOPNDG    = (1 << 3)  /* About to do I/o */
+};
+
 struct offtree_iov {
+	int     oftiov_flags;
 	void   *oftiov_base;  /* point to our data buffer  */
-	size_t  oftiov_nblks; /* length of respective data */
-	off_t   oftiov_floff; /* file-logical offset       */
-	ssize_t oftiov_fllen; /* file-logical len          */
+	off_t   oftiov_off;   /* data offset               */
+	size_t  oftiov_blksz;
+	size_t  oftiov_nblks; /* length of respective data */	
 	void   *oftiov_pri;   /* private data, in slash's case, point at the 
 				sl_buffer structure which manages the 
 				region containing our base */
@@ -88,7 +96,7 @@ struct offtree_memb {
 };
 
 #define OFTM_FLAG(field, str) (field ? str : "")
-#define DEBUG_OFTM_FLAGS(oft)					\
+#define DEBUG_OFTM_FLAGS(oft)						\
 	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_NODE), "N"),		\
 	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_LEAF), "L"),		\
 	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_READPNDG), "R"),		\
@@ -101,16 +109,28 @@ struct offtree_memb {
 
 #define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s"
 
-#define DEBUG_OFT(level, oft, fmt, ...)				\
+#define DEBUG_OFT(level, oft, fmt, ...)					\
 	do {								\
-		_psclog(__FILE__, __func__, __LINE__,			\
-			PSS_OTHER, level, 0,				\
-			" oft@%p p:%p r:%d "                            \
-			"fl:"REQ_OFTM_FLAGS_FMT" "fmt,	                \
-			oft, (oft)->oft_parent,                         \
-			atomic_read(&(oft)->oft_ref),                   \
-                        DEBUG_OFTM_FLAGS(oft),                          \
-			## __VA_ARGS__);  \
+		if (ATTR_TEST((oft)->oft_flags, OFT_LEAF)) {		\
+			_psclog(__FILE__, __func__, __LINE__,		\
+				PSS_OTHER, level, 0,			\
+				" oft@%p p:%p ref:%d"			\
+				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
+				oft,					\
+				(oft)->oft_parent,			\
+				atomic_read(&(oft)->oft_ref), 		\
+				DEBUG_OFTM_FLAGS(oft),			\
+				## __VA_ARGS__);			\
+		} else {						\
+			_psclog(__FILE__, __func__, __LINE__,		\
+				PSS_OTHER, level, 0,			\
+				" oft@%p p:%p r:%d "			\
+				"fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
+				oft, (oft)->oft_parent,			\
+				atomic_read(&(oft)->oft_ref),		\
+				DEBUG_OFTM_FLAGS(oft),			\
+				## __VA_ARGS__);			\
+		}							\
 	} while(0)
 
 
@@ -138,34 +158,23 @@ struct offtree_req {
 	struct offtree_root *oftrq_root;
 	struct offtree_memb *oftrq_memb;
 	struct dynarray     *oftrq_darray;
-	off_t                oftrq_floff; /* file-logical offset       */
-	ssize_t              oftrq_fllen; /* file-logical len          */
+	off_t                oftrq_off;   /* aligned, file-logical offset   */
+	ssize_t              oftrq_nblks; /* number of blocks requested     */
 	u8                   oftrq_op;
 	u8                   oftrq_depth;
 	u8                   oftrq_width;	
 };
 
 static inline int 
-oft_schild_get(off_t o, struct offtree_root *r, int d, int abs_width)
+oft_child_get(off_t o, struct offtree_root *r, int d, int abs_width)
 {
 	off_t soff = OFT_STARTOFF(r, d, abs_width);
 	
+	/* ensure that the parent is responsible for the given range */
 	if (!((o >= soff) && (o < OFT_ENDOFF(r, d, abs_width))))
-		return (-1);
+		abort();
 	
 	return ((o - soff) / OFT_REGIONSZ(r, (d+1)));
-}
-
-static inline int 
-oft_echild_get(off_t o, size_t l, struct offtree_root *r, int d, int abs_width)
-{
-	off_t soff = OFT_STARTOFF(r, d, abs_width);
-	
-	if (!((o >= soff) && (o <= OFT_ENDOFF(r, d, abs_width))))
-		return (-1);
-       	
-	return ((((o + l) - soff) / OFT_REGIONSZ(r, (d+1))) + 
-		(((o + l) % OFT_REGIONSZ(r, (d+1))) ? 1:0) - 1);
 }
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
@@ -174,11 +183,33 @@ oft_echild_get(off_t o, size_t l, struct offtree_root *r, int d, int abs_width)
 			PSS_OTHER, level, 0,				\
 			" oftr@%p o:"LPX64" l:"LPX64" node:%p darray:%p"\
 			" root:%p op:%hh d:%hh w:%hh "fmt,	        \
-			oftr, oftr->oftrq_floff, oftr->oftrq_fllen,     \
+			oftr, oftr->oftrq_off, oftr->oftrq_nblks,	\
 			oftr->oftrq_memb, oftr->oftrq_darray,	        \
 			oftr->oftrq_root, oftr->oftrq_op,               \
 			oftr->oftrq_depth, oftr->oftrq_width,           \
 			## __VA_ARGS__);  \
+	} while(0)
+
+
+#define OFFTIOV_FLAG(field, str) (field ? str : "")
+#define DEBUG_OFFTIOV_FLAGS(iov)					\
+	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_DATARDY),  "d"),	\
+	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_FAULTING), "f"),	\
+	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_COLLISION),"p"),     \
+	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_IOPNDG),   "i")
+
+#define OFFTIOV_FLAGS_FMT "%s%s%s%s"
+
+#define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
+	do {								\
+		_psclog(__FILE__, __func__, __LINE__,			\
+			PSS_OTHER, level, 0,				\
+			" oftiov@%p b:%p o:"LPX64" l:"LPX64 "bsz:"LPX64 \
+			"priv:%p fl:"OFFTIOV_FLAGS_FMT" "fmt,		\
+			iov, iov->oftiov_base, iov->oftiov_off,		\
+			iov->oftiov_nblks, iov->oftiov_blksz,	        \
+			iov->oftiov_pri, DEBUG_OFFTIOV_FLAGS(iov),[5~	\
+			## __VA_ARGS__);				\
 	} while(0)
 
 #endif 

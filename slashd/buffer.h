@@ -46,9 +46,10 @@ struct sl_buffer {
 
 
 struct sl_buffer_iovref {
-	off_t  slbir_off;
-	size_t slbir_nblks;
-	struct psclist_head slbir_lentry;
+	void  *slbir_base;                /* base pointer val (within slb) */
+	void  *slbir_pri;                 /* backpointer to oftmemb        */
+	size_t slbir_nblks;               /* allocation size               */
+	struct psclist_head slbir_lentry; /* chain to slb                  */
 };
 
 #endif
