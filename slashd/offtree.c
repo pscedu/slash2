@@ -320,20 +320,21 @@ offtree_newleaf(struct offtree_memb *parent, int pos)
 	return new;
 }
 
-
+/*
+ * offtree_region_preprw_leaf_locked - the final allocation call into the tree, it may recurse if the allocation is fragmented or there was an existing buffer that needs to be remapped (or both).  What's currently here needs to be modified  so that the allocation is handled by the caller not in here.
+ *
+ */
 int
 offtree_region_preprw_leaf_locked(struct offtree_req *req, int d, int w)
 {
 	struct offtree_root  *r = req->oftrq_root;
 	struct offtree_memb  *m = req->oftrq_memb;
 	struct offtree_iov   *iov = NULL;
-
 	off_t  rg_soff  = OFT_STARTOFF(r, d, w);
 	off_t  rg_eoff  = OFT_ENDOFF(r, d, w);
 	off_t  nr_soffa = req->oftrq_off;
 	off_t  nr_eoffa = (nr_soffa + (req->oftrq_nblks * minsz)) - 1;
 	off_t  i_offa;
-
 	int    j=0, iovoff=0, sblk=0;
 	size_t tblks, nblks, front, back, niovs=0;
 	struct offtree_iov *miovs;
@@ -495,63 +496,67 @@ offtree_region_preprw(struct offtree_req *req, int d, int w)
 	psc_assert((nr_soffa >= rg_soff) && (nr_eoffa <= rg_eoff));
 	
 	spinlock(&m->oft_lock);
-	
-	if (ATTR_TEST(m->oft_flags, OFT_LEAF)) {
-		ATTR_SET(m->oft_flags, OFT_REQPNDG);		
-		offtree_region_preprw_leaf(req, d, w);
-		
-	} else if (ATTR_TEST(m->oft_flags, OFT_NODE)) {
-		/* am I the root or is it one of my children? */
-		int schild = oft_schild_get(o, r, d, w);
-		int echild = oft_echild_get(o, l, r, d, w);
-		
-		if (schild == echild) {
-			struct offtree_memb *new = m->norl.oft_children[schild];
 
-			if (!new) 
-				/* guaranteed to execute the "if OFT_LEAF"
-				 *  block in the next recursion 
-				 */
-				new = offtree_newleaf(m, schild);
-			
-			req->oftrq_memb = new;
-
-			// XXX THIS may need to be done..if so other things will 
-			//  have to change above.
-			//spinlock(new->oft_lock);
-			freelock(&m->oft_lock);
-			/* request can be handled by one tree node so recurse. */
-			return (offtree_region_preprw(req, d+1, 
-						      ((w * r->oftr_width) + schild)));
-			
-		} else {
-			struct offtree_req   myreq;
-			struct offtree_memb *tmemb;
-			
-			memcpy(&myreq, req, (sizeof(*req)));
-			/* the requested range straddles multiple children so 
-			 *  my node (m) is the request root 
-			 */
-			psc_assert(echild > schild);
-			while (schild <= echild) {
-				/* Ensure all necessary children have been allocated
-				 */
-				if (!(tmemb = m->norl.oft_children[schild])) {
-					tmemb = PSCALLOC(sizeof(*tmemb));
-					OFT_MEMB_INIT(tmemb);
-					/* increment for each child reference */
-					atomic_inc(&m->oft_ref);
-					//ATTR_SET(tmemb->oftm_flags, OFT_ALLOCPNDG);
-					m->norl.oft_children[schild] = tmemb;
-				}
-				//spinlock(&tmemb->oft_lock);
-				ATTR_SET(tmemb->oftm_flags, OFT_REQPNDG);	
-				offtree_region_preprw(req, d+1, ((w * r->oftr_width) + schild));
-			}
-			goto done;
-		}		
-	} else 
+	if (!(ATTR_TEST(m->oft_flags, OFT_LEAF) ||
+	      ATTR_TEST(m->oft_flags, OFT_NODE)))
 		psc_fatalx("Invalid offtree node state %d", m->oft_flags);
+
+	if (ATTR_TEST(m->oft_flags, OFT_LEAF)) {
+		ATTR_SET(m->oft_flags, OFT_REQPNDG);	
+		offtree_region_preprw_leaf_locked(req, d, w);		
+	} 
+	
+	//else if (ATTR_TEST(m->oft_flags, OFT_NODE)) {
+	/* am I the root or is it one of my children? */
+	schild = oft_schild_get(o, r, d, w);
+	echild = oft_echild_get(o, l, r, d, w);
+	
+	if (schild == echild) {
+		struct offtree_memb *new = m->norl.oft_children[schild];
+		
+		if (!new) 
+			/* guaranteed to execute the "if OFT_LEAF"
+			 *  block in the next recursion 
+			 */
+			new = offtree_newleaf(m, schild);
+		
+		req->oftrq_memb = new;
+		
+		// XXX THIS may need to be done..if so other things will 
+		//  have to change above.
+		//spinlock(new->oft_lock);
+		freelock(&m->oft_lock);
+		/* request can be handled by one tree node so recurse. */
+		return (offtree_region_preprw(req, d+1, 
+					      ((w * r->oftr_width) + schild)));
+			
+	} else {
+		struct offtree_req   myreq;
+		struct offtree_memb *tmemb;
+		
+		memcpy(&myreq, req, (sizeof(*req)));
+		/* the requested range straddles multiple children so 
+		 *  my node (m) is the request root 
+		 */
+		psc_assert(echild > schild);
+		while (schild <= echild) {
+			/* Ensure all necessary children have been allocated
+			 */
+			if (!(tmemb = m->norl.oft_children[schild])) {
+				tmemb = PSCALLOC(sizeof(*tmemb));
+				OFT_MEMB_INIT(tmemb);
+				/* increment for each child reference */
+				atomic_inc(&m->oft_ref);
+				//ATTR_SET(tmemb->oftm_flags, OFT_ALLOCPNDG);
+				m->norl.oft_children[schild] = tmemb;
+			}
+			//spinlock(&tmemb->oft_lock);
+			ATTR_SET(tmemb->oftm_flags, OFT_REQPNDG);	
+			offtree_region_preprw(req, d+1, ((w * r->oftr_width) + schild));
+		}
+		goto done;
+	}		
+
 	
  done:
 	// The owning slabs will have to be pinned!
