@@ -160,7 +160,7 @@ sl_oftiov_addref(struct offtree_iov *src)
 }
 
 void
-sl_oftiov_modref(struct offtree_iov *new, struct offtree_iov *cur, 
+sl_oftiov_modref(struct offtree_iov *cur, struct offtree_iov *new, 
 		 int s, int n)
 {
 	struct sl_buffer        *nb   = new->oftiov_pri;
@@ -171,6 +171,8 @@ sl_oftiov_modref(struct offtree_iov *new, struct offtree_iov *cur,
 
 	/* sanity */
 	psc_assert(!(src->oftiov_base % b->slb_blksz));
+	psc_assert(ATTR_TEST(cur->oftiov_flags, OFTIOV_MAPPED));
+	psc_assert(!ATTR_TEST(new->oftiov_flags, OFTIOV_MAPPED));
 	
 	spinlock(&b->slb_lock);
 	psclist_for_each_entry_safe(old, &b->slb_iov_list, slbir_lentry) {
@@ -276,6 +278,7 @@ sl_buffer_alloc_internal(struct sl_buffer *b, size_t nblks,
 		*iovs = realloc(*iovs, sizeof(struct offtree_iov *)*(*niovs));
 		psc_assert(*iovs);		
 		/* associate the slb with the offtree_iov */
+		*iovs[*niovs]->oftiov_flags = 0;
 		*iovs[*niovs]->oftiov_pri   = b;
 		*iovs[*niovs]->oftiov_nblks = rc;
 		*iovs[*niovs]->oftiov_base  = b->slb_base + (b->slb_blksz * n);

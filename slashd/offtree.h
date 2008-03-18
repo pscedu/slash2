@@ -34,8 +34,12 @@ power(size_t base, size_t exp)
 #define OFT_REGIONSZ(root, d)					\
 	((root)->oftr_mapsz / (power((root)->oftr_width, d)))
 
-#define OFT_REGIONBLKS(root, d)  \
+#define OFT_REGIONBLKS(root, d)				\
 	(OFT_REGIONSZ(root, d) / (root)->oftr_minsz)
+
+#define OFT_REQ_REGIONBLKS(req)				       \
+	(OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) / \
+	 (req)->oftrq_root->oftr_minsz)
 
 /* abs_width is the global width position of the spoke, not the 
  *  position relative to the parent
@@ -45,6 +49,39 @@ power(size_t base, size_t exp)
 
 #define OFT_ENDOFF(root, d, abs_width)			\
 	(OFT_REGIONSZ(root, d) * (abs_width + 1) - 1)
+
+#define OFT_REQ_STARTOFF(req)					\
+	(OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) *	\
+	 (req)->oftrq_width))
+
+#define OFT_REQ_ENDOFF(req)				       \
+	(OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) * \
+	 ((req)->oftrq_width + 1) - 1)
+
+#define OFT_REQ_ABSWIDTH_GET(req, pos)					\
+	(((req)->oftrq_width * (req)->oftrq_root->oftr_width) + pos)
+
+#define OFT_VERIFY_REQ_SE(req, s, e) {				\
+		psc_assert((s >= OFT_REQ_ENDOFF(req)) &&	\
+			   (e <= OFT_REQ_ENDOFF(req)));		\
+	}
+
+#define OFT_REQ2SE_OFFS(req, s, e) {					\
+		psc_assert(!(req)->oftrq_off %				\
+			   (req)->oftrq_root->oftr_minsz);		\
+		s = (req)->oftrq_off;					\
+		e = 1 - (s + ((req)->oftrq_nblks *			\
+			      (req)->oftrq_root->oftr_minsz));		\
+		psc_assert(!((s) % (req)->oftrq_root->oftr_minsz));	\
+		psc_assert(!((e+1) % (req)->oftrq_root->oftr_minsz));	\
+        } 
+
+#define OFT_IOV2SE_OFFS(iov, s, e) {					\
+		s = (iov)->oftiov_off;					\
+		e = 1 - (s + ((iov)->oftiov_nblks * (iov)->oftiov_blksz)); \
+	}
+
+#define OFT_REQ2BLKSZ(req) ((req)->oftrq_root->oftr_minsz)
 
 /* Verify minsz is a power of 2 */
 #define OFT_BLKMASK_UPPER(root, o) ((r->oftr_minsz - 1) & o)
@@ -61,7 +98,8 @@ enum oft_iov_flags {
 	OFTIOV_DATARDY   = (1 << 0), /* Buffer contains no data       */
 	OFTIOV_FAULTING  = (1 << 1), /* Buffer is being retrieved    */
 	OFTIOV_COLLISION = (1 << 2), /* Collision ops must take place */
-	OFTIOV_IOPNDG    = (1 << 3)  /* About to do I/o */
+	OFTIOV_IOPNDG    = (1 << 3), /* About to do I/o */
+	OFTIOV_MAPPED    = (1 << 4)  /* Mapped to a tree node */
 };
 
 struct offtree_iov {
@@ -175,6 +213,19 @@ oft_child_get(off_t o, struct offtree_root *r, int d, int abs_width)
 		abort();
 	
 	return ((o - soff) / OFT_REGIONSZ(r, (d+1)));
+}
+
+static inline int 
+oft_child_req_get(off_t o, struct offtree_req *req)
+{
+	off_t soff = OFT_REQ_STARTOFF(req);
+	
+	/* ensure that the parent is responsible for the given range */
+	if (!((o >= soff) && (o < OFT_REQ_ENDOFF(req))))
+		abort();
+	
+	return ((o - soff) / OFT_REGIONSZ(req->oftrq_root, 
+					  (req->oftrq_depth + 1)));
 }
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
