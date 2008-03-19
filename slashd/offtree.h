@@ -9,18 +9,6 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/waitq.h"
 
-enum oft_attributes {
-	OFT_NODE      = (1 << 0), /* Node not a leaf          */
-	OFT_LEAF      = (1 << 1), /* Leaf not a node          */
-	OFT_READPNDG  = (1 << 2), /* Read is about to occur   */
-	OFT_WRITEPNDG = (1 << 3), /* Write is about to occur  */
-	OFT_ALLOCPNDG = (1 << 4), /* Alloc is about to occur  */
-	OFT_REQPNDG   = (1 << 5), 
-	OFT_REAP      = (1 << 6), /* Process of being removed */
-	OFT_FREEING   = (1 << 7), /* Different from Reap?     */
-	OFT_SPLITTING = (1 << 8), /* Leaf becoming a parent   */
-	OFT_INVMEM    = (1 << 9)  /* Pages have not been 'filled in' yet */
-};
 
 static inline size_t
 power(size_t base, size_t exp)
@@ -76,9 +64,16 @@ power(size_t base, size_t exp)
 		psc_assert(!((e+1) % (req)->oftrq_root->oftr_minsz));	\
         } 
 
+
+
+#define OFT_IOV2E_OFF(iov, e) {						\
+		e = (((iov)->oftiov_off + ((iov)->oftiov_nblks *	\
+					   (iov)->oftiov_blksz)) - 1);	\
+	}
+
 #define OFT_IOV2SE_OFFS(iov, s, e) {					\
 		s = (iov)->oftiov_off;					\
-		e = 1 - (s + ((iov)->oftiov_nblks * (iov)->oftiov_blksz)); \
+		OFT_IOV2E_OFF(iov, e);					\
 	}
 
 #define OFT_REQ2BLKSZ(req) ((req)->oftrq_root->oftr_minsz)
@@ -94,14 +89,6 @@ power(size_t base, size_t exp)
 # define MAX(a,b) (((a)>(b)) ? (a): (b))
 #end
 
-enum oft_iov_flags {
-	OFTIOV_DATARDY   = (1 << 0), /* Buffer contains no data       */
-	OFTIOV_FAULTING  = (1 << 1), /* Buffer is being retrieved    */
-	OFTIOV_COLLISION = (1 << 2), /* Collision ops must take place */
-	OFTIOV_IOPNDG    = (1 << 3), /* About to do I/o */
-	OFTIOV_MAPPED    = (1 << 4)  /* Mapped to a tree node */
-};
-
 struct offtree_iov {
 	int     oftiov_flags;
 	void   *oftiov_base;  /* point to our data buffer  */
@@ -112,6 +99,36 @@ struct offtree_iov {
 				sl_buffer structure which manages the 
 				region containing our base */
 };
+
+enum oft_iov_flags {
+	OFTIOV_DATARDY   = (1 << 0), /* Buffer contains no data       */
+	OFTIOV_FAULTING  = (1 << 1), /* Buffer is being retrieved    */
+	OFTIOV_COLLISION = (1 << 2), /* Collision ops must take place */
+	OFTIOV_MAPPED    = (1 << 4)  /* Mapped to a tree node */
+};
+
+#define OFFTIOV_FLAG(field, str) (field ? str : "")
+#define DEBUG_OFFTIOV_FLAGS(iov)					\
+	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_DATARDY),  "d"),	\
+	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_FAULTING), "f"),	\
+	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_COLLISION),"p"),      \
+	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_IOPNDG),   "i"),      \
+	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_MAPPED),   "m")
+
+#define OFFTIOV_FLAGS_FMT "%s%s%s%s"
+
+#define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
+	do {								\
+		_psclog(__FILE__, __func__, __LINE__,			\
+			PSS_OTHER, level, 0,				\
+			" oftiov@%p b:%p o:"LPX64" l:"LPX64 "bsz:"LPX64 \
+			"priv:%p fl:"OFFTIOV_FLAGS_FMT" "fmt,		\
+			iov, iov->oftiov_base, iov->oftiov_off,		\
+			iov->oftiov_nblks, iov->oftiov_blksz,	        \
+			iov->oftiov_pri, DEBUG_OFFTIOV_FLAGS(iov),[5~	\
+			## __VA_ARGS__);				\
+	} while(0)
+
 
 #define OFT_MEMB_INIT(m, p) {					\
 		psc_waitq_init(&(m)->oft_waitq);		\
@@ -131,6 +148,19 @@ struct offtree_memb {
 		struct offtree_iov   *oft_iov;
 		struct offtree_memb **oft_children;
 	}		      oft_norl;
+};
+
+enum oft_attributes {
+	OFT_NODE      = (1 << 0), /* Node not a leaf          */
+	OFT_LEAF      = (1 << 1), /* Leaf not a node          */
+	OFT_READPNDG  = (1 << 2), /* Read is about to occur   */
+	OFT_WRITEPNDG = (1 << 3), /* Write is about to occur  */
+	OFT_ALLOCPNDG = (1 << 4), /* Alloc is about to occur  */
+	OFT_REQPNDG   = (1 << 5), 
+	OFT_REAP      = (1 << 6), /* Process of being removed */
+	OFT_FREEING   = (1 << 7), /* Different from Reap?     */
+	OFT_SPLITTING = (1 << 8), /* Leaf becoming a parent   */
+	OFT_INVMEM    = (1 << 9)  /* Pages have not been 'filled in' yet */
 };
 
 #define OFTM_FLAG(field, str) (field ? str : "")
@@ -170,7 +200,6 @@ struct offtree_memb {
 				## __VA_ARGS__);			\
 		}							\
 	} while(0)
-
 
 /*
  * offtree_alloc_fn - allocate memory from slabs managed within the bmap.
@@ -241,26 +270,5 @@ oft_child_req_get(off_t o, struct offtree_req *req)
 			## __VA_ARGS__);  \
 	} while(0)
 
-
-#define OFFTIOV_FLAG(field, str) (field ? str : "")
-#define DEBUG_OFFTIOV_FLAGS(iov)					\
-	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_DATARDY),  "d"),	\
-	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_FAULTING), "f"),	\
-	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_COLLISION),"p"),     \
-	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_IOPNDG),   "i")
-
-#define OFFTIOV_FLAGS_FMT "%s%s%s%s"
-
-#define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
-	do {								\
-		_psclog(__FILE__, __func__, __LINE__,			\
-			PSS_OTHER, level, 0,				\
-			" oftiov@%p b:%p o:"LPX64" l:"LPX64 "bsz:"LPX64 \
-			"priv:%p fl:"OFFTIOV_FLAGS_FMT" "fmt,		\
-			iov, iov->oftiov_base, iov->oftiov_off,		\
-			iov->oftiov_nblks, iov->oftiov_blksz,	        \
-			iov->oftiov_pri, DEBUG_OFFTIOV_FLAGS(iov),[5~	\
-			## __VA_ARGS__);				\
-	} while(0)
 
 #endif 

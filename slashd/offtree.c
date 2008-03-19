@@ -65,20 +65,22 @@ offtree_freeleaf(struct offtree_memb *oftm)
 static void
 offtree_iovs_check(struct offtree_iov *iovs, int niovs) 
 {
-	int i;
-	off_t  prevfloff = 0;
-	size_t prevlen   = 0;
+	int   i, j;
+	off_t e;
 
-	for (i=0; i < niovs; i++) { 	
-		/* No empty iovs */
-		psc_assert(iovs[i]->oftiov_nblks);		
-		/* Ensure that floffs are increasing and non-overlapping */
-		if (iovs[i]->oftiov_floff)
-			psc_assert(iovs[i]->oftiov_floff >=
-				   (prevfloff + prevlen));
+	for (i=0; i < niovs; i++) {
+		/* No empty iovs */		
+		psc_assert(iovs[i]->oftiov_nblks);
 		
-		prevfloff = iovs[i]->oftiov_floff;
-		//prevlen   = iovs[i]->oftiov_nblks * //XXX FIXME;	
+		if (i)
+			psc_assert(iovs[i]->oftiov_off == (e + 1));
+		
+		OFT_IOV2E_OFF(iovs[i], e);
+		
+		for (j=0; j < niovs; j++) {
+			if (i == j) continue;
+			//check for overlapping bases?
+		}
 	}
 }
 
@@ -254,7 +256,7 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 
 #define NEW_PARTIAL_IOV(n, o, off, nblks)				\
 	do {								\
-		(n) = PSCALLOC(sizeof(*tiov));				\
+		(n) = PSCALLOC(sizeof(struct offtree_req));		\
 		(n)->oftiov_base  = (o)->oftiov_base +			\
 			(off * (o)->oftiov_blksz);			\
 		(n)->oftiov_blksz = (o)->oftiov_blksz;			\
@@ -286,22 +288,22 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 	if (iovcnt == 1) {
 		iov = dynarray_getpos(req->oftrq_darray, iovoff);
 		psc_assert((iov->oftiov_nblks - blkoff) >= req->oftrq_nblks);
-
+		
 		DEBUG_OFFTIOV(PLL_INFO, iov, "hb");
 
-		if (iovoff || blkoff ||
-		    (req->oftrq_nblks != iov->oftiov_nblks)) {
+		if (!blkoff) {
+			req->oftr_oftm->norl.oft_iov = iov;
+			psc_assert(!iovoff && !blkoff);
+			sl_oftm_addref(req->oftr_oftm);
+		} else {
 			/* Only modref if the request doesn't use the 
 			 *   entire iov otherwise the existing reference
 			 *   will suffice.  sl_oftiov_modref handles
 			 *   assertions.
 			 */
 			NEW_PARTIAL_IOV(tiov, iov, blkoff, req->oftrq_nblks);
-			sl_oftiov_modref(tiov, iov);
-		} else {
-			psc_assert(!ATTR_TEST(iov->oftiov_flags, 
-					      OFTIOV_MAPPED));
-			ATTR_SET(iov->oftiov_flags, OFTIOV_MAPPED);
+			req->oftr_oftm->norl.oft_iov = tiov
+			sl_oftm_addref(req->oftr_oftm);
 		}
 		goto out;
 		

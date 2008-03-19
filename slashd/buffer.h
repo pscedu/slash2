@@ -15,8 +15,18 @@
 #define SLB_LRU      0x10 /* on the lru, nothing pinned or dirty */
 #define SLB_FREE     0x20
 #define SLB_INIT     0x40
+#deifne SLB_FRESH    0x80
 
 #define SLB_FULL(b) (!vbitmap_nfree((b)->slb_inuse))
+
+#define SLB_IOV2EBASE(iov, slb)						\
+	(((iov)->oftiov_base + ((iov)->oftiov_nblks * slb->slb_blksz)) - 1)
+
+#define SLB_REF2EBASE(ref, slb)						\
+	(((ref)->slbir_base + ((ref)->slbir_nblks * slb->slb_blksz)) - 1)
+
+#define SLB_SLB2EBASE(slb)						\
+	(((slb)->slb_base + ((slb)->slb_nblks * slb->slb_blksz)) - 1)
 
 /* sl_buffer - slash_buffer, is used for both read caching and write aggregation.  The buffer is split into N subsections where N is the size of the vbitmap structure.  
 
@@ -35,6 +45,7 @@ struct sl_buffer {
 	u32             slb_blksz;  /* blocksize                       */
 	void           *slb_base;   /* point to the data buffer        */
 	atomic_t        slb_ref;
+	atomic_t        slb_unmapd_ref;
 	psc_spinlock_t  slb_lock;
 	u32             slb_flags;
 	list_cache_t   *slb_lc_owner;
@@ -44,12 +55,17 @@ struct sl_buffer {
 	struct psclist_head slb_fcm_lentry;  /* chain to fidcm entry        */
 };
 
-
 struct sl_buffer_iovref {
 	void  *slbir_base;                /* base pointer val (within slb) */
-	void  *slbir_pri;                 /* backpointer to oftmemb        */
 	size_t slbir_nblks;               /* allocation size               */
+	void  *slbir_pri;                 /* backpointer to oftmemb        */
+	int    slbir_flags;
 	struct psclist_head slbir_lentry; /* chain to slb                  */
+};
+
+enum slb_ref_flags {
+	SLBREF_MAPPED = (1 << 0),      /* Backpointer to oftm in place */
+	SLBREF_REAP   = (1 << 1)       /* Freeing                      */
 };
 
 #endif
