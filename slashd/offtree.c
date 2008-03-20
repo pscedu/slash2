@@ -2,10 +2,36 @@
 #include "psc_util/alloc.h"
 
 static void
-offtree_node2leaf(struct offtree_memb *oftm)
+offtree_node_release(struct offtree_memb *oftm)
 {
+	struct offtree_memb *parent = oftm->oft_parent;
 
+	spinlock(&parent->oft_lock);
+	spinlock(&oftm->oft_lock);
 
+	if (!ATTR_TEST(oftm->oft_flags, OFT_RELEASE)) {
+		psc_assert(ATTR_TEST(oftm->oft_flags, OFT_LEAF) ||
+			   ATTR_TEST(oftm->oft_flags, OFT_NODE));
+		psc_assert(atomic_read(oftm->oft_ref));
+		DEBUG_OFT(PLL_INFO, oftm, "was reclaimed quickly");	
+		goto out;
+	}
+	DEBUG_OFT(PLL_INFO, oftm, "releasing child .. ");
+	DEBUG_OFT(PLL_INFO, parent, ".. from parent");
+
+	freelock(&oftm->oft_lock);
+	PSCFREE(oftm);
+	parent->norl.oft_children[oftm->oft_pos] = NULL;
+
+	if (atomic_dec_and_test(&parent->oft_ref)) {
+		ATTR_SET(parent->oft_flags, OFT_COLLAPSE);
+		freelock(&parent->oft_ref);
+		offtree_node_release(parent);
+	} else {
+	out:
+		freelock(&oftm->oft_lock);
+		freelock(&parent->oft_lock);
+	}
 }
 
 /**
@@ -15,11 +41,12 @@ offtree_node2leaf(struct offtree_memb *oftm)
 static void
 offtree_leaf2node_locked(struct offtree_memb *oftm)
 {	
-	ATTR_SET(m->oft_flags, OFT_SPLITTING);	
+	ATTR_SET(m->oft_flags, OFT_SPLITTING);
 	m->norl.oft_children = PSC_ALLOC(sizeof(struct offtree_memb **) * 
 					 r->oftr_width);	
 	ATTR_UNSET(m->oft_flags, OFT_LEAF);
 	ATTR_SET(m->oft_flags, OFT_NODE);
+	ATTR_UNSET(m->oft_flags, OFT_SPLITTING);	
 }
 
 struct offtree_root *
@@ -35,31 +62,51 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	t->oftr_maxdepth = depth;
 	t->oftr_alloc    = alloc_fn;
 	t->oftr_pri      = private;  /* our bmap handle */
+	ATTR_SET(t->oftr_flags, OFT_ROOT);
 	
 	return (t);
 }
 
 void
-offtree_freeleaf(struct offtree_memb *oftm)
+offtree_freeleaf_locked(struct offtree_memb *oftm)
 {
-	spinlock(&oftm->oft_lock);
+	struct offtree_memb *parent = oftm->oft_parent;
+	int root=0;
+
+	if (!parent) {
+		psc_assert(ATTR_TEST(oftm->oft_flags, OFT_ROOT));
+		root = 1;
+	} else
+		psc_assert(ATTR_TEST(parent->oft_flags, OFT_NODE));
+
 	/* Only leafs have pages */
+	psc_assert(ATTR_TEST(oftm->oft_flags, OFT_FREEING));
 	psc_assert(ATTR_TEST(oftm->oft_flags, OFT_LEAF));
 	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_NODE));
-	/* Allocate pages first, mark oftm second
-	 *  otherwise the oftm will think is owns pages
-	 *  which are in fact being reclaimed..
-	 *  the pages' slb must have been pinned before 
-	 *  the oftm can claim OFT_WRITEPNDG || READPNDG
-	 */
+	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_REQPNDG));
 	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_READPNDG));
 	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_WRITEPNDG));
-	/* This state would mean that we're freeing pages 
-	 *  that do not exist here.. surely this is bad.
-	 */
 	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_ALLOCPNDG));
+	psc_assert(!oftm->norl.oft_iov);
 	
+	if (root) {
+		/* Reset the tree root
+		 */
+		oftm->oft_flags = OFT_ROOT;
+		freelock(&oftm->oft_lock);
+		return;
+	}
+
+	psc_assert(parent->norl.oft_children[oftm->oft_pos] == otfm);
 	freelock(&oftm->oft_lock);
+	
+	PSCFREE(oftm);
+	parent->norl.oft_children[oftm->oft_pos] = NULL;
+	if (atomic_dec_and_test(&parent->oft_ref)) {
+		ATTR_SET(parent->oft_flags, OFT_RELEASE);
+		freelock(&parent->oft_ref);
+		offtree_node_release(paren);
+	}
 }
 
 static void
@@ -85,58 +132,25 @@ offtree_iovs_check(struct offtree_iov *iovs, int niovs)
 }
 
 static size_t
-offtree_calc_nblks_int(struct offtree_req *r)
-{
-	off_t  nr_soffa = req->oftrq_floff;
-	size_t l = req->oftrq_fllen;	
-	size_t m = req->oftrq_root->oftr_minsz;
-	/* Align our offset with the minimum size, move
-	 *   the length back to the aligned offset
-	 */
-	nr_soffa -= (nr_soffa % m);
-	l += (nr_soffa % m);
-
-	return((l / m) + ((l % m) ? 1:0));
-}
-
-static size_t
 offtree_calc_nblks_hb_int(struct offtree_req *r, struct offtree_iov *v, 
 			  size_t *front, size_t *back)
 {
-	size_t nblks=0,tblks=0;
-	off_t  nr_soffa=req->oftrq_floff, nr_eoffa, hb_soffa, hb_eoffa;
-	size_t l = req->oftrq_fllen;	
-	size_t m = req->oftrq_root->oftr_minsz;
+	size_t nblks = r->oftrq_nblks;
+	off_t  nr_soffa, nr_eoffa, hb_soffa, hb_eoffa;
 
 	psc_assert(v && front && back);
 
 	*front = *back = 0;
 
-	/* Align our offset with the minimum size, move
-	 *   the length back to the aligned offset
+	OFT_REQ2SE_OFFS(r, nr_soffa, nr_eoffa);
+	OFT_IOV2SE_OFFS(v, hb_soffa, hb_eoffa);	
+	DEBUG_OFFTREQ(PLL_TRACE, r, "req eoffa="LPX64, nr_eoffa);
+	DEBUG_OFFTIOV(PLL_TRACE, v, "hb  eoffa="LPX64, hb_eoffa);       
+	/* Otherwise we shouldn't be here 
 	 */
-	nr_soffa -= (nr_soffa % m);
-	l += (nr_soffa % m);
-
-	nblks = (l / m) + ((l % m) ? 1:0);
-
-	/* Calculate overlap (there may be none) */
-	/* Align the soff to block boundary */
-	hb_soffa = v->oftiov_floff - (v->oftiov_floff % m);
-	hb_eoffa = (hb_soffa + (v->oftiov_nblks * m) - 1);
-	nr_eoffa = (o + (nblks * m) - 1);
-	
-	/* Sanity check */
-	psc_assert(!(hb_soffa % m) && !(hb_eoffa % m));
-	/* Otherwise we shouldn't be here */
 	psc_assert((nr_soffa < hb_soffa) || (nr_eoffa > hb_eoffa));
-	/* Unlikely, catch off-by-one */
-	psc_assert((nr_eoffa != hb_soffa) && (nr_soffa != hb_eoffa));
 	
 	if (nr_soffa < hb_soffa) {
-		/* Check my math - probably not needed */
-		psc_assert(!((hb_soffa - nr_soffa) % m));
-		
 		if (nr_eoffa < hb_soffa) {
 			/* Regions do not overlap */
 			*front = nblks;
@@ -145,10 +159,8 @@ offtree_calc_nblks_hb_int(struct offtree_req *r, struct offtree_iov *v,
 			/* Frontal overlap, also cover the case where
 			 *   the have_buffer is completely enveloped.
 			 */
-			*front = (nr_soffa - hb_soffa) % m;
-
-	}
-	
+			*front = (hb_soffa - nr_soffa) % m;
+	}	
 	if (nr_eoffa > hb_eoffa) {
 		if (nr_soffa > hb_eoffa)
 			/* Regions do not overlap */
@@ -176,7 +188,7 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 	struct  offtree_iov  *miovs, 
 	struct  offtree_root *r = req->oftrq_root;
 
-	tblks = offtree_calc_nblks_int(req);
+	tblks = req->oftrq_nblks;
 
 	/* Determine nblks taking into account overlap */
 	if (!hb_iov) {		
@@ -430,6 +442,7 @@ offtree_newleaf(struct offtree_memb *parent, int pos)
 	OFT_MEMB_INIT(new);
 	ATTR_SET(new->oft_flags, OFT_REQPNDG);
 	ATTR_SET(new->oft_flags, OFT_ALLOCPNDG);	
+	new->oft_pos = pos;
 	parent->norl.oft_children[pos] = new;
 	atomic_inc(&parent->oft_ref);
 

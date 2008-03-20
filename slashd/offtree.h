@@ -104,6 +104,7 @@ enum oft_iov_flags {
 	OFTIOV_DATARDY   = (1 << 0), /* Buffer contains no data       */
 	OFTIOV_FAULTING  = (1 << 1), /* Buffer is being retrieved    */
 	OFTIOV_COLLISION = (1 << 2), /* Collision ops must take place */
+	OFTIOV_FREEING   = (1 << 3), /* Collision ops must take place */
 	OFTIOV_MAPPED    = (1 << 4)  /* Mapped to a tree node */
 };
 
@@ -112,10 +113,10 @@ enum oft_iov_flags {
 	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_DATARDY),  "d"),	\
 	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_FAULTING), "f"),	\
 	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_COLLISION),"p"),      \
-	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_IOPNDG),   "i"),      \
+	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_FREEING),  "F"),      \
 	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_MAPPED),   "m")
 
-#define OFFTIOV_FLAGS_FMT "%s%s%s%s"
+#define OFFTIOV_FLAGS_FMT "%s%s%s%s%s"
 
 #define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
 	do {								\
@@ -143,7 +144,8 @@ struct offtree_memb {
 	u32                   oft_flags;
 	atomic_t              oft_ref;
 	struct offtree_memb  *oft_parent;
-	struct psclist_head   oft_lentry; /* chain in the slb    */
+	u8                    oft_pos;                   
+	//struct psclist_head   oft_lentry; /* chain in the slb    */
 	union norl {
 		struct offtree_iov   *oft_iov;
 		struct offtree_memb **oft_children;
@@ -157,10 +159,10 @@ enum oft_attributes {
 	OFT_WRITEPNDG = (1 << 3), /* Write is about to occur  */
 	OFT_ALLOCPNDG = (1 << 4), /* Alloc is about to occur  */
 	OFT_REQPNDG   = (1 << 5), 
-	OFT_REAP      = (1 << 6), /* Process of being removed */
+	OFT_ROOT      = (1 << 6), /* Tree root                */
 	OFT_FREEING   = (1 << 7), /* Different from Reap?     */
 	OFT_SPLITTING = (1 << 8), /* Leaf becoming a parent   */
-	OFT_INVMEM    = (1 << 9)  /* Pages have not been 'filled in' yet */
+	OFT_RELEASE   = (1 << 9)  /* Reclaim empty parent     */
 };
 
 #define OFTM_FLAG(field, str) (field ? str : "")
@@ -170,21 +172,22 @@ enum oft_attributes {
 	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_READPNDG), "R"),		\
 	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_WRITEPNDG), "W"),		\
 	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_ALLOCPNDG), "A"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_REQPNDG), "r"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_REAP), "p"),		\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_REQPNDG), "q"),		\
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_ROOT), "r"),		\
 	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_FREEING), "F"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_SPLITTING), "S")
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_SPLITTING), "S"),	        \
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_RELEASE), "e")
 
-#define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s"
+#define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_OFT(level, oft, fmt, ...)					\
 	do {								\
 		if (ATTR_TEST((oft)->oft_flags, OFT_LEAF)) {		\
 			_psclog(__FILE__, __func__, __LINE__,		\
 				PSS_OTHER, level, 0,			\
-				" oft@%p p:%p ref:%d"			\
+				" oft@%p pos:%hhu p:%p ref:%d"		\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
-				oft,					\
+				oft, (oft)->oft_pos,			\
 				(oft)->oft_parent,			\
 				atomic_read(&(oft)->oft_ref), 		\
 				DEBUG_OFTM_FLAGS(oft),			\
@@ -192,9 +195,9 @@ enum oft_attributes {
 		} else {						\
 			_psclog(__FILE__, __func__, __LINE__,		\
 				PSS_OTHER, level, 0,			\
-				" oft@%p p:%p r:%d "			\
+				" oft@%p pos:%hhu p:%p r:%d "		\
 				"fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
-				oft, (oft)->oft_parent,			\
+				oft, (oft)->oft_pos, (oft)->oft_parent,	\
 				atomic_read(&(oft)->oft_ref),		\
 				DEBUG_OFTM_FLAGS(oft),			\
 				## __VA_ARGS__);			\
