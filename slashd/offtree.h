@@ -162,7 +162,8 @@ enum oft_attributes {
 	OFT_ROOT      = (1 << 6), /* Tree root                */
 	OFT_FREEING   = (1 << 7), /* Different from Reap?     */
 	OFT_SPLITTING = (1 << 8), /* Leaf becoming a parent   */
-	OFT_RELEASE   = (1 << 9)  /* Reclaim empty parent     */
+	OFT_RELEASE   = (1 << 9), /* Reclaim empty parent     */
+	OFT_MCHLDGROW = (1 << 10) /* Multichild grow          */	
 };
 
 #define OFTM_FLAG(field, str) (field ? str : "")
@@ -176,8 +177,9 @@ enum oft_attributes {
 	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_ROOT), "r"),		\
 	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_FREEING), "F"),		\
 	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_SPLITTING), "S"),	        \
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_RELEASE), "e")
-
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_RELEASE), "e"),	        \
+	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_MCHLDGROW), "g")	        \
+		
 #define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_OFT(level, oft, fmt, ...)					\
