@@ -2,6 +2,74 @@
 #include "psc_util/alloc.h"
 
 /**
+ * offtree_iovs_check - iov array verifier.
+ * @iovs: array of iovs
+ * @niovs: number of iovs in array
+ */
+void
+offtree_iovs_check(const struct offtree_iov *iovs, int niovs) 
+{
+	int   i, j;
+	off_t e;
+
+	for (i=0; i < niovs; i++) {
+		/* No empty iovs */		
+		psc_assert(iovs[i]->oftiov_nblks);
+		
+		if (i)
+			psc_assert(iovs[i]->oftiov_off == (e + 1));
+		
+		OFT_IOV2E_OFF(iovs[i], e);
+		
+		for (j=0; j < niovs; j++) {
+			if (i == j) continue;
+			//check for overlapping bases?
+		}
+	}
+}
+
+/**
+ * offtree_newleaf - assign a new leaf node to the parent.
+ * @parent: the parent pointer
+ * @pos: position the child will occupy
+ * Notes:  Assumes that the new leaf will be allocated to.
+ * Notes:  Parent must be locked.
+ */
+static struct offtree_memb *
+offtree_newleaf_locked(struct offtree_memb *parent, int pos)
+{
+	struct offtree_memb *new;
+	
+	psc_assert(!parent->norl.oft_children[pos]);
+	
+	new = PSC_ALLOC(sizeof(struct offtree_memb));
+	OFT_MEMB_INIT(new);
+	ATTR_SET(new->oft_flags, OFT_REQPNDG);
+	ATTR_SET(new->oft_flags, OFT_ALLOCPNDG);
+	new->oft_pos = pos;
+	parent->norl.oft_children[pos] = new;
+	atomic_inc(&parent->oft_ref);
+
+	return new;
+}
+
+/**
+ * offtree_leaf2node - transform a leaf into a parent node.
+ * @oftm:  tree member to promote.
+ * Notes: tree member must be locked.  Caller must manage OFT_SPLITTING which must be set anytime the refcnt is 0. See oftm_splitting_leaf_verify() macro for more details.
+ */
+static void
+offtree_leaf2node_locked(struct offtree_memb *oftm, struct offtree_root *r)
+{	
+	oftm_splitting_leaf_verify(oftm);
+	oftm->norl.oft_children = PSC_ALLOC(sizeof(struct offtree_memb **) * 
+					    r->oftr_width);
+	ATTR_UNSET(oftm->oft_flags, OFT_LEAF);
+	ATTR_SET(oftm->oft_flags, OFT_NODE);
+}
+
+
+/**
  * offtree_node_reuse_locked - retain a tree node which is in the process of being released.  The releasing thread checks for state change and when detected will leave the node in place.
  * @m: the tree node. 
  */
@@ -10,9 +78,7 @@ offtree_node_reuse_locked(struct offtree_memb *m)
 {
 	/* Reuse, don't release
 	 */
-	psc_assert(m->oft_flags == OFT_RELEASE);
-	psc_assert(!atomic_read(m->oft_ref));
-	psc_assert(!m->norl.oft_iov);
+	oftm_reuse_verify(m);
 	m->oft_flags = OFT_LEAF | OFT_ALLOCPNDG;
 }
 
@@ -27,7 +93,7 @@ offtree_node_reuse_locked(struct offtree_memb *m)
 	}
 
 /**
- * offtree_node_release - free node which has a zero refcnt.  Handle cases where parent is the root, parent also needs to be released (recursive), and where another thread has requested to keep the node.
+ * offtree_node_release - free node which has a zero refcnt.  Handle cases: parent is the root, parent also needs to be released (recursive), and where another thread has requested to keep the node.
  * Notes: locking order (1-parent, 2-node)
  */
 static void
@@ -35,13 +101,12 @@ offtree_node_release(struct offtree_memb *oftm)
 {
 	struct offtree_memb *parent = oftm->oft_parent;
 
-	if (!parent) {
+	if (!parent || ATTR_TEST(oftm, OFT_ROOT)) {
 		DEBUG_OFT(PLL_INFO, oftm, "i am the root!");
-		psc_fatalx("Don't release the root from here");
+		psc_fatalx("Attempted to release the root");
 	}
 
-	oftm_node_verify(m);
-	
+	oftm_node_verify(m);       
 	spinlock(&parent->oft_lock);
 	spinlock(&oftm->oft_lock);
 
@@ -72,95 +137,50 @@ offtree_node_release(struct offtree_memb *oftm)
 	}
 }
 
-void
+static void
 offtree_freeleaf_locked(struct offtree_memb *oftm)
 {
 	struct offtree_memb *parent = oftm->oft_parent;
 	int root=0;
 
+	DEBUG_OFT(PLL_TRACE, oftm, "freeing");
+
 	if (!parent) {
 		oftm_root_verify(oftm);
 		root = 1;
 	} else
-		oftm_node_verify(oftm);
+		oftm_node_verify(parent);	
 
 	oftm_freeleaf_verify(oftm);
 
 	if (root) {
-		/* Reset the tree root
+		/* Reset the tree root (remove OFT_FREEING and OFT_LEAF flags)
 		 */
 		oftm->oft_flags = OFT_ROOT;
 		freelock(&oftm->oft_lock);
-		return;
-	}
-
-	oft_child_free(oftm, parent);
-
-	if (atomic_dec_and_test(&parent->oft_ref)) {
-		ATTR_SET(parent->oft_flags, OFT_RELEASE);
-		freelock(&parent->oft_ref);
-		offtree_node_release(paren);
-	}
-}
-
-/**
- * offtree_leaf2node - must be called locked.
- * @oftm:  tree member to promote.
- */
-static void
-offtree_leaf2node_locked(struct offtree_memb *oftm)
-{	
-	ATTR_SET(m->oft_flags, OFT_SPLITTING);
-	m->norl.oft_children = PSC_ALLOC(sizeof(struct offtree_memb **) * 
-					 r->oftr_width);	
-	ATTR_UNSET(m->oft_flags, OFT_LEAF);
-	ATTR_SET(m->oft_flags, OFT_NODE);
-	ATTR_UNSET(m->oft_flags, OFT_SPLITTING);	
-}
-
-struct offtree_root *
-offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
-	       void *private, offtree_alloc_fn alloc_fn)
-{
-	struct offtree_root *t = PSCALLOC(sizeof(struct offtree_root));
-	
-	LOCK_INIT(&t->oftr_lock);
-	t->oftr_width    = width;
-	t->oftr_mapsz    = minsz;
-	t->oftr_minsz    = mapsz;
-	t->oftr_maxdepth = depth;
-	t->oftr_alloc    = alloc_fn;
-	t->oftr_pri      = private;  /* our bmap handle */
-	ATTR_SET(t->oftr_flags, OFT_ROOT);
-	
-	return (t);
-}
-
-
-static void
-offtree_iovs_check(struct offtree_iov *iovs, int niovs) 
-{
-	int   i, j;
-	off_t e;
-
-	for (i=0; i < niovs; i++) {
-		/* No empty iovs */		
-		psc_assert(iovs[i]->oftiov_nblks);
-		
-		if (i)
-			psc_assert(iovs[i]->oftiov_off == (e + 1));
-		
-		OFT_IOV2E_OFF(iovs[i], e);
-		
-		for (j=0; j < niovs; j++) {
-			if (i == j) continue;
-			//check for overlapping bases?
+	} else {
+		oft_child_free(oftm, parent);
+		/* Test parent for releasing
+		 */
+		if (atomic_dec_and_test(&parent->oft_ref)) {
+			ATTR_SET(parent->oft_flags, OFT_RELEASE);
+			freelock(&parent->oft_ref);
+			offtree_node_release(parent);
 		}
 	}
 }
 
+/**
+ * offtree_calc_nblks_hb_int - calculate number of blocks needed to statisfy request taking into account the existing mapped buffer 'v'.  Handles the case where 'v' is overlapping (or not) or encompassed.
+ * @r: request
+ * @v: existing buffer
+ * @front: nblks needed ahead of 'v'.
+ * @back:  nblks needed behind 'v'.
+ * Returns: the total number of blocks needed.  *front and *back contain the number of blocks needed before and after the existing buffer.
+ */
 static size_t
-offtree_calc_nblks_hb_int(struct offtree_req *r, struct offtree_iov *v, 
+offtree_calc_nblks_hb_int(const struct offtree_req *r, 
+			  const struct offtree_iov *v, 
 			  size_t *front, size_t *back)
 {
 	size_t nblks = r->oftrq_nblks;
@@ -171,7 +191,8 @@ offtree_calc_nblks_hb_int(struct offtree_req *r, struct offtree_iov *v,
 	*front = *back = 0;
 
 	OFT_REQ2SE_OFFS(r, nr_soffa, nr_eoffa);
-	OFT_IOV2SE_OFFS(v, hb_soffa, hb_eoffa);	
+	OFT_IOV2SE_OFFS(v, hb_soffa, hb_eoffa);
+
 	DEBUG_OFFTREQ(PLL_TRACE, r, "req eoffa="LPX64, nr_eoffa);
 	DEBUG_OFFTIOV(PLL_TRACE, v, "hb  eoffa="LPX64, hb_eoffa);       
 	/* Otherwise we shouldn't be here 
@@ -184,9 +205,6 @@ offtree_calc_nblks_hb_int(struct offtree_req *r, struct offtree_iov *v,
 			*front = nblks;
 			goto out;
 		} else
-			/* Frontal overlap, also cover the case where
-			 *   the have_buffer is completely enveloped.
-			 */
 			*front = (hb_soffa - nr_soffa) % m;
 	}	
 	if (nr_eoffa > hb_eoffa) {
@@ -209,7 +227,7 @@ offtree_calc_nblks_hb_int(struct offtree_req *r, struct offtree_iov *v,
  * Returns '0' on success.
  */
 static ssize_t
-offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
+offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
 {
 	ssize_t tblks=0, rc=0;
 	size_t  niovs=0;
@@ -218,14 +236,16 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 
 	tblks = req->oftrq_nblks;
 
-	/* Determine nblks taking into account overlap */
+	/* Determine nblks taking into account overlap 
+	 */
 	if (!hb_iov) {		
+		/* No existing buffer, make full allocation
+		 */
 		rc = (r->oftr_alloc)(tblks, &miovs, &niovs, r);
 		if (rc != nblks) {
-			if (rc < tblks) {
-				rc = -1;
+			if (rc < tblks)
 				goto done;
-			} else
+			else
 				psc_warnx("Wanted "LPX64" got "LPX64, 
 					  tblks, rc);
 		}		       
@@ -365,7 +385,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		 *   This case isn't so bad because there are no nodes 
 		 *    below us, only leafs.
 		 */
-		offtree_leaf2node_locked(req->oftrq_memb);	
+		offtree_leaf2node_locked(req->oftrq_memb, req->oftrq_root);
 		/* Determine affected children 
 		 */
 		OFT_REQ2SE_OFFS(req, nr_soffa, nr_eoffa);
@@ -455,32 +475,9 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 }
 
 /*
- *
- * New children may have to deal with old have_buffers.  Old buffers and new buffers are the same..
-
- */
-struct offtree_memb *
-offtree_newleaf(struct offtree_memb *parent, int pos)
-{
-	struct offtree_memb *new;
-	
-	psc_assert(!parent->norl.oft_children[pos]);
-	
-	new = PSC_ALLOC(sizeof(struct offtree_memb));
-	OFT_MEMB_INIT(new);
-	ATTR_SET(new->oft_flags, OFT_REQPNDG);
-	ATTR_SET(new->oft_flags, OFT_ALLOCPNDG);
-	new->oft_pos = pos;
-	parent->norl.oft_children[pos] = new;
-	atomic_inc(&parent->oft_ref);
-
-	return new;
-}
-
-/*
  * offtree_region_preprw_leaf_locked - the stage 2 call into the tree, it does not recurse but rather handles the allocation step taking into account existing buffers. 
  */
-int
+static int
 offtree_region_preprw_leaf_locked(struct offtree_req *req)
 {
 	struct  offtree_memb *m = req->oftrq_memb;
@@ -773,4 +770,22 @@ offtree_region_preprw(struct offtree_req *req)
  error:
 	/* do the right node mgmt here.. */
 	return (-ENOMEM);
+}
+
+struct offtree_root *
+offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
+	       void *private, offtree_alloc_fn alloc_fn)
+{
+	struct offtree_root *t = PSCALLOC(sizeof(struct offtree_root));
+	
+	LOCK_INIT(&t->oftr_lock);
+	t->oftr_width    = width;
+	t->oftr_mapsz    = minsz;
+	t->oftr_minsz    = mapsz;
+	t->oftr_maxdepth = depth;
+	t->oftr_alloc    = alloc_fn;
+	t->oftr_pri      = private;  /* our bmap handle */
+	ATTR_SET(t->oftr_flags, OFT_ROOT);
+	
+	return (t);
 }

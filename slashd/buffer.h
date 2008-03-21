@@ -8,14 +8,16 @@
 #include "psc_ds/vbitmap.h"
 #include "psc_ds/listcache.h"
 
-#define SLB_DIRTY    0x01 /* have dirty data          */
-#define SLB_INFLIGHT 0x02 /* dirty data is being sent */
-#define SLB_FREEING  0x04
-#define SLB_PINNED   0x08 /* not freeable             */
-#define SLB_LRU      0x10 /* on the lru, nothing pinned or dirty */
-#define SLB_FREE     0x20
-#define SLB_INIT     0x40
-#deifne SLB_FRESH    0x80
+enum slb_states {
+	SLB_DIRTY    = 0x01, /* have dirty data          */
+	SLB_INFLIGHT = 0x02, /* dirty data is being sent */
+	SLB_FREEING  = 0x04,
+	SLB_PINNED   = 0x08, /* not freeable             */
+	SLB_LRU      = 0x10, /* on the lru, nothing pinned or dirty */
+	SLB_FREE     = 0x20,
+	SLB_INIT     = 0x40,
+	SLB_FRESH    = 0x80
+}
 
 #define SLB_FULL(b) (!vbitmap_nfree((b)->slb_inuse))
 
@@ -47,13 +49,45 @@ struct sl_buffer {
 	atomic_t        slb_ref;
 	atomic_t        slb_unmapd_ref;
 	psc_spinlock_t  slb_lock;
-	u32             slb_flags;
+             slb_flags;
 	list_cache_t   *slb_lc_owner;
 	list_cache_t   *slb_lc_fcm;
 	struct psclist_head slb_iov_list;    /* list of iov backpointers    */ 
 	struct psclist_head slb_mgmt_lentry; /* attach to lru or outgoing q */ 
 	struct psclist_head slb_fcm_lentry;  /* chain to fidcm entry        */
 };
+
+#define SLB_FLAG(field, str) (field ? str : "")
+#define DEBUG_SLB_FLAGS(iov)					\
+        SLB_FLAG(ATTR_TEST(slb->flags, SLB_DIRTY),  "d"),	\
+	SLB_FLAG(ATTR_TEST(slb->flags, SLB_INFLIGHT), "I"),	\
+	SLB_FLAG(ATTR_TEST(slb->flags, SLB_FREEING),"F"),	\
+	SLB_FLAG(ATTR_TEST(slb->flags, SLB_PINNED),  "P"),	\
+	SLB_FLAG(ATTR_TEST(slb->flags, SLB_LRU),   "L"),	\
+	SLB_FLAG(ATTR_TEST(slb->flags, SLB_FREE),   "f"),	\
+	SLB_FLAG(ATTR_TEST(slb->flags, SLB_INIT),   "i"),	\
+	SLB_FLAG(ATTR_TEST(slb->flags, SLB_FRESH),   "r")	\
+		
+	
+#define SLB_FLAGS_FMT "%s%s%s%s%s%s%s%s"
+
+#define DEBUG_SLB(level, slb, fmt, ...)					\
+        do {                                                            \
+                _psclog(__FILE__, __func__, __LINE__,                   \
+                        PSS_OTHER, level, 0,                            \
+                        " slb@%p b:%p sz(%d/"LPX64") bsz:"LPX64		\
+                        " ref:%d umref:%d fl:"SLB_FLAGS_FMT		\
+			" fcm:%p lco:%p "fmt,				\
+                        slb, slb->slb_base, slb->slb_nblks,		\
+			vbitmap_nfree(slb->slb_inuse),			\
+			slb->slb_blksz,					\
+			atomic_read(&slb->slb_ref),			\
+			atomic_read(&slb->slb_unmapd_ref),		\
+			DEBUG_SLB_FLAGS(slb),				\
+			slb->slb_lc_fcm, slb->slb_lc_owner,		\
+			## __VA_ARGS__);				\
+	} while(0)
+	
 
 struct sl_buffer_iovref {
 	void  *slbir_base;                /* base pointer val (within slb) */
@@ -67,5 +101,35 @@ enum slb_ref_flags {
 	SLBREF_MAPPED = (1 << 0),      /* Backpointer to oftm in place */
 	SLBREF_REAP   = (1 << 1)       /* Freeing                      */
 };
+
+#define slb_fresh_2_pinned(slb) {				\
+		sl_buffer_fresh_assertions((slb));		\
+		ATTR_UNSET((slb)->slb_flags, SLB_FRESH);	\
+		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
+	}
+
+#define slb_lru_2_pinned(slb) {					\
+		sl_buffer_lru_assertions((slb));		\
+		ATTR_UNSET((slb)->slb_flags, SLB_FRESH);	\
+		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
+	}
+
+#define SLB_TIMEOUT_SECS  5
+#define SLB_TIMEOUT_NSECS 0
+
+#define slb_set_alloctimer(t) {				\
+		clock_gettime(CLOCK_REALTIME, (t));	\
+		(t)->tv_sec  += SLB_TIMEOUT_SECS;	\
+		(t)->tv_nsec += SLB_TIMEOUT_NSECS;	\
+	}
+
+#define SLB_RP_TIMEOUT_SECS  0
+#define SLB_RP_TIMEOUT_NSECS 200000
+
+#define slb_set_readpndg_timer(t) {			\
+		clock_gettime(CLOCK_REALTIME, (t));	\
+		(t)->tv_sec  += SLB_RP_TIMEOUT_SECS;	\
+		(t)->tv_nsec += SLB_RP_TIMEOUT_NSECS;	\
+	}
 
 #endif

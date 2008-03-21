@@ -86,21 +86,32 @@ power(size_t base, size_t exp)
 /*
  * Stash assertion routines here
  */
+
 #define oftm_leaf_verify(m) {						\
+		psc_assert((m)->norl.oft_iov);				\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
-		psc_assert(atomic_read((m)->oft_ref) ||		\
+		psc_assert(atomic_read((m)->oft_ref) ||			\
 			   ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
+	}								\
+
+#define oftm_splitting_leaf_verify(m) {					\
+		psc_assert(!(m)->norl.oft_iov);				\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_SPLITTING));	\
+		psc_assert(!atomic_read((m)->oft_ref));			\
 	}								\
 
 #define oftm_node_verify(m) {						\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_NODE));	\
-		psc_assert(atomic_read((m)->oft_ref));			\
+		psc_assert(atomic_read((m)->oft_ref) ||			\
+			   ATTR_TEST((m)->oft_flags, OFT_SPLITTING));	\
+									\
 	}								\
 
 #define oftm_unrelease_verify(m) {					\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF) ||	\
 			   ATTR_TEST((m)->oft_flags, OFT_NODE));	\
-		psc_assert(atomic_read((m)->oft_ref) ||		\
+		psc_assert(atomic_read((m)->oft_ref) ||			\
 			   ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
 	}
 
@@ -119,6 +130,11 @@ power(size_t base, size_t exp)
 		psc_assert(!(m)->norl.oft_iov);			\
 	}
 
+#define oftm_reuse_verify(m) {					\
+		psc_assert((m)->oft_flags == OFT_RELEASE);	\
+		psc_assert(!atomic_read((m)->oft_ref));		\
+		psc_assert(!(m)->norl.oft_iov);			\
+	}
 
 
 #ifndef MIN
@@ -314,5 +330,15 @@ oft_child_req_get(off_t o, struct offtree_req *req)
 			## __VA_ARGS__);  \
 	} while(0)
 
+
+
+extern struct offtree_root *
+offtree_create(size_t, size_t, u32, u32, void *, offtree_alloc_fn);
+
+extern int 
+offtree_region_preprw(struct offtree_req *);
+
+extern void
+offtree_iovs_check(const struct offtree_iov *, const int);
 
 #endif 
