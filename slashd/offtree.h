@@ -19,6 +19,7 @@ power(size_t base, size_t exp)
 		p = p * base;
 	return p;
 }
+
 #define OFT_REGIONSZ(root, d)					\
 	((root)->oftr_mapsz / (power((root)->oftr_width, d)))
 
@@ -79,8 +80,46 @@ power(size_t base, size_t exp)
 #define OFT_REQ2BLKSZ(req) ((req)->oftrq_root->oftr_minsz)
 
 /* Verify minsz is a power of 2 */
-#define OFT_BLKMASK_UPPER(root, o) ((r->oftr_minsz - 1) & o)
-#define OFT_BLKMASK_LOWER(root, o) ((~(r->oftr_minsz - 1)) & o)
+#define OFT_BLKMASK_UPPER(r, o) (((r)->oftr_minsz - 1) & o)
+#define OFT_BLKMASK_LOWER(r, o) ((~((r)->oftr_minsz - 1)) & o)
+
+/*
+ * Stash assertion routines here
+ */
+#define oftm_leaf_verify(m) {						\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
+		psc_assert(atomic_read((m)->oft_ref) ||		\
+			   ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
+	}								\
+
+#define oftm_node_verify(m) {						\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_NODE));	\
+		psc_assert(atomic_read((m)->oft_ref));			\
+	}								\
+
+#define oftm_unrelease_verify(m) {					\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF) ||	\
+			   ATTR_TEST((m)->oft_flags, OFT_NODE));	\
+		psc_assert(atomic_read((m)->oft_ref) ||		\
+			   ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
+	}
+
+#define oftm_root_verify(m) {						\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_ROOT));	\
+	}								\
+
+#define oftm_freeleaf_verify(m) {					\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_FREEING));	\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_REQPNDG));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_READPNDG));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_WRITEPNDG));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
+		psc_assert(!(m)->norl.oft_iov);			\
+	}
+
+
 
 #ifndef MIN
 # define MIN(a,b) (((a)<(b)) ? (a): (b))

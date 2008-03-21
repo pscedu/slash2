@@ -1,6 +1,10 @@
 #include "offtree.h"
 #include "psc_util/alloc.h"
 
+/**
+ * offtree_node_reuse_locked - retain a tree node which is in the process of being released.  The releasing thread checks for state change and when detected will leave the node in place.
+ * @m: the tree node. 
+ */
 static void
 offtree_node_reuse_locked(struct offtree_memb *m)
 {
@@ -12,36 +16,90 @@ offtree_node_reuse_locked(struct offtree_memb *m)
 	m->oft_flags = OFT_LEAF | OFT_ALLOCPNDG;
 }
 
+#define oft_child_free(__c, __p) {					\
+		DEBUG_OFT(PLL_INFO, (__c), "releasing child .. ");	\
+		DEBUG_OFT(PLL_INFO, (__p), ".. from parent");		\
+		psc_assert((__p)->norl.oft_children[(__c)->oft_pos]	\
+			   == (__c));					\
+		(__p)->norl.oft_children[(__c)->oft_pos] = NULL;	\
+		freelock(&(__c)->oft_lock);				\
+		PSCFREE((__c));						\
+	}
+
+/**
+ * offtree_node_release - free node which has a zero refcnt.  Handle cases where parent is the root, parent also needs to be released (recursive), and where another thread has requested to keep the node.
+ * Notes: locking order (1-parent, 2-node)
+ */
 static void
 offtree_node_release(struct offtree_memb *oftm)
 {
 	struct offtree_memb *parent = oftm->oft_parent;
 
+	if (!parent) {
+		DEBUG_OFT(PLL_INFO, oftm, "i am the root!");
+		psc_fatalx("Don't release the root from here");
+	}
+
+	oftm_node_verify(m);
+	
 	spinlock(&parent->oft_lock);
 	spinlock(&oftm->oft_lock);
 
 	if (!ATTR_TEST(oftm->oft_flags, OFT_RELEASE)) {
-		psc_assert(ATTR_TEST(oftm->oft_flags, OFT_LEAF) ||
-			   ATTR_TEST(oftm->oft_flags, OFT_NODE));
-		psc_assert(atomic_read(oftm->oft_ref));
+		/* offtree_node_reuse_locked() got here, verify a few things
+		 *  and then give up.
+		 */		
+		oftm_unrelease_verify(m);
 		DEBUG_OFT(PLL_INFO, oftm, "was reclaimed quickly");	
 		goto out;
 	}
-	DEBUG_OFT(PLL_INFO, oftm, "releasing child .. ");
-	DEBUG_OFT(PLL_INFO, parent, ".. from parent");
-
-	freelock(&oftm->oft_lock);
-	PSCFREE(oftm);
-	parent->norl.oft_children[oftm->oft_pos] = NULL;
+	
+	oft_child_free(oftm, parent);
 
 	if (atomic_dec_and_test(&parent->oft_ref)) {
-		ATTR_SET(parent->oft_flags, OFT_COLLAPSE);
+		if (!parent->oft_parent) {
+			/* Our parent is the root */
+			oftm_root_verify(parent->oft_parent);
+			goto out;
+		}
+		parent->oft_flags = OFT_RELEASE;
 		freelock(&parent->oft_ref);
-		offtree_node_release(parent);
+		offtree_node_release(parent); 
 	} else {
 	out:
 		freelock(&oftm->oft_lock);
 		freelock(&parent->oft_lock);
+	}
+}
+
+void
+offtree_freeleaf_locked(struct offtree_memb *oftm)
+{
+	struct offtree_memb *parent = oftm->oft_parent;
+	int root=0;
+
+	if (!parent) {
+		oftm_root_verify(oftm);
+		root = 1;
+	} else
+		oftm_node_verify(oftm);
+
+	oftm_freeleaf_verify(oftm);
+
+	if (root) {
+		/* Reset the tree root
+		 */
+		oftm->oft_flags = OFT_ROOT;
+		freelock(&oftm->oft_lock);
+		return;
+	}
+
+	oft_child_free(oftm, parent);
+
+	if (atomic_dec_and_test(&parent->oft_ref)) {
+		ATTR_SET(parent->oft_flags, OFT_RELEASE);
+		freelock(&parent->oft_ref);
+		offtree_node_release(paren);
 	}
 }
 
@@ -78,47 +136,6 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	return (t);
 }
 
-void
-offtree_freeleaf_locked(struct offtree_memb *oftm)
-{
-	struct offtree_memb *parent = oftm->oft_parent;
-	int root=0;
-
-	if (!parent) {
-		psc_assert(ATTR_TEST(oftm->oft_flags, OFT_ROOT));
-		root = 1;
-	} else
-		psc_assert(ATTR_TEST(parent->oft_flags, OFT_NODE));
-
-	/* Only leafs have pages */
-	psc_assert(ATTR_TEST(oftm->oft_flags, OFT_FREEING));
-	psc_assert(ATTR_TEST(oftm->oft_flags, OFT_LEAF));
-	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_NODE));
-	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_REQPNDG));
-	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_READPNDG));
-	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_WRITEPNDG));
-	psc_assert(!ATTR_TEST(oftm->oft_flags, OFT_ALLOCPNDG));
-	psc_assert(!oftm->norl.oft_iov);
-	
-	if (root) {
-		/* Reset the tree root
-		 */
-		oftm->oft_flags = OFT_ROOT;
-		freelock(&oftm->oft_lock);
-		return;
-	}
-
-	psc_assert(parent->norl.oft_children[oftm->oft_pos] == otfm);
-	freelock(&oftm->oft_lock);
-	
-	PSCFREE(oftm);
-	parent->norl.oft_children[oftm->oft_pos] = NULL;
-	if (atomic_dec_and_test(&parent->oft_ref)) {
-		ATTR_SET(parent->oft_flags, OFT_RELEASE);
-		freelock(&parent->oft_ref);
-		offtree_node_release(paren);
-	}
-}
 
 static void
 offtree_iovs_check(struct offtree_iov *iovs, int niovs) 
