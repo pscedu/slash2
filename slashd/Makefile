@@ -3,13 +3,13 @@
 include Makefile.path
 
 PROG=		slashd
+SRCS+=		backend.c
 SRCS+=		cfd.c
 SRCS+=		control.c
 SRCS+=		dircache.c
 SRCS+=		fidlink.c
 SRCS+=		journal.c
 SRCS+=		lconf.l
-SRCS+=		backend.c
 SRCS+=		main.c
 SRCS+=		mds.c
 SRCS+=		metadir.c
@@ -39,15 +39,6 @@ SRCS+=		${PFL_BASE}/psc_rpc/packgeneric.c
 SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
 SRCS+=		${PFL_BASE}/psc_rpc/service.c
 
-SRCS+=		${LNET_BASE}/socklnd/connection.c
-SRCS+=		${LNET_BASE}/socklnd/pqtimer.c
-SRCS+=		${LNET_BASE}/socklnd/procapi.c
-SRCS+=		${LNET_BASE}/socklnd/proclib.c
-SRCS+=		${LNET_BASE}/socklnd/select.c
-SRCS+=		${LNET_BASE}/socklnd/table.c
-SRCS+=		${LNET_BASE}/socklnd/tcplnd.c
-SRCS+=		${LNET_BASE}/socklnd/sendrecv.c
-
 SRCS+=		${LNET_BASE}/libcfs/debug.c
 SRCS+=		${LNET_BASE}/libcfs/nidstrings.c
 SRCS+=		${LNET_BASE}/libcfs/user-lock.c
@@ -66,6 +57,15 @@ SRCS+=		${LNET_BASE}/lnet/lo.c
 SRCS+=		${LNET_BASE}/lnet/peer.c
 SRCS+=		${LNET_BASE}/lnet/router.c
 SRCS+=		${LNET_BASE}/lnet/router_proc.c
+
+SRCS+=		${LNET_BASE}/socklnd/connection.c
+SRCS+=		${LNET_BASE}/socklnd/pqtimer.c
+SRCS+=		${LNET_BASE}/socklnd/procapi.c
+SRCS+=		${LNET_BASE}/socklnd/proclib.c
+SRCS+=		${LNET_BASE}/socklnd/select.c
+SRCS+=		${LNET_BASE}/socklnd/table.c
+SRCS+=		${LNET_BASE}/socklnd/tcplnd.c
+SRCS+=		${LNET_BASE}/socklnd/sendrecv.c
 
 INCLUDES+=	-I${LNET_BASE}/include
 INCLUDES+=	-I${LNET_BASE}/socklnd
