@@ -1,6 +1,25 @@
 #include "offtree.h"
 #include "psc_util/alloc.h"
 
+
+struct offtree_root *
+offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
+	       void *private, offtree_alloc_fn alloc_fn)
+{
+	struct offtree_root *t = PSCALLOC(sizeof(struct offtree_root));
+	
+	LOCK_INIT(&t->oftr_lock);
+	t->oftr_width    = width;
+	t->oftr_mapsz    = minsz;
+	t->oftr_minsz    = mapsz;
+	t->oftr_maxdepth = depth;
+	t->oftr_alloc    = alloc_fn;
+	t->oftr_pri      = private;  /* our bmap handle */
+	ATTR_SET(t->oftr_flags, OFT_ROOT);
+	
+	return (t);
+}
+
 /**
  * offtree_iovs_check - iov array verifier.
  * @iovs: array of iovs
@@ -66,6 +85,10 @@ offtree_leaf2node_locked(struct offtree_memb *oftm, struct offtree_root *r)
 					    r->oftr_width);
 	ATTR_UNSET(oftm->oft_flags, OFT_LEAF);
 	ATTR_SET(oftm->oft_flags, OFT_NODE);
+	/* No need to wake up others, they would be blocked on 
+	 *  the spinlock anyway.
+	 */
+	//psc_waitq_wakeup(&oftm->oft_waitq);
 }
 
 
@@ -79,7 +102,7 @@ offtree_node_reuse_locked(struct offtree_memb *m)
 	/* Reuse, don't release
 	 */
 	oftm_reuse_verify(m);
-	m->oft_flags = OFT_LEAF | OFT_ALLOCPNDG;
+	m->oft_flags = (OFT_LEAF | OFT_ALLOCPNDG);
 }
 
 #define oft_child_free(__c, __p) {					\
@@ -224,7 +247,7 @@ offtree_calc_nblks_hb_int(const struct offtree_req *r,
  * offtree_blks_get - allocate memory blocks for request 'req'.  Take into account an existing memory buffer and manage the allocation array.  On successful completion, the req->oftrq_darray will contain an array of iov's which may be used for I/O.  If the 'have_buffer' exists, then it will be placed at the correct logical location within the iov array.  Since our blocks are aligned this is possible.
  * @req: the allocation request (which also holds the array).
  * @hb_iov: if !NULL, represents the currently held buffer.
- * Returns '0' on success.
+ * Returns 'nblks' on success.
  */
 static ssize_t
 offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
@@ -236,6 +259,8 @@ offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
 
 	tblks = req->oftrq_nblks;
 
+	DEBUG_OFFTREQ(PLL_TRACE, req, "req");	
+	
 	/* Determine nblks taking into account overlap 
 	 */
 	if (!hb_iov) {		
@@ -263,6 +288,8 @@ offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
 		 *  have_buffer.  Add the iov's to the array in the 
 		 *  correct order.
 		 */
+		DEBUG_OFFTIOV(PLL_TRACE, hb_iov, "hb");
+
 		nblks = offtree_calc_nblks_hb_int(req, iov, &front, &back);
 		psc_assert(front || back);
 		/* Allocate 'front' blocks and add their iovs to the front
@@ -325,7 +352,7 @@ offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
 	} while (0)		       
 
 /*
- * offtree_putleaf - apply buffers to a leafh
+ * offtree_putleaf - apply buffers to a leaf
  *
  offtree_putnode(req, iovoff, tiov_cnt, sblkoff);	
  * Notes:  don't modify source iov's directly.  Copy them using NEW_PARTIAL_IOV.
@@ -352,9 +379,10 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		DEBUG_OFFTIOV(PLL_INFO, iov, "hb");
 
 		if (!blkoff) {
+			/* Use the existing reference.
+			 */
 			req->oftr_oftm->norl.oft_iov = iov;
 			psc_assert(!iovoff && !blkoff);
-			sl_oftm_addref(req->oftr_oftm);
 		} else {
 			/* Only modref if the request doesn't use the 
 			 *   entire iov otherwise the existing reference
@@ -363,8 +391,9 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			 */
 			NEW_PARTIAL_IOV(tiov, iov, blkoff, req->oftrq_nblks);
 			req->oftr_oftm->norl.oft_iov = tiov
-			sl_oftm_addref(req->oftr_oftm);
 		}
+
+		sl_oftm_addref(req->oftr_oftm);			
 		goto out;
 		
 	} else {
@@ -409,10 +438,12 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		for (j=0, b=0, i_offa=nr_soffa, tchild=schild; 
 		     tchild <= echild; 
 		     j++, tchild++, myreq.oftr_width++) {
-
+			/* Region values increase with myreq.oftr_width
+			 */
 			rg_soff = OFT_REQ_STARTOFF(&myreq);
 			rg_eoff = OFT_REQ_ENDOFF(&myreq);		
-			/* This should always be true */
+			/* This should always be true 
+			 */
 			psc_assert(nr_soffa <= rg_soff); 	
 
 			if (tchild > schild)
@@ -500,10 +531,14 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 
 		OFT_IOV2SE_OFFS(iov, hb_soffa, hb_eaoffa);
 		DEBUG_OFFTIOV(PLL_INFO, iov, "hb");	
-
+		/* Check to see if the existing allocation can fulfill
+		 *   this request.
+		 */
 		if ((nr_soffa >= hb_soffa) && (nr_eoffa <= hb_eoffa)) {
 			DEBUG_OFFTREQ(PLL_TRACE, req, 
 				      "req fulfilled by existing hb %p", iov);
+
+			dynarray_add(req->oftrq_darray, iov);
 			goto done;
 		} else 
 			/* Existing allocation is not sufficient, prep
@@ -528,7 +563,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		m->norl.oft_iov = dynarray_get(req->oftrq_darray);
 		DEBUG_OFFTREQ(PLL_TRACE, req, 
 			      "req fulfilled by a new buffer");
-		DEBUG_OFFTIOV(PLL_INFO, m->norl.oft_iov, "new hb");
+		DEBUG_OFFTIOV(PLL_INFO, m->norl.oft_iov, "new hb");		
+
 		offtree_putnode(req, 0, 1, 0);
 		goto done;
 
@@ -651,12 +687,12 @@ offtree_region_preprw(struct offtree_req *req)
 	psc_assert(req->oftrq_root);
 	psc_assert(req->oftrq_memb);	
 
-	OFT_REQ2SE_OFFS(req, nr_soffa, nr_eoffa);
+ 	OFT_REQ2SE_OFFS(req, nr_soffa, nr_eoffa);
 	OFT_VERIFY_REQ_SE(req, nr_soffa, nr_eoffa);
 
  wakeup_retry:
-	DEBUG_OFFTREQ(PLL_TRACE, req, "soff=%"ZLPX64" eoff=%"ZLPX64" scnt=%d",
-		      nr_soffa, nr_eoffa, scnt);	
+	DEBUG_OFFTREQ(PLL_TRACE, req, "eoff=%"ZLPX64" scnt=%d",
+		      nr_eoffa, scnt);	
 
 	spinlock(&m->oft_lock);
 
@@ -664,11 +700,12 @@ offtree_region_preprw(struct offtree_req *req)
 	/* Verify tree node state
 	 */
 	if (ATTR_TEST(m->oft_flags, OFT_LEAF)) {
-		psc_assert(!ATTR_TEST(m->oft_flags, OFT_NODE));		
+
+		oftm_leaf_verify(m);
 		if (ATTR_TEST(m->oft_flags, OFT_ALLOCPNDG)) {
 			/* Block for completion of allocation 
 			 */
-			DEBUG_OFT(PLL_TRACE, m, 
+			DEBUG_OFT(PLL_WARN, m, 
 				  "block on OFT_ALLOCPNDG req:%p", req);
 			psc_waitq_wait(&m->oft_waitq, &m->oft_lock);
 			scnt++;
@@ -687,9 +724,9 @@ offtree_region_preprw(struct offtree_req *req)
 	} else if (ATTR_TEST(m->oft_flags, OFT_NODE)) {
 		int schild, echild;
 
-		psc_assert(!ATTR_TEST(m->oft_flags, OFT_LEAF));
+		oftm_node_verify(m);
 		if (ATTR_TEST(m->oft_flags, OFT_MCHLDGROW)) {
-			DEBUG_OFT(PLL_TRACE, m, 
+			DEBUG_OFT(PLL_WARN, m, 
 				  "block on OFT_MCHLDGROW req:%p", req);
 			psc_waitq_wait(&m->oft_waitq, &m->oft_lock);
 			scnt++;
@@ -706,7 +743,7 @@ offtree_region_preprw(struct offtree_req *req)
 			new = m->norl.oft_children[schild];		
 			if (!new) 
 				new = offtree_newleaf(m, schild);
-			
+x			
 			req->oftrq_memb = new;			
 			/* Release lock after assigning child
 			 */
@@ -749,6 +786,7 @@ offtree_region_preprw(struct offtree_req *req)
 						freelock(&myreq.oftrq_memb->oft_lock);
 					} else {
 						freelock(&myreq.oftrq_memb->oft_lock);
+						psc_trace("recurse into offtree_region_preprw()");
 						offtree_region_preprw(&myreq);
 					}
 				} else {
@@ -759,6 +797,10 @@ offtree_region_preprw(struct offtree_req *req)
 					freelock(&myreq.oftrq_memb->oft_lock);
 				}
 			}
+			ATTR_UNSET(m->oft_flags, OFT_MCHLDGROW);
+			/* I'm pretty sure this is the right behavior...
+			 */
+			psc_waitq_wakeall(&m->oftm_waitq);
 		}
 	} else
 		psc_fatalx("Invalid offtree node state %d", m->oft_flags);
@@ -770,22 +812,4 @@ offtree_region_preprw(struct offtree_req *req)
  error:
 	/* do the right node mgmt here.. */
 	return (-ENOMEM);
-}
-
-struct offtree_root *
-offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
-	       void *private, offtree_alloc_fn alloc_fn)
-{
-	struct offtree_root *t = PSCALLOC(sizeof(struct offtree_root));
-	
-	LOCK_INIT(&t->oftr_lock);
-	t->oftr_width    = width;
-	t->oftr_mapsz    = minsz;
-	t->oftr_minsz    = mapsz;
-	t->oftr_maxdepth = depth;
-	t->oftr_alloc    = alloc_fn;
-	t->oftr_pri      = private;  /* our bmap handle */
-	ATTR_SET(t->oftr_flags, OFT_ROOT);
-	
-	return (t);
 }

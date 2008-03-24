@@ -5,6 +5,7 @@
 
 #include "psc_types.h"
 #include "psc_util/atomic.h"
+#include "psc_util/log.h"
 #include "psc_ds/list.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/waitq.h"
@@ -37,15 +38,15 @@ power(size_t base, size_t exp)
 	(OFT_REGIONSZ(root, d) * abs_width)
 
 #define OFT_ENDOFF(root, d, abs_width)			\
-	(OFT_REGIONSZ(root, d) * (abs_width + 1) - 1)
+	((off_t)(OFT_REGIONSZ(root, d) * (abs_width + 1) - 1))
 
-#define OFT_REQ_STARTOFF(req)					\
-	(OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) *	\
-	 (req)->oftrq_width))
+#define OFT_REQ_STARTOFF(req)						\
+	((off_t)(OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) *	\
+		 (req)->oftrq_width))
 
 #define OFT_REQ_ENDOFF(req)				       \
-	(OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) * \
-	 ((req)->oftrq_width + 1) - 1)
+	((off_t)(OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) *	\
+		 ((req)->oftrq_width + 1) - 1))
 
 #define OFT_REQ_ABSWIDTH_GET(req, pos)					\
 	(((req)->oftrq_width * (req)->oftrq_root->oftr_width) + pos)
@@ -88,14 +89,15 @@ power(size_t base, size_t exp)
  */
 
 #define oftm_leaf_verify(m) {						\
-		psc_assert((m)->norl.oft_iov);				\
+		psc_assert((m)->oft_norl.oft_iov);			\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
 		psc_assert(atomic_read((m)->oft_ref) ||			\
 			   ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
 	}								\
 
 #define oftm_splitting_leaf_verify(m) {					\
-		psc_assert(!(m)->norl.oft_iov);				\
+		psc_assert(!(m)->oft_norl.oft_iov);			\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_SPLITTING));	\
 		psc_assert(!atomic_read((m)->oft_ref));			\
@@ -103,7 +105,8 @@ power(size_t base, size_t exp)
 
 #define oftm_node_verify(m) {						\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_NODE));	\
-		psc_assert(atomic_read((m)->oft_ref) ||			\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
+		psc_assert(atomic_read(&(m)->oft_ref) ||		\
 			   ATTR_TEST((m)->oft_flags, OFT_SPLITTING));	\
 									\
 	}								\
@@ -127,13 +130,13 @@ power(size_t base, size_t exp)
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_READPNDG));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_WRITEPNDG));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
-		psc_assert(!(m)->norl.oft_iov);			\
+		psc_assert(!(m)->oft_norl.oft_iov);			\
 	}
 
 #define oftm_reuse_verify(m) {					\
 		psc_assert((m)->oft_flags == OFT_RELEASE);	\
 		psc_assert(!atomic_read((m)->oft_ref));		\
-		psc_assert(!(m)->norl.oft_iov);			\
+		psc_assert(!(m)->oft_norl.oft_iov);		\
 	}
 
 
@@ -142,7 +145,7 @@ power(size_t base, size_t exp)
 #endif
 #ifndef MAX
 # define MAX(a,b) (((a)>(b)) ? (a): (b))
-#end
+#endif
 
 struct offtree_iov {
 	int     oftiov_flags;
@@ -165,11 +168,11 @@ enum oft_iov_flags {
 
 #define OFFTIOV_FLAG(field, str) (field ? str : "")
 #define DEBUG_OFFTIOV_FLAGS(iov)					\
-	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_DATARDY),  "d"),	\
-	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_FAULTING), "f"),	\
-	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_COLLISION),"p"),      \
-	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_FREEING),  "F"),      \
-	OFFTIOV_FLAG(ATTR_TEST(iov->flags, OFTIOV_MAPPED),   "m")
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_DATARDY),  "d"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FAULTING), "f"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_COLLISION),"p"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FREEING),  "F"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_MAPPED),   "m")
 
 #define OFFTIOV_FLAGS_FMT "%s%s%s%s%s"
 
@@ -177,11 +180,11 @@ enum oft_iov_flags {
 	do {								\
 		_psclog(__FILE__, __func__, __LINE__,			\
 			PSS_OTHER, level, 0,				\
-			" oftiov@%p b:%p o:"LPX64" l:"LPX64 "bsz:"LPX64 \
-			"priv:%p fl:"OFFTIOV_FLAGS_FMT" "fmt,		\
+			" oftiov@%p b:%p o:%"_P_OFFT" l:%"_P_U64 "bsz:%"_P_U64 \
+			" pri:%p fl:"OFFTIOV_FLAGS_FMT" "fmt,		\
 			iov, iov->oftiov_base, iov->oftiov_off,		\
 			iov->oftiov_nblks, iov->oftiov_blksz,	        \
-			iov->oftiov_pri, DEBUG_OFFTIOV_FLAGS(iov),[5~	\
+			iov->oftiov_pri, DEBUG_OFFTIOV_FLAGS(iov),	\
 			## __VA_ARGS__);				\
 	} while(0)
 
@@ -223,17 +226,17 @@ enum oft_attributes {
 
 #define OFTM_FLAG(field, str) (field ? str : "")
 #define DEBUG_OFTM_FLAGS(oft)						\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_NODE), "N"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_LEAF), "L"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_READPNDG), "R"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_WRITEPNDG), "W"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_ALLOCPNDG), "A"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_REQPNDG), "q"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_ROOT), "r"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_FREEING), "F"),		\
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_SPLITTING), "S"),	        \
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_RELEASE), "e"),	        \
-	OFTM_FLAG(ATTR_TEST(oft->flags, OFT_MCHLDGROW), "g")	        \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_NODE), "N"),		\
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_LEAF), "L"),		\
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_READPNDG), "R"),		\
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_WRITEPNDG), "W"),		\
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ALLOCPNDG), "A"),		\
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_REQPNDG), "q"),		\
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ROOT), "r"),		\
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_FREEING), "F"),		\
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_SPLITTING), "S"),	        \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_RELEASE), "e"),	        \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_MCHLDGROW), "g")	        \
 		
 #define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s"
 
@@ -321,7 +324,7 @@ oft_child_req_get(off_t o, struct offtree_req *req)
 	do {								\
 		_psclog(__FILE__, __func__, __LINE__,			\
 			PSS_OTHER, level, 0,				\
-			" oftr@%p o:"LPX64" l:"LPX64" node:%p darray:%p"\
+			" oftr@%p o:%"_P_OFFT" l:%"_P_U64" node:%p darray:%p"\
 			" root:%p op:%hh d:%hh w:%hh "fmt,	        \
 			oftr, oftr->oftrq_off, oftr->oftrq_nblks,	\
 			oftr->oftrq_memb, oftr->oftrq_darray,	        \

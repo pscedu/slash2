@@ -64,4 +64,31 @@ struct mexpfc {
 };
 
 
+/* Tree definition for the fcm to enable tracking of leased bmaps */
+SPLAY_HEAD(bmap_lessees, mexpfcm);
+SPLAY_PROTOTYPE(bmap_lessees, mexpfcm, mecm_fcm_tentry, bmap_cache_cmp);
+
+struct fcmh_info_mds {
+	struct bmap_lessees fcimds_lessees;  /* mds only, client leases array 
+					      * of bmap_mds_export_cache     */
+};
+
+struct bmexpcr {
+        struct mexpbcm      *bmexpcr_ref;
+        SPLAY_ENTRY(bmexpcr) bmexpcr_tentry;
+};
+
+/* Tree of bmexpcr's held by bmap_mds_info.
+ */
+SPLAY_HEAD(bmap_exports, bmexpcr);
+SPLAY_PROTOTYPE(bmap_exports, bmexpcr, bmexpcr_tentry, bmap_cache_cmp);
+/*
+ * bmap_mds_info - associate the fcache block to its respective export bmap caches.
+ */
+struct bmap_mds_info {
+        atomic_t            bmdsi_refcnt;  /* count our references */
+        struct bmap_exports bmdsi_exports; /* point to our exports */
+};
+
+
 #endif
