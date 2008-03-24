@@ -8,6 +8,7 @@
 #include "psc_ds/vbitmap.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/lock.h"
+#include "psc_rpc/rpc.h"
 
 enum slb_states {
 	SLB_DIRTY    = 0x01, /* have dirty data          */
@@ -76,7 +77,7 @@ struct sl_buffer {
         do {                                                            \
                 _psclog(__FILE__, __func__, __LINE__,                   \
                         PSS_OTHER, level, 0,                            \
-                        " slb@%p b:%p sz(%d/%"_P_U64") bsz:%"_P_U64	\
+                        " slb@%p b:%p sz(%d/"LPD64") bsz:"LPD64	\
                         " ref:%d umref:%d fl:"SLB_FLAGS_FMT		\
 			" fcm:%p lco:%p "fmt,				\
                         slb, slb->slb_base, slb->slb_nblks,		\

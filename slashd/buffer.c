@@ -7,6 +7,7 @@
 #include "psc_util/alloc.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_rpc/rpc.h"
 
 #include "buffer.h"
 #include "fidcache.h"
@@ -177,7 +178,7 @@ sl_oftiov_free_check_locked(struct offtree_memb *m)
 			return -1;
 		}
 		slb_set_readpndg_timer(&ts);
-
+		
 		DEBUG_OFFTIOV(PLL_INFO, v, "iov inuse, waiting..");
 
 		rc = psc_waitq_timedwait(&m->oft_waitq, &m->oft_lock, &ts);
@@ -199,17 +200,14 @@ sl_oftiov_free_check_locked(struct offtree_memb *m)
 }
 
 #define SLB_IOV_VERIFY(v) {						\
-		struct sl_buffer *__s = (v)->oftiov_pri;		\
-		/* Blksz's must match					\
-		 */							\
-		psc_assert(__s->slb_blksz == (v)->oftiov_blksz);	\
-		/* Slb must encompass iov range				\
-		 */							\
-		psc_assert((__s->slb_base <= (v)->oftiov_base) &&	\
-			   SLB_SLB2EBASE(__s) >= SLB_IOV2EBASE((v), __s)); \
-		psc_assert(!(((v)->oftiov_base - __s->slb_base)		\
-			     % __s->slb_blksz));			\
-	}
+		struct sl_buffer *SSs = (v)->oftiov_pri;		\
+		int IIi = 0;						\
+		psc_assert(SSs->slb_blksz == (v)->oftiov_blksz);	\
+		psc_assert((SSs->slb_base <= (v)->oftiov_base) &&	\
+			   SLB_SLB2EBASE(SSs) >= SLB_IOV2EBASE((v), SSs)); \
+		IIi = ((v)->oftiov_base - SSs->slb_base) % SSs->slb_blksz; \
+		psc_assert(!IIi);					\
+}
 /**
  * sl_oftiov_bfree - free blocks from the slab buffer pointed to by the offtree_iov. 
  * @iov: the offtree_iov using the slab's blocks

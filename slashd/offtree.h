@@ -9,6 +9,7 @@
 #include "psc_ds/list.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/waitq.h"
+#include "psc_rpc/rpc.h"
 
 
 static inline size_t
@@ -180,8 +181,8 @@ enum oft_iov_flags {
 	do {								\
 		_psclog(__FILE__, __func__, __LINE__,			\
 			PSS_OTHER, level, 0,				\
-			" oftiov@%p b:%p o:%"_P_OFFT" l:%"_P_U64 "bsz:%"_P_U64 \
-			" pri:%p fl:"OFFTIOV_FLAGS_FMT" "fmt,		\
+			" oftiov@%p b %p o "LPX64" l "LPD64		\
+			" bsz "LPD64" pri:%p fl:"OFFTIOV_FLAGS_FMT" "fmt, \
 			iov, iov->oftiov_base, iov->oftiov_off,		\
 			iov->oftiov_nblks, iov->oftiov_blksz,	        \
 			iov->oftiov_pri, DEBUG_OFFTIOV_FLAGS(iov),	\
