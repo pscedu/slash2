@@ -10,6 +10,11 @@
 #include "psc_util/lock.h"
 #include "psc_rpc/rpc.h"
 
+extern u32 slCacheBlkSz;
+extern u32 slCacheNblks;
+extern u32 slbFreeDef;
+extern u32 slbFreeMax;
+
 enum slb_states {
 	SLB_DIRTY    = 0x01, /* have dirty data          */
 	SLB_INFLIGHT = 0x02, /* dirty data is being sent */

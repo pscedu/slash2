@@ -14,7 +14,7 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	t->oftr_minsz    = mapsz;
 	t->oftr_maxdepth = depth;
 	t->oftr_alloc    = alloc_fn;
-	t->oftr_pri      = private;  /* our bmap handle */
+	t->oftr_pri      = private;  /* our fcache handle */
 	t->oftr_putnode_cb = putnode_cb_fn;
 
 	ATTR_SET(t->oftr_memb.oft_flags, OFT_ROOT);
@@ -410,7 +410,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		off_t  nr_soffa, nr_eoffa;
 		off_t  rg_soff = OFT_REQ_STARTOFF(req);
 		off_t  rg_eoff = OFT_REQ_ENDOFF(req);
-		off_t  i_offa;                              /* offset iterator */
+		off_t  i_offa; /* offset iterator */
 		int    tchild, schild, echild;
 		int    j=0, b=0, tiov_cnt=1, t=0;
 		int    nblks=req->oftrq_nblks;

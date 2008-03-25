@@ -649,11 +649,14 @@ sl_buffer_init(void *pri)
 	slb->slb_nblks = slCacheNblks;
 	slb->slb_base  = PSCALLOC(slCacheNblks * slCacheBlkSz);
 	atomic_set(&slb->slb_ref, 0);
+	atomic_set(&slb->slb_unmapd_ref, 0);
 	LOCK_INIT (&slb->slb_lock);
 	ATTR_SET  (slb->slb_flags, SLB_FREEING);
 	INIT_PSCLIST_HEAD(&slb->slb_iov_list);
 	INIT_PSCLIST_ENTRY(&slb->slb_mgmt_lentry);
 	INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);	
+
+	DEBUG_SLB(PLL_TRACE, slb, "new slb");
 }
 
 void
