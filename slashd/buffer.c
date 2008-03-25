@@ -164,7 +164,7 @@ sl_oftiov_free_check_locked(struct offtree_memb *m)
 	psc_assert(!ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTING));
 	
  restart:	
-	if (ATTR_TEST(m->oft_flags, OFT_REQPNDG)) {		
+	if (atomic_read(&m->oft_op_ref)) {
 		/* Already pulled this guy from the lru, might as 
 		 *   try to free it.
 		 */
@@ -457,14 +457,17 @@ sl_oftm_addref(struct offtree_memb *m)
 			 *  old one.
 			 */
 			struct sl_buffer_iovref *tref = PSCALLOC(sizeof(*nref));
-			
+			int t;
+
 			tref->slbir_base  = SLB_REF2EBASE(nref, slb) + 1;
 			tref->slbir_nblks = oref->slbir_nblks;
 			tref->slbir_pri   = m;
 			ATTR_SET(tref->slbir_flags, SLBREF_MAPPED);
 			
-			psc_assert(!(nref->slbir_base - oref->slbir_base) % slb->slb_blksz);
-			
+			t = (nref->slbir_base - oref->slbir_base) % 
+				slb->slb_blksz;
+			psc_assert(!t);
+
 			oref->slbir_nblks = (nref->slbir_base - oref->slbir_base) /
 				slb->slb_blksz;
 			
@@ -570,7 +573,8 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks,
 		iovs[tiovs]->oftiov_base  = slb->slb_base + (slb->slb_blksz * n);
 		sl_buffer_lru_assertions(slb);
 		
-		DEBUG_OFFTIOV(PLL_TRACE, iovs[tiovs], "new iov(%d)", tiovs);
+		DEBUG_OFFTIOV(PLL_TRACE, iovs[tiovs], "new iov(%d) (niovs %d)", 
+			      tiovs, *niovs);
 		tiovs++;
 	}
  out:
@@ -588,7 +592,6 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks,
 int 
 sl_buffer_alloc(size_t nblks, struct offtree_iov **iovs, int *niovs, void *pri)
 {
-	int     n=0, rc;
 	ssize_t rblks = nblks;
 	struct offtree_root *r  = pri;
 	fcache_mhandle_t    *f  = r->oftr_pri;

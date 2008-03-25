@@ -77,7 +77,7 @@ struct sl_buffer {
         do {                                                            \
                 _psclog(__FILE__, __func__, __LINE__,                   \
                         PSS_OTHER, level, 0,                            \
-                        " slb@%p b:%p sz(%d/"LPD64") bsz:"LPD64	\
+                        " slb@%p b:%p sz(%d/%d) bsz:%u"			\
                         " ref:%d umref:%d fl:"SLB_FLAGS_FMT		\
 			" fcm:%p lco:%p "fmt,				\
                         slb, slb->slb_base, slb->slb_nblks,		\
@@ -93,14 +93,15 @@ struct sl_buffer {
 	
 #define DUMP_SLB(level, slb, fmt, ...)					\
         do {                                                            \
-		int __l, __c;						\
+		int __l;						\
 		struct sl_buffer_iovref *__r;				\
 									\
 		DEBUG_SLB(level, slb, fmt, ## __VA_ARGS__);		\
 		__l = reqlock(&slb->slb_lock);				\
 		psclist_for_each_entry(__r, &slb->slb_iov_list,		\
 				       slbir_lentry) {			\
-			DEBUG_OFT(level,(struct offtree_memb *) __r->slbir_pri, \
+			DEBUG_OFT(level,				\
+				  (struct offtree_memb *)__r->slbir_pri, \
 				  "SLB %p memb", slb);			\
 		}							\
 		ureqlock(&slb->slb_lock, __l);				\

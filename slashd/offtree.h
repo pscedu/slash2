@@ -58,13 +58,15 @@ power(size_t base, size_t exp)
 	}
 
 #define OFT_REQ2SE_OFFS(req, s, e) {					\
-		psc_assert(!(req)->oftrq_off %				\
-			   (req)->oftrq_root->oftr_minsz);		\
+		int TTt;						\
+		TTt = (req)->oftrq_off % (req)->oftrq_root->oftr_minsz; \
 		s = (req)->oftrq_off;					\
-		e = 1 - (s + ((req)->oftrq_nblks *			\
-			      (req)->oftrq_root->oftr_minsz));		\
-		psc_assert(!((s) % (req)->oftrq_root->oftr_minsz));	\
-		psc_assert(!((e+1) % (req)->oftrq_root->oftr_minsz));	\
+		e = (s + ((req)->oftrq_nblks *				\
+			  (req)->oftrq_root->oftr_minsz)) - 1;		\
+		TTt = s % (req)->oftrq_root->oftr_minsz;		\
+		psc_assert(!TTt);					\
+		TTt = (e+1) % (req)->oftrq_root->oftr_minsz;		\
+		psc_assert(!TTt);					\
         } 
 
 
@@ -93,7 +95,7 @@ power(size_t base, size_t exp)
 		psc_assert((m)->oft_norl.oft_iov);			\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
-		psc_assert(atomic_read((m)->oft_ref) ||			\
+		psc_assert(atomic_read(&(m)->oft_ref) ||		\
 			   ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
 	}								\
 
@@ -101,7 +103,7 @@ power(size_t base, size_t exp)
 		psc_assert(!(m)->oft_norl.oft_iov);			\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_SPLITTING));	\
-		psc_assert(!atomic_read((m)->oft_ref));			\
+		psc_assert(!atomic_read(&(m)->oft_ref));		\
 	}								\
 
 #define oftm_node_verify(m) {						\
@@ -115,7 +117,7 @@ power(size_t base, size_t exp)
 #define oftm_unrelease_verify(m) {					\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF) ||	\
 			   ATTR_TEST((m)->oft_flags, OFT_NODE));	\
-		psc_assert(atomic_read((m)->oft_ref) ||			\
+		psc_assert(atomic_read(&(m)->oft_ref) ||		\
 			   ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
 	}
 
@@ -127,7 +129,7 @@ power(size_t base, size_t exp)
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_FREEING));	\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
-		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_REQPNDG));	\
+		psc_assert(!atomic_read(&(m)->oft_op_ref));		\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_READPNDG));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_WRITEPNDG));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
@@ -136,7 +138,7 @@ power(size_t base, size_t exp)
 
 #define oftm_reuse_verify(m) {					\
 		psc_assert((m)->oft_flags == OFT_RELEASE);	\
-		psc_assert(!atomic_read((m)->oft_ref));		\
+		psc_assert(!atomic_read(&(m)->oft_ref));	\
 		psc_assert(!(m)->oft_norl.oft_iov);		\
 	}
 
@@ -194,6 +196,7 @@ enum oft_iov_flags {
 		psc_waitq_init(&(m)->oft_waitq);		\
 		LOCK_INIT(&(m)->oft_lock);			\
 		atomic_set(&(m)->oft_ref, 0);			\
+		atomic_set(&(m)->oft_op_ref, 0);		\
                 (m)->oft_parent = p;                            \
 	}
 
@@ -201,7 +204,8 @@ struct offtree_memb {
 	struct psc_wait_queue oft_waitq; /* block here on OFT_GETPNDG */
 	psc_spinlock_t        oft_lock;
 	u32                   oft_flags;
-	atomic_t              oft_ref;
+	atomic_t              oft_ref;      /* hb or nchildren     */
+	atomic_t              oft_op_ref;   /* pending operations  */
 	struct offtree_memb  *oft_parent;
 	u8                    oft_pos;                   
 	//struct psclist_head   oft_lentry; /* chain in the slb    */
@@ -217,7 +221,6 @@ enum oft_attributes {
 	OFT_READPNDG  = (1 << 2), /* Read is about to occur   */
 	OFT_WRITEPNDG = (1 << 3), /* Write is about to occur  */
 	OFT_ALLOCPNDG = (1 << 4), /* Alloc is about to occur  */
-	OFT_REQPNDG   = (1 << 5), 
 	OFT_ROOT      = (1 << 6), /* Tree root                */
 	OFT_FREEING   = (1 << 7), /* Different from Reap?     */
 	OFT_SPLITTING = (1 << 8), /* Leaf becoming a parent   */
@@ -228,16 +231,15 @@ enum oft_attributes {
 #define OFTM_FLAG(field, str) (field ? str : "")
 #define DEBUG_OFTM_FLAGS(oft)						\
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_NODE), "N"),		\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_LEAF), "L"),		\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_READPNDG), "R"),		\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_WRITEPNDG), "W"),		\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ALLOCPNDG), "A"),		\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_REQPNDG), "q"),		\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ROOT), "r"),		\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_FREEING), "F"),		\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_SPLITTING), "S"),	        \
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_RELEASE), "e"),	        \
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_MCHLDGROW), "g")	        \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_LEAF), "L"),	\
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_READPNDG), "R"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_WRITEPNDG), "W"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ALLOCPNDG), "A"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ROOT), "r"),	\
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_FREEING), "F"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_SPLITTING), "S"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_RELEASE), "e"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_MCHLDGROW), "g")
 		
 #define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s"
 
@@ -246,20 +248,22 @@ enum oft_attributes {
 		if (ATTR_TEST((oft)->oft_flags, OFT_LEAF)) {		\
 			_psclog(__FILE__, __func__, __LINE__,		\
 				PSS_OTHER, level, 0,			\
-				" oft@%p pos:%hhu p:%p ref:%d"		\
+				" oft@%p pos:%hhu p:%p ref:%d oref:%d"	\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
 				oft, (oft)->oft_pos,			\
 				(oft)->oft_parent,			\
 				atomic_read(&(oft)->oft_ref), 		\
+				atomic_read(&(oft)->oft_op_ref),	\
 				DEBUG_OFTM_FLAGS(oft),			\
 				## __VA_ARGS__);			\
 		} else {						\
 			_psclog(__FILE__, __func__, __LINE__,		\
 				PSS_OTHER, level, 0,			\
-				" oft@%p pos:%hhu p:%p r:%d "		\
+				" oft@%p pos:%hhu p:%p ref:%d oref:%d"	\
 				"fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
 				oft, (oft)->oft_pos, (oft)->oft_parent,	\
 				atomic_read(&(oft)->oft_ref),		\
+				atomic_read(&(oft)->oft_op_ref),	\
 				DEBUG_OFTM_FLAGS(oft),			\
 				## __VA_ARGS__);			\
 		}							\
@@ -325,13 +329,13 @@ oft_child_req_get(off_t o, struct offtree_req *req)
 	do {								\
 		_psclog(__FILE__, __func__, __LINE__,			\
 			PSS_OTHER, level, 0,				\
-			" oftr@%p o:%"_P_OFFT" l:%"_P_U64" node:%p darray:%p"\
-			" root:%p op:%hh d:%hh w:%hh "fmt,	        \
-			oftr, oftr->oftrq_off, oftr->oftrq_nblks,	\
-			oftr->oftrq_memb, oftr->oftrq_darray,	        \
-			oftr->oftrq_root, oftr->oftrq_op,               \
-			oftr->oftrq_depth, oftr->oftrq_width,           \
-			## __VA_ARGS__);  \
+			" oftr@%p o:"LPX64" l:"LPD64" node:%p darray:%p"\
+			" root:%p op:%hhu d:%hhu w:%hhu "fmt,	        \
+			oftr, (oftr)->oftrq_off, (oftr)->oftrq_nblks,	\
+			(oftr)->oftrq_memb, (oftr)->oftrq_darray,	\
+			(oftr)->oftrq_root, (oftr)->oftrq_op,		\
+			(oftr)->oftrq_depth, (oftr)->oftrq_width,	\
+			## __VA_ARGS__);				\
 	} while(0)
 
 
@@ -345,4 +349,6 @@ offtree_region_preprw(struct offtree_req *);
 extern void
 offtree_iovs_check(const struct offtree_iov *, const int);
 
+extern void
+offtree_freeleaf_locked(struct offtree_memb *oftm);
 #endif 
