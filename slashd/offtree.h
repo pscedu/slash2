@@ -277,6 +277,7 @@ enum oft_attributes {
  *  Return: the number of blocks allocated (and hence the number of iovec's in the array.
  */
 typedef int (*offtree_alloc_fn)(size_t, struct offtree_iov **, int *, void *);
+typedef void (*offtree_putnode_cb)(struct offtree_memb *);
 
 struct offtree_root {
 	psc_spinlock_t oftr_lock;
@@ -286,6 +287,7 @@ struct offtree_root {
 	size_t         oftr_minsz; /* minimum chunk size                    */
 	void          *oftr_pri;   /* opaque backpointer (use bmap for now) */
 	offtree_alloc_fn    oftr_alloc;
+	offtree_putnode_cb  oftr_putnode_cb;
 	struct offtree_memb oftr_memb; /* root member                       */
 };
 
@@ -341,7 +343,7 @@ oft_child_req_get(off_t o, struct offtree_req *req)
 
 
 extern struct offtree_root *
-offtree_create(size_t, size_t, u32, u32, void *, offtree_alloc_fn);
+offtree_create(size_t, size_t, u32, u32, void *, offtree_alloc_fn, offtree_putnode_cb);
 
 extern int 
 offtree_region_preprw(struct offtree_req *);

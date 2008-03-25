@@ -3,7 +3,8 @@
 
 struct offtree_root *
 offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
-	       void *private, offtree_alloc_fn alloc_fn)
+	       void *private, offtree_alloc_fn alloc_fn, 
+	       offtree_putnode_cb putnode_cb_fn)
 {
 	struct offtree_root *t = PSCALLOC(sizeof(struct offtree_root));
 	
@@ -14,6 +15,8 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	t->oftr_maxdepth = depth;
 	t->oftr_alloc    = alloc_fn;
 	t->oftr_pri      = private;  /* our bmap handle */
+	t->oftr_putnode_cb = putnode_cb_fn;
+
 	ATTR_SET(t->oftr_memb.oft_flags, OFT_ROOT);
 	
 	return (t);
@@ -395,8 +398,9 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			NEW_PARTIAL_IOV(tiov, iov, blkoff, req->oftrq_nblks);
 			req->oftrq_memb->oft_norl.oft_iov = tiov;
 		}
-
-		sl_oftm_addref(req->oftrq_memb);
+		if (req->oftrq_root->oftr_putnode_cb)
+			(req->oftrq_root->oftr_putnode_cb)(req->oftrq_memb);
+		//sl_oftm_addref(req->oftrq_memb);
 		goto out;
 		
 	} else {
