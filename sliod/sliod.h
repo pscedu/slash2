@@ -13,7 +13,12 @@ struct slio_ctlthr {
 	int sc_st_nrecv;
 };
 
+struct slio_rpcthr {
+	struct pscrpc_thread	 srt_prt;
+};
+
 #define slioctlthr(thr) ((struct slio_ctlthr *)(thr)->pscthr_private)
+#define sliorpcthr(thr) ((struct slio_rpcthr *)(thr)->pscthr_private)
 
 void slio_init(void);
 

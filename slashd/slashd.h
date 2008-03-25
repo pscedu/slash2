@@ -19,7 +19,17 @@ struct slash_ctlthr {
 	int sc_st_nrecv;
 };
 
-#define slctlthr(thr) ((struct slash_ctlthr *)(thr)->pscthr_private)
+struct slash_rpcmdsthr {
+	struct pscrpc_thread	 srm_prt;
+};
+
+struct slash_rpcbethr {
+	struct pscrpc_thread	 srb_prt;
+};
+
+#define slctlthr(thr)	 ((struct slash_ctlthr *)(thr)->pscthr_private)
+#define slrpcmdsthr(thr) ((struct slash_rpcmdsthr *)(thr)->pscthr_private)
+#define slrpcbethr(thr)	 ((struct slash_rpcbethr *)(thr)->pscthr_private)
 
 void		slmds_init(void);
 void		slbe_init(void);
