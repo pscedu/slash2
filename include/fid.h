@@ -15,12 +15,12 @@ typedef struct slash_fid {
 #define FIDSZ  (sizeof(slash_fid_t))
 
 /* 16 bit server / filesystem id */
-#define FSID_FMT "%016"_P_LP64"x"
+#define FSID_FMT "%016"_P_U64"x"
 #define FSID_LEN 16
 #define FID_PATH_DEPTH 2
 #define FID_PATH_LEN 1024
 
-#define FIDFMT			"%"_P_LP64"x:%"_P_LP64"x"
+#define FIDFMT			"%"_P_U64"x:%"_P_U64"x"
 #define FIDFMTARGS(fid)		(fid)->fid_inum, (fid)->fid_gen
 
 #define SLASH_FID_FSID(fid) (u32)((fid)->fid_inum >> 48)
