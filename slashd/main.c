@@ -16,7 +16,7 @@
 
 #define SLASH_THRTBL_SIZE 19
 
-extern void *nal_thread(void *);
+void *nal_thread(void *);
 
 struct psc_thread slashControlThread;
 

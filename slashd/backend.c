@@ -118,5 +118,5 @@ slbe_init(void)
 
 	snprintf(svh->svh_svc_name, PSCRPC_SVCNAME_MAX, "%s", BE_SVCNAME);
 
-	pscrpc_thread_spawn(svh);
+	pscrpc_thread_spawn(svh, struct slash_rpcbethr);
 }

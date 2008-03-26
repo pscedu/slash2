@@ -471,7 +471,7 @@ store_tok_val(const char *tok, char *val)
 
 	case SL_TYPE_HEXU64:
 		*(u64 *)ptr = strtoull(val, NULL, 16);
-		psc_trace("SL_TYPE_HEXU64 Tok '%s' set to '%"_P_LP64"x'",
+		psc_trace("SL_TYPE_HEXU64 Tok '%s' set to '%"_P_U64"x'",
 		       e->name, (u64)*(u64 *)(ptr));
 		break;
 
@@ -551,12 +551,12 @@ store_tok_val(const char *tok, char *val)
 			default:
 				psc_fatalx("Sizeval '%c' is not valid", *c);
 			}
-			psc_trace("ival   = %"_P_LP64"u", i);
+			psc_trace("ival   = %"_P_U64"u", i);
 
 			*c = '\0';
 			*(u64 *)ptr = (u64)(i * strtoull(val, NULL, 10));
 
-			psc_trace("SL_TYPE_SIZET Tok '%s' set to '%"_P_LP64"u'",
+			psc_trace("SL_TYPE_SIZET Tok '%s' set to '%"_P_U64"u'",
 				e->name, *(u64 *)ptr);
 		}
 		break;

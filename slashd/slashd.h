@@ -3,6 +3,8 @@
 #ifndef _SLASH_H_
 #define _SLASH_H_
 
+#include "psc_rpc/service.h"
+
 #include "inode.h"
 
 struct slash_sb_mem;

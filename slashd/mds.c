@@ -761,5 +761,5 @@ slmds_init(void)
 
 	strncpy(svh->svh_svc_name, MDS_SVCNAME, PSCRPC_SVCNAME_MAX);
 
-	pscrpc_thread_spawn(svh);
+	pscrpc_thread_spawn(svh, struct slash_rpcmdsthr);
 }
