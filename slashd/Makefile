@@ -7,6 +7,8 @@ SRCS+=		backend.c
 SRCS+=		cfd.c
 SRCS+=		control.c
 SRCS+=		dircache.c
+SRCS+=		offtree.c
+SRCS+=		buffer.c
 SRCS+=		fidlink.c
 SRCS+=		journal.c
 SRCS+=		lconf.l
@@ -19,6 +21,7 @@ SRCS+=		yconf.y
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
+SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/iostats.c
 SRCS+=		${PFL_BASE}/psc_util/journal.c
@@ -74,6 +77,6 @@ INCLUDES+=	-I${LNET_BASE}/libcfs
 INCLUDES+=	-I${LNET_BASE}/lnet
 DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
 DEFINES+=	-DHAVE_LIBPTHREAD -DHAVE_LIBPTHREAD_DEFINED
-LDFLAGS+=	${THREAD_LIBS}
+LDFLAGS+=	${THREAD_LIBS} -lrt
 
 include ${SLASHMK}
