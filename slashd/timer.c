@@ -9,7 +9,6 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/iostats.h"
 #include "psc_util/waitq.h"
-#include "slashd.h"
 
 struct psc_wait_queue	timerwtq;
 struct psc_thread	sltintvthr;
@@ -60,15 +59,4 @@ sltiosthr_main(__unusedx void *arg)
 		}
 		freelock(&pscIostatsListLock);
 	}
-}
-
-void
-sltimerthr_spawn(void)
-{
-	psc_waitq_init(&timerwtq);
-
-	pscthr_init(&sltintvthr, SLTHRT_TINTV,
-	    sltintvthr_main, NULL, "sltintvthr");
-	pscthr_init(&sltiosthr, SLTHRT_TIOS,
-	    sltiosthr_main, NULL, "sltiosthr");
 }

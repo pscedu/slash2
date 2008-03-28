@@ -4,6 +4,7 @@
 #define _SLASH_H_
 
 #include "psc_rpc/service.h"
+#include "psc_util/waitq.h"
 
 #include "inode.h"
 
@@ -40,6 +41,9 @@ void		slbe_init(void);
 void		slash_journal_init(void);
 sl_inum_t	slash_get_inum(void);
 
-extern struct slash_sb_mem sbm;
+extern struct slash_sb_mem	sbm;
+extern struct psc_wait_queue	timerwtq;
+extern struct psc_thread	sltintvthr;
+extern struct psc_thread	sltiosthr;
 
 #endif /* _SLASH_H_ */

@@ -53,6 +53,17 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 	*t = pt->pscthr_pthread;
 }
 
+void
+sltimerthr_spawn(void)
+{
+	psc_waitq_init(&timerwtq);
+
+	pscthr_init(&sltintvthr, SLTHRT_TINTV,
+	    sltintvthr_main, NULL, "sltintvthr");
+	pscthr_init(&sltiosthr, SLTHRT_TIOS,
+	    sltiosthr_main, NULL, "sltiosthr");
+}
+
 int
 main(int argc, char *argv[])
 {

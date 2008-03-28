@@ -311,5 +311,5 @@ slio_init(void)
 
 	strncpy(svh->svh_svc_name, SLIO_SVCNAME, PSCRPC_SVCNAME_MAX);
 
-	pscrpc_thread_spawn(svh);
+	pscrpc_thread_spawn(svh, struct slio_rpcthr);
 }

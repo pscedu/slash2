@@ -53,6 +53,17 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 	*t = pt->pscthr_pthread;
 }
 
+void
+sliotimerthr_spawn(void)
+{
+	psc_waitq_init(&timerwtq);
+
+	pscthr_init(&sltiointvthr, SLIOTHRT_TINTV,
+	    sliotintvthr_main, NULL, "sliotintvthr");
+	pscthr_init(&sliotiosthr, SLIOTHRT_TIOS,
+	    sliotiosthr_main, NULL, "sltioiosthr");
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -88,6 +99,7 @@ main(int argc, char *argv[])
 	libsl_init(PSC_SERVER);
 	rpc_svc_init();
 	slio_init();
+	sliotimerthr_spawn();
 	slioctlthr_main(sfn);
 	exit(0);
 }
