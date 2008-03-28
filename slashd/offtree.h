@@ -41,6 +41,9 @@ power(size_t base, size_t exp)
 #define OFT_ENDOFF(root, d, abs_width)			\
 	((off_t)(OFT_REGIONSZ(root, d) * (abs_width + 1) - 1))
 
+/* Confusing name, it means given an oft_request, find the
+ *   starting offset for the region not the request.
+ */
 #define OFT_REQ_STARTOFF(req)						\
 	((off_t)(OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) *	\
 		 (req)->oftrq_width))
@@ -173,7 +176,8 @@ enum oft_iov_flags {
 	OFTIOV_FAULTING  = (1 << 1), /* Buffer is being retrieved    */
 	OFTIOV_COLLISION = (1 << 2), /* Collision ops must take place */
 	OFTIOV_FREEING   = (1 << 3), /* Collision ops must take place */
-	OFTIOV_MAPPED    = (1 << 4)  /* Mapped to a tree node */
+	OFTIOV_MAPPED    = (1 << 5), /* Mapped to a tree node */
+	OFTIOV_REMAP     = (1 << 6)  /* Remap to a another tree node  */	
 };
 
 #define OFFTIOV_FLAG(field, str) (field ? str : "")

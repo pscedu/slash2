@@ -393,19 +393,23 @@ sl_oftiov_locref_locked(struct offtree_iov *iov, struct sl_buffer *slb)
 	struct sl_buffer_iovref *ref=NULL;
 	void                    *ebase=0;
 
-	/* blksz's must match */
+	/* Blksz's must match 
+	 */
 	psc_assert(slb->slb_blksz == iov->oftiov_blksz);	
-	/* Slb must encompass iov range */
+	/* Slb must encompass iov range 
+	 */
 	psc_assert((slb->slb_base <= iov->oftiov_base) &&
 		   SLB_SLB2EBASE(slb) >= SLB_IOV2EBASE(iov, slb));
 
 	psclist_for_each_entry(ref, &slb->slb_iov_list, slbir_lentry) {
 		psc_assert(ebase < ref->slbir_base);
 		ebase = SLB_REF2EBASE(ref, slb);
+		psc_trace("slbir_base=%p ebase=%p", 
+			  ref->slbir_base, ebase);
 
-		if ((iov->oftiov_base >= ref->slbir_base) && 
-		    (iov->oftiov_base <= ebase)) {
+		if (iov->oftiov_base == ref->slbir_base) {
 			psc_assert(!ATTR_TEST(ref->slbir_flags, SLBREF_REAP));
+			psc_assert(ref->slbir_nblks == iov->oftiov_nblks);
 			psc_assert(SLB_IOV2EBASE(iov, slb) <= ebase);	
 			break;
 		}
@@ -418,7 +422,7 @@ sl_oftm_addref(struct offtree_memb *m)
 {
 	struct offtree_iov      *miov = m->oft_norl.oft_iov;
 	struct sl_buffer        *slb  = miov->oftiov_pri;
-	struct sl_buffer_iovref *oref=NULL, *nref=NULL;
+	struct sl_buffer_iovref *oref=NULL;
 	
 	spinlock(&slb->slb_lock);
 
@@ -426,83 +430,31 @@ sl_oftm_addref(struct offtree_memb *m)
 	/* Old ref must be found 
 	 */
 	psc_assert(oref);
+	psc_assert(oref->slbir_base == slb->slb_base);
 
 	DUMP_SLB(PLL_TRACE, slb, "slb start (treenode %p)", m);
-	
+
 	if (!ATTR_TEST(oref->slbir_flags, SLBREF_MAPPED)) {
 		/* Covers a full or partial mapping.
 		 */
-		psc_assert(oref->slbir_base == slb->slb_base);
 		DEBUG_OFT(PLL_TRACE, m, "unmapped slbref");
 		ATTR_SET(oref->slbir_flags, SLBREF_MAPPED);
 		oref->slbir_pri = m;
 		atomic_dec(&slb->slb_unmapd_ref);
 		atomic_inc(&slb->slb_ref);
-		goto out;
-	}
-	/* At least one ref will be added, prep the new ref.
-	 */
-	DEBUG_OFT(PLL_TRACE, m, "remap slbref");
-	
-	nref = PSCALLOC(sizeof(*nref));
-	nref->slbir_base  = miov->oftiov_base;
-	nref->slbir_nblks = miov->oftiov_nblks;
-	nref->slbir_pri   = m;
-	ATTR_SET(nref->slbir_flags, SLBREF_MAPPED);
-	
-	if (oref->slbir_base == nref->slbir_base) {
-		/* Push oref so that it does not overlap with the 
-		 *  new iov.  Refcnt is bumped below.
-		 */
-		psc_assert(nref->slbir_nblks < oref->slbir_nblks);
-		oref->slbir_nblks -= nref->slbir_nblks;
-		psc_assert(oref->slbir_nblks > 0);
-		oref->slbir_base  += (nref->slbir_nblks * slb->slb_blksz);
-		psclist_add(&nref->slbir_lentry, &oref->slbir_lentry);
-
 	} else {
-		if (SLB_REF2EBASE(nref, slb) == SLB_REF2EBASE(oref, slb)) {
-			/* Ends match up, just shrink oref */
-			oref->slbir_nblks -= nref->slbir_nblks;
-			psc_assert(oref->slbir_nblks > 0);
-			psclist_add_tail(&nref->slbir_lentry, 
-					 &oref->slbir_lentry);
-		
-		} else if (SLB_REF2EBASE(oref, slb) > SLB_REF2EBASE(nref, slb)) {
-			/* New ref is resides in the middle of 
-			 *  old one.
-			 */
-			struct sl_buffer_iovref *tref = PSCALLOC(sizeof(*nref));
-			int t;
+		if (!ATTR_TEST(miov->oftiov_flags, OFTIOV_REMAP)) {
+			DUMP_SLB(PLL_TRACE, slb, "bad slb ref");
+			psc_fatalx("invalid ref %p", oref);
 
-			tref->slbir_base  = SLB_REF2EBASE(nref, slb) + 1;
-			tref->slbir_nblks = oref->slbir_nblks;
-			tref->slbir_pri   = m;
-			ATTR_SET(tref->slbir_flags, SLBREF_MAPPED);
-			
-			t = (nref->slbir_base - oref->slbir_base) % 
-				slb->slb_blksz;
-			psc_assert(!t);
-
-			oref->slbir_nblks = (nref->slbir_base - oref->slbir_base) /
-				slb->slb_blksz;
-			
-			tref->slbir_nblks -= oref->slbir_nblks + nref->slbir_nblks;
-
-			psclist_add_tail(&nref->slbir_lentry, 
-					 &oref->slbir_lentry);
-
-			psclist_add_tail(&tref->slbir_lentry, 
-					 &nref->slbir_lentry);
-
-			/* Need a total of 2 increments */
-			atomic_inc(&slb->slb_ref);
-		} else 
-			psc_fatalx("nref base %p is < oref base %p", 
-				   nref->slbir_base, oref->slbir_base);	
+		} else {
+			DEBUG_OFT(PLL_TRACE, m, "remap slbref");
+			oref->slbir_pri = m;
+			ATTR_UNSET(miov->oftiov_flags, OFTIOV_REMAP);
+		}
 	}
-	atomic_inc(&slb->slb_ref);	
- out:
+	ATTR_SET(miov->oftiov_flags, OFTIOV_MAPPED);
+
 	/* Useful sanity checks which should always be true in
 	 *  this context.
 	 */
@@ -601,8 +553,38 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks,
 		ref->slbir_flags = 0;
 
 		atomic_inc(&slb->slb_unmapd_ref);
-		psclist_xadd(&ref->slbir_lentry, &slb->slb_iov_list);
+		/* Insert the new, unmapped reference into the 
+		 *  appropriate slot within the list determined 
+		 *  by the base address.
+		 */
+		if (psclist_empty(&slb->slb_iov_list)) { 
+			psc_assert(!atomic_read(&slb->slb_ref));
+			psclist_xadd(&ref->slbir_lentry,
+				     &slb->slb_iov_list);
 
+		} else {
+			struct  sl_buffer_iovref *iref, *tref;
+			void   *ebase=NULL;	
+			int     i=0;
+
+			psclist_for_each_entry_safe(iref, tref, 
+						    &slb->slb_iov_list, slbir_lentry) {
+				psc_assert(ebase < iref->slbir_base);
+				ebase = SLB_REF2EBASE(iref, slb);
+				/* The first time through the new ref's base 
+				 *  may be a lower address than the head of the list.
+				 */
+				if (!i && ref->slbir_base < ebase) {
+					psclist_xadd(&ref->slbir_lentry, 
+						     &slb->slb_iov_list);
+					break;
+				} else i = 1;
+				
+				if (ref->slbir_base > ebase)
+					psclist_xadd(&ref->slbir_lentry, 
+						     &iref->slbir_lentry);
+			}
+		}
 		sl_buffer_pin_locked(slb);
 
 		dynarray_add(a, iov);
@@ -665,7 +647,7 @@ sl_buffer_alloc(size_t nblks, struct dynarray *a, void *pri)
 		}
 	} while (rblks > 0);
 
-	return (0);
+	return (nblks-rblks);
 
  enomem:
 	psc_warnx("failed to allocate %zu blocks from fid %p", 
