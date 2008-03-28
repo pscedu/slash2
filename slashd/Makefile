@@ -4,19 +4,20 @@ include Makefile.path
 
 PROG=		slashd
 SRCS+=		backend.c
+SRCS+=		buffer.c
 SRCS+=		cfd.c
 SRCS+=		control.c
 SRCS+=		dircache.c
-SRCS+=		offtree.c
-SRCS+=		buffer.c
 SRCS+=		fidlink.c
 SRCS+=		journal.c
 SRCS+=		lconf.l
 SRCS+=		main.c
 SRCS+=		mds.c
 SRCS+=		metadir.c
+SRCS+=		offtree.c
 SRCS+=		rpc.c
 SRCS+=		sb.c
+SRCS+=		timer.c
 SRCS+=		yconf.y
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c

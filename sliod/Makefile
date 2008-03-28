@@ -7,11 +7,12 @@ SRCS+=		control.c
 SRCS+=		main.c
 SRCS+=		rpc.c
 SRCS+=		rpcio.c
-SRCS+=		${SLASH_BASE}/slashd/cfd.c
-SRCS+=		${SLASH_BASE}/slashd/yconf.y
-SRCS+=		${SLASH_BASE}/slashd/lconf.l
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${SLASH_BASE}/share/rsx.c
+SRCS+=		${SLASH_BASE}/slashd/cfd.c
+SRCS+=		${SLASH_BASE}/slashd/lconf.l
+SRCS+=		${SLASH_BASE}/slashd/timer.c
+SRCS+=		${SLASH_BASE}/slashd/yconf.y
 
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c

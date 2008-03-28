@@ -14,6 +14,8 @@ struct slash_sb_mem;
 #define SLTHRT_RPCMDS	1	/* client metadata messages */
 #define SLTHRT_RPCBE	2	/* MDS <-> I/O server backend messages */
 #define SLTHRT_LND	3	/* lustre networking device helper */
+#define SLTHRT_TINTV	4	/* timer interval */
+#define SLTHRT_TIOS	5	/* iostats updater */
 
 struct slash_ctlthr {
 	int sc_st_nclients;
