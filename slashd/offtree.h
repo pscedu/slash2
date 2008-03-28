@@ -52,9 +52,13 @@ power(size_t base, size_t exp)
 #define OFT_REQ_ABSWIDTH_GET(req, pos)					\
 	(((req)->oftrq_width * (req)->oftrq_root->oftr_width) + pos)
 
-#define OFT_VERIFY_REQ_SE(req, s, e) {				\
-		psc_assert((s >= OFT_REQ_ENDOFF(req)) &&	\
-			   (e <= OFT_REQ_ENDOFF(req)));		\
+#define OFT_VERIFY_REQ_SE(req, s, e) {					\
+		psc_trace("OFT_VERIFY_REQ_SE NR ("LPX64"/"LPX64")",	\
+			  s, e);					\
+		psc_trace("OFT_VERIFY_REQ_SE RG ("LPX64"/"LPX64")",	\
+			  OFT_REQ_STARTOFF(req), OFT_REQ_ENDOFF(req));	\
+		psc_assert((s >= OFT_REQ_STARTOFF(req)) &&		\
+			   (e <= OFT_REQ_ENDOFF(req)));			\
 	}
 
 #define OFT_REQ2SE_OFFS(req, s, e) {					\
@@ -67,6 +71,7 @@ power(size_t base, size_t exp)
 		psc_assert(!TTt);					\
 		TTt = (e+1) % (req)->oftrq_root->oftr_minsz;		\
 		psc_assert(!TTt);					\
+		psc_trace("OFT_REQ2SE_OFFS ("LPX64"/"LPX64")", s, e);	\
         } 
 
 
@@ -92,11 +97,13 @@ power(size_t base, size_t exp)
  */
 
 #define oftm_leaf_verify(m) {						\
-		psc_assert((m)->oft_norl.oft_iov);			\
+		if (!ATTR_TEST((m)->oft_flags, OFT_ROOT)) {		\
+			psc_assert((m)->oft_norl.oft_iov);		\
+			psc_assert(atomic_read(&(m)->oft_ref) ||	\
+				   ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG)); \
+		}							\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
-		psc_assert(atomic_read(&(m)->oft_ref) ||		\
-			   ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
 	}								\
 
 #define oftm_splitting_leaf_verify(m) {					\
@@ -198,6 +205,7 @@ enum oft_iov_flags {
 		atomic_set(&(m)->oft_ref, 0);			\
 		atomic_set(&(m)->oft_op_ref, 0);		\
                 (m)->oft_parent = p;                            \
+		ATTR_SET((m)->oft_flags, OFT_LEAF);		\
 	}
 
 struct offtree_memb {
@@ -260,7 +268,7 @@ enum oft_attributes {
 			_psclog(__FILE__, __func__, __LINE__,		\
 				PSS_OTHER, level, 0,			\
 				" oft@%p pos:%hhu p:%p ref:%d oref:%d"	\
-				"fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
+				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
 				oft, (oft)->oft_pos, (oft)->oft_parent,	\
 				atomic_read(&(oft)->oft_ref),		\
 				atomic_read(&(oft)->oft_op_ref),	\
@@ -276,7 +284,7 @@ enum oft_attributes {
  *  @iovs *: array of iovecs allocated to handle the allocation (returned)
  *  Return: the number of blocks allocated (and hence the number of iovec's in the array.
  */
-typedef int (*offtree_alloc_fn)(size_t, struct offtree_iov **, int *, void *);
+typedef int (*offtree_alloc_fn)(size_t, struct dynarray *, void *);
 typedef void (*offtree_putnode_cb)(struct offtree_memb *);
 
 struct offtree_root {

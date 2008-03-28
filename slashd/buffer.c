@@ -7,6 +7,7 @@
 #include "psc_util/alloc.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/dynarray.h"
 #include "psc_rpc/rpc.h"
 
 #include "buffer.h"
@@ -31,7 +32,7 @@ static void
 sl_buffer_free_assertions(struct sl_buffer *b)
 {
 	/* The following asertions must be true: */
-	psc_assert(b->slb_flags = SLB_FREE);
+	psc_assert(b->slb_flags == SLB_FREE);
 	/* any cache nodes pointing to us? */
 	psc_assert(!atomic_read(&b->slb_ref));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
@@ -60,7 +61,6 @@ sl_buffer_fresh_assertions(struct sl_buffer *b)
 	psc_assert(b->slb_flags == SLB_FRESH);
 	psc_assert(vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	psc_assert(psclist_empty(&b->slb_iov_list));
-	psc_assert(psclist_disjoint(&b->slb_fcm_lentry));
 	psc_assert(!b->slb_lc_owner); /* Not on any cache mgmt lists */
 	psc_assert(psclist_empty(&b->slb_iov_list));
 	psc_assert(b->slb_base);
@@ -79,38 +79,43 @@ sl_buffer_pin_assertions(struct sl_buffer *b)
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREEING));
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREE));
 	//psc_assert(vbitmap_nfree(&b->slb_inuse) < b->slb_nblks);
-	//psc_assert(!psclist_empty(&b->slb_iov_list));
-	psc_assert(psclist_disjoint(&b->slb_fcm_lentry));
-	//psc_assert(!psclist_empty(&b->slb_iov_list));
+	psc_assert(!psclist_empty(&b->slb_iov_list));
+	/* Test this before pinning.. */
+	//psc_assert(psclist_disjoint(&b->slb_mgmt_lentry));
 	psc_assert(b->slb_base);
-	psc_assert(atomic_read(&b->slb_ref));
+	psc_assert(atomic_read(&b->slb_ref) ||
+		   atomic_read(&b->slb_unmapd_ref));
 }
 
 static void
-sl_buffer_put(struct sl_buffer *b, list_cache_t *lc)
+sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 {
-	int locked = reqlock(&b->slb_lock);
+	int locked = reqlock(&slb->slb_lock);
 	
-	/* Must have been removed already */
-	psc_assert(b->slb_lc_owner == NULL);
+	/* Must have been removed already 
+	 */
+	psc_assert(slb->slb_lc_owner == NULL);
+
+	DEBUG_SLB(PLL_TRACE, slb, "adding to %s", lc->lc_name);
 	
 	if (lc == &slBufsLru)
-		sl_buffer_lru_assertions(b);		
+		sl_buffer_lru_assertions(slb);		
 	
 	else if (lc == &slBufsPin)
-		sl_buffer_pin_assertions(b);
+		sl_buffer_pin_assertions(slb);
 	
 	else if (lc == &slBufsFree) {
-		psc_assert(ATTR_TEST(b->slb_flags, SLB_FREEING));
-		ATTR_UNSET(b->slb_flags, SLB_FREEING);
-		ATTR_SET(b->slb_flags, SLB_FREE);
-		sl_buffer_free_assertions(b);
-		
+		psc_assert(ATTR_TEST(slb->slb_flags, SLB_FREEING));
+		ATTR_UNSET(slb->slb_flags, SLB_FREEING);
+		ATTR_SET(slb->slb_flags, SLB_FREE);
+		sl_buffer_free_assertions(slb);
+		slb->slb_flags = SLB_FRESH;
+		sl_buffer_fresh_assertions(slb);
 	} else 
 		psc_fatalx("Invalid listcache address %p", lc);
 	
-	ureqlock(&b->slb_lock, locked);		
-	lc_queue(lc, &b->slb_mgmt_lentry);
+	ureqlock(&slb->slb_lock, locked);		
+	lc_queue(lc, &slb->slb_mgmt_lentry);
 }
 
 /**
@@ -121,7 +126,13 @@ sl_buffer_put(struct sl_buffer *b, list_cache_t *lc)
 static struct sl_buffer *
 sl_buffer_get(list_cache_t *lc, int block)
 {
-	return ((block ? lc_getwait(lc) : lc_getnb(lc)));
+	struct sl_buffer *slb;
+
+	psc_trace("slb from %s", lc->lc_name);
+
+	slb = (block ? lc_getwait(lc) : lc_getnb(lc));
+	INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);
+	return (slb);
 }
 
 static struct sl_buffer *
@@ -327,12 +338,12 @@ sl_slab_reap(int nblks) {
 static int
 sl_slab_alloc(int nblks, fcache_mhandle_t *f) 
 {	
-	struct sl_buffer *b;
+	struct sl_buffer *slb;
 	int    rc, fblks=0, timedout=0;
 
 	do {
-		b = sl_buffer_get(&slBufsFree, 0);
-		if (!b) {
+		slb = sl_buffer_get(&slBufsFree, 0);
+		if (!slb) {
 			if (timedout)
 				/* Already timedout once, give up
 				 */ 
@@ -342,21 +353,24 @@ sl_slab_alloc(int nblks, fcache_mhandle_t *f)
 				 */
 				goto reap;
 		}
+		DEBUG_SLB(PLL_TRACE, slb, "new slb");
 		/* Sanity checks
 		 */
-		psc_assert(!b->slb_lc_fcm);
-		sl_buffer_fresh_assertions(b);
+		psc_assert(!slb->slb_lc_fcm);
+		psc_assert(psclist_disjoint(&slb->slb_fcm_lentry));
+		
+		sl_buffer_fresh_assertions(slb);
 		/* Assign buffer to the fcache member
 		 */
-		b->slb_lc_fcm = &f->fcmh_buffer_cache;
-		lc_stack(&f->fcmh_buffer_cache, &b->slb_fcm_lentry);	
+		slb->slb_lc_fcm = &f->fcmh_buffer_cache;
+		lc_stack(&f->fcmh_buffer_cache, &slb->slb_fcm_lentry);	
 		
 		if (timedout)
 			/* Don't try again
 			 */
 			goto out;
 		
-		if ((fblks += b->slb_nblks) < nblks) {
+		if ((fblks += slb->slb_nblks) < nblks) {
 		reap:
 			rc = sl_slab_reap(nblks - fblks);
 			if (rc <= 0)
@@ -418,10 +432,12 @@ sl_oftm_addref(struct offtree_memb *m)
 	if (!ATTR_TEST(oref->slbir_flags, SLBREF_MAPPED)) {
 		/* Covers a full or partial mapping.
 		 */
+		psc_assert(oref->slbir_base == slb->slb_base);
 		DEBUG_OFT(PLL_TRACE, m, "unmapped slbref");
 		ATTR_SET(oref->slbir_flags, SLBREF_MAPPED);
-		atomic_dec(&slb->slb_unmapd_ref);
 		oref->slbir_pri = m;
+		atomic_dec(&slb->slb_unmapd_ref);
+		atomic_inc(&slb->slb_ref);
 		goto out;
 	}
 	/* At least one ref will be added, prep the new ref.
@@ -533,52 +549,72 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
  */
 static size_t 
 sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks,
-			 struct offtree_iov **iovs, int *niovs, token_t *tok)
+			 struct dynarray  *a, token_t *tok)
 {
-	int n=0,rc=0, tiovs=*niovs;
+	int n=0,rc=0, tiovs=0;
+	struct  offtree_iov *iov;
 	ssize_t blks=0;
+	struct  sl_buffer_iovref *ref=NULL;
 
 	spinlock(&slb->slb_lock);
 	/* this would mean that someone else is processing us 
 	 *   or granted the slb to another fcmh (in which case
 	 *   (tok != b->slb_lc_fcm)) - that would mean that the 
 	 *   slab had been freed and reassigned between now and 
-	 *   us removing it from the list.
+  	 *   us removing it from the list.
 	 */
+	DEBUG_SLB(PLL_TRACE, slb, "sl_buffer_alloc_internal, a=%p", a);
+
 	if (ATTR_TEST(slb->slb_flags, SLB_FREEING) || (tok != slb->slb_lc_fcm))
 		goto out;
 		
-	for (blks=0; (blks <= (ssize_t)nblks) && !SLB_FULL(slb);) {
-		sl_buffer_pin_locked(slb);
-
-		DEBUG_SLB(PLL_INFO, slb, "slb debug");
+	for (blks=0; (blks < (ssize_t)nblks) && !SLB_FULL(slb);) {
 		/* grab a set of blocks, 'n' tells us the starting block
 		 */
+		n = nblks - blks;
 		rc = vbitmap_getncontig(slb->slb_inuse, &n);
 		if (!rc)
-			break;
+ 			break;
+
 		/* deduct returned blocks from remaining 
 		 */
 		blks += rc;
 		/* allocate another iov 
 		 */
-		//*niovs++;
-		*iovs = realloc(*iovs, sizeof(**iovs) * (*niovs++));
-		psc_assert(*iovs);		
+		iov = PSCALLOC(sizeof(*iov));
+		psc_assert(iov);
 		/* associate the slb with the offtree_iov 
 		 */
-		iovs[tiovs]->oftiov_flags = 0;
-		iovs[tiovs]->oftiov_pri   = slb;
-		iovs[tiovs]->oftiov_nblks = rc;
-		iovs[tiovs]->oftiov_base  = slb->slb_base + (slb->slb_blksz * n);
-		sl_buffer_lru_assertions(slb);
+		ref = PSCALLOC(sizeof(*ref));
+		psc_assert(ref);
+
+		DEBUG_SLB(PLL_INFO, slb, "iov=%p ref=%p blks=%zd", 
+			  iov, ref, blks);
+
+		iov->oftiov_flags = 0;
+		iov->oftiov_pri   = slb;
+		iov->oftiov_blksz = slb->slb_blksz;
+
+		ref->slbir_nblks = iov->oftiov_nblks = rc;
+		ref->slbir_base  = iov->oftiov_base  = 
+			slb->slb_base + (slb->slb_blksz * n);
+		ref->slbir_flags = 0;
+
+		atomic_inc(&slb->slb_unmapd_ref);
+		psclist_xadd(&ref->slbir_lentry, &slb->slb_iov_list);
+
+		sl_buffer_pin_locked(slb);
+
+		dynarray_add(a, iov);
 		
-		DEBUG_OFFTIOV(PLL_TRACE, iovs[tiovs], "new iov(%d) (niovs %d)", 
-			      tiovs, *niovs);
+		DEBUG_OFFTIOV(PLL_TRACE, iov, 
+			      "new iov(%d)", tiovs);
 		tiovs++;
 	}
  out:
 	freelock(&slb->slb_lock);
+	DEBUG_SLB(PLL_TRACE, slb, "leaving sl_buffer_alloc_internal blks=%zd", 
+		  blks);
 	return (blks);
 }
 
@@ -590,7 +626,7 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks,
  * @pri:   tree root, which gives the pointer to our fcache handle
  */
 int 
-sl_buffer_alloc(size_t nblks, struct offtree_iov **iovs, int *niovs, void *pri)
+sl_buffer_alloc(size_t nblks, struct dynarray *a, void *pri)
 {
 	ssize_t rblks = nblks;
 	struct offtree_root *r  = pri;
@@ -602,33 +638,32 @@ sl_buffer_alloc(size_t nblks, struct offtree_iov **iovs, int *niovs, void *pri)
 	INIT_PSCLIST_HEAD(&tmpl);
 
 	psc_assert(nblks < (slCacheNblks/2));
-	psc_assert(!iovs);
-	psc_assert(niovs && pri);
+	psc_assert(a);
+	psc_assert(pri);
 	psc_assert(nblks);
 
 	do {
-		/* Fill any previously allocated but incomplete buffers 
+		/* Fill any previously allocated but incomplete buffers.
 		 */
 		spinlock(&lc->lc_lock);
 		psclist_for_each_entry(slb, &lc->lc_list, slb_fcm_lentry) {
 			if (SLB_FULL(slb)) 
 				continue;				
-			rblks -= sl_buffer_alloc_internal(slb, rblks, iovs, 
-							  niovs, lc);
-			if (!rblks)
+			rblks -= sl_buffer_alloc_internal(slb, rblks, a, lc);
+			if (rblks <= 0)
 				break;
 		}
-		/* free our fid's listcache lock
+		/* Free our fid's listcache lock.
 		 */
 		freelock(&lc->lc_lock);
 
 		if (rblks) {	
-			/* request a new slab from the main allocator 
+			/* Request a new slab from the main allocator.
 			 */
 			if (!sl_slab_alloc(rblks, f))
 				goto enomem;
 		}
-	} while (!rblks);
+	} while (rblks > 0);
 
 	return (0);
 
@@ -657,6 +692,7 @@ sl_buffer_init(void *pri)
 	INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);	
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
+	sl_buffer_put(slb, &slBufsFree);
 }
 
 void

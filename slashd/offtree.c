@@ -10,13 +10,14 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	
 	LOCK_INIT(&t->oftr_lock);
 	t->oftr_width    = width;
-	t->oftr_mapsz    = minsz;
-	t->oftr_minsz    = mapsz;
+	t->oftr_mapsz    = mapsz;
+	t->oftr_minsz    = minsz;
 	t->oftr_maxdepth = depth;
 	t->oftr_alloc    = alloc_fn;
 	t->oftr_pri      = private;  /* our fcache handle */
 	t->oftr_putnode_cb = putnode_cb_fn;
 
+	OFT_MEMB_INIT(&t->oftr_memb, NULL);
 	ATTR_SET(t->oftr_memb.oft_flags, OFT_ROOT);
 	
 	return (t);
@@ -67,7 +68,6 @@ offtree_newleaf_locked(struct offtree_memb *parent, int pos)
 	OFT_MEMB_INIT(new, parent);
 	atomic_inc(&new->oft_op_ref);
 	ATTR_SET(new->oft_flags, OFT_ALLOCPNDG);
-	ATTR_SET(new->oft_flags, OFT_LEAF);
 	new->oft_pos = pos;
 	parent->oft_norl.oft_children[pos] = new;
 	atomic_inc(&parent->oft_ref);
@@ -257,8 +257,7 @@ static ssize_t
 offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
 {
 	ssize_t tblks=0, rc=0;
-	int     niovs=0, j;
-	struct  offtree_iov  *miovs=NULL; 
+	int     oniovs=0;
 	struct  offtree_root *r = req->oftrq_root;
 
 	tblks = req->oftrq_nblks;
@@ -266,11 +265,12 @@ offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
 	DEBUG_OFFTREQ(PLL_TRACE, req, "req");	
 	
 	/* Determine nblks taking into account overlap 
-	 */
+	 */	
 	if (!hb_iov) {		
+		oniovs = dynarray_len(req->oftrq_darray);
 		/* No existing buffer, make full allocation
 		 */
-		rc = (r->oftr_alloc)(tblks, &miovs, &niovs, r);
+		rc = (r->oftr_alloc)(tblks, req->oftrq_darray, r);
 		if (rc != req->oftrq_nblks) {
 			if (rc < tblks)
 				goto done;
@@ -278,11 +278,7 @@ offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
 				psc_warnx("Wanted "LPX64" got "LPX64, 
 					  tblks, rc);
 		}		       
-		psc_assert(niovs);
-
-		for (j=0; j < niovs; j++, miovs++)
-			dynarray_add(req->oftrq_darray, 
-				     (const void *)miovs);
+		psc_assert((dynarray_len(req->oftrq_darray) - oniovs) > 0);
 
 	} else {
 		ssize_t front=0, back=0;
@@ -301,7 +297,9 @@ offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
 		 *  of the queue..
 		 */
 		if (front) {
-			rc = (r->oftr_alloc)(front, &miovs, &niovs, r);
+			oniovs = dynarray_len(req->oftrq_darray);
+
+			rc = (r->oftr_alloc)(front, req->oftrq_darray, r);
 			if (rc != front) {
 				if (rc < front) {
 					rc = -1;
@@ -310,19 +308,17 @@ offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
 					psc_fatalx("Wanted "LPX64" got "LPX64, 
 						   front, rc);
 			}
-			psc_assert(niovs);
-			/* Place them at the beginning of the array */
-			for (j=0; j < niovs; j++, miovs++)
-				dynarray_add(req->oftrq_darray, 
-					     (const void *)miovs);
+			psc_assert((dynarray_len(req->oftrq_darray) - oniovs) > 0);
 		}
-		/* Add the 'have_buffer' iov to the array here in the middle */
+		/* Add the 'have_buffer' iov to the array here in the middle. 
+		 */
 		dynarray_add(req->oftrq_darray, hb_iov);
 		
 		if (back) {
-			/* Allocate 'back' blocks */
-			miovs=NULL;
-			rc = (r->oftr_alloc)(back, &miovs, &niovs, r);
+			oniovs = dynarray_len(req->oftrq_darray);
+			/* Allocate 'back' blocks.
+			 */
+			rc = (r->oftr_alloc)(back, req->oftrq_darray, r);
 			if (rc != back) {
 				if (rc < back) {
 					rc = -1;
@@ -331,13 +327,7 @@ offtree_blks_get(struct offtree_req *req, const struct offtree_iov *hb_iov)
 					psc_fatalx("Wanted "LPX64" got "LPX64, 
 						  back, rc);
 			}		       
-			psc_assert(niovs);
-			for (j=0; j < niovs; j++, miovs++)
-				/* Allocate 'rear' blocks and add their
-				 *  to the end of the queue..
-				 */
-				dynarray_add(req->oftrq_darray, 
-					     (const void *)miovs);
+			psc_assert((dynarray_len(req->oftrq_darray) - oniovs) > 0);
 		}
 	}
  done:
@@ -483,7 +473,8 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			 */
 			tiov = dynarray_getpos(req->oftrq_darray,
 					       (iovoff + (tiov_cnt-1)));
-			/* Factor in partially used iov's */
+			/* Factor in partially used iov's 
+			 */
 			b = (tiov->oftiov_nblks - blkoff);
 			psc_assert(b > 0);
 
@@ -499,7 +490,8 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			 *   iov in underfilled.
 			 */
 			iovoff += tiov_cnt - ((b > myreq.oftrq_nblks) ? 1 : 0);
-			/* At which block in the iov do we start? */
+			/* At which block in the iov do we start? 
+			 */
 			if (b)
 				blkoff = tiov->oftiov_nblks - 
 					(b - myreq.oftrq_nblks);
@@ -529,6 +521,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 	psc_assert(ATTR_TEST(m->oft_flags, OFT_LEAF));
 	psc_assert(atomic_read(&m->oft_op_ref));
 	DEBUG_OFFTREQ(PLL_INFO, req, "new req");
+	DEBUG_OFT(PLL_INFO, m, "new req's memb");
 
 	OFT_REQ2SE_OFFS(req, nr_soffa, nr_eoffa);
 
@@ -575,6 +568,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		DEBUG_OFFTIOV(PLL_INFO, m->oft_norl.oft_iov, "new hb");		
 
 		offtree_putnode(req, 0, 1, 0);
+		ATTR_UNSET(m->oft_flags, OFT_ALLOCPNDG);
+		psc_waitq_wakeall(&m->oft_waitq);
 		goto done;
 
 	} else {
@@ -700,11 +695,12 @@ offtree_region_preprw(struct offtree_req *req)
 	psc_assert(req->oftrq_memb);	
 
  	OFT_REQ2SE_OFFS(req, nr_soffa, nr_eoffa);
-	OFT_VERIFY_REQ_SE(req, nr_soffa, nr_eoffa);
 
  wakeup_retry:
+
 	DEBUG_OFFTREQ(PLL_TRACE, req, "eoff="LPX64" scnt=%d",
 		      nr_eoffa, scnt);	
+	OFT_VERIFY_REQ_SE(req, nr_soffa, nr_eoffa);
 
 	spinlock(&m->oft_lock);
 
@@ -725,6 +721,10 @@ offtree_region_preprw(struct offtree_req *req)
 			scnt++;
 			goto wakeup_retry;
 		}
+		/* Root leaf does not get OFT_ALLOCPNDG by default.
+		 */
+		if (ATTR_TEST(m->oft_flags, OFT_ROOT) && !m->oft_norl.oft_iov)
+			ATTR_SET(m->oft_flags, OFT_ALLOCPNDG);
 		/* Found a leaf, drop into stage2 
 		 */
 	runleaf:

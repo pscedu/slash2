@@ -7,13 +7,20 @@
 #include "psc_util/cdefs.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/dynarray.h"
 #include "psc_util/lock.h"
 #include "psc_rpc/rpc.h"
+
+#include "offtree.h"
 
 extern u32 slCacheBlkSz;
 extern u32 slCacheNblks;
 extern u32 slbFreeDef;
 extern u32 slbFreeMax;
+
+extern list_cache_t slBufsFree;
+extern list_cache_t slBufsLru;
+extern list_cache_t slBufsPin;
 
 enum slb_states {
 	SLB_DIRTY    = 0x01, /* have dirty data          */
@@ -59,7 +66,7 @@ struct sl_buffer {
 	u32             slb_flags;
 	list_cache_t   *slb_lc_owner;
 	list_cache_t   *slb_lc_fcm;
-	struct psclist_head slb_iov_list;    /* list of iov backpointers    */ 
+	struct psclist_head slb_iov_list;    /* list of iovref backpointers */ 
 	struct psclist_head slb_mgmt_lentry; /* attach to lru or outgoing q */ 
 	struct psclist_head slb_fcm_lentry;  /* chain to fidcm entry        */
 };
@@ -105,9 +112,14 @@ struct sl_buffer {
 		__l = reqlock(&slb->slb_lock);				\
 		psclist_for_each_entry(__r, &slb->slb_iov_list,		\
 				       slbir_lentry) {			\
-			DEBUG_OFT(level,				\
-				  (struct offtree_memb *)__r->slbir_pri, \
-				  "SLB %p memb", slb);			\
+			if (__r->slbir_pri)				\
+				DEBUG_OFT(level,			\
+					  (struct offtree_memb *)__r->slbir_pri, \
+					  "SLB ref %p memb", __r);		\
+			else						\
+				_psclog(__FILE__, __func__, __LINE__,	\
+					PSS_OTHER, level, 0,		\
+					"---> Unmapped SLB ref %p memb " fmt, __r, ## __VA_ARGS__); \
 		}							\
 		ureqlock(&slb->slb_lock, __l);				\
 	} while (0)
@@ -126,8 +138,11 @@ enum slb_ref_flags {
 	SLBREF_REAP   = (1 << 1)       /* Freeing                      */
 };
 
+/* Should have been done earlier
+ * have to add ref's before adding to pin list 
+//sl_buffer_fresh_assertions((slb)); 
+ */
 #define slb_fresh_2_pinned(slb) {				\
-		sl_buffer_fresh_assertions((slb));		\
 		ATTR_UNSET((slb)->slb_flags, SLB_FRESH);	\
 		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
 	}
@@ -155,5 +170,15 @@ enum slb_ref_flags {
 		(t)->tv_sec  += SLB_RP_TIMEOUT_SECS;	\
 		(t)->tv_nsec += SLB_RP_TIMEOUT_NSECS;	\
 	}
+
+
+int 
+sl_buffer_alloc(size_t nblks, struct dynarray *a, void *pri);
+
+void
+sl_buffer_cache_init(void);
+
+void
+sl_oftm_addref(struct offtree_memb *m);
 
 #endif

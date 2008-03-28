@@ -13,6 +13,8 @@
 #include "fid.h"
 #include "inode.h"
 
+#include "buffer.h"
+
 #define MDS_FID_CACHE_SZ 131071
 #define IOS_FID_CACHE_SZ 131071
 #define CLI_FID_CACHE_SZ 1023
@@ -134,6 +136,15 @@ typedef struct fid_cache_memb_handle {
 	psc_spinlock_t       fcmh_lock;
 } fcache_mhandle_t;
 
+
+static inline void
+fchm_init(fcache_mhandle_t *f)
+{
+	LOCK_INIT(&f->fcmh_lock);
+	lc_init(&f->fcmh_buffer_cache, struct sl_buffer, slb_fcm_lentry);
+	atomic_set(&f->fcmh_refcnt, 0);
+	f->fcmh_cache_owner = NULL;
+}
 
 struct sl_fsops {
 	/* sl_getattr - used for stat and open, loads the objects 
