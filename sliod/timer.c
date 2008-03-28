@@ -10,14 +10,14 @@
 #include "psc_util/iostats.h"
 #include "psc_util/thread.h"
 #include "psc_util/waitq.h"
-#include "slashd.h"
+#include "sliod.h"
 
 struct psc_wait_queue	timerwtq;
-struct psc_thread	sltintvthr;
-struct psc_thread	sltiosthr;
+struct psc_thread	sliotintvthr;
+struct psc_thread	sliotiosthr;
 
 void *
-sltintvthr_main(__unusedx void *arg)
+sliotintvthr_main(__unusedx void *arg)
 {
 	for (;;) {
 		sleep(1);
@@ -26,7 +26,7 @@ sltintvthr_main(__unusedx void *arg)
 }
 
 void *
-sltiosthr_main(__unusedx void *arg)
+sliotiosthr_main(__unusedx void *arg)
 {
 	struct iostats *ist;
 	struct timeval tv;
@@ -64,12 +64,12 @@ sltiosthr_main(__unusedx void *arg)
 }
 
 void
-sltimerthr_spawn(void)
+sliotimerthr_spawn(void)
 {
 	psc_waitq_init(&timerwtq);
 
-	pscthr_init(&sltintvthr, SLTHRT_TINTV,
-	    sltintvthr_main, NULL, "sltintvthr");
-	pscthr_init(&sltiosthr, SLTHRT_TIOS,
-	    sltiosthr_main, NULL, "sltiosthr");
+	pscthr_init(&sliotintvthr, SLIOTHRT_TINTV,
+	    sliotintvthr_main, NULL, "sliotintvthr");
+	pscthr_init(&sliotiosthr, SLIOTHRT_TIOS,
+	    sliotiosthr_main, NULL, "sltioiosthr");
 }
