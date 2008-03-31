@@ -271,7 +271,8 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 		oniovs = dynarray_len(req->oftrq_darray);
 		/* No existing buffer, make full allocation
 		 */
-		rc = (r->oftr_alloc)(tblks, req->oftrq_darray, r);
+		rc = (r->oftr_alloc)(tblks, req->oftrq_off, 
+				     req->oftrq_darray, r);
 		if (rc != tblks) {
 			if (rc < tblks)
 				goto done;
@@ -301,7 +302,8 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 		if (front) {
 			oniovs = dynarray_len(req->oftrq_darray);
 
-			rc = (r->oftr_alloc)(front, req->oftrq_darray, r);
+			rc = (r->oftr_alloc)(front, req->oftrq_off, 
+					     req->oftrq_darray, r);
 			if (rc != front) {
 				if (rc < front) {
 					psc_errorx("Wanted "LPX64" got "LPX64, 
@@ -325,7 +327,8 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 			oniovs = dynarray_len(req->oftrq_darray);
 			/* Allocate 'back' blocks.
 			 */
-			rc = (r->oftr_alloc)(back, req->oftrq_darray, r);
+			rc = (r->oftr_alloc)(back, req->oftrq_off, 
+					     req->oftrq_darray, r);
 			if (rc != back) {
 				if (rc < back) { 
 					psc_errorx("Wanted %zd got %zd", 
@@ -539,7 +542,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 
 	if (!ATTR_TEST(m->oft_flags, OFT_ALLOCPNDG)) {
 		iov = m->oft_norl.oft_iov;
-		/* Intention to allocate must be determined ahead of time.
+		/* Intent to allocate must be determined ahead of time.
 		 */
 		psc_assert(iov && iov->oftiov_base && iov->oftiov_nblks);
 
@@ -611,7 +614,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 
 		offtree_leaf2node_locked(m, req->oftrq_root);
 		
-		DEBUG_OFT(PLL_TRACE, m, "promote to node");
+		DEBUG_OFT(PLL_TRACE, m, "promote to node (niovs=%d)", niovs);
 		/* Determine affected children 
 		 */
 		schild = oft_child_req_get(nr_soffa, req);
@@ -634,9 +637,11 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		 *   iov array so the first item has the lowest offset.
 		 */
 		iov = dynarray_getpos(req->oftrq_darray, 0);
+		DEBUG_OFFTIOV(PLL_TRACE, iov, "iov 0");
 		nr_soffa = i_offa = iov->oftiov_off;
 		
 		iov = dynarray_getpos(req->oftrq_darray, (niovs-1));
+		DEBUG_OFFTIOV(PLL_TRACE, iov, "iov n");
 		nr_eoffa = (iov->oftiov_off + (iov->oftiov_blksz *
 					       iov->oftiov_nblks)) - 1;
 
@@ -659,12 +664,13 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			memcpy(&myreq, req, (sizeof(*req)));		
 			myreq.oftrq_off = i_offa;
 			/* How many blocks fit within this range?
-			 *  Push offset iterator i_offa.
+			 *  Push offset iterator i_offa. 
 			 */			
 			i_offa += myreq.oftrq_nblks = 
 				(MIN(rg_eoff, nr_eoffa) + 1) - i_offa;
 
-			/* This should always be true */
+			/* This should always be true.
+			 */
 			//psc_assert_msg(nr_soffa >= rg_soff, 
 			//	       "nr_soffa="LPX64" ! >= rg_soff="LPX64, 
 			//	       nr_soffa, rg_soff);
@@ -672,7 +678,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			t = myreq.oftrq_nblks % OFT_REQ2BLKSZ(req);
 			psc_assert(!t);
 
-			//myreq.oftrq_nblks /= OFT_REQ2BLKSZ(req);
+			myreq.oftrq_nblks /= OFT_REQ2BLKSZ(req);
+
 			/* More middle child sanity (middle children must
 			 *  consume their entire region).
 			 */
@@ -686,7 +693,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			 */
 			tiov = dynarray_getpos(req->oftrq_darray,
 					       (iovoff + (tiov_cnt-1)));
-			/* Factor in partially used iov's */
+			/* Factor in partially used iov's 
+			 */
 			b = (tiov->oftiov_nblks - sblkoff);
 			while (b < myreq.oftrq_nblks) {
 				tiov_cnt++;
@@ -700,12 +708,13 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			myreq.oftrq_width  = OFT_REQ_ABSWIDTH_GET(req, tchild);
 			myreq.oftrq_off    = MAX(OFT_REQ_STARTOFF(&myreq), 
 						 req->oftrq_off);
-			myreq.oftrq_nblks /= OFT_REQ2BLKSZ(req);
 			nblks             -= myreq.oftrq_nblks;
 			offtree_putnode(req, iovoff, tiov_cnt, sblkoff);
-			/* Bump iovoff */
+			/* Bump iovoff 
+			 */
 			iovoff += tiov_cnt - ((b > myreq.oftrq_nblks) ? 1 : 0);
-			/* At which block in the iov do we start? */
+			/* At which block in the iov do we start? 
+			 */
 			if (b)
 				sblkoff = tiov->oftiov_nblks - 
 					(b - myreq.oftrq_nblks);

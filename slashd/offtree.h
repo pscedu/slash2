@@ -288,7 +288,7 @@ enum oft_attributes {
  *  @iovs *: array of iovecs allocated to handle the allocation (returned)
  *  Return: the number of blocks allocated (and hence the number of iovec's in the array.
  */
-typedef int (*offtree_alloc_fn)(size_t, struct dynarray *, void *);
+typedef int (*offtree_alloc_fn)(size_t, off_t, struct dynarray *, void *);
 typedef void (*offtree_putnode_cb)(struct offtree_memb *);
 
 struct offtree_root {

@@ -173,7 +173,7 @@ enum slb_ref_flags {
 
 
 int 
-sl_buffer_alloc(size_t nblks, struct dynarray *a, void *pri);
+sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri);
 
 void
 sl_buffer_cache_init(void);

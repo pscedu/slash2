@@ -500,7 +500,7 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
  * Returns:  the total number of blocks returned
  */
 static size_t 
-sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks,
+sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 			 struct dynarray  *a, token_t *tok)
 {
 	int n=0,rc=0, tiovs=0;
@@ -546,8 +546,13 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks,
 		iov->oftiov_flags = 0;
 		iov->oftiov_pri   = slb;
 		iov->oftiov_blksz = slb->slb_blksz;
+		/* Track the aligned, application offset.
+		 */
+		iov->oftiov_off   = soffa + (slb->slb_blksz * rc);
 
 		ref->slbir_nblks = iov->oftiov_nblks = rc;
+		/* 'n' contains the starting bit of the allocation.
+		 */
 		ref->slbir_base  = iov->oftiov_base  = 
 			slb->slb_base + (slb->slb_blksz * n);
 		ref->slbir_flags = 0;
@@ -570,6 +575,8 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks,
 			psclist_for_each_entry_safe(iref, tref, 
 						    &slb->slb_iov_list, slbir_lentry) {
 				psc_assert(ebase < iref->slbir_base);
+				psc_assert(iref->slbir_base != ref->slbir_base);
+
 				ebase = SLB_REF2EBASE(iref, slb);
 				/* The first time through the new ref's base 
 				 *  may be a lower address than the head of the list.
@@ -608,7 +615,7 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks,
  * @pri:   tree root, which gives the pointer to our fcache handle
  */
 int 
-sl_buffer_alloc(size_t nblks, struct dynarray *a, void *pri)
+sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 {
 	ssize_t rblks = nblks;
 	struct offtree_root *r  = pri;
@@ -631,7 +638,8 @@ sl_buffer_alloc(size_t nblks, struct dynarray *a, void *pri)
 		psclist_for_each_entry(slb, &lc->lc_list, slb_fcm_lentry) {
 			if (SLB_FULL(slb)) 
 				continue;				
-			rblks -= sl_buffer_alloc_internal(slb, rblks, a, lc);
+			rblks -= sl_buffer_alloc_internal(slb, soffa, 
+							  rblks, a, lc);
 			if (rblks <= 0)
 				break;
 		}
