@@ -52,7 +52,7 @@ sliotiosthr_main(__unusedx void *arg)
 				ist->ist_bytes_total += intv;
 
 				intv = 0;
-				atomic_xchg(&ist->ist_errors_intv, intv);
+				intv = atomic_xchg(&ist->ist_errors_intv, intv);
 				ist->ist_erate = intv /
 				    ((ist->ist_intv.tv_sec * 1e6 +
 				    ist->ist_intv.tv_usec) * 1e-6);
