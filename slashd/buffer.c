@@ -341,6 +341,8 @@ sl_slab_alloc(int nblks, fcache_mhandle_t *f)
 	struct sl_buffer *slb;
 	int    rc, fblks=0, timedout=0;
 
+	ENTRY;
+
 	do {
 		slb = sl_buffer_get(&slBufsFree, 0);
 		if (!slb) {
@@ -383,7 +385,8 @@ sl_slab_alloc(int nblks, fcache_mhandle_t *f)
 		}
 	} while (fblks < nblks);
  out:
-	return (fblks);
+	
+	RETURN (fblks);
 }
 	
 
@@ -430,7 +433,9 @@ sl_oftm_addref(struct offtree_memb *m)
 	/* Old ref must be found 
 	 */
 	psc_assert(oref);
-	psc_assert(oref->slbir_base == slb->slb_base);
+	psc_assert(oref->slbir_base >= slb->slb_base && 
+		   oref->slbir_base <= (slb->slb_base + 
+					(slb->slb_nblks * slb->slb_blksz)));
 
 	DUMP_SLB(PLL_TRACE, slb, "slb start (treenode %p)", m);
 
@@ -508,6 +513,8 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 	ssize_t blks=0;
 	struct  sl_buffer_iovref *ref=NULL;
 
+	ENTRY;
+
 	spinlock(&slb->slb_lock);
 	/* this would mean that someone else is processing us 
 	 *   or granted the slb to another fcmh (in which case
@@ -515,7 +522,8 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 	 *   slab had been freed and reassigned between now and 
   	 *   us removing it from the list.
 	 */
-	DEBUG_SLB(PLL_TRACE, slb, "sl_buffer_alloc_internal, a=%p", a);
+	DEBUG_SLB(PLL_TRACE, slb, 
+		  "sl_buffer_alloc_internal, a=%p soffa="LPX64, a, soffa);
 
 	if (ATTR_TEST(slb->slb_flags, SLB_FREEING) || (tok != slb->slb_lc_fcm))
 		goto out;
@@ -527,7 +535,6 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 		rc = vbitmap_getncontig(slb->slb_inuse, &n);
 		if (!rc)
  			break;
-
 		/* deduct returned blocks from remaining 
 		 */
 		blks += rc;
@@ -548,7 +555,7 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 		iov->oftiov_blksz = slb->slb_blksz;
 		/* Track the aligned, application offset.
 		 */
-		iov->oftiov_off   = soffa + (slb->slb_blksz * rc);
+		iov->oftiov_off   = soffa;
 
 		ref->slbir_nblks = iov->oftiov_nblks = rc;
 		/* 'n' contains the starting bit of the allocation.
@@ -574,24 +581,35 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 
 			psclist_for_each_entry_safe(iref, tref, 
 						    &slb->slb_iov_list, slbir_lentry) {
+				/* Probably need a more thorough check here.
+				 *  These checks ensure that the bases increase and
+				 *  that the new base does not already exist.
+				 */
 				psc_assert(ebase < iref->slbir_base);
 				psc_assert(iref->slbir_base != ref->slbir_base);
-
 				ebase = SLB_REF2EBASE(iref, slb);
-				/* The first time through the new ref's base 
-				 *  may be a lower address than the head of the list.
-				 */
-				if (!i && ref->slbir_base < ebase) {
-					psclist_xadd(&ref->slbir_lentry, 
-						     &slb->slb_iov_list);
-					break;
-				} else i = 1;
 				
-				if (ref->slbir_base > ebase)
+				psc_trace("ebase=%p ref->slbir_base=%p", 
+					  ebase, ref->slbir_base);
+				
+				if (ref->slbir_base < ebase) {
 					psclist_xadd(&ref->slbir_lentry, 
 						     &iref->slbir_lentry);
+					i=1;
+					break;
+				}					
+				//if (ref->slbir_base > ebase)
+				//		psclist_xadd(&ref->slbir_lentry, 
+				//		     &iref->slbir_lentry);
+			}
+			if (!i) {
+				/* Was not added, append to the end of the list.
+				 */
+				psclist_xadd_tail(&ref->slbir_lentry, 
+						  &slb->slb_iov_list);
 			}
 		}
+		
 		sl_buffer_pin_locked(slb);
 
 		dynarray_add(a, iov);
@@ -604,7 +622,7 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 	freelock(&slb->slb_lock);
 	DEBUG_SLB(PLL_TRACE, slb, "leaving sl_buffer_alloc_internal blks=%zd", 
 		  blks);
-	return (blks);
+	RETURN (blks);
 }
 
 /**
@@ -636,10 +654,12 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 		 */
 		spinlock(&lc->lc_lock);
 		psclist_for_each_entry(slb, &lc->lc_list, slb_fcm_lentry) {
+			DEBUG_SLB(PLL_TRACE, slb, 
+				  "soffa "LPX64" trying with this slb", soffa);
 			if (SLB_FULL(slb)) 
-				continue;				
-			rblks -= sl_buffer_alloc_internal(slb, soffa, 
-							  rblks, a, lc);
+				continue;
+			rblks -= sl_buffer_alloc_internal(slb, rblks, soffa,
+							  a, lc);
 			if (rblks <= 0)
 				break;
 		}
@@ -647,7 +667,7 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 		 */
 		freelock(&lc->lc_lock);
 
-		if (rblks) {	
+		if (rblks) {
 			/* Request a new slab from the main allocator.
 			 */
 			if (!sl_slab_alloc(rblks, f))

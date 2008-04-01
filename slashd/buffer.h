@@ -73,14 +73,14 @@ struct sl_buffer {
 
 #define SLB_FLAG(field, str) (field ? str : "")
 #define DEBUG_SLB_FLAGS(iov)					\
-        SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_DIRTY),  "d"),	\
+        SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_DIRTY),    "d"),	\
 	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_INFLIGHT), "I"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_FREEING),"F"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_PINNED),  "P"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_LRU),   "L"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_FREE),   "f"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_INIT),   "i"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_FRESH),   "r")	\
+	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_FREEING),  "F"),	\
+	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_PINNED),   "P"),	\
+	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_LRU),      "L"),	\
+	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_FREE),     "f"),	\
+	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_INIT),     "i"),	\
+	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_FRESH),    "r")	\
 		
 	
 #define SLB_FLAGS_FMT "%s%s%s%s%s%s%s%s"

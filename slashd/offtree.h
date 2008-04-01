@@ -101,10 +101,17 @@ power(size_t base, size_t exp)
 
 #define oftm_leaf_verify(m) {						\
 		if (!ATTR_TEST((m)->oft_flags, OFT_ROOT)) {		\
-			psc_assert((m)->oft_norl.oft_iov);		\
-			psc_assert(atomic_read(&(m)->oft_ref) ||	\
-				   ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG)); \
+			if (!(ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG) || \
+			      ATTR_TEST((m)->oft_flags, OFT_UNINIT))) {	\
+				psc_assert((m)->oft_norl.oft_iov);	\
+				psc_assert(atomic_read(&(m)->oft_ref) == 1);	\
+			}						\
 		}							\
+		if (ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG) ||		\
+		    ATTR_TEST((m)->oft_flags, OFT_ROOT))		\
+			psc_assert(!ATTR_TEST((m)->oft_flags, OFT_UNINIT)); \
+		if (ATTR_TEST((m)->oft_flags, OFT_UNINIT))		\
+			psc_assert(!(m)->oft_norl.oft_iov);		\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
 	}								\
@@ -194,8 +201,8 @@ enum oft_iov_flags {
 	do {								\
 		_psclog(__FILE__, __func__, __LINE__,			\
 			PSS_OTHER, level, 0,				\
-			" oftiov@%p b %p o "LPX64" l "LPD64		\
-			" bsz "LPD64" pri:%p fl:"OFFTIOV_FLAGS_FMT" "fmt, \
+			" oftiov@%p b:%p o:"LPX64" l:"LPD64		\
+			" bsz:"LPD64" pri:%p fl:"OFFTIOV_FLAGS_FMT" "fmt, \
 			iov, iov->oftiov_base, iov->oftiov_off,		\
 			iov->oftiov_nblks, iov->oftiov_blksz,	        \
 			iov->oftiov_pri, DEBUG_OFFTIOV_FLAGS(iov),	\
@@ -237,23 +244,25 @@ enum oft_attributes {
 	OFT_FREEING   = (1 << 7), /* Different from Reap?     */
 	OFT_SPLITTING = (1 << 8), /* Leaf becoming a parent   */
 	OFT_RELEASE   = (1 << 9), /* Reclaim empty parent     */
-	OFT_MCHLDGROW = (1 << 10) /* Multichild grow          */	
+	OFT_MCHLDGROW = (1 << 10),/* Multichild grow          */
+	OFT_UNINIT    = (1 << 11) /* Uninitialized leaf       */
 };
 
 #define OFTM_FLAG(field, str) (field ? str : "")
-#define DEBUG_OFTM_FLAGS(oft)						\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_NODE), "N"),		\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_LEAF), "L"),	\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_READPNDG), "R"), \
+#define DEBUG_OFTM_FLAGS(oft)					    \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_NODE),      "N"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_LEAF),      "L"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_READPNDG),  "R"), \
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_WRITEPNDG), "W"), \
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ALLOCPNDG), "A"), \
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ROOT), "r"),	\
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_FREEING), "F"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ROOT),      "r"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_FREEING),   "F"), \
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_SPLITTING), "S"), \
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_RELEASE), "e"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_RELEASE),   "e"), \
+	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_UNINIT),    "u"), \
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_MCHLDGROW), "g")
 		
-#define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s"
+#define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_OFT(level, oft, fmt, ...)					\
 	do {								\
@@ -311,7 +320,7 @@ struct offtree_req {
 	ssize_t              oftrq_nblks; /* number of blocks requested     */
 	u8                   oftrq_op;
 	u8                   oftrq_depth;
-	u8                   oftrq_width;	
+	u16                  oftrq_width;	
 };
 
 static inline int 
@@ -331,8 +340,9 @@ oft_child_req_get(off_t o, struct offtree_req *req)
 {
 	off_t soff = OFT_REQ_STARTOFF(req);
 	
-	/* ensure that the parent is responsible for the given range */
-	if (!((o >= soff) && (o < OFT_REQ_ENDOFF(req))))
+	/* Ensure that the parent is responsible for the given range 
+	 */
+	if (!((o >= soff) && (o <= OFT_REQ_ENDOFF(req))))
 		abort();
 	
 	return ((o - soff) / OFT_REGIONSZ(req->oftrq_root, 
@@ -344,7 +354,7 @@ oft_child_req_get(off_t o, struct offtree_req *req)
 		_psclog(__FILE__, __func__, __LINE__,			\
 			PSS_OTHER, level, 0,				\
 			" oftr@%p o:"LPX64" l:"LPD64" node:%p darray:%p"\
-			" root:%p op:%hhu d:%hhu w:%hhu "fmt,	        \
+			" root:%p op:%hhu d:%hhu w:%hu "fmt,	        \
 			oftr, (oftr)->oftrq_off, (oftr)->oftrq_nblks,	\
 			(oftr)->oftrq_memb, (oftr)->oftrq_darray,	\
 			(oftr)->oftrq_root, (oftr)->oftrq_op,		\

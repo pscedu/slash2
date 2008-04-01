@@ -67,13 +67,25 @@ offtree_newleaf_locked(struct offtree_memb *parent, int pos)
 	new = PSCALLOC(sizeof(struct offtree_memb));
 	OFT_MEMB_INIT(new, parent);
 	atomic_inc(&new->oft_op_ref);
-	ATTR_SET(new->oft_flags, OFT_ALLOCPNDG);
+	ATTR_SET(new->oft_flags, OFT_UNINIT);
 	new->oft_pos = pos;
 	parent->oft_norl.oft_children[pos] = new;
 	atomic_inc(&parent->oft_ref);
 
 	return new;
 }
+
+static void
+offtree_leaf2node_prep(struct offtree_memb *oftm) {
+	/* Leaf2node caller is responsible for saving 
+	 *  the nodes' buffers.  Dereference the oft.
+	 */
+	oftm_leaf_verify(oftm);
+	atomic_set(&oftm->oft_ref, 0);
+	oftm->oft_norl.oft_iov = NULL;	       
+	ATTR_SET(oftm->oft_flags, OFT_SPLITTING);
+}
+
 
 /**
  * offtree_leaf2node - transform a leaf into a parent node.
@@ -83,6 +95,7 @@ offtree_newleaf_locked(struct offtree_memb *parent, int pos)
 static void
 offtree_leaf2node_locked(struct offtree_memb *oftm, struct offtree_root *r)
 {	
+	DEBUG_OFT(PLL_TRACE, oftm, "promote");
 	oftm_splitting_leaf_verify(oftm);
 	oftm->oft_norl.oft_children = PSCALLOC(sizeof(struct offtree_memb **) * 
 					       r->oftr_width);
@@ -374,7 +387,8 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 {
 	struct offtree_iov *iov, *tiov;
 
-	DEBUG_OFFTREQ(PLL_INFO, req, "o:%d c:%d bo:%d",
+	ENTRY;
+	DEBUG_OFFTREQ(PLL_TRACE, req, "o:%d c:%d bo:%d",
 		      iovoff, iovcnt, blkoff);
 
 	psc_assert(req->oftrq_darray);
@@ -386,26 +400,21 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 	if (iovcnt == 1) {
 		iov = dynarray_getpos(req->oftrq_darray, iovoff);
 		psc_assert((u32)(iov->oftiov_nblks - blkoff) >= req->oftrq_nblks);
-		
-		DEBUG_OFFTIOV(PLL_INFO, iov, "hb");
 
-		if (!blkoff) {
-			/* Use the existing reference.
-			 */
-			req->oftrq_memb->oft_norl.oft_iov = iov;
-			psc_assert(!iovoff && !blkoff);
-		} else {
-			/* Only modref if the request doesn't use the 
-			 *   entire iov otherwise the existing reference
-			 *   will suffice.  sl_oftiov_modref handles
-			 *   assertions.
-			 */
-			NEW_PARTIAL_IOV(tiov, iov, blkoff, req->oftrq_nblks);
-			req->oftrq_memb->oft_norl.oft_iov = tiov;
-		}
+		DEBUG_OFT(PLL_INFO, req->oftrq_memb, "placing buffer here");
+		DEBUG_OFFTIOV(PLL_INFO, iov, "hb");
+		/* Paranioa, verify that the refcnt is zero.
+		 */
+		psc_assert(!atomic_read(&req->oftrq_memb->oft_ref));
+		/* Now bump it to 1.
+		 */
+		atomic_set(&req->oftrq_memb->oft_ref, 1);
+
+		req->oftrq_memb->oft_norl.oft_iov = iov;
+
 		if (req->oftrq_root->oftr_putnode_cb)
 			(req->oftrq_root->oftr_putnode_cb)(req->oftrq_memb);
-		//sl_oftm_addref(req->oftrq_memb);
+
 		goto out;
 		
 	} else {
@@ -426,6 +435,9 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		 *   This case isn't so bad because there are no nodes 
 		 *    below us, only leafs.
 		 */
+		//req->oftrq_memb->oft_norl.oft_iov = NULL;
+		//ATTR_SET(req->oftrq_memb->oft_flags, OFT_SPLITTING);
+		offtree_leaf2node_prep(req->oftrq_memb);
 		offtree_leaf2node_locked(req->oftrq_memb, req->oftrq_root);
 		/* Determine affected children 
 		 */
@@ -446,17 +458,20 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		memcpy(&myreq, req, (sizeof(*req)));
 		myreq.oftrq_depth++;
 		myreq.oftrq_width = OFT_REQ_ABSWIDTH_GET(&myreq, schild);
-
+		
 		for (j=0, b=0, i_offa=nr_soffa, tchild=schild; 
 		     tchild <= echild; 
 		     j++, tchild++, myreq.oftrq_width++) {
 			/* Region values increase with myreq.oftr_width
 			 */
+			printf ("WIDTH = %hhu\n", myreq.oftrq_width);
 			rg_soff = OFT_REQ_STARTOFF(&myreq);
 			rg_eoff = OFT_REQ_ENDOFF(&myreq);		
 			/* This should always be true 
 			 */
-			psc_assert(nr_soffa <= rg_soff); 	
+			psc_trace("i_soffa="LPX64", rg_soff="LPX64, 
+				  i_offa, rg_soff);
+			psc_assert(i_offa >= rg_soff);
 
 			if (tchild > schild)
 				psc_assert(i_offa == rg_soff);
@@ -500,25 +515,25 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 						       (iovoff + (tiov_cnt-1)));
 				b += tiov->oftiov_nblks;
 			}
-			offtree_putnode(req, iovoff, tiov_cnt, blkoff);
+			offtree_putnode(&myreq, iovoff, tiov_cnt, blkoff);
 			/* Bump iovoff, subtract one if the current
 			 *   iov in underfilled.
 			 */
 			iovoff += tiov_cnt - ((b > myreq.oftrq_nblks) ? 1 : 0);
 			/* At which block in the iov do we start? 
 			 */
+			b -= myreq.oftrq_nblks;
 			if (b)
-				blkoff = tiov->oftiov_nblks - 
-					(b - myreq.oftrq_nblks);
+				blkoff = tiov->oftiov_nblks - b;
 			else 
 				blkoff = 0;
 			
 			if (tchild == echild) 
 				psc_assert(!nblks && !blkoff);
 		}
-	}		
+	}	
  out:
-	return;
+	EXIT;
 }
 
 /*
@@ -527,6 +542,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 static int
 offtree_region_preprw_leaf_locked(struct offtree_req *req)
 {
+	ENTRY;
 	struct  offtree_memb *m = req->oftrq_memb;
 	struct  offtree_iov  *iov = NULL;	
 	off_t   nr_soffa, nr_eoffa, hb_soffa=0, hb_eoffa=0;
@@ -605,13 +621,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		 *   This case isn't so bad because there are no nodes 
 		 *    below us, only leafs.
 		 */
-		
-		/* Leaf2node caller is responsible for saving 
-		 *  the nodes' buffers.
-		 */
-		m->oft_norl.oft_iov = NULL;
-		ATTR_SET(m->oft_flags, OFT_SPLITTING);
-
+		offtree_leaf2node_prep(m);
 		offtree_leaf2node_locked(m, req->oftrq_root);
 		
 		DEBUG_OFT(PLL_TRACE, m, "promote to node (niovs=%d)", niovs);
@@ -706,29 +716,36 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			 */
 			myreq.oftrq_memb   = offtree_newleaf_locked(m, tchild);
 			myreq.oftrq_width  = OFT_REQ_ABSWIDTH_GET(req, tchild);
-			myreq.oftrq_off    = MAX(OFT_REQ_STARTOFF(&myreq), 
-						 req->oftrq_off);
+			/* Take the soffa from the first iov returned
+			 *  by the allocator.
+			 */
+			myreq.oftrq_off    = nr_soffa;
+			//myreq.oftrq_off    = MAX(OFT_REQ_STARTOFF(&myreq), 
+			//			 req->oftrq_off);
 			nblks             -= myreq.oftrq_nblks;
-			offtree_putnode(req, iovoff, tiov_cnt, sblkoff);
+
+			offtree_putnode(&myreq, iovoff, tiov_cnt, sblkoff);
 			/* Bump iovoff 
 			 */
 			iovoff += tiov_cnt - ((b > myreq.oftrq_nblks) ? 1 : 0);
 			/* At which block in the iov do we start? 
 			 */
+			b -= myreq.oftrq_nblks;
 			if (b)
-				sblkoff = tiov->oftiov_nblks - 
-					(b - myreq.oftrq_nblks);
+				sblkoff = tiov->oftiov_nblks - b;
 			else 
 				sblkoff = 0;
-			
+
+			/* Ensure that all blocks have been exhausted.
+			 */ 
 			if (tchild == echild)
 				psc_assert(!sblkoff);
 		}
 	}
  done:	
-	return (0);
+	RETURN (0);
  error:
-	return (-1);
+	RETURN (-1);
 }
 
 /**
@@ -741,6 +758,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 int 
 offtree_region_preprw(struct offtree_req *req)
 {
+	ENTRY;
 	struct offtree_memb *m = req->oftrq_memb;
 	off_t  nr_soffa, nr_eoffa;
 	int    scnt=0, rc;
@@ -763,7 +781,6 @@ offtree_region_preprw(struct offtree_req *req)
 	/* Verify tree node state
 	 */
 	if (ATTR_TEST(m->oft_flags, OFT_LEAF)) {
-
 		oftm_leaf_verify(m);
 		if (ATTR_TEST(m->oft_flags, OFT_ALLOCPNDG)) {
 			/* Block for completion of allocation 
@@ -780,8 +797,15 @@ offtree_region_preprw(struct offtree_req *req)
 		 */
 		if (ATTR_TEST(m->oft_flags, OFT_ROOT) && !m->oft_norl.oft_iov)
 			ATTR_SET(m->oft_flags, OFT_ALLOCPNDG);
+
+		if (ATTR_TEST(m->oft_flags, OFT_UNINIT)) {
+			/* The leaf is now initialized.
+			 */
+			ATTR_SET(m->oft_flags, OFT_ALLOCPNDG);
+			ATTR_UNSET(m->oft_flags, OFT_UNINIT);
+		}
 		/* Found a leaf, drop into stage2 
-		 */
+		 */		
 	runleaf:
 		atomic_inc(&m->oft_op_ref);
 		/* Run the leaf.
@@ -865,13 +889,13 @@ offtree_region_preprw(struct offtree_req *req)
 						rc = offtree_region_preprw_leaf_locked(&myreq);	
 						freelock(&myreq.oftrq_memb->oft_lock);
 						if (rc < 0)
-							return (rc);
+							RETURN (rc);
 					} else {
 						freelock(&myreq.oftrq_memb->oft_lock);
 						psc_trace("recurse into offtree_region_preprw()");
 						rc = offtree_region_preprw(&myreq);
 						if (rc < 0)
-							return (rc);
+							RETURN (rc);
 					}
 				} else {
 					myreq.oftrq_memb = offtree_newleaf_locked(m, tchild);
@@ -880,7 +904,7 @@ offtree_region_preprw(struct offtree_req *req)
 					rc = offtree_region_preprw_leaf_locked(&myreq);
 					freelock(&myreq.oftrq_memb->oft_lock);
 					if (rc < 0)
-						return (rc);
+						RETURN (rc);
 				}
 			}
 			ATTR_UNSET(m->oft_flags, OFT_MCHLDGROW);
@@ -891,5 +915,5 @@ offtree_region_preprw(struct offtree_req *req)
 	} else
 		psc_fatalx("Invalid offtree node state %d", m->oft_flags);
 
-	return (0);
+	RETURN (0);
 }
