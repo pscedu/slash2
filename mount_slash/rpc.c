@@ -138,7 +138,7 @@ rpc_svc_init(void)
 
 	snid = getenv("SLASH_SERVER_NID");
 	if (snid == NULL)
-		psc_fatalx("SLASH_RPC_SERVER_NID not set");
+		psc_fatalx("SLASH_SERVER_NID not set");
 	nid = libcfs_str2nid(snid);
 	if (nid == LNET_NID_ANY)
 		psc_fatalx("invalid SLASH_SERVER_NID: %s", snid);
@@ -335,8 +335,7 @@ rpc_sendmsg(int op, ...)
 		errno = -mp->rc;
 		if (errno)
 			rc = -1;
-	}
-	else if (rc != -1) {
+	} else if (rc != -1) {
 		errno = -rc;
 		rc = -1;
 	}
