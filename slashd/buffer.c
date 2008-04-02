@@ -696,13 +696,14 @@ sl_buffer_init(void *pri)
 	atomic_set(&slb->slb_ref, 0);
 	atomic_set(&slb->slb_unmapd_ref, 0);
 	LOCK_INIT (&slb->slb_lock);
-	ATTR_SET  (slb->slb_flags, SLB_FREEING);
+	//ATTR_SET  (slb->slb_flags, SLB_FREEING);
+	slb->slb_flags = SLB_FRESH;
 	INIT_PSCLIST_HEAD(&slb->slb_iov_list);
-	INIT_PSCLIST_ENTRY(&slb->slb_mgmt_lentry);
+	//INIT_PSCLIST_ENTRY(&slb->slb_mgmt_lentry);
 	INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);	
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
-	sl_buffer_put(slb, &slBufsFree);
+	//sl_buffer_put(slb, &slBufsFree);
 }
 
 void
