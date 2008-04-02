@@ -611,6 +611,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		struct offtree_req myreq;
 		off_t  rg_soff = OFT_REQ_STARTOFF(req);
 		off_t  rg_eoff = OFT_REQ_ENDOFF(req);
+		off_t  crg_eoff, crg_soff;
 		off_t  i_offa;
 		int    tchild, schild, echild;
 		int    j=0, iovoff=0, sblkoff=0;
@@ -625,6 +626,19 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		offtree_leaf2node_locked(m, req->oftrq_root);
 		
 		DEBUG_OFT(PLL_TRACE, m, "promote to node (niovs=%d)", niovs);
+		/* Capture the new starting offset, it may be different
+		 *   if the existing buffer's offset was < that of the 
+		 *   new request.  offtree_blks_get() handed back a sorted
+		 *   iov array so the first item has the lowest offset.
+		 */
+		iov = dynarray_getpos(req->oftrq_darray, 0);
+		DEBUG_OFFTIOV(PLL_TRACE, iov, "iov 0");
+		nr_soffa = i_offa = iov->oftiov_off;
+		
+		iov = dynarray_getpos(req->oftrq_darray, (niovs-1));
+		DEBUG_OFFTIOV(PLL_TRACE, iov, "iov n");
+		nr_eoffa = (iov->oftiov_off + (iov->oftiov_blksz *
+					       iov->oftiov_nblks)) - 1;
 		/* Determine affected children 
 		 */
 		schild = oft_child_req_get(nr_soffa, req);
@@ -640,61 +654,42 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		 * How many blocks go to each child? Middle children must
 		 *   be complete.
 		 */
-		myreq.oftrq_depth++;
-		/* Capture the new starting offset, it may be different
-		 *   if the existing buffer's offset was < that of the 
-		 *   new request.  offtree_blks_get() handed back a sorted
-		 *   iov array so the first item has the lowest offset.
-		 */
-		iov = dynarray_getpos(req->oftrq_darray, 0);
-		DEBUG_OFFTIOV(PLL_TRACE, iov, "iov 0");
-		nr_soffa = i_offa = iov->oftiov_off;
-		
-		iov = dynarray_getpos(req->oftrq_darray, (niovs-1));
-		DEBUG_OFFTIOV(PLL_TRACE, iov, "iov n");
-		nr_eoffa = (iov->oftiov_off + (iov->oftiov_blksz *
-					       iov->oftiov_nblks)) - 1;
-
-		// need fixes here, the request is not being properly formatted
-		for (j=0, tchild=schild; 
-		     tchild <= echild; 
-		     j++, tchild++) {
+		for (j=0, tchild=schild; tchild <= echild; j++, tchild++) {
 			int tiov_cnt=1, b=0, t;
 			struct offtree_iov  *tiov;
 
-			rg_soff = OFT_REQ_STARTOFF(req);
-			rg_eoff = OFT_REQ_ENDOFF(req);
+			crg_soff = OFT_STARTOFF(req->oftrq_root, 
+						(req->oftrq_depth+1), 
+						((req->oftrq_width * req->oftrq_root->oftr_width) + tchild));
+			
+			crg_eoff = OFT_ENDOFF(req->oftrq_root,
+					      (req->oftrq_depth+1),
+					      ((req->oftrq_width * req->oftrq_root->oftr_width) + tchild));
+			
+			psc_trace("i_offa="LPX64" crg_soff="LPX64, 
+				  i_offa, crg_soff);
 			/* Middle child sanity (middle children must
 			 *   be completely used).
 			 */
 			if (tchild > schild)
-				psc_assert(i_offa == rg_soff);
+				psc_assert(i_offa == crg_soff);
 						
-
-			memcpy(&myreq, req, (sizeof(*req)));		
+			memcpy(&myreq, req, (sizeof(*req)));
 			myreq.oftrq_off = i_offa;
 			/* How many blocks fit within this range?
 			 *  Push offset iterator i_offa. 
 			 */			
-			i_offa += myreq.oftrq_nblks = 
-				(MIN(rg_eoff, nr_eoffa) + 1) - i_offa;
-
-			/* This should always be true.
-			 */
-			//psc_assert_msg(nr_soffa >= rg_soff, 
-			//	       "nr_soffa="LPX64" ! >= rg_soff="LPX64, 
-			//	       nr_soffa, rg_soff);
-			
+			myreq.oftrq_nblks = (MIN(crg_eoff, nr_eoffa) + 1) - i_offa;
 			t = myreq.oftrq_nblks % OFT_REQ2BLKSZ(req);
 			psc_assert(!t);
-
 			myreq.oftrq_nblks /= OFT_REQ2BLKSZ(req);
 
-			/* More middle child sanity (middle children must
-			 *  consume their entire region).
+			i_offa += (myreq.oftrq_nblks * OFT_REQ2BLKSZ(req));
+			/* This should always be true.
 			 */
-			if (j < echild)
-				psc_assert((i_offa - 1) == rg_eoff);
+			psc_assert_msg(i_offa >= rg_soff && i_offa < rg_eoff, 
+					"i_offa="LPX64" rg_soff="LPX64" rg_eoff="LPX64, 
+				       i_offa, rg_soff, rg_eoff);
 			/* How many iovs are needed to fill the child? 
 			 *  Inspect our array of iov's. 
 			 *  @iovoff: is the 'persisent' iterator
@@ -703,29 +698,34 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			 */
 			tiov = dynarray_getpos(req->oftrq_darray,
 					       (iovoff + (tiov_cnt-1)));
-			/* Factor in partially used iov's 
+			/* Factor in partially used iov's.
 			 */
 			b = (tiov->oftiov_nblks - sblkoff);
-			while (b < myreq.oftrq_nblks) {
+			for (t=0; (b < myreq.oftrq_nblks) && (t < niovs);
+			     t++, tiov_cnt++) {
 				tiov_cnt++;
+				psc_assert((iovoff + (tiov_cnt-1)) < niovs);
 				tiov = dynarray_getpos(req->oftrq_darray, 
 						      (iovoff + (tiov_cnt-1)));
 				b += tiov->oftiov_nblks;
 			}
+			if (b < myreq.oftrq_nblks) {
+				psc_errorx("accumulated blocks (%d) < "
+					   "myreq.oftrq_nblks (%zu)", 
+					   b, myreq.oftrq_nblks);
+				goto error;
+			}
 			/* Make the child...
 			 */
 			myreq.oftrq_memb   = offtree_newleaf_locked(m, tchild);
-			myreq.oftrq_width  = OFT_REQ_ABSWIDTH_GET(req, tchild);
 			/* Take the soffa from the first iov returned
 			 *  by the allocator.
 			 */
 			myreq.oftrq_off    = nr_soffa;
-			//myreq.oftrq_off    = MAX(OFT_REQ_STARTOFF(&myreq), 
-			//			 req->oftrq_off);
 			nblks             -= myreq.oftrq_nblks;
 
 			offtree_putnode(&myreq, iovoff, tiov_cnt, sblkoff);
-			/* Bump iovoff 
+			/* Bump iovoff. 
 			 */
 			iovoff += tiov_cnt - ((b > myreq.oftrq_nblks) ? 1 : 0);
 			/* At which block in the iov do we start? 
