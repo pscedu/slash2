@@ -193,7 +193,7 @@ int simpleop_sizes[] = {
 	0,						/* 26 - read */
 	0,						/* 27 - write */
 	0						/* 28 - GETFID */
-#if SNRT != 29
+#if SNRT != 30
 # error "RPC ops out of sync"
 #endif
 };
