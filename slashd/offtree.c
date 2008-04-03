@@ -236,25 +236,31 @@ offtree_calc_nblks_hb_int(const struct offtree_req *r,
 
 	DEBUG_OFFTREQ(PLL_TRACE, r, "req eoffa="LPX64, nr_eoffa);
 	DEBUG_OFFTIOV(PLL_TRACE, v, "hb  eoffa="LPX64, hb_eoffa);       
-	/* Otherwise we shouldn't be here 
+	/* Otherwise we shouldn't be here.
 	 */
 	psc_assert((nr_soffa < hb_soffa) || (nr_eoffa > hb_eoffa));
 	
 	if (nr_soffa < hb_soffa) {
 		if (nr_eoffa < hb_soffa) {
-			/* Regions do not overlap */
+			/* Regions do not overlap.
+			 */
 			*front = nblks;
 			goto out;
 		} else
-			*front = (hb_soffa - nr_soffa) % v->oftiov_blksz;
+			/* Frontal overlap.
+			 */
+			*front = (hb_soffa - nr_soffa) / 
+				v->oftiov_blksz;
 	}	
 	if (nr_eoffa > hb_eoffa) {
 		if (nr_soffa > hb_eoffa) {
-			/* Regions do not overlap */
+			/* Regions do not overlap.
+			 */
 			*back = nblks;
 			goto out;
 		} else 
-			*back = (nr_eoffa - hb_eoffa) % v->oftiov_blksz;
+			*back = ((nr_eoffa+1) - (hb_eoffa+1)) / 
+				v->oftiov_blksz;
 	}
  out:	
 	return (*back + *front);
@@ -337,10 +343,16 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 		dynarray_add(req->oftrq_darray, hb_iov);
 		
 		if (back) {
+			/* Push the iov offset to the beginning of the back
+			 *   segment.
+			 */
+			off_t toff=(req->oftrq_off += 
+				    (req->oftrq_nblks - back) * r->oftr_minsz);
+
 			oniovs = dynarray_len(req->oftrq_darray);
 			/* Allocate 'back' blocks.
 			 */
-			rc = (r->oftr_alloc)(back, req->oftrq_off, 
+			rc = (r->oftr_alloc)(back, toff, 
 					     req->oftrq_darray, r);
 			if (rc != back) {
 				if (rc < back) { 
@@ -374,6 +386,8 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 		(n)->oftiov_pri   = (o)->oftiov_pri;			\
 		(n)->oftiov_nblks = nblks;				\
 	} while (0)		       
+
+
 
 /*
  * offtree_putleaf - apply buffers to a leaf
@@ -409,8 +423,21 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		/* Now bump it to 1.
 		 */
 		atomic_set(&req->oftrq_memb->oft_ref, 1);
+		/* Notify the allocator if this is a remap.
+		 */
+		if (ATTR_TEST(iov->oftiov_flags, OFTIOV_MAPPED)) { 
+			struct offtree_iov *niov;
 
-		req->oftrq_memb->oft_norl.oft_iov = iov;
+			niov = PSCALLOC(sizeof(struct offtree_iov));
+			memcpy(niov, iov, (sizeof(*iov)));
+			niov->oftiov_nblks = req->oftrq_nblks;
+			niov->oftiov_base += req->oftrq_off;
+			
+			ATTR_UNSET(niov->oftiov_flags, OFTIOV_MAPPED);
+			ATTR_SET(niov->oftiov_flags, OFTIOV_REMAP);
+			req->oftrq_memb->oft_norl.oft_iov = niov;
+		} else 
+			req->oftrq_memb->oft_norl.oft_iov = iov;
 
 		if (req->oftrq_root->oftr_putnode_cb)
 			(req->oftrq_root->oftr_putnode_cb)(req->oftrq_memb);

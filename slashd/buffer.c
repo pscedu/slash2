@@ -407,16 +407,27 @@ sl_oftiov_locref_locked(struct offtree_iov *iov, struct sl_buffer *slb)
 	psclist_for_each_entry(ref, &slb->slb_iov_list, slbir_lentry) {
 		psc_assert(ebase < ref->slbir_base);
 		ebase = SLB_REF2EBASE(ref, slb);
-		psc_trace("slbir_base=%p ebase=%p", 
-			  ref->slbir_base, ebase);
+		psc_trace("ref=%p iovb=%p slbir_base=%p ebase=%p", 
+			  ref, iov->oftiov_base, ref->slbir_base, ebase);
 
 		if (iov->oftiov_base == ref->slbir_base) {
 			psc_assert(!ATTR_TEST(ref->slbir_flags, SLBREF_REAP));
-			psc_assert(ref->slbir_nblks == iov->oftiov_nblks);
+			/* At this point, remapping the ref to a new oftm
+			 *  involves shrinking the original ref so the 
+			 *  proceeding must be true unless the last portion 
+			 *  of the oref was remapped.  Otherwise both nblks
+			 *  must be equal.
+			 */
+			if (ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP))
+				psc_assert(ref->slbir_nblks >= iov->oftiov_nblks);
+			else
+				psc_assert(ref->slbir_nblks == iov->oftiov_nblks);
+
 			psc_assert(SLB_IOV2EBASE(iov, slb) <= ebase);	
 			break;
 		}
 	}
+	psc_trace("ret with ref %p", ref);
 	return ref;
 }
 
@@ -428,7 +439,11 @@ sl_oftm_addref(struct offtree_memb *m)
 	struct sl_buffer_iovref *oref=NULL;
 	
 	spinlock(&slb->slb_lock);
-
+	/* Do not accept iov's which have already been mapped
+	 *  unless it's a remap.
+	 */
+	psc_assert(!ATTR_TEST(miov->oftiov_flags, OFTIOV_MAPPED));
+		   
 	oref = sl_oftiov_locref_locked(miov, slb);
 	/* Old ref must be found 
 	 */
@@ -446,26 +461,55 @@ sl_oftm_addref(struct offtree_memb *m)
 		ATTR_SET(oref->slbir_flags, SLBREF_MAPPED);
 		oref->slbir_pri = m;
 		atomic_dec(&slb->slb_unmapd_ref);
-		atomic_inc(&slb->slb_ref);
 	} else {
+		int    tblks;
+		/* Handle remapping.  If SLBREF_MAPPED then OFTIOV_REMAP
+		 *   must also be set.
+		 */
 		if (!ATTR_TEST(miov->oftiov_flags, OFTIOV_REMAP)) {
 			DUMP_SLB(PLL_TRACE, slb, "bad slb ref");
 			psc_fatalx("invalid ref %p", oref);
+		}
+		tblks  = oref->slbir_nblks;
+		tblks -= miov->oftiov_nblks;
+		psc_assert(tblks >= 0);
 
+		if (!tblks) {
+			/* The end of the ref's range has been reached.
+			 */
+			oref->slbir_nblks = miov->oftiov_nblks;
+			oref->slbir_pri   = m;			
 		} else {
-			DEBUG_OFT(PLL_TRACE, m, "remap slbref");
-			oref->slbir_pri = m;
+			/* Create a new reference.
+			 */		
+			struct sl_buffer_iovref *nref;
+
+			nref = PSCALLOC(sizeof(*nref));
+			oref->slbir_nblks = tblks;
+
+			DEBUG_OFT(PLL_TRACE, m, "remap slbref, oref=%p nref=%p",
+				  oref, nref);
+
+			nref->slbir_pri    = m;			
+			nref->slbir_base   = oref->slbir_base;
+			nref->slbir_nblks  = miov->oftiov_nblks;
+			ATTR_SET(nref->slbir_flags, SLBREF_MAPPED);
+			
+			oref->slbir_base  += (miov->oftiov_blksz * 
+					      miov->oftiov_nblks); 	
+						
 			ATTR_UNSET(miov->oftiov_flags, OFTIOV_REMAP);
+			psclist_xadd_tail(&nref->slbir_lentry, 
+					  &oref->slbir_lentry);
 		}
 	}
 	ATTR_SET(miov->oftiov_flags, OFTIOV_MAPPED);
-
 	/* Useful sanity checks which should always be true in
 	 *  this context.
 	 */
 	DUMP_SLB(PLL_TRACE, slb, "slb done");
+	atomic_inc(&slb->slb_ref);
 	psc_assert(atomic_read(&slb->slb_unmapd_ref) >= 0);
-	psc_assert(atomic_read(&slb->slb_ref) > 0);	
 	psc_assert(atomic_read(&slb->slb_ref) <= slb->slb_nblks);
 	freelock(&slb->slb_lock);
 }
