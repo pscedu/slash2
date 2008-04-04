@@ -62,6 +62,7 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	    SRMT_CREATE, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
+//	if (rc == -1)
 	mq->mode = mode;
 	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
@@ -91,6 +92,7 @@ slash_getattr(const char *path, struct stat *stb)
 	    SRMT_GETATTR, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
+//	if (rc == -1)
 	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
@@ -196,6 +198,7 @@ slash_open(const char *path, struct fuse_file_info *fi)
 	    SRMT_OPEN, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
+//	if (rc == -1)
 	mq->flags = fi->flags;
 	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
@@ -219,6 +222,7 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 	    SRMT_OPENDIR, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
+//	if (rc == -1)
 	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
@@ -379,12 +383,14 @@ slash_readlink(const char *path, char *buf, size_t size)
 	    SRMT_READLINK, sizeof(*mq), size, &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
+//	if (rc == -1)
 	mq->size = size;
 	if ((rc = rsx_getrep(rq, size, &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else
-			rc = snprintf(buf, size, "%s", mp->buf);
+			if (snprintf(buf, size, "%s", mp->buf) == -1)
+				rc = -errno;
 	}
 	pscrpc_req_finished(rq);
 	return (rc);
@@ -434,6 +440,7 @@ slash_statfs(const char *path, struct statvfs *sfb)
 	    SRMT_STATFS, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
+//	if (rc == -1)
 	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
