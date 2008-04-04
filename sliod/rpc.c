@@ -4,11 +4,11 @@
 
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rsx.h"
 #include "psc_util/cdefs.h"
 
 #include "rpc.h"
 #include "slashrpc.h"
-#include "rsx.h"
 
 struct slashrpc_service *rpcsvcs[NRPCSVCS];
 

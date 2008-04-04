@@ -9,7 +9,6 @@ SRCS+=		rpc.c
 SRCS+=		rpcio.c
 SRCS+=		timer.c
 SRCS+=		${SLASH_BASE}/share/fid.c
-SRCS+=		${SLASH_BASE}/share/rsx.c
 SRCS+=		${SLASH_BASE}/slashd/cfd.c
 SRCS+=		${SLASH_BASE}/slashd/lconf.l
 SRCS+=		${SLASH_BASE}/slashd/yconf.y
@@ -35,6 +34,7 @@ SRCS+=		${PFL_BASE}/psc_rpc/nb.c
 SRCS+=		${PFL_BASE}/psc_rpc/niobuf.c
 SRCS+=		${PFL_BASE}/psc_rpc/packgeneric.c
 SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
+SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
 SRCS+=		${PFL_BASE}/psc_rpc/service.c
 
 SRCS+=		${LNET_BASE}/socklnd/connection.c

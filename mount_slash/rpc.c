@@ -1,13 +1,13 @@
 /* $Id$ */
 
 #include "psc_types.h"
-#include "psc_rpc/rpc.h"
-#include "psc_util/cdefs.h"
 #include "psc_ds/list.h"
+#include "psc_rpc/rpc.h"
+#include "psc_rpc/rsx.h"
+#include "psc_util/cdefs.h"
 
 #include "mount_slash.h"
 #include "slashrpc.h"
-#include "rsx.h"
 
 struct slashrpc_service *rpcsvcs[NRPCSVC];
 struct pscrpc_nbreqset *ioNbReqSet;

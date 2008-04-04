@@ -13,6 +13,7 @@
 
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
+#include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
 #include "fid.h"
@@ -20,7 +21,6 @@
 #include "../slashd/cfd.h"
 #include "sliod.h"
 #include "slashrpc.h"
-#include "rsx.h"
 
 #define SLIO_NTHREADS  8
 #define SLIO_NBUFS     1024

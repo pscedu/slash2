@@ -4,11 +4,11 @@
 #include <stdio.h>
 
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rsx.h"
 #include "psc_util/cdefs.h"
 
 #include "mount_slash.h"
 #include "slashrpc.h"
-#include "rsx.h"
 
 #define OBD_TIMEOUT 20
 

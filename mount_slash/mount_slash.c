@@ -18,13 +18,13 @@
 
 #include "pfl.h"
 #include "psc_types.h"
-#include "psc_util/log.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rsx.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/log.h"
 
 #include "mount_slash.h"
 #include "slashrpc.h"
-#include "rsx.h"
 
 int
 slash_access(const char *path, int mask)
