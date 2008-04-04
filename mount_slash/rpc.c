@@ -164,38 +164,35 @@ rpc_svc_init(void)
 }
 
 int simpleop_sizes[] = {
-	sizeof(struct slashrpc_access_req),		/* 0 */
-	sizeof(struct slashrpc_chmod_req),		/* 1 */
-	sizeof(struct slashrpc_chown_req),		/* 2 */
-	sizeof(struct slashrpc_connect_req),		/* 3 */
-	0,						/* 4 - creat */
-	sizeof(struct slashrpc_destroy_req),		/* 5 */
-	0,						/* 6 - fgetattr */
-	sizeof(struct slashrpc_ftruncate_req),		/* 7 */
-	0,						/* 8 - getattr */
-	sizeof(struct slashrpc_link_req),		/* 9 */
-	0,						/* 10 - lock */
-	sizeof(struct slashrpc_mkdir_req),		/* 11 */
-	sizeof(struct slashrpc_mknod_req),		/* 12 */
-	0,						/* 13 - open */
-	0,						/* 14 - opendir */
-	0,						/* 15 - readdir */
-	0,						/* 16 - readlink */
-	sizeof(struct slashrpc_release_req),		/* 17 */
-	sizeof(struct slashrpc_releasedir_req),		/* 18 */
-	sizeof(struct slashrpc_rename_req),		/* 19 */
-	sizeof(struct slashrpc_rmdir_req),		/* 20 */
-	0,						/* 21 - statfs */
-	sizeof(struct slashrpc_symlink_req),		/* 22 */
-	sizeof(struct slashrpc_truncate_req),		/* 23 */
-	sizeof(struct slashrpc_unlink_req),		/* 24 */
-	sizeof(struct slashrpc_utimes_req),		/* 25 */
-	0,						/* 26 - read */
-	0,						/* 27 - write */
-	0						/* 28 - GETFID */
-#if SNRT != 30
-# error "RPC ops out of sync"
-#endif
+	sizeof(struct slashrpc_access_req),
+	sizeof(struct slashrpc_chmod_req),
+	sizeof(struct slashrpc_chown_req),
+	sizeof(struct slashrpc_connect_req),
+	/* 4 - creat */		0,
+	sizeof(struct slashrpc_destroy_req),
+	/* 6 - fgetattr */	0,
+	sizeof(struct slashrpc_ftruncate_req),
+	/* 8 - getattr */	0,
+	sizeof(struct slashrpc_link_req),
+	/* 10 - lock */		0,
+	sizeof(struct slashrpc_mkdir_req),
+	sizeof(struct slashrpc_mknod_req),
+	/* 13 - open */		0,
+	/* 14 - opendir */	0,
+	/* 15 - readdir */	0,
+	/* 16 - readlink */	0,
+	sizeof(struct slashrpc_release_req),
+	sizeof(struct slashrpc_releasedir_req),
+	sizeof(struct slashrpc_rename_req),
+	sizeof(struct slashrpc_rmdir_req),
+	/* 21 - statfs */	0,
+	sizeof(struct slashrpc_symlink_req),
+	sizeof(struct slashrpc_truncate_req),
+	sizeof(struct slashrpc_unlink_req),
+	sizeof(struct slashrpc_utimes_req),
+	/* 26 - read */		0,
+	/* 27 - write */	0,
+	/* 28 - GETFID */	0
 };
 
 /*
