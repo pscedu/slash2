@@ -59,13 +59,14 @@ int
 slio_connect(struct pscrpc_request *rq)
 {
 	struct slashrpc_connect_req *mq;
+	struct slashrpc_generic_rep *mp;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (mq->magic != SR_IO_MAGIC || mq->version != SR_IO_VERSION)
 		rc = -EINVAL;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int

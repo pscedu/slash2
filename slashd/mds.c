@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rsx.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/service.h"
 
@@ -34,56 +35,60 @@ int
 slmds_connect(struct pscrpc_request *rq)
 {
 	struct slashrpc_connect_req *mq;
+	struct slashrpc_generic_rep *mp;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (mq->magic != SR_MDS_MAGIC || mq->version != SR_MDS_VERSION)
 		rc = -EINVAL;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_access(struct pscrpc_request *rq)
 {
+	struct slashrpc_generic_rep *mp;
 	struct slashrpc_access_req *mq;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (access(mq->path, mq->mask) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_chmod(struct pscrpc_request *rq)
 {
+	struct slashrpc_generic_rep *mp;
 	struct slashrpc_chmod_req *mq;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (chmod(mq->path, mq->mode) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 #if 0
 int
 slmds_fchmod(struct pscrpc_request *rq)
 {
+	struct slashrpc_generic_rep *mp;
 	struct slashrpc_fchmod_req *mq;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
 		rc = -errno;
 	else {
@@ -91,23 +96,24 @@ slmds_fchmod(struct pscrpc_request *rq)
 		if (chmod(fn, mq->mode) == -1)
 			rc = -errno;
 	}
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 #endif
 
 int
 slmds_chown(struct pscrpc_request *rq)
 {
+	struct slashrpc_generic_rep *mp;
 	struct slashrpc_chown_req *mq;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (chown(mq->path, mq->uid, mq->gid) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 /**
@@ -119,13 +125,14 @@ slmds_chown(struct pscrpc_request *rq)
 int
 slmds_fchown(struct pscrpc_request *rq)
 {
+	struct slashrpc_generic_rep *mp;
 	struct slashrpc_fchown_req *mq;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
 		rc = -errno;
 	else {
@@ -133,25 +140,26 @@ slmds_fchown(struct pscrpc_request *rq)
 		if (chown(fn, mq->uid, mq->gid) == -1)
 			rc = -errno;
 	}
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 #endif
 
 int
 slmds_create(struct pscrpc_request *rq)
 {
+	struct slashrpc_generic_rep *mp;
 	struct slashrpc_create_req *mq;
 	int fd, rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->path, 0) == -1)
 		rc = -errno;
 	else if ((fd = creat(mq->path, mq->mode)) == -1)
 		rc = -errno;
 	else
 		close(fd);
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
@@ -221,12 +229,13 @@ int
 slmds_ftruncate(struct pscrpc_request *rq)
 {
 	struct slashrpc_ftruncate_req *mq;
+	struct slashrpc_generic_rep *mp;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
 		rc = -errno;
 	else {
@@ -234,54 +243,57 @@ slmds_ftruncate(struct pscrpc_request *rq)
 		if (truncate(fn, mq->size) == -1)
 			rc = -errno;
 	}
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_link(struct pscrpc_request *rq)
 {
+	struct slashrpc_generic_rep *mp;
 	struct slashrpc_link_req *mq;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->from, 1) == -1)
 		rc = -errno;
 	else if (translate_pathname(mq->to, 0) == -1)
 		rc = -errno;
 	else if (link(mq->from, mq->to) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_mkdir(struct pscrpc_request *rq)
 {
+	struct slashrpc_generic_rep *mp;
 	struct slashrpc_mkdir_req *mq;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->path, 0) == -1)
 		rc = -errno;
 	else if (mkdir(mq->path, mq->mode) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_mknod(struct pscrpc_request *rq)
 {
+	struct slashrpc_generic_rep *mp;
 	struct slashrpc_mknod_req *mq;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->path, 0) == -1)
 		rc = -errno;
 	else if (mknod(mq->path, mq->mode, mq->dev) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
@@ -444,58 +456,62 @@ int
 slmds_release(struct pscrpc_request *rq)
 {
 	struct slashrpc_release_req *mq;
+	struct slashrpc_generic_rep *mp;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (cfdfree(rq->rq_export, mq->cfd) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_releasedir(struct pscrpc_request *rq)
 {
 	struct slashrpc_releasedir_req *mq;
+	struct slashrpc_generic_rep *mp;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (cfdfree(rq->rq_export, mq->cfd) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_rename(struct pscrpc_request *rq)
 {
 	struct slashrpc_rename_req *mq;
+	struct slashrpc_generic_rep *mp;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->from, 1) == -1)
 		rc = -errno;
 	else if (translate_pathname(mq->to, 0) == -1)
 		rc = -errno;
 	else if (rename(mq->from, mq->to) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_rmdir(struct pscrpc_request *rq)
 {
+	struct slashrpc_generic_rep *mp;
 	struct slashrpc_rmdir_req *mq;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (rmdir(mq->path) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
@@ -528,62 +544,66 @@ int
 slmds_symlink(struct pscrpc_request *rq)
 {
 	struct slashrpc_symlink_req *mq;
+	struct slashrpc_generic_rep *mp;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->from, 1) == -1)
 		rc = -errno;
 	else if (translate_pathname(mq->to, 0) == -1)
 		rc = -errno;
 	else if (symlink(mq->from, mq->to) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_truncate(struct pscrpc_request *rq)
 {
 	struct slashrpc_truncate_req *mq;
+	struct slashrpc_generic_rep *mp;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (truncate(mq->path, mq->size) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_unlink(struct pscrpc_request *rq)
 {
 	struct slashrpc_unlink_req *mq;
+	struct slashrpc_generic_rep *mp;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (unlink(mq->path) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
 slmds_utimes(struct pscrpc_request *rq)
 {
 	struct slashrpc_utimes_req *mq;
+	struct slashrpc_generic_rep *mp;
 	int rc;
 
 	rc = 0;
-	GET_GEN_REQ(rq, mq);
+	GET_GEN_REQ(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
 		rc = -errno;
 	else if (utimes(mq->path, mq->times) == -1)
 		rc = -errno;
-	GENERIC_REPLY(rq, rc);
+	GENERIC_REPLY(rq, rc, mp);
 }
 
 int
