@@ -28,10 +28,6 @@ power(size_t base, size_t exp)
 #define OFT_REGIONBLKS(root, d)				\
 	(OFT_REGIONSZ(root, d) / (root)->oftr_minsz)
 
-#define OFT_REQ_REGIONBLKS(req)				       \
-	(OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) / \
-	 (req)->oftrq_root->oftr_minsz)
-
 /* abs_width is the global width position of the spoke, not the 
  *  position relative to the parent
  */
@@ -54,6 +50,13 @@ power(size_t base, size_t exp)
 
 #define OFT_REQ_ABSWIDTH_GET(req, pos)					\
 	(((req)->oftrq_width * (req)->oftrq_root->oftr_width) + pos)
+
+
+#define OFT_REQ_REGIONBLKS(req)				       \
+	((OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) - \
+	  ((req)->oftrq_off - OFT_REQ_STARTOFF(req))) /		\
+	 (req)->oftrq_root->oftr_minsz)
+
 
 #define OFT_VERIFY_REQ_SE(req, s, e) {					\
 		psc_trace("OFT_VERIFY_REQ_SE NR ("LPX64"/"LPX64")",	\
@@ -179,12 +182,13 @@ struct offtree_iov {
 };
 
 enum oft_iov_flags {
-	OFTIOV_DATARDY   = (1 << 0), /* Buffer contains no data       */
-	OFTIOV_FAULTING  = (1 << 1), /* Buffer is being retrieved    */
-	OFTIOV_COLLISION = (1 << 2), /* Collision ops must take place */
-	OFTIOV_FREEING   = (1 << 3), /* Collision ops must take place */
-	OFTIOV_MAPPED    = (1 << 5), /* Mapped to a tree node */
-	OFTIOV_REMAP     = (1 << 6)  /* Remap to a another tree node  */	
+	OFTIOV_DATARDY   = (1 << 0), /* Buffer contains no data        */
+	OFTIOV_FAULTING  = (1 << 1), /* Buffer is being retrieved      */
+	OFTIOV_COLLISION = (1 << 2), /* Collision ops must take place  */
+	OFTIOV_FREEING   = (1 << 3), /* Collision ops must take place  */
+	OFTIOV_MAPPED    = (1 << 5), /* Mapped to a tree node          */
+	OFTIOV_REMAPPING = (1 << 6), /* Remap to a another tree node   */	
+	OFTIOV_REMAP_SRC = (1 << 7)  /* IOV is the remap source buffer */	
 };
 
 #define OFFTIOV_FLAG(field, str) (field ? str : "")
@@ -193,9 +197,10 @@ enum oft_iov_flags {
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FAULTING), "f"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_COLLISION),"p"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FREEING),  "F"), \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_MAPPED),   "m")
-
-#define OFFTIOV_FLAGS_FMT "%s%s%s%s%s"
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_MAPPED),   "m"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAPPING),"r"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_SRC),"R")
+#define OFFTIOV_FLAGS_FMT "%s%s%s%s%s%s%s"
 
 #define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
 	do {								\
@@ -227,6 +232,8 @@ struct offtree_memb {
 	atomic_t              oft_op_ref;   /* pending operations  */
 	struct offtree_memb  *oft_parent;
 	u8                    oft_pos;                   
+	u8                    oft_depth;
+	u16                   oft_width;
 	//struct psclist_head   oft_lentry; /* chain in the slb    */
 	union norl {
 		struct offtree_iov   *oft_iov;
@@ -269,10 +276,11 @@ enum oft_attributes {
 		if (ATTR_TEST((oft)->oft_flags, OFT_LEAF)) {		\
 			_psclog(__FILE__, __func__, __LINE__,		\
 				PSS_OTHER, level, 0,			\
-				" oft@%p pos:%hhu p:%p ref:%d oref:%d"	\
+				" oft@%p pos:%hhu d:%hhu w:%hu p:%p "	\
+				"ref:%d oref:%d"			\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
-				oft, (oft)->oft_pos,			\
-				(oft)->oft_parent,			\
+				oft, (oft)->oft_pos, (oft)->oft_depth,	\
+				(oft)->oft_width, (oft)->oft_parent,	\
 				atomic_read(&(oft)->oft_ref), 		\
 				atomic_read(&(oft)->oft_op_ref),	\
 				DEBUG_OFTM_FLAGS(oft),			\
@@ -320,7 +328,8 @@ struct offtree_req {
 	ssize_t              oftrq_nblks; /* number of blocks requested     */
 	u8                   oftrq_op;
 	u8                   oftrq_depth;
-	u16                  oftrq_width;	
+	u16                  oftrq_width;
+	off_t                oftrq_darray_off;	
 };
 
 static inline int 
@@ -346,7 +355,7 @@ oft_child_req_get(off_t o, struct offtree_req *req)
 		abort();
 	
 	return ((o - soff) / OFT_REGIONSZ(req->oftrq_root, 
-					  (req->oftrq_depth + 1)));
+					  (req->oftrq_depth+1)));
 }
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\

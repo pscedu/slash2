@@ -396,6 +396,7 @@ sl_oftiov_locref_locked(struct offtree_iov *iov, struct sl_buffer *slb)
 	struct sl_buffer_iovref *ref=NULL;
 	void                    *ebase=0;
 
+	psc_trace("IOV %p slbir_base=%p", iov, iov->oftiov_base);
 	/* Blksz's must match 
 	 */
 	psc_assert(slb->slb_blksz == iov->oftiov_blksz);	
@@ -407,8 +408,9 @@ sl_oftiov_locref_locked(struct offtree_iov *iov, struct sl_buffer *slb)
 	psclist_for_each_entry(ref, &slb->slb_iov_list, slbir_lentry) {
 		psc_assert(ebase < ref->slbir_base);
 		ebase = SLB_REF2EBASE(ref, slb);
-		psc_trace("ref=%p iovb=%p slbir_base=%p ebase=%p", 
-			  ref, iov->oftiov_base, ref->slbir_base, ebase);
+		psc_trace("ref=%p iovb=%p slbir_base=%p ebase=%p nblks=%zu", 
+			  ref, iov->oftiov_base, ref->slbir_base, 
+			  ebase, ref->slbir_nblks);
 
 		if (iov->oftiov_base == ref->slbir_base) {
 			psc_assert(!ATTR_TEST(ref->slbir_flags, SLBREF_REAP));
@@ -418,7 +420,7 @@ sl_oftiov_locref_locked(struct offtree_iov *iov, struct sl_buffer *slb)
 			 *  of the oref was remapped.  Otherwise both nblks
 			 *  must be equal.
 			 */
-			if (ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP))
+			if (ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAPPING))
 				psc_assert(ref->slbir_nblks >= iov->oftiov_nblks);
 			else
 				psc_assert(ref->slbir_nblks == iov->oftiov_nblks);
@@ -439,13 +441,9 @@ sl_oftm_addref(struct offtree_memb *m)
 	struct sl_buffer_iovref *oref=NULL;
 	
 	spinlock(&slb->slb_lock);
-	/* Do not accept iov's which have already been mapped
-	 *  unless it's a remap.
-	 */
-	psc_assert(!ATTR_TEST(miov->oftiov_flags, OFTIOV_MAPPED));
 		   
 	oref = sl_oftiov_locref_locked(miov, slb);
-	/* Old ref must be found 
+	/* Old ref must be found.
 	 */
 	psc_assert(oref);
 	psc_assert(oref->slbir_base >= slb->slb_base && 
@@ -458,15 +456,21 @@ sl_oftm_addref(struct offtree_memb *m)
 		/* Covers a full or partial mapping.
 		 */
 		DEBUG_OFT(PLL_TRACE, m, "unmapped slbref");
+		/* Do not accept iov's which have already been mapped
+		 */
+		psc_assert(!ATTR_TEST(miov->oftiov_flags, OFTIOV_MAPPED));
+					   
 		ATTR_SET(oref->slbir_flags, SLBREF_MAPPED);
 		oref->slbir_pri = m;
 		atomic_dec(&slb->slb_unmapd_ref);
+		atomic_inc(&slb->slb_ref);
+		ATTR_SET(miov->oftiov_flags, OFTIOV_MAPPED);
 	} else {
-		int    tblks;
-		/* Handle remapping.  If SLBREF_MAPPED then OFTIOV_REMAP
+		int tblks;
+		/* Handle remapping.  If SLBREF_MAPPED then OFTIOV_REMAPPING
 		 *   must also be set.
 		 */
-		if (!ATTR_TEST(miov->oftiov_flags, OFTIOV_REMAP)) {
+		if (!ATTR_TEST(miov->oftiov_flags, OFTIOV_REMAPPING)) {
 			DUMP_SLB(PLL_TRACE, slb, "bad slb ref");
 			psc_fatalx("invalid ref %p", oref);
 		}
@@ -476,9 +480,18 @@ sl_oftm_addref(struct offtree_memb *m)
 
 		if (!tblks) {
 			/* The end of the ref's range has been reached.
+			 *   No need to inc refcnt since no additional
+			 *   refs are being added.
 			 */
 			oref->slbir_nblks = miov->oftiov_nblks;
-			oref->slbir_pri   = m;			
+			oref->slbir_pri   = m;
+			
+			psc_assert(ATTR_TEST(miov->oftiov_flags, OFTIOV_REMAP_SRC));
+			ATTR_UNSET(miov->oftiov_flags, OFTIOV_REMAP_SRC);
+
+			DEBUG_OFT(PLL_TRACE, m, "remap existing slbref, oref=%p",
+				  oref);
+
 		} else {
 			/* Create a new reference.
 			 */		
@@ -498,17 +511,17 @@ sl_oftm_addref(struct offtree_memb *m)
 			oref->slbir_base  += (miov->oftiov_blksz * 
 					      miov->oftiov_nblks); 	
 						
-			ATTR_UNSET(miov->oftiov_flags, OFTIOV_REMAP);
 			psclist_xadd_tail(&nref->slbir_lentry, 
 					  &oref->slbir_lentry);
+			atomic_inc(&slb->slb_ref);
+			ATTR_SET(miov->oftiov_flags, OFTIOV_MAPPED);
 		}
+		ATTR_UNSET(miov->oftiov_flags, OFTIOV_REMAPPING);	
 	}
-	ATTR_SET(miov->oftiov_flags, OFTIOV_MAPPED);
 	/* Useful sanity checks which should always be true in
 	 *  this context.
 	 */
 	DUMP_SLB(PLL_TRACE, slb, "slb done");
-	atomic_inc(&slb->slb_ref);
 	psc_assert(atomic_read(&slb->slb_unmapd_ref) >= 0);
 	psc_assert(atomic_read(&slb->slb_ref) <= slb->slb_nblks);
 	freelock(&slb->slb_lock);
@@ -688,7 +701,7 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 
 	INIT_PSCLIST_HEAD(&tmpl);
 
-	psc_assert(nblks < (slCacheNblks/2));
+	psc_assert(nblks < (slCacheBlkSz/2));
 	psc_assert(a);
 	psc_assert(pri);
 	psc_assert(nblks);

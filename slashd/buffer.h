@@ -112,14 +112,19 @@ struct sl_buffer {
 		__l = reqlock(&slb->slb_lock);				\
 		psclist_for_each_entry(__r, &slb->slb_iov_list,		\
 				       slbir_lentry) {			\
-			if (__r->slbir_pri)				\
+			if (__r->slbir_pri) {				\
+				struct offtree_memb *__m;		\
+				__m = __r->slbir_pri;			\
 				DEBUG_OFT(level,			\
-					  (struct offtree_memb *)__r->slbir_pri, \
-					  "SLB ref %p memb", __r);		\
-			else						\
+					  __m, "SLB ref %p memb", __r);	\
+				DEBUG_OFFTIOV(level,			\
+					     __m->oft_norl.oft_iov,	\
+					     "iov of memb %p", __m);	\
+			} else						\
 				_psclog(__FILE__, __func__, __LINE__,	\
 					PSS_OTHER, level, 0,		\
-					"---> Unmapped SLB ref %p memb " fmt, __r, ## __VA_ARGS__); \
+					"--> Unmapped SLB ref %p memb " \
+					fmt, __r, ## __VA_ARGS__);	\
 		}							\
 		ureqlock(&slb->slb_lock, __l);				\
 	} while (0)
