@@ -455,7 +455,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				niov->oftiov_nblks = req->oftrq_nblks;
 				req->oftrq_memb->oft_norl.oft_iov = niov;
 				/* Modify the old iov.
-				 */ 
+				 */
 				iov->oftiov_nblks -= req->oftrq_nblks;
 				iov->oftiov_base  += req->oftrq_nblks * 
 					iov->oftiov_blksz;
@@ -466,11 +466,37 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				DEBUG_OFFTIOV(PLL_INFO, niov, "remap (niov)");
 			}
 			DEBUG_OFFTIOV(PLL_INFO, iov,  "remapsrc (iov)");
-		} else 
-			req->oftrq_memb->oft_norl.oft_iov = iov;
+
+		} else {
+			if (req->oftrq_nblks < iov->oftiov_nblks) {
+				struct offtree_iov *niov;
+				niov = PSCALLOC(sizeof(*niov));
+				memcpy(niov, iov, (sizeof(*iov)));
+				/* Prep the new iov.
+				 */
+				ATTR_UNSET(niov->oftiov_flags, OFTIOV_REMAP_SRC);
+				ATTR_UNSET(niov->oftiov_flags, OFTIOV_MAPPED);
+				ATTR_SET(niov->oftiov_flags, OFTIOV_REMAPPING);
+				niov->oftiov_nblks = req->oftrq_nblks;
+				req->oftrq_memb->oft_norl.oft_iov = niov;
+				/* Modify the old iov.
+				 */
+				iov->oftiov_nblks -= req->oftrq_nblks;
+				iov->oftiov_base  += req->oftrq_nblks * 
+					iov->oftiov_blksz;
+				iov->oftiov_off   += req->oftrq_nblks *
+					iov->oftiov_blksz;			
+				ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_SRC);
+
+				DEBUG_OFFTIOV(PLL_INFO, niov, "short remap (niov)");
+				req->oftrq_memb->oft_norl.oft_iov = niov;
+			} else 
+				req->oftrq_memb->oft_norl.oft_iov = iov;
+		}
 
 		DEBUG_OFFTIOV(PLL_INFO, req->oftrq_memb->oft_norl.oft_iov, 
 			      "final iov");
+
 		if (req->oftrq_root->oftr_putnode_cb)
 			(req->oftrq_root->oftr_putnode_cb)(req->oftrq_memb);
 

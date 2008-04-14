@@ -131,7 +131,8 @@ sl_buffer_get(list_cache_t *lc, int block)
 	psc_trace("slb from %s", lc->lc_name);
 
 	slb = (block ? lc_getwait(lc) : lc_getnb(lc));
-	INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);
+	if (slb)
+		INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);
 	return (slb);
 }
 
@@ -343,6 +344,7 @@ sl_slab_alloc(int nblks, fcache_mhandle_t *f)
 
 	ENTRY;
 
+ retry:
 	do {
 		slb = sl_buffer_get(&slBufsFree, 0);
 		if (!slb) {
@@ -355,7 +357,7 @@ sl_slab_alloc(int nblks, fcache_mhandle_t *f)
 				 */
 				goto reap;
 		}
-		DEBUG_SLB(PLL_TRACE, slb, "new slb");
+		DEBUG_SLB(PLL_TRACE, slb, "new slb");		
 		/* Sanity checks
 		 */
 		psc_assert(!slb->slb_lc_fcm);
@@ -367,25 +369,24 @@ sl_slab_alloc(int nblks, fcache_mhandle_t *f)
 		slb->slb_lc_fcm = &f->fcmh_buffer_cache;
 		lc_stack(&f->fcmh_buffer_cache, &slb->slb_fcm_lentry);	
 		
-		if (timedout)
-			/* Don't try again
-			 */
-			goto out;
-		
-		if ((fblks += slb->slb_nblks) < nblks) {
-		reap:
-			rc = sl_slab_reap(nblks - fblks);
-			if (rc <= 0)
-				goto out;
-			if (rc < (nblks - fblks))
-				/* Got some but not all, loop once more
-				 *  trying to add them to our pool
-				 */
-				timedout = 1;
-		}
-	} while (fblks < nblks);
- out:
+	} while ((fblks += slb->slb_nblks) < nblks);		
+	/* Got all needed blocks.
+	 */ 
+	goto out;
 	
+ reap:
+	rc = sl_slab_reap(nblks - fblks);	
+	if (rc <= 0)
+		goto out;
+	else {
+		//if (rc < (nblks - fblks)) 
+		/* Got some but not all, loop once more
+		 *  trying to add them to our pool
+		 */
+		timedout = 1;
+		goto retry;
+	}
+ out:	
 	RETURN (fblks);
 }
 	
@@ -450,21 +451,50 @@ sl_oftm_addref(struct offtree_memb *m)
 		   oref->slbir_base <= (slb->slb_base + 
 					(slb->slb_nblks * slb->slb_blksz)));
 
+
+	DEBUG_OFFTIOV(PLL_TRACE, miov, "sl_oftm_addref");
 	DUMP_SLB(PLL_TRACE, slb, "slb start (treenode %p)", m);
 
 	if (!ATTR_TEST(oref->slbir_flags, SLBREF_MAPPED)) {
+		struct sl_buffer_iovref *nref=NULL;
+
 		/* Covers a full or partial mapping.
 		 */
 		DEBUG_OFT(PLL_TRACE, m, "unmapped slbref");
 		/* Do not accept iov's which have already been mapped
 		 */
 		psc_assert(!ATTR_TEST(miov->oftiov_flags, OFTIOV_MAPPED));
-					   
-		ATTR_SET(oref->slbir_flags, SLBREF_MAPPED);
-		oref->slbir_pri = m;
-		atomic_dec(&slb->slb_unmapd_ref);
+		/* Look out for a short mapping, one that does not 
+		 *  consume the entire unmapped area.
+		 */
+		if (miov->oftiov_nblks < oref->slbir_nblks) {
+			/* Got one, fork the slbref.
+			 */ 
+			nref = PSCALLOC(sizeof(*nref));
+			oref->slbir_nblks -= miov->oftiov_nblks;
+			
+			DEBUG_OFT(PLL_TRACE, m, "short map slbref, oref=%p nref=%p",
+				  oref, nref);
+			
+			nref->slbir_pri    = m;			
+			nref->slbir_base   = oref->slbir_base;
+			nref->slbir_nblks  = miov->oftiov_nblks;
+			ATTR_SET(nref->slbir_flags, SLBREF_MAPPED);
+
+			oref->slbir_base  += (miov->oftiov_blksz * 
+					      miov->oftiov_nblks); 	
+
+			psclist_xadd_tail(&nref->slbir_lentry, 
+					  &oref->slbir_lentry);
+
+		} else {
+			ATTR_SET(oref->slbir_flags, SLBREF_MAPPED);
+			oref->slbir_pri = m;
+			atomic_dec(&slb->slb_unmapd_ref);
+		}
 		atomic_inc(&slb->slb_ref);
 		ATTR_SET(miov->oftiov_flags, OFTIOV_MAPPED);
+			
 	} else {
 		int tblks;
 		/* Handle remapping.  If SLBREF_MAPPED then OFTIOV_REMAPPING
@@ -580,7 +610,8 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
   	 *   us removing it from the list.
 	 */
 	DEBUG_SLB(PLL_TRACE, slb, 
-		  "sl_buffer_alloc_internal, a=%p soffa="LPX64, a, soffa);
+		  "sl_buffer_alloc_internal, a=%p nblks=%zu, soffa="LPX64, 
+		  a, nblks, soffa);
 
 	if (ATTR_TEST(slb->slb_flags, SLB_FREEING) || (tok != slb->slb_lc_fcm))
 		goto out;
@@ -604,15 +635,16 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 		ref = PSCALLOC(sizeof(*ref));
 		psc_assert(ref);
 
-		DEBUG_SLB(PLL_INFO, slb, "iov=%p ref=%p blks=%zd", 
-			  iov, ref, blks);
+		DEBUG_SLB(PLL_INFO, slb, "iov=%p ref=%p blks=%zd, soffa=%zu", 
+			  iov, ref, blks, soffa);
 
 		iov->oftiov_flags = 0;
 		iov->oftiov_pri   = slb;
 		iov->oftiov_blksz = slb->slb_blksz;
 		/* Track the aligned, application offset.
 		 */
-		iov->oftiov_off   = soffa;
+		iov->oftiov_off  = soffa;
+		soffa           += rc * slb->slb_blksz;
 
 		ref->slbir_nblks = iov->oftiov_nblks = rc;
 		/* 'n' contains the starting bit of the allocation.
@@ -692,14 +724,14 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 int 
 sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 {
-	ssize_t rblks = nblks;
+	ssize_t fblks=0;
 	struct offtree_root *r  = pri;
 	fcache_mhandle_t    *f  = r->oftr_pri;
 	list_cache_t        *lc = &f->fcmh_buffer_cache;
-	struct psclist_head  tmpl;
+	//struct psclist_head  tmpl;
 	struct sl_buffer    *slb;
 
-	INIT_PSCLIST_HEAD(&tmpl);
+	//INIT_PSCLIST_HEAD(&tmpl);
 
 	psc_assert(nblks < (slCacheBlkSz/2));
 	psc_assert(a);
@@ -707,7 +739,10 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 	psc_assert(nblks);
 
 	do {
-		/* Fill any previously allocated but incomplete buffers.
+		/* Fill any previously allocated but incomplete buffers
+		 *   by iterating over our private list of slb's.  Allocate
+		 *   the remainaing blks by reserving a new slb and alloc'ing
+		 *   from there.
 		 */
 		spinlock(&lc->lc_lock);
 		psclist_for_each_entry(slb, &lc->lc_list, slb_fcm_lentry) {
@@ -715,24 +750,28 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 				  "soffa "LPX64" trying with this slb", soffa);
 			if (SLB_FULL(slb)) 
 				continue;
-			rblks -= sl_buffer_alloc_internal(slb, rblks, soffa,
-							  a, lc);
-			if (rblks <= 0)
+			fblks += sl_buffer_alloc_internal(slb, (nblks-fblks), 
+							  soffa, a, lc);
+			soffa += fblks * slb->slb_blksz;
+
+			if (fblks >= (ssize_t)nblks)
 				break;
 		}
 		/* Free our fid's listcache lock.
 		 */
 		freelock(&lc->lc_lock);
-
-		if (rblks) {
+		/* Are more blocks needed?
+		 */ 
+		if (fblks < (ssize_t)nblks) {
 			/* Request a new slab from the main allocator.
+			 *  If this fails then we're forced to punt (or block).
 			 */
-			if (!sl_slab_alloc(rblks, f))
+			if (!sl_slab_alloc((nblks-fblks), f))
 				goto enomem;
 		}
-	} while (rblks > 0);
+	} while (fblks < (ssize_t)nblks);
 
-	return (nblks-rblks);
+	return (fblks);
 
  enomem:
 	psc_warnx("failed to allocate %zu blocks from fid %p", 

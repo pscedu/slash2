@@ -288,9 +288,11 @@ enum oft_attributes {
 		} else {						\
 			_psclog(__FILE__, __func__, __LINE__,		\
 				PSS_OTHER, level, 0,			\
-				" oft@%p pos:%hhu p:%p ref:%d oref:%d"	\
+				" oft@%p pos:%hhu d:%hhu w:%hu p:%p "	\
+				"ref:%d oref:%d"			\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
-				oft, (oft)->oft_pos, (oft)->oft_parent,	\
+				oft, (oft)->oft_pos, (oft)->oft_depth,  \
+				(oft)->oft_width, (oft)->oft_parent,	\
 				atomic_read(&(oft)->oft_ref),		\
 				atomic_read(&(oft)->oft_op_ref),	\
 				DEBUG_OFTM_FLAGS(oft),			\
