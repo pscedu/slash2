@@ -414,6 +414,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 
 	if (iovcnt == 1) {
 		iov = dynarray_getpos(req->oftrq_darray, iovoff);
+
 		psc_assert((u32)(iov->oftiov_nblks - blkoff) >= 
 			   req->oftrq_nblks);
 
@@ -473,6 +474,8 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		if (req->oftrq_root->oftr_putnode_cb)
 			(req->oftrq_root->oftr_putnode_cb)(req->oftrq_memb);
 
+		ATTR_UNSET(req->oftrq_memb->oft_flags, OFT_ALLOCPNDG);
+		
 		goto out;
 		
 	} else {
@@ -545,6 +548,9 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			myreq.oftrq_nblks /= OFT_REQ2BLKSZ(&myreq);  
 			myreq.oftrq_memb   = offtree_newleaf_locked(req->oftrq_memb, 
 								    tchild);
+			ATTR_UNSET(myreq.oftrq_memb->oft_flags, OFT_UNINIT);
+			ATTR_SET(myreq.oftrq_memb->oft_flags, OFT_ALLOCPNDG);
+
 			myreq.oftrq_off    = MAX(OFT_REQ_STARTOFF(&myreq), 
 						 req->oftrq_off);
 			nblks             -= myreq.oftrq_nblks;
@@ -630,6 +636,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 				      "req fulfilled by existing hb %p", iov);
 
 			dynarray_add(req->oftrq_darray, iov);
+			req->oftrq_darray_off++;
 			goto done;
 		} else 
 			/* Existing allocation is not sufficient, prep
@@ -648,10 +655,10 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 	}
 	/* How many iovs did we get back?
 	 */
-	niovs = dynarray_len(req->oftrq_darray) - req->oftrq_darray_off;
+	niovs = dynarray_len(req->oftrq_darray);
 	psc_assert(niovs > 0);
 
-	if (niovs == 1) {
+	if ((niovs - req->oftrq_darray_off) == 1) {
 		/* Should only have 1 new buffer and no exisiting buffers.
 		 */
 		psc_assert(!m->oft_norl.oft_iov);
@@ -694,8 +701,9 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		 *   new request.  offtree_blks_get() handed back a sorted
 		 *   iov array so the first item has the lowest offset.
 		 */
-		iov = dynarray_getpos(req->oftrq_darray, 0);
-		DEBUG_OFFTIOV(PLL_TRACE, iov, "iov 0");
+		iov = dynarray_getpos(req->oftrq_darray, req->oftrq_darray_off);
+		DEBUG_OFFTIOV(PLL_TRACE, iov, "iov 0 (doff=%zu)", 
+			      req->oftrq_darray_off);
 		nr_soffa = i_offa = iov->oftiov_off;
 		
 		iov = dynarray_getpos(req->oftrq_darray, (niovs-1));
@@ -768,9 +776,12 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			 *    iov's are present.
 			 */
 			tiov = dynarray_getpos(req->oftrq_darray,
-					       (iovoff + (tiov_cnt-1)));
+					       (req->oftrq_darray_off + 
+						iovoff + (tiov_cnt-1)));
+
+			ATTR_SET(tiov->oftiov_flags, OFTIOV_REMAP_SRC);
 			/* Factor in partially used iov's.
-			 */
+			 */			
 			b = (tiov->oftiov_nblks - sblkoff);
 			for (t=0; (b < myreq.oftrq_nblks) && (t < niovs); t++) {
 				tiov_cnt++;
@@ -788,13 +799,16 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			/* Make the child...
 			 */
 			myreq.oftrq_memb   = offtree_newleaf_locked(m, tchild);
+			ATTR_UNSET(myreq.oftrq_memb->oft_flags, OFT_UNINIT);
+			ATTR_SET(myreq.oftrq_memb->oft_flags, OFT_ALLOCPNDG);
 			/* Take the soffa from the first iov returned
 			 *  by the allocator.
 			 */
 			myreq.oftrq_off    = nr_soffa;
 			nblks             -= myreq.oftrq_nblks;
 
-			offtree_putnode(&myreq, iovoff, tiov_cnt, sblkoff);
+			offtree_putnode(&myreq, iovoff + req->oftrq_darray_off, 
+					tiov_cnt, sblkoff);
 			/* Bump iovoff. 
 			 */
 			iovoff += tiov_cnt - ((b > myreq.oftrq_nblks) ? 1 : 0);
@@ -953,13 +967,13 @@ offtree_region_preprw(struct offtree_req *req)
 				myreq.oftrq_nblks = MIN(OFT_REQ_REGIONBLKS(&myreq), nblks);
 				myreq.oftrq_memb  = m->oft_norl.oft_children[tchild];
 				nblks            -= myreq.oftrq_nblks;
+				myreq.oftrq_darray_off = dynarray_len(req->oftrq_darray);	
 			     
 				if (myreq.oftrq_memb) {
 					DEBUG_OFFTREQ(PLL_TRACE, &myreq, "existing child");
 					spinlock(&myreq.oftrq_memb->oft_lock);
 					if (ATTR_TEST(myreq.oftrq_memb->oft_flags, OFT_LEAF)) {
 						rc = offtree_region_preprw_leaf_locked(&myreq);	
-						myreq.oftrq_darray_off = dynarray_len(req->oftrq_darray);
 						freelock(&myreq.oftrq_memb->oft_lock);
 						if (rc < 0)
 							RETURN (rc);
@@ -971,7 +985,6 @@ offtree_region_preprw(struct offtree_req *req)
 							RETURN (rc);
 					}
 				} else {
-					myreq.oftrq_darray_off = dynarray_len(req->oftrq_darray);	
 					myreq.oftrq_memb = offtree_newleaf_locked(m, tchild);
 					DEBUG_OFFTREQ(PLL_TRACE, &myreq, "new child");
 					spinlock(&myreq.oftrq_memb->oft_lock);
