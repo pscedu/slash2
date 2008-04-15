@@ -18,6 +18,7 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	t->oftr_putnode_cb = putnode_cb_fn;
 
 	OFT_MEMB_INIT(&t->oftr_memb, NULL);
+	atomic_set(&t->oftr_memb.oft_op_ref, 1);
 	ATTR_SET(t->oftr_memb.oft_flags, OFT_ROOT);
 	
 	return (t);
@@ -283,7 +284,8 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 	tblks = req->oftrq_nblks;
 
 	DEBUG_OFFTREQ(PLL_TRACE, req, "req");	
-	
+	DEBUG_OFT(PLL_TRACE, req->oftrq_memb, "memb");
+	psc_assert(ATTR_TEST(req->oftrq_memb->oft_flags, OFT_ALLOCPNDG));
 	/* Determine nblks taking into account overlap 
 	 */	
 	if (!hb_iov) {		
@@ -677,6 +679,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 	if (nblks < 0) {
 		DEBUG_OFFTREQ(PLL_ERROR, req, 
 			      "offtree_blks_get() error nblks=%zd", nblks);
+		ATTR_UNSET(m->oft_flags, OFT_ALLOCPNDG);
 		goto error;
 	}
 	/* How many iovs did we get back?
@@ -773,6 +776,14 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			
 			memcpy(&myreq, req, (sizeof(*req)));
 			myreq.oftrq_off = i_offa;
+			/* This should always be true.
+			 */
+			psc_assert_msg(myreq.oftrq_off >= rg_soff && 
+				       myreq.oftrq_off < rg_eoff, 
+				       "myreq.oftrq_off="LPX64" rg_soff="LPX64
+				       " rg_eoff="LPX64, 
+				       myreq.oftrq_off, rg_soff, rg_eoff);
+
 			/* How many blocks fit within this range?
 			 *  Push offset iterator i_offa. 
 			 */			
@@ -789,12 +800,9 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			psc_trace("i_offa="LPX64" crg_soff="LPX64 " nblks=%zd", 
 				  i_offa, crg_soff, myreq.oftrq_nblks);
 
-			i_offa += (myreq.oftrq_nblks * OFT_REQ2BLKSZ(req));
-			/* This should always be true.
+			/* Bump iterator for the next time through.
 			 */
-			psc_assert_msg(i_offa >= rg_soff && i_offa < rg_eoff, 
-					"i_offa="LPX64" rg_soff="LPX64" rg_eoff="LPX64, 
-				       i_offa, rg_soff, rg_eoff);
+			i_offa += (myreq.oftrq_nblks * OFT_REQ2BLKSZ(req));
 			/* How many iovs are needed to fill the child? 
 			 *  Inspect our array of iov's. 
 			 *  @iovoff: is the 'persisent' iterator
@@ -913,17 +921,21 @@ offtree_region_preprw(struct offtree_req *req)
 			 */
 			ATTR_SET(m->oft_flags, OFT_ALLOCPNDG);
 			ATTR_UNSET(m->oft_flags, OFT_UNINIT);
-		}
-		/* Found a leaf, drop into stage2 
-		 */		
+		} else 
+			/* Newly allocated leafs have op_ref 
+			 *   already set to 1.
+			 */
+			atomic_inc(&m->oft_op_ref);
 	runleaf:
-		atomic_inc(&m->oft_op_ref);
-		/* Run the leaf.
-		 */
 		rc = offtree_region_preprw_leaf_locked(req);
 		/* Free the memb lock and return.
 		 */
-		freelock(&m->oft_lock);
+		if (rc && !req->oftrq_memb->oft_norl.oft_iov) {
+			atomic_dec(&m->oft_op_ref);
+			ATTR_SET(req->oftrq_memb->oft_flags, OFT_FREEING);
+			offtree_freeleaf_locked(req->oftrq_memb);
+		} else 
+			freelock(&m->oft_lock);
 		return(rc);
 
 	} else if (m->oft_flags == OFT_RELEASE) {

@@ -19,14 +19,18 @@ list_cache_t slBufsLru;
 list_cache_t slBufsPin;
 
 u32 slCacheBlkSz=16384;
-u32 slCacheNblks=16;
+u32 slCacheNblks=64;
 u32 slbFreeDef=100;
 u32 slbFreeMax=200;
+u32 slbFreeInc=10;
 
 #define token_t list_cache_t
 
 static struct sl_buffer_iovref *
 sl_oftiov_locref_locked(struct offtree_iov *iov, struct sl_buffer *slb);
+
+static void
+sl_buffer_init(void *pri);
 
 static void
 sl_buffer_free_assertions(struct sl_buffer *b)
@@ -348,6 +352,10 @@ sl_slab_alloc(int nblks, fcache_mhandle_t *f)
 	do {
 		slb = sl_buffer_get(&slBufsFree, 0);
 		if (!slb) {
+			if (lc_grow(&slBufsFree, slbFreeInc, 
+				    sl_buffer_init) > 0)
+				goto retry;
+
 			if (timedout)
 				/* Already timedout once, give up
 				 */ 
@@ -453,7 +461,7 @@ sl_oftm_addref(struct offtree_memb *m)
 
 
 	DEBUG_OFFTIOV(PLL_TRACE, miov, "sl_oftm_addref");
-	DUMP_SLB(PLL_TRACE, slb, "slb start (treenode %p)", m);
+	//DUMP_SLB(PLL_TRACE, slb, "slb start (treenode %p)", m);
 
 	if (!ATTR_TEST(oref->slbir_flags, SLBREF_MAPPED)) {
 		struct sl_buffer_iovref *nref=NULL;
