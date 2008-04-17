@@ -64,7 +64,7 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 //	if (rc == -1)
 	mq->mode = mode;
-	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else
@@ -93,7 +93,7 @@ slash_getattr(const char *path, struct stat *stb)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 //	if (rc == -1)
-	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else {
@@ -125,7 +125,7 @@ slash_fgetattr(__unusedx const char *path, struct stat *stb,
 	    SRMT_FGETATTR, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
-	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else {
@@ -200,7 +200,7 @@ slash_open(const char *path, struct fuse_file_info *fi)
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 //	if (rc == -1)
 	mq->flags = fi->flags;
-	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else
@@ -223,7 +223,7 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 //	if (rc == -1)
-	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else
@@ -263,7 +263,7 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->offset = offset;
-	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) != 0 || (rc = mp->rc)) {
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) != 0 || (rc = mp->rc)) {
 		pscrpc_req_finished(rq);
 		return (rc);
 	}
@@ -385,7 +385,7 @@ slash_readlink(const char *path, char *buf, size_t size)
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 //	if (rc == -1)
 	mq->size = size;
-	if ((rc = rsx_getrep(rq, size, &mp)) == 0) {
+	if ((rc = rsx_waitrep(rq, size, &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else
@@ -441,7 +441,7 @@ slash_statfs(const char *path, struct statvfs *sfb)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
 //	if (rc == -1)
-	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else {

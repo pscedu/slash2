@@ -53,7 +53,7 @@ rpc_be_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	mq->magic = magic;
 	mq->version = version;
 
-	rc = rsx_getrep(rq, 0, &mp);
+	rc = rsx_waitrep(rq, 0, &mp);
 	pscrpc_req_finished(rq);
 	if (rc == 0)
 		rc = mp->rc;

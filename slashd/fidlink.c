@@ -70,6 +70,32 @@ translate_pathname(char *path, int must_exist)
 }
 
 /*
+ * untranslate_pathname - strip fsroot from a path.
+ * @path: path to strip.
+ */
+int
+untranslate_pathname(char *path)
+{
+	char *p;
+	int rc;
+
+	rc = snprintf(prefix, sizeof(prefix), "%s/%s",
+	    nodeInfo.node_res->res_fsroot, _PATH_NS);
+	if (rc == -1)
+		return (-1);
+	if (strncmp(path, prefix, strlen(prefix)) == 0) {
+		for (t = path, p = path + strlen(prefix);
+		    p < path + PATH_MAX; *p != '\0'; p++, t++)
+			*t = *p;
+		if (t < path + PATH_MAX)
+			*t = '\0';
+		return (0);
+	}
+	errno = EINVAL;
+	return (-1);
+}
+
+/*
  * fid_get - lookup the FID for a pathname.
  * @fidp: value-result FID pointer.
  * @path: pathname to lookup, should have been passed to translate_pathname().

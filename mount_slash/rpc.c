@@ -326,7 +326,7 @@ rpc_sendmsg(int op, ...)
 	}
 	va_end(ap);
 
-	rc = rsx_getrep(rq, sizeof(*mp), &mp);
+	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
 	pscrpc_req_finished(rq);
 	if (rc == 0) {
 		errno = -mp->rc;

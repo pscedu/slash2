@@ -29,7 +29,7 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 	mq->cfd = fi->fh;
 	mq->size = size;
 	mq->offset = offset;
-	if ((rc = rsx_getrep(rq, sizeof(*mp) + size, &mp)) == 0)
+	if ((rc = rsx_waitrep(rq, sizeof(*mp) + size, &mp)) == 0)
 		memcpy(buf, mp->buf, mp->size);
 	pscrpc_req_finished(rq);
 	if (rc)
@@ -53,7 +53,7 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	mq->cfd = fi->fh;
 	mq->size = size;
 	mq->offset = offset;
-	rc = rsx_getrep(rq, sizeof(*mp), &mp);
+	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
 	pscrpc_req_finished(rq);
 	return (rc ? rc : (int)mp->size);
 }

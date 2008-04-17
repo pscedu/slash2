@@ -48,7 +48,7 @@ cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 	mq->pid = exp->exp_connection->c_peer.pid;
 	mq->nid = exp->exp_connection->c_peer.nid;
 	mq->cfd = cfd;
-	if ((rc = rsx_getrep(rq, sizeof(*mp), &mp)) == 0)
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		if ((c = cfdinsert(cfd, exp, fidp)) != NULL)
 			*fidp = c->fid;
 	pscrpc_req_finished(rq);

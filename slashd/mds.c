@@ -23,7 +23,7 @@
 
 #define MDS_NTHREADS  8
 #define MDS_NBUFS     1024
-#define MDS_BUFSZ     (4096+256)
+#define MDS_BUFSZ     (4096 + 256)
 #define MDS_REPSZ     128
 #define MDS_REQPORTAL SR_MDS_REQ_PORTAL
 #define MDS_REPPORTAL SR_MDS_REP_PORTAL
@@ -36,13 +36,11 @@ slmds_connect(struct pscrpc_request *rq)
 {
 	struct slashrpc_connect_req *mq;
 	struct slashrpc_generic_rep *mp;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SR_MDS_MAGIC || mq->version != SR_MDS_VERSION)
-		rc = -EINVAL;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -EINVAL;
+	return (0);
 }
 
 int
@@ -50,15 +48,13 @@ slmds_access(struct pscrpc_request *rq)
 {
 	struct slashrpc_generic_rep *mp;
 	struct slashrpc_access_req *mq;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (access(mq->path, mq->mask) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -66,15 +62,13 @@ slmds_chmod(struct pscrpc_request *rq)
 {
 	struct slashrpc_generic_rep *mp;
 	struct slashrpc_chmod_req *mq;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (chmod(mq->path, mq->mode) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 #if 0
@@ -85,18 +79,16 @@ slmds_fchmod(struct pscrpc_request *rq)
 	struct slashrpc_fchmod_req *mq;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
-		rc = -errno;
+		mp->rc = -errno;
 	else {
 		fid_makepath(&fid, fn);
 		if (chmod(fn, mq->mode) == -1)
-			rc = -errno;
+			mp->rc = -errno;
 	}
-	GENERIC_REPLY(rq, rc, mp);
+	return (0);
 }
 #endif
 
@@ -105,15 +97,13 @@ slmds_chown(struct pscrpc_request *rq)
 {
 	struct slashrpc_generic_rep *mp;
 	struct slashrpc_chown_req *mq;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (chown(mq->path, mq->uid, mq->gid) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 /**
@@ -129,18 +119,16 @@ slmds_fchown(struct pscrpc_request *rq)
 	struct slashrpc_fchown_req *mq;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
-		rc = -errno;
+		mp->rc = -errno;
 	else {
 		fid_makepath(&fid, fn);
 		if (chown(fn, mq->uid, mq->gid) == -1)
-			rc = -errno;
+			mp->rc = -errno;
 	}
-	GENERIC_REPLY(rq, rc, mp);
+	return (0);
 }
 #endif
 
@@ -149,17 +137,16 @@ slmds_create(struct pscrpc_request *rq)
 {
 	struct slashrpc_generic_rep *mp;
 	struct slashrpc_create_req *mq;
-	int fd, rc;
+	int fd;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 0) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if ((fd = creat(mq->path, mq->mode)) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else
 		close(fd);
-	GENERIC_REPLY(rq, rc, mp);
+	return (0);
 }
 
 int
@@ -169,10 +156,7 @@ slmds_getattr(struct pscrpc_request *rq)
 	struct slashrpc_getattr_rep *mp;
 	struct stat stb;
 
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		return (-ENOMSG);
-	GET_CUSTOM_REPLY(rq, mp);
-	mp->rc = 0;
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1) {
 		mp->rc = -errno;
 		return (0);
@@ -201,10 +185,7 @@ slmds_fgetattr(struct pscrpc_request *rq)
 	slash_fid_t fid;
 	struct stat stb;
 
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		return (-ENOMSG);
-	GET_CUSTOM_REPLY(rq, mp);
-	mp->rc = 0;
+	RSX_ALLOCREP(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd)) {
 		mp->rc = -errno;
 		return (0);
@@ -232,18 +213,16 @@ slmds_ftruncate(struct pscrpc_request *rq)
 	struct slashrpc_generic_rep *mp;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
-		rc = -errno;
+		mp->rc = -errno;
 	else {
 		fid_makepath(&fid, fn);
 		if (truncate(fn, mq->size) == -1)
-			rc = -errno;
+			mp->rc = -errno;
 	}
-	GENERIC_REPLY(rq, rc, mp);
+	return (0);
 }
 
 int
@@ -251,17 +230,15 @@ slmds_link(struct pscrpc_request *rq)
 {
 	struct slashrpc_generic_rep *mp;
 	struct slashrpc_link_req *mq;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->from, 1) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (translate_pathname(mq->to, 0) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (link(mq->from, mq->to) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -269,15 +246,13 @@ slmds_mkdir(struct pscrpc_request *rq)
 {
 	struct slashrpc_generic_rep *mp;
 	struct slashrpc_mkdir_req *mq;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 0) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (mkdir(mq->path, mq->mode) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -285,15 +260,13 @@ slmds_mknod(struct pscrpc_request *rq)
 {
 	struct slashrpc_generic_rep *mp;
 	struct slashrpc_mknod_req *mq;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 0) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (mknod(mq->path, mq->mode, mq->dev) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -303,10 +276,7 @@ slmds_open(struct pscrpc_request *rq)
 	struct slashrpc_open_rep *mp;
 	slash_fid_t fid;
 
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		return (-ENOMSG);
-	GET_CUSTOM_REPLY(rq, mp);
-	mp->rc = 0;
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
 	else if (fid_get(&fid, mq->path, 1) == -1)
@@ -324,10 +294,7 @@ slmds_opendir(struct pscrpc_request *rq)
 	struct slashrpc_opendir_rep *mp;
 	slash_fid_t fid;
 
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		return (-ENOMSG);
-	GET_CUSTOM_REPLY(rq, mp);
-	mp->rc = 0;
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
 	else if (fid_get(&fid, mq->path, 1) == -1)
@@ -347,15 +314,11 @@ slmds_readdir(struct pscrpc_request *rq)
 	struct slashrpc_readdir_req *mq;
 	struct slashrpc_readdir_rep *mp;
 	struct pscrpc_bulk_desc *desc;
-	struct l_wait_info lwi;
 	struct dircache *dc;
-	int comms_error, rc;
 	slash_fid_t fid;
+	int rc;
 
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		return (-ENOMSG);
-	GET_CUSTOM_REPLY(rq, mp);
-	mp->rc = 0;
+	RSX_ALLOCREP(rq, rq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd)) {
 		mp->rc = -errno;
 		return (0);
@@ -376,58 +339,12 @@ slmds_readdir(struct pscrpc_request *rq)
 		return (0);
 	}
 	mp->size = rc;
-
-	desc = pscrpc_prep_bulk_exp(rq, rc / pscPageSize,
-	    BULK_PUT_SOURCE, SR_MDS_BULK_PORTAL);
-	if (desc == NULL) {
-		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
-		mp->rc = -ENOMEM;
-		return (0);
-	}
-	desc->bd_iov[0].iov_base = ents;
-	desc->bd_iov[0].iov_len = mp->size;
-	desc->bd_iov_count = 1;
-	desc->bd_nob = mp->size;
-
-	if (desc->bd_export->exp_failed)
-		rc = -ENOTCONN;
-	else
-		rc = pscrpc_start_bulk_transfer(desc);
-
-	if (rc == 0) {
-		lwi = LWI_TIMEOUT_INTERVAL(20 * HZ / 2, HZ, NULL, desc);
-
-		rc = psc_svr_wait_event(&desc->bd_waitq,
-		    !pscrpc_bulk_active(desc) || desc->bd_export->exp_failed,
-		    &lwi, NULL);
-		LASSERT(rc == 0 || rc == -ETIMEDOUT);
-		if (rc == -ETIMEDOUT) {
-			psc_info("timeout on bulk PUT");
-			pscrpc_abort_bulk(desc);
-		} else if (desc->bd_export->exp_failed) {
-			psc_info("eviction on bulk PUT");
-			rc = -ENOTCONN;
-			pscrpc_abort_bulk(desc);
-		} else if (!desc->bd_success ||
-		    desc->bd_nob_transferred != desc->bd_nob) {
-			psc_info("%s bulk PUT %d(%d)",
-			    desc->bd_success ? "truncated" : "network err",
-			    desc->bd_nob_transferred, desc->bd_nob);
-			/* XXX should this be a different errno? */
-			rc = -ETIMEDOUT;
-		}
-	} else
-		psc_info("pscrpc bulk put failed: rc %d", rc);
-	comms_error = (rc != 0);
-	if (rc == 0)
-		psc_info("put readdir contents successfully");
-	else if (!comms_error) {
-		/* Only reply if there was no comms problem with bulk */
-		rq->rq_status = rc;
-		pscrpc_error(rq);
-	}
-	pscrpc_free_bulk(desc);
-	mp->rc = rc;
+	iov.iov_base = ents;
+	iov.iov_len = mp->size;
+	mp->rc = rsx_bulkgetsource(rq, &bulk, SR_MDS_BULK_PORTAL, &iov, 1);
+// rc / pscPageSize
+	if (desc)
+		pscrpc_free_bulk(desc);
 	return (0);
 }
 
@@ -435,20 +352,27 @@ int
 slmds_readlink(struct pscrpc_request *rq)
 {
 	struct slashrpc_readlink_req *mq;
-	struct slashrpc_readlink_rep *mp;
+	struct slashrpc_readlink_rep *mp
+	struct pscrpc_bulk_desc *desc;
+	char fn[PATH_MAX];
 
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		return (-ENOMSG);
-	if (mq->size > PATH_MAX || mq->size == 0)
+	RSX_ALLOCREP(rq, mq, mp);
+	if (mq->size >= PATH_MAX || mq->size == 0)
 		return (-EINVAL);
-	GET_CUSTOM_REPLY_SZ(rq, mp, mq->size);
-	mp->rc = 0;
 	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
-	else if (readlink(mq->path, mp->buf, mq->size) == -1)
+	else if (readlink(mq->path, fn, mq->size) == -1)
 		mp->rc = -errno;
-	else
-		/* XXX untranslate pathname */;
+	else if (untranslate_pathname(fn) == -1)
+		mp->rc = -errno;
+	else {
+		iov.iov_base = fn;
+		iov.iov_len = mq->size;
+		mp->rc = rsx_bulkgetsource(rq, &bulk, SR_MDS_BULK_PORTAL,
+		    &iov, 1);
+		if (desc)
+			pscrpc_free_bulk(desc);
+	}
 	return (0);
 }
 
@@ -457,13 +381,11 @@ slmds_release(struct pscrpc_request *rq)
 {
 	struct slashrpc_release_req *mq;
 	struct slashrpc_generic_rep *mp;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (cfdfree(rq->rq_export, mq->cfd) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -471,13 +393,11 @@ slmds_releasedir(struct pscrpc_request *rq)
 {
 	struct slashrpc_releasedir_req *mq;
 	struct slashrpc_generic_rep *mp;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (cfdfree(rq->rq_export, mq->cfd) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -485,17 +405,15 @@ slmds_rename(struct pscrpc_request *rq)
 {
 	struct slashrpc_rename_req *mq;
 	struct slashrpc_generic_rep *mp;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->from, 1) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (translate_pathname(mq->to, 0) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (rename(mq->from, mq->to) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -503,15 +421,13 @@ slmds_rmdir(struct pscrpc_request *rq)
 {
 	struct slashrpc_generic_rep *mp;
 	struct slashrpc_rmdir_req *mq;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (rmdir(mq->path) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -521,11 +437,8 @@ slmds_statfs(struct pscrpc_request *rq)
 	struct slashrpc_statfs_rep *mp;
 	struct statfs sfb;
 
-	GET_CUSTOM_REPLY(rq, mp);
-	mp->rc = 0;
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		mp->rc = -ENOMSG;
-	else if (translate_pathname(mq->path, 1) == -1)
+	RSX_ALLOCREP(rq, mq, mp);
+	if (translate_pathname(mq->path, 1) == -1)
 		mp->rc = -errno;
 	else if (statfs(mq->path, &sfb) == -1)
 		mp->rc = -errno;
@@ -545,17 +458,15 @@ slmds_symlink(struct pscrpc_request *rq)
 {
 	struct slashrpc_symlink_req *mq;
 	struct slashrpc_generic_rep *mp;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->from, 1) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (translate_pathname(mq->to, 0) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (symlink(mq->from, mq->to) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -563,15 +474,13 @@ slmds_truncate(struct pscrpc_request *rq)
 {
 	struct slashrpc_truncate_req *mq;
 	struct slashrpc_generic_rep *mp;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (truncate(mq->path, mq->size) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -579,15 +488,13 @@ slmds_unlink(struct pscrpc_request *rq)
 {
 	struct slashrpc_unlink_req *mq;
 	struct slashrpc_generic_rep *mp;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (unlink(mq->path) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -595,15 +502,13 @@ slmds_utimes(struct pscrpc_request *rq)
 {
 	struct slashrpc_utimes_req *mq;
 	struct slashrpc_generic_rep *mp;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
+	RSX_ALLOCREP(rq, mq, mp);
 	if (translate_pathname(mq->path, 1) == -1)
-		rc = -errno;
+		mp->rc = -errno;
 	else if (utimes(mq->path, mq->times) == -1)
-		rc = -errno;
-	GENERIC_REPLY(rq, rc, mp);
+		mp->rc = -errno;
+	return (0);
 }
 
 int
@@ -680,7 +585,7 @@ slmds_svc_handler(struct pscrpc_request *req)
 	case SRMT_CREATE:
 		rc = slmds_create(req);
 		break;
-	case SRMT_DESTROY: /* client has unmounted */
+	case SRMT_DESTROY:	/* client has unmounted */
 		break;
 	case SRMT_GETATTR:
 		rc = slmds_getattr(req);
