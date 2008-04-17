@@ -21,13 +21,11 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
-#define MDS_NTHREADS  8
-#define MDS_NBUFS     1024
-#define MDS_BUFSZ     (4096 + 256)
-#define MDS_REPSZ     128
-#define MDS_REQPORTAL SR_MDS_REQ_PORTAL
-#define MDS_REPPORTAL SR_MDS_REP_PORTAL
-#define MDS_SVCNAME   "slrpcmdsthr"
+#define SRM_NTHREADS	8
+#define SRM_NBUFS	1024
+#define SRM_BUFSZ	(4096 + 256)
+#define SRM_REPSZ	128
+#define SRM_SVCNAME	"slrpcmdsthr"
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
@@ -38,7 +36,7 @@ slmds_connect(struct pscrpc_request *rq)
 	struct slashrpc_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SR_MDS_MAGIC || mq->version != SR_MDS_VERSION)
+	if (mq->magic != SRM_MAGIC || mq->version != SRM_VERSION)
 		mp->rc = -EINVAL;
 	return (0);
 }
@@ -315,6 +313,7 @@ slmds_readdir(struct pscrpc_request *rq)
 	struct slashrpc_readdir_rep *mp;
 	struct pscrpc_bulk_desc *desc;
 	struct dircache *dc;
+	struct iovec iov;
 	slash_fid_t fid;
 	int rc;
 
@@ -341,7 +340,7 @@ slmds_readdir(struct pscrpc_request *rq)
 	mp->size = rc;
 	iov.iov_base = ents;
 	iov.iov_len = mp->size;
-	mp->rc = rsx_bulkgetsource(rq, &bulk, SR_MDS_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkgetsource(rq, &desc, SRM_BULK_PORTAL, &iov, 1);
 // rc / pscPageSize
 	if (desc)
 		pscrpc_free_bulk(desc);
@@ -352,8 +351,9 @@ int
 slmds_readlink(struct pscrpc_request *rq)
 {
 	struct slashrpc_readlink_req *mq;
-	struct slashrpc_readlink_rep *mp
+	struct slashrpc_readlink_rep *mp;
 	struct pscrpc_bulk_desc *desc;
+	struct iovec iov;
 	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
@@ -368,7 +368,7 @@ slmds_readlink(struct pscrpc_request *rq)
 	else {
 		iov.iov_base = fn;
 		iov.iov_len = mq->size;
-		mp->rc = rsx_bulkgetsource(rq, &bulk, SR_MDS_BULK_PORTAL,
+		mp->rc = rsx_bulkgetsource(rq, &desc, SRM_BULK_PORTAL,
 		    &iov, 1);
 		if (desc)
 			pscrpc_free_bulk(desc);
@@ -672,19 +672,22 @@ slmds_svc_handler(struct pscrpc_request *req)
 void
 slmds_init(void)
 {
-	pscrpc_svc_handle_t *svh = PSCALLOC(sizeof(*svh));
+	pscrpc_svc_handle_t *svh;
 
-	svh->svh_nbufs      = MDS_NBUFS;
-	svh->svh_bufsz      = MDS_BUFSZ;
-	svh->svh_reqsz      = MDS_BUFSZ;
-	svh->svh_repsz      = MDS_REPSZ;
-	svh->svh_req_portal = MDS_REQPORTAL;
-	svh->svh_rep_portal = MDS_REPPORTAL;
-	svh->svh_type       = SLTHRT_RPCMDS;
-	svh->svh_nthreads   = MDS_NTHREADS;
-	svh->svh_handler    = slmds_svc_handler;
+	svh = PSCALLOC(sizeof(*svh));
+	svh->svh_nbufs = SRM_NBUFS;
+	svh->svh_bufsz = SRM_BUFSZ;
+	svh->svh_reqsz = SRM_BUFSZ;
+	svh->svh_repsz = SRM_REPSZ;
+	svh->svh_req_portal = SRM_REQ_PORTAL;
+	svh->svh_rep_portal = SRM_REP_PORTAL;
+	svh->svh_type = SLTHRT_RPCMDS;
+	svh->svh_nthreads = SRM_NTHREADS;
+	svh->svh_handler = slmds_svc_handler;
 
-	strncpy(svh->svh_svc_name, MDS_SVCNAME, PSCRPC_SVCNAME_MAX);
+	if (snprintf(svh->svh_svc_name, sizeof(svh->svh_svc_name), "%s",
+	    SRM_SVCNAME) == -1)
+		psc_fatal("snprintf");
 
 	pscrpc_thread_spawn(svh, struct slash_rpcmdsthr);
 }

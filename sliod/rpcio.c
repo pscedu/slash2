@@ -22,11 +22,11 @@
 #include "sliod.h"
 #include "slashrpc.h"
 
-#define SLIO_NTHREADS  8
-#define SLIO_NBUFS     1024
-#define SLIO_BUFSZ     256
-#define SLIO_REPSZ     256
-#define SLIO_SVCNAME   "slrpciothr"
+#define SRI_NTHREADS	8
+#define SRI_NBUFS	1024
+#define SRI_BUFSZ	256
+#define SRI_REPSZ	256
+#define SRI_SVCNAME	"slrpciothr"
 
 int
 cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
@@ -42,7 +42,7 @@ cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 		return (0);
 
 	/* Not there, contact slashd and populate it. */
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_BE]->svc_import, SR_BE_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_BE]->svc_import, SRB_VERSION,
 	    SRMT_GETFID, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	mq->pid = exp->exp_connection->c_peer.pid;
@@ -60,13 +60,10 @@ slio_connect(struct pscrpc_request *rq)
 {
 	struct slashrpc_connect_req *mq;
 	struct slashrpc_generic_rep *mp;
-	int rc;
 
-	rc = 0;
-	GET_GEN_REQ(rq, mq, mp);
-	if (mq->magic != SR_IO_MAGIC || mq->version != SR_IO_VERSION)
-		rc = -EINVAL;
-	GENERIC_REPLY(rq, rc, mp);
+	RSX_ALLOCREP(rq, mq, mp);
+	if (mq->magic != SRI_MAGIC || mq->version != SRI_VERSION)
+		mp->rc = -EINVAL;
 }
 
 int
@@ -82,10 +79,7 @@ slio_read(struct pscrpc_request *rq)
 	ssize_t nbytes;
 	void *buf;
 
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		return (-ENOMSG);
-	GET_CUSTOM_REPLY(rq, mp);
-	mp->rc = 0;
+	RSX_ALLOCREP(rq, mq, mp);
 #define MAX_BUFSIZ (1024 * 1024)
 	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
 		mp->rc = -EINVAL;
@@ -113,7 +107,7 @@ slio_read(struct pscrpc_request *rq)
 		goto done;
 
 	desc = pscrpc_prep_bulk_exp(rq, mq->size / pscPageSize,
-	    BULK_PUT_SOURCE, SR_IO_BULK_PORTAL);
+	    BULK_PUT_SOURCE, SRI_BULK_PORTAL);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		mp->rc = -ENOMEM;
@@ -181,10 +175,7 @@ slio_write(struct pscrpc_request *rq)
 	ssize_t nbytes;
 	void *buf;
 
-	if ((mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq))) == NULL)
-		return (-ENOMSG);
-	GET_CUSTOM_REPLY(rq, mp);
-	mp->rc = 0;
+	RSX_ALLOCREP(rq, mq, mp);
 	if (cfd2fid_cache(&fid, rq->rq_export, mq->cfd)) {
 		mp->rc = -errno;
 		return (0);
@@ -197,7 +188,7 @@ slio_write(struct pscrpc_request *rq)
 	buf = PSCALLOC(mq->size);
 
 	desc = pscrpc_prep_bulk_exp(rq, mq->size / pscPageSize,
-	    BULK_GET_SINK, SR_IO_BULK_PORTAL);
+	    BULK_GET_SINK, SRI_BULK_PORTAL);
 	if (desc == NULL) {
 		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
 		mp->rc = -ENOMEM;
@@ -300,17 +291,17 @@ slio_init(void)
 {
 	pscrpc_svc_handle_t *svh = PSCALLOC(sizeof(*svh));
 
-	svh->svh_nbufs      = SLIO_NBUFS;
-	svh->svh_bufsz      = SLIO_BUFSZ;
-	svh->svh_reqsz      = SLIO_BUFSZ;
-	svh->svh_repsz      = SLIO_REPSZ;
-	svh->svh_req_portal = SR_IO_REQ_PORTAL;
-	svh->svh_rep_portal = SR_IO_REP_PORTAL;
+	svh->svh_nbufs      = SRI_NBUFS;
+	svh->svh_bufsz      = SRI_BUFSZ;
+	svh->svh_reqsz      = SRI_BUFSZ;
+	svh->svh_repsz      = SRI_REPSZ;
+	svh->svh_req_portal = SRI_REQ_PORTAL;
+	svh->svh_rep_portal = SRI_REP_PORTAL;
 	svh->svh_type       = SLIOTHRT_RPC;
-	svh->svh_nthreads   = SLIO_NTHREADS;
+	svh->svh_nthreads   = SRI_NTHREADS;
 	svh->svh_handler    = slio_svc_handler;
 
-	strncpy(svh->svh_svc_name, SLIO_SVCNAME, PSCRPC_SVCNAME_MAX);
+	strncpy(svh->svh_svc_name, SRI_SVCNAME, PSCRPC_SVCNAME_MAX);
 
 	pscrpc_thread_spawn(svh, struct slio_rpcthr);
 }

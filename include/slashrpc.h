@@ -8,26 +8,28 @@
 
 #define SLASH_SVR_PID		54321
 
-/* RPC portals. */
-#define SR_MDS_REQ_PORTAL	20
-#define SR_MDS_REP_PORTAL	21
-#define SR_MDS_BULK_PORTAL	22
+/* Slash RPC MDS defines. */
+#define SRM_REQ_PORTAL		20
+#define SRM_REP_PORTAL		21
+#define SRM_BULK_PORTAL		22
 
-#define SR_IO_REQ_PORTAL	30
-#define SR_IO_REP_PORTAL	31
-#define SR_IO_BULK_PORTAL	32
+#define SRM_VERSION		1
+#define SRM_MAGIC		0xaabbccddeeff0011ULL
 
-#define SR_BE_REQ_PORTAL	40
-#define SR_BE_REP_PORTAL	41
+/* Slash RPC I/O defines. */
+#define SRI_REQ_PORTAL		30
+#define SRI_REP_PORTAL		31
+#define SRI_BULK_PORTAL		32
 
-#define SR_MDS_VERSION		1
-#define SR_MDS_MAGIC		0xaabbccddeeff0011ULL
+#define SRI_VERSION		1
+#define SRI_MAGIC		0xaabbccddeeff0011ULL
 
-#define SR_IO_VERSION		1
-#define SR_IO_MAGIC		0xaabbccddeeff0011ULL
+/* Slash RPC backend defines. */
+#define SRB_REQ_PORTAL		40
+#define SRB_REP_PORTAL		41
 
-#define SR_BE_VERSION		1
-#define SR_BE_MAGIC		0xaabbccddeeff0011ULL
+#define SRB_VERSION		1
+#define SRB_MAGIC		0xaabbccddeeff0011ULL
 
 /* Slash RPC message types. */
 enum {

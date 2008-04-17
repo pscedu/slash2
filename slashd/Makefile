@@ -42,6 +42,7 @@ SRCS+=		${PFL_BASE}/psc_rpc/nb.c
 SRCS+=		${PFL_BASE}/psc_rpc/niobuf.c
 SRCS+=		${PFL_BASE}/psc_rpc/packgeneric.c
 SRCS+=		${PFL_BASE}/psc_rpc/rpcclient.c
+SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
 SRCS+=		${PFL_BASE}/psc_rpc/service.c
 
 SRCS+=		${LNET_BASE}/libcfs/debug.c

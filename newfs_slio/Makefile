@@ -9,6 +9,7 @@ SRCS+=		${SLASH_BASE}/slashd/lconf.l
 
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
+SRCS+=		${PFL_BASE}/psc_util/iostats.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c

@@ -76,7 +76,7 @@ translate_pathname(char *path, int must_exist)
 int
 untranslate_pathname(char *path)
 {
-	char *p;
+	char *t, *p, prefix[PATH_MAX];
 	int rc;
 
 	rc = snprintf(prefix, sizeof(prefix), "%s/%s",
@@ -85,7 +85,7 @@ untranslate_pathname(char *path)
 		return (-1);
 	if (strncmp(path, prefix, strlen(prefix)) == 0) {
 		for (t = path, p = path + strlen(prefix);
-		    p < path + PATH_MAX; *p != '\0'; p++, t++)
+		    p < path + PATH_MAX && *p != '\0'; p++, t++)
 			*t = *p;
 		if (t < path + PATH_MAX)
 			*t = '\0';

@@ -47,7 +47,7 @@ rpc_be_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	imp->imp_connection = pscrpc_get_connection(server_id, id.nid, NULL);
 	imp->imp_connection->c_peer.pid = SLASH_SVR_PID;
 
-	rc = rsx_newreq(imp, SR_BE_VERSION, SRMT_CONNECT, sizeof(*mq), 0, &rq, &mq);
+	rc = rsx_newreq(imp, SRB_VERSION, SRMT_CONNECT, sizeof(*mq), 0, &rq, &mq);
 	if (rc)
 		return (rc);
 	mq->magic = magic;
@@ -109,8 +109,7 @@ rpc_svc_init(void)
 		psc_fatalx("invalid SLASH_SERVER_NID: %s", snid);
 
 	/* Setup backend service */
-	rpcsvcs[RPCSVC_BE] = rpc_svc_create(SR_BE_REQ_PORTAL,
-	    SR_BE_REP_PORTAL);
-	if (rpc_be_connect(nid, RPCSVC_BE, SR_BE_MAGIC, SR_BE_VERSION))
+	rpcsvcs[RPCSVC_BE] = rpc_svc_create(SRB_REQ_PORTAL, SRB_REP_PORTAL);
+	if (rpc_be_connect(nid, RPCSVC_BE, SRB_MAGIC, SRB_VERSION))
 		psc_error("rpc_be_connect %s", snid);
 }
