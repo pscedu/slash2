@@ -64,6 +64,7 @@ slio_connect(struct pscrpc_request *rq)
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRI_MAGIC || mq->version != SRI_VERSION)
 		mp->rc = -EINVAL;
+	return (0);
 }
 
 int
@@ -72,12 +73,12 @@ slio_read(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct slashrpc_read_req *mq;
 	struct slashrpc_read_rep *mp;
-	struct l_wait_info lwi;
-	int comms_error, fd, rc;
+	struct iovec iov;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
 	ssize_t nbytes;
 	void *buf;
+	int fd;
 
 	RSX_ALLOCREP(rq, mq, mp);
 #define MAX_BUFSIZ (1024 * 1024)
@@ -106,57 +107,11 @@ slio_read(struct pscrpc_request *rq)
 	if (nbytes == 0)
 		goto done;
 
-	desc = pscrpc_prep_bulk_exp(rq, mq->size / pscPageSize,
-	    BULK_PUT_SOURCE, SRI_BULK_PORTAL);
-	if (desc == NULL) {
-		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
-		mp->rc = -ENOMEM;
-		goto done;
-	}
-	desc->bd_iov[0].iov_base = buf;
-	desc->bd_iov[0].iov_len = mq->size;
-	desc->bd_iov_count = 1;
-	desc->bd_nob = mq->size;
-
-	if (desc->bd_export->exp_failed)
-		rc = -ENOTCONN;
-	else
-		rc = pscrpc_start_bulk_transfer(desc);
-
-	if (rc == 0) {
-		lwi = LWI_TIMEOUT_INTERVAL(20 * HZ / 2, HZ, NULL, desc);
-
-		rc = psc_svr_wait_event(&desc->bd_waitq,
-		    !pscrpc_bulk_active(desc) || desc->bd_export->exp_failed,
-		    &lwi, NULL);
-		LASSERT(rc == 0 || rc == -ETIMEDOUT);
-		if (rc == -ETIMEDOUT) {
-			psc_info("timeout on bulk PUT");
-			pscrpc_abort_bulk(desc);
-		} else if (desc->bd_export->exp_failed) {
-			psc_info("eviction on bulk PUT");
-			rc = -ENOTCONN;
-			pscrpc_abort_bulk(desc);
-		} else if (!desc->bd_success ||
-		    desc->bd_nob_transferred != desc->bd_nob) {
-			psc_info("%s bulk PUT %d(%d)",
-			    desc->bd_success ? "truncated" : "network err",
-			    desc->bd_nob_transferred, desc->bd_nob);
-			/* XXX should this be a different errno? */
-			rc = -ETIMEDOUT;
-		}
-	} else
-		psc_info("pscrpc bulk PUT failed: rc %d", rc);
-	comms_error = (rc != 0);
-	if (rc == 0)
-		psc_info("PUT READ contents successfully");
-	else if (!comms_error) {
-		/* Only reply if there was no comms problem with bulk */
-		rq->rq_status = rc;
-		pscrpc_error(rq);
-	}
-	pscrpc_free_bulk(desc);
-	mp->rc = rc;
+	iov.iov_base = buf;
+	iov.iov_len = mq->size;
+	mp->rc = rsx_bulkgetsource(rq, &desc, SRI_BULK_PORTAL, &iov, 1);
+	if (desc)
+		pscrpc_free_bulk(desc);
  done:
 	free(buf);
 	return (0);
@@ -168,12 +123,12 @@ slio_write(struct pscrpc_request *rq)
 	struct slashrpc_write_req *mq;
 	struct slashrpc_write_rep *mp;
 	struct pscrpc_bulk_desc *desc;
-	struct l_wait_info lwi;
-	int fd, rc, comms_error;
+	struct iovec iov;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
 	ssize_t nbytes;
 	void *buf;
+	int fd;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (cfd2fid_cache(&fid, rq->rq_export, mq->cfd)) {
@@ -186,69 +141,23 @@ slio_write(struct pscrpc_request *rq)
 		return (0);
 	}
 	buf = PSCALLOC(mq->size);
-
-	desc = pscrpc_prep_bulk_exp(rq, mq->size / pscPageSize,
-	    BULK_GET_SINK, SRI_BULK_PORTAL);
-	if (desc == NULL) {
-		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
-		mp->rc = -ENOMEM;
-		goto done;
-	}
-	desc->bd_iov[0].iov_base = buf;
-	desc->bd_iov[0].iov_len = mq->size;
-	desc->bd_iov_count = 1;
-	desc->bd_nob = mq->size;
-
-	if (desc->bd_export->exp_failed)
-		rc = -ENOTCONN;
-	else
-		rc = pscrpc_start_bulk_transfer(desc);
-
-	if (rc == 0) {
-		lwi = LWI_TIMEOUT_INTERVAL(20 * HZ / 2, HZ, NULL, desc);
-
-		rc = psc_svr_wait_event(&desc->bd_waitq,
-		    !pscrpc_bulk_active(desc) || desc->bd_export->exp_failed,
-		    &lwi, NULL);
-		LASSERT(rc == 0 || rc == -ETIMEDOUT);
-		if (rc == -ETIMEDOUT) {
-			psc_info("timeout on bulk GET");
-			pscrpc_abort_bulk(desc);
-		} else if (desc->bd_export->exp_failed) {
-			psc_info("eviction on bulk GET");
-			rc = -ENOTCONN;
-			pscrpc_abort_bulk(desc);
-		} else if (!desc->bd_success ||
-		    desc->bd_nob_transferred != desc->bd_nob) {
-			psc_info("%s bulk GET %d(%d)",
-			    desc->bd_success ? "truncated" : "network err",
-			    desc->bd_nob_transferred, desc->bd_nob);
-			/* XXX should this be a different errno? */
-			rc = -ETIMEDOUT;
+	iov.iov_base = buf;
+	iov.iov_len = mq->size;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc, SRI_BULK_PORTAL, &iov, 1)) == 0) {
+//	mq->size / pscPageSize,
+		if ((fd = open(fn, O_WRONLY)) == -1)
+			mp->rc = -errno;
+		else {
+			nbytes = pwrite(fd, buf, mq->size, mq->offset);
+			if (nbytes == -1)
+				mp->rc = -errno;
+			else
+				mq->size = nbytes;
+			close(fd);
 		}
-	} else
-		psc_info("pscrpc bulk GET failed: rc %d", rc);
-	comms_error = (rc != 0);
-	if (rc == 0) {
-		if ((fd = open(fn, O_WRONLY)) == -1) {
-			rc = -errno;
-			goto done;
-		}
-		nbytes = pwrite(fd, buf, mq->size, mq->offset);
-		if (nbytes == -1)
-			rc = -errno;
-		else
-			mq->size = nbytes;
-		close(fd);
 	}
-	else if (!comms_error) {
-		/* Only reply if there was no comms problem with bulk */
-		rq->rq_status = rc;
-		pscrpc_error(rq);
-	}
-	pscrpc_free_bulk(desc);
-	mp->rc = rc;
- done:
+	if (desc)
+		pscrpc_free_bulk(desc);
 	free(buf);
 	return (0);
 }

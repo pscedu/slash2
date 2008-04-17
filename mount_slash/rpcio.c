@@ -23,7 +23,7 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_IO]->svc_import, SR_MDS_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_IO]->svc_import, SRM_VERSION,
 	    SRMT_READ, sizeof(*mq), sizeof(*mp) + size, &rq, &mq)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
@@ -46,7 +46,7 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_IO]->svc_import, SR_MDS_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_IO]->svc_import, SRM_VERSION,
 	    SRMT_WRITE, sizeof(*mq) + size, sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	memcpy(mq->buf, buf, size);

@@ -58,7 +58,7 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SRM_VERSION,
 	    SRMT_CREATE, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -88,7 +88,7 @@ slash_getattr(const char *path, struct stat *stb)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SRM_VERSION,
 	    SRMT_GETATTR, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -121,7 +121,7 @@ slash_fgetattr(__unusedx const char *path, struct stat *stb,
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SRM_VERSION,
 	    SRMT_FGETATTR, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
@@ -194,7 +194,7 @@ slash_open(const char *path, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SRM_VERSION,
 	    SRMT_OPEN, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -218,7 +218,7 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SRM_VERSION,
 	    SRMT_OPENDIR, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -245,20 +245,18 @@ int
 slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
     off_t offset, struct fuse_file_info *fi)
 {
-	int i, sum, rc, comms_error;
 	struct slashrpc_readdir_req *mq;
 	struct slashrpc_readdir_rep *mp;
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
-	struct l_wait_info lwi;
 	struct dirent *d;
+	struct iovec iov;
 	struct stat stb;
 	char *mb;
 	u64 off;
-	u8 *v1;
+	int rc;
 
-	mb = NULL;
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SRM_VERSION,
 	    SRMT_READDIR, sizeof(*mq), 0, &rq, &mq)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
@@ -267,77 +265,10 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 		pscrpc_req_finished(rq);
 		return (rc);
 	}
-
-	comms_error = 0;
-
-	desc = pscrpc_prep_bulk_exp(rq, 1, BULK_GET_SINK, SR_IO_BULK_PORTAL);
-	if (desc == NULL) {
-		psc_warnx("pscrpc_prep_bulk_exp returned a null desc");
-		pscrpc_req_finished(rq);
-		return (-ENOMEM); // errno
-	}
 	mb = PSCALLOC(mp->size);
-	desc->bd_iov_count = 1;
-	desc->bd_iov[0].iov_base = mb;
-	desc->bd_iov[0].iov_len = desc->bd_nob = mp->size;
-
-	/* Check for client eviction during previous I/O before proceeding. */
-	if (desc->bd_export->exp_failed)
-		rc = ENOTCONN;
-	else
-		rc = pscrpc_start_bulk_transfer(desc);
-	if (rc == 0) {
-		lwi = LWI_TIMEOUT_INTERVAL(OBD_TIMEOUT / 2,
-		    HZ, slashrpc_timeout, desc);
-
-		rc = psc_svr_wait_event(&desc->bd_waitq,
-		    (!pscrpc_bulk_active(desc) || desc->bd_export->exp_failed),
-		    &lwi, NULL);
-
-		LASSERT(rc == 0 || rc == -ETIMEDOUT);
-		if (rc == -ETIMEDOUT) {
-			psc_errorx("timeout on bulk GET");
-			pscrpc_abort_bulk(desc);
-		} else if (desc->bd_export->exp_failed) {
-			psc_warnx("eviction on bulk GET");
-			rc = -ENOTCONN;
-			pscrpc_abort_bulk(desc);
-		} else if (!desc->bd_success ||
-		    desc->bd_nob_transferred != desc->bd_nob) {
-			psc_errorx("%s bulk GET %d(%d)",
-			    desc->bd_success ? "truncated" : "network error on",
-			    desc->bd_nob_transferred, desc->bd_nob);
-			/* XXX should this be a different errno? */
-			rc = -ETIMEDOUT;
-		}
-	} else {
-		psc_errorx("pscrpc I/O bulk get failed: rc %d", rc);
-	}
-	comms_error = (rc != 0);
-
-	/* count the number of bytes sent, and hold for later... */
-	if (rc == 0) {
-		v1 = desc->bd_iov[0].iov_base;
-		if (v1 == NULL) {
-			psc_errorx("desc->bd_iov[0].iov_base is NULL");
-			rc = ENXIO;
-			goto out;
-		}
-
-		psc_info("got %u bytes of bulk data across %d IOVs: "
-		      "first byte is 0x%x",
-		      desc->bd_nob, desc->bd_iov_count, *v1);
-
-		sum = 0;
-		for (i = 0; i < desc->bd_iov_count; i++)
-			sum += desc->bd_iov[i].iov_len;
-		if (sum != desc->bd_nob)
-			psc_warnx("sum (%d) does not match bd_nob (%d)",
-			    sum, desc->bd_nob);
-		//rc = pscrpc_reply(rq);
-	}
-
- out:
+	iov.iov_base = mb;
+	iov.iov_len = mp->size;
+	rc = rsx_bulkgetsink(rq, &desc, SRM_BULK_PORTAL, &iov, 1);
 	if (rc == 0) {
 		/* Pull down readdir contents slashd posted. */
 		for (off = 0; off < mp->size; off = d->d_off - offset) {
@@ -347,26 +278,10 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 			if (filler(buf, d->d_name, &stb, 1))
 				break;
 		}
-	} else if (!comms_error) {
-		/* Only reply if there were no comm problems with bulk. */
-		rq->rq_status = rc;
-		pscrpc_error(rq);
-	} else {
-#if 0
-		// For now let's not free the reply state..
-		if (rq->rq_reply_state != NULL) {
-			/* reply out callback would free */
-			pscrpc_rs_decref(rq->rq_reply_state);
-			rq->rq_reply_state = NULL;
-			rq->rq_repmsg      = NULL;
-		}
-#endif
-		CWARN("ignoring bulk I/O comm error; "
-		    "id %s - client will retry",
-		    libcfs_id2str(rq->rq_peer));
 	}
 	free(mb);
-	pscrpc_free_bulk(desc);
+	if (desc)
+		pscrpc_free_bulk(desc);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -379,7 +294,7 @@ slash_readlink(const char *path, char *buf, size_t size)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SRM_VERSION,
 	    SRMT_READLINK, sizeof(*mq), size, &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);
@@ -436,7 +351,7 @@ slash_statfs(const char *path, struct statvfs *sfb)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SRM_VERSION,
 	    SRMT_STATFS, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	snprintf(mq->path, sizeof(mq->path), "%s", path);

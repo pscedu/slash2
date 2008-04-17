@@ -144,9 +144,9 @@ rpc_svc_init(void)
 		psc_fatalx("invalid SLASH_SERVER_NID: %s", snid);
 
 	/* Setup client MDS service */
-	rpcsvcs[RPCSVC_MDS] = rpc_svc_create(SR_MDS_REQ_PORTAL,
-	    SR_MDS_REP_PORTAL);
-	if (rpcmds_connect(nid, RPCSVC_MDS, SR_MDS_MAGIC, SR_MDS_VERSION))
+	rpcsvcs[RPCSVC_MDS] = rpc_svc_create(SRM_REQ_PORTAL,
+	    SRM_REP_PORTAL);
+	if (rpcmds_connect(nid, RPCSVC_MDS, SRM_MAGIC, SRM_VERSION))
 		psc_error("rpc_mds_connect %s", snid);
 
 #if 0
@@ -232,7 +232,7 @@ rpc_sendmsg(int op, ...)
 	if (op < 0 || op > SNRT || simpleop_sizes[op] == 0)
 		goto badop;
 
-	rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SR_MDS_VERSION,
+	rc = rsx_newreq(rpcsvcs[RPCSVC_MDS]->svc_import, SRM_VERSION,
 	    op, simpleop_sizes[op], sizeof(*mp), &rq, &u.m);
 	if (rc)
 		return (rc);
