@@ -538,7 +538,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		off_t  rg_eoff = OFT_REQ_ENDOFF(req);
 		off_t  i_offa; /* offset iterator */
 		int    tchild, schild, echild;
-		int    j=0, b=0, tiov_cnt=1, t=0;
+		int    j=0, b=0, tiov_cnt, t=0;
 		int    nblks=req->oftrq_nblks;
 		/* 
 		 * ***Promote to parent node***
@@ -571,9 +571,9 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		myreq.oftrq_depth++;
 		myreq.oftrq_width = OFT_REQ_ABSWIDTH_GET(&myreq, schild);
 		
-		for (j=0, b=0, i_offa=nr_soffa, tchild=schild; 
+		for (j=0, b=0, tiov_cnt=1, i_offa=nr_soffa, tchild=schild; 
 		     tchild <= echild; 
-		     j++, tchild++, myreq.oftrq_width++) {
+		     j++, tchild++, myreq.oftrq_width++, tiov_cnt=1) {
 			/* Region values increase with myreq.oftr_width
 			 */
 			//printf ("WIDTH = %hhu\n", myreq.oftrq_width);
@@ -624,10 +624,10 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			psc_assert(b > 0);
 
 			while (b < myreq.oftrq_nblks) {
-				tiov_cnt++; /* persistent count */
-				psc_assert(tiov_cnt <= iovcnt);
 				tiov = dynarray_getpos(req->oftrq_darray, 
-						       iovoff + tiov_cnt-1);
+						       iovoff + tiov_cnt);
+				tiov_cnt++; /* tmp count */
+				psc_assert(tiov_cnt <= iovcnt);
 				b += tiov->oftiov_nblks;
 			}
 			offtree_putnode(&myreq, iovoff, tiov_cnt, blkoff);
