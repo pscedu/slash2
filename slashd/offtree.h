@@ -80,12 +80,18 @@ power(size_t base, size_t exp)
 		psc_trace("OFT_REQ2SE_OFFS ("LPX64"/"LPX64")", s, e);	\
         } 
 
-
+#define OFT_REQ2E_OFF_(req)						\
+	((req)->oftrq_off + ((req)->oftrq_nblks *			\
+			     (req)->oftrq_root->oftr_minsz) - 1)
 
 #define OFT_IOV2E_OFF(iov, e) {						\
 		e = (((iov)->oftiov_off + ((iov)->oftiov_nblks *	\
 					   (iov)->oftiov_blksz)) - 1);	\
 	}
+
+#define OFT_IOV2E_OFF_(iov)					\
+	(((iov)->oftiov_off + ((iov)->oftiov_nblks *		\
+			       (iov)->oftiov_blksz)) - 1)
 
 #define OFT_IOV2SE_OFFS(iov, s, e) {					\
 		s = (iov)->oftiov_off;					\
@@ -182,25 +188,27 @@ struct offtree_iov {
 };
 
 enum oft_iov_flags {
-	OFTIOV_DATARDY   = (1 << 0), /* Buffer contains no data        */
-	OFTIOV_FAULTING  = (1 << 1), /* Buffer is being retrieved      */
-	OFTIOV_COLLISION = (1 << 2), /* Collision ops must take place  */
-	OFTIOV_FREEING   = (1 << 3), /* Collision ops must take place  */
-	OFTIOV_MAPPED    = (1 << 5), /* Mapped to a tree node          */
-	OFTIOV_REMAPPING = (1 << 6), /* Remap to a another tree node   */	
-	OFTIOV_REMAP_SRC = (1 << 7)  /* IOV is the remap source buffer */	
+	OFTIOV_DATARDY    = (1 << 0), /* Buffer contains no data        */
+	OFTIOV_FAULTING   = (1 << 1), /* Buffer is being retrieved      */
+	OFTIOV_COLLISION  = (1 << 2), /* Collision ops must take place  */
+	OFTIOV_FREEING    = (1 << 3), /* Collision ops must take place  */
+	OFTIOV_MAPPED     = (1 << 5), /* Mapped to a tree node          */
+	OFTIOV_REMAPPING  = (1 << 6), /* Remap to a another tree node   */	
+	OFTIOV_REMAP_SRC  = (1 << 7), /* IOV is the remap source buffer */	
+	OFTIOV_REMAP_END  = (1 << 8)  /* IOV is the last to remap       */
 };
 
 #define OFFTIOV_FLAG(field, str) (field ? str : "")
-#define DEBUG_OFFTIOV_FLAGS(iov)					\
+#define DEBUG_OFFTIOV_FLAGS(iov)					  \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_DATARDY),  "d"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FAULTING), "f"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_COLLISION),"p"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FREEING),  "F"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_MAPPED),   "m"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAPPING),"r"), \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_SRC),"R")
-#define OFFTIOV_FLAGS_FMT "%s%s%s%s%s%s%s"
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_SRC),"R"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_END),"E")
+#define OFFTIOV_FLAGS_FMT "%s%s%s%s%s%s%s%s"
 
 #define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
 	do {								\
@@ -225,11 +233,11 @@ enum oft_iov_flags {
 	}
 
 struct offtree_memb {
-	struct psc_wait_queue oft_waitq; /* block here on OFT_GETPNDG */
+	struct psc_wait_queue oft_waitq;  /* block here on OFT_GETPNDG */
 	psc_spinlock_t        oft_lock;
 	u32                   oft_flags;
-	atomic_t              oft_ref;      /* hb or nchildren     */
-	atomic_t              oft_op_ref;   /* pending operations  */
+	atomic_t              oft_ref;    /* hb or nchildren     */
+	atomic_t              oft_op_ref; /* pending operations  */
 	struct offtree_memb  *oft_parent;
 	u8                    oft_pos;                   
 	u8                    oft_depth;

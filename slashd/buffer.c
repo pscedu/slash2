@@ -459,7 +459,6 @@ sl_oftm_addref(struct offtree_memb *m)
 		   oref->slbir_base <= (slb->slb_base + 
 					(slb->slb_nblks * slb->slb_blksz)));
 
-
 	DEBUG_OFFTIOV(PLL_TRACE, miov, "sl_oftm_addref");
 	//DUMP_SLB(PLL_TRACE, slb, "slb start (treenode %p)", m);
 
@@ -524,8 +523,8 @@ sl_oftm_addref(struct offtree_memb *m)
 			oref->slbir_nblks = miov->oftiov_nblks;
 			oref->slbir_pri   = m;
 			
-			psc_assert(ATTR_TEST(miov->oftiov_flags, OFTIOV_REMAP_SRC));
-			ATTR_UNSET(miov->oftiov_flags, OFTIOV_REMAP_SRC);
+			psc_assert(ATTR_TEST(miov->oftiov_flags, OFTIOV_REMAP_END));
+			ATTR_UNSET(miov->oftiov_flags, OFTIOV_REMAP_END);
 
 			DEBUG_OFT(PLL_TRACE, m, "remap existing slbref, oref=%p",
 				  oref);
