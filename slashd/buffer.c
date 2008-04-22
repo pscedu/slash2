@@ -277,7 +277,7 @@ sl_slab_reap(int nblks) {
 				 */
 				goto out;
 		}
-		spinlock(&b->slb_lock);	
+ 		spinlock(&b->slb_lock);	
 		/* Ensure slb sanity 
 		 */
 		psc_assert(b->slb_lc_owner == &slBufsLru);
@@ -732,6 +732,7 @@ int
 sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 {
 	ssize_t fblks=0;
+	off_t   nr_soffa=soffa;
 	struct offtree_root *r  = pri;
 	fcache_mhandle_t    *f  = r->oftr_pri;
 	list_cache_t        *lc = &f->fcmh_buffer_cache;
@@ -757,10 +758,12 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 				  "soffa "LPX64" trying with this slb", soffa);
 			if (SLB_FULL(slb)) 
 				continue;
-			fblks += sl_buffer_alloc_internal(slb, (nblks-fblks), 
-							  soffa, a, lc);
-			soffa += fblks * slb->slb_blksz;
 
+			fblks += sl_buffer_alloc_internal(slb, (nblks-fblks), 
+							  nr_soffa, a, lc);
+
+			nr_soffa = soffa + (fblks * slb->slb_blksz);
+			
 			if (fblks >= (ssize_t)nblks)
 				break;
 		}

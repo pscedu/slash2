@@ -69,7 +69,6 @@ power(size_t base, size_t exp)
 
 #define OFT_REQ2SE_OFFS(req, s, e) {					\
 		int TTt;						\
-		TTt = (req)->oftrq_off % (req)->oftrq_root->oftr_minsz; \
 		s = (req)->oftrq_off;					\
 		e = (s + ((req)->oftrq_nblks *				\
 			  (req)->oftrq_root->oftr_minsz)) - 1;		\

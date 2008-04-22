@@ -1,6 +1,20 @@
 #include "offtree.h"
 #include "psc_util/alloc.h"
 
+
+static void
+offtree_iov_array_dump(const struct dynarray *a)
+{
+	int i, n=dynarray_len(a);
+	struct offtree_iov *v;
+	
+	for (i=0; i < n; i++) {
+		v = dynarray_getpos(a, i);
+		DEBUG_OFFTIOV(PLL_WARN, v, "offtree_iov_array_dump");
+	}
+}
+
+
 struct offtree_root *
 offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	       void *private, offtree_alloc_fn alloc_fn, 
@@ -450,26 +464,30 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				struct offtree_iov *niov;
 				
 				niov = PSCALLOC(sizeof(struct offtree_iov));
-				memcpy(niov, iov, (sizeof(*iov)));
-				/* Prep the new iov.
-				 *  XXX this should be changed to look like the segment below.
-				 *   the iov going back to the user can't be modified this way.
-				 */
-				ATTR_UNSET(niov->oftiov_flags, OFTIOV_REMAP_SRC);
-				ATTR_UNSET(niov->oftiov_flags, OFTIOV_MAPPED);
 				ATTR_SET(niov->oftiov_flags, OFTIOV_REMAPPING);
 				niov->oftiov_nblks = req->oftrq_nblks;
-				req->oftrq_memb->oft_norl.oft_iov = niov;
-				/* Modify the old iov.
+				niov->oftiov_off   = req->oftrq_off;
+				niov->oftiov_pri   = iov->oftiov_pri;
+				niov->oftiov_blksz = iov->oftiov_blksz;
+				niov->oftiov_base  = iov->oftiov_base + 
+					(req->oftrq_off - iov->oftiov_off);
+				/* Ensure that the new partial iov doesn't overrun
+				 *  the REMAP_SRC iov.
 				 */
-				iov->oftiov_nblks -= req->oftrq_nblks;
-				iov->oftiov_base  += req->oftrq_nblks * 
-					iov->oftiov_blksz;
-				iov->oftiov_off   += req->oftrq_nblks *
-					iov->oftiov_blksz;			
-				ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_SRC);
-				ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_END);
+				psc_trace("blks=%zu reqeoff="LPX64" reqeoffa="LPX64
+					  " ioveoff="LPX64" ioveoffa="LPX64, 
+					  niov->oftiov_nblks,
+					  (req->oftrq_off+(req->oftrq_nblks*iov->oftiov_blksz)), 
+					  OFT_REQ2E_OFF_(req),
+					  (iov->oftiov_off+(iov->oftiov_nblks * iov->oftiov_blksz)), 
+					  OFT_IOV2E_OFF_(iov));
 
+				psc_assert(OFT_REQ2E_OFF_(req) <= OFT_IOV2E_OFF_(iov));
+				
+				if (OFT_REQ2E_OFF_(req) == OFT_IOV2E_OFF_(iov)) 
+					ATTR_SET(niov->oftiov_flags, OFTIOV_REMAP_END);
+
+				req->oftrq_memb->oft_norl.oft_iov = niov;
 				DEBUG_OFFTIOV(PLL_INFO, niov, "remap (niov)");
 			}
 			DEBUG_OFFTIOV(PLL_INFO, iov,  "remapsrc (iov)");
@@ -490,7 +508,8 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				/* Ensure that the new partial iov doesn't overrun
 				 *  the REMAP_SRC iov.
 				 */
-				psc_trace("blks=%zu reqeoff="LPX64" reqeoffa="LPX64" ioveoff="LPX64" ioveoffa="LPX64, 
+				psc_trace("blks=%zu reqeoff="LPX64" reqeoffa="LPX64
+					  " ioveoff="LPX64" ioveoffa="LPX64, 
 					  niov->oftiov_nblks,
 					  (req->oftrq_off+(req->oftrq_nblks*iov->oftiov_blksz)), 
 					  OFT_REQ2E_OFF_(req),
@@ -499,21 +518,11 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 
 				psc_assert(OFT_REQ2E_OFF_(req) <= OFT_IOV2E_OFF_(iov));
 				
-				if (OFT_REQ_ENDOFF(req) == OFT_IOV2E_OFF_(iov)) 
-					ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_END);
+				if (OFT_REQ2E_OFF_(req) == OFT_IOV2E_OFF_(iov)) 
+					ATTR_SET(niov->oftiov_flags, OFTIOV_REMAP_END);
 
 				req->oftrq_memb->oft_norl.oft_iov = niov;
-#if 0
-				/* Modify the old iov.
-				 */
-				iov->oftiov_nblks -= req->oftrq_nblks;
-				iov->oftiov_base  += req->oftrq_nblks * 
-					iov->oftiov_blksz;
-				iov->oftiov_off   += req->oftrq_nblks *
-					iov->oftiov_blksz;			
-#endif
 				ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_SRC);
-
 				DEBUG_OFFTIOV(PLL_INFO, niov, "short remap (niov)");
 			} else 
 				req->oftrq_memb->oft_norl.oft_iov = iov;
@@ -561,6 +570,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		psc_assert((schild >= 0) && 
 			   (echild >= 0) && 
 			   (schild <= echild));
+		
 		/* 
 		 * Iterate over affected subregions, alloc'ing leaf nodes
 		 *  and placing buffers.
@@ -570,7 +580,10 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		memcpy(&myreq, req, (sizeof(*req)));
 		myreq.oftrq_depth++;
 		myreq.oftrq_width = OFT_REQ_ABSWIDTH_GET(&myreq, schild);
-		
+		/* XXX this loop is essentially identical to the one in 
+		 *   offtree_region_preprw_leaf_locked(), this whole
+		 *   segment should be moved into a function.
+		 */
 		for (j=0, b=0, tiov_cnt=1, i_offa=nr_soffa, tchild=schild; 
 		     tchild <= echild; 
 		     j++, tchild++, myreq.oftrq_width++, tiov_cnt=1) {
@@ -618,16 +631,29 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			 */
 			tiov = dynarray_getpos(req->oftrq_darray,
 					       iovoff);
+			DEBUG_OFFTIOV(PLL_TRACE, tiov, "sblkoff debug(0)");
+
+			psc_trace("i_offa="LPX64" tiov->oftiov_off="LPX64
+				  " nblks=%zd sblkoff=%d", 
+                                  i_offa, tiov->oftiov_off + (blkoff * tiov->oftiov_blksz),
+                                  myreq.oftrq_nblks, blkoff);
+
+			psc_assert(tiov->oftiov_off + (blkoff * tiov->oftiov_blksz) 
+                                   == myreq.oftrq_off);
+
 			/* Factor in partially used iov's 
 			 */
 			b = (tiov->oftiov_nblks - blkoff);
 			psc_assert(b > 0);
 
 			while (b < myreq.oftrq_nblks) {
+				struct offtree_iov *piov = tiov;
 				tiov = dynarray_getpos(req->oftrq_darray, 
 						       iovoff + tiov_cnt);
+				DEBUG_OFFTIOV(PLL_TRACE, tiov, "sblkoff debug(%d)", tiov_cnt);
 				tiov_cnt++; /* tmp count */
 				psc_assert(tiov_cnt <= iovcnt);
+				psc_assert(tiov->oftiov_off == OFT_IOV2E_OFF_(piov) + 1);
 				b += tiov->oftiov_nblks;
 			}
 			offtree_putnode(&myreq, iovoff, tiov_cnt, blkoff);
@@ -648,6 +674,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			 */
 			//if (tchild == echild) 
 			//	psc_assert(!nblks && !blkoff);
+
 		}
 	}	
  out:
@@ -738,7 +765,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		off_t  rg_eoff = OFT_REQ_ENDOFF(req);
 		off_t  crg_eoff, crg_soff;
 		off_t  i_offa;
-		int    tchild, schild, echild;
+		int    tchild, schild, echild, tiov_cnt;
 		int    j=0, iovoff=0, sblkoff=0;
 		/* 
 		 * ***Promote to parent node***
@@ -755,6 +782,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		 *   if the existing buffer's offset was < that of the 
 		 *   new request.  offtree_blks_get() handed back a sorted
 		 *   iov array so the first item has the lowest offset.
+		 * This segment is not accessed recursively so there is no need
+		 *   for a blkoff into the iov.
 		 */
 		iov = dynarray_getpos(req->oftrq_darray, req->oftrq_darray_off);
 		DEBUG_OFFTIOV(PLL_TRACE, iov, "iov 0 (doff=%zu)", 
@@ -780,10 +809,13 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		 * How many blocks go to each child? Middle children must
 		 *   be complete.
 		 */
-		for (j=0, tchild=schild; tchild <= echild; j++, tchild++) {
-			int tiov_cnt=1, b=0, t;
+		for (j=0, tchild=schild, tiov_cnt=1; 
+		     tchild <= echild; 
+		     j++, tchild++, tiov_cnt=1) {
+			int b=0, t;
 			struct offtree_iov  *tiov;
-
+			/* Set the s and e offsets for our children.
+			 */
 			crg_soff = OFT_STARTOFF(req->oftrq_root, 
 						(req->oftrq_depth+1), 
 						((req->oftrq_width * 
@@ -801,34 +833,33 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 				psc_assert(i_offa == crg_soff);
 			
 			memcpy(&myreq, req, (sizeof(*req)));
+			/* Set the req offset to the iterative offset value.
+			 */
 			myreq.oftrq_off = i_offa;
 			/* This should always be true.
 			 */
-			psc_assert_msg(myreq.oftrq_off >= rg_soff && 
-				       myreq.oftrq_off < rg_eoff, 
-				       "myreq.oftrq_off="LPX64" rg_soff="LPX64
-				       " rg_eoff="LPX64, 
-				       myreq.oftrq_off, rg_soff, rg_eoff);
+			psc_assert_msg(myreq.oftrq_off >= crg_soff && 
+				       myreq.oftrq_off <  crg_eoff, 
+				       "myreq.oftrq_off="LPX64" crg_soff="LPX64
+				       " crg_eoff="LPX64, 
+				       myreq.oftrq_off, crg_soff, crg_eoff);
 
-			/* How many blocks fit within this range?
-			 *  Push offset iterator i_offa. 
-			 */			
-			myreq.oftrq_nblks = (MIN(crg_eoff, nr_eoffa) + 1) - i_offa;
-
+			/* Manage the depth and width of the request.
+			 */
 			myreq.oftrq_depth++;
 			myreq.oftrq_width = (req->oftrq_width *
 					     req->oftrq_root->oftr_width) + tchild;
-
+			/* How many blocks fit within this range?
+			 *  Push offset iterator i_offa. 
+			 *  Verify that the offset is aligned.
+			 */ 
+			myreq.oftrq_nblks = (MIN(crg_eoff, nr_eoffa) + 1) - i_offa;
 			t = myreq.oftrq_nblks % OFT_REQ2BLKSZ(req);
 			psc_assert(!t);
+			/* Compute the actual number of blks.
+			 */
 			myreq.oftrq_nblks /= OFT_REQ2BLKSZ(req);
 
-			psc_trace("i_offa="LPX64" crg_soff="LPX64 " nblks=%zd", 
-				  i_offa, crg_soff, myreq.oftrq_nblks);
-
-			/* Bump iterator for the next time through.
-			 */
-			i_offa += (myreq.oftrq_nblks * OFT_REQ2BLKSZ(req));
 			/* How many iovs are needed to fill the child? 
 			 *  Inspect our array of iov's. 
 			 *  @iovoff: is the 'persisent' iterator
@@ -836,18 +867,36 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			 *    iov's are present.
 			 */
 			tiov = dynarray_getpos(req->oftrq_darray,
-					       (req->oftrq_darray_off + 
-						iovoff + (tiov_cnt-1)));
+					       req->oftrq_darray_off + iovoff);
+
+			psc_trace("i_offa="LPX64" crg_soff="LPX64 
+				  " tiov->oftiov_off="LPX64" nblks=%zd sblkoff=%d", 
+				  i_offa, crg_soff, tiov->oftiov_off + (sblkoff * tiov->oftiov_blksz),
+				  myreq.oftrq_nblks, sblkoff);
+
+			/* Verify that the iov popped from the dynarray
+			 *   has the expected offset value.  Here this should always be true. 
+			 */
+			psc_assert(tiov->oftiov_off + (sblkoff * tiov->oftiov_blksz) 
+				   == i_offa);
 
 			ATTR_SET(tiov->oftiov_flags, OFTIOV_REMAP_SRC);
+			DEBUG_OFFTIOV(PLL_TRACE, tiov, "sblkoff=%d debug(0)", sblkoff);
+
 			/* Factor in partially used iov's.
 			 */			
 			b = (tiov->oftiov_nblks - sblkoff);
+			psc_assert(b > 0);
+			/* 
+			 */
 			for (t=0; (b < myreq.oftrq_nblks) && (t < niovs); t++) {
-				tiov_cnt++;
-				psc_assert((iovoff + (tiov_cnt-1)) < niovs);
+				struct offtree_iov *piov = tiov;			       
 				tiov = dynarray_getpos(req->oftrq_darray, 
-						      (iovoff + (tiov_cnt-1)));
+						       req->oftrq_darray_off + iovoff + tiov_cnt);
+				DEBUG_OFFTIOV(PLL_TRACE, tiov, "sblkoff debug(%d)", tiov_cnt);
+				psc_assert((iovoff + tiov_cnt) < niovs);
+				psc_assert(tiov->oftiov_off == OFT_IOV2E_OFF_(piov) + 1);
+				tiov_cnt++;
 				b += tiov->oftiov_nblks;
 			}
 			if (b < myreq.oftrq_nblks) {
@@ -856,16 +905,19 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 					   b, myreq.oftrq_nblks);
 				goto error;
 			}
+				
+			psc_trace("myreq.oftrq_nblks=%zd b=%d, tiov->oftiov_nblks=%zu tiov_cnt=%d", 
+				  myreq.oftrq_nblks, b, tiov->oftiov_nblks, tiov_cnt);
 			/* Make the child...
 			 */
-			myreq.oftrq_memb   = offtree_newleaf_locked(m, tchild);
+			myreq.oftrq_memb = offtree_newleaf_locked(m, tchild);
 			ATTR_UNSET(myreq.oftrq_memb->oft_flags, OFT_UNINIT);
 			ATTR_SET(myreq.oftrq_memb->oft_flags, OFT_ALLOCPNDG);
 			/* Take the soffa from the first iov returned
 			 *  by the allocator.
 			 */
 			//myreq.oftrq_off    = nr_soffa;
-			nblks             -= myreq.oftrq_nblks;
+			nblks -= myreq.oftrq_nblks;
 
 			offtree_putnode(&myreq, iovoff + req->oftrq_darray_off, 
 					tiov_cnt, sblkoff);
@@ -880,10 +932,14 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			else 
 				sblkoff = 0;
 
-			/* Ensure that all blocks have been exhausted.
-			 */ 
-			if (tchild == echild)
+			if (tchild == echild)				
+				/* Ensure that all blocks have been exhausted.
+				 */ 
 				psc_assert(!sblkoff);
+			else 
+				/* Bump iterator for the next time through.
+				 */
+				i_offa += (myreq.oftrq_nblks * OFT_REQ2BLKSZ(req));				
 		}
 	}
  done:	
