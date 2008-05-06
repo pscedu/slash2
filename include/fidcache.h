@@ -108,7 +108,7 @@ struct fidcache_memb {
  * fidcache_memb tracks cached bmaps (bmap_cache) and clients
  * (via their exports) which hold cached bmaps (fcm_lessees).
  */
-typedef struct fidcache_memb_handle {
+struct fidcache_memb_handle {
 	struct fidcache_memb	*fcmh_memb;
 	struct hash_entry	 fcmh_hentry;
 	struct psclist_head	 fcmh_lentry;
