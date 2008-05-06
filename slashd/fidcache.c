@@ -1,251 +1,223 @@
-/* $Id: zestInodeCache.c 2430 2008-01-04 21:08:57Z yanovich $ */
+/* $Id$ */
 
 #include <stdio.h>
 
-#include "psc_util/atomic.h"
-#include "fid.h"
-#include "fidcache.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
+#include "fid.h"
+#include "fidcache.h"
 
-/*
- * Available inodes
- */
+struct hash_table fidcHashTable;
+
+/* Available fids */
 list_cache_t	 fidcFreeList;
-/*
- * Dirty inodes which have no completed parity groups
- */
+
+/* Dirty fids */
 list_cache_t	 fidcDirtyList;
-/*
- * Cached inodes avail for reaping, inodes here have no dirty
- *  blocks
- */
+
+/* Cached fids avail for reaping */
 list_cache_t     fidcCleanList;
 
 size_t		 fidcAllocated;
-zest_spinlock_t	 fidcCacheLock;
+psc_spinlock_t	 fidcCacheLock;
 
-/*  
+/*
  * bmap_cache_cmp - bmap_cache splay tree comparator
  * @a: a bmap_cache_memb
  * @b: another bmap_cache_memb
 */
 int
-bmap_cache_cmp(struct bmap_cache_memb *a, struct bmap_cache_memb *b)
+bmap_cache_cmp(const void *x, const void *y)
 {
+	const struct bmap_cache_memb *a = x, *b = y;
+
         if (a->bcm_bmap.slbm_blkno > b->bcm_bmap.slbm_blkno)
                 return 1;
         else if (a->bcm_bmap.slbm_blkno < b->bcm_bmap.slbm_blkno)
                 return -1;
-
         return 0;
 }
 
-__static SPLAY_GENERATE(bmap_cache, bmap_cache_memb, 
+__static SPLAY_GENERATE(bmap_cache, bmap_cache_memb,
 			bmap_cache_entry, bmap_cache_cmp);
 
 /**
- * zinocache_reap - get some inodes from the clean list and free them
+ * fidcache_reap - reclaim fids from the clean list and free them
  */
 __static void
-zinocache_reap(void)
+fidcache_reap(void)
 {
-	struct psclist_head *e;
-	fcache_entry_t      *fce;
+	struct fcache_memb_handle *f;
 	int locked;
-	/*
-	 * Try to reach the reserve threshold
-	 */
+
+	/* Try to reach the reserve threshold */
 	do {
-		e = lc_get(&fidcCleanList, 0);
-		if (e == NULL)
-			/* didn't get anything */
+		f = lc_getnb(&fidcCleanList);
+		if (f == NULL)
 			return;
 
-		ino = psclist_entry(e, fidc_t, fidc_cache_lentry);
-		locked = reqlock(&ino->fidc_lock);
+		locked = reqlock(&f->fcmh_lock);
+
 		/*
 		 * Make sure our clean list is 'clean' by
 		 *  verifying the following conditions
 		 */
-		if (!fidc_clean_check(ino) ||
-		    ino->fidc_state != FIDC_CLEAN) {
-			fidc_dump(ino);
-			psc_fatalx("Invalid inode state for clean list");
+		if (!fcmh_clean_check(f) ||
+		    f->fcmh_state != FCMHS_CLEAN) {
+			fcmh_dump(f);
+			psc_fatalx("Invalid fid state for clean list");
 		}
-		/*
-		 * Clean inodes may have non-zero refcnts, skip these
-		 *   inodes.
-		 */
-		if (atomic_read(&ino->fidc_refcnt)) {
+
+		/* Clean fids may have non-zero refcnts, skip these fids */
+		if (atomic_read(&f->fcmh_refcnt)) {
 			psc_info("fidc %p, has refcnt %d",
-			      ino, atomic_read(&ino->fidc_refcnt));
-			//fidc_dump(ino);
+			      f, atomic_read(&f->fcmh_refcnt));
+			//fcmh_dump(f);
 
 			lc_put(&fidcCleanList,
-			    &ino->fidc_cache_lentry);
+			    &f->fcmh_cache_lentry);
 
-			ureqlock(&ino->fidc_lock, locked);
+			ureqlock(&f->fcmh_lock, locked);
 			continue;
 		}
-		/*
-		 * Free it
-		 */
-		ATTR_SET(ino->fidc_state, FIDC_FREEING);
-		zinocache_put(ino, &fidcFreeList);
-		ureqlock(&ino->fidc_lock, locked);
 
-	} while(!fidc_freelist_avail_check());
+		/* Free it */
+		ATTR_SET(f->fcmh_state, FCMHS_FREEING);
+		fidcache_put(f, &fidcFreeList);
+		ureqlock(&f->fcmh_lock, locked);
+	} while (!fcmh_freelist_avail_check());
 }
 
 /**
- * zinocache_get - grab an inode from an inode list cache.
+ * fidcache_get - grab a fid from a cache.
  */
-__static fidc_t *
-zinocache_get(list_cache_t *zlc, struct zest_fid *fid)
+__static struct fidcache_memb_handle *
+fidcache_get(list_cache_t *lc, struct fcache_entry *f)
 {
-	struct psclist_head *e;
-	fidc_t *ino;
+	struct fidcache_memb_handle *fc;
 
-	e = lc_get(zlc, 0);
-	if (e == NULL) {
-		zinocache_reap(); /* Try to free some inodes */
-		e = lc_get(zlc, 1); /* try again, blocking here */
+	f = lc_getnb(lc, 0);
+	if (f == NULL) {
+		fidcache_reap();	/* Try to free some fids */
+		f = lc_getwait(lc);
 	}
-	ino = psclist_entry(e, fidc_t, fidc_cache_lentry);
 
-	if (zlc == &fidcFreeList) {
+	if (lc == &fidcFreeList) {
 		/*
-		 * The inode should have nothing on its dirty lists
+		 * The fid should have nothing on its dirty lists
 		 *  and have been initialized
 		 */
-		psc_assert(ino->fidc_state == FIDC_FREE);
-		psc_assert(fidc_clean_check(ino));
-
-		lc_register(&ino->fidc_incoming,
-		    "ino-"FIDFMT"-inc", FIDFMTARGS(fid));
-		lc_register(&ino->fidc_unprotected,
-		    "ino-"FIDFMT"-unprot", FIDFMTARGS(fid));
-		lc_register(&ino->fidc_sync_error,
-		    "ino-"FIDFMT"-syncerr", FIDFMTARGS(fid));
+		psc_assert(f->fcmh_state == FCMHS_FREE);
+		psc_assert(fcmh_clean_check(f));
 	} else
-		psc_fatalx("It's unwise to get inodes from %p, it's not "
-		       "fidcFreeList", zlc);
-	return (ino);
+		psc_fatalx("tried to get fids from %p "
+		    "instead of free list", lc);
+	return (f);
 }
 
 /**
- * zinocache_put - release an inode onto an inode list cache.
+ * fidcache_put - release a fid onto a list cache.
  *
  * This routine should be called when:
- * - moving a free inode to the dirty cache.
- * - moving a dirty inode to the free cache.
- * Notes: inode is already locked.  Extensive validity checks are
- *        performed within fidc_clean_check()
+ * - moving a free fid to the dirty cache.
+ * - moving a dirty fid to the free cache.
+ * Notes: fid should already be locked.  Extensive validity checks are
+ *        performed within fcmh_clean_check()
  */
 void
-zinocache_put(fidc_t *ino, list_cache_t *zlc)
+fidcache_put(struct fidcache_memb_handle *f, list_cache_t *lc)
 {
 	int rc, clean;
-	/*
-	 * Check for uninitialized
-	 */
-	if (!ino->fidc_state) {
-		fidc_dump(ino);
-                psc_fatalx("Tried to put an uninitialized inode");
+
+	/* Check for uninitialized */
+	if (!f->fcmh_state) {
+		fcmh_dump(f);
+                psc_fatalx("Tried to put an uninitialized fid");
 	}
 
-	if (ino->fidc_cache_owner == zlc) {
-		fidc_dump(ino);
-		psc_fatalx("Inode tried to move to the same list");
+	if (f->fcmh_cache_owner == lc) {
+		fcmh_dump(f);
+		psc_fatalx("fid tried to move to the same list");
 	}
+
+	/* Validate the fid and check if it has some dirty blocks */
+	clean = FMDH_CHECK(f);
+
 	/*
-	 * Validate the inode and check if it has some dirty blocks
-	 */
-	clean = FIDC_LIST_CHECK(ino);
-	/*
-	 * If we are releasing an inode onto the free list,
+	 * If we are releasing a fid onto the free list,
 	 * remove the corresponding hash table entry for it.
 	 */
-	if (zlc == &fidcFreeList) {
-		struct psclist_head *e, *next;
-		struct zeil       *zeil;
-		/*
-		 * Valid sources of this inode
-		 */
-		if ((ino->fidc_cache_owner == FIDC_CACHE_INIT) ||
-		    (ino->fidc_cache_owner == &fidcFreeList) ||
-		    (ino->fidc_cache_owner == &fidcCleanList)) {
-
-		} else psc_fatalx("Bad inode fidc_cache_owner %p",
-			       ino->fidc_cache_owner);
+	if (lc == &fidcFreeList) {
+		/* Valid sources of this fid */
+		if (f->fcmh_cache_owner == FIDC_CACHE_INIT ||
+		    f->fcmh_cache_owner == &fidcFreeList ||
+		    f->fcmh_cache_owner == &fidcCleanList) {
+		} else
+			psc_fatalx("Bad fcmh_cache_owner %p",
+			    f->fcmh_cache_owner);
 
 		psc_assert(clean);
 
-		psc_assert(ATTR_TEST(ino->fidc_state, FIDC_FREEING));
-
-		lc_unregister(&ino->fidc_incoming);
-		lc_unregister(&ino->fidc_unprotected);
-		lc_unregister(&ino->fidc_sync_error);
+		psc_assert(ATTR_TEST(f->fcmh_state, FCMHS_FREEING));
 
 		rc = del_hash_entry(&fidcHashTable,
-				    ino->fidc_fid.zfid_inum);
+		    f->fcmh_fid.zfid_inum);
 
+#if 0
 		/* Remove RPC export links. */
-		psclist_for_each_safe(e, next, &ino->fidc_zeils) {
+		psclist_for_each_entry_safe(f, next, &f->fcmh_eils) {
 			zeil = psclist_entry(e, struct zeil, zeil_ino_entry);
 			zeil_unregister(zeil);
 			psclist_del(&zeil->zeil_ino_entry);
 			free(zeil);
 		}
+#endif
 
-		if (ATTR_TEST(ino->fidc_state, FIDC_FREE))
+		if (ATTR_TEST(f->fcmh_state, FCMHS_FREE))
 			/* make sure free inodes weren't on the hash table */
 			psc_assert(rc == -1);
 
-		/* Inode is "free" now. */
-		fidc_init(ino);
-
-	} else if (zlc == &fidcCleanList) {
+		/* fid is free now. */
+		fcmh_init(f);
+	} else if (lc == &fidcCleanList) {
 		psc_assert(
-		    ino->fidc_cache_owner == &fidcFreeList ||
-		    ino->fidc_cache_owner == &fidcDirtyList);
-		psc_assert(ATTR_TEST(ino->fidc_state, FIDC_CLEAN));
+		    f->fcmh_cache_owner == &fidcFreeList ||
+		    f->fcmh_cache_owner == &fidcDirtyList);
+		psc_assert(ATTR_TEST(f->fcmh_state, FCMHS_CLEAN));
 		psc_assert(clean);
-
-	} else if (zlc == &fidcDirtyList) {
-		psc_assert(ino->fidc_cache_owner == &fidcCleanList);
-		psc_assert(ATTR_TEST(ino->fidc_state, FIDC_DIRTY));
+	} else if (lc == &fidcDirtyList) {
+		psc_assert(f->fcmh_cache_owner == &fidcCleanList);
+		psc_assert(ATTR_TEST(f->fcmh_state, FCMHS_DIRTY));
 		psc_assert(clean == 0);
-
 	} else
-		psc_fatalx("zlc %p is a bogus list cache", zlc);
+		psc_fatalx("lc %p is a bogus list cache", lc);
 
-	ZINOCACHE_PUT(ino, zlc);
+	FIDCACHE_PUT(f, lc);
 }
 
 /**
- * fidc_lookup - locate or create an inode hash table entry indexed by fid.
+ * fidcache_lookup - locate or create a hash table entry indexed by fid.
  * @fid: file ID to hash on.
  */
-fidc_t *
-zinocache_lookup(zest_fid_t *fid)
+struct fidcache_memb_handle *
+fidcache_lookup(struct slash_fid *fid)
 {
+	struct fidcache_memb_handle *f;
 	struct hash_entry *e;
-	fidc_t          *ino;
-	int                try_create = 0;
+	int try_create = 0;
 
 	psc_assert(fid->zfid_inum);
 
  restart:
 	/*
-	 * Check if an inode for the file already exists
-	 * in another connection/file descriptor.
+	 * Check if the fid already exists in another
+	 * connection/file descriptor.
 	 *
 	 * If try_create, the hash table is locked
 	 */
-	e = get_hash_entry(&fidcHashTable, fid->zfid_inum, NULL);
+	e = get_hash_entry(&fidcHashTable, fid->fid_inum, NULL);
 	if (e) {
 		/*
 		 * Did we bounce here from the 'else' stmt?
@@ -256,29 +228,27 @@ zinocache_lookup(zest_fid_t *fid)
 		if (try_create) {
 			freelock(&fidcHashTable.htable_lock);
 			/* release the pre-allocated inode */
-			ATTR_SET(ino->fidc_state, FIDC_FREEING);
-			zinocache_put(ino, &fidcFreeList);
+			ATTR_SET(f->fcmh_state, FCMHS_FREEING);
+			fidcache_put(f, &fidcFreeList);
 		}
 
-		ino = e->private;
+		f = e->private;
 
-		spinlock(&ino->fidc_lock);
+		spinlock(&f->fcmh_lock);
 
-		(int)fidc_clean_check(ino);
-		/*
-		 * by this point the inode is valid but is it ours?
-		 */
-		if (fid->zfid_inum != ino->fidc_fid.zfid_inum) {
-			freelock(&ino->fidc_lock);
+		fcmh_clean_check(f);
+
+		/* by this point the inode is valid but is it ours?  */
+		if (fid->fid_inum != f->fcmh_fid.zfid_inum) {
+			freelock(&f->fcmh_lock);
 			goto restart;
 		}
 		/*
-		 *inc ref before releasing lock, otherwise the inode may
+		 * inc ref before releasing lock, otherwise the inode may
 		 * be reaped from under us
 		 */
-		fidc_incref(ino);
-
-		freelock(&ino->fidc_lock);
+		fcmh_incref(f);
+		freelock(&f->fcmh_lock);
 	} else {
 		/*
 		 * lock the entire cache here to avoid duplicate
@@ -288,39 +258,40 @@ zinocache_lookup(zest_fid_t *fid)
 			/* have to get this.. we don't want to
 			 *  block here while holding the hash lock!!
 			 */
-			ino        = zinocache_get(&fidcFreeList, fid);
+			f = fidcache_get(&fidcFreeList, fid);
 			spinlock(&fidcHashTable.htable_lock);
 			try_create = 1;
 			goto restart;
 		}
+
 		/* We have the htable lock and just double-checked
 		 *  for dups and none were found.  Go ahead and
 		 *  create the inode
 		 */
-		psc_assert(ino->fidc_state == FIDC_FREE);
-		(int)fidc_clean_check(ino);
+		psc_assert(f->fcmh_state == FCMHS_FREE);
+		fcmh_clean_check(f);
 
 		/* Init the inode */
-		COPYFID(&ino->fidc_fid, fid);
+		COPYFID(&f->fcmh_fid, fid);
 
 		/* no need to lock here, we're the only thread
 		 *  accessing this inode
 		 * XXX unless someone has a dangling reference to it
 		 */
-		fidc_incref(ino);
+		fcmh_incref(f);
 
-		ATTR_UNSET(ino->fidc_state, FIDC_FREE);
-		ATTR_SET(ino->fidc_state, FIDC_CLEAN);
+		ATTR_UNSET(f->fcms_state, FCMHS_FREE);
+		ATTR_SET(f->fcmh_state, FCMHS_CLEAN);
 
 		/* Place it on the clean list */
-		zinocache_put(ino, &fidcCleanList);
+		fidcache_put(f, &fidcCleanList);
 
-		/* XXX fill out fidc_stb a little with inum. */
-		init_hash_entry(&ino->fidc_hentry,
-				&ino->fidc_fid.zfid_inum, ino);
+		/* XXX fill out fcmh_stb a little with inum. */
+		init_hash_entry(&f->fcmh_hentry,
+				&f->fcmh_fid.zfid_inum, ino);
 
 		/* make the inode viewable by all */
-		add_hash_entry(&fidcHashTable, &ino->fidc_hentry);
+		add_hash_entry(&fidcHashTable, &ino->fcmh_hentry);
 
 		/* ok release the hash table lock */
 		freelock(&fidcHashTable.htable_lock);
@@ -328,56 +299,34 @@ zinocache_lookup(zest_fid_t *fid)
 	return (ino);
 }
 
-/*
- * zinocache_alloc - create new inodes and add to free inode list.
- * @n: number of inodes to add.
- */
-int
-zinocache_alloc(size_t n)
+void
+fcmh_init(struct fidcache_memb_handle *f)
 {
-	fidc_t *ino, *inodes;
-	size_t i;
-	int rc;
-
-	rc = 0;
-	spinlock(&fidcCacheLock);
-	if (fidcAllocated + n > ZINOCACHE_ALLOC_MAX) {
-		rc = ENOMEM;
-		goto done;
-	}
-	fidcAllocated += n;
-
-	ino = inodes = PSCALLOC(FIDCSZ * n);
-	for (i = 0; i < n; i++, ino++) {
-		ino->fidc_cache_owner = &fidcFreeList;
-		ATTR_SET(ino->fidc_state, FIDC_FREEING);
-		fidc_init(ino);
-		ino->fidc_gen = 0;
-		LOCK_INIT(&ino->fidc_lock);
-		ZINOCACHE_PUT(ino, &fidcFreeList);
-	}
- done:
-	freelock(&fidcCacheLock);
-	return (rc);
+	f->fcmh_cache_owner = &fidcFreeList;
+	ATTR_SET(f->fcmh_state, FCMHS_FREEING);
+	f->fcmh_gen = 0;
+	LOCK_INIT(&f->fcmh_lock);
+	ZINOCACHE_PUT(f, &fidcFreeList);
 }
 
 /*
- * zinocache_init - initialize the various inode caches.
+ * fidcache_init - initialize the various inode caches.
  */
 void
-zinocache_init(void)
+fidcache_init(void)
 {
-	int rc;
+	struct fidcache_memb_handle *f;
 
 	LOCK_INIT(&fidcCacheLock);
 	lc_reginit(&fidcFreeList, "inofree");
 	lc_reginit(&fidcDirtyList, "inodirty");
 	lc_reginit(&fidcCleanList, "inoclean");
 
-	fidcFreeList.lc_max = ZINOCACHE_ALLOC_MAX;
+	fidcFreeList.lc_max = FIDCACHE_ALLOC_MAX;
 
-	init_hash_table(&fidcHashTable, ZINOCACHE_HASHTABLE_SIZE, "inode");
+	init_hash_table(&fidcHashTable, FIDCACHE_HASHTABLE_SIZE, "inode");
 
-	rc = zinocache_alloc(ZINOCACHE_ALLOC_DEF);
-	psc_assert(rc == 0);
+	f = PSCALLOC(FIDCACHE_ALLOC_DEF * sizeof(*f));
+	for (i = 0; i < FIDCACHE_ALLOC_DEF; i++, f++)
+		fcmh_init(f);
 }
