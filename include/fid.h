@@ -1,14 +1,14 @@
 /* $Id$ */
 
-#ifndef _SLASH_FID_H
-#define _SLASH_FID_H
+#ifndef __FID_H__
+#define __FID_H__
 
 #include <string.h>
 
 #include "psc_types.h"
 
 typedef struct slash_fid {
-	u64 fid_inum;  /* first 16 bits are the svr / fs id */
+	u64 fid_inum;  /* first 16 bits are the svr/fs id */
 	u64 fid_gen;
 } slash_fid_t;
 
@@ -23,15 +23,16 @@ typedef struct slash_fid {
 #define FIDFMT			"%"_P_U64"x:%"_P_U64"x"
 #define FIDFMTARGS(fid)		(fid)->fid_inum, (fid)->fid_gen
 
-#define SLASH_FID_FSID(fid)	(u32)((fid)->fid_inum >> 48)
-#define SLASH_FID_INUM(fid)	(u64)((fid)->fid_inum & 0xffffffffffffULL)
+#define SLASH_FID_FSID(fid)	((u32)((fid)->fid_inum >> 48))
+#define SLASH_FID_INUM(fid)	((u64)((fid)->fid_inum & 0xffffffffffffULL))
 
-#define COPYFID(dest,src)	(memcpy((dest), (src), FIDSZ))
+#define COPYFID(dest,src)	memcpy((dest), (src), FIDSZ)
 
 void fid_makepath(const slash_fid_t *, char *);
 int  fid_link(const slash_fid_t *, const char *);
 int  fid_get(slash_fid_t *, const char *, int);
+
 int  translate_pathname(char *, int);
 int  untranslate_pathname(char *);
 
-#endif
+#endif /* __FID_H__ */
