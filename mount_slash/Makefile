@@ -5,7 +5,6 @@ include Makefile.path
 PROG=		mount_slash
 SRCS=		mount_slash.c
 SRCS+=		rpc.c
-SRCS+=		rpcio.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
 SRCS+=		${PFL_BASE}/psc_rpc/rsx.c

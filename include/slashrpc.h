@@ -33,7 +33,6 @@
 
 /* Slash RPC message types. */
 enum {
-	SRMT_ACCESS,
 	SRMT_CHMOD,
 	SRMT_CHOWN,
 	SRMT_CONNECT,
@@ -65,219 +64,206 @@ enum {
 	SNRT
 };
 
-struct slashrpc_connect_req {
+struct srm_connect_req {
 	u64	magic;
 	u32	version;
 	u32	uid;
 	u32	gid;
 };
 
-struct slashrpc_access_req {
-	char	path[PATH_MAX];
-	u32	mask;
-};
-
-struct slashrpc_chmod_req {
-	char	path[PATH_MAX];
+struct srm_chmod_req {
+	u32	fnlen;
 	u32	mode;
 };
 
-struct slashrpc_chown_req {
-	char	path[PATH_MAX];
+struct srm_chown_req {
+	u32	fnlen;
 	u32	uid;
 	u32	gid;
 };
 
-struct slashrpc_create_req {
-	char	path[PATH_MAX];
+struct srm_create_req {
+	u32	fnlen;
 	u32	mode;
 };
 
-struct slashrpc_create_rep {
-	s32	rc;
-	u32	_pad;
+struct srm_create_rep {
 	u64	cfd;
+	s32	rc;
 };
 
-struct slashrpc_destroy_req {
+struct srm_destroy_req {
 };
 
-struct slashrpc_getattr_req {
-	char path[PATH_MAX];
+struct srm_getattr_req {
+	u32	fnlen;
 };
 
-struct slashrpc_getattr_rep {
+struct srm_getattr_rep {
+	u64	size;
+	u64	atime;
+	u64	mtime;
+	u64	ctime;
 	s32	rc;
 	u32	mode;
 	u32	nlink;
 	u32	uid;
 	u32	gid;
-	u32	_pad;
-	u64	size;
-	u64	atime;
-	u64	mtime;
-	u64	ctime;
 };
 
-struct slashrpc_fgetattr_req {
+struct srm_fgetattr_req {
 	u64	cfd;
 };
 
-#define slashrpc_fgetattr_rep slashrpc_getattr_rep
+#define srm_fgetattr_rep srm_getattr_rep
 
-struct slashrpc_ftruncate_req {
+struct srm_ftruncate_req {
 	u64	cfd;
 	u64	size;
 };
 
-struct slashrpc_link_req {
-	char	from[PATH_MAX];
-	char	to[PATH_MAX];
+struct srm_link_req {
+	u32	fromlen;
+	u32	tolen;
 };
 
-struct slashrpc_mkdir_req {
-	char	path[PATH_MAX];
+struct srm_mkdir_req {
+	u32	fnlen;
 	u32	mode;
 };
 
-struct slashrpc_mknod_req {
-	char	path[PATH_MAX];
+struct srm_mknod_req {
+	u32	fnlen;
 	u32	mode;
 	u32	dev;
 };
 
-struct slashrpc_open_req {
-	char	path[PATH_MAX];
+struct srm_open_req {
+	u32	fnlen;
 	u32	flags;
 };
 
-struct slashrpc_open_rep {
-	s32	rc;
-	u32	_pad;
+struct srm_open_rep {
 	u64	cfd;
-};
-
-struct slashrpc_opendir_req {
-	char	path[PATH_MAX];
-};
-
-struct slashrpc_opendir_rep {
 	s32	rc;
-	u32	_pad;
-	u64	cfd;
 };
 
-struct slashrpc_read_req {
+struct srm_opendir_req {
+	u32	fnlen;
+};
+
+struct srm_opendir_rep {
+	u64	cfd;
+	s32	rc;
+};
+
+struct srm_read_req {
 	u64	cfd;
 	u32	size;
 	u32	offset;
 };
 
-struct slashrpc_read_rep {
+struct srm_read_rep {
 	s32	rc;
 	u32	size;
 	unsigned char buf[0];
 };
 
-struct slashrpc_readdir_req {
+struct srm_readdir_req {
 	u64	cfd;
 	u64	offset;
 };
 
-struct slashrpc_readdir_rep {
+struct srm_readdir_rep {
 	s32	rc;
 	u32	size;
 	/* accompanied by bulk data in pure getdents(2) format */
 };
 
-struct slashrpc_readlink_req {
-	char	path[PATH_MAX];
+struct srm_readlink_req {
+	u32	fnlen;
 	u32	size;
 };
 
-struct slashrpc_readlink_rep {
+struct srm_readlink_rep {
 	s32	rc;
-	u32	_pad;
-	char	buf[0];			/* determined by request size */
 };
 
-struct slashrpc_release_req {
+struct srm_release_req {
 	u64	cfd;
 };
 
-struct slashrpc_releasedir_req {
+struct srm_releasedir_req {
 	u64	cfd;
 };
 
-struct slashrpc_rename_req {
-	char	from[PATH_MAX];
-	char	to[PATH_MAX];
+struct srm_rename_req {
+	u32	fromlen;
+	u32	tolen;
 };
 
-struct slashrpc_rmdir_req {
-	char	path[PATH_MAX];
+struct srm_rmdir_req {
+	u32	fnlen;
 };
 
-struct slashrpc_statfs_req {
-	char	path[PATH_MAX];
+struct srm_statfs_req {
+	u32	fnlen;
 };
 
-struct slashrpc_statfs_rep {
+struct srm_statfs_rep {
+	u64	f_files;
+	u64	f_ffree;
 	s32	rc;
 	u32	f_bsize;
 	u32	f_blocks;
 	u32	f_bfree;
 	u32	f_bavail;
-	u32	_pad;
-	u64	f_files;
-	u64	f_ffree;
 };
 
-struct slashrpc_symlink_req {
-	char	from[PATH_MAX];
-	char	to[PATH_MAX];
+struct srm_symlink_req {
+	u32	fromlen;
+	u32	tolen;
 };
 
-struct slashrpc_truncate_req {
-	char	path[PATH_MAX];
+struct srm_truncate_req {
+	u32	fnlen;
 	u64	size;
 };
 
-struct slashrpc_unlink_req {
-	char	path[PATH_MAX];
+struct srm_unlink_req {
+	u32	fnlen;
 };
 
-struct slashrpc_utimes_req {
-	char	path[PATH_MAX];
+struct srm_utimes_req {
+	u32	fnlen;
 	struct timeval times[2];
 };
 
-struct slashrpc_write_req {
+struct srm_write_req {
 	u64		cfd;
 	u32		size;
 	u32		offset;
 	unsigned char	buf[0];
 };
 
-struct slashrpc_write_rep {
+struct srm_write_rep {
 	s32	rc;
 	u32	size;
 };
 
-struct slashrpc_generic_rep {
+struct srm_generic_rep {
 	s32	rc;
 };
 
-struct slashrpc_getfid_req {
+struct srm_getfid_req {
 	u64	nid;
 	u64	pid;
 	u64	cfd;
 };
 
-struct slashrpc_getfid_rep {
-	s32	rc;
-	u32	_pad;
+struct srm_getfid_rep {
 	u64	fid;
+	s32	rc;
 };
 
 void slashrpc_export_destroy(void *);
