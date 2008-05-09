@@ -3,7 +3,8 @@
 include Makefile.path
 
 PROG=		mount_slash
-SRCS=		mount_slash.c
+SRCS+=		control.c
+SRCS+=		mount_slash.c
 SRCS+=		rpc.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
