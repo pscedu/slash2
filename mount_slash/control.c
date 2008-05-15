@@ -5,27 +5,20 @@
  * parameters of a running instance of mount_slash.
  */
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <sys/uio.h>
-
-#include <err.h>
-#include <errno.h>
-#include <signal.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-#include "psc_ds/hash.h"
-#include "psc_ds/list.h"
-#include "psc_ds/listcache.h"
-#include "psc_util/threadtable.h"
 #include "psc_util/thread.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/ctl.h"
+#include "psc_util/ctlsvr.h"
 
 #include "control.h"
-#include "mount_slash.h"
 
+struct psc_ctlop msctlops[] = {
+	PSC_CTLDEFOPS
+};
+
+void *
+msctlthr_begin(__unusedx void *arg)
+{
+	psc_ctlthr_main(_PATH_MSCTLSOCK, msctlops, NENTRIES(msctlops));
+	return (NULL);
+}

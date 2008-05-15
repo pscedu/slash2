@@ -29,6 +29,8 @@ struct slashrpc_service {
 
 void rpc_svc_init(void);
 
+void *msctlthr_begin(void *);
+
 int slash_read(const char *, char *, size_t, off_t, struct fuse_file_info *);
 int slash_readdir(const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *);
 int slash_write(const char *, const char *, size_t, off_t, struct fuse_file_info *);

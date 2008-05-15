@@ -730,7 +730,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	lnet_thrspawnf = spawn_lnet_thr;
 	rpc_svc_init();
 
-	pscthr_init(&pscControlThread, MSTHRT_CTL, psc_ctlthr_main,
+	pscthr_init(&pscControlThread, MSTHRT_CTL, msctlthr_begin,
 	    PSCALLOC(sizeof(struct psc_ctlthr)), "msctlthr");
 	return (NULL);
 }
