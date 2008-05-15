@@ -5,7 +5,6 @@
 #include <sys/time.h>
 
 #include <dirent.h>
-#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -17,10 +16,11 @@
 #include <fuse.h>
 
 #include "pfl.h"
-#include "psc_types.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
+#include "psc_types.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
 
 #include "mount_slash.h"
@@ -702,15 +702,36 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	iov.iov_len = size;
 	rsx_bulkgetsource(rq, &desc, SRI_BULK_PORTAL, &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
-		rc = mp->rc ? mp->rc : mp->size;
+		rc = mp->rc ? mp->rc : (int)mp->size;
 	pscrpc_req_finished(rq);
 	return (rc);
+}
+
+void
+spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
+{
+	int rc;
+
+	rc = pthread_create(t, NULL, startf, arg);
+	if (rc)
+		psc_fatalx("pthread_create: %s", strerror(rc));
 }
 
 void *
 slash_init(__unusedx struct fuse_conn_info *conn)
 {
+	if (getenv("LNET_NETWORKS") == NULL)
+		psc_fatalx("please export LNET_NETWORKS");
+	if (getenv("SLASH_SERVER_NID") == NULL)
+		psc_fatalx("please export SLASH_SERVER_NID");
+
+#define THRTABSZ 13
+	pfl_init(THRTABSZ);
+	lnet_thrspawnf = spawn_lnet_thr;
 	rpc_svc_init();
+
+	pscthr_init(&pscControlThread, MSTHRT_CTL, psc_ctlthr_main,
+	    PSCALLOC(sizeof(struct psc_ctlthr)), "msctlthr");
 	return (NULL);
 }
 
@@ -745,24 +766,8 @@ struct fuse_operations slashops = {
 	.write		= slash_write
 };
 
-void
-spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
-{
-	int rc;
-
-	rc = pthread_create(t, NULL, startf, arg);
-	if (rc)
-		psc_fatalx("pthread_create: %s", strerror(rc));
-}
-
 int
 main(int argc, char *argv[])
 {
-	if (getenv("LNET_NETWORKS") == NULL)
-		errx(1, "please export LNET_NETWORKS");
-	if (getenv("SLASH_SERVER_NID") == NULL)
-		errx(1, "please export SLASH_SERVER_NID");
-	pfl_init(7);
-	lnet_thrspawnf = spawn_lnet_thr;
 	return (fuse_main(argc, argv, &slashops, NULL));
 }
