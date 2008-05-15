@@ -8,6 +8,7 @@ SRCS+=		mount_slash.c
 SRCS+=		rpc.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
+SRCS+=		${PFL_BASE}/psc_ds/stree.c
 SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
 SRCS+=		${PFL_BASE}/psc_util/ctlsvr.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
