@@ -9,6 +9,7 @@
 #include "psc_ds/vbitmap.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
+#include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
 #include "psc_util/subsys.h"
 #include "../mount_slash/control.h"
@@ -66,7 +67,7 @@ main(int argc, char *argv[])
 			psc_ctl_inhuman = 1;
 			break;
 		case 'i':
-			psc_ctlparse_iostat(optarg);
+			psc_ctlparse_iostats(optarg);
 			break;
 		case 'L':
 			psc_ctlparse_lc(optarg);
