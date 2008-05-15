@@ -96,40 +96,61 @@ calc_offset(off_t o)
 	return o;
 }
 
-void
-tag_blk(void *b, off_t o)
+int
+process_blk(void *b, off_t o, int rw)
 {
 	size_t i, nwords = slCacheBlkSz / sizeof(off_t);
 	off_t  bnum      = o / slCacheBlkSz;
 	off_t *p = (off_t *)b;
 
 	for (i=0; i < nwords; i++) {
-		p[i] = bnum;
-		//fprintf(stderr, "p[%zu]=%p bnum=%llu\n", i, &p[i], bnum);
+#if 0
+		if (!rw)
+			fprintf(stderr, "R p[%zu]=%p bnum=%llu cbs=%zu o=%zu\n", 
+				i, &p[i], bnum, slCacheBlkSz, o);
+
+		else 
+			fprintf(stderr, "W p[%zu]=%p bnum=%llu\n", 
+				i, &p[i], bnum);
+#endif
+		if (rw)
+			p[i] = bnum;
+		else {
+			if (p[i] != bnum) {
+				fprintf(stderr, "Err bnum=%llu but p[%zu]\n", 
+					bnum, p[i]);
+				return 1;
+			}
+		}
 	}
+	return 0;
 }
 
-void
-tag_blks(struct offtree_req *req)
+
+int
+process_blks(struct offtree_req *req, int rw)
 {
 	struct dynarray    *a=req->oftrq_darray;
 	struct offtree_iov *v;
 	unsigned int i, j, n;
+	off_t   o=req->oftrq_off;
 	size_t  niovs=dynarray_len(a);
 	ssize_t nbufs=0;
+	int     rc=0;
 		
 	DEBUG_OFFTREQ(PLL_WARN, req, "");
 
 	for (i=0; i < niovs; i++, n=0) { 
 		v = dynarray_getpos(a, i);
-		DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d", i);
+		DEBUG_OFFTIOV(PLL_WARN, v, "iov%d rq_off=%zu OFT_IOV2E_OFF_(%zu)", 
+			      i, req->oftrq_off,  OFT_IOV2E_OFF_(v));
 		/* The dynarray may contain iov's that we don't need.
 		 */
-		if (req->oftrq_off > OFT_IOV2E_OFF_(v))
+		if (o > OFT_IOV2E_OFF_(v))
 			continue;
 
 		for (j=0; j < v->oftiov_nblks; j++) {
-			if (req->oftrq_off > (v->oftiov_off + (j*slCacheBlkSz)))
+			if (o > (v->oftiov_off + (j*slCacheBlkSz)))
 				continue;
 			else {
 				if (OFT_REQ_ENDOFF(req) < (v->oftiov_off + (j*slCacheBlkSz)))
@@ -139,11 +160,11 @@ tag_blks(struct offtree_req *req)
 						"v->oftiov_base=%p v->oftiov_nblks=%zu\n", 
 						v, (void *)((v->oftiov_base + (j*slCacheBlkSz))), 
 						(off_t)(v->oftiov_off + (j*slCacheBlkSz)),
-						(off_t)(req->oftrq_off + (nbufs*slCacheBlkSz)),
+						(off_t)(o + (nbufs*slCacheBlkSz)),
 						v->oftiov_base, v->oftiov_nblks);
 					
-					tag_blk((void *)((v->oftiov_base + (j*slCacheBlkSz))), 
-						(off_t)(req->oftrq_off + (j*slCacheBlkSz)));
+					rc += process_blk((void *)((v->oftiov_base + (j*slCacheBlkSz))), 
+							  (off_t)(o + (nbufs*slCacheBlkSz)), rw);
 					
 					nbufs++;
 				}
@@ -156,14 +177,16 @@ tag_blks(struct offtree_req *req)
 			nbufs, req->oftrq_nblks);
 		abort();
 	}
+	return rc;
 }
 
 int main(int argc, char **argv)
 {
-	fcache_mhandle_t     fcm;
-	struct offtree_root *oftr;
-	struct offtree_req   req;
-	unsigned int         i;
+	fcache_mhandle_t fcm;
+	struct offtree_root  *oftr;
+	struct offtree_req    req;
+	unsigned int          i;
+	int      rc=0;
 
 	memset(&fcm, 0, sizeof(fcm));
 	memset(&req, 0, sizeof(req));
@@ -191,9 +214,26 @@ int main(int argc, char **argv)
 		dynarray_init(req.oftrq_darray);
 		memset(req.oftrq_darray, 0, sizeof(struct dynarray));
 		offtree_region_preprw(&req);
-		tag_blks(&req);
+		rc = process_blks(&req, 1);
+		if (rc)
+			abort();
 		req.oftrq_off    = calc_offset(req.oftrq_off);
 	}
+
+	for (req.oftrq_off=soffa, i=0; i < iterations; i++) {
+		fprintf(stderr, "Read Offset "LPX64"\n", req.oftrq_off);
+		req.oftrq_root   = oftr;
+                req.oftrq_memb   = &oftr->oftr_memb;
+                req.oftrq_nblks  = nblksPerReq;
+                req.oftrq_width  = req.oftrq_depth = 0;
+                dynarray_init(req.oftrq_darray);
+                memset(req.oftrq_darray, 0, sizeof(struct dynarray));
+                offtree_region_preprw(&req);
+                rc = process_blks(&req, 0);
+		if (rc)
+			abort();
+                req.oftrq_off    = calc_offset(req.oftrq_off);
+        }
 
 	return (0);
 };
