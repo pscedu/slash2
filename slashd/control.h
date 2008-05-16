@@ -53,6 +53,12 @@ struct slctlmsg_stats {
 	int			sst_nrecv;
 };
 
+#define pcst_nwrite	pcst_u32_1
+
+#define pcst_nopen	pcst_u32_1
+#define pcst_nclose	pcst_u32_2
+#define pcst_nstat	pcst_u32_3
+
 struct slctlmsg_hashtable {
 	char			sht_name[HTNAME_MAX];
 	int			sht_totalbucks;
