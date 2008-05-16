@@ -30,6 +30,23 @@ slrpciothr_prdat(const struct psc_ctlmsg_stats *pcst)
 	    pcst->pcst_nwrite);
 }
 
+struct psc_ctlshow_ent psc_ctlshow_tab[] = {
+	{ "loglevels",		PCMT_GETLOGLEVEL },
+	{ "stats",		PCMT_GETSTATS }
+};
+int psc_ctlshow_ntabents = NENTRIES(psc_ctlshow_tab);
+
+struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
+	PSC_CTLMSG_PRFMT_DEFS
+};
+int psc_ctlmsg_nprfmts = NENTRIES(psc_ctlmsg_prfmts);
+
+struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
+	{ psc_ctlthr_prhdr,	psc_ctlthr_prdat },
+	{ slrpciothr_prhdr,	slrpciothr_prdat },
+};
+int psc_ctl_nthrstatfmts = NENTRIES(psc_ctl_thrstatfmts);
+
 const char *progname;
 
 __dead void
