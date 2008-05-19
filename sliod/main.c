@@ -7,18 +7,16 @@
 #include "pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/thread.h"
+#include "psc_util/ctlsvr.h"
 
 #include "sliod.h"
 #include "slconfig.h"
-#include "control.h"
 #include "rpc.h"
 #include "pathnames.h"
 
 #define SLIO_THRTBL_SIZE 19
 
 extern void *nal_thread(void *);
-
-struct psc_thread slioControlThread;
 
 const char *progname;
 
@@ -61,16 +59,6 @@ main(int argc, char *argv[])
 	int c;
 
 	progname = argv[0];
-	pfl_init(SLIO_THRTBL_SIZE);
-	thr = PSCALLOC(sizeof(*thr));
-	pscthr_init(&slioControlThread, SLIOTHRT_CTL, NULL, thr, "slioctlthr");
-
-	if (getenv("LNET_NETWORKS") == NULL)
-		psc_fatalx("please export LNET_NETWORKS");
-	if (getenv("TCPLND_SERVER") == NULL)
-		psc_fatalx("please export TCPLND_SERVER");
-	lnet_thrspawnf = spawn_lnet_thr;
-
 	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLIOCTLSOCK;
 	while ((c = getopt(argc, argv, "f:S:")) != -1)
@@ -84,6 +72,19 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
+
+	if (getenv("LNET_NETWORKS") == NULL)
+		psc_fatalx("please export LNET_NETWORKS");
+	if (getenv("TCPLND_SERVER") == NULL)
+		psc_fatalx("please export TCPLND_SERVER");
+
+	pfl_init(SLIO_THRTBL_SIZE);
+	thr = PSCALLOC(sizeof(*thr));
+	pscthr_init(&pscControlThread, SLIOTHRT_CTL, NULL, thr,
+	    "slioctlthr");
+
+	lnet_thrspawnf = spawn_lnet_thr;
+
 	slashGetConfig(cfn);
 	libsl_init(PSC_SERVER);
 	rpc_svc_init();

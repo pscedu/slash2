@@ -5,7 +5,6 @@
 
 #include "psc_rpc/service.h"
 #include "psc_util/thread.h"
-#include "psc_util/waitq.h"
 
 #define SLIOTHRT_CTL	0	/* control */
 #define SLIOTHRT_LND	1	/* lustre networking helper */
@@ -28,7 +27,6 @@ struct slio_rpcthr {
 
 void slio_init(void);
 void sliotimerthr_spawn(void);
-
-extern struct psc_thread	slioControlThread;
+void slioctlthr_main(const char *);
 
 #endif /* __SLIOD_H__ */

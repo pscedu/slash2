@@ -31,8 +31,8 @@
 int
 cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 {
-	struct slashrpc_getfid_req *mq;
-	struct slashrpc_getfid_rep *mp;
+	struct srm_getfid_req *mq;
+	struct srm_getfid_rep *mp;
 	struct pscrpc_request *rq;
 	struct cfdent *c;
 	int rc;
@@ -58,8 +58,8 @@ cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 int
 slio_connect(struct pscrpc_request *rq)
 {
-	struct slashrpc_connect_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct srm_connect_req *mq;
+	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRI_MAGIC || mq->version != SRI_VERSION)
@@ -71,8 +71,8 @@ int
 slio_read(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
-	struct slashrpc_read_req *mq;
-	struct slashrpc_read_rep *mp;
+	struct srm_read_req *mq;
+	struct srm_read_rep *mp;
 	struct iovec iov;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
@@ -120,9 +120,9 @@ slio_read(struct pscrpc_request *rq)
 int
 slio_write(struct pscrpc_request *rq)
 {
-	struct slashrpc_write_req *mq;
-	struct slashrpc_write_rep *mp;
 	struct pscrpc_bulk_desc *desc;
+	struct srm_write_req *mq;
+	struct srm_write_rep *mp;
 	struct iovec iov;
 	char fn[PATH_MAX];
 	slash_fid_t fid;
@@ -210,7 +210,8 @@ slio_init(void)
 	svh->svh_nthreads   = SRI_NTHREADS;
 	svh->svh_handler    = slio_svc_handler;
 
-	strncpy(svh->svh_svc_name, SRI_SVCNAME, PSCRPC_SVCNAME_MAX);
+	snprintf(svh->svh_svc_name, sizeof(svh->svh_svc_name),
+	    "%s", SRI_SVCNAME);
 
 	pscrpc_thread_spawn(svh, struct slio_rpcthr);
 }

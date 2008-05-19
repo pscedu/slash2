@@ -15,6 +15,8 @@ SRCS+=		${SLASH_BASE}/slashd/yconf.y
 
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
+SRCS+=		${PFL_BASE}/psc_ds/stree.c
+SRCS+=		${PFL_BASE}/psc_util/ctlsvr.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/iostats.c
 SRCS+=		${PFL_BASE}/psc_util/journal.c

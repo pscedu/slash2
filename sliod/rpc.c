@@ -33,8 +33,8 @@ int
 rpc_be_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 {
 	lnet_process_id_t server_id = { server, 0 };
-	struct slashrpc_connect_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct srm_connect_req *mq;
+	struct srm_generic_rep *mp;
 	struct pscrpc_request *rq;
 	struct pscrpc_import *imp;
 	lnet_process_id_t id;

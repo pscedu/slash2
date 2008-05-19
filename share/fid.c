@@ -45,7 +45,7 @@ fid_link(const slash_fid_t *fid, const char *fn)
 	fid_makepath(fid, fidpath);
 	if ((p = strrchr(fidpath, '/')) != NULL) {
 		*p = '\0';
-		if (mkdirs(fidpath) == -1) /* XXX must be done as root */
+		if (mkdirs(fidpath, 0711) == -1) /* XXX must be done as root */
 			return (-1);
 		*p = '/';
 	}
