@@ -5,7 +5,6 @@
  * parameters of a running instance of mount_slash.
  */
 
-#include "psc_util/thread.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
@@ -19,6 +18,11 @@ struct psc_ctlop msctlops[] = {
 void *
 msctlthr_begin(__unusedx void *arg)
 {
-	psc_ctlthr_main(_PATH_MSCTLSOCK, msctlops, NENTRIES(msctlops));
+	const char *fn;
+
+	if ((fn = getenv("CTLSOCK")) == NULL)
+		fn = _PATH_MSCTLSOCK
+
+	psc_ctlthr_main(fn, msctlops, NENTRIES(msctlops));
 	return (NULL);
 }
