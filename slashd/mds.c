@@ -143,8 +143,9 @@ int
 slmds_create(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
-	struct srm_generic_rep *mp;
+	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
+	struct slash_fid fid;
 	struct iovec iov;
 	char fn[PATH_MAX];
 	int fd;
@@ -165,8 +166,13 @@ slmds_create(struct pscrpc_request *rq)
 		mp->rc = -errno;
 	else if ((fd = creat(fn, mq->mode)) == -1)
 		mp->rc = -errno;
-	else
+	else {
 		close(fd);
+		if (fid_get(&fid, fn, 1) == -1)
+			mp->rc = -errno;
+		else
+			cfdnew(&mp->cfd, rq->rq_export, &fid);
+	}
 	return (0);
 }
 

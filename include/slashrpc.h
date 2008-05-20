@@ -80,6 +80,12 @@ struct srm_create_req {
 	struct slash_creds creds;
 	u32	fnlen;
 	u32	mode;
+	u32	flags;
+};
+
+struct srm_create_rep {
+	u64	cfd;
+	s32	rc;
 };
 
 struct srm_chmod_req {

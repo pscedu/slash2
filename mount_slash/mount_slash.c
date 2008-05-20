@@ -97,7 +97,7 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 		return (rc);
 	mq->fnlen = strlen(path);
 	mq->mode = mode;
-//	mq->flags = fi->flags;
+	mq->flags = fi->flags;
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
 	rsx_bulkgetsource(rq, &desc, SRM_BULK_PORTAL, &iov, 1);
@@ -468,9 +468,9 @@ slash_readlink(const char *path, char *buf, size_t size)
 int
 slash_release(__unusedx const char *path, struct fuse_file_info *fi)
 {
-	struct pscrpc_request *rq;
 	struct srm_generic_rep *mp;
 	struct srm_release_req *mq;
+	struct pscrpc_request *rq;
 	int rc;
 
 	if ((rc = RSX_NEWREQ(mds_import, SRM_VERSION,
