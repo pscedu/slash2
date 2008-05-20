@@ -1,10 +1,12 @@
 /* $Id$ */
 
-#include <sys/param.h>
+/*
+ * Slash RPC subsystem definitions including messages definitions.
+ * Note: many of the messages will take on different sizes between
+ * 32-bit and 64-bit machine architectures.
+ */
 
-#include "psc_rpc/rpc.h"
 #include "psc_types.h"
-#include "psc_util/cdefs.h"
 
 #define SLASH_SVR_PID		54321
 
@@ -64,38 +66,40 @@ enum {
 	SNRT
 };
 
-struct srm_connect_req {
-	u64	magic;
-	u32	version;
+struct slash_creds {
 	u32	uid;
 	u32	gid;
 };
 
+struct srm_connect_req {
+	u64	magic;
+	u32	version;
+};
+
+struct srm_create_req {
+	struct slash_creds creds;
+	u32	fnlen;
+	u32	mode;
+};
+
 struct srm_chmod_req {
+	struct slash_creds creds;
 	u32	fnlen;
 	u32	mode;
 };
 
 struct srm_chown_req {
+	struct slash_creds creds;
 	u32	fnlen;
 	u32	uid;
 	u32	gid;
-};
-
-struct srm_create_req {
-	u32	fnlen;
-	u32	mode;
-};
-
-struct srm_create_rep {
-	u64	cfd;
-	s32	rc;
 };
 
 struct srm_destroy_req {
 };
 
 struct srm_getattr_req {
+	struct slash_creds creds;
 	u32	fnlen;
 };
 
@@ -123,22 +127,26 @@ struct srm_ftruncate_req {
 };
 
 struct srm_link_req {
+	struct slash_creds creds;
 	u32	fromlen;
 	u32	tolen;
 };
 
 struct srm_mkdir_req {
+	struct slash_creds creds;
 	u32	fnlen;
 	u32	mode;
 };
 
 struct srm_mknod_req {
+	struct slash_creds creds;
 	u32	fnlen;
 	u32	mode;
 	u32	dev;
 };
 
 struct srm_open_req {
+	struct slash_creds creds;
 	u32	fnlen;
 	u32	flags;
 };
@@ -149,6 +157,7 @@ struct srm_open_rep {
 };
 
 struct srm_opendir_req {
+	struct slash_creds creds;
 	u32	fnlen;
 };
 
@@ -181,6 +190,7 @@ struct srm_readdir_rep {
 };
 
 struct srm_readlink_req {
+	struct slash_creds creds;
 	u32	fnlen;
 	u32	size;
 };
@@ -198,15 +208,18 @@ struct srm_releasedir_req {
 };
 
 struct srm_rename_req {
+	struct slash_creds creds;
 	u32	fromlen;
 	u32	tolen;
 };
 
 struct srm_rmdir_req {
+	struct slash_creds creds;
 	u32	fnlen;
 };
 
 struct srm_statfs_req {
+	struct slash_creds creds;
 	u32	fnlen;
 };
 
@@ -221,20 +234,24 @@ struct srm_statfs_rep {
 };
 
 struct srm_symlink_req {
+	struct slash_creds creds;
 	u32	fromlen;
 	u32	tolen;
 };
 
 struct srm_truncate_req {
+	struct slash_creds creds;
 	u32	fnlen;
 	u64	size;
 };
 
 struct srm_unlink_req {
+	struct slash_creds creds;
 	u32	fnlen;
 };
 
 struct srm_utimes_req {
+	struct slash_creds creds;
 	u32	fnlen;
 	struct timeval times[2];
 };
