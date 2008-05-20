@@ -32,8 +32,8 @@ psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 int
 slmds_connect(struct pscrpc_request *rq)
 {
-	struct slashrpc_connect_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct srm_connect_req *mq;
+	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRM_MAGIC || mq->version != SRM_VERSION)
@@ -42,29 +42,29 @@ slmds_connect(struct pscrpc_request *rq)
 }
 
 int
-slmds_access(struct pscrpc_request *rq)
-{
-	struct slashrpc_generic_rep *mp;
-	struct slashrpc_access_req *mq;
-
-	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1)
-		mp->rc = -errno;
-	else if (access(mq->path, mq->mask) == -1)
-		mp->rc = -errno;
-	return (0);
-}
-
-int
 slmds_chmod(struct pscrpc_request *rq)
 {
-	struct slashrpc_generic_rep *mp;
-	struct slashrpc_chmod_req *mq;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct srm_chmod_req *mq;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (chmod(mq->path, mq->mode) == -1)
+	else if (chmod(fn, mq->mode) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -73,10 +73,10 @@ slmds_chmod(struct pscrpc_request *rq)
 int
 slmds_fchmod(struct pscrpc_request *rq)
 {
-	struct slashrpc_generic_rep *mp;
-	struct slashrpc_fchmod_req *mq;
+	struct srm_generic_rep *mp;
+	struct srm_fchmod_req *mq;
 	char fn[PATH_MAX];
-	slash_fid_t fid;
+	struct slash_fid fid;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
@@ -93,30 +93,39 @@ slmds_fchmod(struct pscrpc_request *rq)
 int
 slmds_chown(struct pscrpc_request *rq)
 {
-	struct slashrpc_generic_rep *mp;
-	struct slashrpc_chown_req *mq;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct srm_chown_req *mq;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (chown(mq->path, mq->uid, mq->gid) == -1)
+	else if (chown(fn, mq->uid, mq->gid) == -1)
 		mp->rc = -errno;
 	return (0);
 }
 
-/**
- *
- * Notes:  fchown of a directory cannot be supported in this version since
- *          there is no immutable namespace for directories.
- */
 #if 0
 int
 slmds_fchown(struct pscrpc_request *rq)
 {
-	struct slashrpc_generic_rep *mp;
-	struct slashrpc_fchown_req *mq;
+	struct srm_generic_rep *mp;
+	struct srm_fchown_req *mq;
+	struct slash_fid fid;
 	char fn[PATH_MAX];
-	slash_fid_t fid;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
@@ -133,14 +142,28 @@ slmds_fchown(struct pscrpc_request *rq)
 int
 slmds_create(struct pscrpc_request *rq)
 {
-	struct slashrpc_generic_rep *mp;
-	struct slashrpc_create_req *mq;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct srm_create_req *mq;
+	struct iovec iov;
+	char fn[PATH_MAX];
 	int fd;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 0) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 0) == -1)
 		mp->rc = -errno;
-	else if ((fd = creat(mq->path, mq->mode)) == -1)
+	else if ((fd = creat(fn, mq->mode)) == -1)
 		mp->rc = -errno;
 	else
 		close(fd);
@@ -150,16 +173,30 @@ slmds_create(struct pscrpc_request *rq)
 int
 slmds_getattr(struct pscrpc_request *rq)
 {
-	struct slashrpc_getattr_req *mq;
-	struct slashrpc_getattr_rep *mp;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_getattr_req *mq;
+	struct srm_getattr_rep *mp;
+	struct iovec iov;
 	struct stat stb;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1) {
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1) {
 		mp->rc = -errno;
 		return (0);
 	}
-	if (stat(mq->path, &stb) == -1) {
+	if (stat(fn, &stb) == -1) {
 		mp->rc = -errno;
 		return (0);
 	}
@@ -177,11 +214,11 @@ slmds_getattr(struct pscrpc_request *rq)
 int
 slmds_fgetattr(struct pscrpc_request *rq)
 {
-	struct slashrpc_fgetattr_req *mq;
-	struct slashrpc_fgetattr_rep *mp;
-	char fn[PATH_MAX];
-	slash_fid_t fid;
+	struct srm_fgetattr_req *mq;
+	struct srm_fgetattr_rep *mp;
+	struct slash_fid fid;
 	struct stat stb;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd)) {
@@ -207,10 +244,10 @@ slmds_fgetattr(struct pscrpc_request *rq)
 int
 slmds_ftruncate(struct pscrpc_request *rq)
 {
-	struct slashrpc_ftruncate_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct srm_ftruncate_req *mq;
+	struct srm_generic_rep *mp;
+	struct slash_fid fid;
 	char fn[PATH_MAX];
-	slash_fid_t fid;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (cfd2fid(&fid, rq->rq_export, mq->cfd))
@@ -226,15 +263,33 @@ slmds_ftruncate(struct pscrpc_request *rq)
 int
 slmds_link(struct pscrpc_request *rq)
 {
-	struct slashrpc_generic_rep *mp;
-	struct slashrpc_link_req *mq;
+	char from[PATH_MAX], to[PATH_MAX];
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct srm_link_req *mq;
+	struct iovec iov[2];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->from, 1) == -1)
+	if (mq->fromlen == 0 || mq->fromlen >= PATH_MAX ||
+	    mq->tolen == 0 || mq->tolen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov[0].iov_base = from;
+	iov[0].iov_len = mq->fromlen;
+	iov[1].iov_base = to;
+	iov[1].iov_len = mq->tolen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, iov, 2)) != 0)
+		return (0);
+	from[mq->fromlen] = '\0';
+	to[mq->tolen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(from, 1) == -1)
 		mp->rc = -errno;
-	else if (translate_pathname(mq->to, 0) == -1)
+	else if (translate_pathname(to, 0) == -1)
 		mp->rc = -errno;
-	else if (link(mq->from, mq->to) == -1)
+	else if (link(from, to) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -242,13 +297,27 @@ slmds_link(struct pscrpc_request *rq)
 int
 slmds_mkdir(struct pscrpc_request *rq)
 {
-	struct slashrpc_generic_rep *mp;
-	struct slashrpc_mkdir_req *mq;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct srm_mkdir_req *mq;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 0) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 0) == -1)
 		mp->rc = -errno;
-	else if (mkdir(mq->path, mq->mode) == -1)
+	else if (mkdir(fn, mq->mode) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -256,13 +325,27 @@ slmds_mkdir(struct pscrpc_request *rq)
 int
 slmds_mknod(struct pscrpc_request *rq)
 {
-	struct slashrpc_generic_rep *mp;
-	struct slashrpc_mknod_req *mq;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct srm_mknod_req *mq;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 0) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 0) == -1)
 		mp->rc = -errno;
-	else if (mknod(mq->path, mq->mode, mq->dev) == -1)
+	else if (mknod(fn, mq->mode, mq->dev) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -270,14 +353,28 @@ slmds_mknod(struct pscrpc_request *rq)
 int
 slmds_open(struct pscrpc_request *rq)
 {
-	struct slashrpc_open_req *mq;
-	struct slashrpc_open_rep *mp;
-	slash_fid_t fid;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_open_req *mq;
+	struct srm_open_rep *mp;
+	struct slash_fid fid;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (fid_get(&fid, mq->path, 1) == -1)
+	else if (fid_get(&fid, fn, 1) == -1)
 		mp->rc = -errno;
 	else
 		cfdnew(&mp->cfd, rq->rq_export, &fid);
@@ -288,14 +385,28 @@ slmds_open(struct pscrpc_request *rq)
 int
 slmds_opendir(struct pscrpc_request *rq)
 {
-	struct slashrpc_opendir_req *mq;
-	struct slashrpc_opendir_rep *mp;
-	slash_fid_t fid;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_opendir_req *mq;
+	struct srm_opendir_rep *mp;
+	struct slash_fid fid;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (fid_get(&fid, mq->path, 1) == -1)
+	else if (fid_get(&fid, fn, 1) == -1)
 		mp->rc = -errno;
 	else
 		cfdnew(&mp->cfd, rq->rq_export, &fid);
@@ -309,12 +420,12 @@ int
 slmds_readdir(struct pscrpc_request *rq)
 {
 	struct dirent ents[READDIR_BUFSZ];
-	struct slashrpc_readdir_req *mq;
-	struct slashrpc_readdir_rep *mp;
 	struct pscrpc_bulk_desc *desc;
+	struct srm_readdir_req *mq;
+	struct srm_readdir_rep *mp;
+	struct slash_fid fid;
 	struct dircache *dc;
 	struct iovec iov;
-	slash_fid_t fid;
 	int rc;
 
 	RSX_ALLOCREP(rq, rq, mp);
@@ -350,23 +461,34 @@ slmds_readdir(struct pscrpc_request *rq)
 int
 slmds_readlink(struct pscrpc_request *rq)
 {
-	struct slashrpc_readlink_req *mq;
-	struct slashrpc_readlink_rep *mp;
+	char fn[PATH_MAX], rfn[PATH_MAX];
 	struct pscrpc_bulk_desc *desc;
+	struct srm_readlink_req *mq;
+	struct srm_readlink_rep *mp;
 	struct iovec iov;
-	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->size >= PATH_MAX || mq->size == 0)
 		return (-EINVAL);
-	if (translate_pathname(mq->path, 1) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (readlink(mq->path, fn, mq->size) == -1)
+	else if (readlink(fn, rfn, mq->size) == -1)
 		mp->rc = -errno;
-	else if (untranslate_pathname(fn) == -1)
+	else if (untranslate_pathname(rfn) == -1)
 		mp->rc = -errno;
 	else {
-		iov.iov_base = fn;
+		iov.iov_base = rfn;
 		iov.iov_len = mq->size;
 		mp->rc = rsx_bulkgetsource(rq, &desc, SRM_BULK_PORTAL,
 		    &iov, 1);
@@ -379,8 +501,8 @@ slmds_readlink(struct pscrpc_request *rq)
 int
 slmds_release(struct pscrpc_request *rq)
 {
-	struct slashrpc_release_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct srm_release_req *mq;
+	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (cfdfree(rq->rq_export, mq->cfd) == -1)
@@ -391,8 +513,8 @@ slmds_release(struct pscrpc_request *rq)
 int
 slmds_releasedir(struct pscrpc_request *rq)
 {
-	struct slashrpc_releasedir_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct srm_releasedir_req *mq;
+	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (cfdfree(rq->rq_export, mq->cfd) == -1)
@@ -403,15 +525,33 @@ slmds_releasedir(struct pscrpc_request *rq)
 int
 slmds_rename(struct pscrpc_request *rq)
 {
-	struct slashrpc_rename_req *mq;
-	struct slashrpc_generic_rep *mp;
+	char from[PATH_MAX], to[PATH_MAX];
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct srm_rename_req *mq;
+	struct iovec iov[2];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->from, 1) == -1)
+	if (mq->fromlen == 0 || mq->fromlen >= PATH_MAX ||
+	    mq->tolen == 0 || mq->tolen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov[0].iov_base = from;
+	iov[0].iov_len = mq->fromlen;
+	iov[1].iov_base = to;
+	iov[1].iov_len = mq->tolen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, iov, 2)) != 0)
+		return (0);
+	from[mq->fromlen] = '\0';
+	to[mq->tolen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(from, 1) == -1)
 		mp->rc = -errno;
-	else if (translate_pathname(mq->to, 0) == -1)
+	else if (translate_pathname(to, 0) == -1)
 		mp->rc = -errno;
-	else if (rename(mq->from, mq->to) == -1)
+	else if (rename(from, to) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -419,13 +559,27 @@ slmds_rename(struct pscrpc_request *rq)
 int
 slmds_rmdir(struct pscrpc_request *rq)
 {
-	struct slashrpc_generic_rep *mp;
-	struct slashrpc_rmdir_req *mq;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct srm_rmdir_req *mq;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (rmdir(mq->path) == -1)
+	else if (rmdir(fn) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -433,14 +587,28 @@ slmds_rmdir(struct pscrpc_request *rq)
 int
 slmds_statfs(struct pscrpc_request *rq)
 {
-	struct slashrpc_statfs_req *mq;
-	struct slashrpc_statfs_rep *mp;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_statfs_req *mq;
+	struct srm_statfs_rep *mp;
 	struct statfs sfb;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (statfs(mq->path, &sfb) == -1)
+	else if (statfs(fn, &sfb) == -1)
 		mp->rc = -errno;
 	else {
 		mp->f_bsize	= sfb.f_bsize;
@@ -456,15 +624,33 @@ slmds_statfs(struct pscrpc_request *rq)
 int
 slmds_symlink(struct pscrpc_request *rq)
 {
-	struct slashrpc_symlink_req *mq;
-	struct slashrpc_generic_rep *mp;
+	char from[PATH_MAX], to[PATH_MAX];
+	struct pscrpc_bulk_desc *desc;
+	struct srm_symlink_req *mq;
+	struct srm_generic_rep *mp;
+	struct iovec iov[2];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->from, 1) == -1)
+	if (mq->fromlen == 0 || mq->fromlen >= PATH_MAX ||
+	    mq->tolen == 0 || mq->tolen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov[0].iov_base = from;
+	iov[0].iov_len = mq->fromlen;
+	iov[1].iov_base = to;
+	iov[1].iov_len = mq->tolen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, iov, 2)) != 0)
+		return (0);
+	from[mq->fromlen] = '\0';
+	to[mq->tolen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(from, 1) == -1)
 		mp->rc = -errno;
-	else if (translate_pathname(mq->to, 0) == -1)
+	else if (translate_pathname(to, 0) == -1)
 		mp->rc = -errno;
-	else if (symlink(mq->from, mq->to) == -1)
+	else if (symlink(from, to) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -472,13 +658,27 @@ slmds_symlink(struct pscrpc_request *rq)
 int
 slmds_truncate(struct pscrpc_request *rq)
 {
-	struct slashrpc_truncate_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_truncate_req *mq;
+	struct srm_generic_rep *mp;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (truncate(mq->path, mq->size) == -1)
+	else if (truncate(fn, mq->size) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -486,13 +686,27 @@ slmds_truncate(struct pscrpc_request *rq)
 int
 slmds_unlink(struct pscrpc_request *rq)
 {
-	struct slashrpc_unlink_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct srm_unlink_req *mq;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (unlink(mq->path) == -1)
+	else if (unlink(fn) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -500,13 +714,27 @@ slmds_unlink(struct pscrpc_request *rq)
 int
 slmds_utimes(struct pscrpc_request *rq)
 {
-	struct slashrpc_utimes_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct srm_utimes_req *mq;
+	struct iovec iov;
+	char fn[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (translate_pathname(mq->path, 1) == -1)
+	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
+		mp->rc = -EINVAL;
+		return (0);
+	}
+	iov.iov_base = fn;
+	iov.iov_len = mq->fnlen;
+	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
+	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+		return (0);
+	fn[mq->fnlen] = '\0';
+	pscrpc_free_bulk(desc);
+	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (utimes(mq->path, mq->times) == -1)
+	else if (utimes(fn, mq->times) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -520,8 +748,6 @@ setcred(uid_t uid, gid_t gid, uid_t *myuid, gid_t *mygid)
 	/* Set fs credentials */
 	spinlock(&fsidlock);
 	*myuid = getuid();
-	*mygid = getgid();
-
 	if ((tuid = setfsuid(uid)) != *myuid)
 		psc_fatal("invalid fsuid %u", tuid);
 	if (setfsuid(uid) != (int)uid) {
@@ -529,6 +755,7 @@ setcred(uid_t uid, gid_t gid, uid_t *myuid, gid_t *mygid)
 		return (-1);
 	}
 
+	*mygid = getgid();
 	if ((tgid = setfsgid(gid)) != *mygid)
 		psc_fatal("invalid fsgid %u", tgid);
 	if (setfsgid(gid) != (int)gid) {
@@ -551,123 +778,117 @@ revokecred(uid_t uid, gid_t gid)
 }
 
 int
-slmds_svc_handler(struct pscrpc_request *req)
+slmds_svc_handler(struct pscrpc_request *rq)
 {
 	struct slashrpc_export *sexp;
 	uid_t myuid;
 	gid_t mygid;
 	int rc = 0;
 
-	ENTRY;
-	DEBUG_REQ(PLL_TRACE, req, "new req");
-
-	switch (req->rq_reqmsg->opc) {
+	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
-		rc = slmds_connect(req);
-		target_send_reply_msg(req, rc, 0);
-		RETURN(rc);
+		rc = slmds_connect(rq);
+		target_send_reply_msg(rq, rc, 0);
+		return (rc);
 	}
 
-	sexp = slashrpc_export_get(req->rq_export);
+	sexp = slashrpc_export_get(rq->rq_export);
 	if (setcred(sexp->uid, sexp->gid, &myuid, &mygid) == -1)
 		goto done;
 
-	switch (req->rq_reqmsg->opc) {
-	case SRMT_ACCESS:
-		rc = slmds_access(req);
-		break;
+	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CHMOD:
-		rc = slmds_chmod(req);
+		rc = slmds_chmod(rq);
 		break;
 	case SRMT_CHOWN:
-		rc = slmds_chown(req);
+		rc = slmds_chown(rq);
 		break;
 	case SRMT_CREATE:
-		rc = slmds_create(req);
+		rc = slmds_create(rq);
 		break;
 	case SRMT_DESTROY:	/* client has unmounted */
 		break;
 	case SRMT_GETATTR:
-		rc = slmds_getattr(req);
+		rc = slmds_getattr(rq);
 		break;
 	case SRMT_FGETATTR:
-		rc = slmds_fgetattr(req);
+		rc = slmds_fgetattr(rq);
 		break;
 	case SRMT_FTRUNCATE:
-		rc = slmds_ftruncate(req);
+		rc = slmds_ftruncate(rq);
 		break;
 //	case SRMT_FCHMOD:
-//		rc = slmds_fchmod(req);
+//		rc = slmds_fchmod(rq);
 //		break;
 //	case SRMT_FCHOWN:
-//		rc = slmds_fchown(req);
+//		rc = slmds_fchown(rq);
 //		break;
 	case SRMT_LINK:
-		rc = slmds_link(req);
+		rc = slmds_link(rq);
 		break;
 	case SRMT_LOCK:
 		break;
 	case SRMT_MKDIR:
-		rc = slmds_mkdir(req);
+		rc = slmds_mkdir(rq);
 		break;
 	case SRMT_MKNOD:
-		rc = slmds_mknod(req);
+		rc = slmds_mknod(rq);
 		break;
 	case SRMT_OPEN:
-		rc = slmds_open(req);
+		rc = slmds_open(rq);
 		break;
 	case SRMT_OPENDIR:
-		rc = slmds_opendir(req);
+		rc = slmds_opendir(rq);
 		break;
 	case SRMT_READDIR:
-		rc = slmds_readdir(req);
+		rc = slmds_readdir(rq);
 		break;
 	case SRMT_READLINK:
-		rc = slmds_readlink(req);
+		rc = slmds_readlink(rq);
 		break;
 	case SRMT_RELEASE:
-		rc = slmds_release(req);
+		rc = slmds_release(rq);
 		break;
 	case SRMT_RELEASEDIR:
-		rc = slmds_releasedir(req);
+		rc = slmds_releasedir(rq);
 		break;
 	case SRMT_RENAME:
-		rc = slmds_rename(req);
+		rc = slmds_rename(rq);
 		break;
 	case SRMT_RMDIR:
-		rc = slmds_rmdir(req);
+		rc = slmds_rmdir(rq);
 		break;
 	case SRMT_STATFS:
-		rc = slmds_statfs(req);
+		rc = slmds_statfs(rq);
 		break;
 	case SRMT_SYMLINK:
-		rc = slmds_symlink(req);
+		rc = slmds_symlink(rq);
 		break;
 	case SRMT_TRUNCATE:
-		rc = slmds_truncate(req);
+		rc = slmds_truncate(rq);
 		break;
 	case SRMT_UNLINK:
-		rc = slmds_unlink(req);
+		rc = slmds_unlink(rq);
 		break;
 	case SRMT_UTIMES:
-		rc = slmds_utimes(req);
+		rc = slmds_utimes(rq);
 		break;
 	default:
-		psc_errorx("Unexpected opcode %d", req->rq_reqmsg->opc);
-		req->rq_status = -ENOSYS;
-		rc = pscrpc_error(req);
+		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
+		rq->rq_status = -ENOSYS;
+		rc = pscrpc_error(rq);
 		goto done;
 	}
-	psc_info("req->rq_status == %d", req->rq_status);
-	target_send_reply_msg (req, rc, 0);
+	psc_info("rq->rq_status == %d", rq->rq_status);
+	target_send_reply_msg(rq, rc, 0);
 
  done:
 	revokecred(myuid, mygid);
-	RETURN(rc);
+	return (rc);
 }
 
 /**
- * slmds_init - start up the mds threads via pscrpc_thread_spawn()
+ * slmds_init - start up the MDS threads via pscrpc_thread_spawn()
  */
 void
 slmds_init(void)

@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "psc_ds/tree.h"
+#include "psc_rpc/rpc.h"
 
 #include "rpc.h"
 #include "slashrpc.h"
@@ -55,19 +56,17 @@ int
 sexpcmp(const void *a, const void *b)
 {
 	const struct slashrpc_export *sa = a, *sb = b;
+	const lnet_process_id_t *pa = &sa->exp->exp_connection->c_peer;
+	const lnet_process_id_t *pb = &sb->exp->exp_connection->c_peer;
 
-	if (sa->exp->exp_connection->c_peer.nid <
-	    sb->exp->exp_connection->c_peer.nid)
+	if (pa->nid < pb->nid)
 		return (-1);
-	else if (sa->exp->exp_connection->c_peer.nid >
-	    sb->exp->exp_connection->c_peer.nid)
+	else if (pa->nid > pb->nid)
 		return (1);
 
-	if (sa->exp->exp_connection->c_peer.pid <
-	    sb->exp->exp_connection->c_peer.pid)
+	if (pa->pid < pb->pid)
 		return (-1);
-	else if (sa->exp->exp_connection->c_peer.pid >
-	    sb->exp->exp_connection->c_peer.pid)
+	else if (pa->pid > pb->pid)
 		return (1);
 
 	return (0);

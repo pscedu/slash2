@@ -23,26 +23,27 @@
 int
 slbe_connect(struct pscrpc_request *rq)
 {
-	struct slashrpc_connect_req *mq;
-	struct slashrpc_generic_rep *mp;
+	struct srm_connect_req *mq;
+	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRB_MAGIC || mq->version != SRB_VERSION)
 		mp->rc = -EINVAL;
+	return (0);
 }
 
 int
 slbe_getfid(struct pscrpc_request *rq)
 {
 	struct slashrpc_export *sexp, qexp;
-	struct slashrpc_getfid_req *mq;
-	struct slashrpc_getfid_rep *mp;
-	struct pscrpc_connection conn;
-	struct cfdent *cfdent, qcfd;
+	struct pscrpc_connection c;
 	struct pscrpc_export exp;
+	struct srm_getfid_req *mq;
+	struct srm_getfid_rep *mp;
+	struct cfdent *cfdent, qcfd;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	exp.exp_connection = &conn;
+	exp.exp_connection = &c;
 	exp.exp_connection->c_peer.nid = mq->nid;
 	exp.exp_connection->c_peer.pid = mq->pid;
 	qexp.exp = &exp;
