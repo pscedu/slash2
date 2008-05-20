@@ -21,7 +21,7 @@ msctlthr_begin(__unusedx void *arg)
 	const char *fn;
 
 	if ((fn = getenv("CTLSOCK")) == NULL)
-		fn = _PATH_MSCTLSOCK
+		fn = _PATH_MSCTLSOCK;
 
 	psc_ctlthr_main(fn, msctlops, NENTRIES(msctlops));
 	return (NULL);
