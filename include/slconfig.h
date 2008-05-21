@@ -11,10 +11,10 @@
 
 #include <sys/param.h>
 
+#include "psc_types.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
-#include "psc_types.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
 
@@ -136,7 +136,7 @@ libsl_resm_lookup(void)
 			psc_fatalx("Nid ;%s; is not a member of any resource",
 				   libcfs_nid2str(nids[i]));
 
-		resm = (sl_resm_t *)e->private;
+		resm = e->private;
 		if (!i)
 			res = resm->resm_res;
 		/* All nids must belong to the same resource */
@@ -243,7 +243,7 @@ libsl_profile_dump(void)
 	}
 	for (i=0; i < z->node_res->res_nnids; i++)
 		psc_warnx("\n\t\tNid %d ;%s;",
-			  i, (char *)libcfs_nid2str(z->node_res->res_nids[i]));
+			  i, libcfs_nid2str(z->node_res->res_nids[i]));
 }
 
 static inline u32
