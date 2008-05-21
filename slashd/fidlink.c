@@ -44,6 +44,7 @@ translate_pathname(char *path, int must_exist)
 	 * if we are creating a new pathname, it obviously won't exist,
 	 * so trim the last component and append it later on.
 	 */
+	lastsep = NULL;
 	if (must_exist == 0 && (lastsep = strrchr(buf, '/')) != NULL) {
 		if (strcmp(lastsep, "/..") == 0 ||
 		    strcmp(lastsep, "/.") == 0) {
