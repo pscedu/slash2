@@ -18,12 +18,6 @@ struct slash_sb_mem;
 #define SLTHRT_TINTV	4	/* timer interval */
 #define SLTHRT_TIOS	5	/* iostats updater */
 
-struct slash_ctlthr {
-	int sc_st_nclients;
-	int sc_st_nsent;
-	int sc_st_nrecv;
-};
-
 struct slash_rpcmdsthr {
 	struct pscrpc_thread	 srm_prt;
 };
@@ -32,7 +26,6 @@ struct slash_rpcbethr {
 	struct pscrpc_thread	 srb_prt;
 };
 
-#define slctlthr(thr)	 ((struct slash_ctlthr *)(thr)->pscthr_private)
 #define slrpcmdsthr(thr) ((struct slash_rpcmdsthr *)(thr)->pscthr_private)
 #define slrpcbethr(thr)	 ((struct slash_rpcbethr *)(thr)->pscthr_private)
 

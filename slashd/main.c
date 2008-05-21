@@ -6,19 +6,18 @@
 
 #include "pfl.h"
 #include "psc_util/alloc.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/thread.h"
 
+#include "control.h"
+#include "pathnames.h"
+#include "sb.h"
 #include "slashd.h"
 #include "slconfig.h"
-#include "control.h"
-#include "sb.h"
-#include "pathnames.h"
 
 #define SLASH_THRTBL_SIZE 19
 
 void *nal_thread(void *);
-
-struct psc_thread slashControlThread;
 
 const char *progname;
 
@@ -56,21 +55,10 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 int
 main(int argc, char *argv[])
 {
-	struct slash_ctlthr *thr;
-	const char *cfn, *sfn;
+	const char *cfn, *sfn, *p;
 	int c;
 
 	progname = argv[0];
-	pfl_init(SLASH_THRTBL_SIZE);
-	thr = PSCALLOC(sizeof(*thr));
-	pscthr_init(&slashControlThread, SLTHRT_CTL, NULL, thr, "slctlthr");
-
-	if (getenv("LNET_NETWORKS") == NULL)
-		psc_fatalx("please export LNET_NETWORKS");
-	if (getenv("TCPLND_SERVER") == NULL)
-		psc_fatalx("please export TCPLND_SERVER");
-	lnet_thrspawnf = spawn_lnet_thr;
-
 	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLCTLSOCK;
 	while ((c = getopt(argc, argv, "f:S:")) != -1)
@@ -84,6 +72,21 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
+	argc -= optind;
+	if (argc)
+		usage();
+
+	if (getenv("LNET_NETWORKS") == NULL)
+		psc_fatalx("please export LNET_NETWORKS");
+	if ((p = getenv("TCPLND_SERVER")) == NULL || strcmp(p, "1"))
+		setenv("TCPLND_SERVER", "1", 1);
+
+	pfl_init(SLASH_THRTBL_SIZE);
+	pscthr_init(&pscControlThread, SLTHRT_CTL, NULL,
+	    PSCALLOC(sizeof(struct psc_ctlthr)), "slctlthr");
+
+	lnet_thrspawnf = spawn_lnet_thr;
+
 	slashGetConfig(cfn);
 	libsl_init(PSC_SERVER);
 
