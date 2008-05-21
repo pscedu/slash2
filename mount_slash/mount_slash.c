@@ -746,6 +746,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 #define THRTABSZ 13
 	pfl_init(THRTABSZ);
 	lnet_thrspawnf = spawn_lnet_thr;
+	fidcache_init();
 	rpc_svc_init();
 
 	pscthr_init(&pscControlThread, MSTHRT_CTL, msctlthr_begin,
@@ -787,14 +788,5 @@ struct fuse_operations slashops = {
 int
 main(int argc, char *argv[])
 {
-	if (getenv("LNET_NETWORKS") == NULL)
-		errx(1, "please export LNET_NETWORKS");
-	if (getenv("SLASH_SERVER_NID") == NULL)
-		errx(1, "please export SLASH_SERVER_NID");
-	pfl_init(7);
-	fidcache_init();
-	/* XXX Cache initialization goes here
-	 */
-	lnet_thrspawnf = spawn_lnet_thr;
 	return (fuse_main(argc, argv, &slashops, NULL));
 }
