@@ -79,7 +79,8 @@ main(int argc, char *argv[])
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
 	if ((p = getenv("TCPLND_SERVER")) == NULL || strcmp(p, "1"))
-		setenv("TCPLND_SERVER", "1", 1);
+		if (setenv("TCPLND_SERVER", "1", 1) == -1)
+			psc_fatal("setenv");
 
 	pfl_init(SLASH_THRTBL_SIZE);
 	pscthr_init(&pscControlThread, SLTHRT_CTL, NULL,
