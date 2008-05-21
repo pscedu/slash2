@@ -454,10 +454,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			if (req->oftrq_nblks == iov->oftiov_nblks) {
 				psc_assert(ATTR_TEST(iov->oftiov_flags, 
 						     OFTIOV_REMAP_SRC));
-				/* Reached the end of the remap src iov.
-				 *  No need to fork another iov as this
-				 *  one already has an slb ref.
-				 */
+
 				req->oftrq_memb->oft_norl.oft_iov = iov;
 				ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_END);
 			} else {
