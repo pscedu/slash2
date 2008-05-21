@@ -104,8 +104,13 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
-		else
+		else {
+			/* Return the cfd to Fuse and register
+			 *   it in the fd cache.
+			 */
 			fi->fh = mp->cfd;
+			fh_register(mp->cfd, msl_fdreg_cb, NULL);
+		}
 	}
 	pscrpc_req_finished(rq);
 	return (rc);
@@ -309,8 +314,10 @@ slash_open(const char *path, struct fuse_file_info *fi)
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
-		else
+		else {
 			fi->fh = mp->cfd;
+			fh_register(mp->cfd, msl_fdreg_cb, NULL);
+		}
 	}
 	pscrpc_req_finished(rq);
 	return (rc);
@@ -360,14 +367,25 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 	struct srm_read_rep *mp;
 	struct srm_read_req *mq;
 	struct iovec iov;
+	struct fhent *fh;
 	int rc;
 
+	/* First get the fhentry from the cache.
+	 */
+	fh = fh_lookup(fi->fh);
+	if (!fh)
+		return -EBADF;
+
+	rc = msl_read(fh, buf, size, off);
+	       
 	if ((rc = RSX_NEWREQ(io_import, SRI_VERSION,
 	    SRMT_READ, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->size = size;
 	mq->offset = offset;
+
+
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
@@ -769,5 +787,14 @@ struct fuse_operations slashops = {
 int
 main(int argc, char *argv[])
 {
+	if (getenv("LNET_NETWORKS") == NULL)
+		errx(1, "please export LNET_NETWORKS");
+	if (getenv("SLASH_SERVER_NID") == NULL)
+		errx(1, "please export SLASH_SERVER_NID");
+	pfl_init(7);
+	fidcache_init();
+	/* XXX Cache initialization goes here
+	 */
+	lnet_thrspawnf = spawn_lnet_thr;
 	return (fuse_main(argc, argv, &slashops, NULL));
 }
