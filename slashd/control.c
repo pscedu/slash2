@@ -15,6 +15,11 @@ struct psc_ctlop slctlops[] = {
 	PSC_CTLDEFOPS
 };
 
+void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {
+/* 0 */	psc_ctlthr_stat
+};
+int psc_ctl_ngetstats = NENTRIES(psc_ctl_getstats);
+
 void
 slctlthr_main(const char *fn)
 {
