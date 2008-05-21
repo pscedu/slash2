@@ -182,7 +182,7 @@ process_blks(struct offtree_req *req, int rw)
 
 int main(int argc, char **argv)
 {
-	fcache_mhandle_t fcm;
+	struct fidcache_memb_handle fcm;
 	struct offtree_root  *oftr;
 	struct offtree_req    req;
 	unsigned int          i;
@@ -195,7 +195,7 @@ int main(int argc, char **argv)
 	
 	sl_buffer_cache_init();
 
-	fchm_init(&fcm);	
+	fidcache_handle_init(&fcm);	
 
 	oftr = offtree_create(mapSize, slCacheBlkSz, 
 			      treeWidth, treeDepth, &fcm, 
