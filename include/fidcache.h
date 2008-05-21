@@ -18,10 +18,29 @@
 #include "buffer.h"
 #include "fid.h"
 #include "inode.h"
+#include "offtree.h"
 
-#define FIDCACHE_HTABLE_SZ	32767
+#define MDS_FID_CACHE_DEFSZ 1024   /* Number of fcmh's to allocate by default */
+#define MDS_FID_CACHE_MAXSZ 131072 /* Max fcmh's */
 
-extern struct hash_table fidcHashTable;
+
+#define SLASH_BMAP_SIZE  134217728
+#define SLASH_BMAP_WIDTH 8
+#define SLASH_BMAP_DEPTH 5
+#define SLASH_BMAP_BLKSZ (SLASH_BMAP_SIZE / pow(SLASH_BMAP_WIDTH,	\
+						(SLASH_BMAP_DEPTH-1))
+
+#define SLASH_BMAP_BLKMASK ~(SLASH_BMAP_BLKSZ-1)
+
+
+#define FCMH_LOCK(h)  spinlock(&(h)->fcmh_lock)
+#define FCMH_ULOCK(h) freelock(&(h)->fcmh_lock)
+
+#define FCMHCACHE_PUT(fcmh, list)					\
+        do {                                                            \
+                (fcmh)->fcmh_cache_owner = (list);			\
+                lc_put((list), &(fcmh)->fcmh_lentry);			\
+        } while (0)
 
 extern list_cache_t	fidcFreeList;
 extern list_cache_t	fidcDirtyList;
@@ -30,13 +49,14 @@ extern psc_spinlock_t	fidcCacheLock;
 
 /* sl_finfo - hold stats and lamport clock */
 struct sl_finfo {
-	struct timeval	slf_opentime;		/* when we received client OPEN  */
-	struct timeval	slf_closetime;		/* when we received client CLOSE */
-	struct timeval	slf_lattr_update;	/* last attribute update         */
+	//struct timespec slf_opentime;		/* when we received client OPEN  */
+	//struct timespec slf_closetime;	/* when we received client CLOSE */
+	struct timespec	slf_lattr_update;	/* last attribute update         */
 	u64		slf_opcnt;		/* count attr updates            */
 	size_t		slf_readb;		/* num bytes read                */
 	size_t		slf_writeb;		/* num bytes written             */
 };
+
 
 struct sl_uid {
 //	u64	sluid_guid;	/* Stubs for global uids */
@@ -77,11 +97,11 @@ struct bmap_info {
  */
 struct bmap_cache_memb {
 	struct timeval		 bcm_ts;
-	struct bmap_info	 bcm_bmap_info;
-	atomic_t		 bcm_refcnt;		/* one ref per client (mds) */
+	struct bmap_info	 bcm_bmapi;
+	atomic_t		 bcm_refcnt;	        /* one ref per client (mds) */
 	void			*bcm_info_pri;
-	struct psclist_head	 bcm_lentry;		/* lru chain */
-	struct psclist_head	 bcm_buffers;		/* track our buffers */
+	//struct psclist_head	 bcm_lentry;		/* lru chain */
+	//struct psclist_head	 bcm_buffers;		/* track our buffers */
 	SPLAY_ENTRY(bmap_cache_memb) bcm_tentry;	/* fcm tree entry */
 };
 
@@ -98,7 +118,7 @@ struct fidcache_memb {
 	struct slash_fid	fcm_fid;
 	struct stat		fcm_stb;
 	struct sl_finfo		fcm_slfinfo;
-	struct sl_uid		fcm_uid;
+	//struct sl_uid		fcm_uid;
 };
 
 /*
@@ -109,76 +129,81 @@ struct fidcache_memb {
  * (via their exports) which hold cached bmaps (fcm_lessees).
  */
 struct fidcache_memb_handle {
-	struct fidcache_memb	*fcmh_memb;
-	struct hash_entry	 fcmh_hentry;
+	struct fidcache_memb	 fcmh_memb;
 	struct psclist_head	 fcmh_lentry;
-	struct timeval		 fcmh_access;
+	struct timespec		 fcmh_access;
 	list_cache_t		*fcmh_cache_owner;
 	int			 fcmh_fd;
+	u64                      fcmh_fh;
 	u32			 fcmh_state;
 	atomic_t		 fcmh_refcnt;
-	void			*fcmh_objm;		/* mmap region for filemap md */
-	size_t			 fcmh_objm_sz;		/* nbytes mapped for objm */
 	void			*fcmh_info_pri;
+	atomic_t                 fcmh_bmap_cache_cnt;
 	struct bmap_cache	 fcmh_bmap_cache;	/* splay tree of bmap cache */
 	list_cache_t		 fcmh_buffer_cache;	/* list of data buffers (slb)*/
 	psc_spinlock_t		 fcmh_lock;
 };
 
-/* fidcache member handle states */
-#define FCMHS_CLEAN	(1 << 0)
-#define FCMHS_DIRTY	(1 << 1)
-#define FCMHS_FREEING	(1 << 2)
+#define fcm_set_accesstime(f) {					    \
+		clock_gettime(CLOCK_REALTIME, &(f)->fcmh_access);   \
+	}
 
-static inline void
-fchm_init(struct fidcache_memb_handle *f)
-{
-	LOCK_INIT(&f->fcmh_lock);
-	lc_init(&f->fcmh_buffer_cache, struct sl_buffer, slb_fcm_lentry);
-	atomic_set(&f->fcmh_refcnt, 0);
-	f->fcmh_cache_owner = NULL;
-}
+enum fcmh_states {
+	FCM_CAC_CLEAN   = (1 << 0),
+	FCM_CAC_DIRTY   = (1 << 1),
+	FCM_CAC_FREEING = (1 << 2), 
+	FCM_CAC_FREE    = (1 << 3),
+	FCM_ATTR_FID    = (1 << 4),  /* Have fidcache memb */
+	FCM_ATTR_SIZE   = (1 << 5),
+	FCM_ATTR_STAT   = (1 << 6)	
+};
 
 struct sl_fsops {
 	/* sl_getattr - used for stat and open, loads the objects
 	 *  via the pathname.
 	 */
-	int (*slfsop_getattr)(const char *path, struct fidcache_memb *fcm);
+	int (*slfsop_getattr)(const char *path, 
+			      struct fidcache_memb_handle *fcm);
 	/* sl_fgetattr - used for stat and open via fid, grabs all the
 	 * attributes of the object and updates the fcm
 	 */
-	int (*slfsop_fgetattr)(struct fidcache_memb *fcm);
+	int (*slfsop_fgetattr)(struct fidcache_memb_handle *fcm);
 	/* sl_setattr - used to update the objects attrs, for now
 	 * all attrs will be updated.  later we may refine the granularity
 	 */
-	int (*slfsop_setattr)(struct fidcache_memb *fcm);
-	/* sl_write - vectorized object write.  Either within mds or ios
+	int (*slfsop_setattr)(struct fidcache_memb_handle *fcm);
+	/* sl_write - Object write.  Either within mds or ios 
 	 *  context.
 	 */
-	int (*slfsop_write)(struct fidcache_memb *fcm,
-			    const struct iovec *vector, int count);
-	/* sl_read - vectorized object read.  Either within mds or ios
+	int (*slfsop_write)(struct fidcache_memb_handle *fcm,
+			    const void *buf, int count, off_t offset);
+	/* sl_read - Object read.  Either within mds or ios 
 	 *  context.
 	 */
-	int (*slfsop_read)(struct fidcache_memb *fcm,
-			   const struct iovec *vector, int count);
+	int (*slfsop_read)(struct fidcache_memb_handle *fcm,
+			   const void *buf, int count, off_t offset);
 	/* sl_getmap - load the data placement map for a given file.
 	 * On the client, the blk no's are determined by calculating the
 	 * request offset with the block size.
 	 */
-	int (*slfsop_getmap)(struct fidcache_memb  *fcm,
+	int (*slfsop_getmap)(struct fidcache_memb_handle  *fcm,
 			     struct bmap_cache_memb *bcms, int count);
 
-	int (*slfsop_invmap)(struct fidcache_memb *fcm, struct bmap_refresh *bmr);
+	int (*slfsop_invmap)(struct fidcache_memb_handle *fcm, 
+			     struct bmap_refresh *bmr);
 };
 
 #define FCMH_FLAG(field, str) ((field) ? (str) : "")
-#define DEBUG_FCMH_FCMH_FLAGS(fcmh)					\
-	FCMH_FLAG(ATTR_TEST((fcmh)->fcmh_state, FCM_CLEAN), "C"),	\
-	FCMH_FLAG(ATTR_TEST((fcmh)->fcmh_state, FCM_DIRTY), "D"),	\
-	FCMH_FLAG(ATTR_TEST((fcmh)->fcmh_state, FCM_FREEING), "F")
-
-#define REQ_FCMH_FLAGS_FMT "%s%s%s"
+#define DEBUG_FCMH_FCMH_FLAGS(fcmh)				      \
+	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_CAC_CLEAN),   "C"), \
+	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_CAC_DIRTY),   "D"), \
+	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_CAC_FREEING), "F"), \
+	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_CAC_FREE),    "f"), \
+	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_ATTR_FID),    "f"), \
+	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_ATTR_SIZE),   "s"), \
+	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_ATTR_STAT),   "S")
+	
+#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s"
 
 static inline const char *
 fcmh_lc_2_string(list_cache_t *lc)
@@ -189,18 +214,43 @@ fcmh_lc_2_string(list_cache_t *lc)
 		return "Free";
 	else if (lc == &fidcDirtyList)
 		return "Dirty";
+	else if (lc == NULL)
+		return "Null";
 	psc_fatalx("bad fidc list cache %p", lc);
 }
 
-#define DEBUG_FCMH(level, fcmh, fmt, ...)			\
-	_psclog(__FILE__, __func__, __LINE__,			\
-		PSS_OTHER, (level), 0,				\
-		" fcmh@%p inum+gen:"LPX64"+"LPX64" state:"	\
-		REQ_FCMH_FLAGS_FMT" cowner:%s fd:%d :: "fmt,	\
-		(fcmh), (fcmh)->fcmh_memb.fcm_fid.fid_inum,	\
-		(fcmh)->fcmh_memb.fcm_fid.fid_gen,		\
-		DEBUG_FCMH_FCMH_FLAGS(fcmh), (fcmh)->fcmh_fd,	\
-		atomic_read(&(fcmh)->fcmh_refcnt),		\
-		## __VA_ARGS__)					\
+#define DEBUG_FCMH(level, fcmh, fmt, ...)				\
+	_psclog(__FILE__, __func__, __LINE__,				\
+		PSS_OTHER, (level), 0,					\
+		" fcmh@%p i+g:"LPX64"+"LPX64" s:"			\
+		REQ_FCMH_FLAGS_FMT" lc:%s fd:%d r:%d:: "fmt,		\
+		(fcmh),							\
+		(fcmh)->fcmh_memb.fcm_fid.fid_inum,			\
+		(fcmh)->fcmh_memb.fcm_fid.fid_gen,			\
+		DEBUG_FCMH_FCMH_FLAGS(fcmh),				\
+		fcmh_lc_2_string((fcmh)->fcmh_cache_owner),		\
+		(fcmh)->fcmh_fd,					\
+		atomic_read(&(fcmh)->fcmh_refcnt),			\
+		## __VA_ARGS__)						\
 
+
+static inline void
+fcmh_incref(struct fidcache_memb_handle *fch)
+{
+	fcm_set_accesstime(fch);
+        atomic_inc(&fch->fcmh_refcnt);
+	DEBUG_FCMH(PLL_TRACE, fch, "fcmh_incref");
+}
+
+static inline void
+fcmh_decref(struct fidcache_memb_handle *fch)
+{
+        atomic_dec(&fch->fcmh_refcnt);
+        psc_assert(atomic_read(&fch->fcmh_refcnt) >= 0);
+	DEBUG_FCMH(PLL_TRACE, fch, "fcmh_decref");
+}
+
+extern void
+fidcache_handle_init(void *p);
+		
 #endif /* __FIDCACHE_H__ */
