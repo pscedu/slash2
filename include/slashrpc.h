@@ -43,6 +43,7 @@ enum {
 	SRMT_FGETATTR,
 	SRMT_FTRUNCATE,
 	SRMT_GETATTR,
+	SRMT_GETBMAP,
 	SRMT_LINK,
 	SRMT_LOCK,
 	SRMT_MKDIR,
@@ -69,6 +70,16 @@ enum {
 struct slash_creds {
 	u32	uid;
 	u32	gid;
+};
+
+struct srm_bmap_req {
+	u32     blkno; /* Starting block number                  */
+	u32     nblks; /* Read-ahead support                     */
+	u64     fid;   /* Optional, may be filled in server-side */
+};
+
+struct srm_bmap_rep {
+	u32     nblks; /* The number of bmaps actually returned  */
 };
 
 struct srm_connect_req {
