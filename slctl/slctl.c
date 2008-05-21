@@ -41,7 +41,7 @@ slrpcbethr_prhdr(void)
 void
 slrpcbethr_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" %-*s %8s\n", PSCTHR_NAME_MAX, pcst->pcst_thrname,
+	printf(" %-*s %8d\n", PSCTHR_NAME_MAX, pcst->pcst_thrname,
 	    pcst->pcst_nwrite);
 }
 
