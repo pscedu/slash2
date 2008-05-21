@@ -12,6 +12,8 @@ typedef struct slash_fid {
 	u64 fid_gen;
 } slash_fid_t;
 
+#define FID_ANY                 0xffffffffffffULL
+
 #define FIDSZ			(sizeof(slash_fid_t))
 
 /* 16 bit server / filesystem id */
