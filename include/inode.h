@@ -28,7 +28,7 @@ typedef u32 sl_ios_id_t; /* io server id: 16 bit site id
 			  */
 
 #define IOS_ID_ANY (~(sl_ios_id_t)0)
-#define BLKNO_ANY  (~(sl_ios_id_t)0)
+#define BLKNO_ANY  (~(sl_blkno_t)0)
 /*
  * sl_global_id_build - produce a unique 32 bit identifier from the object's site and resource id's.
  * @site_id:  id number of the resource's site
