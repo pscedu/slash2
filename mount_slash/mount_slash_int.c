@@ -69,35 +69,81 @@ msl_fcm_get(struct fhent *fh)
 	return (fcmh);
 }
 
+#define BMAP_MAX_GET 63
 /**
  * msl_bmap_fetch - perform a blocking 'get' operation to retrieve one or more bmaps from the MDS.
  * @f: pointer to the fid cache structure to which this bmap belongs.
  * @b: the block id to retrieve (block size == SLASH_BMAP_SIZE).
  * @n: the number of bmaps to retrieve (serves as a simple read-ahead mechanism)
  */
-#define BMAP_MAX_GET 128
-
 __static int 
-msl_bmap_fetch(struct fcache_memb_handle *f, sl_blkno_t b, size_t n) 
+msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n) 
 {
 	struct pscrpc_bulk_desc *desc;
         struct pscrpc_request *rq;
         struct srm_bmap_req *mq;
         struct srm_bmap_rep *mp;
-        struct iovec *iov;
-	struct bmap_info *bmaps;
-        int rc;
+	struct bmap_cache_memb **bmaps;
+        struct iovec *iovs;
+        int rc=-1, i;
 
 	psc_assert(n < BMAP_MAX_GET);
-	iov = PSCALLOC(sizeof(*iov) * n);
 
+	/* Build the new rpc request.
+	 */
 	if ((rc = RSX_NEWREQ(mds_import, SRM_VERSION,
 			     SRMT_GETBMAP, rq, mq, mp)) != 0)
-                return (rc);
+		return (rc);
+
 	mq->blkno = b;
 	mq->nblks = n;
 	mq->fid   = FID_ANY;
-	
+
+	iovs  = PSCALLOC(sizeof(*iov) * n);
+	/* Init the bmap handles and setup the iovs.
+	 */
+	for (i=0; i < n; i++) {
+		bmaps[i] = PSCALLOC(sizeof(bmap_cache_memb));
+		bcm_init(bmaps[i]);
+		iovs[i].iov_base = &bmaps[i].bcm_bmapi;
+		iovs[i].iov_len  = sizeof(struct bmap_info);
+	}
+
+	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmaps (s=%u, n=%zu)", b, n);
+
+	rsx_bulkputsink(rq, &desc, SRM_BULK_PORTAL, iovs, n);
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
+		/* Add the bmaps to the tree.
+		 */
+		spinlock(&f->fcmh_lock);
+		for (i=0; i < mp->nblks ; i++) {
+			SPLAY_INSERT(bmap_cache, &f->fcmh_bmap_cache, 
+				     bmap_cache_memb);
+			atomic_inc(&f->fcmh_bmap_cache_cnt);
+		}
+		freelock(&f->fcmh_lock);
+		/* Verify the return.
+		 */
+		if (mp->nblks > n) {
+			psc_errorx("MDS returned more bmaps than"
+				   " expected! mp->nblks(%zu) > n(%zu)", 
+				   mp->nblks, n);
+			rc = -1;
+			mp->nblks = 0;
+			goto fail;
+		}
+	} else
+		/* Something went wrong, free all bmaps.
+		 */
+		mp->nblks = 0;
+ fail:	
+	/* Free any slack.
+	 */
+	for (i=mp->nblks; i < n; i++)
+		PSCFREE(bmaps[i]);
+
+	PSCFREE(iovs);
+	return (rc);
 }
 
 /**
