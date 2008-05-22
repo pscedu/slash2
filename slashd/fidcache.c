@@ -200,6 +200,22 @@ fidcache_put_locked(struct fidcache_memb_handle *f, list_cache_t *lc)
 
 
 /**
+ * bmap_cache_memb_init - initialize a bmap structure and create its offtree.
+ * @b: the bmap struct
+ * @f: the bmap's owner (
+ */
+void
+bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f)
+{
+	memset(b, 0, sizeof(*b));
+	atomic_set(&b->bcm_refcnt, 0);
+	b->bcm_oftr = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ
+				     SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH, 
+				     f, sl_buffer_alloc, sl_oftm_addref);
+	psc_assert(b->bcm_oftr);
+}
+
+/**
  * sl_fcm_init - (slash_fidcache_member_init) init a fid cache member.
  */
 __static void
