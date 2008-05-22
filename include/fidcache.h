@@ -78,7 +78,7 @@ struct bmap_refresh {
 struct bmap_info {
 	sl_blkno_t	bmapi_blkno;
 	sl_ios_id_t	bmapi_ios[SL_DEF_REPLICAS];
-	sl_gcrc_t	bmapi_gencrc;
+	//sl_gcrc_t	bmapi_gencrc;
 };
 
 /*
@@ -96,10 +96,11 @@ struct bmap_info {
  * bmap_cache_memb sits in the middle of the GFC stratum.
  */
 struct bmap_cache_memb {
-	struct timeval		 bcm_ts;
+	struct timespec		 bcm_ts;
 	struct bmap_info	 bcm_bmapi;
 	atomic_t		 bcm_refcnt;	        /* one ref per client (mds) */
 	void			*bcm_info_pri;
+	struct offtree_root     *bcm_oftr;
 	//struct psclist_head	 bcm_lentry;		/* lru chain */
 	//struct psclist_head	 bcm_buffers;		/* track our buffers */
 	SPLAY_ENTRY(bmap_cache_memb) bcm_tentry;	/* fcm tree entry */
@@ -252,5 +253,8 @@ fcmh_decref(struct fidcache_memb_handle *fch)
 
 extern void
 fidcache_handle_init(void *p);
+
+extern void
+bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb *f);
 		
 #endif /* __FIDCACHE_H__ */
