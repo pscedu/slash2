@@ -113,6 +113,21 @@ msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n)
 
 	rsx_bulkputsink(rq, &desc, SRM_BULK_PORTAL, iovs, n);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
+		/* Verify the return.
+		 */
+		if (!mp->nblks) {
+			psc_errorx("MDS returned 0 bmaps");
+			rc = -1;
+			goto fail;
+		}
+		if (mp->nblks > n) {
+			psc_errorx("MDS returned more bmaps than"
+				   " expected! mp->nblks(%zu) > n(%zu)", 
+				   mp->nblks, n);
+			rc = -1;
+			mp->nblks = 0;
+			goto fail;
+		}
 		/* Add the bmaps to the tree.
 		 */
 		spinlock(&f->fcmh_lock);
@@ -122,16 +137,6 @@ msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n)
 			atomic_inc(&f->fcmh_bmap_cache_cnt);
 		}
 		freelock(&f->fcmh_lock);
-		/* Verify the return.
-		 */
-		if (mp->nblks > n) {
-			psc_errorx("MDS returned more bmaps than"
-				   " expected! mp->nblks(%zu) > n(%zu)", 
-				   mp->nblks, n);
-			rc = -1;
-			mp->nblks = 0;
-			goto fail;
-		}
 	} else
 		/* Something went wrong, free all bmaps.
 		 */
