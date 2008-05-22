@@ -104,11 +104,10 @@ msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n)
 	 */
 	for (i=0; i < n; i++) {
 		bmaps[i] = PSCALLOC(sizeof(bmap_cache_memb));
-		bcm_init(bmaps[i]);
+		bmap_cache_memb_init(bmaps[i], f);
 		iovs[i].iov_base = &bmaps[i].bcm_bmapi;
 		iovs[i].iov_len  = sizeof(struct bmap_info);
 	}
-
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmaps (s=%u, n=%zu)", b, n);
 
 	rsx_bulkputsink(rq, &desc, SRM_BULK_PORTAL, iovs, n);
@@ -149,6 +148,26 @@ msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n)
 
 	PSCFREE(iovs);
 	return (rc);
+}
+
+__static struct bmap_cache_memb *
+msl_bmap_load(struct fcache_memb_handle *f, sl_blkno_t n, int prefetch)
+{
+	struct bmap_cache_memb t, *b;
+	int rc=0;
+
+	t.bcm_bmap_info.bmapi_blkno=n;
+
+	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmap_cache, &t);
+	if (!b) {
+		/* Retrieve the bmap from the sl_mds.
+		 */			
+		rc = msl_bmap_fetch(f, t.bcm_bmap_info.bmapi_blkno, 
+				    prefetch);
+		if (rc)
+			return NULL;
+	}
+	return (SPLAY_FIND(bmap_cache, &f->fcmh_bmap_cache, &t));
 }
 
 /**
@@ -193,29 +212,39 @@ msl_read(struct fhent *fh, char *buf, size_t size, off_t off)
 	struct fcache_memb_handle *f;
 	struct offtree_req        *r=NULL;
 	struct bmap_cache_memb     t, *b;
-	int s,e,i,n=0;
+	sl_blkno_t                 s, e;
+	size_t                     tlen;
+	off_t                      roff;
+	int i,rc,n=0;
 
 	f = fh->fh_pri;	
 	psc_assert(f);
-	/* Are these bytes in the cache?	   
+	/* Are these bytes in the cache?
+	 *  Get the start and end block regions from the input parameters.
 	 */
 	s = off / f->fcmh_bmap_sz;
 	e = (off + size) / f->fcmh_bmap_sz;
-	  
-	for (t.bcm_bmap_info.bmapi_blkno=s; 
-	     t.bcm_bmap_info.bmapi_blkno < e; i++) {
-		b = SPLAY_FIND(bmap_cache, &f->fcmh_bmap_cache, &t);
+	/* Relativize the length and offset.
+	 */
+	roff  = off - (s * SLASH_BMAP_SIZE);
+	tlen  = MIN((SLASH_BMAP_SIZE - roff), size);
+	/* Foreach block range, get its bmap and make a request into its 
+	 *  offtree.
+	 */
+	for (i=0; s < e; s++, i++) {
+		/* Load up the bmap, if it's not available then we're out of 
+		 *  luck because we have no idea where the data is!
+		 */
+		b = msl_bmap_load(f, s, (i ? 0 : (e-s)));
 		if (!b)
-			/* Retrieve the bmap from the sl_mds.
-			 */
-			b = msl_bmap_fetch(f, t.bcm_bmap_info.bmapi_blkno,
-					   (e - t.bcm_bmap_info.bmapi_blkno));
-		/* Allocate an offtree request and its darray.
-		 */ 
-		r = realloc(r, (sizeof(*r)) * (n++));
+			return -EIO;
+		/* Malloc offtree request and pass to the initializer.
+		 */
+		r = realloc(r, (sizeof(*r)) * i);
+		msl_oftrq_build(r[i], b, roff, tlen);
 
-		msl_oftrq_build(r[n], b, , 
-				off, MIN(SLASH_BMAP_SIZE, size));
-		
+		roff += tlen;
+		size -= tlen;		
+		tlen  = MIN(SLASH_BMAP_SIZE, size);
 	}
 }
