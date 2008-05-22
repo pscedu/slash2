@@ -23,5 +23,6 @@ int psc_ctl_ngetstats = NENTRIES(psc_ctl_getstats);
 void
 slctlthr_main(const char *fn)
 {
+	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlthr_main(fn, slctlops, NENTRIES(slctlops));
 }
