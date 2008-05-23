@@ -8,6 +8,7 @@
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/cdefs.h"
+#include "offtree.h"
 
 #define SL_FIDCACHE_LOW_THRESHOLD 80 // 80%
 
@@ -41,7 +42,7 @@ bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f)
 {
 	memset(b, 0, sizeof(*b));
 	atomic_set(&b->bcm_refcnt, 0);
-	b->bcm_oftr = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ
+	b->bcm_oftr = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
 				     SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH, 
 				     f, sl_buffer_alloc, sl_oftm_addref);
 	psc_assert(b->bcm_oftr);
