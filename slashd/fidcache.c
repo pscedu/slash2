@@ -20,7 +20,6 @@ list_cache_t     fidcCleanList;
 __static void
 fidcache_put_locked(struct fidcache_memb_handle *, list_cache_t *);
 
-
 /**
  * fcmh_clean_check - placeholder!  This function will ensure the validity of the passed in inode.
  */
@@ -32,11 +31,27 @@ fcmh_clean_check(struct fidcache_memb_handle *f)
 	return 0;
 }
 
-/*  
+/**
+ * bmap_cache_memb_init - initialize a bmap structure and create its offtree.
+ * @b: the bmap struct
+ * @f: the bmap's owner (
+ */
+void
+bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f)
+{
+	memset(b, 0, sizeof(*b));
+	atomic_set(&b->bcm_refcnt, 0);
+	b->bcm_oftr = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ
+				     SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH, 
+				     f, sl_buffer_alloc, sl_oftm_addref);
+	psc_assert(b->bcm_oftr);
+}
+
+/**  
  * bmap_cache_cmp - bmap_cache splay tree comparator
  * @a: a bmap_cache_memb
  * @b: another bmap_cache_memb
-*/
+ */
 int
 bmap_cache_cmp(const void *x, const void *y)
 {
@@ -65,7 +80,7 @@ fidcache_freelist_avail_check(void)
 }
 
 /**
- * zinocache_reap - get some inodes from the clean list and free them
+ * zinocache_reap - get some inodes from the clean list and free them.
  */
 __static void
 fidcache_reap(void)
@@ -73,7 +88,7 @@ fidcache_reap(void)
 	struct fidcache_memb_handle *f;
 	int locked;
 
-	/* Try to reach the reserve threshold
+	/* Try to reach the reserve threshold.
 	 */
 	do {
 		f = lc_getnb(&fidcCleanList);
@@ -196,23 +211,6 @@ fidcache_put_locked(struct fidcache_memb_handle *f, list_cache_t *lc)
 	/* Place onto the respective list.
 	 */
 	FCMHCACHE_PUT(f, lc);
-}
-
-
-/**
- * bmap_cache_memb_init - initialize a bmap structure and create its offtree.
- * @b: the bmap struct
- * @f: the bmap's owner (
- */
-void
-bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f)
-{
-	memset(b, 0, sizeof(*b));
-	atomic_set(&b->bcm_refcnt, 0);
-	b->bcm_oftr = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ
-				     SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH, 
-				     f, sl_buffer_alloc, sl_oftm_addref);
-	psc_assert(b->bcm_oftr);
 }
 
 /**
