@@ -27,8 +27,8 @@
 #define SLASH_BMAP_SIZE  134217728
 #define SLASH_BMAP_WIDTH 8
 #define SLASH_BMAP_DEPTH 5
-#define SLASH_BMAP_BLKSZ (SLASH_BMAP_SIZE / pow(SLASH_BMAP_WIDTH,	\
-						(SLASH_BMAP_DEPTH-1))
+#define SLASH_BMAP_BLKSZ (SLASH_BMAP_SIZE / power((size_t)SLASH_BMAP_WIDTH, \
+						  (size_t)(SLASH_BMAP_DEPTH-1)))
 
 #define SLASH_BMAP_BLKMASK ~(SLASH_BMAP_BLKSZ-1)
 
@@ -255,6 +255,6 @@ extern void
 fidcache_handle_init(void *p);
 
 extern void
-bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb *f);
+bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f);
 		
 #endif /* __FIDCACHE_H__ */
