@@ -30,21 +30,24 @@
 
 __static void
 msl_oftrq_build(struct offtree_req *r, struct bmap_cache_memb *b, 
-		off_t off, size_t len)
+		off_t off, size_t len, int op)
 {
 	/* Ensure the offset fits within the range and mask off the
 	 *  lower bits to align with the offtree's page size.
 	 */
 	psc_assert((off + len) <= SLASH_BMAP_SIZE);
+	psc_assert(op == OFTREQ_OP_WRITE || 
+		   op == OFTREQ_OP_READ);
 
 	r->oftrq_darray = PSCALLOC(sizeof(struct dynarray));
 	r->oftrq_root   = &b->bcm_oftree;
 	r->oftrq_memb   = &b->bcm_oftree.oftr_memb;
 	r->oftrq_width  = r->oftrq_depth = 0;
+	r->oftrq_op     = op;
 	r->oftrq_off    = off & SLASH_BMAP_BLKMASK;
 	r->oftrq_nblks  = (off + len) / SLASH_BMAP_BLKSZ + 
 		(((off + len) % SLASH_BMAP_BLKSZ) ? 1 : 0);
-
+	
 	DEBUG_OFFTREQ(PLL_TRACE, r, "newly built request");
 }
 
@@ -238,7 +241,7 @@ msl_read(struct fhent *fh, char *buf, size_t size, off_t off)
 		/* Malloc offtree request and pass to the initializer.
 		 */
 		r = realloc(r, (sizeof(*r)) * i);
-		msl_oftrq_build(r[i], b, roff, tlen);
+		msl_oftrq_build(r[i], b, roff, tlen, OFTREQ_OP_READ);
 
 		roff += tlen;
 		size -= tlen;		
