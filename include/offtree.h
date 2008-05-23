@@ -341,6 +341,12 @@ struct offtree_req {
 	off_t                oftrq_darray_off;	
 };
 
+enum offtree_req_op_types {
+	OFTREQ_OP_NOOP  = (1<<0),
+	OFTREQ_OP_READ  = (1<<1),
+	OFTREQ_OP_WRITE = (1<<2)		
+};
+
 static inline int 
 oft_child_get(off_t o, struct offtree_root *r, int d, int abs_width)
 {
