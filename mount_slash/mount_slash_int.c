@@ -29,24 +29,21 @@
 #include "offtree.h"
 
 __static void
-msl_oftrq_build(struct oftree_req *r, struct bmap_cache_memb *b, 
+msl_oftrq_build(struct offtree_req *r, struct bmap_cache_memb *b, 
 		off_t off, size_t len)
 {
-	off_t t = b->bcm_bmap_info.bmapi_blkno * SLASH_BMAP_SIZE;
-	/* Ensure the offset fits within the range.
+	/* Ensure the offset fits within the range and mask off the
+	 *  lower bits to align with the offtree's page size.
 	 */
-	psc_assert(off >= t && off < (t + SLASH_BMAP_SIZE));
-	/* Adjust the offset for this region, align and relativize.
-	 */
-	off -= t;
-	t = off & SLASH_BMAP_BLKMASK;
+	psc_assert((off + len) <= SLASH_BMAP_SIZE);
 
 	r->oftrq_darray = PSCALLOC(sizeof(struct dynarray));
 	r->oftrq_root   = &b->bcm_oftree;
 	r->oftrq_memb   = &b->bcm_oftree.oftr_memb;
-	r->oftrq_nblks  = (t + len) / SLASH_BMAP_BLKSZ + 
-		(((t + len) % SLASH_BMAP_BLKSZ) ? 1 : 0);
 	r->oftrq_width  = r->oftrq_depth = 0;
+	r->oftrq_off    = off & SLASH_BMAP_BLKMASK;
+	r->oftrq_nblks  = (off + len) / SLASH_BMAP_BLKSZ + 
+		(((off + len) % SLASH_BMAP_BLKSZ) ? 1 : 0);
 
 	DEBUG_OFFTREQ(PLL_TRACE, r, "newly built request");
 }
@@ -56,7 +53,7 @@ msl_fcm_get(struct fhent *fh)
 {
 	struct fcache_memb_handle *f = sl_fidc_get(&fidcFreeList);
 
-	fchm_init(f);
+	fidcache_memb_init(f);
 	/* Incref so that this inode is not immediately 
 	 *  considered for reaping.
 	 */
