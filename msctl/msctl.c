@@ -15,8 +15,8 @@
 #include "../mount_slash/control.h"
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
-	{ "loglevels",		PCMT_GETLOGLEVEL },
-	{ "stats",		PCMT_GETSTATS }
+	{ "loglevels",	psc_ctl_packshow_loglevel },
+	{ "stats",	psc_ctl_packshow_stats }
 };
 int psc_ctlshow_ntabents = NENTRIES(psc_ctlshow_tab);
 
