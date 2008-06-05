@@ -10,28 +10,43 @@
 
 #define SLASH_SVR_PID		54321
 
-/* Slash RPC MDS defines. */
-#define SRM_REQ_PORTAL		20
-#define SRM_REP_PORTAL		21
-#define SRM_BULK_PORTAL		22
+/* Slash RPC Client <-> MDS defines. */
+#define SRCM_REQ_PORTAL		20
+#define SRCM_REP_PORTAL		21
+#define SRCM_BULK_PORTAL	22
 
-#define SRM_VERSION		1
-#define SRM_MAGIC		0xaabbccddeeff0011ULL
+#define SRCM_VERSION		1
+#define SRCM_MAGIC		0xaabbccddeeff0011ULL
 
-/* Slash RPC I/O defines. */
-#define SRI_REQ_PORTAL		30
-#define SRI_REP_PORTAL		31
-#define SRI_BULK_PORTAL		32
+/* Slash RPC client <-> I/O defines. */
+#define SRCI_REQ_PORTAL		30
+#define SRCI_REP_PORTAL		31
+#define SRCI_BULK_PORTAL	32
 
-#define SRI_VERSION		1
-#define SRI_MAGIC		0xaabbccddeeff0011ULL
+#define SRCI_VERSION		1
+#define SRCI_MAGIC		0xaabbccddeeff0011ULL
 
-/* Slash RPC backend defines. */
-#define SRB_REQ_PORTAL		40
-#define SRB_REP_PORTAL		41
+/* Slash RPC MDS <-> MDS defines. */
+#define SRMM_REQ_PORTAL		40
+#define SRMM_REP_PORTAL		41
 
-#define SRB_VERSION		1
-#define SRB_MAGIC		0xaabbccddeeff0011ULL
+#define SRMM_VERSION		1
+#define SRMM_MAGIC		0xaabbccddeeff0011ULL
+
+/* Slash RPC MDS <-> I/O defines. */
+#define SRMI_REQ_PORTAL		50
+#define SRMI_REP_PORTAL		51
+
+#define SRMI_VERSION		1
+#define SRMI_MAGIC		0xaabbccddeeff0011ULL
+
+/* Slash RPC I/O <-> I/O defines. */
+#define SRII_REQ_PORTAL		60
+#define SRII_REP_PORTAL		61
+#define SRII_BULK_PORTAL	62
+
+#define SRII_VERSION		1
+#define SRII_MAGIC		0xaabbccddeeff0011ULL
 
 /* Slash RPC message types. */
 enum {
@@ -67,22 +82,40 @@ enum {
 	SNRT
 };
 
+#if 0
+
+struct srm_open_secret {
+	u64			magic;
+	nonce_t			fnonce;
+	fid_t			fid;
+	fidgen_t		fidgen;
+	lnet_nid_t		cnid;
+	lnet_process_id_t	cpid;
+};
+
+#endif
+
 struct slash_creds {
 	u32	uid;
 	u32	gid;
 };
 
 struct srm_bmap_req {
-	u32     blkno; /* Starting block number                  */
-	u32     nblks; /* Read-ahead support                     */
-	u64     fid;   /* Optional, may be filled in server-side */
+	u32	blkno; /* Starting block number                  */
+	u32	nblks; /* Read-ahead support                     */
+	u64	fid;   /* Optional, may be filled in server-side */
 };
 
 struct srm_bmap_rep {
 	u32     nblks; /* The number of bmaps actually returned  */
 };
 
+struct srm_connect_secret {
+	size_t	wndmap_min;
+};
+
 struct srm_connect_req {
+//	struct srm_connect_secret crypt_i;
 	u64	magic;
 	u32	version;
 };
@@ -95,6 +128,8 @@ struct srm_create_req {
 };
 
 struct srm_create_rep {
+//	struct srm_open_secret sig_m;
+//	nonce_t fnonce;
 	u64	cfd;
 	s32	rc;
 };
@@ -179,6 +214,8 @@ struct srm_opendir_req {
 };
 
 struct srm_opendir_rep {
+//	struct slash_open_payload_sig sig_m;
+//	nonce_t fnonce;
 	u64	cfd;
 	s32	rc;
 };
@@ -243,11 +280,11 @@ struct srm_statfs_req {
 struct srm_statfs_rep {
 	u64	f_files;
 	u64	f_ffree;
-	s32	rc;
 	u32	f_bsize;
 	u32	f_blocks;
 	u32	f_bfree;
 	u32	f_bavail;
+	s32	rc;
 };
 
 struct srm_symlink_req {
@@ -273,7 +310,19 @@ struct srm_utimes_req {
 	struct timeval times[2];
 };
 
+#if 0
+struct srm_write_secret {
+	struct srm_open_secret sig_m;
+	size_t wndmap_pos;
+	u64 magic;
+	u32 size;	/* write(2) len */
+	crc_t crc;	/* crc of write data */
+	granting mds server name
+};
+#endif
+
 struct srm_write_req {
+//	struct srm_write_secret crypt_i;
 	u64		cfd;
 	u32		size;
 	u32		offset;
