@@ -1,19 +1,23 @@
 /* $Id$ */
 
-#include <stdio.h>
-
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
-#include "psc_util/strlcpy.h"
 
-#include "rpc.h"
 #include "sliod.h"
 #include "slashrpc.h"
+#include "rpc.h"
+
+struct psclist_head io_server_conns = PSCLIST_HEAD_INIT(io_server_conns);
+
+struct io_server_conn {
+	struct psclist_head		 isc_lentry;
+	struct slashrpc_cservice	*isc_csvc;
+};
 
 int
-slrim_handler(struct pscrpc_request *rq)
+slrii_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
@@ -31,18 +35,20 @@ slrim_handler(struct pscrpc_request *rq)
 }
 
 int
-slrim_issue_connect(const char *name)
+slrii_issue_connect(const char *name)
 {
+	struct io_server_conn *isc;
 	lnet_nid_t nid;
+
+	isc = PSCALLOC(sizeof(*isc));
 
 	nid = libcfs_str2nid(name);
 	if (nid == LNET_NID_ANY)
 		psc_fatalx("invalid server name: %s", name);
 
-	if (rpc_issue_connect(nid, rim_csvc->csvc_import,
-	    SRMI_MAGIC, SRMI_VERSION)) {
+	isc->isc_csvc = rpc_csvc_create(SRII_REQ_PORTAL, SRII_REP_PORTAL);
+	if (rpc_issue_connect(nid, isc->isc_csvc->csvc_import,
+	    SRII_MAGIC, SRII_VERSION))
 		psc_error("rpc_connect %s", name);
-		return (-1);
-	}
-	return (0);
+	psclist_xadd(&isc->isc_lentry, &io_server_conns);
 }

@@ -5,14 +5,17 @@
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
+#include "psc_rpc/service.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/strlcpy.h"
 
 #include "rpc.h"
+#include "sliod.h"
 #include "slashrpc.h"
 
-struct slashrpc_service *ric_svc;
-struct slashrpc_service *rim_svc;
-struct slashrpc_service *rii_svc;
+struct slashrpc_cservice *rim_csvc;
+
+lnet_process_id_t lpid;
 
 struct slashrpc_export *
 slashrpc_export_get(struct pscrpc_export *exp)
@@ -31,23 +34,24 @@ slashrpc_export_destroy(__unusedx void *data)
 {
 }
 
+/*
+ * rpc_connect - attempt connection initiation with a peer.
+ * @server: NID of server peer.
+ * @ptl: portal ID to initiate over.
+ * @magic: agreed-upon connection message key.
+ * @version: communication protocol version.
+ */
 int
-rpc_connect(lnet_nid_t server, struct slashrpc_service *svc, u64 magic,
+rpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp, u64 magic,
     u32 version)
 {
 	lnet_process_id_t server_id = { server, 0 };
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *rq;
-	struct pscrpc_import *imp;
-	lnet_process_id_t id;
 	int rc;
 
-	if (LNetGetId(1, &id))
-		psc_fatalx("LNetGetId");
-
-	imp = svc->svc_import;
-	imp->imp_connection = pscrpc_get_connection(server_id, id.nid, NULL);
+	imp->imp_connection = pscrpc_get_connection(server_id, lpid.nid, NULL);
 	imp->imp_connection->c_peer.pid = SLASH_SVR_PID;
 
 	rc = rsx_newreq(imp, version, SRMT_CONNECT, sizeof(*mq), 0, &rq, &mq);
@@ -55,70 +59,99 @@ rpc_connect(lnet_nid_t server, struct slashrpc_service *svc, u64 magic,
 		return (rc);
 	mq->magic = magic;
 	mq->version = version;
-
-	rc = rsx_waitrep(rq, 0, &mp);
+	if ((rc = rsx_waitrep(rq, 0, &mp)) == 0) {
+		if (mp->rc)
+			rc = mp->rc;
+		else
+			imp->imp_state = PSC_IMP_FULL;
+	}
 	pscrpc_req_finished(rq);
-	if (rc == 0)
-		rc = mp->rc;
-	if (rc == 0)
-		imp->imp_state = PSC_IMP_FULL;
 	return (rc);
 }
 
 /*
- * rpc_svc_create - create a client RPC service.
+ * rpc_csvc_create - create a client RPC service.
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
  */
-struct slashrpc_service *
-rpc_svc_create(u32 rqptl, u32 rpptl)
+struct slashrpc_cservice *
+rpc_csvc_create(u32 rqptl, u32 rpptl)
 {
-	struct slashrpc_service *svc;
+	struct slashrpc_cservice *csvc;
+	struct pscrpc_import *imp;
 
-	svc = PSCALLOC(sizeof(*svc));
+	csvc = PSCALLOC(sizeof(*csvc));
 
-	INIT_PSCLIST_HEAD(&svc->svc_old_imports);
-	LOCK_INIT(&svc->svc_lock);
+	INIT_PSCLIST_HEAD(&csvc->csvc_old_imports);
+	LOCK_INIT(&csvc->csvc_lock);
 
-	svc->svc_failed = 0;
-	svc->svc_initialized = 0;
+	csvc->csvc_failed = 0;
+	csvc->csvc_initialized = 0;
 
-	if ((svc->svc_import = new_import()) == NULL)
+	if ((imp = new_import()) == NULL)
 		psc_fatalx("new_import");
+	csvc->csvc_import = imp;
 
-	svc->svc_import->imp_client =
-	    PSCALLOC(sizeof(*svc->svc_import->imp_client));
-	svc->svc_import->imp_client->cli_request_portal = rqptl;
-	svc->svc_import->imp_client->cli_reply_portal = rpptl;
-
-	svc->svc_import->imp_max_retries = 2;
-	return (svc);
+	imp->imp_client = PSCALLOC(sizeof(*imp->imp_client));
+	imp->imp_client->cli_request_portal = rqptl;
+	imp->imp_client->cli_reply_portal = rpptl;
+	imp->imp_max_retries = 2;
+	return (csvc);
 }
 
-/*
- * rpc_svc_init: initialize RPC services.
+/**
+ * rpcsvc_init - create and initialize RPC services.
  */
 void
-rpc_svc_init(void)
+rpcsvc_init(void)
 {
-	ric_svc = rpc_svc_create(SRCI_REQ_PORTAL, SRCI_REP_PORTAL);
-	rim_svc = rpc_svc_create(SRMI_REQ_PORTAL, SRMI_REP_PORTAL);
-	rii_svc = rpc_svc_create(SRII_REQ_PORTAL, SRII_REP_PORTAL);
-}
+	pscrpc_svc_handle_t *svh;
 
-void
-rpc_svc_connect(void)
-{
-	lnet_nid_t nid;
-	char *snid;
+	if (LNetGetId(1, &lpid))
+		psc_fatalx("LNetGetId");
 
-	snid = getenv("SLASH_SERVER_NID");
-	if (snid == NULL)
-		psc_fatalx("SLASH_SERVER_NID not set");
-	nid = libcfs_str2nid(snid);
-	if (nid == LNET_NID_ANY)
-		psc_fatalx("invalid SLASH_SERVER_NID: %s", snid);
+	/* Create client service to issue requests to the MDS server. */
+	rim_csvc = rpc_csvc_create(SRMI_REQ_PORTAL, SRMI_REP_PORTAL);
 
-	if (rpc_connect(nid, rim_svc, SRMI_MAGIC, SRMI_VERSION))
-		psc_error("rpc_connect %s", snid);
+	/* Create server service to handle requests from clients. */
+	svh = PSCALLOC(sizeof(*svh));
+	svh->svh_nbufs = SRIC_NBUFS;
+	svh->svh_bufsz = SRIC_BUFSZ;
+	svh->svh_reqsz = SRIC_BUFSZ;
+	svh->svh_repsz = SRIC_REPSZ;
+	svh->svh_req_portal = SRCI_REQ_PORTAL;
+	svh->svh_rep_portal = SRCI_REP_PORTAL;
+	svh->svh_type = SLIOTHRT_RIC;
+	svh->svh_nthreads = SRIC_NTHREADS;
+	svh->svh_handler = slric_handler;
+	strlcpy(svh->svh_svc_name, SRIC_SVCNAME, sizeof(svh->svh_svc_name));
+	pscrpc_thread_spawn(svh, struct slash_ricthr);
+
+	/* Create server service to handle requests from the MDS server. */
+	svh = PSCALLOC(sizeof(*svh));
+	svh->svh_nbufs = SRIM_NBUFS;
+	svh->svh_bufsz = SRIM_BUFSZ;
+	svh->svh_reqsz = SRIM_BUFSZ;
+	svh->svh_repsz = SRIM_REPSZ;
+	svh->svh_req_portal = SRMI_REQ_PORTAL;
+	svh->svh_rep_portal = SRMI_REP_PORTAL;
+	svh->svh_type = SLIOTHRT_RIM;
+	svh->svh_nthreads = SRIM_NTHREADS;
+	svh->svh_handler = slrim_handler;
+	strlcpy(svh->svh_svc_name, SRIM_SVCNAME, sizeof(svh->svh_svc_name));
+	pscrpc_thread_spawn(svh, struct slash_rimthr);
+
+	/* Create server service to handle requests from other I/O servers. */
+	svh = PSCALLOC(sizeof(*svh));
+	svh->svh_nbufs = SRII_NBUFS;
+	svh->svh_bufsz = SRII_BUFSZ;
+	svh->svh_reqsz = SRII_BUFSZ;
+	svh->svh_repsz = SRII_REPSZ;
+	svh->svh_req_portal = SRII_REQ_PORTAL;
+	svh->svh_rep_portal = SRII_REP_PORTAL;
+	svh->svh_type = SLIOTHRT_RII;
+	svh->svh_nthreads = SRII_NTHREADS;
+	svh->svh_handler = slrii_handler;
+	strlcpy(svh->svh_svc_name, SRII_SVCNAME, sizeof(svh->svh_svc_name));
+	pscrpc_thread_spawn(svh, struct slash_riithr);
 }

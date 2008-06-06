@@ -5,9 +5,10 @@ include Makefile.path
 PROG=		sliod
 SRCS+=		control.c
 SRCS+=		main.c
+SRCS+=		ric.c
+SRCS+=		rii.c
 SRCS+=		rim.c
 SRCS+=		rpc.c
-SRCS+=		rpcio.c
 SRCS+=		timer.c
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${SLASH_BASE}/slashd/cfd.c
