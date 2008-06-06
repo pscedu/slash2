@@ -12,29 +12,33 @@ struct slash_sb_mem;
 
 /* Slash server thread types. */
 #define SLTHRT_CTL	0	/* control */
-#define SLTHRT_RPCMDS	1	/* client metadata messages */
-#define SLTHRT_RPCBE	2	/* MDS <-> I/O server backend messages */
-#define SLTHRT_LND	3	/* lustre networking device helper */
-#define SLTHRT_TINTV	4	/* timer interval */
-#define SLTHRT_TIOS	5	/* iostats updater */
+#define SLTHRT_ACSVC	1	/* access service */
+#define SLTHRT_RMC	2	/* Client <-> MDS messages */
+#define SLTHRT_RMI	3	/* MDS <-> I/O messages */
+#define SLTHRT_RMM	4	/* MDS <-> MDS messages */
+#define SLTHRT_LND	5	/* lustre networking device helper */
+#define SLTHRT_TINTV	6	/* timer interval */
+#define SLTHRT_TIOS	7	/* iostats updater */
 
-struct slash_rpcmdsthr {
+struct slash_rmcthr {
 	struct pscrpc_thread	 srm_prt;
 };
 
-struct slash_rpcbethr {
+struct slash_rmithr {
 	struct pscrpc_thread	 srb_prt;
 };
 
-#define slrpcmdsthr(thr) ((struct slash_rpcmdsthr *)(thr)->pscthr_private)
-#define slrpcbethr(thr)	 ((struct slash_rpcbethr *)(thr)->pscthr_private)
+#define slrmcthr(thr)	((struct slash_rmcthr *)(thr)->pscthr_private)
+#define slrmithr(thr)	((struct slash_rmithr *)(thr)->pscthr_private)
 
-void		slmds_init(void);
-void		slbe_init(void);
+void		slrmc_init(void);
+void		slrmi_init(void);
 void		slash_journal_init(void);
 sl_inum_t	slash_get_inum(void);
 
 void	sltimerthr_spawn(void);
+
+void fidcache_init(void);
 
 extern struct slash_sb_mem	sbm;
 

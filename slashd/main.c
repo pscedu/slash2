@@ -86,6 +86,8 @@ main(int argc, char *argv[])
 	pscthr_init(&pscControlThread, SLTHRT_CTL, NULL,
 	    PSCALLOC(sizeof(struct psc_ctlthr)), "slctlthr");
 
+//	fidcache_init();
+
 	lnet_thrspawnf = spawn_lnet_thr;
 
 	slashGetConfig(cfn);
@@ -94,8 +96,8 @@ main(int argc, char *argv[])
 	slash_superblock_init();
 	slash_journal_init();
 
-	slbe_init();
-	slmds_init();
+	slrmi_init();
+	slrmc_init();
 	slctlthr_main(sfn);
 	exit(0);
 }

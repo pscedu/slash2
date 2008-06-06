@@ -31,6 +31,7 @@ SRCS+=		${PFL_BASE}/psc_util/journal.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/mkdirs.c
 SRCS+=		${PFL_BASE}/psc_util/palloc.c
+SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/threadtable.c

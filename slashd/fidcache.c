@@ -1,14 +1,15 @@
-/* $Id: zestInodeCache.c 2430 2008-01-04 21:08:57Z yanovich $ */
+/* $Id$ */
 
 #include <stdio.h>
 
-#include "psc_util/atomic.h"
-#include "fid.h"
-#include "fidcache.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
 #include "offtree.h"
+
+#include "fid.h"
+#include "fidcache.h"
 
 #define SL_FIDCACHE_LOW_THRESHOLD 80 // 80%
 
@@ -43,12 +44,12 @@ bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f)
 	memset(b, 0, sizeof(*b));
 	atomic_set(&b->bcm_refcnt, 0);
 	b->bcm_oftr = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
-				     SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH, 
+				     SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,
 				     f, sl_buffer_alloc, sl_oftm_addref);
 	psc_assert(b->bcm_oftr);
 }
 
-/**  
+/**
  * bmap_cache_cmp - bmap_cache splay tree comparator
  * @a: a bmap_cache_memb
  * @b: another bmap_cache_memb
@@ -65,7 +66,7 @@ bmap_cache_cmp(const void *x, const void *y)
         return 0;
 }
 
-__static SPLAY_GENERATE(bmap_cache, bmap_cache_memb, 
+__static SPLAY_GENERATE(bmap_cache, bmap_cache_memb,
 			bcm_tentry, bmap_cache_cmp);
 
 
@@ -101,7 +102,7 @@ fidcache_reap(void)
 		 *  verifying the following conditions.
 		 */
 		if (!fcmh_clean_check(f)) {
-			DEBUG_FCMH(PLL_ERROR, f, "Invalid fcmh state"); 
+			DEBUG_FCMH(PLL_ERROR, f, "Invalid fcmh state");
 			psc_fatalx("Invalid state for clean list");
 		}
 		/*  Clean inodes may have non-zero refcnts, skip these
@@ -182,9 +183,9 @@ fidcache_put_locked(struct fidcache_memb_handle *f, list_cache_t *lc)
 
 		} else psc_fatalx("Bad inode fcmh_cache_owner %p",
 			       f->fcmh_cache_owner);
-		
+
 		psc_assert(ATTR_TEST(f->fcmh_state, FCM_CAC_FREEING));
-		/* All bmaps and cache buffers must have been 
+		/* All bmaps and cache buffers must have been
 		 *  released prior to this.
 		 */
 		psc_assert(!SPLAY_NEXT(bmap_cache, &f->fcmh_bmap_cache, &tbmp));
@@ -228,7 +229,7 @@ fidcache_memb_init(struct fidcache_memb *fcm)
 /**
  * sl_fcmh_init - (slash_fidcache_handle_init) init a fid cache handle.
  */
-void 
+void
 fidcache_handle_init(void *p)
 {
 	struct fidcache_memb_handle *f = p;

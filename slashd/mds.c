@@ -13,6 +13,8 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/service.h"
+#include "psc_util/lock.h"
+#include "psc_util/strlcpy.h"
 
 #include "cfd.h"
 #include "dircache.h"
@@ -21,28 +23,28 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
-#define SRM_NTHREADS	8
-#define SRM_NBUFS	1024
-#define SRM_BUFSZ	(4096 + 256)
-#define SRM_REPSZ	128
-#define SRM_SVCNAME	"slrpcmdsthr"
+#define SRCM_NTHREADS	8
+#define SRCM_NBUFS	1024
+#define SRCM_BUFSZ	(4096 + 256)
+#define SRCM_REPSZ	128
+#define SRCM_SVCNAME	"slrmcthr"
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
 int
-slmds_connect(struct pscrpc_request *rq)
+slrmc_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRM_MAGIC || mq->version != SRM_VERSION)
+	if (mq->magic != SRCM_MAGIC || mq->version != SRCM_VERSION)
 		mp->rc = -EINVAL;
 	return (0);
 }
 
 int
-slmds_chmod(struct pscrpc_request *rq)
+slrmc_chmod(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
@@ -57,8 +59,8 @@ slmds_chmod(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -71,7 +73,7 @@ slmds_chmod(struct pscrpc_request *rq)
 
 #if 0
 int
-slmds_fchmod(struct pscrpc_request *rq)
+slrmc_fchmod(struct pscrpc_request *rq)
 {
 	struct srm_generic_rep *mp;
 	struct srm_fchmod_req *mq;
@@ -91,7 +93,7 @@ slmds_fchmod(struct pscrpc_request *rq)
 #endif
 
 int
-slmds_chown(struct pscrpc_request *rq)
+slrmc_chown(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
@@ -106,8 +108,8 @@ slmds_chown(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -120,7 +122,7 @@ slmds_chown(struct pscrpc_request *rq)
 
 #if 0
 int
-slmds_fchown(struct pscrpc_request *rq)
+slrmc_fchown(struct pscrpc_request *rq)
 {
 	struct srm_generic_rep *mp;
 	struct srm_fchown_req *mq;
@@ -140,7 +142,7 @@ slmds_fchown(struct pscrpc_request *rq)
 #endif
 
 int
-slmds_create(struct pscrpc_request *rq)
+slrmc_create(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_create_rep *mp;
@@ -157,8 +159,8 @@ slmds_create(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -177,7 +179,7 @@ slmds_create(struct pscrpc_request *rq)
 }
 
 int
-slmds_getattr(struct pscrpc_request *rq)
+slrmc_getattr(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_getattr_req *mq;
@@ -193,8 +195,8 @@ slmds_getattr(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -218,7 +220,7 @@ slmds_getattr(struct pscrpc_request *rq)
 }
 
 int
-slmds_fgetattr(struct pscrpc_request *rq)
+slrmc_fgetattr(struct pscrpc_request *rq)
 {
 	struct srm_fgetattr_req *mq;
 	struct srm_fgetattr_rep *mp;
@@ -248,7 +250,7 @@ slmds_fgetattr(struct pscrpc_request *rq)
 }
 
 int
-slmds_ftruncate(struct pscrpc_request *rq)
+slrmc_ftruncate(struct pscrpc_request *rq)
 {
 	struct srm_ftruncate_req *mq;
 	struct srm_generic_rep *mp;
@@ -267,7 +269,7 @@ slmds_ftruncate(struct pscrpc_request *rq)
 }
 
 int
-slmds_link(struct pscrpc_request *rq)
+slrmc_link(struct pscrpc_request *rq)
 {
 	char from[PATH_MAX], to[PATH_MAX];
 	struct pscrpc_bulk_desc *desc;
@@ -285,8 +287,8 @@ slmds_link(struct pscrpc_request *rq)
 	iov[0].iov_len = mq->fromlen;
 	iov[1].iov_base = to;
 	iov[1].iov_len = mq->tolen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, iov, 2)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, iov, 2)) != 0)
 		return (0);
 	from[mq->fromlen] = '\0';
 	to[mq->tolen] = '\0';
@@ -301,7 +303,7 @@ slmds_link(struct pscrpc_request *rq)
 }
 
 int
-slmds_mkdir(struct pscrpc_request *rq)
+slrmc_mkdir(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
@@ -316,8 +318,8 @@ slmds_mkdir(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -329,7 +331,7 @@ slmds_mkdir(struct pscrpc_request *rq)
 }
 
 int
-slmds_mknod(struct pscrpc_request *rq)
+slrmc_mknod(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
@@ -344,8 +346,8 @@ slmds_mknod(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -357,7 +359,7 @@ slmds_mknod(struct pscrpc_request *rq)
 }
 
 int
-slmds_open(struct pscrpc_request *rq)
+slrmc_open(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_open_req *mq;
@@ -373,8 +375,8 @@ slmds_open(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -389,7 +391,7 @@ slmds_open(struct pscrpc_request *rq)
 }
 
 int
-slmds_opendir(struct pscrpc_request *rq)
+slrmc_opendir(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_opendir_req *mq;
@@ -405,8 +407,8 @@ slmds_opendir(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -423,7 +425,7 @@ slmds_opendir(struct pscrpc_request *rq)
 #define READDIR_BUFSZ (512 * 1024)
 
 int
-slmds_readdir(struct pscrpc_request *rq)
+slrmc_readdir(struct pscrpc_request *rq)
 {
 	struct dirent ents[READDIR_BUFSZ];
 	struct pscrpc_bulk_desc *desc;
@@ -457,7 +459,7 @@ slmds_readdir(struct pscrpc_request *rq)
 	mp->size = rc;
 	iov.iov_base = ents;
 	iov.iov_len = mp->size;
-	mp->rc = rsx_bulkgetsource(rq, &desc, SRM_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL, &iov, 1);
 // rc / pscPageSize
 	if (desc)
 		pscrpc_free_bulk(desc);
@@ -465,7 +467,7 @@ slmds_readdir(struct pscrpc_request *rq)
 }
 
 int
-slmds_readlink(struct pscrpc_request *rq)
+slrmc_readlink(struct pscrpc_request *rq)
 {
 	char fn[PATH_MAX], rfn[PATH_MAX];
 	struct pscrpc_bulk_desc *desc;
@@ -482,8 +484,8 @@ slmds_readlink(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -496,8 +498,8 @@ slmds_readlink(struct pscrpc_request *rq)
 	else {
 		iov.iov_base = rfn;
 		iov.iov_len = mq->size;
-		mp->rc = rsx_bulkgetsource(rq, &desc, SRM_BULK_PORTAL,
-		    &iov, 1);
+		mp->rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
+		    SRCM_BULK_PORTAL, &iov, 1);
 		if (desc)
 			pscrpc_free_bulk(desc);
 	}
@@ -505,7 +507,7 @@ slmds_readlink(struct pscrpc_request *rq)
 }
 
 int
-slmds_release(struct pscrpc_request *rq)
+slrmc_release(struct pscrpc_request *rq)
 {
 	struct srm_release_req *mq;
 	struct srm_generic_rep *mp;
@@ -517,7 +519,7 @@ slmds_release(struct pscrpc_request *rq)
 }
 
 int
-slmds_releasedir(struct pscrpc_request *rq)
+slrmc_releasedir(struct pscrpc_request *rq)
 {
 	struct srm_releasedir_req *mq;
 	struct srm_generic_rep *mp;
@@ -529,7 +531,7 @@ slmds_releasedir(struct pscrpc_request *rq)
 }
 
 int
-slmds_rename(struct pscrpc_request *rq)
+slrmc_rename(struct pscrpc_request *rq)
 {
 	char from[PATH_MAX], to[PATH_MAX];
 	struct pscrpc_bulk_desc *desc;
@@ -547,8 +549,8 @@ slmds_rename(struct pscrpc_request *rq)
 	iov[0].iov_len = mq->fromlen;
 	iov[1].iov_base = to;
 	iov[1].iov_len = mq->tolen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, iov, 2)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, iov, 2)) != 0)
 		return (0);
 	from[mq->fromlen] = '\0';
 	to[mq->tolen] = '\0';
@@ -563,7 +565,7 @@ slmds_rename(struct pscrpc_request *rq)
 }
 
 int
-slmds_rmdir(struct pscrpc_request *rq)
+slrmc_rmdir(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
@@ -578,8 +580,8 @@ slmds_rmdir(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -591,7 +593,7 @@ slmds_rmdir(struct pscrpc_request *rq)
 }
 
 int
-slmds_statfs(struct pscrpc_request *rq)
+slrmc_statfs(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_statfs_req *mq;
@@ -607,8 +609,8 @@ slmds_statfs(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -628,7 +630,7 @@ slmds_statfs(struct pscrpc_request *rq)
 }
 
 int
-slmds_symlink(struct pscrpc_request *rq)
+slrmc_symlink(struct pscrpc_request *rq)
 {
 	char from[PATH_MAX], to[PATH_MAX];
 	struct pscrpc_bulk_desc *desc;
@@ -646,8 +648,8 @@ slmds_symlink(struct pscrpc_request *rq)
 	iov[0].iov_len = mq->fromlen;
 	iov[1].iov_base = to;
 	iov[1].iov_len = mq->tolen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, iov, 2)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, iov, 2)) != 0)
 		return (0);
 	from[mq->fromlen] = '\0';
 	to[mq->tolen] = '\0';
@@ -662,7 +664,7 @@ slmds_symlink(struct pscrpc_request *rq)
 }
 
 int
-slmds_truncate(struct pscrpc_request *rq)
+slrmc_truncate(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_truncate_req *mq;
@@ -677,8 +679,8 @@ slmds_truncate(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -690,7 +692,7 @@ slmds_truncate(struct pscrpc_request *rq)
 }
 
 int
-slmds_unlink(struct pscrpc_request *rq)
+slrmc_unlink(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
@@ -705,8 +707,8 @@ slmds_unlink(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -718,7 +720,7 @@ slmds_unlink(struct pscrpc_request *rq)
 }
 
 int
-slmds_utimes(struct pscrpc_request *rq)
+slrmc_utimes(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
@@ -733,8 +735,8 @@ slmds_utimes(struct pscrpc_request *rq)
 	}
 	iov.iov_base = fn;
 	iov.iov_len = mq->fnlen;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc,
-	    SRM_BULK_PORTAL, &iov, 1)) != 0)
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1)) != 0)
 		return (0);
 	fn[mq->fnlen] = '\0';
 	pscrpc_free_bulk(desc);
@@ -784,7 +786,7 @@ revokecred(uid_t uid, gid_t gid)
 }
 
 int
-slmds_svc_handler(struct pscrpc_request *rq)
+slrmc_svc_handler(struct pscrpc_request *rq)
 {
 	struct slashrpc_export *sexp;
 	uid_t myuid;
@@ -793,7 +795,7 @@ slmds_svc_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
-		rc = slmds_connect(rq);
+		rc = slrmc_connect(rq);
 		target_send_reply_msg(rq, rc, 0);
 		return (rc);
 	}
@@ -804,80 +806,80 @@ slmds_svc_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CHMOD:
-		rc = slmds_chmod(rq);
+		rc = slrmc_chmod(rq);
 		break;
 	case SRMT_CHOWN:
-		rc = slmds_chown(rq);
+		rc = slrmc_chown(rq);
 		break;
 	case SRMT_CREATE:
-		rc = slmds_create(rq);
+		rc = slrmc_create(rq);
 		break;
 	case SRMT_DESTROY:	/* client has unmounted */
 		break;
 	case SRMT_GETATTR:
-		rc = slmds_getattr(rq);
+		rc = slrmc_getattr(rq);
 		break;
 	case SRMT_FGETATTR:
-		rc = slmds_fgetattr(rq);
+		rc = slrmc_fgetattr(rq);
 		break;
 	case SRMT_FTRUNCATE:
-		rc = slmds_ftruncate(rq);
+		rc = slrmc_ftruncate(rq);
 		break;
 //	case SRMT_FCHMOD:
-//		rc = slmds_fchmod(rq);
+//		rc = slrmc_fchmod(rq);
 //		break;
 //	case SRMT_FCHOWN:
-//		rc = slmds_fchown(rq);
+//		rc = slrmc_fchown(rq);
 //		break;
 	case SRMT_LINK:
-		rc = slmds_link(rq);
+		rc = slrmc_link(rq);
 		break;
 	case SRMT_LOCK:
 		break;
 	case SRMT_MKDIR:
-		rc = slmds_mkdir(rq);
+		rc = slrmc_mkdir(rq);
 		break;
 	case SRMT_MKNOD:
-		rc = slmds_mknod(rq);
+		rc = slrmc_mknod(rq);
 		break;
 	case SRMT_OPEN:
-		rc = slmds_open(rq);
+		rc = slrmc_open(rq);
 		break;
 	case SRMT_OPENDIR:
-		rc = slmds_opendir(rq);
+		rc = slrmc_opendir(rq);
 		break;
 	case SRMT_READDIR:
-		rc = slmds_readdir(rq);
+		rc = slrmc_readdir(rq);
 		break;
 	case SRMT_READLINK:
-		rc = slmds_readlink(rq);
+		rc = slrmc_readlink(rq);
 		break;
 	case SRMT_RELEASE:
-		rc = slmds_release(rq);
+		rc = slrmc_release(rq);
 		break;
 	case SRMT_RELEASEDIR:
-		rc = slmds_releasedir(rq);
+		rc = slrmc_releasedir(rq);
 		break;
 	case SRMT_RENAME:
-		rc = slmds_rename(rq);
+		rc = slrmc_rename(rq);
 		break;
 	case SRMT_RMDIR:
-		rc = slmds_rmdir(rq);
+		rc = slrmc_rmdir(rq);
 		break;
 	case SRMT_STATFS:
-		rc = slmds_statfs(rq);
+		rc = slrmc_statfs(rq);
 		break;
 	case SRMT_SYMLINK:
-		rc = slmds_symlink(rq);
+		rc = slrmc_symlink(rq);
 		break;
 	case SRMT_TRUNCATE:
-		rc = slmds_truncate(rq);
+		rc = slrmc_truncate(rq);
 		break;
 	case SRMT_UNLINK:
-		rc = slmds_unlink(rq);
+		rc = slrmc_unlink(rq);
 		break;
 	case SRMT_UTIMES:
-		rc = slmds_utimes(rq);
+		rc = slrmc_utimes(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
@@ -894,27 +896,25 @@ slmds_svc_handler(struct pscrpc_request *rq)
 }
 
 /**
- * slmds_init - start up the MDS threads via pscrpc_thread_spawn()
+ * slrmc_init - start up the MDS threads via pscrpc_thread_spawn()
  */
 void
-slmds_init(void)
+slrmc_init(void)
 {
 	pscrpc_svc_handle_t *svh;
 
 	svh = PSCALLOC(sizeof(*svh));
-	svh->svh_nbufs = SRM_NBUFS;
-	svh->svh_bufsz = SRM_BUFSZ;
-	svh->svh_reqsz = SRM_BUFSZ;
-	svh->svh_repsz = SRM_REPSZ;
-	svh->svh_req_portal = SRM_REQ_PORTAL;
-	svh->svh_rep_portal = SRM_REP_PORTAL;
-	svh->svh_type = SLTHRT_RPCMDS;
-	svh->svh_nthreads = SRM_NTHREADS;
-	svh->svh_handler = slmds_svc_handler;
+	svh->svh_nbufs = SRCM_NBUFS;
+	svh->svh_bufsz = SRCM_BUFSZ;
+	svh->svh_reqsz = SRCM_BUFSZ;
+	svh->svh_repsz = SRCM_REPSZ;
+	svh->svh_req_portal = SRCM_REQ_PORTAL;
+	svh->svh_rep_portal = SRCM_REP_PORTAL;
+	svh->svh_type = SLTHRT_RMC;
+	svh->svh_nthreads = SRCM_NTHREADS;
+	svh->svh_handler = slrmc_svc_handler;
 
-	if (snprintf(svh->svh_svc_name, sizeof(svh->svh_svc_name), "%s",
-	    SRM_SVCNAME) == -1)
-		psc_fatal("snprintf");
+	strlcpy(svh->svh_svc_name, SRCM_SVCNAME, sizeof(svh->svh_svc_name));
 
-	pscrpc_thread_spawn(svh, struct slash_rpcmdsthr);
+	pscrpc_thread_spawn(svh, struct slash_rmcthr);
 }
