@@ -93,6 +93,8 @@ struct srm_open_secret {
 	lnet_process_id_t	cpid;
 };
 
+#define SR_OPEN_SIGMAGIC	0x1234123412341234
+
 #endif
 
 struct slash_creds {
@@ -110,12 +112,20 @@ struct srm_bmap_rep {
 	u32     nblks; /* The number of bmaps actually returned  */
 };
 
-struct srm_connect_secret {
+struct srcim_connect_secret {
 	size_t	wndmap_min;
+	u64	magic;
+};
+
+#define SRCI_CONNECT_SIGMAGIC	0x1234123412341234
+
+struct srcim_connect_req {
+	struct srcim_connect_secret crypt_i;
+	u64	magic;
+	u32	version;
 };
 
 struct srm_connect_req {
-//	struct srm_connect_secret crypt_i;
 	u64	magic;
 	u32	version;
 };
@@ -221,6 +231,7 @@ struct srm_opendir_rep {
 };
 
 struct srm_read_req {
+//	struct srm_rw_secret crypt_i;
 	u64	cfd;
 	u32	size;
 	u32	offset;
@@ -311,7 +322,7 @@ struct srm_utimes_req {
 };
 
 #if 0
-struct srm_write_secret {
+struct srm_rw_secret {
 	struct srm_open_secret sig_m;
 	size_t wndmap_pos;
 	u64 magic;
@@ -322,7 +333,7 @@ struct srm_write_secret {
 #endif
 
 struct srm_write_req {
-//	struct srm_write_secret crypt_i;
+//	struct srm_rw_secret crypt_i;
 	u64		cfd;
 	u32		size;
 	u32		offset;
@@ -335,17 +346,6 @@ struct srm_write_rep {
 };
 
 struct srm_generic_rep {
-	s32	rc;
-};
-
-struct srm_getfid_req {
-	u64	nid;
-	u64	pid;
-	u64	cfd;
-};
-
-struct srm_getfid_rep {
-	u64	fid;
 	s32	rc;
 };
 
