@@ -15,6 +15,7 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
+#include "psc_util/strlcpy.h"
 
 #include "fid.h"
 #include "rpc.h"
@@ -22,11 +23,11 @@
 #include "sliod.h"
 #include "slashrpc.h"
 
-#define SRI_NTHREADS	8
-#define SRI_NBUFS	1024
-#define SRI_BUFSZ	256
-#define SRI_REPSZ	256
-#define SRI_SVCNAME	"slrpciothr"
+#define SRIC_NTHREADS	8
+#define SRIC_NBUFS	1024
+#define SRIC_BUFSZ	256
+#define SRIC_REPSZ	256
+#define SRIC_SVCNAME	"slricthr"
 
 int
 cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
@@ -42,7 +43,7 @@ cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 		return (0);
 
 	/* Not there, contact slashd and populate it. */
-	if ((rc = rsx_newreq(rpcsvcs[RPCSVC_BE]->svc_import, SRB_VERSION,
+	if ((rc = rsx_newreq(rim_imp, SRMI_VERSION,
 	    SRMT_GETFID, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
 		return (rc);
 	mq->pid = exp->exp_connection->c_peer.pid;
@@ -56,19 +57,19 @@ cfd2fid_cache(slash_fid_t *fidp, struct pscrpc_export *exp, u64 cfd)
 }
 
 int
-slio_connect(struct pscrpc_request *rq)
+slric_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRI_MAGIC || mq->version != SRI_VERSION)
+	if (mq->magic != SRCI_MAGIC || mq->version != SRCI_VERSION)
 		mp->rc = -EINVAL;
 	return (0);
 }
 
 int
-slio_read(struct pscrpc_request *rq)
+slric_read(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_read_req *mq;
@@ -109,7 +110,8 @@ slio_read(struct pscrpc_request *rq)
 
 	iov.iov_base = buf;
 	iov.iov_len = mq->size;
-	mp->rc = rsx_bulkgetsource(rq, &desc, SRI_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
+	    SRCI_BULK_PORTAL, &iov, 1);
 	if (desc)
 		pscrpc_free_bulk(desc);
  done:
@@ -118,7 +120,7 @@ slio_read(struct pscrpc_request *rq)
 }
 
 int
-slio_write(struct pscrpc_request *rq)
+slric_write(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_write_req *mq;
@@ -143,7 +145,8 @@ slio_write(struct pscrpc_request *rq)
 	buf = PSCALLOC(mq->size);
 	iov.iov_base = buf;
 	iov.iov_len = mq->size;
-	if ((mp->rc = rsx_bulkgetsink(rq, &desc, SRI_BULK_PORTAL, &iov, 1)) == 0) {
+	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCI_BULK_PORTAL, &iov, 1)) == 0) {
 //	mq->size / pscPageSize,
 		if ((fd = open(fn, O_WRONLY)) == -1)
 			mp->rc = -errno;
@@ -163,21 +166,19 @@ slio_write(struct pscrpc_request *rq)
 }
 
 int
-slio_svc_handler(struct pscrpc_request *rq)
+slric_svc_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
-	ENTRY;
-	DEBUG_REQ(PLL_TRACE, rq, "new req");
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
-		rc = slio_connect(rq);
+		rc = slric_connect(rq);
 		break;
 	case SRMT_READ:
-		rc = slio_read(rq);
+		rc = slric_read(rq);
 		break;
 	case SRMT_WRITE:
-		rc = slio_write(rq);
+		rc = slric_write(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
@@ -185,33 +186,31 @@ slio_svc_handler(struct pscrpc_request *rq)
 		rc = pscrpc_error(rq);
 		goto done;
 	}
-	psc_info("rq->rq_status == %d", rq->rq_status);
 	target_send_reply_msg(rq, rc, 0);
 
  done:
-	RETURN(rc);
+	return (rc);
 }
 
 /**
- * slio_init - start up the I/O threads via pscrpc_thread_spawn()
+ * slric_init - start up the I/O threads via pscrpc_thread_spawn()
  */
 void
-slio_init(void)
+slric_init(void)
 {
 	pscrpc_svc_handle_t *svh = PSCALLOC(sizeof(*svh));
 
-	svh->svh_nbufs      = SRI_NBUFS;
-	svh->svh_bufsz      = SRI_BUFSZ;
-	svh->svh_reqsz      = SRI_BUFSZ;
-	svh->svh_repsz      = SRI_REPSZ;
-	svh->svh_req_portal = SRI_REQ_PORTAL;
-	svh->svh_rep_portal = SRI_REP_PORTAL;
-	svh->svh_type       = SLIOTHRT_RPC;
-	svh->svh_nthreads   = SRI_NTHREADS;
-	svh->svh_handler    = slio_svc_handler;
+	svh->svh_nbufs      = SRIC_NBUFS;
+	svh->svh_bufsz      = SRIC_BUFSZ;
+	svh->svh_reqsz      = SRIC_BUFSZ;
+	svh->svh_repsz      = SRIC_REPSZ;
+	svh->svh_req_portal = SRCI_REQ_PORTAL;
+	svh->svh_rep_portal = SRCI_REP_PORTAL;
+	svh->svh_type       = SLIOTHRT_RIC;
+	svh->svh_nthreads   = SRIC_NTHREADS;
+	svh->svh_handler    = slric_svc_handler;
 
-	snprintf(svh->svh_svc_name, sizeof(svh->svh_svc_name),
-	    "%s", SRI_SVCNAME);
+	strlcpy(svh->svh_svc_name, SRIC_SVCNAME, sizeof(svh->svh_svc_name));
 
-	pscrpc_thread_spawn(svh, struct slio_rpcthr);
+	pscrpc_thread_spawn(svh, struct slash_ricthr);
 }

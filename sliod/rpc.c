@@ -10,7 +10,9 @@
 #include "rpc.h"
 #include "slashrpc.h"
 
-struct slashrpc_service *rpcsvcs[NRPCSVCS];
+struct slashrpc_service *ric_svc;
+struct slashrpc_service *rim_svc;
+struct slashrpc_service *rii_svc;
 
 struct slashrpc_export *
 slashrpc_export_get(struct pscrpc_export *exp)
@@ -30,7 +32,8 @@ slashrpc_export_destroy(__unusedx void *data)
 }
 
 int
-rpc_be_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
+rpc_connect(lnet_nid_t server, struct slashrpc_service *svc, u64 magic,
+    u32 version)
 {
 	lnet_process_id_t server_id = { server, 0 };
 	struct srm_connect_req *mq;
@@ -43,11 +46,11 @@ rpc_be_connect(lnet_nid_t server, int ptl, u64 magic, u32 version)
 	if (LNetGetId(1, &id))
 		psc_fatalx("LNetGetId");
 
-	imp = rpcsvcs[ptl]->svc_import;
+	imp = svc->svc_import;
 	imp->imp_connection = pscrpc_get_connection(server_id, id.nid, NULL);
 	imp->imp_connection->c_peer.pid = SLASH_SVR_PID;
 
-	rc = rsx_newreq(imp, SRB_VERSION, SRMT_CONNECT, sizeof(*mq), 0, &rq, &mq);
+	rc = rsx_newreq(imp, version, SRMT_CONNECT, sizeof(*mq), 0, &rq, &mq);
 	if (rc)
 		return (rc);
 	mq->magic = magic;
@@ -98,6 +101,14 @@ rpc_svc_create(u32 rqptl, u32 rpptl)
 void
 rpc_svc_init(void)
 {
+	ric_svc = rpc_svc_create(SRCI_REQ_PORTAL, SRCI_REP_PORTAL);
+	rim_svc = rpc_svc_create(SRMI_REQ_PORTAL, SRMI_REP_PORTAL);
+	rii_svc = rpc_svc_create(SRII_REQ_PORTAL, SRII_REP_PORTAL);
+}
+
+void
+rpc_svc_connect(void)
+{
 	lnet_nid_t nid;
 	char *snid;
 
@@ -108,8 +119,6 @@ rpc_svc_init(void)
 	if (nid == LNET_NID_ANY)
 		psc_fatalx("invalid SLASH_SERVER_NID: %s", snid);
 
-	/* Setup backend service */
-	rpcsvcs[RPCSVC_BE] = rpc_svc_create(SRB_REQ_PORTAL, SRB_REP_PORTAL);
-	if (rpc_be_connect(nid, RPCSVC_BE, SRB_MAGIC, SRB_VERSION))
-		psc_error("rpc_be_connect %s", snid);
+	if (rpc_connect(nid, rim_svc, SRMI_MAGIC, SRMI_VERSION))
+		psc_error("rpc_connect %s", snid);
 }

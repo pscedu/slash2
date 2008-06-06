@@ -5,9 +5,6 @@
 #include "psc_types.h"
 #include "../slashd/cfd.h"
 
-#define RPCSVC_BE	0	/* backend: slashd <=> sliod */
-#define NRPCSVCS	1
-
 struct slashrpc_service {
 	struct pscrpc_import	 *svc_import;
 	psc_spinlock_t		  svc_lock;
@@ -24,4 +21,8 @@ struct slashrpc_export {
 
 void rpc_svc_init(void);
 
-extern struct slashrpc_service *rpcsvcs[];
+extern struct slashrpc_service *ric_svc;
+extern struct slashrpc_service *rim_svc;
+extern struct slashrpc_service *rii_svc;
+
+#define rim_imp (rim_svc->svc_import)
