@@ -36,8 +36,8 @@ rpc_connect(lnet_nid_t server, struct pscrpc_import *imp, u64 magic,
 	imp->imp_connection = pscrpc_get_connection(server_id, id.nid, NULL);
 	imp->imp_connection->c_peer.pid = SLASH_SVR_PID;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRM_VERSION,
-	    SRMT_CONNECT, rq, mq, mp)) != 0)
+	if ((rc = RSX_NEWREQ(mds_import, version, SRMT_CONNECT,
+	    rq, mq, mp)) != 0)
 		return (rc);
 	mq->magic = magic;
 	mq->version = version;
@@ -103,14 +103,14 @@ rpc_svc_init(void)
 		psc_fatalx("invalid SLASH_SERVER_NID: %s", snid);
 
 	/* Setup client MDS service */
-	mds_svc = rpc_svc_create(SRM_REQ_PORTAL, SRM_REP_PORTAL);
-	if (rpc_connect(nid, mds_import, SRM_MAGIC, SRM_VERSION))
+	mds_svc = rpc_svc_create(SRCM_REQ_PORTAL, SRCM_REP_PORTAL);
+	if (rpc_connect(nid, mds_import, SRCM_MAGIC, SRCM_VERSION))
 		psc_error("rpc_connect %s", snid);
 
 #if 0
 	/* Setup client I/O service */
-	io_svc = rpc_svc_create(SRI_REQ_PORTAL, SRI_REP_PORTAL);
-	if (rpc_connect(nid, RPCSVC_IO, SRI_MAGIC, SRI_VERSION))
+	io_svc = rpc_svc_create(SRCI_REQ_PORTAL, SRCI_REP_PORTAL);
+	if (rpc_connect(nid, RPCSVC_IO, SRIC_MAGIC, SRCI_VERSION))
 		psc_error("rpc_connect %s", snid);
 #endif
 }
