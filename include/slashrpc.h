@@ -78,7 +78,6 @@ enum {
 	SRMT_UTIMES,
 	SRMT_READ,
 	SRMT_WRITE,
-	SRMT_GETFID,
 	SNRT
 };
 

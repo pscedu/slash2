@@ -34,39 +34,6 @@ slrmi_connect(struct pscrpc_request *rq)
 }
 
 int
-slrmi_getfid(struct pscrpc_request *rq)
-{
-	struct slashrpc_export *sexp, qexp;
-	struct pscrpc_connection c;
-	struct pscrpc_export exp;
-	struct srm_getfid_req *mq;
-	struct srm_getfid_rep *mp;
-	struct cfdent *cfdent, qcfd;
-
-	RSX_ALLOCREP(rq, mq, mp);
-	exp.exp_connection = &c;
-	exp.exp_connection->c_peer.nid = mq->nid;
-	exp.exp_connection->c_peer.pid = mq->pid;
-	qexp.exp = &exp;
-
-	spinlock(&sexptreelock);
-	sexp = SPLAY_FIND(sexptree, &sexptree, &qexp);
-	if (sexp) {
-		qcfd.cfd = mq->cfd;
-		spinlock(&sexp->exp->exp_lock);
-		cfdent = SPLAY_FIND(cfdtree, &sexp->cfdtree, &qcfd);
-		if (cfdent)
-			COPYFID(&mp->fid, &cfdent->fid);
-		else
-			mp->rc = -ENOENT;
-		freelock(&sexp->exp->exp_lock);
-	} else
-		mp->rc = -ENOENT;
-	freelock(&sexptreelock);
-	return (0);
-}
-
-int
 slrmi_svc_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
@@ -75,23 +42,17 @@ slrmi_svc_handler(struct pscrpc_request *rq)
 	case SRMT_CONNECT:
 		rc = slrmi_connect(rq);
 		break;
-	case SRMT_GETFID:
-		rc = slrmi_getfid(rq);
-		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
-		rc = pscrpc_error(rq);
-		goto done;
+		return (pscrpc_error(rq));
 	}
 	target_send_reply_msg(rq, rc, 0);
-
- done:
 	return (rc);
 }
 
 /**
- * slrmi_init - start up the MDS <-> I/O backend threads
+ * slrmi_init - start up the MDS <-> I/O threads
  */
 void
 slrmi_init(void)

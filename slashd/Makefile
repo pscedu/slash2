@@ -3,7 +3,6 @@
 include Makefile.path
 
 PROG=		slashd
-SRCS+=		backend.c
 SRCS+=		buffer.c
 SRCS+=		cfd.c
 SRCS+=		control.c
@@ -15,6 +14,7 @@ SRCS+=		main.c
 SRCS+=		mds.c
 SRCS+=		metadir.c
 SRCS+=		offtree.c
+SRCS+=		rmi.c
 SRCS+=		rpc.c
 SRCS+=		sb.c
 SRCS+=		timer.c
