@@ -25,30 +25,30 @@ slrii_handler(struct pscrpc_request *rq)
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
-		rc = pscrpc_error(rq);
-		goto done;
+		return (pscrpc_error(rq));
 	}
 	target_send_reply_msg(rq, rc, 0);
-
- done:
 	return (rc);
 }
 
 int
-slrii_issue_connect(const char *name)
+slrii_addconn(const char *name)
 {
+	struct slashrpc_cservice *csvc;
 	struct io_server_conn *isc;
 	lnet_nid_t nid;
-
-	isc = PSCALLOC(sizeof(*isc));
 
 	nid = libcfs_str2nid(name);
 	if (nid == LNET_NID_ANY)
 		psc_fatalx("invalid server name: %s", name);
 
-	isc->isc_csvc = rpc_csvc_create(SRII_REQ_PORTAL, SRII_REP_PORTAL);
-	if (rpc_issue_connect(nid, isc->isc_csvc->csvc_import,
+	csvc = rpc_csvc_create(SRII_REQ_PORTAL, SRII_REP_PORTAL);
+	if (rpc_issue_connect(nid, csvc->csvc_import,
 	    SRII_MAGIC, SRII_VERSION))
-		psc_error("rpc_connect %s", name);
+		return (-1);
+
+	isc = PSCALLOC(sizeof(*isc));
+	isc->isc_csvc = csvc;
 	psclist_xadd(&isc->isc_lentry, &io_server_conns);
+	return (0);
 }

@@ -36,7 +36,7 @@ struct slashrpc_export {
 
 struct slashrpc_cservice *
 	rpc_csvc_create(u32, u32);
-void	rpc_svc_init(void);
+void	rpcsvc_init(void);
 int	rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, u64, u32);
 
 int slrim_handler(struct pscrpc_request *);
