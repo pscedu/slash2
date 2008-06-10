@@ -4,9 +4,12 @@
 
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/service.h"
+#include "psc_util/strlcpy.h"
 
 #include "rpc.h"
 #include "slashrpc.h"
+#include "slashd.h"
 
 struct sexptree sexptree;
 psc_spinlock_t sexptreelock = LOCK_INITIALIZER;
@@ -70,4 +73,70 @@ sexpcmp(const void *a, const void *b)
 		return (1);
 
 	return (0);
+}
+
+#define SRMM_NTHREADS	8
+#define SRMM_NBUFS	1024
+#define SRMM_BUFSZ	128
+#define SRMM_REPSZ	128
+#define SRMM_SVCNAME	"slrmmthr"
+
+#define SRMI_NTHREADS	8
+#define SRMI_NBUFS	1024
+#define SRMI_BUFSZ	128
+#define SRMI_REPSZ	128
+#define SRMI_SVCNAME	"slrmithr"
+
+#define SRCM_NTHREADS	8
+#define SRCM_NBUFS	1024
+#define SRCM_BUFSZ	128
+#define SRCM_REPSZ	128
+#define SRCM_SVCNAME	"slrmcthr"
+
+void
+rpcsvc_init(void)
+{
+	pscrpc_svc_handle_t *svh;
+
+	/* Bring up MDS <-> I/O server service. */
+	svh = PSCALLOC(sizeof(*svh));
+	svh->svh_nbufs = SRMI_NBUFS;
+	svh->svh_bufsz = SRMI_BUFSZ;
+	svh->svh_reqsz = SRMI_BUFSZ;
+	svh->svh_repsz = SRMI_REPSZ;
+	svh->svh_req_portal = SRMI_REQ_PORTAL;
+	svh->svh_rep_portal = SRMI_REP_PORTAL;
+	svh->svh_type = SLTHRT_RMI;
+	svh->svh_nthreads = SRMI_NTHREADS;
+	svh->svh_handler = slrmi_handler;
+	strlcpy(svh->svh_svc_name, SRMI_SVCNAME, sizeof(svh->svh_svc_name));
+	pscrpc_thread_spawn(svh, struct slash_rmithr);
+
+	/* Bring up MDS <-> MDS service. */
+	svh = PSCALLOC(sizeof(*svh));
+	svh->svh_nbufs = SRMM_NBUFS;
+	svh->svh_bufsz = SRMM_BUFSZ;
+	svh->svh_reqsz = SRMM_BUFSZ;
+	svh->svh_repsz = SRMM_REPSZ;
+	svh->svh_req_portal = SRMM_REQ_PORTAL;
+	svh->svh_rep_portal = SRMM_REP_PORTAL;
+	svh->svh_type = SLTHRT_RMM;
+	svh->svh_nthreads = SRMM_NTHREADS;
+	svh->svh_handler = slrmm_handler;
+	strlcpy(svh->svh_svc_name, SRMM_SVCNAME, sizeof(svh->svh_svc_name));
+	pscrpc_thread_spawn(svh, struct slash_rmmthr);
+
+	/* Bring up MDS <-> client service. */
+	svh = PSCALLOC(sizeof(*svh));
+	svh->svh_nbufs = SRCM_NBUFS;
+	svh->svh_bufsz = SRCM_BUFSZ;
+	svh->svh_reqsz = SRCM_BUFSZ;
+	svh->svh_repsz = SRCM_REPSZ;
+	svh->svh_req_portal = SRCM_REQ_PORTAL;
+	svh->svh_rep_portal = SRCM_REP_PORTAL;
+	svh->svh_type = SLTHRT_RMC;
+	svh->svh_nthreads = SRCM_NTHREADS;
+	svh->svh_handler = slrmc_handler;
+	strlcpy(svh->svh_svc_name, SRCM_SVCNAME, sizeof(svh->svh_svc_name));
+	pscrpc_thread_spawn(svh, struct slash_rmcthr);
 }

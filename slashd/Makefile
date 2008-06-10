@@ -15,6 +15,7 @@ SRCS+=		metadir.c
 SRCS+=		offtree.c
 SRCS+=		rmc.c
 SRCS+=		rmi.c
+SRCS+=		rmm.c
 SRCS+=		rpc.c
 SRCS+=		sb.c
 SRCS+=		timer.c

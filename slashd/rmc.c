@@ -23,12 +23,6 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
-#define SRCM_NTHREADS	8
-#define SRCM_NBUFS	1024
-#define SRCM_BUFSZ	(4096 + 256)
-#define SRCM_REPSZ	128
-#define SRCM_SVCNAME	"slrmcthr"
-
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
 int
@@ -786,7 +780,7 @@ revokecred(uid_t uid, gid_t gid)
 }
 
 int
-slrmc_svc_handler(struct pscrpc_request *rq)
+slrmc_handler(struct pscrpc_request *rq)
 {
 	struct slashrpc_export *sexp;
 	uid_t myuid;
@@ -893,28 +887,4 @@ slrmc_svc_handler(struct pscrpc_request *rq)
  done:
 	revokecred(myuid, mygid);
 	return (rc);
-}
-
-/**
- * slrmc_init - start up the MDS threads via pscrpc_thread_spawn()
- */
-void
-slrmc_init(void)
-{
-	pscrpc_svc_handle_t *svh;
-
-	svh = PSCALLOC(sizeof(*svh));
-	svh->svh_nbufs = SRCM_NBUFS;
-	svh->svh_bufsz = SRCM_BUFSZ;
-	svh->svh_reqsz = SRCM_BUFSZ;
-	svh->svh_repsz = SRCM_REPSZ;
-	svh->svh_req_portal = SRCM_REQ_PORTAL;
-	svh->svh_rep_portal = SRCM_REP_PORTAL;
-	svh->svh_type = SLTHRT_RMC;
-	svh->svh_nthreads = SRCM_NTHREADS;
-	svh->svh_handler = slrmc_svc_handler;
-
-	strlcpy(svh->svh_svc_name, SRCM_SVCNAME, sizeof(svh->svh_svc_name));
-
-	pscrpc_thread_spawn(svh, struct slash_rmcthr);
 }

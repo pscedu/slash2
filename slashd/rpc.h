@@ -7,6 +7,8 @@
 
 #include "cfd.h"
 
+struct pscrpc_export;
+
 struct slashrpc_export {
 	struct pscrpc_export		*exp;
 	uid_t				 uid;
@@ -19,6 +21,10 @@ struct slashrpc_export {
 struct slashrpc_export *
 	slashrpc_export_get(struct pscrpc_export *);
 int	sexpcmp(const void *, const void *);
+
+int slrmc_handler(struct pscrpc_request *);
+int slrmi_handler(struct pscrpc_request *);
+int slrmm_handler(struct pscrpc_request *);
 
 SPLAY_HEAD(sexptree, slashrpc_export);
 SPLAY_PROTOTYPE(sexptree, slashrpc_export, entry, sexpcmp);

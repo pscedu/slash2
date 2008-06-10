@@ -28,11 +28,14 @@ struct slash_rmithr {
 	struct pscrpc_thread	 srb_prt;
 };
 
+struct slash_rmmthr {
+	struct pscrpc_thread	 srb_prt;
+};
+
 #define slrmcthr(thr)	((struct slash_rmcthr *)(thr)->pscthr_private)
 #define slrmithr(thr)	((struct slash_rmithr *)(thr)->pscthr_private)
+#define slrmmthr(thr)	((struct slash_rmmthr *)(thr)->pscthr_private)
 
-void		slrmc_init(void);
-void		slrmi_init(void);
 void		slash_journal_init(void);
 sl_inum_t	slash_get_inum(void);
 

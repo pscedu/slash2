@@ -16,25 +16,25 @@
 #include "slashrpc.h"
 
 int
-slrmi_handle_connect(struct pscrpc_request *rq)
+slrmm_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION)
+	if (mq->magic != SRMM_MAGIC || mq->version != SRMM_VERSION)
 		mp->rc = -EINVAL;
 	return (0);
 }
 
 int
-slrmi_handler(struct pscrpc_request *rq)
+slrmm_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
-		rc = slrmi_handle_connect(rq);
+		rc = slrmm_handle_connect(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
