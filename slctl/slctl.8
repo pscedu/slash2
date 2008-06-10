@@ -204,8 +204,12 @@ separated by commas:
 Control thread
 .It Cm sllndthr Ns Ar %d
 Lustre TCP network device threads
-.It Cm zrpcmdsthr Ns Ar %d
-RPC metadata service threads
+.It Cm slrmithr Ns Ar %d
+RPC threads for I/O server communication
+.It Cm slrmcthr Ns Ar %d
+RPC client service threads
+.It Cm slrmmthr Ns Ar %d
+RPC threads for other metadata server communication
 .It Cm everyone
 All threads (default and available where applicable)
 .El

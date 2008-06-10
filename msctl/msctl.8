@@ -19,7 +19,7 @@
 The
 .Nm
 utility examines and manipulates
-.Xr mount_zest 8
+.Xr mount_slash 8
 behavior.
 .Pp
 The options are as follows:
@@ -59,6 +59,7 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
+.It foo
 .El
 .Pp
 The value
@@ -161,10 +162,10 @@ unspecified altogether.
 .It Fl S Ar socket
 Specify an alternative socket file.
 Defaults to
-.Pa /var/run/slashd.sock .
+.Pa /var/run/mount_slash.sock .
 .It Fl s Ar showspec
 Query and show
-.Xr slashd 8
+.Xr mount_slash 8
 parameter values.
 .Ar showspec
 has the following format:
@@ -204,16 +205,16 @@ separated by commas:
 Control thread
 .It Cm sllndthr Ns Ar %d
 Lustre TCP network device threads
-.It Cm zrpcmdsthr Ns Ar %d
-RPC metadata service threads
+.It Cm slfsthr Ns Ar %d
+File system servicing threads
 .It Cm everyone
 All threads (default and available where applicable)
 .El
 .Sh FILES
 .Bl -tag -width Pa
-.It Pa /var/run/slashd.sock
+.It Pa /var/run/mount_slash.sock
 default
-.Xr slashd 8
+.Xr mount_slash 8
 control socket
 .El
 .Sh SEE ALSO
