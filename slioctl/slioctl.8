@@ -10,8 +10,8 @@
 .Nm slioctl
 .Op Fl HI
 .Op Fl h Ar table
+.Op Fl i Ar iostatspec
 .Op Fl L Ar listspec
-.\" Op Fl i Ar iostatspec
 .Op Fl p Ar paramspec
 .Op Fl S Ar socket
 .Op Fl s Ar showspec
@@ -46,24 +46,28 @@ e.g. show
 .Pq one megabyte
 as
 .Li 1048576.
-.\" .It Fl i Ar iostatspec
-.\" Query I/O statistics.
-.\" .Ar iostatspec
-.\" has the following format:
-.\" .Pp
-.\" .Bd -unfilled -offset indent
-.\" .Ar iostat Ns Op , Ns Ar ...
-.\" .Ed
-.\" .Pp
-.\" .Ar iostat
-.\" may be one of the following:
-.\" .Pp
-.\" .Bl -tag -compact -offset indent -width 12n
-.\" .El
-.\" .Pp
-.\" The value
-.\" .Cm all
-.\" may be specified to query all I/O statistics.
+.It Fl i Ar iostatspec
+Query I/O statistics.
+.Ar iostatspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Ar iostat Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar iostat
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width 12n
+.It Cm lndrcv- Ns Ar if
+Per LNET networking device data received.
+.It Cm lndsnd- Ns Ar if
+Per LNET networking device data sent.
+.El
+.Pp
+The value
+.Cm all
+may be specified to query all I/O statistics.
 .It Fl L Ar listspec
 Query list cache information for the given list(s).
 .Ar listspec
@@ -146,6 +150,19 @@ Informational messages
 Debugging messages
 .It Cm trace , all
 All messages
+.El
+.It Ic lc. Ns Ar name
+Access the list cache specified by
+.Ar name .
+The following sub-fields are available:
+.Pp
+.Bl -tag -compact -offset 2n -width 5n
+.It Ic min
+Lower bound for number of entries to which list can shrink.
+.It Ic max
+Upper bound for number of entries to which list can grow.
+.It Ic size
+Current number of entries contained in list.
 .El
 .El
 .Pp
