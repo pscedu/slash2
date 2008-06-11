@@ -13,7 +13,7 @@
 struct dircache {
 	struct hash_entry	 dc_hent;	/* hash table entry */
 	struct psclist_head	 dc_lruent;	/* LRU list entry */
-	slash_fid_t		 dc_fid;	/* file ID */
+	slfid_t			 dc_fid;	/* file ID */
 	int			 dc_flags;	/* operation flags */
 	atomic_t		 dc_refcnt;	/* how many are using us */
 	psc_spinlock_t		 dc_lock;	/* exclusitivity control */
@@ -33,4 +33,4 @@ void	dircache_rel(struct dircache *);
 void	dircache_free(struct dircache *);
 int	dircache_read(struct dircache *, int, struct dirent *, int);
 struct dircache *
-	dircache_get(slash_fid_t *);
+	dircache_get(slfid_t);

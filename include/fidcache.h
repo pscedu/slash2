@@ -66,13 +66,13 @@ struct sl_uid {
 };
 
 struct bmap_refresh {
-	slash_fid_t	bmrfr_fid;
-	sl_blkno_t	bmrfr_blk;
-	u8		bmrfr_flags;
+	struct slash_fidgen	bmrfr_fg;
+	sl_blkno_t		bmrfr_blk;
+	u8			bmrfr_flags;
 };
 
 /*
- * bmap_cli_info - for each block in the fidcache, associate the set of
+ * bmap_info - for each block in the fidcache, associate the set of
  * possible I/O servers and the store the CRC of the block.
  */
 struct bmap_info {
@@ -116,7 +116,7 @@ SPLAY_PROTOTYPE(bmap_cache, bmap_cache_memb, bcm_tentry, bmap_cache_cmp);
  * fidcache_memb - holds inode filesystem related data
  */
 struct fidcache_memb {
-	struct slash_fid	fcm_fid;
+	struct slash_fidgen	fcm_fg;
 	struct stat		fcm_stb;
 	struct sl_finfo		fcm_slfinfo;
 	//struct sl_uid		fcm_uid;
@@ -152,18 +152,18 @@ struct fidcache_memb_handle {
 enum fcmh_states {
 	FCM_CAC_CLEAN   = (1 << 0),
 	FCM_CAC_DIRTY   = (1 << 1),
-	FCM_CAC_FREEING = (1 << 2), 
+	FCM_CAC_FREEING = (1 << 2),
 	FCM_CAC_FREE    = (1 << 3),
 	FCM_ATTR_FID    = (1 << 4),  /* Have fidcache memb */
 	FCM_ATTR_SIZE   = (1 << 5),
-	FCM_ATTR_STAT   = (1 << 6)	
+	FCM_ATTR_STAT   = (1 << 6)
 };
 
 struct sl_fsops {
 	/* sl_getattr - used for stat and open, loads the objects
 	 *  via the pathname.
 	 */
-	int (*slfsop_getattr)(const char *path, 
+	int (*slfsop_getattr)(const char *path,
 			      struct fidcache_memb_handle *fcm);
 	/* sl_fgetattr - used for stat and open via fid, grabs all the
 	 * attributes of the object and updates the fcm
@@ -173,12 +173,12 @@ struct sl_fsops {
 	 * all attrs will be updated.  later we may refine the granularity
 	 */
 	int (*slfsop_setattr)(struct fidcache_memb_handle *fcm);
-	/* sl_write - Object write.  Either within mds or ios 
+	/* sl_write - Object write.  Either within mds or ios
 	 *  context.
 	 */
 	int (*slfsop_write)(struct fidcache_memb_handle *fcm,
 			    const void *buf, int count, off_t offset);
-	/* sl_read - Object read.  Either within mds or ios 
+	/* sl_read - Object read.  Either within mds or ios
 	 *  context.
 	 */
 	int (*slfsop_read)(struct fidcache_memb_handle *fcm,
@@ -190,7 +190,7 @@ struct sl_fsops {
 	int (*slfsop_getmap)(struct fidcache_memb_handle  *fcm,
 			     struct bmap_cache_memb *bcms, int count);
 
-	int (*slfsop_invmap)(struct fidcache_memb_handle *fcm, 
+	int (*slfsop_invmap)(struct fidcache_memb_handle *fcm,
 			     struct bmap_refresh *bmr);
 };
 
@@ -203,7 +203,7 @@ struct sl_fsops {
 	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_ATTR_FID),    "f"), \
 	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_ATTR_SIZE),   "s"), \
 	FCMH_FLAG(ATTR_TEST(fcmh->fcmh_state, FCM_ATTR_STAT),   "S")
-	
+
 #define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s"
 
 static inline const char *
@@ -226,13 +226,13 @@ fcmh_lc_2_string(list_cache_t *lc)
 		" fcmh@%p i+g:"LPX64"+"LPX64" s:"			\
 		REQ_FCMH_FLAGS_FMT" lc:%s fd:%d r:%d:: "fmt,		\
 		(fcmh),							\
-		(fcmh)->fcmh_memb.fcm_fid.fid_inum,			\
-		(fcmh)->fcmh_memb.fcm_fid.fid_gen,			\
+		(fcmh)->fcmh_memb.fcm_fg.fg_fid,			\
+		(fcmh)->fcmh_memb.fcm_fg.fg_gen,			\
 		DEBUG_FCMH_FCMH_FLAGS(fcmh),				\
 		fcmh_lc_2_string((fcmh)->fcmh_cache_owner),		\
 		(fcmh)->fcmh_fd,					\
 		atomic_read(&(fcmh)->fcmh_refcnt),			\
-		## __VA_ARGS__)						\
+		## __VA_ARGS__)
 
 
 static inline void
@@ -256,5 +256,5 @@ fidcache_handle_init(void *p);
 
 extern void
 bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f);
-		
+
 #endif /* __FIDCACHE_H__ */

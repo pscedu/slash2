@@ -16,17 +16,17 @@
  *	to a FID, allowing easily lookup of file metadata via FIDs.
  */
 void
-fid_makepath(const slash_fid_t *fidp, char *fid_path)
+fid_makepath(slfid_t fid, char *fid_path)
 {
 	int rc;
 
 	rc = snprintf(fid_path, PATH_MAX,
 	    "%s/%s/%04x/%04x/%04x/%04x",
 	    nodeInfo.node_res->res_fsroot, _PATH_OBJROOT,
-	    (u32)((fidp->fid_inum & 0x000000000000ffffULL)),
-	    (u32)((fidp->fid_inum & 0x00000000ffff0000ULL) >> 16),
-	    (u32)((fidp->fid_inum & 0x0000ffff00000000ULL) >> 32),
-	    (u32)((fidp->fid_inum & 0xffff000000000000ULL) >> 48));
+	    (u32)((fid & 0x000000000000ffffULL)),
+	    (u32)((fid & 0x00000000ffff0000ULL) >> 16),
+	    (u32)((fid & 0x0000ffff00000000ULL) >> 32),
+	    (u32)((fid & 0xffff000000000000ULL) >> 48));
 	if (rc == -1)
 		psc_fatal("snprintf");
 }
@@ -34,11 +34,11 @@ fid_makepath(const slash_fid_t *fidp, char *fid_path)
 /**
  * fid_link - create an entry in the FID object root corresponding to a
  *	pathname in the file system.
- * @fidp: FID of file.
+ * @fid: file ID.
  * @fn: filename for which to create FID object entry.
  */
 int
-fid_link(const slash_fid_t *fid, const char *fn)
+fid_link(slfid_t fid, const char *fn)
 {
 	char *p, fidpath[PATH_MAX];
 

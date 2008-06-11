@@ -8,6 +8,8 @@
 
 #include "psc_types.h"
 
+#include "fid.h"
+
 #define SLASH_SVR_PID		54321
 
 /* Slash RPC Client <-> MDS defines. */
@@ -86,7 +88,7 @@ enum {
 struct srm_open_secret {
 	u64			magic;
 	nonce_t			fnonce;
-	fid_t			fid;
+	slfid_t			fid;
 	fidgen_t		fidgen;
 	lnet_nid_t		cnid;
 	lnet_process_id_t	cpid;
@@ -139,6 +141,7 @@ struct srm_create_req {
 struct srm_create_rep {
 //	struct srm_open_secret sig_m;
 //	nonce_t fnonce;
+struct slash_fidgen fg; /* XXX for now, put in dsig later */
 	u64	cfd;
 	s32	rc;
 };
@@ -213,6 +216,9 @@ struct srm_open_req {
 };
 
 struct srm_open_rep {
+//	struct srm_open_secret sig_m;
+//	nonce_t fnonce;
+struct slash_fidgen fg; /* XXX for now, put in dsig later */
 	u64	cfd;
 	s32	rc;
 };
@@ -231,6 +237,7 @@ struct srm_opendir_rep {
 
 struct srm_read_req {
 //	struct srm_rw_secret crypt_i;
+struct slash_fidgen fg; /* XXX go away */
 	u64	cfd;
 	u32	size;
 	u32	offset;
@@ -333,6 +340,7 @@ struct srm_rw_secret {
 
 struct srm_write_req {
 //	struct srm_rw_secret crypt_i;
+struct slash_fidgen fg; /* XXX go away */
 	u64		cfd;
 	u32		size;
 	u32		offset;

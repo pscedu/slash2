@@ -105,7 +105,7 @@ untranslate_pathname(char *path)
  * Notes: FID entry will be created if pathname does not exist.
  */
 int
-fid_get(slash_fid_t *fidp, const char *path, int must_exist)
+fid_get(slfid_t *fidp, const char *path, int must_exist)
 {
 	static psc_spinlock_t createlock = LOCK_INITIALIZER;
 	char fn[PATH_MAX];
@@ -144,7 +144,7 @@ fid_get(slash_fid_t *fidp, const char *path, int must_exist)
 		freelock(&createlock);
 		if (fd == -1)
 			return (-1);
-		fidp->fid_inum = slash_get_inum();
+		*fidp = slash_get_inum();
 		sz = write(fd, fidp, sizeof(*fidp));
 		if (sz == -1)
 			rc = -1;
@@ -154,6 +154,5 @@ fid_get(slash_fid_t *fidp, const char *path, int must_exist)
 		}
 		close(fd);
 	}
-	fidp->fid_gen = 0; /* XXX gen should not be here */
 	return (rc);
 }

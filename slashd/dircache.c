@@ -122,35 +122,35 @@ dircache_alloc(void)
 }
 
 struct dircache *
-dircache_get(slash_fid_t *fidp)
+dircache_get(slfid_t fid)
 {
 	struct hash_entry *e;
 	struct dircache *dc;
 	char fn[PATH_MAX];
 	int fd;
 
-	e = get_hash_entry(&dircache, fidp->fid_inum, NULL, dircache_ref);
+	e = get_hash_entry(&dircache, fid, NULL, dircache_ref);
 	if (e) {
 		dc = e->private;
 		psc_assert((dc->dc_flags & DCF_WANTDESTROY) == 0);
 		return (e->private);
 	}
 	spinlock(&dircache.htable_lock);
-	e = get_hash_entry(&dircache, fidp->fid_inum, NULL, dircache_ref);
+	e = get_hash_entry(&dircache, fid, NULL, dircache_ref);
 	if (e) {
 		dc = e->private;
 		psc_assert((dc->dc_flags & DCF_WANTDESTROY) == 0);
 	} else {
-		fid_makepath(fidp, fn);
+		fid_makepath(fid, fn);
 		if ((fd = open(fn, O_RDONLY | O_DIRECTORY)) == -1)
 			goto done;
 		dc = dircache_alloc();
 		LOCK_INIT(&dc->dc_lock);
 		dc->dc_fd = fd;
-		dc->dc_fid = *fidp;
+		dc->dc_fid = fid;
 		dircache_ref(dc);
 		e = PSCALLOC(sizeof(*e));
-		init_hash_entry(e, &dc->dc_fid.fid_inum, dc);
+		init_hash_entry(e, &dc->dc_fid, dc);
 		add_hash_entry(&dircache, e);
 	}
  done:

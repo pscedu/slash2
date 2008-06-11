@@ -34,7 +34,6 @@ slric_handle_read(struct pscrpc_request *rq)
 	struct srm_read_rep *mp;
 	struct iovec iov;
 	char fn[PATH_MAX];
-	slash_fid_t fid;
 	ssize_t nbytes;
 	void *buf;
 	int fd;
@@ -48,10 +47,10 @@ slric_handle_read(struct pscrpc_request *rq)
 
 #if 0
 	decrypt secret
-	grab fid
+	grab fg
 #endif
 
-	fid_makepath(&fid, fn);
+	fid_makepath(mq->fg.fg_fid, fn); /* XXX validity check fid */
 	if ((fd = open(fn, O_RDONLY)) == -1) {
 		mp->rc = -errno;
 		return (0);
@@ -87,7 +86,6 @@ slric_handle_write(struct pscrpc_request *rq)
 	struct srm_write_rep *mp;
 	struct iovec iov;
 	char fn[PATH_MAX];
-	slash_fid_t fid;
 	ssize_t nbytes;
 	void *buf;
 	int fd;
@@ -96,14 +94,14 @@ slric_handle_write(struct pscrpc_request *rq)
 
 #if 0
 	decrypt secret
-	grab fid
+	grab fg
 #endif
 
-	fid_makepath(&fid, fn);
 	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
 		mp->rc = -EINVAL;
 		return (0);
 	}
+	fid_makepath(mq->fg.fg_fid, fn); /* validity check fid */
 	buf = PSCALLOC(mq->size);
 	iov.iov_base = buf;
 	iov.iov_len = mq->size;

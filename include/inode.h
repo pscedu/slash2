@@ -1,14 +1,14 @@
 /* $Id$ */
 
-#ifndef _SLASH_INODE_H
-#define _SLASH_INODE_H
+#ifndef __SLASH_INODE_H__
+#define __SLASH_INODE_H__
 
 #include <sys/types.h>
 #include <sys/stat.h>
 
 #include "psc_types.h"
-#include "psc_util/crc.h"
 #include "psc_util/assert.h"
+#include "psc_util/crc.h"
 
 #include "fid.h"
 
@@ -29,8 +29,10 @@ typedef u32 sl_ios_id_t; /* io server id: 16 bit site id
 
 #define IOS_ID_ANY (~(sl_ios_id_t)0)
 #define BLKNO_ANY  (~(sl_blkno_t)0)
+
 /*
- * sl_global_id_build - produce a unique 32 bit identifier from the object's site and resource id's.
+ * sl_global_id_build - produce a unique 32 bit identifier from the
+ *	object's site and resource id's.
  * @site_id:  id number of the resource's site
  * @res_id:   id number within the site
  * @mds_bool: is this a metadata server?
@@ -61,7 +63,10 @@ sl_glid_to_resid(sl_ios_id_t glid)
 }
 
 /*
- * Point to an offset within the linear metadata file which holds a snapshot.  Snapshots are read-only and their metadata may not be expanded.  Once the offset is established the slash_block structure is used to index up to sn_nblks.
+ * Point to an offset within the linear metadata file which holds a
+ * snapshot.  Snapshots are read-only and their metadata may not be
+ * expanded.  Once the offset is established the slash_block structure
+ * is used to index up to sn_nblks.
  */
 typedef struct slash_snapshot {
 	off_t  sn_off;
@@ -70,7 +75,12 @@ typedef struct slash_snapshot {
 } sl_snap_t;
 
 /*
- * Defines a storage system which holds a block or blocks of the respective file.  A number of these structures are statically allocated within the inode and are fixed for the life of the file and apply to snapshots as well as the active file.  This structure saves us from storing the iosystem id within each block at the cost of limiting the number of iosystems which may manage our blocks.
+ * Defines a storage system which holds a block or blocks of the
+ * respective file.  A number of these structures are statically
+ * allocated within the inode and are fixed for the life of the file
+ * and apply to snapshots as well as the active file.  This structure
+ * saves us from storing the iosystem id within each block at the cost
+ * of limiting the number of iosystems which may manage our blocks.
  */
 typedef struct slash_block_store {
 	sl_ios_id_t bs_id;     /* id of this block store    */
@@ -89,7 +99,8 @@ typedef struct slash_gencrc {
 } sl_gcrc_t;
 
 /*
- * Slim block structure just holds a generation number and a validation bit.  The io server id is held in the block store array.
+ * Slim block structure just holds a generation number and a
+ * validation bit.  The io server id is held in the block store array.
  */
 typedef struct slash_block_desc {
 	unsigned int bl_gen:31; /* generation number     */
@@ -107,10 +118,11 @@ typedef struct slash_block_handle {
 } sl_blkh_t;
 
 /*
- * The inode structure lives at the beginning of the metafile and holds the block store array along with snapshot pointers.
+ * The inode structure lives at the beginning of the metafile and holds
+ * the block store array along with snapshot pointers.
  */
 typedef struct slash_inode {
-	slash_fid_t  ino_fid;                    /* inode number            */
+	slfid_t      ino_fid;			 /* lower 48 bits are inum  */
 	off_t        ino_off;                    /* inode metadata offset   */
 	size_t       ino_bsz;                    /* file block size         */
 	size_t       ino_lblk;                   /* last block              */
@@ -121,4 +133,4 @@ typedef struct slash_inode {
 	psc_crc_t    ino_crc;                    /* crc of the inode        */
 } sl_inode_t;
 
-#endif
+#endif /* __SLASH_INODE_H__ */
