@@ -13,6 +13,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/service.h"
+#include "psc_util/acsvc.h"
 #include "psc_util/lock.h"
 #include "psc_util/strlcpy.h"
 
@@ -60,7 +61,8 @@ slrmc_chmod(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (chmod(fn, mq->mode) == -1)
+	else if (access_fsop(ACSOP_CHMOD, mq->creds.uid,
+	    mq->creds.gid, fn, mq->mode) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -109,7 +111,8 @@ slrmc_chown(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (chown(fn, mq->uid, mq->gid) == -1)
+	else if (access_fsop(ACSOP_CHOWN, mq->creds.uid,
+	    mq->creds.gid, fn, mq->uid, mq->gid) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -160,7 +163,7 @@ slrmc_create(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 0) == -1)
 		mp->rc = -errno;
-	else if ((fd = creat(fn, mq->mode)) == -1)
+	else if ((fd = creat(fn, mq->mode)) == -1) /* XXX access_fsop */
 		mp->rc = -errno;
 	else {
 		close(fd);
@@ -198,7 +201,8 @@ slrmc_getattr(struct pscrpc_request *rq)
 		mp->rc = -errno;
 		return (0);
 	}
-	if (stat(fn, &stb) == -1) {
+	if (access_fsop(ACSOP_STAT, mq->creds.uid,
+	    mq->creds.gid, fn, &stb) == -1) {
 		mp->rc = -errno;
 		return (0);
 	}
@@ -291,7 +295,8 @@ slrmc_link(struct pscrpc_request *rq)
 		mp->rc = -errno;
 	else if (translate_pathname(to, 0) == -1)
 		mp->rc = -errno;
-	else if (link(from, to) == -1)
+	else if (access_fsop(ACSOP_LINK, mq->creds.uid,
+	    mq->creds.gid, from, to) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -319,7 +324,8 @@ slrmc_mkdir(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 0) == -1)
 		mp->rc = -errno;
-	else if (mkdir(fn, mq->mode) == -1)
+	else if (access_fsop(ACSOP_MKDIR, mq->creds.uid,
+	    mq->creds.gid, fn, mq->mode) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -347,7 +353,8 @@ slrmc_mknod(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 0) == -1)
 		mp->rc = -errno;
-	else if (mknod(fn, mq->mode, mq->dev) == -1)
+	else if (access_fsop(ACSOP_MKNOD, mq->creds.uid,
+	    mq->creds.gid, fn, mq->mode, mq->dev) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -453,7 +460,8 @@ slrmc_readdir(struct pscrpc_request *rq)
 	mp->size = rc;
 	iov.iov_base = ents;
 	iov.iov_len = mp->size;
-	mp->rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
+	    SRCM_BULK_PORTAL, &iov, 1);
 // rc / pscPageSize
 	if (desc)
 		pscrpc_free_bulk(desc);
@@ -485,7 +493,8 @@ slrmc_readlink(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (readlink(fn, rfn, mq->size) == -1)
+	else if (access_fsop(ACSOP_READLINK, mq->creds.uid,
+	    mq->creds.gid, fn, rfn, mq->size) == -1)
 		mp->rc = -errno;
 	else if (untranslate_pathname(rfn) == -1)
 		mp->rc = -errno;
@@ -553,7 +562,8 @@ slrmc_rename(struct pscrpc_request *rq)
 		mp->rc = -errno;
 	else if (translate_pathname(to, 0) == -1)
 		mp->rc = -errno;
-	else if (rename(from, to) == -1)
+	else if (access_fsop(ACSOP_RENAME, mq->creds.uid,
+	    mq->creds.gid, from, to) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -581,7 +591,8 @@ slrmc_rmdir(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (rmdir(fn) == -1)
+	else if (access_fsop(ACSOP_RMDIR, mq->creds.uid,
+	    mq->creds.gid, fn) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -610,7 +621,8 @@ slrmc_statfs(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (statfs(fn, &sfb) == -1)
+	else if (access_fsop(ACSOP_STATFS, mq->creds.uid,
+	    mq->creds.gid, fn, &sfb) == -1)
 		mp->rc = -errno;
 	else {
 		mp->f_bsize	= sfb.f_bsize;
@@ -652,7 +664,8 @@ slrmc_symlink(struct pscrpc_request *rq)
 		mp->rc = -errno;
 	else if (translate_pathname(to, 0) == -1)
 		mp->rc = -errno;
-	else if (symlink(from, to) == -1)
+	else if (access_fsop(ACSOP_SYMLINK, mq->creds.uid,
+	    mq->creds.gid, from, to) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -680,7 +693,8 @@ slrmc_truncate(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (truncate(fn, mq->size) == -1)
+	else if (access_fsop(ACSOP_TRUNCATE, mq->creds.uid,
+	    mq->creds.gid, fn, mq->size) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -708,7 +722,8 @@ slrmc_unlink(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (unlink(fn) == -1)
+	else if (access_fsop(ACSOP_UNLINK, mq->creds.uid,
+	    mq->creds.gid, fn) == -1)
 		mp->rc = -errno;
 	return (0);
 }
@@ -736,67 +751,16 @@ slrmc_utimes(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (utimes(fn, mq->times) == -1)
+	else if (access_fsop(ACSOP_UTIMES, mq->creds.uid,
+	    mq->creds.gid, fn, mq->times) == -1)
 		mp->rc = -errno;
 	return (0);
 }
 
 int
-setcred(uid_t uid, gid_t gid, uid_t *myuid, gid_t *mygid)
-{
-	uid_t tuid;
-	gid_t tgid;
-
-	/* Set fs credentials */
-	spinlock(&fsidlock);
-	*myuid = getuid();
-	if ((tuid = setfsuid(uid)) != *myuid)
-		psc_fatal("invalid fsuid %u", tuid);
-	if (setfsuid(uid) != (int)uid) {
-		psc_error("setfsuid %u", uid);
-		return (-1);
-	}
-
-	*mygid = getgid();
-	if ((tgid = setfsgid(gid)) != *mygid)
-		psc_fatal("invalid fsgid %u", tgid);
-	if (setfsgid(gid) != (int)gid) {
-		psc_error("setfsgid %u", gid);
-		return (-1);
-	}
-	return (0);
-}
-
-void
-revokecred(uid_t uid, gid_t gid)
-{
-	setfsuid(uid);
-	if (setfsuid(uid) != (int)uid)
-		psc_fatal("setfsuid %d", uid);
-	setfsgid(gid);
-	if (setfsgid(gid) != (int)gid)
-		psc_fatal("setfsgid %d", gid);
-	freelock(&fsidlock);
-}
-
-int
 slrmc_handler(struct pscrpc_request *rq)
 {
-	struct slashrpc_export *sexp;
-	uid_t myuid;
-	gid_t mygid;
 	int rc = 0;
-
-	switch (rq->rq_reqmsg->opc) {
-	case SRMT_CONNECT:
-		rc = slrmc_connect(rq);
-		target_send_reply_msg(rq, rc, 0);
-		return (rc);
-	}
-
-	sexp = slashrpc_export_get(rq->rq_export);
-	if (setcred(sexp->uid, sexp->gid, &myuid, &mygid) == -1)
-		goto done;
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CHMOD:
@@ -804,6 +768,9 @@ slrmc_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_CHOWN:
 		rc = slrmc_chown(rq);
+		break;
+	case SRMT_CONNECT:
+		rc = slrmc_connect(rq);
 		break;
 	case SRMT_CREATE:
 		rc = slrmc_create(rq);
@@ -878,13 +845,8 @@ slrmc_handler(struct pscrpc_request *rq)
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
-		rc = pscrpc_error(rq);
-		goto done;
+		return (pscrpc_error(rq));
 	}
-	psc_info("rq->rq_status == %d", rq->rq_status);
 	target_send_reply_msg(rq, rc, 0);
-
- done:
-	revokecred(myuid, mygid);
 	return (rc);
 }

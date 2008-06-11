@@ -1,5 +1,10 @@
 /* $Id$ */
 
+/*
+ * Routines for MDS <-> MDS RPC communication.
+ * Note: this file contains both client and server code.
+ */
+
 #include <stdio.h>
 
 #include "psc_rpc/rpc.h"
@@ -22,6 +27,9 @@ struct mds_server_conn {
 	struct slashrpc_cservice	*msc_csvc;
 };
 
+/*
+ * slrmm_handle_connect - handle a CONNECT request from a peer MDS server.
+ */
 int
 slrmm_handle_connect(struct pscrpc_request *rq)
 {
@@ -34,6 +42,9 @@ slrmm_handle_connect(struct pscrpc_request *rq)
 	return (0);
 }
 
+/*
+ * slrmm_handler - handle a request from a peer MDS server.
+ */
 int
 slrmm_handler(struct pscrpc_request *rq)
 {
@@ -52,6 +63,9 @@ slrmm_handler(struct pscrpc_request *rq)
 	return (rc);
 }
 
+/*
+ * slrmm_addconn - initiate a connection to a peer MDS server.
+ */
 int
 slrmm_addconn(const char *name)
 {

@@ -1,5 +1,10 @@
 /* $Id$ */
 
+/*
+ * Routines for MDS <-> I/O server RPC communication.
+ * Note: this file contains both client and server code.
+ */
+
 #include <stdio.h>
 
 #include "psc_rpc/rpc.h"
@@ -15,6 +20,9 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
+/*
+ * slrmi_handle_connect - handle a CONNECT request from a peer I/O server.
+ */
 int
 slrmi_handle_connect(struct pscrpc_request *rq)
 {
@@ -27,6 +35,9 @@ slrmi_handle_connect(struct pscrpc_request *rq)
 	return (0);
 }
 
+/*
+ * slrmi_handler - handle a request from a peer I/O server.
+ */
 int
 slrmi_handler(struct pscrpc_request *rq)
 {
