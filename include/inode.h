@@ -122,7 +122,7 @@ typedef struct slash_block_handle {
  * the block store array along with snapshot pointers.
  */
 typedef struct slash_inode_store {
-	struct slash_fidgen ino_fidgen;
+	struct slash_fidgen ino_fg;
 	off_t        ino_off;                    /* inode metadata offset   */
 	size_t       ino_bsz;                    /* file block size         */
 	size_t       ino_lblk;                   /* last block              */

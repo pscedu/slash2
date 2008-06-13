@@ -113,12 +113,11 @@ untranslate_pathname(char *path)
  * Notes: FID entry will be created if pathname does not exist.
  */
 int
-fid_get(const char *fn, slfid_t *fidp, struct slash_creds *creds,
-    int flags, mode_t mode)
+fid_get(const char *fn, struct slash_fidgen *fgp,
+    struct slash_creds *creds, int flags, mode_t mode)
 {
 	static psc_spinlock_t lookuplock = LOCK_INITIALIZER;
 	struct slash_inode_store ino;
-	struct stat stb;
 	ssize_t sz;
 	int fd, rc;
 
@@ -137,8 +136,11 @@ fid_get(const char *fn, slfid_t *fidp, struct slash_creds *creds,
 			goto done;
 		}
 		memset(&ino, 0, sizeof(ino));
-		*fidp = ino.ino_fidgen.fg_fid = slash_get_inum(); // | myfsid()
-		sz = fsetxattr(fd, SFX_INODE, &ino, sizeof(ino), XATTR_CREATE);
+		fgp->fg_fid = slash_get_inum(); // | myfsid()
+		fgp->fg_gen = 0;
+		ino.ino_fg = *fgp;
+		sz = fsetxattr(fd, SFX_INODE, &ino,
+		    sizeof(ino), XATTR_CREATE);
 		if (sz == -1)
 			rc = -1;
 		else if (sz != sizeof(ino)) {
@@ -162,8 +164,11 @@ fid_get(const char *fn, slfid_t *fidp, struct slash_creds *creds,
 				rc = -1;
 				goto done;
 			}
-			*fidp = ino.ino_fidgen.fg_fid = slash_get_inum(); // | myfsid()
-			sz = fsetxattr(fd, SFX_INODE, &ino, sizeof(ino), XATTR_CREATE);
+			fgp->fg_fid = slash_get_inum(); // | myfsid()
+			fgp->fg_gen = 0;
+			ino.ino_fg = *fgp;
+			sz = fsetxattr(fd, SFX_INODE, &ino,
+			    sizeof(ino), XATTR_CREATE);
 			if (sz == -1)
 				rc = -1;
 			else if (sz != sizeof(ino)) {
@@ -179,7 +184,8 @@ fid_get(const char *fn, slfid_t *fidp, struct slash_creds *creds,
 			else if (sz != sizeof(ino)) {
 				psc_error("short getxattr");
 				rc = -1;
-			}
+			} else
+				*fgp = ino.ino_fg;
 			close(fd);
 		}
 	} else {
@@ -196,7 +202,8 @@ fid_get(const char *fn, slfid_t *fidp, struct slash_creds *creds,
 		else if (sz != sizeof(ino)) {
 			psc_error("short getxattr");
 			rc = -1;
-		}
+		} else
+			*fgp = ino.ino_fg;
 		close(fd);
 	}
  done:

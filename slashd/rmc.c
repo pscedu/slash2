@@ -372,7 +372,6 @@ slrmc_open(struct pscrpc_request *rq)
 	struct srm_open_rep *mp;
 	struct iovec iov;
 	char fn[PATH_MAX];
-	slfid_t fid;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
@@ -393,10 +392,10 @@ slrmc_open(struct pscrpc_request *rq)
 	else if (mq->flags & O_CREAT)
 		psc_fatalx("fuse gave us junk, if someone spoofed "
 		    "this request, change this to psc_warn()");
-	else if (fid_get(fn, &fid, &mq->creds, mq->flags, 0) == -1)
+	else if (fid_get(fn, &mp->fg, &mq->creds, mq->flags, 0) == -1)
 		mp->rc = -errno;
 	else
-		cfdnew(&mp->cfd, rq->rq_export, fid);
+		cfdnew(&mp->cfd, rq->rq_export, mp->fg.fg_fid);
 	return (0);
 }
 
