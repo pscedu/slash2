@@ -6,6 +6,10 @@
 #include <sys/fsuid.h>
 #include <sys/vfs.h>
 
+#define __USE_GNU
+#include <fcntl.h>
+#undef __USE_GNU
+
 #include <unistd.h>
 #include <errno.h>
 
@@ -167,7 +171,8 @@ slrmc_create(struct pscrpc_request *rq)
 		mp->rc = -errno;
 	else {
 		close(fd);
-		if (fid_get(&fid, fn, 1) == -1)
+		if (fid_get(fn, &fid, &mq->creds,
+		    O_CREAT | O_EXCL | O_WRONLY, mq->mode) == -1)
 			mp->rc = -errno;
 		else
 			cfdnew(&mp->cfd, rq->rq_export, fid);
@@ -383,11 +388,15 @@ slrmc_open(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (fid_get(&fid, fn, 1) == -1)
+	else if (mq->flags & O_DIRECTORY)
+		mp->rc = -EINVAL;
+	else if (mq->flags & O_CREAT)
+		psc_fatalx("fuse gave us junk, if someone spoofed "
+		    "this request, change this to psc_warn()");
+	else if (fid_get(fn, &fid, &mq->creds, mq->flags, 0) == -1)
 		mp->rc = -errno;
 	else
 		cfdnew(&mp->cfd, rq->rq_export, fid);
-	/* XXX check access permissions */
 	return (0);
 }
 
@@ -415,11 +424,10 @@ slrmc_opendir(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (fid_get(&fid, fn, 1) == -1)
+	else if (fid_get(fn, &fid, &mq->creds, O_DIRECTORY, 0) == -1)
 		mp->rc = -errno;
 	else
 		cfdnew(&mp->cfd, rq->rq_export, fid);
-	/* XXX check access permissions */
 	return (0);
 }
 

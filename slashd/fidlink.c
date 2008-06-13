@@ -2,17 +2,25 @@
 
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/xattr.h>
+
+#define __USE_GNU
+#include <fcntl.h>
+#undef __USE_GNU
 
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
 
+#include "psc_util/acsvc.h"
+#include "psc_util/lock.h"
 #include "psc_util/log.h"
 
 #include "fid.h"
 #include "slconfig.h"
 #include "slashd.h"
 #include "pathnames.h"
+#include "creds.h"
 
 /*
  * translate_pathname - rewrite a pathname from a client to the location
@@ -99,60 +107,99 @@ untranslate_pathname(char *path)
 /*
  * fid_get - lookup the FID for a pathname.
  * @fidp: value-result FID pointer.
- * @path: pathname to lookup, should have been passed to translate_pathname().
- * @must_exist: whether this entry already exists in the namespace or is
- *	being created.
+ * @fn: pathname to lookup, should have been passed to translate_pathname().
+ * @flags: open(2) flags so we know how to bring this into existence if
+ *	it doesn't exist.
  * Notes: FID entry will be created if pathname does not exist.
  */
 int
-fid_get(slfid_t *fidp, const char *path, int must_exist)
+fid_get(const char *fn, slfid_t *fidp, struct slash_creds *creds,
+    int flags, mode_t mode)
 {
-	static psc_spinlock_t createlock = LOCK_INITIALIZER;
-	char fn[PATH_MAX];
+	static psc_spinlock_t lookuplock = LOCK_INITIALIZER;
+	struct slash_inode_store ino;
 	struct stat stb;
 	ssize_t sz;
 	int fd, rc;
 
-	rc = snprintf(fn, sizeof(fn), "%s", path);
-	if (rc == -1)
-		psc_fatal("snprintf");
+	/* Trim off flags that have no business here. */
+	flags &= O_RDONLY | O_RDWR | O_WRONLY | O_CREAT | O_EXCL |
+	    O_DIRECTORY;
+
 	rc = 0;
-	if (must_exist) {
-		fd = open(fn, O_RDONLY);
-		if (fd == -1)
-			return (-1);
-		sz = read(fd, fidp, sizeof(*fidp));
+	spinlock(&lookuplock);
+	if ((flags & (O_CREAT | O_EXCL)) == (O_CREAT | O_EXCL)) {
+		/* Must be exclusive CREATE. */
+		fd = access_fsop(ACSOP_OPEN, creds->uid, creds->gid,
+		    fn, O_CREAT | O_EXCL | O_WRONLY, mode);
+		if (fd == -1) {
+			rc = -1;
+			goto done;
+		}
+		memset(&ino, 0, sizeof(ino));
+		*fidp = ino.ino_fidgen.fg_fid = slash_get_inum(); // | myfsid()
+		sz = fsetxattr(fd, SFX_INODE, &ino, sizeof(ino), XATTR_CREATE);
 		if (sz == -1)
 			rc = -1;
-		else if (sz != sizeof(*fidp)) {
-			psc_error("short write");
+		else if (sz != sizeof(ino)) {
+			psc_error("short setxattr");
 			rc = -1;
 		}
+		// XXX sync/flush
 		close(fd);
-	} else {
-		spinlock(&createlock);
-		if (stat(fn, &stb) == -1) {
-			if (errno != ENOENT) {
-				psc_error("stat %s", fn);
-				return (-1);
+	} else if (flags & O_CREAT) {
+		/*
+		 * May already exist, or come into existence *while*
+		 * we are creating it, or may not exist at all.
+		 */
+		fd = access_fsop(ACSOP_OPEN, creds->uid, creds->gid,
+		    fn, O_RDONLY);
+		if (fd == -1) {
+			/* Doesn't exist, try to create it. */
+			fd = access_fsop(ACSOP_OPEN, creds->uid, creds->gid,
+			    fn, O_CREAT | O_EXCL | O_WRONLY, 0644);
+			if (fd == -1) {
+				rc = -1;
+				goto done;
 			}
+			*fidp = ino.ino_fidgen.fg_fid = slash_get_inum(); // | myfsid()
+			sz = fsetxattr(fd, SFX_INODE, &ino, sizeof(ino), XATTR_CREATE);
+			if (sz == -1)
+				rc = -1;
+			else if (sz != sizeof(ino)) {
+				psc_error("short setxattr");
+				rc = -1;
+			}
+			// XXX sync/flush
+			close(fd);
 		} else {
-			errno = EEXIST;
-			return (-1);
+			sz = fgetxattr(fd, SFX_INODE, &ino, sizeof(ino));
+			if (sz == -1)
+				rc = -1;
+			else if (sz != sizeof(ino)) {
+				psc_error("short getxattr");
+				rc = -1;
+			}
+			close(fd);
 		}
-		fd = open(fn, O_CREAT | O_EXCL | O_WRONLY, 0644);
-		freelock(&createlock);
-		if (fd == -1)
-			return (-1);
-		*fidp = slash_get_inum();
-		sz = write(fd, fidp, sizeof(*fidp));
+	} else {
+		/* Must already exist. */
+		fd = access_fsop(ACSOP_OPEN, creds->uid, creds->gid,
+		    fn, O_RDONLY);
+		if (fd == -1) {
+			rc = -1;
+			goto done;
+		}
+		sz = fgetxattr(fd, SFX_INODE, &ino, sizeof(ino));
 		if (sz == -1)
 			rc = -1;
-		else if (sz != sizeof(*fidp)) {
-			psc_error("short write");
+		else if (sz != sizeof(ino)) {
+			psc_error("short getxattr");
 			rc = -1;
 		}
 		close(fd);
 	}
+ done:
+	freelock(&lookuplock);
 	return (rc);
 }

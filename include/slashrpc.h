@@ -9,6 +9,7 @@
 #include "psc_types.h"
 
 #include "fid.h"
+#include "creds.h"
 
 #define SLASH_SVR_PID		54321
 
@@ -97,11 +98,6 @@ struct srm_open_secret {
 #define SR_OPEN_SIGMAGIC	0x1234123412341234
 
 #endif
-
-struct slash_creds {
-	u32	uid;
-	u32	gid;
-};
 
 struct srm_bmap_req {
 	u32	blkno; /* Starting block number                  */
@@ -334,7 +330,7 @@ struct srm_rw_secret {
 	u64 magic;
 	u32 size;	/* write(2) len */
 	crc_t crc;	/* crc of write data */
-	granting mds server name
+	granting mds server id
 };
 #endif
 

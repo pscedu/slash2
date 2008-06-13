@@ -57,4 +57,3 @@ fid_link(slfid_t fid, const char *fn)
 	}
 	return (0);
 }
-

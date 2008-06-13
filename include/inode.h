@@ -121,8 +121,8 @@ typedef struct slash_block_handle {
  * The inode structure lives at the beginning of the metafile and holds
  * the block store array along with snapshot pointers.
  */
-typedef struct slash_inode {
-	slfid_t      ino_fid;			 /* lower 48 bits are inum  */
+typedef struct slash_inode_store {
+	struct slash_fidgen ino_fidgen;
 	off_t        ino_off;                    /* inode metadata offset   */
 	size_t       ino_bsz;                    /* file block size         */
 	size_t       ino_lblk;                   /* last block              */
@@ -132,5 +132,8 @@ typedef struct slash_inode {
 	struct stat  ino_stb;                    /* stat buf, on disk       */
 	psc_crc_t    ino_crc;                    /* crc of the inode        */
 } sl_inode_t;
+
+/* File extended attribute names. */
+#define SFX_INODE	"sl-inode"
 
 #endif /* __SLASH_INODE_H__ */

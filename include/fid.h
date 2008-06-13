@@ -3,9 +3,11 @@
 #ifndef __FID_H__
 #define __FID_H__
 
-#include <string.h>
+#include <sys/types.h>
 
 #include "psc_types.h"
+
+struct slash_creds;
 
 typedef u64 slfid_t;	/* first 16 bits are the svr/fs id, rest are inum */
 
@@ -30,7 +32,7 @@ struct slash_fidgen {
 
 void fid_makepath(slfid_t, char *);
 int  fid_link(slfid_t, const char *);
-int  fid_get(slfid_t *, const char *, int);
+int  fid_get(const char *, slfid_t *, struct slash_creds *, int, mode_t);
 
 int  translate_pathname(char *, int);
 int  untranslate_pathname(char *);
