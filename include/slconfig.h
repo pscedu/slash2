@@ -42,8 +42,8 @@ typedef struct resource_profile {
 	char                res_name[RES_NAME_MAX];
 	char               *res_desc;
 	char              **res_peertmp;
-	unsigned int        res_id;
-	unsigned int        res_mds;
+	sl_ios_id_t         res_id;
+	sl_ios_id_t         res_mds;
 	enum res_type_t     res_type;
 	sl_ios_id_t        *res_peers;
 	u32                 res_npeers;
@@ -95,6 +95,7 @@ typedef struct resource_member {
 	lnet_nid_t        resm_nid;
 	sl_resource_t    *resm_res;
 	struct hash_entry resm_hashe;
+	void             *resm_pri; 
 } sl_resm_t;
 
 extern sl_nodeh_t nodeInfo;
@@ -188,6 +189,21 @@ libsl_id2res(sl_ios_id_t id)
 			return (r);
 	return (NULL);
 }
+
+
+static inline sl_resm_t *
+libsl_nid2resm(lnet_nid_t nid)
+{
+	struct hash_entry *e;
+	
+	e = get_hash_entry(&globalConfig.gconf_nids_hash, nid, NULL, NULL);
+	if (!e)
+		return (NULL);
+
+	psc_assert(*e->hentry_id == nid);	
+        return (hash_entry(e, sl_resm_t, resm_hashe));
+}
+
 
 static inline sl_ios_id_t
 libsl_str2id(const char *res_name)
