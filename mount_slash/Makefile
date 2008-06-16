@@ -14,6 +14,7 @@ SRCS+=		${PFL_BASE}/psc_util/ctlsvr.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/iostats.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
+SRCS+=		${PFL_BASE}/psc_util/meter.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/threadtable.c

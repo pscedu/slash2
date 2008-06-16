@@ -387,13 +387,12 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 
 //	rc = msl_read(fh, buf, size, off);
 
-	if ((rc = RSX_NEWREQ(io_import, SRCI_VERSION,
-	    SRMT_READ, rq, mq, mp)) != 0)
+	if ((rc = RSX_NEWREQ(ion_get()->csvc_import,
+	    SRCI_VERSION, SRMT_READ, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->size = size;
 	mq->offset = offset;
-
 
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
@@ -728,8 +727,8 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(io_import, SRCI_VERSION,
-	    SRMT_WRITE, rq, mq, mp)) != 0)
+	if ((rc = RSX_NEWREQ(ion_get()->csvc_import,
+	    SRCI_VERSION, SRMT_WRITE, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->size = size;
@@ -757,6 +756,8 @@ spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
 void *
 slash_init(__unusedx struct fuse_conn_info *conn)
 {
+	char *name, *p;
+
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
 	if (getenv("SLASH_SERVER_NID") == NULL)
@@ -767,6 +768,24 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	lnet_thrspawnf = spawn_lnet_thr;
 //	fidcache_init();
 	rpc_svc_init();
+
+	name = getenv("SLASH_MDS_SERVER_NID");
+	if (name == NULL)
+		psc_fatalx("SLASH_MDS_SERVER_NID not set");
+	if (slrcm_connect(name))
+		psc_fatal("unable to connect to MDS");
+
+	name = getenv("SLASH_IO_SERVER_NIDS");
+	if (name == NULL)
+		psc_fatalx("SLASH_MDS_SERVER_NIDS not set");
+	for (; name; name = p) {
+		while (*name == ' ')
+			name++;
+		if ((p = strchr(name, ',')) != NULL)
+			*p++ = '\0';
+		if (slrci_connect(name))
+			psc_fatal("unable to connect to IO");
+	}
 
 	pscthr_init(&pscControlThread, MSTHRT_CTL, msctlthr_begin,
 	    PSCALLOC(sizeof(struct psc_ctlthr)), "msctlthr");
