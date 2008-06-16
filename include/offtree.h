@@ -11,6 +11,8 @@
 #include "psc_util/waitq.h"
 #include "psc_rpc/rpc.h"
 
+#define OFTIOV_CB_SINGLE_PTR_SLOT 1
+#define OFTIOV_CB_COALESCED_PTR_SLOT 2
 
 static inline size_t
 power(size_t base, size_t exp)
@@ -112,7 +114,7 @@ power(size_t base, size_t exp)
 			if (!(ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG) || \
 			      ATTR_TEST((m)->oft_flags, OFT_UNINIT))) {	\
 				psc_assert((m)->oft_norl.oft_iov);	\
-				psc_assert(atomic_read(&(m)->oft_ref) == 1);	\
+				psc_assert(atomic_read(&(m)->oft_ref) == 1); \
 			}						\
 		}							\
 		if (ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG) ||		\
@@ -122,6 +124,7 @@ power(size_t base, size_t exp)
 			psc_assert(!(m)->oft_norl.oft_iov);		\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
+		psc_assert((m) == (m)->oft_norl.oft_iov.oftiov_memb);	\
 	}								\
 
 #define oftm_splitting_leaf_verify(m) {					\
@@ -167,6 +170,21 @@ power(size_t base, size_t exp)
 		psc_assert(!(m)->oft_norl.oft_iov);		\
 	}
 
+/* List the conditions for a tree leaf which is prepared for a read.
+ */
+#define oftm_read_prepped_verify(m) {					\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_READPNDG));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));  \
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_FREEING));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_SPLITTING));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_RELEASE));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_MCHLDGROW));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_UNINIT));	\
+		psc_assert(atomic_read(&(m)->oft_op_ref) > 0);		\
+		psc_assert((m) == (m)->oft_norl.oft_iov.oftiov_memb);	\
+}
 
 #ifndef MIN
 # define MIN(a,b) (((a)<(b)) ? (a): (b))
@@ -182,18 +200,23 @@ struct offtree_iov {
 	size_t  oftiov_blksz;
 	size_t  oftiov_nblks; /* length of respective data */	
 	void   *oftiov_pri;   /* private data, in slash's case, point at the 
-				sl_buffer structure which manages the 
-				region containing our base */
+	 			  sl_buffer structure which manages the 
+ 				  region containing our base */
+	void   *oftiov_memb;  /* backpointer to our offtree node */
+	//psc_spinlock_t oftiov_lock;
+	//psc_waitq_t    oftiov_waitq;
+	//atomic_t       oftiov_ref;
 };
 
 enum oft_iov_flags {
-	OFTIOV_DATARDY    = (1 << 0), /* Buffer contains no data        */
+	OFTIOV_DATARDY    = (1 << 0), /* Buffer contains readable data  */
 	OFTIOV_FAULTING   = (1 << 1), /* Buffer is being retrieved      */
-	OFTIOV_COLLISION  = (1 << 2), /* Collision ops must take place  */
-	OFTIOV_FREEING    = (1 << 3), /* Collision ops must take place  */
+	OFTIOV_FAULTPNDG  = (1 << 2), /* Our iov is scheduled           */
+	OFTIOV_COLLISION  = (1 << 3), /* Collision ops must take place  */
+	OFTIOV_FREEING    = (1 << 4), /* Collision ops must take place  */
 	OFTIOV_MAPPED     = (1 << 5), /* Mapped to a tree node          */
-	OFTIOV_REMAPPING  = (1 << 6), /* Remap to a another tree node   */	
-	OFTIOV_REMAP_SRC  = (1 << 7), /* IOV is the remap source buffer */	
+	OFTIOV_REMAPPING  = (1 << 6), /* Remap to a another tree node   */  
+	OFTIOV_REMAP_SRC  = (1 << 7), /* IOV is the remap source buffer */
 	OFTIOV_REMAP_END  = (1 << 8)  /* IOV is the last to remap       */
 };
 
@@ -201,13 +224,14 @@ enum oft_iov_flags {
 #define DEBUG_OFFTIOV_FLAGS(iov)					  \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_DATARDY),  "d"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FAULTING), "f"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FAULTING), "P"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_COLLISION),"p"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FREEING),  "F"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_MAPPED),   "m"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAPPING),"r"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_SRC),"R"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_END),"E")
-#define OFFTIOV_FLAGS_FMT "%s%s%s%s%s%s%s%s"
+#define OFFTIOV_FLAGS_FMT "%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
 	do {								\
@@ -329,16 +353,23 @@ struct offtree_root {
 	struct offtree_memb oftr_memb; /* root member                       */
 };
 
+struct offtree_fill {
+	struct pscrpc_request_set *oftfill_reqset; /* Our request set */
+	struct dynarray           *oftfill_inprog; /* already in progress   */
+	psc_spinlock_t             oftfill_lock;
+};
+
 struct offtree_req {
-	struct offtree_root *oftrq_root;
-	struct offtree_memb *oftrq_memb;
-	struct dynarray     *oftrq_darray;
-	off_t                oftrq_off;   /* aligned, file-logical offset   */
-	ssize_t              oftrq_nblks; /* number of blocks requested     */
-	u8                   oftrq_op;
-	u8                   oftrq_depth;
-	u16                  oftrq_width;
-	off_t                oftrq_darray_off;	
+	struct offtree_root  *oftrq_root;
+	struct offtree_memb  *oftrq_memb;   /* pointer to request node head */
+	struct dynarray      *oftrq_darray; /* sorted array of buffer iov's */
+	off_t                 oftrq_off;    /* aligned, file-logical offset  */
+	ssize_t               oftrq_nblks;  /* number of blocks requested */
+	u8                    oftrq_op;
+	u8                    oftrq_depth;
+	u16                   oftrq_width;
+	off_t                 oftrq_darray_off;	
+	struct offtree_fill   oftrq_fill;
 };
 
 enum offtree_req_op_types {
