@@ -405,8 +405,6 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 		(n)->oftiov_nblks = nblks;				\
 	} while (0)		       
 
-
-
 /*
  * offtree_putleaf - apply buffers to a leaf
  *
@@ -455,6 +453,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				psc_assert(ATTR_TEST(iov->oftiov_flags, 
 						     OFTIOV_REMAP_SRC));
 
+				iov->oftiov_memb = req->oftrq_memb;
 				req->oftrq_memb->oft_norl.oft_iov = iov;
 				ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_END);
 			} else {
@@ -484,6 +483,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				if (OFT_REQ2E_OFF_(req) == OFT_IOV2E_OFF_(iov)) 
 					ATTR_SET(niov->oftiov_flags, OFTIOV_REMAP_END);
 
+				niov->oftiov_memb = req->oftrq_memb;
 				req->oftrq_memb->oft_norl.oft_iov = niov;
 				DEBUG_OFFTIOV(PLL_INFO, niov, "remap (niov)");
 			}
@@ -521,8 +521,10 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				req->oftrq_memb->oft_norl.oft_iov = niov;
 				ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_SRC);
 				DEBUG_OFFTIOV(PLL_INFO, niov, "short remap (niov)");
-			} else 
+			} else {
+				iov->oftiov_memb = req->oftrq_memb;
 				req->oftrq_memb->oft_norl.oft_iov = iov;
+			}
 		}
 
 		DEBUG_OFFTIOV(PLL_INFO, req->oftrq_memb->oft_norl.oft_iov, 
