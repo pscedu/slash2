@@ -18,8 +18,8 @@ list_cache_t slBufsFree;
 list_cache_t slBufsLru;
 list_cache_t slBufsPin;
 
-u32 slCacheBlkSz=16384;
-u32 slCacheNblks=64;
+u32 slCacheBlkSz=32768;
+u32 slCacheNblks=32;
 u32 slbFreeDef=100;
 u32 slbFreeMax=200;
 u32 slbFreeInc=10;
@@ -815,6 +815,8 @@ sl_buffer_init(void *pri)
 void
 sl_buffer_cache_init(void)
 {
+	psc_assert(SLB_SIZE <= LNET_MTU);
+
 	lc_reginit(&slBufsFree, struct sl_buffer,
 		   slb_mgmt_lentry, "slabBufFree");
 	lc_reginit(&slBufsLru,  struct sl_buffer,
