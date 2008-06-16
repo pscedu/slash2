@@ -22,6 +22,8 @@ extern list_cache_t slBufsFree;
 extern list_cache_t slBufsLru;
 extern list_cache_t slBufsPin;
 
+#define SLB_SIZE (slCacheBlkSz * slCacheNblks)
+
 enum slb_states {
 	SLB_DIRTY    = 0x01, /* have dirty data          */
 	SLB_INFLIGHT = 0x02, /* dirty data is being sent */
