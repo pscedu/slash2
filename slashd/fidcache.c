@@ -59,9 +59,9 @@ bmap_cache_cmp(const void *x, const void *y)
 {
 	const struct bmap_cache_memb *a = x, *b = y;
 
-        if (a->bcm_bmapi.bmapi_blkno > b->bcm_bmapi.bmapi_blkno)
+        if (a->bcm_blkno > b->bcm_blkno)
                 return 1;
-        else if (a->bcm_bmapi.bmapi_blkno < b->bcm_bmapi.bmapi_blkno)
+        else if (a->bcm_blkno < b->bcm_blkno)
                 return -1;
         return 0;
 }
