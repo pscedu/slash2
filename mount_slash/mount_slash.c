@@ -16,9 +16,10 @@
 #include <fuse.h>
 
 #include "pfl.h"
+#include "psc_types.h"
+#include "psc_mount/dhfh.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
-#include "psc_types.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
@@ -112,7 +113,7 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 			 *   it in the fd cache.
 			 */
 			fi->fh = mp->cfd;
-//			fh_register(mp->cfd, msl_fdreg_cb, NULL);
+			fh_register(mp->cfd, msl_fdreg_cb, NULL);
 		}
 	}
 	pscrpc_req_finished(rq);
@@ -324,7 +325,7 @@ slash_open(const char *path, struct fuse_file_info *fi)
 			rc = mp->rc;
 		else {
 			fi->fh = mp->cfd;
-//			fh_register(mp->cfd, msl_fdreg_cb, NULL);
+			fh_register(mp->cfd, msl_fdreg_cb, NULL);
 		}
 	}
 	pscrpc_req_finished(rq);
@@ -381,9 +382,9 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 
 	/* First get the fhentry from the cache.
 	 */
-//	fh = fh_lookup(fi->fh);
-//	if (!fh)
-//		return -EBADF;
+	fh = fh_lookup(fi->fh);
+	if (!fh)
+		return (-EBADF);
 
 //	rc = msl_read(fh, buf, size, off);
 
@@ -427,8 +428,8 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 	u64 off;
 	int rc;
 
-	if ((rc = rsx_newreq(mds_import, SRCM_VERSION,
-	    SRMT_READDIR, sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0)
+	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	    SRMT_READDIR, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->offset = offset;
@@ -766,7 +767,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 #define THRTABSZ 13
 	pfl_init(THRTABSZ);
 	lnet_thrspawnf = spawn_lnet_thr;
-//	fidcache_init();
+	fidcache_init();
 	rpc_svc_init();
 
 	name = getenv("SLASH_MDS_SERVER_NID");

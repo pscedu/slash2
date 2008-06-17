@@ -42,6 +42,8 @@ int slash_write(const char *, const char *, size_t, off_t, struct fuse_file_info
 
 struct slashrpc_cservice *ion_get(void);
 
+void msl_fdreg_cb(struct fhent *, int, void *[]);
+
 extern struct slashrpc_cservice *mds_csvc;
 
 #define mds_import	(mds_csvc->csvc_import)
