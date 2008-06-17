@@ -63,7 +63,7 @@ struct sl_finfo {
  * fidcache_memb - holds inode filesystem related data
  */
 struct fidcache_memb {
-	struct slash_fid	fcm_fid;
+	struct slash_fidgen	fcm_fg;
 	struct stat		fcm_stb;
 	struct sl_finfo		fcm_slfinfo;
 	//struct sl_uid		fcm_uid;
@@ -125,16 +125,6 @@ bmap_cache_cmp(const void *, const void *);
 
 SPLAY_HEAD(bmap_cache, bmap_cache_memb);
 SPLAY_PROTOTYPE(bmap_cache, bmap_cache_memb, bcm_tentry, bmap_cache_cmp);
-
-/*
- * fidcache_memb - holds inode filesystem related data
- */
-struct fidcache_memb {
-	struct slash_fidgen	fcm_fg;
-	struct stat		fcm_stb;
-	struct sl_finfo		fcm_slfinfo;
-	//struct sl_uid		fcm_uid;
-};
 
 /*
  * fidcache_memb_handle - the primary inode cache structure, all
