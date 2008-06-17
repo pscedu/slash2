@@ -222,8 +222,8 @@ __static void
 fidcache_memb_init(struct fidcache_memb *fcm)
 {
 	memset(fcm, 0, (sizeof *fcm));
-	fcm->fcm_fid.fid_inum = FID_ANY;
-	fcm->fcm_fid.fid_gen  = FID_ANY;
+	fcm->fcm_fg.fg_fid = FID_ANY;
+	fcm->fcm_fg.fg_gen = FID_ANY;
 }
 
 /**
