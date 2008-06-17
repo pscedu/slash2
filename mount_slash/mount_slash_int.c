@@ -212,7 +212,7 @@ msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
  * Notes: the bmap is locked to avoid race conditions with import checking.
  *        the bmap's refcnt must have been incremented so that it is not freed from under us.
  */
-struct pscrpc_import *
+__static struct pscrpc_import *
 msl_bmap_to_import(struct bmap_cache_memb *b)
 {
 	struct bmap_info_cli *c;
@@ -239,7 +239,7 @@ msl_bmap_to_import(struct bmap_cache_memb *b)
 			psc_fatalx("new_import");
 
 		c->bmic_import->imp_client =
-			PSCALLOC(sizeof(*c->bmic_import));
+			PSCALLOC(sizeof(struct pscrpc_client));
 		psc_assert(c->bmic_import->imp_client);
 
 		c->bmic_import->imp_client->cli_request_portal = 
@@ -520,9 +520,9 @@ msl_pages_prefetch(struct offtree_req *r)
 
 	/* Verify that the number of blks matches that of the request.
 	 */	
-	if (nblks != req->oftrq_nblks)
-		psc_fatalx("nbufs=%zu != oftrq_nblks=%zu",
-			   nblks, req->oftrq_nblks);
+	//	if (nblks != req->oftrq_nblks)
+	//	psc_fatalx("nbufs=%zu != oftrq_nblks=%zu",
+	//		   nblks, req->oftrq_nblks);
 }
 
 /**
@@ -556,12 +556,14 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 			/* Assert that the pages are kosher for copying.
 			 */
 			psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY));
-
+			
 			m = (struct offtree_memb *)v->oftiov_memb;
 			oftm_read_prepped_verify(m);
-		}
-	}
-
+			
+			if (!i && !j)
+				;
+		}				
+	}	
 }
 
 int
