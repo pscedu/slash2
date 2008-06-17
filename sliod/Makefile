@@ -23,6 +23,7 @@ SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/iostats.c
 SRCS+=		${PFL_BASE}/psc_util/journal.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
+SRCS+=		${PFL_BASE}/psc_util/meter.c
 SRCS+=		${PFL_BASE}/psc_util/mkdirs.c
 SRCS+=		${PFL_BASE}/psc_util/palloc.c
 SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
