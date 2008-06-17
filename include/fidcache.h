@@ -15,6 +15,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 
+#include "slconfig.h"
 #include "buffer.h"
 #include "fid.h"
 #include "inode.h"
@@ -32,6 +33,7 @@
 
 #define SLASH_BMAP_BLKMASK ~(SLASH_BMAP_BLKSZ-1)
 
+#define SLASH_MAXBLKS_PER_REQ (LNET_MTU / SLASH_BMAP_BLKSZ)
 
 #define FCMH_LOCK(h)  spinlock(&(h)->fcmh_lock)
 #define FCMH_ULOCK(h) freelock(&(h)->fcmh_lock)
@@ -49,14 +51,23 @@ extern psc_spinlock_t	fidcCacheLock;
 
 /* sl_finfo - hold stats and lamport clock */
 struct sl_finfo {
-	//struct timespec slf_opentime;		/* when we received client OPEN  */
-	//struct timespec slf_closetime;	/* when we received client CLOSE */
-	struct timespec	slf_lattr_update;	/* last attribute update         */
-	u64		slf_opcnt;		/* count attr updates            */
-	size_t		slf_readb;		/* num bytes read                */
-	size_t		slf_writeb;		/* num bytes written             */
+	//struct timespec slf_opentime;	   /* when we received client OPEN  */
+	//struct timespec slf_closetime;   /* when we received client CLOSE */
+	struct timespec	slf_lattr_update;  /* last attribute update         */
+	u64		slf_opcnt;	   /* count attr updates            */
+	size_t		slf_readb;	   /* num bytes read                */
+	size_t		slf_writeb;	   /* num bytes written             */
 };
 
+/*
+ * fidcache_memb - holds inode filesystem related data
+ */
+struct fidcache_memb {
+	struct slash_fid	fcm_fid;
+	struct stat		fcm_stb;
+	struct sl_finfo		fcm_slfinfo;
+	//struct sl_uid		fcm_uid;
+};
 
 struct sl_uid {
 //	u64	sluid_guid;	/* Stubs for global uids */
@@ -71,39 +82,42 @@ struct bmap_refresh {
 	u8			bmrfr_flags;
 };
 
+/* 
+ * bmap_info_cli - hangs from the void * pointer in the sl_resm_t struct.
+ *  It's tasked with holding the import to the correct ION.
+ */
+struct bmap_info_cli {
+	struct pscrpc_import *bmic_import;
+};
+
+#define BMAP_AUTH_SZ 8
 /*
  * bmap_info - for each block in the fidcache, associate the set of
  * possible I/O servers and the store the CRC of the block.
  */
-struct bmap_info {
-	sl_blkno_t	bmapi_blkno;
-	sl_ios_id_t	bmapi_ios[SL_DEF_REPLICAS];
-	//sl_gcrc_t	bmapi_gencrc;
+struct bmap_info {	
+	lnet_nid_t      bmapi_ion;                   /* MDS chosen io node  */
+	sl_ios_id_t	bmapi_ios[SL_DEF_REPLICAS];  /* Replica store       */
+	unsigned char   bmapi_auth[BMAP_AUTH_SZ];    /* Our write key       */
 };
 
 /*
- * bmap_info_handle - holder for bmap_info (which is a wire struct).
- */
-//struct bmap_info_handle {
-//	struct bmap_info	bmapih_info;
-//	struct psc_list_head	bmapih_lentry;
-//};
-
-/*
  * bmap_cache_memb - central structure for block map caching used in
- * all slash service contexts (mds, ios, client).
+ *    all slash service contexts (mds, ios, client).
  *
  * bmap_cache_memb sits in the middle of the GFC stratum.
  */
 struct bmap_cache_memb {
-	struct timespec		 bcm_ts;
-	struct bmap_info	 bcm_bmapi;
-	atomic_t		 bcm_refcnt;	        /* one ref per client (mds) */
-	void			*bcm_info_pri;
-	struct offtree_root     *bcm_oftr;
-	//struct psclist_head	 bcm_lentry;		/* lru chain */
-	//struct psclist_head	 bcm_buffers;		/* track our buffers */
-	SPLAY_ENTRY(bmap_cache_memb) bcm_tentry;	/* fcm tree entry */
+	sl_blkno_t	        bcm_blkno;       /* Bmap blk number */
+	struct timespec		bcm_ts;
+	struct bmap_info	bcm_bmapih;
+	atomic_t		bcm_refcnt;	 /* one ref per client (mds) */
+	void		       *bcm_info_pri;    /* point to private data    */
+	struct fidcache_memb   *bcm_fcm;         /* pointer to fid info      */
+	struct offtree_root    *bcm_oftr;
+	psc_spinlock_t          bcm_lock;
+	u32                     bcm_flags;
+	SPLAY_ENTRY(bmap_cache_memb) bcm_tentry; /* fcm tree entry */
 };
 
 int
@@ -140,8 +154,8 @@ struct fidcache_memb_handle {
 	atomic_t		 fcmh_refcnt;
 	void			*fcmh_info_pri;
 	atomic_t                 fcmh_bmap_cache_cnt;
-	struct bmap_cache	 fcmh_bmap_cache;	/* splay tree of bmap cache */
-	list_cache_t		 fcmh_buffer_cache;	/* list of data buffers (slb)*/
+	struct bmap_cache	 fcmh_bmap_cache;    /* splay tree of bmap cache */
+	list_cache_t		 fcmh_buffer_cache;  /* list of data buffers (slb)*/
 	psc_spinlock_t		 fcmh_lock;
 };
 
