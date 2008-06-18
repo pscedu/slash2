@@ -8,7 +8,7 @@ MKDEP= `type -t mkdep >/dev/null 2>&1 && echo mkdep || echo makedepend -f.depend
 LINT=		splint +posixlib
 CTAGS=		ctags
 
-DEFINES+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D__TARGET_LINUX__
+DEFINES+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DLINUX
 INCLUDES+=	-I${KERNEL_BASE}/include
 
 THREAD_LIBS?=	-lpthread
