@@ -57,6 +57,9 @@ sl_buffer_lru_assertions(struct sl_buffer *b)
 	psc_assert(psclist_conjoint(&b->slb_fcm_lentry));
 	psc_assert(atomic_read(&b->slb_ref));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
+	psc_assert(!atomic_read(&b->slb_inflight));
+	psc_assert((!atomic_read(&iov->slb_inflight)) &&
+                   (!atomic_read(&iov->slb_inflpndg)));
 }
 
 static void
@@ -69,7 +72,10 @@ sl_buffer_fresh_assertions(struct sl_buffer *b)
 	psc_assert(psclist_empty(&b->slb_iov_list));
 	psc_assert(b->slb_base);
 	psc_assert(!atomic_read(&b->slb_ref));
+	psc_assert(!atomic_read(&b->slb_inflight));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
+	psc_assert((!atomic_read(&iov->slb_inflight)) &&
+                   (!atomic_read(&iov->slb_inflpndg)));
 }
 
 static void
@@ -78,17 +84,26 @@ sl_buffer_pin_assertions(struct sl_buffer *b)
 	psc_assert(ATTR_TEST(b->slb_flags, SLB_PINNED));
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FRESH));
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_LRU));
-	//psc_assert(!ATTR_TEST(b->slb_flags, SLB_DIRTY));
-	//psc_assert(!ATTR_TEST(b->slb_flags, SLB_INFLIGHT));
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREEING));
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREE));
-	//psc_assert(vbitmap_nfree(&b->slb_inuse) < b->slb_nblks);
 	psc_assert(!psclist_empty(&b->slb_iov_list));
 	/* Test this before pinning.. */
 	//psc_assert(psclist_disjoint(&b->slb_mgmt_lentry));
 	psc_assert(b->slb_base);
-	psc_assert(atomic_read(&b->slb_ref) ||
-		   atomic_read(&b->slb_unmapd_ref));
+	psc_assert((atomic_read(&b->slb_ref) > 0) ||
+		   (atomic_read(&b->slb_unmapd_ref) > 0));
+	psc_assert((atomic_read(&iov->slb_inflight) > 0) ||
+		   (atomic_read(&iov->slb_inflpndg) > 0));	
+	psc_assert(atomic_read(&iov->slb_inflpndg) >= 
+		   (atomic_read(&iov->slb_inflight)));
+}
+
+static void
+sl_buffer_inflight_assertions(struct sl_buffer *b)
+{
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_DIRTY));   
+        psc_assert(!ATTR_TEST(b->slb_flags, SLB_INFLIGHT));  
+	psc_assert(atomic_read(&b->slb_inflight));
 }
 
 static void
@@ -170,7 +185,8 @@ sl_oftiov_free_check_locked(struct offtree_memb *m)
 	psc_assert(!ATTR_TEST(m->oft_flags, OFT_ALLOCPNDG));
 	/* If writing, then the slb must be pinned
 	 */
-	psc_assert(!ATTR_TEST(m->oft_flags, OFT_WRITEPNDG));
+	//psc_assert(!ATTR_TEST(m->oft_flags, OFT_WRITEPNDG));
+	psc_assert(!atomic_read(&m->oft_wrop_ref));
 	/* Verify iov state
 	 */
 	psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY));
@@ -180,12 +196,11 @@ sl_oftiov_free_check_locked(struct offtree_memb *m)
 	psc_assert(!ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTING));
 
  restart:
-	if (atomic_read(&m->oft_op_ref)) {
+	if (atomic_read(&m->oft_rdop_ref)) {
 		/* Already pulled this guy from the lru, might as
 		 *   try to free it.
 		 */
-		psc_assert(ATTR_TEST(m->oft_flags, OFT_READPNDG));
-
+		//psc_assert(ATTR_TEST(m->oft_flags, OFT_READPNDG));
 		if (tried) {
 			DEBUG_OFFTIOV(PLL_INFO, v, "iov inuse, retry fail");
 			/*  Re-lock, caller expects to free it.
@@ -318,7 +333,10 @@ sl_slab_reap(int nblks) {
 			 */
 			ATTR_SET(m->oft_flags, OFT_FREEING);
 			m->oft_norl.oft_iov = NULL;
+			/* offtree_freeleaf_locked() releases both locks.
+			 */
 			offtree_freeleaf_locked(m);
+			
 		}
 		/* Remove ourselves from the fidcache slab list
 		 */
@@ -347,7 +365,6 @@ sl_slab_alloc(int nblks, struct fidcache_memb_handle *f)
 	int    rc, fblks=0, timedout=0;
 
 	ENTRY;
-
  retry:
 	do {
 		slb = sl_buffer_get(&slBufsFree, 0);
@@ -355,7 +372,6 @@ sl_slab_alloc(int nblks, struct fidcache_memb_handle *f)
 			if (lc_grow(&slBufsFree, slbFreeInc,
 				    sl_buffer_init) > 0)
 				goto retry;
-
 			if (timedout)
 				/* Already timedout once, give up
 				 */
@@ -563,32 +579,80 @@ sl_oftm_addref(struct offtree_memb *m)
 	psc_assert(atomic_read(&slb->slb_ref) <= slb->slb_nblks);
 	freelock(&slb->slb_lock);
 }
-
-
-static void
+		
+__static void
 sl_buffer_pin_locked(struct sl_buffer *slb)
 {
-	if (ATTR_TEST(slb->slb_flags, SLB_PINNED))
-		return (sl_buffer_pin_assertions(slb));
-
+	if (ATTR_TEST(slb->slb_flags, SLB_PINNED)) {
+		 psc_assert(slb->slb_lc_owner == slBufsPin);
+		 return (sl_buffer_pin_assertions(slb));
+	}
 	if (ATTR_TEST(slb->slb_flags, SLB_FRESH)) {
 		slb_fresh_2_pinned(slb);
-
+		
 	} else if (ATTR_TEST(slb->slb_flags, SLB_LRU)) {
 		/* Move from LRU to PINNED.
 		 * Note: the LRU and FREE managers MUST use
 		 *  the listcache api for removing entries
 		 *  otherwise there will be race conditions
 		 */
+		psc_assert(slb->slb_lc_owner == slBufsLru);
 		lc_del(&slb->slb_mgmt_lentry, slb->slb_lc_owner);
 		slb_lru_2_pinned(slb);
 	} else {
 		DEBUG_SLB(PLL_FATAL, slb, "invalid slb");
 		psc_fatalx("invalid slb %p", slb);
 	}
+	atomic_inc(&slb->slb_inflpndg);	
 	sl_buffer_put(slb, &slBufsPin);
 }
 
+#define sl_buffer_unpin_locked(slb)					\
+	{								\
+		psc_assert((slb)->slb_lc_owner == slBufsPin);		\
+		psc_assert(atomic_read(&(slb)->slb_inflpndg) <		\
+			   atomic_read(&(slb)->slb_inflight));		\
+		if (atomic_dec_and_test(&(slb)->slb_inflpndg)) {	\
+			lc_del(&(slb)->slb_mgmt_lentry, (slb)->slb_lc_owner); \
+			slb_pinned_2_lru((slb));			\
+			sl_buffer_put((slb), &slBufsLru);		\
+		}							\
+	}								\
+ 
+/**
+ * sl_oftiov_pin_cb - callback from offtree.c to instruct us to pin the slb contained within the passed in 'iov'.  sl_oftiov_pin_cb does some simple sanity checking and merely calls in sl_buffer_pin_locked().
+ *
+ */
+void
+sl_oftiov_pin_cb(struct offtree_iov *iov, int op)
+{
+	struct offtree_memb *m   = (struct offtree_memb *)iov->oftiov_memb;
+	struct sl_buffer    *slb = (struct sl_buffer *)iov->oftiov_pri;
+	/* Saneness.
+	 */
+	LOCK_ENSURE(&m->oft_lock);
+	psc_assert(m->oft_norl.oft_iov == iov);
+	/* If there is no refcnt by the time we're called then no
+	 *   guarantee can be made that this slb is currently being freed.
+	 * For SL_BUFFER_UNPIN, these refs will be dec'd after this callback
+	 *   is issued.
+	 */
+	psc_assert(atomic_read(&m->oft_rdop_ref) ||
+		   atomic_read(&m->oft_wrop_ref));
+
+	DEBUG_SLB(PLL_TRACE, s, "op=%d", op);
+
+	spinlock(&slb->slb_lock);
+	if (op == SL_BUFFER_PIN)
+		sl_buffer_pin_locked(slb);
+
+	else if (op == SL_BUFFER_UNPIN)
+		sl_buffer_unpin_locked(slb);
+	else 
+		psc_fatalx("Unknown op type %d", op);
+
+	freelock(&slb->slb_lock);       	
+}
 /**
  * sl_buffer_alloc_internal - allocate blocks from the given slab buffer 'b'.
  * @b: slab to alloc from
@@ -705,11 +769,8 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 						  &slb->slb_iov_list);
 			}
 		}
-
 		sl_buffer_pin_locked(slb);
-
 		dynarray_add(a, iov);
-
 		DEBUG_OFFTIOV(PLL_TRACE, iov,
 			      "new iov(%d)", tiovs);
 		tiovs++;
@@ -801,6 +862,7 @@ sl_buffer_init(void *pri)
 	slb->slb_base  = PSCALLOC(slCacheNblks * slCacheBlkSz);
 	atomic_set(&slb->slb_ref, 0);
 	atomic_set(&slb->slb_unmapd_ref, 0);
+	atomic_set(&slb->slb_inflight, 0);
 	LOCK_INIT (&slb->slb_lock);
 	//ATTR_SET  (slb->slb_flags, SLB_FREEING);
 	slb->slb_flags = SLB_FRESH;
