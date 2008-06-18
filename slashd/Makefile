@@ -21,6 +21,7 @@ SRCS+=		sb.c
 SRCS+=		timer.c
 SRCS+=		yconf.y
 SRCS+=		${SLASH_BASE}/share/fid.c
+SRCS+=		${SLASH_BASE}/share/rpc.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
 SRCS+=		${PFL_BASE}/psc_ds/stree.c

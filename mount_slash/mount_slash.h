@@ -19,14 +19,6 @@ struct msctl_thread {
 	u32	mc_st_nrecv;
 };
 
-struct slashrpc_cservice {
-	struct pscrpc_import		*csvc_import;
-	psc_spinlock_t			 csvc_lock;
-	struct psclist_head		 csvc_old_imports;
-	int				 csvc_failed;
-	int				 csvc_initialized;
-};
-
 struct io_server_conn {
 	struct psclist_head		 isc_lentry;
 	struct slashrpc_cservice	*isc_csvc;

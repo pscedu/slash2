@@ -7,6 +7,7 @@ SRCS+=		control.c
 SRCS+=		mount_slash.c
 SRCS+=		mount_slash_int.c
 SRCS+=		rpc.c
+SRCS+=		${SLASH_BASE}/share/rpc.c
 SRCS+=		${SLASH_BASE}/slashd/fidcache.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c

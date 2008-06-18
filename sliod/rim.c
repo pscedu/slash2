@@ -21,12 +21,9 @@ slrim_handler(struct pscrpc_request *rq)
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
-		rc = pscrpc_error(rq);
-		goto done;
+		return (pscrpc_error(rq));
 	}
 	target_send_reply_msg(rq, rc, 0);
-
- done:
 	return (rc);
 }
 

@@ -350,4 +350,17 @@ struct srm_generic_rep {
 	s32 rc;
 };
 
+struct slashrpc_cservice {
+	struct pscrpc_import	*csvc_import;
+	psc_spinlock_t		 csvc_lock;
+	struct psclist_head	 csvc_old_imports;
+	int			 csvc_failed;
+	int			 csvc_initialized;
+};
+
 void slashrpc_export_destroy(void *);
+
+struct slashrpc_cservice *rpc_csvc_create(u32, u32);
+int rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, u64, u32);
+
+extern lnet_process_id_t lpid;
