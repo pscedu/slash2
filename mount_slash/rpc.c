@@ -30,7 +30,7 @@ rpc_svc_init(void)
 		psc_fatalx("LNetGetId");
 
 	/* Setup client <-> MDS service */
-	mds_csvc = rpc_svc_create(SRCM_REQ_PORTAL, SRCM_REP_PORTAL);
+	mds_csvc = rpc_csvc_create(SRCM_REQ_PORTAL, SRCM_REP_PORTAL);
 }
 
 int
@@ -57,7 +57,7 @@ slrci_connect(const char *name)
 		psc_fatalx("invalid server name: %s", name);
 
 	isc = PSCALLOC(sizeof(*isc));
-	isc->isc_csvc = rpc_svc_create(SRCI_REQ_PORTAL,
+	isc->isc_csvc = rpc_csvc_create(SRCI_REQ_PORTAL,
 	    SRCI_REP_PORTAL);
 	if (rpc_issue_connect(nid, isc->isc_csvc->csvc_import,
 	    SRCI_MAGIC, SRCI_VERSION))
@@ -71,16 +71,23 @@ ion_get(void)
 {
 	static psc_spinlock_t lock = LOCK_INITIALIZER;
 	static struct io_server_conn *isc;
-	struct slash_cservice *csvc;
+	struct slashrpc_cservice *csvc;
+	struct psclist_head *e;
 
 	spinlock(&lock);
 	if (psclist_empty(&io_server_conns))
 		psc_fatalx("no I/O nodes available");
-	if (isc == NULL || isc == &io_server_conns)
-		isc = psclist_first(&io_server_conns);
+	if (isc == NULL)
+		isc = psclist_first_entry(&io_server_conns,
+		    struct io_server_conn, isc_lentry);
 	else {
 		csvc = isc->isc_csvc;
-		isc = psclist_next_entry(isc, isc_lentry);
+		e = psclist_next(&isc->isc_lentry);
+		if (e == &io_server_conns)
+			isc = NULL;
+		else
+			isc = psclist_entry(e, struct io_server_conn,
+			    isc_lentry);
 	}
 	freelock(&lock);
 	return (csvc);
