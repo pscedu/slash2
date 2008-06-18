@@ -15,6 +15,8 @@
 
 struct slashrpc_cservice *rim_csvc;
 
+lnet_process_id_t lpid; 
+
 struct slashrpc_export *
 slashrpc_export_get(struct pscrpc_export *exp)
 {

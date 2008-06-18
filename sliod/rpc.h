@@ -23,21 +23,10 @@
 #define SRII_REPSZ	128
 #define SRII_SVCNAME	"slriithr"
 
-struct slashrpc_cservice {
-	struct pscrpc_import	 *csvc_import;
-	psc_spinlock_t		  csvc_lock;
-	struct psclist_head	  csvc_old_imports;
-	int			  csvc_failed;
-	int			  csvc_initialized;
-};
-
 struct slashrpc_export {
 };
 
-struct slashrpc_cservice *
-	rpc_csvc_create(u32, u32);
 void	rpcsvc_init(void);
-int	rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, u64, u32);
 
 int slrim_handler(struct pscrpc_request *);
 int slric_handler(struct pscrpc_request *);
