@@ -258,6 +258,7 @@ msl_read_cb(struct pscrpc_request *rq, void *arg, int status)
 	struct dynarray     *a = arg->pointer_arg[MSL_READ_CB_POINTER_SLOT];
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
+	struct sl_buffer    *s;
 	int i, n=dynarray_len(a);
 
 	if (status) {
@@ -272,6 +273,7 @@ msl_read_cb(struct pscrpc_request *rq, void *arg, int status)
 		v = dynarray_getpos(i);
 		m = (struct offtree_memb *)v->oftiov_memb;
 		/* Take the lock and do some sanity checks.
+		 *  XXX waitq wake here (oftm)
 		 */
 		spinlock(&m->oft_lock);
 		oftm_read_prepped_verify(m);
@@ -283,9 +285,13 @@ msl_read_cb(struct pscrpc_request *rq, void *arg, int status)
 		 */ 
 		ATTR_SET(v->oftiov_flags, OFTIOV_DATARDY);
 		DEBUG_OFFTIOV(PLL_TRACE, v, "OFTIOV_DATARDY");
-		//ATTR_UNSET(m->oft_flags, OFT_READPNDG);
-		//atomic_dec(&m->oft_op_ref);
 		freelock(&m->oft_lock);		
+		/* Decrement the inflight counter in the slb.
+		 */
+		s = (struct sl_buffer *)v->oftiov_pri;			
+		atomic_dec(&s->slb_inflight);
+		DEBUG_SLB(PLL_TRACE, s, "inflight dec'd");
+		psc_assert(atomic_read(&s->slb_inflight) >= 0);		
 	}
 	/* Free the dynarray which was allocated in msl_pages_prefetch().
 	 */
@@ -339,6 +345,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a)
 	 */
 	iovs = PSCALLOC(sizeof(*iovs) * n);
 	for (i=0; i < n; i++)
+		//XXX this is all wrong!!!
 		memcpy(iovs[0], dynarray_getpos(i), sizeof(struct iovec));
 
 	rsx_bulkclient(req, &desc, BULK_PUT_SINK, SRM_BULK_PORTAL, iovs, n);
@@ -493,7 +500,7 @@ msl_pages_prefetch(struct offtree_req *r)
 				/* There must be at least 2 pending operations
 				 *  (ours plus the one who set OFTIOV_FAULT*)
 				 */
-				psc_assert(atomic_read(m->oft_op_ref) > 1);
+				psc_assert(atomic_read(m->oft_rdop_ref) > 1);
 				/* Allocate a new 'in progress' dynarray if 
 				 *  one does not already exist.
 				 */
@@ -536,12 +543,15 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 	struct dynarray     *a;
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
-	int   l, i, j;
-	off_t o, t;
+	int    l, i, j, x=0;
+	off_t  o, t;
+	size_t nbytes;
+	ssize_t tsize=size;
+	char  *b;
 
+	psc_assert(r[0].oftrq_off <= off);
 	/* Relative offset into the buffer.
 	 */
-	psc_assert(r[0].oftrq_off <= off);
 	t = off - r[0].oftrq_off;
 	
 	for (i=0; i < n; i++) {
@@ -549,21 +559,53 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 		l = dynarray_len(a);
 		for (j=0; j < l; j++) {
 			v = dynarray_getpos(j);
+			m = (struct offtree_memb *)v->oftiov_memb;
+
+			spinlock(&m->oft_lock);
+
+			DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
+				      "OFT_IOV2E_OFF_(%zu)",
+				      i, req->oftrq_off,  OFT_IOV2E_OFF_(v));
 			/* These pages aren't involved, skip.
 			 */
-			if (off > OFT_IOV2E_OFF_(v))
-				continue;
+			if (!x)
+				if (r[0].oftrq_off > OFT_IOV2E_OFF_(v))
+					continue;
 			/* Assert that the pages are kosher for copying.
 			 */
-			psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY));
-			
-			m = (struct offtree_memb *)v->oftiov_memb;
+			psc_assert(ATTR_TEST(v->oftiov_flags, 
+					     OFTIOV_DATARDY));		
+			/* More sanity
+			 */
 			oftm_read_prepped_verify(m);
+			freelock(&m->oft_lock);
 			
-			if (!i && !j)
-				;
+			if (!x) {
+				x  = 1;
+				b  = (char *)v->oftiov_base;
+				b += t;				
+				nbytes = MIN(((v->oftiov_nblks * v->oftiov_blksz) - t), 
+					     (tsize));
+			} else
+				nbytes = MIN((v->oftiov_nblks * v->oftiov_blksz), tsize);
+			
+			memcpy(buf, b, nbytes);
+			b += nbytes;
+			tsize -= nbytes;
+			/* Manage the offtree leaf and decrement the slb.
+			 */
+			atomic_dec(&m->oft_rdop_ref);			
+			(r->oftrq_root->oftr_slbpin_cb)(iov, SL_BUFFER_UNPIN);
+
+			psc_waitq_wake(&m->oft_waitq);
+			psc_assert(tsize > 0);
+			if (!tsize)
+				goto out;
 		}				
 	}	
+ out:
+	psc_assert(!tsize);
+	return (size);
 }
 
 int
@@ -652,7 +694,7 @@ msl_read(struct fhent *fh, char *buf, size_t size, off_t off)
 	}
 	/*   Copying into the application buffer, and managing the offtree.
 	 */
-	tlen = msl_pages_copyout(r, i, buf, size, off);
+	tlen = msl_pages_copyout(r, i, buf, (size_t)size, off);
 
 	psc_assert(tlen == size);
 	return ((int)size);
