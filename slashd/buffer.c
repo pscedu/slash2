@@ -1,14 +1,16 @@
+/* $Id$ */
+
 #include <errno.h>
 #include <time.h>
 
-#include "psc_util/lock.h"
-#include "psc_util/cdefs.h"
-#include "psc_util/assert.h"
-#include "psc_util/alloc.h"
+#include "psc_ds/dynarray.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
-#include "psc_ds/dynarray.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/alloc.h"
+#include "psc_util/assert.h"
+#include "psc_util/cdefs.h"
+#include "psc_util/lock.h"
 
 #include "buffer.h"
 #include "fidcache.h"
@@ -584,7 +586,7 @@ __static void
 sl_buffer_pin_locked(struct sl_buffer *slb)
 {
 	if (ATTR_TEST(slb->slb_flags, SLB_PINNED)) {
-		 psc_assert(slb->slb_lc_owner == slBufsPin);
+		 psc_assert(slb->slb_lc_owner == &slBufsPin);
 		 return (sl_buffer_pin_assertions(slb));
 	}
 	if (ATTR_TEST(slb->slb_flags, SLB_FRESH)) {
@@ -596,7 +598,7 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 		 *  the listcache api for removing entries
 		 *  otherwise there will be race conditions
 		 */
-		psc_assert(slb->slb_lc_owner == slBufsLru);
+		psc_assert(slb->slb_lc_owner == &slBufsLru);
 		lc_del(&slb->slb_mgmt_lentry, slb->slb_lc_owner);
 		slb_lru_2_pinned(slb);
 	} else {
@@ -609,7 +611,7 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 
 #define sl_buffer_unpin_locked(slb)					\
 	{								\
-		psc_assert((slb)->slb_lc_owner == slBufsPin);		\
+		psc_assert((slb)->slb_lc_owner == &slBufsPin);		\
 		psc_assert(atomic_read(&(slb)->slb_inflpndg) <		\
 			   atomic_read(&(slb)->slb_inflight));		\
 		if (atomic_dec_and_test(&(slb)->slb_inflpndg)) {	\
