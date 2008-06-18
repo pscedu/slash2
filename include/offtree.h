@@ -14,6 +14,8 @@
 #define OFTIOV_CB_SINGLE_PTR_SLOT 1
 #define OFTIOV_CB_COALESCED_PTR_SLOT 2
 
+typedef 
+
 static inline size_t
 power(size_t base, size_t exp)
 {
@@ -157,7 +159,8 @@ power(size_t base, size_t exp)
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_FREEING));	\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
-		psc_assert(!atomic_read(&(m)->oft_op_ref));		\
+		psc_assert(!atomic_read(&(m)->oft_rdop_ref));		\
+		psc_assert(!atomic_read(&(m)->oft_wrop_ref));		\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_READPNDG));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_WRITEPNDG));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
@@ -174,7 +177,7 @@ power(size_t base, size_t exp)
  */
 #define oftm_read_prepped_verify(m) {					\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
-		psc_assert(ATTR_TEST((m)->oft_flags, OFT_READPNDG));	\
+		psc_assert(atomic_read(&(m)->oft_rdop_ref) > 0);	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));  \
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_FREEING));	\
@@ -182,7 +185,6 @@ power(size_t base, size_t exp)
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_RELEASE));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_MCHLDGROW));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_UNINIT));	\
-		psc_assert(atomic_read(&(m)->oft_op_ref) > 0);		\
 		psc_assert((m) == (m)->oft_norl.oft_iov.oftiov_memb);	\
 }
 
@@ -250,7 +252,8 @@ enum oft_iov_flags {
 		psc_waitq_init(&(m)->oft_waitq);		\
 		LOCK_INIT(&(m)->oft_lock);			\
 		atomic_set(&(m)->oft_ref, 0);			\
-		atomic_set(&(m)->oft_op_ref, 0);		\
+		atomic_set(&(m)->oft_rdop_ref, 0);		\
+		atomic_set(&(m)->oft_wrop_ref, 0);		\
                 (m)->oft_parent = p;                            \
 		ATTR_SET((m)->oft_flags, OFT_LEAF);		\
 	}
@@ -260,7 +263,9 @@ struct offtree_memb {
 	psc_spinlock_t        oft_lock;
 	u32                   oft_flags;
 	atomic_t              oft_ref;    /* hb or nchildren     */
-	atomic_t              oft_op_ref; /* pending operations  */
+	atomic_t              oft_wrop_ref; /* pending write operations  */
+	atomic_t              oft_rdop_ref; /* pending read operations  */
+#define oft_op_ref oft_rdop_ref
 	struct offtree_memb  *oft_parent;
 	u8                    oft_pos;                   
 	u8                    oft_depth;
@@ -275,8 +280,8 @@ struct offtree_memb {
 enum oft_attributes {
 	OFT_NODE      = (1 << 0), /* Node not a leaf          */
 	OFT_LEAF      = (1 << 1), /* Leaf not a node          */
-	OFT_READPNDG  = (1 << 2), /* Read is about to occur   */
-	OFT_WRITEPNDG = (1 << 3), /* Write is about to occur  */
+	//	OFT_READPNDG  = (1 << 2), /* Read is about to occur   */
+	//OFT_WRITEPNDG = (1 << 3), /* Write is about to occur  */
 	OFT_ALLOCPNDG = (1 << 4), /* Alloc is about to occur  */
 	OFT_ROOT      = (1 << 6), /* Tree root                */
 	OFT_FREEING   = (1 << 7), /* Different from Reap?     */
@@ -308,24 +313,26 @@ enum oft_attributes {
 			_psclog(__FILE__, __func__, __LINE__,		\
 				PSS_OTHER, level, 0,			\
 				" oft@%p pos:%hhu d:%hhu w:%hu p:%p "	\
-				"ref:%d oref:%d"			\
+				"ref:%d rref:%d wref:%d"		\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
 				oft, (oft)->oft_pos, (oft)->oft_depth,	\
 				(oft)->oft_width, (oft)->oft_parent,	\
 				atomic_read(&(oft)->oft_ref), 		\
-				atomic_read(&(oft)->oft_op_ref),	\
+				atomic_read(&(oft)->oft_rdop_ref),	\
+				atomic_read(&(oft)->oft_wrop_ref),	\
 				DEBUG_OFTM_FLAGS(oft),			\
 				## __VA_ARGS__);			\
 		} else {						\
 			_psclog(__FILE__, __func__, __LINE__,		\
 				PSS_OTHER, level, 0,			\
 				" oft@%p pos:%hhu d:%hhu w:%hu p:%p "	\
-				"ref:%d oref:%d"			\
+				"ref:%d rref:%d wref:%d"		\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
 				oft, (oft)->oft_pos, (oft)->oft_depth,  \
 				(oft)->oft_width, (oft)->oft_parent,	\
 				atomic_read(&(oft)->oft_ref),		\
-				atomic_read(&(oft)->oft_op_ref),	\
+				atomic_read(&(oft)->oft_rdop_ref),	\
+				atomic_read(&(oft)->oft_wrop_ref),	\
 				DEBUG_OFTM_FLAGS(oft),			\
 				## __VA_ARGS__);			\
 		}							\
@@ -340,6 +347,7 @@ enum oft_attributes {
  */
 typedef int  (*offtree_alloc_fn)(size_t, off_t, struct dynarray *, void *);
 typedef void (*offtree_putnode_cb)(struct offtree_memb *);
+typedef void (*offtree_slbpin_cb)(struct offtree_iov *, int);
 
 struct offtree_root {
 	psc_spinlock_t oftr_lock;
@@ -348,9 +356,10 @@ struct offtree_root {
 	size_t         oftr_mapsz; /* map size, how many bytes are tracked? */
 	size_t         oftr_minsz; /* minimum chunk size                    */
 	void          *oftr_pri;   /* opaque backpointer (use bmap for now) */
+	struct offtree_memb oftr_memb; /* root member                       */
 	offtree_alloc_fn    oftr_alloc;
 	offtree_putnode_cb  oftr_putnode_cb;
-	struct offtree_memb oftr_memb; /* root member                       */
+	offtree_slbpin_cb   oftr_slbpin_cb;
 };
 
 struct offtree_fill {
@@ -402,6 +411,31 @@ oft_child_req_get(off_t o, struct offtree_req *req)
 	
 	return ((o - soff) / OFT_REGIONSZ(req->oftrq_root, 
 					  (req->oftrq_depth+1)));
+}
+
+#define OFT_REF_DEC 0
+#define OFT_REF_INC 1
+
+#define oft_refcnt_dec(r, m) oft_adjust_refcnt(r, m, OFT_REF_DEC);
+#define oft_refcnt_inc(r, m) oft_adjust_refcnt(r, m, OFT_REF_INC);
+
+static inline void
+oft_adjust_refcnt(struct offtree_req *req, struct offtree_memb *m, int op)
+{
+	if (op == OFT_REF_DEC) {
+		if (req->oftrq_op == OFTREQ_OP_WRITE)
+			atomic_dec(&m->oft_wrop_ref);
+
+		if (req->oftrq_op == OFTREQ_OP_READ)
+			atomic_dec(&m->oft_rdop_ref);
+	}
+	if (op == OFT_REF_INC) {
+		if (req->oftrq_op == OFTREQ_OP_WRITE)
+			atomic_inc(&m->oft_wrop_ref);
+
+		if (req->oftrq_op == OFTREQ_OP_READ)
+			atomic_inc(&m->oft_rdop_ref);
+	}
 }
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
