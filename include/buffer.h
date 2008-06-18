@@ -26,13 +26,13 @@ extern list_cache_t slBufsPin;
 
 enum slb_states {
 	SLB_DIRTY    = 0x01, /* have dirty data          */
-	SLB_INFLIGHT = 0x02, /* dirty data is being sent */
+	SLB_INFLIGHT = 0x02, /* data faulting in or out  */
 	SLB_FREEING  = 0x04,
 	SLB_PINNED   = 0x08, /* not freeable             */
 	SLB_LRU      = 0x10, /* on the lru, nothing pinned or dirty */
 	SLB_FREE     = 0x20,
 	SLB_INIT     = 0x40,
-	SLB_FRESH    = 0x80
+	SLB_FRESH    = 0x80,
 };
 
 #define SLB_FULL(slb) (!vbitmap_nfree((slb)->slb_inuse))
@@ -64,6 +64,8 @@ struct sl_buffer {
 	void           *slb_base;   /* point to the data buffer        */
 	atomic_t        slb_ref;
 	atomic_t        slb_unmapd_ref;
+	atomic_t        slb_inflight;
+	atomic_t        slb_inflpndg;
 	psc_spinlock_t  slb_lock;
 	u32             slb_flags;
 	list_cache_t   *slb_lc_owner;
@@ -92,13 +94,15 @@ struct sl_buffer {
                 _psclog(__FILE__, __func__, __LINE__,                   \
                         PSS_OTHER, level, 0,                            \
                         " slb@%p b:%p sz(%d/%d) bsz:%u"			\
-                        " ref:%d umref:%d fl:"SLB_FLAGS_FMT		\
+                        " ref:%d umref:%d inf:%d infp %d fl:"SLB_FLAGS_FMT \
 			" fcm:%p lco:%p "fmt,				\
                         slb, slb->slb_base, slb->slb_nblks,		\
 			vbitmap_nfree(slb->slb_inuse),			\
 			slb->slb_blksz,					\
 			atomic_read(&slb->slb_ref),			\
 			atomic_read(&slb->slb_unmapd_ref),		\
+			atomic_read(&slb->slb_inflight),		\
+			atomic_read(&slb->slb_inflpndg),		\
 			DEBUG_SLB_FLAGS(slb),				\
 			slb->slb_lc_fcm, slb->slb_lc_owner,		\
 			## __VA_ARGS__);				\
@@ -152,12 +156,21 @@ enum slb_ref_flags {
 #define slb_fresh_2_pinned(slb) {				\
 		ATTR_UNSET((slb)->slb_flags, SLB_FRESH);	\
 		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
+		(slb)->slb_lc_owner = NULL;			\
 	}
 
 #define slb_lru_2_pinned(slb) {					\
 		sl_buffer_lru_assertions((slb));		\
-		ATTR_UNSET((slb)->slb_flags, SLB_FRESH);	\
+		ATTR_UNSET((slb)->slb_flags, SLB_LRU);		\
 		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
+		(slb)->slb_lc_owner = NULL;			\
+	}
+
+#define slb_pinned_2_lru(slb) {					\
+		sl_buffer_pin_assertions((slb));		\
+		ATTR_UNSET((slb)->slb_flags, SLB_LRU);		\
+		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
+		(slb)->slb_lc_owner = NULL;			\
 	}
 
 #define SLB_TIMEOUT_SECS  5
@@ -187,5 +200,10 @@ sl_buffer_cache_init(void);
 
 void
 sl_oftm_addref(struct offtree_memb *m);
+
+#define SL_BUFFER_PIN 0
+#define SL_BUFFER_UNPIN 1
+void
+sl_oftiov_pin_cb(struct offtree_iov *iov);
 
 #endif
