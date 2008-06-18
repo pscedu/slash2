@@ -13,6 +13,8 @@
 #define MSTHRT_FS	1
 #define MSTHRT_LNET	2
 
+#define MSL_READ_CB_POINTER_SLOT 1
+
 struct msctl_thread {
 	u32	mc_st_nclients;
 	u32	mc_st_nsent;
