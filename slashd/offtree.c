@@ -16,9 +16,10 @@ offtree_iov_array_dump(const struct dynarray *a)
 
 
 struct offtree_root *
-offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
+offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth, 
 	       void *private, offtree_alloc_fn alloc_fn, 
-	       offtree_putnode_cb putnode_cb_fn)
+	       offtree_putnode_cb putnode_cb_fn, 
+	       offtree_slbpin_cb  slbpin_cb_fn)
 {
 	struct offtree_root *t = PSCALLOC(sizeof(struct offtree_root));
 	
@@ -30,9 +31,10 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	t->oftr_alloc    = alloc_fn;
 	t->oftr_pri      = private;  /* our fcache handle */
 	t->oftr_putnode_cb = putnode_cb_fn;
+	t->oftr_slbpin_cb  = slbpin_cb_fn;
 
 	OFT_MEMB_INIT(&t->oftr_memb, NULL);
-	atomic_set(&t->oftr_memb.oft_op_ref, 1);
+	//atomic_set(&t->oftr_memb.oft_op_ref, 1);
 	ATTR_SET(t->oftr_memb.oft_flags, OFT_ROOT);
 	
 	return (t);
@@ -81,7 +83,6 @@ offtree_newleaf_locked(struct offtree_memb *parent, int pos)
 	
 	new = PSCALLOC(sizeof(struct offtree_memb));
 	OFT_MEMB_INIT(new, parent);
-	atomic_inc(&new->oft_op_ref);
 	ATTR_SET(new->oft_flags, OFT_UNINIT);
 	new->oft_pos = pos;
 	parent->oft_norl.oft_children[pos] = new;
@@ -611,6 +612,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			myreq.oftrq_nblks /= OFT_REQ2BLKSZ(&myreq);  
 			myreq.oftrq_memb   = offtree_newleaf_locked(req->oftrq_memb, 
 								    tchild);
+			oft_refcnt_inc(&myreq, myreq.oftrq_memb);
 			ATTR_UNSET(myreq.oftrq_memb->oft_flags, OFT_UNINIT);
 			ATTR_SET(myreq.oftrq_memb->oft_flags, OFT_ALLOCPNDG);
 
@@ -694,7 +696,13 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 	int     niovs;
 
 	psc_assert(ATTR_TEST(m->oft_flags, OFT_LEAF));
-	psc_assert(atomic_read(&m->oft_op_ref));
+
+	if (req->oftrq_op == OFTREQ_OP_WRITE)
+		psc_assert(atomic_read(&m->oft_wrop_ref) > 0);
+
+	if (req->oftrq_op == OFTREQ_OP_READ)
+		psc_assert(atomic_read(&m->oft_rdop_ref) > 0);
+
 	DEBUG_OFFTREQ(PLL_INFO, req, "new req");
 	DEBUG_OFT(PLL_INFO, m, "new req's memb");
 
@@ -705,8 +713,13 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		/* Intent to allocate must be determined ahead of time.
 		 */
 		psc_assert(iov && iov->oftiov_base && iov->oftiov_nblks);
-
+		/* Tell the underlying cache subsystem to pin this guy.
+		 */
+		(req->oftrq_root->oftr_slbpin_cb)(iov);
+		/* Get the start and end offsets.
+		 */
 		OFT_IOV2SE_OFFS(iov, hb_soffa, hb_eoffa);
+
 		DEBUG_OFFTIOV(PLL_INFO, iov, "hb");
 		/* Check to see if the existing allocation can fulfill
 		 *   this request.
@@ -910,6 +923,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			/* Make the child...
 			 */
 			myreq.oftrq_memb = offtree_newleaf_locked(m, tchild);
+			oft_refcnt_inc(&myreq, myreq.oftrq_memb);
+
 			ATTR_UNSET(myreq.oftrq_memb->oft_flags, OFT_UNINIT);
 			ATTR_SET(myreq.oftrq_memb->oft_flags, OFT_ALLOCPNDG);
 			/* Take the soffa from the first iov returned
@@ -938,7 +953,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			else 
 				/* Bump iterator for the next time through.
 				 */
-				i_offa += (myreq.oftrq_nblks * OFT_REQ2BLKSZ(req));				
+				i_offa += (myreq.oftrq_nblks * OFT_REQ2BLKSZ(req));
 		}
 	}
  done:	
@@ -1006,13 +1021,13 @@ offtree_region_preprw(struct offtree_req *req)
 			/* Newly allocated leafs have op_ref 
 			 *   already set to 1.
 			 */
-			atomic_inc(&m->oft_op_ref);
+			oft_refcnt_inc(req, m);
 	runleaf:
 		rc = offtree_region_preprw_leaf_locked(req);
 		/* Free the memb lock and return.
 		 */
 		if (rc && !req->oftrq_memb->oft_norl.oft_iov) {
-			atomic_dec(&m->oft_op_ref);
+			oft_refcnt_dec(req, m);
 			ATTR_SET(req->oftrq_memb->oft_flags, OFT_FREEING);
 			offtree_freeleaf_locked(req->oftrq_memb);
 		} else 
@@ -1045,7 +1060,9 @@ offtree_region_preprw(struct offtree_req *req)
 			new = m->oft_norl.oft_children[schild];		
 			if (!new) 
 				new = offtree_newleaf_locked(m, schild);
-			
+
+			oft_refcnt_inc(req, new);
+
 			req->oftrq_memb = new;			
 			/* Release lock after assigning child
 			 */
@@ -1106,6 +1123,7 @@ offtree_region_preprw(struct offtree_req *req)
 				} else {
 					myreq.oftrq_memb = offtree_newleaf_locked(m, tchild);
 					DEBUG_OFFTREQ(PLL_TRACE, &myreq, "new child");
+					oft_refcnt_inc(&myreq, myreq.oftrq_memb);
 					spinlock(&myreq.oftrq_memb->oft_lock);
 					ATTR_SET(myreq.oftrq_memb->oft_flags, OFT_ALLOCPNDG);
 					ATTR_UNSET(myreq.oftrq_memb->oft_flags, OFT_UNINIT);
