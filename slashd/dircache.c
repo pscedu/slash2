@@ -102,9 +102,11 @@ dircache_reap(void)
 			dc = psclist_last_entry(&dircache_lru,
 			    struct dircache, dc_lruent);
 		e = psclist_prev(&dc->dc_lruent);
-		if (e == &dircache_lru)
+		if (e == &dircache_lru) {
 			/* this shouldn't happen... */
 			psc_errorx("empty dircache_lru during reaping");
+			break;
+		}
 		next = psclist_entry(&e, struct dircache, dc_lruent);
 		if (atomic_read(&dc->dc_refcnt) == 0)
 			dircache_free(dc);
