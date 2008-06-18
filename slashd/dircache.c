@@ -95,13 +95,17 @@ __static void
 dircache_reap(void)
 {
 	struct dircache *dc, *next;
+	struct psclist_head *e;
 
 	for (; atomic_read(&dircache_nents) > DIRCACHE_HIWAT; dc = next) {
 		if (dc == NULL)
 			dc = psclist_last_entry(&dircache_lru,
 			    struct dircache, dc_lruent);
-		next = psclist_prev_entry(&dc->dc_lruent,
-		    struct dircache, dc_lruent);
+		e = psclist_prev(&dc->dc_lruent);
+		if (e == &dircache_lru)
+			/* this shouldn't happen... */
+			psc_errorx("empty dircache_lru during reaping");
+		next = psclist_entry(&e, struct dircache, dc_lruent);
 		if (atomic_read(&dc->dc_refcnt) == 0)
 			dircache_free(dc);
         }
