@@ -161,7 +161,6 @@ offtree_node_release(struct offtree_memb *oftm)
 		DEBUG_OFT(PLL_INFO, oftm, "i am the root!");
 		psc_fatalx("Attempted to release the root");
 	}
-
 	oftm_node_verify(oftm);       
 	spinlock(&parent->oft_lock);
 	spinlock(&oftm->oft_lock);
@@ -173,8 +172,7 @@ offtree_node_release(struct offtree_memb *oftm)
 		oftm_unrelease_verify(oftm);
 		DEBUG_OFT(PLL_INFO, oftm, "was reclaimed quickly");	
 		goto out;
-	}
-	
+	}       
 	oft_child_free(oftm, parent);
 
 	if (atomic_dec_and_test(&parent->oft_ref)) {
