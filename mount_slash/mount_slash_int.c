@@ -251,6 +251,9 @@ msl_bmap_to_import(struct bmap_cache_memb *b)
 	return (c->bmic_import);
 }
 
+/**
+ * msl_read_cb - this function is called from the pscrpc layer as the rpc request completes.  Its task is to set various state machine flags and call into the slb layer to decref the inflight counter.
+ */
 int
 msl_read_cb(struct pscrpc_request *rq, void *arg, int status)
 {
@@ -288,10 +291,7 @@ msl_read_cb(struct pscrpc_request *rq, void *arg, int status)
 		freelock(&m->oft_lock);		
 		/* Decrement the inflight counter in the slb.
 		 */
-		s = (struct sl_buffer *)v->oftiov_pri;			
-		atomic_dec(&s->slb_inflight);
-		DEBUG_SLB(PLL_TRACE, s, "inflight dec'd");
-		psc_assert(atomic_read(&s->slb_inflight) >= 0);		
+		slb_inflight_cb(v, SL_INFLIGHT_DEC);
 	}
 	/* Free the dynarray which was allocated in msl_pages_prefetch().
 	 */
@@ -314,16 +314,17 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a)
         struct pscrpc_bulk_desc   *desc;
 	struct bmap_cache_memb    *bcm;
 	struct iovec              *iovs;
+	struct offtree_iov        *v;
 	int    i, n=dynarray_len(a);
-
+	
 	psc_assert(n);	
 	psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG));
-	ATTR_SET(v->oftiov_flags, OFTIOV_FAULTING));
+	ATTR_SET(v->oftiov_flags, OFTIOV_FAULTING);
 	/* Get a new request set if one doesn't already exist.
 	 */	
 	if (!r->oftrq_fill.oftfill_reqset)
 		r->oftrq_fill.oftfill_reqset = pscrpc_prep_set();
-
+	
 	rqset = r->oftrq_fill.oftfill_reqset;
 	psc_assert(rqset);
 	/* Point to our bmap handle, it has the import information needed
@@ -344,9 +345,16 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a)
 	/* Prep the iovs and bulk descriptor
 	 */
 	iovs = PSCALLOC(sizeof(*iovs) * n);
-	for (i=0; i < n; i++)
-		//XXX this is all wrong!!!
-		memcpy(iovs[0], dynarray_getpos(i), sizeof(struct iovec));
+	for (i=0; i < n; i++) {
+		v = dynarray_getpos(i);
+		/* Make an iov for lnet.
+		 */
+		oftiov_2_iov(v, iovs[i]);
+		/* Tell the slb layer that this offtree_iov is going 
+		 *   for a ride.
+		 */
+		slb_inflight_cb(v, SL_INFLIGHT_INC);
+	}
 
 	rsx_bulkclient(req, &desc, BULK_PUT_SINK, SRM_BULK_PORTAL, iovs, n);
 	/* The bulk descriptor copies these iovs so it's OK to free them.
@@ -569,7 +577,7 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 			/* These pages aren't involved, skip.
 			 */
 			if (!x)
-				if (r[0].oftrq_off > OFT_IOV2E_OFF_(v))
+				if (r[x].oftrq_off > OFT_IOV2E_OFF_(v))
 					continue;
 			/* Assert that the pages are kosher for copying.
 			 */
@@ -596,7 +604,8 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 			 */
 			atomic_dec(&m->oft_rdop_ref);			
 			(r->oftrq_root->oftr_slbpin_cb)(iov, SL_BUFFER_UNPIN);
-
+			/* XXX the details of this wakeup may need to be sorted out.
+			 */
 			psc_waitq_wake(&m->oft_waitq);
 			psc_assert(tsize > 0);
 			if (!tsize)
