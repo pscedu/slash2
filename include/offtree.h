@@ -438,6 +438,14 @@ oft_adjust_refcnt(struct offtree_req *req, struct offtree_memb *m, int op)
 	}
 }
 
+
+static inline void
+oftiov_2_iov(const struct offtree_iov *v, struct iovec *i)
+{
+	i->iov_base = v->oftiov_base;
+	i->iov_len  = v->oftiov_nblks * v->oftiov_blksz;
+}
+
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
 	do {								\
 		_psclog(__FILE__, __func__, __LINE__,			\
