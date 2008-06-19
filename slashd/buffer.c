@@ -26,6 +26,8 @@ u32 slbFreeDef=100;
 u32 slbFreeMax=200;
 u32 slbFreeInc=10;
 
+sl_oftiov_inflight_callback *slInflightCb=NULL;
+
 #define token_t list_cache_t
 
 static struct sl_buffer_iovref *
@@ -609,6 +611,10 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 	sl_buffer_put(slb, &slBufsPin);
 }
 
+/** 
+ * sl_buffer_unpin_locked - decref and perhaps unpin an slb.
+ * Notes:  the slb_inflight ref corresponding to this op must have already been dec'd, meaning that slb_inflpndg must be at least 1 greater than slb_inflight.
+ */
 #define sl_buffer_unpin_locked(slb)					\
 	{								\
 		psc_assert((slb)->slb_lc_owner == &slBufsPin);		\
@@ -620,7 +626,7 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 			sl_buffer_put((slb), &slBufsLru);		\
 		}							\
 	}								\
- 
+		
 /**
  * sl_oftiov_pin_cb - callback from offtree.c to instruct us to pin the slb contained within the passed in 'iov'.  sl_oftiov_pin_cb does some simple sanity checking and merely calls in sl_buffer_pin_locked().
  *
@@ -642,6 +648,7 @@ sl_oftiov_pin_cb(struct offtree_iov *iov, int op)
 	psc_assert(atomic_read(&m->oft_rdop_ref) ||
 		   atomic_read(&m->oft_wrop_ref));
 
+	DEBUG_OFFTIOV(PLL_TRACE, iov, "op=%d", op);
 	DEBUG_SLB(PLL_TRACE, s, "op=%d", op);
 
 	spinlock(&slb->slb_lock);
@@ -654,6 +661,38 @@ sl_oftiov_pin_cb(struct offtree_iov *iov, int op)
 		psc_fatalx("Unknown op type %d", op);
 
 	freelock(&slb->slb_lock);       	
+}
+
+/**
+ * sl_oftiov_inflight_cb - called from the msl_read_cb() and msl_pagereq_finalize() to communicate inflight reference count changes to the slb layer.
+ */
+void
+sl_oftiov_inflight_cb(struct offtree_iov *iov, int op)
+{
+	struct sl_buffer *s;
+
+	s = (struct sl_buffer *)iov->oftiov_pri;
+
+	DEBUG_SLB(PLL_TRACE, s, "inflight ref updating op=%d", op);
+		
+	if (op == SL_INFLIGHT_INC) {
+		psc_assert(atomic_read(&s->slb_inflight) >= 0);
+
+		atomic_inc(&s->slb_inflight);
+
+		psc_assert(atomic_read(&s->slb_inflight) <= 
+			   atomic_read(&s->slb_inflpndg));
+		
+	} else if (op == SL_INFLIGHT_DEC) {
+		psc_assert(atomic_read(&s->slb_inflight) <=
+                           atomic_read(&s->slb_inflpndg));
+		psc_assert(atomic_read(&s->slb_inflight) >= 1);
+
+		atomic_dec(&s->slb_inflight);
+		
+	} else {
+		psc_fatalx("Invalid op=%d", op);
+	}
 }
 /**
  * sl_buffer_alloc_internal - allocate blocks from the given slab buffer 'b'.
@@ -891,4 +930,5 @@ sl_buffer_cache_init(void)
 	slBufsFree.lc_max = slbFreeMax;
 
 	lc_grow(&slBufsFree, slbFreeDef, sl_buffer_init);
+	slInflightCb = sl_oftiov_inflight_cb;
 }
