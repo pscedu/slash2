@@ -22,6 +22,9 @@ extern list_cache_t slBufsFree;
 extern list_cache_t slBufsLru;
 extern list_cache_t slBufsPin;
 
+typedef void (*sl_oftiov_inflight_callback)(struct offtree_iov *, int);
+extern sl_oftiov_inflight_callback *slInflightCb;
+
 #define SLB_SIZE (slCacheBlkSz * slCacheNblks)
 
 enum slb_states {
@@ -204,6 +207,16 @@ sl_oftm_addref(struct offtree_memb *m);
 #define SL_BUFFER_PIN 0
 #define SL_BUFFER_UNPIN 1
 void
-sl_oftiov_pin_cb(struct offtree_iov *iov);
+sl_oftiov_pin_cb(struct offtree_iov *iov, int op);
+
+#define slb_inflight_cb(iov, op) {			\
+		if (slInflightCb)			\
+			slInflightCb(iov, op);		\
+	}
+
+#define SL_INFLIGHT_INC 0
+#define SL_INFLIGHT_DEC 0
+void
+sl_oftiov_inflight_cb(struct offtree_iov *iov, int op);
 
 #endif
