@@ -24,6 +24,7 @@
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
 
+#include "fidcache.h"
 #include "mount_slash.h"
 #include "slashrpc.h"
 
