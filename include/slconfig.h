@@ -95,7 +95,7 @@ typedef struct resource_member {
 	lnet_nid_t        resm_nid;
 	sl_resource_t    *resm_res;
 	struct hash_entry resm_hashe;
-	void             *resm_pri; 
+	void             *resm_pri;
 } sl_resm_t;
 
 extern sl_nodeh_t nodeInfo;
@@ -112,9 +112,12 @@ libsl_nid_associate(lnet_nid_t nid, sl_resource_t *res)
 	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hashe);
 }
 
+int lnet_localnids_get(lnet_nid_t *, size_t);
+
 #define MAX_LOCALNIDS 8
 /*
- * libsl_resm_lookup - To be called after lnet initialization, determines a node's resource membership.
+ * libsl_resm_lookup - To be called after lnet initialization, determines
+ * a node's resource membership.
  */
 static inline sl_resm_t *
 libsl_resm_lookup(void)
@@ -143,7 +146,7 @@ libsl_resm_lookup(void)
 		/* All nids must belong to the same resource */
 		else if (res != resm->resm_res)
 			psc_fatalx("Nids must be members of same resource (%s)",
-                                   libcfs_nid2str(nids[i]));
+				libcfs_nid2str(nids[i]));
 	}
 	return resm;
 }
@@ -190,20 +193,18 @@ libsl_id2res(sl_ios_id_t id)
 	return (NULL);
 }
 
-
 static inline sl_resm_t *
 libsl_nid2resm(lnet_nid_t nid)
 {
 	struct hash_entry *e;
-	
+
 	e = get_hash_entry(&globalConfig.gconf_nids_hash, nid, NULL, NULL);
 	if (!e)
 		return (NULL);
 
-	psc_assert(*e->hentry_id == nid);	
-        return (hash_entry(e, sl_resm_t, resm_hashe));
+	psc_assert(*e->hentry_id == nid);
+	return (hash_entry(e, sl_resm_t, resm_hashe));
 }
-
 
 static inline sl_ios_id_t
 libsl_str2id(const char *res_name)
@@ -226,8 +227,8 @@ libsl_str2id(const char *res_name)
 					return r->res_id;
 			}
 		}
-        }
-        return IOS_ID_ANY;
+	}
+	return IOS_ID_ANY;
 }
 
 static inline void
@@ -275,7 +276,7 @@ libsl_str2restype(char *res_type)
 		return (cluster_noshare_fs);
 
 	else if (strncmp(res_type, "compute", RES_NAME_MAX))
-                return (compute);
+		return (compute);
 	else
 		return (res_any);
 }
