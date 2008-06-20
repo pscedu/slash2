@@ -82,7 +82,7 @@ struct bmap_refresh {
 	u8			bmrfr_flags;
 };
 
-/* 
+/*
  * bmap_info_cli - hangs from the void * pointer in the sl_resm_t struct.
  *  It's tasked with holding the import to the correct ION.
  */
@@ -95,7 +95,7 @@ struct bmap_info_cli {
  * bmap_info - for each block in the fidcache, associate the set of
  * possible I/O servers and the store the CRC of the block.
  */
-struct bmap_info {	
+struct bmap_info {
 	lnet_nid_t      bmapi_ion;                   /* MDS chosen io node  */
 	sl_ios_id_t	bmapi_ios[SL_DEF_REPLICAS];  /* Replica store       */
 	unsigned char   bmapi_auth[BMAP_AUTH_SZ];    /* Our write key       */
@@ -255,10 +255,10 @@ fcmh_decref(struct fidcache_memb_handle *fch)
 	DEBUG_FCMH(PLL_TRACE, fch, "fcmh_decref");
 }
 
-extern void
-fidcache_handle_init(void *p);
+void fidcache_handle_init(void *p);
+void fidcache_init(void);
 
-extern void
-bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f);
+void bmap_cache_memb_init(struct bmap_cache_memb *b,
+	struct fidcache_memb_handle *f);
 
 #endif /* __FIDCACHE_H__ */
