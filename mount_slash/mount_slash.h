@@ -9,6 +9,8 @@
 #include "psc_types.h"
 #include "psc_rpc/rpc.h"
 
+struct fhent;
+
 #define MSTHRT_CTL	0
 #define MSTHRT_FS	1
 #define MSTHRT_LNET	2
