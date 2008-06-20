@@ -44,11 +44,28 @@ msl_oftrq_build(struct offtree_req *r, struct bmap_cache_memb *b,
 	r->oftrq_root   = &b->bcm_oftree;
 	r->oftrq_memb   = &b->bcm_oftree.oftr_memb;
 	r->oftrq_width  = r->oftrq_depth = 0;
-	r->oftrq_op     = op;
 	r->oftrq_off    = off & SLASH_BMAP_BLKMASK;
-	r->oftrq_nblks  = (off + len) / SLASH_BMAP_BLKSZ + 
-		(((off + len) % SLASH_BMAP_BLKSZ) ? 1 : 0);
-	
+	r->oftrq_op     = op;
+	/* Add the bits which were masked above.
+	 */
+	len += off & (~SLASH_BMAP_BLKMASK);
+
+	//r->oftrq_nblks  = ((r->oftrq_off + len) / SLASH_BMAP_BLKSZ) +
+	//	(len & (~SLASH_BMAP_BLKMASK) ? 1 : 0);
+
+	r->oftrq_nblks  = (len << SLASH_BMAP_SHIFT) +
+		(len & (~SLASH_BMAP_BLKMASK) ? 1 : 0);	
+	       
+	if (op == OFTREQ_OP_WRITE) {
+		/* Determine is 'read before write' is needed.
+		 */
+		if (off & (~SLASH_BMAP_BLKMASK))
+			r->oftrq_op |= OFTREQ_OP_PRFFP; 
+
+		if (r->oftrq_nblks > 1)
+			if (len & (~SLASH_BMAP_BLKMASK))
+				r->oftrq_op |= OFTREQ_OP_PRFLP;
+
 	DEBUG_OFFTREQ(PLL_TRACE, r, "newly built request");
 }
 
@@ -57,8 +74,7 @@ msl_fcm_get(struct fhent *fh)
 	struct fcache_memb_handle *f = sl_fidc_get(&fidcFreeList);
 
 	fidcache_memb_init(f);
-	/* Incref so that this inode is not immediately 
-	 *  considered for reaping.
+	/* Incref so that this inode is not immediately considered for reaping.
 	 */
 	fcmh_incref(fcmh);
 	/* Cross-associate the fcmh and fhent structures.
@@ -77,7 +93,7 @@ msl_fcm_get(struct fhent *fh)
  * @n: the number of bmaps to retrieve (serves as a simple read-ahead mechanism)
  */
 __static int 
-msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n) 
+msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n, int rw) 
 {
 	struct pscrpc_bulk_desc *desc;
         struct pscrpc_request *rq;
@@ -98,6 +114,7 @@ msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n)
 	mq->blkno = b;
 	mq->nblks = n; 
 	mq->fid   = FID_ANY; /* The MDS interpolates the fid from his cfd */
+	mq->rw    = rw;
 
 	iovs  = PSCALLOC(sizeof(*iov) * n);
 	/* Init the bmap handles and setup the iovs.
@@ -151,7 +168,7 @@ msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n)
 }
 
 __static struct bmap_cache_memb *
-msl_bmap_load(struct fcache_memb_handle *f, sl_blkno_t n, int prefetch)
+msl_bmap_load(struct fcache_memb_handle *f, sl_blkno_t n, int prefetch, u32 rw)
 {
 	struct bmap_cache_memb t, *b;
 	int rc=0;
@@ -162,7 +179,7 @@ msl_bmap_load(struct fcache_memb_handle *f, sl_blkno_t n, int prefetch)
 	if (!b) {
 		/* Retrieve the bmap from the sl_mds.
 		 */			
-		rc = msl_bmap_fetch(f, t.bcm_blkno, prefetch);
+		rc = msl_bmap_fetch(f, t.bcm_blkno, prefetch, rw);
 		if (rc)
 			return NULL;
 	}
@@ -393,7 +410,7 @@ msl_pages_prefetch(struct offtree_req *r)
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
 	struct dynarray     *a=r->oftrq_darray, *coalesce=NULL;
-	off_t                o=r->oftrq_off;
+	off_t                toff, o=r->oftrq_off;
 	size_t               niovs=dynarray_len(a);
 	ssize_t              nblks=0;
 	u32                  i, j, n;
@@ -417,6 +434,12 @@ msl_pages_prefetch(struct offtree_req *r)
 		DEBUG_OFFTIOV(PLL_TRACE, v, 
 			      "iov%d rq_off=%zu OFT_IOV2E_OFF_(%zu)",
 			      i, req->oftrq_off,  OFT_IOV2E_OFF_(v));
+		/* Assert that oft iovs are contiguous.
+		 */
+		if (i)
+			psc_assert(toff == v->oftiov_off);
+
+		toff = OFT_IOV2E_OFF_(v) + 1;
 		/* The dynarray may contain iov's that we don't need, 
 		 *  skip them.
 		 */
@@ -587,10 +610,10 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 			 */
 			oftm_read_prepped_verify(m);
 			freelock(&m->oft_lock);
-			
+
+			b  = (char *)v->oftiov_base;			
 			if (!x) {
 				x  = 1;
-				b  = (char *)v->oftiov_base;
 				b += t;				
 				nbytes = MIN(((v->oftiov_nblks * v->oftiov_blksz) - t), 
 					     (tsize));
@@ -617,8 +640,11 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 	return (size);
 }
 
+#define msl_read(fh, buf, size, off) msl_io(fh, buf, size, off, MSL_READ)
+#define msl_write(fh, buf, size, off) msl_io(fh, buf, size, off, MSL_WRITE)
+
 int
-msl_read(struct fhent *fh, char *buf, size_t size, off_t off)
+msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 {
 	struct fcache_memb_handle *f;
 	struct offtree_req        *r=NULL;
@@ -646,13 +672,15 @@ msl_read(struct fhent *fh, char *buf, size_t size, off_t off)
 		/* Load up the bmap, if it's not available then we're out of 
 		 *  luck because we have no idea where the data is!
 		 */
-		b = msl_bmap_load(f, s, (i ? 0 : (e-s)));
+		b = msl_bmap_load(f, s, (i ? 0 : (e-s)), (op == MSL_READ) ?
+				  SRCI_BMAP_READ : SRCI_BMAP_WRITE);
 		if (!b)
 			return -EIO;
 		/* Malloc offtree request and pass to the initializer.
 		 */
 		r = realloc(r, (sizeof(*r)) * i);
-		msl_oftrq_build(r[i], b, roff, tlen, OFTREQ_OP_READ);
+		msl_oftrq_build(r[i], b, roff, tlen, (op == MSL_READ) ? 
+				OFTREQ_OP_READ : OFTREQ_OP_WRITE);
 		/* Retrieve offtree region.
 		 */
 		if ((rc = offtree_region_preprw(r))) {
@@ -701,7 +729,7 @@ msl_read(struct fhent *fh, char *buf, size_t size, off_t off)
 				freelock(&m->oft_lock);
 		}
 	}
-	/*   Copying into the application buffer, and managing the offtree.
+	/* Copying into the application buffer, and managing the offtree.
 	 */
 	tlen = msl_pages_copyout(r, i, buf, (size_t)size, off);
 
