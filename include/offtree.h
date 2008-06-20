@@ -195,6 +195,8 @@ power(size_t base, size_t exp)
 # define MAX(a,b) (((a)>(b)) ? (a): (b))
 #endif
 
+struct offtree_memb;
+
 struct offtree_iov {
 	int     oftiov_flags;
 	void   *oftiov_base;  /* point to our data buffer  */
@@ -204,10 +206,8 @@ struct offtree_iov {
 	void   *oftiov_pri;   /* private data, in slash's case, point at the 
 	 			  sl_buffer structure which manages the 
  				  region containing our base */
-	void   *oftiov_memb;  /* backpointer to our offtree node */
-	//psc_spinlock_t oftiov_lock;
-	//psc_waitq_t    oftiov_waitq;
-	//atomic_t       oftiov_ref;
+	struct offtree_memb *oftiov_memb;  /* backpointer to our 
+					      offtree node */
 };
 
 enum oft_iov_flags {
@@ -368,6 +368,7 @@ struct offtree_fill {
 	psc_spinlock_t             oftfill_lock;
 };
 
+
 struct offtree_req {
 	struct offtree_root  *oftrq_root;
 	struct offtree_memb  *oftrq_memb;   /* pointer to request node head */
@@ -384,8 +385,11 @@ struct offtree_req {
 enum offtree_req_op_types {
 	OFTREQ_OP_NOOP  = (1<<0),
 	OFTREQ_OP_READ  = (1<<1),
-	OFTREQ_OP_WRITE = (1<<2)		
+	OFTREQ_OP_WRITE = (1<<2),		
+	OFTREQ_OP_PRFFP = (1<<3),
+	OFTREQ_OP_PRFLP = (1<<4)
 };
+
 
 static inline int 
 oft_child_get(off_t o, struct offtree_root *r, int d, int abs_width)
