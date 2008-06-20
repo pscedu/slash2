@@ -98,10 +98,14 @@ struct srm_open_secret {
 
 #endif
 
+#define SRCI_BMAP_READ  0
+#define SRCI_BMAP_WRITE 1
+
 struct srm_bmap_req {
 	u32 blkno;	/* Starting block number                  */
 	u32 nblks;	/* Read-ahead support                     */
 	u64 fid;	/* Optional, may be filled in server-side */
+	u32 rw;
 };
 
 struct srm_bmap_rep {
