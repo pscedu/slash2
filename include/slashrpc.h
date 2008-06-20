@@ -383,7 +383,7 @@ int rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, u64, u32);
 				 (((v) & U64CONST(0x000000ff00000000)) >>  8) |	\
 				 (((v) & U64CONST(0x0000ff0000000000)) >> 24) |	\
 				 (((v) & U64CONST(0x00ff000000000000)) >> 40) |	\
-				 (((v) & U64CONST(0xff00000000000000)) >> 56) |	\
+				 (((v) & U64CONST(0xff00000000000000)) >> 56))
 # define p_hton_u64(u64 v) p_ntoh_u64(v)
 
 # define p_ntoh_s64(s64 v) ERROR
