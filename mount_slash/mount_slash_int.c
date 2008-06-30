@@ -321,9 +321,10 @@ msl_read_cb(struct pscrpc_request *rq, void *arg, int status)
  * msl_pagereq_finalize - this function is the intersection point of many slash subssytems (pscrpc, sl_config, and bmaps).  Its job is to prepare a reqset of read or write requests and ship them to the correct io server.
  * @r:  the offtree request.
  * @a:  the array of iov's involved.
+ * Notes: make me smarter, so that 'read before write' iovs are created (and freed) here instead of in msl_pagereq_prefetch.
  */
 __static void
-msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a)
+msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int blks)
 {
 	struct pscrpc_import      *imp;
 	struct pscrpc_request_set *rqset;
@@ -412,15 +413,14 @@ msl_pages_prefetch(struct offtree_req *r)
 	struct dynarray     *a=r->oftrq_darray, *coalesce=NULL;
 	off_t                toff, o=r->oftrq_off;
 	size_t               niovs=dynarray_len(a);
-	ssize_t              nblks=0;
 	u32                  i, j, n;
 	int                  rc=0, nc_blks=0;
-
-#define launch_cb {					\
-		psc_assert(coalesce);			\
-		msl_pagereq_finalize(r, coalesce);	\
-	        coalesce = NULL;			\
-		nc_bufs  = 0;				\
+	
+#define launch_cb {						\
+		psc_assert(coalesce && nc_blks);		\
+		msl_pagereq_finalize(r, coalesce, nc_blks);	\
+	        coalesce = NULL;				\
+		nc_blks  = 0;					\
 	}
 
 #define new_cb {					\
@@ -430,6 +430,14 @@ msl_pages_prefetch(struct offtree_req *r)
 	}
 
 	for (i=0; i < niovs; i++, n=0) {
+		if (ATTR_TEST(r->oftrq_op, OFTREQ_OP_WRITE))
+			/* On write, only check first and last pages
+			 *  if they have been specified for retrieval.
+			 */
+			if (!((i == 0 && ATTR_TEST(r->oftrq_op, OFTREQ_OP_PREFFP)) || 
+			      (i == niovs - 1) && ATTR_TEST(r->oftrq_op, OFTREQ_OP_PREFLP)))
+				continue;
+
 		v = dynarray_getpos(a, i);
 		DEBUG_OFFTIOV(PLL_TRACE, v, 
 			      "iov%d rq_off=%zu OFT_IOV2E_OFF_(%zu)",
@@ -453,8 +461,6 @@ msl_pages_prefetch(struct offtree_req *r)
 		/* Ensure the offtree leaf is sane.
 		 */
 		oftm_read_prepped_verify(m);
-		
-		nblks += v->oftiov_nblks;
 		/* Skip iov's which have already been queued for 
 		 *  retrieval but track them.  Take the lock here
 		 *  to serialize access to the iov flags.
@@ -480,9 +486,56 @@ msl_pages_prefetch(struct offtree_req *r)
 				 */
 				if (!coalesce)
 					new_cb;
-				
+
 				dynarray_add(coalesce, v);
-				nc_blks += v->oftiov_nblks;
+
+				if (ATTR_TEST(r->oftrq_op, OFTREQ_OP_READ))
+					nc_blks += v->oftiov_nblks;				
+				else {
+					/* Read-before-write prefetch.
+					 */
+					psc_assert(ATTR_TEST(r->oftrq_op, OFTREQ_OP_WRITE));
+					if ((!i) && ATTR_TEST(r->oftrq_op, OFTREQ_OP_PRFFP)) {
+						/* This is first op, verify that nc_blks is 0.
+						 */
+						psc_assert(!nc_blks);
+						nc_blks = 1;
+						if (niovs > 1 || 
+						    !ATTR_TEST(r->oftrq_op, OFTREQ_OP_PRFLP)) {
+							/* Launch and goto the next loop iteration.
+							 */
+							launch_cb;
+							goto end_loop;
+						}
+					} 
+					if ((i == niovs - 1) &&
+					    ATTR_TEST(r->oftrq_op, OFTREQ_OP_PRFLP)) {
+						if (!ATTR_TEST(r->oftrq_op, OFTREQ_OP_PRFFP)) {	
+							/* Only prefetch the last page.
+							 */
+							psc_assert(!nc_blks);
+							nc_blks = 1;
+						} else {
+							/* Need to prefetch the first buf too.
+							 */
+							if (!i) {
+								/* Their adjacent in the same iov
+								 *  (which is the first iov).
+								 */ 
+								psc_assert(v->oftiov_nblks == 2);
+								psc_assert(nc_blks == 1);
+								nc_blks = 2;
+							} else {
+								/* Since we're no longer within iov[0], 
+								 *  nc_blks must be 0 even if OFTREQ_OP_PRFFP.
+								 */			
+								psc_assert(!nc_blks);
+								nc_blks = 1;
+							}
+						}
+						launch_cb;
+					}			
+				}
 				/* Just to be sure..
 				 */
 				psc_assert(nc_blks < slCacheNblks);
@@ -549,6 +602,7 @@ msl_pages_prefetch(struct offtree_req *r)
 		}
 		/* Finished testing / setting attrs, release the lock.
 		 */
+	end_loop:
 		freelock(&m->oft_lock);	
 	}
 	/* There may be a cb lingering.
@@ -615,10 +669,11 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 			if (!x) {
 				x  = 1;
 				b += t;				
-				nbytes = MIN(((v->oftiov_nblks * v->oftiov_blksz) - t), 
-					     (tsize));
+				nbytes = MIN(((v->oftiov_nblks * 
+					       v->oftiov_blksz) - t), (tsize));
 			} else
-				nbytes = MIN((v->oftiov_nblks * v->oftiov_blksz), tsize);
+				nbytes = MIN((v->oftiov_nblks * 
+					      v->oftiov_blksz), tsize);
 			
 			memcpy(buf, b, nbytes);
 			b += nbytes;
@@ -722,7 +777,7 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 			w = &m->oft_waitq;
 			spinlock(&m->oft_lock);
 			/* Has the other thread finished working on this?
-			 */
+ 			 */
 			if (!ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY))
 				psc_waitq_wait(w, &m->oft_lock);
 			else
