@@ -390,6 +390,15 @@ enum offtree_req_op_types {
 	OFTREQ_OP_PRFLP = (1<<4)
 };
 
+#define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s"
+
+#define DEBUG_OFTRQ_FLAGS(oftrq)				     \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oft_op, OFTREQ_OP_NOOP),  "N"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oft_op, OFTREQ_OP_READ),  "R"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oft_op, OFTREQ_OP_WRITE), "W"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oft_op, OFTREQ_OP_PRFFP), "p"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oft_op, OFTREQ_OP_PRFLP), "l")
+
 
 static inline int 
 oft_child_get(off_t o, struct offtree_root *r, int d, int abs_width)
@@ -455,14 +464,15 @@ oftiov_2_iov(const struct offtree_iov *v, struct iovec *i)
 		_psclog(__FILE__, __func__, __LINE__,			\
 			PSS_OTHER, level, 0,				\
 			" oftr@%p o:"LPX64" l:"LPD64" node:%p darray:%p"\
-			" root:%p op:%hhu d:%hhu w:%hu "fmt,	        \
+			" root:%p op:%hhu d:%hhu w:%hu "		\
+			REQ_OFTM_FLAGS_FMT" "fmt,			\
 			oftr, (oftr)->oftrq_off, (oftr)->oftrq_nblks,	\
 			(oftr)->oftrq_memb, (oftr)->oftrq_darray,	\
 			(oftr)->oftrq_root, (oftr)->oftrq_op,		\
 			(oftr)->oftrq_depth, (oftr)->oftrq_width,	\
+			DEBUG_OFTRQ_FLAGS(oftr),			\
 			## __VA_ARGS__);				\
 	} while(0)
-
 
 
 extern struct offtree_root *
