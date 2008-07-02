@@ -215,7 +215,7 @@ sl_oftiov_pin_cb(struct offtree_iov *iov, int op);
 	}
 
 #define SL_INFLIGHT_INC 0
-#define SL_INFLIGHT_DEC 0
+#define SL_INFLIGHT_DEC 1
 void
 sl_oftiov_inflight_cb(struct offtree_iov *iov, int op);
 
