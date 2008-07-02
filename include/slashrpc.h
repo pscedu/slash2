@@ -236,15 +236,17 @@ struct slash_fidgen fg; /* XXX for now, put in dsig later */
 	s32 rc;
 };
 
-struct srm_read_req {
+struct srm_io_req {
 //	struct srm_rw_secret crypt_i;
 struct slash_fidgen fg; /* XXX go away */
 	u64 cfd;
 	u32 size;
 	u32 offset;
+	u32 flags;
+	u32 op; /* rw */
 };
 
-struct srm_read_rep {
+struct srm_io_rep {
 	s32 rc;
 	u32 size;
 	unsigned char buf[0];
@@ -339,19 +341,6 @@ struct srm_rw_secret {
 };
 #endif
 
-struct srm_write_req {
-//	struct srm_rw_secret crypt_i;
-struct slash_fidgen fg; /* XXX go away */
-	u64 cfd;
-	u32 size;
-	u32 offset;
-	unsigned char buf[0];
-};
-
-struct srm_write_rep {
-	s32 rc;
-	u32 size;
-};
 
 struct srm_generic_rep {
 	s32 rc;
