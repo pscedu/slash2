@@ -1,3 +1,4 @@
+
 #include "offtree.h"
 #include "psc_util/alloc.h"
 
@@ -713,7 +714,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		psc_assert(iov && iov->oftiov_base && iov->oftiov_nblks);
 		/* Tell the underlying cache subsystem to pin this guy.
 		 */
-		(req->oftrq_root->oftr_slbpin_cb)(iov);
+		(req->oftrq_root->oftr_slbpin_cb)(iov, SL_BUFFER_PIN);
 		/* Get the start and end offsets.
 		 */
 		OFT_IOV2SE_OFFS(iov, hb_soffa, hb_eoffa);
@@ -765,6 +766,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		DEBUG_OFFTIOV(PLL_INFO, m->oft_norl.oft_iov, "new hb");	  
 
 		offtree_putnode(req, req->oftrq_darray_off, 1, 0);
+		//offtree_buf_attach(req, req->oftrq_darray_off, 1, 0);
 		ATTR_UNSET(m->oft_flags, OFT_ALLOCPNDG);
 		psc_waitq_wakeall(&m->oft_waitq);
 		goto done;
