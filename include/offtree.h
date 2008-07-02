@@ -175,7 +175,7 @@ power(size_t base, size_t exp)
 
 /* List the conditions for a tree leaf which is prepared for a read.
  */
-#define oftm_read_prepped_verify(m) {					\
+#define oftm_io_prepped_verify(m) {					\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(atomic_read(&(m)->oft_rdop_ref) > 0);	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));  \
@@ -186,6 +186,16 @@ power(size_t base, size_t exp)
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_MCHLDGROW));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_UNINIT));	\
 		psc_assert((m) == (m)->oft_norl.oft_iov.oftiov_memb);	\
+}
+
+#define oftm_read_prepped_verify(m) {					\
+		oftm_io_prepped_verify(m);				\
+		psc_assert(atomic_read(&(m)->oft_rdop_ref) > 0);	\
+}
+
+#define oftm_write_prepped_verify(m) {					\
+		oftm_io_prepped_verify(m);				\
+		psc_assert(atomic_read(&(m)->oft_wrop_ref) > 0);	\
 }
 
 #ifndef MIN
@@ -219,7 +229,9 @@ enum oft_iov_flags {
 	OFTIOV_MAPPED     = (1 << 5), /* Mapped to a tree node          */
 	OFTIOV_REMAPPING  = (1 << 6), /* Remap to a another tree node   */  
 	OFTIOV_REMAP_SRC  = (1 << 7), /* IOV is the remap source buffer */
-	OFTIOV_REMAP_END  = (1 << 8)  /* IOV is the last to remap       */
+	OFTIOV_REMAP_END  = (1 << 8), /* IOV is the last to remap       */
+	OFTIOV_PUSHING    = (1 << 9), /* IOV is being written to IOS    */
+	OFTIOV_PUSHPNDG   = (1 << 10) /* IOV is being written to IOS    */
 };
 
 #define OFFTIOV_FLAG(field, str) (field ? str : "")
@@ -376,7 +388,7 @@ struct offtree_req {
 	off_t                 oftrq_off;    /* aligned, file-logical offset  */
 	ssize_t               oftrq_nblks;  /* number of blocks requested */
 	u8                    oftrq_op;
-	u8                    oftrq_depth;
+ 	u8                    oftrq_depth;
 	u16                   oftrq_width;
 	off_t                 oftrq_darray_off;	
 	struct offtree_fill   oftrq_fill;
