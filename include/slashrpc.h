@@ -162,6 +162,8 @@ struct srm_chown_req {
 struct srm_destroy_req {
 };
 
+#define srm_disconnect_req srm_destroy_req
+
 struct srm_getattr_req {
 	struct slash_creds creds;
 	u32 fnlen;
