@@ -15,6 +15,16 @@
 #include "fid.h"
 
 int
+slric_handle_disconnect(struct pscrpc_request *rq)
+{
+	struct srm_disconnect_req *mq;
+	struct srm_generic_rep *mp;
+
+	RSX_ALLOCREP(rq, mq, mp);
+	return (0);
+}
+
+int
 slric_handle_connect(struct pscrpc_request *rq)
 {
 	struct srcim_connect_req *mq;
@@ -132,6 +142,9 @@ slric_handler(struct pscrpc_request *rq)
 
 	rc = 0; /* gcc */
 	switch (rq->rq_reqmsg->opc) {
+	case SRMT_DISCONNECT:
+		rc = slric_handle_disconnect(rq);
+		break;
 	case SRMT_CONNECT:
 		rc = slric_handle_connect(rq);
 		break;
