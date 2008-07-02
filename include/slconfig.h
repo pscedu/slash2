@@ -203,7 +203,7 @@ libsl_nid2resm(lnet_nid_t nid)
 		return (NULL);
 
 	psc_assert(*e->hentry_id == nid);
-	return (hash_entry(e, sl_resm_t, resm_hashe));
+	return (e->private);
 }
 
 static inline sl_ios_id_t
