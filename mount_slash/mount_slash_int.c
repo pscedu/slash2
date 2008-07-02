@@ -46,6 +46,7 @@ msl_oftrq_build(struct offtree_req *r, struct bmap_cache_memb *b,
 	r->oftrq_width  = r->oftrq_depth = 0;
 	r->oftrq_off    = off & SLASH_BMAP_BLKMASK;
 	r->oftrq_op     = op;
+	r->oftrq_off    = off & SLASH_BMAP_BLKMASK;
 	/* Add the bits which were masked above.
 	 */
 	len += off & (~SLASH_BMAP_BLKMASK);
@@ -68,6 +69,23 @@ msl_oftrq_build(struct offtree_req *r, struct bmap_cache_memb *b,
 
 	DEBUG_OFFTREQ(PLL_TRACE, r, "newly built request");
 }
+
+__static void
+msl_oftrq_destroy(struct offtree_req *r) 
+{
+	struct bmap_cache_memb *b = r->oftrq_root->oftr_pri;
+	
+	psc_assert(b);
+	psc_assert(r->oftrq_darray);
+
+	PSCFREE(r->oftrq_darray);
+	atomic_dec(&b->bcm_opcnt);
+	psc_assert(atomic_read(&b->bcm_opcnt) >= 0);
+	
+	if (r->oftrq_fill.oftfill_reqset)
+		pscrpc_set_destroy(r->oftrq_fill.oftfill_reqset);
+}
+
 
 __static void
 msl_fcm_get(struct fhent *fh)
@@ -137,8 +155,8 @@ msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n, int rw)
 			goto fail;
 		}
 		if (mp->nblks > n) {
-			psc_errorx("MDS returned more bmaps than"
-				   " expected! mp->nblks(%zu) > n(%zu)", 
+			psc_errorx("MDS returned more bmaps than expected! "
+				   "mp->nblks(%zu) > n(%zu)", 
 				   mp->nblks, n);
 			rc = -1;
 			mp->nblks = 0;
@@ -183,7 +201,10 @@ msl_bmap_load(struct fcache_memb_handle *f, sl_blkno_t n, int prefetch, u32 rw)
 		if (rc)
 			return NULL;
 	}
-	return (SPLAY_FIND(bmap_cache, &f->fcmh_bmap_cache, &t));
+	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmap_cache, &t);
+	psc_assert(b);	
+	atomic_inc(&b->bcm_opcnt);
+	return (b);
 }
 
 /**
@@ -272,14 +293,17 @@ msl_bmap_to_import(struct bmap_cache_memb *b)
  * msl_read_cb - this function is called from the pscrpc layer as the rpc request completes.  Its task is to set various state machine flags and call into the slb layer to decref the inflight counter.
  */
 int
-msl_read_cb(struct pscrpc_request *rq, void *arg, int status)
+msl_io_cb(struct pscrpc_request *rq, void *arg, int status)
 {
 	struct pscrpc_async_args *args = arg;
-	struct dynarray     *a = arg->pointer_arg[MSL_READ_CB_POINTER_SLOT];
+	struct dynarray     *a = arg->pointer_arg[MSL_IO_CB_POINTER_SLOT];
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
 	struct sl_buffer    *s;
 	int i, n=dynarray_len(a);
+	int op=rq->rq_reqmsg->opc;
+
+	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
 
 	if (status) {
                 DEBUG_REQ(PLL_ERROR, rq, "non-zero status status %d, "
@@ -296,19 +320,49 @@ msl_read_cb(struct pscrpc_request *rq, void *arg, int status)
 		 *  XXX waitq wake here (oftm)
 		 */
 		spinlock(&m->oft_lock);
-		oftm_read_prepped_verify(m);
-		psc_assert(!ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG));
-		psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTING));
-		ATTR_UNSET(v->oftiov_flags, OFTIOV_FAULTING);
-		/* Set datardy but leave OFT_READPNDG (in the oftm) until 
-		 *   the memcpy -> application buffer has taken place.
-		 */ 
-		ATTR_SET(v->oftiov_flags, OFTIOV_DATARDY);
-		DEBUG_OFFTIOV(PLL_TRACE, v, "OFTIOV_DATARDY");
-		freelock(&m->oft_lock);		
+		switch (op) {
+		case (SRMT_READ):
+			oftm_read_prepped_verify(m);
+			psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG) &&
+				   ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTING));
+			ATTR_UNSET(v->oftiov_flags, OFTIOV_FAULTING);
+			ATTR_UNSET(v->oftiov_flags, OFTIOV_FAULTPNDG);
+			/* Set datardy but leave OFT_READPNDG (in the oftm) until 
+			 *   the memcpy -> application buffer has taken place.
+			 */ 
+			ATTR_SET(v->oftiov_flags, OFTIOV_DATARDY);
+			DEBUG_OFFTIOV(PLL_TRACE, v, "OFTIOV_DATARDY");
+			break;
+
+		case (SRMT_WRITE):
+			oftm_write_prepped_verify(m);
+			/* DATARDY must always be true here since the buffer
+			 *  has already been copied to with valid data.
+			 */
+			psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_PUSHPNDG) &&
+                                   ATTR_TEST(v->oftiov_flags, OFTIOV_PUSHING)  &&
+				   ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY));
+                        ATTR_UNSET(v->oftiov_flags, OFTIOV_PUSHING);
+                        ATTR_UNSET(v->oftiov_flags, OFTIOV_PUSHPNDG);
+			DEBUG_OFFTIOV(PLL_TRACE, v, "PUSH DONE");
+			break;
+
+		default:
+			DEBUG_REQ(PLL_FATAL, rq, "bad opcode");
+			psc_fatalx("How did this opcode(%d) happen?", op);
+		}
 		/* Decrement the inflight counter in the slb.
 		 */
 		slb_inflight_cb(v, SL_INFLIGHT_DEC);
+		if (op == SRMT_WRITE) {
+			struct offtree_root *oftr;
+			oftr = arg->pointer_arg[MSL_IO_CB_POINTER_SLOT];
+			/* Manage the offtree leaf and decrement the slb.
+			 */
+			(oftr->oftr_slbpin_cb)(v, SL_BUFFER_UNPIN);
+			atomic_dec(&m->oft_wrop_ref);			
+		}
+		freelock(&m->oft_lock);			
 	}
 	/* Free the dynarray which was allocated in msl_pages_prefetch().
 	 */
@@ -323,8 +377,7 @@ msl_read_cb(struct pscrpc_request *rq, void *arg, int status)
  * @a:  the array of iov's involved.
  * Notes: make me smarter, so that 'read before write' iovs are created (and freed) here instead of in msl_pagereq_prefetch.
  */
-__static void
-msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int blks)
+msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 {
 	struct pscrpc_import      *imp;
 	struct pscrpc_request_set *rqset;
@@ -333,11 +386,20 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int blks)
 	struct bmap_cache_memb    *bcm;
 	struct iovec              *iovs;
 	struct offtree_iov        *v;
+        struct srm_io_req         *mq;
+        struct srm_io_rep         *mp;
 	int    i, n=dynarray_len(a);
 	
 	psc_assert(n);	
-	psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG));
-	ATTR_SET(v->oftiov_flags, OFTIOV_FAULTING);
+	psc_assert(op == MSL_PAGES_PUT || op == MSL_PAGES_GET);
+
+	if (op == MSL_PAGES_GET) {
+		psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG));
+		ATTR_SET(v->oftiov_flags, OFTIOV_FAULTING);
+	} else {
+		psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_PUSHPNDG));
+		ATTR_SET(v->oftiov_flags, OFTIOV_PUSHING);
+	}
 	/* Get a new request set if one doesn't already exist.
 	 */	
 	if (!r->oftrq_fill.oftfill_reqset)
@@ -351,15 +413,22 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int blks)
 	bcm = (struct bmap_cache_memb *)r->oftrq_root->oftr_pri;
 	imp = msl_bmap_to_import(bcm);
 
-	if ((rc = rsx_newreq(imp, SRCI_VERSION, SRMT_READ
+	if ((rc = rsx_newreq(imp, SRCI_VERSION, 
+			     (op == MSL_PAGES_PUT ? SRMT_WRITE : SRMT_READ),
 			     sizeof(*mq), sizeof(*mp), &rq, &mq)) != 0) {
                 errno = -rc;
 		psc_fatalx("rsx_newreq() bad time to fail :(");
         }
 	/* Setup the callback, supplying the dynarray as a argument.
-	 */
-	req->rq_interpret_reply = msl_read_cb;	
-        req->rq_async_args.pointer_arg[MSL_READ_CB_POINTER_SLOT] = a;
+	 */	
+	req->rq_interpret_reply = msl_io_cb;
+        req->rq_async_args.pointer_arg[MSL_IO_CB_POINTER_SLOT] = a;
+	if (op == MSL_PAGES_PUT)
+		/* Stash the offtree root too.
+		 */
+		req->rq_async_args.pointer_arg[MSL_WRITE_CB_POINTER_SLOT] = 
+			r->oftrq_root;
+
 	/* Prep the iovs and bulk descriptor
 	 */
 	iovs = PSCALLOC(sizeof(*iovs) * n);
@@ -373,8 +442,12 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int blks)
 		 */
 		slb_inflight_cb(v, SL_INFLIGHT_INC);
 	}
-
-	rsx_bulkclient(req, &desc, BULK_PUT_SINK, SRM_BULK_PORTAL, iovs, n);
+	/* Seems cputer-intuitive, but it's right.  MSL_PAGES_GET is a 
+	 * 'PUT' to the client, MSL_PAGES_PUSH is a server get.
+	 */
+	rsx_bulkclient(req, &desc, 
+		       (op == MSL_PAGES_GET ? BULK_PUT_SINK : BULK_GET_SOURCE),
+		       SRM_BULK_PORTAL, iovs, n);
 	/* The bulk descriptor copies these iovs so it's OK to free them.
 	 */
 	PSCFREE(iovs);
@@ -387,40 +460,55 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int blks)
 	}
 }
 
-__static inline size_t
-msl_coalesce_buf_tally(struct dynarray *a)
+__static void
+msl_pages_track_pending(struct offtree_req *r,
+                        const struct offtree_iov *v)
 {
-	struct offtree_iov *v;
-	int    n = dynarray_len(a), i;
-	size_t total=0;
+        struct offtree_memb *m = (struct offtree_memb *)v->oftiov_memb;
 
-	for (i=0; i < n; i++) {
-		v = dynarray_getpos(a, i);
-		total += v->oftiov_nblks;
-	}
-	return total;
+        /* This would be a problem..
+         */
+        psc_assert(!ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY));
+        /* There must be at least 2 pending operations
+         *  (ours plus the one who set OFTIOV_FAULT*)
+         */
+        psc_assert(atomic_read(m->oft_rdop_ref) > 1);
+        /* Allocate a new 'in progress' dynarray if
+         *  one does not already exist.
+         */
+        if (!r->oftrq_fill->oftfill_inprog)
+                r->oftrq_fill->oftfill_inprog =
+                        PSCALLOC(sizeof(struct dynarray));
+        /* This iov is being loaded in by another
+         *  thread, place it in our 'fill' structure
+         *  and check on it later.
+         */
+        dynarray_add(r->oftrq_fill->oftfill_inprog, v);
 }
 
+
+#define msl_pages_prefetch(r) msl_pages_getput(r, MSL_PAGES_GET)
+#define msl_pages_flush(r)    msl_pages_getput(r, MSL_PAGES_PUT)
 /**
  * msl_pages_prefetch - given an filled offtree request, check its iov's for unfaulted pages and initiate the prefect for those pages.  State will be saved in the request's offtree_fill structure.
  * @r: the request.
  */
 __static void
-msl_pages_prefetch(struct offtree_req *r)
+msl_pages_getput(struct offtree_req *r, int op)
 {	
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
 	struct dynarray     *a=r->oftrq_darray, *coalesce=NULL;
-	off_t                toff, o=r->oftrq_off;
+	off_t                o=r->oftrq_off, toff=0;
 	size_t               niovs=dynarray_len(a);
 	u32                  i, j, n;
-	int                  rc=0, nc_blks=0;
-	
-#define launch_cb {						\
-		psc_assert(coalesce && nc_blks);		\
-		msl_pagereq_finalize(r, coalesce, nc_blks);	\
-	        coalesce = NULL;				\
-		nc_blks  = 0;					\
+	int                  rc=0, nc_blks=0, t=0;
+
+#define launch_cb {					\
+		psc_assert(coalesce);			\
+		msl_pagereq_finalize(r, coalesce, op);	\
+	        coalesce = NULL;			\
+		nc_bufs  = 0;				\
 	}
 
 #define new_cb {					\
@@ -442,6 +530,7 @@ msl_pages_prefetch(struct offtree_req *r)
 		DEBUG_OFFTIOV(PLL_TRACE, v, 
 			      "iov%d rq_off=%zu OFT_IOV2E_OFF_(%zu)",
 			      i, req->oftrq_off,  OFT_IOV2E_OFF_(v));
+
 		/* Assert that oft iovs are contiguous.
 		 */
 		if (i)
@@ -453,19 +542,37 @@ msl_pages_prefetch(struct offtree_req *r)
 		 */
 		if (o > OFT_IOV2E_OFF_(v))
 			continue;
+
+                /* On read-before-write, only check first and last iov's
+                 *  if they have been specified for retrieval.
+                 * 't' is used to denote the first valid iov.
+                 */
+		if ((op == MSL_PAGES_GET) && 
+		    (ATTR_TEST(r->oftrq_op, OFTREQ_OP_WRITE))) {
+			if (!((t == 0 && 
+			       ATTR_TEST(r->oftrq_op, OFTREQ_OP_PREFFP)) || 
+			      (i == niovs - 1) && 
+			      ATTR_TEST(r->oftrq_op, OFTREQ_OP_PREFLP)))
+				continue;
+			else 
+				if (!t)
+					t = 1;
+		}
 		/* Map the offtree leaf holding this iov.
 		 */
 		m = (struct offtree_memb *)v->oftiov_memb;
 		DEBUG_OFFTIOV(PLL_INFO, v, "processing..");
 		DEBUG_OFT(PLL_INFO, m, "..processing");
+
+		spinlock(&m->oft_lock);
 		/* Ensure the offtree leaf is sane.
 		 */
-		oftm_read_prepped_verify(m);
-		/* Skip iov's which have already been queued for 
-		 *  retrieval but track them.  Take the lock here
-		 *  to serialize access to the iov flags.
-		 */
-		spinlock(&m->oft_lock);
+		if (op == MSL_PAGES_GET)
+			oftm_read_prepped_verify(m);		
+		else
+			oftm_write_prepped_verify(m);
+
+		nblks += v->oftiov_nblks;
 		/* oftiov_nblks cannot be bigger than slCacheNblks!
 		 */
 		psc_assert(v->oftiov_nblks <= slCacheNblks);
@@ -473,13 +580,18 @@ msl_pages_prefetch(struct offtree_req *r)
 		/* Iov's cannot be split across requests but they may be 
 		 *  coalesced into one request.  We're assured that the 
 		 *  largest contiguous piece of memory is <= to LNET_MTU.
+		 * For MSL_PAGES_PUT, the entire array is always sent.
 		 */
-		if (!ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY)   &&
-		    !ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG) &&
-		    !ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTING)) {
+		if (op == MSL_PAGES_PUT || 
+		    ((op == MSL_PAGES_GET) && 
+		     (!ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY) &&
+		      !ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG)))) {
 			/* Mark it.
 			 */
-			ATTR_SET(v->oftiov_flags, OFTIOV_FAULTPNDG);
+			if (op == MSL_PAGES_GET)
+				ATTR_SET(v->oftiov_flags, OFTIOV_FAULTPNDG);
+			else
+				ATTR_SET(v->oftiov_flags, OFTIOV_PUSHPNDG);
 
    			if ((v->oftiov_nblks + nc_blks) < slCacheNblks) {
 				/* It fits, coalesce.
@@ -550,9 +662,8 @@ msl_pages_prefetch(struct offtree_req *r)
 
 			} else {
 				/* The new iov won't fit, send out the cb as 
-				 *  is.
-				 * Launch the current coalesce buffer (which
-				 *  must exist). 
+				 *  is.  Launch the current coalesce buffer 
+				 *  (which must exist). 
 				 */				
 				launch_cb;
 				/* Make a new cb and add the new iov.
@@ -572,31 +683,14 @@ msl_pages_prefetch(struct offtree_req *r)
 			 *  means that any existing coalesce buffer must be 
 			 *  pushed.
 			 */
+			psc_assert(op == MSL_PAGES_GET);
+
 			if (coalesce)
 				launch_cb;
 
-			if (ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG) ||
-			    ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTING)) { 
-				/* This would be a problem..
-				 */
-				psc_assert(!ATTR_TEST(v->oftiov_flags, 
-						      OFTIOV_DATARDY));
-				/* There must be at least 2 pending operations
-				 *  (ours plus the one who set OFTIOV_FAULT*)
-				 */
-				psc_assert(atomic_read(m->oft_rdop_ref) > 1);
-				/* Allocate a new 'in progress' dynarray if 
-				 *  one does not already exist.
-				 */
-				if (!r->oftrq_fill->oftfill_inprog)
-					r->oftrq_fill->oftfill_inprog = 
-						PSCALLOC(sizeof(struct dynarray));
-				/* This iov is being loaded in by another 
-				 *  thread, place it in our 'fill' structure 
-				 *  and check on it later.
-				 */
-				dynarray_add(r->oftrq_fill->oftfill_inprog, v);	
-			} else
+			if (ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG))
+				msl_pages_track_pending(r, v);
+			else
 				psc_assert(ATTR_TEST(v->oftiov_flags, 
 						     OFTIOV_DATARDY));
 		}
@@ -609,80 +703,100 @@ msl_pages_prefetch(struct offtree_req *r)
 	 */
 	if (coalesce)
 		lauch_cb;
-
-	/* Verify that the number of blks matches that of the request.
-	 */	
-	//	if (nblks != req->oftrq_nblks)
-	//	psc_fatalx("nbufs=%zu != oftrq_nblks=%zu",
-	//		   nblks, req->oftrq_nblks);
 }
 
+
 /**
- * msl_pages_copyout - copy pages to the user application buffer.
+ * msl_pages_copyin - copy user pages into buffer cache and schedule the slabs to be sent to the IOS backend.
  *
  */
 __static size_t
-msl_pages_copyout(struct offtree_req *r, int n, char *buf, 
+msl_pages_copyin(struct offtree_req *r, int n, char *buf, 
 		  size_t size, off_t off)
 {
 	struct dynarray     *a;
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
-	int    l, i, j, x=0;
+	struct iovev        *iov;
+	int    l, i, j, x=0, niovs=0, nc_bufs=0;
 	off_t  o, t;
 	size_t nbytes;
-	ssize_t tsize=size;
-	char  *b;
+	ssize_t tsize;
+	char  *b, *p;
 
 	psc_assert(r[0].oftrq_off <= off);
 	/* Relative offset into the buffer.
 	 */
 	t = off - r[0].oftrq_off;
 	
-	for (i=0; i < n; i++) {
+	for (i=0, p=buf, tsize=size; i < n; i++) {
 		a = r[i].oftrq_darray;
 		l = dynarray_len(a);
 		for (j=0; j < l; j++) {
 			v = dynarray_getpos(j);
 			m = (struct offtree_memb *)v->oftiov_memb;
 
-			spinlock(&m->oft_lock);
-
 			DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
 				      "OFT_IOV2E_OFF_(%zu)",
 				      i, req->oftrq_off,  OFT_IOV2E_OFF_(v));
-			/* These pages aren't involved, skip.
-			 */
-			if (!x)
-				if (r[x].oftrq_off > OFT_IOV2E_OFF_(v))
-					continue;
-			/* Assert that the pages are kosher for copying.
-			 */
-			psc_assert(ATTR_TEST(v->oftiov_flags, 
-					     OFTIOV_DATARDY));		
-			/* More sanity
-			 */
-			oftm_read_prepped_verify(m);
-			freelock(&m->oft_lock);
 
-			b  = (char *)v->oftiov_base;			
+			b  = (char *)v->oftiov_base;
+			m = (struct offtree_memb *)v->oftiov_memb;
+			spinlock(&m->oft_lock);
+
 			if (!x) {
+				/* The first req structure is always needed, 
+				 *  but not necessarily its first iov(s).
+				 */
+				if (r[0].oftrq_off > OFT_IOV2E_OFF_(v)) {
+					freelock(&m->oft_lock);
+                                        continue;
+				}
+				if (t || (tsize < (v->oftiov_nblks * 
+						   v->oftiov_blksz) - t)) {
+					/* Write into middle of iov, verify 
+					 *  that the iov is DATARDY.
+					 */
+					oftm_read_prepped_verify(m); 
+					psc_assert(ATTR_TEST(v->oftiov_flags, 
+							     OFTIOV_DATARDY));
+				}
 				x  = 1;
-				b += t;				
+				b += t;
 				nbytes = MIN(((v->oftiov_nblks * 
-					       v->oftiov_blksz) - t), (tsize));
+					       v->oftiov_blksz) - t), 
+					     (tsize));
+
+			} else if (i == (n-1) && j == (l-1)) {
+				/* Last iov, if the write size is smaller than
+				 *  the iov the data must have been faulted in.
+				 */
+				if (tsize < (v->oftiov_nblks * 
+					     v->oftiov_blksz)) {
+					oftm_read_prepped_verify(m);
+                                        psc_assert(ATTR_TEST(v->oftiov_flags, 
+							     OFTIOV_DATARDY));
+                                }
+				nbytes = MIN((v->oftiov_nblks * 
+					      v->oftiov_blksz), tsize);
 			} else
 				nbytes = MIN((v->oftiov_nblks * 
 					      v->oftiov_blksz), tsize);
-			
-			memcpy(buf, b, nbytes);
-			b += nbytes;
-			tsize -= nbytes;
-			/* Manage the offtree leaf and decrement the slb.
+
+			memcpy(b, p, nbytes);
+			/* Notify others that this buffer is now valid for
+			 *  reads or unaligned writes.  Note that the buffer
+			 *  must still be pinned for it has not been sent yet.
 			 */
-			atomic_dec(&m->oft_rdop_ref);			
-			(r->oftrq_root->oftr_slbpin_cb)(iov, SL_BUFFER_UNPIN);
-			/* XXX the details of this wakeup may need to be sorted out.
+			spinlock(&v->oftiov_lock);
+			ATTR_SET(v->oftiov_flags, OFTIOV_DATARDY);
+			freelock(&v->oftiov_lock);
+
+			p += nbytes
+			tsize -= nbytes;
+			freelock(&m->oft_lock);
+			/* XXX the details of this wakeup may need to be 
+			 *  sorted out.
 			 */
 			psc_waitq_wake(&m->oft_waitq);
 			psc_assert(tsize > 0);
@@ -692,7 +806,134 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 	}	
  out:
 	psc_assert(!tsize);
+	/* Queue these iov's for send to IOS.
+	 */
+	msl_pages_flush(r);
 	return (size);
+}
+
+
+/**
+ * msl_pages_copyout - copy pages to the user application buffer.
+ *
+ */
+__static size_t
+msl_pages_copyout(struct offtree_req *r, int n, char *buf,
+		  size_t size, off_t off)
+{
+	struct dynarray     *a;
+	struct offtree_iov  *v;
+	struct offtree_memb *m;
+	int    l, i, j, x=0;
+	off_t  o, t;
+	size_t nbytes;
+	ssize_t tsize;
+	char  *b, *p;
+
+	psc_assert(r[0].oftrq_off <= off);
+	/* Relative offset into the buffer.
+	 */
+	t = off - r[0].oftrq_off;
+	
+	for (i=0, p=buf, tsize=size; i < n; i++) {
+		a = r[i].oftrq_darray;
+		l = dynarray_len(a);
+		
+		for (j=0; j < l; j++) {
+			v=dynarray_getpos(j);
+			DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
+				      "OFT_IOV2E_OFF_(%zu)",
+				      i, req->oftrq_off,  OFT_IOV2E_OFF_(v));
+			if (!x)
+				/* These pages aren't involved, skip.
+				 */
+				if (r[x].oftrq_off > OFT_IOV2E_OFF_(v))
+					continue;
+
+			m = (struct offtree_memb *)v->oftiov_memb;
+			spinlock(&m->oft_lock);
+			oftm_read_prepped_verify(m); 			
+			psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY));
+
+			b  = (char *)v->oftiov_base;			
+
+			if (!x) {
+				x  = 1;
+				b += t;				
+				nbytes = MIN(((v->oftiov_nblks * 
+					       v->oftiov_blksz) - t), tsize);
+			} else
+				nbytes = MIN((v->oftiov_nblks * 
+					      v->oftiov_blksz), tsize);
+			
+			memcpy(p, b, nbytes);
+			p += nbytes;			
+			tsize -= nbytes;
+			/* As far as we're concerned, we're done with all vital
+			 *  operations on this iov.  It can go away if needed.
+			 * Manage the offtree leaf and decrement the slb.
+			 */
+			(r->oftrq_root->oftr_slbpin_cb)(v, SL_BUFFER_UNPIN);
+			atomic_dec(&m->oft_rdop_ref);
+			freelock(&m->oft_lock);			
+			/* XXX the details of this wakeup may need to be
+			 *  sorted out.  The main thing to know is that there
+			 *  are several sleepers / wakers accessing this q
+			 *  for various reasons.
+			 */
+			psc_waitq_wake(&m->oft_waitq);
+			if (!tsize)
+				goto out;
+		}				
+	}	 
+ out:
+	psc_assert(!tsize);
+	return (size);
+}
+
+
+__static int
+msl_pages_blocking_load(struct offtree_req *r, int n)
+{
+	int i, rc=0;
+
+	for (i=0; i < n; i++)
+		msl_pages_prefetch(r[i]);
+	/* Iterate again, this time checking / waiting for all page-ins to 
+	 *   complete.  Note that msl_read_cb sets OFTIOV_DATARDY.
+	 */
+	for (i=0; i < n; i++) {
+		struct offtree_fill *f = r[i].oftrq_fill;
+		psc_waitq_t *w;
+		int          k;
+		/* If a request set is present then block on its completion.
+		 */
+		if (f->oftfill_reqset) {
+			if ((rc = pscrpc_set_wait(f->oftfill_reqset))) {
+				psc_error("pscrpc_set_wait rc=%d", rc);
+				return (rc);
+			}
+		}
+		/* Wait for our friends to finish their page-ins which we
+		 *  are also blocking on.
+		 */
+		for (k=0; k < dynarray_len(f->oftfill_inprog); k++) {
+			struct offtree_iov  *v = dynarray_getpos(k);
+			struct offtree_memb *m = v->oftiov_memb;
+			
+			w = &m->oft_waitq;
+		retry:
+			spinlock(&m->oft_lock);
+			/* Has the other thread finished working on this?
+			 */
+			if (!ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY)) {
+				psc_waitq_wait(w, &m->oft_lock);
+				goto retry;
+			} else
+				freelock(&m->oft_lock);
+		}
+	}
+	return (rc);
 }
 
 #define msl_read(fh, buf, size, off) msl_io(fh, buf, size, off, MSL_READ)
@@ -715,7 +956,7 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 	 *  Get the start and end block regions from the input parameters.
 	 */
 	s = off / f->fcmh_bmap_sz;
-	e = (off + size) / f->fcmh_bmap_sz;
+	e = (off + size) / f->fcmh_bmap_sz;	
 	/* Relativize the length and offset.
 	 */
 	roff  = off - (s * SLASH_BMAP_SIZE);
@@ -734,8 +975,10 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 		/* Malloc offtree request and pass to the initializer.
 		 */
 		r = realloc(r, (sizeof(*r)) * i);
-		msl_oftrq_build(r[i], b, roff, tlen, (op == MSL_READ) ? 
-				OFTREQ_OP_READ : OFTREQ_OP_WRITE);
+
+		msl_oftrq_build(r[i], b, roff, tlen, (op == MSL_READ) ?
+                                OFTREQ_OP_READ : OFTREQ_OP_WRITE);
+
 		/* Retrieve offtree region.
 		 */
 		if ((rc = offtree_region_preprw(r))) {
@@ -749,45 +992,27 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 	/* Now iterate across the array of completed offtree requests
 	 *   paging in data where needed.
 	 */
-	for (j=0; j < i; j++)
-		msl_pages_prefetch(r[j]);
-	/* Iterate again, this time checking / waiting for all page-ins to 
-	 *   complete.  Note that msl_read_cb sets OFTIOV_DATARDY.
-	 */
-	for (j=0; j < i; j++) {
-		struct offtree_fill *f = r[j].oftrq_fill;
-		psc_waitq_t *w;
-		int          k;
-
-		/* If a request set is present then block on its completion.
-		 */
-		if (f->oftfill_reqset) {
-			if ((rc = pscrpc_set_wait(f->oftfill_reqset))) {
-				psc_error("pscrpc_set_wait rc=%d", rc);;
-				return (rc);
-			}
-		}
-		/* Wait for our friends to finish their page-ins which we
-		 *  are also blocking on.
-		 */
-		for (k=0; k < dynarray_len(f->oftfill_inprog); k++) {
-			struct offtree_iov  *v = dynarray_getpos(k);
-			struct offtree_memb *m = v->oftiov_memb;
-			
-			w = &m->oft_waitq;
-			spinlock(&m->oft_lock);
-			/* Has the other thread finished working on this?
- 			 */
-			if (!ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY))
-				psc_waitq_wait(w, &m->oft_lock);
-			else
-				freelock(&m->oft_lock);
-		}
-	}
+	if (op == MSL_READ || (ATTR_SET(r->oftrq_op, OFTREQ_OP_PRFFP) ||
+			       ATTR_SET(r->oftrq_op, OFTREQ_OP_PRFLP)))
+		if ((rc = msl_pages_blockingload(r, i)))
+			return (rc);
+		
 	/* Copying into the application buffer, and managing the offtree.
 	 */
-	tlen = msl_pages_copyout(r, i, buf, (size_t)size, off);
-
+	//XXX Fix size so that it's relative to the request, 
+	//      not the user supplied size.
+	for (j=0, tlen=0; j < i; j++) {
+		if (op == MSL_READ)
+			tlen += msl_pages_copyout(r[j], i, (buf+tlen), 
+						  (size_t)(size-tlen), 
+						  (off+tlen));
+		else
+			tlen += msl_pages_copyin(r[j], i, (buf+tlen), 
+						 (size_t)(size-tlen), 
+						 (off+tlen));
+		msl_oftrq_destroy(r[j]);
+	}
+       
 	psc_assert(tlen == size);
 	return ((int)size);
 }
