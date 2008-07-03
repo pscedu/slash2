@@ -148,9 +148,9 @@ slrmc_create(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
+	struct slash_fidgen fg;
 	struct iovec iov;
 	char fn[PATH_MAX];
-	slfid_t fid;
 	int fd;
 
 	RSX_ALLOCREP(rq, mq, mp);
@@ -171,11 +171,11 @@ slrmc_create(struct pscrpc_request *rq)
 		mp->rc = -errno;
 	else {
 		close(fd);
-		if (fid_get(fn, &fid, &mq->creds,
+		if (fid_get(fn, &fg, &mq->creds,
 		    O_CREAT | O_EXCL | O_WRONLY, mq->mode) == -1)
 			mp->rc = -errno;
 		else
-			cfdnew(&mp->cfd, rq->rq_export, fid);
+			cfdnew(&mp->cfd, rq->rq_export, fg.fg_fid);
 	}
 	return (0);
 }
@@ -405,9 +405,9 @@ slrmc_opendir(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct srm_opendir_req *mq;
 	struct srm_opendir_rep *mp;
+	struct slash_fidgen fg;
 	struct iovec iov;
 	char fn[PATH_MAX];
-	slfid_t fid;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fnlen == 0 || mq->fnlen >= PATH_MAX) {
@@ -423,10 +423,10 @@ slrmc_opendir(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 	if (translate_pathname(fn, 1) == -1)
 		mp->rc = -errno;
-	else if (fid_get(fn, &fid, &mq->creds, O_DIRECTORY, 0) == -1)
+	else if (fid_get(fn, &fg, &mq->creds, O_DIRECTORY, 0) == -1)
 		mp->rc = -errno;
 	else
-		cfdnew(&mp->cfd, rq->rq_export, fid);
+		cfdnew(&mp->cfd, rq->rq_export, fg.fg_fid);
 	return (0);
 }
 

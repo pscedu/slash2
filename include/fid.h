@@ -17,7 +17,7 @@ struct slash_fidgen {
 	u64	fg_gen;
 };
 
-#define FID_ANY                 0xffffffffffffULL
+#define FID_ANY			0xffffffffffffULL
 
 /* 16 bit server/filesystem id */
 #define FSID_FMT		"%016"_P_U64"x"
@@ -33,8 +33,6 @@ struct slash_fidgen {
 
 void fid_makepath(slfid_t, char *);
 int  fid_link(slfid_t, const char *);
-int  fid_get(const char *, struct slash_fidgen *,
-	struct slash_creds *, int, mode_t);
 
 int  translate_pathname(char *, int);
 int  untranslate_pathname(char *);

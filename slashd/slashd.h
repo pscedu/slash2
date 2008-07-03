@@ -42,6 +42,8 @@ sl_inum_t	slash_get_inum(void);
 void	sltimerthr_spawn(void);
 
 void fidcache_init(void);
+int  fid_get(const char *, struct slash_fidgen *,
+	struct slash_creds *, int, mode_t);
 
 extern struct slash_sb_mem	sbm;
 

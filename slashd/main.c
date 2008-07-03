@@ -11,6 +11,7 @@
 
 #include "control.h"
 #include "pathnames.h"
+#include "rpc.h"
 #include "sb.h"
 #include "slashd.h"
 #include "slconfig.h"
