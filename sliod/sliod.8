@@ -1,0 +1,47 @@
+.\" $Id$
+.Dd July 3, 2008
+.Dt SLIOD 8
+.ds volume Pittsburgh Supercomputing Center
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm sliod
+.Nd slash I/O server daemon
+.Sh SYNOPSIS
+.Nm sliod
+.Op Fl f Ar conf
+.Op Fl S Ar socket
+.Sh DESCRIPTION
+The
+.Nm
+daemon serves I/O requests to slash file system clients.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl f Ar conf
+Specify an alternative configuration file.
+Defaults to
+.Pa /etc/slash.conf .
+See
+.Xr slash.conf 5
+for more details.
+.It Fl S Ar socket
+Specify an alternative named socket file.
+Defaults to
+.Pa /var/run/sliod.sock .
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /etc/slash.conf
+default
+.Nm
+configuration
+.It Pa /var/run/sliod.sock
+default
+.Nm
+control socket
+.El
+.Sh SEE ALSO
+.Xr slash.conf 5 ,
+.\" .Xr lnet-env 7 ,
+.Xr slashd 8 ,
+.Xr slioctl 8
