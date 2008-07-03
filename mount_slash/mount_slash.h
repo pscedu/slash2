@@ -18,6 +18,9 @@ struct fhent;
 #define MSL_IO_CB_POINTER_SLOT 1
 #define MSL_WRITE_CB_POINTER_SLOT 2
 
+#define MSL_READ 0
+#define MSL_WRITE 1
+
 struct msctl_thread {
 	u32	mc_st_nclients;
 	u32	mc_st_nsent;
@@ -46,3 +49,12 @@ extern struct slashrpc_cservice *mds_csvc;
 #define mds_import	(mds_csvc->csvc_import)
 
 #define msctlthr(thr)	((struct msctl_thread *)(thr)->pscthr_private)
+
+#define msl_read(fh, buf, size, off) msl_io(fh, buf, size, off, MSL_READ)
+#define msl_write(fh, buf, size, off) msl_io(fh, buf, size, off, MSL_WRITE)
+
+int
+msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op);
+
+int
+msl_io_cb(struct pscrpc_request *rq, void *arg, int status);

@@ -37,6 +37,8 @@
 
 #define SLASH_MAXBLKS_PER_REQ (LNET_MTU / SLASH_BMAP_BLKSZ)
 
+#define BMAP_MAX_GET 63
+
 #define FCMH_LOCK(h)  spinlock(&(h)->fcmh_lock)
 #define FCMH_ULOCK(h) freelock(&(h)->fcmh_lock)
 

@@ -394,6 +394,7 @@ struct offtree_req {
  	u8                    oftrq_depth;
 	u16                   oftrq_width;
 	off_t                 oftrq_darray_off;	
+	u64                   oftrq_cfd;
 	struct offtree_fill   oftrq_fill;
 };
 
