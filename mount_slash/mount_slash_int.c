@@ -737,8 +737,10 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 			m = (struct offtree_memb *)v->oftiov_memb;
 
 			DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
-				      "OFT_IOV2E_OFF_(%zu)",
-				      i, req->oftrq_off,  OFT_IOV2E_OFF_(v));
+				      "OFT_IOV2E_OFF_(%zu) bufp=%p sz=%zu "
+				      "tsz=%zd nbytes=%zu",
+				      i, req->oftrq_off,  OFT_IOV2E_OFF_(v), 
+				      p, size, tsize, nbytes);
 
 			b  = (char *)v->oftiov_base;
 			m = (struct offtree_memb *)v->oftiov_memb;
@@ -842,8 +844,10 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 		for (j=0; j < l; j++) {
 			v=dynarray_getpos(j);
 			DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
-				      "OFT_IOV2E_OFF_(%zu)",
-				      i, req->oftrq_off,  OFT_IOV2E_OFF_(v));
+				      "OFT_IOV2E_OFF_(%zu) bufp=%p sz=%zu "
+				      "tsz=%zd nbytes=%zu",
+				      i, req->oftrq_off,  OFT_IOV2E_OFF_(v), 
+				      p, size, tsize, nbytes);
 			if (!x)
 				/* These pages aren't involved, skip.
 				 */
@@ -988,7 +992,7 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 		roff += tlen;
 		size -= tlen;		
 		tlen  = MIN(SLASH_BMAP_SIZE, size);
-	}	
+	}
 	/* Now iterate across the array of completed offtree requests
 	 *   paging in data where needed.
 	 */
@@ -996,23 +1000,22 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 			       ATTR_SET(r->oftrq_op, OFTREQ_OP_PRFLP)))
 		if ((rc = msl_pages_blockingload(r, i)))
 			return (rc);
-		
-	/* Copying into the application buffer, and managing the offtree.
-	 */
-	//XXX Fix size so that it's relative to the request, 
-	//      not the user supplied size.
-	for (j=0, tlen=0; j < i; j++) {
-		if (op == MSL_READ)
-			tlen += msl_pages_copyout(r[j], i, (buf+tlen), 
-						  (size_t)(size-tlen), 
-						  (off+tlen));
-		else
-			tlen += msl_pages_copyin(r[j], i, (buf+tlen), 
-						 (size_t)(size-tlen), 
-						 (off+tlen));
-		msl_oftrq_destroy(r[j]);
-	}
-       
+
+	if (op == MSL_READ)
+		/* Copying into the application buffer, and managing 
+		 *  the offtree.
+		 */
+		tlen = msl_pages_copyout(r, i, buf, (size_t)size, off);
+	} else
+		/* Copy pages into the system cache and queue them for
+		 *  xfer to the IOS.
+		 */
+		tlen = msl_pages_copyin(r, i, buf, (size_t)size, off);
+
 	psc_assert(tlen == size);
+
+	for (j=0; j < i; j++)
+		msl_oftrq_destroy(r[j]);
+       
 	return ((int)size);
 }
