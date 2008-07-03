@@ -717,15 +717,7 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 				 *   is unaligned, the latter half of this
 				 *   stmt checks the end of the write.
 				 */
-				if (t || (tsize < (v->oftiov_nblks * 
-						   v->oftiov_blksz) - t)) {
-					/* Write into middle of iov, assert
-					 *  that the iov is the first or 
-					 *  last, otherwise the entire iov
-					 *  must be overwritten.
-					 */
-					psc_assert(!x || (i == (n-1) &&
-							  j == (l-1)));	
+				if (t) {
 					/* Partial iov writes must have been
 					 *  pre-faulted (ie. read).
 					 */
@@ -734,30 +726,34 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 					 */
 					psc_assert(ATTR_TEST(v->oftiov_flags, 
 							     OFTIOV_DATARDY));
-					/* Set the read-before-write notifier.
+					/* Set the read-before-write notifier
+					 *  (first iov).
 					 */
-					rbw = 1;
+					rbw = 1;			
+					b += t;
 				}
-				x  = 1;
-				b += t;
-				nbytes = MIN((v->oftiov_nblks * 
-					      v->oftiov_blksz) - t, tsize);
+				x = 1;
+				nbytes = MIN(OFT_IOVSZ(v) - t, tsize);
 
 			} else if (i == (n-1) && j == (l-1)) {
 				/* Last iov, if the write size is smaller than
 				 *  the iov the data must have been faulted in.
 				 */
-				if (tsize < (v->oftiov_nblks * 
-					     v->oftiov_blksz)) {
+				if (tsize < OFT_IOVSZ(v)) {
 					oftm_read_prepped_verify(m);
                                         psc_assert(ATTR_TEST(v->oftiov_flags, 
 							     OFTIOV_DATARDY));
+					/* Set the read-before-write notifier.
+					 *  (last iov).
+					 */
+					rbw = 1;
                                 }
-				nbytes = MIN((v->oftiov_nblks * 
-					      v->oftiov_blksz), tsize);
-			} else
-				nbytes = MIN((v->oftiov_nblks * 
-					      v->oftiov_blksz), tsize);
+				nbytes = MIN(OFT_IOVSZ(v), tsize);
+
+			} else {
+				psc_assert(tsize >= OFT_IOVSZ(v));
+				nbytes = MIN(OFT_IOVSZ(v), tsize);
+			}
 
 			freelock(&m->oft_lock);
 			
@@ -835,11 +831,9 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 					continue;
 				x  = 1;
 				b += t;				
-				nbytes = MIN(((v->oftiov_nblks * 
-					       v->oftiov_blksz) - t), tsize);
+				nbytes = MIN(OFT_IOVSZ(v) - t, tsize);
 			} else
-				nbytes = MIN((v->oftiov_nblks * 
-					      v->oftiov_blksz), tsize);
+				nbytes = MIN(OFT_IOVSZ(v), tsize);
 
 			m = (struct offtree_memb *)v->oftiov_memb;
 			spinlock(&m->oft_lock);

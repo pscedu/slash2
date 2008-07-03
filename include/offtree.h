@@ -101,6 +101,8 @@ power(size_t base, size_t exp)
 		OFT_IOV2E_OFF(iov, e);					\
 	}
 
+#define OFT_IOVSZ(iov) ((v)->oftiov_nblks * ((v)->oftiov_blksz))
+
 #define OFT_REQ2BLKSZ(req) ((req)->oftrq_root->oftr_minsz)
 
 /* Verify minsz is a power of 2 */
@@ -469,7 +471,7 @@ static inline void
 oftiov_2_iov(const struct offtree_iov *v, struct iovec *i)
 {
 	i->iov_base = v->oftiov_base;
-	i->iov_len  = v->oftiov_nblks * v->oftiov_blksz;
+	i->iov_len  = OFT_IOVSZ(v);
 }
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\

@@ -475,7 +475,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 					  niov->oftiov_nblks,
 					  (req->oftrq_off+(req->oftrq_nblks*iov->oftiov_blksz)), 
 					  OFT_REQ2E_OFF_(req),
-					  (iov->oftiov_off+(iov->oftiov_nblks * iov->oftiov_blksz)), 
+					  (iov->oftiov_off + OFT_IOVSZ(iov)), 
 					  OFT_IOV2E_OFF_(iov));
 
 				psc_assert(OFT_REQ2E_OFF_(req) <= OFT_IOV2E_OFF_(iov));
@@ -510,7 +510,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 					  niov->oftiov_nblks,
 					  (req->oftrq_off+(req->oftrq_nblks*iov->oftiov_blksz)), 
 					  OFT_REQ2E_OFF_(req),
-					  (iov->oftiov_off+(iov->oftiov_nblks * iov->oftiov_blksz)), 
+					  (iov->oftiov_off + OFT_IOVSZ(iov)), 
 					  OFT_IOV2E_OFF_(iov));
 
 				psc_assert(OFT_REQ2E_OFF_(req) <= OFT_IOV2E_OFF_(iov));

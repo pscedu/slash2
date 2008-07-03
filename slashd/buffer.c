@@ -508,8 +508,7 @@ sl_oftm_addref(struct offtree_memb *m)
 			nref->slbir_nblks  = miov->oftiov_nblks;
 			ATTR_SET(nref->slbir_flags, SLBREF_MAPPED);
 
-			oref->slbir_base  += (miov->oftiov_blksz *
-					      miov->oftiov_nblks);
+			oref->slbir_base  += OFT_IOVSZ(miov);
 
 			psclist_xadd_tail(&nref->slbir_lentry,
 					  &oref->slbir_lentry);
@@ -565,8 +564,7 @@ sl_oftm_addref(struct offtree_memb *m)
 			nref->slbir_nblks  = miov->oftiov_nblks;
 			ATTR_SET(nref->slbir_flags, SLBREF_MAPPED);
 
-			oref->slbir_base  += (miov->oftiov_blksz *
-					      miov->oftiov_nblks);
+			oref->slbir_base  += OFT_IOVSZ(miov);
 
 			psclist_xadd_tail(&nref->slbir_lentry,
 					  &oref->slbir_lentry);
