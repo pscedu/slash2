@@ -177,7 +177,8 @@ power(size_t base, size_t exp)
  */
 #define oftm_io_prepped_verify(m) {					\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
-		psc_assert(atomic_read(&(m)->oft_rdop_ref) > 0);	\
+		psc_assert((atomic_read(&(m)->oft_rdop_ref) > 0) ||	\
+			   (atomic_read(&(m)->oft_wrop_ref) > 0));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));  \
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_FREEING));	\
