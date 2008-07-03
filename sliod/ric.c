@@ -40,8 +40,8 @@ int
 slric_handle_read(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
-	struct srm_read_req *mq;
-	struct srm_read_rep *mp;
+	struct srm_io_req *mq;
+	struct srm_io_rep *mp;
 	struct iovec iov;
 	char fn[PATH_MAX];
 	ssize_t nbytes;
@@ -92,8 +92,8 @@ int
 slric_handle_write(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
-	struct srm_write_req *mq;
-	struct srm_write_rep *mp;
+	struct srm_io_req *mq;
+	struct srm_io_rep *mp;
 	struct iovec iov;
 	char fn[PATH_MAX];
 	ssize_t nbytes;
