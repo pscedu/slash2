@@ -491,7 +491,7 @@ msl_pages_track_pending(struct offtree_req *r,
 #define msl_pages_prefetch(r) msl_pages_getput(r, MSL_PAGES_GET)
 #define msl_pages_flush(r)    msl_pages_getput(r, MSL_PAGES_PUT)
 /**
- * msl_pages_prefetch - given an filled offtree request, check its iov's for unfaulted pages and initiate the prefect for those pages.  State will be saved in the request's offtree_fill structure.
+ * msl_pages_getput - given an filled offtree request, check its iov's for unfaulted pages and initiate the prefect for those pages.  State will be saved in the request's offtree_fill structure.
  * @r: the request.
  */
 __static void
@@ -519,14 +519,6 @@ msl_pages_getput(struct offtree_req *r, int op)
 	}
 
 	for (i=0; i < niovs; i++, n=0) {
-		if (ATTR_TEST(r->oftrq_op, OFTREQ_OP_WRITE))
-			/* On write, only check first and last pages
-			 *  if they have been specified for retrieval.
-			 */
-			if (!((i == 0 && ATTR_TEST(r->oftrq_op, OFTREQ_OP_PREFFP)) || 
-			      (i == niovs - 1) && ATTR_TEST(r->oftrq_op, OFTREQ_OP_PREFLP)))
-				continue;
-
 		v = dynarray_getpos(a, i);
 		DEBUG_OFFTIOV(PLL_TRACE, v, 
 			      "iov%d rq_off=%zu OFT_IOV2E_OFF_(%zu)",
@@ -700,6 +692,9 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 			if (!tsize)
 				goto out;
 
+			/* Set the starting buffer pointer into 
+			 *  our cache vector.
+			 */
 			b  = (char *)v->oftiov_base;
 
 			m = (struct offtree_memb *)v->oftiov_memb;
@@ -730,6 +725,9 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 					 *  (first iov).
 					 */
 					rbw = 1;			
+					/* Bump our cache vector destination
+					 *  pointer.
+					 */
 					b += t;
 				}
 				x = 1;
@@ -738,6 +736,10 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 			} else if (i == (n-1) && j == (l-1)) {
 				/* Last iov, if the write size is smaller than
 				 *  the iov the data must have been faulted in.
+				 * Note:  This does not need to be run in
+				 *   addition to the above 'if' since all that
+				 *   really needs to happen here is to check 
+				 *   for OFTIOV_DATARDY and set rbw=1.
 				 */
 				if (tsize < OFT_IOVSZ(v)) {
 					oftm_read_prepped_verify(m);
@@ -754,9 +756,12 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 				psc_assert(tsize >= OFT_IOVSZ(v));
 				nbytes = MIN(OFT_IOVSZ(v), tsize);
 			}
-
+			/* I'm thinking that we don't need to lock
+			 *  the memcpy..
+			 */
 			freelock(&m->oft_lock);
-			
+			/* Do the deed.
+			 */
 			memcpy(b, p, nbytes);
 			/* Notify others that this buffer is now valid for
 			 *  reads or unaligned writes.  Note that the buffer
