@@ -246,11 +246,17 @@ struct slash_fidgen fg; /* XXX go away */
 	u32 op; /* rw */
 };
 
+#define SRMIO_RD 0
+#define SRMIO_WR 1
+
+/* WRITE data is bulk request. */
+
 struct srm_io_rep {
 	s32 rc;
 	u32 size;
-	unsigned char buf[0];
 };
+
+/* READ data is in bulk reply. */
 
 struct srm_readdir_req {
 	u64 cfd;

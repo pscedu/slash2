@@ -375,8 +375,8 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
-	struct srm_read_rep *mp;
-	struct srm_read_req *mq;
+	struct srm_io_rep *mp;
+	struct srm_io_req *mq;
 	struct iovec iov;
 	struct fhent *fh;
 	int rc;
@@ -395,7 +395,7 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 	mq->cfd = fi->fh;
 	mq->size = size;
 	mq->offset = offset;
-
+	mq->op = SRMIO_WR;
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
@@ -724,8 +724,8 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
-	struct srm_write_rep *mp;
-	struct srm_write_req *mq;
+	struct srm_io_rep *mp;
+	struct srm_io_req *mq;
 	struct iovec iov;
 	int rc;
 
@@ -735,6 +735,7 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	mq->cfd = fi->fh;
 	mq->size = size;
 	mq->offset = offset;
+	mq->op = SRMIO_WR;
 	iov.iov_base = (void *)buf;
 	iov.iov_len = size;
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCI_BULK_PORTAL,
