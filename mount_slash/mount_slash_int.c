@@ -600,54 +600,7 @@ msl_pages_getput(struct offtree_req *r, int op)
 					new_cb;
 
 				dynarray_add(coalesce, v);
-
-				if (ATTR_TEST(r->oftrq_op, OFTREQ_OP_READ))
-					nc_blks += v->oftiov_nblks;				
-				else {
-					/* Read-before-write prefetch.
-					 */
-					psc_assert(ATTR_TEST(r->oftrq_op, OFTREQ_OP_WRITE));
-					if ((!i) && ATTR_TEST(r->oftrq_op, OFTREQ_OP_PRFFP)) {
-						/* This is first op, verify that nc_blks is 0.
-						 */
-						psc_assert(!nc_blks);
-						nc_blks = 1;
-						if (niovs > 1 || 
-						    !ATTR_TEST(r->oftrq_op, OFTREQ_OP_PRFLP)) {
-							/* Launch and goto the next loop iteration.
-							 */
-							launch_cb;
-							goto end_loop;
-						}
-					} 
-					if ((i == niovs - 1) &&
-					    ATTR_TEST(r->oftrq_op, OFTREQ_OP_PRFLP)) {
-						if (!ATTR_TEST(r->oftrq_op, OFTREQ_OP_PRFFP)) {	
-							/* Only prefetch the last page.
-							 */
-							psc_assert(!nc_blks);
-							nc_blks = 1;
-						} else {
-							/* Need to prefetch the first buf too.
-							 */
-							if (!i) {
-								/* Their adjacent in the same iov
-								 *  (which is the first iov).
-								 */ 
-								psc_assert(v->oftiov_nblks == 2);
-								psc_assert(nc_blks == 1);
-								nc_blks = 2;
-							} else {
-								/* Since we're no longer within iov[0], 
-								 *  nc_blks must be 0 even if OFTREQ_OP_PRFFP.
-								 */			
-								psc_assert(!nc_blks);
-								nc_blks = 1;
-							}
-						}
-						launch_cb;
-					}			
-				}
+				nc_blks += v->oftiov_nblks;
 				/* Just to be sure..
 				 */
 				psc_assert(nc_blks < slCacheNblks);
@@ -732,6 +685,7 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 	for (i=0, p=buf, tsize=size; i < n; i++) {
 		a = r[i].oftrq_darray;
 		l = dynarray_len(a);
+
 		for (j=0; j < l; j++) {
 			v = dynarray_getpos(j);
 			m = (struct offtree_memb *)v->oftiov_memb;
@@ -741,6 +695,8 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 				      "tsz=%zd nbytes=%zu",
 				      i, req->oftrq_off,  OFT_IOV2E_OFF_(v), 
 				      p, size, tsize, nbytes);
+			if (!tsize)
+				goto out;
 
 			b  = (char *)v->oftiov_base;
 			m = (struct offtree_memb *)v->oftiov_memb;
@@ -801,16 +757,13 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 			 *  sorted out.
 			 */
 			psc_waitq_wake(&m->oft_waitq);
-			psc_assert(tsize > 0);
-			if (!tsize)
-				goto out;
 		}				
-	}	
+		/* Queue these iov's for send to IOS.
+		 */
+		msl_pages_flush(r);		
+	}
  out:
 	psc_assert(!tsize);
-	/* Queue these iov's for send to IOS.
-	 */
-	msl_pages_flush(r);
 	return (size);
 }
 
