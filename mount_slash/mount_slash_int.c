@@ -424,7 +424,8 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	req->rq_interpret_reply = msl_io_cb;
         req->rq_async_args.pointer_arg[MSL_IO_CB_POINTER_SLOT] = a;
 	if (op == MSL_PAGES_PUT)
-		/* Stash the offtree root too.
+		/* On write, stash the offtree root for the callback
+		 *  so that the buffer can be unpinned.
 		 */
 		req->rq_async_args.pointer_arg[MSL_WRITE_CB_POINTER_SLOT] = 
 			r->oftrq_root;
@@ -442,7 +443,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 		 */
 		slb_inflight_cb(v, SL_INFLIGHT_INC);
 	}
-	/* Seems cputer-intuitive, but it's right.  MSL_PAGES_GET is a 
+	/* Seems counter-intuitive, but it's right.  MSL_PAGES_GET is a 
 	 * 'PUT' to the client, MSL_PAGES_PUSH is a server get.
 	 */
 	rsx_bulkclient(req, &desc, 
@@ -665,7 +666,7 @@ msl_pages_getput(struct offtree_req *r, int op)
  */
 __static size_t
 msl_pages_copyin(struct offtree_req *r, int n, char *buf, 
-		  size_t size, off_t off)
+		 size_t size, off_t off)
 {
 	struct dynarray     *a;
 	struct offtree_iov  *v;
@@ -676,6 +677,7 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 	size_t nbytes;
 	ssize_t tsize;
 	char  *b, *p;
+	int    rbw=0;
 
 	psc_assert(r[0].oftrq_off <= off);
 	/* Relative offset into the buffer.
@@ -699,9 +701,10 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 				goto out;
 
 			b  = (char *)v->oftiov_base;
+
 			m = (struct offtree_memb *)v->oftiov_memb;
 			spinlock(&m->oft_lock);
-
+			psc_assert(oftm_write_prepped_verify(m));
 			if (!x) {
 				/* The first req structure is always needed, 
 				 *  but not necessarily its first iov(s).
@@ -710,20 +713,35 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 					freelock(&m->oft_lock);
                                         continue;
 				}
+				/* 't' informs us that the start of the write
+				 *   is unaligned, the latter half of this
+				 *   stmt checks the end of the write.
+				 */
 				if (t || (tsize < (v->oftiov_nblks * 
 						   v->oftiov_blksz) - t)) {
-					/* Write into middle of iov, verify 
-					 *  that the iov is DATARDY.
+					/* Write into middle of iov, assert
+					 *  that the iov is the first or 
+					 *  last, otherwise the entire iov
+					 *  must be overwritten.
 					 */
-					oftm_read_prepped_verify(m); 
+					psc_assert(!x || (i == (n-1) &&
+							  j == (l-1)));	
+					/* Partial iov writes must have been
+					 *  pre-faulted (ie. read).
+					 */
+					oftm_read_prepped_verify(m);
+					/* Verify that the iov is DATARDY.
+					 */
 					psc_assert(ATTR_TEST(v->oftiov_flags, 
 							     OFTIOV_DATARDY));
+					/* Set the read-before-write notifier.
+					 */
+					rbw = 1;
 				}
 				x  = 1;
 				b += t;
-				nbytes = MIN(((v->oftiov_nblks * 
-					       v->oftiov_blksz) - t), 
-					     (tsize));
+				nbytes = MIN((v->oftiov_nblks * 
+					      v->oftiov_blksz) - t, tsize);
 
 			} else if (i == (n-1) && j == (l-1)) {
 				/* Last iov, if the write size is smaller than
@@ -741,18 +759,27 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 				nbytes = MIN((v->oftiov_nblks * 
 					      v->oftiov_blksz), tsize);
 
+			freelock(&m->oft_lock);
+			
 			memcpy(b, p, nbytes);
 			/* Notify others that this buffer is now valid for
 			 *  reads or unaligned writes.  Note that the buffer
 			 *  must still be pinned for it has not been sent yet.
 			 */
-			spinlock(&v->oftiov_lock);
-			ATTR_SET(v->oftiov_flags, OFTIOV_DATARDY);
-			freelock(&v->oftiov_lock);
-
+			if (rbw) {
+				psc_assert(ATTR_TEST(v->oftiov_flags, 
+						     OFTIOV_DATARDY));
+				/* Drop the rbw reference.
+				 */
+				atomic_dec(&m->oft_rdop_ref);
+				rbw = 0;
+			} else {
+				spinlock(&v->oftiov_lock);
+				ATTR_SET(v->oftiov_flags, OFTIOV_DATARDY);
+				freelock(&v->oftiov_lock);
+			}
 			p += nbytes
 			tsize -= nbytes;
-			freelock(&m->oft_lock);
 			/* XXX the details of this wakeup may need to be 
 			 *  sorted out.
 			 */
@@ -760,7 +787,7 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
 		}				
 		/* Queue these iov's for send to IOS.
 		 */
-		msl_pages_flush(r);		
+		msl_pages_flush(r);
 	}
  out:
 	psc_assert(!tsize);
@@ -773,7 +800,7 @@ msl_pages_copyin(struct offtree_req *r, int n, char *buf,
  *
  */
 __static size_t
-msl_pages_copyout(struct offtree_req *r, int n, char *buf,
+msl_pages_copyout(struct offtree_req *r, int n, char *buf, 
 		  size_t size, off_t off)
 {
 	struct dynarray     *a;
@@ -801,20 +828,11 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 				      "tsz=%zd nbytes=%zu",
 				      i, req->oftrq_off,  OFT_IOV2E_OFF_(v), 
 				      p, size, tsize, nbytes);
-			if (!x)
+			if (!x) {
 				/* These pages aren't involved, skip.
 				 */
 				if (r[x].oftrq_off > OFT_IOV2E_OFF_(v))
 					continue;
-
-			m = (struct offtree_memb *)v->oftiov_memb;
-			spinlock(&m->oft_lock);
-			oftm_read_prepped_verify(m); 			
-			psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY));
-
-			b  = (char *)v->oftiov_base;			
-
-			if (!x) {
 				x  = 1;
 				b += t;				
 				nbytes = MIN(((v->oftiov_nblks * 
@@ -822,7 +840,14 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 			} else
 				nbytes = MIN((v->oftiov_nblks * 
 					      v->oftiov_blksz), tsize);
-			
+
+			m = (struct offtree_memb *)v->oftiov_memb;
+			spinlock(&m->oft_lock);
+			oftm_read_prepped_verify(m); 			
+			psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY));
+			freelock(&m->oft_lock);
+
+			b  = (char *)v->oftiov_base;
 			memcpy(p, b, nbytes);
 			p += nbytes;			
 			tsize -= nbytes;
@@ -832,7 +857,6 @@ msl_pages_copyout(struct offtree_req *r, int n, char *buf,
 			 */
 			(r->oftrq_root->oftr_slbpin_cb)(v, SL_BUFFER_UNPIN);
 			atomic_dec(&m->oft_rdop_ref);
-			freelock(&m->oft_lock);			
 			/* XXX the details of this wakeup may need to be
 			 *  sorted out.  The main thing to know is that there
 			 *  are several sleepers / wakers accessing this q
