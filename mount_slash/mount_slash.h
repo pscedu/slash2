@@ -35,6 +35,8 @@ struct io_server_conn {
 };
 
 void rpc_svc_init(void);
+int slrcm_connect(const char *);
+int slrci_connect(const char *);
 
 void *msctlthr_begin(void *);
 
