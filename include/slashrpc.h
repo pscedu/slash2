@@ -236,8 +236,19 @@ struct slash_fidgen fg; /* XXX for now, put in dsig later */
 	s32 rc;
 };
 
+#if 0
+struct srm_io_secret {
+	struct srm_open_secret sig_m;
+	size_t wndmap_pos;
+	u64 magic;
+	u32 size;	/* write(2) len */
+	crc_t crc;	/* crc of write data */
+	granting mds server id
+};
+#endif
+
 struct srm_io_req {
-//	struct srm_rw_secret crypt_i;
+//	struct srm_io_secret crypt_i;
 struct slash_fidgen fg; /* XXX go away */
 	u64 cfd;
 	u32 size;
@@ -335,18 +346,6 @@ struct srm_utimes_req {
 	struct timeval times[2];
 	u32 fnlen;
 };
-
-#if 0
-struct srm_rw_secret {
-	struct srm_open_secret sig_m;
-	size_t wndmap_pos;
-	u64 magic;
-	u32 size;	/* write(2) len */
-	crc_t crc;	/* crc of write data */
-	granting mds server id
-};
-#endif
-
 
 struct srm_generic_rep {
 	s32 rc;

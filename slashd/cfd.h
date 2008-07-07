@@ -22,8 +22,8 @@ struct cfdent *
 	cfdinsert(u64, struct pscrpc_export *, slfid_t);
 int	cfdcmp(const void *, const void *);
 void	cfdnew(u64 *, struct pscrpc_export *, slfid_t);
-int	cfd2fid(struct pscrpc_export *rq, u64 cfd, slfid_t *);
-int	cfdfree(struct pscrpc_export *rq, u64 cfd);
+int	cfd2fid(struct pscrpc_export *, u64, slfid_t *);
+int	cfdfree(struct pscrpc_export *, u64);
 
 SPLAY_PROTOTYPE(cfdtree, cfdent, entry, cfdcmp);
 
