@@ -1,19 +1,19 @@
 .\" $Id$
-.Dd July 3, 2008
-.Dt SLIOD 8
+.Dd July 7, 2008
+.Dt SLASHD 8
 .ds volume Pittsburgh Supercomputing Center
 .Os http://www.psc.edu/
 .Sh NAME
-.Nm sliod
-.Nd slash I/O server daemon
+.Nm slashd
+.Nd slash metadata server daemon
 .Sh SYNOPSIS
-.Nm sliod
+.Nm slashd
 .Op Fl f Ar conf
 .Op Fl S Ar socket
 .Sh DESCRIPTION
 The
 .Nm
-daemon serves I/O requests to slash file system clients.
+daemon serves metadata requests to slash file system clients.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
@@ -26,9 +26,9 @@ See
 for more details.
 .It Fl S Ar socket
 Specify an alternative named socket file for control operations
-.Pq see Xr slioctl 8 .
+.Pq see Xr slctl 8 .
 Defaults to
-.Pa /var/run/sliod.sock .
+.Pa /var/run/slashd.sock .
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
@@ -36,7 +36,7 @@ Defaults to
 default
 .Nm
 configuration
-.It Pa /var/run/sliod.sock
+.It Pa /var/run/slashd.sock
 default
 .Nm
 control socket
@@ -45,5 +45,5 @@ control socket
 .Xr slash.conf 5 ,
 .\" .Xr lnet-env 7 ,
 .Xr mount_slash 8 ,
-.Xr slashd 8 ,
-.Xr slioctl 8
+.Xr slctl 8 ,
+.Xr sliod 8
