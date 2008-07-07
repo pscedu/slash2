@@ -14,8 +14,6 @@
 #define OFTIOV_CB_SINGLE_PTR_SLOT 1
 #define OFTIOV_CB_COALESCED_PTR_SLOT 2
 
-typedef 
-
 static inline size_t
 power(size_t base, size_t exp)
 {
