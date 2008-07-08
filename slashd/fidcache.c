@@ -45,7 +45,8 @@ bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f)
 	atomic_set(&b->bcm_refcnt, 0);
 	b->bcm_oftr = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
 				     SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,
-				     f, sl_buffer_alloc, sl_oftm_addref);
+				     f, sl_buffer_alloc, sl_oftm_addref, 
+				     sl_oftiov_pin_cb);
 	psc_assert(b->bcm_oftr);
 }
 
