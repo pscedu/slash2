@@ -61,9 +61,8 @@ sl_buffer_lru_assertions(struct sl_buffer *b)
 	psc_assert(psclist_conjoint(&b->slb_fcm_lentry));
 	psc_assert(atomic_read(&b->slb_ref));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
-	psc_assert(!atomic_read(&b->slb_inflight));
-	psc_assert((!atomic_read(&iov->slb_inflight)) &&
-                   (!atomic_read(&iov->slb_inflpndg)));
+	psc_assert((!atomic_read(&b->slb_inflight)) &&
+                   (!atomic_read(&b->slb_inflpndg)));
 }
 
 static void
@@ -76,10 +75,9 @@ sl_buffer_fresh_assertions(struct sl_buffer *b)
 	psc_assert(psclist_empty(&b->slb_iov_list));
 	psc_assert(b->slb_base);
 	psc_assert(!atomic_read(&b->slb_ref));
-	psc_assert(!atomic_read(&b->slb_inflight));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
-	psc_assert((!atomic_read(&iov->slb_inflight)) &&
-                   (!atomic_read(&iov->slb_inflpndg)));
+	psc_assert((!atomic_read(&b->slb_inflight)) &&
+                   (!atomic_read(&b->slb_inflpndg)));
 }
 
 static void
@@ -96,10 +94,10 @@ sl_buffer_pin_assertions(struct sl_buffer *b)
 	psc_assert(b->slb_base);
 	psc_assert((atomic_read(&b->slb_ref) > 0) ||
 		   (atomic_read(&b->slb_unmapd_ref) > 0));
-	psc_assert((atomic_read(&iov->slb_inflight) > 0) ||
-		   (atomic_read(&iov->slb_inflpndg) > 0));	
-	psc_assert(atomic_read(&iov->slb_inflpndg) >= 
-		   (atomic_read(&iov->slb_inflight)));
+	psc_assert((atomic_read(&b->slb_inflight) > 0) ||
+		   (atomic_read(&b->slb_inflpndg) > 0));	
+	psc_assert(atomic_read(&b->slb_inflpndg) >= 
+		   (atomic_read(&b->slb_inflight)));
 }
 
 static void
@@ -137,8 +135,10 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 	} else
 		psc_fatalx("Invalid listcache address %p", lc);
 
-	ureqlock(&slb->slb_lock, locked);
 	lc_queue(lc, &slb->slb_mgmt_lentry);
+	slb->slb_lc_owner = lc;
+
+	ureqlock(&slb->slb_lock, locked);
 }
 
 /**
@@ -636,7 +636,8 @@ sl_oftiov_pin_cb(struct offtree_iov *iov, int op)
 	struct sl_buffer    *slb = (struct sl_buffer *)iov->oftiov_pri;
 	/* Saneness.
 	 */
-	LOCK_ENSURE(&m->oft_lock);
+	//LOCK_ENSURE(&m->oft_lock);
+	psc_assert(m);
 	psc_assert(m->oft_norl.oft_iov == iov);
 	/* If there is no refcnt by the time we're called then no
 	 *   guarantee can be made that this slb is currently being freed.
@@ -647,17 +648,17 @@ sl_oftiov_pin_cb(struct offtree_iov *iov, int op)
 		   atomic_read(&m->oft_wrop_ref));
 
 	DEBUG_OFFTIOV(PLL_TRACE, iov, "op=%d", op);
-	DEBUG_SLB(PLL_TRACE, s, "op=%d", op);
+	DEBUG_SLB(PLL_TRACE, slb, "op=%d", op);
 
 	spinlock(&slb->slb_lock);
 	if (op == SL_BUFFER_PIN)
 		sl_buffer_pin_locked(slb);
-
-	else if (op == SL_BUFFER_UNPIN)
+	
+	else if (op == SL_BUFFER_UNPIN) {
 		sl_buffer_unpin_locked(slb);
-	else 
+	} else 
 		psc_fatalx("Unknown op type %d", op);
-
+	
 	freelock(&slb->slb_lock);       	
 }
 
