@@ -1,7 +1,5 @@
-
 #include "offtree.h"
 #include "psc_util/alloc.h"
-
 
 static void
 offtree_iov_array_dump(const struct dynarray *a)
@@ -397,7 +395,7 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 
 #define NEW_PARTIAL_IOV(n, o, off, nblks)				\
 	do {								\
-		(n) = PSCALLOC(sizeof(struct offtree_req));		\
+		(n) = PSCALLOC(sizeof(struct offtree_iov));		\
 		(n)->oftiov_base  = (o)->oftiov_base +			\
 			(off * (o)->oftiov_blksz);			\
 		(n)->oftiov_blksz = (o)->oftiov_blksz;			\
@@ -519,6 +517,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 					ATTR_SET(niov->oftiov_flags, OFTIOV_REMAP_END);
 
 				req->oftrq_memb->oft_norl.oft_iov = niov;
+				niov->oftiov_memb = req->oftrq_memb;
 				ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_SRC);
 				DEBUG_OFFTIOV(PLL_INFO, niov, "short remap (niov)");
 			} else {
@@ -590,7 +589,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			 */
 			//printf ("WIDTH = %hhu\n", myreq.oftrq_width);
 			rg_soff = OFT_REQ_STARTOFF(&myreq);
-			rg_eoff = OFT_REQ_ENDOFF(&myreq);		
+			rg_eoff = OFT_REQ_ENDOFF(&myreq);
 			/* This should always be true 
 			 */
 			psc_trace("i_soffa="LPX64", rg_soff="LPX64, 
@@ -638,7 +637,8 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
                                   i_offa, tiov->oftiov_off + (blkoff * tiov->oftiov_blksz),
                                   myreq.oftrq_nblks, blkoff);
 
-			psc_assert(tiov->oftiov_off + (blkoff * tiov->oftiov_blksz) 
+			psc_assert((off_t)(tiov->oftiov_off + 
+					   (blkoff * tiov->oftiov_blksz))
                                    == myreq.oftrq_off);
 
 			/* Factor in partially used iov's 
@@ -708,12 +708,14 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 	OFT_REQ2SE_OFFS(req, nr_soffa, nr_eoffa);
 
 	if (!ATTR_TEST(m->oft_flags, OFT_ALLOCPNDG)) {
+		int locked;
 		iov = m->oft_norl.oft_iov;
 		/* Intent to allocate must be determined ahead of time.
 		 */
 		psc_assert(iov && iov->oftiov_base && iov->oftiov_nblks);
 		/* Tell the underlying cache subsystem to pin this guy.
 		 */
+		locked = reqlock(&m->oft_lock);
 		(req->oftrq_root->oftr_slbpin_cb)(iov, SL_BUFFER_PIN);
 		/* Get the start and end offsets.
 		 */
@@ -735,6 +737,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			 *  for adding memory.
 			 */
 			ATTR_SET(m->oft_flags, OFT_ALLOCPNDG);
+
+		ureqlock(&m->oft_lock, locked);
 	}	
 	/* Allocate the blocks taking into accout a currently 
 	 *   held buffer (have_buffer) in 'iov'.  
