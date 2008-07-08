@@ -28,6 +28,7 @@
 #include "mount_slash.h"
 #include "slashrpc.h"
 #include "offtree.h"
+#include "fidcache.h"
 
 __static void
 msl_oftrq_build(struct offtree_req *r, struct bmap_cache_memb *b, 
