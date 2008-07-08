@@ -11,12 +11,12 @@
 
 const char *progname;
 
-size_t mapSize     = (1024*1024*512);
+size_t mapSize     = (1024*1024*128);
 size_t nblksPerReq = 1;
 size_t iterScheme  = 0;
 size_t overLapBlks = 1;
 size_t iterations  = 2;
-size_t treeDepth   = 6;
+size_t treeDepth   = 5;
 size_t treeWidth   = 8;
 off_t  soffa=0;
 
@@ -117,7 +117,7 @@ process_blk(void *b, off_t o, int rw)
 			p[i] = bnum;
 		else {
 			if (p[i] != bnum) {
-				fprintf(stderr, "Err bnum=%llu but p[%zu]\n", 
+				fprintf(stderr, "Err bnum="LPX64" but p[%zu]\n", 
 					bnum, p[i]);
 				return 1;
 			}
@@ -156,8 +156,8 @@ process_blks(struct offtree_req *req, int rw)
 				if (OFT_REQ_ENDOFF(req) < (v->oftiov_off + (j*slCacheBlkSz)))
 					goto out;
 				else {
-					fprintf(stderr, "iov=%p buf=%p voff=%llx roff=%llx "
-						"v->oftiov_base=%p v->oftiov_nblks=%zu\n", 
+					fprintf(stderr, "iov=%p buf=%p voff="LPX64" roff="LPX64
+						" v->oftiov_base=%p v->oftiov_nblks=%zu\n", 
 						v, (void *)((v->oftiov_base + (j*slCacheBlkSz))), 
 						(off_t)(v->oftiov_off + (j*slCacheBlkSz)),
 						(off_t)(o + (nbufs*slCacheBlkSz)),
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 
 	oftr = offtree_create(mapSize, slCacheBlkSz, 
 			      treeWidth, treeDepth, &fcm, 
-			      sl_buffer_alloc, sl_oftm_addref);
+			      sl_buffer_alloc, sl_oftm_addref, sl_oftiov_pin_cb);
 
 	req.oftrq_darray = PSCALLOC(sizeof(struct dynarray));
 
@@ -211,6 +211,7 @@ int main(int argc, char **argv)
 		req.oftrq_memb   = &oftr->oftr_memb;
 		req.oftrq_nblks  = nblksPerReq;	
 		req.oftrq_width  = req.oftrq_depth = 0;
+		req.oftrq_op     = OFTREQ_OP_READ;
 		dynarray_init(req.oftrq_darray);
 		memset(req.oftrq_darray, 0, sizeof(struct dynarray));
 		offtree_region_preprw(&req);
@@ -226,6 +227,7 @@ int main(int argc, char **argv)
                 req.oftrq_memb   = &oftr->oftr_memb;
                 req.oftrq_nblks  = nblksPerReq;
                 req.oftrq_width  = req.oftrq_depth = 0;
+		req.oftrq_op     = OFTREQ_OP_READ;
                 dynarray_init(req.oftrq_darray);
                 memset(req.oftrq_darray, 0, sizeof(struct dynarray));
                 offtree_region_preprw(&req);
@@ -237,3 +239,48 @@ int main(int argc, char **argv)
 
 	return (0);
 };
+
+#if 0
+__static void
+msl_oftrq_build(struct offtree_req *r, struct bmap_cache_memb *b, 
+		u64 cfd, off_t off, size_t len, int op)
+{
+	/* Ensure the offset fits within the range and mask off the
+	 *  lower bits to align with the offtree's page size.
+	 */
+	psc_assert((off + len) <= SLASH_BMAP_SIZE);
+	psc_assert(op == OFTREQ_OP_WRITE || 
+		   op == OFTREQ_OP_READ);
+
+	r->oftrq_darray = PSCALLOC(sizeof(struct dynarray));
+	r->oftrq_root   = &b->bcm_oftree;
+	r->oftrq_memb   = &b->bcm_oftree.oftr_memb;
+	r->oftrq_cfd    = cfd;
+	r->oftrq_width  = r->oftrq_depth = 0;
+	r->oftrq_off    = off & SLASH_BMAP_BLKMASK;
+	r->oftrq_op     = op;
+	r->oftrq_off    = off & SLASH_BMAP_BLKMASK;
+	/* Add the bits which were masked above.
+	 */
+	len += off & (~SLASH_BMAP_BLKMASK);
+
+	//r->oftrq_nblks  = ((r->oftrq_off + len) / SLASH_BMAP_BLKSZ) +
+	//	(len & (~SLASH_BMAP_BLKMASK) ? 1 : 0);
+
+	r->oftrq_nblks  = (len << SLASH_BMAP_SHIFT) +
+		(len & (~SLASH_BMAP_BLKMASK) ? 1 : 0);	
+	       
+	if (op == OFTREQ_OP_WRITE) {
+		/* Determine is 'read before write' is needed.
+		 */
+		if (off & (~SLASH_BMAP_BLKMASK))
+			r->oftrq_op |= OFTREQ_OP_PRFFP; 
+
+		if (r->oftrq_nblks > 1)
+			if (len & (~SLASH_BMAP_BLKMASK))
+				r->oftrq_op |= OFTREQ_OP_PRFLP;
+
+	DEBUG_OFFTREQ(PLL_TRACE, r, "newly built request");
+}
+
+#endif

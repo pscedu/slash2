@@ -20,6 +20,7 @@ SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/threadtable.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
+SRCS+=		${PFL_BASE}/psc_util/list.c
 
 DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
 DEFINES+=	-DHAVE_LIBPTHREAD -DHAVE_LIBPTHREAD_DEFINED

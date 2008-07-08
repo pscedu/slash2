@@ -1,9 +1,9 @@
 #!/bin/bash
 
-iters=200
-ppslb=128
-nslbs=200
-mapsz=512
+iters=50
+ppslb=32
+nslbs=128
+mapsz=128
 
 o=0; 
 while [ $o -lt 127 ]
