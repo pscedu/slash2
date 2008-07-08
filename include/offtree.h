@@ -14,6 +14,9 @@
 #define OFTIOV_CB_SINGLE_PTR_SLOT 1
 #define OFTIOV_CB_COALESCED_PTR_SLOT 2
 
+#define SL_BUFFER_PIN 0
+#define SL_BUFFER_UNPIN 1
+
 static inline size_t
 power(size_t base, size_t exp)
 {
@@ -82,24 +85,24 @@ power(size_t base, size_t exp)
         } 
 
 #define OFT_REQ2E_OFF_(req)						\
-	((req)->oftrq_off + ((req)->oftrq_nblks *			\
-			     (req)->oftrq_root->oftr_minsz) - 1)
+	(off_t)(((req)->oftrq_off + ((req)->oftrq_nblks *		\
+				     (req)->oftrq_root->oftr_minsz) - 1))
 
 #define OFT_IOV2E_OFF(iov, e) {						\
 		e = (((iov)->oftiov_off + ((iov)->oftiov_nblks *	\
 					   (iov)->oftiov_blksz)) - 1);	\
 	}
 
-#define OFT_IOV2E_OFF_(iov)					\
-	(((iov)->oftiov_off + ((iov)->oftiov_nblks *		\
-			       (iov)->oftiov_blksz)) - 1)
+#define OFT_IOV2E_OFF_(iov)						\
+	(off_t)((((iov)->oftiov_off + ((iov)->oftiov_nblks *		\
+				       (iov)->oftiov_blksz)) - 1))
 
 #define OFT_IOV2SE_OFFS(iov, s, e) {					\
 		s = (iov)->oftiov_off;					\
 		OFT_IOV2E_OFF(iov, e);					\
 	}
 
-#define OFT_IOVSZ(iov) ((v)->oftiov_nblks * ((v)->oftiov_blksz))
+#define OFT_IOVSZ(iov) ((iov)->oftiov_nblks * ((iov)->oftiov_blksz))
 
 #define OFT_REQ2BLKSZ(req) ((req)->oftrq_root->oftr_minsz)
 
@@ -126,7 +129,8 @@ power(size_t base, size_t exp)
 			psc_assert(!(m)->oft_norl.oft_iov);		\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
-		psc_assert((m) == (m)->oft_norl.oft_iov.oftiov_memb);	\
+		if ((m)->oft_norl.oft_iov)				\
+			psc_assert((m) == (m)->oft_norl.oft_iov->oftiov_memb); \
 	}								\
 
 #define oftm_splitting_leaf_verify(m) {					\
@@ -161,8 +165,6 @@ power(size_t base, size_t exp)
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
 		psc_assert(!atomic_read(&(m)->oft_rdop_ref));		\
 		psc_assert(!atomic_read(&(m)->oft_wrop_ref));		\
-		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_READPNDG));	\
-		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_WRITEPNDG));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
 		psc_assert(!(m)->oft_norl.oft_iov);			\
 	}
@@ -253,10 +255,12 @@ enum oft_iov_flags {
 		_psclog(__FILE__, __func__, __LINE__,			\
 			PSS_OTHER, level, 0,				\
 			" oftiov@%p b:%p o:"LPX64" l:"LPD64		\
-			" bsz:"LPD64" pri:%p fl:"OFFTIOV_FLAGS_FMT" "fmt, \
+			" bsz:"LPD64" pri:%p fl:"OFFTIOV_FLAGS_FMT	\
+			" m:%p "fmt,					\
 			iov, iov->oftiov_base, iov->oftiov_off,		\
 			iov->oftiov_nblks, iov->oftiov_blksz,	        \
 			iov->oftiov_pri, DEBUG_OFFTIOV_FLAGS(iov),	\
+			iov->oftiov_memb,				\
 			## __VA_ARGS__);				\
 	} while(0)
 
@@ -308,8 +312,6 @@ enum oft_attributes {
 #define DEBUG_OFTM_FLAGS(oft)					    \
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_NODE),      "N"), \
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_LEAF),      "L"), \
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_READPNDG),  "R"), \
-	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_WRITEPNDG), "W"), \
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ALLOCPNDG), "A"), \
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_ROOT),      "r"), \
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_FREEING),   "F"), \
@@ -318,7 +320,7 @@ enum oft_attributes {
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_UNINIT),    "u"), \
 	OFTM_FLAG(ATTR_TEST((oft)->oft_flags, OFT_MCHLDGROW), "g")
 		
-#define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
+#define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_OFT(level, oft, fmt, ...)					\
 	do {								\
@@ -387,7 +389,7 @@ struct offtree_req {
 	struct offtree_memb  *oftrq_memb;   /* pointer to request node head */
 	struct dynarray      *oftrq_darray; /* sorted array of buffer iov's */
 	off_t                 oftrq_off;    /* aligned, file-logical offset  */
-	ssize_t               oftrq_nblks;  /* number of blocks requested */
+	size_t                oftrq_nblks;  /* number of blocks requested */
 	u8                    oftrq_op;
  	u8                    oftrq_depth;
 	u16                   oftrq_width;
@@ -404,15 +406,29 @@ enum offtree_req_op_types {
 	OFTREQ_OP_PRFLP = (1<<4)
 };
 
-#define REQ_OFTM_FLAGS_FMT "%s%s%s%s%s"
+#define REQ_OFTRQ_FLAGS_FMT "%s%s%s%s%s"
 
 #define DEBUG_OFTRQ_FLAGS(oftrq)				     \
-	OFTM_FLAG(ATTR_TEST((oftrq)->oft_op, OFTREQ_OP_NOOP),  "N"), \
-	OFTM_FLAG(ATTR_TEST((oftrq)->oft_op, OFTREQ_OP_READ),  "R"), \
-	OFTM_FLAG(ATTR_TEST((oftrq)->oft_op, OFTREQ_OP_WRITE), "W"), \
-	OFTM_FLAG(ATTR_TEST((oftrq)->oft_op, OFTREQ_OP_PRFFP), "p"), \
-	OFTM_FLAG(ATTR_TEST((oftrq)->oft_op, OFTREQ_OP_PRFLP), "l")
+	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_NOOP),  "N"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_READ),  "R"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_WRITE), "W"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_PRFFP), "p"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_PRFLP), "l")
 
+#define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
+	do {								\
+		_psclog(__FILE__, __func__, __LINE__,			\
+			PSS_OTHER, level, 0,				\
+			" oftr@%p o:"LPX64" l:"LPD64" node:%p darray:%p"\
+			" root:%p op:%hhu d:%hhu w:%hu "		\
+			REQ_OFTRQ_FLAGS_FMT" "fmt,			\
+			oftr, (oftr)->oftrq_off, (oftr)->oftrq_nblks,	\
+			(oftr)->oftrq_memb, (oftr)->oftrq_darray,	\
+			(oftr)->oftrq_root, (oftr)->oftrq_op,		\
+			(oftr)->oftrq_depth, (oftr)->oftrq_width,	\
+			DEBUG_OFTRQ_FLAGS(oftr),			\
+			## __VA_ARGS__);				\
+	} while(0)
 
 static inline int 
 oft_child_get(off_t o, struct offtree_root *r, int d, int abs_width)
@@ -473,24 +489,10 @@ oftiov_2_iov(const struct offtree_iov *v, struct iovec *i)
 	i->iov_len  = OFT_IOVSZ(v);
 }
 
-#define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
-	do {								\
-		_psclog(__FILE__, __func__, __LINE__,			\
-			PSS_OTHER, level, 0,				\
-			" oftr@%p o:"LPX64" l:"LPD64" node:%p darray:%p"\
-			" root:%p op:%hhu d:%hhu w:%hu "		\
-			REQ_OFTM_FLAGS_FMT" "fmt,			\
-			oftr, (oftr)->oftrq_off, (oftr)->oftrq_nblks,	\
-			(oftr)->oftrq_memb, (oftr)->oftrq_darray,	\
-			(oftr)->oftrq_root, (oftr)->oftrq_op,		\
-			(oftr)->oftrq_depth, (oftr)->oftrq_width,	\
-			DEBUG_OFTRQ_FLAGS(oftr),			\
-			## __VA_ARGS__);				\
-	} while(0)
-
 
 extern struct offtree_root *
-offtree_create(size_t, size_t, u32, u32, void *, offtree_alloc_fn, offtree_putnode_cb);
+offtree_create(size_t, size_t, u32, u32, void *, offtree_alloc_fn, 
+	       offtree_putnode_cb, offtree_slbpin_cb);
 
 extern int 
 offtree_region_preprw(struct offtree_req *);
