@@ -20,8 +20,8 @@ list_cache_t slBufsFree;
 list_cache_t slBufsLru;
 list_cache_t slBufsPin;
 
-u32 slCacheBlkSz=32768;
-u32 slCacheNblks=32;
+int slCacheBlkSz=32768;
+int slCacheNblks=32;
 u32 slbFreeDef=100;
 u32 slbFreeMax=200;
 u32 slbFreeInc=10;
@@ -100,6 +100,7 @@ sl_buffer_pin_assertions(struct sl_buffer *b)
 		   (atomic_read(&b->slb_inflight)));
 }
 
+#if 0
 static void
 sl_buffer_inflight_assertions(struct sl_buffer *b)
 {
@@ -107,6 +108,7 @@ sl_buffer_inflight_assertions(struct sl_buffer *b)
         psc_assert(!ATTR_TEST(b->slb_flags, SLB_INFLIGHT));  
 	psc_assert(atomic_read(&b->slb_inflight));
 }
+#endif
 
 static void
 sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)

@@ -102,7 +102,7 @@ power(size_t base, size_t exp)
 		OFT_IOV2E_OFF(iov, e);					\
 	}
 
-#define OFT_IOVSZ(iov) ((iov)->oftiov_nblks * ((iov)->oftiov_blksz))
+#define OFT_IOVSZ(iov) (ssize_t)((iov)->oftiov_nblks * ((iov)->oftiov_blksz))
 
 #define OFT_REQ2BLKSZ(req) ((req)->oftrq_root->oftr_minsz)
 
@@ -188,7 +188,7 @@ power(size_t base, size_t exp)
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_RELEASE));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_MCHLDGROW));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_UNINIT));	\
-		psc_assert((m) == (m)->oft_norl.oft_iov.oftiov_memb);	\
+		psc_assert((m) == (m)->oft_norl.oft_iov->oftiov_memb);	\
 }
 
 #define oftm_read_prepped_verify(m) {					\

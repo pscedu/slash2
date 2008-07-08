@@ -13,8 +13,8 @@
 
 #include "offtree.h"
 
-extern u32 slCacheBlkSz;
-extern u32 slCacheNblks;
+extern int slCacheBlkSz;
+extern int slCacheNblks;
 extern u32 slbFreeDef;
 extern u32 slbFreeMax;
 
@@ -208,7 +208,7 @@ sl_oftiov_pin_cb(struct offtree_iov *iov, int op);
 
 #define slb_inflight_cb(iov, op) {			\
 		if (slInflightCb)			\
-			slInflightCb(iov, op);		\
+			(*slInflightCb)(iov, op);	\
 	}
 
 #define SL_INFLIGHT_INC 0

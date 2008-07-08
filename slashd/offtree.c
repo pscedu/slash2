@@ -1,6 +1,7 @@
 #include "offtree.h"
 #include "psc_util/alloc.h"
 
+#if 0
 static void
 offtree_iov_array_dump(const struct dynarray *a)
 {
@@ -12,7 +13,7 @@ offtree_iov_array_dump(const struct dynarray *a)
 		DEBUG_OFFTIOV(PLL_WARN, v, "offtree_iov_array_dump");
 	}
 }
-
+#endif
 
 struct offtree_root *
 offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth, 
@@ -48,7 +49,7 @@ void
 offtree_iovs_check(const struct offtree_iov *iovs, int niovs) 
 {
 	int   i, j;
-	off_t e;
+	off_t e=0;
 
 	for (i=0; i < niovs; i++, iovs++) {
 		/* No empty iovs */		
@@ -646,7 +647,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			b = (tiov->oftiov_nblks - blkoff);
 			psc_assert(b > 0);
 
-			while (b < myreq.oftrq_nblks) {
+			while (b < (ssize_t)myreq.oftrq_nblks) {
 				struct offtree_iov *piov = tiov;
 				tiov = dynarray_getpos(req->oftrq_darray, 
 						       iovoff + tiov_cnt);
@@ -660,7 +661,8 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			/* Bump iovoff, subtract one if the current
 			 *   iov in underfilled.
 			 */
-			iovoff += tiov_cnt - ((b > myreq.oftrq_nblks) ? 1 : 0);
+			iovoff += tiov_cnt - ((b > (ssize_t)myreq.oftrq_nblks)
+					      ? 1 : 0);
 			/* At which block in the iov do we start? 
 			 */
 			b -= myreq.oftrq_nblks;
@@ -777,8 +779,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 
 	} else {
 		struct offtree_req myreq;
-		off_t  rg_soff = OFT_REQ_STARTOFF(req);
-		off_t  rg_eoff = OFT_REQ_ENDOFF(req);
+		//off_t  rg_soff = OFT_REQ_STARTOFF(req);
+		//off_t  rg_eoff = OFT_REQ_ENDOFF(req);
 		off_t  crg_eoff, crg_soff;
 		off_t  i_offa;
 		int    tchild, schild, echild, tiov_cnt;
@@ -887,7 +889,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 
 			psc_trace("i_offa="LPX64" crg_soff="LPX64 
 				  " tiov->oftiov_off="LPX64" nblks=%zd sblkoff=%d", 
-				  i_offa, crg_soff, tiov->oftiov_off + (sblkoff * tiov->oftiov_blksz),
+				  i_offa, crg_soff, 
+				  tiov->oftiov_off + (sblkoff * tiov->oftiov_blksz),
 				  myreq.oftrq_nblks, sblkoff);
 
 			/* Verify that the iov popped from the dynarray
@@ -905,24 +908,27 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			psc_assert(b > 0);
 			/* 
 			 */
-			for (t=0; (b < myreq.oftrq_nblks) && (t < niovs); t++) {
-				struct offtree_iov *piov = tiov;			       
+			for (t=0; b < (ssize_t)myreq.oftrq_nblks && t < niovs; 
+			     t++) {
+				struct offtree_iov *piov = tiov;
 				tiov = dynarray_getpos(req->oftrq_darray, 
 						       req->oftrq_darray_off + iovoff + tiov_cnt);
-				DEBUG_OFFTIOV(PLL_TRACE, tiov, "sblkoff debug(%d)", tiov_cnt);
+				DEBUG_OFFTIOV(PLL_TRACE, tiov, 
+					      "sblkoff debug(%d)", tiov_cnt);
 				psc_assert((iovoff + tiov_cnt) < niovs);
 				psc_assert(tiov->oftiov_off == OFT_IOV2E_OFF_(piov) + 1);
 				tiov_cnt++;
 				b += tiov->oftiov_nblks;
 			}
-			if (b < myreq.oftrq_nblks) {
+			if (b < (ssize_t)myreq.oftrq_nblks) {
 				psc_errorx("accumulated blocks (%d) < "
 					   "myreq.oftrq_nblks (%zu)", 
 					   b, myreq.oftrq_nblks);
 				goto error;
 			}
 				
-			psc_trace("myreq.oftrq_nblks=%zd b=%d, tiov->oftiov_nblks=%zu tiov_cnt=%d", 
+			psc_trace("myreq.oftrq_nblks=%zd b=%d, "
+				  "tiov->oftiov_nblks=%zu tiov_cnt=%d", 
 				  myreq.oftrq_nblks, b, tiov->oftiov_nblks, tiov_cnt);
 			/* Make the child...
 			 */
@@ -941,7 +947,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 					tiov_cnt, sblkoff);
 			/* Bump iovoff. 
 			 */
-			iovoff += tiov_cnt - ((b > myreq.oftrq_nblks) ? 1 : 0);
+			iovoff += tiov_cnt - ((b > (ssize_t)myreq.oftrq_nblks) 
+					      ? 1 : 0);
 			/* At which block in the iov do we start? 
 			 */
 			b -= myreq.oftrq_nblks;

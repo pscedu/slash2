@@ -116,6 +116,7 @@ struct bmap_cache_memb {
 	struct timespec		bcm_ts;
 	struct bmap_info	bcm_bmapih;
 	atomic_t		bcm_refcnt;	 /* one ref per client (mds) */
+	atomic_t                bcm_opcnt;
 	void		       *bcm_info_pri;    /* point to private data    */
 	struct fidcache_memb   *bcm_fcm;         /* pointer to fid info      */
 	struct offtree_root    *bcm_oftr;
@@ -151,6 +152,7 @@ struct fidcache_memb_handle {
 	struct bmap_cache	 fcmh_bmap_cache;    /* splay tree of bmap cache */
 	list_cache_t		 fcmh_buffer_cache;  /* list of data buffers (slb)*/
 	psc_spinlock_t		 fcmh_lock;
+	size_t                   fcmh_bmap_sz;
 };
 
 #define fcm_set_accesstime(f) {					    \
@@ -261,6 +263,8 @@ fcmh_decref(struct fidcache_memb_handle *fch)
 
 void fidcache_handle_init(void *p);
 void fidcache_init(void);
+
+struct fidcache_memb_handle * fidcache_get(list_cache_t *lc);
 
 void bmap_cache_memb_init(struct bmap_cache_memb *b,
 	struct fidcache_memb_handle *f);

@@ -48,6 +48,7 @@ bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f)
 				     f, sl_buffer_alloc, sl_oftm_addref, 
 				     sl_oftiov_pin_cb);
 	psc_assert(b->bcm_oftr);
+	f->fcmh_bmap_sz = SLASH_BMAP_SIZE;
 }
 
 /**
@@ -128,7 +129,7 @@ fidcache_reap(void)
 /**
  * fidcache_get - grab a clean fid from the cache.
  */
-__static struct fidcache_memb_handle *
+struct fidcache_memb_handle *
 fidcache_get(list_cache_t *lc)
 {
 	struct fidcache_memb_handle *f;
@@ -219,7 +220,7 @@ fidcache_put_locked(struct fidcache_memb_handle *f, list_cache_t *lc)
 /**
  * sl_fcm_init - (slash_fidcache_member_init) init a fid cache member.
  */
-__static void
+void
 fidcache_memb_init(struct fidcache_memb *fcm)
 {
 	memset(fcm, 0, (sizeof *fcm));
