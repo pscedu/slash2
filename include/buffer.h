@@ -79,16 +79,15 @@ struct sl_buffer {
 };
 
 #define SLB_FLAG(field, str) (field ? str : "")
-#define DEBUG_SLB_FLAGS(iov)					\
-        SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_DIRTY),    "d"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_INFLIGHT), "I"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_FREEING),  "F"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_PINNED),   "P"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_LRU),      "L"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_FREE),     "f"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_INIT),     "i"),	\
-	SLB_FLAG(ATTR_TEST(slb->slb_flags, SLB_FRESH),    "r")	\
-		
+#define DEBUG_SLB_FLAGS(slb)					  \
+	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_DIRTY),    "d"), \
+	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_INFLIGHT), "I"), \
+	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_FREEING),  "F"), \
+	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_PINNED),   "P"), \
+	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_LRU),      "L"), \
+	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_FREE),     "f"), \
+	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_INIT),     "i"), \
+	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_FRESH),    "r")	
 	
 #define SLB_FLAGS_FMT "%s%s%s%s%s%s%s%s"
 
@@ -99,15 +98,15 @@ struct sl_buffer {
                         " slb@%p b:%p sz(%d/%d) bsz:%u"			\
                         " ref:%d umref:%d inf:%d infp %d fl:"SLB_FLAGS_FMT \
 			" fcm:%p lco:%p "fmt,				\
-                        slb, slb->slb_base, slb->slb_nblks,		\
-			vbitmap_nfree(slb->slb_inuse),			\
-			slb->slb_blksz,					\
-			atomic_read(&slb->slb_ref),			\
-			atomic_read(&slb->slb_unmapd_ref),		\
-			atomic_read(&slb->slb_inflight),		\
-			atomic_read(&slb->slb_inflpndg),		\
+                        (slb), (slb)->slb_base, (slb)->slb_nblks,	\
+			vbitmap_nfree((slb)->slb_inuse),		\
+			(slb)->slb_blksz,				\
+			atomic_read(&(slb)->slb_ref),			\
+			atomic_read(&(slb)->slb_unmapd_ref),		\
+			atomic_read(&(slb)->slb_inflight),		\
+			atomic_read(&(slb)->slb_inflpndg),		\
 			DEBUG_SLB_FLAGS(slb),				\
-			slb->slb_lc_fcm, slb->slb_lc_owner,		\
+			(slb)->slb_lc_fcm, (slb)->slb_lc_owner,		\
 			## __VA_ARGS__);				\
 	} while(0)
 
@@ -204,8 +203,6 @@ sl_buffer_cache_init(void);
 void
 sl_oftm_addref(struct offtree_memb *m);
 
-#define SL_BUFFER_PIN 0
-#define SL_BUFFER_UNPIN 1
 void
 sl_oftiov_pin_cb(struct offtree_iov *iov, int op);
 
