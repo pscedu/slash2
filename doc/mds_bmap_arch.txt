@@ -1,0 +1,140 @@
+MDS Data Structure Overview
+---------------------------
+
+RPCs which may be needed:
+     CLI_2_MDS:
+	REASSIGN IOS - there will be issues here when other clients 
+		       don't agree that the ios needs to be failed.
+
+     MDS_2_ION:
+	IO PING - try to verify that an ION is working.
+     
+
+pscrpc_export -> mexpfc 
+	      . from here we can tell if the export is of type:
+	      	MDS_EXP_ION or MDS_EXP_CLI
+	      . if we're dealing with MDS_EXP_CLI, then 
+	        struct mexpfc_cli is invoked.
+
+		
+mexpfch
+	. pointed to by export
+	. uses a flag to determine the handle type (cli or ion).
+	. tie in point which maintains the bindings for client io's to 
+	a specific ion.  All client reads and writes go to this ion.
+
+	** Failover methods will be important here.. and will determine
+	what sort of write caching will be allowable.
+
+	For instance, if a client reports that an ION has failed, the mds
+	must take action to reassign the bmdsi_ion - otherwise 
+	crc updates may become non-deterministic.  This means that a valid
+	write operation will entail:
+	      - originate from the client (cache or dio)
+	      - sent to ION
+	      - written to ION storage
+	      - CRCs committed to MDS
+
+	.. this method will guarantee that once a failover / ion 
+	reassignment has occured, that we can ignore crc updates from 
+	the reassigned / replaced ion.
+
+	ION_PING() 
+		   if this ping fails.. what happens?
+
+mexpfc_cli
+	. maintains a list of fids
+	  - where the export type == MDS_EXP_CLI, this lists
+	  all the fids which that client has cached (bmaps or inode attrs).
+
+	  - is this relevant for IONs?
+	    . filesize? - don't think so
+	    . therefore the exp_fidtree and friends are moved into their
+	    own structure (mexpfc_cli)
+
+
+MDS Bmap Dereferencing
+----------------------
+MDS Bmaps get dereferenced once they've LRU'd out of the client's cache or when 
+the clients close the file.
+
+Client must track the read and write modes of his bmaps so that deref's on the 
+mds can occur properly.
+    1) This is tracked in bmapi_mode on both the client and mds.
+    2) For a client which access a bmap for write and read then he will send a 
+    deref val of '2' or two separate derefs.
+    3) In the event of a client disconnect, all of his bmaps must be deref'd
+       which means that the mds must keep a reference, per client for both 
+       read and write.
+
+
+MDS / CLI / ION - Bmap Read and Write Policies
+----------------------------------------------
+A) Read-only Mode Bmaps
+
+Readers of different replica bmaps should be directed to an ION based on their 
+preference or proximity of the replica.  Any cache mode may be used by any / all
+clients.  All of this assumes that no writers are present.
+
+B) Write-only Mode Bmaps
+
+   b0. When only a single client is issuing writes, that client may use any 
+       caching policy available to him.
+  
+   b1. Upon addition of a second bmap writer, the first writer is instructed
+       to flush his cache and issue subsequent writes in direct-io mode 
+       - bmap_2_dio(). The new writer(s) must also issue all writes with 
+       direct-io.  
+
+       Using direct-io provides the most straight forward means of ensuring
+       write ordering and cache coherency.
+
+C) Read / Write Bmaps
+
+   c0. When on the same client, a bmap in read/write mode may proceed, as
+       expected, using any cache policy desired so long as the same policy
+       is applied to all operations (on that bmap).  
+       	  * Policy is stored in bcm_mode (BMAP_CLI_DIO).
+
+   c1. On different clients
+       c1a. Write -> Read/Write
+       	    The existing writer is instructed to call bmap_2_dio() to
+	    flush his cache and set his bmap to synchronous mode **.
+
+	    Once this act has been acknowledged by the MDS, he issues the 
+	    bmap to the reader client with bmapi_mode set to BMAP_CLI_DIO.
+
+	    ** It's not determined what will happen if this client 
+	    does not respond in a timely fashion.  As of now, the ION
+	    is not involved in this process.
+	   
+       c1b. Write -> Read/Write (multiple writers)
+       	    The current writers are already set to dio mode so no further
+	    action is necessary other than to return the client's bmap
+	    with BMAP_CLI_DIO set.
+
+       c2a. Read -> Read/Write (single and multiple readers)
+       	    All readers are asked to flush their caches and proceed with 
+	    BMAP_CLI_DIO.  The writer's bmap is returned with 
+	    BMAP_CLI_DIO as well.
+       	    
+D) Issues
+   d1.  Client-drived access to replicas is made difficult by this method.
+   	If the client knows where to retrieve a replica he should be able to 
+	do so without being stunted by the mds.
+
+	. Could the client retreive in dio mode?  Yes, but presumably the 
+	client is accessing a secondary or tertiary replica which means that 
+	latency is more likey to be an issue.
+	    
+	Answer:  This is not a problem because as long as the bmap is in 
+	BMAP_CLI_RD mode no other clients are writing to it which means that 
+	the client is free to read from any replica (in caching mode) that 
+	he wishes.  However, some logic will be needed client-side to override
+	the mds recommended ion (bmapi_ion).
+
+   d2.  Client disconnects must be deref'd properly.
+ 
+E) Devel needed
+   e1. Method for flushing and closing a bmap's offtree cache on the client.
+   e2. Method for client-side direct io.
