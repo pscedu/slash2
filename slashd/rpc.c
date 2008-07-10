@@ -12,8 +12,6 @@
 #include "slashrpc.h"
 #include "slashd.h"
 
-struct slashrpc_cservice *rmm_csvc;
-
 lnet_process_id_t lpid;
 
 struct sexptree sexptree;
@@ -92,21 +90,21 @@ sexpcmp(const void *a, const void *b)
 #define SRMI_REPSZ	128
 #define SRMI_SVCNAME	"slrmithr"
 
-#define SRCM_NTHREADS	8
-#define SRCM_NBUFS	1024
-#define SRCM_BUFSZ	128
-#define SRCM_REPSZ	128
-#define SRCM_SVCNAME	"slrmcthr"
+#define SRMC_NTHREADS	8
+#define SRMC_NBUFS	1024
+#define SRMC_BUFSZ	128
+#define SRMC_REPSZ	128
+#define SRMC_SVCNAME	"slrmcthr"
 
 void
-rpcsvc_init(void)
+rpc_initsvc(void)
 {
 	pscrpc_svc_handle_t *svh;
 
 	if (LNetGetId(1, &lpid))
 		psc_fatalx("LNetGetId");
 
-	/* Bring up MDS <-> I/O server service. */
+	/* Setup request service for MDS from ION. */
 	svh = PSCALLOC(sizeof(*svh));
 	svh->svh_nbufs = SRMI_NBUFS;
 	svh->svh_bufsz = SRMI_BUFSZ;
@@ -120,7 +118,7 @@ rpcsvc_init(void)
 	strlcpy(svh->svh_svc_name, SRMI_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slash_rmithr);
 
-	/* Bring up MDS <-> MDS service. */
+	/* Setup request service for MDS from MDS. */
 	svh = PSCALLOC(sizeof(*svh));
 	svh->svh_nbufs = SRMM_NBUFS;
 	svh->svh_bufsz = SRMM_BUFSZ;
@@ -134,17 +132,17 @@ rpcsvc_init(void)
 	strlcpy(svh->svh_svc_name, SRMM_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slash_rmmthr);
 
-	/* Bring up MDS <-> client service. */
+	/* Setup request service for MDS from client. */
 	svh = PSCALLOC(sizeof(*svh));
-	svh->svh_nbufs = SRCM_NBUFS;
-	svh->svh_bufsz = SRCM_BUFSZ;
-	svh->svh_reqsz = SRCM_BUFSZ;
-	svh->svh_repsz = SRCM_REPSZ;
-	svh->svh_req_portal = SRCM_REQ_PORTAL;
-	svh->svh_rep_portal = SRCM_REP_PORTAL;
+	svh->svh_nbufs = SRMC_NBUFS;
+	svh->svh_bufsz = SRMC_BUFSZ;
+	svh->svh_reqsz = SRMC_BUFSZ;
+	svh->svh_repsz = SRMC_REPSZ;
+	svh->svh_req_portal = SRMC_REQ_PORTAL;
+	svh->svh_rep_portal = SRMC_REP_PORTAL;
 	svh->svh_type = SLTHRT_RMC;
-	svh->svh_nthreads = SRCM_NTHREADS;
+	svh->svh_nthreads = SRMC_NTHREADS;
 	svh->svh_handler = slrmc_handler;
-	strlcpy(svh->svh_svc_name, SRCM_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SRMC_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slash_rmcthr);
 }

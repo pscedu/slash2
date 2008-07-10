@@ -27,11 +27,11 @@ slric_handle_disconnect(struct pscrpc_request *rq)
 int
 slric_handle_connect(struct pscrpc_request *rq)
 {
-	struct srcim_connect_req *mq;
+	struct srm_ic_connect_req *mq;
 	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRCI_MAGIC || mq->version != SRCI_VERSION)
+	if (mq->magic != SRIC_MAGIC || mq->version != SRIC_VERSION)
 		mp->rc = -EINVAL;
 	return (0);
 }
@@ -80,7 +80,7 @@ slric_handle_read(struct pscrpc_request *rq)
 	iov.iov_base = buf;
 	iov.iov_len = mq->size;
 	mp->rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
-	    SRCI_BULK_PORTAL, &iov, 1);
+	    SRIC_BULK_PORTAL, &iov, 1);
 	if (desc)
 		pscrpc_free_bulk(desc);
  done:
@@ -116,7 +116,7 @@ slric_handle_write(struct pscrpc_request *rq)
 	iov.iov_base = buf;
 	iov.iov_len = mq->size;
 	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRCI_BULK_PORTAL, &iov, 1)) == 0) {
+	    SRIC_BULK_PORTAL, &iov, 1)) == 0) {
 //	mq->size / pscPageSize,
 		if ((fd = open(fn, O_WRONLY)) == -1)
 			mp->rc = -errno;

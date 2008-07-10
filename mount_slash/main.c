@@ -16,10 +16,10 @@
 #include <fuse.h>
 
 #include "pfl.h"
-#include "psc_types.h"
 #include "psc_mount/dhfh.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
+#include "psc_types.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
@@ -45,14 +45,14 @@ slash_chmod(const char *path, mode_t mode)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_CHMOD, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	mq->mode = mode;
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -70,7 +70,7 @@ slash_chown(const char *path, uid_t uid, gid_t gid)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_CHOWN, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
@@ -78,7 +78,7 @@ slash_chown(const char *path, uid_t uid, gid_t gid)
 	mq->gid = gid;
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -96,7 +96,7 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_CREATE, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
@@ -104,7 +104,7 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	mq->flags = fi->flags;
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
@@ -128,7 +128,7 @@ slash_destroy(__unusedx void *arg)
 	struct srm_chmod_req *mq;
 	struct pscrpc_request *rq;
 
-	if (RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if (RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_DESTROY, rq, mq, mp) == 0) {
 		rsx_waitrep(rq, sizeof(*mp), &mp);
 		pscrpc_req_finished(rq);
@@ -145,13 +145,13 @@ slash_getattr(const char *path, struct stat *stb)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_GETATTR, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
@@ -181,7 +181,7 @@ slash_fgetattr(__unusedx const char *path, struct stat *stb,
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_FGETATTR, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
@@ -213,7 +213,7 @@ slash_ftruncate(__unusedx const char *path, off_t size,
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_FTRUNCATE, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
@@ -234,7 +234,7 @@ slash_link(const char *from, const char *to)
 	struct iovec iov[2];
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_LINK, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fromlen = strlen(from);
@@ -243,7 +243,7 @@ slash_link(const char *from, const char *to)
 	iov[0].iov_len = strlen(from);
 	iov[1].iov_base = (void *)to;
 	iov[1].iov_len = strlen(to);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    iov, 2);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -261,14 +261,14 @@ slash_mkdir(const char *path, mode_t mode)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_MKDIR, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	mq->mode = mode;
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -286,7 +286,7 @@ slash_mknod(const char *path, mode_t mode, dev_t dev)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_MKNOD, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
@@ -294,7 +294,7 @@ slash_mknod(const char *path, mode_t mode, dev_t dev)
 	mq->dev = dev;
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -312,14 +312,14 @@ slash_open(const char *path, struct fuse_file_info *fi)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_OPEN, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	mq->flags = fi->flags;
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
@@ -343,13 +343,13 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_OPENDIR, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
@@ -390,7 +390,7 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 //	rc = msl_read(fh, buf, size, off);
 
 	if ((rc = RSX_NEWREQ(ion_get()->csvc_import,
-	    SRCI_VERSION, SRMT_READ, rq, mq, mp)) != 0)
+	    SRIC_VERSION, SRMT_READ, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->size = size;
@@ -403,7 +403,7 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 			iov.iov_base = buf;
 			iov.iov_len = size;
 			rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
-			    SRCI_BULK_PORTAL, &iov, 1);
+			    SRIC_BULK_PORTAL, &iov, 1);
 			if (desc)
 				pscrpc_free_bulk(desc);
 			if (rc == 0)
@@ -429,7 +429,7 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 	u64 off;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_READDIR, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
@@ -441,7 +441,7 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 	mb = PSCALLOC(mp->size);
 	iov.iov_base = mb;
 	iov.iov_len = mp->size;
-	rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRCM_BULK_PORTAL,
+	rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if (rc == 0) {
 		/* Pull down readdir contents slashd posted. */
@@ -470,14 +470,14 @@ slash_readlink(const char *path, char *buf, size_t size)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_READLINK, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	mq->size = size;
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &de, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &de, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, size, &mp)) == 0) {
 		if (mp->rc)
@@ -486,7 +486,7 @@ slash_readlink(const char *path, char *buf, size_t size)
 			iov.iov_base = buf;
 			iov.iov_len = size;
 			rc = rsx_bulkserver(rq, &di, BULK_GET_SINK,
-			    SRCM_BULK_PORTAL, &iov, 1);
+			    SRMC_BULK_PORTAL, &iov, 1);
 			if (di)
 				pscrpc_free_bulk(di);
 		}
@@ -503,7 +503,7 @@ slash_release(__unusedx const char *path, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_RELEASE, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
@@ -521,7 +521,7 @@ slash_releasedir(__unusedx const char *path, struct fuse_file_info *fi)
 	struct srm_release_req *mq;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_RELEASEDIR, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
@@ -541,7 +541,7 @@ slash_rename(const char *from, const char *to)
 	struct iovec iov[2];
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_RENAME, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fromlen = strlen(from);
@@ -550,7 +550,7 @@ slash_rename(const char *from, const char *to)
 	iov[0].iov_len = strlen(from);
 	iov[1].iov_base = (void *)to;
 	iov[1].iov_len = strlen(to);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    iov, 2);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -568,13 +568,13 @@ slash_rmdir(const char *path)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_RMDIR, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -592,13 +592,13 @@ slash_statfs(const char *path, struct statvfs *sfb)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_STATFS, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
@@ -627,7 +627,7 @@ slash_symlink(const char *from, const char *to)
 	struct iovec iov[2];
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_SYMLINK, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fromlen = strlen(from);
@@ -636,7 +636,7 @@ slash_symlink(const char *from, const char *to)
 	iov[0].iov_len = strlen(from);
 	iov[1].iov_base = (void *)to;
 	iov[1].iov_len = strlen(to);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    iov, 2);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -654,14 +654,14 @@ slash_truncate(const char *path, off_t size)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_TRUNCATE, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	mq->size = size;
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -679,13 +679,13 @@ slash_unlink(const char *path)
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_UNLINK, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -703,14 +703,14 @@ slash_utimens(const char *path, const struct timespec ts[2])
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_UTIMES, rq, mq, mp)) != 0)
 		return (rc);
 	mq->fnlen = strlen(path);
 	memcpy(mq->times, ts, sizeof(ts));
 	iov.iov_base = (void *)path;
 	iov.iov_len = strlen(path);
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCM_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc;
@@ -730,7 +730,7 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	int rc;
 
 	if ((rc = RSX_NEWREQ(ion_get()->csvc_import,
-	    SRCI_VERSION, SRMT_WRITE, rq, mq, mp)) != 0)
+	    SRIC_VERSION, SRMT_WRITE, rq, mq, mp)) != 0)
 		return (rc);
 	mq->cfd = fi->fh;
 	mq->size = size;
@@ -738,7 +738,7 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	mq->op = SRMIO_WR;
 	iov.iov_base = (void *)buf;
 	iov.iov_len = size;
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRCI_BULK_PORTAL,
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
 	    &iov, 1);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
 		rc = mp->rc ? mp->rc : (int)mp->size;
@@ -770,12 +770,12 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	pfl_init(THRTABSZ);
 	lnet_thrspawnf = spawn_lnet_thr;
 	fidcache_init();
-	rpc_svc_init();
+	rpc_initsvc();
 
 	name = getenv("SLASH_MDS_SERVER_NID");
 	if (name == NULL)
 		psc_fatalx("SLASH_MDS_SERVER_NID not set");
-	if (slrcm_connect(name))
+	if (msrmc_connect(name))
 		psc_fatal("unable to connect to MDS");
 
 	name = getenv("SLASH_IO_SERVER_NIDS");
@@ -786,7 +786,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 			name++;
 		if ((p = strchr(name, ',')) != NULL)
 			*p++ = '\0';
-		if (slrci_connect(name))
+		if (msric_connect(name))
 			psc_fatal("unable to connect to IO");
 	}
 

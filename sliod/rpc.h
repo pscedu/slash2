@@ -26,10 +26,10 @@
 struct slashrpc_export {
 };
 
-void	rpcsvc_init(void);
+void	rpc_initsvc(void);
 
 int slrim_handler(struct pscrpc_request *);
 int slric_handler(struct pscrpc_request *);
 int slrii_handler(struct pscrpc_request *);
 
-extern struct slashrpc_cservice *rim_csvc;
+extern struct slashrpc_cservice *rmi_csvc;

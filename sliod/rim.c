@@ -13,11 +13,26 @@
 #include "slashrpc.h"
 
 int
+slrim_handle_connect(struct pscrpc_request *rq)
+{
+	struct srm_connect_req *mq;
+	struct srm_generic_rep *mp;
+
+	RSX_ALLOCREP(rq, mq, mp);
+	if (mq->magic != SRIM_MAGIC || mq->version != SRIM_VERSION)
+		mp->rc = -EINVAL;
+	return (0);
+}
+
+int
 slrim_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
+	case SRMT_CONNECT:
+		rc = slrim_handle_connect(rq);
+		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
@@ -28,7 +43,7 @@ slrim_handler(struct pscrpc_request *rq)
 }
 
 int
-slrim_issue_connect(const char *name)
+slrmi_issue_connect(const char *name)
 {
 	lnet_nid_t nid;
 
@@ -36,7 +51,7 @@ slrim_issue_connect(const char *name)
 	if (nid == LNET_NID_ANY)
 		psc_fatalx("invalid server name: %s", name);
 
-	if (rpc_issue_connect(nid, rim_csvc->csvc_import,
+	if (rpc_issue_connect(nid, rmi_csvc->csvc_import,
 	    SRMI_MAGIC, SRMI_VERSION)) {
 		psc_error("rpc_connect %s", name);
 		return (-1);

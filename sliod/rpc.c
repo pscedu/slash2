@@ -13,9 +13,9 @@
 #include "sliod.h"
 #include "slashrpc.h"
 
-struct slashrpc_cservice *rim_csvc;
+struct slashrpc_cservice *rmi_csvc;
 
-lnet_process_id_t lpid; 
+lnet_process_id_t lpid;
 
 struct slashrpc_export *
 slashrpc_export_get(struct pscrpc_export *exp)
@@ -35,18 +35,18 @@ slashrpc_export_destroy(__unusedx void *data)
 }
 
 /**
- * rpcsvc_init - create and initialize RPC services.
+ * rpc_initsvc - create and initialize RPC services.
  */
 void
-rpcsvc_init(void)
+rpc_initsvc(void)
 {
 	pscrpc_svc_handle_t *svh;
 
 	if (LNetGetId(1, &lpid))
 		psc_fatalx("LNetGetId");
 
-	/* Create client service to issue requests to the MDS server. */
-	rim_csvc = rpc_csvc_create(SRMI_REQ_PORTAL, SRMI_REP_PORTAL);
+	/* Create client service to issue requests to MDS. */
+	rmi_csvc = rpc_csvc_create(SRMI_REQ_PORTAL, SRMI_REP_PORTAL);
 
 	/* Create server service to handle requests from clients. */
 	svh = PSCALLOC(sizeof(*svh));
@@ -54,8 +54,8 @@ rpcsvc_init(void)
 	svh->svh_bufsz = SRIC_BUFSZ;
 	svh->svh_reqsz = SRIC_BUFSZ;
 	svh->svh_repsz = SRIC_REPSZ;
-	svh->svh_req_portal = SRCI_REQ_PORTAL;
-	svh->svh_rep_portal = SRCI_REP_PORTAL;
+	svh->svh_req_portal = SRIC_REQ_PORTAL;
+	svh->svh_rep_portal = SRIC_REP_PORTAL;
 	svh->svh_type = SLIOTHRT_RIC;
 	svh->svh_nthreads = SRIC_NTHREADS;
 	svh->svh_handler = slric_handler;

@@ -167,7 +167,7 @@ msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n, int rw)
 	psc_assert(n < BMAP_MAX_GET);
 	/* Build the new rpc request.
 	 */
-	if ((rc = RSX_NEWREQ(mds_import, SRCM_VERSION,
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 			     SRMT_GETBMAP, rq, mq, mp)) != 0)
 		return (rc);
 
@@ -187,7 +187,7 @@ msl_bmap_fetch(struct fidcache_memb_handle *f, sl_blkno_t b, size_t n, int rw)
 	}
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmaps (s=%u, n=%zu)", b, n);
 
-	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRCM_BULK_PORTAL, iovs, n);
+	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iovs, n);
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		/* Verify the return.
 		 */
@@ -294,9 +294,9 @@ msl_bmap_to_import(struct bmap_cache_memb *b)
 		psc_assert(c->bmic_import->imp_client);
 
 		c->bmic_import->imp_client->cli_request_portal = 
-			SRCI_REQ_PORTAL;
+			SRIC_REQ_PORTAL;
 		c->bmic_import->imp_client->cli_reply_portal =
-			SRCI_REP_PORTAL;
+			SRIC_REP_PORTAL;
 	}
 	ureqlock(&b->bcm_lock, locked);	
 	return (c->bmic_import);
@@ -430,7 +430,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	bcm = (struct bmap_cache_memb *)r->oftrq_root->oftr_pri;
 	imp = msl_bmap_to_import(bcm);
 
-	if ((rc = rsx_newreq(imp, SRCI_VERSION, 
+	if ((rc = rsx_newreq(imp, SRIC_VERSION, 
 			     (op == MSL_PAGES_PUT ? SRMT_WRITE : SRMT_READ),
 			     sizeof(*mq), sizeof(*mp), &req, &mq)) != 0) {
                 errno = -rc;
@@ -473,7 +473,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	 */
 	rsx_bulkclient(req, &desc, 
 		       (op == MSL_PAGES_GET ? BULK_PUT_SINK : BULK_GET_SOURCE),
-		       SRCM_BULK_PORTAL, iovs, n);
+		       SRMC_BULK_PORTAL, iovs, n);
 	/* The bulk descriptor copies these iovs so it's OK to free them.
 	 */
 	PSCFREE(iovs);
@@ -993,7 +993,7 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 		 *  luck because we have no idea where the data is!
 		 */
 		b = msl_bmap_load(f, s, (i ? 0 : (e-s)), (op == MSL_READ) ?
-				  SRCI_BMAP_READ : SRCI_BMAP_WRITE);
+				  SRIC_BMAP_READ : SRIC_BMAP_WRITE);
 		if (!b)
 			return -EIO;
 		/* Malloc offtree request and pass to the initializer.

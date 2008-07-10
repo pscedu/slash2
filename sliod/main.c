@@ -87,7 +87,7 @@ main(int argc, char *argv[])
 
 	slashGetConfig(cfn);
 	libsl_init(PSC_SERVER);
-	rpcsvc_init();
+	rpc_initsvc();
 	sliotimerthr_spawn();
 	slioctlthr_main(sfn);
 	exit(0);

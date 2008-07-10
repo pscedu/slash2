@@ -7,12 +7,13 @@
 #include <fuse.h>
 
 #include "psc_types.h"
-#include "psc_rpc/rpc.h"
 
 struct fhent;
+struct pscrpc_request;
 
 #define MSTHRT_CTL	0
 #define MSTHRT_FS	1
+#define MSTHRT_RCM	1	/* service RPC reqs for client from MDS */
 #define MSTHRT_LNET	2
 
 #define MSL_IO_CB_POINTER_SLOT 1
@@ -27,6 +28,9 @@ struct msctl_thread {
 	u32	mc_st_nrecv;
 };
 
+struct msrcm_thread {
+};
+
 #define msctlthr(thr)	((struct msctl_thread *)(thr)->pscthr_private)
 
 struct io_server_conn {
@@ -34,9 +38,10 @@ struct io_server_conn {
 	struct slashrpc_cservice	*isc_csvc;
 };
 
-void rpc_svc_init(void);
-int slrcm_connect(const char *);
-int slrci_connect(const char *);
+void rpc_initsvc(void);
+int msrmc_connect(const char *);
+int msric_connect(const char *);
+int msrcm_handler(struct pscrpc_request *);
 
 void *msctlthr_begin(void *);
 

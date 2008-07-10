@@ -28,7 +28,7 @@ struct mds_server_conn {
 };
 
 /*
- * slrmm_handle_connect - handle a CONNECT request from a peer MDS server.
+ * slrmm_handle_connect - handle a CONNECT request from another MDS.
  */
 int
 slrmm_handle_connect(struct pscrpc_request *rq)
@@ -43,7 +43,7 @@ slrmm_handle_connect(struct pscrpc_request *rq)
 }
 
 /*
- * slrmm_handler - handle a request from a peer MDS server.
+ * slrmm_handler - handle a request from another MDS.
  */
 int
 slrmm_handler(struct pscrpc_request *rq)
@@ -64,7 +64,7 @@ slrmm_handler(struct pscrpc_request *rq)
 }
 
 /*
- * slrmm_addconn - initiate a connection to a peer MDS server.
+ * slrmm_addconn - initiate a connection to a peer MD server.
  */
 int
 slrmm_addconn(const char *name)

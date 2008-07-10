@@ -13,43 +13,57 @@
 
 #define SLASH_SVR_PID		54321
 
-/* Slash RPC Client <-> MDS defines. */
-#define SRCM_REQ_PORTAL		20
-#define SRCM_REP_PORTAL		21
-#define SRCM_BULK_PORTAL	22
+/* Slash RPC channel to MDS from client. */
+#define SRMC_REQ_PORTAL		20
+#define SRMC_REP_PORTAL		21
+#define SRMC_BULK_PORTAL	22
 
-#define SRCM_VERSION		1
-#define SRCM_MAGIC		0xaabbccddeeff0011ULL
+#define SRMC_VERSION		1
+#define SRMC_MAGIC		0xaabbccddeeff0022ULL
 
-/* Slash RPC client <-> I/O defines. */
-#define SRCI_REQ_PORTAL		30
-#define SRCI_REP_PORTAL		31
-#define SRCI_BULK_PORTAL	32
-
-#define SRCI_VERSION		1
-#define SRCI_MAGIC		0xaabbccddeeff0011ULL
-
-/* Slash RPC MDS <-> MDS defines. */
-#define SRMM_REQ_PORTAL		40
-#define SRMM_REP_PORTAL		41
+/* Slash RPC channel to MDS from MDS. */
+#define SRMM_REQ_PORTAL		30
+#define SRMM_REP_PORTAL		31
 
 #define SRMM_VERSION		1
-#define SRMM_MAGIC		0xaabbccddeeff0011ULL
+#define SRMM_MAGIC		0xaabbccddeeff0033ULL
 
-/* Slash RPC MDS <-> I/O defines. */
-#define SRMI_REQ_PORTAL		50
-#define SRMI_REP_PORTAL		51
+/* Slash RPC channel to MDS from ION. */
+#define SRMI_REQ_PORTAL		40
+#define SRMI_REP_PORTAL		41
 
 #define SRMI_VERSION		1
-#define SRMI_MAGIC		0xaabbccddeeff0011ULL
+#define SRMI_MAGIC		0xaabbccddeeff0044ULL
 
-/* Slash RPC I/O <-> I/O defines. */
-#define SRII_REQ_PORTAL		60
-#define SRII_REP_PORTAL		61
-#define SRII_BULK_PORTAL	62
+/* Slash RPC channel to client from MDS. */
+#define SRCM_REQ_PORTAL		50
+#define SRCM_REP_PORTAL		51
+
+#define SRCM_VERSION		1
+#define SRCM_MAGIC		0xaabbccddeeff0055ULL
+
+/* Slash RPC channel to ION from client. */
+#define SRIC_REQ_PORTAL		60
+#define SRIC_REP_PORTAL		61
+#define SRIC_BULK_PORTAL	62
+
+#define SRIC_VERSION		1
+#define SRIC_MAGIC		0xaabbccddeeff0066ULL
+
+/* Slash RPC channel to ION from ION. */
+#define SRII_REQ_PORTAL		70
+#define SRII_REP_PORTAL		71
+#define SRII_BULK_PORTAL	72
 
 #define SRII_VERSION		1
-#define SRII_MAGIC		0xaabbccddeeff0011ULL
+#define SRII_MAGIC		0xaabbccddeeff0077ULL
+
+/* Slash RPC channel to ION from MDS. */
+#define SRIM_REQ_PORTAL		80
+#define SRIM_REP_PORTAL		81
+
+#define SRIM_VERSION		1
+#define SRIM_MAGIC		0xaabbccddeeff0088ULL
 
 /* Slash RPC message types. */
 enum {
@@ -72,6 +86,7 @@ enum {
 	SRMT_READDIR,
 	SRMT_READLINK,
 	SRMT_RELEASE,
+	SRMT_RELEASEBMAP,
 	SRMT_RELEASEDIR,
 	SRMT_RENAME,
 	SRMT_RMDIR,
@@ -99,8 +114,8 @@ struct srm_open_secret {
 
 #endif
 
-#define SRCI_BMAP_READ  0
-#define SRCI_BMAP_WRITE 1
+#define SRIC_BMAP_READ  0
+#define SRIC_BMAP_WRITE 1
 
 struct srm_bmap_req {
 	u32 blkno;	/* Starting block number                  */
@@ -113,16 +128,16 @@ struct srm_bmap_rep {
 	u32 nblks;	/* The number of bmaps actually returned  */
 };
 
-/* Slash RPC client -> ION message */
-struct srcim_connect_secret {
+/* Slash RPC message for ION from client */
+struct srm_ic_connect_secret {
 	u64 magic;
 	u64 wndmap_min;
 };
 
-#define SRCI_CONNECT_SIGMAGIC	0x1234123412341234
+#define SRM_CI_CONNECT_SIGMAGIC	0x1234123412341234
 
-struct srcim_connect_req {
-	struct srcim_connect_secret crypt_i;
+struct srm_ic_connect_req {
+	struct srm_ic_connect_secret crypt_i;
 	u64 magic;
 	u32 version;
 };
@@ -296,6 +311,9 @@ struct srm_release_req {
 
 struct srm_releasedir_req {
 	u64 cfd;
+};
+
+struct srm_releasebmap_req {
 };
 
 struct srm_rename_req {

@@ -1,5 +1,6 @@
 /* $Id$ */
 
+#include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
@@ -17,11 +18,26 @@ struct io_server_conn {
 };
 
 int
+slrii_handle_connect(struct pscrpc_request *rq)
+{
+	struct srm_connect_req *mq;
+	struct srm_generic_rep *mp;
+
+	RSX_ALLOCREP(rq, mq, mp);
+	if (mq->magic != SRII_MAGIC || mq->version != SRII_VERSION)
+		mp->rc = -EINVAL;
+	return (0);
+}
+
+int
 slrii_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
+	case SRMT_CONNECT:
+		rc = slrii_handle_connect(rq);
+		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;

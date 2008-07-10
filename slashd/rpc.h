@@ -20,7 +20,7 @@ struct slashrpc_export *
 	slashrpc_export_get(struct pscrpc_export *);
 int	sexpcmp(const void *, const void *);
 
-void	rpcsvc_init(void);
+void	rpc_initsvc(void);
 
 int slrmc_handler(struct pscrpc_request *);
 int slrmi_handler(struct pscrpc_request *);

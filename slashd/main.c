@@ -97,7 +97,7 @@ main(int argc, char *argv[])
 	slash_superblock_init();
 	slash_journal_init();
 
-	rpcsvc_init();
+	rpc_initsvc();
 	slctlthr_main(sfn);
 	exit(0);
 }
