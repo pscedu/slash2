@@ -723,7 +723,7 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 	 *   us removing it from the list.
 	 */
 	DEBUG_SLB(PLL_TRACE, slb,
-		  "sl_buffer_alloc_internal, a=%p nblks=%zu, soffa="LPX64,
+		  "sl_buffer_alloc_internal, a=%p nblks=%zu, soffa=%"_P_U64"x",
 		  a, nblks, soffa);
 
 	if (ATTR_TEST(slb->slb_flags, SLB_FREEING) || (tok != slb->slb_lc_fcm))
@@ -858,7 +858,7 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 		spinlock(&lc->lc_lock);
 		psclist_for_each_entry(slb, &lc->lc_list, slb_fcm_lentry) {
 			DEBUG_SLB(PLL_TRACE, slb,
-				  "soffa "LPX64" trying with this slb", soffa);
+				  "soffa %"_P_U64"x trying with this slb", soffa);
 			if (SLB_FULL(slb))
 				continue;
 

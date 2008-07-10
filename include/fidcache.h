@@ -233,7 +233,7 @@ fcmh_lc_2_string(list_cache_t *lc)
 #define DEBUG_FCMH(level, fcmh, fmt, ...)				\
 	_psclog(__FILE__, __func__, __LINE__,				\
 		PSS_OTHER, (level), 0,					\
-		" fcmh@%p i+g:"LPX64"+"LPX64" s:"			\
+		" fcmh@%p i+g:%"_P_U64"x+%"_P_U64"x s:"			\
 		REQ_FCMH_FLAGS_FMT" lc:%s fd:%d r:%d:: "fmt,		\
 		(fcmh),							\
 		(fcmh)->fcmh_memb.fcm_fg.fg_fid,			\

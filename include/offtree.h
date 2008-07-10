@@ -64,9 +64,9 @@ power(size_t base, size_t exp)
 
 
 #define OFT_VERIFY_REQ_SE(req, s, e) {					\
-		psc_trace("OFT_VERIFY_REQ_SE NR ("LPX64"/"LPX64")",	\
+		psc_trace("OFT_VERIFY_REQ_SE NR (%"_P_U64"x/%"_P_U64"x)",	\
 			  s, e);					\
-		psc_trace("OFT_VERIFY_REQ_SE RG ("LPX64"/"LPX64")",	\
+		psc_trace("OFT_VERIFY_REQ_SE RG (%"_P_U64"x/%"_P_U64"x)",	\
 			  OFT_REQ_STARTOFF(req), OFT_REQ_ENDOFF(req));	\
 		psc_assert((s >= OFT_REQ_STARTOFF(req)) &&		\
 			   (e <= OFT_REQ_ENDOFF(req)));			\
@@ -81,7 +81,7 @@ power(size_t base, size_t exp)
 		psc_assert(!TTt);					\
 		TTt = (e+1) % (req)->oftrq_root->oftr_minsz;		\
 		psc_assert(!TTt);					\
-		psc_trace("OFT_REQ2SE_OFFS ("LPX64"/"LPX64")", s, e);	\
+		psc_trace("OFT_REQ2SE_OFFS (%"_P_U64"x/%"_P_U64"x)", s, e);	\
         } 
 
 #define OFT_REQ2E_OFF_(req)						\
@@ -254,8 +254,8 @@ enum oft_iov_flags {
 	do {								\
 		_psclog(__FILE__, __func__, __LINE__,			\
 			PSS_OTHER, level, 0,				\
-			" oftiov@%p b:%p o:"LPX64" l:"LPD64		\
-			" bsz:"LPD64" pri:%p fl:"OFFTIOV_FLAGS_FMT	\
+			" oftiov@%p b:%p o:%"_P_U64"x l:%"_P_U64"d"	\
+			" bsz:%"_P_U64"d pri:%p fl:"OFFTIOV_FLAGS_FMT	\
 			" m:%p "fmt,					\
 			iov, iov->oftiov_base, iov->oftiov_off,		\
 			iov->oftiov_nblks, iov->oftiov_blksz,	        \
@@ -419,7 +419,7 @@ enum offtree_req_op_types {
 	do {								\
 		_psclog(__FILE__, __func__, __LINE__,			\
 			PSS_OTHER, level, 0,				\
-			" oftr@%p o:"LPX64" l:"LPD64" node:%p darray:%p"\
+			" oftr@%p o:%"_P_U64"x l:%"_P_U64"d node:%p darray:%p"\
 			" root:%p op:%hhu d:%hhu w:%hu "		\
 			REQ_OFTRQ_FLAGS_FMT" "fmt,			\
 			oftr, (oftr)->oftrq_off, (oftr)->oftrq_nblks,	\
