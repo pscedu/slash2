@@ -108,7 +108,8 @@ libsl_nid_associate(lnet_nid_t nid, sl_resource_t *res)
 
 	resm->resm_nid = nid;
 	resm->resm_res = res;
-	init_hash_entry(&resm->resm_hashe, &resm->resm_nid, resm);
+	/* XXX check sizeof(u64) == sizeof(lnet_nid_t) */
+	init_hash_entry(&resm->resm_hashe, (void *)&resm->resm_nid, resm);
 	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hashe);
 }
 
