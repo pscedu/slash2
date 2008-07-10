@@ -18,12 +18,12 @@
 
 #include "pfl.h"
 #include "psc_types.h"
+#include "psc_mount/dhfh.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
-#include "psc_mount/dhfh.h"
-#include "psc_rpc/rpclog.h"
 
 #include "slconfig.h"
 #include "mount_slash.h"
@@ -113,14 +113,14 @@ msl_fcm_get(struct fhent *fh)
 /**
  * msl_fdreg_cb - (file des registration callback) This is the callback handler issued from fh_register().  Its primary duty is to allocate the fidcache member handle structure and attach it to the file des structure.
  * @fh: the file handle.
- * @op: op type (FD_REG_NEW, FD_REG_EXISTS are valid).
+ * @op: op type (FD_REG_NEW, FD_REG_EXIST are valid).
  * @args: array of pointer arguments (not used here).
  */
 void
 msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
 {
 	psc_assert(op == FD_REG_NEW ||
-		   op == FD_REG_EXISTS);
+		   op == FD_REG_EXIST);
 
 	spinlock(&fh->fh_lock);
 	if (op == FD_REG_NEW) {
@@ -138,7 +138,7 @@ msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
 			fh->fh_state = FD_REG_READY;
 		}
 		
-	} else if (op == FD_REG_EXISTS) {
+	} else if (op == FD_REG_EXIST) {
 	exists:
 		psc_assert(fh->fh_state == FD_REG_READY);		
 	}
