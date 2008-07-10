@@ -4,7 +4,7 @@ include Makefile.path
 
 PROG=		mount_slash
 SRCS+=		control.c
-SRCS+=		mount_slash.c
+SRCS+=		main.c
 SRCS+=		mount_slash_int.c
 SRCS+=		rpc.c
 SRCS+=		${SLASH_BASE}/share/rpc.c
