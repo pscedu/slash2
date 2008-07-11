@@ -780,9 +780,15 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	if (msrmc_connect(name))
 		psc_fatal("unable to connect to MDS");
 
+	if ((name = getenv("SLASH2_PIOS_ID")) != NULL) {
+		if ((prefIOS = libsl_str2id(name)) == IOS_ID_ANY)
+			psc_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
+				  "a valid IOS, defaulting to IOS_ID_ANY", name);
+	}
+
 	name = getenv("SLASH_IO_SERVER_NIDS");
 	if (name == NULL)
-		psc_fatalx("SLASH_MDS_SERVER_NIDS not set");
+		psc_fatalx("SLASH_IO_SERVER_NIDS not set");
 	for (; name; name = p) {
 		while (*name == ' ')
 			name++;
@@ -831,12 +837,5 @@ struct fuse_operations slashops = {
 int
 main(int argc, char *argv[])
 {
-	char *pios;
-	
-	if ((pios = getenv("SLASH2_PIOS_ID")) != NULL) {
-		if ((prefIOS = libsl_str2id(pios)) == IOS_ID_ANY)
-			psc_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
-				  "a valid IOS, defaulting to IOS_ID_ANY");
-	}
 	return (fuse_main(argc, argv, &slashops, NULL));
 }

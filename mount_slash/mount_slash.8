@@ -8,22 +8,40 @@
 .Nd slash file system mounter
 .Sh SYNOPSIS
 .Nm mount_slash
-.Op Ar options
+.Op Fl fsV
+.Op Fl o Ar options
 .Ar mountpoint
 .Sh DESCRIPTION
 The
 .Nm
 utility attachs a slash file system mount under the specified
 .Ar mountpoint .
+.Pp
+The options are as follows:
+.Bl -tag -width Ds -offset indent
+.It Fl f
+Enable foreground operation
+.Pq i.e. do not fork and enter daemon operation .
+.It Fl o Ar options
+Enable a FUSE-specific option.
+.It Fl s
+Disable multithreaded operation.
+.It Fl V
+Display version information.
+.El
 .Sh ENVIRONMENT
-.Bl -tag -width Ev
-.It Ev SLASH_SERVER_NID
+.Bl -tag -width SLASH_MDS_SERVER_NIDx
+.It Ev SLASH_MDS_SERVER_NID
 Slash MDS LNET NID
 .Pq connection address string .
+.It Ev SLASH_IO_SERVER_NIDS
+Comma-separated list of I/O server LNET NIDs.
+.It Ev SLASH2_PIOS_ID
+Preferred I/O server LNET NID.
 .El
 .Sh SEE ALSO
+.\" .Xr lnet-env-vars 7 ,
 .Xr msctl 8 ,
 .Xr slashd 8 ,
 .Xr sliod 8 ,
 .Xr umount 8
-.\" .Xr lnet-env-vars 7
