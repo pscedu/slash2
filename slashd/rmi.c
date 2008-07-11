@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
- * Routines for handling requests for MDS from ION.
+ * Routines for handling RPC requests for MDS from ION.
  */
 
 #include <stdio.h>

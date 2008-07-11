@@ -1,5 +1,9 @@
 /* $Id$ */
 
+/*
+ * Routines for handling RPC requests for CLIENT from MDS.
+ */
+
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 

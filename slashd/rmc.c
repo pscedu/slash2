@@ -1,5 +1,9 @@
 /* $Id$ */
 
+/*
+ * Routines for handling RPC requests for MDS from CLIENT.
+ */
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>

@@ -7,6 +7,7 @@ SRCS+=		control.c
 SRCS+=		main.c
 SRCS+=		ric.c
 SRCS+=		rii.c
+SRCS+=		riic.c
 SRCS+=		rim.c
 SRCS+=		rpc.c
 SRCS+=		timer.c

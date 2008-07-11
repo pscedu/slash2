@@ -1,5 +1,9 @@
 /* $Id$ */
 
+/*
+ * Routines for handling RPC requests for ION from CLIENT.
+ */
+
 #define _XOPEN_SOURCE 500
 
 #include <errno.h>

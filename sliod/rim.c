@@ -1,5 +1,9 @@
 /* $Id$ */
 
+/*
+ * Routines for handling RPC requests for ION from MDS.
+ */
+
 #include <stdio.h>
 
 #include "psc_rpc/rpc.h"
