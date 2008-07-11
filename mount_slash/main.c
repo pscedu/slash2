@@ -28,6 +28,8 @@
 #include "mount_slash.h"
 #include "slashrpc.h"
 
+sl_ios_id_t prefIOS = IOS_ID_ANY;
+
 int
 slash_access(__unusedx const char *path, __unusedx int mask)
 {
@@ -829,5 +831,12 @@ struct fuse_operations slashops = {
 int
 main(int argc, char *argv[])
 {
+	char *pios;
+	
+	if ((pios = getenv("SLASH2_PIOS_ID")) != NULL) {
+		if ((prefIOS = libsl_str2id(pios)) == IOS_ID_ANY)
+			psc_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
+				  "a valid IOS, defaulting to IOS_ID_ANY");
+	}
 	return (fuse_main(argc, argv, &slashops, NULL));
 }

@@ -7,6 +7,7 @@
 #include <fuse.h>
 
 #include "psc_types.h"
+#include "slconfig.h"
 
 struct fhent;
 struct pscrpc_request;
@@ -22,10 +23,20 @@ struct pscrpc_request;
 #define MSL_READ 0
 #define MSL_WRITE 1
 
+extern sl_ios_id_t prefIOS;
+
 struct msctl_thread {
 	u32	mc_st_nclients;
 	u32	mc_st_nsent;
 	u32	mc_st_nrecv;
+};
+
+
+struct fidcache_memb_handle;
+
+struct msl_fhent {
+	struct fidcache_memb_handle *mfh_fcmh;
+	struct dynarray              mfh_bmaps;
 };
 
 struct msrcm_thread {
@@ -54,6 +65,7 @@ void msl_fdreg_cb(struct fhent *, int, void *[]);
 
 int msl_io(struct fhent *, char *, size_t, off_t, int);
 int msl_io_cb(struct pscrpc_request *, void *, int);
+int msl_dio_cb(struct pscrpc_request *, void *, int);
 
 #define mds_import	(mds_csvc->csvc_import)
 
