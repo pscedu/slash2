@@ -62,7 +62,30 @@ Client must track the read and write modes of his bmaps so that deref's on the
 mds can occur properly.
     1) This is tracked in bmapi_mode on both the client and mds.
     2) For a client which access a bmap for write and read then he will send a 
-    deref val of '2' or two separate derefs.
+    deref val of '2' or two separate derefs. 
+    ** NO.  A client with write mode already has read mode privs so no further
+    deref's are needed - only the deref of the write.
+
+    But.. this means that the client must keep track of all the fd's which 
+    can reference that bmap (in either ro, rw, or rw mode) but this state 
+    can't be held at the global file level.. it should be done on a per-bmap 
+    basis if possible. 
+
+    This can be solved with struct msl_fhent which is an enhanced
+    data structure hanging from fh->fh_pri.  This must be matched with an 
+    equivalent structure on the mds (struct mexpbcm) seems to be the best 
+    place.  The mds does not track a ref for each fd on a client, only if the
+    client is in read or write mode.   Once the client has decref'd a bmap
+    via close() ops, then he will notify the mds of the mode change.
+
+    So 1 client w/ 50 open fh's has one mexpbcm on the mds which marks 
+    the mexpbcm_mode with MEXPBCM_RD and presumably no dio.  This incurs a 
+    refcnt of 1 in bmdsi_rd_ref and one entry in bmdsi_exports.
+    .. now if that client gets another process that wants to write, then 
+    the mode needs to change to MEXPBCM_WR, this means that, atomically, 
+    bmdsi_rd_ref must be dec'd and bmdsi_wr_ref inc'd.
+
+
     3) In the event of a client disconnect, all of his bmaps must be deref'd
        which means that the mds must keep a reference, per client for both 
        read and write.
