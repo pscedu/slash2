@@ -83,8 +83,15 @@ mds can occur properly.
     refcnt of 1 in bmdsi_rd_ref and one entry in bmdsi_exports.
     .. now if that client gets another process that wants to write, then 
     the mode needs to change to MEXPBCM_WR, this means that, atomically, 
-    bmdsi_rd_ref must be dec'd and bmdsi_wr_ref inc'd.
+    bmdsi_rd_ref must be dec'd and bmdsi_wr_ref inc'd.  Conversly, when a 
+    client's bcm_wr_ref goes to zero and bcm_rd_ref > 0 then the mds is 
+    notified to dec bmdsi_wr_ref, which in turn may cause the mds to change
+    the bmap's cache policy (if bmdsi_wr_ref == 0).  
 
+    On close(), the client will iterate across the mfh_bmaps array (which 
+    lists all the bmaps affected by the fd).  An rpc will be generated which
+    tries to batch as may dec refs as needed.
+    
 
     3) In the event of a client disconnect, all of his bmaps must be deref'd
        which means that the mds must keep a reference, per client for both 
