@@ -87,15 +87,20 @@ mds can occur properly.
     client's bcm_wr_ref goes to zero and bcm_rd_ref > 0 then the mds is 
     notified to dec bmdsi_wr_ref, which in turn may cause the mds to change
     the bmap's cache policy (if bmdsi_wr_ref == 0).  
-
-    On close(), the client will iterate across the mfh_bmaps array (which 
-    lists all the bmaps affected by the fd).  An rpc will be generated which
-    tries to batch as may dec refs as needed.
     
+	struct msl_fhent:
+	       How do we do fast lookups of the bmaps which we have already ref'd?
+
+	       . msl_io() will verify that the bmaps are of the right mode for the
+	       requested operation and that the bmaps and fhent agree on the allowable 
+	       mode. 
+
+	           
 
     3) In the event of a client disconnect, all of his bmaps must be deref'd
        which means that the mds must keep a reference, per client for both 
-       read and write.
+       read and write.  mexpbcm_mode in struct mexpbcm is where this stuff
+       will be kept.
 
 
 MDS / CLI / ION - Bmap Read and Write Policies
