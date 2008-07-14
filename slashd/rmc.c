@@ -791,6 +791,9 @@ slrmc_handler(struct pscrpc_request *rq)
 	case SRMT_GETATTR:
 		rc = slrmc_getattr(rq);
 		break;
+	case SRMT_GETBMAP:
+		rc = slrmc_getbmap(rq);
+		break;
 	case SRMT_FGETATTR:
 		rc = slrmc_fgetattr(rq);
 		break;
