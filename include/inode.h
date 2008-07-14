@@ -20,6 +20,10 @@
 #define SL_RES_BITS  15
 #define SL_MDS_BITS  1
 
+#define SL_BMAP_SIZE  134217728
+#define SL_CRC_SIZE   1048576
+#define SL_CRCS_PER_BMAP (SL_BMAP_SIZE / 1048576)
+
 typedef u32 sl_inum_t;
 typedef u32 sl_blkno_t;  /* block number type */
 typedef u32 sl_ios_id_t; /* io server id: 16 bit site id
@@ -113,13 +117,15 @@ typedef struct slash_block_desc {
 typedef struct slash_block_handle {
 	u64       bh_magic;                        /* set if i'm not a hole */
 	u8        bh_nrepls;                       /* num replicas   */
-	sl_gcrc_t bh_gen_crc[SL_MAX_GENS_PER_BLK]; /* array of crcs  */
+	sl_gcrc_t bh_gen_crc[SL_CRCS_PER_BMAP];    /* array of crcs  */
 	sl_blkd_t bh_blks[SL_DEF_REPLICAS];        /* blk structures */
 } sl_blkh_t;
 
 /*
  * The inode structure lives at the beginning of the metafile and holds
  * the block store array along with snapshot pointers.
+ * 
+ * Replica tables are held here as opposed to  
  */
 typedef struct slash_inode_store {
 	struct slash_fidgen ino_fg;
@@ -127,9 +133,10 @@ typedef struct slash_inode_store {
 	size_t       ino_bsz;                    /* file block size         */
 	size_t       ino_lblk;                   /* last block              */
 	u32          ino_lblk_sz;                /* last block size         */
-	sl_bstore_t  ino_repls[SL_DEF_REPLICAS]; /* io systems holding blks */
 	sl_snap_t    ino_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers       */
+	u32          ino_csnap;                  /* current snapshot        */
 	struct stat  ino_stb;                    /* stat buf, on disk       */
+	sl_bstore_t  ino_repls[SL_DEF_REPLICAS]; /* io systems holding blks */
 	psc_crc_t    ino_crc;                    /* crc of the inode        */
 } sl_inode_t;
 
