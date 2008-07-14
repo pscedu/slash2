@@ -8,6 +8,7 @@
 
 #include "psc_types.h"
 #include "slconfig.h"
+#include "fidcache.h"
 
 struct fhent;
 struct pscrpc_request;
@@ -31,13 +32,106 @@ struct msctl_thread {
 	u32	mc_st_nrecv;
 };
 
+/* msl_fbr (mount slash fhent bmap ref).
+ *
+ */
+struct msl_fbr {
+	struct bmap_cache_memb        *mfbr_bmap;    /* the bmap       */
+	atomic_t                       mfbr_acnt;    /* access counter */
+	SPLAY_ENTRY(fhbmap_cache_memb) mfbr_tentry;
+};
 
-struct fidcache_memb_handle;
+static inline void
+msl_fbr_ref(struct msl_fbr *r, int rw)
+{
+	atomic_inc(&r->mfbr_acnt);
+
+	if (f->fh_state & FHENT_READ)
+                atomic_inc(&b->bcm_rd_ref);
+        if (f->fh_state & FHENT_WRITE)
+                atomic_inc(&b->bcm_wr_ref);
+}
+
+static inline struct msl_fbr *
+msl_fbr_new(struct bmap_cache_memb *b, int rw)
+{
+	struct msl_fbr *r = PSCALLOC(sizeof(*r));
+
+	r->mfbr_bmap = b;
+	msl_fbr_ref(r, rw);
+
+	return (r);
+}
+
+
+static inline void
+msl_fbr_free(struct msl_fbr *r, struct fhent *f)
+{
+	psc_assert(r->mfbr_bmap);
+
+	if (f->fh_state & FHENT_READ)
+		atomic_dec(&r->mfbr_bmap->bcm_rd_ref);
+	if (f->fh_state & FHENT_WRITE)
+		atomic_dec(&r->mfbr_bmap->bcm_wr_ref);
+
+	PSCFREE(r);
+}
+
+static inline int 
+fhbmap_cache_cmp(const void *x, const void *y)
+{
+	//const struct msl_fbr *a = x, *b = y;
+	//return (bmap_cache_cmp(a->mfbr_bmap, b->mfbr_bmap));
+	return (bmap_cache_cmp(((struct msl_fbr *)x)->mfbr_bmap, 
+			       ((struct msl_fbr *)y)->mfbr_bmap));
+}
+
+SPLAY_HEAD(fhbmap_cache, fhbmap_cache_memb);
+SPLAY_PROTOTYPE(fhbmap_cache, fhbmap_cache_memb, 
+		mfbr_tentry, fhbmap_cache_cmp);
 
 struct msl_fhent {
 	struct fidcache_memb_handle *mfh_fcmh;
-	struct dynarray              mfh_bmaps;
+	struct fhbmap_cache          mfh_fhbmap_cache;
 };
+
+static inline int
+msl_fuse_2_oflags(int fuse_flags)
+{
+	int oflag = -1;
+
+	if (fuse_flags & O_RDONLY)
+		oflag = FHENT_READ;
+	
+	else if (fuse_flags & O_WRONLY) {
+		psc_assert(oflag == -1);
+		oflag = FHENT_WRITE;
+		
+	} else if (fuse_flags & O_RDWR) {
+		psc_assert(oflag == -1);
+		oflag = FHENT_WRITE | FHENT_READ;
+
+	} else 
+		psc_fatalx("Invalid fuse_flag %d", fuse_flags);
+	
+	return (oflag);
+}
+
+static inline struct msl_fbr *
+fhcache_bmap_lookup(struct fhent *fh, const struct bmap_cache_memb *b)
+{
+	struct msl_fhent *fhe = fh->fh_pri;
+        struct msl_fbr *r=NULL, lr;
+        int locked;
+
+        lr.mfbr_bmap = b;
+        locked = reqlock(&fh->fh_lock);
+        r = SPLAY_FIND(bmap_cache, &fch->fcmh_bmap_cache, &lr);
+        ureqlock(&fch->fh_lock, locked);
+
+        return (r);
+}
+ 
 
 struct msrcm_thread {
 };
