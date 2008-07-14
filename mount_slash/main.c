@@ -116,7 +116,7 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 			 *   it in the fd cache.
 			 */
 			fi->fh = mp->cfd;
-			fh_register(mp->cfd, msl_fdreg_cb, NULL);
+			fh_register(mp->cfd, FHENT_WRITE, msl_fdreg_cb, NULL);
 		}
 	}
 	pscrpc_req_finished(rq);
@@ -312,7 +312,9 @@ slash_open(const char *path, struct fuse_file_info *fi)
 	struct srm_open_req *mq;
 	struct srm_open_rep *mp;
 	struct iovec iov;
-	int rc;
+	int rc, oflag;
+
+	oflag = msl_fuse_2_oflags(fi->flags);
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_OPEN, rq, mq, mp)) != 0)
@@ -328,7 +330,7 @@ slash_open(const char *path, struct fuse_file_info *fi)
 			rc = mp->rc;
 		else {
 			fi->fh = mp->cfd;
-			fh_register(mp->cfd, msl_fdreg_cb, NULL);
+			fh_register(mp->cfd, oflag, msl_fdreg_cb, NULL);
 		}
 	}
 	pscrpc_req_finished(rq);
