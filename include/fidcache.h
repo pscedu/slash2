@@ -25,7 +25,7 @@
 #define MDS_FID_CACHE_DEFSZ 1024   /* Number of fcmh's to allocate by default */
 #define MDS_FID_CACHE_MAXSZ 131072 /* Max fcmh's */
 
-#define SLASH_BMAP_SIZE  134217728
+#define SLASH_BMAP_SIZE SL_BMAP_SIZE
 #define SLASH_BMAP_WIDTH 8
 #define SLASH_BMAP_DEPTH 5
 #define SLASH_BMAP_SHIFT 11
@@ -97,12 +97,22 @@ struct bmap_info_cli {
 #define BMAP_AUTH_SZ 8
 /*
  * bmap_info - for each block in the fidcache, associate the set of
- * possible I/O servers and the store the CRC of the block.
+ * possible I/O servers.
  */
 struct bmap_info {
 	lnet_nid_t      bmapi_ion;                   /* MDS chosen io node  */
+	u32             bmapi_mode;                  /* MDS tells cache pol */
 	sl_ios_id_t	bmapi_ios[SL_DEF_REPLICAS];  /* Replica store       */
 	unsigned char   bmapi_auth[BMAP_AUTH_SZ];    /* Our write key       */
+};
+
+// XXX should bmapi_mode be stored in bmap_info?
+enum bmap_cli_modes {
+        BMAP_CLI_RD   = (1<<0),  /* bmap has read creds       */
+        BMAP_CLI_WR   = (1<<1),  /* write creds               */
+	BMAP_CLI_DIO  = (1<<2),  /* bmap is in dio mode       */
+	BMAP_CLI_MCIP = (1<<3),  /* "mode change in progress" */
+	BMAP_CLI_MCC  = (1<<4)   /* "mode change complete"    */	
 };
 
 /*
@@ -110,20 +120,26 @@ struct bmap_info {
  *    all slash service contexts (mds, ios, client).
  *
  * bmap_cache_memb sits in the middle of the GFC stratum.
+ * XXX some of these elements may need to be moved into the bcm_info_pri
+ *     area (as part of new structures?) so save space on the mds.
  */
+struct fidcache_memb_handle;
+
 struct bmap_cache_memb {
 	sl_blkno_t	        bcm_blkno;       /* Bmap blk number */
 	struct timespec		bcm_ts;
 	struct bmap_info	bcm_bmapih;
-	atomic_t		bcm_refcnt;	 /* one ref per client (mds) */
-	atomic_t                bcm_opcnt;
-	void		       *bcm_info_pri;    /* point to private data    */
-	struct fidcache_memb   *bcm_fcm;         /* pointer to fid info      */
+	atomic_t		bcm_rd_ref;	 /* one ref per write fd  */
+	atomic_t		bcm_wr_ref;	 /* one ref per read fd   */
+	atomic_t                bcm_opcnt;       /* pending opcnt         */
+	void		       *bcm_info_pri;    /* point to private data */
 	struct offtree_root    *bcm_oftr;
 	psc_spinlock_t          bcm_lock;
-	u32                     bcm_flags;
-	SPLAY_ENTRY(bmap_cache_memb) bcm_tentry; /* fcm tree entry */
+	struct psc_wait_queue   bcm_waitq;
+	struct fidcache_memb_handle *bcm_fcmh;   /* pointer to fid info   */
+	SPLAY_ENTRY(bmap_cache_memb) bcm_tentry; /* fcm tree entry        */
 };
+
 
 int
 bmap_cache_cmp(const void *, const void *);
@@ -149,8 +165,8 @@ struct fidcache_memb_handle {
 	atomic_t		 fcmh_refcnt;
 	void			*fcmh_info_pri;
 	atomic_t                 fcmh_bmap_cache_cnt;
-	struct bmap_cache	 fcmh_bmap_cache;    /* splay tree of bmap cache */
-	list_cache_t		 fcmh_buffer_cache;  /* list of data buffers (slb)*/
+	struct bmap_cache	 fcmh_bmap_cache;    /* bmap cache splay */
+	list_cache_t		 fcmh_buffer_cache;  /* chain our slbs   */
 	psc_spinlock_t		 fcmh_lock;
 	size_t                   fcmh_bmap_sz;
 };
@@ -259,6 +275,22 @@ fcmh_decref(struct fidcache_memb_handle *fch)
         atomic_dec(&fch->fcmh_refcnt);
         psc_assert(atomic_read(&fch->fcmh_refcnt) >= 0);
 	DEBUG_FCMH(PLL_TRACE, fch, "fcmh_decref");
+}
+
+static inline struct bmap_cache_memb *
+fcmh_bmap_lookup(struct fidcache_memb_handle *fch, sl_blkno_t n)
+{
+	struct bmap_cache_memb lb, *b;
+	int locked;
+
+	bmap.bcm_blkno=b;
+	locked = reqlock(&fch->fcmh_lock);	
+	b = SPLAY_FIND(bmap_cache, &fch->fcmh_bmap_cache, &lb);
+	if (b)
+		atomic_inc(&b->bcm_opcnt);
+	ureqlock(&fch->fcmh_lock, locked);
+
+	return (b);
 }
 
 void fidcache_handle_init(void *p);
