@@ -384,6 +384,7 @@ struct offtree_fill {
 };
 
 
+
 struct offtree_req {
 	struct offtree_root  *oftrq_root;
 	struct offtree_memb  *oftrq_memb;   /* pointer to request node head */
@@ -396,6 +397,8 @@ struct offtree_req {
 	off_t                 oftrq_darray_off;	
 	u64                   oftrq_cfd;
 	struct offtree_fill   oftrq_fill;
+	void                 *oftrq_bmap;   /* this is needed for dio        */
+#define oftrq_len oftrq_nblks               /* reuse oftrq_nblks in dio mode */
 };
 
 enum offtree_req_op_types {
@@ -403,8 +406,18 @@ enum offtree_req_op_types {
 	OFTREQ_OP_READ  = (1<<1),
 	OFTREQ_OP_WRITE = (1<<2),		
 	OFTREQ_OP_PRFFP = (1<<3),
-	OFTREQ_OP_PRFLP = (1<<4)
+	OFTREQ_OP_PRFLP = (1<<4),
+	OFTREQ_OP_DIO   = (1<<5)
 };
+
+static inline size_t
+oftrq_size_get(const struct offtree_req *r)
+{
+	if (ATTR_TEST(r->oftrq_op, OFTREQ_OP_DIO))
+		return r->oftrq_len;
+	else
+		return (size_t)(r->oftrq_nblks * SLASH_BMAP_BLKSZ);
+}
 
 #define REQ_OFTRQ_FLAGS_FMT "%s%s%s%s%s"
 
