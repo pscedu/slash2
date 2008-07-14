@@ -8,6 +8,7 @@
 
 #include "psc_types.h"
 
+#include "slconfig.h"
 #include "fid.h"
 #include "creds.h"
 
@@ -67,6 +68,7 @@
 
 /* Slash RPC message types. */
 enum {
+	SRMT_BMAPCHMODE,
 	SRMT_CHMOD,
 	SRMT_CHOWN,
 	SRMT_CONNECT,
@@ -118,6 +120,8 @@ struct srm_open_secret {
 #define SRIC_BMAP_WRITE 1
 
 struct srm_bmap_req {
+	u32 pios;       /* preferred ios (provided by client)     */
+	u64 cfd;
 	u32 blkno;	/* Starting block number                  */
 	u32 nblks;	/* Read-ahead support                     */
 	u64 fid;	/* Optional, may be filled in server-side */
@@ -126,6 +130,12 @@ struct srm_bmap_req {
 
 struct srm_bmap_rep {
 	u32 nblks;	/* The number of bmaps actually returned  */
+};
+
+struct srm_bmap_mode_req {
+	u64 cfd;
+	u32 blkno;
+	u32 rw;
 };
 
 /* Slash RPC message for ION from client */
