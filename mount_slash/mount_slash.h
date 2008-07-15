@@ -83,8 +83,6 @@ msl_fbr_free(struct msl_fbr *r, struct fhent *f)
 static inline int 
 fhbmap_cache_cmp(const void *x, const void *y)
 {
-	//const struct msl_fbr *a = x, *b = y;
-	//return (bmap_cache_cmp(a->mfbr_bmap, b->mfbr_bmap));
 	return (bmap_cache_cmp(((struct msl_fbr *)x)->mfbr_bmap, 
 			       ((struct msl_fbr *)y)->mfbr_bmap));
 }
