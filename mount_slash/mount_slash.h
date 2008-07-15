@@ -6,6 +6,9 @@
 
 #include <fuse.h>
 
+#include "psc_ds/tree.h"
+#include "psc_mount/dhfh.h"
+
 #include "psc_types.h"
 #include "slconfig.h"
 #include "fidcache.h"
@@ -36,18 +39,20 @@ struct msctl_thread {
  *
  */
 struct msl_fbr {
-	struct bmap_cache_memb        *mfbr_bmap;    /* the bmap       */
-	atomic_t                       mfbr_acnt;    /* access counter */
-	SPLAY_ENTRY(fhbmap_cache_memb) mfbr_tentry;
+	struct bmap_cache_memb *mfbr_bmap;    /* the bmap       */
+	atomic_t                mfbr_acnt;    /* access counter */
+	SPLAY_ENTRY(msl_fbr)    mfbr_tentry;
 };
 
 static inline void
 msl_fbr_ref(struct msl_fbr *r, int rw)
 {
-	if (f->fh_state & FHENT_READ)
-                atomic_inc(&b->bcm_rd_ref);
-        if (f->fh_state & FHENT_WRITE)
-                atomic_inc(&b->bcm_wr_ref);
+	psc_assert(r->mfbr_bmap);
+
+	if (rw & FHENT_READ)
+                atomic_inc(&r->mfbr_bmap->bcm_rd_ref);
+        if (rw & FHENT_WRITE)
+                atomic_inc(&r->mfbr_bmap->bcm_wr_ref);
 }
 
 static inline struct msl_fbr *
@@ -84,9 +89,8 @@ fhbmap_cache_cmp(const void *x, const void *y)
 			       ((struct msl_fbr *)y)->mfbr_bmap));
 }
 
-SPLAY_HEAD(fhbmap_cache, fhbmap_cache_memb);
-SPLAY_PROTOTYPE(fhbmap_cache, fhbmap_cache_memb, 
-		mfbr_tentry, fhbmap_cache_cmp);
+SPLAY_HEAD(fhbmap_cache, msl_fbr);
+SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 struct msl_fhent {
 	struct fidcache_memb_handle *mfh_fcmh;
@@ -116,7 +120,7 @@ msl_fuse_2_oflags(int fuse_flags)
 }
 
 static inline struct msl_fbr *
-fhcache_bmap_lookup(struct fhent *fh, const struct bmap_cache_memb *b)
+fhcache_bmap_lookup(struct fhent *fh, struct bmap_cache_memb *b)
 {
 	struct msl_fhent *fhe=fh->fh_pri;
         struct msl_fbr *r=NULL, lr;

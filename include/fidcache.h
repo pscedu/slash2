@@ -1,5 +1,4 @@
 /* $Id$ */
-
 #ifndef __FIDCACHE_H__
 #define __FIDCACHE_H__
 
@@ -15,29 +14,12 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 
+#include "cache_params.h"
 #include "slconfig.h"
 #include "buffer.h"
 #include "fid.h"
 #include "inode.h"
 #include "offtree.h"
-
-/* Hand computed */
-#define MDS_FID_CACHE_DEFSZ 1024   /* Number of fcmh's to allocate by default */
-#define MDS_FID_CACHE_MAXSZ 131072 /* Max fcmh's */
-
-#define SLASH_BMAP_SIZE SL_BMAP_SIZE
-#define SLASH_BMAP_WIDTH 8
-#define SLASH_BMAP_DEPTH 5
-#define SLASH_BMAP_SHIFT 11
-/* End hand computed */
-
-#define SLASH_BMAP_BLKSZ (SLASH_BMAP_SIZE / power((size_t)SLASH_BMAP_WIDTH, \
-						  (size_t)(SLASH_BMAP_DEPTH-1)))
-#define SLASH_BMAP_BLKMASK ~(SLASH_BMAP_BLKSZ-1)
-
-#define SLASH_MAXBLKS_PER_REQ (LNET_MTU / SLASH_BMAP_BLKSZ)
-
-#define BMAP_MAX_GET 63
 
 #define FCMH_LOCK(h)  spinlock(&(h)->fcmh_lock)
 #define FCMH_ULOCK(h) freelock(&(h)->fcmh_lock)
@@ -284,7 +266,7 @@ fcmh_bmap_lookup(struct fidcache_memb_handle *fch, sl_blkno_t n)
 	struct bmap_cache_memb lb, *b;
 	int locked;
 
-	lb.bcm_blkno=b;
+	lb.bcm_blkno=n;
 	locked = reqlock(&fch->fcmh_lock);	
 	b = SPLAY_FIND(bmap_cache, &fch->fcmh_bmap_cache, &lb);
 	if (b)

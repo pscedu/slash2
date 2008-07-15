@@ -11,6 +11,8 @@
 #include "psc_util/waitq.h"
 #include "psc_rpc/rpc.h"
 
+#include "cache_params.h"
+
 #define OFTIOV_CB_SINGLE_PTR_SLOT 1
 #define OFTIOV_CB_COALESCED_PTR_SLOT 2
 
@@ -413,7 +415,7 @@ enum offtree_req_op_types {
 static inline size_t
 oftrq_size_get(const struct offtree_req *r)
 {
-	if (ATTR_TEST(r->oftrq_op, OFTREQ_OP_DIO))
+	if (r->oftrq_op & OFTREQ_OP_DIO)
 		return r->oftrq_len;
 	else
 		return (size_t)(r->oftrq_nblks * SLASH_BMAP_BLKSZ);
@@ -506,6 +508,9 @@ oftiov_2_iov(const struct offtree_iov *v, struct iovec *i)
 extern struct offtree_root *
 offtree_create(size_t, size_t, u32, u32, void *, offtree_alloc_fn, 
 	       offtree_putnode_cb, offtree_slbpin_cb);
+
+extern void
+offtree_destroy(struct offtree_root *);
 
 extern int 
 offtree_region_preprw(struct offtree_req *);

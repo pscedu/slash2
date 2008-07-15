@@ -43,7 +43,7 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 void
 offtree_destroy(struct offtree_root *t)
 {
-	psc_assert(!atomic_read(&t->oftr_memb.oft_op_ref);
+	psc_assert(!atomic_read(&t->oftr_memb.oft_op_ref));
 	PSCFREE(t);
 }
 

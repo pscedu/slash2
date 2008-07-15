@@ -23,7 +23,7 @@ extern list_cache_t slBufsLru;
 extern list_cache_t slBufsPin;
 
 typedef void (*sl_oftiov_inflight_callback)(struct offtree_iov *, int);
-extern sl_oftiov_inflight_callback *slInflightCb;
+extern sl_oftiov_inflight_callback slInflightCb;
 
 #define SLB_SIZE (slCacheBlkSz * slCacheNblks)
 

@@ -42,7 +42,7 @@ void
 bmap_cache_memb_init(struct bmap_cache_memb *b, struct fidcache_memb_handle *f)
 {
 	memset(b, 0, sizeof(*b));
-	atomic_set(&b->bcm_refcnt, 0);
+	atomic_set(&b->bcm_opcnt, 0);
 	psc_waitq_init(&b->bcm_waitq);
 	b->bcm_oftr = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
 				     SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,

@@ -10,7 +10,9 @@
 #include "psc_util/assert.h"
 #include "psc_util/crc.h"
 
+#include "cache_params.h"
 #include "fid.h"
+
 
 #define SL_DEF_REPLICAS     4
 #define SL_DEF_SNAPSHOTS    16
@@ -20,7 +22,7 @@
 #define SL_RES_BITS  15
 #define SL_MDS_BITS  1
 
-#define SL_BMAP_SIZE  134217728
+#define SL_BMAP_SIZE  SLASH_BMAP_SIZE
 #define SL_CRC_SIZE   1048576
 #define SL_CRCS_PER_BMAP (SL_BMAP_SIZE / 1048576)
 

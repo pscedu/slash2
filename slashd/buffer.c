@@ -26,7 +26,7 @@ u32 slbFreeDef=100;
 u32 slbFreeMax=200;
 u32 slbFreeInc=10;
 
-sl_oftiov_inflight_callback *slInflightCb=NULL;
+sl_oftiov_inflight_callback slInflightCb=NULL;
 
 #define token_t list_cache_t
 
@@ -838,13 +838,10 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 	off_t   nr_soffa=soffa;
 	struct offtree_root *r  = pri;
 	struct fidcache_memb_handle *f  = r->oftr_pri;
-	list_cache_t        *lc = &f->fcmh_buffer_cache;
-	//struct psclist_head  tmpl;
-	struct sl_buffer    *slb;
+	list_cache_t *lc = &f->fcmh_buffer_cache;
+	struct sl_buffer *slb;
 
-	//INIT_PSCLIST_HEAD(&tmpl);
-
-	psc_assert(nblks < (slCacheBlkSz/2));
+	psc_assert(nblks < (size_t)(slCacheBlkSz/2));
 	psc_assert(a);
 	psc_assert(pri);
 	psc_assert(nblks);
@@ -857,8 +854,8 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 		 */
 		spinlock(&lc->lc_lock);
 		psclist_for_each_entry(slb, &lc->lc_list, slb_fcm_lentry) {
-			DEBUG_SLB(PLL_TRACE, slb,
-				  "soffa %"_P_U64"x trying with this slb", soffa);
+			DEBUG_SLB(PLL_TRACE, slb, "soffa %"_P_U64"x trying "
+				  "with this slb", soffa);
 			if (SLB_FULL(slb))
 				continue;
 
