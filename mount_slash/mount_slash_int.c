@@ -143,8 +143,7 @@ msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
 	if (op == FD_REG_NEW) {
 		if (!(fh->fh_state & FHENT_INIT))
 			goto exists;
-
-		if (fh->fh_id & FHENT_INIT) {
+		else {
 			psc_assert(fh->fh_pri == NULL);
 			psc_assert(!atomic_read(&fh->fh_refcnt));
  			/* msl_fcm_new() may block for an fcmh, 
