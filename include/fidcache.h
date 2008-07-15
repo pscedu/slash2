@@ -169,6 +169,7 @@ struct fidcache_memb_handle {
 	list_cache_t		 fcmh_buffer_cache;  /* chain our slbs   */
 	psc_spinlock_t		 fcmh_lock;
 	size_t                   fcmh_bmap_sz;
+#define fcmh_cfd fcmh_fh
 };
 
 #define fcm_set_accesstime(f) {					    \
@@ -283,7 +284,7 @@ fcmh_bmap_lookup(struct fidcache_memb_handle *fch, sl_blkno_t n)
 	struct bmap_cache_memb lb, *b;
 	int locked;
 
-	bmap.bcm_blkno=b;
+	lb.bcm_blkno=b;
 	locked = reqlock(&fch->fcmh_lock);	
 	b = SPLAY_FIND(bmap_cache, &fch->fcmh_bmap_cache, &lb);
 	if (b)

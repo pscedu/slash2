@@ -113,19 +113,17 @@ msl_oftrq_destroy(struct offtree_req *r)
  
  
 __static void
-msl_fcm_get(struct fhent *fh)
+msl_fcm_new(struct fhent *fh)
 {
-	struct fidcache_memb_handle *f = fidcache_get(&fidcFreeList);
+	struct msl_fhent *e;
 	
-	//fidcache_handle_init((void *)f);
-	//fidcache_memb_init(f);
-	/* Incref so that this inode is not immediately considered for reaping.
-	 */
-	fcmh_incref(f);
+	psc_assert(!fh->fh_pri);
+
+	e = fh->fh_pri = PSCALLOC(sizeof(*e));
+	e->mfh_fcmh = fidcache_get(&fidcFreeList);
 	/* Cross-associate the fcmh and fhent structures.
 	 */
-	f->fcmh_fh = fh->fh_id;	
-	fh->fh_pri = f;
+	e->mfh_fcmh->fcmh_fh = fh->fh_id;	
 }
 
 /**
@@ -137,8 +135,7 @@ msl_fcm_get(struct fhent *fh)
 void
 msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
 {
-	psc_assert(op == FD_REG_NEW ||
-		   op == FD_REG_EXIST);
+	psc_assert(op == FD_REG_NEW || op == FD_REG_EXIST);
 
 	spinlock(&fh->fh_lock);
 	if (op == FD_REG_NEW) {
@@ -148,17 +145,19 @@ msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
 		if (fh->fh_id == FD_REG_INIT) {
 			psc_assert(fh->fh_pri == NULL);
 			psc_assert(!atomic_read(&fh->fh_refcnt));
- 			/* msl_fcm_get() may block for an fcmh, 
+ 			/* msl_fcm_new() may block for an fcmh, 
 			 *  hopefully that doesn't hurt us here since
 			 *  the fh is spinlocked.
 			 */
-			msl_fcm_get(fh);
+			msl_fcm_new(fh);
 			ATTR_UNSET(fh->fh_state, FD_REG_INIT);
 			ATTR_SET(fh->fh_state, FD_REG_READY);
 		}		
 	} else {
 	exists:
 		psc_assert(ATTR_TEST(fh->fh_state, FD_REG_READY));
+		psc_assert(fh->fh_pri && ;
+			   ((struct msl_ent *)fh->fh_pri)->mfh_fcmh);
 	}
 	atomic_inc(&fh->fh_refcnt);
 	freelock(&fh->fh_lock);
@@ -198,7 +197,7 @@ msl_bmap_fetch(struct fhent *fh, sl_blkno_t b, size_t n, int rw)
 	mq->fid   = FID_ANY; /* The MDS interpolates the fid from his cfd */
 	mq->rw    = rw;
 
-	iovs  = PSCALLOC(sizeof(struct iovec) * n);
+	iovs  = PSCALLOC(sizeof(*iovs) * n);
 	/* Init the bmap handles and setup the iovs.
 	 */
 	for (i=0; i < n; i++) {
@@ -242,16 +241,17 @@ msl_bmap_fetch(struct fhent *fh, sl_blkno_t b, size_t n, int rw)
  fail:	
 	/* Free any slack.
 	 */
-	for (i=mp->nblks; i < n; i++)
+	for (i=mp->nblks; i < n; i++) {
+		offtree_destroy(bmaps[i].bcm_oftr);
 		PSCFREE(bmaps[i]);
-
+	}
 	PSCFREE(iovs);
 	return (rc);
 }
 
 
 __static int
-msl_bmap_mode_set(struct fhent *fh, sl_blkno_t b, int rw)
+msl_bmap_modeset(struct fhent *fh, sl_blkno_t b, int rw)
 {
 	struct fidcache_memb_handle *f = 
 		((struct msl_fhent *)fh->fh_pri)->mfh_fcmh;
@@ -260,8 +260,7 @@ msl_bmap_mode_set(struct fhent *fh, sl_blkno_t b, int rw)
         struct srm_generic_rep *mp;
 	int rc;
 	
-	psc_assert(rw == SRIC_BMAP_WRITE ||
-		   rw == SRIC_BMAP_READ);
+	psc_assert(rw == SRIC_BMAP_WRITE || rw == SRIC_BMAP_READ);
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 			     SRMT_BMAPCHMODE, rq, mq, mp)) != 0)
@@ -366,23 +365,12 @@ msl_bmap_load(struct fhent *fh, sl_blkno_t n, int prefetch, u32 rw)
 	 *   bmap is read-only (but we'd like to write) then the mds
 	 *   must be notified so that coherency amongst clients can
 	 *   be maintained.
-	 *
 	 *  msl_io() has already verified that this file is writable. 
-	 *
-	 *  XXX ok so now we've got to RPC the mds but what should
-	 *      happen to the bmap in the meantime?  should it be 
-	 *      locked?
-	 *  XXX lots of race conditions here.. it may be useful to 
-	 *      inc ref the bmap prior to changing the mode.  Need to 
-	 *      make sure that our write call is considered prior to 
-	 *      another thread wanting to free this.
-	 *   OK.  bcm_opcnt is inc'd in fcmh_bmap_lookup() (if the 
-	 *        bmap was present in the cache)
+	 *  XXX has it?
 	 */
  retry:
 	spinlock(&b->bcm_lock);
-	if (!(rw == SRIC_BMAP_WRITE && 
-	      !(i->bmapi_mode & BMAP_CLI_WR))) {
+	if (rw != SRIC_BMAP_WRITE || (i->bmapi_mode & BMAP_CLI_WR)) {
 		/* Either we're in read-mode here or the bmap
 		 *  has already been marked for writing therefore
 		 *  the mds already knows we're writing.
@@ -393,17 +381,17 @@ msl_bmap_load(struct fhent *fh, sl_blkno_t n, int prefetch, u32 rw)
 	/* unindented 'else'
 	 */
 	if (i->bmapi_mode & BMAP_CLI_MCIP) {
-		/* If some other thread has set BMAP_CLI_MCIP
-		 *  then he must be set BMAP_CLI_MCC when 
-		 *  he's done (at that time he also must 
-		 *  unset BMAP_CLI_MCIP and set BMAP_CLI_WR
+		/* If some other thread has set BMAP_CLI_MCIP then HE 
+		 *  must set BMAP_CLI_MCC when he's done (at that time 
+		 *  he also must unset BMAP_CLI_MCIP and set BMAP_CLI_WR
 		 */
 		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-		/* Double check our refcnt, it should be at 
+		/* Done waiting, double check our refcnt, it should be at 
 		 *  least '1' (our ref).
+		 * XXX Not sure if both checks are needed.
 		 */
-		psc_assert(atomic_read(&b->bcm_opcnt) > 0);
-		
+		psc_assert(atomic_read(&b->bcm_opcnt) > 0);		
+		psc_assert(atomic_read(&b->bcm_wr_ref) > 0);
 		if (i->bmapi_mode & BMAP_CLI_MCC) {
 			/* Another thread has completed the upgrade
 			 *  in mode change.  Verify that the bmap
@@ -418,26 +406,30 @@ msl_bmap_load(struct fhent *fh, sl_blkno_t n, int prefetch, u32 rw)
 			 *  reason - try again.
 			 */
 			goto retry;
-	} else {
-		/* Do the deed here */
-		psc_assert(!(i->bmapi_mode & BMAP_CLI_WR));
+
+	} else { /* !BMAP_CLI_MCIP not set */
+		psc_assert(!(i->bmapi_mode & BMAP_CLI_WR)   &&
+			   !(i->bmapi_mode & BMAP_CLI_MCIP) &&
+			   !(i->bmapi_mode & BMAP_CLI_MCC));	   
+
 		i->bmapi_mode &= BMAP_CLI_MCIP;
 		freelock(&b->bcm_lock);
 		/* An interesting fallout here is that the mds may callback
 		 *  to us causing our offtree cache to be purged :)
-		 * A reply here from the mds tells us that the mds has 
-		 *  completed all flush operations back to us.
+		 * Correction.. this is not true, since if there was another
+		 *  writer then we would already be in directio mode.
 		 */
-		rc = msl_bmap_mode_set(fh, b->bcm_blkno, SRIC_BMAP_WRITE);
+		rc = msl_bmap_modeset(fh, b->bcm_blkno, SRIC_BMAP_WRITE);
 		psc_assert(!rc); /*  XXX for now.. */
 		/* We're the only thread allowed here, these
 		 *  bits can not have been set by another thread.
 		 */
 		spinlock(&b->bcm_lock);
-		psc_assert(!(i->bmapi_mode & BMAP_CLI_MCC));
-		psc_assert(!(i->bmapi_mode & BMAP_CLI_WR));
+		psc_assert((i->bmapi_mode & BMAP_CLI_MCIP));
+		psc_assert(!(i->bmapi_mode & BMAP_CLI_MCC) &&
+			   !(i->bmapi_mode & BMAP_CLI_WR));
 		i->bmapi_mode &= ~(BMAP_CLI_MCIP);
-		i->bmapi_mode &= (BMAP_CLI_WR | BMAP_CLI_MCC);		
+		i->bmapi_mode &= (BMAP_CLI_WR | BMAP_CLI_MCC);
 		freelock(&b->bcm_lock);
 		psc_waitq_wakeall(&b->bcm_waitq);
 	}
@@ -450,6 +442,7 @@ msl_bmap_load(struct fhent *fh, sl_blkno_t n, int prefetch, u32 rw)
  * @b: the bmap
  * Notes: the bmap is locked to avoid race conditions with import checking.
  *        the bmap's refcnt must have been incremented so that it is not freed from under us.
+ * XXX Dev Needed: If the bmap is a read-only then any replica may be accessed (so long as it is recent).  Therefore msl_bmap_to_import() should have logic to accommodate this. 
  */
 __static struct pscrpc_import *
 msl_bmap_to_import(struct bmap_cache_memb *b)
@@ -537,12 +530,12 @@ msl_io_cb(struct pscrpc_request *rq, void *arg, int status)
 				   (v->oftiov_flags & OFTIOV_FAULTING));
 			ATTR_UNSET(v->oftiov_flags, OFTIOV_FAULTING);
 			ATTR_UNSET(v->oftiov_flags, OFTIOV_FAULTPNDG);
-			/* Set datardy but leave OFT_READPNDG (in the oftm) until 
-			 *   the memcpy -> application buffer has taken place.
+			/* Set datardy but leave OFT_READPNDG (in the oftm) 
+			 *   until the memcpy -> application buffer has 
+			 *   taken place.
 			 */ 
 			ATTR_SET(v->oftiov_flags, OFTIOV_DATARDY);
-			DEBUG_OFFTIOV(PLL_TRACE, v, "OFTIOV_DATARDY");
-			
+			DEBUG_OFFTIOV(PLL_TRACE, v, "OFTIOV_DATARDY");	
 			break;
 
 		case (SRMT_WRITE):
@@ -594,9 +587,8 @@ msl_dio_cb(struct pscrpc_request *rq, void *arg, int status)
 		// XXX Freeing of dynarray, offtree state, etc
                 return (status);
         }
-
-	DEBUG_REQ(PLL_TRACE, rq, 
-		  "completed dio req (op=%d) o="LPX64" s=%zu cfd="LPX64, 
+	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o="LPX64
+		  " s=%zu cfd="LPX64, 
 		  op, mq->offset, mq->size, mq->cfd);
 
 	pscrpc_req_finished(rq);
@@ -1278,7 +1270,6 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 	 *  offtree.  This first loop retrieves all the pages.
 	 */
 	for (i=0; s < e; s++, i++) {
-		struct msl_fhent *f = 
 		/* Load up the bmap, if it's not available then we're out of 
 		 *  luck because we have no idea where the data is!
 		 */

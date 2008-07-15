@@ -143,6 +143,7 @@ fidcache_get(list_cache_t *lc)
 	if (lc == &fidcFreeList) {
 		psc_assert(f->fcmh_state == FCM_CAC_FREE);
 		psc_assert(fcmh_clean_check(f));
+		fcmh_incref(f);
 	} else
 		psc_fatalx("It's unwise to get inodes from %p, it's not "
 			   "fidcFreeList", lc);

@@ -40,6 +40,14 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	return (t);
 }
 
+void
+offtree_destroy(struct offtree_root *t)
+{
+	psc_assert(!atomic_read(&t->oftr_memb.oft_op_ref);
+	PSCFREE(t);
+}
+
+
 /**
  * offtree_iovs_check - iov array verifier.
  * @iovs: array of iovs

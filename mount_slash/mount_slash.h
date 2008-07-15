@@ -44,8 +44,6 @@ struct msl_fbr {
 static inline void
 msl_fbr_ref(struct msl_fbr *r, int rw)
 {
-	atomic_inc(&r->mfbr_acnt);
-
 	if (f->fh_state & FHENT_READ)
                 atomic_inc(&b->bcm_rd_ref);
         if (f->fh_state & FHENT_WRITE)
@@ -120,14 +118,16 @@ msl_fuse_2_oflags(int fuse_flags)
 static inline struct msl_fbr *
 fhcache_bmap_lookup(struct fhent *fh, const struct bmap_cache_memb *b)
 {
-	struct msl_fhent *fhe = fh->fh_pri;
+	struct msl_fhent *fhe=fh->fh_pri;
         struct msl_fbr *r=NULL, lr;
         int locked;
 
-        lr.mfbr_bmap = b;
+	lr.mfbr_bmap = b;
         locked = reqlock(&fh->fh_lock);
-        r = SPLAY_FIND(bmap_cache, &fch->fcmh_bmap_cache, &lr);
-        ureqlock(&fch->fh_lock, locked);
+        r = SPLAY_FIND(fhbmap_cache, &fhe->mfh_fhbmap_cache, &lr);
+	if (r)
+		atomic_inc(&r->mfbr_acnt);
+        ureqlock(&fh->fh_lock, locked);
 
         return (r);
 }
