@@ -10,7 +10,6 @@
 #include "fidcache.h"
 
 struct pscrpc_export;
-
 /*
  * mexpbcm (mds_export_bmap_cache_member) - mexpbcm references bmaps stored in the GFC (global fid cache) and acts as a bridge between GFC bmaps and the export(s) which reference them.  mexpbcm is tracked by the global fidcache (through the fcm's bmap export tree (at the bottom of the GFC's tree chain).  The bmexpcr struct (fidcache.h) points to it.
  * 
@@ -56,8 +55,10 @@ struct mexpfcm {
         struct exp_bmaptree   mecm_bmaps;      /* my tree of bmap pointers */
         struct pscrpc_export *mecm_export;     /* backpointer to our export */
         SPLAY_ENTRY(mexpfcm)  mecm_exp_tentry; /* export tree entry */
+        SPLAY_ENTRY(mexpfcm)  mecm_fcm_tentry; /* fcm tree entry */
 };
 
+//XXX Should this be based on the CFD?
 static inline int
 mexpfcm_cache_cmp(const void *x, const void *y)
 {
@@ -134,4 +135,32 @@ enum bmap_mds_modes {
 	BMAP_MDS_WR = (1<<0), 
 	BMAP_MDS_RD = (1<<1)
 };
+
+SPLAY_HEAD(fcm_exports, mexpfcm);
+SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpbmap_cache_cmp);
+
+struct fidc_mds_info {	
+	struct fcm_exports fmdsi_exports; /* tree of mexpfcm */
+	atomic fmdsi_ref;
+};
+
+void
+fidc_mds_handle_init(void *p)
+{
+        struct fidc_memb_handle *f=p;
+	struct fidc_mds_info *i;
+
+        /* Private data must have already been freed and the pointer nullified.
+         */
+        psc_assert(!f->fcmh_pri);
+	/* Call the common initialization handler.
+	 */
+	fidc_gen_handle_init(f);
+	/* Here are the 'mds' specific calls.
+	 */
+        f->fcmh_pri = PSCALLOC(sizeof(*i));
+        SPLAY_INIT(&f->fmdsi_exports);
+	atomic_set(&f->fmdsi_ref, 0);
+}
+
 #endif
