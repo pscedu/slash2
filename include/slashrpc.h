@@ -130,6 +130,7 @@ struct srm_bmap_req {
 
 struct srm_bmap_rep {
 	u32 nblks;	/* The number of bmaps actually returned  */
+	u32 rc;
 };
 
 struct srm_bmap_mode_req {

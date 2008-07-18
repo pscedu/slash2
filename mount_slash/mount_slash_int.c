@@ -122,7 +122,7 @@ msl_fcm_new(struct fhent *fh)
 	psc_assert(!fh->fh_pri);
 
 	e = fh->fh_pri = PSCALLOC(sizeof(*e));
-	e->mfh_fcmh = fidcache_get(&fidcFreeList);
+	e->mfh_fcmh = fidcache_get(&fidcFreePool.ppm_lc);
 	/* Cross-associate the fcmh and fhent structures.
 	 */
 	e->mfh_fcmh->fcmh_fh = fh->fh_id;	
@@ -586,7 +586,7 @@ msl_dio_cb(struct pscrpc_request *rq, __unusedx void *arg, int status)
                 return (status);
         }
 	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u"
-		  " s=%u cfd="LPX64, op, mq->offset, mq->size, mq->cfd);
+		  " s=%u cfd=%"_P_U64"x", op, mq->offset, mq->size, mq->cfd);
 
 	pscrpc_req_finished(rq);
 	return (0);

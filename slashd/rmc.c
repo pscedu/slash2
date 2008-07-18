@@ -227,6 +227,16 @@ slrmc_getattr(struct pscrpc_request *rq)
 }
 
 int
+slrmc_getbmap(struct pscrpc_request *rq)
+{
+	struct srm_bmap_req *mq;
+	struct srm_bmap_rep *mp;
+
+	RSX_ALLOCREP(rq, mq, mp);
+	return (0);
+}
+
+int
 slrmc_fgetattr(struct pscrpc_request *rq)
 {
 	struct srm_fgetattr_req *mq;

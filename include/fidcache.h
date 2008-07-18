@@ -10,6 +10,7 @@
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/pool.h"
 #include "psc_ds/tree.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
@@ -26,14 +27,16 @@
 
 #define FCMHCACHE_PUT(fcmh, list)					\
         do {                                                            \
-                (fcmh)->fcmh_cache_owner = (list);			\
-                lc_put((list), &(fcmh)->fcmh_lentry);			\
+		(fcmh)->fcmh_cache_owner = (list);			\
+		if (list == &fidcFreePool.ppm_lc)			\
+			psc_pool_return(&fidcFreePool, (fcmh));		\
+		else							\
+        	        lc_put((list), &(fcmh)->fcmh_lentry);		\
         } while (0)
 
-extern list_cache_t	fidcFreeList;
+extern struct psc_poolmgr fidcFreePool;
 extern list_cache_t	fidcDirtyList;
 extern list_cache_t	fidcCleanList;
-extern psc_spinlock_t	fidcCacheLock;
 
 /* sl_finfo - hold stats and lamport clock */
 struct sl_finfo {
@@ -220,7 +223,7 @@ fcmh_lc_2_string(list_cache_t *lc)
 {
 	if (lc == &fidcCleanList)
 		return "Clean";
-	else if (lc == &fidcFreeList)
+	else if (lc == &fidcFreePool.ppm_lc)
 		return "Free";
 	else if (lc == &fidcDirtyList)
 		return "Dirty";

@@ -4,17 +4,17 @@
 
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/pool.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
-#include "offtree.h"
 
+#include "offtree.h"
 #include "fid.h"
 #include "fidcache.h"
 
 #define SL_FIDCACHE_LOW_THRESHOLD 80 // 80%
 
-psc_spinlock_t	 fidcCacheLock;
-list_cache_t	 fidcFreeList;
+struct psc_poolmgr fidcFreePool;
 list_cache_t	 fidcDirtyList;
 list_cache_t     fidcCleanList;
 
@@ -76,10 +76,10 @@ __static SPLAY_GENERATE(bmap_cache, bmap_cache_memb,
 static inline int
 fidcache_freelist_avail_check(void)
 {
-        psc_assert(fidcFreeList.lc_size > 0);
+        psc_assert(fidcFreePool.ppm_lc.lc_size > 0);
 
-        if ((fidcFreeList.lc_nseen / SL_FIDCACHE_LOW_THRESHOLD) >
-            (size_t)fidcFreeList.lc_size)
+        if ((fidcFreePool.ppm_lc.lc_nseen / SL_FIDCACHE_LOW_THRESHOLD) >
+            (size_t)fidcFreePool.ppm_lc.lc_size)
                 return 0;
         return 1;
 }
@@ -121,7 +121,7 @@ fidcache_reap(void)
 		/* Free it..
 		 */
 		ATTR_SET(f->fcmh_state, FCM_CAC_FREEING);
-                fidcache_put_locked(f, &fidcFreeList);
+                fidcache_put_locked(f, &fidcFreePool.ppm_lc);
 		ureqlock(&f->fcmh_lock, locked);
 
 	} while(!fidcache_freelist_avail_check());
@@ -140,13 +140,13 @@ fidcache_get(list_cache_t *lc)
                 fidcache_reap();        /* Try to free some fids */
                 f = lc_getwait(lc);
         }
-	if (lc == &fidcFreeList) {
+	if (lc == &fidcFreePool.ppm_lc) {
 		psc_assert(f->fcmh_state == FCM_CAC_FREE);
 		psc_assert(fcmh_clean_check(f));
 		fcmh_incref(f);
 	} else
 		psc_fatalx("It's unwise to get inodes from %p, it's not "
-			   "fidcFreeList", lc);
+			   "fidcFreePool.ppm_lc", lc);
 	return (f);
 }
 
@@ -177,12 +177,12 @@ fidcache_put_locked(struct fidcache_memb_handle *f, list_cache_t *lc)
 	 */
 	clean = fcmh_clean_check(f);
 
-	if (lc == &fidcFreeList) {
+	if (lc == &fidcFreePool.ppm_lc) {
 		struct bmap_cache_memb tbmp;
 
 		/* Valid sources of this inode.
 		 */
-		if ((f->fcmh_cache_owner == &fidcFreeList) ||
+		if ((f->fcmh_cache_owner == &fidcFreePool.ppm_lc) ||
 		    (f->fcmh_cache_owner == &fidcCleanList)) {
 
 		} else psc_fatalx("Bad inode fcmh_cache_owner %p",
@@ -201,7 +201,7 @@ fidcache_put_locked(struct fidcache_memb_handle *f, list_cache_t *lc)
 
 	} else if (lc == &fidcCleanList) {
 		psc_assert(
-			   f->fcmh_cache_owner == &fidcFreeList ||
+			   f->fcmh_cache_owner == &fidcFreePool.ppm_lc ||
 			   f->fcmh_cache_owner == &fidcDirtyList);
                 psc_assert(ATTR_TEST(f->fcmh_state, FCM_CAC_CLEAN));
 		psc_assert(clean);
@@ -258,13 +258,12 @@ fidcache_init(void)
 {
 	int rc;
 
-	LOCK_INIT(&fidcCacheLock);
-	lc_reginit(&fidcFreeList,  struct fidcache_memb_handle, fcmh_lentry, "fcmfree");
+	rc = psc_pool_init(&fidcFreePool, struct fidcache_memb_handle,
+	    fcmh_lentry, 0, MDS_FID_CACHE_DEFSZ, fidcache_handle_init,
+	    "fcmfreepool");
+	psc_assert(rc == MDS_FID_CACHE_DEFSZ);
+	fidcFreePool.ppm_max = MDS_FID_CACHE_MAXSZ;
+
 	lc_reginit(&fidcDirtyList, struct fidcache_memb_handle, fcmh_lentry, "fcmdirty");
 	lc_reginit(&fidcCleanList, struct fidcache_memb_handle, fcmh_lentry, "fcmclean");
-
-	fidcFreeList.lc_max = MDS_FID_CACHE_MAXSZ;
-	rc = lc_grow(&fidcFreeList, MDS_FID_CACHE_DEFSZ, fidcache_handle_init);
-
-	psc_assert(rc == MDS_FID_CACHE_DEFSZ);
 }

@@ -6,6 +6,7 @@
 #include "psc_ds/dynarray.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/pool.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
@@ -16,7 +17,7 @@
 #include "fidcache.h"
 #include "offtree.h"
 
-list_cache_t slBufsFree;
+struct psc_poolmgr slBufsFreePool;
 list_cache_t slBufsLru;
 list_cache_t slBufsPin;
 
@@ -121,25 +122,26 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 
 	DEBUG_SLB(PLL_TRACE, slb, "adding to %s", lc->lc_name);
 
-	if (lc == &slBufsLru)
-		sl_buffer_lru_assertions(slb);
-
-	else if (lc == &slBufsPin)
-		sl_buffer_pin_assertions(slb);
-
-	else if (lc == &slBufsFree) {
+	if (lc == &slBufsFreePool.ppm_lc) {
 		psc_assert(ATTR_TEST(slb->slb_flags, SLB_FREEING));
 		ATTR_UNSET(slb->slb_flags, SLB_FREEING);
 		ATTR_SET(slb->slb_flags, SLB_FREE);
 		sl_buffer_free_assertions(slb);
 		slb->slb_flags = SLB_FRESH;
 		sl_buffer_fresh_assertions(slb);
-	} else
-		psc_fatalx("Invalid listcache address %p", lc);
 
-	lc_queue(lc, &slb->slb_mgmt_lentry);
-	slb->slb_lc_owner = lc;
-
+		psc_pool_return(&slBufsFreePool, slb);
+		slb->slb_lc_owner = &slBufsFreePool.ppm_lc;
+	} else {
+		if (lc == &slBufsLru)
+			sl_buffer_lru_assertions(slb);
+		else if (lc == &slBufsPin)
+			sl_buffer_pin_assertions(slb);
+		else
+			psc_fatalx("Invalid listcache address %p", lc);
+		lc_queue(lc, &slb->slb_mgmt_lentry);
+		slb->slb_lc_owner = lc;
+	}
 	ureqlock(&slb->slb_lock, locked);
 }
 
@@ -152,6 +154,8 @@ static struct sl_buffer *
 sl_buffer_get(list_cache_t *lc, int block)
 {
 	struct sl_buffer *slb;
+
+	psc_assert(lc != &slBufsFreePool.ppm_lc);
 
 	psc_trace("slb from %s", lc->lc_name);
 
@@ -355,7 +359,7 @@ sl_slab_reap(int nblks) {
 		fblks += b->slb_nblks;
 		/* Put it back in the pool
 		 */
-		sl_buffer_put(b, &slBufsFree);
+		sl_buffer_put(b, &slBufsFreePool.ppm_lc);
 
 	} while (fblks < nblks);
 
@@ -373,11 +377,11 @@ sl_slab_alloc(int nblks, struct fidcache_memb_handle *f)
 	ENTRY;
  retry:
 	do {
-		slb = sl_buffer_get(&slBufsFree, 0);
+		slb = psc_pool_get(&slBufsFreePool);
 		if (!slb) {
-			if (lc_grow(&slBufsFree, slbFreeInc,
-				    sl_buffer_init) > 0)
-				goto retry;
+//			if (lc_grow(&slBufsFree, slbFreeInc,
+//				    sl_buffer_init) > 0)
+//				goto retry;
 			if (timedout)
 				/* Already timedout once, give up
 				 */
@@ -853,7 +857,7 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 		 *   from there.
 		 */
 		spinlock(&lc->lc_lock);
-		psclist_for_each_entry(slb, &lc->lc_list, slb_fcm_lentry) {
+		psclist_for_each_entry(slb, &lc->lc_listhd, slb_fcm_lentry) {
 			DEBUG_SLB(PLL_TRACE, slb, "soffa %"_P_U64"x trying "
 				  "with this slb", soffa);
 			if (SLB_FULL(slb))
@@ -910,7 +914,7 @@ sl_buffer_init(void *pri)
 	INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
-	//sl_buffer_put(slb, &slBufsFree);
+	//sl_buffer_put(slb, &slBufsFreePool.ppm_lc);
 }
 
 void
@@ -918,15 +922,15 @@ sl_buffer_cache_init(void)
 {
 	psc_assert(SLB_SIZE <= LNET_MTU);
 
-	lc_reginit(&slBufsFree, struct sl_buffer,
-		   slb_mgmt_lentry, "slabBufFree");
+	psc_pool_init(&slBufsFreePool, struct sl_buffer,
+	    slb_mgmt_lentry, PPMF_AUTO, slbFreeDef,
+	    sl_buffer_init, "slabBufFreePool");
+	slBufsFreePool.ppm_max = slbFreeMax;
+
 	lc_reginit(&slBufsLru,  struct sl_buffer,
 		   slb_mgmt_lentry, "slabBufLru");
 	lc_reginit(&slBufsPin,  struct sl_buffer,
 		   slb_mgmt_lentry, "slabBufPin");
 
-	slBufsFree.lc_max = slbFreeMax;
-
-	lc_grow(&slBufsFree, slbFreeDef, sl_buffer_init);
 	slInflightCb = sl_oftiov_inflight_cb;
 }
