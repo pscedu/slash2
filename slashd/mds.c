@@ -1,0 +1,605 @@
+/* $Id$ */
+
+#include "psc_util/assert.h"
+#include "psc_util/atomic.h"
+#include "psc_util/alloc.h"
+#include "psc_ds/tree.h"
+
+#include "cache_params.h"
+#include "mds.h"
+#include "mdsexpc.h"
+#include "fidcache.h"
+#include "../slashd/rpc.h"
+#include "../slashd/cfd.h"
+
+struct sl_fsops mdsFsops;
+
+extern list_cache_t pndgCacheCbs;
+
+
+__static SPLAY_GENERATE(fcm_exports, mexpfcm, 
+			mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
+
+__static SPLAY_GENERATE(exp_bmaptree, mexpbcm, 
+			mexpbcm_exp_tentry, mexpbmap_cache_cmp);
+
+__static SPLAY_GENERATE(bmap_exports, mexpbcm, 
+			mexpbcm_bmap_tentry, mexpbmap_cache_cmp);
+
+void
+fidc_mds_handle_init(void *p)
+{
+        struct fidc_memb_handle *f=p;
+        struct fidc_mds_info *i;
+
+        /* Private data must have already been freed and the pointer nullified.
+	 */
+        psc_assert(!f->fcmh_pri);
+        /* Call the common initialization handler.
+	 */
+        fidc_gen_handle_init(f);
+        /* Here are the 'mds' specific calls.
+	 */
+        f->fcmh_pri = PSCALLOC(sizeof(*i));
+        SPLAY_INIT(&f->fmdsi_exports);
+        atomic_set(&f->fmdsi_ref, 0);
+}
+
+void
+mexpfcm_new(struct cfdent *c, struct pscrpc_export *e) {
+	struct mexpfcm *m = PSCALLOC(sizeof(*m));
+	struct fidc_memb_handle *f;
+	struct fidc_mds_info *i;
+	struct slashrpc_export *sexp;
+	struct mexp_cli *mexp_cli;
+
+	LOCK_ENSURE(&e->exp_lock);
+	sexp = e->exp_private;
+	psc_assert(sexp);	
+	/* Allocate the private data if it does not already exist and 
+	 *  initialize the import for callback rpc's.
+	 */
+	if (sexp->sexp_data) {
+		psc_assert(sexp->sexp_type == MDS_CLI_EXP);
+		mexp_cli = sexp->sexp_data;
+		psc_assert(mexp_cli->mc_csvc);
+	} else {
+		sexp->sexp_type = MDS_CLI_EXP;
+		mexp_cli = sexp->sexp_data = PSCALLOC(sizeof(*mexp_cli));
+		mexp_cli->mc_csvc = rpc_csvc_create(SRCM_REQ_PORTAL, 
+						    SRCM_REP_PORTAL);
+		if (!mexp_cli->mc_csvc)
+			psc_fatal("rpc_csvc_create() failed");
+		/* See how this works out, I'm just going to borrow 
+		 *   the export's  connection structure.
+		 */
+		psc_assert(e->exp_connection);
+		mexp_cli->mc_csvc->csvc_import->imp_connection = 
+			e->exp_connection;
+	}
+
+	SPLAY_INIT(&m->mecm_bmaps);
+	/* Serialize access to our bmap cache tree.
+	 */
+	LOCK_INIT(&m->mecm_lock);
+	/* Back pointer to our export.
+	 */
+	m->mecm_export = e;
+	/* Locate our fcmh in the global cache, fidc_lookup_immns()
+	 *  bumps the refcnt.  The fid must be found via the simple lookup
+	 *  (which means that the fcmh was already present in the cache).
+	 */
+	m->mecm_fcmh = f = fidc_lookup_immns(c->fid);
+	/* Sanity for fcmh - if the cfdent has been found then the inode
+	 *  should have already been created.
+	 */
+	psc_assert(f);
+
+	psc_assert(m->mecm_fcmh);
+	psc_assert(atomic_read(&f->fcmh_refcnt) > 0);
+	psc_assert(f->fcmh_pri);
+	/* Add ourselves to the fidc_mds_info structure's splay tree.
+	 */
+	i = f->fcmh_pri;
+	spinlock(&f->fcmh_lock);
+	atomic_inc(&i->fmdsi_ref);
+	if (SPLAY_INSERT(fcm_exports, &i->fmdsi_exports, m))
+		psc_fatalx("Tried to reinsert m(%p) "FIDFMT, 
+			   m, FID_FMT_ARGS(&(mexpfcm2fidgen(m))));
+	freelock(&f->fcmh_lock);
+	/* Add the fidcache reference to the cfd's private slot.
+	 */
+	c->pri = m;
+}
+
+void
+mexpfcm_free(struct cfdent *c, struct pscrpc_export *e)
+{	
+	struct mexpfcm *m=c->pri;
+	struct fidc_memb_handle *f=m->mecm_fcmh;
+	struct fidc_mds_info *i=f->fcmh_pri;
+
+	spinlock(&m->mecm_lock);
+	psc_assert(!(m->mecm_flags & MEXPFCM_CLOSING));
+	m->mecm_flags |= MEXPFCM_CLOSING;
+	/* Verify that all of our bmap references have already been freed.
+	 */
+	psc_assert(SPLAY_EMPTY(&m->mecm_bmaps));
+	freelock(&m->mecm_lock);
+		
+	spinlock(&f->fcmh_lock);
+	atomic_dec(&i->fmdsi_ref);
+	if (SPLAY_REMOVE(fcm_exports, &i->fmdsi_exports, m))
+		psc_fatalx("Failed to remove m(%p) "FIDFMT,
+                           m, FID_FMT_ARGS(&(mexpfcm2fidgen(m))));
+        freelock(&f->fcmh_lock);
+
+	c->pri = NULL;
+	PSCFREE(m);
+}
+
+
+int
+mds_stat_refresh_locked(struct fidc_memb_handle *fcmh)
+{	
+	psc_assert(fcmh->fcmh_fd >= 0);
+	rc = fstat(fcmh->fcmh_fd, &fcmh->fcmh_memb.fcm_stb);
+	if (rc < 0)
+		psc_warn("failed for fid=%"_P_U64"x", fcmh_2_fid(fcmh));
+	return (rc);
+}
+
+
+
+/**
+ * mds_bmap_directio - queue mexpbcm's so that their clients may be notified of the cache policy change (to directio) for this bmap.  The mds_coherency thread is responsible for actually issuing and checking the status of the rpc's.  Communication between this thread and the mds_coherency thread occurs by placing the mexpbcm's onto the pndgCacheCbs listcache.
+ * @bmap: the bmap which is going dio.
+ */
+#define mds_bmap_directio_check(b) mds_bmap_directio(b, 1, 1)
+#define mds_bmap_directio_set(b)   mds_bmap_directio(b, 1, 0)
+#define mds_bmap_directio_unset(b) mds_bmap_directio(b, 0, 0)
+
+void
+mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
+{	
+	struct mexpbcm *bref;
+	struct bmap_mds_info *mdsi=b->bcm_mds_pri;
+	int mode=bref->mexpbcm_mode;
+
+	BMAP_LOCK_ENSURE(bmap);
+	/* Iterate over the tree and pick up any clients which still cache 
+	 *   this bmap.
+	 */
+	SPLAY_FOREACH(bref, bmap_exports, &bmap->bmdsi_exports) {
+		/* Lock while the attributes of the this bref are 
+		 *  tested.
+		 */
+		MEXPBCM_LOCK(bref);
+		psc_assert(bref->mexpbcm_export);		
+		/* Don't send rpc if the client is already using DIO or
+		 *  has an rpc in flight (_REQD).
+		 */
+		if (enable_dio && !((mode & MEXPBCM_DIO)  ||
+				    (mode & MEXPBCM_DIO_REQD))) {
+
+			if (check) {
+				psc_warnx("cli(%s) has not acknowledged dio "
+					  "rpc for bmap(%p) bref(%p) sent:(%d 0==true)", 
+					  nid2str(bref->mexpbcm_export->exp_connection->c_peer.nid), 
+					  bmap, bref, atomic_read(&bref->mexpbcm_msgcnt));
+				continue;
+			}
+			atomic_inc(&bref->mexpbcm_msgcnt);
+			bref->mexpbcm_mode |= MEXPBCM_DIO_REQD;
+		
+			if (mode & MEXPBCM_CIO_REQD)
+				/* This bref is already enqueued and may have completed.
+				 */
+				psc_assert(psclist_conjoint(&bref->mexpbcm_lentry));
+			else {
+				/* Queue this one.
+				 */
+				psc_assert(psclist_disjoint(&bref->mexpbcm_lentry));
+				lc_queue(&pndgCacheCbs, &bref->mexpbcm_lentry);
+			}
+			
+		} else if (!enable_dio && (((mode & MEXPBCM_DIO) ||
+					    (mode & MEXPBCM_DIO_REQD)) && 
+					   !(mode & MEXPBCM_CDIO))) {
+			
+			atomic_inc(&bref->mexpbcm_msgcnt);
+			bref->mexpbcm_mode |= MEXPBCM_CIO_REQD;
+
+			if (mode & MEXPBCM_DIO_REQD)
+				psc_assert(psclist_conjoint(&bref->mexpbcm_lentry));
+			else {
+				psc_assert(psclist_disjoint(&bref->mexpbcm_lentry));
+				lc_queue(&pndgCacheCbs, &bref->mexpbcm_lentry);
+			}
+		}
+		MEXPBCM_ULOCK(bref);
+	}
+}
+
+/** 
+ * mds_bmap_ref_add - add a read or write reference to the bmap's tree and refcnts.  This also calls into the directio_[check|set] calls depending on the number of read and/or write clients of this bmap.
+ * @bref: the bref to be added, it must have a bmapc_memb already attached.
+ * @rw: the explicit read/write flag from the rpc.  It is probably unwise to use bref's flag. 
+ */
+__static void 
+mds_bmap_ref_add(struct mexpbcm *bref, int rw)
+{
+	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
+	struct bmap_mds_info *mdsi=b->bcm_mds_pri;
+	atomic_t *a=(rw == SRIC_BMAP_READ ? &mdsi->bmdsi_rd_ref : 
+		     &mdsi->bmdsi_wr_ref);
+	int rdrs, wtrs, 
+		mode=(rw == SRIC_BMAP_READ ? SRIC_BMAP_READ : SRIC_BMAP_WRITE);
+
+	if (rw == SRIC_BMAP_READ)
+		psc_assert(bref->mexpbcm_mode & MEXPBCM_RD);
+	else if (rw == SRIC_BMAP_WRITE)
+		psc_assert(bref->mexpbcm_mode & MEXPBCM_WR);
+	else
+		psc_fatalx("mode value (%d) is invalid", rw);
+	
+	BMAP_LOCK(bmap);
+	if (!atomic_read(a)) {
+		/* There are no refs for this mode, therefore the 
+		 *   bcm_bmapih.bmapi_mode should not be set.
+		 */		
+		psc_assert(!(bmap->bcm_bmapih.bmapi_mode & mode));
+		bmap->bcm_bmapih.bmapi_mode |= mode;
+	}
+	/* Set and check ref cnts now.
+	 */
+	atomic_inc(a);
+
+	wtrs = atomic_read(&mdsi->bmdsi_wr_ref);
+	rdrs = atomic_read(&mdsi->bmdsi_rd_ref);
+	/* No negative refs.
+	 */
+	psc_assert(wtrs >= 0 && rdrs >= 0);
+
+	if (wtrs > 2)
+		/* It should have already been set.
+		 */
+		mds_bmap_directio_check(bmap);
+
+	else if (wrtrs == 2 || (wtrs == 1 && rdrs))
+		/* These represent the two possible 'add' related transitional
+		 *  states, more than 1 writer or the first writer amidst 
+		 *  existing readers.
+		 */
+		mds_bmap_directio_set(bmap);
+
+	/* Pop it on the tree.
+	 */
+	if (SPLAY_INSERT(bmap_exports, &mdsi->bmdsi_exports, bref))
+		psc_fatalx("found duplicate bref on bmap_exports");
+
+	BMAP_ULOCK(bmap);
+}
+
+/** 
+ * mds_bmap_ref_add - add a read or write reference to the bmap's tree and refcnts.  This also calls into the directio_[check|set] calls depending on the number of read and/or write clients of this bmap.
+ * @bref: the bref to be added, it must have a bmapc_memb already attached.
+ * @rw: the explicit read/write flag from the rpc.  It is probably unwise to use bref's flag. 
+ */
+__static void
+mds_bmap_ref_del(struct mexpbcm *bref, int rw)
+{
+	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
+	struct bmap_mds_info *mdsi=b->bcm_mds_pri;
+	atomic_t *a=(rw == SRIC_BMAP_READ ? &mdsi->bmdsi_rd_ref : 
+		     &mdsi->bmdsi_wr_ref);
+	int rdrs, wtrs, 
+		mode=(rw == SRIC_BMAP_READ ? SRIC_BMAP_READ : SRIC_BMAP_WRITE);
+
+	if (rw == SRIC_BMAP_READ)
+		psc_assert(bref->mexpbcm_mode & MEXPBCM_RD);
+	else if (rw == SRIC_BMAP_WRITE)
+		psc_assert(bref->mexpbcm_mode & MEXPBCM_WR);
+	else
+		psc_fatalx("mode value (%d) is invalid", rw);
+	
+	BMAP_LOCK(bmap);
+	psc_assert(atomic_read(a));
+	if (atomic_dec_and_test(a)) {
+		psc_assert(bmap->bcm_bmapih.bmapi_mode & mode);
+		bmap->bcm_bmapih.bmapi_mode &= ~mode;
+	}
+	wtrs = atomic_read(&mdsi->bmdsi_wr_ref);
+	rdrs = atomic_read(&mdsi->bmdsi_rd_ref);
+
+	psc_assert(wtrs >= 0 && rdrs >= 0);
+
+	if ((!wtrs || (wtrs == 1 && !rdrs)) && (rw == SRIC_BMAP_WRITE))
+		/* Decremented a writer.
+		 */
+		mds_bmap_directio_unset(bmap);
+
+	if (!SPLAY_REMOVE(bmap_exports, &mdsi->bmdsi_exports, bref))
+		psc_fatalx("found duplicate bref on bmap_exports");
+
+	BMAP_ULOCK(bmap);
+}
+
+int
+mds_bmap_read(struct fidc_memb_handle *fcmf, sl_blkno_t blkno, 
+	      sl_blkh_t **bmapod)
+{
+	sl_inodeh_t *inoh=&fcmh->fcmh_memb.fcm_inodeh;	
+	int rc=0;
+
+	if (blkno > inoh->inoh_lblk) {
+		rc = -ERANGE;       
+		goto fail;
+
+	} else if (fcmh->fcmh_fd == -1) {
+		psc_warn("fid=%"_P_U64"x has a failed fd", 
+			 fcmh_2_fid(fcmh));
+		rc = -EIO; 
+		goto fail;
+			
+	} else if (fcmh->fcmh_fd == FID_FD_NOTOPEN) {
+		fcmh->fcmh_fd = fid_open(fcmh_2_fid(fcmh), O_RDWR);
+		psc_warn("fid_open() failed for fid=%"_P_U64"x", 
+			 fcmh_2_fid(fcmh));
+		if (fcmh->fcmh_fd == -1) {
+			rc = -EIO;
+			goto fail;
+		}
+	}
+	if (mds_stat_refresh_locked(fcmh))
+		goto fail;
+	/* Check the file offset to test if the file is valid at that offset.
+	 */
+	else if ((((blkno+1) * BMAP_OD_SZ) - 1) > fcmh_2_fsz(fcmh)) {
+		rc = -ERANGE;
+		goto fail;
+	}	
+
+	*bmapod = PSCALLOC(BMAP_OD_SZ);	
+	/* Try to pread() the bmap from the mds file.
+	 */
+	szrc = pread(fcmh->fcmh_fd, *bmapod, BMAP_OD_SZ, (blkno * BMAP_OD_SZ));
+	if (szrc != BMAP_OD_SZ) {
+		psc_warn("failed to pread BMAP_OD_SZ bytes for fid=%"_P_U64"x"
+			 ", got (%zd) instead", fcmh_2_fid(fcmh), szrc);
+		rc = -errno;
+		goto fail;
+	}
+
+	PSC_CRC_CALC(&crc, *bmapod, BMAP_OD_CRCSZ);
+	if (crc != (*bmapod)->bh_bhcrc) {
+		psc_warn("bmap (%zu) crc failed fid=%"_P_U64"x",
+                         blkno, fcmh_2_fid(fcmh), szrc);
+		rc = -EIO;
+		goto fail;
+	}
+	return (rc);
+}
+
+int
+mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq, 
+	      struct bmapc_memb **bmap)
+{
+	struct bmapc_memb tbmap;
+	struct fidc_memb_handle *fcmf=fref->mecm_fcmh;
+	sl_inodeh_t *inoh=&fcmh->fcmh_memb.fcm_inodeh;
+	sl_blkh_t   *bmap_blk;
+	int rc=0;
+	ssize_t szrc;
+	psc_crc_t crc;
+	struct mexpbcm *bref, tbref;
+
+	psc_assert(fref);
+	psc_assert(!*bmap);
+
+	if ((rw != SRIC_BMAP_READ) || (rw != SRIC_BMAP_WRITE))
+		return -EINVAL;
+
+	tbmap.bcm_blkno = mq->blkno;
+	tbref.mexpbcm_bmap = &tbmap;
+	/* This bmap load *should* be for a bmap which the client has not 
+	 *   already referenced and therefore no mexpbcm should exist.
+	 */
+	MEXPFCM_LOCK(fref);
+	bref = SPLAY_FIND(exp_bmaptree, &fref->mecm_bmaps, &tbref);
+	if (bref) {
+		/* If we're here then the same client tried to load this
+		 *  bmap more than once which is an invalid behavior.
+		 */
+		MEXPFCM_ULOCK(fref);
+		return (-EBADF);
+
+	} else {
+		/* Establish a reference here, note that mexpbcm_bmap will
+		 *   be null until either the bmap is loaded or pulled from 
+		 *   the cache.
+ 		 */
+		bref = PSCALLOC(sizeof(*bref));
+		bref->mexpbcm_mode = MEXPBCM_INIT;
+		bref->mexpbcm_blkno = mq->blkno;
+		bref->mexpbcm_export = fref->mecm_export;
+		SPLAY_INSERT(exp_bmaptree, &fref->mecm_bmaps, bref);
+	}
+	MEXPFCM_ULOCK(fref);
+	/* Ok, the bmap has been initialized and loaded into the tree.  We 
+	 *  still need to set the bmap pointer mexpbcm_bmap though.  Lock the 
+	 *  fcmh during the lookup.
+	 */
+	FCMH_LOCK(fcmh);
+	*bmap = SPLAY_FIND(bmap_cache, &fcmh->fcmh_bmapc, &tbmap);
+	if (*bmap) {
+		/* Found it, still don't know if we're in directio mode..
+		 */
+		FCMH_ULOCK(fcmh);
+	retry:
+		BMAP_LOCK(*bmap);
+		if ((*bmap)->bcm_bmapih.bmapi_mode == BMAP_MDS_INIT) {
+			psc_assert(!(*bmap)->bcm_mds_pri);
+			psc_assert(!(*bmap)->bcm_bmapih.bmapi_data);
+			psc_assert(!(*bmap)->bcm_fcmh);
+			/* Block until the other thread has completed the io.
+			 */
+			psc_waitq_wait(&(*bmap)->bcm_waitq, 
+				       &(*bmap)->bcm_lock);
+			goto retry;
+		} else {
+			/* Ensure that the INIT bit is not set and that all 
+			 *  relevant pointers are in place.
+			 */
+			psc_assert(!((*bmap)->bcm_bmapih.bmapi_mode & 
+				     BMAP_MDS_INIT));
+			psc_assert((*bmap)->bcm_mds_pri);
+			psc_assert((*bmap)->bcm_bmapih.bmapi_data);
+			psc_assert((*bmap)->bcm_fcmh);
+		}
+		goto add_ref;
+	} else {
+		/* Create and initialize the new bmap.
+		 */
+		*bmap = PSCALLOC(sizeof(struct bmapc_memb));
+		(*bmap)->bcm_blkno = mq->blkno;
+		(*bmap)->bcm_bmapih.bmapi_mode = BMAP_MDS_INIT;
+		(*bmap)->bcm_mds_pri = PSCALLOC(sizeof(struct bmap_mds_info));
+		LOCK_INIT(&(*bmap)->bcm_lock);
+		psc_waitq_init(&(*bmap)->bcm_waitq);		
+		(*bmap)->bcm_fcmh = fcmh;
+
+		SPLAY_INSERT(bmap_cache, &fcmh->fcmh_bmapc, *bmap);
+		/* The placeholder is set, unlock.
+		 */
+		FCMH_ULOCK(fcmh);
+	}
+
+	rc = mds_bmap_read(fcmf, mq->blkno, &(*bmap)->bcm_bmapih.bmapi_data);
+	if (rc) {
+		(*bmap)->bcm_bmapih.bmapi_mode = BMAP_MDS_FAILED;
+		goto fail;
+	}
+	bmap_set_accesstime(*bmap);
+	if (rw == SRIC_BMAP_WRITE) {
+		/* bmapi_mode is inferred through refcnts.
+		 */
+		(*bmap)->bcm_bmapih.bmapi_mode = 0;
+		atomic_inc(&(*bmap)->bcm_wr_ref);
+		/* XXX pick an ION for the default write resource.
+		 */
+	} else {
+		(*bmap)->bcm_bmapih.bmapi_mode = 0;
+		atomic_inc(&(*bmap)->bcm_rd_ref);
+	}
+	psc_waitq_wakeall(&(*bmap)->bcm_waitq);
+	
+ add_ref:
+	/* Sanity checks, make sure that we didn't let the client in 
+	 *  before this bmap was ready.
+	 */ 
+	psc_assert(bref->mexpbcm_mode == MEXPBCM_INIT);
+	
+	bref->mexpbcm_bmap = *bmap;
+	bref->mexpbcm_mode = ((rw == SRIC_BMAP_WRITE) ? MEXPBCM_WR : 0);
+	/* Check if the client requested directio, if so tag it in the 
+	 *  bref.
+	 */
+	if (mq->dio)
+		bref->mexpbcm_mode |= MEXPBCM_CDIO;
+	/* Place our bref on the tree.
+	 */
+	mds_bmap_ref_add(bref, rw);
+
+	return (0);
+ fail:	
+	/* XXX think about policy updates..
+	 */
+	return (rc);
+}
+
+/** 
+ * mds_fidfs_lookup - "lookup file id via filesystem".  This call does a getattr on the provided pathname, loads (and verifies) the info from the getattr and then does a lookup into the fidcache.
+ * XXX clean me up.. extract crc stuff..
+ * XXX until dcache is done, this must be done for every lookup.
+ */
+#if 0
+int
+mds_fidfs_lookup(const char *path, struct slash_creds *creds,
+		 struct fidc_memb_handle **fcmh)
+{
+	int rc;
+	sl_inodeh_t  inoh;
+	size_t       sz=sizeof(sl_inode_t);
+	psc_crc_t    crc;
+
+	psc_assert(fcmh && !(*fcmh));
+
+	rc = access_fsop(ACSOP_GETATTR, creds->uid, creds->gid, path, 
+			 SFX_INODE, &inoh.inoh_ino, sz);
+
+	if (rc < 0)
+		psc_warn("Attr lookup on (%s) failed", path);
+	else if (rc != sz)
+		psc_warn("Attr lookup on (%s) gave invalid sz (%d)", path, rc);
+	else
+		rc=0;
+
+	PSC_CRC_CALC(&crc, &inoh.inoh_ino, sz);
+	if (crc != inoh.inoh_ino.ino_crc) {
+		psc_warnx("Crc failure on inode");
+		errno = EIO;
+		return -1;		
+	}
+	if (inoh.inoh_ino.ino_nrepls) {
+		sz = sizeof(sl_replica_t) * inoh.inoh_ino.ino_nrepls;
+		inoh->inoh_replicas = PSCALLOC(sz);
+		rc = access_fsop(ACSOP_GETATTR, creds->uid, creds->gid, path,
+				 SFX_REPLICAS, inoh.inoh_replicas, sz);
+		if (rc < 0)
+			psc_warn("Attr lookup on (%s) failed", path);
+		else if (rc != sz)
+			psc_warn("Attr lookup on (%s) gave invalid sz (%d)", 
+				 path, rc);
+		else
+			rc=0;
+
+		PSC_CRC_CALC(&crc, inoh.inoh_replicas, sz);
+		if (crc != inoh.inoh_ino.ino_rs_crc) {
+			psc_warnx("Crc failure on replicas");
+			errno = EIO;
+			*fcmh = NULL;
+			return -1;		
+		}
+	}	
+	*fcmh = fidc_lookup_ino(&inoh.inoh_ino);
+	psc_assert(*fcmh);
+
+	return(rc);
+}
+#endif
+
+
+__static void
+mds_cfdops_init(void) 
+{
+	cfdOps = PSCALLOC(sizeof(*cfdOps));
+	cfdOps->cfd_new = mexpfcm_new;
+	cfdOps->cfd_free = mexpfcm_free;
+	cfdOps->cfd_insert = NULL;
+}
+
+
+
+void
+mds_init(void)
+{
+	mds_cfdops_init();
+
+	mdsFsops.slfsop_getattr  = mds_fidfs_lookup;
+	mdsFsops.slfsop_fgetattr = mds_fid_lookup;
+
+	slFsops = &mdsFsops;
+	
+	mdscoh_init();
+}
