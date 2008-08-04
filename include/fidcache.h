@@ -22,8 +22,15 @@
 #include "inode.h"
 #include "offtree.h"
 
-#define FCMH_LOCK(h)  spinlock(&(h)->fcmh_lock)
-#define FCMH_ULOCK(h) freelock(&(h)->fcmh_lock)
+
+extern struct hash_table fidcHtable;
+
+#define FCMH_LOCK(f)  spinlock(&(f)->fcmh_lock)
+#define FCMH_ULOCK(f) freelock(&(f)->fcmh_lock)
+#define FCMH_LOCK_ENSURE(f) LOCK_ENSURE(&(f)->fcmh_lock)
+#define BMAP_LOCK_ENSURE(b) LOCK_ENSURE(&(b)->bcm_lock)
+#define BMAP_LOCK(b)  spinlock(&(b)->bcm_lock)
+#define BMAP_ULOCK(b) freelock(&(b)->bcm_lock)
 
 #define FCMHCACHE_PUT(fcmh, list)					\
         do {                                                            \
@@ -48,21 +55,22 @@ struct sl_finfo {
 	size_t		slf_writeb;	   /* num bytes written             */
 };
 
-/*
- * fidcache_memb - holds inode filesystem related data
- */
-struct fidcache_memb {
-	struct slash_fidgen	fcm_fg;
-	struct stat		fcm_stb;
-	struct sl_finfo		fcm_slfinfo;
-	//struct sl_uid		fcm_uid;
-};
 
 struct sl_uid {
-//	u64	sluid_guid;	/* Stubs for global uids */
-//	u64	sluid_ggid;
+	u64	sluid_guid;	/* Stubs for global uids */
+	u64	sluid_ggid;
 	uid_t	sluid_suid;	/* site uid */
 	gid_t	sluid_sgid;	/* site gid */
+};
+
+/*
+ * fidc_memb - holds inode filesystem related data
+ */
+struct fidc_memb {
+	sl_inodeh_t             fcm_inodeh;
+	struct stat		fcm_stb;
+	struct sl_finfo		fcm_slfinfo;
+	struct sl_uid		fcm_uid;
 };
 
 struct bmap_refresh {
@@ -82,13 +90,14 @@ struct bmap_info_cli {
 #define BMAP_AUTH_SZ 8
 /*
  * bmap_info - for each block in the fidcache, associate the set of
- * possible I/O servers.
+ * possible I/O servers.  
+ * XXX needs work to fit with the new structures for replication bitmaps.
  */
 struct bmap_info {
 	lnet_nid_t      bmapi_ion;                   /* MDS chosen io node  */
 	u32             bmapi_mode;                  /* MDS tells cache pol */
-	sl_ios_id_t	bmapi_ios[SL_DEF_REPLICAS];  /* Replica store       */
 	unsigned char   bmapi_auth[BMAP_AUTH_SZ];    /* Our write key       */
+	struct slash_block_handle *bmapi_data;
 };
 
 // XXX should bmapi_mode be stored in bmap_info?
@@ -100,47 +109,64 @@ enum bmap_cli_modes {
 	BMAP_CLI_MCC  = (1<<4)   /* "mode change complete"    */	
 };
 
+enum bmap_mds_modes {
+	BMAP_MDS_WR     = (1<<0), 
+	BMAP_MDS_RD     = (1<<1),
+	BMAP_MDS_DIRTY  = (1<<2),
+	BMAP_MDS_INIT   = (1<<3),
+	BMAP_MDS_FAILED = (1<<4)	
+};
+
 /*
- * bmap_cache_memb - central structure for block map caching used in
+ * bmapc_memb - central structure for block map caching used in
  *    all slash service contexts (mds, ios, client).
  *
- * bmap_cache_memb sits in the middle of the GFC stratum.
+ * bmapc_memb sits in the middle of the GFC stratum.
  * XXX some of these elements may need to be moved into the bcm_info_pri
  *     area (as part of new structures?) so save space on the mds.
  */
-struct fidcache_memb_handle;
+struct fidc_memb_handle;
 
-struct bmap_cache_memb {
+struct bmapc_memb {
 	sl_blkno_t	        bcm_blkno;       /* Bmap blk number */
 	struct timespec		bcm_ts;
 	struct bmap_info	bcm_bmapih;
 	atomic_t		bcm_rd_ref;	 /* one ref per write fd  */
 	atomic_t		bcm_wr_ref;	 /* one ref per read fd   */
 	atomic_t                bcm_opcnt;       /* pending opcnt         */
-	void		       *bcm_info_pri;    /* point to private data */
-	struct offtree_root    *bcm_oftr;
+	u64                     bcm_holes[2];    /* one bit SLASH_BMAP_SIZE */
+	union bmap_type {
+		void		       *bmt_mds_pri;
+		struct offtree_root    *bmt_cli_oftr;
+	};
 	psc_spinlock_t          bcm_lock;
 	struct psc_wait_queue   bcm_waitq;
-	struct fidcache_memb_handle *bcm_fcmh;   /* pointer to fid info   */
-	SPLAY_ENTRY(bmap_cache_memb) bcm_tentry; /* fcm tree entry        */
+	struct fidc_memb_handle *bcm_fcmh;   /* pointer to fid info   */
+	SPLAY_ENTRY(bmapc_memb) bcm_tentry; /* fcm tree entry        */
+#define bcm_mds_pri bmap_type.bmt_mds_pri
+#define bcm_oftr    bmap_type.bmt_cli_oftr
 };
+
+#define bmap_set_accesstime(b) {				    \
+		clock_gettime(CLOCK_REALTIME, &(b)->bcm_ts);	    \
+	}
 
 
 int
-bmap_cache_cmp(const void *, const void *);
+bmapc_cmp(const void *, const void *);
 
-SPLAY_HEAD(bmap_cache, bmap_cache_memb);
-SPLAY_PROTOTYPE(bmap_cache, bmap_cache_memb, bcm_tentry, bmap_cache_cmp);
+SPLAY_HEAD(bmap_cache, bmapc_memb);
+SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmapc_cmp);
 
 /*
- * fidcache_memb_handle - the primary inode cache structure, all
+ * fidc_memb_handle - the primary inode cache structure, all
  * updates and lookups into the inode are done through here.
  *
- * fidcache_memb tracks cached bmaps (bmap_cache) and clients
+ * fidc_memb tracks cached bmaps (bmap_cache) and clients
  * (via their exports) which hold cached bmaps (fcm_lessees).
  */
-struct fidcache_memb_handle {
-	struct fidcache_memb	 fcmh_memb;
+struct fidc_memb_handle {
+	struct fidc_memb	 fcmh_memb;
 	struct psclist_head	 fcmh_lentry;
 	struct timespec		 fcmh_access;
 	list_cache_t		*fcmh_cache_owner;
@@ -148,14 +174,18 @@ struct fidcache_memb_handle {
 	u64                      fcmh_fh;
 	u32			 fcmh_state;
 	atomic_t		 fcmh_refcnt;
-	void			*fcmh_info_pri;
-	atomic_t                 fcmh_bmap_cache_cnt;
-	struct bmap_cache	 fcmh_bmap_cache;    /* bmap cache splay */
+	void			*fcmh_pri;
+	atomic_t                 fcmh_bmapc_cnt;
+	struct bmap_cache	 fcmh_bmapc;         /* bmap cache splay */
 	list_cache_t		 fcmh_buffer_cache;  /* chain our slbs   */
 	psc_spinlock_t		 fcmh_lock;
 	size_t                   fcmh_bmap_sz;
+	struct hash_entry        fcmh_hashe;
 #define fcmh_cfd fcmh_fh
 };
+
+#define fcmh_2_fid(f) (f)->fcmh_memb.fcm_inodeh.inoh_ino.ino_fg.fg_fid
+#define fcmh_2_fsz(f) (f)->fcmh_memb.fcm_stb.st_size
 
 #define fcm_set_accesstime(f) {					    \
 		clock_gettime(CLOCK_REALTIME, &(f)->fcmh_access);   \
@@ -171,40 +201,45 @@ enum fcmh_states {
 	FCM_ATTR_STAT   = (1 << 6)
 };
 
+
 struct sl_fsops {
 	/* sl_getattr - used for stat and open, loads the objects
 	 *  via the pathname.
 	 */
 	int (*slfsop_getattr)(const char *path,
-			      struct fidcache_memb_handle *fcm);
+			      struct slash_creds *creds,
+			      struct fidc_memb_handle **fcm);
 	/* sl_fgetattr - used for stat and open via fid, grabs all the
 	 * attributes of the object and updates the fcm
 	 */
-	int (*slfsop_fgetattr)(struct fidcache_memb_handle *fcm);
+	int (*slfsop_fgetattr)(struct fidc_memb_handle *fcm);
 	/* sl_setattr - used to update the objects attrs, for now
 	 * all attrs will be updated.  later we may refine the granularity
 	 */
-	int (*slfsop_setattr)(struct fidcache_memb_handle *fcm);
+	int (*slfsop_bmap_load)(struct fidc_memb_handle *fcm, size_t num);     
+	int (*slfsop_fsetattr)(struct fidc_memb_handle *fcm);
 	/* sl_write - Object write.  Either within mds or ios
 	 *  context.
 	 */
-	int (*slfsop_write)(struct fidcache_memb_handle *fcm,
+	int (*slfsop_write)(struct fidc_memb_handle *fcm,
 			    const void *buf, int count, off_t offset);
 	/* sl_read - Object read.  Either within mds or ios
 	 *  context.
 	 */
-	int (*slfsop_read)(struct fidcache_memb_handle *fcm,
+	int (*slfsop_read)(struct fidc_memb_handle *fcm,
 			   const void *buf, int count, off_t offset);
 	/* sl_getmap - load the data placement map for a given file.
 	 * On the client, the blk no's are determined by calculating the
 	 * request offset with the block size.
 	 */
-	int (*slfsop_getmap)(struct fidcache_memb_handle  *fcm,
-			     struct bmap_cache_memb *bcms, int count);
+	int (*slfsop_getmap)(struct fidc_memb_handle  *fcm,
+			     struct bmapc_memb *bcms, int count);
 
-	int (*slfsop_invmap)(struct fidcache_memb_handle *fcm,
+	int (*slfsop_invmap)(struct fidc_memb_handle *fcm,
 			     struct bmap_refresh *bmr);
 };
+
+extern struct sl_fsops *slFsops;
 
 #define FCMH_FLAG(field, str) ((field) ? (str) : "")
 #define DEBUG_FCMH_FCMH_FLAGS(fcmh)				      \
@@ -247,8 +282,23 @@ fcmh_lc_2_string(list_cache_t *lc)
 		## __VA_ARGS__)
 
 
+#define DEBUG_BMAP(level, b, fmt, ...)					\
+	_psclog(__FILE__, __func__, __LINE__,				\
+		PSS_OTHER, (level), 0,					\
+		" bmap@%p b:%u m:%u ion=(%s) i:%"_P_U64"x"		\
+		"rref=%u wref=%u opcnt=%u "fmt,				\
+		(b), (b)->bcm_blkno, (b)->bcm_bmapih.bmapi_mode,	\
+		((b)->bcm_bmapih.bmapi_ion != LNET_NID_ANY) ?		\
+		nid2str((b)->bcm_bmapih.bmapi_ion) : NULL,		\
+		fcmh2fid((b)->bcm_fcmh),				\
+		atomic_read(&(b)->bcm_rd_ref),				\
+		atomic_read(&(b)->bcm_wr_ref),				\
+		atomic_read(&(b)->bcm_opcnt),				\
+		## __VA_ARGS__)
+
+
 static inline void
-fcmh_incref(struct fidcache_memb_handle *fch)
+fcmh_incref(struct fidc_memb_handle *fch)
 {
 	fcm_set_accesstime(fch);
         atomic_inc(&fch->fcmh_refcnt);
@@ -256,17 +306,17 @@ fcmh_incref(struct fidcache_memb_handle *fch)
 }
 
 static inline void
-fcmh_decref(struct fidcache_memb_handle *fch)
+fcmh_decref(struct fidc_memb_handle *fch)
 {
         atomic_dec(&fch->fcmh_refcnt);
         psc_assert(atomic_read(&fch->fcmh_refcnt) >= 0);
 	DEBUG_FCMH(PLL_TRACE, fch, "fcmh_decref");
 }
 
-static inline struct bmap_cache_memb *
-fcmh_bmap_lookup(struct fidcache_memb_handle *fch, sl_blkno_t n)
+static inline struct bmapc_memb *
+fcmh_bmap_lookup(struct fidc_memb_handle *fch, sl_blkno_t n)
 {
-	struct bmap_cache_memb lb, *b;
+	struct bmapc_memb lb, *b;
 	int locked;
 
 	lb.bcm_blkno=n;
@@ -279,12 +329,12 @@ fcmh_bmap_lookup(struct fidcache_memb_handle *fch, sl_blkno_t n)
 	return (b);
 }
 
-void fidcache_handle_init(void *p);
-void fidcache_init(void);
+void fidc_handle_init(struct fidc_memb_handle *);
+void fidc_init(enum fid_cache_users, void (*)(void *));
 
-struct fidcache_memb_handle * fidcache_get(list_cache_t *lc);
+struct fidc_memb_handle * fidc_get(list_cache_t *lc);
 
-void bmap_cache_memb_init(struct bmap_cache_memb *b,
-	struct fidcache_memb_handle *f);
+void bmapc_memb_init(struct bmapc_memb *b,
+	struct fidc_memb_handle *f);
 
-#endif /* __FIDCACHE_H__ */
+#endif /* __FIDC_H__ */
