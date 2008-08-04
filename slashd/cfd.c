@@ -21,6 +21,7 @@
 
 SPLAY_GENERATE(cfdtree, cfdent, entry, cfdcmp);
 
+struct cfd_svrops *cfdOps=NULL;
 /*
  * cfdcmp - compare to client file descriptors, for tree lookups.
  * @a: one cfd.
@@ -55,7 +56,8 @@ cfdinsert(u64 cfd, struct pscrpc_export *exp, slfid_t fid)
 	if (SPLAY_INSERT(cfdtree, &sexp->cfdtree, c)) {
 		free(c);
 		c = NULL;
-	}
+	} else 
+		CFD_SVROP(c, exp, insert);
 	ureqlock(&exp->exp_lock, locked);
 	return (c);
 }
@@ -67,19 +69,26 @@ cfdinsert(u64 cfd, struct pscrpc_export *exp, slfid_t fid)
  * @fn: server-translated filename to associate cfd with (i.e. the file specified
  *	by the client needs to be "translated" to the server's file system path).
  */
-void
+int
 cfdnew(u64 *cfdp, struct pscrpc_export *exp, slfid_t fid)
 {
 	struct slashrpc_export *sexp;
+	int rc=0;
 
 	spinlock(&exp->exp_lock);
 	sexp = slashrpc_export_get(exp);
-	*cfdp = ++sexp->nextcfd;
+	*cfdp = ++sexp->sexp_nextcfd;
+	if (rc = CFD_SVROP(c, exp, new))
+		return (rc);
 	if (cfdinsert(*cfdp, exp, fid))
 		psc_fatalx("cfdtree already has entry");
 	freelock(&exp->exp_lock);
+	return (0);
 }
 
+
+#define cfd2fid(e, c, f) __cfd2fid(e, c, f, NULL)
+#define cfd2fid_p __cfd2fid
 /*
  * cfd2fid - look up a client file descriptor in the export cfdtree
  *	for the associated file ID.
@@ -88,7 +97,7 @@ cfdnew(u64 *cfdp, struct pscrpc_export *exp, slfid_t fid)
  * @cfd: client file descriptor.
  */
 int
-cfd2fid(struct pscrpc_export *exp, u64 cfd, slfid_t *fidp)
+__cfd2fid(struct pscrpc_export *exp, u64 cfd, slfid_t *fidp, void **pri)
 {
 	struct slashrpc_export *sexp;
 	struct cfdent *c, q;
@@ -102,8 +111,10 @@ cfd2fid(struct pscrpc_export *exp, u64 cfd, slfid_t *fidp)
 	if (c == NULL) {
 		errno = ENOENT;
 		rc = -1;
-	} else
+	} else {
 		*fidp = c->fid;
+		*pri = c->pri;
+	}
 	freelock(&exp->exp_lock);
 	return (rc);
 }
@@ -131,9 +142,10 @@ cfdfree(struct pscrpc_export *exp, u64 cfd)
 		rc = -1;
 		goto done;
 	}
-	if (SPLAY_REMOVE(cfdtree, &sexp->cfdtree, c))
+	if (SPLAY_REMOVE(cfdtree, &sexp->cfdtree, c)) {
+		CFD_SVROP(c, exp, free);
 		free(c);
-	else {
+	} else {
 		errno = ENOENT;
 		rc = -1;
 	}
