@@ -10,6 +10,7 @@
 #include "fid.h"
 #include "slconfig.h"
 #include "pathnames.h"
+#include "fidcache.h"
 
 /**
  * fid_makepath - build the pathname in the FID object root that corresponds
@@ -57,3 +58,38 @@ fid_link(slfid_t fid, const char *fn)
 	}
 	return (0);
 }
+
+int 
+fid_open(slfid_t fid, int flags)
+{
+	char fidfn[FID_PATH_MAX];
+
+	psc_assert(!(flags & O_CREAT));
+	fid_makepath(fid, fidfn);
+
+	return (open(fidfn, flags));
+}
+
+
+
+__static int 
+fid_getxattr(char *fidfn, char *name, void *buf, ssize_t len)
+{
+	psc_crc_t crc;
+	ssize_t szrc;
+
+	szrc = lgetxattr(fidfn, name, buf, len);
+	
+	if (szrc < 0) {
+		psc_warn("lu fid(%s:%s) failed", fidfn, name);
+		return (-1);
+
+	} else if (szrc != len) {
+		psc_warn("lu fid(%s:%s) failed bad sz (%zd)", 
+			 fidfn, name, szrc);
+		errno = EIO;
+		return (-1);
+	}
+	return (0);
+}
+
