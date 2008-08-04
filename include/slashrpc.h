@@ -68,6 +68,7 @@
 
 /* Slash RPC message types. */
 enum {
+	SRMT_BMAPDIO,
 	SRMT_BMAPCHMODE,
 	SRMT_CHMOD,
 	SRMT_CHOWN,
@@ -125,6 +126,7 @@ struct srm_bmap_req {
 	u32 blkno;	/* Starting block number                  */
 	u32 nblks;	/* Read-ahead support                     */
 	u64 fid;	/* Optional, may be filled in server-side */
+	u32 dio;        /* Client wants directio                  */
 	u32 rw;
 };
 
@@ -137,6 +139,12 @@ struct srm_bmap_mode_req {
 	u64 cfd;
 	u32 blkno;
 	u32 rw;
+};
+
+struct srm_bmap_dio_req {
+        u64 fid;
+        u32 blkno;
+        u32 dio;
 };
 
 /* Slash RPC message for ION from client */
@@ -383,7 +391,6 @@ struct srm_generic_rep {
 struct slashrpc_cservice {
 	struct pscrpc_import	*csvc_import;
 	psc_spinlock_t		 csvc_lock;
-	struct psclist_head	 csvc_old_imports;
 	int			 csvc_failed;
 	int			 csvc_initialized;
 };
