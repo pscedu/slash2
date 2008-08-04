@@ -19,6 +19,8 @@ struct slash_sb_mem;
 #define SLTHRT_LND	5	/* lustre networking device helper */
 #define SLTHRT_TINTV	6	/* timer interval */
 #define SLTHRT_TIOS	7	/* iostats updater */
+#define SLTHRT_MDSCOH	8	/* mds coherency thread */
+
 
 struct slash_rmcthr {
 	struct pscrpc_thread	 srm_prt;
