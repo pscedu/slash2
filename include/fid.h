@@ -7,6 +7,9 @@
 
 #include "psc_types.h"
 
+#define FID_MAX_PATH 96
+#define FID_FD_NOTOPEN -2
+
 struct slash_creds;
 struct slash_fidgen;
 
