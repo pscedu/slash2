@@ -21,16 +21,21 @@ mdscoh_reap(void)
 }
 
 static inline void
-mdscoh_bmap_inflight_mode_check(int mode)
+mdscoh_infmode_chk(struct mexpbcm *bref, int rq_mode)
 {
-	if (mode & MEXPBCM_CIO_REQD) {
-		psc_assert(!(mode & MEXPBCM_DIO_REQD));
-		psc_assert(!(mode & MEXPBCM_CIO));
-	} else if (mode & MEXPBCM_DIO_REQD) {
-		psc_assert(!(mode & MEXPBCM_CIO_REQD));
+	int mode=bref->mexpbcm_mode;
+
+	psc_assert(bref->mexpbcm_net_cmd != MEXPBCM_RPC_CANCEL);
+	if (mode & MEXPBCM_CIO_REQD) 
+		psc_assert(mode & MEXPBCM_DIO);
+
+	else if (mode & MEXPBCM_DIO_REQD) {
 		psc_assert(!(mode & MEXPBCM_DIO));
+		
 	} else
 		psc_fatalx("Neither MEXPBCM_CIO_REQD or MEXPBCM_DIO_REQD set");
+	
+	psc_assert(rq_mode == bref->mexpbcm_net_cmd);
 }
 
 int 
@@ -51,36 +56,39 @@ mdscoh_cb(struct pscrpc_request *req, struct pscrpc_async_args *a)
 	MEXPBCM_LOCK(bref);
 
 	DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap, 
-		   "bref=%p m=%u msgc=%u rc=%d", 
-		   bref, mode, atomic_read(&bref->mexpbcm_msgcnt), mp->rc);
-	/* XXX figure what to do here if the rc < 0
+		   "bref=%p m=%u rc=%d netcmd=%d", 
+		   bref, mode, mp->rc, bref->mexpbcm_net_cmd);
+	/* XXX figure what to do here if mp->rc < 0
 	 */
+	psc_assert((bref->mexpbcm_net_cmd != MEXPBCM_RPC_CANCEL) &&
+		   bref->mexpbcm_net_inf);
 	psc_assert(mq->mode & bref->mexpbcm_mode);
 	bref->mexpbcm_mode &= ~mq->dio;
 
-	c = atomic_read(&bref->mexpbcm_msgcnt);
-	if (!c) {
-		if (bref->mexpbcm_mode & MEXPBCM_CIO_REQD) {
+	if (mq->dio == bref->mexpbcm_net_cmd) {
+		/* This rpc was the last one queued for this bref, or, 
+		 *  in other words, the dio mode has not changed since this 
+		 *  rpc was processed.
+		 */
+		bref->mexpbcm_net_cmd = 0;
+		if (mq->dio == MEXPBCM_CIO_REQD) {
 			psc_assert(bref->mexpbcm_mode & MEXPBCM_DIO);
 			bref->mexpbcm_mode &= ~MEXPBCM_DIO;
 
-		} else if (bref->mexpbcm_mode & MEXPBCM_DIO_REQD) {
+		} else if (mq->dio == MEXPBCM_DIO_REQD) {
 			psc_assert(!(bref->mexpbcm_mode & MEXPBCM_DIO));
 			bref->mexpbcm_mode |= MEXPBCM_DIO;
-
 		} else
 			psc_fatalx("Invalid mode %d", bref->mexpbcm_mode);
-		
-	} else if (c > 0) {
-		/* The bref mode has changed again, verify the mode and 
-		 *  requeue.
-		 */
-		mdscoh_bmap_inflight_mode_check(bref->mexpbcm_mode);
+	} else {
+		mdscoh_bmap_inflight_mode_check(bref);
 		lc_queue(&pndgBmapCbs, &bref->mexpbcm_lentry);
-
-	} else if (c < 0) 
-		psc_fatalx("Negative refcount (ouch) %d", c);
-
+	}
+	/* Don't unlock until the mexpbcm_net_inf bit is unset.
+	 */
+	bref->mexpbcm_net_inf = 0;			
+	DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap, 
+		   "mode change complete bref=%p", bref);
 	MEXPBCM_ULOCK(bref);		
 }
 
@@ -99,9 +107,9 @@ mdscoh_queue_req_locked(struct mexpbcm *bref)
 	DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap, "bref=%p m=%u msgc=%u", 
 		   bref, mode, atomic_read(&bref->mexpbcm_msgcnt));	
 
-	psc_assert(atomic_read(&bref->mexpbcm_msgcnt) > 0);
-	mdscoh_bmap_inflight_mode_check(mode);
-		
+	psc_assert(bref->mexpbcm_net_inf);
+	mdscoh_infmode_chk(bref, bref->mexpbcm_net_cmd);
+
 	if (csvc->csvc_failed)
 		return (-1);
 	
@@ -123,9 +131,8 @@ mdscoh_queue_req_locked(struct mexpbcm *bref)
 	req->rq_async_args.pointer_arg[CB_ARG_SLOT] = bref;
 
 	mq->fid = fcmh_2_fid(bref->mexpbcm_bmap->bcm_fcmh);
+	mq->dio = bref->mexpbcm_net_cmd;
 	mq->blkno = bref->mexpbcm_blkno;
-	mq->dio = (mode & MEXPBCM_DIO_REQD) ? 
-		MEXPBCM_DIO_REQD : MEXPBCM_CIO_REQD;
 
 	nbreqset_add(bmapCbSet, req);
 	lc_queue(&inflBmapCbs, &bref->mexpbcm_lentry);
@@ -146,10 +153,17 @@ mdscohthr_begin(void)
                 bref = lc_getwait(&pndgCacheCbs);
 
                 MEXPBCM_LOCK(bref);
-		rc = mdscoh_queue_req_locked(bref);
-		if (rc)
-			psc_fatalx("mdscoh_queue_req_locked() failed with "
-				   "(rc==%d) for bref %p", rc, bref);
+
+		if (bref->mexpbcm_net_cmd != MEXPBCM_RPC_CANCEL) {	
+			bref->mexpbcm_net_inf = 1;
+			rc = mdscoh_queue_req_locked(bref);
+			if (rc)
+				psc_fatalx("mdscoh_queue_req_locked() failed "
+					   "with (rc==%d) for bref %p", 
+					   rc, bref);
+		} else
+			bref->mexpbcm_net_cmd = 0;
+
 		MEXPBCM_ULOCK(bref);
 		mdscoh_reap();
         }
