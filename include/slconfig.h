@@ -51,6 +51,7 @@ typedef struct resource_profile {
 	u32                 res_nnids;
 	char		    res_fsroot[PATH_MAX];
 	struct psclist_head res_lentry;
+	void               *res_pri;
 } sl_resource_t;
 
 #define INIT_RES(r) INIT_PSCLIST_ENTRY(&(r)->res_lentry)
