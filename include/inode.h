@@ -9,12 +9,29 @@
 #include "psc_types.h"
 #include "psc_util/assert.h"
 #include "psc_util/crc.h"
+#include "psc_util/lock.h"
 
 #include "cache_params.h"
 #include "fid.h"
 
 
-#define SL_DEF_REPLICAS     4
+/* To save space in the bmaps, replica stores are kept in the sl-replicas 
+ *   xattr.  Each bmap uses an array of char's as a bitmap to track which 
+ *   stores the bmap is replicated to.  Additional bits are used to specify 
+ *   the freshness of the replica bmaps.  '100' would mean that the bmap 
+ *   is up-to-date, '110' would mean that the bmap is only one generation 
+ *   back and therefore may take partial updates.  111 means that the bmap
+ *   is more than one generation old.
+ * '000' - bmap is not replicated to this ios.
+ * '100' - bmap is replicated to the ios and current.
+ * '110' - bmap is one generation back.
+ * '111' - bmap is > one generation back.
+ */
+#define SL_MAX_REPLICAS     64
+#define SL_BITS_PER_REPLICA 3
+#define SL_REPLICA_NBYTES   ((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) /	\
+			     (sizeof(u8)))
+
 #define SL_DEF_SNAPSHOTS    16
 #define SL_MAX_GENS_PER_BLK 4
 
@@ -25,6 +42,8 @@
 #define SL_BMAP_SIZE  SLASH_BMAP_SIZE
 #define SL_CRC_SIZE   1048576
 #define SL_CRCS_PER_BMAP (SL_BMAP_SIZE / 1048576)
+
+#define SL_NULL_CRC 0x436f5d7c450ed606ULL
 
 typedef u32 sl_inum_t;
 typedef u32 sl_blkno_t;  /* block number type */
@@ -88,40 +107,38 @@ typedef struct slash_snapshot {
  * saves us from storing the iosystem id within each block at the cost
  * of limiting the number of iosystems which may manage our blocks.
  */
-typedef struct slash_block_store {
+typedef struct slash_replica {
 	sl_ios_id_t bs_id;     /* id of this block store    */
-	time_t      bs_lszup;  /* last size update          */
-	off_t       bs_lsz;    /* last size seen            */
-	int         bs_closed; /* expect no more sz updates */
-} sl_bstore_t;
+} sl_replica_t;
 
 /*
  * Associate a crc with a generation id for a block.
  */
 typedef struct slash_gencrc {
-	int       gc_gen:31;      /* generation number  */
-	int       gc_crc_valid:1; /* generation number  */
-	psc_crc_t gc_crc;         /* crc for generation */
+	psc_crc_t gc_crc;
 } sl_gcrc_t;
 
 /*
  * Slim block structure just holds a generation number and a
  * validation bit.  The io server id is held in the block store array.
  */
-typedef struct slash_block_desc {
-	unsigned int bl_gen:31; /* generation number     */
-	unsigned int bl_inv:1;  /* invalidated via ovwrt */
-} sl_blkd_t;
+typedef struct slash_block_gen {
+	unsigned int bl_gen; /* generation number     */
+} sl_blkgen_t;
 
 /*
- * A block container which holds blocks, their checksums, and the number of replicas.
+ * A block container which holds a bmap.  Included are the bmap's checksums and the replication table.
+ * XXX Notes:  use the bh_gen_crc[] to denote holes within the bmap using the CRC of \0's.
  */
 typedef struct slash_block_handle {
-	u64       bh_magic;                        /* set if i'm not a hole */
-	u8        bh_nrepls;                       /* num replicas   */
-	sl_gcrc_t bh_gen_crc[SL_CRCS_PER_BMAP];    /* array of crcs  */
-	sl_blkd_t bh_blks[SL_DEF_REPLICAS];        /* blk structures */
+	sl_blkgen_t bh_gen;                       /* current generation num */
+	sl_gcrc_t   bh_crcs[SL_CRCS_PER_BMAP];    /* array of crcs          */
+	u8          bh_repls[SL_REPLICA_NBYTES];  /* replica bit map        */
+	psc_crc_t   bh_bhcrc;                     /* on-disk bmap crc       */
 } sl_blkh_t;
+
+#define BMAP_OD_SZ (sizeof(sl_blkh_t))
+#define BMAP_OD_CRCSZ (sizeof(sl_blkh_t)-(sizeof(psc_crc_t)))
 
 /*
  * The inode structure lives at the beginning of the metafile and holds
@@ -131,18 +148,40 @@ typedef struct slash_block_handle {
  */
 typedef struct slash_inode_store {
 	struct slash_fidgen ino_fg;
-	off_t        ino_off;                    /* inode metadata offset   */
-	size_t       ino_bsz;                    /* file block size         */
-	size_t       ino_lblk;                   /* last block              */
-	u32          ino_lblk_sz;                /* last block size         */
-	sl_snap_t    ino_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers       */
-	u32          ino_csnap;                  /* current snapshot        */
-	struct stat  ino_stb;                    /* stat buf, on disk       */
-	sl_bstore_t  ino_repls[SL_DEF_REPLICAS]; /* io systems holding blks */
-	psc_crc_t    ino_crc;                    /* crc of the inode        */
+	off_t         ino_off;                    /* inode metadata offset   */
+	size_t        ino_bsz;                    /* file block size         */
+	size_t        ino_lblk;                   /* last block              */
+	u32           ino_lblk_sz;                /* last block size         */
+	sl_snap_t     ino_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers       */
+	u32           ino_csnap;                  /* current snapshot        */
+	sl_replica_t  ino_prepl;                  /* primary replica         */
+	size_t        ino_nrepls;                 /* if 0, use ino_prepl     */
+	psc_crc_t     ino_rs_crc;                 /* crc of the replicas     */
+	psc_crc_t     ino_crc;                    /* crc of the inode        */
 } sl_inode_t;
+
+
+typedef struct slash_inode_handle {
+	sl_inode_t     inoh_ino;
+	psc_spinlock_t inoh_lock;
+	int            inoh_flags;
+	sl_replica_t  *inoh_replicas;
+} sl_inodeh_t;
+
+
+enum slash_inode_handle_flags {	
+	INOH_INO_DIRTY = (1<<0), /* Inode structures need to be written */
+	INOH_REP_DIRTY = (1<<1), /* Replication structures need written */
+	INOH_HAVE_REPS = (1<<2)
+};
+
+#define FCMH_2_INODEP(f) (&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
+#define COPY_INODE_2_FCMH(i, f) {					\
+		memcpy(&(f)->fcmh_memb.fcm_inodeh.inoh_ino, (i),	\
+		       sizeof(*(i)));					\
+	}
 
 /* File extended attribute names. */
 #define SFX_INODE	"sl-inode"
-
+#define SFX_REPLICAS    "sl-replicas"
 #endif /* __SLASH_INODE_H__ */
