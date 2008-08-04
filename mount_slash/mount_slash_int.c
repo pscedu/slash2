@@ -120,9 +120,10 @@ msl_fcm_new(struct fhent *fh)
 	struct msl_fhent *e;
 	
 	psc_assert(!fh->fh_pri);
-
+	
 	e = fh->fh_pri = PSCALLOC(sizeof(*e));
-	e->mfh_fcmh = fidcache_get(&fidcFreePool.ppm_lc);
+	e->mfh_fcmh = fidc_get(&fidcFreePool.ppm_lc);
+	SPLAY_INIT(&e->mfh_fhbmap_cache);
 	/* Cross-associate the fcmh and fhent structures.
 	 */
 	e->mfh_fcmh->fcmh_fh = fh->fh_id;	
@@ -173,7 +174,7 @@ msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
 __static int
 msl_bmap_fetch(struct fhent *fh, sl_blkno_t b, size_t n, int rw)
 {
-	struct fidcache_memb_handle *f = 
+	struct fidc_memb_handle *f = 
 		((struct msl_fhent *)fh->fh_pri)->mfh_fcmh;
 	struct pscrpc_bulk_desc *desc;
         struct pscrpc_request *rq;
@@ -325,7 +326,7 @@ __static struct bmap_cache_memb *
 msl_bmap_load(struct fhent *fh, sl_blkno_t n, int prefetch, u32 rw)
 {
 	struct msl_fhent *fhe = fh->fh_pri;
-	struct fidcache_memb_handle *f = fhe->mfh_fcmh;
+	struct fidc_memb_handle *f = fhe->mfh_fcmh;
 	struct bmap_cache_memb *b;
 	struct bmap_info *i;
 
