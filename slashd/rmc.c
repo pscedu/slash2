@@ -31,6 +31,7 @@
 #include "rpc.h"
 #include "slashd.h"
 #include "slashrpc.h"
+#include "mds.h"
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
@@ -43,6 +44,8 @@ slrmc_connect(struct pscrpc_request *rq)
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
 		mp->rc = -EINVAL;
+
+	
 	return (0);
 }
 
@@ -231,9 +234,21 @@ slrmc_getbmap(struct pscrpc_request *rq)
 {
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
+	struct mexpfcm *fref;
+	slfid_t fid;
+	struct bmapc_memb *bmap;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	return (0);
+	/* Access the reference 
+	 *
+	 */
+	if (cfd2fid_p(rq->rq_export, mq->cfd, &fid, &fref))
+		mp->rc = -errno;
+	else {
+		psc_assert(fref);
+		mp->rc = mds_bmap_load(fref, mp, &bmap);
+	}
+	return (mp->rc);
 }
 
 int
@@ -784,6 +799,8 @@ slrmc_handler(struct pscrpc_request *rq)
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
+	case SRMT_BMAPCHMODE:
+		break;
 	case SRMT_CHMOD:
 		rc = slrmc_chmod(rq);
 		break;
