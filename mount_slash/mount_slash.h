@@ -61,7 +61,7 @@ msl_fbr_new(struct bmap_cache_memb *b, int rw)
 	struct msl_fbr *r = PSCALLOC(sizeof(*r));
 
 	r->mfbr_bmap = b;
-	msl_fbr_ref(r, rw);
+	msl_fbr_ref(r, rw);	
 
 	return (r);
 }
