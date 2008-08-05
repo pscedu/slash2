@@ -291,7 +291,7 @@ fcmh_lc_2_string(list_cache_t *lc)
 		(b), (b)->bcm_blkno, (b)->bcm_bmapih.bmapi_mode,	\
 		((b)->bcm_bmapih.bmapi_ion != LNET_NID_ANY) ?		\
 		nid2str((b)->bcm_bmapih.bmapi_ion) : NULL,		\
-		fcmh2fid((b)->bcm_fcmh),				\
+		(b)->bcm_fcmh ? fcmh2fid((b)->bcm_fcmh) : NULL,		\
 		atomic_read(&(b)->bcm_rd_ref),				\
 		atomic_read(&(b)->bcm_wr_ref),				\
 		atomic_read(&(b)->bcm_opcnt),				\
