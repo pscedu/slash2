@@ -146,6 +146,7 @@ SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
  * Notes: both read and write clients are stored to bmdsi_exports, the ref counts are used to determine the number of both and hence the caching mode used at the clients.   bmdsi_wr_ion is a shortcut pointer used only when the bmap has client writers - all writers (and readers) are directed to this ion once a client has invoked write mode on the bmap.
  */
 struct bmap_mds_info {
+	u32                   bmdsi_pndg_crc_updates;
         atomic_t              bmdsi_rd_ref;  /* count our cli read refs     */
         atomic_t              bmdsi_wr_ref;  /* count our cli write refs    */
 	struct mexp_ion      *bmdsi_wr_ion;  /* ion export assigned to bmap */
@@ -163,6 +164,18 @@ enum bmap_mds_modes {
 SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
 
+static inline void 
+bmdsi_sanity(struct bmapc_memb *b){
+	int wtrs, rdrs;
+	struct bmap_mds_info *mdsi = bmap->bcm_mds_pri;
+
+	wtrs = atomic_read(&mdsi->bmdsi_wr_ref);
+        rdrs = atomic_read(&mdsi->bmdsi_rd_ref);
+        psc_assert(wtrs >= 0 && rdrs >= 0);
+        if (wtrs > 1 || wtrs && rdrs)
+                psc_assert(bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_DIO);
+}
+
 struct fidc_mds_info {	
 	struct fcm_exports fmdsi_exports; /* tree of mexpfcm */
 	atomic fmdsi_ref;
@@ -175,5 +188,7 @@ struct resprof_mds_info {
 	int rmi_cnt;
 	psc_spinlock_t rmi_lock;
 };
+
+
 
 #endif
