@@ -150,7 +150,6 @@ mds_stat_refresh_locked(struct fidc_memb_handle *f)
 	if (rc < 0)
 		psc_warn("failed for fid="FIDFMT, 
 			 FID_FMT_ARGS(fcmh_2_fgp(f)));
-
 	return (rc);
 }
 
@@ -215,7 +214,7 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 		 *  has an rpc in flight (_REQD).
 		 */
 		if (enable_dio &&                   /* turn dio on */
-		    !(mode & MEXPBCM_CDIO) &&       /* client allows dio */		    
+		    !(mode & MEXPBCM_CDIO) &&       /* client allows dio */
 		    (!((mode & MEXPBCM_DIO) ||       /* dio is not already on */
 		       (mode & MEXPBCM_DIO_REQD)) ||  /* dio is not coming on */
 		     (mode & MEXPBCM_CIO_REQD))) { /* dio is being disabled */
@@ -240,9 +239,9 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 				if (!bref->mexpbcm_net_inf) {
 					/* Unschedule this rpc, the coh thread will
 					 *  remove it from the listcache.
-					 */					
+					 */
 					bref->mexpbcm_mode &= ~MEXPBCM_CIO_REQD;
-					bref->mexpbcm_net_cmd = MEXPBCM_RPC_CANCEL;				
+					bref->mexpbcm_net_cmd = MEXPBCM_RPC_CANCEL;
 				} else {
 					/* Inform the coh thread to requeue.
 					 */
@@ -396,7 +395,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 	atomic_t *a=(rw == SRIC_BMAP_READ ? &mdsi->bmdsi_rd_ref : 
 		     &mdsi->bmdsi_wr_ref);
 	int rdrs, wtrs, rw=mq->rw,
-		mode=(rw == SRIC_BMAP_READ ? SRIC_BMAP_READ : SRIC_BMAP_WRITE);
+		mode=(rw == SRIC_BMAP_READ ? BMAP_MDS_RD : BMAP_MDS_WR);
 
 	if (rw == SRIC_BMAP_READ)
 		psc_assert(bref->mexpbcm_mode & MEXPBCM_RD);
@@ -466,7 +465,7 @@ mds_bmap_ref_del(struct mexpbcm *bref, int rw)
 	atomic_t *a=(rw == SRIC_BMAP_READ ? &mdsi->bmdsi_rd_ref : 
 		     &mdsi->bmdsi_wr_ref);
 	int rdrs, wtrs, 
-		mode=(rw == SRIC_BMAP_READ ? SRIC_BMAP_READ : SRIC_BMAP_WRITE);
+		mode=(rw == SRIC_BMAP_READ ? BMAP_MDS_RD : BMAP_MDS_WR);
 
 	if (rw == SRIC_BMAP_READ)
 		psc_assert(bref->mexpbcm_mode & MEXPBCM_RD);
@@ -521,26 +520,15 @@ mds_bmap_read(struct fidc_memb_handle *fcmf, struct srm_bmap_req *mq,
 	sl_inodeh_t *inoh=&fcmh->fcmh_memb.fcm_inodeh;	
 	int rc=0;
 
-	if (fcmh->fcmh_fd == -1) {
-		DEBUG_FCMH(PLL_WARN, fcmh,
-			   "bmap (%zu) fcmh_fd == -1 fid="FIDFMT, 
-			   mq->blkno, FID_FMT_ARGS(fcmh_2_fgp(fcmh)));
-		rc = -EIO; 
-		goto out;
-		
-	} else if (fcmh->fcmh_fd == FID_FD_NOTOPEN) {
+	if (fcmh->fcmh_fd == FID_FD_NOTOPEN)
 		fcmh->fcmh_fd = fid_open(fcmh_2_fid(fcmh), O_RDWR);
 
-		if (fcmh->fcmh_fd == -1) {
-			DEBUG_FCMH(PLL_WARN, fcmh, 
-				   "bmap (%zu) fid_open (e=%d) fid="FIDFMT, 
-				   mq->blkno, errno, 
-				   FID_FMT_ARGS(fcmh_2_fgp(fcmh)));
-			rc = -EIO;
-			goto out;
-		}
-	}
-
+	if (fcmh->fcmh_fd < 0) {
+		DEBUG_FCMH(PLL_WARN, fcmh, "bmap (%zu) fcmh_fd(%d)" 
+			   fcmh->fcmh_fd, mq->blkno);
+		rc = -EIO; 
+		goto out;
+	}		
 	*bmapod = PSCALLOC(BMAP_OD_SZ);	
 	/* Try to pread() the bmap from the mds file.
 	 */
@@ -548,14 +536,11 @@ mds_bmap_read(struct fidc_memb_handle *fcmf, struct srm_bmap_req *mq,
 		     (mq->blkno * BMAP_OD_SZ));
 
 	if (szrc != BMAP_OD_SZ) {
-		DEBUG_FCMH(PLL_WARN, fcmh, 
-			   "bmap (%zu) pread (rc=%zd, e=%d) fid="FIDFMT, 
-			   mq->blkno, szrc, errno,
-			   FID_FMT_ARGS(fcmh_2_fgp(fcmh)));
+		DEBUG_FCMH(PLL_WARN, fcmh, "bmap (%zu) pread (rc=%zd, e=%d)",
+			   mq->blkno, szrc, errno));
 		rc = -errno;
 		goto out;
 	}
-
 	PSC_CRC_CALC(&crc, *bmapod, BMAP_OD_CRCSZ);
 	if (crc == SL_NULL_BMAPOD_CRC) {
 		sl_blkh_t t;
@@ -579,10 +564,69 @@ mds_bmap_read(struct fidc_memb_handle *fcmf, struct srm_bmap_req *mq,
 	return (rc);
 
  crc_fail:
-	DEBUG_FCMH(PLL_WARN, fcmh, "bmap (%zu) crc failed fid="FIDFMT, 
-		   mq->blkno, FID_FMT_ARGS(fcmh_2_fgp(fcmh)));
+	DEBUG_FCMH(PLL_WARN, fcmh, "bmap (%zu) crc failed", mq->blkno);
 	rc = -EIO;
 	goto out;
+}
+
+
+int
+mds_bmap_crc_write(struct srm_bmap_crcwrt_req *mq, lnet_nid_t ion_nid)
+{
+	struct fidc_memb_handle *fcmh;
+	struct bmapc_memb *bmap, tbmap;
+	struct bmap_mds_info *bmdsi;
+	sl_blkh_t *bmapod;
+
+	if (mq->cid >= SL_CRCS_PER_BMAP)
+		return (-ERANGE);
+
+	fcmh = fidc_lookup_immns(mq->fid);
+	if (!fcmh)
+		return (-EBADF);
+
+	bmap = fcmh_bmap_lookup(fcmh, mq->blkno);	
+	if (!bmap)
+		return (-EBADF);
+
+	BMAP_LOCK(bmap);
+	DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u cid=%u ion=%s",
+		   mq->blkno, mq->cid, libcfs_nid2str(ion_nid));
+
+	bmdsi = bmap->bcm_mds_pri;
+	bmapod = bmap->bcm_bmapih.bmapi_data;
+	/* These better check out.
+	 */
+	psc_assert(bmap->bcm_fcmh == fcmh);
+	psc_assert(bmdsi);
+	psc_assert(bmapod);
+	psc_assert(bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_WR);
+	bmdsi_sanity(bmap);	
+	/* Ensure that the annointed nid is the one calling us.
+	 */
+	if (ion_nid != bmdsi->bmdsi_wr_ion->mi_resm->resm_nid)
+		return (-EINVAL);       
+	/* XXX ok if replicas exist, the gen has to be bumped and the
+	 *  replication bmap modified.
+	 *  Schedule the bmap for writing.
+	 */
+	// XXX invalidate replicas and bumpgen?
+	bmapod->bh_crcs[cid] = mq->crc;
+	/* Make sure I'm locked!
+	 */
+	bmap_update_jid = bmdsi->bmdsi_pndg_crc_updates;
+	bmdsi->bmdsi_pndg_crc_updates++;
+	// XXX Schedule write update.  May need to track and journal these.
+	//   this should incref the pdng_updateops ref.
+	// XXX Does this have to be locked while the journaling happens?
+	//   .. No.. unlock then write to the journal with the jid which will 
+	//   be used to sort out conflicts in the journal.
+	BMAP_ULOCK(bmap);
+	/* Mark that mds_bmap_crc_write() is done with this bmap (it was incref'd
+	 *  fcmh_bmap_lookup().
+	 */
+	atomic_dec(&b->bcm_opcnt);
+	return (0);
 }
 
 /**
