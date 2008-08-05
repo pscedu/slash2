@@ -20,7 +20,7 @@ mdscoh_reap(void)
 	return(nbrequest_reap(&bmapCbSet));
 }
 
-static inline void
+__static void
 mdscoh_infmode_chk(struct mexpbcm *bref, int rq_mode)
 {
 	int mode=bref->mexpbcm_mode;
@@ -94,7 +94,7 @@ mdscoh_cb(struct pscrpc_request *req, struct pscrpc_async_args *a)
 
 
 __static int
-mdscoh_queue_req_locked(struct mexpbcm *bref)
+mdscoh_queue_req(struct mexpbcm *bref)
 {
         struct pscrpc_request *req;
 	struct srm_bmap_dio_req *mq;
@@ -108,8 +108,8 @@ mdscoh_queue_req_locked(struct mexpbcm *bref)
 		   bref, mode, atomic_read(&bref->mexpbcm_msgcnt));	
 
 	psc_assert(bref->mexpbcm_net_inf);
-	mdscoh_infmode_chk(bref, bref->mexpbcm_net_cmd);
 
+	spinlock(&csvc->csvc_lock);
 	if (csvc->csvc_failed)
 		return (-1);
 	
@@ -123,6 +123,8 @@ mdscoh_queue_req_locked(struct mexpbcm *bref)
 		else
 			csvc->csvc_initialized = 1;
 	}
+	freelock(&csvc->csvc_lock);
+
 	rc = rsx_newreq(csvc->csvc_import, SRCM_VERSION, SRMT_BMAPDIO, 
 			sizeof(*mq), sizeof(*mp), &req, mq);
 	if (rc)
@@ -135,6 +137,8 @@ mdscoh_queue_req_locked(struct mexpbcm *bref)
 	mq->blkno = bref->mexpbcm_blkno;
 
 	nbreqset_add(bmapCbSet, req);
+	/* This lentry may need to be locked.
+	 */
 	lc_queue(&inflBmapCbs, &bref->mexpbcm_lentry);
 	/* Note that this req has been sent.
 	 */
@@ -153,18 +157,21 @@ mdscohthr_begin(void)
                 bref = lc_getwait(&pndgCacheCbs);
 
                 MEXPBCM_LOCK(bref);
-
 		if (bref->mexpbcm_net_cmd != MEXPBCM_RPC_CANCEL) {	
 			bref->mexpbcm_net_inf = 1;
-			rc = mdscoh_queue_req_locked(bref);
+			mdscoh_infmode_chk(bref, bref->mexpbcm_net_cmd);
+			MEXPBCM_ULOCK(bref);			
+			rc = mdscoh_queue_req(bref);
 			if (rc)
 				psc_fatalx("mdscoh_queue_req_locked() failed "
 					   "with (rc==%d) for bref %p", 
 					   rc, bref);
-		} else
-			bref->mexpbcm_net_cmd = 0;
-
-		MEXPBCM_ULOCK(bref);
+		} else {
+			/* Deschedule
+			 */
+			bref->mexpbcm_net_cmd = 0;		
+			MEXPBCM_ULOCK(bref);
+		}
 		mdscoh_reap();
         }
 }

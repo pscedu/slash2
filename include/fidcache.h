@@ -185,6 +185,7 @@ struct fidc_memb_handle {
 };
 
 #define fcmh_2_fid(f) (f)->fcmh_memb.fcm_inodeh.inoh_ino.ino_fg.fg_fid
+#define fcmh_2_fgp(f) &(f)->fcmh_memb.fcm_inodeh.inoh_ino.ino_fg
 #define fcmh_2_fsz(f) (f)->fcmh_memb.fcm_stb.st_size
 
 #define fcm_set_accesstime(f) {					    \

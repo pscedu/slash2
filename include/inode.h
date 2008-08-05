@@ -44,6 +44,7 @@
 #define SL_CRCS_PER_BMAP (SL_BMAP_SIZE / 1048576)
 
 #define SL_NULL_CRC 0x436f5d7c450ed606ULL
+#define SL_NULL_BMAPOD_CRC 0xb75884187c18a4f2ULL /* obtained from tests/crc */
 
 typedef u32 sl_inum_t;
 typedef u32 sl_blkno_t;  /* block number type */
