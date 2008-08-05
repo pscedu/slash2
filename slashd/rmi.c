@@ -19,6 +19,16 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
+int
+slrmi_bmap_crcwrt(struct pscrpc_request *rq)
+{
+	struct srm_bmap_crcwrt_req *mq;
+	struct srm_generic_rep *mp;
+
+	RSX_ALLOCREP(rq, mq, mp);
+	
+}
+
 /*
  * slrmi_handle_connect - handle a CONNECT request from ION.
  */
@@ -43,6 +53,10 @@ slrmi_handler(struct pscrpc_request *rq)
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
+	case SRMT_BMAPCRCWRT:
+		rc = slrmi_bmap_crcwrt(rq);
+		break;
+		
 	case SRMT_CONNECT:
 		rc = slrmi_handle_connect(rq);
 		break;
