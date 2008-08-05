@@ -68,6 +68,7 @@
 
 /* Slash RPC message types. */
 enum {
+	SRMT_BMAPCRCWRT,
 	SRMT_BMAPDIO,
 	SRMT_BMAPCHMODE,
 	SRMT_CHMOD,
@@ -145,6 +146,13 @@ struct srm_bmap_dio_req {
         u64 fid;
         u32 blkno;
         u32 dio;
+};
+
+struct srm_bmap_crcwrt_req {
+	u64 fid;      
+        u32 blkno;    /* bmap block number */
+	u32 cid;      /* chunk id          */
+	u64 crc;
 };
 
 /* Slash RPC message for ION from client */
