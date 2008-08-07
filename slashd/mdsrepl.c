@@ -54,18 +54,43 @@ mds_repl_xattr_load_locked(sl_inodeh_t *i)
 }
 
 int
-mds_repl_load(sl_inodeh_t *i)
+mds_repl_load_locked(sl_inodeh_t *i)
 {
 	int rc=0;
 
-	INOH_LOCK(i);
+	INOH_LOCK_ENSURE(i);
 	if (i->inoh_ino.ino_nrepls) {		
 		if  (i->inoh_flags & INOH_HAVE_REPS)
 			rc = mds_repl_crc_check(i);			
 	        else 
 			rc = mds_repl_xattr_load_locked(i);
 	}	
+	return (rc);
+}
+
+int 
+mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios)
+{
+	int j, rc=-1;
+
+	INOH_LOCK(i);
+	if (!i->inoh_ino.ino_nrepls)
+		goto out;
+
+	else if (!(i->inoh_flags & INOH_HAVE_REPS)) {
+		if (rc = mds_repl_load_locked(i))
+			goto out;
+	}
+	psc_assert(i->inoh_replicas);
+
+	for (j=0; j < i->inoh_ino.ino_nrepls; j++) {
+		if (i->inoh_replicas[j].bs_id == ios) {
+			rc = j;
+			break;
+		}
+	}
  out:
 	INOH_ULOCK(i);
 	return (rc);
 }
+
