@@ -169,6 +169,9 @@ typedef struct slash_inode_handle {
 	sl_replica_t  *inoh_replicas;
 } sl_inodeh_t;
 
+#define INOH_LOCK(h) spinlock(&(i)->inoh_lock)
+#define INOH_ULOCK(h) freelock(&(i)->inoh_lock)
+#define INOH_LOCK_ENSURE(h) LOCK_ENSURE(&(i)->inoh_lock)
 
 enum slash_inode_handle_flags {	
 	INOH_INO_DIRTY = (1<<0), /* Inode structures need to be written */
@@ -181,6 +184,29 @@ enum slash_inode_handle_flags {
 		memcpy(&(f)->fcmh_memb.fcm_inodeh.inoh_ino, (i),	\
 		       sizeof(*(i)));					\
 	}
+
+#define INOH_FLAG(field, str) ((field) ? (str) : "")
+#define DEBUG_INOH_FLAGS(i)					\
+	INOH_FLAG((i)->inoh_flags & INOH_INO_DIRTY, "D"),	\
+	INOH_FLAG((i)->inoh_flags & INOH_REP_DIRTY, "d"),	\
+	INOH_FLAG((i)->inoh_flags & INOH_HAVE_REPS, "r")
+
+#define INOH_FLAGS_FMT "%s%s%s"
+
+#define DEBUG_INOH(level, i, fmt, ...)				\
+	_psclog(__FILE__, __func__, __LINE__, PSS_OTHER, (level), 0,	\
+		" inoh@%p f:"FIDFMT" fl:"DEBUG_INOH_FLAGS		\
+		"o:%"_P_U64"x bsz:%zu lb:%zu "				\
+		"lbsz:%zu cs:%u pr:%u nr:%zu icrc:%"_P_U64		\
+		"x rcrc:%"_P_U64"x :: "fmt,				\
+		(i), FIDFMTARGS(&(i)->inoh_ino.ino_fg),			\
+		DEBUG_INOH_FLAGS((i)->inoh_flags),
+		(i)->inoh_ino.ino_off, (i)->inoh_ino.ino_bsz,		\
+		(i)->inoh_ino.ino_bsz, (i)->inoh_ino.ino_lblk,		\
+		(i)->inoh_ino.ino_lblk_sz, (i)->inoh_ino.ino_csnap,	\
+		(i)->inoh_ino.ino_prepl, (i)->inoh_ino.ino_nrepls,	\
+		(i)->inoh_ino.ino_rs_crc, (i)->inoh_ino.ino_crc,	\
+		## __VA_ARGS__)
 
 /* File extended attribute names. */
 #define SFX_INODE	"sl-inode"
