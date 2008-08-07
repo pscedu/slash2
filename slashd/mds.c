@@ -306,6 +306,7 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *mdsi=bmap->bcm_mds_pri;
+	//struct fidc_memb_handle *f=bmap->bcm_fcmh;
 	struct mexp_ion *mion;
 	sl_resource_t *res=libsl_id2res(pios);
 	sl_resm_t *resm;
@@ -348,11 +349,12 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 		}
 		freelock(&rmi->rmi_lock);
 		
-		psc_trace("res(%s) ion(%s) init=%d, failed=%d", 
-			  res->res_name, libcfs_nid2str(res->res_nids[n]), 
-			  mion->mi_csvc->csvc_initialized, 
-			  mion->mi_csvc->csvc_failed);
-
+		DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap,
+			   "res(%s) ion(%s) init=%d, failed=%d", 
+			   res->res_name, libcfs_nid2str(res->res_nids[n]), 
+			   mion->mi_csvc->csvc_initialized, 
+			   mion->mi_csvc->csvc_failed);
+		
 		if (mion->mi_csvc->csvc_failed)
 			continue;
 
@@ -369,16 +371,14 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 			} else
 				mion->mi_csvc->csvc_initialized = 1;
 		}
-
 		mdsi->bmdsi_wr_ion = mion;
 	} while (--x);
 
 	if (!mdsi->bmdsi_wr_ion)
 		return (-1);
 
-	psc_trace("using res(%s) ion(%s)", 
-		  res->res_name, libcfs_nid2str(res->res_nids[n]));	
-
+	DEBUG_BMAP(PLL_INFO, bref->mexpbcm_bmap, "using res(%s) ion(%s)", 
+		   res->res_name, libcfs_nid2str(res->res_nids[n]));
 	return (0);
 }
 
@@ -415,20 +415,15 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 	/* Set and check ref cnts now.
 	 */
 	atomic_inc(a);
+	bmdsi_sanity_locked(mdsi, 0);
 
-	wtrs = atomic_read(&mdsi->bmdsi_wr_ref);
-	rdrs = atomic_read(&mdsi->bmdsi_rd_ref);
-	/* No negative refs.
-	 */
-	psc_assert(wtrs >= 0 && rdrs >= 0);
-
-	if (wtrs == 1) {
+	if (wtrs == 1 && mode == BMAP_MDS_WR) {
 		psc_assert(!mdsi->bmdsi_wr_ion);
 		/* XXX Should not send connect rpc's here while
 		 *  the bmap is locked.  This may have to be 
 		 *  replaced by a waitq and init flag.
 		 */
-		mds_bmap_ion_assign(mq->pios);
+		mds_bmap_ion_assign(bref, mq->pios);
 	}
 	/* Do directio checks here.
 	 */
@@ -480,10 +475,8 @@ mds_bmap_ref_del(struct mexpbcm *bref, int rw)
 		psc_assert(bmap->bcm_bmapih.bmapi_mode & mode);
 		bmap->bcm_bmapih.bmapi_mode &= ~mode;
 	}
-	wtrs = atomic_read(&mdsi->bmdsi_wr_ref);
-	rdrs = atomic_read(&mdsi->bmdsi_rd_ref);
 
-	psc_assert(wtrs >= 0 && rdrs >= 0);
+	bmdsi_sanity_locked(bmap, 0);
 
 	if ((!wtrs || (wtrs == 1 && !rdrs)) && (rw == SRIC_BMAP_WRITE))
 		/* Decremented a writer.
@@ -497,80 +490,13 @@ mds_bmap_ref_del(struct mexpbcm *bref, int rw)
 	BMAP_ULOCK(bmap);
 }
 
+
 /**
- * mds_bmapod_initnew - called when a read request offset exceeds the bounds of the file causing a new bmap to be created.
- * Notes:  Bmap creation race conditions are prevented because the bmap handle already exists at this time with bmapi_mode == BMAP_MDS_INIT.  This causes other threads to block on the waitq until read / creation has completed.
- * More Notes:  this bmap is not written to disk until a client actually writes something to it.
+ * mds_bmap_crc_write - process an md5 request from an ION.
+ * @mq: the rpc request containing the fid, the bmap blkno, and the bmap chunk id (cid).
+ * @ion_nid:  the id of the io node which sent the request.  It is compared against the id stored in bmdsi.
  */
-__static void
-mds_bmapod_initnew(sl_blkh_t *b)
-{
-	int i;	
-	
-	for (i=0; i < SL_CRCS_PER_BMAP; i++)
-		b->bh_crcs[i] = SL_NULL_CRC;	
-	
-	PSC_CRC_CALC(b->bh_bhcrc, b, BMAP_OD_CRCSZ);
-}
-
-int
-mds_bmap_read(struct fidc_memb_handle *fcmf, struct srm_bmap_req *mq, 
-	      sl_blkh_t **bmapod)
-{
-	sl_inodeh_t *inoh=&fcmh->fcmh_memb.fcm_inodeh;	
-	int rc=0;
-
-	if (fcmh->fcmh_fd == FID_FD_NOTOPEN)
-		fcmh->fcmh_fd = fid_open(fcmh_2_fid(fcmh), O_RDWR);
-
-	if (fcmh->fcmh_fd < 0) {
-		DEBUG_FCMH(PLL_WARN, fcmh, "bmap (%zu) fcmh_fd(%d)" 
-			   fcmh->fcmh_fd, mq->blkno);
-		rc = -EIO; 
-		goto out;
-	}		
-	*bmapod = PSCALLOC(BMAP_OD_SZ);	
-	/* Try to pread() the bmap from the mds file.
-	 */
-	szrc = pread(fcmh->fcmh_fd, *bmapod, BMAP_OD_SZ, 
-		     (mq->blkno * BMAP_OD_SZ));
-
-	if (szrc != BMAP_OD_SZ) {
-		DEBUG_FCMH(PLL_WARN, fcmh, "bmap (%zu) pread (rc=%zd, e=%d)",
-			   mq->blkno, szrc, errno));
-		rc = -errno;
-		goto out;
-	}
-	PSC_CRC_CALC(&crc, *bmapod, BMAP_OD_CRCSZ);
-	if (crc == SL_NULL_BMAPOD_CRC) {
-		sl_blkh_t t;
-
-		memset(&t, 0, sizeof(sl_blkh_t));
-		/* Hit the NULL crc, verify that this is not a collision
-		 *  by comparing with null bmapod.
-		 */
-		if (memcmp(&t, *bmapod))
-			goto crc_fail;
-		else
-			/* It really is a null bmapod, create a new, blank
-			 *  bmapod for the cache.
-			 */
-			mds_bmapod_initnew(fcmh, mq->blkno, *bmapod);
-		
-	} else if (crc != (*bmapod)->bh_bhcrc)
-		goto crc_fail;
-		
- out:
-	return (rc);
-
- crc_fail:
-	DEBUG_FCMH(PLL_WARN, fcmh, "bmap (%zu) crc failed", mq->blkno);
-	rc = -EIO;
-	goto out;
-}
-
-
-int
+__static int
 mds_bmap_crc_write(struct srm_bmap_crcwrt_req *mq, lnet_nid_t ion_nid)
 {
 	struct fidc_memb_handle *fcmh;
@@ -590,8 +516,8 @@ mds_bmap_crc_write(struct srm_bmap_crcwrt_req *mq, lnet_nid_t ion_nid)
 		return (-EBADF);
 
 	BMAP_LOCK(bmap);
-	DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u cid=%u ion=%s",
-		   mq->blkno, mq->cid, libcfs_nid2str(ion_nid));
+	DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u crc="_P_U64"x cid=%u ion=%s",
+		   mq->blkno, mq->crc, mq->cid, libcfs_nid2str(ion_nid));
 
 	bmdsi = bmap->bcm_mds_pri;
 	bmapod = bmap->bcm_bmapih.bmapi_data;
@@ -601,7 +527,7 @@ mds_bmap_crc_write(struct srm_bmap_crcwrt_req *mq, lnet_nid_t ion_nid)
 	psc_assert(bmdsi);
 	psc_assert(bmapod);
 	psc_assert(bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_WR);
-	bmdsi_sanity(bmap);	
+	bmdsi_sanity_locked(bmap, 1);	
 	/* Ensure that the annointed nid is the one calling us.
 	 */
 	if (ion_nid != bmdsi->bmdsi_wr_ion->mi_resm->resm_nid)
@@ -622,15 +548,102 @@ mds_bmap_crc_write(struct srm_bmap_crcwrt_req *mq, lnet_nid_t ion_nid)
 	//   .. No.. unlock then write to the journal with the jid which will 
 	//   be used to sort out conflicts in the journal.
 	BMAP_ULOCK(bmap);
-	/* Mark that mds_bmap_crc_write() is done with this bmap (it was incref'd
-	 *  fcmh_bmap_lookup().
+
+	/* Mark that mds_bmap_crc_write() is done with this bmap 
+	 *  - it was incref'd in fcmh_bmap_lookup().
 	 */
 	atomic_dec(&b->bcm_opcnt);
 	return (0);
 }
 
 /**
- * 
+ * mds_bmapod_initnew - called when a read request offset exceeds the bounds of the file causing a new bmap to be created.
+ * Notes:  Bmap creation race conditions are prevented because the bmap handle already exists at this time with bmapi_mode == BMAP_MDS_INIT.  This causes other threads to block on the waitq until read / creation has completed.
+ * More Notes:  this bmap is not written to disk until a client actually writes something to it.
+ */
+__static void
+mds_bmapod_initnew(sl_blkh_t *b)
+{
+	int i;	
+	
+	for (i=0; i < SL_CRCS_PER_BMAP; i++)
+		b->bh_crcs[i] = SL_NULL_CRC;	
+	
+	PSC_CRC_CALC(b->bh_bhcrc, b, BMAP_OD_CRCSZ);
+}
+
+/**
+ * mds_bmap_read - retrieve a bmap from the ondisk inode file.
+ * @fcmh: inode structure containing the fid and the fd.
+ * @blkno: the bmap block number. 
+ * @bmapod: on disk structure containing crc's and replication bitmap.
+ */
+__static int
+mds_bmap_read(struct fidc_memb_handle *fcmf, sl_blkno_t blkno, 
+	      sl_blkh_t **bmapod)
+{
+	sl_inodeh_t *inoh=&fcmh->fcmh_memb.fcm_inodeh;	
+	int rc=0;
+
+	if (fcmh->fcmh_fd == FID_FD_NOTOPEN)
+		fcmh->fcmh_fd = fid_open(fcmh_2_fid(fcmh), O_RDWR);
+
+	if (fcmh->fcmh_fd < 0) {
+		DEBUG_FCMH(PLL_WARN, fcmh, "bmap (%zu) fcmh_fd(%d) err(%d)" 
+			   fcmh->fcmh_fd, blkno, errno);
+		rc = -errno; 
+		goto out;
+	}		
+	*bmapod = PSCALLOC(BMAP_OD_SZ);	
+	/* Try to pread() the bmap from the mds file.
+	 */
+	szrc = pread(fcmh->fcmh_fd, *bmapod, BMAP_OD_SZ, 
+		     (blkno * BMAP_OD_SZ));
+
+	if (szrc != BMAP_OD_SZ) {
+		DEBUG_FCMH(PLL_WARN, fcmh, "bmap (%zu) pread (rc=%zd, e=%d)",
+			   blkno, szrc, errno));
+		rc = -errno;
+		goto out;
+	}
+	PSC_CRC_CALC(&crc, *bmapod, BMAP_OD_CRCSZ);
+	if (crc == SL_NULL_BMAPOD_CRC) {
+		/* sl_blkh_t may be a bit large for the stack.
+		 */
+		sl_blkh_t *t = PSCALLOC(sizeof(sl_blkh_t));
+		int rc;
+		/* Hit the NULL crc, verify that this is not a collision
+		 *  by comparing with null bmapod.
+		 */
+		rc = memcmp(t, *bmapod);
+		PSCFREE(t);
+		if (rc)
+			goto crc_fail;
+		} else {
+			/* It really is a null bmapod, create a new, blank
+			 *  bmapod for the cache.
+			 */
+			mds_bmapod_initnew(*bmapod);			
+		}
+	} else if (crc != (*bmapod)->bh_bhcrc)
+		goto crc_fail;		
+ out:
+	return (rc);
+
+ crc_fail:
+	DEBUG_FCMH(PLL_WARN, fcmh, "bmap (%zu) crc failed want(%zu) got(%zu)", 
+		   blkno, (*bmapod)->bh_bhcrc, crc);
+	rc = -EIO;
+	goto out;
+}
+
+
+/**
+ * mds_bmap_load - routine called to retrieve a bmap, presumably so that it may be sent to a client.  It first checks for existence in the cache, if needed, the bmap is retrieved from disk.  mds_bmap_load() also manages the mexpfcm's mexpbcm reference which is used to track the bmaps a particular client knows about.  mds_bmap_read() is used to retrieve the bmap from disk or create a new 'blank-slate' bmap if one does not exist.  Finally a read or write reference is placed on the bmap depending on the client request.  This is factored in with existing references to determine whether or not the bmap should be in DIO mode.  
+ * @fref:  the fidcache reference for the inode (stored in the private pointer of the cfd.
+ * @mq: the client rpc request.
+ * @bmap: structure to be allocated and returned to the client.
+ * Note:  the bmap is not locked during disk io, instead it is marked with a bit (ie INIT) and other threads block on the waitq.
  */
 int
 mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq, 
@@ -726,10 +739,9 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		/* It's ready to go, place it in the tree.
 		 */
 		SPLAY_INSERT(bmap_cache, &fcmh->fcmh_bmapc, *bmap);
-		/* This will probably go away.
-		 */ 
-		(int)mds_bmap_fsz_check_locked(fcmh, mq->blkno);
-		/* Finally, the fcmh may be unlocked.
+		/* Finally, the fcmh may be unlocked.  Other threads
+		 *   wishing to access the bmap will block on bcm_waitq
+		 *   until we have finished reading it from disk.
 		 */
 		FCMH_ULOCK(fcmh);
 		rc = mds_bmap_read(fcmf, mq->blkno, bmap);

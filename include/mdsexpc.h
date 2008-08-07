@@ -165,15 +165,16 @@ SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
 
 static inline void 
-bmdsi_sanity(struct bmapc_memb *b){
+bmdsi_sanity_locked(struct bmapc_memb *b, int dio_check)
+{
 	int wtrs, rdrs;
 	struct bmap_mds_info *mdsi = bmap->bcm_mds_pri;
 
 	wtrs = atomic_read(&mdsi->bmdsi_wr_ref);
         rdrs = atomic_read(&mdsi->bmdsi_rd_ref);
         psc_assert(wtrs >= 0 && rdrs >= 0);
-        if (wtrs > 1 || wtrs && rdrs)
-                psc_assert(bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_DIO);
+	if (dio_check && (wtrs > 1 || wtrs && rdrs))
+		psc_assert(bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_DIO);
 }
 
 struct fidc_mds_info {	
