@@ -154,13 +154,6 @@ struct bmap_mds_info {
 	struct pscrpc_request_set *bmdsi_reqset; /* cache callback rpc's    */
 };
 
-enum bmap_mds_modes {
-	BMAP_MDS_WR =  (1<<0), 
-	BMAP_MDS_RD =  (1<<1),
-	BMAP_MDS_DIO = (1<<2),
-	BMAP_MDS_FAILED = (1<<3)
-};
-
 SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
 
