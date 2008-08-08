@@ -503,6 +503,7 @@ mds_bmap_crc_write(struct srm_bmap_crcwrt_req *mq, lnet_nid_t ion_nid)
 	struct bmapc_memb *bmap, tbmap;
 	struct bmap_mds_info *bmdsi;
 	sl_blkh_t *bmapod;
+	int rc=0;
 
 	if (mq->cid >= SL_CRCS_PER_BMAP)
 		return (-ERANGE);
@@ -530,8 +531,23 @@ mds_bmap_crc_write(struct srm_bmap_crcwrt_req *mq, lnet_nid_t ion_nid)
 	bmdsi_sanity_locked(bmap, 1);	
 	/* Ensure that the annointed nid is the one calling us.
 	 */
-	if (ion_nid != bmdsi->bmdsi_wr_ion->mi_resm->resm_nid)
-		return (-EINVAL);       
+	if (ion_nid != bmdsi->bmdsi_wr_ion->mi_resm->resm_nid) {
+		rc = -EINVAL;
+		goto out;
+	}
+	/* XXX Note the lock ordering here BMAP -> INODEH
+	 *  mds_repl_promote() takes the lock.  This shouldn't be racy because
+	 *   . only one export may be here (ion_nid)
+	 *   . the bmap is locked.
+	 */	
+	mds_repl_promote_locked(bmap, );
+
+	if (bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_EMPTY) {
+		/* New bmap therefore no replication state - we're the only
+		 *  replica now.  Mark that this replica is active.
+		 * XXX journal me.
+		 */
+	} 
 	/* XXX ok if replicas exist, the gen has to be bumped and the
 	 *  replication bmap modified.
 	 *  Schedule the bmap for writing.
@@ -547,8 +563,9 @@ mds_bmap_crc_write(struct srm_bmap_crcwrt_req *mq, lnet_nid_t ion_nid)
 	// XXX Does this have to be locked while the journaling happens?
 	//   .. No.. unlock then write to the journal with the jid which will 
 	//   be used to sort out conflicts in the journal.
-	BMAP_ULOCK(bmap);
 
+ out:
+	BMAP_ULOCK(bmap);
 	/* Mark that mds_bmap_crc_write() is done with this bmap 
 	 *  - it was incref'd in fcmh_bmap_lookup().
 	 */
