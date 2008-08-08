@@ -112,9 +112,9 @@ enum bmap_cli_modes {
 enum bmap_mds_modes {
 	BMAP_MDS_WR     = (1<<0), 
 	BMAP_MDS_RD     = (1<<1),
-	BMAP_MDS_DIRTY  = (1<<2),
-	BMAP_MDS_INIT   = (1<<3),
-	BMAP_MDS_FAILED = (1<<4)	
+	BMAP_MDS_DIO    = (1<<2), /* directio */
+	BMAP_MDS_FAILED = (1<<3), /* crc failure */
+	BMAP_MDS_EMPTY  = (1<<4)  /* new bmap, not yet committed to disk*/
 };
 
 /*
@@ -187,6 +187,7 @@ struct fidc_memb_handle {
 #define fcmh_2_fid(f) (f)->fcmh_memb.fcm_inodeh.inoh_ino.ino_fg.fg_fid
 #define fcmh_2_fgp(f) &(f)->fcmh_memb.fcm_inodeh.inoh_ino.ino_fg
 #define fcmh_2_fsz(f) (f)->fcmh_memb.fcm_stb.st_size
+#define fcmh_2_inoh(f) &(f)->fcmh_memb.fcm_inodeh
 
 #define fcm_set_accesstime(f) {					    \
 		clock_gettime(CLOCK_REALTIME, &(f)->fcmh_access);   \
