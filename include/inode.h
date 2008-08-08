@@ -22,13 +22,13 @@
  *   is up-to-date, '110' would mean that the bmap is only one generation 
  *   back and therefore may take partial updates.  111 means that the bmap
  *   is more than one generation old.
- * '000' - bmap is not replicated to this ios.
- * '100' - bmap is replicated to the ios and current.
- * '110' - bmap is one generation back.
- * '111' - bmap is > one generation back.
+ * '00' - bmap is not replicated to this ios.
+ * '01' - bmap is > one generation back.
+ * '10' - bmap is one generation back.
+ * '11' - bmap is replicated to the ios and current.
  */
 #define SL_MAX_REPLICAS     64
-#define SL_BITS_PER_REPLICA 3
+#define SL_BITS_PER_REPLICA 2
 #define SL_REPLICA_NBYTES   ((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) /	\
 			     (sizeof(u8)))
 
@@ -45,6 +45,11 @@
 
 #define SL_NULL_CRC 0x436f5d7c450ed606ULL
 #define SL_NULL_BMAPOD_CRC 0xb75884187c18a4f2ULL /* obtained from tests/crc */
+
+#define SL_REPL_INACTIVE 0
+#define SL_REPL_TOO_OLD  1
+#define SL_REPL_OLD      2
+#define SL_REPL_ACTIVE   3
 
 typedef u32 sl_inum_t;
 typedef u32 sl_blkno_t;  /* block number type */
@@ -200,7 +205,7 @@ enum slash_inode_handle_flags {
 		"lbsz:%zu cs:%u pr:%u nr:%zu icrc:%"_P_U64		\
 		"x rcrc:%"_P_U64"x :: "fmt,				\
 		(i), FIDFMTARGS(&(i)->inoh_ino.ino_fg),			\
-		DEBUG_INOH_FLAGS((i)->inoh_flags),
+		DEBUG_INOH_FLAGS((i)->inoh_flags),			\
 		(i)->inoh_ino.ino_off, (i)->inoh_ino.ino_bsz,		\
 		(i)->inoh_ino.ino_bsz, (i)->inoh_ino.ino_lblk,		\
 		(i)->inoh_ino.ino_lblk_sz, (i)->inoh_ino.ino_csnap,	\
