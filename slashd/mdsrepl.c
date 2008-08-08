@@ -6,9 +6,10 @@ __static int
 mds_repl_crc_check(sl_inodeh_t *i)
 {
 	psc_crc_t crc;
-	size_t sz = (sizeof(sl_replica_t) * i->inoh_ino.ino_nrepls);
 
-	PSC_CRC_CALC(crc, i->inoh_replicas, sz);
+	PSC_CRC_CALC(crc, i->inoh_replicas, 
+		     (sizeof(sl_replica_t) * i->inoh_ino.ino_nrepls));
+
 	if (crc != i->inoh_ino.ino_rs_crc) {
 		psc_warnx("Crc failure on replicas");
 		return (-EIO);
@@ -69,7 +70,7 @@ mds_repl_load_locked(sl_inodeh_t *i)
 }
 
 int 
-mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios)
+mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios, int add)
 {
 	int j, rc=-1;
 
@@ -86,7 +87,23 @@ mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios)
 	for (j=0; j < i->inoh_ino.ino_nrepls; j++) {
 		if (i->inoh_replicas[j].bs_id == ios) {
 			rc = j;
-			break;
+			goto out;
+		}
+	}
+
+	if (rc == -1 && add) {
+		if (i->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS)
+			DEBUG_INOH(PLL_WARN, i, "too many replicas");
+		else {
+			DEBUG_INOH(PLL_INFO, i, "add IOS(%s) to repls", ios);
+			/* XXX journal write */
+			i->inoh_ino.ino_nrepls++;
+			i->inoh_replicas[j].bs_id == ios;
+			/* Note that both the inode structure and replication
+			 *  table must be synced.
+			 */
+			i->inoh_flags |= (INOH_REP_DIRTY || INOH_INO_DIRTY);
+			rc = j;
 		}
 	}
  out:
@@ -94,3 +111,28 @@ mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios)
 	return (rc);
 }
 
+int
+mds_repl_inv_except_locked(struct bmapc_memb *b, sl_ios_id_t ion)
+{
+	//sl_inodeh_t *i=fcmh_2_inoh(b->bcm_fcmh);
+	sl_blkh_t *bmapod=b->bcm_bmapih.bmapi_data
+	int j, k, pos;
+	u8 mask, *b=bmapod->bh_repls;
+
+	BMAP_LOCK_ENSURE(b);
+	/* Find our replica id else add ourselves.
+         */
+	j = mds_repl_ios_lookup(fcmh_2_inoh(b->bmap_fcmh), 
+				sl_glid_to_resid(ion), 1);
+        if (j < 0) 
+		return (j);
+	
+	for (k=0, pos=0, mask=0, b=; k < SL_REPLICA_NBYTES; k++, mask=0) {
+		
+		mask = 3 << pos;
+		
+		pos += SL_BITS_PER_REPLICA;
+		if (pos >= (NBBY / SL_BITS_PER_REPLICA))
+			pos = 0;
+	}
+}
