@@ -112,11 +112,10 @@ mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios, int add)
 }
 
 int
-mds_repl_inv_except_locked(struct bmapc_memb *b, sl_ios_id_t ion)
+mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 {
-	//sl_inodeh_t *i=fcmh_2_inoh(b->bcm_fcmh);
-	sl_blkh_t *bmapod=b->bcm_bmapih.bmapi_data
-	int j, k, pos;
+	sl_blkh_t *bmapod=bmap->bcm_bmapih.bmapi_data;
+	int j, k, pos, r, bumpgen=0;
 	u8 mask, *b=bmapod->bh_repls;
 
 	BMAP_LOCK_ENSURE(b);
@@ -126,13 +125,42 @@ mds_repl_inv_except_locked(struct bmapc_memb *b, sl_ios_id_t ion)
 				sl_glid_to_resid(ion), 1);
         if (j < 0) 
 		return (j);
-	
-	for (k=0, pos=0, mask=0, b=; k < SL_REPLICA_NBYTES; k++, mask=0) {
-		
-		mask = 3 << pos;
-		
-		pos += SL_BITS_PER_REPLICA;
-		if (pos >= (NBBY / SL_BITS_PER_REPLICA))
-			pos = 0;
+	/* Iterate across the byte array.
+	 */
+	for (r=0, k=0; k < SL_REPLICA_NBYTES; k++, mask=0) {
+		for (pos=0, mask=0; pos < NBBY; 
+		     pos+=SL_BITS_PER_REPLICA, r++) {
+			/* XXX journal these changes to the replication 
+			 *   bitmap
+			 */
+			mask = (u8)(((2 << SL_BITS_PER_REPLICA)-1) << pos);
+			
+			if (r == j) {				
+				b[r] |= SL_REPL_ACTIVE;
+				DEBUG_BMAP(PLL_INFO, bmap, 
+					   "add repl for ion(%d)", ion);
+			} else {
+				switch (b[r] & mask) {
+				case SL_REPL_INACTIVE:
+				case SL_REPL_TOO_OLD:
+					break;
+				case SL_REPL_OLD:
+					b[r] |= mask & SL_REPL_TOO_OLD;
+					break;
+				case SL_REPL_ACTIVE:
+					bumpgen = 1;
+					b[r] |= mask & SL_REPL_OLD;
+					break;
+				}
+			}
+		}
 	}
+	if (bumpgen)
+		/* XXX journal bump gen.
+		 */
+		bmapod->bh_gen++;
+	/* XXX Crc has to be rewritten too - this should be done at write time
+	 *  only.
+	 */	
+	return (0);
 }

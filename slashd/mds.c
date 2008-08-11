@@ -540,14 +540,12 @@ mds_bmap_crc_write(struct srm_bmap_crcwrt_req *mq, lnet_nid_t ion_nid)
 	 *   . only one export may be here (ion_nid)
 	 *   . the bmap is locked.
 	 */	
-	mds_repl_promote_locked(bmap, );
+	if (mds_repl_inv_except_locked(bmap, ion))
+		goto out;
 
-	if (bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_EMPTY) {
-		/* New bmap therefore no replication state - we're the only
-		 *  replica now.  Mark that this replica is active.
-		 * XXX journal me.
-		 */
-	} 
+	if (bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_EMPTY) 
+		bmap->bcm_bmapih.bmapi_mode &= ~BMAP_MDS_EMPTY;
+
 	/* XXX ok if replicas exist, the gen has to be bumped and the
 	 *  replication bmap modified.
 	 *  Schedule the bmap for writing.
