@@ -8,28 +8,9 @@
 
 #include "psc_util/journal.h"
 
-#include "inode.h"
-#include "sb.h"
-#include "slconfig.h"
-#include "slashd.h"
-#include "pathnames.h"
-
-#define SLJ_NENTS		200
-
-#define SLASH_INUM_ALLOC_SZ	1024	/* allocate 1024 inums at a time */
-
-#define SLASH_PJET_VOID		0
-#define SLASH_PJET_INUM		1
-
-struct slash_jent_inum {
-	struct psc_journal_enthdr	sji_hdr;
-	sl_inum_t			sji_inum;
-};
-
-#define SLJ_ENTSIZE (sizeof(struct slash_jent_inum))
 
 sl_inum_t
-slash_get_inum(void)
+slmds_get_inum(void)
 {
 	struct slash_jent_inum *sji;
 
@@ -43,7 +24,7 @@ slash_get_inum(void)
 }
 
 void
-slash_journal_recover(void)
+slmds_journal_recover(void)
 {
 	struct psc_journal_enthdr *pje;
 	struct psc_journal_walker pjw;
@@ -80,14 +61,15 @@ slash_journal_recover(void)
 }
 
 void
-slash_journal_init(void)
+sl_journal_init(struct psc_journal *pj, size_t nent, size_t entsz, int ra)
 {
 	char fn[PATH_MAX];
 	int rc;
 
 	rc = snprintf(fn, sizeof(fn), "%s/%s",
-	    nodeInfo.node_res->res_fsroot, _PATH_SLJOURNAL);
+		      nodeInfo.node_res->res_fsroot, _PATH_SLJOURNAL);
 	if (rc == -1)
 		psc_fatal("snprintf");
-	pjournal_init(&sbm.sbm_pj, fn, 0, SLJ_NENTS, SLJ_ENTSIZE);
+
+	pjournal_init(pj, fn, 0, nent, entsz, ra);
 }
