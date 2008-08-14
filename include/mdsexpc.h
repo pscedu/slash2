@@ -146,7 +146,7 @@ SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
  * Notes: both read and write clients are stored to bmdsi_exports, the ref counts are used to determine the number of both and hence the caching mode used at the clients.   bmdsi_wr_ion is a shortcut pointer used only when the bmap has client writers - all writers (and readers) are directed to this ion once a client has invoked write mode on the bmap.
  */
 struct bmap_mds_info {
-	u32                   bmdsi_pndg_crc_updates;
+	u32                   bmdsi_xid;
         atomic_t              bmdsi_rd_ref;  /* count our cli read refs     */
         atomic_t              bmdsi_wr_ref;  /* count our cli write refs    */
 	struct mexp_ion      *bmdsi_wr_ion;  /* ion export assigned to bmap */
@@ -171,8 +171,9 @@ bmdsi_sanity_locked(struct bmapc_memb *b, int dio_check)
 }
 
 struct fidc_mds_info {	
-	struct fcm_exports fmdsi_exports; /* tree of mexpfcm */
+	struct fcm_exports fmdsi_exports; /* tree of mexpfcm */	
 	atomic fmdsi_ref;
+	u32    fmdsi_xid;
 };
 
 

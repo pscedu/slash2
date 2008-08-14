@@ -72,7 +72,7 @@ mds_repl_load_locked(sl_inodeh_t *i)
 int 
 mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios, int add)
 {
-	int j, rc=-1;
+	int j, rc=-ENOENT;
 
 	INOH_LOCK(i);
 	if (!i->inoh_ino.ino_nrepls)
@@ -91,7 +91,7 @@ mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios, int add)
 		}
 	}
 
-	if (rc == -1 && add) {
+	if (rc == -ENOENT && add) {
 		if (i->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS)
 			DEBUG_INOH(PLL_WARN, i, "too many replicas");
 		else {
@@ -123,6 +123,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
          */
 	j = mds_repl_ios_lookup(fcmh_2_inoh(b->bmap_fcmh), 
 				sl_glid_to_resid(ion), 1);
+	
         if (j < 0) 
 		return (j);
 	/* Iterate across the byte array.
@@ -136,7 +137,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 			mask = (u8)(((2 << SL_BITS_PER_REPLICA)-1) << pos);
 			
 			if (r == j) {				
-				b[r] |= SL_REPL_ACTIVE;
+				b[r] |= mask & SL_REPL_ACTIVE;
 				DEBUG_BMAP(PLL_INFO, bmap, 
 					   "add repl for ion(%d)", ion);
 			} else {
@@ -159,8 +160,8 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 		/* XXX journal bump gen.
 		 */
 		bmapod->bh_gen++;
-	/* XXX Crc has to be rewritten too - this should be done at write time
-	 *  only.
+	/* XXX Crc has to be rewritten too - this should be done at inode 
+	 *  write time only.
 	 */	
 	return (0);
 }
