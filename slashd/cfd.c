@@ -77,7 +77,7 @@ cfdnew(u64 *cfdp, struct pscrpc_export *exp, slfid_t fid)
 
 	spinlock(&exp->exp_lock);
 	sexp = slashrpc_export_get(exp);
-	*cfdp = ++sexp->sexp_nextcfd;
+	*cfdp = ++sexp->nextcfd;
 	if (rc = CFD_SVROP(c, exp, new))
 		return (rc);
 	if (cfdinsert(*cfdp, exp, fid))

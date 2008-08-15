@@ -22,7 +22,7 @@ SPLAY_HEAD(cfdtree, cfdent);
 struct cfdent *
 	cfdinsert(u64, struct pscrpc_export *, slfid_t);
 int	cfdcmp(const void *, const void *);
-void	cfdnew(u64 *, struct pscrpc_export *, slfid_t);
+int	cfdnew(u64 *, struct pscrpc_export *, slfid_t);
 int	cfd2fid(struct pscrpc_export *, u64, slfid_t *);
 int	cfdfree(struct pscrpc_export *, u64);
 
@@ -30,15 +30,15 @@ int	cfdfree(struct pscrpc_export *, u64);
  *  'pri' structure.  All calls must be made with the exp lock held.
  */
 struct cfd_svrops {
-	int (*cfd_new)(struct cfdent *c);
-	int (*cfd_free)(struct cfdent *c);
-	int (*cfd_insert)(struct cfdent *c);
+	int (*cfd_new)(struct cfdent *c, struct pscrpc_export *);
+	int (*cfd_free)(struct cfdent *c, struct pscrpc_export *);
+	int (*cfd_insert)(struct cfdent *c, struct pscrpc_export *);
 };
 
 #define CFD_SVROP(cfd, exp, OP) {			\
 		LOCK_ENSURE(&(exp)->exp_lock);		\
-		if (cfdOps && cfdOps->cfd_OP##)		\
-			(*cfdOps->cfd_OP##)(cfd, exp);	\
+		if (cfdOps && cfdOps->cfd_##OP)		\
+			(*cfdOps->cfd_##OP)(cfd, exp);	\
 	}
 
 
