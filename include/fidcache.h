@@ -135,10 +135,10 @@ struct bmapc_memb {
 	atomic_t		bcm_wr_ref;	 /* one ref per read fd   */
 	atomic_t                bcm_opcnt;       /* pending opcnt         */
 	u64                     bcm_holes[2];    /* one bit SLASH_BMAP_SIZE */
-	union bmap_type {
+	union {
 		void		       *bmt_mds_pri;
 		struct offtree_root    *bmt_cli_oftr;
-	};
+	} bmap_type;
 	psc_spinlock_t          bcm_lock;
 	struct psc_wait_queue   bcm_waitq;
 	struct fidc_memb_handle *bcm_fcmh;   /* pointer to fid info   */

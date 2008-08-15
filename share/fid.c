@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <sys/param.h>
+#include <sys/xattr.h>
 
 #include <stdio.h>
 
