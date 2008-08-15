@@ -34,8 +34,7 @@ sl_oftiov_inflight_callback slInflightCb=NULL;
 static struct sl_buffer_iovref *
 sl_oftiov_locref_locked(struct offtree_iov *iov, struct sl_buffer *slb);
 
-static void
-sl_buffer_init(void *pri);
+int sl_buffer_init(void *);
 
 static void
 sl_buffer_free_assertions(struct sl_buffer *b)
@@ -894,7 +893,7 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 	return -ENOMEM;
 }
 
-static void
+int
 sl_buffer_init(void *pri)
 {
 	struct sl_buffer *slb = pri;
@@ -915,6 +914,7 @@ sl_buffer_init(void *pri)
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
 	//sl_buffer_put(slb, &slBufsFreePool.ppm_lc);
+	return (0);
 }
 
 void
