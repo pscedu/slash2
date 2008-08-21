@@ -14,6 +14,7 @@
 #include "psc_ds/tree.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
+#include "psc_ds/lockedlist.h"
 
 #include "cache_params.h"
 #include "slconfig.h"
@@ -21,7 +22,6 @@
 #include "fid.h"
 #include "inode.h"
 #include "offtree.h"
-
 
 extern struct hash_table fidcHtable;
 
@@ -128,23 +128,24 @@ enum bmap_mds_modes {
 struct fidc_memb_handle;
 
 struct bmapc_memb {
-	sl_blkno_t	        bcm_blkno;       /* Bmap blk number */
-	struct timespec		bcm_ts;
-	struct bmap_info	bcm_bmapih;
-	atomic_t		bcm_rd_ref;	 /* one ref per write fd  */
-	atomic_t		bcm_wr_ref;	 /* one ref per read fd   */
-	atomic_t                bcm_opcnt;       /* pending opcnt         */
-	u64                     bcm_holes[2];    /* one bit SLASH_BMAP_SIZE */
+	sl_blkno_t	            bcm_blkno;    /* Bmap blk number */
+	struct fidc_memb_handle    *bcm_fcmh;   /* pointer to fid info   */
+	struct bmap_info	    bcm_bmapih;
+	atomic_t		    bcm_rd_ref;	  /* one ref per write fd  */
+	atomic_t		    bcm_wr_ref;	  /* one ref per read fd   */
+	struct timespec		    bcm_ts;
+	atomic_t                    bcm_opcnt;    /* pending opcnt         */
+	u64                         bcm_holes[2]; /* one bit SLASH_BMAP_SIZE */
 	union {
 		void		       *bmt_mds_pri;
 		struct offtree_root    *bmt_cli_oftr;
 	} bmap_type;
-	psc_spinlock_t          bcm_lock;
-	struct psc_wait_queue   bcm_waitq;
-	struct fidc_memb_handle *bcm_fcmh;   /* pointer to fid info   */
+	psc_spinlock_t              bcm_lock;
+	struct psc_wait_queue       bcm_waitq;
+	struct jflush_item          bcm_jfi;
 	SPLAY_ENTRY(bmapc_memb) bcm_tentry; /* fcm tree entry        */
 #define bcm_mds_pri bmap_type.bmt_mds_pri
-#define bcm_oftr    bmap_type.bmt_cli_oftr
+#define bcm_oftr    bmap_type.bmt_cli_oftr				
 };
 
 #define bmap_set_accesstime(b) {				    \
@@ -181,6 +182,7 @@ struct fidc_memb_handle {
 	psc_spinlock_t		 fcmh_lock;
 	size_t                   fcmh_bmap_sz;
 	struct hash_entry        fcmh_hashe;
+	struct jflush_item       fcmh_jfi;
 #define fcmh_cfd fcmh_fh
 };
 
