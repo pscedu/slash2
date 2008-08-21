@@ -8,9 +8,8 @@
 #include "slashd.h"
 #include "pathnames.h"
 
-/* If the journal wraps we'll be in trouble, plus space is cheap.
- */
 #define SLJ_MDS_JNENTS		10485760
+#define SLJ_MDS_RA              200
 
 #define SLMDS_INUM_ALLOC_SZ	1024	/* allocate 1024 inums at a time */
 
