@@ -1,4 +1,3 @@
-
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
 #include "psc_ds/listcache.h"
@@ -179,10 +178,12 @@ mdscohthr_begin(void)
 void
 mdscoh_init(void)
 {
-	lc_register(&pndgBmapCbs, "pendingBmapCbs");
-	lc_register(&inflBmapCbs, "inflightBmapCbs");
+	lc_reginit(&pndgBmapCbs, struct mexpbcm, mexpbcm_lentry, 
+		   "pendingBmapCbs");
+	lc_reginit(&inflBmapCbs, struct mexpbcm, mexpbcm_lentry,  
+		   "inflightBmapCbs");
 
 	bmapCbSet = nbreqset_init(NULL, mdscoh_cb);
-	pscthr_init(&pndgCacheCbThread, SLTHRT_MDSCOH, mdscohthr_begin,
-                    PSCALLOC(sizeof(struct slash_mdscohthr)), "mdscohthr");
+	pscthr_init(&pndgCacheCbThread, SLTHRT_MDSOH, mdscohthr_begin,
+                    NULL, "mdscohthr");
 }
