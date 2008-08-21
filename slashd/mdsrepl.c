@@ -115,10 +115,10 @@ int
 mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 {
 	sl_blkh_t *bmapod=bmap->bcm_bmapih.bmapi_data;
-	int j, k, pos, r, bumpgen=0;
+	int j, k, pos, r, bumpgen=0, log=0;
 	u8 mask, *b=bmapod->bh_repls;
 
-	BMAP_LOCK_ENSURE(b);
+	BMAP_LOCK_ENSURE(bmap);
 	/* Find our replica id else add ourselves.
          */
 	j = mds_repl_ios_lookup(fcmh_2_inoh(b->bmap_fcmh), 
@@ -131,9 +131,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 	for (r=0, k=0; k < SL_REPLICA_NBYTES; k++, mask=0) {
 		for (pos=0, mask=0; pos < NBBY; 
 		     pos+=SL_BITS_PER_REPLICA, r++) {
-			/* XXX journal these changes to the replication 
-			 *   bitmap
-			 */
+
 			mask = (u8)(((2 << SL_BITS_PER_REPLICA)-1) << pos);
 			
 			if (r == j) {				
@@ -146,20 +144,24 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 				case SL_REPL_TOO_OLD:
 					break;
 				case SL_REPL_OLD:
+					log++;
 					b[r] |= mask & SL_REPL_TOO_OLD;
 					break;
 				case SL_REPL_ACTIVE:
-					bumpgen = 1;
+					log++;
+					bumpgen++;
 					b[r] |= mask & SL_REPL_OLD;
 					break;
 				}
 			}
 		}
 	}
-	if (bumpgen)
-		/* XXX journal bump gen.
-		 */
-		bmapod->bh_gen++;
+
+	if (log) {
+		if (bumpgen)
+			bmapod->bh_gen++;
+		mds_bmap_repl_log(bmap);
+	}
 	/* XXX Crc has to be rewritten too - this should be done at inode 
 	 *  write time only.
 	 */	
