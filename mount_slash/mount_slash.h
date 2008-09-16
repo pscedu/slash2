@@ -21,6 +21,8 @@ struct pscrpc_request;
 #define MSTHRT_RCM	2	/* service RPC reqs for client from MDS */
 #define MSTHRT_LND	3	/* lustre networking dev */
 #define MSTHRT_EQPOLL	4	/* LNET event queue polling */
+#define MSTHRT_TINTV	5
+#define MSTHRT_TIOS	6
 
 #define MSL_IO_CB_POINTER_SLOT 1
 #define MSL_WRITE_CB_POINTER_SLOT 2
