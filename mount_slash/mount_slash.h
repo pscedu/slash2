@@ -36,6 +36,14 @@ struct msctl_thread {
 	u32	mc_st_nrecv;
 };
 
+#define msctlthr(thr)	((struct msctl_thread *)(thr)->pscthr_private)
+
+struct msrcm_thread {
+};
+
+struct msfs_thread {
+};
+
 /* msl_fbr (mount slash fhent bmap ref).
  *
  */
@@ -136,11 +144,6 @@ fhcache_bmap_lookup(struct fhent *fh, struct bmapc_memb *b)
         return (r);
 }
 
-struct msrcm_thread {
-};
-
-#define msctlthr(thr)	((struct msctl_thread *)(thr)->pscthr_private)
-
 struct io_server_conn {
 	struct psclist_head		 isc_lentry;
 	struct slashrpc_cservice	*isc_csvc;
@@ -166,8 +169,11 @@ int msl_dio_cb(struct pscrpc_request *, void *, int);
 
 void fidcache_init(void);
 
+void mseqpollthr_spawn(void);
+void msctlthr_spawn(void);
+void mstimerthr_spawn(void);
+
 #define mds_import	(mds_csvc->csvc_import)
 
 extern struct slashrpc_cservice *mds_csvc;
-
-const char *ctlsockfn;
+extern const char *ctlsockfn;

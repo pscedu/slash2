@@ -23,6 +23,7 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
+#include "psc_util/threadtable.h"
 
 #include "fidcache.h"
 #include "mount_slash.h"
@@ -841,7 +842,7 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 void *
 slash_init(__unusedx struct fuse_conn_info *conn)
 {
-	char *name, *p;
+	char *name;
 
 	msfsthr_ensure();
 
@@ -946,7 +947,7 @@ usage(void)
 	    "Slash options:\n"
 	    "    -S ctlsock             specify alternate control socket\n\n",
 	    progname);
-	fuse_main(2, argv, &slashops);
+	fuse_main(2, argv, &slashops, NULL);
 	exit(1);
 }
 
