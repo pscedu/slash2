@@ -10,6 +10,7 @@
 #include "psc_util/ctlsvr.h"
 
 #include "control.h"
+#include "mount_slash.h"
 
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS
@@ -23,11 +24,14 @@ int psc_ctl_ngetstats = NENTRIES(psc_ctl_getstats);
 void *
 msctlthr_begin(__unusedx void *arg)
 {
-	const char *fn;
+	psc_ctlthr_main(ctlsockfn, msctlops, NENTRIES(msctlops));
+}
 
-	if ((fn = getenv("CTLSOCK")) == NULL)
-		fn = _PATH_MSCTLSOCK;
-
-	psc_ctlthr_main(fn, msctlops, NENTRIES(msctlops));
-	return (NULL);
+void
+msctlthr_spawn(void)
+{
+	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
+	psc_ctlparam_register("pool", psc_ctlparam_pool);
+	pscthr_init(&pscControlThread, MSTHRT_CTL, msctlthr_begin,
+	    PSCALLOC(sizeof(struct psc_ctlthr)), "msctlthr");
 }

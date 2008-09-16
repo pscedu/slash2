@@ -6,20 +6,21 @@
 
 #include <fuse.h>
 
+#include "psc_types.h"
 #include "psc_ds/tree.h"
 #include "psc_mount/dhfh.h"
 
-#include "psc_types.h"
 #include "slconfig.h"
 #include "fidcache.h"
 
 struct fhent;
 struct pscrpc_request;
 
-#define MSTHRT_CTL	0
-#define MSTHRT_FS	1
-#define MSTHRT_RCM	1	/* service RPC reqs for client from MDS */
-#define MSTHRT_LNET	2
+#define MSTHRT_CTL	0	/* control interface */
+#define MSTHRT_FS	1	/* fuse filesystem syscall handlers */
+#define MSTHRT_RCM	2	/* service RPC reqs for client from MDS */
+#define MSTHRT_LND	3	/* lustre networking dev */
+#define MSTHRT_EQPOLL	4	/* LNET event queue polling */
 
 #define MSL_IO_CB_POINTER_SLOT 1
 #define MSL_WRITE_CB_POINTER_SLOT 2
@@ -61,7 +62,7 @@ msl_fbr_new(struct bmap_cache_memb *b, int rw)
 	struct msl_fbr *r = PSCALLOC(sizeof(*r));
 
 	r->mfbr_bmap = b;
-	msl_fbr_ref(r, rw);	
+	msl_fbr_ref(r, rw);
 
 	return (r);
 }
@@ -80,10 +81,10 @@ msl_fbr_free(struct msl_fbr *r, struct fhent *f)
 	PSCFREE(r);
 }
 
-static inline int 
+static inline int
 fhbmap_cache_cmp(const void *x, const void *y)
 {
-	return (bmap_cache_cmp(((struct msl_fbr *)x)->mfbr_bmap, 
+	return (bmap_cache_cmp(((struct msl_fbr *)x)->mfbr_bmap,
 			       ((struct msl_fbr *)y)->mfbr_bmap));
 }
 
@@ -102,18 +103,18 @@ msl_fuse_2_oflags(int fuse_flags)
 
 	if (fuse_flags & O_RDONLY)
 		oflag = FHENT_READ;
-	
+
 	else if (fuse_flags & O_WRONLY) {
 		psc_assert(oflag == -1);
 		oflag = FHENT_WRITE;
-		
+
 	} else if (fuse_flags & O_RDWR) {
 		psc_assert(oflag == -1);
 		oflag = FHENT_WRITE | FHENT_READ;
 
-	} else 
+	} else
 		psc_fatalx("Invalid fuse_flag %d", fuse_flags);
-	
+
 	return (oflag);
 }
 
@@ -133,7 +134,6 @@ fhcache_bmap_lookup(struct fhent *fh, struct bmap_cache_memb *b)
 
         return (r);
 }
- 
 
 struct msrcm_thread {
 };
@@ -163,6 +163,10 @@ int msl_io(struct fhent *, char *, size_t, off_t, int);
 int msl_io_cb(struct pscrpc_request *, void *, int);
 int msl_dio_cb(struct pscrpc_request *, void *, int);
 
+void fidcache_init(void);
+
 #define mds_import	(mds_csvc->csvc_import)
 
 extern struct slashrpc_cservice *mds_csvc;
+
+const char *ctlsockfn;

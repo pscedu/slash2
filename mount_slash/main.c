@@ -16,10 +16,10 @@
 #include <fuse.h>
 
 #include "pfl.h"
+#include "psc_types.h"
 #include "psc_mount/dhfh.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
-#include "psc_types.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
@@ -30,9 +30,47 @@
 
 sl_ios_id_t prefIOS = IOS_ID_ANY;
 
+const char *progname;
+
+void
+msfsthr_teardown(void *arg)
+{
+	struct psc_thread *thr = arg;
+
+	free(thr->pscthr_private);
+	pscthr_destroy(thr);
+	free(thr);
+}
+
+void
+msfsthr_ensure(void)
+{
+	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	static int thrid; /* XXX maintain bitmap for transiency */
+	struct psc_thread *thr;
+
+	thr = psc_threadtbl_get_canfail();
+	if (thr == NULL) {
+		spinlock(&lock);
+		thr = psc_threadtbl_get_canfail();
+		if (thr == NULL) {
+			thr = PSCALLOC(sizeof(*thr));
+			pscthr_init(thr, MSTHRT_FS, NULL,
+			    PSCALLOC(sizeof(struct msfs_thread)),
+			    "msfsthr%d", thrid++);
+			pthread_cleanup_push(msfsthr_teardown, thr);
+			pthread_cleanup_pop(0);
+		}
+		freelock(&lock);
+	}
+	psc_assert(thr->pscthr_type == MSTHRT_FS);
+}
+
 int
 slash_access(__unusedx const char *path, __unusedx int mask)
 {
+	msfsthr_ensure();
+
 	// fidcache op
 	return (0);
 }
@@ -46,6 +84,8 @@ slash_chmod(const char *path, mode_t mode)
 	struct srm_chmod_req *mq;
 	struct iovec iov;
 	int rc;
+
+	msfsthr_ensure();
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_CHMOD, rq, mq, mp)) != 0)
@@ -72,6 +112,8 @@ slash_chown(const char *path, uid_t uid, gid_t gid)
 	struct iovec iov;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_CHOWN, rq, mq, mp)) != 0)
 		return (rc);
@@ -97,6 +139,8 @@ slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	struct srm_create_rep *mp;
 	struct iovec iov;
 	int rc;
+
+	msfsthr_ensure();
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_CREATE, rq, mq, mp)) != 0)
@@ -130,6 +174,8 @@ slash_destroy(__unusedx void *arg)
 	struct srm_chmod_req *mq;
 	struct pscrpc_request *rq;
 
+	msfsthr_ensure();
+
 	if (RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_DESTROY, rq, mq, mp) == 0) {
 		rsx_waitrep(rq, sizeof(*mp), &mp);
@@ -146,6 +192,8 @@ slash_getattr(const char *path, struct stat *stb)
 	struct srm_getattr_rep *mp;
 	struct iovec iov;
 	int rc;
+
+	msfsthr_ensure();
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_GETATTR, rq, mq, mp)) != 0)
@@ -183,6 +231,8 @@ slash_fgetattr(__unusedx const char *path, struct stat *stb,
 	struct pscrpc_request *rq;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_FGETATTR, rq, mq, mp)) != 0)
 		return (rc);
@@ -215,6 +265,8 @@ slash_ftruncate(__unusedx const char *path, off_t size,
 	struct pscrpc_request *rq;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_FTRUNCATE, rq, mq, mp)) != 0)
 		return (rc);
@@ -235,6 +287,8 @@ slash_link(const char *from, const char *to)
 	struct srm_link_req *mq;
 	struct iovec iov[2];
 	int rc;
+
+	msfsthr_ensure();
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_LINK, rq, mq, mp)) != 0)
@@ -263,6 +317,8 @@ slash_mkdir(const char *path, mode_t mode)
 	struct iovec iov;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_MKDIR, rq, mq, mp)) != 0)
 		return (rc);
@@ -287,6 +343,8 @@ slash_mknod(const char *path, mode_t mode, dev_t dev)
 	struct srm_mknod_req *mq;
 	struct iovec iov;
 	int rc;
+
+	msfsthr_ensure();
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_MKNOD, rq, mq, mp)) != 0)
@@ -313,6 +371,8 @@ slash_open(const char *path, struct fuse_file_info *fi)
 	struct srm_open_rep *mp;
 	struct iovec iov;
 	int rc, oflag;
+
+	msfsthr_ensure();
 
 	oflag = msl_fuse_2_oflags(fi->flags);
 
@@ -346,6 +406,8 @@ slash_opendir(const char *path, struct fuse_file_info *fi)
 	struct srm_opendir_rep *mp;
 	struct iovec iov;
 	int rc;
+
+	msfsthr_ensure();
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_OPENDIR, rq, mq, mp)) != 0)
@@ -384,6 +446,8 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 	struct iovec iov;
 	struct fhent *fh;
 	int rc;
+
+	msfsthr_ensure();
 
 	/* First get the fhentry from the cache.
 	 */
@@ -433,6 +497,8 @@ slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
 	u64 off;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_READDIR, rq, mq, mp)) != 0)
 		return (rc);
@@ -474,6 +540,8 @@ slash_readlink(const char *path, char *buf, size_t size)
 	struct iovec iov;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_READLINK, rq, mq, mp)) != 0)
 		return (rc);
@@ -507,6 +575,8 @@ slash_release(__unusedx const char *path, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_RELEASE, rq, mq, mp)) != 0)
 		return (rc);
@@ -524,6 +594,8 @@ slash_releasedir(__unusedx const char *path, struct fuse_file_info *fi)
 	struct srm_generic_rep *mp;
 	struct srm_release_req *mq;
 	int rc;
+
+	msfsthr_ensure();
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_RELEASEDIR, rq, mq, mp)) != 0)
@@ -544,6 +616,8 @@ slash_rename(const char *from, const char *to)
 	struct srm_rename_req *mq;
 	struct iovec iov[2];
 	int rc;
+
+	msfsthr_ensure();
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_RENAME, rq, mq, mp)) != 0)
@@ -572,6 +646,8 @@ slash_rmdir(const char *path)
 	struct iovec iov;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_RMDIR, rq, mq, mp)) != 0)
 		return (rc);
@@ -595,6 +671,8 @@ slash_statfs(const char *path, struct statvfs *sfb)
 	struct srm_statfs_rep *mp;
 	struct iovec iov;
 	int rc;
+
+	msfsthr_ensure();
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_STATFS, rq, mq, mp)) != 0)
@@ -631,6 +709,8 @@ slash_symlink(const char *from, const char *to)
 	struct iovec iov[2];
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_SYMLINK, rq, mq, mp)) != 0)
 		return (rc);
@@ -658,6 +738,8 @@ slash_truncate(const char *path, off_t size)
 	struct iovec iov;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_TRUNCATE, rq, mq, mp)) != 0)
 		return (rc);
@@ -683,6 +765,8 @@ slash_unlink(const char *path)
 	struct iovec iov;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_UNLINK, rq, mq, mp)) != 0)
 		return (rc);
@@ -706,6 +790,8 @@ slash_utimens(const char *path, const struct timespec ts[2])
 	struct srm_utimes_req *mq;
 	struct iovec iov;
 	int rc;
+
+	msfsthr_ensure();
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_UTIMES, rq, mq, mp)) != 0)
@@ -733,6 +819,8 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	struct iovec iov;
 	int rc;
 
+	msfsthr_ensure();
+
 	if ((rc = RSX_NEWREQ(ion_get()->csvc_import,
 	    SRIC_VERSION, SRMT_WRITE, rq, mq, mp)) != 0)
 		return (rc);
@@ -750,63 +838,38 @@ slash_write(__unusedx const char *path, const char *buf, size_t size,
 	return (rc);
 }
 
-void
-spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
-{
-	int rc;
-
-	rc = pthread_create(t, NULL, startf, arg);
-	if (rc)
-		psc_fatalx("pthread_create: %s", strerror(rc));
-}
-
 void *
 slash_init(__unusedx struct fuse_conn_info *conn)
 {
 	char *name, *p;
 
+	msfsthr_ensure();
+
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
-	if (getenv("SLASH_SERVER_NID") == NULL)
-		psc_fatalx("please export SLASH_SERVER_NID");
+	if ((name = getenv("SLASH_MDS_NID")) == NULL)
+		psc_fatalx("please export SLASH_MDS_NID");
 
-#define THRTABSZ 13
-	pfl_init(THRTABSZ);
-	lnet_thrspawnf = spawn_lnet_thr;
 	fidcache_init();
 	rpc_initsvc();
 
-	name = getenv("SLASH_MDS_SERVER_NID");
-	if (name == NULL)
-		psc_fatalx("SLASH_MDS_SERVER_NID not set");
+	/* Start up service threads. */
+	mseqpollthr_spawn();
+	msctlthr_spawn();
+	mstimerthr_spawn();
+
 	if (msrmc_connect(name))
 		psc_fatal("unable to connect to MDS");
-
 	if ((name = getenv("SLASH2_PIOS_ID")) != NULL) {
 		if ((prefIOS = libsl_str2id(name)) == IOS_ID_ANY)
 			psc_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
 				  "a valid IOS, defaulting to IOS_ID_ANY", name);
 	}
-
-	name = getenv("SLASH_IO_SERVER_NIDS");
-	if (name == NULL)
-		psc_fatalx("SLASH_IO_SERVER_NIDS not set");
-	for (; name; name = p) {
-		while (*name == ' ')
-			name++;
-		if ((p = strchr(name, ',')) != NULL)
-			*p++ = '\0';
-		if (msric_connect(name))
-			psc_fatal("unable to connect to IO");
-	}
-
-	pscthr_init(&pscControlThread, MSTHRT_CTL, msctlthr_begin,
-	    PSCALLOC(sizeof(struct psc_ctlthr)), "msctlthr");
 	return (NULL);
 }
 
 struct fuse_operations slashops = {
-	.access		= slash_access,
+//	.access		= slash_access,
 	.chmod		= slash_chmod,
 	.chown		= slash_chown,
 	.create		= slash_create,
@@ -836,8 +899,88 @@ struct fuse_operations slashops = {
 	.write		= slash_write
 };
 
+void *nal_thread(void *);
+
+void *
+lndthr_begin(void *arg)
+{
+	struct psc_thread *thr;
+
+	thr = arg;
+	return (nal_thread(thr->pscthr_private));
+}
+
+void
+mslndthr_spawn(pthread_t *t, void *(*startf)(void *), void *arg)
+{
+	extern int tcpnal_instances;
+	struct psc_thread *pt;
+
+	if (startf != nal_thread)
+		psc_fatalx("unknown LNET start routine");
+
+	pt = PSCALLOC(sizeof(*pt));
+	pscthr_init(pt, MSTHRT_LND, lndthr_begin, arg, "mslndthr%d",
+	    tcpnal_instances - 1);
+	*t = pt->pscthr_pthread;
+	pt->pscthr_private = arg;
+}
+
+enum {
+	MS_OPT_CTLSOCK
+};
+
+struct fuse_opt msopts[] = {
+	FUSE_OPT_KEY("-S ", MS_OPT_CTLSOCK),
+	FUSE_OPT_END
+};
+
+__dead void
+usage(void)
+{
+	char *argv[] = { (char *)progname, "-ho", NULL };
+
+	fprintf(stderr,
+	    "usage: %s [options] node\n"
+	    "\n"
+	    "Slash options:\n"
+	    "    -S ctlsock             specify alternate control socket\n\n",
+	    progname);
+	fuse_main(2, argv, &slashops);
+	exit(1);
+}
+
+int
+proc_opt(__unusedx void *data, const char *arg, int c,
+    __unusedx struct fuse_args *outargs)
+{
+	switch (c) {
+	case FUSE_OPT_KEY_OPT:
+	case FUSE_OPT_KEY_NONOPT:
+		return (1);
+	case MS_OPT_CTLSOCK:
+		ctlsockfn = arg + 2;
+		break;
+	default:
+		usage();
+	}
+	return (0);
+}
+
 int
 main(int argc, char *argv[])
 {
-	return (fuse_main(argc, argv, &slashops, NULL));
+	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+
+	progname = argv[0];
+	if (fuse_opt_parse(&args, NULL, msopts, proc_opt))
+		usage();
+
+#define THRTAB_SZ 13
+	pfl_init(THRTAB_SZ);
+	lnet_thrspawnf = mslndthr_spawn;
+
+	msfsthr_ensure();
+
+	return (fuse_main(args.argc, args.argv, &slashops, NULL));
 }
