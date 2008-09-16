@@ -3,9 +3,7 @@
 
 
 #include "inode.h"
-#include "sb.h"
 #include "slconfig.h"
-#include "slashd.h"
 #include "pathnames.h"
 
 #define SLJ_MDS_JNENTS		10485760

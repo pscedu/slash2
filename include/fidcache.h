@@ -19,6 +19,7 @@
 #include "cache_params.h"
 #include "slconfig.h"
 #include "buffer.h"
+#include "jflush.h"
 #include "fid.h"
 #include "inode.h"
 #include "offtree.h"
@@ -186,10 +187,10 @@ struct fidc_memb_handle {
 #define fcmh_cfd fcmh_fh
 };
 
-#define fcmh_2_fid(f) (f)->fcmh_memb.fcm_inodeh.inoh_ino.ino_fg.fg_fid
-#define fcmh_2_fgp(f) &(f)->fcmh_memb.fcm_inodeh.inoh_ino.ino_fg
-#define fcmh_2_fsz(f) (f)->fcmh_memb.fcm_stb.st_size
-#define fcmh_2_inoh(f) &(f)->fcmh_memb.fcm_inodeh
+#define fcmh_2_fid(f)	(f)->fcmh_memb.fcm_inodeh.inoh_ino.ino_fg.fg_fid
+#define fcmh_2_fgp(f)	(&(f)->fcmh_memb.fcm_inodeh.inoh_ino.ino_fg)
+#define fcmh_2_fsz(f)	(f)->fcmh_memb.fcm_stb.st_size
+#define fcmh_2_inoh(f)	(&(f)->fcmh_memb.fcm_inodeh)
 
 #define fcm_set_accesstime(f) {					    \
 		clock_gettime(CLOCK_REALTIME, &(f)->fcmh_access);   \
@@ -277,8 +278,8 @@ fcmh_lc_2_string(list_cache_t *lc)
 		" fcmh@%p i+g:%"_P_U64"x+%"_P_U64"x s:"			\
 		REQ_FCMH_FLAGS_FMT" lc:%s fd:%d r:%d:: "fmt,		\
 		(fcmh),							\
-		(fcmh)->fcmh_memb.fcm_fg.fg_fid,			\
-		(fcmh)->fcmh_memb.fcm_fg.fg_gen,			\
+		fcmh_2_fgp(fcmh)->fg_fid,				\
+		fcmh_2_fgp(fcmh)->fg_gen,				\
 		DEBUG_FCMH_FCMH_FLAGS(fcmh),				\
 		fcmh_lc_2_string((fcmh)->fcmh_cache_owner),		\
 		(fcmh)->fcmh_fd,					\
@@ -325,7 +326,7 @@ fcmh_bmap_lookup(struct fidc_memb_handle *fch, sl_blkno_t n)
 
 	lb.bcm_blkno=n;
 	locked = reqlock(&fch->fcmh_lock);	
-	b = SPLAY_FIND(bmap_cache, &fch->fcmh_bmap_cache, &lb);
+	b = SPLAY_FIND(bmap_cache, &fch->fcmh_bmapc, &lb);
 	if (b)
 		atomic_inc(&b->bcm_opcnt);
 	ureqlock(&fch->fcmh_lock, locked);

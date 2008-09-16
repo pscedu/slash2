@@ -40,9 +40,9 @@ struct msctl_thread {
  *
  */
 struct msl_fbr {
-	struct bmap_cache_memb *mfbr_bmap;    /* the bmap       */
-	atomic_t                mfbr_acnt;    /* access counter */
-	SPLAY_ENTRY(msl_fbr)    mfbr_tentry;
+	struct bmapc_memb	*mfbr_bmap;    /* the bmap       */
+	atomic_t		 mfbr_acnt;    /* access counter */
+	SPLAY_ENTRY(msl_fbr)	 mfbr_tentry;
 };
 
 static inline void
@@ -57,7 +57,7 @@ msl_fbr_ref(struct msl_fbr *r, int rw)
 }
 
 static inline struct msl_fbr *
-msl_fbr_new(struct bmap_cache_memb *b, int rw)
+msl_fbr_new(struct bmapc_memb *b, int rw)
 {
 	struct msl_fbr *r = PSCALLOC(sizeof(*r));
 
@@ -84,8 +84,9 @@ msl_fbr_free(struct msl_fbr *r, struct fhent *f)
 static inline int
 fhbmap_cache_cmp(const void *x, const void *y)
 {
-	return (bmap_cache_cmp(((struct msl_fbr *)x)->mfbr_bmap,
-			       ((struct msl_fbr *)y)->mfbr_bmap));
+	const struct msl_fbr *rx = x, *ry = y;
+
+	return (bmapc_cmp(rx->mfbr_bmap, ry->mfbr_bmap));
 }
 
 SPLAY_HEAD(fhbmap_cache, msl_fbr);
@@ -119,7 +120,7 @@ msl_fuse_2_oflags(int fuse_flags)
 }
 
 static inline struct msl_fbr *
-fhcache_bmap_lookup(struct fhent *fh, struct bmap_cache_memb *b)
+fhcache_bmap_lookup(struct fhent *fh, struct bmapc_memb *b)
 {
 	struct msl_fhent *fhe=fh->fh_pri;
         struct msl_fbr *r=NULL, lr;

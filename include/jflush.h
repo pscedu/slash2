@@ -1,8 +1,7 @@
 #ifndef __SL_JFLUSH__
 #define __SL_JFLUSH__ 1
 
-#include "journal.h"
-#include "list.h"
+#include "sljournal.h"
 
 typedef void (*jflush_handler)(void *);
 

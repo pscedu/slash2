@@ -69,9 +69,7 @@ fid_open(slfid_t fid, int flags)
 	fid_makepath(fid, fidfn);
 
 	return (open(fidfn, flags));
-}
-
-
+} 
 
 __static int 
 fid_getxattr(char *fidfn, char *name, void *buf, ssize_t len)
@@ -93,4 +91,3 @@ fid_getxattr(char *fidfn, char *name, void *buf, ssize_t len)
 	}
 	return (0);
 }
-
