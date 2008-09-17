@@ -50,8 +50,7 @@ enum mexpbcm_modes {
 static inline int
 mexpbmapc_cmp(const void *x, const void *y)
 {
-	struct mexpbcm *a = x;
-	struct mexpbcm *b = y;
+	const struct mexpbcm *a = x, *b = y;
 
 	if (a->mexpbcm_blkno > b->mexpbcm_blkno)
 		return (1);
@@ -63,10 +62,11 @@ mexpbmapc_cmp(const void *x, const void *y)
 static inline int
 mexpbmapc_exp_cmp(const void *x, const void *y)
 {
+	const struct mexpbcm *a = x, *b = y;
 	struct pscrpc_export *e, *f;
 
-	e = ((struct mexpbcm *)x)->mexpbcm_export;
-	f = ((struct mexpbcm *)y)->mexpbcm_export;
+	e = a->mexpbcm_export;
+	f = b->mexpbcm_export;
 	
 	if (e->exp_connection->c_peer.nid > f->exp_connection->c_peer.nid)
 		return (1);

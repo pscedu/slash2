@@ -95,7 +95,7 @@ main(int argc, char *argv[])
 	libsl_init(PSC_SERVER);
 
 	slash_superblock_init();
-	slash_journal_init();
+	sl_journal_init();
 
 	rpc_initsvc();
 	slctlthr_main(sfn);

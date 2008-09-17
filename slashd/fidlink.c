@@ -147,7 +147,7 @@ fid_get(const char *fn, struct slash_fidgen *fgp,
 			goto done;
 		}
 		memset(&ino, 0, sizeof(ino));
-		fgp->fg_fid = slash_get_inum(); // | myfsid()
+		fgp->fg_fid = slmds_get_inum(); // | myfsid()
 		fgp->fg_gen = 0;
 		ino.ino_fg = *fgp;
 		sz = fsetxattr(fd, SFX_INODE, &ino,
@@ -175,7 +175,7 @@ fid_get(const char *fn, struct slash_fidgen *fgp,
 				rc = -1;
 				goto done;
 			}
-			fgp->fg_fid = slash_get_inum(); // | myfsid()
+			fgp->fg_fid = slmds_get_inum(); // | myfsid()
 			fgp->fg_gen = 0;
 			ino.ino_fg = *fgp;
 			sz = fsetxattr(fd, SFX_INODE, &ino,

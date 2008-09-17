@@ -17,7 +17,7 @@
 sl_inum_t
 slmds_get_inum(void)
 {
-	struct slash_jent_inum *sji;
+	struct slmds_jent_inum *sji;
 
 	if (++sbm.sbm_sbs->sbs_inum % SLMDS_INUM_ALLOC_SZ == 0) {
 		sji = pjournal_alloclog(&sbm.sbm_pj);
@@ -41,6 +41,7 @@ slmds_journal_recover(void)
 	memset(&pjw, 0, sizeof(pjw));
 	pje = pjournal_alloclog(&sbm.sbm_pj);
 
+#if 0
 	/* Locate the start of the lowest gen ID. */
 	while ((rc = pjournal_walk(&sbm.sbm_pj, &pjw, pje)) == 0) {
 		if ((int)(pje->pje_genid - logenid) < 0) {
@@ -62,6 +63,7 @@ slmds_journal_recover(void)
 	}
 	if (rc == -1)
 		psc_fatal("pjournal_walk");
+#endif
 	free(pje);
 }
 
