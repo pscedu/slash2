@@ -6,7 +6,7 @@
 #include "psc_util/atomic.h"
 
 #include "cache_params.h"
-#include "mds.h"
+//#include "mds.h"
 #include "mdsexpc.h"
 #include "fidcache.h"
 #include "rpc.h"
@@ -19,10 +19,10 @@ __static SPLAY_GENERATE(fcm_exports, mexpfcm,
 			mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
 
 __static SPLAY_GENERATE(exp_bmaptree, mexpbcm,
-			mexpbcm_exp_tentry, mexpbmap_cache_cmp);
+			mexpbcm_exp_tentry, mexpbmapc_cmp);
 
 __static SPLAY_GENERATE(bmap_exports, mexpbcm,
-			mexpbcm_bmap_tentry, mexpbmap_cache_cmp);
+			mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
 
 void
 fidc_mds_handle_init(void *p)
@@ -35,12 +35,12 @@ fidc_mds_handle_init(void *p)
         psc_assert(!f->fcmh_pri);
         /* Call the common initialization handler.
 	 */
-        fidc_gen_handle_init(f);
+        fidc_memb_handle_init(f);
         /* Here are the 'mds' specific calls.
 	 */
-        f->fcmh_pri = PSCALLOC(sizeof(*i));
-        SPLAY_INIT(&f->fmdsi_exports);
-        atomic_set(&f->fmdsi_ref, 0);
+        i = f->fcmh_pri = PSCALLOC(sizeof(*i));
+        SPLAY_INIT(&i->fmdsi_exports);
+        atomic_set(&i->fmdsi_ref, 0);
 }
 
 void
