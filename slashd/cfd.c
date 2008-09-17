@@ -11,9 +11,9 @@
 #include <stdio.h>
 
 #include "psc_ds/tree.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
-#include "psc_rpc/rpc.h"
 
 #include "cfd.h"
 #include "rpc.h"
@@ -22,6 +22,7 @@
 SPLAY_GENERATE(cfdtree, cfdent, entry, cfdcmp);
 
 struct cfd_svrops *cfdOps=NULL;
+
 /*
  * cfdcmp - compare to client file descriptors, for tree lookups.
  * @a: one cfd.
@@ -56,8 +57,8 @@ cfdinsert(u64 cfd, struct pscrpc_export *exp, slfid_t fid)
 	if (SPLAY_INSERT(cfdtree, &sexp->cfdtree, c)) {
 		free(c);
 		c = NULL;
-	} else 
-		CFD_SVROP(c, exp, insert);
+	} else
+		cfd_svrop_insert(c, exp);
 	ureqlock(&exp->exp_lock, locked);
 	return (c);
 }
@@ -78,7 +79,7 @@ cfdnew(u64 *cfdp, struct pscrpc_export *exp, slfid_t fid)
 	spinlock(&exp->exp_lock);
 	sexp = slashrpc_export_get(exp);
 	*cfdp = ++sexp->nextcfd;
-	if (rc = CFD_SVROP(c, exp, new))
+	if ((rc = cfd_svrop_new(NULL, exp)) != 0)
 		return (rc);
 	if (cfdinsert(*cfdp, exp, fid))
 		psc_fatalx("cfdtree already has entry");
@@ -86,9 +87,6 @@ cfdnew(u64 *cfdp, struct pscrpc_export *exp, slfid_t fid)
 	return (0);
 }
 
-
-#define cfd2fid(e, c, f) __cfd2fid(e, c, f, NULL)
-#define cfd2fid_p __cfd2fid
 /*
  * cfd2fid - look up a client file descriptor in the export cfdtree
  *	for the associated file ID.
@@ -143,7 +141,7 @@ cfdfree(struct pscrpc_export *exp, u64 cfd)
 		goto done;
 	}
 	if (SPLAY_REMOVE(cfdtree, &sexp->cfdtree, c)) {
-		CFD_SVROP(c, exp, free);
+		cfd_svrop_free(c, exp);
 		free(c);
 	} else {
 		errno = ENOENT;

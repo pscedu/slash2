@@ -31,7 +31,6 @@
 #include "rpc.h"
 #include "slashd.h"
 #include "slashrpc.h"
-#include "mds.h"
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 

@@ -368,7 +368,7 @@ sl_slab_reap(int nblks) {
 }
 
 static int
-sl_slab_alloc(int nblks, struct fidcache_memb_handle *f)
+sl_slab_alloc(int nblks, struct fidc_memb_handle *f)
 {
 	struct sl_buffer *slb;
 	int    rc, fblks=0, timedout=0;
@@ -840,7 +840,7 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 	ssize_t fblks=0;
 	off_t   nr_soffa=soffa;
 	struct offtree_root *r  = pri;
-	struct fidcache_memb_handle *f  = r->oftr_pri;
+	struct fidc_memb_handle *f  = r->oftr_pri;
 	list_cache_t *lc = &f->fcmh_buffer_cache;
 	struct sl_buffer *slb;
 

@@ -8,16 +8,21 @@
 
 #include "psc_util/journal.h"
 
+#include "pathnames.h"
+#include "slconfig.h"
+#include "sljournal.h"
+#include "slashd.h"
+#include "sb.h"
 
 sl_inum_t
 slmds_get_inum(void)
 {
 	struct slash_jent_inum *sji;
 
-	if (++sbm.sbm_sbs->sbs_inum % SLASH_INUM_ALLOC_SZ == 0) {
+	if (++sbm.sbm_sbs->sbs_inum % SLMDS_INUM_ALLOC_SZ == 0) {
 		sji = pjournal_alloclog(&sbm.sbm_pj);
 		sji->sji_inum = sbm.sbm_sbs->sbs_inum;
-		pjournal_logwrite(&sbm.sbm_pj, SLASH_PJET_INUM, sji);
+		pjournal_logwrite(&sbm.sbm_pj, SLJ_MDS_PJET_INUM, sji);
 		free(sji);
 	}
 	return (sbm.sbm_sbs->sbs_inum);

@@ -19,6 +19,7 @@
 #include "fid.h"
 #include "slconfig.h"
 #include "slashd.h"
+#include "fidcache.h"
 #include "pathnames.h"
 #include "creds.h"
 #include "inode.h"
@@ -105,18 +106,14 @@ untranslate_pathname(char *path)
 	return (-1);
 }
 
-
-
 int
 fid_lookup(const char *fn, struct fidc_memb_handle *fcmh, struct slash_creds *creds)
 {
 	int fd;
 	sl_inodeh_t *inoh = &fcmh->fcmh_memb.fcm_inodeh;
 
-	fd = access_fsop(ACSOP_LOOKUP, creds->uid, creds->gid,fn, O_RDONLY);
-
+	fd = access_fsop(ACSOP_LOOKUP, creds->uid, creds->gid,fn, O_RDONLY); 
 }
-
 
 /*
  * fid_get - lookup the FID for a pathname.
