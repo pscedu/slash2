@@ -11,7 +11,7 @@
 struct psc_thread mseqpoll;
 
 void *
-mzeqpollthr_main(__unusedx void *arg)
+mseqpollthr_main(__unusedx void *arg)
 {
 	for (;;) {
 		pscrpc_check_events(100);
@@ -20,8 +20,8 @@ mzeqpollthr_main(__unusedx void *arg)
 }
 
 void
-mzeqpollthr_spawn(void)
+mseqpollthr_spawn(void)
 {
-	pscthr_init(&mseqpoll, MSTHRT_EQPOLL, mzeqpollthr_main,
+	pscthr_init(&mseqpoll, MSTHRT_EQPOLL, mseqpollthr_main,
 	    NULL, "mseqpollthr");
 }

@@ -334,7 +334,7 @@ fcmh_bmap_lookup(struct fidc_memb_handle *fch, sl_blkno_t n)
 	return (b);
 }
 
-void fidc_handle_init(struct fidc_memb_handle *);
+int fidc_memb_handle_init(struct fidc_memb_handle *);
 void fidc_init(enum fid_cache_users, void (*)(void *));
 
 struct fidc_memb_handle * fidc_get(list_cache_t *lc);

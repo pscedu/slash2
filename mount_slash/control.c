@@ -12,6 +12,8 @@
 #include "control.h"
 #include "mount_slash.h"
 
+const char *ctlsockfn = _PATH_MSCTLSOCK;
+
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS
 };
