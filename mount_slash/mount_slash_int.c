@@ -37,7 +37,7 @@
 __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 __static void
-msl_oftrq_build(struct offtree_req *r, struct bmap_cache_memb *b, 
+msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, 
 		u64 cfd, off_t off, size_t len, int op)
 {
 	/* Ensure the offset fits within the range and mask off the
@@ -100,7 +100,7 @@ msl_oftrq_build(struct offtree_req *r, struct bmap_cache_memb *b,
 __static void
 msl_oftrq_destroy(struct offtree_req *r) 
 {
-	struct bmap_cache_memb *b = r->oftrq_root->oftr_pri;
+	struct bmapc_memb *b = r->oftrq_root->oftr_pri;
 	
 	psc_assert(b);
 	psc_assert(r->oftrq_darray);
@@ -180,7 +180,7 @@ msl_bmap_fetch(struct fhent *fh, sl_blkno_t b, size_t n, int rw)
         struct pscrpc_request *rq;
         struct srm_bmap_req *mq;
         struct srm_bmap_rep *mp;
-	struct bmap_cache_memb **bmaps, *bmap;
+	struct bmapc_memb **bmaps, *bmap;
         struct iovec *iovs;
         int rc=-1;
 	u32 i;
@@ -203,8 +203,8 @@ msl_bmap_fetch(struct fhent *fh, sl_blkno_t b, size_t n, int rw)
 	/* Init the bmap handles and setup the iovs.
 	 */
 	for (i=0; i < n; i++) {
-		bmap = bmaps[i] = PSCALLOC(sizeof(struct bmap_cache_memb));
-		bmap_cache_memb_init(bmap, f);
+		bmap = bmaps[i] = PSCALLOC(sizeof(struct bmapc_memb));
+		bmapc_memb_init(bmap, f);
 		iovs[i].iov_base = (void *)&bmap->bcm_bmapih;
 		iovs[i].iov_len  = sizeof(struct bmap_info);
 	}
@@ -231,9 +231,9 @@ msl_bmap_fetch(struct fhent *fh, sl_blkno_t b, size_t n, int rw)
 		 */
 		spinlock(&f->fcmh_lock);
 		for (i=0; i < mp->nblks ; i++) {
-			SPLAY_INSERT(bmap_cache, &f->fcmh_bmap_cache, 
+			SPLAY_INSERT(bmap_cache, &f->fcmh_bmapc, 
 				     bmaps[i]);
-			atomic_inc(&f->fcmh_bmap_cache_cnt);
+			atomic_inc(&f->fcmh_bmapc_cnt);
 		}
 		freelock(&f->fcmh_lock);
 	} else
@@ -283,7 +283,7 @@ msl_bmap_modeset(struct fhent *fh, sl_blkno_t b, int rw)
 #define BML_HAVE_BMAP 1
 
 __static void
-msl_bmap_fhcache_ref(struct fhent *fh, struct bmap_cache_memb *b, 
+msl_bmap_fhcache_ref(struct fhent *fh, struct bmapc_memb *b, 
 		     int mode, int rw)
 {
 	struct msl_fhent *fhe = fh->fh_pri;
@@ -322,12 +322,12 @@ msl_bmap_fhcache_ref(struct fhent *fh, struct bmap_cache_memb *b,
  * Notes: XXX Need a way to detect bmap mode changes here (ie from read to rw) and take the neccessary actions to notify the mds, this detection will be done by looking at the refcnts on the bmap.
  * TODO:  XXX if bmap is already cached but is not in write mode (but rw==WRITE) then we must notify the mds of this.
  */
-__static struct bmap_cache_memb *
+__static struct bmapc_memb *
 msl_bmap_load(struct fhent *fh, sl_blkno_t n, int prefetch, u32 rw)
 {
 	struct msl_fhent *fhe = fh->fh_pri;
 	struct fidc_memb_handle *f = fhe->mfh_fcmh;
-	struct bmap_cache_memb *b;
+	struct bmapc_memb *b;
 	struct bmap_info *i;
 
 	int rc=0, mode=BML_HAVE_BMAP;
@@ -444,7 +444,7 @@ msl_bmap_load(struct fhent *fh, sl_blkno_t n, int prefetch, u32 rw)
  * XXX Dev Needed: If the bmap is a read-only then any replica may be accessed (so long as it is recent).  Therefore msl_bmap_to_import() should have logic to accommodate this. 
  */
 __static struct pscrpc_import *
-msl_bmap_to_import(struct bmap_cache_memb *b)
+msl_bmap_to_import(struct bmapc_memb *b)
 {
 	struct bmap_info_cli *c;
 	sl_resm_t *r;
@@ -605,7 +605,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	struct pscrpc_request_set *rqset;
 	struct pscrpc_request     *req;
         struct pscrpc_bulk_desc   *desc;
-	struct bmap_cache_memb    *bcm;
+	struct bmapc_memb    *bcm;
 	struct iovec              *iovs;
 	struct offtree_iov        *v;
         struct srm_io_req         *mq;
@@ -632,7 +632,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	/* Point to our bmap handle, it has the import information needed
 	 *  for the rpc request.  (Fid and ios id's)
 	 */
-	bcm = (struct bmap_cache_memb *)r->oftrq_root->oftr_pri;
+	bcm = (struct bmapc_memb *)r->oftrq_root->oftr_pri;
 	imp = msl_bmap_to_import(bcm);
 	/* This pointer is only valid in DIO mode.
 	 */
@@ -705,7 +705,7 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 	struct pscrpc_request_set *rqset;
 	struct pscrpc_request     *req;
         struct pscrpc_bulk_desc   *desc;
-	struct bmap_cache_memb    *bcm;
+	struct bmapc_memb    *bcm;
 	struct iovec              *iovs;
         struct srm_io_req         *mq;
         struct srm_io_rep         *mp;
@@ -718,7 +718,7 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 	psc_assert(r->oftrq_bmap);
 	psc_assert(size);
 
-	bcm = (struct bmap_cache_memb *)r->oftrq_bmap;
+	bcm = (struct bmapc_memb *)r->oftrq_bmap;
 	
 	op = (ATTR_TEST(r->oftrq_op, OFTREQ_OP_WRITE) ? 
 	      SRMT_WRITE : SRMT_READ);
@@ -1247,7 +1247,7 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 {
 	struct msl_fhent *fhe=fh->fh_pri;	
 	struct offtree_req *r=NULL;
-	struct bmap_cache_memb *b;
+	struct bmapc_memb *b;
 	sl_blkno_t s, e;
 	size_t tlen, tsize;
 	off_t roff;

@@ -60,7 +60,7 @@ fid_link(slfid_t fid, const char *fn)
 	return (0);
 }
 
-int 
+int
 fid_open(slfid_t fid, int flags)
 {
 	char fidfn[FID_PATH_MAX];
@@ -69,22 +69,22 @@ fid_open(slfid_t fid, int flags)
 	fid_makepath(fid, fidfn);
 
 	return (open(fidfn, flags));
-} 
+}
 
-__static int 
-fid_getxattr(char *fidfn, char *name, void *buf, ssize_t len)
+int
+fid_getxattr(const char *fidfn, const char *name, void *buf, ssize_t len)
 {
 	psc_crc_t crc;
 	ssize_t szrc;
 
 	szrc = lgetxattr(fidfn, name, buf, len);
-	
+
 	if (szrc < 0) {
 		psc_warn("lu fid(%s:%s) failed", fidfn, name);
 		return (-1);
 
 	} else if (szrc != len) {
-		psc_warn("lu fid(%s:%s) failed bad sz (%zd)", 
+		psc_warn("lu fid(%s:%s) failed bad sz (%zd)",
 			 fidfn, name, szrc);
 		errno = EIO;
 		return (-1);

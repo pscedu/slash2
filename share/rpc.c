@@ -58,7 +58,6 @@ rpc_csvc_create(u32 rqptl, u32 rpptl)
 
 	csvc = PSCALLOC(sizeof(*csvc));
 
-	INIT_PSCLIST_HEAD(&csvc->csvc_old_imports);
 	LOCK_INIT(&csvc->csvc_lock);
 
 	csvc->csvc_failed = 0;

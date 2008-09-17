@@ -25,17 +25,17 @@ struct hash_table fidcHtable;
 struct sl_fsops *slFsops=NULL;
 
 void
-fidc_put_locked(struct fidc_handle *, list_cache_t *);
+fidc_put_locked(struct fidc_memb_handle *, list_cache_t *);
 
 /**
  * fcmh_clean_check - placeholder!  This function will ensure the validity of the passed in inode.
  */
 __static int
-fcmh_clean_check(struct fidc_handle *f)
+fcmh_clean_check(struct fidc_memb_handle *f)
 {
-	spinlock(&f->lock);
+	spinlock(&f->fcmh_lock);
 	
-	freelock(&f->lock);
+	freelock(&f->fcmh_lock);
 	// XXX Write me
 	f = NULL;
 	return 0;
@@ -201,7 +201,7 @@ fidc_put_locked(struct fidc_memb_handle *f, list_cache_t *lc)
 		 *  released prior to this.
 		 */
 		psc_assert(!SPLAY_NEXT(bmap_cache, 
-				       &f->fcmh_bmap_cache, &tbmp));
+				       &f->fcmh_bmapc, &tbmp));
 		psc_assert(lc_empty(&f->fcmh_buffer_cache));
 		psc_assert(!atomic_read(&f->fcmh_bmapc_cnt));
 		/* Re-initialize it before placing onto the free list
@@ -250,19 +250,16 @@ fidc_lookup_simple (slfid_t f)
 struct fidc_memb_handle *
 fidc_lookup_inode (sl_inode_t *i)
 {
-	slfid_t f;
 	int     try_create=0;
 	struct  fidc_memb_handle *fcmh;
 	
  restart:
-	fcmh = fid_lookup_simple(i->ino_fg.fg_fid);
+	fcmh = fidc_lookup_simple(i->ino_fg.fg_fid);
 	if (fcmh) {
 		if (try_create) {
 			freelock(&fidcHtable.htable_lock);
-			fidc_put_lock(fcmh, &fidcFreeList);
+			fidc_put_locked(fcmh, &fidcFreeList);
 		}
-		fcmh = e->private;
-		psc_assert(fcmh);
 		fcmh_clean_check(fcmh);
 
 		if (i->ino_fg.fg_fid != fcmh_2_fid(fcmh))
@@ -275,13 +272,13 @@ fidc_lookup_inode (sl_inode_t *i)
                         goto restart;
                 }		
 		fcmh_clean_check(fcmh);
-		COPY_INODE_2_FCMH(i, f);
-		f->fcmh_flags &= ~(FCM_CAC_FREE);
-		f->fcmh_flags |= FCM_CAC_CLEAN;
-		atomic_inc(&f->fcmh_refcnt);
-		fidc_put_locked(f, fidcCleanList);		
-		init_hash_entry(&f->fcmh_hashe, &(fcmh_2_fid(f)), f);
-                add_hash_entry(&fidcHtable, &f->fcmh_hashe);		
+		COPY_INODE_2_FCMH(i, fcmh);
+		fcmh->fcmh_state &= ~(FCM_CAC_FREE);
+		fcmh->fcmh_state |= FCM_CAC_CLEAN;
+		atomic_inc(&fcmh->fcmh_refcnt);
+		fidc_put_locked(fcmh, &fidcCleanList);		
+		init_hash_entry(&fcmh->fcmh_hashe, &(fcmh_2_fid(fcmh)), fcmh);
+                add_hash_entry(&fidcHtable, &fcmh->fcmh_hashe);		
 		freelock(&fidcHtable.htable_lock);
 	}
 	return (fcmh);
@@ -292,6 +289,7 @@ fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 {
 	char fidfn[FID_MAX_PATH];
 	ssize_t sz=sizeof(sl_inode_t);
+	psc_crc_t crc;
 	int rc;
 
 	fid_makepath(fid, fidfn);
@@ -300,7 +298,7 @@ fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 	if (rc)
 		return (rc);
 	
-	PSC_CRC_CALC(&crc, &inoh->inoh_ino, sz);
+	PSC_CRC_CALC(crc, &inoh->inoh_ino, sz);
 	if (crc != inoh->inoh_ino.ino_crc) {
                 psc_warnx("Crc failure on inode");
                 errno = EIO;
@@ -336,25 +334,25 @@ fidc_lookup_immns (slfid_t f)
 		if (fidc_xattr_load(f, &inoh))
 			return (NULL);
 
-		*fcmh = fidc_lookup_inode(&inoh.inoh_ino);
-		psc_assert(*fcmh);
+		fcmh = fidc_lookup_inode(&inoh.inoh_ino);
+		psc_assert(fcmh);
 	}
 	return (fcmh);
 }
 
 /**
- * sl_fcm_init - (slash_fidc_member_init) init a fid cache member.
+ * sl_fcm_init - (fidc_memb_init) init a fid cache member.
  */
 void
 fidc_memb_init(struct fidc_memb *fcm)
 {
 	memset(fcm, 0, (sizeof *fcm));
-	fcm->fcm_fg.fg_fid = FID_ANY;
-	fcm->fcm_fg.fg_gen = FID_ANY;
+	fcm->fcm_inodeh.inoh_ino.ino_fg.fg_fid = FID_ANY;
+	fcm->fcm_inodeh.inoh_ino.ino_fg.fg_gen = FID_ANY;
 }
 
 /**
- * sl_fcmh_init - (slash_fidc_handle_init) init a fid cache handle.
+ * sl_fcmh_init - (fidc_handle_init) init a fid cache handle.
  */
 void
 fidc_gen_handle_init(struct fidc_memb_handle *f)
@@ -365,7 +363,7 @@ fidc_gen_handle_init(struct fidc_memb_handle *f)
 	atomic_set(&f->fcmh_refcnt, 0);
 	atomic_set(&f->fcmh_bmapc_cnt, 0);
 	LOCK_INIT(&f->fcmh_lock);
-	SPLAY_INIT(&f->fcmh_bmap_cache);
+	SPLAY_INIT(&f->fcmh_bmapc);
 	lc_init(&f->fcmh_buffer_cache, struct sl_buffer, slb_fcm_lentry);
 	fidc_memb_init(&f->fcmh_memb);
 }
@@ -379,15 +377,15 @@ fidc_init(enum fid_cache_users t, void (*fcm_init)(void *))
 	int rc, htsz;
 	ssize_t	fcdsz, fcmsz;
 
-	rc = psc_pool_init(&fidcFreePool, struct fidc_handle,
+	rc = psc_pool_init(&fidcFreePool, struct fidc_memb_handle,
 	    fcmh_lentry, 0, MDS_FID_CACHE_DEFSZ, fidcache_handle_init,
 	    "fcmfreepool");
 	psc_assert(rc == MDS_FID_CACHE_DEFSZ);
 	fidcFreePool.ppm_max = MDS_FID_CACHE_MAXSZ;
 
-	lc_reginit(&fidcDirtyList, struct fidc_handle, 
+	lc_reginit(&fidcDirtyList, struct fidc_memb_handle, 
 		   fcmh_lentry, "fcmdirty");
-	lc_reginit(&fidcCleanList, struct fidc_handle, 
+	lc_reginit(&fidcCleanList, struct fidc_memb_handle, 
 		   fcmh_lentry, "fcmclean");
 
 	switch (t) {

@@ -103,7 +103,7 @@ SPLAY_HEAD(fhbmap_cache, msl_fbr);
 SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 struct msl_fhent {
-	struct fidcache_memb_handle *mfh_fcmh;
+	struct fidc_memb_handle     *mfh_fcmh;
 	struct fhbmap_cache          mfh_fhbmap_cache;
 };
 

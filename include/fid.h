@@ -35,7 +35,8 @@ struct slash_fidgen {
 #define FID_INUM(fid)		((u64)((fid) & U64CONST(0xffffffffffff)))
 
 void fid_makepath(slfid_t, char *);
-int  fid_link(slfid_t, const char *);
+int  fid_link(slfid_t, const char *); 
+int  fid_getxattr(const char *, const char *, void *, ssize_t);
 
 int  translate_pathname(char *, int);
 int  untranslate_pathname(char *);
