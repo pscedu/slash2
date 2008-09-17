@@ -63,7 +63,7 @@ fid_link(slfid_t fid, const char *fn)
 int
 fid_open(slfid_t fid, int flags)
 {
-	char fidfn[FID_PATH_MAX];
+	char fidfn[PATH_MAX];
 
 	psc_assert(!(flags & O_CREAT));
 	fid_makepath(fid, fidfn);

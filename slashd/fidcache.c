@@ -341,7 +341,7 @@ fidc_lookup_immns (slfid_t f)
 }
 
 /**
- * sl_fcm_init - (fidc_memb_init) init a fid cache member.
+ * fidc_memb_init - init a fidcache member.
  */
 void
 fidc_memb_init(struct fidc_memb *fcm)
@@ -352,13 +352,13 @@ fidc_memb_init(struct fidc_memb *fcm)
 }
 
 /**
- * sl_fcmh_init - (fidc_memb_handle_init) init a fid cache handle.
+ * fidc_memb_handle_init - init a fidcache member handle.
  */
 int
 fidc_memb_handle_init(struct fidc_memb_handle *f)
 {
-	memset(f, 0, (sizeof *f));
-	f->fcmh_fd    = -1;
+	memset(f, 0, sizeof(*f));
+	f->fcmh_fd = -1;
 	INIT_PSCLIST_HEAD(&f->fcmh_lentry);
 	atomic_set(&f->fcmh_refcnt, 0);
 	atomic_set(&f->fcmh_bmapc_cnt, 0);
@@ -370,10 +370,10 @@ fidc_memb_handle_init(struct fidc_memb_handle *f)
 }
 
 /**
- * sl_fidc_init - (slash_fidc_init) initialize the fid cache.
+ * fidcache_init - initialize the fid cache.
  */
 void
-fidc_init(enum fid_cache_users t, void (*fcm_init)(void *))
+fidcache_init(enum fid_cache_users t, void (*fcm_init)(void *))
 {
 	int rc, htsz;
 	ssize_t	fcdsz, fcmsz;
