@@ -146,6 +146,7 @@ struct srm_bmap_dio_req {
         u64 fid;
         u32 blkno;
         u32 dio;
+	u32 mode;
 };
 
 struct srm_bmap_crcwrt_req {

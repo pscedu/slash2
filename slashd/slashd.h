@@ -39,7 +39,7 @@ struct slash_rmmthr {
 #define slrmithr(thr)	((struct slash_rmithr *)(thr)->pscthr_private)
 #define slrmmthr(thr)	((struct slash_rmmthr *)(thr)->pscthr_private)
 
-void		slash_journal_init(void);
+void		sl_journal_init(void);
 sl_inum_t	slmds_get_inum(void);
 
 void	sltimerthr_spawn(void);

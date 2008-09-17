@@ -1,16 +1,21 @@
+/* $Id$ */
+
 #include "psc_types.h"
-#include "psc_util/thread.h"
-#include "psc_util/assert.h"
-#include "psc_util/journal.h"
 #include "psc_ds/listcache.h"
+#include "psc_util/assert.h"
+#include "psc_util/cdefs.h"
+#include "psc_util/journal.h"
+#include "psc_util/thread.h"
 
 #include "jflush.h"
+#include "slashd.h"
 
 struct psc_thread mdsFsSync;
 list_cache_t dirtyMdsData;
+struct psc_listcache dirtyInodes;
 
-__static void
-mdsfssyncthr_begin(void)
+__dead __static void *
+mdsfssyncthr_begin(__unusedx void *arg)
 {
 	struct jflush_item *jfi;
 	struct psc_journal_xidhndl *xh;
@@ -42,7 +47,7 @@ mdsfssyncthr_begin(void)
 		freelock(&jfi->jfi_lock);
 		/* Now run the app-specific data flush code.
 		 */
-		psc_trace("fssync jfi(%p) xh(%p) xid(%"_P_U64") data(%p)", 
+		psc_trace("fssync jfi(%p) xh(%p) xid(%"_P_U64"u) data(%p)", 
 			  jfi, xh, xh->pjx_xid, data); 
 		(jfih)(data);
 
@@ -54,7 +59,7 @@ mdsfssyncthr_begin(void)
 void
 mdsfssync_init(void)
 {
-        lc_reginit(&dirtyInodes, struct jflush_item, jfl_lentry, 
+        lc_reginit(&dirtyInodes, struct jflush_item, jfi_lentry, 
 		   "dirtyMdsData");
         pscthr_init(&mdsFsSync, SLTHRT_MDSFSSYNC, mdsfssyncthr_begin,
                     NULL, "mdsfssyncthr");

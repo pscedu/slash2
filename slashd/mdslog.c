@@ -1,6 +1,17 @@
-#include <sys/mman.h>
+/* $Id$ */
 
+#define _XOPEN_SOURCE 600
+#define _GNU_SOURCE
+
+#include <sys/param.h>
+
+#include <string.h>
+
+#include "psc_util/assert.h"
+#include "psc_util/crc.h"
 #include "psc_util/journal.h"
+#include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 #include "sljournal.h"
 #include "inode.h"
@@ -49,19 +60,19 @@ mds_sb_getinum(void)
 	struct slmds_jent_inum sji;
 	sl_inum_t ino=0;
 
-	spinlock(&slSuperBlk.sbm_lock);
+	spinlock(&sbm.sbm_lock);
 	
-	if (!((ino = ++slSuperBlk.sbm_inum_minor) % SLASH_INUM_ALLOC_SZ)) {
-		struct jflush_item *jfi = &slSuperBlk.sbm_jfi;
+	if (!((ino = ++sbm.sbm_inum_minor) % SLMDS_INUM_ALLOC_SZ)) {
+		struct jflush_item *jfi = &sbm.sbm_jfi;
 		
-		sji.sji_inum = ++slSuperBlk.sbm_sbs->sbs_inum_major;
-		freelock(&slSuperBlk.sbm_lock);		
+		sji.sji_inum = ++sbm.sbm_sbs->sbs_inum_major;
+		freelock(&sbm.sbm_lock);		
 
 		psc_dbg("bumped inum_maj=%"_P_U64, sji.sji_inum);
 		
 		jfi_prep(jfi, &mdsJournal);
 		psc_assert(jfi->jfi_handler == mds_sb_sync);
-		psc_assert(jfi->jfi_data == &slSuperBlk);
+		psc_assert(jfi->jfi_data == &sbm);
 		
 		if (pjournal_xadd(jfi->jfi_xh, MDS_LOG_SB, &sji))
 			psc_fatalx("jlog sb pjournal_xadd() failed");
@@ -69,18 +80,18 @@ mds_sb_getinum(void)
 		jfi_schedule(jfi, &dirtyMdsData);
 
 	} else {
-		sji.sji_inum = slSuperBlk.sbm_sbs.sbs_inum_major;
-		freelock(&slSuperBlk.sbm_lock);
+		sji.sji_inum = sbm.sbm_sbs.sbs_inum_major;
+		freelock(&sbm.sbm_lock);
 	}
 	/* Add the major bits to the ones already stored in ino.
 	 */
-	ino += (sji.sji_inum * SLASH_INUM_ALLOC_SZ);
+	ino += (sji.sji_inum * SLMDS_INUM_ALLOC_SZ);
 	/* Prepend the mds_id bits to the ino.
 	 */
-	ino |= (slSuperBlk.sbm_sbs->sbs_mds_id << SL_SUPER_INODE_BITS);
+	ino |= (sbm.sbm_sbs->sbs_mds_id << SL_SUPER_INODE_BITS);
 
 	psc_trace("ino=%"_P_U64" inum_maj=%"_P_U64" mds_id=%u", 
-		  ino, sji.sji_inum, slSuperBlk.sbm_sbs->sbs_mds_id);
+		  ino, sji.sji_inum, sbm.sbm_sbs->sbs_mds_id);
 
 	return (ino);
 }

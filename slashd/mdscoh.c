@@ -1,11 +1,17 @@
+/* $Id$ */
+
+#include "psc_ds/listcache.h"
+#include "psc_rpc/rsx.h"
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
-#include "psc_ds/listcache.h"
+#include "psc_util/cdefs.h"
 
 #include "cache_params.h"
-#include "mds.h"
+//#include "mds.h"
 #include "mdsexpc.h"
-#include "../slashd/rpc.h"
+#include "rpc.h"
+#include "slashrpc.h"
+#include "slashd.h"
 
 struct psc_thread pndgCacheCbThread;
 list_cache_t pndgBmapCbs, inflBmapCbs;
@@ -16,7 +22,7 @@ struct pscrpc_nbreqset *bmapCbSet;
 __static int
 mdscoh_reap(void)
 {
-	return(nbrequest_reap(&bmapCbSet));
+	return(nbrequest_reap(bmapCbSet));
 }
 
 __static void
@@ -56,7 +62,7 @@ mdscoh_cb(struct pscrpc_request *req, struct pscrpc_async_args *a)
 
 	DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap, 
 		   "bref=%p m=%u rc=%d netcmd=%d", 
-		   bref, mode, mp->rc, bref->mexpbcm_net_cmd);
+		   bref, mq->mode, mp->rc, bref->mexpbcm_net_cmd);
 	/* XXX figure what to do here if mp->rc < 0
 	 */
 	psc_assert((bref->mexpbcm_net_cmd != MEXPBCM_RPC_CANCEL) &&
@@ -146,8 +152,8 @@ mdscoh_queue_req(struct mexpbcm *bref)
 	return (rc);
 }
 
-__static void
-mdscohthr_begin(void)
+__dead __static void *
+mdscohthr_begin(__unusedx void *arg)
 {
         struct mexpbcm *bref;
 	int rc;	
@@ -184,6 +190,6 @@ mdscoh_init(void)
 		   "inflightBmapCbs");
 
 	bmapCbSet = nbreqset_init(NULL, mdscoh_cb);
-	pscthr_init(&pndgCacheCbThread, SLTHRT_MDSOH, mdscohthr_begin,
+	pscthr_init(&pndgCacheCbThread, SLTHRT_MDSCOH, mdscohthr_begin,
                     NULL, "mdscohthr");
 }

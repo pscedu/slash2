@@ -18,6 +18,8 @@ slash_superblock_init(void)
 	char fn[PATH_MAX];
 	int rc;
 
+	LOCK_INIT(&sbm.sbm_lock);
+
 	rc = snprintf(fn, sizeof(fn), "%s/%s",
 	    nodeInfo.node_res->res_fsroot, _PATH_SB);
 	if (rc == -1)

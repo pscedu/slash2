@@ -34,8 +34,8 @@ struct mexpbcm {
 #define mexpbcm2nid(b) (b)->mexpbcm_export->exp_connection->c_peer.nid
 /* Borrow the export lock.
  */
-#define MEXPBCM_LOCK(m)  spinlock(&m->mexpbcm_export.exp_lock)
-#define MEXPBCM_ULOCK(m) freelock(&m->mexpbcm_export.exp_lock)
+#define MEXPBCM_LOCK(m)  spinlock(&(m)->mexpbcm_export->exp_lock)
+#define MEXPBCM_ULOCK(m) freelock(&(m)->mexpbcm_export->exp_lock)
 
 enum mexpbcm_modes {
 	MEXPBCM_DIO_REQD = (1<<0),  /* dio callback outstanding             */
