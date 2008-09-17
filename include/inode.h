@@ -198,18 +198,18 @@ enum slash_inode_handle_flags {
 
 #define INOH_FLAGS_FMT "%s%s%s"
 
-#define DEBUG_INOH(level, i, fmt, ...)				\
+#define DEBUG_INOH(level, i, fmt, ...)					\
 	_psclog(__FILE__, __func__, __LINE__, PSS_OTHER, (level), 0,	\
-		" inoh@%p f:"FIDFMT" fl:"DEBUG_INOH_FLAGS		\
+		" inoh@%p f:"FIDFMT" fl:"INOH_FLAGS_FMT			\
 		"o:%"_P_U64"x bsz:%zu lb:%zu "				\
-		"lbsz:%zu cs:%u pr:%u nr:%zu icrc:%"_P_U64		\
-		"x rcrc:%"_P_U64"x :: "fmt,				\
+		"lbsz:%u cs:%u pr:%u nr:%zu icrc:%"_P_U64"x "		\
+		"rcrc:%"_P_U64"x :: "fmt,				\
 		(i), FIDFMTARGS(&(i)->inoh_ino.ino_fg),			\
-		DEBUG_INOH_FLAGS((i)->inoh_flags),			\
+		DEBUG_INOH_FLAGS(i),					\
 		(i)->inoh_ino.ino_off, (i)->inoh_ino.ino_bsz,		\
-		(i)->inoh_ino.ino_bsz, (i)->inoh_ino.ino_lblk,		\
+		(i)->inoh_ino.ino_lblk,					\
 		(i)->inoh_ino.ino_lblk_sz, (i)->inoh_ino.ino_csnap,	\
-		(i)->inoh_ino.ino_prepl, (i)->inoh_ino.ino_nrepls,	\
+		(i)->inoh_ino.ino_prepl.bs_id, (i)->inoh_ino.ino_nrepls,	\
 		(i)->inoh_ino.ino_rs_crc, (i)->inoh_ino.ino_crc,	\
 		## __VA_ARGS__)
 

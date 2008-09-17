@@ -1,6 +1,10 @@
+/* $Id$ */
+
+#include <errno.h>
+
 #include "inode.h"
 #include "fid.h"
-
+#include "fidcache.h"
 
 __static int 
 mds_repl_crc_check(sl_inodeh_t *i)
@@ -31,7 +35,7 @@ mds_repl_xattr_load_locked(sl_inodeh_t *i)
 	psc_assert(!i->inoh_replicas);
 	psc_assert(!(i->inoh_flags & INOH_HAVE_REPS));
 
-	fid_makepath(fid, fidfn);
+	fid_makepath(i->inoh_ino.ino_fg.fg_fid, fidfn);
 	sz = (sizeof(sl_replica_t) * i->inoh_ino.ino_nrepls);
 
 	if (fid_getxattr(fidfn, SFX_REPLICAS,  i->inoh_replicas, sz)) {
@@ -70,7 +74,7 @@ mds_repl_load_locked(sl_inodeh_t *i)
 }
 
 int 
-mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios, int add)
+mds_repl_ios_lookup(sl_inodeh_t *i, sl_ios_id_t ios, int add)
 {
 	int j, rc=-ENOENT;
 
@@ -79,7 +83,7 @@ mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios, int add)
 		goto out;
 
 	else if (!(i->inoh_flags & INOH_HAVE_REPS)) {
-		if (rc = mds_repl_load_locked(i))
+		if ((rc = mds_repl_load_locked(i)) != 0)
 			goto out;
 	}
 	psc_assert(i->inoh_replicas);
@@ -95,10 +99,10 @@ mds_repl_ios_lookup(sl_inodeh_t *i, sl_iod_id_t ios, int add)
 		if (i->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS)
 			DEBUG_INOH(PLL_WARN, i, "too many replicas");
 		else {
-			DEBUG_INOH(PLL_INFO, i, "add IOS(%s) to repls", ios);
+			DEBUG_INOH(PLL_INFO, i, "add IOS(%u) to repls", ios);
 			/* XXX journal write */
 			i->inoh_ino.ino_nrepls++;
-			i->inoh_replicas[j].bs_id == ios;
+			i->inoh_replicas[j].bs_id = ios;
 			/* Note that both the inode structure and replication
 			 *  table must be synced.
 			 */
@@ -121,7 +125,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 	BMAP_LOCK_ENSURE(bmap);
 	/* Find our replica id else add ourselves.
          */
-	j = mds_repl_ios_lookup(fcmh_2_inoh(b->bmap_fcmh), 
+	j = mds_repl_ios_lookup(fcmh_2_inoh(bmap->bcm_fcmh), 
 				sl_glid_to_resid(ion), 1);
 	
         if (j < 0) 
@@ -159,7 +163,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 
 	if (log) {
 		if (bumpgen)
-			bmapod->bh_gen++;
+			bmapod->bh_gen.bl_gen++;
 		mds_bmap_repl_log(bmap);
 	}
 	/* XXX Crc has to be rewritten too - this should be done at inode 

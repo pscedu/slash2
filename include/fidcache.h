@@ -294,8 +294,8 @@ fcmh_lc_2_string(list_cache_t *lc)
 		"rref=%u wref=%u opcnt=%u "fmt,				\
 		(b), (b)->bcm_blkno, (b)->bcm_bmapih.bmapi_mode,	\
 		((b)->bcm_bmapih.bmapi_ion != LNET_NID_ANY) ?		\
-		nid2str((b)->bcm_bmapih.bmapi_ion) : NULL,		\
-		(b)->bcm_fcmh ? fcmh2fid((b)->bcm_fcmh) : NULL,		\
+		libcfs_nid2str((b)->bcm_bmapih.bmapi_ion) : NULL,	\
+		(b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,		\
 		atomic_read(&(b)->bcm_rd_ref),				\
 		atomic_read(&(b)->bcm_wr_ref),				\
 		atomic_read(&(b)->bcm_opcnt),				\
