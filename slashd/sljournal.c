@@ -23,7 +23,7 @@ slmds_get_inum(void)
 		sji = pjournal_alloclog(&sbm.sbm_pj);
 		sji->sji_inum = sbm.sbm_sbs->sbs_inum;
 		pjournal_logwrite(&sbm.sbm_pj, SLJ_MDS_PJET_INUM, sji);
-		free(sji);
+		psc_freel(sji, PJ_PJESZ(&sbm.sbm_pj));
 	}
 	return (sbm.sbm_sbs->sbs_inum);
 }
@@ -64,7 +64,7 @@ slmds_journal_recover(void)
 	if (rc == -1)
 		psc_fatal("pjournal_walk");
 #endif
-	free(pje);
+	psc_freel(pje, PJ_PJESZ(&sbm.sbm_pj));
 }
 
 void
