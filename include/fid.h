@@ -7,8 +7,8 @@
 
 #include "psc_types.h"
 
-#define FID_MAX_PATH 96
-#define FID_FD_NOTOPEN -2
+#define FID_MAX_PATH	96
+#define FID_FD_NOTOPEN	(-2)
 
 struct slash_creds;
 struct slash_fidgen;
@@ -32,7 +32,7 @@ struct slash_fidgen {
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
 
 #define FID_FSID(fid)		((u32)((fid) >> 48))
-#define FID_INUM(fid)		((u64)((fid) & U64CONST(0xffffffffffff)))
+#define FID_INUM(fid)		((u64)((fid) & UINT64_C(0xffffffffffff)))
 
 void fid_makepath(slfid_t, char *);
 int  fid_link(slfid_t, const char *); 
