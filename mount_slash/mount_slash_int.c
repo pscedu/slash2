@@ -126,7 +126,7 @@ msl_fcm_new(struct fhent *fh)
 	SPLAY_INIT(&e->mfh_fhbmap_cache);
 	/* Cross-associate the fcmh and fhent structures.
 	 */
-	e->mfh_fcmh->fcmh_fh = fh->fh_id;	
+	//e->mfh_fcmh->fcmh_fh = fh->fh_id;	
 }
 
 /**
