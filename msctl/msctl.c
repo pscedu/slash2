@@ -12,7 +12,8 @@
 #include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
 #include "psc_util/subsys.h"
-#include "../mount_slash/control.h"
+
+#include "mount_slash/control.h"
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "loglevels",	psc_ctl_packshow_loglevel },
@@ -34,6 +35,10 @@ struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
 /* TIOS		*/	{ NULL,			NULL }
 };
 int psc_ctl_nthrstatfmts = NENTRIES(psc_ctl_thrstatfmts);
+
+struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
+};
+int psc_ctlcmd_nreqs = NENTRIES(psc_ctlcmd_reqs);
 
 const char *progname;
 

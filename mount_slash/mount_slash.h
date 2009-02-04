@@ -1,14 +1,12 @@
 /* $Id$ */
 
 #include <sys/types.h>
-
 #include <stdarg.h>
-
-#include <fuse.h>
 
 #include "psc_types.h"
 #include "psc_ds/tree.h"
 #include "psc_mount/dhfh.h"
+#include "psc_rpc/service.h"
 
 #include "slconfig.h"
 #include "fidcache.h"
@@ -23,6 +21,7 @@ struct pscrpc_request;
 #define MSTHRT_EQPOLL	4	/* LNET event queue polling */
 #define MSTHRT_TINTV	5
 #define MSTHRT_TIOS	6
+#define MSTHRT_FUSE	7
 
 #define MSL_IO_CB_POINTER_SLOT 1
 #define MSL_WRITE_CB_POINTER_SLOT 2
@@ -33,14 +32,15 @@ struct pscrpc_request;
 extern sl_ios_id_t prefIOS;
 
 struct msctl_thread {
-	u32	mc_st_nclients;
-	u32	mc_st_nsent;
-	u32	mc_st_nrecv;
+	u32			 mc_st_nclients;
+	u32			 mc_st_nsent;
+	u32			 mc_st_nrecv;
 };
 
-#define msctlthr(thr)	((struct msctl_thread *)(thr)->pscthr_private)
+PSCTHR_MKCAST(msctlthr, msctl_thread, MSTHRT_CTL)
 
 struct msrcm_thread {
+	struct pscrpc_thread	 mrcm_prt;
 };
 
 struct msfs_thread {
@@ -103,9 +103,33 @@ SPLAY_HEAD(fhbmap_cache, msl_fbr);
 SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 struct msl_fhent {
-	struct fidc_memb_handle     *mfh_fcmh;
-	struct fhbmap_cache          mfh_fhbmap_cache;
+	psc_spinlock_t         mfh_lock;
+	struct fidc_membh     *mfh_fcmh;
+	struct fhbmap_cache    mfh_fhbmap_cache;
 };
+
+static inline u64
+mslfh_2_cfd(struct msl_fhent *mfh)
+{
+	psc_assert(mfh->mfh_fcmh);
+	psc_assert(mfh->mfh_fcmh->fcmh_fcoo);
+	return (mfh->mfh_fcmh->fcmh_fcoo->fcoo_cfd);
+}
+
+static inline size_t
+mslfh_2_bmapsz(struct msl_fhent *mfh)
+{
+	psc_assert(mfh->mfh_fcmh);
+	psc_assert(mfh->mfh_fcmh->fcmh_fcoo);
+	return (mfh->mfh_fcmh->fcmh_fcoo->fcoo_bmap_sz);
+}
+
+static inline u64
+fcmh_2_cfd(struct fidc_membh *f)
+{
+	psc_assert(f->fcmh_fcoo);
+	return (f->fcmh_fcoo->fcoo_cfd);
+}
 
 static inline int
 msl_fuse_2_oflags(int fuse_flags)
@@ -130,18 +154,17 @@ msl_fuse_2_oflags(int fuse_flags)
 }
 
 static inline struct msl_fbr *
-fhcache_bmap_lookup(struct fhent *fh, struct bmapc_memb *b)
+fhcache_bmap_lookup(struct msl_fhent *mfh, struct bmapc_memb *b)
 {
-	struct msl_fhent *fhe=fh->fh_pri;
         struct msl_fbr *r=NULL, lr;
         int locked;
 
 	lr.mfbr_bmap = b;
-        locked = reqlock(&fh->fh_lock);
-        r = SPLAY_FIND(fhbmap_cache, &fhe->mfh_fhbmap_cache, &lr);
+        locked = reqlock(&mfh->mfh_lock);
+        r = SPLAY_FIND(fhbmap_cache, &mfh->mfh_fhbmap_cache, &lr);
 	if (r)
 		atomic_inc(&r->mfbr_acnt);
-        ureqlock(&fh->fh_lock, locked);
+        ureqlock(&mfh->mfh_lock, locked);
 
         return (r);
 }
@@ -165,11 +188,9 @@ void msl_fdreg_cb(struct fhent *, int, void *[]);
 #define msl_read(fh, buf, size, off)  msl_io(fh, buf, size, off, MSL_READ)
 #define msl_write(fh, buf, size, off) msl_io(fh, buf, size, off, MSL_WRITE)
 
-int msl_io(struct fhent *, char *, size_t, off_t, int);
+int msl_io(struct msl_fhent *, char *, size_t, off_t, int);
 int msl_io_cb(struct pscrpc_request *, void *, int);
 int msl_dio_cb(struct pscrpc_request *, void *, int);
-
-void fidcache_init(void);
 
 void mseqpollthr_spawn(void);
 void msctlthr_spawn(void);
@@ -178,4 +199,4 @@ void mstimerthr_spawn(void);
 #define mds_import	(mds_csvc->csvc_import)
 
 extern struct slashrpc_cservice *mds_csvc;
-extern const char *ctlsockfn;
+extern char ctlsockfn[];

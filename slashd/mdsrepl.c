@@ -5,6 +5,7 @@
 #include "inode.h"
 #include "fid.h"
 #include "fidcache.h"
+#include "mdsexpc.h"
 
 __static int 
 mds_repl_crc_check(sl_inodeh_t *i)
@@ -21,6 +22,7 @@ mds_repl_crc_check(sl_inodeh_t *i)
 	return (0);
 }
 
+#if 0
 __static int 
 mds_repl_xattr_load_locked(sl_inodeh_t *i)
 {
@@ -57,6 +59,10 @@ mds_repl_xattr_load_locked(sl_inodeh_t *i)
 	DEBUG_INOH(PLL_INFO, i, "replica table load failed");
 	return (rc);
 }
+#else
+__static int 
+mds_repl_xattr_load_locked(sl_inodeh_t *i) { return (0); }
+#endif
 
 int
 mds_repl_load_locked(sl_inodeh_t *i)
@@ -76,7 +82,8 @@ mds_repl_load_locked(sl_inodeh_t *i)
 int 
 mds_repl_ios_lookup(sl_inodeh_t *i, sl_ios_id_t ios, int add)
 {
-	int j, rc=-ENOENT;
+	u32 j;
+	int rc=-ENOENT;
 
 	INOH_LOCK(i);
 	if (!i->inoh_ino.ino_nrepls)
@@ -96,9 +103,11 @@ mds_repl_ios_lookup(sl_inodeh_t *i, sl_ios_id_t ios, int add)
 	}
 
 	if (rc == -ENOENT && add) {
-		if (i->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS)
+		if (i->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS) {
 			DEBUG_INOH(PLL_WARN, i, "too many replicas");
-		else {
+			rc = -ENOSPC;
+
+		} else {
 			DEBUG_INOH(PLL_INFO, i, "add IOS(%u) to repls", ios);
 			/* XXX journal write */
 			i->inoh_ino.ino_nrepls++;
@@ -106,7 +115,7 @@ mds_repl_ios_lookup(sl_inodeh_t *i, sl_ios_id_t ios, int add)
 			/* Note that both the inode structure and replication
 			 *  table must be synced.
 			 */
-			i->inoh_flags |= (INOH_REP_DIRTY || INOH_INO_DIRTY);
+			i->inoh_flags |= (INOH_REP_DIRTY | INOH_INO_DIRTY);
 			rc = j;
 		}
 	}
@@ -119,8 +128,11 @@ int
 mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 {
 	sl_blkh_t *bmapod=bmap->bcm_bmapih.bmapi_data;
-	int j, k, pos, r, bumpgen=0, log=0;
+	int j, r, bumpgen=0, log=0;
 	u8 mask, *b=bmapod->bh_repls;
+	u32 pos, k;
+	//struct fidc_mds_info *fmdsi=bmap->bcm_fcmh->fcmh_fcoo->fcoo_pri;
+	//sl_inodeh_t *inoh=&fmdsi->fmdsi_inodeh;
 
 	BMAP_LOCK_ENSURE(bmap);
 	/* Find our replica id else add ourselves.

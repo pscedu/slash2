@@ -6,6 +6,7 @@
 #define SITE_NAME_MAX 64
 #define RES_NAME_MAX  64
 #define FULL_NAME_MAX (SITE_NAME_MAX+RES_NAME_MAX+2)
+#define SL_PEER_MAX 16
 
 #define DEVNAMEMAX 128
 
@@ -41,7 +42,7 @@ enum res_type_t {
 typedef struct resource_profile {
 	char                res_name[RES_NAME_MAX];
 	char               *res_desc;
-	char              **res_peertmp;
+	char               *res_peertmp[SL_PEER_MAX];
 	sl_ios_id_t         res_id;
 	sl_ios_id_t         res_mds;
 	enum res_type_t     res_type;
@@ -87,6 +88,7 @@ typedef struct global_config {
 #define GCONF_HASHTBL_SZ 63
 #define INIT_GCONF(g)						\
 	do {							\
+		memset((g), 0, sizeof(*(g)));			\
 		INIT_PSCLIST_HEAD(&(g)->gconf_sites);		\
 		init_hash_table(&(g)->gconf_nids_hash,		\
 				GCONF_HASHTBL_SZ, "gconf");	\

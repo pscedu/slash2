@@ -24,30 +24,30 @@ struct slash_sb_mem;
 
 
 struct slash_rmcthr {
-	struct pscrpc_thread	 srm_prt;
+	struct pscrpc_thread	 srmc_prt;
 };
 
 struct slash_rmithr {
-	struct pscrpc_thread	 srb_prt;
+	struct pscrpc_thread	 srmi_prt;
 };
 
 struct slash_rmmthr {
-	struct pscrpc_thread	 srb_prt;
+	struct pscrpc_thread	 srmm_prt;
 };
 
-#define slrmcthr(thr)	((struct slash_rmcthr *)(thr)->pscthr_private)
-#define slrmithr(thr)	((struct slash_rmithr *)(thr)->pscthr_private)
-#define slrmmthr(thr)	((struct slash_rmmthr *)(thr)->pscthr_private)
+PSCTHR_MKCAST(slrmcthr, slash_rmcthr, SLTHRT_RMC)
+PSCTHR_MKCAST(slrmithr, slash_rmithr, SLTHRT_RMI)
+PSCTHR_MKCAST(slrmmthr, slash_rmmthr, SLTHRT_RMM)
 
 void		sl_journal_init(void);
 sl_inum_t	slmds_get_inum(void);
 
 void	sltimerthr_spawn(void);
 
-void fidcache_init(void);
 int  fid_get(const char *, struct slash_fidgen *,
 	struct slash_creds *, int, mode_t);
 
-extern struct slash_sb_mem	sbm;
+extern struct slash_sb_mem	slSuperBlk;
+extern int                      slSuperFd;
 
 #endif /* _SLASH_H_ */

@@ -14,8 +14,6 @@
 #include "rpc.h"
 #include "pathnames.h"
 
-#define SLIO_THRTBL_SIZE 19
-
 extern void *nal_thread(void *);
 
 const char *progname;
@@ -78,7 +76,7 @@ main(int argc, char *argv[])
 	if (getenv("TCPLND_SERVER") == NULL)
 		psc_fatalx("please export TCPLND_SERVER");
 
-	pfl_init(SLIO_THRTBL_SIZE);
+	pfl_init();
 	thr = PSCALLOC(sizeof(*thr));
 	pscthr_init(&pscControlThread, SLIOTHRT_CTL, NULL, thr,
 	    "slioctlthr");

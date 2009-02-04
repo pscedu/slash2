@@ -1,6 +1,6 @@
 # $Id$
 
-include Makefile.path
+include ../Makefile.path
 
 PROG=		offtree_test
 SRCS+=		offtree_test.c

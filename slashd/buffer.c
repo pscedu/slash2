@@ -17,7 +17,9 @@
 #include "fidcache.h"
 #include "offtree.h"
 
-struct psc_poolmgr slBufsFreePool;
+
+struct psc_poolmaster	 slBufsFreePoolMaster;
+struct psc_poolmgr	*slBufsFreePool;
 list_cache_t slBufsLru;
 list_cache_t slBufsPin;
 
@@ -33,8 +35,6 @@ sl_oftiov_inflight_callback slInflightCb=NULL;
 
 static struct sl_buffer_iovref *
 sl_oftiov_locref_locked(struct offtree_iov *iov, struct sl_buffer *slb);
-
-int sl_buffer_init(void *);
 
 static void
 sl_buffer_free_assertions(struct sl_buffer *b)
@@ -121,7 +121,7 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 
 	DEBUG_SLB(PLL_TRACE, slb, "adding to %s", lc->lc_name);
 
-	if (lc == &slBufsFreePool.ppm_lc) {
+	if (lc == &slBufsFreePool->ppm_lc) {
 		psc_assert(ATTR_TEST(slb->slb_flags, SLB_FREEING));
 		ATTR_UNSET(slb->slb_flags, SLB_FREEING);
 		ATTR_SET(slb->slb_flags, SLB_FREE);
@@ -129,8 +129,8 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 		slb->slb_flags = SLB_FRESH;
 		sl_buffer_fresh_assertions(slb);
 
-		psc_pool_return(&slBufsFreePool, slb);
-		slb->slb_lc_owner = &slBufsFreePool.ppm_lc;
+		psc_pool_return(slBufsFreePool, slb);
+		slb->slb_lc_owner = &slBufsFreePool->ppm_lc;
 	} else {
 		if (lc == &slBufsLru)
 			sl_buffer_lru_assertions(slb);
@@ -154,7 +154,7 @@ sl_buffer_get(list_cache_t *lc, int block)
 {
 	struct sl_buffer *slb;
 
-	psc_assert(lc != &slBufsFreePool.ppm_lc);
+	psc_assert(lc != &slBufsFreePool->ppm_lc);
 
 	psc_trace("slb from %s", lc->lc_name);
 
@@ -358,7 +358,7 @@ sl_slab_reap(int nblks) {
 		fblks += b->slb_nblks;
 		/* Put it back in the pool
 		 */
-		sl_buffer_put(b, &slBufsFreePool.ppm_lc);
+		sl_buffer_put(b, &slBufsFreePool->ppm_lc);
 
 	} while (fblks < nblks);
 
@@ -368,7 +368,7 @@ sl_slab_reap(int nblks) {
 }
 
 static int
-sl_slab_alloc(int nblks, struct fidc_memb_handle *f)
+sl_slab_alloc(int nblks, struct fidc_membh *f)
 {
 	struct sl_buffer *slb;
 	int    rc, fblks=0, timedout=0;
@@ -376,7 +376,7 @@ sl_slab_alloc(int nblks, struct fidc_memb_handle *f)
 	ENTRY;
  retry:
 	do {
-		slb = psc_pool_get(&slBufsFreePool);
+		slb = psc_pool_get(slBufsFreePool);
 		if (!slb) {
 //			if (lc_grow(&slBufsFree, slbFreeInc,
 //				    sl_buffer_init) > 0)
@@ -399,8 +399,8 @@ sl_slab_alloc(int nblks, struct fidc_memb_handle *f)
 		sl_buffer_fresh_assertions(slb);
 		/* Assign buffer to the fcache member
 		 */
-		slb->slb_lc_fcm = &f->fcmh_buffer_cache;
-		lc_stack(&f->fcmh_buffer_cache, &slb->slb_fcm_lentry);
+		slb->slb_lc_fcm = &f->fcmh_fcoo->fcoo_buffer_cache;
+		lc_stack(slb->slb_lc_fcm, &slb->slb_fcm_lentry);
 
 	} while ((fblks += slb->slb_nblks) < nblks);
 	/* Got all needed blocks.
@@ -840,8 +840,8 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 	ssize_t fblks=0;
 	off_t   nr_soffa=soffa;
 	struct offtree_root *r  = pri;
-	struct fidc_memb_handle *f  = r->oftr_pri;
-	list_cache_t *lc = &f->fcmh_buffer_cache;
+	struct fidc_membh *f  = r->oftr_pri;
+	list_cache_t *lc = &f->fcmh_fcoo->fcoo_buffer_cache;
 	struct sl_buffer *slb;
 
 	psc_assert(nblks < (size_t)(slCacheBlkSz/2));
@@ -894,7 +894,7 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 }
 
 int
-sl_buffer_init(void *pri)
+sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 {
 	struct sl_buffer *slb = pri;
 
@@ -913,8 +913,17 @@ sl_buffer_init(void *pri)
 	INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
-	//sl_buffer_put(slb, &slBufsFreePool.ppm_lc);
+	//sl_buffer_put(slb, &slBufsFreePool->ppm_lc);
 	return (0);
+}
+
+void
+sl_buffer_destroy(void *pri)
+{
+	struct sl_buffer *slb = pri;
+
+	free(slb->slb_base);
+	vbitmap_free(slb->slb_inuse);
 }
 
 void
@@ -922,10 +931,10 @@ sl_buffer_cache_init(void)
 {
 	psc_assert(SLB_SIZE <= LNET_MTU);
 
-	psc_pool_init(&slBufsFreePool, struct sl_buffer,
-	    slb_mgmt_lentry, PPMF_AUTO, slbFreeDef,
-	    sl_buffer_init, "slabBufFreePool");
-	slBufsFreePool.ppm_max = slbFreeMax;
+	psc_poolmaster_init(&slBufsFreePoolMaster, struct sl_buffer, slb_mgmt_lentry, 
+			    PPMF_AUTO, slbFreeDef, 0, slbFreeMax,
+			    sl_buffer_init, sl_buffer_destroy, NULL, "slabBufFreePool", NULL);
+	slBufsFreePool = psc_poolmaster_getmgr(&slBufsFreePoolMaster);
 
 	lc_reginit(&slBufsLru,  struct sl_buffer,
 		   slb_mgmt_lentry, "slabBufLru");

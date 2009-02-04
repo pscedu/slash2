@@ -28,11 +28,16 @@ struct slash_fidgen {
 #define FID_PATH_DEPTH		2
 #define FID_PATH_LEN		1024
 
-#define FIDFMT			"%"_P_U64"x:%"_P_U64"x"
+#define FIDFMT			"%"_P_U64"d:%"_P_U64"d"
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
 
 #define FID_FSID(fid)		((u32)((fid) >> 48))
 #define FID_INUM(fid)		((u64)((fid) & UINT64_C(0xffffffffffff)))
+
+//#define SAMEFID(a, b) !(memcmp(a, b, sizeof(*(a))))
+
+#define SAMEFID(a, b)							\
+	(((a)->fg_fid == (b)->fg_fid) && ((a)->fg_gen == (b)->fg_gen))
 
 void fid_makepath(slfid_t, char *);
 int  fid_link(slfid_t, const char *); 

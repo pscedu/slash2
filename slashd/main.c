@@ -9,16 +9,16 @@
 #include "psc_util/ctlsvr.h"
 #include "psc_util/thread.h"
 
-#include "control.h"
-#include "pathnames.h"
-#include "rpc.h"
-#include "sb.h"
-#include "slashd.h"
 #include "slconfig.h"
-
-#define SLASH_THRTBL_SIZE 19
+#include "pathnames.h"
+#include "control.h"
+#include "sb.h"
+#include "slashdthr.h"
+#include "fidc_common.h"
+#include "mdsrpc.h"
 
 void *nal_thread(void *);
+void *zfsVfs;
 
 const char *progname;
 
@@ -77,27 +77,37 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
+	pfl_init();
+
+	pscthr_init(&pscControlThread, SLTHRT_CTL, NULL,
+	    PSCALLOC(sizeof(struct psc_ctlthr)), "slctlthr");
+
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
 	if ((p = getenv("TCPLND_SERVER")) == NULL || strcmp(p, "1"))
 		if (setenv("TCPLND_SERVER", "1", 1) == -1)
 			psc_fatal("setenv");
 
-	pfl_init(SLASH_THRTBL_SIZE);
-	pscthr_init(&pscControlThread, SLTHRT_CTL, NULL,
-	    PSCALLOC(sizeof(struct psc_ctlthr)), "slctlthr");
+	fidcache_init(FIDC_MDS_HASH_SZ, NULL, NULL);
 
-//	fidcache_init();
+	//slFsops = PSCALLOC(sizeof(*slFsops));
+        //slFsops->slfsop_getattr = slash2fuse_stat;
 
 	lnet_thrspawnf = spawn_lnet_thr;
 
 	slashGetConfig(cfn);
 	libsl_init(PSC_SERVER);
+	mds_init();
+	//slash_superblock_init();
+	//sl_journal_init();
+	/* Initialize the zfs layer.
+	 */
+	do_init();
 
-	slash_superblock_init();
-	sl_journal_init();
 
 	rpc_initsvc();
 	slctlthr_main(sfn);
+
+	do_exit();
 	exit(0);
 }

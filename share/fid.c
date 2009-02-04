@@ -71,6 +71,7 @@ fid_open(slfid_t fid, int flags)
 	return (open(fidfn, flags));
 }
 
+#if SLASH_XATTR
 int
 fid_getxattr(const char *fidfn, const char *name, void *buf, ssize_t len)
 {
@@ -91,3 +92,4 @@ fid_getxattr(const char *fidfn, const char *name, void *buf, ssize_t len)
 	}
 	return (0);
 }
+#endif

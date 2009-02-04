@@ -1,3 +1,6 @@
+#ifndef __SLASHRPC_H__
+#define __SLASHRPC_H__ 1
+
 /* $Id$ */
 
 /*
@@ -5,9 +8,19 @@
  * Note: many of the messages will take on different sizes between
  * 32-bit and 64-bit machine architectures.
  */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
 
+#include <fcntl.h>
+#include <sys/vfs.h> 
+#include <sys/statvfs.h> 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include "psc_rpc/rpc.h"
 #include "psc_types.h"
-
 #include "slconfig.h"
 #include "fid.h"
 #include "creds.h"
@@ -62,12 +75,36 @@
 /* Slash RPC channel to ION from MDS. */
 #define SRIM_REQ_PORTAL		80
 #define SRIM_REP_PORTAL		81
+#define SRIM_BULK_PORTAL        82
 
 #define SRIM_VERSION		1
 #define SRIM_MAGIC		0xaabbccddeeff0088ULL
 
+
+#define SL_FREAD   1
+#define SL_FWRITE  2
+#define SL_FAPPEND O_APPEND
+//#define FAPPEND  8                                                            
+#define SL_FCREAT  O_CREAT
+#define SL_FTRUNC  O_TRUNC
+#define SL_FOFFMAX O_LARGEFILE
+#define SL_FSYNC   O_SYNC
+#define SL_FDSYNC  O_DSYNC
+#define SL_FRSYNC  O_RSYNC
+#define SL_FEXCL   O_EXCL
+#define SL_DIRECTORY O_DIRECTORY
+#define SL_FNODSYNC        0x10000 /* fsync pseudo flag */
+#define SL_FNOFOLLOW       0x20000 /* don't follow symlinks */
+#define SL_FIGNORECASE     0x80000 /* request case-insensitive lookups */
+
+#define SL_READ    00400
+#define SL_WRITE   00200
+#define SL_EXEC    00100
+
+
 /* Slash RPC message types. */
 enum {
+	SRMT_ACCESS,
 	SRMT_BMAPCRCWRT,
 	SRMT_BMAPDIO,
 	SRMT_BMAPCHMODE,
@@ -83,6 +120,7 @@ enum {
 	SRMT_GETBMAP,
 	SRMT_LINK,
 	SRMT_LOCK,
+	SRMT_LOOKUP,
 	SRMT_MKDIR,
 	SRMT_MKNOD,
 	SRMT_OPEN,
@@ -94,6 +132,7 @@ enum {
 	SRMT_RELEASEDIR,
 	SRMT_RENAME,
 	SRMT_RMDIR,
+	SRMT_SETATTR,
 	SRMT_STATFS,
 	SRMT_SYMLINK,
 	SRMT_TRUNCATE,
@@ -120,6 +159,12 @@ struct srm_open_secret {
 
 #define SRIC_BMAP_READ  0
 #define SRIC_BMAP_WRITE 1
+
+struct srm_access_req {
+	struct slash_creds creds;
+	u64 ino;
+	u32 mask;	
+};
 
 struct srm_bmap_req {
 	u32 pios;       /* preferred ios (provided by client)     */
@@ -149,11 +194,24 @@ struct srm_bmap_dio_req {
 	u32 mode;
 };
 
-struct srm_bmap_crcwrt_req {
+
+struct srm_bmap_crcwire {
+	u64 crc;
+	u32 slot;
+};
+
+struct srm_bmap_crcup {
 	u64 fid;      
         u32 blkno;    /* bmap block number */
-	u32 cid;      /* chunk id          */
-	u64 crc;
+	u32 nups;     /* number of crc updates */
+	struct srm_bmap_crcwire crcs[0];
+};
+
+#define MAX_BMAP_INODE_PAIRS 64
+struct srm_bmap_crcwrt_req {
+	u32 ncrc_updates;
+	u8  ncrcs_per_update[MAX_BMAP_INODE_PAIRS];
+	u64 crc; /* yes, a crc of the crc's */
 };
 
 /* Slash RPC message for ION from client */
@@ -177,29 +235,26 @@ struct srm_connect_req {
 
 struct srm_create_req {
 	struct slash_creds creds;
-	u32 fnlen;
+	char name[NAME_MAX];
+	int len;
+	u64 pino;
 	u32 mode;
 	u32 flags;
 };
 
-struct srm_create_rep {
-//	struct srm_open_secret sig_m;
-struct slash_fidgen fg; /* XXX for now, put in dsig later */
-	u64 cfd;
-	s32 rc;
-};
-
-struct srm_chmod_req {
+struct srm_open_req {
 	struct slash_creds creds;
-	u32 fnlen;
+	u64 ino;
+	u32 flags;
 	u32 mode;
 };
 
-struct srm_chown_req {
-	struct slash_creds creds;
-	u32 fnlen;
-	u32 uid;
-	u32 gid;
+struct srm_opencreate_rep {
+	//	struct srm_open_secret sig_m;
+	struct slash_fidgen fg; /* XXX for now, put in dsig later */
+	struct stat attr;
+	u64 cfd;
+	s32 rc;
 };
 
 struct srm_destroy_req {
@@ -209,72 +264,68 @@ struct srm_destroy_req {
 
 struct srm_getattr_req {
 	struct slash_creds creds;
-	u32 fnlen;
+	u64 ino;
 };
 
 struct srm_getattr_rep {
-	u64 size;
-	u64 atime;
-	u64 mtime;
-	u64 ctime;
+	struct stat attr;
+	u64 gen;
 	s32 rc;
-	u32 mode;
-	u32 nlink;
-	u32 uid;
-	u32 gid;
-};
-
-struct srm_fgetattr_req {
-	u64 cfd;
-};
-
-#define srm_fgetattr_rep srm_getattr_rep
-
-struct srm_ftruncate_req {
-	u64 cfd;
-	u64 size;
 };
 
 struct srm_link_req {
 	struct slash_creds creds;
-	u32 fromlen;
-	u32 tolen;
+	char name[NAME_MAX];
+	u32 len;
+	u64 pino, ino;
+};
+
+struct srm_link_rep {
+	struct stat attr;
+	struct slash_fidgen fg;
+	s32 rc;
+};
+
+struct srm_lookup_req {
+	struct slash_creds creds;
+	char name[NAME_MAX];
+	int  len;
+	u64 pino;
+};
+
+struct srm_lookup_rep {
+	struct slash_fidgen fg; /* XXX for now, put in dsig later */
+	struct stat attr;
+	s32 rc;
 };
 
 struct srm_mkdir_req {
 	struct slash_creds creds;
-	u32 fnlen;
+	char name[NAME_MAX];
+	u32 len;
+	u64 pino;
 	u32 mode;
 };
+#define srm_mkdir_rep srm_opencreate_rep
+
 
 struct srm_mknod_req {
 	struct slash_creds creds;
-	u32 fnlen;
+	char name[NAME_MAX];
+	u64 pino;
 	u32 mode;
-	u32 dev;
+	u32 rdev;
 };
 
-struct srm_open_req {
-	struct slash_creds creds;
-	u32 fnlen;
-	u32 flags;
-};
-
-struct srm_open_rep {
-//	struct srm_open_secret sig_m;
-struct slash_fidgen fg; /* XXX for now, put in dsig later */
-	u64 cfd;
-	s32 rc;
-};
 
 struct srm_opendir_req {
 	struct slash_creds creds;
-	u32 fnlen;
+	u64 ino;
 };
 
 struct srm_opendir_rep {
 //	struct srm_open_secret sig_m;
-struct slash_fidgen fg; /* XXX for now, put in dsig later */
+	struct slash_fidgen fg; /* XXX for now, put in dsig later */
 	u64 cfd;
 	s32 rc;
 };
@@ -292,7 +343,7 @@ struct srm_io_secret {
 
 struct srm_io_req {
 //	struct srm_io_secret crypt_i;
-struct slash_fidgen fg; /* XXX go away */
+	struct slash_fidgen fg; /* XXX go away */
 	u64 cfd;
 	u32 size;
 	u32 offset;
@@ -313,32 +364,34 @@ struct srm_io_rep {
 /* READ data is in bulk reply. */
 
 struct srm_readdir_req {
+	struct slash_creds creds;
 	u64 cfd;
 	u64 offset;
+	u64 size;
 };
 
 struct srm_readdir_rep {
 	s32 rc;
-	u32 size;
+	u64 size;
+	u32 num; /* how many dirents were returned */
 	/* accompanied by bulk data in pure getdents(2) format */
 };
 
 struct srm_readlink_req {
 	struct slash_creds creds;
-	u32 fnlen;
-	u32 size;
+	u64 ino;
 };
 
 struct srm_readlink_rep {
+	char buf[PATH_MAX+1];
+	u32 len;
 	s32 rc;
 };
 
 struct srm_release_req {
+	struct slash_creds creds;
 	u64 cfd;
-};
-
-struct srm_releasedir_req {
-	u64 cfd;
+	u32 flags;
 };
 
 struct srm_releasebmap_req {
@@ -346,59 +399,62 @@ struct srm_releasebmap_req {
 
 struct srm_rename_req {
 	struct slash_creds creds;
+	u64 npino, opino;
 	u32 fromlen;
 	u32 tolen;
 };
 
-struct srm_rmdir_req {
+
+#define srm_unlink_rep srm_generic_rep
+
+struct srm_setattr_req {
 	struct slash_creds creds;
-	u32 fnlen;
+	u64 cfd;
+	u64 ino;
+	struct stat attr;
+	int to_set;
 };
+
+#define srm_setattr_rep srm_getattr_rep
 
 struct srm_statfs_req {
 	struct slash_creds creds;
-	u32 fnlen;
 };
 
 struct srm_statfs_rep {
-	u64 f_files;
-	u64 f_ffree;
-	u32 f_bsize;
-	u32 f_blocks;
-	u32 f_bfree;
-	u32 f_bavail;
+	struct statvfs stbv;
 	s32 rc;
 };
 
 struct srm_symlink_req {
 	struct slash_creds creds;
-	u32 fromlen;
-	u32 tolen;
+	char name[NAME_MAX];
+	u32 namelen;
+	u32 linklen;
+	u64 pino;
 };
 
-struct srm_truncate_req {
+struct srm_symlink_rep {
 	struct slash_creds creds;
-	u64 size;
-	u32 fnlen;
+	struct slash_fidgen fg;
+	struct stat attr;
+	s32 rc;
 };
 
 struct srm_unlink_req {
 	struct slash_creds creds;
-	u32 fnlen;
-};
-
-struct srm_utimes_req {
-	struct slash_creds creds;
-	struct timeval times[2];
-	u32 fnlen;
+	char name[NAME_MAX];
+	int len;
+	u64 pino;
 };
 
 struct srm_generic_rep {
+	u64 data;
 	s32 rc;
 };
 
 struct slashrpc_cservice {
-	struct pscrpc_import	*csvc_import;
+       	struct pscrpc_import	*csvc_import;
 	psc_spinlock_t		 csvc_lock;
 	int			 csvc_failed;
 	int			 csvc_initialized;
@@ -443,3 +499,5 @@ int rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, u64, u32);
 #endif
 
 extern lnet_process_id_t lpid;
+
+#endif

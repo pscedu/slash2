@@ -5,6 +5,7 @@
 #include "inode.h"
 #include "slconfig.h"
 #include "pathnames.h"
+#include "slashrpc.h" /* struct srm_bmap_crcup */
 
 #define SLJ_MDS_JNENTS		10485760
 #define SLJ_MDS_RA              200
@@ -21,15 +22,7 @@ struct slmds_jent_inum {
 } __attribute__ ((packed));
 
 
-/* Pack multiple crc updates (per bmap) into one journal i/o.
- *  Helper struct for slmds_jent_crc.
- */
-struct slmds_bmap_crc {
-	int         slot;
-	psc_crc_t   crc;
-} __attribute__ ((packed));
-
-#define SLJ_MDS_NCRCS 8
+#define SLJ_MDS_NCRCS 64
 
 /* 
  * slmds_jent_crc - is used to log crc updates which come from the ION's.  
@@ -40,10 +33,11 @@ struct slmds_bmap_crc {
  * Notes: I presume that this will be the most common operation into the journal.   
  */
 struct slmds_jent_crc {
-	sl_ios_id_t           sjc_ion; /* Track the ion which did the I/O */
-	slfid_t               sjc_fid;
-	sl_blkno_t            sjc_bmapno;
-	struct slmds_bmap_crc sjc_crc[SLJ_MDS_NCRCS];
+	sl_ios_id_t             sjc_ion; /* Track the ion which did the I/O */
+	slfid_t                 sjc_fid;
+	sl_blkno_t              sjc_bmapno;
+	u32                     sjc_ncrcs;
+	struct srm_bmap_crcwire sjc_crc[SLJ_MDS_NCRCS];
 } __attribute__ ((packed));
 
 /* Track replication table changes.
@@ -58,7 +52,7 @@ struct slmds_jent_repgen {
 
 #define SLJ_MDS_ENTSIZE MAX(MAX((sizeof(struct slmds_jent_inum)),	\
 				(sizeof(struct slmds_jent_crc))),	\
-			    (struct slmds_jent_repgen))
+			    sizeof(struct slmds_jent_repgen))
 
 #define slion_jent_crc slmds_jent_crc
 

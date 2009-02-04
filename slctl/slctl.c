@@ -21,27 +21,27 @@
 int
 slrpcmdsthr_st_prhdr(void)
 {
-	return (printf(" %-*s %8s %8s %8s\n", PSCTHR_NAME_MAX, "thread",
+	return (printf(" %-*s %8s %8s %8s\n", PSC_THRNAME_MAX, "thread",
 	    "#open", "#close", "#stat"));
 }
 
 void
 slrpcmdsthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" %-*s %8d %8d %8d", PSCTHR_NAME_MAX, pcst->pcst_thrname,
+	printf(" %-*s %8d %8d %8d", PSC_THRNAME_MAX, pcst->pcst_thrname,
 	    pcst->pcst_nopen, pcst->pcst_nclose, pcst->pcst_nstat);
 }
 
 int
 slrpcbethr_st_prhdr(void)
 {
-	return (printf(" %-*s %8s\n", PSCTHR_NAME_MAX, "thread", "#write"));
+	return (printf(" %-*s %8s\n", PSC_THRNAME_MAX, "thread", "#write"));
 }
 
 void
 slrpcbethr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" %-*s %8d\n", PSCTHR_NAME_MAX, pcst->pcst_thrname,
+	printf(" %-*s %8d\n", PSC_THRNAME_MAX, pcst->pcst_thrname,
 	    pcst->pcst_nwrite);
 }
 
@@ -62,6 +62,10 @@ struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
 	{ slrpcbethr_st_prhdr,	slrpcbethr_st_prdat }
 };
 int psc_ctl_nthrstatfmts = NENTRIES(psc_ctl_thrstatfmts);
+
+struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
+};
+int psc_ctlcmd_nreqs = NENTRIES(psc_ctlcmd_reqs);
 
 const char *progname;
 

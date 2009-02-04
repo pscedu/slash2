@@ -8,7 +8,7 @@
 #include "psc_util/thread.h"
 
 #include "jflush.h"
-#include "slashd.h"
+#include "slashdthr.h"
 
 struct psc_thread mdsFsSync;
 list_cache_t dirtyMdsData;
@@ -21,10 +21,9 @@ mdsfssyncthr_begin(__unusedx void *arg)
 	struct psc_journal_xidhndl *xh;
 	jflush_handler jfih;
 	void *data;
-	int type;
 	
 	while (1) {
-		jfi = lc_getwait(&dirtyInodes);
+		jfi = lc_getwait(&dirtyMdsData);
 		spinlock(&jfi->jfi_lock);
 		
 		psc_assert(jfi->jfi_data);
@@ -59,7 +58,7 @@ mdsfssyncthr_begin(__unusedx void *arg)
 void
 mdsfssync_init(void)
 {
-        lc_reginit(&dirtyInodes, struct jflush_item, jfi_lentry, 
+        lc_reginit(&dirtyMdsData, struct jflush_item, jfi_lentry,
 		   "dirtyMdsData");
         pscthr_init(&mdsFsSync, SLTHRT_MDSFSSYNC, mdsfssyncthr_begin,
                     NULL, "mdsfssyncthr");

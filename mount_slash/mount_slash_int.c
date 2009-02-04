@@ -14,8 +14,6 @@
 
 #define FUSE_USE_VERSION 26
 
-#include <fuse.h>
-
 #include "pfl.h"
 #include "psc_types.h"
 #include "psc_mount/dhfh.h"
@@ -50,14 +48,14 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
 	/* Verify that the mds agrees that the bmap is writeable.
 	 */
 	if (op == OFTREQ_OP_WRITE)
-		psc_assert(ATTR_TEST(b->bcm_bmapih.bmapi_mode, BMAP_CLI_WR));
+		psc_assert(b->bcm_bmapih.bmapi_mode & BMAP_CLI_WR);
 
 	r->oftrq_op = op;
 	r->oftrq_cfd = cfd;
 	/* Set directio flag if the bmap is in dio mode, otherwise
 	 *  allocate an array for cache iovs.
 	 */
-	if (ATTR_TEST(b->bcm_bmapih.bmapi_mode, BMAP_CLI_DIO)) {
+	if (b->bcm_bmapih.bmapi_mode & BMAP_CLI_DIO) {
 		r->oftrq_op |= OFTREQ_OP_DIO;
 		r->oftrq_off = off;
 		r->oftrq_len = len;
@@ -80,7 +78,7 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
 	//r->oftrq_nblks  = ((r->oftrq_off + len) / SLASH_BMAP_BLKSZ) +
 	//	(len & (~SLASH_BMAP_BLKMASK) ? 1 : 0);
 	
-	r->oftrq_nblks  = (len << SLASH_BMAP_SHIFT) +
+	r->oftrq_nblks = (len << SLASH_BMAP_SHIFT) +
 		(len & (~SLASH_BMAP_BLKMASK) ? 1 : 0);	
 	
 	if (op == OFTREQ_OP_WRITE) {
@@ -89,9 +87,8 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
 		if (off & (~SLASH_BMAP_BLKMASK))
 			r->oftrq_op |= OFTREQ_OP_PRFFP; 
 		
-		if (r->oftrq_nblks > 1)
-			if (len & (~SLASH_BMAP_BLKMASK))
-				r->oftrq_op |= OFTREQ_OP_PRFLP;
+		if ((r->oftrq_nblks > 1) && (len & (~SLASH_BMAP_BLKMASK)))
+			r->oftrq_op |= OFTREQ_OP_PRFLP;
 	}
  out:
 	DEBUG_OFFTREQ(PLL_TRACE, r, "newly built request");
@@ -113,22 +110,19 @@ msl_oftrq_destroy(struct offtree_req *r)
 		pscrpc_set_destroy(r->oftrq_fill.oftfill_reqset);
 }
  
- 
-__static void
-msl_fcm_new(struct fhent *fh)
+__static struct msl_fhent *
+msl_fhent_new(void)
 {
 	struct msl_fhent *e;
 	
-	psc_assert(!fh->fh_pri);
-	
-	e = fh->fh_pri = PSCALLOC(sizeof(*e));
-	e->mfh_fcmh = fidc_get(&fidcFreePool.ppm_lc);
-	SPLAY_INIT(&e->mfh_fhbmap_cache);
-	/* Cross-associate the fcmh and fhent structures.
-	 */
-	//e->mfh_fcmh->fcmh_fh = fh->fh_id;	
+	e = PSCALLOC(sizeof(*e));
+	SPLAY_INIT(&e->mfh_fhbmap_cache);	
+	//e->mfh_fcmh->fcmh_fh = fh->fh_id;
+	//e->mfh_fcmh = fidc_get(&fidcFreePool.ppm_lc);
+	return (e);
 }
 
+#ifdef NOFUSE
 /**
  * msl_fdreg_cb - (file des registration callback) This is the callback handler issued from fh_register().  Its primary duty is to allocate the fidcache member handle structure and attach it to the file des structure.
  * @fh: the file handle.
@@ -136,8 +130,10 @@ msl_fcm_new(struct fhent *fh)
  * @args: array of pointer arguments (not used here).
  */
 void
-msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
+msl_fdreg_cb(struct fhent *fh, int op, void *args[])
 {
+	__unusedx sl_inum_t ino = (sl_inum_t)args[1];
+
 	psc_assert(op == FD_REG_NEW || op == FD_REG_EXIST);
 
 	spinlock(&fh->fh_lock);
@@ -145,7 +141,7 @@ msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
 		if (!(fh->fh_state & FHENT_INIT))
 			goto exists;
 		else {
-			psc_assert(fh->fh_pri == NULL);
+			psc_assert(fh->fh_private == NULL);
 			psc_assert(!atomic_read(&fh->fh_refcnt));
  			/* msl_fcm_new() may block for an fcmh, 
 			 *  hopefully that doesn't hurt us here since
@@ -158,12 +154,13 @@ msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
 	} else {
 	exists:
 		psc_assert(fh->fh_state & FHENT_READY);
-		psc_assert(fh->fh_pri &&
-			   ((struct msl_fhent *)fh->fh_pri)->mfh_fcmh);
+		psc_assert(fh->fh_private &&
+			   ((struct msl_fhent *)fh->fh_private)->mfh_fcmh);
 	}
 	atomic_inc(&fh->fh_refcnt);
 	freelock(&fh->fh_lock);
 }
+#endif
 
 /**
  * msl_bmap_fetch - perform a blocking 'get' operation to retrieve one or more bmaps from the MDS.
@@ -172,10 +169,8 @@ msl_fdreg_cb(struct fhent *fh, int op, __unusedx void *args[])
  * @n: the number of bmaps to retrieve (serves as a simple read-ahead mechanism)
  */
 __static int
-msl_bmap_fetch(struct fhent *fh, sl_blkno_t b, size_t n, int rw)
+msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 {
-	struct fidc_memb_handle *f = 
-		((struct msl_fhent *)fh->fh_pri)->mfh_fcmh;
 	struct pscrpc_bulk_desc *desc;
         struct pscrpc_request *rq;
         struct srm_bmap_req *mq;
@@ -192,7 +187,7 @@ msl_bmap_fetch(struct fhent *fh, sl_blkno_t b, size_t n, int rw)
 			     SRMT_GETBMAP, rq, mq, mp)) != 0)
 		return (rc);
 
-	mq->cfd   = fh->fh_id;
+	mq->cfd   = fcmh_2_cfd(f);
 	mq->pios  = prefIOS; /* Tell mds of our preferred ios */
 	mq->blkno = b;
 	mq->nblks = n; 
@@ -231,9 +226,9 @@ msl_bmap_fetch(struct fhent *fh, sl_blkno_t b, size_t n, int rw)
 		 */
 		spinlock(&f->fcmh_lock);
 		for (i=0; i < mp->nblks ; i++) {
-			SPLAY_INSERT(bmap_cache, &f->fcmh_bmapc, 
+			SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, 
 				     bmaps[i]);
-			atomic_inc(&f->fcmh_bmapc_cnt);
+			atomic_inc(&f->fcmh_fcoo->fcoo_bmapc_cnt);
 		}
 		freelock(&f->fcmh_lock);
 	} else
@@ -254,7 +249,7 @@ msl_bmap_fetch(struct fhent *fh, sl_blkno_t b, size_t n, int rw)
 
 
 __static int
-msl_bmap_modeset(struct fhent *fh, sl_blkno_t b, int rw)
+msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
 {
         struct pscrpc_request *rq;
         struct srm_bmap_mode_req *mq;
@@ -267,14 +262,14 @@ msl_bmap_modeset(struct fhent *fh, sl_blkno_t b, int rw)
 			     SRMT_BMAPCHMODE, rq, mq, mp)) != 0)
 		return (rc);
 
-	mq->cfd = fh->fh_id;
+	mq->cfd = fcmh_2_cfd(f);
 	mq->blkno = b;
 	mq->rw = rw;
 
 	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
 		if (mp->rc)
-			psc_warn("msl_bmap_chmode() failed (fh=%p) (b=%u)", 
-				 fh, b);
+			psc_warn("msl_bmap_chmode() failed (f=%p) (b=%u)", 
+				 f, b);
 	}
 	return (rc);
 }
@@ -283,10 +278,9 @@ msl_bmap_modeset(struct fhent *fh, sl_blkno_t b, int rw)
 #define BML_HAVE_BMAP 1
 
 __static void
-msl_bmap_fhcache_ref(struct fhent *fh, struct bmapc_memb *b, 
+msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b, 
 		     int mode, int rw)
 {
-	struct msl_fhent *fhe = fh->fh_pri;
 	struct msl_fbr *r;
 	/* Now handle the fhent's bmap cache, adding a new reference
 	 *  if needed.
@@ -295,21 +289,21 @@ msl_bmap_fhcache_ref(struct fhent *fh, struct bmapc_memb *b,
 	 *  reference cache.  Lock around the fhcache_bmap_lookup()
 	 *  test to prevent another thread from inserting before us.
 	 */
-	spinlock(&fh->fh_lock);
-	r = fhcache_bmap_lookup(fh, b);
+	spinlock(&mfh->mfh_lock);
+	r = fhcache_bmap_lookup(mfh, b);
 	if (!r) {
 		r = msl_fbr_new(b, (rw == SRIC_BMAP_WRITE ? 
-				    FHENT_WRITE : FHENT_READ));
-		SPLAY_INSERT(fhbmap_cache, &fhe->mfh_fhbmap_cache, r);
+	    	      FHENT_WRITE : FHENT_READ));
+		SPLAY_INSERT(fhbmap_cache, &mfh->mfh_fhbmap_cache, r);
 	} else {
 		/* Verify that the ref didn't not exist if the caller
 		 *  specified BML_NEW_BMAP.
 		 */
 		psc_assert(mode != BML_NEW_BMAP);
 		msl_fbr_ref(r, (rw == SRIC_BMAP_WRITE ? 
-				FHENT_WRITE : FHENT_READ));
+			FHENT_WRITE : FHENT_READ));
 	}
-	freelock(&fh->fh_lock);
+	freelock(&mfh->mfh_lock);
 
 }
 
@@ -323,33 +317,33 @@ msl_bmap_fhcache_ref(struct fhent *fh, struct bmapc_memb *b,
  * TODO:  XXX if bmap is already cached but is not in write mode (but rw==WRITE) then we must notify the mds of this.
  */
 __static struct bmapc_memb *
-msl_bmap_load(struct fhent *fh, sl_blkno_t n, int prefetch, u32 rw)
+msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, int prefetch, u32 rw)
 {
-	struct msl_fhent *fhe = fh->fh_pri;
-	struct fidc_memb_handle *f = fhe->mfh_fcmh;
+	struct fidc_membh *f = mfh->mfh_fcmh;
 	struct bmapc_memb *b;
 	struct bmap_info *i;
 
 	int rc=0, mode=BML_HAVE_BMAP;
 
-	b = fcmh_bmap_lookup(f, n);
+	
+	b = bmap_lookup(f, n);
 	if (!b) {
 		/* Retrieve the bmap from the sl_mds.
 		 */
-		rc = msl_bmap_fetch(fh, n, prefetch, rw);
+		rc = msl_bmap_fetch(f, n, prefetch, rw);
 		if (rc)
 			return NULL;
 		else
 			mode = BML_NEW_BMAP;
 
-		b = fcmh_bmap_lookup(f, n);
+		b = bmap_lookup(f, n);
 		psc_assert(b);
 		/* Verify that the mds has returned a 'write-enabled' bmap.
 		 */
 		if (rw == SRIC_BMAP_WRITE)
 			psc_assert(b->bcm_bmapih.bmapi_mode & BMAP_CLI_WR);
 
-		msl_bmap_fhcache_ref(fh, b, mode, rw);
+		msl_bmap_fhcache_ref(mfh, b, mode, rw);
 		return (b);
 	} 
 	/* Else */
@@ -357,7 +351,7 @@ msl_bmap_load(struct fhent *fh, sl_blkno_t n, int prefetch, u32 rw)
 	/* Ref now, otherwise our bmap may get downgraded while we're 
 	 *  blocking on the waitq.
 	 */
-	msl_bmap_fhcache_ref(fh, b, mode, rw);
+	msl_bmap_fhcache_ref(mfh, b, mode, rw);
 
 	/* If our bmap is cached then we need to consider the current
 	 *   caching policy and possibly notify the mds.  I.e. if our
@@ -418,7 +412,7 @@ msl_bmap_load(struct fhent *fh, sl_blkno_t n, int prefetch, u32 rw)
 		 * Correction.. this is not true, since if there was another
 		 *  writer then we would already be in directio mode.
 		 */
-		rc = msl_bmap_modeset(fh, b->bcm_blkno, SRIC_BMAP_WRITE);
+		rc = msl_bmap_modeset(f, b->bcm_blkno, SRIC_BMAP_WRITE);
 		psc_assert(!rc); /*  XXX for now.. */
 		/* We're the only thread allowed here, these
 		 *  bits can not have been set by another thread.
@@ -1101,7 +1095,7 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 		/* XXX the details of this wakeup may need to be 
 		 *  sorted out.
 		 */
-		psc_waitq_wakeup(&m->oft_waitq);
+		psc_waitq_wakeall(&m->oft_waitq);
 	}				
 	/* Queue these iov's for send to IOS.
 	 */
@@ -1183,7 +1177,7 @@ msl_pages_copyout(struct offtree_req *r, char *buf, off_t off)
 		 *  are several sleepers / wakers accessing this q
 		 *  for various reasons.
 		 */
-		psc_waitq_wakeup(&m->oft_waitq);
+		psc_waitq_wakeall(&m->oft_waitq);
 		if (!tsize)
 			goto out;
 	}				
@@ -1243,9 +1237,8 @@ msl_pages_blocking_load(struct offtree_req *r)
  * @op: the operation type (MSL_READ or MSL_WRITE).
  */
 int
-msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
+msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 {
-	struct msl_fhent *fhe=fh->fh_pri;	
 	struct offtree_req *r=NULL;
 	struct bmapc_memb *b;
 	sl_blkno_t s, e;
@@ -1254,13 +1247,14 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 	int i, j, rc;
 	char *p;
 
-	psc_assert(fhe);
-	psc_assert(fhe->mfh_fcmh);
+	psc_assert(mfh);
+	psc_assert(mfh->mfh_fcmh);
 	/* Are these bytes in the cache?
 	 *  Get the start and end block regions from the input parameters.
 	 */
-	s = off / fhe->mfh_fcmh->fcmh_bmap_sz;
-	e = (off + size) / fhe->mfh_fcmh->fcmh_bmap_sz;	
+	//XXX beware, I think 'e' can be short by 1.
+	s = off / mslfh_2_bmapsz(mfh);
+	e = (off + size) / mslfh_2_bmapsz(mfh);
 	/* Relativize the length and offset.
 	 */
 	roff  = off - (s * SLASH_BMAP_SIZE);
@@ -1272,7 +1266,7 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 		/* Load up the bmap, if it's not available then we're out of 
 		 *  luck because we have no idea where the data is!
 		 */
-		b = msl_bmap_load(fh, s, (i ? 0 : (e-s)), (op == MSL_READ) ?
+		b = msl_bmap_load(mfh, s, (i ? 0 : (e-s)), (op == MSL_READ) ?
 				  SRIC_BMAP_READ : SRIC_BMAP_WRITE);
 		if (!b)
 			return -EIO;
@@ -1280,7 +1274,7 @@ msl_io(struct fhent *fh, char *buf, size_t size, off_t off, int op)
 		 */
 		r = realloc(r, (sizeof(*r)) * i);
 
-		msl_oftrq_build(&r[i], b, fh->fh_id, roff, tlen, 
+		msl_oftrq_build(&r[i], b, mslfh_2_cfd(mfh), roff, tlen, 
 				(op == MSL_READ) ? OFTREQ_OP_READ : 
 				OFTREQ_OP_WRITE);
 		/* Retrieve offtree region.

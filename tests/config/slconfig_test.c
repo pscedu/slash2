@@ -47,7 +47,7 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	lnet_thrspawnf = spawn_lnet_thr;
 	pfl_init(19);
-	psc_setloglevel(PLL_NOTICE);
+	psc_log_setlevel(0, PLL_NOTICE);
 	getOptions(argc, argv);
 	slashGetConfig(f);
 	libsl_init(serverNode);
@@ -67,7 +67,7 @@ getOptions(int argc, char *argv[])
 		switch (c) {
 
 		case 'l':
-			psc_setloglevel(atoi(optarg));
+			psc_log_setlevel(0, atoi(optarg));
 			break;
 
 		case 'i':

@@ -1,17 +1,21 @@
 /* $Id$ */
 
+#include <time.h>
+
 #include "psc_ds/listcache.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
+#include "psc_rpc/rpc.h"
 
 #include "cache_params.h"
 //#include "mds.h"
 #include "mdsexpc.h"
-#include "rpc.h"
+#include "slashexport.h"
 #include "slashrpc.h"
-#include "slashd.h"
+#include "cfd.h"
+#include "slashdthr.h"
 
 struct psc_thread pndgCacheCbThread;
 list_cache_t pndgBmapCbs, inflBmapCbs;
@@ -19,13 +23,13 @@ struct pscrpc_nbreqset *bmapCbSet;
 
 #define CB_ARG_SLOT 0
 
-__static int
+int
 mdscoh_reap(void)
 {
 	return(nbrequest_reap(bmapCbSet));
 }
 
-__static void
+void
 mdscoh_infmode_chk(struct mexpbcm *bref, int rq_mode)
 {
 	int mode=bref->mexpbcm_mode;
@@ -40,16 +44,15 @@ mdscoh_infmode_chk(struct mexpbcm *bref, int rq_mode)
 	} else
 		psc_fatalx("Neither MEXPBCM_CIO_REQD or MEXPBCM_DIO_REQD set");
 	
-	psc_assert(rq_mode == bref->mexpbcm_net_cmd);
+	psc_assert(rq_mode == (int)bref->mexpbcm_net_cmd);
 }
 
 int 
-mdscoh_cb(struct pscrpc_request *req, struct pscrpc_async_args *a)
+mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 {
 	struct mexpbcm *bref=req->rq_async_args.pointer_arg[CB_ARG_SLOT];
 	struct srm_bmap_dio_req *mq;
 	struct srm_generic_rep *mp;
-	int c;
 
 	psc_assert(bref);
 	
@@ -86,7 +89,7 @@ mdscoh_cb(struct pscrpc_request *req, struct pscrpc_async_args *a)
 		} else
 			psc_fatalx("Invalid mode %d", bref->mexpbcm_mode);
 	} else {
-		mdscoh_bmap_inflight_mode_check(bref);
+		mdscoh_infmode_chk(bref, mq->dio);
 		lc_queue(&pndgBmapCbs, &bref->mexpbcm_lentry);
 	}
 	/* Don't unlock until the mexpbcm_net_inf bit is unset.
@@ -95,6 +98,7 @@ mdscoh_cb(struct pscrpc_request *req, struct pscrpc_async_args *a)
 	DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap, 
 		   "mode change complete bref=%p", bref);
 	MEXPBCM_ULOCK(bref);		
+	return (0);
 }
 
 
@@ -104,9 +108,11 @@ mdscoh_queue_req(struct mexpbcm *bref)
         struct pscrpc_request *req;
 	struct srm_bmap_dio_req *mq;
 	struct srm_generic_rep *mp;
-	struct slashrpc_export *sexp=bref->mexpbcm_export->exp_private;
-	struct slashrpc_cservice *csvc=
-		((struct mexp_cli *)sexp->sexp_data)->mexpc->mc_csvc;
+	struct pscrpc_export *exp=bref->mexpbcm_export;
+	//struct slashrpc_export *sexp=bref->mexpbcm_export->exp_private;
+	struct slashrpc_export *sexp=exp->exp_private;
+	struct mexp_cli *mexpc=sexp->sexp_data;
+	struct slashrpc_cservice *csvc = mexpc->mc_csvc;
 	int rc=0, mode=bref->mexpbcm_mode;
 
 	DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap, "bref=%p m=%u msgc=%u", 
@@ -159,7 +165,7 @@ mdscohthr_begin(__unusedx void *arg)
 	int rc;	
 
         while (1) {
-                bref = lc_getwait(&pndgCacheCbs);
+                bref = lc_getwait(&pndgBmapCbs);
 
                 MEXPBCM_LOCK(bref);
 		if (bref->mexpbcm_net_cmd != MEXPBCM_RPC_CANCEL) {	

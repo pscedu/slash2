@@ -17,15 +17,15 @@ struct dircache {
 	int			 dc_flags;	/* operation flags */
 	atomic_t		 dc_refcnt;	/* how many are using us */
 	psc_spinlock_t		 dc_lock;	/* exclusitivity control */
-
+	struct hash_entry	 dc_hentry;	/* hash table membership */
 	int			 dc_fd;		/* underlying directory filedes */
 };
 
 /* dircache entry flags */
-#define DCF_WANTDESTROY	(1<<1)	/* dc entry should vanish */
+#define DCF_WANTDESTROY	(1 << 0)	/* dc entry should vanish */
 
-#define DIRCACHE_SIZE	128	/* max #entries */
-#define DIRCACHE_HIWAT	96	/* upper bound for reaping */
+#define DIRCACHE_SIZE	128		/* max #entries */
+#define DIRCACHE_HIWAT	96		/* upper bound for reaping */
 
 void	dircache_init(void);
 void	dircache_ref(void *);

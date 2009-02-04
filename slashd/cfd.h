@@ -9,40 +9,50 @@
 #include "fid.h"
 
 struct pscrpc_export;
+struct cfdops;
 
 struct cfdent {
 	slfid_t			fid;
 	u64			cfd;
 	void                   *pri;
+	int                     type;
+	struct cfdops          *cfdops;
 	SPLAY_ENTRY(cfdent)	entry;
 };
 
-SPLAY_HEAD(cfdtree, cfdent);
-
+#define CFD_FILE        01
+#define CFD_DIR         02
+#define CFD_CLOSING     04
+#define CFD_FORCE_CLOSE 010
 /*
  * Server specific cfd ops.  Primarily used to operate on the cfdent's
  *  'pri' structure.  All calls must be made with the exp lock held.
  */
-struct cfd_svrops {
-	int (*cfd_new)(struct cfdent *, struct pscrpc_export *);
+struct cfdops {
+	int (*cfd_init)(struct cfdent *, struct pscrpc_export *);
 	int (*cfd_free)(struct cfdent *, struct pscrpc_export *);
-	int (*cfd_insert)(struct cfdent *, struct pscrpc_export *);
+	int (*cfd_insert)(struct cfdent *, struct pscrpc_export *, slfid_t);
+	void *(*cfd_get_pri)(struct cfdent *, struct pscrpc_export *);
 };
 
-struct cfdent *
-	cfdinsert(u64, struct pscrpc_export *, slfid_t);
+struct cfdent * cfdget(struct pscrpc_export *, u64);
+int	cfdinsert(struct cfdent *, struct pscrpc_export *, slfid_t);
 int	cfdcmp(const void *, const void *);
-int	cfdnew(u64 *, struct pscrpc_export *, slfid_t);
-int	cfd2fid(struct pscrpc_export *, u64, slfid_t *);
+int     cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri, 
+	       struct cfdent **cfd, struct cfdops *svrops);
 int	cfdfree(struct pscrpc_export *, u64);
+void    cfdfreeall(struct pscrpc_export *);
+int __cfd2fid(struct pscrpc_export *exp, u64 cfd, slfid_t *fidp, void **pri);
 
 #define cfd2fid(e, c, f) __cfd2fid(e, c, f, NULL)
 #define cfd2fid_p __cfd2fid
 
+SPLAY_HEAD(cfdtree, cfdent);
 SPLAY_PROTOTYPE(cfdtree, cfdent, entry, cfdcmp);
 
-extern struct cfd_svrops *cfdOps;
 
+#if 0
+extern struct cfd_svrops *cfdOps;
 #define CFD_GEN_SVROP(OP)						\
 	static __inline int						\
 	cfd_svrop_##OP(struct cfdent *cfd, struct pscrpc_export *exp)	\
@@ -53,8 +63,9 @@ extern struct cfd_svrops *cfdOps;
 		return (-ENOTSUP);					\
 	}
 
-CFD_GEN_SVROP(new)
+CFD_GEN_SVROP(init)
 CFD_GEN_SVROP(free)
 CFD_GEN_SVROP(insert)
+#endif
 
 #endif /* _CFD_H_ */

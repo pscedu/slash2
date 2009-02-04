@@ -7,12 +7,12 @@ include ${SLASHMK}
 
 SUBDIRS+=	mount_slash
 SUBDIRS+=	msctl
-SUBDIRS+=	newfs_slio
-SUBDIRS+=	newfs_slmd
 SUBDIRS+=	slashd
 SUBDIRS+=	slctl
 SUBDIRS+=	slioctl
 SUBDIRS+=	sliod
 
 build:
-	${MAKE} clean depend all
+	@(cd ${ROOTDIR}/zfs/zfs-fuse-0.5.0_slash/src && \
+	  scons slashlib=1)
+	${MAKE} clean && ${MAKE} depend && ${MAKE} all

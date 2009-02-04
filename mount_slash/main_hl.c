@@ -1,4 +1,4 @@
-/* $Id: main.c 4180 2008-09-16 21:50:48Z yanovich $ */
+/* $Id$ */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -67,27 +67,72 @@ msfsthr_ensure(void)
 	psc_assert(thr->pscthr_type == MSTHRT_FS);
 }
 
-
-static int
-slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
+int
+slash_access(__unusedx const char *path, __unusedx int mask)
 {
 	msfsthr_ensure();
-	// XXX Send Access RPC
+
+	// fidcache op
 	return (0);
 }
 
-static void 
-slash2fuse_access_helper(fuse_req_t req, fuse_ino_t ino, int mask)
+int
+slash_chmod(const char *path, mode_t mode)
 {
-	int error = slash2fuse_access(req, real_ino, mask);
-	fuse_reply_err(req, error);
+	struct pscrpc_bulk_desc *desc;
+	struct pscrpc_request *rq;
+	struct srm_generic_rep *mp;
+	struct srm_chmod_req *mq;
+	struct iovec iov;
+	int rc;
+
+	msfsthr_ensure();
+
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_CHMOD, rq, mq, mp)) != 0)
+		return (rc);
+	mq->fnlen = strlen(path);
+	mq->mode = mode;
+	iov.iov_base = (void *)path;
+	iov.iov_len = strlen(path);
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
+	    &iov, 1);
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
+		rc = mp->rc;
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
-//XXX convert me
-static int
-slash2fuse_opencreate(fuse_req_t req, fuse_ino_t ino, 
-		      struct fuse_file_info *fi, int fflags, 
-		      mode_t createmode, const char *name)
+int
+slash_chown(const char *path, uid_t uid, gid_t gid)
+{
+	struct pscrpc_bulk_desc *desc;
+	struct pscrpc_request *rq;
+	struct srm_generic_rep *mp;
+	struct srm_chown_req *mq;
+	struct iovec iov;
+	int rc;
+
+	msfsthr_ensure();
+
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_CHOWN, rq, mq, mp)) != 0)
+		return (rc);
+	mq->fnlen = strlen(path);
+	mq->uid = uid;
+	mq->gid = gid;
+	iov.iov_base = (void *)path;
+	iov.iov_len = strlen(path);
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
+	    &iov, 1);
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
+		rc = mp->rc;
+	pscrpc_req_finished(rq);
+	return (rc);
+}
+
+int
+slash_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -123,25 +168,6 @@ slash2fuse_opencreate(fuse_req_t req, fuse_ino_t ino,
 	return (rc);
 }
 
-static void
-slash2fuse_create_helper(fuse_req_t req, fuse_ino_t parent, const char *name, 
-			 mode_t mode, struct fuse_file_info *fi)
-{
-        int error = slash2fuse_opencreate(req, parent, fi, 
-					  fi->flags | O_CREAT, mode, name);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
-static void 
-slash2fuse_open_helper(fuse_req_t req, fuse_ino_t ino, 
-		       struct fuse_file_info *fi)
-{
-        int error = slash2fuse_opencreate(req, ino, fi, fi->flags, 0, NULL);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
 void
 slash_destroy(__unusedx void *arg)
 {
@@ -158,9 +184,8 @@ slash_destroy(__unusedx void *arg)
 	}
 }
 
-//XXX convert me to use ino rather than pathname
-static int
-slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
+int
+slash_getattr(const char *path, struct stat *stb)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -198,18 +223,64 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	return (rc);
 }
 
-static void 
-slash2fuse_getattr_helper(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
+int
+slash_fgetattr(__unusedx const char *path, struct stat *stb,
+    struct fuse_file_info *fi)
 {
-        int error = slash2fuse_getattr(req, ino, fi);
-        if(error)
-                fuse_reply_err(req, error);
+	struct srm_fgetattr_req *mq;
+	struct srm_fgetattr_rep *mp;
+	struct pscrpc_request *rq;
+	int rc;
+
+	msfsthr_ensure();
+
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_FGETATTR, rq, mq, mp)) != 0)
+		return (rc);
+	mq->cfd = fi->fh;
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
+		if (mp->rc)
+			rc = mp->rc;
+		else {
+			memset(stb, 0, sizeof(*stb));
+			stb->st_mode = mp->mode;
+			stb->st_nlink = mp->nlink;
+			stb->st_uid = mp->uid;
+			stb->st_gid = mp->gid;
+			stb->st_size = mp->size;
+			stb->st_atime = mp->atime;
+			stb->st_mtime = mp->mtime;
+			stb->st_ctime = mp->ctime;
+		}
+	}
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
+int
+slash_ftruncate(__unusedx const char *path, off_t size,
+    struct fuse_file_info *fi)
+{
+	struct srm_ftruncate_req *mq;
+	struct srm_generic_rep *mp;
+	struct pscrpc_request *rq;
+	int rc;
 
-static int
-slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent, 
-		const char *newname)
+	msfsthr_ensure();
+
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_FTRUNCATE, rq, mq, mp)) != 0)
+		return (rc);
+	mq->cfd = fi->fh;
+	mq->size = size;
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
+		rc = mp->rc;
+	pscrpc_req_finished(rq);
+	return (rc);
+}
+
+int
+slash_link(const char *from, const char *to)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -237,17 +308,8 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	return (rc);
 }
 
-static void slash2fuse_link_helper(fuse_req_t req, fuse_ino_t ino, 
-				fuse_ino_t newparent, const char *newname)
-{
-        int error = slash2fuse_link(req, ino, newparent, newname);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
-// XXX convert me
-static int
-slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t mode)
+int
+slash_mkdir(const char *path, mode_t mode)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -273,52 +335,8 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t mod
 	return (rc);
 }
 
-static void 
-slash2fuse_mkdir_helper(fuse_req_t req, fuse_ino_t parent, 
-				 const char *name, mode_t mode)
-{
-        int error = slash2fuse_mkdir(req, parent, name, mode);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
-
-//XXX convert me
-static int 
-slash2fuse_rmdir(fuse_req_t req, fuse_ino_t parent, const char *name)
-{
-        if(strlen(name) >= MAXNAMELEN)
-                return ENAMETOOLONG;
-
-	struct pscrpc_request *rq;
-	struct srm_generic_rep *mp;
-	struct srm_release_req *mq;
-	int rc;
-
-	msfsthr_ensure();
-
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	    SRMT_RELEASEDIR, rq, mq, mp)) != 0)
-		return (rc);
-	mq->cfd = fi->fh;
-	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
-		rc = mp->rc;
-	pscrpc_req_finished(rq);
-	return (rc);
-}
-
-static void 
-slash2fuse_rmdir_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
-{
-        int error = slash2fuse_rmdir(req, parent, name);
-        /* rmdir events always reply_err */
-        fuse_reply_err(req, error);
-}
-
-// XXX convert me
-static int
-slash2fuse_mknod(fuse_req_t req, fuse_ino_t parent, const char *name, 
-		 mode_t mode, dev_t rdev)
+int
+slash_mknod(const char *path, mode_t mode, dev_t dev)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -345,17 +363,43 @@ slash2fuse_mknod(fuse_req_t req, fuse_ino_t parent, const char *name,
 	return (rc);
 }
 
-static void 
-slash2fuse_mknod_helper(fuse_req_t req, fuse_ino_t parent, const char *name, mode_t mode, dev_t rdev)
+int
+slash_open(const char *path, struct fuse_file_info *fi)
 {
-        int error = slash2fuse_mknod(req, parent, name, mode, rdev);
-        if(error)
-                fuse_reply_err(req, error);
+	struct pscrpc_bulk_desc *desc;
+	struct pscrpc_request *rq;
+	struct srm_open_req *mq;
+	struct srm_open_rep *mp;
+	struct iovec iov;
+	int rc, oflag;
+
+	msfsthr_ensure();
+
+	oflag = msl_fuse_2_oflags(fi->flags);
+
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_OPEN, rq, mq, mp)) != 0)
+		return (rc);
+	mq->fnlen = strlen(path);
+	mq->flags = fi->flags;
+	iov.iov_base = (void *)path;
+	iov.iov_len = strlen(path);
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
+	    &iov, 1);
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
+		if (mp->rc)
+			rc = mp->rc;
+		else {
+			fi->fh = mp->cfd;
+			fh_register(mp->cfd, oflag, msl_fdreg_cb, NULL);
+		}
+	}
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
-// XXX convert
-static int
-slash_opendir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
+int
+slash_opendir(const char *path, struct fuse_file_info *fi)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -383,15 +427,6 @@ slash_opendir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	pscrpc_req_finished(rq);
 	return (rc);
 }
-
-static void 
-slash2fuse_opendir_helper(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
-{
-        int error = slash2fuse_opendir(req, ino, fi);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
 
 #define OBD_TIMEOUT 15
 
@@ -448,10 +483,9 @@ slash_read(__unusedx const char *path, char *buf, size_t size,
 	return (rc);
 }
 
-//XXX convert me
-static int 
-slash2fuse_readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off, 
-		struct fuse_file_info *fi)
+int
+slash_readdir(__unusedx const char *path, void *buf, fuse_fill_dir_t filler,
+    off_t offset, struct fuse_file_info *fi)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -497,52 +531,8 @@ slash2fuse_readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
 	return (rc);
 }
 
-static void 
-slash2fuse_readdir_helper(fuse_req_t req, fuse_ino_t ino, size_t size, 
-		       off_t off, struct fuse_file_info *fi)
-{
-        fuse_ino_t real_ino = ino == 1 ? 3 : ino;
-
-        int error = slash2fuse_readdir(req, real_ino, size, off, fi);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
-
-// XXX convert
-static int 
-slash2fuse_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
-{
-	// XXX fill me in
-        struct fuse_entry_param e = { 0 };
-
-        e.attr_timeout = 0.0;
-        e.entry_timeout = 0.0;
-
-        if(vp == NULL)
-                goto out;
-
-        e.ino = VTOZ(vp)->z_id;
-        if(e.ino == 3)
-                e.ino = 1;
-
-        e.generation = VTOZ(vp)->z_phys->zp_gen;
-
-        error = slash2fuse_stat(vp, &e.attr, &cred);
-
-}
-
-static void 
-slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
-{
-        int error = slash2fuse_lookup(req, parent, name);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
-// XXX convert me
-static int
-slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
+int
+slash_readlink(const char *path, char *buf, size_t size)
 {
 	struct pscrpc_bulk_desc *de, *di;
 	struct pscrpc_request *rq;
@@ -578,21 +568,8 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	return (rc);
 }
 
-static void 
-slash2fuse_readlink_helper(fuse_req_t req, fuse_ino_t ino)
-{
-        fuse_ino_t real_ino = ino == 1 ? 3 : ino;
-
-        int error = slash2fuse_readlink(req, real_ino);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
-
-
-// XXX convert me
 int
-slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
+slash_release(__unusedx const char *path, struct fuse_file_info *fi)
 {
 	struct srm_generic_rep *mp;
 	struct srm_release_req *mq;
@@ -611,19 +588,28 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	return (rc);
 }
 
-static void 
-slash2fuse_release_helper(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
+int
+slash_releasedir(__unusedx const char *path, struct fuse_file_info *fi)
 {
-        int error = slash2fuse_release(req, ino, fi);
-        /* Release events always reply_err */
-        fuse_reply_err(req, error);
+	struct pscrpc_request *rq;
+	struct srm_generic_rep *mp;
+	struct srm_release_req *mq;
+	int rc;
+
+	msfsthr_ensure();
+
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_RELEASEDIR, rq, mq, mp)) != 0)
+		return (rc);
+	mq->cfd = fi->fh;
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
+		rc = mp->rc;
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
-
-// XXX convert
-static int
-slash2fuse_rename(fuse_req_t req, fuse_ino_t parent, const char *name, 
-	     fuse_ino_t newparent, const char *newname)
+int
+slash_rename(const char *from, const char *to)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -651,19 +637,34 @@ slash2fuse_rename(fuse_req_t req, fuse_ino_t parent, const char *name,
 	return (rc);
 }
 
-
-static void 
-slash2fuse_rename_helper(fuse_req_t req, fuse_ino_t parent, const char *name, fuse_ino_t newparent, const char *newname)
+int
+slash_rmdir(const char *path)
 {
-        int error = slash2fuse_rename(req, parent, name, newparent, newname);
+	struct pscrpc_bulk_desc *desc;
+	struct pscrpc_request *rq;
+	struct srm_generic_rep *mp;
+	struct srm_rmdir_req *mq;
+	struct iovec iov;
+	int rc;
 
-        /* rename events always reply_err */
-        fuse_reply_err(req, error);
+	msfsthr_ensure();
+
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_RMDIR, rq, mq, mp)) != 0)
+		return (rc);
+	mq->fnlen = strlen(path);
+	iov.iov_base = (void *)path;
+	iov.iov_len = strlen(path);
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
+	    &iov, 1);
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
+		rc = mp->rc;
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
-// XXX convert
-static int
-slash2fuse_statfs(fuse_req_t req)
+int
+slash_statfs(const char *path, struct statvfs *sfb)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -696,12 +697,11 @@ slash2fuse_statfs(fuse_req_t req)
 		}
 	}
 	pscrpc_req_finished(rq);
-	fuse_reply_statfs(req, &stat);
+	return (rc);
 }
 
-static int
-slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent, 
-		   const char *name)
+int
+slash_symlink(const char *from, const char *to)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -729,18 +729,35 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 	return (rc);
 }
 
-static void 
-zfsfuse_symlink_helper(fuse_req_t req, const char *link, fuse_ino_t parent, 
-		       const char *name)
+int
+slash_truncate(const char *path, off_t size)
 {
-        int error = zfsfuse_symlink(req, link, parent, name);
-        if(error)
-                fuse_reply_err(req, error);
+	struct pscrpc_bulk_desc *desc;
+	struct pscrpc_request *rq;
+	struct srm_truncate_req *mq;
+	struct srm_generic_rep *mp;
+	struct iovec iov;
+	int rc;
+
+	msfsthr_ensure();
+
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_TRUNCATE, rq, mq, mp)) != 0)
+		return (rc);
+	mq->fnlen = strlen(path);
+	mq->size = size;
+	iov.iov_base = (void *)path;
+	iov.iov_len = strlen(path);
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
+	    &iov, 1);
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
+		rc = mp->rc;
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
-// XXX convert me
-static int 
-slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name)
+int
+slash_unlink(const char *path)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -765,123 +782,62 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name)
 	return (rc);
 }
 
-static void 
-slash2fuse_unlink_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
+int
+slash_utimens(const char *path, const struct timespec ts[2])
 {
-        int error = slash2fuse_unlink(req, parent, name);
-        /* unlink events always reply_err */
-        fuse_reply_err(req, error);
+	struct pscrpc_bulk_desc *desc;
+	struct pscrpc_request *rq;
+	struct srm_generic_rep *mp;
+	struct srm_utimes_req *mq;
+	struct iovec iov;
+	int rc;
+
+	msfsthr_ensure();
+
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_UTIMES, rq, mq, mp)) != 0)
+		return (rc);
+	mq->fnlen = strlen(path);
+	memcpy(mq->times, ts, sizeof(ts));
+	iov.iov_base = (void *)path;
+	iov.iov_len = strlen(path);
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
+	    &iov, 1);
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
+		rc = mp->rc;
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
-// XXX convert me
-static int 
-slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr, 
-		int to_set, struct fuse_file_info *fi)
+int
+slash_write(__unusedx const char *path, const char *buf, size_t size,
+    off_t offset, struct fuse_file_info *fi)
 {
-	if(to_set & FUSE_SET_ATTR_MODE) {
-                vattr.va_mask |= AT_MODE;
-                vattr.va_mode = attr->st_mode;
-        }
-        if(to_set & FUSE_SET_ATTR_UID) {
-                vattr.va_mask |= AT_UID;
-                vattr.va_uid = attr->st_uid;
-        }
-        if(to_set & FUSE_SET_ATTR_GID) {
-                vattr.va_mask |= AT_GID;
-                vattr.va_gid = attr->st_gid;
-        }
-        if(to_set & FUSE_SET_ATTR_SIZE) {
-                vattr.va_mask |= AT_SIZE;
-                vattr.va_size = attr->st_size;
-        }
-        if(to_set & FUSE_SET_ATTR_ATIME) {
-                vattr.va_mask |= AT_ATIME;
-                TIME_TO_TIMESTRUC(attr->st_atime, &vattr.va_atime);
-        }
-        if(to_set & FUSE_SET_ATTR_MTIME) {
-                vattr.va_mask |= AT_MTIME;
-                TIME_TO_TIMESTRUC(attr->st_mtime, &vattr.va_mtime);
-        }
+	struct pscrpc_bulk_desc *desc;
+	struct pscrpc_request *rq;
+	struct srm_io_rep *mp;
+	struct srm_io_req *mq;
+	struct iovec iov;
+	int rc;
 
- out: ;
-        struct stat stat_reply;
+	msfsthr_ensure();
 
-	if(!error)
-                fuse_reply_attr(req, &stat_reply, 0.0);
-
-	return (error);
+	if ((rc = RSX_NEWREQ(ion_get()->csvc_import,
+	    SRIC_VERSION, SRMT_WRITE, rq, mq, mp)) != 0)
+		return (rc);
+	mq->cfd = fi->fh;
+	mq->size = size;
+	mq->offset = offset;
+	mq->op = SRMIO_WR;
+	iov.iov_base = (void *)buf;
+	iov.iov_len = size;
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
+	    &iov, 1);
+	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
+		rc = mp->rc ? mp->rc : (int)mp->size;
+	pscrpc_req_finished(rq);
+	return (rc);
 }
-
-static void 
-slash2fuse_setattr_helper(fuse_req_t req, fuse_ino_t ino, struct stat *attr, 
-		       int to_set, struct fuse_file_info *fi)
-{
-        int error = slash2fuse_setattr(req, ino, attr, to_set, fi);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
-
-//XXX convert me
-static int slash2fuse_fsync(fuse_req_t req, fuse_ino_t ino, int datasync, struct fuse_file_info *fi)
-{
-
-}
-
-static void 
-slash2fuse_fsync_helper(fuse_req_t req, fuse_ino_t ino, int datasync, 
-		     struct fuse_file_info *fi)
-{
-        int error = slash2fuse_fsync(req, ino, datasync, fi);
-
-        /* fsync events always reply_err */
-        fuse_reply_err(req, error);
-}
-
-static void
-slash2fuse_destroy(void *userdata)
-{
-	//do an unmount of slash2
-}
-
-// XXX convertme
-static int 
-slash2fuse_write(fuse_req_t req, fuse_ino_t ino, const char *buf, 
-	      size_t size, off_t off, struct fuse_file_info *fi)
-{
-
-}
-
-
-static void 
-slash2fuse_write_helper(fuse_req_t req, fuse_ino_t ino, const char *buf, 
-		     size_t size, off_t off, struct fuse_file_info *fi)
-{
-        int error = slash2fuse_write(req, ino, buf, size, off, fi);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
-
-// XXX convert me
-static int 
-slash2fuse_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off, 
-	     [struct fuse_file_info *fi) 
-{
-
-
-}
-
-static void 
-slash2fuse_read_helper(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off, 
-		    struct fuse_file_info *fi)
-{
-        int error = slash2fuse_read(req, ino, size, off, fi);
-        if(error)
-                fuse_reply_err(req, error);
-}
-
-
 
 void *
 slash_init(__unusedx struct fuse_conn_info *conn)
@@ -903,6 +859,8 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	msctlthr_spawn();
 	mstimerthr_spawn();
 
+
+
 	if (msrmc_connect(name))
 		psc_fatal("unable to connect to MDS");
 	if ((name = getenv("SLASH2_PIOS_ID")) != NULL) {
@@ -913,36 +871,36 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	return (NULL);
 }
 
-
-struct fuse_lowlevel_ops zfs_operations =
-{
-	.open       = slash2fuse_open_helper,    // 
-	.read       = slash2fuse_read_helper,
-	.write      = slash2fuse_write_helper,
-	.release    = slash2fuse_release_helper, //
-	.opendir    = slash2fuse_opendir_helper, //
-	.readdir    = slash2fuse_readdir_helper, //
-	.releasedir = slash2fuse_release_helper, //
-	.lookup     = slash2fuse_lookup_helper,  //
-	.getattr    = slash2fuse_getattr_helper, //
-	.readlink   = slash2fuse_readlink_helper,//
-	.mkdir      = slash2fuse_mkdir_helper,   //
-	.rmdir      = slash2fuse_rmdir_helper,   //
-	.create     = slash2fuse_create_helper,  //
-	.unlink     = slash2fuse_unlink_helper,  //
-	.mknod      = slash2fuse_mknod_helper,   //
-	.symlink    = slash2fuse_symlink_helper, //
-	.link       = slash2fuse_link_helper,    //
-	.rename     = slash2fuse_rename_helper,  //
-	.setattr    = slash2fuse_setattr_helper, //  
-	.fsync      = slash2fuse_fsync_helper, //
-	.fsyncdir   = slash2fuse_fsync_helper, //
-	.access     = slash2fuse_access_helper,  //
-	.statfs     = slash2fuse_statfs, //
-	.destroy    = slash2fuse_destroy, //
+struct fuse_operations slashops = {
+//	.access		= slash_access,
+	.chmod		= slash_chmod,
+	.chown		= slash_chown,
+	.create		= slash_create,
+	.destroy	= slash_destroy,
+	.fgetattr	= slash_fgetattr,
+	.ftruncate	= slash_ftruncate,
+	.getattr	= slash_getattr,
+	.init		= slash_init,
+	.link		= slash_link,
+//	.lock		= slash_lock,
+	.mkdir		= slash_mkdir,
+	.mknod		= slash_mknod,
+	.open		= slash_open,
+	.opendir	= slash_opendir,
+	.read		= slash_read,
+	.readdir	= slash_readdir,
+	.readlink	= slash_readlink,
+	.release	= slash_release,
+	.releasedir	= slash_releasedir,
+	.rename		= slash_rename,
+	.rmdir		= slash_rmdir,
+	.statfs		= slash_statfs,
+	.symlink	= slash_symlink,
+	.truncate	= slash_truncate,
+	.unlink		= slash_unlink,
+	.utimens	= slash_utimens,
+	.write		= slash_write
 };
-
-
 
 void *nal_thread(void *);
 
@@ -1021,8 +979,7 @@ main(int argc, char *argv[])
 	if (fuse_opt_parse(&args, NULL, msopts, proc_opt))
 		usage();
 
-#define THRTAB_SZ 13
-	pfl_init(THRTAB_SZ);
+	pfl_init();
 	lnet_thrspawnf = mslndthr_spawn;
 
 	msfsthr_ensure();

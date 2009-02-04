@@ -164,7 +164,6 @@ config         : globals site_profiles
 				psc_assert(r->res_peers[i] != IOS_ID_ANY);
 				free(r->res_peertmp[i]);
 			}
-			free(r->res_peertmp);
 			/*
 			 * Associate nids with their respective resources,
 			 *   and add the nids to the global hash table.
@@ -243,12 +242,8 @@ peers          : peer                              |
 
 peer           : RESOURCE_NAME
 {
-	char **tmp;
-	tmp = realloc(currentRes->res_peertmp,
-		      (sizeof(char **) * (currentRes->res_npeers++)));
-	psc_assert(tmp);
-	tmp[(currentRes->res_npeers)-1] = $1;
-	currentRes->res_peertmp = tmp;
+	currentRes->res_peertmp[currentRes->res_npeers] = $1;
+	currentRes->res_npeers++;
 };
 
 interfacelist  : INTERFACETAG EQ interfaces END
@@ -486,6 +481,7 @@ store_tok_val(const char *tok, char *val)
 		break;
 
 	case SL_TYPE_BOOL:
+		*(int *)ptr = 0;
 		if ( !strncmp("yes", val, 3) ||
 		     !strncmp("1",   val, 1) ) {
 			//*(int *)ptr |= e->param;

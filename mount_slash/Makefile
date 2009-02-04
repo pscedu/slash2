@@ -3,6 +3,7 @@
 include Makefile.path
 
 PROG=		mount_slash
+SRCS+=		fuse_listener.c
 SRCS+=		control.c
 SRCS+=		main.c
 SRCS+=		mount_slash_int.c
@@ -10,10 +11,11 @@ SRCS+=		mseqpollthr.c
 SRCS+=		rcm.c
 SRCS+=		rpc.c
 SRCS+=		timer.c
+SRCS+=		fidc_client.c
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${SLASH_BASE}/share/rpc.c
+SRCS+=		${SLASH_BASE}/share/fidc_common.c
 SRCS+=		${SLASH_BASE}/slashd/buffer.c
-SRCS+=		${SLASH_BASE}/slashd/fidcache.c
 SRCS+=		${SLASH_BASE}/slashd/offtree.c
 SRCS+=          ${SLASH_BASE}/slashd/lconf.l
 SRCS+=          ${SLASH_BASE}/slashd/yconf.y
@@ -37,7 +39,7 @@ SRCS+=		${PFL_BASE}/psc_util/mkdirs.c
 SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
-SRCS+=		${PFL_BASE}/psc_util/threadtable.c
+SRCS+=		${PFL_BASE}/psc_util/timerthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}

@@ -155,9 +155,8 @@ dircache_get(slfid_t fid)
 		dc->dc_fd = fd;
 		dc->dc_fid = fid;
 		dircache_ref(dc);
-		e = PSCALLOC(sizeof(*e));
-		init_hash_entry(e, &dc->dc_fid, dc);
-		add_hash_entry(&dircache, e);
+		init_hash_entry(&dc->dc_hentry, &dc->dc_fid, dc);
+		add_hash_entry(&dircache, &dc->dc_hentry);
 	}
  done:
 	freelock(&dircache.htable_lock);

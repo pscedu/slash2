@@ -17,8 +17,12 @@
 #include "inode.h"
 #include "fidcache.h"
 #include "jflush.h"
+
+#ifdef INUM_SELF_MANAGE
 #include "sb.h"
-#include "slashd.h"
+#endif
+
+#include "slashdthr.h"
 
 extern list_cache_t dirtyMdsData;
 struct psc_journal mdsJournal;
@@ -30,6 +34,159 @@ enum mds_log_types {
 	MDS_LOG_SB        = (1<<3)
 };
 
+/**
+ * mds_bmap_sync - callback function which is called from mdsfssyncthr_begin().
+ * @data: void * which is the bmap.
+ * Notes: this call allows slash2 to optimize crc calculation by only taking them when the bmap is written, not upon each update to the bmap.  It is important to note that forward changes may be synced here.  What that means is that changes which are not part of this XID session may have snuck in here (ie a crc update came in and was fully processed before mds_bmap_sync() grabbed the lock.  For this reason the crc updates must be journaled before manifesting in the bmap cache.  Otherwise, log replays will look inconsistent.
+ */ 
+void 
+mds_bmap_sync(void *data)
+{
+	struct bmapc_memb *bmap=data;
+	sl_blkh_t *bmapod=bmap->bcm_bmapih.bmapi_data;
+	int rc;
+	       
+	BMAP_LOCK(bmap);
+
+	psc_crc_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
+	/* XXX replace with ZFS write calls */
+#if SLASH_POSIX_IO
+	rc = pwrite(bmap->bcm_fcmh->fcmh_fd, bmapod, 
+		    BMAP_OD_SZ, (off_t)(BMAP_OD_SZ * bmap->bcm_blkno));
+#endif	
+	if (rc != BMAP_OD_SZ)
+		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail", rc, errno);
+	else
+		DEBUG_BMAP(PLL_TRACE, bmap, "sync ok");
+
+#if SLASH_POSIX_IO
+	rc = fsync(bmap->bcm_fcmh->fcmh_fd);
+	if (rc < 0)
+		psc_fatal("fsync() failed");
+#endif
+
+	BMAP_ULOCK(bmap);
+}
+
+/**
+ * mds_bmap_repl_log - write a modified replication table to the journal.
+ * Note:  bmap must be locked to prevent further changes from sneaking in before the repl table is committed to the journal.
+ */
+void
+mds_bmap_repl_log(struct bmapc_memb *bmap) 
+{
+	struct slmds_jent_repgen jrpg;
+	int rc;
+
+	BMAP_LOCK_ENSURE(bmap);
+	
+	jrpg.sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
+	jrpg.sjp_bmapno = bmap->bcm_blkno;
+	jrpg.sjp_gen.bl_gen = bmap->bcm_bmapih.bmapi_data->bh_gen.bl_gen;
+	memcpy(jrpg.sjp_reptbl, bmap->bcm_bmapih.bmapi_data->bh_repls, 
+	       SL_REPLICA_NBYTES);
+
+	psc_trace("jlog fid=%"_P_U64"x bmapno=%u bmapgen=%u", 
+		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen);
+	
+	jfi_prep(&bmap->bcm_jfi, &mdsJournal);
+
+	psc_assert(bmap->bcm_jfi.jfi_handler == mds_bmap_sync);
+	psc_assert(bmap->bcm_jfi.jfi_data == bmap);
+
+	rc = pjournal_xadd(bmap->bcm_jfi.jfi_xh, MDS_LOG_BMAP_REPL, &jrpg);
+	if (rc) 
+		psc_fatalx("jlog fid=%"_P_U64"x bmapno=%u bmapgen=%u rc=%d",
+			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen, rc);
+	
+	jfi_schedule(&bmap->bcm_jfi, &dirtyMdsData);
+}
+
+/**
+ * mds_bmap_crc_log - commit bmap crc changes to the journal.  
+ * @bmap: the bmap (not locked).
+ * @crcs: array of crc / slot pairs.
+ * @n: the number of crc / slot pairs.
+ * Notes: bmap_crc_writes from the ION are sent here directly because this function is responsible for updating the cached bmap after the crc has been committed to the journal.  This allows us to not have to hold the lock while doing journal I/O with the caveat that we trust the ION to not send multiple crc updates for the same region which me may then process out of order.
+ */
+void
+mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
+{
+	struct slmds_jent_crc jcrc;
+	sl_blkh_t *bmapod=bmap->bcm_bmapih.bmapi_data;
+	int i, rc=0;
+	int n=crcup->nups;
+	u32 t=0, j=0;
+
+	jfi_prep(&bmap->bcm_jfi, &mdsJournal);
+
+	psc_assert(bmap->bcm_jfi.jfi_handler == mds_bmap_sync);
+	psc_assert(bmap->bcm_jfi.jfi_data == bmap);
+	/* No I shouldn't need the lock.  Only this instance of this
+	 *  call may remove the BMAP_MDS_CRC_UP bit.
+	 */
+	psc_assert(bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_CRC_UP);
+
+	jcrc.sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
+	jcrc.sjc_ion = bmap->bcm_bmapih.bmapi_ion;
+        jcrc.sjc_bmapno = bmap->bcm_blkno;
+	
+	while (n) {
+		i = MIN(SLJ_MDS_NCRCS, n);
+				    
+		memcpy(jcrc.sjc_crc, &crcup->crcs[t],
+		       (i * sizeof(struct srm_bmap_crcwire)));
+
+		rc = pjournal_xadd(bmap->bcm_jfi.jfi_xh, 
+				   MDS_LOG_BMAP_CRC, &jcrc);
+		if (rc)
+			psc_fatalx("jlog fid=%"_P_U64"x bmapno=%u rc=%d", 
+				   jcrc.sjc_fid, jcrc.sjc_bmapno, rc);
+		/* Apply the CRC update into memory AFTER recording them
+		 *  in the journal.  The lock should not be needed since the 
+		 *  BMAP_MDS_CRC_UP is protecting the crc table from other 
+		 *  threads who may like to update.  Besides at this moment, 
+		 *  on the ION updating us has the real story on this bmap's
+		 *  CRCs.
+		 */
+		//BMAP_LOCK(bmap);
+		for (t+=i; j < t; j++) {
+			bmapod->bh_crcs[(crcup->crcs[j].slot)].gc_crc = 
+				crcup->crcs[j].crc;
+			DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PRIx64")", 
+				   crcup->crcs[j].slot, crcup->crcs[j].crc);
+		}
+		//BMAP_ULOCK(bmap);
+		n -= i;
+		psc_assert(n >= 0);
+	}	
+	psc_assert(t == crcup->nups);
+	/* Signify that the update has occurred.
+	 */
+	BMAP_LOCK(bmap);
+	bmap->bcm_bmapih.bmapi_mode &= ~BMAP_MDS_CRC_UP;
+	BMAP_ULOCK(bmap);
+	/* Tell the 'syncer' thread to flush this bmap.
+	 */
+	jfi_schedule(&bmap->bcm_jfi, &dirtyMdsData);
+}
+
+void
+mds_journal_init(void)
+{
+	char fn[PATH_MAX];
+	int rc;
+	
+	rc = snprintf(fn, sizeof(fn), "%s/%s",
+                      nodeInfo.node_res->res_fsroot, _PATH_SLJOURNAL);
+        if (rc == -1)
+                psc_fatal("snprintf");
+
+	pjournal_init(&mdsJournal, fn, 0, 
+		      SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE, SLJ_MDS_RA);
+}
+
+#ifdef INUM_SELF_MANAGE
 void
 mds_sb_sync(void *data)
 {
@@ -45,7 +202,7 @@ mds_sb_sync(void *data)
 
 	freelock(&sb->sbm_lock);
 	
-	psc_dbg("sb=%p inum=%"_P_U64"x crc=%"_P_U64"x sync ok", 
+	psc_dbg("sb=%p inum=%"_P_U64"x crc="_P_CRC" sync ok", 
 		sb, sb->sbm_sbs->sbs_inum, sb->sbm_sbs->sbs_crc);
 }
 
@@ -95,126 +252,5 @@ mds_sb_getinum(void)
 
 	return (ino);
 }
+#endif
 
-/**
- * mds_bmap_sync - callback function which is called from mdsfssyncthr_begin().
- * @data: void * which is the bmap.
- * Notes: this call allows slash2 to optimize crc calculation by only taking them when the bmap is written, not upon each update to the bmap.  It is important to note that forward changes may be synced here.  What that means is that changes which are not part of this XID session may have snuck in here (ie a crc update came in and was fully processed before mds_bmap_sync() grabbed the lock.  For this reason the crc updates must be journaled before manifesting in the bmap cache.
- */
-void 
-mds_bmap_sync(void *data)
-{
-	struct bmapc_memb *bmap=data;
-	sl_blkh_t *bmapod=bmap->bcm_bmapih.bmapi_data;
-	int rc;
-	       
-	BMAP_LOCK(bmap);
-
-	psc_crc_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
-	rc = pwrite(bmap->bcm_fcmh->fcmh_fd, bmapod, 
-		    BMAP_OD_SZ, (off_t)(BMAP_OD_SZ * bmap->bcm_blkno));
-
-	if (rc != BMAP_OD_SZ)
-		DEBUG_BMAP(PLL_FATAL, "rc=%d errno=%d sync fail", rc, errno);
-	else
-		DEBUG_BMAP(PLL_TRACE, "sync ok");
-	
-	BMAP_ULOCK(bmap);
-}
-
-/**
- * mds_bmap_repl_log - write a modified replication table to the journal.
- * Note:  bmap must be locked to prevent further changes from sneaking in before the repl table is committed to the journal.
- */
-void
-mds_bmap_repl_log(struct bmapc_memb *bmap) 
-{
-	struct slmds_jent_repgen jrpg;
-	int rc;
-
-	BMAP_LOCK_ENSURE(bmap);
-	
-	jrpg.sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	jrpg.sjp_bmapno = bmap->bcm_blkno;
-	jrpg.sjp_gen = bmap->bcm_bmapih.bmapi_data->bh_gen.bl_gen;
-	memcpy(jrpg.sjp_reptbl, bmap->bcm_bmapih.bmapi_data->bh_repls, 
-	       SL_REPLICA_NBYTES);
-
-	psc_trace("jlog fid=%"_P_U64" bmapno=%u bmapgen=%u", 
-		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen);
-	
-	jfi_prep(&bmap->bcm_jfi, &mdsJournal);
-
-	psc_assert(bmap->bcm_jfi->jfi_handler == mds_bmap_sync);
-	psc_assert(bmap->bcm_jfi->jfi_data == bmap);
-
-	rc = pjournal_xadd(bmap->bcm_jfi->jfi_xh, MDS_LOG_BMAP_REPL, &rg);
-	if (rc) 
-		psc_fatalx("jlog fid=%"_P_U64" bmapno=%u bmapgen=%u rc=%d",
-			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen, rc);
-	
-	jfi_schedule(&bmap->bcm_jfi, &dirtyMdsData);
-}
-
-/**
- * mds_bmap_crc_log - commit bmap crc changes to the journal.  
- * @bmap: the bmap (not locked).
- * @crcs: array of crc / slot pairs.
- * @n: the number of crc / slot pairs.
- * Notes: bmap_crc_writes from the ION are sent here directly because this function is responsible for updating the cached bmap after the crc has been committed to the journal.  This allows us to not have to hold the lock while doing journal I/O with the caveat that we trust the ION to not send multiple crc updates for the same region which me may then process out of order.
- */
-void
-mds_bmap_crc_log(struct bmapc_memb *bmap, struct slmds_bmap_crc *crcs, int n)
-{
-	struct slmds_jent_crc jcrc;
-	sl_blkh_t *bmapod=bmap->bcm_bmapih.bmapi_data;
-	int i, j=0, t=0, rc=0;
-
-	jfi_prep(&bmap->bcm_jfi, &mdsJoural);
-
-	psc_assert(bmap->bcm_jfi->jfi_handler == mds_bmap_sync);
-	psc_assert(bmap->bcm_jfi->jfi_data == bmap);
-
-	jcrc.sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	jcrc.sjc_ion = bmap->bcm_bmapih.bmapi_ion;
-        jcrc.sjc_bmapno = bmap->bcm_blkno;
-	
-	while (n) {
-		i = MIN(SLJ_MDS_NCRCS, n);
-		memcpy(jcrc.sjc_crc, crcs[i],
-		       (i * sizeof(struct slmds_bmap_crc)));
-
-		rc = pjournal_xadd(bmap->bcm_jfi->jfi_xh, 
-				   MDS_LOG_BMAP_CRC, &jcrc);
-		if (rc)
-			psc_fatalx("jlog fid=%"_P_U64" bmapno=%u rc=%d", 
-				   jcrc.sjp_fid, jcrc.sjp_bmapno, rc);
-		/* Apply the CRC update into memory AFTER recording them
-		 *  in the journal.
-		 */
-		BMAP_LOCK(bmap);
-		for (t+=i; j < t; j++) {
-			bmapod->bh_crcs[(crcs[j].slot)] = crcs[j].crc;
-			DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"_P_U64"x)", 
-				   crcs[j].slot, crcs[j].crc);
-		}
-		BMAP_ULOCK(bmap);
-
-		n -= i;
-	}
-	jfi_schedule(&bmap->bcm_jfi, &dirtyMdsData);
-}
-
-void
-mds_journal_init(void)
-{
-	char fn[PATH_MAX];
-	
-	rc = snprintf(fn, sizeof(fn), "%s/%s",
-                      nodeInfo.node_res->res_fsroot, _PATH_SLJOURNAL);
-        if (rc == -1)
-                psc_fatal("snprintf");
-
-	pjournal_init(&mdsJournal, fn, 0, 
-		      SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE, SLJ_MDS_RA);
-}

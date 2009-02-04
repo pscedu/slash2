@@ -10,37 +10,12 @@
 #include "psc_util/strlcpy.h"
 
 #include "rpc.h"
-#include "sliod.h"
-#include "slashrpc.h"
 
-struct slashrpc_cservice *rmi_csvc;
+#include "slashrpc.h"
+#include "sliod.h"
 
 lnet_process_id_t lpid;
-
-struct slashrpc_export *
-slashrpc_export_get(struct pscrpc_export *exp, int type)
-{
-	int locked;
-	locked = reqlock(&exp->exp_lock);
-	if (exp->exp_private == NULL) {
-		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
-		exp->exp_destroycb = slashrpc_export_destroy;		
-	}
-	ureqlock(&exp->exp_lock, locked);
-	return (exp->exp_private);
-}
-
-enum slashrpc_export_types {
-	SEXP_ION,
-	SEXP_CLI,
-	SEXP_MDS       
-};
-
-
-void
-slashrpc_export_destroy(__unusedx void *data)
-{
-}
+struct slashrpc_cservice *rmi_csvc;
 
 /**
  * rpc_initsvc - create and initialize RPC services.

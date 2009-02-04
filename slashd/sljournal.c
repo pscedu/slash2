@@ -11,9 +11,10 @@
 #include "pathnames.h"
 #include "slconfig.h"
 #include "sljournal.h"
-#include "slashd.h"
+#include "slashdthr.h"
 #include "sb.h"
 
+#if 0
 sl_inum_t
 slmds_get_inum(void)
 {
@@ -41,7 +42,7 @@ slmds_journal_recover(void)
 	memset(&pjw, 0, sizeof(pjw));
 	pje = pjournal_alloclog(&sbm.sbm_pj);
 
-#if 0
+#ifdef AAA
 	/* Locate the start of the lowest gen ID. */
 	while ((rc = pjournal_walk(&sbm.sbm_pj, &pjw, pje)) == 0) {
 		if ((int)(pje->pje_genid - logenid) < 0) {
@@ -67,16 +68,4 @@ slmds_journal_recover(void)
 	psc_freel(pje, PJ_PJESZ(&sbm.sbm_pj));
 }
 
-void
-sl_journal_init(struct psc_journal *pj, size_t nent, size_t entsz, int ra)
-{
-	char fn[PATH_MAX];
-	int rc;
-
-	rc = snprintf(fn, sizeof(fn), "%s/%s",
-		      nodeInfo.node_res->res_fsroot, _PATH_SLJOURNAL);
-	if (rc == -1)
-		psc_fatal("snprintf");
-
-	pjournal_init(pj, fn, 0, nent, entsz, ra);
-}
+#endif

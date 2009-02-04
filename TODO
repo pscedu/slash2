@@ -1,0 +1,133 @@
+* Fidcache Generation Numbering	
+	Fidcache must support generation numbers.
+		. hash table code should be modified to add a cmp function.
+		. ambiguous inode lookups should prefer the highest gen #
+
+	On the fidcache generation # subject.  Implementing the FC with gen #'s is 
+	awkward because fuse does not provide the generation number except when it
+	provides an 'fi'.  This means that the gen cannot be used for hash table lookups
+	taking place on behalf of operations like: create, mkdir, open,	etc.
+
+	Done but seeing a problem on the client when doing stress testing:
+	[1233201864:695906 msfsthr9:__fidc_lookup_fg:320] [assert] fcmh_2_gen(tmp) != FID_ANY
+
+	Not seeing the above on the server..
+	
+
+* Running out of FCMH's and threads hanging in fidc_get()
+	On this deadlock.. check the refcnts on the fcmh's, this may be a 
+		true case of exhaustion.
+		- Refcnts checked out to be ok.
+
+	Problem described and fixed in r5093
+
+	Here's a deadlock:
+
+Thread 10 (Thread 1199630656 (LWP 5936)):
+#0  0x0000000000425cb8 in _lc_get ()
+#1  0x0000000000425a4a in lc_getnb ()
+#2  0x0000000000424947 in fidc_reap ()
+#3  0x00000000004260b1 in fidc_get ()
+#4  0x00000000004296cb in __fidc_lookup_inode ()
+#5  0x0000000000404088 in slash2fuse_fidc_putget ()
+#6  0x000000000040a229 in slash2fuse_create ()
+#7  0x00002b264fa70f53 in fuse_reply_err () from /usr/lib/libfuse.so.2
+#8  0x00000000004036ec in slash2fuse_listener_loop ()
+#9  0x00002b2650094305 in start_thread () from /lib64/libpthread.so.0
+#10 0x00002b265037550d in clone () from /lib64/libc.so.6
+#11 0x0000000000000000 in ?? ()
+
+
+	1/27/09
+		Here's the stack trace of a hung server thread:
+
+Thread 105 (Thread 1325521216 (LWP 5518)):
+#0  0x00000000004371ea in _tands ()
+#1  0x00000000004371c1 in spinlock ()
+#2  0x000000000043715c in reqlock ()
+#3  0x0000000000438a98 in _lc_put ()
+#4  0x00000000004385cc in fidc_reap ()
+#5  0x0000000000438cf6 in fidc_get ()
+#6  0x000000000043c310 in __fidc_lookup_inode ()
+#7  0x000000000042ed3f in slrmc_inode_cacheput ()
+#8  0x0000000000431b8c in slrmc_create ()
+#9  0x0000000000435bcb in slrmc_handler ()
+#10 0x0000000000478a13 in pscrpc_server_handle_request ()
+#11 0x000000000047acc2 in pscrpc_main ()
+#12 0x000000000047c3d0 in pscrpcthr_begin ()
+#13 0x00000000004535c6 in pscthr_begin ()
+#14 0x00002b6cc53f7305 in start_thread () from /lib64/libpthread.so.0
+#15 0x00002b6cc5ce750d in clone () from /lib64/libc.so.6
+#16 0x0000000000000000 in ?? ()
+
+
+* MDS Memory Leak
+	1/28/09
+	After running some large tests, it's clear that the slash mds is leaking memory badly.
+	This will have to be fixed before large scale tests can resume
+
+	mount_slash seems to be leaking too, especially on large tree traversals with unlinks.
+
+mds.c
+	mexpfcm_cfd_init()
+		mexpfcm
+		fidc_mds_info to f->fcmh_fcoo->fcoo_pri
+			. this wasn't being freed in mexpfcm_cfd_free()
+	
+
+* fcmh_2_gen(tmp) != FID_ANY __fidc_lookup_fg:320
+	Look at this assert.  I'm not convinced that fidc_lookup_load_inode() 
+	is useful.  It occasionally lets inodes into the cache without a proper
+	generation number.  Which then causes this assert.
+		
+	unique: 94876, opcode: UNLINK (10), nodeid: 379151, insize: 65
+
+	[1233209602:863246 msfsthr8:__fidc_lookup_inode:480]  fcmh@0x6f5a70 fcoo@(nil) f
+cooref(-66:-66) i+g:379151+281474976710655 s: CG lc:Free r:1 :: adding FID_ANY t
+o cache
+
+	[1233209602:866275 msfsthr5:__fidc_lookup_fg:320] [assert] fcmh_2_gen(tmp) != FI
+D_ANY
+
+
+	Look at removing load_inode alltogether.  Instead, maybe do an extra
+	ref on lookup so that proceeding operations are guaranteed to have 
+	their inodes cached.
+
+
+* rename is borked!
+
+[Switching to Thread 1216416064 (LWP 20298)]
+0x00002b67bf7031b5 in raise () from /lib64/libc.so.6
+(gdb) bt
+#0  0x00002b67bf7031b5 in raise () from /lib64/libc.so.6
+#1  0x00002b67bf704b20 in abort () from /lib64/libc.so.6
+#2  0x000000000044ef18 in psclogv (
+    fn=0x49a238 "..//..//psc_fsutil_libs/include/psc_util/lock.h", 
+    func=0x49a230 "_tands", line=211, subsys=4, level=0, options=0, 
+    fmt=0x49a268 "already holding the lock", ap=0x4880fcb0)
+    at ..//..//psc_fsutil_libs/psc_util/log.c:225
+#3  0x000000000044f150 in _psc_fatal (
+    fn=0x49a238 "..//..//psc_fsutil_libs/include/psc_util/lock.h", 
+    func=0x49a230 "_tands", line=211, subsys=4, level=0, options=0, 
+    fmt=0x49a268 "already holding the lock")
+    at ..//..//psc_fsutil_libs/psc_util/log.c:246
+#4  0x000000000041e0bc in _tands (s=0x6cd2b8)
+    at ..//..//psc_fsutil_libs/include/psc_util/lock.h:211
+#5  0x000000000041eab0 in trylock (s=0x6cd2b8)
+    at ..//..//psc_fsutil_libs/include/psc_util/lock.h:242
+#6  0x000000000041fa4f in fidc_child_rename (op=1, 
+    oldname=0x2aaaaad0e040 "FIO_TEST_ROOT", np=1, 
+    newname=0x2aaaaad0e04e "FIO_TEST_ROOT.old") at fidc_client.c:277
+#7  0x0000000000410ca0 in slash2fuse_rename (req=0x7e0dc0, parent=1, 
+    name=0x2aaaaad0e040 "FIO_TEST_ROOT", newparent=1, 
+    newname=0x2aaaaad0e04e "FIO_TEST_ROOT.old") at main.c:1208
+#8  0x0000000000410e85 in slash2fuse_rename_helper (req=0x7e0dc0, parent=1, 
+    name=0x2aaaaad0e040 "FIO_TEST_ROOT", newparent=1, 
+    newname=0x2aaaaad0e04e "FIO_TEST_ROOT.old") at main.c:1239
+#9  0x00000000004036cc in slash2fuse_listener_loop (arg=0x0)
+    at fuse_listener.c:260
+#10 0x00002b67bf4bf305 in start_thread () from /lib64/libpthread.so.0
+#11 0x00002b67bf7a050d in clone () from /lib64/libc.so.6
+#12 0x0000000000000000 in ?? ()
+(gdb) 

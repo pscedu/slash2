@@ -904,7 +904,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			/* Verify that the iov popped from the dynarray
 			 *   has the expected offset value.  Here this should always be true. 
 			 */
-			psc_assert(tiov->oftiov_off + (sblkoff * tiov->oftiov_blksz) 
+			psc_assert((off_t)(tiov->oftiov_off + (sblkoff * tiov->oftiov_blksz))
 				   == i_offa);
 
 			ATTR_SET(tiov->oftiov_flags, OFTIOV_REMAP_SRC);

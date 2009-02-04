@@ -32,10 +32,10 @@ struct slash_riithr {
 	struct pscrpc_thread	 srt_prt;
 };
 
-#define slioctlthr(thr)	((struct slio_ctlthr *)(thr)->pscthr_private)
-#define slricthr(thr)	((struct slash_ricthr *)(thr)->pscthr_private)
-#define slrimthr(thr)	((struct slash_rimthr *)(thr)->pscthr_private)
-#define slriithr(thr)	((struct slash_riithr *)(thr)->pscthr_private)
+PSCTHR_MKCAST(slioctlthr, slio_ctlthr, SLIOTHRT_CTL)
+PSCTHR_MKCAST(slricthr, slash_ricthr, SLIOTHRT_RIC)
+PSCTHR_MKCAST(slrimthr, slash_rimthr, SLIOTHRT_RIM)
+PSCTHR_MKCAST(slriithr, slash_riithr, SLIOTHRT_RII)
 
 void slric_init(void);
 void slrim_init(void);

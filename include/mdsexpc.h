@@ -3,11 +3,15 @@
 
 /* These structures provide back pointers into the Fid Cache to facilitate client-wise operations within the cache.  Such ops would include dereferencing the entire tree of client bmap references on connection close.
  */
+#include <time.h>
 
 #include "psc_types.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/list.h"
+#include "psc_util/atomic.h"
+
 #include "fidcache.h"
+#include "slashrpc.h"
 
 struct pscrpc_export;
 /*
@@ -19,9 +23,9 @@ struct pscrpc_export;
  */
 struct mexpbcm {
 	sl_blkno_t              mexpbcm_blkno;
-        u32                     mexpbcm_mode:29;
-	u32                     mexpbcm_net_cmd:2;
-	u32                     mexpbcm_net_inf:1;
+        u32                     mexpbcm_mode;
+	u32                     mexpbcm_net_cmd;
+	u32                     mexpbcm_net_inf;
         struct bmapc_memb      *mexpbcm_bmap;
 	struct pscrpc_export   *mexpbcm_export;
 	struct psclist_head     mexpbcm_lentry;      /* ref for client cb   */
@@ -40,11 +44,12 @@ struct mexpbcm {
 enum mexpbcm_modes {
 	MEXPBCM_DIO_REQD = (1<<0),  /* dio callback outstanding             */
 	MEXPBCM_CIO_REQD = (1<<1),  /* cached-io callback outstanding       */
-	MEXPBCM_WR       = (1<<2),  /* otherwise read                       */
-	MEXPBCM_CDIO     = (1<<3),  /* client requested directio            */
-        MEXPBCM_DIO      = (1<<4),  /* otherwise caching mode               */
-	MEXPBCM_INIT     = (1<<5),  /* on it's way, block on the fcmh waitq */
-	MEXPBCM_RPC_CANCEL = (1<<6)
+	MEXPBCM_RD       = (1<<2),
+	MEXPBCM_WR       = (1<<3),
+	MEXPBCM_CDIO     = (1<<4),  /* client requested directio            */
+        MEXPBCM_DIO      = (1<<5),  /* otherwise caching mode               */
+	MEXPBCM_INIT     = (1<<6),  /* on it's way, block on the fcmh waitq */
+	MEXPBCM_RPC_CANCEL = (1<<7)
 };
 
 static inline int
@@ -85,21 +90,26 @@ SPLAY_PROTOTYPE(exp_bmaptree, mexpbcm, mexpbcm_exp_tentry, mexpbmapc_cmp);
  */
 struct mexpfcm {
 	int                   mexpfcm_flags;
-        struct fidc_memb_handle *mexpfcm_fcmh; /* point to the fcm*/
+        struct fidc_membh    *mexpfcm_fcmh;       /* point to the fcm*/
 	u64                   mexpfcm_fcm_opcnt;  /* detect fcm updates */
 	u64                   mexpfcm_loc_opcnt;  /* count outstanding updates */
 	u64                   mexpfcm_rem_opcnt;  /* detect remote updates */
         psc_spinlock_t        mexpfcm_lock;
-        struct exp_bmaptree   mexpfcm_bmaps;      /* my tree of bmap pointers */
+	union {
+		struct exp_bmaptree f_bmaps; /* my tree of bmap pointers */ 
+	} mexpfcm_ford;
         struct pscrpc_export *mexpfcm_export;     /* backpointer to our export */
         SPLAY_ENTRY(mexpfcm)  mexpfcm_fcm_tentry; /* fcm tree entry */
+#define mexpfcm_bmaps mexpfcm_ford.f_bmaps
 };
 
-#define MEXPFCM_LOCK(m)  spinlock(&(m)->mecm_lock
-#define MEXPFCM_ULOCK(m) freelock(&(m)->mecm_lock
+#define MEXPFCM_LOCK(m)  spinlock(&(m)->mexpfcm_lock)
+#define MEXPFCM_ULOCK(m) freelock(&(m)->mexpfcm_lock)
 
 enum mexpfcm_states {
-	MEXPFCM_CLOSING = (1<<0)
+	MEXPFCM_CLOSING   = (1<<0),
+	MEXPFCM_REGFILE   = (1<<1),
+	MEXPFCM_DIRECTORY = (1<<2)
 };
 
 #define mexpfcm2fid(m)		fcmh_2_fid((m)->mexpfcm_fcmh)
@@ -108,11 +118,11 @@ enum mexpfcm_states {
 static inline int
 mexpfcm_cache_cmp(const void *x, const void *y)
 {
-	const struct mexpfcm *a = x, *b = y;
-
-        if (mexpfcm2fid(a) > mexpfcm2fid(b))
+	const struct mexpfcm *a=x, *b=y;
+	
+        if (a->mexpfcm_export > b->mexpfcm_export)
                 return 1;
-        else if (mexpfcm2fid(a) < mexpfcm2fid(b))
+        else if (a->mexpfcm_export < b->mexpfcm_export)
                 return -1;
         return 0;
 }
@@ -160,24 +170,35 @@ SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
 
 static inline void
-bmdsi_sanity_locked(struct bmapc_memb *bmap, int dio_check)
+bmdsi_sanity_locked(struct bmapc_memb *bmap, int dio_check, int *wr)
 {
-	int wtrs, rdrs;
 	struct bmap_mds_info *mdsi = bmap->bcm_mds_pri;
 
-	wtrs = atomic_read(&mdsi->bmdsi_wr_ref);
-        rdrs = atomic_read(&mdsi->bmdsi_rd_ref);
-        psc_assert(wtrs >= 0 && rdrs >= 0);
-	if (dio_check && (wtrs > 1 || wtrs && rdrs))
+	wr[0] = atomic_read(&mdsi->bmdsi_wr_ref);
+        wr[1] = atomic_read(&mdsi->bmdsi_rd_ref);
+        psc_assert(wr[0] >= 0 && wr[1] >= 0);
+	if (dio_check && (wr[0] > 1 || (wr[0] && wr[1])))
 		psc_assert(bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_DIO);
 }
 
 struct fidc_mds_info {
 	struct fcm_exports fmdsi_exports; /* tree of mexpfcm */
-	atomic_t fmdsi_ref;
-	u32    fmdsi_xid;
+	sl_inodeh_t        fmdsi_inodeh; // MDS sl_inodeh_t goes here
+	atomic_t           fmdsi_ref;
+	u32                fmdsi_xid;
+	void              *fmdsi_data;
 };
 
+#define fcmh_2_inoh(f) (&((struct fidc_mds_info *)(&(f)->fcmh_fcoo->fcoo_pri))->fmdsi_inodeh)
+
+static inline void
+fmdsi_init(struct fidc_mds_info *mdsi, void *pri)
+{
+	SPLAY_INIT(&mdsi->fmdsi_exports);
+	atomic_set(&mdsi->fmdsi_ref, 0);
+	mdsi->fmdsi_xid = 0;
+	mdsi->fmdsi_data = pri;
+}
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
  */

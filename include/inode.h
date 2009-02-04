@@ -51,7 +51,8 @@
 #define SL_REPL_OLD      2
 #define SL_REPL_ACTIVE   3
 
-typedef u32 sl_inum_t;
+typedef u32 sl_mds_id_t;
+typedef u64 sl_inum_t;
 typedef u32 sl_blkno_t;  /* block number type */
 typedef u32 sl_ios_id_t; /* io server id: 16 bit site id
 			  *               15 bit resource id
@@ -60,6 +61,10 @@ typedef u32 sl_ios_id_t; /* io server id: 16 bit site id
 
 #define IOS_ID_ANY (~(sl_ios_id_t)0)
 #define BLKNO_ANY  (~(sl_blkno_t)0)
+
+#define SL_MDS_ID_BITS   8 /* These 8 bits compose the first bits of the inode
+			    *  number */
+#define SL_MDS_ID_MASK ((2 << SL_MDS_ID_BITS) - 1)
 
 /*
  * sl_global_id_build - produce a unique 32 bit identifier from the
@@ -164,11 +169,11 @@ typedef struct slash_inode_store {
 	size_t        ino_nrepls;                 /* if 0, use ino_prepl     */
 	psc_crc_t     ino_rs_crc;                 /* crc of the replicas     */
 	psc_crc_t     ino_crc;                    /* crc of the inode        */
-} sl_inode_t;
+} sl_inode_mds_t;
 
 
 typedef struct slash_inode_handle {
-	sl_inode_t     inoh_ino;
+	sl_inode_mds_t inoh_ino;
 	psc_spinlock_t inoh_lock;
 	int            inoh_flags;
 	sl_replica_t  *inoh_replicas;
@@ -185,10 +190,10 @@ enum slash_inode_handle_flags {
 };
 
 #define FCMH_2_INODEP(f) (&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
-#define COPY_INODE_2_FCMH(i, f) {					\
-		memcpy(&(f)->fcmh_memb.fcm_inodeh.inoh_ino, (i),	\
-		       sizeof(*(i)));					\
-	}
+
+#define COPYFID(d, s) 				\
+	memcpy((d), (s), sizeof(*(d)))
+	
 
 #define INOH_FLAG(field, str) ((field) ? (str) : "")
 #define DEBUG_INOH_FLAGS(i)					\
