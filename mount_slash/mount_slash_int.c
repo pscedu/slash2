@@ -110,6 +110,7 @@ msl_oftrq_destroy(struct offtree_req *r)
 		pscrpc_set_destroy(r->oftrq_fill.oftfill_reqset);
 }
  
+/* unused */
 __static struct msl_fhent *
 msl_fhent_new(void)
 {
@@ -241,6 +242,7 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 	for (i=mp->nblks; i < n; i++) {
 		bmap = bmaps[i];
 		offtree_destroy(bmap->bcm_oftr);
+//		PSCFREE(bmap->bcm_mds_pri);
 		PSCFREE(bmap);
 	}
 	PSCFREE(iovs);
@@ -790,7 +792,7 @@ msl_pages_track_pending(struct offtree_req *r,
          */
         if (!r->oftrq_fill.oftfill_inprog)
                 r->oftrq_fill.oftfill_inprog =
-                        PSCALLOC(sizeof(struct dynarray));
+                        PSCALLOC(sizeof(struct dynarray)); /* XXX not freed */
         /* This iov is being loaded in by another
          *  thread, place it in our 'fill' structure
          *  and check on it later.
@@ -1332,6 +1334,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	psc_assert(tsize == size);
 	for (j=0; j < i; j++)
 		msl_oftrq_destroy(&r[j]);
+	free(r);
 	
 	return ((int)size);
 }
