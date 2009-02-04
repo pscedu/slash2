@@ -222,7 +222,7 @@ site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
 	cfgMode = SL_STRUCT_RES;
 	if (snprintf(currentRes->res_name, RES_NAME_MAX, "%s%s",
 		     $2, currentSite->site_name) >= RES_NAME_MAX)
-		psc_fatal("Resource name too long");
+		psc_fatalx("Resource name too long");
 	psc_trace("ResName %s", currentRes->res_name);
 	free($2);
 };
@@ -242,6 +242,9 @@ peers          : peer                              |
 
 peer           : RESOURCE_NAME
 {
+	if (currentRes->res_npeers >= SL_PEER_MAX)
+		psc_fatalx("reached max (%d) npeers for resource",
+		    SL_PEER_MAX);
 	currentRes->res_peertmp[currentRes->res_npeers] = $1;
 	currentRes->res_npeers++;
 };
