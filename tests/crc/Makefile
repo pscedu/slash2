@@ -1,6 +1,6 @@
 # $Id$
 
-include Makefile.path
+include ../Makefile.path
 
 PROG=		crc_test
 SRCS+=		crc.c
