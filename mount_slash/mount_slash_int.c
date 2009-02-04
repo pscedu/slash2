@@ -1264,17 +1264,20 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	/* Foreach block range, get its bmap and make a request into its 
 	 *  offtree.  This first loop retrieves all the pages.
 	 */
-	for (i=0; s < e; s++, i++) {
+	for (i=0; s < e; s++) {
 		/* Load up the bmap, if it's not available then we're out of 
 		 *  luck because we have no idea where the data is!
 		 */
 		b = msl_bmap_load(mfh, s, (i ? 0 : (e-s)), (op == MSL_READ) ?
 				  SRIC_BMAP_READ : SRIC_BMAP_WRITE);
-		if (!b)
-			return -EIO;
+		if (!b) {
+			rc = -EIO;
+			goto out;
+		}
 		/* Malloc offtree request and pass to the initializer.
 		 */
 		r = realloc(r, (sizeof(*r)) * i);
+		i++;
 
 		msl_oftrq_build(&r[i], b, mslfh_2_cfd(mfh), roff, tlen, 
 				(op == MSL_READ) ? OFTREQ_OP_READ : 
@@ -1284,7 +1287,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		if (!(r->oftrq_op & OFTREQ_OP_DIO)) {
 			if ((rc = offtree_region_preprw(r))) {
 				psc_error("offtree_region_preprw rc=%d", rc);
-				return (rc);
+				goto out;
 			}
 		}
 		roff += tlen;
@@ -1310,7 +1313,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 			    ((r->oftrq_op & OFTREQ_OP_PRFFP) ||
 			     (r->oftrq_op & OFTREQ_OP_PRFLP)))
 				if ((rc = msl_pages_blocking_load(&r[i])))
-					return (rc);
+					goto out;
 			
 			if (op == MSL_READ)
 				/* Copying into the application buffer, and 
@@ -1332,9 +1335,11 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	}
 
 	psc_assert(tsize == size);
+
+	rc = size;
+ out:
 	for (j=0; j < i; j++)
 		msl_oftrq_destroy(&r[j]);
 	free(r);
-	
-	return ((int)size);
+	return (rc);
 }
