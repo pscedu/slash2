@@ -56,7 +56,8 @@ fidc_child_free(struct fidc_membh *p, struct fidc_child *c)
 
 	psc_assert(c->fcc_fcmh->fcmh_pri == c);
 	c->fcc_fcmh->fcmh_pri = NULL;
-	psclist_del(&c->fcc_lentry);
+	/* reqlock p->fcmh_lock */
+	psclist_del(&c->fcc_lentry); /* XXX lock the parent? */
 	ureqlock(&p->fcmh_lock, l);
 
 	DEBUG_FCMH(PLL_INFO, p, "<-- p fidc_child_free()!!");

@@ -77,7 +77,7 @@ msl_fbr_new(struct bmapc_memb *b, int rw)
 	return (r);
 }
 
-
+/* XXX this is never called */
 static inline void
 msl_fbr_free(struct msl_fbr *r, struct fhent *f)
 {

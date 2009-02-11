@@ -95,6 +95,7 @@ slrmc_connect(struct pscrpc_request *rq)
 	psc_assert(!sexp->sexp_data);
 	sexp->sexp_type = MDS_CLI_EXP;
 	sexp->sexp_export = e;
+	/* XXX allocated twice? slashrpc_export_get() */
 	mexp_cli = sexp->sexp_data = PSCALLOC(sizeof(*mexp_cli));
 	/* Allocate client service for callbacks.
 	 */

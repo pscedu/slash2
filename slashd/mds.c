@@ -791,10 +791,10 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		/* Create and initialize the new bmap while holding the
 		 *  fcmh lock which is needed for atomic tree insertion.
 		 */
-		*bmap = PSCALLOC(sizeof(struct bmapc_memb));
+		*bmap = PSCALLOC(sizeof(struct bmapc_memb)); /* XXX not freed */
 		(*bmap)->bcm_blkno = mq->blkno;
 		(*bmap)->bcm_bmapih.bmapi_mode = BMAP_MDS_INIT;
-		(*bmap)->bcm_mds_pri = PSCALLOC(sizeof(struct bmap_mds_info));
+		(*bmap)->bcm_mds_pri = PSCALLOC(sizeof(struct bmap_mds_info)); /* XXX not freed */
 		LOCK_INIT(&(*bmap)->bcm_lock);
 		psc_waitq_init(&(*bmap)->bcm_waitq);
 		(*bmap)->bcm_fcmh = f;
