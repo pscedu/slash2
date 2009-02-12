@@ -6,15 +6,15 @@
 
 #include "pfl.h"
 #include "psc_util/alloc.h"
-#include "psc_util/thread.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/strlcpy.h"
+#include "psc_util/thread.h"
+#include "psc_util/usklndthr.h"
 
 #include "sliod.h"
 #include "slconfig.h"
 #include "rpc.h"
 #include "pathnames.h"
-
-extern void *nal_thread(void *);
 
 const char *progname;
 
@@ -25,28 +25,23 @@ usage(void)
 	exit(1);
 }
 
-void *
-sliolndthr_start(void *arg)
+int
+psc_usklndthr_get_type(const char *namefmt)
 {
-	struct psc_thread *thr;
-
-	thr = arg;
-	return (nal_thread(thr->pscthr_private));
+	if (namefmt[0] == 'a')
+		return (SLIOTHRT_LNETAC);
+	return (SLIOTHRT_USKLNDPL);
 }
 
 void
-spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
+psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
+    va_list ap)
 {
-	extern int tcpnal_instances;
-	struct psc_thread *pt;
+	size_t n;
 
-	if (startf != nal_thread)
-		psc_fatalx("unexpected LND start routine");
-
-	pt = PSCALLOC(sizeof(*pt));
-	pscthr_init(pt, SLIOTHRT_LND, sliolndthr_start, arg, "sliolndthr%d",
-	    tcpnal_instances - 1);
-	*t = pt->pscthr_pthread;
+	n = strlcpy(buf, "slio", PSC_THRNAME_MAX);
+	if (n < PSC_THRNAME_MAX)
+		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
 int
@@ -71,17 +66,16 @@ main(int argc, char *argv[])
 			usage();
 		}
 
+	pfl_init();
+
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
 	if (getenv("TCPLND_SERVER") == NULL)
 		psc_fatalx("please export TCPLND_SERVER");
 
-	pfl_init();
 	thr = PSCALLOC(sizeof(*thr));
 	pscthr_init(&pscControlThread, SLIOTHRT_CTL, NULL, thr,
 	    "slioctlthr");
-
-	lnet_thrspawnf = spawn_lnet_thr;
 
 	slashGetConfig(cfn);
 	libsl_init(PSC_SERVER);

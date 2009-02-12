@@ -7,7 +7,9 @@
 #include "pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
+#include "psc_util/usklndthr.h"
 
 #include "slconfig.h"
 #include "pathnames.h"
@@ -17,7 +19,6 @@
 #include "fidc_common.h"
 #include "mdsrpc.h"
 
-void *nal_thread(void *);
 void *zfsVfs;
 
 const char *progname;
@@ -29,28 +30,23 @@ usage(void)
 	exit(1);
 }
 
-void *
-sllndthr_start(void *arg)
+int
+psc_usklndthr_get_type(const char *namefmt)
 {
-	struct psc_thread *thr;
-
-	thr = arg;
-	return (nal_thread(thr->pscthr_private));
+	if (namefmt[0] == 'a')
+		return (SLTHRT_LNETAC);
+	return (SLTHRT_USKLNDPL);
 }
 
 void
-spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
+psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
+    va_list ap)
 {
-	extern int tcpnal_instances;
-	struct psc_thread *pt;
+	size_t n;
 
-	if (startf != nal_thread)
-		psc_fatalx("unexpected LND start routine");
-
-	pt = PSCALLOC(sizeof(*pt));
-	pscthr_init(pt, SLTHRT_LND, sllndthr_start, arg, "sllndthr%d",
-	    tcpnal_instances - 1);
-	*t = pt->pscthr_pthread;
+	n = strlcpy(buf, "sl", PSC_THRNAME_MAX);
+	if (n < PSC_THRNAME_MAX)
+		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
 int
@@ -92,8 +88,6 @@ main(int argc, char *argv[])
 
 	//slFsops = PSCALLOC(sizeof(*slFsops));
         //slFsops->slfsop_getattr = slash2fuse_stat;
-
-	lnet_thrspawnf = spawn_lnet_thr;
 
 	slashGetConfig(cfn);
 	libsl_init(PSC_SERVER);

@@ -1,18 +1,19 @@
 /* $Id$ */
 
-#ifndef __SLIOD_H__
-#define __SLIOD_H__
+#ifndef _SLIOD_H_
+#define _SLIOD_H_
 
 #include "psc_rpc/service.h"
 #include "psc_util/thread.h"
 
-#define SLIOTHRT_CTL	0	/* control */
-#define SLIOTHRT_LND	1	/* lustre networking helper */
-#define SLIOTHRT_RIC	2	/* RPC comm */
-#define SLIOTHRT_RIM	3	/* RPC comm */
-#define SLIOTHRT_RII	4	/* RPC comm */
-#define SLIOTHRT_TINTV	5	/* timer interval */
-#define SLIOTHRT_TIOS	6	/* iostats updater */
+#define SLIOTHRT_CTL		0	/* control */
+#define SLIOTHRT_LNETAC		1	/* lustre net accept thr */
+#define SLIOTHRT_USKLNDPL	1	/* userland socket lustre net dev poll thr */
+#define SLIOTHRT_RIC		2	/* RPC comm */
+#define SLIOTHRT_RIM		3	/* RPC comm */
+#define SLIOTHRT_RII		4	/* RPC comm */
+#define SLIOTHRT_TINTV		5	/* timer interval */
+#define SLIOTHRT_TIOS		6	/* iostats updater */
 
 struct slio_ctlthr {
 	int sc_st_nclients;
@@ -43,4 +44,4 @@ void slrii_init(void);
 void sliotimerthr_spawn(void);
 void slioctlthr_main(const char *);
 
-#endif /* __SLIOD_H__ */
+#endif /* _SLIOD_H_ */

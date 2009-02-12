@@ -11,16 +11,17 @@
 struct slash_sb_mem;
 
 /* Slash server thread types. */
-#define SLTHRT_CTL	0	/* control */
-#define SLTHRT_ACSVC	1	/* access service */
-#define SLTHRT_RMC	2	/* Client <-> MDS messages */
-#define SLTHRT_RMI	3	/* MDS <-> I/O messages */
-#define SLTHRT_RMM	4	/* MDS <-> MDS messages */
-#define SLTHRT_LND	5	/* lustre networking device helper */
-#define SLTHRT_TINTV	6	/* timer interval */
-#define SLTHRT_TIOS	7	/* iostats updater */
-#define SLTHRT_MDSCOH	8	/* mds coherency thread */
-#define SLTHRT_MDSFSSYNC 9      /* mds fs syncer */
+#define SLTHRT_CTL		0	/* control */
+#define SLTHRT_ACSVC		1	/* access service */
+#define SLTHRT_RMC		2	/* Client <-> MDS messages */
+#define SLTHRT_RMI		3	/* MDS <-> I/O messages */
+#define SLTHRT_RMM		4	/* MDS <-> MDS messages */
+#define SLTHRT_LNETAC		5	/* lustre net accept thr */
+#define SLTHRT_USKLNDPL		6	/* userland socket lustre net dev poll thr */
+#define SLTHRT_TINTV		7	/* timer interval */
+#define SLTHRT_TIOS		8	/* iostats updater */
+#define SLTHRT_MDSCOH		9	/* mds coherency thread */
+#define SLTHRT_MDSFSSYNC	10      /* mds fs syncer */
 
 
 struct slash_rmcthr {

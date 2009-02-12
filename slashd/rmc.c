@@ -14,8 +14,9 @@
 #include <fcntl.h>
 #undef __USE_GNU
 
-#include <unistd.h>
 #include <errno.h>
+#include <inttypes.h>
+#include <unistd.h>
 
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"

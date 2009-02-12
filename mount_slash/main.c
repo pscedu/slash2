@@ -24,6 +24,7 @@
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
+#include "psc_util/usklndthr.h"
 
 #include "control.h"
 #include "fidc_client.h"
@@ -1599,33 +1600,23 @@ struct fuse_lowlevel_ops zfs_operations =
 	.destroy    = slash2fuse_destroy, //
 };
 
-
-
-void *nal_thread(void *);
-
-void *
-lndthr_begin(void *arg)
+int
+psc_usklndthr_get_type(const char *namefmt)
 {
-	struct psc_thread *thr;
-
-	thr = arg;
-	return (nal_thread(thr->pscthr_private));
+	if (namefmt[0] == 'a')
+		return (MSTHRT_LNETAC);
+	return (MSTHRT_USKLNDPL);
 }
 
 void
-mslndthr_spawn(pthread_t *t, void *(*startf)(void *), void *arg)
+psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
+    va_list ap)
 {
-	extern int tcpnal_instances;
-	struct psc_thread *pt;
+	size_t n;
 
-	if (startf != nal_thread)
-		psc_fatalx("unknown LNET start routine");
-
-	pt = PSCALLOC(sizeof(*pt));
-	pscthr_init(pt, MSTHRT_LND, lndthr_begin, arg, "mslndthr%d",
-	    tcpnal_instances - 1);
-	*t = pt->pscthr_pthread;
-	pt->pscthr_private = arg;
+	n = strlcpy(buf, "ms", PSC_THRNAME_MAX);
+	if (n < PSC_THRNAME_MAX)
+		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
 enum {
@@ -1740,8 +1731,6 @@ main(__unusedx int argc, char *argv[])
 	pfl_init();
 
 	pscthr_init(&msfusethr, MSTHRT_FUSE, NULL, NULL, "msfusethr");
-
-	lnet_thrspawnf = mslndthr_spawn;
 
 	slash_init(NULL);
 

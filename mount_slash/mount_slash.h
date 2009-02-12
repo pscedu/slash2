@@ -17,11 +17,12 @@ struct pscrpc_request;
 #define MSTHRT_CTL	0	/* control interface */
 #define MSTHRT_FS	1	/* fuse filesystem syscall handlers */
 #define MSTHRT_RCM	2	/* service RPC reqs for client from MDS */
-#define MSTHRT_LND	3	/* lustre networking dev */
-#define MSTHRT_EQPOLL	4	/* LNET event queue polling */
-#define MSTHRT_TINTV	5
-#define MSTHRT_TIOS	6
-#define MSTHRT_FUSE	7
+#define MSTHRT_LNETAC	3	/* lustre net accept thr */
+#define MSTHRT_USKLNDPL	4	/* userland socket lustre net dev poll thr */
+#define MSTHRT_EQPOLL	5	/* LNET event queue polling */
+#define MSTHRT_TINTV	6	/* timer interval thread */
+#define MSTHRT_TIOS	7	/* timer iostat updater */
+#define MSTHRT_FUSE	8	/* fuse internal manager */
 
 #define MSL_IO_CB_POINTER_SLOT 1
 #define MSL_WRITE_CB_POINTER_SLOT 2

@@ -6,6 +6,7 @@
 #include <sys/param.h>
 
 #include <string.h>
+#include <inttypes.h>
 
 #include "psc_util/assert.h"
 #include "psc_util/crc.h"

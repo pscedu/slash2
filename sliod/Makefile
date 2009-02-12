@@ -36,16 +36,16 @@ SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/timerthr.c
+SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
+
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 SRCS+=		${LNET_LIB_SRCS}
 SRCS+=		${LNET_CFS_SRCS}
 
 INCLUDES+=	-I${LNET_BASE}/include
-INCLUDES+=	-I${LNET_BASE}/lnet
-INCLUDES+=	-I${LNET_BASE}/libcfs
-INCLUDES+=	-I${LNET_BASE}/socklnd
+INCLUDES+=	-I${LNET_BASE}
 DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
 DEFINES+=	-DHAVE_LIBPTHREAD -DHAVE_LIBPTHREAD_DEFINED
 LDFLAGS+=	${THREAD_LIBS}
