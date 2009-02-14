@@ -1,3 +1,5 @@
+/* $Id$ */
+
 #ifndef SL_BUFFER_H
 #define SL_BUFFER_H 1
 
@@ -92,23 +94,20 @@ struct sl_buffer {
 #define SLB_FLAGS_FMT "%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLB(level, slb, fmt, ...)					\
-        do {                                                            \
-                _psclog(__FILE__, __func__, __LINE__,                   \
-                        PSS_OTHER, level, 0,                            \
-                        " slb@%p b:%p sz(%d/%d) bsz:%u"			\
-                        " ref:%d umref:%d inf:%d infp %d fl:"SLB_FLAGS_FMT \
-			" fcm:%p lco:%p "fmt,				\
-                        (slb), (slb)->slb_base, (slb)->slb_nblks,	\
-			vbitmap_nfree((slb)->slb_inuse),		\
-			(slb)->slb_blksz,				\
-			atomic_read(&(slb)->slb_ref),			\
-			atomic_read(&(slb)->slb_unmapd_ref),		\
-			atomic_read(&(slb)->slb_inflight),		\
-			atomic_read(&(slb)->slb_inflpndg),		\
-			DEBUG_SLB_FLAGS(slb),				\
-			(slb)->slb_lc_fcm, (slb)->slb_lc_owner,		\
-			## __VA_ARGS__);				\
-	} while(0)
+	psc_logs(PSS_OTHER, (level),					\
+		" slb@%p b:%p sz(%d/%d) bsz:%u"				\
+		" ref:%d umref:%d inf:%d infp %d fl:"SLB_FLAGS_FMT	\
+		" fcm:%p lco:%p "fmt,					\
+		(slb), (slb)->slb_base, (slb)->slb_nblks,		\
+		vbitmap_nfree((slb)->slb_inuse),			\
+		(slb)->slb_blksz,					\
+		atomic_read(&(slb)->slb_ref),				\
+		atomic_read(&(slb)->slb_unmapd_ref),			\
+		atomic_read(&(slb)->slb_inflight),			\
+		atomic_read(&(slb)->slb_inflpndg),			\
+		DEBUG_SLB_FLAGS(slb),					\
+		(slb)->slb_lc_fcm, (slb)->slb_lc_owner,			\
+		## __VA_ARGS__)
 
 	
 #define DUMP_SLB(level, slb, fmt, ...)					\
@@ -129,8 +128,7 @@ struct sl_buffer {
 					     __m->oft_norl.oft_iov,	\
 					     "iov of memb %p", __m);	\
 			} else						\
-				_psclog(__FILE__, __func__, __LINE__,	\
-					PSS_OTHER, level, 0,		\
+				psc_logs(PSS_OTHER, (level),		\
 					"--> Unmapped SLB ref %p memb " \
 					fmt, __r, ## __VA_ARGS__);	\
 		}							\

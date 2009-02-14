@@ -204,7 +204,7 @@ enum slash_inode_handle_flags {
 #define INOH_FLAGS_FMT "%s%s%s"
 
 #define DEBUG_INOH(level, i, fmt, ...)					\
-	_psclog(__FILE__, __func__, __LINE__, PSS_OTHER, (level), 0,	\
+	psc_logs(PSS_OTHER, (level),					\
 		" inoh@%p f:"FIDFMT" fl:"INOH_FLAGS_FMT			\
 		"o:%"_P_U64"x bsz:%zu lb:%zu "				\
 		"lbsz:%u cs:%u pr:%u nr:%zu icrc:%"_P_U64"x "		\
@@ -214,7 +214,8 @@ enum slash_inode_handle_flags {
 		(i)->inoh_ino.ino_off, (i)->inoh_ino.ino_bsz,		\
 		(i)->inoh_ino.ino_lblk,					\
 		(i)->inoh_ino.ino_lblk_sz, (i)->inoh_ino.ino_csnap,	\
-		(i)->inoh_ino.ino_prepl.bs_id, (i)->inoh_ino.ino_nrepls,	\
+		(i)->inoh_ino.ino_prepl.bs_id,				\
+		(i)->inoh_ino.ino_nrepls,				\
 		(i)->inoh_ino.ino_rs_crc, (i)->inoh_ino.ino_crc,	\
 		## __VA_ARGS__)
 

@@ -253,19 +253,15 @@ enum oft_iov_flags {
 #define OFFTIOV_FLAGS_FMT "%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
-	do {								\
-		_psclog(__FILE__, __func__, __LINE__,			\
-			PSS_OTHER, level, 0,				\
-			" oftiov@%p b:%p o:%"_P_U64"x l:%"_P_U64"d"	\
-			" bsz:%"_P_U64"d pri:%p fl:"OFFTIOV_FLAGS_FMT	\
-			" m:%p "fmt,					\
-			iov, iov->oftiov_base, iov->oftiov_off,		\
-			iov->oftiov_nblks, iov->oftiov_blksz,	        \
-			iov->oftiov_pri, DEBUG_OFFTIOV_FLAGS(iov),	\
-			iov->oftiov_memb,				\
-			## __VA_ARGS__);				\
-	} while(0)
-
+	psc_logs(PSS_OTHER, (level),					\
+		" oftiov@%p b:%p o:%"_P_U64"x l:%"_P_U64"d"		\
+		" bsz:%"_P_U64"d pri:%p fl:"OFFTIOV_FLAGS_FMT		\
+		" m:%p "fmt,						\
+		(iov), (iov)->oftiov_base, (iov)->oftiov_off,		\
+		(iov)->oftiov_nblks, (iov)->oftiov_blksz,		\
+		(iov)->oftiov_pri, DEBUG_OFFTIOV_FLAGS(iov),		\
+		(iov)->oftiov_memb,					\
+		## __VA_ARGS__)
 
 #define OFT_MEMB_INIT(m, p) {					\
 		psc_waitq_init(&(m)->oft_waitq);		\
@@ -327,12 +323,12 @@ enum oft_attributes {
 #define DEBUG_OFT(level, oft, fmt, ...)					\
 	do {								\
 		if (ATTR_TEST((oft)->oft_flags, OFT_LEAF)) {		\
-			_psclog(__FILE__, __func__, __LINE__,		\
-				PSS_OTHER, level, 0,			\
+			psc_logs(PSS_OTHER, (level),			\
 				" oft@%p pos:%hhu d:%hhu w:%hu p:%p "	\
 				"ref:%d rref:%d wref:%d"		\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
-				oft, (oft)->oft_pos, (oft)->oft_depth,	\
+				(oft), (oft)->oft_pos,			\
+				(oft)->oft_depth,			\
 				(oft)->oft_width, (oft)->oft_parent,	\
 				atomic_read(&(oft)->oft_ref), 		\
 				atomic_read(&(oft)->oft_rdop_ref),	\
@@ -340,12 +336,12 @@ enum oft_attributes {
 				DEBUG_OFTM_FLAGS(oft),			\
 				## __VA_ARGS__);			\
 		} else {						\
-			_psclog(__FILE__, __func__, __LINE__,		\
-				PSS_OTHER, level, 0,			\
+			psc_logs(PSS_OTHER, (level),			\
 				" oft@%p pos:%hhu d:%hhu w:%hu p:%p "	\
 				"ref:%d rref:%d wref:%d"		\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
-				oft, (oft)->oft_pos, (oft)->oft_depth,  \
+				(oft), (oft)->oft_pos,			\
+				(oft)->oft_depth,			\
 				(oft)->oft_width, (oft)->oft_parent,	\
 				atomic_read(&(oft)->oft_ref),		\
 				atomic_read(&(oft)->oft_rdop_ref),	\
@@ -431,19 +427,16 @@ oftrq_size_get(const struct offtree_req *r)
 	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_PRFLP), "l")
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
-	do {								\
-		_psclog(__FILE__, __func__, __LINE__,			\
-			PSS_OTHER, level, 0,				\
-			" oftr@%p o:%"_P_U64"x l:%"_P_U64"d node:%p darray:%p"\
-			" root:%p op:%hhu d:%hhu w:%hu "		\
-			REQ_OFTRQ_FLAGS_FMT" "fmt,			\
-			oftr, (oftr)->oftrq_off, (oftr)->oftrq_nblks,	\
-			(oftr)->oftrq_memb, (oftr)->oftrq_darray,	\
-			(oftr)->oftrq_root, (oftr)->oftrq_op,		\
-			(oftr)->oftrq_depth, (oftr)->oftrq_width,	\
-			DEBUG_OFTRQ_FLAGS(oftr),			\
-			## __VA_ARGS__);				\
-	} while(0)
+	psc_logs(PSS_OTHER, (level),					\
+		" oftr@%p o:%"_P_U64"x l:%"_P_U64"d node:%p darray:%p"	\
+		" root:%p op:%hhu d:%hhu w:%hu "			\
+		REQ_OFTRQ_FLAGS_FMT" "fmt,				\
+		(oftr), (oftr)->oftrq_off, (oftr)->oftrq_nblks,		\
+		(oftr)->oftrq_memb, (oftr)->oftrq_darray,		\
+		(oftr)->oftrq_root, (oftr)->oftrq_op,			\
+		(oftr)->oftrq_depth, (oftr)->oftrq_width,		\
+		DEBUG_OFTRQ_FLAGS(oftr),				\
+		## __VA_ARGS__)
 
 static inline int 
 oft_child_get(off_t o, struct offtree_root *r, int d, int abs_width)
