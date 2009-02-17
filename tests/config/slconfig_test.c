@@ -1,4 +1,4 @@
-/* $Id: zestConfigTest.c 1283 2007-07-17 16:43:48Z yanovich $ */
+/* $Id$ */
 
 #include <sys/types.h>
 #include <sys/stat.h>

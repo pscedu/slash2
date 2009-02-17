@@ -1,8 +1,8 @@
-/* $Id: main.c 4180 2008-09-16 21:50:48Z yanovich $ */
+/* $Id$ */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-
-#include <fcntl.h>
+#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,6 +10,7 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>

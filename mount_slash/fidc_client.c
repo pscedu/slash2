@@ -1,12 +1,14 @@
-/* $Id: fidcache.c 4191 2008-09-17 19:27:30Z yanovich $ */
+/* $Id$ */
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include <stdio.h>
-#include <sys/stat.h>
-#define __USE_GNU
-#define _GNU_SOURCE
 #include <string.h>
-#undef __USE_GNU
-#undef  _GNU_SOURCE
 
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"

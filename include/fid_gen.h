@@ -1,7 +1,9 @@
-/* $Id: fid.h 4384 2008-10-20 15:29:01Z pauln $ */
+/* $Id$ */
 
-#ifndef __FIDGEN_H__
-#define __FIDGEN_H__
+#ifndef _FIDGEN_H_
+#define _FIDGEN_H_
+
+#include <stdint.h>
 
 struct fidgen {
 	u64 fid;

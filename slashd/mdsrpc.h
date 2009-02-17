@@ -1,8 +1,7 @@
-/* $Id: rpc.h 4382 2008-10-17 17:56:07Z pauln $ */
-#ifndef __MDS_RPC_H__
-#define __MDS_RPC_H__ 1
+/* $Id$ */
 
-#include <sys/types.h>
+#ifndef _MDS_RPC_H_
+#define _MDS_RPC_H_
 
 #define SRMM_NTHREADS   8
 #define SRMM_NBUFS      1024
@@ -22,14 +21,12 @@
 #define SRMC_REPSZ      384
 #define SRMC_SVCNAME    "slrmcthr"
 
-extern void 
-rpc_initsvc(void);
-
 struct pscrpc_request;
+
+void rpc_initsvc(void);
 
 int slrmc_handler(struct pscrpc_request *);
 int slrmi_handler(struct pscrpc_request *);
 int slrmm_handler(struct pscrpc_request *);
 
-
-#endif
+#endif /* _MDS_RPC_H_ */

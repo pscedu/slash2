@@ -1,4 +1,4 @@
-/* $Id: fidcache.c 4191 2008-09-17 19:27:30Z yanovich $ */
+/* $Id$ */
 
 #include <stdio.h>
 
