@@ -22,6 +22,6 @@ mseqpollthr_main(__unusedx void *arg)
 void
 mseqpollthr_spawn(void)
 {
-	pscthr_init(&mseqpoll, MSTHRT_EQPOLL, mseqpollthr_main,
-	    NULL, "mseqpollthr");
+	pscthr_init(&mseqpoll, MSTHRT_EQPOLL,
+	    mseqpollthr_main, NULL, 0, "mseqpollthr");
 }

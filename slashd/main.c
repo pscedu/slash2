@@ -76,7 +76,8 @@ main(int argc, char *argv[])
 	pfl_init();
 
 	pscthr_init(&pscControlThread, SLTHRT_CTL, NULL,
-	    PSCALLOC(sizeof(struct psc_ctlthr)), "slctlthr");
+	    PSCALLOC(sizeof(struct psc_ctlthr)),
+	    sizeof(struct psc_ctlthr), "slctlthr");
 
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");

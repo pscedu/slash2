@@ -3,11 +3,11 @@
 #include <time.h>
 
 #include "psc_ds/listcache.h"
+#include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/assert.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
-#include "psc_rpc/rpc.h"
 
 #include "cache_params.h"
 //#include "mds.h"
@@ -196,6 +196,6 @@ mdscoh_init(void)
 		   "inflightBmapCbs");
 
 	bmapCbSet = nbreqset_init(NULL, mdscoh_cb);
-	pscthr_init(&pndgCacheCbThread, SLTHRT_MDSCOH, mdscohthr_begin,
-                    NULL, "mdscohthr");
+	pscthr_init(&pndgCacheCbThread, SLTHRT_MDSCOH,
+	    mdscohthr_begin, NULL, 0, "mdscohthr");
 }

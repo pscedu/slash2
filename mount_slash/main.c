@@ -102,6 +102,7 @@ msfsthr_ensure(void)
 		thr = PSCALLOC(sizeof(*thr));
 		_pscthr_init(thr, MSTHRT_FS, NULL,
 		    PSCALLOC(sizeof(struct msfs_thread)),
+		    sizeof(struct msfs_thread),
 		    PTF_FREE, msfsthr_teardown, "msfsthr%d",
 		    atomic_inc_return(&thrid) - 1);
 	}
@@ -1731,7 +1732,7 @@ main(__unusedx int argc, char *argv[])
 
 	pfl_init();
 
-	pscthr_init(&msfusethr, MSTHRT_FUSE, NULL, NULL, "msfusethr");
+	pscthr_init(&msfusethr, MSTHRT_FUSE, NULL, NULL, 0, "msfusethr");
 
 	slash_init(NULL);
 

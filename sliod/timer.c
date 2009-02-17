@@ -12,5 +12,5 @@ sliotimerthr_spawn(void)
 {
 	psc_timerthr_spawn(SLIOTHRT_TINTV, "sliotintvthr");
 	pscthr_init(&sliotiosthr, SLIOTHRT_TIOS,
-	    psc_timer_iosthr_main, NULL, "sltioiosthr");
+	    psc_timer_iosthr_main, NULL, 0, "sltioiosthr");
 }
