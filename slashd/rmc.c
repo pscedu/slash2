@@ -249,6 +249,7 @@ slrmc_create(struct pscrpc_request *rq)
 
 	RETURN(0);
 }
+
 static int 
 slrmc_open(struct pscrpc_request *rq) {
 	struct srm_open_req *mq;
@@ -382,7 +383,9 @@ slrmc_release(struct pscrpc_request *rq)
         struct srm_generic_rep *mp;
 	struct mexpfcm *m;
 	struct fidc_membh *f;
-	struct cfdent *c;
+	struct cfdent *c;       
+	struct fidc_mds_info *i;
+
 	slfid_t fid;
 	int rc;
 
@@ -401,6 +404,9 @@ slrmc_release(struct pscrpc_request *rq)
 	m = c->pri;
 	psc_assert(m->mexpfcm_fcmh);
 	f = m->mexpfcm_fcmh;
+
+	psc_assert(f->fcmh_fcoo);
+	i = f->fcmh_fcoo->fcoo_pri;
 	
 	rc = cfdfree(rq->rq_export, mq->cfd);
 	psc_info("cfdfree() cfd %"_P_U64"d rc=%d", 
@@ -411,18 +417,28 @@ slrmc_release(struct pscrpc_request *rq)
 	 */	
 	spinlock(&f->fcmh_lock);
 	
-	DEBUG_FCMH(PLL_INFO, f, "slrmc_release");
+	DEBUG_FCMH(PLL_DEBUG, f, "slrmc_release i->fmdsi_ref (%d)", 
+		   atomic_read(&i->fmdsi_ref));
 
-	if (f->fcmh_state & FCMH_FCOO_CLOSING) {
-		struct fidc_mds_info *i;
-		i = f->fcmh_fcoo->fcoo_pri;
+	if (atomic_dec_and_test(&i->fmdsi_ref)) {
+		psc_assert(SPLAY_EMPTY(&i->fmdsi_exports));
+		f->fcmh_state |= FCMH_FCOO_CLOSING;
+
+		DEBUG_FCMH(PLL_DEBUG, f, "calling zfsslash2_release");
 		mp->rc = zfsslash2_release(zfsVfs, fid, &mq->creds, 
 					   i->fmdsi_data);
+		/* Remove the fcoo but first make sure the open ref's 
+		 *  are ok.  This value is bogus, fmdsi_ref has the 
+		 *  the real open ref.  
+		 */	       
+		PSCFREE(i);
+		f->fcmh_fcoo->fcoo_pri = NULL;
+		f->fcmh_fcoo->fcoo_oref_rw[0] = 0;
 		fidc_fcoo_remove(f);
 	} else
 		mp->rc = 0;
-	freelock(&f->fcmh_lock);
 
+	freelock(&f->fcmh_lock);
 	RETURN(0);
 }
 

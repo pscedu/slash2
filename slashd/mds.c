@@ -159,9 +159,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 				mds_bmap_ref_del(bref);
 		} else
 			psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
-		
 	}
-
 	freelock(&m->mexpfcm_lock);
 	/* Grab the fcmh lock (it is responsible for fidc_mds_info
 	 *  serialization) and remove ourselves from the tree.
@@ -170,19 +168,6 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	if (SPLAY_REMOVE(fcm_exports, &i->fmdsi_exports, m) == NULL)
 		psc_fatalx("Failed to remove %p export(%p) from %p",
                            m, m->mexpfcm_export, &i->fmdsi_exports);
-
-	if (atomic_dec_and_test(&i->fmdsi_ref)) {
-		psc_assert(SPLAY_EMPTY(&i->fmdsi_exports));
-		f->fcmh_state |= FCMH_FCOO_CLOSING;
-		/* Remove the fcoo but first make sure the open ref's 
-		 *  are ok.  This value is bogus, fmdsi_ref has the 
-		 *  the real open ref.  
-		 */
-		PSCFREE(i);
-		f->fcmh_fcoo->fcoo_pri = NULL;
-		f->fcmh_fcoo->fcoo_oref_rw[0] = 0;
-		fidc_fcoo_remove(f);
-	}
         ureqlock(&f->fcmh_lock, l);
 
 	c->pri = NULL;
