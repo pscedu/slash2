@@ -15,12 +15,6 @@
 #define SLIOTHRT_TINTV		5	/* timer interval */
 #define SLIOTHRT_TIOS		6	/* iostats updater */
 
-struct slio_ctlthr {
-	int sc_st_nclients;
-	int sc_st_nsent;
-	int sc_st_nrecv;
-};
-
 struct slash_ricthr {
 	struct pscrpc_thread	 srt_prt;
 };
@@ -33,7 +27,6 @@ struct slash_riithr {
 	struct pscrpc_thread	 srt_prt;
 };
 
-PSCTHR_MKCAST(slioctlthr, slio_ctlthr, SLIOTHRT_CTL)
 PSCTHR_MKCAST(slricthr, slash_ricthr, SLIOTHRT_RIC)
 PSCTHR_MKCAST(slrimthr, slash_rimthr, SLIOTHRT_RIM)
 PSCTHR_MKCAST(slriithr, slash_riithr, SLIOTHRT_RII)

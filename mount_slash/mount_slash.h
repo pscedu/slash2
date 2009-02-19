@@ -32,14 +32,6 @@ struct pscrpc_request;
 
 extern sl_ios_id_t prefIOS;
 
-struct msctl_thread {
-	u32			 mc_st_nclients;
-	u32			 mc_st_nsent;
-	u32			 mc_st_nrecv;
-};
-
-PSCTHR_MKCAST(msctlthr, msctl_thread, MSTHRT_CTL)
-
 struct msrcm_thread {
 	struct pscrpc_thread	 mrcm_prt;
 };
