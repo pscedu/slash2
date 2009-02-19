@@ -10,7 +10,6 @@
 #include "jflush.h"
 #include "slashdthr.h"
 
-struct psc_thread mdsFsSync;
 list_cache_t dirtyMdsData;
 struct psc_listcache dirtyInodes;
 
@@ -60,6 +59,6 @@ mdsfssync_init(void)
 {
         lc_reginit(&dirtyMdsData, struct jflush_item, jfi_lentry,
 		   "dirtyMdsData");
-        pscthr_init(&mdsFsSync, SLTHRT_MDSFSSYNC,
-	    mdsfssyncthr_begin, NULL, 0, "mdsfssyncthr");
+        pscthr_init(SLTHRT_MDSFSSYNC, 0, mdsfssyncthr_begin,
+	    NULL, 0, "mdsfssyncthr");
 }

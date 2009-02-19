@@ -47,7 +47,6 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 int
 main(int argc, char *argv[])
 {
-	struct slio_ctlthr *sct;
 	const char *cfn, *sfn;
 	int c;
 
@@ -73,9 +72,8 @@ main(int argc, char *argv[])
 	if (getenv("TCPLND_SERVER") == NULL)
 		psc_fatalx("please export TCPLND_SERVER");
 
-	sct = PSCALLOC(sizeof(*sct));
-	pscthr_init(&pscControlThread, SLIOTHRT_CTL,
-	    NULL, sct, sizeof(*sct), "slioctlthr");
+	pscthr_init(SLIOTHRT_CTL, 0, NULL, NULL,
+	    sizeof(struct psc_ctlthr), "slioctlthr");
 
 	slashGetConfig(cfn);
 	libsl_init(PSC_SERVER);

@@ -75,8 +75,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 
-	pscthr_init(&pscControlThread, SLTHRT_CTL, NULL,
-	    PSCALLOC(sizeof(struct psc_ctlthr)),
+	pscthr_init(SLTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slctlthr");
 
 	if (getenv("LNET_NETWORKS") == NULL)

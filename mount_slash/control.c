@@ -38,7 +38,6 @@ msctlthr_spawn(void)
 {
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
-	pscthr_init(&pscControlThread, MSTHRT_CTL, msctlthr_begin,
-	    PSCALLOC(sizeof(struct psc_ctlthr)),
+	pscthr_init(MSTHRT_CTL, 0, msctlthr_begin, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr");
 }

@@ -8,8 +8,6 @@
 
 #include "mount_slash.h"
 
-struct psc_thread mseqpoll;
-
 void *
 mseqpollthr_main(__unusedx void *arg)
 {
@@ -22,6 +20,6 @@ mseqpollthr_main(__unusedx void *arg)
 void
 mseqpollthr_spawn(void)
 {
-	pscthr_init(&mseqpoll, MSTHRT_EQPOLL,
-	    mseqpollthr_main, NULL, 0, "mseqpollthr");
+	pscthr_init(MSTHRT_EQPOLL, 0, mseqpollthr_main,
+	    NULL, 0, "mseqpollthr");
 }

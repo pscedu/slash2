@@ -17,7 +17,6 @@
 #include "cfd.h"
 #include "slashdthr.h"
 
-struct psc_thread pndgCacheCbThread;
 list_cache_t pndgBmapCbs, inflBmapCbs;
 struct pscrpc_nbreqset *bmapCbSet;
 
@@ -196,6 +195,6 @@ mdscoh_init(void)
 		   "inflightBmapCbs");
 
 	bmapCbSet = nbreqset_init(NULL, mdscoh_cb);
-	pscthr_init(&pndgCacheCbThread, SLTHRT_MDSCOH,
-	    mdscohthr_begin, NULL, 0, "mdscohthr");
+	pscthr_init(SLTHRT_MDSCOH, 0, mdscohthr_begin,
+	    NULL, 0, "mdscohthr");
 }

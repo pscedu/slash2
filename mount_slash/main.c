@@ -72,7 +72,6 @@ static int set_signal_handler(int sig, void (*handler)(int))
 sl_ios_id_t prefIOS = IOS_ID_ANY;
 const char *progname;
 char ctlsockfn[] = _PATH_MSCTLSOCK;
-struct psc_thread msfusethr;
 
 static void 
 slash2fuse_getcred(fuse_req_t req, struct slash_creds *cred)
@@ -99,12 +98,10 @@ msfsthr_ensure(void)
 
 	thr = pscthr_get_canfail();
 	if (thr == NULL) {
-		thr = PSCALLOC(sizeof(*thr));
-		_pscthr_init(thr, MSTHRT_FS, NULL,
-		    PSCALLOC(sizeof(struct msfs_thread)),
-		    sizeof(struct msfs_thread),
-		    PTF_FREE, msfsthr_teardown, "msfsthr%d",
-		    atomic_inc_return(&thrid) - 1);
+		thr = pscthr_init(MSTHRT_FS, PTF_FREE, NULL,
+		    msfsthr_teardown, sizeof(struct msfs_thread),
+		    "msfsthr%d", atomic_inc_return(&thrid) - 1);
+		pscthr_setready(thr);
 	}
 	psc_assert(thr->pscthr_type == MSTHRT_FS);
 }
@@ -1732,7 +1729,7 @@ main(__unusedx int argc, char *argv[])
 
 	pfl_init();
 
-	pscthr_init(&msfusethr, MSTHRT_FUSE, NULL, NULL, 0, "msfusethr");
+	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
 	slash_init(NULL);
 
