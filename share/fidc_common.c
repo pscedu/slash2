@@ -227,6 +227,8 @@ fidc_put_locked(struct fidc_membh *f, list_cache_t *lc)
 			if (f->fcmh_cache_owner == NULL)
 				DEBUG_FCMH(PLL_WARN, f, 
 					   "null fcmh_cache_owner here");
+ 
+			freelock(&f->fcmh_lock);
 			psc_assert(f == __fidc_lookup_fg(fcmh_2_fgp(f), 1));
 
 			PSCFREE(f->fcmh_fcm);
@@ -323,7 +325,19 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 		
 		tmp = e->private;
 
-		l = reqlock(&tmp->fcmh_lock);
+		l = reqlock(&tmp->fcmh_lock); 
+		/* Be sure to ignore any inodes which are freeing unless
+		 *  we are removing the inode from the cache.
+		 *  This is necessary to avoid a deadlock between fidc_reap
+		 *  which has the fcmh_lock before calling fidc_put_locked,
+		 *  whichs calls this function with del==1.  This is described
+		 *  in Bug #13.
+		 */
+		if ((tmp->fcmh_state & FCMH_CAC_FREEING) && !del) {
+			ureqlock(&tmp->fcmh_lock, 1);
+			continue;
+		}
+		
 		if (fcmh_2_gen(tmp) == FID_ANY) {
 			/* The generation number has yet to be obtained
 			 *  from the server.  Wait for it and retry.
@@ -348,6 +362,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 			ureqlock(&tmp->fcmh_lock, l);
 			break;
 		}
+
 		ureqlock(&tmp->fcmh_lock, l);
 	}
 
