@@ -482,8 +482,8 @@ fidc_fcoo_startfailed(struct fidc_membh *h)
 	psc_assert(h->fcmh_state & FCMH_FCOO_STARTING);
 	psc_assert(!(h->fcmh_state & FCMH_FCOO_ATTACH));
 
-	h->fcmh_state &= ~(FCMH_FCOO_STARTING | FCMH_CAC_CLEAN);
-	h->fcmh_state |= (FCMH_FCOO_FAILED);
+	h->fcmh_state &= ~FCMH_FCOO_STARTING;
+	h->fcmh_state |= FCMH_FCOO_FAILED;
 
 	DEBUG_FCMH(PLL_WARN, h, "fidc_fcoo_failed");
 

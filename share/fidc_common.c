@@ -106,7 +106,8 @@ fidc_reap(void)
 		 *  verifying the following conditions.
 		 */
 		if (!fcmh_clean_check(f)) {
-			DEBUG_FCMH(PLL_ERROR, f, "Invalid fcmh state");
+			DEBUG_FCMH(PLL_FATAL, f, 
+			   "Invalid fcmh state for clean list");
 			psc_fatalx("Invalid state for clean list");
 		}
 		/*  Clean inodes may have non-zero refcnts, skip these
@@ -160,6 +161,7 @@ fidc_get(list_cache_t *lc)
 			goto retry;
         }
 	if (lc == &fidcFreePool->ppm_lc) {
+		f->fcmh_cache_owner = NULL;
 		psc_assert(f->fcmh_state == FCMH_CAC_FREE);
 		f->fcmh_state = FCMH_CAC_CLEAN;
 		psc_assert(fcmh_clean_check(f));
