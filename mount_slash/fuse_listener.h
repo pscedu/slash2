@@ -28,8 +28,8 @@
 
 #include "msl_fuse.h"
 
-#define FUSE_OPTIONS "fsname=%s,allow_other,suid,dev,debug"
-//#define FUSE_OPTIONS "fsname=%s,allow_other,suid,dev"
+//#define FUSE_OPTIONS "fsname=%s,allow_other,suid,dev,debug"
+#define FUSE_OPTIONS "fsname=%s,allow_other,suid,dev"
 
 extern int exit_fuse_listener;
 
