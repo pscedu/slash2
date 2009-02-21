@@ -131,5 +131,3 @@ D_ANY
 #11 0x00002b67bf7a050d in clone () from /lib64/libc.so.6
 #12 0x0000000000000000 in ?? ()
 (gdb) 
-
-test
