@@ -38,8 +38,11 @@ msctlthr_spawn(void)
 {
 	struct psc_thread *thr;
 
+	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
+	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
+
 	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_begin, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr");
 	pscthr_setready(thr);

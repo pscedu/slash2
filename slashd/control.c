@@ -29,7 +29,10 @@ int psc_ctl_ncmds = NENTRIES(psc_ctl_cmds);
 void
 slctlthr_main(const char *fn)
 {
+	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
+	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
+
 	psc_ctlthr_main(fn, slctlops, NENTRIES(slctlops));
 }
