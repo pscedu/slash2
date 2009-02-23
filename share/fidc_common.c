@@ -336,7 +336,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 		 *  in Bug #13.
 		 */
 		if ((tmp->fcmh_state & FCMH_CAC_FREEING) && !del) {
-			ureqlock(&tmp->fcmh_lock, 1);
+			ureqlock(&tmp->fcmh_lock, l);
 			continue;
 		}
 		
