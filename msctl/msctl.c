@@ -1,17 +1,16 @@
 /* $Id$ */
 
-#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "psc_ds/list.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
-#include "psc_util/subsys.h"
+
+#include "pathnames.h"
 
 #include "mount_slash/control.h"
 
@@ -46,8 +45,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HI] [-h table] [-i iostat] [-L listspec]\n"
-	    "\t[-p param[=value]] [-S socket] [-s value]\n",
+	    "usage: %s [-HI] [-c cmd] [-h table] [-i iostat] [-L listspec]\n"
+	    "\t[-m meter] [-P pool] [-p param[=value]] [-S socket] [-s value]\n",
 	    progname);
 	exit(1);
 }
@@ -58,10 +57,14 @@ main(int argc, char *argv[])
 	const char *sockfn;
 	int c;
 
+	pfl_init();
 	progname = argv[0];
 	sockfn = _PATH_MSCTLSOCK;
-	while ((c = getopt(argc, argv, "Hh:Ii:L:p:S:s:")) != -1)
+	while ((c = getopt(argc, argv, "c:Hh:Ii:L:m:P:p:S:s:")) != -1)
 		switch (c) {
+		case 'c':
+			psc_ctlparse_cmd(optarg);
+			break;
 		case 'H':
 			psc_ctl_noheader = 1;
 			break;
@@ -76,6 +79,12 @@ main(int argc, char *argv[])
 			break;
 		case 'L':
 			psc_ctlparse_lc(optarg);
+			break;
+		case 'm':
+			psc_ctlparse_meter(optarg);
+			break;
+		case 'P':
+			psc_ctlparse_pool(optarg);
 			break;
 		case 'p':
 			psc_ctlparse_param(optarg);

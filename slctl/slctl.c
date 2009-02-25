@@ -1,22 +1,18 @@
 /* $Id$ */
 
-#include <sys/param.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-
-#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "psc_ds/list.h"
-#include "psc_ds/vbitmap.h"
+#include "pfl.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
-#include "psc_util/subsys.h"
-#include "../slashd/control.h"
+
+#include "pathnames.h"
+
+#include "slashd/control.h"
 
 int
 slrpcmdsthr_st_prhdr(void)
@@ -35,14 +31,14 @@ slrpcmdsthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 int
 slrpcbethr_st_prhdr(void)
 {
-	return (printf(" %-*s %8s\n", PSC_THRNAME_MAX, "thread", "#write"));
+	return (printf(" %-*s %8s\n", PSC_THRNAME_MAX, "thread", "#open"));
 }
 
 void
 slrpcbethr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 {
 	printf(" %-*s %8d\n", PSC_THRNAME_MAX, pcst->pcst_thrname,
-	    pcst->pcst_nwrite);
+	    pcst->pcst_nopen);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
@@ -73,8 +69,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HI] [-h table] [-i iostat] [-L listspec]\n"
-	    "\t[-p param[=value]] [-S socket] [-s value]\n",
+	    "usage: %s [-HI] [-c cmd] [-h table] [-i iostat] [-L listspec]\n"
+	    "\t[-m meter] [-P pool] [-p param[=value]] [-S socket] [-s value]\n",
 	    progname);
 	exit(1);
 }
@@ -85,10 +81,14 @@ main(int argc, char *argv[])
 	const char *sockfn;
 	int c;
 
+	pfl_init();
 	progname = argv[0];
 	sockfn = _PATH_SLCTLSOCK;
-	while ((c = getopt(argc, argv, "Hh:Ii:L:p:S:s:")) != -1)
+	while ((c = getopt(argc, argv, "c:Hh:Ii:L:m:P:p:S:s:")) != -1)
 		switch (c) {
+		case 'c':
+			psc_ctlparse_cmd(optarg);
+			break;
 		case 'H':
 			psc_ctl_noheader = 1;
 			break;
@@ -103,6 +103,12 @@ main(int argc, char *argv[])
 			break;
 		case 'L':
 			psc_ctlparse_lc(optarg);
+			break;
+		case 'm':
+			psc_ctlparse_meter(optarg);
+			break;
+		case 'P':
+			psc_ctlparse_pool(optarg);
 			break;
 		case 'p':
 			psc_ctlparse_param(optarg);

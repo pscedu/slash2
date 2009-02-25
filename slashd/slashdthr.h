@@ -44,6 +44,7 @@ void		sl_journal_init(void);
 sl_inum_t	slmds_get_inum(void);
 
 void	sltimerthr_spawn(void);
+void	slctlthr_main(const char *);
 
 int  fid_get(const char *, struct slash_fidgen *,
 	struct slash_creds *, int, mode_t);

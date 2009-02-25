@@ -2,8 +2,5 @@
 
 /*
  * Control interface for querying and modifying
- * parameters of a running instance of mount_slash.
+ * parameters of a running mount_slash instance.
  */
-
-/* Path to control socket. */
-#define _PATH_MSCTLSOCK		"../mount_slash.sock"

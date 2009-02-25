@@ -6,9 +6,11 @@ PROG=		msctl
 SRCS+=		msctl.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/ctlcli.c
+SRCS+=		${PFL_BASE}/psc_util/humanscale.c
+SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
-SRCS+=		${PFL_BASE}/psc_util/humanscale.c
+
 DEFINES+=	-DHAVE_LIBPTHREAD_DEFINED
 DEFINES+=	-DHAVE_GETHOSTBY_NAME -DHAVE_GETHOSTBYNAME_DEFINED
 

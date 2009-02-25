@@ -2,10 +2,8 @@
 
 /*
  * Control interface for querying and modifying
- * parameters of a currently running sliod.
+ * parameters of a running sliod instance.
  */
 
-/* Path to control socket. */
-#define _PATH_SLIOCTLSOCK	"../sliod.sock"
-
-#define pcst_nwrite pcst_u32_1
+/* slricthr stats */
+#define pcst_nwrite	pcst_u32_1
