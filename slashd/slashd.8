@@ -1,5 +1,5 @@
 .\" $Id$
-.Dd July 7, 2008
+.Dd February 25, 2009
 .Dt SLASHD 8
 .ds volume Pittsburgh Supercomputing Center
 .Os http://www.psc.edu/
@@ -27,8 +27,12 @@ for more details.
 .It Fl S Ar socket
 Specify an alternative named socket file for control operations
 .Pq see Xr slctl 8 .
+The token
+.Ar %h
+present in this filename will be transliterated into the machine
+hostname.
 Defaults to
-.Pa /var/run/slashd.sock .
+.Pa /var/run/slashd. Ns Ar %h Ns Pa .sock .
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
@@ -36,14 +40,16 @@ Defaults to
 default
 .Nm
 configuration
-.It Pa /var/run/slashd.sock
+.It Xo
+.Pa /var/run/slashd. Ns Ar %h Ns Pa .sock
+.Xc
 default
 .Nm
 control socket
 .El
 .Sh SEE ALSO
 .Xr slash.conf 5 ,
-.\" .Xr lnet-env 7 ,
+.Xr pflenv 7 ,
 .Xr mount_slash 8 ,
 .Xr slctl 8 ,
 .Xr sliod 8

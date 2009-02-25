@@ -1,5 +1,5 @@
 .\" $Id$
-.Dd February 15, 2008
+.Dd February 25, 2009
 .Dt SLIOCTL 8
 .ds volume Pittsburgh Supercomputing Center
 .Os http://www.psc.edu/
@@ -9,9 +9,12 @@
 .Sh SYNOPSIS
 .Nm slioctl
 .Op Fl HI
+.Op Fl c Ar cmd
 .Op Fl h Ar table
 .Op Fl i Ar iostatspec
 .Op Fl L Ar listspec
+.Op Fl m Ar meterspec
+.Op Fl P Ar poolspec
 .Op Fl p Ar paramspec
 .Op Fl S Ar socket
 .Op Fl s Ar showspec
@@ -24,6 +27,17 @@ behavior.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
+.It Fl c Ar cmd
+Instruct
+.Xr slashd 8
+to perform one of the following actions:
+.Pp
+.Bl -tag -compact -offset indent -width 12n
+.It Ic exit
+Completely terminate
+.Xr slashd 8
+execution.
+.El
 .It Fl H
 Suppress display of headers.
 .It Fl h Ar table
@@ -95,6 +109,39 @@ Unused FID cache entries.
 The value
 .Cm all
 may be specified to retrieve information about all list caches.
+.It Fl m Ar meterspec
+Report progress information in meters.
+.Ar meterspec
+has the following format:
+.Bd -unfilled -offset indent
+.Ar meter Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar meter
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width 12n
+.It Cm repl- Ns Ar nid
+Replication of inode
+.Ar fid
+metadata to server
+.Ar nid .
+.El
+.Pp
+The value
+.Cm all
+may be specified to retrieve information about all meters.
+.It Fl P Ar poolspec
+Report pool parameters.
+.Ar poolspec
+has the following format:
+.Bd -unfilled -offset indent
+.Ar pool Ns Op , Ns Ar ...
+.Ed
+.Pp
+The value
+.Ic all
+may be specified to retrieve information about all pools.
 .It Fl p Ar paramspec
 Query/manipulate operational control parameters.
 .Ar paramspec
@@ -177,8 +224,12 @@ unspecified altogether.
 .Pp
 .It Fl S Ar socket
 Specify an alternative socket file.
+The token
+.Ar %h
+present in this filename will be transliterated into the machine
+hostname.
 Defaults to
-.Pa /var/run/sliod.sock .
+.Pa /var/run/sliod. Ns Ar %h Ns Pa .sock .
 .It Fl s Ar showspec
 Query and show
 .Xr sliod 8
@@ -232,11 +283,11 @@ All threads (default and available where applicable)
 .El
 .Sh FILES
 .Bl -tag -width Pa
-.It Pa /var/run/sliod.sock
+.It Pa /var/run/sliod. Ns Ar %h Ns Pa .sock
 default
 .Xr sliod 8
 control socket
 .El
 .Sh SEE ALSO
-.Xr slctl 7 ,
+.Xr slctl 8 ,
 .Xr sliod 8

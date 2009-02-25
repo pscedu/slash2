@@ -1,15 +1,16 @@
 .\" $Id$
-.Dd June 10, 2008
+.Dd February 25, 2009
 .Dt MOUNT_SLASH 8
 .ds volume Pittsburgh Supercomputing Center
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm mount_slash
-.Nd slash file system mounter
+.Nd mount a slash file system
 .Sh SYNOPSIS
 .Nm mount_slash
-.Op Fl fsV
+.Op Fl s
 .Op Fl o Ar options
+.Op Fl S Ar socket
 .Ar mountpoint
 .Sh DESCRIPTION
 The
@@ -19,15 +20,20 @@ utility attachs a slash file system mount under the specified
 .Pp
 The options are as follows:
 .Bl -tag -width Ds -offset indent
-.It Fl f
-Enable foreground operation
 .Pq i.e. do not fork and enter daemon operation .
 .It Fl o Ar options
 Enable a FUSE-specific option.
+.It Fl S Ar socket
+Specify an alternative named socket file for control operations
+.Pq see Xr msctl 8 .
+The token
+.Ar %h
+present in this filename will be transliterated into the machine
+hostname.
+Defaults to
+.Pa /var/run/mount_slash. Ns Ar %h Ns Pa .sock .
 .It Fl s
 Disable multithreaded operation.
-.It Fl V
-Display version information.
 .El
 .Sh ENVIRONMENT
 .Bl -tag -width SLASH_MDS_SERVER_NIDx
@@ -39,8 +45,21 @@ Comma-separated list of I/O server LNET NIDs.
 .It Ev SLASH2_PIOS_ID
 Preferred I/O server LNET NID.
 .El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /etc/slash.conf
+default
+.Nm
+configuration
+.It Xo
+.Pa /var/run/mount_slash. Ns Ar %h Ns Pa .sock
+.Xc
+default
+.Nm
+control socket
+.El
 .Sh SEE ALSO
-.\" .Xr lnet-env-vars 7 ,
+.Xr pflenv 7 ,
 .Xr msctl 8 ,
 .Xr slashd 8 ,
 .Xr sliod 8 ,
