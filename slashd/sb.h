@@ -1,10 +1,12 @@
 /* $Id$ */
+
 #ifndef __SLASH_SB_H__
 #define __SLASH_SB_H__ 1
 
 #include <sys/types.h>
 
 #include "psc_util/journal.h"
+
 #include "jflush.h"
 #include "inode.h"
 

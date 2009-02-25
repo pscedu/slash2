@@ -1,6 +1,7 @@
+/* $Id$ */
+
 #ifndef __SL_JOURNAL__
 #define __SL_JOURNAL__ 1
-
 
 #include "inode.h"
 #include "slconfig.h"

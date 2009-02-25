@@ -1,3 +1,5 @@
+/* $Id$ */
+
 #ifndef __MDSCOH_H__
 #define __MDSCOH_H__ 1
 

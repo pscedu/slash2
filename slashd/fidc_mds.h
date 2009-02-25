@@ -1,3 +1,5 @@
+/* $Id$ */
+
 #ifndef __FIDC_MDS_H__
 #define __FIDC_MDS_H__ 1
 
@@ -12,4 +14,3 @@ extern struct fidc_mds_info *
 fidc_fcmh2fmdsi(struct fidc_membh *fcmh);
 
 #endif
-

@@ -1,7 +1,7 @@
+/* $Id$ */
+
 #ifndef __SLASHRPC_H__
 #define __SLASHRPC_H__ 1
-
-/* $Id$ */
 
 /*
  * Slash RPC subsystem definitions including messages definitions.
