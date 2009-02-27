@@ -24,13 +24,22 @@ The options are as follows:
 .It Fl o Ar options
 Enable a FUSE-specific option.
 .It Fl S Ar socket
-Specify an alternative named socket file for control operations
-.Pq see Xr msctl 8 .
-The token
-.Ar %h
-present in this filename will be transliterated into the machine
-hostname.
-Defaults to
+Specify an alternative path for the named socket through which
+.Nm
+operation can be controlled via
+.Xr msctl 8 .
+The following tokens are replaced in the file name specified:
+.Pp
+.Bl -tag -offset indent -width Ds -compact
+.It Ic %h
+the machine hostname
+.It Ic %%
+a literal
+.Sq %
+character
+.El
+.Pp
+The default is
 .Pa /var/run/mount_slash. Ns Ar %h Ns Pa .sock .
 .It Fl s
 Disable multithreaded operation.

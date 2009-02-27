@@ -208,11 +208,18 @@ unspecified altogether.
 .Pp
 .It Fl S Ar socket
 Specify an alternative socket file.
-The token
-.Ar %h
-present in this filename will be transliterated into the machine
-hostname.
-Defaults to
+The following tokens are replaced in the file name specified:
+.Pp
+.Bl -tag -offset indent -width Ds -compact
+.It Ic %h
+the machine hostname
+.It Ic %%
+a literal
+.Sq %
+character
+.El
+.Pp
+The default is
 .Pa /var/run/mount_slash. Ns Ar %h Ns Pa .sock .
 .It Fl s Ar showspec
 Query and show

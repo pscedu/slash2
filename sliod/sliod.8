@@ -25,13 +25,22 @@ See
 .Xr slash.conf 5
 for more details.
 .It Fl S Ar socket
-Specify an alternative named socket file for control operations
-.Pq see Xr slioctl 8 .
-The token
-.Ar %h
-present in this filename will be transliterated into the machine
-hostname.
-Defaults to
+Specify an alternative path for the named socket through which
+.Nm
+operation can be controlled via
+.Xr slioctl 8 .
+The following tokens are replaced in the file name specified:
+.Pp
+.Bl -tag -offset indent -width Ds -compact
+.It Ic %h
+the machine hostname
+.It Ic %%
+a literal
+.Sq %
+character
+.El
+.Pp
+The default is
 .Pa /var/run/sliod. Ns Ar %h Ns Pa .sock .
 .El
 .Sh FILES
