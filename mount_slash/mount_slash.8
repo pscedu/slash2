@@ -20,7 +20,6 @@ utility attachs a slash file system mount under the specified
 .Pp
 The options are as follows:
 .Bl -tag -width Ds -offset indent
-.Pq i.e. do not fork and enter daemon operation .
 .It Fl o Ar options
 Enable a FUSE-specific option.
 .It Fl S Ar socket
@@ -40,7 +39,7 @@ character
 .El
 .Pp
 The default is
-.Pa /var/run/mount_slash. Ns Ar %h Ns Pa .sock .
+.Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock .
 .It Fl s
 Disable multithreaded operation.
 .El
@@ -61,7 +60,7 @@ default
 .Nm
 configuration
 .It Xo
-.Pa /var/run/mount_slash. Ns Ar %h Ns Pa .sock
+.Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
 .Xc
 default
 .Nm
