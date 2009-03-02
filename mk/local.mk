@@ -17,9 +17,3 @@ ZFS_LIBS=	-L${ZFS_BASE}/zfs-fuse				\
 		-L${ZFS_BASE}/lib/libzpool			\
 		-lzfs-fuse -lzpool-kernel -lzfscommon-kernel	\
 		-lnvpair-kernel -lavl -lumem -lsolkerncompat
-
-# On altix
-ifneq ($(wildcard /opt/sgi),)
-#DEFINES+=      -DCONFIG_NR_CPUS=2 -D_GNU_SOURCE
-DEFINES+=      -DCONFIG_NR_CPUS=2
-endif
