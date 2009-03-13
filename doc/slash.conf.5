@@ -1,0 +1,173 @@
+.\" $Id$
+.Dd March 12, 2009
+.Dt SLASH.CONF 5
+.ds volume PSC - Slash Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm slash.conf
+.Nd Slash file system configuration
+.Sh DESCRIPTION
+The
+.Nm
+configuration file specifies storage resources and networks for use on a
+Slash network.
+This document describes the format of this file.
+.Pp
+Empty lines and lines beginning with
+.Sq Li #
+are ignored.
+.Pp
+This file is divided into two sections:
+global configuration and per-site configuration.
+.Ss Global Configuration
+Configuration intended to be applied to all sites on a Slash network
+must be specified in the first section of
+.Nm
+and supports the following directives:
+.Bl -tag -offset indent
+.It Xo
+.Ic global Ar var Li =
+.Ar val Ns Li ;\&
+.Xc
+.Pp
+Set the global variable
+.Ar var
+to the given value
+.Ar val .
+The following variables may be set:
+.Pp
+.Bl -tag -offset indent -compact -width Ds
+.It Ic net
+On which Lustre network site access resides.
+.It Ic port
+On which
+.Tn TCP
+port to establish connections.
+.El
+.El
+.Ss Per-Site Configuration
+Each site resident on a Slash network requires its own section in the second
+part of
+.Nm
+and has the following format:
+.Bd -unfilled -offset indent
+.Ic site @ Ns Ar site-name Li {
+.D1 ...
+.Li }
+.Ed
+.Pp
+A
+.Ic site
+definition may contain variable definitions and
+resource specifications.
+The following variables may be set:
+.Pp
+.Bl -tag -offset indent -width site_descXX -compact
+.It Ic site_desc
+Description of site
+.It Ic site_id
+Numerical identifier for site
+.El
+.Pp
+A resource specification has the following form:
+.Bd -unfilled -offset indent
+.Ic resource Ar resource-name Li {
+.D1 ...
+.Li }
+.Ed
+.Pp
+Resource specifications may contain variable definition for the
+following variables:
+.Pp
+.Bl -tag -offset indent -width Ds -compact
+.It Ic desc
+A string name for this resource
+.It Ic fsroot
+File system mount point,
+exclusive to
+.Ic archival_fs
+resource types
+.Pq see Ic type
+.It Ic id
+Numerical identifier for resource, required to be unique for all
+resources
+.It Ic ifs
+Interface addresses over which to communicate with other site resources
+.It Ic mds
+A Boolean value
+.Ic yes
+or
+.Ic no
+on whether this resource manages site-wide metadata, must be set on at
+least one resource
+.It Ic peers
+List of peers separated by commas of communication resource partners in
+the form
+.Ar resource-name Ns Li @ Ns Ar site-name .
+.It Ic type
+Type of resource, one of
+.Ic archival_fs ,
+.Ic compute ,
+or
+.Ic parallel_fs ,
+required to be set for all resources
+.El
+.Sh EXAMPLES
+The following is an example
+.Nm :
+.Bd -literal
+# Global network config
+global port=1000;
+global net=tcp10;
+
+site @sitename {
+	site_desc = "Site Name";
+	site_id = 40;
+	resource parfs {
+		desc	= "parallel file system";
+		type	= parallel_fs;
+		id	= 0;
+		ifs	= 128.182.112.110,
+			  128.182.112.111,
+			  128.182.112.112,
+			  128.182.112.113;
+		peers	= supercomputer@sitename,
+			  bigstore@sitename;
+	}
+	resource bigstore {
+		desc	= "archival storage system";
+		type	= archival_fs;
+		id	= 1;
+		ifs	= 128.182.112.242,
+			  128.182.112.240,
+			  128.182.112.105,
+			  128.182.112.226;
+		peers	= parfs@sitename;
+	}
+	resource supercomputer {
+		desc	= "computation resource";
+		type	= compute;
+		id	= 2;
+		peers	= parfs@sitename;
+	}
+	resource user_pc {
+		desc	= "user home network";
+		type	= archival_fs;
+		id	= 3;
+		ifs	= 67.171.74.150;
+		peers	= parfs@sitename;
+	}
+	resource test {
+		mds	= yes;
+		desc	= "test network";
+		type	= archival_fs;
+		id	= 4;
+		fsroot	= /tmp/slashfs;
+		ifs	= 10.32.5.82;
+		peers	= parfs@sitename;
+	}
+}
+.Ed
+.Sh SEE ALSO
+.Xr slashd 8 ,
+.Xr sliod 8
