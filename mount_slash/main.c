@@ -427,7 +427,6 @@ slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 			 */
 			fidc_fcoo_startfailed(c);
 	}
-
  out:
 	return (rc);
 }
@@ -1075,7 +1074,8 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 		struct fuse_entry_param e;
 		struct slash_creds creds;
 		struct stat stb;
-
+		struct fidc_membh *t=c->fcc_fcmh;
+		
 		memset(&e, 0, sizeof(e));
 		memset(&stb, 0, sizeof(stb));
 
@@ -1098,6 +1098,17 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 		fuse_reply_entry(req, &e);
 		fidc_membh_dropref(c->fcc_fcmh);
 		error = 0;
+		
+		if (t != c->fcc_fcmh || 
+		    strncmp(name, c->fcc_name, c->fcc_len) || 
+		    fcmh_2_fid(c->fcc_fcmh) != fcmh_2_fid(t)) {
+			/*  Try to catch fcmh state before hitting bug #14.
+			 */
+			DEBUG_FCMH(PLL_ERROR, t, "fcc_fcmh was");
+			DEBUG_FCMH(PLL_ERROR, c->fcc_fcmh, "fcc_fcmh is now");
+			abort();
+		}
+			
 	} else 
 		error = slash2fuse_lookuprpc(req, p, name);
 
@@ -1673,7 +1684,7 @@ msl_fuse_lowlevel_mount(const char *mp)
 
 	slash2fuse_listener_init();
 
-        if(asprintf(&fuse_opts, FUSE_OPTIONS, "slashfs_client") == -1) {
+        if(asprintf(&fuse_opts, FUSE_OPTIONS, mp) == -1) {
                 return ENOMEM;
         }
 
@@ -1724,8 +1735,19 @@ int
 main(__unusedx int argc, char *argv[])
 {
 	int rc;
+	char c, *mp="/slashfs_client";
 
 	progname = argv[0];
+
+	while ((c = getopt(argc, argv, "m:")) != -1)
+                switch (c) {
+                case 'm':
+                        mp = optarg;
+                        break;
+                default:
+                        usage();
+                }
+
 
 	pfl_init();
 
@@ -1733,7 +1755,7 @@ main(__unusedx int argc, char *argv[])
 
 	slash_init(NULL);
 
-	if (msl_fuse_lowlevel_mount("/slashfs_client"))
+	if (msl_fuse_lowlevel_mount(mp))
 		return (-1);
 
 #if 0	
