@@ -32,7 +32,7 @@ slashrpc_export_get(struct pscrpc_export *exp)
 
 	if (exp->exp_private == NULL) {
 		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
-		exp->exp_destroycb = slashrpc_export_destroy;
+		exp->exp_hldropf = slashrpc_export_destroy;
 #if SEXPTREE
 		spinlock(&sexptreelock);
 		if (SPLAY_INSERT(sexptree, &sexptree, exp->exp_private))
