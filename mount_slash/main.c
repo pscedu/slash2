@@ -614,11 +614,9 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	struct srm_getattr_rep *mp;
 	int rc=0, l;	
 
-	/* XXX this is cheesy.
-	 */
 	if ((fcmh->fcmh_state & FCMH_HAVE_ATTRS) && 
 	    fidc_gettime() < (fcmh_2_age(fcmh) + FCMH_ATTR_TIMEO)) {
-		DEBUG_FCMH(PLL_INFO, fcmh, "stat 0 attr debug");
+		DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs cached - YES");
 		/* XXX Need to check creds here.
 		 */
 		return (0);
@@ -647,6 +645,9 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	}
 
 	pscrpc_req_finished(rq);
+
+	DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved via rpc rc=%d", rc);
+
 	return (rc);
 }
 
@@ -926,13 +927,14 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
 	struct fidc_membh *d;
-	struct iovec iov;
+	struct iovec iov[2];
 	int rc;
 	u64 cfd;
 
 	msfsthr_ensure();
 
-	iov.iov_base = NULL;
+	iov[0].iov_base = NULL;
+	iov[1].iov_base = NULL;
 
 	/* Don't allow writes on directory inodes.
 	 */
@@ -971,25 +973,57 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	mq->size = size;
 	mq->offset = off;
 
-	iov.iov_base = PSCALLOC(size);
-	iov.iov_len = size;
+	iov[0].iov_base = PSCALLOC(size);
+	iov[0].iov_len = size;
 
-	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
+
+	mq->nstbpref = 100;
+	if (mq->nstbpref) {
+		iov[1].iov_len = mq->nstbpref * sizeof(struct srm_getattr_rep);
+		iov[1].iov_base = PSCALLOC(iov[1].iov_len);
+		rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, 2);
+	} else
+		rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, 1);
 
 	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
 		goto out;
 	}
-	/* XXX Someday it may be useful to cache this information.
-	 *  Also, it would be good to prefetch the file attrs for the 
-	 *  directory members.
-	 */
-	fuse_reply_buf(req, (char *)iov.iov_base, (size_t)mp->size);
+
+	if (mq->nstbpref) {
+		int i;
+		struct fidc_memb fcm;
+		struct fidc_membh *fcmh;
+		struct srm_getattr_rep *attr = (struct srm_getattr_rep *)iov[1].iov_base;
+
+		for (i=0; i < mq->nstbpref; i++, attr++) {
+			if (attr->rc || !attr->attr.st_ino)
+				continue;
+			memset(&fcm, 0, sizeof(struct fidc_memb));
+			memcpy(&fcm.fcm_stb, &attr->attr, sizeof(struct stat));
+			fcm.fcm_fg.fg_fid = attr->attr.st_ino;
+			fcm.fcm_fg.fg_gen = attr->gen;
+			
+			psc_trace("adding i+g:%"_P_U64"d+%"_P_U64"d rc=%d", 
+				  fcm.fcm_fg.fg_fid, fcm.fcm_fg.fg_gen, attr->rc);  
+
+			fcmh = fidc_lookup_copy_inode(&fcm.fcm_fg, &fcm, 
+						      &mq->creds);
+			if (fcmh)
+				fidc_membh_dropref(fcmh);
+			else
+				psc_warnx("fcmh is NULL");
+		}
+	}
+
+	fuse_reply_buf(req, (char *)iov[0].iov_base, (size_t)mp->size);
  out:	
 	fidc_membh_dropref(d);
 	pscrpc_req_finished(rq);
-	free(iov.iov_base); 
+	PSCFREE(iov[0].iov_base); 
+	if (mq->nstbpref)
+		PSCFREE(iov[1].iov_base); 
 	return (rc);
 }
 
@@ -1559,7 +1593,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	if ((name = getenv("SLASH_MDS_NID")) == NULL)
 		psc_fatalx("please export SLASH_MDS_NID");
 
-	fidcache_init(FIDC_USER_CLI, NULL, fidc_child_reap_cb);
+	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
 	rpc_initsvc();
 
 	/* Start up service threads. */

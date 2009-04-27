@@ -328,7 +328,7 @@ slrmc_readdir(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
-	struct iovec iov;
+	struct iovec iov[2];
 	slfid_t fid;
 	void *data;
 
@@ -339,26 +339,46 @@ slrmc_readdir(struct pscrpc_request *rq)
 		mp->rc = -errno;
 		RETURN(mp->rc);
 	}
-	iov.iov_base = PSCALLOC(mq->size);
-	iov.iov_len = mq->size;
+	iov[0].iov_base = PSCALLOC(mq->size);
+	iov[0].iov_len = mq->size;
 	
+	if (mq->nstbpref) {
+		iov[1].iov_len = mq->nstbpref * sizeof(struct srm_getattr_rep);
+		iov[1].iov_base = PSCALLOC(iov[1].iov_len);
+	} else {
+		iov[1].iov_len = 0;
+		iov[1].iov_base = NULL;
+	}
+
 	psc_info("zfs pri data (%p)", data);
 
 	mp->rc = zfsslash2_readdir(zfsVfs, fid, &mq->creds, mq->size, 
-	   mq->offset, (char *)iov.iov_base, &mp->size, data);
+				   mq->offset, (char *)iov[0].iov_base, 
+				   &mp->size, 
+				   (struct srm_getattr_rep *)iov[1].iov_base, 
+				   mq->nstbpref, data);
 
 	if (mp->rc) {
-		PSCFREE(iov.iov_base);
+		PSCFREE(iov[0].iov_base);
+		if (mq->nstbpref)
+			PSCFREE(iov[1].iov_base);
 		RETURN(mp->rc);
 	}
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
-	    SRMC_BULK_PORTAL, &iov, 1);
+	if (mq->nstbpref) {
+		mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
+					SRMC_BULK_PORTAL, iov, 2);
+		
+	} else
+		mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
+					SRMC_BULK_PORTAL, iov, 1);
 
 	if (desc)
 		pscrpc_free_bulk(desc);
 
-	PSCFREE(iov.iov_base);
+	PSCFREE(iov[0].iov_base);
+	if (mq->nstbpref)
+		PSCFREE(iov[1].iov_base);
 	RETURN(0);
 }
 

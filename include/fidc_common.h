@@ -30,8 +30,9 @@ enum fidc_lookup_flags {
 	FIDC_LOOKUP_COPY      = (1 << 2), /* Create from existing attrs    */
 	FIDC_LOOKUP_LOAD      = (1 << 3), /* Create, get attrs from mds    */
 	FIDC_LOOKUP_REFRESH   = (1 << 3), /* load and refresh are the same */
-	FIDC_LOOKUP_FCOOSTART = (1 << 4)  /* start the fcoo before exposing
+	FIDC_LOOKUP_FCOOSTART = (1 << 4), /* start the fcoo before exposing
 					   *  the cache entry.              */
+	FIDC_LOOKUP_NOREF     = (1 << 5)
 };
 
 /* Perform a simple fidcache lookup, returning NULL if DNE.
@@ -43,6 +44,16 @@ enum fidc_lookup_flags {
 #define fidc_lookup_copy_inode(f, fcm, creds)				\
 	__fidc_lookup_inode((f), (FIDC_LOOKUP_CREATE |			\
 				  FIDC_LOOKUP_COPY   |			\
+				  FIDC_LOOKUP_REFRESH),			\
+			    (fcm), (creds))
+
+/* Create the inode from existing attributes but don't ref it.
+ *  This used for preloading the inode cache.
+ */
+#define fidc_lookup_copy_inode_noref(f, fcm, creds)			\
+	__fidc_lookup_inode((f), (FIDC_LOOKUP_CREATE |			\
+				  FIDC_LOOKUP_COPY   |			\
+				  FIDC_LOOKUP_NOREF  |			\
 				  FIDC_LOOKUP_REFRESH),			\
 			    (fcm), (creds))
 
@@ -78,7 +89,7 @@ enum fidc_lookup_flags {
 		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);	\
 		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));		\
 		atomic_inc(&(f)->fcmh_refcnt);				\
-		DEBUG_FCMH(PLL_NOTICE, (f), "incref");			\
+		DEBUG_FCMH(PLL_NOTIFY, (f), "incref");			\
 	} while (0)
 
 /* Drop an fcmh reference.
@@ -88,8 +99,11 @@ enum fidc_lookup_flags {
 		atomic_dec(&(f)->fcmh_refcnt);				\
 		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));		\
 		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);	\
-		DEBUG_FCMH(PLL_NOTICE, (f), "dropref");			\
+		DEBUG_FCMH(PLL_NOTIFY, (f), "dropref");			\
 	} while (0)
+
+extern void 
+fidc_fcm_setattr(struct fidc_membh *, const struct stat *);
 
 extern int
 fidc_membh_init(__unusedx struct psc_poolmgr *, void *);
@@ -101,9 +115,7 @@ extern void
 fidc_fcoo_init(struct fidc_open_obj *f);
 
 extern void
-fidcache_init(enum fid_cache_users t, 
-	      void (*fcm_init)(void *), 
-	      int (*fcm_reap_cb)(struct fidc_membh *));
+fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *));
 
 extern int
 fidc_fid2cfd(slfid_t f, u64 *cfd, struct fidc_membh **fcmh);

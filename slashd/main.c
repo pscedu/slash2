@@ -84,7 +84,7 @@ main(int argc, char *argv[])
 		if (setenv("TCPLND_SERVER", "1", 1) == -1)
 			psc_fatal("setenv");
 
-	fidcache_init(FIDC_MDS_HASH_SZ, NULL, NULL);
+	fidcache_init(FIDC_MDS_HASH_SZ, NULL);
 
 	//slFsops = PSCALLOC(sizeof(*slFsops));
         //slFsops->slfsop_getattr = slash2fuse_stat;

@@ -363,11 +363,14 @@ struct srm_io_rep {
 
 /* READ data is in bulk reply. */
 
+#define SRM_READDIR_STBUF_PREFETCH (1 << 0)
+
 struct srm_readdir_req {
 	struct slash_creds creds;
 	u64 cfd;
 	u64 offset;
 	u64 size;
+	u32 nstbpref;
 };
 
 struct srm_readdir_rep {

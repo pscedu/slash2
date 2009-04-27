@@ -16,9 +16,6 @@ struct fidc_child {
 };
 
 extern void 
-fidc_fcm_setattr(struct fidc_membh *, struct stat *);
-
-extern void 
 fidc_child_free(struct fidc_membh *, struct fidc_child *);
 
 extern struct fidc_child *

@@ -22,32 +22,6 @@
 #include "fidc_client.h"
 #include "fidcache.h"
 
-void
-fidc_fcm_setattr(struct fidc_membh *fcmh, struct stat *stb)
-{
-	int l = reqlock(&fcmh->fcmh_lock);
-
-	psc_assert(fcmh_2_gen(fcmh) != FID_ANY);
-
-	memcpy(fcmh_2_stb(fcmh), stb, sizeof(*stb));
-	fcmh_2_age(fcmh) = fidc_gettime() + FCMH_ATTR_TIMEO;
-	
-	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
-		fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
-		fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
-		psc_waitq_wakeall(&fcmh->fcmh_waitq);
-	} else
-		psc_assert(fcmh->fcmh_state & FCMH_HAVE_ATTRS);		
-
-	if (fcmh_2_isdir(fcmh) && !(fcmh->fcmh_state & FCMH_ISDIR)) {
-		fcmh->fcmh_state |= FCMH_ISDIR;
-		INIT_PSCLIST_HEAD(&fcmh->fcmh_children);
-	}
-
-	DEBUG_FCMH(PLL_DEBUG, fcmh, "attr set");
-	ureqlock(&fcmh->fcmh_lock, l);
-}
-
 /**
  * fidc_child_free - release a child.
  */
@@ -72,6 +46,7 @@ int
 fidc_child_reap_cb(struct fidc_membh *f)
 {
 	struct fidc_child *c=f->fcmh_pri;
+	int locked;
 
 	/* Don't free the root inode.
 	 */
@@ -86,11 +61,11 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	    !psclist_empty(&f->fcmh_children))
 		return (1);
 
-	if (trylock(&c->fcc_parent->fcmh_lock)) {
+	if (tryreqlock(&c->fcc_parent->fcmh_lock, &locked)) {
 		struct fidc_membh *tmp=c->fcc_parent;
 		
 		fidc_child_free(c->fcc_parent, c);
-		freelock(&tmp->fcmh_lock);
+		ureqlock(&tmp->fcmh_lock, locked);
 		return (0);
 	} else
 		/* The parent is busy, don't wait for the lock.

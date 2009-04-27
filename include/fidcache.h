@@ -69,7 +69,6 @@ struct bmap_refresh {
 	sl_blkno_t		bmrfr_blk;
 	u8			bmrfr_flags;
 };
-
 /*
  * bmap_info_cli - hangs from the void * pointer in the sl_resm_t struct.
  *  It's tasked with holding the import to the correct ION.
@@ -579,7 +578,7 @@ bmap_op_done(struct bmapc_memb *b)
 }
 
 struct fidc_membh * fidc_lookup_simple(slfid_t);
-struct fidc_membh * fidc_get(list_cache_t *);
+struct fidc_membh * fidc_get(void);
 
 void bmapc_memb_init(struct bmapc_memb *b, struct fidc_membh *f);
 

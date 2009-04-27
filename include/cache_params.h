@@ -15,7 +15,7 @@ enum fid_cache_users {
 #define FIDC_MDS_DEFSZ 32768   /* Number of fcmh's to allocate by default */
 #define FIDC_MDS_MAXSZ 1048576 /* Max fcmh's */
 
-#define FIDC_CLI_DEFSZ 1024   /* Number of fcmh's to allocate by default */
+#define FIDC_CLI_DEFSZ 32768   /* Number of fcmh's to allocate by default */
 #define FIDC_CLI_MAXSZ 131072 /* Max fcmh's */
 
 #define FIDC_ION_DEFSZ 4096   /* Number of fcmh's to allocate by default */
