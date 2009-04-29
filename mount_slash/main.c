@@ -28,7 +28,6 @@
 #include "psc_util/usklndthr.h"
 
 #include "control.h"
-#include "fidc_client.h"
 #include "fidc_common.h"
 #include "fidcache.h"
 #include "fuse_listener.h"
@@ -171,11 +170,8 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 	
 	psc_assert(c);
 
-	if (name) {
+	if (name)
 		psc_assert(parent);
-		if (!fidc_child_get(parent, name, strnlen(name, NAME_MAX)))
-			(struct fidc_child *)fidc_child_add(parent, c, name);
-	}		
 	return (c);
 }
 
@@ -382,9 +378,7 @@ slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	psc_assert(ino == fcmh_2_fid(c));
 
 	spinlock(&c->fcmh_lock);
-	if (!c->fcmh_fcoo)
-		fidc_fcoo_start_locked(c);
-	else {		
+	if (c->fcmh_fcoo || (c->fcmh_state & FCMH_FCOO_CLOSING)) {
 		/* Barrier.  Wait for rpc to complete before
 		 *  proceeding.  If we're blocked on a release rpc
 		 *  then fidc_fcoo_wait_locked() will kick us right 
@@ -398,7 +392,9 @@ slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 			freelock(&c->fcmh_lock);
 			goto out;
 		}
-	}
+	} else
+		fidc_fcoo_start_locked(c);
+
 	/* Hold the lock until the read / write ref count is updated.
 	 *  Fcoo's with no refs are invalid.
 	 */
@@ -438,8 +434,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct pscrpc_request *rq=NULL;
 	struct srm_create_req *mq;
 	struct srm_opencreate_rep *mp;
-	struct fidc_membh *p, *n;
-	struct fidc_child *c;
+	struct fidc_membh *p, *m;
 	int rc=0, flags=1;
 
 	msfsthr_ensure();
@@ -455,45 +450,10 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = ENOTDIR;
 		goto out;
 	}
-
-	/* Lock here so that we can do an atomic fidc_child_get and possible
-	 *  add.
+	/* Now we've established a local placeholder for this create.
+	 *  any other creates to this pathame will block in 
+	 *  fidc_child_wait_locked() until we release the fcc.
 	 */
-	spinlock(&p->fcmh_lock);	
-	if ((c = fidc_child_get(p, name, strlen(name)))) {
-		/* The cached basename already exists.  This could mean that
-		 *  another create operation is in progress.  If that's the 
-		 *  case then c->fcc_fcmh will be NULL.
-		 * NOTE: the parent's fcmh_lock and waitq will be used here. 
-		 */
-		if (fi->flags & O_EXCL) {
-			freelock(&p->fcmh_lock);
-			fidc_membh_dropref(c->fcc_fcmh);
-			rc = EEXIST;
-			goto out;
-		} 	
-
-		fidc_child_wait_locked(p, c);
-
-		/* Treat this as a standard open()
-		 */
-		fi->fh = (uint64_t)c->fcc_fcmh;
-		slash2fuse_fcoo_start(req, (fuse_ino_t)fcmh_2_fid(c->fcc_fcmh), fi);
-		slash2fuse_reply_create(req, fcmh_2_fgp(c->fcc_fcmh), 
-					fcmh_2_attrp(c->fcc_fcmh), fi);
-
-		fidc_membh_dropref(c->fcc_fcmh);
-		return;
-
-	} else
-		/* Now we've established a local placeholder for this create.
-		 *  any other creates to this pathame will block in 
-		 *  fidc_child_wait_locked() until we release 'c'.
-		 */
-		c = fidc_child_add(p, NULL, name);
-
-	freelock(&p->fcmh_lock);
-
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	     SRMT_CREATE, rq, mq, mp)) != 0)
 		goto out;
@@ -522,35 +482,35 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = rc ? rc : mp->rc;
 		goto out;
 	}
-	
-	n = slash2fuse_fidc_putget(&mp->fg, &mp->attr, NULL, NULL, &mq->creds,
-				   (FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART));
-	psc_assert(n);
-	psc_assert(n->fcmh_fcoo && (n->fcmh_state & FCMH_FCOO_STARTING));
-	n->fcmh_fcoo->fcoo_cfd = mp->cfd;
 
-	fi->fh = (uint64_t)n;
+	psc_warnx("FID %"_P_U64"d", (slfid_t)mp->fg.fg_fid);
+
+	m = slash2fuse_fidc_putget(&mp->fg, &mp->attr, NULL, NULL, &mq->creds,
+				   (FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART));
+	psc_assert(m);
+	psc_assert(m->fcmh_fcoo && (m->fcmh_state & FCMH_FCOO_STARTING));
+	m->fcmh_fcoo->fcoo_cfd = mp->cfd;
+
+	fi->fh = (uint64_t)m;
 	fi->keep_cache = 1;
 	/* Inc ref the fcoo.  The rpc has already taken place.
 	 */
-	slash2fuse_openref_update(n, fi->flags, &flags);
-
-	fidc_fcoo_startdone(n);
+	slash2fuse_openref_update(m, fi->flags, &flags);
+	fidc_fcoo_startdone(m);
 
  out:
-	if (rc) {
+	if (rc)
                 fuse_reply_err(req, rc);		
-		fidc_child_fail(c);
 
-	} else {
-		fidc_child_add_fcmh(c, n);
+	else {
 		slash2fuse_reply_create(req, &mp->fg, &mp->attr, fi);
 		/* slash2fuse_fidc_putget() leaves the fcmh ref'd.
 		 */
-		fidc_membh_dropref(n);		
+		fidc_membh_dropref(m);
 	}
 	pscrpc_req_finished(rq);
-	fidc_membh_dropref(p);
+	if (p)
+		fidc_membh_dropref(p);
 }
 
 static void 
@@ -558,12 +518,15 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
 	int rc=0;
 	struct fidc_membh *c;
+	struct slash_creds creds;
+
+        slash2fuse_getcred(req, &creds);
 
 	msfsthr_ensure();
 
-	psc_trace("FID %"_P_U64"d", (slfid_t)ino);
+	psc_warnx("FID %"_P_U64"d", (slfid_t)ino);
 
-	c = fidc_lookup_inode((slfid_t)ino);
+	c = fidc_lookup_load_inode((slfid_t)ino, &creds);
 	if (!c) {
 		rc = ENOENT;
 		goto out;
@@ -579,13 +542,11 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 			rc = EISDIR;
 			goto out;
 		}
-
-	} else {
+	} else
 		if (fi->flags & O_DIRECTORY) {
 			rc = ENOTDIR;
 			goto out;
 		}
-	}
 
 	fi->fh = (uint64_t) c;
 	fi->keep_cache = 1;
@@ -768,7 +729,6 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
 	struct fidc_membh *p;
-	struct fidc_child *c;
 	struct fuse_entry_param e;
 	int rc;
 
@@ -778,8 +738,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (strlen(name) >= NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
-	}
-		
+	}		
 	/* Check the parent inode.
 	 */
 	p = fidc_lookup_inode((slfid_t)parent);
@@ -791,12 +750,6 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (!fcmh_2_isdir(p)) {
 		rc = ENOTDIR;
 		goto out;
-	}
-
-	else if ((c = fidc_child_get(p, name, strlen(name)))) {
-		fidc_membh_dropref(c->fcc_fcmh);
-		rc = EEXIST;
-                goto out;
 	}
 	/* Create and initialize the link rpc.
 	 */
@@ -840,7 +793,6 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	struct fidc_membh *p;
-	struct fidc_child *fcc;
 	struct fuse_entry_param e;
 	int rc;
 
@@ -875,13 +827,6 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
 		goto out;
-	}
-
-	fcc = fidc_child_get(p, name, mq->len);
-	if (fcc) {
-		struct fidc_membh *c=fcc->fcc_fcmh;
-		fidc_child_free(p, fcc);
-		fidc_membh_dropref(c);
 	}
  out:
 	fidc_membh_dropref(p);
@@ -992,7 +937,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	}
 
 	if (mq->nstbpref) {
-		int i;
+		u32 i;
 		struct fidc_memb fcm;
 		struct fidc_membh *fcmh;
 		struct srm_getattr_rep *attr = (struct srm_getattr_rep *)iov[1].iov_base;
@@ -1080,7 +1025,6 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
         int error;
 	struct fidc_membh *p;
-	struct fidc_child *c;
 	struct slash_creds creds;
 
 	slash2fuse_getcred(req, &creds);
@@ -1100,56 +1044,12 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 	} else if (!fcmh_2_isdir(p)) {
 		fidc_membh_dropref(p);
 		error = ENOTDIR;
-		goto out;
-
-	} else if ((c = fidc_child_get(p, name, strlen(name)))) {
-		/* The component is already cached.
-		 */
-		struct fuse_entry_param e;
-		struct slash_creds creds;
-		struct stat stb;
-		struct fidc_membh *t=c->fcc_fcmh;
-		
-		memset(&e, 0, sizeof(e));
-		memset(&stb, 0, sizeof(stb));
-
-		slash2fuse_getcred(req, &creds);
-		error = slash2fuse_stat(c->fcc_fcmh, &creds);
-		
-		e.ino = fcmh_2_fid(c->fcc_fcmh);
-		e.generation = fcmh_2_gen(c->fcc_fcmh);
-
-		DEBUG_FCMH(PLL_INFO, c->fcc_fcmh, "lookup debug");
-
-		if (!memcmp(fcmh_2_stb(c->fcc_fcmh), &stb, 
-			    sizeof(struct stat))) {
-			DEBUG_FCMH(PLL_ERROR, c->fcc_fcmh, 
-				   "attrs should not be zero here!");
-			abort();
-		}			
-
-		memcpy(&e.attr, fcmh_2_stb(c->fcc_fcmh), sizeof(e.attr));
-		fuse_reply_entry(req, &e);
-		fidc_membh_dropref(c->fcc_fcmh);
-		error = 0;
-		
-		if (t != c->fcc_fcmh || 
-		    strncmp(name, c->fcc_name, c->fcc_len) || 
-		    fcmh_2_fid(c->fcc_fcmh) != fcmh_2_fid(t)) {
-			/*  Try to catch fcmh state before hitting bug #14.
-			 */
-			DEBUG_FCMH(PLL_ERROR, t, "fcc_fcmh was");
-			DEBUG_FCMH(PLL_ERROR, c->fcc_fcmh, "fcc_fcmh is now");
-			abort();
-		}
-			
+		goto out; 
 	} else 
 		error = slash2fuse_lookuprpc(req, p, name);
-
 	/* Drop the parent's refcnt.
 	 */
-	fidc_membh_dropref(p);
-		
+	fidc_membh_dropref(p);		
  out:
 	if (error)
 		fuse_reply_err(req, error);
@@ -1199,9 +1099,14 @@ slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	u32 mode;
 
 	psc_assert(fi->fh);	
+	
+	spinlock(&h->fcmh_lock);
+	DEBUG_FCMH(PLL_INFO, h, "releaserpc");
 	psc_assert(ino == fcmh_2_fid(h));
 	psc_assert(h->fcmh_fcoo);
-	
+	psc_assert(h->fcmh_state & FCMH_FCOO_CLOSING);
+	freelock(&h->fcmh_lock);	
+
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 			     SRMT_RELEASE, rq, mq, mp)) != 0)
 		return (rc);
@@ -1226,15 +1131,18 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct fidc_membh *c=(struct fidc_membh *)fi->fh;
 
 	msfsthr_ensure();
-
-	psc_assert(c->fcmh_fcoo);
+	psc_warnx("FID %"_P_U64"d", (slfid_t)ino);
 	
+	spinlock(&c->fcmh_lock);
+	psc_assert(c->fcmh_fcoo);
+	/* If the fcoo is going away FCMH_FCOO_CLOSING will be set.
+	 */
 	slash2fuse_openref_update(c, fi->flags, &fdstate);	
 	
-	DEBUG_FCMH(PLL_INFO, c, "slash2fuse_release");
+	DEBUG_FCMH(PLL_INFO, c, "slash2fuse_release");	
+	freelock(&c->fcmh_lock);
 
 	if ((c->fcmh_state & FCMH_FCOO_CLOSING) && fdstate) {
-		DEBUG_FCMH(PLL_INFO, c, "calling releaserpc");
 		rc = slash2fuse_releaserpc(req, ino, fi);
 		fidc_fcoo_remove(c);
 	}
@@ -1258,8 +1166,6 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 
 	if (strlen(name) >= NAME_MAX || strlen(newname) >= NAME_MAX)
 		return (ENAMETOOLONG);
-
-	(int)fidc_child_rename(parent, name, newparent, newname);
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_RENAME, rq, mq, mp)) != 0)
@@ -1593,7 +1499,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	if ((name = getenv("SLASH_MDS_NID")) == NULL)
 		psc_fatalx("please export SLASH_MDS_NID");
 
-	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
+	fidcache_init(FIDC_USER_CLI, NULL);
 	rpc_initsvc();
 
 	/* Start up service threads. */

@@ -102,6 +102,9 @@ enum fidc_lookup_flags {
 		DEBUG_FCMH(PLL_NOTIFY, (f), "dropref");			\
 	} while (0)
 
+extern void
+fidc_put(struct fidc_membh *, list_cache_t *);
+
 extern void 
 fidc_fcm_setattr(struct fidc_membh *, const struct stat *);
 

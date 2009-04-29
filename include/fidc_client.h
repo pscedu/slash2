@@ -16,7 +16,7 @@ struct fidc_child {
 };
 
 extern void 
-fidc_child_free(struct fidc_membh *, struct fidc_child *);
+fidc_child_free(struct fidc_child *);
 
 extern struct fidc_child *
 fidc_child_add(struct fidc_membh *, struct fidc_membh *, 

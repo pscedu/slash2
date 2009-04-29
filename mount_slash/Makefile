@@ -11,7 +11,6 @@ SRCS+=		mseqpollthr.c
 SRCS+=		rcm.c
 SRCS+=		rpc.c
 SRCS+=		timer.c
-SRCS+=		fidc_client.c
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${SLASH_BASE}/share/rpc.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c

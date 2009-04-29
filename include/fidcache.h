@@ -337,8 +337,8 @@ do {								        \
 void
 fidc_fcoo_init(struct fidc_open_obj *f);
 
-void
-fidc_put_locked(struct fidc_membh *f, list_cache_t *lc);
+extern void
+fidc_put(struct fidc_membh *f, list_cache_t *lc);
 
 static inline void
 fidc_fcoo_check_locked(struct fidc_membh *h)
@@ -352,8 +352,6 @@ fidc_fcoo_check_locked(struct fidc_membh *h)
 	psc_assert(!(h->fcmh_state & FCMH_FCOO_CLOSING));
 	psc_assert(o->fcoo_oref_rw[0] || o->fcoo_oref_rw[1]);
 }
-
-
 
 static inline void
 fidc_fcoo_start_locked(struct fidc_membh *h) 
@@ -377,11 +375,14 @@ fidc_fcoo_start_locked(struct fidc_membh *h)
 static inline void
 fidc_fcoo_remove(struct fidc_membh *h)
 {
-	struct fidc_open_obj *o=h->fcmh_fcoo;
-	int l=reqlock(&h->fcmh_lock);
-	
-	psc_assert(!(o->fcoo_oref_rw[0] & o->fcoo_oref_rw[1]));
-	psc_assert(h->fcmh_cache_owner == &fidcDirtyList);
+	struct fidc_open_obj *o;
+
+	lc_remove(&fidcDirtyList, (void *)h);
+
+	spinlock(&h->fcmh_lock);
+	o = h->fcmh_fcoo;
+	psc_assert(h->fcmh_cache_owner == &fidcDirtyList);	
+	psc_assert(!(o->fcoo_oref_rw[0] || o->fcoo_oref_rw[1]));
 	psc_assert(!o->fcoo_pri);
 
 	h->fcmh_state &= ~FCMH_FCOO_ATTACH;
@@ -390,14 +391,14 @@ fidc_fcoo_remove(struct fidc_membh *h)
 
 	h->fcmh_state &= ~FCMH_CAC_DIRTY;
 	h->fcmh_state |= FCMH_CAC_CLEAN;
-	lc_remove(&fidcDirtyList, (void *)h);
+	freelock(&h->fcmh_lock);
 
+	fidc_put(h, &fidcCleanList);
+
+	spinlock(&h->fcmh_lock);
 	DEBUG_FCMH(PLL_INFO, h, "fidc_fcoo_remove");
 	h->fcmh_state &= ~FCMH_FCOO_CLOSING;
-	fidc_put_locked(h, &fidcCleanList);
-
-	ureqlock(&h->fcmh_lock, l);
-
+	freelock(&h->fcmh_lock);
 	psc_waitq_wakeall(&h->fcmh_waitq);
 }
 
@@ -409,12 +410,12 @@ fidc_fcoo_remove(struct fidc_membh *h)
 static inline int
 fidc_fcoo_wait_locked(struct fidc_membh *h, int nostart)
 {
-	psc_assert(h->fcmh_fcoo);
+	psc_assert(h->fcmh_fcoo || (h->fcmh_state & FCMH_FCOO_CLOSING));
 
-	DEBUG_FCMH(PLL_DEBUG, h, "wait locked, nostart=%d", nostart);
+	DEBUG_FCMH(PLL_WARN, h, "wait locked, nostart=%d", nostart);
 
- retry_closing:
-	if (h->fcmh_state & FCMH_FCOO_CLOSING) {
+ retry:
+	if ((h->fcmh_state & FCMH_FCOO_CLOSING) || !h->fcmh_fcoo) {
 		/* The fcoo exists but it's on its way out.
 		 */
 		psc_waitq_wait(&h->fcmh_waitq, &h->fcmh_lock);
@@ -424,16 +425,14 @@ fidc_fcoo_wait_locked(struct fidc_membh *h, int nostart)
 				fidc_fcoo_start_locked(h);
 			return (1);
 		} else
-			goto retry_closing;
-	}
-	
- retry_starting:
-	if (h->fcmh_state & FCMH_FCOO_STARTING) {
+			goto retry;
+
+	} else if (h->fcmh_state & FCMH_FCOO_STARTING) {
 		/* Only perform one fcoo start operation.
 		 */
 		psc_waitq_wait(&h->fcmh_waitq, &h->fcmh_lock);
 		spinlock(&h->fcmh_lock);
-		goto retry_starting;
+		goto retry;
 
 	} else if (h->fcmh_state & FCMH_FCOO_ATTACH) {
 		fidc_fcoo_check_locked(h);
@@ -452,23 +451,25 @@ fidc_fcoo_wait_locked(struct fidc_membh *h, int nostart)
 static inline void
 fidc_fcoo_startdone(struct fidc_membh *h) 
 {
-	psc_assert(h->fcmh_fcoo);
+	lc_remove(&fidcCleanList, h);
 
 	spinlock(&h->fcmh_lock);
+	psc_assert(h->fcmh_fcoo);
+	psc_assert(h->fcmh_cache_owner == &fidcCleanList);
 	psc_assert(h->fcmh_state & FCMH_FCOO_STARTING);
 	psc_assert(!(h->fcmh_state & FCMH_FCOO_ATTACH));
-
 	h->fcmh_state &= ~(FCMH_FCOO_STARTING | FCMH_CAC_CLEAN);
 	h->fcmh_state |= (FCMH_FCOO_ATTACH | FCMH_CAC_DIRTY);
+	DEBUG_FCMH(PLL_INFO, h, "fidc_fcoo_startdone");
+	freelock(&h->fcmh_lock);
 	/* Move the inode to the dirty list so that it's not
 	 *  considered for reaping.
-	 */	
-	DEBUG_FCMH(PLL_INFO, h, "fidc_fcoo_startdone");
+	 */
 
-	lc_remove(h->fcmh_cache_owner, h);
-	fidc_put_locked(h, &fidcDirtyList);
+	//fidc_put_locked(h, &fidcDirtyList);
+	fidc_put(h, &fidcDirtyList);
 
-	freelock(&h->fcmh_lock);
+	//freelock(&h->fcmh_lock);
 	psc_waitq_wakeall(&h->fcmh_waitq);
 }
 
