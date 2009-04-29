@@ -30,9 +30,6 @@ struct hash_table fidcHtable;
 
 struct sl_fsops *slFsops;
 
-void
-fidc_put_locked(struct fidc_membh *, list_cache_t *);
-
 struct fidc_membh * 
 __fidc_lookup_fg(const struct slash_fidgen *, int);
 
@@ -61,7 +58,7 @@ fcmh_clean_check(struct fidc_membh *f)
 		}		
 		psc_assert(!(f->fcmh_state & 
 			     (FCMH_CAC_DIRTY | FCMH_CAC_FREE |
-			      FCMH_FCOO_ATTACH | FCMH_FCOO_CLOSING)));
+			      FCMH_FCOO_ATTACH)));
 		clean = 1;
 	}
 
@@ -107,7 +104,7 @@ fidc_fcm_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 }
 
 /**
- * fidc_put_locked - release an inode onto an inode list cache.
+ * fidc_put - release an inode onto an inode list cache.
  *
  * This routine should be called when:
  * - moving a free inode to the dirty cache.
@@ -116,11 +113,10 @@ fidc_fcm_setattr(struct fidc_membh *fcmh, const struct stat *stb)
  *        performed within fidc_clean_check()
  */
 void
-fidc_put_locked(struct fidc_membh *f, list_cache_t *lc)
+fidc_put(struct fidc_membh *f, list_cache_t *lc)
 {
 	int clean;
 
-	LOCK_ENSURE(&f->fcmh_lock);
 	/* Check for uninitialized
 	 */
 	if (!f->fcmh_state) {
@@ -158,13 +154,16 @@ fidc_put_locked(struct fidc_membh *f, list_cache_t *lc)
 			 */
 			psc_assert(f->fcmh_cache_owner == NULL);
 		else {
+			struct fidc_membh *tmp;
+
 			psc_assert(!atomic_read(&f->fcmh_refcnt));
 			if (f->fcmh_cache_owner == NULL)
 				DEBUG_FCMH(PLL_WARN, f, 
 					   "null fcmh_cache_owner here");
  
-			freelock(&f->fcmh_lock);
-			psc_assert(f == __fidc_lookup_fg(fcmh_2_fgp(f), 1));
+			tmp = __fidc_lookup_fg(fcmh_2_fgp(f), 1);
+			if (f != tmp)
+				abort();
 
 			PSCFREE(f->fcmh_fcm);
 			f->fcmh_fcm = NULL;	
@@ -191,16 +190,6 @@ fidc_put_locked(struct fidc_membh *f, list_cache_t *lc)
 	/* Place onto the respective list.
 	 */
 	FCMHCACHE_PUT(f, lc);
-}
-
-void
-fidc_put(struct fidc_membh *f, list_cache_t *lc)
-{
-	int l=reqlock(&f->fcmh_lock);
-	
-	fidc_put_locked(f, lc);
-	if (lc != &fidcFreePool->ppm_lc)
-		ureqlock(&f->fcmh_lock, l);
 }
 
 /**
@@ -247,7 +236,7 @@ fidc_reap(struct psc_poolmgr *m)
  startover:
 	LIST_CACHE_LOCK(&fidcCleanList);
 	psclist_for_each_entry_safe(f, tmp, &fidcCleanList.lc_listhd,
-					      fcmh_lentry) {
+				    fcmh_lentry) {
 
 		if (psclg_size(&m->ppm_lg) + dynarray_len(&da) >=
                     atomic_read(&m->ppm_nwaiters) + 1) 
@@ -262,14 +251,6 @@ fidc_reap(struct psc_poolmgr *m)
 		 */
 		if (fcmh_2_fid(f) == 1)
 			goto end2;
-		/* Make sure our clean list is 'clean' by
-		 *  verifying the following conditions.
-		 */
-		if (!fcmh_clean_check(f)) {
-			DEBUG_FCMH(PLL_FATAL, f, 
-			   "Invalid fcmh state for clean list");
-			psc_fatalx("Invalid state for clean list");
-		}
 		/*  Clean inodes may have non-zero refcnts, skip these
 		 *   inodes.
 		 */
@@ -278,6 +259,19 @@ fidc_reap(struct psc_poolmgr *m)
 
 		if (!trylock(&f->fcmh_lock))
 			goto end2;
+
+		/* Make sure our clean list is 'clean' by
+		 *  verifying the following conditions.
+		 */
+		if (!fcmh_clean_check(f)) {
+			DEBUG_FCMH(PLL_FATAL, f, 
+				   "Invalid fcmh state for clean list");
+			psc_fatalx("Invalid state for clean list");
+		}
+		/* Skip inodes which already claim to be freeing
+		 */
+		if (f->fcmh_state & FCMH_CAC_FREEING)
+			goto end1;
 
 		if (fidc_reap_cb) {
 			/* Call into the system specific 'reap' code.
@@ -304,7 +298,7 @@ fidc_reap(struct psc_poolmgr *m)
 	
 	for (i=0; i < dynarray_len(&da); i++) {
 		f = dynarray_getpos(&da, i);
-		DEBUG_FCMH(PLL_DEBUG, f, "restoring to clean list");
+		DEBUG_FCMH(PLL_DEBUG, f, "moving to free list");
 		fidc_put(f, &fidcFreeList);
         }
 	
@@ -342,19 +336,19 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 	struct hash_bucket *b;
 	struct hash_entry *e, *save=NULL;
 	struct fidc_membh *fcmh=NULL, *tmp;
-	int l, locked;
+	int l[2];
 
 	b = GET_BUCKET(&fidcHtable, (u64)fg->fg_fid);
 
  retry:
-	locked = reqlock(&b->hbucket_lock);
+	l[0] = reqlock(&b->hbucket_lock);
 	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry) {
 		if ((u64)fg->fg_fid != *e->hentry_id)
 			continue;
 		
 		tmp = e->private;
 
-		l = reqlock(&tmp->fcmh_lock); 
+		l[1] = reqlock(&tmp->fcmh_lock); 
 		/* Be sure to ignore any inodes which are freeing unless
 		 *  we are removing the inode from the cache.
 		 *  This is necessary to avoid a deadlock between fidc_reap
@@ -363,20 +357,18 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 		 *  in Bug #13.
 		 */
 		if ((tmp->fcmh_state & FCMH_CAC_FREEING) && !del) {
-			ureqlock(&tmp->fcmh_lock, l);
+			ureqlock(&tmp->fcmh_lock, l[1]);
 			continue;
-		}
-		
+		}		
 		if (fcmh_2_gen(tmp) == FID_ANY) {
 			/* The generation number has yet to be obtained
 			 *  from the server.  Wait for it and retry.
 			 */			
 			psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
-			freelock(&b->hbucket_lock);
+			ureqlock(&b->hbucket_lock, l[0]);
 			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
 			goto retry;
-		}
-
+		}		
 		if ((u64)fg->fg_gen == FID_ANY) {
 			/* Look for highest generation number.
 			 */
@@ -388,11 +380,10 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 		} else if ((u64)fg->fg_gen == fcmh_2_gen(tmp)) {
 			fcmh = tmp;
 			save = e;
-			ureqlock(&tmp->fcmh_lock, l);
+			ureqlock(&tmp->fcmh_lock, l[1]);
 			break;
 		}
-
-		ureqlock(&tmp->fcmh_lock, l);
+		ureqlock(&tmp->fcmh_lock, l[1]);
 	}
 
 	if (fcmh && (del == 1)) {
@@ -400,7 +391,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
                 psclist_del(&save->hentry_lentry);
 	}
 
-	ureqlock(&b->hbucket_lock, locked);
+	ureqlock(&b->hbucket_lock, l[0]);
 
 	if (fcmh)
 		fidc_membh_incref(fcmh);
@@ -463,7 +454,7 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 		 */
 		if (try_create) {
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
-			fidc_put_locked(fcmh_new, &fidcFreeList);
+			fidc_put(fcmh_new, &fidcFreeList);
 		}
 
 		psc_assert(fg->fg_fid == fcmh_2_fid(fcmh));		
