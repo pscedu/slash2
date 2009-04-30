@@ -72,11 +72,12 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e) {
 		SPLAY_INIT(&m->mexpfcm_bmaps);		
 	}
 	FCMH_LOCK(f);
-	if (!f->fcmh_fcoo) {
+	if (!(f->fcmh_fcoo || (f->fcmh_state & FCMH_FCOO_CLOSING))) {
 		/* Allocate 'open file' data structures if they 
 		 *  don't already exist.
-		 */
+		 */		
 		fidc_fcoo_start_locked(f);
+	fcoo_start:
 		f->fcmh_fcoo->fcoo_pri = i = PSCALLOC(sizeof(*i));
 		/* Set up a bogus rw ref count here.
 		 */ 
@@ -91,12 +92,25 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e) {
 		fidc_fcoo_startdone(f);
 
 	} else {
-		fidc_fcoo_wait_locked(f, FCOO_START);
-		FCMH_ULOCK(f);
-		psc_assert(f->fcmh_fcoo);
-		psc_assert(f->fcmh_fcoo->fcoo_pri);
-		i = f->fcmh_fcoo->fcoo_pri;
-		psc_assert(i->fmdsi_data);
+		int rc=fidc_fcoo_wait_locked(f, FCOO_START);
+		
+		if (rc < 0) {
+			DEBUG_FCMH(PLL_ERROR, f, 
+				   "fidc_fcoo_wait_locked() failed");
+			FCMH_ULOCK(f);
+			return (-1);
+
+		} else if (rc == 1) 
+			goto fcoo_start;
+
+		else {
+			psc_assert(f->fcmh_fcoo);
+			psc_assert(f->fcmh_fcoo->fcoo_pri);
+			i = f->fcmh_fcoo->fcoo_pri;
+			f->fcmh_fcoo->fcoo_oref_rw[0]++;
+			psc_assert(i->fmdsi_data);
+			FCMH_ULOCK(f);
+		}
 	}
 	/* Add ourselves to the fidc_mds_info structure's splay tree.
 	 *  fmdsi_ref is the real open refcnt (one ref per export or client).
@@ -918,7 +932,7 @@ void
 mds_init(void)
 {
 	mds_cfdops_init();
-
+	//	initFcooCb = mds_fcoo_init_cb;
 	//mdsFsops.slfsop_getattr  = mds_fidfs_lookup;
 	//mdsFsops.slfsop_fgetattr = mds_fid_lookup;
 	//slFsops = &mdsFsops;
