@@ -450,15 +450,16 @@ slrmc_release(struct pscrpc_request *rq)
 		/* Remove the fcoo but first make sure the open ref's 
 		 *  are ok.  This value is bogus, fmdsi_ref has the 
 		 *  the real open ref.  
-		 */	       
+		 */			
 		PSCFREE(i);
 		f->fcmh_fcoo->fcoo_pri = NULL;
 		f->fcmh_fcoo->fcoo_oref_rw[0] = 0;
+		freelock(&f->fcmh_lock);
 		fidc_fcoo_remove(f);
-	} else
+	} else {
 		mp->rc = 0;
-
-	freelock(&f->fcmh_lock);
+		freelock(&f->fcmh_lock);
+	}
 	RETURN(0);
 }
 

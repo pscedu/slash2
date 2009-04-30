@@ -356,34 +356,47 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 		 *  whichs calls this function with del==1.  This is described
 		 *  in Bug #13.
 		 */
-		if ((tmp->fcmh_state & FCMH_CAC_FREEING) && !del) {
-			ureqlock(&tmp->fcmh_lock, l[1]);
-			continue;
-		}		
-		if (fcmh_2_gen(tmp) == FID_ANY) {
-			/* The generation number has yet to be obtained
-			 *  from the server.  Wait for it and retry.
-			 */			
-			psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
-			ureqlock(&b->hbucket_lock, l[0]);
-			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
-			goto retry;
-		}		
-		if ((u64)fg->fg_gen == FID_ANY) {
-			/* Look for highest generation number.
-			 */
-			if (!fcmh || (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh))) {
+		if (del) {
+			if (tmp->fcmh_state & FCMH_CAC_FREEING) {
+				psc_assert((u64)fg->fg_gen == fcmh_2_gen(tmp));
 				fcmh = tmp;
 				save = e;
+				ureqlock(&tmp->fcmh_lock, l[1]);
+				break;
+			} else {
+				ureqlock(&tmp->fcmh_lock, l[1]);
+				continue;
 			}
-			
-		} else if ((u64)fg->fg_gen == fcmh_2_gen(tmp)) {
-			fcmh = tmp;
-			save = e;
+		} else {
+			if (tmp->fcmh_state & FCMH_CAC_FREEING) {
+				ureqlock(&tmp->fcmh_lock, l[1]);
+				continue;
+			}
+			if ((u64)fg->fg_gen == fcmh_2_gen(tmp)) {
+				fcmh = tmp;
+				save = e;
+				ureqlock(&tmp->fcmh_lock, l[1]);
+				break;
+			}
+			if (fcmh_2_gen(tmp) == FID_ANY) {
+				/* The generation number has yet to be obtained
+				 *  from the server.  Wait for it and retry.
+				 */			
+				psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
+				ureqlock(&b->hbucket_lock, l[0]);
+				psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
+				goto retry;
+			}		
+			if ((u64)fg->fg_gen == FID_ANY) {
+				/* Look for highest generation number.
+				 */
+				if (!fcmh || (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh))) {
+					fcmh = tmp;
+					save = e;
+				}
+			}
 			ureqlock(&tmp->fcmh_lock, l[1]);
-			break;
 		}
-		ureqlock(&tmp->fcmh_lock, l[1]);
 	}
 
 	if (fcmh && (del == 1)) {
