@@ -334,6 +334,13 @@ do {								        \
 	ureqlock(&(fcmh)->fcmh_lock, dbg_fcmh_locked);			\
 } while (0)
 
+
+static inline void
+dump_fcmh(struct fidc_membh *f)
+{
+	DEBUG_FCMH(PLL_ERROR, f, "");	
+}
+
 void
 fidc_fcoo_init(struct fidc_open_obj *f);
 
@@ -396,8 +403,8 @@ fidc_fcoo_remove(struct fidc_membh *h)
 	fidc_put(h, &fidcCleanList);
 
 	spinlock(&h->fcmh_lock);
-	DEBUG_FCMH(PLL_INFO, h, "fidc_fcoo_remove");
 	h->fcmh_state &= ~FCMH_FCOO_CLOSING;
+	DEBUG_FCMH(PLL_DEBUG, h, "fidc_fcoo_remove");
 	freelock(&h->fcmh_lock);
 	psc_waitq_wakeall(&h->fcmh_waitq);
 }
@@ -412,7 +419,7 @@ fidc_fcoo_wait_locked(struct fidc_membh *h, int nostart)
 {
 	psc_assert(h->fcmh_fcoo || (h->fcmh_state & FCMH_FCOO_CLOSING));
 
-	DEBUG_FCMH(PLL_WARN, h, "wait locked, nostart=%d", nostart);
+	DEBUG_FCMH(PLL_DEBUG, h, "wait locked, nostart=%d", nostart);
 
  retry:
 	if ((h->fcmh_state & FCMH_FCOO_CLOSING) || !h->fcmh_fcoo) {
