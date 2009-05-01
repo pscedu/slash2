@@ -437,8 +437,8 @@ slrmc_release(struct pscrpc_request *rq)
 	 */	
 	spinlock(&f->fcmh_lock);
 	
-	DEBUG_FCMH(PLL_DEBUG, f, "slrmc_release i->fmdsi_ref (%d)", 
-		   atomic_read(&i->fmdsi_ref));
+	DEBUG_FCMH(PLL_DEBUG, f, "slrmc_release i->fmdsi_ref (%d) (oref=%d)", 
+		   atomic_read(&i->fmdsi_ref), f->fcmh_fcoo->fcoo_oref_rw[0]);
 
 	if (atomic_dec_and_test(&i->fmdsi_ref)) {
 		psc_assert(SPLAY_EMPTY(&i->fmdsi_exports));
@@ -528,7 +528,7 @@ slrmc_setattr(struct pscrpc_request *rq)
 		//  it's either inode # 1 or 3
 	}
 
-	if (fmdsi)
+	if (fcmh)
 		fidc_membh_dropref(fcmh);
 
 	RETURN(0);
