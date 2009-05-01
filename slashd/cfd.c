@@ -51,7 +51,7 @@ cfdinsert(struct cfdent *c, struct pscrpc_export *exp, slfid_t fid)
 		rc = EEXIST;
 	else
 		if (c->cfdops && c->cfdops->cfd_insert)
-			rc = (c->cfdops->cfd_insert)(c, exp, fid);
+			rc = c->cfdops->cfd_insert(c, exp, fid);
 
 	freelock(&exp->exp_lock);
 	return (rc);
@@ -137,7 +137,7 @@ __cfd2fid(struct pscrpc_export *exp, u64 cfd, slfid_t *fidp, void **pri)
 		*fidp = c->fid;
 		if (pri) {
 			if (c->cfdops->cfd_get_pri) {
-				*pri = (c->cfdops->cfd_get_pri)(c, exp);
+				*pri = c->cfdops->cfd_get_pri(c, exp);
 				psc_info("zfs pri data (%p)", *pri);
 			}
 			else
@@ -187,7 +187,7 @@ cfdfree(struct pscrpc_export *exp, u64 cfd)
 	if (SPLAY_REMOVE(cfdtree, &sexp->sexp_cfdtree, c)) {
 		c->type |= CFD_CLOSING;
 		if (c->cfdops && c->cfdops->cfd_free)
-			rc = (*c->cfdops->cfd_free)(c, exp);
+			rc = c->cfdops->cfd_free(c, exp);
 		PSCFREE(c);
 	} else
 		rc = -ENOENT;
@@ -217,7 +217,7 @@ cfdfreeall(struct pscrpc_export *exp)
 		SPLAY_REMOVE(cfdtree, &sexp->sexp_cfdtree, c);
 
 		if (c->cfdops && c->cfdops->cfd_free)
-			(int)(*c->cfdops->cfd_free)(c, exp);
+			(int)c->cfdops->cfd_free(c, exp);
 		PSCFREE(c);
 	}
 }
