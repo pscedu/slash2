@@ -18,7 +18,8 @@
 
 #define SL_FIDCACHE_LOW_THRESHOLD 80 // 80%
 
-int (*fidc_reap_cb)(struct fidc_membh *f);
+int (*fidcReapCb)(struct fidc_membh *f);
+void (*initFcooCb)(struct fidc_open_obj *o);
 
 struct psc_poolmaster fidcFreePoolMaster;
 struct psc_poolmgr   *fidcFreePool;
@@ -33,38 +34,6 @@ struct sl_fsops *slFsops;
 struct fidc_membh * 
 __fidc_lookup_fg(const struct slash_fidgen *, int);
 
-/**
- * fcmh_clean_check - verify the validity of the fcmh.
- */
-static int
-fcmh_clean_check(struct fidc_membh *f)
-{
-	int clean=0, l=reqlock(&f->fcmh_lock);
-
-	DEBUG_FCMH(PLL_INFO, f, "clean_check");
-	
-	if (f->fcmh_state & FCMH_CAC_CLEAN) {
-		if (f->fcmh_fcoo) {
-			/* Fcoo's can exist only if the following 
-			 *  true.  This phenomena exists because
-			 *  we don't want to hold a lock on the fcmh
-			 *  while an rpc is inflight.  So the thread
-			 *  issuing the open rpc marks the fcmh as
-			 *  'FCMH_FCOO_STARTING', at this time it's 
-			 *  still on the clean list.
-			 */
-			psc_assert(f->fcmh_state & FCMH_FCOO_STARTING);
-			psc_assert(atomic_read(&f->fcmh_refcnt) > 0);
-		}		
-		psc_assert(!(f->fcmh_state & 
-			     (FCMH_CAC_DIRTY | FCMH_CAC_FREE |
-			      FCMH_FCOO_ATTACH)));
-		clean = 1;
-	}
-
-	ureqlock(&f->fcmh_lock, l);
-	return (clean);
-}
 
 static inline int
 fidc_freelist_avail_check(void)
@@ -238,6 +207,8 @@ fidc_reap(struct psc_poolmgr *m)
 	psclist_for_each_entry_safe(f, tmp, &fidcCleanList.lc_listhd,
 				    fcmh_lentry) {
 
+		DEBUG_FCMH(PLL_WARN, f, "considering for reap");
+
 		if (psclg_size(&m->ppm_lg) + dynarray_len(&da) >=
                     atomic_read(&m->ppm_nwaiters) + 1) 
                         break;
@@ -273,12 +244,12 @@ fidc_reap(struct psc_poolmgr *m)
 		if (f->fcmh_state & FCMH_CAC_FREEING)
 			goto end1;
 
-		if (fidc_reap_cb) {
+		if (fidcReapCb) {
 			/* Call into the system specific 'reap' code.
 			 *  On the client this means taking the fcc from the 
 			 *  parent directory inode.
 			 */
-			if ((fidc_reap_cb)(f)) 
+			if ((fidcReapCb)(f)) 
 				goto end1;
 		}
 		/* Free it but don't bother unlocking it, the fcmh was
@@ -298,7 +269,7 @@ fidc_reap(struct psc_poolmgr *m)
 	
 	for (i=0; i < dynarray_len(&da); i++) {
 		f = dynarray_getpos(&da, i);
-		DEBUG_FCMH(PLL_DEBUG, f, "moving to free list");
+		DEBUG_FCMH(PLL_WARN, f, "moving to free list");
 		fidc_put(f, &fidcFreeList);
         }
 	
@@ -614,6 +585,8 @@ fidc_fcoo_init(struct fidc_open_obj *f)
 	f->fcoo_cfd = FID_ANY;
 	atomic_set(&f->fcoo_bmapc_cnt, 0);
 	SPLAY_INIT(&f->fcoo_bmapc);
+	//	if (fcooInitCb)
+	//	(void)(fcoo_init)(f);
 	lc_init(&f->fcoo_buffer_cache, struct sl_buffer, slb_fcm_lentry);
 	jfi_init(&f->fcoo_jfi);
 }
@@ -633,11 +606,13 @@ fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 		fcdsz = FIDC_CLI_DEFSZ;
 		fcmsz = FIDC_CLI_MAXSZ;
 		break;
+
 	case FIDC_ION_HASH_SZ:
 		htsz  = FIDC_ION_HASH_SZ;
 		fcdsz = FIDC_ION_DEFSZ;
 		fcmsz = FIDC_ION_MAXSZ;
 		break;
+
 	case FIDC_MDS_HASH_SZ:
 		htsz  = FIDC_MDS_HASH_SZ;
 		fcdsz = FIDC_MDS_DEFSZ;
@@ -660,8 +635,8 @@ fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 
 	init_hash_table(&fidcHtable, htsz, "fidcHtable");	
 	/*fidcHtable.htcompare = fidc_hash_cmp;*/
-
-	fidc_reap_cb = fcm_reap_cb;
+	initFcooCb = NULL;
+	fidcReapCb = fcm_reap_cb;
 }
 
 int

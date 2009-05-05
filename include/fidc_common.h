@@ -10,6 +10,8 @@
 #define FCOO_START   0
 #define FCOO_NOSTART 1
 
+extern void (*initFcooCb)(struct fidc_open_obj *o);
+
 extern struct sl_fsops *slFsops;
 extern struct hash_table fidcHtable;
 
@@ -101,6 +103,26 @@ enum fidc_lookup_flags {
 		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);	\
 		DEBUG_FCMH(PLL_NOTIFY, (f), "dropref");			\
 	} while (0)
+
+/**
+ * fcmh_clean_check - verify the validity of the fcmh.
+ */
+#define fcmh_clean_check(f)					\
+({								\
+	int __clean=0, __l=reqlock(&(f)->fcmh_lock);			\
+	DEBUG_FCMH(PLL_INFO, (f), "clean_check");			\
+	if ((f)->fcmh_state & FCMH_CAC_CLEAN) {				\
+		if ((f)->fcmh_fcoo) {					\
+			psc_assert((f)->fcmh_state & FCMH_FCOO_STARTING); \
+			psc_assert(atomic_read(&(f)->fcmh_refcnt) > 0);	\
+		}							\
+		psc_assert(!((f)->fcmh_state &				\
+			     (FCMH_CAC_DIRTY | FCMH_CAC_FREE | FCMH_FCOO_ATTACH))); \
+		__clean = 1;						\
+	}								\
+	ureqlock(&(f)->fcmh_lock, __l);					\
+	__clean;							\
+ })
 
 extern void
 fidc_put(struct fidc_membh *, list_cache_t *);
