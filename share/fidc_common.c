@@ -453,7 +453,7 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 		}
 		/* These attrs may be newer than the ones in the cache.
 		 */
-		if (fcm)
+		if (fcm) 
 			fidc_fcm_update(fcmh, fcm);
 
 		freelock_hash_bucket(&fidcHtable, fg->fg_fid);

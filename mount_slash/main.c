@@ -949,10 +949,11 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			memcpy(&fcm.fcm_stb, &attr->attr, sizeof(struct stat));
 			fcm.fcm_fg.fg_fid = attr->attr.st_ino;
 			fcm.fcm_fg.fg_gen = attr->gen;
-			
+
 			psc_trace("adding i+g:%"_P_U64"d+%"_P_U64"d rc=%d", 
 				  fcm.fcm_fg.fg_fid, fcm.fcm_fg.fg_gen, attr->rc);  
 
+			fcm_2_age(&fcm) = fidc_gettime() + FCMH_ATTR_TIMEO;			
 			fcmh = fidc_lookup_copy_inode(&fcm.fcm_fg, &fcm, 
 						      &mq->creds);
 			if (fcmh)

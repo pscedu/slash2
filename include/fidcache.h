@@ -246,6 +246,7 @@ enum fcmh_states {
 #define fcm_2_gen(f)	(f)->fcm_fg.fg_gen
 #define fcm_2_fgp(f)	(&(f)->fcm_fg)
 #define fcm_2_fsz(f)	(f)->fcm_stb.st_size
+#define fcm_2_age(f)    (f)->fcm_slfinfo.slf_age
 //#define fcm_2_inoh(f)	(&(f)->fcm_inodeh)
 
 #define fcm_set_accesstime(f) {					    \
