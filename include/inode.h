@@ -144,6 +144,7 @@ typedef struct slash_block_gen {
 typedef struct slash_block_handle {
 	sl_blkgen_t bh_gen;                       /* current generation num */
 	sl_gcrc_t   bh_crcs[SL_CRCS_PER_BMAP];    /* array of crcs          */
+	u8          bh_crcstates[SL_CRCS_PER_BMAP]; /* crc descriptor bits  */
 	u8          bh_repls[SL_REPLICA_NBYTES];  /* replica bit map        */
 	psc_crc_t   bh_bhcrc;                     /* on-disk bmap crc       */
 } sl_blkh_t;
