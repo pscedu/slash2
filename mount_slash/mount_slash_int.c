@@ -486,9 +486,8 @@ msl_bmap_to_import(struct bmapc_memb *b)
  * @status: return code from rpc.
  */
 int
-msl_io_cb(struct pscrpc_request *rq, void *arg, int status)
+msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
-	struct pscrpc_async_args *args = arg;
 	struct dynarray     *a = args->pointer_arg[MSL_IO_CB_POINTER_SLOT];
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
@@ -499,12 +498,12 @@ msl_io_cb(struct pscrpc_request *rq, void *arg, int status)
 
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
 
-	if (status) {
-                DEBUG_REQ(PLL_ERROR, rq, "non-zero status status %d, "
-                          "rq_status %d", status, rq->rq_status);
+	if (rq->rq_status) {
+		DEBUG_REQ(PLL_ERROR, rq, "non-zero status status %d",
+		    rq->rq_status);
 		psc_fatalx("Resolve issues surrounding this failure");
 		// XXX Freeing of dynarray, offtree state, etc
-                return (status);
+                return (rq->rq_status);
         }
 
 	for (i=0; i < n; i++) {
@@ -566,7 +565,7 @@ msl_io_cb(struct pscrpc_request *rq, void *arg, int status)
 }
 
 int
-msl_dio_cb(struct pscrpc_request *rq, __unusedx void *arg, int status)
+msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 {
         struct srm_io_req *mq;
 	int op=rq->rq_reqmsg->opc;
@@ -576,12 +575,12 @@ msl_dio_cb(struct pscrpc_request *rq, __unusedx void *arg, int status)
         mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	psc_assert(mq);
 	
-	if (status) {
-                DEBUG_REQ(PLL_ERROR, rq, "dio req, non-zero status %d, "
-                          "rq_status %d", status, rq->rq_status);
+	if (rq->rq_status) {
+		DEBUG_REQ(PLL_ERROR, rq, "dio req, non-zero status %d",
+		    rq->rq_status);
 		psc_fatalx("Resolve issues surrounding this failure");
 		// XXX Freeing of dynarray, offtree state, etc
-                return (status);
+                return (rq->rq_status);
         }
 	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u"
 		  " s=%u cfd=%"_P_U64"x", op, mq->offset, mq->size, mq->cfd);

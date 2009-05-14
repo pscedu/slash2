@@ -182,8 +182,8 @@ void msl_fdreg_cb(struct fhent *, int, void *[]);
 #define msl_write(fh, buf, size, off) msl_io(fh, buf, size, off, MSL_WRITE)
 
 int msl_io(struct msl_fhent *, char *, size_t, off_t, int);
-int msl_io_cb(struct pscrpc_request *, void *, int);
-int msl_dio_cb(struct pscrpc_request *, void *, int);
+int msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+int msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
 void mseqpollthr_spawn(void);
 void msctlthr_spawn(void);
