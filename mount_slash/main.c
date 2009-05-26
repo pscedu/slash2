@@ -29,6 +29,7 @@
 
 #include "control.h"
 #include "fidc_common.h"
+#include "fidc_client.h"
 #include "fidcache.h"
 #include "fuse_listener.h"
 #include "mount_slash.h"
@@ -170,8 +171,10 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 	
 	psc_assert(c);
 
-	if (name)
+	if (name) {
 		psc_assert(parent);
+		fidc_child_add(parent, c, name);
+	}
 	return (c);
 }
 
@@ -369,7 +372,8 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
  *  Starts the fcoo if one doesn't already exist.
  */
 static int
-slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
+slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino, 
+		      struct fuse_file_info *fi)
 {
 	struct fidc_membh *c=(struct fidc_membh *)fi->fh;
 	int flags=1, rc=0;
@@ -485,7 +489,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	psc_warnx("FID %"_P_U64"d", (slfid_t)mp->fg.fg_fid);
 
-	m = slash2fuse_fidc_putget(&mp->fg, &mp->attr, NULL, NULL, &mq->creds,
+	m = slash2fuse_fidc_putget(&mp->fg, &mp->attr, name, p, &mq->creds,
 				   (FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART));
 	psc_assert(m);
 	psc_assert(m->fcmh_fcoo && (m->fcmh_state & FCMH_FCOO_STARTING));
@@ -828,6 +832,9 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = rc ? rc : mp->rc;
 		goto out;
 	}
+	/* Remove ourselves from the namespace cache.
+	 */
+	fidc_child_unlink(p, name);
  out:
 	fidc_membh_dropref(p);
 	pscrpc_req_finished(rq);
@@ -940,20 +947,23 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		u32 i;
 		struct fidc_memb fcm;
 		struct fidc_membh *fcmh;
-		struct srm_getattr_rep *attr = (struct srm_getattr_rep *)iov[1].iov_base;
+		struct srm_getattr_rep *attr = 
+			(struct srm_getattr_rep *)iov[1].iov_base;
 
 		for (i=0; i < mq->nstbpref; i++, attr++) {
 			if (attr->rc || !attr->attr.st_ino)
 				continue;
+
 			memset(&fcm, 0, sizeof(struct fidc_memb));
 			memcpy(&fcm.fcm_stb, &attr->attr, sizeof(struct stat));
 			fcm.fcm_fg.fg_fid = attr->attr.st_ino;
 			fcm.fcm_fg.fg_gen = attr->gen;
 
 			psc_trace("adding i+g:%"_P_U64"d+%"_P_U64"d rc=%d", 
-				  fcm.fcm_fg.fg_fid, fcm.fcm_fg.fg_gen, attr->rc);  
+				  fcm.fcm_fg.fg_fid, fcm.fcm_fg.fg_gen, 
+				  attr->rc);  
 
-			fcm_2_age(&fcm) = fidc_gettime() + FCMH_ATTR_TIMEO;			
+			fcm_2_age(&fcm) = fidc_gettime() + FCMH_ATTR_TIMEO;
 			fcmh = fidc_lookup_copy_inode(&fcm.fcm_fg, &fcm, 
 						      &mq->creds);
 			if (fcmh)
@@ -1012,7 +1022,8 @@ slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 		 *  come to us with another request for the inode it won't
 		 *  yet be visible in the cache.
 		 */
-		slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds, 0);
+		slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, 
+				    &mq->creds, 0);
 		slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
 	}
 
@@ -1024,8 +1035,8 @@ slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 static void 
 slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
-        int error;
-	struct fidc_membh *p;
+        int error=0;
+	struct fidc_membh *p, *m;
 	struct slash_creds creds;
 
 	slash2fuse_getcred(req, &creds);
@@ -1046,8 +1057,23 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 		fidc_membh_dropref(p);
 		error = ENOTDIR;
 		goto out; 
-	} else 
+	}
+
+	if ((m = fidc_child_lookup(p, name))) {
+		/* At this point the namespace reference is still valid but
+		 *  the fcmh contents may be old, use slash2fuse_stat() to 
+		 *  determine attr age and possibly invoke an rpc to refresh
+		 *  the fcmh contents.
+		 */
+		error = slash2fuse_stat(m, &creds);
+		if (error) 
+			goto out;
+
+		slash2fuse_reply_entry(req, fcmh_2_fgp(m), fcmh_2_attrp(m));
+
+	} else
 		error = slash2fuse_lookuprpc(req, p, name);
+
 	/* Drop the parent's refcnt.
 	 */
 	fidc_membh_dropref(p);		
@@ -1500,7 +1526,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	if ((name = getenv("SLASH_MDS_NID")) == NULL)
 		psc_fatalx("please export SLASH_MDS_NID");
 
-	fidcache_init(FIDC_USER_CLI, NULL);
+	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
 	rpc_initsvc();
 
 	/* Start up service threads. */

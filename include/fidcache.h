@@ -53,6 +53,9 @@ fidc_gettime(void) {
 	return (ts.tv_nsec/1000000000.0 + ts.tv_sec);
 }
 
+#define fidc_settimeo(age)			\
+	age = fidc_gettime() + FCMH_ATTR_TIMEO
+
 extern struct psc_poolmgr *fidcFreePool;
 extern struct psc_listcache fidcDirtyList;
 extern struct psc_listcache fidcCleanList;
@@ -212,10 +215,13 @@ struct fidc_membh {
 	struct sl_fsops         *fcmh_fsops;
 	void                    *fcmh_pri;
 	union {
-		struct psclist_head children;
+	    struct psclist_head children;
 	} fcmh_data;
 #define fcmh_children fcmh_data.children
 };
+
+//RB_HEAD(fcmh_childrbtree, fidc_membh);
+//RB_PROTOTYPE(fcmh_childrbtree, fidc_membh, fcmh_children, bmapc_cmp);
 
 enum fcmh_states {
 	FCMH_CAC_CLEAN     = (1 << 0),

@@ -252,9 +252,7 @@ fidc_reap(struct psc_poolmgr *m)
 			if ((fidcReapCb)(f)) 
 				goto end1;
 		}
-		/* Free it but don't bother unlocking it, the fcmh was
-		 *  reinitialized.
-		 */
+
 		f->fcmh_state |= FCMH_CAC_FREEING;
 		lc_del(&f->fcmh_lentry, &fidcCleanList);
 		dynarray_add(&da, f);

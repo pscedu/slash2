@@ -7,20 +7,24 @@ struct fidc_membh;
 struct psclist_head;
 
 struct fidc_child {
-	struct fidc_membh  *fcc_fcmh;
 	struct fidc_membh  *fcc_parent;
-	char               *fcc_name;
-	ssize_t             fcc_len;
-	atomic_t            fcc_ref;
+	struct fidc_membh  *fcc_fcmh;
 	struct psclist_head fcc_lentry;
+	double              fcc_age;
+	atomic_t            fcc_ref;
+	int                 fcc_hash;
+	char                fcc_name[];
 };
 
 extern void 
 fidc_child_free(struct fidc_child *);
 
-extern struct fidc_child *
+extern void
 fidc_child_add(struct fidc_membh *, struct fidc_membh *, 
 	       const char *);
+
+extern void
+fidc_child_unlink(struct fidc_membh *p, const char *name);
 
 extern struct fidc_child *
 fidc_child_get(struct fidc_membh *, const char *, size_t);
