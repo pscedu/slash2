@@ -34,6 +34,7 @@ SRCS+=		${SLASH_BASE}/share/slashexport.c
 
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
+SRCS+=		${PFL_BASE}/psc_ds/hash2.c
 SRCS+=		${PFL_BASE}/psc_ds/pool.c
 SRCS+=		${PFL_BASE}/psc_ds/stree.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c

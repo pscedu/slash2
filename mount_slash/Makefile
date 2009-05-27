@@ -3,25 +3,26 @@
 include Makefile.path
 
 PROG=		mount_slash
-SRCS+=		fuse_listener.c
 SRCS+=		control.c
+SRCS+=		fidc_client.c
+SRCS+=		fuse_listener.c
 SRCS+=		main.c
 SRCS+=		mount_slash_int.c
 SRCS+=		mseqpollthr.c
 SRCS+=		rcm.c
 SRCS+=		rpc.c
 SRCS+=		timer.c
-SRCS+=		fidc_client.c
 SRCS+=		${SLASH_BASE}/share/fid.c
-SRCS+=		${SLASH_BASE}/share/rpc.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c
+SRCS+=		${SLASH_BASE}/share/rpc.c
 SRCS+=		${SLASH_BASE}/slashd/buffer.c
-SRCS+=		${SLASH_BASE}/slashd/offtree.c
 SRCS+=		${SLASH_BASE}/slashd/lconf.l
+SRCS+=		${SLASH_BASE}/slashd/offtree.c
 SRCS+=		${SLASH_BASE}/slashd/yconf.y
 
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
+SRCS+=		${PFL_BASE}/psc_ds/hash2.c
 SRCS+=		${PFL_BASE}/psc_ds/pool.c
 SRCS+=		${PFL_BASE}/psc_ds/stree.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
