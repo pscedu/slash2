@@ -22,33 +22,152 @@
 #include "fidc_client.h"
 #include "fidcache.h"
 
+static struct fidc_child * 
+fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
+{
+	struct fidc_child *fcc;
+	int len=strnlen(name, NAME_MAX);
+
+	fcc = PSCALLOC(sizeof(*fcc) + (len + 1));
+	atomic_set(&fcc->fcc_ref, 0);
+	fcc->fcc_fg.fg_fid = fcmh_2_fid(c);
+	fcc->fcc_fg.fg_gen = fcmh_2_gen(c);
+	fcc->fcc_fcmh   = c;
+	fcc->fcc_parent = p;
+	fcc->fcc_hash   = str_hash(name);
+	INIT_PSCLIST_ENTRY(&fcc->fcc_lentry);
+	LOCK_INIT(&fcc->fcc_lock);
+	fidc_settimeo(fcc->fcc_age);
+	strncpy(fcc->fcc_name, name, len);
+	fcc->fcc_name[len] = '\0';
+	return (fcc);
+}
+
+static void 
+fidc_child_prep_free_locked(struct fidc_membh *f)
+{
+	struct fidc_child *fcc, *tmp;
+
+	LOCK_ENSURE(&f->fcmh_lock);
+
+	if (!(f->fcmh_state & FCMH_ISDIR))
+		return;
+
+	psclist_for_each_entry_safe(fcc, tmp, &f->fcmh_children, fcc_lentry) {
+		DEBUG_FCMH(PLL_WARN, f, "fcc=%p fcc_name=%s detaching", 
+			   f, fcc->fcc_name);
+		spinlock(&fcc->fcc_lock);
+		psc_assert(fcc->fcc_parent == f);
+		fcc->fcc_parent = NULL;
+		freelock(&fcc->fcc_lock);
+		psclist_del(&fcc->fcc_lentry);
+	}
+}
+
 /**
- * fidc_child_free - release a child.
+ * fidc_child_free - release a child, parent must be locked.
  */
 static void
-fidc_child_free_int_locked(struct fidc_child *fcc)
+fidc_child_free_plocked(struct fidc_child *fcc)
 {
 	struct fidc_membh *c=fcc->fcc_fcmh;
 	int l=reqlock(&c->fcmh_lock);
 
 	LOCK_ENSURE(&fcc->fcc_parent->fcmh_lock);
+	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
+
+	fidc_child_prep_free_locked(c);
 	
 	psclist_del(&fcc->fcc_lentry);
 	psc_assert(c->fcmh_pri == fcc);
 	psc_assert(!atomic_read(&fcc->fcc_ref));
 	c->fcmh_pri = NULL;
 
-	DEBUG_FCMH(PLL_INFO, c, "fcc=%p name=%s parent=%p freeing", 
-		   fcc, fcc->fcc_name, fcc->fcc_parent);
+	DEBUG_FCMH(PLL_WARN, c, "fcc=%p name=%s parent=%p freeing "
+		   "child_empty=%d", 
+		   fcc, fcc->fcc_name, fcc->fcc_parent, 
+		   ((c->fcmh_state & FCMH_ISDIR) ?
+                    psclist_empty(&c->fcmh_children) : -1));
+	/* Verify that no children are hanging about.
+	 */
+	if (c->fcmh_state & FCMH_ISDIR)
+		psc_assert(psclist_empty(&c->fcmh_children));
 
 	PSCFREE(fcc);
 	ureqlock(&c->fcmh_lock, l);
 }
 
+static void 
+fidc_child_free_orphan(struct fidc_child *fcc)
+{
+	struct fidc_membh *c=fcc->fcc_fcmh;
+	int l=reqlock(&c->fcmh_lock);
+	
+	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
+	c->fcmh_pri = NULL;
+
+	DEBUG_FCMH(PLL_WARN, c, "fcc=%p name=%s freeing orphan",
+		   fcc, fcc->fcc_name);
+
+	PSCFREE(fcc);
+	ureqlock(&c->fcmh_lock, l);
+}
+
+
+static struct fidc_child *
+fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c, 
+			const char *name)
+{
+	struct fidc_child *fcc=NULL;
+	
+	spinlock(&p->fcmh_lock);
+	spinlock(&c->fcmh_lock);
+	
+	if ((fcc = (struct fidc_child *)c->fcmh_pri)) {
+		spinlock(&fcc->fcc_lock);
+		/* Both of these must always be true.
+		 */
+		psc_assert(fcc->fcc_fcmh == c);
+		psc_assert(SAMEFID(fcmh_2_fgp(c), &fcc->fcc_fg));
+		if (strncmp(name, fcc->fcc_name, strnlen(name, NAME_MAX))) {
+			/* This inode may have been renamed, remove
+			 *  this fcc.
+			 */
+			fcc = NULL;
+			fidc_child_free_plocked(fcc);
+
+		} else {
+			/* Increase the lifespan of this entry and return.
+			 */
+			fidc_settimeo(fcc->fcc_age);
+			/* If the fcc is 'connected', then its parent inode
+			 *   must be 'p'.
+			 */
+			if (fcc->fcc_parent) {
+				psc_assert(fcc->fcc_parent == p);
+				psc_assert(psclist_conjoint(&fcc->fcc_lentry));
+			} else {
+				fcc->fcc_parent = p;
+				psclist_xadd_tail(&fcc->fcc_lentry, 
+						  &p->fcmh_children);
+				DEBUG_FCMH(PLL_WARN, p, "reattaching fcc=%p", 
+					   fcc);
+			}
+		}
+		freelock(&fcc->fcc_lock);
+	}
+
+	freelock(&c->fcmh_lock);
+	freelock(&p->fcmh_lock);
+
+	return (fcc);
+}
+
+
 int
 fidc_child_reap_cb(struct fidc_membh *f)
 {
-	struct fidc_child *c=f->fcmh_pri;
+	struct fidc_child *fcc=f->fcmh_pri;
 	struct fidc_membh *p;
 	int locked;
 
@@ -58,28 +177,35 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	 */
 	psc_assert(fcmh_2_fid(f) != 1);
 	
-	if (!c)
+	if (!fcc)
 		return (0);
+
+	DEBUG_FCMH(PLL_WARN, f, "fcc=%p fcc_ref=%d fcmh_children=%d", 
+		   fcc, atomic_read(&fcc->fcc_ref), 
+		   ((f->fcmh_state & FCMH_ISDIR) ? 
+		    psclist_empty(&f->fcmh_children) : -1));
 	/* Don't free directories which still have child ref's.
 	 */
 	if ((f->fcmh_state & FCMH_ISDIR) && !psclist_empty(&f->fcmh_children))
 		return (1);
 
-	if (atomic_read(&c->fcc_ref)) {
-		DEBUG_FCMH(PLL_WARN, f, "fcc=%p ref=%d",
-			   c, atomic_read(&c->fcc_ref));
+	if (atomic_read(&fcc->fcc_ref))
 		return (1);
-	}
-	p = c->fcc_parent;
-	psc_assert(p);
-	if (tryreqlock(&p->fcmh_lock, &locked)) {
-		fidc_child_free_int_locked(c);
-		ureqlock(&p->fcmh_lock, locked);
+
+	if (!fcc->fcc_parent) {
+		fidc_child_free_orphan(fcc);
 		return (0);
-	} else
-		/* The parent is busy, don't wait for the lock.
-		 */
-		return (1);
+
+	} else {
+		p = fcc->fcc_parent;
+		psc_assert(p);
+		if (tryreqlock(&p->fcmh_lock, &locked)) {
+			fidc_child_free_plocked(fcc);
+			ureqlock(&p->fcmh_lock, locked);
+			return (0);
+		} 
+	}
+	return (1);
 }
 
 
@@ -90,23 +216,23 @@ fidc_child_reap_cb(struct fidc_membh *f)
  * @len: the length of the child name string.
  */
 static struct fidc_child *
-fidc_child_lookup_int_locked(struct fidc_membh *parent, const char *name)
+fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 {
 	struct fidc_child *c=NULL;
 	int found=0;
 	int hash=str_hash(name);
 
-	LOCK_ENSURE(&parent->fcmh_lock);
-	psc_assert(atomic_read(&parent->fcmh_refcnt) > 0);
-	psc_assert(parent->fcmh_state & FCMH_ISDIR);
+	LOCK_ENSURE(&p->fcmh_lock);
+	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
+	psc_assert(p->fcmh_state & FCMH_ISDIR);
 
-	DEBUG_FCMH(PLL_INFO, parent, "name %p (%s), hash=%d",
+	DEBUG_FCMH(PLL_INFO, p, "name %p (%s), hash=%d",
 		   name, name, hash);
 
-	psclist_for_each_entry(c, &parent->fcmh_children, fcc_lentry) {
+	psclist_for_each_entry(c, &p->fcmh_children, fcc_lentry) {
 		
-		psc_traces(PSS_OTHER, "parent=fcmh@%p c=%p cname=%s hash=%d",
-			   parent, c, c->fcc_name, c->fcc_hash);
+		psc_traces(PSS_OTHER, "p=fcmh@%p c=%p cname=%s hash=%d",
+			   p, c, c->fcc_name, c->fcc_hash);
 
 		if ((c->fcc_hash == hash) &&
 		    (!strncmp(name, c->fcc_name, strnlen(name, NAME_MAX)))) {
@@ -118,15 +244,21 @@ fidc_child_lookup_int_locked(struct fidc_membh *parent, const char *name)
 		}
 	}
 	if (found) {
-		psc_assert(atomic_read(&c->fcc_ref) > 0);
+		psc_assert(c->fcc_parent == p);
 		psc_assert(c->fcc_fcmh);
+		psc_assert(c->fcc_fcmh->fcmh_pri == c);
+		psc_assert(atomic_read(&c->fcc_ref) > 0);
+
+		if (c->fcc_fcmh->fcmh_state & FCMH_CAC_FREEING)
+			return (NULL);
+
 		if (c->fcc_age < fidc_gettime()) {
 			/* It's old, remove it.
 			 */
 			atomic_dec(&c->fcc_ref);
-			fidc_child_free_int_locked(c);
+			fidc_child_free_plocked(c);
 			c = NULL;
-		}
+		} 
 	}
 	return (c);
 }
@@ -191,7 +323,6 @@ void
 fidc_child_unlink(struct fidc_membh *p, const char *name)
 {
 	struct fidc_child *fcc;
-	struct fidc_membh *c;
 	int l=reqlock(&p->fcmh_lock);
 
 	psc_assert(p->fcmh_state & FCMH_ISDIR);
@@ -199,33 +330,21 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 
 	fcc = fidc_child_lookup_int_locked(p, name);
 	if (!fcc) {
-		freelock(&p->fcmh_lock);
+		ureqlock(&p->fcmh_lock, l);
 		return;
 	}
-	
-	c = fcc->fcc_fcmh;
-	/* Note the locking order here - parent then child.
-	 */
-	spinlock(&c->fcmh_lock);
 	/* Perform some sanity checks on the cached data structure.
 	 */
 	psc_assert(fcc->fcc_parent == p);
 	psc_assert(fcc->fcc_hash == str_hash(name));
 	psc_assert(!strncmp(fcc->fcc_name, name, 
 			    strnlen(fcc->fcc_name, NAME_MAX)));
+	
 	/* The only ref on the fcc should be the one taken above in
 	 *  fidc_child_lookup_int_locked()
 	 */
 	psc_assert(atomic_dec_and_test(&fcc->fcc_ref));
-	/* Remove the fcc from the list parent's list and delete its
-	 *  reference in the in child's inode.
-	 */
-	psclist_del(&fcc->fcc_lentry);	
-	c->fcmh_pri = NULL;
-
-	freelock(&c->fcmh_lock);
-
-	PSCFREE(fcc);
+	fidc_child_free_plocked(fcc);
 
 	ureqlock(&p->fcmh_lock, l);
 }
@@ -240,39 +359,22 @@ void
 fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 {
 	struct fidc_child *fcc, *tmp=NULL;
-	size_t len=strnlen(name, NAME_MAX);
 
 	psc_assert(p && c && name);
 	psc_assert(p->fcmh_state & FCMH_ISDIR);
  	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
        
 	DEBUG_FCMH(PLL_INFO, p, "name(%s)", name);
-
-	/* Does this fcmh already have an fcc assigned to it?
-	 */
-	spinlock(&c->fcmh_lock);
-	if ((tmp = (struct fidc_child *)c->fcmh_pri)) {
-		psc_assert(tmp->fcc_fcmh == c);
-		psc_assert(tmp->fcc_parent == p);
-		/* Increase the lifespan of this entry and return.
-		 */
-		fidc_settimeo(tmp->fcc_age);
-	}
-	freelock(&c->fcmh_lock);
-	if (tmp)
+	
+	if (fidc_child_try_validate(p, c, name))
 		return;
-	    
-	fcc = PSCALLOC(sizeof(*fcc) + (len + 1));
-	atomic_set(&fcc->fcc_ref, 0);
-	fcc->fcc_fcmh   = c;
-	fcc->fcc_parent = p;
-	fcc->fcc_hash   = str_hash(name);
-	fidc_settimeo(fcc->fcc_age);
-	strncpy(fcc->fcc_name, name, len);
-	fcc->fcc_name[len] = '\0';
+	else
+		/* Couldn't validate an existing namespace reference.
+		 */
+		fcc = fidc_new(p, c, name);
 
-	DEBUG_FCMH(PLL_INFO, p, "fcc=%p fcc_name(%s) try add", 
-		   fcc, fcc->fcc_name);
+	psc_assert(fcc);
+
 	/* Here's our atomic check+add onto the parent d_inode.
 	 */
 	spinlock(&p->fcmh_lock);
@@ -283,14 +385,13 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 		psclist_xadd_tail(&fcc->fcc_lentry, &p->fcmh_children);	
 		psc_assert(!c->fcmh_pri);
 		c->fcmh_pri = fcc;
-		DEBUG_FCMH(PLL_INFO, p, "fcc=%p fcc_name(%s) adding", 
+		DEBUG_FCMH(PLL_WARN, p, "fcc=%p fcc_name(%s) adding", 
 			   fcc, fcc->fcc_name);
 	} else {
 		/* Someone beat us to the punch, do sanity checks and then
 		 *  clean up.
 		 */
 		psc_assert(tmp->fcc_fcmh == c);
-		psc_assert(tmp->fcc_parent == p);
 		psc_assert(tmp == c->fcmh_pri);
 		atomic_dec(&tmp->fcc_ref);
 		PSCFREE(fcc);
