@@ -2,6 +2,7 @@
 #define __FIDC_CLIENT_H__ 1
 
 #include "fid.h"
+#include "psc_util/lock.h"
 
 struct fidc_membh;
 struct psclist_head;
@@ -9,7 +10,9 @@ struct psclist_head;
 struct fidc_child {
 	struct fidc_membh  *fcc_parent;
 	struct fidc_membh  *fcc_fcmh;
+	struct slash_fidgen fcc_fg;
 	struct psclist_head fcc_lentry;
+	psc_spinlock_t      fcc_lock;
 	double              fcc_age;
 	atomic_t            fcc_ref;
 	int                 fcc_hash;

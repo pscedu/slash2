@@ -324,7 +324,7 @@ do {								        \
 	int dbg_fcmh_locked=reqlock(&(fcmh)->fcmh_lock);		\
 	psc_logs((level), PSS_OTHER,					\
 		 " fcmh@%p fcm@%p fcoo@%p fcooref(%d:%d) i+g:%"_P_U64"d+%" \
-		 _P_U64"d s: "REQ_FCMH_FLAGS_FMT" lc:%s r:%d :: "fmt,	\
+		 _P_U64"d s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s r:%d :: "fmt,	\
 		 (fcmh), (fcmh)->fcmh_fcm, (fcmh)->fcmh_fcoo,		\
 		 (int)(((fcmh)->fcmh_fcoo &&				\
 			(fcmh)->fcmh_fcoo != (struct fidc_open_obj *)0x01) ? \
@@ -334,7 +334,7 @@ do {								        \
 		       (fcmh)->fcmh_fcoo->fcoo_oref_rw[1] : -66),	\
 		 (u64)(((fcmh)->fcmh_fcm) ? fcmh_2_fid((fcmh)) : FID_ANY), \
 		 (u64)(((fcmh)->fcmh_fcm) ? fcmh_2_gen((fcmh)) : FID_ANY), \
-		 DEBUG_FCMH_FCMH_FLAGS(fcmh),				\
+		 DEBUG_FCMH_FCMH_FLAGS(fcmh), (fcmh)->fcmh_pri,		\
 		 fcmh_lc_2_string((fcmh)->fcmh_cache_owner),		\
 		 atomic_read(&(fcmh)->fcmh_refcnt),			\
 		 ## __VA_ARGS__);					\

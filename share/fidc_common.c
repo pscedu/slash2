@@ -101,7 +101,18 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 	clean = fcmh_clean_check(f);
 
 	if (lc == &fidcFreePool->ppm_lc) {
+		/* FCMH_CAC_FREEING should have already been set so that 
+		 *  other threads will ignore the freeing hash entry.
+		 */
+		psc_assert(f->fcmh_state & FCMH_CAC_FREEING);
+		/* No open object allowed here.
+		 */
 		psc_assert(!f->fcmh_fcoo);
+		/* Verify that no children are hanging about.
+		 */
+		if (f->fcmh_state & FCMH_ISDIR)
+			psc_assert(psclist_empty(&f->fcmh_children));
+
 		/* Valid sources of this inode.
 		 */
 		if (!((f->fcmh_cache_owner == &fidcFreePool->ppm_lc) ||
@@ -109,11 +120,6 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 		      (f->fcmh_cache_owner == NULL)))
 			psc_fatalx("Bad inode fcmh_cache_owner %p",
 			       f->fcmh_cache_owner);
-
-		/* FCMH_CAC_FREEING should have already been set so that 
-		 *  other threads will ignore the freeing hash entry.
-		 */
-		psc_assert(f->fcmh_state & FCMH_CAC_FREEING);
 
 		DEBUG_FCMH(PLL_DEBUG, f, "reap fcmh");
 
@@ -125,6 +131,7 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 		else {
 			struct fidc_membh *tmp;
 
+			psc_assert(f->fcmh_pri == NULL);
 			psc_assert(!atomic_read(&f->fcmh_refcnt));
 			if (f->fcmh_cache_owner == NULL)
 				DEBUG_FCMH(PLL_WARN, f, 
@@ -557,6 +564,7 @@ fidc_membh_init(__unusedx struct psc_poolmgr *pm, void *a)
 	f->fcmh_cache_owner = NULL;
 	f->fcmh_fsops = slFsops;
 	f->fcmh_state = FCMH_CAC_FREE;
+	f->fcmh_pri = NULL;
 	memset(&f->fcmh_hashe, 0, sizeof(struct hash_entry));
 	return (0);	       
 }
