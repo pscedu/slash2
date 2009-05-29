@@ -121,8 +121,6 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 			psc_fatalx("Bad inode fcmh_cache_owner %p",
 			       f->fcmh_cache_owner);
 
-		DEBUG_FCMH(PLL_DEBUG, f, "reap fcmh");
-
 		if (!f->fcmh_fcm)
 			/* No fcm, this probably came from 
 			 *  __fidc_lookup_inode() try_create.
@@ -214,7 +212,7 @@ fidc_reap(struct psc_poolmgr *m)
 	psclist_for_each_entry_safe(f, tmp, &fidcCleanList.lc_listhd,
 				    fcmh_lentry) {
 
-		DEBUG_FCMH(PLL_WARN, f, "considering for reap");
+		DEBUG_FCMH(PLL_INFO, f, "considering for reap");
 
 		if (psclg_size(&m->ppm_lg) + dynarray_len(&da) >=
                     atomic_read(&m->ppm_nwaiters) + 1) 
@@ -225,19 +223,14 @@ fidc_reap(struct psc_poolmgr *m)
                         sched_yield();
                         goto startover;
 		}		    
-		/* Skip the root inode.
+		/* - Skip the root inode.
+		 * - Clean inodes may have non-zero refcnts,
+		 * - Inode must be lockable now
 		 */
-		if (fcmh_2_fid(f) == 1)
+		if ((fcmh_2_fid(f) == 1)           || 
+		    (atomic_read(&f->fcmh_refcnt)) ||
+		    (!trylock(&f->fcmh_lock)))
 			goto end2;
-		/*  Clean inodes may have non-zero refcnts, skip these
-		 *   inodes.
-		 */
-		if (atomic_read(&f->fcmh_refcnt))
-			goto end2;
-
-		if (!trylock(&f->fcmh_lock))
-			goto end2;
-
 		/* Make sure our clean list is 'clean' by
 		 *  verifying the following conditions.
 		 */
@@ -519,7 +512,8 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 		 *  ref'd so no race condition exists here.
 		 */
 		if (fcmh_2_gen(fcmh) == FID_ANY)
-			DEBUG_FCMH(PLL_WARN, fcmh, "adding FID_ANY to cache");
+			DEBUG_FCMH(PLL_NOTIFY, fcmh, 
+				   "adding FID_ANY to cache");
 			
 		init_hash_entry(&fcmh->fcmh_hashe, &(fcmh_2_fid(fcmh)), fcmh);
 

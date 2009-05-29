@@ -166,8 +166,9 @@ typedef struct slash_inode_store {
 	u32           ino_lblk_sz;                /* last block size         */
 	sl_snap_t     ino_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers       */
 	u32           ino_csnap;                  /* current snapshot        */
-	sl_replica_t  ino_prepl;                  /* primary replica         */
 	size_t        ino_nrepls;                 /* if 0, use ino_prepl     */
+	sl_replica_t  ino_prepl;                  /* primary replica         */
+	sl_replica_t  ino_repls[SL_MAX_REPLICAS]; /* replicas                */
 	psc_crc_t     ino_rs_crc;                 /* crc of the replicas     */
 	psc_crc_t     ino_crc;                    /* crc of the inode        */
 } sl_inode_mds_t;

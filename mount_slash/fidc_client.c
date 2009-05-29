@@ -98,19 +98,23 @@ fidc_child_free_plocked(struct fidc_child *fcc)
 }
 
 static void 
-fidc_child_free_orphan(struct fidc_child *fcc)
+fidc_child_free_orphan_locked(struct fidc_membh *f)
 {
-	struct fidc_membh *c=fcc->fcc_fcmh;
-	int l=reqlock(&c->fcmh_lock);
-	
-	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
-	c->fcmh_pri = NULL;
+	struct fidc_child *fcc=f->fcmh_pri;
 
-	DEBUG_FCMH(PLL_WARN, c, "fcc=%p name=%s freeing orphan",
+	LOCK_ENSURE(&f->fcmh_lock);
+	
+	psc_assert(fcc);
+	psc_assert(!(f->fcmh_state & FCMH_CAC_FREEING));
+	f->fcmh_pri = NULL;
+
+	DEBUG_FCMH(PLL_WARN, f, "fcc=%p name=%s freeing orphan",
 		   fcc, fcc->fcc_name);
 
+	if (f->fcmh_state & FCMH_ISDIR)
+		psc_assert(psclist_empty(&f->fcmh_children));
+
 	PSCFREE(fcc);
-	ureqlock(&c->fcmh_lock, l);
 }
 
 
@@ -119,10 +123,16 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 			const char *name)
 {
 	struct fidc_child *fcc=NULL;
-	
+
+	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
+	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
+
 	spinlock(&p->fcmh_lock);
 	spinlock(&c->fcmh_lock);
 	
+	psc_assert(!(p->fcmh_state & FCMH_CAC_FREEING));
+	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
+
 	if ((fcc = (struct fidc_child *)c->fcmh_pri)) {
 		spinlock(&fcc->fcc_lock);
 		/* Both of these must always be true.
@@ -156,7 +166,6 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 		}
 		freelock(&fcc->fcc_lock);
 	}
-
 	freelock(&c->fcmh_lock);
 	freelock(&p->fcmh_lock);
 
@@ -168,40 +177,43 @@ int
 fidc_child_reap_cb(struct fidc_membh *f)
 {
 	struct fidc_child *fcc=f->fcmh_pri;
-	struct fidc_membh *p;
-	int locked;
-
 	
 	LOCK_ENSURE(&f->fcmh_lock);
 	/* Don't free the root inode.
 	 */
 	psc_assert(fcmh_2_fid(f) != 1);
 	
+	DEBUG_FCMH(PLL_WARN, f, "fcc=%p fcc_ref=%d fcmh_no_children=%d", 
+		   fcc, (fcc ? atomic_read(&fcc->fcc_ref) : -1), 
+		   ((f->fcmh_state & FCMH_ISDIR) ? 
+		    psclist_empty(&f->fcmh_children) : -1));
+
+	if ((fcc && atomic_read(&fcc->fcc_ref)) || 
+	    ((f->fcmh_state & FCMH_ISDIR) && 
+	     (!psclist_empty(&f->fcmh_children))))
+		return (1);
+
 	if (!fcc)
 		return (0);
 
-	DEBUG_FCMH(PLL_WARN, f, "fcc=%p fcc_ref=%d fcmh_children=%d", 
-		   fcc, atomic_read(&fcc->fcc_ref), 
-		   ((f->fcmh_state & FCMH_ISDIR) ? 
-		    psclist_empty(&f->fcmh_children) : -1));
-	/* Don't free directories which still have child ref's.
-	 */
-	if ((f->fcmh_state & FCMH_ISDIR) && !psclist_empty(&f->fcmh_children))
-		return (1);
-
-	if (atomic_read(&fcc->fcc_ref))
-		return (1);
-
 	if (!fcc->fcc_parent) {
-		fidc_child_free_orphan(fcc);
+		fidc_child_free_orphan_locked(f);
 		return (0);
 
 	} else {
-		p = fcc->fcc_parent;
+		/* The parent needs to be unlocked after the fcc is freed, 
+		 *  hence the need for the temp var 'p'.
+		 */
+		struct fidc_membh *p=fcc->fcc_parent;
+
 		psc_assert(p);
-		if (tryreqlock(&p->fcmh_lock, &locked)) {
+		/* This tryeqlock technically violates lock ordering
+		 *  (parent / child / fcc) which is why we bail if the
+		 *  parent lock cannot be obtained without blocking.
+		 */
+		if (trylock(&p->fcmh_lock)) {
 			fidc_child_free_plocked(fcc);
-			ureqlock(&p->fcmh_lock, locked);
+			freelock(&p->fcmh_lock);
 			return (0);
 		} 
 	}
