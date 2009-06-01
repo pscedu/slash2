@@ -1070,7 +1070,7 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 			goto out;
 
 		slash2fuse_reply_entry(req, fcmh_2_fgp(m), fcmh_2_attrp(m));
-
+		fidc_membh_dropref(m);
 	} else
 		error = slash2fuse_lookuprpc(req, p, name);
 

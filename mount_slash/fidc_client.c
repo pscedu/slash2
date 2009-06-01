@@ -270,7 +270,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 			atomic_dec(&c->fcc_ref);
 			fidc_child_free_plocked(c);
 			c = NULL;
-		} 
+		}
 	}
 	return (c);
 }
@@ -319,6 +319,8 @@ fidc_child_lookup(struct fidc_membh *p, const char *name)
 
 	c = fidc_child_lookup_int_locked(p, name);
 	if (c) { 
+		psc_assert(c->fcc_fcmh);
+		fidc_membh_incref(c->fcc_fcmh);
 		m = c->fcc_fcmh;
 		/* We no longer need the fcc, so decref it.  A ref on the fcmh
 		 *  was taken in fidc_child_get_int_locked().
