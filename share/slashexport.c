@@ -28,20 +28,27 @@ SPLAY_GENERATE(sexptree, slashrpc_export, sexp_entry, sexpcmp);
 struct slashrpc_export *
 slashrpc_export_get(struct pscrpc_export *exp)
 {
+	struct slashrpc_export *sexp;
 	int l=reqlock(&exp->exp_lock);
 
 	if (exp->exp_private == NULL) {
-		exp->exp_private = PSCALLOC(sizeof(struct slashrpc_export));
-		exp->exp_hldropf = slashrpc_export_destroy;
+		sexp = exp->exp_private = 
+			PSCALLOC(sizeof(struct slashrpc_export));
+		sexp->sexp_export = exp;
+		exp->exp_hldropf = slashrpc_export_destroy;		
 #if SEXPTREE
 		spinlock(&sexptreelock);
 		if (SPLAY_INSERT(sexptree, &sexptree, exp->exp_private))
 			psc_fatalx("export already registered");
 		freelock(&sexptreelock);
 #endif		
+	} else {
+		sexp = exp->exp_private;
+		psc_assert(sexp->sexp_export == exp);
 	}
+
 	ureqlock(&exp->exp_lock, l);
-	return (exp->exp_private);
+	return (sexp);
 }
 
 void
@@ -50,6 +57,7 @@ slashrpc_export_destroy(void *data)
 	struct slashrpc_export *sexp = data;
 	struct pscrpc_export *exp = sexp->sexp_export;
 	
+	psc_assert(exp);
 	/* There's no way to set this from the drop_callback()
 	 */
 	if (!(sexp->sexp_type & EXP_CLOSING))
