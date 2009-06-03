@@ -6,6 +6,7 @@
 #include "fid.h"
 #include "fidcache.h"
 #include "mdsexpc.h"
+#include "mds.h"
 
 __static int 
 mds_repl_crc_check(sl_inodeh_t *i)
