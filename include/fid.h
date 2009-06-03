@@ -25,8 +25,9 @@ struct slash_fidgen {
 /* 16 bit server/filesystem id */
 #define FSID_FMT		"%016"_P_U64"x"
 #define FSID_LEN		16
-#define FID_PATH_DEPTH		2
+#define FID_PATH_DEPTH		3
 #define FID_PATH_LEN		1024
+#define FID_PATH_NAME           ".slfidns"
 
 #define FIDFMT			"%"_P_U64"d:%"_P_U64"d"
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
