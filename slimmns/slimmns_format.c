@@ -1,4 +1,4 @@
-/* $Id: metadir.c 5315 2009-02-24 08:46:59Z yanovich $ */
+/* $Id$ */
 
 #include <sys/param.h>
 #include <sys/stat.h>
