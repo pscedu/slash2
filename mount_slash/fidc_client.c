@@ -22,11 +22,20 @@
 #include "fidc_client.h"
 #include "fidcache.h"
 
+/**
+ * fidc_new - create a new fcc structure and initialize it using provided parameters.
+ * @p: parent fcmh
+ * @c: child fcmh
+ * @name: name of child fcmh
+ */
 static struct fidc_child * 
 fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 {
 	struct fidc_child *fcc;
 	int len=strnlen(name, NAME_MAX);
+
+ 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
+ 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
 
 	fcc = PSCALLOC(sizeof(*fcc) + (len + 1));
 	atomic_set(&fcc->fcc_ref, 0);
@@ -43,6 +52,10 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	return (fcc);
 }
 
+/**
+ * fidc_child_prep_free_locked - if the fcmh is a directory then detach any cached fcc's from fcmh_children.  This ensures that the children's fcc_parent backpointer reference is properly erased.
+ * @f:  the fcmh object to be freed.
+ */
 static void 
 fidc_child_prep_free_locked(struct fidc_membh *f)
 {
@@ -65,7 +78,8 @@ fidc_child_prep_free_locked(struct fidc_membh *f)
 }
 
 /**
- * fidc_child_free - release a child, parent must be locked.
+ * fidc_child_free - release a child fcc.  The parent must already be locked (plocked == 'parent locked') so that the fcc may be freed from the parent's fcmh_children list.
+ * @fcc: the fcc to be freed.
  */
 static void
 fidc_child_free_plocked(struct fidc_child *fcc)
@@ -97,6 +111,11 @@ fidc_child_free_plocked(struct fidc_child *fcc)
 	ureqlock(&c->fcmh_lock, l);
 }
 
+
+/**
+ * fidc_child_free_orphan_locked - free an fcc which has no parent pointer (and hence, is an 'orphan').  The freeing process here is less involved than fidc_child_free_plocked() because no parent data structure needs to be managed.
+ * @f: fcmh to be freed.
+ */
 static void 
 fidc_child_free_orphan_locked(struct fidc_membh *f)
 {
@@ -105,6 +124,7 @@ fidc_child_free_orphan_locked(struct fidc_membh *f)
 	LOCK_ENSURE(&f->fcmh_lock);
 	
 	psc_assert(fcc);
+	psc_assert(!fcc->fcc_parent);
 	psc_assert(!(f->fcmh_state & FCMH_CAC_FREEING));
 	f->fcmh_pri = NULL;
 
@@ -118,6 +138,13 @@ fidc_child_free_orphan_locked(struct fidc_membh *f)
 }
 
 
+/**
+ * fidc_child_try_validate - given a parent fcmh, child, and a name, try to validate the child's fcc if one exists.  On success the fcc timeout is increased and if the fcc was orphaned then is reattached to the parent 'p'.  
+ * @p: parent fcmh
+ * @c: child fcmh
+ * @name: name of the fcc entry associated with child.
+ * Note: the locking order is [parent, child, child fcc]
+ */
 static struct fidc_child *
 fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c, 
 			const char *name)
@@ -130,6 +157,7 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 	spinlock(&p->fcmh_lock);
 	spinlock(&c->fcmh_lock);
 	
+	psc_assert(p->fcmh_state & FCMH_ISDIR);
 	psc_assert(!(p->fcmh_state & FCMH_CAC_FREEING));
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
@@ -143,9 +171,9 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 			/* This inode may have been renamed, remove
 			 *  this fcc.
 			 */
-			fcc = NULL;
+			freelock(&fcc->fcc_lock);
 			fidc_child_free_plocked(fcc);
-
+			fcc = NULL;
 		} else {
 			/* Increase the lifespan of this entry and return.
 			 */
@@ -163,8 +191,8 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 				DEBUG_FCMH(PLL_WARN, p, "reattaching fcc=%p", 
 					   fcc);
 			}
+			freelock(&fcc->fcc_lock);
 		}
-		freelock(&fcc->fcc_lock);
 	}
 	freelock(&c->fcmh_lock);
 	freelock(&p->fcmh_lock);
@@ -173,6 +201,11 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 }
 
 
+/**
+ * fidc_child_reap_cb - the callback handler for fidc_reap() is responsible for notifying the fcmh reaper if the fcmh is eligible for reaping.  
+ * @f: the fcmh which is trying to be freed.
+ * Returns: '0' if reapable, '1' if unreapable.
+ */
 int
 fidc_child_reap_cb(struct fidc_membh *f)
 {
@@ -193,10 +226,10 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	     (!psclist_empty(&f->fcmh_children))))
 		return (1);
 
-	if (!fcc)
+	else if (!fcc)
 		return (0);
 
-	if (!fcc->fcc_parent) {
+	else if (!fcc->fcc_parent) {
 		fidc_child_free_orphan_locked(f);
 		return (0);
 
@@ -222,7 +255,7 @@ fidc_child_reap_cb(struct fidc_membh *f)
 
 
 /**
- * fidc_child_get_int_locked - given a parent directory inode, try to locate a child. 
+ * fidc_child_get_int_locked - given a parent directory inode, try to locate a child.  If the fcc is too old then it is freed and NULL is returned.
  * @parent: the parent directory inode.
  * @name: name of the child.
  * @len: the length of the child name string.
@@ -255,22 +288,24 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 			break;
 		}
 	}
-	if (found) {
-		psc_assert(c->fcc_parent == p);
-		psc_assert(c->fcc_fcmh);
-		psc_assert(c->fcc_fcmh->fcmh_pri == c);
-		psc_assert(atomic_read(&c->fcc_ref) > 0);
+	
+	if (!found)
+		return (NULL);
 
-		if (c->fcc_fcmh->fcmh_state & FCMH_CAC_FREEING)
-			return (NULL);
-
-		if (c->fcc_age < fidc_gettime()) {
-			/* It's old, remove it.
-			 */
-			atomic_dec(&c->fcc_ref);
-			fidc_child_free_plocked(c);
-			c = NULL;
-		}
+	psc_assert(c->fcc_fcmh);
+	psc_assert(c->fcc_parent == p);
+	psc_assert(c->fcc_fcmh->fcmh_pri == c);
+	psc_assert(atomic_read(&c->fcc_ref) > 0);
+	
+	if (c->fcc_fcmh->fcmh_state & FCMH_CAC_FREEING)
+		return (NULL);
+	
+	if (c->fcc_age < fidc_gettime()) {
+		/* It's old, remove it.
+		 */
+		atomic_dec(&c->fcc_ref);
+		fidc_child_free_plocked(c);
+		c = NULL;
 	}
 	return (c);
 }
@@ -377,6 +412,7 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	psc_assert(p && c && name);
 	psc_assert(p->fcmh_state & FCMH_ISDIR);
  	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
+ 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
        
 	DEBUG_FCMH(PLL_INFO, p, "name(%s)", name);
 	
