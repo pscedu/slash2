@@ -2,14 +2,17 @@
 
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "psc_types.h"
 #include "psc_util/assert.h"
+#include "psc_util/cdefs.h"
+#include "psc_util/log.h"
+
 #include "fid.h"
 
 static void
@@ -55,13 +58,24 @@ slimmns_create(const char *root, u32 depth)
 	return (0);
 }
 
-int 
+const char *progname;
+
+__dead void
+usage(void)
+{
+	fprintf(stderr, "usage: %s /slashfs_root_dir\n", progname);
+	exit(1);
+}
+
+int
 main(int argc, char *argv[])
 {
-	if (argc != 2) {
-		fprintf(stderr, "Usage: %s /slashfs_root_dir\n", argv[0]);
-		return (-1);
-	}
-	
+	progname = argv[0];
+	while (getopt(argc, argv, "") != -1)
+		usage();
+	argc -= optind;
+	if (argc != 1)
+		usage();
+
 	return (slimmns_create(argv[1], 0));
 }

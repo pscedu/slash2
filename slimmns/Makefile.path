@@ -1,4 +1,4 @@
-# $Id: Makefile.path 4118 2008-09-09 17:59:03Z yanovich $
+# $Id$
 
 SLASH_BASE:=${SLASH_BASE}../
 include ${SLASH_BASE}/Makefile.path
