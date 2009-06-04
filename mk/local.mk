@@ -1,5 +1,7 @@
 # $Id$
 
+SCONS?=		scons
+
 CFLAGS+=	-Wall -W -g
 #CFLAGS+=	-Wshadow -Wunused -Wuninitialized
 DEFINES+=	-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DYY_NO_UNPUT
