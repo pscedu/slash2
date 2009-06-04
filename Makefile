@@ -9,10 +9,14 @@ SUBDIRS+=	mount_slash
 SUBDIRS+=	msctl
 SUBDIRS+=	slashd
 SUBDIRS+=	slctl
+SUBDIRS+=	slimmns
 SUBDIRS+=	slioctl
 SUBDIRS+=	sliod
 
+zbuild:
+	@(cd ${ZFS_BASE} && ${SCONS} -c && scons)
+	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 -c && ${SCONS} slashlib=1)
+
 build:
-	@(cd ${ROOTDIR}/zfs/zfs-fuse-0.5.0_slash/src && \
-	  scons slashlib=1)
+	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1)
 	${MAKE} clean && ${MAKE} depend && ${MAKE} all
