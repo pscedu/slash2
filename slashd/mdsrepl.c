@@ -62,7 +62,7 @@ mds_repl_xattr_load_locked(sl_inodeh_t *i)
 }
 #else
 __static int 
-mds_repl_xattr_load_locked(sl_inodeh_t *i) { return (0); }
+mds_repl_xattr_load_locked(__unusedx sl_inodeh_t *i) { return (0); }
 #endif
 
 int

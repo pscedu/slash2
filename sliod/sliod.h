@@ -4,6 +4,7 @@
 #define _SLIOD_H_
 
 #include "psc_rpc/service.h"
+#include "psc_util/cdefs.h"
 #include "psc_util/thread.h"
 
 #define SLIOTHRT_CTL		0	/* control */
@@ -35,6 +36,6 @@ void slric_init(void);
 void slrim_init(void);
 void slrii_init(void);
 void sliotimerthr_spawn(void);
-void slioctlthr_main(const char *);
+__dead void slioctlthr_main(const char *);
 
 #endif /* _SLIOD_H_ */

@@ -7,30 +7,31 @@
 #include <string.h>
 
 #include "psc_util/log.h"
+
 #include "yconf.h"
 
 extern int cfg_lineno;
 extern char *yylval;
 %}
 
-eq   [=]
-sep  [:]
-nsep [,]
-endl [;]
+eq		[=]
+sep		[:]
+nsep		[,]
+endl		[;]
 
-num      [0-9]+
-hexnum   0x[0-9a-f]+
-sitename [\@][A-Z]+
-char     [A-Za-z]
-ipquad   [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
-name     [A-Za-z][0-9A-Za-z_.-]+
-floatv   [0-9]*\.?[0-9]+
-resname  [A-Za-z][0-9A-Za-z]+[\@][A-Z]+
-lnettcp  tcp[0-9]+
-sizeval  [0-9]+[KMGTBkmgtb]
-pathname [/][a-zA-Z0-9/._-]+
-globpath [/][a-zA-Z0-9|/.\,_\[\]+?-]+
-quotedstr [\"].*[\"]
+num		[0-9]+
+hexnum		0x[0-9a-f]+
+sitename	@[A-Z]+
+char		[A-Za-z]
+ipquad		[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
+name		[A-Za-z][0-9A-Za-z_.-]+
+floatv		[0-9]*\.?[0-9]+
+resname		[A-Za-z][0-9A-Za-z]+@[A-Z]+
+lnettcp		tcp[0-9]+
+sizeval		[0-9]+[KMGTBkmgtb]
+pathname	[/][a-zA-Z0-9/._-]+
+globpath	[/][a-zA-Z0-9|/.,_\[\]+?-]+
+quotedstr	\"[^"]*\"
 
 %%
 
@@ -73,7 +74,7 @@ site {
 
 resource {
         psc_trace("RESOURCE_PROFILE %s", yytext);
-        return RESOURCE_PROFILE;           
+        return RESOURCE_PROFILE;
 }
 
 peers {
@@ -83,7 +84,7 @@ peers {
 
 ifs {
         psc_trace("INTERFACETAG %s", yytext);
-        return INTERFACETAG;      
+        return INTERFACETAG;
 }
 
 
@@ -117,19 +118,19 @@ no {
 
 parallel_fs {
         psc_trace("Resource type string %s", yytext);
-        yylval = strdup(yytext); 
+        yylval = strdup(yytext);
         return RESOURCE_TYPE;
 }
 
 archival_fs {
         psc_trace("Resource type string %s", yytext);
-        yylval = strdup(yytext); 
+        yylval = strdup(yytext);
         return RESOURCE_TYPE;
 }
 
 compute {
         psc_trace("Resource type string %s", yytext);
-        yylval = strdup(yytext); 
+        yylval = strdup(yytext);
         return RESOURCE_TYPE;
 }
 
@@ -140,9 +141,9 @@ compute {
 }
 
 {lnettcp} {
-        psc_trace("Lnet tcp network string %s", yytext);  
-        yylval = strdup(yytext);        
-        return LNETTCP;      
+        psc_trace("Lnet tcp network string %s", yytext);
+        yylval = strdup(yytext);
+        return LNETTCP;
 }
 
 {name} {
@@ -177,29 +178,27 @@ compute {
 
 {sitename} {
         psc_trace("SITE_NAME %s", yytext);
-        yylval = strdup(yytext); 
+        yylval = strdup(yytext);
         return SITE_NAME;
 }
 
 {resname} {
         psc_trace("RESOURCE_NAME %s", yytext);
-        yylval = strdup(yytext); 
+        yylval = strdup(yytext);
         return RESOURCE_NAME;
 }
 
 {ipquad} {
         psc_trace("IPADRRESS %s", yytext);
-        yylval = strdup(yytext); 
+        yylval = strdup(yytext);
         return IPADDR;
 }
 
 {quotedstr} {
         psc_trace("Quoted string %s", yytext);
-        yylval = strdup(yytext); 
+        yylval = strdup(yytext);
         return QUOTEDS;
 }
-
-
 
 [ \t]*#.*	;
 [ \t]+		;
@@ -209,7 +208,8 @@ compute {
 
 %%
 
-int yywrap(void)
+int
+yywrap(void)
 {
 	return 1;
 }

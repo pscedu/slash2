@@ -76,7 +76,6 @@ fidc_fid2fmdsi(slfid_t f, struct fidc_membh **fcmh)
 	
 	psc_assert((*fcmh)->fcmh_fcoo->fcoo_pri);       
 	fmdsi = (*fcmh)->fcmh_fcoo->fcoo_pri;	
- out:
 	ureqlock(&(*fcmh)->fcmh_lock, l);
 	return (fmdsi);
 }
