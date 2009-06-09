@@ -4,17 +4,18 @@
  * Routines for handling RPC requests for MDS from CLIENT.
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/fsuid.h>
 #include <sys/vfs.h>
 
-#define __USE_GNU
-#include <fcntl.h>
-#undef __USE_GNU
-
 #include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <unistd.h>
 
@@ -26,15 +27,17 @@
 #include "psc_util/lock.h"
 #include "psc_util/strlcpy.h"
 
-#include "fidcache.h"
+#include "cfd.h"
+#include "fdbuf.h"
 #include "fidc_common.h"
 #include "fidc_mds.h"
-#include "slashrpc.h"
-#include "slashexport.h"
-#include "cfd.h"
-#include "mdsexpc.h"
+#include "fidcache.h"
 #include "mds.h"
-#include "../../zfs/zfs-fuse-0.5.0_slash/src/zfs-fuse/zfs_slashlib.h"
+#include "mdsexpc.h"
+#include "slashexport.h"
+#include "slashrpc.h"
+
+#include "zfs-fuse/zfs_slashlib.h"
 
 extern void *zfsVfs;
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
@@ -155,15 +158,22 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
 	struct mexpfcm *fref;
-	slfid_t fid;
 	struct bmapc_memb *bmap;
+	uint64_t cfd;
 
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
+
+	if (fdbuf_decrypt(&mq->sfdb, &cfd, NULL) == -1) {
+		psc_errorx("decrypt failed!");
+		mp->rc = -EINVAL;
+		RETURN(0);
+	} 
+
 	/* Access the reference 
 	 */
-	if (cfd2fid_p(rq->rq_export, mq->cfd, &fid, (void **)&fref))
+	if (cfd2fid_p(rq->rq_export, cfd, (void **)&fref))
 		mp->rc = -errno;
 	else {
 		psc_assert(fref);
@@ -222,28 +232,32 @@ slrmc_create(struct pscrpc_request *rq)
 {
 	struct srm_create_req *mq;
 	struct srm_opencreate_rep *mp;
+	struct slash_fidgen fg;
 	void *data;
 
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = zfsslash2_opencreate(zfsVfs, mq->pino, &mq->creds, mq->flags, 
-				      mq->mode, mq->name, &mp->fg, 
+				      mq->mode, mq->name, &fg, 
 				      &mp->attr, &data);
 	if (!mp->rc) {
 		extern struct cfdops mdsCfdOps;
 		struct cfdent *cfd=NULL;
 
-		mp->rc = slrmc_inode_cacheput(&mp->fg, &mp->attr, &mq->creds);
+		mp->rc = slrmc_inode_cacheput(&fg, &mp->attr, &mq->creds);
 		if (!mp->rc) {
-			cfdnew(mp->fg.fg_fid, rq->rq_export, data, &cfd, 
-			       &mdsCfdOps);
+			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
+			    data, &cfd, &mdsCfdOps);
 
-			if (!mp->rc && cfd)
-				mp->cfd = cfd->cfd;
+			if (!mp->rc && cfd) {
+				fdbuf_encrypt(&cfd->fdb, &fg);
+				memcpy(&mp->sfdb, &cfd->fdb,
+				    sizeof(mp->sfdb));
+			}
 
-			psc_info("cfdnew() fid %"_P_U64"d CFD (%"_P_U64"d) rc=%d",
-				 mp->fg.fg_fid, mp->cfd, mp->rc);
+			psc_info("cfdnew() fid %"_P_U64"d rc=%d",
+				 fg.fg_fid, mp->rc);
 		}
 	}
 
@@ -251,9 +265,11 @@ slrmc_create(struct pscrpc_request *rq)
 }
 
 static int 
-slrmc_open(struct pscrpc_request *rq) {
+slrmc_open(struct pscrpc_request *rq)
+{
 	struct srm_open_req *mq;
 	struct srm_opencreate_rep *mp;
+	struct slash_fidgen fg;
 	void *data;
 
 	ENTRY;
@@ -261,7 +277,7 @@ slrmc_open(struct pscrpc_request *rq) {
 	RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = zfsslash2_opencreate(zfsVfs, mq->ino, &mq->creds, mq->flags, 
-				      0, NULL, &mp->fg, &mp->attr, &data);
+				      0, NULL, &fg, &mp->attr, &data);
 
 	psc_info("zfsslash2_opencreate() fid %"_P_U64"d rc=%d", 
 		 mq->ino, mp->rc);
@@ -270,20 +286,23 @@ slrmc_open(struct pscrpc_request *rq) {
 		extern struct cfdops mdsCfdOps;
 		struct cfdent *cfd=NULL;
 
-		mp->rc = slrmc_inode_cacheput(&mp->fg, &mp->attr, &mq->creds);
+		mp->rc = slrmc_inode_cacheput(&fg, &mp->attr, &mq->creds);
 		
 		psc_info("slrmc_inode_cacheput() fid %"_P_U64"d rc=%d", 
 			 mq->ino, mp->rc);
 
 		if (!mp->rc) {
-			mp->rc = cfdnew(mp->fg.fg_fid, rq->rq_export, data, 
-					&cfd, &mdsCfdOps);
+			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
+			    data, &cfd, &mdsCfdOps);
 
-			if (!mp->rc && cfd)
-				mp->cfd = cfd->cfd;	
+			if (!mp->rc && cfd) {
+				fdbuf_encrypt(&cfd->fdb, &fg);
+				memcpy(&mp->sfdb, &cfd->fdb,
+				    sizeof(mp->sfdb));
+			}
 
-			psc_info("cfdnew() fid %"_P_U64"d CFD (%"_P_U64"d) rc=%d",
-				 mp->fg.fg_fid, mp->cfd, mp->rc);
+			psc_info("cfdnew() fid %"_P_U64"d rc=%d",
+			    fg.fg_fid, mp->rc);
 		}
 	}
 	RETURN(0);
@@ -293,13 +312,14 @@ static int
 slrmc_opendir(struct pscrpc_request *rq)
 {
 	struct srm_opendir_req *mq;
-	struct srm_opencreate_rep *mp;
+	struct srm_opendir_rep *mp;
+	struct slash_fidgen fg;
 	void *data;
 
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = zfsslash2_opendir(zfsVfs, mq->ino, &mq->creds, &mp->fg, 
+	mp->rc = zfsslash2_opendir(zfsVfs, mq->ino, &mq->creds, &fg, 
 				   &data);
 
 	psc_info("zfs opendir data (%p)", data);
@@ -308,15 +328,17 @@ slrmc_opendir(struct pscrpc_request *rq)
 		extern struct cfdops mdsCfdOps;
 		struct cfdent *cfd;
 
-		mp->rc = slrmc_inode_cacheput(&mp->fg, NULL, &mq->creds);
+		mp->rc = slrmc_inode_cacheput(&fg, NULL, &mq->creds);
 		if (!mp->rc) {
-			mp->rc = cfdnew(mp->fg.fg_fid, rq->rq_export, data, 
-					&cfd, &mdsCfdOps);
+			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
+			    data, &cfd, &mdsCfdOps);
+
 			if (mp->rc) {
 				psc_error("cfdnew failed rc=%d", mp->rc);
 				RETURN(0);
 			}
-			mp->cfd = cfd->cfd;
+			fdbuf_encrypt(&cfd->fdb, &fg);
+			memcpy(&mp->sfdb, &cfd->fdb, sizeof(mp->sfdb));
 		}
 	}
 	RETURN(0);
@@ -328,14 +350,22 @@ slrmc_readdir(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
+	struct slash_fidgen fg;
 	struct iovec iov[2];
-	slfid_t fid;
+	uint64_t cfd;
 	void *data;
 
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (__cfd2fid(rq->rq_export, mq->cfd, &fid, &data)) {
+
+	if (fdbuf_decrypt(&mq->sfdb, &cfd, &fg) == -1) {
+		psc_errorx("decrypt failed!");
+		mp->rc = -EINVAL;
+		RETURN(0);
+	} 
+
+	if (__cfd2fid(rq->rq_export, cfd, &data)) {
 		mp->rc = -errno;
 		RETURN(mp->rc);
 	}
@@ -352,7 +382,7 @@ slrmc_readdir(struct pscrpc_request *rq)
 
 	psc_info("zfs pri data (%p)", data);
 
-	mp->rc = zfsslash2_readdir(zfsVfs, fid, &mq->creds, mq->size, 
+	mp->rc = zfsslash2_readdir(zfsVfs, fg.fg_fid, &mq->creds, mq->size, 
 				   mq->offset, (char *)iov[0].iov_base, 
 				   &mp->size, 
 				   (struct srm_getattr_rep *)iov[1].iov_base, 
@@ -401,25 +431,30 @@ slrmc_release(struct pscrpc_request *rq)
 {
 	struct srm_release_req *mq;
         struct srm_generic_rep *mp;
+	struct slash_fidgen fg;
 	struct mexpfcm *m;
 	struct fidc_membh *f;
 	struct cfdent *c;       
 	struct fidc_mds_info *i;
-
-	slfid_t fid;
+	uint64_t cfd;
 	int rc;
 
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
+
+	if (fdbuf_decrypt(&mq->sfdb, &cfd, &fg) == -1) {
+		psc_errorx("decrypt failed!");
+		mp->rc = -EINVAL;
+		RETURN(0);
+	} 
 	
-	c = cfdget(rq->rq_export, mq->cfd);
+	c = cfdget(rq->rq_export, cfd);
 	if (!c) {
-		psc_info("cfdget() failed cfd %"_P_U64"d", mq->cfd);
+		psc_info("cfdget() failed cfd %"_P_U64"d", cfd);
 		mp->rc = ENOENT;
 		RETURN(0);
 	}
-	fid = c->fid;
 	psc_assert(c->pri);
 	m = c->pri;
 	psc_assert(m->mexpfcm_fcmh);
@@ -428,9 +463,9 @@ slrmc_release(struct pscrpc_request *rq)
 	psc_assert(f->fcmh_fcoo);
 	i = f->fcmh_fcoo->fcoo_pri;
 	
-	rc = cfdfree(rq->rq_export, mq->cfd);
+	rc = cfdfree(rq->rq_export, cfd);
 	psc_info("cfdfree() cfd %"_P_U64"d rc=%d", 
-		 mq->cfd, rc);
+		 cfd, rc);
 	/* Serialize the test for releasing the zfs inode
 	 *  so that this segment is re-entered.  Also, note that
 	 *  'm' may have been freed already.
@@ -445,7 +480,7 @@ slrmc_release(struct pscrpc_request *rq)
 		f->fcmh_state |= FCMH_FCOO_CLOSING;
 
 		DEBUG_FCMH(PLL_DEBUG, f, "calling zfsslash2_release");
-		mp->rc = zfsslash2_release(zfsVfs, fid, &mq->creds, 
+		mp->rc = zfsslash2_release(zfsVfs, fg.fg_fid, &mq->creds, 
 					   i->fmdsi_data);
 		/* Remove the fcoo but first make sure the open ref's 
 		 *  are ok.  This value is bogus, fmdsi_ref has the 

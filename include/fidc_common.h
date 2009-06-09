@@ -146,6 +146,6 @@ extern int
 fidc_fid2cfd(slfid_t f, u64 *cfd, struct fidc_membh **fcmh);
 
 extern int
-fidc_fcmh2cfd(struct fidc_membh *fcmh, u64 *cfd);
+fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
 
 #endif

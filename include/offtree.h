@@ -13,6 +13,7 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
+#include "slashrpc.h"
 #include "cache_params.h"
 
 #define OFTIOV_CB_SINGLE_PTR_SLOT 1
@@ -396,7 +397,7 @@ struct offtree_req {
  	u8                    oftrq_depth;
 	u16                   oftrq_width;
 	off_t                 oftrq_darray_off;	
-	u64                   oftrq_cfd;
+	struct srt_fd_buf     oftrq_fdb;    /* file descriptor */
 	struct offtree_fill   oftrq_fill;
 	void                 *oftrq_bmap;   /* this is needed for dio        */
 #define oftrq_len oftrq_nblks               /* reuse oftrq_nblks in dio mode */

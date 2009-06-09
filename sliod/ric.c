@@ -14,9 +14,10 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
-#include "sliod.h"
-#include "slashrpc.h"
+#include "fdbuf.h"
 #include "fid.h"
+#include "slashrpc.h"
+#include "sliod.h"
 
 int
 slric_handle_disconnect(struct pscrpc_request *rq)
@@ -44,11 +45,13 @@ int
 slric_handle_read(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
+	struct slash_fidgen fg;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec iov;
 	char fn[PATH_MAX];
 	ssize_t nbytes;
+	uint64_t cfd;
 	void *buf;
 	int fd;
 
@@ -59,12 +62,13 @@ slric_handle_read(struct pscrpc_request *rq)
 		return (0);
 	}
 
-#if 0
-	decrypt secret
-	grab fg
-#endif
+	if (fdbuf_decrypt(&mq->sfdb, &cfd, &fg) == -1) {
+		psc_errorx("decrypt failed!");
+		mp->rc = -EINVAL;
+		return (0);
+	}
 
-	fid_makepath(mq->fg.fg_fid, fn); /* XXX validity check fid */
+	fid_makepath(fg.fg_fid, fn);
 	if ((fd = open(fn, O_RDONLY)) == -1) {
 		mp->rc = -errno;
 		return (0);
@@ -96,26 +100,30 @@ int
 slric_handle_write(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
+	struct slash_fidgen fg;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec iov;
 	char fn[PATH_MAX];
 	ssize_t nbytes;
+	uint64_t cfd;
 	void *buf;
 	int fd;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-#if 0
-	decrypt secret
-	grab fg
-#endif
-
 	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
 		mp->rc = -EINVAL;
 		return (0);
 	}
-	fid_makepath(mq->fg.fg_fid, fn); /* validity check fid */
+
+	if (fdbuf_decrypt(&mq->sfdb, &cfd, &fg) == -1) {
+		psc_errorx("decrypt failed!");
+		mp->rc = -EINVAL;
+		return (0);
+	}
+
+	fid_makepath(fg.fg_fid, fn); /* validity check fid */
 	buf = PSCALLOC(mq->size);
 	iov.iov_base = buf;
 	iov.iov_len = mq->size;

@@ -1,4 +1,5 @@
 /* $Id$ */
+
 #ifndef __FIDCACHE_H__
 #define __FIDCACHE_H__
 
@@ -10,11 +11,11 @@
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/lockedlist.h"
 #include "psc_ds/pool.h"
 #include "psc_ds/tree.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
-#include "psc_ds/lockedlist.h"
 
 #include "cache_params.h"
 #include "slconfig.h"
@@ -163,7 +164,7 @@ struct sl_finfo {
 };
 
 struct fidc_open_obj {
-	u64                      fcoo_cfd;
+	struct srt_fd_buf	 fcoo_fdb;
 	int                      fcoo_oref_rw[2];    /* open cnt for r & w */ 
 	atomic_t                 fcoo_bmapc_cnt;
 	list_cache_t		 fcoo_buffer_cache;  /* chain our slbs   */
@@ -237,6 +238,10 @@ enum fcmh_states {
 	FCMH_HAVE_ATTRS    = (1 << 10),
 	FCMH_GETTING_ATTRS = (1 << 11)
 };
+
+#define fcmh_fid fcmh_fcm->fcm_fg.fg_fid
+#define fcmh_gen fcmh_fcm->fcm_fg.fg_gen
+#define fcmh_fg  fcmh_fcm->fcm_fg.fg_fg
 
 #define fcmh_2_fid(f)	(f)->fcmh_fcm->fcm_fg.fg_fid
 #define fcmh_2_gen(f)	(f)->fcmh_fcm->fcm_fg.fg_gen

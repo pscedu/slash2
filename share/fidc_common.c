@@ -582,7 +582,6 @@ void
 fidc_fcoo_init(struct fidc_open_obj *f)
 {
 	memset(f, 0, sizeof(*f));
-	f->fcoo_cfd = FID_ANY;
 	atomic_set(&f->fcoo_bmapc_cnt, 0);
 	SPLAY_INIT(&f->fcoo_bmapc);
 	//	if (fcooInitCb)
@@ -640,12 +639,10 @@ fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 }
 
 int
-fidc_fcmh2cfd(struct fidc_membh *fcmh, u64 *cfd)
+fidc_fcmh2fdb(struct fidc_membh *fcmh, struct srt_fd_buf *fdb)
 {	
 	int rc=0, l=reqlock(&fcmh->fcmh_lock);
 	
-	*cfd = FID_ANY;
-
 	if (!fcmh->fcmh_fcoo) {
 		ureqlock(&fcmh->fcmh_lock, l);
 		return (-1);
@@ -653,7 +650,7 @@ fidc_fcmh2cfd(struct fidc_membh *fcmh, u64 *cfd)
 
 	rc = fidc_fcoo_wait_locked(fcmh, FCOO_NOSTART);
 	if (!rc)
-		*cfd = fcmh->fcmh_fcoo->fcoo_cfd;
+		*fdb = fcmh->fcmh_fcoo->fcoo_fdb;
 
 	ureqlock(&fcmh->fcmh_lock, l);
 	return (rc);

@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <stdarg.h>
-#include <stddef.h> /* offsetof() */
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -18,6 +18,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/log.h"
+
 #include "slconfig.h"
 
 enum sym_types {
@@ -49,48 +50,49 @@ enum sym_structure_types {
 typedef u32 (*sym_handler)(char *);
 
 struct symtable {
-	char *name;
-	enum  sym_types sym_type;
-	enum  sym_structure_types sym_struct_type;
-	enum  sym_parameter_types sym_param_type;
-	int   param;
-	int   offset;
-	sym_handler handler;
+	char			*name;
+	enum sym_types		 sym_type;
+	enum sym_structure_types sym_struct_type;
+	enum sym_parameter_types sym_param_type;
+	int			 param;
+	int			 offset;
+	sym_handler		 handler;
 };
 
-u32
-global_net_handler(char *net);
+u32 global_net_handler(char *net);
+
 /*
  * Define a table macro for each structure type filled in by the config
  */
-#define TABENT_GLOB(name, type, max, field, handler)				\
-        { name, SL_VARIABLE, SL_STRUCT_GLOBAL, type, max, offsetof(sl_gconf_t, field), handler }
+#define TABENT_GLBL(name, type, max, field, handler)				\
+	{ name, SL_VARIABLE, SL_STRUCT_GLOBAL, type, max, offsetof(sl_gconf_t, field), handler }
 
 #define TABENT_SITE(name, type, max, field, handler)				\
-        { name, SL_VARIABLE, SL_STRUCT_SITE, type, max, offsetof(sl_site_t, field), handler }
+	{ name, SL_VARIABLE, SL_STRUCT_SITE, type, max, offsetof(sl_site_t, field), handler }
 
 #define TABENT_RES(name, type, max, field, handler)				\
-        { name, SL_VARIABLE, SL_STRUCT_RES, type, max, offsetof(sl_resource_t, field), handler }
+	{ name, SL_VARIABLE, SL_STRUCT_RES, type, max, offsetof(sl_resource_t, field), handler }
 
 /* declare and initialize the global table */
- struct symtable sym_table[] = {
-	 TABENT_GLOB("port",      SL_TYPE_INT,  INTSTR_MAX, gconf_port,  NULL),
-	 TABENT_GLOB("net",       SL_TYPE_INT,  MAXNET,     gconf_netid, global_net_handler),
-	 TABENT_SITE("site_id",   SL_TYPE_INT,  INTSTR_MAX, site_id,     NULL),
-	 TABENT_SITE("site_desc", SL_TYPE_STRP, DESC_MAX,   site_desc,   NULL),
-	 TABENT_RES ("desc",      SL_TYPE_STRP, DESC_MAX,   res_desc,    NULL),
-	 TABENT_RES ("type",      SL_TYPE_INT,  INTSTR_MAX, res_type,    libsl_str2restype),
-	 TABENT_RES ("id",        SL_TYPE_INT,  INTSTR_MAX, res_id,      NULL),
-	 TABENT_RES ("mds",       SL_TYPE_BOOL, BOOL_MAX,   res_mds,     NULL),
-	 TABENT_RES ("fsroot",    SL_TYPE_STR,  PATH_MAX,   res_fsroot,  NULL),
+struct symtable sym_table[] = {
+	 TABENT_GLBL("port",		SL_TYPE_INT,	INTSTR_MAX,	gconf_port,	NULL),
+	 TABENT_GLBL("net",		SL_TYPE_INT,	MAXNET,		gconf_netid,	global_net_handler),
+	 TABENT_GLBL("keyfn",		SL_TYPE_STR,	PATH_MAX,	gconf_fdbkeyfn,	NULL),
+	 TABENT_SITE("site_id",		SL_TYPE_INT,	INTSTR_MAX,	site_id,	NULL),
+	 TABENT_SITE("site_desc",	SL_TYPE_STRP,	DESC_MAX,	site_desc,	NULL),
+	 TABENT_RES ("desc",		SL_TYPE_STRP,	DESC_MAX,	res_desc,	NULL),
+	 TABENT_RES ("type",		SL_TYPE_INT,	INTSTR_MAX,	res_type,	libsl_str2restype),
+	 TABENT_RES ("id",		SL_TYPE_INT,	INTSTR_MAX,	res_id,		NULL),
+	 TABENT_RES ("mds",		SL_TYPE_BOOL,	BOOL_MAX,	res_mds,	NULL),
+	 TABENT_RES ("fsroot",		SL_TYPE_STR,	PATH_MAX,	res_fsroot,	NULL),
 	 { NULL, 0, 0, 0, 0, 0, NULL }
 };
 
-extern int  yylex(void);
-extern void yyerror(const char *, ...);
-extern int  yyparse(void);
-void        store_tok_val(const char *tok, char *val);
-extern int  run_yacc(const char *);
+int  yylex(void);
+void yyerror(const char *, ...);
+int  yyparse(void);
+void store_tok_val(const char *, char *);
+int  run_yacc(const char *);
 
 sl_gconf_t globalConfig;
 sl_nodeh_t nodeInfo;

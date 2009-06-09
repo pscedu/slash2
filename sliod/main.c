@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <gcrypt.h>
+
 #include "pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctlsvr.h"
@@ -16,14 +18,9 @@
 #include "rpc.h"
 #include "pathnames.h"
 
-const char *progname;
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-__dead void
-usage(void)
-{
-	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket]\n", progname);
-	exit(1);
-}
+const char *progname;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -44,11 +41,26 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
+__dead void
+usage(void)
+{
+	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket]\n", progname);
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
 	const char *cfn, *sfn;
 	int c;
+
+	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	gcry_check_version(NULL);
+
+	pfl_init();
+
+	if (getenv("LNET_NETWORKS") == NULL)
+		psc_fatalx("LNET_NETWORKS is not set");
 
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
@@ -64,13 +76,9 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
-
-	pfl_init();
-
-	if (getenv("LNET_NETWORKS") == NULL)
-		psc_fatalx("please export LNET_NETWORKS");
-	if (getenv("TCPLND_SERVER") == NULL)
-		psc_fatalx("please export TCPLND_SERVER");
+	argc -= optind;
+	if (argc)
+		usage();
 
 	pscthr_init(SLIOTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slioctlthr");
@@ -80,5 +88,4 @@ main(int argc, char *argv[])
 	rpc_initsvc();
 	sliotimerthr_spawn();
 	slioctlthr_main(sfn);
-	exit(0);
 }

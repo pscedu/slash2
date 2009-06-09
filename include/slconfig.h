@@ -78,6 +78,7 @@ typedef struct node_info_handle {
 
 typedef struct global_config {
 	char                 gconf_net[MAXNET];
+	char		     gconf_fdbkeyfn[PATH_MAX];
 	u32                  gconf_netid;
 	int                  gconf_port;
 	int                  gconf_nsites;

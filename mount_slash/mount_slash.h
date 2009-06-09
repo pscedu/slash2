@@ -101,12 +101,12 @@ struct msl_fhent {
 	struct fhbmap_cache    mfh_fhbmap_cache;
 };
 
-static inline u64
-mslfh_2_cfd(struct msl_fhent *mfh)
+static inline struct srt_fd_buf *
+mslfh_2_fdb(struct msl_fhent *mfh)
 {
 	psc_assert(mfh->mfh_fcmh);
 	psc_assert(mfh->mfh_fcmh->fcmh_fcoo);
-	return (mfh->mfh_fcmh->fcmh_fcoo->fcoo_cfd);
+	return (&mfh->mfh_fcmh->fcmh_fcoo->fcoo_fdb);
 }
 
 static inline size_t
@@ -117,11 +117,10 @@ mslfh_2_bmapsz(struct msl_fhent *mfh)
 	return (mfh->mfh_fcmh->fcmh_fcoo->fcoo_bmap_sz);
 }
 
-static inline u64
-fcmh_2_cfd(struct fidc_membh *f)
+static inline struct srt_fd_buf *
+fcmh_2_fdb(struct fidc_membh *f)
 {
-	psc_assert(f->fcmh_fcoo);
-	return (f->fcmh_fcoo->fcoo_cfd);
+	return (&f->fcmh_fcoo->fcoo_fdb);
 }
 
 static inline int

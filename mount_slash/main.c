@@ -36,6 +36,8 @@
 #include "msl_fuse.h"
 #include "slashrpc.h" 
 
+#define _PATH_MSL "/slashfs_client"	/* /slash */
+
 struct slfuse_dirent {
 	u64   ino;
         u64   off;
@@ -43,6 +45,10 @@ struct slfuse_dirent {
         u32   type;
 	char name[0];
 };
+
+sl_ios_id_t prefIOS = IOS_ID_ANY;
+const char *progname;
+char ctlsockfn[] = _PATH_MSCTLSOCK;
 
 #if 0
 static void exit_handler(int sig)
@@ -60,7 +66,7 @@ static int set_signal_handler(int sig, void (*handler)(int))
         sigemptyset(&(sa.sa_mask));
         sa.sa_flags = 0;
 
-        if(sigaction(sig, &sa, NULL) == -1) {
+        if (sigaction(sig, &sa, NULL) == -1) {
                 perror("sigaction");
                 return -1;
         }
@@ -68,10 +74,6 @@ static int set_signal_handler(int sig, void (*handler)(int))
         return 0;
 }
 #endif
-
-sl_ios_id_t prefIOS = IOS_ID_ANY;
-const char *progname;
-char ctlsockfn[] = _PATH_MSCTLSOCK;
 
 static void 
 slash2fuse_getcred(fuse_req_t req, struct slash_creds *cred)
@@ -220,7 +222,7 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 		goto out;
 	}
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
  out:
@@ -309,25 +311,25 @@ slash2fuse_transflags(u32 flags, u32 *nflags, u32 *nmode)
 		*nflags = SL_FREAD;
 	}
 
-	if(flags & O_CREAT)
+	if (flags & O_CREAT)
 		*nflags |= SL_FCREAT;
-	if(flags & O_SYNC)
+	if (flags & O_SYNC)
 		*nflags |= SL_FSYNC;
-	if(flags & O_DSYNC)
+	if (flags & O_DSYNC)
 		*nflags |= SL_FDSYNC;
-	if(flags & O_RSYNC)
+	if (flags & O_RSYNC)
 		*nflags |= SL_FRSYNC;
-	if(flags & O_APPEND)
+	if (flags & O_APPEND)
 		*nflags |= SL_FAPPEND;
-	//if(flags & O_LARGEFILE)
+	//if (flags & O_LARGEFILE)
 	*nflags |= SL_FOFFMAX;
-	if(flags & O_NOFOLLOW)
+	if (flags & O_NOFOLLOW)
 		*nflags |= SL_FNOFOLLOW;
-	if(flags & O_TRUNC)
+	if (flags & O_TRUNC)
 		*nflags |= SL_FTRUNC;
-	if(flags & O_EXCL)
+	if (flags & O_EXCL)
 		*nflags |= SL_FEXCL;
-	if(flags & O_DIRECTORY)
+	if (flags & O_DIRECTORY)
 		*nflags |= SL_DIRECTORY;
 
 }
@@ -353,12 +355,12 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	slash2fuse_transflags(fi->flags, &mq->flags, &mq->mode);
 	mq->ino = ino;
 
-	if (!(rc = rsx_waitrep(rq, sizeof(*mp), &mp))) {
+	if (!(rc = RSX_WAITREP(rq, mp))) {
 		if (mp->rc)
 			rc = mp->rc;
 		else {
-			psc_assert(h->fcmh_fcoo->fcoo_cfd == FID_ANY);
-			h->fcmh_fcoo->fcoo_cfd = mp->cfd;
+			memcpy(&h->fcmh_fcoo->fcoo_fdb,
+			    &mp->sfdb, sizeof(mp->sfdb));
 			//fidc_fcm_setattr(h, &mp->attr);
 		}
 	}
@@ -470,11 +472,11 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	mq->len = strlen(name);
 	strncpy(mq->name, name, mq->len);
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 
-	if (mp->rc == EEXIST) {
+	if (mp->rc == EEXIST) { /* XXX need to check rc before mp->rc */
 		psc_info("fid %"_P_U64"d already existed on mds", 
-			 mp->fg.fg_fid);
+			 mp->sfdb.sfdb_secret.sfs_fg.fg_fid);
 		/*  Handle the network side of O_EXCL.
 		 */
 		if (fi->flags & O_EXCL) {
@@ -487,13 +489,14 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	}
 
-	psc_warnx("FID %"_P_U64"d", (slfid_t)mp->fg.fg_fid);
+	psc_warnx("FID %"_P_U64"d %s", mp->sfdb.sfdb_secret.sfs_fg.fg_fid,
+	    name);
 
-	m = slash2fuse_fidc_putget(&mp->fg, &mp->attr, name, p, &mq->creds,
+	m = slash2fuse_fidc_putget(&mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, name, p, &mq->creds,
 				   (FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART));
 	psc_assert(m);
 	psc_assert(m->fcmh_fcoo && (m->fcmh_state & FCMH_FCOO_STARTING));
-	m->fcmh_fcoo->fcoo_cfd = mp->cfd;
+	memcpy(&m->fcmh_fcoo->fcoo_fdb, &mp->sfdb, sizeof(mp->sfdb));
 
 	fi->fh = (uint64_t)m;
 	fi->keep_cache = 1;
@@ -507,7 +510,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
                 fuse_reply_err(req, rc);		
 
 	else {
-		slash2fuse_reply_create(req, &mp->fg, &mp->attr, fi);
+		slash2fuse_reply_create(req, &mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, fi);
 		/* slash2fuse_fidc_putget() leaves the fcmh ref'd.
 		 */
 		fidc_membh_dropref(m);
@@ -598,7 +601,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	memcpy(&mq->creds, creds, sizeof(*creds));
 	mq->ino = fcmh_2_fid(fcmh);
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
 	else {
@@ -707,7 +710,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	mq->pino = fcmh_2_fid(p);
 	mq->ino = ino;
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
 	err:		
 		rc = rc ? rc : mp->rc;	
@@ -770,7 +773,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	mq->pino = parent;
 	mq->mode = mode;
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 
 	psc_info("pino=%"_P_U64"x mode=0%o name='%s' rc=%d mp->rc=%d", 
 		 mq->pino, mq->mode, mq->name, rc, mp->rc);
@@ -803,7 +806,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	memset(&e, 0, sizeof(e));
 	msfsthr_ensure();
 
-        if(strlen(name) >= NAME_MAX)
+        if (strlen(name) >= NAME_MAX)
                 return (ENAMETOOLONG);
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
@@ -827,7 +830,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	strncpy(mq->name, name, mq->len);
 	mq->pino = parent;
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
 		goto out;
@@ -878,10 +881,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	struct pscrpc_request *rq;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
+	struct srt_fd_buf fdb;
 	struct fidc_membh *d;
 	struct iovec iov[2];
 	int rc;
-	u64 cfd;
 
 	msfsthr_ensure();
 
@@ -904,7 +907,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	if (fidc_lookup_fg(fcmh_2_fgp(d)) != d)
 		return (EBADF);
 
-	if ((fidc_fcmh2cfd(d, &cfd) < 0) || cfd == FID_ANY) {
+	if (fidc_fcmh2fdb(d, &fdb) < 0) {
 		fidc_membh_dropref(d);
 		return (EBADF);
 	}
@@ -921,7 +924,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	}
 
 	slash2fuse_getcred(req, &mq->creds);
-	mq->cfd = cfd;
+	memcpy(&mq->sfdb, &fdb, sizeof(fdb));
 	mq->size = size;
 	mq->offset = off;
 
@@ -937,7 +940,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	} else
 		rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, 1);
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
 		goto out;
@@ -1013,10 +1016,9 @@ slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 	mq->pino = fcmh_2_fid(p);
 	mq->len = strlen(name);
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) 
 		rc = rc ? rc : mp->rc;	
-
 	else {
 		/* Add the inode to the cache first, otherwise fuse may 
 		 *  come to us with another request for the inode it won't
@@ -1099,7 +1101,7 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	slash2fuse_getcred(req, &mq->creds);
 	mq->ino = ino;
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) 
 		rc = rc ? rc : mp->rc;
 
@@ -1140,9 +1142,9 @@ slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
         slash2fuse_getcred(req, &mq->creds);
 	slash2fuse_transflags(fi->flags, &mq->flags, &mode);	
-	mq->cfd = h->fcmh_fcoo->fcoo_cfd;
+	memcpy(&mq->sfdb, &h->fcmh_fcoo->fcoo_fdb, sizeof(mq->sfdb));
 	
-	if (!(rc = rsx_waitrep(rq, sizeof(*mp), &mp))) {
+	if (!(rc = RSX_WAITREP(rq, mp))) {
 		if (mp->rc)
 			rc = mp->rc;
 	}
@@ -1210,7 +1212,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL, iov, 2);
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) 
 		rc = rc ? rc : mp->rc;
 
@@ -1242,7 +1244,7 @@ slash2fuse_statfs(fuse_req_t req)
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_STATFS, rq, mq, mp)) != 0) {}
 	else 
-		rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+		rc = RSX_WAITREP(rq, mp);
 
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
@@ -1304,7 +1306,7 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 	
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;	
 		goto out;
@@ -1370,15 +1372,14 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	if (fi && fi->fh)
 		psc_assert(c == (struct fidc_membh *)fi->fh);
 	
-	if (fidc_fcmh2cfd(c, &mq->cfd) < 0)
-		psc_assert(mq->cfd == FID_ANY);
+	fidc_fcmh2fdb(c, &mq->sfdb);
 	
 	slash2fuse_getcred(req, &mq->creds);
 	mq->ino = ino;
 	mq->to_set = to_set;
 	memcpy(&mq->attr, attr, sizeof(*attr));	
 
-	rc = rsx_waitrep(rq, sizeof(*mp), &mp);
+	rc = RSX_WAITREP(rq, mp);
  err:
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
@@ -1394,6 +1395,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	}
  cleanup:
 	pscrpc_req_finished(rq);
+	EXIT;
 }
 
 
@@ -1444,7 +1446,7 @@ slash2fuse_write_helper(__unusedx fuse_req_t req,
 			__unusedx struct fuse_file_info *fi)
 {
         int error = slash2fuse_write(req, ino, buf, size, off, fi);
-        if(error)
+        if (error)
                 fuse_reply_err(req, error);
 }
 
@@ -1482,11 +1484,10 @@ slash2fuse_read(fuse_req_t req,
 	
 	buf = PSCALLOC(size);
 
-	mq->cfd = fi->fh;
 	mq->size = size;
 	mq->offset = off;
 	mq->op = SRMIO_WR;
-	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
 		if (mp->rc)
 			rc = mp->rc;
 		else {
@@ -1512,7 +1513,7 @@ slash2fuse_read_helper(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
 		    struct fuse_file_info *fi)
 {
         int error = slash2fuse_read(req, ino, size, off, fi);
-        if(error)
+        if (error)
                 fuse_reply_err(req, error);
 }
 
@@ -1596,50 +1597,6 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
-enum {
-	MS_OPT_CTLSOCK,
-	MS_OPT_USAGE
-};
-
-struct fuse_opt msopts[] = {
-	FUSE_OPT_KEY("-S ", MS_OPT_CTLSOCK),
-	FUSE_OPT_KEY("-? ", MS_OPT_USAGE),
-	FUSE_OPT_END
-};
-
-__dead void
-usage(void)
-{
-	//char *argv[] = { (char *)progname, "-ho", NULL };
-
-	fprintf(stderr,
-	    "usage: %s [options] node\n"
-	    "\n"
-	    "Slash options:\n"
-	    "    -S ctlsock             specify alternate control socket\n\n",
-	    progname);
-	//fuse_main(2, argv, &slashops, NULL);
-	exit(1);
-}
-
-int
-proc_opt(__unusedx void *data, const char *arg, int c,
-    __unusedx struct fuse_args *outargs)
-{
-	switch (c) {
-	case FUSE_OPT_KEY_OPT:
-	case FUSE_OPT_KEY_NONOPT:
-		return (1);
-	case MS_OPT_CTLSOCK:
-		strlcpy(ctlsockfn, arg + 2, sizeof(ctlsockfn));
-		break;
-	default:
-		usage();
-	}
-	return (0);
-}
-
-
 static int 
 msl_fuse_lowlevel_mount(const char *mp)
 {
@@ -1651,11 +1608,11 @@ msl_fuse_lowlevel_mount(const char *mp)
 
 	slash2fuse_listener_init();
 
-        if(asprintf(&fuse_opts, FUSE_OPTIONS, mp) == -1) {
+        if (asprintf(&fuse_opts, FUSE_OPTIONS, mp) == -1) {
                 return ENOMEM;
         }
 
-        if(fuse_opt_add_arg(&args, "") == -1 ||
+        if (fuse_opt_add_arg(&args, "") == -1 ||
            fuse_opt_add_arg(&args, "-o") == -1 ||
            fuse_opt_add_arg(&args, fuse_opts) == -1) {
                 fuse_opt_free_args(&args);
@@ -1672,14 +1629,14 @@ msl_fuse_lowlevel_mount(const char *mp)
 			       NULL);
         fuse_opt_free_args(&args);
 
-        if(se == NULL) {
+        if (se == NULL) {
                 close(fd);
                 fuse_unmount(mp);
                 return EIO;
         }
 
         ch = fuse_kern_chan_new(fd);
-        if(ch == NULL) {
+        if (ch == NULL) {
                 fuse_session_destroy(se);
                 close(fd);
                 fuse_unmount(mp);
@@ -1688,7 +1645,7 @@ msl_fuse_lowlevel_mount(const char *mp)
 
         fuse_session_add_chan(se, ch);
 
-	if(slash2fuse_newfs(mp, ch) != 0) {
+	if (slash2fuse_newfs(mp, ch) != 0) {
                 fuse_session_destroy(se);
                 close(fd);
                 fuse_unmount(mp);
@@ -1698,35 +1655,65 @@ msl_fuse_lowlevel_mount(const char *mp)
 	return (0);
 }
 
-int
-main(__unusedx int argc, char *argv[])
+__dead void
+usage(void)
 {
-	int rc;
-	char c, *mp="/slashfs_client";
+	fprintf(stderr, "usage: %s [-U] [-S socket] node\n", progname);
+	exit(1);
+}
 
+int
+main(int argc, char *argv[])
+{
+	char c, mp[PATH_MAX], *nc_mp = _PATH_MSL;
+	int rc, unmount;
+	
+	pfl_init();
+
+	unmount = 0;
 	progname = argv[0];
-
-	while ((c = getopt(argc, argv, "m:")) != -1)
+	while ((c = getopt(argc, argv, "m:S:U")) != -1)
                 switch (c) {
                 case 'm':
-                        mp = optarg;
+                        nc_mp = optarg;
                         break;
+		case 'S':
+			if (strlcpy(ctlsockfn, optarg,
+			    PATH_MAX) >= PATH_MAX)
+				psc_fatalx("%s: too long", optarg);
+			break;
+                case 'U':
+			unmount = 1;
+			break;
                 default:
                         usage();
                 }
-
-
-	pfl_init();
+	argc -= optind;
+	if (argc)
+		usage(); 
 
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
 	slash_init(NULL);
 
+	if (unmount) {
+		char cmdbuf[BUFSIZ];
+
+		if ((size_t)snprintf(cmdbuf, sizeof(cmdbuf),
+		    "umount %s", nc_mp) >= sizeof(cmdbuf))
+			psc_error("snprintf");
+		else if (system(cmdbuf) == -1)
+			psc_error("%s", cmdbuf);
+	}
+	/* canonicalize mount path */
+	if (realpath(nc_mp, mp) == NULL)
+		psc_fatal("realpath %s", nc_mp);
+
 	if (msl_fuse_lowlevel_mount(mp))
 		return (-1);
 
 #if 0	
-	if(set_signal_handler(SIGHUP, exit_handler) != 0 ||
+	if (set_signal_handler(SIGHUP, exit_handler) != 0 ||
            set_signal_handler(SIGINT, exit_handler) != 0 ||
            set_signal_handler(SIGTERM, exit_handler) != 0 ||
            set_signal_handler(SIGPIPE, SIG_IGN) != 0) {

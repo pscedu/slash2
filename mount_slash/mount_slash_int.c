@@ -37,7 +37,7 @@ __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 __static void
 msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, 
-		u64 cfd, off_t off, size_t len, int op)
+    struct srt_fd_buf *fdb, off_t off, size_t len, int op)
 {
 	/* Ensure the offset fits within the range and mask off the
 	 *  lower bits to align with the offtree's page size.
@@ -52,7 +52,7 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
 		psc_assert(b->bcm_bmapih.bmapi_mode & BMAP_CLI_WR);
 
 	r->oftrq_op = op;
-	r->oftrq_cfd = cfd;
+	r->oftrq_fdb = *fdb;
 	/* Set directio flag if the bmap is in dio mode, otherwise
 	 *  allocate an array for cache iovs.
 	 */
@@ -189,7 +189,7 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 			     SRMT_GETBMAP, rq, mq, mp)) != 0)
 		return (rc);
 
-	mq->cfd   = fcmh_2_cfd(f);
+	mq->sfdb  = *fcmh_2_fdb(f);
 	mq->pios  = prefIOS; /* Tell mds of our preferred ios */
 	mq->blkno = b;
 	mq->nblks = n; 
@@ -208,7 +208,7 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmaps (s=%u, n=%zu)", b, n);
 
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iovs, n);
-	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
 		/* Verify the return.
 		 */
 		if (!mp->nblks) {
@@ -265,11 +265,11 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
 			     SRMT_BMAPCHMODE, rq, mq, mp)) != 0)
 		return (rc);
 
-	mq->cfd = fcmh_2_cfd(f);
+	mq->sfdb = *fcmh_2_fdb(f);
 	mq->blkno = b;
 	mq->rw = rw;
 
-	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0) {
+	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
 		if (mp->rc)
 			psc_warn("msl_bmap_chmode() failed (f=%p) (b=%u)", 
 				 f, b);
@@ -582,12 +582,13 @@ msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 		// XXX Freeing of dynarray, offtree state, etc
                 return (rq->rq_status);
         }
-	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u"
-		  " s=%u cfd=%"_P_U64"x", op, mq->offset, mq->size, mq->cfd);
+	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u s=%u",
+	    op, mq->offset, mq->size);
 
 	pscrpc_req_finished(rq);
 	return (0);
 }
+
 /**
  * msl_pagereq_finalize - this function is the intersection point of many slash subssytems (pscrpc, sl_config, and bmaps).  Its job is to prepare a reqset of read or write requests and ship them to the correct io server.
  * @r:  the offtree request.
@@ -670,7 +671,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	}
 	mq->size = v->oftiov_blksz * tblks;
 	mq->op = (op == MSL_PAGES_PUT ? SRMIO_WR : SRMIO_RD);
-	mq->cfd = r->oftrq_cfd;
+	memcpy(&mq->sfdb, &r->oftrq_fdb, sizeof(&mq->sfdb));
 
 	/* Seems counter-intuitive, but it's right.  MSL_PAGES_GET is a 
 	 * 'PUT' to the client, MSL_PAGES_PUSH is a server get.
@@ -750,7 +751,7 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 		mq->offset = off + nbytes;
 		mq->size = len;
 		mq->op = (op == SRMT_WRITE ? SRMIO_WR : SRMIO_RD);
-		mq->cfd = r->oftrq_cfd;
+		memcpy(&mq->sfdb, &r->oftrq_fdb, sizeof(&mq->sfdb));
 
 		pscrpc_set_add_new_req(rqset, req);
 		if (pscrpc_push_req(req)) {
@@ -1279,7 +1280,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		r = realloc(r, (sizeof(*r)) * i);
 		i++;
 
-		msl_oftrq_build(&r[i], b, mslfh_2_cfd(mfh), roff, tlen, 
+		msl_oftrq_build(&r[i], b, mslfh_2_fdb(mfh), roff, tlen, 
 				(op == MSL_READ) ? OFTREQ_OP_READ : 
 				OFTREQ_OP_WRITE);
 		/* Retrieve offtree region.

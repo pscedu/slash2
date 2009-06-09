@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <gcrypt.h>
+
 #include "pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctlsvr.h"
@@ -11,24 +13,18 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
-#include "slconfig.h"
-#include "pathnames.h"
 #include "control.h"
-#include "sb.h"
-#include "slashdthr.h"
 #include "fidc_common.h"
 #include "mdsrpc.h"
+#include "pathnames.h"
+#include "sb.h"
+#include "slashdthr.h"
+#include "slconfig.h"
+
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 void *zfsVfs;
-
 const char *progname;
-
-__dead void
-usage(void)
-{
-	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket]\n", progname);
-	exit(1);
-}
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -49,11 +45,26 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
+__dead void
+usage(void)
+{
+	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket]\n", progname);
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
-	const char *cfn, *sfn, *p;
+	const char *cfn, *sfn;
 	int c;
+
+	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	gcry_check_version(NULL);
+
+	pfl_init();
+
+	if (getenv("LNET_NETWORKS") == NULL)
+		psc_fatalx("LNET_NETWORKS is not set");
 
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
@@ -73,16 +84,8 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	pfl_init();
-
 	pscthr_init(SLTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slctlthr");
-
-	if (getenv("LNET_NETWORKS") == NULL)
-		psc_fatalx("please export LNET_NETWORKS");
-	if ((p = getenv("TCPLND_SERVER")) == NULL || strcmp(p, "1"))
-		if (setenv("TCPLND_SERVER", "1", 1) == -1)
-			psc_fatal("setenv");
 
 	fidcache_init(FIDC_MDS_HASH_SZ, NULL);
 
@@ -97,7 +100,6 @@ main(int argc, char *argv[])
 	/* Initialize the zfs layer.
 	 */
 	do_init();
-
 
 	rpc_initsvc();
 	slctlthr_main(sfn);

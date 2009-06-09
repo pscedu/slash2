@@ -29,18 +29,17 @@ __static SPLAY_GENERATE(cfdtree, cfdent, entry, cfdcmp);
 int
 cfdcmp(const void *a, const void *b)
 {
-	const struct cfdent *ca = a;
-	const struct cfdent *cb = b;
+	const struct cfdent *ca = a, *cb = b;
 
-	if (ca->cfd < cb->cfd)
+	if (ca->fdb.sfdb_secret.sfs_cfd < cb->fdb.sfdb_secret.sfs_cfd)
 		return (-1);
-	else if (ca->cfd > cb->cfd)
+	else if (ca->fdb.sfdb_secret.sfs_cfd > cb->fdb.sfdb_secret.sfs_cfd)
 		return (1);
 	return (0);
 }
 
 int
-cfdinsert(struct cfdent *c, struct pscrpc_export *exp, slfid_t fid)
+cfdinsert(struct cfdent *c, struct pscrpc_export *exp)
 {
 	struct slashrpc_export *sexp;
 	int rc=0;
@@ -51,8 +50,7 @@ cfdinsert(struct cfdent *c, struct pscrpc_export *exp, slfid_t fid)
 		rc = EEXIST;
 	else
 		if (c->cfdops && c->cfdops->cfd_insert)
-			rc = c->cfdops->cfd_insert(c, exp, fid);
-
+			rc = c->cfdops->cfd_insert(c, exp);
 	freelock(&exp->exp_lock);
 	return (rc);
 }
@@ -63,7 +61,7 @@ cfdinsert(struct cfdent *c, struct pscrpc_export *exp, slfid_t fid)
  * @exp: RPC peer info.
  */
 int
-cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri, 
+cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
        struct cfdent **cfd, struct cfdops *cfdops)
 {
 	struct slashrpc_export *sexp;
@@ -74,15 +72,15 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 		*cfd = NULL;
 
 	c = PSCALLOC(sizeof(*c));
-	c->fid = fid;
+	c->fdb.sfdb_secret.sfs_fg.fg_fid = fid;
 	c->pri = pri;
 	c->cfdops = cfdops;
 
 	sexp = slashrpc_export_get(exp);
 	spinlock(&exp->exp_lock);
-	c->cfd = ++sexp->sexp_nextcfd;
-	if (c->cfd == FID_ANY)
-		c->cfd = ++sexp->sexp_nextcfd;
+	c->fdb.sfdb_secret.sfs_cfd = ++sexp->sexp_nextcfd;
+	if (c->fdb.sfdb_secret.sfs_cfd == FID_ANY)
+		c->fdb.sfdb_secret.sfs_cfd = ++sexp->sexp_nextcfd;
 	freelock(&exp->exp_lock);
 
 	if (c->cfdops && c->cfdops->cfd_init) {
@@ -94,9 +92,10 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 		}
 	}
 
-	psc_info("FID (%"_P_U64"d) CFD (%"_P_U64"d)", fid, c->cfd);
+	psc_info("FID (%"_P_U64"d) CFD (%"_P_U64"d)", fid,
+	    c->fdb.sfdb_secret.sfs_cfd);
 
-	if ((rc = cfdinsert(c, exp, fid))) {
+	if ((rc = cfdinsert(c, exp))) {
 		PSCFREE(c);
 		c = NULL;
 		if (rc == EEXIST) {
@@ -106,7 +105,7 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 			rc = EADDRINUSE;
 		} else
 			psc_fatalx("cfdinsert() failed rc=%d", rc);
-	}	
+	}
 	if (cfd)
 		*cfd = c;
 	return (rc);
@@ -115,18 +114,17 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 /*
  * cfd2fid - look up a client file descriptor in the export cfdtree
  *	for the associated file ID.
- * @fidp: value-result file ID.
  * @rq: RPC request containing RPC export peer info.
  * @cfd: client file descriptor.
  */
 int
-__cfd2fid(struct pscrpc_export *exp, u64 cfd, slfid_t *fidp, void **pri)
+__cfd2fid(struct pscrpc_export *exp, u64 cfd, void **pri)
 {
 	struct slashrpc_export *sexp;
 	struct cfdent *c, q;
 	int rc=0;
 
-	q.cfd = cfd;
+	q.fdb.sfdb_secret.sfs_cfd = cfd;
 	spinlock(&exp->exp_lock);
 	sexp = slashrpc_export_get(exp);
 	c = SPLAY_FIND(cfdtree, &sexp->sexp_cfdtree, &q);
@@ -134,7 +132,6 @@ __cfd2fid(struct pscrpc_export *exp, u64 cfd, slfid_t *fidp, void **pri)
 		errno = ENOENT;
 		rc = -1;
 	} else {
-		*fidp = c->fid;
 		if (pri) {
 			if (c->cfdops->cfd_get_pri) {
 				*pri = c->cfdops->cfd_get_pri(c, exp);
@@ -155,7 +152,7 @@ cfdget(struct pscrpc_export *exp, u64 cfd)
 	struct cfdent *c, q;
 	struct slashrpc_export *sexp;
 
-	q.cfd = cfd;
+	q.fdb.sfdb_secret.sfs_cfd = cfd;
 	spinlock(&exp->exp_lock);
 	sexp = slashrpc_export_get(exp);
 	c = SPLAY_FIND(cfdtree, &sexp->sexp_cfdtree, &q);
@@ -174,7 +171,7 @@ cfdfree(struct pscrpc_export *exp, u64 cfd)
 	struct cfdent *c, q;
 	int rc=0, l;
 
-	q.cfd = cfd;
+	q.fdb.sfdb_secret.sfs_cfd = cfd;
 
 	rc = 0;
 	l = reqlock(&exp->exp_lock);
@@ -204,12 +201,12 @@ cfdfreeall(struct pscrpc_export *exp)
 	struct cfdent *c, *nxt;
 
 	psc_warnx("exp=%p", exp);
-	
+
 	psc_assert(sexp);
 	psc_assert(sexp->sexp_type & EXP_CLOSING);
 	/* Don't bother locking if EXP_CLOSING is set.
 	 */
-	for (c = SPLAY_MIN(cfdtree, &sexp->sexp_cfdtree); 
+	for (c = SPLAY_MIN(cfdtree, &sexp->sexp_cfdtree);
 	     c != NULL; c = nxt) {
 		c->type |= (CFD_CLOSING|CFD_FORCE_CLOSE);
 		nxt = SPLAY_NEXT(cfdtree, &sexp->sexp_cfdtree, c);

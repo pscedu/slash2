@@ -6,15 +6,15 @@
 #include "psc_util/atomic.h"
 
 #include "cache_params.h"
-//#include "mds.h"
 #include "cfd.h"
-#include "mdsexpc.h"
-#include "slashexport.h"
-#include "fidcache.h"
 #include "fidc_common.h"
-#include "mdsrpc.h"
-#include "mdscoh.h"
+#include "fidcache.h"
 #include "inode.h"
+#include "mds.h"
+#include "mdscoh.h"
+#include "mdsexpc.h"
+#include "mdsrpc.h"
+#include "slashexport.h"
 
 struct cfdops mdsCfdOps;
 struct sl_fsops mdsFsops;
@@ -35,7 +35,8 @@ __static SPLAY_GENERATE(bmap_exports, mexpbcm,
  * @e: the export to which the cfd belongs.
  */
 int
-mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e) {
+mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
+{
 	struct slashrpc_export *sexp;
 	struct mexpfcm *m = PSCALLOC(sizeof(*m));
 	struct fidc_membh *f;
@@ -58,7 +59,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e) {
 	 *  We do a simple lookup here because the inode should already exist
 	 *  in the cache.
 	 */
-	m->mexpfcm_fcmh = f = fidc_lookup_simple(c->fid);
+	m->mexpfcm_fcmh = f = fidc_lookup_simple(c->fdb.sfdb_secret.sfs_fg.fg_fid);
 	psc_assert(f);
 	/* Ensure our ref has been added.
 	 */
@@ -98,6 +99,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e) {
 			DEBUG_FCMH(PLL_ERROR, f, 
 				   "fidc_fcoo_wait_locked() failed");
 			FCMH_ULOCK(f);
+			free(m);
 			return (-1);
 
 		} else if (rc == 1) 
@@ -645,8 +647,6 @@ __static int
 mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
 	      sl_blkh_t **bmapod)
 {
-	struct fidc_mds_info *mdsi=f->fcmh_fcoo->fcoo_pri;
-	sl_inodeh_t *inoh=&mdsi->fmdsi_inodeh;
 	int rc=0;
 	ssize_t szrc;
 	psc_crc_t crc;
@@ -918,8 +918,6 @@ mds_fidfs_lookup(const char *path, struct slash_creds *creds,
 __static void
 mds_cfdops_init(void)
 {
-	extern struct cfdops *cfdOps;
-
 	mdsCfdOps.cfd_init = mexpfcm_cfd_init;
 	mdsCfdOps.cfd_free = mexpfcm_cfd_free;
 	mdsCfdOps.cfd_insert = NULL;
