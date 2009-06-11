@@ -1,5 +1,7 @@
-#ifndef __CACPARAMS_H__
-#define __CACPARAMS_H__
+/* $Id$ */
+
+#ifndef _CACHEPARAMS_H_
+#define _CACHEPARAMS_H_
 
 #define FIDC_CLI_HASH_SZ 1023
 #define FIDC_ION_HASH_SZ 4095
@@ -21,7 +23,7 @@ enum fid_cache_users {
 #define FIDC_ION_DEFSZ 4096   /* Number of fcmh's to allocate by default */
 #define FIDC_ION_MAXSZ 524288 /* Max fcmh's */
 
-#define SLASH_BMAP_SIZE  134217728
+#define SLASH_BMAP_SIZE  (128 * 1024 * 1024)
 #define SLASH_BMAP_WIDTH 8
 #define SLASH_BMAP_DEPTH 5
 #define SLASH_BMAP_SHIFT 11
@@ -36,4 +38,4 @@ enum fid_cache_users {
 
 #define BMAP_MAX_GET 63
 
-#endif
+#endif /* _CACHEPARAMS_H_ */

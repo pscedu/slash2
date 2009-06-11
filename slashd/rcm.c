@@ -23,7 +23,7 @@ slrcm_issue_releasebmap(struct pscrpc_import *imp)
 	if ((rc = RSX_NEWREQ(imp, SRCM_VERSION,
 	    SRMT_RELEASEBMAP, rq, mq, mp)) != 0)
 		return (rc);
-	if ((rc = rsx_waitrep(rq, sizeof(*mp), &mp)) == 0)
+	if ((rc = RSX_WAITREP(rq, mp)) == 0)
 		rc = mp->rc;
 	pscrpc_req_finished(rq);
 	return (rc);

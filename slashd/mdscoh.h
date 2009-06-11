@@ -1,12 +1,10 @@
 /* $Id$ */
 
-#ifndef __MDSCOH_H__
-#define __MDSCOH_H__ 1
+#ifndef _MDSCOH_H_
+#define _MDSCOH_H_
 
 #include "mdsexpc.h"
 
-void
-mdscoh_infmode_chk(struct mexpbcm *bref, int rq_mode);
+void mdscoh_infmode_chk(struct mexpbcm *, int);
 
-
-#endif
+#endif /* _MDSCOH_H_ */

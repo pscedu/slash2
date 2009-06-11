@@ -1,10 +1,13 @@
-#ifndef __FIDC_COMMON_H__
-#define __FIDC_COMMON_H__ 1
+/* $Id$ */
+
+#ifndef _FIDC_COMMON_H_
+#define _FIDC_COMMON_H_
+
+#include "psc_ds/hash.h"
+#include "psc_ds/pool.h"
 
 #include "fid.h"
 #include "fidcache.h"
-#include "psc_ds/pool.h"
-#include "psc_ds/hash.h"
 #include "cache_params.h"
 
 #define FCOO_START   0
@@ -22,8 +25,8 @@ extern struct fidc_membh *
 fidc_lookup_simple (slfid_t);
 
 extern struct fidc_membh *
-__fidc_lookup_inode (const struct slash_fidgen *, int, 
-		     const struct fidc_memb *, 
+__fidc_lookup_inode (const struct slash_fidgen *, int,
+		     const struct fidc_memb *,
 		     const struct slash_creds *);
 
 enum fidc_lookup_flags {
@@ -124,28 +127,13 @@ enum fidc_lookup_flags {
 	__clean;							\
  })
 
-extern void
-fidc_put(struct fidc_membh *, list_cache_t *);
+void	fidc_fcm_setattr(struct fidc_membh *, const struct stat *);
+int	fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
+void	fidc_fcoo_init(struct fidc_open_obj *);
+int	fidc_fid2cfd(slfid_t, u64 *, struct fidc_membh **);
+void	fidc_memb_init(struct fidc_memb *, slfid_t);
+int	fidc_membh_init(struct psc_poolmgr *, void *);
+void	fidc_put(struct fidc_membh *, list_cache_t *);
+void	fidcache_init(enum fid_cache_users, int (*)(struct fidc_membh *));
 
-extern void 
-fidc_fcm_setattr(struct fidc_membh *, const struct stat *);
-
-extern int
-fidc_membh_init(__unusedx struct psc_poolmgr *, void *);
-
-extern void
-fidc_memb_init(struct fidc_memb *fcm, slfid_t f);
-
-extern void
-fidc_fcoo_init(struct fidc_open_obj *f);
-
-extern void
-fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *));
-
-extern int
-fidc_fid2cfd(slfid_t f, u64 *cfd, struct fidc_membh **fcmh);
-
-extern int
-fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
-
-#endif
+#endif /* _FIDC_COMMON_H_ */

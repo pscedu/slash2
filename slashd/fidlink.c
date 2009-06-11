@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "psc_util/acsvc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 

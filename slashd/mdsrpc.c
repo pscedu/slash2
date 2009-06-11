@@ -17,7 +17,7 @@ lnet_process_id_t lpid;
 void
 rpc_initsvc(void)
 {
-	pscrpc_svc_handle_t *svh;
+	struct pscrpc_svc_handle *svh;
 
 	if (LNetGetId(1, &lpid))
 		psc_fatalx("LNetGetId");
