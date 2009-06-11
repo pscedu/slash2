@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef __SLASH_INODE_H__
-#define __SLASH_INODE_H__
+#ifndef _SLASH_INODE_H_
+#define _SLASH_INODE_H_
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -14,12 +14,11 @@
 #include "cache_params.h"
 #include "fid.h"
 
-
-/* To save space in the bmaps, replica stores are kept in the sl-replicas 
- *   xattr.  Each bmap uses an array of char's as a bitmap to track which 
- *   stores the bmap is replicated to.  Additional bits are used to specify 
- *   the freshness of the replica bmaps.  '100' would mean that the bmap 
- *   is up-to-date, '110' would mean that the bmap is only one generation 
+/* To save space in the bmaps, replica stores are kept in the sl-replicas
+ *   xattr.  Each bmap uses an array of char's as a bitmap to track which
+ *   stores the bmap is replicated to.  Additional bits are used to specify
+ *   the freshness of the replica bmaps.  '100' would mean that the bmap
+ *   is up-to-date, '110' would mean that the bmap is only one generation
  *   back and therefore may take partial updates.  111 means that the bmap
  *   is more than one generation old.
  * '00' - bmap is not replicated to this ios.
@@ -155,8 +154,8 @@ typedef struct slash_block_handle {
 /*
  * The inode structure lives at the beginning of the metafile and holds
  * the block store array along with snapshot pointers.
- * 
- * Replica tables are held here as opposed to  
+ *
+ * Replica tables are held here as opposed to
  */
 typedef struct slash_inode_store {
 	struct slash_fidgen ino_fg;
@@ -185,17 +184,13 @@ typedef struct slash_inode_handle {
 #define INOH_ULOCK(h) freelock(&(i)->inoh_lock)
 #define INOH_LOCK_ENSURE(h) LOCK_ENSURE(&(i)->inoh_lock)
 
-enum slash_inode_handle_flags {	
+enum slash_inode_handle_flags {
 	INOH_INO_DIRTY = (1<<0), /* Inode structures need to be written */
 	INOH_REP_DIRTY = (1<<1), /* Replication structures need written */
 	INOH_HAVE_REPS = (1<<2)
 };
 
 #define FCMH_2_INODEP(f) (&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
-
-#define COPYFID(d, s) 				\
-	memcpy((d), (s), sizeof(*(d)))
-	
 
 #define INOH_FLAG(field, str) ((field) ? (str) : "")
 #define DEBUG_INOH_FLAGS(i)					\
@@ -224,4 +219,5 @@ enum slash_inode_handle_flags {
 /* File extended attribute names. */
 #define SFX_INODE	"sl-inode"
 #define SFX_REPLICAS    "sl-replicas"
-#endif /* __SLASH_INODE_H__ */
+
+#endif /* _SLASH_INODE_H_ */

@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef __FID_H__
-#define __FID_H__
+#ifndef _SLASH_FID_H_
+#define _SLASH_FID_H_
 
 #include <sys/types.h>
 
@@ -35,16 +35,16 @@ struct slash_fidgen {
 #define FID_FSID(fid)		((u32)((fid) >> 48))
 #define FID_INUM(fid)		((u64)((fid) & UINT64_C(0xffffffffffff)))
 
-//#define SAMEFID(a, b) !(memcmp(a, b, sizeof(*(a))))
-
 #define SAMEFID(a, b)							\
 	(((a)->fg_fid == (b)->fg_fid) && ((a)->fg_gen == (b)->fg_gen))
 
+#define COPYFID(d, s)		memcpy((d), (s), sizeof(*(d)))
+
 void fid_makepath(slfid_t, char *);
-int  fid_link(slfid_t, const char *); 
+int  fid_link(slfid_t, const char *);
 int  fid_getxattr(const char *, const char *, void *, ssize_t);
 
 int  translate_pathname(char *, int);
 int  untranslate_pathname(char *);
 
-#endif /* __FID_H__ */
+#endif /* _SLASH_FID_H_ */
