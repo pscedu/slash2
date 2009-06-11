@@ -14,6 +14,7 @@
 #include "psc_util/usklndthr.h"
 
 #include "control.h"
+#include "fdbuf.h"
 #include "fidc_common.h"
 #include "mdsrpc.h"
 #include "pathnames.h"
@@ -93,6 +94,8 @@ main(int argc, char *argv[])
         //slFsops->slfsop_getattr = slash2fuse_stat;
 
 	slashGetConfig(cfn);
+	fdbuf_createkeyfile();
+	fdbuf_readkeyfile();
 	libsl_init(PSC_SERVER);
 	mds_init();
 	//slash_superblock_init();
