@@ -7,19 +7,19 @@
 #define SRMM_NBUFS      1024
 #define SRMM_BUFSZ      128
 #define SRMM_REPSZ      128
-#define SRMM_SVCNAME    "slrmmthr"
+#define SRMM_SVCNAME    "slrmm"
 
 #define SRMI_NTHREADS   8
 #define SRMI_NBUFS      1024
 #define SRMI_BUFSZ      128
 #define SRMI_REPSZ      128
-#define SRMI_SVCNAME    "slrmithr"
+#define SRMI_SVCNAME    "slrmi"
 
 #define SRMC_NTHREADS   8
 #define SRMC_NBUFS      1024
 #define SRMC_BUFSZ      384
 #define SRMC_REPSZ      384
-#define SRMC_SVCNAME    "slrmcthr"
+#define SRMC_SVCNAME    "slrmc"
 
 struct pscrpc_request;
 
