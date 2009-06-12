@@ -588,6 +588,7 @@ fidc_fcoo_init(struct fidc_open_obj *f)
 	//	(void)(fcoo_init)(f);
 	lc_init(&f->fcoo_buffer_cache, struct sl_buffer, slb_fcm_lentry);
 	jfi_init(&f->fcoo_jfi);
+	f->fcoo_bmap_sz = SLASH_BMAP_SIZE;
 }
 
 /**
@@ -683,7 +684,6 @@ bmapc_memb_init(struct bmapc_memb *b, struct fidc_membh *f)
 				     f, sl_buffer_alloc, sl_oftm_addref,
 				     sl_oftiov_pin_cb);
 	psc_assert(b->bcm_oftr);
-	f->fcmh_fcoo->fcoo_bmap_sz = SLASH_BMAP_SIZE;
 }
 
 /**
