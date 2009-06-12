@@ -29,10 +29,12 @@ __static unsigned char	 fdbuf_key[sizeof(struct srt_fd_buf)];
 /*
  * fdbuf_encrypt - Encrypt an fdbuf with the shared key.
  * @sfdb: the srt_fd_buf to encrypt, cfd should be filled in.
- * @fg: the file ID and generation.
+ * @fgp: the file ID and generation.
+ * @nid: peer address to prevent spoofing.
  */
 void
-fdbuf_encrypt(struct srt_fd_buf *sfdb, struct slash_fidgen *fg)
+fdbuf_encrypt(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
+    lnet_process_id_t nid)
 {
 	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0);
 	unsigned char *buf;
@@ -40,18 +42,12 @@ fdbuf_encrypt(struct srt_fd_buf *sfdb, struct slash_fidgen *fg)
 	gcry_md_hd_t hd;
 	int alg;
 
-	sfdb->sfdb_secret.sfs_fg = *fg;
+	sfdb->sfdb_secret.sfs_fg = *fgp;
+	sfdb->sfdb_secret.sfs_cprid = nid;
 	sfdb->sfdb_secret.sfs_magic = SFDB_MAGIC;
 	sfdb->sfdb_secret.sfs_nonce = psc_atomic64_inc_return(&nonce);
 
 	alg = GCRY_MD_SHA256;
-	gerr = gcry_md_open(&hd, alg, 0);
-	if (gerr)
-		psc_fatalx("gcry_md_open: %d", gerr);
-	gcry_md_write(hd, &sfdb->sfdb_secret,
-	    sizeof(sfdb->sfdb_secret));
-	gcry_md_write(hd, fdbuf_key, sizeof(fdbuf_key));
-	buf = gcry_md_read(hd, 0);
 	/* base64 is 4/3 + 1 (for truncation), then 1 for NUL byte */
 	if (gcry_md_get_algo_dlen(alg) * 4 / 3 + 2 >=
 	    sizeof(sfdb->sfdb_hash))
@@ -59,6 +55,14 @@ fdbuf_encrypt(struct srt_fd_buf *sfdb, struct slash_fidgen *fg)
 		    gcry_md_get_algo_dlen(alg),
 		    gcry_md_get_algo_dlen(alg) * 4 / 3 + 2,
 		    sizeof(sfdb->sfdb_hash));
+
+	gerr = gcry_md_open(&hd, alg, 0);
+	if (gerr)
+		psc_fatalx("gcry_md_open: %d", gerr);
+	gcry_md_write(hd, &sfdb->sfdb_secret,
+	    sizeof(sfdb->sfdb_secret));
+	gcry_md_write(hd, fdbuf_key, sizeof(fdbuf_key));
+	buf = gcry_md_read(hd, 0);
 	psc_base64_encode(buf, sfdb->sfdb_hash,
 	    gcry_md_get_algo_dlen(alg));
 	gcry_md_close(hd);
@@ -69,21 +73,51 @@ fdbuf_encrypt(struct srt_fd_buf *sfdb, struct slash_fidgen *fg)
  * @sfdb: the srt_fd_buf to decrypt.
  * @cfdp: value-result client file descriptor.
  * @fgp: value-result file ID and generation, after decryption.
+ * @nid: peer address to prevent spoofing.
  */
 int
 fdbuf_decrypt(struct srt_fd_buf *sfdb, uint64_t *cfdp,
-    struct slash_fidgen *fgp)
+    struct slash_fidgen *fgp, lnet_process_id_t nid)
 {
+	gcry_error_t gerr;
+	gcry_md_hd_t hd;
+	char buf[45];
+	int alg, rc;
+
+	rc = 0;
 	if (sfdb->sfdb_secret.sfs_magic != SFDB_MAGIC)
-		return (-1);
-//	if (sfdb->client != client)
-//		return (-1);
-//	if (hash(secret) != sfdb->hash)
-//		return (-1);
-	*fgp = sfdb->sfdb_secret.sfs_fg;
+		return (EINVAL);
+	if (memcmp(&sfdb->sfdb_secret.sfs_cprid, &nid, sizeof(nid)))
+		return (EPERM);
+
+	alg = GCRY_MD_SHA256;
+	/* base64 is 4/3 + 1 (for truncation), then 1 for NUL byte */
+	if (gcry_md_get_algo_dlen(alg) * 4 / 3 + 2 >=
+	    sizeof(buf))
+		psc_fatal("bad base64 size: %d %d %zd",
+		    gcry_md_get_algo_dlen(alg),
+		    gcry_md_get_algo_dlen(alg) * 4 / 3 + 2,
+		    sizeof(buf));
+
+	gerr = gcry_md_open(&hd, alg, 0);
+	if (gerr)
+		psc_fatalx("gcry_md_open: %d", gerr);
+	gcry_md_write(hd, &sfdb->sfdb_secret,
+	    sizeof(sfdb->sfdb_secret));
+	gcry_md_write(hd, fdbuf_key, sizeof(fdbuf_key));
+	psc_base64_encode(gcry_md_read(hd, 0), buf,
+	    gcry_md_get_algo_dlen(alg));
+	if (strcmp(buf, sfdb->sfdb_hash))
+		rc = EBADF;
+	gcry_md_close(hd);
+
+	if (rc)
+		return (rc);
+
+	if (fgp)
+		*fgp = sfdb->sfdb_secret.sfs_fg;
 	if (cfdp)
 		*cfdp = sfdb->sfdb_secret.sfs_cfd;
-	/* XXX do the cfd lookup for the caller */
 	return (0);
 }
 
