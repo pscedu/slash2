@@ -1,8 +1,10 @@
-#ifndef SLASH2FUSE_H
-#define SLASH2FUSE_H 1
+/* $Id$ */
 
-#define FUSE_USE_VERSION 25
+#ifndef _MSL_FUSE_H_
+#define _MSL_FUSE_H_
+
+#define FUSE_USE_VERSION 27
 
 #include <fuse/fuse_lowlevel.h>
 
-#endif
+#endif /* _MSL_FUSE_H_ */

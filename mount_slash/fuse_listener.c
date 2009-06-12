@@ -1,3 +1,5 @@
+/* $Id$ */
+
 /*
  * CDDL HEADER START
  *
@@ -23,15 +25,17 @@
  * Use is subject to license terms.
  */
 
+#include <sys/poll.h>
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/poll.h>
 #include <errno.h>
 #include <pthread.h>
 
-#include "psc_util/assert.h"
 #include "psc_util/alloc.h"
+#include "psc_util/assert.h"
+
 #include "msl_fuse.h"
 #include "fuse_listener.h"
 
@@ -61,9 +65,10 @@ char *mountpoints[MAX_FDS];
 pthread_t fuse_threads[NUM_THREADS];
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
-int slash2fuse_listener_init()
+int
+slash2fuse_listener_init(void)
 {
-	if(pipe(newfs_fd) == -1) {
+	if (pipe(newfs_fd) == -1) {
 		perror("pipe");
 		return -1;
 	}
@@ -75,16 +80,18 @@ int slash2fuse_listener_init()
 	return 0;
 }
 
-void slash2fuse_listener_exit()
+void
+slash2fuse_listener_exit(void)
 {
 	close(newfs_fd[0]);
 	close(newfs_fd[1]);
 }
 
-int slash2fuse_newfs(const char *mntpoint, struct fuse_chan *ch)
+int
+slash2fuse_newfs(const char *mntpoint, struct fuse_chan *ch)
 {
 	fuse_fs_info_t info;
-	
+
 	memset(&info, 0, sizeof(info));
 
 	info.fd = fuse_chan_fd(ch);
@@ -109,7 +116,8 @@ int slash2fuse_newfs(const char *mntpoint, struct fuse_chan *ch)
  * This function is repeated in lib/libzfs/libzfs_zfsfuse.c
  * and in zfs-fuse/slash2fuse_socket.c
  */
-static int fd_read_loop(int fd, void *buf, int bytes)
+static int
+fd_read_loop(int fd, void *buf, int bytes)
 {
 	int read_bytes = 0;
 	int left_bytes = bytes;
@@ -135,7 +143,8 @@ static int fd_read_loop(int fd, void *buf, int bytes)
  * Add a new filesystem/file descriptor to the poll set
  * Must be called with mtx locked
  */
-static void new_fs()
+static void
+new_fs(void)
 {
 	fuse_fs_info_t fs;
 
@@ -157,7 +166,7 @@ static void new_fs()
 
 	if(nfds == MAX_FDS) {
 		fprintf(stderr, "Warning: filesystem limit (%i) reached, unmounting..\n", MAX_FILESYSTEMS);
-		fuse_unmount(mntpoint);
+		fuse_unmount(mntpoint, fs.ch);
 		free(mntpoint);
 		return;
 	}
@@ -179,7 +188,8 @@ static void new_fs()
  * Delete a filesystem/file descriptor from the poll set
  * Must be called with mtx locked
  */
-static void destroy_fs(int i)
+static void
+destroy_fs(int i)
 {
 #ifdef DEBUG
 	fprintf(stderr, "Filesystem %i (%s) is being unmounted\n", i, mountpoints[i]);
@@ -191,7 +201,8 @@ static void destroy_fs(int i)
 	PSCFREE(mountpoints[i]);
 }
 
-static void *slash2fuse_listener_loop(__unusedx void *arg)
+static void *
+slash2fuse_listener_loop(__unusedx void *arg)
 {
 	size_t bufsize = 0;
 	char *buf = NULL;
@@ -239,7 +250,7 @@ static void *slash2fuse_listener_loop(__unusedx void *arg)
 					bufsize = fsinfo[i].bufsize;
 				}
 
-				int res = fuse_chan_receive(fsinfo[i].ch, buf, fsinfo[i].bufsize);
+				int res = fuse_chan_recv(&fsinfo[i].ch, buf, fsinfo[i].bufsize);
 				if(res == -1 || fuse_session_exited(fsinfo[i].se)) {
 					destroy_fs(i);
 					continue;
@@ -290,7 +301,8 @@ static void *slash2fuse_listener_loop(__unusedx void *arg)
 	return NULL;
 }
 
-int slash2fuse_listener_start()
+int
+slash2fuse_listener_start(void)
 {
 	int i;
 
@@ -313,7 +325,7 @@ int slash2fuse_listener_start()
 
 		fuse_session_exit(fsinfo[i].se);
 		fuse_session_reset(fsinfo[i].se);
-		fuse_unmount(mountpoints[i]);
+		fuse_unmount(mountpoints[i], fsinfo[i].ch);
 		fuse_session_destroy(fsinfo[i].se);
 
 		free(mountpoints[i]);

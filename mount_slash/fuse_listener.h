@@ -23,8 +23,8 @@
  * Use is subject to license terms.
  */
 
-#ifndef SLASH2FUSE_LISTENER_H
-#define SLASH2FUSE_LISTENER_H 1
+#ifndef _FUSE_LISTENER_H_
+#define _FUSE_LISTENER_H_
 
 #include "msl_fuse.h"
 
@@ -33,9 +33,9 @@
 
 extern int exit_fuse_listener;
 
-extern int slash2fuse_listener_init();
-extern int slash2fuse_listener_start();
-extern void slash2fuse_listener_exit();
-extern int slash2fuse_newfs(const char *, struct fuse_chan *);
+int slash2fuse_listener_init(void);
+int slash2fuse_listener_start(void);
+void slash2fuse_listener_exit(void);
+int slash2fuse_newfs(const char *, struct fuse_chan *);
 
-#endif
+#endif /* _FUSE_LISTENER_H_ */
