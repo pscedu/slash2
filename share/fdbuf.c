@@ -149,7 +149,7 @@ fdbuf_checkkey(const char *fn, struct stat *stb)
  * fdbuf_createkey - Generate the key file.
  */
 void
-fdbuf_createkey(void)
+fdbuf_createkeyfile(void)
 {
 	unsigned char secret[sizeof(struct srt_fdb_secret)];
 	const char *keyfn;

@@ -791,7 +791,6 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		pscrpc_req_finished(rq);
 }
 
-
 static int 
 slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name, 
 		  int ford)
@@ -1232,7 +1231,7 @@ slash2fuse_rename_helper(fuse_req_t req, fuse_ino_t parent, const char *name,
 }
 
 static void
-slash2fuse_statfs(fuse_req_t req)
+slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 {
 	struct pscrpc_request *rq;
 	struct srm_statfs_req *mq;
@@ -1549,9 +1548,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	return (NULL);
 }
 
-
-struct fuse_lowlevel_ops zfs_operations =
-{
+struct fuse_lowlevel_ops zfs_operations = {
 	.open       = slash2fuse_open,
 	.read       = slash2fuse_read_helper,
 	.write      = slash2fuse_write_helper,
@@ -1604,7 +1601,6 @@ msl_fuse_lowlevel_mount(const char *mp)
 	struct fuse_chan *ch;
         struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
 	char *fuse_opts;
-	int fd;
 
 	slash2fuse_listener_init();
 
@@ -1621,25 +1617,16 @@ msl_fuse_lowlevel_mount(const char *mp)
         }
         free(fuse_opts);
 
-        fd = fuse_mount(mp, &args);
-	if (fd < 0)
-		return ENOMEM;
+	ch = fuse_mount(mp, &args);
+	if (ch == NULL)
+		return (errno);
 
         se = fuse_lowlevel_new(&args, &zfs_operations, sizeof(zfs_operations),
 			       NULL);
         fuse_opt_free_args(&args);
 
         if (se == NULL) {
-                close(fd);
-                fuse_unmount(mp);
-                return EIO;
-        }
-
-        ch = fuse_kern_chan_new(fd);
-        if (ch == NULL) {
-                fuse_session_destroy(se);
-                close(fd);
-                fuse_unmount(mp);
+                fuse_unmount(mp, ch);
                 return EIO;
         }
 
@@ -1647,8 +1634,7 @@ msl_fuse_lowlevel_mount(const char *mp)
 
 	if (slash2fuse_newfs(mp, ch) != 0) {
                 fuse_session_destroy(se);
-                close(fd);
-                fuse_unmount(mp);
+                fuse_unmount(mp, ch);
                 return EIO;
         }
 
