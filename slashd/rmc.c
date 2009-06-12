@@ -23,7 +23,6 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/service.h"
-#include "psc_util/acsvc.h"
 #include "psc_util/lock.h"
 #include "psc_util/strlcpy.h"
 
@@ -118,7 +117,6 @@ slrmc_connect(struct pscrpc_request *rq)
         RETURN(0);
 }
 
-
 static int 
 slrmc_access(struct pscrpc_request *rq)
 {
@@ -132,7 +130,6 @@ slrmc_access(struct pscrpc_request *rq)
 
 	RETURN(0);
 }
-
 
 static int
 slrmc_getattr(struct pscrpc_request *rq)
@@ -163,22 +160,19 @@ slrmc_getbmap(struct pscrpc_request *rq)
 
 	ENTRY;
 
+	bmap = NULL;
 	RSX_ALLOCREP(rq, mq, mp);
 
-	if (fdbuf_decrypt(&mq->sfdb, &cfd, NULL) == -1) {
-		psc_errorx("decrypt failed!");
-		mp->rc = -EINVAL;
+	mp->rc = fdbuf_decrypt(&mq->sfdb, &cfd, NULL, rq->rq_peer);
+	if (mp->rc)
 		RETURN(0);
-	} 
 
 	/* Access the reference 
 	 */
 	if (cfdlookup(rq->rq_export, cfd, &m))
 		mp->rc = -errno;
-	else {
-		psc_assert(m);
+	else
 		mp->rc = mds_bmap_load(m, mq, &bmap);
-	}
 	RETURN(0);
 }
 
@@ -251,7 +245,8 @@ slrmc_create(struct pscrpc_request *rq)
 			    data, &cfd, &mdsCfdOps);
 
 			if (!mp->rc && cfd) {
-				fdbuf_encrypt(&cfd->fdb, &fg);
+				fdbuf_encrypt(&cfd->fdb, &fg,
+				    rq->rq_peer);
 				memcpy(&mp->sfdb, &cfd->fdb,
 				    sizeof(mp->sfdb));
 			}
@@ -296,7 +291,8 @@ slrmc_open(struct pscrpc_request *rq)
 			    data, &cfd, &mdsCfdOps);
 
 			if (!mp->rc && cfd) {
-				fdbuf_encrypt(&cfd->fdb, &fg);
+				fdbuf_encrypt(&cfd->fdb, &fg,
+				    rq->rq_peer);
 				memcpy(&mp->sfdb, &cfd->fdb,
 				    sizeof(mp->sfdb));
 			}
@@ -337,7 +333,7 @@ slrmc_opendir(struct pscrpc_request *rq)
 				psc_error("cfdnew failed rc=%d", mp->rc);
 				RETURN(0);
 			}
-			fdbuf_encrypt(&cfd->fdb, &fg);
+			fdbuf_encrypt(&cfd->fdb, &fg, rq->rq_peer);
 			memcpy(&mp->sfdb, &cfd->fdb, sizeof(mp->sfdb));
 		}
 	}
@@ -359,11 +355,9 @@ slrmc_readdir(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	if (fdbuf_decrypt(&mq->sfdb, &cfd, &fg) == -1) {
-		psc_errorx("decrypt failed!");
-		mp->rc = -EINVAL;
+	mp->rc = fdbuf_decrypt(&mq->sfdb, &cfd, &fg, rq->rq_peer);
+	if (mp->rc)
 		RETURN(0);
-	} 
 
 	if (cfdlookup(rq->rq_export, cfd, &m)) {
 		mp->rc = -errno;
@@ -386,7 +380,7 @@ slrmc_readdir(struct pscrpc_request *rq)
 				   mq->offset, (char *)iov[0].iov_base, 
 				   &mp->size, 
 				   (struct srm_getattr_rep *)iov[1].iov_base, 
-				   mq->nstbpref, 
+				   mq->nstbpref,
 				   ((struct fidc_mds_info *)m->mexpfcm_fcmh->fcmh_fcoo->fcoo_pri)->fmdsi_data);
 
 	if (mp->rc) {
@@ -444,11 +438,9 @@ slrmc_release(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	if (fdbuf_decrypt(&mq->sfdb, &cfd, &fg) == -1) {
-		psc_errorx("decrypt failed!");
-		mp->rc = -EINVAL;
+	mp->rc = fdbuf_decrypt(&mq->sfdb, &cfd, &fg, rq->rq_peer);
+	if (mp->rc)
 		RETURN(0);
-	} 
 	
 	c = cfdget(rq->rq_export, cfd);
 	if (!c) {

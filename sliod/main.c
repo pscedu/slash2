@@ -13,10 +13,11 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
-#include "sliod.h"
-#include "slconfig.h"
-#include "rpc.h"
+#include "fdbuf.h"
 #include "pathnames.h"
+#include "rpc.h"
+#include "slconfig.h"
+#include "sliod.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -84,6 +85,8 @@ main(int argc, char *argv[])
 	    sizeof(struct psc_ctlthr), "slioctlthr");
 
 	slashGetConfig(cfn);
+	fdbuf_checkkeyfile();
+	fdbuf_readkeyfile();
 	libsl_init(PSC_SERVER);
 	rpc_initsvc();
 	sliotimerthr_spawn();

@@ -62,11 +62,9 @@ slric_handle_read(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	if (fdbuf_decrypt(&mq->sfdb, &cfd, &fg) == -1) {
-		psc_errorx("decrypt failed!");
-		mp->rc = -EINVAL;
+	mp->rc = fdbuf_decrypt(&mq->sfdb, &cfd, &fg, rq->rq_peer);
+	if (mp->rc)
 		return (0);
-	}
 
 	fid_makepath(fg.fg_fid, fn);
 	if ((fd = open(fn, O_RDONLY)) == -1) {
@@ -117,19 +115,16 @@ slric_handle_write(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	if (fdbuf_decrypt(&mq->sfdb, &cfd, &fg) == -1) {
-		psc_errorx("decrypt failed!");
-		mp->rc = -EINVAL;
+	mp->rc = fdbuf_decrypt(&mq->sfdb, &cfd, &fg, rq->rq_peer);
+	if (mp->rc)
 		return (0);
-	}
 
-	fid_makepath(fg.fg_fid, fn); /* validity check fid */
+	fid_makepath(fg.fg_fid, fn);
 	buf = PSCALLOC(mq->size);
 	iov.iov_base = buf;
 	iov.iov_len = mq->size;
 	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 	    SRIC_BULK_PORTAL, &iov, 1)) == 0) {
-//	mq->size / pscPageSize,
 		if ((fd = open(fn, O_WRONLY)) == -1)
 			mp->rc = -errno;
 		else {
