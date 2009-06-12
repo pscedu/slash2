@@ -112,13 +112,14 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 }
 
 /*
- * cfd2fid - look up a client file descriptor in the export cfdtree
- *	for the associated file ID.
- * @rq: RPC request containing RPC export peer info.
- * @cfd: client file descriptor.
+ * cfdlookup - look up a client file descriptor in the export cfdtree
+ *	for existence and the associated private data.
+ * @exp: peer RPC info.
+ * @cfd: client file descriptor/stream ID.
+ * @datap: value-result private data attached to cfd entry.
  */
 int
-__cfd2fid(struct pscrpc_export *exp, u64 cfd, void **pri)
+cfdlookup(struct pscrpc_export *exp, u64 cfd, void *datap)
 {
 	struct slashrpc_export *sexp;
 	struct cfdent *c, q;
@@ -132,17 +133,11 @@ __cfd2fid(struct pscrpc_export *exp, u64 cfd, void **pri)
 		errno = ENOENT;
 		rc = -1;
 	} else {
-		if (pri) {
-			if (c->cfdops->cfd_get_pri) {
-				*pri = c->cfdops->cfd_get_pri(c, exp);
-				psc_info("zfs pri data (%p)", *pri);
-			}
-			else
-				*pri = c->pri;
-		}
+		if (datap)
+			*(void **)datap = c->pri;
 	}
 	freelock(&exp->exp_lock);
-	psc_trace("zfs pri data1 (%p)", *pri);
+	psc_trace("zfs pri data (%p)", c->pri);
 	return (rc);
 }
 

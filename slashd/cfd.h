@@ -38,14 +38,11 @@ struct cfdops {
 
 struct cfdent * cfdget(struct pscrpc_export *, u64);
 int	cfdcmp(const void *, const void *);
-int     cfdnew(slfid_t, struct pscrpc_export *exp, void *pri,
-	       struct cfdent **cfd, struct cfdops *svrops);
+int     cfdnew(slfid_t, struct pscrpc_export *, void *,
+	       struct cfdent **, struct cfdops *);
 int	cfdfree(struct pscrpc_export *, u64);
 void    cfdfreeall(struct pscrpc_export *);
-int __cfd2fid(struct pscrpc_export *exp, u64 cfd, void **pri);
-
-#define cfd2fid(e, c, f) __cfd2fid(e, c, NULL)
-#define cfd2fid_p __cfd2fid
+int	cfdlookup(struct pscrpc_export *, u64, void *);
 
 SPLAY_HEAD(cfdtree, cfdent);
 SPLAY_PROTOTYPE(cfdtree, cfdent, entry, cfdcmp);
