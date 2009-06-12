@@ -1599,44 +1599,44 @@ msl_fuse_lowlevel_mount(const char *mp)
 {
 	struct fuse_session *se;
 	struct fuse_chan *ch;
-        struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
+	struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
 	char *fuse_opts;
 
 	slash2fuse_listener_init();
 
-        if (asprintf(&fuse_opts, FUSE_OPTIONS, mp) == -1) {
-                return ENOMEM;
-        }
+	if (asprintf(&fuse_opts, FUSE_OPTIONS, mp) == -1) {
+		return ENOMEM;
+	}
 
-        if (fuse_opt_add_arg(&args, "") == -1 ||
-           fuse_opt_add_arg(&args, "-o") == -1 ||
-           fuse_opt_add_arg(&args, fuse_opts) == -1) {
-                fuse_opt_free_args(&args);
-                free(fuse_opts);
-                return ENOMEM;
-        }
-        free(fuse_opts);
+	if (fuse_opt_add_arg(&args, "") == -1 ||
+	    fuse_opt_add_arg(&args, "-o") == -1 ||
+	    fuse_opt_add_arg(&args, fuse_opts) == -1) {
+		fuse_opt_free_args(&args);
+		free(fuse_opts);
+		return ENOMEM;
+	}
+	free(fuse_opts);
 
 	ch = fuse_mount(mp, &args);
 	if (ch == NULL)
 		return (errno);
 
-        se = fuse_lowlevel_new(&args, &zfs_operations, sizeof(zfs_operations),
-			       NULL);
-        fuse_opt_free_args(&args);
+	se = fuse_lowlevel_new(&args, &zfs_operations, sizeof(zfs_operations),
+	    NULL);
+	fuse_opt_free_args(&args);
 
-        if (se == NULL) {
-                fuse_unmount(mp, ch);
-                return EIO;
-        }
+	if (se == NULL) {
+		fuse_unmount(mp, ch);
+		return EIO;
+	}
 
-        fuse_session_add_chan(se, ch);
+	fuse_session_add_chan(se, ch);
 
 	if (slash2fuse_newfs(mp, ch) != 0) {
-                fuse_session_destroy(se);
-                fuse_unmount(mp, ch);
-                return EIO;
-        }
+		fuse_session_destroy(se);
+		fuse_unmount(mp, ch);
+		return EIO;
+	}
 
 	return (0);
 }
