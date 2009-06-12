@@ -157,8 +157,8 @@ slrmc_getbmap(struct pscrpc_request *rq)
 {
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
-	struct mexpfcm *fref;
 	struct bmapc_memb *bmap;
+	struct mexpfcm *m;
 	uint64_t cfd;
 
 	ENTRY;
@@ -173,11 +173,11 @@ slrmc_getbmap(struct pscrpc_request *rq)
 
 	/* Access the reference 
 	 */
-	if (cfd2fid_p(rq->rq_export, cfd, (void **)&fref))
+	if (cfdlookup(rq->rq_export, cfd, &m))
 		mp->rc = -errno;
 	else {
-		psc_assert(fref);
-		mp->rc = mds_bmap_load(fref, mq, &bmap);
+		psc_assert(m);
+		mp->rc = mds_bmap_load(m, mq, &bmap);
 	}
 	RETURN(0);
 }
@@ -352,8 +352,8 @@ slrmc_readdir(struct pscrpc_request *rq)
 	struct srm_readdir_rep *mp;
 	struct slash_fidgen fg;
 	struct iovec iov[2];
+	struct mexpfcm *m;
 	uint64_t cfd;
-	void *data;
 
 	ENTRY;
 
@@ -365,7 +365,7 @@ slrmc_readdir(struct pscrpc_request *rq)
 		RETURN(0);
 	} 
 
-	if (__cfd2fid(rq->rq_export, cfd, &data)) {
+	if (cfdlookup(rq->rq_export, cfd, &m)) {
 		mp->rc = -errno;
 		RETURN(mp->rc);
 	}
@@ -380,13 +380,14 @@ slrmc_readdir(struct pscrpc_request *rq)
 		iov[1].iov_base = NULL;
 	}
 
-	psc_info("zfs pri data (%p)", data);
+	psc_info("zfs pri data (%p)", m);
 
 	mp->rc = zfsslash2_readdir(zfsVfs, fg.fg_fid, &mq->creds, mq->size, 
 				   mq->offset, (char *)iov[0].iov_base, 
 				   &mp->size, 
 				   (struct srm_getattr_rep *)iov[1].iov_base, 
-				   mq->nstbpref, data);
+				   mq->nstbpref, 
+				   ((struct fidc_mds_info *)m->mexpfcm_fcmh->fcmh_fcoo->fcoo_pri)->fmdsi_data);
 
 	if (mp->rc) {
 		PSCFREE(iov[0].iov_base);
