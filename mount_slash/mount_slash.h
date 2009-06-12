@@ -1,17 +1,16 @@
 /* $Id$ */
 
 #include <sys/types.h>
+
 #include <stdarg.h>
 
 #include "psc_types.h"
 #include "psc_ds/tree.h"
-#include "psc_mount/dhfh.h"
 #include "psc_rpc/service.h"
 
 #include "slconfig.h"
 #include "fidcache.h"
 
-struct fhent;
 struct pscrpc_request;
 
 #define MSTHRT_CTL	0	/* control interface */
@@ -30,7 +29,8 @@ struct pscrpc_request;
 #define MSL_READ 0
 #define MSL_WRITE 1
 
-extern sl_ios_id_t prefIOS;
+#define FHENT_READ	(1 << 0)
+#define FHENT_WRITE	(1 << 1)
 
 struct msrcm_thread {
 	struct pscrpc_thread	 mrcm_prt;
@@ -39,7 +39,7 @@ struct msrcm_thread {
 struct msfs_thread {
 };
 
-/* msl_fbr (mount slash fhent bmap ref).
+/* msl_fbr (mount_slash fhent bmap ref).
  *
  */
 struct msl_fbr {
@@ -72,13 +72,13 @@ msl_fbr_new(struct bmapc_memb *b, int rw)
 
 /* XXX this is never called */
 static inline void
-msl_fbr_free(struct msl_fbr *r, struct fhent *f)
+msl_fbr_free(struct msl_fbr *r, int rw)
 {
 	psc_assert(r->mfbr_bmap);
 
-	if (f->fh_state & FHENT_READ)
+	if (rw & FHENT_READ)
 		atomic_dec(&r->mfbr_bmap->bcm_rd_ref);
-	if (f->fh_state & FHENT_WRITE)
+	if (rw & FHENT_WRITE)
 		atomic_dec(&r->mfbr_bmap->bcm_wr_ref);
 
 	PSCFREE(r);
@@ -95,7 +95,7 @@ fhbmap_cache_cmp(const void *x, const void *y)
 SPLAY_HEAD(fhbmap_cache, msl_fbr);
 SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
-struct msl_fhent {
+struct msl_fhent {		/* XXX rename */
 	psc_spinlock_t         mfh_lock;
 	struct fidc_membh     *mfh_fcmh;
 	struct fhbmap_cache    mfh_fhbmap_cache;
@@ -114,6 +114,7 @@ mslfh_2_bmapsz(struct msl_fhent *mfh)
 {
 	psc_assert(mfh->mfh_fcmh);
 	psc_assert(mfh->mfh_fcmh->fcmh_fcoo);
+	psc_assert(mfh->mfh_fcmh->fcmh_fcoo->fcoo_bmap_sz);
 	return (mfh->mfh_fcmh->fcmh_fcoo->fcoo_bmap_sz);
 }
 
@@ -121,28 +122,6 @@ static inline struct srt_fd_buf *
 fcmh_2_fdb(struct fidc_membh *f)
 {
 	return (&f->fcmh_fcoo->fcoo_fdb);
-}
-
-static inline int
-msl_fuse_2_oflags(int fuse_flags)
-{
-	int oflag = -1;
-
-	if (fuse_flags & O_RDONLY)
-		oflag = FHENT_READ;
-
-	else if (fuse_flags & O_WRONLY) {
-		psc_assert(oflag == -1);
-		oflag = FHENT_WRITE;
-
-	} else if (fuse_flags & O_RDWR) {
-		psc_assert(oflag == -1);
-		oflag = FHENT_WRITE | FHENT_READ;
-
-	} else
-		psc_fatalx("Invalid fuse_flag %d", fuse_flags);
-
-	return (oflag);
 }
 
 static inline struct msl_fbr *
@@ -175,14 +154,14 @@ void *msctlthr_begin(void *);
 
 struct slashrpc_cservice *ion_get(void);
 
-void msl_fdreg_cb(struct fhent *, int, void *[]);
-
 #define msl_read(fh, buf, size, off)  msl_io(fh, buf, size, off, MSL_READ)
 #define msl_write(fh, buf, size, off) msl_io(fh, buf, size, off, MSL_WRITE)
 
 int msl_io(struct msl_fhent *, char *, size_t, off_t, int);
 int msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+
+struct msl_fhent *msl_fhent_new(struct fidc_membh *);
 
 void mseqpollthr_spawn(void);
 void msctlthr_spawn(void);
@@ -192,3 +171,4 @@ void mstimerthr_spawn(void);
 
 extern struct slashrpc_cservice *mds_csvc;
 extern char ctlsockfn[];
+extern sl_ios_id_t prefIOS;

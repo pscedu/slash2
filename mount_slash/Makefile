@@ -26,7 +26,6 @@ SRCS+=		${PFL_BASE}/psc_ds/hash2.c
 SRCS+=		${PFL_BASE}/psc_ds/pool.c
 SRCS+=		${PFL_BASE}/psc_ds/stree.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
-SRCS+=		${PFL_BASE}/psc_mount/fh.c
 SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c

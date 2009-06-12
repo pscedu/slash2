@@ -17,7 +17,6 @@
 
 #include "pfl.h"
 #include "psc_types.h"
-#include "psc_mount/dhfh.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
@@ -111,58 +110,17 @@ msl_oftrq_destroy(struct offtree_req *r)
 		pscrpc_set_destroy(r->oftrq_fill.oftfill_reqset);
 }
  
-/* unused */
-__static struct msl_fhent *
-msl_fhent_new(void)
+struct msl_fhent *
+msl_fhent_new(struct fidc_membh *f)
 {
-	struct msl_fhent *e;
+	struct msl_fhent *mfh;
 	
-	e = PSCALLOC(sizeof(*e));
-	SPLAY_INIT(&e->mfh_fhbmap_cache);	
-	//e->mfh_fcmh->fcmh_fh = fh->fh_id;
-	//e->mfh_fcmh = fidc_get(&fidcFreePool.ppm_lc);
-	return (e);
+	mfh = PSCALLOC(sizeof(*mfh));
+	LOCK_INIT(&mfh->mfh_lock);
+	SPLAY_INIT(&mfh->mfh_fhbmap_cache);	
+	mfh->mfh_fcmh = f;
+	return (mfh);
 }
-
-#ifdef NOFUSE
-/**
- * msl_fdreg_cb - (file des registration callback) This is the callback handler issued from fh_register().  Its primary duty is to allocate the fidcache member handle structure and attach it to the file des structure.
- * @fh: the file handle.
- * @op: op type (FD_REG_NEW, FD_REG_EXIST are valid).
- * @args: array of pointer arguments (not used here).
- */
-void
-msl_fdreg_cb(struct fhent *fh, int op, void *args[])
-{
-	__unusedx sl_inum_t ino = (sl_inum_t)args[1];
-
-	psc_assert(op == FD_REG_NEW || op == FD_REG_EXIST);
-
-	spinlock(&fh->fh_lock);
-	if (op == FD_REG_NEW) {
-		if (!(fh->fh_state & FHENT_INIT))
-			goto exists;
-		else {
-			psc_assert(fh->fh_private == NULL);
-			psc_assert(!atomic_read(&fh->fh_refcnt));
- 			/* msl_fcm_new() may block for an fcmh, 
-			 *  hopefully that doesn't hurt us here since
-			 *  the fh is spinlocked.
-			 */
-			msl_fcm_new(fh);
-			ATTR_UNSET(fh->fh_state, FHENT_INIT);
-			ATTR_SET(fh->fh_state, FHENT_READY);
-		}		
-	} else {
-	exists:
-		psc_assert(fh->fh_state & FHENT_READY);
-		psc_assert(fh->fh_private &&
-			   ((struct msl_fhent *)fh->fh_private)->mfh_fcmh);
-	}
-	atomic_inc(&fh->fh_refcnt);
-	freelock(&fh->fh_lock);
-}
-#endif
 
 /**
  * msl_bmap_fetch - perform a blocking 'get' operation to retrieve one or more bmaps from the MDS.

@@ -17,7 +17,6 @@
 
 #include "pfl.h"
 #include "psc_types.h"
-#include "psc_mount/dhfh.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/cdefs.h"
@@ -128,7 +127,6 @@ slash2fuse_reply_create(fuse_req_t req, const struct slash_fidgen *fg,
 	
 	fuse_reply_create(req, &e, fi);
 }		
-
 
 static void
 slash2fuse_reply_entry(fuse_req_t req, const struct slash_fidgen *fg, 
@@ -340,10 +338,12 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct pscrpc_request *rq;
 	struct srm_open_req *mq;
 	struct srm_opencreate_rep *mp;
-	struct fidc_membh *h=(struct fidc_membh *)fi->fh;
+	struct msl_fhent *mfh;
+	struct fidc_membh *h;
 	int rc=0;
 
-	psc_assert(fi->fh);
+	mfh = (void *)fi->fh;
+	h = mfh->mfh_fcmh;
 	psc_assert(ino == fcmh_2_fid(h));
 		
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
@@ -377,10 +377,12 @@ static int
 slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino, 
 		      struct fuse_file_info *fi)
 {
-	struct fidc_membh *c=(struct fidc_membh *)fi->fh;
+	struct fidc_membh *c;
+	struct msl_fhent *mfh;
 	int flags=1, rc=0;
 
-	psc_assert(fi->fh);
+	mfh = (void *)fi->fh;
+	c = mfh->mfh_fcmh;
 	psc_assert(ino == fcmh_2_fid(c));
 
 	spinlock(&c->fcmh_lock);
@@ -441,6 +443,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct srm_create_req *mq;
 	struct srm_opencreate_rep *mp;
 	struct fidc_membh *p, *m;
+	struct msl_fhent *mfh;
 	int rc=0, flags=1;
 
 	msfsthr_ensure();
@@ -498,7 +501,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	psc_assert(m->fcmh_fcoo && (m->fcmh_state & FCMH_FCOO_STARTING));
 	memcpy(&m->fcmh_fcoo->fcoo_fdb, &mp->sfdb, sizeof(mp->sfdb));
 
-	fi->fh = (uint64_t)m;
+	mfh = msl_fhent_new(m);
+	fi->fh = (uint64_t)mfh;
 	fi->keep_cache = 1;
 	/* Inc ref the fcoo.  The rpc has already taken place.
 	 */
@@ -523,9 +527,10 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 static void 
 slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
-	int rc=0;
-	struct fidc_membh *c;
 	struct slash_creds creds;
+	struct msl_fhent *mfh;
+	struct fidc_membh *c;
+	int rc=0;
 
         slash2fuse_getcred(req, &creds);
 
@@ -555,7 +560,8 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 			goto out;
 		}
 
-	fi->fh = (uint64_t) c;
+	mfh = msl_fhent_new(c);
+	fi->fh = (uint64_t)mfh;
 	fi->keep_cache = 1;
 	rc = slash2fuse_fcoo_start(req, ino, fi);
  out:
@@ -650,7 +656,6 @@ slash2fuse_getattr(__unusedx fuse_req_t req, fuse_ino_t ino,
 	}
 }
 
-
 static void
 slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent, 
 		const char *newname)
@@ -725,8 +730,6 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	fidc_membh_dropref(p);
 	pscrpc_req_finished(rq);	
 }
-
-
 
 static void
 slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name, 
@@ -871,16 +874,16 @@ slashrpc_timeout(__unusedx void *arg)
 	return (0);
 }
 
-
 static int 
 slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size, 
 		   off_t off, struct fuse_file_info *fi)
 {
 	struct pscrpc_bulk_desc *desc;
-	struct pscrpc_request *rq;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
+	struct pscrpc_request *rq;
 	struct srt_fd_buf fdb;
+	struct msl_fhent *mfh;
 	struct fidc_membh *d;
 	struct iovec iov[2];
 	int rc;
@@ -895,7 +898,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	if ((fi->flags & O_WRONLY) || (fi->flags & O_RDWR))
 		return (EINVAL);
 
-	d = (struct fidc_membh *)fi->fh;
+	mfh = (void *)fi->fh;
+	d = mfh->mfh_fcmh;
 	psc_assert(d);
 
 	/* Ensure that the fcmh is still valid, we can't rely 
@@ -929,7 +933,6 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 
 	iov[0].iov_base = PSCALLOC(size);
 	iov[0].iov_len = size;
-
 
 	mq->nstbpref = 100;
 	if (mq->nstbpref) {
@@ -994,7 +997,6 @@ slash2fuse_readdir_helper(fuse_req_t req, fuse_ino_t ino, size_t size,
                 fuse_reply_err(req, error);
 }
 
-
 static int 
 slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 {
@@ -1031,7 +1033,6 @@ slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 	pscrpc_req_finished(rq);
 	return (rc);
 }
-
 
 static void 
 slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
@@ -1115,18 +1116,19 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 
 }
 
-
 static int
 slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
 	struct pscrpc_request *rq;
 	struct srm_release_req *mq;
 	struct srm_generic_rep *mp;
-	struct fidc_membh *h=(struct fidc_membh *)fi->fh;
+	struct msl_fhent *mfh;
+	struct fidc_membh *h;
 	int rc=0;
 	u32 mode;
 
-	psc_assert(fi->fh);	
+	mfh = (void *)fi->fh;
+	h = mfh->mfh_fcmh;
 	
 	spinlock(&h->fcmh_lock);
 	DEBUG_FCMH(PLL_INFO, h, "releaserpc");
@@ -1156,11 +1158,14 @@ static void
 slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
 	int rc=0, fdstate=0;
-	struct fidc_membh *c=(struct fidc_membh *)fi->fh;
+	struct msl_fhent *mfh;
+	struct fidc_membh *c;
 
 	msfsthr_ensure();
 	psc_warnx("FID %"_P_U64"d", (slfid_t)ino);
-	
+
+	mfh = (void *)fi->fh;
+	c = mfh->mfh_fcmh;
 	spinlock(&c->fcmh_lock);
 	psc_assert(c->fcmh_fcoo);
 	/* If the fcoo is going away FCMH_FCOO_CLOSING will be set.
@@ -1177,7 +1182,6 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	DEBUG_FCMH(PLL_INFO, c, "done with slash2fuse_release");
 	fuse_reply_err(req, rc);
 }
-
 
 static int
 slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent, 
@@ -1218,7 +1222,6 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	pscrpc_req_finished(rq);	
 	return (rc);
 }
-
 
 static void 
 slash2fuse_rename_helper(fuse_req_t req, fuse_ino_t parent, const char *name, 
@@ -1297,10 +1300,10 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 		goto out;
 	}
 
-	iov.iov_base = (void *)PSCALLOC(mq->linklen + 1);
+	iov.iov_base = PSCALLOC(mq->linklen + 1);
 	iov.iov_len = mq->linklen;
 	
-	strncpy((char *)iov.iov_base, name, mq->linklen);
+	strncpy(iov.iov_base, name, mq->linklen);
 	strncpy(mq->name, name, mq->linklen);
 	
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
@@ -1337,7 +1340,6 @@ slash2fuse_unlink_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
         fuse_reply_err(req, error);
 }
 
-
 static void
 slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr, 
 		int to_set, struct fuse_file_info *fi)
@@ -1345,6 +1347,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	struct pscrpc_request *rq;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
+	struct msl_fhent *mfh;
 	struct fidc_membh *c;
 	int rc;
 
@@ -1368,8 +1371,10 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		c->fcmh_state |= FCMH_GETTING_ATTRS;
 	freelock(&c->fcmh_lock);
 
-	if (fi && fi->fh)
-		psc_assert(c == (struct fidc_membh *)fi->fh);
+	if (fi && fi->fh) {
+		mfh = (void *)fi->fh;
+		psc_assert(c == mfh->mfh_fcmh);
+	}
 	
 	fidc_fcmh2fdb(c, &mq->sfdb);
 	
@@ -1380,10 +1385,9 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 
 	rc = RSX_WAITREP(rq, mp);
  err:
-	if (rc || mp->rc) {
+	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
-		fuse_reply_err(req, rc);
-	} else {
+	else {
 		/* It's possible that the inode wasn't cached.
 		 */ 
 		if (c) {
@@ -1393,10 +1397,11 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
                 fuse_reply_attr(req, &mp->attr, 0.0);
 	}
  cleanup:
-	pscrpc_req_finished(rq);
+		fuse_reply_err(req, rc);
+	if (rq)
+		pscrpc_req_finished(rq);
 	EXIT;
 }
-
 
 //XXX convert me
 static int 
@@ -1435,7 +1440,6 @@ slash2fuse_write(__unusedx fuse_req_t req,
 	return (EOPNOTSUPP);
 }
 
-
 static void 
 slash2fuse_write_helper(__unusedx fuse_req_t req, 
 			__unusedx fuse_ino_t ino, 
@@ -1449,7 +1453,6 @@ slash2fuse_write_helper(__unusedx fuse_req_t req,
                 fuse_reply_err(req, error);
 }
 
-
 // XXX convert me
 static int 
 slash2fuse_read(fuse_req_t req, 
@@ -1462,8 +1465,8 @@ slash2fuse_read(fuse_req_t req,
 	struct pscrpc_request *rq;
 	struct srm_io_rep *mp;
 	struct srm_io_req *mq;
+	struct msl_fhent *mfh;
 	struct iovec iov;
-	struct fhent *fh;
 	char *buf;
 	int rc;
 
@@ -1471,9 +1474,7 @@ slash2fuse_read(fuse_req_t req,
 
 	/* First get the fhentry from the cache.
 	 */
-	fh = fh_lookup(fi->fh);
-	if (!fh)
-		return (EBADF);
+	mfh = (void *)fi->fh;
 
 //	rc = msl_read(fh, buf, size, off);
 
