@@ -194,7 +194,7 @@ cfdfreeall(struct pscrpc_export *exp)
 
 	psc_warnx("exp=%p", exp);
 
-	sexp = slashrpc_export_get(e);
+	sexp = slashrpc_export_get(exp);
 	psc_assert(sexp);
 	psc_assert(sexp->sexp_type & EXP_CLOSING);
 	/* Don't bother locking if EXP_CLOSING is set.
