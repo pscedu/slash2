@@ -123,19 +123,16 @@ cfdlookup(struct pscrpc_export *exp, u64 cfd, void *datap)
 {
 	struct slashrpc_export *sexp;
 	struct cfdent *c, q;
-	int rc=0;
+	int rc = 0;
 
 	q.fdb.sfdb_secret.sfs_cfd = cfd;
 	spinlock(&exp->exp_lock);
 	sexp = slashrpc_export_get(exp);
 	c = SPLAY_FIND(cfdtree, &sexp->sexp_cfdtree, &q);
-	if (c == NULL) {
-		errno = ENOENT;
-		rc = -1;
-	} else {
-		if (datap)
-			*(void **)datap = c->pri;
-	}
+	if (c == NULL)
+		rc = ENOENT;
+	else if (datap)
+		*(void **)datap = c->pri;
 	freelock(&exp->exp_lock);
 	psc_trace("zfs pri data (%p)", c->pri);
 	return (rc);
@@ -164,12 +161,12 @@ cfdfree(struct pscrpc_export *exp, u64 cfd)
 {
 	struct slashrpc_export *sexp;
 	struct cfdent *c, q;
-	int rc=0, l;
+	int rc=0, locked;
 
 	q.fdb.sfdb_secret.sfs_cfd = cfd;
 
 	rc = 0;
-	l = reqlock(&exp->exp_lock);
+	locked = reqlock(&exp->exp_lock);
 	sexp = slashrpc_export_get(exp);
 	c = SPLAY_FIND(cfdtree, &sexp->sexp_cfdtree, &q);
 	if (c == NULL) {
@@ -185,18 +182,19 @@ cfdfree(struct pscrpc_export *exp, u64 cfd)
 		rc = -ENOENT;
 
  done:
-	ureqlock(&exp->exp_lock, l);
+	ureqlock(&exp->exp_lock, locked);
 	return (rc);
 }
 
 void
 cfdfreeall(struct pscrpc_export *exp)
 {
-	struct slashrpc_export *sexp=exp->exp_private;
+	struct slashrpc_export *sexp;
 	struct cfdent *c, *nxt;
 
 	psc_warnx("exp=%p", exp);
 
+	sexp = slashrpc_export_get(e);
 	psc_assert(sexp);
 	psc_assert(sexp->sexp_type & EXP_CLOSING);
 	/* Don't bother locking if EXP_CLOSING is set.
