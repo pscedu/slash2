@@ -314,14 +314,14 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 	b = GET_BUCKET(&fidcHtable, (u64)fg->fg_fid);
 
  retry:
-	l[0] = reqlock(&b->hbucket_lock);
+	locked[0] = reqlock(&b->hbucket_lock);
 	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry) {
 		if ((u64)fg->fg_fid != *e->hentry_id)
 			continue;
 		
 		tmp = e->private;
 
-		l[1] = reqlock(&tmp->fcmh_lock); 
+		locked[1] = reqlock(&tmp->fcmh_lock); 
 		/* Be sure to ignore any inodes which are freeing unless
 		 *  we are removing the inode from the cache.
 		 *  This is necessary to avoid a deadlock between fidc_reap

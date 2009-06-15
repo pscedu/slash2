@@ -29,7 +29,7 @@ struct slashrpc_export *
 slashrpc_export_get(struct pscrpc_export *exp)
 {
 	struct slashrpc_export *sexp;
-	int l=reqlock(&exp->exp_lock);
+	int locked = reqlock(&exp->exp_lock);
 
 	if (exp->exp_private == NULL) {
 		sexp = exp->exp_private = 
@@ -47,7 +47,7 @@ slashrpc_export_get(struct pscrpc_export *exp)
 		psc_assert(sexp->sexp_export == exp);
 	}
 
-	ureqlock(&exp->exp_lock, l);
+	ureqlock(&exp->exp_lock, locked);
 	return (sexp);
 }
 
