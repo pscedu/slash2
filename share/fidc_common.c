@@ -1,8 +1,11 @@
 /* $Id$ */
 
-#include <stdio.h>
-#define __USE_GNU 1
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <pthread.h>
+#include <stdio.h>
 
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
@@ -49,7 +52,7 @@ fidc_freelist_avail_check(void)
 void
 fidc_fcm_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 {
-	int l = reqlock(&fcmh->fcmh_lock);
+	int locked = reqlock(&fcmh->fcmh_lock);
 
 	psc_assert(fcmh_2_gen(fcmh) != FID_ANY);
 
@@ -69,7 +72,7 @@ fidc_fcm_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 	}
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attr set");
-	ureqlock(&fcmh->fcmh_lock, l);
+	ureqlock(&fcmh->fcmh_lock, locked);
 }
 
 /**
@@ -176,17 +179,17 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 static void 
 fidc_fcm_update(struct fidc_membh *h, const struct fidc_memb *b)
 {
-	int l;
+	int locked;
 	struct fidc_memb *a = h->fcmh_fcm;
 
-	l = reqlock(&h->fcmh_lock);
+	locked = reqlock(&h->fcmh_lock);
 	
 	psc_assert(SAMEFID(&a->fcm_fg, &b->fcm_fg));
 
 	if (b->fcm_slfinfo.slf_age > a->fcm_slfinfo.slf_age)
 		memcpy(a, b, sizeof(*a));
 
-	ureqlock(&h->fcmh_lock, l);
+	ureqlock(&h->fcmh_lock, locked);
 }
 
 /**
@@ -297,7 +300,8 @@ fidc_get(void)
 
 
 /**
- * fidc_lookup_simple - perform a simple lookup of a fid in the cache.  If the fid is found, its refcnt is incremented and it is returned.
+ * fidc_lookup_simple - perform a simple lookup of a fid in the cache.
+ *	If the fid is found, its refcnt is incremented and it is returned.
  */
 struct fidc_membh *
 __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
@@ -305,7 +309,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 	struct hash_bucket *b;
 	struct hash_entry *e, *save=NULL;
 	struct fidc_membh *fcmh=NULL, *tmp;
-	int l[2];
+	int locked[2];
 
 	b = GET_BUCKET(&fidcHtable, (u64)fg->fg_fid);
 
@@ -330,21 +334,21 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				psc_assert((u64)fg->fg_gen == fcmh_2_gen(tmp));
 				fcmh = tmp;
 				save = e;
-				ureqlock(&tmp->fcmh_lock, l[1]);
+				ureqlock(&tmp->fcmh_lock, locked[1]);
 				break;
 			} else {
-				ureqlock(&tmp->fcmh_lock, l[1]);
+				ureqlock(&tmp->fcmh_lock, locked[1]);
 				continue;
 			}
 		} else {
 			if (tmp->fcmh_state & FCMH_CAC_FREEING) {
-				ureqlock(&tmp->fcmh_lock, l[1]);
+				ureqlock(&tmp->fcmh_lock, locked[1]);
 				continue;
 			}
 			if ((u64)fg->fg_gen == fcmh_2_gen(tmp)) {
 				fcmh = tmp;
 				save = e;
-				ureqlock(&tmp->fcmh_lock, l[1]);
+				ureqlock(&tmp->fcmh_lock, locked[1]);
 				break;
 			}
 			if (fcmh_2_gen(tmp) == FID_ANY) {
@@ -352,7 +356,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				 *  from the server.  Wait for it and retry.
 				 */			
 				psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
-				ureqlock(&b->hbucket_lock, l[0]);
+				ureqlock(&b->hbucket_lock, locked[0]);
 				psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
 				goto retry;
 			}		
@@ -364,7 +368,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 					save = e;
 				}
 			}
-			ureqlock(&tmp->fcmh_lock, l[1]);
+			ureqlock(&tmp->fcmh_lock, locked[1]);
 		}
 	}
 
@@ -373,7 +377,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
                 psclist_del(&save->hentry_lentry);
 	}
 
-	ureqlock(&b->hbucket_lock, l[0]);
+	ureqlock(&b->hbucket_lock, locked[0]);
 
 	if (fcmh)
 		fidc_membh_incref(fcmh);
@@ -642,10 +646,10 @@ fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 int
 fidc_fcmh2fdb(struct fidc_membh *fcmh, struct srt_fd_buf *fdb)
 {	
-	int rc=0, l=reqlock(&fcmh->fcmh_lock);
+	int rc=0, locked=reqlock(&fcmh->fcmh_lock);
 	
 	if (!fcmh->fcmh_fcoo) {
-		ureqlock(&fcmh->fcmh_lock, l);
+		ureqlock(&fcmh->fcmh_lock, locked);
 		return (-1);
 	}
 
@@ -653,7 +657,7 @@ fidc_fcmh2fdb(struct fidc_membh *fcmh, struct srt_fd_buf *fdb)
 	if (!rc)
 		*fdb = fcmh->fcmh_fcoo->fcoo_fdb;
 
-	ureqlock(&fcmh->fcmh_lock, l);
+	ureqlock(&fcmh->fcmh_lock, locked);
 	return (rc);
 }
 
