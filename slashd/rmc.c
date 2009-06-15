@@ -152,10 +152,12 @@ slrmc_getattr(struct pscrpc_request *rq)
 static int
 slrmc_getbmap(struct pscrpc_request *rq)
 {
+	struct pscrpc_bulk_desc *desc;`
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
 	struct bmapc_memb *bmap;
 	struct mexpfcm *m;
+	struct iovec iov;
 	uint64_t cfd;
 
 	ENTRY;
@@ -169,10 +171,20 @@ slrmc_getbmap(struct pscrpc_request *rq)
 
 	/* Access the reference 
 	 */
-	if (cfdlookup(rq->rq_export, cfd, &m))
-		mp->rc = -errno;
-	else
+	mp->rc = cfdlookup(rq->rq_export, cfd, &m);
+	if (mp->rc == 0) {
+		bmap = NULL;
 		mp->rc = mds_bmap_load(m, mq, &bmap);
+		if (mp->rc == 0) {
+			iov.iov_base = &bmap->bcm_bmapih;
+			iov.iov_len = sizeof(bmap->bcm_bmapih);
+			mp->rc = rsx_bulkserver(rq, &desc,
+			    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
+			pscrpc_free_bulk(desc);
+//			mds_bmap_ref_del(m);
+			mp->nblks = 1;
+		}
+	}
 	RETURN(0);
 }
 
