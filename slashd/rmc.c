@@ -152,7 +152,7 @@ slrmc_getattr(struct pscrpc_request *rq)
 static int
 slrmc_getbmap(struct pscrpc_request *rq)
 {
-	struct pscrpc_bulk_desc *desc;`
+	struct pscrpc_bulk_desc *desc;
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
 	struct bmapc_memb *bmap;
