@@ -1428,93 +1428,76 @@ slash2fuse_destroy(__unusedx void *userdata)
 	//fuse_reply_err(req, EOPNOTSUPP);
 }
 
-// XXX convertme
-static int 
-slash2fuse_write(__unusedx fuse_req_t req, 
-		 __unusedx fuse_ino_t ino, 
-		 __unusedx const char *buf, 
-		 __unusedx size_t size, 
-		 __unusedx off_t off, 
-		 __unusedx struct fuse_file_info *fi)
+void 
+slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
+    const char *buf, size_t size, off_t off,
+    struct fuse_file_info *fi)
 {
-	return (EOPNOTSUPP);
-}
-
-static void 
-slash2fuse_write_helper(__unusedx fuse_req_t req, 
-			__unusedx fuse_ino_t ino, 
-			__unusedx const char *buf, 
-			__unusedx size_t size, 
-			__unusedx off_t off, 
-			__unusedx struct fuse_file_info *fi)
-{
-        int error = slash2fuse_write(req, ino, buf, size, off, fi);
-        if (error)
-                fuse_reply_err(req, error);
-}
-
-// XXX convert me
-static int 
-slash2fuse_read(fuse_req_t req, 
-		__unusedx fuse_ino_t ino, 
-		size_t size, 
-		off_t off, 
-		struct fuse_file_info *fi) 
-{
-	struct pscrpc_bulk_desc *desc;
-	struct pscrpc_request *rq;
-	struct srm_io_rep *mp;
-	struct srm_io_req *mq;
 	struct msl_fhent *mfh;
-	struct iovec iov;
-	char *buf;
 	int rc;
 
 	msfsthr_ensure();
 
-	/* First get the fhentry from the cache.
-	 */
 	mfh = (void *)fi->fh;
+	if (fidc_lookup_fg(fcmh_2_fgp(mfh->mfh_fcmh)) != mfh->mfh_fcmh) {
+		rc = EBADF;
+		goto out;
+	}
+	/* XXX EBADF if fd is not open for writing */
+	if (fcmh_2_isdir(mfh->mfh_fcmh)) {
+		fidc_membh_dropref(mfh->mfh_fcmh);
+		rc = EISDIR;
+		goto out;
+	}
 
-//	rc = msl_read(fh, buf, size, off);
-
-	if ((rc = RSX_NEWREQ(ion_get()->csvc_import,
-	    SRIC_VERSION, SRMT_READ, rq, mq, mp)) != 0)
-		return (rc);
-	
-	buf = PSCALLOC(size);
-
-	mq->size = size;
-	mq->offset = off;
-	mq->op = SRMIO_WR;
-	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
-		if (mp->rc)
-			rc = mp->rc;
-		else {
-			iov.iov_base = buf;
-			iov.iov_len = size;
-			rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
-			    SRIC_BULK_PORTAL, &iov, 1);
-			
-			if (!rc)
-				fuse_reply_buf(req, buf, mp->size);
-
-			if (desc)
-				pscrpc_free_bulk(desc);
-		}
-	}	
-	PSCFREE(buf);
-	pscrpc_req_finished(rq);
-	return (rc);
+	rc = msl_write(mfh, buf, size, off);
+	fidc_membh_dropref(mfh->mfh_fcmh);
+	if (rc < 0)
+		rc = -rc;
+	else {
+		fuse_reply_buf(req, buf, rc);
+		rc = 0;
+	}
+ out:
+	if (rc)
+		fuse_reply_err(req, rc);
 }
 
-static void 
-slash2fuse_read_helper(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off, 
-		    struct fuse_file_info *fi)
+void
+slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino, 
+    size_t size, off_t off, struct fuse_file_info *fi) 
 {
-        int error = slash2fuse_read(req, ino, size, off, fi);
-        if (error)
-                fuse_reply_err(req, error);
+	struct msl_fhent *mfh;
+	void *buf;
+	int rc;
+
+	msfsthr_ensure();
+
+	mfh = (void *)fi->fh;
+	if (fidc_lookup_fg(fcmh_2_fgp(mfh->mfh_fcmh)) != mfh->mfh_fcmh) {
+		rc = EBADF;
+		goto out;
+	}
+
+	if (fcmh_2_isdir(mfh->mfh_fcmh)) {
+		fidc_membh_dropref(mfh->mfh_fcmh);
+		rc = EISDIR;
+		goto out;
+	}
+
+	buf = PSCALLOC(size);
+	rc = msl_read(mfh, buf, size, off);
+	fidc_membh_dropref(mfh->mfh_fcmh);
+	if (rc < 0) 
+		rc = -rc;
+	else {
+		fuse_reply_buf(req, buf, rc); 
+		rc = 0;
+	}
+	free(buf);
+ out:
+	if (rc)
+		fuse_reply_err(req, rc);
 }
 
 void *
@@ -1551,8 +1534,8 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 
 struct fuse_lowlevel_ops zfs_operations = {
 	.open       = slash2fuse_open,
-	.read       = slash2fuse_read_helper,
-	.write      = slash2fuse_write_helper,
+	.read       = slash2fuse_read,
+	.write      = slash2fuse_write,
 	.release    = slash2fuse_release,
 	.opendir    = slash2fuse_opendir,
 	.readdir    = slash2fuse_readdir_helper,

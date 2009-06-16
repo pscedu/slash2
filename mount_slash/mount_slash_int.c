@@ -140,27 +140,28 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
         int rc=-1;
 	u32 i;
 
-	psc_assert(n < BMAP_MAX_GET);
-	/* Build the new rpc request.
+	psc_assert(n && n < BMAP_MAX_GET);
+	/* Build the new RPC request.
 	 */
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 			     SRMT_GETBMAP, rq, mq, mp)) != 0)
 		return (rc);
 
 	mq->sfdb  = *fcmh_2_fdb(f);
-	mq->pios  = prefIOS; /* Tell mds of our preferred ios */
+	mq->pios  = prefIOS; /* Tell MDS of our preferred ION */
 	mq->blkno = b;
 	mq->nblks = n; 
 	mq->fid   = FID_ANY; /* The MDS interpolates the fid from his cfd */
 	mq->rw    = rw;
 
 	iovs  = PSCALLOC(sizeof(*iovs) * n);
+	bmaps = PSCALLOC(sizeof(*bmaps) * n);
 	/* Init the bmap handles and setup the iovs.
 	 */
 	for (i=0; i < n; i++) {
 		bmap = bmaps[i] = PSCALLOC(sizeof(struct bmapc_memb));
 		bmapc_memb_init(bmap, f);
-		iovs[i].iov_base = (void *)&bmap->bcm_bmapih;
+		iovs[i].iov_base = &bmap->bcm_bmapih;
 		iovs[i].iov_len  = sizeof(struct bmap_info);
 	}
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmaps (s=%u, n=%zu)", b, n);
@@ -205,9 +206,9 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 		PSCFREE(bmap);
 	}
 	PSCFREE(iovs);
+	PSCFREE(bmaps);
 	return (rc);
 }
-
 
 __static int
 msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
@@ -1223,11 +1224,11 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	/* Foreach block range, get its bmap and make a request into its 
 	 *  offtree.  This first loop retrieves all the pages.
 	 */
-	for (i=0; s < e; s++) {
+	for (i=0; s <= e; s++) {
 		/* Load up the bmap, if it's not available then we're out of 
 		 *  luck because we have no idea where the data is!
 		 */
-		b = msl_bmap_load(mfh, s, (i ? 0 : (e-s)), (op == MSL_READ) ?
+		b = msl_bmap_load(mfh, s, MAX(1, e - s), (op == MSL_READ) ?
 				  SRIC_BMAP_READ : SRIC_BMAP_WRITE);
 		if (!b) {
 			rc = -EIO;
