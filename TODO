@@ -133,3 +133,5 @@ D_ANY
 (gdb) 
 
 * Bug #14
+
+- rename ios to ion
