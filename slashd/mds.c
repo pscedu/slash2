@@ -754,7 +754,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	psc_assert(inoh);
 	psc_assert(!*bmap);
 
-	if ((mq->rw != SRIC_BMAP_READ) || (mq->rw != SRIC_BMAP_WRITE))
+	if ((mq->rw != SRIC_BMAP_READ) && (mq->rw != SRIC_BMAP_WRITE))
 		return -EINVAL;
 
 	tbmap.bcm_blkno = mq->blkno;
