@@ -818,7 +818,6 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		}
 
 	} else {
-		int rc;
 		/* Create and initialize the new bmap while holding the
 		 *  fcmh lock which is needed for atomic tree insertion.
 		 */
