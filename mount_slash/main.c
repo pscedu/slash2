@@ -1635,15 +1635,18 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char c, mp[PATH_MAX], *nc_mp = _PATH_MSL;
+	char c, mp[PATH_MAX], *nc_mp = _PATH_MSL, *cfg = _PATH_SLASHCONF;
 	int rc, unmount;
 
 	pfl_init();
 
 	unmount = 0;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "m:S:U")) != -1)
+	while ((c = getopt(argc, argv, "f:m:S:U")) != -1)
 		switch (c) {
+		case 'f':
+			cfg = optarg;
+			break;
 		case 'm':
 			nc_mp = optarg;
 			break;
@@ -1664,6 +1667,7 @@ main(int argc, char *argv[])
 
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
+	slashGetConfig(cfg);
 	slash_init(NULL);
 
 	if (unmount) {
