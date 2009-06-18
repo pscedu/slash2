@@ -18,8 +18,10 @@
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/log.h"
+#include "psc_util/strlcpy.h"
 
 #include "slconfig.h"
+#include "mdsexpc.h"
 
 enum sym_types {
 	SL_FUNCTION = 1,
@@ -195,7 +197,9 @@ site_profile   : site_profile_start site_defs SUBSECT_END
 site_profile_start : SITE_PROFILE SITE_NAME SUBSECT_START
 {
 	cfgMode = SL_STRUCT_SITE;
-	strncpy(currentSite->site_name, $2, SITE_NAME_MAX);
+	if (strlcpy(currentSite->site_name, $2,
+	    SITE_NAME_MAX) >= SITE_NAME_MAX)
+		psc_fatalx("site name too long");
 	free($2);
 };
 
@@ -213,6 +217,15 @@ site_resource  : site_resource_start resource_def SUBSECT_END
 	currentRes->res_id = sl_global_id_build(currentSite->site_id,
 						currentRes->res_id,
 						currentRes->res_mds);
+
+	if (currentRes->res_type == parallel_fs) {
+		struct resprof_mds_info *rmi;
+
+		rmi = PSCALLOC(sizeof(*rmi));
+		LOCK_INIT(&rmi->rmi_lock);
+		currentRes->res_pri = rmi;
+	}
+
 	psclist_xadd(&currentRes->res_lentry,
 		    &currentSite->site_resources);
 	currentRes = PSCALLOC(sizeof(sl_resource_t));
@@ -567,7 +580,8 @@ store_tok_val(const char *tok, char *val)
 	}
 }
 
-int run_yacc(const char *config_file)
+int
+run_yacc(const char *config_file)
 {
 	extern FILE *yyin;
 
