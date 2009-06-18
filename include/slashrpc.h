@@ -30,54 +30,54 @@
 #define SLASH_SVR_PID		54321
 
 /* Slash RPC channel to MDS from client. */
-#define SRMC_REQ_PORTAL		20
-#define SRMC_REP_PORTAL		21
-#define SRMC_BULK_PORTAL	22
+#define SRMC_REQ_PORTAL		10
+#define SRMC_REP_PORTAL		11
+#define SRMC_BULK_PORTAL	12
 
 #define SRMC_VERSION		1
 #define SRMC_MAGIC		0xaabbccddeeff0022ULL
 
 /* Slash RPC channel to MDS from MDS. */
-#define SRMM_REQ_PORTAL		30
-#define SRMM_REP_PORTAL		31
+#define SRMM_REQ_PORTAL		15
+#define SRMM_REP_PORTAL		16
 
 #define SRMM_VERSION		1
 #define SRMM_MAGIC		0xaabbccddeeff0033ULL
 
 /* Slash RPC channel to MDS from ION. */
-#define SRMI_REQ_PORTAL		40
-#define SRMI_REP_PORTAL		41
+#define SRMI_REQ_PORTAL		20
+#define SRMI_REP_PORTAL		21
 
 #define SRMI_VERSION		1
 #define SRMI_MAGIC		0xaabbccddeeff0044ULL
 
 /* Slash RPC channel to client from MDS. */
-#define SRCM_REQ_PORTAL		50
-#define SRCM_REP_PORTAL		51
+#define SRCM_REQ_PORTAL		25
+#define SRCM_REP_PORTAL		26
 
 #define SRCM_VERSION		1
 #define SRCM_MAGIC		0xaabbccddeeff0055ULL
 
 /* Slash RPC channel to ION from client. */
-#define SRIC_REQ_PORTAL		60
-#define SRIC_REP_PORTAL		61
-#define SRIC_BULK_PORTAL	62
+#define SRIC_REQ_PORTAL		30
+#define SRIC_REP_PORTAL		31
+#define SRIC_BULK_PORTAL	32
 
 #define SRIC_VERSION		1
 #define SRIC_MAGIC		0xaabbccddeeff0066ULL
 
 /* Slash RPC channel to ION from ION. */
-#define SRII_REQ_PORTAL		70
-#define SRII_REP_PORTAL		71
-#define SRII_BULK_PORTAL	72
+#define SRII_REQ_PORTAL		35
+#define SRII_REP_PORTAL		36
+#define SRII_BULK_PORTAL	37
 
 #define SRII_VERSION		1
 #define SRII_MAGIC		0xaabbccddeeff0077ULL
 
 /* Slash RPC channel to ION from MDS. */
-#define SRIM_REQ_PORTAL		80
-#define SRIM_REP_PORTAL		81
-#define SRIM_BULK_PORTAL	82
+#define SRIM_REQ_PORTAL		40
+#define SRIM_REP_PORTAL		41
+#define SRIM_BULK_PORTAL	42
 
 #define SRIM_VERSION		1
 #define SRIM_MAGIC		0xaabbccddeeff0088ULL
