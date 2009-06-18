@@ -1628,7 +1628,7 @@ msl_fuse_lowlevel_mount(const char *mp)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-U] [-S socket] node\n", progname);
+	fprintf(stderr, "usage: %s [-U] [-f conf] [-S socket] node\n", progname);
 	exit(1);
 }
 
