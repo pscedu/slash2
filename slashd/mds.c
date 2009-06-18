@@ -365,8 +365,10 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 	int n, x, rc=0;
 
 	psc_assert(!mdsi->bmdsi_wr_ion);
-	psc_assert(!atomic_read(&bmap->bcm_wr_ref));
-	psc_assert(!atomic_read(&mdsi->bmdsi_wr_ref));
+	n = atomic_read(&bmap->bcm_wr_ref);
+	psc_assert(n == 0 || n == 1);
+	n = atomic_read(&mdsi->bmdsi_wr_ref);
+	psc_assert(n == 0 || n == 1);
 
 	if (!res) {
 		psc_warnx("Failed to find pios %d", pios);
