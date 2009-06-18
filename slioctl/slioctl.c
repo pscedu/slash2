@@ -31,22 +31,22 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "loglevels",	psc_ctl_packshow_loglevel },
 	{ "stats",	psc_ctl_packshow_stats }
 };
-int psc_ctlshow_ntabents = NENTRIES(psc_ctlshow_tab);
+int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS
 };
-int psc_ctlmsg_nprfmts = NENTRIES(psc_ctlmsg_prfmts);
+int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
 struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
 	{ psc_ctlthr_prhdr,	psc_ctlthr_prdat },
 	{ slrpciothr_prhdr,	slrpciothr_prdat },
 };
-int psc_ctl_nthrstatfmts = NENTRIES(psc_ctl_thrstatfmts);
+int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 };
-int psc_ctlcmd_nreqs = NENTRIES(psc_ctlcmd_reqs);
+int psc_ctlcmd_nreqs = nitems(psc_ctlcmd_reqs);
 
 const char *progname;
 

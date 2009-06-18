@@ -21,16 +21,16 @@ struct psc_ctlop msctlops[] = {
 void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {
 	psc_ctlthr_stat
 };
-int psc_ctl_ngetstats = NENTRIES(psc_ctl_getstats);
+int psc_ctl_ngetstats = nitems(psc_ctl_getstats);
 
 int (*psc_ctl_cmds[])(int, struct psc_ctlmsghdr *, void *) = {
 };
-int psc_ctl_ncmds = NENTRIES(psc_ctl_cmds);
+int psc_ctl_ncmds = nitems(psc_ctl_cmds);
 
 void *
 msctlthr_begin(__unusedx void *arg)
 {
-	psc_ctlthr_main(ctlsockfn, msctlops, NENTRIES(msctlops));
+	psc_ctlthr_main(ctlsockfn, msctlops, nitems(msctlops));
 }
 
 void
