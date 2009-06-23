@@ -176,8 +176,9 @@ slrmc_getbmap(struct pscrpc_request *rq)
 		bmap = NULL;
 		mp->rc = mds_bmap_load(m, mq, &bmap);
 		if (mp->rc == 0) {
-			iov.iov_base = &bmap->bcm_bmapih;
-			iov.iov_len = sizeof(bmap->bcm_bmapih);
+			//XXX fix me 
+			//iov.iov_base = &bmap->bcm_bmapih;
+			//iov.iov_len = sizeof(bmap->bcm_bmapih);
 			mp->rc = rsx_bulkserver(rq, &desc,
 			    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
 			pscrpc_free_bulk(desc);

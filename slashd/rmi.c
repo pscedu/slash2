@@ -49,7 +49,7 @@ slrmi_bmap_crcwrt(struct pscrpc_request *rq)
 		iovs[i].iov_len = ((mq->ncrcs_per_update[i] * 
 				    sizeof(struct srm_bmap_crcwire)) + 
 				   sizeof(struct srm_bmap_crcup));
-
+		
 		off += iovs[i].iov_len;
 	}
 	rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRIM_BULK_PORTAL,
@@ -76,16 +76,14 @@ slrmi_bmap_crcwrt(struct pscrpc_request *rq)
 			psc_errorx("nups(%u) != ncrcs_per_update(%u)", 
 				   c->nups, mq->ncrcs_per_update[i]);
 			rc = -EINVAL;
-			goto out;
-	
-		} else {
-			/* Verify slot number validity.
-			 */
-			for (j=0; j < c->nups; j++) {
-				if (c->crcs[j].slot >= SL_CRCS_PER_BMAP) {
-					rc = -ERANGE;
-					goto out;
-				}
+			goto out;	
+		}
+		/* Verify slot number validity.
+		 */
+		for (j=0; j < c->nups; j++) {
+			if (c->crcs[j].slot >= SL_CRCS_PER_BMAP) {
+				rc = -ERANGE;
+				goto out;
 			}
 		}
 		/* Look up the bmap in the cache and write the crc's.

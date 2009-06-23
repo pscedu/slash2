@@ -10,8 +10,10 @@
 #include "psc_ds/list.h"
 #include "psc_util/atomic.h"
 
+#include "jflush.h"
 #include "fidcache.h"
 #include "slashrpc.h"
+#include "inodeh.h"
 
 struct pscrpc_export;
 /*
@@ -159,12 +161,17 @@ SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
  */
 struct bmap_mds_info {
 	u32                   bmdsi_xid;
+	struct jflush_item    bmdsi_jfi;
         atomic_t              bmdsi_rd_ref;  /* count our cli read refs     */
         atomic_t              bmdsi_wr_ref;  /* count our cli write refs    */
 	struct mexp_ion      *bmdsi_wr_ion;  /* ion export assigned to bmap */
         struct bmap_exports   bmdsi_exports; /* tree of mexpbcm's           */
 	struct pscrpc_request_set *bmdsi_reqset; /* cache callback rpc's    */
+	struct slash_block_handle *bmdsi_od;
 };
+
+#define bmap_2_bmdsiod(b)			\
+	(((struct bmap_mds_info *)((b)->bcm_pri))->bmdsi_od)
 
 SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
@@ -172,13 +179,13 @@ SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
 static inline void
 bmdsi_sanity_locked(struct bmapc_memb *bmap, int dio_check, int *wr)
 {
-	struct bmap_mds_info *mdsi = bmap->bcm_mds_pri;
+	struct bmap_mds_info *mdsi = bmap->bcm_pri;
 
 	wr[0] = atomic_read(&mdsi->bmdsi_wr_ref);
         wr[1] = atomic_read(&mdsi->bmdsi_rd_ref);
         psc_assert(wr[0] >= 0 && wr[1] >= 0);
 	if (dio_check && (wr[0] > 1 || (wr[0] && wr[1])))
-		psc_assert(bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_DIO);
+		psc_assert(bmap->bcm_mode & BMAP_MDS_DIO);
 }
 
 struct fidc_mds_info {

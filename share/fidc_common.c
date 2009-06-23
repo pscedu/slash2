@@ -591,7 +591,6 @@ fidc_fcoo_init(struct fidc_open_obj *f)
 	//	if (fcooInitCb)
 	//	(void)(fcoo_init)(f);
 	lc_init(&f->fcoo_buffer_cache, struct sl_buffer, slb_fcm_lentry);
-	jfi_init(&f->fcoo_jfi);
 	f->fcoo_bmap_sz = SLASH_BMAP_SIZE;
 }
 
@@ -671,24 +670,6 @@ fidc_fid2cfd(slfid_t f, u64 *cfd, struct fidc_membh **fcmh)
 	return (fidc_fcmh2cfd(*fcmh, cfd));
 }
 #endif
-
-/**
- * bmapc_memb_init - initialize a bmap structure and create its offtree.
- * @b: the bmap struct
- * @f: the bmap's owner
- */
-void
-bmapc_memb_init(struct bmapc_memb *b, struct fidc_membh *f)
-{
-	memset(b, 0, sizeof(*b));
- 	atomic_set(&b->bcm_opcnt, 0);
-	psc_waitq_init(&b->bcm_waitq);
-	b->bcm_oftr = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
-				     SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,
-				     f, sl_buffer_alloc, sl_oftm_addref,
-				     sl_oftiov_pin_cb);
-	psc_assert(b->bcm_oftr);
-}
 
 /**
  * bmapc_cmp - bmap_cache splay tree comparator

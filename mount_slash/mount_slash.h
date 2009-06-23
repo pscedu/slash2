@@ -10,6 +10,8 @@
 
 #include "slconfig.h"
 #include "fidcache.h"
+#include "offtree.h"
+#include "inode.h"
 
 struct pscrpc_request;
 
@@ -38,6 +40,20 @@ struct msrcm_thread {
 
 struct msfs_thread {
 };
+
+/* msbmap_data - assigned to bmap->bcm_pri for mount slash client.
+ */
+struct msbmap_data {
+	struct offtree_root       *msbd_oftr;
+	struct slash_block_handle *msbd_bmapi;
+	lnet_nid_t                 msbd_ion;
+};
+
+#define bmap_2_msoftr(b)			\
+	((struct msbmap_data *)((b)->bcm_pri))->msbd_oftr
+
+#define bmap_2_msion(b)						\
+	((struct msbmap_data *)((b)->bcm_pri))->msbd_ion
 
 /* msl_fbr (mount_slash fhent bmap ref).
  *

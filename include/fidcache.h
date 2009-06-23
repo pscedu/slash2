@@ -23,7 +23,6 @@
 #include "jflush.h"
 #include "fid.h"
 #include "inode.h"
-#include "offtree.h"
 
 extern struct hash_table fidcHtable;
 
@@ -126,23 +125,15 @@ struct fidc_membh;
 struct bmapc_memb {
 	sl_blkno_t	             bcm_blkno;   /* Bmap blk number        */
 	struct fidc_membh           *bcm_fcmh;    /* pointer to fid info    */
-	struct bmap_info	     bcm_bmapih;
+	void                        *bcm_pri;
 	atomic_t		     bcm_rd_ref;  /* one ref per write fd    */
 	atomic_t		     bcm_wr_ref;  /* one ref per read fd     */
 	struct timespec		     bcm_ts;
 	atomic_t                     bcm_opcnt;   /* pending opcnt           */
-	u64                          bcm_holes[2];/* one bit SLASH_BMAP_SIZE */
-	union {
-		void		    *bmt_mds_pri;
-		struct offtree_root *bmt_cli_oftr;
-	} bmap_type;
+	u32                          bcm_mode;
 	psc_spinlock_t               bcm_lock;
 	psc_waitq_t                  bcm_waitq;
-	struct jflush_item           bcm_jfi;
-	SPLAY_ENTRY(bmapc_memb) bcm_tentry;       /* fcm tree entry    */
-#define bcm_mds_pri bmap_type.bmt_mds_pri
-#define bcm_oftr    bmap_type.bmt_cli_oftr				
-#define bcm_dirty   bcm_holes                     /* change context for ION */
+	SPLAY_ENTRY(bmapc_memb)      bcm_tentry;  /* fcm tree entry    */
 };
 
 #define bmap_set_accesstime(b) {				    \
@@ -170,7 +161,6 @@ struct fidc_open_obj {
 	list_cache_t		 fcoo_buffer_cache;  /* chain our slbs   */
 	struct bmap_cache	 fcoo_bmapc;         /* bmap cache splay */
 	size_t                   fcoo_bmap_sz;
-	struct jflush_item       fcoo_jfi;
 	void			*fcoo_pri;           /* mds, client, ion */
 };
 
@@ -551,20 +541,16 @@ extern struct sl_fsops *slFsops;
 
 #define DEBUG_BMAP(level, b, fmt, ...)					\
 	do {								\
-		char __nidstr[PSC_NIDSTR_SIZE];				\
-		psc_nid2str((b)->bcm_bmapih.bmapi_ion, __nidstr);	\
 		psc_logs((level), PSS_OTHER,				\
-			" bmap@%p b:%u m:%u ion=(%s) i:%"_P_U64"x"	\
-			"rref=%u wref=%u opcnt=%u "fmt,			\
-			(b), (b)->bcm_blkno,				\
-			(b)->bcm_bmapih.bmapi_mode,			\
-			(((b)->bcm_bmapih.bmapi_ion != LNET_NID_ANY) ?	\
-			 __nidstr : "<?>"),				\
-			((b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0), \
-			atomic_read(&(b)->bcm_rd_ref),			\
-			atomic_read(&(b)->bcm_wr_ref),			\
-			atomic_read(&(b)->bcm_opcnt),			\
-			## __VA_ARGS__);				\
+			 " bmap@%p b:%u m:%u i:%"_P_U64"x"		\
+			 "rref=%u wref=%u opcnt=%u "fmt,		\
+			 (b), (b)->bcm_blkno,				\
+			 (b)->bcm_mode,				\
+			 ((b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0), \
+			 atomic_read(&(b)->bcm_rd_ref),			\
+			 atomic_read(&(b)->bcm_wr_ref),			\
+			 atomic_read(&(b)->bcm_opcnt),			\
+			 ## __VA_ARGS__);				\
 	} while (0)
 
 

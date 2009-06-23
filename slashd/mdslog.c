@@ -18,6 +18,8 @@
 #include "inode.h"
 #include "fidcache.h"
 #include "jflush.h"
+#include "mdsexpc.h"
+
 
 #ifdef INUM_SELF_MANAGE
 #include "sb.h"
@@ -29,22 +31,33 @@ extern list_cache_t dirtyMdsData;
 struct psc_journal mdsJournal;
 
 enum mds_log_types {	
-	MDS_LOG_BMAP_REPL = (1<<0),
-	MDS_LOG_BMAP_CRC  = (1<<1),    
-	MDS_LOG_INODE     = (1<<2),
-	MDS_LOG_SB        = (1<<3)
+#ifdef INUM_SELF_MANAGE
+	MDS_LOG_SB        = (1<<0),
+#endif
+	MDS_LOG_BMAP_REPL = (1<<1),
+	MDS_LOG_BMAP_CRC  = (1<<2),    
+	MDS_LOG_INODE     = (1<<3)
 };
 
+
 /**
- * mds_bmap_sync - callback function which is called from mdsfssyncthr_begin().
+ * mds_bmap_sync - callback function which is called from 
+ *   mdsfssyncthr_begin().
  * @data: void * which is the bmap.
- * Notes: this call allows slash2 to optimize crc calculation by only taking them when the bmap is written, not upon each update to the bmap.  It is important to note that forward changes may be synced here.  What that means is that changes which are not part of this XID session may have snuck in here (ie a crc update came in and was fully processed before mds_bmap_sync() grabbed the lock.  For this reason the crc updates must be journaled before manifesting in the bmap cache.  Otherwise, log replays will look inconsistent.
+ * Notes: this call allows slash2 to optimize crc calculation by only 
+ *   taking them when the bmap is written, not upon each update to the 
+ *   bmap.  It is important to note that forward changes may be synced 
+ *   here.  What that means is that changes which are not part of this 
+ *   XID session may have snuck in here (ie a crc update came in and 
+ *   was fully processed before mds_bmap_sync() grabbed the lock.  For 
+ *   this reason the crc updates must be journaled before manifesting 
+ *   in the bmap cache.  Otherwise, log replays will look inconsistent.
  */ 
 void 
 mds_bmap_sync(void *data)
 {
 	struct bmapc_memb *bmap=data;
-	sl_blkh_t *bmapod=bmap->bcm_bmapih.bmapi_data;
+	sl_blkh_t *bmapod=bmap_2_bmdsiod(bmap);
 	int rc;
 	       
 	BMAP_LOCK(bmap);
@@ -54,7 +67,9 @@ mds_bmap_sync(void *data)
 #if SLASH_POSIX_IO
 	rc = pwrite(bmap->bcm_fcmh->fcmh_fd, bmapod, 
 		    BMAP_OD_SZ, (off_t)(BMAP_OD_SZ * bmap->bcm_blkno));
-#endif	
+#elif SLASH_ZFS_IO
+	rc = mdsio_zfs_bmap_write(b);	
+#endif
 	if (rc != BMAP_OD_SZ)
 		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail", rc, errno);
 	else
@@ -77,30 +92,32 @@ void
 mds_bmap_repl_log(struct bmapc_memb *bmap) 
 {
 	struct slmds_jent_repgen jrpg;
+	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
+
 	int rc;
 
 	BMAP_LOCK_ENSURE(bmap);
 	
 	jrpg.sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jrpg.sjp_bmapno = bmap->bcm_blkno;
-	jrpg.sjp_gen.bl_gen = bmap->bcm_bmapih.bmapi_data->bh_gen.bl_gen;
-	memcpy(jrpg.sjp_reptbl, bmap->bcm_bmapih.bmapi_data->bh_repls, 
+	jrpg.sjp_gen.bl_gen = bmap_2_bmdsiod(bmap)->bh_gen.bl_gen;
+	memcpy(jrpg.sjp_reptbl, bmap_2_bmdsiod(bmap)->bh_repls, 
 	       SL_REPLICA_NBYTES);
 
 	psc_trace("jlog fid=%"_P_U64"x bmapno=%u bmapgen=%u", 
 		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen);
 	
-	jfi_prep(&bmap->bcm_jfi, &mdsJournal);
+	jfi_prep(&bmdsi->bmdsi_jfi, &mdsJournal);
 
-	psc_assert(bmap->bcm_jfi.jfi_handler == mds_bmap_sync);
-	psc_assert(bmap->bcm_jfi.jfi_data == bmap);
+	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
+	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
 
-	rc = pjournal_xadd(bmap->bcm_jfi.jfi_xh, MDS_LOG_BMAP_REPL, &jrpg);
+	rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_REPL, &jrpg);
 	if (rc) 
 		psc_fatalx("jlog fid=%"_P_U64"x bmapno=%u bmapgen=%u rc=%d",
 			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen, rc);
 	
-	jfi_schedule(&bmap->bcm_jfi, &dirtyMdsData);
+	jfi_schedule(&bmdsi->bmdsi_jfi, &dirtyMdsData);
 }
 
 /**
@@ -114,22 +131,23 @@ void
 mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 {
 	struct slmds_jent_crc jcrc;
-	sl_blkh_t *bmapod=bmap->bcm_bmapih.bmapi_data;
+	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
+	sl_blkh_t *bmapod = bmdsi->bmdsi_od;
 	int i, rc=0;
 	int n=crcup->nups;
 	u32 t=0, j=0;
 
-	jfi_prep(&bmap->bcm_jfi, &mdsJournal);
+	jfi_prep(&bmdsi->bmdsi_jfi, &mdsJournal);
 
-	psc_assert(bmap->bcm_jfi.jfi_handler == mds_bmap_sync);
-	psc_assert(bmap->bcm_jfi.jfi_data == bmap);
+	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
+	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
 	/* No I shouldn't need the lock.  Only this instance of this
 	 *  call may remove the BMAP_MDS_CRC_UP bit.
 	 */
-	psc_assert(bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_CRC_UP);
+	psc_assert(bmap->bcm_mode & BMAP_MDS_CRC_UP);
 
 	jcrc.sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	jcrc.sjc_ion = bmap->bcm_bmapih.bmapi_ion;
+	jcrc.sjc_ion = bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
         jcrc.sjc_bmapno = bmap->bcm_blkno;
 	
 	while (n) {
@@ -138,7 +156,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		memcpy(jcrc.sjc_crc, &crcup->crcs[t],
 		       (i * sizeof(struct srm_bmap_crcwire)));
 
-		rc = pjournal_xadd(bmap->bcm_jfi.jfi_xh, 
+		rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, 
 				   MDS_LOG_BMAP_CRC, &jcrc);
 		if (rc)
 			psc_fatalx("jlog fid=%"_P_U64"x bmapno=%u rc=%d", 
@@ -165,11 +183,11 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	/* Signify that the update has occurred.
 	 */
 	BMAP_LOCK(bmap);
-	bmap->bcm_bmapih.bmapi_mode &= ~BMAP_MDS_CRC_UP;
+	bmap->bcm_mode &= ~BMAP_MDS_CRC_UP;
 	BMAP_ULOCK(bmap);
 	/* Tell the 'syncer' thread to flush this bmap.
 	 */
-	jfi_schedule(&bmap->bcm_jfi, &dirtyMdsData);
+	jfi_schedule(&bmdsi->bmdsi_jfi, &dirtyMdsData);
 }
 
 void

@@ -38,7 +38,7 @@ cfdcmp(const void *a, const void *b)
 	return (0);
 }
 
-int
+__static int
 cfdinsert(struct cfdent *c, struct pscrpc_export *exp)
 {
 	struct slashrpc_export *sexp;

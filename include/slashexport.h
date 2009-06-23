@@ -24,12 +24,14 @@ enum slash_exp_types {
 };
 
 struct cfdtree;
+struct dfdtree;
 struct pscrpc_export;
 
 struct slashrpc_export {
 	u64                   sexp_conn_gen;
 	u64                   sexp_nextcfd;
 	struct cfdtree        sexp_cfdtree;
+	struct cfdtree        sexp_cddtree;
 	int                   sexp_type;
 	void                 *sexp_data;
 	struct pscrpc_export *sexp_export;

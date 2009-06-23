@@ -3,25 +3,12 @@
 #include <errno.h>
 
 #include "inode.h"
+#include "inodeh.h"
 #include "fid.h"
 #include "fidcache.h"
 #include "mdsexpc.h"
 #include "mds.h"
 
-__static int 
-mds_repl_crc_check(sl_inodeh_t *i)
-{
-	psc_crc_t crc;
-
-	PSC_CRC_CALC(crc, i->inoh_replicas, 
-		     (sizeof(sl_replica_t) * i->inoh_ino.ino_nrepls));
-
-	if (crc != i->inoh_ino.ino_rs_crc) {
-		psc_warnx("Crc failure on replicas");
-		return (-EIO);
-	}		
-	return (0);
-}
 
 #if 0
 __static int 
@@ -60,24 +47,12 @@ mds_repl_xattr_load_locked(sl_inodeh_t *i)
 	DEBUG_INOH(PLL_INFO, i, "replica table load failed");
 	return (rc);
 }
-#else
-__static int 
-mds_repl_xattr_load_locked(__unusedx sl_inodeh_t *i) { return (0); }
-#endif
+
 
 int
 mds_repl_load_locked(sl_inodeh_t *i)
 {
-	int rc=0;
-
-	INOH_LOCK_ENSURE(i);
-	if (i->inoh_ino.ino_nrepls) {		
-		if  (i->inoh_flags & INOH_HAVE_REPS)
-			rc = mds_repl_crc_check(i);			
-	        else 
-			rc = mds_repl_xattr_load_locked(i);
-	}	
-	return (rc);
+	return (0);
 }
 
 int 
@@ -128,7 +103,7 @@ mds_repl_ios_lookup(sl_inodeh_t *i, sl_ios_id_t ios, int add)
 int
 mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 {
-	sl_blkh_t *bmapod=bmap->bcm_bmapih.bmapi_data;
+	sl_blkh_t *bmapod=bmap_2_bmdsiod(bmap);
 	int j, r, bumpgen=0, log=0;
 	u8 mask, *b=bmapod->bh_repls;
 	u32 pos, k;
@@ -184,3 +159,13 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 	 */	
 	return (0);
 }
+
+#else
+__static int 
+mds_repl_xattr_load_locked(__unusedx sl_inodeh_t *i) { return (0); }
+
+int
+mds_repl_inv_except_locked(__unusedx struct bmapc_memb *bmap, __unusedx sl_ios_id_t ion) 
+{ return 0; }
+#endif
+

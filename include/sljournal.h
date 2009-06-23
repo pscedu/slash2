@@ -3,6 +3,8 @@
 #ifndef __SL_JOURNAL__
 #define __SL_JOURNAL__ 1
 
+#include "psc_types.h"
+
 #include "inode.h"
 #include "slconfig.h"
 #include "pathnames.h"

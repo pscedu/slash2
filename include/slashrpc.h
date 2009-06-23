@@ -359,7 +359,7 @@ struct srm_readdir_req {
 
 struct srm_readdir_rep {
 	uint64_t		size;
-	uint32_t		num;		/* how many dirents were returned */
+	uint32_t		num;    /* how many dirents were returned */
 	int32_t			rc;
 	/* accompanied by bulk data in pure getdents(2) format */
 };
@@ -398,19 +398,19 @@ struct srm_rename_req {
 #if 0
 /* Slash RPC transportably safe structures. */
 struct srt_stat {
-	int32_t		st_dev;			/* ID of device containing file */
-	uint64_t	st_ino;			/* inode number */
-	int32_t		st_mode;		/* protection */
-	int32_t		st_nlink;		/* number of hard links */
-	int32_t		st_uid;			/* user ID of owner */
-	int32_t		st_gid;			/* group ID of owner */
-	int32_t		st_rdev;		/* device ID (if special file) */
-	uint64_t	st_size;		/* total size, in bytes */
-	int32_t		st_blksize;		/* blocksize for file system I/O */
-	uint64_t	st_blocks;		/* number of 512B blocks allocated */
-	uint64_t	st_atime;		/* time of last access */
-	uint64_t	st_mtime;		/* time of last modification */
-	uint64_t	st_ctime;		/* time of last status change */
+	int32_t		st_dev;		/* ID of device containing file */
+	uint64_t	st_ino;		/* inode number */
+	int32_t		st_mode;	/* protection */
+	int32_t		st_nlink;	/* number of hard links */
+	int32_t		st_uid;		/* user ID of owner */
+	int32_t		st_gid;		/* group ID of owner */
+	int32_t		st_rdev;	/* device ID (if special file) */
+	uint64_t	st_size;	/* total size, in bytes */
+	int32_t		st_blksize;	/* blocksize for file system I/O */
+	uint64_t	st_blocks;	/* number of 512B blocks allocated */
+	uint64_t	st_atime;	/* time of last access */
+	uint64_t	st_mtime;	/* time of last modification */
+	uint64_t	st_ctime;	/* time of last status change */
 };
 #endif
 

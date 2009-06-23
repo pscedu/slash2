@@ -103,7 +103,6 @@ main(int argc, char *argv[])
 	/* Initialize the zfs layer.
 	 */
 	do_init();
-
 	rpc_initsvc();
 	slctlthr_main(sfn);
 

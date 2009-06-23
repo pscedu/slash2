@@ -239,7 +239,7 @@ static void
 mds_bmap_directio(struct mexpbcm *bref, int enable_dio, int check)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
-	struct bmap_mds_info *mdsi=bmap->bcm_mds_pri;
+	struct bmap_mds_info *mdsi=bmap->bcm_pri;
 	int mode=bref->mexpbcm_mode;
 
 	psc_assert(mdsi && mdsi->bmdsi_wr_ion);
@@ -356,7 +356,7 @@ __static int
 mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
-	struct bmap_mds_info *mdsi=bmap->bcm_mds_pri;
+	struct bmap_mds_info *mdsi=bmap->bcm_pri;
 	//struct fidc_membh *f=bmap->bcm_fcmh;
 	struct mexp_ion *mion;
 	sl_resource_t *res=libsl_id2res(pios);
@@ -448,7 +448,7 @@ __static void
 mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
-	struct bmap_mds_info *bmdsi=bmap->bcm_mds_pri;
+	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
 	int wr[2], rw=mq->rw,
 		mode=(rw == SRIC_BMAP_READ ? BMAP_MDS_RD : BMAP_MDS_WR);
 	atomic_t *a=(rw == SRIC_BMAP_READ ? &bmdsi->bmdsi_rd_ref :
@@ -466,8 +466,8 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 		/* There are no refs for this mode, therefore the
 		 *   bcm_bmapih.bmapi_mode should not be set.
 		 */
-		psc_assert(!(bmap->bcm_bmapih.bmapi_mode & mode));
-		bmap->bcm_bmapih.bmapi_mode = mode;
+		psc_assert(!(bmap->bcm_mode & mode));
+		bmap->bcm_mode = mode;
 	}
 	/* Set and check ref cnts now.
 	 */
@@ -515,7 +515,7 @@ __static void
 mds_bmap_ref_del(struct mexpbcm *bref)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
-	struct bmap_mds_info *mdsi=bmap->bcm_mds_pri;
+	struct bmap_mds_info *mdsi=bmap->bcm_pri;
 	int wr[2];
 
 	BMAP_LOCK(bmap);
@@ -523,14 +523,14 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 	if (bref->mexpbcm_mode & MEXPBCM_WR) {
 		psc_assert(atomic_read(&mdsi->bmdsi_wr_ref));
 		if (atomic_dec_and_test(&mdsi->bmdsi_wr_ref)) {
-			psc_assert(bmap->bcm_bmapih.bmapi_mode & ~BMAP_MDS_WR);
-			bmap->bcm_bmapih.bmapi_mode &= ~BMAP_MDS_WR;
+			psc_assert(bmap->bcm_mode & ~BMAP_MDS_WR);
+			bmap->bcm_mode &= ~BMAP_MDS_WR;
 		}
 
 	} else if (bref->mexpbcm_mode & MEXPBCM_RD) {
 		psc_assert(atomic_read(&mdsi->bmdsi_rd_ref));
 		if (atomic_dec_and_test(&mdsi->bmdsi_rd_ref)) {
-			bmap->bcm_bmapih.bmapi_mode &= ~BMAP_MDS_RD;
+			bmap->bcm_mode &= ~BMAP_MDS_RD;
 		}
 	}
 
@@ -566,33 +566,36 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	if (!fcmh)
 		return (-EBADF);
 
-	spinlock(&fcmh->fcmh_lock);
-	bmap = bmap_lookup_locked(fcmh->fcmh_fcoo, c->blkno);
+	bmap = bmap_lookup(fcmh, c->blkno);
 	if (!bmap)
 		return (-EBADF);
-	freelock(&fcmh->fcmh_lock);
 
 	BMAP_LOCK(bmap);
-	//DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u crc="_P_U64"x cid=%u ion=%s",
-	//	   c->blkno, mq->crc, mq->cid, libcfs_nid2str(ion_nid));
 
-	bmdsi = bmap->bcm_mds_pri;
-	bmapod = bmap->bcm_bmapih.bmapi_data;
+	DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u ion=%s",
+		   c->blkno, libcfs_nid2str(ion_nid));
+
+	bmdsi = bmap->bcm_pri;
+	bmapod = bmdsi->bmdsi_od;
 	/* These better check out.
 	 */
 	psc_assert(bmap->bcm_fcmh == fcmh);
 	psc_assert(bmdsi);
 	psc_assert(bmapod);
-	psc_assert(bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_WR);
+	psc_assert(bmap->bcm_mode & BMAP_MDS_WR);
 	bmdsi_sanity_locked(bmap, 1, wr);
-	/* Ensure that the annointed nid is the one calling us.
-	 */
+
 	if (ion_nid != bmdsi->bmdsi_wr_ion->mi_resm->resm_nid) {
+		/* Whoops, we recv'd a request from an unexpected nid.
+		 */
 		rc = -EINVAL;
 		BMAP_ULOCK(bmap);
 		goto out;
 
-	} else if (bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_CRC_UP) {
+	} else if (bmap->bcm_mode & BMAP_MDS_CRC_UP) {
+		/* Ensure that this thread is the only thread updating the 
+		 *  bmap crc table.
+		 */
 		rc = -EALREADY;
 		BMAP_ULOCK(bmap);
 		goto out;
@@ -602,11 +605,11 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		 *  reentrant so the ION must know better than to send
 		 *  multiple requests for the same bmap.
 		 */
-		bmap->bcm_bmapih.bmapi_mode |= BMAP_MDS_CRC_UP;
+		bmap->bcm_mode |= BMAP_MDS_CRC_UP;
 		/* If the bmap had no contents, denote that it now does.
 		 */
-		if (bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_EMPTY)
-			bmap->bcm_bmapih.bmapi_mode &= ~BMAP_MDS_EMPTY;
+		if (bmap->bcm_mode & BMAP_MDS_EMPTY)
+			bmap->bcm_mode &= ~BMAP_MDS_EMPTY;
 	}
 	/* XXX Note the lock ordering here BMAP -> INODEH
 	 * mds_repl_inv_except_locked() takes the lock.
@@ -618,8 +621,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		BMAP_ULOCK(bmap);
 		goto out;
 	}
-	if (bmap->bcm_bmapih.bmapi_mode & BMAP_MDS_EMPTY)
-		bmap->bcm_bmapih.bmapi_mode &= ~BMAP_MDS_EMPTY;
+	if (bmap->bcm_mode & BMAP_MDS_EMPTY)
+		bmap->bcm_mode &= ~BMAP_MDS_EMPTY;
 
 	/* XXX ok if replicas exist, the gen has to be bumped and the
 	 *  replication bmap modified.
@@ -797,11 +800,14 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		FCMH_ULOCK(f);
  retry:
 		BMAP_LOCK(*bmap);
-		if ((*bmap)->bcm_bmapih.bmapi_mode == BMAP_MDS_INIT) {
+		if ((*bmap)->bcm_mode & BMAP_MDS_INIT) {
+			/* Only the init bit is allowed to be set.
+			 */
+			psc_assert((*bmap)->bcm_mode == 
+				   BMAP_MDS_INIT);
 			/* Sanity checks for BMAP_MDS_INIT
 			 */
-			psc_assert(!(*bmap)->bcm_mds_pri);
-			psc_assert(!(*bmap)->bcm_bmapih.bmapi_data);
+			psc_assert(!(*bmap)->bcm_pri);
 			psc_assert(!(*bmap)->bcm_fcmh);
 			/* Block until the other thread has completed the io.
 			 */
@@ -809,24 +815,21 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 				       &(*bmap)->bcm_lock);
 			goto retry;
 		} else {
-			/* Ensure that the INIT bit is not set and that all
-			 *  relevant pointers are in place.
+			/* Sanity check relevant pointers.
 			 */
-			psc_assert(!((*bmap)->bcm_bmapih.bmapi_mode &
-				     BMAP_MDS_INIT));
-			psc_assert((*bmap)->bcm_mds_pri);
-			psc_assert((*bmap)->bcm_bmapih.bmapi_data);
+			psc_assert((*bmap)->bcm_pri);
 			psc_assert((*bmap)->bcm_fcmh);
 		}
 
 	} else {
+		struct bmap_mds_info *bmdsi;
 		/* Create and initialize the new bmap while holding the
 		 *  fcmh lock which is needed for atomic tree insertion.
 		 */
 		*bmap = PSCALLOC(sizeof(struct bmapc_memb)); /* XXX not freed */
 		(*bmap)->bcm_blkno = mq->blkno;
-		(*bmap)->bcm_bmapih.bmapi_mode = BMAP_MDS_INIT;
-		(*bmap)->bcm_mds_pri = PSCALLOC(sizeof(struct bmap_mds_info)); /* XXX not freed */
+		(*bmap)->bcm_mode = BMAP_MDS_INIT;
+		bmdsi = (*bmap)->bcm_pri = PSCALLOC(sizeof(struct bmap_mds_info)); /* XXX not freed */
 		LOCK_INIT(&(*bmap)->bcm_lock);
 		psc_waitq_init(&(*bmap)->bcm_waitq);
 		(*bmap)->bcm_fcmh = f;
@@ -838,12 +841,13 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		 *   until we have finished reading it from disk.
 		 */
 		FCMH_ULOCK(f);
+		
 		rc = mds_bmap_read(f, mq->blkno,
-				   &(*bmap)->bcm_bmapih.bmapi_data);
+				   &bmdsi->bmdsi_od);
 		if (rc)
 			goto fail;
 
-		(*bmap)->bcm_bmapih.bmapi_mode = 0;
+		(*bmap)->bcm_mode = 0;
 		/* Notify other threads that this bmap has been loaded, they're
 		 *  blocked on BMAP_MDS_INIT.
 		 */
@@ -880,7 +884,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 
 	return (0);
  fail:
-	(*bmap)->bcm_bmapih.bmapi_mode = BMAP_MDS_FAILED;
+	(*bmap)->bcm_mode = BMAP_MDS_FAILED;
 	/* XXX think about policy updates in fail mode.
 	 */
 	return (rc);
