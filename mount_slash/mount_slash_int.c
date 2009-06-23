@@ -130,9 +130,12 @@ msl_fhent_new(struct fidc_membh *f)
 void
 msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f)
 {
+	struct msbmap_data *msbd;
+
 	memset(b, 0, sizeof(*b));
  	atomic_set(&b->bcm_opcnt, 0);
 	psc_waitq_init(&b->bcm_waitq);
+	b->bcm_pri = msbd = PSCALLOC(sizeof(*msbd));
 	bmap_2_msoftr(b) = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
 				  SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,
 				  f, sl_buffer_alloc, sl_oftm_addref,
