@@ -12,6 +12,7 @@
 #include "fidcache.h"
 #include "offtree.h"
 #include "inode.h"
+#include "bmap.h"
 
 struct pscrpc_request;
 

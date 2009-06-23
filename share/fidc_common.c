@@ -18,6 +18,7 @@
 #include "fid.h"
 #include "fidcache.h"
 #include "fidc_common.h"
+#include "bmap.h"
 
 #define SL_FIDCACHE_LOW_THRESHOLD 80 // 80%
 

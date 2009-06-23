@@ -1,8 +1,15 @@
+/* $Id$ */
+
 #ifndef MDSEXPC_H
 #define MDSEXPC_H 1
 
-/* These structures provide back pointers into the Fid Cache to facilitate client-wise operations within the cache.  Such ops would include dereferencing the entire tree of client bmap references on connection close.
+/*
+ * These structures provide back pointers into the Fid Cache to
+ * facilitate client-wise operations within the cache.  Such ops would
+ * include dereferencing the entire tree of client bmap references on
+ * connection close.
  */
+
 #include <time.h>
 
 #include "psc_types.h"
@@ -14,6 +21,7 @@
 #include "fidcache.h"
 #include "slashrpc.h"
 #include "inodeh.h"
+#include "bmap.h"
 
 struct pscrpc_export;
 /*

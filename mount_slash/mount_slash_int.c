@@ -28,6 +28,7 @@
 #include "slashrpc.h"
 #include "offtree.h"
 #include "fidcache.h"
+#include "bmap.h"
 
 #define MSL_PAGES_GET 0
 #define MSL_PAGES_PUT 1
