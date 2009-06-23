@@ -3,9 +3,20 @@
 #ifndef _BMAP_H_
 #define _BMAP_H_
 
+#include <time.h>
+
 #include "psc_types.h"
+#include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/atomic.h"
 #include "psc_util/lock.h"
+#include "psc_util/waitq.h"
+
+#include "fid.h"
+
+struct fidc_membh;
+struct fidc_open_obj;
+struct slash_block_handle;
 
 struct bmap_refresh {
 	struct slash_fidgen	bmrfr_fg;
