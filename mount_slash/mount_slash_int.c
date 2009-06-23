@@ -652,11 +652,11 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	 */
 	psc_assert(!r->oftrq_bmap);
 
-	if ((rc = rsx_newreq(imp, SRIC_VERSION,
+	if ((rc = RSX_NEWREQ(imp, SRIC_VERSION,
 			     (op == MSL_PAGES_PUT ? SRMT_WRITE : SRMT_READ),
-			     sizeof(*mq), sizeof(*mp), &req, &mq)) != 0) {
+			     req, mq, mp)) != 0) {
 		errno = -rc;
-		psc_fatalx("rsx_newreq() bad time to fail :(");
+		psc_fatalx("RSX_NEWREQ() bad time to fail :(");
 	}
 	/* Setup the callback, supplying the dynarray as a argument.
 	 */
@@ -748,10 +748,9 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 	for (i=0, nbytes=0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, (size-nbytes));
 
-		rc = rsx_newreq(imp, SRIC_VERSION, op,
-				sizeof(*mq), sizeof(*mp), &req, &mq);
+		rc = RSX_NEWREQ(imp, SRIC_VERSION, op, req, mq, mp);
 		if (rc)
-			psc_fatalx("rsx_newreq() failed %d", rc);
+			psc_fatalx("RSX_NEWREQ() failed %d", rc);
 
 		req->rq_interpret_reply = msl_dio_cb;
 

@@ -135,8 +135,8 @@ mdscoh_queue_req(struct mexpbcm *bref)
 	}
 	freelock(&csvc->csvc_lock);
 
-	rc = rsx_newreq(csvc->csvc_import, SRCM_VERSION, SRMT_BMAPDIO, 
-			sizeof(*mq), sizeof(*mp), &req, mq);
+	rc = RSX_NEWREQ(csvc->csvc_import, SRCM_VERSION,
+	    SRMT_BMAPDIO, req, mq, mp);
 	if (rc)
 		return (rc);	
 
