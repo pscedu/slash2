@@ -137,11 +137,34 @@ msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f)
  	atomic_set(&b->bcm_opcnt, 0);
 	psc_waitq_init(&b->bcm_waitq);
 	b->bcm_pri = msbd = PSCALLOC(sizeof(*msbd));
+	msbd->msbd_bmapi = PSCALLOC(sizeof(*msbd->msbd_bmapi));
 	bmap_2_msoftr(b) = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
 				  SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,
 				  f, sl_buffer_alloc, sl_oftm_addref,
 				  sl_oftiov_pin_cb);
 	psc_assert(bmap_2_msoftr(b));
+}
+
+/**
+ * bmapc_memb_free - release a bmap structure and associated resources.
+ * @b: the bmap.
+ */
+void
+msl_bmap_free(struct bmapc_memb *b)
+{
+	struct msbmap_data *msbd;
+
+	msbd = b->bcm_pri;
+	free(msbd->msbd_bmapi);
+	msbd->msbd_bmapi = NULL;
+
+	free(b->bcm_pri);
+	b->bcm_pri = NULL;
+
+	offtree_destroy(bmap_2_msoftr(b));
+	bmap_2_msoftr(b) = NULL;
+
+	free(b);
 }
 
 /**
@@ -158,6 +181,7 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
         struct srm_bmap_req *mq;
         struct srm_bmap_rep *mp;
 	struct bmapc_memb **bmaps, *bmap;
+	struct msbmap_data *msbd;
         struct iovec *iovs;
         int rc=-1;
 	u32 i;
@@ -183,9 +207,9 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 	for (i=0; i < n; i++) {
 		bmap = bmaps[i] = PSCALLOC(sizeof(struct bmapc_memb));
 		msl_bmap_init(bmap, f);
-		//XXX
-		//iovs[i].iov_base = &bmap->bcm_bmapih;
-		//iovs[i].iov_len  = sizeof(struct bmap_info);
+		msbd = bmap->bcm_pri;
+		iovs[i].iov_base = msbd->msbd_bmapi;
+		iovs[i].iov_len  = sizeof(*msbd->msbd_bmapi);
 	}
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmaps (s=%u, n=%zu)", b, n);
 
@@ -222,12 +246,8 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
  fail:	
 	/* Free any slack.
 	 */
-	for (i=mp->nblks; i < n; i++) {
-		bmap = bmaps[i];
-		offtree_destroy(bmap_2_msoftr(bmap));
-//		PSCFREE(bmap->bcm_mds_pri);
-		PSCFREE(bmap);
-	}
+	for (i=mp->nblks; i < n; i++)
+		msl_bmap_free(bmaps[i]);
 	PSCFREE(iovs);
 	PSCFREE(bmaps);
 	return (rc);
