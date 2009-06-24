@@ -1286,7 +1286,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	sl_blkno_t s, e;
 	size_t tlen, tsize;
 	off_t roff;
-	int i, j, rc;
+	int nr, j, rc;
 	char *p;
 
 	psc_assert(mfh);
@@ -1304,7 +1304,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	/* Foreach block range, get its bmap and make a request into its
 	 *  offtree.  This first loop retrieves all the pages.
 	 */
-	for (i=0; s <= e; s++, i++) {
+	for (nr=0; s <= e; s++, nr++) {
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
 		 */
@@ -1316,8 +1316,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		}
 		/* Malloc offtree request and pass to the initializer.
 		 */
-		r = realloc(r, sizeof(*r) * (i + 1));
-		msl_oftrq_build(&r[i], b, mslfh_2_fdb(mfh), roff, tlen,
+		r = realloc(r, sizeof(*r) * (nr + 1));
+		msl_oftrq_build(&r[nr], b, mslfh_2_fdb(mfh), roff, tlen,
 				(op == MSL_READ) ? OFTREQ_OP_READ :
 				OFTREQ_OP_WRITE);
 		/* Retrieve offtree region.
@@ -1335,14 +1335,14 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 
 	/* Start prefetching our cached buffers.
 	 */
-	for (j=0; j < i; i++)
+	for (j=0; j < nr; j++)
 		if (!(r->oftrq_op & OFTREQ_OP_DIO))
-			msl_pages_prefetch(&r[i]);
+			msl_pages_prefetch(&r[j]);
 
 	/* Note that the offsets used here are file-wise offsets not
 	 *   offsets into the buffer.
 	 */
-	for (j=0, p=buf, tsize=0; j < i; j++, p+=tlen) {
+	for (j=0, p=buf, tsize=0; j < nr; j++, p+=tlen) {
 		if (!(r->oftrq_op & OFTREQ_OP_DIO)) {
 			/* Now iterate across the array of completed offtree
 			 *  requests paging in data where needed.
@@ -1350,25 +1350,25 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 			if (op == MSL_READ ||
 			    ((r->oftrq_op & OFTREQ_OP_PRFFP) ||
 			     (r->oftrq_op & OFTREQ_OP_PRFLP)))
-				if ((rc = msl_pages_blocking_load(&r[i])))
+				if ((rc = msl_pages_blocking_load(&r[j])))
 					goto out;
 
 			if (op == MSL_READ)
 				/* Copying into the application buffer, and
 				 *   managing the offtree.
 				 */
-				tlen = msl_pages_copyout(&r[i], p, off+tsize);
+				tlen = msl_pages_copyout(&r[j], p, off+tsize);
 			else
 				/* Copy pages into the system cache and queue
 				 *  them for xfer to the IOS.
 				 */
-				tlen = msl_pages_copyin(&r[i], p, off+tsize);
+				tlen = msl_pages_copyin(&r[j], p, off+tsize);
 		} else
 			/* The directio path.
 			 */
-			tlen = msl_pages_dio_getput(&r[i], p, off+tsize);
+			tlen = msl_pages_dio_getput(&r[j], p, off+tsize);
 
-		psc_assert(tlen == oftrq_size_get(&r[i]));
+		psc_assert(tlen == oftrq_size_get(&r[j]));
 		tsize += tlen;
 	}
 
@@ -1376,7 +1376,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 
 	rc = size;
  out:
-	for (j=0; j < i; j++)
+	for (j=0; j < nr; j++)
 		msl_oftrq_destroy(&r[j]);
 	free(r);
 	return (rc);
