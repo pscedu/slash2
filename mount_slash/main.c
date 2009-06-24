@@ -1453,7 +1453,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 		goto out;
 	}
 
-	rc = msl_write(mfh, buf, size, off);
+	rc = msl_write(mfh, (char *)buf, size, off);
 	fidc_membh_dropref(mfh->mfh_fcmh);
 	if (rc < 0)
 		rc = -rc;
