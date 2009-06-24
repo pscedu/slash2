@@ -1511,6 +1511,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 		psc_fatalx("please export SLASH_MDS_NID");
 
 	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
+	sl_buffer_cache_init();
 	rpc_initsvc();
 
 	/* Start up service threads. */

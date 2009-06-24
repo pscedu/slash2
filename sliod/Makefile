@@ -15,8 +15,10 @@ SRCS+=		${SLASH_BASE}/share/fdbuf.c
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${SLASH_BASE}/share/rpc.c
 SRCS+=		${SLASH_BASE}/share/slashexport.c
+SRCS+=		${SLASH_BASE}/slashd/buffer.c
 SRCS+=		${SLASH_BASE}/slashd/cfd.c
 SRCS+=		${SLASH_BASE}/slashd/lconf.l
+SRCS+=		${SLASH_BASE}/slashd/offtree.c
 SRCS+=		${SLASH_BASE}/slashd/yconf.y
 
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c

@@ -88,6 +88,7 @@ main(int argc, char *argv[])
 	fdbuf_checkkeyfile();
 	fdbuf_readkeyfile();
 	libsl_init(PSC_SERVER);
+	sl_buffer_cache_init();
 	rpc_initsvc();
 	sliotimerthr_spawn();
 	slioctlthr_main(sfn);
