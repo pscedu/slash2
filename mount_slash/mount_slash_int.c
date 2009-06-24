@@ -1153,7 +1153,7 @@ msl_pages_copyout(struct offtree_req *r, char *buf, off_t off)
 	struct dynarray     *a;
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
-	int    l, i, j, x=0;
+	int    l, j, x=0;
 	off_t  t;
 	size_t nbytes;
 	ssize_t tsize;
@@ -1177,7 +1177,7 @@ msl_pages_copyout(struct offtree_req *r, char *buf, off_t off)
 		DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
 			      "OFT_IOV2E_OFF_(%zu) bufp=%p sz=%zu "
 			      "tsz=%zd nbytes=%zu",
-			      i, r->oftrq_off, OFT_IOV2E_OFF_(v),
+			      j, r->oftrq_off, OFT_IOV2E_OFF_(v),
 			      p, oftrq_size_get(r), tsize, nbytes);
 		if (!x) {
 			/* These pages aren't involved, skip.
