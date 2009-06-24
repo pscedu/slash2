@@ -629,13 +629,6 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	psc_assert(n);
 	psc_assert(op == MSL_PAGES_PUT || op == MSL_PAGES_GET);
 
-	if (op == MSL_PAGES_GET) {
-		psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG));
-		ATTR_SET(v->oftiov_flags, OFTIOV_FAULTING);
-	} else {
-		psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_PUSHPNDG));
-		ATTR_SET(v->oftiov_flags, OFTIOV_PUSHING);
-	}
 	/* Get a new request set if one doesn't already exist.
 	 */
 	if (!r->oftrq_fill.oftfill_reqset)
@@ -676,6 +669,14 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 		v = dynarray_getpos(a, i);
 		if (!i)
 			mq->offset = v->oftiov_off;
+
+		if (op == MSL_PAGES_GET) {
+			psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG));
+			ATTR_SET(v->oftiov_flags, OFTIOV_FAULTING);
+		} else {
+			psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_PUSHPNDG));
+			ATTR_SET(v->oftiov_flags, OFTIOV_PUSHING);
+		}
 
 		tblks += v->oftiov_nblks;
 		/* Make an iov for lnet.
