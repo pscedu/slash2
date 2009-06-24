@@ -1304,7 +1304,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	/* Foreach block range, get its bmap and make a request into its
 	 *  offtree.  This first loop retrieves all the pages.
 	 */
-	for (i=0; s <= e; s++) {
+	for (i=0; s <= e; s++, i++) {
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
 		 */
@@ -1316,9 +1316,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		}
 		/* Malloc offtree request and pass to the initializer.
 		 */
-		r = realloc(r, (sizeof(*r)) * i);
-		i++;
-
+		r = realloc(r, sizeof(*r) * (i + 1));
 		msl_oftrq_build(&r[i], b, mslfh_2_fdb(mfh), roff, tlen,
 				(op == MSL_READ) ? OFTREQ_OP_READ :
 				OFTREQ_OP_WRITE);
