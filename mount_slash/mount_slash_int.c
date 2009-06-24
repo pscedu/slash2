@@ -77,7 +77,7 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
 	//r->oftrq_nblks  = ((r->oftrq_off + len) / SLASH_BMAP_BLKSZ) +
 	//	(len & (~SLASH_BMAP_BLKMASK) ? 1 : 0);
 
-	r->oftrq_nblks = (len << SLASH_BMAP_SHIFT) +
+	r->oftrq_nblks = (len >> SLASH_BMAP_SHIFT) +
 		(len & (~SLASH_BMAP_BLKMASK) ? 1 : 0);
 
 	if (op == OFTREQ_OP_WRITE) {
@@ -1317,6 +1317,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		/* Malloc offtree request and pass to the initializer.
 		 */
 		r = realloc(r, sizeof(*r) * (nr + 1));
+		memset(&r[nr], 0, sizeof(*r));
 		msl_oftrq_build(&r[nr], b, mslfh_2_fdb(mfh), roff, tlen,
 				(op == MSL_READ) ? OFTREQ_OP_READ :
 				OFTREQ_OP_WRITE);
