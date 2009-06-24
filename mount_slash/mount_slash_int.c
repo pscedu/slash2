@@ -1174,11 +1174,6 @@ msl_pages_copyout(struct offtree_req *r, char *buf, off_t off)
 
 	for (j=0; j < l; j++) {
 		v=dynarray_getpos(a, j);
-		DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
-			      "OFT_IOV2E_OFF_(%zu) bufp=%p sz=%zu "
-			      "tsz=%zd nbytes=%zu",
-			      j, r->oftrq_off, OFT_IOV2E_OFF_(v),
-			      p, oftrq_size_get(r), tsize, nbytes);
 		if (!x) {
 			/* These pages aren't involved, skip.
 			 */
@@ -1189,6 +1184,12 @@ msl_pages_copyout(struct offtree_req *r, char *buf, off_t off)
 			nbytes = MIN(OFT_IOVSZ(v) - t, tsize);
 		} else
 			nbytes = MIN(OFT_IOVSZ(v), tsize);
+
+		DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
+			      "OFT_IOV2E_OFF_(%zu) bufp=%p sz=%zu "
+			      "tsz=%zd nbytes=%zu",
+			      j, r->oftrq_off, OFT_IOV2E_OFF_(v),
+			      p, oftrq_size_get(r), tsize, nbytes);
 
 		m = (struct offtree_memb *)v->oftiov_memb;
 		spinlock(&m->oft_lock);
