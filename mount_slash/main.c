@@ -664,16 +664,17 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		const char *newname)
 {
 	struct pscrpc_request *rq;
+	struct fuse_entry_param e;
+	struct fidc_membh *p, *c;
 	struct srm_link_req *mq;
 	struct srm_link_rep *mp;
-	struct fidc_membh *p, *c;
-	struct fuse_entry_param e;
 	struct slash_creds creds;
 	int rc=0;
 
-	memset(&e, 0, sizeof(e));
-
 	msfsthr_ensure();
+
+	c = NULL;
+	memset(&e, 0, sizeof(e));
 
 	slash2fuse_getcred(req, &creds);
 	/* Check the newparent inode.
@@ -720,7 +721,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
-	err:
+ err:
 		rc = rc ? rc : mp->rc;
 		fuse_reply_err(req, rc);
 
@@ -729,7 +730,8 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		//slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds);
 		fidc_fcm_setattr(c, &mp->attr);
 	}
-	fidc_membh_dropref(c);
+	if (c)
+		fidc_membh_dropref(c);
 	fidc_membh_dropref(p);
 	pscrpc_req_finished(rq);
 }
@@ -741,12 +743,14 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct pscrpc_request *rq=NULL;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
-	struct fidc_membh *p;
 	struct fuse_entry_param e;
+	struct fidc_membh *p;
 	int rc;
 
-	memset(&e, 0, sizeof(e));
 	msfsthr_ensure();
+
+	p = NULL;
+	memset(&e, 0, sizeof(e));
 
 	if (strlen(name) >= NAME_MAX) {
 		rc = ENAMETOOLONG;
@@ -764,7 +768,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = ENOTDIR;
 		goto out;
 	}
-	/* Create and initialize the link rpc.
+	/* Create and initialize the link RPC.
 	 */
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	     SRMT_MKDIR, rq, mq, mp)) != 0)
@@ -785,14 +789,15 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		 mq->pino, mq->mode, mq->name, rc, mp->rc);
 
 	if (rc || mp->rc) {
+ out:
 		rc = rc ? rc : mp->rc;
 		fuse_reply_err(req, rc);
 	} else {
 		slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
 		slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds, 0);
 	}
- out:
-	fidc_membh_dropref(p);
+	if (p)
+		fidc_membh_dropref(p);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
