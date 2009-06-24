@@ -1028,7 +1028,7 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 	n = dynarray_len(a);
 
 	for (i=0; i < n; i++) {
-		v = dynarray_getpos(a, n);
+		v = dynarray_getpos(a, i);
 		m = (struct offtree_memb *)v->oftiov_memb;
 
 		DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
@@ -1143,7 +1143,6 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
  *	iov's owning slabs.  Also sets the IOV to DATARDY so that other
  *	threads may access the data cached there.
  * @r: the offtree req array.
- * @n: number of oftrq's
  * @buf: application source buffer.
  * @off: file-logical offset.
  */
