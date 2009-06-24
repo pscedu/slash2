@@ -523,7 +523,7 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 	if (bref->mexpbcm_mode & MEXPBCM_WR) {
 		psc_assert(atomic_read(&mdsi->bmdsi_wr_ref));
 		if (atomic_dec_and_test(&mdsi->bmdsi_wr_ref)) {
-			psc_assert(bmap->bcm_mode & ~BMAP_MDS_WR);
+			psc_assert(bmap->bcm_mode & BMAP_MDS_WR);
 			bmap->bcm_mode &= ~BMAP_MDS_WR;
 		}
 
