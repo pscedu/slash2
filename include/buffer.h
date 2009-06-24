@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef SL_BUFFER_H
-#define SL_BUFFER_H 1
+#ifndef _SL_BUFFER_H_
+#define _SL_BUFFER_H_
 
 #include "psc_types.h"
 #include "psc_util/atomic.h"
@@ -41,17 +41,17 @@ enum slb_states {
 };
 
 #define SLB_FULL(slb) (!vbitmap_nfree((slb)->slb_inuse))
-	
+
 #define SLB_IOV2EBASE(iov, slb)						\
 	(((iov)->oftiov_base + ((iov)->oftiov_nblks * (slb)->slb_blksz)) - 1)
-	
+
 #define SLB_REF2EBASE(ref, slb)						\
 	(((ref)->slbir_base + ((ref)->slbir_nblks * (slb)->slb_blksz)) - 1)
-	
+
 #define SLB_SLB2EBASE(slb)						\
 	(((slb)->slb_base + ((slb)->slb_nblks * (slb)->slb_blksz)) - 1)
-	
-/* sl_buffer - slash_buffer, is used for both read caching and write aggregation.  The buffer is split into N subsections where N is the size of the vbitmap structure.  
+
+/* sl_buffer - slash_buffer, is used for both read caching and write aggregation.  The buffer is split into N subsections where N is the size of the vbitmap structure.
 
 Slb_ref is maintained for every offtree entry which accesses this buffer.
 
@@ -75,8 +75,8 @@ struct sl_buffer {
 	u32             slb_flags;
 	list_cache_t   *slb_lc_owner;
 	list_cache_t   *slb_lc_fcm;
-	struct psclist_head slb_iov_list;    /* list of iovref backpointers */ 
-	struct psclist_head slb_mgmt_lentry; /* attach to lru or outgoing q */ 
+	struct psclist_head slb_iov_list;    /* list of iovref backpointers */
+	struct psclist_head slb_mgmt_lentry; /* attach to lru or outgoing q */
 	struct psclist_head slb_fcm_lentry;  /* chain to fidcm entry        */
 };
 
@@ -89,12 +89,12 @@ struct sl_buffer {
 	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_LRU),      "L"), \
 	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_FREE),     "f"), \
 	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_INIT),     "i"), \
-	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_FRESH),    "r")	
-	
+	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_FRESH),    "r")
+
 #define SLB_FLAGS_FMT "%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLB(level, slb, fmt, ...)					\
-	psc_logs(PSS_OTHER, (level),					\
+	psc_logs((level), PSS_OTHER, 					\
 		" slb@%p b:%p sz(%d/%d) bsz:%u"				\
 		" ref:%d umref:%d inf:%d infp %d fl:"SLB_FLAGS_FMT	\
 		" fcm:%p lco:%p "fmt,					\
@@ -109,7 +109,7 @@ struct sl_buffer {
 		(slb)->slb_lc_fcm, (slb)->slb_lc_owner,			\
 		## __VA_ARGS__)
 
-	
+
 #define DUMP_SLB(level, slb, fmt, ...)					\
         do {                                                            \
 		int __l;						\
@@ -128,13 +128,13 @@ struct sl_buffer {
 					     __m->oft_norl.oft_iov,	\
 					     "iov of memb %p", __m);	\
 			} else						\
-				psc_logs(PSS_OTHER, (level),		\
+				psc_logs((level), PSS_OTHER, 		\
 					"--> Unmapped SLB ref %p memb " \
 					fmt, __r, ## __VA_ARGS__);	\
 		}							\
 		ureqlock(&slb->slb_lock, __l);				\
 	} while (0)
-		
+
 
 struct sl_buffer_iovref {
 	void  *slbir_base;                /* base pointer val (within slb) */
@@ -150,8 +150,8 @@ enum slb_ref_flags {
 };
 
 /* Should have been done earlier
- * have to add ref's before adding to pin list 
-//sl_buffer_fresh_assertions((slb)); 
+ * have to add ref's before adding to pin list
+//sl_buffer_fresh_assertions((slb));
  */
 #define slb_fresh_2_pinned(slb) {				\
 		ATTR_UNSET((slb)->slb_flags, SLB_FRESH);	\
@@ -192,26 +192,20 @@ enum slb_ref_flags {
 	}
 
 
-int 
-sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri);
+int sl_buffer_alloc(size_t, off_t, struct dynarray *, void *);
+void sl_buffer_cache_init(void);
+void sl_oftm_addref(struct offtree_memb *);
+void sl_oftiov_pin_cb(struct offtree_iov *, int);
 
-void
-sl_buffer_cache_init(void);
-
-void
-sl_oftm_addref(struct offtree_memb *m);
-
-void
-sl_oftiov_pin_cb(struct offtree_iov *iov, int op);
-
-#define slb_inflight_cb(iov, op) {			\
+#define slb_inflight_cb(iov, op)			\
+	do {						\
 		if (slInflightCb)			\
 			(*slInflightCb)(iov, op);	\
-	}
+	} while (0)
 
 #define SL_INFLIGHT_INC 0
 #define SL_INFLIGHT_DEC 1
-void
-sl_oftiov_inflight_cb(struct offtree_iov *iov, int op);
 
-#endif
+void sl_oftiov_inflight_cb(struct offtree_iov *, int);
+
+#endif /* _SL_BUFFER_H_ */

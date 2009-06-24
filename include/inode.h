@@ -200,7 +200,7 @@ enum slash_inode_handle_flags {
 #define INOH_FLAGS_FMT "%s%s%s%s"
 
 #define DEBUG_INOH(level, i, fmt, ...)					\
-	psc_logs(PSS_OTHER, (level),					\
+	psc_logs((level), PSS_OTHER, 					\
 		 " inoh@%p f:"FIDFMT" fl:"INOH_FLAGS_FMT		\
 		 "o:%"_P_U64"x bsz:%zu "				\
 		 "lbsz:%u cs:%u pr:%u nr:%zu crc:%"_P_U64"x "		\
