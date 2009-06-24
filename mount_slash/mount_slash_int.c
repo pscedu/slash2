@@ -13,8 +13,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#define FUSE_USE_VERSION 26
-
 #include "pfl.h"
 #include "psc_types.h"
 #include "psc_rpc/rpc.h"
@@ -210,6 +208,8 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 		msbd = bmap->bcm_pri;
 		iovs[i].iov_base = msbd->msbd_bmapi;
 		iovs[i].iov_len  = sizeof(*msbd->msbd_bmapi);
+		bmap->bcm_mode |= (rw & SRIC_BMAP_WRITE) ?
+		    BMAP_CLI_WR : BMAP_CLI_RD;
 	}
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmaps (s=%u, n=%zu)", b, n);
 
@@ -421,7 +421,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, int prefetch, u32 rw)
 		rc = msl_bmap_modeset(f, b->bcm_blkno, SRIC_BMAP_WRITE);
 		psc_assert(!rc); /*  XXX for now.. */
 		/* We're the only thread allowed here, these
-		 *  bits can not have been set by another thread.
+		 *  bits could not have been set by another thread.
 		 */
 		spinlock(&b->bcm_lock);
 		psc_assert((b->bcm_mode & BMAP_CLI_MCIP));
@@ -533,7 +533,7 @@ msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		 */
 		spinlock(&m->oft_lock);
 		switch (op) {
-		case (SRMT_READ):
+		case SRMT_READ:
 			oftm_read_prepped_verify(m);
 			psc_assert((v->oftiov_flags & OFTIOV_FAULTPNDG) &&
 				   (v->oftiov_flags & OFTIOV_FAULTING));
@@ -547,7 +547,7 @@ msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			DEBUG_OFFTIOV(PLL_TRACE, v, "OFTIOV_DATARDY");
 			break;
 
-		case (SRMT_WRITE):
+		case SRMT_WRITE:
 			oftm_write_prepped_verify(m);
 			oftr = args->pointer_arg[MSL_IO_CB_POINTER_SLOT];
 			/* Manage the offtree leaf and decrement the slb.
@@ -646,7 +646,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	/* Point to our bmap handle, it has the import information needed
 	 *  for the rpc request.  (Fid and ios id's)
 	 */
-	bcm = (struct bmapc_memb *)r->oftrq_root->oftr_pri;
+	bcm = r->oftrq_root->oftr_pri;
 	imp = msl_bmap_to_import(bcm);
 	/* This pointer is only valid in DIO mode.
 	 */
@@ -780,7 +780,7 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 	pscrpc_set_destroy(rqset);
 	PSCFREE(iovs);
 
-	return(size);
+	return (size);
 }
 
 /**
@@ -1251,7 +1251,7 @@ msl_pages_blocking_load(struct offtree_req *r)
 		struct offtree_memb *m = v->oftiov_memb;
 
 		w = &m->oft_waitq;
-	retry:
+ retry:
 		spinlock(&m->oft_lock);
 		/* Has the other thread finished working on this?
 		 */
