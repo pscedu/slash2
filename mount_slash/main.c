@@ -205,8 +205,10 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 
 	msfsthr_ensure();
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION, SRMT_ACCESS,
-			     rq, mq, mp)) != 0)
+	c = NULL;
+
+	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_ACCESS, rq, mq, mp)) != 0)
 		goto out;
 
 	slash2fuse_getcred(req, &mq->creds);
@@ -225,7 +227,8 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 		rc = rc ? rc : mp->rc;
  out:
 	fuse_reply_err(req, rc);
-	fidc_membh_dropref(c);
+	if (c)
+		fidc_membh_dropref(c);
 }
 
 static void
