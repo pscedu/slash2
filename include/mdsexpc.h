@@ -16,6 +16,7 @@
 #include "psc_ds/tree.h"
 #include "psc_ds/list.h"
 #include "psc_util/atomic.h"
+#include "psc_util/odtable.h"
 
 #include "jflush.h"
 #include "fidcache.h"
@@ -163,6 +164,18 @@ struct mexp_mds {};
  */
 SPLAY_HEAD(bmap_exports, mexpbcm);
 SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
+
+/* bmi_assign - the structure used for tracking the mds's bmap / ion 
+ *   assignments.  These structures are stored in a odtable.
+ */
+struct bmi_assign {
+	lnet_nid_t   bmi_ion_nid;
+	sl_ios_id_t  bmi_ios;
+	slfid_t      bmi_fid;
+	off_t        bmi_bmapno;
+	time_t       bmi_start;
+};
+
 /*
  * bmap_mds_info - associate the fcache block to its respective export bmap caches.
  * Notes: both read and write clients are stored to bmdsi_exports, the ref counts are used to determine the number of both and hence the caching mode used at the clients.   bmdsi_wr_ion is a shortcut pointer used only when the bmap has client writers - all writers (and readers) are directed to this ion once a client has invoked write mode on the bmap.
@@ -175,6 +188,7 @@ struct bmap_mds_info {
 	struct mexp_ion      *bmdsi_wr_ion;  /* ion export assigned to bmap */
         struct bmap_exports   bmdsi_exports; /* tree of mexpbcm's           */
 	struct slash_bmap_od *bmdsi_od;
+	struct odtable_receipt    *bmdsi_assign;
 	struct pscrpc_request_set *bmdsi_reqset; /* cache callback rpc's    */
 };
 
