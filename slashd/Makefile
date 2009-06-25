@@ -13,6 +13,7 @@ SRCS+=		main.c
 SRCS+=		mds.c
 SRCS+=		mdscoh.c
 SRCS+=		mdsfssync.c
+SRCS+=		mdsio_zfs.c
 SRCS+=		mdslog.c
 SRCS+=		mdsrepl.c
 SRCS+=		mdsrpc.c
