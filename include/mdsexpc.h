@@ -150,28 +150,20 @@ struct mexp_cli {
 };
 
 /* 
- * This data structure will be used to handle ion failover and
- *   the reassignment of bmaps to other ions.  This data structure is
- *   pointed accessed from (sl_resm_t *)->resm_pri.
+ * mexp_ion - will be used to handle ion failover and the reassignment
+ *   of bmaps to other ions.  Mexp_ion is accessed from 
+ *  (sl_resm_t *)->resm_pri.
  */
 struct mexp_ion {
-	struct dynarray       mi_bmaps;  /* array of struct mexpbcm  */
-	struct dynarray       mi_bmaps_deref; /* dereferencing bmaps */
-	struct psclist_head   mi_lentry; /* chain ion's              */
-	atomic_t              mi_refcnt; /* num cli's using this ion */
+	struct dynarray       mi_bmaps;       /* array of struct mexpbcm     */
+	struct dynarray       mi_bmaps_deref; /* dereferencing bmaps         */
+	struct psclist_head   mi_lentry;      /* chain ion's                 */
+	atomic_t              mi_refcnt;      /* num cli's using this ion    */
 	int                   mi_alive;
 	struct timespec       mi_lastping;
 	struct slashrpc_cservice *mi_csvc;
 	sl_resm_t            *mi_resm;
 };
-
-struct mexp_mds {};
-
-/* 
- * bmap_exports is used to reference the exports which are accessing this bmap.
- */
-SPLAY_HEAD(bmap_exports, mexpbcm);
-SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
 
 /* 
  * bmi_assign - the structure used for tracking the mds's bmap / ion 
@@ -185,6 +177,11 @@ struct bmi_assign {
 	time_t       bmi_start;
 };
 
+/* 
+ * bmap_exports is used to reference the exports which are accessing this bmap.
+ */
+SPLAY_HEAD(bmap_exports, mexpbcm);
+SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
 /* 
  * bmap_mds_info - the bcm_pri data structure for the slash2 mds.  
  *   Bmap_mds_info holds all bmap specific context for the mds which 
