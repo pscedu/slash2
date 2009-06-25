@@ -52,51 +52,48 @@ fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 }
 #endif
 
-
 struct fidc_mds_info *
 fidc_fid2fmdsi(slfid_t f, struct fidc_membh **fcmh)
 {
-	int l=0;
-	//void *zfsdata;
 	struct fidc_mds_info *fmdsi=NULL;
-	
+	int locked;
+
 	*fcmh = fidc_lookup_inode(f);
 
 	if (!*fcmh)
 		return NULL;
-	
-	l = reqlock(&(*fcmh)->fcmh_lock);
-	if (!(*fcmh)->fcmh_fcoo) {
-		ureqlock(&(*fcmh)->fcmh_lock, l);
-		return NULL;
-	}
+
+	locked = reqlock(&(*fcmh)->fcmh_lock);
+	if (!(*fcmh)->fcmh_fcoo)
+		goto out;
 
 	if (fidc_fcoo_wait_locked((*fcmh), FCOO_NOSTART) < 0)
-		return NULL;
-	
-	psc_assert((*fcmh)->fcmh_fcoo->fcoo_pri);       
-	fmdsi = (*fcmh)->fcmh_fcoo->fcoo_pri;	
-	ureqlock(&(*fcmh)->fcmh_lock, l);
+		goto out;
+
+	psc_assert((*fcmh)->fcmh_fcoo->fcoo_pri);
+	fmdsi = (*fcmh)->fcmh_fcoo->fcoo_pri;
+ out:
+	ureqlock(&(*fcmh)->fcmh_lock, locked);
 	return (fmdsi);
 }
-
 
 struct fidc_mds_info *
 fidc_fcmh2fmdsi(struct fidc_membh *fcmh)
 {
-	int l=0;
 	struct fidc_mds_info *fmdsi;
-	
-	l = reqlock(&fcmh->fcmh_lock);
+	int locked;
+
+	fmdsi = NULL;
+	locked = reqlock(&fcmh->fcmh_lock);
 	if (!fcmh->fcmh_fcoo)
 		goto out;
 
 	if (fidc_fcoo_wait_locked(fcmh, FCOO_NOSTART) < 0)
-		return NULL;
+		goto out;
 
-	psc_assert(fcmh->fcmh_fcoo->fcoo_pri);  
-	fmdsi = fcmh->fcmh_fcoo->fcoo_pri;	
+	psc_assert(fcmh->fcmh_fcoo->fcoo_pri);
+	fmdsi = fcmh->fcmh_fcoo->fcoo_pri;
  out:
-	ureqlock(&fcmh->fcmh_lock, l);
+	ureqlock(&fcmh->fcmh_lock, locked);
 	return (fmdsi);
 }
