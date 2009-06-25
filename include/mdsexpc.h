@@ -239,7 +239,8 @@ struct fidc_mds_info {
 	void                     *fmdsi_data;
 };
 
-#define fcmh_2_inoh(f) (&((struct fidc_mds_info *)(&(f)->fcmh_fcoo->fcoo_pri))->fmdsi_inodeh)
+#define fcmh_2_inoh(f)							\
+	(&((struct fidc_mds_info *)(&(f)->fcmh_fcoo->fcoo_pri))->fmdsi_inodeh)
 
 static inline void
 fmdsi_init(struct fidc_mds_info *mdsi, void *pri)
