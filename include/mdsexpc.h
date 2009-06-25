@@ -176,20 +176,28 @@ struct bmi_assign {
 	time_t       bmi_start;
 };
 
-/*
- * bmap_mds_info - associate the fcache block to its respective export bmap caches.
- * Notes: both read and write clients are stored to bmdsi_exports, the ref counts are used to determine the number of both and hence the caching mode used at the clients.   bmdsi_wr_ion is a shortcut pointer used only when the bmap has client writers - all writers (and readers) are directed to this ion once a client has invoked write mode on the bmap.
+/* bmap_mds_info - the bcm_pri data structure for the slash2 mds.  
+ *   Bmap_mds_info holds all bmap specific context for the mds which 
+ *   includes the journal handle, ref counts for client readers and writers
+ *   a point to our ION, a tree of our client's exports, a pointer to the 
+ *   on-disk structure, a receipt for the odtable, and a reqset for issuing
+ *   callbacks (XXX is that really needed?).
+ * Notes: both read and write clients are stored to bmdsi_exports, the ref 
+ *   counts are used to determine the number of both and hence the caching 
+ *   mode used at the clients.   Bmdsi_wr_ion is a shortcut pointer used 
+ *   only when the bmap has client writers - all writers (and readers) are 
+ *   directed to this ion once a client has invoked write mode on the bmap.
  */
 struct bmap_mds_info {
-	u32                   bmdsi_xid;
-	struct jflush_item    bmdsi_jfi;
-        atomic_t              bmdsi_rd_ref;  /* count our cli read refs     */
-        atomic_t              bmdsi_wr_ref;  /* count our cli write refs    */
-	struct mexp_ion      *bmdsi_wr_ion;  /* ion export assigned to bmap */
-        struct bmap_exports   bmdsi_exports; /* tree of mexpbcm's           */
-	struct slash_bmap_od *bmdsi_od;
-	struct odtable_receipt    *bmdsi_assign;
-	struct pscrpc_request_set *bmdsi_reqset; /* cache callback rpc's    */
+	u32                        bmdsi_xid;     /* last op recv'd from ION */
+	struct jflush_item         bmdsi_jfi;     /* journal handle          */
+        atomic_t                   bmdsi_rd_ref;  /* reader clients          */
+        atomic_t                   bmdsi_wr_ref;  /* writer clients          */
+	struct mexp_ion           *bmdsi_wr_ion;  /* pointer to write ION    */
+        struct bmap_exports        bmdsi_exports; /* tree of client exports  */
+	struct slash_bmap_od      *bmdsi_od;      /* od-disk pointer         */
+	struct odtable_receipt    *bmdsi_assign;  /* odtable receipt         */
+	struct pscrpc_request_set *bmdsi_reqset;  /* cache callback rpc's    */
 };
 
 #define bmap_2_bmdsiod(b)			\
