@@ -26,7 +26,7 @@ enum fid_cache_users {
 #define SLASH_BMAP_SIZE  (128 * 1024 * 1024)
 #define SLASH_BMAP_WIDTH 8
 #define SLASH_BMAP_DEPTH 5
-#define SLASH_BMAP_SHIFT 11
+#define SLASH_BMAP_SHIFT 15   /* 2^SLASH_BMAP_SHIFT should == SLASH_BMAP_BLKSZ */
 /* End hand computed */
 
 #define SLASH_BMAP_BLKSZ (SLASH_BMAP_SIZE / power((size_t)SLASH_BMAP_WIDTH, \
