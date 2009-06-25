@@ -593,7 +593,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		goto out;
 
 	} else if (bmap->bcm_mode & BMAP_MDS_CRC_UP) {
-		/* Ensure that this thread is the only thread updating the 
+		/* Ensure that this thread is the only thread updating the
 		 *  bmap crc table.
 		 */
 		rc = -EALREADY;
@@ -678,11 +678,12 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
 	psc_crc_t crc;
 
 	*bmapod = PSCALLOC(BMAP_OD_SZ);
+#if 0
 	/* Try to pread() the bmap from the mds file.
 	 *  XXX replace with mds read ops.
 	 */
-	//	szrc = pread(f->fcmh_fd, *bmapod, BMAP_OD_SZ,
-	//	     (blkno * BMAP_OD_SZ));
+	szrc = pread(f->fcmh_fd, *bmapod, BMAP_OD_SZ,
+	     (blkno * BMAP_OD_SZ));
 
 	if (szrc != BMAP_OD_SZ) {
 		DEBUG_FCMH(PLL_WARN, f, "bmap (%u) pread (rc=%zd, e=%d)",
@@ -690,6 +691,7 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
 		rc = -errno;
 		goto out;
 	}
+#endif
 	PSC_CRC_CALC(crc, *bmapod, BMAP_OD_CRCSZ);
 	if (crc == SL_NULL_BMAPOD_CRC) {
 		/* sl_blkh_t may be a bit large for the stack.
@@ -803,7 +805,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		if ((*bmap)->bcm_mode & BMAP_MDS_INIT) {
 			/* Only the init bit is allowed to be set.
 			 */
-			psc_assert((*bmap)->bcm_mode == 
+			psc_assert((*bmap)->bcm_mode ==
 				   BMAP_MDS_INIT);
 			/* Sanity checks for BMAP_MDS_INIT
 			 */
@@ -841,7 +843,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		 *   until we have finished reading it from disk.
 		 */
 		FCMH_ULOCK(f);
-		
+
 		rc = mds_bmap_read(f, mq->blkno,
 				   &bmdsi->bmdsi_od);
 		if (rc)
