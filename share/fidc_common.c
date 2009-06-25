@@ -412,6 +412,8 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 	int try_create=0, simple_lookup=0;
 	struct fidc_membh *fcmh, *fcmh_new;
 
+	fcmh_new = NULL; /* gcc */
+
 	if (flags & FIDC_LOOKUP_COPY)
 		psc_assert(fcm);
 
