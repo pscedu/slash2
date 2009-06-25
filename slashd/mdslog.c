@@ -57,7 +57,7 @@ void
 mds_bmap_sync(void *data)
 {
 	struct bmapc_memb *bmap=data;
-	sl_blkh_t *bmapod=bmap_2_bmdsiod(bmap);
+	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
 	int rc;
 
 	rc = 0; /* gcc */
@@ -135,7 +135,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 {
 	struct slmds_jent_crc jcrc;
 	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
-	sl_blkh_t *bmapod = bmdsi->bmdsi_od;
+	struct slash_bmap_od *bmapod = bmdsi->bmdsi_od;
 	int i, rc=0;
 	int n=crcup->nups;
 	u32 t=0, j=0;

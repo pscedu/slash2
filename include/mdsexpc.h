@@ -174,8 +174,8 @@ struct bmap_mds_info {
         atomic_t              bmdsi_wr_ref;  /* count our cli write refs    */
 	struct mexp_ion      *bmdsi_wr_ion;  /* ion export assigned to bmap */
         struct bmap_exports   bmdsi_exports; /* tree of mexpbcm's           */
+	struct slash_bmap_od *bmdsi_od;
 	struct pscrpc_request_set *bmdsi_reqset; /* cache callback rpc's    */
-	struct slash_block_handle *bmdsi_od;
 };
 
 #define bmap_2_bmdsiod(b)			\
@@ -197,11 +197,11 @@ bmdsi_sanity_locked(struct bmapc_memb *bmap, int dio_check, int *wr)
 }
 
 struct fidc_mds_info {
-	struct fcm_exports fmdsi_exports; /* tree of mexpfcm */
-	sl_inodeh_t        fmdsi_inodeh; // MDS sl_inodeh_t goes here
-	atomic_t           fmdsi_ref;
-	u32                fmdsi_xid;
-	void              *fmdsi_data;
+	struct fcm_exports        fmdsi_exports; /* tree of mexpfcm */
+	struct slash_inode_handle fmdsi_inodeh; // MDS sl_inodeh_t goes here
+	atomic_t                  fmdsi_ref;
+	u32                       fmdsi_xid;
+	void                     *fmdsi_data;
 };
 
 #define fcmh_2_inoh(f) (&((struct fidc_mds_info *)(&(f)->fcmh_fcoo->fcoo_pri))->fmdsi_inodeh)

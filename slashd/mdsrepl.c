@@ -12,7 +12,7 @@
 
 #if 0
 __static int 
-mds_repl_xattr_load_locked(sl_inodeh_t *i)
+mds_repl_xattr_load_locked(struct slash_inode_handle *i)
 {
 	char fidfn[FID_MAX_PATH];
         size_t sz;
@@ -50,13 +50,13 @@ mds_repl_xattr_load_locked(sl_inodeh_t *i)
 
 
 int
-mds_repl_load_locked(sl_inodeh_t *i)
+mds_repl_load_locked(struct slash_inode_handle *i)
 {
 	return (0);
 }
 
 int 
-mds_repl_ios_lookup(sl_inodeh_t *i, sl_ios_id_t ios, int add)
+mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 {
 	u32 j;
 	int rc=-ENOENT;
@@ -103,12 +103,12 @@ mds_repl_ios_lookup(sl_inodeh_t *i, sl_ios_id_t ios, int add)
 int
 mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 {
-	sl_blkh_t *bmapod=bmap_2_bmdsiod(bmap);
+	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
 	int j, r, bumpgen=0, log=0;
 	u8 mask, *b=bmapod->bh_repls;
 	u32 pos, k;
 	//struct fidc_mds_info *fmdsi=bmap->bcm_fcmh->fcmh_fcoo->fcoo_pri;
-	//sl_inodeh_t *inoh=&fmdsi->fmdsi_inodeh;
+	//struct slash_inode_handle *inoh=&fmdsi->fmdsi_inodeh;
 
 	BMAP_LOCK_ENSURE(bmap);
 	/* Find our replica id else add ourselves.
@@ -162,7 +162,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 
 #else
 __static int 
-mds_repl_xattr_load_locked(__unusedx sl_inodeh_t *i) { return (0); }
+mds_repl_xattr_load_locked(__unusedx struct slash_inode_handle *i) { return (0); }
 
 int
 mds_repl_inv_except_locked(__unusedx struct bmapc_memb *bmap, __unusedx sl_ios_id_t ion) 

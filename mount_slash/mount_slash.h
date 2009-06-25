@@ -46,11 +46,11 @@ struct msfs_thread {
  */
 struct msbmap_data {
 	struct offtree_root       *msbd_oftr;
-	struct slash_block_handle *msbd_bmapi;
+	struct slash_bmap_od      *msbd_bmapi;
 	lnet_nid_t                 msbd_ion;
 };
 
-#define bmap_2_msoftr(b)			\
+#define bmap_2_msoftr(b)					\
 	((struct msbmap_data *)((b)->bcm_pri))->msbd_oftr
 
 #define bmap_2_msion(b)						\

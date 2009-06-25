@@ -18,7 +18,7 @@ __static int
 fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 {
 	char fidfn[FID_MAX_PATH];
-	ssize_t sz=sizeof(sl_inode_t);
+	ssize_t sz=sizeof(struct slash_inode_od);
 	psc_crc_t crc;
 	int rc;
 

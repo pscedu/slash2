@@ -197,7 +197,7 @@ __static int
 mds_bmap_fsz_check_locked(struct fidc_membh *f, sl_blkno_t n)
 {
 	struct fidc_mds_info *mdsi=f->fcmh_fcoo->fcoo_pri;
-	sl_inodeh_t *i=&mdsi->fmdsi_inodeh;
+	struct slash_inode_handle *i=&mdsi->fmdsi_inodeh;
 	//int rc;
 
 	FCMH_LOCK_ENSURE(f);
@@ -216,7 +216,7 @@ mds_bmap_fsz_check_locked(struct fidc_membh *f, sl_blkno_t n)
 	 *  checksum against the bmapod NULL chksum.  This method would cope
 	 *  with holes in the inode file.
 	 */
-	psc_assert((((i->inoh_ino.ino_lblk+1) * BMAP_OD_SZ) - 1)
+	psc_assert((((i->inoh_ino.ino_lblk + 1) * BMAP_OD_SZ) - 1)
 		   <= fcmh_2_fsz(f));
 	return ((n > i->inoh_ino.ino_lblk) ? n : 0);
 }
@@ -559,7 +559,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap;
 	struct bmap_mds_info *bmdsi;
-	sl_blkh_t *bmapod;
+	struct slash_bmap_od *bmapod;
 	int rc=0, wr[2];
 
 	fcmh = fidc_lookup_inode(c->fid);
@@ -653,7 +653,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
  *	writes something to it.
  */
 __static void
-mds_bmapod_initnew(sl_blkh_t *b)
+mds_bmapod_initnew(struct slash_bmap_od *b)
 {
 	int i;
 
@@ -671,7 +671,7 @@ mds_bmapod_initnew(sl_blkh_t *b)
  */
 __static int
 mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
-	      sl_blkh_t **bmapod)
+	      struct slash_bmap_od **bmapod)
 {
 	int rc=0;
 	psc_crc_t crc;
@@ -695,9 +695,9 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
 #endif
 	PSC_CRC_CALC(crc, *bmapod, BMAP_OD_CRCSZ);
 	if (crc == SL_NULL_BMAPOD_CRC) {
-		/* sl_blkh_t may be a bit large for the stack.
+		/* struct slash_bmap_od may be a bit large for the stack.
 		 */
-		sl_blkh_t *t = PSCALLOC(sizeof(sl_blkh_t));
+		struct slash_bmap_od *t = PSCALLOC(sizeof(struct slash_bmap_od));
 		int rc;
 		/* Hit the NULL crc, verify that this is not a collision
 		 *  by comparing with null bmapod.
@@ -755,7 +755,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	struct bmapc_memb tbmap;
 	struct fidc_membh *f=fref->mexpfcm_fcmh;
 	struct fidc_mds_info *fmdsi=f->fcmh_fcoo->fcoo_pri;
-	sl_inodeh_t *inoh=&fmdsi->fmdsi_inodeh;
+	struct slash_inode_handle *inoh=&fmdsi->fmdsi_inodeh;
 	struct mexpbcm *bref, tbref;
 	int rc=0;
 
@@ -906,8 +906,8 @@ mds_fidfs_lookup(const char *path, struct slash_creds *creds,
 		 struct fidc_membh **fcmh)
 {
 	int rc;
-	sl_inodeh_t  inoh;
-	size_t       sz=sizeof(sl_inode_t);
+	struct slash_inode_handle inoh;
+	size_t       sz = sizeof(struct slash_inode_od);
 	psc_crc_t    crc;
 
 	psc_assert(fcmh && !(*fcmh));

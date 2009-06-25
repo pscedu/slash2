@@ -16,7 +16,7 @@
 
 struct fidc_membh;
 struct fidc_open_obj;
-struct slash_block_handle;
+struct slash_bmap_od;
 
 struct bmap_refresh {
 	struct slash_fidgen	bmrfr_fg;
@@ -34,19 +34,6 @@ struct bmap_info_cli {
 
 #define BMAP_AUTH_SZ 8
 
-/*
- * bmap_info - for each block in the fidcache, associate the set of
- * possible I/O servers.
- * XXX needs work to fit with the new structures for replication bitmaps.
- */
-struct bmap_info {
-	lnet_nid_t		bmapi_ion;			/* MDS chosen io node  */
-	u32			bmapi_mode;			/* MDS tells cache pol */
-	unsigned char		bmapi_auth[BMAP_AUTH_SZ];	/* Our write key       */
-	struct slash_block_handle *bmapi_data;
-};
-
-// XXX should bmapi_mode be stored in bmap_info?
 enum bmap_cli_modes {
 	BMAP_CLI_RD   = (1<<0),  /* bmap has read creds       */
 	BMAP_CLI_WR   = (1<<1),  /* write creds               */
