@@ -626,6 +626,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	struct srm_io_rep         *mp;
 	int    i, n=dynarray_len(a), tblks=0, rc=0;
 
+	v = NULL; /* gcc */
 	psc_assert(n);
 	psc_assert(op == MSL_PAGES_PUT || op == MSL_PAGES_GET);
 
@@ -1032,11 +1033,6 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 		v = dynarray_getpos(a, i);
 		m = (struct offtree_memb *)v->oftiov_memb;
 
-		DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
-			      "OFT_IOV2E_OFF_(%zu) bufp=%p sz=%zu "
-			      "tsz=%zd nbytes=%zu",
-			      i, r->oftrq_off,  OFT_IOV2E_OFF_(v),
-			      p, oftrq_size_get(r), tsize, nbytes);
 		if (!tsize)
 			goto out;
 
@@ -1103,6 +1099,13 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 			psc_assert(tsize >= OFT_IOVSZ(v));
 			nbytes = MIN(OFT_IOVSZ(v), tsize);
 		}
+
+		DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
+			      "OFT_IOV2E_OFF_(%zu) bufp=%p sz=%zu "
+			      "tsz=%zd nbytes=%zu",
+			      i, r->oftrq_off,  OFT_IOV2E_OFF_(v),
+			      p, oftrq_size_get(r), tsize, nbytes);
+
 		/* Do the deed.
 		 */
 		memcpy(b, p, nbytes);
