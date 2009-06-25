@@ -397,9 +397,9 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 			/* First time this resm has been used.
 			 */
 			resm->resm_pri = PSCALLOC(sizeof(*mion));
-			mion = resm->resm_pri;
-			mds_mion_init(mion, resm);
+			mds_mion_init(resm->resm_pri, resm);
 		}
+		mion = resm->resm_pri;
 		freelock(&rmi->rmi_lock);
 
 		DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap,
