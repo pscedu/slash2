@@ -26,11 +26,17 @@
 
 struct pscrpc_export;
 /*
- * mexpbcm (mds_export_bmapc_member) - mexpbcm references bmaps stored in the GFC (global fid cache) and acts as a bridge between GFC bmaps and the export(s) which reference them.  mexpbcm is tracked by the global fidcache (through the fcm's bmap export tree (at the bottom of the GFC's tree chain).  The bmexpcr struct (fidcache.h) points to it.
+ * mexpbcm (mds_export_bmapc_member) - mexpbcm references bmaps stored in 
+ *   the GFC (global fid cache) and acts as a bridge between GFC bmaps and 
+ *   the export(s) which reference them.  Mexpbcm is tracked by the global 
+ *   fidcache (through the fcm's bmap export tree (at the bottom of the GFC's
+ *   tree chain).
  *
- * mexpbcm_lentry is used for scheduling revocation of the bmap via a listcache based queue.
+ * mexpbcm_lentry is used for scheduling revocation of the bmap via a 
+ *   listcache based queue.
  *
- * mexpbcm is the lowest member of the exp fidcache chain and corresponds to the GFC's bmap tier.
+ * mexpbcm is the lowest member of the exp fidcache chain and corresponds to 
+ *   the GFC's bmap tier.
  */
 struct mexpbcm {
 	sl_blkno_t              mexpbcm_blkno;
@@ -175,7 +181,7 @@ struct bmi_assign {
 	lnet_nid_t   bmi_ion_nid;
 	sl_ios_id_t  bmi_ios;
 	slfid_t      bmi_fid;
-	off_t        bmi_bmapno;
+	sl_blkno_t   bmi_bmapno;
 	time_t       bmi_start;
 };
 
