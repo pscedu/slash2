@@ -59,6 +59,8 @@ mds_bmap_sync(void *data)
 	struct bmapc_memb *bmap=data;
 	sl_blkh_t *bmapod=bmap_2_bmdsiod(bmap);
 	int rc;
+
+	rc = 0; /* gcc */
 	       
 	BMAP_LOCK(bmap);
 
@@ -69,6 +71,7 @@ mds_bmap_sync(void *data)
 		    BMAP_OD_SZ, (off_t)(BMAP_OD_SZ * bmap->bcm_blkno));
 #elif SLASH_ZFS_IO
 	rc = mdsio_zfs_bmap_write(b);	
+#else
 #endif
 	if (rc != BMAP_OD_SZ)
 		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail", rc, errno);
