@@ -674,11 +674,12 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
 	      sl_blkh_t **bmapod)
 {
 	int rc=0;
-	ssize_t szrc;
 	psc_crc_t crc;
 
 	*bmapod = PSCALLOC(BMAP_OD_SZ);
 #if 0
+	ssize_t szrc;
+
 	/* Try to pread() the bmap from the mds file.
 	 *  XXX replace with mds read ops.
 	 */
