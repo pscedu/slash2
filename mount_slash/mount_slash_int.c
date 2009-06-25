@@ -51,6 +51,8 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
 
 	r->oftrq_op = op;
 	r->oftrq_fdb = *fdb;
+	r->oftrq_bmap = b;
+
 	/* Set directio flag if the bmap is in dio mode, otherwise
 	 *  allocate an array for cache iovs.
 	 */
@@ -58,7 +60,6 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
 		r->oftrq_op |= OFTREQ_OP_DIO;
 		r->oftrq_off = off;
 		r->oftrq_len = len;
-		r->oftrq_bmap = b;
 		goto out;
 	}
 	/* Resume creating the cache-based request.
@@ -68,7 +69,6 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
 	r->oftrq_memb   = &r->oftrq_root->oftr_memb;
 	r->oftrq_width  = r->oftrq_depth = 0;
 	r->oftrq_off    = off & SLASH_BMAP_BLKMASK;
-	r->oftrq_bmap   = NULL;
 	/* Add the bits which were masked above.
 	 */
 	len += off & (~SLASH_BMAP_BLKMASK);
@@ -96,7 +96,7 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
 __static void
 msl_oftrq_destroy(struct offtree_req *r)
 {
-	struct bmapc_memb *b = r->oftrq_root->oftr_pri;
+	struct bmapc_memb *b = r->oftrq_bmap;
 
 	psc_assert(b);
 	psc_assert(r->oftrq_darray);
@@ -174,14 +174,14 @@ msl_bmap_free(struct bmapc_memb *b)
 __static int
 msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 {
+	struct bmapc_memb **bmaps, *bmap;
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
-	struct bmapc_memb **bmaps, *bmap;
 	struct msbmap_data *msbd;
 	struct iovec *iovs;
-	int rc=-1;
+	int nblks, rc=-1;
 	u32 i;
 
 	psc_assert(n && n < BMAP_MAX_GET);
@@ -213,6 +213,7 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 	}
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmaps (s=%u, n=%zu)", b, n);
 
+	nblks = 0;
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iovs, n);
 	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
 		/* Verify the return.
@@ -239,10 +240,8 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 			atomic_inc(&f->fcmh_fcoo->fcoo_bmapc_cnt);
 		}
 		freelock(&f->fcmh_lock);
-	} else
-		/* Something went wrong, free all bmaps.
-		 */
-		mp->nblks = 0;
+		nblks = mp->nblks;
+	}
  fail:
 	/* Free any slack.
 	 */
@@ -640,11 +639,11 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	/* Point to our bmap handle, it has the import information needed
 	 *  for the rpc request.  (Fid and ios id's)
 	 */
-	bcm = r->oftrq_root->oftr_pri;
+	bcm = r->oftrq_bmap;
 	imp = msl_bmap_to_import(bcm);
 	/* This pointer is only valid in DIO mode.
 	 */
-	psc_assert(!r->oftrq_bmap);
+	psc_assert(r->oftrq_bmap);
 
 	if ((rc = RSX_NEWREQ(imp, SRIC_VERSION,
 			     (op == MSL_PAGES_PUT ? SRMT_WRITE : SRMT_READ),
