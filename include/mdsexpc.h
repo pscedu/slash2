@@ -94,23 +94,23 @@ mexpbmapc_exp_cmp(const void *x, const void *y)
 SPLAY_HEAD(exp_bmaptree, mexpbcm);
 SPLAY_PROTOTYPE(exp_bmaptree, mexpbcm, mexpbcm_exp_tentry, mexpbmapc_cmp);
 /*
- * mexpfcm (mds_export_fidc_memb) - this structure interacts with the mds fid cache and the clients cache by mediation within the export.  It tracks which bmaps the client has cached, the operation (lamport) clocks of the fcm and the client.  mexpfcm is tracked by the export's fidcache and the fcm's bmap_lessees tree.
- * mecm_fcm_opcnt is used to detect changes in the fcm who keeps his update count in fcm_slfinfo.slf_opcnt.  At no time may mecm_fcm_opcnt be higher than the fcm (unless the fcm counter has flipped).  mecm_loc_opcnt and mecm_rem_opcnt serve a similar purpose but the update detection is between the client and the export.  So if client A updates the ctime or mode, exp(clientA) will inc mecm_fcm->fcm_slfinfo.slf_opcnt and desync the opcnt between the fcm and the other exports prompting the other exports to update their client's caches.  It may be the case that incrementing  mecm_fcm->fcm_slfinfo.slf_opcnt will cause rpc's to be sent to the set of clients using that fcm.
+ * mexpfcm (mds_export_fidc_memb) - this structure interacts with the mds 
+ *   fid cache and the clients cache by mediation within the export.  It 
+ *   tracks which bmaps the client has cached.  Mexpfcm is tracked by the 
+ *   export's fidcache and the fcm's bmap_lessees tree.
  *
- * mexpfcm is in the middle of the exp fc chain and corresponds with the GFC fcm tier.
+ * mexpfcm is in the middle of the exp fc chain and corresponds with the 
+ *   GFC fcm tier.
  */
 struct mexpfcm {
+        struct fidc_membh    *mexpfcm_fcmh;       /* point to the fcm        */
 	int                   mexpfcm_flags;
-        struct fidc_membh    *mexpfcm_fcmh;       /* point to the fcm*/
-	u64                   mexpfcm_fcm_opcnt;  /* detect fcm updates */
-	u64                   mexpfcm_loc_opcnt;  /* count outstanding updates */
-	u64                   mexpfcm_rem_opcnt;  /* detect remote updates */
         psc_spinlock_t        mexpfcm_lock;
 	union {
-		struct exp_bmaptree f_bmaps; /* my tree of bmap pointers */ 
+		struct exp_bmaptree f_bmaps;      /* tree of bmap pointers   */
 	} mexpfcm_ford;
-        struct pscrpc_export *mexpfcm_export;     /* backpointer to our export */
-        SPLAY_ENTRY(mexpfcm)  mexpfcm_fcm_tentry; /* fcm tree entry */
+        struct pscrpc_export *mexpfcm_export;     /* backpointer to export   */
+        SPLAY_ENTRY(mexpfcm)  mexpfcm_fcm_tentry; /* fcm tree entry          */
 #define mexpfcm_bmaps mexpfcm_ford.f_bmaps
 };
 
@@ -143,7 +143,8 @@ struct mexp_cli {
 	struct slashrpc_cservice *mc_csvc;
 };
 
-/* This data structure will be used to handle ion failover and
+/* 
+ * This data structure will be used to handle ion failover and
  *   the reassignment of bmaps to other ions.  This data structure is
  *   pointed accessed from (sl_resm_t *)->resm_pri.
  */
@@ -160,12 +161,14 @@ struct mexp_ion {
 
 struct mexp_mds {};
 
-/* This tree is used to reference the exports which are accessing this bmap.
+/* 
+ * bmap_exports is used to reference the exports which are accessing this bmap.
  */
 SPLAY_HEAD(bmap_exports, mexpbcm);
 SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
 
-/* bmi_assign - the structure used for tracking the mds's bmap / ion 
+/* 
+ * bmi_assign - the structure used for tracking the mds's bmap / ion 
  *   assignments.  These structures are stored in a odtable.
  */
 struct bmi_assign {
@@ -176,7 +179,8 @@ struct bmi_assign {
 	time_t       bmi_start;
 };
 
-/* bmap_mds_info - the bcm_pri data structure for the slash2 mds.  
+/* 
+ * bmap_mds_info - the bcm_pri data structure for the slash2 mds.  
  *   Bmap_mds_info holds all bmap specific context for the mds which 
  *   includes the journal handle, ref counts for client readers and writers
  *   a point to our ION, a tree of our client's exports, a pointer to the 
@@ -200,8 +204,14 @@ struct bmap_mds_info {
 	struct pscrpc_request_set *bmdsi_reqset;  /* cache callback rpc's    */
 };
 
-#define bmap_2_bmdsiod(b)			\
+#define bmap_2_bmdsiod(b)					\
 	(((struct bmap_mds_info *)((b)->bcm_pri))->bmdsi_od)
+
+#define bmap_2_bmdsjfi(b)					\
+	(((struct jflush_item *)((b)->bcm_pri))->bmdsi_jfi)
+
+#define bmap_2_bmdsassign(b)						\
+	(((struct odtable_receipt *)((b)->bcm_pri))->bmdsi_assign)
 
 SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
