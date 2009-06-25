@@ -208,13 +208,13 @@ struct bmap_mds_info {
 };
 
 #define bmap_2_bmdsiod(b)					\
-	(((struct bmap_mds_info *)((b)->bcm_pri))->bmdsi_od)
+	(struct slash_bmap_od *)(((struct bmap_mds_info *)((b)->bcm_pri))->bmdsi_od)
 
 #define bmap_2_bmdsjfi(b)					\
-	(((struct jflush_item *)((b)->bcm_pri))->bmdsi_jfi)
+	(struct jflush_item *)(&((struct bmap_mds_info *)((b)->bcm_pri))->bmdsi_jfi)
 
 #define bmap_2_bmdsassign(b)						\
-	(((struct odtable_receipt *)((b)->bcm_pri))->bmdsi_assign)
+	(struct odtable_receipt *)(((struct bmap_mds_info *)((b)->bcm_pri))->bmdsi_assign)
 
 SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
