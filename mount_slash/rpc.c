@@ -103,15 +103,13 @@ ion_get(void)
 	if (isc == NULL)
 		isc = psclist_first_entry(&io_server_conns,
 		    struct io_server_conn, isc_lentry);
-	else {
-		csvc = isc->isc_csvc;
-		e = psclist_next(&isc->isc_lentry);
-		if (e == &io_server_conns)
-			isc = NULL;
-		else
-			isc = psclist_entry(e, struct io_server_conn,
-			    isc_lentry);
-	}
+	csvc = isc->isc_csvc;
+	e = psclist_next(&isc->isc_lentry);
+	if (e == &io_server_conns)
+		isc = NULL;
+	else
+		isc = psclist_entry(e, struct io_server_conn,
+		    isc_lentry);
 	freelock(&lock);
 	return (csvc);
 }
