@@ -1,4 +1,4 @@
-/* $Id: mdsio_zfs.c 6602 2009-06-17 20:59:52Z pauln $ */
+/* $Id$ */
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
