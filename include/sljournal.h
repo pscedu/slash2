@@ -29,11 +29,14 @@ struct slmds_jent_inum {
 
 /* 
  * slmds_jent_crc - is used to log crc updates which come from the ION's.  
- * @sjc_ion: the ion who sent the request.  Upon reboot this is used to rebuild the mds's bmap <-> ion associations so that retried crc updates (ion -> mds) may succeed.
+ * @sjc_ion: the ion who sent the request.  Upon reboot this is used to 
+ *    rebuild the mds's bmap <-> ion associations so that retried crc 
+ *    updates (ion -> mds) may succeed.
  * @sjc_fid: what file.
  * @sjc_bmapno: which bmap region.
  * @sjc_crc: array of slots and crcs.
- * Notes: I presume that this will be the most common operation into the journal.   
+ * Notes: I presume that this will be the most common operation into the 
+ *    journal.   
  */
 struct slmds_jent_crc {
 	sl_ios_id_t             sjc_ion; /* Track the ion which did the I/O */
