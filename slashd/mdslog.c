@@ -61,40 +61,23 @@ mds_bmap_sync(void *data)
 	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
 	int rc;
 
-	rc = 0; /* gcc */
-
 	/* XXX At some point this lock should really be changed to
 	 *  a pthread_rwlock.
 	 */
 	BMAP_LOCK(bmap);
-
 	psc_crc_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
-
-#if SLASH_POSIX_IO
-	rc = pwrite(bmap->bcm_fcmh->fcmh_fd, bmapod,
-		    BMAP_OD_SZ, (off_t)(BMAP_OD_SZ * bmap->bcm_blkno));
-#elif SLASH_ZFS_IO
-	rc = mdsio_zfs_bmap_write(b);
-#else
-#endif
+	rc = mdsio_zfs_bmap_write(bmap);
 	if (rc != BMAP_OD_SZ)
 		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail", rc, errno);
 	else
 		DEBUG_BMAP(PLL_TRACE, bmap, "sync ok");
-
-#if SLASH_POSIX_IO
-	rc = fsync(bmap->bcm_fcmh->fcmh_fd);
-	if (rc < 0)
-		psc_fatal("fsync() failed");
-#endif
-
 	BMAP_ULOCK(bmap);
 }
 
 /**
  * mds_bmap_repl_log - write a modified replication table to the journal.
  * Note:  bmap must be locked to prevent further changes from sneaking in
- *    before the repl table is committed to the journal.
+ *	before the repl table is committed to the journal.
  */
 void
 mds_bmap_repl_log(struct bmapc_memb *bmap)

@@ -4,31 +4,14 @@
 #define _GNU_SOURCE
 #endif
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/syscall.h>
-#include <sys/fsuid.h>
-#include <sys/vfs.h>
-
-#include <errno.h>
-#include <fcntl.h>
-#include <inttypes.h>
-#include <unistd.h>
-
-#include "psc_util/lock.h"
-
 #include "fidcache.h"
-#include "inode.h"
-#include "bmap.h"
-#include "mds.h"
 #include "fidc_mds.h"
-#include "mdsexpc.h"
+#include "bmap.h"
+#include "slashdthr.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-extern void *zfsVfs;
-
-static inline void * 
+static inline void *
 bmap_2_zfs_fh(struct bmapc_memb *bmap)
 {
 	struct fidc_mds_info *fmdsi;
@@ -39,31 +22,56 @@ bmap_2_zfs_fh(struct bmapc_memb *bmap)
 
 	psc_assert(fmdsi);
 	psc_assert(fmdsi->fmdsi_data);
-	
+
 	return (fmdsi->fmdsi_data);
 }
 
-#define mdsio_zfs_bmap_read(b) mdsio_zfs_bmap_io(b, 1)
-#define mdsio_zfs_bmap_write(b) mdsio_zfs_bmap_io(b, 0)
+int
+mdsio_zfs_bmap_read(struct bmapc_memb *bmap)
+{
+	struct slash_creds cred = { 0, 0 };
+	struct bmap_mds_info *bmdsi;
+	int rc;
+
+	bmdsi = bmap->bcm_pri;
+
+#if 0
+	rc = pread(bmap->bcm_fcmh->fcmh_fd, bmdsi->bmdsi_od,
+	    BMAP_OD_SZ, (off_t)(BMAP_OD_SZ * bmap->bcm_blkno));
+#else
+	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(bmap->bcm_fcmh), &cred,
+	    (void *)bmap_2_bmdsiod(bmap), sizeof(*bmdsi->bmdsi_od),
+	    (off_t)(BMAP_OD_SZ * bmap->bcm_blkno), bmap_2_zfs_fh(bmap));
+#endif
+	return (rc);
+}
 
 int
-mdsio_zfs_bmap_io(struct bmapc_memb *bmap, int rw)
+mdsio_zfs_bmap_write(struct bmapc_memb *bmap)
 {
+	struct slash_creds cred = { 0, 0 };
+	struct bmap_mds_info *bmdsi;
 	int rc;
-	struct slash_creds cred = {0,0};
 
-	if (rw)
-		rc = zfsslash2_read(zfsVfs, fcmh_2_fid(bmap->bcm_fcmh), &cred,
-			    (void *)bmap_2_bmdsiod(bmap), 
-			    sizeof(struct slash_bmap_od),
-			    (off_t)(BMAP_OD_SZ * bmap->bcm_blkno),
-			    bmap_2_zfs_fh(bmap));
-
-	else
-		rc = zfsslash2_write(zfsVfs, fcmh_2_fid(bmap->bcm_fcmh), &cred,
-			     (void *)bmap_2_bmdsiod(bmap), 
-			     sizeof(struct slash_bmap_od),
-			     (off_t)(BMAP_OD_SZ * bmap->bcm_blkno),
-			     bmap_2_zfs_fh(bmap));	
+	bmdsi = bmap->bcm_pri;
+#if 0
+	rc = pwrite(bmap->bcm_fcmh->fcmh_fd, bmdsi->bmdsi_od,
+	    BMAP_OD_SZ, (off_t)(BMAP_OD_SZ * bmap->bcm_blkno));
+	if (rc == BMAP_OD_SZ) {
+		rc = fsync(bmap->bcm_fcmh->fcmh_fd);
+		if (rc == -1)
+			psc_fatal("fsync() failed");
+	}
+#else
+	rc = zfsslash2_write(zfsVfs, fcmh_2_fid(bmap->bcm_fcmh), &cred,
+	    (void *)bmap_2_bmdsiod(bmap), sizeof(*bmdsi->bmdsi_od),
+	    (off_t)(BMAP_OD_SZ * bmap->bcm_blkno), bmap_2_zfs_fh(bmap));
+	if (rc == BMAP_OD_SZ) {
+		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(bmap->bcm_fcmh),
+		    &cred, 1, bmap_2_zfs_fh(bmap));
+		if (rc == -1)
+			psc_fatal("zfsslash2_fsync() failed");
+	}
+#endif
 	return (rc);
 }

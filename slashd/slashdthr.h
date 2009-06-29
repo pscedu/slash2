@@ -9,6 +9,7 @@
 #include "inode.h"
 
 struct slash_sb_mem;
+struct bmapc_memb;
 
 /* Slash server thread types. */
 #define SLTHRT_CTL		0	/* control */
@@ -49,7 +50,12 @@ void	slctlthr_main(const char *);
 int  fid_get(const char *, struct slash_fidgen *,
 	struct slash_creds *, int, mode_t);
 
+int mdsio_zfs_bmap_read(struct bmapc_memb *);
+int mdsio_zfs_bmap_write(struct bmapc_memb *);
+
 extern struct slash_sb_mem	slSuperBlk;
 extern int                      slSuperFd;
+
+extern void			*zfsVfs;
 
 #endif /* _SLASH_H_ */

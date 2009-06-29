@@ -1,5 +1,9 @@
 /* $Id$ */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "psc_ds/tree.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
@@ -14,10 +18,13 @@
 #include "mdscoh.h"
 #include "mdsexpc.h"
 #include "mdsrpc.h"
+#include "slashdthr.h"
 #include "slashexport.h"
 
+struct slash_bmap_od null_bmap_od;
 struct cfdops mdsCfdOps;
 struct sl_fsops mdsFsops;
+
 extern list_cache_t pndgBmapCbs;
 
 __static SPLAY_GENERATE(fcm_exports, mexpfcm,
@@ -670,62 +677,63 @@ mds_bmapod_initnew(struct slash_bmap_od *b)
  * @bmapod: on disk structure containing crc's and replication bitmap.
  */
 __static int
-mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
-	      struct slash_bmap_od **bmapod)
+mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 {
-	int rc=0;
+	struct bmap_mds_info *bmdsi;
 	psc_crc_t crc;
-
-	*bmapod = PSCALLOC(BMAP_OD_SZ);
-#if 0
 	ssize_t szrc;
+	int rc=0;
+
+	bmdsi = bcm->bcm_pri;
+	psc_assert(bmdsi->bmdsi_od == NULL);
+	bmdsi->bmdsi_od = PSCALLOC(BMAP_OD_SZ);
 
 	/* Try to pread() the bmap from the mds file.
-	 *  XXX replace with mds read ops.
 	 */
-	szrc = pread(f->fcmh_fd, *bmapod, BMAP_OD_SZ,
-	     (blkno * BMAP_OD_SZ));
+	szrc = mdsio_zfs_bmap_read(bcm);
 
-	if (szrc != BMAP_OD_SZ) {
-		DEBUG_FCMH(PLL_WARN, f, "bmap (%u) pread (rc=%zd, e=%d)",
-			   blkno, szrc, errno);
-		rc = -errno;
+	/* EOF means the bmap does not exist */
+	if (szrc == 0)
+		goto new;
+
+	/* read failed, report bad news */
+	if (szrc == -1) {
+		DEBUG_FCMH(PLL_WARN, f, "mdsio_zfs_bmap_read: "
+		    "blkno=%u, errno=%d", blkno, errno);
 		goto out;
 	}
-#endif
-	PSC_CRC_CALC(crc, *bmapod, BMAP_OD_CRCSZ);
-	if (crc == SL_NULL_BMAPOD_CRC) {
-		/* struct slash_bmap_od may be a bit large for the stack.
-		 */
-		struct slash_bmap_od *t = PSCALLOC(sizeof(struct slash_bmap_od));
-		int rc;
-		/* Hit the NULL crc, verify that this is not a collision
-		 *  by comparing with null bmapod.
-		 */
-		rc = memcmp(t, *bmapod, sizeof(*t));
-		PSCFREE(t);
-		if (rc)
-			goto crc_fail;
-		else {
-			/* It really is a null bmapod, create a new, blank
-			 *  bmapod for the cache.
-			 */
-			mds_bmapod_initnew(*bmapod);
-		}
-	} else if (crc != (*bmapod)->bh_bhcrc)
-		goto crc_fail;
- out:
-	if (rc) {
-		PSCFREE(*bmapod);
-		*bmapod = NULL;
-	}
-	return (rc);
 
- crc_fail:
-	DEBUG_FCMH(PLL_WARN, f, "bmap (%u) crc failed want(%zu) got(%zu)",
-		   blkno, (*bmapod)->bh_bhcrc, crc);
+	/* short read, report an I/O error */
+	if (szrc != BMAP_OD_SZ) {
+		DEBUG_FCMH(PLL_WARN, f, "mdsio_zfs_bmap_read: "
+		    "blkno=%u, short I/O", blkno);
+		rc = -EIO;
+		goto out;
+	}
+
+	/*
+	 * Check for a NULL CRC, which can happen when
+	 * bmaps are gaps that have not been written yet.
+	 */
+	if (bmdsi->bmdsi_od->bh_bhcrc == 0 && memcmp(bmdsi->bmdsi_od,
+	    &null_bmap_od, sizeof(null_bmap_od)) == 0) {
+ new:
+		mds_bmapod_initnew(bmdsi->bmdsi_od);
+		return (0);
+	}
+
+	/* calculate and check the CRC now */
+	PSC_CRC_CALC(crc, bmdsi->bmdsi_od, BMAP_OD_CRCSZ);
+	if (crc == bmdsi->bmdsi_od->bh_bhcrc)
+		return (0);
+
+	DEBUG_FCMH(PLL_WARN, f, "CRC failed; blkno=%u, want=%"PRIx64", got=%"PRIx64,
+	    blkno, bmdsi->bmdsi_od->bh_bhcrc, crc);
 	rc = -EIO;
-	goto out;
+ out:
+	PSCFREE(bmdsi->bmdsi_od);
+	bmdsi->bmdsi_od = NULL;
+	return (rc);
 }
 
 /**
@@ -845,8 +853,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		 */
 		FCMH_ULOCK(f);
 
-		rc = mds_bmap_read(f, mq->blkno,
-				   &bmdsi->bmdsi_od);
+		rc = mds_bmap_read(f, mq->blkno, *bmap);
 		if (rc)
 			goto fail;
 
