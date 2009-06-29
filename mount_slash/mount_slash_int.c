@@ -132,6 +132,7 @@ msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f)
 	struct msbmap_data *msbd;
 
 	memset(b, 0, sizeof(*b));
+	LOCK_INIT(&b->bcm_lock);
 	atomic_set(&b->bcm_opcnt, 0);
 	psc_waitq_init(&b->bcm_waitq);
 	b->bcm_pri = msbd = PSCALLOC(sizeof(*msbd));
