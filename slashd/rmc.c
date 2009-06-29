@@ -158,7 +158,7 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	struct srm_bmap_rep *mp;
 	struct bmapc_memb *bmap;
 	struct mexpfcm *m;
-	struct iovec iov;
+	struct iovec iov[2];
 	uint64_t cfd;
 
 	ENTRY;
@@ -178,10 +178,13 @@ slrmc_getbmap(struct pscrpc_request *rq)
 		mp->rc = mds_bmap_load(m, mq, &bmap);
 		if (mp->rc == 0) {
 			bmdsi = bmap->bcm_pri;
-			iov.iov_base = bmdsi->bmdsi_od;
-			iov.iov_len = sizeof(*bmdsi->bmdsi_od);
+			iov[0].iov_base = bmdsi->bmdsi_od;
+			iov[0].iov_len = sizeof(*bmdsi->bmdsi_od);
+			iov[1].iov_base =
+			    &bmdsi->bmdsi_wr_ion->mi_resm->resm_res->res_id;
+			iov[1].iov_len = sizeof(uint32_t);
 			mp->rc = rsx_bulkserver(rq, &desc,
-			    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
+			    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, 2);
 			pscrpc_free_bulk(desc);
 //			mds_bmap_ref_del(m);
 			mp->nblks = 1;

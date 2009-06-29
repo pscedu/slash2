@@ -171,7 +171,7 @@ struct srm_access_req {
 struct srm_bmap_req {
 	struct srt_fd_buf	sfdb;
 	uint64_t		fid;		/* Optional, may be filled in server-side */
-	uint32_t		pios;		/* preferred ios (provided by client)     */
+	uint32_t		pios;		/* preferred ios id (provided by client)  */
 	uint32_t		blkno;		/* Starting block number                  */
 	uint32_t		nblks;		/* Read-ahead support                     */
 	uint32_t		dio;		/* Client wants directio                  */
@@ -181,6 +181,16 @@ struct srm_bmap_req {
 struct srm_bmap_rep {
 	uint32_t		nblks;		/* The number of bmaps actually returned */
 	uint32_t		rc;
+/*
+ * Bulk data contains a number of the following structures:
+ *
+ *	+----------------------+----------------+
+ *	| data type            | description    |
+ *	+----------------------+----------------+
+ *	| struct slash_bmap_od | bmap contents  |
+ *	| uint32_t             | I/O server ID  |
+ *	+----------------------+----------------+
+ */
 };
 
 struct srm_bmap_mode_req {
