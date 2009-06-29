@@ -61,16 +61,19 @@ mds_bmap_sync(void *data)
 	int rc;
 
 	rc = 0; /* gcc */
-	       
+
+	/* XXX At some point this lock should really be changed to 
+	 *  a pthread_rwlock.
+	 */
 	BMAP_LOCK(bmap);
 
 	psc_crc_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
-	/* XXX replace with ZFS write calls */
+
 #if SLASH_POSIX_IO
 	rc = pwrite(bmap->bcm_fcmh->fcmh_fd, bmapod, 
 		    BMAP_OD_SZ, (off_t)(BMAP_OD_SZ * bmap->bcm_blkno));
 #elif SLASH_ZFS_IO
-	rc = mdsio_zfs_bmap_write(b);	
+	rc = mdsio_zfs_bmap_write(b);
 #else
 #endif
 	if (rc != BMAP_OD_SZ)
@@ -89,7 +92,8 @@ mds_bmap_sync(void *data)
 
 /**
  * mds_bmap_repl_log - write a modified replication table to the journal.
- * Note:  bmap must be locked to prevent further changes from sneaking in before the repl table is committed to the journal.
+ * Note:  bmap must be locked to prevent further changes from sneaking in 
+ *    before the repl table is committed to the journal.
  */
 void
 mds_bmap_repl_log(struct bmapc_memb *bmap) 
@@ -128,7 +132,12 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
  * @bmap: the bmap (not locked).
  * @crcs: array of crc / slot pairs.
  * @n: the number of crc / slot pairs.
- * Notes: bmap_crc_writes from the ION are sent here directly because this function is responsible for updating the cached bmap after the crc has been committed to the journal.  This allows us to not have to hold the lock while doing journal I/O with the caveat that we trust the ION to not send multiple crc updates for the same region which me may then process out of order.
+ * Notes: bmap_crc_writes from the ION are sent here directly because this 
+ *    function is responsible for updating the cached bmap after the crc 
+ *    has been committed to the journal.  This allows us to not have to 
+ *    hold the lock while doing journal I/O with the caveat that we trust 
+ *    the ION to not send multiple crc updates for the same region which 
+ *    me may then process out of order.
  */
 void
 mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
@@ -169,7 +178,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		 *  BMAP_MDS_CRC_UP is protecting the crc table from other 
 		 *  threads who may like to update.  Besides at this moment, 
 		 *  on the ION updating us has the real story on this bmap's
-		 *  CRCs.
+		 *  CRCs and all I/O for this bmap is being directed to it.
 		 */
 		//BMAP_LOCK(bmap);
 		for (t+=i; j < t; j++) {
@@ -230,8 +239,12 @@ mds_sb_sync(void *data)
 
 /**
  * mds_sb_getinum - get the next inode number from the sb structure.
- * Notes:  the inode is composed of a counter of size SL_SUPER_INODE_BITS which is prepended by the mds id bits.
- * Notes1: mds_sb_getinum() does not hold the sb lock while performing journal I/O.  This is because the highest sji_inum number is taken from the journal (upon restart) not the value at the latest position.  So in other words, out of order jentries for inum updates don't matter.
+ * Notes:  the inode is composed of a counter of size SL_SUPER_INODE_BITS 
+ *    which is prepended by the mds id bits.
+ * Notes1: mds_sb_getinum() does not hold the sb lock while performing 
+ *    journal I/O.  This is because the highest sji_inum number is taken 
+ *    from the journal (upon restart) not the value at the latest position.
+ *    So in other words, out of order jentries for inum updates don't matter.
  */
 sl_inum_t 
 mds_sb_getinum(void)
