@@ -16,9 +16,9 @@
 #include "cfd.h"
 #include "fid.h"
 #include "rpc.h"
-#include "mds.h"
 #include "slashdthr.h"
 #include "slashrpc.h"
+#include "mds_bmap.h"
 
 int
 slrmi_bmap_crcwrt(struct pscrpc_request *rq)

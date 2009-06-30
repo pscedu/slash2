@@ -1,5 +1,8 @@
 /* $Id$ */
 
+#ifndef _MOUNT_SLASH_H_
+#define _MOUNT_SLASH_H_
+
 #include <sys/types.h>
 
 #include <stdarg.h>
@@ -42,20 +45,6 @@ struct msrcm_thread {
 struct msfs_thread {
 };
 
-/* msbmap_data - assigned to bmap->bcm_pri for mount slash client.
- */
-struct msbmap_data {
-	struct offtree_root       *msbd_oftr;
-	struct slash_bmap_od      *msbd_bmapi;
-	lnet_nid_t                 msbd_ion;
-};
-
-#define bmap_2_msoftr(b)					\
-	((struct msbmap_data *)((b)->bcm_pri))->msbd_oftr
-
-#define bmap_2_msion(b)						\
-	((struct msbmap_data *)((b)->bcm_pri))->msbd_ion
-
 /* msl_fbr (mount_slash fhent bmap ref).
  *
  */
@@ -64,6 +53,47 @@ struct msl_fbr {
 	atomic_t		 mfbr_acnt;    /* access counter */
 	SPLAY_ENTRY(msl_fbr)	 mfbr_tentry;
 };
+
+SPLAY_HEAD(fhbmap_cache, msl_fbr);
+
+struct msl_fhent {		/* XXX rename */
+	psc_spinlock_t         mfh_lock;
+	struct fidc_membh     *mfh_fcmh;
+	struct fhbmap_cache    mfh_fhbmap_cache;
+};
+
+struct io_server_conn {
+	struct psclist_head		 isc_lentry;
+	struct slashrpc_cservice	*isc_csvc;
+};
+
+void rpc_initsvc(void);
+int msrmc_connect(const char *);
+int msric_connect(const char *);
+int msrcm_handler(struct pscrpc_request *);
+
+void *msctlthr_begin(void *);
+
+struct slashrpc_cservice *ion_get(void);
+
+#define msl_read(fh, buf, size, off)  msl_io((fh), (buf), (size), (off), MSL_READ)
+#define msl_write(fh, buf, size, off) msl_io((fh), (buf), (size), (off), MSL_WRITE)
+
+int msl_io(struct msl_fhent *, char *, size_t, off_t, int);
+int msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+int msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+
+struct msl_fhent *msl_fhent_new(struct fidc_membh *);
+
+void mseqpollthr_spawn(void);
+void msctlthr_spawn(void);
+void mstimerthr_spawn(void);
+
+#define mds_import	(mds_csvc->csvc_import)
+
+extern struct slashrpc_cservice *mds_csvc;
+extern char ctlsockfn[];
+extern sl_ios_id_t prefIOS;
 
 static inline void
 msl_fbr_ref(struct msl_fbr *r, int rw)
@@ -109,15 +139,6 @@ fhbmap_cache_cmp(const void *x, const void *y)
 	return (bmapc_cmp(rx->mfbr_bmap, ry->mfbr_bmap));
 }
 
-SPLAY_HEAD(fhbmap_cache, msl_fbr);
-SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
-
-struct msl_fhent {		/* XXX rename */
-	psc_spinlock_t         mfh_lock;
-	struct fidc_membh     *mfh_fcmh;
-	struct fhbmap_cache    mfh_fhbmap_cache;
-};
-
 static inline struct srt_fd_buf *
 mslfh_2_fdb(struct msl_fhent *mfh)
 {
@@ -141,6 +162,8 @@ fcmh_2_fdb(struct fidc_membh *f)
 	return (&f->fcmh_fcoo->fcoo_fdb);
 }
 
+SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
+
 static inline struct msl_fbr *
 fhcache_bmap_lookup(struct msl_fhent *mfh, struct bmapc_memb *b)
 {
@@ -157,35 +180,4 @@ fhcache_bmap_lookup(struct msl_fhent *mfh, struct bmapc_memb *b)
         return (r);
 }
 
-struct io_server_conn {
-	struct psclist_head		 isc_lentry;
-	struct slashrpc_cservice	*isc_csvc;
-};
-
-void rpc_initsvc(void);
-int msrmc_connect(const char *);
-int msric_connect(const char *);
-int msrcm_handler(struct pscrpc_request *);
-
-void *msctlthr_begin(void *);
-
-struct slashrpc_cservice *ion_get(void);
-
-#define msl_read(fh, buf, size, off)  msl_io(fh, buf, size, off, MSL_READ)
-#define msl_write(fh, buf, size, off) msl_io(fh, buf, size, off, MSL_WRITE)
-
-int msl_io(struct msl_fhent *, char *, size_t, off_t, int);
-int msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-int msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-
-struct msl_fhent *msl_fhent_new(struct fidc_membh *);
-
-void mseqpollthr_spawn(void);
-void msctlthr_spawn(void);
-void mstimerthr_spawn(void);
-
-#define mds_import	(mds_csvc->csvc_import)
-
-extern struct slashrpc_cservice *mds_csvc;
-extern char ctlsockfn[];
-extern sl_ios_id_t prefIOS;
+#endif /* _MOUNT_SLASH_H_ */

@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef HAVE_SLASHCONFIG_INC
-#define HAVE_SLASHCONFIG_INC
+#ifndef _SLCONFIG_H_
+#define _SLCONFIG_H_
 
 #define SITE_NAME_MAX 64
 #define RES_NAME_MAX  64
@@ -102,17 +102,20 @@ typedef struct resource_member {
 	void             *resm_pri;
 } sl_resm_t;
 
+struct site_profile	*slcfg_new_site(void);
+struct resource_profile	*slcfg_new_res(void);
+struct resource_member	*slcfg_new_resm(void);
+
 extern sl_nodeh_t nodeInfo;
 extern sl_gconf_t globalConfig;
 
 static inline void
 libsl_nid_associate(lnet_nid_t nid, sl_resource_t *res)
 {
-	sl_resm_t *resm = PSCALLOC(sizeof(sl_resm_t));
+	sl_resm_t *resm = slcfg_new_resm();
 
 	resm->resm_nid = nid;
 	resm->resm_res = res;
-	/* XXX check sizeof(u64) == sizeof(lnet_nid_t) */
 	init_hash_entry(&resm->resm_hashe, (void *)&resm->resm_nid, resm);
 	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hashe);
 }
@@ -307,6 +310,6 @@ libsl_init(int server)
 	libsl_profile_dump();
 }
 
-int run_yacc(const char *config_file);
+int run_yacc(const char *);
 
-#endif /* HAVE_SLASHCONFIG_INC */
+#endif /* _SLCONFIG_H_ */

@@ -21,12 +21,13 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
 
-#include "slconfig.h"
-#include "mount_slash.h"
-#include "slashrpc.h"
-#include "offtree.h"
-#include "fidcache.h"
 #include "bmap.h"
+#include "cli_bmap.h"
+#include "fidcache.h"
+#include "mount_slash.h"
+#include "offtree.h"
+#include "slashrpc.h"
+#include "slconfig.h"
 
 #define MSL_PAGES_GET 0
 #define MSL_PAGES_PUT 1
@@ -242,7 +243,9 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 		}
 		freelock(&f->fcmh_lock);
 		nblks = mp->nblks;
+		bmap_2_msion(bmaps[0]) = mp->ios_nid;
 	}
+
  fail:
 	/* Free any slack.
 	 */

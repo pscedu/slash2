@@ -21,7 +21,6 @@
 #include "psc_util/strlcpy.h"
 
 #include "slconfig.h"
-#include "mdsexpc.h"
 
 enum sym_types {
 	SL_FUNCTION = 1,
@@ -148,10 +147,12 @@ int cfgMode = SL_STRUCT_GLOBAL;
 %token NONE
 
 %%
+
 config         : globals site_profiles
 {
-	sl_site_t     *s=NULL;
-	sl_resource_t *r=NULL;
+	sl_site_t     *s;
+	sl_resource_t *r;
+
 	/*
 	 * Config has been loaded, iterate through the sites'
 	 *  peer lists and resolve the names to numerical id's.
@@ -190,8 +191,7 @@ site_profile   : site_profile_start site_defs SUBSECT_END
 {
 	psclist_xadd(&currentSite->site_lentry,
 		    &currentConf->gconf_sites);
-	currentSite = PSCALLOC(sizeof(sl_site_t));
-	INIT_SITE(currentSite);
+	currentSite = slcfg_new_site();
 };
 
 site_profile_start : SITE_PROFILE SITE_NAME SUBSECT_START
@@ -218,18 +218,9 @@ site_resource  : site_resource_start resource_def SUBSECT_END
 						currentRes->res_id,
 						currentRes->res_mds);
 
-	if (currentRes->res_type == parallel_fs) {
-		struct resprof_mds_info *rmi;
-
-		rmi = PSCALLOC(sizeof(*rmi));
-		LOCK_INIT(&rmi->rmi_lock);
-		currentRes->res_pri = rmi;
-	}
-
 	psclist_xadd(&currentRes->res_lentry,
 		    &currentSite->site_resources);
-	currentRes = PSCALLOC(sizeof(sl_resource_t));
-	INIT_RES(currentRes);
+	currentRes = slcfg_new_res();
 };
 
 site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
@@ -417,7 +408,7 @@ get_symbol(const char *name)
 
         psc_notify("symbol lookup '%s'", name);
 
-        for (e = sym_table; e != NULL && e->name != NULL ; e++)
+        for (e = sym_table; e != NULL && e->name != NULL; e++)
                 if (e->name && !strcmp(e->name, name))
                         break;
 
@@ -518,14 +509,15 @@ store_tok_val(const char *tok, char *val)
 			f = atof(val);
 			c = floatbuf;
 
-			bzero(floatbuf, 16);
-			snprintf(floatbuf, 16, "%f", f);
+			bzero(floatbuf, sizeof(floatbuf));
+			snprintf(floatbuf, sizeof(floatbuf), "%f", f);
 
 			psc_trace("float_val %f '%s'",
 				f, floatbuf);
 
 			while (*(c++) != '\0')
-				if (*c == '.') *c = '\0';
+				if (*c == '.')
+					*c = '\0';
 
 			*(long *)ptr = strtol(floatbuf, NULL, 10);
 
@@ -594,11 +586,9 @@ run_yacc(const char *config_file)
 	cfg_filename = config_file;
 
 	/* Pre-allocate the first resource and site */
-	currentSite = PSCALLOC(sizeof(sl_site_t));
-	currentRes  = PSCALLOC(sizeof(sl_resource_t));
+	currentSite = slcfg_new_site();
+	currentRes = slcfg_new_res();
 
-	INIT_SITE(currentSite);
-	INIT_RES(currentRes);
 	INIT_GCONF(&globalConfig);
 
 	cfg_lineno = 1;
@@ -609,7 +599,8 @@ run_yacc(const char *config_file)
 	if (errors)
 		psc_fatalx("%d error(s) encountered", errors);
 
-	/* Sanity checks */
+	free(currentRes);
+	free(currentSite);
 
 	return 0;
 }

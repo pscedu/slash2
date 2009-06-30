@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef MDSEXPC_H
-#define MDSEXPC_H 1
+#ifndef _MDSEXPC_H_
+#define _MDSEXPC_H_
 
 /*
  * These structures provide back pointers into the Fid Cache to
@@ -23,19 +23,21 @@
 #include "slashrpc.h"
 #include "inodeh.h"
 #include "bmap.h"
+#include "mds_bmap.h"
 
 struct pscrpc_export;
+
 /*
- * mexpbcm (mds_export_bmapc_member) - mexpbcm references bmaps stored in 
- *   the GFC (global fid cache) and acts as a bridge between GFC bmaps and 
- *   the export(s) which reference them.  Mexpbcm is tracked by the global 
+ * mexpbcm (mds_export_bmapc_member) - mexpbcm references bmaps stored in
+ *   the GFC (global fid cache) and acts as a bridge between GFC bmaps and
+ *   the export(s) which reference them.  Mexpbcm is tracked by the global
  *   fidcache (through the fcm's bmap export tree (at the bottom of the GFC's
  *   tree chain).
  *
- * mexpbcm_lentry is used for scheduling revocation of the bmap via a 
+ * mexpbcm_lentry is used for scheduling revocation of the bmap via a
  *   listcache based queue.
  *
- * mexpbcm is the lowest member of the exp fidcache chain and corresponds to 
+ * mexpbcm is the lowest member of the exp fidcache chain and corresponds to
  *   the GFC's bmap tier.
  */
 struct mexpbcm {
@@ -99,13 +101,14 @@ mexpbmapc_exp_cmp(const void *x, const void *y)
 
 SPLAY_HEAD(exp_bmaptree, mexpbcm);
 SPLAY_PROTOTYPE(exp_bmaptree, mexpbcm, mexpbcm_exp_tentry, mexpbmapc_cmp);
+
 /*
- * mexpfcm (mds_export_fidc_memb) - this structure interacts with the mds 
- *   fid cache and the clients cache by mediation within the export.  It 
- *   tracks which bmaps the client has cached.  Mexpfcm is tracked by the 
+ * mexpfcm (mds_export_fidc_memb) - this structure interacts with the mds
+ *   fid cache and the clients cache by mediation within the export.  It
+ *   tracks which bmaps the client has cached.  Mexpfcm is tracked by the
  *   export's fidcache and the fcm's bmap_lessees tree.
  *
- * mexpfcm is in the middle of the exp fc chain and corresponds with the 
+ * mexpfcm is in the middle of the exp fc chain and corresponds with the
  *   GFC fcm tier.
  */
 struct mexpfcm {
@@ -136,7 +139,7 @@ static inline int
 mexpfcm_cache_cmp(const void *x, const void *y)
 {
 	const struct mexpfcm *a=x, *b=y;
-	
+
         if (a->mexpfcm_export > b->mexpfcm_export)
                 return 1;
         else if (a->mexpfcm_export < b->mexpfcm_export)
@@ -149,9 +152,9 @@ struct mexp_cli {
 	struct slashrpc_cservice *mc_csvc;
 };
 
-/* 
+/*
  * mexp_ion - will be used to handle ion failover and the reassignment
- *   of bmaps to other ions.  Mexp_ion is accessed from 
+ *   of bmaps to other ions.  Mexp_ion is accessed from
  *  (sl_resm_t *)->resm_pri.
  */
 struct mexp_ion {
@@ -165,8 +168,8 @@ struct mexp_ion {
 	sl_resm_t            *mi_resm;
 };
 
-/* 
- * bmi_assign - the structure used for tracking the mds's bmap / ion 
+/*
+ * bmi_assign - the structure used for tracking the mds's bmap / ion
  *   assignments.  These structures are stored in a odtable.
  */
 struct bmi_assign {
@@ -177,44 +180,10 @@ struct bmi_assign {
 	time_t       bmi_start;
 };
 
-/* 
+/*
  * bmap_exports is used to reference the exports which are accessing this bmap.
  */
-SPLAY_HEAD(bmap_exports, mexpbcm);
 SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
-/* 
- * bmap_mds_info - the bcm_pri data structure for the slash2 mds.  
- *   Bmap_mds_info holds all bmap specific context for the mds which 
- *   includes the journal handle, ref counts for client readers and writers
- *   a point to our ION, a tree of our client's exports, a pointer to the 
- *   on-disk structure, a receipt for the odtable, and a reqset for issuing
- *   callbacks (XXX is that really needed?).
- * Notes: both read and write clients are stored to bmdsi_exports, the ref 
- *   counts are used to determine the number of both and hence the caching 
- *   mode used at the clients.   Bmdsi_wr_ion is a shortcut pointer used 
- *   only when the bmap has client writers - all writers (and readers) are 
- *   directed to this ion once a client has invoked write mode on the bmap.
- */
-struct bmap_mds_info {
-	u32                        bmdsi_xid;     /* last op recv'd from ION */
-	struct jflush_item         bmdsi_jfi;     /* journal handle          */
-        atomic_t                   bmdsi_rd_ref;  /* reader clients          */
-        atomic_t                   bmdsi_wr_ref;  /* writer clients          */
-	struct mexp_ion           *bmdsi_wr_ion;  /* pointer to write ION    */
-        struct bmap_exports        bmdsi_exports; /* tree of client exports  */
-	struct slash_bmap_od      *bmdsi_od;      /* od-disk pointer         */
-	struct odtable_receipt    *bmdsi_assign;  /* odtable receipt         */
-	struct pscrpc_request_set *bmdsi_reqset;  /* cache callback rpc's    */
-};
-
-#define bmap_2_bmdsiod(b)					\
-	((struct slash_bmap_od *)(((struct bmap_mds_info *)((b)->bcm_pri))->bmdsi_od))
-
-#define bmap_2_bmdsjfi(b)					\
-	((struct jflush_item *)(&((struct bmap_mds_info *)((b)->bcm_pri))->bmdsi_jfi))
-
-#define bmap_2_bmdsassign(b)						\
-	((struct odtable_receipt *)(((struct bmap_mds_info *)((b)->bcm_pri))->bmdsi_assign))
 
 SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
@@ -258,6 +227,4 @@ struct resprof_mds_info {
 	psc_spinlock_t rmi_lock;
 };
 
-
-
-#endif
+#endif /* _MDSEXPC_H_ */

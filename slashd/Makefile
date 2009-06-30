@@ -11,6 +11,7 @@ SRCS+=		jflush.c
 SRCS+=		lconf.l
 SRCS+=		main.c
 SRCS+=		mds.c
+SRCS+=		mds_slcfg.c
 SRCS+=		mdscoh.c
 SRCS+=		mdsfssync.c
 SRCS+=		mdsio_zfs.c

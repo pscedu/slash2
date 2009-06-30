@@ -4,6 +4,7 @@ include Makefile.path
 
 PROG=		sliod
 SRCS+=		control.c
+SRCS+=		io_slcfg.c
 SRCS+=		main.c
 SRCS+=		ric.c
 SRCS+=		rii.c

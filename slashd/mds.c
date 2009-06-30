@@ -14,7 +14,7 @@
 #include "fidc_common.h"
 #include "fidcache.h"
 #include "inode.h"
-#include "mds.h"
+#include "mds_repl.h"
 #include "mdscoh.h"
 #include "mdsexpc.h"
 #include "mdsrpc.h"
@@ -238,9 +238,9 @@ mds_bmap_fsz_check_locked(struct fidc_membh *f, sl_blkno_t n)
  * @bmap: the bmap which is going dio.
  * Notes:  XXX this needs help but it's making my brain explode right now.
  */
-#define mds_bmap_directio_check(b) mds_bmap_directio(b, 1, 1)
-#define mds_bmap_directio_set(b)   mds_bmap_directio(b, 1, 0)
-#define mds_bmap_directio_unset(b) mds_bmap_directio(b, 0, 0)
+#define mds_bmap_directio_check(b) mds_bmap_directio((b), 1, 1)
+#define mds_bmap_directio_set(b)   mds_bmap_directio((b), 1, 0)
+#define mds_bmap_directio_unset(b) mds_bmap_directio((b), 0, 0)
 
 static void
 mds_bmap_directio(struct mexpbcm *bref, int enable_dio, int check)
@@ -487,7 +487,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 		 *  the bmap is locked.  This may have to be
 		 *  replaced by a waitq and init flag.
 		 */
-		mds_bmap_ion_assign(bref, mq->pios);
+		psc_assert(mds_bmap_ion_assign(bref, mq->pios) != -1);
 	}
 	/* Do directio checks here.
 	 */

@@ -3,6 +3,7 @@
 include Makefile.path
 
 PROG=		mount_slash
+SRCS+=		cli_slcfg.c
 SRCS+=		control.c
 SRCS+=		fidc_client.c
 SRCS+=		fuse_listener.c

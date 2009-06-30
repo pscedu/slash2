@@ -180,6 +180,7 @@ struct srm_bmap_req {
 
 struct srm_bmap_rep {
 	uint32_t		nblks;		/* The number of bmaps actually returned */
+	uint64_t		ios_nid;	/* responsible I/O server ID if write */
 	uint32_t		rc;
 /*
  * Bulk data contains a number of the following structures:
@@ -188,7 +189,6 @@ struct srm_bmap_rep {
  *	| data type            | description    |
  *	+----------------------+----------------+
  *	| struct slash_bmap_od | bmap contents  |
- *	| uint32_t             | I/O server ID  |
  *	+----------------------+----------------+
  */
 };

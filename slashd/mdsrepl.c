@@ -7,7 +7,6 @@
 #include "fid.h"
 #include "fidcache.h"
 #include "mdsexpc.h"
-#include "mds.h"
 
 
 #if 0

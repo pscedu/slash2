@@ -12,6 +12,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/waitq.h"
 
+#include "fidcache.h"
 #include "fid.h"
 
 struct fidc_membh;
@@ -22,34 +23,6 @@ struct bmap_refresh {
 	struct slash_fidgen	bmrfr_fg;
 	sl_blkno_t		bmrfr_blk;
 	u8			bmrfr_flags;
-};
-
-/*
- * bmap_info_cli - hangs from the void * pointer in the sl_resm_t struct.
- *  It's tasked with holding the import to the correct ION.
- */
-struct bmap_info_cli {
-	struct pscrpc_import *bmic_import;
-};
-
-#define BMAP_AUTH_SZ 8
-
-enum bmap_cli_modes {
-	BMAP_CLI_RD   = (1<<0),  /* bmap has read creds       */
-	BMAP_CLI_WR   = (1<<1),  /* write creds               */
-	BMAP_CLI_DIO  = (1<<2),  /* bmap is in dio mode       */
-	BMAP_CLI_MCIP = (1<<3),  /* "mode change in progress" */
-	BMAP_CLI_MCC  = (1<<4)   /* "mode change complete"    */
-};
-
-enum bmap_mds_modes {
-	BMAP_MDS_WR     = (1<<0),
-	BMAP_MDS_RD     = (1<<1),
-	BMAP_MDS_DIO    = (1<<2), /* directio */
-	BMAP_MDS_FAILED = (1<<3), /* crc failure */
-	BMAP_MDS_EMPTY  = (1<<4), /* new bmap, not yet committed to disk*/
-	BMAP_MDS_CRC_UP = (1<<5), /* crc update in progress */
-	BMAP_MDS_INIT   = (1<<6)
 };
 
 /*

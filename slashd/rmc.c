@@ -31,7 +31,6 @@
 #include "fidc_common.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
-#include "mds.h"
 #include "mdsexpc.h"
 #include "slashexport.h"
 #include "slashrpc.h"
@@ -158,7 +157,7 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	struct srm_bmap_rep *mp;
 	struct bmapc_memb *bmap;
 	struct mexpfcm *m;
-	struct iovec iov[2];
+	struct iovec iov;
 	uint64_t cfd;
 
 	ENTRY;
@@ -178,13 +177,15 @@ slrmc_getbmap(struct pscrpc_request *rq)
 		mp->rc = mds_bmap_load(m, mq, &bmap);
 		if (mp->rc == 0) {
 			bmdsi = bmap->bcm_pri;
-			iov[0].iov_base = bmdsi->bmdsi_od;
-			iov[0].iov_len = sizeof(*bmdsi->bmdsi_od);
-			iov[1].iov_base =
-			    &bmdsi->bmdsi_wr_ion->mi_resm->resm_res->res_id;
-			iov[1].iov_len = sizeof(uint32_t);
+			iov.iov_base = bmdsi->bmdsi_od;
+			iov.iov_len = sizeof(*bmdsi->bmdsi_od);
+
+			if (bmap->bcm_mode & BMAP_MDS_WR)
+				mp->ios_nid =
+				    bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
+
 			mp->rc = rsx_bulkserver(rq, &desc,
-			    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, 2);
+			    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
 			if (desc)
 				pscrpc_free_bulk(desc);
 			mp->nblks = 1;
