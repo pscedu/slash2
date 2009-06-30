@@ -24,7 +24,6 @@ struct bmapc_memb;
 #define SLTHRT_MDSCOH		9	/* mds coherency thread */
 #define SLTHRT_MDSFSSYNC	10      /* mds fs syncer */
 
-
 struct slash_rmcthr {
 	struct pscrpc_thread	 srmc_prt;
 };
@@ -52,6 +51,8 @@ int  fid_get(const char *, struct slash_fidgen *,
 
 int mdsio_zfs_bmap_read(struct bmapc_memb *);
 int mdsio_zfs_bmap_write(struct bmapc_memb *);
+
+void mds_init(void);
 
 extern struct slash_sb_mem	slSuperBlk;
 extern int                      slSuperFd;

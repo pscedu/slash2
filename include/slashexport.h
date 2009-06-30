@@ -6,10 +6,8 @@
 
 #include "slashd/cfd.h"
 
-#if SEXPTREE
-extern struct sexptree sexptree;
-extern psc_spinlock_t sexptreelock;
-#endif
+struct cfdtree;
+struct pscrpc_export;
 
 /* SERVER_CLIENT */
 enum slash_exp_types {
@@ -23,9 +21,6 @@ enum slash_exp_types {
 	EXP_CLOSING = (1<<7)
 };
 
-struct cfdtree;
-struct pscrpc_export;
-
 struct slashrpc_export {
 	u64                   sexp_conn_gen;
 	u64                   sexp_nextcfd;
@@ -35,13 +30,15 @@ struct slashrpc_export {
 	struct pscrpc_export *sexp_export;
 };
 
-extern struct slashrpc_export * 
-slashrpc_export_get(struct pscrpc_export *exp);
+struct slashrpc_export *
+slashrpc_export_get(struct pscrpc_export *);
 
-extern struct slashrpc_export *
-slashrpc_export_get(struct pscrpc_export *exp);
+struct slashrpc_export *
+slashrpc_export_get(struct pscrpc_export *);
 
 #if SEXPTREE
-extern int
-sexpcmp(const void *a, const void *b);
+int sexpcmp(const void *a, const void *b);
+
+extern struct sexptree sexptree;
+extern psc_spinlock_t sexptreelock;
 #endif

@@ -1,7 +1,10 @@
-#ifndef __SL_JFLUSH__
-#define __SL_JFLUSH__ 1
+/* $Id$ */
+
+#ifndef _SL_JFLUSH_
+#define _SL_JFLUSH_
 
 #include "psc_util/journal.h"
+
 #include "sljournal.h"
 
 typedef void (*jflush_handler)(void *);
@@ -25,13 +28,10 @@ static inline void
 jfi_init(struct jflush_item *j)
 {
 	LOCK_INIT(&j->jfi_lock);
-	INIT_PSCLIST_ENTRY(&j->jfi_lentry);       
+	INIT_PSCLIST_ENTRY(&j->jfi_lentry);
 }
 
-extern void
-jfi_prep(struct jflush_item *jfi, struct psc_journal *pj);
+void jfi_prep(struct jflush_item *, struct psc_journal *);
+void jfi_schedule(struct jflush_item *, list_cache_t *);
 
-extern void
-jfi_schedule(struct jflush_item *jfi, list_cache_t *lc);
-
-#endif
+#endif /* _SL_JFLUSH_ */
