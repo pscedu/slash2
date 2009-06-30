@@ -246,7 +246,7 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
  fail:
 	/* Free any slack.
 	 */
-	for (i=mp->nblks; i < n; i++)
+	for (i=nblks; i < n; i++)
 		msl_bmap_free(bmaps[i]);
 	PSCFREE(iovs);
 	PSCFREE(bmaps);
