@@ -185,8 +185,8 @@ slrmc_getbmap(struct pscrpc_request *rq)
 			iov[1].iov_len = sizeof(uint32_t);
 			mp->rc = rsx_bulkserver(rq, &desc,
 			    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, 2);
-			pscrpc_free_bulk(desc);
-//			mds_bmap_ref_del(m);
+			if (desc)
+				pscrpc_free_bulk(desc);
 			mp->nblks = 1;
 		}
 	}
