@@ -51,8 +51,8 @@ rpc_initsvc(void)
 	svh->svh_bufsz = SRIM_BUFSZ;
 	svh->svh_reqsz = SRIM_BUFSZ;
 	svh->svh_repsz = SRIM_REPSZ;
-	svh->svh_req_portal = SRMI_REQ_PORTAL;
-	svh->svh_rep_portal = SRMI_REP_PORTAL;
+	svh->svh_req_portal = SRIM_REQ_PORTAL;
+	svh->svh_rep_portal = SRIM_REP_PORTAL;
 	svh->svh_type = SLIOTHRT_RIM;
 	svh->svh_nthreads = SRIM_NTHREADS;
 	svh->svh_handler = slrim_handler;
