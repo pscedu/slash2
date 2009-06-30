@@ -50,4 +50,4 @@ int slric_handler(struct pscrpc_request *);
 int slrii_handler(struct pscrpc_request *);
 
 extern struct cfd_svrops *cfdOps;
-struct slashrpc_cservice *rmi_csvc;
+extern struct slashrpc_cservice *rmi_csvc;
