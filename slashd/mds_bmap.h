@@ -46,6 +46,15 @@ struct bmap_mds_info {
 	struct pscrpc_request_set	*bmdsi_reqset;	/* cache callback rpc's    */
 };
 
+static inline void
+bmap_mds_info_init(struct bmap_mds_info *bmdsi)
+{
+	jfi_init(&bmdsi->bmdsi_jfi);
+	bmdsi->bmdsi_xid = 0;
+	atomic_set(&bmdsi->bmdsi_rd_ref, 0);
+	atomic_set(&bmdsi->bmdsi_wr_ref, 0);
+}
+
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)(b)->bcm_pri)
 #define bmap_2_bmdsiod(b)	bmap_2_bmdsi(b)->bmdsi_od
 #define bmap_2_bmdsjfi(b)	(&bmap_2_bmdsi(b)->bmdsi_jfi)

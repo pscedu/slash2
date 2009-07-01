@@ -11,7 +11,6 @@
 #include "slashdthr.h"
 
 list_cache_t dirtyMdsData;
-struct psc_listcache dirtyInodes;
 
 __dead __static void *
 mdsfssyncthr_begin(__unusedx void *arg)
@@ -38,6 +37,7 @@ mdsfssyncthr_begin(__unusedx void *arg)
 		jfih = jfi->jfi_handler;
 		/* Mark the appropriate state changes in the JFI.
 		 */
+		pjournal_xidhndl_free(jfi->jfi_xh);
 		jfi->jfi_xh = NULL;		
 		jfi->jfi_state &= ~JFI_QUEUED;
 		jfi->jfi_state &= ~JFI_HAVE_XH;
@@ -49,7 +49,7 @@ mdsfssyncthr_begin(__unusedx void *arg)
 			  jfi, xh, xh->pjx_xid, data); 
 		(jfih)(data);
 
-		if (pjournal_xend(xh, PJET_VOID, NULL))
+		if (pjournal_xend(xh, PJET_VOID, NULL, 0))
 			psc_fatal("pjournal_xend() failed");
 	}
 }

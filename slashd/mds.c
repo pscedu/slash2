@@ -856,6 +856,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		(*bmap)->bcm_mode = BMAP_MDS_INIT;
 		bmdsi = (*bmap)->bcm_pri = PSCALLOC(sizeof(struct bmap_mds_info)); /* XXX not freed */
 		LOCK_INIT(&(*bmap)->bcm_lock);
+		bmap_mds_info_init(bmdsi);
 		psc_waitq_init(&(*bmap)->bcm_waitq);
 		(*bmap)->bcm_fcmh = f;
 		/* It's ready to go, place it in the tree.
