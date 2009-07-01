@@ -12,6 +12,7 @@ SUBDIRS+=	slctl
 SUBDIRS+=	slimmns
 SUBDIRS+=	slioctl
 SUBDIRS+=	sliod
+SUBDIRS+=	slmkjrnl
 
 zbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} -c && scons)
