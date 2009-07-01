@@ -99,7 +99,8 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 		 *  stored in  c->pri to the mdsi. c->pri will be overwritten
 		 *  at the bottom.
 		 */
-		fmdsi_init(i, c->pri);
+		fmdsi_init(i, f, c->pri);
+		
 		FCMH_ULOCK(f);
 		// XXX do we need to read anything from the disk?
 		fidc_fcoo_startdone(f);

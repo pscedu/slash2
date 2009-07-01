@@ -212,12 +212,15 @@ struct fidc_mds_info {
 	(&((struct fidc_mds_info *)(&(f)->fcmh_fcoo->fcoo_pri))->fmdsi_inodeh)
 
 static inline void
-fmdsi_init(struct fidc_mds_info *mdsi, void *pri)
+fmdsi_init(struct fidc_mds_info *mdsi, const struct fidc_membh *fcmh, 
+	   void *pri)
 {
 	SPLAY_INIT(&mdsi->fmdsi_exports);
 	atomic_set(&mdsi->fmdsi_ref, 0);
 	mdsi->fmdsi_xid = 0;
 	mdsi->fmdsi_data = pri;
+
+	slash_inode_handle_init(&mdsi->fmdsi_inodeh, fcmh);
 }
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri.

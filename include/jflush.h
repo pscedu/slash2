@@ -29,6 +29,7 @@ jfi_init(struct jflush_item *j)
 {
 	LOCK_INIT(&j->jfi_lock);
 	INIT_PSCLIST_ENTRY(&j->jfi_lentry);
+	j->jfi_state = 0;	
 }
 
 void jfi_prep(struct jflush_item *, struct psc_journal *);
