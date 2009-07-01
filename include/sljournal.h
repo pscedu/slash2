@@ -10,9 +10,9 @@
 #include "pathnames.h"
 #include "slashrpc.h" /* struct srm_bmap_crcup */
 
-#define SLJ_MDS_JNENTS		10485760
+#define SLJ_MDS_JNENTS		131072
 #define SLJ_MDS_RA              200
-#define SLJ_MDS_NCRCS           64
+#define SLJ_MDS_NCRCS           32
 
 #define SLJ_MDS_PJET_VOID	  0
 #define SLJ_MDS_PJET_INUM	  1

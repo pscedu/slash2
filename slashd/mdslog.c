@@ -136,7 +136,8 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
 	psc_assert(inoh->inoh_jfi.jfi_handler == mds_inode_sync);
         psc_assert(inoh->inoh_jfi.jfi_data == inoh);
 
-	rc = pjournal_xadd(inoh->inoh_jfi.jfi_xh, MDS_LOG_INO_ADDREPL, &jrir);
+	rc = pjournal_xadd(inoh->inoh_jfi.jfi_xh, MDS_LOG_INO_ADDREPL, &jrir, 
+			   sizeof(struct slmds_jent_ino_addrepl));
 	if (rc)
 		psc_trace("jlog fid=%"_P_U64"x ios=%x pos=%u rc=%d",
 			  jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos, rc);
@@ -175,7 +176,8 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
 	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
 
-	rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_REPL, &jrpg);
+	rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_REPL, &jrpg, 
+			   sizeof(struct slmds_jent_repgen));
 	if (rc)
 		psc_fatalx("jlog fid=%"_P_U64"x bmapno=%u bmapgen=%u rc=%d",
 			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen,
@@ -199,7 +201,7 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 void
 mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 {
-	struct slmds_jent_crc jcrc;
+	struct slmds_jent_crc *jcrc = PSCALLOC(sizeof(struct slmds_jent_crc));
 	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
 	struct slash_bmap_od *bmapod = bmdsi->bmdsi_od;
 	int i, rc=0;
@@ -215,21 +217,21 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	 */
 	psc_assert(bmap->bcm_mode & BMAP_MDS_CRC_UP);
 
-	jcrc.sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	jcrc.sjc_ion = bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
-        jcrc.sjc_bmapno = bmap->bcm_blkno;
+	jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
+	jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
+        jcrc->sjc_bmapno = bmap->bcm_blkno;
 
 	while (n) {
 		i = MIN(SLJ_MDS_NCRCS, n);
 
-		memcpy(jcrc.sjc_crc, &crcup->crcs[t],
+		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
 		       (i * sizeof(struct srm_bmap_crcwire)));
 
-		rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh,
-				   MDS_LOG_BMAP_CRC, &jcrc);
+		rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_CRC, 
+				   jcrc, sizeof(struct slmds_jent_crc));
 		if (rc)
 			psc_fatalx("jlog fid=%"_P_U64"x bmapno=%u rc=%d",
-				   jcrc.sjc_fid, jcrc.sjc_bmapno, rc);
+				   jcrc->sjc_fid, jcrc->sjc_bmapno, rc);
 		/* Apply the CRC update into memory AFTER recording them
 		 *  in the journal.  The lock should not be needed since the
 		 *  BMAP_MDS_CRC_UP is protecting the crc table from other
@@ -257,6 +259,8 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	/* Tell the 'syncer' thread to flush this bmap.
 	 */
 	jfi_schedule(&bmdsi->bmdsi_jfi, &dirtyMdsData);
+
+	PSCFREE(jcrc);
 }
 
 void
@@ -323,7 +327,8 @@ mds_sb_getinum(void)
 		psc_assert(jfi->jfi_handler == mds_sb_sync);
 		psc_assert(jfi->jfi_data == &sbm);
 
-		if (pjournal_xadd(jfi->jfi_xh, MDS_LOG_SB, &sji))
+		if (pjournal_xadd(jfi->jfi_xh, MDS_LOG_SB, &sji, 
+				  sizeof(struct slmds_jent_inum)))
 			psc_fatalx("jlog sb pjournal_xadd() failed");
 
 		jfi_schedule(jfi, &dirtyMdsData);
