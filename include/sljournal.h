@@ -11,8 +11,8 @@
 #include "slashrpc.h" /* struct srm_bmap_crcup */
 
 #define SLJ_MDS_JNENTS		131072
-#define SLJ_MDS_RA              200
-#define SLJ_MDS_NCRCS           32
+#define SLJ_MDS_RA              1024 /* SLJ_MDS_JNENTS % SLJ_MDS_RA == 0 */
+#define SLJ_MDS_NCRCS           28
 
 #define SLJ_MDS_PJET_VOID	  0
 #define SLJ_MDS_PJET_INUM	  1
@@ -90,6 +90,10 @@ struct slmds_jents {
 	} slmds_jent_types;
 };
 
-#define SLJ_MDS_ENTSIZE (sizeof(struct slmds_jents))
+//#define SLJ_MDS_ENTSIZE (sizeof(struct slmds_jents))
+/* A bit of a hack.  Make SLJ_MDS_ENTSIZE + sizeof(struct psc_journal_enthdr)
+ *  == to 512, so long as 512 > than the size of any the structs above.
+ */
+#define SLJ_MDS_ENTSIZE 480
 
 #endif
