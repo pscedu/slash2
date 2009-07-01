@@ -28,10 +28,11 @@
  */
 #define SL_MAX_REPLICAS     64
 #define SL_BITS_PER_REPLICA 2
+#define SL_REPLICA_MASK     (uint8_t)((1 << SL_BITS_PER_REPLICA)-1)
 #define SL_REPLICA_NBYTES   ((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) /	\
-			     (sizeof(u8)))
+			     (sizeof(uint8_t)))
 
-#define SL_DEF_SNAPSHOTS    16
+#define SL_DEF_SNAPSHOTS    1
 #define SL_MAX_GENS_PER_BLK 4
 
 #define SL_SITE_BITS 16
@@ -42,8 +43,13 @@
 #define SL_CRC_SIZE   1048576
 #define SL_CRCS_PER_BMAP (SL_BMAP_SIZE / 1048576)
 
+/* Define metafile offsets
+ */
+#define SL_INODE_START_OFF  0x0000ULL
+#define SL_BMAP_START_OFF   0x1000ULL
+#define SL_EXTRAS_START_OFF 0x0400ULL
+
 #define SL_NULL_CRC 0x436f5d7c450ed606ULL
-#define SL_NULL_BMAPOD_CRC 0xb75884187c18a4f2ULL /* obtained from tests/crc */
 
 #define SL_REPL_INACTIVE 0
 #define SL_REPL_TOO_OLD  1
@@ -151,6 +157,7 @@ struct slash_bmap_od {
 #define BMAP_OD_SZ (sizeof(struct slash_bmap_od))
 #define BMAP_OD_CRCSZ (sizeof(struct slash_bmap_od)-(sizeof(psc_crc_t)))
 
+#define INO_DEF_NREPLS 4
 /*
  * The inode structure lives at the beginning of the metafile and holds
  * the block store array along with snapshot pointers.
@@ -159,20 +166,27 @@ struct slash_bmap_od {
  */
 struct slash_inode_od {
 	struct slash_fidgen ino_fg;
-	off_t         ino_version;                
-	size_t        ino_bsz;                    /* bmap size               */
-	size_t        ino_lblk;                   /* last bmap               */
-	size_t        ino_nrepls;                 /* if 0, use ino_prepl     */
-	u32           ino_csnap;                  /* current snapshot        */
-	sl_replica_t  ino_pios;                   /* first replica           */
+	uint32_t      ino_version;                
+	uint32_t      ino_bsz;                    /* bmap size               */
+	uint32_t      ino_nrepls;                 /* if 0, use ino_prepl     */
+	uint32_t      ino_csnap;                  /* current snapshot        */
+	uint64_t      ino_lblk;                   /* last bmap               */
+	sl_replica_t  ino_repls[INO_DEF_NREPLS];  /* embed a few replicas    */
 	psc_crc_t     ino_crc;                    /* crc of the inode        */
 };
+#define INO_OD_SZ (sizeof(struct slash_inode_od))
+#define INO_OD_CRCSZ (sizeof(struct slash_inode_od)-(sizeof(psc_crc_t)))
 
 struct slash_inode_extras_od {
 	sl_snap_t     inox_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers      */
 	sl_replica_t  inox_repls[SL_MAX_REPLICAS]; /* replicas              */
 	psc_crc_t     inox_crc; 
 };
+#define INOX_OD_SZ (sizeof(struct slash_inode_extras_od))
+#define INOX_OD_CRCSZ							\
+	(sizeof(struct slash_inode_extras_od) - (sizeof(psc_crc_t)))
+
+
 /* File extended attribute names. */
 #define SFX_INODE	"sl-inode"
 #define SFX_REPLICAS    "sl-replicas"

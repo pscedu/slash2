@@ -21,6 +21,7 @@
 #include "slashdthr.h"
 #include "slashexport.h"
 
+struct odtable *mdsBmapAssignTable;
 struct slash_bmap_od null_bmap_od;
 struct cfdops mdsCfdOps;
 struct sl_fsops mdsFsops;
@@ -366,6 +367,7 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 	struct bmap_mds_info *mdsi=bmap->bcm_pri;
 	//struct fidc_membh *f=bmap->bcm_fcmh;
 	struct mexp_ion *mion;
+	struct bmi_assign bmi;
 	sl_resource_t *res=libsl_id2res(pios);
 	sl_resm_t *resm;
 	struct resprof_mds_info *rmi;
@@ -435,6 +437,16 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 	} while (--x);
 
 	if (!mdsi->bmdsi_wr_ion)
+		return (-1);
+
+	bmi.bmi_ion_nid = mion->mi_resm->resm_nid;
+	bmi.bmi_ios = mion->mi_resm->resm_res->res_id;
+	bmi.bmi_fid = fcmh_2_fid(bmap->bcm_fcmh);
+	bmi.bmi_bmapno = bmap->bcm_blkno;
+	bmi.bmi_start = time(NULL);
+
+	mdsi->bmdsi_assign = odtable_putitem(mdsBmapAssignTable, &bmi);
+	if (!mdsi->bmdsi_assign)
 		return (-1);
 
 	DEBUG_BMAP(PLL_INFO, bref->mexpbcm_bmap, "using res(%s) ion(%s)",
@@ -974,12 +986,11 @@ mds_cfdops_init(void)
 
 void
 mds_init(void)
-{
+{       
 	mds_cfdops_init();
-	//	initFcooCb = mds_fcoo_init_cb;
-	//mdsFsops.slfsop_getattr  = mds_fidfs_lookup;
-	//mdsFsops.slfsop_fgetattr = mds_fid_lookup;
-	//slFsops = &mdsFsops;
+	mdsBmapAssignTable = odtable_load(_PATH_SLODTABLE, 
+					  &mdsBmapAssignTable);
+	odtable_scan(mdsBmapAssignTable, NULL);
 
 	//mdscoh_init();
 	//mdsfssync_init();

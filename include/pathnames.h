@@ -16,3 +16,4 @@
 #define _PATH_SLCTLSOCK		"../slashd.%h.sock"
 #define _PATH_SLIOCTLSOCK	"../sliod.%h.sock"
 #define _PATH_MSCTLSOCK		"../mount_slash.%h.sock"
+#define _PATH_SLODTABLE         "/var/run/slashd_bmap_assignments.odt"

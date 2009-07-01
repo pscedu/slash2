@@ -12,20 +12,21 @@
 
 #define SLJ_MDS_JNENTS		10485760
 #define SLJ_MDS_RA              200
-
-#define SLMDS_INUM_ALLOC_SZ	1024	/* allocate 1024 inums at a time */
+#define SLJ_MDS_NCRCS           64
 
 #define SLJ_MDS_PJET_VOID	  0
 #define SLJ_MDS_PJET_INUM	  1
 #define SLJ_MDS_PJET_BMAP         2
 #define SLJ_MDS_PJET_INODE        3
 
+
+#ifdef INUM_SELF_MANAGE
+#define SLMDS_INUM_ALLOC_SZ	1024	/* allocate 1024 inums at a time */
+
 struct slmds_jent_inum {
 	sl_inum_t			sji_inum;
 } __attribute__ ((packed));
-
-
-#define SLJ_MDS_NCRCS 64
+#endif
 
 /* 
  * slmds_jent_crc - is used to log crc updates which come from the ION's.  
@@ -42,24 +43,53 @@ struct slmds_jent_crc {
 	sl_ios_id_t             sjc_ion; /* Track the ion which did the I/O */
 	slfid_t                 sjc_fid;
 	sl_blkno_t              sjc_bmapno;
-	u32                     sjc_ncrcs;
+	uint32_t                sjc_ncrcs;
 	struct srm_bmap_crcwire sjc_crc[SLJ_MDS_NCRCS];
 } __attribute__ ((packed));
 
-/* Track replication table changes.
+#define slion_jent_crc slmds_jent_crc
+
+/* 
+ * slmds_jent_repgen - log changes to the replication state of a bmap which
+ *    occur upon processing a new write for a replicated bmap.
+ * @sjp_fid: what file.
+ * @sjp_bmapno: which bmap region.
+ * @sjp_gen: the new bmap generation.
+ * @sjp_reptbl: the replica table.
  */
 struct slmds_jent_repgen {
 	slfid_t               sjp_fid;
 	sl_blkno_t            sjp_bmapno;
 	sl_blkgen_t           sjp_gen;
-	u8                    sjp_reptbl[SL_REPLICA_NBYTES];
+	uint8_t               sjp_reptbl[SL_REPLICA_NBYTES];
 } __attribute__ ((packed));
 
 
-#define SLJ_MDS_ENTSIZE MAX(MAX((sizeof(struct slmds_jent_inum)),	\
-				(sizeof(struct slmds_jent_crc))),	\
-			    sizeof(struct slmds_jent_repgen))
+/*
+ * slmds_jent_ino_addrepl - add a new replica IOS to the inode or the inode 
+ *    extras.
+ * @sjir_fid: what file.
+ * @sjir_ios: the IOS being added.
+ * @sjir_pos: the slot or position the replica IOS is to be added to.
+ */
+struct slmds_jent_ino_addrepl {
+	slfid_t       sjir_fid;
+	sl_ios_id_t   sjir_ios;
+	uint32_t      sjir_pos;
+} __attribute__ ((packed));
 
-#define slion_jent_crc slmds_jent_crc
+
+/* List all of the journaling structures here so that the maximum
+ *  size can be obtained.
+ */
+struct slmds_jents {
+	union {
+		struct slmds_jent_repgen sjr;
+		struct slmds_jent_crc sjc;
+		struct slmds_jent_ino_addrepl sjia;	
+	} slmds_jent_types;
+};
+
+#define SLJ_MDS_ENTSIZE (sizeof(struct slmds_jents))
 
 #endif

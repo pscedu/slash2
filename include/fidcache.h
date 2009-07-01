@@ -36,9 +36,9 @@ struct sl_uid {
 };
 
 struct sl_finfo {
-	u64			 slf_opcnt;	   /* count attr updates            */
-	size_t			 slf_readb;	   /* num bytes read                */
-	size_t			 slf_writeb;	   /* num bytes written             */
+	u64			 slf_opcnt;     /* count attr updates       */
+	size_t			 slf_readb;	/* num bytes read           */
+	size_t			 slf_writeb;	/* num bytes written        */
 	double			 slf_age;
 };
 

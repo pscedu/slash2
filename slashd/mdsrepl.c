@@ -7,6 +7,165 @@
 #include "fid.h"
 #include "fidcache.h"
 #include "mdsexpc.h"
+#include "mdsio_zfs.h"
+#include "mdslog.h"
+
+
+static int
+mds_repl_load_locked(struct slash_inode_handle *i)
+{
+	int rc;
+	psc_crc_t crc;
+
+	psc_assert(!(i->inoh_flags & INOH_HAVE_EXTRAS));
+
+	i->inoh_flags |= INOH_LOAD_EXTRAS;	
+	i->inoh_extras = PSCALLOC(sizeof(struct slash_inode_extras_od));
+
+	if ((rc = mdsio_zfs_inode_extras_read(i)))
+		return (rc);
+	
+	psc_crc_calc(&crc, i->inoh_extras, INOX_OD_CRCSZ);
+	if (crc != i->inoh_extras->inox_crc) {
+		DEBUG_INOH(PLL_WARN, i, "failed crc for extras");
+		return (-EIO);
+	}
+	i->inoh_flags |= INOH_HAVE_EXTRAS;
+	i->inoh_flags &= ~INOH_LOAD_EXTRAS;
+
+	return (0);
+}
+
+
+int 
+mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
+{
+	uint32_t j=0, k;
+	int rc = -ENOENT;
+	sl_replica_t *repl;
+
+	INOH_LOCK(i);
+	if (!i->inoh_ino.ino_nrepls) {
+		if (!add)
+			goto out;
+		else
+			goto add_repl;
+	}
+
+	for (j=0, k=0, repl=i->inoh_ino.ino_repls; j < i->inoh_ino.ino_nrepls; 
+	     j++, k++) {
+		if (j >= INO_DEF_NREPLS) {
+			/* The first few replicas are in the inode itself, 
+			 *   the rest are in the extras block;
+			 */
+			if (!(i->inoh_flags & INOH_HAVE_EXTRAS))
+                                if (!(rc = mds_repl_load_locked(i)))
+                                        return (rc);
+
+			repl = i->inoh_extras->inox_repls;
+			k = 0;
+		}
+
+		if (repl[k].bs_id == ios) {
+			rc = j;
+			goto out;
+		}
+	}
+	/* It does not exist, add the replica to the inode if 'add' was
+	 *   specified, else return.
+	 */
+	if (rc == -ENOENT && add) {
+	add_repl:
+		psc_assert(i->inoh_ino.ino_nrepls == j);
+
+		if (i->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS) {
+			DEBUG_INOH(PLL_WARN, i, "too many replicas");
+			rc = -ENOSPC;
+			goto out;
+		}
+		
+		if (j > INO_DEF_NREPLS) {
+			/* Note that both the inode structure and replication
+			 *  table must be synced.
+			 */
+			psc_assert(i->inoh_extras);
+			i->inoh_flags |= (INOH_EXTRAS_DIRTY | INOH_INO_DIRTY);
+			repl = i->inoh_extras->inox_repls;
+			k = j - INO_DEF_NREPLS;
+		} else {
+			i->inoh_flags |= INOH_INO_DIRTY;
+			repl = i->inoh_ino.ino_repls;
+			k = j;
+		}
+
+		i->inoh_ino.ino_nrepls++;
+		repl[k].bs_id = ios;
+		
+		DEBUG_INOH(PLL_INFO, i, "add IOS(%u) to repls, %dth repl", 
+			   ios, i->inoh_ino.ino_nrepls);
+
+		mds_inode_addrepl_log(i, ios, j);
+
+		rc = j;
+	}
+ out:
+	INOH_ULOCK(i);
+	return (rc);
+}
+
+int
+mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
+{
+	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
+	int j, r, bumpgen=0, log=0;
+	uint8_t mask, *b=bmapod->bh_repls;
+	uint32_t pos, k;
+
+	BMAP_LOCK_ENSURE(bmap);
+	/* Find our replica id else add ourselves.
+         */
+	j = mds_repl_ios_lookup(fcmh_2_inoh(bmap->bcm_fcmh), 
+				sl_glid_to_resid(ion), 1);
+	
+        if (j < 0) 
+		return (j);
+	/* Iterate across the byte array.
+	 */
+	for (r=0, k=0; k < SL_REPLICA_NBYTES; k++, mask=0) {
+		for (pos=0, mask=0; pos < NBBY; 
+		     pos+=SL_BITS_PER_REPLICA, r++) {
+
+			mask = (uint8_t)(SL_REPLICA_MASK << pos);
+			
+			if (r == j) {				
+				b[r] |= mask & SL_REPL_ACTIVE;
+				DEBUG_BMAP(PLL_INFO, bmap, 
+					   "add repl for ion(%d)", ion);
+			} else
+				switch (b[r] & mask) {
+				case SL_REPL_INACTIVE:
+				case SL_REPL_TOO_OLD:
+					break;
+				case SL_REPL_OLD:
+					log++;
+					b[r] |= mask & SL_REPL_TOO_OLD;
+					break;
+				case SL_REPL_ACTIVE:
+					log++;
+					bumpgen++;
+					b[r] |= mask & SL_REPL_OLD;
+					break;
+				}
+		}
+	}
+	if (log) {
+		if (bumpgen)
+			bmapod->bh_gen.bl_gen++;
+		mds_bmap_repl_log(bmap);
+	}
+
+	return (0);
+}
 
 
 #if 0
@@ -46,125 +205,4 @@ mds_repl_xattr_load_locked(struct slash_inode_handle *i)
 	DEBUG_INOH(PLL_INFO, i, "replica table load failed");
 	return (rc);
 }
-
-
-int
-mds_repl_load_locked(struct slash_inode_handle *i)
-{
-	return (0);
-}
-
-int 
-mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
-{
-	u32 j;
-	int rc=-ENOENT;
-
-	INOH_LOCK(i);
-	if (!i->inoh_ino.ino_nrepls)
-		goto out;
-
-	else if (!(i->inoh_flags & INOH_HAVE_REPS)) {
-		if ((rc = mds_repl_load_locked(i)) != 0)
-			goto out;
-	}
-	psc_assert(i->inoh_replicas);
-
-	for (j=0; j < i->inoh_ino.ino_nrepls; j++) {
-		if (i->inoh_replicas[j].bs_id == ios) {
-			rc = j;
-			goto out;
-		}
-	}
-
-	if (rc == -ENOENT && add) {
-		if (i->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS) {
-			DEBUG_INOH(PLL_WARN, i, "too many replicas");
-			rc = -ENOSPC;
-
-		} else {
-			DEBUG_INOH(PLL_INFO, i, "add IOS(%u) to repls", ios);
-			/* XXX journal write */
-			i->inoh_ino.ino_nrepls++;
-			i->inoh_replicas[j].bs_id = ios;
-			/* Note that both the inode structure and replication
-			 *  table must be synced.
-			 */
-			i->inoh_flags |= (INOH_REP_DIRTY | INOH_INO_DIRTY);
-			rc = j;
-		}
-	}
- out:
-	INOH_ULOCK(i);
-	return (rc);
-}
-
-int
-mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
-{
-	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
-	int j, r, bumpgen=0, log=0;
-	u8 mask, *b=bmapod->bh_repls;
-	u32 pos, k;
-	//struct fidc_mds_info *fmdsi=bmap->bcm_fcmh->fcmh_fcoo->fcoo_pri;
-	//struct slash_inode_handle *inoh=&fmdsi->fmdsi_inodeh;
-
-	BMAP_LOCK_ENSURE(bmap);
-	/* Find our replica id else add ourselves.
-         */
-	j = mds_repl_ios_lookup(fcmh_2_inoh(bmap->bcm_fcmh), 
-				sl_glid_to_resid(ion), 1);
-	
-        if (j < 0) 
-		return (j);
-	/* Iterate across the byte array.
-	 */
-	for (r=0, k=0; k < SL_REPLICA_NBYTES; k++, mask=0) {
-		for (pos=0, mask=0; pos < NBBY; 
-		     pos+=SL_BITS_PER_REPLICA, r++) {
-
-			mask = (u8)(((2 << SL_BITS_PER_REPLICA)-1) << pos);
-			
-			if (r == j) {				
-				b[r] |= mask & SL_REPL_ACTIVE;
-				DEBUG_BMAP(PLL_INFO, bmap, 
-					   "add repl for ion(%d)", ion);
-			} else {
-				switch (b[r] & mask) {
-				case SL_REPL_INACTIVE:
-				case SL_REPL_TOO_OLD:
-					break;
-				case SL_REPL_OLD:
-					log++;
-					b[r] |= mask & SL_REPL_TOO_OLD;
-					break;
-				case SL_REPL_ACTIVE:
-					log++;
-					bumpgen++;
-					b[r] |= mask & SL_REPL_OLD;
-					break;
-				}
-			}
-		}
-	}
-
-	if (log) {
-		if (bumpgen)
-			bmapod->bh_gen.bl_gen++;
-		mds_bmap_repl_log(bmap);
-	}
-	/* XXX Crc has to be rewritten too - this should be done at inode 
-	 *  write time only.
-	 */	
-	return (0);
-}
-
-#else
-__static int 
-mds_repl_xattr_load_locked(__unusedx struct slash_inode_handle *i) { return (0); }
-
-int
-mds_repl_inv_except_locked(__unusedx struct bmapc_memb *bmap, __unusedx sl_ios_id_t ion) 
-{ return 0; }
 #endif
-

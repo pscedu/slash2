@@ -20,6 +20,7 @@
 #include "fidcache.h"
 #include "jflush.h"
 #include "mdsexpc.h"
+#include "mdsio_zfs.h"
 
 
 #ifdef INUM_SELF_MANAGE
@@ -33,11 +34,11 @@ struct psc_journal mdsJournal;
 
 enum mds_log_types {
 #ifdef INUM_SELF_MANAGE
-	MDS_LOG_SB        = (1<<0),
+	MDS_LOG_SB            = (1<<0),
 #endif
-	MDS_LOG_BMAP_REPL = (1<<1),
-	MDS_LOG_BMAP_CRC  = (1<<2),
-	MDS_LOG_INODE     = (1<<3)
+	MDS_LOG_BMAP_REPL     = (1<<1),
+	MDS_LOG_BMAP_CRC      = (1<<2),
+	MDS_LOG_INO_ADDREPL   = (1<<3)
 };
 
 
@@ -74,10 +75,81 @@ mds_bmap_sync(void *data)
 	BMAP_ULOCK(bmap);
 }
 
+
+void
+mds_inode_sync(void *data)
+{
+	int rc;
+	struct slash_inode_handle *inoh = data;
+	
+	INOH_LOCK(inoh);
+
+	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
+		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
+
+	if (inoh->inoh_flags & INOH_INO_DIRTY) {
+		psc_crc_calc(&inoh->inoh_ino.ino_crc, 
+			     &inoh->inoh_ino, INO_OD_CRCSZ);
+		rc = mdsio_zfs_inode_write(inoh);
+		
+		if (rc != INO_OD_SZ)
+			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
+		else
+			DEBUG_INOH(PLL_TRACE, inoh, "sync ok");
+		
+		inoh->inoh_flags &= ~INOH_INO_DIRTY;
+	}
+
+	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
+		psc_crc_calc(&inoh->inoh_extras->inox_crc, inoh->inoh_extras,
+			     INOX_OD_CRCSZ);
+		rc = mdsio_zfs_inode_extras_write(inoh);
+
+		if (rc != INOX_OD_SZ)
+			DEBUG_INOH(PLL_FATAL, inoh, "xtras rc=%d sync fail", 
+				   rc);
+		else
+			DEBUG_INOH(PLL_TRACE, inoh, "xtras sync ok");
+		
+		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
+	}
+
+	INOH_ULOCK(inoh);
+}
+
+void
+mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios, 
+		      uint32_t pos)
+{
+	int rc;
+	struct slmds_jent_ino_addrepl jrir = { fcmh_2_fid(inoh->inoh_fcmh), 
+					       ios, pos };
+
+	INOH_LOCK_ENSURE(inoh);
+	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
+		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
+	
+	psc_trace("jlog fid=%"_P_U64"x ios=%x pos=%u",
+                  jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos);
+
+	jfi_prep(&inoh->inoh_jfi, &mdsJournal);
+	psc_assert(inoh->inoh_jfi.jfi_handler == mds_inode_sync);
+        psc_assert(inoh->inoh_jfi.jfi_data == inoh);
+
+	rc = pjournal_xadd(inoh->inoh_jfi.jfi_xh, MDS_LOG_INO_ADDREPL, &jrir);
+	if (rc)
+		psc_trace("jlog fid=%"_P_U64"x ios=%x pos=%u rc=%d",
+			  jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos, rc);
+
+	jfi_schedule(&inoh->inoh_jfi, &dirtyMdsData);	
+}
+
 /**
  * mds_bmap_repl_log - write a modified replication table to the journal.
  * Note:  bmap must be locked to prevent further changes from sneaking in
  *	before the repl table is committed to the journal.
+ * XXX Another case for a rwlock, currently this code holds the lock while 
+ *     the doing IO to the journal.
  */
 void
 mds_bmap_repl_log(struct bmapc_memb *bmap)
@@ -106,7 +178,8 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_REPL, &jrpg);
 	if (rc)
 		psc_fatalx("jlog fid=%"_P_U64"x bmapno=%u bmapgen=%u rc=%d",
-			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen, rc);
+			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen,
+			   rc);
 
 	jfi_schedule(&bmdsi->bmdsi_jfi, &dirtyMdsData);
 }
