@@ -212,8 +212,7 @@ struct fidc_mds_info {
 	(&((struct fidc_mds_info *)(&(f)->fcmh_fcoo->fcoo_pri))->fmdsi_inodeh)
 
 static inline void
-fmdsi_init(struct fidc_mds_info *mdsi, const struct fidc_membh *fcmh, 
-	   void *pri)
+fmdsi_init(struct fidc_mds_info *mdsi, struct fidc_membh *fcmh, void *pri)
 {
 	SPLAY_INIT(&mdsi->fmdsi_exports);
 	atomic_set(&mdsi->fmdsi_ref, 0);

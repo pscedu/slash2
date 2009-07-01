@@ -1,10 +1,15 @@
+/* $Id$ */
+
 #ifndef _SLASH_INODEH_H_
 #define _SLASH_INODEH_H_
 
 #include "psc_types.h"
 #include "psc_util/lock.h"
+
 #include "inode.h"
 #include "jflush.h"
+
+struct fidc_membh;
 
 struct slash_inode_handle {
 	struct slash_inode_od         inoh_ino;
@@ -15,9 +20,9 @@ struct slash_inode_handle {
 	int                           inoh_flags;
 };
 
-#define INOH_LOCK(h) spinlock(&(h)->inoh_lock)
-#define INOH_ULOCK(h) freelock(&(h)->inoh_lock)
-#define INOH_LOCK_ENSURE(h) LOCK_ENSURE(&(h)->inoh_lock)
+#define INOH_LOCK(h)		spinlock(&(h)->inoh_lock)
+#define INOH_ULOCK(h)		freelock(&(h)->inoh_lock)
+#define INOH_LOCK_ENSURE(h)	LOCK_ENSURE(&(h)->inoh_lock)
 
 enum slash_inode_handle_flags {
 	INOH_INO_DIRTY     = (1<<0), /* Inode structures need to be written */
@@ -29,11 +34,9 @@ enum slash_inode_handle_flags {
 	INOH_INO_NOTLOADED = (1<<5)
 };
 
-struct fidc_membh;
-
 static inline void
 slash_inode_handle_init(struct slash_inode_handle *i, 
-			const struct fidc_membh *f) {
+			struct fidc_membh *f) {
 	i->inoh_fcmh = f;
 	i->inoh_extras = NULL;
 	LOCK_INIT(&i->inoh_lock);
