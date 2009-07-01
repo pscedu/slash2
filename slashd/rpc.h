@@ -1,5 +1,8 @@
 /* $Id$ */
 
+#ifndef _MDS_RPC_H_
+#define _MDS_RPC_H_
+
 #include <sys/types.h>
 
 #include "psc_ds/tree.h"
@@ -31,3 +34,5 @@ SPLAY_PROTOTYPE(sexptree, slashrpc_export, entry, sexpcmp);
 
 extern struct sexptree	sexptree;
 extern psc_spinlock_t	sexptreelock;
+
+#endif /* _MDS_RPC_H_ */
