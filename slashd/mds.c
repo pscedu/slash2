@@ -15,9 +15,11 @@
 #include "fidcache.h"
 #include "inode.h"
 #include "mds_repl.h"
+#include "mdslog.h"
 #include "mdscoh.h"
 #include "mdsexpc.h"
 #include "mdsrpc.h"
+
 #include "slashdthr.h"
 #include "slashexport.h"
 
@@ -988,8 +990,7 @@ void
 mds_init(void)
 {       
 	mds_cfdops_init();
-	mdsBmapAssignTable = odtable_load(_PATH_SLODTABLE, 
-					  &mdsBmapAssignTable);
+	psc_assert(!odtable_load(_PATH_SLODTABLE, &mdsBmapAssignTable));
 	odtable_scan(mdsBmapAssignTable, NULL);
 
 	//mdscoh_init();

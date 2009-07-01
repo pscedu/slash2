@@ -53,7 +53,5 @@ struct bmap_mds_info {
 
 int  mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
 int  mds_bmap_load(struct mexpfcm *, struct srm_bmap_req *, struct bmapc_memb **);
-void mds_bmap_crc_log(struct bmapc_memb *, struct srm_bmap_crcup *);
-void mds_bmap_repl_log(struct bmapc_memb *);
 
 #endif /* _SLASHD_MDS_BMAP_H_ */
