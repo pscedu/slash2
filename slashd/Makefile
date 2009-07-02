@@ -32,7 +32,7 @@ SRCS+=		yconf.y
 SRCS+=		${SLASH_BASE}/share/fdbuf.c
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c
-SRCS+=		${SLASH_BASE}/share/rpc.c
+SRCS+=		${SLASH_BASE}/share/rpc_common.c
 SRCS+=		${SLASH_BASE}/share/slashexport.c
 
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
