@@ -1,13 +1,9 @@
 /* $Id$ */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
-#include <sys/param.h>
-
-#include <inttypes.h>
-#include <string.h>
+#include <err.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "pfl.h"
 #include "psc_util/journal.h"
@@ -35,6 +31,11 @@ main(int argc, char *argv[])
 	argc -= optind;
 	if (argc)
 		usage();
+
+	if (mkdir(_PATH_SLASHD_DIR, 0700) == -1) {
+		if (errno != EEXIST)
+			err(1, "mkdir: %s", _PATH_SLASHD_DIR);
+	}
 
 	pjournal_format(_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE,
 			SLJ_MDS_RA, 0);
