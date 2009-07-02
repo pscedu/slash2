@@ -12,7 +12,7 @@
 
 list_cache_t dirtyMdsData;
 
-__dead __static void *
+__static void *
 mdsfssyncthr_begin(__unusedx void *arg)
 {
 	struct jflush_item *jfi;

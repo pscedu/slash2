@@ -996,6 +996,6 @@ mds_init(void)
 	psc_assert(!odtable_load(_PATH_SLODTABLE, &mdsBmapAssignTable));
 	odtable_scan(mdsBmapAssignTable, NULL);	
 
-	//mdscoh_init();
-	//mdsfssync_init();
+	mdsfssync_init();
+	mdscoh_init();
 }

@@ -90,19 +90,16 @@ main(int argc, char *argv[])
 
 	fidcache_init(FIDC_MDS_HASH_SZ, NULL);
 
-	//slFsops = PSCALLOC(sizeof(*slFsops));
-        //slFsops->slfsop_getattr = slash2fuse_stat;
-
 	slashGetConfig(cfn);
 	fdbuf_createkeyfile();
 	fdbuf_readkeyfile();
 	libsl_init(PSC_SERVER);
 	mds_init();
-	//slash_superblock_init();
-	//sl_journal_init();
+
 	/* Initialize the zfs layer.
 	 */
 	do_init();
+
 	rpc_initsvc();
 	slctlthr_main(sfn);
 
