@@ -591,9 +591,7 @@ fidc_fcoo_init(struct fidc_open_obj *f)
 	memset(f, 0, sizeof(*f));
 	atomic_set(&f->fcoo_bmapc_cnt, 0);
 	SPLAY_INIT(&f->fcoo_bmapc);
-	//	if (fcooInitCb)
-	//	(void)(fcoo_init)(f);
-	lc_init(&f->fcoo_buffer_cache, struct sl_buffer, slb_fcm_lentry);
+	pll_init(&f->fcoo_buffer_cache, struct sl_buffer, slb_fcm_lentry, NULL);
 	f->fcoo_bmap_sz = SLASH_BMAP_SIZE;
 }
 

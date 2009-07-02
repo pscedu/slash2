@@ -32,7 +32,7 @@ u32 slbFreeInc=10;
 
 sl_oftiov_inflight_callback slInflightCb=NULL;
 
-#define token_t list_cache_t
+typedef struct psc_lockedlist token_t;
 
 static struct sl_buffer_iovref *
 sl_oftiov_locref_locked(struct offtree_iov *iov, struct sl_buffer *slb);
@@ -350,7 +350,7 @@ sl_slab_reap(int nblks) {
 		}
 		/* Remove ourselves from the fidcache slab list
 		 */
-		lc_del(&b->slb_fcm_lentry, b->slb_lc_fcm);
+		pll_remove(b->slb_lc_fcm, b);
 		INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);
 		psc_assert(vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 		/* Tally em up
@@ -401,7 +401,7 @@ sl_slab_alloc(int nblks, struct fidc_membh *f)
 		/* Assign buffer to the fcache member
 		 */
 		slb->slb_lc_fcm = &f->fcmh_fcoo->fcoo_buffer_cache;
-		lc_stack(slb->slb_lc_fcm, &slb->slb_fcm_lentry);
+		pll_addstack(slb->slb_lc_fcm, slb);
 
 	} while ((fblks += slb->slb_nblks) < nblks);
 	/* Got all needed blocks.
@@ -842,7 +842,7 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 	off_t   nr_soffa=soffa;
 	struct offtree_root *r  = pri;
 	struct fidc_membh *f  = r->oftr_pri;
-	list_cache_t *lc = &f->fcmh_fcoo->fcoo_buffer_cache;
+	struct psc_lockedlist *ll = &f->fcmh_fcoo->fcoo_buffer_cache;
 	struct sl_buffer *slb;
 
 	psc_assert(nblks < (size_t)(slCacheBlkSz/2));
@@ -856,24 +856,22 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 		 *   the remainaing blks by reserving a new slb and alloc'ing
 		 *   from there.
 		 */
-		spinlock(&lc->lc_lock);
-		psclist_for_each_entry(slb, &lc->lc_listhd, slb_fcm_lentry) {
+		PLL_LOCK(ll);
+		PLL_FOREACH(slb, ll) {
 			DEBUG_SLB(PLL_TRACE, slb, "soffa %"_P_U64"x trying "
 				  "with this slb", soffa);
 			if (SLB_FULL(slb))
 				continue;
-
+			
 			fblks += sl_buffer_alloc_internal(slb, (nblks-fblks),
-							  nr_soffa, a, lc);
+							  nr_soffa, a, ll);
 
 			nr_soffa = soffa + (fblks * slb->slb_blksz);
 
 			if (fblks >= (ssize_t)nblks)
 				break;
 		}
-		/* Free our fid's listcache lock.
-		 */
-		freelock(&lc->lc_lock);
+		PLL_ULOCK(ll);
 		/* Are more blocks needed?
 		 */
 		if (fblks < (ssize_t)nblks) {
