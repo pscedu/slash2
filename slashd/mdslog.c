@@ -30,7 +30,7 @@
 #include "slashdthr.h"
 
 extern list_cache_t dirtyMdsData;
-struct psc_journal mdsJournal;
+struct psc_journal *mdsJournal;
 
 enum mds_log_types {
 #ifdef INUM_SELF_MANAGE
@@ -132,7 +132,7 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
 	psc_trace("jlog fid=%"_P_U64"x ios=%x pos=%u",
                   jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos);
 
-	jfi_prep(&inoh->inoh_jfi, &mdsJournal);
+	jfi_prep(&inoh->inoh_jfi, mdsJournal);
 	psc_assert(inoh->inoh_jfi.jfi_handler == mds_inode_sync);
         psc_assert(inoh->inoh_jfi.jfi_data == inoh);
 
@@ -171,7 +171,7 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	psc_trace("jlog fid=%"_P_U64"x bmapno=%u bmapgen=%u",
 		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen);
 
-	jfi_prep(&bmdsi->bmdsi_jfi, &mdsJournal);
+	jfi_prep(&bmdsi->bmdsi_jfi, mdsJournal);
 
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
 	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
@@ -208,7 +208,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	int n=crcup->nups;
 	u32 t=0, j=0;
 
-	jfi_prep(&bmdsi->bmdsi_jfi, &mdsJournal);
+	jfi_prep(&bmdsi->bmdsi_jfi, mdsJournal);
 
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
 	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
@@ -274,8 +274,8 @@ mds_journal_init(void)
         if (rc == -1)
                 psc_fatal("snprintf");
 
-	pjournal_init(&mdsJournal, fn, 0,
-		      SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE, SLJ_MDS_RA);
+	mdsJournal = pjournal_load(_PATH_SLJOURNAL);
+	psc_assert(mdsJournal);
 }
 
 #ifdef INUM_SELF_MANAGE

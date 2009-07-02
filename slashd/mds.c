@@ -992,8 +992,9 @@ void
 mds_init(void)
 {       
 	mds_cfdops_init();
+	mds_journal_init();
 	psc_assert(!odtable_load(_PATH_SLODTABLE, &mdsBmapAssignTable));
-	odtable_scan(mdsBmapAssignTable, NULL);
+	odtable_scan(mdsBmapAssignTable, NULL);	
 
 	//mdscoh_init();
 	//mdsfssync_init();
