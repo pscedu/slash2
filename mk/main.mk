@@ -6,8 +6,6 @@ INCLUDES+=	-I${PFL_BASE}/include
 INCLUDES+=	-I${SLASH_BASE}/include
 INCLUDES+=	-I${SLASH_BASE} -I.
 INCLUDES+=	-I${ZFS_BASE}
-
-CFLAGS+=	${INCLUDES} ${DEFINES}
-YFLAGS+=	-d -o $@
+INCLUDES+=	-I${LNET_BASE}/include
 
 include ${MAINMK}
