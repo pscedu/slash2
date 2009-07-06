@@ -260,7 +260,7 @@ slrmc_create(struct pscrpc_request *rq)
 		mp->rc = slrmc_inode_cacheput(&fg, &mp->attr, &mq->creds);
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-			    data, &cfd, &mdsCfdOps);
+				data, &cfd, &mdsCfdOps, CFD_FILE);
 
 			if (!mp->rc && cfd) {
 				fdbuf_encrypt(&cfd->fdb, &fg,
@@ -306,7 +306,7 @@ slrmc_open(struct pscrpc_request *rq)
 
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-			    data, &cfd, &mdsCfdOps);
+				data, &cfd, &mdsCfdOps, CFD_FILE);
 
 			if (!mp->rc && cfd) {
 				fdbuf_encrypt(&cfd->fdb, &fg,
@@ -345,7 +345,7 @@ slrmc_opendir(struct pscrpc_request *rq)
 		mp->rc = slrmc_inode_cacheput(&fg, NULL, &mq->creds);
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-			    data, &cfd, &mdsCfdOps);
+				data, &cfd, &mdsCfdOps, CFD_DIR);
 
 			if (mp->rc) {
 				psc_error("cfdnew failed rc=%d", mp->rc);

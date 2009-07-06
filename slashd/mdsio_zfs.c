@@ -18,12 +18,12 @@
 static inline void * 
 inoh_2_zfs_fh(const struct slash_inode_handle *i)
 {
-	struct fidc_mds_info *fmdsi;
-
 	psc_assert(i->inoh_fcmh);
-
-	fmdsi = fidc_fcmh2fmdsi(i->inoh_fcmh);
-	return (fmdsi->fmdsi_data);
+	psc_assert(i->inoh_fcmh->fcmh_fcoo->fcoo_pri);	
+	/* Note:  don't use the fidc_fcmh2fmdsi() call here because we're
+	 *  most likely being invoked by the open procedure.
+	 */
+	return (((struct fidc_mds_info *)i->inoh_fcmh->fcmh_fcoo->fcoo_pri)->fmdsi_data);
 }
 
 static inline void * 

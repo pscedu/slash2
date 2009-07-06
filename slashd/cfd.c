@@ -62,7 +62,7 @@ cfdinsert(struct cfdent *c, struct pscrpc_export *exp)
  */
 int
 cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
-       struct cfdent **cfd, struct cfdops *cfdops)
+       struct cfdent **cfd, struct cfdops *cfdops, int type)
 {
 	struct slashrpc_export *sexp;
 	struct cfdent *c;
@@ -70,11 +70,14 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 
 	if (cfd)
 		*cfd = NULL;
+       	
+	psc_assert(type == CFD_DIR || type == CFD_FILE);
 
 	c = PSCALLOC(sizeof(*c));
 	c->fdb.sfdb_secret.sfs_fg.fg_fid = fid;
 	c->pri = pri;
 	c->cfdops = cfdops;
+	c->type = type;
 
 	sexp = slashrpc_export_get(exp);
 	spinlock(&exp->exp_lock);

@@ -102,7 +102,6 @@ mds_bmap_sync(void *data)
 {
 	struct bmapc_memb *bmap=data;
 	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
-	struct fidc_mds_info *fmdsi;
 	int rc;
 
 	/* XXX At some point this lock should really be changed to
@@ -116,17 +115,6 @@ mds_bmap_sync(void *data)
 	else
 		DEBUG_BMAP(PLL_TRACE, bmap, "sync ok");
 	BMAP_ULOCK(bmap);
-
-	/* Only write out the inode upon seeing the first bmap write.
-	 */
-	fmdsi = fidc_fcmh2fmdsi(bmap->bcm_fcmh);
-	psc_assert(fmdsi);	
-	
-	INOH_LOCK(&fmdsi->fmdsi_inodeh);
-	if (fmdsi->fmdsi_inodeh.inoh_flags & 
-	    (INOH_INO_NEW | INOH_INO_DIRTY)) 
-		mds_inode_sync(&fmdsi->fmdsi_inodeh);
-	INOH_ULOCK(&fmdsi->fmdsi_inodeh);
 }
 
 

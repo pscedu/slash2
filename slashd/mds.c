@@ -130,6 +130,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	/* c->pri holds the zfs file info for this inode, it must be present.
 	 */
 	psc_assert(c->pri);
+	psc_assert(c->type == CFD_DIR || c->type == CFD_FILE);
 
 	sexp = e->exp_private;
 	psc_assert(sexp);
@@ -172,10 +173,13 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 		 *  at the bottom.
 		 */
 		fmdsi_init(i, f, c->pri);
-		psc_assert(i->fmdsi_inodeh.inoh_fcmh);
-		/* XXX For now assert here 
-		 */
-		psc_assert(!mds_inode_read(&i->fmdsi_inodeh));
+		if (c->type & CFD_FILE) {
+			/* XXX For now assert here 
+			 */
+			psc_assert(i->fmdsi_inodeh.inoh_fcmh);
+			psc_assert(!mds_inode_read(&i->fmdsi_inodeh));
+		}
+
 		FCMH_ULOCK(f);
 		fidc_fcoo_startdone(f);
 
