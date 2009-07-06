@@ -10,6 +10,9 @@
 #include "slashrpc.h"
 
 extern void
+mds_inode_sync(void *);
+
+extern void
 mds_inode_addrepl_log(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
 
 extern void

@@ -15,8 +15,6 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct slash_inode_od null_inode_od;
-
 static inline void * 
 inoh_2_zfs_fh(const struct slash_inode_handle *i)
 {
@@ -60,7 +58,8 @@ mdsio_zfs_bmap_read(struct bmapc_memb *bmap)
 	    (void *)bmap_2_bmdsiod(bmap), sizeof(*bmdsi->bmdsi_od),
 	    (off_t)(BMAP_OD_SZ * bmap->bcm_blkno), bmap_2_zfs_fh(bmap));
 #endif
-	rc = (rc != BMAP_OD_SZ) ? -errno : 0;
+	if (rc < 0)
+		rc = -errno;
 
 	return (rc);
 }
@@ -99,9 +98,9 @@ int
 mdsio_zfs_inode_read(struct slash_inode_handle *i)
 {
 	struct slash_creds cred = { 0, 0 };
-	int rc, locked;
-	psc_crc_t crc;
+	int rc;
 
+	INOH_LOCK_ENSURE(i);
 #if 0
 	rc = pread(i->inoh_fcmh->fcmh_fd, &i->inoh_ino,
 	    INO_OD_SZ, (off_t)SL_INODE_START_OFF);
@@ -110,33 +109,10 @@ mdsio_zfs_inode_read(struct slash_inode_handle *i)
 		    (void *)&i->inoh_ino, (size_t)INO_OD_SZ, 
 		    (off_t)SL_INODE_START_OFF, inoh_2_zfs_fh(i));
 #endif
-	rc = (rc != INO_OD_SZ) ? -errno : 0;
-	
-	locked = reqlock(&i->inoh_lock);	
-	psc_assert(i->inoh_flags & INOH_INO_NOTLOADED);
+	if (rc < 0)
+		rc = -errno;
 
-	i->inoh_flags &= ~INOH_INO_NOTLOADED;	
-
-	/* Check for a NULL CRC, which can happen when
-	 *  bmaps are gaps that have not been written yet.
-	 */
-	if ((!i->inoh_ino.ino_crc) && 
-	    (!memcmp(&i->inoh_ino, &null_inode_od, sizeof(null_inode_od)))) {
-		slash_inode_od_initnew(i);
-		DEBUG_INOH(PLL_INFO, i, "detected a new inode");
-		return (0);
-	}	
-	/* Calculate and check the CRC now 
-	 */
-	PSC_CRC_CALC(crc, &i->inoh_ino, INO_OD_CRCSZ);
-	if (crc == i->inoh_ino.ino_crc) {
-		DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
-		return (0);
-	}
-
-	DEBUG_INOH(PLL_WARN, i, "CRC failed want=%"PRIx64", got=%"PRIx64, 
-		   i->inoh_ino.ino_crc, crc);
-	return (-EIO);
+	return (rc);
 }
 
 

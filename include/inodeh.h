@@ -43,20 +43,6 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 	i->inoh_flags = INOH_INO_NOTLOADED;
 }
 
-static inline void
-slash_inode_od_initnew(struct slash_inode_handle *i)
-{
-	i->inoh_flags = (INOH_INO_NEW | INOH_INO_DIRTY);
-	COPYFID(&i->inoh_ino.ino_fg, fcmh_2_fgp(i->inoh_fcmh));
-	/* For now this is a fixed size.
-	 */
-	i->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;	
-	i->inoh_ino.ino_version = INO_VERSION;
-	i->inoh_ino.ino_flags = 0;
-	i->inoh_ino.ino_nrepls = 0;
-	i->inoh_ino.ino_lblk = 0;
-}
-
 #define FCMH_2_INODEP(f) (&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
 
 #define INOH_FLAG(field, str) ((field) ? (str) : "")

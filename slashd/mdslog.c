@@ -42,40 +42,6 @@ enum mds_log_types {
 };
 
 
-/**
- * mds_bmap_sync - callback function which is called from
- *   mdsfssyncthr_begin().
- * @data: void * which is the bmap.
- * Notes: this call allows slash2 to optimize crc calculation by only
- *   taking them when the bmap is written, not upon each update to the
- *   bmap.  It is important to note that forward changes may be synced
- *   here.  What that means is that changes which are not part of this
- *   XID session may have snuck in here (ie a crc update came in and
- *   was fully processed before mds_bmap_sync() grabbed the lock.  For
- *   this reason the crc updates must be journaled before manifesting
- *   in the bmap cache.  Otherwise, log replays will look inconsistent.
- */
-void
-mds_bmap_sync(void *data)
-{
-	struct bmapc_memb *bmap=data;
-	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
-	int rc;
-
-	/* XXX At some point this lock should really be changed to
-	 *  a pthread_rwlock.
-	 */
-	BMAP_LOCK(bmap);
-	psc_crc_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
-	rc = mdsio_zfs_bmap_write(bmap);
-	if (rc != BMAP_OD_SZ)
-		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail", rc, errno);
-	else
-		DEBUG_BMAP(PLL_TRACE, bmap, "sync ok");
-	BMAP_ULOCK(bmap);
-}
-
-
 void
 mds_inode_sync(void *data)
 {
@@ -95,9 +61,10 @@ mds_inode_sync(void *data)
 		if (rc != INO_OD_SZ)
 			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
 		else
-			DEBUG_INOH(PLL_TRACE, inoh, "sync ok");
-		
+			DEBUG_INOH(PLL_TRACE, inoh, "sync ok");	       
+
 		inoh->inoh_flags &= ~INOH_INO_DIRTY;
+		inoh->inoh_flags &= ~INOH_INO_NEW;
 	}
 
 	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
@@ -116,6 +83,52 @@ mds_inode_sync(void *data)
 
 	INOH_ULOCK(inoh);
 }
+
+/**
+ * mds_bmap_sync - callback function which is called from
+ *   mdsfssyncthr_begin().
+ * @data: void * which is the bmap.
+ * Notes: this call allows slash2 to optimize crc calculation by only
+ *   taking them when the bmap is written, not upon each update to the
+ *   bmap.  It is important to note that forward changes may be synced
+ *   here.  What that means is that changes which are not part of this
+ *   XID session may have snuck in here (ie a crc update came in and
+ *   was fully processed before mds_bmap_sync() grabbed the lock.  For
+ *   this reason the crc updates must be journaled before manifesting
+ *   in the bmap cache.  Otherwise, log replays will look inconsistent.
+ */
+void
+mds_bmap_sync(void *data)
+{
+	struct bmapc_memb *bmap=data;
+	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
+	struct fidc_mds_info *fmdsi;
+	int rc;
+
+	/* XXX At some point this lock should really be changed to
+	 *  a pthread_rwlock.
+	 */
+	BMAP_LOCK(bmap);
+	psc_crc_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
+	rc = mdsio_zfs_bmap_write(bmap);
+	if (rc != BMAP_OD_SZ)
+		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail", rc, errno);
+	else
+		DEBUG_BMAP(PLL_TRACE, bmap, "sync ok");
+	BMAP_ULOCK(bmap);
+
+	/* Only write out the inode upon seeing the first bmap write.
+	 */
+	fmdsi = fidc_fcmh2fmdsi(bmap->bcm_fcmh);
+	psc_assert(fmdsi);	
+	
+	INOH_LOCK(&fmdsi->fmdsi_inodeh);
+	if (fmdsi->fmdsi_inodeh.inoh_flags & 
+	    (INOH_INO_NEW | INOH_INO_DIRTY)) 
+		mds_inode_sync(&fmdsi->fmdsi_inodeh);
+	INOH_ULOCK(&fmdsi->fmdsi_inodeh);
+}
+
 
 void
 mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios, 

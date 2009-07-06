@@ -26,6 +26,7 @@
 
 struct odtable *mdsBmapAssignTable;
 struct slash_bmap_od null_bmap_od;
+struct slash_inode_od null_inode_od;
 struct cfdops mdsCfdOps;
 struct sl_fsops mdsFsops;
 
@@ -39,6 +40,76 @@ __static SPLAY_GENERATE(exp_bmaptree, mexpbcm,
 
 __static SPLAY_GENERATE(bmap_exports, mexpbcm,
 			mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
+
+
+__static void
+mds_inode_od_initnew(struct slash_inode_handle *i)
+{
+	i->inoh_flags = (INOH_INO_NEW | INOH_INO_DIRTY);
+	COPYFID(&i->inoh_ino.ino_fg, fcmh_2_fgp(i->inoh_fcmh));
+	/* For now this is a fixed size.
+	 */
+	i->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;	
+	i->inoh_ino.ino_version = INO_VERSION;
+	i->inoh_ino.ino_flags = 0;
+	i->inoh_ino.ino_nrepls = 0;
+	i->inoh_ino.ino_lblk = 0;
+	mds_inode_sync(i);
+}
+
+
+__static int
+mds_inode_read(struct slash_inode_handle *i)
+{
+	psc_crc_t crc;
+	ssize_t szrc;
+	int rc=0, locked;
+
+	locked = reqlock(&i->inoh_lock);
+	psc_assert(i->inoh_flags & INOH_INO_NOTLOADED);
+	/* Try to pread() the inode from the mds file.
+	 */
+	szrc = mdsio_zfs_inode_read(i);
+
+	/* EOF means the inode has not yet been written */
+	if (szrc == 0)
+		goto new;
+
+	/* read failed, report bad news */
+	if (szrc == -1) {
+		DEBUG_INOH(PLL_WARN, i, "mdsio_zfs_inode_read: %d", errno);
+		goto out;
+	}
+
+	/* short read, report an I/O error */
+	if (szrc != INO_OD_SZ) {
+		DEBUG_INOH(PLL_WARN, i, "mdsio_zfs_inode_read: failed");
+		goto out;
+	}
+
+        if ((!i->inoh_ino.ino_crc) &&
+            (!memcmp(&i->inoh_ino, &null_inode_od, sizeof(null_inode_od)))) {
+	new:
+                mds_inode_od_initnew(i);
+                DEBUG_INOH(PLL_INFO, i, "detected a new inode");
+		return (0);
+        }
+
+	PSC_CRC_CALC(crc, &i->inoh_ino, INO_OD_CRCSZ);
+        if (crc == i->inoh_ino.ino_crc) {
+                DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
+		return (0);
+	}
+
+	DEBUG_INOH(PLL_WARN, i, "CRC failed want=%"PRIx64", got=%"PRIx64,
+                   i->inoh_ino.ino_crc, crc);
+
+	i->inoh_flags &= ~INOH_INO_NOTLOADED;
+ out:
+	ureqlock(&i->inoh_lock, locked);
+	rc = -EIO;
+	return (rc);
+}
 
 /**
  * mexpfcm_cfd_init - callback issued from cfdnew() which adds the
@@ -104,7 +175,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 		psc_assert(i->fmdsi_inodeh.inoh_fcmh);
 		/* XXX For now assert here 
 		 */
-		psc_assert(!mdsio_zfs_inode_read(&i->fmdsi_inodeh));
+		psc_assert(!mds_inode_read(&i->fmdsi_inodeh));
 		FCMH_ULOCK(f);
 		fidc_fcoo_startdone(f);
 
@@ -918,6 +989,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	 */
 	return (rc);
 }
+
 
 /**
  * mds_fidfs_lookup - "lookup file id via filesystem".  This call does a
