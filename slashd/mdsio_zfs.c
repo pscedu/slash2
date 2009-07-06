@@ -123,13 +123,16 @@ mdsio_zfs_inode_read(struct slash_inode_handle *i)
 	if ((!i->inoh_ino.ino_crc) && 
 	    (!memcmp(&i->inoh_ino, &null_inode_od, sizeof(null_inode_od)))) {
 		slash_inode_od_initnew(i);
+		DEBUG_INOH(PLL_INFO, i, "detected a new inode");
 		return (0);
 	}	
 	/* Calculate and check the CRC now 
 	 */
 	PSC_CRC_CALC(crc, &i->inoh_ino, INO_OD_CRCSZ);
-	if (crc == i->inoh_ino.ino_crc)
+	if (crc == i->inoh_ino.ino_crc) {
+		DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
 		return (0);
+	}
 
 	DEBUG_INOH(PLL_WARN, i, "CRC failed want=%"PRIx64", got=%"PRIx64, 
 		   i->inoh_ino.ino_crc, crc);
