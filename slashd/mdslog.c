@@ -6,8 +6,8 @@
 
 #include <sys/param.h>
 
-#include <string.h>
 #include <inttypes.h>
+#include <string.h>
 
 #include "psc_util/assert.h"
 #include "psc_util/crc.h"
@@ -21,7 +21,7 @@
 #include "jflush.h"
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
-
+#include "fidc_mds.h"
 
 #ifdef INUM_SELF_MANAGE
 #include "sb.h"
@@ -45,10 +45,10 @@ enum mds_log_types {
 void
 mds_inode_sync(void *data)
 {
-	int rc;
+	int locked, rc;
 	struct slash_inode_handle *inoh = data;
 	
-	INOH_LOCK(inoh);
+	locked = reqlock(&inoh->inoh_lock);
 
 	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
 		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
@@ -81,7 +81,7 @@ mds_inode_sync(void *data)
 		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
 	}
 
-	INOH_ULOCK(inoh);
+	ureqlock(&inoh->inoh_lock, locked);
 }
 
 /**
