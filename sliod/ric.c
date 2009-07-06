@@ -32,11 +32,12 @@ slric_handle_disconnect(struct pscrpc_request *rq)
 int
 slric_handle_connect(struct pscrpc_request *rq)
 {
-	struct srm_ic_connect_req *mq;
+	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRIC_MAGIC || mq->version != SRIC_VERSION)
+	if (mq->magic != SRIC_MAGIC ||
+	    mq->version != SRIC_VERSION)
 		mp->rc = -EINVAL;
 	return (0);
 }

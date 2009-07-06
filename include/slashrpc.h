@@ -226,20 +226,6 @@ struct srm_bmap_crcwrt_req {
 	uint64_t		crc;		/* yes, a crc of the crc's */
 };
 
-/* Slash RPC message to ION from client */
-struct srm_ic_connect_secret {
-	uint64_t		magic;
-	uint64_t		wndmap_min;
-};
-
-#define SRM_CI_CONNECT_SIGMAGIC	0x1234123412341234
-
-struct srm_ic_connect_req {
-	struct srm_ic_connect_secret crypt_i;
-	uint64_t		magic;
-	uint32_t		version;
-};
-
 struct srm_connect_req {
 	uint64_t		magic;
 	uint32_t		version;
