@@ -106,8 +106,10 @@ msl_oftrq_destroy(struct offtree_req *r)
 	atomic_dec(&b->bcm_opcnt);
 	psc_assert(atomic_read(&b->bcm_opcnt) >= 0);
 
-	if (r->oftrq_fill.oftfill_reqset)
+	if (r->oftrq_fill.oftfill_reqset) {
 		pscrpc_set_destroy(r->oftrq_fill.oftfill_reqset);
+		r->oftrq_fill.oftfill_reqset = NULL;
+	}
 }
 
 struct msl_fhent *
@@ -1314,7 +1316,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	/* Foreach block range, get its bmap and make a request into its
 	 *  offtree.  This first loop retrieves all the pages.
 	 */
-	for (nr=0; s <= e; s++, nr++) {
+	for (nr=0; s <= e; s++) {
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
 		 */
@@ -1331,6 +1333,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		msl_oftrq_build(&r[nr], b, mslfh_2_fdb(mfh), roff, tlen,
 				(op == MSL_READ) ? OFTREQ_OP_READ :
 				OFTREQ_OP_WRITE);
+		nr++;
+
 		/* Retrieve offtree region.
 		 */
 		if (!(r->oftrq_op & OFTREQ_OP_DIO)) {
@@ -1383,7 +1387,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		tsize += tlen;
 	}
 
-	psc_assert(tsize == size);
+	psc_assert(tsize == size); /* XXX this crashes */
 
 	rc = size;
  out:
