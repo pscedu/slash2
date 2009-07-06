@@ -158,6 +158,7 @@ struct slash_bmap_od {
 #define BMAP_OD_CRCSZ (sizeof(struct slash_bmap_od)-(sizeof(psc_crc_t)))
 
 #define INO_DEF_NREPLS 4
+
 /*
  * The inode structure lives at the beginning of the metafile and holds
  * the block store array along with snapshot pointers.
@@ -166,7 +167,8 @@ struct slash_bmap_od {
  */
 struct slash_inode_od {
 	struct slash_fidgen ino_fg;
-	uint32_t      ino_version;                
+	uint16_t      ino_version;
+	uint16_t      ino_flags;
 	uint32_t      ino_bsz;                    /* bmap size               */
 	uint32_t      ino_nrepls;                 /* if 0, use ino_prepl     */
 	uint32_t      ino_csnap;                  /* current snapshot        */
@@ -176,6 +178,12 @@ struct slash_inode_od {
 };
 #define INO_OD_SZ (sizeof(struct slash_inode_od))
 #define INO_OD_CRCSZ (sizeof(struct slash_inode_od)-(sizeof(psc_crc_t)))
+
+#define INO_VERSION 0x01
+
+enum slash_inode_flags {
+	INO_FL_HAVE_EXTRAS = (1<<0)
+};
 
 struct slash_inode_extras_od {
 	sl_snap_t     inox_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers      */

@@ -19,6 +19,7 @@
 #include "mdscoh.h"
 #include "mdsexpc.h"
 #include "mdsrpc.h"
+#include "mdsio_zfs.h"
 
 #include "slashdthr.h"
 #include "slashexport.h"
@@ -100,9 +101,12 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 		 *  at the bottom.
 		 */
 		fmdsi_init(i, f, c->pri);
-		
+		psc_assert(i->fmdsi_inodeh.inoh_fcmh);
+		/* XXX For now assert here */
+		psc_assert(!mdsio_zfs_inode_read(&i->fmdsi_inodeh));
+				
+
 		FCMH_ULOCK(f);
-		// XXX do we need to read anything from the disk?
 		fidc_fcoo_startdone(f);
 
 	} else {
