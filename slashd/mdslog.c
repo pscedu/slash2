@@ -58,10 +58,8 @@ mds_inode_sync(void *data)
 			     &inoh->inoh_ino, INO_OD_CRCSZ);
 		rc = mdsio_zfs_inode_write(inoh);
 		
-		if (rc != INO_OD_SZ)
+		if (rc)
 			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
-		else
-			DEBUG_INOH(PLL_TRACE, inoh, "sync ok");	       
 
 		inoh->inoh_flags &= ~INOH_INO_DIRTY;
 		inoh->inoh_flags &= ~INOH_INO_NEW;
@@ -72,7 +70,7 @@ mds_inode_sync(void *data)
 			     INOX_OD_CRCSZ);
 		rc = mdsio_zfs_inode_extras_write(inoh);
 
-		if (rc != INOX_OD_SZ)
+		if (rc)
 			DEBUG_INOH(PLL_FATAL, inoh, "xtras rc=%d sync fail", 
 				   rc);
 		else
@@ -110,7 +108,7 @@ mds_bmap_sync(void *data)
 	BMAP_LOCK(bmap);
 	psc_crc_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
 	rc = mdsio_zfs_bmap_write(bmap);
-	if (rc != BMAP_OD_SZ)
+	if (rc)
 		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail", rc, errno);
 	else
 		DEBUG_BMAP(PLL_TRACE, bmap, "sync ok");
