@@ -471,7 +471,7 @@ msl_bmap_to_import(struct bmapc_memb *b)
 			   " are uniform across all servers",
 			   libcfs_nid2str(bmap_2_msion(b)));
 
-	c = (struct bmap_info_cli *)r->resm_pri;
+	c = r->resm_pri;
 	if (!c->bmic_import) {
 		psc_dbg("Creating new import to %s",
 			libcfs_nid2str(bmap_2_msion(b)));
@@ -487,6 +487,9 @@ msl_bmap_to_import(struct bmapc_memb *b)
 			SRIC_REQ_PORTAL;
 		c->bmic_import->imp_client->cli_reply_portal =
 			SRIC_REP_PORTAL;
+
+		rpc_issue_connect(bmap_2_msion(b), c->bmic_import,
+		    SRIC_MAGIC, SRIC_VERSION);
 	}
 	ureqlock(&b->bcm_lock, locked);
 	return (c->bmic_import);
