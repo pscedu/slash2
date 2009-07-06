@@ -102,10 +102,9 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 		 */
 		fmdsi_init(i, f, c->pri);
 		psc_assert(i->fmdsi_inodeh.inoh_fcmh);
-		/* XXX For now assert here */
+		/* XXX For now assert here 
+		 */
 		psc_assert(!mdsio_zfs_inode_read(&i->fmdsi_inodeh));
-				
-
 		FCMH_ULOCK(f);
 		fidc_fcoo_startdone(f);
 
