@@ -134,12 +134,6 @@ mdsio_zfs_inode_write(struct slash_inode_handle *i)
 	rc = zfsslash2_write(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &cred,
 		     (void *)&i->inoh_ino, (size_t)INO_OD_SZ,
 		     (off_t)SL_INODE_START_OFF, inoh_2_zfs_fh(i));
-	if (rc == INO_OD_SZ) {
-		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(i->inoh_fcmh),
-		    &cred, 1, inoh_2_zfs_fh(i));
-		if (rc == -1)
-			psc_fatal("zfsslash2_fsync() failed");
-	}
 #endif
 	return (rc);
 }
