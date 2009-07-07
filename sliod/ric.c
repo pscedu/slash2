@@ -50,7 +50,6 @@ slric_handle_read(struct pscrpc_request *rq)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec iov;
-	char fn[PATH_MAX];
 	ssize_t nbytes;
 	uint64_t cfd;
 	void *buf;
@@ -67,8 +66,7 @@ slric_handle_read(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	fid_makepath(fg.fg_fid, fn);
-	if ((fd = open(fn, O_RDONLY)) == -1) {
+	if ((fd = fid_open(fg.fg_fid))) {
 		mp->rc = -errno;
 		return (0);
 	}
@@ -103,7 +101,6 @@ slric_handle_write(struct pscrpc_request *rq)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec iov;
-	char fn[PATH_MAX];
 	ssize_t nbytes;
 	uint64_t cfd;
 	void *buf;
@@ -120,13 +117,12 @@ slric_handle_write(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	fid_makepath(fg.fg_fid, fn);
 	buf = PSCALLOC(mq->size);
 	iov.iov_base = buf;
 	iov.iov_len = mq->size;
 	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRIC_BULK_PORTAL, &iov, 1)) == 0) {
-		if ((fd = open(fn, O_WRONLY)) == -1)
+			     SRIC_BULK_PORTAL, &iov, 1)) == 0) {
+		if ((fd = fid_ocreat(fg.fg_fid)) == -1)
 			mp->rc = -errno;
 		else {
 			nbytes = pwrite(fd, buf, mq->size, mq->offset);

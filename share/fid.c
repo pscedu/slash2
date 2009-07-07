@@ -13,6 +13,11 @@
 #include "pathnames.h"
 #include "fidcache.h"
 
+#define FP_DEPTH 3
+#define BPHXC    4
+
+#define SL_PATH_MAX 128
+
 /**
  * fid_makepath - build the pathname in the FID object root that corresponds
  *	to a FID, allowing easily lookup of file metadata via FIDs.
@@ -21,16 +26,29 @@ void
 fid_makepath(slfid_t fid, char *fid_path)
 {
 	int rc;
+       
+	rc = snprintf(fid_path, PATH_MAX, "%s/%s/%c/%c/%c/%016"_P_U64"x",
+	      nodeInfo.node_res->res_fsroot, _PATH_OBJROOT,
+	      (uint8_t)((fid & 0x0000000000f00000ULL) >> (BPHXC*5)),
+	      (uint8_t)((fid & 0x00000000000f0000ULL) >> (BPHXC*4)),
+	      (uint8_t)((fid & 0x000000000000f000ULL) >> (BPHXC*3)), fid);
 
-	rc = snprintf(fid_path, PATH_MAX,
-	    "%s/%s/%04x/%04x/%04x/%04x",
-	    nodeInfo.node_res->res_fsroot, _PATH_OBJROOT,
-	    (u32)((fid & 0x000000000000ffffULL)),
-	    (u32)((fid & 0x00000000ffff0000ULL) >> 16),
-	    (u32)((fid & 0x0000ffff00000000ULL) >> 32),
-	    (u32)((fid & 0xffff000000000000ULL) >> 48));
 	if (rc == -1)
 		psc_fatal("snprintf");
+}
+
+/**
+ * fid_fileops - create or open a fid on the IO server.
+ * @fid: the numeric id.
+ * @flags: open options.
+ */
+int
+fid_fileops(slfid_t fid, int flags)
+{
+	char fidfn[SL_PATH_MAX];
+
+	fid_makepath(fid, fidfn);
+	return (open(fidfn, flags));
 }
 
 /**
@@ -42,7 +60,7 @@ fid_makepath(slfid_t fid, char *fid_path)
 int
 fid_link(slfid_t fid, const char *fn)
 {
-	char *p, fidpath[PATH_MAX];
+	char *p, fidpath[SL_PATH_MAX];
 
 	fid_makepath(fid, fidpath);
 	if ((p = strrchr(fidpath, '/')) != NULL) {
@@ -60,16 +78,7 @@ fid_link(slfid_t fid, const char *fn)
 	return (0);
 }
 
-int
-fid_open(slfid_t fid, int flags)
-{
-	char fidfn[PATH_MAX];
 
-	psc_assert(!(flags & O_CREAT));
-	fid_makepath(fid, fidfn);
-
-	return (open(fidfn, flags));
-}
 
 #if SLASH_XATTR
 int
