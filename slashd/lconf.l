@@ -12,6 +12,8 @@
 
 extern int cfg_lineno;
 extern char *yylval;
+
+void yyerror(const char *, ...);
 %}
 
 eq		[=]
@@ -128,6 +130,12 @@ archival_fs {
         return RESOURCE_TYPE;
 }
 
+cluster_noshare_fs {
+        psc_trace("Resource type string %s", yytext);
+        yylval = strdup(yytext);
+        return RESOURCE_TYPE;
+}
+
 compute {
         psc_trace("Resource type string %s", yytext);
         yylval = strdup(yytext);
@@ -204,7 +212,7 @@ compute {
 [ \t]+		;
 [\n]		cfg_lineno++;
 
-.		psc_warnx("Unrecognized character: ;%s;", yytext);
+.		yyerror("Unrecognized character: %s", yytext);
 
 %%
 
