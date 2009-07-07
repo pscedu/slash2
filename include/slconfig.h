@@ -36,7 +36,6 @@ enum res_type_t {
 	archival_fs        = 1<<1,
 	cluster_noshare_fs = 1<<2,
 	compute            = 1<<3,
-	res_any            = 1<<4
 };
 
 typedef struct resource_profile {
@@ -274,19 +273,15 @@ libsl_profile_dump(void)
 static inline u32
 libsl_str2restype(char *res_type)
 {
-	if (!strncmp(res_type, "parallel_fs", RES_NAME_MAX))
+	if (!strcmp(res_type, "parallel_fs"))
 		return (parallel_fs);
-
-	else if (!strncmp(res_type, "archival_fs", RES_NAME_MAX))
+	else if (!strcmp(res_type, "archival_fs"))
 		return (archival_fs);
-
-	else if (!strncmp(res_type, "cluster_noshare_fs", RES_NAME_MAX))
+	else if (!strcmp(res_type, "cluster_noshare_fs"))
 		return (cluster_noshare_fs);
-
-	else if (strncmp(res_type, "compute", RES_NAME_MAX))
+	else if (!strcmp(res_type, "compute"))
 		return (compute);
-	else
-		return (res_any);
+	psc_fatal("impossible");
 }
 
 static inline void
