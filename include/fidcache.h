@@ -57,7 +57,7 @@ struct fidc_open_obj {
 
 #define fidc_settimeo(age)						\
 	do {								\
-		(age) = fidc_gettime() + FCMH_ATTR_TIMEO;		\
+		*(age) = fidc_gettime() + FCMH_ATTR_TIMEO;		\
 	} while (0)
 
 /*
