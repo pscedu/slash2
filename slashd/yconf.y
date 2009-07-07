@@ -46,8 +46,6 @@ enum sym_structure_types {
 	SL_STRUCT_GLOBAL = 1026
 };
 
-#define BOOL_MAX 3
-
 typedef u32 (*sym_handler)(char *);
 
 struct symtable {
@@ -60,7 +58,7 @@ struct symtable {
 	sym_handler		 handler;
 };
 
-u32 global_net_handler(char *net);
+u32 global_net_handler(char *);
 
 /*
  * Define a table macro for each structure type filled in by the config
@@ -76,15 +74,15 @@ u32 global_net_handler(char *net);
 
 /* declare and initialize the global table */
 struct symtable sym_table[] = {
-	 TABENT_GLBL("port",		SL_TYPE_INT,	INTSTR_MAX,	gconf_port,	NULL),
-	 TABENT_GLBL("net",		SL_TYPE_INT,	MAXNET,		gconf_netid,	global_net_handler),
+	 TABENT_GLBL("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
+	 TABENT_GLBL("net",		SL_TYPE_INT,	0,		gconf_netid,	global_net_handler),
 	 TABENT_GLBL("keyfn",		SL_TYPE_STR,	PATH_MAX,	gconf_fdbkeyfn,	NULL),
-	 TABENT_SITE("site_id",		SL_TYPE_INT,	INTSTR_MAX,	site_id,	NULL),
-	 TABENT_SITE("site_desc",	SL_TYPE_STRP,	DESC_MAX,	site_desc,	NULL),
-	 TABENT_RES ("desc",		SL_TYPE_STRP,	DESC_MAX,	res_desc,	NULL),
-	 TABENT_RES ("type",		SL_TYPE_INT,	INTSTR_MAX,	res_type,	libsl_str2restype),
-	 TABENT_RES ("id",		SL_TYPE_INT,	INTSTR_MAX,	res_id,		NULL),
-	 TABENT_RES ("mds",		SL_TYPE_BOOL,	BOOL_MAX,	res_mds,	NULL),
+	 TABENT_SITE("site_id",		SL_TYPE_INT,	0,		site_id,	NULL),
+	 TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
+	 TABENT_RES ("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
+	 TABENT_RES ("type",		SL_TYPE_INT,	0,		res_type,	libsl_str2restype),
+	 TABENT_RES ("id",		SL_TYPE_INT,	0,		res_id,		NULL),
+	 TABENT_RES ("mds",		SL_TYPE_BOOL,	0,		res_mds,	NULL),
 	 TABENT_RES ("fsroot",		SL_TYPE_STR,	PATH_MAX,	res_fsroot,	NULL),
 	 { NULL, 0, 0, 0, 0, 0, NULL }
 };
@@ -103,8 +101,8 @@ int cfg_lineno;
 
 const char *cfg_filename;
 
-sl_site_t     *currentSite = NULL;
-sl_resource_t *currentRes  = NULL;
+sl_site_t     *currentSite;
+sl_resource_t *currentRes;
 sl_gconf_t    *currentConf = &globalConfig;
 
 int cfgMode = SL_STRUCT_GLOBAL;
@@ -397,7 +395,7 @@ lnettcp_stmt : NAME EQ LNETTCP END
 u32
 global_net_handler(char *net)
 {
-	strncpy(globalConfig.gconf_net, net, MAXNET);
+	strlcpy(globalConfig.gconf_net, net, MAXNET);
 	return (libcfs_str2net(net));
 }
 
@@ -461,8 +459,7 @@ store_tok_val(const char *tok, char *val)
 
 	switch (e->sym_param_type) {
 	case SL_TYPE_STR:
-		strncpy(ptr, val, e->param);
-		((char *)ptr)[e->param - 1] = '\0';
+		strlcpy(ptr, val, e->param);
 		psc_trace("SL_TYPE_STR Tok '%s' set to '%s'",
 		       e->name, (char *)ptr);
 		break;
