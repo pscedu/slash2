@@ -15,6 +15,7 @@
 #include "psc_ds/pool.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/strlcpy.h"
 
 #include "cache_params.h"
 #include "fid.h"
@@ -32,7 +33,11 @@ static struct fidc_child *
 fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 {
 	struct fidc_child *fcc;
-	int len=strnlen(name, NAME_MAX);
+	int len;
+
+	len = strlen(name);
+	if (len > NAME_MAX)
+		psc_fatalx("name too long");
 
  	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
  	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
@@ -46,9 +51,8 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	fcc->fcc_hash   = str_hash(name);
 	INIT_PSCLIST_ENTRY(&fcc->fcc_lentry);
 	LOCK_INIT(&fcc->fcc_lock);
-	fidc_settimeo(fcc->fcc_age);
-	strncpy(fcc->fcc_name, name, len);
-	fcc->fcc_name[len] = '\0';
+	fidc_settimeo(&fcc->fcc_age);
+	strlcpy(fcc->fcc_name, name, len);
 	return (fcc);
 }
 
@@ -177,7 +181,7 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 		} else {
 			/* Increase the lifespan of this entry and return.
 			 */
-			fidc_settimeo(fcc->fcc_age);
+			fidc_settimeo(&fcc->fcc_age);
 			/* If the fcc is 'connected', then its parent inode
 			 *   must be 'p'.
 			 */
@@ -449,4 +453,3 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	freelock(&c->fcmh_lock);
 	freelock(&p->fcmh_lock);
 }
-
