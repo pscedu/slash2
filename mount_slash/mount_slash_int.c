@@ -698,7 +698,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	}
 	mq->size = v->oftiov_blksz * tblks;
 	mq->op = (op == MSL_PAGES_PUT ? SRMIO_WR : SRMIO_RD);
-	memcpy(&mq->sfdb, &r->oftrq_fdb, sizeof(&mq->sfdb));
+	memcpy(&mq->sfdb, &r->oftrq_fdb, sizeof(mq->sfdb));
 
 	/* Seems counter-intuitive, but it's right.  MSL_PAGES_GET is a
 	 * 'PUT' to the client, MSL_PAGES_PUSH is a server get.
@@ -777,7 +777,7 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 		mq->offset = off + nbytes;
 		mq->size = len;
 		mq->op = (op == SRMT_WRITE ? SRMIO_WR : SRMIO_RD);
-		memcpy(&mq->sfdb, &r->oftrq_fdb, sizeof(&mq->sfdb));
+		memcpy(&mq->sfdb, &r->oftrq_fdb, sizeof(mq->sfdb));
 
 		pscrpc_set_add_new_req(rqset, req);
 		if (pscrpc_push_req(req)) {
