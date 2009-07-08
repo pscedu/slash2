@@ -525,8 +525,13 @@ slrmc_rename(struct pscrpc_request *rq)
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (mq->fromlen == 0 || mq->fromlen > NAME_MAX ||
-	    mq->tolen == 0 || mq->tolen > NAME_MAX) {
+	if (mq->fromlen == 0 ||
+	    mq->tolen == 0) {
+		mp->rc = -ENOENT;
+		RETURN(0);
+	}
+	if (mq->fromlen > NAME_MAX ||
+	    mq->tolen > NAME_MAX) {
 		mp->rc = -EINVAL;
 		RETURN(0);
 	}
