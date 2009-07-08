@@ -28,15 +28,13 @@
 #include "psc_util/usklndthr.h"
 
 #include "control.h"
-#include "fidc_common.h"
 #include "fidc_client.h"
+#include "fidc_common.h"
 #include "fidcache.h"
 #include "fuse_listener.h"
 #include "mount_slash.h"
 #include "msl_fuse.h"
 #include "slashrpc.h"
-
-#define _PATH_MSL "/slashfs_client"	/* /slash */
 
 sl_ios_id_t prefIOS = IOS_ID_ANY;
 const char *progname;
@@ -1637,7 +1635,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char c, mp[PATH_MAX], *nc_mp = _PATH_MSL, *cfg = _PATH_SLASHCONF;
+	char c, mp[PATH_MAX], *nc_mp, *cfg = _PATH_SLASHCONF;
 	int rc, unmount;
 
 	pfl_init();
