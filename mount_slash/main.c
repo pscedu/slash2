@@ -188,9 +188,9 @@ slash2fuse_fidc_put(const struct slash_fidgen *fg, const struct stat *stb,
 static void
 slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 {
-	struct pscrpc_request *rq;
-	struct srm_access_req *mq;
 	struct srm_generic_rep *mp;
+	struct srm_access_req *mq;
+	struct pscrpc_request *rq;
 	struct fidc_membh *c;
 	int rc=0;
 
@@ -198,8 +198,9 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 
 	c = NULL;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	    SRMT_ACCESS, rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_ACCESS, rq, mq, mp);
+	if (rc)
 		goto out;
 
 	slash2fuse_getcred(req, &mq->creds);
@@ -216,10 +217,13 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
+
  out:
 	fuse_reply_err(req, rc);
 	if (c)
 		fidc_membh_dropref(c);
+	if (rq)
+		pscrpc_req_finished(rq);
 }
 
 static void
@@ -289,7 +293,6 @@ slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 static void
 slash2fuse_transflags(u32 flags, u32 *nflags, u32 *nmode)
 {
-
 	if (flags & O_WRONLY) {
 		*nmode = SL_WRITE;
 		*nflags = SL_FWRITE;
@@ -297,7 +300,6 @@ slash2fuse_transflags(u32 flags, u32 *nflags, u32 *nmode)
 	} else if (flags & O_RDWR) {
 		*nmode = SL_WRITE | SL_READ;
 		*nflags = SL_FREAD | SL_FWRITE;
-
 	} else {
 		*nmode = SL_READ;
 		*nflags = SL_FREAD;
@@ -323,7 +325,6 @@ slash2fuse_transflags(u32 flags, u32 *nflags, u32 *nmode)
 		*nflags |= SL_FEXCL;
 	if (flags & O_DIRECTORY)
 		*nflags |= SL_DIRECTORY;
-
 }
 
 static int
