@@ -338,26 +338,25 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	h = mfh->mfh_fcmh;
 	psc_assert(ino == fcmh_2_fid(h));
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-		   (fi->flags & O_DIRECTORY) ? SRMT_OPENDIR : SRMT_OPEN,
-		   rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    (fi->flags & O_DIRECTORY) ? SRMT_OPENDIR : SRMT_OPEN,
+	    rq, mq, mp);
+	if (rc)
 		return (rc);
 
 	slash2fuse_getcred(req, &mq->creds);
 	slash2fuse_transflags(fi->flags, &mq->flags, &mq->mode);
 	mq->ino = ino;
 
-	if (!(rc = RSX_WAITREP(rq, mp))) {
-		if (mp->rc)
-			rc = mp->rc;
-		else {
-			memcpy(&h->fcmh_fcoo->fcoo_fdb,
-			    &mp->sfdb, sizeof(mp->sfdb));
-			//fidc_fcm_setattr(h, &mp->attr);
-		}
+	rc = RSX_WAITREP(rq, mp);
+	if (rc || mp->rc)
+		rc = rc ? rc : mp->rc;
+	else {
+		memcpy(&h->fcmh_fcoo->fcoo_fdb,
+		    &mp->sfdb, sizeof(mp->sfdb));
+		//fidc_fcm_setattr(h, &mp->attr);
 	}
 	pscrpc_req_finished(rq);
-
 	return (rc);
 }
 
