@@ -38,11 +38,12 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	len = strlen(name);
 	if (len > NAME_MAX)
 		psc_fatalx("name too long");
+	len++;
 
 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
 
-	fcc = PSCALLOC(sizeof(*fcc) + (len + 1));
+	fcc = PSCALLOC(sizeof(*fcc) + len);
 	atomic_set(&fcc->fcc_ref, 0);
 	fcc->fcc_fg.fg_fid = fcmh_2_fid(c);
 	fcc->fcc_fg.fg_gen = fcmh_2_gen(c);
