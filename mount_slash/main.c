@@ -11,6 +11,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -36,14 +37,6 @@
 #include "slashrpc.h"
 
 #define _PATH_MSL "/slashfs_client"	/* /slash */
-
-struct slfuse_dirent {
-	u64   ino;
-	u64   off;
-	u32   namelen;
-	u32   type;
-	char name[0];
-};
 
 sl_ios_id_t prefIOS = IOS_ID_ANY;
 const char *progname;
@@ -122,7 +115,7 @@ slash2fuse_reply_create(fuse_req_t req, const struct slash_fidgen *fg,
 
 	memcpy(&e.attr, stb, sizeof(e.attr));
 
-	psc_trace("inode:%"_P_U64"d generation:%lu", e.ino, e.generation);
+	psc_trace("inode:%"PRId64" generation:%lu", e.ino, e.generation);
 	fcm_dump_stb(&e.attr, PLL_TRACE);
 
 	fuse_reply_create(req, &e, fi);
@@ -142,7 +135,7 @@ slash2fuse_reply_entry(fuse_req_t req, const struct slash_fidgen *fg,
 
 	memcpy(&e.attr, stb, sizeof(e.attr));
 
-	psc_trace("inode:%"_P_U64"d generation:%lu",
+	psc_trace("inode:%"PRId64" generation:%lu",
 		  e.ino, e.generation);
 	fcm_dump_stb(&e.attr, PLL_TRACE);
 
@@ -481,7 +474,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	rc = RSX_WAITREP(rq, mp);
 
 	if (mp->rc == EEXIST) { /* XXX need to check rc before mp->rc */
-		psc_info("fid %"_P_U64"d already existed on mds",
+		psc_info("fid %"PRId64" already existed on mds",
 			 mp->sfdb.sfdb_secret.sfs_fg.fg_fid);
 		/*  Handle the network side of O_EXCL.
 		 */
@@ -495,7 +488,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	}
 
-	psc_warnx("FID %"_P_U64"d %s", mp->sfdb.sfdb_secret.sfs_fg.fg_fid,
+	psc_warnx("FID %"PRId64" %s", mp->sfdb.sfdb_secret.sfs_fg.fg_fid,
 	    name);
 
 	m = slash2fuse_fidc_putget(&mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, name, p, &mq->creds,
@@ -539,7 +532,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	msfsthr_ensure();
 
-	psc_warnx("FID %"_P_U64"d", (slfid_t)ino);
+	psc_warnx("FID %"PRId64, (slfid_t)ino);
 
 	c = fidc_lookup_load_inode((slfid_t)ino, &creds);
 	if (!c) {
@@ -785,7 +778,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	rc = RSX_WAITREP(rq, mp);
 
-	psc_info("pino=%"_P_U64"x mode=0%o name='%s' rc=%d mp->rc=%d",
+	psc_info("pino=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
 		 mq->pino, mq->mode, mq->name, rc, mp->rc);
 
 	if (rc || mp->rc) {
@@ -972,7 +965,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			fcm.fcm_fg.fg_fid = attr->attr.st_ino;
 			fcm.fcm_fg.fg_gen = attr->gen;
 
-			psc_trace("adding i+g:%"_P_U64"d+%"_P_U64"d rc=%d",
+			psc_trace("adding i+g:%"PRId64"+%"PRId64" rc=%d",
 				  fcm.fcm_fg.fg_fid, fcm.fcm_fg.fg_gen,
 				  attr->rc);
 
@@ -1051,14 +1044,14 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 
 	slash2fuse_getcred(req, &creds);
 
-	psc_infos(PSS_OTHER, "name %s inode %"_P_U64"d",
+	psc_infos(PSS_OTHER, "name %s inode %"PRId64,
 		  name, parent);
 
 	p = fidc_lookup_load_inode((slfid_t)parent, &creds);
 	if (!p) {
 		/* Parent inode must exist in the cache.
 		 */
-		psc_warnx("name %s - failed to load inode %"_P_U64"x",
+		psc_warnx("name %s - failed to load inode %"PRIx64,
 			  name, parent);
 		error = EINVAL;
 		goto out;
@@ -1170,7 +1163,7 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct fidc_membh *c;
 
 	msfsthr_ensure();
-	psc_warnx("FID %"_P_U64"d", (slfid_t)ino);
+	psc_warnx("FID %"PRId64, (slfid_t)ino);
 
 	mfh = (void *)fi->fh;
 	c = mfh->mfh_fcmh;
@@ -1542,30 +1535,30 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 }
 
 struct fuse_lowlevel_ops zfs_operations = {
-	.open       = slash2fuse_open,
-	.read       = slash2fuse_read,
-	.write      = slash2fuse_write,
-	.release    = slash2fuse_release,
-	.opendir    = slash2fuse_opendir,
-	.readdir    = slash2fuse_readdir_helper,
-	.releasedir = slash2fuse_release,
-	.lookup     = slash2fuse_lookup_helper,
-	.getattr    = slash2fuse_getattr,
-	.readlink   = slash2fuse_readlink,
-	.mkdir      = slash2fuse_mkdir,
-	.rmdir      = slash2fuse_rmdir_helper,
-	.create     = slash2fuse_create,
-	.unlink     = slash2fuse_unlink_helper,
-	.mknod      = slash2fuse_mknod_helper,
-	.symlink    = slash2fuse_symlink_helper,
-	.link       = slash2fuse_link,
-	.rename     = slash2fuse_rename_helper,
-	.setattr    = slash2fuse_setattr,
-	.fsync      = slash2fuse_fsync_helper, //
-	.fsyncdir   = slash2fuse_fsync_helper, //
-	.access     = slash2fuse_access,
-	.statfs     = slash2fuse_statfs,
-	.destroy    = slash2fuse_destroy, //
+	.access		= slash2fuse_access,
+	.create		= slash2fuse_create,
+	.destroy	= slash2fuse_destroy,
+	.fsync		= slash2fuse_fsync_helper,
+	.fsyncdir	= slash2fuse_fsync_helper,
+	.getattr	= slash2fuse_getattr,
+	.link		= slash2fuse_link,
+	.lookup		= slash2fuse_lookup_helper,
+	.mkdir		= slash2fuse_mkdir,
+	.mknod		= slash2fuse_mknod_helper,
+	.open		= slash2fuse_open,
+	.opendir	= slash2fuse_opendir,
+	.read		= slash2fuse_read,
+	.readdir	= slash2fuse_readdir_helper,
+	.readlink	= slash2fuse_readlink,
+	.release	= slash2fuse_release,
+	.releasedir	= slash2fuse_release,
+	.rename		= slash2fuse_rename_helper,
+	.rmdir		= slash2fuse_rmdir_helper,
+	.setattr	= slash2fuse_setattr,
+	.statfs		= slash2fuse_statfs,
+	.symlink	= slash2fuse_symlink_helper,
+	.unlink		= slash2fuse_unlink_helper,
+	.write		= slash2fuse_write
 };
 
 int
@@ -1651,13 +1644,13 @@ main(int argc, char *argv[])
 
 	unmount = 0;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "f:m:S:U")) != -1)
+	while ((c = getopt(argc, argv, "f:mS:U")) != -1)
 		switch (c) {
 		case 'f':
 			cfg = optarg;
 			break;
 		case 'm':
-			nc_mp = optarg;
+			psc_errorx("-m is deprecated");
 			break;
 		case 'S':
 			if (strlcpy(ctlsockfn, optarg,
@@ -1671,8 +1664,10 @@ main(int argc, char *argv[])
 			usage();
 		}
 	argc -= optind;
-	if (argc)
+	argv += optind;
+	if (argc != 1)
 		usage();
+	nc_mp = argv[0];
 
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
