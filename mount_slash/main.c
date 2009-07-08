@@ -232,29 +232,29 @@ slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 	struct fidc_open_obj *o=fcmh->fcmh_fcoo;
 	int l=reqlock(&fcmh->fcmh_lock);
 
-#define SL2F_UPOPREF_READ {					\
+#define SL2F_UPOPREF_READ() do {				\
 		if (!o->fcoo_oref_rw[0])			\
 			*uord |= SL_FREAD;			\
 		o->fcoo_oref_rw[0]++;				\
-	}
+	} while (0)
 
-#define SL2F_UPOPREF_WRITE {					\
+#define SL2F_UPOPREF_WRITE() do {				\
 		if (!o->fcoo_oref_rw[1])			\
 			*uord |= SL_FWRITE;			\
 		o->fcoo_oref_rw[1]++;				\
-	}
+	} while (0)
 
-#define SL2F_DOWNOPREF_READ {					\
+#define SL2F_DOWNOPREF_READ() do {				\
 		o->fcoo_oref_rw[0]--;				\
 		if (!o->fcoo_oref_rw[0])			\
 			*uord |= SL_FREAD;			\
-	}
+	} while (0)
 
-#define SL2F_DOWNOPREF_WRITE {					\
+#define SL2F_DOWNOPREF_WRITE() do {				\
 		o->fcoo_oref_rw[1]--;				\
 		if (!o->fcoo_oref_rw[1])			\
 			*uord |= SL_FWRITE;			\
-	}
+	} while (0)
 
 	psc_assert(o->fcoo_oref_rw[0] >= 0);
 	psc_assert(o->fcoo_oref_rw[1] >= 0);
@@ -262,23 +262,20 @@ slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 	if (*uord) {
 		*uord = 0;
 		if (flags & O_WRONLY)
-			{SL2F_UPOPREF_WRITE;}
-
+			SL2F_UPOPREF_WRITE();
 		else if (flags & O_RDWR) {
-			{SL2F_UPOPREF_WRITE;}
-			{SL2F_UPOPREF_READ;}
+			SL2F_UPOPREF_WRITE();
+			SL2F_UPOPREF_READ();
 		} else
-			{SL2F_UPOPREF_READ;}
-
+			SL2F_UPOPREF_READ();
 	} else {
-		if (flags & O_WRONLY) {
-			{SL2F_DOWNOPREF_WRITE;}
-
-		} else if (flags & O_RDWR) {
-			{SL2F_DOWNOPREF_WRITE;}
-			{SL2F_DOWNOPREF_READ;}
+		if (flags & O_WRONLY)
+			SL2F_DOWNOPREF_WRITE();
+		else if (flags & O_RDWR) {
+			SL2F_DOWNOPREF_WRITE();
+			SL2F_DOWNOPREF_READ();
 		} else
-			{SL2F_DOWNOPREF_READ;}
+			SL2F_DOWNOPREF_READ();
 	}
 
 	if (!(o->fcoo_oref_rw[0] || o->fcoo_oref_rw[1])) {
