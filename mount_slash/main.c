@@ -454,8 +454,9 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	 *  any other creates to this pathame will block in
 	 *  fidc_child_wait_locked() until we release the fcc.
 	 */
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	     SRMT_CREATE, rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	     SRMT_CREATE, rq, mq, mp);
+	if (rc)
 		goto out;
 
 	slash2fuse_getcred(req, &mq->creds);
@@ -591,8 +592,9 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 	ureqlock(&fcmh->fcmh_lock, l);
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION, SRMT_GETATTR,
-			     rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_GETATTR, rq, mq, mp);
+	if (rc)
 		return (rc);
 
 	memcpy(&mq->creds, creds, sizeof(*creds));
@@ -690,10 +692,11 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		rc = EISDIR;
 		goto err;
 	}
-	/* Create and initialize the link rpc.
+	/* Create and initialize the LINK RPC.
 	 */
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-			     SRMT_LINK, rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_LINK, rq, mq, mp);
+	if (rc)
 		goto err;
 
 	mq->len = strlen(newname);
@@ -756,10 +759,11 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = ENOTDIR;
 		goto out;
 	}
-	/* Create and initialize the link RPC.
+	/* Create and initialize the MKDIR RPC.
 	 */
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	     SRMT_MKDIR, rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	     SRMT_MKDIR, rq, mq, mp);
+	if (rc)
 		goto out;
 
 	mq->len = strlen(name);
@@ -792,7 +796,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 static int
 slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
-		  int ford)
+		  int isfile)
 {
 	struct pscrpc_request *rq;
 	struct srm_unlink_req *mq;
@@ -807,8 +811,9 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (strlen(name) >= NAME_MAX)
 		return (ENAMETOOLONG);
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	     (ford ? SRMT_UNLINK : SRMT_RMDIR), rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	     (isfile ? SRMT_UNLINK : SRMT_RMDIR), rq, mq, mp);
+	if (rc)
 		return (rc);
 
 	slash2fuse_getcred(req, &mq->creds);
@@ -916,8 +921,9 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		return (ENOTDIR);
 	}
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	    SRMT_READDIR, rq, mq, mp)) != 0) {
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_READDIR, rq, mq, mp);
+	if (rc) {
 		fidc_membh_dropref(d);
 		return (rc);
 	}
@@ -1004,8 +1010,9 @@ slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 	if (strlen(name) > NAME_MAX)
 		return (EINVAL);
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION, SRMT_LOOKUP,
-			     rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_LOOKUP, rq, mq, mp);
+	if (rc)
 		return (rc);
 
 	slash2fuse_getcred(req, &mq->creds);
@@ -1090,8 +1097,9 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 
 	msfsthr_ensure();
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION, SRMT_READLINK,
-			     rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_READLINK, rq, mq, mp);
+	if (rc)
 		goto out;
 
 	slash2fuse_getcred(req, &mq->creds);
@@ -1133,20 +1141,19 @@ slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	psc_assert(h->fcmh_state & FCMH_FCOO_CLOSING);
 	freelock(&h->fcmh_lock);
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-			     SRMT_RELEASE, rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_RELEASE, rq, mq, mp);
+	if (rc)
 		return (rc);
 
 	slash2fuse_getcred(req, &mq->creds);
 	slash2fuse_transflags(fi->flags, &mq->flags, &mode);
 	memcpy(&mq->sfdb, &h->fcmh_fcoo->fcoo_fdb, sizeof(mq->sfdb));
 
-	if (!(rc = RSX_WAITREP(rq, mp))) {
-		if (mp->rc)
-			rc = mp->rc;
-	}
+	rc = RSX_WAITREP(rq, mp);
+	if (rc || mp->rc)
+		rc = rc ? rc : mp->rc;
 	pscrpc_req_finished(rq);
-
 	return (rc);
 }
 
@@ -1192,11 +1199,13 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 
 	msfsthr_ensure();
 
-	if (strlen(name) >= NAME_MAX || strlen(newname) >= NAME_MAX)
+	if (strlen(name) > NAME_MAX ||
+	    strlen(newname) > NAME_MAX)
 		return (ENAMETOOLONG);
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	    SRMT_RENAME, rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_RENAME, rq, mq, mp);
+	if (rc)
 		return (rc);
 
 	mq->opino = parent;
@@ -1239,18 +1248,19 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 
 	msfsthr_ensure();
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	    SRMT_STATFS, rq, mq, mp)) != 0) {}
-	else
-		rc = RSX_WAITREP(rq, mp);
-
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_STATFS, rq, mq, mp);
+	if (rc)
+		goto out;
+	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
+ out:
 		rc = rc ? rc : mp->rc;
 		fuse_reply_err(req, rc);
 	} else
 		fuse_reply_statfs(req, &mp->stbv);
-
-	pscrpc_req_finished(rq);
+	if (rq)
+		pscrpc_req_finished(rq);
 }
 
 static int
@@ -1276,8 +1286,9 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 	if (!p)
 		return (ENOMEM);
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	    SRMT_SYMLINK, rq, mq, mp)) != 0) {
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_SYMLINK, rq, mq, mp);
+	if (rc) {
 		fidc_membh_dropref(p);
 		return (rc);
 	}
@@ -1349,8 +1360,9 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 
 	ENTRY;
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION, SRMT_SETATTR,
-			     rq, mq, mp)) != 0)
+	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	    SRMT_SETATTR, rq, mq, mp);
+	if (rc)
 		goto cleanup;
 
 	c = fidc_lookup_inode((slfid_t)ino);
