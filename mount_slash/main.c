@@ -439,6 +439,13 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	msfsthr_ensure();
 
+	p = NULL;
+
+	if (strlen(name) > NAME_MAX) {
+		rc = ENAMETOOLONG;
+		goto out;
+	}
+
 	p = fidc_lookup_inode((slfid_t)parent);
 	if (!p) {
 		/* Parent inode must exist in the cache.
@@ -465,11 +472,12 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	mq->mode = mode;
 	mq->pino = parent;
 	mq->len = strlen(name);
-	strncpy(mq->name, name, mq->len);
+	strlcpy(mq->name, name, mq->len);
 
 	rc = RSX_WAITREP(rq, mp);
-
-	if (mp->rc == EEXIST) { /* XXX need to check rc before mp->rc */
+	if (rc)
+		goto out;
+	if (mp->rc == EEXIST) {
 		psc_info("fid %"PRId64" already existed on mds",
 			 mp->sfdb.sfdb_secret.sfs_fg.fg_fid);
 		/*  Handle the network side of O_EXCL.
@@ -479,8 +487,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 			goto out;
 		}
 
-	} else if (rc || (mp->rc && mp->rc != EEXIST)) {
-		rc = rc ? rc : mp->rc;
+	} else if (mp->rc) {
+		rc = mp->rc;
 		goto out;
 	}
 
@@ -500,20 +508,16 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	 */
 	slash2fuse_openref_update(m, fi->flags, &flags);
 	fidc_fcoo_startdone(m);
+	slash2fuse_reply_create(req, &mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, fi);
+	fidc_membh_dropref(m);		/* slash2fuse_fidc_putget() bumped it. */
 
  out:
 	if (rc)
 		fuse_reply_err(req, rc);
-
-	else {
-		slash2fuse_reply_create(req, &mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, fi);
-		/* slash2fuse_fidc_putget() leaves the fcmh ref'd.
-		 */
-		fidc_membh_dropref(m);
-	}
-	pscrpc_req_finished(rq);
 	if (p)
 		fidc_membh_dropref(p);
+	if (rq)
+		pscrpc_req_finished(rq);
 }
 
 static void
