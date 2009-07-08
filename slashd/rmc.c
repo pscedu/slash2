@@ -203,6 +203,7 @@ slrmc_link(struct pscrpc_request *rq)
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
+	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = zfsslash2_link(zfsVfs, mq->ino, mq->pino, mq->name,
 				&mp->fg, &mq->creds, &mp->attr);
 
@@ -218,6 +219,7 @@ slrmc_lookup(struct pscrpc_request *rq)
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
+	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = zfsslash2_lookup(zfsVfs, mq->pino, mq->name, &mp->fg, &mq->creds,
 				  &mp->attr);
 
@@ -233,6 +235,7 @@ slrmc_mkdir(struct pscrpc_request *rq)
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
+	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = zfsslash2_mkdir(zfsVfs, mq->pino, mq->name, mq->mode,
 				 &mq->creds, &mp->attr, &mp->fg);
 
@@ -250,6 +253,7 @@ slrmc_create(struct pscrpc_request *rq)
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
+	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = zfsslash2_opencreate(zfsVfs, mq->pino, &mq->creds, mq->flags,
 				      mq->mode, mq->name, &fg,
 				      &mp->attr, &data);
@@ -521,21 +525,21 @@ slrmc_rename(struct pscrpc_request *rq)
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (mq->fromlen == 0 || mq->fromlen >= NAME_MAX ||
-	    mq->tolen == 0 || mq->tolen >= NAME_MAX) {
+	if (mq->fromlen == 0 || mq->fromlen > NAME_MAX ||
+	    mq->tolen == 0 || mq->tolen > NAME_MAX) {
 		mp->rc = -EINVAL;
 		RETURN(0);
 	}
-	iov[0].iov_base = (void *)from;
+	iov[0].iov_base = from;
 	iov[0].iov_len = mq->fromlen;
-	iov[1].iov_base = (void *)to;
+	iov[1].iov_base = to;
 	iov[1].iov_len = mq->tolen;
 
 	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 	    SRMC_BULK_PORTAL, iov, 2)) != 0)
 		RETURN(0);
-	from[mq->fromlen] = '\0';
-	to[mq->tolen] = '\0';
+	from[sizeof(from) - 1] = '\0';
+	to[sizeof(to) - 1] = '\0';
 	pscrpc_free_bulk(desc);
 
 	mp->rc = zfsslash2_rename(zfsVfs, mq->opino, from,
@@ -601,22 +605,26 @@ slrmc_symlink(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
-	struct iovec iov[1];
+	struct iovec iov;
 
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if ((mq->linklen >= PATH_MAX) ||
-	    (mq->namelen >= NAME_MAX)) {
+	mq->name[sizeof(mq->name)] = '\0';
+	if (mq->linklen == 0) {
+		mp->rc = -ENOENT;
+		RETURN(0);
+	}
+	if (mq->linklen >= PATH_MAX) {
 		mp->rc = -ENAMETOOLONG;
 		RETURN(0);
 	}
-	iov[0].iov_base = link;
-	iov[0].iov_len = mq->linklen;
+	iov.iov_base = link;
+	iov.iov_len = mq->linklen;
 	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRMC_BULK_PORTAL, iov, 1)) != 0)
+	    SRMC_BULK_PORTAL, &iov, 1)) != 0)
 		RETURN(0);
-	link[mq->linklen] = '\0';
+	link[sizeof(link) - 1] = '\0';
 	pscrpc_free_bulk(desc);
 
 	mp->rc = zfsslash2_symlink(zfsVfs, link, mq->pino, mq->name,
@@ -625,7 +633,7 @@ slrmc_symlink(struct pscrpc_request *rq)
 }
 
 static int
-slrmc_unlink(struct pscrpc_request *rq, int ford)
+slrmc_unlink(struct pscrpc_request *rq, int isfile)
 {
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
@@ -633,7 +641,8 @@ slrmc_unlink(struct pscrpc_request *rq, int ford)
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (ford)
+	mq->name[sizeof(mq->name) - 1] = '\0';
+	if (isfile)
 		mp->rc = zfsslash2_unlink(zfsVfs, mq->pino,
 					  mq->name, &mq->creds);
 	else
