@@ -8,6 +8,7 @@
  */
 
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 
 #include "psc_ds/tree.h"
@@ -70,7 +71,7 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 
 	if (cfd)
 		*cfd = NULL;
-       	
+
 	psc_assert(type == CFD_DIR || type == CFD_FILE);
 
 	c = PSCALLOC(sizeof(*c));
@@ -95,7 +96,7 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 		}
 	}
 
-	psc_info("FID (%"_P_U64"d) CFD (%"_P_U64"d)", fid,
+	psc_info("FID (%"PRId64") CFD (%"PRId64")", fid,
 	    c->fdb.sfdb_secret.sfs_cfd);
 
 	if ((rc = cfdinsert(c, exp))) {

@@ -5,6 +5,8 @@
 
 #include <sys/types.h>
 
+#include <inttypes.h>
+
 #include "psc_types.h"
 
 #define FID_MAX_PATH	96
@@ -23,13 +25,13 @@ struct slash_fidgen {
 #define FID_ANY			0xffffffffffffULL
 
 /* 16 bit server/filesystem id */
-#define FSID_FMT		"%016"_P_U64"x"
+#define FSID_FMT		"%016"PRIx64
 #define FSID_LEN		16
 #define FID_PATH_DEPTH		3
 #define FID_PATH_LEN		1024
 #define FID_PATH_NAME           ".slfidns"
 
-#define FIDFMT			"%"_P_U64"d:%"_P_U64"d"
+#define FIDFMT			"%"PRId64":%"PRId64
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
 
 #define FID_FSID(fid)		((u32)((fid) >> 48))

@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <errno.h>
+#include <inttypes.h>
 #include <time.h>
 
 #include "psc_ds/dynarray.h"
@@ -96,8 +97,8 @@ sl_buffer_pin_assertions(struct sl_buffer *b)
 	psc_assert((atomic_read(&b->slb_ref) > 0) ||
 		   (atomic_read(&b->slb_unmapd_ref) > 0));
 	psc_assert((atomic_read(&b->slb_inflight) > 0) ||
-		   (atomic_read(&b->slb_inflpndg) > 0));	
-	psc_assert(atomic_read(&b->slb_inflpndg) >= 
+		   (atomic_read(&b->slb_inflpndg) > 0));
+	psc_assert(atomic_read(&b->slb_inflpndg) >=
 		   (atomic_read(&b->slb_inflight)));
 }
 
@@ -105,8 +106,8 @@ sl_buffer_pin_assertions(struct sl_buffer *b)
 static void
 sl_buffer_inflight_assertions(struct sl_buffer *b)
 {
-	psc_assert(!ATTR_TEST(b->slb_flags, SLB_DIRTY));   
-        psc_assert(!ATTR_TEST(b->slb_flags, SLB_INFLIGHT));  
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_DIRTY));
+        psc_assert(!ATTR_TEST(b->slb_flags, SLB_INFLIGHT));
 	psc_assert(atomic_read(&b->slb_inflight));
 }
 #endif
@@ -346,7 +347,7 @@ sl_slab_reap(int nblks) {
 			/* offtree_freeleaf_locked() releases both locks.
 			 */
 			offtree_freeleaf_locked(m);
-			
+
 		}
 		/* Remove ourselves from the fidcache slab list
 		 */
@@ -587,7 +588,7 @@ sl_oftm_addref(struct offtree_memb *m)
 	psc_assert(atomic_read(&slb->slb_ref) <= slb->slb_nblks);
 	freelock(&slb->slb_lock);
 }
-		
+
 __static void
 sl_buffer_pin_locked(struct sl_buffer *slb)
 {
@@ -597,7 +598,7 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 	}
 	if (ATTR_TEST(slb->slb_flags, SLB_FRESH)) {
 		slb_fresh_2_pinned(slb);
-		
+
 	} else if (ATTR_TEST(slb->slb_flags, SLB_LRU)) {
 		/* Move from LRU to PINNED.
 		 * Note: the LRU and FREE managers MUST use
@@ -611,11 +612,11 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 		DEBUG_SLB(PLL_FATAL, slb, "invalid slb");
 		psc_fatalx("invalid slb %p", slb);
 	}
-	atomic_inc(&slb->slb_inflpndg);	
+	atomic_inc(&slb->slb_inflpndg);
 	sl_buffer_put(slb, &slBufsPin);
 }
 
-/** 
+/**
  * sl_buffer_unpin_locked - decref and perhaps unpin an slb.
  * Notes:  the slb_inflight ref corresponding to this op must have already been dec'd, meaning that slb_inflpndg must be at least 1 greater than slb_inflight.
  */
@@ -630,7 +631,7 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 			sl_buffer_put((slb), &slBufsLru);		\
 		}							\
 	}								\
-		
+
 /**
  * sl_oftiov_pin_cb - callback from offtree.c to instruct us to pin the slb contained within the passed in 'iov'.  sl_oftiov_pin_cb does some simple sanity checking and merely calls in sl_buffer_pin_locked().
  *
@@ -659,13 +660,13 @@ sl_oftiov_pin_cb(struct offtree_iov *iov, int op)
 	spinlock(&slb->slb_lock);
 	if (op == SL_BUFFER_PIN)
 		sl_buffer_pin_locked(slb);
-	
+
 	else if (op == SL_BUFFER_UNPIN) {
 		sl_buffer_unpin_locked(slb);
-	} else 
+	} else
 		psc_fatalx("Unknown op type %d", op);
-	
-	freelock(&slb->slb_lock);       	
+
+	freelock(&slb->slb_lock);
 }
 
 /**
@@ -679,22 +680,22 @@ sl_oftiov_inflight_cb(struct offtree_iov *iov, int op)
 	s = (struct sl_buffer *)iov->oftiov_pri;
 
 	DEBUG_SLB(PLL_TRACE, s, "inflight ref updating op=%d", op);
-		
+
 	if (op == SL_INFLIGHT_INC) {
 		psc_assert(atomic_read(&s->slb_inflight) >= 0);
 
 		atomic_inc(&s->slb_inflight);
 
-		psc_assert(atomic_read(&s->slb_inflight) <= 
+		psc_assert(atomic_read(&s->slb_inflight) <=
 			   atomic_read(&s->slb_inflpndg));
-		
+
 	} else if (op == SL_INFLIGHT_DEC) {
 		psc_assert(atomic_read(&s->slb_inflight) <=
                            atomic_read(&s->slb_inflpndg));
 		psc_assert(atomic_read(&s->slb_inflight) >= 1);
 
 		atomic_dec(&s->slb_inflight);
-		
+
 	} else {
 		psc_fatalx("Invalid op=%d", op);
 	}
@@ -727,7 +728,7 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 	 *   us removing it from the list.
 	 */
 	DEBUG_SLB(PLL_TRACE, slb,
-		  "sl_buffer_alloc_internal, a=%p nblks=%zu, soffa=%"_P_U64"x",
+		  "sl_buffer_alloc_internal, a=%p nblks=%zu, soffa=%"PRIx64,
 		  a, nblks, soffa);
 
 	if (ATTR_TEST(slb->slb_flags, SLB_FREEING) || (tok != slb->slb_lc_fcm))
@@ -858,11 +859,11 @@ sl_buffer_alloc(size_t nblks, off_t soffa, struct dynarray *a, void *pri)
 		 */
 		PLL_LOCK(ll);
 		PLL_FOREACH(slb, ll) {
-			DEBUG_SLB(PLL_TRACE, slb, "soffa %"_P_U64"x trying "
+			DEBUG_SLB(PLL_TRACE, slb, "soffa %"PRIx64" trying "
 				  "with this slb", soffa);
 			if (SLB_FULL(slb))
 				continue;
-			
+
 			fblks += sl_buffer_alloc_internal(slb, (nblks-fblks),
 							  nr_soffa, a, ll);
 
@@ -930,7 +931,7 @@ sl_buffer_cache_init(void)
 {
 	psc_assert(SLB_SIZE <= LNET_MTU);
 
-	psc_poolmaster_init(&slBufsFreePoolMaster, struct sl_buffer, slb_mgmt_lentry, 
+	psc_poolmaster_init(&slBufsFreePoolMaster, struct sl_buffer, slb_mgmt_lentry,
 			    PPMF_AUTO, slbFreeDef, 0, slbFreeMax,
 			    sl_buffer_init, sl_buffer_destroy, NULL, "slabBufFreePool", NULL);
 	slBufsFreePool = psc_poolmaster_getmgr(&slBufsFreePoolMaster);

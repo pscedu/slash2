@@ -3,6 +3,7 @@
 #ifndef _BMAP_H_
 #define _BMAP_H_
 
+#include <inttypes.h>
 #include <time.h>
 
 #include "psc_types.h"
@@ -54,8 +55,8 @@ struct bmapc_memb {
 
 #define DEBUG_BMAP(level, b, fmt, ...)					\
 	psc_logs((level), PSS_OTHER,					\
-		 " bmap@%p b:%u m:%u i:%"_P_U64"x"			\
-		 "rref=%u wref=%u opcnt=%u "fmt,			\
+		 " bmap@%p b:%u m:%u i:%"PRIx64				\
+		 " rref=%u wref=%u opcnt=%u "fmt,			\
 		 (b), (b)->bcm_blkno,					\
 		 (b)->bcm_mode,						\
 		 (b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,		\

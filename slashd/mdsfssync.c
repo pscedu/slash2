@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#include <inttypes.h>
+
 #include "psc_types.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/assert.h"
@@ -19,11 +21,11 @@ mdsfssyncthr_begin(__unusedx void *arg)
 	struct psc_journal_xidhndl *xh;
 	jflush_handler jfih;
 	void *data;
-	
+
 	while (1) {
 		jfi = lc_getwait(&dirtyMdsData);
 		spinlock(&jfi->jfi_lock);
-		
+
 		psc_assert(jfi->jfi_data);
 		psc_assert(jfi->jfi_handler);
 		psc_assert(jfi->jfi_xh);
@@ -38,15 +40,15 @@ mdsfssyncthr_begin(__unusedx void *arg)
 		/* Mark the appropriate state changes in the JFI.
 		 */
 		pjournal_xidhndl_free(jfi->jfi_xh);
-		jfi->jfi_xh = NULL;		
+		jfi->jfi_xh = NULL;
 		jfi->jfi_state &= ~JFI_QUEUED;
 		jfi->jfi_state &= ~JFI_HAVE_XH;
-		
+
 		freelock(&jfi->jfi_lock);
 		/* Now run the app-specific data flush code.
 		 */
-		psc_trace("fssync jfi(%p) xh(%p) xid(%"_P_U64"u) data(%p)", 
-			  jfi, xh, xh->pjx_xid, data); 
+		psc_trace("fssync jfi(%p) xh(%p) xid(%"PRIu64") data(%p)",
+			  jfi, xh, xh->pjx_xid, data);
 		(jfih)(data);
 
 		if (pjournal_xend(xh, PJET_VOID, NULL, 0))

@@ -3,6 +3,8 @@
 #ifndef _SLASH_INODEH_H_
 #define _SLASH_INODEH_H_
 
+#include <inttypes.h>
+
 #include "psc_types.h"
 #include "psc_util/lock.h"
 
@@ -27,14 +29,14 @@ enum slash_inode_handle_flags {
 	INOH_INO_DIRTY     = (1<<0), /* Inode structures need to be written */
 	INOH_EXTRAS_DIRTY  = (1<<1), /* Replication structures need written */
 	INOH_HAVE_EXTRAS   = (1<<2),
-	INOH_INO_NEW       = (1<<3), /* The inode info has never been written 
+	INOH_INO_NEW       = (1<<3), /* The inode info has never been written
 				       to disk */
 	INOH_LOAD_EXTRAS   = (1<<4),
 	INOH_INO_NOTLOADED = (1<<5)
 };
 
 static inline void
-slash_inode_handle_init(struct slash_inode_handle *i, 
+slash_inode_handle_init(struct slash_inode_handle *i,
 			struct fidc_membh *f) {
 	i->inoh_fcmh = f;
 	i->inoh_extras = NULL;
@@ -52,14 +54,13 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 	INOH_FLAG((i)->inoh_flags & INOH_HAVE_EXTRAS, "X"),	\
 	INOH_FLAG((i)->inoh_flags & INOH_INO_NEW, "N")
 
-
 #define INOH_FLAGS_FMT "%s%s%s%s"
 
 #define DEBUG_INOH(level, i, fmt, ...)					\
 	psc_logs((level), PSS_OTHER, 					\
 		 " inoh@%p f:"FIDFMT" fl:"INOH_FLAGS_FMT		\
-		 "v:%x bsz:%u nr:%u cs:%u lblk:%"_P_U64"d "		\
-		 "repl0:%u crc:%"_P_U64"x "				\
+		 "v:%x bsz:%u nr:%u cs:%u lblk:%"PRId64" "		\
+		 "repl0:%u crc:%"PRIx64" "				\
 		 ":: "fmt,						\
 		 (i), FIDFMTARGS(&(i)->inoh_ino.ino_fg),		\
 		 DEBUG_INOH_FLAGS(i),					\

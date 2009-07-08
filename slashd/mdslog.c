@@ -292,7 +292,7 @@ mds_sb_sync(void *data)
 
 	freelock(&sb->sbm_lock);
 
-	psc_dbg("sb=%p inum=%"PRIx64" crc="_P_CRC" sync ok",
+	psc_dbg("sb=%p inum=%"PRIx64" crc="PRIxCRC" sync ok",
 		sb, sb->sbm_sbs->sbs_inum, sb->sbm_sbs->sbs_crc);
 }
 

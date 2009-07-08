@@ -3,6 +3,7 @@
 #include <sys/param.h>
 #include <sys/xattr.h>
 
+#include <inttypes.h>
 #include <stdio.h>
 
 #include "psc_util/log.h"
@@ -26,8 +27,8 @@ void
 fid_makepath(slfid_t fid, char *fid_path)
 {
 	int rc;
-       
-	rc = snprintf(fid_path, PATH_MAX, "%s/%s/%c/%c/%c/%016"_P_U64"x",
+
+	rc = snprintf(fid_path, PATH_MAX, "%s/%s/%c/%c/%c/%016"PRIx64,
 	      nodeInfo.node_res->res_fsroot, _PATH_OBJROOT,
 	      (uint8_t)((fid & 0x0000000000f00000ULL) >> (BPHXC*5)),
 	      (uint8_t)((fid & 0x00000000000f0000ULL) >> (BPHXC*4)),
