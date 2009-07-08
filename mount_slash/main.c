@@ -332,7 +332,7 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct srm_opencreate_rep *mp;
 	struct msl_fhent *mfh;
 	struct fidc_membh *h;
-	int rc=0;
+	int rc;
 
 	mfh = (void *)fi->fh;
 	h = mfh->mfh_fcmh;
@@ -471,8 +471,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 			      &mq->flags, &mq->mode);
 	mq->mode = mode;
 	mq->pino = parent;
-	mq->len = strlen(name);
-	strlcpy(mq->name, name, mq->len);
+	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc)
@@ -486,7 +485,6 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 			rc = EEXIST;
 			goto out;
 		}
-
 	} else if (mp->rc) {
 		rc = mp->rc;
 		goto out;
@@ -504,7 +502,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	mfh = msl_fhent_new(m);
 	fi->fh = (uint64_t)mfh;
 	fi->keep_cache = 1;
-	/* Inc ref the fcoo.  The rpc has already taken place.
+	/* Increment the fcoo #refs.  The RPC has already taken place.
 	 */
 	slash2fuse_openref_update(m, fi->flags, &flags);
 	fidc_fcoo_startdone(m);
