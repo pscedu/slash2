@@ -802,10 +802,8 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	struct fidc_membh *p;
-	struct fuse_entry_param e;
 	int rc;
 
-	memset(&e, 0, sizeof(e));
 	msfsthr_ensure();
 
 	if (strlen(name) >= NAME_MAX)
@@ -863,6 +861,7 @@ slash2fuse_mknod_helper(fuse_req_t req,
 			__unusedx mode_t mode,
 			__unusedx dev_t rdev)
 {
+	msfsthr_ensure();
 
 	fuse_reply_err(req, EOPNOTSUPP);
 }
@@ -1043,6 +1042,8 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 	int error=0;
 	struct fidc_membh *p, *m;
 	struct slash_creds creds;
+
+	msfsthr_ensure();
 
 	slash2fuse_getcred(req, &creds);
 
@@ -1360,6 +1361,8 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 
 	ENTRY;
 
+	msfsthr_ensure();
+
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_SETATTR, rq, mq, mp);
 	if (rc)
@@ -1416,6 +1419,9 @@ static int
 slash2fuse_fsync(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino,
 		 __unusedx int datasync, __unusedx struct fuse_file_info *fi)
 {
+
+	msfsthr_ensure();
+
 	return (EOPNOTSUPP);
 }
 
@@ -1597,9 +1603,8 @@ msl_fuse_lowlevel_mount(const char *mp)
 
 	slash2fuse_listener_init();
 
-	if (asprintf(&fuse_opts, FUSE_OPTIONS, mp) == -1) {
+	if (asprintf(&fuse_opts, FUSE_OPTIONS, mp) == -1)
 		return ENOMEM;
-	}
 
 	if (fuse_opt_add_arg(&args, "") == -1 ||
 	    fuse_opt_add_arg(&args, "-o") == -1 ||
@@ -1611,8 +1616,10 @@ msl_fuse_lowlevel_mount(const char *mp)
 	free(fuse_opts);
 
 	ch = fuse_mount(mp, &args);
-	if (ch == NULL)
+	if (ch == NULL) {
+		fuse_opt_free_args(&args);
 		return (errno);
+	}
 
 	se = fuse_lowlevel_new(&args, &zfs_operations, sizeof(zfs_operations),
 	    NULL);
