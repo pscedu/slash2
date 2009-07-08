@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 
+#include <inttypes.h>
+
 #include "psc_types.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
@@ -89,8 +91,8 @@ struct fidc_memb {
 
 #define fcm_dump_stb(stb, level)					\
 	psc_logs(level, PSS_OTHER,					\
-	    "stb (%p) dev:%lu inode:%"_P_U64"d mode:0%o "		\
-	    "nlink:%lu uid:%u gid:%u rdev:%lu sz:%"_P_U64"d "		\
+	    "stb (%p) dev:%lu inode:%"PRId64" mode:0%o "		\
+	    "nlink:%lu uid:%u gid:%u rdev:%lu sz:%"PRId64" "		\
 	    "blk:%lu blkcnt:%zd atime:%lu mtime:%lu ctime:%lu", 	\
 	    (stb),							\
 	    (stb)->st_dev, (stb)->st_ino, (stb)->st_mode,		\
@@ -176,26 +178,26 @@ enum fcmh_states {
 
 #define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
 
-#define DEBUG_FCMH(level, fcmh, fmt, ...)				\
-do {								        \
-	int dbg_fcmh_locked=reqlock(&(fcmh)->fcmh_lock);		\
-	psc_logs((level), PSS_OTHER,					\
-		 " fcmh@%p fcm@%p fcoo@%p fcooref(%d:%d) i+g:%"_P_U64"d+%" \
-		 _P_U64"d s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s r:%d :: "fmt,	\
-		 (fcmh), (fcmh)->fcmh_fcm, (fcmh)->fcmh_fcoo,		\
-		 (int)(((fcmh)->fcmh_fcoo &&				\
-			(fcmh)->fcmh_fcoo != (struct fidc_open_obj *)0x01) ? \
-		       (fcmh)->fcmh_fcoo->fcoo_oref_rw[0] : -66),	\
-		 (int)(((fcmh)->fcmh_fcoo &&				\
-			(fcmh)->fcmh_fcoo != (struct fidc_open_obj *)0x01) ? \
-		       (fcmh)->fcmh_fcoo->fcoo_oref_rw[1] : -66),	\
-		 (u64)(((fcmh)->fcmh_fcm) ? fcmh_2_fid((fcmh)) : FID_ANY), \
-		 (u64)(((fcmh)->fcmh_fcm) ? fcmh_2_gen((fcmh)) : FID_ANY), \
-		 DEBUG_FCMH_FCMH_FLAGS(fcmh), (fcmh)->fcmh_pri,		\
-		 fcmh_lc_2_string((fcmh)->fcmh_cache_owner),		\
-		 atomic_read(&(fcmh)->fcmh_refcnt),			\
-		 ## __VA_ARGS__);					\
-	ureqlock(&(fcmh)->fcmh_lock, dbg_fcmh_locked);			\
+#define DEBUG_FCMH(level, fcmh, fmt, ...)					\
+do {								        	\
+	int dbg_fcmh_locked=reqlock(&(fcmh)->fcmh_lock);			\
+	psc_logs((level), PSS_OTHER,						\
+		 " fcmh@%p fcm@%p fcoo@%p fcooref(%d:%d) i+g:%"PRId64"+"	\
+		 "%"PRId64" s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s r:%d :: "fmt,	\
+		 (fcmh), (fcmh)->fcmh_fcm, (fcmh)->fcmh_fcoo,			\
+		 (int)(((fcmh)->fcmh_fcoo &&					\
+			(fcmh)->fcmh_fcoo != (struct fidc_open_obj *)0x01) ?	\
+		       (fcmh)->fcmh_fcoo->fcoo_oref_rw[0] : -66),		\
+		 (int)(((fcmh)->fcmh_fcoo &&					\
+			(fcmh)->fcmh_fcoo != (struct fidc_open_obj *)0x01) ?	\
+		       (fcmh)->fcmh_fcoo->fcoo_oref_rw[1] : -66),		\
+		 (u64)(((fcmh)->fcmh_fcm) ? fcmh_2_fid((fcmh)) : FID_ANY),	\
+		 (u64)(((fcmh)->fcmh_fcm) ? fcmh_2_gen((fcmh)) : FID_ANY),	\
+		 DEBUG_FCMH_FCMH_FLAGS(fcmh), (fcmh)->fcmh_pri,			\
+		 fcmh_lc_2_string((fcmh)->fcmh_cache_owner),			\
+		 atomic_read(&(fcmh)->fcmh_refcnt),				\
+		 ## __VA_ARGS__);						\
+	ureqlock(&(fcmh)->fcmh_lock, dbg_fcmh_locked);				\
 } while (0)
 
 #define FCMHCACHE_PUT(fcmh, list)					\
@@ -267,8 +269,8 @@ static inline void
 fcm_dump_stb_(const struct stat *stb, int level)
 {
 	psc_logs(level, PSS_OTHER,
-		"stb (%p) dev:%lu inode:%"_P_U64"d mode:0%o nlink:%lu "
-		"uid:%u gid:%u rdev:%lu sz:%"_P_U64"d "
+		"stb (%p) dev:%lu inode:%"PRId64" mode:0%o nlink:%lu "
+		"uid:%u gid:%u rdev:%lu sz:%"PRId64" "
 		"blk:%lu blkcnt:%zd atime:%lu mtime:%lu ctime:%lu",
 		stb,
 		stb->st_dev, stb->st_ino, stb->st_mode,

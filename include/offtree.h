@@ -5,6 +5,8 @@
 
 #include <sys/types.h>
 
+#include <inttypes.h>
+
 #include "psc_types.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
@@ -69,9 +71,9 @@ power(size_t base, size_t exp)
 
 
 #define OFT_VERIFY_REQ_SE(req, s, e) {					\
-		psc_trace("OFT_VERIFY_REQ_SE NR (%"_P_U64"x/%"_P_U64"x)",	\
+		psc_trace("OFT_VERIFY_REQ_SE NR (%"PRIx64"/%"PRIx64")",	\
 			  s, e);					\
-		psc_trace("OFT_VERIFY_REQ_SE RG (%"_P_U64"x/%"_P_U64"x)",	\
+		psc_trace("OFT_VERIFY_REQ_SE RG (%"PRIx64"/%"PRIx64")",	\
 			  OFT_REQ_STARTOFF(req), OFT_REQ_ENDOFF(req));	\
 		psc_assert((s >= OFT_REQ_STARTOFF(req)) &&		\
 			   (e <= OFT_REQ_ENDOFF(req)));			\
@@ -79,6 +81,7 @@ power(size_t base, size_t exp)
 
 #define OFT_REQ2SE_OFFS(req, s, e) {					\
 		int TTt;						\
+									\
 		s = (req)->oftrq_off;					\
 		e = (s + ((req)->oftrq_nblks *				\
 			  (req)->oftrq_root->oftr_minsz)) - 1;		\
@@ -86,7 +89,7 @@ power(size_t base, size_t exp)
 		psc_assert(!TTt);					\
 		TTt = (e+1) % (req)->oftrq_root->oftr_minsz;		\
 		psc_assert(!TTt);					\
-		psc_trace("OFT_REQ2SE_OFFS (%"_P_U64"x/%"_P_U64"x)", s, e);	\
+		psc_trace("OFT_REQ2SE_OFFS (%"PRIx64"/%"PRIx64")", s, e);	\
         }
 
 #define OFT_REQ2E_OFF_(req)						\
@@ -258,8 +261,8 @@ enum oft_iov_flags {
 
 #define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
 	psc_logs((level), PSS_OTHER, 					\
-		" oftiov@%p b:%p o:%"_P_U64"x l:%"_P_U64"d"		\
-		" bsz:%"_P_U64"d pri:%p fl:"OFFTIOV_FLAGS_FMT		\
+		" oftiov@%p b:%p o:%"PRIx64" l:%"PRId64			\
+		" bsz:%"PRId64" pri:%p fl:"OFFTIOV_FLAGS_FMT		\
 		" m:%p "fmt,						\
 		(iov), (iov)->oftiov_base, (iov)->oftiov_off,		\
 		(iov)->oftiov_nblks, (iov)->oftiov_blksz,		\
@@ -433,7 +436,7 @@ oftrq_size_get(const struct offtree_req *r)
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
 	psc_logs((level), PSS_OTHER, 					\
-		" oftr@%p o:%"_P_U64"x l:%"_P_U64"d node:%p darray:%p"	\
+		" oftr@%p o:%"PRIx64" l:%"PRId64" node:%p darray:%p"	\
 		" root:%p op:%hhu d:%hhu w:%hu "			\
 		REQ_OFTRQ_FLAGS_FMT" "fmt,				\
 		(oftr), (oftr)->oftrq_off, (oftr)->oftrq_nblks,		\

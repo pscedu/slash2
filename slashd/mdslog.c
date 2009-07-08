@@ -41,7 +41,6 @@ enum mds_log_types {
 	MDS_LOG_INO_ADDREPL   = (1<<3)
 };
 
-
 void
 mds_inode_sync(void *data)
 {
@@ -128,7 +127,7 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
 	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
 		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
 	
-	psc_trace("jlog fid=%"_P_U64"x ios=%x pos=%u",
+	psc_trace("jlog fid=%"PRIx64" ios=%x pos=%u",
                   jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos);
 
 	jfi_prep(&inoh->inoh_jfi, mdsJournal);
@@ -138,7 +137,7 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
 	rc = pjournal_xadd(inoh->inoh_jfi.jfi_xh, MDS_LOG_INO_ADDREPL, &jrir, 
 			   sizeof(struct slmds_jent_ino_addrepl));
 	if (rc)
-		psc_trace("jlog fid=%"_P_U64"x ios=%x pos=%u rc=%d",
+		psc_trace("jlog fid=%"PRIx64" ios=%x pos=%u rc=%d",
 			  jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos, rc);
 
 	jfi_schedule(&inoh->inoh_jfi, &dirtyMdsData);	
@@ -167,7 +166,7 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	memcpy(jrpg.sjp_reptbl, bmap_2_bmdsiod(bmap)->bh_repls,
 	       SL_REPLICA_NBYTES);
 
-	psc_trace("jlog fid=%"_P_U64"x bmapno=%u bmapgen=%u",
+	psc_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
 		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen);
 
 	jfi_prep(&bmdsi->bmdsi_jfi, mdsJournal);
@@ -178,7 +177,7 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_REPL, &jrpg, 
 			   sizeof(struct slmds_jent_repgen));
 	if (rc)
-		psc_fatalx("jlog fid=%"_P_U64"x bmapno=%u bmapgen=%u rc=%d",
+		psc_fatalx("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u rc=%d",
 			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen,
 			   rc);
 
@@ -229,7 +228,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_CRC, 
 				   jcrc, sizeof(struct slmds_jent_crc));
 		if (rc)
-			psc_fatalx("jlog fid=%"_P_U64"x bmapno=%u rc=%d",
+			psc_fatalx("jlog fid=%"PRIx64" bmapno=%u rc=%d",
 				   jcrc->sjc_fid, jcrc->sjc_bmapno, rc);
 		/* Apply the CRC update into memory AFTER recording them
 		 *  in the journal.  The lock should not be needed since the
@@ -293,7 +292,7 @@ mds_sb_sync(void *data)
 
 	freelock(&sb->sbm_lock);
 
-	psc_dbg("sb=%p inum=%"_P_U64"x crc="_P_CRC" sync ok",
+	psc_dbg("sb=%p inum=%"PRIx64" crc="_P_CRC" sync ok",
 		sb, sb->sbm_sbs->sbs_inum, sb->sbm_sbs->sbs_crc);
 }
 
@@ -320,7 +319,7 @@ mds_sb_getinum(void)
 		sji.sji_inum = ++sbm.sbm_sbs->sbs_inum_major;
 		freelock(&sbm.sbm_lock);
 
-		psc_dbg("bumped inum_maj=%"_P_U64, sji.sji_inum);
+		psc_dbg("bumped inum_maj=%"PRId64, sji.sji_inum);
 
 		jfi_prep(jfi, &mdsJournal);
 		psc_assert(jfi->jfi_handler == mds_sb_sync);
@@ -343,7 +342,7 @@ mds_sb_getinum(void)
 	 */
 	ino |= (sbm.sbm_sbs->sbs_mds_id << SL_SUPER_INODE_BITS);
 
-	psc_trace("ino=%"_P_U64" inum_maj=%"_P_U64" mds_id=%u",
+	psc_trace("ino=%"PRId64" inum_maj=%"PRId64" mds_id=%u",
 		  ino, sji.sji_inum, sbm.sbm_sbs->sbs_mds_id);
 
 	return (ino);

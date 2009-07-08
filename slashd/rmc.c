@@ -142,7 +142,7 @@ slrmc_getattr(struct pscrpc_request *rq)
 	mp->rc = zfsslash2_getattr(zfsVfs, mq->ino, &mq->creds, &mp->attr,
 				   &mp->gen);
 
-	psc_info("zfsslash2_getattr() ino=%"_P_U64"d gen=%"_P_U64"d rc=%d",
+	psc_info("zfsslash2_getattr() ino=%"PRId64" gen=%"PRId64" rc=%d",
 		 mq->ino, mp->gen, mp->rc);
 
 	RETURN(0);
@@ -273,7 +273,7 @@ slrmc_create(struct pscrpc_request *rq)
 				    sizeof(mp->sfdb));
 			}
 
-			psc_info("cfdnew() fid %"_P_U64"d rc=%d",
+			psc_info("cfdnew() fid %"PRId64" rc=%d",
 				 fg.fg_fid, mp->rc);
 		}
 	}
@@ -296,7 +296,7 @@ slrmc_open(struct pscrpc_request *rq)
 	mp->rc = zfsslash2_opencreate(zfsVfs, mq->ino, &mq->creds, mq->flags,
 				      0, NULL, &fg, &mp->attr, &data);
 
-	psc_info("zfsslash2_opencreate() fid %"_P_U64"d rc=%d",
+	psc_info("zfsslash2_opencreate() fid %"PRId64" rc=%d",
 		 mq->ino, mp->rc);
 
 	if (!mp->rc) {
@@ -305,7 +305,7 @@ slrmc_open(struct pscrpc_request *rq)
 
 		mp->rc = slrmc_inode_cacheput(&fg, &mp->attr, &mq->creds);
 
-		psc_info("slrmc_inode_cacheput() fid %"_P_U64"d rc=%d",
+		psc_info("slrmc_inode_cacheput() fid %"PRId64" rc=%d",
 			 mq->ino, mp->rc);
 
 		if (!mp->rc) {
@@ -319,7 +319,7 @@ slrmc_open(struct pscrpc_request *rq)
 				    sizeof(mp->sfdb));
 			}
 
-			psc_info("cfdnew() fid %"_P_U64"d rc=%d",
+			psc_info("cfdnew() fid %"PRId64" rc=%d",
 			    fg.fg_fid, mp->rc);
 		}
 	}
@@ -466,7 +466,7 @@ slrmc_release(struct pscrpc_request *rq)
 
 	c = cfdget(rq->rq_export, cfd);
 	if (!c) {
-		psc_info("cfdget() failed cfd %"_P_U64"d", cfd);
+		psc_info("cfdget() failed cfd %"PRId64, cfd);
 		mp->rc = ENOENT;
 		RETURN(0);
 	}
@@ -479,7 +479,7 @@ slrmc_release(struct pscrpc_request *rq)
 	i = f->fcmh_fcoo->fcoo_pri;
 
 	rc = cfdfree(rq->rq_export, cfd);
-	psc_info("cfdfree() cfd %"_P_U64"d rc=%d",
+	psc_info("cfdfree() cfd %"PRId64" rc=%d",
 		 cfd, rc);
 	/* Serialize the test for releasing the zfs inode
 	 *  so that this segment is re-entered.  Also, note that
