@@ -29,7 +29,7 @@ fid_makepath(slfid_t fid, char *fid_path)
 	int rc;
 
 	rc = snprintf(fid_path, PATH_MAX, "%s/%s/%c/%c/%c/%016"PRIx64,
-	      nodeInfo.node_res->res_fsroot, _PATH_OBJROOT,
+	      nodeInfo.node_res->res_fsroot, FID_PATH_NAME,
 	      (uint8_t)((fid & 0x0000000000f00000ULL) >> (BPHXC*5)),
 	      (uint8_t)((fid & 0x00000000000f0000ULL) >> (BPHXC*4)),
 	      (uint8_t)((fid & 0x000000000000f000ULL) >> (BPHXC*3)), fid);
