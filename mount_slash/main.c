@@ -1364,15 +1364,17 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 
 	msfsthr_ensure();
 
+	c = NULL;
+
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_SETATTR, rq, mq, mp);
 	if (rc)
-		goto cleanup;
+		goto out;
 
 	c = fidc_lookup_inode((slfid_t)ino);
 	if (!c) {
 		rc = EINVAL;
-		goto err;
+		goto out;
 	}
 
 	spinlock(&c->fcmh_lock);
@@ -1396,20 +1398,18 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	memcpy(&mq->attr, attr, sizeof(*attr));
 
 	rc = RSX_WAITREP(rq, mp);
- err:
-	if (rc || mp->rc)
+	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
-	else {
-		/* It's possible that the inode wasn't cached.
-		 */
-		if (c) {
-			fidc_fcm_setattr(c, &mp->attr);
-			fidc_membh_dropref(c);
-		}
-		fuse_reply_attr(req, &mp->attr, 0.0);
+		goto out;
 	}
- cleanup:
+	fidc_fcm_setattr(c, &mp->attr);
+	fuse_reply_attr(req, &mp->attr, 0.0);
+
+ out:
+	if (rc)
 		fuse_reply_err(req, rc);
+	if (c)
+		fidc_membh_dropref(c);
 	if (rq)
 		pscrpc_req_finished(rq);
 	EXIT;
