@@ -737,16 +737,14 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct pscrpc_request *rq=NULL;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
-	struct fuse_entry_param e;
 	struct fidc_membh *p;
 	int rc;
 
 	msfsthr_ensure();
 
 	p = NULL;
-	memset(&e, 0, sizeof(e));
 
-	if (strlen(name) >= NAME_MAX) {
+	if (strlen(name) > NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
 	}
@@ -769,14 +767,12 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		goto out;
 
-	mq->len = strlen(name);
-	strncpy(mq->name, name, mq->len);
-
 	slash2fuse_getcred(req, &mq->creds);
 
 	psc_assert(fcmh_2_fid(p) == parent);
 	mq->pino = parent;
 	mq->mode = mode;
+	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
 
@@ -784,13 +780,15 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		 mq->pino, mq->mode, mq->name, rc, mp->rc);
 
 	if (rc || mp->rc) {
- out:
 		rc = rc ? rc : mp->rc;
-		fuse_reply_err(req, rc);
-	} else {
-		slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
-		slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds, 0);
+		goto out;
 	}
+	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
+	slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds, 0);
+
+ out:
+	if (rc)
+		fuse_reply_err(req, rc);
 	if (p)
 		fidc_membh_dropref(p);
 	if (rq)
