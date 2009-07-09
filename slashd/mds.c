@@ -329,7 +329,7 @@ mds_bmap_directio(struct mexpbcm *bref, int enable_dio, int check)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *mdsi=bmap->bcm_pri;
-	int mode=bref->mexpbcm_mode;
+	int mode=bref->mexpbcm_mode, locked;
 
 	psc_assert(mdsi && mdsi->bmdsi_wr_ion);
 	BMAP_LOCK_ENSURE(bmap);
@@ -345,7 +345,7 @@ mds_bmap_directio(struct mexpbcm *bref, int enable_dio, int check)
 		/* Lock while the attributes of the this bref are
 		 *  tested.
 		 */
-		MEXPBCM_LOCK(bref);
+		locked = MEXPBCM_REQLOCK(bref);
 		psc_assert(bref->mexpbcm_export);
 		/* Don't send rpc if the client is already using DIO or
 		 *  has an rpc in flight (_REQD).
@@ -426,7 +426,7 @@ mds_bmap_directio(struct mexpbcm *bref, int enable_dio, int check)
 				lc_queue(&pndgBmapCbs, e);
 			}
 		}
-		MEXPBCM_ULOCK(bref);
+		MEXPBCM_UREQLOCK(bref, locked);
 	}
 }
 
@@ -471,8 +471,8 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 	do {
 		spinlock(&rmi->rmi_lock);
 		n = rmi->rmi_cnt++;
-		if (rmi->rmi_cnt > (int)res->res_nnids)
-			rmi->rmi_cnt = 0;
+		if (rmi->rmi_cnt >= (int)res->res_nnids)
+			n = rmi->rmi_cnt = 0;
 
 		psc_trace("trying res(%s) ion(%s)",
 			  res->res_name, libcfs_nid2str(res->res_nids[n]));
@@ -973,7 +973,8 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	psc_assert(bref->mexpbcm_mode == MEXPBCM_INIT);
 
 	bref->mexpbcm_bmap = *bmap;
-	bref->mexpbcm_mode = ((mq->rw == SRIC_BMAP_WRITE) ? MEXPBCM_WR : 0);
+	bref->mexpbcm_mode = ((mq->rw == SRIC_BMAP_WRITE) ? 
+			      MEXPBCM_WR : MEXPBCM_RD);
 	/* Check if the client requested directio, if so tag it in the
 	 *  bref.
 	 */
