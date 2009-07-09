@@ -63,16 +63,22 @@ slric_handle_read(struct pscrpc_request *rq)
 	}
 
 	mp->rc = fdbuf_decrypt(&mq->sfdb, &cfd, &fg, rq->rq_peer);
-	if (mp->rc)
+	if (mp->rc) {
+		psc_errorx("fdbuf_decrypt failed for "FIDFMT, FIDFMTARGS(&fg));
 		return (0);
+	}
 
 	if ((fd = fid_open(fg.fg_fid))) {
-		mp->rc = -errno;
+		psc_error("fid_open failed (%d) for "FIDFMT, 
+			 fd, FIDFMTARGS(&fg));
+		mp->rc = fd;
 		return (0);
 	}
 	buf = PSCALLOC(mq->size);
 	nbytes = pread(fd, buf, mq->size, mq->offset);
 	if (nbytes == -1) {
+		psc_error("pread failed (%d) for "FIDFMT, 
+			 fd, FIDFMTARGS(&fg));
 		mp->rc = -errno;
 		close(fd);
 		goto done;
@@ -109,26 +115,33 @@ slric_handle_write(struct pscrpc_request *rq)
 	RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
+		psc_errorx("invalid size %u, fid:"FIDFMT, 
+			   mq->size,  FIDFMTARGS(&fg));
 		mp->rc = -EINVAL;
 		return (0);
 	}
 
 	mp->rc = fdbuf_decrypt(&mq->sfdb, &cfd, &fg, rq->rq_peer);
-	if (mp->rc)
+	if (mp->rc) {
+		psc_errorx("fdbuf_decrypt failed");
 		return (0);
+	}
 
 	buf = PSCALLOC(mq->size);
 	iov.iov_base = buf;
 	iov.iov_len = mq->size;
 	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 			     SRIC_BULK_PORTAL, &iov, 1)) == 0) {
-		if ((fd = fid_ocreat(fg.fg_fid)) == -1)
+		if ((fd = fid_ocreat(fg.fg_fid)) == -1) {
+			psc_error("fid_ocreat failed "FIDFMT, FIDFMTARGS(&fg));
 			mp->rc = -errno;
-		else {
+		} else {
 			nbytes = pwrite(fd, buf, mq->size, mq->offset);
-			if (nbytes == -1)
+			if (nbytes == -1) {
+				psc_error("pwrite failed "FIDFMT, 
+					  FIDFMTARGS(&fg));
 				mp->rc = -errno;
-			else
+			} else
 				mq->size = nbytes;
 			close(fd);
 		}
