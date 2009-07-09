@@ -1,7 +1,8 @@
 /* $Id$ */
 
-#define _PATH_OBJROOT	".slfidns"
-#define _PATH_NS	"ns"
+#ifndef _SLASH_PATHNAMES_H_
+#define _SLASH_PATHNAMES_H_
+
 #define _PATH_SB	"sb"
 
 #if 0
@@ -15,6 +16,9 @@
 #define _PATH_SLCTLSOCK		"../slashd.%h.sock"
 #define _PATH_SLIOCTLSOCK	"../sliod.%h.sock"
 #define _PATH_MSCTLSOCK		"../mount_slash.%h.sock"
+
 #define _PATH_SLODTABLE		"/var/lib/slashd/bmap_assignments.odt"
 #define _PATH_SLJOURNAL		"/var/lib/slashd/slopjrnl"
 #define _PATH_SLASHD_DIR	"/var/lib/slashd"
+
+#endif /* _SLASH_PATHNAMES_H_ */
