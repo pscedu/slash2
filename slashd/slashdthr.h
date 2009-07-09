@@ -59,6 +59,4 @@ void mdsfssync_init(void);
 extern struct slash_sb_mem	slSuperBlk;
 extern int                      slSuperFd;
 
-extern void			*zfsVfs;
-
 #endif /* _SLASH_H_ */
