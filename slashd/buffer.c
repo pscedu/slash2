@@ -102,6 +102,31 @@ sl_buffer_pin_assertions(struct sl_buffer *b)
 		   (atomic_read(&b->slb_inflight)));
 }
 
+static void
+sl_buffer_pin_2_lru_assertions(struct sl_buffer *b)
+{
+	psc_assert(ATTR_TEST(b->slb_flags, SLB_PINNED));
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FRESH));
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_LRU));
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREEING));
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FREE));
+	psc_assert(!psclist_empty(&b->slb_iov_list));
+	/* Test this before pinning.. */
+	//psc_assert(psclist_disjoint(&b->slb_mgmt_lentry));
+	psc_assert(b->slb_base);
+	psc_assert((atomic_read(&b->slb_ref) > 0) ||
+		   (atomic_read(&b->slb_unmapd_ref) > 0));
+	psc_assert(!(atomic_read(&b->slb_inflight)) &&
+		   !(atomic_read(&b->slb_inflpndg)));
+	psc_assert(vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
+	psc_assert(!psclist_empty(&b->slb_iov_list));
+	psc_assert(psclist_conjoint(&b->slb_fcm_lentry));
+	psc_assert(atomic_read(&b->slb_ref));
+	psc_assert(!atomic_read(&b->slb_unmapd_ref));
+	psc_assert((!atomic_read(&b->slb_inflight)) &&
+                   (!atomic_read(&b->slb_inflpndg)));
+}
+
 #if 0
 static void
 sl_buffer_inflight_assertions(struct sl_buffer *b)
@@ -134,9 +159,11 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 		psc_pool_return(slBufsFreePool, slb);
 		slb->slb_lc_owner = &slBufsFreePool->ppm_lc;
 	} else {
-		if (lc == &slBufsLru)
-			sl_buffer_lru_assertions(slb);
-		else if (lc == &slBufsPin)
+		if (lc == &slBufsLru) {
+			sl_buffer_pin_2_lru_assertions(slb);
+			slb->slb_flags = SLB_LRU;
+
+		} else if (lc == &slBufsPin)
 			sl_buffer_pin_assertions(slb);
 		else
 			psc_fatalx("Invalid listcache address %p", lc);
@@ -623,7 +650,7 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 #define sl_buffer_unpin_locked(slb)					\
 	{								\
 		psc_assert((slb)->slb_lc_owner == &slBufsPin);		\
-		psc_assert(atomic_read(&(slb)->slb_inflpndg) <		\
+		psc_assert(atomic_read(&(slb)->slb_inflpndg) >		\
 			   atomic_read(&(slb)->slb_inflight));		\
 		if (atomic_dec_and_test(&(slb)->slb_inflpndg)) {	\
 			lc_del(&(slb)->slb_mgmt_lentry, (slb)->slb_lc_owner); \

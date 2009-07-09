@@ -168,7 +168,7 @@ enum slb_ref_flags {
 	}
 
 #define slb_pinned_2_lru(slb) {					\
-		sl_buffer_pin_assertions((slb));		\
+		sl_buffer_pin_2_lru_assertions((slb));		\
 		ATTR_UNSET((slb)->slb_flags, SLB_LRU);		\
 		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
 		(slb)->slb_lc_owner = NULL;			\
