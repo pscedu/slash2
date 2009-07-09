@@ -656,17 +656,21 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		const char *newname)
 {
 	struct pscrpc_request *rq;
-	struct fuse_entry_param e;
 	struct fidc_membh *p, *c;
+	struct slash_creds creds;
 	struct srm_link_req *mq;
 	struct srm_link_rep *mp;
-	struct slash_creds creds;
 	int rc=0;
 
 	msfsthr_ensure();
 
-	c = NULL;
-	memset(&e, 0, sizeof(e));
+	p = c = NULL;
+	rq = NULL;
+
+	if (strlen(newname) > NAME_MAX) {
+		rc = ENAMETOOLONG;
+		goto out;
+	}
 
 	slash2fuse_getcred(req, &creds);
 	/* Check the newparent inode.
@@ -674,59 +678,56 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	p = fidc_lookup_load_inode((slfid_t)newparent, &creds);
 	if (!p) {
 		rc = ENOMEM;
-		goto err;
+		goto out;
 	}
 
 	if (!fcmh_2_isdir(p)) {
 		rc = ENOTDIR;
-		goto err;
+		goto out;
 	}
 	/* Check the child inode.
 	 */
 	c = fidc_lookup_load_inode((slfid_t)ino, &creds);
 	if (!c) {
 		rc = ENOMEM;
-		goto err;
+		goto out;
 	} else
 		psc_assert(fcmh_2_fid(p) == ino);
 
 	if (fcmh_2_isdir(p)) {
 		rc = EISDIR;
-		goto err;
+		goto out;
 	}
 	/* Create and initialize the LINK RPC.
 	 */
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_LINK, rq, mq, mp);
 	if (rc)
-		goto err;
-
-	mq->len = strlen(newname);
-	if (mq->len >= NAME_MAX) {
-		rc = ENAMETOOLONG;
-		goto err;
-	} else
-		strncpy(mq->name, newname, mq->len);
+		goto out;
 
 	memcpy(&mq->creds, &creds, sizeof(mq->creds));
 	mq->pino = fcmh_2_fid(p);
 	mq->ino = ino;
+	strlcpy(mq->name, newname, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
- err:
 		rc = rc ? rc : mp->rc;
-		fuse_reply_err(req, rc);
-
-	} else {
-		slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
-		//slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds);
-		fidc_fcm_setattr(c, &mp->attr);
+		goto out;
 	}
+	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
+	//slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds);
+	fidc_fcm_setattr(c, &mp->attr);
+
+ out:
+	if (rc)
+		fuse_reply_err(req, rc);
 	if (c)
 		fidc_membh_dropref(c);
-	fidc_membh_dropref(p);
-	pscrpc_req_finished(rq);
+	if (p)
+		fidc_membh_dropref(p);
+	if (rq)
+		pscrpc_req_finished(rq);
 }
 
 static void
