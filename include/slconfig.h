@@ -244,30 +244,33 @@ libsl_profile_dump(void)
 	sl_nodeh_t *z = &nodeInfo;
 	u32 i;
 
-	psc_warnx("\nNode Info: Resource ;%s;\n\tdesc: %s "
-	       "\n\t ID (global=%u, mds=%u)"
-	       "\n\t Type %d, Npeers %u, Nnids %u",
-	       z->node_res->res_name,
-	       z->node_res->res_desc,
-		  //libsl_node2id(z),
-	       z->node_res->res_id,
-	       z->node_res->res_mds,
-	       z->node_res->res_type,
-	       z->node_res->res_npeers,
-	       z->node_res->res_nnids);
-
+	fprintf(stderr, 
+		"\nNode Info: Resource ;%s;\n\tdesc: %s "
+		"\n\t ID (global=%u, mds=%u)"
+		"\n\t Type %d, Npeers %u, Nnids %u"
+		"\n\t Fsroot ;%s;\n",
+		z->node_res->res_name,
+		z->node_res->res_desc,
+		//libsl_node2id(z),
+		z->node_res->res_id,
+		z->node_res->res_mds,
+		z->node_res->res_type,
+		z->node_res->res_npeers,
+		z->node_res->res_nnids, 
+		z->node_res->res_fsroot);
+	
 	for (i=0; i < z->node_res->res_npeers; i++) {
 		sl_resource_t *r;
 
 		r = libsl_id2res(z->node_res->res_peers[i]);
 		if (!r)
 			continue;
-		psc_warnx("\n\t\tPeer %d ;%s;\t%s",
-		       i, r->res_name, r->res_desc);
+		fprintf(stderr,"\tPeer %d ;%s;\t%s",
+			i, r->res_name, r->res_desc);
 	}
 	for (i=0; i < z->node_res->res_nnids; i++)
-		psc_warnx("\n\t\tNid %d ;%s;",
-			  i, libcfs_nid2str(z->node_res->res_nids[i]));
+		fprintf(stderr,"\tNid %d ;%s;\n",
+			i, libcfs_nid2str(z->node_res->res_nids[i]));
 }
 
 static inline u32
