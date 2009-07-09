@@ -1,3 +1,4 @@
+/* $Id$ */
 
 #include <stdio.h>
 
@@ -11,7 +12,7 @@
 
 /**
  * fid_makepath - build the pathname in the FID object root that corresponds
- *	to a FID, allowing easily lookup of file metadata via FIDs.
+ *	to a FID, allowing easy lookup of file metadata via FIDs.
  */
 void
 fid_makepath(slfid_t fid, char *fid_path)
@@ -30,7 +31,9 @@ fid_makepath(slfid_t fid, char *fid_path)
 }
 
 void
-fid_immns_path_load() {}
+fid_immns_path_load(void)
+{
+}
 
 /**
  * fid_link - create an entry in the FID object root corresponding to a
