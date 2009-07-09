@@ -60,6 +60,9 @@ struct mexpbcm {
 #define MEXPBCM_LOCK(m)  spinlock(&(m)->mexpbcm_export->exp_lock)
 #define MEXPBCM_ULOCK(m) freelock(&(m)->mexpbcm_export->exp_lock)
 
+#define MEXPBCM_REQLOCK(m)  reqlock(&(m)->mexpbcm_export->exp_lock)
+#define MEXPBCM_UREQLOCK(m, l) ureqlock(&(m)->mexpbcm_export->exp_lock, l)
+
 enum mexpbcm_modes {
 	MEXPBCM_DIO_REQD = (1<<0),  /* dio callback outstanding             */
 	MEXPBCM_CIO_REQD = (1<<1),  /* cached-io callback outstanding       */
