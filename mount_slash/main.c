@@ -1658,14 +1658,16 @@ main(int argc, char *argv[])
 	pfl_init();
 
 	unmount = 0;
+	nc_mp = NULL;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "f:mS:U")) != -1)
+	while ((c = getopt(argc, argv, "f:m:S:U")) != -1)
 		switch (c) {
 		case 'f':
 			cfg = optarg;
 			break;
 		case 'm':
 			psc_errorx("-m is deprecated");
+			nc_mp = optarg;
 			break;
 		case 'S':
 			if (strlcpy(ctlsockfn, optarg,
@@ -1680,9 +1682,10 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
-	if (argc != 1)
+	if (argc == 1)
+		nc_mp = argv[0];
+	else if (argc || nc_mp == NULL)
 		usage();
-	nc_mp = argv[0];
 
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
