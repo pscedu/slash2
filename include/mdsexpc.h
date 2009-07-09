@@ -61,7 +61,7 @@ struct mexpbcm {
 #define MEXPBCM_ULOCK(m) freelock(&(m)->mexpbcm_export->exp_lock)
 
 #define MEXPBCM_REQLOCK(m)  reqlock(&(m)->mexpbcm_export->exp_lock)
-#define MEXPBCM_UREQLOCK(m, l) ureqlock(&(m)->mexpbcm_export->exp_lock, l)
+#define MEXPBCM_UREQLOCK(m, l) ureqlock(&(m)->mexpbcm_export->exp_lock, (l))
 
 enum mexpbcm_modes {
 	MEXPBCM_DIO_REQD = (1<<0),  /* dio callback outstanding             */
