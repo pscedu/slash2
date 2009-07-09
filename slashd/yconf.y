@@ -231,10 +231,19 @@ site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
 	free($2);
 };
 
+/*
 resource_def   : statements interfacelist peerlist |
                  statements interfacelist          |
-                 statements peerlist
+                 statements peerlist               |
+                 statements interfacelist statements |
+                 interfacelist statements          |
+                 peerlist interfacelist statements |
+                 
 {};
+*/
+
+resource_def : statements
+{}
 
 peerlist       : PEERTAG EQ peers END
 {};
@@ -295,6 +304,8 @@ statement         : restype_stmt |
                     hexnum_stmt  |
                     float_stmt   |
                     lnettcp_stmt |
+                    peerlist     |
+                    interfacelist|
                     quoteds_stmt;
 
 restype_stmt : NAME EQ RESOURCE_TYPE END
