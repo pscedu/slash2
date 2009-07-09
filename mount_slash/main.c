@@ -833,8 +833,8 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = ENOTDIR;
 		goto out;
 	}
-	strlcpy(mq->name, name, mq->len);
 	mq->pino = parent;
+	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
