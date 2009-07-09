@@ -26,14 +26,21 @@
 void
 fid_makepath(slfid_t fid, char *fid_path)
 {
-	int rc;
+	int rc, i;
+	char a[FP_DEPTH];
 
-	rc = snprintf(fid_path, PATH_MAX, "%s/%s/%c/%c/%c/%016"PRIx64,
-	      nodeInfo.node_res->res_fsroot, FID_PATH_NAME,
-	      (uint8_t)((fid & 0x0000000000f00000ULL) >> (BPHXC*5)),
-	      (uint8_t)((fid & 0x00000000000f0000ULL) >> (BPHXC*4)),
-	      (uint8_t)((fid & 0x000000000000f000ULL) >> (BPHXC*3)), fid);
+	a[0] = (uint8_t)((fid & 0x0000000000f00000ULL) >> (BPHXC*5));
+	a[1] = (uint8_t)((fid & 0x00000000000f0000ULL) >> (BPHXC*4));
+	a[2] = (uint8_t)((fid & 0x000000000000f000ULL) >> (BPHXC*3));
+	
+	for (i=0; i < FP_DEPTH; i++)
+		a[i] = (a[i] < 10) ? (a[i] += 0x30) : (a[i] += 0x57);
 
+	rc = snprintf(fid_path, SL_PATH_MAX, "%s/%s/%c/%c/%c/%016"_P_U64"x",
+	      nodeInfo.node_res->res_fsroot, _PATH_OBJROOT,
+	      a[0], a[1], a[2], fid);
+
+	psc_trace("fid=%"_P_U64"x fidpath=;%s;", fid, fid_path);
 	if (rc == -1)
 		psc_fatal("snprintf");
 }
