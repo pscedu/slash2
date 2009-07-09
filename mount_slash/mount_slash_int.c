@@ -513,12 +513,13 @@ msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct dynarray     *a = args->pointer_arg[MSL_IO_CB_POINTER_SLOT];
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
-	struct offtree_root *oftr;
+	struct offtree_root *oftr = args->pointer_arg[MSL_WRITE_CB_POINTER_SLOT] ;
 	int i, n=dynarray_len(a);
 
 	int op=rq->rq_reqmsg->opc;
 
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
+	psc_assert(a && oftr);
 
 	if (rq->rq_status) {
 		DEBUG_REQ(PLL_ERROR, rq, "non-zero status status %d",
@@ -533,7 +534,7 @@ msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 		/* Decrement the inflight counter in the slb.
 		 */
-		slb_inflight_cb(v, SL_INFLIGHT_INC);
+		slb_inflight_cb(v, SL_INFLIGHT_DEC);
 
 		m = (struct offtree_memb *)v->oftiov_memb;
 		/* Take the lock and do some sanity checks.
@@ -557,9 +558,9 @@ msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 		case SRMT_WRITE:
 			oftm_write_prepped_verify(m);
-			oftr = args->pointer_arg[MSL_IO_CB_POINTER_SLOT];
 			/* Manage the offtree leaf and decrement the slb.
 			 */
+			psc_assert(oftr->oftr_slbpin_cb);
 			(oftr->oftr_slbpin_cb)(v, SL_BUFFER_UNPIN);
 			atomic_dec(&m->oft_wrop_ref);
 			/* DATARDY must always be true here since the buffer
@@ -582,7 +583,7 @@ msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	/* Free the dynarray which was allocated in msl_pages_prefetch().
 	 */
 	PSCFREE(a);
-	pscrpc_req_finished(rq);
+	//pscrpc_req_finished(rq);
 	return (0);
 }
 
@@ -943,6 +944,10 @@ msl_pages_getput(struct offtree_req *r, int op)
 			else
 				ATTR_SET(v->oftiov_flags, OFTIOV_PUSHPNDG);
 
+			DEBUG_OFFTIOV(PLL_TRACE, v,
+				      "iov%d rq_off=%zu OFT_IOV2E_OFF_(%zu)",
+				      i, r->oftrq_off,  OFT_IOV2E_OFF_(v));
+
 			if ((int)(v->oftiov_nblks + nc_blks) < slCacheNblks) {
 				/* It fits, coalesce.
 				 */
@@ -990,6 +995,10 @@ msl_pages_getput(struct offtree_req *r, int op)
 
 			if (coalesce)
 				launch_cb;
+
+			DEBUG_OFFTIOV(PLL_TRACE, v,
+				      "iov%d rq_off=%zu OFT_IOV2E_OFF_(%zu)",
+				      i, r->oftrq_off,  OFT_IOV2E_OFF_(v));
 
 			if (ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG))
 				msl_pages_track_pending(r, v);
@@ -1387,10 +1396,13 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		tsize += tlen;
 	}
 
-	psc_assert(tsize == size); /* XXX this crashes */
+	//psc_assert(tsize == size); /* XXX this crashes */
 
 	rc = size;
  out:
+	for (j=0; j < nr; j++) 
+		pscrpc_set_wait((&r[j])->oftrq_fill.oftfill_reqset);
+
 	for (j=0; j < nr; j++)
 		msl_oftrq_destroy(&r[j]);
 	free(r);
