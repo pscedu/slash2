@@ -42,15 +42,12 @@ struct slash_fidgen {
 
 #define COPYFID(d, s)		memcpy((d), (s), sizeof(*(d)))
 
-void fid_makepath(slfid_t, char *);
-int  fid_link(slfid_t, const char *);
+void	fid_makepath(slfid_t, char *);
+int	fid_link(slfid_t, const char *);
 //int  fid_getxattr(const char *, const char *, void *, ssize_t);
-int  fid_fileops(slfid_t, int);
+int	fid_fileops(slfid_t, int);
 
-#define fid_open(f) fid_fileops(f, O_RDWR)
-#define fid_ocreat(f) fid_fileops(f, (O_RDWR|O_CREAT))
-
-int  translate_pathname(char *, int);
-int  untranslate_pathname(char *);
+#define fid_open(f)	fid_fileops((f), O_RDWR)
+#define fid_ocreat(f)	fid_fileops((f), O_RDWR | O_CREAT)
 
 #endif /* _SLASH_FID_H_ */
