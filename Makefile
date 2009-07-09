@@ -18,6 +18,8 @@ zbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} -c && scons)
 	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 -c && ${SCONS} slashlib=1)
 
-build:
+rezbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1)
+
+build: rezbuild
 	${MAKE} clean && ${MAKE} depend && ${MAKE} all
