@@ -32,12 +32,12 @@
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "mdsexpc.h"
+#include "pathnames.h"
 #include "slashexport.h"
 #include "slashrpc.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-extern void *zfsVfs;
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
 static int
@@ -220,9 +220,11 @@ slrmc_lookup(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	mp->rc = zfsslash2_lookup(zfsVfs, mq->pino, mq->name, &mp->fg, &mq->creds,
-				  &mp->attr);
-
+	if (strcmp(mq->name, FID_PATH_NAME) == 0)
+		mp->rc = EINVAL;
+	else
+		mp->rc = zfsslash2_lookup(zfsVfs, mq->pino,
+		    mq->name, &mp->fg, &mq->creds, &mp->attr);
 	RETURN(0);
 }
 
