@@ -807,29 +807,33 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	msfsthr_ensure();
 
-	if (strlen(name) >= NAME_MAX)
-		return (ENAMETOOLONG);
+	rq = NULL;
+	p = NULL;
+
+	if (strlen(name) > NAME_MAX) {
+		rc = ENAMETOOLONG;
+		goto out;
+	}
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	     (isfile ? SRMT_UNLINK : SRMT_RMDIR), rq, mq, mp);
 	if (rc)
-		return (rc);
+		goto out;
 
 	slash2fuse_getcred(req, &mq->creds);
 	/* Check the parent inode.
 	 */
 	p = fidc_lookup_load_inode((slfid_t)parent, &mq->creds);
 	if (!p) {
-		pscrpc_req_finished(rq);
-		return (EINVAL);
+		rc = EINVAL;
+		goto out;
 	}
 
 	if (!fcmh_2_isdir(p)) {
 		rc = ENOTDIR;
 		goto out;
 	}
-	mq->len = strlen(name);
-	strncpy(mq->name, name, mq->len);
+	strlcpy(mq->name, name, mq->len);
 	mq->pino = parent;
 
 	rc = RSX_WAITREP(rq, mp);
@@ -840,9 +844,12 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	/* Remove ourselves from the namespace cache.
 	 */
 	fidc_child_unlink(p, name);
+
  out:
-	fidc_membh_dropref(p);
-	pscrpc_req_finished(rq);
+	if (p)
+		fidc_membh_dropref(p);
+	if (rq)
+		pscrpc_req_finished(rq);
 	return (rc);
 }
 
