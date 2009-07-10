@@ -252,8 +252,15 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	struct fidc_mds_info *i=f->fcmh_fcoo->fcoo_pri;
 
 	spinlock(&m->mexpfcm_lock);
-	psc_assert(!(m->mexpfcm_flags & MEXPFCM_CLOSING));
-	m->mexpfcm_flags |= MEXPFCM_CLOSING;
+
+	if (!(c->type & CFD_FORCE_CLOSE)) {
+		/* A force close comes from a network drop, don't make
+		 *  the export code have to know about our private
+		 *  structures.
+		 */
+		psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
+		m->mexpfcm_flags |= MEXPFCM_CLOSING;
+	}
 	/* Verify that all of our bmap references have already been freed.
 	 */
 	if (m->mexpfcm_flags & MEXPFCM_REGFILE) {
@@ -280,6 +287,19 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	c->pri = NULL;
 	PSCFREE(m);
 	return (0);
+}
+
+void
+mexpfcm_release_brefs(struct mexpfcm *m)
+{
+	struct mexpbcm *bref;
+
+	MEXPFCM_LOCK_ENSURE(m);
+	psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
+	psc_assert(m->mexpfcm_flags & MEXPFCM_REGFILE);
+
+	SPLAY_FOREACH(bref, exp_bmaptree, &m->mexpfcm_bmaps)
+		mds_bmap_ref_del(bref);
 }
 
 __static int

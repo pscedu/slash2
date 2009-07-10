@@ -59,9 +59,9 @@ struct mexpbcm {
  */
 #define MEXPBCM_LOCK(m)  spinlock(&(m)->mexpbcm_export->exp_lock)
 #define MEXPBCM_ULOCK(m) freelock(&(m)->mexpbcm_export->exp_lock)
-
 #define MEXPBCM_REQLOCK(m)  reqlock(&(m)->mexpbcm_export->exp_lock)
 #define MEXPBCM_UREQLOCK(m, l) ureqlock(&(m)->mexpbcm_export->exp_lock, (l))
+#define MEXPBCM_LOCK_ENSURE(m) LOCK_ENSURE(&(m)->mexpbcm_export->exp_lock)
 
 enum mexpbcm_modes {
 	MEXPBCM_DIO_REQD = (1<<0),  /* dio callback outstanding             */
@@ -128,6 +128,7 @@ struct mexpfcm {
 
 #define MEXPFCM_LOCK(m)  spinlock(&(m)->mexpfcm_lock)
 #define MEXPFCM_ULOCK(m) freelock(&(m)->mexpfcm_lock)
+#define MEXPFCM_LOCK_ENSURE(m) LOCK_ENSURE(&(m)->mexpfcm_lock)
 
 enum mexpfcm_states {
 	MEXPFCM_CLOSING   = (1<<0),
@@ -231,5 +232,8 @@ struct resprof_mds_info {
 	int rmi_cnt;
 	psc_spinlock_t rmi_lock;
 };
+
+extern void 
+mexpfcm_release_brefs(struct mexpfcm *);
 
 #endif /* _MDSEXPC_H_ */
