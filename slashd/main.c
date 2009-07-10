@@ -22,6 +22,8 @@
 #include "slashdthr.h"
 #include "slconfig.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 void *zfsVfs;
