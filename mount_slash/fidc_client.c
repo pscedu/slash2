@@ -463,3 +463,39 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	freelock(&c->fcmh_lock);
 	freelock(&p->fcmh_lock);
 }
+
+void
+fidc_child_rename(struct fidc_membh *op, const char *oldname,
+    struct fidc_membh *np, const char *newname)
+{
+	struct fidc_membh *c;
+	struct fidc_child *ch;
+	size_t len;
+
+	len = strlen(newname);
+	if (len > NAME_MAX)
+		psc_fatalx("name too long");
+	len++;
+
+	spinlock(&op->fcmh_lock);
+	ch = fidc_child_lookup_int_locked(op, oldname);
+	if (ch)
+		psclist_del(&ch->fcc_lentry);
+	freelock(&op->fcmh_lock);
+
+	if (ch == NULL)
+		return;			/* it's no longer there */
+
+	c = ch->fcc_fcmh;
+	spinlock(&c->fcmh_lock);
+	ch = c->fcmh_pri = psc_realloc(ch, sizeof(*ch) + len, 0);
+	ch->fcc_hash = str_hash(newname);
+	strlcpy(ch->fcc_name, newname, len);
+
+	spinlock(&np->fcmh_lock);
+	psclist_xadd_tail(&ch->fcc_lentry, &np->fcmh_children);
+	freelock(&np->fcmh_lock);
+
+	atomic_dec(&ch->fcc_ref);
+	freelock(&c->fcmh_lock);
+}

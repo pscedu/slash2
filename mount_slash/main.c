@@ -1203,6 +1203,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
     const char *name, fuse_ino_t newparent, const char *newname)
 {
 	struct pscrpc_bulk_desc *desc;
+	struct fidc_membh *op, *np;
 	struct srm_generic_rep *mp;
 	struct srm_rename_req *mq;
 	struct pscrpc_request *rq;
@@ -1210,6 +1211,9 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	int rc;
 
 	msfsthr_ensure();
+
+	op = np = NULL;
+	rq = NULL;
 
 	if (strlen(name) > NAME_MAX ||
 	    strlen(newname) > NAME_MAX)
@@ -1230,13 +1234,43 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	iov[1].iov_base = (char *)newname;
 	iov[1].iov_len = mq->tolen;
 
+	op = fidc_lookup_load_inode(parent, &mq->creds);
+	if (op == NULL) {
+		rc = ENOENT;
+		goto out;
+	}
+
+	if (!fcmh_2_isdir(op)) {
+		rc = ENOTDIR;
+		goto out;
+	}
+
+	np = fidc_lookup_load_inode(newparent, &mq->creds);
+	if (np == NULL) {
+		rc = ENOENT;
+		goto out;
+	}
+
+	if (!fcmh_2_isdir(np)) {
+		rc = ENOTDIR;
+		goto out;
+	}
+
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL, iov, 2);
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
+	else
+		fidc_child_rename(op, name, np, newname);
 
-	pscrpc_req_finished(rq);
+ out:
+	if (op)
+		fidc_membh_dropref(op);
+	if (np)
+		fidc_membh_dropref(np);
+	if (rq)
+		pscrpc_req_finished(rq);
 	return (rc);
 }
 

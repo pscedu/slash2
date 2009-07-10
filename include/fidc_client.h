@@ -30,7 +30,7 @@ void	fidc_child_add_fcmh(struct fidc_child *, struct fidc_membh *);
 void	fidc_child_fail(struct fidc_child *);
 void	fidc_child_free(struct fidc_child *);
 int	fidc_child_reap_cb(struct fidc_membh *);
-int	fidc_child_rename(slfid_t, const char *, slfid_t, const char *);
+void	fidc_child_rename(struct fidc_membh *, const char *, struct fidc_membh *, const char *);
 void	fidc_child_unlink(struct fidc_membh *, const char *);
 int	fidc_child_wait_locked(struct fidc_membh *, struct fidc_child *);
 
