@@ -619,16 +619,16 @@ slrmc_statfs(struct pscrpc_request *rq)
 static int
 slrmc_symlink(struct pscrpc_request *rq)
 {
-	char link[PATH_MAX];
 	struct pscrpc_bulk_desc *desc;
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
 	struct iovec iov;
+	char link[PATH_MAX];
 
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mq->name[sizeof(mq->name)] = '\0';
+	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (mq->linklen == 0) {
 		mp->rc = -ENOENT;
 		RETURN(0);
