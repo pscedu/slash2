@@ -694,7 +694,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	} else
 		psc_assert(fcmh_2_fid(c) == ino);
 
-	if (fcmh_2_isdir(p)) {
+	if (fcmh_2_isdir(c)) {
 		rc = EISDIR;
 		goto out;
 	}
