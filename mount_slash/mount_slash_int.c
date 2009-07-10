@@ -1305,12 +1305,11 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	struct offtree_req *r=NULL;
 	struct bmapc_memb *b;
 	sl_blkno_t s, e;
-	size_t tlen, tsize, nb;
+	size_t tlen, tsize;
 	off_t roff;
 	int nr, j, rc;
 	char *p;
 
-	nb = 0;
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 	/* Are these bytes in the cache?
@@ -1355,7 +1354,6 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		}
 		roff += tlen;
 		size -= tlen;
-		nb += tlen;
 		tlen  = MIN(SLASH_BMAP_SIZE, size);
 	}
 
@@ -1400,12 +1398,13 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 
 	//psc_assert(tsize == size); /* XXX this crashes */
 
-	rc = nb;
+	rc = size;
  out:
-	for (j=0; j < nr; j++) {
-		pscrpc_set_wait(r[j].oftrq_fill.oftfill_reqset);
+	for (j=0; j < nr; j++) 
+		pscrpc_set_wait((&r[j])->oftrq_fill.oftfill_reqset);
+
+	for (j=0; j < nr; j++)
 		msl_oftrq_destroy(&r[j]);
-	}
 	free(r);
 	return (rc);
 }

@@ -30,11 +30,11 @@ __static unsigned char	 fdbuf_key[sizeof(struct srt_fd_buf)];
  * fdbuf_encrypt - Encrypt an fdbuf with the shared key.
  * @sfdb: the srt_fd_buf to encrypt, cfd should be filled in.
  * @fgp: the file ID and generation.
- * @prid: peer address to prevent spoofing.
+ * @nid: peer address to prevent spoofing.
  */
 void
 fdbuf_encrypt(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
-    lnet_process_id_t prid)
+    lnet_process_id_t nid)
 {
 	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0);
 	unsigned char *buf;
@@ -42,13 +42,8 @@ fdbuf_encrypt(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
 	gcry_md_hd_t hd;
 	int alg;
 
-char buf1[PSC_NIDSTR_SIZE];
-
-psc_id2str(prid, buf1);
-printf("assigning fdb prid %s\n", buf1);
-
 	sfdb->sfdb_secret.sfs_fg = *fgp;
-	sfdb->sfdb_secret.sfs_cprid = prid;
+	sfdb->sfdb_secret.sfs_cprid = nid;
 	sfdb->sfdb_secret.sfs_magic = SFDB_MAGIC;
 	sfdb->sfdb_secret.sfs_nonce = psc_atomic64_inc_return(&nonce);
 
@@ -78,25 +73,21 @@ printf("assigning fdb prid %s\n", buf1);
  * @sfdb: the srt_fd_buf to decrypt.
  * @cfdp: value-result client file descriptor.
  * @fgp: value-result file ID and generation, after decryption.
- * @prid: peer address to prevent spoofing.
+ * @nid: peer address to prevent spoofing.
  */
 int
 fdbuf_decrypt(struct srt_fd_buf *sfdb, uint64_t *cfdp,
-    struct slash_fidgen *fgp, lnet_process_id_t prid)
+    struct slash_fidgen *fgp, lnet_process_id_t nid)
 {
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 	char buf[45];
 	int alg, rc;
-char buf1[PSC_NIDSTR_SIZE], buf2[PSC_NIDSTR_SIZE];
 
 	rc = 0;
 	if (sfdb->sfdb_secret.sfs_magic != SFDB_MAGIC)
 		return (EINVAL);
-psc_id2str(prid, buf1);
-psc_id2str(sfdb->sfdb_secret.sfs_cprid, buf2);
-printf("comparing %s to %s\n", buf1, buf2);
-	if (memcmp(&sfdb->sfdb_secret.sfs_cprid, &prid, sizeof(prid)))
+	if (memcmp(&sfdb->sfdb_secret.sfs_cprid, &nid, sizeof(nid)))
 		return (EPERM);
 
 	alg = GCRY_MD_SHA256;
