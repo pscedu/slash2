@@ -1308,7 +1308,7 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 
 	slash2fuse_getcred(req, &mq->creds);
 	mq->pino = parent;
-	mq->linklen = strlen(link);
+	mq->linklen = strlen(link) + 1;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	iov.iov_base = (char *)link;
