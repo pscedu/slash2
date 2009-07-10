@@ -462,7 +462,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	 *  fidc_child_wait_locked() until we release the fcc.
 	 */
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	     SRMT_CREATE, rq, mq, mp);
+	    SRMT_CREATE, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -763,7 +763,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	/* Create and initialize the MKDIR RPC.
 	 */
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	     SRMT_MKDIR, rq, mq, mp);
+	    SRMT_MKDIR, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -816,7 +816,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	}
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	     (isfile ? SRMT_UNLINK : SRMT_RMDIR), rq, mq, mp);
+	    (isfile ? SRMT_UNLINK : SRMT_RMDIR), rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -1200,7 +1200,7 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 static int
 slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
-		  const char *name, fuse_ino_t newparent, const char *newname)
+    const char *name, fuse_ino_t newparent, const char *newname)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
@@ -1265,11 +1265,10 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 	if (rc)
 		goto out;
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc) {
+	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
-		goto out;
-	}
-	fuse_reply_statfs(req, &mp->stbv);
+	else
+		fuse_reply_statfs(req, &mp->stbv);
 
  out:
 	if (rc)
@@ -1280,7 +1279,7 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 
 static int
 slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
-		   const char *name)
+    const char *name)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq=NULL;

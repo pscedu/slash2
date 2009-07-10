@@ -55,6 +55,8 @@ slric_handle_read(struct pscrpc_request *rq)
 	void *buf;
 	int fd;
 
+printf("reading...\n");
+
 	RSX_ALLOCREP(rq, mq, mp);
 #define MAX_BUFSIZ (1024 * 1024)
 	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
@@ -69,7 +71,7 @@ slric_handle_read(struct pscrpc_request *rq)
 	}
 
 	if ((fd = fid_open(fg.fg_fid))) {
-		psc_error("fid_open failed (%d) for "FIDFMT, 
+		psc_error("fid_open failed (%d) for "FIDFMT,
 			 fd, FIDFMTARGS(&fg));
 		mp->rc = fd;
 		return (0);
@@ -77,7 +79,7 @@ slric_handle_read(struct pscrpc_request *rq)
 	buf = PSCALLOC(mq->size);
 	nbytes = pread(fd, buf, mq->size, mq->offset);
 	if (nbytes == -1) {
-		psc_error("pread failed (%d) for "FIDFMT, 
+		psc_error("pread failed (%d) for "FIDFMT,
 			 fd, FIDFMTARGS(&fg));
 		mp->rc = -errno;
 		close(fd);
@@ -96,6 +98,7 @@ slric_handle_read(struct pscrpc_request *rq)
 		pscrpc_free_bulk(desc);
  done:
 	free(buf);
+printf("reading: returning %d\n", mp->rc);
 	return (0);
 }
 
@@ -112,12 +115,15 @@ slric_handle_write(struct pscrpc_request *rq)
 	void *buf;
 	int fd;
 
+printf("writing...\n");
+
 	RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
-		psc_errorx("invalid size %u, fid:"FIDFMT, 
+		psc_errorx("invalid size %u, fid:"FIDFMT,
 			   mq->size,  FIDFMTARGS(&fg));
 		mp->rc = -EINVAL;
+	abort();
 		return (0);
 	}
 
@@ -138,7 +144,7 @@ slric_handle_write(struct pscrpc_request *rq)
 		} else {
 			nbytes = pwrite(fd, buf, mq->size, mq->offset);
 			if (nbytes == -1) {
-				psc_error("pwrite failed "FIDFMT, 
+				psc_error("pwrite failed "FIDFMT,
 					  FIDFMTARGS(&fg));
 				mp->rc = -errno;
 			} else
@@ -149,6 +155,7 @@ slric_handle_write(struct pscrpc_request *rq)
 	if (desc)
 		pscrpc_free_bulk(desc);
 	free(buf);
+printf("write: returning %d\n", mp->rc);
 	return (0);
 }
 

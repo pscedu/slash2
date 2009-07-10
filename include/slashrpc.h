@@ -233,12 +233,13 @@ struct srm_connect_req {
 
 struct srm_create_req {
 	struct slash_creds	creds;
-	char			name[NAME_MAX + 1];
 	uint64_t		pino;		/* parent inode */
-	int32_t			len;
+	char			name[NAME_MAX + 1];
 	uint32_t		mode;
 	uint32_t		flags;
 };
+
+#define srm_create_rep srm_open_rep
 
 struct srm_open_req {
 	struct slash_creds	creds;
@@ -247,11 +248,13 @@ struct srm_open_req {
 	uint32_t		mode;
 };
 
-struct srm_opencreate_rep {
+struct srm_open_rep {
 	struct srt_fd_buf	sfdb;
 	struct stat		attr;		/* XXX struct srt_stat */
 	int32_t			rc;
 };
+
+#define srm_opencreate_rep srm_open_rep
 
 struct srm_destroy_req {
 };
@@ -271,10 +274,9 @@ struct srm_getattr_rep {
 
 struct srm_link_req {
 	struct slash_creds	creds;
-	char			name[NAME_MAX + 1];
-	uint32_t		len;
 	uint64_t		pino;		/* parent inode */
 	uint64_t		ino;
+	char			name[NAME_MAX + 1];
 };
 
 struct srm_link_rep {
@@ -285,9 +287,8 @@ struct srm_link_rep {
 
 struct srm_lookup_req {
 	struct slash_creds	creds;
-	char			name[NAME_MAX + 1];
-	int			len;
 	uint64_t		pino;		/* parent inode */
+	char			name[NAME_MAX + 1];
 };
 
 struct srm_lookup_rep {
@@ -298,9 +299,8 @@ struct srm_lookup_rep {
 
 struct srm_mkdir_req {
 	struct slash_creds	creds;
-	char			name[NAME_MAX + 1];
 	uint64_t		pino;		/* parent inode */
-	uint32_t		len;
+	char			name[NAME_MAX + 1];
 	uint32_t		mode;
 };
 
@@ -323,7 +323,7 @@ struct srm_opendir_req {
 	uint64_t		ino;
 };
 
-#define srm_opendir_rep srm_opencreate_rep
+#define srm_opendir_rep srm_open_rep
 
 struct srm_io_req {
 	struct srt_fd_buf	sfdb;
@@ -366,9 +366,8 @@ struct srm_readlink_req {
 };
 
 struct srm_readlink_rep {
-	char			buf[PATH_MAX];
-	uint32_t		len;
 	int32_t			rc;
+/* buf is in bulk */
 };
 
 struct srm_release_req {
@@ -386,7 +385,7 @@ struct srm_rename_req {
 	uint64_t		opino;		/* old parent inode */
 	uint32_t		fromlen;
 	uint32_t		tolen;
-/* 'from' and 'to' names are in bulk data */
+/* 'from' and 'to' component names are in bulk data */
 };
 
 #define srm_unlink_rep srm_generic_rep
@@ -431,10 +430,10 @@ struct srm_statfs_rep {
 
 struct srm_symlink_req {
 	struct slash_creds	creds;
-	char			name[NAME_MAX + 1];
 	uint64_t		pino;		/* parent inode */
-	uint32_t		namelen;
+	char			name[NAME_MAX + 1];
 	uint32_t		linklen;
+/* link path name is in bulk */
 };
 
 struct srm_symlink_rep {
@@ -446,9 +445,8 @@ struct srm_symlink_rep {
 
 struct srm_unlink_req {
 	struct slash_creds	creds;
-	char			name[NAME_MAX + 1];
 	uint64_t		pino;		/* parent inode */
-	int32_t			len;
+	char			name[NAME_MAX + 1];
 };
 
 struct srm_generic_rep {
