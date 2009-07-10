@@ -1103,8 +1103,6 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 
 	msfsthr_ensure();
 
-	rq = NULL;
-
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_READLINK, rq, mq, mp);
 	if (rc)
@@ -1136,9 +1134,9 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 static int
 slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
-	struct pscrpc_request *rq;
 	struct srm_release_req *mq;
 	struct srm_generic_rep *mp;
+	struct pscrpc_request *rq;
 	struct msl_fhent *mfh;
 	struct fidc_membh *h;
 	int rc=0;
@@ -1166,6 +1164,7 @@ slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
+
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -1204,9 +1203,9 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 		  const char *name, fuse_ino_t newparent, const char *newname)
 {
 	struct pscrpc_bulk_desc *desc;
-	struct pscrpc_request *rq;
 	struct srm_generic_rep *mp;
 	struct srm_rename_req *mq;
+	struct pscrpc_request *rq;
 	struct iovec iov[2];
 	int rc;
 
@@ -1267,11 +1266,14 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 		goto out;
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
- out:
 		rc = rc ? rc : mp->rc;
+		goto out;
+	}
+	fuse_reply_statfs(req, &mp->stbv);
+
+ out:
+	if (rc)
 		fuse_reply_err(req, rc);
-	} else
-		fuse_reply_statfs(req, &mp->stbv);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
@@ -1284,15 +1286,14 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 	struct pscrpc_request *rq=NULL;
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
-	struct iovec iov;
 	struct fidc_membh *p;
+	struct iovec iov;
 	int rc;
 
 	msfsthr_ensure();
 
-	iov.iov_base = NULL;
-
-	if (strlen(name) >= NAME_MAX)
+	if (strlen(link) >= PATH_MAX ||
+	    strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
 
 	p = fidc_lookup_inode((slfid_t)parent);
@@ -1309,43 +1310,30 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 	slash2fuse_getcred(req, &mq->creds);
 	mq->pino = parent;
 	mq->linklen = strlen(link);
-	if (mq->linklen >= PATH_MAX) {
-		rc = ENAMETOOLONG;
-		goto out;
-	}
+	strlcpy(mq->name, name, sizeof(mq->name));
 
-	mq->namelen = strlen(name);
-	if (mq->namelen >= NAME_MAX) {
-		rc = ENAMETOOLONG;
-		goto out;
-	}
-
-	iov.iov_base = PSCALLOC(mq->linklen + 1);
+	iov.iov_base = link;
 	iov.iov_len = mq->linklen;
 
-	strncpy(iov.iov_base, name, mq->linklen);
-	strncpy(mq->name, name, mq->linklen);
-
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
+	    SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc) {
+	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
-		goto out;
-	} else {
+	else {
 		slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
-		slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds, 0);
+		slash2fuse_fidc_put(&mp->fg, &mp->attr,
+		    name, p, &mq->creds, 0);
 	}
- out:
 	fidc_membh_dropref(p);
 	pscrpc_req_finished(rq);
-	free(iov.iov_base);
 	return (rc);
 }
 
 static void
-slash2fuse_symlink_helper(fuse_req_t req, const char *link, fuse_ino_t parent,
-			  const char *name)
+slash2fuse_symlink_helper(fuse_req_t req, const char *link,
+    fuse_ino_t parent, const char *name)
 {
 	int error = slash2fuse_symlink(req, link, parent, name);
 
