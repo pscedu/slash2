@@ -538,8 +538,8 @@ slrmc_rename(struct pscrpc_request *rq)
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	if (mq->fromlen == 0 ||
-	    mq->tolen == 0) {
+	if (mq->fromlen <= 1 ||
+	    mq->tolen <= 1) {
 		mp->rc = -ENOENT;
 		RETURN(0);
 	}

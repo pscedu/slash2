@@ -1222,13 +1222,13 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 
 	mq->opino = parent;
 	mq->npino = newparent;
-	mq->fromlen = strlen(name);
-	mq->tolen = strlen(newname);
+	mq->fromlen = strlen(name) + 1;
+	mq->tolen = strlen(newname) + 1;
 
-	iov[0].iov_base = (void *)name;
-	iov[0].iov_len = strlen(name);
-	iov[1].iov_base = (void *)newname;
-	iov[1].iov_len = strlen(newname);
+	iov[0].iov_base = (char *)name;
+	iov[0].iov_len = mq->fromlen;
+	iov[1].iov_base = (char *)newname;
+	iov[1].iov_len = mq->tolen;
 
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL, iov, 2);
 
