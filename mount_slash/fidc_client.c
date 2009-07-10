@@ -468,8 +468,8 @@ void
 fidc_child_rename(struct fidc_membh *op, const char *oldname,
     struct fidc_membh *np, const char *newname)
 {
-	struct fidc_membh *c;
 	struct fidc_child *ch;
+	struct fidc_membh *c;
 	size_t len;
 
 	len = strlen(newname);
@@ -479,20 +479,22 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 
 	spinlock(&op->fcmh_lock);
 	ch = fidc_child_lookup_int_locked(op, oldname);
-	if (ch)
+	if (ch) {
+		c = ch->fcc_fcmh;
+		spinlock(&c->fcmh_lock);
 		psclist_del(&ch->fcc_lentry);
+	}
 	freelock(&op->fcmh_lock);
 
 	if (ch == NULL)
 		return;			/* it's no longer there */
 
-	c = ch->fcc_fcmh;
-	spinlock(&c->fcmh_lock);
 	ch = c->fcmh_pri = psc_realloc(ch, sizeof(*ch) + len, 0);
 	ch->fcc_hash = str_hash(newname);
 	strlcpy(ch->fcc_name, newname, len);
 
 	spinlock(&np->fcmh_lock);
+	ch->fcc_parent = np;
 	psclist_xadd_tail(&ch->fcc_lentry, &np->fcmh_children);
 	freelock(&np->fcmh_lock);
 
