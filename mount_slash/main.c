@@ -1311,7 +1311,7 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 	mq->linklen = strlen(link);
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	iov.iov_base = link;
+	iov.iov_base = (char *)link;
 	iov.iov_len = mq->linklen;
 
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
