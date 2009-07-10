@@ -833,6 +833,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = ENOTDIR;
 		goto out;
 	}
+
 	mq->pino = parent;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -857,6 +858,7 @@ static void
 slash2fuse_rmdir_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
 	int error = slash2fuse_unlink(req, parent, name, 0);
+
 	/* rmdir events always reply_err
 	 */
 	fuse_reply_err(req, error);
@@ -872,14 +874,6 @@ slash2fuse_mknod_helper(fuse_req_t req,
 	msfsthr_ensure();
 
 	fuse_reply_err(req, EOPNOTSUPP);
-}
-
-#define OBD_TIMEOUT 15
-
-int
-slashrpc_timeout(__unusedx void *arg)
-{
-	return (0);
 }
 
 static int
@@ -903,7 +897,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 
 	/* Don't allow writes on directory inodes.
 	 */
-	if ((fi->flags & O_WRONLY) || (fi->flags & O_RDWR))
+	if (fi->flags & (O_WRONLY | O_RDWR))
 		return (EINVAL);
 
 	mfh = (void *)fi->fh;
@@ -1002,6 +996,7 @@ slash2fuse_readdir_helper(fuse_req_t req, fuse_ino_t ino, size_t size,
 		       off_t off, struct fuse_file_info *fi)
 {
 	int error = slash2fuse_readdir(req, ino, size, off, fi);
+
 	if (error)
 		fuse_reply_err(req, error);
 }
@@ -1015,7 +1010,7 @@ slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 	int rc;
 
 	if (strlen(name) > NAME_MAX)
-		return (EINVAL);
+		return (ENAMETOOLONG);
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_LOOKUP, rq, mq, mp);
@@ -1023,9 +1018,8 @@ slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 		return (rc);
 
 	slash2fuse_getcred(req, &mq->creds);
-	strncpy(mq->name, name, strlen(name));
 	mq->pino = fcmh_2_fid(p);
-	mq->len = strlen(name);
+	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
