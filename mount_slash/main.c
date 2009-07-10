@@ -1093,12 +1093,17 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 static void
 slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 {
-	struct pscrpc_request *rq;
+	struct pscrpc_bulk_desc *desc;
 	struct srm_readlink_req *mq;
 	struct srm_readlink_rep *mp;
+	struct pscrpc_request *rq;
+	struct iovec iov;
+	char buf[PATH_MAX];
 	int rc;
 
 	msfsthr_ensure();
+
+	rq = NULL;
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_READLINK, rq, mq, mp);
@@ -1108,19 +1113,24 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	slash2fuse_getcred(req, &mq->creds);
 	mq->ino = ino;
 
+	iov.iov_base = buf;
+	iov.iov_len = sizeof(buf);
+	rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
+	    SRMC_BULK_PORTAL, &iov, 1);
+
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
 
  out:
-	if (!rc) {
-		mp->buf[mp->len] = '\0';
-		fuse_reply_readlink(req, mp->buf);
-	} else
+	if (rc)
 		fuse_reply_err(req, rc);
-
-	pscrpc_req_finished(rq);
-
+	else {
+		buf[sizeof(buf) - 1] = '\0';
+		fuse_reply_readlink(req, buf);
+	}
+	if (rq)
+		pscrpc_req_finished(rq);
 }
 
 static int
@@ -1338,6 +1348,7 @@ slash2fuse_symlink_helper(fuse_req_t req, const char *link, fuse_ino_t parent,
 			  const char *name)
 {
 	int error = slash2fuse_symlink(req, link, parent, name);
+
 	if (error)
 		fuse_reply_err(req, error);
 }
@@ -1346,6 +1357,7 @@ static void
 slash2fuse_unlink_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
 	int error = slash2fuse_unlink(req, parent, name, 1);
+
 	/* unlink events always reply_err */
 	fuse_reply_err(req, error);
 }
