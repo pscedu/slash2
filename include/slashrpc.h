@@ -367,7 +367,7 @@ struct srm_readlink_req {
 
 struct srm_readlink_rep {
 	int32_t			rc;
-/* buf is in bulk */
+/* buf is in bulk of size PATH_MAX */
 };
 
 struct srm_release_req {

@@ -434,14 +434,25 @@ slrmc_readdir(struct pscrpc_request *rq)
 static int
 slrmc_readlink(struct pscrpc_request *rq)
 {
+	struct pscrpc_bulk_desc *desc;
 	struct srm_readlink_req *mq;
 	struct srm_readlink_rep *mp;
+	struct iovec iov;
+	char buf[PATH_MAX];
 
 	ENTRY;
 
-	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = zfsslash2_readlink(zfsVfs, mq->ino, mp->buf, &mq->creds);
+	iov.iov_base = buf;
+	iov.iov_len = sizeof(buf);
 
+	RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = zfsslash2_readlink(zfsVfs, mq->ino, buf, &mq->creds);
+	if (mp->rc)
+		RETURN(0);
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
+	    SRMC_BULK_PORTAL, &iov, 1);
+	if (desc)
+		pscrpc_free_bulk(desc);
 	RETURN(0);
 }
 
