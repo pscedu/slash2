@@ -667,6 +667,9 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	p = c = NULL;
 	rq = NULL;
 
+	rc = EOPNOTSUPP;
+	goto out;
+
 	if (strlen(newname) > NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
