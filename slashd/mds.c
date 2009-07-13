@@ -569,7 +569,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
-	int wr[2], rw=mq->rw;
+	int wr[2], locked, rw=mq->rw;
 	int mode=(rw == SRIC_BMAP_READ ? BMAP_MDS_RD : BMAP_MDS_WR);
 	atomic_t *a=(rw == SRIC_BMAP_READ ? &bmdsi->bmdsi_rd_ref :
 		     &bmdsi->bmdsi_wr_ref);
@@ -581,7 +581,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 	else
 		psc_fatalx("mode value (%d) is invalid", rw);
 
-	BMAP_LOCK(bmap);
+	locked = BMAP_RLOCK(bmap);
 	if (!atomic_read(a)) {
 		/* There are no refs for this mode, therefore the
 		 *   bcm_bmapih.bmapi_mode should not be set.
@@ -621,7 +621,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 		psc_fatalx("found duplicate bref on bmap_exports");
 
 	DEBUG_BMAP(PLL_TRACE, bmap, "done with ref_add");
-	BMAP_ULOCK(bmap);
+	BMAP_URLOCK(bmap, locked);
 }
 
 /**
@@ -968,7 +968,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 
 		rc = mds_bmap_read(f, mq->blkno, b);
 		if (rc)
-			goto fail;
+			goto out;
 
 		b->bcm_mode = 0;
 		/* Notify other threads that this bmap has been loaded, they're
@@ -1008,11 +1008,13 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 
 	*bmap = b;
 
-	return (0);
- fail:
-	b->bcm_mode = BMAP_MDS_FAILED;
-	/* XXX think about policy updates in fail mode.
-	 */
+ out:
+	if (rc) {
+		b->bcm_mode = BMAP_MDS_FAILED;
+		/* XXX think about policy updates in fail mode.
+		 */
+	}
+	BMAP_ULOCK(b);
 	return (rc);
 }
 
