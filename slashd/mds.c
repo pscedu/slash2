@@ -49,7 +49,7 @@ mds_inode_od_initnew(struct slash_inode_handle *i)
 	COPYFID(&i->inoh_ino.ino_fg, fcmh_2_fgp(i->inoh_fcmh));
 	/* For now this is a fixed size.
 	 */
-	i->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;	
+	i->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
 	i->inoh_ino.ino_version = INO_VERSION;
 	i->inoh_ino.ino_flags = 0;
 	i->inoh_ino.ino_nrepls = 0;
@@ -174,7 +174,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 		 */
 		fmdsi_init(i, f, c->pri);
 		if (c->type & CFD_FILE) {
-			/* XXX For now assert here 
+			/* XXX For now assert here
 			 */
 			psc_assert(i->fmdsi_inodeh.inoh_fcmh);
 			psc_assert(!mds_inode_read(&i->fmdsi_inodeh));
@@ -569,8 +569,8 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
-	int wr[2], rw=mq->rw,
-		mode=(rw == SRIC_BMAP_READ ? BMAP_MDS_RD : BMAP_MDS_WR);
+	int wr[2], rw=mq->rw;
+	int mode=(rw == SRIC_BMAP_READ ? BMAP_MDS_RD : BMAP_MDS_WR);
 	atomic_t *a=(rw == SRIC_BMAP_READ ? &bmdsi->bmdsi_rd_ref :
 		     &bmdsi->bmdsi_wr_ref);
 
@@ -864,7 +864,7 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
  *	be in DIO mode.
  * @fref: the fidcache reference for the inode (stored in the private
  *	pointer of the cfd).
- * @mq: the client rpc request.
+ * @mq: the client RPC request.
  * @bmap: structure to be allocated and returned to the client.
  * Note: the bmap is not locked during disk I/O, instead it is marked
  *	with a bit (ie INIT) and other threads block on the waitq.
@@ -873,7 +873,7 @@ int
 mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	      struct bmapc_memb **bmap)
 {
-	struct bmapc_memb tbmap;
+	struct bmapc_memb *b, tbmap;
 	struct fidc_membh *f=fref->mexpfcm_fcmh;
 	struct fidc_mds_info *fmdsi=f->fcmh_fcoo->fcoo_pri;
 	struct slash_inode_handle *inoh=&fmdsi->fmdsi_inodeh;
@@ -917,74 +917,73 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	 *  fcmh during the bmap lookup.
 	 */
 	FCMH_LOCK(f);
-	*bmap = SPLAY_FIND(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, &tbmap);
-	if (*bmap) {
+	b = SPLAY_FIND(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, &tbmap);
+	if (b) {
 		/* Found it, still don't know if we're in directio mode..
 		 */
 		FCMH_ULOCK(f);
  retry:
-		BMAP_LOCK(*bmap);
-		if ((*bmap)->bcm_mode & BMAP_MDS_INIT) {
+		BMAP_LOCK(b);
+		if (b->bcm_mode & BMAP_MDS_INIT) {
 			/* Only the init bit is allowed to be set.
 			 */
-			psc_assert((*bmap)->bcm_mode ==
+			psc_assert(b->bcm_mode ==
 				   BMAP_MDS_INIT);
 			/* Sanity checks for BMAP_MDS_INIT
 			 */
-			psc_assert(!(*bmap)->bcm_pri);
-			psc_assert(!(*bmap)->bcm_fcmh);
+			psc_assert(!b->bcm_pri);
+			psc_assert(!b->bcm_fcmh);
 			/* Block until the other thread has completed the io.
 			 */
-			psc_waitq_wait(&(*bmap)->bcm_waitq,
-				       &(*bmap)->bcm_lock);
+			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 			goto retry;
 		} else {
 			/* Sanity check relevant pointers.
 			 */
-			psc_assert((*bmap)->bcm_pri);
-			psc_assert((*bmap)->bcm_fcmh);
+			psc_assert(b->bcm_pri);
+			psc_assert(b->bcm_fcmh);
 		}
-
 	} else {
 		struct bmap_mds_info *bmdsi;
+
 		/* Create and initialize the new bmap while holding the
 		 *  fcmh lock which is needed for atomic tree insertion.
 		 */
-		*bmap = PSCALLOC(sizeof(struct bmapc_memb)); /* XXX not freed */
-		(*bmap)->bcm_blkno = mq->blkno;
-		(*bmap)->bcm_mode = BMAP_MDS_INIT;
-		bmdsi = (*bmap)->bcm_pri = PSCALLOC(sizeof(struct bmap_mds_info)); /* XXX not freed */
-		LOCK_INIT(&(*bmap)->bcm_lock);
+		b = PSCALLOC(sizeof(struct bmapc_memb)); /* XXX not freed */
+		b->bcm_blkno = mq->blkno;
+		b->bcm_mode = BMAP_MDS_INIT;
+		bmdsi = b->bcm_pri = PSCALLOC(sizeof(struct bmap_mds_info)); /* XXX not freed */
+		LOCK_INIT(&b->bcm_lock);
 		bmap_mds_info_init(bmdsi);
-		psc_waitq_init(&(*bmap)->bcm_waitq);
-		(*bmap)->bcm_fcmh = f;
+		psc_waitq_init(&b->bcm_waitq);
+		b->bcm_fcmh = f;
 		/* It's ready to go, place it in the tree.
 		 */
-		SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, *bmap);
+		SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);
 		/* Finally, the fcmh may be unlocked.  Other threads
 		 *   wishing to access the bmap will block on bcm_waitq
 		 *   until we have finished reading it from disk.
 		 */
 		FCMH_ULOCK(f);
 
-		rc = mds_bmap_read(f, mq->blkno, *bmap);
+		rc = mds_bmap_read(f, mq->blkno, b);
 		if (rc)
 			goto fail;
 
-		(*bmap)->bcm_mode = 0;
+		b->bcm_mode = 0;
 		/* Notify other threads that this bmap has been loaded, they're
 		 *  blocked on BMAP_MDS_INIT.
 		 */
-		psc_waitq_wakeall(&(*bmap)->bcm_waitq);
+		psc_waitq_wakeall(&b->bcm_waitq);
 	}
 
-	bmap_set_accesstime(*bmap);
+	bmap_set_accesstime(b);
 	/* Not sure if these are really needed on the mds.
 	 */
 	if (mq->rw == SRIC_BMAP_WRITE)
-		atomic_inc(&(*bmap)->bcm_wr_ref);
+		atomic_inc(&b->bcm_wr_ref);
 	else
-		atomic_inc(&(*bmap)->bcm_rd_ref);
+		atomic_inc(&b->bcm_rd_ref);
 	/* Sanity checks, make sure that we didn't let the client in
 	 *  before this bmap was ready.
 	 */
@@ -992,8 +991,8 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 
 	psc_assert(bref->mexpbcm_mode == MEXPBCM_INIT);
 
-	bref->mexpbcm_bmap = *bmap;
-	bref->mexpbcm_mode = ((mq->rw == SRIC_BMAP_WRITE) ? 
+	bref->mexpbcm_bmap = b;
+	bref->mexpbcm_mode = ((mq->rw == SRIC_BMAP_WRITE) ?
 			      MEXPBCM_WR : MEXPBCM_RD);
 	/* Check if the client requested directio, if so tag it in the
 	 *  bref.
@@ -1007,14 +1006,15 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	 */
 	mds_bmap_ref_add(bref, mq);
 
+	*bmap = b;
+
 	return (0);
  fail:
-	(*bmap)->bcm_mode = BMAP_MDS_FAILED;
+	b->bcm_mode = BMAP_MDS_FAILED;
 	/* XXX think about policy updates in fail mode.
 	 */
 	return (rc);
 }
-
 
 /**
  * mds_fidfs_lookup - "lookup file id via filesystem".  This call does a
@@ -1090,11 +1090,11 @@ mds_cfdops_init(void)
 
 void
 mds_init(void)
-{       
+{
 	mds_cfdops_init();
 	mds_journal_init();
 	psc_assert(!odtable_load(_PATH_SLODTABLE, &mdsBmapAssignTable));
-	odtable_scan(mdsBmapAssignTable, NULL);	
+	odtable_scan(mdsBmapAssignTable, NULL);
 
 	mdsfssync_init();
 	mdscoh_init();
