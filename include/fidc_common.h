@@ -13,21 +13,19 @@
 #define FCOO_START   0
 #define FCOO_NOSTART 1
 
-extern void (*initFcooCb)(struct fidc_open_obj *o);
+extern void (*initFcooCb)(struct fidc_open_obj *);
 
 extern struct sl_fsops *slFsops;
 extern struct hash_table fidcHtable;
 
-extern struct fidc_membh *
-fidc_lookup_fg(const struct slash_fidgen *);
+struct fidc_membh *fidc_lookup_fg(const struct slash_fidgen *);
+struct fidc_membh *fidc_lookup_simple(slfid_t);
 
-extern struct fidc_membh *
-fidc_lookup_simple (slfid_t);
-
-extern struct fidc_membh *
-__fidc_lookup_inode (const struct slash_fidgen *, int,
-		     const struct fidc_memb *,
-		     const struct slash_creds *);
+int
+__fidc_lookup_inode(const struct slash_fidgen *, int,
+		    const struct fidc_memb *,
+		    const struct slash_creds *,
+		    struct fidc_membh **);
 
 enum fidc_lookup_flags {
 	FIDC_LOOKUP_CREATE    = (1 << 0), /* Create if not present         */
@@ -42,36 +40,35 @@ enum fidc_lookup_flags {
 
 /* Perform a simple fidcache lookup, returning NULL if DNE.
  */
-#define fidc_lookup_inode(f) fidc_lookup_simple(f)
+#define fidc_lookup_inode(fg) fidc_lookup_simple(fg)
 
 /* Create the inode from existing attributes.
  */
-#define fidc_lookup_copy_inode(f, fcm, creds)				\
-	__fidc_lookup_inode((f), (FIDC_LOOKUP_CREATE |			\
+#define fidc_lookup_copy_inode(fg, fcm, creds, fcmhp)			\
+	__fidc_lookup_inode((fg), (FIDC_LOOKUP_CREATE |			\
 				  FIDC_LOOKUP_COPY   |			\
 				  FIDC_LOOKUP_REFRESH),			\
-			    (fcm), (creds))
+			    (fcm), (creds), (fcmhp))
 
 /* Create the inode from existing attributes but don't ref it.
  *  This used for preloading the inode cache.
  */
-#define fidc_lookup_copy_inode_noref(f, fcm, creds)			\
-	__fidc_lookup_inode((f), (FIDC_LOOKUP_CREATE |			\
+#define fidc_lookup_copy_inode_noref(fg, fcm, creds, fcmhp)		\
+	__fidc_lookup_inode((fg), (FIDC_LOOKUP_CREATE |			\
 				  FIDC_LOOKUP_COPY   |			\
 				  FIDC_LOOKUP_NOREF  |			\
 				  FIDC_LOOKUP_REFRESH),			\
-			    (fcm), (creds))
+			    (fcm), (creds), (fcmhp))
 
 /* Create the inode if it doesn't exist loading its attributes from the network.
  */
-#define fidc_lookup_load_inode(f, creds)				\
+#define fidc_lookup_load_inode(fid, creds, fcmhp)			\
 	({								\
-		struct slash_fidgen __t = {f, FID_ANY};			\
-		struct fidc_membh *__ret;				\
-		__ret = __fidc_lookup_inode(&__t, (FIDC_LOOKUP_CREATE |	\
-						   FIDC_LOOKUP_LOAD),	\
-					    NULL, (creds));		\
-		__ret;							\
+		struct slash_fidgen __t = { fid, FID_ANY };		\
+									\
+		__fidc_lookup_inode(&__t,				\
+		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,		\
+		    NULL, (creds), (fcmhp));				\
 	})
 
 /* Create the inode from existing attributes only if one by the same id does not
@@ -79,12 +76,12 @@ enum fidc_lookup_flags {
  *  this thread may execute an open on the inode.
  * NOTE: This is needed for fuse create which does a create and open atomically.
  */
-#define fidc_lookup_createopen_inode(f, fcm, creds)			\
+#define fidc_lookup_createopen_inode(f, fcm, creds, fcmhp)		\
 	__fidc_lookup_inode(f, (FIDC_LOOKUP_CREATE |			\
 				FIDC_LOOKUP_EXCL   |			\
 				FIDC_LOOKUP_COPY   |			\
 				FIDC_LOOKUP_FCOOSTART),			\
-			    (fcm), (creds))
+			    (fcm), (creds), (fcmhp))
 
 /* Increment an fcmh reference, fcmh_refcnt is used by the fidcache
  *  to determine which fcmh's may be reclaimed.
@@ -110,8 +107,8 @@ enum fidc_lookup_flags {
 /**
  * fcmh_clean_check - verify the validity of the fcmh.
  */
-#define fcmh_clean_check(f)					\
-({								\
+#define fcmh_clean_check(f)						\
+({									\
 	int __clean=0, __l=reqlock(&(f)->fcmh_lock);			\
 	DEBUG_FCMH(PLL_INFO, (f), "clean_check");			\
 	if ((f)->fcmh_state & FCMH_CAC_CLEAN) {				\

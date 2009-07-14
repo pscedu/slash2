@@ -35,8 +35,7 @@ struct hash_table fidcHtable;
 
 struct sl_fsops *slFsops;
 
-struct fidc_membh *
-__fidc_lookup_fg(const struct slash_fidgen *, int);
+struct fidc_membh *__fidc_lookup_fg(const struct slash_fidgen *, int);
 
 static inline int
 fidc_freelist_avail_check(void)
@@ -139,6 +138,7 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 					   "null fcmh_cache_owner here");
 
 			tmp = __fidc_lookup_fg(fcmh_2_fgp(f), 1);
+
 			if (f != tmp)
 				abort();
 
@@ -298,7 +298,6 @@ fidc_get(void)
 	return (f);
 }
 
-
 /**
  * fidc_lookup_simple - perform a simple lookup of a fid in the cache.
  *	If the fid is found, its refcnt is incremented and it is returned.
@@ -398,18 +397,21 @@ fidc_lookup_fg(const struct slash_fidgen *fg)
 struct fidc_membh *
 fidc_lookup_simple(slfid_t f)
 {
-	struct slash_fidgen t = {f, FID_ANY};
+	struct slash_fidgen t = { f, FID_ANY };
 
 	return (fidc_lookup_fg(&t));
 }
 
-struct fidc_membh *
+int
 __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 		    const struct fidc_memb *fcm,
-		    const struct slash_creds *creds)
+		    const struct slash_creds *creds,
+		    struct fidc_membh **fcmhp)
 {
-	int try_create=0, simple_lookup=0;
+	int rc, try_create=0, simple_lookup=0;
 	struct fidc_membh *fcmh, *fcmh_new;
+
+	*fcmhp = NULL;
 
 	fcmh_new = NULL; /* gcc */
 
@@ -433,7 +435,7 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 			fidc_membh_dropref(fcmh);
 			psc_warnx("Fid "FIDFMT" already in cache",
 				  FIDFMTARGS(fg));
-			return NULL;
+			return (EEXIST);
 		}
 		/* Set to true so that we don't ref twice.
 		 */
@@ -480,7 +482,7 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 			/* FIDC_LOOKUP_CREATE was not specified and the fcmh
 			 *  is not present.
 			 */
-			return (NULL);
+			return (ENOENT);
 
 		/* Ok we've got a new fcmh.  No need to lock it since
 		 *  it's not yet visible to other threads.
@@ -541,14 +543,17 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 
 	if ((flags & FIDC_LOOKUP_LOAD) ||
 	    (flags & FIDC_LOOKUP_REFRESH)) {
-		if (slFsops)
-			if ((slFsops->slfsop_getattr)(fcmh, creds)) {
+		if (slFsops) {
+			rc = slFsops->slfsop_getattr(fcmh, creds);
+			if (rc) {
 				DEBUG_FCMH(PLL_DEBUG, fcmh, "getattr failure");
-				return (NULL);
+				return (rc);
 			}
+		}
 	}
 
-	return (fcmh);
+	*fcmhp = fcmh;
+	return (0);
 }
 
 int
