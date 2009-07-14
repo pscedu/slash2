@@ -65,6 +65,31 @@ static int set_signal_handler(int sig, void (*handler)(int))
 }
 #endif
 
+int
+checkcreds(const struct stat *stb, const struct slash_creds *cr, int xmode)
+{
+	if (stb->st_uid == cr->uid) {
+		if (((xmode & R_OK) && (stb->st_mode & S_IRUSR) == 0) ||
+		    ((xmode & W_OK) && (stb->st_mode & S_IWUSR) == 0) ||
+		    ((xmode & X_OK) && (stb->st_mode & S_IXUSR) == 0))
+			return (EACCES);
+		return (0);
+	}
+	/* XXX check process supplementary group list */
+	if (stb->st_gid == cr->gid) {
+		if (((xmode & R_OK) && (stb->st_mode & S_IRGRP) == 0) ||
+		    ((xmode & W_OK) && (stb->st_mode & S_IWGRP) == 0) ||
+		    ((xmode & X_OK) && (stb->st_mode & S_IXGRP) == 0))
+			return (EACCES);
+		return (0);
+	}
+	if (((xmode & R_OK) && (stb->st_mode & S_IROTH) == 0) ||
+	    ((xmode & W_OK) && (stb->st_mode & S_IWOTH) == 0) ||
+	    ((xmode & X_OK) && (stb->st_mode & S_IXOTH) == 0))
+		return (EACCES);
+	return (0);
+}
+
 static void
 slash2fuse_getcred(fuse_req_t req, struct slash_creds *cred)
 {
@@ -158,7 +183,7 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 
 	FCM_FROM_FG_ATTR(&fcm, fg, stb);
 
-	c = __fidc_lookup_inode(fg, lookupflags, &fcm, creds);
+	__fidc_lookup_inode(fg, lookupflags, &fcm, creds, &c);
 
 	psc_assert(c);
 
@@ -208,11 +233,9 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 	mq->ino = ino;
 	mq->mask = mask;
 
-	c = fidc_lookup_load_inode((slfid_t)ino, &mq->creds);
-	if (!c) {
-		rc = ENOENT;
+	rc = fidc_lookup_load_inode(ino, &mq->creds, &c);
+	if (rc)
 		goto out;
-	}
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
@@ -446,14 +469,15 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	}
 
-	p = fidc_lookup_inode((slfid_t)parent);
+	p = fidc_lookup_inode(parent);
 	if (!p) {
 		/* Parent inode must exist in the cache.
 		 */
 		rc = ENOENT;
 		goto out;
+	}
 
-	} else if (!fcmh_2_isdir(p)) {
+	if (!fcmh_2_isdir(p)) {
 		rc = ENOTDIR;
 		goto out;
 	}
@@ -532,11 +556,10 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	psc_warnx("FID %"PRId64, (slfid_t)ino);
 
-	c = fidc_lookup_load_inode((slfid_t)ino, &creds);
-	if (!c) {
-		rc = ENOENT;
+	rc = fidc_lookup_load_inode(ino, &creds, &c);
+	if (rc)
 		goto out;
-	}
+
 	/* Don't allow writes on directory inodes.
 	 */
 	if (fcmh_2_isdir(c)) {
@@ -636,19 +659,22 @@ slash2fuse_getattr(__unusedx fuse_req_t req, fuse_ino_t ino,
 	 *  be allocated.  slash2fuse_stat() will detect incomplete attrs via
 	 *  FCMH_GETTING_ATTRS flag and rpc for them.
 	 */
-	f = fidc_lookup_load_inode((slfid_t)ino, &creds);
-	if (!f)
-		rc = ENOMEM;
-	else
-		rc = slash2fuse_stat(f, &creds);
+	rc = fidc_lookup_load_inode(ino, &creds, &f);
+	if (rc)
+		goto out;
 
+	rc = slash2fuse_stat(f, &creds);
+	if (rc)
+		goto out;
+
+	fcm_dump_stb(fcmh_2_stb(f), PLL_INFO);
+	fuse_reply_attr(req, fcmh_2_stb(f), 0.0);
+
+ out:
+	if (f)
+		fidc_membh_dropref(f);
 	if (rc)
 		fuse_reply_err(req, rc);
-	else {
-		fcm_dump_stb(fcmh_2_stb(f), PLL_INFO);
-		fuse_reply_attr(req, fcmh_2_stb(f), 0.0);
-		fidc_membh_dropref(f);
-	}
 }
 
 static void
@@ -676,31 +702,31 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	}
 
 	slash2fuse_getcred(req, &creds);
+
 	/* Check the newparent inode.
 	 */
-	p = fidc_lookup_load_inode((slfid_t)newparent, &creds);
-	if (!p) {
-		rc = ENOMEM;
+	rc = fidc_lookup_load_inode(newparent, &creds, &p);
+	if (rc)
 		goto out;
-	}
 
 	if (!fcmh_2_isdir(p)) {
 		rc = ENOTDIR;
 		goto out;
 	}
+
 	/* Check the child inode.
 	 */
-	c = fidc_lookup_load_inode((slfid_t)ino, &creds);
-	if (!c) {
-		rc = ENOMEM;
+	rc = fidc_lookup_load_inode(ino, &creds, &c);
+	if (rc)
 		goto out;
-	} else
-		psc_assert(fcmh_2_fid(c) == ino);
+
+	psc_assert(fcmh_2_fid(c) == ino);
 
 	if (fcmh_2_isdir(c)) {
 		rc = EISDIR;
 		goto out;
 	}
+
 	/* Create and initialize the LINK RPC.
 	 */
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
@@ -751,9 +777,10 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = ENAMETOOLONG;
 		goto out;
 	}
+
 	/* Check the parent inode.
 	 */
-	p = fidc_lookup_inode((slfid_t)parent);
+	p = fidc_lookup_inode(parent);
 	if (!p) {
 		rc = EINVAL;
 		goto out;
@@ -826,11 +853,9 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	slash2fuse_getcred(req, &mq->creds);
 	/* Check the parent inode.
 	 */
-	p = fidc_lookup_load_inode((slfid_t)parent, &mq->creds);
-	if (!p) {
-		rc = EINVAL;
+	rc = fidc_lookup_load_inode(parent, &mq->creds, &p);
+	if (rc)
 		goto out;
-	}
 
 	if (!fcmh_2_isdir(p)) {
 		rc = ENOTDIR;
@@ -975,8 +1000,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 				  attr->rc);
 
 			fcm_2_age(&fcm) = fidc_gettime() + FCMH_ATTR_TIMEO;
-			fcmh = fidc_lookup_copy_inode(&fcm.fcm_fg, &fcm,
-						      &mq->creds);
+			rc = fidc_lookup_copy_inode(&fcm.fcm_fg, &fcm,
+						      &mq->creds, &fcmh);
 			if (fcmh)
 				fidc_membh_dropref(fcmh);
 			else
@@ -1044,53 +1069,57 @@ slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 static void
 slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
-	int error=0;
+	int rc=0;
 	struct fidc_membh *p, *m;
 	struct slash_creds creds;
 
 	msfsthr_ensure();
+
+	p = m = NULL;
 
 	slash2fuse_getcred(req, &creds);
 
 	psc_infos(PSS_OTHER, "name %s inode %"PRId64,
 		  name, parent);
 
-	p = fidc_lookup_load_inode((slfid_t)parent, &creds);
-	if (!p) {
+	rc = fidc_lookup_load_inode(parent, &creds, &p);
+	if (rc) {
 		/* Parent inode must exist in the cache.
 		 */
 		psc_warnx("name %s - failed to load inode %"PRIx64,
 			  name, parent);
-		error = EINVAL;
+		rc = EINVAL;
 		goto out;
+	}
 
-	} else if (!fcmh_2_isdir(p)) {
-		fidc_membh_dropref(p);
-		error = ENOTDIR;
+	if (!fcmh_2_isdir(p)) {
+		rc = ENOTDIR;
 		goto out;
 	}
 
 	if ((m = fidc_child_lookup(p, name))) {
 		/* At this point the namespace reference is still valid but
 		 *  the fcmh contents may be old, use slash2fuse_stat() to
-		 *  determine attr age and possibly invoke an rpc to refresh
+		 *  determine attr age and possibly invoke an RPC to refresh
 		 *  the fcmh contents.
 		 */
-		error = slash2fuse_stat(m, &creds);
-		if (error)
+		rc = slash2fuse_stat(m, &creds);
+		if (rc)
 			goto out;
 
 		slash2fuse_reply_entry(req, fcmh_2_fgp(m), fcmh_2_attrp(m));
-		fidc_membh_dropref(m);
 	} else
-		error = slash2fuse_lookuprpc(req, p, name);
+		rc = slash2fuse_lookuprpc(req, p, name);
 
 	/* Drop the parent's refcnt.
 	 */
-	fidc_membh_dropref(p);
  out:
-	if (error)
-		fuse_reply_err(req, error);
+	if (p)
+		fidc_membh_dropref(p);
+	if (m)
+		fidc_membh_dropref(m);
+	if (rc)
+		fuse_reply_err(req, rc);
 }
 
 static void
@@ -1237,22 +1266,18 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	iov[1].iov_base = (char *)newname;
 	iov[1].iov_len = mq->tolen;
 
-	op = fidc_lookup_load_inode(parent, &mq->creds);
-	if (op == NULL) {
-		rc = ENOENT;
+	rc = fidc_lookup_load_inode(parent, &mq->creds, &op);
+	if (rc)
 		goto out;
-	}
 
 	if (!fcmh_2_isdir(op)) {
 		rc = ENOTDIR;
 		goto out;
 	}
 
-	np = fidc_lookup_load_inode(newparent, &mq->creds);
-	if (np == NULL) {
-		rc = ENOENT;
+	rc = fidc_lookup_load_inode(newparent, &mq->creds, &np);
+	if (rc)
 		goto out;
-	}
 
 	if (!fcmh_2_isdir(np)) {
 		rc = ENOTDIR;
@@ -1332,7 +1357,7 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 	    strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
 
-	p = fidc_lookup_inode((slfid_t)parent);
+	p = fidc_lookup_inode(parent);
 	if (!p)
 		return (ENOMEM);
 
@@ -1408,7 +1433,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	if (rc)
 		goto out;
 
-	c = fidc_lookup_inode((slfid_t)ino);
+	c = fidc_lookup_inode(ino);
 	if (!c) {
 		rc = EINVAL;
 		goto out;
