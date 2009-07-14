@@ -246,7 +246,7 @@ mds_bmap_ref_del(struct mexpbcm *bref);
 int
 mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 {
-	int l;
+	int locked;
 	struct mexpfcm *m=c->pri;
 	struct fidc_membh *f=m->mexpfcm_fcmh;
 	struct fidc_mds_info *i=f->fcmh_fcoo->fcoo_pri;
@@ -278,11 +278,11 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	/* Grab the fcmh lock (it is responsible for fidc_mds_info
 	 *  serialization) and remove ourselves from the tree.
 	 */
-	l = reqlock(&f->fcmh_lock);
+	locked = reqlock(&f->fcmh_lock);
 	if (SPLAY_REMOVE(fcm_exports, &i->fmdsi_exports, m) == NULL)
 		psc_fatalx("Failed to remove %p export(%p) from %p",
 		    m, m->mexpfcm_export, &i->fmdsi_exports);
-	ureqlock(&f->fcmh_lock, l);
+	ureqlock(&f->fcmh_lock, locked);
 
 	c->pri = NULL;
 	PSCFREE(m);

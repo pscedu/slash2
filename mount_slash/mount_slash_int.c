@@ -1173,7 +1173,7 @@ msl_pages_copyout(struct offtree_req *r, char *buf, off_t off)
 	struct dynarray     *a;
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
-	int    l, j, x=0;
+	int    n, j, x=0;
 	off_t  t;
 	size_t nbytes;
 	ssize_t tsize;
@@ -1190,9 +1190,9 @@ msl_pages_copyout(struct offtree_req *r, char *buf, off_t off)
 	t = off - r->oftrq_off;
 	p = buf;
 	a = r->oftrq_darray;
-	l = dynarray_len(a);
+	n = dynarray_len(a);
 
-	for (j=0; j < l; j++) {
+	for (j=0; j < n; j++) {
 		v=dynarray_getpos(a, j);
 		if (!x) {
 			/* These pages aren't involved, skip.

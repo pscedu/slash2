@@ -230,7 +230,7 @@ static void
 slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 {
 	struct fidc_open_obj *o=fcmh->fcmh_fcoo;
-	int l=reqlock(&fcmh->fcmh_lock);
+	int locked=reqlock(&fcmh->fcmh_lock);
 
 #define SL2F_UPOPREF_READ() do {				\
 		if (!o->fcoo_oref_rw[0])			\
@@ -284,7 +284,7 @@ slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 	}
 
 	DEBUG_FCMH(PLL_TRACE, fcmh, "fdstate (%d)", *uord);
-	ureqlock(&fcmh->fcmh_lock, l);
+	ureqlock(&fcmh->fcmh_lock, locked);
 }
 
 static void
@@ -580,7 +580,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	struct pscrpc_request *rq;
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
-	int rc=0, l;
+	int rc=0, locked;
 
 	if ((fcmh->fcmh_state & FCMH_HAVE_ATTRS) &&
 	    fidc_gettime() < (fcmh_2_age(fcmh) + FCMH_ATTR_TIMEO)) {
@@ -590,9 +590,9 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		return (0);
 	}
 
-	l = reqlock(&fcmh->fcmh_lock);
+	locked = reqlock(&fcmh->fcmh_lock);
 	fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
-	ureqlock(&fcmh->fcmh_lock, l);
+	ureqlock(&fcmh->fcmh_lock, locked);
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_GETATTR, rq, mq, mp);

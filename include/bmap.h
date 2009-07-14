@@ -91,10 +91,10 @@ bmap_lookup_locked(struct fidc_open_obj *fcoo, sl_blkno_t n)
 static inline struct bmapc_memb *
 bmap_lookup(struct fidc_membh *f, sl_blkno_t n)
 {
-	int l = reqlock(&f->fcmh_lock);
+	int locked = reqlock(&f->fcmh_lock);
 	struct bmapc_memb *b = bmap_lookup_locked(f->fcmh_fcoo, n);
 
-	ureqlock(&f->fcmh_lock, l);
+	ureqlock(&f->fcmh_lock, locked);
 	return (b);
 }
 
