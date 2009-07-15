@@ -20,8 +20,6 @@
 #include "fidc_common.h"
 #include "bmap.h"
 
-#define SL_FIDCACHE_LOW_THRESHOLD 80 // 80%
-
 int (*fidcReapCb)(struct fidc_membh *);
 void (*initFcooCb)(struct fidc_open_obj *);
 
@@ -36,17 +34,6 @@ struct hash_table fidcHtable;
 struct sl_fsops *slFsops;
 
 struct fidc_membh *__fidc_lookup_fg(const struct slash_fidgen *, int);
-
-static inline int
-fidc_freelist_avail_check(void)
-{
-        psc_assert(fidcFreePool->ppm_lc.lc_size >= 0);
-
-        if ((fidcFreePool->ppm_lc.lc_nseen / SL_FIDCACHE_LOW_THRESHOLD) >
-            (size_t)fidcFreePool->ppm_lc.lc_size)
-                return 0;
-        return 1;
-}
 
 void
 fidc_membh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
