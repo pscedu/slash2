@@ -12,14 +12,13 @@
 
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
-#include "psc_ds/pool.h"
+#include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/strlcpy.h"
 
 #include "cache_params.h"
 #include "fid.h"
-#include "fidc_common.h"
 #include "fidc_client.h"
 #include "fidcache.h"
 

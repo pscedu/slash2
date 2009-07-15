@@ -28,7 +28,6 @@
 
 #include "cfd.h"
 #include "fdbuf.h"
-#include "fidc_common.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "mdsexpc.h"

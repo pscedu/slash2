@@ -15,6 +15,7 @@
 
 #include "pfl.h"
 #include "psc_types.h"
+#include "psc_ds/dynarray.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
@@ -22,6 +23,7 @@
 #include "psc_util/log.h"
 
 #include "bmap.h"
+#include "buffer.h"
 #include "cli_bmap.h"
 #include "fidcache.h"
 #include "mount_slash.h"

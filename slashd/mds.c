@@ -11,7 +11,6 @@
 
 #include "cache_params.h"
 #include "cfd.h"
-#include "fidc_common.h"
 #include "fidcache.h"
 #include "inode.h"
 #include "mds_repl.h"

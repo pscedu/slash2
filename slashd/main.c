@@ -15,7 +15,7 @@
 
 #include "control.h"
 #include "fdbuf.h"
-#include "fidc_common.h"
+#include "fidcache.h"
 #include "mdsrpc.h"
 #include "pathnames.h"
 #include "sb.h"

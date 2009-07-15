@@ -2,16 +2,14 @@
 
 #include <stdio.h>
 
-#include "psc_ds/list.h"
-#include "psc_ds/listcache.h"
-#include "psc_ds/pool.h"
+#include "psc_util/assert.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
+#include "psc_util/lock.h"
 
 #include "cache_params.h"
 #include "fid.h"
 #include "fidcache.h"
-#include "fidc_common.h"
 
 #if 0
 __static int
