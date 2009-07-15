@@ -4,7 +4,7 @@
 #define _MDSEXPC_H_
 
 /*
- * These structures provide back pointers into the Fid Cache to
+ * These structures provide back pointers into the FID Cache to
  * facilitate client-wise operations within the cache.  Such ops would
  * include dereferencing the entire tree of client bmap references on
  * connection close.

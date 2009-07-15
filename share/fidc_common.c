@@ -420,7 +420,7 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 	if (fcmh) {
 		if (flags & FIDC_LOOKUP_EXCL) {
 			fidc_membh_dropref(fcmh);
-			psc_warnx("Fid "FIDFMT" already in cache",
+			psc_warnx("FID "FIDFMT" already in cache",
 				  FIDFMTARGS(fg));
 			return (EEXIST);
 		}

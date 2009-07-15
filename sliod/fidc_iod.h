@@ -1,4 +1,4 @@
-/* $Id: O$ */
+/* $Id$ */
 
 #ifndef _FIDC_IOD_H_
 #define _FIDC_IOD_H_
@@ -11,4 +11,3 @@ struct fidc_iod_info {
 };
 
 #endif
-
