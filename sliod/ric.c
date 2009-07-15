@@ -64,7 +64,8 @@ slric_handle_read(struct pscrpc_request *rq)
 	}
 
 	mp->rc = bdbuf_decrypt(&mq->sbdb, &cfd,
-	    &fg, &bmapno, rq->rq_peer, lpid.nid, 0);
+	    &fg, &bmapno, rq->rq_peer, lpid.nid,
+	    nodeInfo.node_res->res_id);
 	if (mp->rc) {
 		psc_errorx("fdbuf_decrypt failed for "FIDFMT, FIDFMTARGS(&fg));
 		return (0);
@@ -125,7 +126,8 @@ slric_handle_write(struct pscrpc_request *rq)
 	}
 
 	mp->rc = bdbuf_decrypt(&mq->sbdb, &cfd, &fg,
-	    &bmapno, rq->rq_peer, lpid.nid, 0);
+	    &bmapno, rq->rq_peer, lpid.nid,
+	    nodeInfo.node_res->res_id);
 	if (mp->rc) {
 		psc_errorx("fdbuf_decrypt failed");
 		return (0);
