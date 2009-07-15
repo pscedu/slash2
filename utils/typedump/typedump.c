@@ -15,7 +15,6 @@
 #include <creds.h>
 #include <fdbuf.h>
 #include <fid.h>
-#include <fidc_client.h>
 #include <fidc_common.h>
 #include <fidcache.h>
 #include <inode.h>
@@ -30,6 +29,7 @@
 #include <sljournal.h>
 #include <mount_slash/cli_bmap.h>
 #include <mount_slash/control.h>
+#include <mount_slash/fidc_client.h>
 #include <mount_slash/fuse_listener.h>
 #include <mount_slash/mount_slash.h>
 #include <mount_slash/msl_fuse.h>
@@ -45,7 +45,6 @@
 #include <slashd/rpc.h>
 #include <slashd/sb.h>
 #include <slashd/slashdthr.h>
-#include <slashd/yconf.h>
 #include <sliod/control.h>
 #include <sliod/rpc.h>
 #include <sliod/sliod.h>
@@ -115,7 +114,6 @@ PRTYPE(struct sl_buffer);
 PRTYPE(struct sl_buffer_iovref);
 PRTYPE(struct sl_finfo);
 PRTYPE(struct sl_fsops);
-PRTYPE(struct sl_uid);
 PRTYPE(struct slash_bmap_od);
 PRTYPE(struct slash_creds);
 PRTYPE(struct slash_fidgen);
@@ -135,6 +133,7 @@ PRTYPE(struct slashrpc_export);
 PRTYPE(struct slashrpc_export);
 PRTYPE(struct slmds_jent_crc);
 PRTYPE(struct slmds_jent_ino_addrepl);
+PRTYPE(struct slmds_jent_inum);
 PRTYPE(struct slmds_jent_repgen);
 PRTYPE(struct slmds_jents);
 PRTYPE(struct srm_access_req);
@@ -151,8 +150,6 @@ PRTYPE(struct srm_destroy_req);
 PRTYPE(struct srm_generic_rep);
 PRTYPE(struct srm_getattr_rep);
 PRTYPE(struct srm_getattr_req);
-PRTYPE(struct srm_ic_connect_req);
-PRTYPE(struct srm_ic_connect_secret);
 PRTYPE(struct srm_io_rep);
 PRTYPE(struct srm_io_req);
 PRTYPE(struct srm_link_rep);
@@ -162,8 +159,8 @@ PRTYPE(struct srm_lookup_req);
 PRTYPE(struct srm_mkdir_rep);
 PRTYPE(struct srm_mkdir_req);
 PRTYPE(struct srm_mknod_req);
+PRTYPE(struct srm_open_rep);
 PRTYPE(struct srm_open_req);
-PRTYPE(struct srm_opencreate_rep);
 PRTYPE(struct srm_opendir_req);
 PRTYPE(struct srm_readdir_rep);
 PRTYPE(struct srm_readdir_req);
