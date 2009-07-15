@@ -377,7 +377,7 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	else {
 		memcpy(&h->fcmh_fcoo->fcoo_fdb,
 		    &mp->sfdb, sizeof(mp->sfdb));
-		//fidc_fcm_setattr(h, &mp->attr);
+		//fidc_membh_setattr(h, &mp->attr);
 	}
 	pscrpc_req_finished(rq);
 	return (rc);
@@ -633,7 +633,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 			psc_assert(fcmh->fcmh_state & FCMH_GETTING_ATTRS);
 			fcmh_2_gen(fcmh) = mp->gen;
 		}
-		fidc_fcm_setattr(fcmh, &mp->attr);
+		fidc_membh_setattr(fcmh, &mp->attr);
 	}
 
 	pscrpc_req_finished(rq);
@@ -746,7 +746,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	}
 	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
 	//slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds);
-	fidc_fcm_setattr(c, &mp->attr);
+	fidc_membh_setattr(c, &mp->attr);
 
  out:
 	if (rc)
@@ -1464,7 +1464,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		rc = rc ? rc : mp->rc;
 		goto out;
 	}
-	fidc_fcm_setattr(c, &mp->attr);
+	fidc_membh_setattr(c, &mp->attr);
 	fuse_reply_attr(req, &mp->attr, 0.0);
 
  out:

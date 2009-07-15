@@ -124,7 +124,7 @@ enum fidc_lookup_flags {
 	__clean;							\
  })
 
-void	fidc_fcm_setattr(struct fidc_membh *, const struct stat *);
+void	fidc_membh_setattr(struct fidc_membh *, const struct stat *);
 int	fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
 void	fidc_fcoo_init(struct fidc_open_obj *);
 int	fidc_fid2cfd(slfid_t, u64 *, struct fidc_membh **);

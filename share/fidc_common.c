@@ -49,7 +49,7 @@ fidc_freelist_avail_check(void)
 }
 
 void
-fidc_fcm_setattr(struct fidc_membh *fcmh, const struct stat *stb)
+fidc_membh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 {
 	int locked = reqlock(&fcmh->fcmh_lock);
 
@@ -495,7 +495,7 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 
 			COPYFID(fcmh->fcmh_fcm, fcm);
 			fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
-			fidc_fcm_setattr(fcmh, &fcm->fcm_stb);
+			fidc_membh_setattr(fcmh, &fcm->fcm_stb);
 
 		} else if (flags & FIDC_LOOKUP_LOAD) {
 			/* The caller has provided an incomplete
