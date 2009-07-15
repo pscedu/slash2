@@ -18,7 +18,6 @@
 
 struct fidc_membh;
 struct fidc_open_obj;
-struct slash_bmap_od;
 
 struct bmap_refresh {
 	struct slash_fidgen	bmrfr_fg;

@@ -148,7 +148,7 @@ struct srt_fdb_secret {
 	uint64_t		sfs_magic;
 	struct slash_fidgen	sfs_fg;
 	uint64_t		sfs_cfd;	/* stream handle/ID */
-	lnet_process_id_t	sfs_cprid;	/* client NID/PID */
+	lnet_process_id_t	sfs_cli_prid;	/* client NID/PID */
 	uint64_t		sfs_nonce;
 };
 
@@ -158,6 +158,23 @@ struct srt_fd_buf {
 };
 
 #define SFDB_MAGIC		UINT64_C(0x1234123412341234)
+#define SBDB_MAGIC		UINT64_C(0x4321432143214321)
+
+struct srt_bdb_secret {
+	uint64_t		sbs_magic;
+	struct slash_fidgen	sbs_fg;
+	uint64_t		sbs_cfd;	/* stream handle/ID */
+	lnet_process_id_t	sbs_cli_prid;	/* client NID/PID */
+	lnet_nid_t 		sbs_ion_nid;
+	sl_ios_id_t		sbs_ios_id;
+	sl_blkno_t 		sbs_bmapno;
+	uint64_t		sbs_nonce;
+};
+
+struct srt_bmapdesc_buf {
+	struct srt_bdb_secret	sbdb_secret;	/* encrypted */
+	char			sbdb_hash[45];	/* base64(SHA256(srt_bdb_secret + key)) */
+};
 
 #define SRIC_BMAP_READ  0
 #define SRIC_BMAP_WRITE 1
@@ -170,7 +187,6 @@ struct srm_access_req {
 
 struct srm_bmap_req {
 	struct srt_fd_buf	sfdb;
-	uint64_t		fid;		/* Optional, may be filled in server-side */
 	uint32_t		pios;		/* preferred ios id (provided by client)  */
 	uint32_t		blkno;		/* Starting block number                  */
 	uint32_t		nblks;		/* Read-ahead support                     */
@@ -185,18 +201,24 @@ struct srm_bmap_rep {
 /*
  * Bulk data contains a number of the following structures:
  *
- *	+----------------------+----------------+
- *	| data type            | description    |
- *	+----------------------+----------------+
- *	| struct slash_bmap_od | bmap contents  |
- *	+----------------------+----------------+
+ *	+-------------------------+---------------+
+ *	| data type               | description   |
+ *	+-------------------------+---------------+
+ *	| struct slash_bmap_od    | bmap contents |
+ *	| struct srt_bmapdesc_buf | descriptor    |
+ *	+-------------------------+---------------+
  */
 };
 
-struct srm_bmap_mode_req {
+struct srm_bmap_chmode_req {
 	struct srt_fd_buf	sfdb;
 	uint32_t		blkno;
 	uint32_t		rw;
+};
+
+struct srm_bmap_chmode_rep {
+	struct srt_bmapdesc_buf	sbdb;
+	int32_t			rc;
 };
 
 struct srm_bmap_dio_req {
@@ -326,7 +348,7 @@ struct srm_opendir_req {
 #define srm_opendir_rep srm_open_rep
 
 struct srm_io_req {
-	struct srt_fd_buf	sfdb;
+	struct srt_bmapdesc_buf	sbdb;
 	uint32_t		size;
 	uint32_t		offset;
 	uint32_t		flags;
@@ -450,7 +472,6 @@ struct srm_unlink_req {
 };
 
 struct srm_generic_rep {
-	uint64_t		data;
 	int32_t			rc;
 };
 

@@ -401,7 +401,6 @@ struct offtree_req {
 	u8                    oftrq_depth;
 	u16                   oftrq_width;
 	off_t                 oftrq_darray_off;
-	struct srt_fd_buf     oftrq_fdb;    /* file descriptor */
 	struct offtree_fill   oftrq_fill;
 	void                 *oftrq_bmap;   /* this is needed for dio        */
 #define oftrq_len oftrq_nblks               /* reuse oftrq_nblks in dio mode */

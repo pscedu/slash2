@@ -111,8 +111,6 @@ slrmc_connect(struct pscrpc_request *rq)
 	mexp_cli->mc_csvc->csvc_import->imp_connection = e->exp_connection;
 	freelock(&e->exp_lock);
 
-	mp->data = (u64)sexp->sexp_data;
-
 	RETURN(0);
 }
 
@@ -153,11 +151,12 @@ slrmc_getbmap(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_mds_info *bmdsi;
+	struct srt_bmapdesc_buf bdb;
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
 	struct bmapc_memb *bmap;
+	struct iovec iov[2];
 	struct mexpfcm *m;
-	struct iovec iov;
 	uint64_t cfd;
 
 	ENTRY;
@@ -177,15 +176,22 @@ slrmc_getbmap(struct pscrpc_request *rq)
 		mp->rc = mds_bmap_load(m, mq, &bmap);
 		if (mp->rc == 0) {
 			bmdsi = bmap->bcm_pri;
-			iov.iov_base = bmdsi->bmdsi_od;
-			iov.iov_len = sizeof(*bmdsi->bmdsi_od);
+			iov[0].iov_base = bmdsi->bmdsi_od;
+			iov[0].iov_len = sizeof(*bmdsi->bmdsi_od);
+			iov[1].iov_base = &bdb;
+			iov[1].iov_len = sizeof(bdb);
 
 			if (bmap->bcm_mode & BMAP_MDS_WR)
 				mp->ios_nid =
 				    bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
 
+			bdbuf_encrypt(&bdb, &mq->sfdb.sfdb_secret.sfs_fg,
+			    rq->rq_peer, mp->ios_nid,
+			    bmdsi->bmdsi_wr_ion->mi_resm->resm_res->res_id,
+			    bmap->bcm_blkno);
+
 			mp->rc = rsx_bulkserver(rq, &desc,
-			    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, &iov, 1);
+			    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, 2);
 			if (desc)
 				pscrpc_free_bulk(desc);
 			mp->nblks = 1;
@@ -496,7 +502,7 @@ slrmc_release(struct pscrpc_request *rq)
 	/* Prevent others from trying to access the mexpfcm.
 	 */
 	m->mexpfcm_flags |= MEXPFCM_CLOSING;
-	mexpfcm_release_brefs(m);	
+	mexpfcm_release_brefs(m);
 	MEXPFCM_ULOCK(m);
 
 	rc = cfdfree(rq->rq_export, cfd);

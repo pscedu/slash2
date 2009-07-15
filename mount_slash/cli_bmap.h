@@ -12,8 +12,9 @@
  */
 struct msbmap_data {
 	struct offtree_root	*msbd_oftr;
-	struct slash_bmap_od	*msbd_bmapi;
+	struct slash_bmap_od	 msbd_bmapi;
 	lnet_nid_t		 msbd_ion;
+	struct srt_bmapdesc_buf	 msbd_bdb;	/* open bmap descriptor */
 };
 
 #define bmap_2_msoftr(b)					\

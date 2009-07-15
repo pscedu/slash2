@@ -35,8 +35,8 @@
 __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 __static void
-msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
-    struct srt_fd_buf *fdb, off_t off, size_t len, int op)
+msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, off_t off,
+    size_t len, int op)
 {
 	/* Ensure the offset fits within the range and mask off the
 	 *  lower bits to align with the offtree's page size.
@@ -51,7 +51,6 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b,
 		psc_assert(b->bcm_mode & BMAP_CLI_WR);
 
 	r->oftrq_op = op;
-	r->oftrq_fdb = *fdb;
 	r->oftrq_bmap = b;
 
 	/* Set directio flag if the bmap is in dio mode, otherwise
@@ -139,7 +138,6 @@ msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f)
 	atomic_set(&b->bcm_opcnt, 0);
 	psc_waitq_init(&b->bcm_waitq);
 	b->bcm_pri = msbd = PSCALLOC(sizeof(*msbd));
-	msbd->msbd_bmapi = PSCALLOC(sizeof(*msbd->msbd_bmapi));
 	bmap_2_msoftr(b) = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
 				  SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,
 				  f, sl_buffer_alloc, sl_oftm_addref,
@@ -157,8 +155,6 @@ msl_bmap_free(struct bmapc_memb *b)
 	struct msbmap_data *msbd;
 
 	msbd = b->bcm_pri;
-	free(msbd->msbd_bmapi);
-	msbd->msbd_bmapi = NULL;
 
 	free(b->bcm_pri);
 	b->bcm_pri = NULL;
@@ -199,7 +195,6 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 	mq->pios  = prefIOS; /* Tell MDS of our preferred ION */
 	mq->blkno = b;
 	mq->nblks = n;
-	mq->fid   = FID_ANY; /* The MDS interpolates the fid from his cfd */
 	mq->rw    = rw;
 
 	iovs  = PSCALLOC(sizeof(*iovs) * n);
@@ -210,8 +205,9 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 		bmap = bmaps[i] = PSCALLOC(sizeof(struct bmapc_memb));
 		msl_bmap_init(bmap, f);
 		msbd = bmap->bcm_pri;
-		iovs[i].iov_base = msbd->msbd_bmapi;
-		iovs[i].iov_len  = sizeof(*msbd->msbd_bmapi);
+		iovs[i].iov_base = &msbd->msbd_bmapi;
+		iovs[i].iov_len  = sizeof(msbd->msbd_bmapi) +
+		    sizeof(msbd->msbd_bdb);
 		bmap->bcm_mode |= (rw & SRIC_BMAP_WRITE) ?
 		    BMAP_CLI_WR : BMAP_CLI_RD;
 	}
@@ -238,14 +234,14 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 		/* Add the bmaps to the tree.
 		 */
 		spinlock(&f->fcmh_lock);
-		for (i=0; i < mp->nblks ; i++) {
+		for (i=0; i < mp->nblks; i++) {
 			SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc,
 				     bmaps[i]);
 			atomic_inc(&f->fcmh_fcoo->fcoo_bmapc_cnt);
+			bmap_2_msion(bmaps[i]) = mp->ios_nid;
 		}
 		freelock(&f->fcmh_lock);
 		nblks = mp->nblks;
-		bmap_2_msion(bmaps[0]) = mp->ios_nid;
 	}
 
  fail:
@@ -262,7 +258,7 @@ __static int
 msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
 {
 	struct pscrpc_request *rq;
-	struct srm_bmap_mode_req *mq;
+	struct srm_bmap_chmode_req *mq;
 	struct srm_generic_rep *mp;
 	int rc;
 
@@ -628,7 +624,8 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	struct pscrpc_request_set *rqset;
 	struct pscrpc_request     *req;
 	struct pscrpc_bulk_desc   *desc;
-	struct bmapc_memb    *bcm;
+	struct bmapc_memb    	  *bcm;
+	struct msbmap_data    	  *msbd;
 	struct iovec              *iovs;
 	struct offtree_iov        *v;
 	struct srm_io_req         *mq;
@@ -647,9 +644,10 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	rqset = r->oftrq_fill.oftfill_reqset;
 	psc_assert(rqset);
 	/* Point to our bmap handle, it has the import information needed
-	 *  for the rpc request.  (Fid and ios id's)
+	 *  for the RPC request.  (FID and ION id's)
 	 */
 	bcm = r->oftrq_bmap;
+	msbd = bcm->bcm_pri;
 	imp = msl_bmap_to_import(bcm);
 	/* This pointer is only valid in DIO mode.
 	 */
@@ -699,7 +697,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	}
 	mq->size = v->oftiov_blksz * tblks;
 	mq->op = (op == MSL_PAGES_PUT ? SRMIO_WR : SRMIO_RD);
-	memcpy(&mq->sfdb, &r->oftrq_fdb, sizeof(mq->sfdb));
+	memcpy(&mq->sbdb, &msbd->msbd_bdb, sizeof(mq->sbdb));
 
 	/* Seems counter-intuitive, but it's right.  MSL_PAGES_GET is a
 	 * 'PUT' to the client, MSL_PAGES_PUSH is a server get.
@@ -730,7 +728,8 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 	struct pscrpc_request_set *rqset;
 	struct pscrpc_request     *req;
 	struct pscrpc_bulk_desc   *desc;
-	struct bmapc_memb    *bcm;
+	struct bmapc_memb    	  *bcm;
+	struct msbmap_data    	  *msbd;
 	struct iovec              *iovs;
 	struct srm_io_req         *mq;
 	struct srm_io_rep         *mp;
@@ -743,7 +742,8 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 	psc_assert(r->oftrq_bmap);
 	psc_assert(size);
 
-	bcm = (struct bmapc_memb *)r->oftrq_bmap;
+	bcm = r->oftrq_bmap;
+	msbd = bcm->bcm_pri;
 
 	op = (ATTR_TEST(r->oftrq_op, OFTREQ_OP_WRITE) ?
 	      SRMT_WRITE : SRMT_READ);
@@ -778,7 +778,7 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 		mq->offset = off + nbytes;
 		mq->size = len;
 		mq->op = (op == SRMT_WRITE ? SRMIO_WR : SRMIO_RD);
-		memcpy(&mq->sfdb, &r->oftrq_fdb, sizeof(mq->sfdb));
+		memcpy(&mq->sbdb, &msbd->msbd_bdb, sizeof(mq->sbdb));
 
 		pscrpc_set_add_new_req(rqset, req);
 		if (pscrpc_push_req(req)) {
@@ -1339,7 +1339,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		 */
 		r = realloc(r, sizeof(*r) * (nr + 1));
 		memset(&r[nr], 0, sizeof(*r));
-		msl_oftrq_build(&r[nr], b, mslfh_2_fdb(mfh), roff, tlen,
+		msl_oftrq_build(&r[nr], b, roff, tlen,
 				(op == MSL_READ) ? OFTREQ_OP_READ :
 				OFTREQ_OP_WRITE);
 		nr++;
@@ -1400,7 +1400,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 
 	rc = size;
  out:
-	for (j=0; j < nr; j++) 
+	for (j=0; j < nr; j++)
 		pscrpc_set_wait((&r[j])->oftrq_fill.oftfill_reqset);
 
 	for (j=0; j < nr; j++)

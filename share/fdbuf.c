@@ -24,17 +24,135 @@
 #include "fdbuf.h"
 #include "slashrpc.h"
 
-__static unsigned char	 fdbuf_key[sizeof(struct srt_fd_buf)];
+union maxbuf {
+	struct srt_fd_buf	fdb;
+	struct srt_bmapdesc_buf	bdb;
+};
+
+__static unsigned char	 fdbuf_key[sizeof(union maxbuf)];
+
+/*
+ * bdbuf_encrypt - Encrypt an bmapdesc buf with the shared key.
+ * @sbdb: the descriptor to encrypt; cfd should be filled in.
+ * @fgp: the file ID and generation.
+ * @cli_prid: client address to prevent spoofing.
+ * @ion_nid: ION address to prevent spoofing.
+ * @ios_id: I/O system slash.conf ID.
+ * @bmapno: bmap index number in file.
+ */
+void
+bdbuf_encrypt(struct srt_bmapdesc_buf *sbdb,
+    const struct slash_fidgen *fgp, lnet_process_id_t cli_prid,
+    lnet_nid_t ion_nid, sl_ios_id_t ios_id, sl_blkno_t bmapno)
+{
+	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0);
+	unsigned char *buf;
+	gcry_error_t gerr;
+	gcry_md_hd_t hd;
+	int alg;
+
+	sbdb->sbdb_secret.sbs_fg = *fgp;
+	sbdb->sbdb_secret.sbs_cli_prid = cli_prid;
+	sbdb->sbdb_secret.sbs_ion_nid = ion_nid;
+	sbdb->sbdb_secret.sbs_ios_id = ios_id;
+	sbdb->sbdb_secret.sbs_bmapno = bmapno;
+	sbdb->sbdb_secret.sbs_magic = SBDB_MAGIC;
+	sbdb->sbdb_secret.sbs_nonce = psc_atomic64_inc_return(&nonce);
+
+	alg = GCRY_MD_SHA256;
+	/* base64 is 4/3 + 1 (for truncation), then 1 for NUL byte */
+	if (gcry_md_get_algo_dlen(alg) * 4 / 3 + 2 >=
+	    sizeof(sbdb->sbdb_hash))
+		psc_fatal("bad base64 size: %d %d %zd",
+		    gcry_md_get_algo_dlen(alg),
+		    gcry_md_get_algo_dlen(alg) * 4 / 3 + 2,
+		    sizeof(sbdb->sbdb_hash));
+
+	gerr = gcry_md_open(&hd, alg, 0);
+	if (gerr)
+		psc_fatalx("gcry_md_open: %d", gerr);
+	gcry_md_write(hd, &sbdb->sbdb_secret,
+	    sizeof(sbdb->sbdb_secret));
+	gcry_md_write(hd, fdbuf_key, sizeof(fdbuf_key));
+	buf = gcry_md_read(hd, 0);
+	psc_base64_encode(buf, sbdb->sbdb_hash,
+	    gcry_md_get_algo_dlen(alg));
+	gcry_md_close(hd);
+}
+
+/*
+ * bdbuf_decrypt - Decrypt a bmapdesc buf with the shared key.
+ * @sbdb: the descriptor to decrypt.
+ * @cfdp: value-result client file descriptor.
+ * @fgp: value-result file ID and generation, after decryption.
+ * @bmapnop: value-result bmap index number in file.
+ * @cli_prid: client address to prevent spoofing.
+ * @ion_nid: ION address to prevent spoofing.
+ * @ios_id: I/O system slash.conf ID to prevent spoofing.
+ */
+int
+bdbuf_decrypt(struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
+    struct slash_fidgen *fgp, sl_blkno_t *bmapnop,
+    lnet_process_id_t cli_prid, lnet_nid_t ion_nid, sl_ios_id_t ios_id)
+{
+	gcry_error_t gerr;
+	gcry_md_hd_t hd;
+	char buf[45];
+	int alg, rc;
+
+	rc = 0;
+	if (sbdb->sbdb_secret.sbs_magic != SBDB_MAGIC)
+		return (EINVAL);
+	if (memcmp(&sbdb->sbdb_secret.sbs_cli_prid,
+	    &cli_prid, sizeof(cli_prid)))
+		return (EPERM);
+	if (sbdb->sbdb_secret.sbs_ion_nid != ion_nid)
+		return (EPERM);
+	if (sbdb->sbdb_secret.sbs_ios_id != ios_id)
+		return (EPERM);
+
+	alg = GCRY_MD_SHA256;
+	/* base64 is 4/3 + 1 (for truncation), then 1 for NUL byte */
+	if (gcry_md_get_algo_dlen(alg) * 4 / 3 + 2 >=
+	    sizeof(buf))
+		psc_fatal("bad base64 size: %d %d %zd",
+		    gcry_md_get_algo_dlen(alg),
+		    gcry_md_get_algo_dlen(alg) * 4 / 3 + 2,
+		    sizeof(buf));
+
+	gerr = gcry_md_open(&hd, alg, 0);
+	if (gerr)
+		psc_fatalx("gcry_md_open: %d", gerr);
+	gcry_md_write(hd, &sbdb->sbdb_secret,
+	    sizeof(sbdb->sbdb_secret));
+	gcry_md_write(hd, fdbuf_key, sizeof(fdbuf_key));
+	psc_base64_encode(gcry_md_read(hd, 0), buf,
+	    gcry_md_get_algo_dlen(alg));
+	if (strcmp(buf, sbdb->sbdb_hash))
+		rc = EBADF;
+	gcry_md_close(hd);
+
+	if (rc)
+		return (rc);
+
+	if (fgp)
+		*fgp = sbdb->sbdb_secret.sbs_fg;
+	if (cfdp)
+		*cfdp = sbdb->sbdb_secret.sbs_cfd;
+	if (bmapnop)
+		*bmapnop = sbdb->sbdb_secret.sbs_bmapno;
+	return (0);
+}
 
 /*
  * fdbuf_encrypt - Encrypt an fdbuf with the shared key.
  * @sfdb: the srt_fd_buf to encrypt, cfd should be filled in.
  * @fgp: the file ID and generation.
- * @nid: peer address to prevent spoofing.
+ * @cli_prid: peer address to prevent spoofing.
  */
 void
 fdbuf_encrypt(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
-    lnet_process_id_t nid)
+    lnet_process_id_t cli_prid)
 {
 	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0);
 	unsigned char *buf;
@@ -43,7 +161,7 @@ fdbuf_encrypt(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
 	int alg;
 
 	sfdb->sfdb_secret.sfs_fg = *fgp;
-	sfdb->sfdb_secret.sfs_cprid = nid;
+	sfdb->sfdb_secret.sfs_cli_prid = cli_prid;
 	sfdb->sfdb_secret.sfs_magic = SFDB_MAGIC;
 	sfdb->sfdb_secret.sfs_nonce = psc_atomic64_inc_return(&nonce);
 
@@ -73,11 +191,11 @@ fdbuf_encrypt(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
  * @sfdb: the srt_fd_buf to decrypt.
  * @cfdp: value-result client file descriptor.
  * @fgp: value-result file ID and generation, after decryption.
- * @nid: peer address to prevent spoofing.
+ * @cli_prid: peer address to prevent spoofing.
  */
 int
 fdbuf_decrypt(struct srt_fd_buf *sfdb, uint64_t *cfdp,
-    struct slash_fidgen *fgp, lnet_process_id_t nid)
+    struct slash_fidgen *fgp, lnet_process_id_t cli_prid)
 {
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
@@ -87,7 +205,8 @@ fdbuf_decrypt(struct srt_fd_buf *sfdb, uint64_t *cfdp,
 	rc = 0;
 	if (sfdb->sfdb_secret.sfs_magic != SFDB_MAGIC)
 		return (EINVAL);
-	if (memcmp(&sfdb->sfdb_secret.sfs_cprid, &nid, sizeof(nid)))
+	if (memcmp(&sfdb->sfdb_secret.sfs_cli_prid,
+	    &cli_prid, sizeof(cli_prid)))
 		return (EPERM);
 
 	alg = GCRY_MD_SHA256;
@@ -129,17 +248,16 @@ fdbuf_readkeyfile(void)
 {
 	const char *keyfn;
 	struct stat stb;
-	size_t siz;
 	int fd;
 
-	siz = sizeof(struct srt_fdb_secret);
 	keyfn = globalConfig.gconf_fdbkeyfn;
 	if ((fd = open(keyfn, O_RDONLY)) == -1)
 		psc_fatal("open %s", keyfn);
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("fstat %s", keyfn);
 	fdbuf_checkkey(keyfn, &stb);
-	if (read(fd, fdbuf_key, siz) != (ssize_t)siz)
+	if (read(fd, fdbuf_key, sizeof(fdbuf_key)) !=
+	    (ssize_t)sizeof(fdbuf_key))
 		psc_fatal("read %s", keyfn);
 	close(fd);
 }
@@ -167,9 +285,9 @@ fdbuf_checkkeyfile(void)
 void
 fdbuf_checkkey(const char *fn, struct stat *stb)
 {
-	if (stb->st_size != sizeof(struct srt_fdb_secret))
+	if (stb->st_size != sizeof(fdbuf_key))
 		psc_fatalx("key file %s is wrong size, should be %zu",
-		    fn, sizeof(struct srt_fdb_secret));
+		    fn, sizeof(fdbuf_key));
 	if (!S_ISREG(stb->st_mode))
 		psc_fatalx("key file %s: not a file", fn);
 	if ((stb->st_mode & (S_IRWXU | S_IRWXG | S_IRWXO)) != (S_IRUSR | S_IWUSR))
@@ -185,7 +303,6 @@ fdbuf_checkkey(const char *fn, struct stat *stb)
 void
 fdbuf_createkeyfile(void)
 {
-	unsigned char secret[sizeof(struct srt_fdb_secret)];
 	const char *keyfn;
 	int i, j, fd;
 	u32 r;
@@ -198,13 +315,14 @@ fdbuf_createkeyfile(void)
 		}
 		psc_fatal("open %s", keyfn);
 	}
-	for (i = 0; i < (int)sizeof(struct srt_fdb_secret); ) {
+	for (i = 0; i < (int)sizeof(fdbuf_key); ) {
 		r = psc_random32();
 		for (j = 0; j < 4 &&
-		    i < (int)sizeof(struct srt_fdb_secret); j++, i++)
-			secret[i] = (r >> (8 * j)) & 255;
+		    i < (int)sizeof(fdbuf_key); j++, i++)
+			fdbuf_key[i] = (r >> (8 * j)) & 255;
 	}
-	if (write(fd, secret, sizeof(secret)) != (ssize_t)sizeof(secret))
+	if (write(fd, fdbuf_key, sizeof(fdbuf_key)) !=
+	    (ssize_t)sizeof(fdbuf_key))
 		psc_fatal("write %s", keyfn);
 	close(fd);
 }
