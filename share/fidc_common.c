@@ -13,12 +13,12 @@
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
 
+#include "bmap.h"
+#include "buffer.h"
 #include "cache_params.h"
-#include "offtree.h"
 #include "fid.h"
 #include "fidcache.h"
-#include "fidc_common.h"
-#include "bmap.h"
+#include "offtree.h"
 
 int (*fidcReapCb)(struct fidc_membh *);
 void (*initFcooCb)(struct fidc_open_obj *);

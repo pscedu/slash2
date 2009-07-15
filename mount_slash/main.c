@@ -27,13 +27,14 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
+#include "buffer.h"
 #include "control.h"
 #include "fidc_client.h"
-#include "fidc_common.h"
 #include "fidcache.h"
 #include "fuse_listener.h"
 #include "mount_slash.h"
 #include "msl_fuse.h"
+#include "pathnames.h"
 #include "slashrpc.h"
 
 sl_ios_id_t prefIOS = IOS_ID_ANY;
