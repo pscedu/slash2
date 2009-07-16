@@ -139,7 +139,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct slashrpc_export);
 	PRTYPE(struct slmds_jent_crc);
 	PRTYPE(struct slmds_jent_ino_addrepl);
-	PRTYPE(struct slmds_jent_inum);
 	PRTYPE(struct slmds_jent_repgen);
 	PRTYPE(struct slmds_jents);
 	PRTYPE(struct slvr_ref);
@@ -187,7 +186,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_bmapdesc_buf);
 	PRTYPE(struct srt_fd_buf);
 	PRTYPE(struct srt_fdb_secret);
-	PRTYPE(struct srt_stat);
 /* end structs */
 
 	exit(0);
