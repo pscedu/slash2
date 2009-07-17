@@ -583,10 +583,13 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	fi->fh = (uint64_t)mfh;
 	fi->keep_cache = 1;
 	rc = slash2fuse_fcoo_start(req, ino, fi);
+	if (rc)
+		goto out;
 	fuse_reply_open(req, fi);
-	fidc_membh_dropref(c);
 
  out:
+	if (c)
+		fidc_membh_dropref(c);
 	if (rc)
 		fuse_reply_err(req, rc);
 }
