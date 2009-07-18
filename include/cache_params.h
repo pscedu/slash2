@@ -23,7 +23,9 @@ enum fid_cache_users {
 #define FIDC_ION_DEFSZ 4096   /* Number of fcmh's to allocate by default */
 #define FIDC_ION_MAXSZ 524288 /* Max fcmh's */
 
-#define SLASH_BMAP_SIZE  (128 * 1024 * 1024)
+#define SLASH_SLVRS_PER_BMAP 128
+#define SLASH_SLVR_SIZE (1024*1024)
+#define SLASH_BMAP_SIZE  (SLASH_SLVRS_PER_BMAP * SLASH_SLVR_SIZE)
 #define SLASH_BMAP_WIDTH 8
 #define SLASH_BMAP_DEPTH 5
 #define SLASH_BMAP_SHIFT 15   /* 2^SLASH_BMAP_SHIFT should == SLASH_BMAP_BLKSZ */
