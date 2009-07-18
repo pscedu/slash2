@@ -154,7 +154,7 @@ struct slash_bmap_od {
 	psc_crc_t   bh_bhcrc;                     /* on-disk bmap crc       */
 };
 
-#define slash_bmap_od slash_bmap_wire
+#define slash_bmap_wire slash_bmap_od
 
 #define BMAP_OD_SZ (sizeof(struct slash_bmap_od))
 #define BMAP_OD_CRCSZ (sizeof(struct slash_bmap_od)-(sizeof(psc_crc_t)))
