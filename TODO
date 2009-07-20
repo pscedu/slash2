@@ -1,3 +1,24 @@
+* Namespace Disconnection Problem
+  The namespace must be protected from a rename operation where a parent directory
+  is renamed into one of its children.  Supposedly a global rename lock is used in 
+  today's filesystems which locks the entire namespace and looks analyzes the paths to ensure
+  that a rename is source is not a parent of the target.  I think this is not a problem 
+  using directory hardlinks since the source's children may be determined via the immns 
+  dir hardlink.  EEB seems to think otherwise..  I think the issue is where the ".." directory
+  of the destination points.  If it points to the immns then we're in trouble.
+
+
+* Truncate Implementation
+  Non O_TRUNC but otherwise aligned trunc operations should be fairly simple to implement.  
+  Here two things are required:
+  	 1. Zero out the bmap descriptors within the metafile.
+	 2. Record the reclaimable regions so the the IONs may also reclaim that space.
+    
+  The question is, how do we deal with unaligned truncates?  We need some way to denote that 
+  the bmap crc is no longer valid.  Actually such a construct is probably needed in other places
+  as well.  On truncate, the value of ino_lblk needs to be reset as does ino_lblk_sz.
+
+
 * Fidcache Generation Numbering	
 	Fidcache must support generation numbers.
 		. hash table code should be modified to add a cmp function.
