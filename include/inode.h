@@ -142,22 +142,33 @@ typedef struct slash_block_gen {
 	unsigned int bl_gen; /* generation number     */
 } sl_blkgen_t;
 
-/*
- * A block container which holds a bmap.  Included are the bmap's checksums and the replication table.
- * XXX Notes:  use the bh_gen_crc[] to denote holes within the bmap using the CRC of \0's.
+/** 
+ * slash_bmap_od - slash bmap on-disk structure.  This structure maps the
+ *    persistent state of the bmap within the inode's metafile.  
+ * @bh_gen: current generation number.
+ * @bh_crcs: the crc table, one 8 byte crc per sliver.
+ * @bh_crcstates: some bits for describing the state of a sliver.
+ * @bh_repls: bitmap used for tracking the repication status of this bmap.
+ * @bh_bhcrc: on-disk checksum.
  */
 struct slash_bmap_od {
-	sl_blkgen_t bh_gen;                       /* current generation num */
-	sl_gcrc_t   bh_crcs[SL_CRCS_PER_BMAP];    /* array of crcs          */
-	u8          bh_crcstates[SL_CRCS_PER_BMAP]; /* crc descriptor bits  */
-	u8          bh_repls[SL_REPLICA_NBYTES];  /* replica bit map        */
-	psc_crc_t   bh_bhcrc;                     /* on-disk bmap crc       */
+	sl_blkgen_t bh_gen;
+	sl_gcrc_t   bh_crcs[SL_CRCS_PER_BMAP];
+	u8          bh_crcstates[SL_CRCS_PER_BMAP];
+	u8          bh_repls[SL_REPLICA_NBYTES];
+	psc_crc_t   bh_bhcrc;
 };
-
-#define slash_bmap_wire slash_bmap_od
 
 #define BMAP_OD_SZ (sizeof(struct slash_bmap_od))
 #define BMAP_OD_CRCSZ (sizeof(struct slash_bmap_od)-(sizeof(psc_crc_t)))
+
+#define slash_bmap_wire slash_bmap_od
+
+enum slash_bmap_slv_states {
+	BMAP_SLVR_DATA = (1<<0), /* Data present, otherwise slvr is hole */
+	BMAP_SLVR_CRC  = (1<<1)  /* Valid CRC */
+	//XXX ATM, 6 bits are left 
+};
 
 #define INO_DEF_NREPLS 4
 

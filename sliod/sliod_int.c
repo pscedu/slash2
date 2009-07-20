@@ -69,10 +69,10 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 		goto out;
         }
 
-	memcpy(&sbrw->sbdb, s, sizeof(*s));
+	memcpy(&mq->sbdb, s, sizeof(*s));
 
 	iov.iov_len = sizeof(struct slash_bmap_wire);
-	iov.iov_base = 	bmap_2_biodi_wire(b) = 
+	iov.iov_base = bmap_2_biodi_wire(b) = 
 		PSCALLOC(sizeof(struct slash_bmap_wire));
 
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, 1);
@@ -86,9 +86,10 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 		goto out;
         }
  out:
-	b->bcm_mode &= ~BMAP_IOD_RETRIEVE;
 	/* Unblock threads no matter what.
+	 *  XXX need some way to denote that a crcget rpc failed?
 	 */
+	b->bcm_mode &= ~BMAP_IOD_RETRIEVE;
 	psc_waitq_wakeall(&b->bcm_waitq);
 
 	return (rc);
@@ -189,7 +190,7 @@ iod_inode_open(struct fidc_membh *f, int rw)
 	freelock(&c->fcmh_lock);
 
 	if (c->fcmh_state & FCMH_FCOO_STARTING) {
-		if (rw == SL_FWRITE) 
+		if (rw == SL_FWRITE)
 			oflags |= O_CREAT;
 
 		rc = c->fcmh_fcoo->fcoo_fd = fid_fileops(fid, oflags);
@@ -215,25 +216,39 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 	b = bmap_lookup_add(f, sbdb->sbs_bmapno, iod_bmap_init);
 
 	spinlock(&b->bcm_lock);
+	/* For the time being I don't think we need to key actions
+	 *  off of the BMAP_INIT bit so ust get rid of it.
+	 */ 
 	b->bcm_mode &= ~BMAP_INIT;
 
 	if (rw == SL_READ) {
 	retry_getcrcs:
+		/* Check the retrieve bit first since it may be set
+		 *  before the biodi_wire pointer.
+		 */
 		if (b->bcm_mode & BMAP_IOD_RETRIEVE) {
+			/* Another thread is already getting this 
+			 *  bmap's crc table.
+			 */
 			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 			spinlock(&b->bcm_lock);
                         goto retry_getcrcs;
 
 		} else {
 			if (!bmap_2_biodi_wire(b)) {
+				/* This thread will retrieve the crc 
+				 *  table.  Set the bit and drop the
+				 *  lock prior to making the rpc.
+				 */
 				b->bcm_mode |= BMAP_IOD_RETRIEVE;
 				freelock(&b->bcm_lock);
-				/* Drop the lock prior to rpc.
-				 */
+
 				rc = iod_bmap_fetch_crcs(b, sbdb);
 			} else
+				/* biodi_wire already exists.
+				 */
 				freelock(&b->bcm_lock);
-		}		
+		}
 
 	} else if (rw == SL_WRITE) 
 		freelock(&b->bcm_lock);
