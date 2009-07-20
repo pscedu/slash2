@@ -89,7 +89,7 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 	b->bcm_mode &= ~BMAP_IOD_RETRIEVE;
 	/* Unblock threads no matter what.
 	 */
-	psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+	psc_waitq_wakeall(&b->bcm_waitq);
 
 	return (rc);
 }
