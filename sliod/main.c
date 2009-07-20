@@ -13,11 +13,12 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
+#include "buffer.h"
 #include "fdbuf.h"
+#include "fidcache.h"
 #include "pathnames.h"
 #include "rpc.h"
 #include "slconfig.h"
-#include "buffer.h"
 #include "sliod.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
