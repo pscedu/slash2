@@ -25,7 +25,7 @@ SPLAY_PROTOTYPE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 struct bmap_iod_info {
 	psc_spinlock_t          biod_lock;
 	struct bmapc_memb      *biod_bmap;
-	struct iobd_slvrtree    biod_slvrs;     
+	struct biod_slvrtree    biod_slvrs;     
 	struct slash_bmap_wire *biod_bmap_wire;
 	struct psclist_head     biod_lentry;
 	struct timespec         biod_age;
