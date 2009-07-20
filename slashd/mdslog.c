@@ -19,9 +19,9 @@
 #include "inode.h"
 #include "fidcache.h"
 #include "jflush.h"
+#include "fidc_mds.h"
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
-#include "fidc_mds.h"
 
 #ifdef INUM_SELF_MANAGE
 #include "sb.h"

@@ -15,10 +15,31 @@
 
 #include "cfd.h"
 #include "fid.h"
+#include "fdbuf.h"
 #include "rpc.h"
 #include "slashdthr.h"
 #include "slashrpc.h"
 #include "mds_bmap.h"
+
+int 
+slrmi_bmap_getcrcs(struct pscrpc_request *rq)
+{
+	struct srm_bmap_wire_req *mq;
+	struct srm_bmap_wire_rep *mp;
+	struct pscrpc_bulk_desc *desc;
+	struct slash_fidgen fg;
+	sl_blkno_t bmapno;
+	int rc;
+
+	RSX_ALLOCREP(rq, mq, mp);	
+
+	//rc = bdbuf_decrypt(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer, lpid.nid
+	//		   lnet_process_id_t cli_prid, lnet_nid_t ion_nid, sl_ios_id_t ios_id);
+		
+}
+
+
+
 
 int
 slrmi_bmap_crcwrt(struct pscrpc_request *rq)
@@ -128,6 +149,10 @@ slrmi_handler(struct pscrpc_request *rq)
 		rc = slrmi_bmap_crcwrt(rq);
 		break;
 		
+	case SRMT_GETBMAPCRCS:
+		rc = slrmi_bmap_getcrcs(rq);
+		break;
+
 	case SRMT_CONNECT:
 		rc = slrmi_handle_connect(rq);
 		break;

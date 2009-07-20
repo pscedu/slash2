@@ -44,9 +44,20 @@ struct bmapc_memb {
 	atomic_t		 bcm_opcnt;	/* pending opcnt           */
 	u32			 bcm_mode;
 	psc_spinlock_t		 bcm_lock;
-	psc_waitq_t		 bcm_waitq;
+	psc_waitq_t		 bcm_waitq;     /* XXX think about replacing 
+						   me with bcm_fcmh->fcmh_waitq
+						*/
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* fcm tree entry    */
 };
+
+enum bmap_common_modes {
+	BMAP_RD   = (1 << 0),
+	BMAP_WR   = (1 << 1),
+	BMAP_INIT = (1 << 2),
+	BMAP_DIO  = (1 << 3)	
+};
+
+#define BMAP_RSVRD_MODES 4 /* highest bmap_common_mode + 1 */
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
@@ -56,7 +67,7 @@ struct bmapc_memb {
 
 #define DEBUG_BMAP(level, b, fmt, ...)					\
 	psc_logs((level), PSS_OTHER,					\
-		 " bmap@%p b:%u m:%u i:%"PRIx64				\
+		 " bmap@%p b:%x m:%u i:%"PRIx64				\
 		 " rref=%u wref=%u opcnt=%u "fmt,			\
 		 (b), (b)->bcm_blkno,					\
 		 (b)->bcm_mode,						\
@@ -69,33 +80,20 @@ struct bmapc_memb {
 #define bmap_set_accesstime(b)						\
 	clock_gettime(CLOCK_REALTIME, &(b)->bcm_ts)
 
-void	bmapc_memb_init(struct bmapc_memb *, struct fidc_membh *);
-int	bmapc_cmp(const void *, const void *);
+extern int
+bmapc_cmp(const void *, const void *);
+
+extern struct bmapc_memb *
+bmap_lookup_locked(struct fidc_open_obj *, sl_blkno_t);
+
+extern struct bmapc_memb * 
+bmap_lookup(struct fidc_membh *, sl_blkno_t);
+
+extern struct bmapc_memb * 
+bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n, 
+		void (*bmap_init_fn)(struct bmapc_memb *, struct fidc_membh *, sl_blkno_t));
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmapc_cmp);
-
-static inline struct bmapc_memb *
-bmap_lookup_locked(struct fidc_open_obj *fcoo, sl_blkno_t n)
-{
-	struct bmapc_memb lb, *b;
-
-	lb.bcm_blkno=n;
-	b = SPLAY_FIND(bmap_cache, &fcoo->fcoo_bmapc, &lb);
-	if (b)
-		atomic_inc(&b->bcm_opcnt);
-
-	return (b);
-}
-
-static inline struct bmapc_memb *
-bmap_lookup(struct fidc_membh *f, sl_blkno_t n)
-{
-	int locked = reqlock(&f->fcmh_lock);
-	struct bmapc_memb *b = bmap_lookup_locked(f->fcmh_fcoo, n);
-
-	ureqlock(&f->fcmh_lock, locked);
-	return (b);
-}
 
 static inline void
 bmap_op_done(struct bmapc_memb *b)

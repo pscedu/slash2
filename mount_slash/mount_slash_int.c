@@ -50,7 +50,7 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, off_t off,
 	/* Verify that the mds agrees that the bmap is writeable.
 	 */
 	if (op == OFTREQ_OP_WRITE)
-		psc_assert(b->bcm_mode & BMAP_CLI_WR);
+		psc_assert(b->bcm_mode & BMAP_WR);
 
 	r->oftrq_op = op;
 	r->oftrq_bmap = b;
@@ -58,7 +58,7 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, off_t off,
 	/* Set directio flag if the bmap is in dio mode, otherwise
 	 *  allocate an array for cache iovs.
 	 */
-	if (b->bcm_mode & BMAP_CLI_DIO) {
+	if (b->bcm_mode & BMAP_DIO) {
 		r->oftrq_op |= OFTREQ_OP_DIO;
 		r->oftrq_off = off;
 		r->oftrq_len = len;
@@ -131,7 +131,7 @@ msl_fhent_new(struct fidc_membh *f)
  * @f: the bmap's owner
  */
 void
-msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f)
+msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t blkno)
 {
 	struct msbmap_data *msbd;
 
@@ -145,6 +145,8 @@ msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f)
 				  f, sl_buffer_alloc, sl_oftm_addref,
 				  sl_oftiov_pin_cb);
 	psc_assert(bmap_2_msoftr(b));
+	b->bcm_blkno = blkno;
+	b->bcm_fcmh = f;
 }
 
 /**
@@ -158,13 +160,13 @@ msl_bmap_free(struct bmapc_memb *b)
 
 	msbd = b->bcm_pri;
 
-	free(b->bcm_pri);
-	b->bcm_pri = NULL;
-
 	offtree_destroy(bmap_2_msoftr(b));
 	bmap_2_msoftr(b) = NULL;
 
-	free(b);
+	PSCFREE(b->bcm_pri);
+	b->bcm_pri = NULL;
+
+	PSCFREE(b);
 }
 
 /**
@@ -174,19 +176,24 @@ msl_bmap_free(struct bmapc_memb *b)
  * @n: the number of bmaps to retrieve (serves as a simple read-ahead mechanism)
  */
 __static int
-msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
+msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 {
-	struct bmapc_memb **bmaps, *bmap;
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
 	struct msbmap_data *msbd;
-	struct iovec *iovs;
+	struct fidc_membh *f;
+	struct iovec iovs[2];
 	int nblks, rc=-1;
 	u32 i;
 
-	psc_assert(n && n < BMAP_MAX_GET);
+	psc_assert(bmap->bcm_mode & BMAP_INIT);	
+	psc_assert(bmap->bcm_pri);	
+	psc_assert(bmap->bcm_fcmh);
+
+	f = bmap->bcm_fcmh;
+	
 	/* Build the new RPC request.
 	 */
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
@@ -196,66 +203,53 @@ msl_bmap_fetch(struct fidc_membh *f, sl_blkno_t b, size_t n, int rw)
 	mq->sfdb  = *fcmh_2_fdb(f);
 	mq->pios  = prefIOS; /* Tell MDS of our preferred ION */
 	mq->blkno = b;
-	mq->nblks = n;
+	mq->nblks = 1;
 	mq->rw    = rw;
 
-	iovs  = PSCALLOC(sizeof(*iovs) * n);
-	bmaps = PSCALLOC(sizeof(*bmaps) * n);
-	/* Init the bmap handles and setup the iovs.
-	 */
-	for (i=0; i < n; i++) {
-		bmap = bmaps[i] = PSCALLOC(sizeof(struct bmapc_memb));
-		msl_bmap_init(bmap, f);
-		msbd = bmap->bcm_pri;
-		iovs[i].iov_base = &msbd->msbd_bmapi;
-		iovs[i].iov_len  = sizeof(msbd->msbd_bmapi) +
-		    sizeof(msbd->msbd_bdb);
-		bmap->bcm_mode |= (rw & SRIC_BMAP_WRITE) ?
-		    BMAP_CLI_WR : BMAP_CLI_RD;
-	}
-	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmaps (s=%u, n=%zu)", b, n);
+	msbd = bmap->bcm_pri;
+	bmap->bcm_mode |= (rw & SRIC_BMAP_WRITE) ? BMAP_WR : BMAP_RD;
+
+	iovs[0].iov_base = &msbd->msbd_msbcr;
+	iovs[0].iov_len  = sizeof(msbd->msbd_msbcr);
+
+	iovs[1].iov_base = &msbd->msbd_bdb;
+	iovs[1].iov_len  = sizeof(msbd->msbd_bdb);
+
+	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (s=%u)", b);
 
 	nblks = 0;
-	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iovs, n);
+	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iovs, 2);
 	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
 		/* Verify the return.
 		 */
 		if (!mp->nblks) {
 			psc_errorx("MDS returned 0 bmaps");
-			rc = -1;
-			goto fail;
-		}
-		if (mp->nblks > n) {
-			psc_errorx("MDS returned more bmaps than expected! "
-				   "mp->nblks(%u) > n(%zu)",
-				   mp->nblks, n);
-			rc = -1;
-			mp->nblks = 0;
-			goto fail;
+			return (-1);
 		}
 		/* Add the bmaps to the tree.
 		 */
 		spinlock(&f->fcmh_lock);
 		for (i=0; i < mp->nblks; i++) {
 			SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc,
-				     bmaps[i]);
+				     bmap);
 			atomic_inc(&f->fcmh_fcoo->fcoo_bmapc_cnt);
-			bmap_2_msion(bmaps[i]) = mp->ios_nid;
+			bmap_2_msion(bmap) = mp->ios_nid;
 		}
 		freelock(&f->fcmh_lock);
-		nblks = mp->nblks;
 	}
 
- fail:
-	/* Free any slack.
-	 */
-	for (i=nblks; i < n; i++)
-		msl_bmap_free(bmaps[i]);
-	PSCFREE(iovs);
-	PSCFREE(bmaps);
+	bmap->bcm_mode &= ~BMAP_INIT;
 	return (rc);
 }
 
+/** 
+ * msl_bmap_modeset -
+ * Notes:  XXX I think this logic can be simplified when setting mode from
+ *    WRONLY to RDWR.  In WRONLY this client already knows the address
+ *    of the only ION from which this bmap can be read.  Therefore, it 
+ *    should be able to interface with that ION without intervention from
+ *    the mds.
+ */
 __static int
 msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
 {
@@ -328,30 +322,30 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
  *	rw==WRITE) then we must notify the mds of this.
  */
 __static struct bmapc_memb *
-msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, int prefetch, u32 rw)
+msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, u32 rw)
 {
 	struct fidc_membh *f = mfh->mfh_fcmh;
 	struct bmapc_memb *b;
 
-	int rc=0, mode=BML_HAVE_BMAP;
+	int rc = 0, mode = BML_HAVE_BMAP;
 
-
-	b = bmap_lookup(f, n);
-	if (!b) {
+	b = bmap_lookup_add(f, n, msl_bmap_init);
+	psc_assert(b);
+	
+	if (b->bcm_mode & BMAP_INIT) {
 		/* Retrieve the bmap from the sl_mds.
 		 */
-		rc = msl_bmap_fetch(f, n, prefetch, rw);
+		rc = msl_bmap_fetch(b, n, rw);
 		if (rc)
 			return NULL;
-		else
+		else {
 			mode = BML_NEW_BMAP;
-
-		b = bmap_lookup(f, n);
-		psc_assert(b);
+			psc_assert(!(b->bcm_mode & BMAP_INIT));
+		}
 		/* Verify that the mds has returned a 'write-enabled' bmap.
 		 */
 		if (rw == SRIC_BMAP_WRITE)
-			psc_assert(b->bcm_mode & BMAP_CLI_WR);
+			psc_assert(b->bcm_mode & BMAP_WR);
 
 		msl_bmap_fhcache_ref(mfh, b, mode, rw);
 		return (b);
@@ -372,20 +366,18 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, int prefetch, u32 rw)
 	 */
  retry:
 	spinlock(&b->bcm_lock);
-	if (rw != SRIC_BMAP_WRITE || (b->bcm_mode & BMAP_CLI_WR)) {
+	if (rw != SRIC_BMAP_WRITE || (b->bcm_mode & BMAP_WR)) {
 		/* Either we're in read-mode here or the bmap
 		 *  has already been marked for writing therefore
 		 *  the mds already knows we're writing.
 		 */
 		freelock(&b->bcm_lock);
 		goto out;
-	}
-	/* unindented 'else'
-	 */
-	if (b->bcm_mode & BMAP_CLI_MCIP) {
+
+	} else if (b->bcm_mode & BMAP_CLI_MCIP) {
 		/* If some other thread has set BMAP_CLI_MCIP then HE
 		 *  must set BMAP_CLI_MCC when he's done (at that time
-		 *  he also must unset BMAP_CLI_MCIP and set BMAP_CLI_WR
+		 *  he also must unset BMAP_CLI_MCIP and set BMAP_WR
 		 */
 		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 		/* Done waiting, double check our refcnt, it should be at
@@ -399,18 +391,20 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, int prefetch, u32 rw)
 			 *  in mode change.  Verify that the bmap
 			 *  is in the appropriate state.
 			 *  Note: since our wr_ref has been set above,
-			 *   the bmap MUST have BMAP_CLI_WR set here.
+			 *   the bmap MUST have BMAP_WR set here.
 			 */
 			psc_assert(!(b->bcm_mode & BMAP_CLI_MCIP));
-			psc_assert((b->bcm_mode & BMAP_CLI_WR));
+			psc_assert((b->bcm_mode & BMAP_WR));
 		} else
 			/* We were woken up for a different
 			 *  reason - try again.
 			 */
 			goto retry;
 
-	} else { /* !BMAP_CLI_MCIP not set */
-		psc_assert(!(b->bcm_mode & BMAP_CLI_WR)   &&
+	} else { /* !BMAP_CLI_MCIP not set, we will set it and 
+		  *    proceed with the modechange operation.
+		  */
+		psc_assert(!(b->bcm_mode & BMAP_WR)   &&
 			   !(b->bcm_mode & BMAP_CLI_MCIP) &&
 			   !(b->bcm_mode & BMAP_CLI_MCC));
 
@@ -427,11 +421,11 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, int prefetch, u32 rw)
 		 *  bits could not have been set by another thread.
 		 */
 		spinlock(&b->bcm_lock);
-		psc_assert((b->bcm_mode & BMAP_CLI_MCIP));
+		psc_assert(b->bcm_mode & BMAP_CLI_MCIP);
 		psc_assert(!(b->bcm_mode & BMAP_CLI_MCC) &&
-			   !(b->bcm_mode & BMAP_CLI_WR));
-		b->bcm_mode &= ~(BMAP_CLI_MCIP);
-		b->bcm_mode |= (BMAP_CLI_WR | BMAP_CLI_MCC);
+			   !(b->bcm_mode & BMAP_WR));
+		b->bcm_mode &= ~BMAP_CLI_MCIP;
+		b->bcm_mode |= (BMAP_WR | BMAP_CLI_MCC);
 		freelock(&b->bcm_lock);
 		psc_waitq_wakeall(&b->bcm_waitq);
 	}
@@ -737,7 +731,7 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 	struct srm_io_rep         *mp;
 
 	size_t len, nbytes, size=oftrq_size_get(r);
-	int i, op, n=1, rc=1;
+	int i, op, n=0, rc=1;
 
 	psc_assert(ATTR_TEST(r->oftrq_op, OFTREQ_OP_DIO));
 	psc_assert(!r->oftrq_root);
@@ -755,7 +749,8 @@ msl_pages_dio_getput(struct offtree_req *r, char *b, off_t off)
 	/* This buffer hasn't been segmented into LNET sized
 	 *  chunks.  Set up buffers into 1MB chunks or smaller.
 	 */
-	n += (r->oftrq_len / LNET_MTU);
+	n = (r->oftrq_len / LNET_MTU) + ((r->oftrq_len % LNET_MTU) ? 1 : 0);
+
 	iovs = PSCALLOC(sizeof(*iovs) * n);
 
 	for (i=0, nbytes=0; i < n; i++, nbytes += len) {
@@ -1331,7 +1326,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
 		 */
-		b = msl_bmap_load(mfh, s, MAX(1, e - s), (op == MSL_READ) ?
+		b = msl_bmap_load(mfh, s, (op == MSL_READ) ?
 				  SRIC_BMAP_READ : SRIC_BMAP_WRITE);
 		if (!b) {
 			rc = -EIO;
@@ -1402,7 +1397,10 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 
 	rc = size;
  out:
-	for (j=0; j < nr; j++)
+	/* XXX this set_wait should not be here, it's a workaround to 
+	 *  prevent the set from being destroyed before it has completed.
+	 */
+	for (j=0; j < nr; j++) 
 		pscrpc_set_wait((&r[j])->oftrq_fill.oftfill_reqset);
 
 	for (j=0; j < nr; j++)

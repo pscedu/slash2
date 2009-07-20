@@ -10,7 +10,7 @@
 #include "psc_util/cdefs.h"
 
 #include "cache_params.h"
-//#include "mds.h"
+#include "fidc_mds.h"
 #include "mdsexpc.h"
 #include "slashexport.h"
 #include "slashrpc.h"

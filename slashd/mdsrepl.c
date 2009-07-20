@@ -6,6 +6,7 @@
 #include "inodeh.h"
 #include "fid.h"
 #include "fidcache.h"
+#include "fidc_mds.h"
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
 #include "mdslog.h"

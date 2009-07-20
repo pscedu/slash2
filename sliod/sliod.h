@@ -16,6 +16,8 @@
 #define SLIOTHRT_TINTV		5	/* timer interval */
 #define SLIOTHRT_TIOS		6	/* iostats updater */
 
+extern struct slashrpc_cservice *rmi_csvc;
+
 struct slash_ricthr {
 	struct pscrpc_thread	 srt_prt;
 };

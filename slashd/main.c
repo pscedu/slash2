@@ -90,7 +90,7 @@ main(int argc, char *argv[])
 	pscthr_init(SLTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slctlthr");
 
-	fidcache_init(FIDC_MDS_HASH_SZ, NULL);
+	fidcache_init(FIDC_USER_MDS, NULL);
 
 	slashGetConfig(cfn);
 	fdbuf_createkeyfile();

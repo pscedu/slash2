@@ -602,13 +602,13 @@ fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 		fcmsz = FIDC_CLI_MAXSZ;
 		break;
 
-	case FIDC_ION_HASH_SZ:
+	case FIDC_USER_ION:
 		htsz  = FIDC_ION_HASH_SZ;
 		fcdsz = FIDC_ION_DEFSZ;
 		fcmsz = FIDC_ION_MAXSZ;
 		break;
 
-	case FIDC_MDS_HASH_SZ:
+	case FIDC_USER_MDS:
 		htsz  = FIDC_MDS_HASH_SZ;
 		fcdsz = FIDC_MDS_DEFSZ;
 		fcmsz = FIDC_MDS_MAXSZ;
@@ -662,22 +662,3 @@ fidc_fid2cfd(slfid_t f, u64 *cfd, struct fidc_membh **fcmh)
 	return (fidc_fcmh2cfd(*fcmh, cfd));
 }
 #endif
-
-/**
- * bmapc_cmp - bmap_cache splay tree comparator
- * @a: a bmapc_memb
- * @b: another bmapc_memb
- */
-int
-bmapc_cmp(const void *x, const void *y)
-{
-	const struct bmapc_memb *a = x, *b = y;
-
-        if (a->bcm_blkno > b->bcm_blkno)
-                return (1);
-        else if (a->bcm_blkno < b->bcm_blkno)
-                return (-1);
-        return (0);
-}
-
-__static SPLAY_GENERATE(bmap_cache, bmapc_memb, bcm_tentry, bmapc_cmp);

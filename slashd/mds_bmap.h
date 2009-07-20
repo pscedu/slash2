@@ -6,18 +6,10 @@
 #include "psc_ds/tree.h"
 
 #include "jflush.h"
+#include "bmap.h"
 
 struct mexpbcm;
 struct mexpfcm;
-
-/* bcm_mode flags */
-#define	BMAP_MDS_WR	(1 << 0)
-#define	BMAP_MDS_RD	(1 << 1)
-#define	BMAP_MDS_DIO	(1 << 2)	/* directio */
-#define	BMAP_MDS_FAILED	(1 << 3)	/* crc failure */
-#define	BMAP_MDS_EMPTY	(1 << 4)	/* new bmap, not yet committed to disk */
-#define	BMAP_MDS_CRC_UP	(1 << 5)	/* crc update in progress */
-#define	BMAP_MDS_INIT	(1 << 6)
 
 SPLAY_HEAD(bmap_exports, mexpbcm);
 
@@ -46,6 +38,16 @@ struct bmap_mds_info {
 	struct pscrpc_request_set	*bmdsi_reqset;	/* cache callback rpc's    */
 };
 
+/* Note that n + BMAP_RSVRD_MODES must be < 32.
+ */
+enum mds_bmap_modes {
+        BMAP_MDS_FAILED = (1 << (0 + BMAP_RSVRD_MODES)), /* crc failure */
+        BMAP_MDS_EMPTY  = (1 << (1 + BMAP_RSVRD_MODES)), /* new bmap, not yet committed to disk */
+        BMAP_MDS_CRC_UP = (1 << (2 + BMAP_RSVRD_MODES)), /* crc update in progress */
+	BMAP_MDS_INIT   = BMAP_INIT
+};
+
+
 static inline void
 bmap_mds_info_init(struct bmap_mds_info *bmdsi)
 {
@@ -54,6 +56,18 @@ bmap_mds_info_init(struct bmap_mds_info *bmdsi)
 	atomic_set(&bmdsi->bmdsi_rd_ref, 0);
 	atomic_set(&bmdsi->bmdsi_wr_ref, 0);
 }
+
+/*
+ * bmi_assign - the structure used for tracking the mds's bmap / ion
+ *   assignments.  These structures are stored in a odtable.
+ */
+struct bmi_assign {
+	lnet_nid_t   bmi_ion_nid;
+	sl_ios_id_t  bmi_ios;
+	slfid_t      bmi_fid;
+	sl_blkno_t   bmi_bmapno;
+	time_t       bmi_start;
+};
 
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)(b)->bcm_pri)
 #define bmap_2_bmdsiod(b)	bmap_2_bmdsi(b)->bmdsi_od

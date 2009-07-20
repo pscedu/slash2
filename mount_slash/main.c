@@ -583,10 +583,11 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	fi->fh = (uint64_t)mfh;
 	fi->keep_cache = 1;
 	rc = slash2fuse_fcoo_start(req, ino, fi);
-	if (rc)
-		goto out;
-	fuse_reply_open(req, fi);
 
+	if (rc) 
+		goto out;
+
+	fuse_reply_open(req, fi);
  out:
 	if (c)
 		fidc_membh_dropref(c);
@@ -1417,7 +1418,7 @@ slash2fuse_unlink_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 
 static void
 slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
-		int to_set, struct fuse_file_info *fi)
+		   int to_set, struct fuse_file_info *fi)
 {
 	struct pscrpc_request *rq;
 	struct srm_setattr_req *mq;
@@ -1425,18 +1426,18 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	struct msl_fhent *mfh;
 	struct fidc_membh *c;
 	int rc;
-
+	
 	ENTRY;
-
+	
 	msfsthr_ensure();
-
+	
 	c = NULL;
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	    SRMT_SETATTR, rq, mq, mp);
+			SRMT_SETATTR, rq, mq, mp);
 	if (rc)
 		goto out;
-
+	
 	c = fidc_lookup_inode(ino);
 	if (!c) {
 		rc = EINVAL;
@@ -1450,19 +1451,19 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	      (c->fcmh_state & FCMH_HAVE_ATTRS)))
 		c->fcmh_state |= FCMH_GETTING_ATTRS;
 	freelock(&c->fcmh_lock);
-
+	
 	if (fi && fi->fh) {
 		mfh = (void *)fi->fh;
 		psc_assert(c == mfh->mfh_fcmh);
 	}
-
+	
 	fidc_fcmh2fdb(c, &mq->sfdb);
-
+	
 	slash2fuse_getcred(req, &mq->creds);
 	mq->ino = ino;
 	mq->to_set = to_set;
 	memcpy(&mq->attr, attr, sizeof(*attr));
-
+	
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;

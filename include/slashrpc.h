@@ -118,7 +118,8 @@ enum {
 	SRMT_FGETATTR,
 	SRMT_FTRUNCATE,
 	SRMT_GETATTR,
-	SRMT_GETBMAP,
+	SRMT_GETBMAP,	
+	SRMT_GETBMAPCRCS,
 	SRMT_LINK,
 	SRMT_LOCK,
 	SRMT_LOOKUP,
@@ -210,6 +211,26 @@ struct srm_bmap_rep {
  */
 };
 
+/* ION requesting crc table from the mds. Passes back the srt_bdb_secret
+ *  which was handed to him by the client.
+ */
+struct srm_bmap_wire_req {
+	struct srt_bdb_secret   sbdb;
+};
+
+struct srm_bmap_wire_rep {
+	int32_t                 rc;
+	/*                                                                    
+	 * Bulk data contains a number of the following structures: 
+	 *                                                             
+	 *      +-------------------------+---------------+  
+	 *      | data type               | description   |  
+	 *      +-------------------------+---------------+   
+	 *      | struct slash_bmap_od    | bmap contents |
+	 *      +-------------------------+---------------+  
+	 */
+};
+
 struct srm_bmap_chmode_req {
 	struct srt_fd_buf	sfdb;
 	uint32_t		blkno;
@@ -246,6 +267,11 @@ struct srm_bmap_crcwrt_req {
 	uint32_t		ncrc_updates;
 	uint8_t			ncrcs_per_update[MAX_BMAP_INODE_PAIRS];
 	uint64_t		crc;		/* yes, a crc of the crc's */
+};
+
+struct srm_bmap_iod_get {
+	uint64_t                fid;
+	uint32_t                blkno;
 };
 
 struct srm_connect_req {

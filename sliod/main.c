@@ -50,6 +50,7 @@ usage(void)
 	exit(1);
 }
 
+
 int
 main(int argc, char *argv[])
 {
@@ -89,6 +90,7 @@ main(int argc, char *argv[])
 	fdbuf_checkkeyfile();
 	fdbuf_readkeyfile();
 	libsl_init(PSC_SERVER);
+	fidcache_init(FIDC_USER_ION, NULL);
 	sl_buffer_cache_init();
 	rpc_initsvc();
 	sliotimerthr_spawn();

@@ -31,6 +31,7 @@ SRCS+=		timer.c
 SRCS+=		yconf.y
 SRCS+=		${SLASH_BASE}/share/fdbuf.c
 SRCS+=		${SLASH_BASE}/share/fid.c
+SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c
 SRCS+=		${SLASH_BASE}/share/rpc_common.c
 SRCS+=		${SLASH_BASE}/share/slashexport.c
@@ -71,7 +72,7 @@ SRCS+=		${LNET_SOCKLND_SRCS}
 SRCS+=		${LNET_CFS_SRCS}
 SRCS+=		${LNET_LIB_SRCS}
 
-INCLUDES+=	-I${LNET_BASE}/include
+INCLUDES+=	-I${LNET_BASE}/include 
 DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
 DEFINES+=	-DHAVE_LIBPTHREAD -DHAVE_LIBPTHREAD_DEFINED
 LDFLAGS+=	${ZFS_LIBS} ${THREAD_LIBS} -ldl -lz -laio -lrt

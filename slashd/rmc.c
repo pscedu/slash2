@@ -180,7 +180,7 @@ slrmc_getbmap(struct pscrpc_request *rq)
 			iov[1].iov_base = &bdb;
 			iov[1].iov_len = sizeof(bdb);
 
-			if (bmap->bcm_mode & BMAP_MDS_WR)
+			if (bmap->bcm_mode & BMAP_WR)
 				mp->ios_nid =
 				    bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
 

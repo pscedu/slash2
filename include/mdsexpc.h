@@ -24,6 +24,7 @@
 #include "inodeh.h"
 #include "bmap.h"
 #include "mds_bmap.h"
+#include "fidc_mds.h"
 
 struct pscrpc_export;
 
@@ -173,24 +174,9 @@ struct mexp_ion {
 };
 
 /*
- * bmi_assign - the structure used for tracking the mds's bmap / ion
- *   assignments.  These structures are stored in a odtable.
- */
-struct bmi_assign {
-	lnet_nid_t   bmi_ion_nid;
-	sl_ios_id_t  bmi_ios;
-	slfid_t      bmi_fid;
-	sl_blkno_t   bmi_bmapno;
-	time_t       bmi_start;
-};
-
-/*
  * bmap_exports is used to reference the exports which are accessing this bmap.
  */
 SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
-
-SPLAY_HEAD(fcm_exports, mexpfcm);
-SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
 
 static inline void
 bmdsi_sanity_locked(struct bmapc_memb *bmap, int dio_check, int *wr)
@@ -201,29 +187,7 @@ bmdsi_sanity_locked(struct bmapc_memb *bmap, int dio_check, int *wr)
         wr[1] = atomic_read(&mdsi->bmdsi_rd_ref);
         psc_assert(wr[0] >= 0 && wr[1] >= 0);
 	if (dio_check && (wr[0] > 1 || (wr[0] && wr[1])))
-		psc_assert(bmap->bcm_mode & BMAP_MDS_DIO);
-}
-
-struct fidc_mds_info {
-	struct fcm_exports        fmdsi_exports; /* tree of mexpfcm */
-	struct slash_inode_handle fmdsi_inodeh; // MDS sl_inodeh_t goes here
-	atomic_t                  fmdsi_ref;
-	u32                       fmdsi_xid;
-	void                     *fmdsi_data;
-};
-
-#define fcmh_2_inoh(f)							\
-	(&((struct fidc_mds_info *)(&(f)->fcmh_fcoo->fcoo_pri))->fmdsi_inodeh)
-
-static inline void
-fmdsi_init(struct fidc_mds_info *mdsi, struct fidc_membh *fcmh, void *pri)
-{
-	SPLAY_INIT(&mdsi->fmdsi_exports);
-	atomic_set(&mdsi->fmdsi_ref, 0);
-	mdsi->fmdsi_xid = 0;
-	mdsi->fmdsi_data = pri;
-
-	slash_inode_handle_init(&mdsi->fmdsi_inodeh, fcmh);
+		psc_assert(bmap->bcm_mode & BMAP_DIO);
 }
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri.

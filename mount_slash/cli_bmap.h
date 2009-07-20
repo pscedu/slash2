@@ -5,16 +5,27 @@
 
 #include "psc_rpc/rpc.h"
 
+#include "inode.h"
 #include "offtree.h"
+
+/* 
+ * msbmap_crcrepl_states - must be the same as bh_crcstates and bh_repls
+ *  in slash_bmap_inode_od.
+ */ 
+struct msbmap_crcrepl_states
+{
+	u8 msbcr_crcstates[SL_CRCS_PER_BMAP]; /* crc descriptor bits  */
+        u8 msbcr_repls[SL_REPLICA_NBYTES];  /* replica bit map        */
+};
 
 /*
  * msbmap_data - assigned to bmap->bcm_pri for mount slash client.
  */
 struct msbmap_data {
-	struct offtree_root	*msbd_oftr;
-	struct slash_bmap_od	 msbd_bmapi;
-	lnet_nid_t		 msbd_ion;
-	struct srt_bmapdesc_buf	 msbd_bdb;	/* open bmap descriptor */
+	struct offtree_root	    *msbd_oftr;
+	lnet_nid_t		     msbd_ion;
+	struct msbmap_crcrepl_states msbd_msbcr;
+	struct srt_bmapdesc_buf	     msbd_bdb;	/* open bmap descriptor */
 };
 
 #define bmap_2_msoftr(b)					\
@@ -32,9 +43,9 @@ struct bmap_info_cli {
 };
 
 /* bcm_mode flags */
-#define	BMAP_CLI_RD	(1 << 0)	/* bmap has read creds */
-#define	BMAP_CLI_WR	(1 << 1)	/* write creds */
-#define	BMAP_CLI_DIO	(1 << 2)	/* bmap is in dio mode */
+//#define	BMAP_CLI_RD	(1 << 0)	/* bmap has read creds */
+//#define	BMAP_CLI_WR	(1 << 1)	/* write creds */
+//#define	BMAP_CLI_DIO	(1 << 2)	/* bmap is in dio mode */
 #define	BMAP_CLI_MCIP	(1 << 3)	/* "mode change in progress" */
 #define	BMAP_CLI_MCC	(1 << 4)	/* "mode change complete" */
 

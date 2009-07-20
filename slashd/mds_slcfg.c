@@ -3,6 +3,7 @@
 #include "psc_util/alloc.h"
 
 #include "slconfig.h"
+#include "fidc_mds.h"
 #include "mdsexpc.h"
 
 struct resource_profile *

@@ -12,6 +12,7 @@
 #include "cache_params.h"
 #include "cfd.h"
 #include "fidcache.h"
+#include "fidc_mds.h"
 #include "inode.h"
 #include "mds_repl.h"
 #include "mdslog.h"
@@ -569,7 +570,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
 	int wr[2], locked, rw=mq->rw;
-	int mode=(rw == SRIC_BMAP_READ ? BMAP_MDS_RD : BMAP_MDS_WR);
+	int mode=(rw == SRIC_BMAP_READ ? BMAP_RD : BMAP_WR);
 	atomic_t *a=(rw == SRIC_BMAP_READ ? &bmdsi->bmdsi_rd_ref :
 		     &bmdsi->bmdsi_wr_ref);
 
@@ -593,7 +594,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 	atomic_inc(a);
 	bmdsi_sanity_locked(bmap, 0, wr);
 
-	if (wr[0] == 1 && mode == BMAP_MDS_WR) {
+	if (wr[0] == 1 && mode == BMAP_WR) {
 		psc_assert(!bmdsi->bmdsi_wr_ion);
 		/* XXX Should not send connect rpc's here while
 		 *  the bmap is locked.  This may have to be
@@ -642,14 +643,14 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 	if (bref->mexpbcm_mode & MEXPBCM_WR) {
 		psc_assert(atomic_read(&mdsi->bmdsi_wr_ref));
 		if (atomic_dec_and_test(&mdsi->bmdsi_wr_ref)) {
-			psc_assert(bmap->bcm_mode & BMAP_MDS_WR);
-			bmap->bcm_mode &= ~BMAP_MDS_WR;
+			psc_assert(bmap->bcm_mode & BMAP_WR);
+			bmap->bcm_mode &= ~BMAP_WR;
 		}
 
 	} else if (bref->mexpbcm_mode & MEXPBCM_RD) {
 		psc_assert(atomic_read(&mdsi->bmdsi_rd_ref));
 		if (atomic_dec_and_test(&mdsi->bmdsi_rd_ref)) {
-			bmap->bcm_mode &= ~BMAP_MDS_RD;
+			bmap->bcm_mode &= ~BMAP_RD;
 		}
 	}
 
@@ -701,7 +702,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	psc_assert(bmap->bcm_fcmh == fcmh);
 	psc_assert(bmdsi);
 	psc_assert(bmapod);
-	psc_assert(bmap->bcm_mode & BMAP_MDS_WR);
+	psc_assert(bmap->bcm_mode & BMAP_WR);
 	bmdsi_sanity_locked(bmap, 1, wr);
 
 	if (ion_nid != bmdsi->bmdsi_wr_ion->mi_resm->resm_nid) {
