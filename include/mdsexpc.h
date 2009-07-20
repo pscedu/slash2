@@ -24,7 +24,6 @@
 #include "inodeh.h"
 #include "bmap.h"
 #include "mds_bmap.h"
-#include "fidc_mds.h"
 
 struct pscrpc_export;
 
