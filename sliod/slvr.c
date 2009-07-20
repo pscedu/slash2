@@ -32,6 +32,7 @@ slvr_do_crc(struct slvr_ref *s)
 	sliod_oftrq_build(r, SLVR_2_BMAP(s), SLVR_2_BLK(s), 
 		  (SLASH_SLVR_SIZE/SLASH_BMAP_BLKSZ), OFTREQ_OP_READ);
 	
+	//XXX take CRC here.
 
 	PSCFREE(r);
 }
@@ -62,27 +63,6 @@ slvr_release(struct slvr_ref *s)
 
 
 struct slvr_ref *
-slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
-{
-	struct slvr_ref *s, ts;
-
-	psc_assert(b->biod_bmap);
-	ts.slvr_num = num;
-
-	spinlock(&b->biod_lock);
-
-	s = SPLAY_FIND(biod_slvrtree, &biod->iobd_slvrs, &ts);
-	if (!s && add) {
-		s = PSCALLOC(sizeof(*s));
-		slvr_init(s);
-		SPLAY_INSERT(biod_slvrtree, &biod->iobd_slvrs, s);
-	}
-	freelock(&biod->biod_lock);
-
-	return (s);
-}
-
-struct slvr_ref * 
 slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
 {
         struct slvr_ref *s, ts;
