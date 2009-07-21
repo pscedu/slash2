@@ -234,8 +234,8 @@ do {								        	\
 #define FCMHCACHE_PUT(fcmh, list)					\
 	do {								\
 		(fcmh)->fcmh_cache_owner = (list);			\
-		if (list == &fidcFreePool->ppm_lc)			\
-			psc_pool_return(fidcFreePool, (fcmh));		\
+		if (list == &fidcPool->ppm_lc)			\
+			psc_pool_return(fidcPool, (fcmh));		\
 		else							\
 			lc_put((list), &(fcmh)->fcmh_lentry);		\
 	} while (0)
@@ -334,7 +334,7 @@ void	fidc_memb_init(struct fidc_memb *, slfid_t);
 
 extern struct sl_fsops *slFsops;
 extern struct hash_table fidcHtable;
-extern struct psc_poolmgr *fidcFreePool;
+extern struct psc_poolmgr *fidcPool;
 extern struct psc_listcache fidcDirtyList;
 extern struct psc_listcache fidcCleanList;
 extern void (*initFcooCb)(struct fidc_open_obj *);
@@ -353,7 +353,7 @@ fcmh_lc_2_string(struct psc_listcache *lc)
 {
 	if (lc == &fidcCleanList)
 		return "Clean";
-	else if (lc == &fidcFreePool->ppm_lc)
+	else if (lc == &fidcPool->ppm_lc)
 		return "Free";
 	else if (lc == &fidcDirtyList)
 		return "Dirty";

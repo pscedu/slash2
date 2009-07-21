@@ -23,9 +23,9 @@
 int (*fidcReapCb)(struct fidc_membh *);
 void (*initFcooCb)(struct fidc_open_obj *);
 
-struct psc_poolmaster fidcFreePoolMaster;
-struct psc_poolmgr   *fidcFreePool;
-#define fidcFreeList  fidcFreePool->ppm_lc
+struct psc_poolmaster fidcPoolMaster;
+struct psc_poolmgr   *fidcPool;
+#define fidcFreeList  fidcPool->ppm_lc
 struct psc_listcache  fidcDirtyList;
 struct psc_listcache  fidcCleanList;
 
@@ -89,7 +89,7 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 	 */
 	clean = fcmh_clean_check(f);
 
-	if (lc == &fidcFreePool->ppm_lc) {
+	if (lc == &fidcPool->ppm_lc) {
 		/* FCMH_CAC_FREEING should have already been set so that
 		 *  other threads will ignore the freeing hash entry.
 		 */
@@ -104,7 +104,7 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 
 		/* Valid sources of this inode.
 		 */
-		if (!((f->fcmh_cache_owner == &fidcFreePool->ppm_lc) ||
+		if (!((f->fcmh_cache_owner == &fidcPool->ppm_lc) ||
 		      (f->fcmh_cache_owner == &fidcCleanList) ||
 		      (f->fcmh_cache_owner == NULL)))
 			psc_fatalx("Bad inode fcmh_cache_owner %p",
@@ -143,10 +143,10 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 
 		/* Re-initialize it before placing onto the free list
 		 */
-		fidc_membh_init(fidcFreePool, f);
+		fidc_membh_init(fidcPool, f);
 
 	} else if (lc == &fidcCleanList) {
-		psc_assert(f->fcmh_cache_owner == &fidcFreePool->ppm_lc ||
+		psc_assert(f->fcmh_cache_owner == &fidcPool->ppm_lc ||
 			   f->fcmh_cache_owner == &fidcDirtyList ||
 			   f->fcmh_cache_owner == NULL);
                 psc_assert(ATTR_TEST(f->fcmh_state, FCMH_CAC_CLEAN));
@@ -202,7 +202,7 @@ fidc_reap(struct psc_poolmgr *m)
 
 	ENTRY;
 
-	psc_assert(m == fidcFreePool);
+	psc_assert(m == fidcPool);
 	/* Only one thread may be here.
 	 */
 	pthread_mutex_lock(&mutex);
@@ -283,7 +283,7 @@ fidc_get(void)
 {
 	struct fidc_membh *f;
 
-	f = psc_pool_get(fidcFreePool);
+	f = psc_pool_get(fidcPool);
 
 	f->fcmh_cache_owner = NULL;
 	psc_assert(f->fcmh_state == FCMH_CAC_FREE);
@@ -626,18 +626,18 @@ fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 		psc_fatalx("Invalid fidcache user type");
 	}
 
-	psc_poolmaster_init(&fidcFreePoolMaster, struct fidc_membh,
+	psc_poolmaster_init(&fidcPoolMaster, struct fidc_membh,
 			    fcmh_lentry, 0, fcdsz, 0, fcmsz,
-			    fidc_membh_init, NULL, fidc_reap, "fidcFreePool");
+			    fidc_membh_init, NULL, fidc_reap, "fcmh");
 
-	fidcFreePool = psc_poolmaster_getmgr(&fidcFreePoolMaster);
+	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
 	lc_reginit(&fidcDirtyList, struct fidc_membh,
 		   fcmh_lentry, "fcmdirty");
 	lc_reginit(&fidcCleanList, struct fidc_membh,
 		   fcmh_lentry, "fcmclean");
 
-	init_hash_table(&fidcHtable, htsz, "fidcHtable");
+	init_hash_table(&fidcHtable, htsz, "fidc");
 	/*fidcHtable.htcompare = fidc_hash_cmp;*/
 	initFcooCb = NULL;
 	fidcReapCb = fcm_reap_cb;
