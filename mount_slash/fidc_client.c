@@ -161,7 +161,7 @@ static struct fidc_child *
 fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 			const char *name)
 {
-	struct fidc_child *fcc=NULL;
+	struct fidc_child *fcc;
 
 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
@@ -173,7 +173,8 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 	psc_assert(!(p->fcmh_state & FCMH_CAC_FREEING));
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
-	if ((fcc = (struct fidc_child *)c->fcmh_pri)) {
+	fcc = c->fcmh_pri;
+	if (fcc) {
 		spinlock(&fcc->fcc_lock);
 		/* Both of these must always be true.
 		 */
@@ -488,6 +489,7 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	if (ch == NULL)
 		return;			/* it's no longer there */
 
+	psc_assert(c->fcmh_pri == NULL);
 	ch = c->fcmh_pri = psc_realloc(ch, sizeof(*ch) + len, 0);
 	ch->fcc_hash = str_hash(newname);
 	strlcpy(ch->fcc_name, newname, len);
