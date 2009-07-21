@@ -3,10 +3,6 @@
 #ifndef _CACHEPARAMS_H_
 #define _CACHEPARAMS_H_
 
-#define FIDC_CLI_HASH_SZ 1023
-#define FIDC_ION_HASH_SZ 4095
-#define FIDC_MDS_HASH_SZ 32767
-
 enum fid_cache_users {
 	FIDC_USER_CLI = 0,
 	FIDC_USER_ION = 1,
@@ -22,6 +18,10 @@ enum fid_cache_users {
 
 #define FIDC_ION_DEFSZ 4096   /* Number of fcmh's to allocate by default */
 #define FIDC_ION_MAXSZ 524288 /* Max fcmh's */
+
+#define FIDC_CLI_HASH_SZ (FIDC_MDS_DEFSZ * 2)
+#define FIDC_ION_HASH_SZ (FIDC_CLI_DEFSZ * 2)
+#define FIDC_MDS_HASH_SZ (FIDC_ION_DEFSZ * 2)
 
 #define SLASH_SLVRS_PER_BMAP 128
 #define SLASH_SLVR_SIZE (1024*1024)
