@@ -10,17 +10,61 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "slconfig.h"
 #include "pfl.h"
-#include "psc_util/log.h"
-#include "psc_util/cdefs.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/cdefs.h"
+#include "psc_util/log.h"
+#include "psc_util/strlcpy.h"
+
+#include "slconfig.h"
 
 char *progname;
 char *f = "../../src/config/example.conf";
 int serverNode;
 
 int getOptions(int argc, char *argv[]);
+
+int
+psc_usklndthr_get_type(__unusedx const char *namefmt)
+{
+	return (0);
+}
+
+void
+psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], __unusedx const char *namefmt,
+    __unusedx va_list ap)
+{
+	strlcpy(buf, "test", PSC_THRNAME_MAX);
+}
+
+struct resource_profile *
+slcfg_new_res(void)
+{
+	struct resource_profile *res;
+
+	res = PSCALLOC(sizeof(*res));
+	INIT_RES(res);
+	return (res);
+}
+
+struct resource_member *
+slcfg_new_resm(void)
+{
+	struct resource_member *resm;
+
+	resm = PSCALLOC(sizeof(*resm));
+	return (resm);
+}
+
+struct site_profile *
+slcfg_new_site(void)
+{
+	struct site_profile *site;
+
+	site = PSCALLOC(sizeof(*site));
+	INIT_SITE(site);
+	return (site);
+}
 
 __dead void
 usage(void)
@@ -29,58 +73,31 @@ usage(void)
 	exit(1);
 }
 
-void
-spawn_lnet_thr(pthread_t *t, void *(*startf)(void *), void *arg)
-{
-	extern int tcpnal_instances;
-	struct psc_thread *pt;
-
-	pt = PSCALLOC(sizeof(*pt));
-	pscthr_init(pt, 7, startf, NULL, "sllndthr%d", tcpnal_instances - 1);
-	*t = pt->pscthr_pthread;
-	pt->pscthr_private = arg;
-}
-
 int
 main(int argc, char *argv[])
 {
+	int c;
+
 	progname = argv[0];
-	lnet_thrspawnf = spawn_lnet_thr;
-	pfl_init(19);
+	pfl_init();
 	psc_log_setlevel(0, PLL_NOTICE);
-	getOptions(argc, argv);
-	slashGetConfig(f);
-	libsl_init(serverNode);
-	exit(0);
-}
-
-int
-getOptions(int argc, char *argv[])
-{
-#define ARGS "i:l:S"
-	int c, err = 0;
-
-	optarg     = NULL;
-	serverNode = 0;
-
-	while ( !err && ((c = getopt(argc, argv, ARGS)) != -1))
+	while (((c = getopt(argc, argv, "i:l:S:")) != -1))
 		switch (c) {
-
 		case 'l':
 			psc_log_setlevel(0, atoi(optarg));
 			break;
-
 		case 'i':
 			f = optarg;
 			break;
-
 		case 'S':
 			serverNode = 1;
 			break;
-
-		default :
+		default:
 			usage();
 		}
 
-	return 0;
+
+	slashGetConfig(f);
+	libsl_init(serverNode);
+	exit(0);
 }
