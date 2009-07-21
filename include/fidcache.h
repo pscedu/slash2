@@ -320,7 +320,6 @@ __fidc_lookup_inode(const struct slash_fidgen *, int,
 		    struct fidc_membh **);
 
 int	fidc_fid2cfd(slfid_t, u64 *, struct fidc_membh **);
-void	fidc_put(struct fidc_membh *, struct psc_listcache *);
 
 void	fidcache_init(enum fid_cache_users, int (*)(struct fidc_membh *));
 
