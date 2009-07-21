@@ -19,7 +19,7 @@
 #include "slconfig.h"
 
 char *progname;
-char *f = "../../src/config/example.conf";
+char *f = "../../slashd/config/example.conf";
 int serverNode;
 
 int getOptions(int argc, char *argv[]);
