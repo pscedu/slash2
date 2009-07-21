@@ -2,6 +2,6 @@
 
 include Makefile.path
 
-SUBDIRS+=	parse
+SUBDIRS+=	config
 
 include ${SLASHMK}
