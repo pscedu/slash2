@@ -20,8 +20,8 @@
 #include "offtree.h"
 
 
-struct psc_poolmaster	 slBufsFreePoolMaster;
-struct psc_poolmgr	*slBufsFreePool;
+struct psc_poolmaster	 slBufsPoolMaster;
+struct psc_poolmgr	*slBufsPool;
 list_cache_t slBufsLru;
 list_cache_t slBufsPin;
 
@@ -148,7 +148,7 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 
 	DEBUG_SLB(PLL_TRACE, slb, "adding to %s", lc->lc_name);
 
-	if (lc == &slBufsFreePool->ppm_lc) {
+	if (lc == &slBufsPool->ppm_lc) {
 		psc_assert(ATTR_TEST(slb->slb_flags, SLB_FREEING));
 		ATTR_UNSET(slb->slb_flags, SLB_FREEING);
 		ATTR_SET(slb->slb_flags, SLB_FREE);
@@ -156,8 +156,8 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 		slb->slb_flags = SLB_FRESH;
 		sl_buffer_fresh_assertions(slb);
 
-		psc_pool_return(slBufsFreePool, slb);
-		slb->slb_lc_owner = &slBufsFreePool->ppm_lc;
+		psc_pool_return(slBufsPool, slb);
+		slb->slb_lc_owner = &slBufsPool->ppm_lc;
 	} else {
 		if (lc == &slBufsLru) {
 			sl_buffer_pin_2_lru_assertions(slb);
@@ -183,7 +183,7 @@ sl_buffer_get(list_cache_t *lc, int block)
 {
 	struct sl_buffer *slb;
 
-	psc_assert(lc != &slBufsFreePool->ppm_lc);
+	psc_assert(lc != &slBufsPool->ppm_lc);
 
 	psc_trace("slb from %s", lc->lc_name);
 
@@ -387,7 +387,7 @@ sl_slab_reap(int nblks) {
 		fblks += b->slb_nblks;
 		/* Put it back in the pool
 		 */
-		sl_buffer_put(b, &slBufsFreePool->ppm_lc);
+		sl_buffer_put(b, &slBufsPool->ppm_lc);
 
 	} while (fblks < nblks);
 
@@ -405,7 +405,7 @@ sl_slab_alloc(int nblks, struct fidc_membh *f)
 	ENTRY;
  retry:
 	do {
-		slb = psc_pool_get(slBufsFreePool);
+		slb = psc_pool_get(slBufsPool);
 		if (!slb) {
 //			if (lc_grow(&slBufsFree, slbFreeInc,
 //				    sl_buffer_init) > 0)
@@ -940,7 +940,7 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 	INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
-	//sl_buffer_put(slb, &slBufsFreePool->ppm_lc);
+	//sl_buffer_put(slb, &slBufsPool->ppm_lc);
 	return (0);
 }
 
@@ -958,10 +958,10 @@ sl_buffer_cache_init(void)
 {
 	psc_assert(SLB_SIZE <= LNET_MTU);
 
-	psc_poolmaster_init(&slBufsFreePoolMaster, struct sl_buffer, slb_mgmt_lentry,
+	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer, slb_mgmt_lentry,
 			    PPMF_AUTO, slbFreeDef, 0, slbFreeMax,
-			    sl_buffer_init, sl_buffer_destroy, NULL, "slabBufFreePool", NULL);
-	slBufsFreePool = psc_poolmaster_getmgr(&slBufsFreePoolMaster);
+			    sl_buffer_init, sl_buffer_destroy, NULL, "slab", NULL);
+	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
 
 	lc_reginit(&slBufsLru,  struct sl_buffer,
 		   slb_mgmt_lentry, "slabBufLru");
