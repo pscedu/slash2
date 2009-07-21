@@ -49,17 +49,17 @@ struct msfs_thread {
  *
  */
 struct msl_fbr {
-	struct bmapc_memb	*mfbr_bmap;    /* the bmap       */
-	atomic_t		 mfbr_acnt;    /* access counter */
-	SPLAY_ENTRY(msl_fbr)	 mfbr_tentry;
+	struct bmapc_memb		*mfbr_bmap;    /* the bmap       */
+	atomic_t			 mfbr_acnt;    /* access counter */
+	SPLAY_ENTRY(msl_fbr)		 mfbr_tentry;
 };
 
 SPLAY_HEAD(fhbmap_cache, msl_fbr);
 
-struct msl_fhent {		/* XXX rename */
-	psc_spinlock_t         mfh_lock;
-	struct fidc_membh     *mfh_fcmh;
-	struct fhbmap_cache    mfh_fhbmap_cache;
+struct msl_fhent {			 /* XXX rename */
+	psc_spinlock_t        		 mfh_lock;
+	struct fidc_membh     		*mfh_fcmh;
+	struct fhbmap_cache   		 mfh_fhbmap_cache;
 };
 
 struct io_server_conn {
@@ -122,6 +122,9 @@ static inline void
 msl_fbr_free(struct msl_fbr *r, int rw)
 {
 	psc_assert(r->mfbr_bmap);
+	psc_assert(
+	    r->mfbr_tentry.spe_left == NULL &&
+	    r->mfbr_tentry.spe_right == NULL);
 
 	if (rw & FHENT_READ)
 		atomic_dec(&r->mfbr_bmap->bcm_rd_ref);
