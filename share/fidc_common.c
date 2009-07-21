@@ -132,6 +132,15 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 			PSCFREE(f->fcmh_fcm);
 			f->fcmh_fcm = NULL;
 		}
+		if (psclist_conjoint(&f->fcmh_hashe.hentry_lentry)) {
+			struct hash_bucket *b;
+
+			b = hashbkt_get(&fidcHtable, fcmh_2_fid(f));
+			hashbkt_lock(b);
+			hashbkt_del_entry(b, &f->fcmh_hashe);
+			hashbkt_unlock(b);
+		}
+
 		/* Re-initialize it before placing onto the free list
 		 */
 		fidc_membh_init(fidcFreePool, f);
@@ -246,9 +255,9 @@ fidc_reap(struct psc_poolmgr *m)
 		f->fcmh_state |= FCMH_CAC_FREEING;
 		lc_del(&f->fcmh_lentry, &fidcCleanList);
 		dynarray_add(&da, f);
-	end1:
+ end1:
 		freelock(&f->fcmh_lock);
-	end2:
+ end2:
 		freelock_hash_bucket(&fidcHtable, fcmh_2_fid(f));
         }
         LIST_CACHE_ULOCK(&fidcCleanList);
