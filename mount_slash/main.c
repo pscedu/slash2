@@ -474,7 +474,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (!p) {
 		/* Parent inode must exist in the cache.
 		 */
-		rc = ENOENT;
+		rc = EINVAL;
 		goto out;
 	}
 
@@ -555,7 +555,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	msfsthr_ensure();
 
-	psc_warnx("FID %"PRId64, (slfid_t)ino);
+	psc_warnx("FID %"PRId64, ino);
 
 	rc = fidc_lookup_load_inode(ino, &creds, &c);
 	if (rc)
@@ -584,7 +584,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	fi->keep_cache = 1;
 	rc = slash2fuse_fcoo_start(req, ino, fi);
 
-	if (rc) 
+	if (rc)
 		goto out;
 
 	fuse_reply_open(req, fi);
@@ -988,8 +988,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		u32 i;
 		struct fidc_memb fcm;
 		struct fidc_membh *fcmh;
-		struct srm_getattr_rep *attr =
-			(struct srm_getattr_rep *)iov[1].iov_base;
+		struct srm_getattr_rep *attr = iov[1].iov_base;
 
 		for (i=0; i < mq->nstbpref; i++, attr++) {
 			if (attr->rc || !attr->attr.st_ino)
@@ -1014,7 +1013,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		}
 	}
 
-	fuse_reply_buf(req, (char *)iov[0].iov_base, (size_t)mp->size);
+	fuse_reply_buf(req, iov[0].iov_base, (size_t)mp->size);
  out:
 	fidc_membh_dropref(d);
 	pscrpc_req_finished(rq);
@@ -1214,10 +1213,13 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct fidc_membh *c;
 
 	msfsthr_ensure();
-	psc_warnx("FID %"PRId64, (slfid_t)ino);
+	psc_warnx("FID %"PRId64, ino);
 
 	mfh = (void *)fi->fh;
 	c = mfh->mfh_fcmh;
+	psc_assert(SPLAY_EMPTY(&mfh->mfh_fhbmap_cache));
+	free(mfh);
+
 	spinlock(&c->fcmh_lock);
 	psc_assert(c->fcmh_fcoo);
 	/* If the fcoo is going away FCMH_FCOO_CLOSING will be set.
@@ -1364,7 +1366,7 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 
 	p = fidc_lookup_inode(parent);
 	if (!p)
-		return (ENOMEM);
+		return (EINVAL);
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    SRMT_SYMLINK, rq, mq, mp);
@@ -1426,18 +1428,18 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	struct msl_fhent *mfh;
 	struct fidc_membh *c;
 	int rc;
-	
+
 	ENTRY;
-	
+
 	msfsthr_ensure();
-	
+
 	c = NULL;
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 			SRMT_SETATTR, rq, mq, mp);
 	if (rc)
 		goto out;
-	
+
 	c = fidc_lookup_inode(ino);
 	if (!c) {
 		rc = EINVAL;
@@ -1451,19 +1453,19 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	      (c->fcmh_state & FCMH_HAVE_ATTRS)))
 		c->fcmh_state |= FCMH_GETTING_ATTRS;
 	freelock(&c->fcmh_lock);
-	
+
 	if (fi && fi->fh) {
 		mfh = (void *)fi->fh;
 		psc_assert(c == mfh->mfh_fcmh);
 	}
-	
+
 	fidc_fcmh2fdb(c, &mq->sfdb);
-	
+
 	slash2fuse_getcred(req, &mq->creds);
 	mq->ino = ino;
 	mq->to_set = to_set;
 	memcpy(&mq->attr, attr, sizeof(*attr));
-	
+
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
@@ -1487,7 +1489,6 @@ static int
 slash2fuse_fsync(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino,
 		 __unusedx int datasync, __unusedx struct fuse_file_info *fi)
 {
-
 	msfsthr_ensure();
 
 	return (EOPNOTSUPP);
