@@ -110,6 +110,8 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 			psc_fatalx("Bad inode fcmh_cache_owner %p",
 			       f->fcmh_cache_owner);
 
+		psc_assert(f->fcmh_pri == NULL);
+
 		if (!f->fcmh_fcm)
 			/* No fcm, this probably came from
 			 *  __fidc_lookup_inode() try_create.
@@ -118,7 +120,6 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 		else {
 			struct fidc_membh *tmp;
 
-			psc_assert(f->fcmh_pri == NULL);
 			psc_assert(!atomic_read(&f->fcmh_refcnt));
 			if (f->fcmh_cache_owner == NULL)
 				DEBUG_FCMH(PLL_WARN, f,
