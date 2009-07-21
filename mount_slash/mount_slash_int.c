@@ -111,6 +111,9 @@ msl_oftrq_destroy(struct offtree_req *r)
 		pscrpc_set_destroy(r->oftrq_fill.oftfill_reqset);
 		r->oftrq_fill.oftfill_reqset = NULL;
 	}
+
+	PSCFREE(r->oftrq_fill.oftfill_inprog);
+	r->oftrq_fill.oftfill_inprog = NULL; 
 }
 
 struct msl_fhent *
@@ -188,12 +191,12 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	int nblks, rc=-1;
 	u32 i;
 
-	psc_assert(bmap->bcm_mode & BMAP_INIT);	
-	psc_assert(bmap->bcm_pri);	
+	psc_assert(bmap->bcm_mode & BMAP_INIT);
+	psc_assert(bmap->bcm_pri);
 	psc_assert(bmap->bcm_fcmh);
 
 	f = bmap->bcm_fcmh;
-	
+
 	/* Build the new RPC request.
 	 */
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
@@ -242,11 +245,11 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	return (rc);
 }
 
-/** 
+/**
  * msl_bmap_modeset -
  * Notes:  XXX I think this logic can be simplified when setting mode from
  *    WRONLY to RDWR.  In WRONLY this client already knows the address
- *    of the only ION from which this bmap can be read.  Therefore, it 
+ *    of the only ION from which this bmap can be read.  Therefore, it
  *    should be able to interface with that ION without intervention from
  *    the mds.
  */
@@ -284,6 +287,7 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
 		     int mode, int rw)
 {
 	struct msl_fbr *r;
+
 	/* Now handle the fhent's bmap cache, adding a new reference
 	 *  if needed.
 	 *
@@ -306,7 +310,6 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
 			FHENT_WRITE : FHENT_READ));
 	}
 	freelock(&mfh->mfh_lock);
-
 }
 
 /**
@@ -331,7 +334,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, u32 rw)
 
 	b = bmap_lookup_add(f, n, msl_bmap_init);
 	psc_assert(b);
-	
+
 	if (b->bcm_mode & BMAP_INIT) {
 		/* Retrieve the bmap from the sl_mds.
 		 */
@@ -401,7 +404,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, u32 rw)
 			 */
 			goto retry;
 
-	} else { /* !BMAP_CLI_MCIP not set, we will set it and 
+	} else { /* !BMAP_CLI_MCIP not set, we will set it and
 		  *    proceed with the modechange operation.
 		  */
 		psc_assert(!(b->bcm_mode & BMAP_WR)   &&
@@ -1397,10 +1400,10 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 
 	rc = size;
  out:
-	/* XXX this set_wait should not be here, it's a workaround to 
+	/* XXX this set_wait should not be here, it's a workaround to
 	 *  prevent the set from being destroyed before it has completed.
 	 */
-	for (j=0; j < nr; j++) 
+	for (j=0; j < nr; j++)
 		pscrpc_set_wait((&r[j])->oftrq_fill.oftfill_reqset);
 
 	for (j=0; j < nr; j++)
