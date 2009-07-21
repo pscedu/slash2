@@ -149,8 +149,11 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_bmap_crcwire);
 	PRTYPE(struct srm_bmap_crcwrt_req);
 	PRTYPE(struct srm_bmap_dio_req);
+	PRTYPE(struct srm_bmap_iod_get);
 	PRTYPE(struct srm_bmap_rep);
 	PRTYPE(struct srm_bmap_req);
+	PRTYPE(struct srm_bmap_wire_rep);
+	PRTYPE(struct srm_bmap_wire_req);
 	PRTYPE(struct srm_connect_req);
 	PRTYPE(struct srm_create_req);
 	PRTYPE(struct srm_destroy_req);
