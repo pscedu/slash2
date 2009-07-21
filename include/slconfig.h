@@ -91,7 +91,7 @@ typedef struct global_config {
 		memset((g), 0, sizeof(*(g)));			\
 		INIT_PSCLIST_HEAD(&(g)->gconf_sites);		\
 		init_hash_table(&(g)->gconf_nids_hash,		\
-				GCONF_HASHTBL_SZ, "gconf");	\
+				GCONF_HASHTBL_SZ, "resnid");	\
 	} while (0)
 
 typedef struct resource_member {
@@ -244,7 +244,7 @@ libsl_profile_dump(void)
 	sl_nodeh_t *z = &nodeInfo;
 	u32 i;
 
-	fprintf(stderr, 
+	fprintf(stderr,
 		"\nNode Info: Resource ;%s;\n\tdesc: %s "
 		"\n\t ID (global=%u, mds=%u)"
 		"\n\t Type %d, Npeers %u, Nnids %u"
@@ -256,9 +256,9 @@ libsl_profile_dump(void)
 		z->node_res->res_mds,
 		z->node_res->res_type,
 		z->node_res->res_npeers,
-		z->node_res->res_nnids, 
+		z->node_res->res_nnids,
 		z->node_res->res_fsroot);
-	
+
 	for (i=0; i < z->node_res->res_npeers; i++) {
 		sl_resource_t *r;
 
