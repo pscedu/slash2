@@ -1,4 +1,3 @@
-
 /* $Id$ */
 
 #ifndef _SLASH_SLVR_H_

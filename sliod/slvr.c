@@ -80,7 +80,7 @@ slvr_do_crc(struct slvr_ref *s)
 		slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
 
 		SLVR_LOCK(s);
-                s->slvr_flags &= (SLVR_CRCING|SLVR_CRCDIRTY);		
+                s->slvr_flags &= ~(SLVR_CRCING|SLVR_CRCDIRTY);		
                 SLVR_ULOCK(s);
 	}
 
@@ -483,7 +483,7 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
 
         s = SPLAY_FIND(biod_slvrtree, &b->biod_slvrs, &ts);
         if (!s && add) {
-		PSCALLOC(sizeof(*s));
+		s = PSCALLOC(sizeof(*s));
                 slvr_init(s, num, b);
                 SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, s);
         }
