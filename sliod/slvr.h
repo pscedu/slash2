@@ -1,3 +1,4 @@
+
 /* $Id$ */
 
 #ifndef _SLASH_SLVR_H_
@@ -5,11 +6,13 @@
 
 #include "psc_types.h"
 #include "psc_ds/tree.h"
+#include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/assert.h"
 
+#include "slashrpc.h"
 #include "bmap.h"
-#include "offtree.h"
+#include "buffer.h"
 
 extern struct list_cache dirtySlvrs;
 
@@ -29,40 +32,58 @@ extern struct list_cache dirtySlvrs;
 struct slvr_ref {
 	uint16_t              slvr_num;
 	uint16_t              slvr_flags;
-	uint32_t              slvr_updates; 
+	atomic16_t            slvr_pndgwrts;
+	atomic16_t            slvr_pndgreads;
+	uint32_t              slvr_updates;
 	void                 *slvr_pri;
+	struct sl_buffer     *slvr_slab;
 	struct timespec       slvr_ts;
-	struct psclist_head   slvr_lentry;
+	struct psclist_head   slvr_lentry;	
 	SPLAY_ENTRY(slvr_ref) slvr_tentry;
 };
 
-#define SLVR_LOCK(s)				\
-	spinlock(&(SLVR_2_IOBD(s))->iobd_lock)
-
-#define SLVR_ULOCK(s)				\
-	freelock(&(SLVR_2_IOBD(s))->iobd_lock)
-
-#define SLVR_LOCK_ENSURE(s)				\
-	LOCK_ENSURE(&(SLVR_2_IOBD(s))->iobd_lock)
 
 #define SLVR_2_BLK(s) ((s)->slvr_num * (SLASH_BMAP_SIZE/SLASH_BMAP_BLKSZ))
 
 enum slvr_states {
-	SLVR_NEW       = (1<<0),
-	SLVR_CRCING    = (1<<1),
-	SLVR_SCHEDULED = (1<<2),
-	SLVR_INFLIGHT  = (1<<3),
+	SLVR_NEW       = (1<<0),  /* newly initialized */
+	SLVR_SCHEDULED = (1<<1),  /* scheduled to processed (rpc, and crc) */
+	SLVR_CRCING    = (1<<2),  /* in the process of being crc'd */
+	SLVR_FAULTING  = (1<<3),  /* blocks are being read from the fs */
+	SLVR_INFLIGHT  = (1<<4),  /* slvr crc is being sent the mds */ 
+	SLVR_GETSLAB   = (1<<5),  /* assigning memory buffer to slvr */
+	SLVR_PINNED    = (1<<6),  /* cannot be removed from the cache */
+	SLVR_DATARDY   = (1<<7),  /* ready for read / write activity */
+	SLVR_DIRTY     = (1<<8),  /* data which needs to be flushed */
+	SLVR_LRU       = (1<<9),  /* cached but not dirty */
+	SLVR_CRCDIRTY  = (1<<10), /* crc does not match cached buffer */
+	SLVR_RPCPNDG   = (1<<11)  /* buffer !dirty but crc dirty is set */
 };
 
-static inline void
-slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
-{
-	s->slvr_num = num;
-	s->slvr_flags = SLVR_NEW;
-	s->slvr_pri = pri;
-	s->slvr_updates = 0;
-	INIT_PSCLIST_ENTRY(&s->slvr_lentry);
-}
+
+#define SLVR_FLAG(field, str) ((field) ? (str) : "")
+#define DEBUG_SLVR_FLAGS(s)						\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_NEW), "n"),			\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_CRCING), "c"),	\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_SCHEDULED), "s"),	\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_FAULTING), "f"),	\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_INFLIGHT), "i"),	\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_GETSLAB), "S"),	\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_PINNED), "p"),	\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_DATARDY), "d"),	\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_DIRTY), "D"),		\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_LRU), "l")
+
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
+
+#define DEBUG_SLVR(level, s, fmt, ...)					\
+	psc_logs((level), PSS_OTHER,					\
+		 " slvr@%p num=%hu pw=%hu pr=%hu up=%u pri@%p slab@%p flgs:" \
+		 SLVR_FLAGS_FMT" :: "fmt,				\
+		 (s), (s)->slvr_num, atomic_read(&(s)->slvr_pndgwrts),	\
+		 atomic_read(&(s)->slvr_pndgreads), (s)->slvr_updates,	\
+		 (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),	\
+		 ## __VA_ARGS__)
 
 static inline int
 slvr_cmp(const void *x, const void *y)
@@ -87,5 +108,8 @@ slvr_update(struct slvr_ref *);
 
 extern void
 slvr_cache_init(void);
+
+#define slvr_io_done(s, rw) \
+	(rw == SL_WRITE ? slvr_wio_done(s) : slvr_rio_done(s))
 
 #endif
