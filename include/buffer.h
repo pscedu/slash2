@@ -51,19 +51,23 @@ enum slb_states {
 #define SLB_SLB2EBASE(slb)						\
 	(((slb)->slb_base + ((slb)->slb_nblks * (slb)->slb_blksz)) - 1)
 
-/* sl_buffer - slash_buffer, is used for both read caching and write aggregation.  The buffer is split into N subsections where N is the size of the vbitmap structure.
-
-Slb_ref is maintained for every offtree entry which accesses this buffer.
-
-Slb_iov_list is used to hold a sorted list of offtree_memb pointers (sorted by floff).  This is used when the LRU tells us to free our segments.
-
-Slb_mgmt_lentry is used for the global free list, global lru, and the dirty list.
-
-The slb_bmap list entry attaches to the bmap so that it may be freed with the bmap or have its regions allocated from within the bmap.
+/* sl_buffer - slash_buffer, is used for both read caching and write 
+ *   aggregation.  The buffer is split into N subsections where N is 
+ *   the size of the vbitmap structure.
+ *  Slb_ref is maintained for every offtree entry which accesses this 
+ *     buffer.
+ *  Slb_iov_list is used to hold a sorted list of offtree_memb pointers 
+ *    (sorted by floff).  This is used when the LRU tells us to free 
+ *    our segments.
+ *  Slb_mgmt_lentry is used for the global free list, global lru, and 
+ *    the dirty list.
+ * 
+ *  The slb_bmap list entry attaches to the bmap so that it may be freed 
+ *    with the bmap or have its regions allocated from within the bmap.
  */
 struct sl_buffer {
 	struct vbitmap *slb_inuse;  /* track which segments are busy   */
-	//struct vbitmap *slb_dirty;  /* track which segments are dirty  */
+#define slb_dirty slb_inuse         /* slb_inuse -> slb_dirty for IOD  */
 	int             slb_nblks;  /* num blocks                      */
 	u32             slb_blksz;  /* blocksize                       */
 	void           *slb_base;   /* point to the data buffer        */
