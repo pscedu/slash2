@@ -15,6 +15,9 @@
 #define SLIOTHRT_RII		4	/* RPC comm */
 #define SLIOTHRT_TINTV		5	/* timer interval */
 #define SLIOTHRT_TIOS		6	/* iostats updater */
+#define SLIOTHRT_SLVR_CRC       7       /* sliver crc updaters */
+
+#define NSLVRCRC_THRS           4       /* perhaps ncores? */
 
 extern struct slashrpc_cservice *rmi_csvc;
 
