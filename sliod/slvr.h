@@ -4,10 +4,11 @@
 #define _SLASH_SLVR_H_
 
 #include "psc_types.h"
-#include "psc_ds/tree.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/tree.h"
 #include "psc_util/assert.h"
+#include "psc_util/atomic.h"
 
 #include "slashrpc.h"
 #include "bmap.h"
@@ -31,8 +32,8 @@ extern struct list_cache dirtySlvrs;
 struct slvr_ref {
 	uint16_t              slvr_num;
 	uint16_t              slvr_flags;
-	atomic16_t            slvr_pndgwrts;
-	atomic16_t            slvr_pndgreads;
+	psc_atomic16_t        slvr_pndgwrts;
+	psc_atomic16_t        slvr_pndgreads;
 	uint32_t              slvr_updates;
 	void                 *slvr_pri;
 	struct sl_buffer     *slvr_slab;
