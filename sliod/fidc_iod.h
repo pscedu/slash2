@@ -10,4 +10,6 @@ struct fidc_iod_info {
 	int fiodi_fd;
 };
 
+#define fcmh_2_fiodi(f) (struct fidc_iod_info *)((f)->fcmh_pri)
+
 #endif
