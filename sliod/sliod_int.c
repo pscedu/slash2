@@ -140,19 +140,7 @@ iod_oftrq_destroy(struct offtree_req *r)
 }
 
 
-/* Don't forget that this call must map offtree buffers for either sync or 
- *   source.
- */
-int
-iod_oftr_io(slfid_t fid, off_t off, size_t len, int op)
-{
-	int rc;
-
-	rc = offtree_region_preprw(r);
-	
-}
-
-struct fidc_membh *
+struct fidc_membh * 
 iod_inode_lookup(slfid_t fid)
 {
 	int rc;
@@ -210,6 +198,17 @@ iod_inode_open(struct fidc_membh *f, int rw)
         return (rc);
 }
 
+/**
+ * iod_bmap_load - load the relevant bmap information from the metadata 
+ *   server.  In the case of the ION the bmap sections of interest are the 
+ *   crc table and the crc states bitmap.  For now we only load this 
+ *   information on read.  
+ * @f: the fid cache handle for the inode in question.
+ * @sdbd: the key to authenticate with the mds.
+ * @rw: the bmap mode.
+ * @bmap:  return the bmap that has been loaded.
+ * Return: error if rpc fails.
+ */
 int
 iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb, 
 	      int rw, struct bmapc_memb **bmap)
@@ -221,7 +220,7 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 
 	spinlock(&b->bcm_lock);
 	/* For the time being I don't think we need to key actions
-	 *  off of the BMAP_INIT bit so ust get rid of it.
+	 *  off of the BMAP_INIT bit so just get rid of it.
 	 */ 
 	b->bcm_mode &= ~BMAP_INIT;
 
