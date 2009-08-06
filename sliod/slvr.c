@@ -195,7 +195,7 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 			rc = slvr_do_crc(s);
 			if (rc == -EINVAL) {
 				DEBUG_SLVR(PLL_ERROR, s, 
-					   "bad crc blks=%d off=%"_P_U64"x", 
+					   "bad crc blks=%d off=%"PRIx64, 
 					   nblks, slvr_2_fileoff(s, blk));
 				return (rc);
 			}
