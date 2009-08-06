@@ -29,6 +29,13 @@ struct bmap_iod_info {
 	struct slash_bmap_wire *biod_bmap_wire;
 	struct psclist_head     biod_lentry;
 	struct timespec         biod_age;
+	uint32_t                biod_crcup_id;
+};
+
+
+struct bmap_crcup_ref {
+	uint32_t bcr_id;
+
 };
 
 #define bmap_2_biodi(b) ((struct bmap_iod_info *)(b)->bcm_pri)

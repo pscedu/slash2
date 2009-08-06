@@ -10,19 +10,29 @@
 #include "iod_bmap.h"
 #include "buffer.h"
 
-struct list_cache dirtySlvrs;  /* Waiting for rpc packaging */
-struct list_cache lruSlvrs;    /* Clean slivers which may be reaped */
-struct list_cache rpcpngSlvrs; /*  */
-struct list_cache inflSlvrs;   /* Inflight slivers go here once their
-			        *  crc value has been copied into a crcup
-			        *  request.  Is needed because the sliver
-			        *  can only be inflight once.  Also prevents 
-			        *  worker threads from spinning on the dirty 
-			        *  list.
-			        */
+struct list_cache lruSlvrs;     /* Clean slivers which may be reaped */
+struct list_cache rpcqSlvrs;    /*  */
+struct list_cache inflSlvrs;    /* Inflight slivers go here once their
+			         *  crc value has been copied into a crcup
+			         *  request.  Is needed because the sliver
+			         *  can only be inflight once.  Also prevents 
+			         *  worker threads from spinning on the dirty 
+			         *  list.
+			         */
+
+
 
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 
+
+__static void
+slvr_lru_requeue(const struct slvr_ref *s)
+{
+	if (LIST_CACHE_TRYLOCK(&lruSlvrs)) {
+		lc_requeue(&lruSlvrs, s);
+		LIST_CACHE_ULOCK(&lruSlvrs);
+	}
+}
 /**
  * slvr_do_crc - given a sliver reference, take the crc of the respective
  *   data and attach the ref to an srm_bmap_crcup structure.
@@ -80,13 +90,14 @@ slvr_do_crc(struct slvr_ref *s)
 		slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
 
 		SLVR_LOCK(s);
-                s->slvr_flags &= ~(SLVR_CRCING|SLVR_CRCDIRTY);		
+                s->slvr_flags &= ~(SLVR_CRCING|SLVR_CRCDIRTY);
                 SLVR_ULOCK(s);
 	}
 
 	return (1);
 }
 
+#ifdef 0
 void
 slvr_update(struct slvr_ref *s)
 {
@@ -100,6 +111,7 @@ slvr_update(struct slvr_ref *s)
 	else 
 		lc_requeue(&dirtySlvrs, &s->slvr_lentry);
 }
+#endif
 
 __static void
 slvr_release(struct slvr_ref *s)
@@ -293,7 +305,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(psclist_conjoint(&s->slvr_lentry));
 
-	atomic_inc(rw == SL_WRITE ? &s->slvr_pndgwrts : &s->slvr_pndgreads);
 	/* Don't bother marking the bit in the slash_bmap_wire structure, 
 	 *  in fact slash_bmap_wire may not even be present for this 
 	 *  sliver.  Just mark the bit in the sliver itself in 
@@ -303,8 +314,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	 *  which is done asynchronously.
 	 */
 	if (rw == SL_WRITE)
-		s->slvr_flags |= (SLVR_CRCDIRTY | SLVR_DIRTY);
-	
+		s->slvr_flags |= SLVR_CRCDIRTY;
+
+	atomic_inc(rw == SL_WRITE ? &s->slvr_pndgwrts : &s->slvr_pndgreads);
+
  retry:
 	if (s->slvr_flags & SLVR_DATARDY)
 		/* Either read or write ops can just proceed if SLVR_DATARDY
@@ -324,6 +337,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		psc_assert(s->slvr_flags & SLVR_PINNED);
 		psc_assert(psclist_conjoint(&s->slvr_lentry));
 		goto out;
+
 	} else {
 		/* Importing data into the sliver is now our responsibility,
 		 *  other IO into this region will block until SLVR_FAULTING
@@ -387,7 +401,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	if (rw == SL_WRITE) {
 		/* Above, the bits were set for the RMW blocks, now 
 		 *  that they have been read, invert the bitmap so that
-		 *  it propery represents the blocks to be dirtied by
+		 *  it properly represents the blocks to be dirtied by
 		 *  the rpc.
 		 */
 		SLVR_LOCK(s);
@@ -406,6 +420,10 @@ slvr_rio_done(struct slvr_ref *s)
 	if (!atomic_read(&s->slvr_pndgwrts) && 
 	    atomic_dec_and_test(&s->slvr_pndgreads) && 
 	    (s->slvr_flags & SLVR_LRU)) {
+		/* Requeue does a listcache operation but using trylock so 
+		 *   no deadlock should occur on its behalf.
+		 */
+		slvr_lru_requeue(s);
 		slvr_lru_unpin(s);
 		DEBUG_SLVR(PLL_DEBUG, s, "unpinned");
 	} else
@@ -414,12 +432,53 @@ slvr_rio_done(struct slvr_ref *s)
 	SLVR_ULOCK(s);
 }
 
+__static void
+slvr_try_rpcqueue(struct slvr_ref *s)
+{
+	SLVR_LOCK(s);
+	
+	psc_assert(s->slvr_flags & SLVR_PINNED);
+	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
+
+	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc");
+
+	if (s->svr_flags & SLVR_RPCPNDG) {
+		/* It's already here or it's in the process of being 
+		 *   moved.
+		 */
+		SLVR_ULOCK(s);
+		return;
+	}
+
+	if (!atomic_read(&s->slvr_pndgwrts)) { 
+		/* No writes are pending, perform the move to the rpcq 
+		 *   list.  Set the bit first then drop the lock.
+		 */
+		s->svr_flags |= SLVR_RPCPNDG;		
+		SLVR_ULOCK(s);
+		
+		lc_remove(&lruSlvrs, s);
+		/* Don't drop the SLVR_LRU bit until the sliver has been 
+		 *   removed.
+		 */
+		SLVR_LOCK(s);
+		/* If we set SLVR_RPCPNDG then no one else may have 
+		 *   unset SLVR_LRU.
+		 */
+		psc_assert(s->slvr_flags & SLVR_LRU);
+		s->slvr_flags &= ~SLVR_LRU;
+		SLVR_ULOCK(s);
+
+		lc_queue(rpcqSlvrs, s);
+
+	} else
+		SLVR_ULOCK(s);
+}
+
 /**
- * slvr_wio_done - called after a write rpc has completed.  The sliver
- *    can be in two states, FAULTING or DIRTY.  If dirty then DATARDY 
- *    must be set - denoting that any RMW write has already been done
- *    by another thread.  If FAULTING, this thread must wake up sleepers
- *    on the bmap waitq and perform the appropriate list mgmt.
+ * slvr_wio_done - called after a write rpc has completed.  The sliver may
+ *    be FAULTING which is handled separately from DATARDY.  If FAULTING, 
+ *    this thread must wake up sleepers on the bmap waitq.
  * Notes: conforming with standard lock ordering, this routine drops 
  *    the sliver lock prior to performing list operations.
  */
@@ -428,47 +487,42 @@ slvr_wio_done(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(s->slvr_flags & SLVR_DIRTY);
-	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
-	/* The sliver must be on either the LRU or DIRTY list.
-	 */
-	psc_assert(psclist_conjoint(&s->slvr_lentry));
 	psc_assert(atomic_read(&s->slvr_pndgwrts) > 0);
+	/* CRCDIRTY must have been marked and could not have been unset
+	 *   because we have yet to pass this slvr to the crc processing
+	 *   threads. 
+	 */
+	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 
 	if (s->slvr_flags & SLVR_FAULTING) {
+		/* This sliver was being paged-in over the network.
+		 */
                 psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		
+		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
 		/* Other threads may be waiting for DATARDY to either 
 		 *   read or write to this sliver.  At this point it's 
 		 *   safe to wake them up.
-		 * Note: when iterating over the lru list, slvrs marked
-		 *   SLVR_DIRTY are in transition and must be skipped.
+		 * Note: when iterating over the lru list for reclaiming, 
+		 *   slvrs with pending writes must be skipped.
 		 */
 		SLVR_ULOCK(s);
-		lc_remove(&lruSlvrs, s);
-		lc_addtail(&dirtySlvrs, s);
-
 		SLVR_WAKEUP(s);
 
-        } else if (s->slvr_flags & SLVR_DIRTY) {
+        } else {
 		psc_assert(s->slvr_flags & SLVR_DATARDY);
-		SLVR_ULOCK(s);
-		/* Ok to requeue here without the lock or state flag, 
-		 *   slvr_pndgwrts (check above) has a ref to prevent us
-		 *   from being moved to the LRU.
-		 */
-		lc_requeue(&dirtySlvrs, &s->slvr_lentry);
-		/* What should happen to the bitmask for dirty blocks?
-		 *  Don't want to conflict with an incoming write.  This is
-		 *  not a case if SLVR_FAULTING is set since all other threads
-		 *  are blocked on the waitq.
-		 */
-	} else
-		DEBUG_SLVR(PLL_FATAL, s, "invalid sliver state");
+		DEBUG_SLVR(PLL_INFO, s, "DATARDY");
 
-	atomic_dec(&s->slvr_pndgwrts);
+		if ((s->slvr_flags & SLVR_LRU) && 
+		    atomic_read(&s->slvr_pndgwrts) > 1)
+			slvr_lru_requeue(s);
+		SLVR_ULOCK(s);
+	} 
+		
+	if (atomic_dec_and_test(&s->slvr_pndgwrts))
+		slvr_try_rpcqueue(s);
 }
 
 struct slvr_ref *
@@ -495,6 +549,63 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
 void 
 slvr_worker(void)
 {
+	struct slvr_ref *s;
+
+ start:
+	s = lc_getwait(&rpcqSlvrs);
+
+	SLVR_LOCK(s);
+
+	psc_assert(!(s->slvr_flags & SLVR_LRU));
+	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
+	psc_assert(s->slvr_flags & SLVR_RPCPNDG);
+	
+	/* Try our best to determine whether or we should hold off 
+	 *   the crc operation, strive to only crc slivers which have 
+	 *   no pending writes.  This section directly below may race 
+	 *   with slvr_wio_done().
+	 */
+	if (atomic_read(s->slvr_pndgwrts) > 0) {
+		if (!LIST_CACHE_TRYLOCK(&lruSlvrs)) {
+			/* Don't deadlock, take the locks in the 
+			 *   correct order.
+			 */
+			SLVR_ULOCK(s);
+			/* SLVR_RPCPNDG bit will prevent the sliver from 
+			 *   being re-added to the rpcq list.
+			 */
+			LIST_CACHE_LOCK(&lruSlvrs);
+			SLVR_LOCK(s);
+		}
+		/* Guaranteed to have both locks.
+		 */
+		if (atomic_read(s->slvr_pndgwrts) > 0) {
+			s->slvr_flags &= ~SLVR_RPCPNDG;
+			s->slvr_flags |= SLVR_LRU;
+			lc_queue(&lruSlvrs, s);
+			SLVR_ULOCK(s);
+			LIST_CACHE_ULOCK(&lruSlvrs);
+			goto start;
+
+		} else
+			/* It was > 0 but another write must have just 
+			 *   finished.
+			 */
+			LIST_CACHE_ULOCK(&lruSlvrs);
+	}
+	/* Ok, we've got a sliver to work on.
+	 *   From this point until we set to inflight, the slvr_lentry 
+	 *   should be disjointed.
+	 */
+	s->slvr_flags |= SLVR_SCHEDULED;
+	SLVR_ULOCK(s);
+	
+	psc_assert(psclist_disjoint(&s->slvr_lentry));
+	psc_assert(slvr_do_crc(s));
+
+	psc_assert(slvr_2_crcbits(s) & BMAP_SLVR_DATA);
+	psc_assert(slvr_2_crcbits(s) & BMAP_SLVR_CRC);
+	
 	/*
 	  What needs to happen here?
 	  . process elements from the dirtySlvr list

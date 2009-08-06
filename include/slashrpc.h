@@ -261,7 +261,7 @@ struct srm_bmap_crcup {
 	struct srm_bmap_crcwire	crcs[0];
 };
 
-#define MAX_BMAP_INODE_PAIRS 64
+#define MAX_BMAP_INODE_PAIRS 16
 
 struct srm_bmap_crcwrt_req {
 	uint32_t		ncrc_updates;

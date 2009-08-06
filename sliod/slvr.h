@@ -14,12 +14,17 @@
 #include "bmap.h"
 #include "buffer.h"
 
-extern struct list_cache dirtySlvrs;
+extern struct list_cache lruSlvrs;
+extern struct list_cache rpcqSlvrs;
+extern struct list_cache inflSlvrs;
 
 /**
  * slvr_ref - sliver reference used for scheduling dirty slivers
  *   to be crc'd and sent to the mds.
- * @slvr_num: sliver number (0 - SL_CRCS_PER_BMAP)
+ * @slvr_num: sliver number (0 - SL_CRCS_PER_BMAP-1)
+ * @slvr_flags: state bits for the sliver.
+ * @slvr_pndgwrts: the number of writes in progress
+ * @slvr_pndgreads: the number of writes in progress
  * @slvr_updates: update counter used to detect modifications to the
  *   sliver.  Note that atomic is not used here since the lock must be 
  *   held to avoid race conditions.
@@ -54,7 +59,6 @@ enum slvr_states {
 	SLVR_GETSLAB   = (1<<5),  /* assigning memory buffer to slvr */
 	SLVR_PINNED    = (1<<6),  /* cannot be removed from the cache */
 	SLVR_DATARDY   = (1<<7),  /* ready for read / write activity */
-	SLVR_DIRTY     = (1<<8),  /* data which needs to be flushed */
 	SLVR_LRU       = (1<<9),  /* cached but not dirty */
 	SLVR_CRCDIRTY  = (1<<10), /* crc does not match cached buffer */
 	SLVR_RPCPNDG   = (1<<11)  /* buffer !dirty but crc dirty is set */
@@ -71,10 +75,11 @@ enum slvr_states {
 	SLVR_FLAG(((s)->slvr_flags & SLVR_GETSLAB), "S"),	\
 	SLVR_FLAG(((s)->slvr_flags & SLVR_PINNED), "p"),	\
 	SLVR_FLAG(((s)->slvr_flags & SLVR_DATARDY), "d"),	\
-	SLVR_FLAG(((s)->slvr_flags & SLVR_DIRTY), "D"),		\
-	SLVR_FLAG(((s)->slvr_flags & SLVR_LRU), "l")
+	SLVR_FLAG(((s)->slvr_flags & SLVR_CRCDIRTY), "D"),		\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_LRU), "l"),		\
+	SLVR_FLAG(((s)->slvr_flags & SLVR_RPCPNDG), "r"),
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psc_logs((level), PSS_OTHER,					\
