@@ -1,5 +1,9 @@
 /* $Id$ */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "psc_types.h"
 
 #include "psc_ds/listcache.h"
@@ -151,9 +155,8 @@ slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
 }
  
 __static void
-slvr_getslab(struct slvr_ref *s) {
-	struct slvr_ref *s;
-
+slvr_getslab(struct slvr_ref *s)
+{
 	psc_assert(s->slvr_flags & SLVR_GETSLAB);
 	psc_assert(!s->slvr_slab);
 	
@@ -444,7 +447,7 @@ slvr_try_rpcqueue(struct slvr_ref *s)
 
 	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc");
 
-	if (s->svr_flags & SLVR_RPCPNDG) {
+	if (s->slvr_flags & SLVR_RPCPNDG) {
 		/* It's already here or it's in the process of being 
 		 *   moved.
 		 */
@@ -456,7 +459,7 @@ slvr_try_rpcqueue(struct slvr_ref *s)
 		/* No writes are pending, perform the move to the rpcq 
 		 *   list.  Set the bit first then drop the lock.
 		 */
-		s->svr_flags |= SLVR_RPCPNDG;		
+		s->slvr_flags |= SLVR_RPCPNDG;		
 		SLVR_ULOCK(s);
 		
 		lc_remove(&lruSlvrs, s);
@@ -523,7 +526,7 @@ slvr_wio_done(struct slvr_ref *s)
 		SLVR_ULOCK(s);
 	} 
 		
-	if (psc_atomic16_dec_and_test(&s->slvr_pndgwrts))
+	if (psc_atomic16_dec_test_zero(&s->slvr_pndgwrts))
 		slvr_try_rpcqueue(s);
 }
 

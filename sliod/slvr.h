@@ -14,9 +14,9 @@
 #include "bmap.h"
 #include "buffer.h"
 
-extern struct list_cache lruSlvrs;
-extern struct list_cache rpcqSlvrs;
-extern struct list_cache inflSlvrs;
+extern struct psc_listcache lruSlvrs;
+extern struct psc_listcache rpcqSlvrs;
+extern struct psc_listcache inflSlvrs;
 
 /**
  * slvr_ref - sliver reference used for scheduling dirty slivers
