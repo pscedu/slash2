@@ -77,7 +77,7 @@ enum slvr_states {
 	SLVR_FLAG(((s)->slvr_flags & SLVR_DATARDY), "d"),	\
 	SLVR_FLAG(((s)->slvr_flags & SLVR_CRCDIRTY), "D"),		\
 	SLVR_FLAG(((s)->slvr_flags & SLVR_LRU), "l"),		\
-	SLVR_FLAG(((s)->slvr_flags & SLVR_RPCPNDG), "r"),
+	SLVR_FLAG(((s)->slvr_flags & SLVR_RPCPNDG), "r")
 
 #define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
 
