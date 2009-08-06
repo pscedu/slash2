@@ -21,9 +21,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	struct slash_bmap_od bmapod;
 	psc_crc_t crc;
 	char b[1048576];
-	sl_blkh_t bmapod;
 
 	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
@@ -36,8 +36,8 @@ main(int argc, char *argv[])
 	PSC_CRC_CALC(crc, b, sizeof(b));
 	printf("NULL 1MB buf CRC is %#"PRIx64"\n", crc);
 
-	memset(&bmapod, 0, sizeof(sl_blkh_t));
-	PSC_CRC_CALC(crc, &bmapod, sizeof(sl_blkh_t));
+	memset(&bmapod, 0, sizeof(bmapod));
+	PSC_CRC_CALC(crc, &bmapod, sizeof(bmapod));
 	printf("NULL sl_blkh_t CRC is %#"PRIx64"\n", crc);
 	exit(0);
 }
