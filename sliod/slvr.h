@@ -85,8 +85,8 @@ enum slvr_states {
 	psc_logs((level), PSS_OTHER,					\
 		 " slvr@%p num=%hu pw=%hu pr=%hu up=%u pri@%p slab@%p flgs:" \
 		 SLVR_FLAGS_FMT" :: "fmt,				\
-		 (s), (s)->slvr_num, atomic_read(&(s)->slvr_pndgwrts),	\
-		 atomic_read(&(s)->slvr_pndgreads), (s)->slvr_updates,	\
+		 (s), (s)->slvr_num, psc_atomic16_read(&(s)->slvr_pndgwrts),	\
+		 psc_atomic16_read(&(s)->slvr_pndgreads), (s)->slvr_updates,	\
 		 (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),	\
 		 ## __VA_ARGS__)
 
