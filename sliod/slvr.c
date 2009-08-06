@@ -2,17 +2,19 @@
 
 #include "psc_types.h"
 
-#include "psc_rpc/rpc.h"
 #include "psc_ds/listcache.h"
+#include "psc_rpc/rpc.h"
+#include "psc_util/atomic.h"
+#include "psc_util/bitflag.h"
 #include "psc_util/lock.h"
 
 #include "slvr.h"
 #include "iod_bmap.h"
 #include "buffer.h"
 
-struct list_cache lruSlvrs;     /* Clean slivers which may be reaped */
-struct list_cache rpcqSlvrs;    /*  */
-struct list_cache inflSlvrs;    /* Inflight slivers go here once their
+struct psc_listcache lruSlvrs;     /* Clean slivers which may be reaped */
+struct psc_listcache rpcqSlvrs;    /*  */
+struct psc_listcache inflSlvrs;    /* Inflight slivers go here once their
 			         *  crc value has been copied into a crcup
 			         *  request.  Is needed because the sliver
 			         *  can only be inflight once.  Also prevents 
@@ -56,7 +58,7 @@ slvr_do_crc(struct slvr_ref *s)
 	
 	if (s->slvr_flags & SLVR_FAULTING) {
 		psc_assert(!s->slvr_flags & SLVR_DATARDY);
-		psc_assert(atomic_read(&s->slvr_pndgreads));
+		psc_assert(psc_atomic16_read(&s->slvr_pndgreads));
 		/* This thread holds faulting status so all others are
 		 *  waiting on us which means that exclusive access to 
 		 *  slvr contents is ours until we set SLVR_DATARDY.
@@ -73,7 +75,7 @@ slvr_do_crc(struct slvr_ref *s)
 			psc_crc_calc(&crc, slvr_2_buf(s), SL_CRC_SIZE);
 			if (crc != slvr_2_crc(s)) {
 				DEBUG_SLVR(PLL_ERROR, s, "crc failed want=%"
-					   _P_U64"x got=%"_P_U64"x", 
+					   PRIx64" got=%"PRIx64, 
 					   slvr_2_crc(s), crc);
 				return (-EINVAL);
 			}
@@ -206,18 +208,18 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 		 */
 		SLVR_LOCK(s);
 		for (i=0; i < nblks; i++) {
-			psc_assert(vbitmap_set(s->slvr_slab->slb_inuse,
-					       blk + i));
+			psc_assert(vbitmap_xset(s->slvr_slab->slb_inuse,
+					       blk + i) == 0);
 			vbitmap_unset(s->slvr_slab->slb_inuse, blk + i);
 		}
 		SLVR_ULOCK(s);
 	}
 
 	if (rc != len)
-		DEBUG_SLVR(PLL_ERROR, s, "failed blks=%d off=%"_P_U64"x", 
+		DEBUG_SLVR(PLL_ERROR, s, "failed blks=%d off=%"PRIx64, 
 			   nblks, slvr_2_fileoff(s, blk));	
 	else {
-		DEBUG_SLVR(PLL_TRACE, s, "ok blks=%d off=%"_P_U64"x",
+		DEBUG_SLVR(PLL_TRACE, s, "ok blks=%d off=%"PRIx64,
 			   nblks, slvr_2_fileoff(s, blk));
 		rc = 0;
 	}
@@ -316,7 +318,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	if (rw == SL_WRITE)
 		s->slvr_flags |= SLVR_CRCDIRTY;
 
-	atomic_inc(rw == SL_WRITE ? &s->slvr_pndgwrts : &s->slvr_pndgreads);
+	psc_atomic16_inc(rw == SL_WRITE ? &s->slvr_pndgwrts : &s->slvr_pndgreads);
 
  retry:
 	if (s->slvr_flags & SLVR_DATARDY)
@@ -417,8 +419,8 @@ slvr_rio_done(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);
 	
-	if (!atomic_read(&s->slvr_pndgwrts) && 
-	    atomic_dec_and_test(&s->slvr_pndgreads) && 
+	if (!psc_atomic16_read(&s->slvr_pndgwrts) && 
+	    psc_atomic16_dec_test_zero(&s->slvr_pndgreads) && 
 	    (s->slvr_flags & SLVR_LRU)) {
 		/* Requeue does a listcache operation but using trylock so 
 		 *   no deadlock should occur on its behalf.
@@ -450,7 +452,7 @@ slvr_try_rpcqueue(struct slvr_ref *s)
 		return;
 	}
 
-	if (!atomic_read(&s->slvr_pndgwrts)) { 
+	if (!psc_atomic16_read(&s->slvr_pndgwrts)) { 
 		/* No writes are pending, perform the move to the rpcq 
 		 *   list.  Set the bit first then drop the lock.
 		 */
@@ -487,7 +489,7 @@ slvr_wio_done(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(atomic_read(&s->slvr_pndgwrts) > 0);
+	psc_assert(psc_atomic16_read(&s->slvr_pndgwrts) > 0);
 	/* CRCDIRTY must have been marked and could not have been unset
 	 *   because we have yet to pass this slvr to the crc processing
 	 *   threads. 
@@ -516,12 +518,12 @@ slvr_wio_done(struct slvr_ref *s)
 		DEBUG_SLVR(PLL_INFO, s, "DATARDY");
 
 		if ((s->slvr_flags & SLVR_LRU) && 
-		    atomic_read(&s->slvr_pndgwrts) > 1)
+		    psc_atomic16_read(&s->slvr_pndgwrts) > 1)
 			slvr_lru_requeue(s);
 		SLVR_ULOCK(s);
 	} 
 		
-	if (atomic_dec_and_test(&s->slvr_pndgwrts))
+	if (psc_atomic16_dec_and_test(&s->slvr_pndgwrts))
 		slvr_try_rpcqueue(s);
 }
 
@@ -565,7 +567,7 @@ slvr_worker(void)
 	 *   no pending writes.  This section directly below may race 
 	 *   with slvr_wio_done().
 	 */
-	if (atomic_read(s->slvr_pndgwrts) > 0) {
+	if (psc_atomic16_read(s->slvr_pndgwrts) > 0) {
 		if (!LIST_CACHE_TRYLOCK(&lruSlvrs)) {
 			/* Don't deadlock, take the locks in the 
 			 *   correct order.
@@ -579,7 +581,7 @@ slvr_worker(void)
 		}
 		/* Guaranteed to have both locks.
 		 */
-		if (atomic_read(s->slvr_pndgwrts) > 0) {
+		if (psc_atomic16_read(s->slvr_pndgwrts) > 0) {
 			s->slvr_flags &= ~SLVR_RPCPNDG;
 			s->slvr_flags |= SLVR_LRU;
 			lc_queue(&lruSlvrs, s);

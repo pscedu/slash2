@@ -53,7 +53,7 @@ enum iod_bmap_modes {
 	BMAP_IOD_RELEASING = (1 << (1 + BMAP_RSVRD_MODES))
 };
 
-#define slvr_2_biod(s) ((struct bmap_iod_info *)(s)->slvr_iobd)
+#define slvr_2_biod(s) ((struct bmap_iod_info *)(s)->slvr_pri)
 #define slvr_2_bmap(s) slvr_2_biod(s)->biod_bmap
 #define slvr_2_fcmh(s) slvr_2_biod(s)->biod_bmap->bcm_fcmh
 #define slvr_2_fd(s) fcmh_2_fiodi(slvr_2_fcmh(s))->fiodi_fd
@@ -110,8 +110,8 @@ slvr_lru_unpin(struct slvr_ref *s)
 {
 	SLVR_LOCK_ENSURE(s);
         psc_assert(s->slvr_slab && psclist_conjoint(&s->slvr_lentry));
-	psc_assert(!atomic_read(&s->slvr_pndgreads));
-	psc_assert(!atomic_read(&s->slvr_pndgwrts));
+	psc_assert(!psc_atomic16_read(&s->slvr_pndgreads));
+	psc_assert(!psc_atomic16_read(&s->slvr_pndgwrts));
 
         bitflag_sorc(&s->slvr_flags, NULL, (SLVR_LRU|SLVR_PINNED|SLVR_DATARDY),
                      (SLVR_DIRTY|SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|
