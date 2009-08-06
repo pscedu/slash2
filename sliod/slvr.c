@@ -102,7 +102,7 @@ slvr_do_crc(struct slvr_ref *s)
 	return (1);
 }
 
-#ifdef 0
+#if 0
 void
 slvr_update(struct slvr_ref *s)
 {
