@@ -35,7 +35,7 @@ __static void
 slvr_lru_requeue(const struct slvr_ref *s)
 {
 	if (LIST_CACHE_TRYLOCK(&lruSlvrs)) {
-		lc_requeue(&lruSlvrs, s);
+		lc_move2tail(&lruSlvrs, s);
 		LIST_CACHE_ULOCK(&lruSlvrs);
 	}
 }
@@ -474,7 +474,7 @@ slvr_try_rpcqueue(struct slvr_ref *s)
 		s->slvr_flags &= ~SLVR_LRU;
 		SLVR_ULOCK(s);
 
-		lc_queue(rpcqSlvrs, s);
+		lc_queue(&rpcqSlvrs, s);
 
 	} else
 		SLVR_ULOCK(s);
@@ -570,7 +570,7 @@ slvr_worker(void)
 	 *   no pending writes.  This section directly below may race 
 	 *   with slvr_wio_done().
 	 */
-	if (psc_atomic16_read(s->slvr_pndgwrts) > 0) {
+	if (psc_atomic16_read(&s->slvr_pndgwrts) > 0) {
 		if (!LIST_CACHE_TRYLOCK(&lruSlvrs)) {
 			/* Don't deadlock, take the locks in the 
 			 *   correct order.
@@ -584,10 +584,10 @@ slvr_worker(void)
 		}
 		/* Guaranteed to have both locks.
 		 */
-		if (psc_atomic16_read(s->slvr_pndgwrts) > 0) {
+		if (psc_atomic16_read(&s->slvr_pndgwrts) > 0) {
 			s->slvr_flags &= ~SLVR_RPCPNDG;
 			s->slvr_flags |= SLVR_LRU;
-			lc_queue(&lruSlvrs, s);
+			lc_addqueue(&lruSlvrs, s);
 			SLVR_ULOCK(s);
 			LIST_CACHE_ULOCK(&lruSlvrs);
 			goto start;
