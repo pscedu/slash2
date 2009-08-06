@@ -5,8 +5,8 @@
 #endif
 
 #include "psc_types.h"
-
 #include "psc_ds/listcache.h"
+#include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/bitflag.h"
@@ -32,7 +32,7 @@ __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 
 
 __static void
-slvr_lru_requeue(const struct slvr_ref *s)
+slvr_lru_requeue(struct slvr_ref *s)
 {
 	if (LIST_CACHE_TRYLOCK(&lruSlvrs)) {
 		lc_move2tail(&lruSlvrs, s);
@@ -160,7 +160,7 @@ slvr_getslab(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_GETSLAB);
 	psc_assert(!s->slvr_slab);
 	
-	s->slvr_slab = psc_pool_get(slBufsFreePool);
+	s->slvr_slab = psc_pool_get(slBufsPool);
 	sl_buffer_fresh_assertions(s->slvr_slab);
 
 	s->slvr_flags |= SLVR_PINNED;
@@ -474,7 +474,7 @@ slvr_try_rpcqueue(struct slvr_ref *s)
 		s->slvr_flags &= ~SLVR_LRU;
 		SLVR_ULOCK(s);
 
-		lc_queue(&rpcqSlvrs, s);
+		lc_addqueue(&rpcqSlvrs, s);
 
 	} else
 		SLVR_ULOCK(s);
