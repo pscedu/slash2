@@ -73,14 +73,12 @@ enum iod_bmap_modes {
 #define slvr_2_crc(s)				\
 	(psc_crc_t)(slvr_2_biodi_wire((s))->bh_crc[(s)->slvr_num])
 
-#define SLVR_LOCK(s)				\
-	spinlock(&(slvr_2_biod(s))->biod_lock)
-
-#define SLVR_ULOCK(s)				\
-	freelock(&(slvr_2_biod(s))->biod_lock)
-
-#define SLVR_LOCK_ENSURE(s)				\
-	LOCK_ENSURE(&(slvr_2_biod(s))->biod_lock)
+#define SLVR_GETLOCK(s)		(&(slvr_2_biod(s))->biod_lock)
+#define SLVR_LOCK(s)		spinlock(SLVR_GETLOCK(s))
+#define SLVR_ULOCK(s)		freelock(SLVR_GETLOCK(s))
+#define SLVR_RLOCK(s)		reqlock(SLVR_GETLOCK(s))
+#define SLVR_URLOCK(s, lk)	ureqlock(SLVR_GETLOCK(s), (lk))
+#define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(SLVR_GETLOCK(s))
 
 #define SLVR_WAKEUP(s)					\
 	psc_waitq_wakeall(&(slvr_2_bmap(s))->bcm_waitq)
