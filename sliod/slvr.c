@@ -26,8 +26,6 @@ struct psc_listcache inflSlvrs;    /* Inflight slivers go here once their
 			         *  list.
 			         */
 
-
-
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 
 
@@ -48,8 +46,6 @@ slvr_lru_requeue(struct slvr_ref *s)
 __static int
 slvr_do_crc(struct slvr_ref *s)
 {
-	psc_crc_t crc;
-
 	psc_assert(!SLVR_LOCK_ENSURE(s));
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	/* SLVR_FAULTING implies that we're bringing this data buffer
@@ -87,23 +83,26 @@ slvr_do_crc(struct slvr_ref *s)
 			return (0);
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
-		SLVR_LOCK(s);
 		psc_assert(s->slvr_flags & SLVR_SCHEDULED);
-		s->slvr_flags |= SLVR_CRCING;
-		SLVR_ULOCK(s);
+		psc_assert(s->slvr_flags & SLVR_CRCING);
 		
-		psc_crc_calc(&slvr_2_crc(s), slvr_2_buf(s), SL_CRC_SIZE);
-		slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
+		psc_crc_calc(&s->slvr_crc, slvr_2_buf(s), SL_CRC_SIZE);
 
 		SLVR_LOCK(s);
                 s->slvr_flags &= ~(SLVR_CRCING|SLVR_CRCDIRTY);
+		if (slvr_2_biodi_wire(s)) {
+			slvr_2_crc(s) = s->slvr_crc;
+			slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
+		}
                 SLVR_ULOCK(s);
-	}
 
+	} else 
+		abort();
+	      
 	return (1);
 }
 
-#if 0
+#ifdef 0
 void
 slvr_update(struct slvr_ref *s)
 {
@@ -192,8 +191,15 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 		 *  grabbing the crc table, we use the 1MB buffer in 
 		 *  either case.
 		 */
-		if (nblks == SLASH_BLKS_PER_SLVR)
-			slvr_do_crc(s);
+		if (nblks == SLASH_BLKS_PER_SLVR) {
+			rc = slvr_do_crc(s);
+			if (rc == -EINVAL) {
+				DEBUG_SLVR(PLL_ERROR, s, 
+					   "bad crc blks=%d off=%"_P_U64"x", 
+					   nblks, slvr_2_fileoff(s, blk));
+				return (rc);
+			}
+		}
 		
 	} else {	
 		size_t i;
@@ -602,7 +608,8 @@ slvr_worker(void)
 	 *   From this point until we set to inflight, the slvr_lentry 
 	 *   should be disjointed.
 	 */
-	s->slvr_flags |= SLVR_SCHEDULED;
+	s->slvr_flags |= (SLVR_SCHEDULED|SLVR_CRCING);
+	
 	SLVR_ULOCK(s);
 	
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
@@ -628,6 +635,8 @@ slvr_worker(void)
 	      place the slvr on the lru or on the dirty list.
 	  . need to figure out how items from the lru are reclaimed.
 	      - this will most likely happen via the pool reclaim cb.
+	      
+
 	*/
 
 }
@@ -640,3 +649,17 @@ slvr_cache_init(void)
 	lc_reginit(&dirtySlvrs,  struct slvr_ref, slvr_lentry, "dirtySlvrs");
 	
 }
+
+/*
+ TODO:
+    . figure out how to reclaim.  probably be something along the lines
+    of traversing the lru looking for slvrs which are !crcdirty and have 
+    no pending operations (!PINNED).
+    
+    . at what point should a bmap_wire structure be present?  perhaps at 
+    all points, read or write, we should pull the bmap_wire from the mds.
+    seems like a waste if we're just in write mode..  
+       - Just in write mode.  I added some logic to copy over valid crc's 
+       from the biodi tree to the bmap wire.
+    
+ */

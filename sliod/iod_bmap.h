@@ -16,6 +16,7 @@
 #include "inode.h"
 #include "fidc_iod.h"
 #include "slvr.h"
+#include "slashrpc.h"
 
 extern struct psc_listcache iodBmapLru;
 
@@ -29,20 +30,24 @@ struct bmap_iod_info {
 	struct slash_bmap_wire *biod_bmap_wire;
 	struct psclist_head     biod_lentry;
 	struct timespec         biod_age;
-	uint32_t                biod_crcup_id;
+	uint32_t                biod_bcr_id;
 };
 
 
-struct bmap_crcup_ref {
-	uint32_t bcr_id;
+SPLAY_HEAD(crcup_reftree, biod_crcup_ref);
+SPLAY_PROTOTYPE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
 
+struct biod_crcup_ref {
+	uint32_t bcr_id;
+	struct srm_bmap_crcup *bcr_crcup;
+	SPLAY_ENTRY(biod_crcup_ref) bcr_tentry;
 };
 
 #define bmap_2_biodi(b) ((struct bmap_iod_info *)(b)->bcm_pri)
 #define bmap_2_biodi_age(b) bmap_2_biodi(b)->biod_age
 #define bmap_2_biodi_lentry(b) bmap_2_biodi(b)->biod_lentry
-#define bmap_2_biodi_oftr(b)			\
-	bmap_2_biodi(b)->biod_oftr
+#define bmap_2_biodi_slvrs(b)			\
+	&bmap_2_biodi(b)->biod_slvrs
 //	(((struct iodbmap_data *)((b)->bcm_pri))->biod_oftr)
 #define bmap_2_biodi_wire(b)			\
 	bmap_2_biodi(b)->biod_bmap_wire
@@ -50,7 +55,8 @@ struct bmap_crcup_ref {
 
 enum iod_bmap_modes {
 	BMAP_IOD_RETRIEVE  = (1 << (0 + BMAP_RSVRD_MODES)),
-	BMAP_IOD_RELEASING = (1 << (1 + BMAP_RSVRD_MODES))
+	BMAP_IOD_RELEASING = (1 << (1 + BMAP_RSVRD_MODES)),
+	BMAP_IOD_RETRFAIL  = (1 << (2 + BMAP_RSVRD_MODES))
 };
 
 #define slvr_2_biod(s) ((struct bmap_iod_info *)(s)->slvr_pri)

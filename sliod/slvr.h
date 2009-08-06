@@ -28,6 +28,8 @@ extern struct psc_listcache inflSlvrs;
  * @slvr_updates: update counter used to detect modifications to the
  *   sliver.  Note that atomic is not used here since the lock must be 
  *   held to avoid race conditions.
+ * @slvr_crc: used if there's no bmap_wire present, only is valid if
+ *   !SLVR_CRCDIRTY.
  * @slvr_pri: private pointer used for backpointer to iodbmap_data.
  * @slvr_ts: timestamp since last access.
  * @slvr_lentry: dirty queue.
@@ -40,6 +42,7 @@ struct slvr_ref {
 	psc_atomic16_t        slvr_pndgwrts;
 	psc_atomic16_t        slvr_pndgreads;
 	uint32_t              slvr_updates;
+	psc_crc_t             slvr_crc;
 	void                 *slvr_pri;
 	struct sl_buffer     *slvr_slab;
 	struct timespec       slvr_ts;
