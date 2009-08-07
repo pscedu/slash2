@@ -1,6 +1,23 @@
-#define _XOPEN_SOURCE 500
+/* $Id$ */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif 
+
+#include <sys/time.h>
+
+#include <string.h>
 #include <unistd.h>
+
+#include "psc_ds/list.h"
+#include "psc_ds/tree.h"
+#include "psc_rpc/rsx.h"
+#include "psc_util/alloc.h"
+#include "psc_util/assert.h"
+#include "psc_util/atomic.h"
+#include "psc_util/log.h"
+#include "psc_util/spinlock.h"
+#include "psc_util/waitq.h"
 
 #include "fid.h"
 #include "bmap.h"
@@ -36,7 +53,7 @@ iod_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t bmapno)
 	
 	b->bcm_fcmh = f;
 	b->bcm_blkno = bmapno;
-	iod_biodi_init((struct bmap_iod_info *)b->bcm_pri);	
+	iod_biodi_init(b->bcm_pri, b);	
 }
 
 __static void
@@ -76,7 +93,7 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 	iov.iov_base = bmap_2_biodi_wire(b) = 
 		PSCALLOC(sizeof(struct slash_bmap_wire));
 
-	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, 1);
+	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
 	
 	rc = RSX_WAITREP(rq, mp);
         if (rc || mp->rc) {
@@ -121,7 +138,7 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 }
 
 void
-iod_oftrq_build(struct offtree_req *r, const struct bmapc_memb *b, 
+iod_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, 
 		  uint32_t sblk, uint32_t nblks, int op)
 {
 	psc_assert((sblk * nblks) <= SLASH_BMAP_SIZE);
@@ -135,7 +152,7 @@ iod_oftrq_build(struct offtree_req *r, const struct bmapc_memb *b,
 	r->oftrq_len = nblks * SLASH_BMAP_SIZE;
 
 	r->oftrq_darray = PSCALLOC(sizeof(struct dynarray));
-        r->oftrq_root   = bmap_2_msoftr(b);
+        r->oftrq_root   = bmap_2_iooftr(b);
         r->oftrq_memb   = &r->oftrq_root->oftr_memb;
         r->oftrq_width  = r->oftrq_depth = 0;
         DEBUG_OFFTREQ(PLL_TRACE, r, "newly built request");	
@@ -198,24 +215,24 @@ iod_inode_open(struct fidc_membh *f, int rw)
 	else if (rw == SL_FWRITE)
 		f->fcmh_fcoo->fcoo_oref_rw[1]++;
 	else
-		psc_assert("rw mode=%d is invalid", rw);
+		psc_fatalx("rw mode=%d is invalid", rw);
 
-	freelock(&c->fcmh_lock);
+	freelock(&f->fcmh_lock);
 
-	if (c->fcmh_state & FCMH_FCOO_STARTING) {
+	if (f->fcmh_state & FCMH_FCOO_STARTING) {
 		if (rw == SL_FWRITE)
 			oflags |= O_CREAT;
 
-		rc = c->fcmh_fcoo->fcoo_fd = fid_fileops(fid, oflags);
+		rc = f->fcmh_fcoo->fcoo_fd = fid_fileops(fid, oflags);
                 if (!rc)
-                        fidc_fcoo_startdone(c);
+                        fidc_fcoo_startdone(f);
                 else
-                        fidc_fcoo_startfailed(c);
+                        fidc_fcoo_startfailed(f);
         }
  out:
 	if (rc)
-		psc_error("failed rc=%d "FIDFMT, 
-			  FIDFMTARGS(fcmh_2_fg(f)), rc);
+		psc_error("failed rc=%d "FIDFMT, rc,
+			  FIDFMTARGS(fcmh_2_fgp(f)));
         return (rc);
 }
 
@@ -278,7 +295,7 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 		freelock(&b->bcm_lock);
 
 	else
-		psc_assert("invalid rw mode (%d)", rw);
+		psc_fatalx("invalid rw mode (%d)", rw);
 
 	return (rc);
 }
