@@ -6,10 +6,10 @@
 #include <sys/time.h>
 
 #include "psc_types.h"
-
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/bitflag.h"
 #include "psc_util/lock.h"
 
 #include "bmap.h"
@@ -97,7 +97,7 @@ enum iod_bmap_modes {
 	(u8)(slvr_2_biodi_wire((s))->bh_crcstates[(s)->slvr_num])
 
 #define slvr_2_crc(s)				\
-	(psc_crc_t)(slvr_2_biodi_wire((s))->bh_crc[(s)->slvr_num])
+	(psc_crc_t)(slvr_2_biodi_wire((s))->bh_crcs[(s)->slvr_num])
 
 #define SLVR_GETLOCK(s)		(&(slvr_2_biod(s))->biod_lock)
 #define SLVR_LOCK(s)		spinlock(SLVR_GETLOCK(s))

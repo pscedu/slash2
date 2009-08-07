@@ -7,6 +7,8 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/thread.h"
 
+#include "fid.h"
+
 #define SLIOTHRT_CTL		0	/* control */
 #define SLIOTHRT_LNETAC		1	/* lustre net accept thr */
 #define SLIOTHRT_USKLNDPL	1	/* userland socket lustre net dev poll thr */
@@ -21,6 +23,7 @@
 
 struct bmapc_memb;
 struct fidc_membh;
+struct srt_bmapdesc_buf;
 
 struct slash_ricthr {
 	struct pscrpc_thread	 srt_prt;

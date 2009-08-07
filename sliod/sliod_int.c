@@ -19,14 +19,15 @@
 #include "psc_util/spinlock.h"
 #include "psc_util/waitq.h"
 
-#include "fid.h"
 #include "bmap.h"
+#include "fid.h"
 #include "fidcache.h"
+#include "iod_bmap.h"
 #include "offtree.h"
+#include "slashrpc.h"
 #include "slashrpc.h"
 #include "slconfig.h"
 #include "sliod.h"
-#include "iod_bmap.h"
 #include "slvr.h"
 
 __static void 
@@ -254,7 +255,7 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 	int rc=0;
 	struct bmapc_memb *b;
 	
-	b = bmap_lookup_add(f, sbdb->sbs_bmapno, iod_bmap_init);
+	b = bmap_lookup_add(f, sbdb->sbdb_secret.sbs_bmapno, iod_bmap_init);
 
 	spinlock(&b->bcm_lock);
 	/* For the time being I don't think we need to key actions
@@ -284,7 +285,8 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 				b->bcm_mode |= BMAP_IOD_RETRIEVE;
 				freelock(&b->bcm_lock);
 
-				rc = iod_bmap_fetch_crcs(b, sbdb);
+				rc = iod_bmap_fetch_crcs(b,
+				    &sbdb->sbdb_secret);
 			} else
 				/* biodi_wire already exists.
 				 */
