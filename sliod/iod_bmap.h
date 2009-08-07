@@ -91,7 +91,7 @@ enum iod_bmap_modes {
 	(void *)(((s)->slvr_slab->slb_base) + (blk * SLASH_SLVR_BLKSZ))
 
 #define slvr_2_fileoff(s, blk)						\
-	(off_t)((slvr_2_bmap(s)->bcm_bmapno * SLASH_BMAP_SIZE) +	\
+	(off_t)((slvr_2_bmap(s)->bcm_blkno * SLASH_BMAP_SIZE) +	\
 		((s)->slvr_num * SLASH_SLVR_SIZE) +			\
 		(blk * SLASH_SLVR_BLKSZ))
 
