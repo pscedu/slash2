@@ -20,12 +20,14 @@
 
 extern struct psc_listcache iodBmapLru;
 
+#define BIOD_CRCUP_MAX_AGE 2
+
 struct biod_crcup_ref {
 	uint64_t                    bcr_id;
 	struct timespec             bcr_age;
 	struct slvr_ref            *bcr_slvr;
-	struct srm_bmap_crcup      *bcr_crcup;
 	SPLAY_ENTRY(biod_crcup_ref) bcr_tentry;
+	struct srm_bmap_crcup       bcr_crcup;
 };
 
 SPLAY_HEAD(crcup_reftree, biod_crcup_ref);
@@ -129,9 +131,11 @@ slvr_lru_unpin(struct slvr_ref *s)
         psc_assert(s->slvr_slab && psclist_conjoint(&s->slvr_lentry));
 	psc_assert(!psc_atomic16_read(&s->slvr_pndgreads));
 	psc_assert(!psc_atomic16_read(&s->slvr_pndgwrts));
-	psc_assert((s->slvr_flags & (SLVR_LRU|SLVR_PINNED|SLVR_DATARDY)) ==
-		   (SLVR_LRU|SLVR_PINNED|SLVR_DATARDY));
-	s->slvr_flags &= ~SLVR_PINNED;
+
+        bitflag_sorc(&s->slvr_flags, NULL, (SLVR_LRU|SLVR_PINNED|SLVR_DATARDY),
+                     (SLVR_DIRTY|SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|
+		      SLVR_INFLIGHT|SLVR_GETSLAB|SLVR_DIRTY|SLVR_CRCDIRTY),
+                     0, SLVR_PINNED, (BIT_STRICT|BIT_ABORT));
 }
 
 

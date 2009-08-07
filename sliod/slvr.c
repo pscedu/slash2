@@ -19,6 +19,8 @@
 struct psc_listcache lruSlvrs;   /* Clean slivers which may be reaped */
 struct psc_listcache rpcqSlvrs;  /*  */
 
+struct biod_infslvr_tree binfSlvrs;
+
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 __static SPLAY_GENERATE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
 
@@ -535,11 +537,16 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
 }
 
 void 
-slvr_worker(void)
+slvr_worker_int(void)
 {
 	struct slvr_ref *s;
+	struct biod_crcup_ref tbcrc_ref, *bcrc_ref=NULL;
+	struct dynarray *a=NULL;
+	struct timespec ts;
 
- start:
+	int add=0, i;
+
+ start:	
 	s = lc_getwait(&rpcqSlvrs);
 
 	SLVR_LOCK(s);
@@ -599,7 +606,6 @@ slvr_worker(void)
 	
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(slvr_do_crc(s));
-
 	psc_assert(slvr_2_crcbits(s) & BMAP_SLVR_DATA);
 	psc_assert(slvr_2_crcbits(s) & BMAP_SLVR_CRC);
 
@@ -618,38 +624,100 @@ slvr_worker(void)
 	      psc_atomic16_read(&s->slvr_pndgreads)))
 		slvr_lru_unpin(s);
 	SLVR_ULOCK(s);
-
+	/* Put the slvr back to the LRU so it may have its slab reaped.
+	 */
 	lc_addqueue(&lruSlvrs, s);
-
 	
+	spinlock(&binfSlvrs.binfst_lock);
+	/* Lock the biodi to get (or possibly set) the bcr_id.
+	 */ 
+	spinlock(&slvr_2_biod(s)->biod_lock);
+	/* Only search the tree if the biodi id has a non-zero value.
+	 */
+	if (slvr_2_biod(s)->biod_bcr_id) {
+		tbcrc_ref.bcr_id = slvr_2_biod(s)->biod_bcr_id;	
+		bcrc_ref = SPLAY_FIND(crcup_reftree, &binfSlvrs.binfst_tree, 
+				      &tbcrc_ref);
+	}
+
+	if (!bcrc_ref) {
+		/* Don't have a ref in the tree, let's add one.
+		 */		
+		slvr_2_biod(s)->biod_bcr_id = binfSlvrs.binfst_counter++;
+		add = 1;
+
+	} else {
+		struct srm_bmap_crcwire *crcw;
+
+		psc_assert(bcrc_ref->bcr_crcup.blkno == 
+			   slvr_2_bmap(s)->bcm_blkno);
+
+		psc_assert(bcrc_ref->bcr_crcup.fid == 
+			   fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh));
+
+		crcw = &bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups++];
+		crcw->crc  = s->slvr_crc;
+		crcw->slot = s->slvr_num; 
+		
+		if (bcrc_ref->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
+			/* The crcup is filled to the max, remove it from the
+			 *   tree and clear the bcr_id from the biodi.
+			 */
+			slvr_2_biod(s)->biod_bcr_id = 0;
+	}
+	/* Should be done with the biodi, unlock it.
+	 */
+	freelock(&slvr_2_biod(s)->biod_lock);
 	
-	/*
-	  What needs to happen here?
-	  . process elements from the dirtySlvr list
-	      - involves calling do_crc and adding the sliver's crc 
-	      info to a crcup packing rpc.
-	      - will need a data structure to track partially filled 
-	      crcup structures.
-	      - slrmi_bmap_crcwrt() is the handler function on the mds.
-	      - one tricky item concerns crcup serialization from a single
-	      slvr.  in no circumstances may we have the same sliver 
-	      inflight for 2 different updates - the mds has no means to 
-	      determine which is the most current.  therefore we should avoid
-	      processing slvrs which are still inflight.  conversely, when
-	      a crcup is ack'd we must unset the inflight bit and either 
-	      place the slvr on the lru or on the dirty list.
-	  . need to figure out how items from the lru are reclaimed.
-	      - this will most likely happen via the pool reclaim cb.
-	      
+	if (add) {
+		struct srm_bmap_crcwire *crcw;
 
-	*/
+		bcrc_ref = PSCALLOC(sizeof(struct biod_crcup_ref) + 
+				    (sizeof(struct srm_bmap_crcwire) * 
+				     MAX_BMAP_INODE_PAIRS));
+		bcrc_ref->bcr_slvr = s;		
+		bcrc_ref->bcr_id = infSlvrs.binfst_counter;
+		clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
 
+		bcrc_ref->bcr_crcup.fid = fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh);
+		bcrc_ref->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_blkno;
+		
+		crcw = &bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups++];
+                crcw->crc  = s->slvr_crc;
+                crcw->slot = s->slvr_num;
+
+		SPLAY_INSERT(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
+	}
+	
+	a = PSCALLOC(sizeof(struct dynarray));
+	clock_gettime(CLOCK_REALTIME, &ts);
+
+	SPLAY_FOREACH(bcrc_ref, crcup_reftree, &binfSlvrs.binfst_tree) {
+		if ((bcrc_ref->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) ||
+		    ts.tv_sec >= (bcrc_ref->bcr_age.tv_sec + 
+				  BIOD_CRCUP_MAX_AGE))
+			dynarray_add(a, bcrc_ref);
+
+		if (dynarray_len(a) >= MAX_BMAP_NCRC_UPDATES)
+			break;
+	}
+	
+	for (i=0; i < dynarray_len(a); i++) {
+		bcrc_ref = dynarray_getpos(i);
+		SPLAY_REMOVE(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
+	}
+	/* Tree operations are finished now.
+	 */
+	freelock(&binfSlvrs.binfst_lock);
+	
 }
 
 void
 slvr_cache_init(void)
 {
 	int i;
+
+	binfSlvrs.binfst_counter = 1;
 
 	lc_reginit(&lruSlvrs,  struct slvr_ref, slvr_lentry, "lruSlvrs");
 	lc_reginit(&rpcqSlvrs,  struct slvr_ref, slvr_lentry, "rpcqSlvrs");
