@@ -11,6 +11,7 @@ SRCS+=		rii.c
 SRCS+=		riic.c
 SRCS+=		rim.c
 SRCS+=		rpc.c
+SRCS+=		sliod_int.c
 SRCS+=		slvr.c
 SRCS+=		timer.c
 SRCS+=		${SLASH_BASE}/share/fdbuf.c
