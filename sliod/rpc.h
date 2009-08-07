@@ -27,6 +27,9 @@
 #define SRII_REPSZ	128
 #define SRII_SVCNAME	"slrii"
 
+#define slric_handle_read(rq)	slric_handle_io((rq), SL_READ)
+#define slric_handle_write(rq)	slric_handle_io((rq), SL_WRITE)
+
 void	rpc_initsvc(void);
 
 int slrim_handler(struct pscrpc_request *);
