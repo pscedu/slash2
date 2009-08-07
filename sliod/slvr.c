@@ -122,7 +122,7 @@ slvr_release(struct slvr_ref *s)
         freelock(&biod->biod_lock);
 }
 
-int
+void
 slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
 {
 	s->slvr_num = num;
@@ -703,7 +703,7 @@ slvr_worker_int(void)
 	}
 	
 	for (i=0; i < dynarray_len(a); i++) {
-		bcrc_ref = dynarray_getpos(i);
+		bcrc_ref = dynarray_getpos(a, i);
 		SPLAY_REMOVE(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
 	}
 	/* Tree operations are finished now.
