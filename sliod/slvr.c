@@ -18,7 +18,6 @@
 
 struct psc_listcache lruSlvrs;   /* Clean slivers which may be reaped */
 struct psc_listcache rpcqSlvrs;  /*  */
-struct psc_listcache dirtySlvrs;
 
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 __static SPLAY_GENERATE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
@@ -668,8 +667,6 @@ slvr_cache_init(void)
 	int i;
 
 	lc_reginit(&dirtySlvrs,  struct slvr_ref, slvr_lentry, "dirtySlvrs");
-
-	atomic_set(&biodCrcupCnt, 1);
 }
 
 /*
