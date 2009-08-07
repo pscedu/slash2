@@ -19,7 +19,8 @@
 
 #define NSLVRCRC_THRS           4       /* perhaps ncores? */
 
-extern struct slashrpc_cservice *rmi_csvc;
+struct bmapc_memb;
+struct fidc_membh;
 
 struct slash_ricthr {
 	struct pscrpc_thread	 srt_prt;
@@ -37,10 +38,19 @@ PSCTHR_MKCAST(slricthr, slash_ricthr, SLIOTHRT_RIC)
 PSCTHR_MKCAST(slrimthr, slash_rimthr, SLIOTHRT_RIM)
 PSCTHR_MKCAST(slriithr, slash_riithr, SLIOTHRT_RII)
 
-void slric_init(void);
-void slrim_init(void);
-void slrii_init(void);
-void sliotimerthr_spawn(void);
+void	slric_init(void);
+void	slrim_init(void);
+void	slrii_init(void);
+void	sliotimerthr_spawn(void);
 __dead void slioctlthr_main(const char *);
+
+struct fidc_membh *
+	iod_inode_lookup(slfid_t);
+int	iod_inode_open(struct fidc_membh *, int);
+
+int	iod_bmap_load(struct fidc_membh *, struct srt_bmapdesc_buf *,
+		int, struct bmapc_memb **);
+
+extern struct slashrpc_cservice *rmi_csvc;
 
 #endif /* _SLIOD_H_ */

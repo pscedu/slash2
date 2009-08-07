@@ -65,15 +65,11 @@ bcr_cmp(const void *x, const void *y)
         return (0);
 }
 
-#define bmap_2_biodi(b) ((struct bmap_iod_info *)(b)->bcm_pri)
-#define bmap_2_biodi_age(b) bmap_2_biodi(b)->biod_age
-#define bmap_2_biodi_lentry(b) bmap_2_biodi(b)->biod_lentry
-#define bmap_2_biodi_slvrs(b)			\
-	&bmap_2_biodi(b)->biod_slvrs
-//	(((struct iodbmap_data *)((b)->bcm_pri))->biod_oftr)
-#define bmap_2_biodi_wire(b)			\
-	bmap_2_biodi(b)->biod_bmap_wire
-
+#define bmap_2_biodi(b)		((struct bmap_iod_info *)(b)->bcm_pri)
+#define bmap_2_biodi_age(b)	bmap_2_biodi(b)->biod_age
+#define bmap_2_biodi_lentry(b)	bmap_2_biodi(b)->biod_lentry
+#define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)
+#define bmap_2_biodi_wire(b)	bmap_2_biodi(b)->biod_bmap_wire
 
 enum iod_bmap_modes {
 	BMAP_IOD_RETRIEVE  = (1 << (0 + BMAP_RSVRD_MODES)),
@@ -81,11 +77,11 @@ enum iod_bmap_modes {
 	BMAP_IOD_RETRFAIL  = (1 << (2 + BMAP_RSVRD_MODES))
 };
 
-#define slvr_2_biod(s) ((struct bmap_iod_info *)(s)->slvr_pri)
-#define slvr_2_bmap(s) slvr_2_biod(s)->biod_bmap
-#define slvr_2_fcmh(s) slvr_2_biod(s)->biod_bmap->bcm_fcmh
-#define slvr_2_fd(s) fcmh_2_fiodi(slvr_2_fcmh(s))->fiodi_fd
-#define slvr_2_biodi_wire(s) slvr_2_biod(s)->biod_bmap_wire
+#define slvr_2_biod(s)		((struct bmap_iod_info *)(s)->slvr_pri)
+#define slvr_2_bmap(s)		slvr_2_biod(s)->biod_bmap
+#define slvr_2_fcmh(s)		slvr_2_biod(s)->biod_bmap->bcm_fcmh
+#define slvr_2_fd(s)		fcmh_2_fiodi(slvr_2_fcmh(s))->fiodi_fd
+#define slvr_2_biodi_wire(s)	slvr_2_biod(s)->biod_bmap_wire
 
 #define slvr_2_buf(s, blk)						\
 	(void *)(((s)->slvr_slab->slb_base) + (blk * SLASH_SLVR_BLKSZ))

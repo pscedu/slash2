@@ -14,6 +14,8 @@
 #include "bmap.h"
 #include "buffer.h"
 
+struct bmap_iod_info;
+
 extern struct psc_listcache lruSlvrs;
 extern struct psc_listcache rpcqSlvrs;
 extern struct psc_listcache inflSlvrs;
@@ -30,11 +32,11 @@ extern struct psc_listcache inflSlvrs;
  *   held to avoid race conditions.
  * @slvr_crc: used if there's no bmap_wire present, only is valid if
  *   !SLVR_CRCDIRTY.
- * @slvr_pri: private pointer used for backpointer to iodbmap_data.
+ * @slvr_pri: private pointer used for backpointer to bmap_iod_info.
  * @slvr_ts: timestamp since last access.
  * @slvr_lentry: dirty queue.
  * @slvr_tentry: bmap tree entry.
- * Note: slivers are locked through their iodbmap_data lock.
+ * Note: slivers are locked through their bmap_iod_info lock.
  */
 struct slvr_ref {
 	uint16_t              slvr_num;
@@ -105,19 +107,18 @@ slvr_cmp(const void *x, const void *y)
         return (0);
 }
 
-extern void
-slvr_release(struct slvr_ref *);
-
-//extern struct slvr_ref * 
-//slvr_get(uint16_t, struct iodbmap_data *, int);
-
-extern void
-slvr_update(struct slvr_ref *);
-
-extern void
-slvr_cache_init(void);
+struct slvr_ref *
+	slvr_lookup(uint16_t, struct bmap_iod_info *, int);
+void	slvr_cache_init(void);
+int	slvr_fsbytes_io(struct slvr_ref *, int);
+int	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, int);
+void	slvr_release(struct slvr_ref *);
+void	slvr_rio_done(struct slvr_ref *);
+void	slvr_slab_prep(struct slvr_ref *);
+void	slvr_update(struct slvr_ref *);
+void	slvr_wio_done(struct slvr_ref *);
 
 #define slvr_io_done(s, rw) \
-	(rw == SL_WRITE ? slvr_wio_done(s) : slvr_rio_done(s))
+	((rw) == SL_WRITE ? slvr_wio_done(s) : slvr_rio_done(s))
 
 #endif

@@ -218,7 +218,7 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
  *   in slab bitmap, trying to coalesce where possible.
  * @s: the sliver.
  */
-__static int
+int
 slvr_fsbytes_io(struct slvr_ref *s, int rw)
 {
 	int nblks, blk, rc;

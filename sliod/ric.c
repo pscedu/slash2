@@ -19,6 +19,7 @@
 #include "fdbuf.h"
 #include "fid.h"
 #include "fidcache.h"
+#include "iod_bmap.h"
 #include "rpc.h"
 #include "slashrpc.h"
 #include "sliod.h"
