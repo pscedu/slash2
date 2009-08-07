@@ -141,7 +141,6 @@ enum slb_ref_flags {
 
 /* Should have been done earlier
  * have to add ref's before adding to pin list
-//sl_buffer_fresh_assertions((slb));
  */
 #define slb_fresh_2_pinned(slb) do {				\
 		ATTR_UNSET((slb)->slb_flags, SLB_FRESH);	\
@@ -192,6 +191,7 @@ enum slb_ref_flags {
 
 int  sl_buffer_alloc(size_t, off_t, struct dynarray *, void *);
 void sl_buffer_cache_init(void);
+void sl_buffer_fresh_assertions(struct sl_buffer *);
 void sl_oftiov_inflight_cb(struct offtree_iov *, int);
 void sl_oftiov_pin_cb(struct offtree_iov *, int);
 void sl_oftm_addref(struct offtree_memb *);
