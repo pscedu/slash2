@@ -94,10 +94,10 @@ enum iod_bmap_modes {
 		(blk * SLASH_SLVR_BLKSZ))
 
 #define slvr_2_crcbits(s)			\
-	(u8)(slvr_2_biodi_wire((s))->bh_crcstates[(s)->slvr_num])
+	slvr_2_biodi_wire((s))->bh_crcstates[(s)->slvr_num]
 
 #define slvr_2_crc(s)				\
-	(psc_crc_t)(slvr_2_biodi_wire((s))->bh_crcs[(s)->slvr_num])
+	slvr_2_biodi_wire((s))->bh_crcs[(s)->slvr_num].gc_crc
 
 #define SLVR_GETLOCK(s)		(&(slvr_2_biod(s))->biod_lock)
 #define SLVR_LOCK(s)		spinlock(SLVR_GETLOCK(s))
@@ -110,11 +110,11 @@ enum iod_bmap_modes {
 	psc_waitq_wakeall(&(slvr_2_bmap(s))->bcm_waitq)
 
 #define SLVR_WAIT(s)						\
-	{							\
+	do {							\
 		psc_waitq_wait(&(slvr_2_bmap(s))->bcm_waitq,	\
 			       &(slvr_2_biod(s))->biod_lock);	\
 		SLVR_LOCK(s);					\
-	}
+	} while (0)
 
 static inline void
 slvr_lru_pin_check(struct slvr_ref *s)
