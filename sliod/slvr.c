@@ -95,21 +95,6 @@ slvr_do_crc(struct slvr_ref *s)
 	return (1);
 }
 
-#if 0
-void
-slvr_update(struct slvr_ref *s)
-{
-	SLVR_LOCK(s);
-	s->slvr_updates++;
-	clock_gettime(&s->slvr_ts);
-	SLVR_ULOCK(s);
-	
-	if (s->slvr_flags & SLVR_NEW)
-		lc_queue(&dirtySlvrs, &s->slvr_lentry);
-	else 
-		lc_requeue(&dirtySlvrs, &s->slvr_lentry);
-}
-#endif
 
 __static void
 slvr_release(struct slvr_ref *s)
@@ -666,7 +651,8 @@ slvr_cache_init(void)
 {
 	int i;
 
-	lc_reginit(&dirtySlvrs,  struct slvr_ref, slvr_lentry, "dirtySlvrs");
+	lc_reginit(&lruSlvrs,  struct slvr_ref, slvr_lentry, "lruSlvrs");
+	lc_reginit(&rpcqSlvrs,  struct slvr_ref, slvr_lentry, "rpcqSlvrs");
 }
 
 /*
