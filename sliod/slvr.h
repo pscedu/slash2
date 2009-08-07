@@ -60,7 +60,7 @@ enum slvr_states {
 	SLVR_FAULTING  = (1<<3),  /* blocks are being read from the fs */
 	SLVR_INFLIGHT  = (1<<4),  /* slvr crc is being sent the mds */ 
 	SLVR_GETSLAB   = (1<<5),  /* assigning memory buffer to slvr */
-	SLVR_PINNED    = (1<<6),  /* cannot be removed from the cache */
+	SLVR_PINNED    = (1<<6),  /* slab cannot be removed from the cache */
 	SLVR_DATARDY   = (1<<7),  /* ready for read / write activity */
 	SLVR_LRU       = (1<<9),  /* cached but not dirty */
 	SLVR_CRCDIRTY  = (1<<10), /* crc does not match cached buffer */

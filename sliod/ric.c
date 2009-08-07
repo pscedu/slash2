@@ -42,65 +42,6 @@ slric_handle_connect(struct pscrpc_request *rq)
 	return (0);
 }
 
-int
-slric_handle_read(struct pscrpc_request *rq)
-{
-	struct pscrpc_bulk_desc *desc;
-	struct slash_fidgen fg;
-	struct srm_io_req *mq;
-	struct srm_io_rep *mp;
-	struct iovec iov;
-	sl_blkno_t bmapno;
-	ssize_t nbytes;
-	uint64_t cfd;
-	void *buf;
-	int fd;
-
-	RSX_ALLOCREP(rq, mq, mp);
-#define MAX_BUFSIZ (1024 * 1024)
-	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
-		mp->rc = -EINVAL;
-		return (0);
-	}
-
-	mp->rc = bdbuf_decrypt(&mq->sbdb, &cfd,
-	    &fg, &bmapno, rq->rq_peer, lpid.nid,
-	    nodeInfo.node_res->res_id);
-	if (mp->rc) {
-		psc_errorx("fdbuf_decrypt failed for "FIDFMT, FIDFMTARGS(&fg));
-		return (0);
-	}
-
-	if ((fd = fid_open(fg.fg_fid))) {
-		psc_error("fid_open failed (%d) for "FIDFMT,
-			 fd, FIDFMTARGS(&fg));
-		mp->rc = fd;
-		return (0);
-	}
-	buf = PSCALLOC(mq->size);
-	nbytes = pread(fd, buf, mq->size, mq->offset);
-	if (nbytes == -1) {
-		psc_error("pread failed (%d) for "FIDFMT,
-			 fd, FIDFMTARGS(&fg));
-		mp->rc = -errno;
-		close(fd);
-		goto done;
-	}
-	close(fd);
-	mp->size = nbytes;
-	if (nbytes == 0)
-		goto done;
-
-	iov.iov_base = buf;
-	iov.iov_len = mq->size;
-	mp->rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
-	    SRIC_BULK_PORTAL, &iov, 1);
-	if (desc)
-		pscrpc_free_bulk(desc);
- done:
-	free(buf);
-	return (0);
-}
 
 int
 slric_handle_io(struct pscrpc_request *rq, int rw)

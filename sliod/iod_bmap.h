@@ -20,6 +20,26 @@
 
 extern struct psc_listcache iodBmapLru;
 
+struct biod_crcup_ref {
+	uint64_t                    bcr_id;
+	struct timespec             bcr_age;
+	struct slvr_ref            *bcr_slvr;
+	struct srm_bmap_crcup      *bcr_crcup;
+	SPLAY_ENTRY(biod_crcup_ref) bcr_tentry;
+};
+
+SPLAY_HEAD(crcup_reftree, biod_crcup_ref);
+SPLAY_PROTOTYPE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
+
+/* For now only one of these structures is needed.  In the future
+ *   we'll need one per MDS.
+ */
+struct biod_infslvr_tree {
+	uint64_t             binfst_counter;
+	psc_spinlock_t       binfst_lock;
+	struct crcup_reftree binfst_tree;
+};
+
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
 SPLAY_PROTOTYPE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 
@@ -33,15 +53,17 @@ struct bmap_iod_info {
 	uint32_t                biod_bcr_id;
 };
 
+static inline int
+bcr_cmp(const void *x, const void *y)
+{
+        const struct biod_crcup_ref *a = x, *b = y;
 
-SPLAY_HEAD(crcup_reftree, biod_crcup_ref);
-SPLAY_PROTOTYPE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
-
-struct biod_crcup_ref {
-	uint32_t bcr_id;
-	struct srm_bmap_crcup *bcr_crcup;
-	SPLAY_ENTRY(biod_crcup_ref) bcr_tentry;
-};
+        if (a->bcr_id > b->bcr_id)
+                return (1);
+        if (a->bcr_id < b->bcr_id)
+                return (-1);
+        return (0);
+}
 
 #define bmap_2_biodi(b) ((struct bmap_iod_info *)(b)->bcm_pri)
 #define bmap_2_biodi_age(b) bmap_2_biodi(b)->biod_age
@@ -97,16 +119,11 @@ enum iod_bmap_modes {
 	}
 
 static inline void
-slvr_lru_pin(struct slvr_ref *s)
+slvr_lru_pin_check(struct slvr_ref *s)
 {
 	SLVR_LOCK_ENSURE(s);
         psc_assert(s->slvr_slab && psclist_conjoint(&s->slvr_lentry));
-
-        bitflag_sorc(&s->slvr_flags, NULL, SLVR_LRU,
-                     (SLVR_DIRTY|SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|
-		      SLVR_INFLIGHT|SLVR_GETSLAB|SLVR_PINNED|
-                      SLVR_DATARDY|SLVR_DIRTY|SLVR_CRCDIRTY),
-                     SLVR_PINNED, 0, (BIT_STRICT|BIT_ABORT));
+	psc_assert(s->slvr_flags == (SLVR_LRU|SLVR_PINNED));
 }
 
 static inline void
@@ -116,11 +133,9 @@ slvr_lru_unpin(struct slvr_ref *s)
         psc_assert(s->slvr_slab && psclist_conjoint(&s->slvr_lentry));
 	psc_assert(!psc_atomic16_read(&s->slvr_pndgreads));
 	psc_assert(!psc_atomic16_read(&s->slvr_pndgwrts));
-
-        bitflag_sorc(&s->slvr_flags, NULL, (SLVR_LRU|SLVR_PINNED|SLVR_DATARDY),
-                     (SLVR_DIRTY|SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|
-		      SLVR_INFLIGHT|SLVR_GETSLAB|SLVR_DIRTY|SLVR_CRCDIRTY),
-                     0, SLVR_PINNED, (BIT_STRICT|BIT_ABORT));
+	psc_assert((s->slvr_flags & (SLVR_LRU|SLVR_PINNED|SLVR_DATARDY)) ==
+		   (SLVR_LRU|SLVR_PINNED|SLVR_DATARDY));
+	s->slvr_flags &= ~SLVR_PINNED;
 }
 
 

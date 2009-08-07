@@ -12,6 +12,8 @@
 #include "iod_bmap.h"
 #include "slvr.h"
 
+atomic_t biodCrcupCnt;
+
 __static void 
 iod_biodi_init(struct bmap_iod_info *biod, struct bmapc_memb *b)
 {

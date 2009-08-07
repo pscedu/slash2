@@ -16,18 +16,12 @@
 #include "iod_bmap.h"
 #include "buffer.h"
 
-struct psc_listcache lruSlvrs;     /* Clean slivers which may be reaped */
-struct psc_listcache rpcqSlvrs;    /*  */
-struct psc_listcache inflSlvrs;    /* Inflight slivers go here once their
-			         *  crc value has been copied into a crcup
-			         *  request.  Is needed because the sliver
-			         *  can only be inflight once.  Also prevents 
-			         *  worker threads from spinning on the dirty 
-			         *  list.
-			         */
+struct psc_listcache lruSlvrs;   /* Clean slivers which may be reaped */
+struct psc_listcache rpcqSlvrs;  /*  */
+struct psc_listcache dirtySlvrs;
 
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
-
+__static SPLAY_GENERATE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
 
 __static void
 slvr_lru_requeue(struct slvr_ref *s)
@@ -156,13 +150,13 @@ slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
 __static void
 slvr_getslab(struct slvr_ref *s)
 {
+	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_GETSLAB);
 	psc_assert(!s->slvr_slab);
 	
 	s->slvr_slab = psc_pool_get(slBufsPool);
 	sl_buffer_fresh_assertions(s->slvr_slab);
 
-	s->slvr_flags |= SLVR_PINNED;
 	s->slvr_flags &= ~SLVR_GETSLAB;
 	/* Until the slab is added to the sliver, the sliver is private
 	 *  to the bmap's biod_slvrtree.  
@@ -277,6 +271,9 @@ void
 slvr_slab_prep(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);
+	/* Set the pin bit no matter what.
+	 */
+	s->slvr_flags |= SLVR_PINNED;
 
 	if (s->slvr_flags & SLVR_NEW) {
 		s->slvr_flags &= ~SLVR_NEW;
@@ -296,12 +293,7 @@ slvr_slab_prep(struct slvr_ref *s)
 			goto retry_getslab;
 		}	      
 	}
-	/* At this point the sliver should at least have a slab. 
-	 *  Next, with the lock held ensure the slvr / slab pair don't 
-	 *  go anywhere.  slvr_lru_pin() does extensive checking to 
-	 *  ensure the sliver is in the correct state.
-	 */		
-	slvr_lru_pin(s);
+	psc_assert(s->slvr_slab);
 	SLVR_ULOCK(s);
 }
 
@@ -327,7 +319,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	if (rw == SL_WRITE)
 		s->slvr_flags |= SLVR_CRCDIRTY;
 
-	psc_atomic16_inc(rw == SL_WRITE ? &s->slvr_pndgwrts : &s->slvr_pndgreads);
+	psc_atomic16_inc(rw == SL_WRITE ? 
+			 &s->slvr_pndgwrts : &s->slvr_pndgreads);
 
  retry:
 	if (s->slvr_flags & SLVR_DATARDY)
@@ -567,9 +560,17 @@ slvr_worker(void)
 
 	SLVR_LOCK(s);
 
+	DEBUG_SLVR(PLL_INFO, s, "slvr_worker");
+	/* Sliver assertions:
+	 *  !LRU & RPCPNDG - ensure that slvr is in the right state.
+	 *  CRCDIRTY - must have work to do.
+	 *  PINNED - slab must not move from beneath us because the 
+	 *           contents must be crc'd.
+	 */
 	psc_assert(!(s->slvr_flags & SLVR_LRU));
-	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
+	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);	
 	psc_assert(s->slvr_flags & SLVR_RPCPNDG);
+	psc_assert(s->slvr_flags & SLVR_PINNED);
 	
 	/* Try our best to determine whether or we should hold off 
 	 *   the crc operation, strive to only crc slivers which have 
@@ -617,6 +618,26 @@ slvr_worker(void)
 
 	psc_assert(slvr_2_crcbits(s) & BMAP_SLVR_DATA);
 	psc_assert(slvr_2_crcbits(s) & BMAP_SLVR_CRC);
+
+	/* At this point the slvr's slab can be freed but for that	  
+	 *   to happen we need to go back to the LRU.  The RPCPNDG bit
+	 *   set above will prevent this sliver from being rescheduled.
+	 * The crc stored in s->slvr_crc will not be modified until 
+	 *   we unset the RPCPNDG bit, allowing the slvr to be processed
+	 *   once again.
+	 */
+	SLVR_LOCK(s);
+	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU");
+	s->slvr_flags |= SLVR_LRU;
+	s->slvr_flags &= ~SLVR_SCHEDULED;
+	if (!(psc_atomic16_read(&s->slvr_pndgwrts) ||
+	      psc_atomic16_read(&s->slvr_pndgreads)))
+		slvr_lru_unpin(s);
+	SLVR_ULOCK(s);
+
+	lc_addqueue(&lruSlvrs, s);
+
+	
 	
 	/*
 	  What needs to happen here?
@@ -647,7 +668,8 @@ slvr_cache_init(void)
 	int i;
 
 	lc_reginit(&dirtySlvrs,  struct slvr_ref, slvr_lentry, "dirtySlvrs");
-	
+
+	atomic_set(&biodCrcupCnt, 1);
 }
 
 /*
