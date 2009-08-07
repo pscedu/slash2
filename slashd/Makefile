@@ -3,7 +3,6 @@
 include Makefile.path
 
 PROG=		slashd
-SRCS+=		buffer.c
 SRCS+=		cfd.c
 SRCS+=		control.c
 SRCS+=		fidc_mds.c
@@ -29,9 +28,10 @@ SRCS+=		sb.c
 SRCS+=		sljournal.c
 SRCS+=		timer.c
 SRCS+=		yconf.y
+SRCS+=		${SLASH_BASE}/share/bmap.c
+SRCS+=		${SLASH_BASE}/share/buffer.c
 SRCS+=		${SLASH_BASE}/share/fdbuf.c
 SRCS+=		${SLASH_BASE}/share/fid.c
-SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c
 SRCS+=		${SLASH_BASE}/share/rpc_common.c
 SRCS+=		${SLASH_BASE}/share/slashexport.c
@@ -56,6 +56,7 @@ SRCS+=		${PFL_BASE}/psc_util/list.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/meter.c
 SRCS+=		${PFL_BASE}/psc_util/mkdirs.c
+SRCS+=		${PFL_BASE}/psc_util/odtable.c
 SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
 SRCS+=		${PFL_BASE}/psc_util/random.c
 SRCS+=		${PFL_BASE}/psc_util/rlimit.c
@@ -65,14 +66,13 @@ SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/timerthr.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
-SRCS+=		${PFL_BASE}/psc_util/odtable.c
 
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 SRCS+=		${LNET_CFS_SRCS}
 SRCS+=		${LNET_LIB_SRCS}
 
-INCLUDES+=	-I${LNET_BASE}/include 
+INCLUDES+=	-I${LNET_BASE}/include
 DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
 DEFINES+=	-DHAVE_LIBPTHREAD -DHAVE_LIBPTHREAD_DEFINED
 LDFLAGS+=	${ZFS_LIBS} ${THREAD_LIBS} -ldl -lz -laio -lrt
