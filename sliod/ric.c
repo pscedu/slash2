@@ -4,7 +4,9 @@
  * Routines for handling RPC requests for ION from CLIENT.
  */
 
-#define _XOPEN_SOURCE 500
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
 #include <errno.h>
 #include <stdio.h>
@@ -16,8 +18,11 @@
 
 #include "fdbuf.h"
 #include "fid.h"
+#include "fidcache.h"
+#include "rpc.h"
 #include "slashrpc.h"
 #include "sliod.h"
+#include "slvr.h"
 
 int
 slric_handle_disconnect(struct pscrpc_request *rq)
@@ -53,14 +58,14 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	struct iovec iovs[2];
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap;
-	struct slvr_ref *slvr[2];
+	struct slvr_ref *slvr_ref[2];
 	
 	sl_blkno_t bmapno, slvrno;
 	ssize_t nbytes;
 	uint64_t cfd;
 	uint32_t tsize, roff;
 	void *buf;
-	int fd, nslvrs=1, i;
+	int rc, fd, nslvrs=1, i;
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
@@ -144,19 +149,19 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	if (mp->rc)
 		return (0);
 
+	if (desc)
+		pscrpc_free_bulk(desc);
+
 	/* Write the sliver back to the filesystem, but only the blocks
 	 *   which are marked '0' in the bitmap.   Here we don't care about
 	 *   buffer offsets since we're block aligned now
 	 */ 
 	for (i=0; i < nslvrs; i++) {	
 		if (rw == SL_WRITE)
-			if ((rc = slvr_fsbytes_io(s, SL_WRITE)))
+			if ((rc = slvr_fsbytes_io(slvr_ref[i], SL_WRITE)))
 				return (rc);
-		slvr_io_done(s, rw);
-	}
-
-	if (desc)
-		pscrpc_free_bulk(desc);
+		slvr_io_done(slvr_ref[i], rw);
+	} 
 
 	return (0);
 }
