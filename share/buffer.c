@@ -38,7 +38,7 @@ typedef struct psc_lockedlist token_t;
 static struct sl_buffer_iovref *
 sl_oftiov_locref_locked(struct offtree_iov *iov, struct sl_buffer *slb);
 
-void
+static void
 sl_buffer_free_assertions(struct sl_buffer *b)
 {
 	/* The following asertions must be true: */
@@ -67,7 +67,7 @@ sl_buffer_lru_assertions(struct sl_buffer *b)
                    (!atomic_read(&b->slb_inflpndg)));
 }
 
-static void
+void
 sl_buffer_fresh_assertions(struct sl_buffer *b)
 {
 	psc_assert(b->slb_flags == SLB_FRESH);
