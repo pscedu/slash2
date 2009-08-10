@@ -676,7 +676,7 @@ slvr_worker_int(void)
 				    (sizeof(struct srm_bmap_crcwire) * 
 				     MAX_BMAP_INODE_PAIRS));
 		bcrc_ref->bcr_slvr = s;		
-		bcrc_ref->bcr_id = infSlvrs.binfst_counter;
+		bcrc_ref->bcr_id = binfSlvrs.binfst_counter;
 		clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
 
 		bcrc_ref->bcr_crcup.fid = fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh);
