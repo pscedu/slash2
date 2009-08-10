@@ -72,7 +72,7 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->size <= 0 || mq->size > MAX_BUFSIZ) {
+	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psc_errorx("invalid size %u, fid:"FIDFMT,
 			   mq->size,  FIDFMTARGS(&fg));
 		mp->rc = -EINVAL;

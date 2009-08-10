@@ -177,6 +177,7 @@ SPLAY_HEAD(bmap_cache, bmapc_memb);
 struct fidc_open_obj {
 	struct srt_fd_buf	 fcoo_fdb;
 	int			 fcoo_oref_rw[2];    /* open cnt for r & w */
+	int                      fcoo_fd;
 	atomic_t		 fcoo_bmapc_cnt;
 	//struct psc_listcache	 fcoo_buffer_cache;  /* chain our slbs   */
 	struct psc_lockedlist	 fcoo_buffer_cache;  /* chain our slbs   */

@@ -44,6 +44,7 @@
 #include <slashd/rpc.h>
 #include <slashd/sb.h>
 #include <slashd/slashdthr.h>
+#include <slashd/yconf.h>
 #include <sliod/control.h>
 #include <sliod/fidc_iod.h>
 #include <sliod/iod_bmap.h>
@@ -139,6 +140,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slashrpc_export);
 	PRTYPE(struct slmds_jent_crc);
 	PRTYPE(struct slmds_jent_ino_addrepl);
+//	PRTYPE(struct slmds_jent_inum);
 	PRTYPE(struct slmds_jent_repgen);
 	PRTYPE(struct slmds_jents);
 	PRTYPE(struct slvr_ref);

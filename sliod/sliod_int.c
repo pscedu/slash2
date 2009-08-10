@@ -44,9 +44,7 @@ iod_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t bmapno)
         LOCK_INIT(&b->bcm_lock);
         atomic_set(&b->bcm_opcnt, 0);
         psc_waitq_init(&b->bcm_waitq);
-        b->bcm_pri = PSCALLOC(sizeof(struct bmap_iod_info));
-        psc_assert(bmap_2_iooftr(b));
-	
+        b->bcm_pri = PSCALLOC(sizeof(struct bmap_iod_info));	
 	b->bcm_fcmh = f;
 	b->bcm_blkno = bmapno;
 
@@ -179,7 +177,8 @@ iod_inode_open(struct fidc_membh *f, int rw)
 		if (rw == SL_FWRITE)
 			oflags |= O_CREAT;
 
-		rc = f->fcmh_fcoo->fcoo_fd = fid_fileops(fid, oflags);
+		rc = f->fcmh_fcoo->fcoo_fd = 
+			fid_fileops(fcmh_2_fid(f), oflags);
                 if (!rc)
                         fidc_fcoo_startdone(f);
                 else

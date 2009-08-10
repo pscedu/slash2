@@ -132,10 +132,15 @@ slvr_lru_unpin(struct slvr_ref *s)
 	psc_assert(!psc_atomic16_read(&s->slvr_pndgreads));
 	psc_assert(!psc_atomic16_read(&s->slvr_pndgwrts));
 
-        bitflag_sorc(&s->slvr_flags, NULL, (SLVR_LRU|SLVR_PINNED|SLVR_DATARDY),
-                     (SLVR_DIRTY|SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|
-		      SLVR_INFLIGHT|SLVR_GETSLAB|SLVR_DIRTY|SLVR_CRCDIRTY),
-                     0, SLVR_PINNED, (BIT_STRICT|BIT_ABORT));
+	psc_assert(s->slvr_flags & SLVR_LRU);
+	psc_assert(s->slvr_flags & SLVR_PINNED);
+	psc_assert(s->slvr_flags & SLVR_DATARDY);
+	
+	psc_assert(!(s->slvr_flags & 
+		     (SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|SLVR_INFLIGHT|
+		      SLVR_GETSLAB|SLVR_CRCDIRTY)));
+
+	s->slvr_flags &= ~SLVR_PINNED;
 }
 
 

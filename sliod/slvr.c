@@ -66,11 +66,12 @@ slvr_do_crc(struct slvr_ref *s)
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
 			
-			psc_crc_calc(&crc, slvr_2_buf(s), SL_CRC_SIZE);
-			if (crc != slvr_2_crc(s)) {
+			psc_crc_calc(&s->slvr_crc, slvr_2_buf(s, 0), 
+				     SL_CRC_SIZE);
+			if (s->slvr_crc != slvr_2_crc(s)) {
 				DEBUG_SLVR(PLL_ERROR, s, "crc failed want=%"
 					   PRIx64" got=%"PRIx64, 
-					   slvr_2_crc(s), crc);
+					   slvr_2_crc(s), s->slvr_crc);
 				return (-EINVAL);
 			}
 		} else
@@ -80,7 +81,7 @@ slvr_do_crc(struct slvr_ref *s)
 		psc_assert(s->slvr_flags & SLVR_SCHEDULED);
 		psc_assert(s->slvr_flags & SLVR_CRCING);
 		
-		psc_crc_calc(&s->slvr_crc, slvr_2_buf(s), SL_CRC_SIZE);
+		psc_crc_calc(&s->slvr_crc, slvr_2_buf(s, 0), SL_CRC_SIZE);
 
 		SLVR_LOCK(s);
                 s->slvr_flags &= ~(SLVR_CRCING|SLVR_CRCDIRTY);
@@ -130,6 +131,8 @@ slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
 	s->slvr_slab = NULL;
 	s->slvr_updates = 0;
 	INIT_PSCLIST_ENTRY(&s->slvr_lentry);
+	
+	return (0);
 }
  
 __static void
@@ -170,7 +173,7 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 		 *  grabbing the crc table, we use the 1MB buffer in 
 		 *  either case.
 		 */
-		if (nblks == SLASH_BLKS_PER_SLVR) {
+		if ((uint32_t)nblks == SLASH_BLKS_PER_SLVR) {
 			rc = slvr_do_crc(s);
 			if (rc == -EINVAL) {
 				DEBUG_SLVR(PLL_ERROR, s, 
@@ -195,7 +198,7 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 		 *  to mark as dirty after an RPC.
 		 */
 		SLVR_LOCK(s);
-		for (i=0; i < nblks; i++) {
+		for (i=0; (ssize_t)i < nblks; i++) {
 			psc_assert(vbitmap_xset(s->slvr_slab->slb_inuse,
 					       blk + i) == 0);
 			vbitmap_unset(s->slvr_slab->slb_inuse, blk + i);
@@ -230,7 +233,7 @@ slvr_fsbytes_io(struct slvr_ref *s, int rw)
 
 #define slvr_fsbytes_RW							\
 	if (nblks) {							\
-		if ((rc = (slvr_fsio(s, rw))))				\
+		if ((rc = (slvr_fsio(s, blk, nblks, rw))))		\
 			return (rc);					\
 		nblks = 0;						\
 	}								\
@@ -307,7 +310,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	psc_atomic16_inc(rw == SL_WRITE ? 
 			 &s->slvr_pndgwrts : &s->slvr_pndgreads);
 
- retry:
 	if (s->slvr_flags & SLVR_DATARDY)
 		/* Either read or write ops can just proceed if SLVR_DATARDY
 		 *  is set, the sliver is prepared.
@@ -359,7 +361,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		if (offset & SLASH_SLVR_BLKMASK)
 			++blks;
 		
-		for (i=0; i < blks; i++)
+		for (i=0; (ssize_t)i < blks; i++)
 			vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
 	/* Mark any blocks at the end.
@@ -377,7 +379,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	/* We must have found some work to do.
 	 */
 	psc_assert(vbitmap_nfree(s->slvr_slab->slb_inuse) < 
-		   SLASH_BLKS_PER_SLVR);
+		   (int)SLASH_BLKS_PER_SLVR);
 
  do_read:
 	SLVR_ULOCK(s);
@@ -539,7 +541,7 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
 void
 slvr_cache_init(void)
 {
-	int i;
+	//int i;
 
 	lc_reginit(&lruSlvrs,  struct slvr_ref, slvr_lentry, "lruSlvrs");
 	lc_reginit(&rpcqSlvrs,  struct slvr_ref, slvr_lentry, "rpcqSlvrs");

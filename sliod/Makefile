@@ -13,6 +13,7 @@ SRCS+=		rim.c
 SRCS+=		rpc.c
 SRCS+=		sliod_int.c
 SRCS+=		slvr.c
+SRCS+=		slvr_worker.c
 SRCS+=		timer.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
@@ -53,6 +54,7 @@ SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/timerthr.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
+SRCS+=		${PFL_BASE}/psc_util/crc.c
 
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
