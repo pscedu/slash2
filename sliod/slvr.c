@@ -122,7 +122,7 @@ slvr_release(struct slvr_ref *s)
         freelock(&biod->biod_lock);
 }
 
-void
+int
 slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
 {
 	s->slvr_num = num;
@@ -220,7 +220,7 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
  *   in slab bitmap, trying to coalesce where possible.
  * @s: the sliver.
  */
-int
+__static int
 slvr_fsbytes_io(struct slvr_ref *s, int rw)
 {
 	int nblks, blk, rc;
@@ -676,7 +676,7 @@ slvr_worker_int(void)
 				    (sizeof(struct srm_bmap_crcwire) * 
 				     MAX_BMAP_INODE_PAIRS));
 		bcrc_ref->bcr_slvr = s;		
-		bcrc_ref->bcr_id = binfSlvrs.binfst_counter;
+		bcrc_ref->bcr_id = infSlvrs.binfst_counter;
 		clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
 
 		bcrc_ref->bcr_crcup.fid = fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh);
@@ -694,7 +694,7 @@ slvr_worker_int(void)
 
 	SPLAY_FOREACH(bcrc_ref, crcup_reftree, &binfSlvrs.binfst_tree) {
 		if ((bcrc_ref->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) ||
-		    ts.tv_sec >= (bcrc_ref->bcr_age.tv_sec + 
+		    ts.tv_sec <= (bcrc_ref->bcr_age.tv_sec + 
 				  BIOD_CRCUP_MAX_AGE))
 			dynarray_add(a, bcrc_ref);
 
@@ -703,13 +703,15 @@ slvr_worker_int(void)
 	}
 	
 	for (i=0; i < dynarray_len(a); i++) {
-		bcrc_ref = dynarray_getpos(a, i);
+		bcrc_ref = dynarray_getpos(i);
 		SPLAY_REMOVE(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
 	}
 	/* Tree operations are finished now.
 	 */
 	freelock(&binfSlvrs.binfst_lock);
-	
+	/* Need to package an rpc here, if !dynarray_len(a) then free
+	 *  the dynarray.
+	 */
 }
 
 void

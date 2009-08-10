@@ -23,7 +23,6 @@
 #include "fid.h"
 #include "fidcache.h"
 #include "iod_bmap.h"
-#include "offtree.h"
 #include "slashrpc.h"
 #include "slashrpc.h"
 #include "slconfig.h"
@@ -46,14 +45,11 @@ iod_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t bmapno)
         atomic_set(&b->bcm_opcnt, 0);
         psc_waitq_init(&b->bcm_waitq);
         b->bcm_pri = PSCALLOC(sizeof(struct bmap_iod_info));
-        bmap_2_iooftr(b) = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
-					  SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,
-					  f, sl_buffer_alloc, sl_oftm_addref,
-					  sl_oftiov_pin_cb);
         psc_assert(bmap_2_iooftr(b));
 	
 	b->bcm_fcmh = f;
 	b->bcm_blkno = bmapno;
+
 	iod_biodi_init(b->bcm_pri, b);	
 }
 
@@ -63,7 +59,6 @@ iod_bmap_free(struct bmapc_memb *b)
 	struct bmap_iod_info *iobd;
 
 	iobd = b->bcm_pri;
-	offtree_destroy(bmap_2_iooftr(b));
 	PSCFREE(b->bcm_pri);
 	PSCFREE(b);
 }
@@ -136,46 +131,6 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 	psc_waitq_wakeall(&b->bcm_waitq);
 
 	return (rc);
-}
-
-void
-iod_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, 
-		  uint32_t sblk, uint32_t nblks, int op)
-{
-	psc_assert((sblk * nblks) <= SLASH_BMAP_SIZE);
-        psc_assert(op == OFTREQ_OP_WRITE || op == OFTREQ_OP_READ);
-
-	r->oftrq_op = op;
-	r->oftrq_bmap = b;
-	r->oftrq_nblks = nblks;
-	r->oftrq_op |= OFTREQ_OP_DIO;
-	r->oftrq_off = sblk * SLASH_BMAP_SIZE;
-	r->oftrq_len = nblks * SLASH_BMAP_SIZE;
-
-	r->oftrq_darray = PSCALLOC(sizeof(struct dynarray));
-        r->oftrq_root   = bmap_2_iooftr(b);
-        r->oftrq_memb   = &r->oftrq_root->oftr_memb;
-        r->oftrq_width  = r->oftrq_depth = 0;
-        DEBUG_OFFTREQ(PLL_TRACE, r, "newly built request");	
-}
-
-void
-iod_oftrq_destroy(struct offtree_req *r)
-{
-	struct bmapc_memb *b = r->oftrq_bmap;
-
-        psc_assert(b);
-        psc_assert(r->oftrq_darray);
-
-        PSCFREE(r->oftrq_darray);
-        atomic_dec(&b->bcm_opcnt);
-        psc_assert(atomic_read(&b->bcm_opcnt) >= 0);
-	/*
-        if (r->oftrq_fill.oftfill_reqset) {
-                pscrpc_set_destroy(r->oftrq_fill.oftfill_reqset);
-                r->oftrq_fill.oftfill_reqset = NULL;
-		}
-	*/
 }
 
 
