@@ -30,6 +30,18 @@ struct biod_crcup_ref {
 	struct srm_bmap_crcup       bcr_crcup;
 };
 
+static inline int
+bcr_cmp(const void *x, const void *y)
+{
+        const struct biod_crcup_ref *a = x, *b = y;
+
+        if (a->bcr_id > b->bcr_id)
+                return (1);
+        if (a->bcr_id < b->bcr_id)
+                return (-1);
+        return (0);
+}
+
 SPLAY_HEAD(crcup_reftree, biod_crcup_ref);
 SPLAY_PROTOTYPE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
 
@@ -54,18 +66,6 @@ struct bmap_iod_info {
 	struct timespec         biod_age;
 	uint32_t                biod_bcr_id;
 };
-
-static inline int
-bcr_cmp(const void *x, const void *y)
-{
-        const struct biod_crcup_ref *a = x, *b = y;
-
-        if (a->bcr_id > b->bcr_id)
-                return (1);
-        if (a->bcr_id < b->bcr_id)
-                return (-1);
-        return (0);
-}
 
 #define bmap_2_biodi(b)		((struct bmap_iod_info *)(b)->bcm_pri)
 #define bmap_2_biodi_age(b)	bmap_2_biodi(b)->biod_age
