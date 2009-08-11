@@ -36,6 +36,7 @@ SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/base64.c
+SRCS+=		${PFL_BASE}/psc_util/crc.c
 SRCS+=		${PFL_BASE}/psc_util/ctlsvr.c
 SRCS+=		${PFL_BASE}/psc_util/fault.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
@@ -54,7 +55,6 @@ SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/timerthr.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
-SRCS+=		${PFL_BASE}/psc_util/crc.c
 
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
