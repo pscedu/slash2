@@ -37,7 +37,7 @@ slvr_lru_requeue(struct slvr_ref *s)
  * @s: the sliver reference.
  * Notes:  Don't hold the lock while taking the crc.
  */
-__static int
+int
 slvr_do_crc(struct slvr_ref *s)
 {
 	psc_assert(!SLVR_LOCK_ENSURE(s));

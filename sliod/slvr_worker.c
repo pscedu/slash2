@@ -1,4 +1,4 @@
-/* $Ids */
+/* $Id$ */
 
 #include <time.h>
 
