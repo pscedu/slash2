@@ -11,6 +11,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/atomic.h"
 
+#include "sliod.h"
 #include "slvr.h"
 #include "iod_bmap.h"
 
@@ -126,15 +127,65 @@ slvr_worker_push_crcups(void)
 	slvr_worker_crcup_genrq(a);
 }
 
-void 
+
+int 
+slvr_nbreqset_cb(__unusedx struct pscrpc_request *req, 
+		 struct pscrpc_async_args *args)
+{
+	struct dynarray *a = args->pointer_arg[0];
+	struct slvr_ref *s;
+	int i;
+
+	ENTRY;
+
+	psc_assert(a);
+	
+	for (i=0; i < dynarray_len(a); i++) {
+		s = dynarray_getpos(a, i);
+		
+		SLVR_LOCK(s);
+
+		DEBUG_SLVR(PLL_INFO, s, "callback, rpc complete");
+		psc_assert(s->slvr_flags & SLVR_RPCPNDG);		
+		s->slvr_flags &= ~SLVR_RPCPNDG;
+
+		if (!psc_atomic16_read(&s->slvr_pndgwrts) && 
+		    s->slvr_flags & SLVR_CRCDIRTY) {
+			/* If the crc is dirty and there are no pending
+			 *   ops then the sliver was not moved to the 
+			 *   rpc queue because SLVR_RPCPNDG had been set.
+			 *   Therefore we should try to schedule the
+			 *   sliver, otherwise may sit in the LRU forever.
+			 */
+			SLVR_ULOCK(s);
+			slvr_try_rpcqueue(s);
+		} else
+			SLVR_ULOCK(s);
+	}
+	PSCFREE(a);
+
+	return (0);
+}
+
+
+__static void 
 slvr_worker_int(void)
 {
 	struct slvr_ref *s;
 	struct biod_crcup_ref tbcrc_ref, *bcrc_ref=NULL;
+	struct timespec ts;
 	int add=0;
-
+	
  start:	
-	s = lc_getwait(&rpcqSlvrs);
+	clock_gettime(CLOCK_REALTIME, &ts);
+	ts.tv_sec += BIOD_CRCUP_MAX_AGE;
+	if (!(s = lc_gettimed(&rpcqSlvrs, &ts))) {
+		/* Nothing available, try to push any existing 
+		 *  crc updates.
+		 */  
+		slvr_worker_push_crcups();
+		return;
+	}
 
 	SLVR_LOCK(s);
 
@@ -288,47 +339,19 @@ slvr_worker_int(void)
 	slvr_worker_push_crcups();
 }
 
-int 
-slvr_nbreqset_cb(__unusedx struct pscrpc_request *req, 
-		 struct pscrpc_async_args *args)
+void * 
+slvr_worker(__unusedx void *arg) 
 {
-	struct dynarray *a = args->pointer_arg[0];
-	struct slvr_ref *s;
-	int i;
-
-	ENTRY;
-
-	psc_assert(a);
-	
-	for (i=0; i < dynarray_len(a); i++) {
-		s = dynarray_getpos(a, i);
-		
-		SLVR_LOCK(s);
-
-		DEBUG_SLVR(PLL_INFO, s, "callback, rpc complete");
-		psc_assert(s->slvr_flags & SLVR_RPCPNDG);		
-		s->slvr_flags &= ~SLVR_RPCPNDG;
-
-		if (!psc_atomic16_read(&s->slvr_pndgwrts) && 
-		    s->slvr_flags & SLVR_CRCDIRTY) {
-			/* If the crc is dirty and there are no pending
-			 *   ops then the sliver was not moved to the 
-			 *   rpc queue because SLVR_RPCPNDG had been set.
-			 *   Therefore we should try to schedule the
-			 *   sliver, otherwise may sit in the LRU forever.
-			 */
-			SLVR_ULOCK(s);
-			slvr_try_rpcqueue(s);
-		} else
-			SLVR_ULOCK(s);
+	for (;;) {
+		slvr_worker_int();
+		sched_yield();
 	}
-	PSCFREE(a);
-
-	return (0);
 }
 
 void slvr_worker_init(void)
 {
+	int i;
+
 	binfSlvrs.binfst_counter = 1;
 	LOCK_INIT(&binfSlvrs.binfst_lock);
 
@@ -336,5 +359,7 @@ void slvr_worker_init(void)
 	if (!slvrNbReqSet)
 		psc_fatalx("nbreqset_init() failed");
 
-	// XXX Need a connect call to the mds.
+	for (i=0; i < NSLVRCRC_THRS; i++) 
+		pscthr_init(SLIOTHRT_SLVR_CRC, 0, slvr_worker, NULL, 0, 
+			    "slvr_wrk%d", i);
 }
