@@ -4,6 +4,7 @@
 
 #include "psc_types.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rsx.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/dynarray.h"
 #include "psc_util/assert.h"
@@ -19,6 +20,8 @@ struct biod_infslvr_tree binfSlvrs;
 extern struct psc_listcache lruSlvrs;
 extern struct psc_listcache rpcqSlvrs;
 
+extern struct slashrpc_cservice *rmi_csvc;
+
 __static SPLAY_GENERATE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
 
 __static int
@@ -26,15 +29,19 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
 {
 	struct biod_crcup_ref *bcrc_ref;
 	struct srm_bmap_crcwrt_req *mq;
+	struct srm_generic_rep *mp;
+	struct pscrpc_request *req;
+	struct pscrpc_bulk_desc *desc;
 	struct iovec *iovs;
 	size_t len;
-	int i, rc=0;
+	int rc=0;
+	uint32_t i;
 
-	//XXX Need an RSX_NEWREQ here
-	//#define RSX_NEWREQ(imp, version, op, rq, mq, mp) 
-
+	rc = RSX_NEWREQ(rmi_csvc->csvc_import, SRMI_VERSION, 
+			SRMT_BMAPCRCWRT, req, mq, mp);
 
 	mq->ncrc_updates = dynarray_len(a);
+	req->rq_async_args.pointer_arg[0] = (void *)a;
 
 	psc_assert((mq->ncrc_updates <= MAX_BMAP_NCRC_UPDATES) &&
 		   mq->ncrc_updates);
@@ -52,12 +59,13 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
 					  sizeof(struct srm_bmap_crcup));
 	}
 	psc_assert(len <= LNET_MTU);
+	rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL, 
+		       iovs, mq->ncrc_updates);
 
-	//        rc = rsx_bulkserver(rq, &desc, BULK_GET_SOURC, SRIM_BULK_PORTAL,
-	//                   iovs, mq->ncrc_updates);
-        //pscrpc_free_bulk(desc);
-        //if (rc)
-        //        goto out;
+	PSCFREE(iovs);
+
+	nbreqset_add(slvrNbReqSet, req);
+	(int)nbrequest_reap(slvrNbReqSet);
 
 	return (rc);
 }
@@ -281,11 +289,14 @@ slvr_worker_int(void)
 }
 
 int 
-slvr_nbreqset_cb(struct pscrpc_request *req, struct pscrpc_async_args *args)
+slvr_nbreqset_cb(__unusedx struct pscrpc_request *req, 
+		 struct pscrpc_async_args *args)
 {
 	struct dynarray *a = args->pointer_arg[0];
 	struct slvr_ref *s;
 	int i;
+
+	ENTRY;
 
 	psc_assert(a);
 	
@@ -298,19 +309,22 @@ slvr_nbreqset_cb(struct pscrpc_request *req, struct pscrpc_async_args *args)
 		psc_assert(s->slvr_flags & SLVR_RPCPNDG);		
 		s->slvr_flags &= ~SLVR_RPCPNDG;
 
-		SLVR_ULOCK(s);
-
 		if (!psc_atomic16_read(&s->slvr_pndgwrts) && 
-		    s->slvr_flags & SLVR_CRCDIRTY) 
+		    s->slvr_flags & SLVR_CRCDIRTY) {
 			/* If the crc is dirty and there are no pending
 			 *   ops then the sliver was not moved to the 
 			 *   rpc queue because SLVR_RPCPNDG had been set.
 			 *   Therefore we should try to schedule the
-			 *   sliver.
+			 *   sliver, otherwise may sit in the LRU forever.
 			 */
+			SLVR_ULOCK(s);
 			slvr_try_rpcqueue(s);
+		} else
+			SLVR_ULOCK(s);
 	}
 	PSCFREE(a);
+
+	return (0);
 }
 
 void slvr_worker_init(void)

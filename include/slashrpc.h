@@ -47,6 +47,7 @@
 /* Slash RPC channel to MDS from ION. */
 #define SRMI_REQ_PORTAL		20
 #define SRMI_REP_PORTAL		21
+#define SRMI_BULK_PORTAL        22
 
 #define SRMI_VERSION		1
 #define SRMI_MAGIC		0xaabbccddeeff0044ULL
