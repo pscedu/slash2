@@ -421,7 +421,7 @@ slvr_rio_done(struct slvr_ref *s)
 	SLVR_ULOCK(s);
 }
 
-__static void
+void
 slvr_try_rpcqueue(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);

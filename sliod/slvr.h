@@ -118,6 +118,7 @@ void	slvr_rio_done(struct slvr_ref *);
 void	slvr_slab_prep(struct slvr_ref *);
 void	slvr_update(struct slvr_ref *);
 void	slvr_wio_done(struct slvr_ref *);
+void   slvr_try_rpcqueue(struct slvr_ref *);
 
 #define slvr_io_done(s, rw) \
 	((rw) == SL_WRITE ? slvr_wio_done(s) : slvr_rio_done(s))

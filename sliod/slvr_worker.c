@@ -36,15 +36,15 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
 
 	mq->ncrc_updates = dynarray_len(a);
 
-	psc_assert((bcrcup_req->ncrc_updates <= MAX_BMAP_NCRC_UPDATES) &&
-		   bcrcup_req->ncrc_updates);
+	psc_assert((mq->ncrc_updates <= MAX_BMAP_NCRC_UPDATES) &&
+		   mq->ncrc_updates);
 
 	len = (mq->ncrc_updates * sizeof(struct srm_bmap_crcup));
         iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 	
 	for (i=0; i < mq->ncrc_updates; i++) {
 		bcrc_ref = dynarray_getpos(a, i);
-		mq->ncrcs_per_update[i] = bcrc_ref->nups;
+		mq->ncrcs_per_update[i] = bcrc_ref->bcr_crcup.nups;
 
                 iovs[i].iov_base = &bcrc_ref->bcr_crcup;
                 len += iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
@@ -53,11 +53,11 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
 	}
 	psc_assert(len <= LNET_MTU);
 
-        rc = rsx_bulkserver(rq, &desc, BULK_GET_SOURC, SRIM_BULK_PORTAL,
-                            iovs, mq->ncrc_updates);
-        pscrpc_free_bulk(desc);
-        if (rc)
-                goto out;
+	//        rc = rsx_bulkserver(rq, &desc, BULK_GET_SOURC, SRIM_BULK_PORTAL,
+	//                   iovs, mq->ncrc_updates);
+        //pscrpc_free_bulk(desc);
+        //if (rc)
+        //        goto out;
 
 	return (rc);
 }
@@ -67,6 +67,7 @@ slvr_worker_push_crcups(void)
 {
         struct biod_crcup_ref *bcrc_ref=NULL;
 	struct dynarray *a;
+	int i;
 
 	if (!trylock(&binfSlvrs.binfst_lock))
 		return;
@@ -114,10 +115,6 @@ slvr_worker_push_crcups(void)
 	/* Drop the lock
 	 */
 	freelock(&binfSlvrs.binfst_lock);
-	/* Need to package an rpc here, if !dynarray_len(a) then free
-	 *  the dynarray.
-	 */
-
 	slvr_worker_crcup_genrq(a);
 }
 
@@ -126,10 +123,7 @@ slvr_worker_int(void)
 {
 	struct slvr_ref *s;
 	struct biod_crcup_ref tbcrc_ref, *bcrc_ref=NULL;
-	struct dynarray *a=NULL;
-	struct timespec ts;
-
-	int add=0, i;
+	int add=0;
 
  start:	
 	s = lc_getwait(&rpcqSlvrs);
