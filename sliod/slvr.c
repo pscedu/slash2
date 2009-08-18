@@ -19,8 +19,6 @@ struct psc_listcache lruSlvrs;   /* Clean slivers which may be reaped */
 struct psc_listcache rpcqSlvrs;  /* Slivers ready to be crc'd and have their
 				    crc's shipped to the mds. */
 
-extern struct biod_infslvr_tree binfSlvrs;
-
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 
 __static void
