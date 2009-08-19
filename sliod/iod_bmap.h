@@ -112,9 +112,12 @@ enum iod_bmap_modes {
 
 #define SLVR_WAIT(s)						\
 	do {							\
+	slvr_wait_retry:					\
 		psc_waitq_wait(&(slvr_2_bmap(s))->bcm_waitq,	\
 			       &(slvr_2_biod(s))->biod_lock);	\
 		SLVR_LOCK(s);					\
+		if (s->slvr_flags & SLVR_DATARDY)		\
+			goto slvr_wait_retry;			\
 	} while (0)
 
 static inline void
