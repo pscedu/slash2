@@ -208,6 +208,8 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 {
 	int rc=0;
 	struct bmapc_memb *b;
+
+	psc_assert(bmap);
 	
 	b = bmap_lookup_add(f, sbdb->sbdb_secret.sbs_bmapno, iod_bmap_init);
 
@@ -252,6 +254,8 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 
 	else
 		psc_fatalx("invalid rw mode (%d)", rw);
+
+	*bmap = b;
 
 	return (rc);
 }

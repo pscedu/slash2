@@ -62,11 +62,9 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	struct slvr_ref *slvr_ref[2];
 	
 	sl_blkno_t bmapno, slvrno;
-	ssize_t nbytes;
 	uint64_t cfd;
 	uint32_t tsize, roff;
-	void *buf;
-	int rc, fd, nslvrs=1, i;
+	int rc, nslvrs=1, i;
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 

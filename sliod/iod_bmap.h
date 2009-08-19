@@ -105,6 +105,7 @@ enum iod_bmap_modes {
 #define SLVR_RLOCK(s)		reqlock(SLVR_GETLOCK(s))
 #define SLVR_URLOCK(s, lk)	ureqlock(SLVR_GETLOCK(s), (lk))
 #define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(SLVR_GETLOCK(s))
+#define SLVR_TRYLOCK(s)         trylock(SLVR_GETLOCK(s))
 
 #define SLVR_WAKEUP(s)					\
 	psc_waitq_wakeall(&(slvr_2_bmap(s))->bcm_waitq)
@@ -143,5 +144,49 @@ slvr_lru_unpin(struct slvr_ref *s)
 	s->slvr_flags &= ~SLVR_PINNED;
 }
 
+static inline int
+slvr_lru_slab_freeable(struct slvr_ref *s)
+{
+	int freeable = 1;
+	SLVR_LOCK_ENSURE(s);
+
+	psc_assert(s->slvr_flags & SLVR_LRU);
+
+	if (s->slvr_flags & SLVR_PINNED) {
+		psc_assert(psc_atomic16_read(&s->slvr_pndgwrts) ||
+			   psc_atomic16_read(&s->slvr_pndgreads));
+		freeable = 0;
+	} 
+
+	if (s->slvr_flags & SLVR_DATARDY)
+		psc_assert(!(s->slvr_flags &
+			     (SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|SLVR_INFLIGHT|
+			      SLVR_GETSLAB)));
+	else
+		freeable = 0;
+	
+	return (freeable);
+}
+
+static inline int
+slvr_lru_freeable(struct slvr_ref *s)
+{
+	int locked, freeable=0;
+
+	locked = SLVR_RLOCK(s);
+	if (!slvr_lru_slab_freeable(s))
+		goto out;
+	      
+	if (s->slvr_slab)
+		goto out;
+
+	if (s->slvr_flags & SLVR_CRCDIRTY)
+		goto out;
+
+	freeable = 1;
+ out:
+	SLVR_URLOCK(s, locked);
+	return (freeable);
+}
 
 #endif /* _SLASH_IOD_BMAP_H_ */

@@ -15,6 +15,9 @@
 #include "iod_bmap.h"
 #include "buffer.h"
 
+extern struct psc_poolmaster    slBufsPoolMaster;
+extern struct psc_poolmgr      *slBufsPool;
+
 struct psc_listcache lruSlvrs;   /* Clean slivers which may be reaped */
 struct psc_listcache rpcqSlvrs;  /* Slivers ready to be crc'd and have their
 				    crc's shipped to the mds. */
@@ -112,8 +115,7 @@ slvr_release(struct slvr_ref *s)
                 return;
         }
 
-        if (SPLAY_REMOVE(biod_slvrtree, &biod->biod_slvrs, s))
-                PSCFREE(s);
+
         else
                 psc_assert("Could not locate sliver for removal");
 
@@ -521,11 +523,18 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
 
         psc_assert(b->biod_bmap);
         ts.slvr_num = num;
-
+ retry:
         spinlock(&b->biod_lock);
 
         s = SPLAY_FIND(biod_slvrtree, &b->biod_slvrs, &ts);
-        if (!s && add) {
+	/* Note, slvr lock and biod lock are the same.
+	 */	
+	if (s && (s->slvr_flags & SLVR_FREEING)) {
+		freelock(&b->biod_lock);
+		sched_yield();
+		goto retry;
+
+        } else if (!s && add) {
 		s = PSCALLOC(sizeof(*s));
                 slvr_init(s, num, b);
                 SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, s);
@@ -535,14 +544,105 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
         return (s);
 }
 
+__static void
+slvr_remove(struct slvr_ref *s)
+{
+	SLVR_LOCK(s);
+	DEBUG_SLVR(PLL_WARN, s, "freeing slvr");
+
+	psc_assert(s->slvr_flags & SLVR_FREEING);
+	psc_assert(slvr_lru_freeable(s));
+	SLVR_ULOCK(s);
+
+	lc_del(&s->slvr_lentry, &lruSlvrs);
+
+	psc_assert(s == slvr_lookup(s->slvr_num, slvr_2_biod(s), 0));
+	
+	spinlock(&(slvr_2_biod(s))->biod_lock);
+        psc_assert(SPLAY_REMOVE(biod_slvrtree, 
+			&(slvr_2_biod(s))->biod_slvrs, s));
+	freelock(&(slvr_2_biod(s))->biod_lock);
+
+	PSCFREE(s);
+}
+
+int
+slvr_buffer_reap(struct psc_poolmgr *m)
+{
+	struct slvr_ref *s, *tmp;
+	static pthread_mutex_t mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+	struct dynarray a = DYNARRAY_INIT;
+	int i, n;
+
+	psc_assert(m == slBufsPool);
+	
+	ENTRY;
+
+	pthread_mutex_lock(&mutex);
+	
+	LIST_CACHE_LOCK(&lruSlvrs);
+	psclist_for_each_entry_safe(s, tmp, &lruSlvrs.lc_listhd, slvr_lentry) {
+		SLVR_LOCK(s);
+		DEBUG_SLVR(PLL_INFO, s, "considering for reap");
+
+		/* Look for slvrs which can be freed, slvr_lru_freeable() 
+		 *   returning true means that no slab is attached.
+		 */
+		if (slvr_lru_freeable(s)) {
+			dynarray_add(&a, s);
+			s->slvr_flags |= SLVR_FREEING;
+			lc_del(&s->slvr_lentry, &lruSlvrs);
+			continue;
+		}			
+
+		if (slvr_lru_slab_freeable(s)) {
+			/* At this point we know that the slb can be 
+			 *   reclaimed, however the slvr itself may 
+			 *   have to stay.
+			 */
+			dynarray_add(&a, s);
+			s->slvr_flags |= SLVR_SLBFREEING;
+			n++;
+		}
+		SLVR_ULOCK(s);
+
+		if (n >= atomic_read(&m->ppm_nwaiters))
+			break;
+	}
+	LIST_CACHE_ULOCK(&lruSlvrs);
+
+	pthread_mutex_unlock(&mutex);
+
+	for (i=0; i < dynarray_len(&a); i++) {
+                s = dynarray_getpos(&a, i);
+                DEBUG_SLVR(PLL_WARN, s, "freeing slvr slb");
+		psc_assert(s->slvr_flags & SLVR_SLBFREEING || 
+			   s->slvr_flags & SLVR_FREEING);
+
+		if (s->slvr_flags & SLVR_SLBFREEING) {
+			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slb");
+			psc_pool_return(m, (void *)s->slvr_slab);
+
+		} else if (s->slvr_flags & SLVR_FREEING)
+			slvr_remove(s);
+        }
+
+	return (n);
+}
 
 void
 slvr_cache_init(void)
 {
-	//int i;
-
 	lc_reginit(&lruSlvrs,  struct slvr_ref, slvr_lentry, "lruSlvrs");
 	lc_reginit(&rpcqSlvrs,  struct slvr_ref, slvr_lentry, "rpcqSlvrs");
+
+	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer, 
+		    slb_mgmt_lentry, PPMF_AUTO, 256, 0, 1024, 
+		    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, 
+		    "svlr_slab", NULL);
+        slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
+
+	slvr_worker_init();
 }
 
 /*
