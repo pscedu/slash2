@@ -15,9 +15,6 @@
 #include "iod_bmap.h"
 #include "buffer.h"
 
-extern struct psc_poolmaster    slBufsPoolMaster;
-extern struct psc_poolmgr      *slBufsPool;
-
 struct psc_listcache lruSlvrs;   /* Clean slivers which may be reaped */
 struct psc_listcache rpcqSlvrs;  /* Slivers ready to be crc'd and have their
 				    crc's shipped to the mds. */
@@ -645,17 +642,3 @@ slvr_cache_init(void)
 
 	slvr_worker_init();
 }
-
-/*
- TODO:
-    . figure out how to reclaim.  probably be something along the lines
-    of traversing the lru looking for slvrs which are !crcdirty and have 
-    no pending operations (!PINNED).
-    
-    . at what point should a bmap_wire structure be present?  perhaps at 
-    all points, read or write, we should pull the bmap_wire from the mds.
-    seems like a waste if we're just in write mode..  
-       - Just in write mode.  I added some logic to copy over valid crc's 
-       from the biodi tree to the bmap wire.
-    
- */

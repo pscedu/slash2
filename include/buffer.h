@@ -5,12 +5,15 @@
 
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/pool.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
-#include "psc_ds/pool.h"
 
 #include "offtree.h"
+
+extern struct psc_poolmaster    slBufsPoolMaster;
+extern struct psc_poolmgr      *slBufsPool;
 
 struct dynarray;
 struct vbitmap;
