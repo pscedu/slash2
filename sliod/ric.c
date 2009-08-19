@@ -141,6 +141,8 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		tsize -= iovs[i].iov_len = MIN(tsize, SLASH_SLVR_SIZE - roff);
 	}
 
+	psc_assert(!tsize);
+
 	mp->rc = rsx_bulkserver(rq, &desc, 
 			(rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE), 
 			SRIC_BULK_PORTAL, iovs, nslvrs);
