@@ -159,7 +159,8 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 			 */
 			SLVR_ULOCK(s);
 			slvr_try_rpcqueue(s);
-		}
+		} else
+			SLVR_ULOCK(s);
 	}
 	PSCFREE(a);
 

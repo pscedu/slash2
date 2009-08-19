@@ -615,7 +615,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 	for (i=0; i < dynarray_len(&a); i++) {
                 s = dynarray_getpos(&a, i);
-                DEBUG_SLVR(PLL_WARN, s, "freeing slvr slb");
+
 		psc_assert(s->slvr_flags & SLVR_SLBFREEING || 
 			   s->slvr_flags & SLVR_FREEING);
 
@@ -625,6 +625,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 		} else if (s->slvr_flags & SLVR_FREEING)
 			slvr_remove(s);
+		
         }
 
 	return (n);
