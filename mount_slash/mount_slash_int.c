@@ -137,6 +137,7 @@ void
 msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t blkno)
 {
 	struct msbmap_data *msbd;
+	u32 tmode = b->bcm_mode;
 
 	memset(b, 0, sizeof(*b));
 	LOCK_INIT(&b->bcm_lock);
@@ -149,7 +150,8 @@ msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t blkno)
 				  sl_oftiov_pin_cb);
 	psc_assert(bmap_2_msoftr(b));
 	b->bcm_blkno = blkno;
-	b->bcm_fcmh = f;
+	b->bcm_fcmh = f;	
+	b->bcm_mode = tmode;
 }
 
 /**
