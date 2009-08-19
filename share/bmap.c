@@ -71,8 +71,9 @@ bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n, void (*bmap_init_fn)(struct 
 		/* Call the provided init function.
 		 */
                 (bmap_init_fn)(b, f, n);
-		/* Add to the fcmh's bmap cache.
+		/* Add to the fcmh's bmap cache but first up the opcnt.
 		 */
+		atomic_inc(&b->bcm_opcnt);
 		SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);
         }
         ureqlock(&f->fcmh_lock, locked);

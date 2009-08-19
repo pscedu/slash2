@@ -142,6 +142,12 @@ typedef struct slash_block_gen {
 	unsigned int bl_gen; /* generation number     */
 } sl_blkgen_t;
 
+
+struct slash_bmap_cli_wire {
+	u8 bh_crcstates[SL_CRCS_PER_BMAP];
+	u8 bh_repls[SL_REPLICA_NBYTES];
+};
+
 /** 
  * slash_bmap_od - slash bmap on-disk structure.  This structure maps the
  *    persistent state of the bmap within the inode's metafile.  

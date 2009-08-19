@@ -174,9 +174,13 @@ slrmc_getbmap(struct pscrpc_request *rq)
 		bmap = NULL;
 		mp->rc = mds_bmap_load(m, mq, &bmap);
 		if (mp->rc == 0) {
+			struct slash_bmap_cli_wire *cw; 
+
 			bmdsi = bmap->bcm_pri;
-			iov[0].iov_base = bmdsi->bmdsi_od;
-			iov[0].iov_len = sizeof(*bmdsi->bmdsi_od);
+			cw = (struct slash_bmap_cli_wire *)bmdsi->bmdsi_od->bh_crcstates;
+
+			iov[0].iov_base = cw;
+			iov[0].iov_len = sizeof(*cw);
 			iov[1].iov_base = &bdb;
 			iov[1].iov_len = sizeof(bdb);
 

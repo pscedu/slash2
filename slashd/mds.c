@@ -959,6 +959,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		b->bcm_fcmh = f;
 		/* It's ready to go, place it in the tree.
 		 */
+		BMAP_LOCK(b);
 		SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);
 		/* Finally, the fcmh may be unlocked.  Other threads
 		 *   wishing to access the bmap will block on bcm_waitq
