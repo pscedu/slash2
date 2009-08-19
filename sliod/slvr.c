@@ -510,6 +510,9 @@ slvr_wio_done(struct slvr_ref *s)
 	} 
 		
 	if (psc_atomic16_dec_test_zero(&s->slvr_pndgwrts))
+		/* No more pending writes, try to schedule the buffer
+		 *   to be crc'd.
+		 */
 		slvr_try_rpcqueue(s);
 }
 
