@@ -12,9 +12,6 @@
 
 #include "offtree.h"
 
-extern struct psc_poolmaster    slBufsPoolMaster;
-extern struct psc_poolmgr      *slBufsPool;
-
 struct dynarray;
 struct vbitmap;
 
@@ -193,7 +190,7 @@ enum slb_ref_flags {
 #define SL_INFLIGHT_INC 0
 #define SL_INFLIGHT_DEC 1
 
-int  sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri);
+int  sl_buffer_init(struct psc_poolmgr *m, void *pri);
 void sl_buffer_destroy(void *);
 int  sl_buffer_alloc(size_t, off_t, struct dynarray *, void *);
 void sl_buffer_cache_init(void);
@@ -205,6 +202,7 @@ void sl_oftm_addref(struct offtree_memb *);
 typedef void (*sl_oftiov_inflight_callback)(struct offtree_iov *, int);
 extern sl_oftiov_inflight_callback slInflightCb;
 
+extern struct psc_poolmaster	 slBufsPoolMaster;
 extern struct psc_poolmgr	*slBufsPool;
 extern struct psc_listcache	 slBufsFree;
 extern struct psc_listcache	 slBufsLru;
