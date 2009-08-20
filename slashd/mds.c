@@ -351,8 +351,12 @@ mds_bmap_directio(struct mexpbcm *bref, int enable_dio, int check)
 	struct bmap_mds_info *mdsi=bmap->bcm_pri;
 	int mode=bref->mexpbcm_mode, locked;
 
-	psc_assert(mdsi && mdsi->bmdsi_wr_ion);
+	psc_assert(mdsi);
+	
 	BMAP_LOCK_ENSURE(bmap);
+
+	if (atomic_read(&mdsi->bmdsi_wr_ref))
+		psc_assert(mdsi->bmdsi_wr_ion);
 
 	DEBUG_BMAP(PLL_TRACE, bmap, "enable=%d check=%d",
 		   enable_dio, check);
@@ -461,12 +465,20 @@ mds_mion_init(struct mexp_ion *mion, sl_resm_t *resm)
 	mion->mi_csvc = rpc_csvc_create(SRIM_REQ_PORTAL, SRIM_REP_PORTAL);
 }
 
+/** 
+ * mds_bmap_ion_assign - bind a bmap to a ion node for writing.  The process 
+ *    involves a round-robin'ing of an i/o system's nodes and attaching a 
+ *    a mexp_ion to the bmap.  The mexp_ion is stored in the i/o node's 
+ *    resouce_member struct (resm_pri).  It is here that an initial connection
+ *    to the i/o node is created.
+ * @bref: the bmap reference
+ * @pios: the preferred i/o system
+ */
 __static int
 mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *mdsi=bmap->bcm_pri;
-	//struct fidc_membh *f=bmap->bcm_fcmh;
 	struct mexp_ion *mion;
 	struct bmi_assign bmi;
 	sl_resource_t *res=libsl_id2res(pios);
@@ -522,9 +534,6 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 			continue;
 
 		if (!mion->mi_csvc->csvc_initialized) {
-			//struct pscrpc_connection *c=
-			//      mion->mi_csvc->csvc_import->imp_connection;
-
 			rc = rpc_issue_connect(res->res_nids[n],
 			    mion->mi_csvc->csvc_import,
 			    SRIM_MAGIC, SRIM_VERSION);
@@ -534,12 +543,16 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 			} else
 				mion->mi_csvc->csvc_initialized = 1;
 		}
+		atomic_inc(&mion->mi_refcnt);
 		mdsi->bmdsi_wr_ion = mion;
 	} while (--x);
 
 	if (!mdsi->bmdsi_wr_ion)
 		return (-1);
 
+	/* A mion has been assigned to the bmap, mark it in the odtable
+	 *   so that the assignment may be restored on reboot.
+	 */
 	bmi.bmi_ion_nid = mion->mi_resm->resm_nid;
 	bmi.bmi_ios = mion->mi_resm->resm_res->res_id;
 	bmi.bmi_fid = fcmh_2_fid(bmap->bcm_fcmh);
@@ -550,8 +563,9 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 	if (!mdsi->bmdsi_assign)
 		return (-1);
 
-	DEBUG_BMAP(PLL_INFO, bref->mexpbcm_bmap, "using res(%s) ion(%s)",
-		   res->res_name, libcfs_nid2str(res->res_nids[n]));
+	DEBUG_BMAP(PLL_INFO, bref->mexpbcm_bmap, "using res(%s) ion(%s) "
+		   "mion(%p)", res->res_name, 
+		   libcfs_nid2str(res->res_nids[n]), mdsi->bmdsi_wr_ion);
 	return (0);
 }
 
@@ -620,7 +634,8 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 	if (SPLAY_INSERT(bmap_exports, &bmdsi->bmdsi_exports, bref))
 		psc_fatalx("found duplicate bref on bmap_exports");
 
-	DEBUG_BMAP(PLL_TRACE, bmap, "done with ref_add");
+	DEBUG_BMAP(PLL_TRACE, bmap, "done with ref_add (mion=%p)", 
+		   bmdsi->bmdsi_wr_ion);
 	BMAP_URLOCK(bmap, locked);
 }
 
@@ -642,12 +657,18 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 
 	if (bref->mexpbcm_mode & MEXPBCM_WR) {
 		psc_assert(atomic_read(&mdsi->bmdsi_wr_ref));
+		atomic_dec(&bmap->bcm_wr_ref);
 		if (atomic_dec_and_test(&mdsi->bmdsi_wr_ref)) {
 			psc_assert(bmap->bcm_mode & BMAP_WR);
 			bmap->bcm_mode &= ~BMAP_WR;
+			if (atomic_dec_and_test(&mdsi->bmdsi_wr_ion->mi_refcnt)) {
+				//XXX cleanup mion here?
+			}
+			mdsi->bmdsi_wr_ion = NULL;
 		}
 
 	} else if (bref->mexpbcm_mode & MEXPBCM_RD) {
+		atomic_dec(&bmap->bcm_rd_ref);
 		psc_assert(atomic_read(&mdsi->bmdsi_rd_ref));
 		if (atomic_dec_and_test(&mdsi->bmdsi_rd_ref)) {
 			bmap->bcm_mode &= ~BMAP_RD;
@@ -662,7 +683,7 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 	if (!SPLAY_REMOVE(bmap_exports, &mdsi->bmdsi_exports, bref))
 		psc_fatalx("found duplicate bref on bmap_exports");
 
-	DEBUG_BMAP(PLL_TRACE, bmap, "done with ref_del");
+	DEBUG_BMAP(PLL_INFO, bmap, "done with ref_del");
 	BMAP_ULOCK(bmap);
 }
 
