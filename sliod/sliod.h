@@ -48,7 +48,7 @@ void	sliotimerthr_spawn(void);
 __dead void slioctlthr_main(const char *);
 
 struct fidc_membh *
-	iod_inode_lookup(slfid_t);
+	iod_inode_lookup(struct slash_fidgen *);
 int	iod_inode_open(struct fidc_membh *, int);
 
 int	iod_bmap_load(struct fidc_membh *, struct srt_bmapdesc_buf *,

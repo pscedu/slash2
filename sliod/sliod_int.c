@@ -132,19 +132,21 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 }
 
 
-struct fidc_membh * 
-iod_inode_lookup(slfid_t fid)
+struct fidc_membh *
+iod_inode_lookup(struct slash_fidgen *fg)
 {
 	int rc;
 	struct fidc_membh *f;
 	/* Note that these creds are bogus, just used to satisfy the current
 	 *  fidc_lookup_load_inode() code.
 	 */
+	struct fidc_memb m;
 	struct slash_creds creds = {0,0};
 
-	rc = fidc_lookup_load_inode(fid, &creds, &f);	
+	COPYFID(fcm_2_fgp(&m), fg);
+	rc = fidc_lookup_copy_inode(fg, &m, &creds, &f);	
 	psc_assert(f);
-	
+
 	return (f);
 }
 
@@ -163,10 +165,10 @@ iod_inode_open(struct fidc_membh *f, int rw)
         } else
                 fidc_fcoo_start_locked(f);
 
-	if (rw == SL_FREAD)
+	if (rw == SL_READ)
 		f->fcmh_fcoo->fcoo_oref_rw[0]++;
 
-	else if (rw == SL_FWRITE)
+	else if (rw == SL_WRITE)
 		f->fcmh_fcoo->fcoo_oref_rw[1]++;
 	else
 		psc_fatalx("rw mode=%d is invalid", rw);
@@ -174,15 +176,18 @@ iod_inode_open(struct fidc_membh *f, int rw)
 	freelock(&f->fcmh_lock);
 
 	if (f->fcmh_state & FCMH_FCOO_STARTING) {
-		if (rw == SL_FWRITE)
+		if (rw == SL_WRITE)
 			oflags |= O_CREAT;
 
 		rc = f->fcmh_fcoo->fcoo_fd = 
 			fid_fileops(fcmh_2_fid(f), oflags);
-                if (!rc)
-                        fidc_fcoo_startdone(f);
-                else
+                if (rc < 0) {
                         fidc_fcoo_startfailed(f);
+			rc = -errno;
+                } else {
+                        fidc_fcoo_startdone(f);
+			rc = 0;
+		}
         }
  out:
 	if (rc)
@@ -249,7 +254,7 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 				freelock(&b->bcm_lock);
 		}
 
-	} else if (rw == SL_WRITE) 
+	} else if (rw == SL_WRITE)
 		freelock(&b->bcm_lock);
 
 	else

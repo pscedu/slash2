@@ -74,7 +74,7 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		psc_errorx("invalid size %u, fid:"FIDFMT,
 			   mq->size,  FIDFMTARGS(&fg));
 		mp->rc = -EINVAL;
-		return (0);
+		return (-1);
 	}
 
 	mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg,
@@ -82,7 +82,7 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	    nodeInfo.node_res->res_id);
 	if (mp->rc) {
 		psc_errorx("fdbuf_check failed");
-		return (0);
+		return (-1);
 	}
 	/* Ensure that this request fits into the bmap's address range.
 	 */	
@@ -91,28 +91,28 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 			   "address range off=%u len=%u", 
 			   mq->offset, mq->size);
 		mp->rc = -ERANGE;
-		return (0);
+		return (-1);
 	}
 	/* Lookup inode and fetch bmap, don't forget to decref bmap
 	 *  on failure.
 	 */
-	fcmh = iod_inode_lookup(fg.fg_fid);
+	fcmh = iod_inode_lookup(&fg);
 	psc_assert(fcmh);
-	/* ATM, not much to do here for write operations.
-	 */
-	if (iod_bmap_load(fcmh, &mq->sbdb, rw, &bmap)) {
-		fidc_membh_dropref(fcmh);
-		psc_errorx("failed to load bmap %u", bmapno);
-		return (0);
-	}	
 	/* Ensure the fid in the local filesystem is created and open,
 	 *  otherwise fail.
 	 */
 	if (iod_inode_open(fcmh, rw)) {
 		fidc_membh_dropref(fcmh);
 		DEBUG_FCMH(PLL_ERROR, fcmh, "error fidopen bmap=%u", bmapno);
-		return (0);
+		return (-1);
 	}
+	/* ATM, not much to do here for write operations.
+	 */
+	if (iod_bmap_load(fcmh, &mq->sbdb, rw, &bmap)) {
+		fidc_membh_dropref(fcmh);
+		psc_errorx("failed to load bmap %u", bmapno);
+		return (-1);
+	}	
 	
 	slvrno = mq->offset / SLASH_SLVR_SIZE;
 	/* We should never have a request size > 1MB, therefore it would 
@@ -148,7 +148,7 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 			SRIC_BULK_PORTAL, iovs, nslvrs);
 		  
 	if (mp->rc)
-		return (0);
+		return (-1);
 
 	if (desc)
 		pscrpc_free_bulk(desc);
