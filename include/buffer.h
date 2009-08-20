@@ -190,7 +190,7 @@ enum slb_ref_flags {
 #define SL_INFLIGHT_INC 0
 #define SL_INFLIGHT_DEC 1
 
-int  sl_buffer_init(struct psc_poolmgr *m, void *pri);
+int  sl_buffer_init(struct psc_poolmgr *, void *);
 void sl_buffer_destroy(void *);
 int  sl_buffer_alloc(size_t, off_t, struct dynarray *, void *);
 void sl_buffer_cache_init(void);

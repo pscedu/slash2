@@ -47,7 +47,7 @@
 /* Slash RPC channel to MDS from ION. */
 #define SRMI_REQ_PORTAL		20
 #define SRMI_REP_PORTAL		21
-#define SRMI_BULK_PORTAL        22
+#define SRMI_BULK_PORTAL	22
 
 #define SRMI_VERSION		1
 #define SRMI_MAGIC		0xaabbccddeeff0044ULL
@@ -119,7 +119,7 @@ enum {
 	SRMT_FGETATTR,
 	SRMT_FTRUNCATE,
 	SRMT_GETATTR,
-	SRMT_GETBMAP,	
+	SRMT_GETBMAP,
 	SRMT_GETBMAPCRCS,
 	SRMT_LINK,
 	SRMT_LOCK,
@@ -221,14 +221,14 @@ struct srm_bmap_wire_req {
 
 struct srm_bmap_wire_rep {
 	int32_t                 rc;
-	/*                                                                    
-	 * Bulk data contains a number of the following structures: 
-	 *                                                             
-	 *      +-------------------------+---------------+  
-	 *      | data type               | description   |  
-	 *      +-------------------------+---------------+   
+	/*
+	 * Bulk data contains a number of the following structures:
+	 *
+	 *      +-------------------------+---------------+
+	 *      | data type               | description   |
+	 *      +-------------------------+---------------+
 	 *      | struct slash_bmap_od    | bmap contents |
-	 *      +-------------------------+---------------+  
+	 *      +-------------------------+---------------+
 	 */
 };
 
