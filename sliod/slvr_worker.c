@@ -114,6 +114,7 @@ slvr_worker_push_crcups(void)
 	psc_assert(dynarray_len(a) <= MAX_BMAP_NCRC_UPDATES);
 	if (!dynarray_len(a)) {
 		PSCFREE(a);
+		freelock(&binfSlvrs.binfst_lock);
 		return;
 	}
 
@@ -336,6 +337,7 @@ slvr_worker_int(void)
 		SPLAY_INSERT(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
 	}
 
+	freelock(&binfSlvrs.binfst_lock);
 	slvr_worker_push_crcups();
 }
 

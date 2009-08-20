@@ -38,7 +38,6 @@ slvr_lru_requeue(struct slvr_ref *s)
 int
 slvr_do_crc(struct slvr_ref *s)
 {
-	psc_assert(!SLVR_LOCK_ENSURE(s));
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	/* SLVR_FAULTING implies that we're bringing this data buffer
 	 *   in from the filesystem.  
@@ -49,8 +48,15 @@ slvr_do_crc(struct slvr_ref *s)
 		   s->slvr_flags & SLVR_CRCDIRTY);
 	
 	if (s->slvr_flags & SLVR_FAULTING) {
-		psc_assert(!s->slvr_flags & SLVR_DATARDY);
-		psc_assert(psc_atomic16_read(&s->slvr_pndgreads));
+		if (!psc_atomic16_read(&s->slvr_pndgreads)) {
+			/* Small RMW workaround 
+			 */ 
+			psc_assert(psc_atomic16_read(&s->slvr_pndgwrts));
+			return(1);
+		}
+
+		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
+
 		/* This thread holds faulting status so all others are
 		 *  waiting on us which means that exclusive access to 
 		 *  slvr contents is ours until we set SLVR_DATARDY.
@@ -143,6 +149,7 @@ slvr_getslab(struct slvr_ref *s)
 	sl_buffer_fresh_assertions(s->slvr_slab);
 
 	s->slvr_flags &= ~SLVR_GETSLAB;
+	s->slvr_flags |= SLVR_LRU;
 	/* Until the slab is added to the sliver, the sliver is private
 	 *  to the bmap's biod_slvrtree.  
 	 */
@@ -516,7 +523,7 @@ slvr_wio_done(struct slvr_ref *s)
 		slvr_try_rpcqueue(s);
 }
 
-struct slvr_ref *
+struct slvr_ref * 
 slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
 {
         struct slvr_ref *s, ts;

@@ -82,7 +82,7 @@ enum iod_bmap_modes {
 #define slvr_2_biod(s)		((struct bmap_iod_info *)(s)->slvr_pri)
 #define slvr_2_bmap(s)		slvr_2_biod(s)->biod_bmap
 #define slvr_2_fcmh(s)		slvr_2_biod(s)->biod_bmap->bcm_fcmh
-#define slvr_2_fd(s)		fcmh_2_fiodi(slvr_2_fcmh(s))->fiodi_fd
+#define slvr_2_fd(s)		slvr_2_fcmh(s)->fcmh_fcoo->fcoo_fd
 #define slvr_2_biodi_wire(s)	slvr_2_biod(s)->biod_bmap_wire
 
 #define slvr_2_buf(s, blk)						\

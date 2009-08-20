@@ -20,6 +20,7 @@
 #include "rpc.h"
 #include "slconfig.h"
 #include "sliod.h"
+#include "slvr.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -93,6 +94,7 @@ main(int argc, char *argv[])
 	libsl_init(PSC_SERVER);
 	fidcache_init(FIDC_USER_ION, NULL);
 	sl_buffer_cache_init();
+	slvr_cache_init();
 	rpc_initsvc();
 	sliotimerthr_spawn();
 	slioctlthr_main(sfn);
