@@ -4,8 +4,8 @@
  * fdbuf - file descriptor buffer routines.
  *
  * File descriptor buffers (struct srt_fd_buf and srt_iofd_buf) are used
- * as global file descriptors which identify a FID as they are encrypted
- * by a shared crypto key.
+ * as global file descriptors which identify a FID as they are signed
+ * by a shared private key.
  */
 
 #include <sys/types.h>
@@ -32,8 +32,8 @@ union maxbuf {
 __static unsigned char	 fdbuf_key[sizeof(union maxbuf)];
 
 /*
- * bdbuf_encrypt - Encrypt an bmapdesc buf with the shared key.
- * @sbdb: the descriptor to encrypt; cfd should be filled in.
+ * bdbuf_sign - Sign a bmapdesc buf with the private key.
+ * @sbdb: the descriptor to sign; cfd should be filled in.
  * @fgp: the file ID and generation.
  * @cli_prid: client address to prevent spoofing.
  * @ion_nid: ION address to prevent spoofing.
@@ -41,7 +41,7 @@ __static unsigned char	 fdbuf_key[sizeof(union maxbuf)];
  * @bmapno: bmap index number in file.
  */
 void
-bdbuf_encrypt(struct srt_bmapdesc_buf *sbdb,
+bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
     const struct slash_fidgen *fgp, lnet_process_id_t cli_prid,
     lnet_nid_t ion_nid, sl_ios_id_t ios_id, sl_blkno_t bmapno)
 {
@@ -81,17 +81,17 @@ bdbuf_encrypt(struct srt_bmapdesc_buf *sbdb,
 }
 
 /*
- * bdbuf_decrypt - Decrypt a bmapdesc buf with the shared key.
- * @sbdb: the descriptor to decrypt.
+ * bdbuf_check - Check signature validity of a bmapdesc buf.
+ * @sbdb: the descriptor to check.
  * @cfdp: value-result client file descriptor.
- * @fgp: value-result file ID and generation, after decryption.
+ * @fgp: value-result file ID and generation, after validation.
  * @bmapnop: value-result bmap index number in file.
  * @cli_prid: client address to prevent spoofing.
  * @ion_nid: ION address to prevent spoofing.
  * @ios_id: I/O system slash.conf ID to prevent spoofing.
  */
 int
-bdbuf_decrypt(struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
+bdbuf_check(struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
     struct slash_fidgen *fgp, sl_blkno_t *bmapnop,
     lnet_process_id_t cli_prid, lnet_nid_t ion_nid, sl_ios_id_t ios_id)
 {
@@ -145,13 +145,13 @@ bdbuf_decrypt(struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 }
 
 /*
- * fdbuf_encrypt - Encrypt an fdbuf with the shared key.
- * @sfdb: the srt_fd_buf to encrypt, cfd should be filled in.
+ * fdbuf_sign - Sign an fdbuf with the private key.
+ * @sfdb: the srt_fd_buf to sign, cfd should be filled in.
  * @fgp: the file ID and generation.
  * @cli_prid: peer address to prevent spoofing.
  */
 void
-fdbuf_encrypt(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
+fdbuf_sign(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
     lnet_process_id_t cli_prid)
 {
 	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0);
@@ -187,14 +187,14 @@ fdbuf_encrypt(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
 }
 
 /*
- * fdbuf_decrypt - Decrypt an fdbuf with the shared key.
- * @sfdb: the srt_fd_buf to decrypt.
+ * fdbuf_check - Check signature validity of an fdbuf.
+ * @sfdb: the srt_fd_buf to check.
  * @cfdp: value-result client file descriptor.
- * @fgp: value-result file ID and generation, after decryption.
+ * @fgp: value-result file ID and generation, after validation.
  * @cli_prid: peer address to prevent spoofing.
  */
 int
-fdbuf_decrypt(struct srt_fd_buf *sfdb, uint64_t *cfdp,
+fdbuf_check(struct srt_fd_buf *sfdb, uint64_t *cfdp,
     struct slash_fidgen *fgp, lnet_process_id_t cli_prid)
 {
 	gcry_error_t gerr;

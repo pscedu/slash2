@@ -163,7 +163,7 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	bmap = NULL;
 	RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = fdbuf_decrypt(&mq->sfdb, &cfd, NULL, rq->rq_peer);
+	mp->rc = fdbuf_check(&mq->sfdb, &cfd, NULL, rq->rq_peer);
 	if (mp->rc)
 		RETURN(0);
 
@@ -188,7 +188,7 @@ slrmc_getbmap(struct pscrpc_request *rq)
 				mp->ios_nid =
 				    bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
 
-			bdbuf_encrypt(&bdb, &mq->sfdb.sfdb_secret.sfs_fg,
+			bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg,
 			    rq->rq_peer, mp->ios_nid,
 			    bmdsi->bmdsi_wr_ion->mi_resm->resm_res->res_id,
 			    bmap->bcm_blkno);
@@ -278,7 +278,7 @@ slrmc_create(struct pscrpc_request *rq)
 				data, &cfd, &mdsCfdOps, CFD_FILE);
 
 			if (!mp->rc && cfd) {
-				fdbuf_encrypt(&cfd->fdb, &fg,
+				fdbuf_sign(&cfd->fdb, &fg,
 				    rq->rq_peer);
 				memcpy(&mp->sfdb, &cfd->fdb,
 				    sizeof(mp->sfdb));
@@ -324,7 +324,7 @@ slrmc_open(struct pscrpc_request *rq)
 				data, &cfd, &mdsCfdOps, CFD_FILE);
 
 			if (!mp->rc && cfd) {
-				fdbuf_encrypt(&cfd->fdb, &fg,
+				fdbuf_sign(&cfd->fdb, &fg,
 				    rq->rq_peer);
 				memcpy(&mp->sfdb, &cfd->fdb,
 				    sizeof(mp->sfdb));
@@ -366,7 +366,7 @@ slrmc_opendir(struct pscrpc_request *rq)
 				psc_error("cfdnew failed rc=%d", mp->rc);
 				RETURN(0);
 			}
-			fdbuf_encrypt(&cfd->fdb, &fg, rq->rq_peer);
+			fdbuf_sign(&cfd->fdb, &fg, rq->rq_peer);
 			memcpy(&mp->sfdb, &cfd->fdb, sizeof(mp->sfdb));
 		}
 	}
@@ -388,7 +388,7 @@ slrmc_readdir(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = fdbuf_decrypt(&mq->sfdb, &cfd, &fg, rq->rq_peer);
+	mp->rc = fdbuf_check(&mq->sfdb, &cfd, &fg, rq->rq_peer);
 	if (mp->rc)
 		RETURN(0);
 
@@ -482,7 +482,7 @@ slrmc_release(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = fdbuf_decrypt(&mq->sfdb, &cfd, &fg, rq->rq_peer);
+	mp->rc = fdbuf_check(&mq->sfdb, &cfd, &fg, rq->rq_peer);
 	if (mp->rc)
 		RETURN(0);
 

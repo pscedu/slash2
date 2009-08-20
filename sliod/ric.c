@@ -77,11 +77,11 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		return (0);
 	}
 
-	mp->rc = bdbuf_decrypt(&mq->sbdb, &cfd, &fg,
+	mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg,
 	    &bmapno, rq->rq_peer, lpid.nid,
 	    nodeInfo.node_res->res_id);
 	if (mp->rc) {
-		psc_errorx("fdbuf_decrypt failed");
+		psc_errorx("fdbuf_check failed");
 		return (0);
 	}
 	/* Ensure that this request fits into the bmap's address range.

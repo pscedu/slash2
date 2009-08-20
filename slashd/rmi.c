@@ -33,7 +33,7 @@ slrmi_bmap_getcrcs(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);	
 
-	//rc = bdbuf_decrypt(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer, lpid.nid
+	//rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer, lpid.nid
 	//		   lnet_process_id_t cli_prid, lnet_nid_t ion_nid, sl_ios_id_t ios_id);
 		
 }

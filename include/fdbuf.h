@@ -13,14 +13,14 @@ struct stat;
 struct srt_fd_buf;
 struct srt_bmapdesc_buf;
 
-void bdbuf_encrypt(struct srt_bmapdesc_buf *, const struct slash_fidgen *,
+void bdbuf_sign(struct srt_bmapdesc_buf *, const struct slash_fidgen *,
 	lnet_process_id_t, lnet_nid_t, sl_ios_id_t, sl_blkno_t);
-int  bdbuf_decrypt(struct srt_bmapdesc_buf *, uint64_t *, struct slash_fidgen *,
+int  bdbuf_check(struct srt_bmapdesc_buf *, uint64_t *, struct slash_fidgen *,
 	sl_blkno_t *, lnet_process_id_t, lnet_nid_t, sl_ios_id_t);
 
-void fdbuf_encrypt(struct srt_fd_buf *, const struct slash_fidgen *,
+void fdbuf_sign(struct srt_fd_buf *, const struct slash_fidgen *,
 	lnet_process_id_t);
-int  fdbuf_decrypt(struct srt_fd_buf *, uint64_t *,
+int  fdbuf_check(struct srt_fd_buf *, uint64_t *,
 	struct slash_fidgen *, lnet_process_id_t);
 void fdbuf_readkeyfile(void);
 void fdbuf_checkkeyfile(void);
