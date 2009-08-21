@@ -38,9 +38,6 @@ slrmi_bmap_getcrcs(struct pscrpc_request *rq)
 		
 }
 
-
-
-
 int
 slrmi_bmap_crcwrt(struct pscrpc_request *rq)
 {
@@ -73,7 +70,7 @@ slrmi_bmap_crcwrt(struct pscrpc_request *rq)
 		
 		off += iovs[i].iov_len;
 	}
-	rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRIM_BULK_PORTAL,
+	rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL,
 			    iovs, mq->ncrc_updates);
 	pscrpc_free_bulk(desc);
 	if (rc)

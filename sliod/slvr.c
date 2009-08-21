@@ -87,6 +87,8 @@ slvr_do_crc(struct slvr_ref *s)
 		
 		psc_crc_calc(&s->slvr_crc, slvr_2_buf(s, 0), SL_CRC_SIZE);
 
+		DEBUG_SLVR(PLL_TRACE, s, "crc=%"PRIx64, s->slvr_crc);
+
 		SLVR_LOCK(s);
                 s->slvr_flags &= ~(SLVR_CRCING|SLVR_CRCDIRTY);
 		if (slvr_2_biodi_wire(s)) {
@@ -101,30 +103,6 @@ slvr_do_crc(struct slvr_ref *s)
 	return (1);
 }
 
-
-__static void
-slvr_release(struct slvr_ref *s)
-{
-        struct bmap_iod_info *biod = s->slvr_pri;
-
-        psc_assert(biod);
-	/* Lock the biod which protects the sliver and biod
-	 *   tree.  If no one has updated the sliver during the 
-	 *   crc and rpc procedures then free it.
-	 */
-        spinlock(&biod->biod_lock);
-        if (s->slvr_updates) {
-                freelock(&biod->biod_lock);
-                return;
-        }
-
-
-        else
-                psc_assert("Could not locate sliver for removal");
-
-        freelock(&biod->biod_lock);
-}
-
 int
 slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
 {
@@ -132,7 +110,6 @@ slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
 	s->slvr_flags = SLVR_NEW;
 	s->slvr_pri = pri;
 	s->slvr_slab = NULL;
-	s->slvr_updates = 0;
 	INIT_PSCLIST_ENTRY(&s->slvr_lentry);
 	
 	return (0);
@@ -150,6 +127,10 @@ slvr_getslab(struct slvr_ref *s)
 
 	s->slvr_flags &= ~SLVR_GETSLAB;
 	s->slvr_flags |= SLVR_LRU;
+
+	DEBUG_SLVR(PLL_INFO, s, "should have slab");
+	if (!s->slvr_slab)
+		abort();
 	/* Until the slab is added to the sliver, the sliver is private
 	 *  to the bmap's biod_slvrtree.  
 	 */
@@ -177,13 +158,18 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 		 *  grabbing the crc table, we use the 1MB buffer in 
 		 *  either case.
 		 */
+
+		/* XXX do the right thing when EOF is reached..
+		 */
 		if ((uint32_t)nblks == SLASH_BLKS_PER_SLVR) {
-			rc = slvr_do_crc(s);
-			if (rc == -EINVAL) {
+			int crc_rc;
+
+			crc_rc = slvr_do_crc(s);
+			if (crc_rc == -EINVAL) {
 				DEBUG_SLVR(PLL_ERROR, s, 
 					   "bad crc blks=%d off=%"PRIx64, 
 					   nblks, slvr_2_fileoff(s, blk));
-				return (rc);
+				return (crc_rc);
 			}
 		}
 		
@@ -211,8 +197,9 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 	}
 
 	if (rc != len)
-		DEBUG_SLVR(PLL_ERROR, s, "failed blks=%d off=%"PRIx64, 
-			   nblks, slvr_2_fileoff(s, blk));	
+		DEBUG_SLVR(PLL_ERROR, s, "failed (rc=%zd, len=%zd) "
+			   "blks=%d off=%"PRIx64, 
+			   rc, len, nblks, slvr_2_fileoff(s, blk));
 	else {
 		DEBUG_SLVR(PLL_TRACE, s, "ok blks=%d off=%"PRIx64,
 			   nblks, slvr_2_fileoff(s, blk));
@@ -231,8 +218,9 @@ slvr_fsbytes_io(struct slvr_ref *s, int rw)
 {
 	int nblks, blk, rc;
 	size_t i;
-	
-	psc_assert(s->slvr_flags & SLVR_FAULTING);
+
+	if (!s->slvr_flags & SLVR_DATARDY)
+		psc_assert(s->slvr_flags & SLVR_FAULTING);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
 #define slvr_fsbytes_RW							\

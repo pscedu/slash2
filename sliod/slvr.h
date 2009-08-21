@@ -27,7 +27,6 @@ extern struct psc_listcache inflSlvrs;
  * @slvr_flags: state bits for the sliver.
  * @slvr_pndgwrts: the number of writes in progress
  * @slvr_pndgreads: the number of writes in progress
- * @slvr_updates: update counter used to detect modifications to the
  *   sliver.  Note that atomic is not used here since the lock must be 
  *   held to avoid race conditions.
  * @slvr_crc: used if there's no bmap_wire present, only is valid if
@@ -43,7 +42,6 @@ struct slvr_ref {
 	uint16_t              slvr_flags;
 	psc_atomic16_t        slvr_pndgwrts;
 	psc_atomic16_t        slvr_pndgreads;
-	uint32_t              slvr_updates;
 	psc_crc_t             slvr_crc;
 	void                 *slvr_pri;
 	struct sl_buffer     *slvr_slab;
@@ -51,7 +49,6 @@ struct slvr_ref {
 	struct psclist_head   slvr_lentry;	
 	SPLAY_ENTRY(slvr_ref) slvr_tentry;
 };
-
 
 #define SLVR_2_BLK(s) ((s)->slvr_num * (SLASH_BMAP_SIZE/SLASH_BMAP_BLKSZ))
 
@@ -92,10 +89,11 @@ enum slvr_states {
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psc_logs((level), PSS_OTHER,					\
-		 " slvr@%p num=%hu pw=%hu pr=%hu up=%u pri@%p slab@%p flgs:" \
+		 " slvr@%p num=%hu pw=%hu pr=%hu pri@%p slab@%p flgs:"	\
 		 SLVR_FLAGS_FMT" :: "fmt,				\
-		 (s), (s)->slvr_num, psc_atomic16_read(&(s)->slvr_pndgwrts),	\
-		 psc_atomic16_read(&(s)->slvr_pndgreads), (s)->slvr_updates,	\
+		 (s), (s)->slvr_num,					\
+		 psc_atomic16_read(&(s)->slvr_pndgwrts),		\
+		 psc_atomic16_read(&(s)->slvr_pndgreads),		\
 		 (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),	\
 		 ## __VA_ARGS__)
 

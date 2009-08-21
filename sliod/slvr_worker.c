@@ -14,6 +14,8 @@
 #include "sliod.h"
 #include "slvr.h"
 #include "iod_bmap.h"
+#include "fid.h"
+#include "fidcache.h"
 
 struct pscrpc_nbreqset *slvrNbReqSet;
 struct biod_infslvr_tree binfSlvrs;
@@ -41,6 +43,8 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
 	rc = RSX_NEWREQ(rmi_csvc->csvc_import, SRMI_VERSION, 
 			SRMT_BMAPCRCWRT, req, mq, mp);
 
+	PSC_CRC_INIT(mq->crc);
+
 	mq->ncrc_updates = dynarray_len(a);
 	req->rq_async_args.pointer_arg[0] = (void *)a;
 
@@ -58,8 +62,13 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
                 len += iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
 					   sizeof(struct srm_bmap_crcwire)) +
 					  sizeof(struct srm_bmap_crcup));
+
+		PSC_CRC_ADD(mq->crc, iovs[i].iov_base, iovs[i].iov_len);
 	}
 	psc_assert(len <= LNET_MTU);
+
+	PSC_CRC_FIN(mq->crc);
+
 	rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL, 
 		       iovs, mq->ncrc_updates);
 
@@ -134,20 +143,35 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 		 struct pscrpc_async_args *args)
 {
 	struct dynarray *a = args->pointer_arg[0];
+	struct biod_crcup_ref *b=NULL;
 	struct slvr_ref *s;
-	int i;
+	struct srm_generic_rep *mp;
+	int i, err=0;
 
 	ENTRY;
 
+	mp = psc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
+	if (req->rq_status || mp->rc)
+		err = 1;
+
 	psc_assert(a);
 	
-	for (i=0; i < dynarray_len(a); i++) {
-		s = dynarray_getpos(a, i);
-		
+	for (i=0; i < dynarray_len(a); i++) {		
+		b = dynarray_getpos(a, i);
+		s = b->bcr_slvr;
+
 		SLVR_LOCK(s);
 
-		DEBUG_SLVR(PLL_INFO, s, "callback, rpc complete");
-		psc_assert(s->slvr_flags & SLVR_RPCPNDG);		
+		DEBUG_SLVR(err ? PLL_ERROR : PLL_INFO, s, 
+			   "crcup %s fid(%"PRId64":%"PRId64")"
+			   " bmap(%u) slvr(%hu) crc=%"PRIx64, 
+			   err ? "error" : "ok",
+			   fcmh_2_fid(slvr_2_fcmh(s)), 
+			   fcmh_2_gen(slvr_2_fcmh(s)),
+			   slvr_2_bmap(s)->bcm_blkno, 
+			   s->slvr_num, s->slvr_crc);
+
+		psc_assert(s->slvr_flags & SLVR_RPCPNDG);
 		s->slvr_flags &= ~SLVR_RPCPNDG;
 
 		if (!psc_atomic16_read(&s->slvr_pndgwrts) && 
@@ -162,6 +186,8 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 			slvr_try_rpcqueue(s);
 		} else
 			SLVR_ULOCK(s);
+
+		PSCFREE(b);
 	}
 	PSCFREE(a);
 
@@ -201,6 +227,7 @@ slvr_worker_int(void)
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);	
 	psc_assert(s->slvr_flags & SLVR_RPCPNDG);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
+	psc_assert(s->slvr_flags & SLVR_DATARDY);
 	
 	/* Try our best to determine whether or we should hold off 
 	 *   the crc operation, strive to only crc slivers which have 
@@ -263,9 +290,11 @@ slvr_worker_int(void)
 	 *   once again.
 	 */
 	SLVR_LOCK(s);
-	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU");
 	s->slvr_flags |= SLVR_LRU;
 	s->slvr_flags &= ~SLVR_SCHEDULED;
+
+	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU");
+
 	if (!(psc_atomic16_read(&s->slvr_pndgwrts) ||
 	      psc_atomic16_read(&s->slvr_pndgreads)))
 		slvr_lru_unpin(s);

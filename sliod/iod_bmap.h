@@ -132,7 +132,7 @@ static inline void
 slvr_lru_unpin(struct slvr_ref *s)
 {
 	SLVR_LOCK_ENSURE(s);
-        psc_assert(s->slvr_slab && psclist_conjoint(&s->slvr_lentry));
+        psc_assert(s->slvr_slab);
 	psc_assert(!psc_atomic16_read(&s->slvr_pndgreads));
 	psc_assert(!psc_atomic16_read(&s->slvr_pndgwrts));
 

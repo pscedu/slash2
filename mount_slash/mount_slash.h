@@ -50,7 +50,8 @@ struct msfs_thread {
  */
 struct msl_fbr {
 	struct bmapc_memb		*mfbr_bmap;    /* the bmap       */
-	atomic_t			 mfbr_acnt;    /* access counter */
+	atomic_t			 mfbr_wr_ref;
+	atomic_t			 mfbr_rd_ref;
 	SPLAY_ENTRY(msl_fbr)		 mfbr_tentry;
 };
 
@@ -100,10 +101,15 @@ msl_fbr_ref(struct msl_fbr *r, int rw)
 {
 	psc_assert(r->mfbr_bmap);
 
-	if (rw & FHENT_READ)
+	if (rw == FHENT_READ) {
                 atomic_inc(&r->mfbr_bmap->bcm_rd_ref);
-        if (rw & FHENT_WRITE)
+                atomic_inc(&r->mfbr_rd_ref); 
+
+	} else if (rw == FHENT_WRITE) {
                 atomic_inc(&r->mfbr_bmap->bcm_wr_ref);
+                atomic_inc(&r->mfbr_wr_ref); 
+	} else
+		abort();
 }
 
 static inline struct msl_fbr *
@@ -117,19 +123,30 @@ msl_fbr_new(struct bmapc_memb *b, int rw)
 	return (r);
 }
 
-/* XXX this is never called */
 static inline void
-msl_fbr_free(struct msl_fbr *r, int rw)
+msl_fbr_free(struct msl_fbr *r)
 {
 	psc_assert(r->mfbr_bmap);
 	psc_assert(
 	    r->mfbr_tentry.spe_left == NULL &&
 	    r->mfbr_tentry.spe_right == NULL);
 
-	if (rw & FHENT_READ)
-		atomic_dec(&r->mfbr_bmap->bcm_rd_ref);
-	if (rw & FHENT_WRITE)
+#if 0
+	if (atomic_read(&r->mfbr_wr_ref))
 		atomic_dec(&r->mfbr_bmap->bcm_wr_ref);
+
+	if (atomic_read(&r->mfbr_rd_ref))
+                atomic_dec(&r->mfbr_bmap->bcm_rd_ref);
+#endif
+
+	atomic_sub(atomic_read(&r->mfbr_rd_ref),
+		   &r->mfbr_bmap->bcm_rd_ref);
+
+	atomic_sub(atomic_read(&r->mfbr_wr_ref), 
+		   &r->mfbr_bmap->bcm_wr_ref);
+
+	psc_assert(atomic_read(&r->mfbr_bmap->bcm_wr_ref) >= 0);
+	psc_assert(atomic_read(&r->mfbr_bmap->bcm_rd_ref) >= 0);
 
 	PSCFREE(r);
 }
@@ -167,17 +184,18 @@ fcmh_2_fdb(struct fidc_membh *f)
 
 SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
-static inline struct msl_fbr *
+static inline struct msl_fbr * 
 fhcache_bmap_lookup(struct msl_fhent *mfh, struct bmapc_memb *b)
 {
         struct msl_fbr *r=NULL, lr;
         int locked;
 
 	lr.mfbr_bmap = b;
+
         locked = reqlock(&mfh->mfh_lock);
+
         r = SPLAY_FIND(fhbmap_cache, &mfh->mfh_fhbmap_cache, &lr);
-	if (r)
-		atomic_inc(&r->mfbr_acnt);
+
         ureqlock(&mfh->mfh_lock, locked);
 
         return (r);

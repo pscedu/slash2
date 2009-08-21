@@ -24,12 +24,10 @@ void
 rpc_initsvc(void)
 {
 	pscrpc_svc_handle_t *svh;
+	char *slash2_mds;
 
 	if (LNetGetId(1, &lpid))
 		psc_fatalx("LNetGetId");
-
-	/* Create client service to issue requests to MDS. */
-	rmi_csvc = rpc_csvc_create(SRMI_REQ_PORTAL, SRMI_REP_PORTAL);
 
 	/* Create server service to handle requests from clients. */
 	svh = PSCALLOC(sizeof(*svh));
@@ -72,4 +70,13 @@ rpc_initsvc(void)
 	svh->svh_handler = slrii_handler;
 	strlcpy(svh->svh_svc_name, SRII_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slash_riithr);
+
+	/* Create client service to issue requests to MDS. */
+	rmi_csvc = rpc_csvc_create(SRMI_REQ_PORTAL, SRMI_REP_PORTAL);
+	if ((slash2_mds = getenv("SLASH_MDS_NID")) == NULL)
+                psc_fatalx("please export SLASH_MDS_NID");
+
+	if (slrmi_issue_connect(slash2_mds))
+		abort();
+
 }

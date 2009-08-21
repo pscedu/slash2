@@ -281,6 +281,20 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
 	return (rc);
 }
 
+void
+msl_bmap_fhcache_clear(struct msl_fhent *mfh)
+{
+	struct msl_fbr *r;
+
+	spinlock(&mfh->mfh_lock);
+
+	SPLAY_FOREACH(r, fhbmap_cache, &mfh->mfh_fhbmap_cache) {
+		SPLAY_REMOVE(fhbmap_cache, &mfh->mfh_fhbmap_cache, r);
+		msl_fbr_free(r);
+	}
+	freelock(&mfh->mfh_lock);
+}
+
 #define BML_NEW_BMAP  0
 #define BML_HAVE_BMAP 1
 
