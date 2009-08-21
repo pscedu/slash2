@@ -243,6 +243,24 @@ mexpfcm_cfd_get_zfsdata(struct cfdent *c, __unusedx struct pscrpc_export *e)
 __static void
 mds_bmap_ref_del(struct mexpbcm *bref);
 
+
+void
+mexpfcm_release_brefs(struct mexpfcm *m)
+{
+	struct mexpbcm *bref, *bn;
+
+	MEXPFCM_LOCK_ENSURE(m);
+	psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
+	psc_assert(m->mexpfcm_flags & MEXPFCM_REGFILE);
+
+	for (bref = SPLAY_MIN(exp_bmaptree, &m->mexpfcm_bmaps);
+	    bref; bref = bn) {
+		bn = SPLAY_NEXT(exp_bmaptree, &m->mexpfcm_bmaps, bref);
+		mds_bmap_ref_del(bref);
+		SPLAY_REMOVE(exp_bmaptree, &m->mexpfcm_bmaps, bref);
+	}
+}
+
 int
 mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 {
@@ -266,17 +284,10 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	if (m->mexpfcm_flags & MEXPFCM_REGFILE) {
 		psc_assert(c->type & CFD_CLOSING);
 
-		if (c->type & CFD_FORCE_CLOSE) {
-			struct mexpbcm *bref, *bn;
+		if (c->type & CFD_FORCE_CLOSE)
+			mexpfcm_release_brefs(m);
 
-			for (bref = SPLAY_MIN(exp_bmaptree,
-			    &m->mexpfcm_bmaps); bref; bref = bn) {
-				bn = SPLAY_NEXT(exp_bmaptree,
-				    &m->mexpfcm_bmaps, bref);
-				mds_bmap_ref_del(bref);
-			}
-		} else
-			psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
+		psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
 	}
 	freelock(&m->mexpfcm_lock);
 	/* Grab the fcmh lock (it is responsible for fidc_mds_info
@@ -291,22 +302,6 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	c->pri = NULL;
 	PSCFREE(m);
 	return (0);
-}
-
-void
-mexpfcm_release_brefs(struct mexpfcm *m)
-{
-	struct mexpbcm *bref, *bn;
-
-	MEXPFCM_LOCK_ENSURE(m);
-	psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
-	psc_assert(m->mexpfcm_flags & MEXPFCM_REGFILE);
-
-	for (bref = SPLAY_MIN(exp_bmaptree, &m->mexpfcm_bmaps);
-	    bref; bref = bn) {
-		bn = SPLAY_NEXT(exp_bmaptree, &m->mexpfcm_bmaps, bref);
-		mds_bmap_ref_del(bref);
-	}
 }
 
 __static int

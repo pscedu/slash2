@@ -37,7 +37,6 @@ mds_repl_load_locked(struct slash_inode_handle *i)
 	return (0);
 }
 
-
 int 
 mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 {
@@ -61,7 +60,7 @@ mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 			 */
 			if (!(i->inoh_flags & INOH_HAVE_EXTRAS))
                                 if (!(rc = mds_repl_load_locked(i)))
-                                        return (rc);
+					goto out;
 
 			repl = i->inoh_extras->inox_repls;
 			k = 0;

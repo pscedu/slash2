@@ -20,7 +20,7 @@ struct fidc_mds_info {
 };
 
 #define fcmh_2_inoh(f)							\
-	(&((struct fidc_mds_info *)(&(f)->fcmh_fcoo->fcoo_pri))->fmdsi_inodeh)
+	(&((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)->fmdsi_inodeh)
 
 static inline void
 fmdsi_init(struct fidc_mds_info *mdsi, struct fidc_membh *fcmh, void *pri)
