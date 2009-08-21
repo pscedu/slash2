@@ -267,10 +267,14 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		psc_assert(c->type & CFD_CLOSING);
 
 		if (c->type & CFD_FORCE_CLOSE) {
-			struct mexpbcm *bref;
-			SPLAY_FOREACH(bref, exp_bmaptree,
-				      &m->mexpfcm_bmaps)
+			struct mexpbcm *bref, *bn;
+
+			for (bref = SPLAY_MIN(exp_bmaptree,
+			    &m->mexpfcm_bmaps); bref; bref = bn) {
+				bn = SPLAY_NEXT(exp_bmaptree,
+				    &m->mexpfcm_bmaps, bref);
 				mds_bmap_ref_del(bref);
+			}
 		} else
 			psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
 	}
@@ -292,14 +296,17 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 void
 mexpfcm_release_brefs(struct mexpfcm *m)
 {
-	struct mexpbcm *bref;
+	struct mexpbcm *bref, *bn;
 
 	MEXPFCM_LOCK_ENSURE(m);
 	psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
 	psc_assert(m->mexpfcm_flags & MEXPFCM_REGFILE);
 
-	SPLAY_FOREACH(bref, exp_bmaptree, &m->mexpfcm_bmaps)
+	for (bref = SPLAY_MIN(exp_bmaptree, &m->mexpfcm_bmaps);
+	    bref; bref = bn) {
+		bn = SPLAY_NEXT(exp_bmaptree, &m->mexpfcm_bmaps, bref);
 		mds_bmap_ref_del(bref);
+	}
 }
 
 __static int
@@ -681,7 +688,7 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 		mds_bmap_directio_unset(bref);
 
 	if (!SPLAY_REMOVE(bmap_exports, &mdsi->bmdsi_exports, bref))
-		psc_fatalx("found duplicate bref on bmap_exports");
+		psc_fatalx("bref not found on bmap_exports");
 
 	DEBUG_BMAP(PLL_INFO, bmap, "done with ref_del");
 	BMAP_ULOCK(bmap);
