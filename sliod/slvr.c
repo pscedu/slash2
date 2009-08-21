@@ -10,6 +10,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
+#include "psc_util/pthrutil.h"
 
 #include "slvr.h"
 #include "iod_bmap.h"
@@ -565,7 +566,7 @@ int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
 	struct slvr_ref *s, *tmp;
-	static pthread_mutex_t mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+	static pthread_mutex_t mutex;
 	struct dynarray a = DYNARRAY_INIT;
 	int i, n;
 
@@ -573,7 +574,8 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	
 	ENTRY;
 
-	pthread_mutex_lock(&mutex);
+	psc_pthread_mutex_init(&mutex);
+	psc_pthread_mutex_lock(&mutex);
 	
 	LIST_CACHE_LOCK(&lruSlvrs);
 	psclist_for_each_entry_safe(s, tmp, &lruSlvrs.lc_listhd, slvr_lentry) {
@@ -622,6 +624,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			slvr_remove(s);
 		
         }
+	dynarray_free(&a);
 
 	return (n);
 }
