@@ -284,12 +284,14 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
 void
 msl_bmap_fhcache_clear(struct msl_fhent *mfh)
 {
-	struct msl_fbr *r;
+	struct msl_fbr *r, *n;
 
 	spinlock(&mfh->mfh_lock);
-
-	SPLAY_FOREACH(r, fhbmap_cache, &mfh->mfh_fhbmap_cache) {
-		SPLAY_REMOVE(fhbmap_cache, &mfh->mfh_fhbmap_cache, r);
+	for (r = SPLAY_MIN(fhbmap_cache, &mfh->mfh_fhbmap_cache);
+	    r; r = n) {
+		n = SPLAY_NEXT(fhbmap_cache, &mfh->mfh_fhbmap_cache, r);
+		psc_assert(SPLAY_REMOVE(fhbmap_cache,
+		    &mfh->mfh_fhbmap_cache, r));
 		msl_fbr_free(r);
 	}
 	freelock(&mfh->mfh_lock);
