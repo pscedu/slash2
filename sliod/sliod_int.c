@@ -103,17 +103,17 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 	if (!SPLAY_EMPTY(bmap_2_biodi_slvrs(b))) {
 		struct slvr_ref *s;
 		
-		SPLAY_FOREACH(s, biod_slvrtree, bmap_2_biodi_slvrs(b));
-		/* Only replace the crc if datardy is true (meaning that 
-		 *   all init operations have be done) and that the 
-		 *   crc is clean (meaning that the crc reflects the slab
-		 *   contents.
-		 */
-		if (!(s->slvr_flags & SLVR_CRCDIRTY) && 
-		    s->slvr_flags & SLVR_DATARDY) {
-			slvr_2_crc(s) = s->slvr_crc;
-			slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
-		}			
+		SPLAY_FOREACH(s, biod_slvrtree, bmap_2_biodi_slvrs(b))
+		    /* Only replace the crc if datardy is true (meaning that 
+		     *   all init operations have be done) and that the 
+		     *   crc is clean (meaning that the crc reflects the slab
+		     *   contents.
+		     */
+		    if (!(s->slvr_flags & SLVR_CRCDIRTY) && 
+			s->slvr_flags & SLVR_DATARDY) {
+			    slvr_2_crc(s) = s->slvr_crc;
+			    slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
+		    }			
 	}
 	freelock(&bmap_2_biodi(b)->biod_lock);
  out:
@@ -124,9 +124,8 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 	b->bcm_mode &= ~BMAP_IOD_RETRIEVE;
 	if (rc)
 		b->bcm_mode |= BMAP_IOD_RETRFAIL;
-	BMAP_ULOCK(b);
-
 	psc_waitq_wakeall(&b->bcm_waitq);
+	BMAP_ULOCK(b); 
 
 	return (rc);
 }
