@@ -3,13 +3,13 @@
 #include <time.h>
 
 #include "psc_types.h"
+#include "psc_ds/dynarray.h"
+#include "psc_ds/listcache.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
-#include "psc_ds/listcache.h"
-#include "psc_ds/dynarray.h"
 #include "psc_util/assert.h"
-#include "psc_util/lock.h"
 #include "psc_util/atomic.h"
+#include "psc_util/lock.h"
 
 #include "sliod.h"
 #include "slvr.h"
@@ -189,6 +189,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 
 		PSCFREE(b);
 	}
+	dynarray_free(a);
 	PSCFREE(a);
 
 	return (0);
