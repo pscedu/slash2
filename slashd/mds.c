@@ -622,8 +622,7 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
  *	calls depending on the number of read and/or write clients of
  *	this bmap.
  * @bref: the bref to be added, it must have a bmapc_memb already attached.
- * @mq: the explicit read/write flag from the rpc.  It is probably
- *	unwise to use bref's flag.
+ * @mq: the RPC request for examining the bmap access mode (read/write).
  */
 __static void
 mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
