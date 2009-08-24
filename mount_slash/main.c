@@ -1217,7 +1217,7 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	mfh = (void *)fi->fh;
 	c = mfh->mfh_fcmh;
-	/* Derefence the set of bmaps associated with this fd.
+	/* Remove bmap references associated with this fd.
 	 */ 
 	msl_bmap_fhcache_clear(mfh);
 
@@ -1234,6 +1234,8 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	freelock(&c->fcmh_lock);
 
 	if ((c->fcmh_state & FCMH_FCOO_CLOSING) && fdstate) {
+		/* Tell the mds to release all of our bmaps.
+		 */
 		rc = slash2fuse_releaserpc(req, ino, fi);
 		fidc_fcoo_remove(c);
 	}
@@ -1538,15 +1540,18 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	}
 
 	rc = msl_write(mfh, (char *)buf, size, off);
+
+	psc_info("msl_write() %p rc=%d sz=%zu off=%llu", buf, rc, size, off);
+
 	fidc_membh_dropref(mfh->mfh_fcmh);
 	if (rc < 0)
 		rc = -rc;
 	else {
-		fuse_reply_buf(req, buf, rc);
+		fuse_reply_write(req, size);
 		rc = 0;
 	}
- out:
 	if (rc)
+	out:
 		fuse_reply_err(req, rc);
 }
 
