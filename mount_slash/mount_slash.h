@@ -31,6 +31,7 @@ struct pscrpc_request;
 
 #define MSL_IO_CB_POINTER_SLOT 1
 #define MSL_WRITE_CB_POINTER_SLOT 2
+#define MSL_OFTRQ_CB_POINTER_SLOT 3
 
 #define MSL_READ 0
 #define MSL_WRITE 1
@@ -121,34 +122,6 @@ msl_fbr_new(struct bmapc_memb *b, int rw)
 	msl_fbr_ref(r, rw);
 
 	return (r);
-}
-
-static inline void
-msl_fbr_free(struct msl_fbr *r)
-{
-	psc_assert(r->mfbr_bmap);
-	psc_assert(
-	    r->mfbr_tentry.spe_left == NULL &&
-	    r->mfbr_tentry.spe_right == NULL);
-
-#if 0
-	if (atomic_read(&r->mfbr_wr_ref))
-		atomic_dec(&r->mfbr_bmap->bcm_wr_ref);
-
-	if (atomic_read(&r->mfbr_rd_ref))
-                atomic_dec(&r->mfbr_bmap->bcm_rd_ref);
-#endif
-
-	atomic_sub(atomic_read(&r->mfbr_rd_ref),
-		   &r->mfbr_bmap->bcm_rd_ref);
-
-	atomic_sub(atomic_read(&r->mfbr_wr_ref), 
-		   &r->mfbr_bmap->bcm_wr_ref);
-
-	psc_assert(atomic_read(&r->mfbr_bmap->bcm_wr_ref) >= 0);
-	psc_assert(atomic_read(&r->mfbr_bmap->bcm_rd_ref) >= 0);
-
-	PSCFREE(r);
 }
 
 static inline int
