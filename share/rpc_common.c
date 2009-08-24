@@ -23,9 +23,9 @@ rpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp, u64 magic,
     u32 version)
 {
 	lnet_process_id_t server_id = { server, 0 };
-	struct srm_generic_rep *mp;
-	struct srm_connect_req *mq;
 	struct pscrpc_request *rq;
+	struct srm_connect_req *mq;
+	struct srm_generic_rep *mp;
 	int rc;
 
 	imp->imp_connection = pscrpc_get_connection(server_id, lpid.nid, NULL);
