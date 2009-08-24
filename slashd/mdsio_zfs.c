@@ -43,6 +43,23 @@ bmap_2_zfs_fh(struct bmapc_memb *bmap)
 	return (fmdsi->fmdsi_data);
 }
 
+int 
+mdsio_zfs_release(struct slash_inode_handle *i)
+{
+	struct slash_creds cred = { 0, 0 };
+	struct fidc_mds_info *fmdsi;
+
+	psc_assert(i->inoh_fcmh);
+	psc_assert(i->inoh_fcmh->fcmh_fcoo);
+	psc_assert(i->inoh_fcmh->fcmh_state & FCMH_FCOO_CLOSING);
+
+	fmdsi = fcmh_2_fmdsi(i->inoh_fcmh);
+	psc_assert(!atomic_read(&fmdsi->fmdsi_ref));
+
+	return (zfsslash2_release(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &cred,
+				  fmdsi->fmdsi_data));
+}
+
 int
 mdsio_zfs_bmap_read(struct bmapc_memb *bmap)
 {
