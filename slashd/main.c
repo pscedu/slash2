@@ -26,7 +26,6 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-void *zfsVfs;
 const char *progname;
 
 int

@@ -577,7 +577,7 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
  *	calls depending on the number of read and/or write clients of
  *	this bmap.
  * @bref: the bref to be added, it must have a bmapc_memb already attached.
- * @rw: the explicit read/write flag from the rpc.  It is probably
+ * @mq: the explicit read/write flag from the rpc.  It is probably
  *	unwise to use bref's flag.
  */
 __static void
@@ -827,28 +827,26 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 	/* Try to pread() the bmap from the mds file.
 	 */
 	szrc = mdsio_zfs_bmap_read(bcm);
-
-	/* EOF means the bmap does not exist */
+	/* EOF means the bmap does not exist 
+	 */
 	if (szrc == 0)
 		goto new;
-
-	/* read failed, report bad news */
+	/* read failed, report bad news 
+	 */
 	if (szrc == -1) {
 		DEBUG_FCMH(PLL_WARN, f, "mdsio_zfs_bmap_read: "
 		    "blkno=%u, errno=%d", blkno, errno);
 		goto out;
 	}
-
-	/* short read, report an I/O error */
+	/* short read, report an I/O error 
+	 */
 	if (szrc != BMAP_OD_SZ) {
 		DEBUG_FCMH(PLL_WARN, f, "mdsio_zfs_bmap_read: "
 		    "blkno=%u, short I/O", blkno);
 		rc = -EIO;
 		goto out;
 	}
-
-	/*
-	 * Check for a NULL CRC, which can happen when
+	/* Check for a NULL CRC, which can happen when
 	 * bmaps are gaps that have not been written yet.
 	 */
 	if (bmdsi->bmdsi_od->bh_bhcrc == 0 && memcmp(bmdsi->bmdsi_od,
@@ -857,8 +855,8 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 		mds_bmapod_initnew(bmdsi->bmdsi_od);
 		return (0);
 	}
-
-	/* calculate and check the CRC now */
+	/* Calculate and check the CRC now 
+	 */
 	PSC_CRC_CALC(crc, bmdsi->bmdsi_od, BMAP_OD_CRCSZ);
 	if (crc == bmdsi->bmdsi_od->bh_bhcrc)
 		return (0);
@@ -972,10 +970,12 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		/* Create and initialize the new bmap while holding the
 		 *  fcmh lock which is needed for atomic tree insertion.
 		 */
-		b = PSCALLOC(sizeof(struct bmapc_memb)); /* XXX not freed */
+		b = PSCALLOC(sizeof(struct bmapc_memb) + 
+			     sizeof(struct bmap_mds_info)); /* XXX not freed */
+
 		b->bcm_blkno = mq->blkno;
 		b->bcm_mode = BMAP_MDS_INIT;
-		bmdsi = b->bcm_pri = PSCALLOC(sizeof(struct bmap_mds_info)); /* XXX not freed */
+		bmdsi = b->bcm_pri;
 		LOCK_INIT(&b->bcm_lock);
 		bmap_mds_info_init(bmdsi);
 		psc_waitq_init(&b->bcm_waitq);

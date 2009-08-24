@@ -34,6 +34,7 @@
 #include "pathnames.h"
 #include "slashexport.h"
 #include "slashrpc.h"
+#include "mdsio_zfs.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 

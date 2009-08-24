@@ -37,7 +37,6 @@ struct bmap_refresh {
 struct bmapc_memb {
 	sl_blkno_t		 bcm_blkno;	/* Bmap blk number        */
 	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info    */
-	void			*bcm_pri;
 	atomic_t		 bcm_rd_ref;	/* one ref per write fd    */
 	atomic_t		 bcm_wr_ref;	/* one ref per read fd     */
 	struct timespec		 bcm_ts;
@@ -48,6 +47,7 @@ struct bmapc_memb {
 						   me with bcm_fcmh->fcmh_waitq
 						*/
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* fcm tree entry    */
+	void			*bcm_pri;
 };
 
 enum bmap_common_modes {

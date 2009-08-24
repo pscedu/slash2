@@ -15,6 +15,8 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+void *zfsVfs;
+
 static inline void * 
 inoh_2_zfs_fh(const struct slash_inode_handle *i)
 {
