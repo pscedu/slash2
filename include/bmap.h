@@ -51,13 +51,14 @@ struct bmapc_memb {
 };
 
 enum bmap_common_modes {
-	BMAP_RD   = (1 << 0),
-	BMAP_WR   = (1 << 1),
-	BMAP_INIT = (1 << 2),
-	BMAP_DIO  = (1 << 3)	
+	BMAP_RD      = (1 << 0),
+	BMAP_WR      = (1 << 1),
+	BMAP_INIT    = (1 << 2),
+	BMAP_DIO     = (1 << 3),
+	BMAP_CLOSING = (1 << 4)
 };
 
-#define BMAP_RSVRD_MODES 4 /* highest bmap_common_mode + 1 */
+#define BMAP_RSVRD_MODES 5 /* highest bmap_common_mode + 1 */
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
