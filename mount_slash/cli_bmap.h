@@ -6,6 +6,7 @@
 #include "psc_rpc/rpc.h"
 
 #include "inode.h"
+#include "bmap.h"
 #include "offtree.h"
 
 /* 
@@ -26,13 +27,51 @@ struct msbmap_data {
 	lnet_nid_t		     msbd_ion;
 	struct msbmap_crcrepl_states msbd_msbcr;
 	struct srt_bmapdesc_buf	     msbd_bdb;	/* open bmap descriptor */
+	struct psclist_head          msbd_oftrqs;
 };
+
+#define bmap_2_msbd(b)				\
+	((struct msbmap_data *)((b)->bcm_pri))
 
 #define bmap_2_msoftr(b)					\
 	(((struct msbmap_data *)((b)->bcm_pri))->msbd_oftr)
 
 #define bmap_2_msion(b)						\
 	((struct msbmap_data *)((b)->bcm_pri))->msbd_ion
+
+static inline void
+bmap_oftrq_add(struct bmapc_memb *b, struct offtree_req *r)
+{
+	BMAP_LOCK(b);	
+        psclist_xadd(&r->oftrq_lentry, &bmap_2_msbd(b)->msbd_oftrqs);
+        BMAP_ULOCK(b);
+}
+ 
+static inline void
+bmap_oftrq_del(struct bmapc_memb *b, struct offtree_req *r)
+{
+	BMAP_LOCK(b);
+	psclist_del(&r->oftrq_lentry);
+
+	DEBUG_BMAP(PLL_INFO, b, "list_empty(%d)", 
+		   psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
+
+        psc_waitq_wakeall(&b->bcm_waitq);
+        BMAP_ULOCK(b);
+}
+
+static inline void
+bmap_oftrq_waitempty(struct bmapc_memb *b)
+{
+ retry:
+	BMAP_LOCK(b);
+
+	if (!psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs)) {
+		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+		goto retry;
+	} else
+		BMAP_ULOCK(b);
+}
 
 /*
  * bmap_info_cli - hangs from the void * pointer in the sl_resm_t struct.
@@ -43,10 +82,7 @@ struct bmap_info_cli {
 };
 
 /* bcm_mode flags */
-//#define	BMAP_CLI_RD	(1 << 0)	/* bmap has read creds */
-//#define	BMAP_CLI_WR	(1 << 1)	/* write creds */
-//#define	BMAP_CLI_DIO	(1 << 2)	/* bmap is in dio mode */
-#define	BMAP_CLI_MCIP	(1 << 3)	/* "mode change in progress" */
-#define	BMAP_CLI_MCC	(1 << 4)	/* "mode change complete" */
+#define	BMAP_CLI_MCIP	(1 << (0 + BMAP_RSVRD_MODES)) /* mode change in prog */
+#define	BMAP_CLI_MCC	(1 << (1 + BMAP_RSVRD_MODES)) /* mode change complete */
 
 #endif /* _SLASH_CLI_BMAP_H_ */
