@@ -389,8 +389,6 @@ struct offtree_fill {
 	psc_spinlock_t             oftfill_lock;
 };
 
-
-
 struct offtree_req {
 	struct offtree_root  *oftrq_root;
 	struct offtree_memb  *oftrq_memb;   /* pointer to request node head */
@@ -402,8 +400,9 @@ struct offtree_req {
 	u16                   oftrq_width;
 	off_t                 oftrq_darray_off;
 	struct offtree_fill   oftrq_fill;
-	void                 *oftrq_bmap;   /* this is needed for dio        */
+	void                 *oftrq_bmap;
 #define oftrq_len oftrq_nblks               /* reuse oftrq_nblks in dio mode */
+	struct psclist_head   oftrq_lentry; /* chain onto bmap */
 };
 
 enum offtree_req_op_types {
