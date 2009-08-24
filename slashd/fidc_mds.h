@@ -23,7 +23,7 @@ struct fidc_mds_info {
 	(&((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)->fmdsi_inodeh)
 
 #define fcmh_2_fmdsi(f)						\
-	(struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri;
+	((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)
 
 
 static inline void
