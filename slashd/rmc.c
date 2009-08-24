@@ -344,13 +344,14 @@ slrmc_opendir(struct pscrpc_request *rq)
 	struct srm_opendir_req *mq;
 	struct srm_opendir_rep *mp;
 	struct slash_fidgen fg;
+	struct stat stb;
 	void *data;
 
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = zfsslash2_opendir(zfsVfs, mq->ino, &mq->creds, &fg,
-				   &data);
+				   &stb, &data);
 
 	psc_info("zfs opendir data (%p)", data);
 
@@ -358,7 +359,7 @@ slrmc_opendir(struct pscrpc_request *rq)
 		extern struct cfdops mdsCfdOps;
 		struct cfdent *cfd;
 
-		mp->rc = slrmc_inode_cacheput(&fg, NULL, &mq->creds);
+		mp->rc = slrmc_inode_cacheput(&fg, &stb, &mq->creds);
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
 				data, &cfd, &mdsCfdOps, CFD_DIR);
@@ -499,48 +500,21 @@ slrmc_release(struct pscrpc_request *rq)
 	f = m->mexpfcm_fcmh;
 	psc_assert(f->fcmh_fcoo);
 
-	i = f->fcmh_fcoo->fcoo_pri;
+	i = fcmh_2_fmdsi(f);
 
 	MEXPFCM_LOCK(m);
 	psc_assert(m->mexpfcm_fcmh);
 	/* Prevent others from trying to access the mexpfcm.
 	 */
 	m->mexpfcm_flags |= MEXPFCM_CLOSING;
-	mexpfcm_release_brefs(m);
 	MEXPFCM_ULOCK(m);
 
 	rc = cfdfree(rq->rq_export, cfd);
 	psc_info("cfdfree() cfd %"PRId64" rc=%d",
 		 cfd, rc);
-	/* Serialize the test for releasing the zfs inode so that this 
-	 *   segment is not re-entered.  Also, note that 'm' may have 
-	 *   been freed already.
-	 */
-	spinlock(&f->fcmh_lock);
+	
+	mp->rc = mds_inode_release(f);
 
-	DEBUG_FCMH(PLL_DEBUG, f, "slrmc_release i->fmdsi_ref (%d) (oref=%d)",
-		   atomic_read(&i->fmdsi_ref), f->fcmh_fcoo->fcoo_oref_rw[0]);
-
-	if (atomic_dec_and_test(&i->fmdsi_ref)) {
-		psc_assert(SPLAY_EMPTY(&i->fmdsi_exports));
-		f->fcmh_state |= FCMH_FCOO_CLOSING;
-
-		DEBUG_FCMH(PLL_DEBUG, f, "calling zfsslash2_release");
-		mp->rc = zfsslash2_release(zfsVfs, fg.fg_fid, &mq->creds,
-					   i->fmdsi_data);
-		/* Remove the fcoo but first make sure the open ref's
-		 *  are ok.  This value is bogus, fmdsi_ref has the
-		 *  the real open ref.
-		 */
-		PSCFREE(i);
-		f->fcmh_fcoo->fcoo_pri = NULL;
-		f->fcmh_fcoo->fcoo_oref_rw[0] = 0;
-		freelock(&f->fcmh_lock);
-		fidc_fcoo_remove(f);
-	} else {
-		mp->rc = 0;
-		freelock(&f->fcmh_lock);
-	}
 	RETURN(0);
 }
 
