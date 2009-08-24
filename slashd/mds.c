@@ -57,6 +57,43 @@ mds_inode_od_initnew(struct slash_inode_handle *i)
 	mds_inode_sync(i);
 }
 
+int 
+mds_inode_release(struct fidc_membh *f)
+{
+	struct fidc_mds_info *i;
+	int rc=0;
+
+	spinlock(&f->fcmh_lock);
+
+	psc_assert(f->fcmh_fcoo && f->fcmh_fcoo->fcoo_pri);
+	/* It should be safe to look at the fmdsi without calling 
+	 *   fidc_fcmh2fmdsi() because this thread should absolutely have
+	 *   a ref to the fcmh which should be open.
+	 */
+	i = fcmh_2_fmdsi(f);
+
+	DEBUG_FCMH(PLL_DEBUG, f, "i->fmdsi_ref (%d) (oref=%d)",
+                   atomic_read(&i->fmdsi_ref), f->fcmh_fcoo->fcoo_oref_rw[0]);
+
+	if (atomic_dec_and_test(&i->fmdsi_ref)) {
+		psc_assert(SPLAY_EMPTY(&i->fmdsi_exports));
+		/* We held the final reference to this fcoo, it must 
+		 *   return attached.
+		 */
+		psc_assert(!fidc_fcoo_wait_locked(f, 1));
+
+		f->fcmh_state |= FCMH_FCOO_CLOSING;
+		DEBUG_FCMH(PLL_DEBUG, f, "calling zfsslash2_release");
+		rc = mdsio_zfs_release(&i->fmdsi_inodeh);
+		PSCFREE(i);
+                f->fcmh_fcoo->fcoo_pri = NULL;
+                f->fcmh_fcoo->fcoo_oref_rw[0] = 0;
+                freelock(&f->fcmh_lock);
+                fidc_fcoo_remove(f);
+	} else 
+		freelock(&f->fcmh_lock);
+	return (rc);
+}
 
 __static int
 mds_inode_read(struct slash_inode_handle *i)
@@ -252,6 +289,7 @@ mexpfcm_release_brefs(struct mexpfcm *m)
 	MEXPFCM_LOCK_ENSURE(m);
 	psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
 	psc_assert(m->mexpfcm_flags & MEXPFCM_REGFILE);
+	psc_assert(!(m->mexpfcm_flags & MEXPFCM_DIRECTORY));
 
 	for (bref = SPLAY_MIN(exp_bmaptree, &m->mexpfcm_bmaps);
 	    bref; bref = bn) {
@@ -271,21 +309,22 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 
 	spinlock(&m->mexpfcm_lock);
 
-	if (c->type & CFD_FORCE_CLOSE) {
+	if (c->type & CFD_FORCE_CLOSE)
 		/* A force close comes from a network drop, don't make
 		 *  the export code have to know about our private
 		 *  structures.
 		 */
 		m->mexpfcm_flags |= MEXPFCM_CLOSING;
-		if (c->type & CFD_FORCE_CLOSE)
-			mexpfcm_release_brefs(m);
-		    
-	} else
+	else
 		psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
 	
 	/* Verify that all of our bmap references have already been freed.
 	 */
 	if (m->mexpfcm_flags & MEXPFCM_REGFILE) {
+		/* Iterate across our brefs dropping this cfd's reference.
+		 */
+		mexpfcm_release_brefs(m);	
+
 		psc_assert(c->type & CFD_CLOSING);
 		psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
 	}
@@ -565,7 +604,13 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 	if (!mdsi->bmdsi_assign)
 		return (-1);
 
-	DEBUG_BMAP(PLL_INFO, bref->mexpbcm_bmap, "using res(%s) ion(%s) "
+	atomic_inc(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
+
+	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, 
+		   "inc fmdsi_ref (%d) for bmap assignment",  
+		   atomic_read(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref));
+	
+	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
 		   "mion(%p)", res->res_name, 
 		   libcfs_nid2str(res->res_nids[n]), mdsi->bmdsi_wr_ion);
 	return (0);
