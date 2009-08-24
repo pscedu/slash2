@@ -112,6 +112,7 @@ msl_oftrq_destroy(__unusedx struct pscrpc_request_set *set, void *a, int rc)
 
 	bmap_oftrq_del(b, r);
 
+	dynarray_free(r->oftrq_darray);
 	PSCFREE(r->oftrq_darray);
 	if (r->oftrq_fill.oftfill_reqset) {
 		pscrpc_set_destroy(r->oftrq_fill.oftfill_reqset);
