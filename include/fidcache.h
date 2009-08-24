@@ -413,6 +413,7 @@ fidc_fcoo_remove(struct fidc_membh *h)
 	psc_assert(h->fcmh_cache_owner == &fidcDirtyList);
 	psc_assert(!(o->fcoo_oref_rw[0] || o->fcoo_oref_rw[1]));
 	psc_assert(!o->fcoo_pri);
+	psc_assert(SPLAY_EMPTY(&o->fcoo_bmapc));
 
 	h->fcmh_state &= ~FCMH_FCOO_ATTACH;
 	h->fcmh_fcoo = NULL;

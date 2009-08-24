@@ -512,9 +512,9 @@ slrmc_release(struct pscrpc_request *rq)
 	rc = cfdfree(rq->rq_export, cfd);
 	psc_info("cfdfree() cfd %"PRId64" rc=%d",
 		 cfd, rc);
-	/* Serialize the test for releasing the zfs inode
-	 *  so that this segment is not re-entered.  Also, note that
-	 *  'm' may have been freed already.
+	/* Serialize the test for releasing the zfs inode so that this 
+	 *   segment is not re-entered.  Also, note that 'm' may have 
+	 *   been freed already.
 	 */
 	spinlock(&f->fcmh_lock);
 

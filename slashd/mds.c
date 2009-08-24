@@ -256,8 +256,8 @@ mexpfcm_release_brefs(struct mexpfcm *m)
 	for (bref = SPLAY_MIN(exp_bmaptree, &m->mexpfcm_bmaps);
 	    bref; bref = bn) {
 		bn = SPLAY_NEXT(exp_bmaptree, &m->mexpfcm_bmaps, bref);
-		mds_bmap_ref_del(bref);
 		SPLAY_REMOVE(exp_bmaptree, &m->mexpfcm_bmaps, bref);
+		mds_bmap_ref_del(bref);
 	}
 }
 
@@ -271,22 +271,22 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 
 	spinlock(&m->mexpfcm_lock);
 
-	if (!(c->type & CFD_FORCE_CLOSE)) {
+	if (c->type & CFD_FORCE_CLOSE) {
 		/* A force close comes from a network drop, don't make
 		 *  the export code have to know about our private
 		 *  structures.
 		 */
-		psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
 		m->mexpfcm_flags |= MEXPFCM_CLOSING;
-	}
+		if (c->type & CFD_FORCE_CLOSE)
+			mexpfcm_release_brefs(m);
+		    
+	} else
+		psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
+	
 	/* Verify that all of our bmap references have already been freed.
 	 */
 	if (m->mexpfcm_flags & MEXPFCM_REGFILE) {
 		psc_assert(c->type & CFD_CLOSING);
-
-		if (c->type & CFD_FORCE_CLOSE)
-			mexpfcm_release_brefs(m);
-
 		psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
 	}
 	freelock(&m->mexpfcm_lock);
@@ -685,8 +685,10 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 	if (!SPLAY_REMOVE(bmap_exports, &mdsi->bmdsi_exports, bref))
 		psc_fatalx("bref not found on bmap_exports");
 
-	DEBUG_BMAP(PLL_INFO, bmap, "done with ref_del");
+	DEBUG_BMAP(PLL_INFO, bmap, "done with ref_del bref=%p", bref);
 	BMAP_ULOCK(bmap);
+	
+	PSCFREE(bref);
 }
 
 /**
@@ -973,6 +975,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		b = PSCALLOC(sizeof(struct bmapc_memb) + 
 			     sizeof(struct bmap_mds_info)); /* XXX not freed */
 
+		b->bcm_pri = b + (sizeof(*b));
 		b->bcm_blkno = mq->blkno;
 		b->bcm_mode = BMAP_MDS_INIT;
 		bmdsi = b->bcm_pri;
@@ -1031,7 +1034,6 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	mds_bmap_ref_add(bref, mq);
 
 	*bmap = b;
-
  out:
 	if (rc) {
 		b->bcm_mode = BMAP_MDS_FAILED;
