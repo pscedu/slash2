@@ -78,5 +78,4 @@ rpc_initsvc(void)
 
 	if (slrmi_issue_connect(slash2_mds))
 		abort();
-
 }
