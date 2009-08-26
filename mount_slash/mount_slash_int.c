@@ -899,7 +899,9 @@ __static void
 msl_pages_track_pending(struct offtree_req *r, struct offtree_iov *v)
 {
 	struct offtree_memb *m = (struct offtree_memb *)v->oftiov_memb;
-
+	
+	DEBUG_OFFTREQ(PLL_WARN, r, "pending...");
+	DEBUG_OFFTIOV(PLL_WARN, v, "...pending");
 	/* This would be a problem..
 	 */
 	psc_assert(!ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY));
@@ -1154,8 +1156,7 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 		spinlock(&m->oft_lock);
 		oftm_write_prepped_verify(m);
 		if (!x) {
-			/* The first req structure is always needed,
-			 *  but not necessarily its first iov(s).
+			/* The first iovs are not always needed.
 			 */
 			if (r->oftrq_off > OFT_IOV2E_OFF_(v)) {
 				freelock(&m->oft_lock);
@@ -1359,12 +1360,15 @@ msl_pages_blocking_load(struct offtree_req *r)
 	/* Wait for our friends to finish their page-ins which we
 	 *  are also blocking on.
 	 */
+	if (!f->oftfill_inprog)
+		return (rc);
+
+ retry:
 	for (i=0; i < dynarray_len(f->oftfill_inprog); i++) {
 		struct offtree_iov  *v = dynarray_getpos(f->oftfill_inprog, i);
 		struct offtree_memb *m = v->oftiov_memb;
 
 		w = &m->oft_waitq;
- retry:
 		spinlock(&m->oft_lock);
 		/* Has the other thread finished working on this?
 		 */
@@ -1417,6 +1421,9 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	 */
 	roff  = off - (s * SLASH_BMAP_SIZE);
 	tlen  = MIN((size_t)(SLASH_BMAP_SIZE - roff), size);
+
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "sz=%zu off=%llu op=%d", 
+		   size, off, op);
 	/* Foreach block range, get its bmap and make a request into its
 	 *  offtree.  This first loop retrieves all the pages.
 	 */
@@ -1496,6 +1503,9 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	 *  prevent the set from being destroyed before it has completed.
 	 */
 	for (j=0; j < nr; j++) {
+		if (!(r[j])->oftrq_fill.oftfill_reqset)
+			continue;
+
 		(r[j])->oftrq_fill.oftfill_reqset->set_interpret = msl_oftrq_destroy;
 		(r[j])->oftrq_fill.oftfill_reqset->set_arg = r[j];
 		pscrpc_set_wait((r[j])->oftrq_fill.oftfill_reqset);	
