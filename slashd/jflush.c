@@ -33,7 +33,7 @@ jfi_schedule(struct jflush_item *jfi, list_cache_t *lc)
                 psc_assert(psclist_conjoint(&jfi->jfi_lentry));
         else {
                 psc_assert(psclist_disjoint(&jfi->jfi_lentry));
-                jfi->jfi_state &= ~JFI_QUEUED;
+                jfi->jfi_state |= JFI_QUEUED;
                 lc_queue(lc, &jfi->jfi_lentry);
         }
         freelock(&jfi->jfi_lock);
