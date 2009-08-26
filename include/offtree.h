@@ -303,15 +303,13 @@ struct offtree_memb {
 enum oft_attributes {
 	OFT_NODE      = (1 << 0), /* Node not a leaf          */
 	OFT_LEAF      = (1 << 1), /* Leaf not a node          */
-	//	OFT_READPNDG  = (1 << 2), /* Read is about to occur   */
-	//OFT_WRITEPNDG = (1 << 3), /* Write is about to occur  */
-	OFT_ALLOCPNDG = (1 << 4), /* Alloc is about to occur  */
-	OFT_ROOT      = (1 << 6), /* Tree root                */
-	OFT_FREEING   = (1 << 7), /* Different from Reap?     */
-	OFT_SPLITTING = (1 << 8), /* Leaf becoming a parent   */
-	OFT_RELEASE   = (1 << 9), /* Reclaim empty parent     */
-	OFT_MCHLDGROW = (1 << 10),/* Multichild grow          */
-	OFT_UNINIT    = (1 << 11) /* Uninitialized leaf       */
+	OFT_ALLOCPNDG = (1 << 2), /* Alloc is about to occur  */
+	OFT_ROOT      = (1 << 3), /* Tree root                */
+	OFT_FREEING   = (1 << 4), /* Different from Reap?     */
+	OFT_SPLITTING = (1 << 5), /* Leaf becoming a parent   */
+	OFT_RELEASE   = (1 << 6), /* Reclaim empty parent     */
+	OFT_MCHLDGROW = (1 << 7),/* Multichild grow          */
+	OFT_UNINIT    = (1 << 8) /* Uninitialized leaf       */
 };
 
 #define OFTM_FLAG(field, str) (field ? str : "")
