@@ -21,4 +21,8 @@ mds_bmap_repl_log(struct bmapc_memb *);
 extern void
 mds_bmap_crc_log(struct bmapc_memb *, struct srm_bmap_crcup *);
 
+extern void
+mds_bmap_sync(void *);
+
+
 #endif
