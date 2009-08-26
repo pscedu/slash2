@@ -115,12 +115,14 @@ mds_inode_read(struct slash_inode_handle *i)
 	/* read failed, report bad news */
 	if (szrc == -1) {
 		DEBUG_INOH(PLL_WARN, i, "mdsio_zfs_inode_read: %d", errno);
+		rc = -EIO;
 		goto out;
 	}
 
 	/* short read, report an I/O error */
 	if (szrc != INO_OD_SZ) {
 		DEBUG_INOH(PLL_WARN, i, "mdsio_zfs_inode_read: failed");
+		rc = -EIO;
 		goto out;
 	}
 
@@ -129,22 +131,20 @@ mds_inode_read(struct slash_inode_handle *i)
 	new:
                 mds_inode_od_initnew(i);
                 DEBUG_INOH(PLL_INFO, i, "detected a new inode");
-		return (0);
+		goto out;
         }
 
 	PSC_CRC_CALC(crc, &i->inoh_ino, INO_OD_CRCSZ);
         if (crc == i->inoh_ino.ino_crc) {
+		i->inoh_flags &= ~INOH_INO_NOTLOADED;	
                 DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
-		return (0);
+		goto out;
 	}
 
 	DEBUG_INOH(PLL_WARN, i, "CRC failed want=%"PRIx64", got=%"PRIx64,
                    i->inoh_ino.ino_crc, crc);
-
-	i->inoh_flags &= ~INOH_INO_NOTLOADED;
  out:
 	ureqlock(&i->inoh_lock, locked);
-	rc = -EIO;
 	return (rc);
 }
 
@@ -323,7 +323,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	if (m->mexpfcm_flags & MEXPFCM_REGFILE) {
 		/* Iterate across our brefs dropping this cfd's reference.
 		 */
-		mexpfcm_release_brefs(m);	
+		mexpfcm_release_brefs(m);
 
 		psc_assert(c->type & CFD_CLOSING);
 		psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
@@ -624,12 +624,12 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
  * @bref: the bref to be added, it must have a bmapc_memb already attached.
  * @mq: the RPC request for examining the bmap access mode (read/write).
  */
-__static void
+__static int
 mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
-	int wr[2], locked, rw=mq->rw;
+	int wr[2], locked, rc=0, rw=mq->rw;
 	int mode=(rw == SRIC_BMAP_READ ? BMAP_RD : BMAP_WR);
 	atomic_t *a=(rw == SRIC_BMAP_READ ? &bmdsi->bmdsi_rd_ref :
 		     &bmdsi->bmdsi_wr_ref);
@@ -660,7 +660,9 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 		 *  the bmap is locked.  This may have to be
 		 *  replaced by a waitq and init flag.
 		 */
-		psc_assert(mds_bmap_ion_assign(bref, mq->pios) != -1);
+		rc = mds_bmap_ion_assign(bref, mq->pios);
+		if (rc)
+			goto out;
 	}
 	/* Do directio checks here.
 	 */
@@ -680,9 +682,13 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 	if (SPLAY_INSERT(bmap_exports, &bmdsi->bmdsi_exports, bref))
 		psc_fatalx("found duplicate bref on bmap_exports");
 
-	DEBUG_BMAP(PLL_TRACE, bmap, "done with ref_add (mion=%p)", 
-		   bmdsi->bmdsi_wr_ion);
+ out:
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, bmap, 
+		   "ref_add (mion=%p) (rc=%d)", 
+		   bmdsi->bmdsi_wr_ion, rc);
 	BMAP_URLOCK(bmap, locked);
+
+	return (rc);
 }
 
 /**
@@ -707,10 +713,11 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 		if (atomic_dec_and_test(&mdsi->bmdsi_wr_ref)) {
 			psc_assert(bmap->bcm_mode & BMAP_WR);
 			bmap->bcm_mode &= ~BMAP_WR;
-			if (atomic_dec_and_test(&mdsi->bmdsi_wr_ion->mi_refcnt)) {
+			if (mdsi->bmdsi_wr_ion && 
+			    atomic_dec_and_test(&mdsi->bmdsi_wr_ion->mi_refcnt)) {
 				//XXX cleanup mion here?
 			}
-			mdsi->bmdsi_wr_ion = NULL;
+			//mdsi->bmdsi_wr_ion = NULL;
 		}
 
 	} else if (bref->mexpbcm_mode & MEXPBCM_RD) {
@@ -771,7 +778,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	psc_assert(bmap->bcm_fcmh == fcmh);
 	psc_assert(bmdsi);
 	psc_assert(bmapod);
-	psc_assert(bmap->bcm_mode & BMAP_WR);
+	psc_assert(bmdsi->bmdsi_wr_ion);
 	bmdsi_sanity_locked(bmap, 1, wr);
 
 	if (ion_nid != bmdsi->bmdsi_wr_ion->mi_resm->resm_nid) {
@@ -1024,7 +1031,7 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		b->bcm_mode = BMAP_MDS_INIT;
 		bmdsi = b->bcm_pri;
 		LOCK_INIT(&b->bcm_lock);
-		bmap_mds_info_init(bmdsi);
+		bmap_mds_info_init(b);
 		psc_waitq_init(&b->bcm_waitq);
 		b->bcm_fcmh = f;
 		/* It's ready to go, place it in the tree.
@@ -1038,8 +1045,12 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		FCMH_ULOCK(f);
 
 		rc = mds_bmap_read(f, mq->blkno, b);
-		if (rc)
+		if (rc) {
+			DEBUG_FCMH(PLL_WARN, f, "mds_bmap_read() rc=%d blkno=%u", 
+				   rc, mq->blkno);
+			b->bcm_mode |= BMAP_MDS_FAILED;
 			goto out;
+		}
 
 		b->bcm_mode = 0;
 		/* Notify other threads that this bmap has been loaded, they're
@@ -1075,15 +1086,16 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	/* Place our bref on the tree, manage any mode changes that result
 	 *  from this new reference.  Also, on write choose an ION if needed.
 	 */
-	mds_bmap_ref_add(bref, mq);
-
-	*bmap = b;
+	if ((rc = mds_bmap_ref_add(bref, mq)))
+		b->bcm_mode |= BMAP_MDS_NOION;		
  out:
-	if (rc) {
-		b->bcm_mode = BMAP_MDS_FAILED;
+	if (rc)
+		*bmap = NULL;
 		/* XXX think about policy updates in fail mode.
 		 */
-	}
+        else
+		*bmap = b;
+
 	BMAP_ULOCK(b);
 	return (rc);
 }
