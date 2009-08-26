@@ -720,10 +720,12 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 
 	psc_assert(ATTR_TEST(m->oft_flags, OFT_LEAF));
 
-	if (req->oftrq_op == OFTREQ_OP_WRITE)
+	if (req->oftrq_op & OFTREQ_OP_WRITE)
 		psc_assert(atomic_read(&m->oft_wrop_ref) > 0);
-
-	if (req->oftrq_op == OFTREQ_OP_READ)
+	
+	else if ((req->oftrq_op & OFTREQ_OP_READ)  ||
+		 (req->oftrq_op & OFTREQ_OP_PRFFP) ||
+		 (req->oftrq_op & OFTREQ_OP_PRFLP))
 		psc_assert(atomic_read(&m->oft_rdop_ref) > 0);
 
 	DEBUG_OFFTREQ(PLL_INFO, req, "new req");
@@ -1064,11 +1066,21 @@ offtree_region_preprw(struct offtree_req *req)
 			 */
 			ATTR_SET(m->oft_flags, OFT_ALLOCPNDG);
 			ATTR_UNSET(m->oft_flags, OFT_UNINIT);
-		} else
+		} else {}
 			/* Newly allocated leafs have op_ref
 			 *   already set to 1.
 			 */
-			oft_refcnt_inc(req, m);
+			//oft_refcnt_inc(req, m);
+		
+		if ((req->oftrq_op & OFTREQ_OP_READ)  ||
+		    (req->oftrq_op & OFTREQ_OP_PRFFP) ||
+		    (req->oftrq_op & OFTREQ_OP_PRFLP))
+			atomic_inc(&m->oft_rdop_ref);
+
+		if (req->oftrq_op & OFTREQ_OP_WRITE)
+			atomic_inc(&m->oft_wrop_ref);
+
+		DEBUG_OFT(PLL_TRACE, m, "refcnt chk");
 	runleaf:
 		rc = offtree_region_preprw_leaf_locked(req);
 		/* Free the memb lock and return.
