@@ -85,6 +85,8 @@ int msl_io(struct msl_fhent *, char *, size_t, off_t, int);
 int msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 
+void msl_bmap_fhcache_clear(struct msl_fhent *);
+
 struct msl_fhent *msl_fhent_new(struct fidc_membh *);
 
 void mseqpollthr_spawn(void);
@@ -104,11 +106,11 @@ msl_fbr_ref(struct msl_fbr *r, int rw)
 
 	if (rw == FHENT_READ) {
                 atomic_inc(&r->mfbr_bmap->bcm_rd_ref);
-                atomic_inc(&r->mfbr_rd_ref); 
+                atomic_inc(&r->mfbr_rd_ref);
 
 	} else if (rw == FHENT_WRITE) {
                 atomic_inc(&r->mfbr_bmap->bcm_wr_ref);
-                atomic_inc(&r->mfbr_wr_ref); 
+                atomic_inc(&r->mfbr_wr_ref);
 	} else
 		abort();
 }
@@ -157,20 +159,17 @@ fcmh_2_fdb(struct fidc_membh *f)
 
 SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
-static inline struct msl_fbr * 
+static inline struct msl_fbr *
 fhcache_bmap_lookup(struct msl_fhent *mfh, struct bmapc_memb *b)
 {
-        struct msl_fbr *r=NULL, lr;
+        struct msl_fbr *r, lr;
         int locked;
 
 	lr.mfbr_bmap = b;
 
         locked = reqlock(&mfh->mfh_lock);
-
         r = SPLAY_FIND(fhbmap_cache, &mfh->mfh_fhbmap_cache, &lr);
-
         ureqlock(&mfh->mfh_lock, locked);
-
         return (r);
 }
 
