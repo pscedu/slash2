@@ -1541,7 +1541,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 
 	rc = msl_write(mfh, (char *)buf, size, off);
 
-	psc_info("msl_write() %p rc=%d sz=%zu off=%llu", buf, rc, size, off);
+	psc_info("msl_write() %p rc=%d sz=%zu off=%"PRIdOFF, buf, rc, size, off);
 
 	fidc_membh_dropref(mfh->mfh_fcmh);
 	if (rc < 0)
@@ -1551,7 +1551,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 		rc = 0;
 	}
 	if (rc)
-	out:
+ out:
 		fuse_reply_err(req, rc);
 }
 

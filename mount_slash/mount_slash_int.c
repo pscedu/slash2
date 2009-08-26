@@ -1422,7 +1422,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	roff  = off - (s * SLASH_BMAP_SIZE);
 	tlen  = MIN((size_t)(SLASH_BMAP_SIZE - roff), size);
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "sz=%zu off=%llu op=%d", 
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "sz=%zu off=%"PRIdOFF" op=%d", 
 		   size, off, op);
 	/* Foreach block range, get its bmap and make a request into its
 	 *  offtree.  This first loop retrieves all the pages.
