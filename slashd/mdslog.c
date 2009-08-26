@@ -127,7 +127,7 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
 	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
 		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
 	
-	psc_trace("jlog fid=%"PRIx64" ios=%x pos=%u",
+	psc_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
                   jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos);
 
 	jfi_prep(&inoh->inoh_jfi, mdsJournal);
