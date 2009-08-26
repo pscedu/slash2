@@ -37,11 +37,11 @@ enum slash_inode_handle_flags {
 
 static inline void
 slash_inode_handle_init(struct slash_inode_handle *i,
-			struct fidc_membh *f) {
+			struct fidc_membh *f, jflush_handler handler) {
 	i->inoh_fcmh = f;
 	i->inoh_extras = NULL;
 	LOCK_INIT(&i->inoh_lock);
-	jfi_init(&i->inoh_jfi);
+	jfi_init(&i->inoh_jfi, handler, i);
 	i->inoh_flags = INOH_INO_NOTLOADED;
 }
 

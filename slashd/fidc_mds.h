@@ -7,6 +7,7 @@
 #include "fidcache.h"
 #include "mdsexpc.h"
 #include "inodeh.h"
+#include "mdslog.h"
 
 SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
@@ -34,7 +35,7 @@ fmdsi_init(struct fidc_mds_info *mdsi, struct fidc_membh *fcmh, void *pri)
 	mdsi->fmdsi_xid = 0;
 	mdsi->fmdsi_data = pri;
 
-	slash_inode_handle_init(&mdsi->fmdsi_inodeh, fcmh);
+	slash_inode_handle_init(&mdsi->fmdsi_inodeh, fcmh, mds_inode_sync);
 }
 
 struct fidc_mds_info *fidc_fid2fmdsi(slfid_t, struct fidc_membh **);
