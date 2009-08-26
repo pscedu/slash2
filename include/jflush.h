@@ -25,11 +25,13 @@ enum jfi_states {
 };
 
 static inline void
-jfi_init(struct jflush_item *j)
+jfi_init(struct jflush_item *j, jflush_handler handler, void *data)
 {
 	LOCK_INIT(&j->jfi_lock);
 	INIT_PSCLIST_ENTRY(&j->jfi_lentry);
-	j->jfi_state = 0;	
+	j->jfi_handler = handler;
+	j->jfi_data = data;
+	j->jfi_state = 0;
 }
 
 void jfi_prep(struct jflush_item *, struct psc_journal *);
