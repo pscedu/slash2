@@ -7,6 +7,7 @@
 
 #include "jflush.h"
 #include "bmap.h"
+#include "mdslog.h"
 
 struct mexpbcm;
 struct mexpfcm;
@@ -44,14 +45,17 @@ enum mds_bmap_modes {
         BMAP_MDS_FAILED = (1 << (0 + BMAP_RSVRD_MODES)), /* crc failure */
         BMAP_MDS_EMPTY  = (1 << (1 + BMAP_RSVRD_MODES)), /* new bmap, not yet committed to disk */
         BMAP_MDS_CRC_UP = (1 << (2 + BMAP_RSVRD_MODES)), /* crc update in progress */
+	BMAP_MDS_CRCWRT = (1 << (3 + BMAP_RSVRD_MODES)),
+	BMAP_MDS_NOION  = (1 << (4 + BMAP_RSVRD_MODES)),
 	BMAP_MDS_INIT   = BMAP_INIT
 };
 
-
 static inline void
-bmap_mds_info_init(struct bmap_mds_info *bmdsi)
+bmap_mds_info_init(struct bmapc_memb *bmap)
 {
-	jfi_init(&bmdsi->bmdsi_jfi);
+	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
+
+	jfi_init(&bmdsi->bmdsi_jfi, mds_bmap_sync, bmap);
 	bmdsi->bmdsi_xid = 0;
 	atomic_set(&bmdsi->bmdsi_rd_ref, 0);
 	atomic_set(&bmdsi->bmdsi_wr_ref, 0);
