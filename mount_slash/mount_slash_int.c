@@ -222,8 +222,7 @@ msl_fbr_free(struct msl_fbr *r)
 	struct bmapc_memb *b = r->mfbr_bmap;
 
 	psc_assert(b);
-	psc_assert(r->mfbr_tentry.spe_left == NULL &&
-		   r->mfbr_tentry.spe_right == NULL);
+	psc_assert(SPLAY_ENTRY_DISJOINT(fhbmap_cache, r));
 #if 0
 	if (atomic_read(&r->mfbr_wr_ref))
 		atomic_dec(&r->mfbr_bmap->bcm_wr_ref);
