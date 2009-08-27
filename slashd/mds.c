@@ -262,6 +262,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	 */
 	c->pri = m;
 	fidc_membh_dropref(f);
+
 	return (rc);
 }
 
@@ -516,9 +517,8 @@ mds_mion_init(struct mexp_ion *mion, sl_resm_t *resm)
  * @pios: the preferred i/o system
  */
 __static int
-mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
+mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 {
-	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *mdsi=bmap->bcm_pri;
 	struct mexp_ion *mion;
 	struct bmi_assign bmi;
@@ -565,7 +565,7 @@ mds_bmap_ion_assign(struct mexpbcm *bref, sl_ios_id_t pios)
 		mion = resm->resm_pri;
 		freelock(&rmi->rmi_lock);
 
-		DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap,
+		DEBUG_BMAP(PLL_TRACE, bmap,
 		    "res(%s) ion(%s) init=%d, failed=%d",
 		    res->res_name, libcfs_nid2str(res->res_nids[n]),
 		    mion->mi_csvc->csvc_initialized,
@@ -654,13 +654,12 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 	atomic_inc(a);
 	bmdsi_sanity_locked(bmap, 0, wr);
 
-	if (wr[0] == 1 && mode == BMAP_WR) {
-		psc_assert(!bmdsi->bmdsi_wr_ion);
+	if (wr[0] == 1 && mode == BMAP_WR && !bmdsi->bmdsi_wr_ion) {
 		/* XXX Should not send connect rpc's here while
 		 *  the bmap is locked.  This may have to be
 		 *  replaced by a waitq and init flag.
 		 */
-		rc = mds_bmap_ion_assign(bref, mq->pios);
+		rc = mds_bmap_ion_assign(bmap, mq->pios);
 		if (rc)
 			goto out;
 	}
