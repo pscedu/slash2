@@ -621,8 +621,10 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 {
 	if (ATTR_TEST(slb->slb_flags, SLB_PINNED)) {
 		 psc_assert(slb->slb_lc_owner == &slBufsPin);
+		 atomic_inc(&slb->slb_inflpndg);
 		 return (sl_buffer_pin_assertions(slb));
 	}
+
 	if (ATTR_TEST(slb->slb_flags, SLB_FRESH)) {
 		slb_fresh_2_pinned(slb);
 
@@ -706,7 +708,8 @@ sl_oftiov_inflight_cb(struct offtree_iov *iov, int op)
 
 	s = (struct sl_buffer *)iov->oftiov_pri;
 
-	DEBUG_SLB(PLL_TRACE, s, "inflight ref updating op=%d", op);
+	DEBUG_SLB(PLL_TRACE, s, "inflight ref updating op=%s",
+		  op ? "SL_INFLIGHT_INC" : "SL_INFLIGHT_DEC");
 
 	if (op == SL_INFLIGHT_INC) {
 		psc_assert(atomic_read(&s->slb_inflight) >= 0);
@@ -723,9 +726,8 @@ sl_oftiov_inflight_cb(struct offtree_iov *iov, int op)
 
 		atomic_dec(&s->slb_inflight);
 
-	} else {
+	} else
 		psc_fatalx("Invalid op=%d", op);
-	}
 }
 /**
  * sl_buffer_alloc_internal - allocate blocks from the given slab buffer 'b'.
