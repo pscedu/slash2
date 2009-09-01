@@ -54,6 +54,15 @@ offtree_destroy(struct offtree_root *t)
 	PSCFREE(t);
 }
 
+int
+offtree_req_set_finalize(struct offtree_req *r, int block, int destroy) 
+{
+	if (!r->oftrq_fill.oftfill_reqset)
+		return (0);
+
+	return(pscrpc_set_finalize(r->oftrq_fill.oftfill_reqset, 
+		   block, destroy));
+}
 
 /**
  * offtree_iovs_check - iov array verifier.

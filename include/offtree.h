@@ -385,6 +385,7 @@ struct offtree_fill {
 	struct pscrpc_request_set *oftfill_reqset; /* Our request set */
 	struct dynarray           *oftfill_inprog; /* already in progress   */
 	psc_spinlock_t             oftfill_lock;
+	u32                        oftfill_chkset;
 };
 
 struct offtree_req {
@@ -393,13 +394,13 @@ struct offtree_req {
 	struct dynarray      *oftrq_darray; /* sorted array of buffer iov's */
 	off_t                 oftrq_off;    /* aligned, file-logical offset  */
 	size_t                oftrq_nblks;  /* number of blocks requested */
+	size_t                oftrq_len;
 	u8                    oftrq_op;
 	u8                    oftrq_depth;
 	u16                   oftrq_width;
 	off_t                 oftrq_darray_off;
 	struct offtree_fill   oftrq_fill;
 	void                 *oftrq_bmap;
-#define oftrq_len oftrq_nblks               /* reuse oftrq_nblks in dio mode */
 	struct psclist_head   oftrq_lentry; /* chain onto bmap */
 };
 
@@ -409,7 +410,7 @@ enum offtree_req_op_types {
 	OFTREQ_OP_WRITE = (1<<2),
 	OFTREQ_OP_PRFFP = (1<<3),
 	OFTREQ_OP_PRFLP = (1<<4),
-	OFTREQ_OP_DIO   = (1<<5)
+	OFTREQ_OP_DIO   = (1<<5)	
 };
 
 static inline size_t

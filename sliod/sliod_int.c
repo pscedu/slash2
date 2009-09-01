@@ -130,6 +130,27 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 	return (rc);
 }
 
+int
+iod_inode_getsize(slfid_t fid, off_t *fsize)
+{
+	struct fidc_membh *f;
+	struct stat stb;
+	int rc;
+
+	f = fidc_lookup_simple(fid);
+	psc_assert(f);
+	psc_assert(f->fcmh_fcoo);
+	
+	rc = fstat(f->fcmh_fcoo->fcoo_fd, &stb);
+	if (!rc)
+		*fsize = stb.st_size;
+	else
+		DEBUG_FCMH(PLL_ERROR, f, "fstat failed (rc=%d)", rc);
+
+	fidc_membh_dropref(f);
+
+	return (rc);
+}
 
 struct fidc_membh *
 iod_inode_lookup(struct slash_fidgen *fg)

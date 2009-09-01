@@ -54,6 +54,9 @@ int	iod_inode_open(struct fidc_membh *, int);
 int	iod_bmap_load(struct fidc_membh *, struct srt_bmapdesc_buf *,
 		int, struct bmapc_memb **);
 
+int     iod_inode_getsize(slfid_t, off_t *);
+
+
 extern struct slashrpc_cservice *rmi_csvc;
 
 #endif /* _SLIOD_H_ */

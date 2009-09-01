@@ -147,7 +147,8 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 	ssize_t rc, len = (nblks * SLASH_SLVR_BLKSZ);
 
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-	
+        psc_assert(rw == SL_READ || rw == SL_WRITE);
+
 	if (rw == SL_READ) {
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, blk), len,
@@ -174,11 +175,8 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 			}
 		}
 		
-	} else {	
+	} else {
 		size_t i;
-
-		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, blk), 
-			    len, slvr_2_fileoff(s, blk));
 
 		/* Denote that this block(s) have been synced to the 
 		 *  filesystem.
@@ -190,23 +188,32 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 		 */
 		SLVR_LOCK(s);
 		for (i=0; (ssize_t)i < nblks; i++) {
-			psc_assert(vbitmap_xset(s->slvr_slab->slb_inuse,
-					       blk + i) == 0);
+			//psc_assert(vbitmap_get(s->slvr_slab->slb_inuse, 
+			//	       blk + i));
 			vbitmap_unset(s->slvr_slab->slb_inuse, blk + i);
 		}
 		SLVR_ULOCK(s);
+		
+		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, blk), 
+			    len, slvr_2_fileoff(s, blk));
 	}
 
-	if (rc != len)
+	if (rc < 0)
 		DEBUG_SLVR(PLL_ERROR, s, "failed (rc=%zd, len=%zd) "
-			   "blks=%d off=%"PRIx64, 
-			   rc, len, nblks, slvr_2_fileoff(s, blk));
+			   "rw=%d blks=%d off=%"PRIx64" errno=%d", 
+			   rc, len, nblks, rw, slvr_2_fileoff(s, blk), errno);
+
+	else if (rc != len)
+		DEBUG_SLVR(PLL_ERROR, s, "short io (rc=%zd, len=%zd) "
+			   "rw=%d blks=%d off=%"PRIu64" errno=%d", 
+			   rc, len, rw, nblks, slvr_2_fileoff(s, blk), errno);
 	else {
-		DEBUG_SLVR(PLL_TRACE, s, "ok blks=%d off=%"PRIx64,
+		DEBUG_SLVR(PLL_TRACE, s, "ok blks=%d off=%"PRIu64,
 			   nblks, slvr_2_fileoff(s, blk));
 		rc = 0;
 	}
-	return (rc ? (int)-errno : (int)0);	
+
+	return ((rc < 0) ? (int)-errno : (int)0);
 }
 
 /**
@@ -219,6 +226,9 @@ slvr_fsbytes_io(struct slvr_ref *s, int rw)
 {
 	int nblks, blk, rc;
 	size_t i;
+
+	psc_trace("vbitmap_nfree() = %d", 
+		  vbitmap_nfree(s->slvr_slab->slb_inuse));
 
 	if (!s->slvr_flags & SLVR_DATARDY)
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
@@ -287,7 +297,11 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(psclist_conjoint(&s->slvr_lentry));
+	//if (psclist_conjoint(&s->slvr_lentry))
+	//	psc_assert(!(s->slvr_flags & SLVR_LRU));
+
+	DEBUG_SLVR(PLL_INFO, s, "slvrno=%hu off=%u size=%u rw=%o", 
+		   s->slvr_num, offset, size, rw);
 
 	/* Don't bother marking the bit in the slash_bmap_wire structure, 
 	 *  in fact slash_bmap_wire may not even be present for this 
@@ -306,8 +320,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	if (s->slvr_flags & SLVR_DATARDY)
 		/* Either read or write ops can just proceed if SLVR_DATARDY
 		 *  is set, the sliver is prepared.
-		 */
-		goto out;
+		 */		
+		goto set_write_dirty;
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		/* Another thread is either pulling this sliver from
@@ -334,6 +348,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		}
 	}
 
+ set_write_dirty:
 	psc_assert(rw != SL_READ);
 
 	if (!offset && size == SLASH_SLVR_SIZE) {
@@ -373,6 +388,11 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	 */
 	psc_assert(vbitmap_nfree(s->slvr_slab->slb_inuse) < 
 		   (int)SLASH_BLKS_PER_SLVR);
+	
+	psc_info("vbitmap_nfree() = %d", vbitmap_nfree(s->slvr_slab->slb_inuse));
+
+	if (s->slvr_flags & SLVR_DATARDY)
+                goto out;
 
  do_read:
 	SLVR_ULOCK(s);
@@ -393,6 +413,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	out:
 		SLVR_ULOCK(s);
 	} 
+
 	return (0);
 }
 
@@ -482,18 +503,19 @@ slvr_wio_done(struct slvr_ref *s)
 		/* This sliver was being paged-in over the network.
 		 */
                 psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
+
+		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 		/* Other threads may be waiting for DATARDY to either 
 		 *   read or write to this sliver.  At this point it's 
 		 *   safe to wake them up.
 		 * Note: when iterating over the lru list for reclaiming, 
 		 *   slvrs with pending writes must be skipped.
 		 */
-		SLVR_ULOCK(s);
 		SLVR_WAKEUP(s);
+		SLVR_ULOCK(s);
 
         } else {
 		psc_assert(s->slvr_flags & SLVR_DATARDY);

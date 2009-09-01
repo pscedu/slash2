@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <inttypes.h>
+#include <unistd.h>
 
 #include "psc_types.h"
 #include "psc_ds/listcache.h"
@@ -13,6 +14,7 @@
 #include "slashdthr.h"
 
 list_cache_t dirtyMdsData;
+extern struct psc_journal *mdsJournal;
 
 __static void *
 mdsfssyncthr_begin(__unusedx void *arg)
@@ -31,15 +33,25 @@ mdsfssyncthr_begin(__unusedx void *arg)
 		psc_assert(jfi->jfi_xh);
 		psc_assert(jfi->jfi_state & JFI_HAVE_XH);
 		psc_assert(jfi->jfi_state & JFI_QUEUED);
+		
+		if (jfi->jfi_state & JFI_BUSY) {
+			freelock(&jfi->jfi_lock);
+			lc_addtail(&dirtyMdsData, jfi);			
+			psc_info("fssync jfi(%p) xh(%p) BUSY",
+				 jfi, xh);
+			usleep(100);
+			continue;
+		}
+		
 		/* Copy the data items so that the lock may be released
 		 *  prior to the sync function being run.
 		 */
 		xh = jfi->jfi_xh;
 		data = jfi->jfi_data;
 		jfih = jfi->jfi_handler;
-		/* Mark the appropriate state changes in the JFI.
-		 */
-		pjournal_xidhndl_free(jfi->jfi_xh);
+
+		psc_assert(xh->pjx_pj == mdsJournal);
+
 		jfi->jfi_xh = NULL;
 		jfi->jfi_state &= ~JFI_QUEUED;
 		jfi->jfi_state &= ~JFI_HAVE_XH;
@@ -47,12 +59,16 @@ mdsfssyncthr_begin(__unusedx void *arg)
 		freelock(&jfi->jfi_lock);
 		/* Now run the app-specific data flush code.
 		 */
-		psc_trace("fssync jfi(%p) xh(%p) xid(%"PRIu64") data(%p)",
+		psc_info("fssync jfi(%p) xh(%p) xid(%"PRIu64") data(%p)",
 			  jfi, xh, xh->pjx_xid, data);
 		(jfih)(data);
 
+		psc_assert(xh->pjx_pj == mdsJournal);
+
 		if (pjournal_xend(xh, PJET_VOID, NULL, 0))
 			psc_fatal("pjournal_xend() failed");
+
+		pjournal_xidhndl_free(xh);
 	}
 }
 

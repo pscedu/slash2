@@ -37,16 +37,17 @@
 __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 __static void
-msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, off_t off,
+msl_oftrq_build(struct offtree_req **newreq, struct bmapc_memb *b, off_t off,
     size_t len, int op)
 {
-	
+	struct offtree_req *r;	
 	/* Ensure the offset fits within the range and mask off the
 	 *  lower bits to align with the offtree's page size.
 	 */
 	psc_assert((off + len) <= SLASH_BMAP_SIZE);
-	psc_assert(op == OFTREQ_OP_WRITE ||
-		   op == OFTREQ_OP_READ);
+	psc_assert(op == OFTREQ_OP_WRITE || op == OFTREQ_OP_READ);
+
+	*newreq = r = PSCALLOC(sizeof(struct offtree_req));
 
 	INIT_PSCLIST_ENTRY(&r->oftrq_lentry);
 	/* Verify that the mds agrees that the bmap is writeable.
@@ -63,7 +64,6 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, off_t off,
 	if (b->bcm_mode & BMAP_DIO) {
 		r->oftrq_op |= OFTREQ_OP_DIO;
 		r->oftrq_off = off;
-		r->oftrq_len = len;
 		goto out;
 	}
 	/* Resume creating the cache-based request.
@@ -73,11 +73,12 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, off_t off,
 	r->oftrq_memb   = &r->oftrq_root->oftr_memb;
 	r->oftrq_width  = r->oftrq_depth = 0;
 	r->oftrq_off    = off & SLASH_BMAP_BLKMASK;
+	r->oftrq_len    = len;
 	/* Add the bits which were masked above.
 	 */
 	len += off & (~SLASH_BMAP_BLKMASK);
 
-	// XXX alternate way of determining nblks
+	/* Alternate way of determining nblks */
 	//r->oftrq_nblks  = ((r->oftrq_off + len) / SLASH_BMAP_BLKSZ) +
 	//	(len & (~SLASH_BMAP_BLKMASK) ? 1 : 0);
 
@@ -93,10 +94,14 @@ msl_oftrq_build(struct offtree_req *r, struct bmapc_memb *b, off_t off,
 		if ((r->oftrq_nblks > 1) && (len & (~SLASH_BMAP_BLKMASK)))
 			r->oftrq_op |= OFTREQ_OP_PRFLP;
 	}
+	/* Add this offtree request to the bmap so that pending 
+	 *   operations can be tracked.
+	 */
 	bmap_oftrq_add(b, r);
  out:
 	DEBUG_OFFTREQ(PLL_TRACE, r, "newly built request");
 }
+
 
 __static int
 msl_oftrq_destroy(__unusedx struct pscrpc_request_set *set, void *a, int rc)
@@ -109,7 +114,8 @@ msl_oftrq_destroy(__unusedx struct pscrpc_request_set *set, void *a, int rc)
 
 	atomic_dec(&b->bcm_opcnt);
 	psc_assert(atomic_read(&b->bcm_opcnt) >= 0);
-
+	/* Remove the offtree request reference from the bmap.
+	 */
 	bmap_oftrq_del(b, r);
 
 	dynarray_free(r->oftrq_darray);
@@ -155,6 +161,7 @@ msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t blkno)
 				  SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,
 				  f, sl_buffer_alloc, sl_oftm_addref,
 				  sl_oftiov_pin_cb);
+
 	psc_assert(bmap_2_msoftr(b));
 	INIT_PSCLIST_HEAD(&msbd->msbd_oftrqs);
 
@@ -188,12 +195,26 @@ msl_bmap_release(struct bmapc_memb *b)
 
 	if (!SPLAY_REMOVE(bmap_cache, &b->bcm_fcmh->fcmh_fcoo->fcoo_bmapc, b))
 		DEBUG_BMAP(PLL_FATAL, b, "failed to locate bmap in fcoo");
+
 	FCMH_ULOCK(b->bcm_fcmh);
 
 	offtree_destroy(bmap_2_msoftr(b));
 
 	PSCFREE(b->bcm_pri);
 	PSCFREE(b);
+}
+
+__static void
+bmap_oftrq_waitempty(struct bmapc_memb *b)
+{
+ retry:
+	BMAP_LOCK(b);
+
+	if (!psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs)) {
+		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+		goto retry;
+	} else
+		BMAP_ULOCK(b);
 }
 
 void 
@@ -211,7 +232,7 @@ msl_bmap_tryrelease(struct bmapc_memb *b)
 		BMAP_ULOCK(b);
 		/* Wait for any pending offtree reqs to clear.
 		 */
-		bmap_oftrq_waitempty(b);		
+		bmap_oftrq_waitempty(b);
 		msl_bmap_release(b);
 	}
 }
@@ -229,9 +250,10 @@ msl_fbr_free(struct msl_fbr *r)
 
 	if (atomic_read(&r->mfbr_rd_ref))
                 atomic_dec(&r->mfbr_bmap->bcm_rd_ref);
-#endif
+#else
 	atomic_sub(atomic_read(&r->mfbr_rd_ref), &b->bcm_rd_ref);
 	atomic_sub(atomic_read(&r->mfbr_wr_ref), &b->bcm_wr_ref);
+#endif
 	PSCFREE(r);	
 
 	msl_bmap_tryrelease(b);
@@ -405,7 +427,7 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
  * TODO:  XXX if bmap is already cached but is not in write mode (but
  *	rw==WRITE) then we must notify the mds of this.
  */
-__static struct bmapc_memb *
+__static struct bmapc_memb * 
 msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, u32 rw)
 {
 	struct fidc_membh *f = mfh->mfh_fcmh;
@@ -667,6 +689,8 @@ msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	/* Free the dynarray which was allocated in msl_pages_prefetch().
 	 */
 	PSCFREE(a);
+	if (!pscrpc_set_finalize(rq->rq_set, 0, 0))
+		psc_info("cleared set(%p)", rq->rq_set);
 	//msl_oftrq_destroy(r);
 	//pscrpc_req_finished(rq);
 	return (0);
@@ -728,10 +752,13 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	/* Get a new request set if one doesn't already exist.
 	 */
 	if (!r->oftrq_fill.oftfill_reqset)
-		r->oftrq_fill.oftfill_reqset = pscrpc_prep_set();
+		rqset = r->oftrq_fill.oftfill_reqset = pscrpc_prep_set();
 
-	rqset = r->oftrq_fill.oftfill_reqset;
 	psc_assert(rqset);
+	/* Initialize the request set.
+	 */
+	rqset->set_interpret = msl_oftrq_destroy;
+	rqset->set_arg = r;       
 	/* Point to our bmap handle, it has the import information needed
 	 *  for the RPC request.  (FID and ION id's)
 	 */
@@ -1123,7 +1150,7 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 	struct offtree_iov  *v;
 	struct offtree_memb *m;
 	int    i, n, x=0;
-	off_t  t;
+	off_t  roff;
 	size_t nbytes;
 	ssize_t tsize;
 	char  *b, *p;
@@ -1132,10 +1159,10 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 	psc_assert(r->oftrq_off <= off);
 	/* Relative offset into the buffer.
 	 */
-	t = off - r->oftrq_off;
+	roff = off - r->oftrq_off;
 	p = buf;
-	tsize = oftrq_size_get(r);
-
+	//tsize = oftrq_size_get(r);
+	tsize = r->oftrq_len;
 	a = r->oftrq_darray;
 	n = dynarray_len(a);
 
@@ -1149,7 +1176,7 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 		/* Set the starting buffer pointer into
 		 *  our cache vector.
 		 */
-		b  = (char *)v->oftiov_base;
+		b = (char *)v->oftiov_base;
 
 		m = (struct offtree_memb *)v->oftiov_memb;
 		spinlock(&m->oft_lock);
@@ -1165,7 +1192,7 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 			 *   is unaligned, the latter half of this
 			 *   stmt checks the end of the write.
 			 */
-			if (t) {
+			if (roff) {
 				/* Partial iov writes must have been
 				 *  pre-faulted (ie. read).
 				 */
@@ -1180,10 +1207,10 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 				/* Bump our cache vector destination
 				 *  pointer.
 				 */
-				b += t;
+				b += roff;
 			}
 			x = 1;
-			nbytes = MIN(OFT_IOVSZ(v) - t, tsize);
+			nbytes = MIN(OFT_IOVSZ(v) - roff, tsize);
 
 		} else if (i == (n-1)) {
 			/* Last iov, if the write size is smaller than
@@ -1209,11 +1236,11 @@ msl_pages_copyin(struct offtree_req *r, char *buf, off_t off)
 			nbytes = MIN(OFT_IOVSZ(v), tsize);
 		}
 
-		DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu "
-			      "OFT_IOV2E_OFF_(%zu) bufp=%p sz=%zu "
-			      "tsz=%zd nbytes=%zu",
-			      i, r->oftrq_off,  OFT_IOV2E_OFF_(v),
-			      p, oftrq_size_get(r), tsize, nbytes);
+		DEBUG_OFFTIOV(PLL_TRACE, v, "iov%d rq_off=%zu fl_off=%zu " 
+			      "OFT_IOV2E_OFF_(%zu) bufp=%p oft_bufsz=%zu "
+			      "tsz=%zd nbytes=%zu t=%zu",
+			      i, r->oftrq_off, off, OFT_IOV2E_OFF_(v),
+			      p, oftrq_size_get(r), tsize, nbytes, roff);
 
 		/* Do the deed.
 		 */
@@ -1397,10 +1424,11 @@ msl_pages_blocking_load(struct offtree_req *r)
 int
 msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 {
-	struct offtree_req *r[4];
+#define MAX_BMAPS_REQ 4
+	struct offtree_req *r[MAX_BMAPS_REQ];
 	struct bmapc_memb *b;
 	sl_blkno_t s, e;
-	size_t tlen, tsize;
+	size_t tlen, tsize=size;
 	off_t roff;
 	int nr, j, rc;
 	char *p;
@@ -1414,19 +1442,21 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	s = off / mslfh_2_bmapsz(mfh);
 	e = (off + size) / mslfh_2_bmapsz(mfh);
 	
-	if ((e - s) > 4)
+	if ((e - s) > MAX_BMAPS_REQ)
 		return (-EINVAL);
-	/* Relativize the length and offset.
+	/* Relativize the length and offset (roff is not aligned).
 	 */
 	roff  = off - (s * SLASH_BMAP_SIZE);
+	/* Length of the first bmap request.
+	 */
 	tlen  = MIN((size_t)(SLASH_BMAP_SIZE - roff), size);
-
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "sz=%zu off=%"PRIdOFF" op=%d", 
-		   size, off, op);
 	/* Foreach block range, get its bmap and make a request into its
 	 *  offtree.  This first loop retrieves all the pages.
 	 */
 	for (nr=0; s <= e; s++, nr++) {		
+		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, 
+			   "sz=%zu tlen=%zu off=%llu roff=%llu op=%d", 
+			   tsize, tlen, off, roff, op);
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
 		 */
@@ -1438,8 +1468,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		}
 		/* Malloc offtree request and pass to the initializer.
 		 */
-		r[nr] = PSCALLOC(sizeof(struct offtree_req));
-		msl_oftrq_build(r[nr], b, roff, tlen,
+		msl_oftrq_build(&r[nr], b, roff, tlen,
 				(op == MSL_READ) ? OFTREQ_OP_READ :
 				OFTREQ_OP_WRITE);
 		/* Retrieve offtree region.
@@ -1449,17 +1478,14 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 				psc_error("offtree_region_preprw rc=%d", rc);
 				goto out;
 			}
+			/* Start prefetching our cached buffers.
+			 */
+			msl_pages_prefetch(r[nr]);
 		}
 		roff += tlen;
-		size -= tlen;
-		tlen  = MIN(SLASH_BMAP_SIZE, size);
+		tsize -= tlen;
+		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
 	}
-
-	/* Start prefetching our cached buffers.
-	 */
-	for (j=0; j < nr; j++)
-		if (!(r[j]->oftrq_op & OFTREQ_OP_DIO))
-			msl_pages_prefetch(r[j]);
 
 	/* Note that the offsets used here are file-wise offsets not
 	 *   offsets into the buffer.
@@ -1495,23 +1521,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	}
 
 	//psc_assert(tsize == size); /* XXX this crashes */
-
 	rc = size;
  out:
-	/* XXX this set_wait should not be here, it's a workaround to
-	 *  prevent the set from being destroyed before it has completed.
-	 */
-	for (j=0; j < nr; j++) {
-		if (!(r[j])->oftrq_fill.oftfill_reqset)
-			continue;
-
-		(r[j])->oftrq_fill.oftfill_reqset->set_interpret = msl_oftrq_destroy;
-		(r[j])->oftrq_fill.oftfill_reqset->set_arg = r[j];
-		pscrpc_set_wait((r[j])->oftrq_fill.oftfill_reqset);	
-	}
-
-	//for (j=0; j < nr; j++)
-	//	msl_oftrq_destroy(&r[j]);
-	//free(r);
 	return (rc);
 }

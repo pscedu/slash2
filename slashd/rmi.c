@@ -70,11 +70,17 @@ slrmi_bmap_crcwrt(struct pscrpc_request *rq)
 		
 		off += iovs[i].iov_len;
 	}
+
 	rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL,
-			    iovs, mq->ncrc_updates);
-	pscrpc_free_bulk(desc);
-	if (rc)
+		       iovs, mq->ncrc_updates);
+	if (desc)
+		pscrpc_free_bulk(desc);
+	else {
+		psc_errorx("rsx_bulkserver() rc=%d", rc);
+		/* rsx_bulkserver() frees the desc on error.
+		 */
 		goto out;
+	}
 
 	/* Crc the Crc's!
 	 */

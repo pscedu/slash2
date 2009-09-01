@@ -55,7 +55,11 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
         iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 	
 	for (i=0; i < mq->ncrc_updates; i++) {
-		bcrc_ref = dynarray_getpos(a, i);
+		bcrc_ref = dynarray_getpos(a, i);		
+		
+		(int)iod_inode_getsize(bcrc_ref->bcr_crcup.fid, 
+				       (off_t *)&bcrc_ref->bcr_crcup.fsize);
+
 		mq->ncrcs_per_update[i] = bcrc_ref->bcr_crcup.nups;
 
                 iovs[i].iov_base = &bcrc_ref->bcr_crcup;

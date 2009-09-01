@@ -767,8 +767,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 
 	BMAP_LOCK(bmap);
 
-	DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u ion=%s",
-		   c->blkno, libcfs_nid2str(ion_nid));
+	DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u sz=%"PRId64" ion=%s",
+		   c->blkno, c->fsize, libcfs_nid2str(ion_nid));
 
 	bmdsi = bmap->bcm_pri;
 	bmapod = bmdsi->bmdsi_od;
@@ -833,6 +833,45 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	 */
 	bmap_op_done(bmap);
 	return (rc);
+}
+
+void
+mds_bmapod_dump(const struct bmapc_memb *bmap)
+{
+	uint8_t mask, *b=bmap_2_bmdsiod(bmap)->bh_repls;
+        uint32_t pos, k;
+	char buf[SL_MAX_REPLICAS+1], c;
+
+        for (k=0; k < SL_REPLICA_NBYTES; k++, mask=0)
+                for (pos=0, mask=0; pos < NBBY; pos+=SL_BITS_PER_REPLICA) {
+
+                        mask = (uint8_t)(SL_REPLICA_MASK << pos);
+
+			switch (b[k] & mask) {
+			case SL_REPL_INACTIVE:
+				c = '-';
+				break;
+					
+			case SL_REPL_TOO_OLD:
+				c = 'o';
+				break;
+
+			case SL_REPL_OLD:
+				c = 'O';
+				break;
+
+			case SL_REPL_ACTIVE:
+				c = 'A';
+				break;
+			}
+			buf[k*(NBBY/SL_BITS_PER_REPLICA) +
+			    pos/SL_BITS_PER_REPLICA] = c;
+		}
+
+	buf[SL_MAX_REPLICAS] = '\0';
+
+	DEBUG_BMAP(PLL_INFO, bmap, "replicas(%s) SL_REPLICA_NBYTES=%u", 
+		   buf, SL_REPLICA_NBYTES);
 }
 
 /**
@@ -904,7 +943,11 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 	if (bmdsi->bmdsi_od->bh_bhcrc == 0 && memcmp(bmdsi->bmdsi_od,
 	    &null_bmap_od, sizeof(null_bmap_od)) == 0) {
  new:
+		mds_bmapod_dump(bcm);
+
 		mds_bmapod_initnew(bmdsi->bmdsi_od);
+
+		mds_bmapod_dump(bcm);
 		return (0);
 	}
 	/* Calculate and check the CRC now 

@@ -21,7 +21,8 @@ struct jflush_item {
 
 enum jfi_states {
 	JFI_QUEUED  = (1<<0),
-	JFI_HAVE_XH = (1<<1)
+	JFI_HAVE_XH = (1<<1),
+	JFI_BUSY    = (1<<2)
 };
 
 static inline void

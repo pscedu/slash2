@@ -60,19 +60,6 @@ bmap_oftrq_del(struct bmapc_memb *b, struct offtree_req *r)
         BMAP_ULOCK(b);
 }
 
-static inline void
-bmap_oftrq_waitempty(struct bmapc_memb *b)
-{
- retry:
-	BMAP_LOCK(b);
-
-	if (!psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs)) {
-		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-		goto retry;
-	} else
-		BMAP_ULOCK(b);
-}
-
 /*
  * bmap_info_cli - hangs from the void * pointer in the sl_resm_t struct.
  *  It's tasked with holding the import to the correct ION.

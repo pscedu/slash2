@@ -118,7 +118,7 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	/* We should never have a request size > 1MB, therefore it would 
 	 *  never exceed two slivers.
 	 */
-	if (((mq->offset + mq->size) / SLASH_SLVR_SIZE) > slvrno)
+	if (((mq->offset + (mq->size-1)) / SLASH_SLVR_SIZE) > slvrno)
 		nslvrs++;
 
 	/* This loop assumes that nslvrs is always <= 2.  Note that  
@@ -133,12 +133,16 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		 */
 		slvr_io_prep(slvr_ref[i], roff, tsize, rw);
 
-		DEBUG_SLVR(PLL_TRACE, slvr_ref[i], "post io_prep");
+		DEBUG_SLVR(PLL_TRACE, slvr_ref[i], "post io_prep rw=%d", rw);
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
 		 */
 		iovs[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + roff;
 		tsize -= iovs[i].iov_len = MIN(tsize, SLASH_SLVR_SIZE - roff);
+		/* Avoid more complicated errors within lnet by ensuring 
+		 *   that len is non-zero.
+		 */
+		psc_assert(iovs[i].iov_len > 0);
 	}
 
 	psc_assert(!tsize);
@@ -156,7 +160,7 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	/* Write the sliver back to the filesystem, but only the blocks
 	 *   which are marked '0' in the bitmap.   Here we don't care about
 	 *   buffer offsets since we're block aligned now
-	 */ 
+	 */
 	for (i=0; i < nslvrs; i++) {	
 		if (rw == SL_WRITE)
 			if ((rc = slvr_fsbytes_io(slvr_ref[i], SL_WRITE)))

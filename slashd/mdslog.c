@@ -110,7 +110,7 @@ mds_bmap_sync(void *data)
 	if (rc)
 		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail", rc, errno);
 	else
-		DEBUG_BMAP(PLL_TRACE, bmap, "sync ok");
+		DEBUG_BMAP(PLL_INFO, bmap, "sync ok");
 	BMAP_ULOCK(bmap);
 }
 
@@ -218,6 +218,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
         jcrc->sjc_bmapno = bmap->bcm_blkno;
+	jcrc->sjc_ncrcs = n;
 
 	while (n) {
 		i = MIN(SLJ_MDS_NCRCS, n);
@@ -227,6 +228,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 
 		rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_CRC, 
 				   jcrc, sizeof(struct slmds_jent_crc));
+
 		if (rc)
 			psc_fatalx("jlog fid=%"PRIx64" bmapno=%u rc=%d",
 				   jcrc->sjc_fid, jcrc->sjc_bmapno, rc);

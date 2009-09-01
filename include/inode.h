@@ -29,8 +29,7 @@
 #define SL_MAX_REPLICAS     64
 #define SL_BITS_PER_REPLICA 2
 #define SL_REPLICA_MASK     (uint8_t)((1 << SL_BITS_PER_REPLICA)-1)
-#define SL_REPLICA_NBYTES   ((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) /	\
-			     (sizeof(uint8_t)))
+#define SL_REPLICA_NBYTES   ((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) / NBBY)
 
 #define SL_DEF_SNAPSHOTS    1
 #define SL_MAX_GENS_PER_BLK 4

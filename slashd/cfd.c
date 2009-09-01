@@ -96,8 +96,8 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 		}
 	}
 
-	psc_info("FID (%"PRId64") CFD (%"PRId64")", fid,
-	    c->fdb.sfdb_secret.sfs_cfd);
+	psc_info("FID (%"PRId64") CFD (%"PRId64") PRI(%p)", fid,
+		 c->fdb.sfdb_secret.sfs_cfd, c->pri);
 
 	if ((rc = cfdinsert(c, exp))) {
 		PSCFREE(c);

@@ -66,6 +66,8 @@ mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 			k = 0;
 		}
 
+		DEBUG_INOH(PLL_INFO, i, "rep%u[%u] == %u", 
+			   k, repl[k].bs_id, ios);
 		if (repl[k].bs_id == ios) {
 			rc = j;
 			goto out;
@@ -98,12 +100,12 @@ mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 			k = j;
 		}
 
-		i->inoh_ino.ino_nrepls++;
 		repl[k].bs_id = ios;
+		i->inoh_ino.ino_nrepls++;
 		
-		DEBUG_INOH(PLL_INFO, i, "add IOS(%u) to repls, %dth repl", 
-			   ios, i->inoh_ino.ino_nrepls);
-
+		DEBUG_INOH(PLL_INFO, i, "add IOS(%u) to repls, replica %d", 
+			   ios, i->inoh_ino.ino_nrepls-1);
+		
 		mds_inode_addrepl_log(i, ios, j);
 
 		rc = j;
@@ -117,7 +119,7 @@ int
 mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 {
 	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
-	int j, r, bumpgen=0, log=0;
+	int r, j, bumpgen=0, log=0;
 	uint8_t mask, *b=bmapod->bh_repls;
 	uint32_t pos, k;
 
@@ -131,33 +133,37 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 		return (j);
 	/* Iterate across the byte array.
 	 */
-	for (r=0, k=0; k < SL_REPLICA_NBYTES; k++, mask=0) {
+
+	mds_bmapod_dump(bmap);
+
+	for (r=0, k=0; k < SL_REPLICA_NBYTES; k++, mask=0)
 		for (pos=0, mask=0; pos < NBBY; 
 		     pos+=SL_BITS_PER_REPLICA, r++) {
 
-			mask = (uint8_t)(SL_REPLICA_MASK << pos);
-			
+			mask = (uint8_t)(SL_REPLICA_MASK << pos);	
+
 			if (r == j) {				
-				b[r] |= mask & SL_REPL_ACTIVE;
+				b[k] |= (mask & SL_REPL_ACTIVE);
 				DEBUG_BMAP(PLL_INFO, bmap, 
-					   "add repl for ion(%d)", ion);
-			} else
-				switch (b[r] & mask) {
+					   "add repl for ion(%u)", ion);
+			} else {
+				switch (b[k] & mask) {
 				case SL_REPL_INACTIVE:
 				case SL_REPL_TOO_OLD:
 					break;
 				case SL_REPL_OLD:
 					log++;
-					b[r] |= mask & SL_REPL_TOO_OLD;
+					b[k] |= (mask & SL_REPL_TOO_OLD);
 					break;
 				case SL_REPL_ACTIVE:
 					log++;
 					bumpgen++;
-					b[r] |= mask & SL_REPL_OLD;
+					b[k] |= (mask & SL_REPL_OLD);
 					break;
 				}
+			}
 		}
-	}
+
 	if (log) {
 		if (bumpgen)
 			bmapod->bh_gen.bl_gen++;
