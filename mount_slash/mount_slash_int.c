@@ -734,7 +734,7 @@ __static void
 msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 {
 	struct pscrpc_import      *imp;
-	struct pscrpc_request_set *rqset;
+	struct pscrpc_request_set *rqset = NULL;
 	struct pscrpc_request     *req;
 	struct pscrpc_bulk_desc   *desc;
 	struct bmapc_memb    	  *bcm;
@@ -1455,7 +1455,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	 */
 	for (nr=0; s <= e; s++, nr++) {		
 		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, 
-			   "sz=%zu tlen=%zu off=%llu roff=%llu op=%d", 
+			   "sz=%zu tlen=%zu off=%"PRIdOFF" roff=%"PRIdoff" op=%d", 
 			   tsize, tlen, off, roff, op);
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
