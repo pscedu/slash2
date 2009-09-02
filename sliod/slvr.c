@@ -590,7 +590,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	struct slvr_ref *s, *tmp;
 	static pthread_mutex_t mutex;
 	struct dynarray a = DYNARRAY_INIT;
-	int i, n;
+	int i, n=0;
 
 	psc_assert(m == slBufsPool);
 	
