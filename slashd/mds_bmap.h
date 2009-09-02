@@ -80,5 +80,6 @@ struct bmi_assign {
 
 int  mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
 int  mds_bmap_load(struct mexpfcm *, struct srm_bmap_req *, struct bmapc_memb **);
+void mds_bmapod_dump(const struct bmapc_memb *);
 
 #endif /* _SLASHD_MDS_BMAP_H_ */
