@@ -16,6 +16,7 @@ jfi_prep(struct jflush_item *jfi, struct psc_journal *pj)
                 if (jfi->jfi_state & JFI_QUEUED)
                         psc_assert(psclist_conjoint(&jfi->jfi_lentry));
         } else {
+		psc_assert(jfi->jfi_xh == NULL);
                 psc_assert(!(jfi->jfi_state & JFI_QUEUED));
                 psc_assert(psclist_disjoint(&jfi->jfi_lentry));
                 jfi->jfi_xh = pjournal_nextxid(pj);
