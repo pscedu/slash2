@@ -615,7 +615,7 @@ slrmc_symlink(struct pscrpc_request *rq)
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
 	struct iovec iov;
-	char link[PATH_MAX];
+	char linkname[PATH_MAX];
 
 	ENTRY;
 
@@ -629,15 +629,15 @@ slrmc_symlink(struct pscrpc_request *rq)
 		mp->rc = -ENAMETOOLONG;
 		RETURN(0);
 	}
-	iov.iov_base = link;
+	iov.iov_base = linkname;
 	iov.iov_len = mq->linklen;
 	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 	    SRMC_BULK_PORTAL, &iov, 1)) != 0)
 		RETURN(0);
-	link[sizeof(link) - 1] = '\0';
+	linkname[sizeof(linkname) - 1] = '\0';
 	pscrpc_free_bulk(desc);
 
-	mp->rc = zfsslash2_symlink(zfsVfs, link, mq->pino, mq->name,
+	mp->rc = zfsslash2_symlink(zfsVfs, linkname, mq->pino, mq->name,
 				   &mq->creds, &mp->attr, &mp->fg);
 	RETURN(0);
 }
