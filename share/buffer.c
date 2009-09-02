@@ -951,7 +951,7 @@ sl_buffer_destroy(void *pri)
 {
 	struct sl_buffer *slb = pri;
 
-	free(slb->slb_base);
+	PSCFREE(slb->slb_base);
 	vbitmap_free(slb->slb_inuse);
 }
 

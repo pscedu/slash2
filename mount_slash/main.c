@@ -1586,7 +1586,7 @@ slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
 		fuse_reply_buf(req, buf, rc);
 		rc = 0;
 	}
-	free(buf);
+	PSCFREE(buf);
  out:
 	if (rc)
 		fuse_reply_err(req, rc);

@@ -71,7 +71,7 @@ slashrpc_export_destroy(void *data)
 	freelock(&sexptreelock);
 #endif
 	exp->exp_private = NULL;
-	free(sexp);
+	PSCFREE(sexp);
 	
 }
 
