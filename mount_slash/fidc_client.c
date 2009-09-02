@@ -472,6 +472,7 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	struct fidc_membh *c;
 	size_t len;
 
+	c = NULL; /* gcc */
 	len = strlen(newname);
 	if (len > NAME_MAX)
 		psc_fatalx("name too long");
