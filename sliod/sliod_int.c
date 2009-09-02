@@ -62,7 +62,7 @@ iod_bmap_free(struct bmapc_memb *b)
 }
 
 __static int
-iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
+iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *sec)
 {
 	int rc=0;
 	struct srm_bmap_wire_req *mq;
@@ -81,7 +81,7 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *s)
 		goto out;
         }
 
-	memcpy(&mq->sbdb, s, sizeof(*s));
+	memcpy(&mq->sbdb, sec, sizeof(*sec));
 
 	iov.iov_len = sizeof(struct slash_bmap_wire);
 	iov.iov_base = bmap_2_biodi_wire(b) = 
