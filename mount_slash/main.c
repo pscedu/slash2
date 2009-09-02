@@ -1353,7 +1353,7 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 }
 
 static int
-slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
+slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
     const char *name)
 {
 	struct pscrpc_bulk_desc *desc;
@@ -1366,7 +1366,7 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 
 	msfsthr_ensure();
 
-	if (strlen(link) >= PATH_MAX ||
+	if (strlen(buf) >= PATH_MAX ||
 	    strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
 
@@ -1383,10 +1383,10 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 
 	slash2fuse_getcred(req, &mq->creds);
 	mq->pino = parent;
-	mq->linklen = strlen(link) + 1;
+	mq->linklen = strlen(buf) + 1;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	iov.iov_base = (char *)link;
+	iov.iov_base = (char *)buf;
 	iov.iov_len = mq->linklen;
 
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
@@ -1406,10 +1406,10 @@ slash2fuse_symlink(fuse_req_t req, const char *link, fuse_ino_t parent,
 }
 
 static void
-slash2fuse_symlink_helper(fuse_req_t req, const char *link,
+slash2fuse_symlink_helper(fuse_req_t req, const char *buf,
     fuse_ino_t parent, const char *name)
 {
-	int error = slash2fuse_symlink(req, link, parent, name);
+	int error = slash2fuse_symlink(req, buf, parent, name);
 
 	if (error)
 		fuse_reply_err(req, error);
