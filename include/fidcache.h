@@ -406,7 +406,7 @@ fidc_fcoo_remove(struct fidc_membh *h)
 {
 	struct fidc_open_obj *o;
 
-	lc_remove(&fidcDirtyList, (void *)h);
+	lc_remove(&fidcDirtyList, h);
 
 	spinlock(&h->fcmh_lock);
 	o = h->fcmh_fcoo;
