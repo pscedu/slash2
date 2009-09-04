@@ -68,66 +68,50 @@ utility:
 
 
 
-		    * The structure used to manage data about pending operations which need to be stored on disk can be created by running:
+* The structure used to manage data about pending operations which need to be stored on disk can be created by running:
 
-			  # odtable -C -N /var/lib/slashd/bmap_assignments.odt
+# odtable -C -N /var/lib/slashd/bmap_assignments.odt
 
-			  Once the operating environment has been set up, launch the MDS server:
+Once the operating environment has been set up, launch the MDS server:
 
-			    # LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 USOCK_CPORT=1202 \
-				slashd -f slash.conf
+# LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 USOCK_CPORT=1202 \
+slashd -f slash.conf
 
-				(Note: the USOCK_CPORT parameter specified above is for connections that slashd attempts to establish with I/O servers.)
+(Note: the USOCK_CPORT parameter specified above is for connections that slashd attempts to establish with I/O servers.)
 
-				After slashd has started, the ZFS namespace must be loaded:
+After slashd has started, the ZFS namespace must be loaded:
 
-				  # zpool import -c slpool.cf slpool
+# zpool import -c slpool.cf slpool
 
-				  On new file system creation, the immutable namespace must be created:
+On new file system creation, the immutable namespace must be created:
 
-				    # slimmns /slash
-
-				    I/O
-
-.Ss Running Cm sliod Ns Ss ,\& the Tn Ss I/O Ss Server
+# slimmns /slash
 
 .Xr slctl 8
 can be used to control operation of the client mount point.
 
+.Ss Running Cm sliod Ns Ss ,\& the Tn Ss I/O Ss Server
 
 
+Next, any I/O servers that need to be brought up can be at this point:
 
+# SLASH_MDS_NID="128.182.58.86@tcp10" USOCK_CPORT=50001 \
+LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \
+sliod -f slash.conf
 
-    Next, any I/O servers that need to be brought up can be at this point:
-
-      # SLASH_MDS_NID="128.182.58.86@tcp10" USOCK_CPORT=50001 \
-	  LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \
-	      sliod -f slash.conf
-
-	      Note: due to limitations in the Lustre networking stack, these daemons cannot be run to listen on the same interface with different TCP ports. Furthermore, due to limitations in the Slash protocols, interface alias addresses cannot be used either, as data is signed based on the assumption that clients have global addresses, a premise not true when connections are made across different network interfaces. Only virtual machines can facilitate an environment where all MD, I/O, and client can run together on the same machine; otherwise, the MD and I/O servers must reside on different hosts.
-
-
-.Ss Running Cm mount_slash Ns Ss ,\& the Client Mount Daemon
+Note: due to limitations in the Lustre networking stack, these daemons cannot be run to listen on the same interface with different TCP ports. Furthermore, due to limitations in the Slash protocols, interface alias addresses cannot be used either, as data is signed based on the assumption that clients have global addresses, a premise not true when connections are made across different network interfaces. Only virtual machines can facilitate an environment where all MD, I/O, and client can run together on the same machine; otherwise, the MD and I/O servers must reside on different hosts.
 
 .Xr slioctl 8
 can be used to control operation of the client mount point.
 
-
-	      Client
-
-	      Now launch the client mount points:
-
-	       # SLASH_MDS_NID="10.32.5.82@tcp10" LNET_NETWORKS="tcp10(eth0)" \
-		  USOCK_CPORT=1202 SLASH2_PIOS_ID="ion@mysite" \
-		     mount_slash -U -f slash.conf /slash
+.Ss Running Cm mount_slash Ns Ss ,\& the Client Mount Daemon
 
 
+Now launch the client mount points:
 
-
-
-
-
-
+# SLASH_MDS_NID="10.32.5.82@tcp10" LNET_NETWORKS="tcp10(eth0)" \
+USOCK_CPORT=1202 SLASH2_PIOS_ID="ion@mysite" \
+mount_slash -U -f slash.conf /slash
 
 
 .Xr msctl 8
@@ -137,12 +121,12 @@ can be used to control operation of the client mount point.
 .Bl -tag -width 37n -compact
 .It Pa /etc/slash.conf
 site configuration
-.It Pa /var/run/slashd.%h.sock
+.It Pa /var/run/slashd. Ns Ic %h Ns Pa .sock
 metadata daemon control socket
-.It Pa /var/run/sliod.%h.sock
+.It Pa /var/run/sliod. Ns Ic %h Ns Pa .sock
 .Tn I/O
 daemon control socket
-.It Pa /var/run/mount_slash.%h.sock
+.It Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
 client mount daemon control socket
 .It Pa /var/lib/slashd/bmap_assignments.odt
 .Tn I/O
