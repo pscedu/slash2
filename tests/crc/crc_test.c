@@ -33,11 +33,11 @@ main(int argc, char *argv[])
 		usage();
 
 	memset(b, 0, sizeof(b));
-	PSC_CRC_CALC(crc, b, sizeof(b));
+	psc_crc_calc(&crc, b, sizeof(b));
 	printf("NULL 1MB buf CRC is %#"PRIx64"\n", crc);
 
 	memset(&bmapod, 0, sizeof(bmapod));
-	PSC_CRC_CALC(crc, &bmapod, sizeof(bmapod));
+	psc_crc_calc(&crc, &bmapod, sizeof(bmapod));
 	printf("NULL sl_blkh_t CRC is %#"PRIx64"\n", crc);
 	exit(0);
 }
