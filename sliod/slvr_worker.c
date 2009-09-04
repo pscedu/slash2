@@ -67,7 +67,7 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
 					   sizeof(struct srm_bmap_crcwire)) +
 					  sizeof(struct srm_bmap_crcup));
 
-		PSC_CRC_ADD(mq->crc, iovs[i].iov_base, iovs[i].iov_len);
+		psc_crc_add(&mq->crc, iovs[i].iov_base, iovs[i].iov_len);
 	}
 	psc_assert(len <= LNET_MTU);
 

@@ -134,7 +134,7 @@ mds_inode_read(struct slash_inode_handle *i)
 		goto out;
         }
 
-	PSC_CRC_CALC(crc, &i->inoh_ino, INO_OD_CRCSZ);
+	psc_crc_calc(&crc, &i->inoh_ino, INO_OD_CRCSZ);
         if (crc == i->inoh_ino.ino_crc) {
 		i->inoh_flags &= ~INOH_INO_NOTLOADED;	
                 DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
@@ -894,7 +894,7 @@ mds_bmapod_initnew(struct slash_bmap_od *b)
 	for (i=0; i < SL_CRCS_PER_BMAP; i++)
 		b->bh_crcs[i].gc_crc = SL_NULL_CRC;
 
-	PSC_CRC_CALC(b->bh_bhcrc, b, BMAP_OD_CRCSZ);
+	psc_crc_calc(&b->bh_bhcrc, b, BMAP_OD_CRCSZ);
 }
 
 /**
@@ -952,7 +952,7 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 	}
 	/* Calculate and check the CRC now 
 	 */
-	PSC_CRC_CALC(crc, bmdsi->bmdsi_od, BMAP_OD_CRCSZ);
+	psc_crc_calc(&crc, bmdsi->bmdsi_od, BMAP_OD_CRCSZ);
 	if (crc == bmdsi->bmdsi_od->bh_bhcrc)
 		return (0);
 
@@ -1171,7 +1171,7 @@ mds_fidfs_lookup(const char *path, struct slash_creds *creds,
 	else
 		rc=0;
 
-	PSC_CRC_CALC(&crc, &inoh.inoh_ino, sz);
+	psc_crc_calc(&crc, &inoh.inoh_ino, sz);
 	if (crc != inoh.inoh_ino.ino_crc) {
 		psc_warnx("Crc failure on inode");
 		errno = EIO;
@@ -1190,7 +1190,7 @@ mds_fidfs_lookup(const char *path, struct slash_creds *creds,
 		else
 			rc=0;
 
-		PSC_CRC_CALC(&crc, inoh.inoh_replicas, sz);
+		psc_crc_calc(&crc, inoh.inoh_replicas, sz);
 		if (crc != inoh.inoh_ino.ino_rs_crc) {
 			psc_warnx("Crc failure on replicas");
 			errno = EIO;

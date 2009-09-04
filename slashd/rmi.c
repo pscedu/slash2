@@ -84,7 +84,7 @@ slrmi_bmap_crcwrt(struct pscrpc_request *rq)
 
 	/* Crc the Crc's!
 	 */
-	PSC_CRC_CALC(crc, buf, len);
+	psc_crc_calc(&crc, buf, len);
 	if (crc != mq->crc) {
 		psc_errorx("crc verification of crcwrt payload failed");
 		rc = -1;
