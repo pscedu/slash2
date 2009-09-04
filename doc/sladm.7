@@ -7,119 +7,148 @@
 .Nm sladm
 .Nd Slash administration guide
 .Sh DESCRIPTION
-
-overview
-installation/configuration
-maintainence
-
-The
-.Nm
-configuration file specifies storage resources and networks for use on a
-Slash network.
-This document describes the format of this file.
+Slash is a distributed network file system featuring:
 .Pp
-Empty lines and lines beginning with
-.Sq Li #
-are ignored.
-.Pp
-This file is divided into two sections:
-global configuration and per-site configuration.
-.Ss Global Configuration
-Configuration intended to be applied to all sites on a Slash network
-must be specified in the first section of
-.Nm
-and supports the following directives:
-.Bl -tag -offset indent
-.It Xo
-.Ic global Ar var Li =
-.Ar val Ns Li ;\&
-.Xc
-.Pp
-Set the global variable
-.Ar var
-to the given value
-.Ar val .
-The following variables may be set:
-.Pp
-.Bl -tag -offset indent -compact -width Ds
-.It Ic net
-On which Lustre network site access resides.
-.It Ic port
-On which
-.Tn TCP
-port to establish connections.
+.Bl -bullet -compact -offset indent
+.It
+replication
 .El
-.El
-.Ss Per-Site Configuration
-Each site resident on a Slash network requires its own section in the second
-part of
-.Nm
-and has the following format:
-.Bd -unfilled -offset indent
-.Ic site @ Ns Ar site-name Li {
-.D1 ...
-.Li }
+.Ss Creating a Slash File System
+Slash uses
+.Tn ZFS
+for its backend metadata file system.
+To create a new
+.Tn ZFS
+file system, launch the
+.Xr zfs-fuse 8
+daemon:
+.Bd -literal -offset indent
+# zfs-fuse
+.Pp
+.Ed
+Next, create a
+.Tn ZFS
+pool with
+.Xr zpool 8
+which will be the master
+.Tn ZFS
+resource for use by the Slash file system:
+.Bd -literal -offset indent
+# ./zpool create mypool mirror sda sdb
 .Ed
 .Pp
-A
-.Ic site
-definition may contain variable definitions and
-resource specifications.
-The following variables may be set:
-.Pp
-.Bl -tag -offset indent -width site_descXX -compact
-.It Ic site_desc
-Description of site
-.It Ic site_id
-Numerical identifier for site
-.El
-.Pp
-A resource specification has the following form:
-.Bd -unfilled -offset indent
-.Ic resource Ar resource-name Li {
-.D1 ...
-.Li }
+To import the settings of this file system into Slash, a zpool cache
+file is needed, which can also be created with
+.Xr zpool :
+.Bd -literal -offset indent
+# ./zpool set cachefile=mypool.cf mypool
 .Ed
 .Pp
-Resource specifications may contain variable definition for the
-following variables:
+Now that the pool has been setup, the
+.Xr zfs-fuse 8
+daemon should be terminated so Slash be the single accessor of the new
+file system:
+.Bd -literal -offset indent
+# pkill zfs-fuse
+.Ed
 .Pp
-.Bl -tag -offset indent -width Ds -compact
-.It Ic desc
-A string name for this resource
-.It Ic fsroot
-File system mount point,
-exclusive to
-.Ic archival_fs
-resource types
-.Pq see Ic type
-.It Ic id
-Numerical identifier for resource, required to be unique for all
-resources
-.It Ic ifs
-Interface addresses over which to communicate with other site resources
-.It Ic mds
-A Boolean value
-.Ic yes
-or
-.Ic no
-on whether this resource manages site-wide metadata, must be set on at
-least one resource
-.It Ic peers
-List of peers separated by commas of communication resource partners in
-the form
-.Ar resource-name Ns Li @ Ns Ar site-name .
-.It Ic type
-Type of resource, one of
-.Ic archival_fs ,
-.Ic compute ,
-or
-.Ic parallel_fs ,
-required to be set for all resources
-.El
+Further setup of file systems for use with Slash is necessary and can be
+performed once the file system has been mounted by the metadata server.
+.Ss Running Cm slashd Ns Ss ,\& the Metadata Server
+.Xr slashd 8 ,
+the Slash metadata server, must be started first.
+.Xr slash 8
+requires a pending operations journal for operation, which can be
+created with the
+.Xr slmkjrnl 8
+utility:
+.Bd -literal -offset indent
+# slmkjrnl
+.Ed
+
+
+
+		    * The structure used to manage data about pending operations which need to be stored on disk can be created by running:
+
+			  # odtable -C -N /var/lib/slashd/bmap_assignments.odt
+
+			  Once the operating environment has been set up, launch the MDS server:
+
+			    # LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 USOCK_CPORT=1202 \
+				slashd -f slash.conf
+
+				(Note: the USOCK_CPORT parameter specified above is for connections that slashd attempts to establish with I/O servers.)
+
+				After slashd has started, the ZFS namespace must be loaded:
+
+				  # zpool import -c slpool.cf slpool
+
+				  On new file system creation, the immutable namespace must be created:
+
+				    # slimmns /slash
+
+				    I/O
+
+.Ss Running Cm sliod Ns Ss ,\& the Tn Ss I/O Ss Server
+
+.Xr slctl 8
+can be used to control operation of the client mount point.
+
+
+
+
+
+    Next, any I/O servers that need to be brought up can be at this point:
+
+      # SLASH_MDS_NID="128.182.58.86@tcp10" USOCK_CPORT=50001 \
+	  LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \
+	      sliod -f slash.conf
+
+	      Note: due to limitations in the Lustre networking stack, these daemons cannot be run to listen on the same interface with different TCP ports. Furthermore, due to limitations in the Slash protocols, interface alias addresses cannot be used either, as data is signed based on the assumption that clients have global addresses, a premise not true when connections are made across different network interfaces. Only virtual machines can facilitate an environment where all MD, I/O, and client can run together on the same machine; otherwise, the MD and I/O servers must reside on different hosts.
+
+
+.Ss Running Cm mount_slash Ns Ss ,\& the Client Mount Daemon
+
+.Xr slioctl 8
+can be used to control operation of the client mount point.
+
+
+	      Client
+
+	      Now launch the client mount points:
+
+	       # SLASH_MDS_NID="10.32.5.82@tcp10" LNET_NETWORKS="tcp10(eth0)" \
+		  USOCK_CPORT=1202 SLASH2_PIOS_ID="ion@mysite" \
+		     mount_slash -U -f slash.conf /slash
+
+
+
+
+
+
+
+
+
+
+.Xr msctl 8
+can be used to control operation of the client mount point.
+
 .Sh FILES
-.Bl -tag -width Pa -compact
-.It Pa /var/lib/slash/
+.Bl -tag -width 37n -compact
+.It Pa /etc/slash.conf
+site configuration
+.It Pa /var/run/slashd.%h.sock
+metadata daemon control socket
+.It Pa /var/run/sliod.%h.sock
+.Tn I/O
+daemon control socket
+.It Pa /var/run/mount_slash.%h.sock
+client mount daemon control socket
+.It Pa /var/lib/slashd/bmap_assignments.odt
+.Tn I/O
+server file block ownership
+.It Pa /var/lib/slashd/slopjrnl
+pending operations journal
 .El
 .Sh SEE ALSO
 .Xr odtable 1 ,
