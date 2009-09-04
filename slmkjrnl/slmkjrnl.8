@@ -1,0 +1,22 @@
+.\" $Id$
+.Dd September 2, 2009
+.Dt SLMKJRNL 8
+.ds volume PSC \- Slash Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm slmkjrnl
+.Nd create Slash metadata server journal
+.Sh SYNOPSIS
+.Nm slmkjrnl
+.Sh DESCRIPTION
+The
+.Nm
+utility creates and formats the pending operations journal for Slash
+metadata servers.
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /var/lib/slashd/slopjrnl
+pending operations journal
+.El
+.Sh SEE ALSO
+.Xr slashd 8
