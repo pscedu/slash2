@@ -1,0 +1,23 @@
+.\" $Id$
+.Dd September 4, 2009
+.Dt SLIMMNS 8
+.ds volume PSC \- Slash Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm slimmns
+.Nd create Slash immutable namespace file system structure
+.Sh SYNOPSIS
+.Nm slmkjrnl
+.Pa fsroot
+.Sh DESCRIPTION
+The
+.Nm
+utility creates the immutable namespace structure on the backend file
+system necessary for Slash metadata operation.
+This structure provides a method for Slash to access data for files
+residing in its file system without the need for knowing the pathname
+the user has chosen, so access can persistent across unlinks and file
+renames.
+.Sh SEE ALSO
+.Xr sladm 7 ,
+.Xr slashd 8
