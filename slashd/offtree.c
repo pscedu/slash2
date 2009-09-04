@@ -55,12 +55,12 @@ offtree_destroy(struct offtree_root *t)
 }
 
 int
-offtree_req_set_finalize(struct offtree_req *r, int block, int destroy) 
+offtree_req_set_finalize(struct offtree_req *r, int block, int destroy)
 {
 	if (!r->oftrq_fill.oftfill_reqset)
 		return (0);
 
-	return(pscrpc_set_finalize(r->oftrq_fill.oftfill_reqset, 
+	return(pscrpc_set_finalize(r->oftrq_fill.oftfill_reqset,
 		   block, destroy));
 }
 
@@ -272,8 +272,8 @@ offtree_calc_nblks_hb_int(const struct offtree_req *r,
 	OFT_REQ2SE_OFFS(r, nr_soffa, nr_eoffa);
 	OFT_IOV2SE_OFFS(v, hb_soffa, hb_eoffa);
 
-	DEBUG_OFFTREQ(PLL_TRACE, r, "req eoffa="LPX64, nr_eoffa);
-	DEBUG_OFFTIOV(PLL_TRACE, v, "hb  eoffa="LPX64, hb_eoffa);
+	DEBUG_OFFTREQ(PLL_TRACE, r, "req eoffa=%"PRIx64, nr_eoffa);
+	DEBUG_OFFTIOV(PLL_TRACE, v, "hb  eoffa=%"PRIx64, hb_eoffa);
 	/* Otherwise we shouldn't be here.
 	 */
 	psc_assert((nr_soffa < hb_soffa) || (nr_eoffa > hb_eoffa));
@@ -372,12 +372,12 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 					     req->oftrq_darray, r);
 			if (rc != front) {
 				if (rc < front) {
-					psc_errorx("Wanted "LPX64" got "LPX64,
+					psc_errorx("Wanted %"PRIx64" got %"PRIx64,
 						   front, rc);
 					rc = -1;
 					goto done;
 				} else
-					psc_fatalx("Wanted "LPX64" got "LPX64,
+					psc_fatalx("Wanted %"PRIx64" got %"PRIx64,
 						   front, rc);
 			}
 			psc_assert((dynarray_len(req->oftrq_darray) -
@@ -499,8 +499,8 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				/* Ensure that the new partial iov doesn't overrun
 				 *  the REMAP_SRC iov.
 				 */
-				psc_trace("blks=%zu reqeoff="LPX64" reqeoffa="LPX64
-					  " ioveoff="LPX64" ioveoffa="LPX64,
+				psc_trace("blks=%zu reqeoff=%"PRIx64" reqeoffa=%"PRIx64
+					  " ioveoff=%"PRIx64" ioveoffa=%"PRIx64,
 					  niov->oftiov_nblks,
 					  (req->oftrq_off+(req->oftrq_nblks*iov->oftiov_blksz)),
 					  OFT_REQ2E_OFF_(req),
@@ -534,8 +534,8 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				/* Ensure that the new partial iov doesn't overrun
 				 *  the REMAP_SRC iov.
 				 */
-				psc_trace("blks=%zu reqeoff="LPX64" reqeoffa="LPX64
-					  " ioveoff="LPX64" ioveoffa="LPX64,
+				psc_trace("blks=%zu reqeoff=%"PRIx64" reqeoffa=%"PRIx64
+					  " ioveoff=%"PRIx64" ioveoffa=%"PRIx64,
 					  niov->oftiov_nblks,
 					  (req->oftrq_off+(req->oftrq_nblks*iov->oftiov_blksz)),
 					  OFT_REQ2E_OFF_(req),
@@ -623,7 +623,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			rg_eoff = OFT_REQ_ENDOFF(&myreq);
 			/* This should always be true
 			 */
-			psc_trace("i_soffa="LPX64", rg_soff="LPX64,
+			psc_trace("i_soffa=%"PRIx64", rg_soff=%"PRIx64,
 				  i_offa, rg_soff);
 			psc_assert(i_offa >= rg_soff);
 
@@ -663,14 +663,14 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 					       iovoff);
 			DEBUG_OFFTIOV(PLL_TRACE, tiov, "sblkoff debug(0)");
 
-			psc_trace("i_offa="LPX64" tiov->oftiov_off="LPX64
+			psc_trace("i_offa=%"PRIx64" tiov->oftiov_off=%"PRIx64
 				  " nblks=%zd sblkoff=%d",
-                                  i_offa, tiov->oftiov_off + (blkoff * tiov->oftiov_blksz),
-                                  myreq.oftrq_nblks, blkoff);
+				  i_offa, tiov->oftiov_off + (blkoff * tiov->oftiov_blksz),
+				  myreq.oftrq_nblks, blkoff);
 
 			psc_assert((off_t)(tiov->oftiov_off +
 					   (blkoff * tiov->oftiov_blksz))
-                                   == myreq.oftrq_off);
+				   == myreq.oftrq_off);
 
 			/* Factor in partially used iov's
 			 */
@@ -731,7 +731,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 
 	if (req->oftrq_op & OFTREQ_OP_WRITE)
 		psc_assert(atomic_read(&m->oft_wrop_ref) > 0);
-	
+
 	else if ((req->oftrq_op & OFTREQ_OP_READ)  ||
 		 (req->oftrq_op & OFTREQ_OP_PRFFP) ||
 		 (req->oftrq_op & OFTREQ_OP_PRFLP))
@@ -891,8 +891,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			 */
 			psc_assert_msg(myreq.oftrq_off >= crg_soff &&
 				       myreq.oftrq_off <  crg_eoff,
-				       "myreq.oftrq_off="LPX64" crg_soff="LPX64
-				       " crg_eoff="LPX64,
+				       "myreq.oftrq_off=%"PRIx64" crg_soff=%"PRIx64
+				       " crg_eoff=%"PRIx64,
 				       myreq.oftrq_off, crg_soff, crg_eoff);
 
 			/* Manage the depth and width of the request.
@@ -920,8 +920,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 			tiov = dynarray_getpos(req->oftrq_darray,
 					       req->oftrq_darray_off + iovoff);
 
-			psc_trace("i_offa="LPX64" crg_soff="LPX64
-				  " tiov->oftiov_off="LPX64" nblks=%zd sblkoff=%d",
+			psc_trace("i_offa=%"PRIx64" crg_soff=%"PRIx64
+				  " tiov->oftiov_off=%"PRIx64" nblks=%zd sblkoff=%d",
 				  i_offa, crg_soff,
 				  tiov->oftiov_off + (sblkoff * tiov->oftiov_blksz),
 				  myreq.oftrq_nblks, sblkoff);
@@ -1043,7 +1043,7 @@ offtree_region_preprw(struct offtree_req *req)
 
  wakeup_retry:
 
-	DEBUG_OFFTREQ(PLL_TRACE, req, "eoff="LPX64" scnt=%d",
+	DEBUG_OFFTREQ(PLL_TRACE, req, "eoff=%"PRIx64" scnt=%d",
 		      nr_eoffa, scnt);
 	OFT_VERIFY_REQ_SE(req, nr_soffa, nr_eoffa);
 
@@ -1080,7 +1080,7 @@ offtree_region_preprw(struct offtree_req *req)
 			 *   already set to 1.
 			 */
 			//oft_refcnt_inc(req, m);
-		
+
 		if ((req->oftrq_op & OFTREQ_OP_READ)  ||
 		    (req->oftrq_op & OFTREQ_OP_PRFFP) ||
 		    (req->oftrq_op & OFTREQ_OP_PRFLP))
