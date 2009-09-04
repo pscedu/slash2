@@ -1,0 +1,135 @@
+.\" $Id$
+.Dd September 4, 2009
+.Dt SLADM 7
+.ds volume PSC - Slash Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm sladm
+.Nd Slash administration guide
+.Sh DESCRIPTION
+
+overview
+installation/configuration
+maintainence
+
+The
+.Nm
+configuration file specifies storage resources and networks for use on a
+Slash network.
+This document describes the format of this file.
+.Pp
+Empty lines and lines beginning with
+.Sq Li #
+are ignored.
+.Pp
+This file is divided into two sections:
+global configuration and per-site configuration.
+.Ss Global Configuration
+Configuration intended to be applied to all sites on a Slash network
+must be specified in the first section of
+.Nm
+and supports the following directives:
+.Bl -tag -offset indent
+.It Xo
+.Ic global Ar var Li =
+.Ar val Ns Li ;\&
+.Xc
+.Pp
+Set the global variable
+.Ar var
+to the given value
+.Ar val .
+The following variables may be set:
+.Pp
+.Bl -tag -offset indent -compact -width Ds
+.It Ic net
+On which Lustre network site access resides.
+.It Ic port
+On which
+.Tn TCP
+port to establish connections.
+.El
+.El
+.Ss Per-Site Configuration
+Each site resident on a Slash network requires its own section in the second
+part of
+.Nm
+and has the following format:
+.Bd -unfilled -offset indent
+.Ic site @ Ns Ar site-name Li {
+.D1 ...
+.Li }
+.Ed
+.Pp
+A
+.Ic site
+definition may contain variable definitions and
+resource specifications.
+The following variables may be set:
+.Pp
+.Bl -tag -offset indent -width site_descXX -compact
+.It Ic site_desc
+Description of site
+.It Ic site_id
+Numerical identifier for site
+.El
+.Pp
+A resource specification has the following form:
+.Bd -unfilled -offset indent
+.Ic resource Ar resource-name Li {
+.D1 ...
+.Li }
+.Ed
+.Pp
+Resource specifications may contain variable definition for the
+following variables:
+.Pp
+.Bl -tag -offset indent -width Ds -compact
+.It Ic desc
+A string name for this resource
+.It Ic fsroot
+File system mount point,
+exclusive to
+.Ic archival_fs
+resource types
+.Pq see Ic type
+.It Ic id
+Numerical identifier for resource, required to be unique for all
+resources
+.It Ic ifs
+Interface addresses over which to communicate with other site resources
+.It Ic mds
+A Boolean value
+.Ic yes
+or
+.Ic no
+on whether this resource manages site-wide metadata, must be set on at
+least one resource
+.It Ic peers
+List of peers separated by commas of communication resource partners in
+the form
+.Ar resource-name Ns Li @ Ns Ar site-name .
+.It Ic type
+Type of resource, one of
+.Ic archival_fs ,
+.Ic compute ,
+or
+.Ic parallel_fs ,
+required to be set for all resources
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /var/lib/slash/
+.El
+.Sh SEE ALSO
+.Xr odtable 1 ,
+.Xr slash.conf 5 ,
+.Xr mount_slash 8 ,
+.Xr msctl 8
+.Xr slashd 8 ,
+.Xr slctl 8 ,
+.Xr slimmns 8 ,
+.Xr slioctl 8 ,
+.Xr sliod 8 ,
+.Xr slmkjrnl 8 ,
+.Xr zpool 8
