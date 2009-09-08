@@ -65,58 +65,79 @@ utility:
 .Bd -literal -offset indent
 # slmkjrnl
 .Ed
-
-
-
-* The structure used to manage data about pending operations which need to be stored on disk can be created by running:
-
+.Pp
+Next, an on-disk table for persistent storage of data pertaining to the
+ownership of file blocks by
+.Tn I/O
+servers needs to be created and can be done so with the
+.Xr odtable 1
+utility:
+.Bd -literal -offset indent
 # odtable -C -N /var/lib/slashd/bmap_assignments.odt
-
-Once the operating environment has been set up, launch the MDS server:
-
-# LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 USOCK_CPORT=1202 \
-slashd -f slash.conf
-
-(Note: the USOCK_CPORT parameter specified above is for connections that slashd attempts to establish with I/O servers.)
-
-After slashd has started, the ZFS namespace must be loaded:
-
+.Ed
+.Pp
+Next, bring up the metadata server
+.Xr slashd 8 :
+.Bd -literal -offset indent
+# LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \e
+  USOCK_CPORT=1202 slashd -f slash.conf
+.Ed
+.Pp
+Now that the metadata server is up, the
+.Tn ZFS
+pool and namespace information must be loaded before operation can
+commence:
+.Bd -literal -offset indent
 # zpool import -c slpool.cf slpool
-
-On new file system creation, the immutable namespace must be created:
-
-# slimmns /slash
-
+.Ed
+.Pp
+For new Slash file systems, the immutable namespace needed by Slash for
+file system access must be created with the
+.Xr slimmns 8
+utility, which must be run once
+.Xr mount_slash 8
+has mounted the file system before normal client operation can begin.
+.Pp
 .Xr slctl 8
-can be used to control operation of the client mount point.
-
+can be used to control live operation of the metadata server once it is
+running.
 .Ss Running Cm sliod Ns Ss ,\& the Tn Ss I/O Ss Server
-
-
-Next, any I/O servers that need to be brought up can be at this point:
-
-# SLASH_MDS_NID="128.182.58.86@tcp10" USOCK_CPORT=50001 \
-LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \
-sliod -f slash.conf
-
-Note: due to limitations in the Lustre networking stack, these daemons cannot be run to listen on the same interface with different TCP ports. Furthermore, due to limitations in the Slash protocols, interface alias addresses cannot be used either, as data is signed based on the assumption that clients have global addresses, a premise not true when connections are made across different network interfaces. Only virtual machines can facilitate an environment where all MD, I/O, and client can run together on the same machine; otherwise, the MD and I/O servers must reside on different hosts.
-
+The
+.Tn I/O
+server which manages the store of actual file data can be brought up with
+.Xr sliod 8 :
+.Bd -literal -offset indent
+# SLASH_MDS_NID="128.182.58.86@tcp10" USOCK_CPORT=50001 \e
+  LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \e
+  sliod -f slash.conf
+.Ed
+.Pp
+.Xr sliod 8
+actually be brought independently of site metadata servers.
+However, on its startup,
+.Xr sliod 8
+tries to resume any pending operations which have not finished from previous
+instances which were interrupted (for example, by machine power failure).
+For this reason, it is encouraged that metadata servers be brought up before
+.Tn I/O
+servers.
+.Pp
 .Xr slioctl 8
-can be used to control operation of the client mount point.
-
+can be used to control live operation of the
+.Tn I/O
+server once it is running.
 .Ss Running Cm mount_slash Ns Ss ,\& the Client Mount Daemon
-
-
-Now launch the client mount points:
-
-# SLASH_MDS_NID="10.32.5.82@tcp10" LNET_NETWORKS="tcp10(eth0)" \
-USOCK_CPORT=1202 SLASH2_PIOS_ID="ion@mysite" \
-mount_slash -U -f slash.conf /slash
-
-
+.Xr mount_slash 8
+is used to mount a Slash file system to a point on the local system:
+.Bd -literal -offset indent
+# SLASH_MDS_NID="10.32.5.82@tcp10" LNET_NETWORKS="tcp10(eth0)" \e
+  USOCK_CPORT=1202 SLASH2_PIOS_ID="ion@mysite" \e
+  mount_slash -U -f slash.conf /myfs
+.Ed
+.Pp
 .Xr msctl 8
-can be used to control operation of the client mount point.
-
+can be used to control live operation of the client mount point once it
+has been brought up.
 .Sh FILES
 .Bl -tag -width 37n -compact
 .It Pa /etc/slash.conf
@@ -134,6 +155,37 @@ server file block ownership
 .It Pa /var/lib/slashd/slopjrnl
 pending operations journal
 .El
+.Sh CAVEATS
+The metadata and
+.Tn I/O
+servers must reside on different hosts.
+At this time, it is necessary to use virtual machines to facilitate an
+environment where all metadata,
+.Tn I/O ,
+and client mount servers can run together on the same machine.
+This is due to two limitations:
+.Bl -bullet -offset 2n
+.It
+Slash uses the Lustre networking stack which restricts applications from
+connecting to servers on different
+.Tn TCP
+ports, preventing one from running both metadata and
+.Tn I/O
+servers on the same machine yet bound to different
+.Tn TCP
+ports.
+A single
+.Tn TCP
+port must be used site-wide for all daemons.
+.It
+Restrictions in the Slash protocols forbid network interface aliases
+.Pq of the form Dq eth0:2
+from being used either.
+This is due to data being signed based on the assumption that clients
+always have the same global addresses as seen by all daemons across the
+site.
+This condition will not hold when connections are made from different
+addresses provided by the network interface aliases.
 .Sh SEE ALSO
 .Xr odtable 1 ,
 .Xr slash.conf 5 ,
