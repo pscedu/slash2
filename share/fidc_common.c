@@ -544,7 +544,7 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 			rc = slFsops->slfsop_getattr(fcmh, creds);
 			if (rc) {
 				DEBUG_FCMH(PLL_DEBUG, fcmh, "getattr failure");
-				return (rc);
+				return (-rc);
 			}
 		}
 	}
