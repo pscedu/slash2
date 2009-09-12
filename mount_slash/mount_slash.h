@@ -28,6 +28,8 @@ struct pscrpc_request;
 #define MSTHRT_TINTV	6	/* timer interval thread */
 #define MSTHRT_TIOS	7	/* timer iostat updater */
 #define MSTHRT_FUSE	8	/* fuse internal manager */
+#define MSTHRT_BMAPFLSH	9	/* async buffer thread */
+
 
 #define MSL_IO_CB_POINTER_SLOT 1
 #define MSL_WRITE_CB_POINTER_SLOT 2
@@ -38,6 +40,7 @@ struct pscrpc_request;
 
 #define FHENT_READ	(1 << 0)
 #define FHENT_WRITE	(1 << 1)
+
 
 struct msrcm_thread {
 	struct pscrpc_thread	 mrcm_prt;
@@ -84,7 +87,9 @@ struct slashrpc_cservice *ion_get(void);
 int msl_io(struct msl_fhent *, char *, size_t, off_t, int);
 int msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-
+struct pscrpc_import * msl_bmap_to_import(struct bmapc_memb *, int);
+int msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
+int msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 void msl_bmap_fhcache_clear(struct msl_fhent *);
 
 struct msl_fhent *msl_fhent_new(struct fidc_membh *);

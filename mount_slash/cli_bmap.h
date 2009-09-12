@@ -24,10 +24,12 @@ struct msbmap_crcrepl_states
  */
 struct msbmap_data {
 	struct offtree_root	    *msbd_oftr;
+	struct bmapc_memb           *msbd_bmap;
 	lnet_nid_t		     msbd_ion;
 	struct msbmap_crcrepl_states msbd_msbcr;
 	struct srt_bmapdesc_buf	     msbd_bdb;	/* open bmap descriptor */
 	struct psclist_head          msbd_oftrqs;
+	struct psclist_head          msbd_lentry;
 };
 
 #define bmap_2_msbd(b)				\
@@ -56,6 +58,10 @@ bmap_oftrq_del(struct bmapc_memb *b, struct offtree_req *r)
 	DEBUG_BMAP(PLL_INFO, b, "list_empty(%d)", 
 		   psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
 
+	if (psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs)) {
+		psc_assert(b->bcm_mode & BMAP_DIRTY);
+		b->bcm_mode &= ~BMAP_DIRTY;
+	}
         psc_waitq_wakeall(&b->bcm_waitq);
         BMAP_ULOCK(b);
 }
@@ -69,7 +75,10 @@ struct bmap_info_cli {
 };
 
 /* bcm_mode flags */
-#define	BMAP_CLI_MCIP	(1 << (0 + BMAP_RSVRD_MODES)) /* mode change in prog */
-#define	BMAP_CLI_MCC	(1 << (1 + BMAP_RSVRD_MODES)) /* mode change complete */
+//#define	BMAP_CLI_MCIP	(1 << (0 + BMAP_RSVRD_MODES)) /* mode change in prog */
+//#define	BMAP_CLI_MCC	(1 << (1 + BMAP_RSVRD_MODES)) /* mode change complete */
+
+#define BMAP_CLI_MCIP (1 << 16)
+#define	BMAP_CLI_MCC  (1 << 17)
 
 #endif /* _SLASH_CLI_BMAP_H_ */

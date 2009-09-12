@@ -1793,6 +1793,7 @@ main(int argc, char *argv[])
 		return 2;
 	}
 #endif
+	bmap_flush_init();
 	rc = slash2fuse_listener_start();
 
 	return (0);
