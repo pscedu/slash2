@@ -3,6 +3,7 @@
 include Makefile.path
 
 PROG=		mount_slash
+SRCS+=		bmap_flush.c
 SRCS+=		cli_slcfg.c
 SRCS+=		control.c
 SRCS+=		fidc_client.c
@@ -13,7 +14,6 @@ SRCS+=		mseqpollthr.c
 SRCS+=		rcm.c
 SRCS+=		rpc.c
 SRCS+=		timer.c
-SRCS+=		bmap_flush.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
 SRCS+=		${SLASH_BASE}/share/fid.c
@@ -29,8 +29,8 @@ SRCS+=		${PFL_BASE}/psc_ds/hash2.c
 SRCS+=		${PFL_BASE}/psc_ds/pool.c
 SRCS+=		${PFL_BASE}/psc_ds/stree.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
-SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
 SRCS+=		${PFL_BASE}/psc_rpc/nb.c
+SRCS+=		${PFL_BASE}/psc_rpc/rsx.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
 SRCS+=		${PFL_BASE}/psc_util/ctlsvr.c

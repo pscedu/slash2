@@ -250,7 +250,7 @@ bmap_flush_coalesce_map(const struct dynarray *oftrqs, struct iovec **iovset)
 	psc_assert(!*iovset);
 	psc_assert(dynarray_len(oftrqs) > 0);
 	
-	/* Prime the pump with iniial values from the first oftrq.
+	/* Prime the pump with initial values from the first oftrq.
 	 */
 	r = dynarray_getpos(oftrqs, 0);
 	off = r->oftrq_off;
