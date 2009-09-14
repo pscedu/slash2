@@ -88,7 +88,7 @@ enum slvr_states {
 #define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
-	psc_logs((level), PSS_OTHER,					\
+	psc_logs((level), PSS_GEN,					\
 		 " slvr@%p num=%hu pw=%hu pr=%hu pri@%p slab@%p flgs:"	\
 		 SLVR_FLAGS_FMT" :: "fmt,				\
 		 (s), (s)->slvr_num,					\

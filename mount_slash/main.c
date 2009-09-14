@@ -1083,7 +1083,7 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 
 	slash2fuse_getcred(req, &creds);
 
-	psc_infos(PSS_OTHER, "name %s inode %"PRId64,
+	psc_infos(PSS_GEN, "name %s inode %"PRId64,
 		  name, parent);
 
 	rc = fidc_lookup_load_inode(parent, &creds, &p);

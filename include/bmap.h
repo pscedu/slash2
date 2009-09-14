@@ -67,7 +67,7 @@ enum bmap_common_modes {
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, lk)
 
 #define DEBUG_BMAP(level, b, fmt, ...)					\
-	psc_logs((level), PSS_OTHER,					\
+	psc_logs((level), PSS_GEN,					\
 		 " bmap@%p b:%x m:%u i:%"PRIx64				\
 		 " rref=%u wref=%u opcnt=%u "fmt,			\
 		 (b), (b)->bcm_blkno,					\

@@ -260,7 +260,7 @@ enum oft_iov_flags {
 #define OFFTIOV_FLAGS_FMT "%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
-	psc_logs((level), PSS_OTHER, 					\
+	psc_logs((level), PSS_GEN, 					\
 		" oftiov@%p b:%p o:%"PRIx64" l:%"PRId64			\
 		" bsz:%"PRId64" pri:%p fl:"OFFTIOV_FLAGS_FMT		\
 		" m:%p "fmt,						\
@@ -329,7 +329,7 @@ enum oft_attributes {
 #define DEBUG_OFT(level, oft, fmt, ...)					\
 	do {								\
 		if (ATTR_TEST((oft)->oft_flags, OFT_LEAF)) {		\
-			psc_logs((level), PSS_OTHER, 			\
+			psc_logs((level), PSS_GEN, 			\
 				" oft@%p pos:%hhu d:%hhu w:%hu p:%p "	\
 				"ref:%d rref:%d wref:%d"		\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
@@ -342,7 +342,7 @@ enum oft_attributes {
 				DEBUG_OFTM_FLAGS(oft),			\
 				## __VA_ARGS__);			\
 		} else {						\
-			psc_logs((level), PSS_OTHER, 			\
+			psc_logs((level), PSS_GEN, 			\
 				" oft@%p pos:%hhu d:%hhu w:%hu p:%p "	\
 				"ref:%d rref:%d wref:%d"		\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
@@ -432,7 +432,7 @@ oftrq_size_get(const struct offtree_req *r)
 	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_PRFLP), "l")
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
-	psc_logs((level), PSS_OTHER, 					\
+	psc_logs((level), PSS_GEN, 					\
 		" oftr@%p o:%"PRIx64" l:%"PRId64" node:%p darray:%p"	\
 		" root:%p op:%hhu d:%hhu w:%hu "			\
 		REQ_OFTRQ_FLAGS_FMT" "fmt,				\

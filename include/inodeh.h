@@ -57,7 +57,7 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 #define INOH_FLAGS_FMT "%s%s%s%s"
 
 #define DEBUG_INOH(level, i, fmt, ...)					\
-	psc_logs((level), PSS_OTHER, 					\
+	psc_logs((level), PSS_GEN, 					\
 		 " inoh@%p f:"FIDFMT" fl:"INOH_FLAGS_FMT		\
 		 "v:%x bsz:%u nr:%u cs:%u lblk:%"PRId64" "		\
 		 "repl0:%u crc:%"PRIx64" "				\

@@ -86,7 +86,7 @@ struct sl_buffer {
 #define SLB_FLAGS_FMT "%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLB(level, slb, fmt, ...)					\
-	psc_logs((level), PSS_OTHER, 					\
+	psc_logs((level), PSS_GEN, 					\
 		" slb@%p b:%p sz(%d/%d) bsz:%u"				\
 		" ref:%d umref:%d inf:%d infp:%d fl:"SLB_FLAGS_FMT	\
 		" fcm:%p lco:%p "fmt,					\
@@ -120,7 +120,7 @@ struct sl_buffer {
 					     __m->oft_norl.oft_iov,	\
 					     "iov of memb %p", __m);	\
 			} else						\
-				psc_logs((level), PSS_OTHER, 		\
+				psc_logs((level), PSS_GEN, 		\
 					"--> Unmapped SLB ref %p memb " \
 					fmt, __r, ## __VA_ARGS__);	\
 		}							\

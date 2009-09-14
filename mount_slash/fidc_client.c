@@ -291,7 +291,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 
 	psclist_for_each_entry(c, &p->fcmh_children, fcc_lentry) {
 
-		psc_traces(PSS_OTHER, "p=fcmh@%p c=%p cname=%s hash=%d",
+		psc_traces(PSS_GEN, "p=fcmh@%p c=%p cname=%s hash=%d",
 			   p, c, c->fcc_name, c->fcc_hash);
 
 		if ((c->fcc_hash == hash) &&

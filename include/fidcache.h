@@ -213,7 +213,7 @@ struct fidc_open_obj {
 do {								        	\
 	int dbg_fcmh_locked=reqlock(&(fcmh)->fcmh_lock);			\
 										\
-	psc_logs((level), PSS_OTHER,						\
+	psc_logs((level), PSS_GEN,						\
 		 " fcmh@%p fcm@%p fcoo@%p fcooref(%d:%d) i+g:%"PRId64"+"	\
 		 "%"PRId64" s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s r:%d :: "fmt,	\
 		 (fcmh), (fcmh)->fcmh_fcm, (fcmh)->fcmh_fcoo,			\
@@ -297,7 +297,7 @@ struct fidc_memb {
 	clock_gettime(CLOCK_REALTIME, &(f)->fcmh_access)
 
 #define fcm_dump_stb(stb, level)					\
-	psc_logs(level, PSS_OTHER,					\
+	psc_logs(level, PSS_GEN,					\
 	    "stb (%p) dev:%lu inode:%"PRId64" mode:0%o "		\
 	    "nlink:%lu uid:%u gid:%u rdev:%lu sz:%"PRId64" "		\
 	    "blk:%lu blkcnt:%zd atime:%lu mtime:%lu ctime:%lu", 	\
@@ -533,7 +533,7 @@ fidc_fcoo_startfailed(struct fidc_membh *h)
 static inline void
 fcm_dump_stb_(const struct stat *stb, int level)
 {
-	psc_logs(level, PSS_OTHER,
+	psc_logs(level, PSS_GEN,
 		"stb (%p) dev:%lu inode:%"PRId64" mode:0%o nlink:%lu "
 		"uid:%u gid:%u rdev:%lu sz:%"PRId64" "
 		"blk:%lu blkcnt:%zd atime:%lu mtime:%lu ctime:%lu",
