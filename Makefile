@@ -13,7 +13,7 @@ SUBDIRS+=	slimmns
 SUBDIRS+=	slioctl
 SUBDIRS+=	sliod
 SUBDIRS+=	slmkjrnl
-SUBDIRS+=	${PFL_BASE}/tests/odtable
+SUBDIRS+=	${PFL_BASE}/utils/odtable
 
 zbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} -c && scons)
