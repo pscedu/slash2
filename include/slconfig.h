@@ -3,16 +3,9 @@
 #ifndef _SLCONFIG_H_
 #define _SLCONFIG_H_
 
-#define SITE_NAME_MAX 64
-#define RES_NAME_MAX  64
-#define FULL_NAME_MAX (SITE_NAME_MAX+RES_NAME_MAX+2)
-#define SL_PEER_MAX 16
-
-#define DEVNAMEMAX 128
-
 #include <sys/param.h>
 
-#include "psc_types.h"
+#include "pfl/types.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
@@ -20,6 +13,13 @@
 #include "psc_util/log.h"
 
 #include "inode.h"
+
+#define SITE_NAME_MAX 64
+#define RES_NAME_MAX  64
+#define FULL_NAME_MAX (SITE_NAME_MAX+RES_NAME_MAX+2)
+#define SL_PEER_MAX 16
+
+#define DEVNAMEMAX 128
 
 #define MAX_PEERS  32
 #define MAX_IFS    256
@@ -274,7 +274,7 @@ libsl_profile_dump(void)
 }
 
 static inline u32
-libsl_str2restype(char *res_type)
+libsl_str2restype(const char *res_type)
 {
 	if (!strcmp(res_type, "parallel_fs"))
 		return (parallel_fs);

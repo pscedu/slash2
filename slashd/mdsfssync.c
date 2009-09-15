@@ -3,7 +3,6 @@
 #include <inttypes.h>
 #include <unistd.h>
 
-#include "psc_types.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/assert.h"
 #include "psc_util/cdefs.h"

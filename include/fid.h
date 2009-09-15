@@ -7,19 +7,17 @@
 
 #include <inttypes.h>
 
-#include "psc_types.h"
-
 #define FID_MAX_PATH	96
 #define FID_FD_NOTOPEN	(-2)
 
 struct slash_creds;
 struct slash_fidgen;
 
-typedef u64 slfid_t;	/* first 16 bits are the svr/fs id, rest are inum */
+typedef uint64_t slfid_t;	/* first 16 bits are the svr/fs id, rest are inum */
 
 struct slash_fidgen {
-	slfid_t	fg_fid;
-	u64	fg_gen;
+	slfid_t		fg_fid;
+	uint64_t	fg_gen;
 };
 
 #define FID_ANY			0xffffffffffffULL
@@ -34,8 +32,8 @@ struct slash_fidgen {
 #define FIDFMT			"%"PRId64":%"PRId64
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
 
-#define FID_FSID(fid)		((u32)((fid) >> 48))
-#define FID_INUM(fid)		((u64)((fid) & UINT64_C(0xffffffffffff)))
+#define FID_FSID(fid)		((uint32_t)((fid) >> 48))
+#define FID_INUM(fid)		((uint64_t)((fid) & UINT64_C(0xffffffffffff)))
 
 #define SAMEFID(a, b)							\
 	(((a)->fg_fid == (b)->fg_fid) && ((a)->fg_gen == (b)->fg_gen))

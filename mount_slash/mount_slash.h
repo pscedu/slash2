@@ -7,7 +7,6 @@
 
 #include <stdarg.h>
 
-#include "psc_types.h"
 #include "psc_ds/tree.h"
 #include "psc_rpc/service.h"
 

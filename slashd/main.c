@@ -6,7 +6,7 @@
 
 #include <gcrypt.h>
 
-#include "pfl.h"
+#include "pfl/pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/strlcpy.h"

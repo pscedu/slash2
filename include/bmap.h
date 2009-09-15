@@ -6,7 +6,6 @@
 #include <inttypes.h>
 #include <time.h>
 
-#include "psc_types.h"
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/atomic.h"
@@ -41,7 +40,7 @@ struct bmapc_memb {
 	atomic_t		 bcm_wr_ref;	/* one ref per read fd     */
 	struct timespec		 bcm_ts;
 	atomic_t		 bcm_opcnt;	/* pending opcnt           */
-	u32			 bcm_mode;
+	uint32_t		 bcm_mode;
 	psc_spinlock_t		 bcm_lock;
 	psc_waitq_t		 bcm_waitq;     /* XXX think about replacing 
 						   me with bcm_fcmh->fcmh_waitq

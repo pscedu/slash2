@@ -2,7 +2,6 @@
 
 #include <time.h>
 
-#include "psc_types.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_rpc/rpc.h"

@@ -14,7 +14,6 @@
 
 #include "libcfs/kp30.h"
 
-#include "psc_types.h"
 #include "psc_util/alloc.h"
 #include "psc_util/assert.h"
 #include "psc_util/log.h"
@@ -46,7 +45,7 @@ enum sym_structure_types {
 	SL_STRUCT_GLOBAL = 1026
 };
 
-typedef u32 (*sym_handler)(char *);
+typedef uint32_t (*sym_handler)(const char *);
 
 struct symtable {
 	char			*name;
@@ -58,7 +57,7 @@ struct symtable {
 	sym_handler		 handler;
 };
 
-u32 global_net_handler(char *);
+uint32_t global_net_handler(const char *);
 
 /*
  * Define a table macro for each structure type filled in by the config
@@ -157,7 +156,7 @@ config         : globals site_profiles
 	 */
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry) {
 		psclist_for_each_entry(r, &s->site_resources, res_lentry) {
-			u32 i;
+			uint32_t i;
 
 			r->res_peers = PSCALLOC(sizeof(sl_ios_id_t) *
 						r->res_npeers);
@@ -178,12 +177,12 @@ config         : globals site_profiles
 };
 
 globals        : /* NULL */              |
-                 global globals;
+		 global globals;
 
 global         : GLOBAL statement;
 
 site_profiles  : site_profile            |
-                 site_profile site_profiles;
+		 site_profile site_profiles;
 
 site_profile   : site_profile_start site_defs SUBSECT_END
 {
@@ -205,7 +204,7 @@ site_defs      : statements site_resources
 {};
 
 site_resources : site_resource              |
-                 site_resources site_resource
+		 site_resources site_resource
 {
 	cfgMode = SL_STRUCT_SITE;
 };
@@ -233,12 +232,12 @@ site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
 
 /*
 resource_def   : statements interfacelist peerlist |
-                 statements interfacelist          |
-                 statements peerlist               |
-                 statements interfacelist statements |
-                 interfacelist statements          |
-                 peerlist interfacelist statements |
-                 
+		 statements interfacelist          |
+		 statements peerlist               |
+		 statements interfacelist statements |
+		 interfacelist statements          |
+		 peerlist interfacelist statements |
+
 {};
 */
 
@@ -249,7 +248,7 @@ peerlist       : PEERTAG EQ peers END
 {};
 
 peers          : peer                              |
-                 peer NSEP peers
+		 peer NSEP peers
 
 {};
 
@@ -266,7 +265,7 @@ interfacelist  : INTERFACETAG EQ interfaces END
 {};
 
 interfaces     : interface                 |
-                 interface NSEP interfaces
+		 interface NSEP interfaces
 {};
 
 interface      : IPADDR
@@ -276,37 +275,37 @@ interface      : IPADDR
 
 	i = realloc(currentRes->res_nids,
 		    (sizeof(lnet_nid_t) * (currentRes->res_nnids + 1)));
-        psc_assert(i);
+	psc_assert(i);
 
 	if ((snprintf(nidstr, MAXNET, "%s@%s", $1, currentConf->gconf_net))
 	    >= MAXNET)
 		psc_fatalx("Interface to NID failed, ifname too long %s", $1);
 	free($1);
 
-        i[currentRes->res_nnids] = libcfs_str2nid(nidstr);
+	i[currentRes->res_nnids] = libcfs_str2nid(nidstr);
 
 	psc_info("Got nidstr ;%s; nid2str ;%s;",
 		 nidstr, libcfs_nid2str(i[currentRes->res_nnids]));
 
 	currentRes->res_nnids++;
-        currentRes->res_nids = i;
+	currentRes->res_nids = i;
 };
 
 statements        : /* NULL */               |
-                    statement statements;
+		    statement statements;
 
 statement         : restype_stmt |
-                    path_stmt    |
-                    num_stmt     |
-                    bool_stmt    |
-                    size_stmt    |
-                    glob_stmt    |
-                    hexnum_stmt  |
-                    float_stmt   |
-                    lnettcp_stmt |
-                    peerlist     |
-                    interfacelist|
-                    quoteds_stmt;
+		    path_stmt    |
+		    num_stmt     |
+		    bool_stmt    |
+		    size_stmt    |
+		    glob_stmt    |
+		    hexnum_stmt  |
+		    float_stmt   |
+		    lnettcp_stmt |
+		    peerlist     |
+		    interfacelist|
+		    quoteds_stmt;
 
 restype_stmt : NAME EQ RESOURCE_TYPE END
 {
@@ -328,8 +327,8 @@ path_stmt : NAME EQ PATHNAME END
 
 glob_stmt : NAME EQ GLOBPATH END
 {
-        psc_notify("Found Glob Statement: Tok '%s' Val '%s'",
-               $1, $3);
+	psc_notify("Found Glob Statement: Tok '%s' Val '%s'",
+	       $1, $3);
 	store_tok_val($1, $3);
 	free($1);
 	free($3);
@@ -355,7 +354,7 @@ size_stmt : NAME EQ SIZEVAL END
 
 num_stmt : NAME EQ NUM END
 {
-        psc_notify("Found Num Statement: Tok '%s' Val '%s'",
+	psc_notify("Found Num Statement: Tok '%s' Val '%s'",
 		$1, $3);
 	store_tok_val($1, $3);
 	free($1);
@@ -403,8 +402,8 @@ lnettcp_stmt : NAME EQ LNETTCP END
 
 %%
 
-u32
-global_net_handler(char *net)
+uint32_t
+global_net_handler(const char *net)
 {
 	strlcpy(globalConfig.gconf_net, net, MAXNET);
 	return (libcfs_str2net(net));
@@ -413,19 +412,19 @@ global_net_handler(char *net)
 static struct symtable *
 get_symbol(const char *name)
 {
-        struct symtable *e;
+	struct symtable *e;
 
-        psc_notify("symbol lookup '%s'", name);
+	psc_notify("symbol lookup '%s'", name);
 
-        for (e = sym_table; e != NULL && e->name != NULL; e++)
-                if (e->name && !strcmp(e->name, name))
-                        break;
+	for (e = sym_table; e != NULL && e->name != NULL; e++)
+		if (e->name && !strcmp(e->name, name))
+			break;
 
-        if (e == NULL || e->name == NULL) {
-                psc_warnx("Symbol '%s' was not found", name);
+	if (e == NULL || e->name == NULL) {
+		psc_warnx("Symbol '%s' was not found", name);
 		return NULL;
 	}
-        return e;
+	return e;
 }
 
 void
@@ -482,9 +481,9 @@ store_tok_val(const char *tok, char *val)
 		break;
 
 	case SL_TYPE_HEXU64:
-		*(u64 *)ptr = strtoull(val, NULL, 16);
+		*(uint64_t *)ptr = strtoull(val, NULL, 16);
 		psc_trace("SL_TYPE_HEXU64 Tok '%s' set to '%"PRIx64"'",
-		       e->name, (u64)*(u64 *)(ptr));
+		       e->name, *(uint64_t *)(ptr));
 		break;
 
 	case SL_TYPE_INT:
@@ -537,43 +536,42 @@ store_tok_val(const char *tok, char *val)
 		}
 		break;
 
-	case SL_TYPE_SIZET:
-		{
-			u64   i;
-			int   j;
-			char *c;
+	case SL_TYPE_SIZET: {
+		uint64_t   i;
+		int   j;
+		char *c;
 
-			j = strlen(val);
-			c = &val[j-1];
+		j = strlen(val);
+		c = &val[j-1];
 
-			switch (tolower(*c)) {
-			case 'b':
-				i = (u64)1;
-				break;
-			case 'k':
-				i = (u64)1024;
-				break;
-			case 'm':
-				i = (u64)1024*1024;
-				break;
-			case 'g':
-				i = (u64)1024*1024*1024;
-				break;
-			case 't':
-				i = (u64)1024*1024*1024*1024;
-				break;
-			default:
-				psc_fatalx("Sizeval '%c' is not valid", *c);
-			}
-			psc_trace("ival   = %"PRIu64, i);
-
-			*c = '\0';
-			*(u64 *)ptr = (u64)(i * strtoull(val, NULL, 10));
-
-			psc_trace("SL_TYPE_SIZET Tok '%s' set to '%"PRIu64"'",
-				e->name, *(u64 *)ptr);
+		switch (tolower(*c)) {
+		case 'b':
+			i = 1;
+			break;
+		case 'k':
+			i = 1024;
+			break;
+		case 'm':
+			i = 1024*1024;
+			break;
+		case 'g':
+			i = UINT64_C(1024)*1024*1024;
+			break;
+		case 't':
+			i = UINT64_C(1024)*1024*1024*1024;
+			break;
+		default:
+			psc_fatalx("Sizeval '%c' is not valid", *c);
 		}
+		psc_trace("ival   = %"PRIu64, i);
+
+		*c = '\0';
+		*(uint64_t *)ptr = (i * strtoull(val, NULL, 10));
+
+		psc_trace("SL_TYPE_SIZET Tok '%s' set to '%"PRIu64"'",
+			e->name, *(uint64_t *)ptr);
 		break;
+	    }
 
 	default:
 		psc_fatalx("Invalid Token '%s'", e->name);

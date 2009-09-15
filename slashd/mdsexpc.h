@@ -12,7 +12,6 @@
 
 #include <time.h>
 
-#include "psc_types.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/list.h"
 #include "psc_util/atomic.h"
@@ -42,9 +41,9 @@ struct pscrpc_export;
  */
 struct mexpbcm {
 	sl_blkno_t              mexpbcm_blkno;
-        u32                     mexpbcm_mode;
-	u32                     mexpbcm_net_cmd;
-	u32                     mexpbcm_net_inf;
+        uint32_t                mexpbcm_mode;
+	uint32_t                mexpbcm_net_cmd;
+	uint32_t                mexpbcm_net_inf;
         struct bmapc_memb      *mexpbcm_bmap;
 	struct pscrpc_export   *mexpbcm_export;
 	struct psclist_head     mexpbcm_lentry;      /* ref for client cb   */

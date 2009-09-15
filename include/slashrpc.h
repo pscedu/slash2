@@ -19,7 +19,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "psc_types.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/crc.h"
 
@@ -167,9 +166,9 @@ struct srt_bdb_secret {
 	struct slash_fidgen	sbs_fg;
 	uint64_t		sbs_cfd;	/* stream handle/ID */
 	lnet_process_id_t	sbs_cli_prid;	/* client NID/PID */
-	lnet_nid_t 		sbs_ion_nid;
+	lnet_nid_t		sbs_ion_nid;
 	sl_ios_id_t		sbs_ios_id;
-	sl_blkno_t 		sbs_bmapno;
+	sl_blkno_t		sbs_bmapno;
 	uint64_t		sbs_nonce;
 };
 
@@ -513,8 +512,8 @@ struct slashrpc_cservice {
 
 void slashrpc_export_destroy(void *);
 
-struct slashrpc_cservice *rpc_csvc_create(u32, u32);
-int rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, u64, u32);
+struct slashrpc_cservice *rpc_csvc_create(uint32_t, uint32_t);
+int rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, u64, uint32_t);
 
 extern lnet_process_id_t lpid;
 

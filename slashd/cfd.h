@@ -3,7 +3,6 @@
 #ifndef _CFD_H_
 #define _CFD_H_
 
-#include "psc_types.h"
 #include "psc_ds/tree.h"
 
 #include "fid.h"

@@ -3,7 +3,6 @@
 #ifndef _SLASH_SLVR_H_
 #define _SLASH_SLVR_H_
 
-#include "psc_types.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/tree.h"

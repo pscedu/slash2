@@ -7,13 +7,13 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "psc_types.h"
 #include "psc_util/assert.h"
+#include "psc_util/log.h"
 
 #include "fid.h"
 
 void
-_meta_dir_create(u32 curdepth, u32 maxdepth)
+_meta_dir_create(uint32_t curdepth, uint32_t maxdepth)
 {
 	int  i;
 	char d[2];
@@ -39,7 +39,7 @@ _meta_dir_create(u32 curdepth, u32 maxdepth)
  *  on a mapserver filesystem.
  */
 int
-meta_dir_create(const char *meta_root, u64 fs_set_uuid, u32 meta_dir_depth)
+meta_dir_create(const char *meta_root, uint64_t fs_set_uuid, uint32_t meta_dir_depth)
 {
 	char wd[PATH_MAX], meta_fsid_str[FSID_LEN+1];
 	int  rc;
@@ -57,7 +57,7 @@ meta_dir_create(const char *meta_root, u64 fs_set_uuid, u32 meta_dir_depth)
 
 	rc = mkdir(meta_fsid_str, 0700);
 	if (rc < 0 && errno != EEXIST)
-		psc_assert_perror(0);
+		psc_fatal("mkdir %s", meta_fsid_str);
 
 	psc_assert_perror(chdir(meta_fsid_str) == 0);
 	_meta_dir_create(1, meta_dir_depth);

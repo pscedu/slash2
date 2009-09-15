@@ -1,9 +1,7 @@
 /* $Id$ */
 
-#ifndef __SL_JOURNAL__
-#define __SL_JOURNAL__ 1
-
-#include "psc_types.h"
+#ifndef _SL_JOURNAL_
+#define _SL_JOURNAL_
 
 #include "inode.h"
 #include "slconfig.h"
@@ -28,16 +26,16 @@ struct slmds_jent_inum {
 } __attribute__ ((packed));
 #endif
 
-/* 
- * slmds_jent_crc - is used to log crc updates which come from the ION's.  
- * @sjc_ion: the ion who sent the request.  Upon reboot this is used to 
- *    rebuild the mds's bmap <-> ion associations so that retried crc 
+/*
+ * slmds_jent_crc - is used to log crc updates which come from the ION's.
+ * @sjc_ion: the ion who sent the request.  Upon reboot this is used to
+ *    rebuild the mds's bmap <-> ion associations so that retried crc
  *    updates (ion -> mds) may succeed.
  * @sjc_fid: what file.
  * @sjc_bmapno: which bmap region.
  * @sjc_crc: array of slots and crcs.
- * Notes: I presume that this will be the most common operation into the 
- *    journal.   
+ * Notes: I presume that this will be the most common operation into the
+ *    journal.
  */
 struct slmds_jent_crc {
 	sl_ios_id_t             sjc_ion; /* Track the ion which did the I/O */
@@ -50,7 +48,7 @@ struct slmds_jent_crc {
 
 #define slion_jent_crc slmds_jent_crc
 
-/* 
+/*
  * slmds_jent_repgen - log changes to the replication state of a bmap which
  *    occur upon processing a new write for a replicated bmap.
  * @sjp_fid: what file.
@@ -67,7 +65,7 @@ struct slmds_jent_repgen {
 
 
 /*
- * slmds_jent_ino_addrepl - add a new replica IOS to the inode or the inode 
+ * slmds_jent_ino_addrepl - add a new replica IOS to the inode or the inode
  *    extras.
  * @sjir_fid: what file.
  * @sjir_ios: the IOS being added.
@@ -87,7 +85,7 @@ struct slmds_jents {
 	union {
 		struct slmds_jent_repgen sjr;
 		struct slmds_jent_crc sjc;
-		struct slmds_jent_ino_addrepl sjia;	
+		struct slmds_jent_ino_addrepl sjia;
 	} slmds_jent_types;
 };
 
@@ -97,4 +95,4 @@ struct slmds_jents {
  */
 #define SLJ_MDS_ENTSIZE 480
 
-#endif
+#endif /* _SL_JOURNAL_ */

@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "psc_types.h"
+#include "pfl/types.h"
 #include "psc_util/assert.h"
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"

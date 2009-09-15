@@ -1,6 +1,5 @@
 /* $Id$ */
 
-#include "psc_types.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"

@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 
-#include "psc_types.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
@@ -19,8 +18,8 @@
  * @version: communication protocol version.
  */
 int
-rpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp, u64 magic,
-    u32 version)
+rpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp, uint64_t magic,
+    uint32_t version)
 {
 	lnet_process_id_t server_id = { server, 0 };
 	struct pscrpc_request *rq;
@@ -51,7 +50,7 @@ rpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp, u64 magic,
  * @rpptl: reply portal ID.
  */
 struct slashrpc_cservice *
-rpc_csvc_create(u32 rqptl, u32 rpptl)
+rpc_csvc_create(uint32_t rqptl, uint32_t rpptl)
 {
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_import *imp;

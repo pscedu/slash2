@@ -16,8 +16,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pfl.h"
-#include "psc_types.h"
+#include "pfl/pfl.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/cdefs.h"
@@ -312,7 +311,7 @@ slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 }
 
 static void
-slash2fuse_transflags(u32 flags, u32 *nflags, u32 *nmode)
+slash2fuse_transflags(uint32_t flags, uint32_t *nflags, uint32_t *nmode)
 {
 	if (flags & O_WRONLY) {
 		*nmode = SL_WRITE;
@@ -985,7 +984,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	}
 
 	if (mq->nstbpref) {
-		u32 i;
+		uint32_t i;
 		struct fidc_memb fcm;
 		struct fidc_membh *fcmh;
 		struct srm_getattr_rep *attr = iov[1].iov_base;
@@ -1176,7 +1175,7 @@ slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct msl_fhent *mfh;
 	struct fidc_membh *h;
 	int rc=0;
-	u32 mode;
+	uint32_t mode;
 
 	mfh = (void *)fi->fh;
 	h = mfh->mfh_fcmh;

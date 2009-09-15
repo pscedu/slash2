@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "psc_types.h"
+#include "pfl/pfl.h"
 #include "psc_util/assert.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
@@ -70,6 +70,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	pfl_init();
 	progname = argv[0];
 	while (getopt(argc, argv, "") != -1)
 		usage();
