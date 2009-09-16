@@ -14,17 +14,10 @@
 
 #include "sliod/control.h"
 
-int
-slrpciothr_prhdr(void)
-{
-	return (printf(" %-*s %8s\n", PSC_THRNAME_MAX, "thread", "#write"));
-}
-
 void
 slrpciothr_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" %-*s %8u\n", PSC_THRNAME_MAX, pcst->pcst_thrname,
-	    pcst->pcst_nwrite);
+	printf(" #write %8u\n", pcst->pcst_nwrite);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
@@ -39,8 +32,8 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
 struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
-	{ psc_ctlthr_prhdr,	psc_ctlthr_prdat },
-	{ slrpciothr_prhdr,	slrpciothr_prdat },
+	{ psc_ctlthr_prdat },
+	{ slrpciothr_prdat }
 };
 int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 

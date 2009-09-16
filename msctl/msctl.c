@@ -26,12 +26,7 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
 struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
-/* CTL		*/	{ psc_ctlthr_prhdr,	psc_ctlthr_prdat },
-/* RPCMDS	*/	{ NULL,			NULL },
-/* RPCBE	*/	{ NULL,			NULL },
-/* LND		*/	{ NULL,			NULL },
-/* TINTV	*/	{ NULL,			NULL },
-/* TIOS		*/	{ NULL,			NULL }
+/* CTL		*/	{ psc_ctlthr_prdat },
 };
 int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 

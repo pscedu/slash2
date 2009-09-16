@@ -14,31 +14,17 @@
 
 #include "slashd/control.h"
 
-int
-slrpcmdsthr_st_prhdr(void)
-{
-	return (printf(" %-*s %8s %8s %8s\n", PSC_THRNAME_MAX, "thread",
-	    "#open", "#close", "#stat"));
-}
-
 void
 slrpcmdsthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" %-*s %8d %8d %8d", PSC_THRNAME_MAX, pcst->pcst_thrname,
+	printf(" #open %8d #close %8d #stat %8d",
 	    pcst->pcst_nopen, pcst->pcst_nclose, pcst->pcst_nstat);
-}
-
-int
-slrpcbethr_st_prhdr(void)
-{
-	return (printf(" %-*s %8s\n", PSC_THRNAME_MAX, "thread", "#open"));
 }
 
 void
 slrpcbethr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" %-*s %8d\n", PSC_THRNAME_MAX, pcst->pcst_thrname,
-	    pcst->pcst_nopen);
+	printf(" #open %8d\n", pcst->pcst_nopen);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
@@ -53,9 +39,9 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
 struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
-	{ psc_ctlthr_prhdr,	psc_ctlthr_prdat },
-	{ slrpcmdsthr_st_prhdr,	slrpcmdsthr_st_prdat },
-	{ slrpcbethr_st_prhdr,	slrpcbethr_st_prdat }
+	{ psc_ctlthr_prdat },
+	{ slrpcmdsthr_st_prdat },
+	{ slrpcbethr_st_prdat }
 };
 int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 
