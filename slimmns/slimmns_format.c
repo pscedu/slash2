@@ -16,7 +16,7 @@
 #include "fid.h"
 
 static void
-slimmns_create_int(const char *fn, u32 curdepth, u32 maxdepth)
+slimmns_create_int(const char *fn, uint32_t curdepth, uint32_t maxdepth)
 {
 	char d[PATH_MAX];
 	int i, rc;
@@ -39,7 +39,7 @@ slimmns_create_int(const char *fn, u32 curdepth, u32 maxdepth)
  *  on a mapserver filesystem.
  */
 int
-slimmns_create(const char *root, u32 depth)
+slimmns_create(const char *root, uint32_t depth)
 {
 	char fn[PATH_MAX];
 	int rc;
