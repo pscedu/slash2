@@ -314,9 +314,9 @@ sl_oftiov_bfree(struct offtree_iov *iov, struct sl_buffer_iovref *r)
 	psclist_del(&r->slbir_lentry);
 	PSCFREE(r);
 
-	if (vbitmap_nfree(b->slb_inuse) == b->slb_nblks) {
+	if (vbitmap_nfree(slb->slb_inuse) == slb->slb_nblks) {
 		psc_assert(!atomic_read(&slb->slb_ref));
-		b->slb_flags |= SLB_FREEING;
+		slb->slb_flags |= SLB_FREEING;
 	}
 
 	ureqlock(&slb->slb_lock, locked);
@@ -329,7 +329,7 @@ sl_slab_trylru(struct sl_buffer *b)
 	DEBUG_SLB(PLL_INFO, b, "check");
 
 	if (vbitmap_nfree(b->slb_inuse) == b->slb_nblks) {
-		sl_buffer_lru_assertions(b)
+		sl_buffer_lru_assertions(b);
 		b->slb_flags = SLB_FREEING;
 		DEBUG_SLB(PLL_INFO, b, "freeing slab via non-cb context");
 	}

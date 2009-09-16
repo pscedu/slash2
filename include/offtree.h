@@ -1,4 +1,4 @@
-/* $Id$ */
+/* $id: offtree.h 7979 2009-09-16 21:16:48Z pauln $ */
 
 #ifndef _OFFTREE_H_
 #define _OFFTREE_H_
@@ -238,7 +238,7 @@ power(size_t base, size_t exp)
 #endif
 
 struct offtree_memb;
-struct dynarray;
+struct psc_dynarray;
 
 struct offtree_iov {
 	int     oftiov_flags;
@@ -422,7 +422,7 @@ enum oft_attributes {
  *  @iovs *: array of iovecs allocated to handle the allocation (returned)
  *  Return: the number of blocks allocated (and hence the number of iovec's in the array.
  */
-typedef int  (*offtree_alloc_fn)(size_t, off_t, struct dynarray *, void *);
+typedef int  (*offtree_alloc_fn)(size_t, off_t, struct psc_dynarray *, void *);
 typedef void (*offtree_putnode_cb)(struct offtree_memb *);
 typedef void (*offtree_slbpin_cb)(struct offtree_iov *, int);
 typedef void (*offtree_slbdel_cb)(struct offtree_iov *);
@@ -441,14 +441,14 @@ struct offtree_root {
 };
 
 struct offtree_fill {
-	struct dynarray           *oftfill_inprog; /* already in progress   */
+	struct psc_dynarray           *oftfill_inprog; /* already in progress   */
 	struct pscrpc_request_set *oftfill_reqset;
 };
 
 struct offtree_req {
 	struct offtree_root  *oftrq_root;
 	struct offtree_memb  *oftrq_memb;   /* pointer to request node head */
-	struct dynarray      *oftrq_darray; /* sorted array of buffer iov's */
+	struct psc_dynarray  *oftrq_darray; /* sorted array of buffer iov's */
 	off_t                 oftrq_off;    /* aligned, file-logical offset  */
 	off_t                 oftrq_darray_off;
 	size_t                oftrq_nblks;  /* number of blocks requested */

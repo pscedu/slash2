@@ -13,7 +13,7 @@ offtree_slbdel_cb oftrSlDelCb;
 
 #if 0
 static void
-offtree_iov_array_dump(const struct dynarray *a)
+offtree_iov_array_dump(const struct psc_dynarray *a)
 {
 	int i, n=dynarray_len(a);
 	struct offtree_iov *v;
