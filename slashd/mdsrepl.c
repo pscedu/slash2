@@ -119,8 +119,8 @@ int
 mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 {
 	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
-	int r, j, bumpgen=0, log=0;
 	uint8_t mask, *b=bmapod->bh_repls;
+	int r, j, bumpgen=0, log=0;
 	uint32_t pos, k;
 
 	BMAP_LOCK_ENSURE(bmap);
@@ -131,21 +131,27 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 	
         if (j < 0) 
 		return (j);
-	/* Iterate across the byte array.
-	 */
 
 	mds_bmapod_dump(bmap);
-
+	/* Iterate across the byte array.
+	 */
 	for (r=0, k=0; k < SL_REPLICA_NBYTES; k++, mask=0)
-		for (pos=0, mask=0; pos < NBBY; 
-		     pos+=SL_BITS_PER_REPLICA, r++) {
+		for (pos=0; pos < NBBY; pos+=SL_BITS_PER_REPLICA, r++) {
 
 			mask = (uint8_t)(SL_REPLICA_MASK << pos);	
 
-			if (r == j) {				
-				b[k] |= (mask & SL_REPL_ACTIVE);
-				DEBUG_BMAP(PLL_INFO, bmap, 
-					   "add repl for ion(%u)", ion);
+			if (r == j) {			
+				if ((b[k] & mask) == SL_REPL_ACTIVE)
+					DEBUG_BMAP(PLL_INFO, bmap, 
+						   "repl[%d] ion(%u) exists",
+						   r, ion);
+				else {
+					b[k] |= (mask & SL_REPL_ACTIVE);
+					DEBUG_BMAP(PLL_NOTIFY, bmap, 
+						   "repl[%d] ion(%u) add", 
+						   r, ion);
+				}
+
 			} else {
 				switch (b[k] & mask) {
 				case SL_REPL_INACTIVE:

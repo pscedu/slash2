@@ -67,7 +67,7 @@ mdsfssyncthr_begin(__unusedx void *arg)
 		if (pjournal_xend(xh, PJET_VOID, NULL, 0))
 			psc_fatal("pjournal_xend() failed");
 
-		pjournal_xidhndl_free(xh);
+		//pjournal_xidhndl_free(xh);
 	}
 }
 

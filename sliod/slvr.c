@@ -39,6 +39,7 @@ int
 slvr_do_crc(struct slvr_ref *s)
 {
 	psc_assert(s->slvr_flags & SLVR_PINNED);
+
 	/* SLVR_FAULTING implies that we're bringing this data buffer
 	 *   in from the filesystem.  
 	 * SLVR_CRCDIRTY means that DATARDY has been set and that 
@@ -118,7 +119,8 @@ slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
 __static void
 slvr_getslab(struct slvr_ref *s)
 {
-	psc_assert(s->slvr_flags & SLVR_PINNED);
+	psc_assert(s->slvr_flags & SLVR_PINNED); 
+		   
 	psc_assert(s->slvr_flags & SLVR_GETSLAB);
 	psc_assert(!s->slvr_slab);
 	
@@ -145,7 +147,8 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 {
 	ssize_t rc, len = (nblks * SLASH_SLVR_BLKSZ);
 
-	psc_assert(s->slvr_flags & SLVR_PINNED);
+	psc_assert(s->slvr_flags & SLVR_PINNED); 
+		   
         psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	if (rw == SL_READ) {
@@ -231,7 +234,9 @@ slvr_fsbytes_io(struct slvr_ref *s, int rw)
 
 	if (!s->slvr_flags & SLVR_DATARDY)
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
+
 	psc_assert(s->slvr_flags & SLVR_PINNED);
+                   
 
 #define slvr_fsbytes_RW							\
 	if (nblks) {							\
@@ -258,11 +263,16 @@ slvr_fsbytes_io(struct slvr_ref *s, int rw)
 }
 
 void
-slvr_slab_prep(struct slvr_ref *s)
+slvr_slab_prep(struct slvr_ref *s, int rw)
 {
 	SLVR_LOCK(s);
-	/* Set the pin bit no matter what.
+	/* Set the pin bit no matter what, but first set the correct
+	 *   pndg op refcnt so that the slvr can't be freed from 
+	 *   underneath us.
 	 */
+	psc_atomic16_inc(rw == SL_WRITE ? 
+			 &s->slvr_pndgwrts : &s->slvr_pndgreads);
+
 	s->slvr_flags |= SLVR_PINNED;
 
 	if (s->slvr_flags & SLVR_NEW) {
@@ -295,7 +305,9 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	size_t i;
 
 	SLVR_LOCK(s);
-	psc_assert(s->slvr_flags & SLVR_PINNED);
+        psc_assert(s->slvr_flags & SLVR_PINNED);
+                   
+
 	//if (psclist_conjoint(&s->slvr_lentry))
 	//	psc_assert(!(s->slvr_flags & SLVR_LRU));
 
@@ -313,9 +325,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	if (rw == SL_WRITE)
 		s->slvr_flags |= SLVR_CRCDIRTY;
 
-	psc_atomic16_inc(rw == SL_WRITE ? 
-			 &s->slvr_pndgwrts : &s->slvr_pndgreads);
-
 	if (s->slvr_flags & SLVR_DATARDY)
 		/* Either read or write ops can just proceed if SLVR_DATARDY
 		 *  is set, the sliver is prepared.
@@ -332,6 +341,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		SLVR_WAIT(s);
 		psc_assert(s->slvr_flags & SLVR_DATARDY);
 		psc_assert(s->slvr_flags & SLVR_PINNED);
+			   
 		psc_assert(psclist_conjoint(&s->slvr_lentry));
 		goto out;
 
@@ -441,7 +451,9 @@ slvr_try_rpcqueue(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);
 	
-	psc_assert(s->slvr_flags & SLVR_PINNED);
+        psc_assert(s->slvr_flags & SLVR_PINNED);
+                   
+
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 
 	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc");
@@ -490,13 +502,17 @@ void
 slvr_wio_done(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);
-	psc_assert(s->slvr_flags & SLVR_PINNED);
+	psc_assert(s->slvr_flags & SLVR_PINNED);                   
 	psc_assert(psc_atomic16_read(&s->slvr_pndgwrts) > 0);
 	/* CRCDIRTY must have been marked and could not have been unset
 	 *   because we have yet to pass this slvr to the crc processing
-	 *   threads. 
+	 *   threads. XXX this is not the case, the slvr worker may be
+	 *   processing this slvr too.
 	 */
-	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
+	if (!(s->slvr_flags & SLVR_CRCDIRTY)) {
+		DEBUG_SLVR(PLL_INFO, s, "crcdirty unset..");
+		s->slvr_flags |= SLVR_CRCDIRTY;
+	}
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		/* This sliver was being paged-in over the network.

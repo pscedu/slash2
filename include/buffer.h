@@ -67,9 +67,9 @@ struct sl_buffer {
 	uint32_t        slb_flags;
 	struct psc_listcache  *slb_lc_owner;
 	struct psc_lockedlist *slb_lc_fcm;
-	struct psclist_head slb_iov_list;    /* list of iovref backpointers */
-	struct psclist_head slb_mgmt_lentry; /* attach to lru or outgoing q */
-	struct psclist_head slb_fcm_lentry;  /* chain to fidcm entry        */
+	struct psclist_head slb_iov_list;    /* list iovref backpointers */
+	struct psclist_head slb_mgmt_lentry; /* chain lru or outgoing q  */
+	struct psclist_head slb_fcm_lentry;  /* chain to fidcm entry     */
 };
 
 #define SLB_FLAG(field, str) (field ? str : "")
@@ -187,6 +187,12 @@ enum slb_ref_flags {
 			(*slInflightCb)(iov, op);	\
 	} while (0)
 
+#define slb_pin_cb(iov, op)				\
+	do {						\
+		if (bufSlPinCb)				\
+			(*bufSlPinCb)(iov, op);		\
+	} while (0)
+
 #define SL_INFLIGHT_INC 0
 #define SL_INFLIGHT_DEC 1
 
@@ -201,6 +207,9 @@ void sl_oftm_addref(struct offtree_memb *);
 
 typedef void (*sl_oftiov_inflight_callback)(struct offtree_iov *, int);
 extern sl_oftiov_inflight_callback slInflightCb;
+
+typedef void (*sl_oftiov_pin_callback)(struct offtree_iov *, int);
+extern sl_oftiov_pin_callback bufSlPinCb;
 
 extern struct psc_poolmaster	 slBufsPoolMaster;
 extern struct psc_poolmgr	*slBufsPool;

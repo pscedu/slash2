@@ -42,11 +42,14 @@ struct msbmap_data {
 	((struct msbmap_data *)((b)->bcm_pri))->msbd_ion
 
 static inline void
-bmap_oftrq_add(struct bmapc_memb *b, struct offtree_req *r)
+bmap_oftrq_add_locked(struct bmapc_memb *b, struct offtree_req *r)
 {
-	BMAP_LOCK(b);	
+	BMAP_LOCK_ENSURE(b);	
+
+	DEBUG_BMAP(PLL_INFO, b, "add oftrq=%p list_empty(%d)", 
+		   r, psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
+
         psclist_xadd(&r->oftrq_lentry, &bmap_2_msbd(b)->msbd_oftrqs);
-        BMAP_ULOCK(b);
 }
  
 static inline void
@@ -55,8 +58,8 @@ bmap_oftrq_del(struct bmapc_memb *b, struct offtree_req *r)
 	BMAP_LOCK(b);
 	psclist_del(&r->oftrq_lentry);
 
-	DEBUG_BMAP(PLL_INFO, b, "list_empty(%d)", 
-		   psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
+	DEBUG_BMAP(PLL_INFO, b, "remove oftrq=%p list_empty(%d)", 
+		   r, psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
 
 	if (psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs)) {
 		psc_assert(b->bcm_mode & BMAP_DIRTY);

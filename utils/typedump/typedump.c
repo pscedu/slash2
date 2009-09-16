@@ -115,7 +115,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct msrcm_thread);
 	PRTYPE(struct offtree_fill);
 	PRTYPE(struct offtree_iov);
+	PRTYPE(struct offtree_iov_new);
 	PRTYPE(struct offtree_memb);
+	PRTYPE(struct offtree_memb_new);
 	PRTYPE(struct offtree_req);
 	PRTYPE(struct offtree_root);
 	PRTYPE(struct resprof_mds_info);
@@ -123,6 +125,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_buffer_iovref);
 	PRTYPE(struct sl_finfo);
 	PRTYPE(struct sl_fsops);
+	PRTYPE(struct slash_bmap_cli_wire);
 	PRTYPE(struct slash_bmap_od);
 	PRTYPE(struct slash_creds);
 	PRTYPE(struct slash_fidgen);

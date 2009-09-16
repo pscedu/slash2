@@ -104,7 +104,6 @@ bmap_flush_coalesce_size(const struct dynarray *oftrqs)
 	return (size);
 }
 
-
 __static int
 bmap_flush_rpc_cb(struct pscrpc_request *req,
 		  __unusedx struct pscrpc_async_args *args)
@@ -118,8 +117,10 @@ bmap_flush_rpc_cb(struct pscrpc_request *req,
 
 		
 __static struct pscrpc_request *
-bmap_flush_create_rpc(struct pscrpc_import *imp, struct iovec *iovs, int niovs)
+bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs, 
+		      size_t size, off_t soff, int niovs)
 {
+	struct pscrpc_import *imp;
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *req;
 	struct srm_io_req *mq;
@@ -127,6 +128,8 @@ bmap_flush_create_rpc(struct pscrpc_import *imp, struct iovec *iovs, int niovs)
 	int rc;
 
 	atomic_inc(&outstandingRpcCnt);
+
+	imp = msl_bmap_to_import(b, 1);
 
 	rc = RSX_NEWREQ(imp, SRIC_VERSION, SRMT_WRITE, req, mq, mp);
 	if (rc)
@@ -137,12 +140,30 @@ bmap_flush_create_rpc(struct pscrpc_import *imp, struct iovec *iovs, int niovs)
         if (rc)
                 psc_fatalx("rsx_bulkclient() failed with %d", rc);
 
-	/* Decrement the oustanding rpc counter.
-	 */
 	req->rq_interpret_reply = bmap_flush_rpc_cb;
 	req->rq_compl_cntr = &completedRpcCnt;
 
+	mq->offset = soff;
+	mq->size = size;
+	mq->op = SRMIO_WR;
+	memcpy(&mq->sbdb, &bmap_2_msbd(b)->msbd_bdb, sizeof(mq->sbdb));
+
 	return (req);
+}
+
+__static void
+bmap_flush_inflight_ref(const struct offtree_req *r)
+{
+	struct offtree_iov *v;
+	int i;
+
+	DEBUG_OFFTREQ(PLL_INFO, r, "set inc");
+
+	for (i=0; i < dynarray_len(r->oftrq_darray); i++) {
+		v = dynarray_getpos(r->oftrq_darray, i);
+		DEBUG_OFFTIOV(PLL_INFO, v, "set inc");
+		slb_inflight_cb(v, SL_INFLIGHT_INC);
+	}
 }
 
 
@@ -150,28 +171,38 @@ __static void
 bmap_flush_send_rpcs(struct dynarray *oftrqs, struct iovec *iovs, 
 		     int niovs)
 {
-	struct offtree_req *r;
 	struct pscrpc_request *req;
 	struct pscrpc_import *imp;
+	struct offtree_req *r;
+	struct bmapc_memb *b;
+	off_t soff;
+	size_t size;
 	int i;
 	
 	r = dynarray_getpos(oftrqs, 0);
 	imp = msl_bmap_to_import((struct bmapc_memb *)r->oftrq_bmap, 1);
 	psc_assert(imp);
 
-	for (i=1; i < dynarray_len(oftrqs); i++) {
+	b = r->oftrq_bmap;
+	soff = r->oftrq_off;
+
+	for (i=0; i < dynarray_len(oftrqs); i++) {
 		/* All oftrqs should have the same import, otherwise
 		 *   there is a major problem.
 		 */
 		r = dynarray_getpos(oftrqs, i);
 		psc_assert(imp == msl_bmap_to_import(r->oftrq_bmap, 0));
+		psc_assert(b == r->oftrq_bmap);
+		bmap_flush_inflight_ref(r);
 	}
 
-	if (bmap_flush_coalesce_size(oftrqs) <= LNET_MTU) {
+	DEBUG_OFFTREQ(PLL_INFO, r, "oftrq array cb arg (%p)", oftrqs);
+
+	if ((size = bmap_flush_coalesce_size(oftrqs)) <= LNET_MTU) {
 		/* Single rpc case.  Set the appropriate cb handler
 		 *   and attach to the nb request set.
 		 */
-		req = bmap_flush_create_rpc(imp, iovs, niovs);
+		req = bmap_flush_create_rpc(b, iovs, size, soff, niovs);
 		/* Set the per-req cp arg for the nbreqset cb handler.
 		 *   oftrqs MUST be freed by the cb.
 		 */
@@ -183,30 +214,57 @@ bmap_flush_send_rpcs(struct dynarray *oftrqs, struct iovec *iovs,
 		 */
 		struct pscrpc_request_set *set;
 		struct iovec *tiov;
-		size_t size;
-		int n;
+		int n, j;
 
+#define launch_rpc							\
+		{							\
+			req = bmap_flush_create_rpc(b, tiov, size, soff, n); \
+			pscrpc_set_add_new_req(set, req);		\
+			if (pscrpc_push_req(req)) {			\
+				DEBUG_REQ(PLL_ERROR, req,		\
+					  "pscrpc_push_req() failed");	\
+				psc_fatalx("no failover yet");		\
+			}						\
+			soff += size;					\
+		}
+
+		size = 0;
 		set = pscrpc_prep_set();
 		set->set_interpret = msl_io_rpcset_cb;
 		/* oftrqs MUST be freed by the cb.
 		 */
-		set->set_arg = oftrqs;
+		set->set_arg = oftrqs;		
 		
-		for (n=1, size=0, tiov=iovs; n <= niovs; n++) {
-			if ((size + iovs[n-1].iov_len) > LNET_MTU) {
-				req = bmap_flush_create_rpc(imp, tiov, n);
-				pscrpc_set_add_new_req(set, req);
-				if (pscrpc_push_req(req)) {
-					DEBUG_REQ(PLL_ERROR, req, 
-						  "pscrpc_push_req() failed");
-					psc_fatalx("no failover yet");
-				}
-				size = iovs[n-1].iov_len;
-				tiov = &iovs[n-1];
-			} else
-				size += iovs[n-1].iov_len;
-		}		
-	}	
+		for (j=0, n=0, size=0, tiov=iovs; j < niovs; j++) {
+			if ((size + iovs[j].iov_len) == LNET_MTU) {
+				n++;
+				launch_rpc;
+				tiov = NULL;
+				size = n = 0;
+
+			} else if ((size + iovs[j].iov_len) > LNET_MTU) {
+				psc_assert(n > 0);
+				launch_rpc;
+				size = iovs[j].iov_len;
+				tiov = &iovs[j];
+				n = 0;
+
+			} else {
+				if (!tiov)
+					tiov = &iovs[j];
+				size += iovs[j].iov_len;
+				n++;
+			}
+		}
+		/* Launch any small, lingerers.
+		 */
+		if (tiov) {
+			psc_assert(n);
+			launch_rpc;
+		}
+
+		dynarray_add(&pndgReqSets, set);
+	}
 }
 
 __static int 
@@ -217,8 +275,8 @@ bmap_flush_oftrq_cmp(const void *x, const void *y)
 	const struct offtree_req *a = (const struct offtree_req *)*t0;
 	const struct offtree_req *b = (const struct offtree_req *)*t1;
 
-	DEBUG_OFFTREQ(PLL_TRACE, a, "compare..");
-	DEBUG_OFFTREQ(PLL_TRACE, b, "..compare");
+	//DEBUG_OFFTREQ(PLL_TRACE, a, "compare..");
+	//DEBUG_OFFTREQ(PLL_TRACE, b, "..compare");
 
 	if (a->oftrq_off < b->oftrq_off)
 		return (-1);
@@ -274,8 +332,6 @@ bmap_flush_coalesce_map(const struct dynarray *oftrqs, struct iovec **iovset)
 		for (j=0, skip=1; j < dynarray_len(t->oftrq_darray); j++) {
 			v = dynarray_getpos(t->oftrq_darray, j);
 
-			DEBUG_OFFTIOV(PLL_INFO, v, "pos=%d off=%zu", j, off);
-
 			if ((OFT_IOV2E_VOFF_(v) <= off)) {
 				if (skip)
 					continue;
@@ -314,7 +370,8 @@ bmap_flush_coalesce_map(const struct dynarray *oftrqs, struct iovec **iovset)
 			v->oftiov_flags |= (OFTIOV_PUSHING | OFTIOV_PUSHPNDG);
 			OFFTIOV_ULOCK(v);
 
-			slb_inflight_cb(v, SL_INFLIGHT_INC);
+			DEBUG_OFFTIOV(PLL_INFO, v, "pos=%d off=%zu", j, off);			
+			//slb_inflight_cb(v, SL_INFLIGHT_INC);
 		}
  	}
 	return (niovs);
@@ -331,6 +388,8 @@ bmap_flush_trycoalesce(const struct dynarray *oftrqs, int *offset)
 
 	for (off=0; (off + *offset) < dynarray_len(oftrqs); off++) {
 		t = dynarray_getpos(oftrqs, off + *offset);
+		psc_assert(!(t->oftrq_flags & OFTREQ_INFLIGHT));
+
 		if (r)
 			psc_assert(t->oftrq_off >= r->oftrq_off);
 		/* If any member is expired then we'll push everything out.
@@ -360,8 +419,12 @@ bmap_flush_trycoalesce(const struct dynarray *oftrqs, int *offset)
 	if (expired) {
 	make_coalesce:
 		a = PSCALLOC(sizeof(*a));
-		for (i=0; i < dynarray_len(&b); i++)
+		for (i=0; i < dynarray_len(&b); i++) {
+			t = dynarray_getpos(&b, i);
+			t->oftrq_flags |= OFTREQ_INFLIGHT;
+			DEBUG_OFFTREQ(PLL_TRACE, t, "oftrq #%d (inflight)", i);
 			dynarray_add(a, dynarray_getpos(&b, i));
+		}
 	}
 
 	*offset += off;
@@ -407,16 +470,30 @@ bmap_flush(void)
 		dynarray_reset(&a);
 	
 		psclist_for_each_entry(r, h, oftrq_lentry) {
+			if (r->oftrq_flags & OFTREQ_INFLIGHT)
+				continue;
 			DEBUG_OFFTREQ(PLL_TRACE, r, "try flush");
 			dynarray_add(&a, r);
 		}
 	
 		BMAP_ULOCK(b);
+
+		if (!dynarray_len(&a)) {
+			dynarray_free(&a);
+			break;
+		}
 		/* Sort the items by their offsets.
 		 */
 		qsort(a.da_items, a.da_pos, sizeof(void *),
 		      bmap_flush_oftrq_cmp);
 	
+#if 0
+		for (i=0; i < dynarray_len(&a); i++) {
+			r = dynarray_getpos(&a, i);
+			DEBUG_OFFTREQ(PLL_TRACE, r, "sorted?");
+		}
+#endif
+
 		i=0;
 		while (i < dynarray_len(&a) && 
 		       (oftrqs = bmap_flush_trycoalesce(&a, &i))) {

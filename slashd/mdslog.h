@@ -5,6 +5,15 @@
 
 #include "inode.h"
 
+enum mds_log_types {
+#ifdef INUM_SELF_MANAGE
+	MDS_LOG_SB            = (1 << (0 + PJET_RESERVED)),
+#endif
+	MDS_LOG_BMAP_REPL     = (1 << (1 + PJET_RESERVED)),
+	MDS_LOG_BMAP_CRC      = (1 << (2 + PJET_RESERVED)),
+	MDS_LOG_INO_ADDREPL   = (1 << (3 + PJET_RESERVED))
+};
+
 struct bmapc_memb;
 struct fidc_membh;
 struct slash_inode_handle;

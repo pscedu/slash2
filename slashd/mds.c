@@ -309,6 +309,18 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	struct fidc_mds_info *i=f->fcmh_fcoo->fcoo_pri;
 
 	spinlock(&m->mexpfcm_lock);
+	/* Ensure the mexpfcm has the correct pointers before 
+	 *   dereferencing them.
+	 */
+	if (!(f = m->mexpfcm_fcmh)) {
+		psc_errorx("mexpfcm %p has no fcmh", m);
+		goto out;
+	}
+	
+	if (!(i = fidc_fcmh2fmdsi(f))) {
+		DEBUG_FCMH(PLL_WARN, f, "fid has no fcoo");
+		goto out;
+	}
 
 	if (c->type & CFD_FORCE_CLOSE)
 		/* A force close comes from a network drop, don't make
@@ -338,7 +350,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		psc_fatalx("Failed to remove %p export(%p) from %p",
 		    m, m->mexpfcm_export, &i->fmdsi_exports);
 	ureqlock(&f->fcmh_lock, locked);
-
+ out:	
 	c->pri = NULL;
 	PSCFREE(m);
 	return (0);
@@ -870,7 +882,7 @@ mds_bmapod_dump(const struct bmapc_memb *bmap)
 
 	buf[SL_MAX_REPLICAS] = '\0';
 
-	DEBUG_BMAP(PLL_INFO, bmap, "replicas(%s) SL_REPLICA_NBYTES=%u", 
+	DEBUG_BMAP(PLL_NOTIFY, bmap, "replicas(%s) SL_REPLICA_NBYTES=%u", 
 		   buf, SL_REPLICA_NBYTES);
 }
 
@@ -1061,14 +1073,16 @@ mds_bmap_load(struct mexpfcm *fref, struct srm_bmap_req *mq,
 		}
 	} else {
 		struct bmap_mds_info *bmdsi;
+		void *p;
 
 		/* Create and initialize the new bmap while holding the
 		 *  fcmh lock which is needed for atomic tree insertion.
 		 */
-		b = PSCALLOC(sizeof(struct bmapc_memb) + 
+		p = PSCALLOC(sizeof(struct bmapc_memb) + 
 			     sizeof(struct bmap_mds_info)); /* XXX not freed */
-
-		b->bcm_pri = b + (sizeof(*b));
+		
+		b = p;
+		b->bcm_pri = p + (sizeof(*b));
 		b->bcm_blkno = mq->blkno;
 		b->bcm_mode = BMAP_MDS_INIT;
 		bmdsi = b->bcm_pri;

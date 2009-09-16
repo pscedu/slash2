@@ -78,7 +78,7 @@ fidc_fid2fmdsi(slfid_t f, struct fidc_membh **fcmh)
 struct fidc_mds_info *
 fidc_fcmh2fmdsi(struct fidc_membh *fcmh)
 {
-	struct fidc_mds_info *fmdsi;
+	struct fidc_mds_info *fmdsi=NULL;
 	int locked;
 
 	fmdsi = NULL;

@@ -179,7 +179,6 @@ struct fidc_open_obj {
 	int			 fcoo_oref_rw[2];    /* open cnt for r & w */
 	int                      fcoo_fd;
 	atomic_t		 fcoo_bmapc_cnt;
-	//struct psc_listcache	 fcoo_buffer_cache;  /* chain our slbs   */
 	struct psc_lockedlist	 fcoo_buffer_cache;  /* chain our slbs   */
 	struct bmap_cache	 fcoo_bmapc;         /* bmap cache splay */
 	size_t			 fcoo_bmap_sz;

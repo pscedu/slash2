@@ -8,6 +8,9 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
 
+offtree_slbpin_cb oftrSlPinCb;
+offtree_slbdel_cb oftrSlDelCb;
+
 #if 0
 static void
 offtree_iov_array_dump(const struct dynarray *a)
@@ -25,8 +28,7 @@ offtree_iov_array_dump(const struct dynarray *a)
 struct offtree_root *
 offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	       void *private, offtree_alloc_fn alloc_fn,
-	       offtree_putnode_cb putnode_cb_fn,
-	       offtree_slbpin_cb  slbpin_cb_fn)
+	       offtree_putnode_cb putnode_cb_fn)
 {
 	struct offtree_root *t = PSCALLOC(sizeof(struct offtree_root));
 
@@ -38,7 +40,6 @@ offtree_create(size_t mapsz, size_t minsz, u32 width, u32 depth,
 	t->oftr_alloc    = alloc_fn;
 	t->oftr_pri      = private;  /* our fcache handle */
 	t->oftr_putnode_cb = putnode_cb_fn;
-	t->oftr_slbpin_cb  = slbpin_cb_fn;
 
 	OFT_MEMB_INIT(&t->oftr_memb, NULL);
 	//atomic_set(&t->oftr_memb.oft_op_ref, 1);
@@ -177,7 +178,7 @@ offtree_node_reuse_locked(struct offtree_memb *m)
  * Notes: locking order (1-parent, 2-node)
  */
 static void
-offtree_node_release(struct offtree_memb *oftm)
+offtree_node_release(struct offtree_memb *oftm, int rlsparent)
 {
 	struct offtree_memb *parent = oftm->oft_parent;
 
@@ -195,39 +196,46 @@ offtree_node_release(struct offtree_memb *oftm)
 		 */
 		oftm_unrelease_verify(oftm);
 		DEBUG_OFT(PLL_INFO, oftm, "was reclaimed quickly");
-		goto out;
+		freelock(&oftm->oft_lock);
+		freelock(&parent->oft_lock);
+		return;
 	}
 	oft_child_free(oftm, parent);
 
 	if (atomic_dec_and_test(&parent->oft_ref)) {
 		if (!parent->oft_parent) {
-			/* Our parent is the root */
+			/* Our parent is the root 
+			 */
 			oftm_root_verify(parent->oft_parent);
-			goto out;
+			freelock(&parent->oft_lock);
+			return;
 		}
-		parent->oft_flags = OFT_RELEASE;
+		parent->oft_flags |= OFT_RELEASE;
 		freelock(&parent->oft_lock);
-		offtree_node_release(parent);
-	} else {
-	out:
-		freelock(&oftm->oft_lock);
-		freelock(&parent->oft_lock);
+		if (rlsparent)
+			offtree_node_release(parent, rlsparent);
 	}
+	freelock(&parent->oft_lock);
+	return;
 }
 
+
 void
-offtree_freeleaf_locked(struct offtree_memb *oftm)
+offtree_freeleaf_locked(struct offtree_memb *oftm, int rlsparent)
 {
 	struct offtree_memb *parent = oftm->oft_parent;
 	int root=0;
 
-	DEBUG_OFT(PLL_TRACE, oftm, "freeing");
+	LOCK_ENSURE(&oftm->oft_lock);
+	DEBUG_OFT(PLL_INFO, oftm, "try free");
 
 	if (!parent) {
 		oftm_root_verify(oftm);
 		root = 1;
-	} else
+	} else {
+		LOCK_ENSURE(&parent->oft_lock);
 		oftm_node_verify(parent);
+	}
 
 	oftm_freeleaf_verify(oftm);
 
@@ -243,9 +251,54 @@ offtree_freeleaf_locked(struct offtree_memb *oftm)
 		if (atomic_dec_and_test(&parent->oft_ref)) {
 			ATTR_SET(parent->oft_flags, OFT_RELEASE);
 			freelock(&parent->oft_lock);
-			offtree_node_release(parent);
-		}
+			if (rlsparent)
+				offtree_node_release(parent, rlsparent);
+		} else
+			freelock(&parent->oft_lock);
 	}
+}
+
+
+void
+offtree_freeleaf(struct offtree_memb *oftm, int rlsparent)
+{
+	if (oftm->oft_parent)
+		spinlock(&oftm->oft_parent->oft_lock);
+
+	spinlock(&oftm->oft_lock);
+	offtree_freeleaf_locked(oftm, rlsparent);
+}
+
+void
+offtree_traverse_free(struct offtree_memb *m, int w)
+{
+	DEBUG_OFT(PLL_INFO, m, "free via non-cb context");
+
+	if (m->oft_flags & OFT_LEAF) {
+		(oftrSlDelCb)(m->oft_norl.oft_iov);
+		return (offtree_freeleaf(m, 0));
+
+	} else {
+		int i;
+
+		for (i=0; i < w; i++) {
+			if (OFTM_2_CHILD(m, i))
+				offtree_traverse_free(OFTM_2_CHILD(m, i), w);
+		}
+		if (!(m->oft_flags & OFT_ROOT))
+			return (offtree_node_release(m, 0));
+	}
+}
+
+void 
+offtree_release_all(struct offtree_root *oftr)
+{
+	int i;
+
+	offtree_traverse_free(&oftr->oftr_memb, oftr->oftr_width);
+
+	for (i=0; i < oftr->oftr_width; i++)
+		psc_assert(!oftr->oftr_memb.oft_norl.oft_children[i]);
 }
 
 /**
@@ -332,9 +385,12 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 	/* Determine nblks taking into account overlap
 	 */
 	if (!hb_iov) {
-		oniovs = dynarray_len(req->oftrq_darray);
-		/* No existing buffer, make full allocation
+		/* No existing buffer, make full allocation.
+		 *   Record the number of already existing iov's attached
+		 *   to the offtree request.
 		 */
+		oniovs = dynarray_len(req->oftrq_darray);
+
 		rc = (r->oftr_alloc)(tblks, req->oftrq_off,
 				     req->oftrq_darray, r);
 		if (rc != tblks) {
@@ -344,6 +400,9 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 				psc_fatalx("Wanted %zd, got %zd",
 					   tblks, rc);
 		}
+		/* Assert that new buffers have been added to the oftrq's
+		 *   iov array.
+		 */
 		psc_assert((dynarray_len(req->oftrq_darray) - oniovs) > 0);
 
 	} else {
@@ -360,7 +419,7 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 
 		ATTR_SET(hb_iov->oftiov_flags, OFTIOV_REMAPPING);
 
-		DEBUG_OFFTIOV(PLL_TRACE, hb_iov, "hb f=%zd, b=%zd",
+		DEBUG_OFFTIOV(PLL_TRACE, hb_iov, "hb remap f=%zd, b=%zd",
 			      front, back);
 		/* Allocate 'front' blocks and add their iovs to the front
 		 *  of the queue..
@@ -665,12 +724,12 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 
 			psc_trace("i_offa=%"PRIx64" tiov->oftiov_off=%"PRIx64
 				  " nblks=%zd sblkoff=%d",
-				  i_offa, tiov->oftiov_off + (blkoff * tiov->oftiov_blksz),
+				  i_offa, tiov->oftiov_off + 
+				  (blkoff * tiov->oftiov_blksz),
 				  myreq.oftrq_nblks, blkoff);
 
-			psc_assert((off_t)(tiov->oftiov_off +
-					   (blkoff * tiov->oftiov_blksz))
-				   == myreq.oftrq_off);
+			psc_assert((off_t)(tiov->oftiov_off + 
+			   (blkoff * tiov->oftiov_blksz)) == myreq.oftrq_off);
 
 			/* Factor in partially used iov's
 			 */
@@ -751,7 +810,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 		/* Tell the underlying cache subsystem to pin this guy.
 		 */
 		locked = reqlock(&m->oft_lock);
-		(req->oftrq_root->oftr_slbpin_cb)(iov, SL_BUFFER_PIN);
+		(oftrSlPinCb)(iov, SL_BUFFER_PIN);
 		/* Get the start and end offsets.
 		 */
 		OFT_IOV2SE_OFFS(iov, hb_soffa, hb_eoffa);
@@ -775,8 +834,8 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 
 		ureqlock(&m->oft_lock, locked);
 	}
-	/* Allocate the blocks taking into accout a currently
-	 *   held buffer (have_buffer) in 'iov'.
+	/* Allocate the blocks taking into account a buffer which may
+	 *   be already attached to the oftrm.  Iov may be null.
 	 */
 	nblks = offtree_blks_get(req, iov);
 	if (nblks < 0) {
@@ -1097,7 +1156,7 @@ offtree_region_preprw(struct offtree_req *req)
 		if (rc && !req->oftrq_memb->oft_norl.oft_iov) {
 			oft_refcnt_dec(req, m);
 			ATTR_SET(req->oftrq_memb->oft_flags, OFT_FREEING);
-			offtree_freeleaf_locked(req->oftrq_memb);
+			offtree_freeleaf_locked(req->oftrq_memb, 1);
 		} else
 			freelock(&m->oft_lock);
 		return(rc);

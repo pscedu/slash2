@@ -42,11 +42,11 @@ struct bmap_mds_info {
 /* Note that n + BMAP_RSVRD_MODES must be < 32.
  */
 enum mds_bmap_modes {
-        BMAP_MDS_FAILED = (1 << (0 + BMAP_RSVRD_MODES)), /* crc failure */
-        BMAP_MDS_EMPTY  = (1 << (1 + BMAP_RSVRD_MODES)), /* new bmap, not yet committed to disk */
-        BMAP_MDS_CRC_UP = (1 << (2 + BMAP_RSVRD_MODES)), /* crc update in progress */
-	BMAP_MDS_CRCWRT = (1 << (3 + BMAP_RSVRD_MODES)),
-	BMAP_MDS_NOION  = (1 << (4 + BMAP_RSVRD_MODES)),
+        BMAP_MDS_FAILED = (1 << 16), /* crc failure */
+        BMAP_MDS_EMPTY  = (1 << 17), /* new bmap, not yet committed to disk */
+        BMAP_MDS_CRC_UP = (1 << 18), /* crc update in progress */
+	BMAP_MDS_CRCWRT = (1 << 19),
+	BMAP_MDS_NOION  = (1 << 20),
 	BMAP_MDS_INIT   = BMAP_INIT
 };
 

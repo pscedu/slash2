@@ -140,7 +140,9 @@ iod_inode_getsize(slfid_t fid, off_t *fsize)
 	f = fidc_lookup_simple(fid);
 	psc_assert(f);
 	psc_assert(f->fcmh_fcoo);
-	
+	/* XXX May want to replace this syscall with an inode cache
+	 *   lookup.	
+	 */
 	rc = fstat(f->fcmh_fcoo->fcoo_fd, &stb);
 	if (!rc)
 		*fsize = stb.st_size;

@@ -189,6 +189,14 @@ msl_bmap_release(struct bmapc_memb *b)
 	psc_assert(!atomic_read(&b->bcm_wr_ref) && 
 		   !atomic_read(&b->bcm_rd_ref));
 	psc_assert(!atomic_read(&b->bcm_opcnt));
+	/* The flush thread may have yet to remove this bmap.
+	 */
+	if (psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry)) {
+		LIST_CACHE_LOCK(&bmapFlushQ);
+		if (psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry))
+			lc_remove(&bmapFlushQ, bmap_2_msbd(b));
+		LIST_CACHE_ULOCK(&bmapFlushQ);
+	}
 	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 
 	DEBUG_BMAP(PLL_INFO, b, "freeing");
@@ -248,6 +256,7 @@ msl_bmap_tryrelease(struct bmapc_memb *b)
 		/* Wait for any pending offtree reqs to clear.
 		 */
 		bmap_oftrq_waitempty(b);
+		offtree_release_all(bmap_2_msoftr(b));
 		msl_bmap_release(b);
 	}
 }
@@ -259,19 +268,11 @@ msl_fbr_free(struct msl_fbr *r)
 	
 	psc_assert(b);
 	psc_assert(SPLAY_ENTRY_DISJOINT(fhbmap_cache, r));
-#if 0
-	if (atomic_read(&r->mfbr_wr_ref))
-		atomic_dec(&r->mfbr_bmap->bcm_wr_ref);
 
-	if (atomic_read(&r->mfbr_rd_ref))
-                atomic_dec(&r->mfbr_bmap->bcm_rd_ref);
-#else
-	atomic_sub(atomic_read(&r->mfbr_rd_ref), &b->bcm_rd_ref);
-	atomic_sub(atomic_read(&r->mfbr_wr_ref), &b->bcm_wr_ref);
-#endif
+	msl_fbr_unref(r);
 	PSCFREE(r);	
 
-	msl_bmap_tryrelease(b);
+	return (msl_bmap_tryrelease(b));
 }
 
 /**
@@ -613,25 +614,35 @@ msl_bmap_to_import(struct bmapc_memb *b, int add)
 
 
 __static void
-msl_oftrq_iov_unref(struct dynarray *oftiovs, int op)
+msl_oftrq_unref(struct offtree_req *r, int op)
 {
+	/* XXX the thing is.. v->oftiov_memb can't be used for decref 
+	 *   purposes because it may have been remapped to a different 
+	 *   oft node.  NEvertheless, the oftrq has a pointer to the original
+	 *   oft which has the correct ref cnt.  So all of these callbacks 
+	 *   must be modified to use the oft from the request.
+	 */
+	struct dynarray *oftiovs=r->oftrq_darray;
 	struct offtree_memb *m;
 	struct offtree_iov *v;
 	int i;
-	
+
+	DEBUG_OFT(PLL_INFO, r->oftrq_memb, "node");
+	DEBUG_OFFTREQ(PLL_INFO, r, "request");
+	oft_refcnt_dec(r, r->oftrq_memb);
+
 	for (i=0; i < dynarray_len(oftiovs); i++) {
 		v = dynarray_getpos(oftiovs, i);
 		
 		DEBUG_OFFTIOV(PLL_INFO, v, "iov %d", i);
-		/* Decrement the inflight counter in the slb.
-		 */
+
 		slb_inflight_cb(v, SL_INFLIGHT_DEC);
-		
-		m = (struct offtree_memb *)v->oftiov_memb;
+
+		m = v->oftiov_memb;
+		spinlock(&m->oft_lock);		
 		/* Take the lock and do some sanity checks.
 		 *  XXX waitq wake here (oftm)
 		 */
-		spinlock(&m->oft_lock);
 		switch (op) {
 		case SRMT_READ:
 			oftm_read_prepped_verify(m);
@@ -652,13 +663,10 @@ msl_oftrq_iov_unref(struct dynarray *oftiovs, int op)
 			/* Manage the offtree leaf and decrement the slb.
 			 */
 			slb_pin_cb(v, SL_BUFFER_UNPIN);
-			atomic_dec(&m->oft_wrop_ref);
 			/* DATARDY must always be true here since the buffer
 			 *  has already been copied to with valid data.
 			 */
-			psc_assert((v->oftiov_flags & OFTIOV_PUSHPNDG) &&
-			    (v->oftiov_flags & OFTIOV_PUSHING)  &&
-			    (v->oftiov_flags & OFTIOV_DATARDY));
+			psc_assert(v->oftiov_flags & OFTIOV_DATARDY);
 			ATTR_UNSET(v->oftiov_flags, OFTIOV_PUSHING);
 			ATTR_UNSET(v->oftiov_flags, OFTIOV_PUSHPNDG);
 			DEBUG_OFFTIOV(PLL_TRACE, v, "PUSH DONE");
@@ -668,6 +676,10 @@ msl_oftrq_iov_unref(struct dynarray *oftiovs, int op)
 			psc_fatalx("How did this opcode(%d) happen?", op);
 		}
 		freelock(&m->oft_lock);
+		/* Decrement the inflight counter in the slb.  Do this last so 
+		 *   free's coming from the slab reaper don't run into
+		 *   vestigial refcnts.
+		 */
 	}
 }
 /**
@@ -708,7 +720,7 @@ msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		return (rq->rq_status);
 	}
 	
-	msl_oftrq_iov_unref(a, op);
+	msl_oftrq_unref(r, op);
 	
 	/* Free the dynarray which was allocated in msl_pages_prefetch().
 	 */
@@ -737,7 +749,7 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 	
 	for (i=0; i < dynarray_len(oftrqs); i++) {
 		r = dynarray_getpos(oftrqs, i);
-		msl_oftrq_iov_unref(r->oftrq_darray, SRMT_WRITE);
+		msl_oftrq_unref(r, SRMT_WRITE);
 		msl_oftrq_destroy(r);
 	}
 	PSCFREE(oftrqs);
@@ -754,9 +766,13 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 	int i;
 
 	oftrqs = args->pointer_arg[0];
+
+	DEBUG_REQ(PLL_INFO, req, "oftrqs=%p", oftrqs);
+
 	for (i=0; i < dynarray_len(oftrqs); i++) {
                 r = dynarray_getpos(oftrqs, i);
-                msl_oftrq_iov_unref(r->oftrq_darray, SRMT_WRITE);
+		
+                msl_oftrq_unref(r, SRMT_WRITE);
                 msl_oftrq_destroy(r);
         }
 	
@@ -1041,8 +1057,8 @@ msl_pages_schedflush(struct offtree_req *r)
 		b->bcm_mode |= BMAP_DIRTY;
 		put_dirty = 1;
 	}
-	psclist_xadd(&r->oftrq_lentry, &bmap_2_msbd(b)->msbd_oftrqs);
 	clock_gettime(CLOCK_REALTIME, &r->oftrq_start);
+	bmap_oftrq_add_locked(b, r);
 
 	BMAP_ULOCK(b);
 

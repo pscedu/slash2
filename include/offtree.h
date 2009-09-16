@@ -89,7 +89,7 @@ power(size_t base, size_t exp)
 		psc_assert(!TTt);					\
 		TTt = (e+1) % (req)->oftrq_root->oftr_minsz;		\
 		psc_assert(!TTt);					\
-		psc_trace("OFT_REQ2SE_OFFS (%"PRIx64"/%"PRIx64")", s, e);	\
+		psc_trace("OFT_REQ2SE_OFFS (%"PRIx64"/%"PRIx64")", s, e); \
         }
 
 #define OFT_REQ2E_OFF_(req)						\
@@ -104,6 +104,10 @@ power(size_t base, size_t exp)
 #define OFT_IOV2E_OFF_(iov)						\
 	(off_t)((((iov)->oftiov_off + ((iov)->oftiov_nblks *		\
 				       (iov)->oftiov_blksz)) - 1))
+
+#define OFT_IOV2E_VOFF_(iov)						\
+	(off_t)((((iov)->oftiov_off + ((iov)->oftiov_nblks *		\
+				       (iov)->oftiov_blksz))))
 
 #define OFT_IOV2SE_OFFS(iov, s, e) {					\
 		s = (iov)->oftiov_off;					\
@@ -148,13 +152,20 @@ power(size_t base, size_t exp)
 		psc_assert(!atomic_read(&(m)->oft_ref));		\
 	}								\
 
+#if 0
 #define oftm_node_verify(m) {						\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_NODE));	\
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
 		psc_assert(atomic_read(&(m)->oft_ref) ||		\
 			   ATTR_TEST((m)->oft_flags, OFT_SPLITTING));	\
 									\
-	}								\
+	}
+#else
+#define oftm_node_verify(m) {						\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_NODE));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
+	}
+#endif
 
 #define oftm_unrelease_verify(m) {					\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF) ||	\
@@ -167,6 +178,7 @@ power(size_t base, size_t exp)
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_ROOT));	\
 	}								\
 
+#if 0
 #define oftm_freeleaf_verify(m) {					\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_FREEING));	\
 		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
@@ -176,6 +188,15 @@ power(size_t base, size_t exp)
 		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
 		psc_assert(!(m)->oft_norl.oft_iov);			\
 	}
+#else
+#define oftm_freeleaf_verify(m) {					\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_FREEING));	\
+		psc_assert(ATTR_TEST((m)->oft_flags, OFT_LEAF));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_NODE));	\
+		psc_assert(!ATTR_TEST((m)->oft_flags, OFT_ALLOCPNDG));	\
+		psc_assert(!(m)->oft_norl.oft_iov);			\
+	}
+#endif
 
 #define oftm_reuse_verify(m) {					\
 		psc_assert((m)->oft_flags == OFT_RELEASE);	\
@@ -232,6 +253,9 @@ struct offtree_iov {
 					      offtree node */
 };
 
+#define OFFTIOV_LOCK(v)  spinlock(&(v)->oftiov_memb->oft_lock)
+#define OFFTIOV_ULOCK(v) freelock(&(v)->oftiov_memb->oft_lock)
+
 enum oft_iov_flags {
 	OFTIOV_DATARDY    = (1 << 0), /* Buffer contains readable data  */
 	OFTIOV_FAULTING   = (1 << 1), /* Buffer is being retrieved      */
@@ -248,16 +272,19 @@ enum oft_iov_flags {
 
 #define OFFTIOV_FLAG(field, str) (field ? str : "")
 #define DEBUG_OFFTIOV_FLAGS(iov)					  \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_DATARDY),  "d"), \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FAULTING), "f"), \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FAULTING), "P"), \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_COLLISION),"p"), \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FREEING),  "F"), \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_MAPPED),   "m"), \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAPPING),"r"), \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_SRC),"R"), \
-	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_END),"E")
-#define OFFTIOV_FLAGS_FMT "%s%s%s%s%s%s%s%s%s"
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_DATARDY),   "d"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FAULTING),  "f"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FAULTPNDG), "P"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_COLLISION), "C"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_FREEING),   "F"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_MAPPED),    "m"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAPPING), "r"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_SRC), "R"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_END), "E"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_PUSHING),   "u"), \
+	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_PUSHPNDG),  "U")
+		
+#define OFFTIOV_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
 	psc_logs((level), PSS_GEN, 					\
@@ -299,6 +326,37 @@ struct offtree_memb {
 		struct offtree_memb **oft_children;
 	}		      oft_norl;
 };
+
+#define OFTM_2_CHILD(m, n) (m)->oft_norl.oft_children[n]
+
+#if 0
+struct offtree_iov_new {
+	uint16_t oftiov_flags;
+	uint16_t oftiov_nblks; /* length of respective data */
+	uint32_t oftiov_blksz; /* really needed? XXX        */
+	off_t    oftiov_off;   /* filewise data offset      */
+	void    *oftiov_base;  /* point to our data buffer  */
+	void    *oftiov_pri;   /* private data, in slash's case, point at the
+	 			  sl_buffer structure which manages the
+				  region containing our base */
+};
+
+struct offtree_memb_new {
+	psc_spinlock_t        oft_lock;
+	atomic_t              oft_wrop_ref; /* pending write operations  */
+	atomic_t              oft_rdop_ref; /* pending read operations */
+	psc_atomic16_t        oft_ref;    /* hb or nchildren     */
+	u16                   oft_flags;
+	u16                   oft_width;
+	u8                    oft_pos;
+	u8                    oft_depth;
+	//struct offtree_memb  *oft_parent; /* &offtree_memb_new - offset */
+	union norl_new {
+		struct offtree_iov_new oft_iov;
+		struct offtree_memb   *oft_children[8];
+	} oft_norl;
+};
+#endif	
 
 enum oft_attributes {
 	OFT_NODE      = (1 << 0), /* Node not a leaf          */
@@ -367,6 +425,8 @@ enum oft_attributes {
 typedef int  (*offtree_alloc_fn)(size_t, off_t, struct dynarray *, void *);
 typedef void (*offtree_putnode_cb)(struct offtree_memb *);
 typedef void (*offtree_slbpin_cb)(struct offtree_iov *, int);
+typedef void (*offtree_slbdel_cb)(struct offtree_iov *);
+
 
 struct offtree_root {
 	psc_spinlock_t oftr_lock;
@@ -378,14 +438,11 @@ struct offtree_root {
 	struct offtree_memb oftr_memb; /* root member                       */
 	offtree_alloc_fn    oftr_alloc;
 	offtree_putnode_cb  oftr_putnode_cb;
-	offtree_slbpin_cb   oftr_slbpin_cb;
 };
 
 struct offtree_fill {
-	struct pscrpc_request_set *oftfill_reqset; /* Our request set */
 	struct dynarray           *oftfill_inprog; /* already in progress   */
-	psc_spinlock_t             oftfill_lock;
-	u32                        oftfill_chkset;
+	struct pscrpc_request_set *oftfill_reqset;
 };
 
 struct offtree_req {
@@ -393,15 +450,17 @@ struct offtree_req {
 	struct offtree_memb  *oftrq_memb;   /* pointer to request node head */
 	struct dynarray      *oftrq_darray; /* sorted array of buffer iov's */
 	off_t                 oftrq_off;    /* aligned, file-logical offset  */
+	off_t                 oftrq_darray_off;
 	size_t                oftrq_nblks;  /* number of blocks requested */
 	size_t                oftrq_len;
 	u8                    oftrq_op;
 	u8                    oftrq_depth;
 	u16                   oftrq_width;
-	off_t                 oftrq_darray_off;
-	struct offtree_fill   oftrq_fill;
+	u32                   oftrq_flags;
 	void                 *oftrq_bmap;
+	struct offtree_fill   oftrq_fill;
 	struct psclist_head   oftrq_lentry; /* chain onto bmap */
+	struct timespec       oftrq_start;
 };
 
 enum offtree_req_op_types {
@@ -413,6 +472,10 @@ enum offtree_req_op_types {
 	OFTREQ_OP_DIO   = (1<<5)	
 };
 
+enum offtree_req_flags {
+	OFTREQ_INFLIGHT = (1<<0)			   
+};
+
 static inline size_t
 oftrq_size_get(const struct offtree_req *r)
 {
@@ -422,14 +485,22 @@ oftrq_size_get(const struct offtree_req *r)
 		return (size_t)(r->oftrq_nblks * SLASH_BMAP_BLKSZ);
 }
 
-#define REQ_OFTRQ_FLAGS_FMT "%s%s%s%s%s"
+static inline off_t
+oftrq_voff_get(const struct offtree_req *r)
+{
+	return ((off_t)(oftrq_size_get(r) + r->oftrq_off));
+}
+
+#define REQ_OFTRQ_FLAGS_FMT "%s%s%s%s%s%s%s"
 
 #define DEBUG_OFTRQ_FLAGS(oftrq)					\
 	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_NOOP),  "N"),	\
 	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_READ),  "R"),	\
 	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_WRITE), "W"),	\
-	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_PRFFP), "p"),	\
-	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_PRFLP), "l")
+	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_PRFFP), "p"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_PRFLP), "l"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_op, OFTREQ_OP_DIO), "d"), \
+	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_flags, OFTREQ_INFLIGHT), "I")
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
 	psc_logs((level), PSS_GEN, 					\
@@ -484,6 +555,9 @@ oft_adjust_refcnt(struct offtree_req *req, struct offtree_memb *m, int op)
 
 		if (req->oftrq_op == OFTREQ_OP_READ)
 			atomic_dec(&m->oft_rdop_ref);
+
+		psc_assert(atomic_read(&m->oft_rdop_ref) >= 0);
+		psc_assert(atomic_read(&m->oft_wrop_ref) >= 0);
 	}
 	if (op == OFT_REF_INC) {
 		if (req->oftrq_op == OFTREQ_OP_WRITE)
@@ -504,12 +578,11 @@ oftiov_2_iov(const struct offtree_iov *v, struct iovec *i)
 
 
 struct offtree_root *
-offtree_create(size_t, size_t, u32, u32, void *, offtree_alloc_fn,
-	       offtree_putnode_cb, offtree_slbpin_cb);
+offtree_create(size_t, size_t, u32, u32, void *, offtree_alloc_fn, offtree_putnode_cb);
 
 void offtree_destroy(struct offtree_root *);
 int offtree_region_preprw(struct offtree_req *);
 void offtree_iovs_check(const struct offtree_iov *, const int);
-void offtree_freeleaf_locked(struct offtree_memb *);
+void offtree_freeleaf_locked(struct offtree_memb *, int);
 
 #endif /* _OFFTREE_H_ */

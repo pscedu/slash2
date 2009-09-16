@@ -41,6 +41,7 @@ struct slvr_ref {
 	uint16_t              slvr_flags;
 	psc_atomic16_t        slvr_pndgwrts;
 	psc_atomic16_t        slvr_pndgreads;
+	atomic_t              slvr_pinref;
 	psc_crc_t             slvr_crc;
 	void                 *slvr_pri;
 	struct sl_buffer     *slvr_slab;
@@ -116,7 +117,7 @@ int	slvr_fsbytes_io(struct slvr_ref *, int);
 int	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, int);
 void	slvr_release(struct slvr_ref *);
 void	slvr_rio_done(struct slvr_ref *);
-void	slvr_slab_prep(struct slvr_ref *);
+void	slvr_slab_prep(struct slvr_ref *, int);
 void	slvr_update(struct slvr_ref *);
 void	slvr_wio_done(struct slvr_ref *);
 void    slvr_try_rpcqueue(struct slvr_ref *);

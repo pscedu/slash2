@@ -128,12 +128,12 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	     i < nslvrs; i++, roff=0) {
 
 		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bmap), 1);
-		slvr_slab_prep(slvr_ref[i]);
+		slvr_slab_prep(slvr_ref[i], rw);
 		/* Fault in pages either for read or RBW.
 		 */
 		slvr_io_prep(slvr_ref[i], roff, tsize, rw);
 
-		DEBUG_SLVR(PLL_TRACE, slvr_ref[i], "post io_prep rw=%d", rw);
+		DEBUG_SLVR(PLL_INFO, slvr_ref[i], "post io_prep rw=%d", rw);
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
 		 */

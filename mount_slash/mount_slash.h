@@ -119,6 +119,16 @@ msl_fbr_ref(struct msl_fbr *r, int rw)
 		abort();
 }
 
+
+static inline void
+msl_fbr_unref(const struct msl_fbr *r)
+{
+	psc_assert(r->mfbr_bmap);
+	atomic_sub(atomic_read(&r->mfbr_rd_ref), &r->mfbr_bmap->bcm_rd_ref);
+	atomic_sub(atomic_read(&r->mfbr_wr_ref), &r->mfbr_bmap->bcm_wr_ref);
+}
+
+
 static inline struct msl_fbr *
 msl_fbr_new(struct bmapc_memb *b, int rw)
 {

@@ -19,7 +19,6 @@
 #include "fidcache.h"
 #include "offtree.h"
 
-
 struct psc_poolmaster	 slBufsPoolMaster;
 struct psc_poolmgr	*slBufsPool;
 list_cache_t slBufsLru;
@@ -32,6 +31,10 @@ u32 slbFreeMax=200;
 u32 slbFreeInc=10;
 
 sl_oftiov_inflight_callback slInflightCb=NULL;
+sl_oftiov_pin_callback bufSlPinCb=NULL;
+
+extern offtree_slbpin_cb oftrSlPinCb;
+extern offtree_slbdel_cb oftrSlDelCb;
 
 typedef struct psc_lockedlist token_t;
 
@@ -188,8 +191,6 @@ sl_buffer_get(list_cache_t *lc, int block)
 	psc_trace("slb from %s", lc->lc_name);
 
 	slb = (block ? lc_getwait(lc) : lc_getnb(lc));
-	if (slb)
-		INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);
 	return (slb);
 }
 
@@ -224,7 +225,9 @@ sl_oftiov_free_check_locked(struct offtree_memb *m)
 	/* If writing, then the slb must be pinned
 	 */
 	//psc_assert(!ATTR_TEST(m->oft_flags, OFT_WRITEPNDG));
-	psc_assert(!atomic_read(&m->oft_wrop_ref));
+	if (atomic_read(&m->oft_wrop_ref))
+		DEBUG_OFT(PLL_NOTIFY, m, "i have a wr_ref!");
+	//psc_assert(!atomic_read(&m->oft_wrop_ref));
 	/* Verify iov state
 	 */
 	psc_assert(ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY));
@@ -268,6 +271,8 @@ sl_oftiov_free_check_locked(struct offtree_memb *m)
 	return 0;
 }
 
+
+
 #define SLB_IOV_VERIFY(v) {						\
 		struct sl_buffer *SSs = (v)->oftiov_pri;		\
 		int IIi = 0;						\
@@ -277,6 +282,7 @@ sl_oftiov_free_check_locked(struct offtree_memb *m)
 		IIi = ((v)->oftiov_base - SSs->slb_base) % SSs->slb_blksz; \
 		psc_assert(!IIi);					\
 }
+
 /**
  * sl_oftiov_bfree - free blocks from the slab buffer pointed to by the offtree_iov.
  * @iov: the offtree_iov using the slab's blocks
@@ -308,117 +314,171 @@ sl_oftiov_bfree(struct offtree_iov *iov, struct sl_buffer_iovref *r)
 	psclist_del(&r->slbir_lentry);
 	PSCFREE(r);
 
+	if (vbitmap_nfree(b->slb_inuse) == b->slb_nblks) {
+		psc_assert(!atomic_read(&slb->slb_ref));
+		b->slb_flags |= SLB_FREEING;
+	}
+
 	ureqlock(&slb->slb_lock, locked);
 }
 
+static void
+sl_slab_trylru(struct sl_buffer *b) 
+{
+	spinlock(&b->slb_lock);
+	DEBUG_SLB(PLL_INFO, b, "check");
+
+	if (vbitmap_nfree(b->slb_inuse) == b->slb_nblks) {
+		sl_buffer_lru_assertions(b)
+		b->slb_flags = SLB_FREEING;
+		DEBUG_SLB(PLL_INFO, b, "freeing slab via non-cb context");
+	}
+	freelock(&b->slb_lock);
+
+	if (b->slb_flags & SLB_FREEING) {
+		psc_assert(b->slb_lc_owner == &slBufsLru);
+		lc_remove(&slBufsLru, b);
+		b->slb_lc_owner = NULL;
+		pll_remove(b->slb_lc_fcm, b);
+		INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);
+		sl_buffer_put(b, &slBufsPool->ppm_lc);
+	}
+}
+
+void 
+sl_slab_iovdel(struct offtree_iov *iov)
+{
+	struct offtree_memb *m=iov->oftiov_memb;
+	struct sl_buffer *b=iov->oftiov_pri;
+	struct sl_buffer_iovref *r, *t;
+	int found=0;
+
+	spinlock(&m->oft_lock);
+	/* This is all wrong, the slb as a whole could be dirty 
+	 *   though this iov cannot be.  If the slb is on the LRU, 
+	 *   then first pull it off so that we don't race with the
+	 *   reaper.  If the reaper has it already then what should 
+	 *   be done?
+	 *  XXX
+	 */
+	DEBUG_OFT(PLL_INFO, m, "freeing via non-cb context");
+	DEBUG_OFFTIOV(PLL_INFO, iov, "freeing via non-cb context");
+
+	psc_assert(!sl_oftiov_free_check_locked(m));
+	ATTR_SET(m->oft_flags, OFT_FREEING);
+	freelock(&m->oft_lock);
+	
+	spinlock(&b->slb_lock);
+	psc_assert(b->slb_lc_owner == &slBufsLru);
+	sl_buffer_lru_assertions(b);
+
+	psclist_for_each_entry_safe(r, t, &b->slb_iov_list, slbir_lentry)
+		/* Locate the iovref for this iov within the slab's list.
+		 */
+		if (m == r->slbir_pri) {
+			found = 1;
+			break;
+		}
+	psc_assert(found);
+
+	sl_oftiov_bfree(iov, r);
+	freelock(&b->slb_lock);
+
+	m->oft_norl.oft_iov = NULL;
+	return (sl_slab_trylru(b));
+}
+
 static int
-sl_slab_reap(int nblks) {
+sl_slab_reap(__unusedx struct psc_poolmgr *pool) {
 	struct sl_buffer        *b;
 	struct sl_buffer_iovref *r, *t;
 	struct offtree_memb     *m;
-	int    fblks=0, nslbs=0;
+	int nslbs=0;
 
-	do {
-	nextlru:
-		/* Grab one off the lru.
+ nextlru:
+	/* Grab one off the lru.
+	 */
+	b = sl_buffer_get(&slBufsLru, 0);
+	if (!b) {
+		b = sl_buffer_timedget(&slBufsLru);
+		if (!b)
+			/* Timedout, give up.
+			 */
+			return (0);
+	}
+	spinlock(&b->slb_lock);
+	/* Ensure slb sanity
+	 */
+	psc_assert(b->slb_lc_owner == &slBufsLru);
+	sl_buffer_lru_assertions(b);
+	/* Safe to reclaim, notify fcmh_buffer_cache users.
+	 */
+	b->slb_lc_owner = NULL;
+	b->slb_flags	= 0;
+	ATTR_SET(b->slb_flags, SLB_FREEING);
+	freelock(&b->slb_lock);
+	/* Iteratively dereference the slb's iovectors.
+	 */
+	psclist_for_each_entry_safe(r, t, &b->slb_iov_list,
+				    slbir_lentry) {
+		m = (struct offtree_memb *)r->slbir_pri;
+		/* Lock the parent first unless 'm' is the root
 		 */
-		b = sl_buffer_get(&slBufsLru, 0);
-		if (!b) {
-			b = sl_buffer_timedget(&slBufsLru);
-			if (!b)
-				/* Timedout, give up.
-				 */
-				goto out;
+		if (!m->oft_parent) {
+			oftm_root_verify(m);
+		} else {
+			spinlock(&m->oft_parent->oft_lock);
+			oftm_node_verify(m->oft_parent);
 		}
-		spinlock(&b->slb_lock);
-		/* Ensure slb sanity
-		 */
-		psc_assert(b->slb_lc_owner == &slBufsLru);
-		sl_buffer_lru_assertions(b);
-		/* Safe to reclaim, notify fcmh_buffer_cache users.
-		 */
-		b->slb_lc_owner = NULL;
-		b->slb_flags    = 0;
-		ATTR_SET(b->slb_flags, SLB_FREEING);
-		freelock(&b->slb_lock);
-		/* Iteratively dereference the slb's iovectors.
-		 */
-		psclist_for_each_entry_safe(r, t, &b->slb_iov_list,
-					    slbir_lentry) {
-			m = (struct offtree_memb *)r->slbir_pri;
-			/* Lock the parent first unless 'm' is the root
-			 */
-			if (!m->oft_parent) {
-				oftm_root_verify(m);
-			} else {
-				spinlock(&m->oft_parent->oft_lock);
-				oftm_node_verify(m->oft_parent);
-			}
-			spinlock(&m->oft_lock);
+		spinlock(&m->oft_lock);
 
-			if (sl_oftiov_free_check_locked(m) < 0) {
-				freelock(&m->oft_lock);
-				freelock(&m->oft_parent->oft_lock);
-				/* Leave the slb alone for now
-				 */
-				ATTR_UNSET(b->slb_flags, SLB_FREEING);
-				goto nextlru;
-			}
-			/* Free the slb blocks and remove the iov ref.
+		if (sl_oftiov_free_check_locked(m) < 0) {
+			freelock(&m->oft_lock);
+			freelock(&m->oft_parent->oft_lock);
+			/* Leave the slb alone for now
 			 */
-			sl_oftiov_bfree(m->oft_norl.oft_iov, r);
-			/* Prep and remove the child tree node.
-			 */
-			ATTR_SET(m->oft_flags, OFT_FREEING);
-			m->oft_norl.oft_iov = NULL;
-			/* offtree_freeleaf_locked() releases both locks.
-			 */
-			offtree_freeleaf_locked(m);
-
+			ATTR_UNSET(b->slb_flags, SLB_FREEING);
+			goto nextlru;
 		}
-		/* Remove ourselves from the fidcache slab list
+		/* Free the slb blocks and remove the iov ref.
 		 */
-		pll_remove(b->slb_lc_fcm, b);
-		INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);
-		psc_assert(vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
-		/* Tally em up
+		sl_oftiov_bfree(m->oft_norl.oft_iov, r);
+		/* Prep and remove the child tree node.
 		 */
-		nslbs++;
-		fblks += b->slb_nblks;
-		/* Put it back in the pool
+		ATTR_SET(m->oft_flags, OFT_FREEING);
+		m->oft_norl.oft_iov = NULL;
+		/* offtree_freeleaf_locked() releases both locks.
 		 */
-		sl_buffer_put(b, &slBufsPool->ppm_lc);
+		offtree_freeleaf_locked(m, 1);
+	}
+	/* Remove ourselves from the fidcache slab list
+	 */
+	pll_remove(b->slb_lc_fcm, b);
+	INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);
+	psc_assert(vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
+	/* Tally em up
+	 */
+	nslbs++;
+	/* Put it back in the pool
+	 */
+	sl_buffer_put(b, &slBufsPool->ppm_lc);
 
-	} while (fblks < nblks);
-
- out:
-	psc_trace("Reaped (%d/%d) blocks in %d slabs", fblks, nblks, nslbs);
-	return (fblks);
+	psc_trace("Reaped %d slabs", nslbs);
+	return (nslbs);
 }
+
 
 static int
 sl_slab_alloc(int nblks, struct fidc_membh *f)
 {
 	struct sl_buffer *slb;
-	int    rc, fblks=0, timedout=0;
+	int    fblks=0;
 
 	ENTRY;
- retry:
 	do {
 		slb = psc_pool_get(slBufsPool);
-		if (!slb) {
-//			if (lc_grow(&slBufsFree, slbFreeInc,
-//				    sl_buffer_init) > 0)
-//				goto retry;
-			if (timedout)
-				/* Already timedout once, give up
-				 */
-				goto out;
-			else
-				/* Try to get more
-				 */
-				goto reap;
-		}
+
+		psc_assert(slb);
 		DEBUG_SLB(PLL_TRACE, slb, "new slb");
 		/* Sanity checks
 		 */
@@ -432,23 +492,7 @@ sl_slab_alloc(int nblks, struct fidc_membh *f)
 		pll_addstack(slb->slb_lc_fcm, slb);
 
 	} while ((fblks += slb->slb_nblks) < nblks);
-	/* Got all needed blocks.
-	 */
-	goto out;
 
- reap:
-	rc = sl_slab_reap(nblks - fblks);
-	if (rc <= 0)
-		goto out;
-	else {
-		//if (rc < (nblks - fblks))
-		/* Got some but not all, loop once more
-		 *  trying to add them to our pool
-		 */
-		timedout = 1;
-		goto retry;
-	}
- out:
 	RETURN (fblks);
 }
 
@@ -683,8 +727,8 @@ sl_oftiov_pin_cb(struct offtree_iov *iov, int op)
 	psc_assert(atomic_read(&m->oft_rdop_ref) ||
 		   atomic_read(&m->oft_wrop_ref));
 
-	DEBUG_OFFTIOV(PLL_TRACE, iov, "op=%d", op);
-	DEBUG_SLB(PLL_TRACE, slb, "op=%d", op);
+	DEBUG_OFFTIOV(PLL_NOTIFY, iov, "op=%d", op);
+	DEBUG_SLB(PLL_NOTIFY, slb, "op=%d", op);
 
 	spinlock(&slb->slb_lock);
 	if (op == SL_BUFFER_PIN)
@@ -709,19 +753,19 @@ sl_oftiov_inflight_cb(struct offtree_iov *iov, int op)
 	s = (struct sl_buffer *)iov->oftiov_pri;
 
 	DEBUG_SLB(PLL_TRACE, s, "inflight ref updating op=%s",
-		  op ? "SL_INFLIGHT_INC" : "SL_INFLIGHT_DEC");
+		  op ? "SL_INFLIGHT_DEC" : "SL_INFLIGHT_INC");
 
 	if (op == SL_INFLIGHT_INC) {
 		psc_assert(atomic_read(&s->slb_inflight) >= 0);
 
 		atomic_inc(&s->slb_inflight);
 
-		psc_assert(atomic_read(&s->slb_inflight) <=
-			   atomic_read(&s->slb_inflpndg));
+		//		psc_assert(atomic_read(&s->slb_inflight) <=
+		//	   atomic_read(&s->slb_inflpndg));
 
 	} else if (op == SL_INFLIGHT_DEC) {
-		psc_assert(atomic_read(&s->slb_inflight) <=
-                           atomic_read(&s->slb_inflpndg));
+		//psc_assert(atomic_read(&s->slb_inflight) <=
+                //           atomic_read(&s->slb_inflpndg));
 		psc_assert(atomic_read(&s->slb_inflight) >= 1);
 
 		atomic_dec(&s->slb_inflight);
@@ -859,7 +903,9 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 }
 
 /**
- * sl_buffer_alloc - allocate memory blocks from slb's already attached to our fid and/or the global slb allocator otherwise import new slab(s) from the global allocator.
+ * sl_buffer_alloc - allocate memory blocks from slb's already attached 
+ *    to our fid and/or the global slb allocator otherwise import new 
+ *    slab(s) from the global allocator.
  * @nblks: number of blocks to fetch
  * @iovs:  iov array (allocated by us) to hold each contiguous region.
  * @niovs: tell the caller how many iovs we allocated.
@@ -962,7 +1008,7 @@ sl_buffer_cache_init(void)
 
 	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer, slb_mgmt_lentry,
 			    PPMF_AUTO, slbFreeDef, 0, slbFreeMax,
-			    sl_buffer_init, sl_buffer_destroy, NULL, "slab", NULL);
+			    sl_buffer_init, sl_buffer_destroy, sl_slab_reap, "slab", NULL);
 	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
 
 	lc_reginit(&slBufsLru,  struct sl_buffer,
@@ -971,4 +1017,6 @@ sl_buffer_cache_init(void)
 		   slb_mgmt_lentry, "slabBufPin");
 
 	slInflightCb = sl_oftiov_inflight_cb;
+	oftrSlPinCb = bufSlPinCb = sl_oftiov_pin_cb;
+	oftrSlDelCb = sl_slab_iovdel;
 }

@@ -32,15 +32,6 @@
 extern list_cache_t dirtyMdsData;
 struct psc_journal *mdsJournal;
 
-enum mds_log_types {
-#ifdef INUM_SELF_MANAGE
-	MDS_LOG_SB            = (1<<0),
-#endif
-	MDS_LOG_BMAP_REPL     = (1<<1),
-	MDS_LOG_BMAP_CRC      = (1<<2),
-	MDS_LOG_INO_ADDREPL   = (1<<3)
-};
-
 void
 mds_inode_sync(void *data)
 {
@@ -108,7 +99,8 @@ mds_bmap_sync(void *data)
 	psc_crc_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
 	rc = mdsio_zfs_bmap_write(bmap);
 	if (rc)
-		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail", rc, errno);
+		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail", 
+			   rc, errno);
 	else
 		DEBUG_BMAP(PLL_INFO, bmap, "sync ok");
 	BMAP_ULOCK(bmap);
@@ -159,6 +151,8 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	int rc;
 
 	BMAP_LOCK_ENSURE(bmap);
+
+	mds_bmapod_dump(bmap);
 
 	jrpg.sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jrpg.sjp_bmapno = bmap->bcm_blkno;
@@ -228,7 +222,6 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 
 		rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_CRC, 
 				   jcrc, sizeof(struct slmds_jent_crc));
-
 		if (rc)
 			psc_fatalx("jlog fid=%"PRIx64" bmapno=%u rc=%d",
 				   jcrc->sjc_fid, jcrc->sjc_bmapno, rc);

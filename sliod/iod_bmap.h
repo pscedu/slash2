@@ -73,9 +73,9 @@ struct bmap_iod_info {
 #define bmap_2_biodi_wire(b)	bmap_2_biodi(b)->biod_bmap_wire
 
 enum iod_bmap_modes {
-	BMAP_IOD_RETRIEVE  = (1 << (0 + BMAP_RSVRD_MODES)),
-	BMAP_IOD_RELEASING = (1 << (1 + BMAP_RSVRD_MODES)),
-	BMAP_IOD_RETRFAIL  = (1 << (2 + BMAP_RSVRD_MODES))
+	BMAP_IOD_RETRIEVE  = (1 << 16),
+	BMAP_IOD_RELEASING = (1 << 17),
+	BMAP_IOD_RETRFAIL  = (1 << 18)
 };
 
 #define slvr_2_biod(s)		((struct bmap_iod_info *)(s)->slvr_pri)
