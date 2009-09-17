@@ -206,7 +206,7 @@ offtree_node_release(struct offtree_memb *oftm, int rlsparent)
 		if (!parent->oft_parent) {
 			/* Our parent is the root 
 			 */
-			oftm_root_verify(parent->oft_parent);
+			oftm_root_verify(parent);
 			freelock(&parent->oft_lock);
 			return;
 		}
@@ -214,9 +214,8 @@ offtree_node_release(struct offtree_memb *oftm, int rlsparent)
 		freelock(&parent->oft_lock);
 		if (rlsparent)
 			offtree_node_release(parent, rlsparent);
-	}
-	freelock(&parent->oft_lock);
-	return;
+	} else 
+		freelock(&parent->oft_lock);
 }
 
 
@@ -620,7 +619,8 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			      "final iov");
 
 		if (req->oftrq_root->oftr_putnode_cb)
-			(req->oftrq_root->oftr_putnode_cb)(req->oftrq_memb);
+			(req->oftrq_root->oftr_putnode_cb)(req->oftrq_memb, 
+							   req->oftrq_bmap);
 
 		ATTR_UNSET(req->oftrq_memb->oft_flags, OFT_ALLOCPNDG);
 

@@ -170,6 +170,43 @@ msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t blkno)
 	b->bcm_mode = tmode;
 }
 
+
+int
+msl_bmap_memrls_trylock(void *a)
+{
+	struct bmapc_memb *b = a;
+	int got_it=0;
+
+	DEBUG_BMAP(PLL_INFO, b, "tryget memrls lock");
+	BMAP_LOCK(b);
+	if (!(b->bcm_mode & BMAP_MEMRLS)) {
+		b->bcm_mode |= BMAP_MEMRLS;
+		got_it = 1;
+	}
+	BMAP_ULOCK(b);
+	
+	return (got_it);
+}
+
+void
+msl_bmap_memrls_unlock(void *a)
+{
+	struct bmapc_memb *b = a;
+
+	BMAP_LOCK(b);
+	DEBUG_BMAP(PLL_INFO, b, "free memrls lock");
+	b->bcm_mode &= ~BMAP_MEMRLS;
+	psc_waitq_wakeall(&b->bcm_waitq);
+	BMAP_ULOCK(b);
+}
+
+
+msl_init(void)
+{
+	slMemRlsUlock=msl_bmap_memrls_unlock;
+	slMemRlsTrylock=msl_bmap_memrls_trylock;
+}
+
 /**
  * bmapc_memb_release - release a bmap structure and associated resources.
  * @b: the bmap.
@@ -177,6 +214,7 @@ msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t blkno)
 void
 msl_bmap_release(struct bmapc_memb *b)
 {
+ retry:
 	/* Mind lock ordering.
 	 */
 	FCMH_LOCK(b->bcm_fcmh);
@@ -199,15 +237,30 @@ msl_bmap_release(struct bmapc_memb *b)
 	}
 	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 
-	DEBUG_BMAP(PLL_INFO, b, "freeing");
-	
+	if (b->bcm_mode & BMAP_MEMRLS) {
+		/* Don't race with the slab cache reaper, if he's 
+		 *    releasing pages from offtree then we must
+		 *    wait here.
+		 */
+		DEBUG_BMAP(PLL_WARN, b, "block on reaper");
+		FCMH_ULOCK(b->bcm_fcmh);
+		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+		goto retry;
+	} else 
+		/* Keep the slap reaper from dealing with our bmap's
+		 *    offtree.
+		 */
+		b->bcm_mode |= BMAP_MEMRLS;
+
+	DEBUG_BMAP(PLL_INFO, b, "freeing");	
 	BMAP_ULOCK(b);
 
 	if (!SPLAY_REMOVE(bmap_cache, &b->bcm_fcmh->fcmh_fcoo->fcoo_bmapc, b))
 		DEBUG_BMAP(PLL_FATAL, b, "failed to locate bmap in fcoo");
 
 	FCMH_ULOCK(b->bcm_fcmh);
-
+		
+	offtree_release_all(bmap_2_msoftr(b));
 	offtree_destroy(bmap_2_msoftr(b));
 	psc_assert(psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
 	PSCFREE(b->bcm_pri);
@@ -256,7 +309,6 @@ msl_bmap_tryrelease(struct bmapc_memb *b)
 		/* Wait for any pending offtree reqs to clear.
 		 */
 		bmap_oftrq_waitempty(b);
-		offtree_release_all(bmap_2_msoftr(b));
 		msl_bmap_release(b);
 	}
 }
@@ -1643,3 +1695,4 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
  out:
 	return (rc);
 }
+

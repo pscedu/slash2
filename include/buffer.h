@@ -131,6 +131,7 @@ struct sl_buffer_iovref {
 	void  *slbir_base;                /* base pointer val (within slb) */
 	size_t slbir_nblks;               /* allocation size               */
 	void  *slbir_pri;                 /* backpointer to oftmemb        */
+	void  *slbir_pri_bmap;
 	int    slbir_flags;
 	struct psclist_head slbir_lentry; /* chain to slb                  */
 };
@@ -153,14 +154,13 @@ enum slb_ref_flags {
 		sl_buffer_lru_assertions((slb));		\
 		ATTR_UNSET((slb)->slb_flags, SLB_LRU);		\
 		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
-		(slb)->slb_lc_owner = NULL;			\
 	} while (0)
 
-#define slb_pinned_2_lru(slb) do {				\
-		sl_buffer_pin_2_lru_assertions((slb));		\
-		ATTR_UNSET((slb)->slb_flags, SLB_LRU);		\
-		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
-		(slb)->slb_lc_owner = NULL;			\
+#define slb_pinned_2_lru(slb) do {					\
+		sl_buffer_pin_2_lru_assertions((slb));			\
+		ATTR_UNSET((slb)->slb_flags, SLB_PINNED);		\
+		ATTR_SET((slb)->slb_flags, SLB_LRU);			\
+		(slb)->slb_lc_owner = NULL;				\
 	} while (0)
 
 #define SLB_TIMEOUT_SECS  5
@@ -200,16 +200,22 @@ int  sl_buffer_init(struct psc_poolmgr *, void *);
 void sl_buffer_destroy(void *);
 int  sl_buffer_alloc(size_t, off_t, struct dynarray *, void *);
 void sl_buffer_cache_init(void);
-void sl_buffer_fresh_assertions(struct sl_buffer *);
+void sl_buffer_fresh_assertions(const struct sl_buffer *);
 void sl_oftiov_inflight_cb(struct offtree_iov *, int);
 void sl_oftiov_pin_cb(struct offtree_iov *, int);
-void sl_oftm_addref(struct offtree_memb *);
+void sl_oftm_addref(struct offtree_memb *, void *);
 
 typedef void (*sl_oftiov_inflight_callback)(struct offtree_iov *, int);
 extern sl_oftiov_inflight_callback slInflightCb;
 
 typedef void (*sl_oftiov_pin_callback)(struct offtree_iov *, int);
 extern sl_oftiov_pin_callback bufSlPinCb;
+
+typedef int (*sl_iov_try_memrls)(void *);
+typedef void (*sl_iov_memrls_ulock)(void *);
+
+extern sl_iov_try_memrls   slMemRlsTrylock;
+extern sl_iov_memrls_ulock slMemRlsUlock;
 
 extern struct psc_poolmaster	 slBufsPoolMaster;
 extern struct psc_poolmgr	*slBufsPool;

@@ -1791,7 +1791,8 @@ main(int argc, char *argv[])
 	    set_signal_handler(SIGPIPE, SIG_IGN) != 0) {
 		return 2;
 	}
-#endif
+#endif	
+	msl_init();
 	bmap_flush_init();
 	rc = slash2fuse_listener_start();
 
