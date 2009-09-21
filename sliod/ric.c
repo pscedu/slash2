@@ -102,16 +102,16 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	 *  otherwise fail.
 	 */
 	if (iod_inode_open(fcmh, rw)) {
-		fidc_membh_dropref(fcmh);
 		DEBUG_FCMH(PLL_ERROR, fcmh, "error fidopen bmap=%u", bmapno);
-		return (-1);
+		rc = -1;
+		goto out;
 	}
 	/* ATM, not much to do here for write operations.
 	 */
 	if (iod_bmap_load(fcmh, &mq->sbdb, rw, &bmap)) {
-		fidc_membh_dropref(fcmh);
 		psc_errorx("failed to load bmap %u", bmapno);
-		return (-1);
+		rc = -1;
+		goto out;
 	}	
 	
 	slvrno = mq->offset / SLASH_SLVR_SIZE;
@@ -127,7 +127,8 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	for (i=0, roff=(mq->offset - (slvrno*SLASH_SLVR_SIZE)), tsize=mq->size;
 	     i < nslvrs; i++, roff=0) {
 
-		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bmap), 1);
+		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bmap), 
+					  SLVR_LOOKUP_ADD);
 		slvr_slab_prep(slvr_ref[i], rw);
 		/* Fault in pages either for read or RBW.
 		 */
@@ -151,8 +152,10 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 			(rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE), 
 			SRIC_BULK_PORTAL, iovs, nslvrs);
 		  
-	if (mp->rc)
-		return (-1);
+	if (mp->rc) {
+		rc = -1;
+		goto out;
+	}
 
 	if (desc)
 		pscrpc_free_bulk(desc);
@@ -164,11 +167,12 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	for (i=0; i < nslvrs; i++) {	
 		if (rw == SL_WRITE)
 			if ((rc = slvr_fsbytes_io(slvr_ref[i], SL_WRITE)))
-				return (rc);
+				goto out;
 		slvr_io_done(slvr_ref[i], rw);
 	} 
-
-	return (0);
+ out:
+	fidc_membh_dropref(fcmh);
+	return (rc);
 }
 
 int
