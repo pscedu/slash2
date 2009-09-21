@@ -107,16 +107,28 @@ enum iod_bmap_modes {
 #define SLVR_TRYLOCK(s)         trylock(SLVR_GETLOCK(s))
 
 #define SLVR_WAKEUP(s)					\
-	psc_waitq_wakeall(&(slvr_2_bmap(s))->bcm_waitq)
+	psc_waitq_wakeall(&(slvr_2_bmap((s)))->bcm_waitq)
 
 #define SLVR_WAIT(s)						\
 	do {							\
 	slvr_wait_retry:					\
-		psc_waitq_wait(&(slvr_2_bmap(s))->bcm_waitq,	\
-			       &(slvr_2_biod(s))->biod_lock);	\
-		SLVR_LOCK(s);					\
-		if (!(s->slvr_flags & SLVR_DATARDY))		\
+		psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,	\
+			       &(slvr_2_biod((s)))->biod_lock);	\
+		SLVR_LOCK((s));					\
+		if (!((s)->slvr_flags & SLVR_DATARDY))		\
 			goto slvr_wait_retry;			\
+	} while (0)
+
+#define SLVR_WAIT_SLAB(s)					\
+	do {							\
+	slvr_wait_slab_retry:					\
+		psc_assert((s)->slvr_flags & SLVR_GETSLAB);	\
+		psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,	\
+			       &(slvr_2_biod((s)))->biod_lock);	\
+		SLVR_LOCK((s));					\
+		if (!(s)->slvr_slab)				\
+			goto slvr_wait_slab_retry;		\
+		psc_assert(!((s)->slvr_flags & SLVR_GETSLAB));	\
 	} while (0)
 
 static inline void
@@ -151,7 +163,7 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 {
 	int freeable = 1;
 	SLVR_LOCK_ENSURE(s);
-
+	
 	psc_assert(s->slvr_flags & SLVR_LRU);
 
 	if (s->slvr_flags & SLVR_PINNED) {
@@ -166,6 +178,8 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 			      SLVR_GETSLAB)));
 	else
 		freeable = 0;
+
+	DEBUG_SLVR(PLL_INFO, s, "freeable=%d", freeable);
 	
 	return (freeable);
 }
@@ -176,15 +190,11 @@ slvr_lru_freeable(struct slvr_ref *s)
 	int locked, freeable=0;
 
 	locked = SLVR_RLOCK(s);
-	if (!slvr_lru_slab_freeable(s))
+	if (s->slvr_slab || s->slvr_flags & SLVR_CRCDIRTY)
 		goto out;
+
+	psc_assert(slvr_lru_slab_freeable(s));
 	      
-	if (s->slvr_slab)
-		goto out;
-
-	if (s->slvr_flags & SLVR_CRCDIRTY)
-		goto out;
-
 	freeable = 1;
  out:
 	SLVR_URLOCK(s, locked);
