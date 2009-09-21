@@ -80,7 +80,7 @@ sl_buffer_lru_assertions(const struct sl_buffer *b)
 	psc_assert(!psclist_empty(&b->slb_iov_list));
 	psc_assert(psclist_conjoint(&b->slb_fcm_lentry));
 	psc_assert(atomic_read(&b->slb_ref));
-	psc_assert(!atomic_read(&b->slb_unmapd_ref));
+	//	psc_assert(!atomic_read(&b->slb_unmapd_ref));
 	psc_assert((!atomic_read(&b->slb_inflight)) &&
                    (!atomic_read(&b->slb_inflpndg)));
 }
@@ -160,11 +160,12 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 {
 	int locked = reqlock(&slb->slb_lock);
 
+
+	DEBUG_SLB(PLL_INFO, slb, "adding to %s", lc->lc_name);
+
 	/* Must have been removed already
 	 */
-	psc_assert(slb->slb_lc_owner == NULL);
-
-	DEBUG_SLB(PLL_TRACE, slb, "adding to %s", lc->lc_name);
+	psc_assert(psclist_disjoint(&slb->slb_mgmt_lentry));
 
 	if (lc == &slBufsPool->ppm_lc) {
 		psc_assert(ATTR_TEST(slb->slb_flags, SLB_FREEING));
@@ -178,14 +179,14 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 
 	} else {
 		if (lc == &slBufsLru) {
-			if (slb->slb_lc_owner == &slBufsPin) {
-				sl_buffer_pin_2_lru_assertions(slb);
-				slb->slb_flags = SLB_LRU;
+			slb->slb_flags = SLB_LRU;
 
-			} else if (slb->slb_lc_owner == &slBufsLru) {
-				slb->slb_flags = SLB_LRU;
+			if (slb->slb_lc_owner == &slBufsPin) 
+				sl_buffer_pin_2_lru_assertions(slb);
+
+			else 
 				sl_buffer_lru_assertions(slb);
-			}
+
 		} else if (lc == &slBufsPin)
 			sl_buffer_pin_assertions(slb);
 		else
@@ -338,9 +339,6 @@ sl_oftiov_bfree(struct offtree_iov *iov, struct sl_buffer_iovref *r)
 
 	if (vbitmap_nfree(slb->slb_inuse) == slb->slb_nblks) {
 		slb->slb_flags |= SLB_FREEING;
-		/* Find out asap if the slb is corrupt.
-		 */
-		sl_buffer_lru_2_free_assertions(slb);
 		psc_assert(!atomic_read(&slb->slb_ref));
 		DEBUG_SLB(PLL_INFO, slb, "freeable");
 	} 
@@ -426,10 +424,14 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool) {
 	struct sl_buffer        *b;
 	struct sl_buffer_iovref *r, *t;
 	struct offtree_memb     *m;
-	int nslbs=0;
+	int nslbs=0, rls_locked;
+	void *pri_bmap_tmp;
 
  nextlru:
-	/* Grab one off the lru.
+	/* Grab one off the lru.  
+	 *    XXX it may be better to lock the entire list and 
+	 *    iterate over each item to prevent having to restore
+	 *    the unreapable items.
 	 */
 	b = sl_buffer_get(&slBufsLru, 0);
 	if (!b) {
@@ -447,7 +449,7 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool) {
 	/* Safe to reclaim, notify fcmh_buffer_cache users.
 	 */
 	b->slb_lc_owner = NULL;
-	b->slb_flags	= 0;
+	//b->slb_flags	= 0;
 	ATTR_SET(b->slb_flags, SLB_FREEING);
 	freelock(&b->slb_lock);
 	/* Iteratively dereference the slb's iovectors.
@@ -455,7 +457,9 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool) {
 	psclist_for_each_entry_safe(r, t, &b->slb_iov_list,
 				    slbir_lentry) {
 
-		if ((slMemRlsTrylock)(r->slbir_pri_bmap))
+		pri_bmap_tmp = r->slbir_pri_bmap;
+
+		if (!(rls_locked = (slMemRlsTrylock)(pri_bmap_tmp)))
 			goto unfree;
 
 		m = (struct offtree_memb *)r->slbir_pri;
@@ -476,6 +480,10 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool) {
 			 */
 		unfree:
 			ATTR_UNSET(b->slb_flags, SLB_FREEING);
+			DEBUG_SLB(PLL_NOTIFY, b, "restore to LRU rls_locked=%d", 
+				  rls_locked);
+			if (rls_locked)
+				(slMemRlsUlock)(pri_bmap_tmp);
 			sl_buffer_put(b, &slBufsLru);
 			goto nextlru;
 		}
@@ -489,10 +497,13 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool) {
 		/* offtree_freeleaf_locked() releases both locks.
 		 */
 		offtree_freeleaf_locked(m, 1);
-		(slMemRlsUlock)(r->slbir_pri_bmap);
+		(slMemRlsUlock)(pri_bmap_tmp);
 	}
-	/* Remove ourselves from the fidcache slab list
+	/* Remove the LRU bit now that the slb is to be freed.
 	 */
+	b->slb_flags &= ~SLB_LRU;
+	/* Remove ourselves from the fidcache slab list
+	 */	
 	pll_remove(b->slb_lc_fcm, b);
 	b->slb_lc_fcm = NULL;
 	INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);
