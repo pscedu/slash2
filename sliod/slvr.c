@@ -202,16 +202,19 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 
 	if (rc < 0)
 		DEBUG_SLVR(PLL_ERROR, s, "failed (rc=%zd, len=%zd) "
-			   "rw=%d blks=%d off=%"PRIx64" errno=%d", 
-			   rc, len, nblks, rw, slvr_2_fileoff(s, blk), errno);
+			   "%s blks=%d off=%"PRIx64" errno=%d", 
+			   rc, len, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
+			   nblks, slvr_2_fileoff(s, blk), errno);
 
 	else if (rc != len)
 		DEBUG_SLVR(PLL_ERROR, s, "short io (rc=%zd, len=%zd) "
-			   "rw=%d blks=%d off=%"PRIu64" errno=%d", 
-			   rc, len, rw, nblks, slvr_2_fileoff(s, blk), errno);
+			   "%s blks=%d off=%"PRIu64" errno=%d", 
+			   rc, len, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
+			   nblks, slvr_2_fileoff(s, blk), errno);
 	else {
-		DEBUG_SLVR(PLL_TRACE, s, "ok blks=%d off=%"PRIu64,
-			   nblks, slvr_2_fileoff(s, blk));
+		DEBUG_SLVR(PLL_INFO, s, "ok %s blks=%d off=%"PRIu64,
+			   (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), nblks, 
+			   slvr_2_fileoff(s, blk));
 		rc = 0;
 	}
 
@@ -284,14 +287,9 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 		 */
 		slvr_getslab(s);
 		SLVR_LOCK(s);
-	} else {
-	retry_getslab:
-		psc_assert((s->slvr_flags & SLVR_GETSLAB) || s->slvr_slab);
 
-		if (s->slvr_flags & SLVR_GETSLAB) {
-			SLVR_WAIT(s);
-			goto retry_getslab;
-		}	      
+	} else if (!s->slvr_slab) {
+		SLVR_WAIT_SLAB(s);
 	}
 	psc_assert(s->slvr_slab);
 	SLVR_ULOCK(s);
@@ -549,8 +547,8 @@ slvr_wio_done(struct slvr_ref *s)
 		slvr_try_rpcqueue(s);
 }
 
-struct slvr_ref * 
-slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
+struct slvr_ref *
+slvr_lookup(uint16_t num, struct bmap_iod_info *b, int op)
 {
         struct slvr_ref *s, ts;
 
@@ -561,13 +559,18 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int add)
 
         s = SPLAY_FIND(biod_slvrtree, &b->biod_slvrs, &ts);
 	/* Note, slvr lock and biod lock are the same.
-	 */	
+	 */
 	if (s && (s->slvr_flags & SLVR_FREEING)) {
-		freelock(&b->biod_lock);
-		sched_yield();
-		goto retry;
+		if (op == SLVR_LOOKUP_DEL) 
+			psc_assert(SPLAY_REMOVE(biod_slvrtree, 
+					&b->biod_slvrs, s));
+		else {
+			freelock(&b->biod_lock);
+			sched_yield();
+			goto retry;
+		}
 
-        } else if (!s && add) {
+        } else if (!s && (op == SLVR_LOOKUP_ADD)) {
 		s = PSCALLOC(sizeof(*s));
                 slvr_init(s, num, b);
                 SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, s);
@@ -585,17 +588,13 @@ slvr_remove(struct slvr_ref *s)
 
 	psc_assert(s->slvr_flags & SLVR_FREEING);
 	psc_assert(slvr_lru_freeable(s));
+	psc_assert(!s->slvr_slab);
 	SLVR_ULOCK(s);
-
-	lc_del(&s->slvr_lentry, &lruSlvrs);
-
-	psc_assert(s == slvr_lookup(s->slvr_num, slvr_2_biod(s), 0));
-	
-	spinlock(&(slvr_2_biod(s))->biod_lock);
-        psc_assert(SPLAY_REMOVE(biod_slvrtree, 
-			&(slvr_2_biod(s))->biod_slvrs, s));
-	freelock(&(slvr_2_biod(s))->biod_lock);
-
+	/* Slvr should be detached from any listheads.
+	 */
+	psc_assert(psclist_disjoint(&s->slvr_lentry));
+	psc_assert(s == slvr_lookup(s->slvr_num, slvr_2_biod(s), 
+				    SLVR_LOOKUP_DEL));
 	PSCFREE(s);
 }
 
@@ -626,8 +625,10 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			dynarray_add(&a, s);
 			s->slvr_flags |= SLVR_FREEING;
 			lc_del(&s->slvr_lentry, &lruSlvrs);
-			continue;
+			goto ulock;
 		}			
+
+		psc_assert(s->slvr_slab);
 
 		if (slvr_lru_slab_freeable(s)) {
 			/* At this point we know that the slb can be 
@@ -638,6 +639,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			s->slvr_flags |= SLVR_SLBFREEING;
 			n++;
 		}
+	ulock:
 		SLVR_ULOCK(s);
 
 		if (n >= atomic_read(&m->ppm_nwaiters))
@@ -653,9 +655,18 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		psc_assert(s->slvr_flags & SLVR_SLBFREEING || 
 			   s->slvr_flags & SLVR_FREEING);
 
-		if (s->slvr_flags & SLVR_SLBFREEING) {
-			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slb");
-			psc_pool_return(m, (void *)s->slvr_slab);
+		if (s->slvr_flags & SLVR_SLBFREEING) {			
+			struct sl_buffer *slb;
+
+			psc_assert(!(s->slvr_flags & SLVR_FREEING));
+			psc_assert(s->slvr_slab);
+
+			slb = s->slvr_slab;
+			s->slvr_slab = NULL;
+			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slb=%p", slb);
+			s->slvr_flags &= ~SLVR_SLBFREEING;
+			
+			psc_pool_return(m, (void *)slb);
 
 		} else if (s->slvr_flags & SLVR_FREEING)
 			slvr_remove(s);
@@ -673,7 +684,7 @@ slvr_cache_init(void)
 	lc_reginit(&rpcqSlvrs,  struct slvr_ref, slvr_lentry, "rpcqSlvrs");
 
 	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer, 
-		    slb_mgmt_lentry, PPMF_AUTO, 256, 0, 1024, 
+		    slb_mgmt_lentry, PPMF_AUTO, 64, 64, 128, 
 		    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, 
 		    "svlr_slab", NULL);
         slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
