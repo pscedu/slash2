@@ -109,6 +109,12 @@ slvr_cmp(const void *x, const void *y)
         return (0);
 }
 
+enum slvr_lookup_ops {
+	SLVR_LOOKUP_ADD,
+	SLVR_LOOKUP_DEL,
+	SLVR_LOOKUP_NONE
+};
+
 struct slvr_ref *
 	slvr_lookup(uint16_t, struct bmap_iod_info *, int);
 void	slvr_cache_init(void);
