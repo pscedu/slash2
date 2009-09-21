@@ -774,9 +774,10 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		return (-EBADF);
 
 	bmap = bmap_lookup(fcmh, c->blkno);
-	if (!bmap)
-		return (-EBADF);
-
+	if (!bmap) {
+		rc = -EBADF;
+		goto out;
+	}
 	BMAP_LOCK(bmap);
 
 	DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u sz=%"PRId64" ion=%s",
@@ -842,8 +843,9 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
  out:
 	/* Mark that mds_bmap_crc_write() is done with this bmap
 	 *  - it was incref'd in fcmh_bmap_lookup().
-	 */
+	 */	
 	bmap_op_done(bmap);
+	fidc_membh_dropref(fcmh);
 	return (rc);
 }
 
