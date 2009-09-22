@@ -29,7 +29,7 @@ const char *progname;
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
-	if (namefmt[0] == 'a')
+	if (strstr(namefmt, "lnetacthr"))
 		return (SLIOTHRT_LNETAC);
 	return (SLIOTHRT_USKLNDPL);
 }

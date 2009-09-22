@@ -1217,7 +1217,7 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	mfh = (void *)fi->fh;
 	c = mfh->mfh_fcmh;
 	/* Remove bmap references associated with this fd.
-	 */ 
+	 */
 	msl_bmap_fhcache_clear(mfh);
 
 	psc_assert(SPLAY_EMPTY(&mfh->mfh_fhbmap_cache));
@@ -1654,7 +1654,7 @@ struct fuse_lowlevel_ops zfs_operations = {
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
-	if (namefmt[0] == 'a')
+	if (strstr(namefmt, "lnetacthr"))
 		return (MSTHRT_LNETAC);
 	return (MSTHRT_USKLNDPL);
 }
@@ -1791,7 +1791,7 @@ main(int argc, char *argv[])
 	    set_signal_handler(SIGPIPE, SIG_IGN) != 0) {
 		return 2;
 	}
-#endif	
+#endif
 	msl_init();
 	bmap_flush_init();
 	rc = slash2fuse_listener_start();
