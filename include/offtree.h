@@ -1,4 +1,4 @@
-/* $id: offtree.h 7979 2009-09-16 21:16:48Z pauln $ */
+/* $Id$ */
 
 #ifndef _OFFTREE_H_
 #define _OFFTREE_H_
