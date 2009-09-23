@@ -112,6 +112,7 @@ enum iod_bmap_modes {
 #define SLVR_WAIT(s)						\
 	do {							\
 	slvr_wait_retry:					\
+		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT");	\
 		psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,	\
 			       &(slvr_2_biod((s)))->biod_lock);	\
 		SLVR_LOCK((s));					\
@@ -122,6 +123,7 @@ enum iod_bmap_modes {
 #define SLVR_WAIT_SLAB(s)					\
 	do {							\
 	slvr_wait_slab_retry:					\
+		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT_SLAB");	\
 		psc_assert((s)->slvr_flags & SLVR_GETSLAB);	\
 		psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,	\
 			       &(slvr_2_biod((s)))->biod_lock);	\
@@ -167,8 +169,9 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_LRU);
 
 	if (s->slvr_flags & SLVR_PINNED) {
-		psc_assert(psc_atomic16_read(&s->slvr_pndgwrts) ||
-			   psc_atomic16_read(&s->slvr_pndgreads));
+		psc_assert(psc_atomic16_read(&s->slvr_pndgwrts)  ||
+			   psc_atomic16_read(&s->slvr_pndgreads) ||
+			   (s->slvr_flags & SLVR_CRCDIRTY));
 		freeable = 0;
 	} 
 
