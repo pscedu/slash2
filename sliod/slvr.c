@@ -666,7 +666,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slb=%p", slb);
 			s->slvr_flags &= ~SLVR_SLBFREEING;
 			
-			psc_pool_return(m, (void *)slb);
+			psc_pool_return(m, slb);
 
 		} else if (s->slvr_flags & SLVR_FREEING)
 			slvr_remove(s);
