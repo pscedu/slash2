@@ -61,6 +61,28 @@ mdsio_zfs_release(struct slash_inode_handle *i)
 }
 
 int
+mds_fcmh_apply_fsize(struct fidc_membh *f, uint64_t size)
+{
+	struct fidc_mds_info *fmdsi;
+
+	FCMH_LOCK(f);
+
+	if (size <= fcmh_2_fsz(f)) {
+		FCMH_ULOCK(f);
+		return (0);
+	}
+
+	DEBUG_FCMH(PLL_WARN, f, "sz=%"PRId64, size);
+	fmdsi = fcmh_2_fmdsi(f);
+	fcmh_2_fsz(f) = size;
+
+	FCMH_ULOCK(f);
+
+	return (zfsslash2_sets2szattr(zfsVfs, fcmh_2_fid(f), size, 
+				      fmdsi->fmdsi_data));
+}
+
+int
 mdsio_zfs_bmap_read(struct bmapc_memb *bmap)
 {
 	struct slash_creds cred = { 0, 0 };

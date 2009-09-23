@@ -200,6 +200,8 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	int n=crcup->nups;
 	u32 t=0, j=0;
 
+	mds_fcmh_apply_fsize(bmap->bcm_fcmh, crcup->fsize);
+
 	jfi_prep(&bmdsi->bmdsi_jfi, mdsJournal);
 
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
