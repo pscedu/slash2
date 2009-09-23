@@ -41,33 +41,6 @@ struct msbmap_data {
 #define bmap_2_msion(b)						\
 	((struct msbmap_data *)((b)->bcm_pri))->msbd_ion
 
-static inline void
-bmap_oftrq_add_locked(struct bmapc_memb *b, struct offtree_req *r)
-{
-	BMAP_LOCK_ENSURE(b);	
-
-	DEBUG_BMAP(PLL_INFO, b, "add oftrq=%p list_empty(%d)", 
-		   r, psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
-
-        psclist_xadd(&r->oftrq_lentry, &bmap_2_msbd(b)->msbd_oftrqs);
-}
- 
-static inline void
-bmap_oftrq_del(struct bmapc_memb *b, struct offtree_req *r)
-{
-	BMAP_LOCK(b);
-	psclist_del(&r->oftrq_lentry);
-
-	DEBUG_BMAP(PLL_INFO, b, "remove oftrq=%p list_empty(%d)", 
-		   r, psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
-
-	if (psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs)) {
-		psc_assert(b->bcm_mode & BMAP_DIRTY);
-		b->bcm_mode &= ~BMAP_DIRTY;
-	}
-        psc_waitq_wakeall(&b->bcm_waitq);
-        BMAP_ULOCK(b);
-}
 
 /*
  * bmap_info_cli - hangs from the void * pointer in the sl_resm_t struct.

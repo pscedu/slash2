@@ -102,6 +102,75 @@ msl_oftrq_build(struct offtree_req **newreq, struct bmapc_memb *b, off_t off,
 
 
 __static void
+bmap_oftrq_add_locked(struct bmapc_memb *b, struct offtree_req *r)
+{
+	BMAP_LOCK_ENSURE(b);	
+
+	DEBUG_BMAP(PLL_INFO, b, "add oftrq=%p list_empty(%d)", 
+		   r, psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
+
+        psclist_xadd(&r->oftrq_lentry, &bmap_2_msbd(b)->msbd_oftrqs);
+}
+ 
+
+__static void
+bmap_oftrq_del(struct bmapc_memb *b, struct offtree_req *r)
+{
+	BMAP_LOCK(b);
+
+	psc_assert(b->bcm_mode & BMAP_DIRTY);	
+	psc_assert(psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry));
+	
+	psclist_del(&r->oftrq_lentry);
+	
+	DEBUG_BMAP(PLL_INFO, b, "remove oftrq=%p list_empty(%d)", 
+		   r, psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
+	
+	if (!psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs))
+		goto out;
+	
+	else {
+		/* Set the special flag to prevent races with others which 
+		 *   can occur because we may drop the bmap lock before 
+		 *   removing from the bmapFlushQ listcache.
+		 */
+		b->bcm_mode |= BMAP_DIRTY2LRU;
+		b->bcm_mode &= ~BMAP_DIRTY;
+
+		if (LIST_CACHE_TRYLOCK(&bmapFlushQ))
+			goto remove;
+		
+		else {
+			BMAP_ULOCK(b);
+			/* Retake the locks in the correct order else 
+			 *   deadlock.
+			 */
+			LIST_CACHE_LOCK(&bmapFlushQ);
+			BMAP_LOCK(b);
+			/* Only this thread may unset BMAP_DIRTY2LRU.x
+			 */
+			psc_assert(b->bcm_mode & BMAP_DIRTY2LRU);
+
+			if (b->bcm_mode & BMAP_DIRTY) {
+				psc_assert(psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry));
+				psc_assert(!psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
+
+			} else {
+			remove:
+				psc_assert(psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
+				lc_remove(&bmapFlushQ, bmap_2_msbd(b));
+			}
+			LIST_CACHE_ULOCK(&bmapFlushQ);
+			b->bcm_mode &= ~BMAP_DIRTY2LRU;
+		}
+	}
+ out:
+	psc_waitq_wakeall(&b->bcm_waitq);
+        BMAP_ULOCK(b);
+}
+
+
+__static void
 msl_oftrq_destroy(struct offtree_req *r)
 {
 	struct bmapc_memb *b = r->oftrq_bmap;
@@ -227,6 +296,7 @@ msl_bmap_release(struct bmapc_memb *b)
 	psc_assert(!atomic_read(&b->bcm_wr_ref) && 
 		   !atomic_read(&b->bcm_rd_ref));
 	psc_assert(!atomic_read(&b->bcm_opcnt));
+#if 0
 	/* The flush thread may have yet to remove this bmap.
 	 */
 	if (psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry)) {
@@ -235,6 +305,7 @@ msl_bmap_release(struct bmapc_memb *b)
 			lc_remove(&bmapFlushQ, bmap_2_msbd(b));
 		LIST_CACHE_ULOCK(&bmapFlushQ);
 	}
+#endif
 	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 
 	if (b->bcm_mode & BMAP_MEMRLS) {
@@ -285,7 +356,7 @@ bmap_oftrq_waitempty(struct bmapc_memb *b)
 {
  retry:
 	BMAP_LOCK(b);	
-	if (!bmap_offtree_reqs_chkempty(b)) {
+	if (!psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs)) {
 		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 		goto retry;
 	}
@@ -302,8 +373,7 @@ msl_bmap_tryrelease(struct bmapc_memb *b)
 
 	DEBUG_BMAP(PLL_INFO, b, "free me?");
 
-	if (!atomic_read(&b->bcm_wr_ref) && 
-	    !atomic_read(&b->bcm_rd_ref)) {
+	if (!atomic_read(&b->bcm_wr_ref) && !atomic_read(&b->bcm_rd_ref)) {
 		b->bcm_mode |= BMAP_CLOSING;
 		BMAP_ULOCK(b);
 		/* Wait for any pending offtree reqs to clear.
@@ -668,20 +738,19 @@ msl_bmap_to_import(struct bmapc_memb *b, int add)
 __static void
 msl_oftrq_unref(struct offtree_req *r, int op)
 {
-	/* XXX the thing is.. v->oftiov_memb can't be used for decref 
+	/* v->oftiov_memb can't be used for decref 
 	 *   purposes because it may have been remapped to a different 
 	 *   oft node.  NEvertheless, the oftrq has a pointer to the original
 	 *   oft which has the correct ref cnt.  So all of these callbacks 
 	 *   must be modified to use the oft from the request.
 	 */
 	struct dynarray *oftiovs=r->oftrq_darray;
-	struct offtree_memb *m;
 	struct offtree_iov *v;
+	struct offtree_memb *m;
 	int i;
 
 	DEBUG_OFT(PLL_INFO, r->oftrq_memb, "node");
 	DEBUG_OFFTREQ(PLL_INFO, r, "request");
-	oft_refcnt_dec(r, r->oftrq_memb);
 
 	for (i=0; i < dynarray_len(oftiovs); i++) {
 		v = dynarray_getpos(oftiovs, i);
@@ -689,15 +758,28 @@ msl_oftrq_unref(struct offtree_req *r, int op)
 		DEBUG_OFFTIOV(PLL_INFO, v, "iov %d", i);
 
 		slb_inflight_cb(v, SL_INFLIGHT_DEC);
-
-		m = v->oftiov_memb;
-		spinlock(&m->oft_lock);		
-		/* Take the lock and do some sanity checks.
-		 *  XXX waitq wake here (oftm)
+		/* Avoid racing with offtree_putnode which may reassign the 
+		 *   v->oftiov_memb pointer.  Taking the lock here should prevent 
+		 *   v->oftiov_memb from being assigned.
 		 */
+		spinlock(&v->oftiov_memb->oft_lock);
+		m = v->oftiov_memb;		
+		
+		if (m == r->oftrq_memb) {
+			if (op == SRMT_READ) {
+				oftm_read_prepped_verify(m);
+			} else {
+				oftm_write_prepped_verify(m);
+			}
+		} else {
+			DEBUG_OFFTIOV(PLL_TRACE, v, "no longer bound to..");
+			DEBUG_OFT(PLL_TRACE, r->oftrq_memb, ".. no longer bound to");
+			oftm_node_verify(r->oftrq_memb);
+			oftm_leaf_verify(m);
+		}
+		
 		switch (op) {
 		case SRMT_READ:
-			oftm_read_prepped_verify(m);
 			psc_assert((v->oftiov_flags & OFTIOV_FAULTPNDG) &&
 				   (v->oftiov_flags & OFTIOV_FAULTING));
 			ATTR_UNSET(v->oftiov_flags, OFTIOV_FAULTING);
@@ -711,7 +793,6 @@ msl_oftrq_unref(struct offtree_req *r, int op)
 			break;
 
 		case SRMT_WRITE:
-			oftm_write_prepped_verify(m);
 			/* Manage the offtree leaf and decrement the slb.
 			 */
 			slb_pin_cb(v, SL_BUFFER_UNPIN);
@@ -727,12 +808,10 @@ msl_oftrq_unref(struct offtree_req *r, int op)
 		default:
 			psc_fatalx("How did this opcode(%d) happen?", op);
 		}
+		psc_assert(v->oftiov_memb == m);
 		freelock(&m->oft_lock);
-		/* Decrement the inflight counter in the slb.  Do this last so 
-		 *   free's coming from the slab reaper don't run into
-		 *   vestigial refcnts.
-		 */
 	}
+	oft_refcnt_dec(r, r->oftrq_memb);
 }
 /**
  * msl_io_cb - this function is called from the pscrpc layer as the RPC
@@ -1100,12 +1179,20 @@ msl_pages_schedflush(struct offtree_req *r)
 	if (b->bcm_mode & BMAP_DIRTY)
 		psc_assert(!psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
 
-	else {
-		psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
-		psc_assert(psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
-		/* Set it to dirty and hand it off to the bmap flush 
-		 *   thread.
+	else if (b->bcm_mode & BMAP_DIRTY2LRU) 
+		/* Deal with a race which can occur with bmap_oftrq_del() due to 
+		 *    his requirement to drop the bmap lock prior to removing 
+		 *    the bmap from the bmapFlushQ listcache.  By replacing the 
+		 *    dirty flag bmap_oftrq_del() will leave the bmap on the 
+		 *    bmap_oftrq_del().
 		 */
+		b->bcm_mode |= BMAP_DIRTY;
+
+	else {
+		/* Set it to dirty and hand it off to the bmap flush thread.
+		 */		
+		psc_assert(psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
+		psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 		b->bcm_mode |= BMAP_DIRTY;
 		put_dirty = 1;
 	}

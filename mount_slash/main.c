@@ -1221,7 +1221,6 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	msl_bmap_fhcache_clear(mfh);
 
 	psc_assert(SPLAY_EMPTY(&mfh->mfh_fhbmap_cache));
-	PSCFREE(mfh);
 
 	spinlock(&c->fcmh_lock);
 	psc_assert(c->fcmh_fcoo);
@@ -1239,6 +1238,8 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		fidc_fcoo_remove(c);
 	}
 	DEBUG_FCMH(PLL_INFO, c, "done with slash2fuse_release");
+
+	PSCFREE(mfh);
 	fuse_reply_err(req, rc);
 }
 

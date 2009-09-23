@@ -302,6 +302,7 @@ bmap_flush_coalesce_map(const struct dynarray *oftrqs, struct iovec **iovset)
 {
 	struct offtree_req *r, *t;
 	struct offtree_iov *v;
+	struct offtree_memb *m;
 	struct iovec *iovs=NULL;
 	off_t off;
 	int i, j, niovs=0, skip;
@@ -344,8 +345,8 @@ bmap_flush_coalesce_map(const struct dynarray *oftrqs, struct iovec **iovset)
 			}			
 			/* Add a new iov!
 			 */
-			*iovset = iovs = PSC_REALLOC(iovs, (sizeof(struct iovec) * 
-							    (niovs + 1)));
+			*iovset = iovs = PSC_REALLOC(iovs, 
+				     (sizeof(struct iovec) * (niovs + 1)));
 			/* Set the base pointer past the overlapping 
 			 *   area.
 			 */
@@ -366,11 +367,14 @@ bmap_flush_coalesce_map(const struct dynarray *oftrqs, struct iovec **iovset)
 			/* Signify that the ending offset has been extended.
 			 */			
 			OFFTIOV_LOCK(v);
+			m = v->oftiov_memb;
 			off = OFT_IOV2E_VOFF_(v);
 			v->oftiov_flags |= (OFTIOV_PUSHING | OFTIOV_PUSHPNDG);
+			if (v->oftiov_memb != m)
+				abort();
 			OFFTIOV_ULOCK(v);
 
-			DEBUG_OFFTIOV(PLL_INFO, v, "pos=%d off=%zu", j, off);			
+			DEBUG_OFFTIOV(PLL_INFO, v, "pos=%d off=%zu", j, off);
 			//slb_inflight_cb(v, SL_INFLIGHT_INC);
 		}
  	}
