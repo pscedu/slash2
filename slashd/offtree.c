@@ -296,8 +296,11 @@ offtree_release_all(struct offtree_root *oftr)
 
 	offtree_traverse_free(&oftr->oftr_memb, oftr->oftr_width);
 
-	for (i=0; i < oftr->oftr_width; i++)
-		psc_assert(!oftr->oftr_memb.oft_norl.oft_children[i]);
+	if (oftr->oftr_memb.oft_norl.oft_children) {
+		for (i=0; i < oftr->oftr_width; i++)
+			psc_assert(!oftr->oftr_memb.oft_norl.oft_children[i]);
+		PSCFREE(oftr->oftr_memb.oft_norl.oft_children);
+	}
 }
 
 /**
@@ -537,11 +540,14 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		 */
 		if (ATTR_TEST(iov->oftiov_flags, OFTIOV_MAPPED)) {
 			if (req->oftrq_nblks == iov->oftiov_nblks) {
+				spinlock(&req->oftrq_memb->oft_lock);
 				psc_assert(ATTR_TEST(iov->oftiov_flags,
 						     OFTIOV_REMAP_SRC));
 
 				iov->oftiov_memb = req->oftrq_memb;
 				req->oftrq_memb->oft_norl.oft_iov = iov;
+				freelock(&req->oftrq_memb->oft_lock);
+
 				ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_END);
 			} else {
 				struct offtree_iov *niov;
