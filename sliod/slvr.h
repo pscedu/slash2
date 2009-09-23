@@ -76,7 +76,7 @@ enum slvr_states {
 		SLVR_FLAG(((s)->slvr_flags & SLVR_CRCING), "c"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_FAULTING), "f"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_INFLIGHT), "i"),	\
-		SLVR_FLAG(((s)->slvr_flags & SLVR_GETSLAB), "S"),	\
+		SLVR_FLAG(((s)->slvr_flags & SLVR_GETSLAB), "G"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_PINNED), "p"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_CRCDIRTY), "D"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_DATARDY), "d"),	\
