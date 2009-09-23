@@ -56,10 +56,11 @@ enum bmap_common_modes {
 	BMAP_DIO     = (1 << 3),
 	BMAP_CLOSING = (1 << 4),
 	BMAP_DIRTY   = (1 << 5),
-	BMAP_MEMRLS  = (1 << 6)
+	BMAP_MEMRLS  = (1 << 6),
+	BMAP_DIRTY2LRU = (1 << 7)
 };
 
-#define BMAP_RSVRD_MODES (1 << 6)
+#define BMAP_RSVRD_MODES (1 << 7)
 
 
 
