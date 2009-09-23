@@ -171,6 +171,10 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		slvr_io_done(slvr_ref[i], rw);
 	} 
  out:
+	/* XXX In situations where errors occur (such as an ENOSPC from 
+	 *   iod_inode_open()) then we must have a way to notify other 
+	 *   threads blocked on DATARDY.
+	 */
 	fidc_membh_dropref(fcmh);
 	return (rc);
 }
