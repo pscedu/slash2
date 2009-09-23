@@ -119,16 +119,20 @@ slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
 __static void
 slvr_getslab(struct slvr_ref *s)
 {
-	psc_assert(s->slvr_flags & SLVR_PINNED); 
-		   
+	struct sl_buffer *slb;
+
+	psc_assert(s->slvr_flags & SLVR_PINNED);		   
 	psc_assert(s->slvr_flags & SLVR_GETSLAB);
 	psc_assert(!s->slvr_slab);
 	
-	s->slvr_slab = psc_pool_get(slBufsPool);
-	sl_buffer_fresh_assertions(s->slvr_slab);
+	slb = psc_pool_get(slBufsPool);
+	sl_buffer_fresh_assertions(slb);
 
+	SLVR_LOCK(s);	
+	s->slvr_slab = slb;
 	s->slvr_flags &= ~SLVR_GETSLAB;
 	s->slvr_flags |= SLVR_LRU;
+	SLVR_ULOCK(s);
 
 	DEBUG_SLVR(PLL_INFO, s, "should have slab");
 	if (!s->slvr_slab)
@@ -212,9 +216,9 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 			   rc, len, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 			   nblks, slvr_2_fileoff(s, blk), errno);
 	else {
-		DEBUG_SLVR(PLL_INFO, s, "ok %s blks=%d off=%"PRIu64,
+		DEBUG_SLVR(PLL_INFO, s, "ok %s blks=%d off=%"PRIu64" rc=%zd",
 			   (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), nblks, 
-			   slvr_2_fileoff(s, blk));
+			   slvr_2_fileoff(s, blk), rc);
 		rc = 0;
 	}
 
@@ -278,18 +282,24 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 
 	s->slvr_flags |= SLVR_PINNED;
 
+#define slvr_slab_prep_getslab			\
+	{					\
+		s->slvr_flags |= SLVR_GETSLAB;	\
+		SLVR_ULOCK(s);			\
+		slvr_getslab(s);		\
+		SLVR_LOCK(s);			\
+	}
+
 	if (s->slvr_flags & SLVR_NEW) {
 		s->slvr_flags &= ~SLVR_NEW;
-		s->slvr_flags |= SLVR_GETSLAB;
-		SLVR_ULOCK(s);
-		/* Set the flag and drop the lock before entering       
-		 *  slvr_getslab().                                     
-		 */
-		slvr_getslab(s);
-		SLVR_LOCK(s);
-
+		slvr_slab_prep_getslab;
+		
 	} else if (!s->slvr_slab) {
-		SLVR_WAIT_SLAB(s);
+		if (s->slvr_flags & SLVR_GETSLAB)
+			SLVR_WAIT_SLAB(s);
+		else {
+			slvr_slab_prep_getslab;
+		}			
 	}
 	psc_assert(s->slvr_slab);
 	SLVR_ULOCK(s);
