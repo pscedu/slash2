@@ -236,8 +236,9 @@ bmap_flush_send_rpcs(struct dynarray *oftrqs, struct iovec *iovs,
 		set->set_arg = oftrqs;		
 		
 		for (j=0, n=0, size=0, tiov=iovs; j < niovs; j++) {
-			if ((size + iovs[j].iov_len) == LNET_MTU) {
+			if ((size + iovs[j].iov_len) == LNET_MTU) {			
 				n++;
+				size += iovs[j].iov_len;
 				launch_rpc;
 				tiov = NULL;
 				size = n = 0;
