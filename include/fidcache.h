@@ -148,7 +148,8 @@ struct fidc_membh {
 #define fcmh_2_fid(f)	(f)->fcmh_fcm->fcm_fg.fg_fid
 #define fcmh_2_gen(f)	(f)->fcmh_fcm->fcm_fg.fg_gen
 #define fcmh_2_fgp(f)	(&(f)->fcmh_fcm->fcm_fg)
-#define fcmh_2_fsz(f)	(size_t)(f)->fcmh_fcm->fcm_stb.st_size
+//#define fcmh_2_fsz(f)	(size_t)(f)->fcmh_fcm->fcm_stb.st_size
+#define fcmh_2_fsz(f)   (f)->fcmh_fcm->fcm_stb.st_size
 #define fcmh_2_attrp(f)	(&(f)->fcmh_fcm->fcm_stb)
 
 #define fcmh_2_age(f)	((f)->fcmh_fcm->fcm_slfinfo.slf_age)
