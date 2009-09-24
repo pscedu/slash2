@@ -309,12 +309,11 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 int
 slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 {
-	int blks, rc;
+	int blks, rc, unaligned[2] = {0,0};
 	size_t i;
 
 	SLVR_LOCK(s);
         psc_assert(s->slvr_flags & SLVR_PINNED);
-                   
 
 	//if (psclist_conjoint(&s->slvr_lentry))
 	//	psc_assert(!(s->slvr_flags & SLVR_LRU));
@@ -383,8 +382,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		/* Unaffected blocks at the beginning of the sliver.
 		 */
 		blks = (offset / SLASH_SLVR_BLKSZ);
-		if (offset & SLASH_SLVR_BLKMASK)
-			++blks;
+		if (offset & SLASH_SLVR_BLKMASK) {
+			unaligned[0] = blks;
+			blks++;
+		}
 		
 		for (i=0; (ssize_t)i < blks; i++)
 			vbitmap_set(s->slvr_slab->slb_inuse, i);
@@ -392,13 +393,17 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	/* Mark any blocks at the end.
 	 */
 	if ((offset + size) < SLASH_SLVR_SIZE) {
+		int j;
+
 		blks = ((SLASH_SLVR_SIZE - (offset + size)) / 
 			SLASH_SLVR_BLKSZ);
 
-		if ((offset + size) & SLASH_SLVR_BLKMASK)
-			++blks;
+		if ((offset + size) & SLASH_SLVR_BLKMASK) {
+			blks++;
+			unaligned[1] = SLASH_BLKS_PER_SLVR - blks;
+		}
 
-		for (i=SLASH_BLKS_PER_SLVR-1; blks--; i--)
+		for (i=SLASH_BLKS_PER_SLVR-1, j=blks; j > 0; i--, j--)
 			vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
 	/* We must have found some work to do.
@@ -409,7 +414,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	psc_info("vbitmap_nfree() = %d", vbitmap_nfree(s->slvr_slab->slb_inuse));
 
 	if (s->slvr_flags & SLVR_DATARDY)
-                goto out;
+                goto invert;
 
  do_read:
 	SLVR_ULOCK(s);
@@ -426,7 +431,13 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		 *  the rpc.
 		 */
 		SLVR_LOCK(s);
-		vbitmap_invert(s->slvr_slab->slb_inuse);		
+	invert:
+		vbitmap_invert(s->slvr_slab->slb_inuse);
+		if (unaligned[0])
+			vbitmap_set(s->slvr_slab->slb_inuse, unaligned[0]);
+		
+		if (unaligned[1])
+			vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
 	out:
 		SLVR_ULOCK(s);
 	} 
