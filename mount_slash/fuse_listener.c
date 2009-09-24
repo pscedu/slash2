@@ -39,7 +39,7 @@
 #include "msl_fuse.h"
 #include "fuse_listener.h"
 
-#define NUM_THREADS 10
+#define NUM_THREADS 32
 
 #define MAX_FILESYSTEMS 5
 
@@ -307,7 +307,8 @@ slash2fuse_listener_start(void)
 	int i;
 
 	for(i = 0; i < NUM_THREADS; i++)
-		psc_assert(pthread_create(&fuse_threads[i], NULL, slash2fuse_listener_loop, NULL) == 0);
+		psc_assert(pthread_create(&fuse_threads[i], NULL, 
+					  slash2fuse_listener_loop, NULL) == 0);
 
 	for(i = 0; i < NUM_THREADS; i++) {
 		int ret = pthread_join(fuse_threads[i], NULL);
