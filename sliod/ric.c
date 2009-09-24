@@ -113,6 +113,9 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		rc = -1;
 		goto out;
 	}	
+
+	DEBUG_FCMH(PLL_INFO, fcmh, "blkno=%u size=%u off=%u rw=%d", 
+		   bmap->bcm_blkno, mq->size, mq->offset, rw);
 	
 	slvrno = mq->offset / SLASH_SLVR_SIZE;
 	/* We should never have a request size > 1MB, therefore it would 
