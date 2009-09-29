@@ -19,7 +19,6 @@
 #include <inode.h>
 #include <inodeh.h>
 #include <jflush.h>
-#include <mdsexpc.h>
 #include <offtree.h>
 #include <pathnames.h>
 #include <slashexport.h>
@@ -38,6 +37,7 @@
 #include <slashd/mds_bmap.h>
 #include <slashd/mds_repl.h>
 #include <slashd/mdscoh.h>
+#include <slashd/mdsexpc.h>
 #include <slashd/mdsio_zfs.h>
 #include <slashd/mdslog.h>
 #include <slashd/mdsrpc.h>
@@ -115,9 +115,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msrcm_thread);
 	PRTYPE(struct offtree_fill);
 	PRTYPE(struct offtree_iov);
-	PRTYPE(struct offtree_iov_new);
 	PRTYPE(struct offtree_memb);
-	PRTYPE(struct offtree_memb_new);
 	PRTYPE(struct offtree_req);
 	PRTYPE(struct offtree_root);
 	PRTYPE(struct resprof_mds_info);
