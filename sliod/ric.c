@@ -81,7 +81,7 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	    &bmapno, rq->rq_peer, lpid.nid,
 	    nodeInfo.node_res->res_id);
 	if (mp->rc) {
-		psc_errorx("fdbuf_check failed");
+		psc_errorx("bdbuf_check failed");
 		return (-1);
 	}
 	/* Ensure that this request fits into the bmap's address range.
