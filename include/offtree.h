@@ -90,7 +90,7 @@ power(size_t base, size_t exp)
 		TTt = (e+1) % (req)->oftrq_root->oftr_minsz;		\
 		psc_assert(!TTt);					\
 		psc_trace("OFT_REQ2SE_OFFS (%"PRIx64"/%"PRIx64")", s, e); \
-        }
+	}
 
 #define OFT_REQ2E_OFF_(req)						\
 	(off_t)(((req)->oftrq_off + ((req)->oftrq_nblks *		\
@@ -247,7 +247,7 @@ struct offtree_iov {
 	size_t  oftiov_blksz;
 	size_t  oftiov_nblks; /* length of respective data */
 	void   *oftiov_pri;   /* private data, in slash's case, point at the
-	 			  sl_buffer structure which manages the
+				  sl_buffer structure which manages the
 				  region containing our base */
 	struct offtree_memb *oftiov_memb;  /* backpointer to our
 					      offtree node */
@@ -283,11 +283,11 @@ enum oft_iov_flags {
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_REMAP_END), "E"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_PUSHING),   "u"), \
 	OFFTIOV_FLAG(ATTR_TEST(iov->oftiov_flags, OFTIOV_PUSHPNDG),  "U")
-		
+
 #define OFFTIOV_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_OFFTIOV(level, iov, fmt, ...)				\
-	psc_logs((level), PSS_GEN, 					\
+	psc_logs((level), PSS_GEN,					\
 		" oftiov@%p b:%p o:%"PRIx64" l:%"PRId64			\
 		" bsz:%"PRId64" pri:%p fl:"OFFTIOV_FLAGS_FMT		\
 		" m:%p "fmt,						\
@@ -304,7 +304,7 @@ enum oft_iov_flags {
 		atomic_set(&(m)->oft_ref, 0);				\
 		atomic_set(&(m)->oft_rdop_ref, 0);			\
 		atomic_set(&(m)->oft_wrop_ref, 0);			\
-                (m)->oft_parent = p;                            	\
+		(m)->oft_parent = p;	\
 		ATTR_SET((m)->oft_flags, OFT_LEAF);			\
 	} while (0)
 
@@ -337,7 +337,7 @@ struct offtree_iov_new {
 	off_t    oftiov_off;   /* filewise data offset      */
 	void    *oftiov_base;  /* point to our data buffer  */
 	void    *oftiov_pri;   /* private data, in slash's case, point at the
-	 			  sl_buffer structure which manages the
+				  sl_buffer structure which manages the
 				  region containing our base */
 };
 
@@ -356,7 +356,7 @@ struct offtree_memb_new {
 		struct offtree_memb   *oft_children[8];
 	} oft_norl;
 };
-#endif	
+#endif
 
 enum oft_attributes {
 	OFT_NODE      = (1 << 0), /* Node not a leaf          */
@@ -387,20 +387,20 @@ enum oft_attributes {
 #define DEBUG_OFT(level, oft, fmt, ...)					\
 	do {								\
 		if (ATTR_TEST((oft)->oft_flags, OFT_LEAF)) {		\
-			psc_logs((level), PSS_GEN, 			\
+			psc_logs((level), PSS_GEN,			\
 				" oft@%p pos:%hhu d:%hhu w:%hu p:%p "	\
 				"ref:%d rref:%d wref:%d"		\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
 				(oft), (oft)->oft_pos,			\
 				(oft)->oft_depth,			\
 				(oft)->oft_width, (oft)->oft_parent,	\
-				atomic_read(&(oft)->oft_ref), 		\
+				atomic_read(&(oft)->oft_ref),		\
 				atomic_read(&(oft)->oft_rdop_ref),	\
 				atomic_read(&(oft)->oft_wrop_ref),	\
 				DEBUG_OFTM_FLAGS(oft),			\
 				## __VA_ARGS__);			\
 		} else {						\
-			psc_logs((level), PSS_GEN, 			\
+			psc_logs((level), PSS_GEN,			\
 				" oft@%p pos:%hhu d:%hhu w:%hu p:%p "	\
 				"ref:%d rref:%d wref:%d"		\
 				" fl:"REQ_OFTM_FLAGS_FMT" "fmt,		\
@@ -469,11 +469,11 @@ enum offtree_req_op_types {
 	OFTREQ_OP_WRITE = (1<<2),
 	OFTREQ_OP_PRFFP = (1<<3),
 	OFTREQ_OP_PRFLP = (1<<4),
-	OFTREQ_OP_DIO   = (1<<5)	
+	OFTREQ_OP_DIO   = (1<<5)
 };
 
 enum offtree_req_flags {
-	OFTREQ_INFLIGHT = (1<<0)			   
+	OFTREQ_INFLIGHT = (1<<0)
 };
 
 static inline size_t
@@ -503,7 +503,7 @@ oftrq_voff_get(const struct offtree_req *r)
 	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_flags, OFTREQ_INFLIGHT), "I")
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
-	psc_logs((level), PSS_GEN, 					\
+	psc_logs((level), PSS_GEN,					\
 		" oftr@%p o:%"PRIx64" l:%"PRId64" node:%p darray:%p"	\
 		" root:%p op:%hhu d:%hhu w:%hu "			\
 		REQ_OFTRQ_FLAGS_FMT" "fmt,				\
@@ -568,7 +568,6 @@ oft_adjust_refcnt(struct offtree_req *req, struct offtree_memb *m, int op)
 	}
 }
 
-
 static inline void
 oftiov_2_iov(const struct offtree_iov *v, struct iovec *i)
 {
@@ -576,13 +575,13 @@ oftiov_2_iov(const struct offtree_iov *v, struct iovec *i)
 	i->iov_len  = OFT_IOVSZ(v);
 }
 
-
 struct offtree_root *
 offtree_create(size_t, size_t, u32, u32, void *, offtree_alloc_fn, offtree_putnode_cb);
 
+int  offtree_region_preprw(struct offtree_req *);
 void offtree_destroy(struct offtree_root *);
-int offtree_region_preprw(struct offtree_req *);
-void offtree_iovs_check(const struct offtree_iov *, const int);
 void offtree_freeleaf_locked(struct offtree_memb *, int);
+void offtree_iovs_check(const struct offtree_iov *, const int);
+void offtree_release_all(struct offtree_root *);
 
 #endif /* _OFFTREE_H_ */
