@@ -271,10 +271,8 @@ bmap_flush_send_rpcs(struct dynarray *oftrqs, struct iovec *iovs,
 __static int 
 bmap_flush_oftrq_cmp(const void *x, const void *y)
 {
-	const void **t0 = x;
-	const void **t1 = y;
-	const struct offtree_req *a = (const struct offtree_req *)*t0;
-	const struct offtree_req *b = (const struct offtree_req *)*t1;
+	const struct offtree_req *a = *(const struct offtree_req **)x;
+	const struct offtree_req *b = *(const struct offtree_req **)y;
 
 	//DEBUG_OFFTREQ(PLL_TRACE, a, "compare..");
 	//DEBUG_OFFTREQ(PLL_TRACE, b, "..compare");
