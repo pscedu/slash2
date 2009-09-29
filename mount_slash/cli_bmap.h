@@ -51,4 +51,6 @@ struct bmap_info_cli {
 #define BMAP_CLI_MCIP (1 << 16)
 #define	BMAP_CLI_MCC  (1 << 17)
 
+void bmap_flush_init(void);
+
 #endif /* _SLASH_CLI_BMAP_H_ */
