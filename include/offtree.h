@@ -503,16 +503,17 @@ oftrq_voff_get(const struct offtree_req *r)
 	OFTM_FLAG(ATTR_TEST((oftrq)->oftrq_flags, OFTREQ_INFLIGHT), "I")
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
-	psc_logs((level), PSS_GEN,					\
-		" oftr@%p o:%"PRIx64" l:%"PRId64" node:%p darray:%p"	\
-		" root:%p op:%hhu d:%hhu w:%hu "			\
-		REQ_OFTRQ_FLAGS_FMT" "fmt,				\
-		(oftr), (oftr)->oftrq_off, (oftr)->oftrq_nblks,		\
-		(oftr)->oftrq_memb, (oftr)->oftrq_darray,		\
-		(oftr)->oftrq_root, (oftr)->oftrq_op,			\
-		(oftr)->oftrq_depth, (oftr)->oftrq_width,		\
-		DEBUG_OFTRQ_FLAGS(oftr),				\
-		## __VA_ARGS__)
+	psc_logs((level), PSS_GEN, 					\
+		 " oftr@%p o:%"PRIx64" l:%"PRId64" node:%p darray:%p"	\
+		 " root:%p op:%hhu d:%hhu w:%hu len=%zu "		\
+		 REQ_OFTRQ_FLAGS_FMT" "fmt,				\
+		 (oftr), (oftr)->oftrq_off, (oftr)->oftrq_nblks,	\
+		 (oftr)->oftrq_memb, (oftr)->oftrq_darray,		\
+		 (oftr)->oftrq_root, (oftr)->oftrq_op,			\
+		 (oftr)->oftrq_depth, (oftr)->oftrq_width,		\
+		 (oftr)->oftrq_len,					\
+		 DEBUG_OFTRQ_FLAGS(oftr),				\
+		 ## __VA_ARGS__)
 
 static inline int
 oft_child_get(off_t o, struct offtree_root *r, int d, int abs_width)
