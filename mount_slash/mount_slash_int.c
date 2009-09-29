@@ -269,7 +269,7 @@ msl_bmap_memrls_unlock(void *a)
 	BMAP_ULOCK(b);
 }
 
-
+void
 msl_init(void)
 {
 	slMemRlsUlock=msl_bmap_memrls_unlock;
