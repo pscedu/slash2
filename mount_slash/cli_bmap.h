@@ -5,18 +5,18 @@
 
 #include "psc_rpc/rpc.h"
 
-#include "inode.h"
 #include "bmap.h"
+#include "inode.h"
 #include "offtree.h"
 
-/* 
+/*
  * msbmap_crcrepl_states - must be the same as bh_crcstates and bh_repls
  *  in slash_bmap_inode_od.
- */ 
+ */
 struct msbmap_crcrepl_states
 {
 	u8 msbcr_crcstates[SL_CRCS_PER_BMAP]; /* crc descriptor bits  */
-        u8 msbcr_repls[SL_REPLICA_NBYTES];  /* replica bit map        */
+	u8 msbcr_repls[SL_REPLICA_NBYTES];  /* replica bit map        */
 };
 
 /*
@@ -32,15 +32,9 @@ struct msbmap_data {
 	struct psclist_head          msbd_lentry;
 };
 
-#define bmap_2_msbd(b)				\
-	((struct msbmap_data *)((b)->bcm_pri))
-
-#define bmap_2_msoftr(b)					\
-	(((struct msbmap_data *)((b)->bcm_pri))->msbd_oftr)
-
-#define bmap_2_msion(b)						\
-	((struct msbmap_data *)((b)->bcm_pri))->msbd_ion
-
+#define bmap_2_msbd(b)		((struct msbmap_data *)(b)->bcm_pri)
+#define bmap_2_msoftr(b)	bmap_2_msbd(b)->msbd_oftr
+#define bmap_2_msion(b)		bmap_2_msbd(b)->msbd_ion
 
 /*
  * bmap_info_cli - hangs from the void * pointer in the sl_resm_t struct.
