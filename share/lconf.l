@@ -38,12 +38,12 @@ quotedstr	\"[^"]*\"
 %%
 
 none {
-        psc_trace("NONE");
+	psc_trace("NONE");
 	return NONE;
 }
 
 NONE {
-        psc_trace("NONE");
+	psc_trace("NONE");
 	return NONE;
 }
 
@@ -56,7 +56,7 @@ NONE {
 }
 
 "," {
-        psc_trace("Sep ','");
+	psc_trace("Sep ','");
 	return NSEP;
 }
 
@@ -65,8 +65,8 @@ NONE {
 }
 
 global {
-        psc_trace("GLOBAL %s", yytext);
-        return GLOBAL;
+	psc_trace("GLOBAL %s", yytext);
+	return GLOBAL;
 }
 
 site {
@@ -75,18 +75,18 @@ site {
 }
 
 resource {
-        psc_trace("RESOURCE_PROFILE %s", yytext);
-        return RESOURCE_PROFILE;
+	psc_trace("RESOURCE_PROFILE %s", yytext);
+	return RESOURCE_PROFILE;
 }
 
 peers {
-        psc_trace("PEERTAG %s", yytext);
-        return PEERTAG;
+	psc_trace("PEERTAG %s", yytext);
+	return PEERTAG;
 }
 
 ifs {
-        psc_trace("INTERFACETAG %s", yytext);
-        return INTERFACETAG;
+	psc_trace("INTERFACETAG %s", yytext);
+	return INTERFACETAG;
 }
 
 
@@ -119,27 +119,27 @@ no {
 }
 
 parallel_fs {
-        psc_trace("Resource type string %s", yytext);
-        yylval = strdup(yytext);
-        return RESOURCE_TYPE;
+	psc_trace("Resource type string %s", yytext);
+	yylval = strdup(yytext);
+	return RESOURCE_TYPE;
 }
 
 archival_fs {
-        psc_trace("Resource type string %s", yytext);
-        yylval = strdup(yytext);
-        return RESOURCE_TYPE;
+	psc_trace("Resource type string %s", yytext);
+	yylval = strdup(yytext);
+	return RESOURCE_TYPE;
 }
 
 cluster_noshare_fs {
-        psc_trace("Resource type string %s", yytext);
-        yylval = strdup(yytext);
-        return RESOURCE_TYPE;
+	psc_trace("Resource type string %s", yytext);
+	yylval = strdup(yytext);
+	return RESOURCE_TYPE;
 }
 
 compute {
-        psc_trace("Resource type string %s", yytext);
-        yylval = strdup(yytext);
-        return RESOURCE_TYPE;
+	psc_trace("Resource type string %s", yytext);
+	yylval = strdup(yytext);
+	return RESOURCE_TYPE;
 }
 
 {hexnum} {
@@ -149,9 +149,9 @@ compute {
 }
 
 {lnettcp} {
-        psc_trace("Lnet tcp network string %s", yytext);
-        yylval = strdup(yytext);
-        return LNETTCP;
+	psc_trace("Lnet tcp network string %s", yytext);
+	yylval = strdup(yytext);
+	return LNETTCP;
 }
 
 {name} {
@@ -167,45 +167,45 @@ compute {
 }
 
 {globpath} {
-        psc_trace("GLOBPATH %s", yytext);
-        yylval = strdup(yytext);
-        return GLOBPATH;
+	psc_trace("GLOBPATH %s", yytext);
+	yylval = strdup(yytext);
+	return GLOBPATH;
 }
 
 {floatv} {
 	psc_trace("FLOATVAL %s", yytext);
-        yylval = strdup(yytext);
-        return FLOATVAL;
+	yylval = strdup(yytext);
+	return FLOATVAL;
 }
 
 {sizeval} {
 	psc_trace("SIZEVAL %s", yytext);
-        yylval = strdup(yytext);
-        return SIZEVAL;
+	yylval = strdup(yytext);
+	return SIZEVAL;
 }
 
 {sitename} {
-        psc_trace("SITE_NAME %s", yytext);
-        yylval = strdup(yytext);
-        return SITE_NAME;
+	psc_trace("SITE_NAME %s", yytext);
+	yylval = strdup(yytext);
+	return SITE_NAME;
 }
 
 {resname} {
-        psc_trace("RESOURCE_NAME %s", yytext);
-        yylval = strdup(yytext);
-        return RESOURCE_NAME;
+	psc_trace("RESOURCE_NAME %s", yytext);
+	yylval = strdup(yytext);
+	return RESOURCE_NAME;
 }
 
 {ipquad} {
-        psc_trace("IPADRRESS %s", yytext);
-        yylval = strdup(yytext);
-        return IPADDR;
+	psc_trace("IPADRRESS %s", yytext);
+	yylval = strdup(yytext);
+	return IPADDR;
 }
 
 {quotedstr} {
-        psc_trace("Quoted string %s", yytext);
-        yylval = strdup(yytext);
-        return QUOTEDS;
+	psc_trace("Quoted string %s", yytext);
+	yylval = strdup(yytext);
+	return QUOTEDS;
 }
 
 [ \t]*#.*	;
