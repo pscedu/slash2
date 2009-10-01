@@ -58,6 +58,7 @@ struct symtable {
 };
 
 uint32_t global_net_handler(const char *);
+void slcfg_addif(char *, char *);
 
 /*
  * Define a table macro for each structure type filled in by the config
@@ -268,28 +269,11 @@ interfaces     : interface                 |
 		 interface NSEP interfaces
 {};
 
-interface      : IPADDR
-{
-	lnet_nid_t *i;
-	char        nidstr[MAXNET];
-
-	i = realloc(currentRes->res_nids,
-		    (sizeof(lnet_nid_t) * (currentRes->res_nnids + 1)));
-	psc_assert(i);
-
-	if ((snprintf(nidstr, MAXNET, "%s@%s", $1, currentConf->gconf_net))
-	    >= MAXNET)
-		psc_fatalx("Interface to NID failed, ifname too long %s", $1);
-	free($1);
-
-	i[currentRes->res_nnids] = libcfs_str2nid(nidstr);
-
-	psc_info("Got nidstr ;%s; nid2str ;%s;",
-		 nidstr, libcfs_nid2str(i[currentRes->res_nnids]));
-
-	currentRes->res_nnids++;
-	currentRes->res_nids = i;
-};
+interface      : IPADDR '@' LNETTCP	{ slcfg_addif($1, $3); free($3); }
+	       | IPADDR			{ slcfg_addif($1, currentConf->gconf_net); }
+	       | NAME '@' LNETTCP	{ slcfg_addif($1, $3); free($3); }
+	       | NAME			{ slcfg_addif($1, currentConf->gconf_net); }
+	       ;
 
 statements        : /* NULL */               |
 		    statement statements;
@@ -401,6 +385,38 @@ lnettcp_stmt : NAME EQ LNETTCP END
 };
 
 %%
+
+void
+slcfg_addif(char *ifname, char *netname)
+{
+	char nidstr[MAXNET];
+	lnet_nid_t *i;
+	int rc;
+
+	/* XXX dynarray */
+	i = realloc(currentRes->res_nids,
+	    (sizeof(lnet_nid_t) * (currentRes->res_nnids + 1)));
+	psc_assert(i);
+
+	if (strchr(ifname, '-'))
+		psc_fatalx("%s:%d: invalid interface name",
+		    cfg_filename, cfg_lineno);
+
+	rc = snprintf(nidstr, sizeof(nidstr), "%s@%s", ifname, netname);
+	if (rc == -1)
+		psc_fatal("snprintf");
+	if (rc >= (int)sizeof(nidstr))
+		psc_fatalx("interface name too long: %s", ifname);
+	free(ifname);
+
+	i[currentRes->res_nnids] = libcfs_str2nid(nidstr);
+
+	psc_info("Got nidstr %s nid2str %s\n",
+	    nidstr, libcfs_nid2str(i[currentRes->res_nnids]));
+
+	currentRes->res_nnids++;
+	currentRes->res_nids = i;
+}
 
 uint32_t
 global_net_handler(const char *net)
