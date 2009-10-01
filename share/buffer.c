@@ -314,8 +314,8 @@ static void
 sl_oftiov_bfree(struct offtree_iov *iov, struct sl_buffer_iovref *r)
 {
 	struct sl_buffer *slb = iov->oftiov_pri;
-	size_t sbit, nblks;
-	int    locked=0, i;
+	size_t i, sbit, nblks;
+	int    locked=0;
 
 	SLB_IOV_VERIFY(iov);
 	/* Which bits are to be released?

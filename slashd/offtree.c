@@ -292,7 +292,7 @@ offtree_traverse_free(struct offtree_memb *m, int w)
 void 
 offtree_release_all(struct offtree_root *oftr)
 {
-	int i;
+	uint32_t i;
 
 	offtree_traverse_free(&oftr->oftr_memb, oftr->oftr_width);
 
