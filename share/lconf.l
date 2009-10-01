@@ -22,7 +22,7 @@ nsep		[,]
 endl		[;]
 
 num		[0-9]+
-hexnum		0x[0-9a-f]+
+hexnum		0[Xx][0-9A-Fa-f]+
 sitename	@[A-Z]+
 char		[A-Za-z]
 ipquad		[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
