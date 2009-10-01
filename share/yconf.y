@@ -393,14 +393,15 @@ slcfg_addif(char *ifname, char *netname)
 	lnet_nid_t *i;
 	int rc;
 
+	if (strchr(ifname, '-')) {
+		yyerror("invalid interface name: %s", ifname);
+		return;
+	}
+
 	/* XXX dynarray */
 	i = realloc(currentRes->res_nids,
 	    (sizeof(lnet_nid_t) * (currentRes->res_nnids + 1)));
 	psc_assert(i);
-
-	if (strchr(ifname, '-'))
-		psc_fatalx("%s:%d: invalid interface name",
-		    cfg_filename, cfg_lineno);
 
 	rc = snprintf(nidstr, sizeof(nidstr), "%s@%s", ifname, netname);
 	if (rc == -1)
