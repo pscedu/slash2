@@ -17,6 +17,9 @@ struct msctlmsg_replrq {
 	int	mrq_bmapno;
 };
 
+#define REPLRQ_BMAPNO_ALL (-1)
+
+/* custom mount_slash message types */
 #define SCMT_ADDREPLRQ		(NPCMT + 0)
 #define SCMT_DELREPLRQ		(NPCMT + 1)
 #define SCMT_GETREPLST		(NPCMT + 2)

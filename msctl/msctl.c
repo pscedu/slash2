@@ -23,8 +23,6 @@ struct replrq_arg {
 	int bmapno;
 };
 
-#define REPLRQ_BMAPNO_ALL (-1)
-
 void
 pack_replst(const char *fn, __unusedx void *arg)
 {
@@ -63,7 +61,7 @@ parse_replrq(int code, char *replrqspec,
 
 	bmapnos = strchr(replrqspec, ':');
 	if (bmapnos) {
-		if (!allow_bmapno)
+		if (!allow_bmapno && replrqspec[0] != '\0')
 			errx(1, "%s: bmap specification not allowed",
 			    replrqspec);
 		*bmapnos++ = '\0';
