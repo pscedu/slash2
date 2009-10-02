@@ -50,14 +50,14 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-C zpoolcache] [-f cfgfile] [-P zpoolname] [-S socket]\n", progname);
+	fprintf(stderr, "usage: %s [-f cfgfile] [-P zpoolname] [-S socket]\n", progname);
 	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
-	const char *cfn, *sfn, *zpoolcachefn, *zpoolname;
+	const char *cfn, *sfn, *zpoolname;
 	int c;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -69,15 +69,11 @@ main(int argc, char *argv[])
 		psc_fatalx("LNET_NETWORKS is not set");
 
 	zpoolname = NULL;
-	zpoolcachefn = NULL;
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLCTLSOCK;
-	while ((c = getopt(argc, argv, "C:f:P:S:")) != -1)
+	while ((c = getopt(argc, argv, "f:P:S:")) != -1)
 		switch (c) {
-		case 'C':
-			zpoolcachefn = optarg;
-			break;
 		case 'f':
 			cfn = optarg;
 			break;
@@ -109,7 +105,7 @@ main(int argc, char *argv[])
 	 */
 	do_init();
 
-//	if (zpoolcachefn && zpoolname)
+//	if (zpoolname)
 
 	rpc_initsvc();
 	slctlthr_main(sfn);
