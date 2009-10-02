@@ -4,7 +4,7 @@ include Makefile.path
 
 PROG=		msctl
 SRCS+=		msctl.c
-SRCS+=		repl.c
+SRCS+=		walk.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/ctlcli.c
 SRCS+=		${PFL_BASE}/psc_util/fmt.c
