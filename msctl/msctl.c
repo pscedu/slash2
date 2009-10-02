@@ -13,6 +13,7 @@
 #include "pathnames.h"
 
 #include "mount_slash/control.h"
+#include "msctl.h"
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "loglevels",	psc_ctl_packshow_loglevel },
@@ -35,13 +36,14 @@ struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 int psc_ctlcmd_nreqs = nitems(psc_ctlcmd_reqs);
 
 const char *progname;
+int recursive;
 
 __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HI] [-c cmd] [-h table] [-i iostat] [-L listspec]\n"
-	    "\t[-m meter] [-P pool] [-p param[=value]] [-S socket] [-s value]\n",
+	    "usage: %s [-HIR] [-c cmd] [-h table] [-i iostat] [-L listspec] [-m meter]\n"
+	    "\t[-P pool] [-p param[=value]] [-r file] [-S socket] [-s value] [-U file]\n",
 	    progname);
 	exit(1);
 }
@@ -55,7 +57,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	progname = argv[0];
 	sockfn = _PATH_MSCTLSOCK;
-	while ((c = getopt(argc, argv, "c:Hh:Ii:L:m:P:p:S:s:")) != -1)
+	while ((c = getopt(argc, argv, "c:Hh:Ii:L:m:P:p:Rr:S:s:U:")) != -1)
 		switch (c) {
 		case 'c':
 			psc_ctlparse_cmd(optarg);
@@ -84,11 +86,20 @@ main(int argc, char *argv[])
 		case 'p':
 			psc_ctlparse_param(optarg);
 			break;
+		case 'R':
+			recursive = 1;
+			break;
+		case 'r':
+			parse_repl(SCMT_ADDREPL, optarg);
+			break;
 		case 'S':
 			sockfn = optarg;
 			break;
 		case 's':
 			psc_ctlparse_show(optarg);
+			break;
+		case 'U':
+			parse_repl(SCMT_DELREPL, optarg);
 			break;
 		default:
 			usage();

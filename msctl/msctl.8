@@ -8,7 +8,7 @@
 .Nd slash file system mount daemon runtime control
 .Sh SYNOPSIS
 .Nm msctl
-.Op Fl HI
+.Op Fl HIR
 .Op Fl c Ar cmd
 .Op Fl h Ar table
 .Op Fl i Ar iostatspec
@@ -16,12 +16,14 @@
 .Op Fl m Ar meterspec
 .Op Fl P Ar poolspec
 .Op Fl p Ar paramspec
+.Op Fl r Ar file
 .Op Fl S Ar socket
 .Op Fl s Ar showspec
+.Op Fl U Ar file
 .Sh DESCRIPTION
 The
 .Nm
-utility examines and manipulates
+utility controls
 .Xr mount_slash 8
 behavior.
 .Pp
@@ -206,6 +208,18 @@ or by leaving
 .Ar thread-name
 unspecified altogether.
 .Pp
+.It Fl R
+Apply file operations such as replication requests recursively.
+.It Fl r Ar file
+Perform a file replication of the given
+.Ar file .
+The file contents residing on the master
+.Tn I/O
+node responsible for the file will be propagated to all other
+.Tn I/O
+nodes in the containing
+.Tn I/O
+system.
 .It Fl S Ar socket
 Specify an alternative socket file.
 The following tokens are replaced in the file name specified:
@@ -251,6 +265,11 @@ Query thread activity statistics.
 .El
 .Pp
 This option may be specified multiple times.
+.It Fl U Ar file
+Cancel an ongoing file replication of the given
+.Ar file .
+See
+.Fl r .
 .El
 .Ss Thread Specification
 Options which take
@@ -259,11 +278,11 @@ parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Cm slctlthr
+.It Cm mslctlthr
 Control thread
 .It Cm sllndthr Ns Ar %d
 Lustre TCP network device threads
-.It Cm slfsthr Ns Ar %d
+.It Cm msfsthr Ns Ar %d
 File system servicing threads
 .It Cm everyone
 All threads (default and available where applicable)
