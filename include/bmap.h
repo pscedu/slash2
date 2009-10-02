@@ -32,7 +32,6 @@ struct bmap_refresh {
  * XXX some of these elements may need to be moved into the bcm_info_pri
  *     area (as part of new structures?) so save space on the mds.
  */
-
 struct bmapc_memb {
 	sl_blkno_t		 bcm_blkno;	/* Bmap blk number        */
 	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info    */
@@ -42,7 +41,7 @@ struct bmapc_memb {
 	atomic_t		 bcm_opcnt;	/* pending opcnt           */
 	uint32_t		 bcm_mode;
 	psc_spinlock_t		 bcm_lock;
-	psc_waitq_t		 bcm_waitq;     /* XXX think about replacing 
+	psc_waitq_t		 bcm_waitq;     /* XXX think about replacing
 						   me with bcm_fcmh->fcmh_waitq
 						*/
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* fcm tree entry    */
@@ -68,7 +67,7 @@ enum bmap_common_modes {
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
 #define BMAP_ULOCK(b)		freelock(&(b)->bcm_lock)
 #define BMAP_RLOCK(b)		reqlock(&(b)->bcm_lock)
-#define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, lk)
+#define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
 
 #define DEBUG_BMAP(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
@@ -85,18 +84,17 @@ enum bmap_common_modes {
 #define bmap_set_accesstime(b)						\
 	clock_gettime(CLOCK_REALTIME, &(b)->bcm_ts)
 
-extern int
-bmapc_cmp(const void *, const void *);
+int	bmapc_cmp(const void *, const void *);
 
-extern struct bmapc_memb *
-bmap_lookup_locked(struct fidc_open_obj *, sl_blkno_t);
+struct bmapc_memb *
+	bmap_lookup_locked(struct fidc_open_obj *, sl_blkno_t);
 
-extern struct bmapc_memb * 
-bmap_lookup(struct fidc_membh *, sl_blkno_t);
+struct bmapc_memb *
+	bmap_lookup(struct fidc_membh *, sl_blkno_t);
 
-extern struct bmapc_memb * 
-bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n, 
-		void (*bmap_init_fn)(struct bmapc_memb *, struct fidc_membh *, sl_blkno_t));
+struct bmapc_memb *
+	bmap_lookup_add(struct fidc_membh *, sl_blkno_t,
+	    void (*)(struct bmapc_memb *, struct fidc_membh *, sl_blkno_t));
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmapc_cmp);
 
