@@ -20,12 +20,8 @@ struct fidc_mds_info {
 	void                     *fmdsi_data;
 };
 
-#define fcmh_2_inoh(f)							\
-	(&((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)->fmdsi_inodeh)
-
-#define fcmh_2_fmdsi(f)						\
-	((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)
-
+#define fcmh_2_fmdsi(f)	((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)
+#define fcmh_2_inoh(f)	(&fcmh_2_fmdsi(f)->fmdsi_inodeh)
 
 static inline void
 fmdsi_init(struct fidc_mds_info *mdsi, struct fidc_membh *fcmh, void *pri)
@@ -40,5 +36,7 @@ fmdsi_init(struct fidc_mds_info *mdsi, struct fidc_membh *fcmh, void *pri)
 
 struct fidc_mds_info *fidc_fid2fmdsi(slfid_t, struct fidc_membh **);
 struct fidc_mds_info *fidc_fcmh2fmdsi(struct fidc_membh *);
+
+int mds_fcmh_apply_fsize(struct fidc_membh *, uint64_t);
 
 #endif /* _FIDC_MDS_H_ */
