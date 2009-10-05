@@ -40,6 +40,7 @@
 sl_ios_id_t prefIOS = IOS_ID_ANY;
 const char *progname;
 char ctlsockfn[] = _PATH_MSCTLSOCK;
+char mountpoint[PATH_MAX];
 
 #if 0
 static void exit_handler(int sig)
@@ -65,6 +66,30 @@ static int set_signal_handler(int sig, void (*handler)(int))
 	return 0;
 }
 #endif
+
+/*
+ * translate_pathname - convert an absolute file system path name into
+ *	the relative location from the root of the mount point.
+ * @fn: absolute file path.
+ * @buf: value-result of the translated pathname.
+ * Returns Boolean true on success or errno code on failure.
+ */
+int
+translate_pathname(const char *fn, char buf[PATH_MAX])
+{
+	size_t len;
+
+	if (fn[0] != '/')
+		return (EINVAL);	/* require absolute paths */
+	if (realpath(fn, buf) == NULL)
+		return (errno);
+	len = strlen(mountpoint);
+	if (strncmp(buf, mountpoint, len))
+		return (EINVAL);	/* outside residual slashfs root */
+	if (buf[len] != '/' && buf[len] != '\0')
+		return (EINVAL);
+	return (0);
+}
 
 int
 checkcreds(const struct stat *stb, const struct slash_creds *cr, int xmode)
@@ -649,8 +674,8 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 }
 
 static void
-slash2fuse_getattr(__unusedx fuse_req_t req, fuse_ino_t ino,
-		   __unusedx struct fuse_file_info *fi)
+slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
+    __unusedx struct fuse_file_info *fi)
 {
 	struct fidc_membh *f;
 	struct slash_creds creds;
@@ -1034,7 +1059,8 @@ slash2fuse_readdir_helper(fuse_req_t req, fuse_ino_t ino, size_t size,
 }
 
 static int
-slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
+slash_lookuprpc(const struct slash_creds *cr, struct fidc_membh *p,
+    const char *name, struct slash_fidgen *fgp, struct stat *stb)
 {
 	struct pscrpc_request *rq;
 	struct srm_lookup_req *mq;
@@ -1049,7 +1075,7 @@ slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 	if (rc)
 		return (rc);
 
-	slash2fuse_getcred(req, &mq->creds);
+	mq->creds = *cr;
 	mq->pino = fcmh_2_fid(p);
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -1061,32 +1087,30 @@ slash2fuse_lookuprpc(fuse_req_t req, struct fidc_membh *p, const char *name)
 		 *  come to us with another request for the inode it won't
 		 *  yet be visible in the cache.
 		 */
-		slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p,
-				    &mq->creds, 0);
-		slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
+		slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, cr, 0);
+		*fgp = mp->fg;
+		*stb = mp->attr;
 	}
 
 	pscrpc_req_finished(rq);
 	return (rc);
 }
 
-static void
-slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
+int
+slash_lookup_cache(const struct slash_creds *cr, fuse_ino_t parent,
+    const char *name, struct slash_fidgen *fgp, struct stat *stb)
 {
 	int rc=0;
 	struct fidc_membh *p, *m;
-	struct slash_creds creds;
 
 	msfsthr_ensure();
 
 	p = m = NULL;
 
-	slash2fuse_getcred(req, &creds);
-
 	psc_infos(PSS_GEN, "name %s inode %"PRId64,
 		  name, parent);
 
-	rc = fidc_lookup_load_inode(parent, &creds, &p);
+	rc = fidc_lookup_load_inode(parent, cr, &p);
 	if (rc) {
 		/* Parent inode must exist in the cache.
 		 */
@@ -1107,13 +1131,13 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 		 *  determine attr age and possibly invoke an RPC to refresh
 		 *  the fcmh contents.
 		 */
-		rc = slash2fuse_stat(m, &creds);
+		rc = slash2fuse_stat(m, cr);
 		if (rc)
 			goto out;
-
-		slash2fuse_reply_entry(req, fcmh_2_fgp(m), fcmh_2_attrp(m));
+		*fgp = *fcmh_2_fgp(m);
+		*stb = *fcmh_2_attrp(m);
 	} else
-		rc = slash2fuse_lookuprpc(req, p, name);
+		rc = slash_lookuprpc(cr, p, name, fgp, stb);
 
 	/* Drop the parent's refcnt.
 	 */
@@ -1122,8 +1146,23 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 		fidc_membh_dropref(p);
 	if (m)
 		fidc_membh_dropref(m);
+	return (rc);
+}
+
+static void
+slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
+{
+	struct slash_fidgen fg;
+	struct slash_creds cr;
+	struct stat stb;
+	int rc;
+
+	slash2fuse_getcred(req, &cr);
+	rc = slash_lookup_cache(&cr, parent, name, &fg, &stb);
 	if (rc)
 		fuse_reply_err(req, rc);
+	else
+		slash2fuse_reply_entry(req, &fg, &stb);
 }
 
 static void
@@ -1730,7 +1769,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char c, mp[PATH_MAX], *nc_mp, *cfg = _PATH_SLASHCONF;
+	char c, *nc_mp, *cfg = _PATH_SLASHCONF;
 	int rc, unmount;
 
 	pfl_init();
@@ -1780,10 +1819,10 @@ main(int argc, char *argv[])
 			psc_error("%s", cmdbuf);
 	}
 	/* canonicalize mount path */
-	if (realpath(nc_mp, mp) == NULL)
+	if (realpath(nc_mp, mountpoint) == NULL)
 		psc_fatal("realpath %s", nc_mp);
 
-	if (msl_fuse_lowlevel_mount(mp))
+	if (msl_fuse_lowlevel_mount(mountpoint))
 		return (-1);
 
 #if 0

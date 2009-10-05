@@ -10,14 +10,16 @@
 #include "psc_ds/tree.h"
 #include "psc_rpc/service.h"
 
-#include "slconfig.h"
-#include "fidcache.h"
-#include "offtree.h"
-#include "inode.h"
 #include "bmap.h"
+#include "fidcache.h"
+#include "inode.h"
+#include "msl_fuse.h"
+#include "offtree.h"
+#include "slconfig.h"
 
 struct pscrpc_request;
 
+/* thread types */
 #define MSTHRT_CTL	0	/* control interface */
 #define MSTHRT_FS	1	/* fuse filesystem syscall handlers */
 #define MSTHRT_RCM	2	/* service RPC reqs for client from MDS */
@@ -29,17 +31,18 @@ struct pscrpc_request;
 #define MSTHRT_FUSE	8	/* fuse internal manager */
 #define MSTHRT_BMAPFLSH	9	/* async buffer thread */
 
-
+/* async RPC pointers */
 #define MSL_IO_CB_POINTER_SLOT 1
 #define MSL_WRITE_CB_POINTER_SLOT 2
 #define MSL_OFTRQ_CB_POINTER_SLOT 3
 
+/* I/O flags */
 #define MSL_READ 0
 #define MSL_WRITE 1
 
+/* file handle entry access flags */
 #define FHENT_READ	(1 << 0)
 #define FHENT_WRITE	(1 << 1)
-
 
 struct msrcm_thread {
 	struct pscrpc_thread	 mrcm_prt;
@@ -52,7 +55,7 @@ struct msfs_thread {
  *
  */
 struct msl_fbr {
-	struct bmapc_memb		*mfbr_bmap;    /* the bmap       */
+	struct bmapc_memb		*mfbr_bmap;
 	atomic_t			 mfbr_wr_ref;
 	atomic_t			 mfbr_rd_ref;
 	SPLAY_ENTRY(msl_fbr)		 mfbr_tentry;
@@ -71,12 +74,12 @@ struct io_server_conn {
 	struct slashrpc_cservice	*isc_csvc;
 };
 
-void rpc_initsvc(void);
-int msrmc_connect(const char *);
-int msric_connect(const char *);
-int msrcm_handler(struct pscrpc_request *);
+void	rpc_initsvc(void);
+int	msrmc_connect(const char *);
+int	msric_connect(const char *);
+int	msrcm_handler(struct pscrpc_request *);
 
-void *msctlthr_begin(void *);
+void	*msctlthr_begin(void *);
 
 struct slashrpc_cservice *ion_get(void);
 
@@ -93,11 +96,18 @@ int	msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
 
-struct msl_fhent *msl_fhent_new(struct fidc_membh *);
+struct msl_fhent *
+	msl_fhent_new(struct fidc_membh *);
 
-void mseqpollthr_spawn(void);
-void msctlthr_spawn(void);
-void mstimerthr_spawn(void);
+void	mseqpollthr_spawn(void);
+void	msctlthr_spawn(void);
+void	mstimerthr_spawn(void);
+
+int	slash_lookup_cache(const struct slash_creds *, fuse_ino_t, const char *,
+	    struct slash_fidgen *, struct stat *);
+
+int	checkcreds(const struct stat *, const struct slash_creds *, int);
+int	translate_pathname(const char *, char []);
 
 #define mds_import	(mds_csvc->csvc_import)
 
