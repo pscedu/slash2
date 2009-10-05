@@ -11,7 +11,6 @@
 #include "mdsio_zfs.h"
 #include "mdslog.h"
 
-
 static int
 mds_repl_load_locked(struct slash_inode_handle *i)
 {
@@ -20,8 +19,10 @@ mds_repl_load_locked(struct slash_inode_handle *i)
 
 	psc_assert(!(i->inoh_flags & INOH_HAVE_EXTRAS));
 
-	i->inoh_flags |= INOH_LOAD_EXTRAS;
-	i->inoh_extras = PSCALLOC(sizeof(struct slash_inode_extras_od));
+	if ((i->inoh_flags & INOH_LOAD_EXTRAS) == 0) {
+		i->inoh_flags |= INOH_LOAD_EXTRAS;
+		i->inoh_extras = PSCALLOC(sizeof(struct slash_inode_extras_od));
+	}
 
 	if ((rc = mdsio_zfs_inode_extras_read(i)))
 		return (rc);
