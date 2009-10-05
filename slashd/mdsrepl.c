@@ -20,12 +20,12 @@ mds_repl_load_locked(struct slash_inode_handle *i)
 
 	psc_assert(!(i->inoh_flags & INOH_HAVE_EXTRAS));
 
-	i->inoh_flags |= INOH_LOAD_EXTRAS;	
+	i->inoh_flags |= INOH_LOAD_EXTRAS;
 	i->inoh_extras = PSCALLOC(sizeof(struct slash_inode_extras_od));
 
 	if ((rc = mdsio_zfs_inode_extras_read(i)))
 		return (rc);
-	
+
 	psc_crc_calc(&crc, i->inoh_extras, INOX_OD_CRCSZ);
 	if (crc != i->inoh_extras->inox_crc) {
 		DEBUG_INOH(PLL_WARN, i, "failed crc for extras");
@@ -37,7 +37,7 @@ mds_repl_load_locked(struct slash_inode_handle *i)
 	return (0);
 }
 
-int 
+int
 mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 {
 	uint32_t j=0, k;
@@ -52,21 +52,21 @@ mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 			goto add_repl;
 	}
 
-	for (j=0, k=0, repl=i->inoh_ino.ino_repls; j < i->inoh_ino.ino_nrepls; 
+	for (j=0, k=0, repl=i->inoh_ino.ino_repls; j < i->inoh_ino.ino_nrepls;
 	     j++, k++) {
 		if (j >= INO_DEF_NREPLS) {
-			/* The first few replicas are in the inode itself, 
+			/* The first few replicas are in the inode itself,
 			 *   the rest are in the extras block;
 			 */
 			if (!(i->inoh_flags & INOH_HAVE_EXTRAS))
-                                if (!(rc = mds_repl_load_locked(i)))
+				if (!(rc = mds_repl_load_locked(i)))
 					goto out;
 
 			repl = i->inoh_extras->inox_repls;
 			k = 0;
 		}
 
-		DEBUG_INOH(PLL_INFO, i, "rep%u[%u] == %u", 
+		DEBUG_INOH(PLL_INFO, i, "rep%u[%u] == %u",
 			   k, repl[k].bs_id, ios);
 		if (repl[k].bs_id == ios) {
 			rc = j;
@@ -77,7 +77,7 @@ mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 	 *   specified, else return.
 	 */
 	if (rc == -ENOENT && add) {
-	add_repl:
+ add_repl:
 		psc_assert(i->inoh_ino.ino_nrepls == j);
 
 		if (i->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS) {
@@ -85,7 +85,7 @@ mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 			rc = -ENOSPC;
 			goto out;
 		}
-		
+
 		if (j > INO_DEF_NREPLS) {
 			/* Note that both the inode structure and replication
 			 *  table must be synced.
@@ -102,10 +102,10 @@ mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 
 		repl[k].bs_id = ios;
 		i->inoh_ino.ino_nrepls++;
-		
-		DEBUG_INOH(PLL_INFO, i, "add IOS(%u) to repls, replica %d", 
+
+		DEBUG_INOH(PLL_INFO, i, "add IOS(%u) to repls, replica %d",
 			   ios, i->inoh_ino.ino_nrepls-1);
-		
+
 		mds_inode_addrepl_log(i, ios, j);
 
 		rc = j;
@@ -125,11 +125,11 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 
 	BMAP_LOCK_ENSURE(bmap);
 	/* Find our replica id else add ourselves.
-         */
-	j = mds_repl_ios_lookup(fcmh_2_inoh(bmap->bcm_fcmh), 
+	 */
+	j = mds_repl_ios_lookup(fcmh_2_inoh(bmap->bcm_fcmh),
 				sl_glid_to_resid(ion), 1);
-	
-        if (j < 0) 
+
+	if (j < 0)
 		return (j);
 
 	mds_bmapod_dump(bmap);
@@ -138,17 +138,17 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 	for (r=0, k=0; k < SL_REPLICA_NBYTES; k++, mask=0)
 		for (pos=0; pos < NBBY; pos+=SL_BITS_PER_REPLICA, r++) {
 
-			mask = (uint8_t)(SL_REPLICA_MASK << pos);	
+			mask = (uint8_t)(SL_REPLICA_MASK << pos);
 
-			if (r == j) {			
+			if (r == j) {
 				if ((b[k] & mask) == SL_REPL_ACTIVE)
-					DEBUG_BMAP(PLL_INFO, bmap, 
+					DEBUG_BMAP(PLL_INFO, bmap,
 						   "repl[%d] ion(%u) exists",
 						   r, ion);
 				else {
 					b[k] |= (mask & SL_REPL_ACTIVE);
-					DEBUG_BMAP(PLL_NOTIFY, bmap, 
-						   "repl[%d] ion(%u) add", 
+					DEBUG_BMAP(PLL_NOTIFY, bmap,
+						   "repl[%d] ion(%u) add",
 						   r, ion);
 				}
 
@@ -181,11 +181,11 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 
 
 #if 0
-__static int 
+__static int
 mds_repl_xattr_load_locked(struct slash_inode_handle *i)
 {
 	char fidfn[FID_MAX_PATH];
-        size_t sz;
+	size_t sz;
 	int rc;
 
 	DEBUG_INOH(PLL_INFO, i, "trying to load replica table");
@@ -208,11 +208,11 @@ mds_repl_xattr_load_locked(struct slash_inode_handle *i)
 		goto fail;
 
 	} else {
-		i->inoh_flags |= INOH_HAVE_REPS;		
+		i->inoh_flags |= INOH_HAVE_REPS;
 		DEBUG_INOH(PLL_INFO, i, "replica table loaded");
 	}
 	return (0);
-	
+
  fail:
 	DEBUG_INOH(PLL_INFO, i, "replica table load failed");
 	return (rc);
