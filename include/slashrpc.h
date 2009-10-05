@@ -106,6 +106,7 @@
 /* Slash RPC message types. */
 enum {
 	SRMT_ACCESS,
+	SRMT_ADDREPLRQ,
 	SRMT_BMAPCHMODE,
 	SRMT_BMAPCRCWRT,
 	SRMT_BMAPDIO,
@@ -113,6 +114,7 @@ enum {
 	SRMT_CHOWN,
 	SRMT_CONNECT,
 	SRMT_CREATE,
+	SRMT_DELREPLRQ,
 	SRMT_DESTROY,
 	SRMT_DISCONNECT,
 	SRMT_FGETATTR,
@@ -471,6 +473,11 @@ struct srm_setattr_req {
 
 struct srm_statfs_req {
 	struct slash_creds	creds;
+};
+
+struct srm_addreplrq_req {
+	uint64_t		ino;
+	sl_blkno_t		bmapno;		/* bmap to replicate or -1 for all */
 };
 
 struct srm_statfs_rep {
