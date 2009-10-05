@@ -309,7 +309,7 @@ enum oft_iov_flags {
 	} while (0)
 
 struct offtree_memb {
-	psc_waitq_t           oft_waitq;  /* block here on OFT_GETPNDG */
+	struct psc_waitq      oft_waitq;  /* block here on OFT_GETPNDG */
 	psc_spinlock_t        oft_lock;
 	u32                   oft_flags;
 	atomic_t              oft_ref;    /* hb or nchildren     */

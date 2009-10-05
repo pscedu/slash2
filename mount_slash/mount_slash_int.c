@@ -1628,7 +1628,7 @@ __static int
 msl_pages_blocking_load(struct offtree_req *r)
 {
 	struct offtree_fill *f = &r->oftrq_fill;
-	psc_waitq_t *w;
+	struct psc_waitq *w;
 	int i, rc=0;
 
 	psc_assert(!(r->oftrq_op & OFTREQ_OP_DIO));

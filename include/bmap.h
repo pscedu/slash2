@@ -41,7 +41,7 @@ struct bmapc_memb {
 	atomic_t		 bcm_opcnt;	/* pending opcnt           */
 	uint32_t		 bcm_mode;
 	psc_spinlock_t		 bcm_lock;
-	psc_waitq_t		 bcm_waitq;     /* XXX think about replacing
+	struct psc_waitq	 bcm_waitq;     /* XXX think about replacing
 						   me with bcm_fcmh->fcmh_waitq
 						*/
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* fcm tree entry    */
