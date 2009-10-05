@@ -723,7 +723,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	p = c = NULL;
 	rq = NULL;
 
-	rc = EOPNOTSUPP;
+	rc = ENOTSUP;
 	goto out;
 
 	if (strlen(newname) > NAME_MAX) {
@@ -931,7 +931,7 @@ slash2fuse_mknod_helper(fuse_req_t req,
 {
 	msfsthr_ensure();
 
-	fuse_reply_err(req, EOPNOTSUPP);
+	fuse_reply_err(req, ENOTSUP);
 }
 
 static int
@@ -1537,7 +1537,7 @@ slash2fuse_fsync(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino,
 {
 	msfsthr_ensure();
 
-	return (EOPNOTSUPP);
+	return (ENOTSUP);
 }
 
 static void
@@ -1554,7 +1554,7 @@ static void
 slash2fuse_destroy(__unusedx void *userdata)
 {
 	//do an unmount of slash2
-	//fuse_reply_err(req, EOPNOTSUPP);
+	//fuse_reply_err(req, ENOTSUP);
 }
 
 void
