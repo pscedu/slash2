@@ -1,11 +1,11 @@
 09/23/09
 * Sliod has too many open files but reports success anyway to mount_slash.
 * Sliod runs out of space in filesystem and returns from an rpc early (client sees the rc -28)
-	the problem is that other sliod threads are blocked on a waitq and are never woken 
+	the problem is that other sliod threads are blocked on a waitq and are never woken
 	up.  Need a way to deal with the failure mode.
 * Need a method for cleaning up sliod inodes, they're sitting around in the cache dirty (and
 	hence, unreclaimable).
-* It would seem that generation numbering is needed in the slfidns, still not sure what 
+* It would seem that generation numbering is needed in the slfidns, still not sure what
 	to do about deletes or truncates.
 
 * While running a small file / create intensive fio test, I find that most of the threads
@@ -24,39 +24,39 @@ Thread 4 (Thread 0x50fa7940 (LWP 31008)):
 #9  0x000000331c206367 in start_thread () from /lib64/libpthread.so.0
 #10 0x000000331bad309d in clone () from /lib64/libc.so.6
 
-Actually, if all of the operations performed in slash2fuse_release could be done 
-asynchronously then performance would be greatly improved.  
+Actually, if all of the operations performed in slash2fuse_release could be done
+asynchronously then performance would be greatly improved.
 
 Well, after increasing the number of fuse threads to 48 I don't see the entire set blocked
 in release but I don't see good performance for 'ls -al'.
 
 * Namespace Disconnection Problem
   The namespace must be protected from a rename operation where a parent directory
-  is renamed into one of its children.  Supposedly a global rename lock is used in 
+  is renamed into one of its children.  Supposedly a global rename lock is used in
   today's filesystems which locks the entire namespace and looks analyzes the paths to ensure
-  that a rename is source is not a parent of the target.  I think this is not a problem 
-  using directory hardlinks since the source's children may be determined via the immns 
+  that a rename is source is not a parent of the target.  I think this is not a problem
+  using directory hardlinks since the source's children may be determined via the immns
   dir hardlink.  EEB seems to think otherwise..  I think the issue is where the ".." directory
   of the destination points.  If it points to the immns then we're in trouble.
 
 
 * Truncate Implementation
-  Non O_TRUNC but otherwise aligned trunc operations should be fairly simple to implement.  
+  Non O_TRUNC but otherwise aligned trunc operations should be fairly simple to implement.
   Here two things are required:
-  	 1. Zero out the bmap descriptors within the metafile.
+	 1. Zero out the bmap descriptors within the metafile.
 	 2. Record the reclaimable regions so the the IONs may also reclaim that space.
-    
-  The question is, how do we deal with unaligned truncates?  We need some way to denote that 
+
+  The question is, how do we deal with unaligned truncates?  We need some way to denote that
   the bmap crc is no longer valid.  Actually such a construct is probably needed in other places
   as well.  On truncate, the value of ino_lblk needs to be reset as does ino_lblk_sz.
 
 
-* Fidcache Generation Numbering	
+* Fidcache Generation Numbering
 	Fidcache must support generation numbers.
 		. hash table code should be modified to add a cmp function.
 		. ambiguous inode lookups should prefer the highest gen #
 
-	On the fidcache generation # subject.  Implementing the FC with gen #'s is 
+	On the fidcache generation # subject.  Implementing the FC with gen #'s is
 	awkward because fuse does not provide the generation number except when it
 	provides an 'fi'.  This means that the gen cannot be used for hash table lookups
 	taking place on behalf of operations like: create, mkdir, open,	etc.
@@ -65,10 +65,10 @@ in release but I don't see good performance for 'ls -al'.
 	[1233201864:695906 msfsthr9:__fidc_lookup_fg:320] [assert] fcmh_2_gen(tmp) != FID_ANY
 
 	Not seeing the above on the server..
-	
+
 
 * Running out of FCMH's and threads hanging in fidc_get()
-	On this deadlock.. check the refcnts on the fcmh's, this may be a 
+	On this deadlock.. check the refcnts on the fcmh's, this may be a
 		true case of exhaustion.
 		- Refcnts checked out to be ok.
 
@@ -126,13 +126,13 @@ mds.c
 		mexpfcm
 		fidc_mds_info to f->fcmh_fcoo->fcoo_pri
 			. this wasn't being freed in mexpfcm_cfd_free()
-	
+
 
 * fcmh_2_gen(tmp) != FID_ANY __fidc_lookup_fg:320
-	Look at this assert.  I'm not convinced that fidc_lookup_load_inode() 
+	Look at this assert.  I'm not convinced that fidc_lookup_load_inode()
 	is useful.  It occasionally lets inodes into the cache without a proper
 	generation number.  Which then causes this assert.
-		
+
 	unique: 94876, opcode: UNLINK (10), nodeid: 379151, insize: 65
 
 	[1233209602:863246 msfsthr8:__fidc_lookup_inode:480]  fcmh@0x6f5a70 fcoo@(nil) f
@@ -144,47 +144,11 @@ D_ANY
 
 
 	Look at removing load_inode alltogether.  Instead, maybe do an extra
-	ref on lookup so that proceeding operations are guaranteed to have 
+	ref on lookup so that proceeding operations are guaranteed to have
 	their inodes cached.
 
 
-* rename is borked!
-
-[Switching to Thread 1216416064 (LWP 20298)]
-0x00002b67bf7031b5 in raise () from /lib64/libc.so.6
-(gdb) bt
-#0  0x00002b67bf7031b5 in raise () from /lib64/libc.so.6
-#1  0x00002b67bf704b20 in abort () from /lib64/libc.so.6
-#2  0x000000000044ef18 in psclogv (
-    fn=0x49a238 "..//..//psc_fsutil_libs/include/psc_util/lock.h", 
-    func=0x49a230 "_tands", line=211, subsys=4, level=0, options=0, 
-    fmt=0x49a268 "already holding the lock", ap=0x4880fcb0)
-    at ..//..//psc_fsutil_libs/psc_util/log.c:225
-#3  0x000000000044f150 in _psc_fatal (
-    fn=0x49a238 "..//..//psc_fsutil_libs/include/psc_util/lock.h", 
-    func=0x49a230 "_tands", line=211, subsys=4, level=0, options=0, 
-    fmt=0x49a268 "already holding the lock")
-    at ..//..//psc_fsutil_libs/psc_util/log.c:246
-#4  0x000000000041e0bc in _tands (s=0x6cd2b8)
-    at ..//..//psc_fsutil_libs/include/psc_util/lock.h:211
-#5  0x000000000041eab0 in trylock (s=0x6cd2b8)
-    at ..//..//psc_fsutil_libs/include/psc_util/lock.h:242
-#6  0x000000000041fa4f in fidc_child_rename (op=1, 
-    oldname=0x2aaaaad0e040 "FIO_TEST_ROOT", np=1, 
-    newname=0x2aaaaad0e04e "FIO_TEST_ROOT.old") at fidc_client.c:277
-#7  0x0000000000410ca0 in slash2fuse_rename (req=0x7e0dc0, parent=1, 
-    name=0x2aaaaad0e040 "FIO_TEST_ROOT", newparent=1, 
-    newname=0x2aaaaad0e04e "FIO_TEST_ROOT.old") at main.c:1208
-#8  0x0000000000410e85 in slash2fuse_rename_helper (req=0x7e0dc0, parent=1, 
-    name=0x2aaaaad0e040 "FIO_TEST_ROOT", newparent=1, 
-    newname=0x2aaaaad0e04e "FIO_TEST_ROOT.old") at main.c:1239
-#9  0x00000000004036cc in slash2fuse_listener_loop (arg=0x0)
-    at fuse_listener.c:260
-#10 0x00002b67bf4bf305 in start_thread () from /lib64/libpthread.so.0
-#11 0x00002b67bf7a050d in clone () from /lib64/libc.so.6
-#12 0x0000000000000000 in ?? ()
-(gdb) 
-
-* Bug #14
-
 - rename ios to ion
+- use a sliding window to track valid cfd's and remove them from the window
+  once they are CLOSE()'d
+
