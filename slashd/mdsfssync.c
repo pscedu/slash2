@@ -11,9 +11,9 @@
 
 #include "jflush.h"
 #include "slashdthr.h"
+#include "mdslog.h"
 
 list_cache_t dirtyMdsData;
-extern struct psc_journal *mdsJournal;
 
 __static void *
 mdsfssyncthr_begin(__unusedx void *arg)
@@ -32,16 +32,16 @@ mdsfssyncthr_begin(__unusedx void *arg)
 		psc_assert(jfi->jfi_xh);
 		psc_assert(jfi->jfi_state & JFI_HAVE_XH);
 		psc_assert(jfi->jfi_state & JFI_QUEUED);
-		
+
 		if (jfi->jfi_state & JFI_BUSY) {
 			freelock(&jfi->jfi_lock);
-			lc_addtail(&dirtyMdsData, jfi);			
+			lc_addtail(&dirtyMdsData, jfi);
 			psc_info("fssync jfi(%p) xh(%p) BUSY",
 				 jfi, xh);
 			usleep(100);
 			continue;
 		}
-		
+
 		/* Copy the data items so that the lock may be released
 		 *  prior to the sync function being run.
 		 */
@@ -74,8 +74,8 @@ mdsfssyncthr_begin(__unusedx void *arg)
 void
 mdsfssync_init(void)
 {
-        lc_reginit(&dirtyMdsData, struct jflush_item, jfi_lentry,
+	lc_reginit(&dirtyMdsData, struct jflush_item, jfi_lentry,
 		   "dirtyMdsData");
-        pscthr_init(SLTHRT_MDSFSSYNC, 0, mdsfssyncthr_begin,
-	    NULL, 0, "mdsfssyncthr");
+	pscthr_init(SLTHRT_FSSYNC, 0, mdsfssyncthr_begin,
+	    NULL, 0, "slfssyncthr");
 }

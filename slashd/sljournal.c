@@ -15,20 +15,6 @@
 #include "sb.h"
 
 #if 0
-sl_inum_t
-slmds_get_inum(void)
-{
-	struct slmds_jent_inum *sji;
-
-	if (++sbm.sbm_sbs->sbs_inum % SLMDS_INUM_ALLOC_SZ == 0) {
-		sji = pjournal_alloclog(&sbm.sbm_pj);
-		sji->sji_inum = sbm.sbm_sbs->sbs_inum;
-		pjournal_logwrite(&sbm.sbm_pj, SLJ_MDS_PJET_INUM, sji);
-		psc_freel(sji, PJ_PJESZ(&sbm.sbm_pj));
-	}
-	return (sbm.sbm_sbs->sbs_inum);
-}
-
 void
 slmds_journal_recover(void)
 {

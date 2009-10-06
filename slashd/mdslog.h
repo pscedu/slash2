@@ -26,4 +26,6 @@ void mds_bmap_sync(void *);
 void mds_inode_addrepl_log(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
 void mds_inode_sync(void *);
 
+extern struct psc_journal *mdsJournal;
+
 #endif /* _SLASHD_MDSLOG_H_ */

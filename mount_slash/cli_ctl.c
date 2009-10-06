@@ -122,7 +122,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	fuse_ino_t pino;
 	int rv, rc;
 
-	if (strcmp(mrq->mrq_fn, ":") == 0) {
+	if (strcmp(mrq->mrq_fn, "") == 0) {
 		fg.fg_fid = REPLRQ_FID_ALL;
 		goto issue;
 	}

@@ -14,7 +14,7 @@ struct pscrpc_export;
 
 struct slashrpc_export {
 	struct pscrpc_export		*exp;
-	u64				 nextcfd;
+	uint64_t			 nextcfd;
 	struct cfdtree			 cfdtree;
 	SPLAY_ENTRY(slashrpc_export)	 entry;
 };
@@ -25,9 +25,12 @@ int	sexpcmp(const void *, const void *);
 
 void	rpc_initsvc(void);
 
-int slrmc_handler(struct pscrpc_request *);
-int slrmi_handler(struct pscrpc_request *);
-int slrmm_handler(struct pscrpc_request *);
+int	slrmc_handler(struct pscrpc_request *);
+int	slrmi_handler(struct pscrpc_request *);
+int	slrmm_handler(struct pscrpc_request *);
+
+int	slrcm_issue_getreplst(struct pscrpc_import *,
+	    slfid_t, sl_blkno_t, int32_t, char repls[], int);
 
 SPLAY_HEAD(sexptree, slashrpc_export);
 SPLAY_PROTOTYPE(sexptree, slashrpc_export, entry, sexpcmp);

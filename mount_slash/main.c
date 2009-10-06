@@ -17,6 +17,7 @@
 #include <unistd.h>
 
 #include "pfl/pfl.h"
+#include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/cdefs.h"
@@ -41,6 +42,9 @@ sl_ios_id_t prefIOS = IOS_ID_ANY;
 const char *progname;
 char ctlsockfn[] = _PATH_MSCTLSOCK;
 char mountpoint[PATH_MAX];
+
+struct vbitmap	*msfsthr_uniqidmap;
+psc_spinlock_t	 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
 
 #if 0
 static void exit_handler(int sig)
@@ -130,20 +134,32 @@ msfsthr_teardown(void *arg)
 {
 	struct msfs_thread *mft = arg;
 
+	spinlock(&msfsthr_uniqidmap_lock);
+	vbitmap_unset(msfsthr_uniqidmap, mft->mft_uniqid);
+	vbitmap_setnextpos(msfsthr_uniqidmap, 0);
+	freelock(&msfsthr_uniqidmap_lock);
+
 	free(mft);
 }
 
 static void
 msfsthr_ensure(void)
 {
-	static atomic_t thrid; /* XXX maintain bitmap for transiency */
+	struct msfs_thread *mft;
 	struct psc_thread *thr;
+	size_t id;
 
 	thr = pscthr_get_canfail();
 	if (thr == NULL) {
+		spinlock(&msfsthr_uniqidmap_lock);
+		if (vbitmap_next(msfsthr_uniqidmap, &id) == -1)
+			psc_fatal("vbitmap_next");
+		freelock(&msfsthr_uniqidmap_lock);
+
 		thr = pscthr_init(MSTHRT_FS, PTF_FREE, NULL,
-		    msfsthr_teardown, sizeof(struct msfs_thread),
-		    "msfsthr%d", atomic_inc_return(&thrid) - 1);
+		    msfsthr_teardown, sizeof(*mft), "msfsthr%02zu", id);
+		mft = thr->pscthr_private;
+		mft->mft_uniqid = id;
 		pscthr_setready(thr);
 	}
 	psc_assert(thr->pscthr_type == MSTHRT_FS);
@@ -1661,6 +1677,8 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 
 	slFsops = PSCALLOC(sizeof(*slFsops));
 	slFsops->slfsop_getattr = slash2fuse_stat;
+
+	msfsthr_uniqidmap = vbitmap_newf(0, PVBF_AUTO);
 
 	return (NULL);
 }

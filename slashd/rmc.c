@@ -34,6 +34,7 @@
 #include "mdsio_zfs.h"
 #include "pathnames.h"
 #include "slashd.h"
+#include "slashdthr.h"
 #include "slashexport.h"
 #include "slashrpc.h"
 
@@ -687,9 +688,17 @@ slrmc_handle_getreplst(struct pscrpc_request *rq)
 {
 	struct srm_replst_req *mq;
 	struct srm_replst_rep *mp;
+	size_t id;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
+	spinlock(&slrcmthr_uniqidmap_lock);
+	if (vbitmap_next(slrcmthr_uniqidmap, &id) == -1)
+		psc_fatal("vbitmap_next");
+	freelock(&slrcmthr_uniqidmap_lock);
+
+	pscthr_init(SLTHRT_RCM, 0, slrcmthr_main,
+	    NULL, 0, "slrcmthr%02zu", id);
 	return (0);
 }
 

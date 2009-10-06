@@ -45,10 +45,11 @@ struct pscrpc_request;
 #define FHENT_WRITE	(1 << 1)
 
 struct msrcm_thread {
-	struct pscrpc_thread	 mrcm_prt;
+	struct pscrpc_thread		 mrcm_prt;
 };
 
 struct msfs_thread {
+	size_t				 mft_uniqid;
 };
 
 /* msl_fbr (mount_slash fhent bmap ref).
