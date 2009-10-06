@@ -109,7 +109,7 @@ fidc_child_free_plocked(struct fidc_child *fcc)
 		   "child_empty=%d",
 		   fcc, fcc->fcc_name, fcc->fcc_parent,
 		   ((c->fcmh_state & FCMH_ISDIR) ?
-                    psclist_empty(&c->fcmh_children) : -1));
+		    psclist_empty(&c->fcmh_children) : -1));
 	/* Verify that no children are hanging about.
 	 */
 	if (c->fcmh_state & FCMH_ISDIR)
@@ -341,11 +341,11 @@ fidc_child_cmp(const void *x, const void *y)
 
 	if (a->
 
-        if (a->bcm_blkno > b->bcm_blkno)
-                return (1);
-        else if (a->bcm_blkno < b->bcm_blkno)
-                return (-1);
-        return (0);
+	if (a->bcm_blkno > b->bcm_blkno)
+		return (1);
+	else if (a->bcm_blkno < b->bcm_blkno)
+		return (-1);
+	return (0);
 }
 
 __static SPLAY_GENERATE(bmap_cache, bmapc_memb, bcm_tentry, bmapc_cmp);
