@@ -254,7 +254,7 @@ fidc_child_reap_cb(struct fidc_membh *f)
 		struct fidc_membh *p=fcc->fcc_parent;
 
 		psc_assert(p);
-		/* This tryeqlock technically violates lock ordering
+		/* This trylock technically violates lock ordering
 		 *  (parent / child / fcc) which is why we bail if the
 		 *  parent lock cannot be obtained without blocking.
 		 */
