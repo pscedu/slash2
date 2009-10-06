@@ -3,8 +3,9 @@
 include Makefile.path
 
 PROG=		sliod
-SRCS+=		control.c
-SRCS+=		io_slcfg.c
+SRCS+=		iod_ctl.c
+SRCS+=		iod_slcfg.c
+SRCS+=		iod_timer.c
 SRCS+=		main.c
 SRCS+=		ric.c
 SRCS+=		rii.c
@@ -14,7 +15,6 @@ SRCS+=		rpc.c
 SRCS+=		sliod_int.c
 SRCS+=		slvr.c
 SRCS+=		slvr_worker.c
-SRCS+=		timer.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
 SRCS+=		${SLASH_BASE}/share/fdbuf.c
