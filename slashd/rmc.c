@@ -31,10 +31,11 @@
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "mdsexpc.h"
+#include "mdsio_zfs.h"
 #include "pathnames.h"
+#include "slashd.h"
 #include "slashexport.h"
 #include "slashrpc.h"
-#include "mdsio_zfs.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
@@ -270,7 +271,6 @@ slrmc_create(struct pscrpc_request *rq)
 				      mq->mode, mq->name, &fg,
 				      &mp->attr, &data);
 	if (!mp->rc) {
-		extern struct cfdops mdsCfdOps;
 		struct cfdent *cfd=NULL;
 
 		mp->rc = slrmc_inode_cacheput(&fg, &mp->attr, &mq->creds);
@@ -312,7 +312,6 @@ slrmc_open(struct pscrpc_request *rq)
 		 mq->ino, mp->rc);
 
 	if (!mp->rc) {
-		extern struct cfdops mdsCfdOps;
 		struct cfdent *cfd=NULL;
 
 		mp->rc = slrmc_inode_cacheput(&fg, &mp->attr, &mq->creds);
@@ -356,7 +355,6 @@ slrmc_opendir(struct pscrpc_request *rq)
 	psc_info("zfs opendir data (%p)", data);
 
 	if (!mp->rc) {
-		extern struct cfdops mdsCfdOps;
 		struct cfdent *cfd;
 
 		mp->rc = slrmc_inode_cacheput(&fg, &stb, &mq->creds);
@@ -661,6 +659,40 @@ slrmc_unlink(struct pscrpc_request *rq, int isfile)
 
 	RETURN(0);
 }
+
+static int
+slrmc_handle_addreplrq(struct pscrpc_request *rq)
+{
+	struct srm_generic_rep *mp;
+	struct srm_replrq_req *mq;
+
+	RSX_ALLOCREP(rq, mq, mp);
+
+	return (0);
+}
+
+static int
+slrmc_handle_delreplrq(struct pscrpc_request *rq)
+{
+	struct srm_generic_rep *mp;
+	struct srm_replrq_req *mq;
+
+	RSX_ALLOCREP(rq, mq, mp);
+
+	return (0);
+}
+
+static int
+slrmc_handle_getreplst(struct pscrpc_request *rq)
+{
+	struct srm_replst_req *mq;
+	struct srm_replst_rep *mp;
+
+	RSX_ALLOCREP(rq, mq, mp);
+
+	return (0);
+}
+
 int
 slrmc_handler(struct pscrpc_request *rq)
 {
@@ -670,7 +702,8 @@ slrmc_handler(struct pscrpc_request *rq)
 	case SRMT_ACCESS:
 		rc = slrmc_access(rq);
 		break;
-	case SRMT_BMAPCHMODE:
+	case SRMT_ADDREPLRQ:
+		rc = slrmc_handle_addreplrq(rq);
 		break;
 	case SRMT_CONNECT:
 		rc = slrmc_connect(rq);
@@ -678,7 +711,8 @@ slrmc_handler(struct pscrpc_request *rq)
 	case SRMT_CREATE:
 		rc = slrmc_create(rq);
 		break;
-	case SRMT_DESTROY:	/* client has unmounted */
+	case SRMT_DELREPLRQ:
+		rc = slrmc_handle_addreplrq(rq);
 		break;
 	case SRMT_GETATTR:
 		rc = slrmc_getattr(rq);
@@ -686,16 +720,14 @@ slrmc_handler(struct pscrpc_request *rq)
 	case SRMT_GETBMAP:
 		rc = slrmc_getbmap(rq);
 		break;
+	case SRMT_GETREPLST:
+		rc = slrmc_handle_getreplst(rq);
+		break;
 	case SRMT_LINK:
 		rc = slrmc_link(rq);
 		break;
-	case SRMT_LOCK:
-		break;
 	case SRMT_MKDIR:
 		rc = slrmc_mkdir(rq);
-		break;
-	case SRMT_MKNOD:
-		//rc = slrmc_mknod(rq);
 		break;
 	case SRMT_LOOKUP:
 		rc = slrmc_lookup(rq);
