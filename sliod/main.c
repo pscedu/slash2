@@ -56,7 +56,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	const char *cfn, *sfn;
+	const char *cfn, *sfn, *mds_nid;
 	int c;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -97,5 +97,12 @@ main(int argc, char *argv[])
 	slvr_cache_init();
 	rpc_initsvc();
 	sliotimerthr_spawn();
+
+	if ((mds_nid = getenv("SLASH_MDS_NID")) == NULL)
+		psc_fatalx("please export SLASH_MDS_NID");
+
+	if (slrmi_issue_connect(mds_nid))
+		psc_fatalx("MDS server unavailable");
+
 	slioctlthr_main(sfn);
 }

@@ -24,7 +24,6 @@ void
 rpc_initsvc(void)
 {
 	pscrpc_svc_handle_t *svh;
-	char *slash2_mds;
 
 	if (LNetGetId(1, &lpid))
 		psc_fatalx("LNetGetId");
@@ -73,9 +72,4 @@ rpc_initsvc(void)
 
 	/* Create client service to issue requests to MDS. */
 	rmi_csvc = rpc_csvc_create(SRMI_REQ_PORTAL, SRMI_REP_PORTAL);
-	if ((slash2_mds = getenv("SLASH_MDS_NID")) == NULL)
-                psc_fatalx("please export SLASH_MDS_NID");
-
-	if (slrmi_issue_connect(slash2_mds))
-		abort();
 }

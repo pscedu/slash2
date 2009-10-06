@@ -34,6 +34,8 @@ int slrim_handler(struct pscrpc_request *);
 int slric_handler(struct pscrpc_request *);
 int slrii_handler(struct pscrpc_request *);
 
+int slrmi_issue_connect(const char *);
+
 extern struct cfd_svrops *cfdOps;
 extern struct slashrpc_cservice *rmi_csvc;
 
