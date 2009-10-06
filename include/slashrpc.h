@@ -122,6 +122,7 @@ enum {
 	SRMT_GETATTR,
 	SRMT_GETBMAP,
 	SRMT_GETBMAPCRCS,
+	SRMT_GETREPLST,
 	SRMT_LINK,
 	SRMT_LOCK,
 	SRMT_LOOKUP,
@@ -440,7 +441,21 @@ struct srm_rename_req {
 /* 'from' and 'to' component names are in bulk data */
 };
 
-#define srm_unlink_rep srm_generic_rep
+struct srm_replrq_req {
+	uint64_t		ino;
+	sl_blkno_t		bmapno;		/* bmap to access or -1 for all */
+};
+
+struct srm_replst_req {
+	uint64_t		ino;
+	sl_blkno_t		bmapno;
+	int32_t			id;		/* user-provided passback value */
+	uint8_t			repls[SL_REPLICA_NBYTES];
+	int32_t			rc;
+	int32_t			last;
+};
+
+#define srm_replst_rep srm_replst_req
 
 #if 0
 /* Slash RPC transportably safe structures. */
@@ -475,11 +490,6 @@ struct srm_statfs_req {
 	struct slash_creds	creds;
 };
 
-struct srm_addreplrq_req {
-	uint64_t		ino;
-	sl_blkno_t		bmapno;		/* bmap to replicate or -1 for all */
-};
-
 struct srm_statfs_rep {
 	struct statvfs		stbv;
 	int32_t			rc;
@@ -505,6 +515,8 @@ struct srm_unlink_req {
 	uint64_t		pino;		/* parent inode */
 	char			name[NAME_MAX + 1];
 };
+
+#define srm_unlink_rep srm_generic_rep
 
 struct srm_generic_rep {
 	int32_t			rc;

@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "psc_ds/list.h"
+#include "psc_ds/listcache.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
