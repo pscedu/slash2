@@ -175,7 +175,7 @@ slrmc_getbmap(struct pscrpc_request *rq)
 		bmap = NULL;
 		mp->rc = mds_bmap_load(m, mq, &bmap);
 		if (mp->rc == 0) {
-			struct slash_bmap_cli_wire *cw; 
+			struct slash_bmap_cli_wire *cw;
 
 			bmdsi = bmap->bcm_pri;
 			cw = (struct slash_bmap_cli_wire *)bmdsi->bmdsi_od->bh_crcstates;
@@ -512,7 +512,7 @@ slrmc_release(struct pscrpc_request *rq)
 	rc = cfdfree(rq->rq_export, cfd);
 	psc_info("cfdfree() cfd %"PRId64" rc=%d",
 		 cfd, rc);
-	
+
 	mp->rc = mds_inode_release(f);
 
 	RETURN(0);
