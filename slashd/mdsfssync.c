@@ -51,6 +51,11 @@ mdsfssyncthr_begin(__unusedx void *arg)
 
 		psc_assert(xh->pjx_pj == mdsJournal);
 
+		/*
+		 * Detach the transaction handle from the journal flush item,
+		 * so that the latter can start a new transaction while the
+		 * current one is being closed.
+		 */
 		jfi->jfi_xh = NULL;
 		jfi->jfi_state &= ~JFI_QUEUED;
 		jfi->jfi_state &= ~JFI_HAVE_XH;
