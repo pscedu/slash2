@@ -7,7 +7,7 @@
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
-#include "psc_util/spinlock.h"
+#include "psc_util/lock.h"
 #include "psc_util/thread.h"
 
 #include "fid.h"
