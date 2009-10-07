@@ -9,7 +9,6 @@
 #include <inttypes.h>
 #include <string.h>
 
-#include "psc_util/assert.h"
 #include "psc_util/crc.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"

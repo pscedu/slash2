@@ -6,8 +6,8 @@
 
 #include "psc_ds/tree.h"
 #include "psc_util/alloc.h"
-#include "psc_util/assert.h"
 #include "psc_util/atomic.h"
+#include "psc_util/log.h"
 
 #include "cache_params.h"
 #include "cfd.h"

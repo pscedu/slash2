@@ -9,7 +9,6 @@
 #include <unistd.h>
 
 #include "pfl/pfl.h"
-#include "psc_util/assert.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
 

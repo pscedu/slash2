@@ -2,10 +2,10 @@
 
 #include <stdio.h>
 
-#include "psc_util/assert.h"
 #include "psc_util/atomic.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 #include "cache_params.h"
 #include "fid.h"

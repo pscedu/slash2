@@ -34,7 +34,7 @@
 #include <pthread.h>
 
 #include "psc_util/alloc.h"
-#include "psc_util/assert.h"
+#include "psc_util/log.h"
 
 #include "msl_fuse.h"
 #include "fuse_listener.h"

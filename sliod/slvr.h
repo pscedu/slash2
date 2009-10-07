@@ -6,8 +6,8 @@
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/tree.h"
-#include "psc_util/assert.h"
 #include "psc_util/atomic.h"
+#include "psc_util/log.h"
 
 #include "slashrpc.h"
 #include "bmap.h"

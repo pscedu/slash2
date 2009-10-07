@@ -4,7 +4,6 @@
 
 #include "psc_ds/dynarray.h"
 #include "psc_util/alloc.h"
-#include "psc_util/assert.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
 

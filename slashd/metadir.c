@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "psc_util/assert.h"
 #include "psc_util/log.h"
 
 #include "fid.h"

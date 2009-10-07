@@ -1,9 +1,9 @@
 /* $Id$ */
 
 #include "psc_ds/listcache.h"
-#include "psc_util/assert.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 
 #include "jflush.h"
 
