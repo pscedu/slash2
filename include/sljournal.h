@@ -17,15 +17,6 @@
 #define SLJ_MDS_PJET_BMAP         2
 #define SLJ_MDS_PJET_INODE        3
 
-
-#ifdef INUM_SELF_MANAGE
-#define SLMDS_INUM_ALLOC_SZ	1024	/* allocate 1024 inums at a time */
-
-struct slmds_jent_inum {
-	sl_inum_t			sji_inum;
-} __attribute__ ((packed));
-#endif
-
 /*
  * slmds_jent_crc - is used to log crc updates which come from the ION's.
  * @sjc_ion: the ion who sent the request.  Upon reboot this is used to
