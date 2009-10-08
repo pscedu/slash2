@@ -148,6 +148,8 @@ enum {
 	SNRT
 };
 
+#define DESCBUF_REPRLEN	45
+
 struct srt_fdb_secret {
 	uint64_t		sfs_magic;
 	struct slash_fidgen	sfs_fg;
@@ -156,9 +158,10 @@ struct srt_fdb_secret {
 	uint64_t		sfs_nonce;
 };
 
+/* hash = base64(SHA256(secret + key)) */
 struct srt_fd_buf {
 	struct srt_fdb_secret	sfdb_secret;	/* encrypted */
-	char			sfdb_hash[45];	/* base64(SHA256(srt_fdb_secret + key)) */
+	char			sfdb_hash[DESCBUF_REPRLEN];
 };
 
 #define SFDB_MAGIC		UINT64_C(0x1234123412341234)
@@ -175,9 +178,10 @@ struct srt_bdb_secret {
 	uint64_t		sbs_nonce;
 };
 
+/* hash = base64(SHA256(secret + key)) */
 struct srt_bmapdesc_buf {
 	struct srt_bdb_secret	sbdb_secret;	/* encrypted */
-	char			sbdb_hash[45];	/* base64(SHA256(srt_bdb_secret + key)) */
+	char			sbdb_hash[DESCBUF_REPRLEN];
 };
 
 #define SRIC_BMAP_READ  0

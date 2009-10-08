@@ -24,12 +24,9 @@
 #include "fdbuf.h"
 #include "slashrpc.h"
 
-union maxbuf {
-	struct srt_fd_buf	fdb;
-	struct srt_bmapdesc_buf	bdb;
-};
-
-__static unsigned char	 fdbuf_key[sizeof(union maxbuf)];
+#define DESCBUF_KEYSIZE	1024
+__static unsigned char	descbuf_key[DESCBUF_KEYSIZE];
+__static gcry_md_hd_t	descbuf_hd;
 
 /*
  * bdbuf_sign - Sign a bmapdesc buf with the private key.
@@ -49,7 +46,6 @@ bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
 	unsigned char *buf;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
-	int alg;
 
 	sbdb->sbdb_secret.sbs_fg = *fgp;
 	sbdb->sbdb_secret.sbs_cli_prid = cli_prid;
@@ -59,24 +55,13 @@ bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
 	sbdb->sbdb_secret.sbs_magic = SBDB_MAGIC;
 	sbdb->sbdb_secret.sbs_nonce = psc_atomic64_inc_return(&nonce);
 
-	alg = GCRY_MD_SHA256;
-	/* base64 is 4/3 + 1 (for truncation), then 1 for NUL byte */
-	if (gcry_md_get_algo_dlen(alg) * 4 / 3 + 2 >=
-	    sizeof(sbdb->sbdb_hash))
-		psc_fatal("bad base64 size: %d %d %zd",
-		    gcry_md_get_algo_dlen(alg),
-		    gcry_md_get_algo_dlen(alg) * 4 / 3 + 2,
-		    sizeof(sbdb->sbdb_hash));
-
-	gerr = gcry_md_open(&hd, alg, 0);
+	gerr = gcry_md_copy(&hd, descbuf_hd);
 	if (gerr)
-		psc_fatalx("gcry_md_open: %d", gerr);
+		psc_fatalx("gcry_md_copy: %d", gerr);
 	gcry_md_write(hd, &sbdb->sbdb_secret,
 	    sizeof(sbdb->sbdb_secret));
-	gcry_md_write(hd, fdbuf_key, sizeof(fdbuf_key));
 	buf = gcry_md_read(hd, 0);
-	psc_base64_encode(buf, sbdb->sbdb_hash,
-	    gcry_md_get_algo_dlen(alg));
+	psc_base64_encode(buf, sbdb->sbdb_hash, DESCBUF_REPRLEN);
 	gcry_md_close(hd);
 }
 
@@ -96,11 +81,11 @@ bdbuf_check(struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
     lnet_process_id_t cli_prid, lnet_nid_t ion_nid, sl_ios_id_t ios_id)
 {
 	char tibuf[PSC_NIDSTR_SIZE], tcbuf[PSC_NIDSTR_SIZE],
-	     sibuf[PSC_NIDSTR_SIZE], scbuf[PSC_NIDSTR_SIZE];
+	     sibuf[PSC_NIDSTR_SIZE], scbuf[PSC_NIDSTR_SIZE],
+	     buf[DESCBUF_REPRLEN];
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
-	char buf[45];
-	int alg, rc;
+	int rc;
 
 	rc = 0;
 	if (sbdb->sbdb_secret.sbs_magic != SBDB_MAGIC) {
@@ -121,23 +106,12 @@ bdbuf_check(struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 		goto out;
 	}
 
-	alg = GCRY_MD_SHA256;
-	/* base64 is 4/3 + 1 (for truncation), then 1 for NUL byte */
-	if (gcry_md_get_algo_dlen(alg) * 4 / 3 + 2 >=
-	    sizeof(buf))
-		psc_fatal("bad base64 size: %d %d %zd",
-		    gcry_md_get_algo_dlen(alg),
-		    gcry_md_get_algo_dlen(alg) * 4 / 3 + 2,
-		    sizeof(buf));
-
-	gerr = gcry_md_open(&hd, alg, 0);
+	gerr = gcry_md_copy(&hd, descbuf_hd);
 	if (gerr)
-		psc_fatalx("gcry_md_open: %d", gerr);
+		psc_fatalx("gcry_md_copy: %d", gerr);
 	gcry_md_write(hd, &sbdb->sbdb_secret,
 	    sizeof(sbdb->sbdb_secret));
-	gcry_md_write(hd, fdbuf_key, sizeof(fdbuf_key));
-	psc_base64_encode(gcry_md_read(hd, 0), buf,
-	    gcry_md_get_algo_dlen(alg));
+	psc_base64_encode(gcry_md_read(hd, 0), buf, DESCBUF_REPRLEN);
 	if (strcmp(buf, sbdb->sbdb_hash))
 		rc = EBADF;
 	gcry_md_close(hd);
@@ -177,31 +151,19 @@ fdbuf_sign(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
 	unsigned char *buf;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
-	int alg;
 
 	sfdb->sfdb_secret.sfs_fg = *fgp;
 	sfdb->sfdb_secret.sfs_cli_prid = cli_prid;
 	sfdb->sfdb_secret.sfs_magic = SFDB_MAGIC;
 	sfdb->sfdb_secret.sfs_nonce = psc_atomic64_inc_return(&nonce);
 
-	alg = GCRY_MD_SHA256;
-	/* base64 is 4/3 + 1 (for truncation), then 1 for NUL byte */
-	if (gcry_md_get_algo_dlen(alg) * 4 / 3 + 2 >=
-	    sizeof(sfdb->sfdb_hash))
-		psc_fatal("bad base64 size: %d %d %zd",
-		    gcry_md_get_algo_dlen(alg),
-		    gcry_md_get_algo_dlen(alg) * 4 / 3 + 2,
-		    sizeof(sfdb->sfdb_hash));
-
-	gerr = gcry_md_open(&hd, alg, 0);
+	gerr = gcry_md_copy(&hd, descbuf_hd);
 	if (gerr)
-		psc_fatalx("gcry_md_open: %d", gerr);
+		psc_fatalx("gcry_md_copy: %d", gerr);
 	gcry_md_write(hd, &sfdb->sfdb_secret,
 	    sizeof(sfdb->sfdb_secret));
-	gcry_md_write(hd, fdbuf_key, sizeof(fdbuf_key));
 	buf = gcry_md_read(hd, 0);
-	psc_base64_encode(buf, sfdb->sfdb_hash,
-	    gcry_md_get_algo_dlen(alg));
+	psc_base64_encode(buf, sfdb->sfdb_hash, DESCBUF_REPRLEN);
 	gcry_md_close(hd);
 }
 
@@ -216,10 +178,10 @@ int
 fdbuf_check(struct srt_fd_buf *sfdb, uint64_t *cfdp,
     struct slash_fidgen *fgp, lnet_process_id_t cli_prid)
 {
+	char buf[DESCBUF_REPRLEN];
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
-	char buf[45];
-	int alg, rc;
+	int rc;
 
 	rc = 0;
 	if (sfdb->sfdb_secret.sfs_magic != SFDB_MAGIC)
@@ -228,23 +190,12 @@ fdbuf_check(struct srt_fd_buf *sfdb, uint64_t *cfdp,
 	    &cli_prid, sizeof(cli_prid)))
 		return (EPERM);
 
-	alg = GCRY_MD_SHA256;
-	/* base64 is 4/3 + 1 (for truncation), then 1 for NUL byte */
-	if (gcry_md_get_algo_dlen(alg) * 4 / 3 + 2 >=
-	    sizeof(buf))
-		psc_fatal("bad base64 size: %d %d %zd",
-		    gcry_md_get_algo_dlen(alg),
-		    gcry_md_get_algo_dlen(alg) * 4 / 3 + 2,
-		    sizeof(buf));
-
-	gerr = gcry_md_open(&hd, alg, 0);
+	gerr = gcry_md_copy(&hd, descbuf_hd);
 	if (gerr)
-		psc_fatalx("gcry_md_open: %d", gerr);
+		psc_fatalx("gcry_md_copy: %d", gerr);
 	gcry_md_write(hd, &sfdb->sfdb_secret,
 	    sizeof(sfdb->sfdb_secret));
-	gcry_md_write(hd, fdbuf_key, sizeof(fdbuf_key));
-	psc_base64_encode(gcry_md_read(hd, 0), buf,
-	    gcry_md_get_algo_dlen(alg));
+	psc_base64_encode(gcry_md_read(hd, 0), buf, DESCBUF_REPRLEN);
 	if (strcmp(buf, sfdb->sfdb_hash))
 		rc = EBADF;
 	gcry_md_close(hd);
@@ -265,9 +216,10 @@ fdbuf_check(struct srt_fd_buf *sfdb, uint64_t *cfdp,
 void
 fdbuf_readkeyfile(void)
 {
+	gcry_error_t gerr;
 	const char *keyfn;
 	struct stat stb;
-	int fd;
+	int alg, fd;
 
 	keyfn = globalConfig.gconf_fdbkeyfn;
 	if ((fd = open(keyfn, O_RDONLY)) == -1)
@@ -275,10 +227,23 @@ fdbuf_readkeyfile(void)
 	if (fstat(fd, &stb) == -1)
 		psc_fatal("fstat %s", keyfn);
 	fdbuf_checkkey(keyfn, &stb);
-	if (read(fd, fdbuf_key, sizeof(fdbuf_key)) !=
-	    (ssize_t)sizeof(fdbuf_key))
+	if (read(fd, descbuf_key, sizeof(descbuf_key)) !=
+	    (ssize_t)sizeof(descbuf_key))
 		psc_fatal("read %s", keyfn);
 	close(fd);
+
+	alg = GCRY_MD_SHA256;
+	gerr = gcry_md_open(&descbuf_hd, alg, 0);
+	if (gerr)
+		psc_fatalx("gcry_md_open: %d", gerr);
+	gcry_md_write(descbuf_hd, descbuf_key, sizeof(descbuf_key));
+
+	/* base64 is len*4/3 + 1 for integer truncation + 1 for NUL byte */
+	if (gcry_md_get_algo_dlen(alg) * 4 / 3 + 2 >= DESCBUF_REPRLEN)
+		psc_fatal("bad alg/base64 size: alg=%d need=%d want=%d",
+		    gcry_md_get_algo_dlen(alg),
+		    gcry_md_get_algo_dlen(alg) * 4 / 3 + 2,
+		    DESCBUF_REPRLEN);
 }
 
 /*
@@ -304,9 +269,9 @@ fdbuf_checkkeyfile(void)
 void
 fdbuf_checkkey(const char *fn, struct stat *stb)
 {
-	if (stb->st_size != sizeof(fdbuf_key))
+	if (stb->st_size != sizeof(descbuf_key))
 		psc_fatalx("key file %s is wrong size, should be %zu",
-		    fn, sizeof(fdbuf_key));
+		    fn, sizeof(descbuf_key));
 	if (!S_ISREG(stb->st_mode))
 		psc_fatalx("key file %s: not a file", fn);
 	if ((stb->st_mode & (S_IRWXU | S_IRWXG | S_IRWXO)) != (S_IRUSR | S_IWUSR))
@@ -334,14 +299,14 @@ fdbuf_createkeyfile(void)
 		}
 		psc_fatal("open %s", keyfn);
 	}
-	for (i = 0; i < (int)sizeof(fdbuf_key); ) {
+	for (i = 0; i < (int)sizeof(descbuf_key); ) {
 		r = psc_random32();
 		for (j = 0; j < 4 &&
-		    i < (int)sizeof(fdbuf_key); j++, i++)
-			fdbuf_key[i] = (r >> (8 * j)) & 255;
+		    i < (int)sizeof(descbuf_key); j++, i++)
+			descbuf_key[i] = (r >> (8 * j)) & 0xff;
 	}
-	if (write(fd, fdbuf_key, sizeof(fdbuf_key)) !=
-	    (ssize_t)sizeof(fdbuf_key))
+	if (write(fd, descbuf_key, sizeof(descbuf_key)) !=
+	    (ssize_t)sizeof(descbuf_key))
 		psc_fatal("write %s", keyfn);
 	close(fd);
 }
