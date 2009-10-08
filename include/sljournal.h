@@ -8,7 +8,7 @@
 #include "pathnames.h"
 #include "slashrpc.h" /* struct srm_bmap_crcup */
 
-#define SLJ_MDS_JNENTS		128*1024	/* 131072 */
+#define SLJ_MDS_JNENTS		(128*1024)	/* 131072 */
 #define SLJ_MDS_RA              1024 		/* SLJ_MDS_JNENTS % SLJ_MDS_RA == 0 */
 #define SLJ_MDS_NCRCS           28
 
