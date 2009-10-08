@@ -25,12 +25,14 @@
 #include <slashrpc.h>
 #include <slconfig.h>
 #include <sljournal.h>
+#include <util.h>
 #include <mount_slash/cli_bmap.h>
 #include <mount_slash/control.h>
 #include <mount_slash/fidc_client.h>
 #include <mount_slash/fuse_listener.h>
 #include <mount_slash/mount_slash.h>
 #include <mount_slash/msl_fuse.h>
+#include <msctl/msctl.h>
 #include <slashd/cfd.h>
 #include <slashd/control.h>
 #include <slashd/fidc_mds.h>
@@ -43,6 +45,7 @@
 #include <slashd/mdsrpc.h>
 #include <slashd/rpc.h>
 #include <slashd/sb.h>
+#include <slashd/slashd.h>
 #include <slashd/slashdthr.h>
 #include <sliod/control.h>
 #include <sliod/fidc_iod.h>
@@ -109,6 +112,10 @@ main(int argc, char *argv[])
 	PRTYPE(struct mexpbcm);
 	PRTYPE(struct mexpfcm);
 	PRTYPE(struct msbmap_data);
+	PRTYPE(struct msctl_replst_cont);
+	PRTYPE(struct msctl_replstq);
+	PRTYPE(struct msctlmsg_replrq);
+	PRTYPE(struct msctlmsg_replst);
 	PRTYPE(struct msfs_thread);
 	PRTYPE(struct msl_fbr);
 	PRTYPE(struct msl_fhent);
@@ -130,6 +137,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slash_inode_extras_od);
 	PRTYPE(struct slash_inode_handle);
 	PRTYPE(struct slash_inode_od);
+	PRTYPE(struct slash_rcmthr);
 	PRTYPE(struct slash_ricthr);
 	PRTYPE(struct slash_riithr);
 	PRTYPE(struct slash_rimthr);
@@ -182,6 +190,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_release_req);
 	PRTYPE(struct srm_releasebmap_req);
 	PRTYPE(struct srm_rename_req);
+	PRTYPE(struct srm_replrq_req);
+	PRTYPE(struct srm_replst_req);
 	PRTYPE(struct srm_setattr_req);
 	PRTYPE(struct srm_statfs_rep);
 	PRTYPE(struct srm_statfs_req);
