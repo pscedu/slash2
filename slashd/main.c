@@ -18,7 +18,6 @@
 #include "fidcache.h"
 #include "mdsrpc.h"
 #include "pathnames.h"
-#include "sb.h"
 #include "slashdthr.h"
 #include "slconfig.h"
 

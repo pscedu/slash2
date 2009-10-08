@@ -12,7 +12,6 @@
 #include "slconfig.h"
 #include "sljournal.h"
 #include "slashdthr.h"
-#include "sb.h"
 
 #if 0
 void
