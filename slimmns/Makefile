@@ -3,7 +3,8 @@
 include Makefile.path
 
 PROG=		slimmns_format
-SRCS=		slimmns_format.c
+SRCS+=		slimmns_format.c
+SRCS+=		wipedir.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
