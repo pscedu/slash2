@@ -43,7 +43,7 @@ const char *progname;
 char ctlsockfn[] = _PATH_MSCTLSOCK;
 char mountpoint[PATH_MAX];
 
-struct vbitmap	*msfsthr_uniqidmap;
+struct vbitmap	 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t	 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
 
 #if 0
@@ -135,8 +135,8 @@ msfsthr_teardown(void *arg)
 	struct msfs_thread *mft = arg;
 
 	spinlock(&msfsthr_uniqidmap_lock);
-	vbitmap_unset(msfsthr_uniqidmap, mft->mft_uniqid);
-	vbitmap_setnextpos(msfsthr_uniqidmap, 0);
+	vbitmap_unset(&msfsthr_uniqidmap, mft->mft_uniqid);
+	vbitmap_setnextpos(&msfsthr_uniqidmap, 0);
 	freelock(&msfsthr_uniqidmap_lock);
 
 	free(mft);
@@ -152,7 +152,7 @@ msfsthr_ensure(void)
 	thr = pscthr_get_canfail();
 	if (thr == NULL) {
 		spinlock(&msfsthr_uniqidmap_lock);
-		if (vbitmap_next(msfsthr_uniqidmap, &id) == -1)
+		if (vbitmap_next(&msfsthr_uniqidmap, &id) == -1)
 			psc_fatal("vbitmap_next");
 		freelock(&msfsthr_uniqidmap_lock);
 
@@ -1677,8 +1677,6 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 
 	slFsops = PSCALLOC(sizeof(*slFsops));
 	slFsops->slfsop_getattr = slash2fuse_stat;
-
-	msfsthr_uniqidmap = vbitmap_newf(0, PVBF_AUTO);
 
 	return (NULL);
 }
