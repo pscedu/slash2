@@ -3,7 +3,8 @@
 #ifndef _SLASH_PATHNAMES_H_
 #define _SLASH_PATHNAMES_H_
 
-#define _PATH_SB	"sb"
+#define SL_PATH_REPLS		".slrepls"
+#define SL_PATH_FIDNS		".slfidns"
 
 #if 0
 #define _PATH_SLASHCONF		"/etc/slash.conf"
