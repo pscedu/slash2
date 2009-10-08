@@ -462,7 +462,7 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool) {
 		if (!(rls_locked = (slMemRlsTrylock)(pri_bmap_tmp)))
 			goto unfree;
 
-		m = (struct offtree_memb *)r->slbir_pri;
+		m = r->slbir_pri;
 		/* Lock the parent first unless 'm' is the root
 		 */
 		if (!m->oft_parent) {
@@ -768,8 +768,8 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 void
 sl_oftiov_pin_cb(struct offtree_iov *iov, int op)
 {
-	struct offtree_memb *m   = (struct offtree_memb *)iov->oftiov_memb;
-	struct sl_buffer    *slb = (struct sl_buffer *)iov->oftiov_pri;
+	struct offtree_memb *m   = iov->oftiov_memb;
+	struct sl_buffer    *slb = iov->oftiov_pri;
 	/* Saneness.
 	 */
 	//LOCK_ENSURE(&m->oft_lock);
@@ -806,7 +806,7 @@ sl_oftiov_inflight_cb(struct offtree_iov *iov, int op)
 {
 	struct sl_buffer *s;
 
-	s = (struct sl_buffer *)iov->oftiov_pri;
+	s = iov->oftiov_pri;
 
 	DEBUG_SLB(PLL_TRACE, s, "inflight ref updating op=%s",
 		  op ? "SL_INFLIGHT_DEC" : "SL_INFLIGHT_INC");
