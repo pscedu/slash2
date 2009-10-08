@@ -138,8 +138,6 @@ msfsthr_teardown(void *arg)
 	vbitmap_unset(&msfsthr_uniqidmap, mft->mft_uniqid);
 	vbitmap_setnextpos(&msfsthr_uniqidmap, 0);
 	freelock(&msfsthr_uniqidmap_lock);
-
-	free(mft);
 }
 
 static void
