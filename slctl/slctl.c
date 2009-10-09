@@ -15,16 +15,16 @@
 #include "slashd/control.h"
 
 void
-slrpcmdsthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
+slrmcthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 {
 	printf(" #open %8d #close %8d #stat %8d",
 	    pcst->pcst_nopen, pcst->pcst_nclose, pcst->pcst_nstat);
 }
 
 void
-slrpcbethr_st_prdat(const struct psc_ctlmsg_stats *pcst)
+slrmmthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" #open %8d\n", pcst->pcst_nopen);
+	printf(" #open %8d", pcst->pcst_nopen);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
@@ -39,9 +39,11 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
 struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
-	{ psc_ctlthr_prdat },
-	{ slrpcmdsthr_st_prdat },
-	{ slrpcbethr_st_prdat }
+/* CTL		*/ { psc_ctlthr_prdat },
+/* ACSVC	*/ { NULL },
+/* RMC		*/ { slrmcthr_st_prdat },
+/* RMI		*/ { NULL },
+/* RMM		*/ { slrmmthr_st_prdat }
 };
 int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 
