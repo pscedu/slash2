@@ -7,6 +7,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/log.h"
+#include "psc_util/strlcpy.h"
 
 #include "control.h"
 #include "slashrpc.h"
@@ -31,9 +32,10 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	PLL_FOREACH(mrsq, &msctl_replsts)
 		if (mrsq->mrsq_id == mq->id) {
 			mrc = PSCALLOC(sizeof(*mrc));
-			mrc->mrc_mrs.mrs_bmapno = mp->bmapno;
-			memcpy(mrc->mrc_mrs.mrs_repls,
-			    mp->repls, sizeof(mrc->mrc_mrs.mrs_repls));
+//			strlcpy(mrc->mrc_mrs.mrs_fn, mp->fn,
+//			    sizeof(mrc->mrc_mrs.mrs_fn));
+			mrc->mrc_mrs.mrs_bold = mp->st_bold;
+			mrc->mrc_mrs.mrs_bact = mp->st_bact;
 			lc_add(&mrsq->mrsq_lc, mrc);
 			if (mq->last)
 				lc_kill(&mrsq->mrsq_lc);

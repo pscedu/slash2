@@ -452,11 +452,11 @@ struct srm_replrq_req {
 
 struct srm_replst_req {
 	uint64_t		ino;
-	sl_blkno_t		bmapno;
 	int32_t			id;		/* user-provided passback value */
-	uint8_t			repls[SL_REPLICA_NBYTES];
 	int32_t			rc;
 	int32_t			last;
+	uint32_t		st_bact;
+	uint32_t		st_bold;
 };
 
 #define srm_replst_rep srm_replst_req
@@ -536,6 +536,7 @@ struct slashrpc_cservice {
 void slashrpc_export_destroy(void *);
 
 struct slashrpc_cservice *rpc_csvc_create(uint32_t, uint32_t);
+struct slashrpc_cservice *rpc_csvc_fromexp(struct pscrpc_export *, uint32_t, uint32_t);
 int rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, u64, uint32_t);
 
 extern lnet_process_id_t lpid;

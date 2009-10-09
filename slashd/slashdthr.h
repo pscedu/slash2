@@ -30,7 +30,10 @@ struct slash_rmcthr {
 };
 
 struct slash_rcmthr {
-	int			 srcm_uniqid;
+	struct slashrpc_cservice *srcm_csvc;
+	int			 srcm_uniqid;	/* thread ID */
+	slfid_t			 srcm_fid;
+	int			 srcm_id;	/* private client ID */
 };
 
 struct slash_rmithr {

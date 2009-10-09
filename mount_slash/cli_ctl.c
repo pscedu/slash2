@@ -166,7 +166,6 @@ issue:
 		    "%s: %s", mrq->mrq_fn, strerror(rc)));
 
 	mq->ino = fg.fg_fid;
-	mq->bmapno = mrq->mrq_bmapno;
 	mq->id = psc_atomic32_inc_return(&msctl_replstid);
 
 	rv = 1;

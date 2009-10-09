@@ -37,6 +37,7 @@
 #include "slashdthr.h"
 #include "slashexport.h"
 #include "slashrpc.h"
+#include "util.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
@@ -91,7 +92,7 @@ slrmc_connect(struct pscrpc_request *rq)
 		freelock(&e->exp_lock);
 		DEBUG_REQ(PLL_WARN, rq,
 			  "connect rq but export already exists");
-		slashrpc_export_destroy((void *)sexp);
+		slashrpc_export_destroy(sexp);
 	}
 	spinlock(&e->exp_lock);
 	sexp = slashrpc_export_get(e);
@@ -688,6 +689,8 @@ slrmc_handle_getreplst(struct pscrpc_request *rq)
 {
 	struct srm_replst_req *mq;
 	struct srm_replst_rep *mp;
+	struct slash_rcmthr *srcm;
+	struct psc_thread *thr;
 	size_t id;
 
 	RSX_ALLOCREP(rq, mq, mp);
@@ -697,8 +700,14 @@ slrmc_handle_getreplst(struct pscrpc_request *rq)
 		psc_fatal("vbitmap_next");
 	freelock(&slrcmthr_uniqidmap_lock);
 
-	pscthr_init(SLTHRT_RCM, 0, slrcmthr_main,
+	thr = pscthr_init(SLTHRT_RCM, 0, slrcmthr_main,
 	    NULL, 0, "slrcmthr%02zu", id);
+	srcm = thr->pscthr_private;
+	srcm->srcm_fid = mq->ino;
+	srcm->srcm_id = mq->id;
+	srcm->srcm_csvc = rpc_csvc_fromexp(rq->rq_export,
+	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL);
+	pscthr_setready(thr);
 	return (0);
 }
 

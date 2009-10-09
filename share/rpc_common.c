@@ -72,3 +72,14 @@ rpc_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	imp->imp_max_retries = 2;
 	return (csvc);
 }
+
+struct slashrpc_cservice *
+rpc_csvc_fromexp(struct pscrpc_export *exp, uint32_t rqptl, uint32_t rpptl)
+{
+	struct slashrpc_cservice *csvc;
+
+	csvc = rpc_csvc_create(rqptl, rpptl);
+	atomic_inc(&exp->exp_connection->c_refcount);
+	csvc->csvc_import->imp_connection = exp->exp_connection;
+	return (csvc);
+}

@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <string.h>
+#include <stdlib.h>
 
 const char *
 slstrerror(int error)

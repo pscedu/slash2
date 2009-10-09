@@ -10,14 +10,14 @@
 /* for retrieving info about replication status */
 struct msctlmsg_replst {
 	char			mrs_fn[PATH_MAX];
-	sl_blkno_t		mrs_bmapno;
-	uint8_t			mrs_repls[SL_REPLICA_NBYTES];
+	uint32_t		mrs_bact;
+	uint32_t		mrs_bold;
 };
 
 struct msctl_replstq {
 	struct psclist_head	mrsq_lentry;
 	struct psc_listcache	mrsq_lc;
-	int			mrsq_id;
+	int32_t			mrsq_id;
 };
 
 /* in-memory container for a replst msg */
@@ -29,7 +29,7 @@ struct msctl_replst_cont {
 /* for issuing/controlling replication requests */
 struct msctlmsg_replrq {
 	char			mrq_fn[PATH_MAX];
-	int			mrq_bmapno;
+	sl_blkno_t		mrq_bmapno;
 };
 
 #define REPLRQ_FID_ALL		FID_ANY
