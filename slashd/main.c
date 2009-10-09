@@ -107,6 +107,7 @@ main(int argc, char *argv[])
 //	if (zpoolname)
 
 	rpc_initsvc();
+	sltimerthr_spawn();
 	slctlthr_main(sfn);
 
 	do_exit();
