@@ -579,5 +579,5 @@ bmap_flush_init(void)
 		   "bmap_flush_queue");
 
 	pscthr_init(MSTHRT_BMAPFLSH, 0, bmap_flush_thr, NULL, 0,
-		    "bmap_flush");
+		    "msbflushthr");
 }
