@@ -30,7 +30,7 @@ int	slrmi_handler(struct pscrpc_request *);
 int	slrmm_handler(struct pscrpc_request *);
 
 int	slrcm_issue_getreplst(struct pscrpc_import *,
-	    slfid_t, sl_blkno_t, int32_t, char repls[], int);
+	    slfid_t, int32_t, int, int, int);
 
 SPLAY_HEAD(sexptree, slashrpc_export);
 SPLAY_PROTOTYPE(sexptree, slashrpc_export, entry, sexpcmp);
