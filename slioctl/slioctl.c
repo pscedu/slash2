@@ -15,9 +15,9 @@
 #include "sliod/control.h"
 
 void
-slrpciothr_prdat(const struct psc_ctlmsg_stats *pcst)
+slricthr_prdat(const struct psc_ctlmsg_stats *pcst)
 {
-	printf(" #write %8u\n", pcst->pcst_nwrite);
+	printf(" #write %8u", pcst->pcst_nwrite);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
@@ -32,8 +32,10 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
 struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
-	{ psc_ctlthr_prdat },
-	{ slrpciothr_prdat }
+/* CTL		*/ { psc_ctlthr_prdat },
+/* LNETAC	*/ { NULL },
+/* USKLNDPL	*/ { NULL },
+/* RIC		*/ { slricthr_prdat }
 };
 int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 

@@ -274,19 +274,34 @@ Options which take
 parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
+.Bl -tag -compact -offset indent -width 17n
 .It Cm slioctlthr
 Control thread
-.It Cm sllndthr Ns Ar %d
-Lustre TCP network device threads
-.It Cm slricthr Ns Ar %d
-RPC client service threads
-.It Cm slriithr Ns Ar %d
-RPC threads for other I/O server communication
-.It Cm slrimthr Ns Ar %d
-RPC threads for metadata server communication
+.It Cm sliolnetacthr- Ns Ar %s
+Lustre network acceptor thread
+.It Cm slioricthr Ns Ar %02d
+Client
+.Tn RPC
+request service thread
+.It Cm slioriithr Ns Ar %02d
+.No Inter-
+.Tn I/O RPC
+request service thread
+.It Cm sliorimthr Ns Ar %02d
+.Tn MDS RPC
+request service thread
+.It Cm slioslvrthr Ns Ar %d
+Sliver monitoring thread
+.It Cm sliotintvthr
+Timer interval thread
+.It Cm sliotiosthr
+Timed
+.Tn I/O
+stats updater thread
+.It Cm sliousklndplthr Ns Ar %d
+Lustre userland socket poll thread
 .It Cm everyone
-All threads (default and available where applicable)
+All threads (default, where applicable)
 .El
 .Sh FILES
 .Bl -tag -width Pa
