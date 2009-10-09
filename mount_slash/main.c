@@ -150,7 +150,7 @@ msfsthr_ensure(void)
 	thr = pscthr_get_canfail();
 	if (thr == NULL) {
 		spinlock(&msfsthr_uniqidmap_lock);
-		if (vbitmap_next(&msfsthr_uniqidmap, &id) == -1)
+		if (vbitmap_next(&msfsthr_uniqidmap, &id) != 1)
 			psc_fatal("vbitmap_next");
 		freelock(&msfsthr_uniqidmap_lock);
 
