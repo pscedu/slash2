@@ -308,15 +308,31 @@ Options which take
 parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
-.It Cm mslctlthr
+.Bl -tag -compact -offset indent -width 15n
+.It Cm msbflushthr
+Bmap flusher thread
+.It Cm msctlthr
 Control thread
-.It Cm sllndthr Ns Ar %d
-Lustre TCP network device threads
+.It Cm mseqpollthr
+Lustre EQPoll thread
 .It Cm msfsthr Ns Ar %d
 File system servicing threads
+.It Cm msfusethr
+.Tn FUSE
+master thread
+.It Cm msrcmthrthr Ns Ar %02d
+.Tn MDS RPC
+request service
+.It Cm mstintvthr
+Timer interval thread
+.It Cm mstiosthr
+Timed
+.Tn I/O
+stats updater thread
+.It Cm msusklndplthr Ns Ar %d
+Lustre userland socket poll thread
 .It Cm everyone
-All threads (default and available where applicable)
+All threads (default, where applicable)
 .El
 .Sh FILES
 .Bl -tag -width Pa
