@@ -397,5 +397,5 @@ slvr_worker_init(void)
 
 	for (i=0; i < NSLVRCRC_THRS; i++) 
 		pscthr_init(SLIOTHRT_SLVR_CRC, 0, slvr_worker, NULL, 0, 
-			    "slvr_wrk%d", i);
+			    "slioslvrthr%d", i);
 }

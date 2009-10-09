@@ -9,17 +9,18 @@
 
 #include "fid.h"
 
+/* sliod thread types */
 #define SLIOTHRT_CTL		0	/* control */
 #define SLIOTHRT_LNETAC		1	/* lustre net accept thr */
-#define SLIOTHRT_USKLNDPL	1	/* userland socket lustre net dev poll thr */
-#define SLIOTHRT_RIC		2	/* RPC comm */
-#define SLIOTHRT_RIM		3	/* RPC comm */
-#define SLIOTHRT_RII		4	/* RPC comm */
-#define SLIOTHRT_TINTV		5	/* timer interval */
-#define SLIOTHRT_TIOS		6	/* iostats updater */
-#define SLIOTHRT_SLVR_CRC       7       /* sliver crc updaters */
+#define SLIOTHRT_USKLNDPL	2	/* userland socket lustre net dev poll thr */
+#define SLIOTHRT_RIC		3	/* RPC comm */
+#define SLIOTHRT_RIM		4	/* RPC comm */
+#define SLIOTHRT_RII		5	/* RPC comm */
+#define SLIOTHRT_TINTV		6	/* timer interval */
+#define SLIOTHRT_TIOS		7	/* iostats updater */
+#define SLIOTHRT_SLVR_CRC	8	/* sliver crc updaters */
 
-#define NSLVRCRC_THRS           4       /* perhaps ncores? */
+#define NSLVRCRC_THRS		4	/* perhaps ncores? */
 
 struct bmapc_memb;
 struct fidc_membh;
