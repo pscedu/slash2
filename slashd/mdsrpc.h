@@ -11,8 +11,8 @@
 
 #define SRMI_NTHREADS   8
 #define SRMI_NBUFS      1024
-#define SRMI_BUFSZ      192
-#define SRMI_REPSZ      192
+#define SRMI_BUFSZ      256
+#define SRMI_REPSZ      256
 #define SRMI_SVCNAME    "slrmi"
 
 #define SRMC_NTHREADS   8
