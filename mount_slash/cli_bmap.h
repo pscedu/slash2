@@ -4,6 +4,7 @@
 #define _SLASH_CLI_BMAP_H_
 
 #include "psc_rpc/rpc.h"
+#include "psc_util/spinlock.h"
 
 #include "bmap.h"
 #include "inode.h"
@@ -42,6 +43,22 @@ struct msbmap_data {
  */
 struct bmap_info_cli {
 	struct pscrpc_import *bmic_import;
+	struct timespec       bmic_connect_time;
+	struct psc_waitq      bmic_waitq;
+	psc_spinlock_t        bmic_lock;
+	int                   bmic_flags;
+};
+
+struct resprof_cli_info {
+        int rci_cnt;
+        psc_spinlock_t rci_lock;
+};
+
+
+enum {
+	BMIC_CONNECTING   = (1<<0),
+	BMIC_CONNECTED    = (1<<1),
+	BMIC_CONNECT_FAIL = (1<<2)
 };
 
 /* bcm_mode flags */

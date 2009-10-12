@@ -99,7 +99,8 @@ bmap_flush_coalesce_size(const struct dynarray *oftrqs)
 	r = dynarray_getpos(oftrqs, 0);
 	size -= r->oftrq_off;
 
-	psc_info("array %p has size=%zu", oftrqs, size);
+	psc_info("array %p has size=%zu array len=%d", 
+		 oftrqs, size, dynarray_len(oftrqs));
 	
 	return (size);
 }
@@ -146,6 +147,10 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 	mq->offset = soff;
 	mq->size = size;
 	mq->op = SRMIO_WR;
+
+	DEBUG_REQ(PLL_INFO, req, "off=%u sz=%u op=%u", mq->offset, 
+		  mq->size, mq->op);
+		  
 	memcpy(&mq->sbdb, &bmap_2_msbd(b)->msbd_bdb, sizeof(mq->sbdb));
 
 	return (req);
@@ -236,7 +241,7 @@ bmap_flush_send_rpcs(struct dynarray *oftrqs, struct iovec *iovs,
 		set->set_arg = oftrqs;		
 		
 		for (j=0, n=0, size=0, tiov=iovs; j < niovs; j++) {
-			if ((size + iovs[j].iov_len) == LNET_MTU) {			
+			if ((size + iovs[j].iov_len) == LNET_MTU) {	
 				n++;
 				size += iovs[j].iov_len;
 				launch_rpc;
@@ -257,7 +262,7 @@ bmap_flush_send_rpcs(struct dynarray *oftrqs, struct iovec *iovs,
 				n++;
 			}
 		}
-		/* Launch any small, lingerers.
+		/* Launch any small lingerers.
 		 */
 		if (tiov) {
 			psc_assert(n);
@@ -284,13 +289,13 @@ bmap_flush_oftrq_cmp(const void *x, const void *y)
 		return (1);
 
 	else {
-		/* Larger requests with the same start offset
-		 *  should have ordering priority.
+		/* Larger requests with the same start offset should have
+		 *   ordering priority.
 		 */
-		if (a->oftrq_nblks > b->oftrq_nblks)
+		if (a->oftrq_len > b->oftrq_len)
 			return (-1);
 
-		else if (a->oftrq_nblks < b->oftrq_nblks)
+		else if (a->oftrq_len < b->oftrq_len)
 			return (1);
 	}		
 	return (0);
@@ -300,83 +305,110 @@ __static int
 bmap_flush_coalesce_map(const struct dynarray *oftrqs, struct iovec **iovset)
 {
 	struct offtree_req *r, *t;
-	struct offtree_iov *v;
+	struct offtree_iov *v, *last_iov=NULL;
 	struct offtree_memb *m;
 	struct iovec *iovs=NULL;
-	off_t off;
-	int i, j, niovs=0, skip;
-
+	int i, j, niovs=0, pre=1;
+	size_t reqsz = bmap_flush_coalesce_size(oftrqs);
+	off_t off=0;
+	
 	psc_assert(!*iovset);
 	psc_assert(dynarray_len(oftrqs) > 0);
-	
 	/* Prime the pump with initial values from the first oftrq.
 	 */
 	r = dynarray_getpos(oftrqs, 0);
 	off = r->oftrq_off;
-	
-	for (i=0; i < dynarray_len(oftrqs); i++, r=t) {
-		t = dynarray_getpos(oftrqs, i);
-		
-		DEBUG_OFFTREQ(PLL_INFO, t, "pos=%d off=%zu", i, off);
-		
-		if ((off - t->oftrq_off) % slCacheBlkSz)
-			DEBUG_OFFTREQ(PLL_FATAL, t, "invalid off=%zu", off);
 
+	for (i=0; i < dynarray_len(oftrqs); i++) {
+		t = dynarray_getpos(oftrqs, i);
+
+		DEBUG_OFFTREQ(PLL_INFO, r, "r rreqsz=%zu off=%zu", reqsz, off);
 		psc_assert(dynarray_len(t->oftrq_darray));
 		
-		if (oftrq_voff_get(t) <= off)
+		if (oftrq_voff_get(t) <= off) {
+			/* No need to map this one, it's data has been
+			 *   accounted for.
+			 */
+			DEBUG_OFFTREQ(PLL_INFO, t, "t pos=%d (skip)", i);
 			continue;
+		}
+		DEBUG_OFFTREQ(PLL_INFO, t, "t pos=%d (use)", i);
+		psc_assert(reqsz);
 		/* Now iterate through the oftrq's iov set, where the
 		 *   actual buffers are stored.  
 		 */ 
-		for (j=0, skip=1; j < dynarray_len(t->oftrq_darray); j++) {
+		for (j=0; j < dynarray_len(t->oftrq_darray); j++) {
 			v = dynarray_getpos(t->oftrq_darray, j);
 
-			if ((OFT_IOV2E_VOFF_(v) <= off)) {
-				if (skip)
-					continue;
-				else
-					/* Only iov's at the beginning of 
-					 *   the set may skipped or 
-					 *   partially used.
-					 */
-					abort();
-			}			
-			/* Add a new iov!
-			 */
-			*iovset = iovs = PSC_REALLOC(iovs, 
-				     (sizeof(struct iovec) * (niovs + 1)));
-			/* Set the base pointer past the overlapping 
-			 *   area.
-			 */
-			iovs[niovs].iov_base = v->oftiov_base + 
-				(off - v->oftiov_off);
-			
-			iovs[niovs].iov_len = OFT_IOVSZ(v) - 
-				(off - v->oftiov_off);
-			
-			psc_info("oftrq=%p oftiov=%p base=%p len=%zu niov=%d",
-				 t, v, iovs[niovs].iov_base, 
-				 iovs[niovs].iov_len, niovs);
-			
-			if (skip)
-				 skip = 0;
+			if ((OFT_IOV2E_VOFF_(v) <= r->oftrq_off))
+				abort();
 
-			niovs++;
+			if (OFT_IOV2E_VOFF_(v) <= off)
+				continue;
+
+			if (last_iov)
+				psc_assert(OFT_IOV2E_VOFF_(last_iov) ==
+					   v->oftiov_off);
+
+			if (!last_iov || last_iov != v->oftiov_base) {
+				/* Ensure contiguity
+				 */
+				last_iov = v->oftiov_base; 
+				/* Add a new iov!
+				 */
+				*iovset = iovs = PSC_REALLOC(iovs, 
+				     (sizeof(struct iovec) * (niovs + 1)));
+				/* Set the base pointer past the overlapping 
+				 *   area if this is the first mapping, ot
+				 */
+				iovs[niovs].iov_base = v->oftiov_base +
+					(pre ? (off - v->oftiov_off) : 0);
+				
+				iovs[niovs].iov_len = MIN(reqsz, 
+					  (size_t)(OFT_IOV2E_VOFF_(v) - off));
+
+				reqsz -= iovs[niovs].iov_len;
+				off += iovs[niovs].iov_len;
+
+				psc_info("oftrq=%p oftiov=%p base=%p len=%zu "
+					 "niov=%d reqsz=%zu (new)",
+					 t, v, iovs[niovs].iov_base, 
+					 iovs[niovs].iov_len, niovs, reqsz);
+
+				last_iov = v;
+				pre = 0;
+				niovs++;
+
+			} else {
+				/* Extend the existing IOV.
+				 */
+				psc_assert(!pre);
+				iovs[niovs-1].iov_len = MIN(reqsz,
+					    (size_t)(OFT_IOV2E_VOFF_(v) - off));
+				reqsz -= iovs[niovs-1].iov_len;
+				off += iovs[niovs].iov_len;
+				psc_info("oftrq=%p oftiov=%p base=%p len=%zu "
+					 "niov=%d reqsz=%zu (extend)",
+					 t, v, iovs[niovs].iov_base, 
+					 iovs[niovs].iov_len, niovs, reqsz);
+			}
+			/* 't' is now the reference oftrq.
+			 */
+			r = t;
 			/* Signify that the ending offset has been extended.
 			 */			
 			OFFTIOV_LOCK(v);
 			m = v->oftiov_memb;
-			off = OFT_IOV2E_VOFF_(v);
 			v->oftiov_flags |= (OFTIOV_PUSHING | OFTIOV_PUSHPNDG);
 			if (v->oftiov_memb != m)
 				abort();
-			OFFTIOV_ULOCK(v);
+			OFFTIOV_ULOCK(v);			
 
-			DEBUG_OFFTIOV(PLL_INFO, v, "pos=%d off=%zu", j, off);
-			//slb_inflight_cb(v, SL_INFLIGHT_INC);
+			DEBUG_OFFTIOV(PLL_INFO, v, "pos=%d off=%zu", 
+				      j, r->oftrq_off);
 		}
  	}
+	psc_assert(!reqsz);
 	return (niovs);
 }
 
@@ -405,9 +437,10 @@ bmap_flush_trycoalesce(const struct dynarray *oftrqs, int *offset)
 
 		if (!r || t->oftrq_off <= oftrq_voff_get(r)) {
 			dynarray_add(&b, t);
-			r = t;
+			if (!r || oftrq_voff_get(t) > oftrq_voff_get(r))
+				r = t;
 		} else {
-			if ((bmap_flush_coalesce_size(&b) >= 
+			if ((bmap_flush_coalesce_size(&b) >=
 			     MIN_COALESCE_RPC_SZ) || expired)
 				goto make_coalesce;
 			else {
@@ -417,7 +450,7 @@ bmap_flush_trycoalesce(const struct dynarray *oftrqs, int *offset)
 				dynarray_add(&b, t);
 				r = t;
 			}
-		}			
+		}
 	}
 	if (expired) {
 	make_coalesce:

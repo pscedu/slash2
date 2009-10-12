@@ -70,6 +70,23 @@ struct msl_fhent {			 /* XXX rename */
 	struct fhbmap_cache		 mfh_fhbmap_cache;
 };
 
+/* Mainly a place to store our replication table.
+ */
+struct msl_fcoo_data {
+	int                              mfd_flags;
+	sl_replica_t                     mfd_reptbl[SL_MAX_REPLICAS];
+};
+
+enum {
+	MFD_HAVEREPTBL = (1<<0),
+	MFD_RETRREPTBL = (1<<1)
+};
+
+static inline void
+msl_mfd_release(struct msl_fcoo_data *mfd) {
+	PSCFREE(mfd);	
+}
+
 struct io_server_conn {
 	struct psclist_head		 isc_lentry;
 	struct slashrpc_cservice	*isc_csvc;

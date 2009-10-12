@@ -1289,6 +1289,10 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		/* Tell the mds to release all of our bmaps.
 		 */
 		rc = slash2fuse_releaserpc(req, ino, fi);
+		if (c->fcmh_fcoo->fcoo_pri) {
+			msl_mfd_release((struct msl_fcoo_data *)c->fcmh_fcoo->fcoo_pri);
+			c->fcmh_fcoo->fcoo_pri = NULL;
+		}			
 		fidc_fcoo_remove(c);
 	}
 	DEBUG_FCMH(PLL_INFO, c, "done with slash2fuse_release");
