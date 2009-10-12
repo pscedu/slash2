@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include "psc_util/alloc.h"
+#include "psc_util/lock.h"
 
 #include "cli_bmap.h"
 #include "slconfig.h"
@@ -9,9 +10,14 @@ struct resource_profile *
 slcfg_new_res(void)
 {
 	struct resource_profile *res;
+	struct resprof_cli_info *rci;
 
 	res = PSCALLOC(sizeof(*res));
 	INIT_RES(res);
+
+	rci = res->res_pri = PSCALLOC(sizeof(*rci));
+	LOCK_INIT(&rci->rci_lock);
+
 	return (res);
 }
 
@@ -22,8 +28,10 @@ slcfg_new_resm(void)
 	struct bmap_info_cli *c;
 
 	resm = PSCALLOC(sizeof(*resm));
-	c = PSCALLOC(sizeof(*c));
-	resm->resm_pri = c;
+	c = resm->resm_pri = PSCALLOC(sizeof(*c));
+	LOCK_INIT(&c->bmic_lock);
+	psc_waitq_init(&c->bmic_waitq);
+
 	return (resm);
 }
 
