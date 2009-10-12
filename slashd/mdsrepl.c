@@ -38,6 +38,8 @@ mds_repl_load_locked(struct slash_inode_handle *i)
 	return (0);
 }
 
+#define mds_repl_ios_lookup_add(i, ios) mds_repl_ios_lookup(i, ios, 1)
+
 int
 mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 {
@@ -117,7 +119,7 @@ mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 }
 
 int
-mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
+mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ios)
 {
 	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
 	uint8_t mask, *b=bmapod->bh_repls;
@@ -126,11 +128,9 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 
 	BMAP_LOCK_ENSURE(bmap);
 	/* Find our replica id else add ourselves.
-	 */
-	j = mds_repl_ios_lookup(fcmh_2_inoh(bmap->bcm_fcmh),
-				sl_glid_to_resid(ion), 1);
-
-	if (j < 0)
+         */
+	j = mds_repl_ios_lookup_add(fcmh_2_inoh(bmap->bcm_fcmh), ios);	
+        if (j < 0) 
 		return (j);
 
 	mds_bmapod_dump(bmap);
@@ -144,13 +144,14 @@ mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ion)
 			if (r == j) {
 				if ((b[k] & mask) == SL_REPL_ACTIVE)
 					DEBUG_BMAP(PLL_INFO, bmap,
-						   "repl[%d] ion(%u) exists",
-						   r, ion);
+						   "repl[%d] ios(%u) exists",
+						   r, ios);
 				else {
+					log++;
 					b[k] |= (mask & SL_REPL_ACTIVE);
 					DEBUG_BMAP(PLL_NOTIFY, bmap,
-						   "repl[%d] ion(%u) add",
-						   r, ion);
+						   "repl[%d] ios(%u) add",
+						   r, ios);
 				}
 
 			} else {
