@@ -28,14 +28,38 @@ slrmi_bmap_getcrcs(struct pscrpc_request *rq)
 	struct srm_bmap_wire_rep *mp;
 	struct pscrpc_bulk_desc *desc;
 	struct slash_fidgen fg;
+	struct bmapc_memb *b=NULL;
+	struct iovec iov;
 	sl_blkno_t bmapno;
 	int rc;
 
 	RSX_ALLOCREP(rq, mq, mp);	
+#if 0
+	mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer,
+                             (mq->rw == SL_WRITE) ? lpid.nid : LNET_NID_ANY,
+                             (mq->rw == SL_WRITE) ? nodeInfo.node_res->res_id :
+                             IOS_ID_ANY);
+#endif
 
-	//rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer, lpid.nid
-	//		   lnet_process_id_t cli_prid, lnet_nid_t ion_nid, sl_ios_id_t ios_id);
-		
+	if (mp->rc)
+                return (-1);
+
+	rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &b);
+	if (rc)
+		return (rc);
+
+	psc_assert(b);
+
+	DEBUG_BMAP(PLL_INFO, b, "sending to sliod");
+
+	iov.iov_len = sizeof(struct slash_bmap_wire);
+        iov.iov_base = bmap_2_bmdsiod(b);
+
+        rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE, SRMI_BULK_PORTAL, &iov, 1);
+	if (desc)
+                pscrpc_free_bulk(desc);
+
+	return (0);
 }
 
 int
