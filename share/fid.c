@@ -1,4 +1,8 @@
 /* $Id$ */
+#ifndef _USE_GNU
+#define _USE_GNU
+#endif
+#include <string.h>
 
 #include <sys/param.h>
 #include <sys/xattr.h>
@@ -45,6 +49,7 @@ fid_makepath(slfid_t fid, char *fid_path)
 		psc_fatal("snprintf");
 }
 
+
 /**
  * fid_fileops - create or open a fid on the IO server.
  * @fid: the numeric id.
@@ -56,8 +61,29 @@ fid_fileops(slfid_t fid, int flags)
 	char fidfn[SL_PATH_MAX];
 
 	fid_makepath(fid, fidfn);
+
 	return (open(fidfn, flags));
 }
+
+/**
+ * fid_fileops - create or open a fid on the IO server using the generation
+ *    number as a file suffix.
+ * @fid: the numeric id.
+ * @flags: open options.
+ */
+int
+fid_fileops_fg(struct slash_fidgen *fg, int flags)
+{
+	char fidfn[SL_PATH_MAX];
+
+	fid_makepath(fg->fg_fid, fidfn);
+	snprintf((fidfn + strlen(fidfn)), SL_PATH_MAX, 
+		 "_%"PRIx64, fg->fg_gen);
+
+	return (open(fidfn, flags));
+}
+
+
 
 /**
  * fid_link - create an entry in the FID object root corresponding to a
