@@ -61,7 +61,7 @@ iod_bmap_free(struct bmapc_memb *b)
 }
 
 __static int
-iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *sec)
+iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw, struct srt_bmapdesc_buf *sbdb)
 {
 	int rc=0;
 	struct srm_bmap_wire_req *mq;
@@ -80,13 +80,16 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, struct srt_bdb_secret *sec)
 		goto out;
         }
 
-	memcpy(&mq->sbdb, sec, sizeof(*sec));
-
+	mq->rw = rw;
+	mq->bmapno = sbdb->sbdb_secret.sbs_bmapno;
+	COPYFID(&mq->fg, &sbdb->sbdb_secret.sbs_fg);
+	//memcpy(&mq->sbdb, sbdb, sizeof(*sbdb));
+	
 	iov.iov_len = sizeof(struct slash_bmap_wire);
 	iov.iov_base = bmap_2_biodi_wire(b) = 
 		PSCALLOC(sizeof(struct slash_bmap_wire));
 
-	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, &iov, 1);
+	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMI_BULK_PORTAL, &iov, 1);
 	
 	rc = RSX_WAITREP(rq, mp);
         if (rc || mp->rc) {
@@ -201,7 +204,7 @@ iod_inode_open(struct fidc_membh *f, int rw)
 			oflags |= O_CREAT;
 
 		rc = f->fcmh_fcoo->fcoo_fd = 
-			fid_fileops(fcmh_2_fid(f), oflags);
+			fid_fileops_fg(fcmh_2_fgp(f), oflags);
                 if (rc < 0) {
                         fidc_fcoo_startfailed(f);
 			rc = -errno;
@@ -267,8 +270,7 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 				b->bcm_mode |= BMAP_IOD_RETRIEVE;
 				freelock(&b->bcm_lock);
 
-				rc = iod_bmap_fetch_crcs(b,
-				    &sbdb->sbdb_secret);
+				rc = iod_bmap_fetch_crcs(b, rw, sbdb);
 			} else
 				/* biodi_wire already exists.
 				 */

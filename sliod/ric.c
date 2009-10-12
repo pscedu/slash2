@@ -63,8 +63,8 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	
 	sl_blkno_t bmapno, slvrno;
 	uint64_t cfd;
-	uint32_t tsize, roff;
-	int rc, nslvrs=1, i;
+	uint32_t tsize, roff, sblk;
+	int rc=0, nslvrs=1, i;
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
@@ -76,10 +76,10 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		mp->rc = -EINVAL;
 		return (-1);
 	}
-
-	mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg,
-	    &bmapno, rq->rq_peer, lpid.nid,
-	    nodeInfo.node_res->res_id);
+	mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg, &bmapno, rq->rq_peer, 
+			     (rw == SL_WRITE) ? lpid.nid : LNET_NID_ANY, 
+			     (rw == SL_WRITE) ? nodeInfo.node_res->res_id : 
+			     IOS_ID_ANY);
 	if (mp->rc)
 		return (-1);
 	/* Ensure that this request fits into the bmap's address range.
@@ -165,12 +165,32 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	 *   which are marked '0' in the bitmap.   Here we don't care about
 	 *   buffer offsets since we're block aligned now
 	 */
+	if (rw == SL_WRITE) {
+		off_t roff = mq->offset - (slvrno * SLASH_SLVR_SIZE);
+
+		tsize = mq->size;
+		sblk  = roff / SLASH_SLVR_BLKSZ;
+
+		if (roff & SLASH_SLVR_BLKMASK)
+			tsize += roff & SLASH_SLVR_BLKMASK;
+	}
+
 	for (i=0; i < nslvrs; i++) {	
-		if (rw == SL_WRITE)
-			if ((rc = slvr_fsbytes_io(slvr_ref[i], SL_WRITE)))
+		if (rw == SL_WRITE) {
+			uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR-sblk) 
+					   * SLASH_SLVR_BLKSZ, tsize);
+			tsize -= tsz;
+			if ((rc = slvr_fsbytes_wio(slvr_ref[i], tsz, sblk)))
 				goto out;
+			/* Only the first sliver may use a blk offset.
+			 */
+			sblk = 0;
+		}
 		slvr_io_done(slvr_ref[i], rw);
-	} 
+	}
+	
+	if (rw == SL_WRITE)
+		psc_assert(!tsize);
  out:
 	/* XXX In situations where errors occur (such as an ENOSPC from 
 	 *   iod_inode_open()) then we must have a way to notify other 
