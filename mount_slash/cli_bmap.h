@@ -4,7 +4,7 @@
 #define _SLASH_CLI_BMAP_H_
 
 #include "psc_rpc/rpc.h"
-#include "psc_util/spinlock.h"
+#include "psc_util/lock.h"
 
 #include "bmap.h"
 #include "inode.h"
