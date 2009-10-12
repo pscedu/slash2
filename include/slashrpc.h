@@ -103,6 +103,8 @@
 #define SL_WRITE	00200
 #define SL_EXEC		00100
 
+#define SL_GETREPTBL    01000
+
 /* Slash RPC message types. */
 enum {
 	SRMT_ACCESS,
@@ -137,6 +139,7 @@ enum {
 	SRMT_RELEASEBMAP,
 	SRMT_RELEASEDIR,
 	SRMT_RENAME,
+	SRMT_GETREPTBL,
 	SRMT_RMDIR,
 	SRMT_SETATTR,
 	SRMT_STATFS,
@@ -199,7 +202,8 @@ struct srm_bmap_req {
 	uint32_t		blkno;		/* Starting block number                  */
 	uint32_t		nblks;		/* Read-ahead support                     */
 	uint32_t		dio;		/* Client wants directio                  */
-	uint32_t		rw;
+	uint32_t		rw;	
+	uint32_t                getreptbl;
 };
 
 struct srm_bmap_rep {
@@ -222,7 +226,10 @@ struct srm_bmap_rep {
  *  which was handed to him by the client.
  */
 struct srm_bmap_wire_req {
-	struct srt_bdb_secret   sbdb;
+	struct slash_fidgen fg;
+	sl_blkno_t bmapno;
+	int rw;	
+	//struct srt_bmapdesc_buf sbdb;
 };
 
 struct srm_bmap_wire_rep {
