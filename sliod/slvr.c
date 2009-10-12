@@ -147,17 +147,20 @@ slvr_getslab(struct slvr_ref *s)
 
 
 __static int
-slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
+slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 {
-	ssize_t rc, len = (nblks * SLASH_SLVR_BLKSZ);
+	ssize_t rc;
+	int nblks;
 
-	psc_assert(s->slvr_flags & SLVR_PINNED); 
-		   
+	nblks = (size / SLASH_SLVR_BLKSZ) + 
+		(size & SLASH_SLVR_BLKMASK) ? 1 : 0;
+
+	psc_assert(s->slvr_flags & SLVR_PINNED); 		   
         psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	if (rw == SL_READ) {
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
-		rc = pread(slvr_2_fd(s), slvr_2_buf(s, blk), len,
+		rc = pread(slvr_2_fd(s), slvr_2_buf(s, blk), size,
 			   slvr_2_fileoff(s, blk));		
 		/* XXX this is a bit of a hack.  Here we'll check crc's
 		 *  only when nblks == an entire sliver.  Only RMW will
@@ -201,23 +204,23 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
 		SLVR_ULOCK(s);
 		
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, blk), 
-			    len, slvr_2_fileoff(s, blk));
+			    size, slvr_2_fileoff(s, blk));
 	}
 
 	if (rc < 0)
-		DEBUG_SLVR(PLL_ERROR, s, "failed (rc=%zd, len=%zd) "
+		DEBUG_SLVR(PLL_ERROR, s, "failed (rc=%zd, size=%u) "
 			   "%s blks=%d off=%"PRIx64" errno=%d", 
-			   rc, len, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
+			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 			   nblks, slvr_2_fileoff(s, blk), errno);
 
-	else if (rc != len)
-		DEBUG_SLVR(PLL_ERROR, s, "short io (rc=%zd, len=%zd) "
+	else if (rc != size)
+		DEBUG_SLVR(PLL_ERROR, s, "short io (rc=%zd, size=%u) "
 			   "%s blks=%d off=%"PRIu64" errno=%d", 
-			   rc, len, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
+			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 			   nblks, slvr_2_fileoff(s, blk), errno);
 	else {
-		DEBUG_SLVR(PLL_INFO, s, "ok %s blks=%d off=%"PRIu64" rc=%zd",
-			   (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), nblks, 
+		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%"PRIu64" rc=%zd",
+			   (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), size, 
 			   slvr_2_fileoff(s, blk), rc);
 		rc = 0;
 	}
@@ -230,8 +233,8 @@ slvr_fsio(struct slvr_ref *s, int blk, int nblks, int rw)
  *   in slab bitmap, trying to coalesce where possible.
  * @s: the sliver.
  */
-__static int
-slvr_fsbytes_io(struct slvr_ref *s, int rw)
+int
+slvr_fsbytes_rio(struct slvr_ref *s)
 {
 	int nblks, blk, rc;
 	size_t i;
@@ -244,10 +247,10 @@ slvr_fsbytes_io(struct slvr_ref *s, int rw)
 
 	psc_assert(s->slvr_flags & SLVR_PINNED);
                    
-
-#define slvr_fsbytes_RW							\
+#define slvr_fsbytes_READ						\
 	if (nblks) {							\
-		if ((rc = (slvr_fsio(s, blk, nblks, rw))))		\
+		if ((rc = (slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,	\
+				     SL_READ))))			\
 			return (rc);					\
 		nblks = 0;						\
 	}								\
@@ -261,12 +264,22 @@ slvr_fsbytes_io(struct slvr_ref *s, int rw)
 				nblks = 1; 
 			}
 		} else {
-			slvr_fsbytes_RW;
+			slvr_fsbytes_READ;
 		}
 	}
-	slvr_fsbytes_RW;
+	slvr_fsbytes_READ;
 
 	return (0);
+}
+
+/**
+ *
+ */
+int
+slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
+{
+	DEBUG_SLVR(PLL_INFO, s, "sblk=%u size=%u", sblk, size);
+	slvr_fsio(s, sblk, size, SL_WRITE);
 }
 
 void
@@ -329,14 +342,21 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	 *  completes but prior the re-calculation of the slvr's crc
 	 *  which is done asynchronously.
 	 */
-	if (rw == SL_WRITE)
+	if (rw == SL_WRITE) {
 		s->slvr_flags |= SLVR_CRCDIRTY;
+		
+		if (s->slvr_flags & SLVR_DATARDY)
+			/* Either read or write ops can just proceed if SLVR_DATARDY
+			 *  is set, the sliver is prepared.
+			 */		
+			goto set_write_dirty;
 
-	if (s->slvr_flags & SLVR_DATARDY)
-		/* Either read or write ops can just proceed if SLVR_DATARDY
-		 *  is set, the sliver is prepared.
-		 */		
-		goto set_write_dirty;
+	} else if (rw == SL_READ) {
+		if (s->slvr_flags & SLVR_DATARDY)
+			goto out;
+
+	} else
+		abort();
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		/* Another thread is either pulling this sliver from
@@ -421,8 +441,21 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	/* Execute read to fault in needed blocks after dropping
 	 *   the lock.  All should be protected by the FAULTING bit.
 	 */
-	if ((rc = slvr_fsbytes_io(s, SL_READ)))
+	if ((rc = slvr_fsbytes_rio(s)))
 		return (rc);
+	else {
+		SLVR_LOCK(s);
+		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
+		
+		s->slvr_flags |= SLVR_DATARDY;
+		s->slvr_flags &= ~SLVR_FAULTING;
+		
+		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
+		SLVR_WAKEUP(s);
+		SLVR_ULOCK(s);
+
+		return (0);
+	}
 
 	if (rw == SL_WRITE) {
 		/* Above, the bits were set for the RMW blocks, now 
