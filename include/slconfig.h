@@ -101,6 +101,8 @@ typedef struct resource_member {
 	void             *resm_pri;
 } sl_resm_t;
 
+#define slresm_2_resid(r) (r)->resm_res->res_id
+
 struct site_profile	*slcfg_new_site(void);
 struct resource_profile	*slcfg_new_res(void);
 struct resource_member	*slcfg_new_resm(void);
