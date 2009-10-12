@@ -772,9 +772,10 @@ sl_oftiov_pin_cb(struct offtree_iov *iov, int op)
 	struct sl_buffer    *slb = iov->oftiov_pri;
 	/* Saneness.
 	 */
-	//LOCK_ENSURE(&m->oft_lock);
 	psc_assert(m);
 	psc_assert(m->oft_norl.oft_iov == iov);
+	LOCK_ENSURE(&m->oft_lock);
+
 	/* If there is no refcnt by the time we're called then no
 	 *   guarantee can be made that this slb is currently being freed.
 	 * For SL_BUFFER_UNPIN, these refs will be dec'd after this callback
@@ -816,18 +817,23 @@ sl_oftiov_inflight_cb(struct offtree_iov *iov, int op)
 
 		atomic_inc(&s->slb_inflight);
 
-		//		psc_assert(atomic_read(&s->slb_inflight) <=
-		//	   atomic_read(&s->slb_inflpndg));
+	       	psc_assert(atomic_read(&s->slb_inflight) <=
+			   atomic_read(&s->slb_inflpndg));
 
 	} else if (op == SL_INFLIGHT_DEC) {
-		//psc_assert(atomic_read(&s->slb_inflight) <=
-                //           atomic_read(&s->slb_inflpndg));
+		psc_assert(atomic_read(&s->slb_inflight) <=
+                           atomic_read(&s->slb_inflpndg));
 		psc_assert(atomic_read(&s->slb_inflight) >= 1);
 
 		atomic_dec(&s->slb_inflight);
 
 	} else
 		psc_fatalx("Invalid op=%d", op);
+
+
+	DEBUG_SLB(PLL_TRACE, s, "inflight ref updating op=%s",
+		  op ? "SL_INFLIGHT_DEC" : "SL_INFLIGHT_INC");
+
 }
 /**
  * sl_buffer_alloc_internal - allocate blocks from the given slab buffer 'b'.
@@ -948,7 +954,7 @@ sl_buffer_alloc_internal(struct sl_buffer *slb, size_t nblks, off_t soffa,
 		sl_buffer_pin_locked(slb);
 		dynarray_add(a, iov);
 		DEBUG_OFFTIOV(PLL_TRACE, iov,
-			      "new iov(%d)", tiovs);
+			      "new iov(%d) array=%p", tiovs, a);
 		tiovs++;
 	}
  out:
