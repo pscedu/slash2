@@ -68,6 +68,7 @@ bmap_mds_info_init(struct bmapc_memb *bmap)
 struct bmi_assign {
 	lnet_nid_t   bmi_ion_nid;
 	sl_ios_id_t  bmi_ios;
+	//	struct slash_fidgen bmi_fid;
 	slfid_t      bmi_fid;
 	sl_blkno_t   bmi_bmapno;
 	time_t       bmi_start;
@@ -79,7 +80,11 @@ struct bmi_assign {
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 
 int  mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
-int  mds_bmap_load(struct mexpfcm *, struct srm_bmap_req *, struct bmapc_memb **);
+int  mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, 
+		  struct bmapc_memb **);
+
+int  mds_bmap_load_cli(struct mexpfcm *, struct srm_bmap_req *, struct bmapc_memb **);
+
 void mds_bmapod_dump(const struct bmapc_memb *);
 
 #endif /* _SLASHD_MDS_BMAP_H_ */
