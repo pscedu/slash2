@@ -153,7 +153,7 @@ struct slash_bmap_cli_wire {
  * @bh_gen: current generation number.
  * @bh_crcs: the crc table, one 8 byte crc per sliver.
  * @bh_crcstates: some bits for describing the state of a sliver.
- * @bh_repls: bitmap used for tracking the repication status of this bmap.
+ * @bh_repls: bitmap used for tracking the replication status of this bmap.
  * @bh_bhcrc: on-disk checksum.
  */
 struct slash_bmap_od {
