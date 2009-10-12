@@ -158,8 +158,9 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
 	struct bmapc_memb *bmap;
-	struct iovec iov[2];
+	struct iovec iov[3];
 	struct mexpfcm *m;
+	struct slash_bmap_cli_wire *cw; 
 	uint64_t cfd;
 
 	ENTRY;
@@ -174,36 +175,50 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	/* Access the reference
 	 */
 	mp->rc = cfdlookup(rq->rq_export, cfd, &m);
-	if (mp->rc == 0) {
-		bmap = NULL;
-		mp->rc = mds_bmap_load(m, mq, &bmap);
-		if (mp->rc == 0) {
-			struct slash_bmap_cli_wire *cw;
+	if (mp->rc)
+		RETURN(0);
+	
+	bmap = NULL;
+	mp->rc = mds_bmap_load_cli(m, mq, &bmap);
+	if (mp->rc)
+                RETURN(0);
 
-			bmdsi = bmap->bcm_pri;
-			cw = (struct slash_bmap_cli_wire *)bmdsi->bmdsi_od->bh_crcstates;
+	bmdsi = bmap->bcm_pri;
+	cw = (struct slash_bmap_cli_wire *)bmdsi->bmdsi_od->bh_crcstates;
+		
+	iov[0].iov_base = cw;
+	iov[0].iov_len = sizeof(*cw);
+	iov[1].iov_base = &bdb;
+	iov[1].iov_len = sizeof(bdb);
 
-			iov[0].iov_base = cw;
-			iov[0].iov_len = sizeof(*cw);
-			iov[1].iov_base = &bdb;
-			iov[1].iov_len = sizeof(bdb);
-
-			if (bmap->bcm_mode & BMAP_WR)
-				mp->ios_nid =
-				    bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
-
-			bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg,
-			    rq->rq_peer, mp->ios_nid,
-			    bmdsi->bmdsi_wr_ion->mi_resm->resm_res->res_id,
-			    bmap->bcm_blkno);
-
-			mp->rc = rsx_bulkserver(rq, &desc,
-			    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, 2);
-			if (desc)
-				pscrpc_free_bulk(desc);
-			mp->nblks = 1;
-		}
+	if (mq->getreptbl) {
+		/* This code only deals with INO_DEF_REPLICAS, not MAX.
+		 *   XXX
+		 */
+		iov[2].iov_base = &fcmh_2_inoh(bmap->bcm_fcmh)->inoh_ino.ino_repls;
+		iov[2].iov_len = sizeof(sl_replica_t) * INO_DEF_NREPLS;
 	}
+
+	if (bmap->bcm_mode & BMAP_WR) {
+		/* Always return the write IOS if the bmap is in write mode.
+		 */
+		psc_assert(bmdsi->bmdsi_wr_ion);
+		mp->ios_nid = bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
+	}
+
+	bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg, rq->rq_peer, 
+	   (mq->rw == SRIC_BMAP_WRITE ? mp->ios_nid : LNET_NID_ANY),
+	   (mq->rw == SRIC_BMAP_WRITE ? 
+	    bmdsi->bmdsi_wr_ion->mi_resm->resm_res->res_id : IOS_ID_ANY),
+	   bmap->bcm_blkno);
+
+	mp->rc = rsx_bulkserver(rq, &desc,
+				BULK_PUT_SOURCE, SRMC_BULK_PORTAL, 
+				iov, 2 + mq->getreptbl);
+	if (desc)
+		pscrpc_free_bulk(desc);
+	mp->nblks = 1;
+
 	RETURN(0);
 }
 
@@ -510,7 +525,7 @@ slrmc_release(struct pscrpc_request *rq)
 	MEXPFCM_ULOCK(m);
 
 	rc = cfdfree(rq->rq_export, cfd);
-	psc_info("cfdfree() cfd %"PRId64" rc=%d",
+	psc_warnx("cfdfree() cfd %"PRId64" rc=%d",
 		 cfd, rc);
 
 	mp->rc = mds_inode_release(f);
