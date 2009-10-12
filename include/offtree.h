@@ -49,6 +49,8 @@ power(size_t base, size_t exp)
 #define OFT_ENDOFF(root, d, abs_width)			\
 	((off_t)(OFT_REGIONSZ(root, d) * (abs_width + 1) - 1))
 
+#define OFT_REQ_SOFFA(req) ((req)->oftrq_off & ~SLASH_BMAP_BLKMASK)
+
 /* Confusing name, it means given an oft_request, find the
  *   starting offset for the region not the request.
  */
@@ -64,9 +66,9 @@ power(size_t base, size_t exp)
 	(((req)->oftrq_width * (req)->oftrq_root->oftr_width) + pos)
 
 
-#define OFT_REQ_REGIONBLKS(req)				       \
-	((OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) - \
-	  ((req)->oftrq_off - OFT_REQ_STARTOFF(req))) /		\
+#define OFT_REQ_REGIONBLKS(req)						\
+	((OFT_REGIONSZ((req)->oftrq_root, (req)->oftrq_depth) -		\
+	  (OFT_REQ_SOFFA(req) - OFT_REQ_STARTOFF(req))) /		\
 	 (req)->oftrq_root->oftr_minsz)
 
 
@@ -79,10 +81,11 @@ power(size_t base, size_t exp)
 			   (e <= OFT_REQ_ENDOFF(req)));			\
 	}
 
+
 #define OFT_REQ2SE_OFFS(req, s, e) {					\
 		int TTt;						\
 									\
-		s = (req)->oftrq_off;					\
+		s = OFT_REQ_SOFFA(req);					\
 		e = (s + ((req)->oftrq_nblks *				\
 			  (req)->oftrq_root->oftr_minsz)) - 1;		\
 		TTt = s % (req)->oftrq_root->oftr_minsz;		\
@@ -93,8 +96,8 @@ power(size_t base, size_t exp)
 	}
 
 #define OFT_REQ2E_OFF_(req)						\
-	(off_t)(((req)->oftrq_off + ((req)->oftrq_nblks *		\
-				     (req)->oftrq_root->oftr_minsz) - 1))
+	(off_t)((OFT_REQ_SOFFA(req) + ((req)->oftrq_nblks *		\
+				       (req)->oftrq_root->oftr_minsz) - 1))
 
 #define OFT_IOV2E_OFF(iov, e) {						\
 		e = (((iov)->oftiov_off + ((iov)->oftiov_nblks *	\
@@ -476,6 +479,7 @@ enum offtree_req_flags {
 	OFTREQ_INFLIGHT = (1<<0)
 };
 
+#if 0
 static inline size_t
 oftrq_size_get(const struct offtree_req *r)
 {
@@ -484,6 +488,13 @@ oftrq_size_get(const struct offtree_req *r)
 	else
 		return (size_t)(r->oftrq_nblks * SLASH_BMAP_BLKSZ);
 }
+#else 
+static inline size_t
+oftrq_size_get(const struct offtree_req *r)
+{
+	return (r->oftrq_len);
+}
+#endif
 
 static inline off_t
 oftrq_voff_get(const struct offtree_req *r)
@@ -504,7 +515,7 @@ oftrq_voff_get(const struct offtree_req *r)
 
 #define DEBUG_OFFTREQ(level, oftr, fmt, ...)				\
 	psc_logs((level), PSS_GEN, 					\
-		 " oftr@%p o:%"PRIx64" l:%"PRId64" node:%p darray:%p"	\
+		 " oftr@%p o:%"PRId64" blks:%"PRId64" node:%p darray:%p" \
 		 " root:%p op:%hhu d:%hhu w:%hu len=%zu "		\
 		 REQ_OFTRQ_FLAGS_FMT" "fmt,				\
 		 (oftr), (oftr)->oftrq_off, (oftr)->oftrq_nblks,	\
@@ -514,6 +525,7 @@ oftrq_voff_get(const struct offtree_req *r)
 		 (oftr)->oftrq_len,					\
 		 DEBUG_OFTRQ_FLAGS(oftr),				\
 		 ## __VA_ARGS__)
+
 
 static inline int
 oft_child_get(off_t o, struct offtree_root *r, int d, int abs_width)

@@ -377,6 +377,7 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 	ssize_t tblks=0, rc=0;
 	int     oniovs=0;
 	struct  offtree_root *r = req->oftrq_root;
+	off_t   soffa = OFT_REQ_SOFFA(req);
 
 	tblks = req->oftrq_nblks;
 
@@ -392,8 +393,7 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 		 */
 		oniovs = dynarray_len(req->oftrq_darray);
 
-		rc = (r->oftr_alloc)(tblks, req->oftrq_off,
-				     req->oftrq_darray, r);
+		rc = (r->oftr_alloc)(tblks, soffa, req->oftrq_darray, r);
 		if (rc != tblks) {
 			if (rc < tblks)
 				goto done;
@@ -428,8 +428,9 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 		if (front) {
 			oniovs = dynarray_len(req->oftrq_darray);
 
-			rc = (r->oftr_alloc)(front, req->oftrq_off,
-					     req->oftrq_darray, r);
+			rc = (r->oftr_alloc)(front, soffa, 
+				     req->oftrq_darray, r);
+
 			if (rc != front) {
 				if (rc < front) {
 					psc_errorx("Wanted %"PRIx64" got %"PRIx64,
@@ -452,9 +453,8 @@ offtree_blks_get(struct offtree_req *req, struct offtree_iov *hb_iov)
 			/* Push the iov offset to the beginning of the back
 			 *   segment.
 			 */
-			//off_t toff=(req->oftrq_off +=
-			off_t toff=(req->oftrq_off +
-				    (req->oftrq_nblks - back) * r->oftr_minsz);
+			off_t toff=(soffa + (req->oftrq_nblks - back) * 
+				    r->oftr_minsz);
 
 			oniovs = dynarray_len(req->oftrq_darray);
 			/* Allocate 'back' blocks.
@@ -539,17 +539,22 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		 */
 		if (ATTR_TEST(iov->oftiov_flags, OFTIOV_MAPPED)) {
 			if (req->oftrq_nblks == iov->oftiov_nblks) {
-				spinlock(&req->oftrq_memb->oft_lock);
+				struct offtree_memb *m;
+				int locked;
+				
+				psc_assert(iov->oftiov_memb);
+				m = iov->oftiov_memb;				
+				locked = reqlock(&m->oft_lock);
 				psc_assert(ATTR_TEST(iov->oftiov_flags,
 						     OFTIOV_REMAP_SRC));
-
 				iov->oftiov_memb = req->oftrq_memb;
 				req->oftrq_memb->oft_norl.oft_iov = iov;
-				freelock(&req->oftrq_memb->oft_lock);
-
 				ATTR_SET(iov->oftiov_flags, OFTIOV_REMAP_END);
+				ureqlock(&m->oft_lock, locked);
+
 			} else {
 				struct offtree_iov *niov;
+				off_t soffa = OFT_REQ_SOFFA(req);
 
 				niov = PSCALLOC(sizeof(struct offtree_iov));
 				ATTR_SET(niov->oftiov_flags, OFTIOV_REMAPPING);
@@ -558,14 +563,14 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				niov->oftiov_pri   = iov->oftiov_pri;
 				niov->oftiov_blksz = iov->oftiov_blksz;
 				niov->oftiov_base  = iov->oftiov_base +
-					(req->oftrq_off - iov->oftiov_off);
+					(soffa - iov->oftiov_off);
 				/* Ensure that the new partial iov doesn't overrun
 				 *  the REMAP_SRC iov.
 				 */
 				psc_trace("blks=%zu reqeoff=%"PRIx64" reqeoffa=%"PRIx64
 					  " ioveoff=%"PRIx64" ioveoffa=%"PRIx64,
 					  niov->oftiov_nblks,
-					  (req->oftrq_off+(req->oftrq_nblks*iov->oftiov_blksz)),
+					  (soffa + (req->oftrq_nblks*iov->oftiov_blksz)),
 					  OFT_REQ2E_OFF_(req),
 					  (iov->oftiov_off + OFT_IOVSZ(iov)),
 					  OFT_IOV2E_OFF_(iov));
@@ -579,28 +584,30 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 				req->oftrq_memb->oft_norl.oft_iov = niov;
 				DEBUG_OFFTIOV(PLL_INFO, niov, "remap (niov)");
 			}
-			DEBUG_OFFTIOV(PLL_INFO, iov,  "remapsrc (iov)");
+			DEBUG_OFFTIOV(PLL_INFO, iov, "remapsrc (iov)");
 
 		} else {
 			if (req->oftrq_nblks < iov->oftiov_nblks) {
 				struct offtree_iov *niov;
+				off_t soffa = OFT_REQ_SOFFA(req);
+
 				niov = PSCALLOC(sizeof(*niov));
 				/* Prep the new iov.
 				 */
 				ATTR_SET(niov->oftiov_flags, OFTIOV_REMAPPING);
 				niov->oftiov_nblks = req->oftrq_nblks;
-				niov->oftiov_off   = req->oftrq_off;
+				niov->oftiov_off   = soffa;
 				niov->oftiov_pri   = iov->oftiov_pri;
 				niov->oftiov_blksz = iov->oftiov_blksz;
 				niov->oftiov_base  = iov->oftiov_base +
-					(req->oftrq_off - iov->oftiov_off);
+					(soffa - iov->oftiov_off);
 				/* Ensure that the new partial iov doesn't overrun
 				 *  the REMAP_SRC iov.
 				 */
 				psc_trace("blks=%zu reqeoff=%"PRIx64" reqeoffa=%"PRIx64
 					  " ioveoff=%"PRIx64" ioveoffa=%"PRIx64,
 					  niov->oftiov_nblks,
-					  (req->oftrq_off+(req->oftrq_nblks*iov->oftiov_blksz)),
+					  (soffa + (req->oftrq_nblks*iov->oftiov_blksz)),
 					  OFT_REQ2E_OFF_(req),
 					  (iov->oftiov_off + OFT_IOVSZ(iov)),
 					  OFT_IOV2E_OFF_(iov));
@@ -682,9 +689,12 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 		     j++, tchild++, myreq.oftrq_width++, tiov_cnt=1) {
 			/* Region values increase with myreq.oftr_width
 			 */
+			off_t soffa = OFT_REQ_SOFFA(req);
+
 			//printf ("WIDTH = %hhu\n", myreq.oftrq_width);
 			rg_soff = OFT_REQ_STARTOFF(&myreq);
 			rg_eoff = OFT_REQ_ENDOFF(&myreq);
+
 			/* This should always be true
 			 */
 			psc_trace("i_soffa=%"PRIx64", rg_soff=%"PRIx64,
@@ -709,8 +719,7 @@ offtree_putnode(struct offtree_req *req, int iovoff, int iovcnt, int blkoff)
 			ATTR_UNSET(myreq.oftrq_memb->oft_flags, OFT_UNINIT);
 			ATTR_SET(myreq.oftrq_memb->oft_flags, OFT_ALLOCPNDG);
 
-			myreq.oftrq_off    = MAX(OFT_REQ_STARTOFF(&myreq),
-						 req->oftrq_off);
+			myreq.oftrq_off    = MAX(OFT_REQ_STARTOFF(&myreq), soffa);
 			nblks             -= myreq.oftrq_nblks;
 			/* More middle child sanity (middle children must
 			 *  consume their entire region).
@@ -1216,6 +1225,7 @@ offtree_region_preprw(struct offtree_req *req)
 			struct offtree_req myreq;
 			size_t nblks = req->oftrq_nblks;
 			int    tchild, tdepth=0;
+			off_t soffa = OFT_REQ_SOFFA(req);
 
 			psc_assert(echild > schild);
 			DEBUG_OFFTREQ(PLL_TRACE, req, "req spans multiple children");
@@ -1226,12 +1236,12 @@ offtree_region_preprw(struct offtree_req *req)
 			 */
 			freelock(&m->oft_lock);
 			memcpy(&myreq, req, (sizeof(*req)));
-
+			
 			myreq.oftrq_depth++;
 			for (tchild=schild, tdepth=myreq.oftrq_depth;
 			     tchild <= echild; tchild++, myreq.oftrq_depth=tdepth) {
 				myreq.oftrq_width = OFT_REQ_ABSWIDTH_GET(req, tchild);
-				myreq.oftrq_off   = MAX(OFT_REQ_STARTOFF(&myreq), req->oftrq_off);
+				myreq.oftrq_off   = MAX(OFT_REQ_STARTOFF(&myreq), soffa);
 				myreq.oftrq_nblks = MIN(OFT_REQ_REGIONBLKS(&myreq), nblks);
 				myreq.oftrq_memb  = m->oft_norl.oft_children[tchild];
 				nblks            -= myreq.oftrq_nblks;
