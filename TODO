@@ -19,18 +19,18 @@
 
 * Need a method for cleaning up sliod inodes, they're sitting around in the cache dirty (and
 	hence, unreclaimable).
-	. use biod_lentry to place bmaps onto an list which is periodically 
+	. use biod_lentry to place bmaps onto an list which is periodically
 	scanned for bmaps which have been inactive for some time.
 
-	. the bmaps are gathered up and placed into an rpc bound for the mds.  
-	the mds unbinds the bmaps from the sliod (erasing the respective 
+	. the bmaps are gathered up and placed into an rpc bound for the mds.
+	the mds unbinds the bmaps from the sliod (erasing the respective
 	odtable entry).
-	
+
 	. fcmh will remain dirty until all of its bmaps have been reclaimed.  At
 	that point the fcmh file des will be closed and the fcmh will be released.
 
 	. Note that these operations are not beared upon by client-side release
-	operations.  They are purposely kept separate.		
+	operations.  They are purposely kept separate.
 
 * Sliod runs out of space in filesystem and returns from an rpc early (client sees the rc -28)
 	the problem is that other sliod threads are blocked on a waitq and are never woken
@@ -180,6 +180,7 @@ D_ANY
 
 
 - rename ios to ion
+- rename fdbuf.c -> descbuf.c
 - use a sliding window to track valid cfd's and remove them from the window
   once they are CLOSE()'d
 
