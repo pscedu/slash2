@@ -42,12 +42,13 @@ struct bmap_mds_info {
 /* Note that n + BMAP_RSVRD_MODES must be < 32.
  */
 enum mds_bmap_modes {
-        BMAP_MDS_FAILED = (1 << 16), /* crc failure */
-        BMAP_MDS_EMPTY  = (1 << 17), /* new bmap, not yet committed to disk */
-        BMAP_MDS_CRC_UP = (1 << 18), /* crc update in progress */
-	BMAP_MDS_CRCWRT = (1 << 19),
-	BMAP_MDS_NOION  = (1 << 20),
-	BMAP_MDS_INIT   = BMAP_INIT
+	BMAP_MDS_FAILED		= (1 << 16), /* crc failure */
+	BMAP_MDS_EMPTY		= (1 << 17), /* new bmap, not yet committed to disk */
+	BMAP_MDS_CRC_UP		= (1 << 18), /* crc update in progress */
+	BMAP_MDS_CRCWRT		= (1 << 19),
+	BMAP_MDS_NOION		= (1 << 20),
+	BMAP_MDS_REPL_PERSIST	= (1 << 21), /* policy: persist for auto replication */
+	BMAP_MDS_INIT		= BMAP_INIT
 };
 
 static inline void
@@ -80,7 +81,7 @@ struct bmi_assign {
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 
 int  mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
-int  mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, 
+int  mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t,
 		  struct bmapc_memb **);
 
 int  mds_bmap_load_cli(struct mexpfcm *, struct srm_bmap_req *, struct bmapc_memb **);
