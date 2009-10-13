@@ -22,6 +22,7 @@
 #include "mdsrpc.h"
 #include "slashdthr.h"
 #include "slashexport.h"
+#include "slashd.h"
 
 struct odtable *mdsBmapAssignTable;
 struct slash_bmap_od null_bmap_od;
@@ -204,13 +205,13 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 		fidc_fcoo_startdone(f);
 
 	} else {
-		int rc=fidc_fcoo_wait_locked(f, FCOO_START);
+		rc=fidc_fcoo_wait_locked(f, FCOO_START);
 
 		if (rc < 0) {
 			DEBUG_FCMH(PLL_ERROR, f,
 				   "fidc_fcoo_wait_locked() failed");
 			FCMH_ULOCK(f);
-			free(m);
+			PSCFREE(m);
 			return (-1);
 
 		} else if (rc == 1)
@@ -278,7 +279,7 @@ mexpfcm_release_brefs(struct mexpfcm *m)
 	for (bref = SPLAY_MIN(exp_bmaptree, &m->mexpfcm_bmaps);
 	    bref; bref = bn) {
 		bn = SPLAY_NEXT(exp_bmaptree, &m->mexpfcm_bmaps, bref);
-		SPLAY_REMOVE(exp_bmaptree, &m->mexpfcm_bmaps, bref);
+		SPLAY_XREMOVE(exp_bmaptree, &m->mexpfcm_bmaps, bref);
 		mds_bmap_ref_del(bref);
 	}
 }
@@ -329,9 +330,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	 *  serialization) and remove ourselves from the tree.
 	 */
 	locked = reqlock(&f->fcmh_lock);
-	if (SPLAY_REMOVE(fcm_exports, &i->fmdsi_exports, m) == NULL)
-		psc_fatalx("Failed to remove %p export(%p) from %p",
-		    m, m->mexpfcm_export, &i->fmdsi_exports);
+	SPLAY_XREMOVE(fcm_exports, &i->fmdsi_exports, m);
 	ureqlock(&f->fcmh_lock, locked);
  out:
 	c->pri = NULL;
@@ -729,7 +728,6 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 	if (!wr[0] || (wr[0] == 1 && !wr[1]))
 		mds_bmap_directio_unset(bref);
 
-
 	if (!SPLAY_REMOVE(bmap_exports, &mdsi->bmdsi_exports, bref) &&
 	    !(bmap->bcm_mode & BMAP_MDS_NOION))
 		psc_fatalx("bref not found on bmap_exports");
@@ -841,36 +839,22 @@ void
 mds_bmapod_dump(const struct bmapc_memb *bmap)
 {
 	uint8_t mask, *b=bmap_2_bmdsiod(bmap)->bh_repls;
+	char buf[SL_MAX_REPLICAS+1], c, *ob=buf;
 	uint32_t pos, k;
-	char buf[SL_MAX_REPLICAS+1], c;
+	int ch[4];
+
+	ch[SL_REPL_INACTIVE] = '-';
+	ch[SL_REPL_TOO_OLD] = 'o';
+	ch[SL_REPL_OLD] = 'O';
+	ch[SL_REPL_ACTIVE] = 'A';
 
 	for (k=0; k < SL_REPLICA_NBYTES; k++, mask=0)
-		for (pos=0, mask=0; pos < NBBY; pos+=SL_BITS_PER_REPLICA) {
-
+		for (pos=0, mask=0; pos < NBBY; b++, pos+=SL_BITS_PER_REPLICA) {
 			mask = (uint8_t)(SL_REPLICA_MASK << pos);
-
-			switch (b[k] & mask) {
-			case SL_REPL_INACTIVE:
-				c = '-';
-				break;
-
-			case SL_REPL_TOO_OLD:
-				c = 'o';
-				break;
-
-			case SL_REPL_OLD:
-				c = 'O';
-				break;
-
-			case SL_REPL_ACTIVE:
-				c = 'A';
-				break;
-			}
-			buf[k*(NBBY/SL_BITS_PER_REPLICA) +
-			    pos/SL_BITS_PER_REPLICA] = c;
+			*ob = ch[(b[k] & mask) >> pos];
 		}
 
-	buf[SL_MAX_REPLICAS] = '\0';
+	*ob = '\0';
 
 	DEBUG_BMAP(PLL_NOTIFY, bmap, "replicas(%s) SL_REPLICA_NBYTES=%u",
 		   buf, SL_REPLICA_NBYTES);
