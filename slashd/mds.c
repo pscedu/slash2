@@ -11,16 +11,15 @@
 
 #include "cache_params.h"
 #include "cfd.h"
-#include "fidcache.h"
 #include "fidc_mds.h"
+#include "fidcache.h"
 #include "inode.h"
 #include "mds_repl.h"
-#include "mdslog.h"
 #include "mdscoh.h"
 #include "mdsexpc.h"
-#include "mdsrpc.h"
 #include "mdsio_zfs.h"
-
+#include "mdslog.h"
+#include "mdsrpc.h"
 #include "slashdthr.h"
 #include "slashexport.h"
 
@@ -29,8 +28,6 @@ struct slash_bmap_od null_bmap_od;
 struct slash_inode_od null_inode_od;
 struct cfdops mdsCfdOps;
 struct sl_fsops mdsFsops;
-
-extern list_cache_t pndgBmapCbs;
 
 __static SPLAY_GENERATE(fcm_exports, mexpfcm,
 			mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
@@ -57,7 +54,7 @@ mds_inode_od_initnew(struct slash_inode_handle *i)
 	mds_inode_sync(i);
 }
 
-int 
+int
 mds_inode_release(struct fidc_membh *f)
 {
 	struct fidc_mds_info *i;
@@ -66,18 +63,18 @@ mds_inode_release(struct fidc_membh *f)
 	spinlock(&f->fcmh_lock);
 
 	psc_assert(f->fcmh_fcoo && f->fcmh_fcoo->fcoo_pri);
-	/* It should be safe to look at the fmdsi without calling 
+	/* It should be safe to look at the fmdsi without calling
 	 *   fidc_fcmh2fmdsi() because this thread should absolutely have
 	 *   a ref to the fcmh which should be open.
 	 */
 	i = fcmh_2_fmdsi(f);
 
 	DEBUG_FCMH(PLL_DEBUG, f, "i->fmdsi_ref (%d) (oref=%d)",
-                   atomic_read(&i->fmdsi_ref), f->fcmh_fcoo->fcoo_oref_rw[0]);
+		   atomic_read(&i->fmdsi_ref), f->fcmh_fcoo->fcoo_oref_rw[0]);
 
 	if (atomic_dec_and_test(&i->fmdsi_ref)) {
 		psc_assert(SPLAY_EMPTY(&i->fmdsi_exports));
-		/* We held the final reference to this fcoo, it must 
+		/* We held the final reference to this fcoo, it must
 		 *   return attached.
 		 */
 		psc_assert(!fidc_fcoo_wait_locked(f, 1));
@@ -86,11 +83,11 @@ mds_inode_release(struct fidc_membh *f)
 		DEBUG_FCMH(PLL_DEBUG, f, "calling zfsslash2_release");
 		rc = mdsio_zfs_release(&i->fmdsi_inodeh);
 		PSCFREE(i);
-                f->fcmh_fcoo->fcoo_pri = NULL;
-                f->fcmh_fcoo->fcoo_oref_rw[0] = 0;
-                freelock(&f->fcmh_lock);
-                fidc_fcoo_remove(f);
-	} else 
+		f->fcmh_fcoo->fcoo_pri = NULL;
+		f->fcmh_fcoo->fcoo_oref_rw[0] = 0;
+		freelock(&f->fcmh_lock);
+		fidc_fcoo_remove(f);
+	} else
 		freelock(&f->fcmh_lock);
 	return (rc);
 }
@@ -111,23 +108,23 @@ mds_inode_read(struct slash_inode_handle *i)
 		goto out;
 	}
 
-        if ((!i->inoh_ino.ino_crc) &&
-            (!memcmp(&i->inoh_ino, &null_inode_od, sizeof(null_inode_od)))) {
+	if ((!i->inoh_ino.ino_crc) &&
+	    (!memcmp(&i->inoh_ino, &null_inode_od, sizeof(null_inode_od)))) {
 	new:
-                DEBUG_INOH(PLL_INFO, i, "detected a new inode");
-                mds_inode_od_initnew(i);
+		DEBUG_INOH(PLL_INFO, i, "detected a new inode");
+		mds_inode_od_initnew(i);
 		goto out;
-        }
+	}
 
 	psc_crc_calc(&crc, &i->inoh_ino, INO_OD_CRCSZ);
-        if (crc == i->inoh_ino.ino_crc) {
-		i->inoh_flags &= ~INOH_INO_NOTLOADED;	
-                DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
+	if (crc == i->inoh_ino.ino_crc) {
+		i->inoh_flags &= ~INOH_INO_NOTLOADED;
+		DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
 		goto out;
 	}
 
 	DEBUG_INOH(PLL_WARN, i, "CRC failed want=%"PRIx64", got=%"PRIx64,
-                   i->inoh_ino.ino_crc, crc);
+		   i->inoh_ino.ino_crc, crc);
  out:
 	ureqlock(&i->inoh_lock, locked);
 	return (rc);
@@ -166,7 +163,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	 *  We do a simple lookup here because the inode should already exist
 	 *  in the cache.
 	 */
-	m->mexpfcm_fcmh = f = 
+	m->mexpfcm_fcmh = f =
 		fidc_lookup_simple(c->fdb.sfdb_secret.sfs_fg.fg_fid);
 	psc_assert(f);
 	/* Ensure our ref has been added.
@@ -295,14 +292,14 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	struct fidc_mds_info *i=f->fcmh_fcoo->fcoo_pri;
 
 	spinlock(&m->mexpfcm_lock);
-	/* Ensure the mexpfcm has the correct pointers before 
+	/* Ensure the mexpfcm has the correct pointers before
 	 *   dereferencing them.
 	 */
 	if (!(f = m->mexpfcm_fcmh)) {
 		psc_errorx("mexpfcm %p has no fcmh", m);
 		goto out;
 	}
-	
+
 	if (!(i = fidc_fcmh2fmdsi(f))) {
 		DEBUG_FCMH(PLL_WARN, f, "fid has no fcoo");
 		goto out;
@@ -316,7 +313,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		m->mexpfcm_flags |= MEXPFCM_CLOSING;
 	else
 		psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
-	
+
 	/* Verify that all of our bmap references have already been freed.
 	 */
 	if (m->mexpfcm_flags & MEXPFCM_REGFILE) {
@@ -336,7 +333,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		psc_fatalx("Failed to remove %p export(%p) from %p",
 		    m, m->mexpfcm_export, &i->fmdsi_exports);
 	ureqlock(&f->fcmh_lock, locked);
- out:	
+ out:
 	c->pri = NULL;
 	PSCFREE(m);
 	return (0);
@@ -392,7 +389,7 @@ mds_bmap_directio(struct mexpbcm *bref, int enable_dio, int check)
 	int mode=bref->mexpbcm_mode, locked;
 
 	psc_assert(mdsi);
-	
+
 	BMAP_LOCK_ENSURE(bmap);
 
 	if (atomic_read(&mdsi->bmdsi_wr_ref))
@@ -505,10 +502,10 @@ mds_mion_init(struct mexp_ion *mion, sl_resm_t *resm)
 	mion->mi_csvc = rpc_csvc_create(SRIM_REQ_PORTAL, SRIM_REP_PORTAL);
 }
 
-/** 
- * mds_bmap_ion_assign - bind a bmap to a ion node for writing.  The process 
- *    involves a round-robin'ing of an i/o system's nodes and attaching a 
- *    a mexp_ion to the bmap.  The mexp_ion is stored in the i/o node's 
+/**
+ * mds_bmap_ion_assign - bind a bmap to a ion node for writing.  The process
+ *    involves a round-robin'ing of an i/o system's nodes and attaching a
+ *    a mexp_ion to the bmap.  The mexp_ion is stored in the i/o node's
  *    resouce_member struct (resm_pri).  It is here that an initial connection
  *    to the i/o node is created.
  * @bref: the bmap reference
@@ -606,12 +603,12 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 
 	atomic_inc(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
 
-	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, 
-		   "inc fmdsi_ref (%d) for bmap assignment",  
+	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
+		   "inc fmdsi_ref (%d) for bmap assignment",
 		   atomic_read(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref));
-	
+
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
-		   "mion(%p)", res->res_name, 
+		   "mion(%p)", res->res_name,
 		   libcfs_nid2str(res->res_nids[n]), mdsi->bmdsi_wr_ion);
 	return (0);
 }
@@ -682,8 +679,8 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 		psc_fatalx("found duplicate bref on bmap_exports");
 
  out:
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, bmap, 
-		   "ref_add (mion=%p) (rc=%d)", 
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, bmap,
+		   "ref_add (mion=%p) (rc=%d)",
 		   bmdsi->bmdsi_wr_ion, rc);
 	BMAP_URLOCK(bmap, locked);
 
@@ -712,7 +709,7 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 		if (atomic_dec_and_test(&mdsi->bmdsi_wr_ref)) {
 			psc_assert(bmap->bcm_mode & BMAP_WR);
 			bmap->bcm_mode &= ~BMAP_WR;
-			if (mdsi->bmdsi_wr_ion && 
+			if (mdsi->bmdsi_wr_ion &&
 			    atomic_dec_and_test(&mdsi->bmdsi_wr_ion->mi_refcnt)) {
 				//XXX cleanup mion here?
 			}
@@ -733,13 +730,13 @@ mds_bmap_ref_del(struct mexpbcm *bref)
 		mds_bmap_directio_unset(bref);
 
 
-	if (!SPLAY_REMOVE(bmap_exports, &mdsi->bmdsi_exports, bref) && 
+	if (!SPLAY_REMOVE(bmap_exports, &mdsi->bmdsi_exports, bref) &&
 	    !(bmap->bcm_mode & BMAP_MDS_NOION))
 		psc_fatalx("bref not found on bmap_exports");
 
 	DEBUG_BMAP(PLL_INFO, bmap, "done with ref_del bref=%p", bref);
 	BMAP_ULOCK(bmap);
-	
+
 	PSCFREE(bref);
 }
 
@@ -815,7 +812,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	 *   . only one export may be here (ion_nid)
 	 *   . the bmap is locked.
 	 */
-	if ((rc = mds_repl_inv_except_locked(bmap, 
+	if ((rc = mds_repl_inv_except_locked(bmap,
 			     slresm_2_resid(bmdsi->bmdsi_wr_ion->mi_resm)))) {
 		BMAP_ULOCK(bmap);
 		goto out;
@@ -834,7 +831,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
  out:
 	/* Mark that mds_bmap_crc_write() is done with this bmap
 	 *  - it was incref'd in fcmh_bmap_lookup().
-	 */	
+	 */
 	bmap_op_done(bmap);
 	fidc_membh_dropref(fcmh);
 	return (rc);
@@ -844,19 +841,19 @@ void
 mds_bmapod_dump(const struct bmapc_memb *bmap)
 {
 	uint8_t mask, *b=bmap_2_bmdsiod(bmap)->bh_repls;
-        uint32_t pos, k;
+	uint32_t pos, k;
 	char buf[SL_MAX_REPLICAS+1], c;
 
-        for (k=0; k < SL_REPLICA_NBYTES; k++, mask=0)
-                for (pos=0, mask=0; pos < NBBY; pos+=SL_BITS_PER_REPLICA) {
+	for (k=0; k < SL_REPLICA_NBYTES; k++, mask=0)
+		for (pos=0, mask=0; pos < NBBY; pos+=SL_BITS_PER_REPLICA) {
 
-                        mask = (uint8_t)(SL_REPLICA_MASK << pos);
+			mask = (uint8_t)(SL_REPLICA_MASK << pos);
 
 			switch (b[k] & mask) {
 			case SL_REPL_INACTIVE:
 				c = '-';
 				break;
-					
+
 			case SL_REPL_TOO_OLD:
 				c = 'o';
 				break;
@@ -875,7 +872,7 @@ mds_bmapod_dump(const struct bmapc_memb *bmap)
 
 	buf[SL_MAX_REPLICAS] = '\0';
 
-	DEBUG_BMAP(PLL_NOTIFY, bmap, "replicas(%s) SL_REPLICA_NBYTES=%u", 
+	DEBUG_BMAP(PLL_NOTIFY, bmap, "replicas(%s) SL_REPLICA_NBYTES=%u",
 		   buf, SL_REPLICA_NBYTES);
 }
 
@@ -942,7 +939,7 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 		mds_bmapod_dump(bcm);
 		return (0);
 	}
-	/* Calculate and check the CRC now 
+	/* Calculate and check the CRC now
 	 */
 	mds_bmapod_dump(bcm);
 
@@ -996,13 +993,13 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno)
 		struct bmap_mds_info *bmdsi;
 		void *p;
 		int rc;
-		
+
 		/* Create and initialize the new bmap while holding the
 		 *  fcmh lock which is needed for atomic tree insertion.
 		 */
-		p = PSCALLOC(sizeof(struct bmapc_memb) + 
+		p = PSCALLOC(sizeof(struct bmapc_memb) +
 			     sizeof(struct bmap_mds_info)); /* XXX not freed */
-		
+
 		b = p;
 		b->bcm_pri = p + (sizeof(*b));
 		b->bcm_blkno = bmapno;
@@ -1024,15 +1021,15 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno)
 
 		rc = mds_bmap_read(f, bmapno, b);
 		if (rc) {
-			DEBUG_FCMH(PLL_WARN, f, "mds_bmap_read() rc=%d blkno=%u", 
+			DEBUG_FCMH(PLL_WARN, f, "mds_bmap_read() rc=%d blkno=%u",
 				   rc, bmapno);
 			b->bcm_mode |= BMAP_MDS_FAILED;
 			psc_waitq_wakeall(&b->bcm_waitq);
 			return (NULL);
 
-		} else { 
+		} else {
 			b->bcm_mode = 0;
-			/* Notify other threads that this bmap has been loaded, 
+			/* Notify other threads that this bmap has been loaded,
 			 *  they're blocked on BMAP_MDS_INIT.
 			 */
 			psc_waitq_wakeall(&b->bcm_waitq);
@@ -1046,10 +1043,10 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno)
 }
 
 int
-mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno, 
+mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
 		  struct bmapc_memb **bmap)
 {
-	struct fidc_membh *f;	
+	struct fidc_membh *f;
 	struct bmapc_memb *b;
 
 	psc_assert(!*bmap);
@@ -1061,7 +1058,7 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
 	b = mds_bmap_load(f, bmapno);
 	if (!b)
 		return (-EIO);
-	
+
 	*bmap = b;
 	return (0);
 }
@@ -1244,15 +1241,15 @@ mds_bmi_cb(void *data, struct odtable_receipt *odtr)
 	sl_resm_t *resm;
 
 	bmi = data;
-	
+
 	resm = libsl_nid2resm(bmi->bmi_ion_nid);
 
-	psc_warnx("fid=%"PRId64" res=(%s) ion=(%s) bmapno=%u", 
+	psc_warnx("fid=%"PRId64" res=(%s) ion=(%s) bmapno=%u",
 		  bmi->bmi_fid,
-		  resm->resm_res->res_name, 
-		  libcfs_nid2str(bmi->bmi_ion_nid), 
+		  resm->resm_res->res_name,
+		  libcfs_nid2str(bmi->bmi_ion_nid),
 		  bmi->bmi_bmapno);
-	
+
 	odtable_freeitem(mdsBmapAssignTable, odtr);
 }
 
