@@ -3,7 +3,6 @@
 include Makefile.path
 
 PROG=		slashd
-SRCS+=		cfd.c
 SRCS+=		fidc_mds.c
 SRCS+=		jflush.c
 SRCS+=		main.c
@@ -27,6 +26,7 @@ SRCS+=		rmmc.c
 SRCS+=		sljournal.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
+SRCS+=		${SLASH_BASE}/share/cfd.c
 SRCS+=		${SLASH_BASE}/share/fdbuf.c
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c
