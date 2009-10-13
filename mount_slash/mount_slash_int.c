@@ -39,9 +39,9 @@ extern struct psc_listcache bmapFlushQ;
 __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 /**
- * msl_oftrq_build - 
+ * msl_oftrq_build -
  * @newreq: newly created request will be placed here.
- * @b: the source bmap 
+ * @b: the source bmap
  * @off: the 'normalized' offset (ie bmap relative, not absolute)
  * @len: extent size
  * @op: read or write.
@@ -50,10 +50,10 @@ __static void
 msl_oftrq_build(struct offtree_req **newreq, struct bmapc_memb *b, off_t off,
     size_t len, int op)
 {
-	struct offtree_req *r;	
+	struct offtree_req *r;
 	int top=0;
 
-	DEBUG_BMAP(PLL_TRACE, b, "adding req for (off=%zu) (size=%zu)", 
+	DEBUG_BMAP(PLL_TRACE, b, "adding req for (off=%zu) (size=%zu)",
 		   off, len);
 	/* Ensure the offset fits within the range and mask off the
 	 *  lower bits to align with the offtree's page size.
@@ -62,7 +62,7 @@ msl_oftrq_build(struct offtree_req **newreq, struct bmapc_memb *b, off_t off,
 	psc_assert(op == OFTREQ_OP_WRITE || op == OFTREQ_OP_READ);
 
 	*newreq = r = PSCALLOC(sizeof(struct offtree_req));
-	
+
 	INIT_PSCLIST_ENTRY(&r->oftrq_lentry);
 	/* Verify that the mds agrees that the bmap is writeable.
 	 */
@@ -90,13 +90,13 @@ msl_oftrq_build(struct offtree_req **newreq, struct bmapc_memb *b, off_t off,
 
 	if (off & SLASH_BMAP_BLKMASK) {
 		/* Unaligned offset, account for the partial block,
-		 *   subtract the unaligned segment from the length 
+		 *   subtract the unaligned segment from the length
 		 *   and mask it off.
 		 */
 		r->oftrq_nblks++;
 		len -= len & SLASH_BMAP_BLKMASK;
 		top |= OFTREQ_OP_PRFFP;
-	}	
+	}
 	r->oftrq_nblks += len / SLASH_BMAP_BLKSZ;
 
 	if (len & SLASH_BMAP_BLKMASK) {
@@ -107,7 +107,7 @@ msl_oftrq_build(struct offtree_req **newreq, struct bmapc_memb *b, off_t off,
 	 *   of the file to determine whether a RBW is needed.
 	 *   XXX actually with the new non-aligned code we shouldn't have
 	 *   to do RBW unless the bmap is open in RW mode.
-	 *   If that's the case then the DATARDY semantics need to be 
+	 *   If that's the case then the DATARDY semantics need to be
 	 *     changed.
 	 */
 	if ((fcmh_2_fsz(b->bcm_fcmh) > off) && op == OFTREQ_OP_WRITE && top)
@@ -124,12 +124,12 @@ bmap_oftrq_add_locked(struct offtree_req *r)
 
 	BMAP_LOCK_ENSURE(b);
 
-	DEBUG_BMAP(PLL_INFO, b, "add oftrq=%p list_empty(%d)", 
+	DEBUG_BMAP(PLL_INFO, b, "add oftrq=%p list_empty(%d)",
 		   r, psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
 
-        psclist_xadd(&r->oftrq_lentry, &bmap_2_msbd(b)->msbd_oftrqs);
+	psclist_xadd(&r->oftrq_lentry, &bmap_2_msbd(b)->msbd_oftrqs);
 }
- 
+
 
 __static void
 bmap_oftrq_del(struct bmapc_memb *b, struct offtree_req *r)
@@ -137,27 +137,27 @@ bmap_oftrq_del(struct bmapc_memb *b, struct offtree_req *r)
 	BMAP_LOCK(b);
 
 	if (r->oftrq_op & OFTREQ_OP_READ) {
-		/* Read requests don't need to be tracked.		   
+		/* Read requests don't need to be tracked.
 		 */
-		DEBUG_BMAP(PLL_INFO, b, "oftrq=%p", r);		
+		DEBUG_BMAP(PLL_INFO, b, "oftrq=%p", r);
 		goto out;
 	}
 
 	if (!(r->oftrq_op & OFTREQ_OP_READ)) {
-		psc_assert(b->bcm_mode & BMAP_DIRTY);		
-		psc_assert(psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry));		
+		psc_assert(b->bcm_mode & BMAP_DIRTY);
+		psc_assert(psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry));
 		psclist_del(&r->oftrq_lentry);
 	}
-	
-	DEBUG_BMAP(PLL_INFO, b, "remove oftrq=%p list_empty(%d)", 
+
+	DEBUG_BMAP(PLL_INFO, b, "remove oftrq=%p list_empty(%d)",
 		   r, psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
-	
+
 	if (!psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs))
 		goto wake;
-	
+
 	else {
-		/* Set the special flag to prevent races with others which 
-		 *   can occur because we may drop the bmap lock before 
+		/* Set the special flag to prevent races with others which
+		 *   can occur because we may drop the bmap lock before
 		 *   removing from the bmapFlushQ listcache.
 		 */
 		b->bcm_mode |= BMAP_DIRTY2LRU;
@@ -165,10 +165,10 @@ bmap_oftrq_del(struct bmapc_memb *b, struct offtree_req *r)
 
 		if (LIST_CACHE_TRYLOCK(&bmapFlushQ))
 			goto remove;
-		
+
 		else {
 			BMAP_ULOCK(b);
-			/* Retake the locks in the correct order else 
+			/* Retake the locks in the correct order else
 			 *   deadlock.
 			 */
 			LIST_CACHE_LOCK(&bmapFlushQ);
@@ -193,7 +193,7 @@ bmap_oftrq_del(struct bmapc_memb *b, struct offtree_req *r)
  wake:
 	psc_waitq_wakeall(&b->bcm_waitq);
  out:
-        BMAP_ULOCK(b);
+	BMAP_ULOCK(b);
 }
 
 
@@ -201,7 +201,7 @@ __static void
 msl_oftrq_destroy(struct offtree_req *r)
 {
 	struct bmapc_memb *b = r->oftrq_bmap;
-	
+
 	psc_assert(b);
 	psc_assert(r->oftrq_darray);
 
@@ -245,7 +245,7 @@ msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t blkno)
 {
 	struct msbmap_data *msbd;
 	u32 tmode = b->bcm_mode;
-	
+
 	memset(b, 0, sizeof(*b));
 	LOCK_INIT(&b->bcm_lock);
 	atomic_set(&b->bcm_opcnt, 0);
@@ -262,7 +262,7 @@ msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t blkno)
 	INIT_PSCLIST_HEAD(&msbd->msbd_oftrqs);
 
 	b->bcm_blkno = blkno;
-	b->bcm_fcmh = f;	
+	b->bcm_fcmh = f;
 	b->bcm_mode = tmode;
 }
 
@@ -280,7 +280,7 @@ msl_bmap_memrls_trylock(void *a)
 		got_it = 1;
 	}
 	BMAP_ULOCK(b);
-	
+
 	return (got_it);
 }
 
@@ -318,9 +318,9 @@ msl_bmap_release(struct bmapc_memb *b)
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_mode & BMAP_CLOSING);
-	psc_assert(!(b->bcm_mode & BMAP_DIRTY));	
+	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
 	psc_assert(!atomic_read(&b->bcm_waitq.wq_nwaitors));
-	psc_assert(!atomic_read(&b->bcm_wr_ref) && 
+	psc_assert(!atomic_read(&b->bcm_wr_ref) &&
 		   !atomic_read(&b->bcm_rd_ref));
 	psc_assert(!atomic_read(&b->bcm_opcnt));
 #if 0
@@ -336,7 +336,7 @@ msl_bmap_release(struct bmapc_memb *b)
 	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 
 	if (b->bcm_mode & BMAP_MEMRLS) {
-		/* Don't race with the slab cache reaper, if he's 
+		/* Don't race with the slab cache reaper, if he's
 		 *    releasing pages from offtree then we must
 		 *    wait here.
 		 */
@@ -344,20 +344,20 @@ msl_bmap_release(struct bmapc_memb *b)
 		FCMH_ULOCK(b->bcm_fcmh);
 		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 		goto retry;
-	} else 
+	} else
 		/* Keep the slap reaper from dealing with our bmap's
 		 *    offtree.
 		 */
 		b->bcm_mode |= BMAP_MEMRLS;
 
-	DEBUG_BMAP(PLL_INFO, b, "freeing");	
+	DEBUG_BMAP(PLL_INFO, b, "freeing");
 	BMAP_ULOCK(b);
 
 	if (!SPLAY_REMOVE(bmap_cache, &b->bcm_fcmh->fcmh_fcoo->fcoo_bmapc, b))
 		DEBUG_BMAP(PLL_FATAL, b, "failed to locate bmap in fcoo");
 
 	FCMH_ULOCK(b->bcm_fcmh);
-		
+
 	offtree_release_all(bmap_2_msoftr(b));
 	offtree_destroy(bmap_2_msoftr(b));
 	psc_assert(psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
@@ -385,7 +385,7 @@ __static void
 bmap_oftrq_waitempty(struct bmapc_memb *b)
 {
  retry:
-	BMAP_LOCK(b);	
+	BMAP_LOCK(b);
 	if (!psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs)) {
 		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 		goto retry;
@@ -394,7 +394,7 @@ bmap_oftrq_waitempty(struct bmapc_memb *b)
 	BMAP_ULOCK(b);
 }
 
-void 
+void
 msl_bmap_tryrelease(struct bmapc_memb *b)
 {
 	BMAP_LOCK(b);
@@ -417,18 +417,18 @@ void
 msl_fbr_free(struct msl_fbr *r)
 {
 	struct bmapc_memb *b = r->mfbr_bmap;
-	
+
 	psc_assert(b);
 	psc_assert(SPLAY_ENTRY_DISJOINT(fhbmap_cache, r));
 
 	msl_fbr_unref(r);
-	PSCFREE(r);	
+	PSCFREE(r);
 
 	return (msl_bmap_tryrelease(b));
 }
 
 /**
- * msl_bmap_fetch - perform a blocking 'get' operation to retrieve 
+ * msl_bmap_fetch - perform a blocking 'get' operation to retrieve
  *    one or more bmaps from the MDS.
  * @f: pointer to the fid cache structure to which this bmap belongs.
  * @b: the block id to retrieve (block size == SLASH_BMAP_SIZE).
@@ -495,7 +495,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (s=%u) (rw=%d)", b, rw);
 
 	nblks = 0;
-	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iovs, 
+	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iovs,
 		       2 + getreptbl);
 
 	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
@@ -518,7 +518,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	}
 
 	bmap->bcm_mode &= ~BMAP_INIT;
-	
+
 	if (getreptbl) {
 		/* XXX don't forget that on write we need to invalidate the local replication
 		 *   table..
@@ -602,7 +602,7 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
 	r = fhcache_bmap_lookup(mfh, b);
 	if (!r) {
 		r = msl_fbr_new(b, (rw == SRIC_BMAP_WRITE ?
-	    	      FHENT_WRITE : FHENT_READ));
+		      FHENT_WRITE : FHENT_READ));
 		SPLAY_INSERT(fhbmap_cache, &mfh->mfh_fhbmap_cache, r);
 	} else {
 		/* Verify that the ref didn't not exist if the caller
@@ -746,12 +746,12 @@ msl_ion_connect(lnet_nid_t nid, struct bmap_info_cli *c)
 {
 	int rc;
 
-	psc_dbg("Creating new import to %s", 
+	psc_dbg("Creating new import to %s",
 		libcfs_nid2str(nid));
 
  retry:
-	spinlock(&c->bmic_lock);	
-       
+	spinlock(&c->bmic_lock);
+
 	if (c->bmic_flags & BMIC_CONNECTED) {
 		psc_assert(c->bmic_import);
 		freelock(&c->bmic_lock);
@@ -761,28 +761,28 @@ msl_ion_connect(lnet_nid_t nid, struct bmap_info_cli *c)
 		psc_waitq_wait(&c->bmic_waitq, &c->bmic_lock);
 		goto retry;
 	}
-	
+
 	if (c->bmic_flags & BMIC_CONNECT_FAIL) {
 		struct timespec ts;
-		
+
 		clock_gettime(CLOCK_REALTIME, &ts);
-		if ((ts.tv_sec - c->bmic_connect_time.tv_sec) < 
+		if ((ts.tv_sec - c->bmic_connect_time.tv_sec) <
 		    MIN_CONNECT_RETRY_SECS)
 			return (-EAGAIN);
-	} else 
+	} else
 		c->bmic_flags &= ~BMIC_CONNECT_FAIL;
-	
+
 
 	psc_assert(!c->bmic_import);
 	psc_assert(!((c->bmic_flags & BMIC_CONNECTED) ||
 		     (c->bmic_flags & BMIC_CONNECTING)));
-	
+
 	c->bmic_flags |= BMIC_CONNECTING;
 	freelock(&c->bmic_lock);
 
 	if ((c->bmic_import = new_import()) == NULL)
 		psc_fatalx("new_import");
-	
+
 	c->bmic_import->imp_client = PSCALLOC(sizeof(struct pscrpc_client));
 	c->bmic_import->imp_client->cli_request_portal = SRIC_REQ_PORTAL;
 	c->bmic_import->imp_client->cli_reply_portal = SRIC_REP_PORTAL;
@@ -795,7 +795,7 @@ msl_ion_connect(lnet_nid_t nid, struct bmap_info_cli *c)
 	if (rc) {
 		psc_errorx("rpc_issue_connect() to %s", libcfs_nid2str(nid));
 		PSCFREE(c->bmic_import->imp_client);
-		c->bmic_import->imp_client = NULL;		
+		c->bmic_import->imp_client = NULL;
 		c->bmic_flags |= BMIC_CONNECT_FAIL;
 	} else
 		c->bmic_flags |= BMIC_CONNECTED;
@@ -837,13 +837,13 @@ msl_bmap_to_import(struct bmapc_memb *b, int add)
 		psc_fatalx("Failed to lookup %s, verify that the slash configs"
 			   " are uniform across all servers",
 			   libcfs_nid2str(bmap_2_msion(b)));
-	
+
 	c = r->resm_pri;
 	ureqlock(&b->bcm_lock, locked);
 
 	if (!c->bmic_import && add)
 		msl_ion_connect(bmap_2_msion(b), c);
-	
+
 	return (c->bmic_import);
 }
 
@@ -858,10 +858,10 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	sl_resm_t *resm;
 	lnet_nid_t repl_nid;
 	int n;
-	
+
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 	psc_assert(b->bcm_fcmh->fcmh_fcoo);
-	
+
 	mfd = b->bcm_fcmh->fcmh_fcoo->fcoo_pri;
 	psc_assert(mfd);
 	/*  XXX need a more intelligent algorithm here.
@@ -882,7 +882,7 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 
 	psc_trace("trying res(%s) ion(%s)",
 		  res->res_name, libcfs_nid2str(repl_nid));
-	
+
 	resm = libsl_nid2resm(repl_nid);
 	if (!resm)
 		psc_fatalx("Failed to lookup %s, verify that the slash configs"
@@ -892,17 +892,17 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	c = resm->resm_pri;
 	msl_ion_connect(repl_nid, c);
 
-	return (c->bmic_import);	
+	return (c->bmic_import);
 }
 
 
 __static void
 msl_oftrq_unref(struct offtree_req *r, int op)
 {
-	/* v->oftiov_memb can't be used for decref 
-	 *   purposes because it may have been remapped to a different 
+	/* v->oftiov_memb can't be used for decref
+	 *   purposes because it may have been remapped to a different
 	 *   oft node.  NEvertheless, the oftrq has a pointer to the original
-	 *   oft which has the correct ref cnt.  So all of these callbacks 
+	 *   oft which has the correct ref cnt.  So all of these callbacks
 	 *   must be modified to use the oft from the request.
 	 */
 	struct dynarray *oftiovs=r->oftrq_darray;
@@ -915,15 +915,15 @@ msl_oftrq_unref(struct offtree_req *r, int op)
 
 	for (i=0; i < dynarray_len(oftiovs); i++) {
 		v = dynarray_getpos(oftiovs, i);
-		
+
 		DEBUG_OFFTIOV(PLL_INFO, v, "iov %d", i);
-		/* Avoid racing with offtree_putnode which may reassign the 
-		 *   v->oftiov_memb pointer.  Taking the lock here should prevent 
+		/* Avoid racing with offtree_putnode which may reassign the
+		 *   v->oftiov_memb pointer.  Taking the lock here should prevent
 		 *   v->oftiov_memb from being assigned.
 		 */
 		spinlock(&v->oftiov_memb->oft_lock);
-		m = v->oftiov_memb;		
-		
+		m = v->oftiov_memb;
+
 		if (m == r->oftrq_memb) {
 			if (op == SRMT_READ) {
 				oftm_read_prepped_verify(m);
@@ -936,7 +936,7 @@ msl_oftrq_unref(struct offtree_req *r, int op)
 			oftm_node_verify(r->oftrq_memb);
 			oftm_leaf_verify(m);
 		}
-		
+
 		switch (op) {
 		case SRMT_READ:
 			if (!(v->oftiov_flags & OFTIOV_DATARDY)) {
@@ -974,7 +974,7 @@ msl_oftrq_unref(struct offtree_req *r, int op)
 	if (op == SRMT_WRITE)
 		/* Have to use r->oftrq_memb so that we adjust the refcnt
 		 *   of the offtree node who was responsible for the buffer
-		 *   at the time of request creation which is not 
+		 *   at the time of request creation which is not
 		 *   necessarily the current owner.
 		 */
 		oft_refcnt_dec(r, r->oftrq_memb);
@@ -999,11 +999,11 @@ msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct offtree_req  *r = args->pointer_arg[MSL_OFTRQ_CB_POINTER_SLOT];
 	struct offtree_iov  *v;
 	int op=rq->rq_reqmsg->opc, i;
-	
-	
+
+
 	b = r->oftrq_bmap;
 	psc_assert(b);
-	
+
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
 	psc_assert(a);
 
@@ -1017,23 +1017,23 @@ msl_io_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		// XXX Freeing of dynarray, offtree state, etc
 		return (rq->rq_status);
 	}
-	/* Call the inflight CB only on the iov's in the dynarray - 
-	 *   not the iov's in the request since some of those may 
+	/* Call the inflight CB only on the iov's in the dynarray -
+	 *   not the iov's in the request since some of those may
 	 *   have already been staged in.
 	 */
 	for (i=0; i < dynarray_len(a); i++) {
-                v = dynarray_getpos(a, i);
+		v = dynarray_getpos(a, i);
 		slb_inflight_cb(v, SL_INFLIGHT_DEC);
 	}
 
-	msl_oftrq_unref(r, op);	
+	msl_oftrq_unref(r, op);
 	/* Free the dynarray which was allocated in msl_pages_prefetch().
 	 */
 	PSCFREE(a);
 	return (0);
 }
- 
- 
+
+
 int
 msl_io_rpcset_cb_old(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 {
@@ -1051,14 +1051,14 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 	struct dynarray *oftrqs = arg;
 	struct offtree_req *r;
 	int i;
-	
+
 	for (i=0; i < dynarray_len(oftrqs); i++) {
 		r = dynarray_getpos(oftrqs, i);
 		msl_oftrq_unref(r, SRMT_WRITE);
 		msl_oftrq_destroy(r);
 	}
 	PSCFREE(oftrqs);
-	
+
 	return (rc);
 }
 
@@ -1075,12 +1075,12 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 	DEBUG_REQ(PLL_INFO, req, "oftrqs=%p", oftrqs);
 
 	for (i=0; i < dynarray_len(oftrqs); i++) {
-                r = dynarray_getpos(oftrqs, i);
-		
-                msl_oftrq_unref(r, SRMT_WRITE);
-                msl_oftrq_destroy(r);
-        }
-	
+		r = dynarray_getpos(oftrqs, i);
+
+		msl_oftrq_unref(r, SRMT_WRITE);
+		msl_oftrq_destroy(r);
+	}
+
 	PSCFREE(oftrqs);
 
 	return (0);
@@ -1120,9 +1120,9 @@ msl_track_readreq(struct offtree_req *r)
 
 	psc_assert(psclist_disjoint(&r->oftrq_lentry));
 
-        BMAP_LOCK(b);
+	BMAP_LOCK(b);
 	clock_gettime(CLOCK_REALTIME, &r->oftrq_start);
-        bmap_oftrq_add_locked(r);
+	bmap_oftrq_add_locked(r);
 	BMAP_ULOCK(b);
 }
 
@@ -1142,8 +1142,8 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	struct pscrpc_request_set *rqset = NULL;
 	struct pscrpc_request     *req;
 	struct pscrpc_bulk_desc   *desc;
-	struct bmapc_memb    	  *bcm;
-	struct msbmap_data    	  *msbd;
+	struct bmapc_memb	  *bcm;
+	struct msbmap_data	  *msbd;
 	struct iovec              *iovs;
 	struct offtree_iov        *v;
 	struct srm_io_req         *mq;
@@ -1153,7 +1153,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	v = NULL; /* gcc */
 	psc_assert(n);
 	psc_assert(op == MSL_PAGES_PUT || op == MSL_PAGES_GET);
-	
+
 	if (op == MSL_PAGES_GET)
 		msl_track_readreq(r);
 	/* Get a new request set if one doesn't already exist.
@@ -1174,9 +1174,9 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	bcm = r->oftrq_bmap;
 	msbd = bcm->bcm_pri;
 
-	imp = (op == MSL_PAGES_PUT ? msl_bmap_to_import(bcm, 1) : 
+	imp = (op == MSL_PAGES_PUT ? msl_bmap_to_import(bcm, 1) :
 	       msl_bmap_choose_replica(bcm));
-	
+
 	/* This pointer is only valid in DIO mode.
 	 */
 	psc_assert(r->oftrq_bmap);
@@ -1258,8 +1258,8 @@ msl_pages_dio_getput(struct offtree_req *r, char *b)
 	struct pscrpc_request_set *rqset;
 	struct pscrpc_request     *req;
 	struct pscrpc_bulk_desc   *desc;
-	struct bmapc_memb    	  *bcm;
-	struct msbmap_data    	  *msbd;
+	struct bmapc_memb	  *bcm;
+	struct msbmap_data	  *msbd;
 	struct iovec              *iovs;
 	struct srm_io_req         *mq;
 	struct srm_io_rep         *mp;
@@ -1336,7 +1336,7 @@ __static void
 msl_pages_track_pending(struct offtree_req *r, struct offtree_iov *v)
 {
 	struct offtree_memb *m = (struct offtree_memb *)v->oftiov_memb;
-	
+
 	DEBUG_OFFTREQ(PLL_WARN, r, "pending...");
 	DEBUG_OFFTIOV(PLL_WARN, v, "...pending");
 	/* This would be a problem..
@@ -1360,10 +1360,10 @@ msl_pages_track_pending(struct offtree_req *r, struct offtree_iov *v)
 	dynarray_add(r->oftrq_fill.oftfill_inprog, v);
 }
 
-__static void 
+__static void
 msl_pages_schedflush(struct offtree_req *r)
 {
-       	struct bmapc_memb *b=r->oftrq_bmap;
+	struct bmapc_memb *b=r->oftrq_bmap;
 	int put_dirty=0;
 
 	psc_assert(psclist_disjoint(&r->oftrq_lentry));
@@ -1373,18 +1373,18 @@ msl_pages_schedflush(struct offtree_req *r)
 	if (b->bcm_mode & BMAP_DIRTY)
 		psc_assert(!psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
 
-	else if (b->bcm_mode & BMAP_DIRTY2LRU) 
-		/* Deal with a race which can occur with bmap_oftrq_del() due to 
-		 *    his requirement to drop the bmap lock prior to removing 
-		 *    the bmap from the bmapFlushQ listcache.  By replacing the 
-		 *    dirty flag bmap_oftrq_del() will leave the bmap on the 
+	else if (b->bcm_mode & BMAP_DIRTY2LRU)
+		/* Deal with a race which can occur with bmap_oftrq_del() due to
+		 *    his requirement to drop the bmap lock prior to removing
+		 *    the bmap from the bmapFlushQ listcache.  By replacing the
+		 *    dirty flag bmap_oftrq_del() will leave the bmap on the
 		 *    bmap_oftrq_del().
 		 */
 		b->bcm_mode |= BMAP_DIRTY;
 
 	else {
 		/* Set it to dirty and hand it off to the bmap flush thread.
-		 */		
+		 */
 		psc_assert(psclist_empty(&bmap_2_msbd(b)->msbd_oftrqs));
 		psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 		b->bcm_mode |= BMAP_DIRTY;
@@ -1588,11 +1588,11 @@ msl_pages_getput(struct offtree_req *r, int op)
 }
 
 /**
- * msl_pages_copyin - copy user pages into buffer cache and schedule the 
+ * msl_pages_copyin - copy user pages into buffer cache and schedule the
  *    slabs to be sent to the IOS backend.
  * @r: array of request structs.
  * @buf: the source (application) buffer.
- * Notes:  the iov's (contained in the offtree_req dynarray) are unpinned 
+ * Notes:  the iov's (contained in the offtree_req dynarray) are unpinned
  *    via msl_io_cb.
  */
 __static void
@@ -1635,7 +1635,7 @@ msl_pages_copyin(struct offtree_req *r, char *buf)
 				freelock(&m->oft_lock);
 				continue;
 			}
-			/* Check for offset alignment, the latter half 
+			/* Check for offset alignment, the latter half
 			 *    of this stmt checks the end of the write.
 			 */
 			if ((r->oftrq_flags & OFTREQ_OP_PRFLP) ||
@@ -1685,7 +1685,7 @@ msl_pages_copyin(struct offtree_req *r, char *buf)
 			nbytes = MIN(OFT_IOVSZ(v), tsize);
 		}
 
-		DEBUG_OFFTIOV(PLL_NOTIFY, v, "iov%d rq_off=%zu " 
+		DEBUG_OFFTIOV(PLL_NOTIFY, v, "iov%d rq_off=%zu "
 			      "OFT_IOV2E_OFF_(%zu) bufp=%p oft_bufsz=%zu "
 			      "tsz=%zd nbytes=%zu t=%zu",
 			      i, r->oftrq_off, OFT_IOV2E_OFF_(v),
@@ -1743,7 +1743,7 @@ msl_pages_copyout(struct offtree_req *r, char *buf)
 	size_t nbytes;
 	ssize_t tsize;
 	char  *b, *p;
-	
+
 	psc_assert(r->oftrq_darray);
 	/* Relative offset into the buffer.
 	 */
@@ -1754,7 +1754,7 @@ msl_pages_copyout(struct offtree_req *r, char *buf)
 	 */
 	t = (r->oftrq_off & SLASH_BMAP_BLKMASK);
 	p = buf;
-	a = r->oftrq_darray;      
+	a = r->oftrq_darray;
 	n = dynarray_len(a);
 
 	for (j=0; j < n; j++) {
@@ -1794,7 +1794,7 @@ msl_pages_copyout(struct offtree_req *r, char *buf)
 		 * Manage the offtree leaf and decrement the slb.
 		 */
 		spinlock(&v->oftiov_memb->oft_lock);
-		slb_pin_cb(v, SL_BUFFER_UNPIN);		
+		slb_pin_cb(v, SL_BUFFER_UNPIN);
 		atomic_dec(&m->oft_rdop_ref);
 		freelock(&v->oftiov_memb->oft_lock);
 		/* XXX the details of this wakeup may need to be
@@ -1891,7 +1891,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	//XXX beware, I think 'e' can be short by 1.
 	s = off / mslfh_2_bmapsz(mfh);
 	e = (off + size) / mslfh_2_bmapsz(mfh);
-	
+
 	if ((e - s) > MAX_BMAPS_REQ)
 		return (-EINVAL);
 	/* Relativize the length and offset (roff is not aligned).
@@ -1903,9 +1903,9 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	/* Foreach block range, get its bmap and make a request into its
 	 *  offtree.  This first loop retrieves all the pages.
 	 */
-	for (nr=0; s <= e; s++, nr++) {		
-		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, 
-			   "sz=%zu tlen=%zu off=%"PRIdOFF" roff=%"PRIdOFF" op=%d", 
+	for (nr=0; s <= e; s++, nr++) {
+		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
+			   "sz=%zu tlen=%zu off=%"PRIdOFF" roff=%"PRIdOFF" op=%d",
 			   tsize, tlen, off, roff, op);
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
