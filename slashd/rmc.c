@@ -684,7 +684,7 @@ slrmc_handle_addreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_req *mq;
 
 	RSX_ALLOCREP(rq, mq, mp);
-
+	mp->rc = mds_repl_addrq(&mq->fg, mq->bmapno);
 	return (0);
 }
 
@@ -695,7 +695,7 @@ slrmc_handle_delreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_req *mq;
 
 	RSX_ALLOCREP(rq, mq, mp);
-
+	mp->rc = mds_repl_delrq(&mq->fg, mq->bmapno);
 	return (0);
 }
 
@@ -745,7 +745,7 @@ slrmc_handler(struct pscrpc_request *rq)
 		rc = slrmc_create(rq);
 		break;
 	case SRMT_DELREPLRQ:
-		rc = slrmc_handle_addreplrq(rq);
+		rc = slrmc_handle_delreplrq(rq);
 		break;
 	case SRMT_GETATTR:
 		rc = slrmc_getattr(rq);

@@ -57,7 +57,8 @@ int	iod_bmap_load(struct fidc_membh *, struct srt_bmapdesc_buf *,
 
 int     iod_inode_getsize(slfid_t, off_t *);
 
-
 extern struct slashrpc_cservice *rmi_csvc;
+
+extern struct slash_creds rootcreds;
 
 #endif /* _SLIOD_H_ */

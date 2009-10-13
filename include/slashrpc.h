@@ -453,7 +453,7 @@ struct srm_rename_req {
 };
 
 struct srm_replrq_req {
-	uint64_t		ino;
+	struct slash_fidgen	fg;
 	sl_blkno_t		bmapno;		/* bmap to access or -1 for all */
 };
 

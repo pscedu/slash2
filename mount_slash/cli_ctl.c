@@ -92,7 +92,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mrq->mrq_fn, strerror(rc)));
 
-	mq->ino = fg.fg_fid;
+	memcpy(&mq->fg, &fg, sizeof(mq->fg));
 	mq->bmapno = mrq->mrq_bmapno;
 
 	rc = RSX_WAITREP(rq, mp);
