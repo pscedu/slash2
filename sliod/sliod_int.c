@@ -28,36 +28,23 @@
 #include "sliod.h"
 #include "slvr.h"
 
-__static void
-iod_biodi_init(struct bmap_iod_info *biod, struct bmapc_memb *b)
+struct slash_creds rootcreds = { 0, 0 };
+
+void
+iod_bmap_init(struct bmapc_memb *b)
 {
+	struct bmap_iod_info *biod;
+
+	biod = b->bcm_pri = PSCALLOC(sizeof(*biod));
 	biod->biod_bmap = b;
 	INIT_PSCLIST_ENTRY(&biod->biod_lentry);
 	LOCK_INIT(&biod->biod_lock);
 }
 
-__static void
-iod_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t bmapno)
-{
-	memset(b, 0, sizeof(*b));
-	LOCK_INIT(&b->bcm_lock);
-	atomic_set(&b->bcm_opcnt, 0);
-	psc_waitq_init(&b->bcm_waitq);
-	b->bcm_pri = PSCALLOC(sizeof(struct bmap_iod_info));
-	b->bcm_fcmh = f;
-	b->bcm_blkno = bmapno;
-
-	iod_biodi_init(b->bcm_pri, b);
-}
-
-__static void
+void
 iod_bmap_free(struct bmapc_memb *b)
 {
-	struct bmap_iod_info *iobd;
-
-	iobd = b->bcm_pri;
-	PSCFREE(b->bcm_pri);
-	PSCFREE(b);
+	psc_pool_return(bmap_pool, b);
 }
 
 __static int
@@ -165,10 +152,9 @@ iod_inode_lookup(struct slash_fidgen *fg)
 	 *  fidc_lookup_load_inode() code.
 	 */
 	struct fidc_memb m;
-	struct slash_creds creds = {0,0};
 
 	COPYFID(fcm_2_fgp(&m), fg);
-	rc = fidc_lookup_copy_inode(fg, &m, &creds, &f);
+	rc = fidc_lookup_copy_inode(fg, &m, &rootcreds, &f);
 	psc_assert(f);
 
 	return (f);
@@ -249,7 +235,7 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 	b->bcm_mode &= ~BMAP_INIT;
 
 	if (rw == SL_READ) {
-	retry_getcrcs:
+ retry_getcrcs:
 		/* Check the retrieve bit first since it may be set
 		 *  before the biodi_wire pointer.
 		 */
@@ -287,5 +273,3 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 
 	return (rc);
 }
-
-

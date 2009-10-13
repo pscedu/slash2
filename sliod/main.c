@@ -16,6 +16,7 @@
 #include "buffer.h"
 #include "fdbuf.h"
 #include "fidcache.h"
+#include "iod_bmap.h"
 #include "pathnames.h"
 #include "rpc.h"
 #include "slconfig.h"
@@ -92,6 +93,12 @@ main(int argc, char *argv[])
 	fdbuf_checkkeyfile();
 	fdbuf_readkeyfile();
 	libsl_init(PSC_SERVER);
+
+	_psc_poolmaster_init(&bmap_poolmaster, sizeof(struct bmapc_memb) +
+	    sizeof(struct bmap_iod_info), offsetof(struct bmapc_memb, bcm_lentry),
+	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
+	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
+
 	fidcache_init(FIDC_USER_ION, NULL);
 	sl_buffer_cache_init();
 	slvr_cache_init();

@@ -17,6 +17,7 @@
 #include <unistd.h>
 
 #include "pfl/pfl.h"
+#include "psc_ds/pool.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
@@ -38,10 +39,10 @@
 #include "pathnames.h"
 #include "slashrpc.h"
 
-sl_ios_id_t prefIOS = IOS_ID_ANY;
-const char *progname;
-char ctlsockfn[] = _PATH_MSCTLSOCK;
-char mountpoint[PATH_MAX];
+sl_ios_id_t	 prefIOS = IOS_ID_ANY;
+const char	*progname;
+char		 ctlsockfn[] = _PATH_MSCTLSOCK;
+char		 mountpoint[PATH_MAX];
 
 struct vbitmap	 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t	 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
@@ -1290,9 +1291,9 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		 */
 		rc = slash2fuse_releaserpc(req, ino, fi);
 		if (c->fcmh_fcoo->fcoo_pri) {
-			msl_mfd_release((struct msl_fcoo_data *)c->fcmh_fcoo->fcoo_pri);
+			msl_mfd_release(c->fcmh_fcoo->fcoo_pri);
 			c->fcmh_fcoo->fcoo_pri = NULL;
-		}			
+		}
 		fidc_fcoo_remove(c);
 	}
 	DEBUG_FCMH(PLL_INFO, c, "done with slash2fuse_release");
@@ -1662,6 +1663,12 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 
 	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
 	sl_buffer_cache_init();
+
+	_psc_poolmaster_init(&bmap_poolmaster, sizeof(struct bmapc_memb) +
+	    sizeof(struct msbmap_data), offsetof(struct bmapc_memb, bcm_lentry),
+	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
+	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
+
 	rpc_initsvc();
 
 	/* Start up service threads. */

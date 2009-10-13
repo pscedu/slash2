@@ -238,34 +238,21 @@ msl_fhent_new(struct fidc_membh *f)
 /**
  * bmapc_memb_init - initialize a bmap structure and create its offtree.
  * @b: the bmap struct
- * @f: the bmap's owner
  */
 void
-msl_bmap_init(struct bmapc_memb *b, struct fidc_membh *f, sl_blkno_t blkno)
+msl_bmap_init(struct bmapc_memb *b)
 {
 	struct msbmap_data *msbd;
-	u32 tmode = b->bcm_mode;
 
-	memset(b, 0, sizeof(*b));
-	LOCK_INIT(&b->bcm_lock);
-	atomic_set(&b->bcm_opcnt, 0);
-	psc_waitq_init(&b->bcm_waitq);
-	b->bcm_pri = msbd = PSCALLOC(sizeof(*msbd));
-	bmap_2_msoftr(b) = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
-					  SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,
-					  f, sl_buffer_alloc, sl_oftm_addref);
-	/* Assign the backpointer.
-	 */
-	bmap_2_msbd(b)->msbd_bmap = b;
-
-	psc_assert(bmap_2_msoftr(b));
+	msbd = b->bcm_pri;
+	msbd->msbd_bmap = b;
 	INIT_PSCLIST_HEAD(&msbd->msbd_oftrqs);
 
-	b->bcm_blkno = blkno;
-	b->bcm_fcmh = f;
-	b->bcm_mode = tmode;
+	bmap_2_msoftr(b) = offtree_create(SLASH_BMAP_SIZE, SLASH_BMAP_BLKSZ,
+					  SLASH_BMAP_WIDTH, SLASH_BMAP_DEPTH,
+					  b->bcm_fcmh, sl_buffer_alloc, sl_oftm_addref);
+	psc_assert(bmap_2_msoftr(b));
 }
-
 
 int
 msl_bmap_memrls_trylock(void *a)
@@ -364,8 +351,7 @@ msl_bmap_release(struct bmapc_memb *b)
 
 	atomic_dec(&b->bcm_fcmh->fcmh_fcoo->fcoo_bmapc_cnt);
 
-	PSCFREE(b->bcm_pri);
-	PSCFREE(b);
+	psc_pool_return(bmap_pool, b);
 }
 
 __static int
@@ -379,7 +365,6 @@ bmap_offtree_reqs_chkempty(struct bmapc_memb *b)
 
 	return (rc);
 }
-
 
 __static void
 bmap_oftrq_waitempty(struct bmapc_memb *b)

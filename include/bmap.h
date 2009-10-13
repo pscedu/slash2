@@ -45,6 +45,7 @@ struct bmapc_memb {
 						   me with bcm_fcmh->fcmh_waitq
 						*/
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* fcm tree entry    */
+	struct psclist_head	 bcm_lentry;
 	void			*bcm_pri;
 };
 
@@ -94,9 +95,12 @@ struct bmapc_memb *
 
 struct bmapc_memb *
 	bmap_lookup_add(struct fidc_membh *, sl_blkno_t,
-	    void (*)(struct bmapc_memb *, struct fidc_membh *, sl_blkno_t));
+	    void (*)(struct bmapc_memb *));
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmapc_cmp);
+
+extern struct psc_poolmaster	 bmap_poolmaster;
+extern struct psc_poolmgr	*bmap_pool;
 
 static inline void
 bmap_op_done(struct bmapc_memb *b)
