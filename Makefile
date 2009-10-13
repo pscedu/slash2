@@ -17,7 +17,8 @@ SUBDIRS+=	${PFL_BASE}/utils/odtable
 
 zbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} -c && scons)
-	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 -c && ${SCONS} slashlib=1)
+	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=2 -c && \
+	    ${SCONS} slashlib=1 debug=2)
 
 prereq rezbuild:
-	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1)
+	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=2)
