@@ -1,14 +1,15 @@
 /* $Id$ */
-#ifndef _USE_GNU
-#define _USE_GNU
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
 #endif
-#include <string.h>
 
 #include <sys/param.h>
 #include <sys/xattr.h>
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <string.h> 
 
 #include "psc_util/log.h"
 #include "psc_util/mkdirs.h"
@@ -66,9 +67,9 @@ fid_fileops(slfid_t fid, int flags)
 }
 
 /**
- * fid_fileops - create or open a fid on the IO server using the generation
+ * fid_fileops_fg - create or open a fid on the IO server using the generation
  *    number as a file suffix.
- * @fid: the numeric id.
+ * @fg: file ID and generation.
  * @flags: open options.
  */
 int
@@ -82,8 +83,6 @@ fid_fileops_fg(struct slash_fidgen *fg, int flags)
 
 	return (open(fidfn, flags));
 }
-
-
 
 /**
  * fid_link - create an entry in the FID object root corresponding to a

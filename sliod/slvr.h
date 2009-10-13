@@ -120,6 +120,7 @@ struct slvr_ref *
 void	slvr_cache_init(void);
 int	slvr_do_crc(struct slvr_ref *);
 int	slvr_fsbytes_io(struct slvr_ref *, int);
+int	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
 int	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, int);
 void	slvr_release(struct slvr_ref *);
 void	slvr_rio_done(struct slvr_ref *);

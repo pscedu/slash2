@@ -44,6 +44,7 @@ void	fid_makepath(slfid_t, char *);
 int	fid_link(slfid_t, const char *);
 //int  fid_getxattr(const char *, const char *, void *, ssize_t);
 int	fid_fileops(slfid_t, int);
+int	fid_fileops_fg(struct slash_fidgen *, int);
 
 #define fid_open(f)	fid_fileops((f), O_RDWR)
 #define fid_ocreat(f)	fid_fileops((f), O_RDWR | O_CREAT)
