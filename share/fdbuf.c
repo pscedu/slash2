@@ -89,20 +89,20 @@ bdbuf_check(struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 
 	rc = 0;
 	if (sbdb->sbdb_secret.sbs_magic != SBDB_MAGIC) {
-		rc = EINVAL;
+		rc = EBADF;
 		goto out;
 	}
 	if (memcmp(&sbdb->sbdb_secret.sbs_cli_prid,
 	    &cli_prid, sizeof(cli_prid))) {
-		rc = EPERM;
+		rc = EBADF;
 		goto out;
 	}
 	if (sbdb->sbdb_secret.sbs_ion_nid != ion_nid) {
-		rc = EPERM;
+		rc = EBADF;
 		goto out;
 	}
 	if (sbdb->sbdb_secret.sbs_ios_id != ios_id) {
-		rc = EPERM;
+		rc = EBADF;
 		goto out;
 	}
 
@@ -185,10 +185,10 @@ fdbuf_check(struct srt_fd_buf *sfdb, uint64_t *cfdp,
 
 	rc = 0;
 	if (sfdb->sfdb_secret.sfs_magic != SFDB_MAGIC)
-		return (EINVAL);
+		return (EBADF);
 	if (memcmp(&sfdb->sfdb_secret.sfs_cli_prid,
 	    &cli_prid, sizeof(cli_prid)))
-		return (EPERM);
+		return (EBADF);
 
 	gerr = gcry_md_copy(&hd, descbuf_hd);
 	if (gerr)
