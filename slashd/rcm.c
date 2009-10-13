@@ -52,8 +52,8 @@ slrcmthr_main(__unusedx void *arg)
 	size_t siz, tsiz;
 	off_t off, toff;
 	uint16_t inum;
-	void *data;
 	int rc, trc;
+	void *data;
 
 	thr = pscthr_get();
 	srcm = slrcmthr(thr);
@@ -67,7 +67,7 @@ slrcmthr_main(__unusedx void *arg)
 	    &rootcreds, &fg, &stb, &data);
 	for (;;) {
 		rc = zfsslash2_readdir(zfsVfs, inum, &rootcreds,
-		    INT_MAX, off, buf, &tsiz, NULL, 0, &data);
+		    INT_MAX, off, buf, &tsiz, NULL, 0, data);
 		if (rc)
 			break;
 
