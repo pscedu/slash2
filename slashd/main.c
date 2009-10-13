@@ -1,5 +1,6 @@
 /* $Id$ */
 
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -62,10 +63,13 @@ main(int argc, char *argv[])
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	gcry_check_version(NULL);
 
-	pfl_init();
+	if (setenv("USOCK_PORTPID", "0", 1) == -1)
+		err(1, "setenv");
 
 	if (getenv("LNET_NETWORKS") == NULL)
-		psc_fatalx("LNET_NETWORKS is not set");
+		errx(1, "LNET_NETWORKS is not set");
+
+	pfl_init();
 
 	zpoolname = NULL;
 	progname = argv[0];
