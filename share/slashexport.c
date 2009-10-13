@@ -8,10 +8,9 @@
 #include "psc_rpc/service.h"
 #include "psc_util/strlcpy.h"
 
-#include "slashd/slashdthr.h"
-#include "slashrpc.h"
+#include "cfd.h"
 #include "slashexport.h"
-#include "slashd/cfd.h"
+#include "slashrpc.h"
 
 #if SEXPTREE
 struct sexptree sexptree;
@@ -32,16 +31,16 @@ slashrpc_export_get(struct pscrpc_export *exp)
 	int locked = reqlock(&exp->exp_lock);
 
 	if (exp->exp_private == NULL) {
-		sexp = exp->exp_private = 
+		sexp = exp->exp_private =
 			PSCALLOC(sizeof(struct slashrpc_export));
 		sexp->sexp_export = exp;
-		exp->exp_hldropf = slashrpc_export_destroy;		
+		exp->exp_hldropf = slashrpc_export_destroy;
 #if SEXPTREE
 		spinlock(&sexptreelock);
 		if (SPLAY_INSERT(sexptree, &sexptree, exp->exp_private))
 			psc_fatalx("export already registered");
 		freelock(&sexptreelock);
-#endif		
+#endif
 	} else {
 		sexp = exp->exp_private;
 		psc_assert(sexp->sexp_export == exp);
@@ -56,7 +55,7 @@ slashrpc_export_destroy(void *data)
 {
 	struct slashrpc_export *sexp = data;
 	struct pscrpc_export *exp = sexp->sexp_export;
-	
+
 	psc_assert(exp);
 	/* There's no way to set this from the drop_callback()
 	 */
@@ -72,7 +71,6 @@ slashrpc_export_destroy(void *data)
 #endif
 	exp->exp_private = NULL;
 	PSCFREE(sexp);
-	
 }
 
 #if SEXPTREE

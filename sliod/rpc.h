@@ -5,7 +5,7 @@
 
 #include <sys/types.h>
 
-#include "../slashd/cfd.h"
+#include "cfd.h"
 
 #define SRIM_NTHREADS	8
 #define SRIM_NBUFS	1024

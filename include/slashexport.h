@@ -2,7 +2,7 @@
 
 #include <sys/types.h>
 
-#include "slashd/cfd.h"
+#include "cfd.h"
 
 struct cfdtree;
 struct pscrpc_export;
