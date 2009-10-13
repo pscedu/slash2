@@ -80,31 +80,19 @@ bdbuf_check(struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
     struct slash_fidgen *fgp, sl_blkno_t *bmapnop,
     lnet_process_id_t cli_prid, lnet_nid_t ion_nid, sl_ios_id_t ios_id)
 {
-	char tibuf[PSC_NIDSTR_SIZE], tcbuf[PSC_NIDSTR_SIZE],
-	     sibuf[PSC_NIDSTR_SIZE], scbuf[PSC_NIDSTR_SIZE],
-	     buf[DESCBUF_REPRLEN];
+	char buf[DESCBUF_REPRLEN];
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
-	int rc;
 
-	rc = 0;
-	if (sbdb->sbdb_secret.sbs_magic != SBDB_MAGIC) {
-		rc = EBADF;
-		goto out;
-	}
+	if (sbdb->sbdb_secret.sbs_magic != SBDB_MAGIC)
+		return (EBADF);
 	if (memcmp(&sbdb->sbdb_secret.sbs_cli_prid,
-	    &cli_prid, sizeof(cli_prid))) {
-		rc = EBADF;
-		goto out;
-	}
-	if (sbdb->sbdb_secret.sbs_ion_nid != ion_nid) {
-		rc = EBADF;
-		goto out;
-	}
-	if (sbdb->sbdb_secret.sbs_ios_id != ios_id) {
-		rc = EBADF;
-		goto out;
-	}
+	    &cli_prid, sizeof(cli_prid)))
+		return (EBADF);
+	if (sbdb->sbdb_secret.sbs_ion_nid != ion_nid)
+		return (EBADF);
+	if (sbdb->sbdb_secret.sbs_ios_id != ios_id)
+		return (EBADF);
 
 	gerr = gcry_md_copy(&hd, descbuf_hd);
 	if (gerr)
@@ -113,12 +101,9 @@ bdbuf_check(struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 	    sizeof(sbdb->sbdb_secret));
 	psc_base64_encode(gcry_md_read(hd, 0),
 	    buf, descbuf_alglen);
-	if (strcmp(buf, sbdb->sbdb_hash))
-		rc = EBADF;
 	gcry_md_close(hd);
-
-	if (rc)
-		goto out;
+	if (strcmp(buf, sbdb->sbdb_hash))
+		return (EBADF);
 
 	if (fgp)
 		*fgp = sbdb->sbdb_secret.sbs_fg;
@@ -126,16 +111,7 @@ bdbuf_check(struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 		*cfdp = sbdb->sbdb_secret.sbs_cfd;
 	if (bmapnop)
 		*bmapnop = sbdb->sbdb_secret.sbs_bmapno;
-
- out:
-	if (rc)
-		psc_errorx("bdbuf_check(cli=%s:%s,ion=%s:%s,ios=%d:%d): %s",
-		    psc_id2str(sbdb->sbdb_secret.sbs_cli_prid, scbuf),
-		    psc_id2str(cli_prid, tcbuf),
-		    psc_nid2str(sbdb->sbdb_secret.sbs_ion_nid, sibuf),
-		    psc_nid2str(ion_nid, tibuf), sbdb->sbdb_secret.sbs_ios_id,
-		    ios_id, strerror(rc));
-	return (rc);
+	return (0);
 }
 
 /*
@@ -181,9 +157,7 @@ fdbuf_check(struct srt_fd_buf *sfdb, uint64_t *cfdp,
 	char buf[DESCBUF_REPRLEN];
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
-	int rc;
 
-	rc = 0;
 	if (sfdb->sfdb_secret.sfs_magic != SFDB_MAGIC)
 		return (EBADF);
 	if (memcmp(&sfdb->sfdb_secret.sfs_cli_prid,
@@ -197,12 +171,9 @@ fdbuf_check(struct srt_fd_buf *sfdb, uint64_t *cfdp,
 	    sizeof(sfdb->sfdb_secret));
 	psc_base64_encode(gcry_md_read(hd, 0),
 	    buf, descbuf_alglen);
-	if (strcmp(buf, sfdb->sfdb_hash))
-		rc = EBADF;
 	gcry_md_close(hd);
-
-	if (rc)
-		return (rc);
+	if (strcmp(buf, sfdb->sfdb_hash))
+		return (EBADF);
 
 	if (fgp)
 		*fgp = sfdb->sfdb_secret.sfs_fg;
