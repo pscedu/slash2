@@ -56,10 +56,12 @@ Further setup of file systems for use with Slash is necessary and can be
 performed once the file system has been mounted by the metadata server.
 .Ss Running Cm slashd Ns Ss ,\& the Metadata Server
 .Xr slashd 8 ,
-the Slash metadata server, must be started first.
-.Xr slash 8
-requires a pending operations journal for operation, which can be
-created with the
+the Slash metadata server, is the first daemon that should be started
+when bringing up a Slash file system.
+In order to run,
+.Xr slashd 8
+requires an on-disk journal for resuming interrupted operations which
+can be created with the
 .Xr slmkjrnl 8
 utility:
 .Bd -literal -offset indent
