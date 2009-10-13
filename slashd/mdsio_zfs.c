@@ -6,12 +6,12 @@
 
 #include "psc_util/lock.h"
 
-#include "fidcache.h"
-#include "fidc_mds.h"
 #include "bmap.h"
-#include "slashdthr.h"
+#include "fidc_mds.h"
+#include "fidcache.h"
 #include "inode.h"
 #include "inodeh.h"
+#include "slashdthr.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
@@ -25,7 +25,7 @@ inoh_2_zfs_fh(const struct slash_inode_handle *i)
 	/* Note:  don't use the fidc_fcmh2fmdsi() call here because we're
 	 *  most likely being invoked by the open procedure.
 	 */
-	return (((struct fidc_mds_info *)i->inoh_fcmh->fcmh_fcoo->fcoo_pri)->fmdsi_data);
+	return (fcmh_2_data(i->inoh_fcmh));
 }
 
 static inline void *
@@ -46,7 +46,6 @@ bmap_2_zfs_fh(struct bmapc_memb *bmap)
 int
 mdsio_zfs_release(struct slash_inode_handle *i)
 {
-	struct slash_creds cred = { 0, 0 };
 	struct fidc_mds_info *fmdsi;
 
 	psc_assert(i->inoh_fcmh);
@@ -56,7 +55,7 @@ mdsio_zfs_release(struct slash_inode_handle *i)
 	fmdsi = fcmh_2_fmdsi(i->inoh_fcmh);
 	psc_assert(!atomic_read(&fmdsi->fmdsi_ref));
 
-	return (zfsslash2_release(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &cred,
+	return (zfsslash2_release(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
 				  fmdsi->fmdsi_data));
 }
 
@@ -85,23 +84,15 @@ mds_fcmh_apply_fsize(struct fidc_membh *f, uint64_t size)
 int
 mdsio_zfs_bmap_read(struct bmapc_memb *bmap)
 {
-	struct slash_creds cred = { 0, 0 };
 	struct bmap_mds_info *bmdsi;
 	int rc;
 
 	bmdsi = bmap->bcm_pri;
 
-#if 0
-	rc = pread(bmap->bcm_fcmh->fcmh_fd, bmdsi->bmdsi_od,
-	    BMAP_OD_SZ, (off_t)(BMAP_OD_SZ * bmap->bcm_blkno));
-	if (rc < 0)
-		rc = -errno;
-#else
-	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(bmap->bcm_fcmh), &cred,
-	    (void *)bmdsi->bmdsi_od, BMAP_OD_SZ,
+	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(bmap->bcm_fcmh), &rootcreds,
+	    bmdsi->bmdsi_od, BMAP_OD_SZ,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
 	    bmap_2_zfs_fh(bmap));
-#endif
 
 	DEBUG_BMAP(PLL_TRACE, bmap, "read bmap (rc=%d)",rc);
 	return (rc);
@@ -110,22 +101,12 @@ mdsio_zfs_bmap_read(struct bmapc_memb *bmap)
 int
 mdsio_zfs_bmap_write(struct bmapc_memb *bmap)
 {
-	struct slash_creds cred = { 0, 0 };
 	struct bmap_mds_info *bmdsi;
 	int rc;
 
 	bmdsi = bmap->bcm_pri;
-#if 0
-	rc = pwrite(bmap->bcm_fcmh->fcmh_fd, bmdsi->bmdsi_od,
-	    BMAP_OD_SZ, (off_t)(BMAP_OD_SZ * bmap->bcm_blkno));
-	if (rc == BMAP_OD_SZ) {
-		rc = fsync(bmap->bcm_fcmh->fcmh_fd);
-		if (rc == -1)
-			psc_fatal("fsync() failed");
-	}
-#else
-	rc = zfsslash2_write(zfsVfs, fcmh_2_fid(bmap->bcm_fcmh), &cred,
-	    (void *)bmdsi->bmdsi_od, BMAP_OD_SZ,
+	rc = zfsslash2_write(zfsVfs, fcmh_2_fid(bmap->bcm_fcmh), &rootcreds,
+	    bmdsi->bmdsi_od, BMAP_OD_SZ,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
 	     bmap_2_zfs_fh(bmap));
 
@@ -134,11 +115,10 @@ mdsio_zfs_bmap_write(struct bmapc_memb *bmap)
 			   rc);
 	} else {
 		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(bmap->bcm_fcmh),
-		    &cred, 1, bmap_2_zfs_fh(bmap));
+		    &rootcreds, 1, bmap_2_zfs_fh(bmap));
 		if (rc == -1)
 			psc_fatal("zfsslash2_fsync() failed");
 	}
-#endif
 	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)",rc);
 
 	return (rc);
@@ -147,18 +127,12 @@ mdsio_zfs_bmap_write(struct bmapc_memb *bmap)
 int
 mdsio_zfs_inode_read(struct slash_inode_handle *i)
 {
-	struct slash_creds cred = { 0, 0 };
 	int rc;
 
 	INOH_LOCK_ENSURE(i);
-#if 0
-	rc = pread(i->inoh_fcmh->fcmh_fd, &i->inoh_ino,
-	    INO_OD_SZ, (off_t)SL_INODE_START_OFF);
-#else
-	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &cred,
-		    (void *)&i->inoh_ino, (size_t)INO_OD_SZ,
+	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
+		    &i->inoh_ino, (size_t)INO_OD_SZ,
 		    (off_t)SL_INODE_START_OFF, inoh_2_zfs_fh(i));
-#endif
 	DEBUG_INOH(PLL_TRACE, i, "read inode (rc=%d) data=%p",
 		   rc, inoh_2_zfs_fh(i));
 
@@ -168,31 +142,20 @@ mdsio_zfs_inode_read(struct slash_inode_handle *i)
 	return (rc);
 }
 
-
 int
 mdsio_zfs_inode_write(struct slash_inode_handle *i)
 {
-	struct slash_creds cred = { 0, 0 };
 	int rc;
 
-#if 0
-	rc = pwrite(i->inoh_fcmh->fcmh_fd, &i->inoh_ino,
-		    INO_OD_SZ, (off_t)SL_INODE_START_OFF);
-	if (rc == BMAP_OD_SZ) {
-		rc = fsync(bmap->bcm_fcmh->fcmh_fd);
-		if (rc == -1)
-			psc_fatal("fsync() failed");
-	}
-#else
-	rc = zfsslash2_write(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &cred,
-		     (void *)&i->inoh_ino, (size_t)INO_OD_SZ,
+	rc = zfsslash2_write(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
+		     &i->inoh_ino, (size_t)INO_OD_SZ,
 		     (off_t)SL_INODE_START_OFF, inoh_2_zfs_fh(i));
 
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() error (rc=%d)",
 			   rc);
 	} else {
-		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &cred,
+		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
 			     1, inoh_2_zfs_fh(i));
 		if (rc == -1)
 			psc_fatal("zfsslash2_fsync() failed");
@@ -201,64 +164,43 @@ mdsio_zfs_inode_write(struct slash_inode_handle *i)
 	DEBUG_INOH(PLL_TRACE, i, "wrote inode (rc=%d) data=%p",
 		   rc, inoh_2_zfs_fh(i));
 
-#endif
 	return (rc);
 }
 
 int
 mdsio_zfs_inode_extras_read(struct slash_inode_handle *i)
 {
-	struct slash_creds cred = { 0, 0 };
 	int rc;
 
 	psc_assert(i->inoh_flags & INOH_LOAD_EXTRAS);
 	psc_assert(i->inoh_extras);
-#if 0
-	rc = pread(i->inoh_fcmh->fcmh_fd, (void *)i->inoh_extras,
-		   (size_t)INOX_OD_SZ, (off_t)SL_EXTRAS_START_OFF);
-	if (rc != INOX_OD_SZ)
-		return (-errno);
-#else
-	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &cred,
-		    (void *)i->inoh_extras, (size_t)INOX_OD_SZ,
+	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
+		    i->inoh_extras, (size_t)INOX_OD_SZ,
 		    (off_t)SL_EXTRAS_START_OFF, inoh_2_zfs_fh(i));
 	if (rc)
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() error (rc=%d)",
 			   rc);
-#endif
 	return (rc);
 }
-
 
 int
 mdsio_zfs_inode_extras_write(struct slash_inode_handle *i)
 {
-	struct slash_creds cred = { 0, 0 };
 	int rc;
 
 	psc_assert(i->inoh_extras);
-#if 0
-	rc = pwrite(i->inoh_fcmh->fcmh_fd, &i->inoh_ino,
-		    INO_OD_SZ, (off_t)SL_INODE_START_OFF);
-	if (rc == BMAP_OD_SZ) {
-		rc = fsync(bmap->bcm_fcmh->fcmh_fd);
-		if (rc == -1)
-			psc_fatal("fsync() failed");
-	}
-#else
-	rc = zfsslash2_write(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &cred,
-		     (void *)i->inoh_extras, (size_t)INOX_OD_SZ,
+	rc = zfsslash2_write(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
+		     i->inoh_extras, (size_t)INOX_OD_SZ,
 		     (off_t)SL_EXTRAS_START_OFF, inoh_2_zfs_fh(i));
 
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() error (rc=%d)",
 			   rc);
 	} else {
-		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &cred,
+		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
 			     1, inoh_2_zfs_fh(i));
 		if (rc == -1)
 			psc_fatal("zfsslash2_fsync() failed");
 	}
-#endif
 	return (rc);
 }
