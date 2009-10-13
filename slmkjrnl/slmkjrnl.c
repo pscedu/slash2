@@ -32,13 +32,12 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	if (mkdir(_PATH_SLASHD_DIR, 0700) == -1) {
+	if (mkdir(_PATH_SLASHD_DIR, 0700) == -1)
 		if (errno != EEXIST)
 			err(1, "mkdir: %s", _PATH_SLASHD_DIR);
-	}
 
-	pjournal_format(_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE,
-			SLJ_MDS_RA, 0);
+	pjournal_format(_PATH_SLJOURNAL, SLJ_MDS_JNENTS,
+	    SLJ_MDS_ENTSIZE, SLJ_MDS_RA, 0);
 	pjournal_dump(_PATH_SLJOURNAL);
 	exit(0);
 }
