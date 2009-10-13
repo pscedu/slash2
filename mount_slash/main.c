@@ -9,6 +9,7 @@
 #include <sys/time.h>
 
 #include <dirent.h>
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
