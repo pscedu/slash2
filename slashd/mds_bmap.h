@@ -51,17 +51,6 @@ enum mds_bmap_modes {
 	BMAP_MDS_INIT		= BMAP_INIT
 };
 
-static inline void
-bmap_mds_info_init(struct bmapc_memb *bmap)
-{
-	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
-
-	jfi_init(&bmdsi->bmdsi_jfi, mds_bmap_sync, bmap);
-	bmdsi->bmdsi_xid = 0;
-	atomic_set(&bmdsi->bmdsi_rd_ref, 0);
-	atomic_set(&bmdsi->bmdsi_wr_ref, 0);
-}
-
 /*
  * bmi_assign - the structure used for tracking the mds's bmap / ion
  *   assignments.  These structures are stored in a odtable.
@@ -80,12 +69,12 @@ struct bmi_assign {
 #define bmap_2_bmdsjfi(b)	(&bmap_2_bmdsi(b)->bmdsi_jfi)
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 
-int  mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
-int  mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t,
-		  struct bmapc_memb **);
-
-int  mds_bmap_load_cli(struct mexpfcm *, struct srm_bmap_req *, struct bmapc_memb **);
-
-void mds_bmapod_dump(const struct bmapc_memb *);
+struct bmapc_memb *
+	mds_bmap_load(struct fidc_membh *, sl_blkno_t);
+int	mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
+int	mds_bmap_load_cli(struct mexpfcm *, struct srm_bmap_req *, struct bmapc_memb **);
+int	mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, struct bmapc_memb **);
+void	mds_bmap_ref_drop(struct bmapc_memb *, int);
+void	mds_bmapod_dump(const struct bmapc_memb *);
 
 #endif /* _SLASHD_MDS_BMAP_H_ */
