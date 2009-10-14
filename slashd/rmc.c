@@ -160,7 +160,7 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	struct bmapc_memb *bmap;
 	struct iovec iov[3];
 	struct mexpfcm *m;
-	struct slash_bmap_cli_wire *cw; 
+	struct slash_bmap_cli_wire *cw;
 	uint64_t cfd;
 
 	ENTRY;
@@ -177,15 +177,15 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	mp->rc = cfdlookup(rq->rq_export, cfd, &m);
 	if (mp->rc)
 		RETURN(0);
-	
+
 	bmap = NULL;
 	mp->rc = mds_bmap_load_cli(m, mq, &bmap);
 	if (mp->rc)
-                RETURN(0);
+		RETURN(0);
 
 	bmdsi = bmap->bcm_pri;
 	cw = (struct slash_bmap_cli_wire *)bmdsi->bmdsi_od->bh_crcstates;
-		
+
 	iov[0].iov_base = cw;
 	iov[0].iov_len = sizeof(*cw);
 	iov[1].iov_base = &bdb;
@@ -206,14 +206,14 @@ slrmc_getbmap(struct pscrpc_request *rq)
 		mp->ios_nid = bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
 	}
 
-	bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg, rq->rq_peer, 
+	bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg, rq->rq_peer,
 	   (mq->rw == SRIC_BMAP_WRITE ? mp->ios_nid : LNET_NID_ANY),
-	   (mq->rw == SRIC_BMAP_WRITE ? 
+	   (mq->rw == SRIC_BMAP_WRITE ?
 	    bmdsi->bmdsi_wr_ion->mi_resm->resm_res->res_id : IOS_ID_ANY),
 	   bmap->bcm_blkno);
 
 	mp->rc = rsx_bulkserver(rq, &desc,
-				BULK_PUT_SOURCE, SRMC_BULK_PORTAL, 
+				BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
 				iov, 2 + mq->getreptbl);
 	if (desc)
 		pscrpc_free_bulk(desc);
