@@ -17,6 +17,7 @@
 #include "control.h"
 #include "fdbuf.h"
 #include "fidcache.h"
+#include "mds_bmap.h"
 #include "mdsrpc.h"
 #include "pathnames.h"
 #include "slashdthr.h"
