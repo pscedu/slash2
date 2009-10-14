@@ -839,6 +839,7 @@ offtree_region_preprw_leaf_locked(struct offtree_req *req)
 
 			dynarray_add(req->oftrq_darray, iov);
 			req->oftrq_darray_off++;
+			ureqlock(&m->oft_lock, locked);
 			goto done;
 		} else
 			/* Existing allocation is not sufficient, prep
