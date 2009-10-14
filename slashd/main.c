@@ -104,6 +104,11 @@ main(int argc, char *argv[])
 	libsl_init(PSC_SERVER);
 	mds_init();
 
+	_psc_poolmaster_init(&bmap_poolmaster, sizeof(struct bmapc_memb) +
+	    sizeof(struct bmap_mds_info), offsetof(struct bmapc_memb, bcm_lentry),
+	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
+	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
+
 	/* Initialize the zfs layer.
 	 */
 	do_init();
