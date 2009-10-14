@@ -1,6 +1,18 @@
 /* $Id$ */
 
+#include <sys/param.h>
+
 #include <errno.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "psc_ds/pool.h"
+#include "psc_ds/tree.h"
+#include "psc_util/alloc.h"
+#include "psc_util/crc.h"
+#include "psc_util/lock.h"
+#include "psc_util/log.h"
+#include "psc_util/waitq.h"
 
 #include "fid.h"
 #include "fidc_mds.h"
@@ -282,26 +294,68 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 	return (rc);
 }
 
-int
-mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
+struct sl_replrq *
+mds_replrq_find(struct slash_fidgen *fgp, int *locked)
 {
-	char fn[FID_MAX_PATH];
-	int rc, tract[4], retifset[4];
-	struct sl_replrq q, *newrq, *rrq;
-	struct bmapc_memb *bcm;
-	struct slash_fidgen fg;
 	struct slash_inode_handle inoh;
-	struct stat stb;
-	uint64_t inum;
+	struct sl_replrq q, *rrq;
 
 	inoh.inoh_ino.ino_fg = *fgp;
 	q.rrq_inoh = &inoh;
 
+	*locked = reqlock(&replrq_tree_lock);
+	rrq = SPLAY_FIND(replrqtree, &replrq_tree, &q);
+	if (rrq) {
+		spinlock(&rrq->rrq_lock);
+		rrq->rrq_refcnt++;
+	}
+
+	if (rrq == NULL) {
+		ureqlock(&replrq_tree_lock, *locked);
+		return (NULL);
+	}
+	freelock(&replrq_tree_lock);
+	*locked = 0;
+
+	while (rrq->rrq_flags & REPLRQF_BUSY) {
+		psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
+		spinlock(&rrq->rrq_lock);
+	}
+
+	if (rrq->rrq_flags & REPLRQF_DIE) {
+		rrq->rrq_refcnt--;
+		psc_waitq_wakeall(&rrq->rrq_waitq);
+		freelock(&rrq->rrq_lock);
+		rrq = NULL;
+	} else {
+		rrq->rrq_flags |= REPLRQF_BUSY;
+		freelock(&rrq->rrq_lock);
+	}
+	return (rrq);
+}
+
+int
+mds_replrq_add(struct slash_fidgen *fgp, sl_blkno_t bmapno)
+{
+	char fn[FID_MAX_PATH];
+	int rc, locked, tract[4], retifset[4];
+	struct sl_replrq *newrq, *rrq;
+	struct slash_fidgen fg;
+	struct bmapc_memb *bcm;
+	struct stat stb;
+	uint64_t inum;
+	sl_blkno_t n;
+
 	newrq = psc_pool_get(replrq_pool);
 
+	rc = 0;
+ restart:
 	spinlock(&replrq_tree_lock);
-	rrq = SPLAY_FIND(replrqtree, &replrq_tree, &q);
+	rrq = mds_replrq_find(fgp, &locked);
 	if (rrq == NULL) {
+		if (!locked)
+			goto restart;
+
 		/* Not found, add it and its persistent link. */
 		inum = sl_get_repls_inum();
 		rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fgp->fg_fid);
@@ -313,105 +367,123 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 			rc = zfsslash2_link(zfsVfs, fgp->fg_fid, inum,
 			    fn, &fg, &rootcreds, &stb);
 			if (rc == 0) {
+				memset(rrq, 0, sizeof(*rrq));
+				LOCK_INIT(&rrq->rrq_lock);
+				psc_waitq_init(&rrq->rrq_waitq);
+				rrq->rrq_refcnt = 1;
+				rrq->rrq_inoh = fcmh_2_inoh(fidc_lookup_fg(fgp));
+				rrq->rrq_flags |= REPLRQF_BUSY;
 				SPLAY_INSERT(replrqtree, &replrq_tree, newrq);
+				rrq = newrq;
 				newrq = NULL;
 			}
 		}
 	}
-	if (rc == 0) {
-		/*
-		 * Check inode's bmap state.  INACTIVE and ACTIVE states
-		 * become TOO_OLD, signifying that replication needs to happen.
-		 */
-		tract[SL_REPL_INACTIVE] = SL_REPL_TOO_OLD;
-		tract[SL_REPL_TOO_OLD] = -1;
-		tract[SL_REPL_OLD] = -1;
-		tract[SL_REPL_ACTIVE] = SL_REPL_TOO_OLD;
-		if (bmapno == (sl_blkno_t)-1) {
-//			for (each bmap)
-				mds_repl_bmap_walk(bcm, tract, NULL, 0);
-		} else {
-			/*
-			 * If this bmap is already being
-			 * replicated, return EALREADY.
-			 */
-			retifset[SL_REPL_INACTIVE] = 0;
-			retifset[SL_REPL_TOO_OLD] = EALREADY;
-			retifset[SL_REPL_OLD] = EALREADY;
-			retifset[SL_REPL_ACTIVE] = 0;
-			rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
-		}
-	}
-	freelock(&replrq_tree_lock);
+	if (locked)
+		freelock(&replrq_tree_lock);
 
 	if (newrq)
 		psc_pool_return(replrq_pool, newrq);
 
-	return (0);
+	if (rc)
+		return (rc);
+
+	/*
+	 * Check inode's bmap state.  INACTIVE and ACTIVE states
+	 * become TOO_OLD, signifying that replication needs to happen.
+	 */
+	tract[SL_REPL_INACTIVE] = SL_REPL_TOO_OLD;
+	tract[SL_REPL_TOO_OLD] = -1;
+	tract[SL_REPL_OLD] = -1;
+	tract[SL_REPL_ACTIVE] = SL_REPL_TOO_OLD;
+	if (bmapno == (sl_blkno_t)-1) {
+		retifset[SL_REPL_INACTIVE] = 1;
+		retifset[SL_REPL_TOO_OLD] = 0;
+		retifset[SL_REPL_OLD] = 0;
+		retifset[SL_REPL_ACTIVE] = 1;
+		for (n = 0; n < rrq->rrq_inoh->inoh_ino.ino_lblk; n++) {
+			bcm = mds_bmap_load(rrq->rrq_inoh->inoh_fcmh, n);
+			BMAP_LOCK(bcm);
+			rc |= mds_repl_bmap_walk(bcm, tract, NULL, 0);
+			bmap_op_done(bcm);
+		}
+		if (rc == 0)
+			rc = EALREADY;
+	} else {
+		/*
+		 * If this bmap is already being
+		 * replicated, return EALREADY.
+		 */
+		retifset[SL_REPL_INACTIVE] = 0;
+		retifset[SL_REPL_TOO_OLD] = EALREADY;
+		retifset[SL_REPL_OLD] = EALREADY;
+		retifset[SL_REPL_ACTIVE] = 0;
+		bcm = mds_bmap_load(rrq->rrq_inoh->inoh_fcmh, bmapno);
+		BMAP_LOCK(bcm);
+		rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
+		bmap_op_done(bcm);
+	}
+
+	spinlock(&rrq->rrq_lock);
+	rrq->rrq_refcnt--;
+	rrq->rrq_flags &= ~REPLRQF_BUSY;
+	psc_waitq_wakeall(&rrq->rrq_waitq);
+	freelock(&rrq->rrq_lock);
+	return (rc);
 }
 
-int
-mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
+void
+mds_repl_tryrmqfile(struct sl_replrq *rrq)
 {
 	int rc, tract[4], retifset[4];
-	struct sl_replrq q, *rrq;
 	struct bmapc_memb *bcm;
 	char fn[FID_MAX_PATH];
 	uint64_t inum;
+	sl_blkno_t n;
+
+	/* Scan for any OLD states. */
+	tract[SL_REPL_INACTIVE] = -1;
+	tract[SL_REPL_ACTIVE] = -1;
+	tract[SL_REPL_OLD] = -1;
+	tract[SL_REPL_TOO_OLD] = -1;
+
+	retifset[SL_REPL_INACTIVE] = 0;
+	retifset[SL_REPL_ACTIVE] = 0;
+	retifset[SL_REPL_OLD] = 1;
+	retifset[SL_REPL_TOO_OLD] = 1;
+
+	/*
+	 * Mark the inode such that we want to remove it from the repl
+	 * queue.  Behavior requiring it to stay in the queue which will
+	 * clear this flag under us.
+	 */
+	INOH_LOCK(rrq->rrq_inoh);
+	rrq->rrq_inoh->inoh_flags |= INOH_WANT_REPL_REL;
+	INOH_ULOCK(rrq->rrq_inoh);
+
+	/* Scan bmaps to see if the inode should disappear. */
+	for (n = 0; n < rrq->rrq_inoh->inoh_ino.ino_lblk; n++) {
+		bcm = mds_bmap_load(rrq->rrq_inoh->inoh_fcmh, n);
+		BMAP_LOCK(bcm);
+		rc = mds_repl_bmap_walk(bcm, tract,
+		    retifset, REPL_WALKF_SCIRCUIT);
+		bmap_op_done(bcm);
+		if (rc)
+			goto out;
+	}
 
 	spinlock(&replrq_tree_lock);
-	rrq = SPLAY_FIND(replrqtree, &replrq_tree, &q);
-	if (rrq == NULL) {
-		/* Not in cache */
-		rc = ENOENT;
-	} else {
-		/* Found it, remove bmap. */
-		tract[SL_REPL_INACTIVE] = -1;
-		tract[SL_REPL_ACTIVE] = SL_REPL_INACTIVE;
-		tract[SL_REPL_OLD] = SL_REPL_INACTIVE;
-		tract[SL_REPL_TOO_OLD] = SL_REPL_INACTIVE;
-
-		if (bmapno == (sl_blkno_t)-1) {
-			retifset[SL_REPL_INACTIVE] = 1;
-			retifset[SL_REPL_ACTIVE] = 0;
-			retifset[SL_REPL_OLD] = 0;
-			retifset[SL_REPL_TOO_OLD] = 0;
-
-			rc = ENOENT;
-//			for (each bmap)
-				if (mds_repl_bmap_walk(bcm, tract,
-				    retifset, 0))
-					rc = 0;
-		} else {
-			retifset[SL_REPL_INACTIVE] = ENOENT;
-			retifset[SL_REPL_ACTIVE] = 0;
-			retifset[SL_REPL_OLD] = 0;
-			retifset[SL_REPL_TOO_OLD] = 0;
-			rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
-		}
-
-		/* Scan for any OLD states. */
-		tract[SL_REPL_INACTIVE] = -1;
-		tract[SL_REPL_ACTIVE] = -1;
-		tract[SL_REPL_OLD] = -1;
-		tract[SL_REPL_TOO_OLD] = -1;
-
-		retifset[SL_REPL_INACTIVE] = 0;
-		retifset[SL_REPL_ACTIVE] = 0;
-		retifset[SL_REPL_OLD] = 1;
-		retifset[SL_REPL_TOO_OLD] = 1;
-
-//		for (each bmap in inode)
-			if (mds_repl_bmap_walk(bcm, tract,
-			    retifset, REPL_WALKF_SCIRCUIT))
-				goto out;
-
+	INOH_LOCK(rrq->rrq_inoh);
+	rc = rrq->rrq_inoh->inoh_flags & INOH_WANT_REPL_REL;
+	INOH_ULOCK(rrq->rrq_inoh);
+	if (rc) {
 		/*
 		 * All states are INACTIVE/ACTIVE;
 		 * remove it and its persistent link.
 		 */
 		inum = sl_get_repls_inum();
-		rc = snprintf(fn, sizeof(fn), "%015"PRIx64, fgp->fg_fid);
+		rc = snprintf(fn, sizeof(fn), "%016"PRIx64,
+		    rrq->rrq_inoh->inoh_ino.ino_fg.fg_fid);
 		if (rc == -1)
 			rc = errno;
 		else if (rc >= (int)sizeof(fn))
@@ -419,10 +491,69 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		else
 			rc = zfsslash2_unlink(zfsVfs, inum, fn, &rootcreds);
 		SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
-	}
- out:
+	} else
+		rrq = NULL;
 	freelock(&replrq_tree_lock);
-	if (rrq)
+
+ out:
+	if (rrq) {
+		spinlock(&rrq->rrq_lock);
+		rrq->rrq_flags |= REPLRQF_DIE;
+		rrq->rrq_flags &= ~REPLRQF_BUSY;
+
+		while (rrq->rrq_refcnt > 1) {
+			psc_waitq_wakeall(&rrq->rrq_waitq);
+			psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
+			spinlock(&rrq->rrq_lock);
+		}
+
 		psc_pool_return(replrq_pool, rrq);
+	}
+}
+
+int
+mds_replrq_del(struct slash_fidgen *fgp, sl_blkno_t bmapno)
+{
+	int locked, rc, tract[4], retifset[4];
+	struct bmapc_memb *bcm;
+	struct sl_replrq *rrq;
+	sl_blkno_t n;
+
+	rrq = mds_replrq_find(fgp, &locked);
+	if (rrq == NULL)
+		return (ENOENT);
+
+	tract[SL_REPL_INACTIVE] = -1;
+	tract[SL_REPL_ACTIVE] = SL_REPL_INACTIVE;
+	tract[SL_REPL_OLD] = SL_REPL_INACTIVE;
+	tract[SL_REPL_TOO_OLD] = SL_REPL_INACTIVE;
+
+	if (bmapno == (sl_blkno_t)-1) {
+		retifset[SL_REPL_INACTIVE] = 1;
+		retifset[SL_REPL_ACTIVE] = 0;
+		retifset[SL_REPL_OLD] = 0;
+		retifset[SL_REPL_TOO_OLD] = 0;
+
+		rc = ENOENT;
+		for (n = 0; n < rrq->rrq_inoh->inoh_ino.ino_lblk; n++) {
+			bcm = mds_bmap_load(rrq->rrq_inoh->inoh_fcmh, n);
+			BMAP_LOCK(bcm);
+			if (mds_repl_bmap_walk(bcm, tract,
+			    retifset, 0))
+				rc = 0;
+			bmap_op_done(bcm);
+		}
+	} else {
+		retifset[SL_REPL_INACTIVE] = ENOENT;
+		retifset[SL_REPL_ACTIVE] = 0;
+		retifset[SL_REPL_OLD] = 0;
+		retifset[SL_REPL_TOO_OLD] = 0;
+		bcm = mds_bmap_load(rrq->rrq_inoh->inoh_fcmh, bmapno);
+		BMAP_LOCK(bcm);
+		rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
+		bmap_op_done(bcm);
+	}
+
+	mds_repl_tryrmqfile(rrq);
 	return (0);
 }

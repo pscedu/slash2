@@ -684,7 +684,7 @@ slrmc_handle_addreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_req *mq;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mds_repl_addrq(&mq->fg, mq->bmapno);
+	mp->rc = mds_replrq_add(&mq->fg, mq->bmapno);
 	return (0);
 }
 
@@ -695,7 +695,7 @@ slrmc_handle_delreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_req *mq;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mds_repl_delrq(&mq->fg, mq->bmapno);
+	mp->rc = mds_replrq_del(&mq->fg, mq->bmapno);
 	return (0);
 }
 

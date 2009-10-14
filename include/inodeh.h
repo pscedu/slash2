@@ -31,7 +31,8 @@ enum slash_inode_handle_flags {
 	INOH_INO_NEW       = (1<<3), /* The inode info has never been written
 				       to disk */
 	INOH_LOAD_EXTRAS   = (1<<4),
-	INOH_INO_NOTLOADED = (1<<5)
+	INOH_INO_NOTLOADED = (1<<5),
+	INOH_WANT_REPL_REL = (1<<6), /* want to remove from replication queue */
 };
 
 static inline void
@@ -56,7 +57,7 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 #define INOH_FLAGS_FMT "%s%s%s%s"
 
 #define DEBUG_INOH(level, i, fmt, ...)					\
-	psc_logs((level), PSS_GEN, 					\
+	psc_logs((level), PSS_GEN,					\
 		 " inoh@%p f:"FIDFMT" fl:"INOH_FLAGS_FMT		\
 		 "v:%x bsz:%u nr:%u cs:%u lblk:%"PRId64" "		\
 		 "repl0:%u crc:%"PRIx64" "				\
