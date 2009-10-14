@@ -210,7 +210,7 @@ struct fidc_open_obj {
 #define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)					\
-do {								        	\
+do {										\
 	int dbg_fcmh_locked=reqlock(&(fcmh)->fcmh_lock);			\
 										\
 	psc_logs((level), PSS_GEN,						\
@@ -300,7 +300,7 @@ struct fidc_memb {
 	psc_logs(level, PSS_GEN,					\
 	    "stb (%p) dev:%lu inode:%"PRId64" mode:0%o "		\
 	    "nlink:%lu uid:%u gid:%u rdev:%lu sz:%"PRId64" "		\
-	    "blk:%lu blkcnt:%zd atime:%lu mtime:%lu ctime:%lu", 	\
+	    "blk:%lu blkcnt:%zd atime:%lu mtime:%lu ctime:%lu",		\
 	    (stb),							\
 	    (stb)->st_dev, (stb)->st_ino, (stb)->st_mode,		\
 	    (stb)->st_nlink, (stb)->st_uid, (stb)->st_gid,		\
