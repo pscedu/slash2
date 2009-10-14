@@ -133,12 +133,12 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 			PSCFREE(f->fcmh_fcm);
 			f->fcmh_fcm = NULL;
 		}
-		if (psclist_conjoint(&f->fcmh_hashe.hentry_lentry)) {
+		if (psclist_conjoint(&f->fcmh_hentry.hentry_lentry)) {
 			struct hash_bucket *b;
 
 			b = hashbkt_get(&fidcHtable, fcmh_2_fid(f));
 			hashbkt_lock(b);
-			hashbkt_del_entry(b, &f->fcmh_hashe);
+			hashbkt_del_entry(b, &f->fcmh_hentry);
 			hashbkt_unlock(b);
 		}
 
@@ -520,11 +520,11 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 			DEBUG_FCMH(PLL_NOTIFY, fcmh,
 				   "adding FID_ANY to cache");
 
-		init_hash_entry(&fcmh->fcmh_hashe, &(fcmh_2_fid(fcmh)), fcmh);
+		init_hash_entry(&fcmh->fcmh_hentry, &(fcmh_2_fid(fcmh)), fcmh);
 
 		FCMH_LOCK(fcmh);
 		fidc_put(fcmh, &fidcCleanList);
-		add_hash_entry(&fidcHtable, &fcmh->fcmh_hashe);
+		add_hash_entry(&fidcHtable, &fcmh->fcmh_hentry);
 		freelock_hash_bucket(&fidcHtable, fg->fg_fid);
 		/* Do this dance so that fidc_fcoo_start_locked() is not
 		 *  called while holding the hash bucket lock!
@@ -567,7 +567,7 @@ fidc_membh_init(__unusedx struct psc_poolmgr *pm, void *a)
 	f->fcmh_fsops = slFsops;
 	f->fcmh_state = FCMH_CAC_FREE;
 	f->fcmh_pri = NULL;
-	memset(&f->fcmh_hashe, 0, sizeof(struct hash_entry));
+	memset(&f->fcmh_hentry, 0, sizeof(struct hash_entry));
 	return (0);
 }
 
