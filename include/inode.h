@@ -147,9 +147,9 @@ struct slash_bmap_cli_wire {
 	u8 bh_repls[SL_REPLICA_NBYTES];
 };
 
-/** 
+/**
  * slash_bmap_od - slash bmap on-disk structure.  This structure maps the
- *    persistent state of the bmap within the inode's metafile.  
+ *    persistent state of the bmap within the inode's metafile.
  * @bh_gen: current generation number.
  * @bh_crcs: the crc table, one 8 byte crc per sliver.
  * @bh_crcstates: some bits for describing the state of a sliver.
@@ -172,7 +172,7 @@ struct slash_bmap_od {
 enum slash_bmap_slv_states {
 	BMAP_SLVR_DATA = (1<<0), /* Data present, otherwise slvr is hole */
 	BMAP_SLVR_CRC  = (1<<1)  /* Valid CRC */
-	//XXX ATM, 6 bits are left 
+	//XXX ATM, 6 bits are left
 };
 
 #define INO_DEF_NREPLS 4
@@ -206,7 +206,7 @@ enum slash_inode_flags {
 struct slash_inode_extras_od {
 	sl_snap_t     inox_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers      */
 	sl_replica_t  inox_repls[SL_MAX_REPLICAS]; /* replicas              */
-	psc_crc_t     inox_crc; 
+	psc_crc_t     inox_crc;
 };
 #define INOX_OD_SZ (sizeof(struct slash_inode_extras_od))
 #define INOX_OD_CRCSZ							\
