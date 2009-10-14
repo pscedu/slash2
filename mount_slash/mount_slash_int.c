@@ -242,7 +242,7 @@ msl_fhent_new(struct fidc_membh *f)
 void
 msl_bmap_init(struct bmapc_memb *b)
 {
-	struct msbmap_data *msbd;
+	struct bmap_cli_data *msbd;
 
 	msbd = b->bcm_pri;
 	msbd->msbd_bmap = b;
@@ -426,7 +426,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	struct pscrpc_request *rq;
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
-	struct msbmap_data *msbd;
+	struct bmap_cli_data *msbd;
 	struct fidc_membh *f;
 	struct iovec iovs[3];
 	int nblks, rc=-1;
@@ -1128,7 +1128,7 @@ msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
 	struct pscrpc_request     *req;
 	struct pscrpc_bulk_desc   *desc;
 	struct bmapc_memb	  *bcm;
-	struct msbmap_data	  *msbd;
+	struct bmap_cli_data	  *msbd;
 	struct iovec              *iovs;
 	struct offtree_iov        *v;
 	struct srm_io_req         *mq;
@@ -1244,7 +1244,7 @@ msl_pages_dio_getput(struct offtree_req *r, char *b)
 	struct pscrpc_request     *req;
 	struct pscrpc_bulk_desc   *desc;
 	struct bmapc_memb	  *bcm;
-	struct msbmap_data	  *msbd;
+	struct bmap_cli_data	  *msbd;
 	struct iovec              *iovs;
 	struct srm_io_req         *mq;
 	struct srm_io_rep         *mp;

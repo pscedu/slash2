@@ -21,9 +21,9 @@ struct msbmap_crcrepl_states
 };
 
 /*
- * msbmap_data - assigned to bmap->bcm_pri for mount slash client.
+ * bmap_cli_data - assigned to bmap->bcm_pri for mount slash client.
  */
-struct msbmap_data {
+struct bmap_cli_data {
 	struct offtree_root	    *msbd_oftr;
 	struct bmapc_memb           *msbd_bmap;
 	lnet_nid_t		     msbd_ion;
@@ -33,7 +33,7 @@ struct msbmap_data {
 	struct psclist_head          msbd_lentry;
 };
 
-#define bmap_2_msbd(b)		((struct msbmap_data *)(b)->bcm_pri)
+#define bmap_2_msbd(b)		((struct bmap_cli_data *)(b)->bcm_pri)
 #define bmap_2_msoftr(b)	bmap_2_msbd(b)->msbd_oftr
 #define bmap_2_msion(b)		bmap_2_msbd(b)->msbd_ion
 

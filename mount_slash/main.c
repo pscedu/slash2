@@ -1666,7 +1666,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	sl_buffer_cache_init();
 
 	_psc_poolmaster_init(&bmap_poolmaster, sizeof(struct bmapc_memb) +
-	    sizeof(struct msbmap_data), offsetof(struct bmapc_memb, bcm_lentry),
+	    sizeof(struct bmap_cli_data), offsetof(struct bmapc_memb, bcm_lentry),
 	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 
