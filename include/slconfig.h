@@ -135,6 +135,7 @@ libsl_resm_lookup(void)
 	sl_resm_t         *resm=NULL;
 	sl_resource_t     *res=NULL;
 	lnet_nid_t         nids[MAX_LOCALNIDS];
+	char nidbuf[PSC_NIDSTR_SIZE];
 	struct hash_entry *e;
 
 	nnids = lnet_localnids_get(nids, 8);
@@ -147,7 +148,7 @@ libsl_resm_lookup(void)
 		/* Every nid found by lnet must be a resource member.  */
 		if (!e)
 			psc_fatalx("Nid ;%s; is not a member of any resource",
-				   libcfs_nid2str(nids[i]));
+				   psc_nid2str(nids[i], nidbuf));
 
 		resm = e->private;
 		if (!i)
@@ -155,7 +156,7 @@ libsl_resm_lookup(void)
 		/* All nids must belong to the same resource */
 		else if (res != resm->resm_res)
 			psc_fatalx("Nids must be members of same resource (%s)",
-				libcfs_nid2str(nids[i]));
+				psc_nid2str(nids[i], nidbuf));
 	}
 	return resm;
 }
@@ -295,7 +296,9 @@ libsl_init(int server)
 	sl_resm_t  *resm;
 	sl_nodeh_t *z = &nodeInfo;
 
-	//tcpnal_acceptor_port = globalConfig.gconf_port;
+	//lnet_acceptor_port = globalConfig.gconf_port;
+	//setenv("USOCK_CPORT", globalConfig.gconf_port, 1);
+	//setenv("LNET_ACCEPT_PORT", globalConfig.gconf_port, 1);
 
 	pscrpc_init_portals(server);
 
