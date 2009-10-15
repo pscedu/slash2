@@ -9,7 +9,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
-#include <string.h> 
+#include <string.h>
 
 #include "psc_util/log.h"
 #include "psc_util/mkdirs.h"
@@ -78,7 +78,7 @@ fid_fileops_fg(struct slash_fidgen *fg, int flags)
 	char fidfn[SL_PATH_MAX];
 
 	fid_makepath(fg->fg_fid, fidfn);
-	snprintf((fidfn + strlen(fidfn)), SL_PATH_MAX, 
+	snprintf((fidfn + strlen(fidfn)), SL_PATH_MAX,
 		 "_%"PRIx64, fg->fg_gen);
 
 	return (open(fidfn, flags));
