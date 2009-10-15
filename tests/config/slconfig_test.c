@@ -101,6 +101,6 @@ main(int argc, char *argv[])
 		usage();
 
 	slashGetConfig(fn);
-	libsl_init(PSC_CLIENT);
+	libsl_init(PSCNET_CLIENT);
 	exit(0);
 }

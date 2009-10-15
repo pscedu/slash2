@@ -102,7 +102,7 @@ main(int argc, char *argv[])
 	slashGetConfig(cfn);
 	fdbuf_createkeyfile();
 	fdbuf_readkeyfile();
-	libsl_init(PSC_SERVER);
+	libsl_init(PSCNET_SERVER);
 	mds_init();
 
 	_psc_poolmaster_init(&bmap_poolmaster, sizeof(struct bmapc_memb) +
