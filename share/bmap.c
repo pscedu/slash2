@@ -75,7 +75,7 @@ bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n,
 		psc_waitq_init(&b->bcm_waitq);
 		b->bcm_fcmh = f;
 		b->bcm_blkno = n;
-		b->bcm_pri = b + sizeof(*b);
+		b->bcm_pri = b + 1;
 
 		/* Note that the bmap is newly initialized and therefore
 		 *  may not contain certain structures.
