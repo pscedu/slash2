@@ -1662,6 +1662,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	if ((name = getenv("SLASH_MDS_NID")) == NULL)
 		psc_fatalx("please export SLASH_MDS_NID");
 
+	libsl_init(PSC_CLIENT);
 	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
 	sl_buffer_cache_init();
 

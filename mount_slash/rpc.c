@@ -30,9 +30,6 @@ rpc_initsvc(void)
 {
 	pscrpc_svc_handle_t *svh;
 
-	if (pscrpc_init_portals(PSC_CLIENT))
-		psc_fatal("pscrpc_init_portals");
-
 	if (LNetGetId(1, &lpid))
 		psc_fatalx("LNetGetId");
 
