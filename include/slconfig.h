@@ -291,7 +291,7 @@ libsl_str2restype(const char *res_type)
 }
 
 static inline void
-libsl_init(int server)
+libsl_init(int pscnet_mode)
 {
 	sl_resm_t  *resm;
 	sl_nodeh_t *z = &nodeInfo;
@@ -300,17 +300,17 @@ libsl_init(int server)
 	//setenv("USOCK_CPORT", globalConfig.gconf_port, 1);
 	//setenv("LNET_ACCEPT_PORT", globalConfig.gconf_port, 1);
 
-	pscrpc_init_portals(server);
+	pscrpc_init_portals(pscnet_mode);
 
-	resm = libsl_resm_lookup();
-	if (server) {
+	if (pscnet_mode == PSCNET_SERVER) {
+		resm = libsl_resm_lookup();
 		if (!resm)
 			psc_fatalx("No resource for this node");
 		psc_errorx("Resource %s", resm->resm_res->res_name);
+		z->node_res  = resm->resm_res;
+		z->node_site = libsl_id2site(z->node_res->res_id);
+		libsl_profile_dump();
 	}
-	z->node_res  = resm->resm_res;
-	z->node_site = libsl_id2site(z->node_res->res_id);
-	libsl_profile_dump();
 }
 
 int run_yacc(const char *);
