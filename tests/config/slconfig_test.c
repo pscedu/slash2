@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,25 +66,32 @@ slcfg_new_site(void)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-S] [-l level] [-i file]\n", progname);
+	fprintf(stderr, "usage: %s [-S] [-i file]\n", progname);
 	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
-	char *fn = "../../slashd/config/example.conf";
+	char *cp, fn[PATH_MAX];
 	int c;
-
-	setenv("LNET_NETWORKS", "tcp10(lo)", 1);
 
 	progname = argv[0];
 	pfl_init();
-	psc_log_setlevel(0, PLL_NOTICE);
+
+	cp = strdup(progname);
+	if (cp == NULL)
+		psc_fatal("strdup");
+	snprintf(fn, sizeof(fn), "%s/example.conf", dirname(cp));
+	free(cp);
+
+	setenv("LNET_NETWORKS", "tcp10(lo)", 1);
+
 	while (((c = getopt(argc, argv, "c:")) != -1))
 		switch (c) {
 		case 'c':
-			fn = optarg;
+			if (strlcpy(fn, optarg, sizeof(fn)) >= sizeof(fn))
+				psc_fatalx("name too long: %s", optarg);
 			break;
 		default:
 			usage();
