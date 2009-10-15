@@ -10,7 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pfl.h"
+#include "pfl/pfl.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/cdefs.h"
 #include "psc_util/log.h"
@@ -19,10 +19,6 @@
 #include "slconfig.h"
 
 char *progname;
-char *f = "../../slashd/config/example.conf";
-int serverNode;
-
-int getOptions(int argc, char *argv[]);
 
 int
 psc_usklndthr_get_type(__unusedx const char *namefmt)
@@ -76,28 +72,27 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	char *fn = "../../slashd/config/example.conf";
 	int c;
+
+	setenv("LNET_NETWORKS", "tcp10(lo)", 1);
 
 	progname = argv[0];
 	pfl_init();
 	psc_log_setlevel(0, PLL_NOTICE);
-	while (((c = getopt(argc, argv, "i:l:S:")) != -1))
+	while (((c = getopt(argc, argv, "c:")) != -1))
 		switch (c) {
-		case 'l':
-			psc_log_setlevel(0, atoi(optarg));
-			break;
-		case 'i':
-			f = optarg;
-			break;
-		case 'S':
-			serverNode = 1;
+		case 'c':
+			fn = optarg;
 			break;
 		default:
 			usage();
 		}
+	argc -= optind;
+	if (argc)
+		usage();
 
-
-	slashGetConfig(f);
-	libsl_init(serverNode);
+	slashGetConfig(fn);
+	libsl_init(PSC_CLIENT);
 	exit(0);
 }
