@@ -29,7 +29,7 @@
 struct replrqtree	 replrq_tree;
 struct psc_poolmaster	 replrq_poolmaster;
 struct psc_poolmgr	*replrq_pool;
-psc_spinlock_t		 replrq_tree_lock;
+psc_spinlock_t		 replrq_tree_lock = LOCK_INITIALIZER;
 
 int
 replrq_cmp(const void *a, const void *b)

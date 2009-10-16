@@ -61,19 +61,25 @@ parse_replrq(int code, char *replrqspec,
 
 	bmapnos = strchr(replrqspec, ':');
 	if (bmapnos) {
-		if (!allow_bmapno && replrqspec[0] != '\0')
-			errx(1, "%s: bmap specification not allowed",
-			    replrqspec);
 		*bmapnos++ = '\0';
-		for (bmapno = bmapnos; bmapno; bmapno = next) {
-			if ((next = strchr(bmapno, ',')) != NULL)
-				*next++ = '\0';
-			ra.bmapno = strtol(bmapno, &endp, 10);
-			if (ra.bmapno < 1 || bmapno[0] == '\0' ||
-			    *endp != '\0')
-				errx(1, "%s: invalid replication request",
+		if (allow_bmapno) {
+			for (bmapno = bmapnos;
+			    bmapno && *bmapno != '\0';
+			    bmapno = next) {
+				if ((next = strchr(bmapno, ',')) != NULL)
+					*next++ = '\0';
+				ra.bmapno = strtol(bmapno, &endp, 10);
+				if (ra.bmapno < 1 || bmapno[0] == '\0' ||
+				    *endp != '\0')
+					errx(1, "%s: invalid replication request",
+					    replrqspec);
+				walk(optarg, packf, &ra);
+			}
+		} else {
+			if (replrqspec[0] != '\0')
+				errx(1, "%s: bmap specification not allowed",
 				    replrqspec);
-			walk(optarg, packf, &ra);
+			packf("", &ra);
 		}
 	} else
 		walk(replrqspec, packf, &ra);
@@ -186,7 +192,7 @@ main(int argc, char *argv[])
 		case 'R':
 			recursive = 1;
 			break;
-		case 'q':
+		case 'r':
 			parse_replrq(0, optarg, pack_replst, 0);
 			break;
 		case 'S':
