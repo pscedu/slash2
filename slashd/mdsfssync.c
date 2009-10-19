@@ -69,7 +69,7 @@ mdsfssyncthr_begin(__unusedx void *arg)
 
 		psc_assert(xh->pjx_pj == mdsJournal);
 
-		if (pjournal_xend(xh, PJET_NONE, NULL, 0))
+		if (pjournal_xend(xh, PJE_NONE, NULL, 0))
 			psc_fatal("pjournal_xend() failed");
 
 		//pjournal_xidhndl_free(xh);
