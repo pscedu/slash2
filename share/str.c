@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-const char *
+char *
 slstrerror(int error)
 {
 	error = abs(error);

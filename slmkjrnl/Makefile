@@ -4,6 +4,7 @@ include Makefile.path
 
 PROG=		slmkjrnl
 SRCS+=		slmkjrnl.c
+SRCS+=		${SLASH_BASE}/share/str.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
