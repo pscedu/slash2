@@ -20,7 +20,7 @@
 #include "util.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct vbitmap	*slrcmthr_uniqidmap = VBITMAP_INIT_AUTO;
+struct vbitmap	 slrcmthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t	 slrcmthr_uniqidmap_lock = LOCK_INITIALIZER;
 
 #define SL_ROOT_INUM 1
@@ -102,8 +102,8 @@ slrcmthr_main(__unusedx void *arg)
 	    0, srcm->srcm_id, 0, 0, 1);
 
 	spinlock(&slrcmthr_uniqidmap_lock);
-	vbitmap_unset(slrcmthr_uniqidmap, srcm->srcm_uniqid);
-	vbitmap_setnextpos(slrcmthr_uniqidmap, 0);
+	vbitmap_unset(&slrcmthr_uniqidmap, srcm->srcm_uniqid);
+	vbitmap_setnextpos(&slrcmthr_uniqidmap, 0);
 	freelock(&slrcmthr_uniqidmap_lock);
 	return (NULL);
 }

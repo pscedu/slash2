@@ -69,7 +69,7 @@ void	*slrcmthr_main(void *);
 extern struct slash_sb_mem	slSuperBlk;
 extern int                      slSuperFd;
 
-extern struct vbitmap	*slrcmthr_uniqidmap;
+extern struct vbitmap	 slrcmthr_uniqidmap;
 extern psc_spinlock_t	 slrcmthr_uniqidmap_lock;
 
 #endif /* _SLASH_H_ */

@@ -707,7 +707,7 @@ slrmc_handle_getreplst(struct pscrpc_request *rq)
 	RSX_ALLOCREP(rq, mq, mp);
 
 	spinlock(&slrcmthr_uniqidmap_lock);
-	if (vbitmap_next(slrcmthr_uniqidmap, &id) == -1)
+	if (vbitmap_next(&slrcmthr_uniqidmap, &id) == -1)
 		psc_fatal("vbitmap_next");
 	freelock(&slrcmthr_uniqidmap_lock);
 
