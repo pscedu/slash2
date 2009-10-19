@@ -67,6 +67,11 @@ SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 SRCS+=		${PFL_BASE}/psc_util/wndmap.c
 
+#SRCS+=		${ZFS_BASE}/cmd/zpool/ptrace.c
+#SRCS+=		${ZFS_BASE}/cmd/zpool/zpool_iter.c
+#SRCS+=		${ZFS_BASE}/cmd/zpool/zpool_util.c
+#SRCS+=		${ZFS_BASE}/cmd/zpool/zpool_vdev.c
+
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 SRCS+=		${LNET_CFS_SRCS}
@@ -75,7 +80,20 @@ SRCS+=		${LNET_LIB_SRCS}
 INCLUDES+=	-I${LNET_BASE}/include
 DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
 DEFINES+=	-DHAVE_LIBPTHREAD -DHAVE_LIBPTHREAD_DEFINED
-LDFLAGS+=	${ZFS_LIBS} ${THREAD_LIBS} -ldl -lz -laio -lrt
-LDFLAGS+=	-lgcrypt
+DEFINES+=	-DTEXT_DOMAIN=\"zfs-fuse\"
+LDFLAGS+=	${ZFS_LIBS} ${ZPOOL_LIBS}
+LDFLAGS+=	${THREAD_LIBS} -ldl -lz -laio -lrt -lgcrypt
+
+# ZFS_INCLUDES=	-I${ZFS_BASE}/lib/libavl/include				\
+#		-I${ZFS_BASE}/lib/libnvpair/include				\
+#		-I${ZFS_BASE}/lib/libsolcompat/include				\
+#		-I${ZFS_BASE}/lib/libuutil/include				\
+#		-I${ZFS_BASE}/lib/libzfs/include				\
+#		-I${ZFS_BASE}/lib/libzfscommon/include
+#
+# zfs_zfs_fuse_0_5_0_slash_src_cmd_zpool_zpool_iter_c_CFLAGS+=	${ZFS_INCLUDES}
+# zfs_zfs_fuse_0_5_0_slash_src_cmd_zpool_zpool_util_c_CFLAGS+=	${ZFS_INCLUDES}
+# zfs_zfs_fuse_0_5_0_slash_src_cmd_zpool_zpool_vdev_c_CFLAGS+=	${ZFS_INCLUDES}
+# zfs_zfs_fuse_0_5_0_slash_src_zfs_fuse_ptrace_c_CFLAGS+=		${ZFS_INCLUDES} -std=c99
 
 include ${SLASHMK}
