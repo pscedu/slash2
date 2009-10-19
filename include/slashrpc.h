@@ -83,6 +83,7 @@
 #define SRIM_MAGIC		0xaabbccddeeff0088ULL
 
 /* Slash OPEN message flags */
+/* XXX make system agnostic */
 #define SL_FREAD	1
 #define SL_FWRITE	2
 #define SL_FAPPEND	O_APPEND
@@ -99,10 +100,12 @@
 #define SL_FNOFOLLOW	0x20000		/* don't follow symlinks */
 #define SL_FIGNORECASE	0x80000		/* request case-insensitive lookups */
 
+/* I/O modes */
 #define SL_READ		00400
 #define SL_WRITE	00200
 #define SL_EXEC		00100
 
+/* */
 #define SL_GETREPTBL    01000
 
 /* Slash RPC message types. */
@@ -202,7 +205,7 @@ struct srm_bmap_req {
 	uint32_t		blkno;		/* Starting block number                  */
 	uint32_t		nblks;		/* Read-ahead support                     */
 	uint32_t		dio;		/* Client wants directio                  */
-	uint32_t		rw;	
+	uint32_t		rw;
 	uint32_t                getreptbl;
 };
 
@@ -228,7 +231,7 @@ struct srm_bmap_rep {
 struct srm_bmap_wire_req {
 	struct slash_fidgen fg;
 	sl_blkno_t bmapno;
-	int rw;	
+	int rw;
 	//struct srt_bmapdesc_buf sbdb;
 };
 
