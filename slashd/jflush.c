@@ -22,7 +22,7 @@ jfi_prep(struct jflush_item *jfi, struct psc_journal *pj)
 		psc_assert(jfi->jfi_xh == NULL);
                 psc_assert(!(jfi->jfi_state & JFI_QUEUED));
                 psc_assert(psclist_disjoint(&jfi->jfi_lentry));
-                jfi->jfi_xh = pjournal_nextxid(pj);
+                jfi->jfi_xh = pjournal_newxid(pj);
                 jfi->jfi_state |= JFI_HAVE_XH;
         }
 	jfi->jfi_state |= JFI_BUSY;
