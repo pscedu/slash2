@@ -180,6 +180,7 @@ D_ANY
 
 
 - rename ios to ion
+- rename buffer.c -> slab.c
 - rename fdbuf.c -> descbuf.c
 - use a sliding window to track valid cfd's and remove them from the window
   once they are CLOSE()'d
