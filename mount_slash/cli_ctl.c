@@ -13,11 +13,13 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/strlcpy.h"
 
 #include "cli_ctl.h"
 #include "mount_slash.h"
 #include "msl_fuse.h"
 #include "slashrpc.h"
+#include "util.h"
 
 struct psc_lockedlist	psc_mlists;
 
@@ -58,12 +60,12 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = msctl_getcreds(fd, &cr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "unable to obtain credentials: %s",
-		    mrq->mrq_fn, strerror(rc)));
+		    mrq->mrq_fn, slstrerror(rc)));
 
 	rc = translate_pathname(mrq->mrq_fn, fn);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, strerror(rc)));
+		    mrq->mrq_fn, slstrerror(rc)));
 
 	pino = 1; /* root inum */
 	for (cpn = mrq->mrq_fn; cpn; cpn = next) {
@@ -72,25 +74,25 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		rc = slash_lookup_cache(&cr, pino, cpn, &fg, &stb);
 		if (rc)
 			return (psc_ctlsenderr(fd, mh,
-			    "%s: %s", mrq->mrq_fn, strerror(rc)));
+			    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
 		pino = fg.fg_fid;
 	}
 
 	if (!S_ISREG(stb.st_mode))
 		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, strerror(ENOTSUP)));
+		    "%s: %s", mrq->mrq_fn, slstrerror(ENOTSUP)));
 
 	rc = -checkcreds(&stb, &cr, W_OK);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, strerror(rc)));
+		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    mh->mh_type == SCMT_ADDREPLRQ ?
 	    SRMT_ADDREPLRQ : SRMT_DELREPLRQ, rq, mq, mp);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, strerror(rc)));
+		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
 
 	memcpy(&mq->fg, &fg, sizeof(mq->fg));
 	mq->bmapno = mrq->mrq_bmapno;
@@ -99,10 +101,10 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pscrpc_req_finished(rq);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, strerror(rc)));
+		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
 	if (mp->rc)
 		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, strerror(mp->rc)));
+		    "%s: %s", mrq->mrq_fn, slstrerror(mp->rc)));
 	return (1);
 }
 
@@ -113,8 +115,8 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct msctlmsg_replrq *mrq = m;
 	struct msctl_replst_cont *mrc;
 	struct msctl_replstq *mrsq;
-	struct srm_replst_rep *mp;
 	struct srm_replst_req *mq;
+	struct srm_replst_rep *mp;
 	struct pscrpc_request *rq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
@@ -123,6 +125,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	int rv, rc;
 
 	if (strcmp(mrq->mrq_fn, "") == 0) {
+		strlcpy(mrq->mrq_fn, "active replications", sizeof(mrq->mrq_fn));
 		fg.fg_fid = REPLRQ_FID_ALL;
 		goto issue;
 	}
@@ -130,12 +133,12 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rc = msctl_getcreds(fd, &cr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "unable to obtain credentials: %s",
-		    mrq->mrq_fn, strerror(rc)));
+		    mrq->mrq_fn, slstrerror(rc)));
 
 	rc = translate_pathname(mrq->mrq_fn, fn);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, strerror(rc)));
+		    mrq->mrq_fn, slstrerror(rc)));
 
 	pino = 1; /* root inum */
 	for (cpn = mrq->mrq_fn; cpn; cpn = next) {
@@ -144,28 +147,25 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		rc = slash_lookup_cache(&cr, pino, cpn, &fg, &stb);
 		if (rc)
 			return (psc_ctlsenderr(fd, mh,
-			    "%s: %s", mrq->mrq_fn, strerror(rc)));
+			    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
 		pino = fg.fg_fid;
 	}
 
 	if (!S_ISREG(stb.st_mode))
 		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, strerror(ENOTSUP)));
+		    "%s: %s", mrq->mrq_fn, slstrerror(ENOTSUP)));
 
 	rc = -checkcreds(&stb, &cr, W_OK);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, strerror(rc)));
+		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
 
-issue:
+ issue:
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	    mh->mh_type == SCMT_ADDREPLRQ ?
-	    SRMT_ADDREPLRQ : SRMT_DELREPLRQ, rq, mq, mp);
+	    SCMT_GETREPLST, rq, mq, mp);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s%s%s",
-		    mrq->mrq_fn[0] == '\0' ? "" : mrq->mrq_fn,
-		    mrq->mrq_fn[0] == '\0' ? "" : ": ",
-		    strerror(-rc)));
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    mrq->mrq_fn, slstrerror(rc)));
 
 	mq->ino = fg.fg_fid;
 	mq->id = psc_atomic32_inc_return(&msctl_replstid);
@@ -179,13 +179,13 @@ issue:
 	rc = RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
 	if (rc) {
-		rv = psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, strerror(rc));
+		rv = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mrq->mrq_fn, slstrerror(rc));
 		goto out;
 	}
 	if (mp->rc) {
-		rv = psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, strerror(mp->rc));
+		rv = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mrq->mrq_fn, slstrerror(mp->rc));
 		goto out;
 	}
 
