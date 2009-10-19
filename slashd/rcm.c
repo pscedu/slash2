@@ -20,8 +20,8 @@
 #include "util.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct vbitmap	*slrcmthr_uniqidmap;
-psc_spinlock_t	 slrcmthr_uniqidmap_lock;
+struct vbitmap	*slrcmthr_uniqidmap = VBITMAP_INIT_AUTO;
+psc_spinlock_t	 slrcmthr_uniqidmap_lock = LOCK_INITIALIZER;
 
 #define SL_ROOT_INUM 1
 struct slash_creds rootcreds = { 0, 0 };
