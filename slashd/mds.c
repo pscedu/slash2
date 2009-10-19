@@ -1,9 +1,5 @@
 /* $Id$ */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include "psc_ds/tree.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"

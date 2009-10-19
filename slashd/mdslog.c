@@ -1,9 +1,5 @@
 /* $Id$ */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <sys/param.h>
 
 #include <inttypes.h>

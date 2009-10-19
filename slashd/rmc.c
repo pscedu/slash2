@@ -4,10 +4,6 @@
  * Routines for handling RPC requests for MDS from CLIENT.
  */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>

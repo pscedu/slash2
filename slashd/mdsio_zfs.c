@@ -1,9 +1,5 @@
 /* $Id$ */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include "psc_util/lock.h"
 
 #include "bmap.h"

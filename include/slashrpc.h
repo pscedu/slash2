@@ -7,10 +7,6 @@
 #ifndef _SLASHRPC_H_
 #define _SLASHRPC_H_
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <sys/vfs.h>
 #include <sys/statvfs.h>
 #include <sys/types.h>
