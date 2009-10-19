@@ -14,7 +14,7 @@
 
 #include "pathnames.h"
 
-#include "mount_slash/control.h"
+#include "mount_slash/cli_ctl.h"
 #include "inode.h"
 #include "msctl.h"
 

@@ -9,7 +9,7 @@
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
 
-#include "control.h"
+#include "cli_ctl.h"
 #include "slashrpc.h"
 
 /*

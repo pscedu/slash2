@@ -14,7 +14,7 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 
-#include "control.h"
+#include "cli_ctl.h"
 #include "mount_slash.h"
 #include "msl_fuse.h"
 #include "slashrpc.h"
@@ -162,8 +162,10 @@ issue:
 	    mh->mh_type == SCMT_ADDREPLRQ ?
 	    SRMT_ADDREPLRQ : SRMT_DELREPLRQ, rq, mq, mp);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, strerror(rc)));
+		return (psc_ctlsenderr(fd, mh, "%s%s%s",
+		    mrq->mrq_fn[0] == '\0' ? "" : mrq->mrq_fn,
+		    mrq->mrq_fn[0] == '\0' ? "" : ": ",
+		    strerror(-rc)));
 
 	mq->ino = fg.fg_fid;
 	mq->id = psc_atomic32_inc_return(&msctl_replstid);

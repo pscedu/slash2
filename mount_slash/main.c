@@ -31,7 +31,7 @@
 
 #include "buffer.h"
 #include "cli_bmap.h"
-#include "control.h"
+#include "cli_ctl.h"
 #include "fidc_client.h"
 #include "fidcache.h"
 #include "fuse_listener.h"
