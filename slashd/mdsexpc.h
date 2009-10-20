@@ -41,15 +41,15 @@ struct pscrpc_export;
  */
 struct mexpbcm {
 	sl_blkno_t              mexpbcm_blkno;
-        uint32_t                mexpbcm_mode;
+	uint32_t                mexpbcm_mode;
 	uint32_t                mexpbcm_net_cmd;
 	uint32_t                mexpbcm_net_inf;
-        struct bmapc_memb      *mexpbcm_bmap;
+	struct bmapc_memb      *mexpbcm_bmap;
 	struct pscrpc_export   *mexpbcm_export;
 	struct psclist_head     mexpbcm_lentry;      /* ref for client cb   */
 	atomic_t                mexpbcm_msgcnt;      /* put to zero after rpc
 						      * has been issued */
-        SPLAY_ENTRY(mexpbcm)    mexpbcm_exp_tentry;  /* ref from mexpfcm    */
+	SPLAY_ENTRY(mexpbcm)    mexpbcm_exp_tentry;  /* ref from mexpfcm    */
 	SPLAY_ENTRY(mexpbcm)    mexpbcm_bmap_tentry; /* ref from bmap tree  */
 };
 
@@ -68,7 +68,7 @@ enum mexpbcm_modes {
 	MEXPBCM_RD       = (1<<2),
 	MEXPBCM_WR       = (1<<3),
 	MEXPBCM_CDIO     = (1<<4),  /* client requested directio            */
-        MEXPBCM_DIO      = (1<<5),  /* otherwise caching mode               */
+	MEXPBCM_DIO      = (1<<5),  /* otherwise caching mode               */
 	MEXPBCM_INIT     = (1<<6),  /* on it's way, block on the fcmh waitq */
 	MEXPBCM_RPC_CANCEL = (1<<7)
 };
@@ -114,14 +114,14 @@ SPLAY_PROTOTYPE(exp_bmaptree, mexpbcm, mexpbcm_exp_tentry, mexpbmapc_cmp);
  *   GFC fcm tier.
  */
 struct mexpfcm {
-        struct fidc_membh    *mexpfcm_fcmh;       /* point to the fcm        */
+	struct fidc_membh    *mexpfcm_fcmh;       /* point to the fcm        */
 	int                   mexpfcm_flags;
-        psc_spinlock_t        mexpfcm_lock;
+	psc_spinlock_t        mexpfcm_lock;
 	union {
 		struct exp_bmaptree f_bmaps;      /* tree of bmap pointers   */
 	} mexpfcm_ford;
-        struct pscrpc_export *mexpfcm_export;     /* backpointer to export   */
-        SPLAY_ENTRY(mexpfcm)  mexpfcm_fcm_tentry; /* fcm tree entry          */
+	struct pscrpc_export *mexpfcm_export;     /* backpointer to export   */
+	SPLAY_ENTRY(mexpfcm)  mexpfcm_fcm_tentry; /* fcm tree entry          */
 #define mexpfcm_bmaps mexpfcm_ford.f_bmaps
 };
 
@@ -143,11 +143,11 @@ mexpfcm_cache_cmp(const void *x, const void *y)
 {
 	const struct mexpfcm *a=x, *b=y;
 
-        if (a->mexpfcm_export > b->mexpfcm_export)
-                return 1;
-        else if (a->mexpfcm_export < b->mexpfcm_export)
-                return -1;
-        return 0;
+	if (a->mexpfcm_export > b->mexpfcm_export)
+		return 1;
+	else if (a->mexpfcm_export < b->mexpfcm_export)
+		return -1;
+	return 0;
 }
 
 struct mexp_cli {
@@ -182,8 +182,8 @@ bmdsi_sanity_locked(struct bmapc_memb *bmap, int dio_check, int *wr)
 	struct bmap_mds_info *mdsi = bmap->bcm_pri;
 
 	wr[0] = atomic_read(&mdsi->bmdsi_wr_ref);
-        wr[1] = atomic_read(&mdsi->bmdsi_rd_ref);
-        psc_assert(wr[0] >= 0 && wr[1] >= 0);
+	wr[1] = atomic_read(&mdsi->bmdsi_rd_ref);
+	psc_assert(wr[0] >= 0 && wr[1] >= 0);
 	if (dio_check && (wr[0] > 1 || (wr[0] && wr[1])))
 		psc_assert(bmap->bcm_mode & BMAP_DIO);
 }
@@ -195,7 +195,7 @@ struct resprof_mds_info {
 	psc_spinlock_t rmi_lock;
 };
 
-extern void 
+extern void
 mexpfcm_release_brefs(struct mexpfcm *);
 
 #endif /* _MDSEXPC_H_ */
