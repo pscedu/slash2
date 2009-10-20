@@ -24,6 +24,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	struct msctl_replstq *mrsq;
 	struct srm_replst_req *mq;
 	struct srm_replst_rep *mp;
+	struct sl_site *site;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
@@ -36,6 +37,11 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 //			    sizeof(mrc->mrc_mrs.mrs_fn));
 			mrc->mrc_mrs.mrs_bold = mp->st_bold;
 			mrc->mrc_mrs.mrs_bact = mp->st_bact;
+			site = libsl_id2site(mp->ios);
+			if (site)
+				strlcpy(mrc->mrc_mrs.mrs_ios,
+				    site->site_name,
+				    sizeof(mrc->mrc_mrs.mrs_ios));
 			lc_add(&mrsq->mrsq_lc, mrc);
 			if (mq->last)
 				lc_kill(&mrsq->mrsq_lc);

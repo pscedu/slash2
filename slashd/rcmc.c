@@ -61,7 +61,7 @@ slrcmthr_main(__unusedx void *arg)
 		SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
 			rc = slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
 			    rrq->rrq_inoh->inoh_ino.ino_fg.fg_fid, srcm->srcm_id,
-			    0, 0, 0);
+			    0, 0, 0, 0);
 			if (!rc)
 				break;
 		}
@@ -71,13 +71,13 @@ slrcmthr_main(__unusedx void *arg)
 		if (rrq)
 			rc = slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
 			    rrq->rrq_inoh->inoh_ino.ino_fg.fg_fid, srcm->srcm_id,
-			    0, 0, 0);
+			    0, 0, 0, 0);
 	}
 
 	/* signal EOF */
-	if (!rc)
+	if (rc)
 		slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
-		    0, srcm->srcm_id, 0, 0, 1);
+		    0, srcm->srcm_id, 0, 0, 0, 1);
 
 	spinlock(&slrcmthr_uniqidmap_lock);
 	vbitmap_unset(&slrcmthr_uniqidmap, srcm->srcm_uniqid);
@@ -91,7 +91,7 @@ slrcmthr_main(__unusedx void *arg)
  */
 int
 slrcm_issue_getreplst(struct pscrpc_import *imp, slfid_t fid, int32_t id,
-    int bold, int bact, int last)
+    sl_ios_id_t ios, int bold, int bact, int last)
 {
 	struct srm_replst_req *mq;
 	struct srm_replst_rep *mp;
@@ -104,6 +104,7 @@ slrcm_issue_getreplst(struct pscrpc_import *imp, slfid_t fid, int32_t id,
 	mq->ino = fid;
 	mq->id = id;
 	mq->last = last;
+	mq->ios = ios;
 	mq->st_bold = bold;
 	mq->st_bact = bact;
 	rc = RSX_WAITREP(rq, mp);

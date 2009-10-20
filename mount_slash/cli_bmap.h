@@ -38,7 +38,7 @@ struct bmap_cli_data {
 #define bmap_2_msion(b)		bmap_2_msbd(b)->msbd_ion
 
 /*
- * bmap_info_cli - hangs from the void * pointer in the sl_resm_t struct.
+ * bmap_info_cli - private client data for struct sl_resm.
  *  It's tasked with holding the import to the correct ION.
  */
 struct bmap_info_cli {
@@ -50,10 +50,9 @@ struct bmap_info_cli {
 };
 
 struct resprof_cli_info {
-        int rci_cnt;
-        psc_spinlock_t rci_lock;
+	int rci_cnt;
+	psc_spinlock_t rci_lock;
 };
-
 
 enum {
 	BMIC_CONNECTING   = (1<<0),

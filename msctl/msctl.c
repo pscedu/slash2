@@ -9,14 +9,15 @@
 #include "psc_util/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
+#include "psc_util/fmt.h"
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
 
-#include "pathnames.h"
-
-#include "mount_slash/cli_ctl.h"
 #include "inode.h"
+#include "mount_slash/cli_ctl.h"
 #include "msctl.h"
+#include "pathnames.h"
+#include "slconfig.h"
 
 struct replrq_arg {
 	int code;
@@ -99,15 +100,27 @@ replst_check(struct psc_ctlmsghdr *mh, __unusedx const void *m)
 void
 replst_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("replication status\n");
+	printf("replication status\n"
+	    " %-54s %8s %8s %6s\n",
+	    "file/fid", "total", "old", "%done");
 }
 
 void
 replst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
+	static char lastfn[PATH_MAX];
 	const struct msctlmsg_replst *mrs = m;
+	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
-	printf(" %s\n", mrs->mrs_fn);
+	if (strcmp(lastfn, mrs->mrs_fn)) {
+		strlcpy(lastfn, mrs->mrs_fn, sizeof(lastfn));
+		printf(" %-79s\n", mrs->mrs_fn);
+	}
+
+	psc_fmt_ratio(rbuf, mrs->mrs_bact, mrs->mrs_bact + mrs->mrs_bold);
+	printf("     %-50s %8d %8d %6s\n", mrs->mrs_ios,
+	    mrs->mrs_bact + mrs->mrs_bold, mrs->mrs_bold, rbuf);
+	/* XXX show each bmap status */
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {

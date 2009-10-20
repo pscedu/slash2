@@ -6,12 +6,14 @@
  */
 
 #include "inode.h"
+#include "slconfig.h"
 
 /* for retrieving info about replication status */
 struct msctlmsg_replst {
 	char			mrs_fn[PATH_MAX];
 	uint32_t		mrs_bact;
 	uint32_t		mrs_bold;
+	char			mrs_ios[SITE_NAME_MAX];
 };
 
 struct msctl_replstq {

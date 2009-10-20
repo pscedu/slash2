@@ -461,8 +461,11 @@ struct srm_replst_req {
 	int32_t			id;		/* user-provided passback value */
 	int32_t			rc;
 	int32_t			last;
+	uint32_t		len;		/* length of bulk data */
 	uint32_t		st_bact;
 	uint32_t		st_bold;
+	sl_ios_id_t		ios;
+/* bulk contains repl bits for each bmap */
 };
 
 #define srm_replst_rep srm_replst_req
