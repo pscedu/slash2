@@ -80,10 +80,11 @@ SRCS+=		${LNET_LIB_SRCS}
 INCLUDES+=	-I${LNET_BASE}/include
 DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
 DEFINES+=	-DHAVE_LIBPTHREAD -DHAVE_LIBPTHREAD_DEFINED
-DEFINES+=	-DTEXT_DOMAIN=\"zfs-fuse\"
+DEFINES+=	-DZPOOL_PATH=\"${ZFS_BASE}/cmd/zpool\"
 LDFLAGS+=	${ZFS_LIBS} ${ZPOOL_LIBS}
 LDFLAGS+=	${THREAD_LIBS} -ldl -lz -laio -lrt -lgcrypt
 
+# DEFINES+=	-DTEXT_DOMAIN=\"zfs-fuse\"
 # ZFS_INCLUDES=	-I${ZFS_BASE}/lib/libavl/include				\
 #		-I${ZFS_BASE}/lib/libnvpair/include				\
 #		-I${ZFS_BASE}/lib/libsolcompat/include				\

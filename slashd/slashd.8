@@ -1,5 +1,5 @@
 .\" $Id$
-.Dd February 25, 2009
+.Dd October 20, 2009
 .Dt SLASHD 8
 .ds volume PSC \- Slash Administrator's Manual
 .Os http://www.psc.edu/
@@ -10,11 +10,18 @@
 .Nm slashd
 .Op Fl f Ar conf
 .Op Fl S Ar socket
+.Ar zpoolname
 .Sh DESCRIPTION
 The
 .Nm
-daemon serves metadata requests to slash file system clients.
+daemon serves metadata requests to Slash file system clients and
+.Tn I/O
+nodes.
 .Pp
+.Ar zpoolname
+specifies the name of the
+.Tn ZFS
+pool to import for use as the backing metadata file system.
 The options are as follows:
 .Bl -tag -width Ds
 .It Fl f Ar conf
