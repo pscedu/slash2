@@ -5,6 +5,8 @@
 
 #include "psc_ds/tree.h"
 
+#define SL_ROOT_INUM 1
+
 struct sl_replrq {
 	SPLAY_ENTRY(sl_replrq)		 rrq_tentry;
 	struct slash_inode_handle	*rrq_inoh;
@@ -29,5 +31,6 @@ int	 mds_replrq_add(struct slash_fidgen *, sl_blkno_t);
 extern struct cfdops		mdsCfdOps;
 extern struct replrqtree	replrq_tree;
 extern struct slash_creds	rootcreds;
+extern int			allow_internal_fsaccess;
 
 #endif /* _SLASHD_H_ */

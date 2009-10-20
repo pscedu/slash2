@@ -3,6 +3,7 @@
 #ifndef _SLASH_PATHNAMES_H_
 #define _SLASH_PATHNAMES_H_
 
+#define SL_PATH_PREFIX		".sl"
 #define SL_PATH_REPLS		".slrepls"
 #define SL_PATH_FIDNS		".slfidns"
 

@@ -244,7 +244,10 @@ slrmc_lookup(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (strcmp(mq->name, FID_PATH_NAME) == 0)
+	if (!allow_internal_fsaccess &&
+	    mq->pino == SL_ROOT_INUM &&
+	    strncmp(mq->name, SL_PATH_PREFIX,
+	     strlen(SL_PATH_PREFIX)) == 0)
 		mp->rc = EINVAL;
 	else
 		mp->rc = zfsslash2_lookup(zfsVfs, mq->pino,
@@ -422,12 +425,9 @@ slrmc_readdir(struct pscrpc_request *rq)
 
 	psc_info("zfs pri data (%p)", m);
 
-	mp->rc = zfsslash2_readdir(zfsVfs, fg.fg_fid, &mq->creds, mq->size,
-				   mq->offset, (char *)iov[0].iov_base,
-				   &mp->size,
-				   (struct srm_getattr_rep *)iov[1].iov_base,
-				   mq->nstbpref,
-				   ((struct fidc_mds_info *)m->mexpfcm_fcmh->fcmh_fcoo->fcoo_pri)->fmdsi_data);
+	mp->rc = zfsslash2_readdir(zfsVfs, fg.fg_fid, &mq->creds,
+	    mq->size, mq->offset, iov[0].iov_base, &mp->size,
+	    iov[1].iov_base, mq->nstbpref, fcmh_2_data(m->mexpfcm_fcmh));
 
 	if (mp->rc) {
 		PSCFREE(iov[0].iov_base);
@@ -436,11 +436,10 @@ slrmc_readdir(struct pscrpc_request *rq)
 		RETURN(mp->rc);
 	}
 
-	if (mq->nstbpref) {
+	if (mq->nstbpref)
 		mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
 					SRMC_BULK_PORTAL, iov, 2);
-
-	} else
+	else
 		mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
 					SRMC_BULK_PORTAL, iov, 1);
 

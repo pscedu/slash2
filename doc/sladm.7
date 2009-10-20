@@ -1,5 +1,5 @@
 .\" $Id$
-.Dd September 4, 2009
+.Dd October 20, 2009
 .Dt SLADM 7
 .ds volume PSC - Slash Administrator's Manual
 .Os http://www.psc.edu/
@@ -71,38 +71,54 @@ utility:
 Next, an on-disk table for persistent storage of data pertaining to the
 ownership of file blocks by
 .Tn I/O
-servers needs to be created and can be done so with the
-.Xr odtable 1
-utility:
+servers needs to be created with
+.Xr odtable 1 :
 .Bd -literal -offset indent
 # odtable -C -N /var/lib/slashd/bmap_assignments.odt
 .Ed
 .Pp
-Next, bring up the metadata server
-.Xr slashd 8 :
+Next, bring up
+.Xr slashd 8 ,
+the metadata server:
 .Bd -literal -offset indent
 # LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \e
-  USOCK_CPORT=1202 slashd -f slash.conf
+  USOCK_CPORT=1202 slashd -X -f slash.conf slpool
 .Ed
 .Pp
-Now that the metadata server is up, the
+The last argument
+.Dq slpool
+specifies the name of the
 .Tn ZFS
-pool and namespace information must be loaded before operation can
-commence:
+pool to load at startup for metadata storage.
+.Pp
+For normal operation, the
+.Fl X
+flag should
+.Sy not
+be specified, as this allows manipulation of internal Slash file system
+structure from clients, a mode of operation that should
+.Sy only
+be used when initializing the metadata backing store file system via
+.Xr slimmns 8 .
+This utility sets up the immutable namespace and other internal
+infrastructure required by the metadata server at the specified mount
+point.
+See
+.Xr mount_slash 8
+for details on bringing up a client mount point.
+.Pp
+After the file system has been initialized, kill
+.Xr slashd 8
+and relaunch it without
+.Fl X :
 .Bd -literal -offset indent
-# zpool import -c slpool.cf slpool
+# LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \e
+  USOCK_CPORT=1202 slashd -f slash.conf slpool
 .Ed
 .Pp
-For new Slash file systems, the immutable namespace needed by Slash for
-file system access must be created with the
-.Xr slimmns 8
-utility, which must be run once
-.Xr mount_slash 8
-has mounted the file system before normal client operation can begin.
-.Pp
+Now that the metadata server is running for normal operation,
 .Xr slctl 8
-can be used to control live operation of the metadata server once it is
-running.
+can be used to control its behavior.
 .Ss Running Cm sliod Ns Ss ,\& the Tn Ss I/O Ss Server
 The
 .Tn I/O

@@ -27,6 +27,7 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
+int allow_internal_fsaccess;
 const char *progname;
 
 int
@@ -119,13 +120,16 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLCTLSOCK;
-	while ((c = getopt(argc, argv, "f:S:")) != -1)
+	while ((c = getopt(argc, argv, "f:S:X")) != -1)
 		switch (c) {
 		case 'f':
 			cfn = optarg;
 			break;
 		case 'S':
 			sfn = optarg;
+			break;
+		case 'X':
+			allow_internal_fsaccess = 1;
 			break;
 		default:
 			usage();
