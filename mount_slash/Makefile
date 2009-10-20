@@ -5,15 +5,15 @@ include Makefile.path
 PROG=		mount_slash
 SRCS+=		bmap_flush.c
 SRCS+=		cli_ctl.c
+SRCS+=		cli_fidc.c
+SRCS+=		cli_rpc.c
 SRCS+=		cli_slcfg.c
 SRCS+=		cli_timer.c
-SRCS+=		fidc_client.c
 SRCS+=		fuse_listener.c
 SRCS+=		main.c
 SRCS+=		mount_slash_int.c
 SRCS+=		mseqpollthr.c
 SRCS+=		rcm.c
-SRCS+=		rpc.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
 SRCS+=		${SLASH_BASE}/share/fid.c

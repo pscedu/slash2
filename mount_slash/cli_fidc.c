@@ -14,8 +14,8 @@
 #include "psc_util/strlcpy.h"
 
 #include "cache_params.h"
+#include "cli_fidc.h"
 #include "fid.h"
-#include "fidc_client.h"
 #include "fidcache.h"
 
 /**
