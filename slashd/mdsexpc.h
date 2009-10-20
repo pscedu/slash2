@@ -157,8 +157,8 @@ struct mexp_cli {
 
 /*
  * mexp_ion - will be used to handle ion failover and the reassignment
- *   of bmaps to other ions.  Mexp_ion is accessed from
- *  (sl_resm_t *)->resm_pri.
+ *   of bmaps to other ions.  mexp_ion is accessed from
+ *  (struct sl_resm *)->resm_pri.
  */
 struct mexp_ion {
 	struct dynarray       mi_bmaps;       /* array of struct mexpbcm     */
@@ -168,7 +168,7 @@ struct mexp_ion {
 	int                   mi_alive;
 	struct timespec       mi_lastping;
 	struct slashrpc_cservice *mi_csvc;
-	sl_resm_t            *mi_resm;
+	struct sl_resm           *mi_resm;
 };
 
 /*

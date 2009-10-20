@@ -4,29 +4,29 @@
 
 #include "slconfig.h"
 
-struct resource_profile *
+struct sl_resource *
 slcfg_new_res(void)
 {
-	struct resource_profile *res;
+	struct sl_resource *res;
 
 	res = PSCALLOC(sizeof(*res));
 	INIT_RES(res);
 	return (res);
 }
 
-struct resource_member *
+struct sl_resm *
 slcfg_new_resm(void)
 {
-	struct resource_member *resm;
+	struct sl_resm *resm;
 
 	resm = PSCALLOC(sizeof(*resm));
 	return (resm);
 }
 
-struct site_profile *
+struct sl_site *
 slcfg_new_site(void)
 {
-	struct site_profile *site;
+	struct sl_site *site;
 
 	site = PSCALLOC(sizeof(*site));
 	INIT_SITE(site);

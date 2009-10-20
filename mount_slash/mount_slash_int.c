@@ -809,7 +809,7 @@ struct pscrpc_import *
 msl_bmap_to_import(struct bmapc_memb *b, int add)
 {
 	struct bmap_info_cli *c;
-	sl_resm_t *r;
+	struct sl_resm *r;
 	int locked;
 
 	/* Sanity check on the opcnt.
@@ -839,8 +839,8 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	struct bmap_info_cli *c;
 	struct resprof_cli_info *r;
 	struct msl_fcoo_data *mfd;
-	sl_resource_t *res;
-	sl_resm_t *resm;
+	struct sl_resource *res;
+	struct sl_resm *resm;
 	lnet_nid_t repl_nid;
 	int n;
 

@@ -484,7 +484,7 @@ mexpbcm_directio(struct mexpbcm *bref, int enable_dio, int check)
 }
 
 __static void
-mds_mion_init(struct mexp_ion *mion, sl_resm_t *resm)
+mds_mion_init(struct mexp_ion *mion, struct sl_resm *resm)
 {
 	dynarray_init(&mion->mi_bmaps);
 	dynarray_init(&mion->mi_bmaps_deref);
@@ -509,8 +509,8 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	struct bmap_mds_info *mdsi=bmap->bcm_pri;
 	struct mexp_ion *mion;
 	struct bmi_assign bmi;
-	sl_resource_t *res=libsl_id2res(pios);
-	sl_resm_t *resm;
+	struct sl_resource *res=libsl_id2res(pios);
+	struct sl_resm *resm;
 	struct resprof_mds_info *rmi;
 	int n, x, rc=0;
 
@@ -1215,7 +1215,7 @@ __static void
 mds_bmi_cb(void *data, struct odtable_receipt *odtr)
 {
 	struct bmi_assign *bmi;
-	sl_resm_t *resm;
+	struct sl_resm *resm;
 
 	bmi = data;
 

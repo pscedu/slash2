@@ -14,55 +14,47 @@
 
 #include "inode.h"
 
-#define SITE_NAME_MAX 64
-#define RES_NAME_MAX  64
-#define FULL_NAME_MAX (SITE_NAME_MAX+RES_NAME_MAX+2)
-#define SL_PEER_MAX 16
-
-#define DEVNAMEMAX 128
-
-#define MAX_PEERS  32
-#define MAX_IFS    256
-#define MAXNET     32
-#define INTSTR_MAX 10
-#define MAXNET     32
-#define DESC_MAX   255
-#define RTYPE_MAX  32
+#define SITE_NAME_MAX	64
+#define RES_NAME_MAX	64
+#define FULL_NAME_MAX	(SITE_NAME_MAX + RES_NAME_MAX + 2)	/* '@' + NUL */
+#define SL_PEER_MAX	16
+#define DEVNAMEMAX	128
+#define MAXNET		32
 
 #define slashGetConfig run_yacc
 
-enum res_type_t {
-	parallel_fs        = 1<<0,
-	archival_fs        = 1<<1,
-	cluster_noshare_fs = 1<<2,
-	compute            = 1<<3,
+enum sl_res_type {
+	SLREST_PARALLEL_FS,
+	SLREST_ARCHIVAL_FS,
+	SLREST_CLUSTER_NOSHARE_FS,
+	SLREST_COMPUTE
 };
 
-typedef struct resource_profile {
-	char                res_name[RES_NAME_MAX];
-	char               *res_desc;
-	char               *res_peertmp[SL_PEER_MAX];
-	sl_ios_id_t         res_id;
-	sl_ios_id_t         res_mds;
-	enum res_type_t     res_type;
-	sl_ios_id_t        *res_peers;
-	u32                 res_npeers;
-	lnet_nid_t         *res_nids;
-	u32                 res_nnids;
-	char		    res_fsroot[PATH_MAX];
-	struct psclist_head res_lentry;
-	void               *res_pri;
-} sl_resource_t;
+struct sl_resource {
+	char			 res_name[RES_NAME_MAX];
+	char			*res_desc;
+	char			*res_peertmp[SL_PEER_MAX];
+	sl_ios_id_t		 res_id;
+	sl_ios_id_t		 res_mds;
+	enum sl_res_type	 res_type;
+	sl_ios_id_t		*res_peers;
+	uint32_t		 res_npeers;
+	lnet_nid_t		*res_nids;
+	uint32_t		 res_nnids;
+	char			 res_fsroot[PATH_MAX];
+	struct psclist_head	 res_lentry;
+	void			*res_pri;
+};
 
 #define INIT_RES(r) INIT_PSCLIST_ENTRY(&(r)->res_lentry)
 
-typedef struct site_profile {
-	char                site_name[SITE_NAME_MAX];
-	char               *site_desc;
-	u32                 site_id;
-	struct psclist_head site_resources;
-	struct psclist_head site_lentry;
-} sl_site_t;
+struct sl_site {
+	char			 site_name[SITE_NAME_MAX];
+	char			*site_desc;
+	uint32_t		 site_id;
+	struct psclist_head	 site_resources;
+	struct psclist_head	 site_lentry;
+};
 
 #define INIT_SITE(s)						\
 	do {							\
@@ -70,20 +62,20 @@ typedef struct site_profile {
 		INIT_PSCLIST_HEAD(&(s)->site_resources);	\
 	} while (0)
 
-typedef struct node_info_handle {
-	sl_resource_t      *node_res;
-	sl_site_t          *node_site;
-} sl_nodeh_t;
+struct sl_nodeh {
+	struct sl_resource	*node_res;
+	struct sl_site		*node_site;
+};
 
-typedef struct global_config {
-	char                 gconf_net[MAXNET];
-	char		     gconf_fdbkeyfn[PATH_MAX];
-	u32                  gconf_netid;
-	int                  gconf_port;
-	int                  gconf_nsites;
-	struct psclist_head  gconf_sites;
-	struct hash_table    gconf_nids_hash;
-} sl_gconf_t;
+struct sl_gconf {
+	char			 gconf_net[MAXNET];
+	char			 gconf_fdbkeyfn[PATH_MAX];
+	uint32_t		 gconf_netid;
+	int			 gconf_port;
+	int			 gconf_nsites;
+	struct psclist_head	 gconf_sites;
+	struct hash_table	 gconf_nids_hash;
+};
 
 #define GCONF_HASHTBL_SZ 63
 #define INIT_GCONF(g)						\
@@ -94,60 +86,60 @@ typedef struct global_config {
 				GCONF_HASHTBL_SZ, "resnid");	\
 	} while (0)
 
-typedef struct resource_member {
-	lnet_nid_t        resm_nid;
-	sl_resource_t    *resm_res;
-	struct hash_entry resm_hashe;
-	void             *resm_pri;
-} sl_resm_t;
+struct sl_resm {
+	lnet_nid_t		 resm_nid;
+	struct sl_resource	*resm_res;
+	struct hash_entry	 resm_hentry;
+	void			*resm_pri;
+};
 
 #define slresm_2_resid(r) (r)->resm_res->res_id
 
-struct site_profile	*slcfg_new_site(void);
-struct resource_profile	*slcfg_new_res(void);
-struct resource_member	*slcfg_new_resm(void);
+struct sl_site		*slcfg_new_site(void);
+struct sl_resource	*slcfg_new_res(void);
+struct sl_resm		*slcfg_new_resm(void);
 
-extern sl_nodeh_t nodeInfo;
-extern sl_gconf_t globalConfig;
+extern struct sl_nodeh nodeInfo;
+extern struct sl_gconf globalConfig;
 
 static inline void
-libsl_nid_associate(lnet_nid_t nid, sl_resource_t *res)
+libsl_nid_associate(lnet_nid_t nid, struct sl_resource *res)
 {
-	sl_resm_t *resm = slcfg_new_resm();
+	struct sl_resm *resm = slcfg_new_resm();
 
 	resm->resm_nid = nid;
 	resm->resm_res = res;
-	init_hash_entry(&resm->resm_hashe, (void *)&resm->resm_nid, resm);
-	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hashe);
+	init_hash_entry(&resm->resm_hentry, (void *)&resm->resm_nid, resm);
+	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hentry);
 }
 
 int lnet_localnids_get(lnet_nid_t *, size_t);
 
-#define MAX_LOCALNIDS 8
+#define MAX_LOCALNIDS 128
 /*
- * libsl_resm_lookup - To be called after lnet initialization, determines
+ * libsl_resm_lookup - To be called after LNET initialization, determines
  * a node's resource membership.
  */
-static inline sl_resm_t *
+static inline struct sl_resm *
 libsl_resm_lookup(void)
 {
-	int                nnids, i;
-	sl_resm_t         *resm=NULL;
-	sl_resource_t     *res=NULL;
-	lnet_nid_t         nids[MAX_LOCALNIDS];
+	lnet_nid_t nids[MAX_LOCALNIDS];
 	char nidbuf[PSC_NIDSTR_SIZE];
+	struct sl_resource *res=NULL;
+	struct sl_resm *resm=NULL;
 	struct hash_entry *e;
+	int nnids, i;
 
-	nnids = lnet_localnids_get(nids, 8);
+	nnids = lnet_localnids_get(nids, nitems(nids));
 	if (!nnids)
-		return NULL;
+		return (NULL);
 
 	for (i=0; i<nnids; i++) {
 		e = get_hash_entry(&globalConfig.gconf_nids_hash,
 		    nids[i], NULL, NULL);
 		/* Every nid found by lnet must be a resource member.  */
 		if (!e)
-			psc_fatalx("Nid ;%s; is not a member of any resource",
+			psc_fatalx("nid %s is not a member of any resource",
 				   psc_nid2str(nids[i], nidbuf));
 
 		resm = e->private;
@@ -155,25 +147,25 @@ libsl_resm_lookup(void)
 			res = resm->resm_res;
 		/* All nids must belong to the same resource */
 		else if (res != resm->resm_res)
-			psc_fatalx("Nids must be members of same resource (%s)",
+			psc_fatalx("nids must be members of same resource (%s)",
 				psc_nid2str(nids[i], nidbuf));
 	}
-	return resm;
+	return (resm);
 }
 
 static inline sl_ios_id_t
-libsl_node2id(sl_nodeh_t *n)
+libsl_node2id(struct sl_nodeh *n)
 {
 	return (sl_global_id_build(n->node_site->site_id,
 				   n->node_res->res_id,
 				   n->node_res->res_mds));
 }
 
-static inline sl_site_t *
+static inline struct sl_site *
 libsl_id2site(sl_ios_id_t id)
 {
-	u32 tmp=(id >> (SL_RES_BITS + SL_MDS_BITS));
-	sl_site_t *s=NULL;
+	uint32_t tmp = (id >> (SL_RES_BITS + SL_MDS_BITS));
+	struct sl_site *s;
 
 	psc_assert(tmp <= ((1 << SL_SITE_BITS))-1);
 
@@ -183,11 +175,11 @@ libsl_id2site(sl_ios_id_t id)
 	return (NULL);
 }
 
-static inline sl_resource_t *
+static inline struct sl_resource *
 libsl_id2res(sl_ios_id_t id)
 {
-	sl_resource_t *r=NULL;
-	sl_site_t *s=NULL;
+	struct sl_resource *r;
+	struct sl_site *s;
 
 	if ((s = libsl_id2site(id)) == NULL)
 		return NULL;
@@ -203,7 +195,7 @@ libsl_id2res(sl_ios_id_t id)
 	return (NULL);
 }
 
-static inline sl_resm_t *
+static inline struct sl_resm *
 libsl_nid2resm(lnet_nid_t nid)
 {
 	struct hash_entry *e;
@@ -219,12 +211,12 @@ libsl_nid2resm(lnet_nid_t nid)
 static inline sl_ios_id_t
 libsl_str2id(const char *res_name)
 {
-	const char    *p = res_name;
-	sl_site_t     *s=NULL;
-	sl_resource_t *r=NULL;
+	const char *p = res_name;
+	struct sl_resource *r;
+	struct sl_site *s;
 
 	while (*p != '@') {
-		psc_assert((((int)(p-res_name)) < FULL_NAME_MAX) &&
+		psc_assert((((int)(p - res_name)) < FULL_NAME_MAX) &&
 			   *p != '\0');
 		p++;
 	}
@@ -244,17 +236,18 @@ libsl_str2id(const char *res_name)
 static inline void
 libsl_profile_dump(void)
 {
-	sl_nodeh_t *z = &nodeInfo;
-	u32 i;
+	struct sl_nodeh *z = &nodeInfo;
+	struct sl_resource *r;
+	uint32_t i;
 
 	fprintf(stderr,
-		"\nNode Info: Resource ;%s;\n\tdesc: %s "
-		"\n\t ID (global=%u, mds=%u)"
-		"\n\t Type %d, Npeers %u, Nnids %u"
-		"\n\t Fsroot ;%s;\n",
+		"\nNode Info: resource %s\n"
+		"\tdesc: %s "
+		"\n\t id (global=%u, mds=%u)"
+		"\n\t type %d, npeers %u, nnids %u"
+		"\n\t fsroot %s\n",
 		z->node_res->res_name,
 		z->node_res->res_desc,
-		//libsl_node2id(z),
 		z->node_res->res_id,
 		z->node_res->res_mds,
 		z->node_res->res_type,
@@ -263,38 +256,36 @@ libsl_profile_dump(void)
 		z->node_res->res_fsroot);
 
 	for (i=0; i < z->node_res->res_npeers; i++) {
-		sl_resource_t *r;
-
 		r = libsl_id2res(z->node_res->res_peers[i]);
 		if (!r)
 			continue;
-		fprintf(stderr,"\tPeer %d ;%s;\t%s",
+		fprintf(stderr,"\tpeer %d ;%s;\t%s",
 			i, r->res_name, r->res_desc);
 	}
 	for (i=0; i < z->node_res->res_nnids; i++)
-		fprintf(stderr,"\tNid %d ;%s;\n",
+		fprintf(stderr,"\tnid %d ;%s;\n",
 			i, libcfs_nid2str(z->node_res->res_nids[i]));
 }
 
-static inline u32
+static inline uint32_t
 libsl_str2restype(const char *res_type)
 {
 	if (!strcmp(res_type, "parallel_fs"))
-		return (parallel_fs);
+		return (SLREST_PARALLEL_FS);
 	else if (!strcmp(res_type, "archival_fs"))
-		return (archival_fs);
+		return (SLREST_ARCHIVAL_FS);
 	else if (!strcmp(res_type, "cluster_noshare_fs"))
-		return (cluster_noshare_fs);
+		return (SLREST_CLUSTER_NOSHARE_FS);
 	else if (!strcmp(res_type, "compute"))
-		return (compute);
-	psc_fatal("impossible");
+		return (SLREST_COMPUTE);
+	psc_fatalx("invalid type");
 }
 
 static inline void
 libsl_init(int pscnet_mode)
 {
-	sl_resm_t  *resm;
-	sl_nodeh_t *z = &nodeInfo;
+	struct sl_nodeh *z = &nodeInfo;
+	struct sl_resm *resm;
 
 	//lnet_acceptor_port = globalConfig.gconf_port;
 	//setenv("USOCK_CPORT", globalConfig.gconf_port, 1);

@@ -21,27 +21,26 @@
 #include "slconfig.h"
 
 enum sym_types {
-	SL_FUNCTION = 1,
-	SL_VARIABLE = 2,
-	SL_METATAG  = 4,
-	SL_FLAG     = 8
+	SL_FLAG,
+	SL_FUNCTION,
+	SL_METATAG,
+	SL_VARIABLE
 };
 
 enum sym_parameter_types {
-	SL_TYPE_STR        = 0,
-	SL_TYPE_STRP       = 1,
-	SL_TYPE_INT        = 2,
-	SL_TYPE_BOOL       = 3,
-	SL_TYPE_FLOAT      = 4,
-	SL_TYPE_SIZET      = 5,
-	SL_TYPE_HEXU64     = 6,
-	SL_TYPE_NONE       = 7
+	SL_TYPE_BOOL,
+	SL_TYPE_FLOAT,
+	SL_TYPE_HEXU64,
+	SL_TYPE_INT,
+	SL_TYPE_SIZET,
+	SL_TYPE_STR,
+	SL_TYPE_STRP
 };
 
 enum sym_structure_types {
-	SL_STRUCT_SITE   = 1024,
-	SL_STRUCT_RES    = 1025,
-	SL_STRUCT_GLOBAL = 1026
+	SL_STRUCT_GLOBAL,
+	SL_STRUCT_RES,
+	SL_STRUCT_SITE
 };
 
 typedef uint32_t (*sym_handler)(const char *);
@@ -63,13 +62,13 @@ void slcfg_addif(char *, char *);
  * Define a table macro for each structure type filled in by the config
  */
 #define TABENT_GLBL(name, type, max, field, handler)				\
-	{ name, SL_VARIABLE, SL_STRUCT_GLOBAL, type, max, offsetof(sl_gconf_t, field), handler }
+	{ name, SL_VARIABLE, SL_STRUCT_GLOBAL, type, max, offsetof(struct sl_gconf, field), handler }
 
 #define TABENT_SITE(name, type, max, field, handler)				\
-	{ name, SL_VARIABLE, SL_STRUCT_SITE, type, max, offsetof(sl_site_t, field), handler }
+	{ name, SL_VARIABLE, SL_STRUCT_SITE, type, max, offsetof(struct sl_site, field), handler }
 
 #define TABENT_RES(name, type, max, field, handler)				\
-	{ name, SL_VARIABLE, SL_STRUCT_RES, type, max, offsetof(sl_resource_t, field), handler }
+	{ name, SL_VARIABLE, SL_STRUCT_RES, type, max, offsetof(struct sl_resource, field), handler }
 
 /* declare and initialize the global table */
 struct symtable sym_table[] = {
@@ -92,19 +91,17 @@ int  yyparse(void);
 void store_tok_val(const char *, char *);
 int  run_yacc(const char *);
 
-sl_gconf_t globalConfig;
-sl_nodeh_t nodeInfo;
+struct sl_gconf globalConfig;
+struct sl_nodeh nodeInfo;
 
 int errors;
 int cfg_lineno;
 
 const char *cfg_filename;
 
-sl_site_t     *currentSite;
-sl_resource_t *currentRes;
-sl_gconf_t    *currentConf = &globalConfig;
-
-int cfgMode = SL_STRUCT_GLOBAL;
+struct sl_site     *currentSite;
+struct sl_resource *currentRes;
+struct sl_gconf    *currentConf = &globalConfig;
 %}
 
 %start config
@@ -147,8 +144,8 @@ int cfgMode = SL_STRUCT_GLOBAL;
 
 config         : globals site_profiles
 {
-	sl_site_t     *s;
-	sl_resource_t *r;
+	struct sl_resource *r;
+	struct sl_site *s;
 
 	/*
 	 * Config has been loaded, iterate through the sites'
@@ -193,7 +190,6 @@ site_profile   : site_profile_start site_defs SUBSECT_END
 
 site_profile_start : SITE_PROFILE SITE_NAME SUBSECT_START
 {
-	cfgMode = SL_STRUCT_SITE;
 	if (strlcpy(currentSite->site_name, $2,
 	    SITE_NAME_MAX) >= SITE_NAME_MAX)
 		psc_fatalx("site name too long");
@@ -204,10 +200,7 @@ site_defs      : statements site_resources
 {};
 
 site_resources : site_resource              |
-		 site_resources site_resource
-{
-	cfgMode = SL_STRUCT_SITE;
-};
+		 site_resources site_resource { };
 
 site_resource  : site_resource_start resource_def SUBSECT_END
 {
@@ -222,7 +215,6 @@ site_resource  : site_resource_start resource_def SUBSECT_END
 
 site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
 {
-	cfgMode = SL_STRUCT_RES;
 	if (snprintf(currentRes->res_name, RES_NAME_MAX, "%s%s",
 		     $2, currentSite->site_name) >= RES_NAME_MAX)
 		psc_fatalx("Resource name too long");
