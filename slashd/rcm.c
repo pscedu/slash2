@@ -15,15 +15,16 @@
 #include "fid.h"
 #include "pathnames.h"
 #include "rpc.h"
+#include "slashd.h"
 #include "slashdthr.h"
 #include "slashrpc.h"
 #include "util.h"
+
 #include "zfs-fuse/zfs_slashlib.h"
 
 struct vbitmap	 slrcmthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t	 slrcmthr_uniqidmap_lock = LOCK_INITIALIZER;
 
-#define SL_ROOT_INUM 1
 struct slash_creds rootcreds = { 0, 0 };
 
 uint64_t
@@ -80,7 +81,7 @@ slrcmthr_main(__unusedx void *arg)
 			    d->d_fileno == 0)
 				continue;
 
-			snprintf(fn, sizeof(buf), "%016"PRIx64"",
+			snprintf(fn, sizeof(buf), "%016"PRIx64,
 			    srcm->srcm_fid);
 			if (srcm->srcm_fid == FID_ANY ||
 			    strcmp(d->d_name, fn) == 0) {
