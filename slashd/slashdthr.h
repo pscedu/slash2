@@ -44,7 +44,7 @@ struct slash_rmmthr {
 	struct pscrpc_thread	 srmm_prt;
 };
 
-PSCTHR_MKCAST(slrcmthr, slash_rcmthr, SLTHRT_RMM)
+PSCTHR_MKCAST(slrcmthr, slash_rcmthr, SLTHRT_RCM)
 PSCTHR_MKCAST(slrmcthr, slash_rmcthr, SLTHRT_RMC)
 PSCTHR_MKCAST(slrmithr, slash_rmithr, SLTHRT_RMI)
 PSCTHR_MKCAST(slrmmthr, slash_rmmthr, SLTHRT_RMM)

@@ -712,7 +712,7 @@ slrmc_handle_getreplst(struct pscrpc_request *rq)
 	freelock(&slrcmthr_uniqidmap_lock);
 
 	thr = pscthr_init(SLTHRT_RCM, 0, slrcmthr_main,
-	    NULL, 0, "slrcmthr%02zu", id);
+	    NULL, sizeof(*srcm), "slrcmthr%02zu", id);
 	srcm = thr->pscthr_private;
 	srcm->srcm_fid = mq->ino;
 	srcm->srcm_id = mq->id;
