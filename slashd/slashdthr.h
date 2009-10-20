@@ -26,22 +26,22 @@ struct bmapc_memb;
 #define SLTHRT_FSSYNC		11      /* fs syncer */
 
 struct slash_rmcthr {
-	struct pscrpc_thread	 srmc_prt;
+	struct pscrpc_thread	  srmc_prt;
 };
 
 struct slash_rcmthr {
 	struct slashrpc_cservice *srcm_csvc;
-	int			 srcm_uniqid;	/* thread ID */
-	slfid_t			 srcm_fid;
-	int			 srcm_id;	/* private client ID */
+	int			  srcm_uniqid;	/* thread ID */
+	struct slash_fidgen	  srcm_fg;
+	int			  srcm_id;	/* private client ID */
 };
 
 struct slash_rmithr {
-	struct pscrpc_thread	 srmi_prt;
+	struct pscrpc_thread	  srmi_prt;
 };
 
 struct slash_rmmthr {
-	struct pscrpc_thread	 srmm_prt;
+	struct pscrpc_thread	  srmm_prt;
 };
 
 PSCTHR_MKCAST(slrcmthr, slash_rcmthr, SLTHRT_RCM)

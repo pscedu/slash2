@@ -2,6 +2,7 @@
 
 #include <sys/param.h>
 
+#include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -317,6 +318,10 @@ mds_replrq_find(struct slash_fidgen *fgp, int *locked)
 	freelock(&replrq_tree_lock);
 	*locked = 0;
 
+	/*
+	 * We have a handle on it; check if its
+	 * going away and release it if so.
+	 */
 	while (rrq->rrq_flags & REPLRQF_BUSY) {
 		psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
 		spinlock(&rrq->rrq_lock);
@@ -556,4 +561,48 @@ mds_replrq_del(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 
 	mds_repl_tryrmqfile(rrq);
 	return (0);
+}
+
+void
+scan_repldir(void)
+{
+	struct slash_fidgen fg;
+	struct dirent *d;
+	struct stat stb;
+	size_t siz, tsiz;
+	off_t off, toff;
+	uint16_t inum;
+	int rc, trc;
+	void *data;
+	char *buf;
+
+	off = 0;
+	siz = 8 * 1024;
+	buf = PSCALLOC(siz);
+
+	inum = sl_get_repls_inum();
+	rc = zfsslash2_opendir(zfsVfs, inum,
+	    &rootcreds, &fg, &stb, &data);
+	for (;;) {
+		rc = zfsslash2_readdir(zfsVfs, inum, &rootcreds,
+		    siz, off, buf, &tsiz, NULL, 0, data);
+		if (rc)
+			break;
+
+		for (toff = 0; toff < (off_t)tsiz;
+		    toff += d->d_reclen) {
+			d = (void *)(buf + toff);
+
+			psc_assert(d->d_reclen > 0);
+			if (d->d_name[0] == '.' ||
+			    d->d_fileno == 0)
+				continue;
+		}
+		off += toff;
+	}
+	trc = zfsslash2_release(zfsVfs, inum, &rootcreds, data);
+	if (rc == 0)
+		rc = trc;
+
+	free(buf);
 }

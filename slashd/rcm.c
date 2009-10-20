@@ -4,6 +4,8 @@
  * Routines for issuing RPC requests for CLIENT from MDS.
  */
 
+#include <sys/param.h>
+
 #include <dirent.h>
 
 #include "psc_ds/vbitmap.h"
@@ -13,6 +15,7 @@
 #include "psc_util/thread.h"
 
 #include "fid.h"
+#include "inodeh.h"
 #include "pathnames.h"
 #include "rpc.h"
 #include "slashd.h"
@@ -44,63 +47,37 @@ sl_get_repls_inum(void)
 void *
 slrcmthr_main(__unusedx void *arg)
 {
-	char *buf, fn[NAME_MAX + 1];
 	struct slash_rcmthr *srcm;
-	struct slash_fidgen fg;
 	struct psc_thread *thr;
-	struct dirent *d;
-	struct stat stb;
-	size_t siz, tsiz;
-	off_t off, toff;
-	uint16_t inum;
-	int rc, trc;
-	void *data;
+	struct sl_replrq *rrq;
+	int rc, dummy;
 
 	thr = pscthr_get();
 	srcm = slrcmthr(thr);
 
-	off = 0;
-	siz = 8 * 1024;
-	buf = PSCALLOC(siz);
-
-	inum = sl_get_repls_inum();
-	rc = zfsslash2_opendir(zfsVfs, inum,
-	    &rootcreds, &fg, &stb, &data);
-	for (;;) {
-		rc = zfsslash2_readdir(zfsVfs, inum, &rootcreds,
-		    INT_MAX, off, buf, &tsiz, NULL, 0, data);
-		if (rc)
-			break;
-
-		for (toff = 0; toff < (off_t)tsiz;
-		    off += d->d_reclen, toff += d->d_reclen) {
-			d = (void *)(buf + toff);
-
-			psc_assert(d->d_reclen > 0);
-			if (d->d_name[0] == '.' ||
-			    d->d_fileno == 0)
-				continue;
-
-			snprintf(fn, sizeof(buf), "%016"PRIx64,
-			    srcm->srcm_fid);
-			if (srcm->srcm_fid == FID_ANY ||
-			    strcmp(d->d_name, fn) == 0) {
-				rc = slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
-				    srcm->srcm_fid, srcm->srcm_id, 0, 0, 0);
-				if (rc)
-					break;
-			}
+	rc = 1;
+	if (srcm->srcm_fg.fg_fid == FID_ANY) {
+		spinlock(&replrq_tree_lock);
+		SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
+			rc = slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
+			    rrq->rrq_inoh->inoh_ino.ino_fg.fg_fid, srcm->srcm_id,
+			    0, 0, 0);
+			if (!rc)
+				break;
 		}
+		freelock(&replrq_tree_lock);
+	} else {
+		rrq = mds_replrq_find(&srcm->srcm_fg, &dummy);
+		if (rrq)
+			rc = slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
+			    rrq->rrq_inoh->inoh_ino.ino_fg.fg_fid, srcm->srcm_id,
+			    0, 0, 0);
 	}
-	trc = zfsslash2_release(zfsVfs, inum, &rootcreds, data);
-	if (rc == 0)
-		rc = trc;
-
-	free(buf);
 
 	/* signal EOF */
-	slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
-	    0, srcm->srcm_id, 0, 0, 1);
+	if (!rc)
+		slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
+		    0, srcm->srcm_id, 0, 0, 1);
 
 	spinlock(&slrcmthr_uniqidmap_lock);
 	vbitmap_unset(&slrcmthr_uniqidmap, srcm->srcm_uniqid);
