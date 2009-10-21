@@ -124,6 +124,7 @@ enum {
 	SRMT_GETBMAP,
 	SRMT_GETBMAPCRCS,
 	SRMT_GETREPLST,
+	SRMT_GETREPLST_SLAVE,
 	SRMT_LINK,
 	SRMT_LOCK,
 	SRMT_LOOKUP,
@@ -456,19 +457,29 @@ struct srm_replrq_req {
 	sl_blkno_t		bmapno;		/* bmap to access or -1 for all */
 };
 
-struct srm_replst_req {
+/* request/response for a GETSTATUS on a replication request */
+struct srm_replst_master_req {
 	uint64_t		ino;
 	int32_t			id;		/* user-provided passback value */
-	int32_t			rc;
-	int32_t			last;
-	uint32_t		len;		/* length of bulk data */
-	uint32_t		st_bact;
-	uint32_t		st_bold;
-	sl_ios_id_t		ios;
-/* bulk contains repl bits for each bmap */
+	int32_t			rc;		/* or EOF */
+	uint32_t		nbmaps;
+	uint32_t		nrepls;
+	sl_replica_t		repls[SL_MAX_REPLICAS + INO_DEF_NREPLS];
 };
 
-#define srm_replst_rep srm_replst_req
+#define srm_replst_master_rep srm_replst_master_req
+
+/* bmap data carrier for a replrq GETSTATUS */
+struct srm_replst_slave_req {
+	uint64_t		ino;
+	int32_t			id;		/* user-provided passback value */
+	int32_t			len;		/* of bulk data */
+	uint32_t		rc;
+	sl_blkno_t		boff;		/* offset into inode of first bmap in bulk */
+/* bulk data is bh_repls data */
+};
+
+#define srm_replst_slave_rep srm_replst_slave_req
 
 #if 0
 /* Slash RPC transportably safe structures. */

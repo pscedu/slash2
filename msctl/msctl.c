@@ -117,9 +117,9 @@ replst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 		printf(" %-79s\n", mrs->mrs_fn);
 	}
 
-	psc_fmt_ratio(rbuf, mrs->mrs_bact, mrs->mrs_bact + mrs->mrs_bold);
-	printf("     %-50s %8d %8d %6s\n", mrs->mrs_ios,
-	    mrs->mrs_bact + mrs->mrs_bold, mrs->mrs_bold, rbuf);
+//	psc_fmt_ratio(rbuf, mrs->mrs_bact, mrs->mrs_bact + mrs->mrs_bold);
+//	printf("     %-50s %8d %8d %6s\n", mrs->mrs_ios,
+//	    mrs->mrs_bact + mrs->mrs_bold, mrs->mrs_bold, rbuf);
 	/* XXX show each bmap status */
 }
 

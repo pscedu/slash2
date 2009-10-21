@@ -20,11 +20,11 @@
 int
 msrcm_handle_getreplst(struct pscrpc_request *rq)
 {
-	struct msctl_replst_cont *mrc;
+	struct srm_replst_master_req *mq;
+	struct srm_replst_master_rep *mp;
 	struct msctl_replstq *mrsq;
-	struct srm_replst_req *mq;
-	struct srm_replst_rep *mp;
 	struct sl_site *site;
+	int n;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
@@ -32,19 +32,54 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	PLL_LOCK(&msctl_replsts);
 	PLL_FOREACH(mrsq, &msctl_replsts)
 		if (mrsq->mrsq_id == mq->id) {
-			mrc = PSCALLOC(sizeof(*mrc));
-//			strlcpy(mrc->mrc_mrs.mrs_fn, mp->fn,
-//			    sizeof(mrc->mrc_mrs.mrs_fn));
-			mrc->mrc_mrs.mrs_bold = mp->st_bold;
-			mrc->mrc_mrs.mrs_bact = mp->st_bact;
-			site = libsl_id2site(mp->ios);
-			if (site)
-				strlcpy(mrc->mrc_mrs.mrs_ios,
-				    site->site_name,
-				    sizeof(mrc->mrc_mrs.mrs_ios));
-			lc_add(&mrsq->mrsq_lc, mrc);
-			if (mq->last)
+			if (mq->rc) {
 				lc_kill(&mrsq->mrsq_lc);
+				break;
+			}
+
+//			strlcpy(mrc->mrc_mrs.mrs_fn, mq->fn,
+//			    sizeof(mrc->mrc_mrs.mrs_fn));
+			mrsq->mrsq_id = mq->id;
+			mrsq->mrsq_nios = mq->nrepls;
+			for (n = 0; n < (int)mq->nrepls; n++) {
+				site = libsl_id2site(mq->repls[n].bs_id);
+				strlcpy(mrsq->mrsq_iosv[n],
+				    site->site_name, SITE_NAME_MAX);
+			}
+			break;
+		}
+	PLL_ULOCK(&msctl_replsts);
+	return (0);
+}
+
+/*
+ * msrcm_handle_getreplst_slave - handle a GETREPLST request for client from MDS,
+ *	which would have been initiated by a client request originally.
+ * @rq: request.
+ */
+int
+msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
+{
+	struct srm_replst_slave_req *mq;
+	struct srm_replst_slave_rep *mp;
+	struct msctl_replst_cont *mrc;
+	struct msctl_replstq *mrsq;
+
+	RSX_ALLOCREP(rq, mq, mp);
+
+	/* find corresponding queue */
+	PLL_LOCK(&msctl_replsts);
+	PLL_FOREACH(mrsq, &msctl_replsts)
+		if (mrsq->mrsq_id == mq->id) {
+			if (mq->rc) {
+				lc_kill(&mrsq->mrsq_lc);
+				break;
+			}
+
+			mrc = PSCALLOC(sizeof(*mrc) + mq->len);
+			mrc->mrc_mrs.mrs_id = mq->id;
+			//bulkserver();
+			lc_add(&mrsq->mrsq_lc, mrc);
 			break;
 		}
 	PLL_ULOCK(&msctl_replsts);
@@ -94,6 +129,9 @@ msrcm_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_GETREPLST:
 		rc = msrcm_handle_getreplst(rq);
+		break;
+	case SRMT_GETREPLST_SLAVE:
+		rc = msrcm_handle_getreplst_slave(rq);
 		break;
 	case SRMT_RELEASEBMAP:
 		rc = msrcm_handle_releasebmap(rq);

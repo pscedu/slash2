@@ -16,8 +16,10 @@
 
 #include "fid.h"
 #include "inodeh.h"
+#include "mds_bmap.h"
+#include "mds_repl.h"
+#include "mdsrpc.h"
 #include "pathnames.h"
-#include "rpc.h"
 #include "slashd.h"
 #include "slashdthr.h"
 #include "slashrpc.h"
@@ -25,10 +27,10 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+#define REPLST_PAGESIZ	(1024 * 1024)	/* should be network MSS */
+
 struct vbitmap	 slrcmthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t	 slrcmthr_uniqidmap_lock = LOCK_INITIALIZER;
-
-struct slash_creds rootcreds = { 0, 0 };
 
 uint64_t
 sl_get_repls_inum(void)
@@ -44,72 +46,168 @@ sl_get_repls_inum(void)
 	return (fg.fg_fid);
 }
 
-void *
-slrcmthr_main(__unusedx void *arg)
+int
+slrmcthr_repl_waitrep(struct pscrpc_request *rq)
 {
+	struct srm_replst_slave_req *mq;
+	struct srm_replst_slave_rep *mp;
 	struct slash_rcmthr *srcm;
 	struct psc_thread *thr;
-	struct sl_replrq *rrq;
-	int rc, dummy;
+	int rc;
 
 	thr = pscthr_get();
 	srcm = slrcmthr(thr);
 
-	rc = 1;
-	if (srcm->srcm_fg.fg_fid == FID_ANY) {
-		spinlock(&replrq_tree_lock);
-		SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
-			rc = slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
-			    rrq->rrq_inoh->inoh_ino.ino_fg.fg_fid, srcm->srcm_id,
-			    0, 0, 0, 0);
-			if (!rc)
-				break;
+	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	mq->len = srcm->srcm_pagelen;
+//	rsx_bulkclient();
+	rc = RSX_WAITREP(rq, mp);
+	pscrpc_req_finished(rq);
+	return (rc);
+}
+
+int
+slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
+    sl_blkno_t n, struct pscrpc_request **rqp)
+{
+	struct srm_replst_slave_req *mq;
+	struct srm_replst_slave_rep *mp;
+	struct pscrpc_request *rq;
+	struct slash_rcmthr *srcm;
+	struct psc_thread *thr;
+	int len, rc;
+
+	thr = pscthr_get();
+	srcm = slrcmthr(thr);
+
+	rc = 0;
+	rq = NULL;
+	len = rrq->rrq_inoh->inoh_ino.ino_nrepls *
+	    SL_BITS_PER_REPLICA / NBBY;
+	if (srcm->srcm_pagelen + len > REPLST_PAGESIZ) {
+		if (*rqp) {
+			rc = slrmcthr_repl_waitrep(*rqp);
+			if (rc)
+				return (rc);
 		}
-		freelock(&replrq_tree_lock);
-	} else {
-		rrq = mds_replrq_find(&srcm->srcm_fg, &dummy);
-		if (rrq)
-			rc = slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
-			    rrq->rrq_inoh->inoh_ino.ino_fg.fg_fid, srcm->srcm_id,
-			    0, 0, 0, 0);
+
+		rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
+		    SRCM_VERSION, SRMT_GETREPLST_SLAVE, *rqp, mq, mp);
+		if (rc)
+			return (rc);
+		mq->ino = REPLRQ_FID(rrq);
+		mq->id = srcm->srcm_id;
+		mq->boff = n;
+
+		srcm->srcm_pagelen = 0;
 	}
-
-	/* signal EOF */
-	if (rc)
-		slrcm_issue_getreplst(srcm->srcm_csvc->csvc_import,
-		    0, srcm->srcm_id, 0, 0, 0, 1);
-
-	spinlock(&slrcmthr_uniqidmap_lock);
-	vbitmap_unset(&slrcmthr_uniqidmap, srcm->srcm_uniqid);
-	vbitmap_setnextpos(&slrcmthr_uniqidmap, 0);
-	freelock(&slrcmthr_uniqidmap_lock);
-	return (NULL);
+	memcpy(srcm->srcm_page + srcm->srcm_pagelen,
+	    bmap_2_bmdsiod(bcm)->bh_repls, len);
+	srcm->srcm_pagelen += len;
+	return (rc);
 }
 
 /*
  * slrcm_issue_getreplst - issue a GETREPLST reply to a CLIENT from MDS.
  */
 int
-slrcm_issue_getreplst(struct pscrpc_import *imp, slfid_t fid, int32_t id,
-    sl_ios_id_t ios, int bold, int bact, int last)
+slrcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 {
-	struct srm_replst_req *mq;
-	struct srm_replst_rep *mp;
+	struct srm_replst_master_req *mq;
+	struct srm_replst_master_rep *mp;
 	struct pscrpc_request *rq;
+	struct slash_rcmthr *srcm;
+	struct psc_thread *thr;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(imp, SRCM_VERSION,
-	    SRMT_GETREPLST, rq, mq, mp)) != 0)
+	thr = pscthr_get();
+	srcm = slrcmthr(thr);
+
+	rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
+	    SRCM_VERSION, SRMT_GETREPLST, rq, mq, mp);
+	if (rc)
 		return (rc);
-	mq->ino = fid;
-	mq->id = id;
-	mq->last = last;
-	mq->ios = ios;
-	mq->st_bold = bold;
-	mq->st_bact = bact;
+	mq->id = srcm->srcm_id;
+	if (rrq) {
+		mq->ino = REPLRQ_FID(rrq);
+		mq->nbmaps = REPLRQ_NBMAPS(rrq);
+		mq->nrepls = REPLRQ_NREPLS(rrq);
+		memcpy(mq->repls, REPLRQ_INO(rrq)->ino_repls,
+		    MIN(mq->nrepls, INO_DEF_NREPLS) * sizeof(*mq->repls));
+		if (mq->nrepls > INO_DEF_NREPLS)
+			memcpy(mq->repls + INO_DEF_NREPLS,
+			    rrq->rrq_inoh->inoh_extras->inox_repls,
+			    (REPLRQ_NREPLS(rrq) - INO_DEF_NREPLS) *
+			    sizeof(*mq->repls));
+	}
+	if (is_eof)
+		mq->rc = EOF;
 	rc = RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
+}
+
+void *
+slrcmthr_main(__unusedx void *arg)
+{
+	struct pscrpc_request *rq;
+	struct slash_rcmthr *srcm;
+	struct psc_thread *thr;
+	struct bmapc_memb *bcm;
+	struct sl_replrq *rrq;
+	int rc, dummy;
+	uint64_t n;
+
+	thr = pscthr_get();
+	srcm = slrcmthr(thr);
+	srcm->srcm_page = PSCALLOC(REPLST_PAGESIZ);
+	srcm->srcm_pagelen = REPLST_PAGESIZ;
+
+	rq = NULL;
+	rc = 0;
+	if (srcm->srcm_fg.fg_fid == FID_ANY) {
+		spinlock(&replrq_tree_lock);
+		SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
+			slrcm_issue_getreplst(rrq, 0);
+			for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
+				bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
+				BMAP_LOCK(bcm);
+				rc = slrcmthr_walk_brepls(rrq, bcm, n, &rq);
+				bmap_op_done(bcm);
+				if (rc)
+					break;
+			}
+			if (rc)
+				break;
+		}
+		freelock(&replrq_tree_lock);
+	} else if ((rrq = mds_repl_findrq(&srcm->srcm_fg, &dummy)) != NULL) {
+		slrcm_issue_getreplst(rrq, 0);
+		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
+			bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
+			BMAP_LOCK(bcm);
+			rc = slrcmthr_walk_brepls(rrq, bcm, n, &rq);
+			bmap_op_done(bcm);
+			if (rc)
+				break;
+		}
+		mds_repl_unrefrq(rrq);
+	}
+
+	if (!rc) {
+		if (rq)
+			slrmcthr_repl_waitrep(rq);
+		/* signal EOF */
+		slrcm_issue_getreplst(NULL, 1);
+	}
+
+	free(srcm->srcm_page);
+
+	spinlock(&slrcmthr_uniqidmap_lock);
+	vbitmap_unset(&slrcmthr_uniqidmap, srcm->srcm_uniqid);
+	vbitmap_setnextpos(&slrcmthr_uniqidmap, 0);
+	freelock(&slrcmthr_uniqidmap_lock);
+	return (NULL);
 }
 
 /*

@@ -18,6 +18,7 @@
 #include "fdbuf.h"
 #include "fidcache.h"
 #include "mds_bmap.h"
+#include "mds_repl.h"
 #include "mdsrpc.h"
 #include "pathnames.h"
 #include "slashdthr.h"
@@ -29,6 +30,8 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 int allow_internal_fsaccess;
 const char *progname;
+
+struct slash_creds rootcreds = { 0, 0 };
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -158,6 +161,8 @@ main(int argc, char *argv[])
 	/* Initialize the ZFS layer. */
 	do_init();
 	import_zpool(argv[0]);
+
+	mds_repl_init();
 
 	rpc_initsvc();
 	sltimerthr_spawn();

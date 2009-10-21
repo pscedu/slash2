@@ -34,6 +34,8 @@ struct slash_rcmthr {
 	int			  srcm_uniqid;	/* thread ID */
 	struct slash_fidgen	  srcm_fg;
 	int			  srcm_id;	/* private client ID */
+	char			 *srcm_page;
+	int			  srcm_pagelen;
 };
 
 struct slash_rmithr {

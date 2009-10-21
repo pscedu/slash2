@@ -11,14 +11,23 @@
 /* for retrieving info about replication status */
 struct msctlmsg_replst {
 	char			mrs_fn[PATH_MAX];
-	uint32_t		mrs_bact;
-	uint32_t		mrs_bold;
-	char			mrs_ios[SITE_NAME_MAX];
+	char			mrs_ios[SL_MAX_REPLICAS][SITE_NAME_MAX];
+	uint32_t		mrs_nios;
+	uint32_t		mrs_nbmaps;
+	uint32_t		mrs_id;
+};
+
+struct msctlmsg_replst_slave {
+	uint32_t		mrs_id;
+	uint32_t		mrs_boff;
+	char			mrs_data[0];
 };
 
 struct msctl_replstq {
 	struct psclist_head	mrsq_lentry;
+	char			mrsq_iosv[SL_MAX_REPLICAS][SITE_NAME_MAX];
 	struct psc_listcache	mrsq_lc;
+	uint32_t		mrsq_nios;
 	int32_t			mrsq_id;
 };
 
@@ -41,5 +50,6 @@ struct msctlmsg_replrq {
 #define SCMT_ADDREPLRQ		(NPCMT + 0)
 #define SCMT_DELREPLRQ		(NPCMT + 1)
 #define SCMT_GETREPLST		(NPCMT + 2)
+#define SCMT_GETREPLST_SLAVE	(NPCMT + 3)
 
 extern struct psc_lockedlist	msctl_replsts;

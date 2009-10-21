@@ -2,6 +2,8 @@
 
 #include <sys/param.h>
 
+#include <linux/fuse.h>
+
 #include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
@@ -20,14 +22,16 @@
 #include "fidcache.h"
 #include "inode.h"
 #include "inodeh.h"
+#include "mds_repl.h"
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
 #include "mdslog.h"
 #include "slashd.h"
+#include "util.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct replrqtree	 replrq_tree;
+struct replrqtree	 replrq_tree = SPLAY_INITIALIZER(&replrq_tree);
 struct psc_poolmaster	 replrq_poolmaster;
 struct psc_poolmgr	*replrq_pool;
 psc_spinlock_t		 replrq_tree_lock = LOCK_INITIALIZER;
@@ -37,11 +41,9 @@ replrq_cmp(const void *a, const void *b)
 {
 	const struct sl_replrq *x = a, *y = b;
 
-	if (x->rrq_inoh->inoh_ino.ino_fg.fg_fid <
-	    y->rrq_inoh->inoh_ino.ino_fg.fg_fid)
+	if (REPLRQ_FID(x) < REPLRQ_FID(y))
 		return (-1);
-	else if (x->rrq_inoh->inoh_ino.ino_fg.fg_fid >
-	    y->rrq_inoh->inoh_ino.ino_fg.fg_fid)
+	else if (REPLRQ_FID(x) > REPLRQ_FID(y))
 		return (1);
 	return (0);
 }
@@ -74,6 +76,19 @@ mds_repl_load_locked(struct slash_inode_handle *i)
 	i->inoh_flags &= ~INOH_LOAD_EXTRAS;
 
 	return (0);
+}
+
+int
+mds_inoh_load_repls(struct slash_inode_handle *ih)
+{
+	int rc = 0;
+
+	INOH_LOCK(ih);
+	if (ih->inoh_ino.ino_nrepls >= INO_DEF_NREPLS)
+		if (ATTR_NOTSET(ih->inoh_flags, INOH_HAVE_EXTRAS))
+			rc = mds_repl_load_locked(ih);
+	INOH_ULOCK(ih);
+	return (rc);
 }
 
 #define mds_repl_ios_lookup_add(i, ios) mds_repl_ios_lookup(i, ios, 1)
@@ -296,7 +311,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 }
 
 struct sl_replrq *
-mds_replrq_find(struct slash_fidgen *fgp, int *locked)
+mds_repl_findrq(struct slash_fidgen *fgp, int *locked)
 {
 	struct slash_inode_handle inoh;
 	struct sl_replrq q, *rrq;
@@ -340,7 +355,7 @@ mds_replrq_find(struct slash_fidgen *fgp, int *locked)
 }
 
 int
-mds_replrq_add(struct slash_fidgen *fgp, sl_blkno_t bmapno)
+mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 {
 	char fn[FID_MAX_PATH];
 	int rc, locked, tract[4], retifset[4];
@@ -356,7 +371,7 @@ mds_replrq_add(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 	rc = 0;
  restart:
 	spinlock(&replrq_tree_lock);
-	rrq = mds_replrq_find(fgp, &locked);
+	rrq = mds_repl_findrq(fgp, &locked);
 	if (rrq == NULL) {
 		if (!locked)
 			goto restart;
@@ -372,15 +387,20 @@ mds_replrq_add(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 			rc = zfsslash2_link(zfsVfs, fgp->fg_fid, inum,
 			    fn, &fg, &rootcreds, &stb);
 			if (rc == 0) {
+				rrq = newrq;
+				newrq = NULL;
+
 				memset(rrq, 0, sizeof(*rrq));
 				LOCK_INIT(&rrq->rrq_lock);
 				psc_waitq_init(&rrq->rrq_waitq);
 				rrq->rrq_refcnt = 1;
 				rrq->rrq_inoh = fcmh_2_inoh(fidc_lookup_fg(fgp));
+				rc = mds_inoh_load_repls(rrq->rrq_inoh);
+				if (rc)
+					psc_fatalx("mds_inoh_load_repls: %s",
+					    slstrerror(rc));
 				rrq->rrq_flags |= REPLRQF_BUSY;
-				SPLAY_INSERT(replrqtree, &replrq_tree, newrq);
-				rrq = newrq;
-				newrq = NULL;
+				SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
 			}
 		}
 	}
@@ -406,8 +426,8 @@ mds_replrq_add(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		retifset[SL_REPL_TOO_OLD] = 0;
 		retifset[SL_REPL_OLD] = 0;
 		retifset[SL_REPL_ACTIVE] = 1;
-		for (n = 0; n < rrq->rrq_inoh->inoh_ino.ino_lblk; n++) {
-			bcm = mds_bmap_load(rrq->rrq_inoh->inoh_fcmh, n);
+		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
+			bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
 			BMAP_LOCK(bcm);
 			rc |= mds_repl_bmap_walk(bcm, tract, NULL, 0);
 			bmap_op_done(bcm);
@@ -423,18 +443,24 @@ mds_replrq_add(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		retifset[SL_REPL_TOO_OLD] = EALREADY;
 		retifset[SL_REPL_OLD] = EALREADY;
 		retifset[SL_REPL_ACTIVE] = 0;
-		bcm = mds_bmap_load(rrq->rrq_inoh->inoh_fcmh, bmapno);
+		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno);
 		BMAP_LOCK(bcm);
 		rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
 		bmap_op_done(bcm);
 	}
 
+	mds_repl_unrefrq(rrq);
+	return (rc);
+}
+
+void
+mds_repl_unrefrq(struct sl_replrq *rrq)
+{
 	spinlock(&rrq->rrq_lock);
 	rrq->rrq_refcnt--;
 	rrq->rrq_flags &= ~REPLRQF_BUSY;
 	psc_waitq_wakeall(&rrq->rrq_waitq);
 	freelock(&rrq->rrq_lock);
-	return (rc);
 }
 
 void
@@ -467,8 +493,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	INOH_ULOCK(rrq->rrq_inoh);
 
 	/* Scan bmaps to see if the inode should disappear. */
-	for (n = 0; n < rrq->rrq_inoh->inoh_ino.ino_lblk; n++) {
-		bcm = mds_bmap_load(rrq->rrq_inoh->inoh_fcmh, n);
+	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
+		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
 		BMAP_LOCK(bcm);
 		rc = mds_repl_bmap_walk(bcm, tract,
 		    retifset, REPL_WALKF_SCIRCUIT);
@@ -487,8 +513,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		 * remove it and its persistent link.
 		 */
 		inum = sl_get_repls_inum();
-		rc = snprintf(fn, sizeof(fn), "%016"PRIx64,
-		    rrq->rrq_inoh->inoh_ino.ino_fg.fg_fid);
+		rc = snprintf(fn, sizeof(fn),
+		    "%016"PRIx64, REPLRQ_FID(rrq));
 		if (rc == -1)
 			rc = errno;
 		else if (rc >= (int)sizeof(fn))
@@ -512,19 +538,21 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 			spinlock(&rrq->rrq_lock);
 		}
 
+		fidc_membh_dropref(REPLRQ_FCMH(rrq));
+
 		psc_pool_return(replrq_pool, rrq);
 	}
 }
 
 int
-mds_replrq_del(struct slash_fidgen *fgp, sl_blkno_t bmapno)
+mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 {
 	int locked, rc, tract[4], retifset[4];
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 	sl_blkno_t n;
 
-	rrq = mds_replrq_find(fgp, &locked);
+	rrq = mds_repl_findrq(fgp, &locked);
 	if (rrq == NULL)
 		return (ENOENT);
 
@@ -540,8 +568,8 @@ mds_replrq_del(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		retifset[SL_REPL_TOO_OLD] = 0;
 
 		rc = ENOENT;
-		for (n = 0; n < rrq->rrq_inoh->inoh_ino.ino_lblk; n++) {
-			bcm = mds_bmap_load(rrq->rrq_inoh->inoh_fcmh, n);
+		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
+			bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
 			BMAP_LOCK(bcm);
 			if (mds_repl_bmap_walk(bcm, tract,
 			    retifset, 0))
@@ -553,7 +581,7 @@ mds_replrq_del(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		retifset[SL_REPL_ACTIVE] = 0;
 		retifset[SL_REPL_OLD] = 0;
 		retifset[SL_REPL_TOO_OLD] = 0;
-		bcm = mds_bmap_load(rrq->rrq_inoh->inoh_fcmh, bmapno);
+		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno);
 		BMAP_LOCK(bcm);
 		rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
 		bmap_op_done(bcm);
@@ -564,10 +592,11 @@ mds_replrq_del(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 }
 
 void
-scan_repldir(void)
+mds_repl_scandir(void)
 {
 	struct slash_fidgen fg;
-	struct dirent *d;
+	struct fuse_dirent *d;
+	struct sl_replrq *rrq;
 	struct stat stb;
 	size_t siz, tsiz;
 	off_t off, toff;
@@ -590,13 +619,23 @@ scan_repldir(void)
 			break;
 
 		for (toff = 0; toff < (off_t)tsiz;
-		    toff += d->d_reclen) {
+		    toff += FUSE_DIRENT_SIZE(d)) {
 			d = (void *)(buf + toff);
 
-			psc_assert(d->d_reclen > 0);
-			if (d->d_name[0] == '.' ||
-			    d->d_fileno == 0)
+			if (d->name[0] == '.')
 				continue;
+
+			rrq = psc_pool_get(replrq_pool);
+			memset(rrq, 0, sizeof(*rrq));
+			LOCK_INIT(&rrq->rrq_lock);
+			psc_waitq_init(&rrq->rrq_waitq);
+			rrq->rrq_refcnt = 1;
+			rrq->rrq_inoh = fcmh_2_inoh(fidc_lookup_inode(d->ino));
+			rc = mds_inoh_load_repls(rrq->rrq_inoh);
+			if (rc)
+				psc_fatalx("mds_inoh_load_repls: %s",
+				    slstrerror(rc));
+			SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
 		}
 		off += toff;
 	}
@@ -605,4 +644,10 @@ scan_repldir(void)
 		rc = trc;
 
 	free(buf);
+}
+
+void
+mds_repl_init(void)
+{
+	mds_repl_scandir();
 }

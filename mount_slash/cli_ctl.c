@@ -112,11 +112,11 @@ int
 msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	char fn[PATH_MAX], *cpn, *next;
+	struct srm_replst_master_req *mq;
+	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replrq *mrq = m;
 	struct msctl_replst_cont *mrc;
 	struct msctl_replstq *mrsq;
-	struct srm_replst_req *mq;
-	struct srm_replst_rep *mp;
 	struct pscrpc_request *rq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
