@@ -78,10 +78,10 @@ struct slmds_jents {
 	} slmds_jent_types;
 };
 
-//#define SLJ_MDS_ENTSIZE (sizeof(struct slmds_jents))
-/* A bit of a hack.  Make SLJ_MDS_ENTSIZE + sizeof(struct psc_journal_enthdr)
- *  == to 512, so long as 512 > than the size of any the structs above.
+/*
+ * The combined size of the standard header of each log entry (i.e., struct psc_journal_enthdr) 
+ * and its data, if any, should occupy less than this size.
  */
-#define SLJ_MDS_ENTSIZE 480
+#define	SLJ_MDS_ENTSIZE		512
 
 #endif /* _SL_JOURNAL_ */
