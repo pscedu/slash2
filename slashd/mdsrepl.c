@@ -601,9 +601,9 @@ mds_repl_scandir(void)
 	size_t siz, tsiz;
 	off_t off, toff;
 	uint16_t inum;
-	int rc, trc;
 	void *data;
 	char *buf;
+	int rc;
 
 	off = 0;
 	siz = 8 * 1024;
@@ -612,12 +612,17 @@ mds_repl_scandir(void)
 	inum = sl_get_repls_inum();
 	rc = zfsslash2_opendir(zfsVfs, inum,
 	    &rootcreds, &fg, &stb, &data);
+	if (rc)
+		psc_fatalx("opendir %s: %s", SL_PATH_REPLS,
+		    slstrerror(rc));
 	for (;;) {
 		rc = zfsslash2_readdir(zfsVfs, inum, &rootcreds,
 		    siz, off, buf, &tsiz, NULL, 0, data);
 		if (rc)
+			psc_fatalx("readdir %s: %s", SL_PATH_REPLS,
+			    slstrerror(rc));
+		if (tsiz == 0)
 			break;
-
 		for (toff = 0; toff < (off_t)tsiz;
 		    toff += FUSE_DIRENT_SIZE(d)) {
 			d = (void *)(buf + toff);
@@ -639,9 +644,10 @@ mds_repl_scandir(void)
 		}
 		off += toff;
 	}
-	trc = zfsslash2_release(zfsVfs, inum, &rootcreds, data);
-	if (rc == 0)
-		rc = trc;
+	rc = zfsslash2_release(zfsVfs, inum, &rootcreds, data);
+	if (rc)
+		psc_fatalx("release %s: %s", SL_PATH_REPLS,
+		    slstrerror(rc));
 
 	free(buf);
 }
