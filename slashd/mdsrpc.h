@@ -3,13 +3,6 @@
 #ifndef _MDS_RPC_H_
 #define _MDS_RPC_H_
 
-#include <sys/types.h>
-
-#include "psc_ds/tree.h"
-#include "psc_util/lock.h"
-
-#include "cfd.h"
-
 #define SRMM_NTHREADS   8
 #define SRMM_NBUFS      1024
 #define SRMM_BUFSZ      128
