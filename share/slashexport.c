@@ -13,10 +13,10 @@
 #include "slashrpc.h"
 
 #if SEXPTREE
-struct sexptree sexptree;
-psc_spinlock_t sexptreelock = LOCK_INITIALIZER;
+struct slexptree slexptree;
+psc_spinlock_t slexptreelock = LOCK_INITIALIZER;
 
-SPLAY_GENERATE(sexptree, slashrpc_export, slexp_entry, sexpcmp);
+SPLAY_GENERATE(slexptree, slashrpc_export, slexp_entry, slexpcmp);
 #endif
 
 /*
@@ -36,10 +36,10 @@ slashrpc_export_get(struct pscrpc_export *exp)
 		slexp->slexp_export = exp;
 		exp->exp_hldropf = slashrpc_export_destroy;
 #if SEXPTREE
-		spinlock(&sexptreelock);
-		if (SPLAY_INSERT(sexptree, &sexptree, exp->exp_private))
+		spinlock(&slexptreelock);
+		if (SPLAY_INSERT(slexptree, &slexptree, exp->exp_private))
 			psc_fatalx("export already registered");
-		freelock(&sexptreelock);
+		freelock(&slexptreelock);
 #endif
 	} else {
 		slexp = exp->exp_private;
@@ -65,9 +65,9 @@ slashrpc_export_destroy(void *data)
 	 */
 	cfdfreeall(exp);
 #if SEXPTREE
-	spinlock(&sexptreelock);
-	SPLAY_REMOVE(sexptree, &sexptree, slexp);
-	freelock(&sexptreelock);
+	spinlock(&slexptreelock);
+	SPLAY_REMOVE(slexptree, &slexptree, slexp);
+	freelock(&slexptreelock);
 #endif
 	exp->exp_private = NULL;
 	PSCFREE(slexp);
@@ -75,7 +75,7 @@ slashrpc_export_destroy(void *data)
 
 #if SEXPTREE
 int
-sexpcmp(const void *a, const void *b)
+slexpcmp(const void *a, const void *b)
 {
 	const struct slashrpc_export *sa = a, *sb = b;
 	const lnet_process_id_t *pa = &sa->exp->exp_connection->c_peer;

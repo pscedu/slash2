@@ -5,6 +5,9 @@
 
 #include <sys/types.h>
 
+#include "psc_ds/tree.h"
+#include "psc_util/lock.h"
+
 #include "cfd.h"
 
 struct cfdtree;
