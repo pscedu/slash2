@@ -143,8 +143,8 @@ typedef struct slash_block_gen {
 
 
 struct slash_bmap_cli_wire {
-	u8 bh_crcstates[SL_CRCS_PER_BMAP];
-	u8 bh_repls[SL_REPLICA_NBYTES];
+	u8 bw_crcstates[SL_CRCS_PER_BMAP];
+	u8 bw_repls[SL_REPLICA_NBYTES];
 };
 
 /**
@@ -205,7 +205,7 @@ enum slash_inode_flags {
 
 struct slash_inode_extras_od {
 	sl_snap_t     inox_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers      */
-	sl_replica_t  inox_repls[SL_MAX_REPLICAS]; /* replicas              */
+	sl_replica_t  inox_repls[SL_MAX_REPLICAS - INO_DEF_NREPLS]; /* replicas */
 	psc_crc_t     inox_crc;
 };
 #define INOX_OD_SZ (sizeof(struct slash_inode_extras_od))
