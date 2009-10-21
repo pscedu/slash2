@@ -1,5 +1,8 @@
 /* $Id$ */
 
+#ifndef _SL_EXP_H_
+#define _SL_EXP_H_
+
 #include <sys/types.h>
 
 #include "cfd.h"
@@ -7,7 +10,7 @@
 struct cfdtree;
 struct pscrpc_export;
 
-/* SERVER_CLIENT */
+/* Format here is SERVER_CLIENT */
 enum slash_exp_types {
 	MDS_ION_EXP = (1<<0),
 	MDS_CLI_EXP = (1<<1),
@@ -20,20 +23,25 @@ enum slash_exp_types {
 };
 
 struct slashrpc_export {
-	uint64_t		 sexp_conn_gen;
-	uint64_t		 sexp_nextcfd;
-	struct cfdtree		 sexp_cfdtree;
-	int			 sexp_type;
-	void			*sexp_data;
-	struct pscrpc_export	*sexp_export;
+	uint64_t			 slexp_conn_gen;
+	uint64_t			 slexp_nextcfd;
+	struct cfdtree			 slexp_cfdtree;
+	int				 slexp_type;
+	void				*slexp_data;
+	struct pscrpc_export		*slexp_export;
+	SPLAY_ENTRY(slashrpc_export)	 slexp_entry;
 };
 
+SPLAY_HEAD(slexptree, slashrpc_export);
+
 struct slashrpc_export *
-slashrpc_export_get(struct pscrpc_export *);
+	slashrpc_export_get(struct pscrpc_export *);
 
-#if SEXPTREE
-int sexpcmp(const void *a, const void *b);
+int	slexpcmp(const void *, const void *);
 
-extern struct sexptree sexptree;
-extern psc_spinlock_t sexptreelock;
-#endif
+SPLAY_PROTOTYPE(slexptree, slashrpc_export, slexp_entry, slexpcmp);
+
+extern struct slexptree	slexptree;
+extern psc_spinlock_t	slexptreelock;
+
+#endif /* _SL_EXP_H_ */

@@ -3,6 +3,13 @@
 #ifndef _MDS_RPC_H_
 #define _MDS_RPC_H_
 
+#include <sys/types.h>
+
+#include "psc_ds/tree.h"
+#include "psc_util/lock.h"
+
+#include "cfd.h"
+
 #define SRMM_NTHREADS   8
 #define SRMM_NBUFS      1024
 #define SRMM_BUFSZ      128
@@ -22,11 +29,12 @@
 #define SRMC_SVCNAME    "slrmc"
 
 struct pscrpc_request;
+struct pscrpc_export;
 
-void rpc_initsvc(void);
+void	rpc_initsvc(void);
 
-int slrmc_handler(struct pscrpc_request *);
-int slrmi_handler(struct pscrpc_request *);
-int slrmm_handler(struct pscrpc_request *);
+int	slrmc_handler(struct pscrpc_request *);
+int	slrmi_handler(struct pscrpc_request *);
+int	slrmm_handler(struct pscrpc_request *);
 
 #endif /* _MDS_RPC_H_ */
