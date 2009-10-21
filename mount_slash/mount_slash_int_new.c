@@ -46,20 +46,28 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce, *bmpce_tmp;
-	int i, npages=0;
-	uint64_t bmpce_pagebitmask=0;
+	int i, npages=0, rbw=0;
+	uint64_t bmpce_pagemap=0;
 
 	DEBUG_BMAP(PLL_TRACE, b, "adding req for (off=%u) (size=%u)",
                    off, len);
 
 	psc_assert((off + len) <= SLASH_BMAP_SIZE);
-	psc_assert(op == OFTREQ_OP_WRITE || op == OFTREQ_OP_READ);	
+	psc_assert(op == BIORQ_WRITE || op == BIORQ_READ);
 	*newreq = r = PSCALLOC(sizeof(struct bmpc_ioreq));
 
 	bmpc_ioreq_init(r, off, len, b);
-	bmpc = bmap_2_msbmpc(b);
 
-	/* How many pages are needed to accommodate the request?
+	if (b->bcm_mode & BMAP_DIO)
+		/* The bmap is set to use directio, we may then skip
+		 *   cache preparation.
+		 */
+		goto out;
+
+	bmpc = bmap_2_msbmpc(b);	
+	/* How many pages are needed to accommodate the request?  
+	 *   Determine and record whether RBW operations are needed on
+	 *   the first or last pages.
 	 */
 	if (off & BMPC_BUFMASK) {
 		/* Align the offset to the beginning of the first
@@ -67,9 +75,16 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 		 */
 		len += off & BMPC_BUFMASK;
 		off &= ~BMPC_BUFMASK;
+		rbw |= BIORQ_RBWFP;
 		npages++;
 	}
-	npages += (len / BMPC_BUFSZ) + ((len % BMPC_BUFSZ) ? 1 : 0);
+	npages += len / BMPC_BUFSZ;
+
+	if (len % BMPC_BUFSZ) {		
+		rbw |= BIORQ_RBWLP;
+		npages++;
+	}
+	
 	psc_assert(npages <= BMPC_IOMAXBLKS);
 	
 	bmpce_tmp = PSCALLOC(sizeof(*bmpce_tmp));
@@ -80,13 +95,13 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 		bmpce = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, 
 				   bmpce_tmp);
 		if (bmpce) {
-			op == OFTREQ_OP_WRITE ? 
+			op == BIORQ_WRITE ? 
 				psc_atomic16_inc(&bmpce->bmpce_wrref) : 
 				psc_atomic16_inc(&bmpce->bmpce_rdref);
 
 			/* Mark this cache block as being present.
 			 */
-			i |= (1 << i);
+			bmpce_pagemap |= (1 << i);
 			dynarray_add(&r->biorq_pages, bmpce);
 		}
 	}
@@ -98,14 +113,14 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 	/* Obtain any bmpce's which were not already present in the cache.
 	 */
 	for (i=0; i < npages; i++) {
-		if (i & (1 << i))
+		if (bmpce_pagemap & (1 << i))
 			continue;
 
 		bmpce = psc_pool_get(bmpcePoolMgr);
 		bmpce_useprep(bmpce, bmpc);
 		bmpce->bmpce_offset = off + (i * BMPC_BUFSZ);
-		/* Atomically lookup and then possibly add the bmpce to
-		 *   the list.
+		/* Atomically lookup and add the bmpce to the tree
+		 *   if one of the same offset isn't already there.
 		 */
 		spinlock(&bmpc->bmpc_lock);
 		bmpce_tmp = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
@@ -118,18 +133,26 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 			bmpce = bmpce_tmp;
 		}
 
-		op == OFTREQ_OP_WRITE ? 
-			psc_atomic16_inc(&bmpce->bmpce_wrref) : 
-			psc_atomic16_inc(&bmpce->bmpce_rdref);		
+		op == BIORQ_WRITE ?
+			psc_atomic16_inc(&bmpce->bmpce_wrref) :
+			psc_atomic16_inc(&bmpce->bmpce_rdref);
 		freelock(&bmpc->bmpc_lock);
 		dynarray_add(&r->biorq_pages, bmpce);
 	}
-	psc_assert(dynarray_len(&r->biorq_pages) == npages);	
+	psc_assert(dynarray_len(&r->biorq_pages) == npages);
 	/* Sort the list by offset.
-	 */	
+	 */
 	if (npages > 1)
-		qsort(r->biorq_pages.da_items, r->biorq_pages.da_pos, 
+		qsort(r->biorq_pages.da_items, r->biorq_pages.da_pos,
 		      sizeof(void *), bmpce_cmp);
+
+	/* XXX Note if we were move to a RD_DATARDY / WR_DATARDY then 
+	 *   we wouldn't have to fault in pages like this unless the 
+	 *   bmap was open in RW mode.
+	 */
+	if ((fcmh_2_fsz(b->bcm_fcmh) > off) && op == BIORQ_WRITE && rbw)
+		r->biorq_flags |= rbw;
+
 	/* Pass1: Retrieve memory pages from the cache on behalf of our pages
 	 *   stuck in GETBUF.
 	 */
@@ -140,15 +163,23 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 		spinlock(&bmpce->bmpce_lock);
 		if (biorq_is_my_bmpce(r, bmpce) && 
 		    (bmpce->bmpce_flags & BMPCE_GETBUF)) {
+			/* Increase the rdref cnt in preparation for any 
+			 *   RBW ops but only on new pages owned by this
+			 *
+			 */
+			if ((!i && (r->biorq_flags & BIORQ_RBWFP)) ||
+			    (i == (npages-1) && 
+			     (r->biorq_flags & BIORQ_RBWLP)))
+				psc_atomic16_inc(&bmpce->bmpce_rdref);
+	
 			psc_assert(!bmpce->bmpce_base);
 			psc_assert(bmpce->bmpce_flags == BMPCE_GETBUF);
-			bmpce->bmpce_flags = 0;
 			freelock(&bmpce->bmpce_lock);
 
-			bmpce->bmpce_base = bmpc_alloc();
+			bmpce->bmpce_base = bmpc_alloc();		
+			bmpce->bmpce_flags = 0;
 		} else 
 			freelock(&bmpce->bmpce_lock);
-
 	}
 	/* Pass2: Block on pages others are dealing with.
 	 */
@@ -171,7 +202,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 		bmpce = dynarray_getpos(&r->biorq_pages, i);
 		spinlock(&bmpce->bmpce_lock);
 
-		op == OFTREQ_OP_WRITE ?
+		op == BIORQ_WRITE ?
 		      psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0) :
 		      psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) > 0); 
 
@@ -182,92 +213,15 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 			psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
 		freelock(&bmpce->bmpce_lock);		
-	}	
-	/* Chain to bmpc at the bmap_pagecache.
-	 */
-	pll_add(&bmpc->bmpc_pndg, r);	
-}
+	}		
 
-/**
- * msl_oftrq_build -
- * @newreq: newly created request will be placed here.
- * @b: the source bmap
- * @off: the 'normalized' offset (ie bmap relative, not absolute)
- * @len: extent size
- * @op: read or write.
- */
-__static void
-msl_oftrq_build(struct offtree_req **newreq, struct bmapc_memb *b, off_t off,
-    size_t len, int op)
-{
-	struct offtree_req *r;
-	int top=0;
-
-	DEBUG_BMAP(PLL_TRACE, b, "adding req for (off=%zu) (size=%zu)",
-		   off, len);
-	/* Ensure the offset fits within the range and mask off the
-	 *  lower bits to align with the offtree's page size.
-	 */
-	psc_assert((off + len) <= SLASH_BMAP_SIZE);
-	psc_assert(op == OFTREQ_OP_WRITE || op == OFTREQ_OP_READ);
-
-	*newreq = r = PSCALLOC(sizeof(struct offtree_req));
-
-	INIT_PSCLIST_ENTRY(&r->oftrq_lentry);
-	/* Verify that the mds agrees that the bmap is writeable.
-	 */
-	if (op == OFTREQ_OP_WRITE)
-		psc_assert(b->bcm_mode & BMAP_WR);
-
-	r->oftrq_op = op;
-	r->oftrq_bmap = b;
-	r->oftrq_off = off;
-	/* Set directio flag if the bmap is in dio mode, otherwise
-	 *  allocate an array for cache iovs.
-	 */
-	if (b->bcm_mode & BMAP_DIO) {
-		r->oftrq_op |= OFTREQ_OP_DIO;
-		goto out;
-	}
-	/* Resume creating the cache-based request.
-	 */
-	r->oftrq_darray = PSCALLOC(sizeof(struct dynarray));
-	r->oftrq_root   = bmap_2_msoftr(b);
-	r->oftrq_memb   = &r->oftrq_root->oftr_memb;
-	r->oftrq_width  = r->oftrq_depth = 0;
-	r->oftrq_len    = len;
-	r->oftrq_nblks  = 0;
-       
-	if (off & SLASH_BMAP_BLKMASK) {
-		/* Unaligned offset, account for the partial block,
-		 *   subtract the unaligned segment from the length
-		 *   and mask it off.
-		 */
-		r->oftrq_nblks++;
-		len -= len & SLASH_BMAP_BLKMASK;
-		top |= OFTREQ_OP_PRFFP;
-	}
-	r->oftrq_nblks += len / SLASH_BMAP_BLKSZ;
-
-	if (len & SLASH_BMAP_BLKMASK) {
-		r->oftrq_nblks++;
-		top |= OFTREQ_OP_PRFLP;
-	}
-	/* The inode should be relatively recent.  Lookup the size
-	 *   of the file to determine whether a RBW is needed.
-	 *   XXX actually with the new non-aligned code we shouldn't have
-	 *   to do RBW unless the bmap is open in RW mode.
-	 *   If that's the case then the DATARDY semantics need to be
-	 *     changed.
-	 */
-	if ((fcmh_2_fsz(b->bcm_fcmh) > off) && op == OFTREQ_OP_WRITE && top)
-			r->oftrq_op |= top;
-
-	/* Take a readlock on the offtree.
-	 */
  out:
-	DEBUG_OFFTREQ(PLL_TRACE, r, "newly built request (len=%zu)", len);
+	DEBUG_BIORQ(PLL_TRACE, r, "new req");	
+	/* Chain to bmpc at the bmap_pagecache.
+	 */	
+	pll_add(&bmpc->bmpc_pndg, r);
 }
+
 
 
 __static void
@@ -1236,17 +1190,9 @@ msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	psc_assert(mq);
 
-	if (rq->rq_status) {
-		DEBUG_REQ(PLL_ERROR, rq, "dio req, non-zero status %d",
-		    rq->rq_status);
-		psc_fatalx("Resolve issues surrounding this failure");
-		// XXX Freeing of dynarray, offtree state, etc
-		return (rq->rq_status);
-	}
 	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u s=%u",
 	    op, mq->offset, mq->size);
 
-	pscrpc_req_finished(rq);
 	return (0);
 }
 
@@ -1264,136 +1210,11 @@ msl_track_readreq(struct offtree_req *r)
 	BMAP_ULOCK(b);
 }
 
-/**
- * msl_pagereq_finalize - this function is the intersection point of many
- *	slash subssytems (pscrpc, sl_config, and bmaps).  Its job is to
- *	prepare a reqset of read or write requests and ship them to the
- *	correct I/O server.
- * @r:  the offtree request.
- * @a:  the array of iov's involved.
- * @op: GET or PUT.
- */
-__static void
-msl_pagereq_finalize(struct offtree_req *r, struct dynarray *a, int op)
-{
-	struct pscrpc_import      *imp;
-	struct pscrpc_request_set *rqset = NULL;
-	struct pscrpc_request     *req;
-	struct pscrpc_bulk_desc   *desc;
-	struct bmapc_memb	  *bcm;
-	struct bmap_cli_data	  *msbd;
-	struct iovec              *iovs;
-	struct offtree_iov        *v;
-	struct srm_io_req         *mq;
-	struct srm_io_rep         *mp;
-	int    i, n=dynarray_len(a), tblks=0, rc=0;
-
-	v = NULL; /* gcc */
-	psc_assert(n);
-	psc_assert(op == MSL_PAGES_PUT || op == MSL_PAGES_GET);
-
-	if (op == MSL_PAGES_GET)
-		msl_track_readreq(r);
-	/* Get a new request set if one doesn't already exist.
-	 */
-	if (!r->oftrq_fill.oftfill_reqset)
-		rqset = r->oftrq_fill.oftfill_reqset = pscrpc_prep_set();
-
-	psc_assert(rqset);
-	/* Initialize the request set.
-	 */
-	if (op == MSL_PAGES_PUT) {
-		rqset->set_interpret = msl_io_rpcset_cb_old;
-		rqset->set_arg = r;
-	}
-	/* Point to our bmap handle, it has the import information needed
-	 *  for the RPC request.  (FID and ION id's)
-	 */
-	bcm = r->oftrq_bmap;
-	msbd = bcm->bcm_pri;
-
-	imp = (op == MSL_PAGES_PUT ? msl_bmap_to_import(bcm, 1) :
-	       msl_bmap_choose_replica(bcm));
-
-	/* This pointer is only valid in DIO mode.
-	 */
-	psc_assert(r->oftrq_bmap);
-
-	if ((rc = RSX_NEWREQ(imp, SRIC_VERSION,
-			     (op == MSL_PAGES_PUT ? SRMT_WRITE : SRMT_READ),
-			     req, mq, mp)) != 0) {
-		errno = -rc;
-		psc_fatalx("RSX_NEWREQ() bad time to fail :(");
-	}
-	/* Setup the callback, supplying the dynarray as a argument.
-	 */
-	req->rq_interpret_reply = msl_io_cb;
-	req->rq_async_args.pointer_arg[MSL_IO_CB_POINTER_SLOT] = a;
-	req->rq_async_args.pointer_arg[MSL_OFTRQ_CB_POINTER_SLOT] = r;
-
-	/* Prep the iovs and bulk descriptor
-	 */
-	iovs = PSCALLOC(sizeof(*iovs) * n);
-	for (i=0; i < n; i++) {
-		v = dynarray_getpos(a, i);
-
-		if (!i)
-			mq->offset = v->oftiov_off;
-
-		if (op == MSL_PAGES_GET) {
-			psc_assert(v->oftiov_flags &  OFTIOV_FAULTPNDG);
-			v->oftiov_flags |= OFTIOV_FAULTING;
-		} else {
-			psc_assert(v->oftiov_flags &  OFTIOV_PUSHPNDG);
-			v->oftiov_flags |= OFTIOV_PUSHING;
-		}
-
-		tblks += v->oftiov_nblks;
-		DEBUG_OFFTIOV(PLL_TRACE, v,
-			      "iov%d tblks=%d off=%u OFT_IOV2E_OFF_(%zu)",
-			      i, tblks, mq->offset, OFT_IOV2E_OFF_(v));
-
-		/* Make an iov for lnet.
-		 */
-		oftiov_2_iov(v, &iovs[i]);
-		/* Tell the slb layer that this offtree_iov is going
-		 *   for a ride.
-		 */
-		slb_inflight_cb(v, SL_INFLIGHT_INC);
-	}
-	//mq->size = v->oftiov_blksz * tblks;
-	mq->size = r->oftrq_len;
-	psc_warnx("mq->sz == %u", mq->size);
-	mq->op = (op == MSL_PAGES_PUT ? SRMIO_WR : SRMIO_RD);
-	memcpy(&mq->sbdb, &msbd->msbd_bdb, sizeof(mq->sbdb));
-
-	/* Seems counter-intuitive, but it's right.  MSL_PAGES_GET is a
-	 * 'PUT' to the client, MSL_PAGES_PUSH is a server get.
-	 */
-	rc = rsx_bulkclient(req, &desc,
-			    (op == MSL_PAGES_GET ?
-			     BULK_PUT_SINK : BULK_GET_SOURCE),
-			    SRIC_BULK_PORTAL, iovs, n);
-	if (rc)
-		psc_fatalx("rsx_bulkclient() failed with %d", rc);
-
-	/* The bulk descriptor copies these iovs so it's OK to free them.
-	 */
-	PSCFREE(iovs);
-	/* Push onto our request set and send it out the door.
-	 */
-	pscrpc_set_add_new_req(rqset, req);
-	if (pscrpc_push_req(req)) {
-		DEBUG_REQ(PLL_ERROR, req, "pscrpc_push_req() failed");
-		psc_fatalx("pscrpc_push_req(), no failover yet");
-	}
-}
 
 __static void
-msl_pages_dio_getput(struct offtree_req *r, char *b)
+msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 {
 	struct pscrpc_import      *imp;
-	struct pscrpc_request_set *rqset;
 	struct pscrpc_request     *req;
 	struct pscrpc_bulk_desc   *desc;
 	struct bmapc_memb	  *bcm;
@@ -1402,27 +1223,30 @@ msl_pages_dio_getput(struct offtree_req *r, char *b)
 	struct srm_io_req         *mq;
 	struct srm_io_rep         *mp;
 
-	size_t len, nbytes, size=oftrq_size_get(r);
+	size_t len, nbytes, size=r->biorq_len;
 	int i, op, n=0, rc=1;
 
-	psc_assert(ATTR_TEST(r->oftrq_op, OFTREQ_OP_DIO));
-	psc_assert(!r->oftrq_root);
-	psc_assert(r->oftrq_bmap);
+	psc_assert(r->biorq_flags & BIORQ_DIO));
+	psc_assert(r->biorq_bmap);
 	psc_assert(size);
 
-	bcm = r->oftrq_bmap;
+	bcm = r->biorq_bmap;
 	msbd = bcm->bcm_pri;
 
-	op = (ATTR_TEST(r->oftrq_op, OFTREQ_OP_WRITE) ?
-	      SRMT_WRITE : SRMT_READ);
+	DEBUG_BIORQ(PLL_TRACE, r, "dio req");
+       
+	op = r->biorq_flags & BIORQ_WRITE ? 
+		SRMT_WRITE : SRMT_READ;
+	
+	imp = (op == SRMT_WRITE) ? 
+		msl_bmap_to_import(bcm, 1) : 
+		msl_bmap_choose_replica(bcm);
 
-	imp = msl_bmap_to_import(bcm, 1);
-	rqset = pscrpc_prep_set();
+	r->biorq_rqset = pscrpc_prep_set();
 	/* This buffer hasn't been segmented into LNET sized
 	 *  chunks.  Set up buffers into 1MB chunks or smaller.
 	 */
-	n = (r->oftrq_len / LNET_MTU) + ((r->oftrq_len % LNET_MTU) ? 1 : 0);
-
+	n = (r->biorq_len / LNET_MTU) + ((r->biorq_len % LNET_MTU) ? 1 : 0);
 	iovs = PSCALLOC(sizeof(*iovs) * n);
 
 	for (i=0, nbytes=0; i < n; i++, nbytes += len) {
@@ -1437,14 +1261,14 @@ msl_pages_dio_getput(struct offtree_req *r, char *b)
 		iovs[i].iov_base = b + nbytes;
 		iovs[i].iov_len  = len;
 
-		rc = rsx_bulkclient(req, &desc,
+		rc = rsx_bulkclient(req, &desc, 
 				    (op == SRMT_WRITE ?
 				     BULK_GET_SOURCE : BULK_PUT_SINK),
 				    SRIC_BULK_PORTAL, &iovs[i], 1);
 		if (rc)
 			psc_fatalx("rsx_bulkclient() failed %d", rc);
 
-		mq->offset = r->oftrq_off + nbytes;
+		mq->offset = r->biorq_off + nbytes;
 		mq->size = len;
 		mq->op = (op == SRMT_WRITE ? SRMIO_WR : SRMIO_RD);
 		memcpy(&mq->sbdb, &msbd->msbd_bdb, sizeof(mq->sbdb));
@@ -1456,8 +1280,8 @@ msl_pages_dio_getput(struct offtree_req *r, char *b)
 		}
 	}
 	psc_assert(nbytes == size);
-	pscrpc_set_wait(rqset);
-	pscrpc_set_destroy(rqset);
+	pscrpc_set_wait(r->biorq_rqset);
+	pscrpc_set_destroy(r->biorq_rqset);
 	PSCFREE(iovs);
 }
 
@@ -1559,170 +1383,114 @@ msl_pages_schedflush(struct offtree_req *r)
 #define msl_pages_flush(r)    msl_pages_getput(r, MSL_PAGES_PUT)
 
 __static void
-msl_pages_getput(struct offtree_req *r, int op)
+msl_iorpc_create(uint32_t off, int op, struct pscrpc_request_set *rqset, 
+		 struct iovec *iovs, int niovs, struct srt_bmapdesc_buf *sbdb)
 {
-	struct offtree_iov  *v;
-	struct offtree_memb *m;
-	struct dynarray     *a=r->oftrq_darray, *coalesce=NULL;
-	off_t                o=OFT_REQ_SOFFA(r), toff=0;
-	size_t               niovs=dynarray_len(a);
-	u32                  i, n;
-	int                  nc_blks=0, t=0;
+	struct pscrpc_import      *imp;
+	struct pscrpc_request     *req;
+	struct pscrpc_bulk_desc   *desc;
+	struct srm_io_req         *mq;
+	struct srm_io_rep         *mp;
+	int rc;
 
-#define launch_cb {					\
-		psc_assert(coalesce);			\
-		msl_pagereq_finalize(r, coalesce, op);	\
-		coalesce = NULL;			\
-		nc_blks = 0;				\
+	psc_assert(niovs <= BMPC_MAXBUFSRPC);
+
+	imp = (op == SRMT_WRITE) ? 
+		msl_bmap_to_import(bcm, 1) : 
+		msl_bmap_choose_replica(bcm);
+
+	rc = RSX_NEWREQ(imp, SRIC_VERSION, op, req, mq, mp);
+	if (rc)
+		psc_fatalx("RSX_NEWREQ() failed %d", rc);
+	
+	niovs = MIN(npages, BMPC_MAXBUFSRPC);       
+	rc = rsx_bulkclient(req, &desc, 
+			    (op == SRMT_WRITE ? 
+			     BULK_GET_SOURCE : BULK_PUT_SINK),
+			    SRIC_BULK_PORTAL, iovs, niovs);
+	if (rc)
+		psc_fatalx("rsx_bulkclient() failed %d", rc);
+	
+	mq->offset = off;
+	mq->size = niovs * BMPC_BUFSZ;
+	mq->op = (op == SRMT_WRITE ? SRMIO_WR : SRMIO_RD);
+	memcpy(&mq->sbdb, sbdb, sizeof(mq->sbdb));
+	
+	pscrpc_set_add_new_req(rqset, req);
+	if (pscrpc_push_req(req)) {
+		DEBUG_REQ(PLL_ERROR, req, 
+			  "pscrpc_push_req() failed");
+		psc_fatalx("pscrpc_push_req, no failover yet");
 	}
-
-#define new_cb {					\
-		psc_assert(!nc_blks);			\
-		psc_assert(!coalesce);			\
-		coalesce = PSCALLOC(sizeof(*coalesce)); \
-	}
-
-	psc_assert(!ATTR_TEST(r->oftrq_op, OFTREQ_OP_DIO));
-
-	for (i=0; i < niovs; i++, n=0) {
-		v = dynarray_getpos(a, i);
-		DEBUG_OFFTIOV(PLL_TRACE, v,
-			      "iov%d rq_off=%zu OFT_IOV2E_OFF_(%zu)",
-			      i, r->oftrq_off,  OFT_IOV2E_OFF_(v));
-
-		/* Assert that oft iovs are contiguous.
-		 */
-		if (i)
-			psc_assert(toff == v->oftiov_off);
-
-		toff = OFT_IOV2E_OFF_(v) + 1;
-		/* The dynarray may contain iov's that we don't need,
-		 *  skip them.
-		 */
-		if (o > OFT_IOV2E_OFF_(v))
-			continue;
-
-		/* On read-before-write, only check first and last iov's
-		 *  if they have been specified for retrieval.
-		 * 't' is used to denote the first valid iov.
-		 */
-		if ((op == MSL_PAGES_GET) &&
-		    (ATTR_TEST(r->oftrq_op, OFTREQ_OP_WRITE))) {
-			if (!(((t == 0 &&
-				ATTR_TEST(r->oftrq_op, OFTREQ_OP_PRFFP))) ||
-			      ((i == niovs - 1) &&
-			       ATTR_TEST(r->oftrq_op, OFTREQ_OP_PRFLP))))
-				continue;
-			else
-				if (!t)
-					t = 1;
-		}
-		/* Map the offtree leaf holding this iov.
-		 */
-		m = (struct offtree_memb *)v->oftiov_memb;
-		DEBUG_OFFTIOV(PLL_INFO, v, "processing..");
-		DEBUG_OFT(PLL_INFO, m, "..processing");
-
-		spinlock(&m->oft_lock);
-		/* Ensure the offtree leaf is sane.
-		 */
-		if (op == MSL_PAGES_GET) {
-			oftm_read_prepped_verify(m);
-		} else {
-			oftm_write_prepped_verify(m);
-		}
-
-		//nblks += v->oftiov_nblks;
-		/* oftiov_nblks cannot be bigger than slCacheNblks!
-		 */
-		psc_assert(v->oftiov_nblks <= (u32)slCacheNblks);
-		psc_assert(nc_blks < slCacheNblks);
-		/* Iov's cannot be split across requests but they may be
-		 *  coalesced into one request.  We're assured that the
-		 *  largest contiguous piece of memory is <= to LNET_MTU.
-		 * For MSL_PAGES_PUT, the entire array is always sent.
-		 */
-		if (op == MSL_PAGES_PUT ||
-		    ((op == MSL_PAGES_GET) &&
-		     (!ATTR_TEST(v->oftiov_flags, OFTIOV_DATARDY) &&
-		      !ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG)))) {
-			/* Mark it.
-			 */
-			if (op == MSL_PAGES_GET)
-				ATTR_SET(v->oftiov_flags, OFTIOV_FAULTPNDG);
-			else
-				ATTR_SET(v->oftiov_flags, OFTIOV_PUSHPNDG);
-
-			DEBUG_OFFTIOV(PLL_TRACE, v,
-				      "iov%d rq_off=%zu OFT_IOV2E_OFF_(%zu)",
-				      i, r->oftrq_off,  OFT_IOV2E_OFF_(v));
-
-			if ((int)(v->oftiov_nblks + nc_blks) < slCacheNblks) {
-				/* It fits, coalesce.
-				 */
-				if (!coalesce)
-					new_cb;
-
-				dynarray_add(coalesce, v);
-				nc_blks += v->oftiov_nblks;
-				/* Just to be sure..
-				 */
-				psc_assert(nc_blks < slCacheNblks);
-
-			} else if ((int)(v->oftiov_nblks + nc_blks) ==
-				   slCacheNblks) {
-				/* A perfect fit, send this one out.
-				 */
-				dynarray_add(coalesce, v);
-				nc_blks += v->oftiov_nblks;
-				launch_cb;
-
-			} else {
-				/* The new iov won't fit, send out the cb as
-				 *  is.  Launch the current coalesce buffer
-				 *  (which must exist).
-				 */
-				launch_cb;
-				/* Make a new cb and add the new iov.
-				 */
-				new_cb;
-				dynarray_add(coalesce, v);
-				/* The new one may constitute an entire I/O,
-				 *  if so send it on its merry way.
-				 */
-				if (v->oftiov_nblks == (u32)slCacheNblks) {
-					launch_cb;
-				} else
-					nc_blks = v->oftiov_nblks;
-			}
-		} else {
-			/* This iov is being or already has been handled which
-			 *  means that any existing coalesce buffer must be
-			 *  pushed.
-			 */
-			psc_assert(op == MSL_PAGES_GET);
-
-			if (coalesce)
-				launch_cb;
-
-			DEBUG_OFFTIOV(PLL_TRACE, v,
-				      "iov%d rq_off=%zu OFT_IOV2E_OFF_(%zu)",
-				      i, r->oftrq_off,  OFT_IOV2E_OFF_(v));
-
-			if (ATTR_TEST(v->oftiov_flags, OFTIOV_FAULTPNDG))
-				msl_pages_track_pending(r, v);
-			else
-				psc_assert(ATTR_TEST(v->oftiov_flags,
-						     OFTIOV_DATARDY));
-		}
-		/* Finished testing / setting attrs, release the lock.
-		 */
-		freelock(&m->oft_lock);
-	}
-	/* There may be a cb lingering.
+	///XXX req->rq_interpret_reply = msl_dio_cb; ??
+	/* Setup the callback, supplying the dynarray as a argument.
 	 */
-	if (coalesce)
-		launch_cb;
+	//req->rq_interpret_reply = msl_io_cb;
+	//req->rq_async_args.pointer_arg[MSL_IO_CB_POINTER_SLOT] = a;
+	//req->rq_async_args.pointer_arg[MSL_OFTRQ_CB_POINTER_SLOT] = r;
+
+}
+
+__static void
+mds_pages_prefetch(struct bmpc_ioreq *r)
+{
+	int i, npages, niovs, op;
+	struct bmapc_memb	  *bcm;
+	struct bmap_cli_data	  *msbd;
+	struct bmap_pagecache_entry *bmpce;
+	
+	if (!((r->biorq_flags & BIORQ_READ) ||
+	      (r->biorq_flags & BIORQ_RBWFP) ||
+	      (r->biorq_flags & BIORQ_RBWLP)))
+		return;
+
+	bcm    = r->biorq_bmap;
+	msbd   = bcm->bcm_pri;       
+	npages = dynarray_len(&r->biorq_pages);
+              
+	psc_assert(!r->biorq_rqset);
+	r->biorq_rqset = pscrpc_prep_set();
+
+	if (r->biorq_flags & BIORQ_READ) {
+		struct iovec *iovs;
+		iovs = PSCALLOC(npages * sizeof(*iovs));
+		
+		for (i=0; i < npages; i++) {
+			bmpce = dynarray_getpos(&r->biorq_pages, i);
+			bmpce_usecheck(bmpce, BIORQ_READ, 
+				       biorq_getaligned_off(r, i));
+			
+			iovs[i].iov_base = bmpce->bmpce_base;
+			iovs[i].iov_len  = BMPC_BUFSZ;
+		}
+		
+		for (i=0; i < npages; i += niovs) {
+			niovs = MIN(npages, BMPC_MAXBUFSRPC);
+			msl_iorpc_create(biorq_getaligned_off(r, i), SRMT_READ,
+			     r->biorq_rqset, &iovs[i], niovs, &msbd->msbd_bdb);
+		}
+		PSCFREE(iovs);
+
+	} else {
+		struct iovec iov;
+		
+#define call_msl_iorpc_create(page) {					\
+			bmpce = dynarray_getpos(&r->biorq_pages, page); \
+			bmpce_usecheck(bmpce, BIORQ_READ,		\
+				       biorq_getaligned_off(r, page));	\
+			iov.iov_base = bmpce->bmpce_base;		\
+			iov.iov_len  = BMPC_BUFSZ;			\
+			msl_iorpc_create(biorq_getaligned_off(r, page),	\
+					 SRMT_READ, r->biorq_rqset, &iov, \
+					 1, &msbd->msbd_bdb);		\
+		}
+		
+		if (r->biorq_flags & BIORQ_RBWFP) 
+			call_msl_iorpc_create(0);
+		
+		if (r->biorq_flags & BIORQ_RBWLP)
+			call_msl_iorpc_create(npages-1);
+	}
 }
 
 /**
@@ -2056,20 +1824,13 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		}
 		/* Malloc offtree request and pass to the initializer.
 		 */
-		msl_oftrq_build(&r[nr], b, roff, tlen,
+		msl_biorq_build(&r[nr], b, roff, tlen,
 				(op == MSL_READ) ? OFTREQ_OP_READ :
 				OFTREQ_OP_WRITE);
-		/* Retrieve offtree region.
+		/* Start prefetching our cached buffers.
 		 */
-		if (!(r[nr]->oftrq_op & OFTREQ_OP_DIO)) {
-			if ((rc = offtree_region_preprw(r[nr]))) {
-				psc_error("offtree_region_preprw rc=%d", rc);
-				goto out;
-			}
-			/* Start prefetching our cached buffers.
-			 */
-			msl_pages_prefetch(r[nr]);
-		}
+		msl_pages_prefetch(r[nr]);
+
 		roff += tlen;
 		tsize -= tlen;
 		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
@@ -2079,30 +1840,23 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	 *   offsets into the buffer.
 	 */
 	for (j=0, p=buf; j < nr; j++, p+=tlen) {
-		if (!(r[j]->oftrq_op & OFTREQ_OP_DIO)) {
-			/* Now iterate across the array of completed offtree
-			 *  requests paging in data where needed.
+		if (!r[j]->biorq_flags & BIORQ_DIO)
+			msl_pages_dio_getput(r[j], p);
+		
+		else {
+			/* Wait here for any pages to be faulted in from
+			 *    the ION.
 			 */
 			if (op == MSL_READ ||
-			    ((r[j]->oftrq_op & OFTREQ_OP_PRFFP) ||
-			     (r[j]->oftrq_op & OFTREQ_OP_PRFLP)))
+			    ((r[j]->biorq_flags & BIORQ_RBWFP) ||
+			     (r[j]->biorq_flags & BIORQ_RBWLP)))
 				if ((rc = msl_pages_blocking_load(r[j])))
 					goto out;
-
-			if (op == MSL_READ)
-				/* Copying into the application buffer, and
-				 *   managing the offtree.
-				 */
-				msl_pages_copyout(r[j], p);
-			else
-				/* Copy pages into the system cache and queue
-				 *  them for xfer to the IOS.
-				 */
+			
+			(op == MSL_READ) ? 
+				msl_pages_copyout(r[j], p) :
 				msl_pages_copyin(r[j], p);
-		} else
-			/* The directio path.
-			 */
-			msl_pages_dio_getput(r[j], p);
+		}
 	}
 	rc = size;
  out:

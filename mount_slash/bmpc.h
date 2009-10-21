@@ -29,6 +29,7 @@ extern struct psc_poolmgr *bmpcePoolMgr;
 #define BMPC_BUFMASK    (BMPC_BLKSZ-1)
 #define BMPC_SLBBUFMASK ((BMPC_BLKSZ * BMPC_SLB_NBLKS)-1)
 #define BMPC_IOMAXBLKS  64
+#define BMPC_MAXBUFSRPC (1048576/BMPC_BUFSZ)
 
 #define BMPC_DEF_MINAGE {2, 0} /* seconds, nanoseconds */
 #define BMPC_INTERVAL   {0, 200000000}
@@ -119,6 +120,26 @@ bmpce_useprep(struct bmap_pagecache_entry *bmpce, struct bmap_pagecache *bmpc)
 	bmpce->bmpce_waitq = &bmpc->bmpc_waitq;
 }
 
+static inline void
+bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
+{
+	int locked;
+	
+	locked = reqlock(&bmpce->bmpce_lock);
+
+	DEBUG_BMPCE(PLL_TRACE, bmpce, "op=%d off=%u", op, off);
+	psc_assert(bmpce->bmpce_base);
+	psc_assert(!(bmpce->bmpce_flags & BMPC_GETBUF));
+
+	if (op == BIORQ_READ)
+		psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref));
+	else
+		psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref));
+
+	psc_assert(bmpce->bmpce_offset == off);
+	ureqlock(&bmpce->bmpce_lock, locked);
+}
+
 static inline int
 bmpce_cmp(const void *x, const void *y)
 {
@@ -152,29 +173,40 @@ struct bmap_pagecache {
 #define BMPC_WAIT  psc_waitq_wait(&bmpcSlabs.bmms_waitq, &bmpcSlabs.bmms_lock)
 #define BMPC_WAKE  psc_waitq_wakeall(&bmpcSlabs.bmms_waitq)
 
-struct bmpc_ioreq {
-	uint32_t               biorq_off;      /* filewise, bmap relative    */
-	uint32_t               biorq_len;      /* non-aligned, real length   */
-	uint32_t               biorq_flags;    /* state and op type bits     */
-	struct timespec        biorq_start;    /* issue time                 */
-	struct psc_dynarray    biorq_pages;    /* array of bmpce             */
-	struct psclist_head    biorq_lentry;   /* chain on bmpc_pndg         */
-	struct bmapc_memb     *biorq_bmap;     /* backpointer to our bmap    */
-	struct psc_waitq       biorq_waitq;    /* others will wait for I/O   */
-	psc_spinlock_t         biorq_lock;
+struct bmpc_ioreq {	
+	uint32_t                   biorq_off;   /* filewise, bmap relative   */
+	uint32_t                   biorq_len;   /* non-aligned, real length  */
+	uint32_t                   biorq_flags; /* state and op type bits    */
+	psc_spinlock_t             biorq_lock;
+	struct timespec            biorq_start; /* issue time                */
+	struct psc_dynarray        biorq_pages; /* array of bmpce            */
+	struct psclist_head        biorq_lentry;/* chain on bmpc_pndg        */
+	struct bmapc_memb         *biorq_bmap;  /* backpointer to our bmap   */
+	struct pscrpc_request_set *biorq_rqset;
 };
 
 enum BMPC_IOREQ_FLAGS {
 	BIORQ_READ  = (1<<0),
 	BIORQ_WRITE = (1<<1),
-	BIORQ_RBW   = (1<<2),
-	BIORQ_SCHED = (1<<3),
-	BIORQ_INFL  = (1<<4),
-	BIORQ_DIO   = (1<<5)
+	BIORQ_RBWFP = (1<<2),
+	BIORQ_RBWLP = (1<<3),
+	BIORQ_SCHED = (1<<4),
+	BIORQ_INFL  = (1<<5),
+	BIORQ_DIO   = (1<<6)
 };
 
-#define biorq_is_my_bmpce(r, b)				\
-	((&(r)->biorq_waitq == (b)->bmpce_waitq) ? 1 : 0)
+#define DEBUG_BIORQ(level, b, fmt, ...)					\
+	psc_logs((level), PSS_GEN,					\
+		 " biorq@%p fl=%x o=%x np=%d b=%p ts=%u:%u: "fmt,	\
+		 (b), (b)->biorq_flags, (b)->biorq_off,			\
+		 dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
+		 (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec, \
+		 ## __VA_ARGS__)
+
+#define biorq_is_my_bmpce(r, b)	(&(r)->biorq_waitq == (b)->bmpce_waitq)
+
+#define biorq_getaligned_off(r, nbmpce) ((&(r)->biorq_off & ~BMPC_BUFMASK) + \
+					 (nbmpce * BMPC_BUFSZ))
 
 static inline void
 bmpc_init(struct bmap_pagecache *bmpc) {
@@ -187,21 +219,23 @@ bmpc_init(struct bmap_pagecache *bmpc) {
 
 	pll_init(&bmpc->bmpc_pndg, struct bmpc_ioreq,
                  biorq_lentry, &bmpc->bmpc_lock);
-
-	//psc_waitq_init(&bmpc->bmpc_waitq);
 }
 
 static inline void
-bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, 
+bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 		const struct bmapc_memb *bmap)
 {
 	memset(ioreq, 0, sizeof(*ioreq));
 	psc_waitq_init(&ioreq->biorq_waitq);
 	LOCK_INIT(&ioreq->biorq_lock);
+	clock_gettime(CLOCK_REALTIME, &ioreq->biorq_start);
 
 	ioreq->biorq_off  = off;
 	ioreq->biorq_len  = len;
 	ioreq->biorq_bmap = bmap;
+	ioreq->biorq_flags = op;
+	if (b->bcm_mode & BMAP_DIO)
+                r->biorq_flags |= BIORQ_DIO;
 }
 
 static inline int
