@@ -136,7 +136,7 @@ mds_inode_read(struct slash_inode_handle *i)
 int
 mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 {
-	struct slashrpc_export *sexp;
+	struct slashrpc_export *slexp;
 	struct mexpfcm *m = PSCALLOC(sizeof(*m));
 	struct fidc_membh *f;
 	struct fidc_mds_info *i;
@@ -147,8 +147,8 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	psc_assert(c->pri);
 	psc_assert(c->type == CFD_DIR || c->type == CFD_FILE);
 
-	sexp = e->exp_private;
-	psc_assert(sexp);
+	slexp = e->exp_private;
+	psc_assert(slexp);
 	/* Serialize access to our bmap cache tree.
 	 */
 	LOCK_INIT(&m->mexpfcm_lock);

@@ -14,12 +14,12 @@
 #include "psc_util/strlcpy.h"
 
 #include "cfd.h"
-#include "fid.h"
 #include "fdbuf.h"
-#include "rpc.h"
+#include "fid.h"
+#include "mds_bmap.h"
+#include "mdsrpc.h"
 #include "slashdthr.h"
 #include "slashrpc.h"
-#include "mds_bmap.h"
 
 int 
 slrmi_bmap_getcrcs(struct pscrpc_request *rq)

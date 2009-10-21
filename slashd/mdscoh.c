@@ -108,9 +108,9 @@ mdscoh_queue_req(struct mexpbcm *bref)
 	struct srm_bmap_dio_req *mq;
 	struct srm_generic_rep *mp;
 	struct pscrpc_export *exp=bref->mexpbcm_export;
-	//struct slashrpc_export *sexp=bref->mexpbcm_export->exp_private;
-	struct slashrpc_export *sexp=exp->exp_private;
-	struct mexp_cli *mexpc=sexp->sexp_data;
+	//struct slashrpc_export *slexp=bref->mexpbcm_export->exp_private;
+	struct slashrpc_export *slexp=exp->exp_private;
+	struct mexp_cli *mexpc=slexp->slexp_data;
 	struct slashrpc_cservice *csvc = mexpc->mc_csvc;
 	int rc=0, mode=bref->mexpbcm_mode;
 

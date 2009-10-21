@@ -16,7 +16,7 @@
 struct sexptree sexptree;
 psc_spinlock_t sexptreelock = LOCK_INITIALIZER;
 
-SPLAY_GENERATE(sexptree, slashrpc_export, sexp_entry, sexpcmp);
+SPLAY_GENERATE(sexptree, slashrpc_export, slexp_entry, sexpcmp);
 #endif
 
 /*
@@ -27,13 +27,13 @@ SPLAY_GENERATE(sexptree, slashrpc_export, sexp_entry, sexpcmp);
 struct slashrpc_export *
 slashrpc_export_get(struct pscrpc_export *exp)
 {
-	struct slashrpc_export *sexp;
+	struct slashrpc_export *slexp;
 	int locked = reqlock(&exp->exp_lock);
 
 	if (exp->exp_private == NULL) {
-		sexp = exp->exp_private =
+		slexp = exp->exp_private =
 			PSCALLOC(sizeof(struct slashrpc_export));
-		sexp->sexp_export = exp;
+		slexp->slexp_export = exp;
 		exp->exp_hldropf = slashrpc_export_destroy;
 #if SEXPTREE
 		spinlock(&sexptreelock);
@@ -42,35 +42,35 @@ slashrpc_export_get(struct pscrpc_export *exp)
 		freelock(&sexptreelock);
 #endif
 	} else {
-		sexp = exp->exp_private;
-		psc_assert(sexp->sexp_export == exp);
+		slexp = exp->exp_private;
+		psc_assert(slexp->slexp_export == exp);
 	}
 
 	ureqlock(&exp->exp_lock, locked);
-	return (sexp);
+	return (slexp);
 }
 
 void
 slashrpc_export_destroy(void *data)
 {
-	struct slashrpc_export *sexp = data;
-	struct pscrpc_export *exp = sexp->sexp_export;
+	struct slashrpc_export *slexp = data;
+	struct pscrpc_export *exp = slexp->slexp_export;
 
 	psc_assert(exp);
 	/* There's no way to set this from the drop_callback()
 	 */
-	if (!(sexp->sexp_type & EXP_CLOSING))
-		sexp->sexp_type |= EXP_CLOSING;
+	if (!(slexp->slexp_type & EXP_CLOSING))
+		slexp->slexp_type |= EXP_CLOSING;
 	/* Ok, no one else should be in here.
 	 */
 	cfdfreeall(exp);
 #if SEXPTREE
 	spinlock(&sexptreelock);
-	SPLAY_REMOVE(sexptree, &sexptree, sexp);
+	SPLAY_REMOVE(sexptree, &sexptree, slexp);
 	freelock(&sexptreelock);
 #endif
 	exp->exp_private = NULL;
-	PSCFREE(sexp);
+	PSCFREE(slexp);
 }
 
 #if SEXPTREE

@@ -42,12 +42,12 @@ cfdcmp(const void *a, const void *b)
 __static int
 cfdinsert(struct cfdent *c, struct pscrpc_export *exp)
 {
-	struct slashrpc_export *sexp;
+	struct slashrpc_export *slexp;
 	int rc=0;
 
-	sexp = slashrpc_export_get(exp);
+	slexp = slashrpc_export_get(exp);
 	spinlock(&exp->exp_lock);
-	if (SPLAY_INSERT(cfdtree, &sexp->sexp_cfdtree, c))
+	if (SPLAY_INSERT(cfdtree, &slexp->slexp_cfdtree, c))
 		rc = EEXIST;
 	else
 		if (c->cfdops && c->cfdops->cfd_insert)
@@ -65,7 +65,7 @@ int
 cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
        struct cfdent **cfd, struct cfdops *cfdops, int type)
 {
-	struct slashrpc_export *sexp;
+	struct slashrpc_export *slexp;
 	struct cfdent *c;
 	int rc=0;
 
@@ -80,11 +80,11 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 	c->cfdops = cfdops;
 	c->type = type;
 
-	sexp = slashrpc_export_get(exp);
+	slexp = slashrpc_export_get(exp);
 	spinlock(&exp->exp_lock);
-	c->fdb.sfdb_secret.sfs_cfd = ++sexp->sexp_nextcfd;
+	c->fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
 	if (c->fdb.sfdb_secret.sfs_cfd == FID_ANY)
-		c->fdb.sfdb_secret.sfs_cfd = ++sexp->sexp_nextcfd;
+		c->fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
 	freelock(&exp->exp_lock);
 
 	if (c->cfdops && c->cfdops->cfd_init) {
@@ -125,14 +125,14 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 int
 cfdlookup(struct pscrpc_export *exp, u64 cfd, void *datap)
 {
-	struct slashrpc_export *sexp;
+	struct slashrpc_export *slexp;
 	struct cfdent *c, q;
 	int rc = 0;
 
 	q.fdb.sfdb_secret.sfs_cfd = cfd;
 	spinlock(&exp->exp_lock);
-	sexp = slashrpc_export_get(exp);
-	c = SPLAY_FIND(cfdtree, &sexp->sexp_cfdtree, &q);
+	slexp = slashrpc_export_get(exp);
+	c = SPLAY_FIND(cfdtree, &slexp->slexp_cfdtree, &q);
 	if (c == NULL)
 		rc = ENOENT;
 	else if (datap)
@@ -146,12 +146,12 @@ struct cfdent *
 cfdget(struct pscrpc_export *exp, u64 cfd)
 {
 	struct cfdent *c, q;
-	struct slashrpc_export *sexp;
+	struct slashrpc_export *slexp;
 
 	q.fdb.sfdb_secret.sfs_cfd = cfd;
 	spinlock(&exp->exp_lock);
-	sexp = slashrpc_export_get(exp);
-	c = SPLAY_FIND(cfdtree, &sexp->sexp_cfdtree, &q);
+	slexp = slashrpc_export_get(exp);
+	c = SPLAY_FIND(cfdtree, &slexp->slexp_cfdtree, &q);
 	freelock(&exp->exp_lock);
 	return (c);
 }
@@ -163,7 +163,7 @@ cfdget(struct pscrpc_export *exp, u64 cfd)
 int
 cfdfree(struct pscrpc_export *exp, u64 cfd)
 {
-	struct slashrpc_export *sexp;
+	struct slashrpc_export *slexp;
 	struct cfdent *c, q;
 	int rc=0, locked;
 
@@ -171,13 +171,13 @@ cfdfree(struct pscrpc_export *exp, u64 cfd)
 
 	rc = 0;
 	locked = reqlock(&exp->exp_lock);
-	sexp = slashrpc_export_get(exp);
-	c = SPLAY_FIND(cfdtree, &sexp->sexp_cfdtree, &q);
+	slexp = slashrpc_export_get(exp);
+	c = SPLAY_FIND(cfdtree, &slexp->slexp_cfdtree, &q);
 	if (c == NULL) {
 		rc = -ENOENT;
 		goto done;
 	}
-	if (SPLAY_REMOVE(cfdtree, &sexp->sexp_cfdtree, c)) {
+	if (SPLAY_REMOVE(cfdtree, &slexp->slexp_cfdtree, c)) {
 		c->type |= CFD_CLOSING;
 		if (c->cfdops && c->cfdops->cfd_free)
 			rc = c->cfdops->cfd_free(c, exp);
@@ -193,22 +193,22 @@ cfdfree(struct pscrpc_export *exp, u64 cfd)
 void
 cfdfreeall(struct pscrpc_export *exp)
 {
-	struct slashrpc_export *sexp;
+	struct slashrpc_export *slexp;
 	struct cfdent *c, *nxt;
 
 	psc_warnx("exp=%p", exp);
 
-	sexp = slashrpc_export_get(exp);
-	psc_assert(sexp);
-	psc_assert(sexp->sexp_type & EXP_CLOSING);
+	slexp = slashrpc_export_get(exp);
+	psc_assert(slexp);
+	psc_assert(slexp->slexp_type & EXP_CLOSING);
 	/* Don't bother locking if EXP_CLOSING is set.
 	 */
-	for (c = SPLAY_MIN(cfdtree, &sexp->sexp_cfdtree);
+	for (c = SPLAY_MIN(cfdtree, &slexp->slexp_cfdtree);
 	     c != NULL; c = nxt) {
 		c->type |= (CFD_CLOSING|CFD_FORCE_CLOSE);
-		nxt = SPLAY_NEXT(cfdtree, &sexp->sexp_cfdtree, c);
+		nxt = SPLAY_NEXT(cfdtree, &slexp->slexp_cfdtree, c);
 
-		SPLAY_REMOVE(cfdtree, &sexp->sexp_cfdtree, c);
+		SPLAY_REMOVE(cfdtree, &slexp->slexp_cfdtree, c);
 
 		if (c->cfdops && c->cfdops->cfd_free)
 			(int)c->cfdops->cfd_free(c, exp);

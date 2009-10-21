@@ -26,6 +26,7 @@
 #include "fdbuf.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
+#include "mds_repl.h"
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
 #include "pathnames.h"
@@ -68,7 +69,7 @@ slrmc_connect(struct pscrpc_request *rq)
 	struct pscrpc_export *e=rq->rq_export;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
-	struct slashrpc_export *sexp;
+	struct slashrpc_export *slexp;
 	struct mexp_cli *mexp_cli;
 
 	ENTRY;
@@ -82,22 +83,22 @@ slrmc_connect(struct pscrpc_request *rq)
 		 *   the remaining cached bmaps.
 		 */
 		spinlock(&e->exp_lock);
-		sexp = slashrpc_export_get(e);
-		psc_assert(sexp->sexp_data);
-		sexp->sexp_type |= EXP_CLOSING;
+		slexp = slashrpc_export_get(e);
+		psc_assert(slexp->slexp_data);
+		slexp->slexp_type |= EXP_CLOSING;
 		freelock(&e->exp_lock);
 		DEBUG_REQ(PLL_WARN, rq,
 			  "connect rq but export already exists");
-		slashrpc_export_destroy(sexp);
+		slashrpc_export_destroy(slexp);
 	}
 	spinlock(&e->exp_lock);
-	sexp = slashrpc_export_get(e);
+	slexp = slashrpc_export_get(e);
 
-	psc_assert(!sexp->sexp_data);
-	sexp->sexp_type = MDS_CLI_EXP;
-	sexp->sexp_export = e;
+	psc_assert(!slexp->slexp_data);
+	slexp->slexp_type = MDS_CLI_EXP;
+	slexp->slexp_export = e;
 	/* XXX allocated twice? slashrpc_export_get() */
-	mexp_cli = sexp->sexp_data = PSCALLOC(sizeof(*mexp_cli));
+	mexp_cli = slexp->slexp_data = PSCALLOC(sizeof(*mexp_cli));
 	/* Allocate client service for callbacks.
 	 */
 	mexp_cli->mc_csvc = rpc_csvc_create(SRCM_REQ_PORTAL, SRCM_REP_PORTAL);
@@ -679,7 +680,7 @@ slrmc_handle_addreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_req *mq;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mds_replrq_add(&mq->fg, mq->bmapno);
+	mp->rc = mds_repl_addrq(&mq->fg, mq->bmapno);
 	return (0);
 }
 
@@ -690,15 +691,15 @@ slrmc_handle_delreplrq(struct pscrpc_request *rq)
 	struct srm_replrq_req *mq;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mds_replrq_del(&mq->fg, mq->bmapno);
+	mp->rc = mds_repl_delrq(&mq->fg, mq->bmapno);
 	return (0);
 }
 
 static int
 slrmc_handle_getreplst(struct pscrpc_request *rq)
 {
-	struct srm_replst_req *mq;
-	struct srm_replst_rep *mp;
+	struct srm_replst_master_req *mq;
+	struct srm_replst_master_rep *mp;
 	struct slash_rcmthr *srcm;
 	struct psc_thread *thr;
 	size_t id;
