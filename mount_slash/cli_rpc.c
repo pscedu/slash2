@@ -17,9 +17,9 @@ lnet_process_id_t lpid;
 
 /* Slash RPC channel for client from MDS. */
 #define SRCM_NTHREADS	8
-#define SRCM_NBUFS	1024
-#define SRCM_BUFSZ	128
-#define SRCM_REPSZ	128
+#define SRCM_NBUFS	512
+#define SRCM_BUFSZ	384
+#define SRCM_REPSZ	384
 #define SRCM_SVCNAME	"msrcmthr"
 
 /*
