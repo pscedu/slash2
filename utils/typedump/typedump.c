@@ -12,6 +12,7 @@
 #include <bmap.h>
 #include <buffer.h>
 #include <cache_params.h>
+#include <cfd.h>
 #include <creds.h>
 #include <fdbuf.h>
 #include <fid.h>
@@ -27,13 +28,12 @@
 #include <sljournal.h>
 #include <util.h>
 #include <mount_slash/cli_bmap.h>
-#include <mount_slash/control.h>
-#include <mount_slash/fidc_client.h>
+#include <mount_slash/cli_ctl.h>
+#include <mount_slash/cli_fidc.h>
 #include <mount_slash/fuse_listener.h>
 #include <mount_slash/mount_slash.h>
 #include <mount_slash/msl_fuse.h>
 #include <msctl/msctl.h>
-#include <slashd/cfd.h>
 #include <slashd/control.h>
 #include <slashd/fidc_mds.h>
 #include <slashd/mds_bmap.h>
@@ -43,8 +43,6 @@
 #include <slashd/mdsio_zfs.h>
 #include <slashd/mdslog.h>
 #include <slashd/mdsrpc.h>
-#include <slashd/rpc.h>
-#include <slashd/sb.h>
 #include <slashd/slashd.h>
 #include <slashd/slashdthr.h>
 #include <sliod/control.h>
@@ -91,6 +89,7 @@ main(int argc, char *argv[])
 	PRTYPE(sl_mds_id_t);
 	PRTYPE(struct biod_crcup_ref);
 	PRTYPE(struct biod_infslvr_tree);
+	PRTYPE(struct bmap_cli_data);
 	PRTYPE(struct bmap_info_cli);
 	PRTYPE(struct bmap_iod_info);
 	PRTYPE(struct bmap_mds_info);
@@ -111,13 +110,14 @@ main(int argc, char *argv[])
 	PRTYPE(struct mexp_ion);
 	PRTYPE(struct mexpbcm);
 	PRTYPE(struct mexpfcm);
-	PRTYPE(struct msbmap_data);
 	PRTYPE(struct msctl_replst_cont);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_replrq);
 	PRTYPE(struct msctlmsg_replst);
+	PRTYPE(struct msctlmsg_replst_slave);
 	PRTYPE(struct msfs_thread);
 	PRTYPE(struct msl_fbr);
+	PRTYPE(struct msl_fcoo_data);
 	PRTYPE(struct msl_fhent);
 	PRTYPE(struct msrcm_thread);
 	PRTYPE(struct offtree_fill);
@@ -125,11 +125,18 @@ main(int argc, char *argv[])
 	PRTYPE(struct offtree_memb);
 	PRTYPE(struct offtree_req);
 	PRTYPE(struct offtree_root);
+	PRTYPE(struct resprof_cli_info);
 	PRTYPE(struct resprof_mds_info);
 	PRTYPE(struct sl_buffer);
 	PRTYPE(struct sl_buffer_iovref);
 	PRTYPE(struct sl_finfo);
 	PRTYPE(struct sl_fsops);
+	PRTYPE(struct sl_gconf);
+	PRTYPE(struct sl_nodeh);
+	PRTYPE(struct sl_replrq);
+	PRTYPE(struct sl_resm);
+	PRTYPE(struct sl_resource);
+	PRTYPE(struct sl_site);
 	PRTYPE(struct slash_bmap_cli_wire);
 	PRTYPE(struct slash_bmap_od);
 	PRTYPE(struct slash_creds);
@@ -144,8 +151,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct slash_rmcthr);
 	PRTYPE(struct slash_rmithr);
 	PRTYPE(struct slash_rmmthr);
-	PRTYPE(struct slash_sb_mem);
-	PRTYPE(struct slash_sb_store);
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slashrpc_export);
 	PRTYPE(struct slmds_jent_crc);
@@ -191,7 +196,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_releasebmap_req);
 	PRTYPE(struct srm_rename_req);
 	PRTYPE(struct srm_replrq_req);
-	PRTYPE(struct srm_replst_req);
+	PRTYPE(struct srm_replst_master_req);
+	PRTYPE(struct srm_replst_slave_req);
 	PRTYPE(struct srm_setattr_req);
 	PRTYPE(struct srm_statfs_rep);
 	PRTYPE(struct srm_statfs_req);
