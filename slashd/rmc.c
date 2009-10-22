@@ -54,7 +54,7 @@ slrmc_inode_cacheput(struct slash_fidgen *fg, struct stat *stb,
 		FCM_FROM_FG_ATTR(&fcm, fg, stb);
 	}
 
-	__fidc_lookup_inode(fg, flags, (stb ? (&fcm) : NULL), creds, &fcmh);
+	fidc_lookup(fg, flags, stb ? &fcm : NULL, creds, &fcmh);
 
 	if (fcmh) {
 		fidc_membh_dropref(fcmh);

@@ -181,7 +181,7 @@ slash2fuse_reply_create(fuse_req_t req, const struct slash_fidgen *fg,
 	memcpy(&e.attr, stb, sizeof(e.attr));
 
 	psc_trace("inode:%"PRId64" generation:%lu", e.ino, e.generation);
-	fcm_dump_stb(&e.attr, PLL_TRACE);
+	dump_statbuf(&e.attr, PLL_TRACE);
 
 	fuse_reply_create(req, &e, fi);
 }
@@ -202,7 +202,7 @@ slash2fuse_reply_entry(fuse_req_t req, const struct slash_fidgen *fg,
 
 	psc_trace("inode:%"PRId64" generation:%lu",
 		  e.ino, e.generation);
-	fcm_dump_stb(&e.attr, PLL_TRACE);
+	dump_statbuf(&e.attr, PLL_TRACE);
 
 	fuse_reply_entry(req, &e);
 }
@@ -225,7 +225,7 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 
 	FCM_FROM_FG_ATTR(&fcm, fg, stb);
 
-	__fidc_lookup_inode(fg, lookupflags, &fcm, creds, &c);
+	fidc_lookup(fg, lookupflags, &fcm, creds, &c);
 
 	psc_assert(c);
 
@@ -713,7 +713,7 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
-	fcm_dump_stb(fcmh_2_stb(f), PLL_INFO);
+	dump_statbuf(fcmh_2_stb(f), PLL_INFO);
 	fuse_reply_attr(req, fcmh_2_stb(f), 0.0);
 
  out:

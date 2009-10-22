@@ -21,6 +21,7 @@ struct slash_fidgen {
 };
 
 #define FID_ANY			0xffffffffffffULL
+#define FIDGEN_ANY		0xffffffffffffULL
 
 /* 16 bit server/filesystem id */
 #define FSID_FMT		"%016"PRIx64

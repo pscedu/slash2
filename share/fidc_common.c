@@ -19,17 +19,16 @@
 int (*fidcReapCb)(struct fidc_membh *);
 void (*initFcooCb)(struct fidc_open_obj *);
 
-struct psc_poolmaster fidcPoolMaster;
-struct psc_poolmgr   *fidcPool;
-#define fidcFreeList  fidcPool->ppm_lc
-struct psc_listcache  fidcDirtyList;
-struct psc_listcache  fidcCleanList;
-
-struct hash_table fidcHtable;
+struct psc_poolmaster	 fidcPoolMaster;
+struct psc_poolmgr	*fidcPool;
+#define fidcFreeList	 fidcPool->ppm_lc
+struct psc_listcache	 fidcDirtyList;
+struct psc_listcache	 fidcCleanList;
+struct hash_table	 fidcHtable;
 
 struct sl_fsops *slFsops;
 
-struct fidc_membh *__fidc_lookup_fg(const struct slash_fidgen *, int);
+struct fidc_membh * _fidc_lookup_fg(const struct slash_fidgen *, int);
 
 void
 fidc_membh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
@@ -110,7 +109,7 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 
 		if (!f->fcmh_fcm)
 			/* No fcm, this probably came from
-			 *  __fidc_lookup_inode() try_create.
+			 *  fidc_lookup() try_create.
 			 */
 			psc_assert(f->fcmh_cache_owner == NULL);
 		else {
@@ -121,7 +120,7 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 				DEBUG_FCMH(PLL_WARN, f,
 					   "null fcmh_cache_owner here");
 
-			tmp = __fidc_lookup_fg(fcmh_2_fgp(f), 1);
+			tmp = _fidc_lookup_fg(fcmh_2_fgp(f), 1);
 
 			if (f != tmp)
 				abort();
@@ -296,7 +295,7 @@ fidc_get(void)
  *	If the fid is found, its refcnt is incremented and it is returned.
  */
 struct fidc_membh *
-__fidc_lookup_fg(const struct slash_fidgen *fg, int del)
+_fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 {
 	struct hash_bucket *b;
 	struct hash_entry *e, *save=NULL;
@@ -380,7 +379,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 struct fidc_membh *
 fidc_lookup_fg(const struct slash_fidgen *fg)
 {
-	return (__fidc_lookup_fg(fg, 0));
+	return (_fidc_lookup_fg(fg, 0));
 }
 
 /**
@@ -396,10 +395,9 @@ fidc_lookup_simple(slfid_t f)
 }
 
 int
-__fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
-		    const struct fidc_memb *fcm,
-		    const struct slash_creds *creds,
-		    struct fidc_membh **fcmhp)
+fidc_lookup(const struct slash_fidgen *fg, int flags,
+    const struct fidc_memb *fcm, const struct slash_creds *creds,
+    struct fidc_membh **fcmhp)
 {
 	int rc, try_create=0, simple_lookup=0;
 	struct fidc_membh *fcmh, *fcmh_new;
