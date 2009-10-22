@@ -15,17 +15,6 @@
 void *zfsVfs;
 
 static inline void *
-inoh_2_zfs_fh(const struct slash_inode_handle *i)
-{
-	psc_assert(i->inoh_fcmh);
-	psc_assert(i->inoh_fcmh->fcmh_fcoo->fcoo_pri);
-	/* Note:  don't use the fidc_fcmh2fmdsi() call here because we're
-	 *  most likely being invoked by the open procedure.
-	 */
-	return (fcmh_2_data(i->inoh_fcmh));
-}
-
-static inline void *
 bmap_2_zfs_fh(struct bmapc_memb *bmap)
 {
 	struct fidc_mds_info *fmdsi;
@@ -129,9 +118,9 @@ mdsio_zfs_inode_read(struct slash_inode_handle *i)
 	INOH_LOCK_ENSURE(i);
 	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
 		    &i->inoh_ino, (size_t)INO_OD_SZ,
-		    (off_t)SL_INODE_START_OFF, inoh_2_zfs_fh(i));
+		    (off_t)SL_INODE_START_OFF, inoh_2_zfsdata(i));
 	DEBUG_INOH(PLL_TRACE, i, "read inode (rc=%d) data=%p",
-		   rc, inoh_2_zfs_fh(i));
+		   rc, inoh_2_zfsdata(i));
 
 	if (rc < 0)
 		rc = -errno;
@@ -146,20 +135,20 @@ mdsio_zfs_inode_write(struct slash_inode_handle *i)
 
 	rc = zfsslash2_write(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
 		     &i->inoh_ino, (size_t)INO_OD_SZ,
-		     (off_t)SL_INODE_START_OFF, inoh_2_zfs_fh(i));
+		     (off_t)SL_INODE_START_OFF, inoh_2_zfsdata(i));
 
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() error (rc=%d)",
 			   rc);
 	} else {
 		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
-			     1, inoh_2_zfs_fh(i));
+			     1, inoh_2_zfsdata(i));
 		if (rc == -1)
 			psc_fatal("zfsslash2_fsync() failed");
 	}
 
 	DEBUG_INOH(PLL_TRACE, i, "wrote inode (rc=%d) data=%p",
-		   rc, inoh_2_zfs_fh(i));
+		   rc, inoh_2_zfsdata(i));
 
 	return (rc);
 }
@@ -173,7 +162,7 @@ mdsio_zfs_inode_extras_read(struct slash_inode_handle *i)
 	psc_assert(i->inoh_extras);
 	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
 		    i->inoh_extras, (size_t)INOX_OD_SZ,
-		    (off_t)SL_EXTRAS_START_OFF, inoh_2_zfs_fh(i));
+		    (off_t)SL_EXTRAS_START_OFF, inoh_2_zfsdata(i));
 	if (rc)
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() error (rc=%d)",
 			   rc);
@@ -188,14 +177,14 @@ mdsio_zfs_inode_extras_write(struct slash_inode_handle *i)
 	psc_assert(i->inoh_extras);
 	rc = zfsslash2_write(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
 		     i->inoh_extras, (size_t)INOX_OD_SZ,
-		     (off_t)SL_EXTRAS_START_OFF, inoh_2_zfs_fh(i));
+		     (off_t)SL_EXTRAS_START_OFF, inoh_2_zfsdata(i));
 
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() error (rc=%d)",
 			   rc);
 	} else {
 		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
-			     1, inoh_2_zfs_fh(i));
+			     1, inoh_2_zfsdata(i));
 		if (rc == -1)
 			psc_fatal("zfsslash2_fsync() failed");
 	}

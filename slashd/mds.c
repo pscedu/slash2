@@ -126,6 +126,65 @@ mds_inode_read(struct slash_inode_handle *i)
 	return (rc);
 }
 
+int
+mds_fcmh_tryref_fmdsi(struct fidc_membh *f)
+{
+	int rc;
+
+	rc = 0;
+	FCMH_LOCK(f);
+	if (f->fcmh_fcoo && (f->fcmh_state & FCMH_FCOO_CLOSING) == 0)
+		atomic_inc(&fcmh_2_fmdsi(f)->fmdsi_ref);
+	else
+		rc = ENOENT;
+	FCMH_ULOCK(f);
+	return (rc);
+}
+
+int
+mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
+{
+	struct fidc_mds_info *i;
+	int rc;
+
+	FCMH_LOCK(f);
+	if (!(f->fcmh_fcoo || (f->fcmh_state & FCMH_FCOO_CLOSING))) {
+		fidc_fcoo_start_locked(f);
+ fcoo_start:
+		f->fcmh_fcoo->fcoo_pri = i = PSCALLOC(sizeof(*i));
+		f->fcmh_fcoo->fcoo_oref_rw[0] = 1;
+		fmdsi_init(i, f, data);
+		if (isfile) {
+			/* XXX For now assert here */
+			psc_assert(i->fmdsi_inodeh.inoh_fcmh);
+			psc_assert(!mds_inode_read(&i->fmdsi_inodeh));
+		}
+
+		FCMH_ULOCK(f);
+		fidc_fcoo_startdone(f);
+	} else {
+		rc = fidc_fcoo_wait_locked(f, FCOO_START);
+
+		if (rc < 0) {
+			DEBUG_FCMH(PLL_ERROR, f,
+				   "fidc_fcoo_wait_locked() failed");
+			FCMH_ULOCK(f);
+			return (rc);
+		} else if (rc == 1)
+			goto fcoo_start;
+		else {
+			psc_assert(f->fcmh_fcoo);
+			psc_assert(f->fcmh_fcoo->fcoo_pri);
+			i = f->fcmh_fcoo->fcoo_pri;
+			f->fcmh_fcoo->fcoo_oref_rw[0]++;
+			psc_assert(i->fmdsi_data);
+			FCMH_ULOCK(f);
+		}
+	}
+	atomic_inc(&i->fmdsi_ref);
+	return (0);
+}
+
 /**
  * mexpfcm_cfd_init - callback issued from cfdnew() which adds the
  *	provided cfd to the export tree and attaches to the fid's
@@ -173,60 +232,18 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 		m->mexpfcm_flags |= MEXPFCM_REGFILE;
 		SPLAY_INIT(&m->mexpfcm_bmaps);
 	}
-	FCMH_LOCK(f);
-	if (!(f->fcmh_fcoo || (f->fcmh_state & FCMH_FCOO_CLOSING))) {
-		/* Allocate 'open file' data structures if they
-		 *  don't already exist.
-		 */
-		fidc_fcoo_start_locked(f);
- fcoo_start:
-		f->fcmh_fcoo->fcoo_pri = i = PSCALLOC(sizeof(*i));
-		/* Set up a bogus rw ref count here.
-		 */
-		f->fcmh_fcoo->fcoo_oref_rw[0] = 1;
-		/* This is a tricky move, copy the zfs private file data
-		 *  stored in  c->pri to the mdsi. c->pri will be overwritten
-		 *  at the bottom.
-		 */
-		fmdsi_init(i, f, c->pri);
-		if (c->type & CFD_FILE) {
-			/* XXX For now assert here
-			 */
-			psc_assert(i->fmdsi_inodeh.inoh_fcmh);
-			psc_assert(!mds_inode_read(&i->fmdsi_inodeh));
-		}
 
-		FCMH_ULOCK(f);
-		fidc_fcoo_startdone(f);
-
-	} else {
-		rc=fidc_fcoo_wait_locked(f, FCOO_START);
-
-		if (rc < 0) {
-			DEBUG_FCMH(PLL_ERROR, f,
-				   "fidc_fcoo_wait_locked() failed");
-			FCMH_ULOCK(f);
-			PSCFREE(m);
-			return (-1);
-
-		} else if (rc == 1)
-			goto fcoo_start;
-
-		else {
-			psc_assert(f->fcmh_fcoo);
-			psc_assert(f->fcmh_fcoo->fcoo_pri);
-			i = f->fcmh_fcoo->fcoo_pri;
-			f->fcmh_fcoo->fcoo_oref_rw[0]++;
-			psc_assert(i->fmdsi_data);
-			FCMH_ULOCK(f);
-		}
+	rc = mds_fcmh_load_fmdsi(f, c->pri, c->type & CFD_FILE);
+	if (rc) {
+		PSCFREE(m);
+		return (-1);
 	}
+
 	/* Add ourselves to the fidc_mds_info structure's splay tree.
 	 *  fmdsi_ref is the real open refcnt (one ref per export or client).
 	 *  Note that muliple client opens are handled on the client and
 	 *  should no be passed to the mds.  However the open mode can change.
 	 */
-	atomic_inc(&i->fmdsi_ref);
 	FCMH_LOCK(f);
 	if (SPLAY_INSERT(fcm_exports, &i->fmdsi_exports, m)) {
 		psc_warnx("Tried to reinsert m(%p) "FIDFMT,
@@ -242,19 +259,15 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	c->pri = m;
 	fidc_membh_dropref(f);
 
+	if (rc)
+		PSCFREE(m);
 	return (rc);
 }
 
 void *
 mexpfcm_cfd_get_zfsdata(struct cfdent *c, __unusedx struct pscrpc_export *e)
 {
-	struct mexpfcm *m=c->pri;
-	struct fidc_membh *f=m->mexpfcm_fcmh;
-	struct fidc_mds_info *i=f->fcmh_fcoo->fcoo_pri;
-
-	psc_info("zfs opendir data (%p)", i->fmdsi_data);
-
-	return(i->fmdsi_data);
+	return (cfd_2_zfsdata(c));
 }
 
 __static void mexpfcm_release_bref(struct mexpbcm *);
