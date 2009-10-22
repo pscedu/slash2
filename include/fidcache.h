@@ -79,6 +79,11 @@ enum fidc_lookup_flags {
 		    NULL, (creds), (fcmhp));				\
 	})
 
+#define fidc_lookup_load_fg(fg, creds, fcmhp)				\
+		__fidc_lookup_inode((fg),				\
+		    FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,		\
+		    NULL, (creds), (fcmhp))
+
 /* Create the inode from existing attributes only if one by the same id does not
  *  already exist.  Once it's created call fidc_fcoo_start_locked() so that only
  *  this thread may execute an open on the inode.
