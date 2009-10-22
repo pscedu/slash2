@@ -133,7 +133,8 @@ mds_fcmh_tryref_fmdsi(struct fidc_membh *f)
 
 	rc = 0;
 	FCMH_LOCK(f);
-	if (f->fcmh_fcoo && (f->fcmh_state & FCMH_FCOO_CLOSING) == 0)
+	if (f->fcmh_fcoo && fcmh_2_fmdsi(f) &&
+	    (f->fcmh_state & FCMH_FCOO_CLOSING) == 0)
 		atomic_inc(&fcmh_2_fmdsi(f)->fmdsi_ref);
 	else
 		rc = ENOENT;
@@ -148,21 +149,7 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
 	int rc;
 
 	FCMH_LOCK(f);
-	if (!(f->fcmh_fcoo || (f->fcmh_state & FCMH_FCOO_CLOSING))) {
-		fidc_fcoo_start_locked(f);
- fcoo_start:
-		f->fcmh_fcoo->fcoo_pri = i = PSCALLOC(sizeof(*i));
-		f->fcmh_fcoo->fcoo_oref_rw[0] = 1;
-		fmdsi_init(i, f, data);
-		if (isfile) {
-			/* XXX For now assert here */
-			psc_assert(i->fmdsi_inodeh.inoh_fcmh);
-			psc_assert(!mds_inode_read(&i->fmdsi_inodeh));
-		}
-
-		FCMH_ULOCK(f);
-		fidc_fcoo_startdone(f);
-	} else {
+	if (f->fcmh_fcoo || (f->fcmh_state & FCMH_FCOO_CLOSING)) {
 		rc = fidc_fcoo_wait_locked(f, FCOO_START);
 
 		if (rc < 0) {
@@ -180,6 +167,20 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
 			psc_assert(i->fmdsi_data);
 			FCMH_ULOCK(f);
 		}
+	} else {
+		fidc_fcoo_start_locked(f);
+ fcoo_start:
+		f->fcmh_fcoo->fcoo_pri = i = PSCALLOC(sizeof(*i));
+		f->fcmh_fcoo->fcoo_oref_rw[0] = 1;
+		fmdsi_init(i, f, data);
+		if (isfile) {
+			/* XXX For now assert here */
+			psc_assert(i->fmdsi_inodeh.inoh_fcmh);
+			psc_assert(!mds_inode_read(&i->fmdsi_inodeh));
+		}
+
+		FCMH_ULOCK(f);
+		fidc_fcoo_startdone(f);
 	}
 	atomic_inc(&i->fmdsi_ref);
 	return (0);
