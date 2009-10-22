@@ -355,6 +355,51 @@ mds_repl_findrq(struct slash_fidgen *fgp, int *locked)
 }
 
 int
+mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
+{
+	struct slash_inode_handle *ih;
+	struct fidc_membh *fcmh;
+	struct slash_fidgen fg;
+	struct stat stb;
+	char fn[NAME_MAX + 1];
+	uint64_t inum;
+	void *data;
+	int rc;
+
+	*fp = NULL;
+
+	rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD |
+	    FIDC_LOOKUP_FCOOSTART, NULL, &rootcreds, &fcmh);
+	if (rc)
+		return (rc);
+
+	rc = mds_fcmh_tryref_fmdsi(fcmh);
+	if (rc) {
+		inum = sl_get_repls_inum();
+
+		rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fgp->fg_fid);
+		rc = zfsslash2_opencreate(zfsVfs, inum, &rootcreds,
+		    SL_FREAD, 0, fn, &fg, &stb, &data);
+		if (rc)
+			return (rc);
+		rc = mds_fcmh_load_fmdsi(fcmh, data, 1);
+		/* don't release the ZFS handle on success */
+		if (rc || fcmh_2_zfsdata(fcmh) != data)
+			zfsslash2_release(zfsVfs, fg.fg_fid,
+			    &rootcreds, data);
+		if (rc)
+			return (EINVAL); /* XXX need better errno */
+	}
+
+	ih = fcmh_2_inoh(fcmh);
+	rc = mds_inoh_load_repls(ih);
+	if (rc)
+		psc_fatalx("mds_inoh_load_repls: %s", slstrerror(rc));
+	*fp = fcmh;
+	return (0);
+}
+
+int
 mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 {
 	char fn[FID_MAX_PATH];
@@ -384,9 +429,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 			rc = errno;
 		else if (rc >= (int)sizeof(fn))
 			rc = ENAMETOOLONG;
-		else if ((rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE |
-		    FIDC_LOOKUP_LOAD | FIDC_LOOKUP_FCOOSTART, NULL,
-		    &rootcreds, &fcmh)) != ENOENT) {
+		else if ((rc = mds_repl_loadino(fgp, &fcmh)) != ENOENT) {
 			if (rc)
 				psc_fatalx("fidc_lookup_load_fg: %s",
 				    slstrerror(rc));
@@ -402,10 +445,6 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 				psc_waitq_init(&rrq->rrq_waitq);
 				rrq->rrq_refcnt = 1;
 				rrq->rrq_inoh = fcmh_2_inoh(fcmh);
-				rc = mds_inoh_load_repls(rrq->rrq_inoh);
-				if (rc)
-					psc_fatalx("mds_inoh_load_repls: %s",
-					    slstrerror(rc));
 				rrq->rrq_flags |= REPLRQF_BUSY;
 				SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
 			}
@@ -545,6 +584,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 			spinlock(&rrq->rrq_lock);
 		}
 
+		atomic_dec(&fcmh_2_fmdsi(REPLRQ_FCMH(rrq))->fmdsi_ref);
 		fidc_membh_dropref(REPLRQ_FCMH(rrq));
 
 		psc_pool_return(replrq_pool, rrq);
@@ -640,10 +680,11 @@ mds_repl_scandir(void)
 
 			fg.fg_fid = d->ino;
 			fg.fg_gen = FIDGEN_ANY;
+			rc = mds_repl_loadino(&fg, &fcmh);
 			rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
 			    FIDC_LOOKUP_LOAD | FIDC_LOOKUP_FCOOSTART,
 			    NULL, &rootcreds, &fcmh);
-			if (rc == ENOENT)
+			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
 				psc_fatal("fidc_lookup: %s", slstrerror(rc));
 
@@ -653,10 +694,6 @@ mds_repl_scandir(void)
 			psc_waitq_init(&rrq->rrq_waitq);
 			rrq->rrq_refcnt = 1;
 			rrq->rrq_inoh = fcmh_2_inoh(fcmh);
-			rc = mds_inoh_load_repls(rrq->rrq_inoh);
-			if (rc)
-				psc_fatalx("mds_inoh_load_repls: %s",
-				    slstrerror(rc));
 			SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
 		}
 		off += toff;
