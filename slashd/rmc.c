@@ -305,8 +305,15 @@ slrmc_create(struct pscrpc_request *rq)
 			psc_info("cfdnew() fid %"PRId64" rc=%d",
 				 fg.fg_fid, mp->rc);
 		}
+		/*
+		 * On success, the cfd private data, originally the ZFS
+		 * handle private data, is overwritten with an fmdsi,
+		 * so release the ZFS handle if we failed or didn't use it.
+		 */
+		if (cfd == NULL || cfd_2_zfsdata(cfd) != data)
+			zfsslash2_release(zfsVfs, fg.fg_fid,
+			    &mq->creds, data);
 	}
-
 	RETURN(0);
 }
 
@@ -350,6 +357,14 @@ slrmc_open(struct pscrpc_request *rq)
 			psc_info("cfdnew() fid %"PRId64" rc=%d",
 			    fg.fg_fid, mp->rc);
 		}
+		/*
+		 * On success, the cfd private data, originally the ZFS
+		 * handle private data, is overwritten with an fmdsi,
+		 * so release the ZFS handle if we failed or didn't use it.
+		 */
+		if (cfd == NULL || cfd_2_zfsdata(cfd) != data)
+			zfsslash2_release(zfsVfs, fg.fg_fid,
+			    &mq->creds, data);
 	}
 	RETURN(0);
 }
@@ -386,6 +401,14 @@ slrmc_opendir(struct pscrpc_request *rq)
 			fdbuf_sign(&cfd->fdb, &fg, rq->rq_peer);
 			memcpy(&mp->sfdb, &cfd->fdb, sizeof(mp->sfdb));
 		}
+		/*
+		 * On success, the cfd private data, originally the ZFS
+		 * handle private data, is overwritten with an fmdsi,
+		 * so release the ZFS handle if we failed or didn't use it.
+		 */
+		if (cfd == NULL || cfd_2_zfsdata(cfd) != data)
+			zfsslash2_release(zfsVfs, fg.fg_fid,
+			    &mq->creds, data);
 	}
 	RETURN(0);
 }
@@ -428,7 +451,7 @@ slrmc_readdir(struct pscrpc_request *rq)
 
 	mp->rc = zfsslash2_readdir(zfsVfs, fg.fg_fid, &mq->creds,
 	    mq->size, mq->offset, iov[0].iov_base, &mp->size,
-	    iov[1].iov_base, mq->nstbpref, fcmh_2_data(m->mexpfcm_fcmh));
+	    iov[1].iov_base, mq->nstbpref, fcmh_2_zfsdata(m->mexpfcm_fcmh));
 
 	if (mp->rc) {
 		PSCFREE(iov[0].iov_base);
