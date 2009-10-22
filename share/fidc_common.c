@@ -75,7 +75,7 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 	 */
 	if (!f->fcmh_state) {
 		DEBUG_FCMH(PLL_FATAL, f, "not initialized!");
-                psc_fatalx("Tried to put an uninitialized inode");
+		psc_fatalx("Tried to put an uninitialized inode");
 	}
 	if (f->fcmh_cache_owner == lc) {
 		DEBUG_FCMH(PLL_FATAL, f, "invalid list move");
@@ -146,12 +146,12 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 		psc_assert(f->fcmh_cache_owner == &fidcPool->ppm_lc ||
 			   f->fcmh_cache_owner == &fidcDirtyList ||
 			   f->fcmh_cache_owner == NULL);
-                psc_assert(ATTR_TEST(f->fcmh_state, FCMH_CAC_CLEAN));
+		psc_assert(ATTR_TEST(f->fcmh_state, FCMH_CAC_CLEAN));
 		psc_assert(clean);
 
 	} else if (lc == &fidcDirtyList) {
 		psc_assert(f->fcmh_cache_owner == &fidcCleanList);
-                psc_assert(ATTR_TEST(f->fcmh_state, FCMH_CAC_DIRTY));
+		psc_assert(ATTR_TEST(f->fcmh_state, FCMH_CAC_DIRTY));
 		//XXX psc_assert(clean == 0);
 
 	} else
@@ -211,13 +211,13 @@ fidc_reap(struct psc_poolmgr *m)
 		DEBUG_FCMH(PLL_INFO, f, "considering for reap");
 
 		if (psclg_size(&m->ppm_lg) + dynarray_len(&da) >=
-                    atomic_read(&m->ppm_nwaiters) + 1)
-                        break;
+		    atomic_read(&m->ppm_nwaiters) + 1)
+			break;
 
 		if (!trylock_hash_bucket(&fidcHtable, fcmh_2_fid(f))) {
-                        LIST_CACHE_ULOCK(&fidcCleanList);
-                        sched_yield();
-                        goto startover;
+			LIST_CACHE_ULOCK(&fidcCleanList);
+			sched_yield();
+			goto startover;
 		}
 		/* - Skip the root inode.
 		 * - Clean inodes may have non-zero refcnts,
@@ -256,8 +256,8 @@ fidc_reap(struct psc_poolmgr *m)
 		freelock(&f->fcmh_lock);
  end2:
 		freelock_hash_bucket(&fidcHtable, fcmh_2_fid(f));
-        }
-        LIST_CACHE_ULOCK(&fidcCleanList);
+	}
+	LIST_CACHE_ULOCK(&fidcCleanList);
 
 	pthread_mutex_unlock(&mutex);
 
@@ -265,7 +265,7 @@ fidc_reap(struct psc_poolmgr *m)
 		f = dynarray_getpos(&da, i);
 		DEBUG_FCMH(PLL_WARN, f, "moving to free list");
 		fidc_put(f, &fidcFreeList);
-        }
+	}
 
 	dynarray_free(&da);
 	return (i);
@@ -303,12 +303,12 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 	struct fidc_membh *fcmh=NULL, *tmp;
 	int locked[2];
 
-	b = GET_BUCKET(&fidcHtable, (u64)fg->fg_fid);
+	b = GET_BUCKET(&fidcHtable, fg->fg_fid);
 
  retry:
 	locked[0] = reqlock(&b->hbucket_lock);
 	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry) {
-		if ((u64)fg->fg_fid != *e->hentry_id)
+		if (fg->fg_fid != *e->hentry_id)
 			continue;
 
 		tmp = e->private;
@@ -323,7 +323,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 		 */
 		if (del) {
 			if (tmp->fcmh_state & FCMH_CAC_FREEING) {
-				psc_assert((u64)fg->fg_gen == fcmh_2_gen(tmp));
+				psc_assert(fg->fg_gen == fcmh_2_gen(tmp));
 				fcmh = tmp;
 				save = e;
 				ureqlock(&tmp->fcmh_lock, locked[1]);
@@ -337,7 +337,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				ureqlock(&tmp->fcmh_lock, locked[1]);
 				continue;
 			}
-			if ((u64)fg->fg_gen == fcmh_2_gen(tmp)) {
+			if (fg->fg_gen == fcmh_2_gen(tmp)) {
 				fcmh = tmp;
 				save = e;
 				ureqlock(&tmp->fcmh_lock, locked[1]);
@@ -352,7 +352,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
 				goto retry;
 			}
-			if ((u64)fg->fg_gen == FID_ANY) {
+			if (fg->fg_gen == FID_ANY) {
 				/* Look for highest generation number.
 				 */
 				if (!fcmh || (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh))) {
@@ -366,7 +366,7 @@ __fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 
 	if (fcmh && (del == 1)) {
 		psc_assert(save);
-                psclist_del(&save->hentry_lentry);
+		psclist_del(&save->hentry_lentry);
 	}
 
 	ureqlock(&b->hbucket_lock, locked[0]);
@@ -420,7 +420,7 @@ __fidc_lookup_inode(const struct slash_fidgen *fg, int flags,
 			   (flags & FIDC_LOOKUP_LOAD));
 
  restart:
-        spinlock_hash_bucket(&fidcHtable, fg->fg_fid);
+	spinlock_hash_bucket(&fidcHtable, fg->fg_fid);
  trycreate:
 	fcmh = fidc_lookup_fg(fg);
 	if (fcmh) {
