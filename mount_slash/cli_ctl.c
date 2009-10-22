@@ -141,7 +141,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fn, slstrerror(rc)));
 
 	pino = 1; /* root inum */
-	for (cpn = mrq->mrq_fn; cpn; cpn = next) {
+	for (cpn = fn + 1; cpn; cpn = next) {
 		if ((next = strchr(cpn, '/')) != NULL)
 			*next++ = '\0';
 		rc = slash_lookup_cache(&cr, pino, cpn, &fg, &stb);

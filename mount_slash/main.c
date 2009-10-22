@@ -75,6 +75,8 @@ static int set_signal_handler(int sig, void (*handler)(int))
  * @fn: absolute file path.
  * @buf: value-result of the translated pathname.
  * Returns Boolean true on success or errno code on failure.
+ *
+ * XXX this should be rewritten to solely use slash_lookup_cache().
  */
 int
 translate_pathname(const char *fn, char buf[PATH_MAX])
@@ -90,6 +92,8 @@ translate_pathname(const char *fn, char buf[PATH_MAX])
 		return (EINVAL);	/* outside residual slashfs root */
 	if (buf[len] != '/' && buf[len] != '\0')
 		return (EINVAL);
+	memmove(buf, buf + len, strlen(buf) - len);
+	buf[strlen(buf) - len] = '\0';
 	return (0);
 }
 
@@ -1115,7 +1119,7 @@ slash_lookup_cache(const struct slash_creds *cr, fuse_ino_t parent,
 	int rc=0;
 	struct fidc_membh *p, *m;
 
-	msfsthr_ensure();
+//	msfsthr_ensure();
 
 	p = m = NULL;
 
