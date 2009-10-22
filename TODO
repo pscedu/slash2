@@ -186,3 +186,31 @@ D_ANY
 - rename fdbuf.c -> descbuf.c
 - use a sliding window to track valid cfd's and remove them from the window
   once they are CLOSE()'d
+
+------------------------------------------------ replication interface
+
+# msctl -Q /slash/fn:PSC,ORNL:8
+bmap 8 being replicated to PSC, ORNL
+use msctl -r to check status
+
+# msctl -r /slash/fn -r /slash/fn2
+replication status
+===========================================================
+ fn                               btot        bold    %xfer
+ /slash/fn
+    PSC                             25          15    40.0%
+	--------+------------------------------------------
+	---------------------------------------------------
+    ORNL                            17           1    94.1%
+	--------o------------------------------------------
+	---------------------------------------------------
+ /slash/fn2
+    NCSA                             3           2    33.3%
+	+--------------------------------------------------
+	---------------------------------------------------
+
+legend:
+  -	inactive
+  +	active
+  o	old
+
