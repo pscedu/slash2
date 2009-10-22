@@ -368,8 +368,7 @@ mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
 
 	*fp = NULL;
 
-	rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD |
-	    FIDC_LOOKUP_FCOOSTART, NULL, &rootcreds, &fcmh);
+	rc = fidc_lookup_load_fg(fgp, &rootcreds, &fcmh);
 	if (rc)
 		return (rc);
 
@@ -681,9 +680,7 @@ mds_repl_scandir(void)
 			fg.fg_fid = d->ino;
 			fg.fg_gen = FIDGEN_ANY;
 			rc = mds_repl_loadino(&fg, &fcmh);
-			rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
-			    FIDC_LOOKUP_LOAD | FIDC_LOOKUP_FCOOSTART,
-			    NULL, &rootcreds, &fcmh);
+			rc = fidc_lookup_load_fg(&fg, &rootcreds, &fcmh);
 			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
 				psc_fatal("fidc_lookup: %s", slstrerror(rc));
