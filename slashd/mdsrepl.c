@@ -384,7 +384,13 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 			rc = errno;
 		else if (rc >= (int)sizeof(fn))
 			rc = ENAMETOOLONG;
-		else {
+		else if ((rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE |
+		    FIDC_LOOKUP_LOAD | FIDC_LOOKUP_FCOOSTART, NULL,
+		    &rootcreds, &fcmh)) != ENOENT) {
+			if (rc)
+				psc_fatalx("fidc_lookup_load_fg: %s",
+				    slstrerror(rc));
+
 			rc = zfsslash2_link(zfsVfs, fgp->fg_fid, inum,
 			    fn, &fg, &rootcreds, &stb);
 			if (rc == 0) {
@@ -395,11 +401,6 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 				LOCK_INIT(&rrq->rrq_lock);
 				psc_waitq_init(&rrq->rrq_waitq);
 				rrq->rrq_refcnt = 1;
-				rc = fidc_lookup_load_fg(fgp,
-				    &rootcreds, &fcmh);
-				if (rc)
-					psc_fatalx("fidc_lookup_load_fg: %s",
-					    slstrerror(rc));
 				rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 				rc = mds_inoh_load_repls(rrq->rrq_inoh);
 				if (rc)
@@ -637,16 +638,20 @@ mds_repl_scandir(void)
 			if (d->name[0] == '.')
 				continue;
 
+			fg.fg_fid = d->ino;
+			fg.fg_gen = FIDGEN_ANY;
+			rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
+			    FIDC_LOOKUP_LOAD | FIDC_LOOKUP_FCOOSTART,
+			    NULL, &rootcreds, &fcmh);
+			if (rc == ENOENT)
+				/* XXX if ENOENT, remove from repldir and continue */
+				psc_fatal("fidc_lookup: %s", slstrerror(rc));
+
 			rrq = psc_pool_get(replrq_pool);
 			memset(rrq, 0, sizeof(*rrq));
 			LOCK_INIT(&rrq->rrq_lock);
 			psc_waitq_init(&rrq->rrq_waitq);
 			rrq->rrq_refcnt = 1;
-			rc = fidc_lookup_load_inode(d->ino,
-			    &rootcreds, &fcmh);
-			if (rc)
-				psc_fatalx("fidc_lookup_load_inode: %s",
-				    slstrerror(rc));
 			rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 			rc = mds_inoh_load_repls(rrq->rrq_inoh);
 			if (rc)
