@@ -360,6 +360,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 	char fn[FID_MAX_PATH];
 	int rc, locked, tract[4], retifset[4];
 	struct sl_replrq *newrq, *rrq;
+	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct bmapc_memb *bcm;
 	struct stat stb;
@@ -394,7 +395,12 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 				LOCK_INIT(&rrq->rrq_lock);
 				psc_waitq_init(&rrq->rrq_waitq);
 				rrq->rrq_refcnt = 1;
-				rrq->rrq_inoh = fcmh_2_inoh(fidc_lookup_fg(fgp));
+				rc = fidc_lookup_load_fg(fgp,
+				    &rootcreds, &fcmh);
+				if (rc)
+					psc_fatalx("fidc_lookup_load_fg: %s",
+					    slstrerror(rc));
+				rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 				rc = mds_inoh_load_repls(rrq->rrq_inoh);
 				if (rc)
 					psc_fatalx("mds_inoh_load_repls: %s",
@@ -594,6 +600,7 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 void
 mds_repl_scandir(void)
 {
+	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct fuse_dirent *d;
 	struct sl_replrq *rrq;
@@ -635,7 +642,12 @@ mds_repl_scandir(void)
 			LOCK_INIT(&rrq->rrq_lock);
 			psc_waitq_init(&rrq->rrq_waitq);
 			rrq->rrq_refcnt = 1;
-			rrq->rrq_inoh = fcmh_2_inoh(fidc_lookup_inode(d->ino));
+			rc = fidc_lookup_load_inode(d->ino,
+			    &rootcreds, &fcmh);
+			if (rc)
+				psc_fatalx("fidc_lookup_load_inode: %s",
+				    slstrerror(rc));
+			rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 			rc = mds_inoh_load_repls(rrq->rrq_inoh);
 			if (rc)
 				psc_fatalx("mds_inoh_load_repls: %s",
@@ -655,5 +667,10 @@ mds_repl_scandir(void)
 void
 mds_repl_init(void)
 {
+	psc_poolmaster_init(&replrq_poolmaster, struct sl_replrq,
+	    rrq_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
+	    "replrq");
+	replrq_pool = psc_poolmaster_getmgr(&replrq_poolmaster);
+
 	mds_repl_scandir();
 }

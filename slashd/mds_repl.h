@@ -6,14 +6,20 @@
 #include "psc_ds/tree.h"
 
 struct sl_replrq {
-	SPLAY_ENTRY(sl_replrq)		 rrq_tentry;
 	struct slash_inode_handle	*rrq_inoh;
 	psc_spinlock_t			 rrq_lock;
 	struct psc_waitq		 rrq_waitq;
 	int				 rrq_flags;
 	int				 rrq_refcnt;
+	union {
+		struct psclist_head	 rrqu_lentry;
+		SPLAY_ENTRY(sl_replrq)	 rrqu_tentry;
+	} rrq_u;
+#define rrq_tentry rrq_u.rrqu_tentry
+#define rrq_lentry rrq_u.rrqu_lentry
 };
 
+/* replication request flags */
 #define REPLRQF_BUSY	(1 << 0)
 #define REPLRQF_DIE	(1 << 1)
 
