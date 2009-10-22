@@ -55,13 +55,7 @@ struct fidc_membh {
 	struct psc_waitq	 fcmh_waitq;
 	struct sl_fsops		*fcmh_fsops;
 	void			*fcmh_pri;
-	union {
-		struct psclist_head children;
-	} fcmh_data;
-#define fcmh_children	fcmh_data.children
-#define fcmh_fid	fcmh_fcm->fcm_fg.fg_fid
-#define fcmh_gen	fcmh_fcm->fcm_fg.fg_gen
-#define fcmh_fg		fcmh_fcm->fcm_fg.fg_fg
+	struct psclist_head	 fcmh_children;
 };
 
 enum fcmh_states {
@@ -440,7 +434,7 @@ fidc_fcoo_remove(struct fidc_membh *h)
 #define FCOO_NOSTART 1
 
 /**
- * fidc_fcoo_startwait_locked - if the fcoo is in 'STARTING' state, wait
+ * fidc_fcoo_wait_locked - if the fcoo is in 'STARTING' state, wait
  *	for it to complete.  Otherwise return 1 if ATTACHED and zero
  *	otherwise.
  * @h: the fcmh.
