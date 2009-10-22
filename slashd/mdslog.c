@@ -14,7 +14,7 @@
 #include "inode.h"
 #include "fidcache.h"
 #include "jflush.h"
-#include "fidc_mds.h"
+#include "mds_fidc.h"
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
 

@@ -24,7 +24,7 @@
 
 #include "cfd.h"
 #include "fdbuf.h"
-#include "fidc_mds.h"
+#include "mds_fidc.h"
 #include "fidcache.h"
 #include "mds_repl.h"
 #include "mdsexpc.h"

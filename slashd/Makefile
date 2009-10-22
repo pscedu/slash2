@@ -3,11 +3,11 @@
 include Makefile.path
 
 PROG=		slashd
-SRCS+=		fidc_mds.c
 SRCS+=		jflush.c
 SRCS+=		main.c
 SRCS+=		mds.c
 SRCS+=		mds_ctl.c
+SRCS+=		mds_fidc.c
 SRCS+=		mds_slcfg.c
 SRCS+=		mds_timer.c
 SRCS+=		mdscoh.c

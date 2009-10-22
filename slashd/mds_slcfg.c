@@ -3,7 +3,7 @@
 #include "psc_util/alloc.h"
 
 #include "slconfig.h"
-#include "fidc_mds.h"
+#include "mds_fidc.h"
 #include "mdsexpc.h"
 
 struct sl_resource*

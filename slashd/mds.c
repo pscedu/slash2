@@ -7,7 +7,7 @@
 
 #include "cache_params.h"
 #include "cfd.h"
-#include "fidc_mds.h"
+#include "mds_fidc.h"
 #include "fidcache.h"
 #include "inode.h"
 #include "mds_repl.h"
