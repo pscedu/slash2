@@ -246,6 +246,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	 *  should no be passed to the mds.  However the open mode can change.
 	 */
 	FCMH_LOCK(f);
+	i = fcmh_2_fmdsi(f);
 	if (SPLAY_INSERT(fcm_exports, &i->fmdsi_exports, m)) {
 		psc_warnx("Tried to reinsert m(%p) "FIDFMT,
 			   m, FIDFMTARGS(mexpfcm2fidgen(m)));
