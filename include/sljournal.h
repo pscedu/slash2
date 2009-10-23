@@ -27,11 +27,11 @@
  *    journal.
  */
 struct slmds_jent_crc {
-	sl_ios_id_t             sjc_ion; /* Track the ion which did the I/O */
 	slfid_t                 sjc_fid;
 	sl_blkno_t              sjc_bmapno;
-	uint64_t                sjc_fsize;
+	sl_ios_id_t             sjc_ion; /* Track the ion which did the I/O */
 	uint32_t                sjc_ncrcs;
+	uint64_t                sjc_fsize;
 	struct srm_bmap_crcwire sjc_crc[SLJ_MDS_NCRCS];
 } __attribute__ ((packed));
 
