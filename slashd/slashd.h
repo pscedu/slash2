@@ -3,8 +3,6 @@
 #ifndef _SLASHD_H_
 #define _SLASHD_H_
 
-#define SL_ROOT_INUM 1
-
 #define cfd_2_mexpfcm(cfd)	((struct mexpfcm *)(cfd)->pri)
 #define cfd_2_fcmh(cfd)		cfd_2_mexpfcm(cfd)->mexpfcm_fcmh
 #define cfd_2_fmdsi(cfd)	fcmh_2_fmdsi(cfd_2_fcmh(cfd))

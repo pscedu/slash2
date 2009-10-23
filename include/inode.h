@@ -212,6 +212,7 @@ struct slash_inode_extras_od {
 #define INOX_OD_CRCSZ							\
 	(sizeof(struct slash_inode_extras_od) - (sizeof(psc_crc_t)))
 
+#define SL_ROOT_INUM 1
 
 /* File extended attribute names. */
 #define SFX_INODE	"sl-inode"
