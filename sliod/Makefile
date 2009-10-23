@@ -24,7 +24,7 @@ SRCS+=		${SLASH_BASE}/share/fidc_common.c
 SRCS+=		${SLASH_BASE}/share/lconf.l
 SRCS+=		${SLASH_BASE}/share/rpc_common.c
 SRCS+=		${SLASH_BASE}/share/slashexport.c
-SRCS+=		${SLASH_BASE}/share/str.c
+SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
 SRCS+=		${SLASH_BASE}/slashd/offtree.c
 
