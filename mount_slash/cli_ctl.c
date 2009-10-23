@@ -19,7 +19,7 @@
 #include "mount_slash.h"
 #include "msl_fuse.h"
 #include "slashrpc.h"
-#include "util.h"
+#include "slerr.h"
 
 struct psc_lockedlist	psc_mlists;
 

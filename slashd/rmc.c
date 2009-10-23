@@ -34,7 +34,7 @@
 #include "slashdthr.h"
 #include "slashexport.h"
 #include "slashrpc.h"
-#include "util.h"
+#include "slerr.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 

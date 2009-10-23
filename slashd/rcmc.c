@@ -23,7 +23,7 @@
 #include "slashd.h"
 #include "slashdthr.h"
 #include "slashrpc.h"
-#include "util.h"
+#include "slerr.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
