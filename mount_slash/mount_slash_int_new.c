@@ -1,4 +1,4 @@
-/* $Id: mount_slash_int.c 8395 2009-10-14 21:44:10Z yanovich $ */
+/* $Id$ */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -19,7 +19,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/log.h"
 
 #include "bmap.h"
