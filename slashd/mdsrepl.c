@@ -27,7 +27,7 @@
 #include "mdsio_zfs.h"
 #include "mdslog.h"
 #include "slashd.h"
-#include "util.h"
+#include "slerr.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 
@@ -397,7 +397,7 @@ int
 mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 {
 	char fn[FID_MAX_PATH];
-	int rc, locked, tract[4], retifset[4];
+	int rc, locked, tract[4], retifset[4], retifset2[4];
 	struct sl_replrq *newrq, *rrq;
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
@@ -459,21 +459,37 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 	 */
 	tract[SL_REPL_INACTIVE] = SL_REPL_TOO_OLD;
 	tract[SL_REPL_TOO_OLD] = -1;
-	tract[SL_REPL_OLD] = -1;
+	tract[SL_REPL_OLD] = SL_REPL_TOO_OLD;
 	tract[SL_REPL_ACTIVE] = SL_REPL_TOO_OLD;
 	if (bmapno == (sl_blkno_t)-1) {
+		int repl_some_act = 0, repl_all_act = 1;
+
+		/* check if all bmaps are already old/queued */
 		retifset[SL_REPL_INACTIVE] = 1;
 		retifset[SL_REPL_TOO_OLD] = 0;
 		retifset[SL_REPL_OLD] = 0;
 		retifset[SL_REPL_ACTIVE] = 1;
+
+		/* check if all bmaps are already active */
+		retifset[SL_REPL_INACTIVE] = 1;
+		retifset[SL_REPL_TOO_OLD] = 1;
+		retifset[SL_REPL_OLD] = 1;
+		retifset[SL_REPL_ACTIVE] = 0;
+
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 			bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
 			BMAP_LOCK(bcm);
-			rc |= mds_repl_bmap_walk(bcm, tract, NULL, 0);
+			repl_some_act |= mds_repl_bmap_walk(bcm,
+			    tract, retifset, 0);
+			if (repl_all_act &&
+			    mds_repl_bmap_walk(bcm, NULL, retifset2, 1))
+				repl_all_act = 0;
 			bmap_op_done(bcm);
 		}
-		if (rc == 0 && n)
+		if (repl_some_act == 0)
 			rc = EALREADY;
+		else if (repl_all_act)
+			rc = SLERR_REPL_ACT;
 	} else {
 		/*
 		 * If this bmap is already being
