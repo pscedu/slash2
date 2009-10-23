@@ -27,6 +27,12 @@
 extern list_cache_t dirtyMdsData;
 struct psc_journal *mdsJournal;
 
+/* master journal log replay function */
+psc_jhandler mds_journal_replay(struct dynarray * logentrys, int * rc)
+{
+	return;
+}
+
 void
 mds_inode_sync(void *data)
 {
@@ -264,7 +270,7 @@ mds_journal_init(void)
         if (rc == -1)
                 psc_fatal("snprintf");
 
-	mdsJournal = pjournal_load(_PATH_SLJOURNAL, PJOURNAL_LOG_REPLAY);
+	mdsJournal = pjournal_replay(_PATH_SLJOURNAL, mds_journal_replay);
 	psc_assert(mdsJournal);
 }
 
