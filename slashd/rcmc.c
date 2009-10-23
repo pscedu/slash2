@@ -95,7 +95,7 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 		    SRCM_VERSION, SRMT_GETREPLST_SLAVE, *rqp, mq, mp);
 		if (rc)
 			return (rc);
-		mq->ino = REPLRQ_FID(rrq);
+		mq->inum = REPLRQ_FID(rrq);
 		mq->id = srcm->srcm_id;
 		mq->boff = n;
 
@@ -129,7 +129,7 @@ slrcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 		return (rc);
 	mq->id = srcm->srcm_id;
 	if (rrq) {
-		mq->ino = REPLRQ_FID(rrq);
+		mq->inum = REPLRQ_FID(rrq);
 		mq->nbmaps = REPLRQ_NBMAPS(rrq);
 		mq->nrepls = REPLRQ_NREPLS(rrq);
 		memcpy(mq->repls, REPLRQ_INO(rrq)->ino_repls,

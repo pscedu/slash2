@@ -361,8 +361,6 @@ mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct stat stb;
-	char fn[NAME_MAX + 1];
-	uint64_t inum;
 	void *data;
 	int rc;
 
@@ -374,11 +372,8 @@ mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
 
 	rc = mds_fcmh_tryref_fmdsi(fcmh);
 	if (rc) {
-		inum = sl_get_repls_inum();
-
-		rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fgp->fg_fid);
-		rc = zfsslash2_opencreate(zfsVfs, inum, &rootcreds,
-		    SL_FREAD, 0, fn, &fg, &stb, &data);
+		rc = zfsslash2_opencreate(zfsVfs, fgp->fg_fid,
+		    &rootcreds, SL_FREAD, 0, NULL, &fg, &stb, &data);
 		if (rc)
 			return (rc);
 		rc = mds_fcmh_load_fmdsi(fcmh, data, 1);
@@ -477,7 +472,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 			rc |= mds_repl_bmap_walk(bcm, tract, NULL, 0);
 			bmap_op_done(bcm);
 		}
-		if (rc == 0)
+		if (rc == 0 && n)
 			rc = EALREADY;
 	} else {
 		/*

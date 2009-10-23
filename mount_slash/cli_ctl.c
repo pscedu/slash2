@@ -54,7 +54,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct stat stb;
-	fuse_ino_t pino;
+	fuse_ino_t pinum;
 	int rc;
 
 	rc = msctl_getcreds(fd, &cr);
@@ -67,15 +67,16 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
-	pino = 1; /* root inum */
+	pinum = 0; /* gcc */
+	fg.fg_fid = SL_ROOT_INUM;
 	for (cpn = fn + 1; cpn; cpn = next) {
+		pinum = fg.fg_fid;
 		if ((next = strchr(cpn, '/')) != NULL)
 			*next++ = '\0';
-		rc = slash_lookup_cache(&cr, pino, cpn, &fg, &stb);
+		rc = slash_lookup_cache(&cr, pinum, cpn, &fg, &stb);
 		if (rc)
 			return (psc_ctlsenderr(fd, mh,
 			    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
-		pino = fg.fg_fid;
 	}
 
 	if (!S_ISREG(stb.st_mode))
@@ -121,7 +122,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct stat stb;
-	fuse_ino_t pino;
+	fuse_ino_t pinum;
 	int rv, rc;
 
 	if (strcmp(mrq->mrq_fn, "") == 0) {
@@ -140,15 +141,16 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
-	pino = 1; /* root inum */
+	pinum = 0; /* gcc */
+	fg.fg_fid = SL_ROOT_INUM;
 	for (cpn = fn + 1; cpn; cpn = next) {
+		pinum = fg.fg_fid;
 		if ((next = strchr(cpn, '/')) != NULL)
 			*next++ = '\0';
-		rc = slash_lookup_cache(&cr, pino, cpn, &fg, &stb);
+		rc = slash_lookup_cache(&cr, pinum, cpn, &fg, &stb);
 		if (rc)
 			return (psc_ctlsenderr(fd, mh,
 			    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
-		pino = fg.fg_fid;
 	}
 
 	if (!S_ISREG(stb.st_mode))
@@ -167,7 +169,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
-	mq->ino = fg.fg_fid;
+	mq->inum = fg.fg_fid;
 	mq->id = psc_atomic32_inc_return(&msctl_replstid);
 
 	rv = 1;
