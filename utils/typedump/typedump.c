@@ -35,8 +35,8 @@
 #include <mount_slash/msl_fuse.h>
 #include <msctl/msctl.h>
 #include <slashd/control.h>
-#include <slashd/fidc_mds.h>
 #include <slashd/mds_bmap.h>
+#include <slashd/mds_fidc.h>
 #include <slashd/mds_repl.h>
 #include <slashd/mdscoh.h>
 #include <slashd/mdsexpc.h>
