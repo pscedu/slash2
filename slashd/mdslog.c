@@ -264,7 +264,7 @@ mds_journal_init(void)
         if (rc == -1)
                 psc_fatal("snprintf");
 
-	mdsJournal = pjournal_load(_PATH_SLJOURNAL);
+	mdsJournal = pjournal_load(_PATH_SLJOURNAL, PJOURNAL_LOG_REPLAY);
 	psc_assert(mdsJournal);
 }
 
