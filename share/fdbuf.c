@@ -16,7 +16,7 @@
 
 #include "psc_util/atomic.h"
 #include "psc_util/base64.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/random.h"

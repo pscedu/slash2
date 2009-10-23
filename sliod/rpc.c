@@ -6,7 +6,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/strlcpy.h"
 
 #include "rpc.h"

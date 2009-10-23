@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 #include "pfl/pfl.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/log.h"

@@ -11,7 +11,7 @@
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 

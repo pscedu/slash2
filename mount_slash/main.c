@@ -18,7 +18,7 @@
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"

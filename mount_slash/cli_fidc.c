@@ -10,7 +10,7 @@
 #include "psc_ds/listcache.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/strlcpy.h"
 
 #include "cache_params.h"

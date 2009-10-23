@@ -11,7 +11,7 @@
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/atomic.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 

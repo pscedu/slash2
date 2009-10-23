@@ -4,7 +4,7 @@
 #define _SLIOD_H_
 
 #include "psc_rpc/service.h"
-#include "psc_util/cdefs.h"
+#include "pfl/cdefs.h"
 #include "psc_util/thread.h"
 
 #include "fid.h"
