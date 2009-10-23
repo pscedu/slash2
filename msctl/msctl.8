@@ -217,23 +217,30 @@ The
 node responsible for the data regions specified will propagate the data
 to all other
 .Tn I/O
-nodes in the containing
-.Tn I/O
-system.
+systems specified.
 .Pp
 .Ar replrqspec
 has the following format:
 .Bd -unfilled -offset indent
 .Sm off
 .Ar filename
-.Op : Ar bmapno Op , Ar ...
+.Oo Li :\& Ar bmapno Op Ic P
+.Op Li ,\& Ar ...
+.Oc
+.Li : Ar ios Op Li ,\& Ar ...
 .Sm on
 .Ed
 .Pp
 If
 .Ar bmapno
-is not specified, all bmaps will be replicated; otherwise, only the
+is not specified or is the special value
+.Sq Li * ,
+all bmaps will be replicated; otherwise, only the
 bmaps with the given indexes will be replicated.
+If the
+.Ic P
+modified, those bmaps specified will be marked for persistent
+replication.
 .Pp
 This option may be specified multiple times.
 .It Fl R
@@ -301,6 +308,10 @@ See
 .Fl Q
 for details of the format of
 .Ar replrqspec .
+The bmap modifier flag
+.Ic P
+is not recognized in this mode:
+requests to cancel bmap replication will resist the persistent flag.
 .El
 .Ss Thread Specification
 Options which take
