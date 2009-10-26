@@ -14,12 +14,13 @@
 #include "psc_util/strlcpy.h"
 
 #include "inode.h"
-#include "mount_slash/cli_ctl.h"
+#include "mount_slash/ctl_cli.h"
 #include "msctl.h"
 #include "pathnames.h"
 #include "slconfig.h"
 
 struct replrq_arg {
+	char iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
 	int code;
 	int bmapno;
 };
@@ -54,36 +55,69 @@ void
 parse_replrq(int code, char *replrqspec,
     void (*packf)(const char *, void *), int allow_bmapno)
 {
-	char *endp, *bmapnos, *bmapno, *next;
+	char *files, *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *site;
 	struct replrq_arg ra;
+	long l, niosv;
+	int bmax;
 
+	files = replrqspec;
 	ra.code = code;
-	ra.bmapno = REPLRQ_BMAPNO_ALL;
 
+	/* parse I/O systems */
+	iosv = strrchr(replrqspec, ':');
+	if (iosv == NULL) {
+		warnx("%s: invalid replication request", replrqspec);
+		return;
+	}
+	*iosv++ = '\0';
+	for (site = iosv; site; site = next) {
+		if ((next = strchr(site, ',')) != NULL)
+			*next++ = '\0';
+		if (niosv >= nitems(ra.iosv))
+			errx(1, "%s: too many site replicas specified",
+			    replrqspec);
+		if (strlcpy(ra.iosv[niosv++], site,
+		    sizeof(ra.iosv[0])) >= sizeof(ra.iosv[0]))
+			errx(1, "%s: site name too long", site);
+	}
+
+	/* parse bmap specs */
 	bmapnos = strchr(replrqspec, ':');
 	if (bmapnos) {
 		*bmapnos++ = '\0';
 		if (allow_bmapno) {
-			for (bmapno = bmapnos;
-			    bmapno && *bmapno != '\0';
-			    bmapno = next) {
+			for (bmapno = bmapnos; bmapno; bmapno = next) {
 				if ((next = strchr(bmapno, ',')) != NULL)
 					*next++ = '\0';
-				ra.bmapno = strtol(bmapno, &endp, 10);
-				if (ra.bmapno < 1 || bmapno[0] == '\0' ||
-				    *endp != '\0')
+				l = strtol(bmapno, &endp, 10);
+				if (l < 0 || endp == bmapno)
 					errx(1, "%s: invalid replication request",
 					    replrqspec);
-				walk(optarg, packf, &ra);
+				ra.bmapno = bmax = l;
+				/* parse bmap range */
+				if (*endp++ == '-') {
+					l = strtol(endp, &bend, 10);
+					if (l < 0 || l < ra.bmapno ||
+					    bend == endp || *bend != '\0')
+						errx(1, "%s: invalid replication request",
+						    replrqspec);
+					bmax = l;
+				} else if (*endp != '\0')
+					errx(1, "%s: invalid replication request",
+					    replrqspec);
+				for (; ra.bmapno < bmax; ra.bmapno++)
+					walk(files, packf, &ra);
 			}
 		} else {
-			if (replrqspec[0] != '\0')
+			if (files[0] != '\0')
 				errx(1, "%s: bmap specification not allowed",
 				    replrqspec);
 			packf("", &ra);
 		}
-	} else
-		walk(replrqspec, packf, &ra);
+	} else {
+		ra.bmapno = REPLRQ_BMAPNO_ALL;
+		walk(files, packf, &ra);
+	}
 }
 
 int
