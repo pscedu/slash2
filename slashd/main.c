@@ -75,12 +75,17 @@ append_path(const char *newpath)
 }
 
 void
-import_zpool(const char *zpoolname)
+import_zpool(const char *zpoolname, const char *zfspoolcf)
 {
 	char cmdbuf[BUFSIZ];
 	int rc;
 
-	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zpool import %s", zpoolname);
+	if (zfspoolcf)		
+		rc = snprintf(cmdbuf, sizeof(cmdbuf), "zpool import -c %s %s", 
+			      zfspoolcf, zpoolname);
+	else 		
+		rc = snprintf(cmdbuf, sizeof(cmdbuf), "zpool import %s", 
+			      zpoolname);
 	if (rc == -1)
 		psc_fatal("%s", zpoolname);
 	else if (rc >= (int)sizeof(cmdbuf))
@@ -95,7 +100,7 @@ import_zpool(const char *zpoolname)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket] zpoolname\n", progname);
+	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket] [-p zfspool_cf] zpoolname\n", progname);
 	exit(1);
 }
 
@@ -103,6 +108,7 @@ int
 main(int argc, char *argv[])
 {
 	const char *cfn, *sfn;
+	char *zfspoolcf=NULL;
 	int c;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -123,7 +129,7 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLCTLSOCK;
-	while ((c = getopt(argc, argv, "f:S:X")) != -1)
+	while ((c = getopt(argc, argv, "f:S:X:p:")) != -1)
 		switch (c) {
 		case 'f':
 			cfn = optarg;
@@ -133,6 +139,9 @@ main(int argc, char *argv[])
 			break;
 		case 'X':
 			allow_internal_fsaccess = 1;
+			break;
+		case 'p':
+			zfspoolcf = optarg;
 			break;
 		default:
 			usage();
@@ -160,7 +169,7 @@ main(int argc, char *argv[])
 
 	/* Initialize the ZFS layer. */
 	do_init();
-	import_zpool(argv[0]);
+	import_zpool(argv[0], zfspoolcf);
 
 	mds_repl_init();
 
