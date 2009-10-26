@@ -19,7 +19,7 @@
 #define _PATH_SLIOCTLSOCK	"../sliod.%h.sock"
 #define _PATH_MSCTLSOCK		"../mount_slash.%h.sock"
 
-#define _PATH_SLODTABLE		"/var/lib/slashd/bmap_assignments.odt"
+#define _PATH_SLODTABLE		"/var/lib/slashd/ion_bmaps.odt"
 #define _PATH_SLJOURNAL		"/var/lib/slashd/slopjrnl"
 #define _PATH_SLASHD_DIR	"/var/lib/slashd"
 
