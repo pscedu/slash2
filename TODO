@@ -1,3 +1,6 @@
+10/26/09
+* The config engine should use "type = mds" to describe metadata servers.
+
 09/28/09
 * Mds failure causes client to crash in fidc_fcoo_remove.
 
