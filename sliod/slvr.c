@@ -275,7 +275,7 @@ int
 slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
 {
 	DEBUG_SLVR(PLL_INFO, s, "sblk=%u size=%u", sblk, size);
-	slvr_fsio(s, sblk, size, SL_WRITE);
+	return slvr_fsio(s, sblk, size, SL_WRITE);
 }
 
 void

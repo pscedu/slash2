@@ -23,7 +23,7 @@ struct fidc_mds_info {
 #define fcmh_2_fmdsi(f)		((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)
 #define fcmh_2_inoh(f)		(&fcmh_2_fmdsi(f)->fmdsi_inodeh)
 #define fcmh_2_zfsdata(f)	fcmh_2_fmdsi(f)->fmdsi_data
-#define fcmh_2_nbmaps(f)	(fcmh_2_fsz(f) / fcmh_2_inoh(f)->inoh_ino.ino_bsz)
+#define fcmh_2_nbmaps(f)	((sl_blkno_t)(fcmh_2_fsz(f) / fcmh_2_inoh(f)->inoh_ino.ino_bsz))
 
 #define inoh_2_zfsdata(ih)	fcmh_2_zfsdata(ih->inoh_fcmh)
 
@@ -43,6 +43,6 @@ struct fidc_mds_info *fidc_fcmh2fmdsi(struct fidc_membh *);
 
 int mds_fcmh_load_fmdsi(struct fidc_membh *, void *, int);
 int mds_fcmh_tryref_fmdsi(struct fidc_membh *);
-int mds_fcmh_apply_fsize(struct fidc_membh *, uint64_t);
+int mds_fcmh_apply_fsize(struct fidc_membh *, off64_t);
 
 #endif /* _FIDC_MDS_H_ */

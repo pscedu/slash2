@@ -348,8 +348,6 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 __static int
 mds_bmap_fsz_check_locked(struct fidc_membh *f, sl_blkno_t n)
 {
-	struct fidc_mds_info *mdsi=f->fcmh_fcoo->fcoo_pri;
-	struct slash_inode_handle *i=&mdsi->fmdsi_inodeh;
 	sl_blkno_t lblk;
 	//int rc;
 

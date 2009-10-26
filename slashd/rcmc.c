@@ -156,7 +156,7 @@ slrcmthr_main(__unusedx void *arg)
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 	int rc, dummy;
-	uint64_t n;
+	sl_blkno_t n;
 
 	thr = pscthr_get();
 	srcm = slrcmthr(thr);

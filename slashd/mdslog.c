@@ -18,10 +18,6 @@
 #include "mdsio_zfs.h"
 #include "sljournal.h"
 
-#ifdef INUM_SELF_MANAGE
-#include "sb.h"
-#endif
-
 #include "slashdthr.h"
 
 extern list_cache_t dirtyMdsData;

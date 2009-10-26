@@ -46,7 +46,7 @@ mdsio_zfs_release(struct slash_inode_handle *i)
 }
 
 int
-mds_fcmh_apply_fsize(struct fidc_membh *f, uint64_t size)
+mds_fcmh_apply_fsize(struct fidc_membh *f, off64_t size)
 {
 	struct fidc_mds_info *fmdsi;
 
