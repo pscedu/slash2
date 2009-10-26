@@ -436,6 +436,15 @@ slrmc_readdir(struct pscrpc_request *rq)
 		mp->rc = -errno;
 		RETURN(mp->rc);
 	}
+
+#define MAX_READDIR_NENTS	1000
+#define MAX_READDIR_BUFSIZ	(sizeof(struct stat) * MAX_READDIR_NENTS)
+	if (mq->size > MAX_READDIR_BUFSIZ ||
+	    mq->nstbpref > MAX_READDIR_NENTS) {
+		mp->rc = EINVAL;
+		RETURN(mp->rc);
+	}
+
 	iov[0].iov_base = PSCALLOC(mq->size);
 	iov[0].iov_len = mq->size;
 
@@ -461,11 +470,11 @@ slrmc_readdir(struct pscrpc_request *rq)
 	}
 
 	if (mq->nstbpref)
-		mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
-					SRMC_BULK_PORTAL, iov, 2);
+		mp->rc = rsx_bulkserver(rq, &desc,
+		    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, 2);
 	else
-		mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
-					SRMC_BULK_PORTAL, iov, 1);
+		mp->rc = rsx_bulkserver(rq, &desc,
+		    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, 1);
 
 	if (desc)
 		pscrpc_free_bulk(desc);
