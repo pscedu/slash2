@@ -15,7 +15,7 @@
 #include "psc_util/ctlsvr.h"
 #include "psc_util/strlcpy.h"
 
-#include "cli_ctl.h"
+#include "ctl_cli.h"
 #include "mount_slash.h"
 #include "msl_fuse.h"
 #include "slashrpc.h"
@@ -75,8 +75,8 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 			*next++ = '\0';
 		rc = slash_lookup_cache(&cr, pinum, cpn, &fg, &stb);
 		if (rc)
-			return (psc_ctlsenderr(fd, mh,
-			    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
+			return (psc_ctlsenderr(fd, mh, "%s: %s",
+			    mrq->mrq_fn, slstrerror(rc)));
 	}
 
 	if (!S_ISREG(stb.st_mode))

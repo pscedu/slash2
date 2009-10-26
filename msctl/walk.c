@@ -16,7 +16,7 @@
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
 
-#include "mount_slash/cli_ctl.h"
+#include "mount_slash/ctl_cli.h"
 #include "msctl.h"
 
 void

@@ -27,8 +27,8 @@
 
 #include "buffer.h"
 #include "cli_bmap.h"
-#include "cli_ctl.h"
 #include "cli_fidc.h"
+#include "ctl_cli.h"
 #include "fidcache.h"
 #include "fuse_listener.h"
 #include "mount_slash.h"
