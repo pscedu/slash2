@@ -44,6 +44,13 @@ file is needed, which can also be created with
 # ./zpool set cachefile=mypool.cf mypool
 .Ed
 .Pp
+Create the Slash2 mds private directories while the pool is mounted
+with 
+.Xr slimmns_format :
+.Bd -literal -offset indent
+# ./slimmns_format /mypool
+.Ed
+.Pp
 Now that the pool has been setup, the
 .Xr zfs-fuse 8
 daemon should be terminated so Slash be the single accessor of the new
