@@ -657,8 +657,8 @@ mds_repl_scandir(void)
 	struct sl_replrq *rrq;
 	struct stat stb;
 	size_t siz, tsiz;
-	off_t off, toff;
-	uint16_t inum;
+	off64_t off, toff;
+	uint64_t inum;
 	void *data;
 	char *buf;
 	int rc;
@@ -681,13 +681,13 @@ mds_repl_scandir(void)
 			    slstrerror(rc));
 		if (tsiz == 0)
 			break;
-		for (toff = 0; toff < (off_t)tsiz;
+		for (toff = 0; toff < (off64_t)tsiz;
 		    toff += FUSE_DIRENT_SIZE(d)) {
 			d = (void *)(buf + toff);
+			off = d->off;
 
 			if (d->name[0] == '.')
 				continue;
-
 			fg.fg_fid = d->ino;
 			fg.fg_gen = FIDGEN_ANY;
 			rc = mds_repl_loadino(&fg, &fcmh);
@@ -704,7 +704,7 @@ mds_repl_scandir(void)
 			rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 			SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
 		}
-		off += toff;
+		off += tsiz;
 	}
 	rc = zfsslash2_release(zfsVfs, inum, &rootcreds, data);
 	if (rc)
