@@ -18,7 +18,7 @@
 #include "psc_util/waitq.h"
 
 #include "fid.h"
-#include "mds_fidc.h"
+#include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
 #include "inodeh.h"

@@ -5,7 +5,7 @@
 
 #include "psc_ds/tree.h"
 
-#include "mds_fidc.h"
+#include "fidc_mds.h"
 
 struct sl_replrq {
 	struct slash_inode_handle	*rrq_inoh;

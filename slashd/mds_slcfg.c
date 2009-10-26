@@ -2,9 +2,9 @@
 
 #include "psc_util/alloc.h"
 
-#include "slconfig.h"
-#include "mds_fidc.h"
+#include "fidc_mds.h"
 #include "mdsexpc.h"
+#include "slconfig.h"
 
 struct sl_resource*
 slcfg_new_res(void)
