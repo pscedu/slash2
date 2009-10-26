@@ -48,10 +48,10 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 #define FCMH_2_INODEP(f) (&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
 
 #define INOH_FLAG(field, str) ((field) ? (str) : "")
-#define DEBUG_INOH_FLAGS(i)					\
-	INOH_FLAG((i)->inoh_flags & INOH_INO_DIRTY, "D"),       \
-	INOH_FLAG((i)->inoh_flags & INOH_EXTRAS_DIRTY, "d"),	\
-	INOH_FLAG((i)->inoh_flags & INOH_HAVE_EXTRAS, "X"),	\
+#define DEBUG_INOH_FLAGS(i)						\
+	INOH_FLAG((i)->inoh_flags & INOH_INO_DIRTY, "D"),	\
+	INOH_FLAG((i)->inoh_flags & INOH_EXTRAS_DIRTY, "d"),		\
+	INOH_FLAG((i)->inoh_flags & INOH_HAVE_EXTRAS, "X"),		\
 	INOH_FLAG((i)->inoh_flags & INOH_INO_NEW, "N")
 
 #define INOH_FLAGS_FMT "%s%s%s%s"
@@ -59,16 +59,12 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 #define DEBUG_INOH(level, i, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 		 " inoh@%p f:"FIDFMT" fl:"INOH_FLAGS_FMT		\
-		 "v:%x bsz:%u nr:%u cs:%u lblk:%"PRId64" "		\
-		 "repl0:%u crc:%"PRIx64" "				\
-		 ":: "fmt,						\
+		 "v:%x bsz:%u nr:%u cs:%u "				\
+		 "repl0:%u crc:%"PRIx64" :: "fmt,			\
 		 (i), FIDFMTARGS(&(i)->inoh_ino.ino_fg),		\
 		 DEBUG_INOH_FLAGS(i),					\
-		 (i)->inoh_ino.ino_version,				\
-		 (i)->inoh_ino.ino_bsz,					\
-		 (i)->inoh_ino.ino_nrepls,				\
-		 (i)->inoh_ino.ino_csnap,				\
-		 (i)->inoh_ino.ino_lblk,				\
+		 (i)->inoh_ino.ino_version, (i)->inoh_ino.ino_bsz,	\
+		 (i)->inoh_ino.ino_nrepls, (i)->inoh_ino.ino_csnap,	\
 		 (i)->inoh_ino.ino_repls[0].bs_id,			\
 		 (i)->inoh_ino.ino_crc,					\
 		 ## __VA_ARGS__)

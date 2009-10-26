@@ -23,6 +23,7 @@ struct fidc_mds_info {
 #define fcmh_2_fmdsi(f)		((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)
 #define fcmh_2_inoh(f)		(&fcmh_2_fmdsi(f)->fmdsi_inodeh)
 #define fcmh_2_zfsdata(f)	fcmh_2_fmdsi(f)->fmdsi_data
+#define fcmh_2_nbmaps(f)	(fcmh_2_fsz(f) / fcmh_2_inoh(f)->inoh_ino.ino_bsz)
 
 #define inoh_2_zfsdata(ih)	fcmh_2_zfsdata(ih->inoh_fcmh)
 

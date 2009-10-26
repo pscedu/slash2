@@ -5,6 +5,8 @@
 
 #include "psc_ds/tree.h"
 
+#include "mds_fidc.h"
+
 struct sl_replrq {
 	struct slash_inode_handle	*rrq_inoh;
 	psc_spinlock_t			 rrq_lock;
@@ -38,10 +40,10 @@ int	mds_repl_inv_except_locked(struct bmapc_memb *, sl_ios_id_t);
 void	mds_repl_unrefrq(struct sl_replrq *);
 
 #define REPLRQ_INO(rrq)		(&(rrq)->rrq_inoh->inoh_ino)
-#define REPLRQ_NBMAPS(rrq)	REPLRQ_INO(rrq)->ino_lblk
 #define REPLRQ_NREPLS(rrq)	REPLRQ_INO(rrq)->ino_nrepls
 #define REPLRQ_FID(rrq)		REPLRQ_INO(rrq)->ino_fg.fg_fid
 #define REPLRQ_FCMH(rrq)	(rrq)->rrq_inoh->inoh_fcmh
+#define REPLRQ_NBMAPS(rrq)	fcmh_2_nbmaps(REPLRQ_FCMH(rrq))
 
 extern struct replrqtree	replrq_tree;
 extern psc_spinlock_t		replrq_tree_lock;

@@ -47,7 +47,6 @@ mds_inode_od_initnew(struct slash_inode_handle *i)
 	i->inoh_ino.ino_version = INO_VERSION;
 	i->inoh_ino.ino_flags = 0;
 	i->inoh_ino.ino_nrepls = 0;
-	i->inoh_ino.ino_lblk = 0;
 	mds_inode_sync(i);
 }
 
@@ -351,6 +350,7 @@ mds_bmap_fsz_check_locked(struct fidc_membh *f, sl_blkno_t n)
 {
 	struct fidc_mds_info *mdsi=f->fcmh_fcoo->fcoo_pri;
 	struct slash_inode_handle *i=&mdsi->fmdsi_inodeh;
+	sl_blkno_t lblk;
 	//int rc;
 
 	FCMH_LOCK_ENSURE(f);
@@ -359,19 +359,12 @@ mds_bmap_fsz_check_locked(struct fidc_membh *f, sl_blkno_t n)
 		return (rc);
 #endif
 
-	psc_trace("fid="FIDFMT" lblk=%zu fsz=%zu",
-		  FIDFMTARGS(fcmh_2_fgp(f)), i->inoh_ino.ino_lblk,
-		  fcmh_2_fsz(f));
+	lblk = fcmh_2_nbmaps(f);
 
-	/* Verify that the inode agrees with file contents.
-	 *  XXX this assert is a bit too aggressive - perhaps a more
-	 *  interesting method is to read the bmap anyway and compare its
-	 *  checksum against the bmapod NULL chksum.  This method would cope
-	 *  with holes in the inode file.
-	 */
-	psc_assert((((i->inoh_ino.ino_lblk + 1) * BMAP_OD_SZ) - 1)
-		   <= fcmh_2_fsz(f));
-	return ((n > i->inoh_ino.ino_lblk) ? n : 0);
+	psc_trace("fid="FIDFMT" lblk=%u fsz=%zu",
+		  FIDFMTARGS(fcmh_2_fgp(f)), lblk, fcmh_2_fsz(f));
+
+	return (n < lblk ? n : 0);
 }
 
 /**

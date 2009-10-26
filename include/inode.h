@@ -190,7 +190,6 @@ struct slash_inode_od {
 	uint32_t      ino_bsz;                    /* bmap size               */
 	uint32_t      ino_nrepls;                 /* if 0, use ino_prepl     */
 	uint32_t      ino_csnap;                  /* current snapshot        */
-	uint64_t      ino_lblk;                   /* last bmap               */
 	sl_replica_t  ino_repls[INO_DEF_NREPLS];  /* embed a few replicas    */
 	psc_crc_t     ino_crc;                    /* crc of the inode        */
 };
