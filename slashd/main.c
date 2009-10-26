@@ -101,7 +101,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-f slashconf] [-p zpoolcache] [-S socket] zpoolname\n",
+	    "usage: %s [-X] [-f slashconf] [-p zpoolcache] [-S socket] zpoolname\n",
 	    progname);
 	exit(1);
 }
@@ -131,7 +131,7 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLCTLSOCK;
-	while ((c = getopt(argc, argv, "f:p:S:X:")) != -1)
+	while ((c = getopt(argc, argv, "f:p:S:X")) != -1)
 		switch (c) {
 		case 'f':
 			cfn = optarg;
