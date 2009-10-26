@@ -8,7 +8,8 @@
 .Nd slash metadata server daemon
 .Sh SYNOPSIS
 .Nm slashd
-.Op Fl f Ar conf
+.Op Fl f Ar slashconf
+.Op Fl p Ar zpoolcache
 .Op Fl S Ar socket
 .Ar zpoolname
 .Sh DESCRIPTION
@@ -31,9 +32,13 @@ Defaults to
 See
 .Xr slash.conf 5
 for more details.
-.It Fl p Ar zfs_pool_cachefile
-Specify path to a zfs pool cachefile.  This speeds up the zfs pool
-discovery process.
+.It Fl p Ar zpoolcache
+Specify the path to the
+.Tn ZFS
+file system pool cache file.
+This speeds up the
+.Tn ZFS
+pool discovery process.
 .It Fl S Ar socket
 Specify an alternative path for the named socket through which
 .Nm
@@ -59,6 +64,12 @@ The default is
 default
 .Nm
 configuration
+.It Pa /var/lib/slashd/ion_bmaps.odt
+map of
+.Tn I/O
+node file block ownership
+.It Pa /var/lib/slashd/slopjrnl
+pending operations journal
 .It Xo
 .Pa /var/run/slashd. Ns Ic %h Ns Pa .sock
 .Xc
