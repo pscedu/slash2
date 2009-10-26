@@ -80,12 +80,12 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	char cmdbuf[BUFSIZ];
 	int rc;
 
-	if (zfspoolcf)		
-		rc = snprintf(cmdbuf, sizeof(cmdbuf), "zpool import -c %s %s", 
-			      zfspoolcf, zpoolname);
-	else 		
-		rc = snprintf(cmdbuf, sizeof(cmdbuf), "zpool import %s", 
-			      zpoolname);
+	if (zfspoolcf)
+		rc = snprintf(cmdbuf, sizeof(cmdbuf),
+		    "zpool import -c '%s' '%s'", zfspoolcf, zpoolname);
+	else
+		rc = snprintf(cmdbuf, sizeof(cmdbuf),
+		    "zpool import '%s'", zpoolname);
 	if (rc == -1)
 		psc_fatal("%s", zpoolname);
 	else if (rc >= (int)sizeof(cmdbuf))
@@ -100,7 +100,9 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket] [-p zfspool_cf] zpoolname\n", progname);
+	fprintf(stderr,
+	    "usage: %s [-f slashconf] [-p zpoolcache] [-S socket] zpoolname\n",
+	    progname);
 	exit(1);
 }
 
@@ -129,19 +131,19 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLCTLSOCK;
-	while ((c = getopt(argc, argv, "f:S:X:p:")) != -1)
+	while ((c = getopt(argc, argv, "f:p:S:X:")) != -1)
 		switch (c) {
 		case 'f':
 			cfn = optarg;
+			break;
+		case 'p':
+			zfspoolcf = optarg;
 			break;
 		case 'S':
 			sfn = optarg;
 			break;
 		case 'X':
 			allow_internal_fsaccess = 1;
-			break;
-		case 'p':
-			zfspoolcf = optarg;
 			break;
 		default:
 			usage();
