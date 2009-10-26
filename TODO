@@ -187,6 +187,17 @@ D_ANY
 	(o) iod - the sliod daemon
 - rename buffer.c -> slab.c
 - rename fdbuf.c -> descbuf.c
+- add a way to tag new bmaps with the persist flag, something like:
+
+  $ msctl -x bmap-persist:a,b,c
+
+  alias slfctl=msctl -x
+    slfctl -R -b a b c
+
+  alias slrepls=msctl -r
+  alias slreplq=msctl -Q
+  alias slreplrm=msctl -U
+
 - use a sliding window to track valid cfd's and remove them from the window
   once they are CLOSE()'d
 
@@ -196,7 +207,7 @@ D_ANY
 bmap 8 being replicated to PSC, ORNL
 use msctl -r to check status
 
-# msctl -r /slash/fn -r /slash/fn2
+# msctl -r /slash/fn -r /slash/fn2:NCSA
 replication status
 ===========================================================
  fn                               btot        bold    %xfer
@@ -216,4 +227,5 @@ legend:
   -	inactive
   +	active
   o	old
+
 
