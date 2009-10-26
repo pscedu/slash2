@@ -55,7 +55,7 @@ struct bmap_pagecache_entry {
 	psc_atomic16_t            bmpce_wrref;   /* pending write ops        */
 	psc_atomic16_t            bmpce_rdref;   /* pending read ops         */
 	uint32_t                  bmpce_flags;   /* state bits               */
-	uint32_t                  bmpce_offset;  /* filewise, bmap relative  */
+	uint32_t                  bmpce_off;     /* filewise, bmap relative  */
 	psc_spinlock_t            bmpce_lock;    /* serialize                */
 	void                     *bmpce_base;    /* base pointer from slb    */
 	struct psc_waitq         *bmpce_waitq;   /* others block here on I/O */
@@ -65,18 +65,20 @@ struct bmap_pagecache_entry {
 };
 
 enum BMPCE_STATES {
-	BMPCE_NEW     = (1<<0),
-	BMPCE_GETBUF  = (1<<1),
-	BMPCE_INFLGHT = (1<<2),
-        BMPCE_IOSCHED = (1<<3),	
-	BMPCE_DATARDY = (1<<4),
-	BMPCE_FREE    = (1<<5)
+	BMPCE_NEW       = (1<<0),
+	BMPCE_GETBUF    = (1<<1),
+	BMPCE_INFLGHT   = (1<<2),
+        BMPCE_IOSCHED   = (1<<3),	
+	BMPCE_DATARDY   = (1<<4),
+	BMPCE_DIRTY2LRU = (1<<5),
+	BMPCE_LRU       = (1<<6),
+	BMPCE_FREE      = (1<<7)
 };
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 		 " bmpce@%p fl=%x o=%x b=%p ts=%u:%u wr=%hu rd=%hu: "fmt, \
-		 (b), (b)->bmpce_flags, (b)->bmpce_offset, (b)->bmpce_base, \
+		 (b), (b)->bmpce_flags, (b)->bmpce_off, (b)->bmpce_base, \
 		 (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec, \
 		 psc_atomic16_read(&(b)->bmpce_wrref),			\
 		 psc_atomic16_read(&(b)->bmpce_rdref),			\
@@ -136,35 +138,37 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	else
 		psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref));
 
-	psc_assert(bmpce->bmpce_offset == off);
+	psc_assert(bmpce->bmpce_off == off);
 	ureqlock(&bmpce->bmpce_lock, locked);
 }
 
 static inline int
 bmpce_cmp(const void *x, const void *y)
 {
-	if (((struct bmap_pagecache_entry *)x)->bmpce_offset <
-	    ((struct bmap_pagecache_entry *)y)->bmpce_offset)
+	if (((struct bmap_pagecache_entry *)x)->bmpce_off <
+	    ((struct bmap_pagecache_entry *)y)->bmpce_off)
 		return (-1);
 
-	if (((struct bmap_pagecache_entry *)x)->bmpce_offset > 
-	    ((struct bmap_pagecache_entry *)y)->bmpce_offset)
+	if (((struct bmap_pagecache_entry *)x)->bmpce_off > 
+	    ((struct bmap_pagecache_entry *)y)->bmpce_off)
 		return (1);
 
 	return (0);
 }
+
 
 SPLAY_HEAD(bmap_pagecachetree, bmap_pagecache_entry);
 SPLAY_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry, 
 		bmpce_cmp);
 
 struct bmap_pagecache {
-	struct bmap_pagecachetree bmpc_tree;   /* tree of cbuf_handle       */
-	struct timespec           bmpc_oldest; /* LRU's oldest item         */
-	struct psc_lockedlist     bmpc_lru;    /* cleancnt can be kept here */
-	struct psc_lockedlist     bmpc_pndg;   /* pending I/O requests      */
-	psc_spinlock_t            bmpc_lock;   /* serialize tree and pll    */
-	struct psclist_head       bmpc_lentry; /* chain to global LRU lc    */
+	struct bmap_pagecachetree bmpc_tree;   /* tree of cbuf_handle        */
+	struct timespec           bmpc_oldest; /* LRU's oldest item          */
+	struct psc_lockedlist     bmpc_lru;    /* cleancnt can be kept here  */
+	struct psc_lockedlist     bmpc_pndg;   /* chain pending I/O requests */
+	atomic_t                  bmpc_pndgwr; /* # pending wr req           */
+	psc_spinlock_t            bmpc_lock;   /* serialize tree and pll     */
+	struct psclist_head       bmpc_lentry; /* chain to global LRU lc     */
 };
 
 #define BMPC_LOCK(b)  spinlock(&(b)->bmpc_lock
@@ -185,6 +189,7 @@ struct bmpc_ioreq {
 	struct pscrpc_request_set *biorq_rqset;
 };
 
+
 enum BMPC_IOREQ_FLAGS {
 	BIORQ_READ  = (1<<0),
 	BIORQ_WRITE = (1<<1),
@@ -195,18 +200,41 @@ enum BMPC_IOREQ_FLAGS {
 	BIORQ_DIO   = (1<<6)
 };
 
+#define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s"
+#define BIORQ_FLAG(field, str) ((field) ? (str) : "-")
+#define DEBUG_BIORQ_FLAGS(s)				        \
+        BIORQ_FLAG(((b)->biorq_flags & BIORQ_READ), "r"),	\
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_WRITE), "w"),	\
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_RBWFP), "f"),	\
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_RBWLP), "l"),	\
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_SCHED), "s"),	\
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_INFL), "i"),	\
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_DIO), "d")
+
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 " biorq@%p fl=%x o=%x np=%d b=%p ts=%u:%u: "fmt,	\
+		 " biorq@%p fl=%x o=%x np=%d b=%p ts=%u:%u: "		\
+		 BIORQ_FLAGS_FORMAT" "fmt,				\
 		 (b), (b)->biorq_flags, (b)->biorq_off,			\
 		 dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 		 (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec, \
-		 ## __VA_ARGS__)
+		 DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
 
+/* biorq_is_my_bmpce - informs the caller that biorq, r, owns the 
+ *    the page cache entry, b.  This state implies that the thread 
+ *    processing 'r' is responsible for allocating a memory page 
+ *    and possible faulting in that page from the ION.
+ */
 #define biorq_is_my_bmpce(r, b)	(&(r)->biorq_waitq == (b)->bmpce_waitq)
 
 #define biorq_getaligned_off(r, nbmpce) ((&(r)->biorq_off & ~BMPC_BUFMASK) + \
 					 (nbmpce * BMPC_BUFSZ))
+
+#define bmpce_is_rbw_page(r, b, pos)					\
+	(biorq_is_my_bmpce(r, b) &&					\
+	 ((!pos && ((r)->biorq_flags & BIORQ_RBWFP)) ||			\
+	  ((pos == (dynarray_len(&(r)->biorq_pages)-1) &&		\
+	    ((r)->biorq_flags & BIORQ_RBWLP)))))
 
 static inline void
 bmpc_init(struct bmap_pagecache *bmpc) {
