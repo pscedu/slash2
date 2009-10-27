@@ -12,6 +12,7 @@
 #include "psc_ds/pool.h"
 #include "psc_util/atomic.h"
 #include "psc_util/waitq.h"
+#include "psc_util/time.h"
 #include "psc_util/spinlock.h"
 #include "psc_ds/vbitmap.h"
 
@@ -78,70 +79,12 @@ enum BMPCE_STATES {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 " bmpce@%p fl=%x o=%x b=%p ts=%u:%u wr=%hu rd=%hu: "fmt, \
+		 " bmpce@%p fl=%x o=%u b=%p ts=%ld:%ld wr=%hu rd=%hu: "fmt, \
 		 (b), (b)->bmpce_flags, (b)->bmpce_off, (b)->bmpce_base, \
 		 (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec, \
 		 psc_atomic16_read(&(b)->bmpce_wrref),			\
 		 psc_atomic16_read(&(b)->bmpce_rdref),			\
 		 ## __VA_ARGS__)
-
-
-static inline void
-bmpce_init(struct bmap_pagecache_entry *bmpce)
-{
-	memset(bmpce, 0, sizeof(*bmpce));
-	LOCK_INIT(&bmpce->bmpce_lock);
-	bmpce->bmpce_flags = BMPCE_NEW;
-}
-
-static inline void
-bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
-{
-	psc_assert(LOCK_ENSURE(&bmpce->bmpce_lock));
-	psc_assert(!(bmpce->flags & 
-		     (BMPCE_FREEING|BMPCE_IOSCHED|BMPCE_INFLGHT|
-		      BMPCE_GETBUF|BMPCE_NEW)));
-	psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
-
-	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
-	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
-	
-	bmpce->flags = BMPCE_FREEING;
-}
-
-static inline void
-bmpce_useprep(struct bmap_pagecache_entry *bmpce, struct bmap_pagecache *bmpc)
-{
-	psc_assert(!bmpce->bmpce_base);
-	psc_assert(!bmpce->bmpce_waitq);
-	psc_assert(psclist_disjoint(&bmpce->bmpce_lentry));
-	psc_assert(bmpce->bmpce_flags == BMPCE_NEW);
-	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
-	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
-
-	bmpce->bmpce_flags = BMPCE_GETBUF;
-	bmpce->bmpce_waitq = &bmpc->bmpc_waitq;
-}
-
-static inline void
-bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
-{
-	int locked;
-	
-	locked = reqlock(&bmpce->bmpce_lock);
-
-	DEBUG_BMPCE(PLL_TRACE, bmpce, "op=%d off=%u", op, off);
-	psc_assert(bmpce->bmpce_base);
-	psc_assert(!(bmpce->bmpce_flags & BMPC_GETBUF));
-
-	if (op == BIORQ_READ)
-		psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref));
-	else
-		psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref));
-
-	psc_assert(bmpce->bmpce_off == off);
-	ureqlock(&bmpce->bmpce_lock, locked);
-}
 
 static inline int
 bmpce_cmp(const void *x, const void *y)
@@ -156,7 +99,6 @@ bmpce_cmp(const void *x, const void *y)
 
 	return (0);
 }
-
 
 SPLAY_HEAD(bmap_pagecachetree, bmap_pagecache_entry);
 SPLAY_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry, 
@@ -188,6 +130,7 @@ struct bmpc_ioreq {
 	struct psclist_head        biorq_lentry;/* chain on bmpc_pndg        */
 	struct bmapc_memb         *biorq_bmap;  /* backpointer to our bmap   */
 	struct pscrpc_request_set *biorq_rqset;
+	struct psc_waitq           biorq_waitq;
 };
 
 
@@ -214,12 +157,71 @@ enum BMPC_IOREQ_FLAGS {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 " biorq@%p fl=%x o=%x np=%d b=%p ts=%u:%u: "		\
+		 " biorq@%p fl=%x o=%x np=%d b=%p ts=%ld:%ld "		\
 		 BIORQ_FLAGS_FORMAT" "fmt,				\
 		 (b), (b)->biorq_flags, (b)->biorq_off,			\
 		 dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 		 (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec, \
 		 DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
+
+
+static inline void
+bmpce_init(struct bmap_pagecache_entry *bmpce)
+{
+	memset(bmpce, 0, sizeof(*bmpce));
+	LOCK_INIT(&bmpce->bmpce_lock);
+	bmpce->bmpce_flags = BMPCE_NEW;
+}
+
+static inline void
+bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
+{
+	psc_assert(LOCK_ENSURE(&bmpce->bmpce_lock));
+	psc_assert(!(bmpce->bmpce_flags & 
+		     (BMPCE_FREEING|BMPCE_IOSCHED|BMPCE_INFLGHT|
+		      BMPCE_GETBUF|BMPCE_NEW)));
+	psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
+
+	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
+	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
+	
+	bmpce->bmpce_flags = BMPCE_FREEING;
+}
+
+static inline void
+bmpce_useprep(struct bmap_pagecache_entry *bmpce, struct bmpc_ioreq *biorq)
+{
+	psc_assert(!bmpce->bmpce_base);
+	psc_assert(!bmpce->bmpce_waitq);
+	psc_assert(psclist_disjoint(&bmpce->bmpce_lentry));
+	psc_assert(bmpce->bmpce_flags == BMPCE_NEW);
+	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
+	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
+
+	bmpce->bmpce_flags = BMPCE_GETBUF;
+	bmpce->bmpce_waitq = &biorq->biorq_waitq;
+}
+
+static inline void
+bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
+{
+	int locked;
+	
+	locked = reqlock(&bmpce->bmpce_lock);
+
+	DEBUG_BMPCE(PLL_TRACE, bmpce, "op=%d off=%u", op, off);
+	psc_assert(bmpce->bmpce_base);
+	psc_assert(!(bmpce->bmpce_flags & BMPCE_GETBUF));
+
+	if (op == BIORQ_READ)
+		psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref));
+	else
+		psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref));
+
+	psc_assert(bmpce->bmpce_off == off);
+	ureqlock(&bmpce->bmpce_lock, locked);
+}
+
 
 /* biorq_is_my_bmpce - informs the caller that biorq, r, owns the 
  *    the page cache entry, b.  This state implies that the thread 
@@ -252,7 +254,7 @@ bmpc_init(struct bmap_pagecache *bmpc) {
 
 static inline void
 bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
-		const struct bmapc_memb *bmap)
+		struct bmapc_memb *bmap)
 {
 	memset(ioreq, 0, sizeof(*ioreq));
 	psc_waitq_init(&ioreq->biorq_waitq);
@@ -263,19 +265,19 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 	ioreq->biorq_len  = len;
 	ioreq->biorq_bmap = bmap;
 	ioreq->biorq_flags = op;
-	if (b->bcm_mode & BMAP_DIO)
-                r->biorq_flags |= BIORQ_DIO;
+	if (bmap->bcm_mode & BMAP_DIO)
+                ioreq->biorq_flags |= BIORQ_DIO;
 }
 
 static inline int
 bmpc_lru_cmp(const void *x, const void *y)
 {
-	struct bmap_pagecache *a=x, *b=y;
+	const struct bmap_pagecache *a=x, *b=y;
 
-	if (timespeccmp(&a->bmpc_oldest, &b->bmpce_oldest, <))
+	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
 		return (-1);
 	
-	if (timespeccmp(&a->bmpc_oldest, &b->bmpce_oldest, >))
+	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, >))
 		return (1);
 
 	return (0);
@@ -285,14 +287,13 @@ static inline void
 bmpc_decrease_minage(void)
 {
 	struct timespec ts = BMPC_INTERVAL;
-	int tmp;
 
 	lockBmpcSlabs;
 
 	timespecsub(&bmpcSlabs.bmms_minage, &ts, 
 		    &bmpcSlabs.bmms_minage);
 	
-	if (bmpcSlabs.bmms_minage.tv_sec) < 0)
+	if (bmpcSlabs.bmms_minage.tv_sec < 0)
 		timespecclear(&bmpcSlabs.bmms_minage);
 
 	ulockBmpcSlabs;
@@ -302,7 +303,6 @@ static inline void
 bmpc_increase_minage(void)
 {
 	struct timespec ts = BMPC_INTERVAL;
-	int tmp;
 
 	lockBmpcSlabs;
 
@@ -313,10 +313,10 @@ bmpc_increase_minage(void)
 }
 
 
-void  bmpc_init(void);
+void  bmpc_init(struct bmap_pagecache *);
 void  bmpc_grow(void);
 void *bmpc_alloc(void);
 void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
 
-
+#endif
