@@ -13,7 +13,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/waitq.h"
 #include "psc_util/spinlock.h"
-#include "psc_util/vbitmap.h"
+#include "psc_ds/vbitmap.h"
 
 #include "bmap.h"
 #include "buffer.h"
@@ -72,7 +72,8 @@ enum BMPCE_STATES {
 	BMPCE_DATARDY   = (1<<4),
 	BMPCE_DIRTY2LRU = (1<<5),
 	BMPCE_LRU       = (1<<6),
-	BMPCE_FREE      = (1<<7)
+	BMPCE_FREE      = (1<<7),
+	BMPCE_FREEING   = (1<<8)
 };
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
@@ -100,7 +101,7 @@ bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
 	psc_assert(!(bmpce->flags & 
 		     (BMPCE_FREEING|BMPCE_IOSCHED|BMPCE_INFLGHT|
 		      BMPCE_GETBUF|BMPCE_NEW)));
-	psc_assert(bmpce->flags & BMPCE_DATARDY);
+	psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
