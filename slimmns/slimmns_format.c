@@ -15,10 +15,11 @@
 #include "fid.h"
 #include "pathnames.h"
 
-void wipedir(const char *);
+void wipefs(const char *);
 
 const char *progname;
 int wipe;
+int ion;
 
 void
 slimmns_create_int(const char *fn, uint32_t curdepth, uint32_t maxdepth)
@@ -43,7 +44,7 @@ slimmns_create_int(const char *fn, uint32_t curdepth, uint32_t maxdepth)
  * Routine for creating the directory structure
  *  on a mapserver filesystem.
  */
-int
+void
 slimmns_create(const char *root, uint32_t depth)
 {
 	char fn[PATH_MAX];
@@ -61,29 +62,26 @@ slimmns_create(const char *root, uint32_t depth)
 	if (rc == -1 && errno != EEXIST)
 		psc_fatal("mkdir %s", fn);
 
-	if (wipe)
-		wipedir(fn);
-
 	/* create immutable namespace subdirectories */
 	slimmns_create_int(fn, 1, depth);
+
+	if (ion)
+		return;
 
 	/* create replication queue directory */
 	rc = snprintf(fn, sizeof(fn), "%s/%s",
 	    root, SL_PATH_REPLS);
 	psc_assert(rc != -1 && rc < (int)sizeof(fn));
+
 	rc = mkdir(fn, 0700);
 	if (rc == -1 && errno != EEXIST)
 		psc_fatal("mkdir %s", fn);
-
-	if (wipe)
-		wipedir(fn);
-	return (0);
 }
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-W] /slashfs_root_dir\n", progname);
+	fprintf(stderr, "usage: %s [-iW] /slash_rootfs\n", progname);
 	exit(1);
 }
 
@@ -94,8 +92,11 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "W")) != -1)
+	while ((c = getopt(argc, argv, "iW")) != -1)
 		switch (c) {
+		case 'i':
+			ion = 1;
+			break;
 		case 'W':
 			wipe = 1;
 			break;
@@ -107,5 +108,8 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	return (slimmns_create(argv[0], 0));
+	if (wipe)
+		wipefs(argv[0]);
+	slimmns_create(argv[0], 0);
+	exit(0);
 }

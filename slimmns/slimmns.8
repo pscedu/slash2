@@ -1,23 +1,36 @@
 .\" $Id$
-.Dd October 8, 2009
-.Dt SLIMMNS 8
+.Dd October 27, 2009
+.Dt SLMKFS 8
 .ds volume PSC \- Slash Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
-.Nm slimmns
-.Nd create Slash immutable namespace file system structure
+.Nm slmkfs
+.Nd create a Slash metadata file system
 .Sh SYNOPSIS
-.Nm slmkjrnl
+.Nm slmkfs
+.Op Fl W
 .Pa fsroot
 .Sh DESCRIPTION
 The
 .Nm
-utility creates the immutable namespace structure on the backend file
-system necessary for Slash metadata operation.
-This structure provides a method for Slash to access data for files
-residing in its file system without the need for knowing the pathname
-the user has chosen, so access can persistent across unlinks and file
-renames.
+utility initializes the internal file directory structure necessary for
+use with Slash metadata server and
+.Tn I/O
+node operation.
+This includes facilities such as the immutable namespace, which is
+responsible for providing persistent access to file data regardless of
+file pathname renames and unlinks, and the replication queue.
+.Pp
+The following options are available:
+.Fl W
+.Bl -tag -indent Ds
+.It Fl i
+Format a file system suitable for use with
+.Tn I/O
+nodes.
+.It Fl W
+Wipe all existing data in the destination file system.
+.El
 .Sh FILES
 .Bl -tag -width Pa -compact
 .It Ar fsroot Ns Pa /.slfidns
@@ -26,5 +39,6 @@ immutable namespace
 replication queue
 .El
 .Sh SEE ALSO
+.Xr pflenv 7 ,
 .Xr sladm 7 ,
 .Xr slashd 8
