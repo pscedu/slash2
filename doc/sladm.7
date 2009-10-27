@@ -39,7 +39,8 @@ which will be the master
 .Tn ZFS
 resource for use by the Slash metadata server:
 .Bd -literal -offset indent
-# zpool create mypool mirror sda sdb
+# zpool create mypool sda		# single drive
+# zpool create mypool mirror sda sdb	# two mirrored drives
 .Ed
 .Pp
 To allow
@@ -47,20 +48,12 @@ To allow
 and Slash to load this file system quickly, create a
 cache dump file:
 .Bd -literal -offset indent
-# zpool set cachefile=mypool.zcf mypool
+# zpool set cachefile=/mypool.zcf mypool
 .Ed
 .Pp
 Before this file system can be used by the Slash metadata server, it
-needs to be initialized with the directory structure required.
-To do so, we must first load it:
-.Bd -literal -offset indent
-# zpool import -c mypool.zcf mypool
-.Ed
-.Pp
-Next,
-.Xr slimmns_format 8
-can be used create the internal structure assumed which includes the
-immutable namespace and replication manager:
+needs to be initialized by
+.Xr slimmns_format 8 :
 .Bd -literal -offset indent
 # slimmns_format /mypool
 .Ed
