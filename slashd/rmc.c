@@ -266,9 +266,8 @@ slrmc_mkdir(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	mp->rc = zfsslash2_mkdir(zfsVfs, mq->pino, mq->name, mq->mode,
-				 &mq->creds, &mp->attr, &mp->fg);
-
+	mp->rc = zfsslash2_mkdir(zfsVfs, mq->pino, mq->name,
+	    mq->mode, &mq->creds, &mp->attr, &mp->fg, 0);
 	RETURN(0);
 }
 
