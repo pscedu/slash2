@@ -40,6 +40,8 @@ struct msctl_replst_cont {
 /* for issuing/controlling replication requests */
 struct msctlmsg_replrq {
 	char			mrq_fn[PATH_MAX];
+	char			mrq_ios[SL_MAX_REPLICAS][SITE_NAME_MAX];
+	uint32_t		mrq_nios;
 	sl_blkno_t		mrq_bmapno;
 };
 

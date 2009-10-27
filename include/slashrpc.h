@@ -454,6 +454,8 @@ struct srm_rename_req {
 
 struct srm_replrq_req {
 	struct slash_fidgen	fg;
+	sl_replica_t		repls[SL_MAX_REPLICAS];
+	uint32_t		nrepls;
 	sl_blkno_t		bmapno;		/* bmap to access or -1 for all */
 };
 
@@ -464,7 +466,7 @@ struct srm_replst_master_req {
 	int32_t			rc;		/* or EOF */
 	uint32_t		nbmaps;
 	uint32_t		nrepls;
-	sl_replica_t		repls[SL_MAX_REPLICAS + INO_DEF_NREPLS];
+	sl_replica_t		repls[SL_MAX_REPLICAS];
 };
 
 #define srm_replst_master_rep srm_replst_master_req

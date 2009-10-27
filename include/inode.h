@@ -124,7 +124,7 @@ typedef struct slash_snapshot {
  */
 typedef struct slash_replica {
 	sl_ios_id_t bs_id;     /* id of this block store    */
-} sl_replica_t;
+} __packed sl_replica_t;
 
 /*
  * Associate a crc with a generation id for a block.

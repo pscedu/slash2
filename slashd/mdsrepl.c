@@ -490,7 +490,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 			rc = EALREADY;
 		else if (repl_all_act)
 			rc = SLERR_REPL_ACT;
-	} else {
+	} else if (mds_bmap_valid(REPLRQ_FCMH(rrq), bmapno)) {
 		/*
 		 * If this bmap is already being
 		 * replicated, return EALREADY.
@@ -503,7 +503,8 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		BMAP_LOCK(bcm);
 		rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
 		bmap_op_done(bcm);
-	}
+	} else
+		rc = SLERR_INVALID_BMAP;
 
 	mds_repl_unrefrq(rrq);
 	return (rc);
@@ -633,7 +634,7 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 				rc = 0;
 			bmap_op_done(bcm);
 		}
-	} else {
+	} else if (mds_bmap_valid(REPLRQ_FCMH(rrq), bmapno)) {
 		retifset[SL_REPL_INACTIVE] = ENOENT;
 		retifset[SL_REPL_ACTIVE] = 0;
 		retifset[SL_REPL_OLD] = 0;
@@ -642,7 +643,8 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		BMAP_LOCK(bcm);
 		rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
 		bmap_op_done(bcm);
-	}
+	} else
+		rc = SLERR_INVALID_BMAP;
 
 	mds_repl_tryrmqfile(rrq);
 	return (0);

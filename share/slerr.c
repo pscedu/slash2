@@ -9,6 +9,8 @@
 
 char *slash_errstrs[] = {
 	"Replicas already active",
+	"Invalid bmap",
+	"Unknown I/O system",
 	NULL
 };
 

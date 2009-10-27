@@ -55,6 +55,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct slash_creds cr;
 	struct stat stb;
 	fuse_ino_t pinum;
+	uint32_t n;
 	int rc;
 
 	rc = msctl_getcreds(fd, &cr);
@@ -62,11 +63,13 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "unable to obtain credentials: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
+	/* ensure path exists in the slash fs */
 	rc = translate_pathname(mrq->mrq_fn, fn);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
+	/* lookup FID/inum */
 	pinum = 0; /* gcc */
 	fg.fg_fid = SL_ROOT_INUM;
 	for (cpn = fn + 1; cpn; cpn = next) {
@@ -83,7 +86,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mrq->mrq_fn, slstrerror(ENOTSUP)));
 
-	rc = -checkcreds(&stb, &cr, W_OK);
+	rc = checkcreds(&stb, &cr, W_OK);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
@@ -94,6 +97,15 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
+
+	/* parse I/O systems specified */
+	for (n = 0; n < mrq->mrq_nios; n++, mq->nrepls++)
+		if ((mq->repls[n].bs_id =
+		    libsl_str2id(mrq->mrq_ios[n])) == IOS_ID_ANY) {
+			pscrpc_req_finished(rq);
+			return (psc_ctlsenderr(fd, mh,
+			    "%s: %s", mrq->mrq_ios[n], slstrerror(rc)));
+		}
 
 	memcpy(&mq->fg, &fg, sizeof(mq->fg));
 	mq->bmapno = mrq->mrq_bmapno;

@@ -70,6 +70,7 @@ parse_replrq(int code, char *replrqspec,
 		return;
 	}
 	*iosv++ = '\0';
+	niosv = 0;
 	for (site = iosv; site; site = next) {
 		if ((next = strchr(site, ',')) != NULL)
 			*next++ = '\0';
@@ -95,7 +96,8 @@ parse_replrq(int code, char *replrqspec,
 					    replrqspec);
 				ra.bmapno = bmax = l;
 				/* parse bmap range */
-				if (*endp++ == '-') {
+				if (*endp == '-') {
+					endp++;
 					l = strtol(endp, &bend, 10);
 					if (l < 0 || l < ra.bmapno ||
 					    bend == endp || *bend != '\0')
@@ -105,7 +107,7 @@ parse_replrq(int code, char *replrqspec,
 				} else if (*endp != '\0')
 					errx(1, "%s: invalid replication request",
 					    replrqspec);
-				for (; ra.bmapno < bmax; ra.bmapno++)
+				for (; ra.bmapno <= bmax; ra.bmapno++)
 					walk(files, packf, &ra);
 			}
 		} else {
