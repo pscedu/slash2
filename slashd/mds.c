@@ -120,6 +120,8 @@ mds_inode_read(struct slash_inode_handle *i)
 
 	DEBUG_INOH(PLL_WARN, i, "CRC failed want=%"PRIx64", got=%"PRIx64,
 		   i->inoh_ino.ino_crc, crc);
+//	rc = -EIO;
+
  out:
 	ureqlock(&i->inoh_lock, locked);
 	return (rc);
@@ -345,8 +347,8 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	return (0);
 }
 
-__static int
-mds_bmap_fsz_check_locked(struct fidc_membh *f, sl_blkno_t n)
+int
+mds_bmap_valid(struct fidc_membh *f, sl_blkno_t n)
 {
 	sl_blkno_t lblk;
 	//int rc;
@@ -362,7 +364,7 @@ mds_bmap_fsz_check_locked(struct fidc_membh *f, sl_blkno_t n)
 	psc_trace("fid="FIDFMT" lblk=%u fsz=%zu",
 		  FIDFMTARGS(fcmh_2_fgp(f)), lblk, fcmh_2_fsz(f));
 
-	return (n < lblk ? n : 0);
+	return (n < lblk);
 }
 
 /**

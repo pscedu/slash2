@@ -74,6 +74,7 @@ struct bmapc_memb *
 int	mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
 int	mds_bmap_load_cli(struct mexpfcm *, struct srm_bmap_req *, struct bmapc_memb **);
 int	mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, struct bmapc_memb **);
+int	mds_bmap_valid(struct fidc_membh *, sl_blkno_t);
 void	mds_bmap_ref_drop(struct bmapc_memb *, int);
 void	mds_bmapod_dump(const struct bmapc_memb *);
 
