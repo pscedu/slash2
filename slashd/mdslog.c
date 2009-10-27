@@ -266,6 +266,10 @@ mds_journal_init(void)
 	if (rc == -1)
 		psc_fatal("snprintf");
 
+#if 0
+	/* keep out while debugging in progress */
 	mdsJournal = pjournal_replay(_PATH_SLJOURNAL, mds_journal_replay);
 	psc_assert(mdsJournal);
+#endif
+
 }
