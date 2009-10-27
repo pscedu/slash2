@@ -158,6 +158,10 @@ main(int argc, char *argv[])
 
 	fidcache_init(FIDC_USER_MDS, NULL);
 
+	/* Initialize the ZFS layer. */
+	do_init();
+	import_zpool(argv[0], zfspoolcf);
+
 	slashGetConfig(cfn);
 	fdbuf_createkeyfile();
 	fdbuf_readkeyfile();
@@ -168,10 +172,6 @@ main(int argc, char *argv[])
 	    sizeof(struct bmap_mds_info), offsetof(struct bmapc_memb, bcm_lentry),
 	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
-
-	/* Initialize the ZFS layer. */
-	do_init();
-	import_zpool(argv[0], zfspoolcf);
 
 	mds_repl_init();
 
