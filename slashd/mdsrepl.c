@@ -672,9 +672,17 @@ mds_repl_scandir(void)
 	inum = sl_get_repls_inum();
 	rc = zfsslash2_opendir(zfsVfs, inum,
 	    &rootcreds, &fg, &stb, &data);
-	if (rc)
+	if (rc) {
+		if (rc == ENOENT) {
+			rc = zfsslash2_mkdir(zfsVfs, SL_ROOT_INUM,
+			    SL_PATH_REPLS, 0700, &rootcreds, NULL, NULL, 1);
+			if (rc == -1)
+				psc_fatal("zfs_mkdir %s", SL_PATH_REPLS);
+			return;
+		}
 		psc_fatalx("opendir %s: %s", SL_PATH_REPLS,
 		    slstrerror(rc));
+	}
 	for (;;) {
 		rc = zfsslash2_readdir(zfsVfs, inum, &rootcreds,
 		    siz, off, buf, &tsiz, NULL, 0, data);
