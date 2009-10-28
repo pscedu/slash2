@@ -146,7 +146,7 @@ __static int
 slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 {
 	ssize_t rc;
-	int nblks;
+	int nblks, save_errno;
 
 	nblks = (size / SLASH_SLVR_BLKSZ) + 
 		(size & SLASH_SLVR_BLKMASK) ? 1 : 0;
@@ -158,6 +158,8 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, blk), size,
 			   slvr_2_fileoff(s, blk));		
+		save_errno = errno;
+
 		/* XXX this is a bit of a hack.  Here we'll check crc's
 		 *  only when nblks == an entire sliver.  Only RMW will
 		 *  have their checks bypassed.  This should probably be
@@ -201,19 +203,20 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 		
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, blk), 
 			    size, slvr_2_fileoff(s, blk));
+		save_errno = errno;
 	}
 
 	if (rc < 0)
 		DEBUG_SLVR(PLL_ERROR, s, "failed (rc=%zd, size=%u) "
 			   "%s blks=%d off=%"PRIx64" errno=%d", 
 			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
-			   nblks, slvr_2_fileoff(s, blk), errno);
+			   nblks, slvr_2_fileoff(s, blk), save_errno);
 
 	else if (rc != size)
 		DEBUG_SLVR(PLL_ERROR, s, "short io (rc=%zd, size=%u) "
 			   "%s blks=%d off=%"PRIu64" errno=%d", 
 			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
-			   nblks, slvr_2_fileoff(s, blk), errno);
+			   nblks, slvr_2_fileoff(s, blk), save_errno);
 	else {
 		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%"PRIu64" rc=%zd",
 			   (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), size, 
@@ -221,7 +224,7 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 		rc = 0;
 	}
 
-	return ((rc < 0) ? (int)-errno : (int)0);
+	return ((rc < 0) ? (int)-save_errno : (int)0);
 }
 
 /**
