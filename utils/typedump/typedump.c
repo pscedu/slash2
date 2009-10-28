@@ -58,13 +58,29 @@
 
 const char *progname;
 
+void
+pr(const char *name, uint64_t value)
+{
+	static int i;
+	int n;
+
+	if (i++ % 2) {
+		n = printf("%s ", name);
+		while (n++ <= 50)
+			putchar('-');
+		if (n < 53)
+			printf("> ");
+		printf("%zu\n", value);
+	} else
+		printf("%-52s %zu\n", name, value);
+}
+
 __dead void
 usage(void)
 {
 	fprintf(stderr, "usage: %s\n", progname);
 	exit(1);
 }
-
 int
 main(int argc, char *argv[])
 {
@@ -80,11 +96,8 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-#define PRTYPE(type) \
-	printf("%-52s %zu\n", #type, sizeof(type))
-
-#define PRVAL(val) \
-	printf("%-52s %lu\n", #val, (unsigned long)(val))
+#define PRTYPE(type)	pr(#type, sizeof(type))
+#define PRVAL(val)	pr(#val, (unsigned long)(val))
 
 	/* start structs */
 	PRTYPE(cred_t);
