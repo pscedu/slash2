@@ -39,5 +39,8 @@ main(int argc, char *argv[])
 	pjournal_format(_PATH_SLJOURNAL, SLJ_MDS_JNENTS,
 	    SLJ_MDS_ENTSIZE, SLJ_MDS_RA, 0);
 	pjournal_dump(_PATH_SLJOURNAL);
+	printf("SLASH log file %s has been created with %d %d-byte entries.\n",
+		_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE);
+	
 	exit(0);
 }
