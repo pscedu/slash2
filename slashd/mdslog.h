@@ -19,26 +19,12 @@ struct fidc_membh;
 struct slash_inode_handle;
 struct srm_bmap_crcup;
 
-#ifdef _NOJOURNALING
-__unusedx static void *mds_inode_sync = NULL;
-__unusedx static void *mds_bmap_sync = NULL;
-
-#define mds_bmap_crc_log(a,b)
-#define mds_bmap_repl_log(a)
-#define mds_bmap_sync(a)
-#define mds_inode_addrepl_log(a,b,c)
-#define mds_inode_sync(a)
-#define mds_journal_init()
-#else
-
 void mds_bmap_crc_log(struct bmapc_memb *, struct srm_bmap_crcup *);
 void mds_bmap_repl_log(struct bmapc_memb *);
 void mds_bmap_sync(void *);
 void mds_inode_addrepl_log(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
 void mds_inode_sync(void *);
 void mds_journal_init(void);
-
-#endif /* _NOJOURNALING */
 
 extern struct psc_journal *mdsJournal;
 
