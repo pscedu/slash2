@@ -186,7 +186,7 @@ iod_inode_open(struct fidc_membh *f, int rw)
 			oflags |= O_CREAT;
 
 		rc = f->fcmh_fcoo->fcoo_fd =
-			fid_fileops_fg(fcmh_2_fgp(f), oflags);
+			fid_fileops_fg(fcmh_2_fgp(f), oflags, 0600);
 		if (rc < 0) {
 			fidc_fcoo_startfailed(f);
 			rc = -errno;

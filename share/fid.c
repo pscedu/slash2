@@ -46,7 +46,6 @@ fid_makepath(slfid_t fid, char *fid_path)
 		psc_fatal("snprintf");
 }
 
-
 /**
  * fid_fileops - create or open a fid on the IO server.
  * @fid: the numeric id.
@@ -69,7 +68,7 @@ fid_fileops(slfid_t fid, int flags)
  * @flags: open options.
  */
 int
-fid_fileops_fg(struct slash_fidgen *fg, int flags)
+fid_fileops_fg(struct slash_fidgen *fg, int flags, mode_t mode)
 {
 	char fidfn[SL_PATH_MAX];
 
@@ -77,7 +76,7 @@ fid_fileops_fg(struct slash_fidgen *fg, int flags)
 	snprintf((fidfn + strlen(fidfn)), SL_PATH_MAX,
 		 "_%"PRIx64, fg->fg_gen);
 
-	return (open(fidfn, flags));
+	return (open(fidfn, flags, mode));
 }
 
 /**

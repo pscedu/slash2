@@ -188,6 +188,7 @@ D_ANY
 - rename buffer.c -> slab.c
 - rename fdbuf.c -> descbuf.c
 - ensure fidc doesn't look up beyond SYM_NLOOPS #loops
+- run sliod as user _sliod
 - add a way to tag new bmaps with the persist flag, something like:
 
   $ msctl -x bmap-persist:a,b,c
