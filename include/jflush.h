@@ -26,7 +26,7 @@ enum jfi_states {
 };
 
 #ifdef _NOJOURNALING
-#define jfi_init(a,b,c)
+#define jfi_init(a,b,c) ((void)b)
 #define jfi_prep(a,b)
 #define jfi_schedule(a,b)
 #else
