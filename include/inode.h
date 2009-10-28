@@ -26,34 +26,34 @@
  * '10' - bmap is one generation back.
  * '11' - bmap is replicated to the ios and current.
  */
-#define SL_MAX_REPLICAS     64
-#define SL_BITS_PER_REPLICA 2
-#define SL_REPLICA_MASK     (uint8_t)((1 << SL_BITS_PER_REPLICA)-1)
-#define SL_REPLICA_NBYTES   ((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) / NBBY)
+#define SL_MAX_REPLICAS		64
+#define SL_BITS_PER_REPLICA	2
+#define SL_REPLICA_MASK		((uint8_t)((1 << SL_BITS_PER_REPLICA) - 1))
+#define SL_REPLICA_NBYTES	((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) / NBBY)
 
-#define SL_DEF_SNAPSHOTS    1
-#define SL_MAX_GENS_PER_BLK 4
+#define SL_DEF_SNAPSHOTS	1
+#define SL_MAX_GENS_PER_BLK	4
 
-#define SL_SITE_BITS 16
-#define SL_RES_BITS  15
-#define SL_MDS_BITS  1
+#define SL_SITE_BITS		16
+#define SL_RES_BITS		15
+#define SL_MDS_BITS		1
 
-#define SL_BMAP_SIZE  SLASH_BMAP_SIZE
-#define SL_CRC_SIZE   1048576
-#define SL_CRCS_PER_BMAP (SL_BMAP_SIZE / 1048576)
+#define SL_BMAP_SIZE		SLASH_BMAP_SIZE
+#define SL_CRC_SIZE		(1024 * 1024)
+#define SL_CRCS_PER_BMAP	(SL_BMAP_SIZE / SL_CRC_SIZE)
 
 /* Define metafile offsets
  */
-#define SL_INODE_START_OFF  0x0000ULL
-#define SL_BMAP_START_OFF   0x1000ULL
-#define SL_EXTRAS_START_OFF 0x0400ULL
+#define SL_INODE_START_OFF	0x0000ULL
+#define SL_BMAP_START_OFF	0x1000ULL
+#define SL_EXTRAS_START_OFF	0x0400ULL
 
-#define SL_NULL_CRC 0x436f5d7c450ed606ULL
+#define SL_NULL_CRC		0x436f5d7c450ed606ULL
 
-#define SL_REPL_INACTIVE 0
-#define SL_REPL_TOO_OLD  1
-#define SL_REPL_OLD      2
-#define SL_REPL_ACTIVE   3
+#define SL_REPL_INACTIVE	0
+#define SL_REPL_TOO_OLD		1
+#define SL_REPL_OLD		2
+#define SL_REPL_ACTIVE		3
 
 typedef u32 sl_mds_id_t;
 typedef u64 sl_inum_t;
@@ -63,12 +63,11 @@ typedef u32 sl_ios_id_t; /* io server id: 16 bit site id
 			  *                1 bit metadata svr bool
 			  */
 
-#define IOS_ID_ANY (~(sl_ios_id_t)0)
-#define BLKNO_ANY  (~(sl_blkno_t)0)
+#define IOS_ID_ANY		(~(sl_ios_id_t)0)
+#define BLKNO_ANY		(~(sl_blkno_t)0)
 
-#define SL_MDS_ID_BITS   8 /* These 8 bits compose the first bits of the inode
-			    *  number */
-#define SL_MDS_ID_MASK ((2 << SL_MDS_ID_BITS) - 1)
+#define SL_MDS_ID_BITS		8 /* # first bits in inode inode number */
+#define SL_MDS_ID_MASK		((2 << SL_MDS_ID_BITS) - 1)
 
 /*
  * sl_global_id_build - produce a unique 32 bit identifier from the
@@ -193,28 +192,28 @@ struct slash_inode_od {
 	sl_replica_t  ino_repls[INO_DEF_NREPLS];  /* embed a few replicas    */
 	psc_crc_t     ino_crc;                    /* crc of the inode        */
 };
-#define INO_OD_SZ (sizeof(struct slash_inode_od))
-#define INO_OD_CRCSZ (sizeof(struct slash_inode_od)-(sizeof(psc_crc_t)))
+#define INO_OD_SZ	sizeof(struct slash_inode_od)
+#define INO_OD_CRCSZ	(INO_OD_SZ - (sizeof(psc_crc_t)))
 
-#define INO_VERSION 0x01
+#define INO_VERSION 0x0002
 
-enum slash_inode_flags {
+enum {
 	INO_FL_HAVE_EXTRAS = (1<<0)
 };
 
 struct slash_inode_extras_od {
-	sl_snap_t     inox_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers      */
-	sl_replica_t  inox_repls[SL_MAX_REPLICAS - INO_DEF_NREPLS]; /* replicas */
-	psc_crc_t     inox_crc;
+	sl_snap_t	inox_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers      */
+	sl_replica_t	inox_repls[SL_MAX_REPLICAS - INO_DEF_NREPLS]; /* replicas */
+	psc_crc_t	inox_crc;
+	uint32_t	inox_newbmap_policy;	/* see BRP_* values */
 };
-#define INOX_OD_SZ (sizeof(struct slash_inode_extras_od))
-#define INOX_OD_CRCSZ							\
-	(sizeof(struct slash_inode_extras_od) - (sizeof(psc_crc_t)))
+#define INOX_OD_SZ	sizeof(struct slash_inode_extras_od)
+#define INOX_OD_CRCSZ	(INOX_OD_SZ - (sizeof(psc_crc_t)))
 
-#define SL_ROOT_INUM 1
+#define SL_ROOT_INUM	1
 
 /* File extended attribute names. */
 #define SFX_INODE	"sl-inode"
-#define SFX_REPLICAS    "sl-replicas"
+#define SFX_REPLICAS	"sl-replicas"
 
 #endif /* _SLASH_INODE_H_ */

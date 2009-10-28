@@ -29,6 +29,7 @@ SPLAY_HEAD(bmap_exports, mexpbcm);
  */
 struct bmap_mds_info {
 	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
+	uint32_t			 bmdsi_repl_policy;
 	struct jflush_item		 bmdsi_jfi;	/* journal handle          */
 	atomic_t			 bmdsi_rd_ref;	/* reader clients          */
 	atomic_t			 bmdsi_wr_ref;	/* writer clients          */
@@ -36,7 +37,7 @@ struct bmap_mds_info {
 	struct bmap_exports		 bmdsi_exports;	/* tree of client exports  */
 	struct slash_bmap_od		*bmdsi_od;	/* od-disk pointer         */
 	struct odtable_receipt		*bmdsi_assign;	/* odtable receipt         */
-	struct pscrpc_request_set	*bmdsi_reqset;	/* cache callback rpc's    */
+	struct pscrpc_request_set	*bmdsi_reqset;	/* cache callback RPC's    */
 };
 
 /* Note that n + BMAP_RSVRD_MODES must be < 32.
@@ -47,9 +48,12 @@ enum mds_bmap_modes {
 	BMAP_MDS_CRC_UP		= (1 << 18), /* crc update in progress */
 	BMAP_MDS_CRCWRT		= (1 << 19),
 	BMAP_MDS_NOION		= (1 << 20),
-	BMAP_MDS_REPL_PERSIST	= (1 << 21), /* policy: persist for auto replication */
 	BMAP_MDS_INIT		= BMAP_INIT
 };
+
+/* bmap replication policies */
+#define BRP_ONETIME	0
+#define BRP_PERSIST	1
 
 /*
  * bmi_assign - the structure used for tracking the mds's bmap / ion
