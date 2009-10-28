@@ -24,7 +24,7 @@ extern list_cache_t dirtyMdsData;
 struct psc_journal *mdsJournal;
 
 /* master journal log replay function */
-psc_jhandler mds_journal_replay(struct dynarray * logentrys, int * rc)
+void mds_journal_replay(struct dynarray * logentrys, int * rc)
 {
 	return;
 }
@@ -266,10 +266,11 @@ mds_journal_init(void)
 	if (rc == -1)
 		psc_fatal("snprintf");
 
-#if 0
+#if 1
 	/* keep out while debugging in progress */
 	mdsJournal = pjournal_replay(_PATH_SLJOURNAL, mds_journal_replay);
-	psc_assert(mdsJournal);
+	if (mdsJournal == NULL)
+		psc_fatal("Fail to load/replay log file %s", _PATH_SLJOURNAL);
 #endif
 
 }
