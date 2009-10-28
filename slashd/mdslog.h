@@ -11,7 +11,7 @@ enum mds_log_types {
 #endif
 	MDS_LOG_BMAP_REPL     = (1 << (2 + PJE_LASTBIT)),
 	MDS_LOG_BMAP_CRC      = (1 << (3 + PJE_LASTBIT)),
-	MDS_LOG_INO_ADDREPL   = (1 << (4 + PJE_LASTBIT)) 
+	MDS_LOG_INO_ADDREPL   = (1 << (4 + PJE_LASTBIT))
 };
 
 struct bmapc_memb;
@@ -19,12 +19,26 @@ struct fidc_membh;
 struct slash_inode_handle;
 struct srm_bmap_crcup;
 
-int  mds_inode_release(struct fidc_membh *);
+#ifdef _NOJOURNALING
+__unusedx static void *mds_inode_sync = NULL;
+__unusedx static void *mds_bmap_sync = NULL;
+
+#define mds_bmap_crc_log(a,b)
+#define mds_bmap_repl_log(a)
+#define mds_bmap_sync(a)
+#define mds_inode_addrepl_log(a,b,c)
+#define mds_inode_sync(a)
+#define mds_journal_init()
+#else
+
 void mds_bmap_crc_log(struct bmapc_memb *, struct srm_bmap_crcup *);
 void mds_bmap_repl_log(struct bmapc_memb *);
 void mds_bmap_sync(void *);
 void mds_inode_addrepl_log(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
 void mds_inode_sync(void *);
+void mds_journal_init(void);
+
+#endif /* _NOJOURNALING */
 
 extern struct psc_journal *mdsJournal;
 

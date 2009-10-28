@@ -63,7 +63,6 @@ int	mdsio_zfs_bmap_read(struct bmapc_memb *);
 int	mdsio_zfs_bmap_write(struct bmapc_memb *);
 
 void	mds_init(void);
-void	mds_journal_init(void);
 void	mdsfssync_init(void);
 
 void	*slrcmthr_main(void *);
