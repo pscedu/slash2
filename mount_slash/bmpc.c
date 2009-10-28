@@ -1,11 +1,89 @@
 /* $Id$ */
 
+#include "psc_ds/lockedlist.h"
+#include "psc_util/atomic.h"
+
 #include "bmpc.h"
 
 struct psc_poolmaster bmpcePoolMaster;
-struct psc_poolmgr   *bmpcePoolMgr;
-struct bmpc_mem_slbs  bmpcSlabs;
-struct psc_listcache  bmpcLru;
+struct psc_poolmgr *bmpcePoolMgr;
+struct bmpc_mem_slbs bmpcSlabs;
+struct psc_listcache bmpcLru;
+
+void
+bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *a)
+{
+	struct bmap_pagecache_entry *bmpce=a;
+
+	memset(bmpce, 0, sizeof(*bmpce));
+	LOCK_INIT(&bmpce->bmpce_lock);
+	bmpce->bmpce_flags = BMPCE_NEW;
+}
+
+void
+bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce, 
+			struct bmap_pagecache *bmpc, int op, int incref)
+{
+	psc_assert(op == BIORQ_WRITE || op == BIORQ_READ);
+
+	LOCK_ENSURE(&bmpc->bmpc_lock);
+	LOCK_ENSURE(&bmpce->bmpce_lock);
+
+	DEBUG_BMPCE(PLL_INFO, bmpce, "op=%d incref=%d", op, incref);
+       
+	psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) >= 0);
+	psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) >= 0);
+
+	if (psc_atomic16_read(&bmpce->bmpce_wrref)) {
+		psc_assert(!(bmpce->bmpce_flags & BMPCE_LRU));
+		psc_assert(!pll_conjoint(&bmpc->bmpc_lru, bmpce));
+
+	} else {
+		psc_assert(bmpce->bmpce_flags & BMPCE_LRU);
+		psc_assert(pll_conjoint(&bmpc->bmpc_lru, bmpce));
+	} 
+
+	if (incref) {
+		clock_gettime(CLOCK_REALTIME, &bmpce->bmpce_laccess);
+		
+		if (op == BIORQ_WRITE) {
+			if (bmpce->bmpce_flags & BMPCE_LRU) {
+				pll_remove(&bmpc->bmpc_lru, bmpce);
+				bmpce->bmpce_flags &= ~BMPCE_LRU;
+			}
+			psc_atomic16_inc(&bmpce->bmpce_wrref);
+
+		} else {
+			pll_remove(&bmpc->bmpc_lru, bmpce);
+			pll_addhead(&bmpc->bmpc_lru, bmpce);
+			psc_assert(bmpce->bmpce_flags & BMPCE_LRU);
+			psc_atomic16_inc(&bmpce->bmpce_rdref);
+		}
+
+	} else {
+		psc_assert(bmpce->bmpce_base);
+		psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
+
+		if (op == BIORQ_WRITE) {
+			psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
+			psc_atomic16_dec(&bmpce->bmpce_wrref);
+			if (!psc_atomic16_read(&bmpce->bmpce_wrref)) {
+				bmpce->bmpce_flags |= BMPCE_LRU;
+				pll_addhead(&bmpc->bmpc_lru, bmpce);
+				if (timespeccmp(&bmpce->bmpce_laccess,
+						&bmpc->bmpc_oldest, <))
+					memcpy(&bmpc->bmpc_oldest,
+					       &bmpce->bmpce_laccess,
+					       sizeof(struct timespec));
+			}
+		} else {
+			psc_assert(bmpce->bmpce_flags & BMPCE_LRU);
+			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) > 0);
+			psc_atomic16_dec(&bmpce->bmpce_rdref);
+		}
+	}
+}
+
 
 static void 
 bmpc_slb_init(struct sl_buffer *slb)
@@ -52,6 +130,7 @@ bmpc_slb_new(void)
 int
 bmpc_grow(int nslbs)
 {
+	struct sl_buffer *slb;
 	int i=0, nalloced, rc=0;
 
 	lockBmpcSlabs;
@@ -111,18 +190,20 @@ bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
 void
 bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 {
-	struct bmap_pagecache_entry *bmpce;
+	struct bmap_pagecache_entry *a, *b;
 
 	LOCK_ENSURE(&bmpc->bmpc_lock);
 	psc_assert(pll_empty(&bmpc->bmpc_pndg));
 
-	while ((bmpce = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, 
-				   bmpce_tentry))) {
-		spinlock(&bmpce->bmpce_lock);
-		DEBUG_BMPCE(PLL_TRACE, bmpce, "freeall");
-		bmpce_freeprep(bmpce);
-		freelock(&bmpce->bmpce_lock);
-		bmpce_release_locked(bmpce);
+	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a; a = b) {
+		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
+
+		spinlock(&a->bmpce_lock);
+		DEBUG_BMPCE(PLL_TRACE, a, "freeing..");
+		bmpce_freeprep(a);
+		freelock(&a->bmpce_lock);
+
+		bmpce_release_locked(a, bmpc);
 	}
 	psc_assert(SPLAY_EMPTY(&bmpc->bmpc_tree));
 	psc_assert(pll_empty(&bmpc->bmpc_lru));
@@ -133,21 +214,19 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
  *    bmap_pagecache structure.  
  * @bmpc:   bmap_pagecache
  * @nfree:  number of blocks to free.
- * @minage: cache age specifier used to ensure fairness across many
- *          bmap_pagecache's.            
  */
 __static int
 bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree) 
 {
-	struct bmap_pagecache_entry *bmpce;
+	struct bmap_pagecache_entry *bmpce, *tmp;
 	struct timespec ts;
 	int freed=0;
 
-	clock_gettime(CLOCK_REALTIME, ts);
+	clock_gettime(CLOCK_REALTIME, &ts);
 	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 
 	BMPC_LOCK(bmpc);
-	PLL_FOREACH_SAFE(bmpce, &bmpc->bmpc_lru) {
+	PLL_FOREACH_SAFE(bmpce, tmp, &bmpc->bmpc_lru) {
 		spinlock(&bmpce->bmpce_lock);
 
 		psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
@@ -157,12 +236,12 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 			freelock(&bmpce->bmpce_lock);
 			continue;
 		}
-		if (timespeccmp(ts, &bmpce->bmpce_laccess, <)) {
+		if (timespeccmp(&ts, &bmpce->bmpce_laccess, <)) {
 			DEBUG_BMPCE(PLL_TRACE, bmpce, "too recent, skip");
 			freelock(&bmpce->bmpce_lock);
 			continue;
 		}
-		
+
 		DEBUG_BMPCE(PLL_NOTIFY, bmpce, "freeing");
 		freelock(&bmpce->bmpce_lock);
 
@@ -203,6 +282,14 @@ bmpc_reap_locked(void)
 	 */
 	clock_gettime(CLOCK_REALTIME, &ts);
 	psclist_for_each_entry(bmpc, &bmpcLru.lc_listhd, bmpc_lentry) {
+		/* First check for lru items.
+		 */
+		if (!pll_nitems(&bmpc->bmpc_lru)) {
+			psc_trace("skip bmpc=%p, nothing on lru", bmpc);
+			continue;
+		}
+		/* Second, check for age.
+		 */
 		timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 		if (timespeccmp(&ts, &bmpc->bmpc_oldest, <)) {
 			psc_trace("skip bmpc=%p, too recent", bmpc);
@@ -242,23 +329,24 @@ void
 bmpc_free(void *base)
 {
 	struct sl_buffer *slb;
+	uint64_t uptr = (uint64_t)base;
 	int found=0, freeslb=0;
 
 	lockBmpcSlabs;	
 	PLL_FOREACH(slb, &bmpcSlabs.bmms_slbs) {
-		if (slb->slb_base == (base & ~BMPC_SLBBUFMASK)) {
+		if (slb->slb_base == (void *)(uptr & ~BMPC_SLBBUFMASK)) {
 			found = 1;
 			break;
 		}
 	}
 	psc_assert(found);
-	psc_assert(!((base & BMPC_SLBBUFMASK) % BMPC_BLKSZ));
+	psc_assert(!((uptr & BMPC_SLBBUFMASK) % BMPC_BLKSZ));
 
 	spinlock(&slb->slb_lock);
-	vbitmap_unset(&slb->slb_inuse, 
-		      (size_t)((base & BMPC_SLBBUFMASK) / BMPC_BLKSZ));
+	vbitmap_unset(slb->slb_inuse, 
+		      (size_t)((uptr & BMPC_SLBBUFMASK) / BMPC_BLKSZ));
 	
-	if ((vbitmap_nfree(&slb->slb_inuse) == BMPC_SLB_NBLKS) && 
+	if ((vbitmap_nfree(slb->slb_inuse) == BMPC_SLB_NBLKS) && 
 	    pll_nitems(&bmpcSlabs.bmms_slbs) > BMPC_DEFSLBS) {
 		/* The entire slb has been freed, let's remove it
 		 *   remove it from the cache and free the memory.
@@ -273,7 +361,7 @@ bmpc_free(void *base)
 	ulockBmpcSlabs;
 
 	if (freeslb) {
-		bmpc_increase_minage_locked();
+		bmpc_increase_minage();
 		bmpc_slb_free(slb);
 	}
 }
@@ -292,7 +380,7 @@ bmpc_alloc(void) {
 	lockBmpcSlabs;	
 	PLL_FOREACH(slb, &bmpcSlabs.bmms_slbs) {
 		spinlock(&slb->slb_lock);
-		if (vbitmap_next(&slb->slb_inuse, &elem))
+		if (vbitmap_next(slb->slb_inuse, &elem))
 			found = 1;
 		freelock(&slb->slb_lock);
 		if (found)
@@ -309,7 +397,7 @@ bmpc_alloc(void) {
 		ulockBmpcSlabs;
 		base = (char *)slb->slb_base + (elem * BMPC_BLKSZ);
 	}
-
+	
 	psc_assert(base);
 	return (base);
 }
@@ -318,9 +406,12 @@ bmpc_alloc(void) {
 void
 bmpc_global_init(void)
 {
-	bmpcSlabs.bmms_minage = BMPC_DEF_MINAGE;
-	LOCK_INIT(&bmpcSlabs.bmms_lock);
+	struct timespec ts = BMPC_DEF_MINAGE;
 
+	LOCK_INIT(&bmpcSlabs.bmms_lock);
+	timespecclear(&bmpcSlabs.bmms_minage);
+	timespecadd(&bmpcSlabs.bmms_minage, &ts, &bmpcSlabs.bmms_minage);
+	
 	psc_waitq_init(&bmpcSlabs.bmms_waitq);
 
 	pll_init(&bmpcSlabs.bmms_slbs, struct sl_buffer, 
@@ -331,7 +422,10 @@ bmpc_global_init(void)
 			    bmpce_init, NULL, NULL, "bmpce");
 
 	bmpcePoolMgr = psc_poolmaster_getmgr(&bmpcePoolMaster);
+	
+	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry, "bmpcLru");
 
 	psc_assert(!bmpc_grow(BMPC_DEFSLBS));
+	
 }
 
