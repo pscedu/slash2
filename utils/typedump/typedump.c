@@ -20,6 +20,7 @@
 #include "inode.h"
 #include "inodeh.h"
 #include "jflush.h"
+#include "mkfn.h"
 #include "offtree.h"
 #include "pathnames.h"
 #include "slashexport.h"
@@ -27,16 +28,18 @@
 #include "slconfig.h"
 #include "slerr.h"
 #include "sljournal.h"
+#include "sltypes.h"
+#include "mount_slash/bmpc.h"
 #include "mount_slash/cli_bmap.h"
-#include "mount_slash/cli_ctl.h"
 #include "mount_slash/cli_fidc.h"
+#include "mount_slash/ctl_cli.h"
 #include "mount_slash/fuse_listener.h"
 #include "mount_slash/mount_slash.h"
 #include "mount_slash/msl_fuse.h"
 #include "msctl/msctl.h"
 #include "slashd/control.h"
+#include "slashd/fidc_mds.h"
 #include "slashd/mds_bmap.h"
-#include "slashd/mds_fidc.h"
 #include "slashd/mds_repl.h"
 #include "slashd/mdscoh.h"
 #include "slashd/mdsexpc.h"
@@ -78,14 +81,16 @@ main(int argc, char *argv[])
 		usage();
 
 #define PRTYPE(type) \
-	printf("%-32s %zu\n", #type, sizeof(type))
+	printf("%-52s %zu\n", #type, sizeof(type))
 
 #define PRVAL(val) \
-	printf("%-32s %lu\n", #val, (unsigned long)(val))
+	printf("%-52s %lu\n", #val, (unsigned long)(val))
 
 	/* start structs */
 	PRTYPE(cred_t);
+	PRTYPE(sl_blkno_t);
 	PRTYPE(sl_inum_t);
+	PRTYPE(sl_ios_id_t);
 	PRTYPE(sl_mds_id_t);
 	PRTYPE(struct biod_crcup_ref);
 	PRTYPE(struct biod_infslvr_tree);
@@ -93,9 +98,13 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_info_cli);
 	PRTYPE(struct bmap_iod_info);
 	PRTYPE(struct bmap_mds_info);
+	PRTYPE(struct bmap_pagecache);
+	PRTYPE(struct bmap_pagecache_entry);
 	PRTYPE(struct bmap_refresh);
 	PRTYPE(struct bmapc_memb);
 	PRTYPE(struct bmi_assign);
+	PRTYPE(struct bmpc_ioreq);
+	PRTYPE(struct bmpc_mem_slbs);
 	PRTYPE(struct cfdent);
 	PRTYPE(struct cfdops);
 	PRTYPE(struct fidc_child);
