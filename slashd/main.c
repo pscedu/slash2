@@ -28,7 +28,6 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-int allow_internal_fsaccess;
 const char *progname;
 
 struct slash_creds rootcreds = { 0, 0 };
@@ -101,7 +100,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-X] [-f slashconf] [-p zpoolcache] [-S socket] zpoolname\n",
+	    "usage: %s [-f slashconf] [-p zpoolcache] [-S socket] zpoolname\n",
 	    progname);
 	exit(1);
 }
@@ -131,7 +130,7 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLCTLSOCK;
-	while ((c = getopt(argc, argv, "f:p:S:X")) != -1)
+	while ((c = getopt(argc, argv, "f:p:S:")) != -1)
 		switch (c) {
 		case 'f':
 			cfn = optarg;
@@ -141,9 +140,6 @@ main(int argc, char *argv[])
 			break;
 		case 'S':
 			sfn = optarg;
-			break;
-		case 'X':
-			allow_internal_fsaccess = 1;
 			break;
 		default:
 			usage();

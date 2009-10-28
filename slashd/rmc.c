@@ -245,8 +245,7 @@ slrmc_lookup(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (!allow_internal_fsaccess &&
-	    mq->pino == SL_ROOT_INUM &&
+	if (mq->pino == SL_ROOT_INUM &&
 	    strncmp(mq->name, SL_PATH_PREFIX,
 	     strlen(SL_PATH_PREFIX)) == 0)
 		mp->rc = EINVAL;

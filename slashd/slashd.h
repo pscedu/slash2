@@ -10,6 +10,5 @@
 
 extern struct cfdops		mdsCfdOps;
 extern struct slash_creds	rootcreds;
-extern int			allow_internal_fsaccess;
 
 #endif /* _SLASHD_H_ */
