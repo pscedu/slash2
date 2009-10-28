@@ -25,6 +25,12 @@ enum jfi_states {
 	JFI_BUSY    = (1<<2)
 };
 
+#ifdef _NOJOURNALING
+#define jfi_init(a,b,c)
+#define jfi_prep(a,b)
+#define jfi_schedule(a,b)
+#else
+
 static inline void
 jfi_init(struct jflush_item *j, jflush_handler handler, void *data)
 {
@@ -37,5 +43,7 @@ jfi_init(struct jflush_item *j, jflush_handler handler, void *data)
 
 void jfi_prep(struct jflush_item *, struct psc_journal *);
 void jfi_schedule(struct jflush_item *, list_cache_t *);
+
+#endif /* _NOJOURNALING */
 
 #endif /* _SL_JFLUSH_ */

@@ -10,4 +10,5 @@ JOURNALING=yes
 ifeq (${JOURNALING},no)
 DEFINES+=	-D_NOJOURNALING
 psc_fsutil_libs_psc_util_journal_c_CFLAGS=	-U_NOJOURNALING
+slash_nara_slashd_jflush_c_CFLAGS=		-U_NOJOURNALING
 endif
