@@ -13,6 +13,7 @@
 
 #include "cache_params.h"
 #include "fid.h"
+#include "sltypes.h"
 
 /* To save space in the bmaps, replica stores are kept in the sl-replicas
  *   xattr.  Each bmap uses an array of char's as a bitmap to track which
@@ -34,6 +35,7 @@
 #define SL_DEF_SNAPSHOTS	1
 #define SL_MAX_GENS_PER_BLK	4
 
+/* breakdown of I/O system ID: # of bits for each part */
 #define SL_SITE_BITS		16
 #define SL_RES_BITS		15
 #define SL_MDS_BITS		1
@@ -55,16 +57,7 @@
 #define SL_REPL_OLD		2
 #define SL_REPL_ACTIVE		3
 
-typedef u32 sl_mds_id_t;
-typedef u64 sl_inum_t;
-typedef u32 sl_blkno_t;  /* block number type */
-typedef u32 sl_ios_id_t; /* io server id: 16 bit site id
-			  *               15 bit resource id
-			  *                1 bit metadata svr bool
-			  */
-
-#define IOS_ID_ANY		(~(sl_ios_id_t)0)
-#define BLKNO_ANY		(~(sl_blkno_t)0)
+typedef uint64_t sl_inum_t;
 
 #define SL_MDS_ID_BITS		8 /* # first bits in inode inode number */
 #define SL_MDS_ID_MASK		((2 << SL_MDS_ID_BITS) - 1)
