@@ -21,6 +21,7 @@
 
 struct replrq_arg {
 	char iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
+	int nios;
 	int code;
 	int bmapno;
 };
@@ -42,10 +43,15 @@ pack_replrq(const char *fn, void *arg)
 {
 	struct msctlmsg_replrq *mrq;
 	struct replrq_arg *ra = arg;
+	int n;
 
 	mrq = psc_ctlmsg_push(ra->code,
 	    sizeof(struct msctlmsg_replrq));
 	mrq->mrq_bmapno = ra->bmapno;
+	mrq->mrq_nios = ra->nios;
+	for (n = 0; n < ra->nios; n++)
+		strlcpy(mrq->mrq_iosv[n], ra->iosv[n],
+		    sizeof(mrq->mrq_iosv[0]));
 	if (strlcpy(mrq->mrq_fn, fn,
 	    sizeof(mrq->mrq_fn)) >= sizeof(mrq->mrq_fn))
 		errx(1, "%s: too long", fn);
@@ -57,8 +63,8 @@ parse_replrq(int code, char *replrqspec,
 {
 	char *files, *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *site;
 	struct replrq_arg ra;
-	long l, niosv;
 	int bmax;
+	long l;
 
 	files = replrqspec;
 	ra.code = code;
@@ -70,14 +76,14 @@ parse_replrq(int code, char *replrqspec,
 		return;
 	}
 	*iosv++ = '\0';
-	niosv = 0;
+	ra.nios = 0;
 	for (site = iosv; site; site = next) {
 		if ((next = strchr(site, ',')) != NULL)
 			*next++ = '\0';
-		if (niosv >= nitems(ra.iosv))
+		if (ra.nios >= nitems(ra.iosv))
 			errx(1, "%s: too many site replicas specified",
 			    replrqspec);
-		if (strlcpy(ra.iosv[niosv++], site,
+		if (strlcpy(ra.iosv[ra.nios++], site,
 		    sizeof(ra.iosv[0])) >= sizeof(ra.iosv[0]))
 			errx(1, "%s: site name too long", site);
 	}

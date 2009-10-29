@@ -12,7 +12,7 @@
 
 #include "pathnames.h"
 
-#include "slashd/control.h"
+#include "slashd/ctl_mds.h"
 
 void
 slrmcthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
