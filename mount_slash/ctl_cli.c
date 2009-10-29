@@ -58,6 +58,12 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	uint32_t n;
 	int rc;
 
+	if (mrq->mrq_nios < 1 ||
+	    mrq->mrq_nios >= nitems(mrq->mrq_iosv))
+		return (psc_ctlsenderr(fd, mh,
+		    "replication request: %s",
+		    slstrerror(EINVAL)));
+
 	rc = msctl_getcreds(fd, &cr);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "unable to obtain credentials: %s",
@@ -101,12 +107,11 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	/* parse I/O systems specified */
 	for (n = 0; n < mrq->mrq_nios; n++, mq->nrepls++)
 		if ((mq->repls[n].bs_id =
-		    libsl_str2id(mrq->mrq_ios[n])) == IOS_ID_ANY) {
+		    libsl_str2id(mrq->mrq_iosv[n])) == IOS_ID_ANY) {
 			pscrpc_req_finished(rq);
 			return (psc_ctlsenderr(fd, mh,
-			    "%s: %s", mrq->mrq_ios[n], slstrerror(rc)));
+			    "%s: %s", mrq->mrq_iosv[n], slstrerror(rc)));
 		}
-
 	memcpy(&mq->fg, &fg, sizeof(mq->fg));
 	mq->bmapno = mrq->mrq_bmapno;
 

@@ -75,6 +75,7 @@ struct sl_gconf {
 	int			 gconf_nsites;
 	struct psclist_head	 gconf_sites;
 	struct hash_table	 gconf_nids_hash;
+	psc_spinlock_t		 gconf_lock;
 };
 
 #define GCONF_HASHTBL_SZ 63
@@ -82,9 +83,13 @@ struct sl_gconf {
 	do {							\
 		memset((g), 0, sizeof(*(g)));			\
 		INIT_PSCLIST_HEAD(&(g)->gconf_sites);		\
+		LOCK_INIT(&(g)->gconf_lock);			\
 		init_hash_table(&(g)->gconf_nids_hash,		\
 				GCONF_HASHTBL_SZ, "resnid");	\
 	} while (0)
+
+#define GCONF_LOCK()	spinlock(&globalConfig.gconf_lock)
+#define GCONF_ULOCK()	freelock(&globalConfig.gconf_lock)
 
 struct sl_resm {
 	lnet_nid_t		 resm_nid;
@@ -211,26 +216,26 @@ libsl_nid2resm(lnet_nid_t nid)
 static inline sl_ios_id_t
 libsl_str2id(const char *res_name)
 {
+	sl_ios_id_t id = IOS_ID_ANY;
 	const char *p = res_name;
 	struct sl_resource *r;
 	struct sl_site *s;
 
-	while (*p != '@') {
-		psc_assert((((int)(p - res_name)) < FULL_NAME_MAX) &&
-			   *p != '\0');
-		p++;
-	}
-	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry) {
-		if (!strncmp(s->site_name, p, SITE_NAME_MAX)) {
+	p = strhcr(res_name, '@');
+	if (p == NULL)
+		IOS_ID_ANY;
+	p++;
+	GCONF_LOCK();
+	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry)
+		if (strcmp(s->site_name, p) == 0)
 			psclist_for_each_entry(r, &s->site_resources,
-					       res_lentry) {
-				if (!strncmp(r->res_name, res_name,
-					     FULL_NAME_MAX))
-					return r->res_id;
-			}
-		}
-	}
-	return IOS_ID_ANY;
+			    res_lentry)
+				if (strcmp(r->res_name, res_name) == 0) {
+					id = r->res_id;
+					break;
+				}
+	GCONF_ULOCK();
+	return (id);
 }
 
 static inline void
