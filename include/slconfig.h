@@ -224,7 +224,6 @@ libsl_str2id(const char *res_name)
 	p = strchr(res_name, '@');
 	if (p == NULL)
 		return (IOS_ID_ANY);
-	p++;
 	GCONF_LOCK();
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry)
 		if (strcmp(s->site_name, p) == 0)
