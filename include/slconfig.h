@@ -221,9 +221,9 @@ libsl_str2id(const char *res_name)
 	struct sl_resource *r;
 	struct sl_site *s;
 
-	p = strhcr(res_name, '@');
+	p = strchr(res_name, '@');
 	if (p == NULL)
-		IOS_ID_ANY;
+		return (IOS_ID_ANY);
 	p++;
 	GCONF_LOCK();
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry)
