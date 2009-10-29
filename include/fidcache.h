@@ -77,6 +77,8 @@ enum fcmh_states {
 
 #define FCMH_LOCK(f)		spinlock(&(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock(&(f)->fcmh_lock)
+#define FCMH_RLOCK(f)		reqlock(&(f)->fcmh_lock)
+#define FCMH_URLOCK(f, lk)	ureqlock(&(f)->fcmh_lock, (lk))
 #define FCMH_LOCK_ENSURE(f)	LOCK_ENSURE(&(f)->fcmh_lock)
 
 #define fcmh_2_fid(f)		(f)->fcmh_fcm->fcm_fg.fg_fid
