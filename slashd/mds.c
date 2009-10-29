@@ -351,9 +351,10 @@ int
 mds_bmap_valid(struct fidc_membh *f, sl_blkno_t n)
 {
 	sl_blkno_t lblk;
+	int locked;
 	//int rc;
 
-	FCMH_LOCK_ENSURE(f);
+	locked = FCMH_RLOCK(f);
 #if 0
 	if ((rc = mds_stat_refresh_locked(f)))
 		return (rc);
@@ -364,6 +365,7 @@ mds_bmap_valid(struct fidc_membh *f, sl_blkno_t n)
 	psc_trace("fid="FIDFMT" lblk=%u fsz=%zu",
 		  FIDFMTARGS(fcmh_2_fgp(f)), lblk, fcmh_2_fsz(f));
 
+	FCMH_URLOCK(f, locked);
 	return (n < lblk);
 }
 
