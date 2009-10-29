@@ -83,8 +83,9 @@ enum {
 };
 
 static inline void
-msl_mfd_release(struct msl_fcoo_data *mfd) {
-	PSCFREE(mfd);	
+msl_mfd_release(struct msl_fcoo_data *mfd)
+{
+	PSCFREE(mfd);
 }
 
 struct io_server_conn {
