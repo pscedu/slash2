@@ -27,8 +27,6 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-#define REPLST_PAGESIZ	(1024 * 1024)	/* should be network MSS */
-
 struct vbitmap	 slrcmthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t	 slrcmthr_uniqidmap_lock = LOCK_INITIALIZER;
 
@@ -51,17 +49,24 @@ slrmcthr_repl_waitrep(struct pscrpc_request *rq)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
+	struct pscrpc_bulk_desc *desc;
 	struct slash_rcmthr *srcm;
 	struct psc_thread *thr;
+	struct iovec iov;
 	int rc;
 
 	thr = pscthr_get();
 	srcm = slrcmthr(thr);
 
+	iov.iov_base = srcm->srcm_page;
+	iov.iov_len = srcm->srcm_pagelen;
+
 	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	mq->len = srcm->srcm_pagelen;
-//	rsx_bulkclient();
-	rc = RSX_WAITREP(rq, mp);
+	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
+	    SRCM_BULK_PORTAL, &iov, 1);
+	if (rc == 0)
+		rc = RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -84,7 +89,7 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 	rq = NULL;
 	len = rrq->rrq_inoh->inoh_ino.ino_nrepls *
 	    SL_BITS_PER_REPLICA / NBBY;
-	if (srcm->srcm_pagelen + len > REPLST_PAGESIZ) {
+	if (srcm->srcm_pagelen + len > SRM_REPLST_PAGESIZ) {
 		if (*rqp) {
 			rc = slrmcthr_repl_waitrep(*rqp);
 			if (rc)
@@ -95,7 +100,6 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 		    SRCM_VERSION, SRMT_GETREPLST_SLAVE, *rqp, mq, mp);
 		if (rc)
 			return (rc);
-		mq->inum = REPLRQ_FID(rrq);
 		mq->id = srcm->srcm_id;
 		mq->boff = n;
 
@@ -160,8 +164,8 @@ slrcmthr_main(__unusedx void *arg)
 
 	thr = pscthr_get();
 	srcm = slrcmthr(thr);
-	srcm->srcm_page = PSCALLOC(REPLST_PAGESIZ);
-	srcm->srcm_pagelen = REPLST_PAGESIZ;
+	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
+	srcm->srcm_pagelen = SRM_REPLST_PAGESIZ;
 
 	rq = NULL;
 	rc = 0;

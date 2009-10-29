@@ -4,6 +4,7 @@
  * Routines for handling RPC requests for CLIENT from MDS.
  */
 
+#include "psc_ds/pool.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/log.h"
@@ -60,12 +61,21 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 int
 msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 {
+	struct msctl_replst_slave_cont *mrsc;
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
-	struct msctl_replst_cont *mrc;
+	struct pscrpc_bulk_desc *desc;
 	struct msctl_replstq *mrsq;
+	struct iovec iov;
 
 	RSX_ALLOCREP(rq, mq, mp);
+
+	if (mq->len < 1 || mq->len > SRM_REPLST_PAGESIZ) {
+		mp->rc = EINVAL;
+		return (mp->rc);
+	}
+
+	mrsc = psc_pool_get(msctl_replstc_pool);
 
 	/* find corresponding queue */
 	PLL_LOCK(&msctl_replsts);
@@ -76,14 +86,22 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 				break;
 			}
 
-			mrc = PSCALLOC(sizeof(*mrc) + mq->len);
-			mrc->mrc_mrs.mrs_id = mq->id;
-			//bulkserver();
-			lc_add(&mrsq->mrsq_lc, mrc);
+			iov.iov_base = mrsc->mrsc_mrsl.mrsl_data;
+			iov.iov_len = mq->len;
+
+			mrsc->mrsc_mrsl.mrsl_len = mq->len;
+			mrsc->mrsc_mrsl.mrsl_id = mq->id;
+			mrsc->mrsc_mrsl.mrsl_boff = mq->boff;
+			mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+			    SRCM_BULK_PORTAL, &iov, 1);
+			lc_add(&mrsq->mrsq_lc, mrsc);
+			mrsc = NULL;
 			break;
 		}
 	PLL_ULOCK(&msctl_replsts);
-	return (0);
+	if (mrsc)
+		psc_pool_return(msctl_replstc_pool, mrsc);
+	return (mp->rc);
 }
 
 /*

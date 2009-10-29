@@ -117,14 +117,15 @@ parse_replrq(int code, char *replrqspec,
 					walk(files, packf, &ra);
 			}
 		} else {
-			if (files[0] != '\0')
-				errx(1, "%s: bmap specification not allowed",
-				    replrqspec);
-			packf("", &ra);
+			errx(1, "%s: bmap specification not allowed",
+			    replrqspec);
 		}
 	} else {
 		ra.bmapno = REPLRQ_BMAPNO_ALL;
-		walk(files, packf, &ra);
+		if (files[0] == '\0')
+			packf("", &ra);
+		else
+			walk(files, packf, &ra);
 	}
 }
 

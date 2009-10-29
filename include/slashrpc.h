@@ -50,6 +50,7 @@
 /* Slash RPC channel to client from MDS. */
 #define SRCM_REQ_PORTAL		25
 #define SRCM_REP_PORTAL		26
+#define SRCM_BULK_PORTAL	27
 
 #define SRCM_VERSION		1
 #define SRCM_MAGIC		0xaabbccddeeff0055ULL
@@ -473,13 +474,14 @@ struct srm_replst_master_req {
 
 /* bmap data carrier for a replrq GETSTATUS */
 struct srm_replst_slave_req {
-	uint64_t		inum;
 	int32_t			id;		/* user-provided passback value */
 	int32_t			len;		/* of bulk data */
 	uint32_t		rc;
 	sl_blkno_t		boff;		/* offset into inode of first bmap in bulk */
 /* bulk data is bh_repls data */
 };
+
+#define SRM_REPLST_PAGESIZ	(1024 * 1024)	/* should be network MSS */
 
 #define srm_replst_slave_rep srm_replst_slave_req
 

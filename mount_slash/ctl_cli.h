@@ -13,28 +13,36 @@ struct msctlmsg_replst {
 	char			mrs_fn[PATH_MAX];
 	char			mrs_iosv[SL_MAX_REPLICAS][SITE_NAME_MAX];
 	uint32_t		mrs_nios;
-	uint32_t		mrs_nbmaps;
-	uint32_t		mrs_id;
+	uint32_t		mrs_nbmaps;	/* accounting for # of slaves */
+	uint32_t		mrs_id;		/* user-provided identifer */
 };
 
 struct msctlmsg_replst_slave {
-	uint32_t		mrs_id;
-	uint32_t		mrs_boff;
-	char			mrs_data[0];
+	uint32_t		mrsl_id;	/* user-provided identifer */
+	uint32_t		mrsl_boff;	/* bmap starting offset */
+	uint32_t		mrsl_len;	/* max: SRM_REPLST_PAGESIZ */
+	char			mrsl_data[0];	/* bmap replica bits */
+};
+
+/* in-memory container for a replst_slave msg */
+struct msctl_replst_slave_cont {
+	struct psclist_head	mrsc_lentry;
+	struct msctlmsg_replst_slave mrsc_mrsl;
 };
 
 struct msctl_replstq {
 	struct psclist_head	mrsq_lentry;
 	char			mrsq_iosv[SL_MAX_REPLICAS][SITE_NAME_MAX];
-	struct psc_listcache	mrsq_lc;
 	uint32_t		mrsq_nios;
-	int32_t			mrsq_id;
+	int32_t			mrsq_id;	/* user-provided identifer */
+	struct psc_listcache	mrsq_lc;
 };
 
 /* in-memory container for a replst msg */
 struct msctl_replst_cont {
 	struct psclist_head	mrc_lentry;
 	struct msctlmsg_replst	mrc_mrs;
+	struct psc_lockedlist	mrc_bdata;	/* msctl_replst_slave_cont */
 };
 
 /* for issuing/controlling replication requests */
@@ -54,4 +62,5 @@ struct msctlmsg_replrq {
 #define SCMT_GETREPLST		(NPCMT + 2)
 #define SCMT_GETREPLST_SLAVE	(NPCMT + 3)
 
-extern struct psc_lockedlist	msctl_replsts;
+extern struct psc_lockedlist	 msctl_replsts;
+extern struct psc_poolmgr	*msctl_replstc_pool;
