@@ -9,7 +9,7 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 
-#include "control.h"
+#include "ctl_mds.h"
 
 struct psc_lockedlist psc_mlists;
 

@@ -14,7 +14,7 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
-#include "control.h"
+#include "ctl_mds.h"
 #include "fdbuf.h"
 #include "fidcache.h"
 #include "mds_bmap.h"
