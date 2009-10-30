@@ -11,6 +11,7 @@
 #include "psc_util/strlcpy.h"
 
 #include "ctl_cli.h"
+#include "ctlsvr_cli.h"
 #include "slashrpc.h"
 
 /*
@@ -37,16 +38,16 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	PLL_FOREACH(mrsq, &msctl_replsts)
 		if (mrsq->mrsq_id == mq->id) {
 			if (mq->rc) {
-				/* XXX kill all slave lists */
-				lc_kill(&mrsq->mrsq_lc);
+				/* XXX completion all mrcs */
+				psc_completion_done(&mrsq->mrsq_compl, 0);
 				break;
 			}
 			/* fill in data */
 			memset(mrc, 0, sizeof(*mrc));
-			lc_reginit(&mrc->mrc_bdata,
+			psc_completion_init(&mrc->mrc_compl);
+			pll_init(&mrc->mrc_bdata,
 			    struct msctl_replst_slave_cont,
-			    mrsc_lentry, "msctl_replst-%d:%lx",
-			    mq->id, mq->fid);
+			    mrsc_lentry, NULL);
 			mrc->mrc_mrs.mrs_id = mq->id;
 			mrc->mrc_mrs.mrs_fid = mq->fid;
 			mrc->mrc_mrs.mrs_nbmaps = mq->nbmaps;
@@ -56,7 +57,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 				strlcpy(mrc->mrc_mrs.mrs_iosv[n],
 				    site->site_name, SITE_NAME_MAX);
 			}
-			lc_add(&mrsq->mrsq_lc, mrc);
+			pll_add(&mrsq->mrsq_mrcs, mrc);
 			mrc = NULL;
 			break;
 		}
@@ -95,23 +96,18 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	PLL_LOCK(&msctl_replsts);
 	PLL_FOREACH(mrsq, &msctl_replsts)
 		if (mrsq->mrsq_id == mq->id) {
-			LIST_CACHE_LOCK(&mrsq->mrsq_lc);
-			LIST_CACHE_FOREACH(mrc, &mrsq->mrsq_lc)
+			PLL_LOCK(&mrsq->mrsq_mrcs);
+			PLL_FOREACH(mrc, &mrsq->mrsq_mrcs)
 				if (mrc->mrc_mrs.mrs_fid == mq->fid)
 					break;
-			LIST_CACHE_ULOCK(&mrsq->mrsq_lc);
+			PLL_ULOCK(&mrsq->mrsq_mrcs);
 
 			if (mrc == NULL)
 				break;
 
-			/*
-			 * There shouldn't be a here race between
-			 * adding and killing because these are
-			 * processed synchronously and serially.
-			 */
 			if (mq->rc)
-				lc_kill(&mrc->mrc_bdata);
-			else if (mq->len < 1) /* XXX SL_REPLICA_NBYTES */
+				psc_completion_done(&mrc->mrc_compl, 0);
+			else if (mq->len < 1)
 				mp->rc = EINVAL;
 			else {
 				iov.iov_base = mrsc->mrsc_mrsl.mrsl_data;
@@ -122,7 +118,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 				mrsc->mrsc_mrsl.mrsl_boff = mq->boff;
 				mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 				    SRCM_BULK_PORTAL, &iov, 1);
-				lc_add(&mrc->mrc_bdata, mrsc);
+				pll_add(&mrc->mrc_bdata, mrsc);
 				mrsc = NULL;
 			}
 			break;

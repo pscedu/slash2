@@ -130,30 +130,26 @@ parse_replrq(int code, char *replrqspec,
 }
 
 int
-replst_check(struct psc_ctlmsghdr *mh, __unusedx const void *m)
+replst_slave_check(struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	__unusedx struct msctlmsg_replst *mrs;
+	__unusedx struct msctlmsg_replst_slave *mrsc;
 
-	if (mh->mh_size < sizeof(*mrs) ||
-	    (mh->mh_size - sizeof(*mrs)) % SL_REPLICA_NBYTES)
-		return (sizeof(*mrs));
+	if (mh->mh_size < sizeof(*mrsc) ||
+	    (mh->mh_size - sizeof(*mrsc)) % SL_REPLICA_NBYTES)
+		return (sizeof(*mrsc));
 	return (0);
 }
 
 void
-replst_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
-{
-	printf("replication status\n"
-	    " %-54s %8s %8s %6s\n",
-	    "file/fid", "total", "old", "%done");
-}
-
-void
-replst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+replst_slave_prdatif(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	static char lastfn[PATH_MAX];
 	const struct msctlmsg_replst *mrs = m;
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
+
+	printf("replication status\n"
+	    " %-54s %8s %8s %6s\n",
+	    "file/fid", "total", "old", "%done");
 
 	if (strcmp(lastfn, mrs->mrs_fn)) {
 		strlcpy(lastfn, mrs->mrs_fn, sizeof(lastfn));
@@ -174,9 +170,10 @@ int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
-	{ NULL,		NULL,		0, NULL },
-	{ NULL,		NULL,		0, NULL },
-	{ replst_prhdr,	replst_prdat,	0, replst_check }
+	{ NULL,		NULL,			0, NULL },
+	{ NULL,		NULL,			0, NULL },
+	{ NULL,		NULL,			sizeof(struct msctlmsg_replst), NULL },
+	{ NULL,		replst_slave_prdatif,	0, replst_slave_check }
 };
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 

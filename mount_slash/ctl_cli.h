@@ -5,6 +5,9 @@
  * parameters of a running mount_slash instance.
  */
 
+#ifndef _SL_CTL_CLI_H_
+#define _SL_CTL_CLI_H_
+
 #include "inode.h"
 #include "slconfig.h"
 
@@ -25,25 +28,6 @@ struct msctlmsg_replst_slave {
 	char			mrsl_data[0];	/* bmap replica bits */
 };
 
-/* in-memory container for a replst_slave msg */
-struct msctl_replst_slave_cont {
-	struct psclist_head	mrsc_lentry;
-	struct msctlmsg_replst_slave mrsc_mrsl;
-};
-
-struct msctl_replstq {
-	struct psclist_head	mrsq_lentry;
-	int32_t			mrsq_id;	/* user-provided identifer */
-	struct psc_listcache	mrsq_lc;	/* msctl_replst_cont */
-};
-
-/* in-memory container for a replst msg */
-struct msctl_replst_cont {
-	struct psclist_head	mrc_lentry;
-	struct msctlmsg_replst	mrc_mrs;
-	struct psc_listcache	mrc_bdata;	/* msctl_replst_slave_cont */
-};
-
 /* for issuing/controlling replication requests */
 struct msctlmsg_replrq {
 	char			mrq_fn[PATH_MAX];
@@ -61,6 +45,4 @@ struct msctlmsg_replrq {
 #define SCMT_GETREPLST		(NPCMT + 2)
 #define SCMT_GETREPLST_SLAVE	(NPCMT + 3)
 
-extern struct psc_lockedlist	 msctl_replsts;
-extern struct psc_poolmgr	*msctl_replstmc_pool;
-extern struct psc_poolmgr	*msctl_replstsc_pool;
+#endif /* _SL_CTL_CLI_H_ */

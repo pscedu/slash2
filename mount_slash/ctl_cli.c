@@ -16,6 +16,7 @@
 #include "psc_util/strlcpy.h"
 
 #include "ctl_cli.h"
+#include "ctlsvr_cli.h"
 #include "mount_slash.h"
 #include "msl_fuse.h"
 #include "slashrpc.h"
@@ -198,8 +199,9 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rv = 1;
 	mrsq = PSCALLOC(sizeof(*mrsq));
 	mrsq->mrsq_id = mq->id;
-	lc_reginit(&mrsq->mrsq_lc, struct msctl_replst_cont,
-	    mrc_lentry, "msctl_replst-%d", mq->id);
+	pll_init(&mrsq->mrsq_mrcs, struct msctl_replst_cont,
+	    mrc_lentry, NULL);
+	psc_completion_init(&mrsq->mrsq_compl);
 	pll_add(&msctl_replsts, mrsq);
 
 	rc = RSX_WAITREP(rq, mp);
@@ -215,30 +217,27 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
-	while ((mrc = lc_peekheadwait(&mrsq->mrsq_lc)) != NULL) {
+	psc_completion_wait(&mrsq->mrsq_compl);
+	while (rv && (mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
 		/* XXX fill in mrs_fn */
 		rv = psc_ctlmsg_sendv(fd, mh, &mrc->mrc_mrs);
-		while ((mrsc = lc_getwait(&mrc->mrc_bdata)) != NULL) {
+
+		psc_completion_wait(&mrc->mrc_compl);
+		while (rv && (mrsc = pll_get(&mrc->mrc_bdata)) != NULL) {
 			rv = psc_ctlmsg_sendv(fd, mh, &mrsc->mrsc_mrsl);
 			psc_pool_return(msctl_replstsc_pool, mrsc);
-			if (!rv)
-				break;
 		}
-		while ((mrsc = lc_getnb(&mrc->mrc_bdata)) != NULL)
+		while ((mrsc = pll_get(&mrc->mrc_bdata)) != NULL)
 			psc_pool_return(msctl_replstsc_pool, mrsc);
-		lc_remove(&mrsq->mrsq_lc, mrc);
-		lc_unregister(&mrc->mrc_bdata);
 		psc_pool_return(msctl_replstmc_pool, mrc);
-		if (!rv)
-			break;
 	}
 
  out:
 	pll_remove(&msctl_replsts, mrsq);
-	while ((mrc = lc_getnb(&mrsq->mrsq_lc)) != NULL) {
-		while ((mrsc = lc_getwait(&mrc->mrc_bdata)) != NULL)
+	while ((mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
+		psc_completion_wait(&mrc->mrc_compl);
+		while ((mrsc = pll_get(&mrc->mrc_bdata)) != NULL)
 			psc_pool_return(msctl_replstsc_pool, mrsc);
-		lc_unregister(&mrc->mrc_bdata);
 		psc_pool_return(msctl_replstmc_pool, mrc);
 	}
 	free(mrsq);
