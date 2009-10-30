@@ -71,6 +71,9 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 {
 	struct timespec ts;
 
+	if (a->biorq_flags & BIORQ_FORCE_EXPIRE)
+		return (1);
+
 	clock_gettime(CLOCK_REALTIME, &ts);
 
 	if ((a->biorq_start.tv_sec + bmapFlushDefMaxAge.tv_sec) < ts.tv_sec)
@@ -157,12 +160,16 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 }
 
 __static void
-bmap_flush_inflight_ref(const struct bmpc_ioreq *r)
+bmap_flush_inflight_ref(struct bmpc_ioreq *r)
 {
 	int i;
 	struct bmap_pagecache_entry *bmpce;
-
+	
+	spinlock(&r->biorq_lock);
+	psc_assert(r->biorq_flags & BIORQ_SCHED);
+	r->biorq_flags |= BIORQ_INFL;	
 	DEBUG_BIORQ(PLL_INFO, r, "set inflight");
+	freelock(&r->biorq_lock);
 
 	for (i=0; i < dynarray_len(&r->biorq_pages); i++) {
 		bmpce = dynarray_getpos(&r->biorq_pages, i);
@@ -309,7 +316,7 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache_entry *bmpce;
 	struct iovec *iovs=NULL;
-	int i, j, niovs=0, first_iov=1;
+	int i, j, niovs=0, first_iov;
 	uint32_t reqsz=bmap_flush_coalesce_size(biorqs);
 	off_t off=0;
 
@@ -320,9 +327,9 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 	r = dynarray_getpos(biorqs, 0);
 	off = r->biorq_off;
 
-	for (i=0; i < dynarray_len(biorqs); i++) {
+	for (i=0; i < dynarray_len(biorqs); i++, first_iov=1) {
 		r = dynarray_getpos(biorqs, i);
-
+			       
 		DEBUG_BIORQ(PLL_INFO, r, "r rreqsz=%u off=%zu", reqsz, off);
 		psc_assert(dynarray_len(&r->biorq_pages));
 
@@ -349,14 +356,15 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 		/* Now iterate through the biorq's iov set, where the
 		 *   actual buffers are stored.
 		 */
-		for (j=0; j < dynarray_len(&r->biorq_pages); j++) {
+		for (j=0, first_iov=1; j < dynarray_len(&r->biorq_pages); 
+		     j++) {
 			bmpce = dynarray_getpos(&r->biorq_pages, j);
 			spinlock(&bmpce->bmpce_lock);
 
-			if (bmpce->bmpce_off <= r->biorq_off)
+			if ((bmpce->bmpce_off <= r->biorq_off) && j)
 				abort();
 
-			if (bmpce->bmpce_off <= off) {
+			if ((bmpce->bmpce_off < off) && !first_iov) {
 				/* Similar case to the 'continue' stmt above,
 				 *   this bmpce overlaps a previously 
 				 *   scheduled biorq.
@@ -365,7 +373,7 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 				psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
 				freelock(&bmpce->bmpce_lock);
 				continue;
-			}
+			} 
 
 			bmpce->bmpce_flags |= BMPCE_IOSCHED;
 			DEBUG_BMPCE(PLL_INFO, bmpce, "scheduled");
@@ -373,6 +381,8 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 			 */
 			bmpce_usecheck(bmpce, BIORQ_WRITE, 
 			       (first_iov ? (off & ~BMPC_BUFMASK) : off));
+
+			freelock(&bmpce->bmpce_lock);
 			/* Add a new iov!
 			 */
 			*iovset = iovs = PSC_REALLOC(iovs,
