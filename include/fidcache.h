@@ -84,11 +84,9 @@ enum fcmh_states {
 #define fcmh_2_fid(f)		(f)->fcmh_fcm->fcm_fg.fg_fid
 #define fcmh_2_gen(f)		(f)->fcmh_fcm->fcm_fg.fg_gen
 #define fcmh_2_fgp(f)		(&(f)->fcmh_fcm->fcm_fg)
-//#define fcmh_2_fsz(f)		(size_t)(f)->fcmh_fcm->fcm_stb.st_size
 #define fcmh_2_fsz(f)		(f)->fcmh_fcm->fcm_stb.st_size
 #define fcmh_2_attrp(f)		(&(f)->fcmh_fcm->fcm_stb)
-#define fcmh_2_nbmaps(f)	((sl_bmapno_t)((fcmh_2_fsz(f) + (SLASH_BMAP_SIZE - 1)) / \
-				    SLASH_BMAP_SIZE))
+#define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE))
 
 #define fcmh_2_age(f)		((f)->fcmh_fcm->fcm_slfinfo.slf_age)
 #define fcmh_2_stb(f)		(&(f)->fcmh_fcm->fcm_stb)
