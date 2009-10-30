@@ -24,11 +24,22 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	char	c;
+	int	dumponly = 0;
+
 	progname = argv[0];
 	pfl_init();
-	if (getopt(argc, argv, "") != -1)
-		usage();
+	while ((c = getopt(argc, argv, "d")) != -1) {
+		switch (c) {
+			case 'd':
+				dumponly = 1;
+				break;
+			default:
+				usage();
+		}
+	}
 	argc -= optind;
+	argv += optind;
 	if (argc)
 		usage();
 
@@ -36,11 +47,12 @@ main(int argc, char *argv[])
 		if (errno != EEXIST)
 			err(1, "mkdir: %s", _PATH_SLASHD_DIR);
 
-	pjournal_format(_PATH_SLJOURNAL, SLJ_MDS_JNENTS,
-	    SLJ_MDS_ENTSIZE, SLJ_MDS_RA, 0);
+	if (!dumponly) {
+		pjournal_format(_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE, SLJ_MDS_RA, 0);
+		printf("SLASH log file %s has been created with %d %d-byte entries.\n", 
+				_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE);
+	}
 	pjournal_dump(_PATH_SLJOURNAL);
-	printf("SLASH log file %s has been created with %d %d-byte entries.\n",
-		_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE);
 	
 	exit(0);
 }
