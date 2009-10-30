@@ -17,7 +17,11 @@
 #include "mount_slash/ctl_cli.h"
 #include "msctl.h"
 #include "pathnames.h"
+#include "slashrpc.h"
 #include "slconfig.h"
+
+struct msctlmsg_replst		current_mrs;
+const struct msctlmsg_replst	zero_mrs;
 
 struct replrq_arg {
 	char iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
@@ -132,34 +136,53 @@ parse_replrq(int code, char *replrqspec,
 int
 replst_slave_check(struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	__unusedx struct msctlmsg_replst_slave *mrsc;
+	const struct msctlmsg_replst_slave *mrsl = m;
+	uint32_t nbytes, nbmaps, len;
 
-	if (mh->mh_size < sizeof(*mrsc) ||
-	    (mh->mh_size - sizeof(*mrsc)) % SL_REPLICA_NBYTES)
-		return (sizeof(*mrsc));
+	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)) == 0)
+		errx(1, "received unexpected replication status slave message");
+
+	nbytes = howmany(SL_BITS_PER_REPLICA * current_mrs.mrs_nios, NBBY);
+
+	if (mh->mh_size < sizeof(*mrsl))
+		return (sizeof(*mrsl));
+	len = mh->mh_size - sizeof(*mrsl);
+	if (len > SRM_REPLST_PAGESIZ || len % nbytes)
+		return (sizeof(*mrsl));
+	nbmaps = (mh->mh_size - sizeof(*mrsl)) / nbytes;
+	if (nbmaps > current_mrs.mrs_nbmaps)
+		errx(1, "invalid value in replication status slave message");
+	current_mrs.mrs_nbmaps -= nbmaps;
 	return (0);
+}
+
+void
+replst_savdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct msctlmsg_replst *mrs = m;
+
+	memcpy(&current_mrs, mrs, sizeof(current_mrs));
 }
 
 void
 replst_slave_prdatif(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
-	static char lastfn[PATH_MAX];
-	const struct msctlmsg_replst *mrs = m;
+	const struct msctlmsg_replst_slave *mrsl = m;
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
+
+	/* if there are more bmaps left, wait to print */
+	if (current_mrs.mrs_nbmaps)
+		return;
 
 	printf("replication status\n"
 	    " %-54s %8s %8s %6s\n",
 	    "file/fid", "total", "old", "%done");
 
-	if (strcmp(lastfn, mrs->mrs_fn)) {
-		strlcpy(lastfn, mrs->mrs_fn, sizeof(lastfn));
-		printf(" %-79s\n", mrs->mrs_fn);
-	}
-
 //	psc_fmt_ratio(rbuf, mrs->mrs_bact, mrs->mrs_bact + mrs->mrs_bold);
 //	printf("     %-50s %8d %8d %6s\n", mrs->mrs_ios,
 //	    mrs->mrs_bact + mrs->mrs_bold, mrs->mrs_bold, rbuf);
-	/* XXX show each bmap status */
+
+	memcpy(&current_mrs, &zero_mrs, sizeof(current_mrs));
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
@@ -172,7 +195,7 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
 	{ NULL,		NULL,			0, NULL },
 	{ NULL,		NULL,			0, NULL },
-	{ NULL,		NULL,			sizeof(struct msctlmsg_replst), NULL },
+	{ NULL,		replst_savdat,		sizeof(struct msctlmsg_replst), NULL },
 	{ NULL,		replst_slave_prdatif,	0, replst_slave_check }
 };
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
@@ -267,5 +290,7 @@ main(int argc, char *argv[])
 		usage();
 
 	psc_ctlcli_main(sockfn);
+	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)))
+		errx(1, "communication error: replication status not completed");
 	exit(0);
 }

@@ -24,7 +24,6 @@ struct msctlmsg_replst {
 struct msctlmsg_replst_slave {
 	uint32_t		mrsl_id;	/* user-provided identifer */
 	uint32_t		mrsl_boff;	/* bmap starting offset */
-	uint32_t		mrsl_len;	/* max: SRM_REPLST_PAGESIZ */
 	char			mrsl_data[0];	/* bmap replica bits */
 };
 

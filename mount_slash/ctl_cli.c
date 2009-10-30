@@ -224,7 +224,9 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 		psc_completion_wait(&mrc->mrc_compl);
 		while (rv && (mrsc = pll_get(&mrc->mrc_bdata)) != NULL) {
-			rv = psc_ctlmsg_sendv(fd, mh, &mrsc->mrsc_mrsl);
+			rv = psc_ctlmsg_send(fd, mh->mh_id,
+			    SCMT_GETREPLST_SLAVE, mrsc->mrsc_len +
+			    sizeof(mrsc->mrsc_mrsl), &mrsc->mrsc_mrsl);
 			psc_pool_return(msctl_replstsc_pool, mrsc);
 		}
 		while ((mrsc = pll_get(&mrc->mrc_bdata)) != NULL)
@@ -246,9 +248,10 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS,
-	{ msctlrep_replrq,	sizeof(struct msctlmsg_replrq) },
-	{ msctlrep_replrq,	sizeof(struct msctlmsg_replrq) },
-	{ msctlrep_getreplst,	sizeof(struct msctlmsg_replst) }
+	{ msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
+	{ msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
+	{ msctlrep_getreplst,		sizeof(struct msctlmsg_replst) },
+	{ NULL,				0 }
 };
 
 void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {

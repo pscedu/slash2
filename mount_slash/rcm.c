@@ -113,7 +113,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 				iov.iov_base = mrsc->mrsc_mrsl.mrsl_data;
 				iov.iov_len = mq->len;
 
-				mrsc->mrsc_mrsl.mrsl_len = mq->len;
+				mrsc->mrsc_len = mq->len;
 				mrsc->mrsc_mrsl.mrsl_id = mq->id;
 				mrsc->mrsc_mrsl.mrsl_boff = mq->boff;
 				mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
