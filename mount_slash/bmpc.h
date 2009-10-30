@@ -16,6 +16,7 @@
 #include "psc_util/spinlock.h"
 #include "psc_ds/vbitmap.h"
 
+#include "cache_params.h"
 #include "bmap.h"
 #include "buffer.h"
 
@@ -24,7 +25,7 @@ extern struct psc_poolmgr *bmpcePoolMgr;
 extern struct bmpc_mem_slbs bmpcSlabs;
 extern struct psc_listcache bmpcLru;
 
-#define BMPC_BUFSZ      32768
+#define BMPC_BUFSZ      SLASH_BMAP_BLKSZ
 #define BMPC_BLKSZ      BMPC_BUFSZ
 #define BMPC_SLB_NBLKS  256  /* 8MB slab */
 #define BMPC_DEFSLBS    8
@@ -37,8 +38,8 @@ extern struct psc_listcache bmpcLru;
 #define BMPC_DEF_MINAGE { 2, 0 } /* seconds, nanoseconds */
 #define BMPC_INTERVAL   { 0, 200000000 }
 
-uint32_t bmpcDefSlbs = BMPC_DEFSLBS;
-uint32_t bmpcMaxSlbs = BMPC_MAXSLBS; /* Adjust to some % of system mem? */
+extern uint32_t bmpcDefSlbs;
+extern uint32_t bmpcMaxSlbs;
 
 struct bmpc_mem_slbs {
 	atomic_t              bmms_waiters;
@@ -82,26 +83,50 @@ enum BMPCE_STATES {
 	BMPCE_FREEING   = (1<<8)
 };
 
+#define BMPCE_2_BIORQ(b) ((b)->bmpce_waitq == NULL) ? NULL :	\
+	(((char *)((b)->bmpce_waitq)) -				\
+	 offsetof(struct bmpc_ioreq, biorq_waitq))
+
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 " bmpce@%p fl=%x o=%u b=%p ts=%ld:%ld wr=%hu rd=%hu: "	\
-		 "lru=%d "fmt,						\
+		 " bmpce@%p fl=%u o=%x b=%p ts=%ld:%ld wr=%hu rd=%hu: "	\
+		 "lru=%d biorq=%p "fmt,					\
 		 (b), (b)->bmpce_flags, (b)->bmpce_off, (b)->bmpce_base, \
 		 (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec, \
 		 psc_atomic16_read(&(b)->bmpce_wrref),			\
 		 psc_atomic16_read(&(b)->bmpce_rdref),			\
 		 psclist_conjoint(&(b)->bmpce_lentry),			\
+		 BMPCE_2_BIORQ(b),					\
 		 ## __VA_ARGS__)
+
+static inline int
+bmpce_sort_cmp(const void *x, const void *y)
+{
+	const struct bmap_pagecache_entry *a = 
+		*(const struct bmap_pagecache_entry **)x;
+
+	const struct bmap_pagecache_entry *b = 
+		*(const struct bmap_pagecache_entry **)y;
+
+	if (a->bmpce_off < b->bmpce_off)
+		return (-1);
+
+	if (a->bmpce_off > b->bmpce_off)
+		return (1);
+
+	return (0);
+}
 
 static inline int
 bmpce_cmp(const void *x, const void *y)
 {
-	if (((struct bmap_pagecache_entry *)x)->bmpce_off <
-	    ((struct bmap_pagecache_entry *)y)->bmpce_off)
+	const struct bmap_pagecache_entry *a = x;
+	const struct bmap_pagecache_entry *b = y;
+
+	if (a->bmpce_off < b->bmpce_off)
 		return (-1);
 
-	if (((struct bmap_pagecache_entry *)x)->bmpce_off > 
-	    ((struct bmap_pagecache_entry *)y)->bmpce_off)
+	if (a->bmpce_off > b->bmpce_off)
 		return (1);
 
 	return (0);
@@ -154,16 +179,17 @@ struct bmpc_ioreq {
 };
 
 enum BMPC_IOREQ_FLAGS {
-	BIORQ_READ  = (1<<0),
-	BIORQ_WRITE = (1<<1),
-	BIORQ_RBWFP = (1<<2),
-	BIORQ_RBWLP = (1<<3),
-	BIORQ_SCHED = (1<<4),
-	BIORQ_INFL  = (1<<5),
-	BIORQ_DIO   = (1<<6)
+	BIORQ_READ         = (1<<0),
+	BIORQ_WRITE        = (1<<1),
+	BIORQ_RBWFP        = (1<<2),
+	BIORQ_RBWLP        = (1<<3),
+	BIORQ_SCHED        = (1<<4),
+	BIORQ_INFL         = (1<<5),
+	BIORQ_DIO          = (1<<6),
+	BIORQ_FORCE_EXPIRE = (1<<7)
 };
 
-#define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s"
+#define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s"
 #define BIORQ_FLAG(field, str) ((field) ? (str) : "-")
 #define DEBUG_BIORQ_FLAGS(b)				        \
         BIORQ_FLAG(((b)->biorq_flags & BIORQ_READ), "r"),	\
@@ -172,13 +198,14 @@ enum BMPC_IOREQ_FLAGS {
 	BIORQ_FLAG(((b)->biorq_flags & BIORQ_RBWLP), "l"),	\
 	BIORQ_FLAG(((b)->biorq_flags & BIORQ_SCHED), "s"),	\
 	BIORQ_FLAG(((b)->biorq_flags & BIORQ_INFL), "i"),	\
-	BIORQ_FLAG(((b)->biorq_flags & BIORQ_DIO), "d")
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_DIO), "d"),	\
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_FORCE_EXPIRE), "x")
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 " biorq@%p fl=%x o=%x np=%d b=%p ts=%ld:%ld "		\
+		 " biorq@%p fl=%x o=%x l=%d np=%d b=%p ts=%ld:%ld "	\
 		 BIORQ_FLAGS_FORMAT" "fmt,				\
-		 (b), (b)->biorq_flags, (b)->biorq_off,			\
+		 (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
 		 dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 		 (b)->biorq_start.tv_sec, (b)->biorq_start.tv_nsec,	\
 		 DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
@@ -187,7 +214,7 @@ enum BMPC_IOREQ_FLAGS {
 static inline void
 bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
 {
-	psc_assert(LOCK_ENSURE(&bmpce->bmpce_lock));
+	LOCK_ENSURE(&bmpce->bmpce_lock);
 	
 	psc_assert(!(bmpce->bmpce_flags & 
 		     (BMPCE_FREEING|BMPCE_IOSCHED|BMPCE_INFL|
@@ -335,11 +362,13 @@ bmpc_increase_minage(void)
 	ulockBmpcSlabs;
 }
 
-
+int   bmpce_init(struct psc_poolmgr *, void *);
 void  bmpc_init(struct bmap_pagecache *);
+void  bmpc_global_init(void);
 int   bmpc_grow(int);
 void *bmpc_alloc(void);
 void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
-
+void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
+			      struct bmap_pagecache *, int, int);
 #endif

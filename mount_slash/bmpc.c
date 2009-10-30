@@ -2,6 +2,7 @@
 
 #include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"
+#include "psc_ds/pool.h"
 
 #include "bmpc.h"
 
@@ -10,7 +11,13 @@ struct psc_poolmgr *bmpcePoolMgr;
 struct bmpc_mem_slbs bmpcSlabs;
 struct psc_listcache bmpcLru;
 
-void
+uint32_t bmpcDefSlbs = BMPC_DEFSLBS;
+uint32_t bmpcMaxSlbs = BMPC_MAXSLBS;
+
+__static SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry, 
+			bmpce_tentry, bmpce_cmp);
+
+int
 bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *a)
 {
 	struct bmap_pagecache_entry *bmpce=a;
@@ -18,6 +25,8 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *a)
 	memset(bmpce, 0, sizeof(*bmpce));
 	LOCK_INIT(&bmpce->bmpce_lock);
 	bmpce->bmpce_flags = BMPCE_NEW;
+	
+	return (0);
 }
 
 void
@@ -39,8 +48,13 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 		psc_assert(!pll_conjoint(&bmpc->bmpc_lru, bmpce));
 
 	} else {
-		psc_assert(bmpce->bmpce_flags & BMPCE_LRU);
-		psc_assert(pll_conjoint(&bmpc->bmpc_lru, bmpce));
+		if (bmpce->bmpce_flags & BMPCE_GETBUF)
+			psc_assert(!bmpce->bmpce_base);
+		else {
+			if (bmpce->bmpce_flags & BMPCE_LRU)
+				psc_assert(pll_conjoint(&bmpc->bmpc_lru, 
+							bmpce));
+		}
 	} 
 
 	if (incref) {
@@ -54,9 +68,17 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 			psc_atomic16_inc(&bmpce->bmpce_wrref);
 
 		} else {
-			pll_remove(&bmpc->bmpc_lru, bmpce);
-			pll_addhead(&bmpc->bmpc_lru, bmpce);
-			psc_assert(bmpce->bmpce_flags & BMPCE_LRU);
+			if (bmpce->bmpce_flags & BMPCE_LRU) {
+				pll_remove(&bmpc->bmpc_lru, bmpce);
+				pll_addhead(&bmpc->bmpc_lru, bmpce);
+
+			} else 
+				psc_assert(
+				   psc_atomic16_read(&bmpce->bmpce_wrref) ||
+				   (bmpce->bmpce_flags & BMPCE_GETBUF) ||
+				   (bmpce->bmpce_flags & BMPCE_INFL) ||
+				   (bmpce->bmpce_flags & BMPCE_IOSCHED));
+			
 			psc_atomic16_inc(&bmpce->bmpce_rdref);
 		}
 
@@ -67,7 +89,15 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 		if (op == BIORQ_WRITE) {
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
 			psc_atomic16_dec(&bmpce->bmpce_wrref);
-			if (!psc_atomic16_read(&bmpce->bmpce_wrref)) {
+			if (!psc_atomic16_read(&bmpce->bmpce_wrref))
+				goto add_lru;
+
+		} else {
+			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) > 0);
+			psc_atomic16_dec(&bmpce->bmpce_rdref);
+
+			if (!(bmpce->bmpce_flags & BMPCE_LRU)) {
+			add_lru:
 				bmpce->bmpce_flags |= BMPCE_LRU;
 				pll_addhead(&bmpc->bmpc_lru, bmpce);
 				if (timespeccmp(&bmpce->bmpce_laccess,
@@ -76,10 +106,6 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 					       &bmpce->bmpce_laccess,
 					       sizeof(struct timespec));
 			}
-		} else {
-			psc_assert(bmpce->bmpce_flags & BMPCE_LRU);
-			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) > 0);
-			psc_atomic16_dec(&bmpce->bmpce_rdref);
 		}
 	}
 }
@@ -171,14 +197,18 @@ bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
 		     struct bmap_pagecache *bmpc)
 {	
 	LOCK_ENSURE(&bmpc->bmpc_lock);
+	
+        psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
+        psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
+        psc_assert(bmpce->bmpce_flags == BMPCE_FREEING);
 
-	bmpce_freeprep(bmpce);
 	psc_assert(SPLAY_REMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, bmpce));
 	psc_assert(psclist_conjoint(&bmpce->bmpce_lentry));
 	pll_remove(&bmpc->bmpc_lru, bmpce);
 	/* Replace the bmpc memory.
-	 */
+	 */	
 	bmpc_free(bmpce->bmpce_base);
+	bmpce_init(bmpcePoolMgr, bmpce);
 	psc_pool_return(bmpcePoolMgr, bmpce);
 }
 
@@ -329,22 +359,23 @@ void
 bmpc_free(void *base)
 {
 	struct sl_buffer *slb;
-	uint64_t uptr = (uint64_t)base;
+	uint64_t uptr=(uint64_t)base, sptr;
 	int found=0, freeslb=0;
 
 	lockBmpcSlabs;	
 	PLL_FOREACH(slb, &bmpcSlabs.bmms_slbs) {
-		if (slb->slb_base == (void *)(uptr & ~BMPC_SLBBUFMASK)) {
+		sptr = (uint64_t)slb->slb_base;		
+		if (uptr >= sptr && 
+		    (uptr < sptr + (BMPC_SLB_NBLKS * BMPC_BUFSZ))) {
 			found = 1;
 			break;
 		}
 	}
 	psc_assert(found);
-	psc_assert(!((uptr & BMPC_SLBBUFMASK) % BMPC_BLKSZ));
 
+	psc_assert(!((uptr-sptr) % BMPC_BLKSZ));
 	spinlock(&slb->slb_lock);
-	vbitmap_unset(slb->slb_inuse, 
-		      (size_t)((uptr & BMPC_SLBBUFMASK) / BMPC_BLKSZ));
+	vbitmap_unset(slb->slb_inuse, (size_t)(((uptr-sptr) / BMPC_BLKSZ)));
 	
 	if ((vbitmap_nfree(slb->slb_inuse) == BMPC_SLB_NBLKS) && 
 	    pll_nitems(&bmpcSlabs.bmms_slbs) > BMPC_DEFSLBS) {
