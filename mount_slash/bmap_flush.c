@@ -262,7 +262,7 @@ bmap_flush_send_rpcs(struct dynarray *biorqs, struct iovec *iovs,
 				launch_rpc;
 				size = iovs[j].iov_len;
 				tiov = &iovs[j];
-				n = 0;
+				n = 1;
 
 			} else {
 				if (!tiov)
