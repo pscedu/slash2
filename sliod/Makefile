@@ -15,6 +15,7 @@ SRCS+=		rpc.c
 SRCS+=		sliod_int.c
 SRCS+=		slvr.c
 SRCS+=		slvr_worker.c
+SRCS+=		${SLASH_BASE}slashd/offtree.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
 SRCS+=		${SLASH_BASE}/share/cfd.c
