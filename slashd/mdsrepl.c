@@ -485,6 +485,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 			    mds_repl_bmap_walk(bcm, NULL, retifset2, 1))
 				repl_all_act = 0;
 			bmap_op_done(bcm);
+			BMAP_ULOCK(bcm);
 		}
 		if (repl_some_act == 0)
 			rc = EALREADY;
@@ -503,6 +504,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		BMAP_LOCK(bcm);
 		rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
 		bmap_op_done(bcm);
+		BMAP_ULOCK(bcm);
 	} else
 		rc = SLERR_INVALID_BMAP;
 
@@ -556,6 +558,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		rc = mds_repl_bmap_walk(bcm, tract,
 		    retifset, REPL_WALKF_SCIRCUIT);
 		bmap_op_done(bcm);
+		BMAP_ULOCK(bcm);
 		if (rc)
 			goto out;
 	}
@@ -633,6 +636,7 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 			    retifset, 0))
 				rc = 0;
 			bmap_op_done(bcm);
+			BMAP_ULOCK(bcm);
 		}
 	} else if (mds_bmap_valid(REPLRQ_FCMH(rrq), bmapno)) {
 		retifset[SL_REPL_INACTIVE] = ENOENT;
@@ -643,6 +647,7 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		BMAP_LOCK(bcm);
 		rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
 		bmap_op_done(bcm);
+		BMAP_ULOCK(bcm);
 	} else
 		rc = SLERR_INVALID_BMAP;
 
