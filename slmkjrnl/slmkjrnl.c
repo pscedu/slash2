@@ -17,7 +17,7 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s\n", progname);
+	fprintf(stderr, "usage: [-d] %s\n", progname);
 	exit(1);
 }
 
@@ -29,15 +29,14 @@ main(int argc, char *argv[])
 
 	progname = argv[0];
 	pfl_init();
-	while ((c = getopt(argc, argv, "d")) != -1) {
+	while ((c = getopt(argc, argv, "d")) != -1)
 		switch (c) {
-			case 'd':
-				dumponly = 1;
-				break;
-			default:
-				usage();
+		case 'd':
+			dumponly = 1;
+			break;
+		default:
+			usage();
 		}
-	}
 	argc -= optind;
 	argv += optind;
 	if (argc)
@@ -49,10 +48,9 @@ main(int argc, char *argv[])
 
 	if (!dumponly) {
 		pjournal_format(_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE, SLJ_MDS_RA, 0);
-		printf("SLASH log file %s has been created with %d %d-byte entries.\n", 
+		printf("SLASH log file %s has been created with %d %d-byte entries.\n",
 				_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE);
 	}
 	pjournal_dump(_PATH_SLJOURNAL);
-	
 	exit(0);
 }
