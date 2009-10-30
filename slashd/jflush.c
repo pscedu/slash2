@@ -16,8 +16,12 @@ jfi_prep(struct jflush_item *jfi, struct psc_journal *pj)
 	spinlock(&jfi->jfi_lock);
         if (jfi->jfi_state & JFI_HAVE_XH) {
                 psc_assert(jfi->jfi_xh);
-                if (jfi->jfi_state & JFI_QUEUED)
-                        psc_assert(psclist_conjoint(&jfi->jfi_lentry));
+		/* XXX The following check will fail when the 
+		 *   mdsfssync thread pulls us from the 
+		 *   dirtyMdsData list.
+		 */
+		//if (jfi->jfi_state & JFI_QUEUED)
+		//       psc_assert(psclist_conjoint(&jfi->jfi_lentry));
         } else {
 		psc_assert(jfi->jfi_xh == NULL);
                 psc_assert(!(jfi->jfi_state & JFI_QUEUED));
