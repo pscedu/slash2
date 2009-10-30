@@ -8,11 +8,18 @@
 .Nd create Slash metadata server journal
 .Sh SYNOPSIS
 .Nm slmkjrnl
+.Op Fl d
 .Sh DESCRIPTION
 The
 .Nm
 utility creates and formats the pending operations journal for Slash
 metadata servers.
+.Pp
+The following options are available:
+.Bl -tag -indent Ds
+.It Fl d
+Only dump the current journal data; do not format.
+.El
 .Sh FILES
 .Bl -tag -width Pa -compact
 .It Pa /var/lib/slashd/slopjrnl
