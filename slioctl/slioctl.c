@@ -12,7 +12,7 @@
 
 #include "pathnames.h"
 
-#include "sliod/control.h"
+#include "sliod/ctl_iod.h"
 
 void
 slricthr_prdat(const struct psc_ctlmsg_stats *pcst)
