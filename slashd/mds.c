@@ -857,8 +857,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 void
 mds_bmapod_dump(const struct bmapc_memb *bmap)
 {
-	uint8_t mask, *b=bmap_2_bmdsiod(bmap)->bh_repls;
-	char buf[SL_MAX_REPLICAS+1], *ob=buf;
+	uint8_t mask, *b = bmap_2_bmdsiod(bmap)->bh_repls;
+	char buf[SL_MAX_REPLICAS + 1], *ob=buf;
 	uint32_t pos, k;
 	int ch[4];
 
@@ -867,8 +867,8 @@ mds_bmapod_dump(const struct bmapc_memb *bmap)
 	ch[SL_REPL_OLD] = 'O';
 	ch[SL_REPL_ACTIVE] = 'A';
 
-	for (k=0; k < SL_REPLICA_NBYTES; k++, mask=0)
-		for (pos=0, mask=0; pos < NBBY; b++, pos+=SL_BITS_PER_REPLICA) {
+	for (k = 0; k < SL_REPLICA_NBYTES; k++, mask = 0)
+		for (pos = mask = 0; pos < NBBY; pos += SL_BITS_PER_REPLICA) {
 			mask = (uint8_t)(SL_REPLICA_MASK << pos);
 			*ob = ch[(b[k] & mask) >> pos];
 		}
