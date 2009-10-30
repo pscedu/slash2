@@ -198,7 +198,8 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	rv = 1;
 	mrsq = PSCALLOC(sizeof(*mrsq));
 	mrsq->mrsq_id = mq->id;
-	lc_init(&mrsq->mrsq_lc, struct msctl_replst_cont, mrc_lentry);
+	lc_reginit(&mrsq->mrsq_lc, struct msctl_replst_cont,
+	    mrc_lentry, "msctl_replst-%d", mq->id);
 	pll_add(&msctl_replsts, mrsq);
 
 	rc = RSX_WAITREP(rq, mp);
@@ -214,7 +215,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
-	while ((mrc = lc_getwait(&mrsq->mrsq_lc)) != NULL) {
+	while ((mrc = lc_peekheadwait(&mrsq->mrsq_lc)) != NULL) {
 		/* XXX fill in mrs_fn */
 		rv = psc_ctlmsg_sendv(fd, mh, &mrc->mrc_mrs);
 		while ((mrsc = lc_getwait(&mrc->mrc_bdata)) != NULL) {
@@ -225,6 +226,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		}
 		while ((mrsc = lc_getnb(&mrc->mrc_bdata)) != NULL)
 			psc_pool_return(msctl_replstsc_pool, mrsc);
+		lc_remove(&mrsq->mrsq_lc, mrc);
 		lc_unregister(&mrc->mrc_bdata);
 		psc_pool_return(msctl_replstmc_pool, mrc);
 		if (!rv)

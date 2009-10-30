@@ -45,7 +45,8 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			memset(mrc, 0, sizeof(*mrc));
 			lc_reginit(&mrc->mrc_bdata,
 			    struct msctl_replst_slave_cont,
-			    mrsc_lentry, "msctl_replst-%d", mq->id);
+			    mrsc_lentry, "msctl_replst-%d:%lx",
+			    mq->id, mq->fid);
 			mrc->mrc_mrs.mrs_id = mq->id;
 			mrc->mrc_mrs.mrs_fid = mq->fid;
 			mrc->mrc_mrs.mrs_nbmaps = mq->nbmaps;
@@ -83,7 +84,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->len < 1 || mq->len > SRM_REPLST_PAGESIZ) {
+	if (mq->len < 0 || mq->len > SRM_REPLST_PAGESIZ) {
 		mp->rc = EINVAL;
 		return (mp->rc);
 	}
@@ -108,21 +109,22 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 			 * adding and killing because these are
 			 * processed synchronously and serially.
 			 */
-			if (mq->rc) {
+			if (mq->rc)
 				lc_kill(&mrc->mrc_bdata);
-				break;
+			else if (mq->len < 1) /* XXX SL_REPLICA_NBYTES */
+				mp->rc = EINVAL;
+			else {
+				iov.iov_base = mrsc->mrsc_mrsl.mrsl_data;
+				iov.iov_len = mq->len;
+
+				mrsc->mrsc_mrsl.mrsl_len = mq->len;
+				mrsc->mrsc_mrsl.mrsl_id = mq->id;
+				mrsc->mrsc_mrsl.mrsl_boff = mq->boff;
+				mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+				    SRCM_BULK_PORTAL, &iov, 1);
+				lc_add(&mrc->mrc_bdata, mrsc);
+				mrsc = NULL;
 			}
-
-			iov.iov_base = mrsc->mrsc_mrsl.mrsl_data;
-			iov.iov_len = mq->len;
-
-			mrsc->mrsc_mrsl.mrsl_len = mq->len;
-			mrsc->mrsc_mrsl.mrsl_id = mq->id;
-			mrsc->mrsc_mrsl.mrsl_boff = mq->boff;
-			mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-			    SRCM_BULK_PORTAL, &iov, 1);
-			lc_add(&mrc->mrc_bdata, mrsc);
-			mrsc = NULL;
 			break;
 		}
 	PLL_ULOCK(&msctl_replsts);
