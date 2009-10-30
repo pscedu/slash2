@@ -103,7 +103,6 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
-	struct pscrpc_request *rq;
 	struct slash_rcmthr *srcm;
 	struct psc_thread *thr;
 	int len, rc;
@@ -112,9 +111,8 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 	srcm = slrcmthr(thr);
 
 	rc = 0;
-	rq = NULL;
-	len = rrq->rrq_inoh->inoh_ino.ino_nrepls *
-	    SL_BITS_PER_REPLICA / NBBY;
+	len = howmany(rrq->rrq_inoh->inoh_ino.ino_nrepls *
+	    SL_BITS_PER_REPLICA, NBBY);
 	if (srcm->srcm_pagelen + len > SRM_REPLST_PAGESIZ) {
 		if (*rqp) {
 			rc = slrmcthr_replst_slave_waitrep(*rqp);
@@ -194,8 +192,8 @@ slrcmthr_main(__unusedx void *arg)
 	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
 	srcm->srcm_pagelen = SRM_REPLST_PAGESIZ;
 
-	rq = NULL;
 	rc = 0;
+	rq = NULL;
 	if (srcm->srcm_fg.fg_fid == FID_ANY) {
 		spinlock(&replrq_tree_lock);
 		SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
