@@ -178,6 +178,7 @@ slrcmthr_main(__unusedx void *arg)
 				BMAP_LOCK(bcm);
 				rc = slrcmthr_walk_brepls(rrq, bcm, n, &rq);
 				bmap_op_done(bcm);
+				BMAP_ULOCK(bcm);
 				if (rc)
 					break;
 			}
@@ -192,6 +193,7 @@ slrcmthr_main(__unusedx void *arg)
 			BMAP_LOCK(bcm);
 			rc = slrcmthr_walk_brepls(rrq, bcm, n, &rq);
 			bmap_op_done(bcm);
+				BMAP_ULOCK(bcm);
 			if (rc)
 				break;
 		}
