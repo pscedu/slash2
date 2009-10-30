@@ -45,7 +45,33 @@ sl_get_repls_inum(void)
 }
 
 int
-slrmcthr_repl_waitrep(struct pscrpc_request *rq)
+slrmcthr_replst_slave_eof(struct sl_replrq *rrq)
+{
+	struct srm_replst_slave_req *mq;
+	struct srm_replst_slave_rep *mp;
+	struct pscrpc_request *rq;
+	struct slash_rcmthr *srcm;
+	struct psc_thread *thr;
+	int rc;
+
+	thr = pscthr_get();
+	srcm = slrcmthr(thr);
+
+	rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
+	    SRCM_VERSION, SRMT_GETREPLST_SLAVE, rq, mq, mp);
+	if (rc)
+		return (rc);
+
+	mq->fid = REPLRQ_FID(rrq);
+	mq->id = srcm->srcm_id;
+	mq->rc = EOF;
+	rc = RSX_WAITREP(rq, mp);
+	pscrpc_req_finished(rq);
+	return (rc);
+}
+
+int
+slrmcthr_replst_slave_waitrep(struct pscrpc_request *rq)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
@@ -91,7 +117,7 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 	    SL_BITS_PER_REPLICA / NBBY;
 	if (srcm->srcm_pagelen + len > SRM_REPLST_PAGESIZ) {
 		if (*rqp) {
-			rc = slrmcthr_repl_waitrep(*rqp);
+			rc = slrmcthr_replst_slave_waitrep(*rqp);
 			if (rc)
 				return (rc);
 		}
@@ -102,6 +128,7 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 			return (rc);
 		mq->id = srcm->srcm_id;
 		mq->boff = n;
+		mq->fid = REPLRQ_FID(rrq);
 
 		srcm->srcm_pagelen = 0;
 	}
@@ -133,7 +160,7 @@ slrcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 		return (rc);
 	mq->id = srcm->srcm_id;
 	if (rrq) {
-		mq->inum = REPLRQ_FID(rrq);
+		mq->fid = REPLRQ_FID(rrq);
 		mq->nbmaps = REPLRQ_NBMAPS(rrq);
 		mq->nrepls = REPLRQ_NREPLS(rrq);
 		memcpy(mq->repls, REPLRQ_INO(rrq)->ino_repls,
@@ -182,6 +209,9 @@ slrcmthr_main(__unusedx void *arg)
 				if (rc)
 					break;
 			}
+			if (rq)
+				slrmcthr_replst_slave_waitrep(rq);
+			slrmcthr_replst_slave_eof(rrq);
 			if (rc)
 				break;
 		}
@@ -197,15 +227,14 @@ slrcmthr_main(__unusedx void *arg)
 			if (rc)
 				break;
 		}
+		if (rq)
+			slrmcthr_replst_slave_waitrep(rq);
+		slrmcthr_replst_slave_eof(rrq);
 		mds_repl_unrefrq(rrq);
 	}
 
-	if (!rc) {
-		if (rq)
-			slrmcthr_repl_waitrep(rq);
-		/* signal EOF */
-		slrcm_issue_getreplst(NULL, 1);
-	}
+	/* signal EOF */
+	slrcm_issue_getreplst(NULL, 1);
 
 	free(srcm->srcm_page);
 

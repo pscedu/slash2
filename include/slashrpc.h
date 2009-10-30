@@ -462,7 +462,7 @@ struct srm_replrq_req {
 
 /* request/response for a GETSTATUS on a replication request */
 struct srm_replst_master_req {
-	uint64_t		inum;
+	uint64_t		fid;
 	int32_t			id;		/* user-provided passback value */
 	int32_t			rc;		/* or EOF */
 	uint32_t		nbmaps;
@@ -474,6 +474,7 @@ struct srm_replst_master_req {
 
 /* bmap data carrier for a replrq GETSTATUS */
 struct srm_replst_slave_req {
+	uint64_t		fid;
 	int32_t			id;		/* user-provided passback value */
 	int32_t			len;		/* of bulk data */
 	uint32_t		rc;

@@ -192,7 +192,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
-	mq->inum = fg.fg_fid;
+	mq->fid = fg.fg_fid;
 	mq->id = psc_atomic32_inc_return(&msctl_replstid);
 
 	rv = 1;

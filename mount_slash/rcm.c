@@ -37,6 +37,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	PLL_FOREACH(mrsq, &msctl_replsts)
 		if (mrsq->mrsq_id == mq->id) {
 			if (mq->rc) {
+				/* XXX kill all slave lists */
 				lc_kill(&mrsq->mrsq_lc);
 				break;
 			}
@@ -46,6 +47,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			    struct msctl_replst_slave_cont,
 			    mrsc_lentry, "msctl_replst-%d", mq->id);
 			mrc->mrc_mrs.mrs_id = mq->id;
+			mrc->mrc_mrs.mrs_fid = mq->fid;
 			mrc->mrc_mrs.mrs_nbmaps = mq->nbmaps;
 			mrc->mrc_mrs.mrs_nios = mq->nrepls;
 			for (n = 0; n < (int)mq->nrepls; n++) {
@@ -54,6 +56,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 				    site->site_name, SITE_NAME_MAX);
 			}
 			lc_add(&mrsq->mrsq_lc, mrc);
+			mrc = NULL;
 			break;
 		}
 	PLL_ULOCK(&msctl_replsts);
@@ -73,6 +76,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	struct msctl_replst_slave_cont *mrsc;
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
+	struct msctl_replst_cont *mrc;
 	struct pscrpc_bulk_desc *desc;
 	struct msctl_replstq *mrsq;
 	struct iovec iov;
@@ -90,8 +94,22 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	PLL_LOCK(&msctl_replsts);
 	PLL_FOREACH(mrsq, &msctl_replsts)
 		if (mrsq->mrsq_id == mq->id) {
+			LIST_CACHE_LOCK(&mrsq->mrsq_lc);
+			LIST_CACHE_FOREACH(mrc, &mrsq->mrsq_lc)
+				if (mrc->mrc_mrs.mrs_fid == mq->fid)
+					break;
+			LIST_CACHE_ULOCK(&mrsq->mrsq_lc);
+
+			if (mrc == NULL)
+				break;
+
+			/*
+			 * There shouldn't be a here race between
+			 * adding and killing because these are
+			 * processed synchronously and serially.
+			 */
 			if (mq->rc) {
-				lc_kill(&mrsq->mrsq_lc);
+				lc_kill(&mrc->mrc_bdata);
 				break;
 			}
 
@@ -103,7 +121,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 			mrsc->mrsc_mrsl.mrsl_boff = mq->boff;
 			mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 			    SRCM_BULK_PORTAL, &iov, 1);
-			lc_add(&mrsq->mrsq_lc, mrsc);
+			lc_add(&mrc->mrc_bdata, mrsc);
 			mrsc = NULL;
 			break;
 		}
