@@ -17,7 +17,6 @@ SRCS+=		mdslog.c
 SRCS+=		mdsrepl.c
 SRCS+=		mdsrpc.c
 SRCS+=		metadir.c
-SRCS+=		offtree.c
 SRCS+=		rcmc.c
 SRCS+=		rmc.c
 SRCS+=		rmi.c
