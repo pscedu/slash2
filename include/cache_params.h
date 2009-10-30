@@ -26,13 +26,10 @@ enum fid_cache_users {
 #define SLASH_SLVRS_PER_BMAP 128
 #define SLASH_SLVR_SIZE (1024*1024)
 #define SLASH_BMAP_SIZE  (SLASH_SLVRS_PER_BMAP * SLASH_SLVR_SIZE)
-#define SLASH_BMAP_WIDTH 8
-#define SLASH_BMAP_DEPTH 5
 #define SLASH_BMAP_SHIFT 15   /* 2^SLASH_BMAP_SHIFT should == SLASH_BMAP_BLKSZ */
 /* End hand computed */
 
-#define SLASH_BMAP_BLKSZ (SLASH_BMAP_SIZE / power((size_t)SLASH_BMAP_WIDTH, \
-				                 (size_t)(SLASH_BMAP_DEPTH-1)))
+#define SLASH_BMAP_BLKSZ 32768
 
 #define SLASH_BMAP_BLKMASK (SLASH_BMAP_BLKSZ-1)
 

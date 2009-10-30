@@ -10,8 +10,6 @@
 #include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 
-#include "offtree.h"
-
 struct dynarray;
 struct vbitmap;
 
@@ -201,15 +199,6 @@ void sl_buffer_destroy(void *);
 int  sl_buffer_alloc(size_t, off_t, struct dynarray *, void *);
 void sl_buffer_cache_init(void);
 void sl_buffer_fresh_assertions(const struct sl_buffer *);
-void sl_oftiov_inflight_cb(struct offtree_iov *, int);
-void sl_oftiov_pin_cb(struct offtree_iov *, int);
-void sl_oftm_addref(struct offtree_memb *, void *);
-
-typedef void (*sl_oftiov_inflight_callback)(struct offtree_iov *, int);
-extern sl_oftiov_inflight_callback slInflightCb;
-
-typedef void (*sl_oftiov_pin_callback)(struct offtree_iov *, int);
-extern sl_oftiov_pin_callback bufSlPinCb;
 
 typedef int (*sl_iov_try_memrls)(void *);
 typedef void (*sl_iov_memrls_ulock)(void *);
