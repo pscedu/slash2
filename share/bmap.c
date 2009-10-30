@@ -65,6 +65,7 @@ bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n,
 	psc_assert(f->fcmh_fcoo);
 
 	locked = reqlock(&f->fcmh_lock);
+	psc_assert(n < fcmh_2_nbmaps(f));
 
 	b = bmap_lookup_locked(f->fcmh_fcoo, n);
 	if (!b) {
