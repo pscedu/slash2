@@ -71,13 +71,24 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 			   mq->size,  FIDFMTARGS(&fg));
 		mp->rc = -EINVAL;
 		return (-1);
-	}
-	mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg, &bmapno, rq->rq_peer, 
-			     (rw == SL_WRITE) ? lpid.nid : LNET_NID_ANY, 
-			     (rw == SL_WRITE) ? nodeInfo.node_res->res_id : 
-			     IOS_ID_ANY);
-	if (mp->rc)
+	}	
+	/* A RBW request from the client may have a write enabled
+	 *   bdbuf which he uses to fault in his page.
+	 */
+	mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg, &bmapno, rq->rq_peer,
+			     lpid.nid, nodeInfo.node_res->res_id);
+
+	if (mp->rc && (rw == SL_READ)) 
+		/* Read requests can get by with looser authentication.
+		 */
+		mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg, &bmapno, 
+				     rq->rq_peer, LNET_NID_ANY, IOS_ID_ANY);
+
+	if (mp->rc) {
+		psc_warnx("bdbuf failed for fid:"FIDFMT,
+			  FIDFMTARGS(&fg));
 		return (-1);
+	}
 	/* Ensure that this request fits into the bmap's address range.
 	 */	
 	if ((mq->offset + mq->size) >= ((bmapno + 1) * SLASH_BMAP_SIZE)) {
