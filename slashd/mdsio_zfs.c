@@ -124,7 +124,9 @@ mdsio_zfs_inode_read(struct slash_inode_handle *i)
 
 	if (rc < 0)
 		rc = -errno;
-
+	else
+		rc = zfsslash2_gets2szattr(zfsVfs, inoh_2_fid(i),
+		    &inoh_2_fsz(i), inoh_2_zfsdata(i));
 	return (rc);
 }
 

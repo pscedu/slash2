@@ -25,7 +25,9 @@ struct fidc_mds_info {
 #define fcmh_2_zfsdata(f)	fcmh_2_fmdsi(f)->fmdsi_data
 #define fcmh_2_nbmaps(f)	((sl_blkno_t)(fcmh_2_fsz(f) / fcmh_2_inoh(f)->inoh_ino.ino_bsz))
 
-#define inoh_2_zfsdata(ih)	fcmh_2_zfsdata(ih->inoh_fcmh)
+#define inoh_2_zfsdata(ih)	fcmh_2_zfsdata((ih)->inoh_fcmh)
+#define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
+#define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
 
 static inline void
 fmdsi_init(struct fidc_mds_info *mdsi, struct fidc_membh *fcmh, void *pri)
