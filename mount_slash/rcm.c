@@ -23,11 +23,14 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
+	struct msctl_replst_cont *mrc;
 	struct msctl_replstq *mrsq;
 	struct sl_site *site;
 	int n;
 
 	RSX_ALLOCREP(rq, mq, mp);
+
+	mrc = psc_pool_get(msctl_replstmc_pool);
 
 	/* find corresponding queue */
 	PLL_LOCK(&msctl_replsts);
@@ -37,19 +40,25 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 				lc_kill(&mrsq->mrsq_lc);
 				break;
 			}
-
-//			strlcpy(mrc->mrc_mrs.mrs_fn, mq->fn,
-//			    sizeof(mrc->mrc_mrs.mrs_fn));
-			mrsq->mrsq_id = mq->id;
-			mrsq->mrsq_nios = mq->nrepls;
+			/* fill in data */
+			memset(mrc, 0, sizeof(*mrc));
+			lc_reginit(&mrc->mrc_bdata,
+			    struct msctl_replst_slave_cont,
+			    mrsc_lentry, "msctl_replst-%d", mq->id);
+			mrc->mrc_mrs.mrs_id = mq->id;
+			mrc->mrc_mrs.mrs_nbmaps = mq->nbmaps;
+			mrc->mrc_mrs.mrs_nios = mq->nrepls;
 			for (n = 0; n < (int)mq->nrepls; n++) {
 				site = libsl_id2site(mq->repls[n].bs_id);
-				strlcpy(mrsq->mrsq_iosv[n],
+				strlcpy(mrc->mrc_mrs.mrs_iosv[n],
 				    site->site_name, SITE_NAME_MAX);
 			}
+			lc_add(&mrsq->mrsq_lc, mrc);
 			break;
 		}
 	PLL_ULOCK(&msctl_replsts);
+	if (mrc)
+		psc_pool_return(msctl_replstmc_pool, mrc);
 	return (0);
 }
 
@@ -75,7 +84,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		return (mp->rc);
 	}
 
-	mrsc = psc_pool_get(msctl_replstc_pool);
+	mrsc = psc_pool_get(msctl_replstsc_pool);
 
 	/* find corresponding queue */
 	PLL_LOCK(&msctl_replsts);
@@ -100,7 +109,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		}
 	PLL_ULOCK(&msctl_replsts);
 	if (mrsc)
-		psc_pool_return(msctl_replstc_pool, mrsc);
+		psc_pool_return(msctl_replstsc_pool, mrsc);
 	return (mp->rc);
 }
 

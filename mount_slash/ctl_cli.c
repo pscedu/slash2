@@ -23,8 +23,10 @@
 
 struct psc_lockedlist	 psc_mlists;
 
-struct psc_poolmaster	 msctl_replstc_poolmaster;
-struct psc_poolmgr	*msctl_replstc_pool;
+struct psc_poolmaster	 msctl_replstmc_poolmaster;
+struct psc_poolmaster	 msctl_replstsc_poolmaster;
+struct psc_poolmgr	*msctl_replstmc_pool;
+struct psc_poolmgr	*msctl_replstsc_pool;
 
 psc_atomic32_t		 msctl_replstid = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INITIALIZER(&msctl_replsts,
@@ -133,6 +135,7 @@ int
 msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	char fn[PATH_MAX], *cpn, *next;
+	struct msctl_replst_slave_cont *mrsc;
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replrq *mrq = m;
@@ -214,15 +217,28 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	while ((mrc = lc_getwait(&mrsq->mrsq_lc)) != NULL) {
 		/* XXX fill in mrs_fn */
 		rv = psc_ctlmsg_sendv(fd, mh, &mrc->mrc_mrs);
-		psc_pool_return(msctl_replstc_pool, mrc);
+		while ((mrsc = lc_getwait(&mrc->mrc_bdata)) != NULL) {
+			rv = psc_ctlmsg_sendv(fd, mh, &mrsc->mrsc_mrsl);
+			psc_pool_return(msctl_replstsc_pool, mrsc);
+			if (!rv)
+				break;
+		}
+		while ((mrsc = lc_getnb(&mrc->mrc_bdata)) != NULL)
+			psc_pool_return(msctl_replstsc_pool, mrsc);
+		lc_unregister(&mrc->mrc_bdata);
+		psc_pool_return(msctl_replstmc_pool, mrc);
 		if (!rv)
 			break;
 	}
 
  out:
 	pll_remove(&msctl_replsts, mrsq);
-	while ((mrc = lc_getnb(&mrsq->mrsq_lc)) != NULL)
-		psc_pool_return(msctl_replstc_pool, mrc);
+	while ((mrc = lc_getnb(&mrsq->mrsq_lc)) != NULL) {
+		while ((mrsc = lc_getwait(&mrc->mrc_bdata)) != NULL)
+			psc_pool_return(msctl_replstsc_pool, mrsc);
+		lc_unregister(&mrc->mrc_bdata);
+		psc_pool_return(msctl_replstmc_pool, mrc);
+	}
 	free(mrsq);
 	return (rv);
 }
@@ -254,12 +270,18 @@ msctlthr_spawn(void)
 {
 	struct psc_thread *thr;
 
-	_psc_poolmaster_init(&msctl_replstc_poolmaster,
-	    sizeof(struct msctl_replst_cont) + SRM_REPLST_PAGESIZ,
-	    offsetof(struct msctl_replst_cont, mrc_lentry),
-	    PPMF_AUTO, 64, 64, 128, NULL, NULL, NULL, NULL, "replstc");
-	msctl_replstc_pool = psc_poolmaster_getmgr(
-	    &msctl_replstc_poolmaster);
+	psc_poolmaster_init(&msctl_replstmc_poolmaster,
+	    struct msctl_replst_cont, mrc_lentry, 0,
+	    0, 32, 0, NULL, NULL, NULL, "replstmc");
+	msctl_replstmc_pool = psc_poolmaster_getmgr(
+	    &msctl_replstmc_poolmaster);
+
+	_psc_poolmaster_init(&msctl_replstsc_poolmaster,
+	    sizeof(struct msctl_replst_slave_cont) + SRM_REPLST_PAGESIZ,
+	    offsetof(struct msctl_replst_slave_cont, mrsc_lentry),
+	    PPMF_AUTO, 32, 32, 64, NULL, NULL, NULL, NULL, "replstsc");
+	msctl_replstsc_pool = psc_poolmaster_getmgr(
+	    &msctl_replstsc_poolmaster);
 
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
