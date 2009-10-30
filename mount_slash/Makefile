@@ -14,6 +14,7 @@ SRCS+=		main.c
 SRCS+=		mount_slash_int.c
 SRCS+=		mseqpollthr.c
 SRCS+=		rcm.c
+SRCS+=		bmpc.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
 SRCS+=		${SLASH_BASE}/share/fid.c
@@ -22,7 +23,6 @@ SRCS+=		${SLASH_BASE}/share/lconf.l
 SRCS+=		${SLASH_BASE}/share/rpc_common.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
-SRCS+=		${SLASH_BASE}/slashd/offtree.c
 
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c

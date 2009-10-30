@@ -17,7 +17,7 @@
 #include "buffer.h"
 #include "cli_bmap.h"
 #include "mount_slash.h"
-#include "offtree.h"
+#include "bmpc.h"
 #include "slashrpc.h"
 #include "slconfig.h"
 
@@ -67,20 +67,23 @@ bmap_flush_reap_rpcs(void)
 }
 
 __static int
-bmap_flush_oftrq_expired(const struct offtree_req *a)
+bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 {
 	struct timespec ts;
 
-	clock_gettime(CLOCK_REALTIME, &ts);
-
-	if ((a->oftrq_start.tv_sec + bmapFlushDefMaxAge.tv_sec) < ts.tv_sec)
+	if (a->biorq_flags & BIORQ_FORCE_EXPIRE)
 		return (1);
 
-	else if ((a->oftrq_start.tv_sec + bmapFlushDefMaxAge.tv_sec) >
+	clock_gettime(CLOCK_REALTIME, &ts);
+
+	if ((a->biorq_start.tv_sec + bmapFlushDefMaxAge.tv_sec) < ts.tv_sec)
+		return (1);
+
+	else if ((a->biorq_start.tv_sec + bmapFlushDefMaxAge.tv_sec) >
 		 ts.tv_sec)
 		return (0);
 
-	if ((a->oftrq_start.tv_nsec + bmapFlushDefMaxAge.tv_nsec) <=
+	if ((a->biorq_start.tv_nsec + bmapFlushDefMaxAge.tv_nsec) <=
 	    ts.tv_nsec)
 		return (1);
 
@@ -88,19 +91,19 @@ bmap_flush_oftrq_expired(const struct offtree_req *a)
 }
 
 __static size_t
-bmap_flush_coalesce_size(const struct dynarray *oftrqs)
+bmap_flush_coalesce_size(const struct dynarray *biorqs)
 {
-	struct offtree_req *r;
+	struct bmpc_ioreq *r;
 	size_t size;
 
-	r = dynarray_getpos(oftrqs, dynarray_len(oftrqs) - 1);
-	size = r->oftrq_off + oftrq_size_get(r);
+	r = dynarray_getpos(biorqs, dynarray_len(biorqs) - 1);
+	size = r->biorq_off + r->biorq_len;
 
-	r = dynarray_getpos(oftrqs, 0);
-	size -= r->oftrq_off;
+	r = dynarray_getpos(biorqs, 0);
+	size -= r->biorq_off;
 
 	psc_info("array %p has size=%zu array len=%d",
-		 oftrqs, size, dynarray_len(oftrqs));
+		 biorqs, size, dynarray_len(biorqs));
 
 	return (size);
 }
@@ -157,61 +160,67 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 }
 
 __static void
-bmap_flush_inflight_ref(const struct offtree_req *r)
+bmap_flush_inflight_ref(struct bmpc_ioreq *r)
 {
-	struct offtree_iov *v;
 	int i;
+	struct bmap_pagecache_entry *bmpce;
+	
+	spinlock(&r->biorq_lock);
+	psc_assert(r->biorq_flags & BIORQ_SCHED);
+	r->biorq_flags |= BIORQ_INFL;	
+	DEBUG_BIORQ(PLL_INFO, r, "set inflight");
+	freelock(&r->biorq_lock);
 
-	DEBUG_OFFTREQ(PLL_INFO, r, "set inc");
-
-	for (i=0; i < dynarray_len(r->oftrq_darray); i++) {
-		v = dynarray_getpos(r->oftrq_darray, i);
-		DEBUG_OFFTIOV(PLL_INFO, v, "set inc");
-		slb_inflight_cb(v, SL_INFLIGHT_INC);
+	for (i=0; i < dynarray_len(&r->biorq_pages); i++) {
+		bmpce = dynarray_getpos(&r->biorq_pages, i);
+		spinlock(&bmpce->bmpce_lock);
+		bmpce->bmpce_flags |= BMPCE_INFL;
+		freelock(&bmpce->bmpce_lock);
+		DEBUG_BIORQ(PLL_INFO, r, "set inflight");
 	}
 }
 
 
 __static void
-bmap_flush_send_rpcs(struct dynarray *oftrqs, struct iovec *iovs,
+bmap_flush_send_rpcs(struct dynarray *biorqs, struct iovec *iovs,
 		     int niovs)
 {
 	struct pscrpc_request *req;
 	struct pscrpc_import *imp;
-	struct offtree_req *r;
+	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
 	off_t soff;
 	size_t size;
 	int i;
 
-	r = dynarray_getpos(oftrqs, 0);
-	imp = msl_bmap_to_import((struct bmapc_memb *)r->oftrq_bmap, 1);
+	r = dynarray_getpos(biorqs, 0);
+	imp = msl_bmap_to_import(r->biorq_bmap, 1);
 	psc_assert(imp);
 
-	b = r->oftrq_bmap;
-	soff = r->oftrq_off;
+	b = r->biorq_bmap;
+	soff = r->biorq_off;
 
-	for (i=0; i < dynarray_len(oftrqs); i++) {
-		/* All oftrqs should have the same import, otherwise
+	for (i=0; i < dynarray_len(biorqs); i++) {
+		/* All biorqs should have the same import, otherwise
 		 *   there is a major problem.
 		 */
-		r = dynarray_getpos(oftrqs, i);
-		psc_assert(imp == msl_bmap_to_import(r->oftrq_bmap, 0));
-		psc_assert(b == r->oftrq_bmap);
+		r = dynarray_getpos(biorqs, i);
+		psc_assert(imp == msl_bmap_to_import(r->biorq_bmap, 0));
+		psc_assert(b == r->biorq_bmap);
 		bmap_flush_inflight_ref(r);
 	}
 
-	DEBUG_OFFTREQ(PLL_INFO, r, "oftrq array cb arg (%p)", oftrqs);
+	DEBUG_BIORQ(PLL_INFO, r, "biorq array cb arg (%p)", biorqs);
 
-	if ((size = bmap_flush_coalesce_size(oftrqs)) <= LNET_MTU) {
+	if ((size = bmap_flush_coalesce_size(biorqs)) <= LNET_MTU) {
 		/* Single rpc case.  Set the appropriate cb handler
 		 *   and attach to the nb request set.
 		 */
 		req = bmap_flush_create_rpc(b, iovs, size, soff, niovs);
 		/* Set the per-req cp arg for the nbreqset cb handler.
-		 *   oftrqs MUST be freed by the cb.
+		 *   biorqs MUST be freed by the cb.
 		 */
-		req->rq_async_args.pointer_arg[0] = oftrqs;
+		req->rq_async_args.pointer_arg[0] = biorqs;
 		nbreqset_add(pndgReqs, req);
 
 	} else {
@@ -236,9 +245,9 @@ bmap_flush_send_rpcs(struct dynarray *oftrqs, struct iovec *iovs,
 		size = 0;
 		set = pscrpc_prep_set();
 		set->set_interpret = msl_io_rpcset_cb;
-		/* oftrqs MUST be freed by the cb.
+		/* biorqs MUST be freed by the cb.
 		 */
-		set->set_arg = oftrqs;
+		set->set_arg = biorqs;
 
 		for (j=0, n=0, size=0, tiov=iovs; j < niovs; j++) {
 			if ((size + iovs[j].iov_len) == LNET_MTU) {
@@ -274,138 +283,129 @@ bmap_flush_send_rpcs(struct dynarray *oftrqs, struct iovec *iovs,
 }
 
 __static int
-bmap_flush_oftrq_cmp(const void *x, const void *y)
+bmap_flush_biorq_cmp(const void *x, const void *y)
 {
-	const struct offtree_req *a = *(const struct offtree_req **)x;
-	const struct offtree_req *b = *(const struct offtree_req **)y;
+	const struct bmpc_ioreq *a = *(const struct bmpc_ioreq **)x;
+	const struct bmpc_ioreq *b = *(const struct bmpc_ioreq **)y;
 
-	//DEBUG_OFFTREQ(PLL_TRACE, a, "compare..");
-	//DEBUG_OFFTREQ(PLL_TRACE, b, "..compare");
+	//DEBUG_BIORQ(PLL_TRACE, a, "compare..");
+	//DEBUG_BIORQ(PLL_TRACE, b, "..compare");
 
-	if (a->oftrq_off < b->oftrq_off)
+	if (a->biorq_off < b->biorq_off)
 		return (-1);
 
-	else if	(a->oftrq_off > b->oftrq_off)
+	else if	(a->biorq_off > b->biorq_off)
 		return (1);
 
 	else {
 		/* Larger requests with the same start offset should have
 		 *   ordering priority.
 		 */
-		if (a->oftrq_len > b->oftrq_len)
+		if (a->biorq_len > b->biorq_len)
 			return (-1);
 
-		else if (a->oftrq_len < b->oftrq_len)
+		else if (a->biorq_len < b->biorq_len)
 			return (1);
 	}
 	return (0);
 }
 
 __static int
-bmap_flush_coalesce_map(const struct dynarray *oftrqs, struct iovec **iovset)
+bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 {
-	struct offtree_req *r, *t;
-	struct offtree_iov *v, *last_iov=NULL;
-	struct offtree_memb *m;
+	struct bmpc_ioreq *r;
+	struct bmap_pagecache_entry *bmpce;
 	struct iovec *iovs=NULL;
-	int i, j, niovs=0, pre=1;
-	size_t reqsz = bmap_flush_coalesce_size(oftrqs);
+	int i, j, niovs=0, first_iov;
+	uint32_t reqsz=bmap_flush_coalesce_size(biorqs);
 	off_t off=0;
 
 	psc_assert(!*iovset);
-	psc_assert(dynarray_len(oftrqs) > 0);
-	/* Prime the pump with initial values from the first oftrq.
+	psc_assert(dynarray_len(biorqs) > 0);
+	/* Prime the pump with initial values from the first biorq.
 	 */
-	r = dynarray_getpos(oftrqs, 0);
-	off = r->oftrq_off;
+	r = dynarray_getpos(biorqs, 0);
+	off = r->biorq_off;
 
-	for (i=0; i < dynarray_len(oftrqs); i++) {
-		t = dynarray_getpos(oftrqs, i);
+	for (i=0; i < dynarray_len(biorqs); i++, first_iov=1) {
+		r = dynarray_getpos(biorqs, i);
+			       
+		DEBUG_BIORQ(PLL_INFO, r, "r rreqsz=%u off=%zu", reqsz, off);
+		psc_assert(dynarray_len(&r->biorq_pages));
 
-		DEBUG_OFFTREQ(PLL_INFO, r, "r rreqsz=%zu off=%zu", reqsz, off);
-		psc_assert(dynarray_len(t->oftrq_darray));
-
-		if (oftrq_voff_get(t) <= off) {
+		if (biorq_voff_get(r) <= off) {
 			/* No need to map this one, it's data has been
-			 *   accounted for.
+			 *   accounted for but first ensure that all of the 
+			 *   pages have been scheduled for IO.
+			 * XXX single-threaded, bmap_flush is single threaded
+			 *   which will prevent any bmpce from being scheduled
+			 *   twice.  Therefore, a bmpce skipped in this loop
+			 *   must have BMPCE_IOSCHED set.
 			 */
-			DEBUG_OFFTREQ(PLL_INFO, t, "t pos=%d (skip)", i);
+			for (j=0; j < dynarray_len(&r->biorq_pages); j++) {
+				spinlock(&bmpce->bmpce_lock);
+				bmpce = dynarray_getpos(&r->biorq_pages, j);
+				psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
+				freelock(&bmpce->bmpce_lock);
+			}
+			DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (skip)", i);
 			continue;
 		}
-		DEBUG_OFFTREQ(PLL_INFO, t, "t pos=%d (use)", i);
+		DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (use)", i);
 		psc_assert(reqsz);
-		/* Now iterate through the oftrq's iov set, where the
+		/* Now iterate through the biorq's iov set, where the
 		 *   actual buffers are stored.
 		 */
-		for (j=0; j < dynarray_len(t->oftrq_darray); j++) {
-			v = dynarray_getpos(t->oftrq_darray, j);
+		for (j=0, first_iov=1; j < dynarray_len(&r->biorq_pages); 
+		     j++) {
+			bmpce = dynarray_getpos(&r->biorq_pages, j);
+			spinlock(&bmpce->bmpce_lock);
 
-			if ((OFT_IOV2E_VOFF_(v) <= r->oftrq_off))
+			if ((bmpce->bmpce_off <= r->biorq_off) && j)
 				abort();
 
-			if (OFT_IOV2E_VOFF_(v) <= off)
+			if ((bmpce->bmpce_off < off) && !first_iov) {
+				/* Similar case to the 'continue' stmt above,
+				 *   this bmpce overlaps a previously 
+				 *   scheduled biorq.
+				 */
+				DEBUG_BMPCE(PLL_INFO, bmpce, "skip");
+				psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
+				freelock(&bmpce->bmpce_lock);
 				continue;
+			} 
 
-			if (last_iov)
-				psc_assert(OFT_IOV2E_VOFF_(last_iov) ==
-					   v->oftiov_off);
+			bmpce->bmpce_flags |= BMPCE_IOSCHED;
+			DEBUG_BMPCE(PLL_INFO, bmpce, "scheduled");
+			/* Issue sanity checks on the bmpce.
+			 */
+			bmpce_usecheck(bmpce, BIORQ_WRITE, 
+			       (first_iov ? (off & ~BMPC_BUFMASK) : off));
 
-			if (!last_iov || last_iov != v->oftiov_base) {
-				/* Ensure contiguity
-				 */
-				last_iov = v->oftiov_base;
-				/* Add a new iov!
-				 */
-				*iovset = iovs = PSC_REALLOC(iovs,
+			freelock(&bmpce->bmpce_lock);
+			/* Add a new iov!
+			 */
+			*iovset = iovs = PSC_REALLOC(iovs,
 				     (sizeof(struct iovec) * (niovs + 1)));
-				/* Set the base pointer past the overlapping
-				 *   area if this is the first mapping, ot
-				 */
-				iovs[niovs].iov_base = v->oftiov_base +
-					(pre ? (off - v->oftiov_off) : 0);
-
-				iovs[niovs].iov_len = MIN(reqsz,
-					  (size_t)(OFT_IOV2E_VOFF_(v) - off));
-
-				reqsz -= iovs[niovs].iov_len;
-				off += iovs[niovs].iov_len;
-
-				psc_info("oftrq=%p oftiov=%p base=%p len=%zu "
-					 "niov=%d reqsz=%zu (new)",
-					 t, v, iovs[niovs].iov_base,
-					 iovs[niovs].iov_len, niovs, reqsz);
-
-				last_iov = v;
-				pre = 0;
-				niovs++;
-
-			} else {
-				/* Extend the existing IOV.
-				 */
-				psc_assert(!pre);
-				iovs[niovs-1].iov_len = MIN(reqsz,
-					    (size_t)(OFT_IOV2E_VOFF_(v) - off));
-				reqsz -= iovs[niovs-1].iov_len;
-				off += iovs[niovs].iov_len;
-				psc_info("oftrq=%p oftiov=%p base=%p len=%zu "
-					 "niov=%d reqsz=%zu (extend)",
-					 t, v, iovs[niovs].iov_base,
-					 iovs[niovs].iov_len, niovs, reqsz);
-			}
-			/* 't' is now the reference oftrq.
+			/* Set the base pointer past the overlapping
+			 *   area if this is the first mapping.
 			 */
-			r = t;
-			/* Signify that the ending offset has been extended.
-			 */
-			OFFTIOV_LOCK(v);
-			m = v->oftiov_memb;
-			v->oftiov_flags |= (OFTIOV_PUSHING | OFTIOV_PUSHPNDG);
-			if (v->oftiov_memb != m)
-				abort();
-			OFFTIOV_ULOCK(v);
+			iovs[niovs].iov_base = bmpce->bmpce_base +
+				(first_iov ? (off - bmpce->bmpce_off) : 0);
 
-			DEBUG_OFFTIOV(PLL_INFO, v, "pos=%d off=%zu",
-				      j, r->oftrq_off);
+			iovs[niovs].iov_len = MIN(reqsz,
+			  (first_iov ? bmpce->bmpce_off + BMPC_BUFSZ - off : 
+			   BMPC_BUFSZ));
+
+			reqsz -= iovs[niovs].iov_len;
+			off += iovs[niovs].iov_len;
+			first_iov = 0;
+			niovs++;
+
+			psc_info("biorq=%p bmpce=%p base=%p len=%zu "
+				 "niov=%d reqsz=%u (new)",
+				 r, bmpce, iovs[niovs].iov_base,
+				 iovs[niovs].iov_len, niovs, reqsz);
 		}
 	}
 	psc_assert(!reqsz);
@@ -413,31 +413,42 @@ bmap_flush_coalesce_map(const struct dynarray *oftrqs, struct iovec **iovset)
 }
 
 __static struct dynarray *
-bmap_flush_trycoalesce(const struct dynarray *oftrqs, int *offset)
+bmap_flush_trycoalesce(const struct dynarray *biorqs, int *offset)
 {
 	int i, off, expired=0;
-	struct offtree_req *r=NULL, *t;
+	struct bmpc_ioreq *r=NULL, *t;
 	struct dynarray b=DYNARRAY_INIT, *a=NULL;
 
-	psc_assert(dynarray_len(oftrqs) > *offset);
+	psc_assert(dynarray_len(biorqs) > *offset);
 
-	for (off=0; (off + *offset) < dynarray_len(oftrqs); off++) {
-		t = dynarray_getpos(oftrqs, off + *offset);
-		psc_assert(!(t->oftrq_flags & OFTREQ_INFLIGHT));
+	for (off=0; (off + *offset) < dynarray_len(biorqs); off++) {
+		t = dynarray_getpos(biorqs, off + *offset);
+
+		psc_assert((t->biorq_flags & BIORQ_SCHED) && 
+			   !(t->biorq_flags & BIORQ_INFL));
 
 		if (r)
-			psc_assert(t->oftrq_off >= r->oftrq_off);
+			/* Assert 'lowest to highest' ordering.
+			 */
+			psc_assert(t->biorq_off >= r->biorq_off);
 		/* If any member is expired then we'll push everything out.
 		 */
 		if (!expired)
-			expired = bmap_flush_oftrq_expired(t);
+			expired = bmap_flush_biorq_expired(t);
 
-		DEBUG_OFFTREQ(PLL_TRACE, t, "oftrq #%d (expired=%d)",
+		DEBUG_BIORQ(PLL_TRACE, t, "biorq #%d (expired=%d)",
 			      off, expired);
-
-		if (!r || t->oftrq_off <= oftrq_voff_get(r)) {
+		/* The next request, 't', can be added to the coalesce
+		 *   group either because 'r' is not yet set (meaning 
+		 *   the group is empty) or because 't' overlaps or 
+		 *   extends 'r'.
+		 */
+		if (!r || t->biorq_off <= biorq_voff_get(r)) {
 			dynarray_add(&b, t);
-			if (!r || oftrq_voff_get(t) > oftrq_voff_get(r))
+			if (!r || biorq_voff_get(t) > biorq_voff_get(r))
+				/* If 'r' is not yet set or 't' is a larger
+				 *   extent then set 'r' to 't'.
+				 */
 				r = t;
 		} else {
 			if ((bmap_flush_coalesce_size(&b) >=
@@ -457,8 +468,6 @@ bmap_flush_trycoalesce(const struct dynarray *oftrqs, int *offset)
 		a = PSCALLOC(sizeof(*a));
 		for (i=0; i < dynarray_len(&b); i++) {
 			t = dynarray_getpos(&b, i);
-			t->oftrq_flags |= OFTREQ_INFLIGHT;
-			DEBUG_OFFTREQ(PLL_TRACE, t, "oftrq #%d (inflight)", i);
 			dynarray_add(a, dynarray_getpos(&b, i));
 		}
 	}
@@ -474,45 +483,60 @@ bmap_flush(void)
 {
 	struct bmapc_memb *b;
 	struct bmap_cli_data *msbd;
-	struct dynarray a=DYNARRAY_INIT, bmaps=DYNARRAY_INIT, *oftrqs;
-	struct offtree_req *r;
-	struct psclist_head *h;
+	struct bmap_pagecache *bmpc;
+	struct dynarray a=DYNARRAY_INIT, bmaps=DYNARRAY_INIT, *biorqs;
+	struct bmpc_ioreq *r;
 	struct iovec *iovs=NULL;
 	int i=0, niovs;
 
-	/* Send
-	 */
 	while ((atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS) &&
 	       (msbd = lc_getnb(&bmapFlushQ))) {
 
 		b = msbd->msbd_bmap;
+		bmpc = bmap_2_msbmpc(b);
+		/* Bmap lock only needed to test the dirty bit.  
+		 */
 		BMAP_LOCK(b);
 		DEBUG_BMAP(PLL_INFO, b, "try flush (outstandingRpcCnt=%d)",
 			   atomic_read(&outstandingRpcCnt));
-
-		h = &msbd->msbd_oftrqs;
+		/* Take the page cache lock too so that the bmap's 
+		 *   dirty state may be sanity checked.
+		 */
+		BMPC_LOCK(bmpc);
 
 		if (b->bcm_mode & BMAP_DIRTY) {
-			psc_assert(!psclist_empty(h));
+			psc_assert(bmpc_queued_writes(bmpc));
 			dynarray_add(&bmaps, msbd);
 		} else {
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
-			psc_assert(psclist_empty(h));
+			psc_assert(!bmpc_queued_writes(bmpc));
+			freelock(&bmpc->bmpc_lock);
 			BMAP_ULOCK(b);
 			continue;
 		}
-		/* Ok, have something to do.
-		 */
+		BMAP_ULOCK(b);
+
 		dynarray_reset(&a);
 
-		psclist_for_each_entry(r, h, oftrq_lentry) {
-			if (r->oftrq_flags & OFTREQ_INFLIGHT)
+		PLL_FOREACH(r, &bmpc->bmpc_pndg) {
+			spinlock(&r->biorq_lock);
+			if (r->biorq_flags & BIORQ_INFL) {
+				psc_assert(r->biorq_flags & BIORQ_SCHED);
+				freelock(&r->biorq_lock);
 				continue;
-			DEBUG_OFFTREQ(PLL_TRACE, r, "try flush");
+
+			} else if (r->biorq_flags & BIORQ_READ) {
+				freelock(&r->biorq_lock);
+				continue;
+			}
+
+			r->biorq_flags |= BIORQ_SCHED;
+			freelock(&r->biorq_lock);
+
+			DEBUG_BIORQ(PLL_TRACE, r, "try flush");
 			dynarray_add(&a, r);
 		}
-
-		BMAP_ULOCK(b);
+		BMPC_ULOCK(bmpc);
 
 		if (!dynarray_len(&a)) {
 			dynarray_free(&a);
@@ -521,37 +545,38 @@ bmap_flush(void)
 		/* Sort the items by their offsets.
 		 */
 		qsort(a.da_items, a.da_pos, sizeof(void *),
-		      bmap_flush_oftrq_cmp);
+		      bmap_flush_biorq_cmp);
 
-#if 0
+#if 1
 		for (i=0; i < dynarray_len(&a); i++) {
 			r = dynarray_getpos(&a, i);
-			DEBUG_OFFTREQ(PLL_TRACE, r, "sorted?");
+			DEBUG_BIORQ(PLL_TRACE, r, "sorted?");
 		}
 #endif
 
 		i=0;
 		while (i < dynarray_len(&a) &&
-		       (oftrqs = bmap_flush_trycoalesce(&a, &i))) {
-			/* Note: 'oftrqs' must be freed!!
+		       (biorqs = bmap_flush_trycoalesce(&a, &i))) {
+			/* Note: 'biorqs' must be freed!!
 			 */
-			niovs = bmap_flush_coalesce_map(oftrqs, &iovs);
+			niovs = bmap_flush_coalesce_map(biorqs, &iovs);
 			psc_assert(niovs);
 			/* Have a set of iov's now.  Let's create an rpc
 			 *   or rpc set and send it out.
 			 */
-			bmap_flush_send_rpcs(oftrqs, iovs, niovs);
+			bmap_flush_send_rpcs(biorqs, iovs, niovs);
 			PSCFREE(iovs);
 		}
 	}
 
 	for (i=0; i < dynarray_len(&bmaps); i++) {
 		msbd = dynarray_getpos(&bmaps, i);
-		h = &msbd->msbd_oftrqs;
 		b = msbd->msbd_bmap;
-		BMAP_LOCK(b);
+		bmpc = bmap_2_msbmpc(b);
 
-		if (!psclist_empty(h)) {
+		BMAP_LOCK(b);
+		spinlock(&bmpc->bmpc_lock);
+		if (bmpc_queued_writes(bmpc)) {
 			psc_assert(b->bcm_mode & BMAP_DIRTY);
 			BMAP_ULOCK(b);
 			DEBUG_BMAP(PLL_INFO, b, "restore to dirty list");
@@ -559,11 +584,13 @@ bmap_flush(void)
 
 		} else {
 			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
+			freelock(&bmpc->bmpc_lock);
 			BMAP_ULOCK(b);
 
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
 			continue;
 		}
+		freelock(&bmpc->bmpc_lock);
 	}
 	dynarray_free(&bmaps);
 }

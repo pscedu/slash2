@@ -1664,7 +1664,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 
 	libsl_init(PSCNET_CLIENT);
 	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
-	sl_buffer_cache_init();
+	bmpc_global_init();
 
 	_psc_poolmaster_init(&bmap_poolmaster, sizeof(struct bmapc_memb) +
 	    sizeof(struct bmap_cli_data), offsetof(struct bmapc_memb, bcm_lentry),

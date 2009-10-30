@@ -14,7 +14,6 @@
 #include "fidcache.h"
 #include "inode.h"
 #include "msl_fuse.h"
-#include "offtree.h"
 #include "slconfig.h"
 
 struct pscrpc_request;
