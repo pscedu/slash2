@@ -14,7 +14,6 @@
 #include "cache_params.h"
 #include "fid.h"
 #include "fidcache.h"
-#include "offtree.h"
 
 int (*fidcReapCb)(struct fidc_membh *);
 void (*initFcooCb)(struct fidc_open_obj *);
