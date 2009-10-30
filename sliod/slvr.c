@@ -148,8 +148,7 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 	ssize_t rc;
 	int nblks, save_errno;
 
-	nblks = (size / SLASH_SLVR_BLKSZ) + 
-		(size & SLASH_SLVR_BLKMASK) ? 1 : 0;
+	nblks = (size + SLASH_SLVR_BLKSZ-1) / SLASH_SLVR_BLKSZ;
 
 	psc_assert(s->slvr_flags & SLVR_PINNED); 		   
         psc_assert(rw == SL_READ || rw == SL_WRITE);
@@ -218,11 +217,13 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 			   nblks, slvr_2_fileoff(s, blk), save_errno);
 	else {
-		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%"PRIu64" rc=%zd",
+		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%"PRIu64" rc=%zd nblks=%d",
 			   (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), size, 
-			   slvr_2_fileoff(s, blk), rc);
+			   slvr_2_fileoff(s, blk), rc, nblks);
 		rc = 0;
 	}
+
+	vbitmap_printbin1(s->slvr_slab->slb_inuse);
 
 	return ((rc < 0) ? (int)-save_errno : (int)0);
 }
@@ -430,8 +431,9 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	psc_assert(vbitmap_nfree(s->slvr_slab->slb_inuse) < 
 		   (int)SLASH_BLKS_PER_SLVR);
 	
-	psc_info("vbitmap_nfree() = %d", 
-		 vbitmap_nfree(s->slvr_slab->slb_inuse));
+	psc_info("vbitmap_nfree()=%d", vbitmap_nfree(s->slvr_slab->slb_inuse));
+
+	vbitmap_printbin1(s->slvr_slab->slb_inuse);	
 
 	if (s->slvr_flags & SLVR_DATARDY)
                 goto invert;
@@ -443,21 +445,24 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	 */
 	if ((rc = slvr_fsbytes_rio(s)))
 		return (rc);
-	else {
+
+
+	if (rw == SL_READ) {
 		SLVR_LOCK(s);
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 		
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
 		
+		vbitmap_invert(s->slvr_slab->slb_inuse);
+		vbitmap_printbin1(s->slvr_slab->slb_inuse);
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
 
 		return (0);
-	}
 
-	if (rw == SL_WRITE) {
+	} else {		
 		/* Above, the bits were set for the RMW blocks, now 
 		 *  that they have been read, invert the bitmap so that
 		 *  it properly represents the blocks to be dirtied by
@@ -471,6 +476,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		
 		if (unaligned[1] >= 0)
 			vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
+		vbitmap_printbin1(s->slvr_slab->slb_inuse);
 	out:
 		SLVR_ULOCK(s);
 	} 
