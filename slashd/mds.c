@@ -740,11 +740,13 @@ mexpfcm_release_bref(struct mexpbcm *bref)
 	    !(bmap->bcm_mode & BMAP_MDS_NOION))
 		psc_fatalx("bref not found on bmap_exports");
 
+	if (bref->mexpbcm_mode & MEXPBCM_WR)
+		atomic_dec(&bmap->bcm_wr_ref);
+
+	if (bref->mexpbcm_mode & MEXPBCM_RD)
+		atomic_dec(&bmap->bcm_rd_ref);
+
 	bmdsi_sanity_locked(bmap, 0, refs);
-	psc_assert(refs[0] > 1);
-	psc_assert(refs[1] > 1);
-	refs[0]--;
-	refs[1]--;
 
 	if (!refs[0] || (refs[0] == 1 && !refs[1]))
 		mexpbcm_directio_unset(bref);
