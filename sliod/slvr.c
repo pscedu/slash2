@@ -198,11 +198,11 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 			//psc_assert(vbitmap_get(s->slvr_slab->slb_inuse, 
 			//	       blk + i));
 			vbitmap_unset(s->slvr_slab->slb_inuse, blk + i);
-		}
+		}		
+		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, blk), size, 
+			    slvr_2_fileoff(s, blk));
 		SLVR_ULOCK(s);
-		
-		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, blk), 
-			    size, slvr_2_fileoff(s, blk));
+
 		save_errno = errno;
 	}
 
@@ -241,7 +241,7 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 	psc_trace("vbitmap_nfree() = %d", 
 		  vbitmap_nfree(s->slvr_slab->slb_inuse));
 
-	if (!s->slvr_flags & SLVR_DATARDY)
+	if (!(s->slvr_flags & SLVR_DATARDY))
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -278,7 +278,8 @@ int
 slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
 {
 	DEBUG_SLVR(PLL_INFO, s, "sblk=%u size=%u", sblk, size);
-	return slvr_fsio(s, sblk, size, SL_WRITE);
+
+	return (slvr_fsio(s, sblk, size, SL_WRITE));
 }
 
 void
@@ -321,7 +322,7 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 int
 slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 {
-	int blks, rc, unaligned[2] = {0,0};
+	int blks, rc, unaligned[2] = {-1, -1};
 	size_t i;
 
 	SLVR_LOCK(s);
@@ -345,9 +346,9 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		s->slvr_flags |= SLVR_CRCDIRTY;
 		
 		if (s->slvr_flags & SLVR_DATARDY)
-			/* Either read or write ops can just proceed if SLVR_DATARDY
-			 *  is set, the sliver is prepared.
-			 */		
+			/* Either read or write ops can just proceed if
+			 *   SLVR_DATARDY is set, the sliver is prepared.
+			 */
 			goto set_write_dirty;
 
 	} else if (rw == SL_READ) {
@@ -414,8 +415,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	if ((offset + size) < SLASH_SLVR_SIZE) {
 		int j;
 
-		blks = ((SLASH_SLVR_SIZE - (offset + size)) / 
-			SLASH_SLVR_BLKSZ);
+		blks = (SLASH_SLVR_SIZE - (offset + size)) / SLASH_SLVR_BLKSZ;
 
 		if ((offset + size) & SLASH_SLVR_BLKMASK) {
 			blks++;
@@ -430,7 +430,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	psc_assert(vbitmap_nfree(s->slvr_slab->slb_inuse) < 
 		   (int)SLASH_BLKS_PER_SLVR);
 	
-	psc_info("vbitmap_nfree() = %d", vbitmap_nfree(s->slvr_slab->slb_inuse));
+	psc_info("vbitmap_nfree() = %d", 
+		 vbitmap_nfree(s->slvr_slab->slb_inuse));
 
 	if (s->slvr_flags & SLVR_DATARDY)
                 goto invert;
@@ -465,10 +466,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		SLVR_LOCK(s);
 	invert:
 		vbitmap_invert(s->slvr_slab->slb_inuse);
-		if (unaligned[0])
+		if (unaligned[0] >= 0)
 			vbitmap_set(s->slvr_slab->slb_inuse, unaligned[0]);
 		
-		if (unaligned[1])
+		if (unaligned[1] >= 0)
 			vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
 	out:
 		SLVR_ULOCK(s);
