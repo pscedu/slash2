@@ -20,15 +20,18 @@ struct msctl_replstq {
 /* in-memory container for a replst_slave msg */
 struct msctl_replst_slave_cont {
 	struct psclist_head		 mrsc_lentry;
+	uint32_t			 mrsc_len;	/* max: SRM_REPLST_PAGESIZ */
+
+	/* must be at end, memory is allocated past */
 	struct msctlmsg_replst_slave	 mrsc_mrsl;
 };
 
 /* in-memory container for a replst msg */
 struct msctl_replst_cont {
 	struct psclist_head		 mrc_lentry;
-	struct msctlmsg_replst		 mrc_mrs;
 	struct psc_completion		 mrc_compl;	/* notification when all slaves arrive */
 	struct psc_lockedlist		 mrc_bdata;	/* msctl_replst_slave_cont */
+	struct msctlmsg_replst		 mrc_mrs;
 };
 
 extern struct psc_lockedlist		 msctl_replsts;
