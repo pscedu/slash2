@@ -7,6 +7,7 @@
 
 #include "pfl/pfl.h"
 #include "pfl/cdefs.h"
+#include "psc_ds/vbitmap.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/fmt.h"
@@ -19,16 +20,53 @@
 #include "pathnames.h"
 #include "slashrpc.h"
 #include "slconfig.h"
+#include "slerr.h"
 
-struct msctlmsg_replst		current_mrs;
-const struct msctlmsg_replst	zero_mrs;
+struct msctlmsg_replst		 current_mrs;
+struct vbitmap			 current_mrs_bmask;
+struct psclist_head		 current_mrs_bdata =
+				    PSCLIST_HEAD_INIT(current_mrs_bdata);
+const struct msctlmsg_replst	 zero_mrs;
+
+struct replst_slave_bdata {
+	struct psclist_head	rsb_lentry;
+	sl_bmapno_t		rsb_boff;
+	int			rsb_blen;
+	unsigned char		rsb_data[0];
+};
 
 struct replrq_arg {
-	char iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
-	int nios;
-	int code;
-	int bmapno;
+	char	iosv[SITE_NAME_MAX][SL_MAX_REPLICAS];
+	int	nios;
+	int	code;
+	int	bmapno;
 };
+
+int
+rsb_cmp(const void *a, const void *b)
+{
+	const struct replst_slave_bdata *x = a, *y = b;
+
+	if (x->rsb_blen < y->rsb_blen)
+		return (-1);
+	else if (x->rsb_blen > y->rsb_blen)
+		return (1);
+	return (0);
+}
+
+int
+rsb_isfull(void)
+{
+	struct replst_slave_bdata *rsb;
+	sl_bmapno_t range = 0;
+
+	psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
+		if (rsb->rsb_boff != range)
+			return (0);
+		range += rsb->rsb_blen;
+	}
+	return (1);
+}
 
 void
 pack_replst(const char *fn, __unusedx void *arg)
@@ -134,10 +172,33 @@ parse_replrq(int code, char *replrqspec,
 }
 
 int
-replst_slave_check(struct psc_ctlmsghdr *mh, __unusedx const void *m)
+replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
+{
+	__unusedx const struct msctlmsg_replst *mrs = m;
+	int blen;
+
+	if (mh->mh_size != sizeof(*mrs))
+		return (sizeof(*mrs));
+
+	if (mrs->mrs_nios > SL_MAX_REPLICAS)
+		psc_fatalx("replication status has too many replicas");
+
+	memcpy(&current_mrs, mrs, sizeof(current_mrs));
+	vbitmap_resize(&current_mrs_bmask, current_mrs.mrs_nbmaps);
+	vbitmap_clearall(&current_mrs_bmask);
+
+	blen = current_mrs.mrs_nbmaps * howmany(SL_BITS_PER_REPLICA *
+	    current_mrs.mrs_nios, NBBY);
+	return (-1);
+}
+
+int
+replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct msctlmsg_replst_slave *mrsl = m;
+	struct replst_slave_bdata *rsb;
 	uint32_t nbytes, nbmaps, len;
+	int rc;
 
 	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)) == 0)
 		errx(1, "received unexpected replication status slave message");
@@ -153,35 +214,41 @@ replst_slave_check(struct psc_ctlmsghdr *mh, __unusedx const void *m)
 	if (nbmaps > current_mrs.mrs_nbmaps)
 		errx(1, "invalid value in replication status slave message");
 	current_mrs.mrs_nbmaps -= nbmaps;
+
+	rc = vbitmap_setrange(&current_mrs_bmask, mrsl->mrsl_boff, nbmaps);
+	if (rc)
+		psc_fatalx("replication status bmap data: %s", slstrerror(rc));
+
+	rsb = PSCALLOC(sizeof(*rsb) + nbytes);
+	rsb->rsb_blen = nbmaps;
+	rsb->rsb_boff = mrsl->mrsl_boff;
+	psclist_add_sorted(&current_mrs_bdata, &rsb->rsb_lentry, rsb_cmp,
+	    offsetof(struct replst_slave_bdata, rsb_lentry));
+
+	if (current_mrs.mrs_nbmaps || !rsb_isfull())
+		return (-1);
 	return (0);
 }
 
 void
-replst_savdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+replst_slave_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	const struct msctlmsg_replst *mrs = m;
-
-	memcpy(&current_mrs, mrs, sizeof(current_mrs));
-}
-
-void
-replst_slave_prdatif(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
-{
-	const struct msctlmsg_replst_slave *mrsl = m;
-	char rbuf[PSCFMT_RATIO_BUFSIZ];
-
-	/* if there are more bmaps left, wait to print */
-	if (current_mrs.mrs_nbmaps)
-		return;
-
 	printf("replication status\n"
 	    " %-54s %8s %8s %6s\n",
 	    "file/fid", "total", "old", "%done");
+}
+
+void
+replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct msctlmsg_replst_slave *mrsl = m;
+	char rbuf[PSCFMT_RATIO_BUFSIZ];
 
 //	psc_fmt_ratio(rbuf, mrs->mrs_bact, mrs->mrs_bact + mrs->mrs_bold);
 //	printf("     %-50s %8d %8d %6s\n", mrs->mrs_ios,
 //	    mrs->mrs_bact + mrs->mrs_bold, mrs->mrs_bold, rbuf);
 
+	/* reset current_mrs for next replst */
 	memcpy(&current_mrs, &zero_mrs, sizeof(current_mrs));
 }
 
@@ -193,10 +260,10 @@ int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
-	{ NULL,		NULL,			0, NULL },
-	{ NULL,		NULL,			0, NULL },
-	{ NULL,		replst_savdat,		sizeof(struct msctlmsg_replst), NULL },
-	{ NULL,		replst_slave_prdatif,	0, replst_slave_check }
+	{ NULL,			NULL,			0, NULL },
+	{ NULL,			NULL,			0, NULL },
+	{ NULL,			NULL,			0, replst_savdat },
+	{ replst_slave_prhdr,	replst_slave_prdat,	0, replst_slave_check }
 };
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
