@@ -73,7 +73,7 @@ enum fcmh_states {
 	FCMH_GETTING_ATTRS = (1 << 11)
 };
 
-#define FCMH_ATTR_TIMEO 5
+#define FCMH_ATTR_TIMEO		5			/* number of seconds in which attribute times out */
 
 #define FCMH_LOCK(f)		spinlock(&(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock(&(f)->fcmh_lock)
