@@ -296,12 +296,10 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh, __unusedx const voi
 			off = SL_BITS_PER_REPLICA * iosidx;
 			for (nb = 0; nb < rsb->rsb_nbmaps; nb++, nbw++,
 			    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios) {
-				if (nbw > 76) {
-					putchar('\n');
+				if (nbw > 76)
 					nbw = 0;
-				}
 				if (nbw == 0)
-					putchar('\t');
+					printf("\n\t");
 				putchar(map[SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)]);
 			}
 		}
