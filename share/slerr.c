@@ -8,7 +8,9 @@
 #include "slerr.h"
 
 char *slash_errstrs[] = {
-	"Replicas already active",
+	"Replica already active",
+	"Replica already inactive",
+	"All replicas inactive",
 	"Invalid bmap",
 	"Unknown I/O system",
 	NULL
