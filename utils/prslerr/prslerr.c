@@ -21,8 +21,6 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int j, n;
-
 	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
@@ -30,7 +28,12 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	for (j = 0, n = _SLERR_START + 1; slash_errstrs[j]; j++, n++)
-		printf("%4d: %s\n", n, slstrerror(n));
+	/* start custom errnos */
+	printf("%4d [SLERR_REPL_ALREADY_ACT]: %s\n", SLERR_REPL_ALREADY_ACT, slstrerror(SLERR_REPL_ALREADY_ACT));
+	printf("%4d [SLERR_REPL_ALREADY_INACT]: %s\n", SLERR_REPL_ALREADY_INACT, slstrerror(SLERR_REPL_ALREADY_INACT));
+	printf("%4d [SLERR_REPLS_ALL_INACT]: %s\n", SLERR_REPLS_ALL_INACT, slstrerror(SLERR_REPLS_ALL_INACT));
+	printf("%4d [SLERR_INVALID_BMAP]: %s\n", SLERR_INVALID_BMAP, slstrerror(SLERR_INVALID_BMAP));
+	printf("%4d [SLERR_UNKNOWN_IOS]: %s\n", SLERR_UNKNOWN_IOS, slstrerror(SLERR_UNKNOWN_IOS));
+	/* end custom errnos */
 	exit(0);
 }
