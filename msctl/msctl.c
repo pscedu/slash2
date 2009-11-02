@@ -22,6 +22,11 @@
 #include "slconfig.h"
 #include "slerr.h"
 
+/* for accessing the status of a bmap for a replica */
+#define RSB_IOS_STATUS(rsb, off)	((((rsb)->rsb_data[(off) / NBBY] <<	 \
+					    ((off) % NBBY)) >> ((off) % NBBY)) & \
+					    SL_REPLICA_MASK)
+
 struct msctlmsg_replst		 current_mrs;
 struct vbitmap			 current_mrs_bmask;
 struct psclist_head		 current_mrs_bdata =
@@ -31,7 +36,7 @@ const struct msctlmsg_replst	 zero_mrs;
 struct replst_slave_bdata {
 	struct psclist_head	rsb_lentry;
 	sl_bmapno_t		rsb_boff;
-	int			rsb_blen;
+	sl_bmapno_t		rsb_nbmaps;
 	unsigned char		rsb_data[0];
 };
 
@@ -47,9 +52,9 @@ rsb_cmp(const void *a, const void *b)
 {
 	const struct replst_slave_bdata *x = a, *y = b;
 
-	if (x->rsb_blen < y->rsb_blen)
+	if (x->rsb_boff < y->rsb_boff)
 		return (-1);
-	else if (x->rsb_blen > y->rsb_blen)
+	else if (x->rsb_boff > y->rsb_boff)
 		return (1);
 	return (0);
 }
@@ -63,9 +68,31 @@ rsb_isfull(void)
 	psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
 		if (rsb->rsb_boff != range)
 			return (0);
-		range += rsb->rsb_blen;
+		range += rsb->rsb_nbmaps;
 	}
 	return (1);
+}
+
+void
+rsb_accul_replica_stats(struct replst_slave_bdata *rsb, int iosidx,
+    sl_bmapno_t *bact, sl_bmapno_t *bold)
+{
+	sl_bmapno_t n;
+	int off;
+
+	off = iosidx * SL_BITS_PER_REPLICA;
+	for (n = 0; n < rsb->rsb_nbmaps; n++,
+	    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios) {
+		switch (RSB_IOS_STATUS(rsb, off)) {
+		case SL_REPL_TOO_OLD:
+		case SL_REPL_OLD:
+			++*bold;
+			break;
+		case SL_REPL_ACTIVE:
+			++*bact;
+			break;
+		}
+	}
 }
 
 void
@@ -220,8 +247,9 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 		psc_fatalx("replication status bmap data: %s", slstrerror(rc));
 
 	rsb = PSCALLOC(sizeof(*rsb) + nbytes);
-	rsb->rsb_blen = nbmaps;
+	rsb->rsb_nbmaps = nbmaps;
 	rsb->rsb_boff = mrsl->mrsl_boff;
+	memcpy(rsb->rsb_data, mrsl->mrsl_data, nbytes);
 	psclist_add_sorted(&current_mrs_bdata, &rsb->rsb_lentry, rsb_cmp,
 	    offsetof(struct replst_slave_bdata, rsb_lentry));
 
@@ -233,22 +261,63 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 void
 replst_slave_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
+	/* XXX add #repls, #bmaps */
 	printf("replication status\n"
-	    " %-54s %8s %8s %6s\n",
-	    "file/fid", "total", "old", "%done");
+	    " %-62s %4s %4s %6s\n",
+	    "file", "tot", "old", "%xfer");
 }
 
 void
-replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	const struct msctlmsg_replst_slave *mrsl = m;
-	char rbuf[PSCFMT_RATIO_BUFSIZ];
+	char map[4], *iosname, rbuf[PSCFMT_RATIO_BUFSIZ];
+	struct replst_slave_bdata *rsb, *nrsb;
+	sl_blkno_t bact, bold, nb;
+	uint32_t iosidx;
+	int nbw, off;
 
-//	psc_fmt_ratio(rbuf, mrs->mrs_bact, mrs->mrs_bact + mrs->mrs_bold);
-//	printf("     %-50s %8d %8d %6s\n", mrs->mrs_ios,
-//	    mrs->mrs_bact + mrs->mrs_bold, mrs->mrs_bold, rbuf);
+	map[SL_REPL_TOO_OLD] = 'o';
+	map[SL_REPL_OLD] = 'o';
+	map[SL_REPL_ACTIVE] = '+';
+	map[SL_REPL_INACTIVE] = '-';
+
+	printf(" %s\n", current_mrs.mrs_fn);
+	for (iosidx = 0; iosidx < current_mrs.mrs_nios; iosidx++) {
+		nbw = 0;
+		bact = bold = 0;
+		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry)
+			rsb_accul_replica_stats(rsb, iosidx, &bact, &bold);
+
+		iosname = strchr(current_mrs.mrs_iosv[iosidx], '@');
+		if (iosname)
+			iosname++;
+		else
+			iosname = current_mrs.mrs_iosv[iosidx];
+
+		psc_fmt_ratio(rbuf, bact, bact + bold);
+		printf("     %-58s %4d %4d %6s",
+		    iosname, bact + bold, bold, rbuf);
+		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
+			off = SL_BITS_PER_REPLICA * iosidx;
+			for (nb = 0; nb < rsb->rsb_nbmaps; nb++, nbw++,
+			    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios) {
+				if (nbw > 76) {
+					putchar('\n');
+					nbw = 0;
+				}
+				if (nbw == 0)
+					putchar('\t');
+				putchar(map[RSB_IOS_STATUS(rsb, off)]);
+			}
+		}
+		putchar('\n');
+	}
 
 	/* reset current_mrs for next replst */
+	psclist_for_each_entry_safe(rsb, nrsb, &current_mrs_bdata, rsb_lentry) {
+		psclist_del(&rsb->rsb_lentry);
+		PSCFREE(rsb);
+	}
 	memcpy(&current_mrs, &zero_mrs, sizeof(current_mrs));
 }
 
