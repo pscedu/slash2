@@ -884,7 +884,7 @@ mds_bmapod_dump(const struct bmapc_memb *bmap)
  *	bounds of the file causing a new bmap to be created.
  * Notes:  Bmap creation race conditions are prevented because the bmap
  *	handle already exists at this time with
- *	bmapi_mode == BMAP_MDS_INIT.
+ *	bmapi_mode == BMAP_INIT.
  *
  *	This causes other threads to block on the waitq until
  *	read/creation has completed.
@@ -986,11 +986,11 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno)
 		/* Add check for directio mode. */
 		while (initializing) {
 			BMAP_LOCK(b);
-			if (b->bcm_mode & BMAP_MDS_INIT) {
+			if (b->bcm_mode & BMAP_INIT) {
 				/* Only the init bit is allowed to be set.
 				 */
-				psc_assert(b->bcm_mode == BMAP_MDS_INIT);
-				/* Sanity checks for BMAP_MDS_INIT
+				psc_assert(b->bcm_mode == BMAP_INIT);
+				/* Sanity checks for BMAP_INIT
 				 */
 				psc_assert(!b->bcm_pri);
 				psc_assert(!b->bcm_fcmh);
@@ -1016,7 +1016,7 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno)
 		} else {
 			b->bcm_mode = 0;
 			/* Notify other threads that this bmap has been loaded,
-			 *  they're blocked on BMAP_MDS_INIT.
+			 *  they're blocked on BMAP_INIT.
 			 */
 			psc_waitq_wakeall(&b->bcm_waitq);
 		}
