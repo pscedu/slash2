@@ -21,6 +21,7 @@
 #include "pfl/cdefs.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
+#include "psc_util/time.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
@@ -650,13 +651,16 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 	int rc=0, locked;
+	struct timespec now;
 
-	if ((fcmh->fcmh_state & FCMH_HAVE_ATTRS) &&
-	    fidc_gettime() < (fcmh_2_age(fcmh) + FCMH_ATTR_TIMEO)) {
-		DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs cached - YES");
-		/* XXX Need to check creds here.
-		 */
-		return (0);
+	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
+		clock_gettime(CLOCK_REALTIME, &now);
+		if (timespeccmp(&now, fcmh_2_age(fcmh), <)) {
+			DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs cached - YES");
+			/* XXX Need to check creds here.
+			 */
+			return (0);
+		}
 	}
 
 	locked = reqlock(&fcmh->fcmh_lock);
@@ -1044,7 +1048,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 				  fcm.fcm_fg.fg_fid, fcm.fcm_fg.fg_gen,
 				  attr->rc);
 
-			fcm_2_age(&fcm) = fidc_gettime() + FCMH_ATTR_TIMEO;
+			fidc_gettime(fcm_2_age(&fcm));
 			rc = fidc_lookup_copy_inode(&fcm.fcm_fg, &fcm,
 						      &mq->creds, &fcmh);
 			if (fcmh)

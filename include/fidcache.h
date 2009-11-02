@@ -6,6 +6,7 @@
 #include "psc_ds/pool.h"
 #include "psc_ds/tree.h"
 #include "psc_util/lock.h"
+#include "psc_util/time.h"
 
 #include "slashrpc.h"
 
@@ -88,7 +89,7 @@ enum fcmh_states {
 #define fcmh_2_attrp(f)		(&(f)->fcmh_fcm->fcm_stb)
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE))
 
-#define fcmh_2_age(f)		((f)->fcmh_fcm->fcm_slfinfo.slf_age)
+#define fcmh_2_age(f)		(&(f)->fcmh_fcm->fcm_slfinfo.slf_age)
 #define fcmh_2_stb(f)		(&(f)->fcmh_fcm->fcm_stb)
 #define fcmh_2_isdir(f)		(S_ISDIR((f)->fcmh_fcm->fcm_stb.st_mode))
 
@@ -162,10 +163,10 @@ do {										\
 	} while (0)
 
 struct sl_finfo {
-	u64			 slf_opcnt;     /* count attr updates       */
-	size_t			 slf_readb;	/* num bytes read           */
-	size_t			 slf_writeb;	/* num bytes written        */
-	double			 slf_age;
+	u64			slf_opcnt;	/* count attr updates       */
+	size_t			slf_readb;	/* num bytes read           */
+	size_t			slf_writeb;	/* num bytes written        */
+	struct timespec		slf_age;	/* when the cached info times out */
 };
 
 /*
@@ -181,7 +182,7 @@ struct fidc_memb {
 #define fcm_2_gen(f)	(f)->fcm_fg.fg_gen
 #define fcm_2_fgp(f)	(&(f)->fcm_fg)
 #define fcm_2_fsz(f)	(f)->fcm_stb.st_size
-#define fcm_2_age(f)	(f)->fcm_slfinfo.slf_age
+#define fcm_2_age(f)	(&(f)->fcm_slfinfo.slf_age)
 //#define fcm_2_inoh(f)	(&(f)->fcm_inodeh)
 
 #define FCM_CLEAR(fcm) memset((fcm), 0, sizeof(struct fidc_memb))
@@ -304,13 +305,13 @@ dump_statbuf(struct stat *stb, int level)
 
 extern void (*initFcooCb)(struct fidc_open_obj *);
 
-static inline double
-fidc_gettime(void)
+static inline void
+fidc_gettime(struct timespec *ts)
 {
-	struct timespec ts;
+	struct timespec tmp = {FCMH_ATTR_TIMEO, 0};
 
-	clock_gettime(CLOCK_REALTIME, &ts);
-	return (ts.tv_nsec/1000000000.0 + ts.tv_sec);
+	clock_gettime(CLOCK_REALTIME, ts);
+	timespecadd(ts, &tmp, ts);
 }
 
 static inline const char *

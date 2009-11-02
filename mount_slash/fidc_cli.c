@@ -8,6 +8,7 @@
 
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_util/time.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "pfl/cdefs.h"
@@ -47,7 +48,7 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	fcc->fcc_hash   = str_hash(name);
 	INIT_PSCLIST_ENTRY(&fcc->fcc_lentry);
 	LOCK_INIT(&fcc->fcc_lock);
-	fidc_settimeo(&fcc->fcc_age);
+	fidc_gettime(&fcc->fcc_age);
 	strlcpy(fcc->fcc_name, name, len);
 	return (fcc);
 }
@@ -186,7 +187,7 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 		} else {
 			/* Increase the lifespan of this entry and return.
 			 */
-			fidc_settimeo(&fcc->fcc_age);
+			fidc_gettime(&fcc->fcc_age);
 			/* If the fcc is 'connected', then its parent inode
 			 *   must be 'p'.
 			 */
@@ -277,6 +278,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	struct fidc_child *c=NULL;
 	int found=0;
 	int hash=str_hash(name);
+	struct timespec	now;
 
 	LOCK_ENSURE(&p->fcmh_lock);
 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
@@ -311,7 +313,8 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	if (c->fcc_fcmh->fcmh_state & FCMH_CAC_FREEING)
 		return (NULL);
 
-	if (c->fcc_age < fidc_gettime()) {
+	clock_gettime(CLOCK_REALTIME, &now);
+	if (timespeccmp(&c->fcc_age, &now, <)) {
 		/* It's old, remove it.
 		 */
 		atomic_dec(&c->fcc_ref);

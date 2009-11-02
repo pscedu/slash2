@@ -37,7 +37,7 @@ fidc_membh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 	psc_assert(fcmh_2_gen(fcmh) != FID_ANY);
 
 	memcpy(fcmh_2_stb(fcmh), stb, sizeof(*stb));
-	fcmh_2_age(fcmh) = fidc_gettime() + FCMH_ATTR_TIMEO;
+	fidc_gettime(fcmh_2_age(fcmh));
 
 	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
 		fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
@@ -177,7 +177,7 @@ fidc_fcm_update(struct fidc_membh *h, const struct fidc_memb *b)
 
 	psc_assert(SAMEFID(&a->fcm_fg, &b->fcm_fg));
 
-	if (b->fcm_slfinfo.slf_age > a->fcm_slfinfo.slf_age)
+	if (timespeccmp(&b->fcm_slfinfo.slf_age, &a->fcm_slfinfo.slf_age, >))
 		memcpy(a, b, sizeof(*a));
 
 	ureqlock(&h->fcmh_lock, locked);
