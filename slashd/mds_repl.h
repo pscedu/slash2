@@ -33,8 +33,8 @@ SPLAY_PROTOTYPE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
 uint64_t sl_get_repls_inum(void);
 struct sl_replrq *
 	mds_repl_findrq(struct slash_fidgen *, int *);
-int	mds_repl_addrq(struct slash_fidgen *, sl_blkno_t);
-int	mds_repl_delrq(struct slash_fidgen *, sl_blkno_t);
+int	mds_repl_addrq(struct slash_fidgen *, sl_blkno_t, sl_replica_t *, int);
+int	mds_repl_delrq(struct slash_fidgen *, sl_blkno_t, sl_replica_t *, int);
 void	mds_repl_init(void);
 int	mds_repl_inv_except_locked(struct bmapc_memb *, sl_ios_id_t);
 void	mds_repl_unrefrq(struct sl_replrq *);

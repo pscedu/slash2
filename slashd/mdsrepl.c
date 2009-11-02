@@ -36,6 +36,27 @@ struct psc_poolmaster	 replrq_poolmaster;
 struct psc_poolmgr	*replrq_pool;
 psc_spinlock_t		 replrq_tree_lock = LOCK_INITIALIZER;
 
+__static int
+iosidx_cmp(const void *a, const void *b)
+{
+	const int *x = a, *y = b;
+
+	if (*x < *y)
+		return (-1);
+	else if (*x > *y)
+		return (1);
+	return (0);
+}
+
+__static int
+iosidx_in(int idx, int iosidx[], int nios)
+{
+	if (bsearch(&idx, iosidx, nios,
+	    sizeof(iosidx[0]), iosidx_cmp))
+		return (1);
+	return (0);
+}
+
 int
 replrq_cmp(const void *a, const void *b)
 {
@@ -91,10 +112,11 @@ mds_inoh_load_repls(struct slash_inode_handle *ih)
 	return (rc);
 }
 
-#define mds_repl_ios_lookup_add(i, ios) mds_repl_ios_lookup(i, ios, 1)
+#define mds_repl_ios_lookup_add(ih, ios)	_mds_repl_ios_lookup((ih), (ios), 1)
+#define mds_repl_ios_lookup(ih, ios)		_mds_repl_ios_lookup((ih), (ios), 0)
 
 int
-mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
+_mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 {
 	uint32_t j=0, k;
 	int rc = -ENOENT;
@@ -171,68 +193,27 @@ mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 	return (rc);
 }
 
-int
-mds_repl_inv_except_locked(struct bmapc_memb *bmap, sl_ios_id_t ios)
+#define mds_repl_iosv_lookup(ih, ios, iosidx, nios)	_mds_repl_iosv_lookup((ih), (ios), (iosidx), (nios), 0)
+#define mds_repl_iosv_lookup_add(ih, ios, iosidx, nios)	_mds_repl_iosv_lookup((ih), (ios), (iosidx), (nios), 1)
+
+__static int
+_mds_repl_iosv_lookup(struct slash_inode_handle *ih,
+    sl_replica_t iosv[], int iosidx[], int nios, int add)
 {
-	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
-	uint8_t mask, *b=bmapod->bh_repls;
-	int r, j, bumpgen=0, log=0;
-	uint32_t pos, k;
+	int k, last;
 
-	BMAP_LOCK_ENSURE(bmap);
-	/* Find our replica id else add ourselves.
-	 */
-	j = mds_repl_ios_lookup_add(fcmh_2_inoh(bmap->bcm_fcmh), ios);
-	if (j < 0)
-		return (j);
+	for (k = 0; k < nios; k++)
+		if ((iosidx[k] = _mds_repl_ios_lookup(ih, iosv[k].bs_id, add)) < 0)
+			return (-iosidx[k]);
 
-	mds_bmapod_dump(bmap);
-	/* Iterate across the byte array.
-	 */
-	for (r=0, k=0; k < SL_REPLICA_NBYTES; k++, mask=0)
-		for (pos=0; pos < NBBY; pos+=SL_BITS_PER_REPLICA, r++) {
-
-			mask = (uint8_t)(SL_REPLICA_MASK << pos);
-
-			if (r == j) {
-				if ((b[k] & mask) >> pos == SL_REPL_ACTIVE)
-					DEBUG_BMAP(PLL_INFO, bmap,
-						   "repl[%d] ios(%u) exists",
-						   r, ios);
-				else {
-					log++;
-					b[k] = (b[k] & ~mask) | (SL_REPL_ACTIVE << pos);
-					DEBUG_BMAP(PLL_NOTIFY, bmap,
-						   "repl[%d] ios(%u) add",
-						   r, ios);
-				}
-			} else {
-				switch ((b[k] & mask) >> pos) {
-				case SL_REPL_INACTIVE:
-				case SL_REPL_TOO_OLD:
-					break;
-				case SL_REPL_OLD:
-					log++;
-					b[k] = (b[k] & ~mask) | (SL_REPL_TOO_OLD << pos);
-					break;
-				case SL_REPL_ACTIVE:
-					log++;
-					bumpgen++;
-					b[k] = (b[k] & ~mask) | (SL_REPL_OLD << pos);
-					break;
-				}
-			}
-		}
-
-	if (log) {
-		if (bumpgen)
-			bmapod->bh_gen.bl_gen++;
-		mds_bmap_repl_log(bmap);
-	}
-
+	qsort(iosidx, nios, sizeof(iosidx[0]), iosidx_cmp);
+	/* check for dups */
+	last = -1;
+	for (k = 0; k < nios; k++, last = iosidx[k])
+		if (iosidx[k] == last)
+			return (EINVAL);
 	return (0);
 }
-
 
 #if 0
 __static int
@@ -273,7 +254,47 @@ mds_repl_xattr_load_locked(struct slash_inode_handle *i)
 }
 #endif
 
+/* replication state walking flags */
 #define REPL_WALKF_SCIRCUIT	(1 << 0)	/* short circuit on return value set */
+#define REPL_WALKF_MODOTH	(1 << 1)	/* modify everyone except specified ios */
+
+int
+mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
+    const int retifset[4], int flags, int off, int *scircuit)
+{
+	struct slash_bmap_od *bmapod;
+	struct bmap_mds_info *bmdsi;
+	int val, rc = 0;
+
+	*scircuit = 0;
+
+	bmdsi = bmap_2_bmdsi(bcm);
+	bmapod = bmdsi->bmdsi_od;
+	val = SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls, off);
+
+	/* Check for return values */
+	if (retifset && retifset[val]) {
+		/*
+		 * Assign here instead of above to prevent
+		 * overwriting a zero return value.
+		 */
+		rc = retifset[val];
+		if (flags & REPL_WALKF_SCIRCUIT) {
+			*scircuit = 1;
+			return (rc);
+		}
+	}
+
+	/* Apply any translations */
+	if (tract && tract[val] != -1) {
+		SL_REPL_SET_BMAP_IOS_STAT(bmapod->bh_repls,
+		    off, tract[val]);
+		bmdsi->bmdsi_flags |= BMIM_LOGCHG;
+		if (val == SL_REPL_ACTIVE)
+			bmdsi->bmdsi_flags |= BMIM_BUMPGEN;
+	}
+	return (rc);
+}
 
 /*
  * mds_repl_bmap_walk - walk the bmap replication bits, performing any
@@ -282,32 +303,99 @@ mds_repl_xattr_load_locked(struct slash_inode_handle *i)
  * @tract: action translation array.
  * @retifset: return given value, last one wins.
  * @flags: operational flags.
+ * @iosidx: indexes of I/O systems to exclude or query, or NULL for everyone.
+ * @nios: # I/O system indexes specified.
  */
 int
-mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
-    const int *retifset, int flags)
+mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
+    const int retifset[4], int flags, int iosidx[], int nios)
 {
-	uint8_t mask, *b;
-	int k, pos, rc = 0;
+	int scircuit, nr, off, k, rc;
+	struct slash_bmap_od *bmapod;
+	struct bmap_mds_info *bmdsi;
 
-	b = bmap_2_bmdsiod(bcm)->bh_repls;
-	for (k = 0; k < SL_REPLICA_NBYTES; k++)
-		for (pos = 0; pos < NBBY; pos += SL_BITS_PER_REPLICA) {
-			mask = (uint8_t)SL_REPLICA_MASK << pos;
+	BMAP_LOCK_ENSURE(bcm);
 
-			/* check for return values */
-			if (retifset && retifset[(b[k] & mask) >> pos]) {
-				rc = retifset[(b[k] & mask) >> pos];
-				if (flags & REPL_WALKF_SCIRCUIT)
-					return (rc);
+	scircuit = k = rc = 0;
+	nr = fcmh_2_inoh(bcm->bcm_fcmh)->inoh_ino.ino_nrepls;
+	bmdsi = bmap_2_bmdsi(bcm);
+	bmapod = bmdsi->bmdsi_od;
+
+	if (nios == 0)
+		for (; k < nr; k++, off += SL_BITS_PER_REPLICA) {
+			mds_repl_bmap_apply(bcm, tract,
+			    retifset, flags, off, &scircuit);
+			if (scircuit)
+				break;
+		}
+	else if (flags & REPL_WALKF_MODOTH) {
+		for (; k < nr; k++, off += SL_BITS_PER_REPLICA)
+			if (!iosidx_in(k, iosidx, nios)) {
+				mds_repl_bmap_apply(bcm, tract,
+				    retifset, flags, off, &scircuit);
+				if (scircuit)
+					break;
 			}
-
-			/* apply any translations */
-			if (tract[(b[k] & mask) >> pos] != -1)
-				b[k] = (b[k] & ~mask) ||
-				    tract[(b[k] & mask) >> pos] << pos;
+	} else
+		for (k = 0; k < nios; k++) {
+			mds_repl_bmap_apply(bcm, tract, retifset, flags,
+			    iosidx[k] * SL_BITS_PER_REPLICA, &scircuit);
+				if (scircuit)
+					break;
 		}
 	return (rc);
+}
+
+int
+mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
+{
+	int rc, iosidx, tract[4], retifset[4];
+	struct slash_bmap_od *bmapod;
+	struct bmap_mds_info *bmdsi;
+
+	BMAP_LOCK_ENSURE(bcm);
+
+	/* Find/add our replica's IOS ID */
+	iosidx = mds_repl_ios_lookup_add(fcmh_2_inoh(bcm->bcm_fcmh), ios);
+	if (iosidx < 0)
+		psc_fatalx("lookup ios %d: %s", ios, slstrerror(rc));
+
+	bmdsi = bmap_2_bmdsi(bcm);
+	bmapod = bmdsi->bmdsi_od;
+
+	mds_repl_bmap_walk(bcm, tract, retifset, REPL_WALKF_MODOTH, &iosidx, 1);
+	if (bmdsi->bmdsi_flags & BMIM_LOGCHG) {
+		bmdsi->bmdsi_flags &= ~BMIM_LOGCHG;
+		if (bmdsi->bmdsi_flags & BMIM_BUMPGEN) {
+			bmdsi->bmdsi_flags &= ~BMIM_BUMPGEN;
+			bmapod->bh_gen.bl_gen++;
+		}
+		mds_bmap_repl_log(bcm);
+	}
+	return (0);
+}
+
+__static void
+mds_repl_bmap_rel(struct bmapc_memb *bcm)
+{
+	struct bmap_mds_info *bmdsi;
+	struct slash_bmap_od *bmapod;
+
+	BMAP_LOCK_ENSURE(bcm);
+
+	bmdsi = bmap_2_bmdsi(bcm);
+	bmapod = bmdsi->bmdsi_od;
+
+	if (bmdsi->bmdsi_flags & BMIM_LOGCHG) {
+		bmdsi->bmdsi_flags &= ~BMIM_LOGCHG;
+		if (bmdsi->bmdsi_flags & BMIM_BUMPGEN) {
+			bmdsi->bmdsi_flags &= ~BMIM_BUMPGEN;
+			bmapod->bh_gen.bl_gen++;
+		}
+		mds_bmap_repl_log(bcm);
+	}
+	bmap_op_done(bcm);
+	BMAP_ULOCK(bcm);
 }
 
 struct sl_replrq *
@@ -394,17 +482,21 @@ mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
 }
 
 int
-mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
+mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
+    sl_replica_t *iosv, int nios)
 {
-	char fn[FID_MAX_PATH];
-	int rc, locked, tract[4], retifset[4], retifset2[4];
+	int iosidx[SL_MAX_REPLICAS], rc, locked, tract[4], retifset[4], retifset2[4];
 	struct sl_replrq *newrq, *rrq;
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct bmapc_memb *bcm;
 	struct stat stb;
+	char fn[FID_MAX_PATH];
 	uint64_t inum;
 	sl_blkno_t n;
+
+	if (nios < 1 || nios > SL_MAX_REPLICAS)
+		return (EINVAL);
 
 	newrq = psc_pool_get(replrq_pool);
 
@@ -428,8 +520,15 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 				psc_fatalx("fidc_lookup_load_fg: %s",
 				    slstrerror(rc));
 
-			rc = zfsslash2_link(zfsVfs, fgp->fg_fid, inum,
-			    fn, &fg, &rootcreds, &stb);
+			/* Find/add our replica's IOS ID */
+			rc = mds_repl_iosv_lookup_add(rrq->rrq_inoh,
+			    iosv, iosidx, nios);
+			if (rc)
+				goto bail;
+
+			/* Create persistent file system link */
+			rc = zfsslash2_link(zfsVfs, fgp->fg_fid,
+			    inum, fn, &fg, &rootcreds, &stb);
 			if (rc == 0) {
 				rrq = newrq;
 				newrq = NULL;
@@ -443,15 +542,23 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 				SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
 			}
 		}
+	} else {
+		/* Find/add our replica's IOS ID */
+		rc = mds_repl_iosv_lookup_add(rrq->rrq_inoh,
+		    iosv, iosidx, nios);
 	}
+ bail:
 	if (locked)
 		freelock(&replrq_tree_lock);
 
 	if (newrq)
 		psc_pool_return(replrq_pool, newrq);
 
-	if (rc)
+	if (rc) {
+		if (rrq)
+			mds_repl_unrefrq(rrq);
 		return (rc);
+	}
 
 	/*
 	 * Check inode's bmap state.  INACTIVE and ACTIVE states
@@ -461,6 +568,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 	tract[SL_REPL_TOO_OLD] = -1;
 	tract[SL_REPL_OLD] = SL_REPL_TOO_OLD;
 	tract[SL_REPL_ACTIVE] = SL_REPL_TOO_OLD;
+
 	if (bmapno == (sl_blkno_t)-1) {
 		int repl_some_act = 0, repl_all_act = 1;
 
@@ -471,26 +579,25 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		retifset[SL_REPL_ACTIVE] = 1;
 
 		/* check if all bmaps are already active */
-		retifset[SL_REPL_INACTIVE] = 1;
-		retifset[SL_REPL_TOO_OLD] = 1;
-		retifset[SL_REPL_OLD] = 1;
-		retifset[SL_REPL_ACTIVE] = 0;
+		retifset2[SL_REPL_INACTIVE] = 1;
+		retifset2[SL_REPL_TOO_OLD] = 1;
+		retifset2[SL_REPL_OLD] = 1;
+		retifset2[SL_REPL_ACTIVE] = 0;
 
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 			bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
 			BMAP_LOCK(bcm);
 			repl_some_act |= mds_repl_bmap_walk(bcm,
-			    tract, retifset, 0);
-			if (repl_all_act &&
-			    mds_repl_bmap_walk(bcm, NULL, retifset2, 1))
+			    tract, retifset, 0, iosidx, nios);
+			if (repl_all_act && mds_repl_bmap_walk(bcm,
+			    NULL, retifset2, REPL_WALKF_SCIRCUIT, NULL, 0))
 				repl_all_act = 0;
-			bmap_op_done(bcm);
-			BMAP_ULOCK(bcm);
+			mds_repl_bmap_rel(bcm);
 		}
 		if (repl_some_act == 0)
 			rc = EALREADY;
 		else if (repl_all_act)
-			rc = SLERR_REPL_ACT;
+			rc = SLERR_REPL_ALREADY_ACT;
 	} else if (mds_bmap_valid(REPLRQ_FCMH(rrq), bmapno)) {
 		/*
 		 * If this bmap is already being
@@ -502,9 +609,9 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 		retifset[SL_REPL_ACTIVE] = 0;
 		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno);
 		BMAP_LOCK(bcm);
-		rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
-		bmap_op_done(bcm);
-		BMAP_ULOCK(bcm);
+		rc = mds_repl_bmap_walk(bcm,
+		    tract, retifset, 0, iosidx, nios);
+		mds_repl_bmap_rel(bcm);
 	} else
 		rc = SLERR_INVALID_BMAP;
 
@@ -522,21 +629,17 @@ mds_repl_unrefrq(struct sl_replrq *rrq)
 	freelock(&rrq->rrq_lock);
 }
 
+/* XXX this should remove any ios that are empty in all bmaps from the inode */
 void
 mds_repl_tryrmqfile(struct sl_replrq *rrq)
 {
-	int rc, tract[4], retifset[4];
 	struct bmapc_memb *bcm;
 	char fn[FID_MAX_PATH];
+	int rc, retifset[4];
 	uint64_t inum;
 	sl_blkno_t n;
 
 	/* Scan for any OLD states. */
-	tract[SL_REPL_INACTIVE] = -1;
-	tract[SL_REPL_ACTIVE] = -1;
-	tract[SL_REPL_OLD] = -1;
-	tract[SL_REPL_TOO_OLD] = -1;
-
 	retifset[SL_REPL_INACTIVE] = 0;
 	retifset[SL_REPL_ACTIVE] = 0;
 	retifset[SL_REPL_OLD] = 1;
@@ -555,10 +658,9 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
 		BMAP_LOCK(bcm);
-		rc = mds_repl_bmap_walk(bcm, tract,
-		    retifset, REPL_WALKF_SCIRCUIT);
-		bmap_op_done(bcm);
-		BMAP_ULOCK(bcm);
+		rc = mds_repl_bmap_walk(bcm, NULL,
+		    retifset, REPL_WALKF_SCIRCUIT, NULL, 0);
+		mds_repl_bmap_rel(bcm);
 		if (rc)
 			goto out;
 	}
@@ -606,16 +708,28 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 }
 
 int
-mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
+mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
+    sl_replica_t *iosv, int nios)
 {
-	int locked, rc, tract[4], retifset[4];
+	int iosidx[SL_MAX_REPLICAS], locked, rc, tract[4], retifset[4];
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 	sl_blkno_t n;
 
+	if (nios < 1 || nios > SL_MAX_REPLICAS)
+		return (EINVAL);
+
 	rrq = mds_repl_findrq(fgp, &locked);
 	if (rrq == NULL)
 		return (ENOENT);
+
+	/* Find replica IOS indexes */
+	rc = mds_repl_iosv_lookup_add(rrq->rrq_inoh,
+	    iosv, iosidx, nios);
+	if (rc) {
+		mds_repl_unrefrq(rrq);
+		return (rc);
+	}
 
 	tract[SL_REPL_INACTIVE] = -1;
 	tract[SL_REPL_ACTIVE] = SL_REPL_INACTIVE;
@@ -623,31 +737,30 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno)
 	tract[SL_REPL_TOO_OLD] = SL_REPL_INACTIVE;
 
 	if (bmapno == (sl_blkno_t)-1) {
-		retifset[SL_REPL_INACTIVE] = 1;
-		retifset[SL_REPL_ACTIVE] = 0;
-		retifset[SL_REPL_OLD] = 0;
-		retifset[SL_REPL_TOO_OLD] = 0;
+		retifset[SL_REPL_INACTIVE] = 0;
+		retifset[SL_REPL_ACTIVE] = 1;
+		retifset[SL_REPL_OLD] = 1;
+		retifset[SL_REPL_TOO_OLD] = 1;
 
-		rc = ENOENT;
+		rc = SLERR_REPLS_ALL_INACT;
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 			bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
 			BMAP_LOCK(bcm);
 			if (mds_repl_bmap_walk(bcm, tract,
-			    retifset, 0))
+			    retifset, 0, iosidx, nios))
 				rc = 0;
-			bmap_op_done(bcm);
-			BMAP_ULOCK(bcm);
+			mds_repl_bmap_rel(bcm);
 		}
 	} else if (mds_bmap_valid(REPLRQ_FCMH(rrq), bmapno)) {
-		retifset[SL_REPL_INACTIVE] = ENOENT;
+		retifset[SL_REPL_INACTIVE] = SLERR_REPL_ALREADY_INACT;
 		retifset[SL_REPL_ACTIVE] = 0;
 		retifset[SL_REPL_OLD] = 0;
 		retifset[SL_REPL_TOO_OLD] = 0;
 		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno);
 		BMAP_LOCK(bcm);
-		rc = mds_repl_bmap_walk(bcm, tract, retifset, 0);
-		bmap_op_done(bcm);
-		BMAP_ULOCK(bcm);
+		rc = mds_repl_bmap_walk(bcm,
+		    tract, retifset, 0, iosidx, nios);
+		mds_repl_bmap_rel(bcm);
 	} else
 		rc = SLERR_INVALID_BMAP;
 
