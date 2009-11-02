@@ -2,7 +2,6 @@
 
 /*
  * Routines for handling RPC requests for ION from CLIENT (ric stands for RPC I/O Client).
- *                                                                        -   -   -
  */
 
 #include <errno.h>
@@ -52,12 +51,12 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	struct pscrpc_bulk_desc *desc;
 	struct slash_fidgen fg;
 	struct srm_io_req *mq;
-	struct srm_io_rep *mp;	
+	struct srm_io_rep *mp;
 	struct iovec iovs[2];
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap;
 	struct slvr_ref *slvr_ref[2];
-	
+
 	sl_blkno_t bmapno, slvrno;
 	uint64_t cfd;
 	uint32_t tsize, roff, sblk;
@@ -72,14 +71,14 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 			   mq->size,  FIDFMTARGS(&fg));
 		mp->rc = -EINVAL;
 		return (-1);
-	}	
+	}
 	/* A RBW (read-before-write) request from the client may have a write enabled
 	 *   bdbuf which he uses to fault in his page.
 	 *
 	 * Read requests can get by with looser authentication.
 	 */
 	mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg, &bmapno, rq->rq_peer,
-			     (rw == SL_READ) ? LNET_NID_ANY:lpid.nid, 
+			     (rw == SL_READ) ? LNET_NID_ANY:lpid.nid,
 			     (rw == SL_READ) ? IOS_ID_ANY: nodeInfo.node_res->res_id);
 
 	if (mp->rc) {
@@ -88,10 +87,10 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		return (-1);
 	}
 	/* Ensure that this request fits into the bmap's address range.
-	 */	
+	 */
 	if ((mq->offset + mq->size) >= ((bmapno + 1) * SLASH_BMAP_SIZE)) {
 		psc_errorx("req offset / size outside of the bmap's "
-			   "address range off=%u len=%u", 
+			   "address range off=%u len=%u",
 			   mq->offset, mq->size);
 		mp->rc = -ERANGE;
 		return (-1);
@@ -115,25 +114,25 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		psc_errorx("failed to load bmap %u", bmapno);
 		rc = -1;
 		goto out;
-	}	
+	}
 
-	DEBUG_FCMH(PLL_INFO, fcmh, "blkno=%u size=%u off=%u rw=%d", 
+	DEBUG_FCMH(PLL_INFO, fcmh, "blkno=%u size=%u off=%u rw=%d",
 		   bmap->bcm_blkno, mq->size, mq->offset, rw);
-	
+
 	slvrno = mq->offset / SLASH_SLVR_SIZE;
-	/* We should never have a request size > 1MB, therefore it would 
+	/* We should never have a request size > 1MB, therefore it would
 	 *  never exceed two slivers.
 	 */
 	if (((mq->offset + (mq->size-1)) / SLASH_SLVR_SIZE) > slvrno)
 		nslvrs++;
 
-	/* This loop assumes that nslvrs is always <= 2.  Note that  
+	/* This loop assumes that nslvrs is always <= 2.  Note that
 	 *   once i > 0, roff is always 0.
 	 */
 	for (i=0, roff=(mq->offset - (slvrno*SLASH_SLVR_SIZE)), tsize=mq->size;
 	     i < nslvrs; i++, roff=0) {
 
-		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bmap), 
+		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bmap),
 					  SLVR_LOOKUP_ADD);
 		slvr_slab_prep(slvr_ref[i], rw);
 		/* Fault in pages either for read or RBW.
@@ -146,7 +145,7 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		 */
 		iovs[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + roff;
 		tsize -= iovs[i].iov_len = MIN(tsize, SLASH_SLVR_SIZE - roff);
-		/* Avoid more complicated errors within lnet by ensuring 
+		/* Avoid more complicated errors within lnet by ensuring
 		 *   that len is non-zero.
 		 */
 		psc_assert(iovs[i].iov_len > 0);
@@ -154,10 +153,10 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 
 	psc_assert(!tsize);
 
-	mp->rc = rsx_bulkserver(rq, &desc, 
-			(rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE), 
+	mp->rc = rsx_bulkserver(rq, &desc,
+			(rw == SL_WRITE ? BULK_GET_SINK : BULK_PUT_SOURCE),
 			SRIC_BULK_PORTAL, iovs, nslvrs);
-		  
+
 	if (mp->rc) {
 		rc = -1;
 		goto out;
@@ -180,9 +179,9 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 			tsize += roff & SLASH_SLVR_BLKMASK;
 	}
 
-	for (i=0; i < nslvrs; i++) {	
+	for (i=0; i < nslvrs; i++) {
 		if (rw == SL_WRITE) {
-			uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR-sblk) 
+			uint32_t tsz = MIN((SLASH_BLKS_PER_SLVR-sblk)
 					   * SLASH_SLVR_BLKSZ, tsize);
 			tsize -= tsz;
 			if ((rc = slvr_fsbytes_wio(slvr_ref[i], tsz, sblk)))
@@ -193,12 +192,12 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		}
 		slvr_io_done(slvr_ref[i], rw);
 	}
-	
+
 	if (rw == SL_WRITE)
 		psc_assert(!tsize);
  out:
-	/* XXX In situations where errors occur (such as an ENOSPC from 
-	 *   iod_inode_open()) then we must have a way to notify other 
+	/* XXX In situations where errors occur (such as an ENOSPC from
+	 *   iod_inode_open()) then we must have a way to notify other
 	 *   threads blocked on DATARDY.
 	 */
 	fidc_membh_dropref(fcmh);
