@@ -219,7 +219,14 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	psc_completion_wait(&mrsq->mrsq_compl);
 	while (rv && (mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
-		/* XXX fill in mrs_fn */
+		if (mrq->mrq_fn[0] != '\0')
+			strlcpy(mrc->mrc_mrs.mrs_fn, mrq->mrq_fn,
+			    sizeof(mrc->mrc_mrs.mrs_fn));
+		else
+			/* XXX try to do a reverse lookup of pathname; check cache maybe? */
+			snprintf(mrc->mrc_mrs.mrs_fn,
+			    sizeof(mrc->mrc_mrs.mrs_fn),
+			    "%"PRIx64, mrc->mrc_mrs.mrs_fid);
 		rv = psc_ctlmsg_sendv(fd, mh, &mrc->mrc_mrs);
 
 		psc_completion_wait(&mrc->mrc_compl);
