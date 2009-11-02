@@ -25,6 +25,7 @@ int
 main(int argc, char *argv[])
 {
 	char	c;
+	int	rc;
 	int	dumponly = 0;
 
 	progname = argv[0];
@@ -47,9 +48,14 @@ main(int argc, char *argv[])
 			err(1, "mkdir: %s", _PATH_SLASHD_DIR);
 
 	if (!dumponly) {
-		pjournal_format(_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE, SLJ_MDS_RA, 0);
-		printf("SLASH log file %s has been created with %d %d-byte entries.\n",
+		rc = pjournal_format(_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE, SLJ_MDS_RA, 0);
+		if (rc == 0)
+			printf("SLASH log file %s has been created with %d %d-byte entries.\n",
 				_PATH_SLJOURNAL, SLJ_MDS_JNENTS, SLJ_MDS_ENTSIZE);
+		else {
+			printf("Fail to format SLASH log file %s.\n", _PATH_SLJOURNAL);
+			exit(0);
+		}
 	}
 	pjournal_dump(_PATH_SLJOURNAL);
 	exit(0);
