@@ -27,7 +27,7 @@ struct hash_table	 fidcHtable;
 
 struct sl_fsops *slFsops;
 
-struct fidc_membh * _fidc_lookup_fg(const struct slash_fidgen *, int);
+static struct fidc_membh * _fidc_lookup_fg(const struct slash_fidgen *, int);
 
 void
 fidc_membh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
@@ -293,7 +293,7 @@ fidc_get(void)
  * fidc_lookup_simple - perform a simple lookup of a fid in the cache.
  *	If the fid is found, its refcnt is incremented and it is returned.
  */
-struct fidc_membh *
+static struct fidc_membh *
 _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 {
 	struct hash_bucket *b;
