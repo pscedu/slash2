@@ -123,7 +123,7 @@ pack_replrq(const char *fn, void *arg)
 
 void
 parse_replrq(int code, char *replrqspec,
-    void (*packf)(const char *, void *), int allow_bmapno)
+    void (*packf)(const char *, void *))
 {
 	char *files, *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *site;
 	struct replrq_arg ra;
@@ -152,43 +152,37 @@ parse_replrq(int code, char *replrqspec,
 			errx(1, "%s: site name too long", site);
 	}
 
-	/* parse bmap specs */
+	/* no bmap specified; apply to all */
 	bmapnos = strchr(replrqspec, ':');
-	if (bmapnos) {
-		*bmapnos++ = '\0';
-		if (allow_bmapno) {
-			for (bmapno = bmapnos; bmapno; bmapno = next) {
-				if ((next = strchr(bmapno, ',')) != NULL)
-					*next++ = '\0';
-				l = strtol(bmapno, &endp, 10);
-				if (l < 0 || endp == bmapno)
-					errx(1, "%s: invalid replication request",
-					    replrqspec);
-				ra.bmapno = bmax = l;
-				/* parse bmap range */
-				if (*endp == '-') {
-					endp++;
-					l = strtol(endp, &bend, 10);
-					if (l < 0 || l < ra.bmapno ||
-					    bend == endp || *bend != '\0')
-						errx(1, "%s: invalid replication request",
-						    replrqspec);
-					bmax = l;
-				} else if (*endp != '\0')
-					errx(1, "%s: invalid replication request",
-					    replrqspec);
-				for (; ra.bmapno <= bmax; ra.bmapno++)
-					walk(files, packf, &ra);
-			}
-		} else {
-			errx(1, "%s: bmap specification not allowed",
-			    replrqspec);
-		}
-	} else {
+	if (bmapnos == NULL || strcmp(bmapnos, "*") == 0) {
 		ra.bmapno = REPLRQ_BMAPNO_ALL;
-		if (files[0] == '\0')
-			packf("", &ra);
-		else
+		walk(files, packf, &ra);
+		return;
+	}
+
+	/* parse bmap specs */
+	*bmapnos++ = '\0';
+	for (bmapno = bmapnos; bmapno; bmapno = next) {
+		if ((next = strchr(bmapno, ',')) != NULL)
+			*next++ = '\0';
+		l = strtol(bmapno, &endp, 10);
+		if (l < 0 || endp == bmapno)
+			errx(1, "%s: invalid replication request",
+			    replrqspec);
+		ra.bmapno = bmax = l;
+		/* parse bmap range */
+		if (*endp == '-') {
+			endp++;
+			l = strtol(endp, &bend, 10);
+			if (l < 0 || l < ra.bmapno ||
+			    bend == endp || *bend != '\0')
+				errx(1, "%s: invalid replication request",
+				    replrqspec);
+			bmax = l;
+		} else if (*endp != '\0')
+			errx(1, "%s: invalid replication request",
+			    replrqspec);
+		for (; ra.bmapno <= bmax; ra.bmapno++)
 			walk(files, packf, &ra);
 	}
 }
@@ -392,13 +386,16 @@ main(int argc, char *argv[])
 			break;
 		case 'Q':
 			parse_replrq(SCMT_ADDREPLRQ,
-			    optarg, pack_replrq, 1);
+			    optarg, pack_replrq);
 			break;
 		case 'R':
 			recursive = 1;
 			break;
 		case 'r':
-			parse_replrq(0, optarg, pack_replst, 0);
+			if (optarg[0] == ':')
+				pack_replst("", NULL);
+			else
+				walk(optarg, pack_replst, NULL);
 			break;
 		case 'S':
 			sockfn = optarg;
@@ -408,7 +405,7 @@ main(int argc, char *argv[])
 			break;
 		case 'U':
 			parse_replrq(SCMT_DELREPLRQ,
-			    optarg, pack_replrq, 1);
+			    optarg, pack_replrq);
 			break;
 		default:
 			usage();
