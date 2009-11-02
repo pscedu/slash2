@@ -135,7 +135,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 int
 msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	char fn[PATH_MAX], *cpn, *next;
+	char *displayfn, fn[PATH_MAX], *cpn, *next;
 	struct msctl_replst_slave_cont *mrsc;
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
@@ -149,8 +149,9 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	fuse_ino_t pinum;
 	int rv, rc;
 
+	displayfn = mrq->mrq_fn;
 	if (strcmp(mrq->mrq_fn, "") == 0) {
-		strlcpy(mrq->mrq_fn, "active replications", sizeof(mrq->mrq_fn));
+		displayfn = "<all active replications>";
 		fg.fg_fid = REPLRQ_FID_ALL;
 		goto issue;
 	}
@@ -191,7 +192,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	    SRMT_GETREPLST, rq, mq, mp);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(rc)));
+		    displayfn, slstrerror(rc)));
 
 	mq->fid = fg.fg_fid;
 	mq->id = psc_atomic32_inc_return(&msctl_replstid);
@@ -208,12 +209,12 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pscrpc_req_finished(rq);
 	if (rc) {
 		rv = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(rc));
+		    displayfn, slstrerror(rc));
 		goto out;
 	}
 	if (mp->rc) {
 		rv = psc_ctlsenderr(fd, mh, "%s: %s",
-		    mrq->mrq_fn, slstrerror(mp->rc));
+		    displayfn, slstrerror(mp->rc));
 		goto out;
 	}
 
