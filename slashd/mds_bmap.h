@@ -38,25 +38,26 @@ struct bmap_mds_info {
 	struct slash_bmap_od		*bmdsi_od;	/* od-disk pointer         */
 	struct odtable_receipt		*bmdsi_assign;	/* odtable receipt         */
 	struct pscrpc_request_set	*bmdsi_reqset;	/* cache callback RPC's    */
+	int				 bmdsi_flags;
 };
 
-/* Note that n + BMAP_RSVRD_MODES must be < 32.
- */
-enum mds_bmap_modes {
-	BMAP_MDS_FAILED		= (1 << 16), /* crc failure */
-	BMAP_MDS_EMPTY		= (1 << 17), /* new bmap, not yet committed to disk */
-	BMAP_MDS_CRC_UP		= (1 << 18), /* crc update in progress */
-	BMAP_MDS_CRCWRT		= (1 << 19),
-	BMAP_MDS_NOION		= (1 << 20),
-	BMAP_MDS_INIT		= BMAP_INIT
-};
+/* bmap MDS modes */
+#define BMAP_MDS_FAILED		(_BMAP_FLSHFT << 0) /* CRC failure */
+#define BMAP_MDS_EMPTY		(_BMAP_FLSHFT << 1) /* new bmap, not yet committed to disk */
+#define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 2) /* CRC update in progress */
+#define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 3)
+#define BMAP_MDS_NOION		(_BMAP_FLSHFT << 4)
+
+/* bmap_mds_info modes */
+#define BMIM_BUMPGEN		(1 << 0)
+#define BMIM_LOGCHG		(1 << 1)
 
 /* bmap replication policies */
 #define BRP_ONETIME	0
 #define BRP_PERSIST	1
 
 /*
- * bmi_assign - the structure used for tracking the mds's bmap / ion
+ * bmi_assign - the structure used for tracking the mds's bmap/ion
  *   assignments.  These structures are stored in a odtable.
  */
 struct bmi_assign {

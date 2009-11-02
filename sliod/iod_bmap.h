@@ -32,13 +32,13 @@ struct biod_crcup_ref {
 static inline int
 bcr_cmp(const void *x, const void *y)
 {
-        const struct biod_crcup_ref *a = x, *b = y;
+	const struct biod_crcup_ref *a = x, *b = y;
 
-        if (a->bcr_id > b->bcr_id)
-                return (1);
-        if (a->bcr_id < b->bcr_id)
-                return (-1);
-        return (0);
+	if (a->bcr_id > b->bcr_id)
+		return (1);
+	if (a->bcr_id < b->bcr_id)
+		return (-1);
+	return (0);
 }
 
 SPLAY_HEAD(crcup_reftree, biod_crcup_ref);
@@ -59,7 +59,7 @@ SPLAY_PROTOTYPE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 struct bmap_iod_info {
 	psc_spinlock_t          biod_lock;
 	struct bmapc_memb      *biod_bmap;
-	struct biod_slvrtree    biod_slvrs;     
+	struct biod_slvrtree    biod_slvrs;
 	struct slash_bmap_wire *biod_bmap_wire;
 	struct psclist_head     biod_lentry;
 	struct timespec         biod_age;
@@ -72,11 +72,10 @@ struct bmap_iod_info {
 #define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)
 #define bmap_2_biodi_wire(b)	bmap_2_biodi(b)->biod_bmap_wire
 
-enum iod_bmap_modes {
-	BMAP_IOD_RETRIEVE  = (1 << 16),
-	BMAP_IOD_RELEASING = (1 << 17),
-	BMAP_IOD_RETRFAIL  = (1 << 18)
-};
+/* bmap iod modes */
+#define BMAP_IOD_RETRIEVE	(_BMAP_FLSHFT << 0)
+#define BMAP_IOD_RELEASING	(_BMAP_FLSHFT << 1)
+#define BMAP_IOD_RETRFAIL	(_BMAP_FLSHFT << 2)
 
 #define slvr_2_biod(s)		((struct bmap_iod_info *)(s)->slvr_pri)
 #define slvr_2_bmap(s)		slvr_2_biod(s)->biod_bmap
@@ -85,17 +84,17 @@ enum iod_bmap_modes {
 #define slvr_2_biodi_wire(s)	slvr_2_biod(s)->biod_bmap_wire
 
 #define slvr_2_buf(s, blk)						\
-	(void *)(((s)->slvr_slab->slb_base) + (blk * SLASH_SLVR_BLKSZ))
+	(void *)(((s)->slvr_slab->slb_base) + ((blk) * SLASH_SLVR_BLKSZ))
 
 #define slvr_2_fileoff(s, blk)						\
-	(off_t)((slvr_2_bmap(s)->bcm_blkno * SLASH_BMAP_SIZE) +	\
+	(off_t)((slvr_2_bmap(s)->bcm_blkno * SLASH_BMAP_SIZE) +		\
 		((s)->slvr_num * SLASH_SLVR_SIZE) +			\
-		(blk * SLASH_SLVR_BLKSZ))
+		((blk) * SLASH_SLVR_BLKSZ))
 
-#define slvr_2_crcbits(s)			\
+#define slvr_2_crcbits(s)						\
 	slvr_2_biodi_wire((s))->bh_crcstates[(s)->slvr_num]
 
-#define slvr_2_crc(s)				\
+#define slvr_2_crc(s)							\
 	slvr_2_biodi_wire((s))->bh_crcs[(s)->slvr_num].gc_crc
 
 #define SLVR_GETLOCK(s)		(&(slvr_2_biod(s))->biod_lock)
@@ -104,40 +103,40 @@ enum iod_bmap_modes {
 #define SLVR_RLOCK(s)		reqlock(SLVR_GETLOCK(s))
 #define SLVR_URLOCK(s, lk)	ureqlock(SLVR_GETLOCK(s), (lk))
 #define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(SLVR_GETLOCK(s))
-#define SLVR_TRYLOCK(s)         trylock(SLVR_GETLOCK(s))
+#define SLVR_TRYLOCK(s)		trylock(SLVR_GETLOCK(s))
 
-#define SLVR_WAKEUP(s)					\
+#define SLVR_WAKEUP(s)							\
 	psc_waitq_wakeall(&(slvr_2_bmap((s)))->bcm_waitq)
 
-#define SLVR_WAIT(s)						\
-	do {							\
-	slvr_wait_retry:					\
-		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT");	\
-		psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,	\
-			       &(slvr_2_biod((s)))->biod_lock);	\
-		SLVR_LOCK((s));					\
-		if (!((s)->slvr_flags & SLVR_DATARDY))		\
-			goto slvr_wait_retry;			\
+#define SLVR_WAIT(s)							\
+	do {								\
+ slvr_wait_retry:							\
+		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT");		\
+		psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,		\
+			       &(slvr_2_biod((s)))->biod_lock);		\
+		SLVR_LOCK((s));						\
+		if (!((s)->slvr_flags & SLVR_DATARDY))			\
+			goto slvr_wait_retry;				\
 	} while (0)
 
-#define SLVR_WAIT_SLAB(s)					\
-	do {							\
-	slvr_wait_slab_retry:					\
-		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT_SLAB");	\
-		psc_assert((s)->slvr_flags & SLVR_GETSLAB);	\
-		psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,	\
-			       &(slvr_2_biod((s)))->biod_lock);	\
-		SLVR_LOCK((s));					\
-		if (!(s)->slvr_slab)				\
-			goto slvr_wait_slab_retry;		\
-		psc_assert(!((s)->slvr_flags & SLVR_GETSLAB));	\
+#define SLVR_WAIT_SLAB(s)						\
+	do {								\
+ slvr_wait_slab_retry:							\
+		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT_SLAB");		\
+		psc_assert((s)->slvr_flags & SLVR_GETSLAB);		\
+		psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,		\
+			       &(slvr_2_biod((s)))->biod_lock);		\
+		SLVR_LOCK((s));						\
+		if (!(s)->slvr_slab)					\
+			goto slvr_wait_slab_retry;			\
+		psc_assert(!((s)->slvr_flags & SLVR_GETSLAB));		\
 	} while (0)
 
 static inline void
 slvr_lru_pin_check(struct slvr_ref *s)
 {
 	SLVR_LOCK_ENSURE(s);
-        psc_assert(s->slvr_slab && psclist_conjoint(&s->slvr_lentry));
+	psc_assert(s->slvr_slab && psclist_conjoint(&s->slvr_lentry));
 	psc_assert(s->slvr_flags == (SLVR_LRU|SLVR_PINNED));
 }
 
@@ -145,15 +144,15 @@ static inline void
 slvr_lru_unpin(struct slvr_ref *s)
 {
 	SLVR_LOCK_ENSURE(s);
-        psc_assert(s->slvr_slab);
+	psc_assert(s->slvr_slab);
 	psc_assert(!psc_atomic16_read(&s->slvr_pndgreads));
 	psc_assert(!psc_atomic16_read(&s->slvr_pndgwrts));
 
 	psc_assert(s->slvr_flags & SLVR_LRU);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
-	
-	psc_assert(!(s->slvr_flags & 
+
+	psc_assert(!(s->slvr_flags &
 		     (SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|SLVR_INFLIGHT|
 		      SLVR_GETSLAB|SLVR_CRCDIRTY)));
 
@@ -165,7 +164,7 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 {
 	int freeable = 1;
 	SLVR_LOCK_ENSURE(s);
-	
+
 	psc_assert(s->slvr_flags & SLVR_LRU);
 
 	if (s->slvr_flags & SLVR_PINNED) {
@@ -173,7 +172,7 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 			   psc_atomic16_read(&s->slvr_pndgreads) ||
 			   (s->slvr_flags & SLVR_CRCDIRTY));
 		freeable = 0;
-	} 
+	}
 
 	if (s->slvr_flags & SLVR_DATARDY)
 		psc_assert(!(s->slvr_flags &
@@ -183,7 +182,7 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 		freeable = 0;
 
 	DEBUG_SLVR(PLL_INFO, s, "freeable=%d", freeable);
-	
+
 	return (freeable);
 }
 
@@ -197,7 +196,7 @@ slvr_lru_freeable(struct slvr_ref *s)
 		goto out;
 
 	psc_assert(slvr_lru_slab_freeable(s));
-	      
+
 	freeable = 1;
  out:
 	SLVR_URLOCK(s, locked);
