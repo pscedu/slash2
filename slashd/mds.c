@@ -10,15 +10,15 @@
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
-#include "mds_repl.h"
 #include "mdscoh.h"
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
 #include "mdslog.h"
 #include "mdsrpc.h"
+#include "repl_mds.h"
+#include "slashd.h"
 #include "slashdthr.h"
 #include "slashexport.h"
-#include "slashd.h"
 
 struct odtable *mdsBmapAssignTable;
 struct slash_bmap_od null_bmap_od;

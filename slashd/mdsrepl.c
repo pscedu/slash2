@@ -22,10 +22,10 @@
 #include "fidcache.h"
 #include "inode.h"
 #include "inodeh.h"
-#include "mds_repl.h"
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
 #include "mdslog.h"
+#include "repl_mds.h"
 #include "slashd.h"
 #include "slerr.h"
 
