@@ -62,7 +62,7 @@ main(int argc, char *argv[])
 	int c;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-	if (!gcry_check_version (GCRYPT_VERSION))
+	if (!gcry_check_version(GCRYPT_VERSION))
 		errx(1, "libgcrypt version mismatch");
 
 	if (setenv("USOCK_PORTPID", "0", 1) == -1)
