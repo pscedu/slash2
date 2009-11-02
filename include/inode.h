@@ -57,6 +57,17 @@
 #define SL_REPL_OLD		2
 #define SL_REPL_ACTIVE		3
 
+/* get a replica's bmap replication status */
+#define SL_REPL_GET_BMAP_IOS_STAT(data, off)			\
+	((((data)[(off) / NBBY] << ((off) % NBBY)) >>		\
+	    ((off) % NBBY)) & SL_REPLICA_MASK)
+
+/* set a replica's bmap replication status */
+#define SL_REPL_SET_BMAP_IOS_STAT(data, off, val)		\
+	((data)[(off) / NBBY] = ((data)[(off) / NBBY] &		\
+	    ~(SL_REPLICA_MASK << ((off) % NBBY))) |		\
+	    ((val) << ((off) % NBBY)))
+
 typedef uint64_t sl_inum_t;
 
 #define SL_MDS_ID_BITS		8 /* # first bits in inode inode number */

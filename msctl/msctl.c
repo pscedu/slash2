@@ -22,11 +22,6 @@
 #include "slconfig.h"
 #include "slerr.h"
 
-/* for accessing the status of a bmap for a replica */
-#define RSB_IOS_STATUS(rsb, off)	((((rsb)->rsb_data[(off) / NBBY] <<	 \
-					    ((off) % NBBY)) >> ((off) % NBBY)) & \
-					    SL_REPLICA_MASK)
-
 struct msctlmsg_replst		 current_mrs;
 struct vbitmap			 current_mrs_bmask;
 struct psclist_head		 current_mrs_bdata =
@@ -83,7 +78,7 @@ rsb_accul_replica_stats(struct replst_slave_bdata *rsb, int iosidx,
 	off = iosidx * SL_BITS_PER_REPLICA;
 	for (n = 0; n < rsb->rsb_nbmaps; n++,
 	    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios) {
-		switch (RSB_IOS_STATUS(rsb, off)) {
+		switch (SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)) {
 		case SL_REPL_TOO_OLD:
 		case SL_REPL_OLD:
 			++*bold;
@@ -307,7 +302,7 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh, __unusedx const voi
 				}
 				if (nbw == 0)
 					putchar('\t');
-				putchar(map[RSB_IOS_STATUS(rsb, off)]);
+				putchar(map[SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)]);
 			}
 		}
 		putchar('\n');
