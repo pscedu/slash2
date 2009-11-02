@@ -135,6 +135,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 			SPLAY_INSERT(bmap_pagecachetree, &bmpc->bmpc_tree,
 				     bmpce);
 		else {
+			bmpce_init(bmpce);
 			psc_pool_return(bmpcePoolMgr, bmpce);
 			bmpce = bmpce_tmp;
 		}
