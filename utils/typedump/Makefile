@@ -11,5 +11,5 @@ DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
 
 include ${SLASHMK}
 
-gentypes:
+gentypes regen:
 	@${GENTYPES} -h '../../*/*.h' typedump.c
