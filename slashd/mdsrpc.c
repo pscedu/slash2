@@ -8,9 +8,9 @@
 #include "psc_rpc/service.h"
 #include "psc_util/strlcpy.h"
 
-#include "slashdthr.h"
-#include "slashrpc.h"
 #include "mdsrpc.h"
+#include "slashd.h"
+#include "slashrpc.h"
 
 lnet_process_id_t lpid;
 

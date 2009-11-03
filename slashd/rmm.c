@@ -16,7 +16,7 @@
 #include "cfd.h"
 #include "fid.h"
 #include "mdsrpc.h"
-#include "slashdthr.h"
+#include "slashd.h"
 #include "slashrpc.h"
 
 /*

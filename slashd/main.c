@@ -21,7 +21,7 @@
 #include "mdsrpc.h"
 #include "pathnames.h"
 #include "repl_mds.h"
-#include "slashdthr.h"
+#include "slashd.h"
 #include "slconfig.h"
 
 #include "zfs-fuse/zfs_slashlib.h"

@@ -8,7 +8,6 @@
 #include "inode.h"
 #include "inodeh.h"
 #include "slashd.h"
-#include "slashdthr.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
 

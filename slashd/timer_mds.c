@@ -3,7 +3,7 @@
 #include "psc_util/thread.h"
 #include "psc_util/timerthr.h"
 
-#include "slashdthr.h"
+#include "slashd.h"
 
 void
 sltimerthr_spawn(void)

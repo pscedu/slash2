@@ -2,30 +2,31 @@
 
 #include <time.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/listcache.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
 #include "psc_util/log.h"
 
 #include "cache_params.h"
+#include "cfd.h"
 #include "fidc_mds.h"
 #include "mdsexpc.h"
+#include "slashd.h"
 #include "slashexport.h"
 #include "slashrpc.h"
-#include "cfd.h"
-#include "slashdthr.h"
 
-list_cache_t pndgBmapCbs, inflBmapCbs;
-struct pscrpc_nbreqset *bmapCbSet;
+struct psc_listcache	pndgBmapCbs;
+struct psc_listcache	inflBmapCbs;
+struct pscrpc_nbreqset	*bmapCbSet;
 
 #define CB_ARG_SLOT 0
 
 int
 mdscoh_reap(void)
 {
-	return(nbrequest_reap(bmapCbSet));
+	return (nbrequest_reap(bmapCbSet));
 }
 
 void

@@ -18,10 +18,10 @@
 #include "fid.h"
 #include "mds_bmap.h"
 #include "mdsrpc.h"
-#include "slashdthr.h"
+#include "slashd.h"
 #include "slashrpc.h"
 
-int 
+int
 slrmi_bmap_getcrcs(struct pscrpc_request *rq)
 {
 	struct srm_bmap_wire_req *mq;
@@ -33,16 +33,16 @@ slrmi_bmap_getcrcs(struct pscrpc_request *rq)
 	sl_blkno_t bmapno;
 	int rc;
 
-	RSX_ALLOCREP(rq, mq, mp);	
+	RSX_ALLOCREP(rq, mq, mp);
 #if 0
 	mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer,
-                             (mq->rw == SL_WRITE) ? lpid.nid : LNET_NID_ANY,
-                             (mq->rw == SL_WRITE) ? nodeInfo.node_res->res_id :
-                             IOS_ID_ANY);
+			     (mq->rw == SL_WRITE) ? lpid.nid : LNET_NID_ANY,
+			     (mq->rw == SL_WRITE) ? nodeInfo.node_res->res_id :
+			     IOS_ID_ANY);
 #endif
 
 	if (mp->rc)
-                return (-1);
+		return (-1);
 
 	rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &b);
 	if (rc)
@@ -53,11 +53,11 @@ slrmi_bmap_getcrcs(struct pscrpc_request *rq)
 	DEBUG_BMAP(PLL_INFO, b, "sending to sliod");
 
 	iov.iov_len = sizeof(struct slash_bmap_wire);
-        iov.iov_base = bmap_2_bmdsiod(b);
+	iov.iov_base = bmap_2_bmdsiod(b);
 
-        rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE, SRMI_BULK_PORTAL, &iov, 1);
+	rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE, SRMI_BULK_PORTAL, &iov, 1);
 	if (desc)
-                pscrpc_free_bulk(desc);
+		pscrpc_free_bulk(desc);
 
 	return (0);
 }
@@ -77,21 +77,21 @@ slrmi_bmap_crcwrt(struct pscrpc_request *rq)
 	u32 i;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	
+
 	len = (mq->ncrc_updates * sizeof(struct srm_bmap_crcup));
 	for (i=0; i < mq->ncrc_updates; i++)
-		len += (mq->ncrcs_per_update[i] * 
+		len += (mq->ncrcs_per_update[i] *
 			sizeof(struct srm_bmap_crcwire));
-	
+
 	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 	buf = PSCALLOC(len);
 
 	for (i=0, off=0; i < mq->ncrc_updates; i++) {
 		iovs[i].iov_base = buf + off;
-		iovs[i].iov_len = ((mq->ncrcs_per_update[i] * 
-				    sizeof(struct srm_bmap_crcwire)) + 
+		iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
+				    sizeof(struct srm_bmap_crcwire)) +
 				   sizeof(struct srm_bmap_crcup));
-		
+
 		off += iovs[i].iov_len;
 	}
 
@@ -121,10 +121,10 @@ slrmi_bmap_crcwrt(struct pscrpc_request *rq)
 		/* Does the bulk payload agree with the original request?
 		 */
 		if (c->nups != mq->ncrcs_per_update[i]) {
-			psc_errorx("nups(%u) != ncrcs_per_update(%u)", 
+			psc_errorx("nups(%u) != ncrcs_per_update(%u)",
 				   c->nups, mq->ncrcs_per_update[i]);
 			rc = -EINVAL;
-			goto out;	
+			goto out;
 		}
 		/* Verify slot number validity.
 		 */
@@ -175,7 +175,7 @@ slrmi_handler(struct pscrpc_request *rq)
 	case SRMT_BMAPCRCWRT:
 		rc = slrmi_bmap_crcwrt(rq);
 		break;
-		
+
 	case SRMT_GETBMAPCRCS:
 		rc = slrmi_bmap_getcrcs(rq);
 		break;

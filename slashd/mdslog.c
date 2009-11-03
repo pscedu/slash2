@@ -16,17 +16,15 @@
 #include "jflush.h"
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
+#include "slashd.h"
 #include "sljournal.h"
 
-#include "slashdthr.h"
-
-extern list_cache_t dirtyMdsData;
 struct psc_journal *mdsJournal;
 
 /* master journal log replay function */
-void mds_journal_replay(struct dynarray * logentrys, int * rc)
+void
+mds_journal_replay(struct dynarray * logentrys, int *rc)
 {
-	return;
 }
 
 void

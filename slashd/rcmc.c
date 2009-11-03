@@ -21,7 +21,6 @@
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "slashd.h"
-#include "slashdthr.h"
 #include "slashrpc.h"
 #include "slerr.h"
 
