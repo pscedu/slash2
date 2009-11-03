@@ -679,6 +679,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	rc = rrq->rrq_inoh->inoh_flags & INOH_WANT_REPL_REL;
 	INOH_ULOCK(rrq->rrq_inoh);
 	if (rc) {
+		rrq->rrq_ionh->inoh_flags &= ~INOH_WANT_REPL_REL;
+
 		/*
 		 * All states are INACTIVE/ACTIVE;
 		 * remove it and its persistent link.
@@ -692,6 +694,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 			rc = ENAMETOOLONG;
 		else
 			rc = zfsslash2_unlink(zfsVfs, inum, fn, &rootcreds);
+		/* XXX lock rrq? */
 		SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
 	} else
 		rrq = NULL;
@@ -699,7 +702,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 
  out:
 	if (rrq) {
-		spinlock(&rrq->rrq_lock);
+		reqlock(&rrq->rrq_lock);
+		rrq->rrq_refcnt--;		/* removed from tree */
 		rrq->rrq_flags |= REPLRQF_DIE;
 		rrq->rrq_flags &= ~REPLRQF_BUSY;
 
