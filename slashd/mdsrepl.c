@@ -679,7 +679,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	rc = rrq->rrq_inoh->inoh_flags & INOH_WANT_REPL_REL;
 	INOH_ULOCK(rrq->rrq_inoh);
 	if (rc) {
-		rrq->rrq_ionh->inoh_flags &= ~INOH_WANT_REPL_REL;
+		rrq->rrq_inoh->inoh_flags &= ~INOH_WANT_REPL_REL;
 
 		/*
 		 * All states are INACTIVE/ACTIVE;
