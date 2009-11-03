@@ -70,7 +70,7 @@ struct msl_fhent {			 /* XXX rename */
 };
 
 /*
- * bmap_info_cli - private client data for struct sl_resm.
+ * cli_imp_ion - private client data for struct sl_resm.
  *  It is tasked with holding the import to the correct ION.
  */
 struct cli_imp_ion {

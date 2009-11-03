@@ -796,7 +796,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, u32 rw)
 #define MIN_CONNECT_RETRY_SECS 30
 
 __static int
-msl_ion_connect(lnet_nid_t nid, struct bmap_info_cli *c)
+msl_ion_connect(lnet_nid_t nid, struct cli_imp_ion *c)
 {
 	int rc;
 
@@ -804,59 +804,59 @@ msl_ion_connect(lnet_nid_t nid, struct bmap_info_cli *c)
 		libcfs_nid2str(nid));
 
  retry:
-	spinlock(&c->cion_lock);
+	spinlock(&c->ci_lock);
 
-	if (c->cion_flags & CION_CONNECTED) {
-		psc_assert(c->cion_import);
-		freelock(&c->cion_lock);
+	if (c->ci_flags & CION_CONNECTED) {
+		psc_assert(c->ci_import);
+		freelock(&c->ci_lock);
 		return (0);
 
-	} else if (c->cion_flags & CION_CONNECTING) {
-		psc_waitq_wait(&c->cion_waitq, &c->cion_lock);
+	} else if (c->ci_flags & CION_CONNECTING) {
+		psc_waitq_wait(&c->ci_waitq, &c->ci_lock);
 		goto retry;
 	}
 
-	if (c->cion_flags & CION_CONNECT_FAIL) {
+	if (c->ci_flags & CION_CONNECT_FAIL) {
 		struct timespec ts;
 
 		clock_gettime(CLOCK_REALTIME, &ts);
-		if ((ts.tv_sec - c->cion_connect_time.tv_sec) <
+		if ((ts.tv_sec - c->ci_connect_time.tv_sec) <
 		    MIN_CONNECT_RETRY_SECS)
 			return (-EAGAIN);
 	} else
-		c->cion_flags &= ~CION_CONNECT_FAIL;
+		c->ci_flags &= ~CION_CONNECT_FAIL;
 	
 	
-	psc_assert(!c->cion_import);
-	psc_assert(!((c->cion_flags & CION_CONNECTED) ||
-		     (c->cion_flags & CION_CONNECTING)));
+	psc_assert(!c->ci_import);
+	psc_assert(!((c->ci_flags & CION_CONNECTED) ||
+		     (c->ci_flags & CION_CONNECTING)));
 
-	c->cion_flags |= CION_CONNECTING;
-	freelock(&c->cion_lock);
+	c->ci_flags |= CION_CONNECTING;
+	freelock(&c->ci_lock);
 
-	if ((c->cion_import = new_import()) == NULL)
+	if ((c->ci_import = new_import()) == NULL)
 		psc_fatalx("new_import");
 
-	c->cion_import->imp_client = PSCALLOC(sizeof(struct pscrpc_client));
-	c->cion_import->imp_client->cli_request_portal = SRIC_REQ_PORTAL;
-	c->cion_import->imp_client->cli_reply_portal = SRIC_REP_PORTAL;
-	clock_gettime(CLOCK_REALTIME, &c->cion_connect_time);
+	c->ci_import->imp_client = PSCALLOC(sizeof(struct pscrpc_client));
+	c->ci_import->imp_client->cli_request_portal = SRIC_REQ_PORTAL;
+	c->ci_import->imp_client->cli_reply_portal = SRIC_REP_PORTAL;
+	clock_gettime(CLOCK_REALTIME, &c->ci_connect_time);
 
-	rc = rpc_issue_connect(nid, c->cion_import,
+	rc = rpc_issue_connect(nid, c->ci_import,
 			       SRIC_MAGIC, SRIC_VERSION);
 
-	spinlock(&c->cion_lock);
+	spinlock(&c->ci_lock);
 	if (rc) {
 		psc_errorx("rpc_issue_connect() to %s", libcfs_nid2str(nid));
-		PSCFREE(c->cion_import->imp_client);
-		c->cion_import->imp_client = NULL;
-		c->cion_flags |= CION_CONNECT_FAIL;
+		PSCFREE(c->ci_import->imp_client);
+		c->ci_import->imp_client = NULL;
+		c->ci_flags |= CION_CONNECT_FAIL;
 	} else
-		c->cion_flags |= CION_CONNECTED;
+		c->ci_flags |= CION_CONNECTED;
 
-	c->cion_flags &= ~CION_CONNECTING;
-	psc_waitq_wakeall(&c->cion_waitq);
-	freelock(&c->cion_lock);
+	c->ci_flags &= ~CION_CONNECTING;
+	psc_waitq_wakeall(&c->ci_waitq);
+	freelock(&c->ci_lock);
 
 	return (rc);
 }
@@ -877,7 +877,7 @@ msl_ion_connect(lnet_nid_t nid, struct bmap_info_cli *c)
 struct pscrpc_import *
 msl_bmap_to_import(struct bmapc_memb *b, int add)
 {
-	struct bmap_info_cli *c;
+	struct cli_imp_ion *c;
         struct sl_resm *r;
 	int locked;
 
@@ -895,17 +895,17 @@ msl_bmap_to_import(struct bmapc_memb *b, int add)
 	c = r->resm_pri;
 	ureqlock(&b->bcm_lock, locked);
 	
-	if (!c->cion_import && add)
+	if (!c->ci_import && add)
 		msl_ion_connect(bmap_2_msion(b), c);
 
-	return (c->cion_import);
+	return (c->ci_import);
 }
 
 
 struct pscrpc_import *
 msl_bmap_choose_replica(struct bmapc_memb *b)
 {
-	struct bmap_info_cli *c;
+	struct cli_imp_ion *c;
 	struct resprof_cli_info *r;
 	struct msl_fcoo_data *mfd;
 	struct sl_resource *res;
@@ -946,7 +946,7 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	c = resm->resm_pri;
 	msl_ion_connect(repl_nid, c);
 
-	return (c->cion_import);
+	return (c->ci_import);
 }
 
 /** msl_readio_cb - rpc callback used only for read or RBW operations.

@@ -4,6 +4,7 @@
 #include "psc_util/lock.h"
 
 #include "cli_bmap.h"
+#include "mount_slash.h"
 #include "slconfig.h"
 
 struct sl_resource *
@@ -25,12 +26,12 @@ struct sl_resm *
 slcfg_new_resm(void)
 {
 	struct sl_resm *resm;
-	struct bmap_info_cli *c;
+	struct cli_imp_ion *c;
 
 	resm = PSCALLOC(sizeof(*resm));
 	c = resm->resm_pri = PSCALLOC(sizeof(*c));
-	LOCK_INIT(&c->cion_lock);
-	psc_waitq_init(&c->cion_waitq);
+	LOCK_INIT(&c->ci_lock);
+	psc_waitq_init(&c->ci_waitq);
 
 	return (resm);
 }
