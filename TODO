@@ -236,3 +236,6 @@ legend:
 - merge sl_replrq directly into fidc_mds_info
 - get rid of lpid.  zest uses an array to listen on multiple
   interfaces; slash should do the same.
+- slimmns does more than create the immutable namespace, and should
+  be more intuitively named for formatting MDS file systems, such as
+  slmkfs, slfmtfs, or slnewfs
