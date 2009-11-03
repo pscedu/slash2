@@ -159,7 +159,12 @@ iod_inode_lookup(struct slash_fidgen *fg)
 int
 iod_inode_open(struct fidc_membh *f, int rw)
 {
-	int rc=0, oflags=O_RDWR;
+	int	rc;
+	int	oflags;
+
+	rc = 0;
+	oflags = O_RDWR;
+	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	spinlock(&f->fcmh_lock);
 	if (f->fcmh_fcoo || (f->fcmh_state & FCMH_FCOO_CLOSING)) {
@@ -171,28 +176,23 @@ iod_inode_open(struct fidc_membh *f, int rw)
 	} else
 		fidc_fcoo_start_locked(f);
 
-	if (rw == SL_READ)
-		f->fcmh_fcoo->fcoo_oref_rw[0]++;
-
-	else if (rw == SL_WRITE)
+	if (rw == SL_WRITE) {
+		oflags |= O_CREAT;
 		f->fcmh_fcoo->fcoo_oref_rw[1]++;
-	else
-		psc_fatalx("rw mode=%d is invalid", rw);
+	} else {
+		f->fcmh_fcoo->fcoo_oref_rw[0]++;
+	}
 
 	freelock(&f->fcmh_lock);
 
 	if (f->fcmh_state & FCMH_FCOO_STARTING) {
-		if (rw == SL_WRITE)
-			oflags |= O_CREAT;
 
-		rc = f->fcmh_fcoo->fcoo_fd =
-			fid_fileops_fg(fcmh_2_fgp(f), oflags, 0600);
-		if (rc < 0) {
+		f->fcmh_fcoo->fcoo_fd = fid_fileops_fg(fcmh_2_fgp(f), oflags, 0600);
+		if (f->fcmh_fcoo->fcoo_fd < 0) {
 			fidc_fcoo_startfailed(f);
 			rc = -errno;
 		} else {
 			fidc_fcoo_startdone(f);
-			rc = 0;
 		}
 	}
  out:
