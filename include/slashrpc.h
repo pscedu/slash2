@@ -562,7 +562,7 @@ void slashrpc_export_destroy(void *);
 
 struct slashrpc_cservice *rpc_csvc_create(uint32_t, uint32_t);
 struct slashrpc_cservice *rpc_csvc_fromexp(struct pscrpc_export *, uint32_t, uint32_t);
-int rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, u64, uint32_t);
+int rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, uint64_t, uint32_t);
 
 extern lnet_process_id_t lpid;
 

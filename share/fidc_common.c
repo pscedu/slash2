@@ -657,7 +657,7 @@ fidc_fcmh2fdb(struct fidc_membh *fcmh, struct srt_fd_buf *fdb)
 
 #if 0
 int
-fidc_fid2cfd(slfid_t f, u64 *cfd, struct fidc_membh **fcmh)
+fidc_fid2cfd(slfid_t f, uint64_t *cfd, struct fidc_membh **fcmh)
 {
 	if (!(*fcmh = fidc_lookup_inode(f)))
 		return (-1);

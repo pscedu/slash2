@@ -123,8 +123,8 @@ do {										\
 		 (int)(((fcmh)->fcmh_fcoo &&					\
 			(fcmh)->fcmh_fcoo != (struct fidc_open_obj *)0x01) ?	\
 		       (fcmh)->fcmh_fcoo->fcoo_oref_rw[1] : -66),		\
-		 (u64)(((fcmh)->fcmh_fcm) ? fcmh_2_fid((fcmh)) : FID_ANY),	\
-		 (u64)(((fcmh)->fcmh_fcm) ? fcmh_2_gen((fcmh)) : FID_ANY),	\
+		 (uint64_t)(((fcmh)->fcmh_fcm) ? fcmh_2_fid((fcmh)) : FID_ANY),	\
+		 (uint64_t)(((fcmh)->fcmh_fcm) ? fcmh_2_gen((fcmh)) : FID_ANY),	\
 		 DEBUG_FCMH_FLAGS(fcmh), (fcmh)->fcmh_pri,			\
 		 fcmh_lc_2_string((fcmh)->fcmh_cache_owner),			\
 		 atomic_read(&(fcmh)->fcmh_refcnt),				\
@@ -163,7 +163,7 @@ do {										\
 	} while (0)
 
 struct sl_finfo {
-	u64			slf_opcnt;	/* count attr updates       */
+	uint64_t		slf_opcnt;	/* count attr updates       */
 	size_t			slf_readb;	/* num bytes read           */
 	size_t			slf_writeb;	/* num bytes written        */
 	struct timespec		slf_age;	/* when the cached info times out */
@@ -267,7 +267,7 @@ void	fidc_memb_init(struct fidc_memb *, slfid_t);
 struct fidc_membh *
 	fidc_get(void);
 void	fidc_put(struct fidc_membh *, struct psc_listcache *);
-int	fidc_fid2cfd(slfid_t, u64 *, struct fidc_membh **);
+int	fidc_fid2cfd(slfid_t, uint64_t *, struct fidc_membh **);
 int	fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
 void	fidcache_init(enum fid_cache_users, int (*)(struct fidc_membh *));
 
