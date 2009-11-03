@@ -231,4 +231,6 @@ legend:
   +	active
   o	old
 
+----------------------------------------------------------------------
 
+- merge sl_replrq directly into fidc_mds_info
