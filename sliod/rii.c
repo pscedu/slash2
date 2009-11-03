@@ -10,9 +10,9 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
-#include "sliod.h"
+#include "rpc_iod.h"
 #include "slashrpc.h"
-#include "rpc.h"
+#include "sliod.h"
 
 int
 slrii_handle_connect(struct pscrpc_request *rq)

@@ -12,9 +12,9 @@
 #include "psc_rpc/service.h"
 #include "psc_util/strlcpy.h"
 
-#include "rpc.h"
-#include "sliod.h"
+#include "rpc_iod.h"
 #include "slashrpc.h"
+#include "sliod.h"
 
 int
 slrim_handle_connect(struct pscrpc_request *rq)

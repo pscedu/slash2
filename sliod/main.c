@@ -19,7 +19,7 @@
 #include "fidcache.h"
 #include "iod_bmap.h"
 #include "pathnames.h"
-#include "rpc.h"
+#include "rpc_iod.h"
 #include "slconfig.h"
 #include "sliod.h"
 #include "slvr.h"

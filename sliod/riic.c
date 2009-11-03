@@ -8,8 +8,8 @@
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
 
+#include "rpc_iod.h"
 #include "slashrpc.h"
-#include "rpc.h"
 
 struct psclist_head io_server_conns = PSCLIST_HEAD_INIT(io_server_conns);
 

@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*
- * Routines for handling RPC requests for ION from CLIENT (ric stands for RPC I/O Client).
+ * Routines for handling RPC requests for ION from CLIENT.
  */
 
 #include <errno.h>
@@ -16,7 +16,7 @@
 #include "fid.h"
 #include "fidcache.h"
 #include "iod_bmap.h"
-#include "rpc.h"
+#include "rpc_iod.h"
 #include "slashrpc.h"
 #include "sliod.h"
 #include "slvr.h"
@@ -43,7 +43,6 @@ slric_handle_connect(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 	return (0);
 }
-
 
 int
 slric_handle_io(struct pscrpc_request *rq, int rw)

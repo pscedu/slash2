@@ -9,8 +9,7 @@
 #include "pfl/cdefs.h"
 #include "psc_util/strlcpy.h"
 
-#include "rpc.h"
-
+#include "rpc_iod.h"
 #include "slashrpc.h"
 #include "sliod.h"
 
