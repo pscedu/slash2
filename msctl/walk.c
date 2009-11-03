@@ -34,13 +34,18 @@ walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
 		    FTS_NOCHDIR | FTS_PHYSICAL, NULL);
 		if (fp == NULL)
 			psc_fatal("fts_open %s", fn);
-		while ((f = fts_read(fp)) != NULL)
+		while ((f = fts_read(fp)) != NULL) {
+			if (f->fts_info & FTS_NS) {
+				warn("%s", f->fts_path);
+				continue;
+			}
 			if (S_ISREG(f->fts_statp->st_mode)) {
 				if (realpath(f->fts_path, buf) == NULL)
 					warn("%s", f->fts_path);
 				else
 					cbf(buf, arg);
 			}
+		}
 		fts_close(fp);
 	} else {
 		if (stat(fn, &stb) == -1)
