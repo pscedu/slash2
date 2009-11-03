@@ -3,8 +3,8 @@
 include Makefile.path
 
 PROG=		sliod
+SRCS+=		cfg_iod.c
 SRCS+=		ctl_iod.c
-SRCS+=		iod_slcfg.c
 SRCS+=		iod_timer.c
 SRCS+=		main.c
 SRCS+=		ric.c

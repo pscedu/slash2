@@ -4,8 +4,8 @@ include Makefile.path
 
 PROG=		mount_slash
 SRCS+=		bmap_flush.c
+SRCS+=		cfg_cli.c
 SRCS+=		cli_rpc.c
-SRCS+=		cli_slcfg.c
 SRCS+=		cli_timer.c
 SRCS+=		ctl_cli.c
 SRCS+=		fidc_cli.c
