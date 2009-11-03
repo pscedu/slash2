@@ -8,22 +8,21 @@
 
 #include "inode.h"
 
-struct slash_sb_mem;
 struct bmapc_memb;
 
 /* Slash server thread types. */
 #define SLTHRT_CTL		0	/* control */
-#define SLTHRT_ACSVC		1	/* access service */
-#define SLTHRT_RMC		2	/* MDS <- CLI message handler */
-#define SLTHRT_RMI		3	/* MDS <- I/O message handler */
-#define SLTHRT_RMM		4	/* MDS <- MDS message handler */
-#define SLTHRT_RCM		5	/* CLI <- MDS message issuer */
-#define SLTHRT_LNETAC		6	/* lustre net accept thr */
-#define SLTHRT_USKLNDPL		7	/* userland socket lustre net dev poll thr */
-#define SLTHRT_TINTV		8	/* timer interval */
-#define SLTHRT_TIOS		9	/* iostats updater */
-#define SLTHRT_COH		10	/* coherency thread */
-#define SLTHRT_FSSYNC		11      /* fs syncer */
+#define SLTHRT_RMC		1	/* MDS <- CLI message handler */
+#define SLTHRT_RMI		2	/* MDS <- I/O message handler */
+#define SLTHRT_RMM		3	/* MDS <- MDS message handler */
+#define SLTHRT_RCM		4	/* CLI <- MDS message issuer */
+#define SLTHRT_LNETAC		5	/* lustre net accept thr */
+#define SLTHRT_USKLNDPL		6	/* userland socket lustre net dev poll thr */
+#define SLTHRT_TINTV		7	/* timer interval */
+#define SLTHRT_TIOS		8	/* I/O stats updater */
+#define SLTHRT_COH		9	/* coherency thread */
+#define SLTHRT_FSSYNC		10      /* file system syncer */
+#define SLTHRT_IONMON		10      /* I/O system monitor for replication, etc. */
 
 struct slash_rmcthr {
 	struct pscrpc_thread	  srmc_prt;
@@ -66,9 +65,6 @@ void	mds_init(void);
 void	mdsfssync_init(void);
 
 void	*slrcmthr_main(void *);
-
-extern struct slash_sb_mem	slSuperBlk;
-extern int                      slSuperFd;
 
 extern struct vbitmap	 slrcmthr_uniqidmap;
 extern psc_spinlock_t	 slrcmthr_uniqidmap_lock;
