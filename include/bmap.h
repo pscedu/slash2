@@ -46,7 +46,7 @@ struct bmapc_memb {
 						*/
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* fcm tree entry    */
 	struct psclist_head	 bcm_lentry;
-	void			*bcm_pri;
+	void			*bcm_pri;	/* bmap_[mds|cli|iod]_info structure */
 };
 
 /* common bmap modes */
