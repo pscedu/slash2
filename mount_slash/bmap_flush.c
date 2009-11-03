@@ -482,7 +482,7 @@ void
 bmap_flush(void)
 {
 	struct bmapc_memb *b;
-	struct bmap_cli_data *msbd;
+	struct bmap_cli_info *msbd;
 	struct bmap_pagecache *bmpc;
 	struct dynarray a=DYNARRAY_INIT, bmaps=DYNARRAY_INIT, *biorqs;
 	struct bmpc_ioreq *r;
@@ -635,7 +635,7 @@ bmap_flush_init(void)
 	atomic_set(&outstandingRpcCnt, 0);
 	atomic_set(&completedRpcCnt, 0);
 
-	lc_reginit(&bmapFlushQ, struct bmap_cli_data, msbd_lentry,
+	lc_reginit(&bmapFlushQ, struct bmap_cli_info, msbd_lentry,
 		   "bmap_flush_queue");
 
 	pscthr_init(MSTHRT_BMAPFLSH, 0, bmap_flush_thr, NULL, 0,
