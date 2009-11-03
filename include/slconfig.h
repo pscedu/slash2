@@ -100,7 +100,6 @@ struct sl_resm {
 
 #define slresm_2_resid(r) (r)->resm_res->res_id
 
-struct sl_site		*slcfg_new_site(void);
 struct sl_resource	*slcfg_new_res(void);
 struct sl_resm		*slcfg_new_resm(void);
 
@@ -283,6 +282,16 @@ libsl_str2restype(const char *res_type)
 	else if (!strcmp(res_type, "compute"))
 		return (SLREST_COMPUTE);
 	psc_fatalx("invalid type");
+}
+
+static __inline struct sl_site *
+slcfg_new_site(void)
+{
+	struct sl_site *site;
+
+	site = PSCALLOC(sizeof(*site));
+	INIT_SITE(site);
+	return (site);
 }
 
 static inline void
