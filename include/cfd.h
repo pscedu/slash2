@@ -12,17 +12,17 @@ struct pscrpc_export;
 struct cfdops;
 
 struct cfdent {
-	struct srt_fd_buf	fdb;
-	void                   *pri;
-	int                     type;
-	struct cfdops          *cfdops;
-	SPLAY_ENTRY(cfdent)	entry;
+	struct srt_fd_buf	 cfd_fdb;
+	void			*cfd_pri;
+	int			 cfd_type;
+	struct cfdops		*cfd_ops;
+	SPLAY_ENTRY(cfdent)	 cfd_entry;
 };
 
-#define CFD_FILE        01
-#define CFD_DIR         02
-#define CFD_CLOSING     04
-#define CFD_FORCE_CLOSE 010
+#define CFD_FILE		(1 << 0)
+#define CFD_DIR			(1 << 1)
+#define CFD_CLOSING		(1 << 2)
+#define CFD_FORCE_CLOSE		(1 << 3)
 
 /*
  * Server specific cfd ops.  Primarily used to operate on the cfdent's
@@ -37,14 +37,14 @@ struct cfdops {
 
 struct cfdent * cfdget(struct pscrpc_export *, uint64_t);
 int	cfdcmp(const void *, const void *);
-int     cfdnew(slfid_t, struct pscrpc_export *, void *,
-	       struct cfdent **, struct cfdops *, int);
+int	cfdnew(slfid_t, struct pscrpc_export *, void *,
+	    struct cfdent **, struct cfdops *, int);
 int	cfdfree(struct pscrpc_export *, uint64_t);
-void    cfdfreeall(struct pscrpc_export *);
+void	cfdfreeall(struct pscrpc_export *);
 int	cfdlookup(struct pscrpc_export *, uint64_t, void *);
 
 SPLAY_HEAD(cfdtree, cfdent);
-SPLAY_PROTOTYPE(cfdtree, cfdent, entry, cfdcmp);
+SPLAY_PROTOTYPE(cfdtree, cfdent, cfd_entry, cfdcmp);
 
 #if 0
 extern struct cfd_svrops *cfdOps;

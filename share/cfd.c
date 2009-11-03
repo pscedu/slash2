@@ -20,7 +20,7 @@
 #include "slashexport.h"
 #include "slashrpc.h"
 
-__static SPLAY_GENERATE(cfdtree, cfdent, entry, cfdcmp);
+__static SPLAY_GENERATE(cfdtree, cfdent, cfd_entry, cfdcmp);
 
 /*
  * cfdcmp - compare to client file descriptors, for tree lookups.
@@ -32,9 +32,9 @@ cfdcmp(const void *a, const void *b)
 {
 	const struct cfdent *ca = a, *cb = b;
 
-	if (ca->fdb.sfdb_secret.sfs_cfd < cb->fdb.sfdb_secret.sfs_cfd)
+	if (ca->cfd_fdb.sfdb_secret.sfs_cfd < cb->cfd_fdb.sfdb_secret.sfs_cfd)
 		return (-1);
-	else if (ca->fdb.sfdb_secret.sfs_cfd > cb->fdb.sfdb_secret.sfs_cfd)
+	else if (ca->cfd_fdb.sfdb_secret.sfs_cfd > cb->cfd_fdb.sfdb_secret.sfs_cfd)
 		return (1);
 	return (0);
 }
@@ -50,8 +50,8 @@ cfdinsert(struct cfdent *c, struct pscrpc_export *exp)
 	if (SPLAY_INSERT(cfdtree, &slexp->slexp_cfdtree, c))
 		rc = EEXIST;
 	else
-		if (c->cfdops && c->cfdops->cfd_insert)
-			rc = c->cfdops->cfd_insert(c, exp);
+		if (c->cfd_ops && c->cfd_ops->cfd_insert)
+			rc = c->cfd_ops->cfd_insert(c, exp);
 	freelock(&exp->exp_lock);
 	return (rc);
 }
@@ -75,20 +75,20 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 	psc_assert(type == CFD_DIR || type == CFD_FILE);
 
 	c = PSCALLOC(sizeof(*c));
-	c->fdb.sfdb_secret.sfs_fg.fg_fid = fid;
-	c->pri = pri;
-	c->cfdops = cfdops;
-	c->type = type;
+	c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid = fid;
+	c->cfd_pri = pri;
+	c->cfd_ops = cfdops;
+	c->cfd_type = type;
 
 	slexp = slashrpc_export_get(exp);
 	spinlock(&exp->exp_lock);
-	c->fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
-	if (c->fdb.sfdb_secret.sfs_cfd == FID_ANY)
-		c->fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
+	c->cfd_fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
+	if (c->cfd_fdb.sfdb_secret.sfs_cfd == FID_ANY)
+		c->cfd_fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
 	freelock(&exp->exp_lock);
 
-	if (c->cfdops && c->cfdops->cfd_init) {
-		rc = (c->cfdops->cfd_init)(c, exp);
+	if (c->cfd_ops && c->cfd_ops->cfd_init) {
+		rc = (c->cfd_ops->cfd_init)(c, exp);
 		if (rc) {
 			psc_errorx("cfd_init() failed rc=%d", rc);
 			PSCFREE(c);
@@ -97,9 +97,9 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 	}
 
 	psc_info("FID (%"PRId64") CFD (%"PRId64") PRI(%p)", fid,
-		 c->fdb.sfdb_secret.sfs_cfd, c->pri);
+		 c->cfd_fdb.sfdb_secret.sfs_cfd, c->cfd_pri);
 
-	if ((rc = cfdinsert(c, exp))) {
+	if ((rc = cfdinsert(c, exp)) != 0) {
 		PSCFREE(c);
 		c = NULL;
 		if (rc == EEXIST) {
@@ -117,57 +117,58 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 
 /*
  * cfdlookup - look up a client file descriptor in the export cfdtree
- *	for existence and the associated private data.
+ *	for existence and access its associated private data.
  * @exp: peer RPC info.
  * @cfd: client file descriptor/stream ID.
  * @datap: value-result private data attached to cfd entry.
  */
 int
-cfdlookup(struct pscrpc_export *exp, u64 cfd, void *datap)
+cfdlookup(struct pscrpc_export *exp, uint64_t cfd, void *datap)
 {
 	struct slashrpc_export *slexp;
 	struct cfdent *c, q;
 	int rc = 0;
 
-	q.fdb.sfdb_secret.sfs_cfd = cfd;
+	q.cfd_fdb.sfdb_secret.sfs_cfd = cfd;
 	spinlock(&exp->exp_lock);
 	slexp = slashrpc_export_get(exp);
 	c = SPLAY_FIND(cfdtree, &slexp->slexp_cfdtree, &q);
 	if (c == NULL)
 		rc = ENOENT;
 	else if (datap)
-		*(void **)datap = c->pri;
+		*(void **)datap = c->cfd_pri;
 	freelock(&exp->exp_lock);
-	psc_trace("zfs pri data (%p)", c->pri);
+	psc_trace("cfd pri data (%p)", c->cfd_pri);
 	return (rc);
 }
 
 struct cfdent *
-cfdget(struct pscrpc_export *exp, u64 cfd)
+cfdget(struct pscrpc_export *exp, uint64_t cfd)
 {
-	struct cfdent *c, q;
 	struct slashrpc_export *slexp;
+	struct cfdent *c, q;
 
-	q.fdb.sfdb_secret.sfs_cfd = cfd;
+	q.cfd_fdb.sfdb_secret.sfs_cfd = cfd;
 	spinlock(&exp->exp_lock);
 	slexp = slashrpc_export_get(exp);
 	c = SPLAY_FIND(cfdtree, &slexp->slexp_cfdtree, &q);
 	freelock(&exp->exp_lock);
 	return (c);
 }
+
 /*
  * cfdfree - release a client file descriptor.
  * @exp: RPC peer info.
  * @cfd: client fd to release.
  */
 int
-cfdfree(struct pscrpc_export *exp, u64 cfd)
+cfdfree(struct pscrpc_export *exp, uint64_t cfd)
 {
 	struct slashrpc_export *slexp;
 	struct cfdent *c, q;
 	int rc=0, locked;
 
-	q.fdb.sfdb_secret.sfs_cfd = cfd;
+	q.cfd_fdb.sfdb_secret.sfs_cfd = cfd;
 
 	rc = 0;
 	locked = reqlock(&exp->exp_lock);
@@ -178,9 +179,9 @@ cfdfree(struct pscrpc_export *exp, u64 cfd)
 		goto done;
 	}
 	if (SPLAY_REMOVE(cfdtree, &slexp->slexp_cfdtree, c)) {
-		c->type |= CFD_CLOSING;
-		if (c->cfdops && c->cfdops->cfd_free)
-			rc = c->cfdops->cfd_free(c, exp);
+		c->cfd_type |= CFD_CLOSING;
+		if (c->cfd_ops && c->cfd_ops->cfd_free)
+			rc = c->cfd_ops->cfd_free(c, exp);
 		PSCFREE(c);
 	} else
 		rc = -ENOENT;
@@ -201,17 +202,18 @@ cfdfreeall(struct pscrpc_export *exp)
 	slexp = slashrpc_export_get(exp);
 	psc_assert(slexp);
 	psc_assert(slexp->slexp_type & EXP_CLOSING);
+
 	/* Don't bother locking if EXP_CLOSING is set.
 	 */
 	for (c = SPLAY_MIN(cfdtree, &slexp->slexp_cfdtree);
 	     c != NULL; c = nxt) {
-		c->type |= (CFD_CLOSING|CFD_FORCE_CLOSE);
+		c->cfd_type |= CFD_CLOSING | CFD_FORCE_CLOSE;
 		nxt = SPLAY_NEXT(cfdtree, &slexp->slexp_cfdtree, c);
 
 		SPLAY_REMOVE(cfdtree, &slexp->slexp_cfdtree, c);
 
-		if (c->cfdops && c->cfdops->cfd_free)
-			(int)c->cfdops->cfd_free(c, exp);
+		if (c->cfd_ops && c->cfd_ops->cfd_free)
+			c->cfd_ops->cfd_free(c, exp);
 		PSCFREE(c);
 	}
 }

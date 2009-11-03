@@ -31,7 +31,6 @@
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "slashd.h"
-#include "slashdthr.h"
 #include "slashexport.h"
 #include "slashrpc.h"
 #include "slerr.h"
@@ -294,15 +293,16 @@ slrmc_create(struct pscrpc_request *rq)
 				data, &cfd, &mdsCfdOps, CFD_FILE);
 
 			if (!mp->rc && cfd) {
-				fdbuf_sign(&cfd->fdb, &fg,
-				    rq->rq_peer);
-				memcpy(&mp->sfdb, &cfd->fdb,
+				fdbuf_sign(&cfd->cfd_fdb,
+				    &fg, rq->rq_peer);
+				memcpy(&mp->sfdb, &cfd->cfd_fdb,
 				    sizeof(mp->sfdb));
 			}
 
 			psc_info("cfdnew() fid %"PRId64" rc=%d",
 				 fg.fg_fid, mp->rc);
 		}
+
 		/*
 		 * On success, the cfd private data, originally the ZFS
 		 * handle private data, is overwritten with an fmdsi,
@@ -346,15 +346,16 @@ slrmc_open(struct pscrpc_request *rq)
 				data, &cfd, &mdsCfdOps, CFD_FILE);
 
 			if (!mp->rc && cfd) {
-				fdbuf_sign(&cfd->fdb, &fg,
-				    rq->rq_peer);
-				memcpy(&mp->sfdb, &cfd->fdb,
+				fdbuf_sign(&cfd->cfd_fdb,
+				    &fg, rq->rq_peer);
+				memcpy(&mp->sfdb, &cfd->cfd_fdb,
 				    sizeof(mp->sfdb));
 			}
 
 			psc_info("cfdnew() fid %"PRId64" rc=%d",
 			    fg.fg_fid, mp->rc);
 		}
+
 		/*
 		 * On success, the cfd private data, originally the ZFS
 		 * handle private data, is overwritten with an fmdsi,
@@ -396,9 +397,10 @@ slrmc_opendir(struct pscrpc_request *rq)
 				psc_error("cfdnew failed rc=%d", mp->rc);
 				RETURN(0);
 			}
-			fdbuf_sign(&cfd->fdb, &fg, rq->rq_peer);
-			memcpy(&mp->sfdb, &cfd->fdb, sizeof(mp->sfdb));
+			fdbuf_sign(&cfd->cfd_fdb, &fg, rq->rq_peer);
+			memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
 		}
+
 		/*
 		 * On success, the cfd private data, originally the ZFS
 		 * handle private data, is overwritten with an fmdsi,
@@ -535,8 +537,8 @@ slrmc_release(struct pscrpc_request *rq)
 		mp->rc = ENOENT;
 		RETURN(0);
 	}
-	psc_assert(c->pri);
-	m = c->pri;
+	psc_assert(c->cfd_pri);
+	m = c->cfd_pri;
 
 	f = m->mexpfcm_fcmh;
 	psc_assert(f->fcmh_fcoo);

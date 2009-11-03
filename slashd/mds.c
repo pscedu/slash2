@@ -17,14 +17,13 @@
 #include "mdsrpc.h"
 #include "repl_mds.h"
 #include "slashd.h"
-#include "slashdthr.h"
 #include "slashexport.h"
 
-struct odtable *mdsBmapAssignTable;
-struct slash_bmap_od null_bmap_od;
-struct slash_inode_od null_inode_od;
-struct cfdops mdsCfdOps;
-struct sl_fsops mdsFsops;
+struct odtable		*mdsBmapAssignTable;
+struct slash_bmap_od	 null_bmap_od;
+struct slash_inode_od	 null_inode_od;
+struct cfdops		 mdsCfdOps;
+struct sl_fsops		 mdsFsops;
 
 __static SPLAY_GENERATE(fcm_exports, mexpfcm,
 			mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
@@ -34,7 +33,6 @@ __static SPLAY_GENERATE(exp_bmaptree, mexpbcm,
 
 __static SPLAY_GENERATE(bmap_exports, mexpbcm,
 			mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
-
 
 __static void
 mds_inode_od_initnew(struct slash_inode_handle *i)
@@ -205,8 +203,8 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 
 	/* c->pri holds the zfs file info for this inode, it must be present.
 	 */
-	psc_assert(c->pri);
-	psc_assert(c->type == CFD_DIR || c->type == CFD_FILE);
+	psc_assert(c->cfd_pri);
+	psc_assert(c->cfd_type == CFD_DIR || c->cfd_type == CFD_FILE);
 
 	slexp = e->exp_private;
 	psc_assert(slexp);
@@ -221,7 +219,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	 *  in the cache.
 	 */
 	m->mexpfcm_fcmh = f =
-		fidc_lookup_simple(c->fdb.sfdb_secret.sfs_fg.fg_fid);
+		fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
 	psc_assert(f);
 	/* Ensure our ref has been added.
 	 */
@@ -235,7 +233,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 		SPLAY_INIT(&m->mexpfcm_bmaps);
 	}
 
-	rc = mds_fcmh_load_fmdsi(f, c->pri, c->type & CFD_FILE);
+	rc = mds_fcmh_load_fmdsi(f, c->cfd_pri, c->cfd_type & CFD_FILE);
 	if (rc) {
 		PSCFREE(m);
 		return (-1);
@@ -259,7 +257,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	FCMH_ULOCK(f);
 	/* Add the fidcache reference to the cfd's private slot.
 	 */
-	c->pri = m;
+	c->cfd_pri = m;
 	fidc_membh_dropref(f);
 
 	if (rc)
@@ -297,7 +295,7 @@ int
 mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 {
 	int locked;
-	struct mexpfcm *m=c->pri;
+	struct mexpfcm *m=c->cfd_pri;
 	struct fidc_membh *f=m->mexpfcm_fcmh;
 	struct fidc_mds_info *i=f->fcmh_fcoo->fcoo_pri;
 
@@ -315,7 +313,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		goto out;
 	}
 
-	if (c->type & CFD_FORCE_CLOSE)
+	if (c->cfd_type & CFD_FORCE_CLOSE)
 		/* A force close comes from a network drop, don't make
 		 *  the export code have to know about our private
 		 *  structures.
@@ -331,7 +329,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		 */
 		mexpfcm_release_brefs(m);
 
-		psc_assert(c->type & CFD_CLOSING);
+		psc_assert(c->cfd_type & CFD_CLOSING);
 		psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
 	}
 	freelock(&m->mexpfcm_lock);
@@ -342,7 +340,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	SPLAY_XREMOVE(fcm_exports, &i->fmdsi_exports, m);
 	ureqlock(&f->fcmh_lock, locked);
  out:
-	c->pri = NULL;
+	c->cfd_pri = NULL;
 	PSCFREE(m);
 	return (0);
 }
@@ -1259,6 +1257,6 @@ mds_init(void)
 	psc_assert(!odtable_load(_PATH_SLODTABLE, &mdsBmapAssignTable));
 	odtable_scan(mdsBmapAssignTable, mds_bmi_cb);
 
-	mdsfssync_init();
+	mdsfssyncthr_init();
 	mdscoh_init();
 }

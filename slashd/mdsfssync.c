@@ -3,17 +3,17 @@
 #include <inttypes.h>
 #include <unistd.h>
 
-#include "psc_ds/listcache.h"
 #include "pfl/cdefs.h"
+#include "psc_ds/listcache.h"
 #include "psc_util/journal.h"
 #include "psc_util/log.h"
 #include "psc_util/thread.h"
 
 #include "jflush.h"
-#include "slashdthr.h"
 #include "mdslog.h"
+#include "slashd.h"
 
-list_cache_t dirtyMdsData;
+struct psc_listcache dirtyMdsData;
 
 __static void *
 mdsfssyncthr_begin(__unusedx void *arg)
@@ -75,7 +75,7 @@ mdsfssyncthr_begin(__unusedx void *arg)
 }
 
 void
-mdsfssync_init(void)
+mdsfssyncthr_init(void)
 {
 	lc_reginit(&dirtyMdsData, struct jflush_item, jfi_lentry,
 		   "dirtyMdsData");
