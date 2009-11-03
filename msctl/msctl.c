@@ -3,6 +3,7 @@
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "pfl/pfl.h"
@@ -277,11 +278,8 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh, __unusedx const voi
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry)
 			rsb_accul_replica_stats(rsb, iosidx, &bact, &bold);
 
-		iosname = strchr(current_mrs.mrs_iosv[iosidx], '@');
-		if (iosname)
-			iosname++;
-		else
-			iosname = current_mrs.mrs_iosv[iosidx];
+		iosname = current_mrs.mrs_iosv[iosidx] +
+		    strcspn(current_mrs.mrs_iosv[iosidx], "@");
 
 		psc_fmt_ratio(rbuf, bact, bact + bold);
 		printf("     %-58s %4d %4d %6s",
