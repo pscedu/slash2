@@ -8,10 +8,10 @@ include ${SLASHMK}
 SUBDIRS+=	mount_slash
 SUBDIRS+=	msctl
 SUBDIRS+=	slashd
-SUBDIRS+=	slctl
+SUBDIRS+=	slictl
 SUBDIRS+=	slimmns
-SUBDIRS+=	slioctl
 SUBDIRS+=	sliod
+SUBDIRS+=	slmctl
 SUBDIRS+=	slmkjrnl
 SUBDIRS+=	${PFL_BASE}/utils/odtable
 
