@@ -234,3 +234,5 @@ legend:
 ----------------------------------------------------------------------
 
 - merge sl_replrq directly into fidc_mds_info
+- get rid of lpid.  zest uses an array to listen on multiple
+  interfaces; slash should do the same.
