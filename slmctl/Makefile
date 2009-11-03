@@ -2,8 +2,8 @@
 
 include Makefile.path
 
-PROG=		slctl
-SRCS+=		slctl.c
+PROG=		slmctl
+SRCS+=		slmctl.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/ctlcli.c

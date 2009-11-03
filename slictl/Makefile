@@ -2,8 +2,8 @@
 
 include Makefile.path
 
-PROG=		slioctl
-SRCS+=		slioctl.c
+PROG=		slictl
+SRCS+=		slictl.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/ctlcli.c

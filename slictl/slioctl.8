@@ -1,13 +1,13 @@
 .\" $Id$
-.Dd February 25, 2009
+.Dd November 3, 2009
 .Dt SLIOCTL 8
 .ds volume PSC \- Slash Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
-.Nm slioctl
+.Nm slictl
 .Nd Slash sliod runtime control
 .Sh SYNOPSIS
-.Nm slioctl
+.Nm slictl
 .Op Fl HI
 .Op Fl c Ar cmd
 .Op Fl h Ar table
@@ -275,30 +275,30 @@ parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
 .Bl -tag -compact -offset indent -width 17n
-.It Cm slioctlthr
+.It Cm slictlthr
 Control thread
-.It Cm sliolnetacthr- Ns Ar %s
+.It Cm slilnetacthr- Ns Ar %s
 Lustre network acceptor thread
-.It Cm slioricthr Ns Ar %02d
+.It Cm sliricthr Ns Ar %02d
 Client
 .Tn RPC
 request service thread
-.It Cm slioriithr Ns Ar %02d
+.It Cm sliriithr Ns Ar %02d
 .No Inter-
 .Tn I/O RPC
 request service thread
-.It Cm sliorimthr Ns Ar %02d
+.It Cm slirimthr Ns Ar %02d
 .Tn MDS RPC
 request service thread
-.It Cm slioslvrthr Ns Ar %d
+.It Cm slislvrthr Ns Ar %d
 Sliver monitoring thread
-.It Cm sliotintvthr
+.It Cm slitintvthr
 Timer interval thread
-.It Cm sliotiosthr
+.It Cm slitiosthr
 Timed
 .Tn I/O
 stats updater thread
-.It Cm sliousklndplthr Ns Ar %d
+.It Cm sliusklndplthr Ns Ar %d
 Lustre userland socket poll thread
 .It Cm everyone
 All threads (default, where applicable)
@@ -311,5 +311,5 @@ default
 control socket
 .El
 .Sh SEE ALSO
-.Xr slctl 8 ,
+.Xr slmctl 8 ,
 .Xr sliod 8
