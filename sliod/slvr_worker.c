@@ -396,6 +396,6 @@ slvr_worker_init(void)
 		psc_fatalx("nbreqset_init() failed");
 
 	for (i=0; i < NSLVRCRC_THRS; i++) 
-		pscthr_init(SLIOTHRT_SLVR_CRC, 0, slvr_worker, NULL, 0, 
-			    "slioslvrthr%d", i);
+		pscthr_init(SLITHRT_SLVR_CRC, 0, slvr_worker, NULL, 0, 
+			    "slislvrthr%d", i);
 }

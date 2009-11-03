@@ -79,6 +79,6 @@ mdsfssyncthr_init(void)
 {
 	lc_reginit(&dirtyMdsData, struct jflush_item, jfi_lentry,
 		   "dirtyMdsData");
-	pscthr_init(SLTHRT_FSSYNC, 0, mdsfssyncthr_begin,
+	pscthr_init(SLMTHRT_FSSYNC, 0, mdsfssyncthr_begin,
 	    NULL, 0, "slfssyncthr");
 }

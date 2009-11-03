@@ -196,6 +196,6 @@ mdscoh_init(void)
 		   "inflightBmapCbs");
 
 	bmapCbSet = nbreqset_init(NULL, mdscoh_cb);
-	pscthr_init(SLTHRT_COH, 0, mdscohthr_begin,
+	pscthr_init(SLMTHRT_COH, 0, mdscohthr_begin,
 	    NULL, 0, "slcohthr");
 }

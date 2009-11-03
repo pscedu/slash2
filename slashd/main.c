@@ -36,8 +36,8 @@ int
 psc_usklndthr_get_type(const char *namefmt)
 {
 	if (strstr(namefmt, "lnetacthr"))
-		return (SLTHRT_LNETAC);
-	return (SLTHRT_USKLNDPL);
+		return (SLMTHRT_LNETAC);
+	return (SLMTHRT_USKLNDPL);
 }
 
 void
@@ -150,7 +150,7 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	pscthr_init(SLTHRT_CTL, 0, NULL, NULL,
+	pscthr_init(SLMTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slctlthr");
 
 	fidcache_init(FIDC_USER_MDS, NULL);
@@ -170,9 +170,9 @@ main(int argc, char *argv[])
 	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 
-	mds_repl_init();
-
 	rpc_initsvc();
+	sitemons_spawn();
+	mds_repl_init();
 	sltimerthr_spawn();
 	slctlthr_main(sfn);
 

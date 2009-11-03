@@ -48,13 +48,13 @@ slrmcthr_replst_slave_eof(struct sl_replrq *rrq)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
+	struct slmrcm_thread *srcm;
 	struct pscrpc_request *rq;
-	struct slash_rcmthr *srcm;
 	struct psc_thread *thr;
 	int rc;
 
 	thr = pscthr_get();
-	srcm = slrcmthr(thr);
+	srcm = slmrcmthr(thr);
 
 	rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
 	    SRCM_VERSION, SRMT_GETREPLST_SLAVE, rq, mq, mp);
@@ -75,13 +75,13 @@ slrmcthr_replst_slave_waitrep(struct pscrpc_request *rq)
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
 	struct pscrpc_bulk_desc *desc;
-	struct slash_rcmthr *srcm;
+	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
 	struct iovec iov;
 	int rc;
 
 	thr = pscthr_get();
-	srcm = slrcmthr(thr);
+	srcm = slmrcmthr(thr);
 
 	iov.iov_base = srcm->srcm_page;
 	iov.iov_len = srcm->srcm_pagelen;
@@ -102,12 +102,12 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
-	struct slash_rcmthr *srcm;
+	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
 	int len, rc;
 
 	thr = pscthr_get();
-	srcm = slrcmthr(thr);
+	srcm = slmrcmthr(thr);
 
 	rc = 0;
 	len = howmany(rrq->rrq_inoh->inoh_ino.ino_nrepls *
@@ -143,13 +143,13 @@ slrcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
+	struct slmrcm_thread *srcm;
 	struct pscrpc_request *rq;
-	struct slash_rcmthr *srcm;
 	struct psc_thread *thr;
 	int rc;
 
 	thr = pscthr_get();
-	srcm = slrcmthr(thr);
+	srcm = slmrcmthr(thr);
 
 	rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
 	    SRCM_VERSION, SRMT_GETREPLST, rq, mq, mp);
@@ -178,8 +178,8 @@ slrcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 void *
 slrcmthr_main(__unusedx void *arg)
 {
+	struct slmrcm_thread *srcm;
 	struct pscrpc_request *rq;
-	struct slash_rcmthr *srcm;
 	struct psc_thread *thr;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
@@ -187,7 +187,7 @@ slrcmthr_main(__unusedx void *arg)
 	sl_blkno_t n;
 
 	thr = pscthr_get();
-	srcm = slrcmthr(thr);
+	srcm = slmrcmthr(thr);
 	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
 	srcm->srcm_pagelen = SRM_REPLST_PAGESIZ;
 

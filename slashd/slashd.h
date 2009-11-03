@@ -3,6 +3,7 @@
 #ifndef _SLASHD_H_
 #define _SLASHD_H_
 
+#include "psc_ds/dynarray.h"
 #include "psc_rpc/service.h"
 
 #include "inode.h"
@@ -12,24 +13,24 @@ struct fidc_membh;
 struct mexpfcm;
 
 /* Slash server thread types. */
-#define SLTHRT_CTL		0	/* control */
-#define SLTHRT_RMC		1	/* MDS <- CLI message handler */
-#define SLTHRT_RMI		2	/* MDS <- I/O message handler */
-#define SLTHRT_RMM		3	/* MDS <- MDS message handler */
-#define SLTHRT_RCM		4	/* CLI <- MDS message issuer */
-#define SLTHRT_LNETAC		5	/* lustre net accept thr */
-#define SLTHRT_USKLNDPL		6	/* userland socket lustre net dev poll thr */
-#define SLTHRT_TINTV		7	/* timer interval */
-#define SLTHRT_TIOS		8	/* I/O stats updater */
-#define SLTHRT_COH		9	/* coherency thread */
-#define SLTHRT_FSSYNC		10      /* file system syncer */
-#define SLTHRT_IONMON		10      /* I/O system monitor for replication, etc. */
+#define SLMTHRT_CTL		0	/* control */
+#define SLMTHRT_RMC		1	/* MDS <- CLI msg svc handler */
+#define SLMTHRT_RMI		2	/* MDS <- I/O msg svc handler */
+#define SLMTHRT_RMM		3	/* MDS <- MDS msg svc handler */
+#define SLMTHRT_RCM		4	/* CLI <- MDS msg issuer */
+#define SLMTHRT_LNETAC		5	/* lustre net accept thr */
+#define SLMTHRT_USKLNDPL	6	/* userland socket lustre net dev poll thr */
+#define SLMTHRT_TINTV		7	/* timer interval */
+#define SLMTHRT_TIOS		8	/* I/O stats updater */
+#define SLMTHRT_COH		9	/* coherency thread */
+#define SLMTHRT_FSSYNC		10	/* file system syncer */
+#define SLMTHRT_SITEMON		11	/* site monitor for replication, etc. */
 
-struct slash_rmcthr {
-	struct pscrpc_thread	  srmc_prt;
+struct slmrmc_thread {
+	struct pscrpc_thread	  smrct_prt;
 };
 
-struct slash_rcmthr {
+struct slmrcm_thread {
 	struct slashrpc_cservice *srcm_csvc;
 	int			  srcm_uniqid;	/* thread ID */
 	struct slash_fidgen	  srcm_fg;
@@ -38,18 +39,24 @@ struct slash_rcmthr {
 	int			  srcm_pagelen;
 };
 
-struct slash_rmithr {
-	struct pscrpc_thread	  srmi_prt;
+struct slmrmi_thread {
+	struct pscrpc_thread	  smrit_prt;
 };
 
-struct slash_rmmthr {
-	struct pscrpc_thread	  srmm_prt;
+struct slmrmm_thread {
+	struct pscrpc_thread	  smrmt_prt;
 };
 
-PSCTHR_MKCAST(slrcmthr, slash_rcmthr, SLTHRT_RCM)
-PSCTHR_MKCAST(slrmcthr, slash_rmcthr, SLTHRT_RMC)
-PSCTHR_MKCAST(slrmithr, slash_rmithr, SLTHRT_RMI)
-PSCTHR_MKCAST(slrmmthr, slash_rmmthr, SLTHRT_RMM)
+struct slmsm_thread {
+	struct psc_dynarray	  smsmt_replq;
+	struct sl_site		 *smsmt_site;
+};
+
+PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
+PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
+PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
+PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
+PSCTHR_MKCAST(slmsmthr, slmsm_thread, SLMTHRT_SITEMON)
 
 /* cfd private accessors */
 #define cfd_2_mexpfcm(cfd)	((struct mexpfcm *)(cfd)->cfd_pri)
@@ -66,6 +73,7 @@ int	mds_inode_release(struct fidc_membh *);
 void	sltimerthr_spawn(void);
 void	slctlthr_main(const char *);
 void	mdsfssyncthr_init(void);
+void	sitemons_spawn(void);
 void	*slrcmthr_main(void *);
 
 extern struct vbitmap		 slrcmthr_uniqidmap;

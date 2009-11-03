@@ -734,7 +734,7 @@ slrmc_handle_getreplst(struct pscrpc_request *rq)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
-	struct slash_rcmthr *srcm;
+	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
 	size_t id;
 
@@ -745,8 +745,8 @@ slrmc_handle_getreplst(struct pscrpc_request *rq)
 		psc_fatal("vbitmap_next");
 	freelock(&slrcmthr_uniqidmap_lock);
 
-	thr = pscthr_init(SLTHRT_RCM, 0, slrcmthr_main,
-	    NULL, sizeof(*srcm), "slrcmthr%02zu", id);
+	thr = pscthr_init(SLMTHRT_RCM, 0, slrcmthr_main,
+	    NULL, sizeof(*srcm), "slmrcmthr%02zu", id);
 	srcm = thr->pscthr_private;
 	srcm->srcm_fg.fg_fid = mq->fid;
 	srcm->srcm_id = mq->id;

@@ -32,8 +32,8 @@ int
 psc_usklndthr_get_type(const char *namefmt)
 {
 	if (strstr(namefmt, "lnetacthr"))
-		return (SLIOTHRT_LNETAC);
-	return (SLIOTHRT_USKLNDPL);
+		return (SLITHRT_LNETAC);
+	return (SLITHRT_USKLNDPL);
 }
 
 void
@@ -42,7 +42,7 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 {
 	size_t n;
 
-	n = strlcpy(buf, "slio", PSC_THRNAME_MAX);
+	n = strlcpy(buf, "sli", PSC_THRNAME_MAX);
 	if (n < PSC_THRNAME_MAX)
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
@@ -75,7 +75,7 @@ main(int argc, char *argv[])
 
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
-	sfn = _PATH_SLIOCTLSOCK;
+	sfn = _PATH_SLICTLSOCK;
 	while ((c = getopt(argc, argv, "f:S:")) != -1)
 		switch (c) {
 		case 'f':
@@ -91,8 +91,8 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-	pscthr_init(SLIOTHRT_CTL, 0, NULL, NULL,
-	    sizeof(struct psc_ctlthr), "slioctlthr");
+	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
+	    sizeof(struct psc_ctlthr), "slictlthr");
 
 	slashGetConfig(cfn);
 	fdbuf_checkkeyfile();
@@ -108,7 +108,7 @@ main(int argc, char *argv[])
 	sl_buffer_cache_init();
 	slvr_cache_init();
 	rpc_initsvc();
-	sliotimerthr_spawn();
+	slitimerthr_spawn();
 
 	if ((mds_nid = getenv("SLASH_MDS_NID")) == NULL)
 		psc_fatalx("please export SLASH_MDS_NID");
@@ -116,5 +116,5 @@ main(int argc, char *argv[])
 	if (slrmi_issue_connect(mds_nid))
 		psc_fatalx("MDS server unavailable");
 
-	slioctlthr_main(sfn);
+	slictlthr_main(sfn);
 }

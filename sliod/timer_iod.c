@@ -6,9 +6,9 @@
 #include "sliod.h"
 
 void
-sliotimerthr_spawn(void)
+slitimerthr_spawn(void)
 {
-	psc_timerthr_spawn(SLIOTHRT_TINTV, "sliotintvthr");
-	pscthr_init(SLIOTHRT_TIOS, 0, psc_timer_iosthr_main,
-	    NULL, 0, "sliotioiosthr");
+	psc_timerthr_spawn(SLITHRT_TINTV, "slitintvthr");
+	pscthr_init(SLITHRT_TIOS, 0, psc_timer_iosthr_main,
+	    NULL, 0, "slitioiosthr");
 }

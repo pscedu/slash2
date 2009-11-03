@@ -11,19 +11,19 @@
 #define SRIM_NBUFS	1024
 #define SRIM_BUFSZ	256
 #define SRIM_REPSZ	256
-#define SRIM_SVCNAME	"sliorim"
+#define SRIM_SVCNAME	"slirim"
 
 #define SRIC_NTHREADS	8
 #define SRIC_NBUFS	1024
 #define SRIC_BUFSZ	(4096 + 256)
 #define SRIC_REPSZ	128
-#define SRIC_SVCNAME	"slioric"
+#define SRIC_SVCNAME	"sliric"
 
 #define SRII_NTHREADS	8
 #define SRII_NBUFS	1024
 #define SRII_BUFSZ	(4096 + 256)
 #define SRII_REPSZ	128
-#define SRII_SVCNAME	"sliorii"
+#define SRII_SVCNAME	"slirii"
 
 #define slric_handle_read(rq)	slric_handle_io((rq), SL_READ)
 #define slric_handle_write(rq)	slric_handle_io((rq), SL_WRITE)
