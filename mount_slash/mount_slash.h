@@ -69,6 +69,23 @@ struct msl_fhent {			 /* XXX rename */
 	struct fhbmap_cache		 mfh_fhbmap_cache;
 };
 
+/*
+ * bmap_info_cli - private client data for struct sl_resm.
+ *  It is tasked with holding the import to the correct ION.
+ */
+struct cli_imp_ion {
+	struct pscrpc_import		*ci_import;
+	struct timespec			 ci_connect_time;
+	struct psc_waitq		 ci_waitq;
+	psc_spinlock_t			 ci_lock;
+	int				 ci_flags;
+};
+
+/* cli_imp_ion flags */
+#define CION_CONNECTING			(1 << 0)
+#define CION_CONNECTED			(1 << 1)
+#define CION_CONNECT_FAIL		(1 << 2)
+
 /* Mainly a place to store our replication table.
  */
 struct msl_fcoo_data {

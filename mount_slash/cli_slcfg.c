@@ -29,8 +29,8 @@ slcfg_new_resm(void)
 
 	resm = PSCALLOC(sizeof(*resm));
 	c = resm->resm_pri = PSCALLOC(sizeof(*c));
-	LOCK_INIT(&c->bmic_lock);
-	psc_waitq_init(&c->bmic_waitq);
+	LOCK_INIT(&c->cion_lock);
+	psc_waitq_init(&c->cion_waitq);
 
 	return (resm);
 }

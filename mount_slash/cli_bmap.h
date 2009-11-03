@@ -35,23 +35,6 @@ struct bmap_cli_info {
 #define bmap_2_msbmpc(b)		&(bmap_2_msbd(b)->msbd_bmpc)
 #define bmap_2_msion(b)			bmap_2_msbd(b)->msbd_ion
 
-/*
- * bmap_info_cli - private client data for struct sl_resm.
- *  It is tasked with holding the import to the correct ION.
- */
-struct bmap_info_cli {
-	struct pscrpc_import		*bmic_import;
-	struct timespec			 bmic_connect_time;
-	struct psc_waitq		 bmic_waitq;
-	psc_spinlock_t			 bmic_lock;
-	int				 bmic_flags;
-};
-
-/* bmap_info_cli flags */
-#define BMIC_CONNECTING			(1 << 0)
-#define BMIC_CONNECTED			(1 << 1)
-#define BMIC_CONNECT_FAIL		(1 << 2)
-
 /* bmap client modes */
 #define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)	/* mode change in progress */
 #define	BMAP_CLI_MCC			(_BMAP_FLSHFT << 1)	/* mode change compete */
