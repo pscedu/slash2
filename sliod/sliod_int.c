@@ -31,7 +31,7 @@ iod_bmap_init(struct bmapc_memb *b)
 {
 	struct bmap_iod_info *biod;
 
-	biod = b->bcm_pri = PSCALLOC(sizeof(*biod));
+	biod = b->bcm_pri;
 	biod->biod_bmap = b;
 	INIT_PSCLIST_ENTRY(&biod->biod_lentry);
 	LOCK_INIT(&biod->biod_lock);
