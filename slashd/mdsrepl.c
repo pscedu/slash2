@@ -310,38 +310,47 @@ int
 mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
     const int retifset[4], int flags, int iosidx[], int nios)
 {
-	int scircuit, nr, off, k, rc;
+	int scircuit, nr, off, k, rc, trc;
 	struct slash_bmap_od *bmapod;
 	struct bmap_mds_info *bmdsi;
 
 	BMAP_LOCK_ENSURE(bcm);
 
-	scircuit = k = rc = 0;
+	scircuit = rc = 0;
 	nr = fcmh_2_inoh(bcm->bcm_fcmh)->inoh_ino.ino_nrepls;
 	bmdsi = bmap_2_bmdsi(bcm);
 	bmapod = bmdsi->bmdsi_od;
 
 	if (nios == 0)
-		for (; k < nr; k++, off += SL_BITS_PER_REPLICA) {
-			mds_repl_bmap_apply(bcm, tract,
+		for (k = 0, off = 0; k < nr;
+		    k++, off += SL_BITS_PER_REPLICA) {
+			trc = mds_repl_bmap_apply(bcm, tract,
 			    retifset, flags, off, &scircuit);
+			if (trc)
+				rc = trc;
 			if (scircuit)
 				break;
 		}
 	else if (flags & REPL_WALKF_MODOTH) {
-		for (; k < nr; k++, off += SL_BITS_PER_REPLICA)
+		for (k = 0, off = 0; k < nr; k++,
+		    off += SL_BITS_PER_REPLICA)
 			if (!iosidx_in(k, iosidx, nios)) {
-				mds_repl_bmap_apply(bcm, tract,
+				trc = mds_repl_bmap_apply(bcm, tract,
 				    retifset, flags, off, &scircuit);
+				if (trc)
+					rc = trc;
 				if (scircuit)
 					break;
 			}
 	} else
 		for (k = 0; k < nios; k++) {
-			mds_repl_bmap_apply(bcm, tract, retifset, flags,
-			    iosidx[k] * SL_BITS_PER_REPLICA, &scircuit);
-				if (scircuit)
-					break;
+			trc = mds_repl_bmap_apply(bcm, tract,
+			    retifset, flags, iosidx[k] *
+			    SL_BITS_PER_REPLICA, &scircuit);
+			if (trc)
+				rc = trc;
+			if (scircuit)
+				break;
 		}
 	return (rc);
 }
