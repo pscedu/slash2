@@ -247,7 +247,7 @@ int main(int argc, char **argv)
 #if 0
 __static void
 msl_oftrq_build(struct offtree_req *r, struct bmap_cache_memb *b,
-		u64 cfd, off_t off, size_t len, int op)
+		uint64_t cfd, off_t off, size_t len, int op)
 {
 	/* Ensure the offset fits within the range and mask off the
 	 *  lower bits to align with the offtree's page size.
