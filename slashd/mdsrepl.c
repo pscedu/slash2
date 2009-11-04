@@ -36,6 +36,9 @@ struct psc_poolmaster	 replrq_poolmaster;
 struct psc_poolmgr	*replrq_pool;
 psc_spinlock_t		 replrq_tree_lock = LOCK_INITIALIZER;
 
+struct vbitmap		*repl_busy_table;
+psc_spinlock_t		 repl_busy_table_lock = LOCK_INITIALIZER;
+
 __static int
 iosidx_cmp(const void *a, const void *b)
 {
@@ -935,6 +938,35 @@ mds_repl_scandir(void)
 }
 
 void
+mds_repl_buildbusytable(void)
+{
+	struct mds_resm_info *mri;
+	struct sl_resource *r;
+	struct sl_resm *resm;
+	struct sl_site *s;
+	uint32_t j;
+	int n, bid;
+
+	/* count # resm's (IONs) and assign each a busy identifier */
+	bid = 0;
+	PLL_FOREACH(s, &globalConfig.gconf_sites)
+		for (n = 0; n < s->site_nres; n++) {
+			r = s->site_resv[n];
+			for (j = 0; j < r->res_nnids; j++) {
+				resm = libsl_nid2resm(r->res_nids[j]);
+				mri = resm->resm_pri;
+				mri->mri_busyid = bid++;
+			}
+		}
+
+	spinlock(&repl_busy_table_lock);
+	if (repl_busy_table)
+		vbitmap_free(repl_busy_table);
+	repl_busy_table = vbitmap_new(bid * (bid - 1) / 2);
+	freelock(&repl_busy_table_lock);
+}
+
+void
 mds_repl_init(void)
 {
 	psc_poolmaster_init(&replrq_poolmaster, struct sl_replrq,
@@ -942,5 +974,6 @@ mds_repl_init(void)
 	    "replrq");
 	replrq_pool = psc_poolmaster_getmgr(&replrq_poolmaster);
 
+	mds_repl_buildbusytable();
 	mds_repl_scandir();
 }

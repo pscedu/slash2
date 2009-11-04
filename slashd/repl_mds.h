@@ -58,7 +58,10 @@ int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);
 				    REPLRQ_INO(rrq)->ino_repls[n] :	\
 				    REPLRQ_INOX(rrq)->inox_repls[(n) - 1])
 
-extern struct replrqtree	replrq_tree;
-extern psc_spinlock_t		replrq_tree_lock;
+extern struct replrqtree	 replrq_tree;
+extern psc_spinlock_t		 replrq_tree_lock;
+
+extern struct vbitmap		*repl_busy_table;
+extern psc_spinlock_t		 repl_busy_table_lock;
 
 #endif /* _SL_MDS_REPL_H_ */

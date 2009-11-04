@@ -71,13 +71,10 @@ struct mds_site_info {
 
 struct mds_resm_info {
 	psc_spinlock_t		  mri_lock;
-	int			  mri_flags;
 	struct slashrpc_cservice *mri_csvc;
 	struct psc_waitq	  mri_waitq;
+	int			  mri_busyid;
 };
-
-/* mds_resm_info flags */
-#define MRIF_BUSY	(1 << 0)	/* currently scheduled for replication xfer */
 
 /* cfd private accessors */
 #define cfd_2_mexpfcm(cfd)	((struct mexpfcm *)(cfd)->cfd_pri)

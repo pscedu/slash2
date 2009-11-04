@@ -40,24 +40,57 @@ slmsmthr_removeq(struct sl_replrq *rrq)
 	mds_repl_unrefrq(rrq);
 }
 
+struct sl_resm *
+slmsmthr_find_dst_ion(struct mds_resm_info *src)
+{
+	struct slmsm_thread *smsmt;
+	struct mds_resm_info *dst;
+	struct psc_thread *thr;
+	struct sl_resource *r;
+	struct sl_resm *resm;
+	struct sl_site *site;
+	uint32_t j;
+	int n;
+
+	thr = pscthr_get();
+	smsmt = slmsmthr(thr);
+	site = smsmt->smsmt_site;
+
+	spinlock(&repl_busy_table_lock);
+	for (n = 0; n < site->site_nres; n++) {
+		r = site->site_resv[n];
+		for (j = 0; j < r->res_nnids; j++) {
+			resm = libsl_nid2resm(r->res_nids[j]);
+			dst = resm->resm_pri;
+			if (!psc_vbitmap_get(repl_busy_table,
+			    src->mri_busyid + dst->mri_busyid))
+				goto out;
+		}
+	}
+	resm = NULL;
+ out:
+	freelock(&repl_busy_table_lock);
+	return (resm);
+}
+
 __dead void *
 slmsmthr_main(void *arg)
 {
 	int iosidx, val, nios, off, rc, ris, is, rir, ir, rin, in;
 	sl_bmapno_t bmapno, nb, ib;
-	struct slash_bmap_od *bmapod;
+	struct mds_resm_info *src_mri, *dst_mri;
+	struct sl_resm *src_resm, *dst_resm;
 	struct srm_repl_schedwk_req *mq;
+	struct slash_bmap_od *bmapod;
 	struct srm_generic_rep *mp;
 	struct slmsm_thread *smsmt;
 	struct pscrpc_request *rq;
 	struct mds_site_info *msi;
-	struct mds_resm_info *mri;
 	struct sl_site *site, *s;
 	struct sl_resource *res;
 	struct bmapc_memb *bcm;
 	struct psc_thread *thr;
 	struct sl_replrq *rrq;
-	struct sl_resm *resm;
 
 	thr = arg;
 	smsmt = slmsmthr(thr);
@@ -141,8 +174,8 @@ slmsmthr_main(void *arg)
 		 * Got a bmap to replicate; need to find a source.
 		 * First, select a random IOS that has it.
 		 */
-		mri = NULL;
-		resm = NULL;
+		src_mri = dst_mri = NULL;
+		src_resm = dst_resm = NULL;
 		nios = REPLRQ_NREPLS(rrq);
 		ris = psc_random32u(nios);
 		for (is = 0; is < nios; is++,
@@ -166,13 +199,13 @@ slmsmthr_main(void *arg)
 				rin = psc_random32u(res->res_nnids);
 				for (in = 0; in < (int)res->res_nnids; in++,
 				    rin = (rin + 1) % res->res_nnids) {
-					resm = libsl_nid2resm(res->res_nids[rin]);
-					mri = resm->resm_pri;
-					spinlock(&mri->mri_lock);
-					if (mri->mri_csvc &&
-					    (mri->mri_flags & MRIF_BUSY) == 0)
+					src_resm = libsl_nid2resm(res->res_nids[rin]);
+					src_mri = src_resm->resm_pri;
+					spinlock(&src_mri->mri_lock);
+					if (src_mri->mri_csvc && (dst_resm =
+					    slmsmthr_find_dst_ion(src_mri)) != NULL)
 						goto issue;
-					freelock(&mri->mri_lock);
+					freelock(&src_mri->mri_lock);
 				}
 			}
 		}
@@ -180,22 +213,25 @@ slmsmthr_main(void *arg)
  issue:
 		mds_repl_bmap_rel(bcm);
 		mds_repl_unrefrq(rrq);
-		if (resm == NULL) {
+		if (dst_resm == NULL) {
 			spinlock(&msi->msi_lock);
 			psc_waitq_waitrel_ms(&msi->msi_waitq,
 			    &msi->msi_lock, 1);
 			continue;
 		}
+		freelock(&src_mri->mri_lock);
 
 		/* Issue replication work request */
-		mri->mri_flags |= MRIF_BUSY;
-		freelock(&mri->mri_lock);
+		spinlock(&repl_busy_table_lock);
+		psc_vbitmap_set(repl_busy_table,
+		    src_mri->mri_busyid + dst_mri->mri_busyid);
+		freelock(&repl_busy_table_lock);
 
-		rc = RSX_NEWREQ(mri->mri_csvc->csvc_import,
+		rc = RSX_NEWREQ(dst_mri->mri_csvc->csvc_import,
 		    SRIM_VERSION, SRMT_REPL_SCHEDWK, rq, mq, mp);
 		if (rc)
 			goto rpcfail;
-		mq->nid = resm->resm_nid;
+		mq->nid = src_resm->resm_nid;
 		mq->fid = REPLRQ_FID(rrq);
 		mq->bmapno = bmapno;
 		rc = RSX_WAITREP(rq, mp);
@@ -203,9 +239,10 @@ slmsmthr_main(void *arg)
 
 		if (rc) {
  rpcfail:
-			spinlock(&mri->mri_lock);
-			mri->mri_flags &= ~MRIF_BUSY;
-			freelock(&mri->mri_lock);
+			spinlock(&repl_busy_table_lock);
+			psc_vbitmap_set(repl_busy_table,
+			    src_mri->mri_busyid + dst_mri->mri_busyid);
+			freelock(&repl_busy_table_lock);
 		}
 	}
 }
@@ -217,8 +254,7 @@ sitemons_spawn(void)
 	struct psc_thread *thr;
 	struct sl_site *site;
 
-	psclist_for_each_entry(site, &globalConfig.gconf_sites,
-	    site_lentry) {
+	PLL_FOREACH(site, &globalConfig.gconf_sites) {
 		thr = pscthr_init(SLMTHRT_SITEMON, 0, slmsmthr_main,
 		    NULL, sizeof(*smsmt), "slmsmthr-%s",
 		    site->site_name + strcspn(site->site_name, "@"));
