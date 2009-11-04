@@ -81,27 +81,16 @@ struct bmapc_memb {
 #define bmap_set_accesstime(b)						\
 	clock_gettime(CLOCK_REALTIME, &(b)->bcm_ts)
 
-int	bmapc_cmp(const void *, const void *);
-
-struct bmapc_memb *
-	bmap_lookup_locked(struct fidc_open_obj *, sl_blkno_t);
-
-struct bmapc_memb *
-	bmap_lookup(struct fidc_membh *, sl_blkno_t);
-
-struct bmapc_memb *
-	bmap_lookup_add(struct fidc_membh *, sl_blkno_t,
-	    void (*)(struct bmapc_memb *));
+int bmapc_cmp(const void *, const void *);
+void bmap_remove(struct bmapc_memb *);
+struct bmapc_memb * bmap_lookup_locked(struct fidc_open_obj *, sl_blkno_t);
+struct bmapc_memb * bmap_lookup(struct fidc_membh *, sl_blkno_t);
+struct bmapc_memb * bmap_lookup_add(struct fidc_membh *, sl_blkno_t,
+				    void (*)(struct bmapc_memb *));
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmapc_cmp);
 
 extern struct psc_poolmaster	 bmap_poolmaster;
 extern struct psc_poolmgr	*bmap_pool;
-
-static inline void
-bmap_op_done(struct bmapc_memb *b)
-{
-	atomic_dec(&b->bcm_opcnt);
-}
 
 #endif /* _BMAP_H_ */
