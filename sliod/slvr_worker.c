@@ -178,13 +178,14 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 		s->slvr_flags &= ~SLVR_RPCPNDG;
 
 		if (!psc_atomic16_read(&s->slvr_pndgwrts) && 
-		    s->slvr_flags & SLVR_CRCDIRTY) {
+		    s->slvr_flags & SLVR_CRCDIRTY && !s->slvr_flags & SLVR_RPCPNDG) {
 			/* If the crc is dirty and there are no pending
 			 *   ops then the sliver was not moved to the 
 			 *   rpc queue because SLVR_RPCPNDG had been set.
 			 *   Therefore we should try to schedule the
 			 *   sliver, otherwise may sit in the LRU forever.
 			 */
+			s->slvr_flags |= SLVR_RPCPNDG;
 			SLVR_ULOCK(s);
 			slvr_try_rpcqueue(s);
 		} else

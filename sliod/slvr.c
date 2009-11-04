@@ -576,7 +576,6 @@ slvr_wio_done(struct slvr_ref *s)
 		 *   slvrs with pending writes must be skipped.
 		 */
 		SLVR_WAKEUP(s);
-		SLVR_ULOCK(s);
 
         } else {
 		psc_assert(s->slvr_flags & SLVR_DATARDY);
@@ -585,14 +584,17 @@ slvr_wio_done(struct slvr_ref *s)
 		if ((s->slvr_flags & SLVR_LRU) && 
 		    psc_atomic16_read(&s->slvr_pndgwrts) > 1)
 			slvr_lru_requeue(s);
-		SLVR_ULOCK(s);
 	} 
 		
-	if (psc_atomic16_dec_test_zero(&s->slvr_pndgwrts))
+	if (psc_atomic16_dec_test_zero(&s->slvr_pndgwrts) && !s->slvr_flags & SLVR_RPCPNDG) {
 		/* No more pending writes, try to schedule the buffer
 		 *   to be crc'd.
 		 */
+		s->slvr_flags |= SLVR_RPCPNDG;
+		SLVR_ULOCK(s);
 		slvr_try_rpcqueue(s);
+	}
+		SLVR_ULOCK(s);
 }
 
 struct slvr_ref *
