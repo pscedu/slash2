@@ -590,10 +590,9 @@ slvr_wio_done(struct slvr_ref *s)
 		/* No more pending writes, try to schedule the buffer
 		 *   to be crc'd.
 		 */
-		s->slvr_flags |= SLVR_RPCPNDG;
 		SLVR_ULOCK(s);
 		slvr_try_rpcqueue(s);
-	}
+	} else
 		SLVR_ULOCK(s);
 }
 
