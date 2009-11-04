@@ -39,9 +39,10 @@ struct msctlmsg_replrq {
 #define REPLRQ_BMAPNO_ALL	(-1)
 
 /* custom mount_slash message types */
-#define SCMT_ADDREPLRQ		(NPCMT + 0)
-#define SCMT_DELREPLRQ		(NPCMT + 1)
-#define SCMT_GETREPLST		(NPCMT + 2)
-#define SCMT_GETREPLST_SLAVE	(NPCMT + 3)
+#define MSCMT_ADDREPLRQ		(NPCMT + 0)
+#define MSCMT_DELREPLRQ		(NPCMT + 1)
+#define MSCMT_GETREPLST		(NPCMT + 2)
+#define MSCMT_GETREPLST_SLAVE	(NPCMT + 3)
+#define MSCMT_RECONFIG		(NPCMT + 4)
 
 #endif /* _SL_CTL_CLI_H_ */
