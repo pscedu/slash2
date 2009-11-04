@@ -57,7 +57,7 @@ slrmcthr_replst_slave_eof(struct sl_replrq *rrq)
 	srcm = slmrcmthr(thr);
 
 	rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
-	    SRCM_VERSION, SRMT_GETREPLST_SLAVE, rq, mq, mp);
+	    SRCM_VERSION, SRMT_REPL_GETST_SLAVE, rq, mq, mp);
 	if (rc)
 		return (rc);
 
@@ -120,7 +120,7 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 		}
 
 		rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
-		    SRCM_VERSION, SRMT_GETREPLST_SLAVE, *rqp, mq, mp);
+		    SRCM_VERSION, SRMT_REPL_GETST_SLAVE, *rqp, mq, mp);
 		if (rc)
 			return (rc);
 		mq->id = srcm->srcm_id;
@@ -152,7 +152,7 @@ slrcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 	srcm = slmrcmthr(thr);
 
 	rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
-	    SRCM_VERSION, SRMT_GETREPLST, rq, mq, mp);
+	    SRCM_VERSION, SRMT_REPL_GETST, rq, mq, mp);
 	if (rc)
 		return (rc);
 	mq->id = srcm->srcm_id;

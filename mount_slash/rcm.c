@@ -170,10 +170,10 @@ msrcm_handler(struct pscrpc_request *rq)
 	case SRMT_CONNECT:
 		rc = msrcm_handle_connect(rq);
 		break;
-	case SRMT_GETREPLST:
+	case SRMT_REPL_GETST:
 		rc = msrcm_handle_getreplst(rq);
 		break;
-	case SRMT_GETREPLST_SLAVE:
+	case SRMT_REPL_GETST_SLAVE:
 		rc = msrcm_handle_getreplst_slave(rq);
 		break;
 	case SRMT_RELEASEBMAP:

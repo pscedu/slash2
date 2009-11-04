@@ -765,7 +765,7 @@ slrmc_handler(struct pscrpc_request *rq)
 	case SRMT_ACCESS:
 		rc = slrmc_access(rq);
 		break;
-	case SRMT_ADDREPLRQ:
+	case SRMT_REPL_ADDRQ:
 		rc = slrmc_handle_addreplrq(rq);
 		break;
 	case SRMT_CONNECT:
@@ -774,7 +774,7 @@ slrmc_handler(struct pscrpc_request *rq)
 	case SRMT_CREATE:
 		rc = slrmc_create(rq);
 		break;
-	case SRMT_DELREPLRQ:
+	case SRMT_REPL_DELRQ:
 		rc = slrmc_handle_delreplrq(rq);
 		break;
 	case SRMT_GETATTR:
@@ -783,7 +783,7 @@ slrmc_handler(struct pscrpc_request *rq)
 	case SRMT_GETBMAP:
 		rc = slrmc_getbmap(rq);
 		break;
-	case SRMT_GETREPLST:
+	case SRMT_REPL_GETST:
 		rc = slrmc_handle_getreplst(rq);
 		break;
 	case SRMT_LINK:

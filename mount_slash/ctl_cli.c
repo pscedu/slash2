@@ -105,7 +105,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 	    mh->mh_type == SCMT_ADDREPLRQ ?
-	    SRMT_ADDREPLRQ : SRMT_DELREPLRQ, rq, mq, mp);
+	    SRMT_REPL_ADDRQ : SRMT_REPL_DELRQ, rq, mq, mp);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
@@ -189,7 +189,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 
  issue:
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	    SRMT_GETREPLST, rq, mq, mp);
+	    SRMT_REPL_GETST, rq, mq, mp);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    displayfn, slstrerror(rc)));
