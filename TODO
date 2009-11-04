@@ -239,3 +239,7 @@ legend:
 - slimmns does more than create the immutable namespace, and should
   be more intuitively named for formatting MDS file systems, such as
   slmkfs, slfmtfs, or slnewfs
+
+- add a replbusy table nnid x nnid, need a translation map of nnid
+- remove MRIF_BUSY
+- need a SCHEDULED bh_repls state
