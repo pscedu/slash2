@@ -248,29 +248,27 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 
 	psc_assert(s->slvr_flags & SLVR_PINNED);
                    
-#define slvr_fsbytes_READ						\
-	if (nblks) {							\
-		if ((rc = (slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,	\
-				     SL_READ))))			\
-			return (rc);					\
-		nblks = 0;						\
-	}								\
-	
-	for (i=0, blk=0, nblks=0; i < SLASH_BLKS_PER_SLVR; i++) {
+	rc = 0;
+	for (i = 0, nblks = 0; i < SLASH_BLKS_PER_SLVR; i++) {
 		if (vbitmap_get(s->slvr_slab->slb_inuse, i)) {
-			if (nblks) 
-				nblks++;
-			else { 
-				blk = i; 
-				nblks = 1; 
+			if (nblks == 0) {
+				blk = i;
 			}
-		} else {
-			slvr_fsbytes_READ;
+			nblks++;
+			continue;
+		}
+		if (nblks) {
+			nblks = 0;
+			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, SL_READ);
+			if (rc) {
+				return (rc);
+			}
 		}
 	}
-	slvr_fsbytes_READ;
-
-	return (0);
+	if (nblks) {
+		rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, SL_READ);
+	}
+	return (rc);
 }
 
 /**
