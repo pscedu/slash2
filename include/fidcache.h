@@ -149,7 +149,7 @@ do {										\
 		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);	\
 		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));		\
 		atomic_inc(&(f)->fcmh_refcnt);				\
-		DEBUG_FCMH(PLL_NOTIFY, (f), "incref");			\
+		DEBUG_FCMH(PLL_TRACE, (f), "incref");			\
 	} while (0)
 
 /* Drop an fcmh reference.
@@ -159,7 +159,7 @@ do {										\
 		atomic_dec(&(f)->fcmh_refcnt);				\
 		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));		\
 		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);	\
-		DEBUG_FCMH(PLL_NOTIFY, (f), "dropref");			\
+		DEBUG_FCMH(PLL_TRACE, (f), "dropref");			\
 	} while (0)
 
 struct sl_finfo {
