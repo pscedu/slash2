@@ -71,11 +71,56 @@ replrq_cmp(const void *a, const void *b)
 
 SPLAY_GENERATE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
 
+void
+mds_repl_dequeue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
+{
+	struct mds_site_info *msi;
+	struct sl_site *site;
+	int locked, n;
+
+	locked = reqlock(&rrq->rrq_lock);
+	for (n = 0; n < nios; n++) {
+		site = libsl_id2site(iosv[n].bs_id);
+		msi = site->site_pri;
+
+		spinlock(&msi->msi_lock);
+		if (psc_dynarray_exists(&msi->msi_replq, rrq)) {
+			psc_dynarray_remove(&msi->msi_replq, rrq);
+			rrq->rrq_refcnt--;
+		}
+		freelock(&msi->msi_lock);
+	}
+	ureqlock(&rrq->rrq_lock, locked);
+}
+
+void
+mds_repl_enqueue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
+{
+	struct mds_site_info *msi;
+	struct sl_site *site;
+	int locked, n;
+
+	locked = reqlock(&rrq->rrq_lock);
+	for (n = 0; n < nios; n++) {
+		site = libsl_id2site(iosv[n].bs_id);
+		msi = site->site_pri;
+
+		spinlock(&msi->msi_lock);
+		if (!psc_dynarray_exists(&msi->msi_replq, rrq)) {
+			psc_dynarray_add(&msi->msi_replq, rrq);
+			psc_waitq_wakeall(&msi->msi_waitq);
+			rrq->rrq_refcnt++;
+		}
+		freelock(&msi->msi_lock);
+	}
+	ureqlock(&rrq->rrq_lock, locked);
+}
+
 static int
 mds_repl_load_locked(struct slash_inode_handle *i)
 {
-	int rc;
 	psc_crc_t crc;
+	int rc;
 
 	psc_assert(!(i->inoh_flags & INOH_HAVE_EXTRAS));
 
@@ -358,9 +403,11 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
 int
 mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 {
-	int rc, iosidx, tract[4], retifset[4];
+	int dummy, rc, iosidx, tract[4], retifset[4];
 	struct slash_bmap_od *bmapod;
 	struct bmap_mds_info *bmdsi;
+	struct sl_replrq *rrq;
+	sl_replica_t repl;
 
 	BMAP_LOCK_ENSURE(bcm);
 
@@ -371,6 +418,19 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 
 	bmdsi = bmap_2_bmdsi(bcm);
 	bmapod = bmdsi->bmdsi_od;
+
+	/*
+	 * If this bmap is marked for persistent replication,
+	 * do not release the replication request for this file.
+	 */
+	if (bmdsi->bmdsi_repl_policy == BRP_PERSIST) {
+		fcmh_2_inoh(bcm->bcm_fcmh)->inoh_flags &= ~INOH_WANT_REPL_REL;
+
+		rrq = mds_repl_findrq(fcmh_2_fgp(bcm->bcm_fcmh), &dummy);
+		repl.bs_id = ios;
+		mds_repl_enqueue_sites(rrq, &repl, 1);
+		mds_repl_unrefrq(rrq);
+	}
 
 	mds_repl_bmap_walk(bcm, tract, retifset, REPL_WALKF_MODOTH, &iosidx, 1);
 	if (bmdsi->bmdsi_flags & BMIM_LOGCHG) {
@@ -624,6 +684,11 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	} else
 		rc = SLERR_INVALID_BMAP;
 
+	if (rc == 0) {
+		rrq->rrq_inoh->inoh_flags &= ~INOH_WANT_REPL_REL;
+		mds_repl_enqueue_sites(rrq, iosv, nios);
+	}
+
 	mds_repl_unrefrq(rrq);
 	return (rc);
 }
@@ -673,6 +738,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		if (rc)
 			goto out;
 	}
+
+//	mds_repl_dequeue_sites(rrq, iosv, nios);
 
 	spinlock(&replrq_tree_lock);
 	INOH_LOCK(rrq->rrq_inoh);

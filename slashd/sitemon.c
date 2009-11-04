@@ -31,7 +31,6 @@ sitemons_spawn(void)
 		    site->site_name + strcspn(site->site_name, "@"));
 		smsmt = slmsmthr(thr);
 		smsmt->smsmt_site = site;
-		dynarray_init(&smsmt->smsmt_replq);
 		pscthr_setready(thr);
 	}
 }

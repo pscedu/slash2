@@ -48,8 +48,13 @@ struct slmrmm_thread {
 };
 
 struct slmsm_thread {
-	struct psc_dynarray	  smsmt_replq;
 	struct sl_site		 *smsmt_site;
+};
+
+struct mds_site_info {
+	struct psc_dynarray	  msi_replq;
+	psc_spinlock_t		  msi_lock;
+	struct psc_waitq	  msi_waitq;
 };
 
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
