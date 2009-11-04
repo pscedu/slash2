@@ -39,8 +39,8 @@ struct sl_resource {
 	enum sl_res_type	 res_type;
 	sl_ios_id_t		*res_peers;
 	uint32_t		 res_npeers;
-	lnet_nid_t		*res_nids;
 	uint32_t		 res_nnids;
+	lnet_nid_t		*res_nids;
 	char			 res_fsroot[PATH_MAX];
 	struct psclist_head	 res_lentry;
 	void			*res_pri;
@@ -51,9 +51,10 @@ struct sl_resource {
 struct sl_site {
 	char			 site_name[SITE_NAME_MAX];
 	char			*site_desc;
-	uint32_t		 site_id;
+	void			*site_pri;
 	struct psclist_head	 site_resources;
 	struct psclist_head	 site_lentry;
+	uint32_t		 site_id;
 };
 
 #define INIT_SITE(s)						\
@@ -100,6 +101,7 @@ struct sl_resm {
 
 #define slresm_2_resid(r) (r)->resm_res->res_id
 
+struct sl_site		*slcfg_new_site(void);
 struct sl_resource	*slcfg_new_res(void);
 struct sl_resm		*slcfg_new_resm(void);
 
@@ -282,16 +284,6 @@ libsl_str2restype(const char *res_type)
 	else if (!strcmp(res_type, "compute"))
 		return (SLREST_COMPUTE);
 	psc_fatalx("invalid type");
-}
-
-static __inline struct sl_site *
-slcfg_new_site(void)
-{
-	struct sl_site *site;
-
-	site = PSCALLOC(sizeof(*site));
-	INIT_SITE(site);
-	return (site);
 }
 
 static inline void

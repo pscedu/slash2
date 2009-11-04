@@ -35,3 +35,13 @@ slcfg_new_resm(void)
 
 	return (resm);
 }
+
+struct sl_site *
+slcfg_new_site(void)
+{
+	struct sl_site *site;
+
+	site = PSCALLOC(sizeof(*site));
+	INIT_SITE(site);
+	return (site);
+}
