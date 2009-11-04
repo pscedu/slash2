@@ -80,7 +80,8 @@ enum BMPCE_STATES {
 	BMPCE_DIRTY2LRU = (1<<5),
 	BMPCE_LRU       = (1<<6),
 	BMPCE_FREE      = (1<<7),
-	BMPCE_FREEING   = (1<<8)
+	BMPCE_FREEING   = (1<<8),
+	BMPCE_INIT      = (1<<9)
 };
 
 #define BMPCE_2_BIORQ(b) ((b)->bmpce_waitq == NULL) ? NULL :	\
@@ -237,7 +238,7 @@ bmpce_useprep(struct bmap_pagecache_entry *bmpce, struct bmpc_ioreq *biorq)
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
 
-	bmpce->bmpce_flags = BMPCE_GETBUF;
+	bmpce->bmpce_flags = (BMPCE_GETBUF | BMPCE_INIT);
 	bmpce->bmpce_waitq = &biorq->biorq_waitq;
 }
 
