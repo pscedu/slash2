@@ -370,17 +370,15 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 			   
 		psc_assert(psclist_conjoint(&s->slvr_lentry));
 		goto out;
-
-	} else {
-		/* Importing data into the sliver is now our responsibility,
-		 *  other IO into this region will block until SLVR_FAULTING
-		 *  is released.
-		 */
-		s->slvr_flags |= SLVR_FAULTING;
-		if (rw == SL_READ) {
-			vbitmap_setall(s->slvr_slab->slb_inuse);
-			goto do_read;
-		}
+	}
+	/* Importing data into the sliver is now our responsibility,
+	 *  other IO into this region will block until SLVR_FAULTING
+	 *  is released.
+	 */
+	s->slvr_flags |= SLVR_FAULTING;
+	if (rw == SL_READ) {
+		vbitmap_setall(s->slvr_slab->slb_inuse);
+		goto do_read;
 	}
 
  set_write_dirty:
