@@ -44,9 +44,7 @@ jfi_schedule(struct jflush_item *jfi, list_cache_t *lc)
 
 	jfi->jfi_state &= ~JFI_BUSY;
 
-        if (jfi->jfi_state & JFI_QUEUED)
-                psc_assert(psclist_conjoint(&jfi->jfi_lentry));
-        else {
+        if (!(jfi->jfi_state & JFI_QUEUED)) {
                 psc_assert(psclist_disjoint(&jfi->jfi_lentry));
                 jfi->jfi_state |= JFI_QUEUED;
                 lc_queue(lc, &jfi->jfi_lentry);
