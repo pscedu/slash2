@@ -145,8 +145,10 @@ slvr_getslab(struct slvr_ref *s)
 __static int
 slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 {
-	ssize_t rc;
-	int nblks, save_errno;
+	int	i;
+	ssize_t	rc;
+	int	nblks;
+	int	save_errno;
 
 	nblks = (size + SLASH_SLVR_BLKSZ-1) / SLASH_SLVR_BLKSZ;
 
@@ -182,7 +184,6 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 		}
 		
 	} else {
-		size_t i;
 
 		/* Denote that this block(s) have been synced to the 
 		 *  filesystem.
@@ -193,7 +194,7 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 		 *  to mark as dirty after an RPC.
 		 */
 		SLVR_LOCK(s);
-		for (i=0; (ssize_t)i < nblks; i++) {
+		for (i = 0; i < nblks; i++) {
 			//psc_assert(vbitmap_get(s->slvr_slab->slb_inuse, 
 			//	       blk + i));
 			vbitmap_unset(s->slvr_slab->slb_inuse, blk + i);
