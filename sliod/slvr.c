@@ -391,13 +391,12 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		vbitmap_setall(s->slvr_slab->slb_inuse);
 		goto out;
 	}
-	/* Prepare the sliver for a read-modify-write.  Mark the blocks 
-	 *    NOT affected by the write as '1' so that they can be faulted 
-	 *    in by slvr_fsbytes_io().
+	/*
+	 * Prepare the sliver for a read-modify-write.  Mark the blocks 
+	 * that need to be read as 1 so that they can be faulted in by
+	 * slvr_fsbytes_io().  We can have at most two unaligned writes.
 	 */		
 	if (offset) {
-		/* Unaffected blocks at the beginning of the sliver.
-		 */
 		blks = (offset / SLASH_SLVR_BLKSZ);
 		if (offset & SLASH_SLVR_BLKMASK) {
 			unaligned[0] = blks;
@@ -406,10 +405,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		for (i=0; (ssize_t)i < blks; i++)
 			vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
-	/* Mark any blocks at the end.
-	 */
 	if ((offset + size) < SLASH_SLVR_SIZE) {
-
 		blks = (offset + size) / SLASH_SLVR_BLKSZ;
 		if ((offset + size) & SLASH_SLVR_BLKMASK) {
 			unaligned[1] = blks;
