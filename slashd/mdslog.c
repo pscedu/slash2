@@ -223,20 +223,20 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 			psc_fatalx("jlog fid=%"PRIx64" bmapno=%u rc=%d",
 				   jcrc->sjc_fid, jcrc->sjc_bmapno, rc);
 		/* Apply the CRC update into memory AFTER recording them
-		 *  in the journal.  The lock should not be needed since the
+		 *  in the journal. The lock should not be needed since the
 		 *  BMAP_MDS_CRC_UP is protecting the crc table from other
 		 *  threads who may like to update.  Besides at this moment,
 		 *  on the ION updating us has the real story on this bmap's
 		 *  CRCs and all I/O for this bmap is being directed to it.
 		 */
-		//BMAP_LOCK(bmap);
+		BMAP_LOCK(bmap);
 		for (t+=i; j < t; j++) {
 			bmapod->bh_crcs[(crcup->crcs[j].slot)].gc_crc =
 				crcup->crcs[j].crc;
 			DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PRIx64")",
 				   crcup->crcs[j].slot, crcup->crcs[j].crc);
 		}
-		//BMAP_ULOCK(bmap);
+		BMAP_ULOCK(bmap);
 		n -= i;
 		psc_assert(n >= 0);
 	}
