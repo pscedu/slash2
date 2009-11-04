@@ -23,8 +23,6 @@ struct sl_site;
 #define DEVNAMEMAX	128
 #define MAXNET		32
 
-#define slashGetConfig run_yacc
-
 enum sl_res_type {
 	SLREST_PARALLEL_FS,
 	SLREST_ARCHIVAL_FS,
@@ -48,6 +46,15 @@ struct sl_resource {
 	struct sl_site		*res_site;
 };
 
+struct sl_resm {
+	lnet_nid_t		 resm_nid;
+	struct sl_resource	*resm_res;
+	struct hash_entry	 resm_hentry;
+	void			*resm_pri;
+};
+
+#define slresm_2_resid(r)	(r)->resm_res->res_id
+
 struct sl_site {
 	char			 site_name[SITE_NAME_MAX];
 	char			*site_desc;
@@ -60,6 +67,7 @@ struct sl_site {
 
 #define INIT_SITE(s)		INIT_PSCLIST_ENTRY(&(s)->site_lentry)
 
+/* structure for this node */
 struct sl_nodeh {
 	struct sl_resource	*node_res;
 	struct sl_site		*node_site;
@@ -88,15 +96,6 @@ struct sl_gconf {
 
 #define GCONF_LOCK()	spinlock(&globalConfig.gconf_lock)
 #define GCONF_ULOCK()	freelock(&globalConfig.gconf_lock)
-
-struct sl_resm {
-	lnet_nid_t		 resm_nid;
-	struct sl_resource	*resm_res;
-	struct hash_entry	 resm_hentry;
-	void			*resm_pri;
-};
-
-#define slresm_2_resid(r) (r)->resm_res->res_id
 
 struct sl_site		*slcfg_new_site(void);
 struct sl_resource	*slcfg_new_res(void);
@@ -313,6 +312,6 @@ libsl_init(int pscnet_mode)
 	}
 }
 
-int run_yacc(const char *);
+void slcfg_parse(const char *);
 
 #endif /* _SLCONFIG_H_ */

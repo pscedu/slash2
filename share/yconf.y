@@ -4,7 +4,9 @@
 #define YYSTYPE char *
 
 #include <ctype.h>
+#include <err.h>
 #include <fcntl.h>
+#include <glob.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -55,8 +57,18 @@ struct symtable {
 	sym_handler		 handler;
 };
 
-uint32_t global_net_handler(const char *);
-void slcfg_addif(char *, char *);
+struct cfg_file {
+	char			 cf_fn[PATH_MAX];
+	struct psclist_head	 cf_lentry;
+};
+
+uint32_t	global_net_handler(const char *);
+void		slcfg_addif(char *, char *);
+void		slcfg_add_include(const char *);
+void		yyerror(const char *, ...);
+int		yyparse(void);
+int		yylex(void);
+void		store_tok_val(const char *, char *);
 
 /*
  * Define a table macro for each structure type filled in by the config
@@ -85,23 +97,17 @@ struct symtable sym_table[] = {
 	 { NULL, 0, 0, 0, 0, 0, NULL }
 };
 
-int  yylex(void);
-void yyerror(const char *, ...);
-int  yyparse(void);
-void store_tok_val(const char *, char *);
-int  run_yacc(const char *);
+struct sl_gconf		 globalConfig;
+struct sl_nodeh		 nodeInfo;
 
-struct sl_gconf globalConfig;
-struct sl_nodeh nodeInfo;
+int			 cfg_errors;
+int			 cfg_lineno;
+const char		*cfg_filename;
+struct psclist_head	 cfg_files = PSCLIST_HEAD_INIT(cfg_files);
 
-int errors;
-int cfg_lineno;
-
-const char *cfg_filename;
-
-struct sl_site     *currentSite;
-struct sl_resource *currentRes;
-struct sl_gconf    *currentConf = &globalConfig;
+struct sl_site		*currentSite;
+struct sl_resource	*currentRes;
+struct sl_gconf		*currentConf = &globalConfig;
 %}
 
 %start config
@@ -126,6 +132,7 @@ struct sl_gconf    *currentConf = &globalConfig;
 %token FLOATVAL
 
 %token GLOBAL
+%token INCLUDE
 %token RESOURCE_PROFILE
 %token RESOURCE_NAME
 %token RESOURCE_TYPE
@@ -142,7 +149,7 @@ struct sl_gconf    *currentConf = &globalConfig;
 
 %%
 
-config         : globals site_profiles
+config         : globals includes site_profiles
 {
 	struct sl_resource *r;
 	struct sl_site *s;
@@ -179,6 +186,26 @@ globals        : /* NULL */              |
 		 global globals;
 
 global         : GLOBAL statement;
+
+includes	: /* NULL */		|
+		  include includes;
+
+include		: INCLUDE QUOTEDS {
+			glob_t gl;
+			size_t i;
+			int rc;
+
+			rc = glob($2, GLOB_BRACE, NULL, &gl);
+			if (rc)
+				warnx("%s:%d: %s: could not glob",
+				cfg_filename, cfg_lineno, $2);
+			else {
+				for (i = 0; i < gl.gl_pathc; i++)
+					slcfg_add_include($2);
+				globfree(&gl);
+			}
+			free($2);
+		};
 
 site_profiles  : site_profile            |
 		 site_profile site_profiles;
@@ -590,37 +617,52 @@ store_tok_val(const char *tok, char *val)
 	}
 }
 
-int
-run_yacc(const char *config_file)
+void
+slcfg_add_include(const char *fn)
 {
+	struct cfg_file *cf;
+
+	cf = PSCALLOC(sizeof(*cf));
+	if (strlcpy(cf->cf_fn, fn,
+	    sizeof(cf->cf_fn)) >= sizeof(cf->cf_fn)) {
+		errno = ENAMETOOLONG;
+		psc_fatal("%s", fn);
+	}
+	psclist_xadd_tail(&cf->cf_lentry, &cfg_files);
+}
+
+void
+slcfg_parse(const char *config_file)
+{
+	struct cfg_file *cf, *ncf;
 	extern FILE *yyin;
 
-	errors = 0;
+	cfg_errors = 0;
 
-	yyin = fopen(config_file, "r");
-	if (yyin == NULL)
-		psc_fatal("open() failed ;%s;", config_file);
-
-	cfg_filename = config_file;
+	INIT_GCONF(&globalConfig);
 
 	/* Pre-allocate the first resource and site */
 	currentSite = slcfg_new_site();
 	currentRes = slcfg_new_res();
 
-	INIT_GCONF(&globalConfig);
+	slcfg_add_include(config_file);
+	psclist_for_each_entry_safe(cf, ncf, &cfg_files, cf_lentry) {
+		cfg_filename = cf->cf_fn;
+		yyin = fopen(cfg_filename, "r");
+		if (yyin == NULL)
+			psc_fatal("%s", cfg_filename);
 
-	cfg_lineno = 1;
-	yyparse();
+		cfg_lineno = 1;
+		yyparse();
+		fclose(yyin);
 
-	fclose(yyin);
-
-	if (errors)
-		psc_fatalx("%d error(s) encountered", errors);
+		free(cf);
+	}
+	if (cfg_errors)
+		psc_fatalx("%d error(s) encountered", cfg_errors);
 
 	free(currentRes);
 	free(currentSite);
-
-	return 0;
 }
 
 void
@@ -629,7 +671,7 @@ yyerror(const char *fmt, ...)
 	char buf[LINE_MAX];
 	va_list ap;
 
-	errors++;
+	cfg_errors++;
 
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);

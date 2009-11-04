@@ -1840,7 +1840,7 @@ main(int argc, char *argv[])
 
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
-	slashGetConfig(cfg);
+	slcfg_parse(cfg);
 	slash_init(NULL);
 
 	if (unmount) {

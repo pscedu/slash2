@@ -94,7 +94,7 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slictlthr");
 
-	slashGetConfig(cfn);
+	slcfg_parse(cfn);
 	fdbuf_checkkeyfile();
 	fdbuf_readkeyfile();
 	libsl_init(PSCNET_SERVER);

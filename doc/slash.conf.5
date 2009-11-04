@@ -45,6 +45,19 @@ On which
 port to establish connections.
 .El
 .El
+.Pp
+Additional configuration files may be included at the end of the globals
+section with
+.Ic include :
+.Bd -literal -offset indent
+.Ic include Dq Ar pattern
+.Ed
+.Pp
+The
+.Ar pattern
+argument may be a filename or
+.Xr glob 7
+pattern.
 .Ss Per-Site Configuration
 Each site resident on a Slash network requires its own section in the second
 part of

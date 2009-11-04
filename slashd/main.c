@@ -159,7 +159,7 @@ main(int argc, char *argv[])
 	do_init();
 	import_zpool(argv[0], zfspoolcf);
 
-	slashGetConfig(cfn);
+	slcfg_parse(cfn);
 	fdbuf_createkeyfile();
 	fdbuf_readkeyfile();
 	libsl_init(PSCNET_SERVER);

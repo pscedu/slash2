@@ -64,6 +64,10 @@ NONE {
 	return EQ;
 }
 
+include {
+	return INCLUDE;
+}
+
 global {
 	psc_trace("GLOBAL %s", yytext);
 	return GLOBAL;
