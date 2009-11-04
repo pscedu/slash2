@@ -86,7 +86,7 @@ mds_repl_dequeue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
 		spinlock(&msi->msi_lock);
 		if (psc_dynarray_exists(&msi->msi_replq, rrq)) {
 			psc_dynarray_remove(&msi->msi_replq, rrq);
-			rrq->rrq_refcnt--;
+			psc_atomic32_dec(&rrq->rrq_refcnt);
 		}
 		freelock(&msi->msi_lock);
 	}
@@ -109,7 +109,7 @@ mds_repl_enqueue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
 		if (!psc_dynarray_exists(&msi->msi_replq, rrq)) {
 			psc_dynarray_add(&msi->msi_replq, rrq);
 			psc_waitq_wakeall(&msi->msi_waitq);
-			rrq->rrq_refcnt++;
+			psc_atomic32_inc(&rrq->rrq_refcnt);
 		}
 		freelock(&msi->msi_lock);
 	}
@@ -145,7 +145,7 @@ mds_repl_load_locked(struct slash_inode_handle *i)
 }
 
 int
-mds_inoh_load_repls(struct slash_inode_handle *ih)
+mds_repl_inoh_ensure_loaded(struct slash_inode_handle *ih)
 {
 	int rc = 0;
 
@@ -156,9 +156,6 @@ mds_inoh_load_repls(struct slash_inode_handle *ih)
 	INOH_ULOCK(ih);
 	return (rc);
 }
-
-#define mds_repl_ios_lookup_add(ih, ios)	_mds_repl_ios_lookup((ih), (ios), 1)
-#define mds_repl_ios_lookup(ih, ios)		_mds_repl_ios_lookup((ih), (ios), 0)
 
 int
 _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
@@ -467,6 +464,46 @@ mds_repl_bmap_rel(struct bmapc_memb *bcm)
 	BMAP_ULOCK(bcm);
 }
 
+/**
+ * mds_repl_accessrq - Obtain processing access to a replication request.
+ *	This routine assumes the refcnt has already been bumped.
+ * @rrq: replication request to access, locked on return.
+ * Returns Boolean true on success or false if the request is going away.
+ */
+int
+mds_repl_accessrq(struct sl_replrq *rrq)
+{
+	int rc = 1;
+
+	reqlock(&rrq->rrq_lock);
+
+	/* Wait for someone else to finish processing. */
+	while (rrq->rrq_flags & REPLRQF_BUSY) {
+		psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
+		spinlock(&rrq->rrq_lock);
+	}
+
+	/* Release if going away. */
+	if (rrq->rrq_flags & REPLRQF_DIE) {
+		psc_atomic32_dec(&rrq->rrq_refcnt);
+		psc_waitq_wakeall(&rrq->rrq_waitq);
+		rc = 0;
+	} else
+		rrq->rrq_flags |= REPLRQF_BUSY;
+	return (rc);
+
+}
+
+void
+mds_repl_unrefrq(struct sl_replrq *rrq)
+{
+	spinlock(&rrq->rrq_lock);
+	psc_atomic32_dec(&rrq->rrq_refcnt);
+	rrq->rrq_flags &= ~REPLRQF_BUSY;
+	psc_waitq_wakeall(&rrq->rrq_waitq);
+	freelock(&rrq->rrq_lock);
+}
+
 struct sl_replrq *
 mds_repl_findrq(struct slash_fidgen *fgp, int *locked)
 {
@@ -480,7 +517,7 @@ mds_repl_findrq(struct slash_fidgen *fgp, int *locked)
 	rrq = SPLAY_FIND(replrqtree, &replrq_tree, &q);
 	if (rrq) {
 		spinlock(&rrq->rrq_lock);
-		rrq->rrq_refcnt++;
+		psc_atomic32_inc(&rrq->rrq_refcnt);
 	}
 
 	if (rrq == NULL) {
@@ -490,24 +527,8 @@ mds_repl_findrq(struct slash_fidgen *fgp, int *locked)
 	freelock(&replrq_tree_lock);
 	*locked = 0;
 
-	/*
-	 * We have a handle on it; check if its
-	 * going away and release it if so.
-	 */
-	while (rrq->rrq_flags & REPLRQF_BUSY) {
-		psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
-		spinlock(&rrq->rrq_lock);
-	}
-
-	if (rrq->rrq_flags & REPLRQF_DIE) {
-		rrq->rrq_refcnt--;
-		psc_waitq_wakeall(&rrq->rrq_waitq);
-		freelock(&rrq->rrq_lock);
-		rrq = NULL;
-	} else {
-		rrq->rrq_flags |= REPLRQF_BUSY;
-		freelock(&rrq->rrq_lock);
-	}
+	mds_repl_accessrq(rrq);
+	freelock(&rrq->rrq_lock);
 	return (rrq);
 }
 
@@ -543,9 +564,9 @@ mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
 	}
 
 	ih = fcmh_2_inoh(fcmh);
-	rc = mds_inoh_load_repls(ih);
+	rc = mds_repl_inoh_ensure_loaded(ih);
 	if (rc)
-		psc_fatalx("mds_inoh_load_repls: %s", slstrerror(rc));
+		psc_fatalx("mds_repl_inoh_ensure_loaded: %s", slstrerror(rc));
 	*fp = fcmh;
 	return (0);
 }
@@ -605,7 +626,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 				memset(rrq, 0, sizeof(*rrq));
 				LOCK_INIT(&rrq->rrq_lock);
 				psc_waitq_init(&rrq->rrq_waitq);
-				rrq->rrq_refcnt = 1;
+				psc_atomic32_set(&rrq->rrq_refcnt, 1);
 				rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 				rrq->rrq_flags |= REPLRQF_BUSY;
 				SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
@@ -693,16 +714,6 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	return (rc);
 }
 
-void
-mds_repl_unrefrq(struct sl_replrq *rrq)
-{
-	spinlock(&rrq->rrq_lock);
-	rrq->rrq_refcnt--;
-	rrq->rrq_flags &= ~REPLRQF_BUSY;
-	psc_waitq_wakeall(&rrq->rrq_waitq);
-	freelock(&rrq->rrq_lock);
-}
-
 /* XXX this should remove any ios that are empty in all bmaps from the inode */
 void
 mds_repl_tryrmqfile(struct sl_replrq *rrq)
@@ -770,11 +781,11 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
  out:
 	if (rrq) {
 		reqlock(&rrq->rrq_lock);
-		rrq->rrq_refcnt--;		/* removed from tree */
+		psc_atomic32_dec(&rrq->rrq_refcnt);	/* removed from tree */
 		rrq->rrq_flags |= REPLRQF_DIE;
 		rrq->rrq_flags &= ~REPLRQF_BUSY;
 
-		while (rrq->rrq_refcnt > 1) {
+		while (psc_atomic32_read(&rrq->rrq_refcnt) > 1) {
 			psc_waitq_wakeall(&rrq->rrq_waitq);
 			psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
 			spinlock(&rrq->rrq_lock);
@@ -909,7 +920,7 @@ mds_repl_scandir(void)
 			memset(rrq, 0, sizeof(*rrq));
 			LOCK_INIT(&rrq->rrq_lock);
 			psc_waitq_init(&rrq->rrq_waitq);
-			rrq->rrq_refcnt = 1;
+			psc_atomic32_set(&rrq->rrq_refcnt, 1);
 			rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 			SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
 		}

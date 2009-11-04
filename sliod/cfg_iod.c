@@ -10,7 +10,6 @@ slcfg_new_res(void)
 	struct sl_resource *res;
 
 	res = PSCALLOC(sizeof(*res));
-	INIT_RES(res);
 	return (res);
 }
 

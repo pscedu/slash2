@@ -25,6 +25,7 @@ struct mexpfcm;
 #define SLMTHRT_COH		9	/* coherency thread */
 #define SLMTHRT_FSSYNC		10	/* file system syncer */
 #define SLMTHRT_SITEMON		11	/* site monitor for replication, etc. */
+#define SLMTHRT_IONCONN		12	/* I/O node connection maintainer */
 
 struct slmrmc_thread {
 	struct pscrpc_thread	  smrct_prt;
@@ -51,17 +52,32 @@ struct slmsm_thread {
 	struct sl_site		 *smsmt_site;
 };
 
-struct mds_site_info {
-	struct psc_dynarray	  msi_replq;
-	psc_spinlock_t		  msi_lock;
-	struct psc_waitq	  msi_waitq;
+struct slmiconn_thread {
+	struct sl_resm		 *smict_resm;
 };
 
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
+PSCTHR_MKCAST(slmiconnthr, slmiconn_thread, SLMTHRT_IONCONN)
 PSCTHR_MKCAST(slmsmthr, slmsm_thread, SLMTHRT_SITEMON)
+
+struct mds_site_info {
+	struct psc_dynarray	  msi_replq;
+	psc_spinlock_t		  msi_lock;
+	struct psc_waitq	  msi_waitq;
+};
+
+struct mds_resm_info {
+	psc_spinlock_t		  mri_lock;
+	int			  mri_flags;
+	struct slashrpc_cservice *mri_csvc;
+	struct psc_waitq	  mri_waitq;
+};
+
+/* mds_resm_info flags */
+#define MRIF_BUSY	(1 << 0)	/* currently scheduled for replication xfer */
 
 /* cfd private accessors */
 #define cfd_2_mexpfcm(cfd)	((struct mexpfcm *)(cfd)->cfd_pri)

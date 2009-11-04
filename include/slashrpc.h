@@ -108,7 +108,6 @@
 /* Slash RPC message types. */
 enum {
 	SRMT_ACCESS,
-	SRMT_ADDREPLRQ,
 	SRMT_BMAPCHMODE,
 	SRMT_BMAPCRCWRT,
 	SRMT_BMAPDIO,
@@ -116,7 +115,6 @@ enum {
 	SRMT_CHOWN,
 	SRMT_CONNECT,
 	SRMT_CREATE,
-	SRMT_DELREPLRQ,
 	SRMT_DESTROY,
 	SRMT_DISCONNECT,
 	SRMT_FGETATTR,
@@ -124,8 +122,7 @@ enum {
 	SRMT_GETATTR,
 	SRMT_GETBMAP,
 	SRMT_GETBMAPCRCS,
-	SRMT_GETREPLST,
-	SRMT_GETREPLST_SLAVE,
+	SRMT_GETREPTBL,
 	SRMT_LINK,
 	SRMT_LOCK,
 	SRMT_LOOKUP,
@@ -140,7 +137,11 @@ enum {
 	SRMT_RELEASEBMAP,
 	SRMT_RELEASEDIR,
 	SRMT_RENAME,
-	SRMT_GETREPTBL,
+	SRMT_REPL_ADDRQ,
+	SRMT_REPL_DELRQ,
+	SRMT_REPL_GETST,
+	SRMT_REPL_GETST_SLAVE,
+	SRMT_REPL_SCHEDWK,
 	SRMT_RMDIR,
 	SRMT_SETATTR,
 	SRMT_STATFS,
@@ -486,6 +487,12 @@ struct srm_replst_slave_req {
 
 #define srm_replst_slave_rep srm_replst_slave_req
 
+struct srm_repl_schedwk_req {
+	uint64_t		nid;
+	uint64_t		fid;
+	sl_bmapno_t		bmapno;
+};
+
 #if 0
 /* Slash RPC transportably safe structures. */
 struct srt_stat {
@@ -558,11 +565,14 @@ struct slashrpc_cservice {
 	int			 csvc_initialized;
 };
 
-void slashrpc_export_destroy(void *);
+void	slashrpc_export_destroy(void *);
 
-struct slashrpc_cservice *rpc_csvc_create(uint32_t, uint32_t);
-struct slashrpc_cservice *rpc_csvc_fromexp(struct pscrpc_export *, uint32_t, uint32_t);
-int rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, uint64_t, uint32_t);
+void	slashrpc_csvc_free(struct slashrpc_cservice *);
+struct slashrpc_cservice *
+	rpc_csvc_create(uint32_t, uint32_t);
+struct slashrpc_cservice *
+	rpc_csvc_fromexp(struct pscrpc_export *, uint32_t, uint32_t);
+int	rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, uint64_t, uint32_t);
 
 extern lnet_process_id_t lpid;
 

@@ -15,6 +15,78 @@
 lnet_process_id_t lpid;
 
 void
+slmiconnthr_ping_peer(void)
+{
+}
+
+void *
+slmiconnthr_main(void *arg)
+{
+	struct slashrpc_cservice *csvc;
+	struct slmiconn_thread *smict;
+	struct psc_thread *thr = arg;
+	struct mds_resm_info *mri;
+	struct mds_site_info *msi;
+	struct sl_resm *resm;
+	int rc;
+
+	smict = slmiconnthr(thr);
+	resm = smict->smict_resm;
+	mri = resm->resm_pri;
+	msi = resm->resm_res->res_site->site_pri;
+	for (;;) {
+		spinlock(&mri->mri_lock);
+		if (mri->mri_csvc == NULL) {
+			/* try to establish connection to ION */
+			csvc = rpc_csvc_create(SRIM_REQ_PORTAL,
+			    SRIM_REP_PORTAL);
+			rc = rpc_issue_connect(resm->resm_nid,
+			    csvc->csvc_import, SRIM_MAGIC,
+			    SRIM_VERSION);
+			spinlock(&mri->mri_lock);
+
+			/*
+			 * Check if he connected to us while
+			 * we were trying to connect to him.
+			 */
+			if (mri->mri_csvc) {
+				slashrpc_csvc_free(csvc);
+				freelock(&mri->mri_lock);
+				goto live;
+			}
+			if (rc) {
+				/* failure; try again in a bit */
+				slashrpc_csvc_free(csvc);
+				psc_waitq_waitrel_s(&mri->mri_waitq,
+				    &mri->mri_lock, 10);
+				continue;
+			}
+			mri->mri_csvc = csvc;
+			freelock(&mri->mri_lock);
+		}
+		freelock(&mri->mri_lock);
+
+ live:
+		psc_waitq_wakeall(&msi->msi_waitq);
+
+		/* Now just PING for connection lifetime. */
+		spinlock(&mri->mri_lock);
+		while (!mri->mri_csvc->csvc_import->imp_failed) {
+			psc_waitq_waitrel_s(&mri->mri_waitq,
+			    &mri->mri_lock, 60);
+			spinlock(&mri->mri_lock);
+			if (mri->mri_csvc->csvc_import->imp_failed)
+				break;
+			freelock(&mri->mri_lock);
+			slmiconnthr_ping_peer();
+			spinlock(&mri->mri_lock);
+		}
+		freelock(&mri->mri_lock);
+		sched_yield();
+	}
+}
+
+void
 rpc_initsvc(void)
 {
 	struct pscrpc_svc_handle *svh;
