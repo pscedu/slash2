@@ -355,8 +355,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		if (s->slvr_flags & SLVR_DATARDY)
 			goto out;
 
-	} else
-		abort();
+	}
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		/* Another thread is either pulling this sliver from
