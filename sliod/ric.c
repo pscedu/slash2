@@ -71,10 +71,9 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		mp->rc = -EINVAL;
 		return (-1);
 	}
-	/* A RBW (read-before-write) request from the client may have a write enabled
-	 *   bdbuf which he uses to fault in his page.
-	 *
-	 * Read requests can get by with looser authentication.
+	/* A RBW (read-before-write) request from the client may have a 
+	 *   write enabled bdbuf which he uses to fault in his page.
+	 *   Read requests can get by with looser authentication.
 	 */
 	mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg, &bmapno, rq->rq_peer,
 			     (rw == SL_READ) ? LNET_NID_ANY:lpid.nid,
@@ -86,10 +85,13 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		return (-1);
 	}
 	/* Ensure that this request fits into the bmap's address range.
-	 */
-	if ((mq->offset + mq->size) >= ((bmapno + 1) * SLASH_BMAP_SIZE)) {
+	 *   XXX this check assumes that mq->offset has not been made
+	 *     bmap relative (ie it's filewise.
+	 */	
+	//if ((mq->offset + mq->size) >= ((bmapno + 1) * SLASH_BMAP_SIZE)) {
+	if ((mq->offset + mq->size) >= SLASH_BMAP_SIZE) {
 		psc_errorx("req offset / size outside of the bmap's "
-			   "address range off=%u len=%u",
+		   "address range off=%u len=%u",
 			   mq->offset, mq->size);
 		mp->rc = -ERANGE;
 		return (-1);
