@@ -59,6 +59,8 @@ slrmi_bmap_getcrcs(struct pscrpc_request *rq)
 	if (desc)
 		pscrpc_free_bulk(desc);
 
+	bmap_op_done(b);
+
 	return (0);
 }
 
