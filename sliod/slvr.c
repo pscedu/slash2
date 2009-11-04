@@ -403,7 +403,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 			unaligned[0] = blks;
 			blks++;
 		}
-		
 		for (i=0; (ssize_t)i < blks; i++)
 			vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
@@ -411,14 +410,12 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	 */
 	if ((offset + size) < SLASH_SLVR_SIZE) {
 
-		blks = (SLASH_SLVR_SIZE - (offset + size)) / SLASH_SLVR_BLKSZ;
-
+		blks = (offset + size) / SLASH_SLVR_BLKSZ;
 		if ((offset + size) & SLASH_SLVR_BLKMASK) {
-			blks++;
-			unaligned[1] = SLASH_BLKS_PER_SLVR - blks;
+			unaligned[1] = blks;
+			blks--;
 		}
-
-		for (i=SLASH_BLKS_PER_SLVR-1; blks > 0; i--, blks--)
+		for (i = blks; i < SLASH_BLKS_PER_SLVR; i++)
 			vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
 	/* We must have found some work to do.
