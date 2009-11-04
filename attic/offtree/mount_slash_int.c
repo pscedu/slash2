@@ -768,7 +768,6 @@ msl_ion_connect(lnet_nid_t nid, struct bmap_info_cli *c)
 	if ((c->bmic_import = new_import()) == NULL)
 		psc_fatalx("new_import");
 
-	c->bmic_import->imp_client = PSCALLOC(sizeof(struct pscrpc_client));
 	c->bmic_import->imp_client->cli_request_portal = SRIC_REQ_PORTAL;
 	c->bmic_import->imp_client->cli_reply_portal = SRIC_REP_PORTAL;
 	clock_gettime(CLOCK_REALTIME, &c->bmic_connect_time);
@@ -779,8 +778,6 @@ msl_ion_connect(lnet_nid_t nid, struct bmap_info_cli *c)
 	spinlock(&c->bmic_lock);
 	if (rc) {
 		psc_errorx("rpc_issue_connect() to %s", libcfs_nid2str(nid));
-		PSCFREE(c->bmic_import->imp_client);
-		c->bmic_import->imp_client = NULL;
 		c->bmic_flags |= BMIC_CONNECT_FAIL;
 	} else
 		c->bmic_flags |= BMIC_CONNECTED;

@@ -44,6 +44,13 @@ rpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp, uint64_t magic,
 	return (rc);
 }
 
+void
+slashrpc_csvc_free(struct slashrpc_cservice *csvc)
+{
+	pscrpc_import_put(csvc->csvc_import);
+	free(csvc);
+}
+
 /*
  * rpc_csvc_create - create a client RPC service.
  * @rqptl: request portal ID.
@@ -62,11 +69,10 @@ rpc_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	csvc->csvc_failed = 0;
 	csvc->csvc_initialized = 0;
 
-	if ((imp = new_import()) == NULL)
-		psc_fatalx("new_import");
+	if ((imp = pscrpc_new_import()) == NULL)
+		psc_fatalx("pscrpc_new_import");
 	csvc->csvc_import = imp;
 
-	imp->imp_client = PSCALLOC(sizeof(*imp->imp_client));
 	imp->imp_client->cli_request_portal = rqptl;
 	imp->imp_client->cli_reply_portal = rpptl;
 	imp->imp_max_retries = 2;

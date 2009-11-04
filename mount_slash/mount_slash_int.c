@@ -834,10 +834,9 @@ msl_ion_connect(lnet_nid_t nid, struct cli_imp_ion *c)
 	c->ci_flags |= CION_CONNECTING;
 	freelock(&c->ci_lock);
 
-	if ((c->ci_import = new_import()) == NULL)
-		psc_fatalx("new_import");
+	if ((c->ci_import = pscrpc_new_import()) == NULL)
+		psc_fatalx("pscrpc_new_import");
 
-	c->ci_import->imp_client = PSCALLOC(sizeof(struct pscrpc_client));
 	c->ci_import->imp_client->cli_request_portal = SRIC_REQ_PORTAL;
 	c->ci_import->imp_client->cli_reply_portal = SRIC_REP_PORTAL;
 	clock_gettime(CLOCK_REALTIME, &c->ci_connect_time);
@@ -848,8 +847,8 @@ msl_ion_connect(lnet_nid_t nid, struct cli_imp_ion *c)
 	spinlock(&c->ci_lock);
 	if (rc) {
 		psc_errorx("rpc_issue_connect() to %s", libcfs_nid2str(nid));
-		PSCFREE(c->ci_import->imp_client);
-		c->ci_import->imp_client = NULL;
+		pscrpc_import_put(c->ci_import);
+		c->ci_import = NULL;
 		c->ci_flags |= CION_CONNECT_FAIL;
 	} else
 		c->ci_flags |= CION_CONNECTED;
