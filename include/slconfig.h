@@ -78,8 +78,7 @@ struct sl_gconf {
 	char			 gconf_fdbkeyfn[PATH_MAX];
 	uint32_t		 gconf_netid;
 	int			 gconf_port;
-	int			 gconf_nsites;
-	struct psclist_head	 gconf_sites;
+	struct psc_lockedlist	 gconf_sites;
 	struct hash_table	 gconf_nids_hash;
 	psc_spinlock_t		 gconf_lock;
 };
@@ -88,14 +87,12 @@ struct sl_gconf {
 #define INIT_GCONF(g)						\
 	do {							\
 		memset((g), 0, sizeof(*(g)));			\
-		INIT_PSCLIST_HEAD(&(g)->gconf_sites);		\
 		LOCK_INIT(&(g)->gconf_lock);			\
+		pll_init(&(g)->gconf_sites, struct sl_site,	\
+		    site_lentry, &(g)->gconf_lock);		\
 		init_hash_table(&(g)->gconf_nids_hash,		\
 				GCONF_HASHTBL_SZ, "resnid");	\
 	} while (0)
-
-#define GCONF_LOCK()	spinlock(&globalConfig.gconf_lock)
-#define GCONF_ULOCK()	freelock(&globalConfig.gconf_lock)
 
 struct sl_site		*slcfg_new_site(void);
 struct sl_resource	*slcfg_new_res(void);
@@ -104,7 +101,7 @@ struct sl_resm		*slcfg_new_resm(void);
 extern struct sl_nodeh nodeInfo;
 extern struct sl_gconf globalConfig;
 
-static inline void
+static __inline void
 libsl_nid_associate(lnet_nid_t nid, struct sl_resource *res)
 {
 	struct sl_resm *resm = slcfg_new_resm();
@@ -122,7 +119,7 @@ int lnet_localnids_get(lnet_nid_t *, size_t);
  * libsl_resm_lookup - To be called after LNET initialization, determines
  * a node's resource membership.
  */
-static inline struct sl_resm *
+static __inline struct sl_resm *
 libsl_resm_lookup(void)
 {
 	lnet_nid_t nids[MAX_LOCALNIDS];
@@ -155,7 +152,7 @@ libsl_resm_lookup(void)
 	return (resm);
 }
 
-static inline sl_ios_id_t
+static __inline sl_ios_id_t
 libsl_node2id(struct sl_nodeh *n)
 {
 	return (sl_global_id_build(n->node_site->site_id,
@@ -163,7 +160,7 @@ libsl_node2id(struct sl_nodeh *n)
 				   n->node_res->res_mds));
 }
 
-static inline struct sl_site *
+static __inline struct sl_site *
 libsl_id2site(sl_ios_id_t id)
 {
 	uint32_t tmp = (id >> (SL_RES_BITS + SL_MDS_BITS));
@@ -171,13 +168,13 @@ libsl_id2site(sl_ios_id_t id)
 
 	psc_assert(tmp <= ((1 << SL_SITE_BITS))-1);
 
-	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry)
+	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		if (tmp == s->site_id)
 			return (s);
 	return (NULL);
 }
 
-static inline struct sl_resource *
+static __inline struct sl_resource *
 libsl_id2res(sl_ios_id_t id)
 {
 	struct sl_resource *r;
@@ -201,7 +198,7 @@ libsl_id2res(sl_ios_id_t id)
 	return (NULL);
 }
 
-static inline struct sl_resm *
+static __inline struct sl_resm *
 libsl_nid2resm(lnet_nid_t nid)
 {
 	struct hash_entry *e;
@@ -214,7 +211,7 @@ libsl_nid2resm(lnet_nid_t nid)
 	return (e->private);
 }
 
-static inline sl_ios_id_t
+static __inline sl_ios_id_t
 libsl_str2id(const char *res_name)
 {
 	sl_ios_id_t id = IOS_ID_ANY;
@@ -226,8 +223,8 @@ libsl_str2id(const char *res_name)
 	p = strchr(res_name, '@');
 	if (p == NULL)
 		return (IOS_ID_ANY);
-	GCONF_LOCK();
-	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry)
+	PLL_LOCK(&globalConfig.gconf_sites);
+	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		if (strcmp(s->site_name, p) == 0)
 			for (n = 0; n < s->site_nres; n++) {
 				r = s->site_resv[n];
@@ -237,11 +234,11 @@ libsl_str2id(const char *res_name)
 				}
 			}
  done:
-	GCONF_ULOCK();
+	PLL_ULOCK(&globalConfig.gconf_sites);
 	return (id);
 }
 
-static inline void
+static __inline void
 libsl_profile_dump(void)
 {
 	struct sl_nodeh *z = &nodeInfo;
@@ -275,7 +272,7 @@ libsl_profile_dump(void)
 			i, libcfs_nid2str(z->node_res->res_nids[i]));
 }
 
-static inline uint32_t
+static __inline uint32_t
 libsl_str2restype(const char *res_type)
 {
 	if (!strcmp(res_type, "parallel_fs"))
@@ -289,7 +286,7 @@ libsl_str2restype(const char *res_type)
 	psc_fatalx("invalid type");
 }
 
-static inline void
+static __inline void
 libsl_init(int pscnet_mode)
 {
 	struct sl_nodeh *z = &nodeInfo;
@@ -310,6 +307,42 @@ libsl_init(int pscnet_mode)
 		z->node_site = libsl_id2site(z->node_res->res_id);
 		libsl_profile_dump();
 	}
+}
+
+static __inline int
+slcfg_site_cmp(const void *a, const void *b)
+{
+	const struct sl_site *x = a, *y = b;
+
+	if (x->site_id < y->site_id)
+		return (-1);
+	else if (x->site_id > y->site_id)
+		return (1);
+	return (0);
+}
+
+static __inline int
+slcfg_res_cmp(const void *a, const void *b)
+{
+	const struct sl_resource *x = a, *y = b;
+
+	if (x->res_id < y->res_id)
+		return (-1);
+	else if (x->res_id > y->res_id)
+		return (1);
+	return (0);
+}
+
+static __inline int
+slcfg_resnid_cmp(const void *a, const void *b)
+{
+	const lnet_nid_t *x = a, *y = b;
+
+	if (*x < *y)
+		return (-1);
+	else if (*x > *y)
+		return (1);
+	return (0);
 }
 
 void slcfg_parse(const char *);

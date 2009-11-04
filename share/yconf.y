@@ -160,7 +160,7 @@ config         : globals includes site_profiles
 	 * Config has been loaded, iterate through the sites'
 	 *  peer lists and resolve the names to numerical id's.
 	 */
-	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry) {
+	PLL_FOREACH(s, &globalConfig.gconf_sites) {
 		for (n = 0; n < s->site_nres; n++) {
 			r = s->site_resv[n];
 
@@ -212,8 +212,7 @@ site_profiles  : site_profile            |
 
 site_profile   : site_profile_start site_defs SUBSECT_END
 {
-	psclist_xadd(&currentSite->site_lentry,
-		    &currentConf->gconf_sites);
+	pll_add(&currentConf->gconf_sites, currentSite);
 	currentSite = slcfg_new_site();
 };
 
@@ -634,8 +633,11 @@ slcfg_add_include(const char *fn)
 void
 slcfg_parse(const char *config_file)
 {
-	struct cfg_file *cf, *ncf;
 	extern FILE *yyin;
+	struct cfg_file *cf, *ncf;
+	struct sl_resource *r;
+	struct sl_site *s;
+	int n;
 
 	cfg_errors = 0;
 
@@ -663,6 +665,17 @@ slcfg_parse(const char *config_file)
 
 	free(currentRes);
 	free(currentSite);
+
+	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
+	PLL_FOREACH(s, &globalConfig.gconf_sites) {
+		qsort(s->site_resv, s->site_nres,
+		    sizeof(*s->site_resv), slcfg_res_cmp);
+		for (n = 0; n < s->site_nres; n++) {
+			r = s->site_resv[n];
+			qsort(r->res_nids, r->res_nnids,
+			    sizeof(*r->res_nids), slcfg_resnid_cmp);
+		}
+	}
 }
 
 void
