@@ -14,7 +14,6 @@ slcfg_new_res(void)
 	struct sl_resource *res;
 
 	res = PSCALLOC(sizeof(*res));
-	INIT_RES(res);
 
 	rci = res->res_pri = PSCALLOC(sizeof(*rci));
 	LOCK_INIT(&rci->rci_lock);

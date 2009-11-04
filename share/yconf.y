@@ -146,14 +146,16 @@ config         : globals site_profiles
 {
 	struct sl_resource *r;
 	struct sl_site *s;
+	uint32_t i;
+	int n;
 
 	/*
 	 * Config has been loaded, iterate through the sites'
 	 *  peer lists and resolve the names to numerical id's.
 	 */
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry) {
-		psclist_for_each_entry(r, &s->site_resources, res_lentry) {
-			uint32_t i;
+		for (n = 0; n < s->site_nres; n++) {
+			r = s->site_resv[n];
 
 			r->res_peers = PSCALLOC(sizeof(sl_ios_id_t) *
 						r->res_npeers);
@@ -208,9 +210,11 @@ site_resource  : site_resource_start resource_def SUBSECT_END
 						currentRes->res_id,
 						currentRes->res_mds);
 
-	psclist_xadd(&currentRes->res_lentry,
-		    &currentSite->site_resources);
+	currentSite->site_nres++;
+	currentSite->site_resv = psc_realloc(currentSite->site_resv,
+	    sizeof(*currentSite->site_resv) * currentSite->site_nres, 0);
 	currentRes = slcfg_new_res();
+	currentRes->res_site = currentSite;
 };
 
 site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START

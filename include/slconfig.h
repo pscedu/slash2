@@ -14,6 +14,8 @@
 
 #include "inode.h"
 
+struct sl_site;
+
 #define SITE_NAME_MAX	64
 #define RES_NAME_MAX	64
 #define FULL_NAME_MAX	(SITE_NAME_MAX + RES_NAME_MAX + 2)	/* '@' + NUL */
@@ -42,26 +44,21 @@ struct sl_resource {
 	uint32_t		 res_nnids;
 	lnet_nid_t		*res_nids;
 	char			 res_fsroot[PATH_MAX];
-	struct psclist_head	 res_lentry;
 	void			*res_pri;
+	struct sl_site		*res_site;
 };
-
-#define INIT_RES(r) INIT_PSCLIST_ENTRY(&(r)->res_lentry)
 
 struct sl_site {
 	char			 site_name[SITE_NAME_MAX];
 	char			*site_desc;
 	void			*site_pri;
-	struct psclist_head	 site_resources;
 	struct psclist_head	 site_lentry;
+	struct sl_resource	**site_resv;
+	int			 site_nres;
 	uint32_t		 site_id;
 };
 
-#define INIT_SITE(s)						\
-	do {							\
-		INIT_PSCLIST_ENTRY(&(s)->site_lentry);		\
-		INIT_PSCLIST_HEAD(&(s)->site_resources);	\
-	} while (0)
+#define INIT_SITE(s)		INIT_PSCLIST_ENTRY(&(s)->site_lentry)
 
 struct sl_nodeh {
 	struct sl_resource	*node_res;
@@ -186,6 +183,7 @@ libsl_id2res(sl_ios_id_t id)
 {
 	struct sl_resource *r;
 	struct sl_site *s;
+	int n;
 
 	if ((s = libsl_id2site(id)) == NULL)
 		return NULL;
@@ -195,9 +193,12 @@ libsl_id2res(sl_ios_id_t id)
 	 */
 	//sl_ios_id_t    rid = sl_glid_to_resid(id);
 
-	psclist_for_each_entry(r, &s->site_resources, res_lentry)
+	for (n = 0; n < s->site_nres; n++) {
+		r = s->site_resv[n];
+		/* XXX this part doesn't make sense... */
 		if (id == r->res_id)
 			return (r);
+	}
 	return (NULL);
 }
 
@@ -221,6 +222,7 @@ libsl_str2id(const char *res_name)
 	const char *p = res_name;
 	struct sl_resource *r;
 	struct sl_site *s;
+	int n;
 
 	p = strchr(res_name, '@');
 	if (p == NULL)
@@ -228,12 +230,14 @@ libsl_str2id(const char *res_name)
 	GCONF_LOCK();
 	psclist_for_each_entry(s, &globalConfig.gconf_sites, site_lentry)
 		if (strcmp(s->site_name, p) == 0)
-			psclist_for_each_entry(r, &s->site_resources,
-			    res_lentry)
+			for (n = 0; n < s->site_nres; n++) {
+				r = s->site_resv[n];
 				if (strcmp(r->res_name, res_name) == 0) {
 					id = r->res_id;
-					break;
+					goto done;
 				}
+			}
+ done:
 	GCONF_ULOCK();
 	return (id);
 }
