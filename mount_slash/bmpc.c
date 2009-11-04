@@ -77,6 +77,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 				   psc_atomic16_read(&bmpce->bmpce_wrref) ||
 				   (bmpce->bmpce_flags & BMPCE_GETBUF) ||
 				   (bmpce->bmpce_flags & BMPCE_INFL) ||
+				   (bmpce->bmpce_flags & BMPCE_INIT) ||
 				   (bmpce->bmpce_flags & BMPCE_IOSCHED));
 			
 			psc_atomic16_inc(&bmpce->bmpce_rdref);
