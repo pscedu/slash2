@@ -18,7 +18,7 @@
 #include "fdbuf.h"
 #include "fidcache.h"
 #include "mds_bmap.h"
-#include "mdsrpc.h"
+#include "rpc_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "slashd.h"

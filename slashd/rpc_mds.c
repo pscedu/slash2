@@ -8,7 +8,7 @@
 #include "psc_rpc/service.h"
 #include "psc_util/strlcpy.h"
 
-#include "mdsrpc.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
 

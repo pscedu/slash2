@@ -14,7 +14,7 @@
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
 #include "mdslog.h"
-#include "mdsrpc.h"
+#include "rpc_mds.h"
 #include "repl_mds.h"
 #include "slashd.h"
 #include "slashexport.h"

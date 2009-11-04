@@ -8,7 +8,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
 
-#include "mdsrpc.h"
+#include "rpc_mds.h"
 #include "slashrpc.h"
 
 struct psclist_head mds_server_conns = PSCLIST_HEAD_INIT(mds_server_conns);

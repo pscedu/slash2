@@ -17,7 +17,7 @@
 #include "fdbuf.h"
 #include "fid.h"
 #include "mds_bmap.h"
-#include "mdsrpc.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
 
