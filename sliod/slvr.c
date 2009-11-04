@@ -410,7 +410,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	/* Mark any blocks at the end.
 	 */
 	if ((offset + size) < SLASH_SLVR_SIZE) {
-		int j;
 
 		blks = (SLASH_SLVR_SIZE - (offset + size)) / SLASH_SLVR_BLKSZ;
 
@@ -419,7 +418,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 			unaligned[1] = SLASH_BLKS_PER_SLVR - blks;
 		}
 
-		for (i=SLASH_BLKS_PER_SLVR-1, j=blks; j > 0; i--, j--)
+		for (i=SLASH_BLKS_PER_SLVR-1; blks > 0; i--, blks--)
 			vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
 	/* We must have found some work to do.
