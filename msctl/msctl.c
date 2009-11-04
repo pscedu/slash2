@@ -96,7 +96,7 @@ pack_replst(const char *fn, __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;
 
-	mrs = psc_ctlmsg_push(SCMT_GETREPLST,
+	mrs = psc_ctlmsg_push(MSCMT_GETREPLST,
 	    sizeof(struct msctlmsg_replst));
 	if (strlcpy(mrs->mrs_fn, fn,
 	    sizeof(mrs->mrs_fn)) >= sizeof(mrs->mrs_fn))
@@ -383,7 +383,7 @@ main(int argc, char *argv[])
 			psc_ctlparse_param(optarg);
 			break;
 		case 'Q':
-			parse_replrq(SCMT_ADDREPLRQ,
+			parse_replrq(MSCMT_ADDREPLRQ,
 			    optarg, pack_replrq);
 			break;
 		case 'R':
@@ -402,7 +402,7 @@ main(int argc, char *argv[])
 			psc_ctlparse_show(optarg);
 			break;
 		case 'U':
-			parse_replrq(SCMT_DELREPLRQ,
+			parse_replrq(MSCMT_DELREPLRQ,
 			    optarg, pack_replrq);
 			break;
 		default:

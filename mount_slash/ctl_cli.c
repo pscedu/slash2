@@ -104,7 +104,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
 
 	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-	    mh->mh_type == SCMT_ADDREPLRQ ?
+	    mh->mh_type == MSCMT_ADDREPLRQ ?
 	    SRMT_REPL_ADDRQ : SRMT_REPL_DELRQ, rq, mq, mp);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
@@ -233,7 +233,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		psc_completion_wait(&mrc->mrc_compl);
 		while (rv && (mrsc = pll_get(&mrc->mrc_bdata)) != NULL) {
 			rv = psc_ctlmsg_send(fd, mh->mh_id,
-			    SCMT_GETREPLST_SLAVE, mrsc->mrsc_len +
+			    MSCMT_GETREPLST_SLAVE, mrsc->mrsc_len +
 			    sizeof(mrsc->mrsc_mrsl), &mrsc->mrsc_mrsl);
 			psc_pool_return(msctl_replstsc_pool, mrsc);
 		}
