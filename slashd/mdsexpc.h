@@ -176,17 +176,6 @@ struct mexp_ion {
  */
 SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
 
-static inline void
-bmdsi_sanity_locked(struct bmapc_memb *bmap, int dio_check, int *wr)
-{
-	struct bmap_mds_info *mdsi = bmap->bcm_pri;
-
-	wr[0] = atomic_read(&mdsi->bmdsi_wr_ref);
-	wr[1] = atomic_read(&mdsi->bmdsi_rd_ref);
-	psc_assert(wr[0] >= 0 && wr[1] >= 0);
-	if (dio_check && (wr[0] > 1 || (wr[0] && wr[1])))
-		psc_assert(bmap->bcm_mode & BMAP_DIO);
-}
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
  */

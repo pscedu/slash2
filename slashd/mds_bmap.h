@@ -31,8 +31,6 @@ struct bmap_mds_info {
 	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
 	uint32_t			 bmdsi_repl_policy;
 	struct jflush_item		 bmdsi_jfi;	/* journal handle          */
-	atomic_t			 bmdsi_rd_ref;	/* reader clients          */
-	atomic_t			 bmdsi_wr_ref;	/* writer clients          */
 	struct mexp_ion			*bmdsi_wr_ion;	/* pointer to write ION    */
 	struct bmap_exports		 bmdsi_exports;	/* tree of client exports  */
 	struct slash_bmap_od		*bmdsi_od;	/* od-disk pointer         */
@@ -73,6 +71,21 @@ struct bmi_assign {
 #define bmap_2_bmdsiod(b)	bmap_2_bmdsi(b)->bmdsi_od
 #define bmap_2_bmdsjfi(b)	(&bmap_2_bmdsi(b)->bmdsi_jfi)
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
+
+static inline void
+bmap_dio_sanity_locked(struct bmapc_memb *bmap, int dio_check)
+{
+	BMAP_LOCK_ENSURE(bmap);
+
+	psc_assert(atomic_read(&bmap->bcm_wr_ref) >= 0);
+	psc_assert(atomic_read(&bmap->bcm_rd_ref) >= 0);
+
+	if (dio_check && 
+	    ((atomic_read(&bmap->bcm_wr_ref) > 1) || 
+	     (atomic_read(&bmap->bcm_wr_ref) && 
+	      atomic_read(&bmap->bcm_rd_ref))))
+		psc_assert(bmap->bcm_mode & BMAP_DIO);
+}
 
 struct bmapc_memb *
 	mds_bmap_load(struct fidc_membh *, sl_blkno_t);
