@@ -882,9 +882,9 @@ mds_bmapod_dump(const struct bmapc_memb *bmap)
 	int ch[4];
 
 	ch[SL_REPL_INACTIVE] = '-';
-	ch[SL_REPL_TOO_OLD] = 'o';
-	ch[SL_REPL_OLD] = 'O';
-	ch[SL_REPL_ACTIVE] = 'A';
+	ch[SL_REPL_SCHED] = 's';
+	ch[SL_REPL_OLD] = 'o';
+	ch[SL_REPL_ACTIVE] = '+';
 
 	for (k = 0; k < SL_REPLICA_NBYTES; k++, mask = 0)
 		for (pos = mask = 0; pos < NBBY; pos += SL_BITS_PER_REPLICA) {

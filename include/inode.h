@@ -53,7 +53,7 @@
 #define SL_NULL_CRC		0x436f5d7c450ed606ULL
 
 #define SL_REPL_INACTIVE	0
-#define SL_REPL_TOO_OLD		1
+#define SL_REPL_SCHED		1
 #define SL_REPL_OLD		2
 #define SL_REPL_ACTIVE		3
 

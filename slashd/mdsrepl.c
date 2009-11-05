@@ -655,25 +655,25 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 
 	/*
 	 * Check inode's bmap state.  INACTIVE and ACTIVE states
-	 * become TOO_OLD, signifying that replication needs to happen.
+	 * become OLD, signifying that replication needs to happen.
 	 */
-	tract[SL_REPL_INACTIVE] = SL_REPL_TOO_OLD;
-	tract[SL_REPL_TOO_OLD] = -1;
-	tract[SL_REPL_OLD] = SL_REPL_TOO_OLD;
-	tract[SL_REPL_ACTIVE] = SL_REPL_TOO_OLD;
+	tract[SL_REPL_INACTIVE] = SL_REPL_OLD;
+	tract[SL_REPL_SCHED] = SL_REPL_OLD;
+	tract[SL_REPL_OLD] = -1;
+	tract[SL_REPL_ACTIVE] = SL_REPL_OLD;
 
 	if (bmapno == (sl_blkno_t)-1) {
 		int repl_some_act = 0, repl_all_act = 1;
 
 		/* check if all bmaps are already old/queued */
 		retifset[SL_REPL_INACTIVE] = 1;
-		retifset[SL_REPL_TOO_OLD] = 0;
+		retifset[SL_REPL_SCHED] = 0;
 		retifset[SL_REPL_OLD] = 0;
 		retifset[SL_REPL_ACTIVE] = 1;
 
 		/* check if all bmaps are already active */
 		retifset2[SL_REPL_INACTIVE] = 1;
-		retifset2[SL_REPL_TOO_OLD] = 1;
+		retifset2[SL_REPL_SCHED] = 1;
 		retifset2[SL_REPL_OLD] = 1;
 		retifset2[SL_REPL_ACTIVE] = 0;
 
@@ -697,7 +697,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		 * replicated, return EALREADY.
 		 */
 		retifset[SL_REPL_INACTIVE] = 0;
-		retifset[SL_REPL_TOO_OLD] = EALREADY;
+		retifset[SL_REPL_SCHED] = EALREADY;
 		retifset[SL_REPL_OLD] = EALREADY;
 		retifset[SL_REPL_ACTIVE] = 0;
 		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno);
@@ -731,7 +731,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	retifset[SL_REPL_INACTIVE] = 0;
 	retifset[SL_REPL_ACTIVE] = 0;
 	retifset[SL_REPL_OLD] = 1;
-	retifset[SL_REPL_TOO_OLD] = 1;
+	retifset[SL_REPL_SCHED] = 1;
 
 	/*
 	 * Mark the inode such that we want to remove it from the repl
@@ -829,13 +829,13 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	tract[SL_REPL_INACTIVE] = -1;
 	tract[SL_REPL_ACTIVE] = SL_REPL_INACTIVE;
 	tract[SL_REPL_OLD] = SL_REPL_INACTIVE;
-	tract[SL_REPL_TOO_OLD] = SL_REPL_INACTIVE;
+	tract[SL_REPL_SCHED] = SL_REPL_INACTIVE;
 
 	if (bmapno == (sl_blkno_t)-1) {
 		retifset[SL_REPL_INACTIVE] = 0;
 		retifset[SL_REPL_ACTIVE] = 1;
 		retifset[SL_REPL_OLD] = 1;
-		retifset[SL_REPL_TOO_OLD] = 1;
+		retifset[SL_REPL_SCHED] = 1;
 
 		rc = SLERR_REPLS_ALL_INACT;
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
@@ -850,7 +850,7 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPL_INACTIVE] = SLERR_REPL_ALREADY_INACT;
 		retifset[SL_REPL_ACTIVE] = 0;
 		retifset[SL_REPL_OLD] = 0;
-		retifset[SL_REPL_TOO_OLD] = 0;
+		retifset[SL_REPL_SCHED] = 0;
 		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno);
 		BMAP_LOCK(bcm);
 		rc = mds_repl_bmap_walk(bcm,

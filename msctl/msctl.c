@@ -80,7 +80,7 @@ rsb_accul_replica_stats(struct replst_slave_bdata *rsb, int iosidx,
 	for (n = 0; n < rsb->rsb_nbmaps; n++,
 	    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios) {
 		switch (SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)) {
-		case SL_REPL_TOO_OLD:
+		case SL_REPL_SCHED:
 		case SL_REPL_OLD:
 			++*bold;
 			break;
@@ -266,7 +266,7 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh, __unusedx const voi
 	uint32_t iosidx;
 	int nbw, off;
 
-	map[SL_REPL_TOO_OLD] = 'o';
+	map[SL_REPL_SCHED] = 's';
 	map[SL_REPL_OLD] = 'o';
 	map[SL_REPL_ACTIVE] = '+';
 	map[SL_REPL_INACTIVE] = '-';

@@ -140,8 +140,7 @@ slmsmthr_main(void *arg)
 			BMAP_LOCK(bcm);
 			val = SL_REPL_GET_BMAP_IOS_STAT(
 			    bmapod->bh_repls, off);
-			if (val == SL_REPL_OLD ||
-			    val == SL_REPL_TOO_OLD)
+			if (val == SL_REPL_OLD)
 				goto brepl;
 			mds_repl_bmap_rel(bcm);
 		}
