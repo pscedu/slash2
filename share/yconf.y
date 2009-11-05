@@ -236,10 +236,10 @@ site_resource  : site_resource_start resource_def SUBSECT_END
 						currentRes->res_id,
 						currentRes->res_mds);
 
-	currentSite->site_nres++;
 	currentSite->site_resv = psc_realloc(currentSite->site_resv,
-	    sizeof(*currentSite->site_resv) * currentSite->site_nres, 0);
+	    sizeof(*currentSite->site_resv) * (currentSite->site_nres + 1), 0);
 	currentRes = slcfg_new_res();
+	currentSite->site_resv[currentSite->site_nres++] = currentRes;
 	currentRes->res_site = currentSite;
 };
 
