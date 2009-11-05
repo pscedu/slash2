@@ -11,7 +11,7 @@
 #include "iod_bmap.h"
 #include "buffer.h"
 
-struct psc_listcache lruSlvrs;   /* Clean slivers which may be reaped */
+struct psc_listcache lruSlvrs;   /* LRU list of clean slivers which may be reaped */
 struct psc_listcache rpcqSlvrs;  /* Slivers ready to be crc'd and have their
 				    crc's shipped to the mds. */
 
