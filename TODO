@@ -239,5 +239,3 @@ legend:
 - slimmns does more than create the immutable namespace, and should
   be more intuitively named for formatting MDS file systems, such as
   slmkfs, slfmtfs, or slnewfs
-
-- need a SCHEDULED bh_repls state
