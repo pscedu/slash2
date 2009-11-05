@@ -266,9 +266,9 @@ struct srm_bmap_dio_req {
 };
 
 struct srm_bmap_crcwire {
-	uint64_t		crc;		/* CRC of the sliver */
+	uint64_t		crc;		/* CRC of the corresponding sliver */
 	uint32_t		slot;		/* sliver number in the owning bmap */
-};
+} __attribute__ ((__packed__));
 
 struct srm_bmap_crcup {
 	uint64_t		fid;
