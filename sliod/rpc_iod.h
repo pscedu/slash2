@@ -7,6 +7,8 @@
 
 #include "cfd.h"
 
+struct sli_repl_workrq;
+
 #define SRIM_NTHREADS	8
 #define SRIM_NBUFS	1024
 #define SRIM_BUFSZ	256
@@ -30,11 +32,12 @@
 
 void	rpc_initsvc(void);
 
-int slrim_handler(struct pscrpc_request *);
+int sli_rim_handler(struct pscrpc_request *);
 int slric_handler(struct pscrpc_request *);
-int slrii_handler(struct pscrpc_request *);
+int sli_rii_handler(struct pscrpc_request *);
 
-int slrmi_issue_connect(const char *);
+int sli_rmi_issue_connect(const char *);
+int sli_rmi_issue_schedwk(struct pscrpc_import *, struct sli_repl_workrq *);
 
 extern struct cfd_svrops *cfdOps;
 extern struct slashrpc_cservice *rmi_csvc;

@@ -130,6 +130,7 @@ enum {
 	SRMT_MKNOD,
 	SRMT_OPEN,
 	SRMT_OPENDIR,
+	SRMT_PING,
 	SRMT_READ,
 	SRMT_READDIR,
 	SRMT_READLINK,
@@ -141,6 +142,7 @@ enum {
 	SRMT_REPL_DELRQ,
 	SRMT_REPL_GETST,
 	SRMT_REPL_GETST_SLAVE,
+	SRMT_REPL_READ,
 	SRMT_REPL_SCHEDWK,
 	SRMT_RMDIR,
 	SRMT_SETATTR,
@@ -338,6 +340,23 @@ struct srm_getattr_rep {
 	int32_t			rc;
 };
 
+struct srm_io_req {
+	struct srt_bmapdesc_buf	sbdb;
+	uint32_t		size;
+	uint32_t		offset;
+	uint32_t		op;		/* read/write */
+/* WRITE data is bulk request. */
+};
+
+#define SRMIO_RD 0
+#define SRMIO_WR 1
+
+struct srm_io_rep {
+	int32_t			rc;
+	uint32_t		size;
+/* READ data is in bulk reply. */
+};
+
 struct srm_link_req {
 	struct slash_creds	creds;
 	uint64_t		pino;		/* parent inode */
@@ -391,22 +410,7 @@ struct srm_opendir_req {
 
 #define srm_opendir_rep srm_open_rep
 
-struct srm_io_req {
-	struct srt_bmapdesc_buf	sbdb;
-	uint32_t		size;
-	uint32_t		offset;
-	uint32_t		flags;
-	uint32_t		op;		/* read/write */
-/* WRITE data is bulk request. */
-};
-
-#define SRMIO_RD 0
-#define SRMIO_WR 1
-
-struct srm_io_rep {
-	int32_t			rc;
-	uint32_t		size;
-/* READ data is in bulk reply. */
+struct srm_ping_req {
 };
 
 #define SRM_READDIR_STBUF_PREFETCH (1 << 0)
@@ -480,7 +484,7 @@ struct srm_replst_slave_req {
 	int32_t			len;		/* of bulk data */
 	uint32_t		rc;
 	sl_blkno_t		boff;		/* offset into inode of first bmap in bulk */
-/* bulk data is bh_repls data */
+/* bulk data is sections of bh_repls data */
 };
 
 #define SRM_REPLST_PAGESIZ	(1024 * 1024)	/* should be network MSS */
@@ -491,7 +495,17 @@ struct srm_repl_schedwk_req {
 	uint64_t		nid;
 	uint64_t		fid;
 	sl_bmapno_t		bmapno;
+	uint32_t		len;
+	uint32_t		rc;
 };
+
+struct srm_repl_read_req {
+	uint64_t		fid;
+	uint64_t		len;
+	sl_bmapno_t		bmapno;
+};
+
+#define srm_repl_read_rep srm_io_rep
 
 #if 0
 /* Slash RPC transportably safe structures. */

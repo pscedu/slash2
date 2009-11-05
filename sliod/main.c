@@ -113,7 +113,7 @@ main(int argc, char *argv[])
 	if ((mds_nid = getenv("SLASH_MDS_NID")) == NULL)
 		psc_fatalx("please export SLASH_MDS_NID");
 
-	if (slrmi_issue_connect(mds_nid))
+	if (sli_rmi_issue_connect(mds_nid))
 		psc_fatalx("MDS server unavailable");
 
 	slictlthr_main(sfn);

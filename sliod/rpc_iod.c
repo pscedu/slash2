@@ -13,8 +13,8 @@
 #include "slashrpc.h"
 #include "sliod.h"
 
-lnet_process_id_t lpid;
-struct slashrpc_cservice *rmi_csvc;
+lnet_process_id_t		 lpid;
+struct slashrpc_cservice	*rmi_csvc;
 
 /**
  * rpc_initsvc - create and initialize RPC services.
@@ -51,7 +51,7 @@ rpc_initsvc(void)
 	svh->svh_rep_portal = SRIM_REP_PORTAL;
 	svh->svh_type = SLITHRT_RIM;
 	svh->svh_nthreads = SRIM_NTHREADS;
-	svh->svh_handler = slrim_handler;
+	svh->svh_handler = sli_rim_handler;
 	strlcpy(svh->svh_svc_name, SRIM_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slirim_thread);
 
@@ -65,7 +65,7 @@ rpc_initsvc(void)
 	svh->svh_rep_portal = SRII_REP_PORTAL;
 	svh->svh_type = SLITHRT_RII;
 	svh->svh_nthreads = SRII_NTHREADS;
-	svh->svh_handler = slrii_handler;
+	svh->svh_handler = sli_rii_handler;
 	strlcpy(svh->svh_svc_name, SRII_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slirii_thread);
 
