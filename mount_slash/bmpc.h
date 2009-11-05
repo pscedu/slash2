@@ -81,7 +81,8 @@ enum BMPCE_STATES {
 	BMPCE_LRU       = (1<<6),
 	BMPCE_FREE      = (1<<7),
 	BMPCE_FREEING   = (1<<8),
-	BMPCE_INIT      = (1<<9)
+	BMPCE_INIT      = (1<<9),
+	BMPCE_READPNDG  = (1<<10)
 };
 
 #define BMPCE_2_BIORQ(b) ((b)->bmpce_waitq == NULL) ? NULL :	\
@@ -250,7 +251,15 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	locked = reqlock(&bmpce->bmpce_lock);
 
 	DEBUG_BMPCE(PLL_TRACE, bmpce, "op=%d off=%u", op, off);
-	psc_assert(bmpce->bmpce_base);
+
+	while (bmpce->bmpce_flags & BMPCE_GETBUF) {
+		psc_assert(!bmpce->bmpce_base);
+		psc_assert(bmpce->bmpce_waitq);
+		psc_waitq_wait(bmpce->bmpce_waitq, &bmpce->bmpce_lock);
+		spinlock(&bmpce->bmpce_lock);
+	}
+
+	psc_assert(bmpce->bmpce_base);	
 	psc_assert(!(bmpce->bmpce_flags & BMPCE_GETBUF));
 
 	if (op == BIORQ_READ)

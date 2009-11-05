@@ -73,11 +73,12 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 				pll_addhead(&bmpc->bmpc_lru, bmpce);
 
 			} else 
-				psc_assert(
+				psc_assert(				   
 				   psc_atomic16_read(&bmpce->bmpce_wrref) ||
-				   (bmpce->bmpce_flags & BMPCE_GETBUF) ||
-				   (bmpce->bmpce_flags & BMPCE_INFL) ||
-				   (bmpce->bmpce_flags & BMPCE_INIT) ||
+				   (bmpce->bmpce_flags & BMPCE_READPNDG)  ||
+				   (bmpce->bmpce_flags & BMPCE_GETBUF)    ||
+				   (bmpce->bmpce_flags & BMPCE_INFL)      ||
+				   (bmpce->bmpce_flags & BMPCE_INIT)      ||
 				   (bmpce->bmpce_flags & BMPCE_IOSCHED));
 			
 			psc_atomic16_inc(&bmpce->bmpce_rdref);
@@ -99,6 +100,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 
 			if (!(bmpce->bmpce_flags & BMPCE_LRU)) {
 			add_lru:
+				bmpce->bmpce_flags &= ~BMPCE_READPNDG;
 				bmpce->bmpce_flags |= BMPCE_LRU;
 				pll_addhead(&bmpc->bmpc_lru, bmpce);
 				if (timespeccmp(&bmpce->bmpce_laccess,
