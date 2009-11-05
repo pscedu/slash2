@@ -27,7 +27,7 @@ extern struct slashrpc_cservice *rmi_csvc;
 __static SPLAY_GENERATE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
 
 __static int
-slvr_worker_crcup_genrq(const struct dynarray *a)
+slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 {
 	struct biod_crcup_ref *bcrc_ref;
 	struct srm_bmap_crcwrt_req *mq;
@@ -44,8 +44,8 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
 
 	PSC_CRC_INIT(mq->crc);
 
-	mq->ncrc_updates = dynarray_len(a);
-	req->rq_async_args.pointer_arg[0] = (void *)a;
+	mq->ncrc_updates = dynarray_len(ref_array);
+	req->rq_async_args.pointer_arg[0] = (void *)ref_array;
 
 	psc_assert((mq->ncrc_updates <= MAX_BMAP_NCRC_UPDATES) &&
 		   mq->ncrc_updates);
@@ -54,7 +54,7 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
         iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 	
 	for (i=0; i < mq->ncrc_updates; i++) {
-		bcrc_ref = dynarray_getpos(a, i);		
+		bcrc_ref = dynarray_getpos(ref_array, i);		
 		
 		(int)iod_inode_getsize(bcrc_ref->bcr_crcup.fid,
 				       (off_t *)&bcrc_ref->bcr_crcup.fsize);
@@ -86,63 +86,53 @@ slvr_worker_crcup_genrq(const struct dynarray *a)
 __static void 
 slvr_worker_push_crcups(void)
 {
-        struct biod_crcup_ref *bcrc_ref=NULL;
-	struct dynarray *a;
-	int i;
+	int			 i;
+	struct timespec		 now;
+        struct biod_crcup_ref	*bcrc_ref;
+	struct dynarray		*ref_array;
 
 	if (!trylock(&binfSlvrs.binfst_lock))
 		return;
 
-	a = PSCALLOC(sizeof(struct dynarray));       
+	ref_array = PSCALLOC(sizeof(struct dynarray));       
 
 	/* First, try to gather full crcup's */
 	SPLAY_FOREACH(bcrc_ref, crcup_reftree, &binfSlvrs.binfst_tree) {
 		if (bcrc_ref->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
-			dynarray_add(a, bcrc_ref);
-
-		if (dynarray_len(a) >= MAX_BMAP_NCRC_UPDATES)
+			dynarray_add(ref_array, bcrc_ref);
+		if (dynarray_len(ref_array) >= MAX_BMAP_NCRC_UPDATES)
 			break;
 	}
 	/* 
 	 * Second, try to gather old crcups. We need to purge the ones we already
 	 * have from the tree first.
 	 */
-	for (i = 0; i < dynarray_len(a); i++) {
-		bcrc_ref = dynarray_getpos(a, i);
+	for (i = 0; i < dynarray_len(ref_array); i++) {
+		bcrc_ref = dynarray_getpos(ref_array, i);
 		SPLAY_REMOVE(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
 	}
-	if (dynarray_len(a) < MAX_BMAP_NCRC_UPDATES) {
-		struct timespec ts;
-
-		clock_gettime(CLOCK_REALTIME, &ts);
-
-		SPLAY_FOREACH(bcrc_ref, crcup_reftree, 
-			      &binfSlvrs.binfst_tree) {
-
-			if (ts.tv_sec <= (bcrc_ref->bcr_age.tv_sec + 
-					  BIOD_CRCUP_MAX_AGE))
-				dynarray_add(a, bcrc_ref);
-			
-			if (dynarray_len(a) >= MAX_BMAP_NCRC_UPDATES)
-				break;
-		}
+	if (dynarray_len(ref_array) >= MAX_BMAP_NCRC_UPDATES) {
+		goto done;
 	}
-
-	psc_assert(dynarray_len(a) <= MAX_BMAP_NCRC_UPDATES);
-	if (!dynarray_len(a)) {
-		PSCFREE(a);
+	clock_gettime(CLOCK_REALTIME, &now);
+	SPLAY_FOREACH(bcrc_ref, crcup_reftree, &binfSlvrs.binfst_tree) {
+		if (now.tv_sec <= (bcrc_ref->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE))
+			dynarray_add(ref_array, bcrc_ref);
+		if (dynarray_len(ref_array) >= MAX_BMAP_NCRC_UPDATES)
+			break;
+	}
+	if (!dynarray_len(ref_array)) {
+		PSCFREE(ref_array);
 		freelock(&binfSlvrs.binfst_lock);
 		return;
 	}
-
-	for (i=0; i < dynarray_len(a); i++) {
-		bcrc_ref = dynarray_getpos(a, i);
+	for (i = 0; i < dynarray_len(ref_array); i++) {
+		bcrc_ref = dynarray_getpos(ref_array, i);
 		SPLAY_REMOVE(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
 	}
-	/* Drop the lock
-	 */
+done:
 	freelock(&binfSlvrs.binfst_lock);
-	slvr_worker_crcup_genrq(a);
+	slvr_worker_crcup_genrq(ref_array);
 }
 
 
