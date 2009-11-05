@@ -14,9 +14,20 @@
 
 lnet_process_id_t lpid;
 
-void
-slmiconnthr_ping_peer(void)
+int
+slm_rim_issue_ping(struct pscrpc_import *imp)
 {
+	const struct srm_generic_rep *mp;
+	struct pscrpc_request *rq;
+	struct srm_ping_req *mq;
+	int rc;
+
+	if ((rc = RSX_NEWREQ(imp, SRIM_VERSION,
+	    SRMT_PING, rq, mq, mp)) != 0)
+		return (rc);
+	rc = RSX_WAITREP(rq, mp);
+	pscrpc_req_finished(rq);
+	return (rc);
 }
 
 void *
@@ -78,7 +89,7 @@ slmiconnthr_main(void *arg)
 			if (mri->mri_csvc->csvc_import->imp_failed)
 				break;
 			freelock(&mri->mri_lock);
-			slmiconnthr_ping_peer();
+			slm_rim_issue_ping(mri->mri_csvc->csvc_import);
 			spinlock(&mri->mri_lock);
 		}
 		freelock(&mri->mri_lock);
