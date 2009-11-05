@@ -257,25 +257,23 @@ enum fidc_lookup_flags {
 		*(age) = fidc_gettime() + FCMH_ATTR_TIMEO;		\
 	} while (0)
 
-int	fidc_membh_init(struct psc_poolmgr *, void *);
-void	fidc_membh_setattr(struct fidc_membh *, const struct stat *);
+int			 fidc_membh_init(struct psc_poolmgr *, void *);
+void			 fidc_membh_setattr(struct fidc_membh *, const struct stat *);
 
-void	fidc_fcoo_init(struct fidc_open_obj *);
+struct fidc_open_obj	*fidc_fcoo_init(void);
+void			 fidc_memb_init(struct fidc_memb *, slfid_t);
 
-void	fidc_memb_init(struct fidc_memb *, slfid_t);
+struct fidc_membh	*fidc_get(void);
+void			 fidc_put(struct fidc_membh *, struct psc_listcache *);
+int			 fidc_fid2cfd(slfid_t, uint64_t *, struct fidc_membh **);
+int			 fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
+void			 fidcache_init(enum fid_cache_users, int (*)(struct fidc_membh *));
 
-struct fidc_membh *
-	fidc_get(void);
-void	fidc_put(struct fidc_membh *, struct psc_listcache *);
-int	fidc_fid2cfd(slfid_t, uint64_t *, struct fidc_membh **);
-int	fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
-void	fidcache_init(enum fid_cache_users, int (*)(struct fidc_membh *));
+struct fidc_membh	*fidc_lookup_fg(const struct slash_fidgen *);
+struct fidc_membh	*fidc_lookup_simple(slfid_t);
 
-struct fidc_membh *fidc_lookup_fg(const struct slash_fidgen *);
-struct fidc_membh *fidc_lookup_simple(slfid_t);
-
-int	fidc_lookup(const struct slash_fidgen *, int, const struct fidc_memb *,
-	    const struct slash_creds *, struct fidc_membh **);
+int			 fidc_lookup(const struct slash_fidgen *, int, const struct fidc_memb *, 
+					const struct slash_creds *, struct fidc_membh **);
 
 extern struct sl_fsops		*slFsops;
 extern struct hash_table	 fidcHtable;
@@ -394,10 +392,7 @@ fidc_fcoo_start_locked(struct fidc_membh *h)
 			   "trying to start a formerly failed fcmh");
 		h->fcmh_state &= ~FCMH_FCOO_FAILED;
 	}
-
-	h->fcmh_fcoo = PSCALLOC(sizeof(*h->fcmh_fcoo));
-	fidc_fcoo_init(h->fcmh_fcoo);
-
+	h->fcmh_fcoo = fidc_fcoo_init();
 	DEBUG_FCMH(PLL_DEBUG, h, "start locked");
 }
 
