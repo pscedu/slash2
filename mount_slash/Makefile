@@ -17,6 +17,7 @@ SRCS+=		rcm.c
 SRCS+=		timer_cli.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
+SRCS+=		${SLASH_BASE}/share/cfg_common.c
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c
 SRCS+=		${SLASH_BASE}/share/lconf.l
