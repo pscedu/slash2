@@ -95,8 +95,7 @@ slvr_worker_push_crcups(void)
 
 	a = PSCALLOC(sizeof(struct dynarray));       
 
-	/* Try to locate the full crcup's first.
-	 */
+	/* First, try to gather full crcup's */
 	SPLAY_FOREACH(bcrc_ref, crcup_reftree, &binfSlvrs.binfst_tree) {
 		if (bcrc_ref->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
 			dynarray_add(a, bcrc_ref);
@@ -104,8 +103,14 @@ slvr_worker_push_crcups(void)
 		if (dynarray_len(a) >= MAX_BMAP_NCRC_UPDATES)
 			break;
 	}
-	/* Now try to find old ones.
+	/* 
+	 * Second, try to gather old crcups. We need to purge the ones we already
+	 * have from the tree first.
 	 */
+	for (i = 0; i < dynarray_len(a); i++) {
+		bcrc_ref = dynarray_getpos(a, i);
+		SPLAY_REMOVE(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
+	}
 	if (dynarray_len(a) < MAX_BMAP_NCRC_UPDATES) {
 		struct timespec ts;
 
