@@ -440,8 +440,8 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 				mdscoh_infmode_chk(bref, MEXPBCM_CIO_REQD);
 				psc_assert(psclist_conjoint(e));
 				if (!bref->mexpbcm_net_inf) {
-					/* Unschedule this rpc, the coh 
-					 *    thread will remove it from 
+					/* Unschedule this rpc, the coh
+					 *    thread will remove it from
 					 *    the listcache.
 					 */
 					bref->mexpbcm_mode &= ~MEXPBCM_CIO_REQD;
@@ -629,7 +629,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
 	int locked, rc=0, rw=mq->rw;
 	int mode=(rw == SRIC_BMAP_READ ? BMAP_RD : BMAP_WR);
-	atomic_t *a=(rw == SRIC_BMAP_READ ? 
+	atomic_t *a=(rw == SRIC_BMAP_READ ?
 		     &bmap->bcm_rd_ref : &bmap->bcm_wr_ref);
 
 	if (rw == SRIC_BMAP_READ)
@@ -654,8 +654,8 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 	atomic_inc(a);
 	bmap_dio_sanity_locked(bmap, 0);
 
-	if ((atomic_read(&bmap->bcm_wr_ref) == 1) && 
-	    (mode == BMAP_WR) && 
+	if ((atomic_read(&bmap->bcm_wr_ref) == 1) &&
+	    (mode == BMAP_WR) &&
 	    !bmdsi->bmdsi_wr_ion) {
 		/* XXX Should not send connect rpc's here while
 		 *  the bmap is locked.  This may have to be
@@ -672,8 +672,8 @@ mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
 		 */
 		mds_bmap_directio_check(bmap);
 
-	else if (atomic_read(&bmap->bcm_wr_ref) == 2 || 
-		 (atomic_read(&bmap->bcm_wr_ref) == 1 && 
+	else if (atomic_read(&bmap->bcm_wr_ref) == 2 ||
+		 (atomic_read(&bmap->bcm_wr_ref) == 1 &&
 		  atomic_read(&bmap->bcm_rd_ref)))
 		/* These represent the two possible 'add' related transitional
 		 *  states, more than 1 writer or the first writer amidst
@@ -705,7 +705,7 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, int mode)
 	struct bmap_mds_info *mdsi;
 
 	BMAP_LOCK_ENSURE(bmap);
-       
+
 	DEBUG_BMAP(PLL_WARN, bmap, "try close 1");
 
 	mdsi = bmap->bcm_pri;
@@ -726,19 +726,19 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, int mode)
 		if (atomic_dec_and_test(&bmap->bcm_rd_ref))
 			bmap->bcm_mode &= ~BMAP_RD;
 	}
-	
+
 	bmap_dio_sanity_locked(bmap, 1);
 	/* Disable directio if the last writer has left OR
 	 *   no readers exist amongst a single writer.
 	 */
-	if (!atomic_read(&bmap->bcm_wr_ref) || 
+	if (!atomic_read(&bmap->bcm_wr_ref) ||
 	    ((atomic_read(&bmap->bcm_wr_ref) == 1) &&
 	     (!atomic_read(&bmap->bcm_rd_ref))))
 		mds_bmap_directio_unset(bmap);
-	
+
 	if (!bmap_try_release_locked(bmap))
 		BMAP_ULOCK(bmap);
-		
+
 }
 
 /**
@@ -759,10 +759,10 @@ mexpfcm_release_bref(struct mexpbcm *bref)
 
 	DEBUG_BMAP(PLL_INFO, bmap, "done with ref_del bref=%p", bref);
 
-	/* mds_bmap_ref_drop_locked() may free the bmap therefore 
+	/* mds_bmap_ref_drop_locked() may free the bmap therefore
 	 *   we don't try to unlock it here, mds_bmap_ref_drop_locked()
 	 *   will unlock it for us.
-	 */ 
+	 */
 	mds_bmap_ref_drop_locked(bmap, bref->mexpbcm_mode & MEXPBCM_WR ?
 				 BMAP_WR : BMAP_RD);
 	PSCFREE(bref);
@@ -822,12 +822,12 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		rc = -EALREADY;
 		BMAP_ULOCK(bmap);
 
-		DEBUG_BMAP(PLL_ERROR, bmap, "EALREADY blkno=%u sz=%"PRId64 
-			   "ion=%s", c->blkno, c->fsize, 
+		DEBUG_BMAP(PLL_ERROR, bmap, "EALREADY blkno=%u sz=%"PRId64
+			   "ion=%s", c->blkno, c->fsize,
 			   libcfs_nid2str(ion_nid));
 
 		DEBUG_FCMH(PLL_ERROR, fcmh, "EALREADY blkno=%u sz=%"PRId64
-			   " ion=%s", c->blkno, c->fsize, 
+			   " ion=%s", c->blkno, c->fsize,
 			   libcfs_nid2str(ion_nid));
 		goto out;
 
@@ -1025,7 +1025,7 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno)
 	} else {
 		rc = mds_bmap_read(f, bmapno, b);
 		if (rc) {
-			DEBUG_FCMH(PLL_WARN, f, 
+			DEBUG_FCMH(PLL_WARN, f,
 				   "mds_bmap_read() rc=%d blkno=%u",
 				   rc, bmapno);
 			b->bcm_mode |= BMAP_MDS_FAILED;
@@ -1163,7 +1163,7 @@ mds_bmap_load_cli(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	if ((rc = mds_bmap_ref_add(bref, mq)))
 		b->bcm_mode |= BMAP_MDS_NOION;
 
-	/* Release the reference taken by mds_bmap_load().  This call 
+	/* Release the reference taken by mds_bmap_load().  This call
 	 *   established a read or write ref to pin the bmap.
 	 */
 	bmap_op_done(b);
