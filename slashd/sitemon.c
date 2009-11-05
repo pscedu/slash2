@@ -160,13 +160,14 @@ slmsmthr_main(void *arg)
 		psc_waitq_waitrel_ms(&msi->msi_waitq, &msi->msi_lock, 1);
 		continue;
 
-
  brepl:
+		BMAP_ULOCK(bcm);
+
 		rc = mds_repl_inoh_ensure_loaded(rrq->rrq_inoh);
 		if (rc) {
 			psc_warnx("couldn't load inoh repl table: %s",
 			    slstrerror(rc));
-			continue;
+			goto release;
 		}
 
 		/*
@@ -210,39 +211,38 @@ slmsmthr_main(void *arg)
 		}
 		psc_error("should have found someone");
  issue:
-		mds_repl_bmap_rel(bcm);
-		mds_repl_unrefrq(rrq);
 		if (dst_resm == NULL) {
 			spinlock(&msi->msi_lock);
 			psc_waitq_waitrel_ms(&msi->msi_waitq,
 			    &msi->msi_lock, 1);
-			continue;
+			rc = -1;
+			goto release;
 		}
 		freelock(&src_mri->mri_lock);
 
 		/* Issue replication work request */
-		spinlock(&repl_busy_table_lock);
-		psc_vbitmap_set(repl_busy_table,
-		    src_mri->mri_busyid + dst_mri->mri_busyid);
-		freelock(&repl_busy_table_lock);
-
 		rc = RSX_NEWREQ(dst_mri->mri_csvc->csvc_import,
 		    SRIM_VERSION, SRMT_REPL_SCHEDWK, rq, mq, mp);
-		if (rc)
-			goto rpcfail;
-		mq->nid = src_resm->resm_nid;
-		mq->fid = REPLRQ_FID(rrq);
-		mq->bmapno = bmapno;
-		rc = RSX_WAITREP(rq, mp);
-		pscrpc_req_finished(rq);
+		if (rc == 0) {
+			mq->nid = src_resm->resm_nid;
+			mq->fid = REPLRQ_FID(rrq);
+			mq->bmapno = bmapno;
+			rc = RSX_WAITREP(rq, mp);
+			pscrpc_req_finished(rq);
+		}
 
-		if (rc) {
- rpcfail:
+ release:
+		if (rc == 0) {
+			SL_REPL_SET_BMAP_IOS_STAT(
+			    bmapod->bh_repls, off, SL_REPL_SCHED);
+
 			spinlock(&repl_busy_table_lock);
 			psc_vbitmap_set(repl_busy_table,
 			    src_mri->mri_busyid + dst_mri->mri_busyid);
 			freelock(&repl_busy_table_lock);
 		}
+		mds_repl_bmap_rel(bcm);
+		mds_repl_unrefrq(rrq);
 	}
 }
 
