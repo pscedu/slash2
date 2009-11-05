@@ -322,18 +322,16 @@ slvr_worker_int(void)
 		add = 1;
 
 	} else {
-		struct srm_bmap_crcwire *crcw;
-
 		psc_assert(bcrc_ref->bcr_crcup.blkno == 
 			   slvr_2_bmap(s)->bcm_blkno);
 
 		psc_assert(bcrc_ref->bcr_crcup.fid == 
 			   fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh));
 
-		crcw = &bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups++];
-		crcw->crc  = s->slvr_crc;
-		crcw->slot = s->slvr_num;
-		
+		bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups].crc = s->slvr_crc;
+		bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups].slot = s->slvr_num;
+		bcrc_ref->bcr_crcup.nups++;
+
 		if (bcrc_ref->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
 			/* The crcup is filled to the max, clear the bcr_id 
 			 *  from the biodi, later we'll remove it from the 
@@ -346,8 +344,6 @@ slvr_worker_int(void)
 	freelock(&slvr_2_biod(s)->biod_lock);
 	
 	if (add) {
-		struct srm_bmap_crcwire *crcw;
-
 		bcrc_ref = PSCALLOC(sizeof(struct biod_crcup_ref) + 
 				    (sizeof(struct srm_bmap_crcwire) * 
 				     MAX_BMAP_INODE_PAIRS));
@@ -358,9 +354,9 @@ slvr_worker_int(void)
 		bcrc_ref->bcr_crcup.fid = fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh);
 		bcrc_ref->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_blkno;
 		
-		crcw = &bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups++];
-                crcw->crc  = s->slvr_crc;
-                crcw->slot = s->slvr_num;
+		bcrc_ref->bcr_crcup.crcs[0].crc = s->slvr_crc;
+		bcrc_ref->bcr_crcup.crcs[0].slot = s->slvr_num;
+		bcrc_ref->bcr_crcup.nups = 1;
 
 		SPLAY_INSERT(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
 	}
