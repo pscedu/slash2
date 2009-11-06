@@ -477,8 +477,8 @@ slvr_rio_done(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);
 	
-	if (!psc_atomic16_read(&s->slvr_pndgwrts) && 
-	    psc_atomic16_dec_test_zero(&s->slvr_pndgreads) && 
+	if (psc_atomic16_dec_test_zero(&s->slvr_pndgreads) && 
+	    !psc_atomic16_read(&s->slvr_pndgwrts) && 
 	    (s->slvr_flags & SLVR_LRU)) {
 		/* Requeue does a listcache operation but using trylock so 
 		 *   no deadlock should occur on its behalf.
