@@ -330,9 +330,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	SLVR_LOCK(s);
         psc_assert(s->slvr_flags & SLVR_PINNED);
 
-	//if (psclist_conjoint(&s->slvr_lentry))
-	//	psc_assert(!(s->slvr_flags & SLVR_LRU));
-
 	DEBUG_SLVR(PLL_INFO, s, "slvrno=%hu off=%u size=%u rw=%o", 
 		   s->slvr_num, offset, size, rw);
 

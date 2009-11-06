@@ -41,11 +41,9 @@ struct slvr_ref {
 	uint16_t		 slvr_flags;
 	uint16_t		 slvr_pndgwrts;
 	uint16_t		 slvr_pndgreads;
-	atomic_t		 slvr_pinref;
 	psc_crc_t		 slvr_crc;
 	void			*slvr_pri;
 	struct sl_buffer	*slvr_slab;
-	struct timespec		 slvr_ts;
 	struct psclist_head	 slvr_lentry;	
 	SPLAY_ENTRY(slvr_ref)	 slvr_tentry;
 };
@@ -56,7 +54,7 @@ enum slvr_states {
 	SLVR_NEW        = (1<<0),  /* newly initialized */
 	SLVR_SCHEDULED  = (1<<1),  /* scheduled to processed (rpc, and crc) */
 	SLVR_CRCING     = (1<<2),  /* in the process of being crc'd */
-	SLVR_FAULTING   = (1<<3),  /* blocks are being read from the fs */
+	SLVR_FAULTING   = (1<<3),  /* one or more blocks are being read from the fs */
 	SLVR_INFLIGHT   = (1<<4),  /* slvr crc is being sent the mds */ 
 	SLVR_GETSLAB    = (1<<5),  /* assigning memory buffer to slvr */
 	SLVR_PINNED     = (1<<6),  /* slab cannot be removed from the cache */
