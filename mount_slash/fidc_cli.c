@@ -25,10 +25,10 @@
  * @c: child fcmh
  * @name: name of child fcmh
  */
-static struct fidc_child *
+static struct fidc_private *
 fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 {
-	struct fidc_child *fcc;
+	struct fidc_private *fcc;
 	int len;
 
 	len = strlen(name);
@@ -62,7 +62,7 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 static void
 fidc_child_prep_free_locked(struct fidc_membh *f)
 {
-	struct fidc_child *fcc, *tmp;
+	struct fidc_private *fcc, *tmp;
 
 	LOCK_ENSURE(&f->fcmh_lock);
 
@@ -87,7 +87,7 @@ fidc_child_prep_free_locked(struct fidc_membh *f)
  * @fcc: the fcc to be freed.
  */
 static void
-fidc_child_free_plocked(struct fidc_child *fcc)
+fidc_child_free_plocked(struct fidc_private *fcc)
 {
 	struct fidc_membh *c=fcc->fcc_fcmh;
 	int locked=reqlock(&c->fcmh_lock);
@@ -126,7 +126,7 @@ fidc_child_free_plocked(struct fidc_child *fcc)
 static void
 fidc_child_free_orphan_locked(struct fidc_membh *f)
 {
-	struct fidc_child *fcc=f->fcmh_pri;
+	struct fidc_private *fcc=f->fcmh_pri;
 
 	LOCK_ENSURE(&f->fcmh_lock);
 
@@ -154,11 +154,11 @@ fidc_child_free_orphan_locked(struct fidc_membh *f)
  * @name: name of the fcc entry associated with child.
  * Note: the locking order is [parent, child, child fcc]
  */
-static struct fidc_child *
+static struct fidc_private *
 fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 			const char *name)
 {
-	struct fidc_child *fcc;
+	struct fidc_private *fcc;
 
 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
@@ -220,7 +220,7 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 int
 fidc_child_reap_cb(struct fidc_membh *f)
 {
-	struct fidc_child *fcc=f->fcmh_pri;
+	struct fidc_private *fcc=f->fcmh_pri;
 
 	LOCK_ENSURE(&f->fcmh_lock);
 	/* Don't free the root inode.
@@ -272,10 +272,10 @@ fidc_child_reap_cb(struct fidc_membh *f)
  * @name: name of the child.
  * @len: the length of the child name string.
  */
-static struct fidc_child *
+static struct fidc_private *
 fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 {
-	struct fidc_child *c=NULL;
+	struct fidc_private *c=NULL;
 	int found=0;
 	int hash=str_hash(name);
 	struct timespec	now;
@@ -328,7 +328,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 int
 fidc_child_cmp(const void *x, const void *y)
 {
-	const struct fidc_child *a=x, *b=y;
+	const struct fidc_private *a=x, *b=y;
 	if ((c->fcc_hash == hash) &&
 	    (!strncmp(name, c->fcc_name, strnlen(name, NAME_MAX)))) {
 		/* Pin down the fcc while the parent dir lock is held.
@@ -359,7 +359,7 @@ __static SPLAY_GENERATE(bmap_cache, bmapc_memb, bcm_tentry, bmapc_cmp);
 struct fidc_membh *
 fidc_child_lookup(struct fidc_membh *p, const char *name)
 {
-	struct fidc_child *c=NULL;
+	struct fidc_private *c=NULL;
 	struct fidc_membh *m=NULL;
 	int locked=reqlock(&p->fcmh_lock);
 
@@ -384,7 +384,7 @@ fidc_child_lookup(struct fidc_membh *p, const char *name)
 void
 fidc_child_unlink(struct fidc_membh *p, const char *name)
 {
-	struct fidc_child *fcc;
+	struct fidc_private *fcc;
 	int locked=reqlock(&p->fcmh_lock);
 
 	psc_assert(p->fcmh_state & FCMH_ISDIR);
@@ -420,7 +420,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 void
 fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 {
-	struct fidc_child *fcc, *tmp=NULL;
+	struct fidc_private *fcc, *tmp=NULL;
 
 	psc_assert(p && c && name);
 	psc_assert(p->fcmh_state & FCMH_ISDIR);
@@ -467,7 +467,7 @@ void
 fidc_child_rename(struct fidc_membh *op, const char *oldname,
     struct fidc_membh *np, const char *newname)
 {
-	struct fidc_child *ch;
+	struct fidc_private *ch;
 	struct fidc_membh *c;
 	size_t len;
 
