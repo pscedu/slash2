@@ -37,7 +37,6 @@ struct bmapc_memb {
 	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info    */
 	atomic_t		 bcm_rd_ref;	/* one ref per write fd    */
 	atomic_t		 bcm_wr_ref;	/* one ref per read fd     */
-	struct timespec		 bcm_ts;
 	atomic_t		 bcm_opcnt;	/* pending opcnt           */
 	uint32_t		 bcm_mode;
 	psc_spinlock_t		 bcm_lock;
@@ -77,9 +76,6 @@ struct bmapc_memb {
 		 atomic_read(&(b)->bcm_wr_ref),				\
 		 atomic_read(&(b)->bcm_opcnt),				\
 		 ## __VA_ARGS__)
-
-#define bmap_set_accesstime(b)						\
-	clock_gettime(CLOCK_REALTIME, &(b)->bcm_ts)
 
 int  bmapc_cmp(const void *, const void *);
 void bmap_op_done(struct bmapc_memb *);

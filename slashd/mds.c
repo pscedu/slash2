@@ -1039,8 +1039,6 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno)
 			psc_waitq_wakeall(&b->bcm_waitq);
 		}
 	}
-
-	bmap_set_accesstime(b);
 	BMAP_ULOCK(b);
 
 	return (b);

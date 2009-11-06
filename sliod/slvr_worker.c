@@ -75,9 +75,8 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 
 	PSC_CRC_FIN(mq->crc);
 
-	rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL, 
-		       iovs, mq->ncrc_updates);
-
+	(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL, 
+			     iovs, mq->ncrc_updates);
 	PSCFREE(iovs);
 
 	nbreqset_add(slvrNbReqSet, req);
