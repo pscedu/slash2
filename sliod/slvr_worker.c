@@ -36,11 +36,14 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 	struct pscrpc_bulk_desc *desc;
 	struct iovec *iovs;
 	size_t len;
-	int rc=0;
+	int rc;
 	uint32_t i;
 
 	rc = RSX_NEWREQ(rmi_csvc->csvc_import, SRMI_VERSION, 
 			SRMT_BMAPCRCWRT, req, mq, mp);
+	if (rc) {
+		return rc;
+	}
 
 	PSC_CRC_INIT(mq->crc);
 
@@ -53,7 +56,7 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 	len = (mq->ncrc_updates * sizeof(struct srm_bmap_crcup));
         iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 	
-	for (i=0; i < mq->ncrc_updates; i++) {
+	for (i = 0; i < mq->ncrc_updates; i++) {
 		bcrc_ref = dynarray_getpos(ref_array, i);		
 		
 		(int)iod_inode_getsize(bcrc_ref->bcr_crcup.fid,
@@ -72,7 +75,7 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 
 	PSC_CRC_FIN(mq->crc);
 
-	rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL, 
+	rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL, 
 		       iovs, mq->ncrc_updates);
 
 	PSCFREE(iovs);
