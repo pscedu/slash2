@@ -202,13 +202,13 @@ slvr_worker_int(void)
 {
 	struct slvr_ref *s;
 	struct biod_crcup_ref tbcrc_ref, *bcrc_ref=NULL;
-	struct timespec ts;
+	struct timespec now;
 	int add=0;
 	
  start:	
-	clock_gettime(CLOCK_REALTIME, &ts);
-	ts.tv_sec += BIOD_CRCUP_MAX_AGE;
-	if (!(s = lc_gettimed(&rpcqSlvrs, &ts))) {
+	clock_gettime(CLOCK_REALTIME, &now);
+	now.tv_sec += BIOD_CRCUP_MAX_AGE;
+	if (!(s = lc_gettimed(&rpcqSlvrs, &now))) {
 		/* Nothing available, try to push any existing 
 		 *  crc updates.
 		 */  
