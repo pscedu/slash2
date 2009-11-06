@@ -330,6 +330,23 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	SLVR_LOCK(s);
         psc_assert(s->slvr_flags & SLVR_PINNED);
 
+	/*
+	 * Common courtesy requires us to wait for another threads' work FIRST.  
+	 * Otherwise, we could bail out prematurely when the data is ready without
+	 * considering the range we want to write.
+	 *
+	 * Note we have taken our read or write references, so the sliver won't
+	 * be freed from under us.
+	 */
+	if (s->slvr_flags & SLVR_FAULTING) {
+
+		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
+		SLVR_WAIT(s);
+		psc_assert(s->slvr_flags & SLVR_DATARDY);
+
+		psc_assert(psclist_conjoint(&s->slvr_lentry));
+	}
+
 	DEBUG_SLVR(PLL_INFO, s, "slvrno=%hu off=%u size=%u rw=%o", 
 		   s->slvr_num, offset, size, rw);
 
@@ -356,20 +373,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 
 	}
 
-	if (s->slvr_flags & SLVR_FAULTING) {
-		/* Another thread is either pulling this sliver from
-		 *   the network or disk.  Wait here for it to complete.
-		 * The pending write ref taken above should ensure 
-		 *   that the sliver isn't freed from under us.
-		 * Note that SLVR_WAIT() regains the lock.
-		 */
-		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		SLVR_WAIT(s);
-		psc_assert(s->slvr_flags & SLVR_DATARDY);
-			   
-		psc_assert(psclist_conjoint(&s->slvr_lentry));
-		goto out;
-	}
 	/* Importing data into the sliver is now our responsibility,
 	 *  other IO into this region will block until SLVR_FAULTING
 	 *  is released.
