@@ -3,6 +3,9 @@
 #ifndef _MDS_RPC_H_
 #define _MDS_RPC_H_
 
+struct pscrpc_request;
+struct pscrpc_export;
+
 #define SRMM_NTHREADS   8
 #define SRMM_NBUFS      1024
 #define SRMM_BUFSZ      128
@@ -21,8 +24,20 @@
 #define SRMC_REPSZ      384
 #define SRMC_SVCNAME    "slrmc"
 
-struct pscrpc_request;
-struct pscrpc_export;
+/* aliases for connection management */
+#define slm_mri_geticonn(mri)						\
+	slconn_get(&(mri)->mri_csvc, NULL, (mri)->mri_resm->resm_nid,	\
+	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION)
+
+#define slm_rmm_getmconn(mri)						\
+	slconn_get(&(mri)->mri_csvc, NULL, (mri)->mri_resm->resm_nid,	\
+	    SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC, SRMM_VERSION)
+
+#define slm_rcm_initconn(csvc, exp)					\
+	slconn_get(&(csvc), (exp), 0, SRCM_REQ_PORTAL, SRCM_REP_PORTAL,	\
+	    SRCM_MAGIC, SRCM_VERSION)
+
+#define slm_rcm_getconn(csvc)		slm_rcm_initconn((csvc), NULL)
 
 void	rpc_initsvc(void);
 

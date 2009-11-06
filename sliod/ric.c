@@ -22,7 +22,7 @@
 #include "slvr.h"
 
 int
-slric_handle_disconnect(struct pscrpc_request *rq)
+sli_ric_handle_disconnect(struct pscrpc_request *rq)
 {
 	struct srm_disconnect_req *mq;
 	struct srm_generic_rep *mp;
@@ -32,7 +32,7 @@ slric_handle_disconnect(struct pscrpc_request *rq)
 }
 
 int
-slric_handle_connect(struct pscrpc_request *rq)
+sli_ric_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
@@ -45,7 +45,7 @@ slric_handle_connect(struct pscrpc_request *rq)
 }
 
 int
-slric_handle_io(struct pscrpc_request *rq, int rw)
+sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct slash_fidgen fg;
@@ -71,7 +71,7 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 		mp->rc = -EINVAL;
 		return (-1);
 	}
-	/* A RBW (read-before-write) request from the client may have a 
+	/* A RBW (read-before-write) request from the client may have a
 	 *   write enabled bdbuf which he uses to fault in his page.
 	 *   Read requests can get by with looser authentication.
 	 */
@@ -87,7 +87,7 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 	/* Ensure that this request fits into the bmap's address range.
 	 *   XXX this check assumes that mq->offset has not been made
 	 *     bmap relative (ie it's filewise.
-	 */	
+	 */
 	//if ((mq->offset + mq->size) >= ((bmapno + 1) * SLASH_BMAP_SIZE)) {
 	if ((mq->offset + mq->size) >= SLASH_BMAP_SIZE) {
 		psc_errorx("req offset / size outside of the bmap's "
@@ -206,23 +206,23 @@ slric_handle_io(struct pscrpc_request *rq, int rw)
 }
 
 int
-slric_handler(struct pscrpc_request *rq)
+sli_ric_handler(struct pscrpc_request *rq)
 {
 	int rc;
 
 	rc = 0; /* gcc */
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_DISCONNECT:
-		rc = slric_handle_disconnect(rq);
+		rc = sli_ric_handle_disconnect(rq);
 		break;
 	case SRMT_CONNECT:
-		rc = slric_handle_connect(rq);
+		rc = sli_ric_handle_connect(rq);
 		break;
 	case SRMT_READ:
-		rc = slric_handle_read(rq);
+		rc = sli_ric_handle_read(rq);
 		break;
 	case SRMT_WRITE:
-		rc = slric_handle_write(rq);
+		rc = sli_ric_handle_write(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);

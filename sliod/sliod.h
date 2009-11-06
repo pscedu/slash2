@@ -42,6 +42,10 @@ PSCTHR_MKCAST(sliricthr, sliric_thread, SLITHRT_RIC)
 PSCTHR_MKCAST(slirimthr, slirim_thread, SLITHRT_RIM)
 PSCTHR_MKCAST(sliriithr, slirii_thread, SLITHRT_RII)
 
+struct iod_resm_info {
+	struct slashrpc_service	*iri_csvc;
+};
+
 void	sliric_init(void);
 void	slirim_init(void);
 void	slirii_init(void);

@@ -29,44 +29,44 @@ rpc_initsvc(void)
 
 	/* Create server service to handle requests from clients. */
 	svh = PSCALLOC(sizeof(*svh));
-	svh->svh_nbufs = SRIC_NBUFS;
-	svh->svh_bufsz = SRIC_BUFSZ;
-	svh->svh_reqsz = SRIC_BUFSZ;
-	svh->svh_repsz = SRIC_REPSZ;
+	svh->svh_nbufs = SLI_RIC_NBUFS;
+	svh->svh_bufsz = SLI_RIC_BUFSZ;
+	svh->svh_reqsz = SLI_RIC_BUFSZ;
+	svh->svh_repsz = SLI_RIC_REPSZ;
 	svh->svh_req_portal = SRIC_REQ_PORTAL;
 	svh->svh_rep_portal = SRIC_REP_PORTAL;
 	svh->svh_type = SLITHRT_RIC;
-	svh->svh_nthreads = SRIC_NTHREADS;
-	svh->svh_handler = slric_handler;
-	strlcpy(svh->svh_svc_name, SRIC_SVCNAME, sizeof(svh->svh_svc_name));
+	svh->svh_nthreads = SLI_RIC_NTHREADS;
+	svh->svh_handler = sli_ric_handler;
+	strlcpy(svh->svh_svc_name, SLI_RIC_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct sliric_thread);
 
 	/* Create server service to handle requests from the MDS server. */
 	svh = PSCALLOC(sizeof(*svh));
-	svh->svh_nbufs = SRIM_NBUFS;
-	svh->svh_bufsz = SRIM_BUFSZ;
-	svh->svh_reqsz = SRIM_BUFSZ;
-	svh->svh_repsz = SRIM_REPSZ;
+	svh->svh_nbufs = SLI_RIM_NBUFS;
+	svh->svh_bufsz = SLI_RIM_BUFSZ;
+	svh->svh_reqsz = SLI_RIM_BUFSZ;
+	svh->svh_repsz = SLI_RIM_REPSZ;
 	svh->svh_req_portal = SRIM_REQ_PORTAL;
 	svh->svh_rep_portal = SRIM_REP_PORTAL;
 	svh->svh_type = SLITHRT_RIM;
-	svh->svh_nthreads = SRIM_NTHREADS;
+	svh->svh_nthreads = SLI_RIM_NTHREADS;
 	svh->svh_handler = sli_rim_handler;
-	strlcpy(svh->svh_svc_name, SRIM_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLI_RIM_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slirim_thread);
 
 	/* Create server service to handle requests from other I/O servers. */
 	svh = PSCALLOC(sizeof(*svh));
-	svh->svh_nbufs = SRII_NBUFS;
-	svh->svh_bufsz = SRII_BUFSZ;
-	svh->svh_reqsz = SRII_BUFSZ;
-	svh->svh_repsz = SRII_REPSZ;
+	svh->svh_nbufs = SLI_RII_NBUFS;
+	svh->svh_bufsz = SLI_RII_BUFSZ;
+	svh->svh_reqsz = SLI_RII_BUFSZ;
+	svh->svh_repsz = SLI_RII_REPSZ;
 	svh->svh_req_portal = SRII_REQ_PORTAL;
 	svh->svh_rep_portal = SRII_REP_PORTAL;
 	svh->svh_type = SLITHRT_RII;
-	svh->svh_nthreads = SRII_NTHREADS;
+	svh->svh_nthreads = SLI_RII_NTHREADS;
 	svh->svh_handler = sli_rii_handler;
-	strlcpy(svh->svh_svc_name, SRII_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLI_RII_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slirii_thread);
 
 	/* Create client service to issue requests to MDS. */

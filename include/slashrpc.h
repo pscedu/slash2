@@ -577,7 +577,12 @@ struct slashrpc_cservice {
 	psc_spinlock_t		 csvc_lock;
 	int			 csvc_failed;
 	int			 csvc_initialized;
+	struct psc_waitq	 csvc_waitq;
+	time_t			 csvc_mtime;
 };
+
+#define CSVC_LOCK(c)	spinlock(&(c)->csvc_lock)
+#define CSVC_ULOCK(c)	freelock(&(c)->csvc_lock)
 
 void	slashrpc_export_destroy(void *);
 

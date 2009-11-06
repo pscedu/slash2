@@ -65,6 +65,7 @@ rpc_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	csvc = PSCALLOC(sizeof(*csvc));
 
 	LOCK_INIT(&csvc->csvc_lock);
+	psc_waitq_init(&csvc->csvc_waitq);
 
 	csvc->csvc_failed = 0;
 	csvc->csvc_initialized = 0;
@@ -87,5 +88,43 @@ rpc_csvc_fromexp(struct pscrpc_export *exp, uint32_t rqptl, uint32_t rpptl)
 	csvc = rpc_csvc_create(rqptl, rpptl);
 	atomic_inc(&exp->exp_connection->c_refcount);
 	csvc->csvc_import->imp_connection = exp->exp_connection;
+	return (csvc);
+}
+
+struct slashrpc_cservice *
+slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
+    lnet_nid_t peernid, uint32_t rqptl, uint32_t rpptl, uint64_t magic,
+    uint32_t version)
+{
+	struct slashrpc_cservice *csvc;
+	int rc;
+
+	if (*csvcp == NULL) {
+		*csvcp = rpc_csvc_create(rqptl, rpptl);
+		if (exp) {
+			atomic_inc(&exp->exp_connection->c_refcount);
+			(*csvcp)->csvc_import->imp_connection = exp->exp_connection;
+			csvc->csvc_initialized = 1;
+		}
+	}
+	csvc = *csvcp;
+	CSVC_LOCK(csvc);
+	if (!csvc->csvc_initialized || (csvc->csvc_failed &&
+	    csvc->csvc_mtime + 30 < time(NULL))) {
+		rc = rpc_issue_connect(peernid, csvc->csvc_import,
+		    magic, version);
+		csvc->csvc_mtime = time(NULL);
+		if (rc)
+			csvc->csvc_failed = 1;
+		else {
+			psc_waitq_wakeall(&csvc->csvc_waitq);
+			csvc->csvc_initialized = 1;
+			csvc->csvc_failed = 0;
+		}
+	}
+	rc = csvc->csvc_failed;
+	CSVC_ULOCK(csvc);
+	if (rc)
+		return (NULL);
 	return (csvc);
 }
