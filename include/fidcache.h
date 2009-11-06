@@ -55,7 +55,7 @@ struct fidc_membh {
 	struct psc_listcache	*fcmh_cache_owner;
 	struct psc_waitq	 fcmh_waitq;
 	struct sl_fsops		*fcmh_fsops;
-	void			*fcmh_pri;
+	struct fidc_child	*fcmh_pri;
 	struct psclist_head	 fcmh_children;
 };
 
