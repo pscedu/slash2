@@ -145,8 +145,8 @@ slvr_lru_unpin(struct slvr_ref *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
-	psc_assert(!psc_atomic16_read(&s->slvr_pndgreads));
-	psc_assert(!psc_atomic16_read(&s->slvr_pndgwrts));
+	psc_assert(!s->slvr_pndgreads);
+	psc_assert(!s->slvr_pndgwrts);
 
 	psc_assert(s->slvr_flags & SLVR_LRU);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -168,8 +168,8 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_LRU);
 
 	if (s->slvr_flags & SLVR_PINNED) {
-		psc_assert(psc_atomic16_read(&s->slvr_pndgwrts)  ||
-			   psc_atomic16_read(&s->slvr_pndgreads) ||
+		psc_assert(s->slvr_pndgwrts  ||
+			   s->slvr_pndgreads ||
 			   (s->slvr_flags & SLVR_CRCDIRTY));
 		freeable = 0;
 	}

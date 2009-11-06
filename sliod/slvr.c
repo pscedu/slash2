@@ -45,10 +45,10 @@ slvr_do_crc(struct slvr_ref *s)
 		   s->slvr_flags & SLVR_CRCDIRTY);
 	
 	if (s->slvr_flags & SLVR_FAULTING) {
-		if (!psc_atomic16_read(&s->slvr_pndgreads)) {
+		if (!s->slvr_pndgreads) {
 			/* Small RMW workaround 
 			 */ 
-			psc_assert(psc_atomic16_read(&s->slvr_pndgwrts));
+			psc_assert(s->slvr_pndgwrts);
 			return(1);
 		}
 
@@ -290,8 +290,10 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 	 *   pndg op refcnt so that the slvr can't be freed from 
 	 *   underneath us.
 	 */
-	psc_atomic16_inc(rw == SL_WRITE ? 
-			 &s->slvr_pndgwrts : &s->slvr_pndgreads);
+	if (rw == SL_WRITE)
+		s->slvr_pndgwrts++;
+	else
+		s->slvr_pndgreads++;
 
 	s->slvr_flags |= SLVR_PINNED;
 
@@ -477,9 +479,8 @@ slvr_rio_done(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);
 	
-	if (psc_atomic16_dec_test_zero(&s->slvr_pndgreads) && 
-	    !psc_atomic16_read(&s->slvr_pndgwrts) && 
-	    (s->slvr_flags & SLVR_LRU)) {
+	s->slvr_pndgreads--;
+	if (!s->slvr_pndgreads && !s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU)) {
 		/* Requeue does a listcache operation but using trylock so 
 		 *   no deadlock should occur on its behalf.
 		 */
@@ -512,7 +513,7 @@ slvr_try_rpcqueue(struct slvr_ref *s)
 		return;
 	}
 
-	if (!psc_atomic16_read(&s->slvr_pndgwrts)) { 
+	if (!s->slvr_pndgwrts) { 
 		/* No writes are pending, perform the move to the rpcq 
 		 *   list.  Set the bit first then drop the lock.
 		 */
@@ -549,7 +550,7 @@ slvr_wio_done(struct slvr_ref *s)
 {
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);                   
-	psc_assert(psc_atomic16_read(&s->slvr_pndgwrts) > 0);
+	psc_assert(s->slvr_pndgwrts > 0);
 	/* CRCDIRTY must have been marked and could not have been unset
 	 *   because we have yet to pass this slvr to the crc processing
 	 *   threads. XXX this is not the case, the slvr worker may be
@@ -582,11 +583,11 @@ slvr_wio_done(struct slvr_ref *s)
 		DEBUG_SLVR(PLL_INFO, s, "DATARDY");
 
 		if ((s->slvr_flags & SLVR_LRU) && 
-		    psc_atomic16_read(&s->slvr_pndgwrts) > 1)
+		    s->slvr_pndgwrts > 1)
 			slvr_lru_requeue(s);
 	} 
 		
-	if (psc_atomic16_dec_test_zero(&s->slvr_pndgwrts) && !s->slvr_flags & SLVR_RPCPNDG) {
+	if (--s->slvr_pndgwrts == 0 && !s->slvr_flags & SLVR_RPCPNDG) {
 		/* No more pending writes, try to schedule the buffer
 		 *   to be crc'd.
 		 */

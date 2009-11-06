@@ -37,17 +37,17 @@ extern struct psc_listcache inflSlvrs;
  * Note: slivers are locked through their bmap_iod_info lock.
  */
 struct slvr_ref {
-	uint16_t              slvr_num;
-	uint16_t              slvr_flags;
-	psc_atomic16_t        slvr_pndgwrts;
-	psc_atomic16_t        slvr_pndgreads;
-	atomic_t              slvr_pinref;
-	psc_crc_t             slvr_crc;
-	void                 *slvr_pri;
-	struct sl_buffer     *slvr_slab;
-	struct timespec       slvr_ts;
-	struct psclist_head   slvr_lentry;	
-	SPLAY_ENTRY(slvr_ref) slvr_tentry;
+	uint16_t		 slvr_num;
+	uint16_t		 slvr_flags;
+	uint16_t		 slvr_pndgwrts;
+	uint16_t		 slvr_pndgreads;
+	atomic_t		 slvr_pinref;
+	psc_crc_t		 slvr_crc;
+	void			*slvr_pri;
+	struct sl_buffer	*slvr_slab;
+	struct timespec		 slvr_ts;
+	struct psclist_head	 slvr_lentry;	
+	SPLAY_ENTRY(slvr_ref)	 slvr_tentry;
 };
 
 #define SLVR_2_BLK(s) ((s)->slvr_num * (SLASH_BMAP_SIZE/SLASH_BMAP_BLKSZ))
@@ -92,8 +92,8 @@ enum slvr_states {
 		 " slvr@%p num=%hu pw=%hu pr=%hu pri@%p slab@%p flgs:"	\
 		 SLVR_FLAGS_FMT" :: "fmt,				\
 		 (s), (s)->slvr_num,					\
-		 psc_atomic16_read(&(s)->slvr_pndgwrts),		\
-		 psc_atomic16_read(&(s)->slvr_pndgreads),		\
+		 (s)->slvr_pndgwrts,					\
+		 (s)->slvr_pndgreads,					\
 		 (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),	\
 		 ## __VA_ARGS__)
 

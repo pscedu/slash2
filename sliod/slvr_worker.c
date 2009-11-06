@@ -175,7 +175,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 		psc_assert(s->slvr_flags & SLVR_RPCPNDG);
 		s->slvr_flags &= ~SLVR_RPCPNDG;
 
-		if (!psc_atomic16_read(&s->slvr_pndgwrts) && 
+		if (!s->slvr_pndgwrts && 
 		    s->slvr_flags & SLVR_CRCDIRTY) {
 			/* If the crc is dirty and there are no pending
 			 *   ops then the sliver was not moved to the 
@@ -236,7 +236,7 @@ slvr_worker_int(void)
 	 *   no pending writes.  This section directly below may race 
 	 *   with slvr_wio_done().
 	 */
-	if (psc_atomic16_read(&s->slvr_pndgwrts) > 0) {
+	if (s->slvr_pndgwrts > 0) {
 		if (!LIST_CACHE_TRYLOCK(&lruSlvrs)) {
 			/* Don't deadlock, take the locks in the 
 			 *   correct order.
@@ -250,7 +250,7 @@ slvr_worker_int(void)
 		}
 		/* Guaranteed to have both locks.
 		 */
-		if (psc_atomic16_read(&s->slvr_pndgwrts) > 0) {
+		if (s->slvr_pndgwrts > 0) {
 			s->slvr_flags &= ~SLVR_RPCPNDG;
 			s->slvr_flags |= SLVR_LRU;
 			lc_addqueue(&lruSlvrs, s);
@@ -297,8 +297,7 @@ slvr_worker_int(void)
 
 	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU");
 
-	if (!(psc_atomic16_read(&s->slvr_pndgwrts) ||
-	      psc_atomic16_read(&s->slvr_pndgreads)))
+	if (!(s->slvr_pndgwrts) || s->slvr_pndgreads)
 		slvr_lru_unpin(s);
 	SLVR_ULOCK(s);
 	/* Put the slvr back to the LRU so it may have its slab reaped.
