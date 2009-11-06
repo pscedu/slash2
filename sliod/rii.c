@@ -5,6 +5,7 @@
  */
 
 #include "psc_ds/list.h"
+#include "psc_ds/pool.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
@@ -79,8 +80,7 @@ sli_rii_issue_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	struct iovec iov;
 	int rc;
 
-//	p = mmap(fcoo_fd);
-//	iov.iov_base = p
+	w->srw_srb = psc_pool_get(sli_repl_bufpool);
 
 	if ((rc = RSX_NEWREQ(imp, SRII_VERSION,
 	    SRMT_REPL_READ, rq, mq, mp)) != 0)
@@ -93,6 +93,8 @@ sli_rii_issue_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	rq->rq_interpret_reply = sli_rii_read_callback;
 	rq->rq_async_args.pointer_arg[SRII_READ_CBARG_WKRQ] = w;
 
+	iov.iov_base = w->srw_srb->srb_data;
+	iov.iov_len = w->srw_len;
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRII_BULK_PORTAL,
 	    &iov, 1);
 	return (0);

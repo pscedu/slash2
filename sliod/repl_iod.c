@@ -11,6 +11,8 @@
 
 struct psc_poolmaster	 repl_workrq_poolmaster;
 struct psc_poolmgr	*repl_workrq_pool;
+struct psc_poolmaster	 sli_repl_bufpoolmaster;
+struct psc_poolmgr	*sli_repl_bufpool;
 struct psc_listcache	 repl_workq_pending;
 struct psc_listcache	 repl_workq_inflight;
 struct psc_listcache	 repl_workq_finished;
@@ -45,6 +47,7 @@ slireplfinthr_main(void *arg)
 	for (;;) {
 		w = lc_getwait(&repl_workq_finished);
 //		rc = sli_rmi_issue_schedwk(imp, w);
+		psc_pool_return(sli_repl_bufpool, w->srw_srb);
 		psc_pool_return(repl_workrq_pool, w);
 		sched_yield();
 	}
@@ -82,6 +85,12 @@ sli_repl_init(void)
 	psc_poolmaster_init(&repl_workrq_poolmaster, struct sli_repl_workrq,
 	    srw_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL, "replwkrq");
 	repl_workrq_pool = psc_poolmaster_getmgr(&repl_workrq_poolmaster);
+
+	_psc_poolmaster_init(&sli_repl_bufpoolmaster,
+	    sizeof(struct sli_repl_buf) + SLASH_BMAP_SIZE,
+	    offsetof(struct sli_repl_buf, srb_lentry),
+	    0, 0, 32, 0, NULL, NULL, NULL, NULL, "replbuf");
+	sli_repl_bufpool = psc_poolmaster_getmgr(&sli_repl_bufpoolmaster);
 
 	lc_reginit(&repl_workq_pending, struct sli_repl_workrq,
 	    srw_lentry, "replwkpnd");
