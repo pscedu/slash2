@@ -22,7 +22,6 @@ struct fidc_private {
 	char                fcc_name[];
 };
 
-struct fidc_private *fidc_child_get(struct fidc_membh *, const char *, size_t);
 struct fidc_membh *fidc_child_lookup(struct fidc_membh *, const char *);
 
 void	fidc_child_add(struct fidc_membh *, struct fidc_membh *, const char *);
