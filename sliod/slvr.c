@@ -363,9 +363,9 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		 *   that the sliver isn't freed from under us.
 		 * Note that SLVR_WAIT() regains the lock.
 		 */
+		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 		SLVR_WAIT(s);
 		psc_assert(s->slvr_flags & SLVR_DATARDY);
-		psc_assert(s->slvr_flags & SLVR_PINNED);
 			   
 		psc_assert(psclist_conjoint(&s->slvr_lentry));
 		goto out;
