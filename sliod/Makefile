@@ -10,6 +10,7 @@ SRCS+=		repl_iod.c
 SRCS+=		ric.c
 SRCS+=		rii.c
 SRCS+=		rim.c
+SRCS+=		rmi.c
 SRCS+=		rpc_iod.c
 SRCS+=		sliod_int.c
 SRCS+=		slvr.c

@@ -107,43 +107,43 @@ rpc_initsvc(void)
 
 	/* Setup request service for MDS from ION. */
 	svh = PSCALLOC(sizeof(*svh));
-	svh->svh_nbufs = SRMI_NBUFS;
-	svh->svh_bufsz = SRMI_BUFSZ;
-	svh->svh_reqsz = SRMI_BUFSZ;
-	svh->svh_repsz = SRMI_REPSZ;
+	svh->svh_nbufs = SLM_RMI_NBUFS;
+	svh->svh_bufsz = SLM_RMI_BUFSZ;
+	svh->svh_reqsz = SLM_RMI_BUFSZ;
+	svh->svh_repsz = SLM_RMI_REPSZ;
 	svh->svh_req_portal = SRMI_REQ_PORTAL;
 	svh->svh_rep_portal = SRMI_REP_PORTAL;
 	svh->svh_type = SLMTHRT_RMI;
-	svh->svh_nthreads = SRMI_NTHREADS;
+	svh->svh_nthreads = SLM_RMI_NTHREADS;
 	svh->svh_handler = slrmi_handler;
-	strlcpy(svh->svh_svc_name, SRMI_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLM_RMI_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmi_thread);
 
 	/* Setup request service for MDS from MDS. */
 	svh = PSCALLOC(sizeof(*svh));
-	svh->svh_nbufs = SRMM_NBUFS;
-	svh->svh_bufsz = SRMM_BUFSZ;
-	svh->svh_reqsz = SRMM_BUFSZ;
-	svh->svh_repsz = SRMM_REPSZ;
+	svh->svh_nbufs = SLM_RMM_NBUFS;
+	svh->svh_bufsz = SLM_RMM_BUFSZ;
+	svh->svh_reqsz = SLM_RMM_BUFSZ;
+	svh->svh_repsz = SLM_RMM_REPSZ;
 	svh->svh_req_portal = SRMM_REQ_PORTAL;
 	svh->svh_rep_portal = SRMM_REP_PORTAL;
 	svh->svh_type = SLMTHRT_RMM;
-	svh->svh_nthreads = SRMM_NTHREADS;
+	svh->svh_nthreads = SLM_RMM_NTHREADS;
 	svh->svh_handler = slrmm_handler;
-	strlcpy(svh->svh_svc_name, SRMM_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLM_RMM_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmm_thread);
 
 	/* Setup request service for MDS from client. */
 	svh = PSCALLOC(sizeof(*svh));
-	svh->svh_nbufs = SRMC_NBUFS;
-	svh->svh_bufsz = SRMC_BUFSZ;
-	svh->svh_reqsz = SRMC_BUFSZ;
-	svh->svh_repsz = SRMC_REPSZ;
+	svh->svh_nbufs = SLM_RMC_NBUFS;
+	svh->svh_bufsz = SLM_RMC_BUFSZ;
+	svh->svh_reqsz = SLM_RMC_BUFSZ;
+	svh->svh_repsz = SLM_RMC_REPSZ;
 	svh->svh_req_portal = SRMC_REQ_PORTAL;
 	svh->svh_rep_portal = SRMC_REP_PORTAL;
 	svh->svh_type = SLMTHRT_RMC;
-	svh->svh_nthreads = SRMC_NTHREADS;
+	svh->svh_nthreads = SLM_RMC_NTHREADS;
 	svh->svh_handler = slrmc_handler;
-	strlcpy(svh->svh_svc_name, SRMC_SVCNAME, sizeof(svh->svh_svc_name));
+	strlcpy(svh->svh_svc_name, SLM_RMC_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmc_thread);
 }

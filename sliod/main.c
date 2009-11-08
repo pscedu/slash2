@@ -31,7 +31,7 @@ const char *progname;
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
-	if (strstr(namefmt, "lnetacthr"))
+	if (strstr(namefmt, "lnacthr"))
 		return (SLITHRT_LNETAC);
 	return (SLITHRT_USKLNDPL);
 }
@@ -54,11 +54,10 @@ usage(void)
 	exit(1);
 }
 
-
 int
 main(int argc, char *argv[])
 {
-	const char *cfn, *sfn, *mds_nid;
+	const char *cfn, *sfn, *mds;
 	int c;
 
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -110,10 +109,10 @@ main(int argc, char *argv[])
 	rpc_initsvc();
 	slitimerthr_spawn();
 
-	if ((mds_nid = getenv("SLASH_MDS_NID")) == NULL)
+	if ((mds = getenv("SLASH_MDS_NID")) == NULL)
 		psc_fatalx("please export SLASH_MDS_NID");
 
-	if (sli_rmi_issue_connect(mds_nid))
+	if (sli_rmi_connect(mds))
 		psc_fatalx("MDS server unavailable");
 
 	slictlthr_main(sfn);

@@ -43,7 +43,8 @@ PSCTHR_MKCAST(slirimthr, slirim_thread, SLITHRT_RIM)
 PSCTHR_MKCAST(sliriithr, slirii_thread, SLITHRT_RII)
 
 struct iod_resm_info {
-	struct slashrpc_service	*iri_csvc;
+	struct slashrpc_cservice *iri_csvc;
+	struct sl_resm		*iri_resm;
 };
 
 void	sliric_init(void);

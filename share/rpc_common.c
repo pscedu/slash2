@@ -94,17 +94,39 @@ rpc_csvc_fromexp(struct pscrpc_export *exp, uint32_t rqptl, uint32_t rpptl)
 struct slashrpc_cservice *
 slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
     lnet_nid_t peernid, uint32_t rqptl, uint32_t rpptl, uint64_t magic,
-    uint32_t version)
+    uint32_t version, enum slconn_type ctype)
 {
 	struct slashrpc_cservice *csvc;
+	struct sl_resm *resm;
 	int rc;
 
 	if (*csvcp == NULL) {
+		if (exp)
+			peernid = exp->exp_connection->c_peer.nid;
+
+		/* ensure peer is of the given type */
+		switch (ctype) {
+		case SLCONNT_CLI:
+			break;
+		case SLCONNT_IOD:
+			resm = libsl_nid2resm(peernid);
+			if (resm->resm_res->res_mds)
+				return (NULL);
+			break;
+		case SLCONNT_MDS:
+			resm = libsl_nid2resm(peernid);
+			if (!resm->resm_res->res_mds)
+				return (NULL);
+			break;
+		}
+
+		/* initialize service */
 		*csvcp = rpc_csvc_create(rqptl, rpptl);
 		if (exp) {
 			atomic_inc(&exp->exp_connection->c_refcount);
 			(*csvcp)->csvc_import->imp_connection = exp->exp_connection;
 			csvc->csvc_initialized = 1;
+
 		}
 	}
 	csvc = *csvcp;

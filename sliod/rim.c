@@ -18,7 +18,7 @@
 #include "sliod.h"
 
 int
-slrim_handle_repl_schedwk(struct pscrpc_request *rq)
+sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 {
 	struct srm_repl_schedwk_req *mq;
 	struct srm_generic_rep *mp;
@@ -29,7 +29,7 @@ slrim_handle_repl_schedwk(struct pscrpc_request *rq)
 }
 
 int
-slrim_handle_connect(struct pscrpc_request *rq)
+sli_rim_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
@@ -47,10 +47,10 @@ sli_rim_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_REPL_SCHEDWK:
-		rc = slrim_handle_repl_schedwk(rq);
+		rc = sli_rim_handle_repl_schedwk(rq);
 		break;
 	case SRMT_CONNECT:
-		rc = slrim_handle_connect(rq);
+		rc = sli_rim_handle_connect(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
@@ -58,44 +58,5 @@ sli_rim_handler(struct pscrpc_request *rq)
 		return (pscrpc_error(rq));
 	}
 	target_send_reply_msg(rq, rc, 0);
-	return (rc);
-}
-
-int
-sli_rmi_issue_connect(const char *name)
-{
-	lnet_nid_t nid;
-
-	nid = libcfs_str2nid(name);
-	if (nid == LNET_NID_ANY)
-		psc_fatalx("invalid server name: %s", name);
-
-	if (rpc_issue_connect(nid, rmi_csvc->csvc_import,
-	    SRMI_MAGIC, SRMI_VERSION)) {
-		psc_error("rpc_connect %s", name);
-		return (-1);
-	}
-	return (0);
-}
-
-int
-sli_rmi_issue_repl_schedwk(uint64_t nid, uint64_t fid, sl_bmapno_t bmapno,
-    int rv)
-{
-	struct srm_repl_schedwk_req *mq;
-	struct srm_generic_rep *mp;
-	struct pscrpc_request *rq;
-	int rc;
-
-	rc = RSX_NEWREQ(rmi_csvc->csvc_import,
-	    SRMI_VERSION, SRMT_REPL_SCHEDWK, rq, mq, mp);
-	if (rc)
-		return (rc);
-	mq->nid = nid;
-	mq->fid = fid;
-	mq->bmapno = bmapno;
-	mq->rc = rv;
-	rc = RSX_WAITREP(rq, mp);
-	pscrpc_req_finished(rq);
 	return (rc);
 }
