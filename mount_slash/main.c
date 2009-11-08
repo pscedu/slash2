@@ -1726,7 +1726,7 @@ struct fuse_lowlevel_ops zfs_operations = {
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
-	if (strstr(namefmt, "lnetacthr"))
+	if (strstr(namefmt, "lnacthr"))
 		return (MSTHRT_LNETAC);
 	return (MSTHRT_USKLNDPL);
 }

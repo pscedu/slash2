@@ -35,7 +35,7 @@ struct slash_creds rootcreds = { 0, 0 };
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
-	if (strstr(namefmt, "lnetacthr"))
+	if (strstr(namefmt, "lnacthr"))
 		return (SLMTHRT_LNETAC);
 	return (SLMTHRT_USKLNDPL);
 }
