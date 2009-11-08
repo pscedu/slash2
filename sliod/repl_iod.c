@@ -4,9 +4,12 @@
 
 #include "psc_ds/listcache.h"
 #include "psc_ds/pool.h"
+#include "psc_rpc/rpc.h"
 
 #include "repl_iod.h"
 #include "rpc_iod.h"
+#include "sliod.h"
+#include "slerr.h"
 #include "sltypes.h"
 
 struct psc_poolmaster	 repl_workrq_poolmaster;
@@ -67,14 +70,33 @@ slireplinfthr_main(void *arg)
 __dead void *
 slireplpndthr_main(void *arg)
 {
+	struct slashrpc_cservice *csvc;
 	struct psc_thread *thr = arg;
 	struct sli_repl_workrq *w;
-	int rc;
+	char buf[PSC_NIDSTR_SIZE];
+	struct sl_resm *resm;
 
 	for (;;) {
 		w = lc_getwait(&repl_workq_pending);
-//		rc = sli_rii_issue_read(imp, w->rwkrq_fid, w->rwkrq_bmapno);
+		resm = libsl_nid2resm(w->srw_nid);
+		if (resm == NULL) {
+			psc_errorx("%s: unknown resource member",
+			    psc_nid2str(w->srw_nid, buf));
+			w->srw_status = SLERR_ION_UNKNOWN;
+			sli_rmi_issue_repl_schedwk(w);
+			psc_pool_return(repl_workrq_pool, w);
+			goto next;
+		}
+		csvc = sli_geticonn(resm);
+		if (csvc == NULL) {
+			w->srw_status = SLERR_ION_OFFLINE;
+			sli_rmi_issue_repl_schedwk(w);
+			psc_pool_return(repl_workrq_pool, w);
+			goto next;
+		}
+		w->srw_status = sli_rii_issue_read(csvc->csvc_import, w);
 		lc_add(&repl_workq_inflight, w);
+ next:
 		sched_yield();
 	}
 }
