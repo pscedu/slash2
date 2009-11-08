@@ -11,5 +11,7 @@ char *slstrerror(int);
 #define SLERR_REPLS_ALL_INACT		(_SLERR_START + 2)
 #define SLERR_INVALID_BMAP		(_SLERR_START + 3)
 #define SLERR_UNKNOWN_IOS		(_SLERR_START + 4)
+#define SLERR_ION_UNKNOWN		(_SLERR_START + 5)
+#define SLERR_ION_OFFLINE		(_SLERR_START + 6)
 
 #endif /* _SLERR_H_ */

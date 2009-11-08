@@ -13,6 +13,8 @@ char *slash_errstrs[] = {
 	"All replicas inactive",
 	"Invalid bmap",
 	"Unknown I/O system",
+	"Unknown I/O node",
+	"I/O node connection coud not be established",
 	NULL
 };
 
