@@ -45,4 +45,8 @@ struct msctlmsg_replrq {
 #define MSCMT_GETREPLST_SLAVE	(NPCMT + 3)
 #define MSCMT_RECONFIG		(NPCMT + 4)
 
+/* mount_slash control commands */
+#define MSCC_EXIT	0
+#define MSCC_RECONFIG	1
+
 #endif /* _SL_CTL_CLI_H_ */

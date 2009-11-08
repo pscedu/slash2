@@ -5,8 +5,9 @@
  * parameters of a running sliod instance.
  */
 
-/* slricthr stats */
+/* sliricthr stats */
 #define pcst_nwrite	pcst_u32_1
 
-/* custom sliod ctlmsg types */
-#define SICMT_RECONFIG		(NPCMT + 0)
+/* sliod control commands */
+#define SICC_EXIT	0
+#define SICC_RECONFIG	1

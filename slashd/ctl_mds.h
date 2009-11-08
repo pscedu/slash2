@@ -10,5 +10,6 @@
 #define pcst_nstat	pcst_u32_2
 #define pcst_nclose	pcst_u32_3
 
-/* custom slashd ctlmsg types */
-#define SMCMT_RECONFIG		(NPCMT + 0)
+/* slashd control commands */
+#define SMCC_EXIT	0
+#define SMCC_RECONFIG	1
