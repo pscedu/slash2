@@ -134,8 +134,9 @@ global port=1000;
 global net=tcp10;
 
 site @sitename {
-	site_desc = "Site Name";
-	site_id = 40;
+	site_desc	= "Site Name";
+	site_id		= 40;
+
 	resource parfs {
 		desc	= "parallel file system";
 		type	= parallel_fs;
@@ -147,6 +148,7 @@ site @sitename {
 		peers	= supercomputer@sitename,
 			  bigstore@sitename;
 	}
+
 	resource bigstore {
 		desc	= "archival storage system";
 		type	= archival_fs;
@@ -157,12 +159,14 @@ site @sitename {
 			  128.182.112.226;
 		peers	= parfs@sitename;
 	}
+
 	resource supercomputer {
 		desc	= "computation resource";
 		type	= compute;
 		id	= 2;
 		peers	= parfs@sitename;
 	}
+
 	resource user_pc {
 		desc	= "user home network";
 		type	= archival_fs;
@@ -170,6 +174,7 @@ site @sitename {
 		ifs	= 67.171.74.150;
 		peers	= parfs@sitename;
 	}
+
 	resource test {
 		mds	= yes;
 		desc	= "test network";
