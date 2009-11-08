@@ -3,6 +3,8 @@
 
 set -e
 
+ulimit -c 0
+
 base=$(pwd)/$(dirname $0)
 
 cd $base 2>/dev/null
