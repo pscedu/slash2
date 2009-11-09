@@ -4,7 +4,9 @@ include ../Makefile.path
 
 PROG=		slconfig_test
 SRCS+=		slconfig_test.c
+SRCS+=		${SLASH_BASE}/share/cfg_common.c
 SRCS+=		${SLASH_BASE}/share/lconf.l
+SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_ds/hash.c
