@@ -683,7 +683,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		psc_assert(s->slvr_slab);
 
 		if (slvr_lru_slab_freeable(s)) {
-			/* At this point we know that the slb can be 
+			/* At this point we know that the slab can be 
 			 *   reclaimed, however the slvr itself may 
 			 *   have to stay.
 			 */
@@ -707,7 +707,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			psc_assert(!(s->slvr_flags & SLVR_FREEING));
 			psc_assert(s->slvr_slab);
 
-			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slb=%p", s->slvr_slb);
+			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slab=%p", s->slvr_slab);
 			s->slvr_flags &= ~SLVR_SLBFREEING;
 			psc_pool_return(m, s->slvr_slab);
 			s->slvr_slab = NULL;
