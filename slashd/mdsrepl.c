@@ -960,10 +960,11 @@ mds_repl_scandir(void)
  * For checking if communication exists between resources with busyid 1
  * and 2, we test the bit:
  *
- *	1 * (sz - (1-1)/2) + (2 - 1)
+ *	1 * (sz - (1-1)/2) + (2 - 1 - 1)
+ *	n * (sz - (n-1)/2) + (m - n - 1)
  */
 #define MDS_REPL_BUSYNODES(nnodes, min, max)				\
-	(((min) * ((nnodes) - ((min) - 1) / 2)) + ((max) - (min)))
+	(((min) * ((nnodes) - ((min) - 1) / 2)) + ((max) - (min) - 1))
 
 int
 mds_repl_nodes_getbusy(struct mds_resm_info *ma, struct mds_resm_info *mb)
