@@ -11,15 +11,16 @@
 struct fidc_membh;
 
 struct fidc_private {
-	struct fidc_membh  *fcc_parent;
-	struct fidc_membh  *fcc_fcmh;
-	struct slash_fidgen fcc_fg;
-	struct psclist_head fcc_lentry;
-	psc_spinlock_t      fcc_lock;
-	struct timespec		fcc_age;
-	atomic_t            fcc_ref;
-	int                 fcc_hash;
-	char                fcc_name[];
+	struct fidc_membh	*fcc_fcmh;		/* back pointer */
+	struct slash_fidgen	 fcc_fg;
+	struct fidc_membh	*fcc_parent;
+	struct psclist_head	 fcc_children;
+	struct psclist_head	 fcc_lentry;
+	psc_spinlock_t		 fcc_lock;
+	struct timespec		 fcc_age;
+	atomic_t		 fcc_ref;
+	int			 fcc_hash;
+	char			 fcc_name[];
 };
 
 struct fidc_membh *fidc_child_lookup(struct fidc_membh *, const char *);

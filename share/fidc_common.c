@@ -48,7 +48,7 @@ fidc_membh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 
 	if (fcmh_2_isdir(fcmh) && !(fcmh->fcmh_state & FCMH_ISDIR)) {
 		fcmh->fcmh_state |= FCMH_ISDIR;
-		INIT_PSCLIST_HEAD(&fcmh->fcmh_children);
+		INIT_PSCLIST_HEAD(&fcmh->fcmh_pri->fcc_children);
 	}
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attr set");
@@ -94,7 +94,7 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 		/* Verify that no children are hanging about.
 		 */
 		if (f->fcmh_state & FCMH_ISDIR)
-			psc_assert(psclist_empty(&f->fcmh_children));
+			psc_assert(psclist_empty(&f->fcmh_pri->fcc_children));
 
 		/* Valid sources of this inode.
 		 */
