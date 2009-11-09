@@ -659,8 +659,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	struct dynarray a = DYNARRAY_INIT;
 	int i, n=0;
 
-	psc_assert(m == slBufsPool);
-	
 	ENTRY;
 
 	LIST_CACHE_LOCK(&lruSlvrs);
@@ -699,9 +697,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 	for (i=0; i < dynarray_len(&a); i++) {
                 s = dynarray_getpos(&a, i);
-
-		psc_assert(s->slvr_flags & SLVR_SLBFREEING || 
-			   s->slvr_flags & SLVR_FREEING);
 
 		if (s->slvr_flags & SLVR_SLBFREEING) {			
 			struct sl_buffer *slb;
