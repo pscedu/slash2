@@ -56,20 +56,19 @@ slmsmthr_find_dst_ion(struct mds_resm_info *src)
 	smsmt = slmsmthr(thr);
 	site = smsmt->smsmt_site;
 
-	spinlock(&repl_busy_table_lock);
+	spinlock(&repl_busytable_lock);
 	for (n = 0; n < site->site_nres; n++) {
 		r = site->site_resv[n];
 		for (j = 0; j < r->res_nnids; j++) {
 			resm = libsl_nid2resm(r->res_nids[j]);
 			dst = resm->resm_pri;
-			if (!psc_vbitmap_get(repl_busy_table,
-			    src->mri_busyid + dst->mri_busyid))
+			if (!mds_repl_nodes_getbusy(src, dst))
 				goto out;
 		}
 	}
 	resm = NULL;
  out:
-	freelock(&repl_busy_table_lock);
+	freelock(&repl_busytable_lock);
 	return (resm);
 }
 
@@ -235,11 +234,7 @@ slmsmthr_main(void *arg)
 		if (rc == 0) {
 			SL_REPL_SET_BMAP_IOS_STAT(
 			    bmapod->bh_repls, off, SL_REPL_SCHED);
-
-			spinlock(&repl_busy_table_lock);
-			psc_vbitmap_set(repl_busy_table,
-			    src_mri->mri_busyid + dst_mri->mri_busyid);
-			freelock(&repl_busy_table_lock);
+			mds_repl_nodes_setbusy(src_mri, dst_mri, 1);
 		}
 		mds_repl_bmap_rel(bcm);
 		mds_repl_unrefrq(rrq);

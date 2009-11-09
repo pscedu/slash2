@@ -36,8 +36,9 @@ struct psc_poolmaster	 replrq_poolmaster;
 struct psc_poolmgr	*replrq_pool;
 psc_spinlock_t		 replrq_tree_lock = LOCK_INITIALIZER;
 
-struct vbitmap		*repl_busy_table;
-psc_spinlock_t		 repl_busy_table_lock = LOCK_INITIALIZER;
+struct vbitmap		*repl_busytable;
+psc_spinlock_t		 repl_busytable_lock = LOCK_INITIALIZER;
+int			 repl_busytable_nents;
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -937,6 +938,86 @@ mds_repl_scandir(void)
 	free(buf);
 }
 
+/*
+ * The replication busy table is a bitmap to allow quick lookups of
+ * communication status between arbitrary IONs.  Each resm has a unique
+ * busyid:
+ *
+ *	 busyid +---+---+---+---+---+---+	n | off, sz=6	| diff
+ *	      0	| 1 | 2 | 3 | 4 | 5 | 6 |	--+-------------------
+ *		+---+---+---+---+---+---+	0 |  0		|
+ *	      1	| 2 | 3 | 4 | 5 | 6 |		1 |  6		| 6
+ *		+---+---+---+---+---+		2 | 11		| 5
+ *	      2	| 3 | 4 | 5 | 6 |		3 | 15		| 4
+ *		+---+---+---+---+		4 | 18		| 3
+ *	      3	| 4 | 5 | 6 |			5 | 20		| 2
+ *		+---+---+---+			--+-------------------
+ *	      4	| 5 | 6 |			n | n * (sz - (n-1)/2)
+ *		+---+---+
+ *	      5	| 6 |
+ *		+---+
+ *
+ * For checking if communication exists between resources with busyid 1
+ * and 2, we test the bit:
+ *
+ *	1 * (sz - (1-1)/2) + (2 - 1)
+ */
+#define MDS_REPL_BUSYNODES(nnodes, min, max)				\
+	(((min) * ((nnodes) - ((min) - 1) / 2)) + ((max) - (min)))
+
+int
+mds_repl_nodes_getbusy(struct mds_resm_info *ma, struct mds_resm_info *mb)
+{
+	struct mds_resm_info *min, *max;
+	int rc, locked;
+
+	psc_assert(ma->mri_busyid != mb->mri_busyid);
+
+	if (ma->mri_busyid < mb->mri_busyid) {
+		min = ma;
+		max = mb;
+	} else {
+		min = mb;
+		max = ma;
+	}
+
+	locked = reqlock(&repl_busytable_lock);
+	rc = psc_vbitmap_get(repl_busytable,
+	    MDS_REPL_BUSYNODES(repl_busytable_nents,
+	    min->mri_busyid, max->mri_busyid));
+	ureqlock(&repl_busytable_lock, locked);
+	return (rc);
+}
+
+void
+mds_repl_nodes_setbusy(struct mds_resm_info *ma, struct mds_resm_info *mb,
+    int busy)
+{
+	struct mds_resm_info *min, *max;
+	int locked;
+
+	psc_assert(ma->mri_busyid != mb->mri_busyid);
+
+	if (ma->mri_busyid < mb->mri_busyid) {
+		min = ma;
+		max = mb;
+	} else {
+		min = mb;
+		max = ma;
+	}
+
+	locked = reqlock(&repl_busytable_lock);
+	if (busy)
+		psc_vbitmap_set(repl_busytable,
+		    MDS_REPL_BUSYNODES(repl_busytable_nents,
+		    min->mri_busyid, max->mri_busyid));
+	else
+		psc_vbitmap_unset(repl_busytable,
+		    MDS_REPL_BUSYNODES(repl_busytable_nents,
+		    min->mri_busyid, max->mri_busyid));
+	ureqlock(&repl_busytable_lock, locked);
+}
+
 void
 mds_repl_buildbusytable(void)
 {
@@ -945,25 +1026,28 @@ mds_repl_buildbusytable(void)
 	struct sl_resm *resm;
 	struct sl_site *s;
 	uint32_t j;
-	int n, bid;
+	int n;
 
 	/* count # resm's (IONs) and assign each a busy identifier */
-	bid = 0;
+	PLL_LOCK(&globalConfig.gconf_sites);
+	spinlock(&repl_busytable_lock);
+	repl_busytable_nents = 0;
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		for (n = 0; n < s->site_nres; n++) {
 			r = s->site_resv[n];
 			for (j = 0; j < r->res_nnids; j++) {
 				resm = libsl_nid2resm(r->res_nids[j]);
 				mri = resm->resm_pri;
-				mri->mri_busyid = bid++;
+				mri->mri_busyid = repl_busytable_nents++;
 			}
 		}
+	PLL_ULOCK(&globalConfig.gconf_sites);
 
-	spinlock(&repl_busy_table_lock);
-	if (repl_busy_table)
-		vbitmap_free(repl_busy_table);
-	repl_busy_table = vbitmap_new(bid * (bid - 1) / 2);
-	freelock(&repl_busy_table_lock);
+	if (repl_busytable)
+		vbitmap_free(repl_busytable);
+	repl_busytable = vbitmap_new(repl_busytable_nents *
+	    (repl_busytable_nents - 1) / 2);
+	freelock(&repl_busytable_lock);
 }
 
 void
