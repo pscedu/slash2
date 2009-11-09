@@ -245,11 +245,11 @@ fidc_reap(struct psc_poolmgr *m)
 			 */
 			if ((fidcReapCb)(f))
 				goto end1;
-		}
 
-		f->fcmh_state |= FCMH_CAC_FREEING;
-		lc_del(&f->fcmh_lentry, &fidcCleanList);
-		dynarray_add(&da, f);
+			f->fcmh_state |= FCMH_CAC_FREEING;
+			lc_del(&f->fcmh_lentry, &fidcCleanList);
+			dynarray_add(&da, f);
+		}
  end1:
 		freelock(&f->fcmh_lock);
  end2:
