@@ -212,7 +212,7 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
  *	responsible for notifying the fcmh reaper if the fcmh is
  *	eligible for reaping.
  * @f: the fcmh which is trying to be freed.
- * Returns: '0' if reapable, '1' if unreapable.
+ * Returns: '1' if reapable, '0' if unreapable.
  */
 int
 fidc_child_reap_cb(struct fidc_membh *f)
@@ -232,14 +232,14 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	if ((fcc && atomic_read(&fcc->fcc_ref)) ||
 	    ((f->fcmh_state & FCMH_ISDIR) &&
 	     (!psclist_empty(&f->fcmh_children))))
-		return (1);
+		return (0);
 
 	else if (!fcc)
-		return (0);
+		return (1);
 
 	else if (!fcc->fcc_parent) {
 		fidc_child_free_orphan_locked(f);
-		return (0);
+		return (1);
 
 	} else {
 		/* The parent needs to be unlocked after the fcc is freed,
@@ -255,10 +255,10 @@ fidc_child_reap_cb(struct fidc_membh *f)
 		if (trylock(&p->fcmh_lock)) {
 			fidc_child_free_plocked(fcc);
 			freelock(&p->fcmh_lock);
-			return (0);
+			return (1);
 		}
 	}
-	return (1);
+	return (0);
 }
 
 /**

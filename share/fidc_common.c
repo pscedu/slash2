@@ -238,14 +238,11 @@ fidc_reap(struct psc_poolmgr *m)
 		if (f->fcmh_state & FCMH_CAC_FREEING)
 			goto end1;
 
-		if (fidcReapCb) {
-			/* Call into the system specific 'reap' code.
-			 *  On the client this means taking the fcc from the
-			 *  parent directory inode.
-			 */
-			if ((fidcReapCb)(f))
-				goto end1;
-
+		/* Call into the system specific 'reap' code.
+		 *  On the client this means taking the fcc from the
+		 *  parent directory inode.
+		 */
+		if (fidcReapCb && ((fidcReapCb)(f))) {
 			f->fcmh_state |= FCMH_CAC_FREEING;
 			lc_del(&f->fcmh_lentry, &fidcCleanList);
 			dynarray_add(&da, f);
