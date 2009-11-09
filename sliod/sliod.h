@@ -44,7 +44,8 @@ PSCTHR_MKCAST(sliriithr, slirii_thread, SLITHRT_RII)
 
 struct iod_resm_info {
 	struct slashrpc_cservice *iri_csvc;
-	struct sl_resm		*iri_resm;
+	psc_spinlock_t		  iri_lock;
+	struct psc_waitq	  iri_waitq;
 };
 
 void	sliric_init(void);

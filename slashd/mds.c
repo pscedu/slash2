@@ -507,7 +507,7 @@ mds_mion_init(struct mexp_ion *mion, struct sl_resm *resm)
  * mds_bmap_ion_assign - bind a bmap to a ion node for writing.  The process
  *    involves a round-robin'ing of an i/o system's nodes and attaching a
  *    a mexp_ion to the bmap.  The mexp_ion is stored in the i/o node's
- *    resouce_member struct (resm_pri).  It is here that an initial connection
+ *    resouce_member struct (resm_pri->rmi_data).  It is here that an initial connection
  *    to the i/o node is created.
  * @bref: the bmap reference
  * @pios: the preferred i/o system
@@ -552,42 +552,26 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 				   libcfs_nid2str(res->res_nids[n]));
 		freelock(&rmi->rmi_lock);
 
-		psc_assert(resm->resm_pri);
 		mri = resm->resm_pri;
 		spinlock(&mri->mri_lock);
 
-		if (!mri->mri_csvc) 
-			mri->mri_csvc = rpc_csvc_create(SRIM_REQ_PORTAL, 
-							SRIM_REP_PORTAL);
-
 		if (!mri->mri_data) {
-			mion = mri->mri_data = PSCALLOC(sizeof(*mion));
+			mri->mri_data = PSCALLOC(sizeof(*mion));
 			mds_mion_init(mion, resm);
-		} else
-			mion = mri->mri_data;
-		
-		DEBUG_BMAP(PLL_TRACE, bmap,
-		    "res(%s) ion(%s) init=%d, failed=%d",
-		    res->res_name, libcfs_nid2str(res->res_nids[n]),
-		    mri->mri_csvc->csvc_initialized,
-		    mri->mri_csvc->csvc_failed);
+		}
+		mion = mri->mri_data;
 
-		if (mri->mri_csvc->csvc_failed)
+		DEBUG_BMAP(PLL_TRACE, bmap,
+		    "res(%s) ion(%s) flags=%x",
+		    res->res_name, libcfs_nid2str(res->res_nids[n]),
+		    mri->mri_csvc->csvc_flags);
+
+		if (slm_geticonn(resm) == NULL)
 			goto end_loop;
 
-		if (!mri->mri_csvc->csvc_initialized) {
-			rc = rpc_issue_connect(res->res_nids[n],
-			    mri->mri_csvc->csvc_import,
-			    SRIM_MAGIC, SRIM_VERSION);
-			if (rc) {
-				mri->mri_csvc->csvc_failed = 1;
-				goto end_loop;
-			} else
-				mri->mri_csvc->csvc_initialized = 1;
-		}
 		atomic_inc(&mion->mi_refcnt);
 		mdsi->bmdsi_wr_ion = mion;
-	end_loop:
+ end_loop:
 		freelock(&mri->mri_lock);
 	} while (--x);
 

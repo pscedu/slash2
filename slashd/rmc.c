@@ -30,6 +30,7 @@
 #include "mdsio_zfs.h"
 #include "pathnames.h"
 #include "repl_mds.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slashexport.h"
 #include "slashrpc.h"
@@ -96,19 +97,10 @@ slrmc_connect(struct pscrpc_request *rq)
 	psc_assert(!slexp->slexp_data);
 	slexp->slexp_type = MDS_CLI_EXP;
 	slexp->slexp_export = e;
-	/* XXX allocated twice? slashrpc_export_get() */
+
 	mexp_cli = slexp->slexp_data = PSCALLOC(sizeof(*mexp_cli));
-	/* Allocate client service for callbacks.
-	 */
-	mexp_cli->mc_csvc = rpc_csvc_create(SRCM_REQ_PORTAL, SRCM_REP_PORTAL);
-	if (!mexp_cli->mc_csvc)
-		psc_fatal("rpc_csvc_create() failed");
-	/* See how this works out, I'm just going to borrow
-	 *   the export's  connection structure.
-	 */
-	psc_assert(e->exp_connection);
-	mexp_cli->mc_csvc->csvc_import->imp_connection = e->exp_connection;
-	freelock(&e->exp_lock);
+	LOCK_INIT(&mexp_cli->mc_lock);
+	slm_initclconn(mexp_cli, e);
 
 	RETURN(0);
 }

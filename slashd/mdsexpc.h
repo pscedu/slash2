@@ -73,32 +73,21 @@ enum mexpbcm_modes {
 	MEXPBCM_RPC_CANCEL = (1<<7)
 };
 
-static inline int
+static __inline int
 mexpbmapc_cmp(const void *x, const void *y)
 {
 	const struct mexpbcm *a = x, *b = y;
 
-	if (a->mexpbcm_blkno > b->mexpbcm_blkno)
-		return (1);
-	if (a->mexpbcm_blkno < b->mexpbcm_blkno)
-		return (-1);
-	return (0);
+	return (CMP(a->mexpbcm_blkno, b->mexpbcm_blkno));
 }
 
-static inline int
+static __inline int
 mexpbmapc_exp_cmp(const void *x, const void *y)
 {
 	const struct mexpbcm *a = x, *b = y;
-	struct pscrpc_export *e, *f;
 
-	e = a->mexpbcm_export;
-	f = b->mexpbcm_export;
-
-	if (e->exp_connection->c_peer.nid > f->exp_connection->c_peer.nid)
-		return (1);
-	if (e->exp_connection->c_peer.nid < f->exp_connection->c_peer.nid)
-		return (-1);
-	return (0);
+	return (CMP(a->mexpbcm_export->exp_connection->c_peer.nid,
+	    b->mexpbcm_export->exp_connection->c_peer.nid));
 }
 
 SPLAY_HEAD(exp_bmaptree, mexpbcm);
@@ -138,21 +127,18 @@ enum mexpfcm_states {
 #define mexpfcm2fid(m)		fcmh_2_fid((m)->mexpfcm_fcmh)
 #define mexpfcm2fidgen(m)	fcmh_2_fgp((m)->mexpfcm_fcmh)
 
-static inline int
+static __inline int
 mexpfcm_cache_cmp(const void *x, const void *y)
 {
 	const struct mexpfcm *a=x, *b=y;
 
-	if (a->mexpfcm_export > b->mexpfcm_export)
-		return 1;
-	else if (a->mexpfcm_export < b->mexpfcm_export)
-		return -1;
-	return 0;
+	return (CMP(a->mexpfcm_export, b->mexpfcm_export));
 }
 
 struct mexp_cli {
 	struct timespec           mc_lastping;
 	struct slashrpc_cservice *mc_csvc;
+	psc_spinlock_t		  mc_lock;
 };
 
 /*
@@ -171,14 +157,6 @@ struct mexp_ion {
  * bmap_exports is used to reference the exports which are accessing this bmap.
  */
 SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
-
-
-/* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
- */
-struct resprof_mds_info {
-	int rmi_cnt;
-	psc_spinlock_t rmi_lock;
-};
 
 extern void
 mexpfcm_release_brefs(struct mexpfcm *);

@@ -75,9 +75,16 @@ struct mds_resm_info {
 	struct slashrpc_cservice *mri_csvc;
 	struct psc_waitq	  mri_waitq;
 	struct timespec           mri_lastping;
-	int			  mri_busyid;	
+	int			  mri_busyid;
 	struct sl_resm           *mri_resm;
 	void                     *mri_data;
+};
+
+/* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
+ */
+struct resprof_mds_info {
+	int			  rmi_cnt;
+	psc_spinlock_t		  rmi_lock;
 };
 
 /* cfd private accessors */

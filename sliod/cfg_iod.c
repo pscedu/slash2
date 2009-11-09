@@ -3,6 +3,7 @@
 #include "psc_util/alloc.h"
 
 #include "slconfig.h"
+#include "sliod.h"
 
 struct sl_resource *
 slcfg_new_res(void)
@@ -16,9 +17,14 @@ slcfg_new_res(void)
 struct sl_resm *
 slcfg_new_resm(void)
 {
+	struct iod_resm_info *iri;
 	struct sl_resm *resm;
 
 	resm = PSCALLOC(sizeof(*resm));
+	iri = resm->resm_pri = PSCALLOC(sizeof(*iri));
+	LOCK_INIT(&iri->iri_lock);
+	psc_waitq_init(&iri->iri_waitq);
+
 	return (resm);
 }
 

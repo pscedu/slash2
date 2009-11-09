@@ -29,17 +29,20 @@ struct pscrpc_export;
 /* aliases for connection management */
 #define slm_geticonn(resm)						\
 	slconn_get(&resm2mri(resm)->mri_csvc, NULL, (resm)->resm_nid,	\
-	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION)
+	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION,	\
+	    &resm2mri(resm)->mri_lock, &resm2mri(resm)->mri_waitq, SLCONNT_IOD)
 
 #define slm_getmconn(resm)						\
 	slconn_get(&resm2mri(resm)->mri_csvc, NULL, (resm)->resm_nid,	\
-	    SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC, SRMM_VERSION)
+	    SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC, SRMM_VERSION,	\
+	    &resm2mri(resm)->mri_lock, &resm2mri(resm)->mri_waitq, SLCONNT_MDS)
 
-#define slm_initclconn(csvc, exp)					\
-	slconn_get(&(csvc), (exp), 0, SRCM_REQ_PORTAL, SRCM_REP_PORTAL,	\
-	    SRCM_MAGIC, SRCM_VERSION)
+#define slm_initclconn(mexpcli, exp)					\
+	slconn_get(&(mexpcli)->mc_csvc, (exp), LNET_NID_ANY,		\
+	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,	\
+	    &(mexpcli)->mc_lock, NULL, SLCONNT_CLI)
 
-#define slm_getclconn(csvc)		slm_rcm_initconn((csvc), NULL)
+#define slm_getclconn(mexpcli)		slm_initclconn((mexpcli), NULL)
 
 void	rpc_initsvc(void);
 

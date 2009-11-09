@@ -574,25 +574,23 @@ struct srm_generic_rep {
 
 struct slashrpc_cservice {
 	struct pscrpc_import	*csvc_import;
-	psc_spinlock_t		 csvc_lock;
-	int			 csvc_failed;
-	int			 csvc_initialized;
-	struct psc_waitq	 csvc_waitq;
+	int			 csvc_flags;
 	time_t			 csvc_mtime;
 };
 
-#define CSVC_LOCK(c)	spinlock(&(c)->csvc_lock)
-#define CSVC_ULOCK(c)	freelock(&(c)->csvc_lock)
+#define CSVCF_INIT	(1 << 0)
+#define CSVCF_FAILED	(1 << 1)
 
 enum slconn_type {
 	SLCONNT_CLI,
 	SLCONNT_IOD,
-	SLCONNT_MDS,
+	SLCONNT_MDS
 };
 
 struct slashrpc_cservice *
 	slconn_get(struct slashrpc_cservice **, struct pscrpc_export *,
-	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t, enum slconn_type);
+	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
+	    psc_spinlock_t *, struct psc_waitq *, enum slconn_type);
 void	slashrpc_export_destroy(void *);
 void	slashrpc_csvc_free(struct slashrpc_cservice *);
 

@@ -13,6 +13,7 @@
 #include "cfd.h"
 #include "fidc_mds.h"
 #include "mdsexpc.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slashexport.h"
 #include "slashrpc.h"
@@ -112,7 +113,7 @@ mdscoh_queue_req(struct mexpbcm *bref)
 	//struct slashrpc_export *slexp=bref->mexpbcm_export->exp_private;
 	struct slashrpc_export *slexp=exp->exp_private;
 	struct mexp_cli *mexpc=slexp->slexp_data;
-	struct slashrpc_cservice *csvc = mexpc->mc_csvc;
+	struct slashrpc_cservice *csvc;
 	int rc=0, mode=bref->mexpbcm_mode;
 
 	DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap, "bref=%p m=%u msgc=%u",
@@ -120,21 +121,9 @@ mdscoh_queue_req(struct mexpbcm *bref)
 
 	psc_assert(bref->mexpbcm_net_inf);
 
-	spinlock(&csvc->csvc_lock);
-	if (csvc->csvc_failed)
+	csvc = slm_getclconn(mexpc);
+	if (csvc == NULL)
 		return (-1);
-
-	if (!csvc->csvc_initialized) {
-		struct pscrpc_connection *c=
-			csvc->csvc_import->imp_connection;
-		rc = rpc_issue_connect(c->c_peer.nid, csvc->csvc_import,
-				       SRCM_MAGIC, SRCM_VERSION);
-		if (rc)
-			return (rc);
-		else
-			csvc->csvc_initialized = 1;
-	}
-	freelock(&csvc->csvc_lock);
 
 	rc = RSX_NEWREQ(csvc->csvc_import, SRCM_VERSION,
 	    SRMT_BMAPDIO, req, mq, mp);

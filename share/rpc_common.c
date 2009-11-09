@@ -64,12 +64,6 @@ rpc_csvc_create(uint32_t rqptl, uint32_t rpptl)
 
 	csvc = PSCALLOC(sizeof(*csvc));
 
-	LOCK_INIT(&csvc->csvc_lock);
-	psc_waitq_init(&csvc->csvc_waitq);
-
-	csvc->csvc_failed = 0;
-	csvc->csvc_initialized = 0;
-
 	if ((imp = pscrpc_new_import()) == NULL)
 		psc_fatalx("pscrpc_new_import");
 	csvc->csvc_import = imp;
@@ -94,11 +88,15 @@ rpc_csvc_fromexp(struct pscrpc_export *exp, uint32_t rqptl, uint32_t rpptl)
 struct slashrpc_cservice *
 slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
     lnet_nid_t peernid, uint32_t rqptl, uint32_t rpptl, uint64_t magic,
-    uint32_t version, enum slconn_type ctype)
+    uint32_t version, psc_spinlock_t *lk, struct psc_waitq *wq,
+    enum slconn_type ctype)
 {
-	struct slashrpc_cservice *csvc;
+	struct slashrpc_cservice *csvc = NULL;
 	struct sl_resm *resm;
-	int rc;
+	int rc, locked;
+
+	if (lk)
+		locked = reqlock(lk);
 
 	if (*csvcp == NULL) {
 		if (exp)
@@ -111,12 +109,12 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 		case SLCONNT_IOD:
 			resm = libsl_nid2resm(peernid);
 			if (resm->resm_res->res_mds)
-				return (NULL);
+				goto out;
 			break;
 		case SLCONNT_MDS:
 			resm = libsl_nid2resm(peernid);
 			if (!resm->resm_res->res_mds)
-				return (NULL);
+				goto out;
 			break;
 		}
 
@@ -125,28 +123,32 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 		if (exp) {
 			atomic_inc(&exp->exp_connection->c_refcount);
 			(*csvcp)->csvc_import->imp_connection = exp->exp_connection;
-			csvc->csvc_initialized = 1;
+			(*csvcp)->csvc_flags |= CSVCF_INIT;
 
 		}
 	}
 	csvc = *csvcp;
-	CSVC_LOCK(csvc);
-	if (!csvc->csvc_initialized || (csvc->csvc_failed &&
+	if ((csvc->csvc_flags & CSVCF_INIT) == 0 ||
+	    (csvc->csvc_flags & CSVCF_FAILED &&
 	    csvc->csvc_mtime + 30 < time(NULL))) {
+		psc_assert(peernid != LNET_NID_ANY);
+
 		rc = rpc_issue_connect(peernid, csvc->csvc_import,
 		    magic, version);
 		csvc->csvc_mtime = time(NULL);
 		if (rc)
-			csvc->csvc_failed = 1;
+			csvc->csvc_flags |= CSVCF_FAILED;
 		else {
-			psc_waitq_wakeall(&csvc->csvc_waitq);
-			csvc->csvc_initialized = 1;
-			csvc->csvc_failed = 0;
+			psc_waitq_wakeall(wq);
+			csvc->csvc_flags |= CSVCF_INIT;
+			csvc->csvc_flags &= ~CSVCF_FAILED;
 		}
 	}
-	rc = csvc->csvc_failed;
-	CSVC_ULOCK(csvc);
-	if (rc)
-		return (NULL);
+	if (csvc->csvc_flags & CSVCF_FAILED)
+		csvc = NULL;
+
+ out:
+	if (lk)
+		ureqlock(lk, locked);
 	return (csvc);
 }
