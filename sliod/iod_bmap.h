@@ -189,9 +189,8 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 static inline int
 slvr_lru_freeable(struct slvr_ref *s)
 {
-	int locked, freeable=0;
+	int freeable=0;
 
-	locked = SLVR_RLOCK(s);
 	if (s->slvr_slab || s->slvr_flags & SLVR_CRCDIRTY)
 		goto out;
 
@@ -199,7 +198,6 @@ slvr_lru_freeable(struct slvr_ref *s)
 
 	freeable = 1;
  out:
-	SLVR_URLOCK(s, locked);
 	return (freeable);
 }
 
