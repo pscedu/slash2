@@ -584,9 +584,18 @@ struct slashrpc_cservice {
 #define CSVC_LOCK(c)	spinlock(&(c)->csvc_lock)
 #define CSVC_ULOCK(c)	freelock(&(c)->csvc_lock)
 
-void	slashrpc_export_destroy(void *);
+enum slconn_type {
+	SLCONNT_CLI,
+	SLCONNT_IOD,
+	SLCONNT_MDS,
+};
 
+struct slashrpc_cservice *
+	slconn_get(struct slashrpc_cservice **, struct pscrpc_export *,
+	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t, enum slconn_type);
+void	slashrpc_export_destroy(void *);
 void	slashrpc_csvc_free(struct slashrpc_cservice *);
+
 struct slashrpc_cservice *
 	rpc_csvc_create(uint32_t, uint32_t);
 struct slashrpc_cservice *
