@@ -84,17 +84,17 @@ void		store_tok_val(const char *, char *);
 
 /* declare and initialize the global table */
 struct symtable sym_table[] = {
-	 TABENT_GLBL("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
-	 TABENT_GLBL("net",		SL_TYPE_INT,	0,		gconf_netid,	global_net_handler),
-	 TABENT_GLBL("keyfn",		SL_TYPE_STR,	PATH_MAX,	gconf_fdbkeyfn,	NULL),
-	 TABENT_SITE("site_id",		SL_TYPE_INT,	0,		site_id,	NULL),
-	 TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
-	 TABENT_RES ("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
-	 TABENT_RES ("type",		SL_TYPE_INT,	0,		res_type,	libsl_str2restype),
-	 TABENT_RES ("id",		SL_TYPE_INT,	0,		res_id,		NULL),
-	 TABENT_RES ("mds",		SL_TYPE_BOOL,	0,		res_mds,	NULL),
-	 TABENT_RES ("fsroot",		SL_TYPE_STR,	PATH_MAX,	res_fsroot,	NULL),
-	 { NULL, 0, 0, 0, 0, 0, NULL }
+	TABENT_GLBL("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
+	TABENT_GLBL("net",		SL_TYPE_INT,	0,		gconf_netid,	global_net_handler),
+	TABENT_GLBL("keyfn",		SL_TYPE_STR,	PATH_MAX,	gconf_fdbkeyfn,	NULL),
+	TABENT_SITE("site_id",		SL_TYPE_INT,	0,		site_id,	NULL),
+	TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
+	TABENT_RES ("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
+	TABENT_RES ("type",		SL_TYPE_INT,	0,		res_type,	libsl_str2restype),
+	TABENT_RES ("id",		SL_TYPE_INT,	0,		res_id,		NULL),
+	TABENT_RES ("mds",		SL_TYPE_BOOL,	0,		res_mds,	NULL),
+	TABENT_RES ("fsroot",		SL_TYPE_STR,	PATH_MAX,	res_fsroot,	NULL),
+	{ NULL, 0, 0, 0, 0, 0, NULL }
 };
 
 struct sl_gconf		 globalConfig;
@@ -116,6 +116,7 @@ struct sl_gconf		*currentConf = &globalConfig;
 %token EQ
 
 %token SEP
+%token ATSIGN
 %token NSEP
 
 %token SUB
@@ -144,8 +145,6 @@ struct sl_gconf		*currentConf = &globalConfig;
 %token INTERFACETAG
 %token QUOTEDS
 %token LNETTCP
-
-%token NONE
 
 %%
 
@@ -233,8 +232,7 @@ site_resources : site_resource              |
 site_resource  : site_resource_start resource_def SUBSECT_END
 {
 	currentRes->res_id = sl_global_id_build(currentSite->site_id,
-						currentRes->res_id,
-						currentRes->res_mds);
+						currentRes->res_id);
 
 	currentSite->site_resv = psc_realloc(currentSite->site_resv,
 	    sizeof(*currentSite->site_resv) * (currentSite->site_nres + 1), 0);
@@ -292,9 +290,9 @@ interfaces     : interface                 |
 		 interface NSEP interfaces
 {};
 
-interface      : IPADDR '@' LNETTCP	{ slcfg_addif($1, $3); free($3); }
+interface      : IPADDR ATSIGN LNETTCP	{ slcfg_addif($1, $3); free($3); }
 	       | IPADDR			{ slcfg_addif($1, currentConf->gconf_net); }
-	       | NAME '@' LNETTCP	{ slcfg_addif($1, $3); free($3); }
+	       | NAME ATSIGN LNETTCP	{ slcfg_addif($1, $3); free($3); }
 	       | NAME			{ slcfg_addif($1, currentConf->gconf_net); }
 	       ;
 
@@ -394,7 +392,7 @@ quoteds_stmt : NAME EQ QUOTEDS END
 	store_tok_val($1, $3);
 	free($1);
 	free($3);
-	/* Don't free the string itself; its pointer has been copied. */
+	/* XXX: don't free, just copy the pointer */
 };
 
 lnettcp_stmt : NAME EQ LNETTCP END
@@ -477,8 +475,7 @@ store_tok_val(const char *tok, char *val)
 
 	e = get_symbol(tok);
 	if (!e)
-		psc_fatalx("'%s' is an unknown symbol in the current context",
-			   tok);
+		psc_fatalx("%s: unknown symbol", tok);
 	psc_trace("%p %d", e, e->sym_type );
 	psc_assert(e->sym_type == SL_VARIABLE ||
 		   e->sym_type == SL_FLAG);
@@ -493,11 +490,9 @@ store_tok_val(const char *tok, char *val)
 	case SL_STRUCT_GLOBAL:
 		ptr = e->offset + (char *)currentConf;
 		break;
-
 	case SL_STRUCT_SITE:
 		ptr = e->offset + (char *)currentSite;
 		break;
-
 	case SL_STRUCT_RES:
 		ptr = e->offset + (char *)currentRes;
 		break;
@@ -529,9 +524,16 @@ store_tok_val(const char *tok, char *val)
 	case SL_TYPE_INT:
 		if (e->handler)
 			*(int *)ptr = (e->handler)(val);
-		else
-			//*(long *)ptr = strtol(val, NULL, 10);
-			*(int *)ptr = atoi(val);
+		else {
+			char *endp;
+			long l;
+
+			l = strtol(val, &endp, 10);
+			if (l >= INT_MAX || l <= INT_MIN ||
+			    endp == val || *endp != '\0')
+				yyerror("%s: invalid integer", val);
+			*(int *)ptr = l;
+		}
 		psc_trace("SL_TYPE_INT Tok '%s' set to '%ld'",
 		       e->name, (long)*(long *)(ptr));
 		break;

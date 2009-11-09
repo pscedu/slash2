@@ -16,11 +16,6 @@ extern char *yylval;
 void yyerror(const char *, ...);
 %}
 
-eq		[=]
-sep		[:]
-nsep		[,]
-endl		[;]
-
 num		[0-9]+
 hexnum		0[Xx][0-9A-Fa-f]+
 sitename	@[A-Z]+
@@ -36,16 +31,6 @@ globpath	[/][a-zA-Z0-9|/.,_\[\]+?-]+
 quotedstr	\"[^"]*\"
 
 %%
-
-none {
-	psc_trace("NONE");
-	return NONE;
-}
-
-NONE {
-	psc_trace("NONE");
-	return NONE;
-}
 
 ";" {
 	return END;
@@ -210,6 +195,10 @@ compute {
 	psc_trace("Quoted string %s", yytext);
 	yylval = strdup(yytext);
 	return QUOTEDS;
+}
+
+@ {
+	return (ATSIGN);
 }
 
 [ \t]*#.*	;
