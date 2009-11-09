@@ -7,6 +7,7 @@
 #include "psc_rpc/service.h"
 
 #include "inode.h"
+#include "slconfig.h"
 
 struct bmapc_memb;
 struct fidc_membh;
@@ -73,7 +74,10 @@ struct mds_resm_info {
 	psc_spinlock_t		  mri_lock;
 	struct slashrpc_cservice *mri_csvc;
 	struct psc_waitq	  mri_waitq;
-	int			  mri_busyid;
+	struct timespec           mri_lastping;
+	int			  mri_busyid;	
+	struct sl_resm           *mri_resm;
+	void                     *mri_data;
 };
 
 /* cfd private accessors */

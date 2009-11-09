@@ -163,12 +163,8 @@ struct mexp_cli {
 struct mexp_ion {
 	struct dynarray       mi_bmaps;       /* array of struct mexpbcm     */
 	struct dynarray       mi_bmaps_deref; /* dereferencing bmaps         */
-	struct psclist_head   mi_lentry;      /* chain ion's                 */
 	atomic_t              mi_refcnt;      /* num cli's using this ion    */
-	int                   mi_alive;
-	struct timespec       mi_lastping;
-	struct slashrpc_cservice *mi_csvc;
-	struct sl_resm           *mi_resm;
+	struct sl_resm       *mi_resm;
 };
 
 /*

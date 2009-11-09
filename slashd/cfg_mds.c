@@ -31,6 +31,7 @@ slcfg_new_resm(void)
 	mri = resm->resm_pri = PSCALLOC(sizeof(*mri));
 	LOCK_INIT(&mri->mri_lock);
 	psc_waitq_init(&mri->mri_waitq);
+	mri->mri_resm = resm;
 
 	return (resm);
 }

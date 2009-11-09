@@ -499,10 +499,8 @@ mds_mion_init(struct mexp_ion *mion, struct sl_resm *resm)
 {
 	dynarray_init(&mion->mi_bmaps);
 	dynarray_init(&mion->mi_bmaps_deref);
-	INIT_PSCLIST_ENTRY(&mion->mi_lentry);
 	atomic_set(&mion->mi_refcnt, 0);
 	mion->mi_resm = resm;
-	mion->mi_csvc = rpc_csvc_create(SRIM_REQ_PORTAL, SRIM_REP_PORTAL);
 }
 
 /**
@@ -522,6 +520,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	struct bmi_assign bmi;
 	struct sl_resource *res=libsl_id2res(pios);
 	struct sl_resm *resm;
+	struct mds_resm_info *mri;
 	struct resprof_mds_info *rmi;
 	int n, x, rc=0;
 
@@ -551,37 +550,45 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 			psc_fatalx("Failed to lookup %s, verify that slash "
 				   "configs are uniform across all servers",
 				   libcfs_nid2str(res->res_nids[n]));
-
-		if (!resm->resm_pri) {
-			/* First time this resm has been used.
-			 */
-			resm->resm_pri = PSCALLOC(sizeof(*mion));
-			mds_mion_init(resm->resm_pri, resm);
-		}
-		mion = resm->resm_pri;
 		freelock(&rmi->rmi_lock);
 
+		psc_assert(resm->resm_pri);
+		mri = resm->resm_pri;
+		spinlock(&mri->mri_lock);
+
+		if (!mri->mri_csvc) 
+			mri->mri_csvc = rpc_csvc_create(SRIM_REQ_PORTAL, 
+							SRIM_REP_PORTAL);
+
+		if (!mri->mri_data) {
+			mion = mri->mri_data = PSCALLOC(sizeof(*mion));
+			mds_mion_init(mion, resm);
+		} else
+			mion = mri->mri_data;
+		
 		DEBUG_BMAP(PLL_TRACE, bmap,
 		    "res(%s) ion(%s) init=%d, failed=%d",
 		    res->res_name, libcfs_nid2str(res->res_nids[n]),
-		    mion->mi_csvc->csvc_initialized,
-		    mion->mi_csvc->csvc_failed);
+		    mri->mri_csvc->csvc_initialized,
+		    mri->mri_csvc->csvc_failed);
 
-		if (mion->mi_csvc->csvc_failed)
-			continue;
+		if (mri->mri_csvc->csvc_failed)
+			goto end_loop;
 
-		if (!mion->mi_csvc->csvc_initialized) {
+		if (!mri->mri_csvc->csvc_initialized) {
 			rc = rpc_issue_connect(res->res_nids[n],
-			    mion->mi_csvc->csvc_import,
+			    mri->mri_csvc->csvc_import,
 			    SRIM_MAGIC, SRIM_VERSION);
 			if (rc) {
-				mion->mi_csvc->csvc_failed = 1;
-				continue;
+				mri->mri_csvc->csvc_failed = 1;
+				goto end_loop;
 			} else
-				mion->mi_csvc->csvc_initialized = 1;
+				mri->mri_csvc->csvc_initialized = 1;
 		}
 		atomic_inc(&mion->mi_refcnt);
 		mdsi->bmdsi_wr_ion = mion;
+	end_loop:
+		freelock(&mri->mri_lock);
 	} while (--x);
 
 	if (!mdsi->bmdsi_wr_ion)
@@ -590,8 +597,8 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	/* A mion has been assigned to the bmap, mark it in the odtable
 	 *   so that the assignment may be restored on reboot.
 	 */
-	bmi.bmi_ion_nid = mion->mi_resm->resm_nid;
-	bmi.bmi_ios = mion->mi_resm->resm_res->res_id;
+	bmi.bmi_ion_nid = mri->mri_resm->resm_nid;
+	bmi.bmi_ios = mri->mri_resm->resm_res->res_id;
 	bmi.bmi_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	bmi.bmi_bmapno = bmap->bcm_blkno;
 	bmi.bmi_start = time(NULL);
