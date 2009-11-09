@@ -13,9 +13,9 @@ struct sli_repl_workrq {
 	uint64_t		 srw_fid;
 	uint64_t		 srw_nid;
 	uint32_t		 srw_len;
+	uint32_t		 srw_status;
 	sl_bmapno_t		 srw_bmapno;
 	struct psclist_head	 srw_lentry;
-	int			 srw_status;
 	struct sli_repl_buf	*srw_srb;
 };
 
