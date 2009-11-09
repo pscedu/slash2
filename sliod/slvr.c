@@ -648,7 +648,7 @@ slvr_remove(struct slvr_ref *s)
 	PSCFREE(s);
 }
 
-int
+static int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
 	struct slvr_ref *s, *tmp;
