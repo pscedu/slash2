@@ -657,7 +657,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 {
 	int			 i;
 	int			 n;
-	struct dynarray		 a
+	struct dynarray		 a;
 	struct slvr_ref		*s;
 	struct slvr_ref		*dummy;
 
