@@ -655,14 +655,18 @@ slvr_remove(struct slvr_ref *s)
 static int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
-	struct slvr_ref *s, *tmp;
-	struct dynarray a = DYNARRAY_INIT;
-	int i, n=0;
+	int			 i;
+	int			 n;
+	struct dynarray		 a
+	struct slvr_ref		*s;
+	struct slvr_ref		*dummy;
 
 	ENTRY;
 
+	n = 0;
+	dynarray_init(&a);
 	LIST_CACHE_LOCK(&lruSlvrs);
-	psclist_for_each_entry_safe(s, tmp, &lruSlvrs.lc_listhd, slvr_lentry) {
+	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd, slvr_lentry) {
 		SLVR_LOCK(s);
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap");
 
@@ -695,25 +699,25 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&lruSlvrs);
 
-	for (i=0; i < dynarray_len(&a); i++) {
+	for (i = 0; i < dynarray_len(&a); i++) {
                 s = dynarray_getpos(&a, i);
 
 		if (s->slvr_flags & SLVR_SLBFREEING) {			
-			struct sl_buffer *slb;
 
 			psc_assert(!(s->slvr_flags & SLVR_FREEING));
 			psc_assert(s->slvr_slab);
 
-			slb = s->slvr_slab;
-			s->slvr_slab = NULL;
-			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slb=%p", slb);
+			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slb=%p", s->slvr_slb);
 			s->slvr_flags &= ~SLVR_SLBFREEING;
-			
-			psc_pool_return(m, slb);
+			psc_pool_return(m, s->slvr_slab);
+			s->slvr_slab = NULL;
 
-		} else if (s->slvr_flags & SLVR_FREEING)
+		} else if (s->slvr_flags & SLVR_FREEING) {
+
+			psc_assert(!(s->slvr_flags & SLVR_SLBFREEING));
+			psc_assert(!s->slvr_slab);
 			slvr_remove(s);
-		
+		}
         }
 	dynarray_free(&a);
 
