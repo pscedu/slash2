@@ -134,7 +134,7 @@ libsl_str2id(const char *name)
 	res = libsl_str2res(name);
 	if (res)
 		return (res->res_id);
-	return (RES_ID_ANY);
+	return (IOS_ID_ANY);
 }
 
 void
