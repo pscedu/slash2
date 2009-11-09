@@ -660,7 +660,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	tract[SL_REPL_INACTIVE] = SL_REPL_OLD;
 	tract[SL_REPL_SCHED] = SL_REPL_OLD;
 	tract[SL_REPL_OLD] = -1;
-	tract[SL_REPL_ACTIVE] = SL_REPL_OLD;
+	tract[SL_REPL_ACTIVE] = -1;
 
 	if (bmapno == (sl_blkno_t)-1) {
 		int repl_some_act = 0, repl_all_act = 1;
