@@ -20,8 +20,8 @@ int lnet_localnids_get(lnet_nid_t *, size_t);
 
 #define MAX_LOCALNIDS 128
 /*
- * libsl_resm_lookup - To be called after LNET initialization, determines
- * a node's resource membership.
+ * libsl_resm_lookup - Sanity check this node's resource membership.
+ * Notes: must be called after LNET has been initialized.
  */
 struct sl_resm *
 libsl_resm_lookup(void)
@@ -37,10 +37,10 @@ libsl_resm_lookup(void)
 	if (!nnids)
 		return (NULL);
 
-	for (i=0; i<nnids; i++) {
+	for (i = 0; i < nnids; i++) {
 		e = get_hash_entry(&globalConfig.gconf_nids_hash,
 		    nids[i], NULL, NULL);
-		/* Every nid found by lnet must be a resource member.  */
+		/* Every nid found by lnet must be a resource member. */
 		if (!e)
 			psc_fatalx("nid %s is not a member of any resource",
 				   psc_nid2str(nids[i], nidbuf));
@@ -56,26 +56,18 @@ libsl_resm_lookup(void)
 	return (resm);
 }
 
-sl_ios_id_t
-libsl_node2id(struct sl_nodeh *n)
-{
-	return (sl_global_id_build(n->node_site->site_id,
-				   n->node_res->res_id,
-				   n->node_res->res_mds));
-}
-
 struct sl_site *
 libsl_id2site(sl_ios_id_t id)
 {
-	uint32_t tmp = (id >> (SL_RES_BITS + SL_MDS_BITS));
+	sl_siteid_t siteid = sl_iosid_to_siteid(id);
 	struct sl_site *s;
 
-	psc_assert(tmp <= ((1 << SL_SITE_BITS))-1);
-
+	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
-		if (tmp == s->site_id)
-			return (s);
-	return (NULL);
+		if (s->site_id == siteid)
+			break;
+	PLL_ULOCK(&globalConfig.gconf_sites);
+	return (s);
 }
 
 struct sl_resource *
@@ -86,16 +78,9 @@ libsl_id2res(sl_ios_id_t id)
 	int n;
 
 	if ((s = libsl_id2site(id)) == NULL)
-		return NULL;
-
-	/* The global ID is now stored as the resource id (res_id).
-	 *  local id's are deprecated for now.
-	 */
-	//sl_ios_id_t    rid = sl_glid_to_resid(id);
-
+		return (NULL);
 	for (n = 0; n < s->site_nres; n++) {
 		r = s->site_resv[n];
-		/* XXX this part doesn't make sense... */
 		if (id == r->res_id)
 			return (r);
 	}
@@ -115,31 +100,41 @@ libsl_nid2resm(lnet_nid_t nid)
 	return (e->private);
 }
 
-sl_ios_id_t
-libsl_str2id(const char *res_name)
+struct sl_resource *
+libsl_str2res(const char *res_name)
 {
-	sl_ios_id_t id = IOS_ID_ANY;
-	const char *p = res_name;
+	const char *site_name;
 	struct sl_resource *r;
 	struct sl_site *s;
 	int n;
 
-	p = strchr(res_name, '@');
-	if (p == NULL)
-		return (IOS_ID_ANY);
+	site_name = strchr(res_name, '@');
+	if (site_name == NULL)
+		return (NULL);
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
-		if (strcmp(s->site_name, p) == 0)
+		if (strcmp(s->site_name, site_name) == 0)
 			for (n = 0; n < s->site_nres; n++) {
 				r = s->site_resv[n];
-				if (strcmp(r->res_name, res_name) == 0) {
-					id = r->res_id;
+				/* res_name includes '@SITE' in both */
+				if (strcmp(r->res_name, res_name) == 0)
 					goto done;
-				}
 			}
+	r = NULL;
  done:
 	PLL_ULOCK(&globalConfig.gconf_sites);
-	return (id);
+	return (r);
+}
+
+sl_ios_id_t
+libsl_str2id(const char *name)
+{
+	struct sl_resource *res;
+
+	res = libsl_str2res(name);
+	if (res)
+		return (res->res_id);
+	return (RES_ID_ANY);
 }
 
 void
@@ -152,7 +147,7 @@ libsl_profile_dump(void)
 	fprintf(stderr,
 		"\nNode Info: resource %s\n"
 		"\tdesc: %s "
-		"\n\t id (global=%u, mds=%u)"
+		"\n\t id (global=%u, mds=%d)"
 		"\n\t type %d, npeers %u, nnids %u"
 		"\n\t fsroot %s\n",
 		z->node_res->res_name,

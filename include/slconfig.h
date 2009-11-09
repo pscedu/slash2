@@ -24,10 +24,10 @@ struct sl_site;
 #define MAXNET		32
 
 enum sl_res_type {
-	SLREST_PARALLEL_FS,
 	SLREST_ARCHIVAL_FS,
 	SLREST_CLUSTER_NOSHARE_FS,
-	SLREST_COMPUTE
+	SLREST_COMPUTE,
+	SLREST_PARALLEL_FS
 };
 
 struct sl_resource {
@@ -35,7 +35,7 @@ struct sl_resource {
 	char			*res_desc;
 	char			*res_peertmp[SL_PEER_MAX];
 	sl_ios_id_t		 res_id;
-	sl_ios_id_t		 res_mds;
+	int			 res_mds;
 	enum sl_res_type	 res_type;
 	sl_ios_id_t		*res_peers;
 	uint32_t		 res_npeers;
@@ -62,7 +62,7 @@ struct sl_site {
 	struct psclist_head	 site_lentry;
 	struct sl_resource	**site_resv;
 	int			 site_nres;
-	uint32_t		 site_id;
+	sl_siteid_t		 site_id;
 };
 
 #define INIT_SITE(s)		INIT_PSCLIST_ENTRY(&(s)->site_lentry)
@@ -94,6 +94,26 @@ struct sl_gconf {
 				GCONF_HASHTBL_SZ, "resnid");	\
 	} while (0)
 
+/*
+ * sl_global_id_build - produce a global, unique identifier for a resource
+ *	from its internal identifier.
+ * @site_id: site identifier.
+ * @res_id: resource identifier, internal to site.
+ */
+static __inline sl_ios_id_t
+sl_global_id_build(sl_siteid_t site_id, uint32_t intres_id)
+{
+	psc_assert(site_id != SITE_ID_ANY);
+	psc_assert(res_id < (1 << SL_RES_BITS) - 1);
+	return (((sl_ios_id_t)site_id << SL_SITE_BITS) | res_id);
+}
+
+static __inline sl_siteid_t
+sl_iosid_to_siteid(sl_ios_id_t id)
+{
+	return ((id & SL_SITE_MASK) >> SL_SITE_BITS);
+}
+
 struct sl_site		*slcfg_new_site(void);
 struct sl_resource	*slcfg_new_res(void);
 struct sl_resm		*slcfg_new_resm(void);
@@ -106,10 +126,10 @@ void			 slcfg_parse(const char *);
 
 void			 libsl_nid_associate(lnet_nid_t, struct sl_resource *);
 struct sl_resm		*libsl_resm_lookup(void);
-sl_ios_id_t		 libsl_node2id(struct sl_nodeh *);
 struct sl_site		*libsl_id2site(sl_ios_id_t);
 struct sl_resource	*libsl_id2res(sl_ios_id_t);
 struct sl_resm		*libsl_nid2resm(lnet_nid_t);
+struct sl_resource	*libsl_str2res(const char *);
 sl_ios_id_t		 libsl_str2id(const char *);
 void			 libsl_profile_dump(void);
 uint32_t		 libsl_str2restype(const char *);

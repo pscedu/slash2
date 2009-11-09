@@ -35,11 +35,6 @@
 #define SL_DEF_SNAPSHOTS	1
 #define SL_MAX_GENS_PER_BLK	4
 
-/* breakdown of I/O system ID: # of bits for each part */
-#define SL_SITE_BITS		16
-#define SL_RES_BITS		15
-#define SL_MDS_BITS		1
-
 #define SL_BMAP_SIZE		SLASH_BMAP_SIZE
 #define SL_CRC_SIZE		(1024 * 1024)
 #define SL_CRCS_PER_BMAP	(SL_BMAP_SIZE / SL_CRC_SIZE)
@@ -69,41 +64,6 @@
 	    ((val) << ((off) % NBBY)))
 
 typedef uint64_t sl_inum_t;
-
-#define SL_MDS_ID_BITS		8 /* # first bits in inode inode number */
-#define SL_MDS_ID_MASK		((2 << SL_MDS_ID_BITS) - 1)
-
-/*
- * sl_global_id_build - produce a unique 32 bit identifier from the
- *	object's site and resource id's.
- * @site_id:  id number of the resource's site
- * @res_id:   id number within the site
- * @mds_bool: is this a metadata server?
- */
-static inline sl_ios_id_t
-sl_global_id_build(u32 site_id, u32 res_id, u32 mds_bool)
-{
-	sl_ios_id_t ios_id = 0;
-
-	psc_assert(site_id  <= ((1 << SL_SITE_BITS))-1);
-	psc_assert(res_id   <= ((1 << SL_RES_BITS))-1);
-	psc_assert(mds_bool <= ((1 << SL_MDS_BITS))-1);
-
-	ios_id = site_id << SL_SITE_BITS;
-	ios_id |= (res_id + mds_bool);
-
-	return ios_id;
-}
-
-static inline u32
-sl_glid_to_resid(sl_ios_id_t glid)
-{
-	sl_ios_id_t tmp = 0;
-
-	tmp = ((1 << SL_SITE_BITS)-1) << (SL_RES_BITS + SL_MDS_BITS);
-
-	return (u32)(glid & ~tmp);
-}
 
 /*
  * Point to an offset within the linear metadata file which holds a
