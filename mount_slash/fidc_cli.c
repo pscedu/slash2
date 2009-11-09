@@ -84,14 +84,18 @@ fidc_child_prep_free_locked(struct fidc_membh *f)
 static void
 fidc_child_free_plocked(struct fidc_private *fcc)
 {
-	struct fidc_membh *c=fcc->fcc_fcmh;
-	int locked=reqlock(&c->fcmh_lock);
+	struct fidc_membh	*c;
+	int			 locked;
+
+	c = fcc->fcc_fcmh;
+	locked = reqlock(&c->fcmh_lock);
 
 	LOCK_ENSURE(&fcc->fcc_parent->fcmh_lock);
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
 	if (c->fcmh_state & FCMH_ISDIR) {
 		fidc_child_prep_free_locked(c);
+		psc_assert(psclist_empty(&c->fcmh_children));
 	}
 
 	psclist_del(&fcc->fcc_lentry);
@@ -104,10 +108,6 @@ fidc_child_free_plocked(struct fidc_private *fcc)
 		   fcc, fcc->fcc_name, fcc->fcc_parent,
 		   ((c->fcmh_state & FCMH_ISDIR) ?
 		    psclist_empty(&c->fcmh_children) : -1));
-	/* Verify that no children are hanging about.
-	 */
-	if (c->fcmh_state & FCMH_ISDIR)
-		psc_assert(psclist_empty(&c->fcmh_children));
 
 	PSCFREE(fcc);
 	ureqlock(&c->fcmh_lock, locked);
