@@ -648,11 +648,14 @@ slvr_remove(struct slvr_ref *s)
 	PSCFREE(s);
 }
 
+/* 
+ * The reclaim function for the slBufsPoolMaster pool.  Note that our caller psc_pool_get() 
+ * ensures that we are called exclusviely.
+ */
 static int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
 	struct slvr_ref *s, *tmp;
-	static pthread_mutex_t mutex;
 	struct dynarray a = DYNARRAY_INIT;
 	int i, n=0;
 
@@ -660,9 +663,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	
 	ENTRY;
 
-	psc_pthread_mutex_init(&mutex);
-	psc_pthread_mutex_lock(&mutex);
-	
 	LIST_CACHE_LOCK(&lruSlvrs);
 	psclist_for_each_entry_safe(s, tmp, &lruSlvrs.lc_listhd, slvr_lentry) {
 		SLVR_LOCK(s);
@@ -696,8 +696,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			break;
 	}
 	LIST_CACHE_ULOCK(&lruSlvrs);
-
-	pthread_mutex_unlock(&mutex);
 
 	for (i=0; i < dynarray_len(&a); i++) {
                 s = dynarray_getpos(&a, i);
