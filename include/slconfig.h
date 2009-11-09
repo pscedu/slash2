@@ -98,14 +98,14 @@ struct sl_gconf {
  * sl_global_id_build - produce a global, unique identifier for a resource
  *	from its internal identifier.
  * @site_id: site identifier.
- * @res_id: resource identifier, internal to site.
+ * @intres_id: resource identifier, internal to site.
  */
 static __inline sl_ios_id_t
 sl_global_id_build(sl_siteid_t site_id, uint32_t intres_id)
 {
 	psc_assert(site_id != SITE_ID_ANY);
-	psc_assert(res_id < (1 << SL_RES_BITS) - 1);
-	return (((sl_ios_id_t)site_id << SL_SITE_BITS) | res_id);
+	psc_assert(intres_id < (1 << SL_RES_BITS) - 1);
+	return (((sl_ios_id_t)site_id << SL_SITE_BITS) | intres_id);
 }
 
 static __inline sl_siteid_t
