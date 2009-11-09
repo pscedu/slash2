@@ -64,11 +64,6 @@ fidc_child_prep_free_locked(struct fidc_membh *f)
 {
 	struct fidc_private *fcc, *tmp;
 
-	LOCK_ENSURE(&f->fcmh_lock);
-
-	if (!(f->fcmh_state & FCMH_ISDIR))
-		return;
-
 	psclist_for_each_entry_safe(fcc, tmp, &f->fcmh_children, fcc_lentry) {
 		DEBUG_FCMH(PLL_WARN, f, "fcc=%p fcc_name=%s detaching",
 			   f, fcc->fcc_name);
@@ -95,7 +90,9 @@ fidc_child_free_plocked(struct fidc_private *fcc)
 	LOCK_ENSURE(&fcc->fcc_parent->fcmh_lock);
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
-	fidc_child_prep_free_locked(c);
+	if (c->fcmh_state & FCMH_ISDIR) {
+		fidc_child_prep_free_locked(c);
+	}
 
 	psclist_del(&fcc->fcc_lentry);
 	psc_assert(c->fcmh_pri == fcc);
