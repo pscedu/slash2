@@ -137,36 +137,37 @@ is used to mount a Slash file system to a point on the local system:
 can be used to control live operation of the client mount point once it
 has been brought up.
 .Sh CAVEATS
-The metadata and
+Running metadata and
 .Tn I/O
-servers must reside on different hosts.
-At this time, it is necessary to use virtual machines to facilitate an
-environment where all metadata,
-.Tn I/O ,
-and client mount servers can run together on the same machine.
-This is due to two limitations:
-.Bl -bullet -offset 2n
-.It
-Slash uses the Lustre networking stack which restricts applications from
-connecting to servers on different
+servers on the same machine currently requires configuring each daemon
+to listen on different addresses.
+Furthermore, the network configuration must be such that each daemon can
+access clients via the client destination network address.
+.Pp
+For example, setups where
+.Xr slashd 8
+residing on one network on
+.Li eth0
+reaches a client over a different client network address than
+.Xr sliod 8
+residing on a different network on
+.Li eth1
+will not work.
+.Pp
+The reason for this is because alternative
 .Tn TCP
-ports, preventing one from running both metadata and
-.Tn I/O
-servers on the same machine yet bound to different
+ports cannot be used for each of
+.Xr slashd 8
+and
+.Xr sliod 8 ,
+as Slash utilizes the Lustre networking stack which does not easily
+permit applications from connecting to multiple peers on differing
 .Tn TCP
 ports.
 A single
 .Tn TCP
-port must be used site-wide for all daemons.
-.It
-Restrictions in the Slash protocols forbid network interface aliases
-.Pq of the form Dq eth0:2
-from being used either.
-This is due to data being signed based on the assumption that clients
-always have the same global addresses as seen by all daemons across the
-site.
-This condition will not hold when connections are made from different
-addresses provided by the network interface aliases.
+port must be used globally for all daemons.
+.El
 .Sh SEE ALSO
 .Xr odtable 1 ,
 .Xr slash.conf 5 ,
