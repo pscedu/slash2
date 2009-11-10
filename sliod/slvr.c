@@ -100,18 +100,6 @@ slvr_do_crc(struct slvr_ref *s)
 	return (1);
 }
 
-int
-slvr_init(struct slvr_ref *s, uint16_t num, void *pri)
-{
-	s->slvr_num = num;
-	s->slvr_flags = SLVR_NEW;
-	s->slvr_pri = pri;
-	s->slvr_slab = NULL;
-	INIT_PSCLIST_ENTRY(&s->slvr_lentry);
-	
-	return (0);
-}
- 
 __static void
 slvr_getslab(struct slvr_ref *s)
 {
@@ -622,7 +610,13 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int op)
 
         } else if (!s && (op == SLVR_LOOKUP_ADD)) {
 		s = PSCALLOC(sizeof(*s));
-                slvr_init(s, num, b);
+
+		s->slvr_num = num;
+		s->slvr_flags = SLVR_NEW;
+		s->slvr_pri = b;
+		s->slvr_slab = NULL;
+		INIT_PSCLIST_ENTRY(&s->slvr_lentry);
+
                 SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, s);
         }
         freelock(&b->biod_lock);
