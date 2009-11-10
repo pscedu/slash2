@@ -23,13 +23,8 @@ bmapc_cmp(const void *x, const void *y)
 {
 	const struct bmapc_memb *a = x, *b = y;
 
-	if (a->bcm_blkno > b->bcm_blkno)
-		return (1);
-	else if (a->bcm_blkno < b->bcm_blkno)
-		return (-1);
-	return (0);
+	return (CMP(a->bcm_blkno, b->bcm_blkno));
 }
-
 
 void
 bmap_remove(struct bmapc_memb *b)
@@ -62,10 +57,9 @@ bmap_remove(struct bmapc_memb *b)
 	psc_pool_return(bmap_pool, b);
 }
 
-
 int
-bmap_try_release_locked(struct bmapc_memb *b) {
-
+bmap_try_release_locked(struct bmapc_memb *b)
+{
 	BMAP_LOCK_ENSURE(b);
 
 	DEBUG_BMAP(PLL_WARN, b, " ");
@@ -84,16 +78,18 @@ bmap_try_release_locked(struct bmapc_memb *b) {
 	return (0);
 }
 
-
 void
-bmap_try_release(struct bmapc_memb *b) {
-	BMAP_LOCK(b);
+bmap_try_release(struct bmapc_memb *b)
+{
+	int locked;
+
+	locked = BMAP_RLOCK(b);
 	bmap_try_release_locked(b);
 
 	if (!bmap_try_release_locked(b))
 		/* It wasn't freed.
 		 */
-		BMAP_ULOCK(b);
+		BMAP_URLOCK(b, locked);
 }
 
 void
