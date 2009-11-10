@@ -615,7 +615,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 				    slstrerror(rc));
 
 			/* Find/add our replica's IOS ID */
-			rc = mds_repl_iosv_lookup_add(rrq->rrq_inoh,
+			rc = mds_repl_iosv_lookup_add(fcmh_2_inoh(fcmh),
 			    iosv, iosidx, nios);
 			if (rc)
 				goto bail;
