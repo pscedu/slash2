@@ -10,6 +10,7 @@ struct fidc_iod_info {
 	int fiodi_fd;
 };
 
+/* This is not used - should be removed after confirmation */
 #define fcmh_2_fiodi(f) ((struct fidc_iod_info *)(f)->fcmh_pri)
 
 #endif
