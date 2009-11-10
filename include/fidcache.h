@@ -338,7 +338,7 @@ static inline int
 fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *cr,
     struct fidc_membh **fp)
 {
-	struct slash_fidgen fg = { fid, FID_ANY };
+	struct slash_fidgen fg = { fid, FIDGEN_ANY };
 
 	return (fidc_lookup(&fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
 	    NULL, cr, fp));
