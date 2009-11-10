@@ -81,13 +81,11 @@ bmap_try_release_locked(struct bmapc_memb *b)
 void
 bmap_try_release(struct bmapc_memb *b)
 {
-	int locked;
-
-	locked = BMAP_RLOCK(b);
+	BMAP_RLOCK(b);
 	if (!bmap_try_release_locked(b))
 		/* It wasn't freed.
 		 */
-		BMAP_URLOCK(b, locked);
+		BMAP_ULOCK(b);
 }
 
 void
