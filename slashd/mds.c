@@ -508,7 +508,7 @@ mds_mion_init(struct mexp_ion *mion, struct sl_resm *resm)
  *    involves a round-robin'ing of an i/o system's nodes and attaching a
  *    a mexp_ion to the bmap.  The mexp_ion is stored in the i/o node's
  *    resouce_member struct (resm_pri->rmi_data).  It is here that an initial connection
- *    to the i/o node is created.
+ *    to the i/o node may be created.
  * @bref: the bmap reference
  * @pios: the preferred i/o system
  */

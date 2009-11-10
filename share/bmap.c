@@ -34,7 +34,7 @@ bmap_remove(struct bmapc_memb *b)
 
 	BMAP_LOCK(b);
 
-	DEBUG_BMAP(PLL_WARN, b, "removing");
+	DEBUG_BMAP(PLL_INFO, b, "removing");
 
 	psc_assert(b->bcm_mode & BMAP_CLOSING);
 	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
@@ -44,6 +44,7 @@ bmap_remove(struct bmapc_memb *b)
 	psc_assert(!atomic_read(&b->bcm_opcnt));
 	BMAP_ULOCK(b);
 
+	/* XXX how can this be right? */
 	locked = FCMH_RLOCK(f);
 
 	if (!SPLAY_REMOVE(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b))
@@ -62,7 +63,7 @@ bmap_try_release_locked(struct bmapc_memb *b)
 {
 	BMAP_LOCK_ENSURE(b);
 
-	DEBUG_BMAP(PLL_WARN, b, " ");
+	DEBUG_BMAP(PLL_INFO, b, " ");
 
 	if (!atomic_read(&b->bcm_rd_ref) &&
 	    !atomic_read(&b->bcm_wr_ref) &&
