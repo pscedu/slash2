@@ -727,9 +727,7 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, int mode)
 	     (!atomic_read(&bmap->bcm_rd_ref))))
 		mds_bmap_directio_unset(bmap);
 
-	if (!bmap_try_release_locked(bmap))
-		BMAP_ULOCK(bmap);
-
+	bmap_try_release(bmap);
 }
 
 /**
