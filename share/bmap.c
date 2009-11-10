@@ -43,40 +43,40 @@ bmap_remove(struct bmapc_memb *b)
 
 	psc_assert(b->bcm_mode & BMAP_CLOSING);
 	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
-        psc_assert(!atomic_read(&b->bcm_waitq.wq_nwaitors));
-        psc_assert(!atomic_read(&b->bcm_wr_ref) &&
-                   !atomic_read(&b->bcm_rd_ref));
-        psc_assert(!atomic_read(&b->bcm_opcnt));
+	psc_assert(!atomic_read(&b->bcm_waitq.wq_nwaitors));
+	psc_assert(!atomic_read(&b->bcm_wr_ref) &&
+		   !atomic_read(&b->bcm_rd_ref));
+	psc_assert(!atomic_read(&b->bcm_opcnt));
 	BMAP_ULOCK(b);
 
 	locked = FCMH_RLOCK(f);
 
 	if (!SPLAY_REMOVE(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b))
-                DEBUG_BMAP(PLL_FATAL, b, "failed to locate bmap in fcoo");
-	
+		DEBUG_BMAP(PLL_FATAL, b, "failed to locate bmap in fcoo");
+
 	FCMH_URLOCK(f, locked);
 
 	atomic_dec(&f->fcmh_fcoo->fcoo_bmapc_cnt);
 	psc_assert(atomic_read(&f->fcmh_fcoo->fcoo_bmapc_cnt) >= 0);
 
-        psc_pool_return(bmap_pool, b);
+	psc_pool_return(bmap_pool, b);
 }
 
 
 int
 bmap_try_release_locked(struct bmapc_memb *b) {
-	
+
 	BMAP_LOCK_ENSURE(b);
-	
+
 	DEBUG_BMAP(PLL_WARN, b, " ");
 
 	if (!atomic_read(&b->bcm_rd_ref) &&
-            !atomic_read(&b->bcm_wr_ref) &&
-            !atomic_read(&b->bcm_opcnt)) {
-                b->bcm_mode |= BMAP_CLOSING;
-                BMAP_ULOCK(b);
+	    !atomic_read(&b->bcm_wr_ref) &&
+	    !atomic_read(&b->bcm_opcnt)) {
+		b->bcm_mode |= BMAP_CLOSING;
+		BMAP_ULOCK(b);
 
-                bmap_remove(b);
+		bmap_remove(b);
 
 		return (1);
 	}
@@ -89,7 +89,7 @@ void
 bmap_try_release(struct bmapc_memb *b) {
 	BMAP_LOCK(b);
 	bmap_try_release_locked(b);
-	
+
 	if (!bmap_try_release_locked(b))
 		/* It wasn't freed.
 		 */
@@ -160,7 +160,7 @@ bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n,
 		/* Call the provided init function.
 		 */
 		bmap_init_fn(b);
-		/* Add to the fcmh's bmap cache but first up the opcnt. 
+		/* Add to the fcmh's bmap cache but first up the opcnt.
 		 *   If 'b' was found the opcnt was incremented within
 		 *   bmap_lookup_locked().
 		 */
