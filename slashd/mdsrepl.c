@@ -180,7 +180,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 	     j++, k++) {
 		if (j >= INO_DEF_NREPLS) {
 			/* The first few replicas are in the inode itself,
-			 *   the rest are in the extras block;
+			 *   the rest are in the extras block.
 			 */
 			if (!(i->inoh_flags & INOH_HAVE_EXTRAS))
 				if (!(rc = mds_repl_load_locked(i)))
@@ -465,7 +465,6 @@ mds_repl_bmap_rel(struct bmapc_memb *bcm)
 		mds_bmap_repl_log(bcm);
 	}
 	bmap_op_done(bcm);
-	BMAP_ULOCK(bcm);
 }
 
 /**
