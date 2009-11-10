@@ -81,6 +81,7 @@ int  bmapc_cmp(const void *, const void *);
 void bmap_op_done(struct bmapc_memb *);
 void bmap_remove(struct bmapc_memb *);
 int  bmap_try_release_locked(struct bmapc_memb *);
+void bmap_try_release(struct bmapc_memb *);
 struct bmapc_memb * bmap_lookup_locked(struct fidc_open_obj *, sl_blkno_t);
 struct bmapc_memb * bmap_lookup(struct fidc_membh *, sl_blkno_t);
 struct bmapc_memb * bmap_lookup_add(struct fidc_membh *, sl_blkno_t,
