@@ -679,8 +679,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
 	else {
-		if (fcmh_2_gen(fcmh) == FID_ANY) {
-			psc_assert(fcmh->fcmh_state & FCMH_GETTING_ATTRS);
+		if (fcmh_2_gen(fcmh) == FIDGEN_ANY) {
 			fcmh_2_gen(fcmh) = mp->gen;
 		}
 		fidc_membh_setattr(fcmh, &mp->attr);
@@ -1130,10 +1129,9 @@ slash_lookup_cache(const struct slash_creds *cr, fuse_ino_t parent,
 	psc_infos(PSS_GEN, "name %s inode %"PRId64,
 		  name, parent);
 
+	/* load or create the parent in the fid cache */
 	rc = fidc_lookup_load_inode(parent, cr, &p);
 	if (rc) {
-		/* Parent inode must exist in the cache.
-		 */
 		psc_warnx("name %s - failed to load inode %"PRIx64,
 			  name, parent);
 		rc = EINVAL;
