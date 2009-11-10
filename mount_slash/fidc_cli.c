@@ -16,6 +16,7 @@
 
 #include "cache_params.h"
 #include "fid.h"
+#include "fidc_cli.h"
 #include "fidcache.h"
 
 /**
@@ -61,10 +62,9 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 static void
 fidc_child_prep_free_locked(struct fidc_membh *f)
 {
-	struct fidc_private	*fcc;
-	struct fidc_private	*tmp;
+	struct fidc_private *fcc, *tmp;
 
-	psclist_for_each_entry_safe(fcc, tmp, &f->fcmh_pri->fcc_children, fcc_lentry) {
+	psclist_for_each_entry_safe(fcc, tmp, &f->fcmh_children, fcc_lentry) {
 		DEBUG_FCMH(PLL_WARN, f, "fcc=%p fcc_name=%s detaching",
 			   f, fcc->fcc_name);
 		spinlock(&fcc->fcc_lock);
@@ -95,7 +95,7 @@ fidc_child_free_plocked(struct fidc_private *fcc)
 
 	if (c->fcmh_state & FCMH_ISDIR) {
 		fidc_child_prep_free_locked(c);
-		psc_assert(psclist_empty(&c->fcmh_pri->fcc_children));
+		psc_assert(psclist_empty(&c->fcmh_children));
 	}
 
 	psclist_del(&fcc->fcc_lentry);
@@ -107,7 +107,7 @@ fidc_child_free_plocked(struct fidc_private *fcc)
 		   "child_empty=%d",
 		   fcc, fcc->fcc_name, fcc->fcc_parent,
 		   ((c->fcmh_state & FCMH_ISDIR) ?
-		    psclist_empty(&c->fcmh_pri->fcc_children) : -1));
+		    psclist_empty(&c->fcmh_children) : -1));
 
 	PSCFREE(fcc);
 	ureqlock(&c->fcmh_lock, locked);
@@ -136,7 +136,7 @@ fidc_child_free_orphan_locked(struct fidc_membh *f)
 		   fcc, fcc->fcc_name);
 
 	if (f->fcmh_state & FCMH_ISDIR)
-		psc_assert(psclist_empty(&f->fcmh_pri->fcc_children));
+		psc_assert(psclist_empty(&f->fcmh_children));
 
 	PSCFREE(fcc);
 }
@@ -194,7 +194,7 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 			} else {
 				fcc->fcc_parent = p;
 				psclist_xadd_tail(&fcc->fcc_lentry,
-						  &p->fcmh_pri->fcc_children);
+						  &p->fcmh_children);
 				DEBUG_FCMH(PLL_WARN, p, "reattaching fcc=%p",
 					   fcc);
 			}
@@ -227,11 +227,11 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	DEBUG_FCMH(PLL_WARN, f, "fcc=%p fcc_ref=%d fcmh_no_children=%d",
 		   fcc, (fcc ? atomic_read(&fcc->fcc_ref) : -1),
 		   ((f->fcmh_state & FCMH_ISDIR) ?
-		    psclist_empty(&f->fcmh_pri->fcc_children) : -1));
+		    psclist_empty(&f->fcmh_children) : -1));
 
 	if ((fcc && atomic_read(&fcc->fcc_ref)) ||
 	    ((f->fcmh_state & FCMH_ISDIR) &&
-	     (!psclist_empty(&f->fcmh_pri->fcc_children))))
+	     (!psclist_empty(&f->fcmh_children))))
 		return (0);
 
 	else if (!fcc)
@@ -284,7 +284,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	DEBUG_FCMH(PLL_INFO, p, "name %p (%s), hash=%d",
 		   name, name, hash);
 
-	psclist_for_each_entry(c, &p->fcmh_pri->fcc_children, fcc_lentry) {
+	psclist_for_each_entry(c, &p->fcmh_children, fcc_lentry) {
 
 		psc_traces(PSS_GEN, "p=fcmh@%p c=%p cname=%s hash=%d",
 			   p, c, c->fcc_name, c->fcc_hash);
@@ -442,7 +442,7 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	if (!(tmp = fidc_child_lookup_int_locked(p, name))) {
 		/* It doesn't yet exist, add it.
 		 */
-		psclist_xadd_tail(&fcc->fcc_lentry, &p->fcmh_pri->fcc_children);
+		psclist_xadd_tail(&fcc->fcc_lentry, &p->fcmh_children);
 		psc_assert(!c->fcmh_pri);
 		c->fcmh_pri = fcc;
 		DEBUG_FCMH(PLL_WARN, p, "fcc=%p fcc_name(%s) adding",
@@ -493,7 +493,7 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 
 	spinlock(&np->fcmh_lock);
 	ch->fcc_parent = np;
-	psclist_xadd_tail(&ch->fcc_lentry, &np->fcmh_pri->fcc_children);
+	psclist_xadd_tail(&ch->fcc_lentry, &np->fcmh_children);
 	freelock(&np->fcmh_lock);
 
 	atomic_dec(&ch->fcc_ref);

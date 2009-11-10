@@ -7,7 +7,6 @@
 #include "psc_ds/tree.h"
 #include "psc_util/lock.h"
 #include "psc_util/time.h"
-#include "mount_slash/fidc_cli.h"
 
 #include "slashrpc.h"
 
@@ -57,6 +56,7 @@ struct fidc_membh {
 	struct psc_waitq	 fcmh_waitq;
 	struct sl_fsops		*fcmh_fsops;
 	struct fidc_private	*fcmh_pri;
+	struct psclist_head	 fcmh_children;
 };
 
 enum fcmh_states {
