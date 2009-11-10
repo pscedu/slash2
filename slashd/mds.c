@@ -5,6 +5,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
 
+#include "bmap.h"
 #include "cache_params.h"
 #include "cfd.h"
 #include "fidc_mds.h"
