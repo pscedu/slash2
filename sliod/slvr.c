@@ -633,13 +633,8 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int op)
 __static void
 slvr_remove(struct slvr_ref *s)
 {
-	SLVR_LOCK(s);
 	DEBUG_SLVR(PLL_WARN, s, "freeing slvr");
 
-	psc_assert(s->slvr_flags & SLVR_FREEING);
-	psc_assert(slvr_lru_freeable(s));
-	psc_assert(!s->slvr_slab);
-	SLVR_ULOCK(s);
 	/* Slvr should be detached from any listheads.
 	 */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
