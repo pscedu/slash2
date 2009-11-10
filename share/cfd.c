@@ -32,11 +32,8 @@ cfdcmp(const void *a, const void *b)
 {
 	const struct cfdent *ca = a, *cb = b;
 
-	if (ca->cfd_fdb.sfdb_secret.sfs_cfd < cb->cfd_fdb.sfdb_secret.sfs_cfd)
-		return (-1);
-	else if (ca->cfd_fdb.sfdb_secret.sfs_cfd > cb->cfd_fdb.sfdb_secret.sfs_cfd)
-		return (1);
-	return (0);
+	return (CMP(ca->cfd_fdb.sfdb_secret.sfs_cfd,
+	    cb->cfd_fdb.sfdb_secret.sfs_cfd));
 }
 
 __static int
@@ -80,8 +77,8 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, void *pri,
 	c->cfd_ops = cfdops;
 	c->cfd_type = type;
 
-	slexp = slashrpc_export_get(exp);
 	spinlock(&exp->exp_lock);
+	slexp = slashrpc_export_get(exp);
 	c->cfd_fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
 	if (c->cfd_fdb.sfdb_secret.sfs_cfd == FID_ANY)
 		c->cfd_fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
