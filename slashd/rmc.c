@@ -79,6 +79,11 @@ slrmc_connect(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 
 	if (e->exp_private) {
+		/*
+		 * XXX this should never happen; it should have been
+		 * cleaned up by the hldrop routine.
+		 */
+
 		/* Client has issued a reconnect.  For now just dump
 		 *   the remaining cached bmaps.
 		 */
@@ -101,6 +106,7 @@ slrmc_connect(struct pscrpc_request *rq)
 	mexp_cli = slexp->slexp_data = PSCALLOC(sizeof(*mexp_cli));
 	LOCK_INIT(&mexp_cli->mc_lock);
 	slm_initclconn(mexp_cli, e);
+	freelock(&e->exp_lock);
 
 	RETURN(0);
 }
