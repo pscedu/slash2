@@ -52,22 +52,21 @@ enum slb_states {
  *    with the bmap or have its regions allocated from within the bmap.
  */
 struct sl_buffer {
-	struct vbitmap *slb_inuse;  /* track which segments are busy   */
-#define slb_dirty slb_inuse         /* slb_inuse -> slb_dirty for IOD  */
-	int             slb_nblks;  /* num blocks                      */
-	uint32_t        slb_blksz;  /* blocksize                       */
-	void           *slb_base;   /* point to the data buffer        */
-	atomic_t        slb_ref;
-	atomic_t        slb_unmapd_ref;
-	atomic_t        slb_inflight;
-	atomic_t        slb_inflpndg;
-	psc_spinlock_t  slb_lock;
-	uint32_t        slb_flags;
-	struct psc_listcache  *slb_lc_owner;
-	struct psc_lockedlist *slb_lc_fcm;
-	struct psclist_head slb_iov_list;    /* list iovref backpointers */
-	struct psclist_head slb_mgmt_lentry; /* chain lru or outgoing q  */
-	struct psclist_head slb_fcm_lentry;  /* chain to fidcm entry     */
+	struct vbitmap		*slb_inuse;		/* track which segments are busy   */
+	int			 slb_nblks;		/* num blocks                      */
+	uint32_t		 slb_blksz;		/* blocksize                       */
+	void			*slb_base;		/* point to the data buffer        */
+	atomic_t		 slb_ref;
+	atomic_t		 slb_unmapd_ref;
+	atomic_t		 slb_inflight;
+	atomic_t		 slb_inflpndg;
+	psc_spinlock_t		 slb_lock;
+	uint32_t		 slb_flags;
+	struct psc_listcache	*slb_lc_owner;
+	struct psc_lockedlist	*slb_lc_fcm;
+	struct psclist_head	 slb_iov_list;		/* list iovref backpointers */
+	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
+	struct psclist_head	 slb_fcm_lentry;	/* chain to fidcm entry     */
 };
 
 #define SLB_FLAG(field, str) (field ? str : "")
