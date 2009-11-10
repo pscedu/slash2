@@ -44,7 +44,6 @@ bmap_remove(struct bmapc_memb *b)
 	psc_assert(!atomic_read(&b->bcm_opcnt));
 	BMAP_ULOCK(b);
 
-	/* XXX how can this be right? */
 	locked = FCMH_RLOCK(f);
 
 	if (!SPLAY_REMOVE(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b))
