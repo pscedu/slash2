@@ -500,7 +500,7 @@ mds_repl_accessrq(struct sl_replrq *rrq)
 void
 mds_repl_unrefrq(struct sl_replrq *rrq)
 {
-	spinlock(&rrq->rrq_lock);
+	reqlock(&rrq->rrq_lock);
 	psc_atomic32_dec(&rrq->rrq_refcnt);
 	rrq->rrq_flags &= ~REPLRQF_BUSY;
 	psc_waitq_wakeall(&rrq->rrq_waitq);
