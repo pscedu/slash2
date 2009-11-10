@@ -79,7 +79,6 @@ slvr_do_crc(struct slvr_ref *s)
 			return (0);
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
-		psc_assert(s->slvr_flags & SLVR_SCHEDULED);
 		psc_assert(s->slvr_flags & SLVR_CRCING);
 		
 		psc_crc_calc(&s->slvr_crc, slvr_2_buf(s, 0), SL_CRC_SIZE);

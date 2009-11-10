@@ -52,7 +52,6 @@ struct slvr_ref {
 
 enum slvr_states {
 	SLVR_NEW        = (1<<0),  /* newly initialized */
-	SLVR_SCHEDULED  = (1<<1),  /* scheduled to processed (rpc, and crc) */
 	SLVR_CRCING     = (1<<2),  /* in the process of being crc'd */
 	SLVR_FAULTING   = (1<<3),  /* one or more blocks are being read from the fs */
 	SLVR_INFLIGHT   = (1<<4),  /* slvr crc is being sent the mds */ 
@@ -70,7 +69,6 @@ enum slvr_states {
 #define SLVR_FLAG(field, str) ((field) ? (str) : "")
 #define DEBUG_SLVR_FLAGS(s)						\
 	SLVR_FLAG(((s)->slvr_flags & SLVR_NEW), "n"),			\
-		SLVR_FLAG(((s)->slvr_flags & SLVR_SCHEDULED), "s"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_CRCING), "c"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_FAULTING), "f"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_INFLIGHT), "i"),	\
@@ -83,7 +81,7 @@ enum slvr_states {
 		SLVR_FLAG(((s)->slvr_flags & SLVR_FREEING), "F"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_SLBFREEING), "b")
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\

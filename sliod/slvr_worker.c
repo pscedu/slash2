@@ -267,7 +267,7 @@ slvr_worker_int(void)
 	 *   From this point until we set to inflight, the slvr_lentry 
 	 *   should be disjointed.
 	 */
-	s->slvr_flags |= (SLVR_SCHEDULED|SLVR_CRCING);
+	s->slvr_flags |= SLVR_CRCING;
 	
 	SLVR_ULOCK(s);
 	
@@ -292,7 +292,6 @@ slvr_worker_int(void)
 	 */
 	SLVR_LOCK(s);
 	s->slvr_flags |= SLVR_LRU;
-	s->slvr_flags &= ~SLVR_SCHEDULED;
 
 	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU");
 
