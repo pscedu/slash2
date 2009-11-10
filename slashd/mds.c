@@ -523,7 +523,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	struct sl_resm *resm;
 	struct mds_resm_info *mri;
 	struct resprof_mds_info *rmi;
-	int n, x, rc=0;
+	int n, x;
 
 	psc_assert(!mdsi->bmdsi_wr_ion);
 	n = atomic_read(&bmap->bcm_wr_ref);
@@ -558,7 +558,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 
 		if (!mri->mri_data) {
 			mri->mri_data = PSCALLOC(sizeof(*mion));
-			mds_mion_init(mion, resm);
+			mds_mion_init(mri->mri_data, resm);
 		}
 		mion = mri->mri_data;
 
