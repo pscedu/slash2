@@ -78,7 +78,7 @@ bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
 int
 bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
     struct slash_fidgen *fgp, sl_blkno_t *bmapnop,
-    lnet_process_id_t cli_prid, lnet_nid_t ion_nid, sl_ios_id_t ios_id)
+    lnet_process_id_t cli_prid, lnet_nid_t ion_nid, sl_ios_id_t ios_id, int rw)
 {
 	char buf[DESCBUF_REPRLEN];
 	gcry_error_t gerr;
@@ -86,13 +86,22 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 
 	if (sbdb->sbdb_secret.sbs_magic != SBDB_MAGIC)
 		return (EBADF);
-	if (memcmp(&sbdb->sbdb_secret.sbs_cli_prid,
-	    &cli_prid, sizeof(cli_prid)))
+	if (memcmp(&sbdb->sbdb_secret.sbs_cli_prid, &cli_prid, sizeof(cli_prid)))
 		return (EBADF);
-	if (sbdb->sbdb_secret.sbs_ion_nid != ion_nid)
-		return (EBADF);
-	if (sbdb->sbdb_secret.sbs_ios_id != ios_id)
-		return (EBADF);
+	if (rw == SL_WRITE) {
+		if (sbdb->sbdb_secret.sbs_ion_nid != ion_nid)
+			return (EBADF);
+		if (sbdb->sbdb_secret.sbs_ios_id != ios_id)
+			return (EBADF);
+	} else {
+	 	/* Read requests can get by with looser authentication. */
+		if ((sbdb->sbdb_secret.sbs_ion_nid != ion_nid) && 
+		    (sbdb->sbdb_secret.sbs_ion_nid != LNET_NID_ANY))
+			return (EBADF);
+		if ((sbdb->sbdb_secret.sbs_ios_id != ios_id) &&
+		    (sbdb->sbdb_secret.sbs_ios_id != IOS_ID_ANY))
+			return (EBADF);
+	}
 
 	gerr = gcry_md_copy(&hd, descbuf_hd);
 	if (gerr)
@@ -105,12 +114,9 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 	if (strcmp(buf, sbdb->sbdb_hash))
 		return (EBADF);
 
-	if (fgp)
-		*fgp = sbdb->sbdb_secret.sbs_fg;
-	if (cfdp)
-		*cfdp = sbdb->sbdb_secret.sbs_cfd;
-	if (bmapnop)
-		*bmapnop = sbdb->sbdb_secret.sbs_bmapno;
+	*fgp = sbdb->sbdb_secret.sbs_fg;
+	*cfdp = sbdb->sbdb_secret.sbs_cfd;
+	*bmapnop = sbdb->sbdb_secret.sbs_bmapno;
 	return (0);
 }
 

@@ -73,11 +73,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 	}
 	/* A RBW (read-before-write) request from the client may have a
 	 *   write enabled bdbuf which he uses to fault in his page.
-	 *   Read requests can get by with looser authentication.
 	 */
 	mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg, &bmapno, rq->rq_peer,
-			     (rw == SL_READ) ? LNET_NID_ANY:lpid.nid,
-			     (rw == SL_READ) ? IOS_ID_ANY: nodeInfo.node_res->res_id);
+			     lpid.nid, nodeInfo.node_res->res_id, rw);
 
 	if (mp->rc) {
 		psc_warnx("bdbuf failed for fid:"FIDFMT,
