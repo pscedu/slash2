@@ -10,19 +10,19 @@ struct pscrpc_export;
 #define SLM_RMM_NBUFS      1024
 #define SLM_RMM_BUFSZ      128
 #define SLM_RMM_REPSZ      128
-#define SLM_RMM_SVCNAME    "slrmm"
+#define SLM_RMM_SVCNAME    "slmrmm"
 
 #define SLM_RMI_NTHREADS   8
 #define SLM_RMI_NBUFS      1024
 #define SLM_RMI_BUFSZ      256
 #define SLM_RMI_REPSZ      256
-#define SLM_RMI_SVCNAME    "slrmi"
+#define SLM_RMI_SVCNAME    "slmrmi"
 
 #define SLM_RMC_NTHREADS   8
 #define SLM_RMC_NBUFS      1024
 #define SLM_RMC_BUFSZ      384
 #define SLM_RMC_REPSZ      384
-#define SLM_RMC_SVCNAME    "slrmc"
+#define SLM_RMC_SVCNAME    "slmrmc"
 
 #define resm2mri(resm)	((struct mds_resm_info *)(resm)->resm_pri)
 
@@ -47,7 +47,7 @@ struct pscrpc_export;
 void	rpc_initsvc(void);
 
 int	slrmc_handler(struct pscrpc_request *);
-int	slrmi_handler(struct pscrpc_request *);
+int	slm_rmi_handler(struct pscrpc_request *);
 int	slrmm_handler(struct pscrpc_request *);
 
 #endif /* _MDS_RPC_H_ */

@@ -22,7 +22,7 @@
 #include "slashrpc.h"
 
 int
-slrmi_bmap_getcrcs(struct pscrpc_request *rq)
+slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 {
 	struct srm_bmap_wire_req *mq;
 	struct srm_bmap_wire_rep *mp;
@@ -65,7 +65,7 @@ slrmi_bmap_getcrcs(struct pscrpc_request *rq)
 }
 
 int
-slrmi_bmap_crcwrt(struct pscrpc_request *rq)
+slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 {
 	struct srm_bmap_crcwrt_req *mq;
 	struct srm_generic_rep *mp;
@@ -151,10 +151,10 @@ slrmi_bmap_crcwrt(struct pscrpc_request *rq)
 }
 
 /*
- * slrmi_handle_connect - handle a CONNECT request from ION.
+ * slm_rmi_handle_connect - handle a CONNECT request from ION.
  */
 int
-slrmi_handle_connect(struct pscrpc_request *rq)
+slm_rmi_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
@@ -166,24 +166,22 @@ slrmi_handle_connect(struct pscrpc_request *rq)
 }
 
 /*
- * slrmi_handler - handle a request from ION.
+ * slm_rmi_handler - handle a request from ION.
  */
 int
-slrmi_handler(struct pscrpc_request *rq)
+slm_rmi_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_BMAPCRCWRT:
-		rc = slrmi_bmap_crcwrt(rq);
+		rc = slm_rmi_handle_bmap_crcwrt(rq);
 		break;
-
 	case SRMT_GETBMAPCRCS:
-		rc = slrmi_bmap_getcrcs(rq);
+		rc = slm_rmi_handle_bmap_getcrcs(rq);
 		break;
-
 	case SRMT_CONNECT:
-		rc = slrmi_handle_connect(rq);
+		rc = slm_rmi_handle_connect(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
