@@ -127,8 +127,7 @@ slmsmthr_main(void *arg)
 		bmapno = psc_random32u(nb);
 		for (ib = 0; ib < nb; ib++,
 		    bmapno = (bmapno + 1) % nb) {
-			bcm = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno);
-			if (bcm == NULL)
+			if (mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm))
 				/* XXX check inode new bmap policy? */
 				continue;
 

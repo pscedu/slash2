@@ -198,7 +198,8 @@ slrcmthr_main(__unusedx void *arg)
 		SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
 			slrcm_issue_getreplst(rrq, 0);
 			for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-				bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
+				if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+					continue;
 				BMAP_LOCK(bcm);
 				rc = slrcmthr_walk_brepls(rrq, bcm, n, &rq);
 				bmap_op_done(bcm);
@@ -215,7 +216,8 @@ slrcmthr_main(__unusedx void *arg)
 	} else if ((rrq = mds_repl_findrq(&srcm->srcm_fg, &dummy)) != NULL) {
 		slrcm_issue_getreplst(rrq, 0);
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
+			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+				continue;
 			BMAP_LOCK(bcm);
 			rc = slrcmthr_walk_brepls(rrq, bcm, n, &rq);
 			bmap_op_done(bcm);

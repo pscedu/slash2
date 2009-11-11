@@ -15,10 +15,11 @@
 #include "mdsexpc.h"
 #include "mdsio_zfs.h"
 #include "mdslog.h"
-#include "rpc_mds.h"
 #include "repl_mds.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slashexport.h"
+#include "slerr.h"
 
 struct odtable		*mdsBmapAssignTable;
 struct slash_bmap_od	 null_bmap_od;
@@ -531,7 +532,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 
 	if (!res) {
 		psc_warnx("Failed to find pios %d", pios);
-		return (-1);
+		return (-SLERR_ION_UNKNOWN);
 	}
 	rmi = res->res_pri;
 	psc_assert(rmi);
@@ -577,7 +578,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	} while (--x);
 
 	if (!mdsi->bmdsi_wr_ion)
-		return (-1);
+		return (-SLERR_ION_OFFLINE);
 
 	/* A mion has been assigned to the bmap, mark it in the odtable
 	 *   so that the assignment may be restored on reboot.
@@ -591,7 +592,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	mdsi->bmdsi_assign = odtable_putitem(mdsBmapAssignTable, &bmi);
 	if (!mdsi->bmdsi_assign) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
-		return (-1);
+		return (-SLERR_XACT_FAIL);
 	}
 
 	atomic_inc(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
@@ -615,7 +616,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
  * @mq: the RPC request for examining the bmap access mode (read/write).
  */
 __static int
-mds_bmap_ref_add(struct mexpbcm *bref, struct srm_bmap_req *mq)
+mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
@@ -980,8 +981,9 @@ mds_bmap_init(struct bmapc_memb *bcm)
 	BMAP_LOCK(bcm);
 }
 
-struct bmapc_memb *
-mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno)
+int
+mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
+    struct bmapc_memb **bp)
 {
 	struct bmapc_memb *b;
 	struct bmap_mds_info *bmdsi;
@@ -1020,7 +1022,7 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno)
 				   rc, bmapno);
 			b->bcm_mode |= BMAP_MDS_FAILED;
 			psc_waitq_wakeall(&b->bcm_waitq);
-			return (NULL);
+			return (rc);
 		} else {
 			b->bcm_mode = 0;
 			/* Notify other threads that this bmap has been loaded,
@@ -1031,7 +1033,8 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno)
 	}
 	BMAP_ULOCK(b);
 
-	return (b);
+	*bp = b;
+	return (0);
 }
 
 int
@@ -1039,7 +1042,7 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
 		  struct bmapc_memb **bmap)
 {
 	struct fidc_membh *f;
-	struct bmapc_memb *b;
+	int rc;
 
 	psc_assert(!*bmap);
 
@@ -1047,11 +1050,9 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
 	if (!f)
 		return (-ENOENT);
 
-	b = mds_bmap_load(f, bmapno);
-	if (!b)
-		return (-EIO);
-
-	*bmap = b;
+	rc = mds_bmap_load(f, bmapno, bmap);
+	if (rc)
+		return (rc);
 	return (0);
 }
 
@@ -1076,8 +1077,8 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
  *	with a bit (ie INIT) and other threads block on the waitq.
  */
 int
-mds_bmap_load_cli(struct mexpfcm *fref, struct srm_bmap_req *mq,
-		  struct bmapc_memb **bmap)
+mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
+    struct bmapc_memb **bmap)
 {
 	struct bmapc_memb *b, tbmap;
 	struct fidc_membh *f=fref->mexpfcm_fcmh;
@@ -1123,11 +1124,9 @@ mds_bmap_load_cli(struct mexpfcm *fref, struct srm_bmap_req *mq,
 	 *  still need to set the bmap pointer mexpbcm_bmap though.  Lock the
 	 *  fcmh during the bmap lookup.
 	 */
-	b = mds_bmap_load(f, mq->blkno);
-	if (!b) {
-		rc = -1;
+	rc = mds_bmap_load(f, mq->blkno, &b);
+	if (rc)
 		goto out;
-	}
 	/* Sanity checks, make sure that we didn't let the client in
 	 *  before this bmap was ready.
 	 */

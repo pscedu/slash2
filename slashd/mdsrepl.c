@@ -678,7 +678,8 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset2[SL_REPL_ACTIVE] = 0;
 
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
+			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+				continue;
 			BMAP_LOCK(bcm);
 			repl_some_act |= mds_repl_bmap_walk(bcm,
 			    tract, retifset, 0, iosidx, nios);
@@ -700,11 +701,13 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPL_SCHED] = EALREADY;
 		retifset[SL_REPL_OLD] = EALREADY;
 		retifset[SL_REPL_ACTIVE] = 0;
-		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno);
-		BMAP_LOCK(bcm);
-		rc = mds_repl_bmap_walk(bcm,
-		    tract, retifset, 0, iosidx, nios);
-		mds_repl_bmap_rel(bcm);
+		rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm);
+		if (rc == 0) {
+			BMAP_LOCK(bcm);
+			rc = mds_repl_bmap_walk(bcm,
+			    tract, retifset, 0, iosidx, nios);
+			mds_repl_bmap_rel(bcm);
+		}
 	} else
 		rc = SLERR_INVALID_BMAP;
 
@@ -744,7 +747,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
+		if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+			continue;
 		BMAP_LOCK(bcm);
 		rc = mds_repl_bmap_walk(bcm, NULL,
 		    retifset, REPL_WALKF_SCIRCUIT, NULL, 0);
@@ -839,7 +843,8 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 
 		rc = SLERR_REPLS_ALL_INACT;
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			bcm = mds_bmap_load(REPLRQ_FCMH(rrq), n);
+			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+				continue;
 			BMAP_LOCK(bcm);
 			if (mds_repl_bmap_walk(bcm, tract,
 			    retifset, 0, iosidx, nios))
@@ -851,11 +856,13 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPL_ACTIVE] = 0;
 		retifset[SL_REPL_OLD] = 0;
 		retifset[SL_REPL_SCHED] = 0;
-		bcm = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno);
-		BMAP_LOCK(bcm);
-		rc = mds_repl_bmap_walk(bcm,
-		    tract, retifset, 0, iosidx, nios);
-		mds_repl_bmap_rel(bcm);
+		rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm);
+		if (rc == 0) {
+			BMAP_LOCK(bcm);
+			rc = mds_repl_bmap_walk(bcm,
+			    tract, retifset, 0, iosidx, nios);
+			mds_repl_bmap_rel(bcm);
+		}
 	} else
 		rc = SLERR_INVALID_BMAP;
 

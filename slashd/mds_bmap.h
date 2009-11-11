@@ -51,8 +51,8 @@ struct bmap_mds_info {
 #define BMIM_LOGCHG		(1 << 1)
 
 /* bmap replication policies */
-#define BRP_ONETIME	0
-#define BRP_PERSIST	1
+#define BRP_ONETIME		0
+#define BRP_PERSIST		1
 
 /*
  * bmi_assign - the structure used for tracking the mds's bmap/ion
@@ -80,17 +80,16 @@ bmap_dio_sanity_locked(struct bmapc_memb *bmap, int dio_check)
 	psc_assert(atomic_read(&bmap->bcm_wr_ref) >= 0);
 	psc_assert(atomic_read(&bmap->bcm_rd_ref) >= 0);
 
-	if (dio_check && 
-	    ((atomic_read(&bmap->bcm_wr_ref) > 1) || 
-	     (atomic_read(&bmap->bcm_wr_ref) && 
+	if (dio_check &&
+	    ((atomic_read(&bmap->bcm_wr_ref) > 1) ||
+	     (atomic_read(&bmap->bcm_wr_ref) &&
 	      atomic_read(&bmap->bcm_rd_ref))))
 		psc_assert(bmap->bcm_mode & BMAP_DIO);
 }
 
-struct bmapc_memb *
-	mds_bmap_load(struct fidc_membh *, sl_blkno_t);
 int	mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
-int	mds_bmap_load_cli(struct mexpfcm *, struct srm_bmap_req *, struct bmapc_memb **);
+int	mds_bmap_load(struct fidc_membh *, sl_blkno_t, struct bmapc_memb **);
+int	mds_bmap_load_cli(struct mexpfcm *, const struct srm_bmap_req *, struct bmapc_memb **);
 int	mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, struct bmapc_memb **);
 int	mds_bmap_valid(struct fidc_membh *, sl_blkno_t);
 void	mds_bmap_ref_drop(struct bmapc_memb *, int);
