@@ -59,7 +59,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 	sl_blkno_t bmapno, slvrno;
 	uint64_t cfd;
 	uint32_t tsize, roff, sblk;
-	int rc=0, nslvrs=1, i;
+	int rc=0, nslvrs, i;
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
@@ -117,11 +117,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 
 	DEBUG_FCMH(PLL_INFO, fcmh, "blkno=%u size=%u off=%u rw=%d",
 		   bmap->bcm_blkno, mq->size, mq->offset, rw);
-
-	slvrno = mq->offset / SLASH_SLVR_SIZE;
-	/* We should never have a request size > 1MB, therefore it would
-	 *  never exceed two slivers.
+	/* 
+	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MB, therefore 
+	 * we would never exceed two slivers.
 	 */
+	nslvrs = 1;
+	slvrno = mq->offset / SLASH_SLVR_SIZE;
 	if (((mq->offset + (mq->size-1)) / SLASH_SLVR_SIZE) > slvrno)
 		nslvrs++;
 

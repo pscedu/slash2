@@ -9,24 +9,24 @@ enum fid_cache_users {
 	FIDC_USER_MDS = 2
 };
 
-/* Hand computed */
-#define FIDC_MDS_DEFSZ 32768   /* Number of fcmh's to allocate by default */
-#define FIDC_MDS_MAXSZ 1048576 /* Max fcmh's */
+/* Begin hand computed */
+#define FIDC_MDS_DEFSZ			32768	/* Number of fcmh's to allocate by default */
+#define FIDC_MDS_MAXSZ			1048576	/* Max fcmh's */
 
-#define FIDC_CLI_DEFSZ 32768   /* Number of fcmh's to allocate by default */
-#define FIDC_CLI_MAXSZ 131072 /* Max fcmh's */
+#define FIDC_CLI_DEFSZ			32768	/* Number of fcmh's to allocate by default */
+#define FIDC_CLI_MAXSZ			131072	/* Max fcmh's */
 
-#define FIDC_ION_DEFSZ 4096   /* Number of fcmh's to allocate by default */
-#define FIDC_ION_MAXSZ 524288 /* Max fcmh's */
+#define FIDC_ION_DEFSZ			4096	/* Number of fcmh's to allocate by default */
+#define FIDC_ION_MAXSZ			524288	/* Max fcmh's */
 
-#define FIDC_CLI_HASH_SZ (FIDC_MDS_DEFSZ * 2)
-#define FIDC_ION_HASH_SZ (FIDC_CLI_DEFSZ * 2)
-#define FIDC_MDS_HASH_SZ (FIDC_ION_DEFSZ * 2)
+#define FIDC_CLI_HASH_SZ		(FIDC_MDS_DEFSZ * 2)
+#define FIDC_ION_HASH_SZ		(FIDC_CLI_DEFSZ * 2)
+#define FIDC_MDS_HASH_SZ		(FIDC_ION_DEFSZ * 2)
 
-#define SLASH_SLVRS_PER_BMAP 128
-#define SLASH_SLVR_SIZE (1024*1024)
-#define SLASH_BMAP_SIZE  (SLASH_SLVRS_PER_BMAP * SLASH_SLVR_SIZE)
-#define SLASH_BMAP_SHIFT 15   /* 2^SLASH_BMAP_SHIFT should == SLASH_BMAP_BLKSZ */
+#define SLASH_SLVRS_PER_BMAP		128
+#define SLASH_SLVR_SIZE			(1024*1024)
+#define SLASH_BMAP_SIZE			(SLASH_SLVRS_PER_BMAP * SLASH_SLVR_SIZE)
+#define SLASH_BMAP_SHIFT		15	/* 2^SLASH_BMAP_SHIFT should == SLASH_BMAP_BLKSZ */
 /* End hand computed */
 
 #define SLASH_BMAP_BLKSZ 32768
