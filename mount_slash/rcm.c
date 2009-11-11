@@ -26,7 +26,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	struct srm_replst_master_rep *mp;
 	struct msctl_replst_cont *mrc;
 	struct msctl_replstq *mrsq;
-	struct sl_site *site;
+	struct sl_resource *res;
 	int n;
 
 	RSX_ALLOCREP(rq, mq, mp);
@@ -53,9 +53,13 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			mrc->mrc_mrs.mrs_nbmaps = mq->nbmaps;
 			mrc->mrc_mrs.mrs_nios = mq->nrepls;
 			for (n = 0; n < (int)mq->nrepls; n++) {
-				site = libsl_id2site(mq->repls[n].bs_id);
-				strlcpy(mrc->mrc_mrs.mrs_iosv[n],
-				    site->site_name, SITE_NAME_MAX);
+				res = libsl_id2res(mq->repls[n].bs_id);
+				if (res)
+					strlcpy(mrc->mrc_mrs.mrs_iosv[n],
+					    res->res_name, RES_NAME_MAX);
+				else
+					strlcpy(mrc->mrc_mrs.mrs_iosv[n],
+					    "<unknown IOS>", RES_NAME_MAX);
 			}
 			pll_add(&mrsq->mrsq_mrcs, mrc);
 			mrc = NULL;
