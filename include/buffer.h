@@ -195,7 +195,6 @@ enum slb_ref_flags {
 
 int  sl_buffer_init(struct psc_poolmgr *, void *);
 void sl_buffer_destroy(void *);
-int  sl_buffer_alloc(size_t, off_t, struct dynarray *, void *);
 void sl_buffer_cache_init(void);
 void sl_buffer_fresh_assertions(const struct sl_buffer *);
 
