@@ -34,6 +34,9 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_REPLS_ALL_INACT]: %s\n", SLERR_REPLS_ALL_INACT, slstrerror(SLERR_REPLS_ALL_INACT));
 	printf("%4d [SLERR_INVALID_BMAP]: %s\n", SLERR_INVALID_BMAP, slstrerror(SLERR_INVALID_BMAP));
 	printf("%4d [SLERR_UNKNOWN_IOS]: %s\n", SLERR_UNKNOWN_IOS, slstrerror(SLERR_UNKNOWN_IOS));
+	printf("%4d [SLERR_ION_UNKNOWN]: %s\n", SLERR_ION_UNKNOWN, slstrerror(SLERR_ION_UNKNOWN));
+	printf("%4d [SLERR_ION_OFFLINE]: %s\n", SLERR_ION_OFFLINE, slstrerror(SLERR_ION_OFFLINE));
+	printf("%4d [SLERR_XACT_FAIL]: %s\n", SLERR_XACT_FAIL, slstrerror(SLERR_XACT_FAIL));
 	/* end custom errnos */
 	exit(0);
 }

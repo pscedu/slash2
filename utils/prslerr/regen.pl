@@ -29,7 +29,7 @@ my @err = $hdat =~ /\b(SLERR_\w+)/g;
 my $ndat = join '', map { qq{\tprintf("%4d [$_]: %s\\n", $_, slstrerror($_));\n} } @err;
 
 my $data = slurp $src;
-$data =~ s!(?<=/\* start custom errnos \*/\n).*(?=\t/\* end custom errnos \*/)!$ndat!;
+$data =~ s!(?<=/\* start custom errnos \*/\n).*(?=\t/\* end custom errnos \*/)!$ndat!s;
 
 open F, ">", $src or die "$src: $!\n";
 print F $data;
