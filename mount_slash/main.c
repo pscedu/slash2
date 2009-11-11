@@ -38,6 +38,7 @@
 #include "slashrpc.h"
 
 sl_ios_id_t	 prefIOS = IOS_ID_ANY;
+int		 fuse_debug;
 const char	*progname;
 char		 ctlsockfn[] = _PATH_MSCTLSOCK;
 char		 mountpoint[PATH_MAX];
@@ -1740,8 +1741,15 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
-static int
-msl_fuse_lowlevel_mount(const char *mp)
+void
+msl_fuse_addarg(struct fuse_args *av, const char *arg)
+{
+	if (fuse_opt_add_arg(av, arg) == -1)
+		psc_fatal("fuse_opt_add_arg");
+}
+
+void
+msl_fuse_mount(const char *mp)
 {
 	struct fuse_session *se;
 	struct fuse_chan *ch;
@@ -1751,30 +1759,27 @@ msl_fuse_lowlevel_mount(const char *mp)
 	slash2fuse_listener_init();
 
 	if (asprintf(&fuse_opts, FUSE_OPTIONS, mp) == -1)
-		return ENOMEM;
+		psc_fatal("asprintf");
 
-	if (fuse_opt_add_arg(&args, "") == -1 ||
-	    fuse_opt_add_arg(&args, "-o") == -1 ||
-	    fuse_opt_add_arg(&args, fuse_opts) == -1) {
-		fuse_opt_free_args(&args);
-		free(fuse_opts);
-		return ENOMEM;
-	}
+	msl_fuse_addarg(&args, "");
+	msl_fuse_addarg(&args, "-o");
+	msl_fuse_addarg(&args, fuse_opts);
 	free(fuse_opts);
 
-	ch = fuse_mount(mp, &args);
-	if (ch == NULL) {
-		fuse_opt_free_args(&args);
-		return (errno);
-	}
+	if (fuse_debug)
+		msl_fuse_addarg(&args, "-odebug");
 
-	se = fuse_lowlevel_new(&args, &zfs_operations, sizeof(zfs_operations),
-	    NULL);
+	ch = fuse_mount(mp, &args);
+	if (ch == NULL)
+		psc_fatal("fuse_mount");
+
+	se = fuse_lowlevel_new(&args, &zfs_operations,
+	    sizeof(zfs_operations), NULL);
 	fuse_opt_free_args(&args);
 
 	if (se == NULL) {
 		fuse_unmount(mp, ch);
-		return EIO;
+		psc_fatal("fuse_lowlevel_new");
 	}
 
 	fuse_session_add_chan(se, ch);
@@ -1782,16 +1787,14 @@ msl_fuse_lowlevel_mount(const char *mp)
 	if (slash2fuse_newfs(mp, ch) != 0) {
 		fuse_session_destroy(se);
 		fuse_unmount(mp, ch);
-		return EIO;
+		psc_fatal("fuse_session_add_chan");
 	}
-
-	return (0);
 }
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-U] [-f conf] [-S socket] node\n", progname);
+	fprintf(stderr, "usage: %s [-dU] [-f conf] [-S socket] node\n", progname);
 	exit(1);
 }
 
@@ -1799,7 +1802,7 @@ int
 main(int argc, char *argv[])
 {
 	char c, *nc_mp, *cfg = _PATH_SLASHCONF;
-	int rc, unmount;
+	int unmount;
 
 	if (setenv("USOCK_PORTPID", "0", 1) == -1)
 		err(1, "setenv");
@@ -1809,14 +1812,13 @@ main(int argc, char *argv[])
 	unmount = 0;
 	nc_mp = NULL;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "f:m:S:U")) != -1)
+	while ((c = getopt(argc, argv, "df:S:U")) != -1)
 		switch (c) {
+		case 'd':
+			fuse_debug = 1;
+			break;
 		case 'f':
 			cfg = optarg;
-			break;
-		case 'm':
-			psc_errorx("-m is deprecated");
-			nc_mp = optarg;
 			break;
 		case 'S':
 			if (strlcpy(ctlsockfn, optarg,
@@ -1854,8 +1856,7 @@ main(int argc, char *argv[])
 	if (realpath(nc_mp, mountpoint) == NULL)
 		psc_fatal("realpath %s", nc_mp);
 
-	if (msl_fuse_lowlevel_mount(mountpoint))
-		return (-1);
+	msl_fuse_mount(mountpoint);
 
 #if 0
 	if (set_signal_handler(SIGHUP, exit_handler) != 0 ||
@@ -1867,7 +1868,5 @@ main(int argc, char *argv[])
 #endif
 	msl_init();
 	bmap_flush_init();
-	rc = slash2fuse_listener_start();
-
-	return (0);
+	exit(slash2fuse_listener_start());
 }

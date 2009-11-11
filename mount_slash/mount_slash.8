@@ -1,27 +1,37 @@
 .\" $Id$
-.Dd February 25, 2009
+.Dd November 11, 2009
 .Dt MOUNT_SLASH 8
-.ds volume PSC \- Slash Administrator's Manual
+.ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm mount_slash
-.Nd mount a slash file system
+.Nd mount a
+.Tn SLASH
+file system
 .Sh SYNOPSIS
 .Nm mount_slash
-.Op Fl s
-.Op Fl o Ar options
+.Op Fl dU
+.Op Fl f Ar conf
 .Op Fl S Ar socket
 .Ar mountpoint
 .Sh DESCRIPTION
 The
 .Nm
-utility attachs a slash file system mount under the specified
+utility attachs a
+.Tn SLASH
+file system under the specified
 .Ar mountpoint .
 .Pp
 The options are as follows:
 .Bl -tag -width Ds -offset indent
-.It Fl o Ar options
-Enable a FUSE-specific option.
+.It Fl d
+Enable
+.Tn FUSE
+debug messages.
+.It Fl f Ar conf
+Specify an alternative configuration file.
+Defaults to
+.Pa /etc/slash.conf .
 .It Fl S Ar socket
 Specify an alternative path for the named socket through which
 .Nm
@@ -40,18 +50,21 @@ character
 .Pp
 The default is
 .Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock .
-.It Fl s
-Disable multithreaded operation.
+.It Fl U
+Perform an unmount at the location specified by
+.Ar mountpoint
+before attempting to bring up the file system.
 .El
 .Sh ENVIRONMENT
 .Bl -tag -width SLASH_MDS_SERVER_NIDx
-.It Ev SLASH_MDS_SERVER_NID
-Slash MDS LNET NID
-.Pq connection address string .
-.It Ev SLASH_IO_SERVER_NIDS
-Comma-separated list of I/O server LNET NIDs.
+.It Ev SLASH_MDS_NID
+Metadata server address or resource name.
 .It Ev SLASH2_PIOS_ID
-Preferred I/O server LNET NID.
+Preferred
+.Tn I/O
+server
+.Xr slash.conf 5
+resource name.
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
@@ -68,6 +81,7 @@ control socket
 .El
 .Sh SEE ALSO
 .Xr pflenv 7 ,
+.Xr sladm 7 ,
 .Xr msctl 8 ,
 .Xr slashd 8 ,
 .Xr sliod 8 ,
