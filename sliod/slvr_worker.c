@@ -4,8 +4,10 @@
 
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
+#include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
@@ -18,11 +20,6 @@
 
 struct pscrpc_nbreqset *slvrNbReqSet;
 struct biod_infslvr_tree binfSlvrs;
-
-extern struct psc_listcache lruSlvrs;
-extern struct psc_listcache rpcqSlvrs;
-
-extern struct slashrpc_cservice *rmi_csvc;
 
 __static SPLAY_GENERATE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
 
@@ -39,7 +36,7 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 	int rc;
 	uint32_t i;
 
-	rc = RSX_NEWREQ(rmi_csvc->csvc_import, SRMI_VERSION, 
+	rc = RSX_NEWREQ(rmi_csvc->csvc_import, SRMI_VERSION,
 			SRMT_BMAPCRCWRT, req, mq, mp);
 	if (rc) {
 		return rc;
@@ -54,18 +51,18 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 		   mq->ncrc_updates);
 
 	len = (mq->ncrc_updates * sizeof(struct srm_bmap_crcup));
-        iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
-	
+	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
+
 	for (i = 0; i < mq->ncrc_updates; i++) {
-		bcrc_ref = dynarray_getpos(ref_array, i);		
-		
+		bcrc_ref = dynarray_getpos(ref_array, i);
+
 		(int)iod_inode_getsize(bcrc_ref->bcr_crcup.fid,
 				       (off_t *)&bcrc_ref->bcr_crcup.fsize);
 
 		mq->ncrcs_per_update[i] = bcrc_ref->bcr_crcup.nups;
 
-                iovs[i].iov_base = &bcrc_ref->bcr_crcup;
-                len += iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
+		iovs[i].iov_base = &bcrc_ref->bcr_crcup;
+		len += iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
 					   sizeof(struct srm_bmap_crcwire)) +
 					  sizeof(struct srm_bmap_crcup));
 
@@ -75,7 +72,7 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 
 	PSC_CRC_FIN(mq->crc);
 
-	(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL, 
+	(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
 			     iovs, mq->ncrc_updates);
 	PSCFREE(iovs);
 
@@ -85,18 +82,18 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 	return (rc);
 }
 
-__static void 
+__static void
 slvr_worker_push_crcups(void)
 {
 	int			 i;
 	struct timespec		 now;
-        struct biod_crcup_ref	*bcrc_ref;
+	struct biod_crcup_ref	*bcrc_ref;
 	struct dynarray		*ref_array;
 
 	if (!trylock(&binfSlvrs.binfst_lock))
 		return;
 
-	ref_array = PSCALLOC(sizeof(struct dynarray));       
+	ref_array = PSCALLOC(sizeof(struct dynarray));
 
 	/* First, try to gather full crcup's */
 	SPLAY_FOREACH(bcrc_ref, crcup_reftree, &binfSlvrs.binfst_tree) {
@@ -105,7 +102,7 @@ slvr_worker_push_crcups(void)
 		if (dynarray_len(ref_array) >= MAX_BMAP_NCRC_UPDATES)
 			break;
 	}
-	/* 
+	/*
 	 * Second, try to gather old crcups. We need to purge the ones we already
 	 * have from the tree first.
 	 */
@@ -138,8 +135,8 @@ done:
 }
 
 
-int 
-slvr_nbreqset_cb(__unusedx struct pscrpc_request *req, 
+int
+slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 		 struct pscrpc_async_args *args)
 {
 	struct dynarray *a = args->pointer_arg[0];
@@ -155,29 +152,29 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 		err = 1;
 
 	psc_assert(a);
-	
-	for (i=0; i < dynarray_len(a); i++) {		
+
+	for (i=0; i < dynarray_len(a); i++) {
 		b = dynarray_getpos(a, i);
 		s = b->bcr_slvr;
 
 		SLVR_LOCK(s);
 
-		DEBUG_SLVR(err ? PLL_ERROR : PLL_INFO, s, 
+		DEBUG_SLVR(err ? PLL_ERROR : PLL_INFO, s,
 			   "crcup %s fid(%"PRId64":%"PRId64")"
-			   " bmap(%u) slvr(%hu) crc=%"PRIx64, 
+			   " bmap(%u) slvr(%hu) crc=%"PRIx64,
 			   err ? "error" : "ok",
-			   fcmh_2_fid(slvr_2_fcmh(s)), 
+			   fcmh_2_fid(slvr_2_fcmh(s)),
 			   fcmh_2_gen(slvr_2_fcmh(s)),
-			   slvr_2_bmap(s)->bcm_blkno, 
+			   slvr_2_bmap(s)->bcm_blkno,
 			   s->slvr_num, s->slvr_crc);
 
 		psc_assert(s->slvr_flags & SLVR_RPCPNDG);
 		s->slvr_flags &= ~SLVR_RPCPNDG;
 
-		if (!s->slvr_pndgwrts && 
+		if (!s->slvr_pndgwrts &&
 		    s->slvr_flags & SLVR_CRCDIRTY) {
 			/* If the crc is dirty and there are no pending
-			 *   ops then the sliver was not moved to the 
+			 *   ops then the sliver was not moved to the
 			 *   rpc queue because SLVR_RPCPNDG had been set.
 			 *   Therefore we should try to schedule the
 			 *   sliver, otherwise may sit in the LRU forever.
@@ -196,21 +193,21 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 }
 
 
-__static void 
+__static void
 slvr_worker_int(void)
 {
 	struct slvr_ref *s;
 	struct biod_crcup_ref tbcrc_ref, *bcrc_ref=NULL;
 	struct timespec now;
 	int add=0;
-	
- start:	
+
+ start:
 	clock_gettime(CLOCK_REALTIME, &now);
 	now.tv_sec += BIOD_CRCUP_MAX_AGE;
 	if (!(s = lc_gettimed(&rpcqSlvrs, &now))) {
-		/* Nothing available, try to push any existing 
+		/* Nothing available, try to push any existing
 		 *  crc updates.
-		 */  
+		 */
 		slvr_worker_push_crcups();
 		return;
 	}
@@ -221,27 +218,27 @@ slvr_worker_int(void)
 	/* Sliver assertions:
 	 *  !LRU & RPCPNDG - ensure that slvr is in the right state.
 	 *  CRCDIRTY - must have work to do.
-	 *  PINNED - slab must not move from beneath us because the 
+	 *  PINNED - slab must not move from beneath us because the
 	 *           contents must be crc'd.
 	 */
 	psc_assert(!(s->slvr_flags & SLVR_LRU));
-	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);	
+	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 	psc_assert(s->slvr_flags & SLVR_RPCPNDG);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
-	
-	/* Try our best to determine whether or we should hold off 
-	 *   the crc operation, strive to only crc slivers which have 
-	 *   no pending writes.  This section directly below may race 
+
+	/* Try our best to determine whether or we should hold off
+	 *   the crc operation, strive to only crc slivers which have
+	 *   no pending writes.  This section directly below may race
 	 *   with slvr_wio_done().
 	 */
 	if (s->slvr_pndgwrts > 0) {
 		if (!LIST_CACHE_TRYLOCK(&lruSlvrs)) {
-			/* Don't deadlock, take the locks in the 
+			/* Don't deadlock, take the locks in the
 			 *   correct order.
 			 */
 			SLVR_ULOCK(s);
-			/* SLVR_RPCPNDG bit will prevent the sliver from 
+			/* SLVR_RPCPNDG bit will prevent the sliver from
 			 *   being re-added to the rpcq list.
 			 */
 			LIST_CACHE_LOCK(&lruSlvrs);
@@ -258,19 +255,19 @@ slvr_worker_int(void)
 			goto start;
 
 		} else
-			/* It was > 0 but another write must have just 
+			/* It was > 0 but another write must have just
 			 *   finished.
 			 */
 			LIST_CACHE_ULOCK(&lruSlvrs);
 	}
 	/* Ok, we've got a sliver to work on.
-	 *   From this point until we set to inflight, the slvr_lentry 
+	 *   From this point until we set to inflight, the slvr_lentry
 	 *   should be disjointed.
 	 */
 	s->slvr_flags |= SLVR_CRCING;
-	
+
 	SLVR_ULOCK(s);
-	
+
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(slvr_do_crc(s));
 	/* biodi_wire() will only be present if this bmap is in read
@@ -281,12 +278,12 @@ slvr_worker_int(void)
 		psc_assert(slvr_2_crcbits(s) & BMAP_SLVR_CRC);
 	}
 
-	/* At this point the slvr's slab can be freed but for that	  
+	/* At this point the slvr's slab can be freed but for that
 	 *   to happen we need to go back to the LRU.  The RPCPNDG bit
 	 *   set above will prevent this sliver from being rescheduled.
 	 *   Remember, sliod must guarantee the sliver is not inflight
 	 *   more than once.
-	 * The crc stored in s->slvr_crc will not be modified until 
+	 * The crc stored in s->slvr_crc will not be modified until
 	 *   we unset the RPCPNDG bit, allowing the slvr to be processed
 	 *   once again.
 	 */
@@ -305,27 +302,27 @@ slvr_worker_int(void)
 	 */
 	spinlock(&binfSlvrs.binfst_lock);
 	/* Lock the biodi to get (or possibly set) the bcr_id.
-	 */ 
+	 */
 	spinlock(&slvr_2_biod(s)->biod_lock);
 	/* Only search the tree if the biodi id has a non-zero value.
 	 */
 	if (slvr_2_biod(s)->biod_bcr_id) {
-		tbcrc_ref.bcr_id = slvr_2_biod(s)->biod_bcr_id;	
-		bcrc_ref = SPLAY_FIND(crcup_reftree, &binfSlvrs.binfst_tree, 
+		tbcrc_ref.bcr_id = slvr_2_biod(s)->biod_bcr_id;
+		bcrc_ref = SPLAY_FIND(crcup_reftree, &binfSlvrs.binfst_tree,
 				      &tbcrc_ref);
 	}
 
 	if (!bcrc_ref) {
 		/* Don't have a ref in the tree, let's add one.
-		 */		
+		 */
 		slvr_2_biod(s)->biod_bcr_id = binfSlvrs.binfst_counter++;
 		add = 1;
 
 	} else {
-		psc_assert(bcrc_ref->bcr_crcup.blkno == 
+		psc_assert(bcrc_ref->bcr_crcup.blkno ==
 			   slvr_2_bmap(s)->bcm_blkno);
 
-		psc_assert(bcrc_ref->bcr_crcup.fid == 
+		psc_assert(bcrc_ref->bcr_crcup.fid ==
 			   fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh));
 
 		bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups].crc = s->slvr_crc;
@@ -333,8 +330,8 @@ slvr_worker_int(void)
 		bcrc_ref->bcr_crcup.nups++;
 
 		if (bcrc_ref->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
-			/* The crcup is filled to the max, clear the bcr_id 
-			 *  from the biodi, later we'll remove it from the 
+			/* The crcup is filled to the max, clear the bcr_id
+			 *  from the biodi, later we'll remove it from the
 			 *  tree.
 			 */
 			slvr_2_biod(s)->biod_bcr_id = 0;
@@ -342,18 +339,18 @@ slvr_worker_int(void)
 	/* Should be done with the biodi, unlock it.
 	 */
 	freelock(&slvr_2_biod(s)->biod_lock);
-	
+
 	if (add) {
-		bcrc_ref = PSCALLOC(sizeof(struct biod_crcup_ref) + 
-				    (sizeof(struct srm_bmap_crcwire) * 
+		bcrc_ref = PSCALLOC(sizeof(struct biod_crcup_ref) +
+				    (sizeof(struct srm_bmap_crcwire) *
 				     MAX_BMAP_INODE_PAIRS));
-		bcrc_ref->bcr_slvr = s;		
+		bcrc_ref->bcr_slvr = s;
 		bcrc_ref->bcr_id = slvr_2_biod(s)->biod_bcr_id;
 		clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
 
 		bcrc_ref->bcr_crcup.fid = fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh);
 		bcrc_ref->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_blkno;
-		
+
 		bcrc_ref->bcr_crcup.crcs[0].crc = s->slvr_crc;
 		bcrc_ref->bcr_crcup.crcs[0].slot = s->slvr_num;
 		bcrc_ref->bcr_crcup.nups = 1;
@@ -365,8 +362,8 @@ slvr_worker_int(void)
 	slvr_worker_push_crcups();
 }
 
-void * 
-slvr_worker(__unusedx void *arg) 
+void *
+slvr_worker(__unusedx void *arg)
 {
 	for (;;) {
 		slvr_worker_int();
@@ -374,7 +371,7 @@ slvr_worker(__unusedx void *arg)
 	}
 }
 
-void 
+void
 slvr_worker_init(void)
 {
 	int i;
@@ -386,7 +383,7 @@ slvr_worker_init(void)
 	if (!slvrNbReqSet)
 		psc_fatalx("nbreqset_init() failed");
 
-	for (i=0; i < NSLVRCRC_THRS; i++) 
-		pscthr_init(SLITHRT_SLVR_CRC, 0, slvr_worker, NULL, 0, 
+	for (i=0; i < NSLVRCRC_THRS; i++)
+		pscthr_init(SLITHRT_SLVR_CRC, 0, slvr_worker, NULL, 0,
 			    "slislvrthr%d", i);
 }
