@@ -165,7 +165,7 @@ slrmc_getbmap(struct pscrpc_request *rq)
 
 	mp->rc = fdbuf_check(&mq->sfdb, &cfd, NULL, rq->rq_peer);
 	if (mp->rc)
-		RETURN(0);
+		RETURN(mp->rc);
 
 	/* Access the reference
 	 */
@@ -189,21 +189,11 @@ slrmc_getbmap(struct pscrpc_request *rq)
 
 	if (mq->getreptbl) {
 		struct slash_inode_handle *ih;
-		int nr;
 
 		niov++;
 		ih = fcmh_2_inoh(bmap->bcm_fcmh);
-		nr = ih->inoh_ino.ino_nrepls;
 		iov[2].iov_base = &ih->inoh_ino.ino_repls;
-		iov[2].iov_len = sizeof(sl_replica_t) *
-		    MIN(INO_DEF_NREPLS, nr);
-		if (nr > INO_DEF_NREPLS &&
-		    mds_repl_inoh_ensure_loaded(ih) == 0) {
-			niov++;
-			iov[3].iov_base = &ih->inoh_extras->inox_repls;
-			iov[3].iov_len = sizeof(sl_replica_t) *
-			    (nr - INO_DEF_NREPLS);
-		}
+		iov[2].iov_len = sizeof(sl_replica_t) * INO_DEF_NREPLS;
 	}
 
 	if (bmap->bcm_mode & BMAP_WR) {
@@ -225,7 +215,7 @@ slrmc_getbmap(struct pscrpc_request *rq)
 		pscrpc_free_bulk(desc);
 	mp->nblks = 1;
 
-	RETURN(0);
+	RETURN(mp->rc);
 }
 
 static int
