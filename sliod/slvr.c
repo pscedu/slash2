@@ -574,7 +574,7 @@ slvr_wio_done(struct slvr_ref *s)
 			slvr_lru_requeue(s);
 	}
 
-	if (--s->slvr_pndgwrts == 0 && !s->slvr_flags & SLVR_RPCPNDG) {
+	if (--s->slvr_pndgwrts == 0 && !(s->slvr_flags & SLVR_RPCPNDG)) {
 		/* No more pending writes, try to schedule the buffer
 		 *   to be crc'd.
 		 */
