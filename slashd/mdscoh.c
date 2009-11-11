@@ -68,6 +68,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 		   "bref=%p m=%u rc=%d netcmd=%d",
 		   bref, mq->mode, mp->rc, bref->mexpbcm_net_cmd);
 	/* XXX figure what to do here if mp->rc < 0
+	 * or rq_status or !mq or !mp
 	 */
 	psc_assert((bref->mexpbcm_net_cmd != MEXPBCM_RPC_CANCEL) &&
 		   bref->mexpbcm_net_inf);
