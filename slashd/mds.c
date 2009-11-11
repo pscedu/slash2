@@ -859,7 +859,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	/* Mark that mds_bmap_crc_write() is done with this bmap
 	 *  - it was incref'd in fcmh_bmap_lookup().
 	 */
-	bmap_op_done(bmap);
+	if (bmap)
+		bmap_op_done(bmap);
 	fidc_membh_dropref(fcmh);
 	return (rc);
 }
