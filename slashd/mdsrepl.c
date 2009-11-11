@@ -415,7 +415,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	/* Find/add our replica's IOS ID */
 	iosidx = mds_repl_ios_lookup_add(fcmh_2_inoh(bcm->bcm_fcmh), ios);
 	if (iosidx < 0)
-		psc_fatalx("lookup ios %d: %s", ios, slstrerror(rc));
+		psc_fatalx("lookup ios %d: %s", ios, slstrerror(iosidx));
 
 	bmdsi = bmap_2_bmdsi(bcm);
 	bmapod = bmdsi->bmdsi_od;
@@ -433,7 +433,32 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 		mds_repl_unrefrq(rrq);
 	}
 
-	mds_repl_bmap_walk(bcm, tract, retifset, REPL_WALKF_MODOTH, &iosidx, 1);
+	/* ensure this replica is marked active */
+	tract[SL_REPL_INACTIVE] = SL_REPL_ACTIVE;
+	tract[SL_REPL_OLD] = -1;
+	tract[SL_REPL_SCHED] = -1;
+	tract[SL_REPL_ACTIVE] = -1;
+
+	retifset[SL_REPL_INACTIVE] = 0;
+	retifset[SL_REPL_OLD] = EINVAL;
+	retifset[SL_REPL_SCHED] = EINVAL;
+	retifset[SL_REPL_ACTIVE] = 0;
+
+	rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
+	if (rc)
+		psc_error("bh_repls is marked OLD or SCHED for fid %lx "
+		    "bmap %d iosidx %d", fcmh_2_fid(bcm->bcm_fcmh),
+		    bcm->bcm_blkno, iosidx);
+
+	/* invalidate all other replicas */
+	tract[SL_REPL_INACTIVE] = -1;
+	tract[SL_REPL_OLD] = -1;
+	tract[SL_REPL_SCHED] = SL_REPL_OLD;
+	tract[SL_REPL_ACTIVE] = SL_REPL_OLD;
+
+	mds_repl_bmap_walk(bcm, tract, NULL, REPL_WALKF_MODOTH, &iosidx, 1);
+
+	/* write changes back to disk */
 	if (bmdsi->bmdsi_flags & BMIM_LOGCHG) {
 		bmdsi->bmdsi_flags &= ~BMIM_LOGCHG;
 		if (bmdsi->bmdsi_flags & BMIM_BUMPGEN) {
