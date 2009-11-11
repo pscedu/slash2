@@ -41,15 +41,13 @@ sli_repl_finishwk(struct sli_repl_workrq *w, int status)
 }
 
 __dead void *
-slireplfinthr_main(void *arg)
+slireplfinthr_main(__unusedx void *arg)
 {
-	struct psc_thread *thr = arg;
 	struct sli_repl_workrq *w;
-	int rc;
 
 	for (;;) {
 		w = lc_getwait(&repl_workq_finished);
-//		rc = sli_rmi_issue_schedwk(imp, w);
+		sli_rmi_issue_repl_schedwk(w);
 		psc_pool_return(sli_repl_bufpool, w->srw_srb);
 		psc_pool_return(repl_workrq_pool, w);
 		sched_yield();
@@ -57,10 +55,8 @@ slireplfinthr_main(void *arg)
 }
 
 __dead void *
-slireplinfthr_main(void *arg)
+slireplinfthr_main(__unusedx void *arg)
 {
-	struct psc_thread *thr = arg;
-
 	for (;;) {
 		sched_yield();
 //		check_set();
@@ -68,10 +64,9 @@ slireplinfthr_main(void *arg)
 }
 
 __dead void *
-slireplpndthr_main(void *arg)
+slireplpndthr_main(__unusedx void *arg)
 {
 	struct slashrpc_cservice *csvc;
-	struct psc_thread *thr = arg;
 	struct sli_repl_workrq *w;
 	char buf[PSC_NIDSTR_SIZE];
 	struct sl_resm *resm;
