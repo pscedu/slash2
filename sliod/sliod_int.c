@@ -155,6 +155,9 @@ iod_inode_lookup(struct slash_fidgen *fg)
 	return (f);
 }
 
+/*
+ * Attach the SLASH file to a file on the local file system.
+ */
 int
 iod_inode_open(struct fidc_membh *f, int rw)
 {

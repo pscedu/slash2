@@ -99,36 +99,6 @@ slvr_do_crc(struct slvr_ref *s)
 	return (1);
 }
 
-__static void
-slvr_getslab(struct slvr_ref *s)
-{
-	struct sl_buffer *slb;
-
-	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(s->slvr_flags & SLVR_GETSLAB);
-	psc_assert(!s->slvr_slab);
-
-	slb = psc_pool_get(slBufsPool);
-	sl_buffer_fresh_assertions(slb);
-
-	SLVR_LOCK(s);
-	s->slvr_slab = slb;
-	s->slvr_flags &= ~SLVR_GETSLAB;
-	s->slvr_flags |= SLVR_LRU;
-	SLVR_ULOCK(s);
-
-	DEBUG_SLVR(PLL_INFO, s, "should have slab");
-	if (!s->slvr_slab)
-		abort();
-	/* Until the slab is added to the sliver, the sliver is private
-	 *  to the bmap's biod_slvrtree.
-	 */
-	lc_addtail(&lruSlvrs, s);
-
-	SLVR_WAKEUP(s);
-}
-
-
 __static int
 slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 {
@@ -282,28 +252,23 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 	else
 		s->slvr_pndgreads++;
 
-	s->slvr_flags |= SLVR_PINNED;
-
-#define slvr_slab_prep_getslab			\
-	{					\
-		s->slvr_flags |= SLVR_GETSLAB;	\
-		SLVR_ULOCK(s);			\
-		slvr_getslab(s);		\
-		SLVR_LOCK(s);			\
-	}
-
 	if (s->slvr_flags & SLVR_NEW) {
 		s->slvr_flags &= ~SLVR_NEW;
-		slvr_slab_prep_getslab;
 
-	} else if (!s->slvr_slab) {
-		if (s->slvr_flags & SLVR_GETSLAB)
-			SLVR_WAIT_SLAB(s);
-		else {
-			slvr_slab_prep_getslab;
-		}
+		/* note: we grab a second lock here */
+		s->slvr_slab = psc_pool_get(slBufsPool);
+		sl_buffer_fresh_assertions(s->slvr_slab);
+
+		DEBUG_SLVR(PLL_INFO, s, "should have slab");
+		/* Until the slab is added to the sliver, the sliver is private
+		 *  to the bmap's biod_slvrtree.
+		 */
+		s->slvr_flags |= SLVR_LRU;
+		lc_addtail(&lruSlvrs, s);
 	}
+
 	psc_assert(s->slvr_slab);
+	s->slvr_flags |= SLVR_PINNED;
 	SLVR_ULOCK(s);
 }
 
