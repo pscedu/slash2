@@ -258,9 +258,10 @@ replst_slave_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 }
 
 void
-replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh, __unusedx const void *m)
+replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
+    __unusedx const void *m)
 {
-	char map[4], *iosname, rbuf[PSCFMT_RATIO_BUFSIZ];
+	char map[4], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
 	sl_blkno_t bact, bold, nb;
 	uint32_t iosidx;
@@ -278,12 +279,10 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh, __unusedx const voi
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry)
 			rsb_accul_replica_stats(rsb, iosidx, &bact, &bold);
 
-		iosname = current_mrs.mrs_iosv[iosidx] +
-		    strcspn(current_mrs.mrs_iosv[iosidx], "@");
-
 		psc_fmt_ratio(rbuf, bact, bact + bold);
 		printf("     %-58s %4d %4d %6s",
-		    iosname, bact + bold, bold, rbuf);
+		    current_mrs.mrs_iosv[iosidx],
+		    bact + bold, bold, rbuf);
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
 			off = SL_BITS_PER_REPLICA * iosidx;
 			for (nb = 0; nb < rsb->rsb_nbmaps; nb++, nbw++,
