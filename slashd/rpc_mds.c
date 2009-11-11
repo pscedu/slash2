@@ -143,7 +143,7 @@ rpc_initsvc(void)
 	svh->svh_rep_portal = SRMC_REP_PORTAL;
 	svh->svh_type = SLMTHRT_RMC;
 	svh->svh_nthreads = SLM_RMC_NTHREADS;
-	svh->svh_handler = slrmc_handler;
+	svh->svh_handler = slm_rmc_handler;
 	strlcpy(svh->svh_svc_name, SLM_RMC_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmc_thread);
 }

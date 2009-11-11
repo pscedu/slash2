@@ -46,7 +46,7 @@ struct pscrpc_export;
 
 void	rpc_initsvc(void);
 
-int	slrmc_handler(struct pscrpc_request *);
+int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
 int	slrmm_handler(struct pscrpc_request *);
 

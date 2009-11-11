@@ -40,9 +40,9 @@
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
-static int
-slrmc_inode_cacheput(struct slash_fidgen *fg, struct stat *stb,
-		     struct slash_creds *creds)
+int
+slmrmcthr_inode_cacheput(struct slash_fidgen *fg, struct stat *stb,
+    struct slash_creds *creds)
 {
 	struct fidc_memb fcm;
 	struct fidc_membh *fcmh;
@@ -64,7 +64,7 @@ slrmc_inode_cacheput(struct slash_fidgen *fg, struct stat *stb,
 }
 
 int
-slrmc_connect(struct pscrpc_request *rq)
+slm_rmc_handle_connect(struct pscrpc_request *rq)
 {
 	struct pscrpc_export *e=rq->rq_export;
 	struct srm_connect_req *mq;
@@ -111,8 +111,8 @@ slrmc_connect(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_access(struct pscrpc_request *rq)
+int
+slm_rmc_handle_access(struct pscrpc_request *rq)
 {
 	struct srm_access_req *mq;
 	struct srm_generic_rep *mp;
@@ -125,8 +125,8 @@ slrmc_access(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_getattr(struct pscrpc_request *rq)
+int
+slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
@@ -143,8 +143,8 @@ slrmc_getattr(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_getbmap(struct pscrpc_request *rq)
+int
+slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
 	struct slash_bmap_cli_wire *cw;
 	struct pscrpc_bulk_desc *desc;
@@ -218,8 +218,8 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	RETURN(mp->rc);
 }
 
-static int
-slrmc_link(struct pscrpc_request *rq)
+int
+slm_rmc_handle_link(struct pscrpc_request *rq)
 {
 	struct srm_link_req *mq;
 	struct srm_link_rep *mp;
@@ -234,8 +234,8 @@ slrmc_link(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_lookup(struct pscrpc_request *rq)
+int
+slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
@@ -254,8 +254,8 @@ slrmc_lookup(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_mkdir(struct pscrpc_request *rq)
+int
+slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 {
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
@@ -269,8 +269,8 @@ slrmc_mkdir(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_create(struct pscrpc_request *rq)
+int
+slm_rmc_handle_create(struct pscrpc_request *rq)
 {
 	struct srm_create_req *mq;
 	struct srm_opencreate_rep *mp;
@@ -287,7 +287,7 @@ slrmc_create(struct pscrpc_request *rq)
 	if (!mp->rc) {
 		struct cfdent *cfd=NULL;
 
-		mp->rc = slrmc_inode_cacheput(&fg, &mp->attr, &mq->creds);
+		mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
 				data, &cfd, &mdsCfdOps, CFD_FILE);
@@ -315,8 +315,8 @@ slrmc_create(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_open(struct pscrpc_request *rq)
+int
+slm_rmc_handle_open(struct pscrpc_request *rq)
 {
 	struct srm_open_req *mq;
 	struct srm_opencreate_rep *mp;
@@ -336,9 +336,9 @@ slrmc_open(struct pscrpc_request *rq)
 	if (!mp->rc) {
 		struct cfdent *cfd=NULL;
 
-		mp->rc = slrmc_inode_cacheput(&fg, &mp->attr, &mq->creds);
+		mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
 
-		psc_info("slrmc_inode_cacheput() fid %"PRId64" rc=%d",
+		psc_info("slmrmcthr_inode_cacheput() fid %"PRId64" rc=%d",
 			 mq->ino, mp->rc);
 
 		if (!mp->rc) {
@@ -368,8 +368,8 @@ slrmc_open(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_opendir(struct pscrpc_request *rq)
+int
+slm_rmc_handle_opendir(struct pscrpc_request *rq)
 {
 	struct srm_opendir_req *mq;
 	struct srm_opendir_rep *mp;
@@ -388,7 +388,7 @@ slrmc_opendir(struct pscrpc_request *rq)
 	if (!mp->rc) {
 		struct cfdent *cfd;
 
-		mp->rc = slrmc_inode_cacheput(&fg, &stb, &mq->creds);
+		mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
 				data, &cfd, &mdsCfdOps, CFD_DIR);
@@ -413,8 +413,8 @@ slrmc_opendir(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_readdir(struct pscrpc_request *rq)
+int
+slm_rmc_handle_readdir(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_readdir_req *mq;
@@ -485,8 +485,8 @@ slrmc_readdir(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_readlink(struct pscrpc_request *rq)
+int
+slm_rmc_handle_readlink(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_readlink_req *mq;
@@ -510,8 +510,8 @@ slrmc_readlink(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_release(struct pscrpc_request *rq)
+int
+slm_rmc_handle_release(struct pscrpc_request *rq)
 {
 	struct srm_release_req *mq;
 	struct srm_generic_rep *mp;
@@ -561,8 +561,8 @@ slrmc_release(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_rename(struct pscrpc_request *rq)
+int
+slm_rmc_handle_rename(struct pscrpc_request *rq)
 {
 	char from[NAME_MAX+1], to[NAME_MAX+1];
 	struct pscrpc_bulk_desc *desc;
@@ -600,8 +600,8 @@ slrmc_rename(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_setattr(struct pscrpc_request *rq)
+int
+slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
@@ -637,8 +637,8 @@ slrmc_setattr(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_statfs(struct pscrpc_request *rq)
+int
+slm_rmc_handle_statfs(struct pscrpc_request *rq)
 {
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
@@ -651,8 +651,8 @@ slrmc_statfs(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_symlink(struct pscrpc_request *rq)
+int
+slm_rmc_handle_symlink(struct pscrpc_request *rq)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct srm_symlink_req *mq;
@@ -685,8 +685,8 @@ slrmc_symlink(struct pscrpc_request *rq)
 	RETURN(0);
 }
 
-static int
-slrmc_unlink(struct pscrpc_request *rq, int isfile)
+int
+slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
@@ -705,8 +705,8 @@ slrmc_unlink(struct pscrpc_request *rq, int isfile)
 	RETURN(0);
 }
 
-static int
-slrmc_handle_addreplrq(struct pscrpc_request *rq)
+int
+slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 {
 	struct srm_generic_rep *mp;
 	struct srm_replrq_req *mq;
@@ -717,8 +717,8 @@ slrmc_handle_addreplrq(struct pscrpc_request *rq)
 	return (0);
 }
 
-static int
-slrmc_handle_delreplrq(struct pscrpc_request *rq)
+int
+slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 {
 	struct srm_generic_rep *mp;
 	struct srm_replrq_req *mq;
@@ -729,8 +729,8 @@ slrmc_handle_delreplrq(struct pscrpc_request *rq)
 	return (0);
 }
 
-static int
-slrmc_handle_getreplst(struct pscrpc_request *rq)
+int
+slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
@@ -757,76 +757,76 @@ slrmc_handle_getreplst(struct pscrpc_request *rq)
 }
 
 int
-slrmc_handler(struct pscrpc_request *rq)
+slm_rmc_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_ACCESS:
-		rc = slrmc_access(rq);
+		rc = slm_rmc_handle_access(rq);
 		break;
 	case SRMT_REPL_ADDRQ:
-		rc = slrmc_handle_addreplrq(rq);
+		rc = slm_rmc_handle_addreplrq(rq);
 		break;
 	case SRMT_CONNECT:
-		rc = slrmc_connect(rq);
+		rc = slm_rmc_handle_connect(rq);
 		break;
 	case SRMT_CREATE:
-		rc = slrmc_create(rq);
+		rc = slm_rmc_handle_create(rq);
 		break;
 	case SRMT_REPL_DELRQ:
-		rc = slrmc_handle_delreplrq(rq);
+		rc = slm_rmc_handle_delreplrq(rq);
 		break;
 	case SRMT_GETATTR:
-		rc = slrmc_getattr(rq);
+		rc = slm_rmc_handle_getattr(rq);
 		break;
 	case SRMT_GETBMAP:
-		rc = slrmc_getbmap(rq);
+		rc = slm_rmc_handle_getbmap(rq);
 		break;
 	case SRMT_REPL_GETST:
-		rc = slrmc_handle_getreplst(rq);
+		rc = slm_rmc_handle_getreplst(rq);
 		break;
 	case SRMT_LINK:
-		rc = slrmc_link(rq);
+		rc = slm_rmc_handle_link(rq);
 		break;
 	case SRMT_MKDIR:
-		rc = slrmc_mkdir(rq);
+		rc = slm_rmc_handle_mkdir(rq);
 		break;
 	case SRMT_LOOKUP:
-		rc = slrmc_lookup(rq);
+		rc = slm_rmc_handle_lookup(rq);
 		break;
 	case SRMT_OPEN:
-		rc = slrmc_open(rq);
+		rc = slm_rmc_handle_open(rq);
 		break;
 	case SRMT_OPENDIR:
-		rc = slrmc_opendir(rq);
+		rc = slm_rmc_handle_opendir(rq);
 		break;
 	case SRMT_READDIR:
-		rc = slrmc_readdir(rq);
+		rc = slm_rmc_handle_readdir(rq);
 		break;
 	case SRMT_READLINK:
-		rc = slrmc_readlink(rq);
+		rc = slm_rmc_handle_readlink(rq);
 		break;
 	case SRMT_RELEASE:
-		rc = slrmc_release(rq);
+		rc = slm_rmc_handle_release(rq);
 		break;
 	case SRMT_RENAME:
-		rc = slrmc_rename(rq);
+		rc = slm_rmc_handle_rename(rq);
 		break;
 	case SRMT_RMDIR:
-		rc = slrmc_unlink(rq, 0);
+		rc = slm_rmc_handle_unlink(rq, 0);
 		break;
 	case SRMT_SETATTR:
-		rc = slrmc_setattr(rq);
+		rc = slm_rmc_handle_setattr(rq);
 		break;
 	case SRMT_STATFS:
-		rc = slrmc_statfs(rq);
+		rc = slm_rmc_handle_statfs(rq);
 		break;
 	case SRMT_SYMLINK:
-		rc = slrmc_symlink(rq);
+		rc = slm_rmc_handle_symlink(rq);
 		break;
 	case SRMT_UNLINK:
-		rc = slrmc_unlink(rq, 1);
+		rc = slm_rmc_handle_unlink(rq, 1);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
