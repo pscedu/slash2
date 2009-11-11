@@ -39,7 +39,7 @@ extern struct psc_listcache bmapFlushQ;
 __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 
-__static void 
+__static void
 msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 		uint32_t len, int op)
 {
@@ -48,9 +48,9 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 	struct bmap_pagecache_entry *bmpce, *bmpce_tmp;
 	int i, npages=0, rbw=0;
 	uint64_t bmpce_pagemap=0;
-	
+
 	DEBUG_BMAP(PLL_TRACE, b, "adding req for (off=%u) (size=%u)",
-                   off, len);
+		   off, len);
 
 	psc_assert((off + len) <= SLASH_BMAP_SIZE);
 	psc_assert(op == BIORQ_WRITE || op == BIORQ_READ);
@@ -66,8 +66,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 		goto out;
 	}
 
-	bmpc = bmap_2_msbmpc(b);	
-	/* How many pages are needed to accommodate the request?  
+	bmpc = bmap_2_msbmpc(b);
+	/* How many pages are needed to accommodate the request?
 	 *   Determine and record whether RBW operations are needed on
 	 *   the first or last pages.
 	 */
@@ -81,25 +81,25 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 	}
 	npages = len / BMPC_BUFSZ;
 
-	if (len % BMPC_BUFSZ) {		
+	if (len % BMPC_BUFSZ) {
 		rbw |= BIORQ_RBWLP;
 		npages++;
 	}
-	
+
 	psc_assert(npages <= BMPC_IOMAXBLKS);
-	
+
 	bmpce_tmp = PSCALLOC(sizeof(*bmpce_tmp));
 	/* Lock the bmap's page cache and try to locate cached pages
 	 *   which correspond to this request.
 	 */
 	spinlock(&bmpc->bmpc_lock);
-	for (i=0; i < npages; i++) { 
+	for (i=0; i < npages; i++) {
 		bmpce_tmp->bmpce_off = off + (i * BMPC_BUFSZ);
-		bmpce = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree, 
+		bmpce = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
 				   bmpce_tmp);
 		if (bmpce) {
 			spinlock(&bmpce->bmpce_lock);
-			/* Increment the ref cnt via the lru mgmt 
+			/* Increment the ref cnt via the lru mgmt
 			 *   function.
 			 */
 			bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
@@ -112,7 +112,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 		}
 	}
 	freelock(&bmpc->bmpc_lock);
-	/* Drop the lock and now try to allocate any needed bmpce's from 
+	/* Drop the lock and now try to allocate any needed bmpce's from
 	 *    the pool.  Free the bmpce_tmp, it's no longer needed.
 	 */
 	PSCFREE(bmpce_tmp);
@@ -121,7 +121,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 	for (i=0; i < npages; i++) {
 		if (bmpce_pagemap & (1 << i))
 			continue;
-		
+
 		bmpce = psc_pool_get(bmpcePoolMgr);
 		bmpce_useprep(bmpce, r);
 		bmpce->bmpce_off = off + (i * BMPC_BUFSZ);
@@ -151,9 +151,9 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 	if (npages > 1)
 		qsort(r->biorq_pages.da_items, r->biorq_pages.da_pos,
 		      sizeof(void *), bmpce_sort_cmp);
-	
-	/* XXX Note if we were move to a RD_DATARDY / WR_DATARDY then 
-	 *   we wouldn't have to fault in pages like this unless the 
+
+	/* XXX Note if we were move to a RD_DATARDY / WR_DATARDY then
+	 *   we wouldn't have to fault in pages like this unless the
 	 *   bmap was open in RW mode.
 	 */
 	if ((fcmh_2_fsz(b->bcm_fcmh) > off) && op == BIORQ_WRITE && rbw)
@@ -167,22 +167,22 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 		/* Only this thread may assign a buffer to the bmpce.
 		 */
 		spinlock(&bmpce->bmpce_lock);
-		if (biorq_is_my_bmpce(r, bmpce) && 
+		if (biorq_is_my_bmpce(r, bmpce) &&
 		    (bmpce->bmpce_flags & BMPCE_GETBUF)) {
-			/* Increase the rdref cnt in preparation for any 
+			/* Increase the rdref cnt in preparation for any
 			 *   RBW ops but only on new pages owned by this
-			 *   page cache entry.  For now bypass 
+			 *   page cache entry.  For now bypass
 			 *   bmpce_handle_lru_locked() for this op.
 			 *  XXX how is this ref affected by the cb's?
 			 */
 			if (bmpce_is_rbw_page(r, bmpce, i))
 				psc_atomic16_inc(&bmpce->bmpce_rdref);
-			
+
 			psc_assert(!bmpce->bmpce_base);
 			psc_assert(bmpce->bmpce_flags & BMPCE_GETBUF);
 			freelock(&bmpce->bmpce_lock);
-			
-			bmpce->bmpce_base = bmpc_alloc();		
+
+			bmpce->bmpce_base = bmpc_alloc();
 
 			bmpce->bmpce_flags &= ~BMPCE_GETBUF;
 			psc_waitq_wakeall(bmpce->bmpce_waitq);
@@ -195,10 +195,10 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 			if (!i && (r->biorq_flags & BIORQ_RBWFP))
 				r->biorq_flags &= ~BIORQ_RBWFP;
 
-			else if (i == (npages-1) && 
+			else if (i == (npages-1) &&
 				 (r->biorq_flags & BIORQ_RBWLP))
 				r->biorq_flags &= ~BIORQ_RBWLP;
-				
+
 			freelock(&bmpce->bmpce_lock);
 		}
 	}
@@ -212,9 +212,9 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 		if (op == BIORQ_WRITE)
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
 		else
-			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) > 0); 
+			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) > 0);
 		if (biorq_is_my_bmpce(r, bmpce)) {
-			/* The page is my reponsibility, ensure a cache 
+			/* The page is my reponsibility, ensure a cache
 			 *   block has been assigned.
 			 */
 			psc_assert(bmpce->bmpce_base);
@@ -248,13 +248,13 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 
 	psc_assert(psclist_conjoint(&r->biorq_lentry));
 
-	pll_remove(&bmpc->bmpc_pndg, r);       
+	pll_remove(&bmpc->bmpc_pndg, r);
 	if (r->biorq_flags & BIORQ_WRITE) {
 		atomic_dec(&bmpc->bmpc_pndgwr);
 		psc_assert(atomic_read(&bmpc->bmpc_pndgwr) >= 0);
 
 	} else
-		/* Nothing left to do for read biorq's since they don't 
+		/* Nothing left to do for read biorq's since they don't
 		 *   affect the dirty status of the bmap.
 		 */
 		goto out;
@@ -262,7 +262,7 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 	if (atomic_read(&bmpc->bmpc_pndgwr)) {
 		psc_assert(b->bcm_mode & BMAP_DIRTY);
 		psc_assert(psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry));
-		
+
 	} else {
 		/* Set the special flag to prevent races with others which
 		 *   can occur because we may drop the bmap lock before
@@ -320,10 +320,10 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 
 	spinlock(&bmpc->bmpc_lock);
 	for (i=0; i < dynarray_len(&r->biorq_pages); i++) {
-		bmpce = dynarray_getpos(&r->biorq_pages, i);		
+		bmpce = dynarray_getpos(&r->biorq_pages, i);
 		spinlock(&bmpce->bmpce_lock);
 
-		bmpce_handle_lru_locked(bmpce, bmpc, 
+		bmpce_handle_lru_locked(bmpce, bmpc,
 		 (r->biorq_flags & BIORQ_WRITE) ? BIORQ_WRITE : BIORQ_READ, 0);
 
 		bmpce->bmpce_flags &= ~(BMPCE_INFL|BMPCE_IOSCHED);
@@ -347,7 +347,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 
 	if (r->biorq_rqset)
 		pscrpc_set_destroy(r->biorq_rqset);
-	
+
 	PSCFREE(r);
 }
 
@@ -393,7 +393,7 @@ void
 msl_bmap_release(struct bmapc_memb *b)
 {
 	struct bmap_pagecache *bmpc=bmap_2_msbmpc(b);
-	
+
 	/* Mind lock ordering, remove from LRU first.
 	 */
 	bmpc_lru_del(bmpc);
@@ -402,18 +402,18 @@ msl_bmap_release(struct bmapc_memb *b)
 
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_mode & BMAP_CLOSING);
-	/* Assert that this bmap can no longer be scheduled by the 
+	/* Assert that this bmap can no longer be scheduled by the
 	 *   write back cache thread.
-	 */ 
+	 */
 	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
-	/* Assert that this thread cannot be seen by the page cache 
+	/* Assert that this thread cannot be seen by the page cache
 	 *   reaper (it was lc_remove'd above by bmpc_lru_del()).
 	 */
 	psc_assert(psclist_disjoint(&bmpc->bmpc_lentry));
 	BMAP_ULOCK(b);
-	
+
 	DEBUG_BMAP(PLL_INFO, b, "freeing");
-	
+
 	spinlock(&bmpc->bmpc_lock);
 	bmpc_freeall_locked(bmpc);
 	freelock(&bmpc->bmpc_lock);
@@ -471,7 +471,7 @@ msl_fbr_free(struct msl_fbr *r)
 
 	psc_assert(b);
 	psc_assert(SPLAY_ENTRY_DISJOINT(fhbmap_cache, r));
-	
+
 	msl_fbr_unref(r);
 	PSCFREE(r);
 
@@ -504,7 +504,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	psc_assert(bmap->bcm_fcmh);
 
 	f = bmap->bcm_fcmh;
-	
+
 	FCMH_LOCK(f);
 	psc_assert(f->fcmh_fcoo);
 	if (!f->fcmh_fcoo->fcoo_pri) {
@@ -513,7 +513,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 		getreptbl = 1;
 	}
 	FCMH_ULOCK(f);
-	
+
 	/* Build the new RPC request.
 	 */
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
@@ -598,7 +598,7 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
 	struct srm_bmap_chmode_req *mq;
 	struct srm_generic_rep *mp;
 	int rc;
-	
+
 	psc_assert(rw == SRIC_BMAP_WRITE || rw == SRIC_BMAP_READ);
 
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
@@ -683,9 +683,9 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, u32 rw)
 {
 	struct fidc_membh *f = mfh->mfh_fcmh;
 	struct bmapc_memb *b;
-	
+
 	int rc = 0, mode = BML_HAVE_BMAP;
-	
+
 	b = bmap_lookup_add(f, n, msl_bmap_init);
 	psc_assert(b);
 
@@ -712,7 +712,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, u32 rw)
 	 *  blocking on the waitq.
 	 */
 	msl_bmap_fhcache_ref(mfh, b, mode, rw);
-	
+
 	/* If our bmap is cached then we need to consider the current
 	 *   caching policy and possibly notify the mds.  I.e. if our
 	 *   bmap is read-only (but we'd like to write) then the mds
@@ -822,8 +822,8 @@ msl_ion_connect(lnet_nid_t nid, struct cli_imp_ion *c)
 			return (-EAGAIN);
 	} else
 		c->ci_flags &= ~CION_CONNECT_FAIL;
-	
-	
+
+
 	psc_assert(!c->ci_import);
 	psc_assert(!((c->ci_flags & CION_CONNECTED) ||
 		     (c->ci_flags & CION_CONNECTING)));
@@ -874,7 +874,7 @@ struct pscrpc_import *
 msl_bmap_to_import(struct bmapc_memb *b, int add)
 {
 	struct cli_imp_ion *c;
-        struct sl_resm *r;
+	struct sl_resm *r;
 	int locked;
 
 	/* Sanity check on the opcnt.
@@ -890,7 +890,7 @@ msl_bmap_to_import(struct bmapc_memb *b, int add)
 
 	c = r->resm_pri;
 	ureqlock(&b->bcm_lock, locked);
-	
+
 	if (!c->ci_import && add)
 		msl_ion_connect(bmap_2_msion(b), c);
 
@@ -908,10 +908,10 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	struct sl_resm *resm;
 	lnet_nid_t repl_nid;
 	int n;
-	
+
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 	psc_assert(b->bcm_fcmh->fcmh_fcoo);
-	
+
 	mfd = b->bcm_fcmh->fcmh_fcoo->fcoo_pri;
 	psc_assert(mfd);
 	/*  XXX need a more intelligent algorithm here.
@@ -947,8 +947,8 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 
 /** msl_readio_cb - rpc callback used only for read or RBW operations.
  *    The primary purpose is to set the bmpce's to DATARDY so that other
- *    threads waiting for DATARDY may be unblocked.  
- *  Note: Unref of the biorq will happen after the pages have been 
+ *    threads waiting for DATARDY may be unblocked.
+ *  Note: Unref of the biorq will happen after the pages have been
  *     copied out to the applicaton buffers.
  */
 int
@@ -983,7 +983,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	for (i=0; i < dynarray_len(a); i++) {
 		bmpce = dynarray_getpos(a, i);
 		spinlock(&bmpce->bmpce_lock);
-		
+
 		psc_assert(bmpce->bmpce_waitq);
 		psc_assert(biorq_is_my_bmpce(r, bmpce));
 		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
@@ -992,11 +992,11 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		bmpce->bmpce_flags &= ~(BMPCE_INFL|BMPCE_IOSCHED);
 		bmpce->bmpce_flags |= BMPCE_DATARDY;
 		if (bmpce_is_rbw_page(r, bmpce, i)) {
-			/* The RBW stuff needs to be managed outside of 
-			 *   the LRU, this is not the best place but should 
+			/* The RBW stuff needs to be managed outside of
+			 *   the LRU, this is not the best place but should
 			 *   suffice for now.
 			 */
-			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) 
+			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref)
 				   == 1);
 			psc_atomic16_dec(&bmpce->bmpce_rdref);
 		}
@@ -1008,7 +1008,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		freelock(&bmpce->bmpce_lock);
 	}
 	psc_waitq_wakeall(&r->biorq_waitq);
-	
+
 	/* Free the dynarray which was allocated in msl_readio_rpc_create().
 	 */
 	PSCFREE(a);
@@ -1122,21 +1122,21 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	msbd = bcm->bcm_pri;
 
 	DEBUG_BIORQ(PLL_TRACE, r, "dio req");
-       
-	op = r->biorq_flags & BIORQ_WRITE ? 
+
+	op = r->biorq_flags & BIORQ_WRITE ?
 		SRMT_WRITE : SRMT_READ;
-	
-	imp = (op == SRMT_WRITE) ? 
-		msl_bmap_to_import(bcm, 1) : 
+
+	imp = (op == SRMT_WRITE) ?
+		msl_bmap_to_import(bcm, 1) :
 		msl_bmap_choose_replica(bcm);
-	
+
 	r->biorq_rqset = pscrpc_prep_set();
 	/* This buffer hasn't been segmented into LNET sized
 	 *  chunks.  Set up buffers into 1MB chunks or smaller.
 	 */
 	n = (r->biorq_len / LNET_MTU) + ((r->biorq_len % LNET_MTU) ? 1 : 0);
 	iovs = PSCALLOC(sizeof(*iovs) * n);
-	
+
 	for (i=0, nbytes=0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, (size-nbytes));
 
@@ -1149,7 +1149,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 		iovs[i].iov_base = b + nbytes;
 		iovs[i].iov_len  = len;
 
-		rc = rsx_bulkclient(req, &desc, 
+		rc = rsx_bulkclient(req, &desc,
 				    (op == SRMT_WRITE ?
 				     BULK_GET_SOURCE : BULK_PUT_SINK),
 				    SRIC_BULK_PORTAL, &iovs[i], 1);
@@ -1203,12 +1203,12 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		psc_assert(pll_nitems(&bmpc->bmpc_pndg) > 1);
 
 	} else if (!(b->bcm_mode & BMAP_DIRTY2LRU)) {
-		/* Deal with a race which can occur with bmap_oftrq_del() 
-		 *   due to his requirement to drop the bmap lock prior 
-		 *   to removing the bmap from the bmapFlushQ listcache.  
-		 *   By replacing the dirty flag bmap_biorq_del() will 
+		/* Deal with a race which can occur with bmap_oftrq_del()
+		 *   due to his requirement to drop the bmap lock prior
+		 *   to removing the bmap from the bmapFlushQ listcache.
+		 *   By replacing the dirty flag bmap_biorq_del() will
 		 *   leave the bmap on the bmap_biorq_del().
-		 * Set it to dirty and hand it off to the bmap 
+		 * Set it to dirty and hand it off to the bmap
 		 *   flush thread.
 		 */
 		psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
@@ -1217,7 +1217,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	}
 
 	DEBUG_BMAP(PLL_INFO, b, "biorq=%p list_empty(%d)",
-                   r, pll_empty(&bmpc->bmpc_pndg));
+		   r, pll_empty(&bmpc->bmpc_pndg));
 
 	BMAP_ULOCK(b);
 
@@ -1244,15 +1244,15 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	psc_assert(npages <= BMPC_MAXBUFSRPC);
 
 	imp = msl_bmap_choose_replica(r->biorq_bmap);
-	
+
 	rc = RSX_NEWREQ(imp, SRIC_VERSION, SRMT_READ, req, mq, mp);
 	if (rc)
 		psc_fatalx("RSX_NEWREQ() failed %d", rc);
-	
+
 	iovs = PSCALLOC(sizeof(*iovs) * npages);
 	a = PSCALLOC(sizeof(a));
 	dynarray_init(a);
-	
+
 	for (i=0; i < npages; i++) {
 		bmpce = dynarray_getpos(&r->biorq_pages, i+startpage);
 
@@ -1265,7 +1265,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		 */
 		psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
 		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
-		bmpce_usecheck(bmpce, BIORQ_READ, 
+		bmpce_usecheck(bmpce, BIORQ_READ,
 			       biorq_getaligned_off(r, (i+startpage)));
 		bmpce->bmpce_flags |= BMPCE_INFL;
 		DEBUG_BMPCE(PLL_TRACE, bmpce, "adding to rpc");
@@ -1274,25 +1274,25 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 
 		iovs[i].iov_base = bmpce->bmpce_base;
 		iovs[i].iov_len  = BMPC_BUFSZ;
-		
+
 		if (!i)
 			mq->offset = bmpce->bmpce_off;
 		dynarray_add(a, bmpce);
 	}
 
-	rc = rsx_bulkclient(req, &desc, BULK_PUT_SINK, SRIC_BULK_PORTAL, 
+	rc = rsx_bulkclient(req, &desc, BULK_PUT_SINK, SRIC_BULK_PORTAL,
 			    iovs, npages);
 	if (rc)
 		psc_fatalx("rsx_bulkclient() failed %d", rc);
-	
+
 	mq->size = npages * BMPC_BUFSZ;
 	mq->op = SRMIO_RD;
-	memcpy(&mq->sbdb, &bmap_2_msbd(r->biorq_bmap)->msbd_bdb, 
+	memcpy(&mq->sbdb, &bmap_2_msbd(r->biorq_bmap)->msbd_bdb,
 	       sizeof(mq->sbdb));
-	
+
 	pscrpc_set_add_new_req(r->biorq_rqset, req);
 	if (pscrpc_push_req(req)) {
-		DEBUG_REQ(PLL_ERROR, req, 
+		DEBUG_REQ(PLL_ERROR, req,
 			  "pscrpc_push_req() failed");
 		psc_fatalx("pscrpc_push_req, no failover yet");
 	}
@@ -1310,45 +1310,45 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	struct bmapc_memb *bcm;
 	struct bmap_cli_info *msbd;
 	struct bmap_pagecache_entry *bmpce;
-	
+
 	if (!((r->biorq_flags & BIORQ_READ)  ||
 	      (r->biorq_flags & BIORQ_RBWFP) ||
 	      (r->biorq_flags & BIORQ_RBWLP)))
 		return;
 
 	bcm    = r->biorq_bmap;
-	msbd   = bcm->bcm_pri;       
+	msbd   = bcm->bcm_pri;
 	npages = dynarray_len(&r->biorq_pages);
 
 	r->biorq_flags |= BIORQ_SCHED;
-              
+
 	psc_assert(!r->biorq_rqset);
 	r->biorq_rqset = pscrpc_prep_set();
-	/* Only read in the pages owned by this request.  To do this 
+	/* Only read in the pages owned by this request.  To do this
 	 *   the below loop marks only the iov slots which correspond
 	 *   to page cache entries owned by this request as determined
 	 *   by biorq_is_my_bmpce().
 	 */
 	if (r->biorq_flags & BIORQ_READ) {
 		int j=-1;
-		
+
 		for (i=0; i < npages; i++) {
 			bmpce = dynarray_getpos(&r->biorq_pages, i);
 			spinlock(&bmpce->bmpce_lock);
 
-			bmpce_usecheck(bmpce, BIORQ_READ, 
+			bmpce_usecheck(bmpce, BIORQ_READ,
 				       biorq_getaligned_off(r, i));
 
 			if (biorq_is_my_bmpce(r, bmpce)) {
-				psc_assert(!(bmpce->bmpce_flags & 
+				psc_assert(!(bmpce->bmpce_flags &
 					     BMPCE_DATARDY));
-				bmpce->bmpce_flags |= BMPCE_IOSCHED;	
+				bmpce->bmpce_flags |= BMPCE_IOSCHED;
 			}
 			freelock(&bmpce->bmpce_lock);
-		       
-			/* Try to set the tail bmpce if it's not yet 
+
+			/* Try to set the tail bmpce if it's not yet
 			 *   assigned.
-			 */			
+			 */
 			if (j < 0) {
 				if (biorq_is_my_bmpce(r, bmpce))
 					j = i;
@@ -1364,7 +1364,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			}
 		}
 
-		if (j >= 0) 
+		if (j >= 0)
 			/* Catch any unsent frags at the end of the array.
 			 */
 			msl_readio_rpc_create(r, j, i-j);
@@ -1373,21 +1373,21 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		bmpce = dynarray_getpos(&r->biorq_pages, 0);
 
 		if (biorq_is_my_bmpce(r, bmpce)) {
-			psc_assert(!(bmpce->bmpce_flags & 
+			psc_assert(!(bmpce->bmpce_flags &
 				     BMPCE_DATARDY));
-			bmpce->bmpce_flags |= BMPCE_IOSCHED;	
+			bmpce->bmpce_flags |= BMPCE_IOSCHED;
 			msl_readio_rpc_create(r, 0, 1);
 		}
 
 	} else if (r->biorq_flags & BIORQ_RBWLP) {
-		bmpce = dynarray_getpos(&r->biorq_pages, 
+		bmpce = dynarray_getpos(&r->biorq_pages,
 				dynarray_len(&r->biorq_pages)-1);
 
 		if (biorq_is_my_bmpce(r, bmpce)) {
-			psc_assert(!(bmpce->bmpce_flags & 
+			psc_assert(!(bmpce->bmpce_flags &
 				     BMPCE_DATARDY));
-			bmpce->bmpce_flags |= BMPCE_IOSCHED;	
-			msl_readio_rpc_create(r, 
+			bmpce->bmpce_flags |= BMPCE_IOSCHED;
+			msl_readio_rpc_create(r,
 			      dynarray_len(&r->biorq_pages)-1, 1);
 		}
 	}
@@ -1404,7 +1404,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *bmpce;
 	int rc, i, npages=dynarray_len(&r->biorq_pages);
 
- 	if (r->biorq_rqset) {
+		if (r->biorq_rqset) {
 		rc = pscrpc_set_wait(r->biorq_rqset);
 		if (rc)
 			// XXX need to cleanup properly
@@ -1425,18 +1425,18 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			 *    wait for them to become DATARDY.
 			 */
 			while (!(bmpce->bmpce_flags & BMPCE_DATARDY)) {
-				psc_waitq_wait(bmpce->bmpce_waitq, 
+				psc_waitq_wait(bmpce->bmpce_waitq,
 					       &bmpce->bmpce_lock);
 				spinlock(&bmpce->bmpce_lock);
 			}
-		
+
 		if ((r->biorq_flags & BIORQ_READ) ||
 		    !biorq_is_my_bmpce(r, bmpce)  ||
 		    bmpce_is_rbw_page(r, bmpce, i))
 			/* Read requests must have had their bmpce's
-			 *   put into DATARDY by now (i.e. all RPCs 
-			 *   must have already been completed).  
-			 *   Unaligned writes must have been faulted in, 
+			 *   put into DATARDY by now (i.e. all RPCs
+			 *   must have already been completed).
+			 *   Unaligned writes must have been faulted in,
 			 *   same as any page owned by another request.
 			 */
 			psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
@@ -1485,35 +1485,35 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 			/* The first cache buffer pointer may need
 			 *    a bump if the request offset is unaligned.
 			 */
-			bmpce_usecheck(bmpce, BIORQ_WRITE, 
+			bmpce_usecheck(bmpce, BIORQ_WRITE,
 				       (toff & ~BMPC_BUFMASK));
 			psc_assert((toff - bmpce->bmpce_off) < BMPC_BUFSZ);
 			sink += toff - bmpce->bmpce_off;
-			nbytes = MIN(BMPC_BUFSZ - (toff - bmpce->bmpce_off), 
+			nbytes = MIN(BMPC_BUFSZ - (toff - bmpce->bmpce_off),
 				     tsize);
 		} else {
 			bmpce_usecheck(bmpce, BIORQ_WRITE, toff);
 			nbytes = MIN(BMPC_BUFSZ, tsize);
 		}
-		
-		DEBUG_BMPCE(PLL_TRACE, bmpce, "tsize=%u nbytes=%u toff=%u", 
+
+		DEBUG_BMPCE(PLL_TRACE, bmpce, "tsize=%u nbytes=%u toff=%u",
 			    tsize, nbytes, toff);
 		/* Do the deed.
 		 */
 		memcpy(sink, src, nbytes);
 		/* If the bmpce belongs to this request and is not yet
-		 *   DATARDY (ie wasn't an RBW block) then set DATARDY 
+		 *   DATARDY (ie wasn't an RBW block) then set DATARDY
 		 *   and wakeup anyone who was blocked.  Note the waitq
 		 *   pointer will hang around until the request has completed.
-		 * Note:  wrrefs are held until the 
+		 * Note:  wrrefs are held until the
 		 */
 		spinlock(&bmpce->bmpce_lock);
-		if (biorq_is_my_bmpce(r, bmpce) && 		    
+		if (biorq_is_my_bmpce(r, bmpce) &&
 		    !(bmpce->bmpce_flags & BMPCE_DATARDY)) {
-			/* This should never happen as RBW pages should 
+			/* This should never happen as RBW pages should
 			 *   have BMPCE_DATARDY already set.
 			 */
-			psc_assert(!bmpce_is_rbw_page(r, bmpce, i));	
+			psc_assert(!bmpce_is_rbw_page(r, bmpce, i));
 			bmpce->bmpce_flags |= BMPCE_DATARDY;
 			psc_waitq_wakeall(bmpce->bmpce_waitq);
 			bmpce->bmpce_waitq = NULL;
@@ -1556,7 +1556,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 		bmpce = dynarray_getpos(&r->biorq_pages, i);
 
 		spinlock(&bmpce->bmpce_lock);
-		
+
 		psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
 		bmpce_usecheck(bmpce, BIORQ_READ, biorq_getaligned_off(r, i));
@@ -1565,12 +1565,12 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 		if (!i && (toff > bmpce->bmpce_off)) {
 			psc_assert((toff - bmpce->bmpce_off) < BMPC_BUFSZ);
 			src += toff - bmpce->bmpce_off;
-			nbytes = MIN(BMPC_BUFSZ - (toff - bmpce->bmpce_off), 
+			nbytes = MIN(BMPC_BUFSZ - (toff - bmpce->bmpce_off),
 				     tsize);
 		} else
 			nbytes = MIN(BMPC_BUFSZ, tsize);
-		
-		DEBUG_BMPCE(PLL_TRACE, bmpce, "tsize=%u nbytes=%zu toff=%u", 
+
+		DEBUG_BMPCE(PLL_TRACE, bmpce, "tsize=%u nbytes=%zu toff=%u",
 			    tsize, nbytes, toff);
 
 		memcpy(sink, src, nbytes);
@@ -1667,7 +1667,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	for (j=0, p=buf; j < nr; j++, p+=tlen) {
 		if (!r[j]->biorq_flags & BIORQ_DIO)
 			msl_pages_dio_getput(r[j], p);
-		
+
 		else {
 			/* Wait here for any pages to be faulted in from
 			 *    the ION.
@@ -1677,8 +1677,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 			     (r[j]->biorq_flags & BIORQ_RBWLP)))
 				if ((rc = msl_pages_blocking_load(r[j])))
 					goto out;
-			
-			(op == MSL_READ) ? 
+
+			(op == MSL_READ) ?
 				msl_pages_copyout(r[j], p) :
 				msl_pages_copyin(r[j], p);
 		}
