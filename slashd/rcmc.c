@@ -115,6 +115,7 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 	if (srcm->srcm_pagelen + len > SRM_REPLST_PAGESIZ) {
 		if (*rqp) {
 			rc = slrmcthr_replst_slave_waitrep(*rqp);
+			*rqp = NULL;
 			if (rc)
 				return (rc);
 		}
@@ -206,8 +207,10 @@ slrcmthr_main(__unusedx void *arg)
 				if (rc)
 					break;
 			}
-			if (rq)
+			if (rq) {
 				slrmcthr_replst_slave_waitrep(rq);
+				rq = NULL;
+			}
 			slrmcthr_replst_slave_eof(rrq);
 			if (rc)
 				break;
