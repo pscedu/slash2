@@ -146,16 +146,17 @@ slrmc_getattr(struct pscrpc_request *rq)
 static int
 slrmc_getbmap(struct pscrpc_request *rq)
 {
+	struct slash_bmap_cli_wire *cw;
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_mds_info *bmdsi;
 	struct srt_bmapdesc_buf bdb;
-	struct srm_bmap_req *mq;
+	const struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
 	struct bmapc_memb *bmap;
-	struct iovec iov[3];
+	struct iovec iov[4];
 	struct mexpfcm *m;
-	struct slash_bmap_cli_wire *cw;
 	uint64_t cfd;
+	int niov;
 
 	ENTRY;
 
@@ -170,27 +171,39 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	 */
 	mp->rc = cfdlookup(rq->rq_export, cfd, &m);
 	if (mp->rc)
-		RETURN(0);
+		RETURN(mp->rc);
 
 	bmap = NULL;
 	mp->rc = mds_bmap_load_cli(m, mq, &bmap);
 	if (mp->rc)
-		RETURN(0);
+		RETURN(mp->rc);
 
 	bmdsi = bmap->bcm_pri;
 	cw = (struct slash_bmap_cli_wire *)bmdsi->bmdsi_od->bh_crcstates;
 
+	niov = 2;
 	iov[0].iov_base = cw;
 	iov[0].iov_len = sizeof(*cw);
 	iov[1].iov_base = &bdb;
 	iov[1].iov_len = sizeof(bdb);
 
 	if (mq->getreptbl) {
-		/* This code only deals with INO_DEF_REPLICAS, not MAX.
-		 *   XXX
-		 */
-		iov[2].iov_base = &fcmh_2_inoh(bmap->bcm_fcmh)->inoh_ino.ino_repls;
-		iov[2].iov_len = sizeof(sl_replica_t) * INO_DEF_NREPLS;
+		struct slash_inode_handle *ih;
+		int nr;
+
+		niov++;
+		ih = fcmh_2_inoh(bmap->bcm_fcmh);
+		nr = ih->inoh_ino.ino_nrepls;
+		iov[2].iov_base = &ih->inoh_ino.ino_repls;
+		iov[2].iov_len = sizeof(sl_replica_t) *
+		    MIN(INO_DEF_NREPLS, nr);
+		if (nr > INO_DEF_NREPLS &&
+		    mds_repl_inoh_ensure_loaded(ih) == 0) {
+			niov++;
+			iov[3].iov_base = &ih->inoh_extras->inox_repls;
+			iov[3].iov_len = sizeof(sl_replica_t) *
+			    (nr - INO_DEF_NREPLS);
+		}
 	}
 
 	if (bmap->bcm_mode & BMAP_WR) {
@@ -206,9 +219,8 @@ slrmc_getbmap(struct pscrpc_request *rq)
 	    bmdsi->bmdsi_wr_ion->mi_resm->resm_res->res_id : IOS_ID_ANY),
 	   bmap->bcm_blkno);
 
-	mp->rc = rsx_bulkserver(rq, &desc,
-				BULK_PUT_SOURCE, SRMC_BULK_PORTAL,
-				iov, 2 + mq->getreptbl);
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
+	    SRMC_BULK_PORTAL, iov, niov);
 	if (desc)
 		pscrpc_free_bulk(desc);
 	mp->nblks = 1;
