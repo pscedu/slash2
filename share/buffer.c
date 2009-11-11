@@ -321,36 +321,6 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool) {
 	return (nslbs);
 }
 
-
-static int
-sl_slab_alloc(int nblks, struct fidc_membh *f)
-{
-	struct sl_buffer *slb;
-	int    fblks=0;
-
-	ENTRY;
-	do {
-		slb = psc_pool_get(slBufsPool);
-
-		psc_assert(slb);
-		DEBUG_SLB(PLL_INFO, slb, "new slb");
-		/* Sanity checks
-		 */
-		psc_assert(!slb->slb_lc_fcm);
-		psc_assert(psclist_disjoint(&slb->slb_fcm_lentry));
-
-		sl_buffer_fresh_assertions(slb);
-		/* Assign buffer to the fcache member
-		 */
-		slb->slb_lc_fcm = &f->fcmh_fcoo->fcoo_buffer_cache;
-		pll_addstack(slb->slb_lc_fcm, slb);
-
-	} while ((fblks += slb->slb_nblks) < nblks);
-
-	RETURN (fblks);
-}
-
-
 __static void
 sl_buffer_pin_locked(struct sl_buffer *slb)
 {
