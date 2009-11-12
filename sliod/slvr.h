@@ -41,7 +41,7 @@ enum slvr_states {
 	SLVR_NEW	= (1 <<  0),	/* newly initialized */
 	SLVR_SPLAYTREE	= (1 <<  1),	/* registered in the splay tree */
 	SLVR_CRCING	= (1 <<  2),	/* in the process of being crc'd */
-	SLVR_FAULTING	= (1 <<  3),	/* one or more blocks are being read from the fs */
+	SLVR_FAULTING	= (1 <<  3),	/* contents being filled in from the disk or over the network */
 	SLVR_INFLIGHT	= (1 <<  4),	/* slvr crc is being sent the mds */ 
 	SLVR_GETSLAB	= (1 <<  5),	/* assigning memory buffer to slvr */
 	SLVR_PINNED	= (1 <<  6),	/* slab cannot be removed from the cache */
@@ -50,7 +50,7 @@ enum slvr_states {
 	SLVR_CRCDIRTY	= (1 <<  9),	/* crc does not match cached buffer */
 	SLVR_RPCPNDG	= (1 << 10),	/* buffer !dirty but crc dirty is set */
 	SLVR_FREEING	= (1 << 11),	/* sliver is being reaped */
-	SLVR_SLBFREEING	= (1 << 12)	/* sliver is being reaped */
+	SLVR_SLBFREEING	= (1 << 12)	/* slab of the sliver is being reaped */
 };
 
 

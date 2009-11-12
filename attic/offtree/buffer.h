@@ -55,7 +55,6 @@ enum slb_states {
  */
 struct sl_buffer {
 	struct vbitmap *slb_inuse;  /* track which segments are busy   */
-#define slb_dirty slb_inuse         /* slb_inuse -> slb_dirty for IOD  */
 	int             slb_nblks;  /* num blocks                      */
 	uint32_t        slb_blksz;  /* blocksize                       */
 	void           *slb_base;   /* point to the data buffer        */
