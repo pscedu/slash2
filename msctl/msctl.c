@@ -254,7 +254,7 @@ replst_slave_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 	/* XXX add #repls, #bmaps */
 	printf("replication status\n"
 	    " %-62s %4s %4s %6s\n",
-	    "file", "tot", "old", "%xfer");
+	    "file", "#blk", "#old", "%xfer");
 }
 
 void
@@ -414,6 +414,10 @@ main(int argc, char *argv[])
 
 	psc_ctlcli_main(sockfn);
 	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)))
-		errx(1, "communication error: replication status not completed");
+		errx(1, "communication error: replication status "
+		    "not completed (%zd/%zd)",
+		    vbitmap_getsize(&current_mrs_bmask) -
+		    vbitmap_nfree(&current_mrs_bmask),
+		    vbitmap_getsize(&current_mrs_bmask));
 	exit(0);
 }
