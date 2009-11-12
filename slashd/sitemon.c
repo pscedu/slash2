@@ -21,23 +21,19 @@ slmsmthr_removeq(struct sl_replrq *rrq)
 	struct mds_site_info *msi;
 	struct psc_thread *thr;
 	struct sl_site *site;
+	int locked;
 
 	thr = pscthr_get();
 	smsmt = slmsmthr(thr);
 	site = smsmt->smsmt_site;
 	msi = site->site_pri;
 
-	spinlock(&msi->msi_lock);
+	locked = reqlock(&msi->msi_lock);
 	if (psc_dynarray_exists(&msi->msi_replq, rrq))
 		psc_dynarray_remove(&msi->msi_replq, rrq);
-	freelock(&msi->msi_lock);
+	ureqlock(&msi->msi_lock, locked);
 
-	/*
-	 * XXX if this rrq is not a member of any other replq's,
-	 * delete the rrq.
-	 */
-
-	mds_repl_unrefrq(rrq);
+	mds_repl_tryrmqfile(rrq);
 }
 
 struct sl_resm *
@@ -107,10 +103,10 @@ slmsmthr_main(void *arg)
 		}
 		rrq = psc_dynarray_getpos(&msi->msi_replq,
 		    psc_random32u(psc_dynarray_len(&msi->msi_replq)));
-		psc_atomic32_inc(&rrq->rrq_refcnt);
+		rc = mds_repl_accessrq(rrq);
 		freelock(&msi->msi_lock);
 
-		if (mds_repl_accessrq(rrq) == 0) {
+		if (rc == 0) {
 			/* repl must be going away, drop it */
 			slmsmthr_removeq(rrq);
 			continue;
@@ -226,7 +222,7 @@ slmsmthr_main(void *arg)
 		    SRIM_VERSION, SRMT_REPL_SCHEDWK, rq, mq, mp);
 		if (rc == 0) {
 			mq->nid = src_resm->resm_nid;
-			mq->fid = REPLRQ_FID(rrq);
+			mq->fg = *REPLRQ_FG(rrq);
 			mq->bmapno = bmapno;
 			rc = RSX_WAITREP(rq, mp);
 			pscrpc_req_finished(rq);

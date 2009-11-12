@@ -744,7 +744,7 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	return (rc);
 }
 
-/* XXX this should remove any ios that are empty in all bmaps from the inode */
+/* XXX this should also remove any ios that are empty in all bmaps from the inode */
 void
 mds_repl_tryrmqfile(struct sl_replrq *rrq)
 {
@@ -805,8 +805,10 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 			rc = zfsslash2_unlink(zfsVfs, inum, fn, &rootcreds);
 		/* XXX lock rrq? */
 		SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
-	} else
+	} else {
+		mds_repl_unrefrq(rrq);
 		rrq = NULL;
+	}
 	freelock(&replrq_tree_lock);
 
  out:
