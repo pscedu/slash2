@@ -278,6 +278,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 {
 	int blks, rc, unaligned[2] = {-1, -1};
 	size_t i;
+	
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -361,21 +362,19 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	}
 	if ((offset + size) < SLASH_SLVR_SIZE) {
 		blks = (offset + size) / SLASH_SLVR_BLKSZ;
-		if ((offset + size) & SLASH_SLVR_BLKMASK) {
+		if ((offset + size) & SLASH_SLVR_BLKMASK)
 			unaligned[1] = blks;
-			blks--;
-		}
+
 		for (i = blks; i < SLASH_BLKS_PER_SLVR; i++)
 			vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
+
+	vbitmap_printbin1(s->slvr_slab->slb_inuse);
+	psc_info("vbitmap_nfree()=%d", vbitmap_nfree(s->slvr_slab->slb_inuse));
 	/* We must have found some work to do.
 	 */
 	psc_assert(vbitmap_nfree(s->slvr_slab->slb_inuse) <
 		   (int)SLASH_BLKS_PER_SLVR);
-
-	psc_info("vbitmap_nfree()=%d", vbitmap_nfree(s->slvr_slab->slb_inuse));
-
-	vbitmap_printbin1(s->slvr_slab->slb_inuse);
 
 	if (s->slvr_flags & SLVR_DATARDY)
 		goto invert;
@@ -604,8 +603,8 @@ slvr_remove(struct slvr_ref *s)
 }
 
 /*
- * The reclaim function for the slBufsPoolMaster pool.  Note that our caller psc_pool_get()
- * ensures that we are called exclusviely.
+ * The reclaim function for the slBufsPoolMaster pool.  Note that our 
+ *   caller psc_pool_get() ensures that we are called exclusviely.
  */
 static int
 slvr_buffer_reap(struct psc_poolmgr *m)
@@ -621,7 +620,8 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	n = 0;
 	dynarray_init(&a);
 	LIST_CACHE_LOCK(&lruSlvrs);
-	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd, slvr_lentry) {
+	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd, 
+				    slvr_lentry) {
 		SLVR_LOCK(s);
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap");
 
@@ -671,12 +671,10 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 			psc_assert(!(s->slvr_flags & SLVR_SLBFREEING));
 			psc_assert(!s->slvr_slab);
-			SLVR_LOCK(s);
 			if (s->slvr_flags & SLVR_SPLAYTREE) {
 				s->slvr_flags &= ~SLVR_SPLAYTREE;
 				slvr_remove(s);
 			}
-			SLVR_ULOCK(s);
 		}
 	}
 	dynarray_free(&a);
