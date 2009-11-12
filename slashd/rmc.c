@@ -748,7 +748,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	thr = pscthr_init(SLMTHRT_RCM, 0, slrcmthr_main,
 	    NULL, sizeof(*srcm), "slmrcmthr%02zu", id);
 	srcm = thr->pscthr_private;
-	srcm->srcm_fg.fg_fid = mq->fid;
+	srcm->srcm_fg = mq->fg;
 	srcm->srcm_id = mq->id;
 	srcm->srcm_csvc = rpc_csvc_fromexp(rq->rq_export,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL);

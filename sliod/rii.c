@@ -85,7 +85,7 @@ sli_rii_issue_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	if ((rc = RSX_NEWREQ(imp, SRII_VERSION,
 	    SRMT_REPL_READ, rq, mq, mp)) != 0)
 		return (rc);
-	mq->fid = w->srw_fid;
+	mq->fg = w->srw_fg;
 	mq->len = w->srw_len;
 	mq->bmapno = w->srw_bmapno;
 

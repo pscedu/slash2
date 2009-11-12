@@ -49,7 +49,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			    struct msctl_replst_slave_cont,
 			    mrsc_lentry, NULL);
 			mrc->mrc_mrs.mrs_id = mq->id;
-			mrc->mrc_mrs.mrs_fid = mq->fid;
+			mrc->mrc_mrs.mrs_fg = mq->fg;
 			mrc->mrc_mrs.mrs_nbmaps = mq->nbmaps;
 			mrc->mrc_mrs.mrs_nios = mq->nrepls;
 			for (n = 0; n < (int)mq->nrepls; n++) {
@@ -102,7 +102,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		if (mrsq->mrsq_id == mq->id) {
 			PLL_LOCK(&mrsq->mrsq_mrcs);
 			PLL_FOREACH(mrc, &mrsq->mrsq_mrcs)
-				if (mrc->mrc_mrs.mrs_fid == mq->fid)
+				if (SAMEFID(&mrc->mrc_mrs.mrs_fg, &mq->fg))
 					break;
 			PLL_ULOCK(&mrsq->mrsq_mrcs);
 

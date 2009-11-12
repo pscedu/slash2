@@ -61,7 +61,7 @@ slrmcthr_replst_slave_eof(struct sl_replrq *rrq)
 	if (rc)
 		return (rc);
 
-	mq->fid = REPLRQ_FID(rrq);
+	mq->fg = *REPLRQ_FG(rrq);
 	mq->id = srcm->srcm_id;
 	mq->rc = EOF;
 	rc = RSX_WAITREP(rq, mp);
@@ -126,7 +126,7 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 			return (rc);
 		mq->id = srcm->srcm_id;
 		mq->boff = n;
-		mq->fid = REPLRQ_FID(rrq);
+		mq->fg = *REPLRQ_FG(rrq);
 
 		srcm->srcm_pagelen = 0;
 	}
@@ -158,7 +158,7 @@ slrcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 		return (rc);
 	mq->id = srcm->srcm_id;
 	if (rrq) {
-		mq->fid = REPLRQ_FID(rrq);
+		mq->fg = *REPLRQ_FG(rrq);
 		mq->nbmaps = REPLRQ_NBMAPS(rrq);
 		mq->nrepls = REPLRQ_NREPLS(rrq);
 		memcpy(mq->repls, REPLRQ_INO(rrq)->ino_repls,
@@ -241,7 +241,6 @@ slrcmthr_main(__unusedx void *arg)
 		 */
 		rrq = psc_pool_get(replrq_pool);
 		memset(rrq, 0, sizeof(*rrq));
-		LOCK_INIT(&rrq->rrq_lock);
 		rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 
 		slrcm_issue_getreplst(rrq, 0);
@@ -257,7 +256,6 @@ slrcmthr_main(__unusedx void *arg)
 		if (rq)
 			slrmcthr_replst_slave_waitrep(rq);
 		slrmcthr_replst_slave_eof(rrq);
-		mds_repl_unrefrq(rrq);
 		fidc_membh_dropref(fcmh);
 		psc_pool_return(replrq_pool, rrq);
 	}

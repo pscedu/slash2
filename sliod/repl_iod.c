@@ -21,13 +21,13 @@ struct psc_listcache	 repl_workq_inflight;
 struct psc_listcache	 repl_workq_finished;
 
 void
-sli_repl_addwk(uint64_t nid, uint64_t fid, sl_bmapno_t bmapno)
+sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp, sl_bmapno_t bmapno)
 {
 	struct sli_repl_workrq *w;
 
 	w = psc_pool_get(repl_workrq_pool);
 	w->srw_nid = nid;
-	w->srw_fid = fid;
+	w->srw_fg = *fgp;
 	w->srw_bmapno = bmapno;
 	lc_add(&repl_workq_pending, w);
 }

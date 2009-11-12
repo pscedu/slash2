@@ -152,7 +152,8 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	displayfn = mrq->mrq_fn;
 	if (strcmp(mrq->mrq_fn, "") == 0) {
 		displayfn = "<all active replications>";
-		fg.fg_fid = REPLRQ_FID_ALL;
+		fg.fg_fid = FID_ANY;
+		fg.fg_gen = FIDGEN_ANY;
 		goto issue;
 	}
 
@@ -194,7 +195,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    displayfn, slstrerror(rc)));
 
-	mq->fid = fg.fg_fid;
+	mq->fg = fg;
 	mq->id = psc_atomic32_inc_return(&msctl_replstid);
 
 	rv = 1;
@@ -227,7 +228,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 			/* XXX try to do a reverse lookup of pathname; check cache maybe? */
 			snprintf(mrc->mrc_mrs.mrs_fn,
 			    sizeof(mrc->mrc_mrs.mrs_fn),
-			    "%"PRIx64, mrc->mrc_mrs.mrs_fid);
+			    "%"PRIx64, mrc->mrc_mrs.mrs_fg.fg_fid);
 		rv = psc_ctlmsg_sendv(fd, mh, &mrc->mrc_mrs);
 
 		psc_completion_wait(&mrc->mrc_compl);

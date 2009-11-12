@@ -24,7 +24,7 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	sli_repl_addwk(mq->nid, mq->fid, mq->bmapno);
+	sli_repl_addwk(mq->nid, &mq->fg, mq->bmapno);
 	return (0);
 }
 

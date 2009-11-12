@@ -14,7 +14,7 @@
 /* for retrieving info about replication status */
 struct msctlmsg_replst {
 	char			mrs_fn[PATH_MAX];
-	uint64_t		mrs_fid;	/* used intermittenly */
+	struct slash_fidgen	mrs_fg;	/* used intermittenly */
 	char			mrs_iosv[SL_MAX_REPLICAS][SITE_NAME_MAX];
 	uint32_t		mrs_nios;
 	uint32_t		mrs_nbmaps;	/* accounting for # of slaves */
@@ -35,7 +35,6 @@ struct msctlmsg_replrq {
 	sl_bmapno_t		mrq_bmapno;
 };
 
-#define REPLRQ_FID_ALL		FID_ANY
 #define REPLRQ_BMAPNO_ALL	(-1)
 
 /* custom mount_slash message types */

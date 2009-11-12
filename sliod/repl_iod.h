@@ -2,6 +2,7 @@
 
 #include "psc_ds/list.h"
 
+#include "fid.h"
 #include "sltypes.h"
 
 struct sli_repl_buf {
@@ -10,7 +11,7 @@ struct sli_repl_buf {
 };
 
 struct sli_repl_workrq {
-	uint64_t		 srw_fid;
+	struct slash_fidgen	 srw_fg;
 	uint64_t		 srw_nid;
 	uint32_t		 srw_len;
 	uint32_t		 srw_status;
@@ -19,7 +20,7 @@ struct sli_repl_workrq {
 	struct sli_repl_buf	*srw_srb;
 };
 
-void sli_repl_addwk(uint64_t, uint64_t, sl_bmapno_t);
+void sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t);
 void sli_repl_finishwk(struct sli_repl_workrq *, int);
 
 extern struct psc_poolmgr	*sli_repl_bufpool;

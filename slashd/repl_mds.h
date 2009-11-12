@@ -46,6 +46,7 @@ int	mds_repl_inv_except_locked(struct bmapc_memb *, sl_ios_id_t);
 int	mds_repl_loadino(struct slash_fidgen *, struct fidc_membh **);
 int	mds_repl_nodes_getbusy(struct mds_resm_info *, struct mds_resm_info *);
 void	mds_repl_nodes_setbusy(struct mds_resm_info *, struct mds_resm_info *, int);
+void	mds_repl_tryrmqfile(struct sl_replrq *);
 void	mds_repl_unrefrq(struct sl_replrq *);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);
 
@@ -55,7 +56,8 @@ int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);
 #define REPLRQ_INO(rrq)		(&(rrq)->rrq_inoh->inoh_ino)
 #define REPLRQ_INOX(rrq)	(rrq)->rrq_inoh->inoh_extras
 #define REPLRQ_NREPLS(rrq)	REPLRQ_INO(rrq)->ino_nrepls
-#define REPLRQ_FID(rrq)		REPLRQ_INO(rrq)->ino_fg.fg_fid
+#define REPLRQ_FG(rrq)		(&REPLRQ_INO(rrq)->ino_fg)
+#define REPLRQ_FID(rrq)		REPLRQ_FG(rrq)->fg_fid
 #define REPLRQ_FCMH(rrq)	(rrq)->rrq_inoh->inoh_fcmh
 #define REPLRQ_NBMAPS(rrq)	fcmh_2_nbmaps(REPLRQ_FCMH(rrq))
 
