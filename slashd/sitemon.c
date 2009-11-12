@@ -75,7 +75,7 @@ slmsmthr_find_dst_ion(struct mds_resm_info *src)
 __dead void *
 slmsmthr_main(void *arg)
 {
-	int iosidx, val, nios, off, rc, ris, is, rir, ir, rin, in;
+	int iosidx, val, nios, off, rc, ris, is, ir, rin, in;
 	sl_bmapno_t bmapno, nb, ib;
 	struct mds_resm_info *src_mri, *dst_mri;
 	struct sl_resm *src_resm, *dst_resm;
@@ -85,11 +85,11 @@ slmsmthr_main(void *arg)
 	struct slmsm_thread *smsmt;
 	struct pscrpc_request *rq;
 	struct mds_site_info *msi;
-	struct sl_site *site, *s;
 	struct sl_resource *res;
 	struct bmapc_memb *bcm;
 	struct psc_thread *thr;
 	struct sl_replrq *rrq;
+	struct sl_site *site;
 
 	thr = arg;
 	smsmt = slmsmthr(thr);
@@ -110,10 +110,21 @@ slmsmthr_main(void *arg)
 		psc_atomic32_inc(&rrq->rrq_refcnt);
 		freelock(&msi->msi_lock);
 
-		rc = mds_repl_accessrq(rrq);
+		if (mds_repl_accessrq(rrq) == 0) {
+			/* repl must be going away, drop it */
+			slmsmthr_removeq(rrq);
+			continue;
+		}
 
-		if (rc == 0 || (iosidx = mds_repl_ios_lookup(rrq->rrq_inoh,
-		    site->site_id)) < 0) {
+		/* find which resource in our site this repl is destined for */
+		iosidx = -1;
+		for (ir = 0; ir < site->site_nres; ir++) {
+			iosidx = mds_repl_ios_lookup(rrq->rrq_inoh,
+			    site->site_resv[ir]->res_id);
+			if (iosidx >= 0)
+				break;
+		}
+		if (iosidx < 0) {
 			slmsmthr_removeq(rrq);
 			continue;
 		}
@@ -178,36 +189,28 @@ slmsmthr_main(void *arg)
 		ris = psc_random32u(nios);
 		for (is = 0; is < nios; is++,
 		    ris = (ris + 1) % nios) {
-			s = libsl_id2site(REPLRQ_GETREPL(rrq, ris).bs_id);
+			res = libsl_id2res(REPLRQ_GETREPL(rrq, ris).bs_id);
 
-			/* skip ourself */
-			if (s == site)
+			/* skip ourself and old/inactive replicas */
+			if (ris == iosidx ||
+			    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
+			    SL_BITS_PER_REPLICA * ris) != SL_REPL_ACTIVE)
 				continue;
 
-			/* Next, pick a random resource at this site. */
-			rir = psc_random32u(s->site_nres);
-			for (ir = 0; ir < s->site_nres; ir++,
-			    rir = (rir + 1) % s->site_nres) {
-				res = s->site_resv[rir];
-
-				/*
-				 * Finally, pick a random ION that is
-				 * online and not already busy.
-				 */
-				rin = psc_random32u(res->res_nnids);
-				for (in = 0; in < (int)res->res_nnids; in++,
-				    rin = (rin + 1) % res->res_nnids) {
-					src_resm = libsl_nid2resm(res->res_nids[rin]);
-					src_mri = src_resm->resm_pri;
-					spinlock(&src_mri->mri_lock);
-					if (src_mri->mri_csvc && (dst_resm =
-					    slmsmthr_find_dst_ion(src_mri)) != NULL)
-						goto issue;
-					freelock(&src_mri->mri_lock);
-				}
+			/* search nids for an idle, online connection */
+			rin = psc_random32u(res->res_nnids);
+			for (in = 0; in < (int)res->res_nnids; in++,
+			    rin = (rin + 1) % res->res_nnids) {
+				src_resm = libsl_nid2resm(res->res_nids[rin]);
+				src_mri = src_resm->resm_pri;
+				spinlock(&src_mri->mri_lock);
+				if (src_mri->mri_csvc && (dst_resm =
+				    slmsmthr_find_dst_ion(src_mri)) != NULL)
+					goto issue;
+				freelock(&src_mri->mri_lock);
 			}
 		}
-		psc_error("should have found someone");
+		psc_error("could not find a replica");
  issue:
 		if (dst_resm == NULL) {
 			spinlock(&msi->msi_lock);
