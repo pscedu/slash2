@@ -563,13 +563,11 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		}
 		mion = mri->mri_data;
 
-		DEBUG_BMAP(PLL_TRACE, bmap,
-		    "res(%s) ion(%s) flags=%x",
-		    res->res_name, libcfs_nid2str(res->res_nids[n]),
-		    mri->mri_csvc->csvc_flags);
-
 		if (slm_geticonn(resm) == NULL)
 			goto end_loop;
+
+		DEBUG_BMAP(PLL_TRACE, bmap, "res(%s) ion(%s)",
+			   res->res_name, libcfs_nid2str(res->res_nids[n]));
 
 		atomic_inc(&mion->mi_refcnt);
 		mdsi->bmdsi_wr_ion = mion;
@@ -593,8 +591,12 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	if (!mdsi->bmdsi_assign) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
 		return (-SLERR_XACT_FAIL);
-	}
-
+	}	
+	/* Signify that a ION has been assigned to this bmap.  This 
+	 *   opcnt ref will stay in place until the ION informs us that
+	 *   he's finished with it.
+	 */
+	atomic_inc(&bmap->bcm_opcnt); 
 	atomic_inc(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
