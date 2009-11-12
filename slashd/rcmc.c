@@ -181,6 +181,7 @@ slrcmthr_main(__unusedx void *arg)
 {
 	struct slmrcm_thread *srcm;
 	struct pscrpc_request *rq;
+	struct fidc_membh *fcmh;
 	struct psc_thread *thr;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
@@ -231,6 +232,34 @@ slrcmthr_main(__unusedx void *arg)
 			slrmcthr_replst_slave_waitrep(rq);
 		slrmcthr_replst_slave_eof(rrq);
 		mds_repl_unrefrq(rrq);
+	} else if (mds_repl_loadino(&srcm->srcm_fg, &fcmh) == 0) {
+		/*
+		 * file is not in cache, load it up
+		 * to report replication status
+		 *
+		 * grab a dummy replrq struct to pass around.
+		 */
+		rrq = psc_pool_get(replrq_pool);
+		memset(rrq, 0, sizeof(*rrq));
+		LOCK_INIT(&rrq->rrq_lock);
+		rrq->rrq_inoh = fcmh_2_inoh(fcmh);
+
+		slrcm_issue_getreplst(rrq, 0);
+		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
+			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+				continue;
+			BMAP_LOCK(bcm);
+			rc = slrcmthr_walk_brepls(rrq, bcm, n, &rq);
+			bmap_op_done(bcm);
+			if (rc)
+				break;
+		}
+		if (rq)
+			slrmcthr_replst_slave_waitrep(rq);
+		slrmcthr_replst_slave_eof(rrq);
+		mds_repl_unrefrq(rrq);
+		fidc_membh_dropref(fcmh);
+		psc_pool_return(replrq_pool, rrq);
 	}
 
 	/* signal EOF */

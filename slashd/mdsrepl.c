@@ -519,7 +519,6 @@ mds_repl_accessrq(struct sl_replrq *rrq)
 	} else
 		rrq->rrq_flags |= REPLRQF_BUSY;
 	return (rc);
-
 }
 
 void

@@ -43,6 +43,7 @@ int	mds_repl_delrq(struct slash_fidgen *, sl_blkno_t, sl_replica_t *, int);
 void	mds_repl_init(void);
 int	mds_repl_inoh_ensure_loaded(struct slash_inode_handle *);
 int	mds_repl_inv_except_locked(struct bmapc_memb *, sl_ios_id_t);
+int	mds_repl_loadino(struct slash_fidgen *, struct fidc_membh **);
 int	mds_repl_nodes_getbusy(struct mds_resm_info *, struct mds_resm_info *);
 void	mds_repl_nodes_setbusy(struct mds_resm_info *, struct mds_resm_info *, int);
 void	mds_repl_unrefrq(struct sl_replrq *);
@@ -61,6 +62,8 @@ int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);
 #define REPLRQ_GETREPL(rrq, n)	((n) > INO_DEF_NREPLS ?			\
 				    REPLRQ_INO(rrq)->ino_repls[n] :	\
 				    REPLRQ_INOX(rrq)->inox_repls[(n) - 1])
+
+extern struct psc_poolmgr	*replrq_pool;
 
 extern struct replrqtree	 replrq_tree;
 extern psc_spinlock_t		 replrq_tree_lock;
