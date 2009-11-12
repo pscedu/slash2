@@ -1,3 +1,7 @@
+11/02/09
+* msl_io and rpc ION calls need to return actual size so that read() can 
+be short circuited  on EOF.
+
 10/26/09
 * The config engine should use "type = mds" to describe metadata servers.
 
