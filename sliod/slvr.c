@@ -508,11 +508,8 @@ slvr_wio_done(struct slvr_ref *s)
 	 *   threads. XXX this is not the case, the slvr worker may be
 	 *   processing this slvr too.
 	 */
-	if (!(s->slvr_flags & SLVR_CRCDIRTY)) {
-		DEBUG_SLVR(PLL_INFO, s, "crcdirty unset..");
-		s->slvr_flags |= SLVR_CRCDIRTY;
-	}
-
+	/* we have just done a write, so the CRC must be dirty */
+	s->slvr_flags |= SLVR_CRCDIRTY;
 	if (s->slvr_flags & SLVR_FAULTING) {
 		/* This sliver was being paged-in over the network.
 		 */
