@@ -20,32 +20,19 @@ extern struct psc_listcache rpcqSlvrs;
 extern struct psc_listcache inflSlvrs;
 
 /**
- * slvr_ref - sliver reference used for scheduling dirty slivers
- *   to be crc'd and sent to the mds.
- * @slvr_num: sliver number (0 - SL_CRCS_PER_BMAP-1)
- * @slvr_flags: state bits for the sliver.
- * @slvr_pndgwrts: the number of writes in progress
- * @slvr_pndgreads: the number of writes in progress
- *   sliver.  Note that atomic is not used here since the lock must be 
- *   held to avoid race conditions.
- * @slvr_crc: used if there's no bmap_wire present, only is valid if
- *   !SLVR_CRCDIRTY.
- * @slvr_pri: private pointer used for backpointer to bmap_iod_info.
- * @slvr_ts: timestamp since last access.
- * @slvr_lentry: dirty queue.
- * @slvr_tentry: bmap tree entry.
+ * slvr_ref - sliver reference used for scheduling dirty slivers to be crc'd and sent to the mds.
  * Note: slivers are locked through their bmap_iod_info lock.
  */
 struct slvr_ref {
-	uint16_t		 slvr_num;
+	uint16_t		 slvr_num;		/* sliver index in the block map */
 	uint16_t		 slvr_flags;
-	uint16_t		 slvr_pndgwrts;
-	uint16_t		 slvr_pndgreads;
-	psc_crc_t		 slvr_crc;
-	void			*slvr_pri;
+	uint16_t		 slvr_pndgwrts;		/* # of writes in progess */
+	uint16_t		 slvr_pndgreads;	/* # of reads in progress */
+	psc_crc_t		 slvr_crc;		/* used if there's no bmap_wire present, only is valid if !SLVR_CRCDIRTY */
+	void			*slvr_pri;		/* private pointer used for backpointer to bmap_iod_info */
 	struct sl_buffer	*slvr_slab;
-	struct psclist_head	 slvr_lentry;	
-	SPLAY_ENTRY(slvr_ref)	 slvr_tentry;
+	struct psclist_head	 slvr_lentry;		/* dirty queue */	
+	SPLAY_ENTRY(slvr_ref)	 slvr_tentry;		/* bmap tree entry */
 };
 
 #define SLVR_2_BLK(s) ((s)->slvr_num * (SLASH_BMAP_SIZE/SLASH_BMAP_BLKSZ))
