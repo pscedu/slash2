@@ -80,7 +80,7 @@ sli_rii_issue_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	struct iovec iov;
 	int rc;
 
-	w->srw_srb = psc_pool_get(sli_repl_bufpool);
+	w->srw_srb = psc_pool_get(sli_replwkbuf_pool);
 
 	if ((rc = RSX_NEWREQ(imp, SRII_VERSION,
 	    SRMT_REPL_READ, rq, mq, mp)) != 0)
@@ -97,6 +97,8 @@ sli_rii_issue_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	iov.iov_len = w->srw_len;
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRII_BULK_PORTAL,
 	    &iov, 1);
+
+	nbreqset_add(&sli_replwk_nbset, rq);
 	return (0);
 }
 

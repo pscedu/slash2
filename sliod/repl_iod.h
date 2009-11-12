@@ -23,4 +23,5 @@ struct sli_repl_workrq {
 void sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t);
 void sli_repl_finishwk(struct sli_repl_workrq *, int);
 
-extern struct psc_poolmgr	*sli_repl_bufpool;
+extern struct psc_poolmgr	*sli_replwkbuf_pool;
+extern struct pscrpc_nbreqset	 sli_replwk_nbset;
