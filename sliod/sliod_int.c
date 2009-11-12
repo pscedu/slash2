@@ -35,6 +35,7 @@ iod_bmap_init(struct bmapc_memb *b)
 	biod->biod_bmap = b;
 	INIT_PSCLIST_ENTRY(&biod->biod_lentry);
 	LOCK_INIT(&biod->biod_lock);
+	SPLAY_INIT(&biod->biod_slvrs);
 }
 
 void
