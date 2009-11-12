@@ -202,7 +202,6 @@ struct fidc_open_obj {
 	struct srt_fd_buf	 fcoo_fdb;
 	int			 fcoo_oref_rw[2];    /* open cnt for r & w */
 	int                      fcoo_fd;
-	atomic_t		 fcoo_bmapc_cnt;
 	struct bmap_cache	 fcoo_bmapc;         /* bmap cache splay */
 	size_t			 fcoo_bmap_sz;
 	void			*fcoo_pri;           /* mds, client, ion */

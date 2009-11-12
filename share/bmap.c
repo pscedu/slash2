@@ -51,9 +51,6 @@ bmap_remove(struct bmapc_memb *b)
 
 	FCMH_URLOCK(f, locked);
 
-	atomic_dec(&f->fcmh_fcoo->fcoo_bmapc_cnt);
-	psc_assert(atomic_read(&f->fcmh_fcoo->fcoo_bmapc_cnt) >= 0);
-
 	psc_pool_return(bmap_pool, b);
 }
 
@@ -157,7 +154,6 @@ bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n,
 		 *   bmap_lookup_locked().
 		 */
 		atomic_inc(&b->bcm_opcnt);
-		atomic_inc(&f->fcmh_fcoo->fcoo_bmapc_cnt);
 		SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);
 	}
 	ureqlock(&f->fcmh_lock, locked);

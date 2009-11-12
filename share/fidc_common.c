@@ -582,7 +582,6 @@ fidc_fcoo_init(void)
 	struct fidc_open_obj	*f;
 
 	f = PSCALLOC(sizeof(*f));
-	atomic_set(&f->fcoo_bmapc_cnt, 0);
 	SPLAY_INIT(&f->fcoo_bmapc);
 	f->fcoo_bmap_sz = SLASH_BMAP_SIZE;
 	return f;
