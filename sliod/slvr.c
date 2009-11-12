@@ -576,7 +576,7 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int op)
 		s = PSCALLOC(sizeof(*s));
 
 		s->slvr_num = num;
-		s->slvr_flags = SLVR_NEW;
+		s->slvr_flags = SLVR_NEW | SLVR_SPLAYTREE;
 		s->slvr_pri = b;
 		s->slvr_slab = NULL;
 		INIT_PSCLIST_ENTRY(&s->slvr_lentry);
@@ -591,13 +591,18 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int op)
 __static void
 slvr_remove(struct slvr_ref *s)
 {
-	DEBUG_SLVR(PLL_WARN, s, "freeing slvr");
+	struct bmap_iod_info	*b;
 
+	DEBUG_SLVR(PLL_WARN, s, "freeing slvr");
 	/* Slvr should be detached from any listheads.
 	 */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
-	psc_assert(s == slvr_lookup(s->slvr_num, slvr_2_biod(s),
-				    SLVR_LOOKUP_DEL));
+
+	b = slvr_2_biod(s);
+	spinlock(&b->biod_lock);
+	SPLAY_REMOVE(biod_slvrtree, &b->biod_slvrs, s);
+	freelock(&b->biod_lock);
+
 	PSCFREE(s);
 }
 
@@ -669,7 +674,12 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 			psc_assert(!(s->slvr_flags & SLVR_SLBFREEING));
 			psc_assert(!s->slvr_slab);
-			slvr_remove(s);
+			SLVR_LOCK(s);
+			if (s->slvr_flags & SLVR_SPLAYTREE) {
+				s->slvr_flags &= ~SLVR_SPLAYTREE;
+				slvr_remove(s);
+			}
+			SLVR_ULOCK(s);
 		}
 	}
 	dynarray_free(&a);
