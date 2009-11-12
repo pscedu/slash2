@@ -191,7 +191,7 @@ parse_replrq(int code, char *replrqspec,
 int
 replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 {
-	__unusedx const struct msctlmsg_replst *mrs = m;
+	const struct msctlmsg_replst *mrs = m;
 	int blen;
 
 	if (mh->mh_size != sizeof(*mrs))
