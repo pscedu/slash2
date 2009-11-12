@@ -311,9 +311,9 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 		locked[1] = reqlock(&tmp->fcmh_lock);
 		/* Be sure to ignore any inodes which are freeing unless
 		 *  we are removing the inode from the cache.
-		 *  This is necessary to avoid a deadlock between fidc_reap
+		 *  This is necessary to avoid a deadlock between fidc_reap()
 		 *  which has the fcmh_lock before calling fidc_put_locked,
-		 *  whichs calls this function with del==1.  This is described
+		 *  which calls this function with del==1.  This is described
 		 *  in Bug #13.
 		 */
 		if (del) {
@@ -343,8 +343,17 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				 *  from the server.  Wait for it and retry.
 				 */
 				psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
-				ureqlock(&b->hbucket_lock, locked[0]);
+				if (locked[1])
+					atomic_inc(&tmp->fcmh_refcnt);
+				freelock(&b->hbucket_lock);
 				psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
+
+				if (locked[0])
+					spinlock(&b->hbucket_lock);
+				if (locked[1]) {
+					spinlock(&tmp->fcmh_lock);
+					atomic_dec(&tmp->fcmh_refcnt);
+				}
 				goto retry;
 			}
 			if (fg->fg_gen == FID_ANY) {
