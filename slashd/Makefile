@@ -84,17 +84,4 @@ DEFINES+=	-DZPOOL_PATH=\"${ZFS_BASE}/cmd/zpool\"
 LDFLAGS+=	${ZFS_LIBS} ${ZPOOL_LIBS}
 LDFLAGS+=	${THREAD_LIBS} -ldl -lz -laio -lrt -lgcrypt
 
-# DEFINES+=	-DTEXT_DOMAIN=\"zfs-fuse\"
-# ZFS_INCLUDES=	-I${ZFS_BASE}/lib/libavl/include				\
-#		-I${ZFS_BASE}/lib/libnvpair/include				\
-#		-I${ZFS_BASE}/lib/libsolcompat/include				\
-#		-I${ZFS_BASE}/lib/libuutil/include				\
-#		-I${ZFS_BASE}/lib/libzfs/include				\
-#		-I${ZFS_BASE}/lib/libzfscommon/include
-#
-# zfs_zfs_fuse_0_5_0_slash_src_cmd_zpool_zpool_iter_c_CFLAGS+=	${ZFS_INCLUDES}
-# zfs_zfs_fuse_0_5_0_slash_src_cmd_zpool_zpool_util_c_CFLAGS+=	${ZFS_INCLUDES}
-# zfs_zfs_fuse_0_5_0_slash_src_cmd_zpool_zpool_vdev_c_CFLAGS+=	${ZFS_INCLUDES}
-# zfs_zfs_fuse_0_5_0_slash_src_zfs_fuse_ptrace_c_CFLAGS+=		${ZFS_INCLUDES} -std=c99
-
 include ${SLASHMK}

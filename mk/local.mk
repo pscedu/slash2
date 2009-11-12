@@ -2,12 +2,6 @@
 
 INCLUDES+=	-I${KERNEL_BASE}/include
 
-# ZPOOL_LIBS=	-L${ZFS_BASE}/lib/libsolcompat			\
-#		-L${ZFS_BASE}/lib/libuutil			\
-#		-L${ZFS_BASE}/lib/libzfs			\
-#		-L${ZFS_BASE}/lib/libzfscommon			\
-#		-lm -luutil -lzfs -lsolcompat -lzfscommon-user
-
 ZFS_LIBS=	-L${ZFS_BASE}/zfs-fuse				\
 		-L${ZFS_BASE}/lib/libavl			\
 		-L${ZFS_BASE}/lib/libnvpair			\
