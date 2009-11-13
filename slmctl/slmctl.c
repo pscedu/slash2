@@ -15,14 +15,14 @@
 #include "slashd/ctl_mds.h"
 
 void
-slrmcthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
+slmrmcthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 {
 	printf(" #open %8d #close %8d #stat %8d",
 	    pcst->pcst_nopen, pcst->pcst_nclose, pcst->pcst_nstat);
 }
 
 void
-slrmmthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
+slmrmmthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 {
 	printf(" #open %8d", pcst->pcst_nopen);
 }
@@ -41,9 +41,9 @@ int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
 /* CTL		*/ { psc_ctlthr_prdat },
 /* ACSVC	*/ { NULL },
-/* RMC		*/ { slrmcthr_st_prdat },
+/* RMC		*/ { slmrmcthr_st_prdat },
 /* RMI		*/ { NULL },
-/* RMM		*/ { slrmmthr_st_prdat }
+/* RMM		*/ { slmrmmthr_st_prdat }
 };
 int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 
@@ -71,7 +71,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	sockfn = _PATH_SLCTLSOCK;
+	sockfn = _PATH_SLMCTLSOCK;
 	while ((c = getopt(argc, argv, "c:Hh:Ii:L:m:P:p:S:s:")) != -1)
 		switch (c) {
 		case 'c':

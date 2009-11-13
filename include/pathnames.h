@@ -9,13 +9,13 @@
 
 #if 0
 #define _PATH_SLASHCONF		"/etc/slash.conf"
-#define _PATH_SLCTLSOCK		"/var/run/slashd.%h.sock"
+#define _PATH_SLMCTLSOCK	"/var/run/slashd.%h.sock"
 #define _PATH_SLICTLSOCK	"/var/run/sliod.%h.sock"
 #define _PATH_MSCTLSOCK		"/var/run/mount_slash.%h.sock"
 #endif
 
 #define _PATH_SLASHCONF		"../slashd/config/example.conf"
-#define _PATH_SLCTLSOCK		"../slashd.%h.sock"
+#define _PATH_SLMCTLSOCK	"../slashd.%h.sock"
 #define _PATH_SLICTLSOCK	"../sliod.%h.sock"
 #define _PATH_MSCTLSOCK		"../mount_slash.%h.sock"
 
