@@ -1,54 +1,48 @@
 /* $Id$ */
 
+#include "psc_ds/dynarray.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
+#include "psc_util/lock.h"
+#include "psc_util/multilock.h"
 
 #include "mdsexpc.h"
 #include "slashd.h"
 #include "slconfig.h"
 
-struct sl_resource *
-slcfg_new_res(void)
+void
+slcfg_init_res(struct sl_resource *res)
 {
 	struct resprof_mds_info *rmi;
-	struct sl_resource *res;
-
-	res = PSCALLOC(sizeof(*res));
 
 	rmi = res->res_pri = PSCALLOC(sizeof(*rmi));
 	LOCK_INIT(&rmi->rmi_lock);
-
-	return (res);
 }
 
-struct sl_resm *
-slcfg_new_resm(void)
+void
+slcfg_init_resm(struct sl_resm *resm)
 {
+	char nidbuf[PSC_NIDSTR_SIZE];
 	struct mds_resm_info *mri;
-	struct sl_resm *resm;
 
-	resm = PSCALLOC(sizeof(*resm));
+	psc_nid2str(resm->resm_nid, nidbuf);
 
 	mri = resm->resm_pri = PSCALLOC(sizeof(*mri));
 	LOCK_INIT(&mri->mri_lock);
-	psc_waitq_init(&mri->mri_waitq);
+	psc_multilock_cond_init(&mri->mri_mlcond, NULL, 0, "mri-%s", nidbuf);
 	mri->mri_resm = resm;
-
-	return (resm);
 }
 
-struct sl_site *
-slcfg_new_site(void)
+void
+slcfg_init_site(struct sl_site *site)
 {
 	struct mds_site_info *msi;
-	struct sl_site *site;
-
-	site = PSCALLOC(sizeof(*site));
-	INIT_SITE(site);
 
 	msi = site->site_pri = PSCALLOC(sizeof(*msi));
 	psc_dynarray_init(&msi->msi_replq);
 	LOCK_INIT(&msi->msi_lock);
-	psc_waitq_init(&msi->msi_waitq);
-
-	return (site);
+	psc_multilock_init(&msi->msi_ml,
+	    "msi-%s", site->site_name);
+	psc_multilock_cond_init(&msi->msi_mlcond,
+	    NULL, 0, "msi-%s", site->site_name);
 }

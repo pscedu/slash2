@@ -217,11 +217,13 @@ site_profile   : site_profile_start site_defs SUBSECT_END
 		    libsl_siteid2site(currentSite->site_id)->site_name);
 
 	pll_add(&currentConf->gconf_sites, currentSite);
-	currentSite = slcfg_new_site();
 };
 
 site_profile_start : SITE_PROFILE SITE_NAME SUBSECT_START
 {
+	currentSite = PSCALLOC(sizeof(*currentSite));
+	INIT_SITE(currentSite);
+	slcfg_init_site(currentSite);
 	if (strlcpy(currentSite->site_name, $2,
 	    SITE_NAME_MAX) >= SITE_NAME_MAX)
 		psc_fatalx("site name too long");
@@ -239,19 +241,23 @@ site_resource  : site_resource_start resource_def SUBSECT_END
 	currentRes->res_id = sl_global_id_build(currentSite->site_id,
 						currentRes->res_id);
 
+	if (libsl_id2res(currentRes->res_id))
+		yyerror("resource %s ID %d already assigned to %s",
+		    currentRes->res_name, currentRes->res_id,
+		    libsl_id2res(currentRes->res_id)->res_name);
+
 	currentSite->site_resv = psc_realloc(currentSite->site_resv,
 	    sizeof(*currentSite->site_resv) * (currentSite->site_nres + 1), 0);
 	currentSite->site_resv[currentSite->site_nres++] = currentRes;
 	currentRes->res_site = currentSite;
-
-	/* setup next resource */
-	currentRes = slcfg_new_res();
 };
 
 site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
 {
+	currentRes = PSCALLOC(sizeof(*currentRes));
+	slcfg_init_res(currentRes);
 	if (snprintf(currentRes->res_name, RES_NAME_MAX, "%s%s",
-		     $2, currentSite->site_name) >= RES_NAME_MAX)
+	    $2, currentSite->site_name) >= RES_NAME_MAX)
 		psc_fatalx("Resource name too long");
 	psc_trace("ResName %s", currentRes->res_name);
 	free($2);
@@ -652,10 +658,6 @@ slcfg_parse(const char *config_file)
 
 	INIT_GCONF(&globalConfig);
 
-	/* Pre-allocate the first resource and site */
-	currentSite = slcfg_new_site();
-	currentRes = slcfg_new_res();
-
 	slcfg_add_include(config_file);
 	psclist_for_each_entry_safe(cf, ncf, &cfg_files, cf_lentry) {
 		cfg_filename = cf->cf_fn;
@@ -671,9 +673,6 @@ slcfg_parse(const char *config_file)
 	}
 	if (cfg_errors)
 		errx(1, "%d error(s) encountered", cfg_errors);
-
-	free(currentRes);
-	free(currentSite);
 
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {

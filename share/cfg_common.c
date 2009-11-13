@@ -8,7 +8,10 @@
 void
 libsl_nid_associate(lnet_nid_t nid, struct sl_resource *res)
 {
-	struct sl_resm *resm = slcfg_new_resm();
+	struct sl_resm *resm;
+
+	resm = PSCALLOC(sizeof(*resm));
+	slcfg_init_resm(resm);
 
 	resm->resm_nid = nid;
 	resm->resm_res = res;

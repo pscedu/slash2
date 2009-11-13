@@ -114,9 +114,9 @@ sl_resid_to_siteid(sl_ios_id_t id)
 	return ((id & SL_SITE_MASK) >> SL_SITE_BITS);
 }
 
-struct sl_site		*slcfg_new_site(void);
-struct sl_resource	*slcfg_new_res(void);
-struct sl_resm		*slcfg_new_resm(void);
+void			 slcfg_init_res(struct sl_resource *);
+void			 slcfg_init_resm(struct sl_resm *);
+void			 slcfg_init_site(struct sl_site *);
 
 int			 slcfg_site_cmp(const void *, const void *);
 int			 slcfg_res_cmp(const void *, const void *);
