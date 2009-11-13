@@ -334,7 +334,7 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 		psc_assert(dynarray_len(&r->biorq_pages));
 
 		if (biorq_voff_get(r) <= off) {
-			/* No need to map this one, it's data has been
+			/* No need to map this one, its data has been
 			 *   accounted for but first ensure that all of the 
 			 *   pages have been scheduled for IO.
 			 * XXX single-threaded, bmap_flush is single threaded
@@ -343,8 +343,8 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 			 *   must have BMPCE_IOSCHED set.
 			 */
 			for (j=0; j < dynarray_len(&r->biorq_pages); j++) {
-				spinlock(&bmpce->bmpce_lock);
 				bmpce = dynarray_getpos(&r->biorq_pages, j);
+				spinlock(&bmpce->bmpce_lock);
 				psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
 				freelock(&bmpce->bmpce_lock);
 			}
