@@ -48,9 +48,6 @@ struct iod_resm_info {
 	struct psc_waitq	  iri_waitq;
 };
 
-void	sliric_init(void);
-void	slirim_init(void);
-void	slirii_init(void);
 void	slitimerthr_spawn(void);
 __dead void slictlthr_main(const char *);
 

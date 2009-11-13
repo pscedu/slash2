@@ -62,8 +62,6 @@
 	    ~(SL_REPLICA_MASK << ((off) % NBBY))) |		\
 	    ((val) << ((off) % NBBY)))
 
-typedef uint64_t sl_inum_t;
-
 /*
  * Point to an offset within the linear metadata file which holds a
  * snapshot.  Snapshots are read-only and their metadata may not be

@@ -17,7 +17,6 @@ struct bmap_iod_info;
 
 extern struct psc_listcache lruSlvrs;
 extern struct psc_listcache rpcqSlvrs;
-extern struct psc_listcache inflSlvrs;
 
 /**
  * slvr_ref - sliver reference used for scheduling dirty slivers to be crc'd and sent to the mds.
@@ -106,10 +105,8 @@ int	slvr_do_crc(struct slvr_ref *);
 int	slvr_fsbytes_io(struct slvr_ref *, int);
 int	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
 int	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, int);
-void	slvr_release(struct slvr_ref *);
 void	slvr_rio_done(struct slvr_ref *);
 void	slvr_slab_prep(struct slvr_ref *, int);
-void	slvr_update(struct slvr_ref *);
 void	slvr_wio_done(struct slvr_ref *);
 void    slvr_try_rpcqueue(struct slvr_ref *);
 void    slvr_worker_init(void);
