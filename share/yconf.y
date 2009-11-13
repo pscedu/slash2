@@ -211,6 +211,11 @@ site_profiles  : site_profile            |
 
 site_profile   : site_profile_start site_defs SUBSECT_END
 {
+	if (libsl_siteid2site(currentSite->site_id))
+		yyerror("site %s ID %d already assigned to %s",
+		    currentSite->site_name, currentSite->site_id,
+		    libsl_siteid2site(currentSite->site_id)->site_name);
+
 	pll_add(&currentConf->gconf_sites, currentSite);
 	currentSite = slcfg_new_site();
 };
@@ -665,7 +670,7 @@ slcfg_parse(const char *config_file)
 		free(cf);
 	}
 	if (cfg_errors)
-		psc_fatalx("%d error(s) encountered", cfg_errors);
+		errx(1, "%d error(s) encountered", cfg_errors);
 
 	free(currentRes);
 	free(currentSite);
@@ -694,5 +699,5 @@ yyerror(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
-	psc_errorx("%s:%d: %s", cfg_filename, cfg_lineno, buf);
+	warnx("%s:%d: %s", cfg_filename, cfg_lineno, buf);
 }

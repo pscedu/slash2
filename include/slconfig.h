@@ -109,7 +109,7 @@ sl_global_id_build(sl_siteid_t site_id, uint32_t intres_id)
 }
 
 static __inline sl_siteid_t
-sl_iosid_to_siteid(sl_ios_id_t id)
+sl_resid_to_siteid(sl_ios_id_t id)
 {
 	return ((id & SL_SITE_MASK) >> SL_SITE_BITS);
 }
@@ -126,7 +126,8 @@ void			 slcfg_parse(const char *);
 
 void			 libsl_nid_associate(lnet_nid_t, struct sl_resource *);
 struct sl_resm		*libsl_resm_lookup(void);
-struct sl_site		*libsl_id2site(sl_ios_id_t);
+struct sl_site		*libsl_siteid2site(sl_siteid_t);
+struct sl_site		*libsl_resid2site(sl_ios_id_t);
 struct sl_resource	*libsl_id2res(sl_ios_id_t);
 struct sl_resm		*libsl_nid2resm(lnet_nid_t);
 struct sl_resource	*libsl_str2res(const char *);

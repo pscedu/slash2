@@ -57,9 +57,8 @@ libsl_resm_lookup(void)
 }
 
 struct sl_site *
-libsl_id2site(sl_ios_id_t id)
+libsl_siteid2site(sl_siteid_t siteid)
 {
-	sl_siteid_t siteid = sl_iosid_to_siteid(id);
 	struct sl_site *s;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
@@ -70,6 +69,12 @@ libsl_id2site(sl_ios_id_t id)
 	return (s);
 }
 
+struct sl_site *
+libsl_resid2site(sl_ios_id_t id)
+{
+	return (libsl_siteid2site(sl_resid_to_siteid(id)));
+}
+
 struct sl_resource *
 libsl_id2res(sl_ios_id_t id)
 {
@@ -77,7 +82,7 @@ libsl_id2res(sl_ios_id_t id)
 	struct sl_site *s;
 	int n;
 
-	if ((s = libsl_id2site(id)) == NULL)
+	if ((s = libsl_resid2site(id)) == NULL)
 		return (NULL);
 	for (n = 0; n < s->site_nres; n++) {
 		r = s->site_resv[n];
@@ -203,7 +208,7 @@ libsl_init(int pscnet_mode)
 			psc_fatalx("No resource for this node");
 		psc_errorx("Resource %s", resm->resm_res->res_name);
 		z->node_res  = resm->resm_res;
-		z->node_site = libsl_id2site(z->node_res->res_id);
+		z->node_site = libsl_resid2site(z->node_res->res_id);
 		libsl_profile_dump();
 	}
 }
@@ -211,13 +216,9 @@ libsl_init(int pscnet_mode)
 int
 slcfg_site_cmp(const void *a, const void *b)
 {
-	const struct sl_site *x = a, *y = b;
+	struct sl_site * const *px = a, *x = *px, * const *py = b, *y = *py;
 
-	if (x->site_id < y->site_id)
-		return (-1);
-	else if (x->site_id > y->site_id)
-		return (1);
-	return (0);
+	return (CMP(x->site_id, y->site_id));
 }
 
 int
