@@ -65,7 +65,7 @@ slcfg_new_site(void)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-S] [-i file]\n", progname);
+	fprintf(stderr, "usage: %s [-c file]\n", progname);
 	exit(1);
 }
 
