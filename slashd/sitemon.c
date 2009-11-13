@@ -10,12 +10,13 @@
 #include "psc_util/thread.h"
 
 #include "repl_mds.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
 #include "slerr.h"
 
 void
-slmsmthr_removeq(struct sl_replrq *rrq)
+slmreplthr_removeq(struct sl_replrq *rrq)
 {
 	struct slmrepl_thread *smrt;
 	struct mds_site_info *msi;
@@ -36,43 +37,13 @@ slmsmthr_removeq(struct sl_replrq *rrq)
 	mds_repl_tryrmqfile(rrq);
 }
 
-struct sl_resm *
-slmsmthr_find_dst_ion(struct mds_resm_info *src)
-{
-	struct slmrepl_thread *smrt;
-	struct mds_resm_info *dst;
-	struct psc_thread *thr;
-	struct sl_resource *r;
-	struct sl_resm *resm;
-	struct sl_site *site;
-	uint32_t j;
-	int n;
-
-	thr = pscthr_get();
-	smrt = slmreplthr(thr);
-	site = smrt->smrt_site;
-
-	spinlock(&repl_busytable_lock);
-	for (n = 0; n < site->site_nres; n++) {
-		r = site->site_resv[n];
-		for (j = 0; j < r->res_nnids; j++) {
-			resm = libsl_nid2resm(r->res_nids[j]);
-			dst = resm->resm_pri;
-			if (!mds_repl_nodes_getbusy(src, dst))
-				goto out;
-		}
-	}
-	resm = NULL;
- out:
-	freelock(&repl_busytable_lock);
-	return (resm);
-}
-
 __dead void *
-slmsmthr_main(void *arg)
+slmreplthr_main(void *arg)
 {
-	int iosidx, val, nios, off, rc, ris, is, ir, rin, in;
+	int iosidx, val, nios, off, rc, ris, is, ir, rin, in, j;
+	struct slashrpc_cservice *src_csvc, *dst_csvc;
 	struct mds_resm_info *src_mri, *dst_mri;
+	struct sl_resource *src_res, *dst_res;
 	struct sl_resm *src_resm, *dst_resm;
 	struct srm_repl_schedwk_req *mq;
 	struct slash_bmap_od *bmapod;
@@ -80,7 +51,6 @@ slmsmthr_main(void *arg)
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *rq;
 	struct mds_site_info *msi;
-	struct sl_resource *res;
 	struct bmapc_memb *bcm;
 	struct psc_thread *thr;
 	struct sl_replrq *rrq;
@@ -94,8 +64,7 @@ slmsmthr_main(void *arg)
 	for (;;) {
 		sched_yield();
 
-		/* find/wait for a resm */
-
+		/* select or wait for a repl rq */
 		spinlock(&msi->msi_lock);
 		if (psc_dynarray_len(&msi->msi_replq) == 0) {
 			psc_waitq_wait(&msi->msi_waitq, &msi->msi_lock);
@@ -108,24 +77,26 @@ slmsmthr_main(void *arg)
 
 		if (rc == 0) {
 			/* repl must be going away, drop it */
-			slmsmthr_removeq(rrq);
+			slmreplthr_removeq(rrq);
 			continue;
 		}
-
+printf("got a rrq\n");
 		/* find which resource in our site this repl is destined for */
 		iosidx = -1;
 		for (ir = 0; ir < site->site_nres; ir++) {
+			dst_res = site->site_resv[ir];
 			iosidx = mds_repl_ios_lookup(rrq->rrq_inoh,
-			    site->site_resv[ir]->res_id);
+			    dst_res->res_id);
 			if (iosidx >= 0)
 				break;
 		}
 		if (iosidx < 0) {
-			slmsmthr_removeq(rrq);
+			slmreplthr_removeq(rrq);
 			continue;
 		}
 		freelock(&rrq->rrq_lock);
 
+printf("got a destination res at our site %s\n", site->site_name);
 		off = SL_BITS_PER_REPLICA * iosidx;
 
 		/* got a replication request; find a bmap this ios needs */
@@ -158,7 +129,7 @@ slmsmthr_main(void *arg)
 		    inode new bmap policy not persist &&
 		    every bmap not persistent)
 			/* couldn't find any bmaps; remove from queue */
-			slmsmthr_removeq(rrq);
+			slmreplthr_removeq(rrq);
 		else
 #endif
 			mds_repl_unrefrq(rrq);
@@ -169,6 +140,7 @@ slmsmthr_main(void *arg)
  brepl:
 		BMAP_ULOCK(bcm);
 
+printf("got a bmap\n");
 		rc = mds_repl_inoh_ensure_loaded(rrq->rrq_inoh);
 		if (rc) {
 			psc_warnx("couldn't load inoh repl table: %s",
@@ -186,7 +158,7 @@ slmsmthr_main(void *arg)
 		ris = psc_random32u(nios);
 		for (is = 0; is < nios; is++,
 		    ris = (ris + 1) % nios) {
-			res = libsl_id2res(REPLRQ_GETREPL(rrq, ris).bs_id);
+			src_res = libsl_id2res(REPLRQ_GETREPL(rrq, ris).bs_id);
 
 			/* skip ourself and old/inactive replicas */
 			if (ris == iosidx ||
@@ -195,28 +167,35 @@ slmsmthr_main(void *arg)
 				continue;
 
 			/* search nids for an idle, online connection */
-			rin = psc_random32u(res->res_nnids);
-			for (in = 0; in < (int)res->res_nnids; in++,
-			    rin = (rin + 1) % res->res_nnids) {
-				src_resm = libsl_nid2resm(res->res_nids[rin]);
+			rin = psc_random32u(src_res->res_nnids);
+			for (in = 0; in < (int)src_res->res_nnids; in++,
+			    rin = (rin + 1) % src_res->res_nnids) {
+				src_resm = libsl_nid2resm(src_res->res_nids[rin]);
 				src_mri = src_resm->resm_pri;
-				spinlock(&src_mri->mri_lock);
-				if (src_mri->mri_csvc && (dst_resm =
-				    slmsmthr_find_dst_ion(src_mri)) != NULL)
-					goto issue;
-				freelock(&src_mri->mri_lock);
+				src_csvc = slm_geticonn(src_resm);
+				if (src_csvc == NULL)
+					continue;
+
+				/* look for a destination resm */
+				for (j = 0; j < (int)dst_res->res_nnids; j++) {
+					dst_resm = libsl_nid2resm(dst_res->res_nids[j]);
+					dst_mri = dst_resm->resm_pri;
+					dst_csvc = slm_geticonn(dst_resm);
+					if (dst_csvc == NULL)
+						continue;
+
+					rc = mds_repl_nodes_trysetbusy(
+					    src_mri, dst_mri);
+					if (rc)
+						goto issue;
+				}
 			}
 		}
 		psc_error("could not find a replica");
+		rc = -1;
+		goto release;
  issue:
-		if (dst_resm == NULL) {
-			spinlock(&msi->msi_lock);
-			psc_waitq_waitrel_ms(&msi->msi_waitq,
-			    &msi->msi_lock, 1);
-			rc = -1;
-			goto release;
-		}
-		freelock(&src_mri->mri_lock);
+printf("got a source resm?\n");
 
 		/* Issue replication work request */
 		rc = RSX_NEWREQ(dst_mri->mri_csvc->csvc_import,
@@ -230,13 +209,17 @@ slmsmthr_main(void *arg)
 		}
 
  release:
-		if (rc == 0) {
-			SL_REPL_SET_BMAP_IOS_STAT(
-			    bmapod->bh_repls, off, SL_REPL_SCHED);
-			mds_repl_nodes_setbusy(src_mri, dst_mri, 1);
-		}
+		if (rc)
+			mds_repl_nodes_setbusy(src_mri, dst_mri, 0);
+		else
+			SL_REPL_SET_BMAP_IOS_STAT(bmapod->bh_repls,
+			    off, SL_REPL_SCHED);
 		mds_repl_bmap_rel(bcm);
 		mds_repl_unrefrq(rrq);
+
+//		spinlock(&msi->msi_lock);
+//		psc_waitq_waitrel_ms(&msi->msi_waitq,
+//		    &msi->msi_lock, 1);
 	}
 }
 
@@ -248,7 +231,7 @@ slmreplthr_spawnall(void)
 	struct sl_site *site;
 
 	PLL_FOREACH(site, &globalConfig.gconf_sites) {
-		thr = pscthr_init(SLMTHRT_REPL, 0, slmsmthr_main,
+		thr = pscthr_init(SLMTHRT_REPL, 0, slmreplthr_main,
 		    NULL, sizeof(*smrt), "slmreplthr-%s",
 		    site->site_name + strcspn(site->site_name, "@"));
 		smrt = slmreplthr(thr);

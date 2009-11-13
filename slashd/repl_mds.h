@@ -45,13 +45,16 @@ int	mds_repl_inoh_ensure_loaded(struct slash_inode_handle *);
 int	mds_repl_inv_except_locked(struct bmapc_memb *, sl_ios_id_t);
 int	mds_repl_loadino(struct slash_fidgen *, struct fidc_membh **);
 int	mds_repl_nodes_getbusy(struct mds_resm_info *, struct mds_resm_info *);
-void	mds_repl_nodes_setbusy(struct mds_resm_info *, struct mds_resm_info *, int);
+int	_mds_repl_nodes_setbusy(struct mds_resm_info *, struct mds_resm_info *, int, int);
 void	mds_repl_tryrmqfile(struct sl_replrq *);
 void	mds_repl_unrefrq(struct sl_replrq *);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);
 
 #define mds_repl_ios_lookup_add(ih, ios)	_mds_repl_ios_lookup((ih), (ios), 1)
 #define mds_repl_ios_lookup(ih, ios)		_mds_repl_ios_lookup((ih), (ios), 0)
+
+#define mds_repl_nodes_trysetbusy(ma, mb)	_mds_repl_nodes_setbusy((ma), (mb), 0, 1)
+#define mds_repl_nodes_setbusy(ma, mb, busy)	((void)_mds_repl_nodes_setbusy((ma), (mb), 1, (busy)))
 
 #define REPLRQ_INO(rrq)		(&(rrq)->rrq_inoh->inoh_ino)
 #define REPLRQ_INOX(rrq)	(rrq)->rrq_inoh->inoh_extras

@@ -11,6 +11,7 @@
 
 #include "psc_ds/pool.h"
 #include "psc_ds/tree.h"
+#include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"
@@ -1022,12 +1023,12 @@ mds_repl_nodes_getbusy(struct mds_resm_info *ma, struct mds_resm_info *mb)
 	return (rc);
 }
 
-void
-mds_repl_nodes_setbusy(struct mds_resm_info *ma, struct mds_resm_info *mb,
-    int busy)
+int
+_mds_repl_nodes_setbusy(struct mds_resm_info *ma, struct mds_resm_info *mb,
+    int exclusive, int busy)
 {
 	struct mds_resm_info *min, *max;
-	int locked;
+	int locked, changed = 0;
 
 	psc_assert(ma->mri_busyid != mb->mri_busyid);
 
@@ -1040,15 +1041,16 @@ mds_repl_nodes_setbusy(struct mds_resm_info *ma, struct mds_resm_info *mb,
 	}
 
 	locked = reqlock(&repl_busytable_lock);
-	if (busy)
-		psc_vbitmap_set(repl_busytable,
+	if (!exclusive || !!busy ^ !!psc_vbitmap_get(repl_busytable,
+	    MDS_REPL_BUSYNODES(repl_busytable_nents,
+	    min->mri_busyid, max->mri_busyid))) {
+		psc_vbitmap_setval(repl_busytable,
 		    MDS_REPL_BUSYNODES(repl_busytable_nents,
-		    min->mri_busyid, max->mri_busyid));
-	else
-		psc_vbitmap_unset(repl_busytable,
-		    MDS_REPL_BUSYNODES(repl_busytable_nents,
-		    min->mri_busyid, max->mri_busyid));
+		    min->mri_busyid, max->mri_busyid), busy);
+		changed = 1;
+	}
 	ureqlock(&repl_busytable_lock, locked);
+	return (changed);
 }
 
 void
