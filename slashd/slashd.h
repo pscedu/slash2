@@ -5,6 +5,7 @@
 
 #include "psc_ds/dynarray.h"
 #include "psc_rpc/service.h"
+#include "psc_util/multilock.h"
 
 #include "inode.h"
 #include "slconfig.h"
@@ -67,13 +68,17 @@ PSCTHR_MKCAST(slmreplthr, slmrepl_thread, SLMTHRT_REPL)
 struct mds_site_info {
 	struct psc_dynarray	  msi_replq;
 	psc_spinlock_t		  msi_lock;
-	struct psc_waitq	  msi_waitq;
+	struct psc_multilock	  msi_ml;
+	struct psc_multilock_cond msi_mlcond;
+	int			  msi_flags;
 };
+
+#define MSIF_DIRTYQ		(1 << 0)	/* queue has changed */
 
 struct mds_resm_info {
 	psc_spinlock_t		  mri_lock;
 	struct slashrpc_cservice *mri_csvc;
-	struct psc_waitq	  mri_waitq;
+	struct psc_multilock_cond mri_mlcond;
 	struct timespec           mri_lastping;
 	int			  mri_busyid;
 	struct sl_resm           *mri_resm;

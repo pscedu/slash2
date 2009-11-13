@@ -3,6 +3,8 @@
 #ifndef _MDS_RPC_H_
 #define _MDS_RPC_H_
 
+#include "psc_util/multilock.h"
+
 struct pscrpc_request;
 struct pscrpc_export;
 
@@ -26,21 +28,29 @@ struct pscrpc_export;
 
 #define resm2mri(resm)	((struct mds_resm_info *)(resm)->resm_pri)
 
+static __inline void
+slconn_wake_mlcond(void *arg)
+{
+	psc_multilock_cond_wakeup(arg);
+}
+
 /* aliases for connection management */
 #define slm_geticonn(resm)						\
 	slconn_get(&resm2mri(resm)->mri_csvc, NULL, (resm)->resm_nid,	\
 	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION,	\
-	    &resm2mri(resm)->mri_lock, &resm2mri(resm)->mri_waitq, SLCONNT_IOD)
+	    &resm2mri(resm)->mri_lock, slconn_wake_mlcond,		\
+	    &resm2mri(resm)->mri_mlcond, SLCONNT_IOD)
 
 #define slm_getmconn(resm)						\
 	slconn_get(&resm2mri(resm)->mri_csvc, NULL, (resm)->resm_nid,	\
 	    SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC, SRMM_VERSION,	\
-	    &resm2mri(resm)->mri_lock, &resm2mri(resm)->mri_waitq, SLCONNT_MDS)
+	    &resm2mri(resm)->mri_lock, slconn_wake_mlcond,		\
+	    &resm2mri(resm)->mri_mlcond, SLCONNT_MDS)
 
 #define slm_initclconn(mexpcli, exp)					\
 	slconn_get(&(mexpcli)->mc_csvc, (exp), LNET_NID_ANY,		\
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,	\
-	    &(mexpcli)->mc_lock, NULL, SLCONNT_CLI)
+	    &(mexpcli)->mc_lock, NULL, NULL, SLCONNT_CLI)
 
 #define slm_getclconn(mexpcli)		slm_initclconn((mexpcli), NULL)
 

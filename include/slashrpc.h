@@ -590,7 +590,7 @@ enum slconn_type {
 struct slashrpc_cservice *
 	slconn_get(struct slashrpc_cservice **, struct pscrpc_export *,
 	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
-	    psc_spinlock_t *, struct psc_waitq *, enum slconn_type);
+	    psc_spinlock_t *, void (*)(void *), void *, enum slconn_type);
 void	slashrpc_export_destroy(void *);
 void	slashrpc_csvc_free(struct slashrpc_cservice *);
 
@@ -601,5 +601,11 @@ struct slashrpc_cservice *
 int	rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, uint64_t, uint32_t);
 
 extern lnet_process_id_t lpid;
+
+static __inline void
+slconn_wake_waitq(void *arg)
+{
+	psc_waitq_wakeall(arg);
+}
 
 #endif /* _SLASHRPC_H_ */

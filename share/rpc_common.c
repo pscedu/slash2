@@ -88,8 +88,8 @@ rpc_csvc_fromexp(struct pscrpc_export *exp, uint32_t rqptl, uint32_t rpptl)
 struct slashrpc_cservice *
 slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
     lnet_nid_t peernid, uint32_t rqptl, uint32_t rpptl, uint64_t magic,
-    uint32_t version, psc_spinlock_t *lk, struct psc_waitq *wq,
-    enum slconn_type ctype)
+    uint32_t version, psc_spinlock_t *lk, void (*wakef)(void *),
+    void *wakearg, enum slconn_type ctype)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct sl_resm *resm;
@@ -139,7 +139,7 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 		if (rc)
 			csvc->csvc_flags |= CSVCF_FAILED;
 		else {
-			psc_waitq_wakeall(wq);
+			wakef(wakearg);
 			csvc->csvc_flags |= CSVCF_INIT;
 			csvc->csvc_flags &= ~CSVCF_FAILED;
 		}

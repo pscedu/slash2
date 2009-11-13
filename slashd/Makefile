@@ -54,6 +54,7 @@ SRCS+=		${PFL_BASE}/psc_util/list.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/meter.c
 SRCS+=		${PFL_BASE}/psc_util/mkdirs.c
+SRCS+=		${PFL_BASE}/psc_util/multilock.c
 SRCS+=		${PFL_BASE}/psc_util/odtable.c
 SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
 SRCS+=		${PFL_BASE}/psc_util/random.c
@@ -65,11 +66,6 @@ SRCS+=		${PFL_BASE}/psc_util/timerthr.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 SRCS+=		${PFL_BASE}/psc_util/wndmap.c
-
-#SRCS+=		${ZFS_BASE}/cmd/zpool/ptrace.c
-#SRCS+=		${ZFS_BASE}/cmd/zpool/zpool_iter.c
-#SRCS+=		${ZFS_BASE}/cmd/zpool/zpool_util.c
-#SRCS+=		${ZFS_BASE}/cmd/zpool/zpool_vdev.c
 
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}

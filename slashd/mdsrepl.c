@@ -92,6 +92,8 @@ mds_repl_dequeue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
 		if (psc_dynarray_exists(&msi->msi_replq, rrq)) {
 			psc_dynarray_remove(&msi->msi_replq, rrq);
 			psc_atomic32_dec(&rrq->rrq_refcnt);
+			msi->msi_flags |= MSIF_DIRTYQ;
+			psc_multilock_cond_wakeup(&msi->msi_mlcond);
 		}
 		freelock(&msi->msi_lock);
 	}
@@ -113,9 +115,10 @@ mds_repl_enqueue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
 		spinlock(&msi->msi_lock);
 		if (!psc_dynarray_exists(&msi->msi_replq, rrq)) {
 			psc_dynarray_add(&msi->msi_replq, rrq);
-			psc_waitq_wakeall(&msi->msi_waitq);
+			msi->msi_flags |= MSIF_DIRTYQ;
 			psc_atomic32_inc(&rrq->rrq_refcnt);
 		}
+		psc_multilock_cond_wakeup(&msi->msi_mlcond);
 		freelock(&msi->msi_lock);
 	}
 	ureqlock(&rrq->rrq_lock, locked);
@@ -1024,11 +1027,11 @@ mds_repl_nodes_getbusy(struct mds_resm_info *ma, struct mds_resm_info *mb)
 }
 
 int
-_mds_repl_nodes_setbusy(struct mds_resm_info *ma, struct mds_resm_info *mb,
-    int exclusive, int busy)
+mds_repl_nodes_setbusy(struct mds_resm_info *ma,
+    struct mds_resm_info *mb, int busy)
 {
 	struct mds_resm_info *min, *max;
-	int locked, changed = 0;
+	int locked, rc;
 
 	psc_assert(ma->mri_busyid != mb->mri_busyid);
 
@@ -1041,16 +1044,11 @@ _mds_repl_nodes_setbusy(struct mds_resm_info *ma, struct mds_resm_info *mb,
 	}
 
 	locked = reqlock(&repl_busytable_lock);
-	if (!exclusive || !!busy ^ !!psc_vbitmap_get(repl_busytable,
+	rc = psc_vbitmap_xsetval(repl_busytable,
 	    MDS_REPL_BUSYNODES(repl_busytable_nents,
-	    min->mri_busyid, max->mri_busyid))) {
-		psc_vbitmap_setval(repl_busytable,
-		    MDS_REPL_BUSYNODES(repl_busytable_nents,
-		    min->mri_busyid, max->mri_busyid), busy);
-		changed = 1;
-	}
+	    min->mri_busyid, max->mri_busyid), busy);
 	ureqlock(&repl_busytable_lock, locked);
-	return (changed);
+	return (rc);
 }
 
 void

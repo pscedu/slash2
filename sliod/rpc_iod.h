@@ -33,7 +33,8 @@ struct sli_repl_workrq;
 #define sli_geticonn(resm)						\
 	slconn_get(&resm2iri(resm)->iri_csvc, NULL, (resm)->resm_nid,	\
 	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,	\
-	    &resm2iri(resm)->iri_lock, &resm2iri(resm)->iri_waitq, SLCONNT_IOD)
+	    &resm2iri(resm)->iri_lock, slconn_wake_waitq,		\
+	    &resm2iri(resm)->iri_waitq, SLCONNT_IOD)
 
 #define sli_ric_handle_read(rq)		sli_ric_handle_io((rq), SL_READ)
 #define sli_ric_handle_write(rq)	sli_ric_handle_io((rq), SL_WRITE)
