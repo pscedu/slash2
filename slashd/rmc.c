@@ -740,12 +740,12 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	spinlock(&slrcmthr_uniqidmap_lock);
-	if (vbitmap_next(&slrcmthr_uniqidmap, &id) == -1)
+	spinlock(&slmrcmthr_uniqidmap_lock);
+	if (vbitmap_next(&slmrcmthr_uniqidmap, &id) == -1)
 		psc_fatal("vbitmap_next");
-	freelock(&slrcmthr_uniqidmap_lock);
+	freelock(&slmrcmthr_uniqidmap_lock);
 
-	thr = pscthr_init(SLMTHRT_RCM, 0, slrcmthr_main,
+	thr = pscthr_init(SLMTHRT_RCM, 0, slmrcmthr_main,
 	    NULL, sizeof(*srcm), "slmrcmthr%02zu", id);
 	srcm = thr->pscthr_private;
 	srcm->srcm_fg = mq->fg;

@@ -13,7 +13,7 @@
 
 struct psc_lockedlist psc_mlists;
 
-struct psc_ctlop slctlops[] = {
+struct psc_ctlop slmctlops[] = {
 	PSC_CTLDEFOPS
 };
 
@@ -27,12 +27,12 @@ int (*psc_ctl_cmds[])(int, struct psc_ctlmsghdr *, void *) = {
 int psc_ctl_ncmds = nitems(psc_ctl_cmds);
 
 void
-slctlthr_main(const char *fn)
+slmctlthr_main(const char *fn)
 {
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
 
-	psc_ctlthr_main(fn, slctlops, nitems(slctlops));
+	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops));
 }

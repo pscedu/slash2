@@ -19,11 +19,18 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
+struct psclist_head mds_server_conns = PSCLIST_HEAD_INIT(mds_server_conns);
+
+struct mds_server_conn {
+	struct psclist_head		 msc_lentry;
+	struct slashrpc_cservice	*msc_csvc;
+};
+
 /*
- * slrmm_handle_connect - handle a CONNECT request from another MDS.
+ * slm_rmm_handle_connect - handle a CONNECT request from another MDS.
  */
 int
-slrmm_handle_connect(struct pscrpc_request *rq)
+slm_rmm_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
@@ -35,16 +42,16 @@ slrmm_handle_connect(struct pscrpc_request *rq)
 }
 
 /*
- * slrmm_handler - handle a request from another MDS.
+ * slm_rmm_handler - handle a request from another MDS.
  */
 int
-slrmm_handler(struct pscrpc_request *rq)
+slm_rmm_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
-		rc = slrmm_handle_connect(rq);
+		rc = slm_rmm_handle_connect(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
@@ -53,4 +60,29 @@ slrmm_handler(struct pscrpc_request *rq)
 	}
 	target_send_reply_msg(rq, rc, 0);
 	return (rc);
+}
+
+/*
+ * slm_rmm_addconn - initiate a connection to MDS from MDS.
+ */
+int
+slm_rmm_addconn(const char *name)
+{
+	struct slashrpc_cservice *csvc;
+	struct mds_server_conn *msc;
+	lnet_nid_t nid;
+
+	nid = libcfs_str2nid(name);
+	if (nid == LNET_NID_ANY)
+		psc_fatalx("invalid server name: %s", name);
+
+	csvc = rpc_csvc_create(SRMM_REQ_PORTAL, SRMM_REP_PORTAL);
+	if (rpc_issue_connect(nid, csvc->csvc_import,
+	    SRMM_MAGIC, SRMM_VERSION))
+		return (-1);
+
+	msc = PSCALLOC(sizeof(*msc));
+	msc->msc_csvc = csvc;
+	psclist_xadd(&msc->msc_lentry, &mds_server_conns);
+	return (0);
 }

@@ -25,7 +25,7 @@ struct mexpfcm;
 #define SLMTHRT_TIOS		8	/* I/O stats updater */
 #define SLMTHRT_COH		9	/* coherency thread */
 #define SLMTHRT_FSSYNC		10	/* file system syncer */
-#define SLMTHRT_SITEMON		11	/* site monitor for replication, etc. */
+#define SLMTHRT_REPL		11	/* per-site replication monitor */
 #define SLMTHRT_IONCONN		12	/* I/O node connection maintainer */
 
 struct slmrmc_thread {
@@ -49,8 +49,8 @@ struct slmrmm_thread {
 	struct pscrpc_thread	  smrmt_prt;
 };
 
-struct slmsm_thread {
-	struct sl_site		 *smsmt_site;
+struct slmrepl_thread {
+	struct sl_site		 *smrt_site;
 };
 
 struct slmiconn_thread {
@@ -62,7 +62,7 @@ PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
 PSCTHR_MKCAST(slmiconnthr, slmiconn_thread, SLMTHRT_IONCONN)
-PSCTHR_MKCAST(slmsmthr, slmsm_thread, SLMTHRT_SITEMON)
+PSCTHR_MKCAST(slmreplthr, slmrepl_thread, SLMTHRT_REPL)
 
 struct mds_site_info {
 	struct psc_dynarray	  msi_replq;
@@ -93,20 +93,20 @@ struct resprof_mds_info {
 #define cfd_2_fmdsi(cfd)	fcmh_2_fmdsi(cfd_2_fcmh(cfd))
 #define cfd_2_zfsdata(cfd)	fcmh_2_zfsdata(cfd_2_fcmh(cfd))
 
-int	fid_get(const char *, struct slash_fidgen *,
+int	 fid_get(const char *, struct slash_fidgen *,
 	    struct slash_creds *, int, mode_t);
 
-void	mds_init(void);
-int	mds_inode_release(struct fidc_membh *);
+void	 mds_init(void);
+int	 mds_inode_release(struct fidc_membh *);
 
-void	sltimerthr_spawn(void);
-void	slctlthr_main(const char *);
-void	mdsfssyncthr_init(void);
-void	sitemons_spawn(void);
-void	*slrcmthr_main(void *);
+void	 slmtimerthr_spawn(void);
+void	 slmctlthr_main(const char *);
+void	 slmfssyncthr_init(void);
+void	 slmreplthr_spawnall(void);
+void	*slmrcmthr_main(void *);
 
-extern struct vbitmap		 slrcmthr_uniqidmap;
-extern psc_spinlock_t		 slrcmthr_uniqidmap_lock;
+extern struct vbitmap		 slmrcmthr_uniqidmap;
+extern psc_spinlock_t		 slmrcmthr_uniqidmap_lock;
 
 extern struct cfdops		 mdsCfdOps;
 extern struct slash_creds	 rootcreds;

@@ -46,7 +46,7 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 {
 	size_t n;
 
-	n = strlcpy(buf, "sl", PSC_THRNAME_MAX);
+	n = strlcpy(buf, "slm", PSC_THRNAME_MAX);
 	if (n < PSC_THRNAME_MAX)
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
@@ -130,7 +130,7 @@ main(int argc, char *argv[])
 
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
-	sfn = _PATH_SLCTLSOCK;
+	sfn = _PATH_SLMCTLSOCK;
 	while ((c = getopt(argc, argv, "f:p:S:")) != -1)
 		switch (c) {
 		case 'f':
@@ -151,7 +151,7 @@ main(int argc, char *argv[])
 		usage();
 
 	pscthr_init(SLMTHRT_CTL, 0, NULL, NULL,
-	    sizeof(struct psc_ctlthr), "slctlthr");
+	    sizeof(struct psc_ctlthr), "slmctlthr");
 
 	fidcache_init(FIDC_USER_MDS, NULL);
 
@@ -171,10 +171,10 @@ main(int argc, char *argv[])
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 
 	rpc_initsvc();
-	sitemons_spawn();
+	slmreplthr_spawnall();
 	mds_repl_init();
-	sltimerthr_spawn();
-	slctlthr_main(sfn);
+	slmtimerthr_spawn();
+	slmctlthr_main(sfn);
 
 	do_exit();
 	exit(0);

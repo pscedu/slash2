@@ -17,15 +17,15 @@
 void
 slmsmthr_removeq(struct sl_replrq *rrq)
 {
-	struct slmsm_thread *smsmt;
+	struct slmrepl_thread *smrt;
 	struct mds_site_info *msi;
 	struct psc_thread *thr;
 	struct sl_site *site;
 	int locked;
 
 	thr = pscthr_get();
-	smsmt = slmsmthr(thr);
-	site = smsmt->smsmt_site;
+	smrt = slmreplthr(thr);
+	site = smrt->smrt_site;
 	msi = site->site_pri;
 
 	locked = reqlock(&msi->msi_lock);
@@ -39,7 +39,7 @@ slmsmthr_removeq(struct sl_replrq *rrq)
 struct sl_resm *
 slmsmthr_find_dst_ion(struct mds_resm_info *src)
 {
-	struct slmsm_thread *smsmt;
+	struct slmrepl_thread *smrt;
 	struct mds_resm_info *dst;
 	struct psc_thread *thr;
 	struct sl_resource *r;
@@ -49,8 +49,8 @@ slmsmthr_find_dst_ion(struct mds_resm_info *src)
 	int n;
 
 	thr = pscthr_get();
-	smsmt = slmsmthr(thr);
-	site = smsmt->smsmt_site;
+	smrt = slmreplthr(thr);
+	site = smrt->smrt_site;
 
 	spinlock(&repl_busytable_lock);
 	for (n = 0; n < site->site_nres; n++) {
@@ -72,13 +72,12 @@ __dead void *
 slmsmthr_main(void *arg)
 {
 	int iosidx, val, nios, off, rc, ris, is, ir, rin, in;
-	sl_bmapno_t bmapno, nb, ib;
 	struct mds_resm_info *src_mri, *dst_mri;
 	struct sl_resm *src_resm, *dst_resm;
 	struct srm_repl_schedwk_req *mq;
 	struct slash_bmap_od *bmapod;
+	struct slmrepl_thread *smrt;
 	struct srm_generic_rep *mp;
-	struct slmsm_thread *smsmt;
 	struct pscrpc_request *rq;
 	struct mds_site_info *msi;
 	struct sl_resource *res;
@@ -86,10 +85,11 @@ slmsmthr_main(void *arg)
 	struct psc_thread *thr;
 	struct sl_replrq *rrq;
 	struct sl_site *site;
+	sl_bmapno_t bmapno, nb, ib;
 
 	thr = arg;
-	smsmt = slmsmthr(thr);
-	site = smsmt->smsmt_site;
+	smrt = slmreplthr(thr);
+	site = smrt->smrt_site;
 	msi = site->site_pri;
 	for (;;) {
 		sched_yield();
@@ -241,18 +241,18 @@ slmsmthr_main(void *arg)
 }
 
 void
-sitemons_spawn(void)
+slmreplthr_spawnall(void)
 {
-	struct slmsm_thread *smsmt;
+	struct slmrepl_thread *smrt;
 	struct psc_thread *thr;
 	struct sl_site *site;
 
 	PLL_FOREACH(site, &globalConfig.gconf_sites) {
-		thr = pscthr_init(SLMTHRT_SITEMON, 0, slmsmthr_main,
-		    NULL, sizeof(*smsmt), "slmsmthr-%s",
+		thr = pscthr_init(SLMTHRT_REPL, 0, slmsmthr_main,
+		    NULL, sizeof(*smrt), "slmreplthr-%s",
 		    site->site_name + strcspn(site->site_name, "@"));
-		smsmt = slmsmthr(thr);
-		smsmt->smsmt_site = site;
+		smrt = slmreplthr(thr);
+		smrt->smrt_site = site;
 		pscthr_setready(thr);
 	}
 }

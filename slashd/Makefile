@@ -19,7 +19,6 @@ SRCS+=		rcmc.c
 SRCS+=		rmc.c
 SRCS+=		rmi.c
 SRCS+=		rmm.c
-SRCS+=		rmmc.c
 SRCS+=		rpc_mds.c
 SRCS+=		sitemon.c
 SRCS+=		timer_mds.c

@@ -26,8 +26,8 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct vbitmap	 slrcmthr_uniqidmap = VBITMAP_INIT_AUTO;
-psc_spinlock_t	 slrcmthr_uniqidmap_lock = LOCK_INITIALIZER;
+struct vbitmap	 slmrcmthr_uniqidmap = VBITMAP_INIT_AUTO;
+psc_spinlock_t	 slmrcmthr_uniqidmap_lock = LOCK_INITIALIZER;
 
 uint64_t
 sl_get_repls_inum(void)
@@ -44,7 +44,7 @@ sl_get_repls_inum(void)
 }
 
 int
-slrmcthr_replst_slave_eof(struct sl_replrq *rrq)
+slmrmcthr_replst_slave_eof(struct sl_replrq *rrq)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
@@ -70,7 +70,7 @@ slrmcthr_replst_slave_eof(struct sl_replrq *rrq)
 }
 
 int
-slrmcthr_replst_slave_waitrep(struct pscrpc_request *rq)
+slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
@@ -97,7 +97,7 @@ slrmcthr_replst_slave_waitrep(struct pscrpc_request *rq)
 }
 
 int
-slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
+slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
     sl_blkno_t n, struct pscrpc_request **rqp)
 {
 	struct srm_replst_slave_req *mq;
@@ -114,7 +114,7 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 	    SL_BITS_PER_REPLICA, NBBY);
 	if (srcm->srcm_pagelen + len > SRM_REPLST_PAGESIZ) {
 		if (*rqp) {
-			rc = slrmcthr_replst_slave_waitrep(*rqp);
+			rc = slmrmcthr_replst_slave_waitrep(*rqp);
 			*rqp = NULL;
 			if (rc)
 				return (rc);
@@ -137,10 +137,10 @@ slrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 }
 
 /*
- * slrcm_issue_getreplst - issue a GETREPLST reply to a CLIENT from MDS.
+ * slm_rcm_issue_getreplst - issue a GETREPLST reply to a CLIENT from MDS.
  */
 int
-slrcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
+slm_rcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
@@ -177,7 +177,7 @@ slrcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 }
 
 void *
-slrcmthr_main(__unusedx void *arg)
+slmrcmthr_main(__unusedx void *arg)
 {
 	struct slmrcm_thread *srcm;
 	struct pscrpc_request *rq;
@@ -198,39 +198,39 @@ slrcmthr_main(__unusedx void *arg)
 	if (srcm->srcm_fg.fg_fid == FID_ANY) {
 		spinlock(&replrq_tree_lock);
 		SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
-			slrcm_issue_getreplst(rrq, 0);
+			slm_rcm_issue_getreplst(rrq, 0);
 			for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 				if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
 					continue;
 				BMAP_LOCK(bcm);
-				rc = slrcmthr_walk_brepls(rrq, bcm, n, &rq);
+				rc = slmrcmthr_walk_brepls(rrq, bcm, n, &rq);
 				bmap_op_done(bcm);
 				if (rc)
 					break;
 			}
 			if (rq) {
-				slrmcthr_replst_slave_waitrep(rq);
+				slmrmcthr_replst_slave_waitrep(rq);
 				rq = NULL;
 			}
-			slrmcthr_replst_slave_eof(rrq);
+			slmrmcthr_replst_slave_eof(rrq);
 			if (rc)
 				break;
 		}
 		freelock(&replrq_tree_lock);
 	} else if ((rrq = mds_repl_findrq(&srcm->srcm_fg, &dummy)) != NULL) {
-		slrcm_issue_getreplst(rrq, 0);
+		slm_rcm_issue_getreplst(rrq, 0);
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
 				continue;
 			BMAP_LOCK(bcm);
-			rc = slrcmthr_walk_brepls(rrq, bcm, n, &rq);
+			rc = slmrcmthr_walk_brepls(rrq, bcm, n, &rq);
 			bmap_op_done(bcm);
 			if (rc)
 				break;
 		}
 		if (rq)
-			slrmcthr_replst_slave_waitrep(rq);
-		slrmcthr_replst_slave_eof(rrq);
+			slmrmcthr_replst_slave_waitrep(rq);
+		slmrmcthr_replst_slave_eof(rrq);
 		mds_repl_unrefrq(rrq);
 	} else if (mds_repl_loadino(&srcm->srcm_fg, &fcmh) == 0) {
 		/*
@@ -243,40 +243,40 @@ slrcmthr_main(__unusedx void *arg)
 		memset(rrq, 0, sizeof(*rrq));
 		rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 
-		slrcm_issue_getreplst(rrq, 0);
+		slm_rcm_issue_getreplst(rrq, 0);
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
 				continue;
 			BMAP_LOCK(bcm);
-			rc = slrcmthr_walk_brepls(rrq, bcm, n, &rq);
+			rc = slmrcmthr_walk_brepls(rrq, bcm, n, &rq);
 			bmap_op_done(bcm);
 			if (rc)
 				break;
 		}
 		if (rq)
-			slrmcthr_replst_slave_waitrep(rq);
-		slrmcthr_replst_slave_eof(rrq);
+			slmrmcthr_replst_slave_waitrep(rq);
+		slmrmcthr_replst_slave_eof(rrq);
 		fidc_membh_dropref(fcmh);
 		psc_pool_return(replrq_pool, rrq);
 	}
 
 	/* signal EOF */
-	slrcm_issue_getreplst(NULL, 1);
+	slm_rcm_issue_getreplst(NULL, 1);
 
 	free(srcm->srcm_page);
 
-	spinlock(&slrcmthr_uniqidmap_lock);
-	vbitmap_unset(&slrcmthr_uniqidmap, srcm->srcm_uniqid);
-	vbitmap_setnextpos(&slrcmthr_uniqidmap, 0);
-	freelock(&slrcmthr_uniqidmap_lock);
+	spinlock(&slmrcmthr_uniqidmap_lock);
+	vbitmap_unset(&slmrcmthr_uniqidmap, srcm->srcm_uniqid);
+	vbitmap_setnextpos(&slmrcmthr_uniqidmap, 0);
+	freelock(&slmrcmthr_uniqidmap_lock);
 	return (NULL);
 }
 
 /*
- * slrcm_issue_releasebmap - issue a RELEASEBMAP request to a CLIENT from MDS.
+ * slm_rcm_issue_releasebmap - issue a RELEASEBMAP request to a CLIENT from MDS.
  */
 int
-slrcm_issue_releasebmap(struct pscrpc_import *imp)
+slm_rcm_issue_releasebmap(struct pscrpc_import *imp)
 {
 	struct srm_releasebmap_req *mq;
 	struct srm_generic_rep *mp;

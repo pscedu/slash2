@@ -591,12 +591,12 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	if (!mdsi->bmdsi_assign) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
 		return (-SLERR_XACT_FAIL);
-	}	
-	/* Signify that a ION has been assigned to this bmap.  This 
+	}
+	/* Signify that a ION has been assigned to this bmap.  This
 	 *   opcnt ref will stay in place until the ION informs us that
 	 *   he's finished with it.
 	 */
-	atomic_inc(&bmap->bcm_opcnt); 
+	atomic_inc(&bmap->bcm_opcnt);
 	atomic_inc(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
@@ -1266,6 +1266,6 @@ mds_init(void)
 	psc_assert(!odtable_load(_PATH_SLODTABLE, &mdsBmapAssignTable));
 	odtable_scan(mdsBmapAssignTable, mds_bmi_cb);
 
-	mdsfssyncthr_init();
+	slmfssyncthr_init();
 	mdscoh_init();
 }

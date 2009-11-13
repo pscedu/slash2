@@ -48,6 +48,6 @@ void	rpc_initsvc(void);
 
 int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
-int	slrmm_handler(struct pscrpc_request *);
+int	slm_rmm_handler(struct pscrpc_request *);
 
 #endif /* _MDS_RPC_H_ */
