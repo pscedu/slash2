@@ -143,6 +143,7 @@ slmsmthr_main(void *arg)
 			 * still open, hold off on this bmap for now.
 			 */
 			BMAP_LOCK(bcm);
+			bmapod = bmap_2_bmdsi(bcm)->bmdsi_od;
 			val = SL_REPL_GET_BMAP_IOS_STAT(
 			    bmapod->bh_repls, off);
 			if (val == SL_REPL_OLD)
