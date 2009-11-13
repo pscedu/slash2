@@ -274,34 +274,36 @@ Options which take
 parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
-.Bl -tag -compact -offset indent -width 15n
-.It Cm slcohthr
+.Bl -tag -compact -offset indent -width 16n
+.It Cm slmcohthr
 Coherency thread
-.It Cm slctlthr
+.It Cm slmctlthr
 Control thread
-.It Cm slfssyncthr
+.It Cm slmfssyncthr
 File system synchronization thread
 .It Cm slmlnacthr- Ns Ar %s
 Lustre network acceptor thread
-.It Cm slrmcthr Ns Ar %02d
+.It Cm slmreplthr- Ns Ar %s
+Per-site replication monitoring thread
+.It Cm slmrmcthr Ns Ar %02d
 Client
 .Tn RPC
 request service thread
-.It Cm slrmithr Ns Ar %02d
+.It Cm slmrmithr Ns Ar %02d
 .Tn I/O
 node
 .Tn RPC
 request service thread
-.It Cm slrmmthr Ns Ar %02d
+.It Cm slmrmmthr Ns Ar %02d
 .No Inter- Ns Tn MDS RPC
 request service thread
-.It Cm sltintvthr
+.It Cm slmtintvthr
 Timer interval thread
-.It Cm sltiosthr
+.It Cm slmtiosthr
 Timed
 .Tn I/O
 stats updater thread
-.It Cm slusklndplthr Ns Ar %d
+.It Cm slmusklndplthr Ns Ar %d
 Lustre userland socket poll thread
 .It Cm everyone
 All threads (default, where applicable)
