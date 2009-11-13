@@ -85,7 +85,7 @@ mds_repl_dequeue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
 
 	locked = reqlock(&rrq->rrq_lock);
 	for (n = 0; n < nios; n++) {
-		site = libsl_id2site(iosv[n].bs_id);
+		site = libsl_resid2site(iosv[n].bs_id);
 		msi = site->site_pri;
 
 		spinlock(&msi->msi_lock);
@@ -107,7 +107,7 @@ mds_repl_enqueue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
 
 	locked = reqlock(&rrq->rrq_lock);
 	for (n = 0; n < nios; n++) {
-		site = libsl_id2site(iosv[n].bs_id);
+		site = libsl_resid2site(iosv[n].bs_id);
 		msi = site->site_pri;
 
 		spinlock(&msi->msi_lock);
