@@ -1,0 +1,146 @@
+11/13/2009
+----------
+
+While studying sliver code, I notice that there are times when we lock and unlock a sliver several times
+in order to perform an operation.  This is done to avoid a deadlock.  But it is not very efficient and 
+we can't guarantee things are atomic sometimes.  For example, in slvr_try_rpcqueue():
+
+471                 s->slvr_flags |= SLVR_RPCPNDG;
+472                 SLVR_ULOCK(s);
+473 
+474                 lc_remove(&lruSlvrs, s);
+475                 /* Don't drop the SLVR_LRU bit until the sliver has been
+476                  *   removed.
+477                  */
+478                 SLVR_LOCK(s);
+479                 /* If we set SLVR_RPCPNDG then no one else may have
+480                  *   unset SLVR_LRU.
+481                  */
+482                 psc_assert(s->slvr_flags & SLVR_LRU);
+483                 s->slvr_flags &= ~SLVR_LRU;
+484                 SLVR_ULOCK(s);
+485 
+486                 lc_addqueue(&rpcqSlvrs, s);
+
+
+The setting of flag SLVR_RPCPNDG and the enqueuing of the sliver is not atomic.  This leaves a window 
+for race condition.
+
+It is a common pattern that an individual item (e.g., a sliver) needs to be removed or inserted
+into a queue (e.g., rpcqSlvrs).  I propose we adopt the following usual locking convention:
+
+From the list perspective:
+
+	take list lock
+	take an item (potentially off the list)
+	drop list lock
+	work on the item
+
+From the item perspective:
+
+	take item lock
+
+	...
+
+	if needed {
+
+		take list lock
+		perform list operation (insert, remove, etc)
+		drop list lock
+	}
+
+	...
+
+	drop item lock.
+
+In other words, we allow the locking order of "take an item lock and take a list lock". We already
+do this in some cases (e.g., lc_getnb()).
+
+This seems to be the way people are using.  An example would be vop_stdfsync(ap) in
+FreeBSD file sys/kern/vfs_default.c.
+
+384 
+385 int
+386 vop_stdfsync(ap)
+387         struct vop_fsync_args /* {
+388                 struct vnode *a_vp;
+389                 struct ucred *a_cred;
+390                 int a_waitfor;
+391                 struct thread *a_td;
+392         } */ *ap;
+393 {
+394         struct vnode *vp = ap->a_vp;
+395         struct buf *bp;
+396         struct bufobj *bo;
+397         struct buf *nbp;
+398         int error = 0;
+399         int maxretry = 1000;     /* large, arbitrarily chosen */
+400 
+401         VI_LOCK(vp);
+402 loop1:
+403         /*
+404          * MARK/SCAN initialization to avoid infinite loops.
+405          */
+406         TAILQ_FOREACH(bp, &vp->v_bufobj.bo_dirty.bv_hd, b_bobufs) {
+407                 bp->b_vflags &= ~BV_SCANNED;
+408                 bp->b_error = 0;
+409         }
+410 
+411         /*
+412          * Flush all dirty buffers associated with a vnode.
+413          */
+414 loop2:
+415         TAILQ_FOREACH_SAFE(bp, &vp->v_bufobj.bo_dirty.bv_hd, b_bobufs,
+nbp) {
+416                 if ((bp->b_vflags & BV_SCANNED) != 0)		<-- this is protected by vnode lock
+417                         continue;
+418                 bp->b_vflags |= BV_SCANNED;
+419                 if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL))
+420                         continue;
+421                 VI_UNLOCK(vp);
+422                 KASSERT(bp->b_bufobj == &vp->v_bufobj,
+423                     ("bp %p wrong b_bufobj %p should be %p",
+424                     bp, bp->b_bufobj, &vp->v_bufobj));
+425                 if ((bp->b_flags & B_DELWRI) == 0)
+426                         panic("fsync: not dirty");
+427                 if ((vp->v_object != NULL) && (bp->b_flags & B_CLUSTEROK))
+{
+428                         vfs_bio_awrite(bp);
+429                 } else {
+430                         bremfree(bp);
+431                         bawrite(bp);
+432                 }
+433                 VI_LOCK(vp);
+434                 goto loop2;
+435         }
+436 
+437         /*
+438          * If synchronous the caller expects us to completely resolve all
+439          * dirty buffers in the system.  Wait for in-progress I/O to
+440          * complete (which could include background bitmap writes), then
+441          * retry if dirty blocks still exist.
+442          */
+443         if (ap->a_waitfor == MNT_WAIT) {
+444                 bo = &vp->v_bufobj;
+445                 bufobj_wwait(bo, 0, 0);
+446                 if (bo->bo_dirty.bv_cnt > 0) {
+447                         /*
+448                          * If we are unable to write any of these buffers
+449                          * then we fail now rather than trying endlessly
+450                          * to write them out.
+451                          */
+452                         TAILQ_FOREACH(bp, &bo->bo_dirty.bv_hd, b_bobufs)
+453                                 if ((error = bp->b_error) == 0)
+454                                         continue;
+455                         if (error == 0 && --maxretry >= 0)
+456                                 goto loop1;
+457                         error = EAGAIN;
+458                 }
+459         }
+460         VI_UNLOCK(vp);
+461         if (error == EAGAIN)
+462                 vprint("fsync: giving up on dirty", vp);
+463 
+464         return (error);
+465 }
+
