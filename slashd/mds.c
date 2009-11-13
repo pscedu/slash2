@@ -883,12 +883,12 @@ mds_bmapod_dump(const struct bmapc_memb *bmap)
 	for (k = 0; k < SL_REPLICA_NBYTES; k++, mask = 0)
 		for (pos = mask = 0; pos < NBBY; pos += SL_BITS_PER_REPLICA) {
 			mask = (uint8_t)(SL_REPLICA_MASK << pos);
-			*ob = ch[(b[k] & mask) >> pos];
+			*ob++ = ch[(b[k] & mask) >> pos];
 		}
 
 	*ob = '\0';
 
-	DEBUG_BMAP(PLL_NOTIFY, bmap, "replicas(%s) SL_REPLICA_NBYTES=%u",
+	DEBUG_BMAP(PLL_NOTICE, bmap, "replicas(%s) SL_REPLICA_NBYTES=%u",
 		   buf, SL_REPLICA_NBYTES);
 }
 
