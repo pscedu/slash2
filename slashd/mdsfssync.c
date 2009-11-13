@@ -37,7 +37,7 @@ mdsfssyncthr_begin(__unusedx void *arg)
 			freelock(&jfi->jfi_lock);
 			lc_addtail(&dirtyMdsData, jfi);
 			psc_info("fssync jfi(%p) xh(%p) BUSY",
-				 jfi, xh);
+				 jfi, jfi->jfi_xh);
 			usleep(100);
 			continue;
 		}
