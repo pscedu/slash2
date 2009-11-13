@@ -100,22 +100,22 @@ slvr_do_crc(struct slvr_ref *s)
 }
 
 __static int
-slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
+slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
 {
 	int	i;
 	ssize_t	rc;
 	int	nblks;
 	int	save_errno;
 
-	nblks = (size + SLASH_SLVR_BLKSZ-1) / SLASH_SLVR_BLKSZ;
+	nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
 
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	if (rw == SL_READ) {
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
-		rc = pread(slvr_2_fd(s), slvr_2_buf(s, blk), size,
-			   slvr_2_fileoff(s, blk));
+		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
+			   slvr_2_fileoff(s, sblk));
 		save_errno = errno;
 
 		/* XXX this is a bit of a hack.  Here we'll check crc's
@@ -135,7 +135,7 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 			if (crc_rc == -EINVAL) {
 				DEBUG_SLVR(PLL_ERROR, s,
 					   "bad crc blks=%d off=%"PRIx64,
-					   nblks, slvr_2_fileoff(s, blk));
+					   nblks, slvr_2_fileoff(s, sblk));
 				return (crc_rc);
 			}
 		}
@@ -153,11 +153,11 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 		SLVR_LOCK(s);
 		for (i = 0; i < nblks; i++) {
 			//psc_assert(vbitmap_get(s->slvr_slab->slb_inuse,
-			//	       blk + i));
-			vbitmap_unset(s->slvr_slab->slb_inuse, blk + i);
+			//	       sblk + i));
+			vbitmap_unset(s->slvr_slab->slb_inuse, sblk + i);
 		}
-		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, blk), size,
-			    slvr_2_fileoff(s, blk));
+		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
+			    slvr_2_fileoff(s, sblk));
 		SLVR_ULOCK(s);
 
 		save_errno = errno;
@@ -167,17 +167,17 @@ slvr_fsio(struct slvr_ref *s, int blk, uint32_t size, int rw)
 		DEBUG_SLVR(PLL_ERROR, s, "failed (rc=%zd, size=%u) "
 			   "%s blks=%d off=%"PRIx64" errno=%d",
 			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
-			   nblks, slvr_2_fileoff(s, blk), save_errno);
+			   nblks, slvr_2_fileoff(s, sblk), save_errno);
 
 	else if (rc != size)
 		DEBUG_SLVR(PLL_ERROR, s, "short io (rc=%zd, size=%u) "
 			   "%s blks=%d off=%"PRIu64" errno=%d",
 			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
-			   nblks, slvr_2_fileoff(s, blk), save_errno);
+			   nblks, slvr_2_fileoff(s, sblk), save_errno);
 	else {
 		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%"PRIu64" rc=%zd nblks=%d",
 			   (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), size,
-			   slvr_2_fileoff(s, blk), rc, nblks);
+			   slvr_2_fileoff(s, sblk), rc, nblks);
 		rc = 0;
 	}
 
