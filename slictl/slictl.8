@@ -1,11 +1,14 @@
 .\" $Id$
-.Dd November 3, 2009
-.Dt SLIOCTL 8
-.ds volume PSC \- Slash Administrator's Manual
+.Dd November 13, 2009
+.Dt SLICTL 8
+.ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm slictl
-.Nd Slash sliod runtime control
+.Nd
+.Tn SLASH
+.Xr sliod 8
+runtime control
 .Sh SYNOPSIS
 .Nm slictl
 .Op Fl HI
@@ -47,7 +50,7 @@ may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
 .It Cm threads
-Daemon threads
+execution threads
 .El
 .Pp
 The value
@@ -311,5 +314,6 @@ default
 control socket
 .El
 .Sh SEE ALSO
+.Xr sladm 7 ,
 .Xr slmctl 8 ,
 .Xr sliod 8

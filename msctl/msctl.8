@@ -1,11 +1,13 @@
 .\" $Id$
-.Dd February 25, 2009
+.Dd November 13, 2009
 .Dt MSCTL 8
-.ds volume PSC \- Slash Administrator's Manual
+.ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm msctl
-.Nd slash file system mount daemon runtime control
+.Nd
+.Tn SLASH
+file system mount daemon runtime control
 .Sh SYNOPSIS
 .Nm msctl
 .Op Fl HIR
@@ -50,7 +52,7 @@ may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
 .It Cm threads
-Slash threads
+execution threads
 .El
 .Pp
 The value
@@ -357,5 +359,6 @@ default
 control socket
 .El
 .Sh SEE ALSO
+.Xr sladm 7 ,
 .Xr mount_slash 8 ,
 .Xr slashd 8

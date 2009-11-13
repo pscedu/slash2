@@ -1,18 +1,21 @@
 .\" $Id$
 .Dd September 2, 2009
 .Dt SLMKJRNL 8
-.ds volume PSC \- Slash Administrator's Manual
+.ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm slmkjrnl
-.Nd create Slash metadata server journal
+.Nd create
+.Tn SLASH
+metadata server journal
 .Sh SYNOPSIS
 .Nm slmkjrnl
 .Op Fl d
 .Sh DESCRIPTION
 The
 .Nm
-utility creates and formats the pending operations journal for Slash
+utility creates and formats the pending operations journal for
+.Tn SLASH
 metadata servers.
 .Pp
 The following options are available:
@@ -26,4 +29,5 @@ Only dump the current journal data; do not format.
 pending operations journal
 .El
 .Sh SEE ALSO
+.Xr sladm 7 ,
 .Xr slashd 8

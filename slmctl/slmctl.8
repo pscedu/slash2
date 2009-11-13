@@ -1,11 +1,13 @@
 .\" $Id$
-.Dd February 25, 2009
+.Dd November 13, 2009
 .Dt SLMCTL 8
-.ds volume PSC \- Slash Administrator's Manual
+.ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm slmctl
-.Nd Slash MDS daemon runtime control
+.Nd
+.Tn SLASH MDS
+daemon runtime control
 .Sh SYNOPSIS
 .Nm slmctl
 .Op Fl HI
@@ -47,7 +49,7 @@ may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
 .It Cm threads
-Slash threads
+execution threads
 .El
 .Pp
 The value
@@ -318,5 +320,6 @@ default
 control socket
 .El
 .Sh SEE ALSO
+.Xr sladm 7 ,
 .Xr slashd 8 ,
 .Xr slictl 8

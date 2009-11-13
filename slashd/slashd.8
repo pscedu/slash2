@@ -1,11 +1,13 @@
 .\" $Id$
 .Dd October 20, 2009
 .Dt SLASHD 8
-.ds volume PSC \- Slash Administrator's Manual
+.ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm slashd
-.Nd slash metadata server daemon
+.Nd
+.Tn SLASH
+metadata server daemon
 .Sh SYNOPSIS
 .Nm slashd
 .Op Fl f Ar slashconf
@@ -15,7 +17,9 @@
 .Sh DESCRIPTION
 The
 .Nm
-daemon serves metadata requests to Slash file system clients and
+daemon serves metadata requests to
+.Tn SLASH
+file system clients and
 .Tn I/O
 nodes.
 .Pp
@@ -80,6 +84,7 @@ control socket
 .Sh SEE ALSO
 .Xr slash.conf 5 ,
 .Xr pflenv 7 ,
+.Xr sladm 7 ,
 .Xr mount_slash 8 ,
 .Xr slmctl 8 ,
 .Xr sliod 8

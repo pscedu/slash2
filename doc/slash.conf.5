@@ -1,16 +1,19 @@
 .\" $Id$
 .Dd March 12, 2009
 .Dt SLASH.CONF 5
-.ds volume PSC - Slash Administrator's Manual
+.ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
 .Sh NAME
 .Nm slash.conf
-.Nd Slash file system configuration
+.Nd
+.Tn SLASH
+file system configuration
 .Sh DESCRIPTION
 The
 .Nm
 configuration file specifies storage resources and networks for use on a
-Slash network.
+.Tn SLASH
+network.
 This document describes the format of this file.
 .Pp
 Empty lines and lines beginning with
@@ -20,8 +23,9 @@ are ignored.
 This file is divided into two sections:
 global configuration and per-site configuration.
 .Ss Global Configuration
-Configuration intended to be applied to all sites on a Slash network
-must be specified in the first section of
+Configuration intended to be applied to all sites on a
+.Tn SLASH
+network must be specified in the first section of
 .Nm
 and supports the following directives:
 .Bl -tag -offset indent
@@ -59,8 +63,9 @@ argument may be a filename or
 .Xr glob 7
 pattern.
 .Ss Per-Site Configuration
-Each site resident on a Slash network requires its own section in the second
-part of
+Each site resident on a
+.Tn SLASH
+network requires its own section in the second part of
 .Nm
 and has the following format:
 .Bd -unfilled -offset indent
@@ -187,5 +192,6 @@ site @sitename {
 }
 .Ed
 .Sh SEE ALSO
+.Xr sladm 7 ,
 .Xr slashd 8 ,
 .Xr sliod 8
