@@ -36,6 +36,10 @@ From the list perspective:
 	drop list lock
 	work on the item
 
+Or alternatively, try to lock the item without dropping the list lock.  The
+bottom line is that we are willing to back off or not attempting to grab two
+locks simulaneously.
+
 From the item perspective:
 
 	take item lock
