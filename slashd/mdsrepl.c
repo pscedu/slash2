@@ -831,7 +831,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		atomic_dec(&fcmh_2_fmdsi(REPLRQ_FCMH(rrq))->fmdsi_ref);
 		fidc_membh_dropref(REPLRQ_FCMH(rrq));
 
-		//INIT_PSCLIST_ENTRY(&rrq->rrq_lentry);
+		/* SPLAY_REMOVE() does not NULL out the field */
+		INIT_PSCLIST_ENTRY(&rrq->rrq_lentry);
 		psc_pool_return(replrq_pool, rrq);
 	}
 }

@@ -62,7 +62,7 @@ int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);
 #define REPLRQ_FCMH(rrq)	(rrq)->rrq_inoh->inoh_fcmh
 #define REPLRQ_NBMAPS(rrq)	fcmh_2_nbmaps(REPLRQ_FCMH(rrq))
 
-#define REPLRQ_GETREPL(rrq, n)	((n) > INO_DEF_NREPLS ?			\
+#define REPLRQ_GETREPL(rrq, n)	((n) < INO_DEF_NREPLS ?			\
 				    REPLRQ_INO(rrq)->ino_repls[n] :	\
 				    REPLRQ_INOX(rrq)->inox_repls[(n) - 1])
 

@@ -32,6 +32,7 @@ printf("removing rrq from our site\n");
 	msi = site->site_pri;
 
 	locked = reqlock(&msi->msi_lock);
+	msi->msi_flags |= MSIF_DIRTYQ;
 	if (psc_dynarray_exists(&msi->msi_replq, rrq))
 		psc_dynarray_remove(&msi->msi_replq, rrq);
 	ureqlock(&msi->msi_lock, locked);
@@ -55,6 +56,8 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	struct psc_thread *thr;
 	struct sl_site *site;
 	int rc;
+
+printf("try connect\n");
 
 	thr = pscthr_get();
 	smrt = slmreplthr(thr);
@@ -102,7 +105,8 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 __dead void *
 slmreplthr_main(void *arg)
 {
-	int iosidx, val, nios, off, rc, ris, is, rir, ir, rin, in, j, has_bmap_work;
+	int is, rir, ir, rin, in, j, has_bmap_work;
+	int iosidx, val, nios, nrq, off, rc, ris;
 	struct sl_resource *src_res, *dst_res;
 	struct slash_bmap_od *bmapod;
 	struct slmrepl_thread *smrt;
@@ -113,6 +117,7 @@ slmreplthr_main(void *arg)
 	struct sl_replrq *rrq;
 	struct sl_site *site;
 	sl_bmapno_t bmapno, nb, ib;
+	void *dummy;
 
 	thr = arg;
 	smrt = slmreplthr(thr);
@@ -131,15 +136,16 @@ slmreplthr_main(void *arg)
 		psc_multilock_enter_critsect(&msi->msi_ml);
 
 		if (psc_dynarray_len(&msi->msi_replq) == 0) {
-			psc_multilock_wait(&msi->msi_ml, NULL, 0);
+			freelock(&msi->msi_lock);
+			psc_multilock_wait(&msi->msi_ml, &dummy, 0);
 			continue;
 		}
 
 		msi->msi_flags &= ~MSIF_DIRTYQ;
 
-		rir = psc_random32u(psc_dynarray_len(&msi->msi_replq));
-		for (ir = 0; ir < psc_dynarray_len(&msi->msi_replq);
-		    rir = (rir + 1) % psc_dynarray_len(&msi->msi_replq), ir++) {
+		nrq = psc_dynarray_len(&msi->msi_replq);
+		rir = psc_random32u(nrq);
+		for (ir = 0; ir < nrq; rir = (rir + 1) % nrq, ir++) {
 			if (msi->msi_flags & MSIF_DIRTYQ) {
 				msi->msi_flags &= ~MSIF_DIRTYQ;
 				freelock(&msi->msi_lock);
@@ -155,7 +161,7 @@ slmreplthr_main(void *arg)
 			if (rc == 0) {
 				/* repl must be going away, drop it */
 				slmreplthr_removeq(rrq);
-				continue;
+				goto restart;
 			}
 			freelock(&rrq->rrq_lock);
 
@@ -164,7 +170,7 @@ slmreplthr_main(void *arg)
 				psc_warnx("couldn't load inoh repl table: %s",
 				    slstrerror(rc));
 				slmreplthr_removeq(rrq);
-				continue;
+				goto restart;
 			}
 
 			/* find which resource in our site this repl is destined for */
@@ -188,11 +194,10 @@ slmreplthr_main(void *arg)
 				bmapno = psc_random32u(nb);
 				for (ib = 0; ib < nb; ib++,
 				    bmapno = (bmapno + 1) % nb) {
-					if ((rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm)))
-{printf(" not considering bmap %d : %d\n", ib, rc);
+					if ((rc = mds_bmap_load(REPLRQ_FCMH(rrq),
+					    bmapno, &bcm)))
 						/* XXX check inode new bmap policy? */
 						continue;
-}
 
 					/*
 					 * XXX if bmap has been recently modified or is
@@ -207,7 +212,6 @@ slmreplthr_main(void *arg)
 						continue;
 					}
 					has_bmap_work = 1;
-printf("got a bmap\n");
 
 					/* Got a bmap; now look for a source and destination. */
 					nios = REPLRQ_NREPLS(rrq);
@@ -215,6 +219,9 @@ printf("got a bmap\n");
 					for (is = 0; is < nios; is++,
 					    ris = (ris + 1) % nios) {
 						src_res = libsl_id2res(REPLRQ_GETREPL(rrq, ris).bs_id);
+printf(" checking res %s idx %d st %d\n", src_res->res_name, ris,
+    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
+    SL_BITS_PER_REPLICA * ris));
 
 						/* skip ourself and old/inactive replicas */
 						if (ris == iosidx ||
@@ -248,20 +255,21 @@ printf("got a bmap\n");
 				if (has_bmap_work &&
 				    (rrq->rrq_flags & REPLRQF_REQUEUE) == 0
 				    inode new bmap policy not persist &&
-				    every bmap not persistent)
+				    every bmap not persistent) {
 					/* couldn't find any bmaps; remove from queue */
 					slmreplthr_removeq(rrq);
+					goto restart;
 				else
 #endif
-					mds_repl_unrefrq(rrq);
 			}
 			/*
 			 * could not find a destination resource in
 			 * our site needed by this replrq
 			 */
 			slmreplthr_removeq(rrq);
+			goto restart;
 		}
-		psc_multilock_wait(&msi->msi_ml, NULL, 0);
+		psc_multilock_wait(&msi->msi_ml, &dummy, 0);
 	}
 }
 
