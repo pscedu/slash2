@@ -25,7 +25,6 @@ slmreplthr_removeq(struct sl_replrq *rrq)
 	struct sl_site *site;
 	int locked;
 
-printf("removing rrq from our site\n");
 	thr = pscthr_get();
 	smrt = slmreplthr(thr);
 	site = smrt->smrt_site;
@@ -56,8 +55,6 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	struct psc_thread *thr;
 	struct sl_site *site;
 	int rc;
-
-printf("try connect\n");
 
 	thr = pscthr_get();
 	smrt = slmreplthr(thr);
@@ -105,7 +102,7 @@ printf("try connect\n");
 __dead void *
 slmreplthr_main(void *arg)
 {
-	int is, rir, ir, rin, in, j, has_bmap_work;
+	int is, rir, ir, rin, in, j, has_repl_work;
 	int iosidx, val, nios, nrq, off, rc, ris;
 	struct sl_resource *src_res, *dst_res;
 	struct slash_bmap_od *bmapod;
@@ -149,8 +146,7 @@ slmreplthr_main(void *arg)
 			if (msi->msi_flags & MSIF_DIRTYQ) {
 				msi->msi_flags &= ~MSIF_DIRTYQ;
 				freelock(&msi->msi_lock);
-				psc_multilock_leave_critsect(&msi->msi_ml);
-				break;
+				goto restart;
 			}
 
 			rrq = psc_dynarray_getpos(&msi->msi_replq, rir);
@@ -173,6 +169,8 @@ slmreplthr_main(void *arg)
 				goto restart;
 			}
 
+			has_repl_work = 0;
+
 			/* find which resource in our site this repl is destined for */
 			iosidx = -1;
 			for (j = 0; j < site->site_nres; j++) {
@@ -189,7 +187,6 @@ slmreplthr_main(void *arg)
 				rrq->rrq_flags &= ~REPLRQF_REQUEUE;
 				freelock(&rrq->rrq_lock);
 
-				has_bmap_work = 0;
 				nb = REPLRQ_NBMAPS(rrq);
 				bmapno = psc_random32u(nb);
 				for (ib = 0; ib < nb; ib++,
@@ -211,7 +208,6 @@ slmreplthr_main(void *arg)
 						BMAP_ULOCK(bcm);
 						continue;
 					}
-					has_bmap_work = 1;
 
 					/* Got a bmap; now look for a source and destination. */
 					nios = REPLRQ_NREPLS(rrq);
@@ -219,20 +215,20 @@ slmreplthr_main(void *arg)
 					for (is = 0; is < nios; is++,
 					    ris = (ris + 1) % nios) {
 						src_res = libsl_id2res(REPLRQ_GETREPL(rrq, ris).bs_id);
-printf(" checking res %s idx %d st %d\n", src_res->res_name, ris,
-    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
-    SL_BITS_PER_REPLICA * ris));
 
 						/* skip ourself and old/inactive replicas */
 						if (ris == iosidx ||
 						    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
 						    SL_BITS_PER_REPLICA * ris) != SL_REPL_ACTIVE)
 							continue;
+						has_repl_work = 1;
 
 						/* search nids for an idle, online connection */
 						rin = psc_random32u(src_res->res_nnids);
 						for (in = 0; in < (int)src_res->res_nnids; in++,
 						    rin = (rin + 1) % src_res->res_nnids) {
+							int k;
+
 							src_resm = libsl_nid2resm(src_res->res_nids[rin]);
 							if (slm_geticonn(src_resm) == NULL)
 								psc_multilock_addcond(&msi->msi_ml,
@@ -240,9 +236,9 @@ printf(" checking res %s idx %d st %d\n", src_res->res_name, ris,
 								continue;
 
 							/* look for a destination resm */
-							for (j = 0; j < (int)dst_res->res_nnids; j++)
+							for (k = 0; k < (int)dst_res->res_nnids; k++)
 								if (slmreplthr_trydst(rrq, bcm,
-								    off, src_resm, dst_res, j))
+								    off, src_resm, dst_res, k))
 									goto restart;
 						}
 					}
@@ -252,7 +248,7 @@ printf(" checking res %s idx %d st %d\n", src_res->res_name, ris,
 
 #if 0
 				spinlock(&rrq->rrq_lock);
-				if (has_bmap_work &&
+				if (has_repl_work &&
 				    (rrq->rrq_flags & REPLRQF_REQUEUE) == 0
 				    inode new bmap policy not persist &&
 				    every bmap not persistent) {
@@ -266,8 +262,12 @@ printf(" checking res %s idx %d st %d\n", src_res->res_name, ris,
 			 * could not find a destination resource in
 			 * our site needed by this replrq
 			 */
-			slmreplthr_removeq(rrq);
-			goto restart;
+			if (has_repl_work)
+				mds_repl_unrefrq(rrq);
+			else {
+				slmreplthr_removeq(rrq);
+				goto restart;
+			}
 		}
 		psc_multilock_wait(&msi->msi_ml, &dummy, 0);
 	}
@@ -283,7 +283,7 @@ slmreplthr_spawnall(void)
 	PLL_FOREACH(site, &globalConfig.gconf_sites) {
 		thr = pscthr_init(SLMTHRT_REPL, 0, slmreplthr_main,
 		    NULL, sizeof(*smrt), "slmreplthr-%s",
-		    site->site_name + strcspn(site->site_name, "@"));
+		    site->site_name + strspn(site->site_name, "@"));
 		smrt = slmreplthr(thr);
 		smrt->smrt_site = site;
 		pscthr_setready(thr);
