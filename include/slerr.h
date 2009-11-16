@@ -14,5 +14,6 @@ char *slstrerror(int);
 #define SLERR_ION_UNKNOWN		(_SLERR_START + 5)
 #define SLERR_ION_OFFLINE		(_SLERR_START + 6)
 #define SLERR_XACT_FAIL			(_SLERR_START + 7)
+#define SLERR_SHORTIO			(_SLERR_START + 8)
 
 #endif /* _SLERR_H_ */

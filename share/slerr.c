@@ -16,6 +16,7 @@ char *slash_errstrs[] = {
 	"Unknown I/O node",
 	"I/O node connection coud not be established",
 	"Transaction could not be started",
+	"Short I/O",
 	NULL
 };
 
