@@ -12,11 +12,11 @@
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
-#include "sliod.h"
-#include "slvr.h"
-#include "iod_bmap.h"
+#include "bmap_iod.h"
 #include "fid.h"
 #include "fidcache.h"
+#include "sliod.h"
+#include "slvr.h"
 
 struct pscrpc_nbreqset *slvrNbReqSet;
 struct biod_infslvr_tree binfSlvrs;
@@ -162,25 +162,25 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 
 			SLVR_LOCK(s);
 
-			DEBUG_SLVR(err ? PLL_ERROR : PLL_INFO, s, 
+			DEBUG_SLVR(err ? PLL_ERROR : PLL_INFO, s,
 				   "crcup %s fid(%"PRId64":%"PRId64")"
-				   " bmap(%u) slvr(%hu) crc=%"PRIx64, 
+				   " bmap(%u) slvr(%hu) crc=%"PRIx64,
 				   err ? "error" : "ok",
-				   fcmh_2_fid(slvr_2_fcmh(s)), 
+				   fcmh_2_fid(slvr_2_fcmh(s)),
 				   fcmh_2_gen(slvr_2_fcmh(s)),
-				   slvr_2_bmap(s)->bcm_blkno, 
+				   slvr_2_bmap(s)->bcm_blkno,
 				   s->slvr_num, s->slvr_crc);
-			
+
 			psc_assert(s->slvr_flags & SLVR_RPCPNDG);
 			s->slvr_flags &= ~SLVR_RPCPNDG;
-			
-			if (!s->slvr_pndgwrts && 
+
+			if (!s->slvr_pndgwrts &&
 			    s->slvr_flags & SLVR_CRCDIRTY) {
-				/* If the crc is dirty and there are no 
-				 *   pending ops then the sliver was not 
-				 *   moved to the rpc queue because 
-				 *   SLVR_RPCPNDG had been set.  Therefore 
-				 *   we should try to schedule the sliver, 
+				/* If the crc is dirty and there are no
+				 *   pending ops then the sliver was not
+				 *   moved to the rpc queue because
+				 *   SLVR_RPCPNDG had been set.  Therefore
+				 *   we should try to schedule the sliver,
 				 *   otherwise may sit in the LRU forever.
 				 */
 				SLVR_ULOCK(s);
@@ -328,7 +328,7 @@ slvr_worker_int(void)
 
 		psc_assert(bcrc_ref->bcr_crcup.fid ==
 			   fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh));
-		
+
 		psc_assert(bcrc_ref->bcr_nups < MAX_BMAP_NCRC_UPDATES);
 		bcrc_ref->bcr_slvrs[bcrc_ref->bcr_nups++] = s;
 

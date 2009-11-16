@@ -15,9 +15,9 @@
 #include "psc_util/waitq.h"
 
 #include "bmap.h"
+#include "bmap_iod.h"
 #include "fid.h"
 #include "fidcache.h"
-#include "iod_bmap.h"
 #include "slashrpc.h"
 #include "slashrpc.h"
 #include "slconfig.h"

@@ -7,9 +7,9 @@
 #include "psc_util/lock.h"
 #include "psc_util/pthrutil.h"
 
-#include "slvr.h"
-#include "iod_bmap.h"
+#include "bmap_iod.h"
 #include "buffer.h"
+#include "slvr.h"
 
 struct psc_listcache lruSlvrs;   /* LRU list of clean slivers which may be reaped */
 struct psc_listcache rpcqSlvrs;  /* Slivers ready to be crc'd and have their
@@ -278,7 +278,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 {
 	int blks, rc, unaligned[2] = {-1, -1};
 	size_t i;
-	
+
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -602,7 +602,7 @@ slvr_remove(struct slvr_ref *s)
 }
 
 /*
- * The reclaim function for the slBufsPoolMaster pool.  Note that our 
+ * The reclaim function for the slBufsPoolMaster pool.  Note that our
  *   caller psc_pool_get() ensures that we are called exclusviely.
  */
 static int
@@ -619,7 +619,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	n = 0;
 	dynarray_init(&a);
 	LIST_CACHE_LOCK(&lruSlvrs);
-	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd, 
+	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd,
 				    slvr_lentry) {
 		SLVR_LOCK(s);
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap");

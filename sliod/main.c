@@ -14,11 +14,12 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
+#include "bmap_iod.h"
 #include "buffer.h"
 #include "fdbuf.h"
 #include "fidcache.h"
-#include "iod_bmap.h"
 #include "pathnames.h"
+#include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slconfig.h"
 #include "sliod.h"
@@ -106,6 +107,7 @@ main(int argc, char *argv[])
 	fidcache_init(FIDC_USER_ION, NULL);
 	sl_buffer_cache_init();
 	slvr_cache_init();
+	sli_repl_init();
 	rpc_initsvc();
 	slitimerthr_spawn();
 

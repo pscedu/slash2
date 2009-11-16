@@ -12,10 +12,10 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
+#include "bmap_iod.h"
 #include "fdbuf.h"
 #include "fid.h"
 #include "fidcache.h"
-#include "iod_bmap.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
 #include "sliod.h"
@@ -117,8 +117,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 
 	DEBUG_FCMH(PLL_INFO, fcmh, "blkno=%u size=%u off=%u rw=%d",
 		   bmap->bcm_blkno, mq->size, mq->offset, rw);
-	/* 
-	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MB, therefore 
+	/*
+	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MB, therefore
 	 * we would never exceed two slivers.
 	 */
 	nslvrs = 1;
