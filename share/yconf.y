@@ -148,46 +148,49 @@ struct sl_gconf		*currentConf = &globalConfig;
 
 %%
 
-config         : globals includes site_profiles
-{
-	struct sl_resource *r;
-	struct sl_site *s;
-	uint32_t i;
-	int n;
+config		: globals includes site_profiles {
+			struct sl_resource *r;
+			struct sl_site *s;
+			uint32_t i;
+			int n;
 
-	/*
-	 * Config has been loaded, iterate through the sites'
-	 *  peer lists and resolve the names to numerical id's.
-	 */
-	PLL_FOREACH(s, &globalConfig.gconf_sites) {
-		for (n = 0; n < s->site_nres; n++) {
-			r = s->site_resv[n];
-
-			r->res_peers = PSCALLOC(sizeof(sl_ios_id_t) *
-						r->res_npeers);
-
-			for (i=0; i < r->res_npeers; i++) {
-				r->res_peers[i] = libsl_str2id(r->res_peertmp[i]);
-				psc_assert(r->res_peers[i] != IOS_ID_ANY);
-				free(r->res_peertmp[i]);
-			}
 			/*
-			 * Associate nids with their respective resources,
-			 *   and add the nids to the global hash table.
+			 * Config has been loaded; iterate through the sites'
+			 *  peer lists and resolve names to numerical ID's.
 			 */
-			for (i=0; i < r->res_nnids; i++)
-				libsl_nid_associate(r->res_nids[i], r);
-		}
-	}
-};
+			PLL_FOREACH(s, &globalConfig.gconf_sites) {
+				for (n = 0; n < s->site_nres; n++) {
+					r = s->site_resv[n];
 
-globals        : /* NULL */              |
-		 global globals;
+					r->res_peers = PSCALLOC(
+					    sizeof(sl_ios_id_t) * r->res_npeers);
 
-global         : GLOBAL statement;
+					for (i = 0; i < r->res_npeers; i++) {
+						r->res_peers[i] = libsl_str2id(r->res_peertmp[i]);
+						psc_assert(r->res_peers[i] != IOS_ID_ANY);
+						free(r->res_peertmp[i]);
+					}
 
-includes	: /* NULL */		|
-		  include includes;
+					/*
+					 * Associate nids with their respective resources,
+					 *   and add the nids to the global hash table.
+					 */
+					for (i = 0; i < r->res_nnids; i++)
+						libsl_nid_associate(r->res_nids[i], r);
+				}
+			}
+		};
+
+globals		: /* NULL */
+		| global globals
+		;
+
+global		: GLOBAL statement
+		;
+
+includes	: /* NULL */
+		| include includes
+		;
 
 include		: INCLUDE QUOTEDS {
 			glob_t gl;
@@ -204,224 +207,217 @@ include		: INCLUDE QUOTEDS {
 				globfree(&gl);
 			}
 			free($2);
+		}
+		;
+
+site_profiles	: site_profile
+		| site_profile site_profiles
+		;
+
+site_profile	: site_prof_start site_defs SUBSECT_END {
+			if (libsl_siteid2site(currentSite->site_id))
+				yyerror("site %s ID %d already assigned to %s",
+				    currentSite->site_name, currentSite->site_id,
+				    libsl_siteid2site(currentSite->site_id)->site_name);
+
+			pll_add(&currentConf->gconf_sites, currentSite);
+		}
+		;
+
+site_prof_start	: SITE_PROFILE SITE_NAME SUBSECT_START {
+			currentSite = PSCALLOC(sizeof(*currentSite));
+			INIT_SITE(currentSite);
+			if (strlcpy(currentSite->site_name, $2,
+			    sizeof(currentSite->site_name)) >=
+			    sizeof(currentSite->site_name))
+				psc_fatalx("site %s: name too long", $2);
+			slcfg_init_site(currentSite);
+			free($2);
+		}
+		;
+
+site_defs	: statements site_resources { }
+		;
+
+site_resources	: site_resource
+		| site_resources site_resource { }
+		;
+
+site_resource	: resource_start resource_def SUBSECT_END {
+			currentRes->res_id = sl_global_id_build(
+			    currentSite->site_id, currentRes->res_id);
+
+			if (libsl_id2res(currentRes->res_id))
+				yyerror("resource %s ID %d already assigned to %s",
+				    currentRes->res_name, currentRes->res_id,
+				    libsl_id2res(currentRes->res_id)->res_name);
+
+			currentSite->site_resv = psc_realloc(currentSite->site_resv,
+			    sizeof(*currentSite->site_resv) *
+			    (currentSite->site_nres + 1), 0);
+			currentSite->site_resv[currentSite->site_nres++] = currentRes;
+			currentRes->res_site = currentSite;
+		}
+		;
+
+resource_start	: RESOURCE_PROFILE NAME SUBSECT_START {
+			int rc;
+
+			currentRes = PSCALLOC(sizeof(*currentRes));
+			rc = snprintf(currentRes->res_name,
+			    sizeof(currentRes->res_name), "%s%s",
+			    $2, currentSite->site_name);
+			if (rc == -1)
+				psc_fatal("resource %s@%s",
+				$2, currentSite->site_name);
+			if (rc >= (int)sizeof(currentRes->res_name))
+				psc_fatalx("resource %s@%s: name too long",
+				    $2, currentSite->site_name);
+			slcfg_init_res(currentRes);
+			free($2);
+		}
+		;
+
+resource_def	: statements { }
+		;
+
+peerlist	: PEERTAG EQ peers END { }
+		;
+
+peers		: peer
+		| peer NSEP peers { }
+		;
+
+peer		: RESOURCE_NAME {
+			if (currentRes->res_npeers >= SL_PEER_MAX)
+				psc_fatalx("reached max (%d) npeers for resource",
+				    SL_PEER_MAX);
+			currentRes->res_peertmp[currentRes->res_npeers] = $1;
+			currentRes->res_npeers++;
+		}
+		;
+
+interfacelist	: INTERFACETAG EQ interfaces END {}
+		;
+
+interfaces	: interface
+		| interface NSEP interfaces { }
+		;
+
+interface	: IPADDR ATSIGN LNETTCP	{ slcfg_addif($1, $3); free($3); }
+		| IPADDR		{ slcfg_addif($1, currentConf->gconf_net); }
+		| NAME ATSIGN LNETTCP	{ slcfg_addif($1, $3); free($3); }
+		| NAME			{ slcfg_addif($1, currentConf->gconf_net); }
+		;
+
+statements	: /* NULL */
+		| statement statements
+		;
+
+statement	: restype_stmt
+		| path_stmt
+		| num_stmt
+		| bool_stmt
+		| size_stmt
+		| glob_stmt
+		| hexnum_stmt
+		| float_stmt
+		| lnettcp_stmt
+		| peerlist
+		| interfacelist
+		| quoteds_stmt
+		;
+
+restype_stmt	: NAME EQ RESOURCE_TYPE END {
+			psc_notify("Found Fstype Statement: Tok '%s' Val '%s'",
+			   $1, $3);
+			store_tok_val($1, $3);
+			free($1);
+			free($3);
+		}
+		;
+
+path_stmt	: NAME EQ PATHNAME END {
+			psc_notify("Found Path Statement: Tok '%s' Val '%s'",
+			       $1, $3);
+			store_tok_val($1, $3);
+			free($1);
+			free($3);
+		}
+		;
+
+glob_stmt	: NAME EQ GLOBPATH END {
+			psc_notify("Found Glob Statement: Tok '%s' Val '%s'",
+			       $1, $3);
+			store_tok_val($1, $3);
+			free($1);
+			free($3);
 		};
 
-site_profiles  : site_profile            |
-		 site_profile site_profiles;
+bool_stmt	: NAME EQ BOOL END {
+			psc_notify("Found Bool Statement: Tok '%s' Val '%s'",
+			       $1, $3);
+			store_tok_val($1, $3);
+			free($1);
+			free($3);
+		};
 
-site_profile   : site_profile_start site_defs SUBSECT_END
-{
-	if (libsl_siteid2site(currentSite->site_id))
-		yyerror("site %s ID %d already assigned to %s",
-		    currentSite->site_name, currentSite->site_id,
-		    libsl_siteid2site(currentSite->site_id)->site_name);
+size_stmt	: NAME EQ SIZEVAL END {
+			psc_notify("Found Sizeval Statement: Tok '%s' Val '%s'",
+			       $1, $3);
+			store_tok_val($1, $3);
+			free($1);
+			free($3);
+		};
 
-	pll_add(&currentConf->gconf_sites, currentSite);
-};
+num_stmt	: NAME EQ NUM END {
+			psc_notify("Found Num Statement: Tok '%s' Val '%s'",
+				$1, $3);
+			store_tok_val($1, $3);
+			free($1);
+			free($3);
+		};
 
-site_profile_start : SITE_PROFILE SITE_NAME SUBSECT_START
-{
-	currentSite = PSCALLOC(sizeof(*currentSite));
-	INIT_SITE(currentSite);
-	slcfg_init_site(currentSite);
-	if (strlcpy(currentSite->site_name, $2,
-	    SITE_NAME_MAX) >= SITE_NAME_MAX)
-		psc_fatalx("site name too long");
-	free($2);
-};
+float_stmt	: NAME EQ FLOATVAL END {
+			psc_notify("Found Float Statement: Tok '%s' Val '%s'",
+			       $1, $3);
+			store_tok_val($1, $3);
+			free($1);
+			free($3);
+		};
 
-site_defs      : statements site_resources
-{};
+hexnum_stmt	: NAME EQ HEXNUM END {
+			psc_notify("Found Hexnum Statement: Tok '%s' Val '%s'",
+			       $1, $3);
+			store_tok_val($1, $3);
+			free($1);
+			free($3);
+		};
 
-site_resources : site_resource              |
-		 site_resources site_resource { };
+quoteds_stmt	: NAME EQ QUOTEDS END {
+			psc_notify("Found Quoted String Statement: Tok '%s' Val '%s'",
+				   $1, $3);
+			store_tok_val($1, $3);
+			free($1);
+			free($3);
+			/* XXX: don't free, just copy the pointer */
+		};
 
-site_resource  : site_resource_start resource_def SUBSECT_END
-{
-	currentRes->res_id = sl_global_id_build(currentSite->site_id,
-						currentRes->res_id);
+lnettcp_stmt	: NAME EQ LNETTCP END {
+			psc_notify("Found Lnettcp String Statement: Tok '%s' Val '%s'",
+				   $1, $3);
 
-	if (libsl_id2res(currentRes->res_id))
-		yyerror("resource %s ID %d already assigned to %s",
-		    currentRes->res_name, currentRes->res_id,
-		    libsl_id2res(currentRes->res_id)->res_name);
-
-	currentSite->site_resv = psc_realloc(currentSite->site_resv,
-	    sizeof(*currentSite->site_resv) * (currentSite->site_nres + 1), 0);
-	currentSite->site_resv[currentSite->site_nres++] = currentRes;
-	currentRes->res_site = currentSite;
-};
-
-site_resource_start : RESOURCE_PROFILE NAME SUBSECT_START
-{
-	currentRes = PSCALLOC(sizeof(*currentRes));
-	slcfg_init_res(currentRes);
-	if (snprintf(currentRes->res_name, RES_NAME_MAX, "%s%s",
-	    $2, currentSite->site_name) >= RES_NAME_MAX)
-		psc_fatalx("Resource name too long");
-	psc_trace("ResName %s", currentRes->res_name);
-	free($2);
-};
-
-/*
-resource_def   : statements interfacelist peerlist |
-		 statements interfacelist          |
-		 statements peerlist               |
-		 statements interfacelist statements |
-		 interfacelist statements          |
-		 peerlist interfacelist statements |
-
-{};
-*/
-
-resource_def : statements
-{}
-
-peerlist       : PEERTAG EQ peers END
-{};
-
-peers          : peer                              |
-		 peer NSEP peers
-
-{};
-
-peer           : RESOURCE_NAME
-{
-	if (currentRes->res_npeers >= SL_PEER_MAX)
-		psc_fatalx("reached max (%d) npeers for resource",
-		    SL_PEER_MAX);
-	currentRes->res_peertmp[currentRes->res_npeers] = $1;
-	currentRes->res_npeers++;
-};
-
-interfacelist  : INTERFACETAG EQ interfaces END
-{};
-
-interfaces     : interface                 |
-		 interface NSEP interfaces
-{};
-
-interface      : IPADDR ATSIGN LNETTCP	{ slcfg_addif($1, $3); free($3); }
-	       | IPADDR			{ slcfg_addif($1, currentConf->gconf_net); }
-	       | NAME ATSIGN LNETTCP	{ slcfg_addif($1, $3); free($3); }
-	       | NAME			{ slcfg_addif($1, currentConf->gconf_net); }
-	       ;
-
-statements        : /* NULL */               |
-		    statement statements;
-
-statement         : restype_stmt |
-		    path_stmt    |
-		    num_stmt     |
-		    bool_stmt    |
-		    size_stmt    |
-		    glob_stmt    |
-		    hexnum_stmt  |
-		    float_stmt   |
-		    lnettcp_stmt |
-		    peerlist     |
-		    interfacelist|
-		    quoteds_stmt;
-
-restype_stmt : NAME EQ RESOURCE_TYPE END
-{
-	psc_notify("Found Fstype Statement: Tok '%s' Val '%s'",
-		   $1, $3);
-	store_tok_val($1, $3);
-	free($1);
-	free($3);
-}
-
-path_stmt : NAME EQ PATHNAME END
-{
-	psc_notify("Found Path Statement: Tok '%s' Val '%s'",
-	       $1, $3);
-	store_tok_val($1, $3);
-	free($1);
-	free($3);
-};
-
-glob_stmt : NAME EQ GLOBPATH END
-{
-	psc_notify("Found Glob Statement: Tok '%s' Val '%s'",
-	       $1, $3);
-	store_tok_val($1, $3);
-	free($1);
-	free($3);
-};
-
-bool_stmt : NAME EQ BOOL END
-{
-	psc_notify("Found Bool Statement: Tok '%s' Val '%s'",
-	       $1, $3);
-	store_tok_val($1, $3);
-	free($1);
-	free($3);
-};
-
-size_stmt : NAME EQ SIZEVAL END
-{
-	psc_notify("Found Sizeval Statement: Tok '%s' Val '%s'",
-	       $1, $3);
-	store_tok_val($1, $3);
-	free($1);
-	free($3);
-};
-
-num_stmt : NAME EQ NUM END
-{
-	psc_notify("Found Num Statement: Tok '%s' Val '%s'",
-		$1, $3);
-	store_tok_val($1, $3);
-	free($1);
-	free($3);
-};
-
-float_stmt : NAME EQ FLOATVAL END
-{
-	psc_notify("Found Float Statement: Tok '%s' Val '%s'",
-	       $1, $3);
-	store_tok_val($1, $3);
-	free($1);
-	free($3);
-};
-
-hexnum_stmt : NAME EQ HEXNUM END
-{
-	psc_notify("Found Hexnum Statement: Tok '%s' Val '%s'",
-	       $1, $3);
-	store_tok_val($1, $3);
-	free($1);
-	free($3);
-};
-
-quoteds_stmt : NAME EQ QUOTEDS END
-{
-	psc_notify("Found Quoted String Statement: Tok '%s' Val '%s'",
-		   $1, $3);
-
-	store_tok_val($1, $3);
-	free($1);
-	free($3);
-	/* XXX: don't free, just copy the pointer */
-};
-
-lnettcp_stmt : NAME EQ LNETTCP END
-{
-	psc_notify("Found Lnettcp String Statement: Tok '%s' Val '%s'",
-		   $1, $3);
-
-	store_tok_val($1, $3);
-	free($1);
-	free($3);
-};
+			store_tok_val($1, $3);
+			free($1);
+			free($3);
+		};
 
 %%
 
 void
 slcfg_addif(char *ifname, char *netname)
 {
-	char nidstr[MAXNET];
+	char nidstr[PSC_NIDSTR_SIZE];
 	lnet_nid_t *i;
 	int rc;
 
@@ -454,7 +450,9 @@ slcfg_addif(char *ifname, char *netname)
 uint32_t
 global_net_handler(const char *net)
 {
-	strlcpy(globalConfig.gconf_net, net, MAXNET);
+	if (strlcpy(globalConfig.gconf_net, net,
+	    sizeof(globalConfig.gconf_net)) >= sizeof(globalConfig.gconf_net))
+		psc_fatalx("LNET network name too long: %s", net);
 	return (libcfs_str2net(net));
 }
 
