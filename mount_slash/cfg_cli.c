@@ -4,7 +4,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 
-#include "cli_bmap.h"
+#include "bmap_cli.h"
 #include "mount_slash.h"
 #include "slconfig.h"
 

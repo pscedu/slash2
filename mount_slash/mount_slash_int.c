@@ -23,8 +23,8 @@
 #include "psc_util/log.h"
 
 #include "bmap.h"
+#include "bmap_cli.h"
 #include "buffer.h"
-#include "cli_bmap.h"
 #include "fidcache.h"
 #include "mount_slash.h"
 #include "bmpc.h"

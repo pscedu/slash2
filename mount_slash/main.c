@@ -26,8 +26,8 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
+#include "bmap_cli.h"
 #include "buffer.h"
-#include "cli_bmap.h"
 #include "ctl_cli.h"
 #include "fidc_cli.h"
 #include "fidcache.h"
