@@ -145,40 +145,40 @@ enum slash_bmap_slv_states {
  */
 struct slash_inode_od {
 	struct slash_fidgen ino_fg;
-	uint16_t      ino_version;
-	uint16_t      ino_flags;
-	uint32_t      ino_bsz;			/* bmap size		*/
-	uint32_t      ino_nrepls;		/* if 0, use ino_prepl	*/
-	uint32_t      ino_csnap;		/* current snapshot	*/
-	sl_replica_t  ino_repls[INO_DEF_NREPLS];/* embed a few replicas	*/
+	uint16_t		ino_version;
+	uint16_t		ino_flags;
+	uint32_t		ino_bsz;			/* bmap size		*/
+	uint32_t		ino_nrepls;			/* if 0, use ino_prepl	*/
+	uint32_t		ino_csnap;			/* current snapshot	*/
+	sl_replica_t		ino_repls[INO_DEF_NREPLS];	/* embed a few replicas	*/
 
 	/* must be last */
-	psc_crc_t     ino_crc;			/* crc of the inode	*/
+	psc_crc_t		ino_crc;			/* crc of the inode	*/
 };
-#define INO_OD_SZ	sizeof(struct slash_inode_od)
-#define INO_OD_CRCSZ	(INO_OD_SZ - (sizeof(psc_crc_t)))
+#define INO_OD_SZ		sizeof(struct slash_inode_od)
+#define INO_OD_CRCSZ		(INO_OD_SZ - (sizeof(psc_crc_t)))
 
-#define INO_VERSION 0x0003
+#define INO_VERSION		0x0003
 
 enum {
 	INO_FL_HAVE_EXTRAS = (1<<0)
 };
 
 struct slash_inode_extras_od {
-	sl_snap_t	inox_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers      */
-	sl_replica_t	inox_repls[SL_MAX_REPLICAS - INO_DEF_NREPLS]; /* replicas */
-	uint32_t	inox_newbmap_policy;	/* see BRP_* values */
+	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers      */
+	sl_replica_t		inox_repls[SL_MAX_REPLICAS - INO_DEF_NREPLS]; /* replicas */
+	uint32_t		inox_newbmap_policy;		/* see BRP_* values */
 
 	/* must be last */
-	psc_crc_t	inox_crc;
+	psc_crc_t		inox_crc;
 };
-#define INOX_OD_SZ	sizeof(struct slash_inode_extras_od)
-#define INOX_OD_CRCSZ	(INOX_OD_SZ - (sizeof(psc_crc_t)))
+#define INOX_OD_SZ		sizeof(struct slash_inode_extras_od)
+#define INOX_OD_CRCSZ		(INOX_OD_SZ - (sizeof(psc_crc_t)))
 
-#define SL_ROOT_INUM	1
+#define SL_ROOT_INUM		1
 
 /* File extended attribute names. */
-#define SFX_INODE	"sl-inode"
-#define SFX_REPLICAS	"sl-replicas"
+#define SFX_INODE		"sl-inode"
+#define SFX_REPLICAS		"sl-replicas"
 
 #endif /* _SLASH_INODE_H_ */
