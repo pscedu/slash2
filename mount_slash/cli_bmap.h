@@ -39,11 +39,4 @@ struct bmap_cli_info {
 #define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)	/* mode change in progress */
 #define	BMAP_CLI_MCC			(_BMAP_FLSHFT << 1)	/* mode change compete */
 
-struct resprof_cli_info {
-	int				 rci_cnt;
-	psc_spinlock_t			 rci_lock;
-};
-
-void bmap_flush_init(void);
-
 #endif /* _SLASH_CLI_BMAP_H_ */

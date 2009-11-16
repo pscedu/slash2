@@ -164,10 +164,10 @@ bmap_flush_inflight_ref(struct bmpc_ioreq *r)
 {
 	int i;
 	struct bmap_pagecache_entry *bmpce;
-	
+
 	spinlock(&r->biorq_lock);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
-	r->biorq_flags |= BIORQ_INFL;	
+	r->biorq_flags |= BIORQ_INFL;
 	DEBUG_BIORQ(PLL_INFO, r, "set inflight");
 	freelock(&r->biorq_lock);
 
@@ -329,13 +329,13 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 
 	for (i=0; i < dynarray_len(biorqs); i++, first_iov=1) {
 		r = dynarray_getpos(biorqs, i);
-			       
+
 		DEBUG_BIORQ(PLL_INFO, r, "r rreqsz=%u off=%zu", reqsz, off);
 		psc_assert(dynarray_len(&r->biorq_pages));
 
 		if (biorq_voff_get(r) <= off) {
 			/* No need to map this one, its data has been
-			 *   accounted for but first ensure that all of the 
+			 *   accounted for but first ensure that all of the
 			 *   pages have been scheduled for IO.
 			 * XXX single-threaded, bmap_flush is single threaded
 			 *   which will prevent any bmpce from being scheduled
@@ -356,7 +356,7 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 		/* Now iterate through the biorq's iov set, where the
 		 *   actual buffers are stored.
 		 */
-		for (j=0, first_iov=1; j < dynarray_len(&r->biorq_pages); 
+		for (j=0, first_iov=1; j < dynarray_len(&r->biorq_pages);
 		     j++) {
 			bmpce = dynarray_getpos(&r->biorq_pages, j);
 			spinlock(&bmpce->bmpce_lock);
@@ -366,20 +366,20 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 
 			if ((bmpce->bmpce_off < off) && !first_iov) {
 				/* Similar case to the 'continue' stmt above,
-				 *   this bmpce overlaps a previously 
+				 *   this bmpce overlaps a previously
 				 *   scheduled biorq.
 				 */
 				DEBUG_BMPCE(PLL_INFO, bmpce, "skip");
 				psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
 				freelock(&bmpce->bmpce_lock);
 				continue;
-			} 
+			}
 
 			bmpce->bmpce_flags |= BMPCE_IOSCHED;
 			DEBUG_BMPCE(PLL_INFO, bmpce, "scheduled");
 			/* Issue sanity checks on the bmpce.
 			 */
-			bmpce_usecheck(bmpce, BIORQ_WRITE, 
+			bmpce_usecheck(bmpce, BIORQ_WRITE,
 			       (first_iov ? (off & ~BMPC_BUFMASK) : off));
 
 			freelock(&bmpce->bmpce_lock);
@@ -394,7 +394,7 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 				(first_iov ? (off - bmpce->bmpce_off) : 0);
 
 			iovs[niovs].iov_len = MIN(reqsz,
-			  (first_iov ? bmpce->bmpce_off + BMPC_BUFSZ - off : 
+			  (first_iov ? bmpce->bmpce_off + BMPC_BUFSZ - off :
 			   BMPC_BUFSZ));
 
 			reqsz -= iovs[niovs].iov_len;
@@ -424,7 +424,7 @@ bmap_flush_trycoalesce(const struct dynarray *biorqs, int *offset)
 	for (off=0; (off + *offset) < dynarray_len(biorqs); off++) {
 		t = dynarray_getpos(biorqs, off + *offset);
 
-		psc_assert((t->biorq_flags & BIORQ_SCHED) && 
+		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
 			   !(t->biorq_flags & BIORQ_INFL));
 
 		if (r)
@@ -439,8 +439,8 @@ bmap_flush_trycoalesce(const struct dynarray *biorqs, int *offset)
 		DEBUG_BIORQ(PLL_TRACE, t, "biorq #%d (expired=%d)",
 			      off, expired);
 		/* The next request, 't', can be added to the coalesce
-		 *   group either because 'r' is not yet set (meaning 
-		 *   the group is empty) or because 't' overlaps or 
+		 *   group either because 'r' is not yet set (meaning
+		 *   the group is empty) or because 't' overlaps or
 		 *   extends 'r'.
 		 */
 		if (!r || t->biorq_off <= biorq_voff_get(r)) {
@@ -494,12 +494,12 @@ bmap_flush(void)
 
 		b = msbd->msbd_bmap;
 		bmpc = bmap_2_msbmpc(b);
-		/* Bmap lock only needed to test the dirty bit.  
+		/* Bmap lock only needed to test the dirty bit.
 		 */
 		BMAP_LOCK(b);
 		DEBUG_BMAP(PLL_INFO, b, "try flush (outstandingRpcCnt=%d)",
 			   atomic_read(&outstandingRpcCnt));
-		/* Take the page cache lock too so that the bmap's 
+		/* Take the page cache lock too so that the bmap's
 		 *   dirty state may be sanity checked.
 		 */
 		BMPC_LOCK(bmpc);
@@ -596,7 +596,7 @@ bmap_flush(void)
 }
 
 void *
-bmap_flush_thr(__unusedx void *arg)
+msbmapflushthr_main(__unusedx void *arg)
 {
 	while (1) {
 		if (atomic_read(&completedRpcCnt))
@@ -629,15 +629,15 @@ bmap_flush_thr(__unusedx void *arg)
 }
 
 void
-bmap_flush_init(void)
+msbmapflushthr_spawn(void)
 {
 	pndgReqs = nbreqset_init(NULL, msl_io_rpc_cb);
 	atomic_set(&outstandingRpcCnt, 0);
 	atomic_set(&completedRpcCnt, 0);
 
-	lc_reginit(&bmapFlushQ, struct bmap_cli_info, msbd_lentry,
-		   "bmap_flush_queue");
+	lc_reginit(&bmapFlushQ, struct bmap_cli_info,
+	    msbd_lentry, "bmapflush");
 
-	pscthr_init(MSTHRT_BMAPFLSH, 0, bmap_flush_thr, NULL, 0,
-		    "msbflushthr");
+	pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
+	    NULL, 0, "msbflushthr");
 }

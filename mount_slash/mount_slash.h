@@ -69,6 +69,11 @@ struct msl_fhent {			 /* XXX rename */
 	struct fhbmap_cache		 mfh_fhbmap_cache;
 };
 
+struct resprof_cli_info {
+	int				 rci_cnt;
+	psc_spinlock_t			 rci_lock;
+};
+
 /*
  * cli_imp_ion - private client data for struct sl_resm.
  *  It is tasked with holding the import to the correct ION.
@@ -98,7 +103,7 @@ enum {
 	MFD_RETRREPTBL = (1<<1)
 };
 
-static inline void
+static __inline void
 msl_mfd_release(struct msl_fcoo_data *mfd)
 {
 	PSCFREE(mfd);
@@ -137,6 +142,7 @@ struct msl_fhent *
 void	mseqpollthr_spawn(void);
 void	msctlthr_spawn(void);
 void	mstimerthr_spawn(void);
+void	msbmapflushthr_spawn(void);
 
 int	slash_lookup_cache(const struct slash_creds *, fuse_ino_t, const char *,
 	    struct slash_fidgen *, struct stat *);
@@ -146,11 +152,11 @@ int	translate_pathname(const char *, char []);
 
 #define mds_import	(mds_csvc->csvc_import)
 
-extern struct slashrpc_cservice *mds_csvc;
-extern char ctlsockfn[];
-extern sl_ios_id_t prefIOS;
+extern struct slashrpc_cservice	*mds_csvc;
+extern char			 ctlsockfn[];
+extern sl_ios_id_t		 prefIOS;
 
-static inline void
+static __inline void
 msl_fbr_ref(struct msl_fbr *r, int rw)
 {
 	psc_assert(r->mfbr_bmap);
@@ -166,8 +172,7 @@ msl_fbr_ref(struct msl_fbr *r, int rw)
 		abort();
 }
 
-
-static inline void
+static __inline void
 msl_fbr_unref(const struct msl_fbr *r)
 {
 	psc_assert(r->mfbr_bmap);
@@ -175,8 +180,7 @@ msl_fbr_unref(const struct msl_fbr *r)
 	atomic_sub(atomic_read(&r->mfbr_wr_ref), &r->mfbr_bmap->bcm_wr_ref);
 }
 
-
-static inline struct msl_fbr *
+static __inline struct msl_fbr *
 msl_fbr_new(struct bmapc_memb *b, int rw)
 {
 	struct msl_fbr *r = PSCALLOC(sizeof(*r));
@@ -187,7 +191,7 @@ msl_fbr_new(struct bmapc_memb *b, int rw)
 	return (r);
 }
 
-static inline int
+static __inline int
 fhbmap_cache_cmp(const void *x, const void *y)
 {
 	const struct msl_fbr *rx = x, *ry = y;
@@ -195,7 +199,7 @@ fhbmap_cache_cmp(const void *x, const void *y)
 	return (bmapc_cmp(rx->mfbr_bmap, ry->mfbr_bmap));
 }
 
-static inline struct srt_fd_buf *
+static __inline struct srt_fd_buf *
 mslfh_2_fdb(struct msl_fhent *mfh)
 {
 	psc_assert(mfh->mfh_fcmh);
@@ -203,7 +207,7 @@ mslfh_2_fdb(struct msl_fhent *mfh)
 	return (&mfh->mfh_fcmh->fcmh_fcoo->fcoo_fdb);
 }
 
-static inline size_t
+static __inline size_t
 mslfh_2_bmapsz(struct msl_fhent *mfh)
 {
 	psc_assert(mfh->mfh_fcmh);
@@ -212,7 +216,7 @@ mslfh_2_bmapsz(struct msl_fhent *mfh)
 	return (mfh->mfh_fcmh->fcmh_fcoo->fcoo_bmap_sz);
 }
 
-static inline struct srt_fd_buf *
+static __inline struct srt_fd_buf *
 fcmh_2_fdb(struct fidc_membh *f)
 {
 	return (&f->fcmh_fcoo->fcoo_fdb);
@@ -220,7 +224,7 @@ fcmh_2_fdb(struct fidc_membh *f)
 
 SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
-static inline struct msl_fbr *
+static __inline struct msl_fbr *
 fhcache_bmap_lookup(struct msl_fhent *mfh, struct bmapc_memb *b)
 {
 	struct msl_fbr *r, lr;
