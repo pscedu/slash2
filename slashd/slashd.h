@@ -13,6 +13,7 @@
 struct bmapc_memb;
 struct fidc_membh;
 struct mexpfcm;
+struct slash_inode_handle;
 
 /* Slash server thread types. */
 #define SLMTHRT_CTL		0	/* control */
@@ -103,6 +104,8 @@ int	 fid_get(const char *, struct slash_fidgen *,
 
 void	 mds_init(void);
 int	 mds_inode_release(struct fidc_membh *);
+int	 mds_inox_load_locked(struct slash_inode_handle *);
+int	 mds_inox_ensure_loaded(struct slash_inode_handle *);
 
 void	 slmtimerthr_spawn(void);
 void	 slmctlthr_main(const char *);

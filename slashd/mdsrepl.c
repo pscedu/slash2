@@ -108,6 +108,7 @@ mds_repl_enqueue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
 	int locked, n;
 
 	locked = reqlock(&rrq->rrq_lock);
+	rrq->rrq_flags |= REPLRQF_REQUEUE;
 	for (n = 0; n < nios; n++) {
 		site = libsl_resid2site(iosv[n].bs_id);
 		msi = site->site_pri;
@@ -122,47 +123,6 @@ mds_repl_enqueue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
 		freelock(&msi->msi_lock);
 	}
 	ureqlock(&rrq->rrq_lock, locked);
-}
-
-static int
-mds_repl_load_locked(struct slash_inode_handle *i)
-{
-	psc_crc_t crc;
-	int rc;
-
-	psc_assert(!(i->inoh_flags & INOH_HAVE_EXTRAS));
-
-	if ((i->inoh_flags & INOH_LOAD_EXTRAS) == 0) {
-		i->inoh_flags |= INOH_LOAD_EXTRAS;
-		psc_assert(i->inoh_extras == NULL);
-		i->inoh_extras = PSCALLOC(sizeof(struct slash_inode_extras_od));
-	}
-
-	if ((rc = mdsio_zfs_inode_extras_read(i)))
-		return (rc);
-
-	psc_crc_calc(&crc, i->inoh_extras, INOX_OD_CRCSZ);
-	if (crc != i->inoh_extras->inox_crc) {
-		DEBUG_INOH(PLL_WARN, i, "failed crc for extras");
-		return (-EIO);
-	}
-	i->inoh_flags |= INOH_HAVE_EXTRAS;
-	i->inoh_flags &= ~INOH_LOAD_EXTRAS;
-
-	return (0);
-}
-
-int
-mds_repl_inoh_ensure_loaded(struct slash_inode_handle *ih)
-{
-	int rc = 0;
-
-	INOH_LOCK(ih);
-	if (ih->inoh_ino.ino_nrepls >= INO_DEF_NREPLS)
-		if (ATTR_NOTSET(ih->inoh_flags, INOH_HAVE_EXTRAS))
-			rc = mds_repl_load_locked(ih);
-	INOH_ULOCK(ih);
-	return (rc);
 }
 
 int
@@ -187,7 +147,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 			 *   the rest are in the extras block.
 			 */
 			if (!(i->inoh_flags & INOH_HAVE_EXTRAS))
-				if (!(rc = mds_repl_load_locked(i)))
+				if (!(rc = mds_inox_load_locked(i)))
 					goto out;
 
 			repl = i->inoh_extras->inox_repls;
@@ -429,8 +389,6 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	 * do not release the replication request for this file.
 	 */
 	if (bmdsi->bmdsi_repl_policy == BRP_PERSIST) {
-		fcmh_2_inoh(bcm->bcm_fcmh)->inoh_flags &= ~INOH_WANT_REPL_REL;
-
 		rrq = mds_repl_findrq(fcmh_2_fgp(bcm->bcm_fcmh), &dummy);
 		repl.bs_id = ios;
 		mds_repl_enqueue_sites(rrq, &repl, 1);
@@ -563,6 +521,7 @@ mds_repl_findrq(struct slash_fidgen *fgp, int *locked)
 	return (rrq);
 }
 
+/* XXX this should be refactored into a generic inode loader in mds.c */
 int
 mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
 {
@@ -595,7 +554,7 @@ mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
 	}
 
 	ih = fcmh_2_inoh(fcmh);
-	rc = mds_repl_inoh_ensure_loaded(ih);
+	rc = mds_inox_ensure_loaded(ih);
 	if (rc)
 		psc_fatalx("mds_repl_inoh_ensure_loaded: %s", slstrerror(rc));
 	*fp = fcmh;
@@ -739,10 +698,8 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	} else
 		rc = SLERR_INVALID_BMAP;
 
-	if (rc == 0) {
-		rrq->rrq_inoh->inoh_flags &= ~INOH_WANT_REPL_REL;
+	if (rc == 0)
 		mds_repl_enqueue_sites(rrq, iosv, nios);
-	}
 
 	mds_repl_unrefrq(rrq);
 	return (rc);
@@ -765,13 +722,16 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	retifset[SL_REPL_SCHED] = 1;
 
 	/*
-	 * Mark the inode such that we want to remove it from the repl
-	 * queue.  Behavior requiring it to stay in the queue which will
-	 * clear this flag under us.
+	 * If this request is currently being requeued, wait.
+	 * After such a time, if it was requeued again, there must have
+	 * been work to do, and some one else should tryrmqfile().
 	 */
-	INOH_LOCK(rrq->rrq_inoh);
-	rrq->rrq_inoh->inoh_flags |= INOH_WANT_REPL_REL;
-	INOH_ULOCK(rrq->rrq_inoh);
+	reqlock(&rrq->rrq_lock);
+	while (rrq->rrq_flags & REPLRQF_REQUEUE) {
+		psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
+		spinlock(&rrq->rrq_lock);
+	}
+	freelock(&rrq->rrq_lock);
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
@@ -785,15 +745,14 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 			goto out;
 	}
 
-//	mds_repl_dequeue_sites(rrq, iosv, nios);
-
 	spinlock(&replrq_tree_lock);
-	INOH_LOCK(rrq->rrq_inoh);
-	rc = rrq->rrq_inoh->inoh_flags & INOH_WANT_REPL_REL;
-	INOH_ULOCK(rrq->rrq_inoh);
-	if (rc) {
-		rrq->rrq_inoh->inoh_flags &= ~INOH_WANT_REPL_REL;
-
+	spinlock(&rrq->rrq_lock);
+	/* XXX or if inode new bmap policy == PERSIST or if any bmap policy == PERSIST */
+	/* XXX or if someone else is rmqfile()'s this rrq */
+	if (rrq->rrq_flags & REPLRQF_REQUEUE) {
+		mds_repl_unrefrq(rrq);
+		rrq = NULL;
+	} else {
 		/*
 		 * All states are INACTIVE/ACTIVE;
 		 * remove it and its persistent link.
@@ -807,11 +766,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 			rc = ENAMETOOLONG;
 		else
 			rc = zfsslash2_unlink(zfsVfs, inum, fn, &rootcreds);
-		/* XXX lock rrq? */
 		SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
-	} else {
-		mds_repl_unrefrq(rrq);
-		rrq = NULL;
 	}
 	freelock(&replrq_tree_lock);
 

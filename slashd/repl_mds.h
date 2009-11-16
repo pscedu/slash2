@@ -42,7 +42,6 @@ int	mds_repl_addrq(struct slash_fidgen *, sl_blkno_t, sl_replica_t *, int);
 void	mds_repl_bmap_rel(struct bmapc_memb *);
 int	mds_repl_delrq(struct slash_fidgen *, sl_blkno_t, sl_replica_t *, int);
 void	mds_repl_init(void);
-int	mds_repl_inoh_ensure_loaded(struct slash_inode_handle *);
 int	mds_repl_inv_except_locked(struct bmapc_memb *, sl_ios_id_t);
 int	mds_repl_loadino(struct slash_fidgen *, struct fidc_membh **);
 int	mds_repl_nodes_getbusy(struct mds_resm_info *, struct mds_resm_info *);

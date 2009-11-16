@@ -20,24 +20,26 @@ struct slash_inode_handle {
 	int                           inoh_flags;
 };
 
-#define INOH_LOCK(h)		spinlock(&(h)->inoh_lock)
-#define INOH_ULOCK(h)		freelock(&(h)->inoh_lock)
-#define INOH_LOCK_ENSURE(h)	LOCK_ENSURE(&(h)->inoh_lock)
+#define INOH_LOCK(ih)		spinlock(&(ih)->inoh_lock)
+#define INOH_ULOCK(ih)		freelock(&(ih)->inoh_lock)
+#define INOH_RLOCK(ih)		reqlock(&(ih)->inoh_lock)
+#define INOH_URLOCK(ih, lk)	ureqlock(&(ih)->inoh_lock, (lk))
+#define INOH_LOCK_ENSURE(ih)	LOCK_ENSURE(&(ih)->inoh_lock)
 
 enum slash_inode_handle_flags {
 	INOH_INO_DIRTY     = (1<<0), /* Inode structures need to be written */
 	INOH_EXTRAS_DIRTY  = (1<<1), /* Replication structures need written */
 	INOH_HAVE_EXTRAS   = (1<<2),
 	INOH_INO_NEW       = (1<<3), /* The inode info has never been written
-				       to disk */
+					to disk */
 	INOH_LOAD_EXTRAS   = (1<<4),
 	INOH_INO_NOTLOADED = (1<<5),
-	INOH_WANT_REPL_REL = (1<<6), /* want to remove from replication queue */
 };
 
-static inline void
+static __inline void
 slash_inode_handle_init(struct slash_inode_handle *i,
-			struct fidc_membh *f, jflush_handler handler) {
+    struct fidc_membh *f, jflush_handler handler)
+{
 	i->inoh_fcmh = f;
 	i->inoh_extras = NULL;
 	LOCK_INIT(&i->inoh_lock);
@@ -45,14 +47,13 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 	i->inoh_flags = INOH_INO_NOTLOADED;
 }
 
-#define FCMH_2_INODEP(f) (&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
+#define FCMH_2_INODEP(f)	(&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
 
-#define INOH_FLAG(field, str) ((field) ? (str) : "")
 #define DEBUG_INOH_FLAGS(i)						\
-	INOH_FLAG((i)->inoh_flags & INOH_INO_DIRTY, "D"),	\
-	INOH_FLAG((i)->inoh_flags & INOH_EXTRAS_DIRTY, "d"),		\
-	INOH_FLAG((i)->inoh_flags & INOH_HAVE_EXTRAS, "X"),		\
-	INOH_FLAG((i)->inoh_flags & INOH_INO_NEW, "N")
+	(i)->inoh_flags & INOH_INO_DIRTY	? "D" : "",		\
+	(i)->inoh_flags & INOH_EXTRAS_DIRTY	? "d" : "",		\
+	(i)->inoh_flags & INOH_HAVE_EXTRAS	? "X" : "",		\
+	(i)->inoh_flags & INOH_INO_NEW		? "N" : ""
 
 #define INOH_FLAGS_FMT "%s%s%s%s"
 

@@ -128,6 +128,47 @@ mds_inode_read(struct slash_inode_handle *i)
 }
 
 int
+mds_inox_load_locked(struct slash_inode_handle *i)
+{
+	psc_crc_t crc;
+	int rc;
+
+	INOH_LOCK_ENSURE(i);
+
+	psc_assert(!(i->inoh_flags & INOH_HAVE_EXTRAS));
+
+	if ((i->inoh_flags & INOH_LOAD_EXTRAS) == 0) {
+		i->inoh_flags |= INOH_LOAD_EXTRAS;
+		psc_assert(i->inoh_extras == NULL);
+		i->inoh_extras = PSCALLOC(sizeof(struct slash_inode_extras_od));
+	}
+
+	if ((rc = mdsio_zfs_inode_extras_read(i)))
+		return (rc);
+
+	psc_crc_calc(&crc, i->inoh_extras, INOX_OD_CRCSZ);
+	if (crc != i->inoh_extras->inox_crc) {
+		DEBUG_INOH(PLL_WARN, i, "failed crc for extras");
+		return (-EIO);
+	}
+	i->inoh_flags |= INOH_HAVE_EXTRAS;
+	i->inoh_flags &= ~INOH_LOAD_EXTRAS;
+	return (0);
+}
+
+int
+mds_inox_ensure_loaded(struct slash_inode_handle *ih)
+{
+	int locked, rc = 0;
+
+	locked = INOH_RLOCK(ih);
+	if (ATTR_NOTSET(ih->inoh_flags, INOH_HAVE_EXTRAS))
+		rc = mds_inox_load_locked(ih);
+	INOH_URLOCK(ih, locked);
+	return (rc);
+}
+
+int
 mds_fcmh_tryref_fmdsi(struct fidc_membh *f)
 {
 	int rc;
