@@ -8,13 +8,25 @@
 void
 libsl_nid_associate(lnet_nid_t nid, struct sl_resource *res)
 {
+	char nidbuf[PSC_NIDSTR_SIZE];
 	struct sl_resm *resm;
+	int rc;
+
+	psc_nid2str(nid, nidbuf);
 
 	resm = PSCALLOC(sizeof(*resm));
-	slcfg_init_resm(resm);
+	rc = snprintf(resm->resm_addrbuf, sizeof(resm->resm_addrbuf),
+	    "%s:%s", res->res_name, nidbuf);
+	if (rc == -1)
+		psc_fatal("resource member %s:%s", res->res_name, nidbuf);
+	if (rc >= (int)sizeof(resm->resm_addrbuf))
+		psc_fatalx("resource member %s:%s: address too long",
+		    res->res_name, nidbuf);
 
 	resm->resm_nid = nid;
 	resm->resm_res = res;
+	slcfg_init_resm(resm);
+
 	init_hash_entry(&resm->resm_hentry, (void *)&resm->resm_nid, resm);
 	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hentry);
 }

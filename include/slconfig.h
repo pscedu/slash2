@@ -16,12 +16,13 @@
 
 struct sl_site;
 
-#define SITE_NAME_MAX	64
-#define RES_NAME_MAX	64
-#define FULL_NAME_MAX	(SITE_NAME_MAX + RES_NAME_MAX + 2)	/* '@' + NUL */
+#define SITE_NAME_MAX	32
+#define INTRES_NAME_MAX	32
+#define RES_NAME_MAX	(SITE_NAME_MAX + INTRES_NAME_MAX)
+#define RESM_ADDRBUF_SZ	(RES_NAME_MAX + 1 + PSC_NIDSTR_SIZE)	/* foo@BAR:1.1.1.1@tcp0 */
 #define SL_PEER_MAX	16
 #define DEVNAMEMAX	128
-#define MAXNET		32
+#define LNET_NAME_MAX	32
 
 enum sl_res_type {
 	SLREST_ARCHIVAL_FS,
@@ -47,6 +48,7 @@ struct sl_resource {
 };
 
 struct sl_resm {
+	char			 resm_addrbuf[RESM_ADDRBUF_SZ];
 	lnet_nid_t		 resm_nid;
 	struct sl_resource	*resm_res;
 	struct hash_entry	 resm_hentry;
@@ -74,7 +76,7 @@ struct sl_nodeh {
 };
 
 struct sl_gconf {
-	char			 gconf_net[MAXNET];
+	char			 gconf_net[LNET_NAME_MAX];
 	char			 gconf_fdbkeyfn[PATH_MAX];
 	uint32_t		 gconf_netid;
 	int			 gconf_port;
