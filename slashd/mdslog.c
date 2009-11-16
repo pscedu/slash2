@@ -47,7 +47,10 @@ mds_inode_sync(void *data)
 			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
 
 		inoh->inoh_flags &= ~INOH_INO_DIRTY;
-		inoh->inoh_flags &= ~INOH_INO_NEW;
+		if (inoh->inoh_flags & INOH_INO_NEW) {
+			inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
+			inoh->inoh_flags &= ~INOH_INO_NEW;
+		}
 	}
 
 	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
