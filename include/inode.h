@@ -147,16 +147,18 @@ struct slash_inode_od {
 	struct slash_fidgen ino_fg;
 	uint16_t      ino_version;
 	uint16_t      ino_flags;
-	uint32_t      ino_bsz;                    /* bmap size               */
-	uint32_t      ino_nrepls;                 /* if 0, use ino_prepl     */
-	uint32_t      ino_csnap;                  /* current snapshot        */
-	sl_replica_t  ino_repls[INO_DEF_NREPLS];  /* embed a few replicas    */
-	psc_crc_t     ino_crc;                    /* crc of the inode        */
+	uint32_t      ino_bsz;			/* bmap size		*/
+	uint32_t      ino_nrepls;		/* if 0, use ino_prepl	*/
+	uint32_t      ino_csnap;		/* current snapshot	*/
+	sl_replica_t  ino_repls[INO_DEF_NREPLS];/* embed a few replicas	*/
+
+	/* must be last */
+	psc_crc_t     ino_crc;			/* crc of the inode	*/
 };
 #define INO_OD_SZ	sizeof(struct slash_inode_od)
 #define INO_OD_CRCSZ	(INO_OD_SZ - (sizeof(psc_crc_t)))
 
-#define INO_VERSION 0x0002
+#define INO_VERSION 0x0003
 
 enum {
 	INO_FL_HAVE_EXTRAS = (1<<0)
@@ -165,8 +167,10 @@ enum {
 struct slash_inode_extras_od {
 	sl_snap_t	inox_snaps[SL_DEF_SNAPSHOTS];/* snapshot pointers      */
 	sl_replica_t	inox_repls[SL_MAX_REPLICAS - INO_DEF_NREPLS]; /* replicas */
-	psc_crc_t	inox_crc;
 	uint32_t	inox_newbmap_policy;	/* see BRP_* values */
+
+	/* must be last */
+	psc_crc_t	inox_crc;
 };
 #define INOX_OD_SZ	sizeof(struct slash_inode_extras_od)
 #define INOX_OD_CRCSZ	(INOX_OD_SZ - (sizeof(psc_crc_t)))

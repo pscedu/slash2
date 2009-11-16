@@ -148,7 +148,7 @@ mds_inox_load_locked(struct slash_inode_handle *i)
 
 	psc_crc_calc(&crc, i->inoh_extras, INOX_OD_CRCSZ);
 	if (crc != i->inoh_extras->inox_crc) {
-		DEBUG_INOH(PLL_WARN, i, "failed crc for extras");
+		DEBUG_INOH(PLL_WARN, i, "failed CRC (%lx) for extras", crc);
 		return (-EIO);
 	}
 	i->inoh_flags |= INOH_HAVE_EXTRAS;

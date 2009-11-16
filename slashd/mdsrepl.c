@@ -556,7 +556,7 @@ mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
 	ih = fcmh_2_inoh(fcmh);
 	rc = mds_inox_ensure_loaded(ih);
 	if (rc)
-		psc_fatalx("mds_repl_inoh_ensure_loaded: %s", slstrerror(rc));
+		psc_fatalx("mds_inox_ensure_loaded: %s", slstrerror(rc));
 	*fp = fcmh;
 	return (0);
 }
