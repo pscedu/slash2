@@ -1680,6 +1680,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	mseqpollthr_spawn();
 	msctlthr_spawn();
 	mstimerthr_spawn();
+	msbmapflushthr_spawn();
 
 	if (msrmc_connect(name))
 		psc_fatal("unable to connect to MDS");
@@ -1691,7 +1692,6 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 
 	slFsops = PSCALLOC(sizeof(*slFsops));
 	slFsops->slfsop_getattr = slash2fuse_stat;
-
 	return (NULL);
 }
 
@@ -1866,7 +1866,5 @@ main(int argc, char *argv[])
 		return 2;
 	}
 #endif
-	msl_init();
-	bmap_flush_init();
 	exit(slash2fuse_listener_start());
 }

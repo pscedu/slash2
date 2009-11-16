@@ -378,13 +378,6 @@ msl_bmap_init(struct bmapc_memb *b)
 	bmpc_init(&msbd->msbd_bmpc);
 }
 
-
-void
-msl_init(void)
-{
-	return;
-}
-
 /**
  * bmapc_memb_release - release a bmap structure and associated resources.
  * @b: the bmap.
