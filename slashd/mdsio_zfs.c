@@ -165,7 +165,7 @@ mdsio_zfs_inode_extras_read(struct slash_inode_handle *i)
 		    i->inoh_extras, (size_t)INOX_OD_SZ,
 		    (off_t)SL_EXTRAS_START_OFF, inoh_2_zfsdata(i));
 	if (rc)
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() error (rc=%d)",
+		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_read() error (rc=%d)",
 			   rc);
 	return (rc);
 }
