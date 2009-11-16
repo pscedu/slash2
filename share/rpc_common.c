@@ -93,53 +93,52 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct sl_resm *resm;
-	int rc, locked;
+	int rc = 0, locked;
 
 	if (lk)
 		locked = reqlock(lk);
 
-	if (*csvcp == NULL) {
-		if (exp)
-			peernid = exp->exp_connection->c_peer.nid;
+	if (exp)
+		peernid = exp->exp_connection->c_peer.nid;
+	psc_assert(peernid != LNET_NID_ANY);
 
+	if (*csvcp == NULL) {
 		/* ensure peer is of the given type */
 		switch (ctype) {
 		case SLCONNT_CLI:
 			break;
 		case SLCONNT_IOD:
 			resm = libsl_nid2resm(peernid);
-			if (resm->resm_res->res_mds)
+			if (resm == NULL || resm->resm_res->res_mds)
 				goto out;
 			break;
 		case SLCONNT_MDS:
 			resm = libsl_nid2resm(peernid);
-			if (!resm->resm_res->res_mds)
+			if (resm == NULL || !resm->resm_res->res_mds)
 				goto out;
 			break;
 		}
 
 		/* initialize service */
 		*csvcp = rpc_csvc_create(rqptl, rpptl);
-		if (exp) {
-			atomic_inc(&exp->exp_connection->c_refcount);
-			(*csvcp)->csvc_import->imp_connection = exp->exp_connection;
-			(*csvcp)->csvc_flags |= CSVCF_INIT;
-
-		}
 	}
 	csvc = *csvcp;
 	if ((csvc->csvc_flags & CSVCF_INIT) == 0 ||
-	    (csvc->csvc_flags & CSVCF_FAILED &&
+	    ((csvc->csvc_flags & CSVCF_FAILED) &&
 	    csvc->csvc_mtime + 30 < time(NULL))) {
-		psc_assert(peernid != LNET_NID_ANY);
-
-		rc = rpc_issue_connect(peernid, csvc->csvc_import,
-		    magic, version);
-		csvc->csvc_mtime = time(NULL);
-		if (rc)
-			csvc->csvc_flags |= CSVCF_FAILED;
-		else {
-			wakef(wakearg);
+		if (exp) {
+			atomic_inc(&exp->exp_connection->c_refcount);
+			csvc->csvc_import->imp_connection = exp->exp_connection;
+		} else {
+			rc = rpc_issue_connect(peernid, csvc->csvc_import,
+			    magic, version);
+			csvc->csvc_mtime = time(NULL);
+			if (rc)
+				csvc->csvc_flags |= CSVCF_FAILED;
+		}
+		if (rc == 0) {
+			if (wakef && wakearg)
+				wakef(wakearg);
 			csvc->csvc_flags |= CSVCF_INIT;
 			csvc->csvc_flags &= ~CSVCF_FAILED;
 		}
