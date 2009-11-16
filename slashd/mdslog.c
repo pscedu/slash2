@@ -19,7 +19,8 @@
 #include "slashd.h"
 #include "sljournal.h"
 
-struct psc_journal *mdsJournal;
+struct slash_inode_extras_od	 zero_inox;
+struct psc_journal		*mdsJournal;
 
 /* master journal log replay function */
 void
@@ -30,7 +31,7 @@ mds_journal_replay(__unusedx struct dynarray *logentrys, __unusedx int *rc)
 void
 mds_inode_sync(void *data)
 {
-	int locked, rc;
+	int locked, rc, tmpx = 0;
 	struct slash_inode_handle *inoh = data;
 
 	locked = reqlock(&inoh->inoh_lock);
@@ -48,8 +49,13 @@ mds_inode_sync(void *data)
 
 		inoh->inoh_flags &= ~INOH_INO_DIRTY;
 		if (inoh->inoh_flags & INOH_INO_NEW) {
-			inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
 			inoh->inoh_flags &= ~INOH_INO_NEW;
+			inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
+
+			if (inoh->inoh_extras == NULL) {
+				inoh->inoh_extras = &zero_inox;
+				tmpx = 1;
+			}
 		}
 	}
 
@@ -66,6 +72,9 @@ mds_inode_sync(void *data)
 
 		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
 	}
+
+	if (tmpx)
+		inoh->inoh_extras = NULL;
 
 	ureqlock(&inoh->inoh_lock, locked);
 }
