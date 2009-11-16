@@ -41,6 +41,12 @@ slconn_wake_mlcond(void *arg)
 	    &resm2mri(resm)->mri_lock, slconn_wake_mlcond,		\
 	    &resm2mri(resm)->mri_mlcond, SLCONNT_IOD)
 
+#define slm_geticonnx(resm, exp)					\
+	slconn_get(&resm2mri(resm)->mri_csvc, (exp), 0,			\
+	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION,	\
+	    &resm2mri(resm)->mri_lock, slconn_wake_mlcond,		\
+	    &resm2mri(resm)->mri_mlcond, SLCONNT_IOD)
+
 #define slm_getmconn(resm)						\
 	slconn_get(&resm2mri(resm)->mri_csvc, NULL, (resm)->resm_nid,	\
 	    SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC, SRMM_VERSION,	\

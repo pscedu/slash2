@@ -27,18 +27,16 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	struct srm_bmap_wire_req *mq;
 	struct srm_bmap_wire_rep *mp;
 	struct pscrpc_bulk_desc *desc;
-	struct slash_fidgen fg;
+	__unusedx struct slash_fidgen fg;
 	struct bmapc_memb *b=NULL;
 	struct iovec iov;
-	sl_blkno_t bmapno;
+	__unusedx sl_blkno_t bmapno;
 	int rc;
 
 	RSX_ALLOCREP(rq, mq, mp);
 #if 0
 	mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer,
-			     (mq->rw == SL_WRITE) ? lpid.nid : LNET_NID_ANY,
-			     (mq->rw == SL_WRITE) ? nodeInfo.node_res->res_id :
-			     IOS_ID_ANY);
+	    lpid.nid, nodeInfo.node_res->res_id, mq->rw);
 #endif
 
 	if (mp->rc)
@@ -158,10 +156,15 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
+	struct sl_resm *resm;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION)
 		mp->rc = -EINVAL;
+
+	/* initialize our reverse stream structures */
+	resm = libsl_nid2resm(rq->rq_peer.nid);
+	slm_geticonnx(resm, rq->rq_export);
 	return (0);
 }
 
