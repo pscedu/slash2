@@ -1,5 +1,5 @@
 11/02/09
-* msl_io and rpc ION calls need to return actual size so that read() can 
+* msl_io and rpc ION calls need to return actual size so that read() can
 be short circuited  on EOF.
 
 10/26/09
@@ -243,3 +243,5 @@ legend:
 - slimmns does more than create the immutable namespace, and should
   be more intuitively named for formatting MDS file systems, such as
   slmkfs, slfmtfs, or slnewfs
+- rename rpc_csvc_create to slashrpc_csvc_create() and don't expose it
+  outside of rpc_common.c
