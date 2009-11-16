@@ -22,14 +22,12 @@ slcfg_init_res(struct sl_resource *res)
 void
 slcfg_init_resm(struct sl_resm *resm)
 {
-	char nidbuf[PSC_NIDSTR_SIZE];
 	struct mds_resm_info *mri;
-
-	psc_nid2str(resm->resm_nid, nidbuf);
 
 	mri = resm->resm_pri = PSCALLOC(sizeof(*mri));
 	LOCK_INIT(&mri->mri_lock);
-	psc_multilock_cond_init(&mri->mri_mlcond, NULL, 0, "mri-%s", nidbuf);
+	psc_multilock_cond_init(&mri->mri_mlcond,
+	    NULL, 0, "mri-%s", resm->resm_addrbuf);
 	mri->mri_resm = resm;
 }
 
@@ -41,8 +39,8 @@ slcfg_init_site(struct sl_site *site)
 	msi = site->site_pri = PSCALLOC(sizeof(*msi));
 	psc_dynarray_init(&msi->msi_replq);
 	LOCK_INIT(&msi->msi_lock);
-	psc_multilock_init(&msi->msi_ml,
-	    "msi-%s", site->site_name);
-	psc_multilock_cond_init(&msi->msi_mlcond,
-	    NULL, 0, "msi-%s", site->site_name);
+	psc_multilock_init(&msi->msi_ml, "msi-%s",
+	    site->site_name + strspn(site->site_name, "@"));
+	psc_multilock_cond_init(&msi->msi_mlcond, NULL, 0, "msi-%s",
+	    site->site_name + strspn(site->site_name, "@"));
 }
