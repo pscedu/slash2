@@ -30,9 +30,9 @@ fid_makepath(slfid_t fid, char *fid_path)
 	int rc, i;
 	char a[FP_DEPTH];
 
-	a[0] = (uint8_t)((fid & 0x0000000000f00000ULL) >> (BPHXC*5));
-	a[1] = (uint8_t)((fid & 0x00000000000f0000ULL) >> (BPHXC*4));
-	a[2] = (uint8_t)((fid & 0x000000000000f000ULL) >> (BPHXC*3));
+	a[0] = (uint8_t)((fid & UINT64_C(0x0000000000f00000)) >> (BPHXC*5));
+	a[1] = (uint8_t)((fid & UINT64_C(0x00000000000f0000)) >> (BPHXC*4));
+	a[2] = (uint8_t)((fid & UINT64_C(0x000000000000f000)) >> (BPHXC*3));
 
 	for (i=0; i < FP_DEPTH; i++)
 		a[i] = (a[i] < 10) ? (a[i] += 0x30) : (a[i] += 0x57);

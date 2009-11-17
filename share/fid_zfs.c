@@ -22,10 +22,10 @@ fid_makepath(slfid_t fid, char *fid_path)
 	rc = snprintf(fid_path, PATH_MAX,
 	    "%s/%s/%04x/%04x/%04x/%04x",
 	    nodeInfo.node_res->res_fsroot, _PATH_OBJROOT,
-	    (u32)((fid & 0x000000000000ffffULL)),
-	    (u32)((fid & 0x00000000ffff0000ULL) >> 16),
-	    (u32)((fid & 0x0000ffff00000000ULL) >> 32),
-	    (u32)((fid & 0xffff000000000000ULL) >> 48));
+	    (u32)((fid & UINT64_C(0x000000000000ffff))),
+	    (u32)((fid & UINT64_C(0x00000000ffff0000)) >> 16),
+	    (u32)((fid & UINT64_C(0x0000ffff00000000)) >> 32),
+	    (u32)((fid & UINT64_C(0xffff000000000000)) >> 48));
 	if (rc == -1)
 		psc_fatal("snprintf");
 }
