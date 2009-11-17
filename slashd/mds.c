@@ -21,12 +21,12 @@
 #include "slashexport.h"
 #include "slerr.h"
 
-struct odtable			*mdsBmapAssignTable;
-struct slash_bmap_od		 null_bmap_od;
-struct slash_inode_od		 null_inode_od;
-struct slash_inode_extras_od	 null_inox_od;
-struct cfdops			 mdsCfdOps;
-struct sl_fsops			 mdsFsops;
+struct odtable				*mdsBmapAssignTable;
+const struct slash_bmap_od		 null_bmap_od;
+const struct slash_inode_od		 null_inode_od;
+const struct slash_inode_extras_od	 null_inox_od;
+struct cfdops				 mdsCfdOps;
+struct sl_fsops				 mdsFsops;
 
 __static SPLAY_GENERATE(fcm_exports, mexpfcm,
     mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
@@ -100,8 +100,7 @@ mds_inode_read(struct slash_inode_handle *i)
 
 	rc = mdsio_zfs_inode_read(i);
 	if (rc == SLERR_SHORTIO && i->inoh_ino.ino_crc == 0 &&
-	    memcmp(&i->inoh_ino, &null_inode_od,
-	    sizeof(null_inode_od)) == 0) {
+	    memcmp(&i->inoh_ino, &null_inode_od, INO_OD_CRCSZ) == 0) {
 		DEBUG_INOH(PLL_INFO, i, "detected a new inode");
 		mds_inode_od_initnew(i);
 		rc = 0;
@@ -137,8 +136,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 
 	rc = mdsio_zfs_inode_extras_read(ih);
 	if (rc == SLERR_SHORTIO && ih->inoh_extras->inox_crc == 0 &&
-	    memcmp(&ih->inoh_extras, &null_inox_od,
-	    sizeof(null_inox_od)) == 0) {
+	    memcmp(&ih->inoh_extras, &null_inox_od, INOX_OD_CRCSZ) == 0) {
 		rc = 0;
 	} else if (rc) {
 		DEBUG_INOH(PLL_WARN, ih, "mdsio_zfs_inode_extras_read: %d", rc);
@@ -155,6 +153,7 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	if (rc) {
 		PSCFREE(ih->inoh_extras);
 		ih->inoh_extras = NULL;
+		ih->inoh_flags &= ~INOH_HAVE_EXTRAS;
 	}
 	return (rc);
 }
