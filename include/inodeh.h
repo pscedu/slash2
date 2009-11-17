@@ -32,8 +32,7 @@ enum slash_inode_handle_flags {
 	INOH_HAVE_EXTRAS   = (1<<2),
 	INOH_INO_NEW       = (1<<3), /* The inode info has never been written
 					to disk */
-	INOH_LOAD_EXTRAS   = (1<<4),
-	INOH_INO_NOTLOADED = (1<<5),
+	INOH_INO_NOTLOADED = (1<<4),
 };
 
 static __inline void
