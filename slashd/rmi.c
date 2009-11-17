@@ -13,10 +13,10 @@
 #include "psc_util/lock.h"
 #include "psc_util/strlcpy.h"
 
+#include "bmap_mds.h"
 #include "cfd.h"
 #include "fdbuf.h"
 #include "fid.h"
-#include "mds_bmap.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"

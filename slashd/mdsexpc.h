@@ -17,12 +17,12 @@
 #include "psc_util/atomic.h"
 #include "psc_util/odtable.h"
 
-#include "jflush.h"
-#include "fidcache.h"
-#include "slashrpc.h"
-#include "inodeh.h"
 #include "bmap.h"
-#include "mds_bmap.h"
+#include "bmap_mds.h"
+#include "fidcache.h"
+#include "inodeh.h"
+#include "jflush.h"
+#include "slashrpc.h"
 
 struct pscrpc_export;
 

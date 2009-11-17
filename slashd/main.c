@@ -14,13 +14,13 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
+#include "bmap_mds.h"
 #include "ctl_mds.h"
 #include "fdbuf.h"
 #include "fidcache.h"
-#include "mds_bmap.h"
-#include "rpc_mds.h"
 #include "pathnames.h"
 #include "repl_mds.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
 
