@@ -52,7 +52,7 @@ mds_inode_sync(void *data)
 			inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
 
 			if (inoh->inoh_extras == NULL) {
-				inoh->inoh_extras = &null_inox_od;
+				inoh->inoh_extras = (void *)&null_inox_od;
 				tmpx = 1;
 			}
 		}
