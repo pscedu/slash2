@@ -117,7 +117,7 @@ _log_debug_inoh(int level, struct slash_inode_handle *ih, const char *fmt, ...)
 
 	_debug_ino(buf, sizeof(buf), &ih->inoh_ino);
 	psc_logs(level, PSS_GEN,
-	    "fl:"INOH_FLAGS_FMT" %s :: %s",
+	    "inoh@%p fl:"INOH_FLAGS_FMT" %s :: %s", ih,
 	    DEBUG_INOH_FLAGS(ih), buf, mbuf);
 }
 
