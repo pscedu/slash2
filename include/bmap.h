@@ -65,6 +65,16 @@ struct bmapc_memb {
 #define BMAP_RLOCK(b)		reqlock(&(b)->bcm_lock)
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
 
+/* get a replica's bmap replication status */
+#define SL_REPL_GET_BMAP_IOS_STAT(data, off)				\
+	(((data)[(off) / NBBY] >> ((off) % NBBY)) & SL_REPLICA_MASK)
+
+/* set a replica's bmap replication status */
+#define SL_REPL_SET_BMAP_IOS_STAT(data, off, val)			\
+	((data)[(off) / NBBY] = ((data)[(off) / NBBY] &			\
+	    ~(SL_REPLICA_MASK << ((off) % NBBY))) |			\
+	    ((val) << ((off) % NBBY)))
+
 #define DEBUG_BMAP(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 		 " bmap@%p b:%x m:%u i:%"PRIx64				\

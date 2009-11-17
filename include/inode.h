@@ -41,26 +41,16 @@
 
 /* Define metafile offsets
  */
-#define SL_INODE_START_OFF	0x0000ULL
-#define SL_BMAP_START_OFF	0x1000ULL
-#define SL_EXTRAS_START_OFF	0x0400ULL
+#define SL_INODE_START_OFF	UINT64_C(0x0000)
+#define SL_BMAP_START_OFF	UINT64_C(0x1000)
+#define SL_EXTRAS_START_OFF	UINT64_C(0x0400)
 
-#define SL_NULL_CRC		0x436f5d7c450ed606ULL
+#define SL_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
 
 #define SL_REPL_INACTIVE	0
 #define SL_REPL_SCHED		1
 #define SL_REPL_OLD		2
 #define SL_REPL_ACTIVE		3
-
-/* get a replica's bmap replication status */
-#define SL_REPL_GET_BMAP_IOS_STAT(data, off)			\
-	(((data)[(off) / NBBY] >> ((off) % NBBY)) & SL_REPLICA_MASK)
-
-/* set a replica's bmap replication status */
-#define SL_REPL_SET_BMAP_IOS_STAT(data, off, val)		\
-	((data)[(off) / NBBY] = ((data)[(off) / NBBY] &		\
-	    ~(SL_REPLICA_MASK << ((off) % NBBY))) |		\
-	    ((val) << ((off) % NBBY)))
 
 /*
  * Point to an offset within the linear metadata file which holds a
