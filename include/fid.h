@@ -40,6 +40,7 @@ struct slash_fidgen {
 	(((a)->fg_fid == (b)->fg_fid) && ((a)->fg_gen == (b)->fg_gen))
 
 #define COPYFID(d, s)		memcpy((d), (s), sizeof(*(d)))
+#define COPYFG(d, s)		memcpy((d), (s), sizeof(*(d)))
 
 void	fid_makepath(slfid_t, char *);
 int	fid_link(slfid_t, const char *);
