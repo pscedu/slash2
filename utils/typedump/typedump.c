@@ -28,8 +28,8 @@
 #include "slerr.h"
 #include "sljournal.h"
 #include "sltypes.h"
+#include "mount_slash/bmap_cli.h"
 #include "mount_slash/bmpc.h"
-#include "mount_slash/cli_bmap.h"
 #include "mount_slash/ctl_cli.h"
 #include "mount_slash/ctlsvr_cli.h"
 #include "mount_slash/fidc_cli.h"
@@ -47,9 +47,9 @@
 #include "slashd/repl_mds.h"
 #include "slashd/rpc_mds.h"
 #include "slashd/slashd.h"
+#include "sliod/bmap_iod.h"
 #include "sliod/ctl_iod.h"
 #include "sliod/fidc_iod.h"
-#include "sliod/iod_bmap.h"
 #include "sliod/repl_iod.h"
 #include "sliod/rpc_iod.h"
 #include "sliod/sliod.h"
@@ -101,7 +101,6 @@ main(int argc, char *argv[])
 
 	/* start structs */
 	PRTYPE(cred_t);
-	PRTYPE(sl_inum_t);
 	PRTYPE(sl_ios_id_t);
 	PRTYPE(sl_siteid_t);
 	PRTYPE(struct biod_crcup_ref);
@@ -178,10 +177,10 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmds_jents);
 	PRTYPE(struct slmiconn_thread);
 	PRTYPE(struct slmrcm_thread);
+	PRTYPE(struct slmrepl_thread);
 	PRTYPE(struct slmrmc_thread);
 	PRTYPE(struct slmrmi_thread);
 	PRTYPE(struct slmrmm_thread);
-	PRTYPE(struct slmsm_thread);
 	PRTYPE(struct slvr_ref);
 	PRTYPE(struct srm_access_req);
 	PRTYPE(struct srm_bmap_chmode_rep);
@@ -237,6 +236,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_fd_buf);
 	PRTYPE(struct srt_fdb_secret);
 /* end structs */
+
+	PRVAL(INOX_OD_SZ);
+	PRVAL(INOX_OD_CRCSZ);
 
 	exit(0);
 }
