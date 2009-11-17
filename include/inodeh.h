@@ -6,6 +6,7 @@
 #include <inttypes.h>
 
 #include "psc_util/lock.h"
+#include "psc_util/strlcat.h"
 
 #include "inode.h"
 #include "jflush.h"
@@ -48,25 +49,79 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 
 #define FCMH_2_INODEP(f)	(&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
 
+static __inline void
+_debug_ino(char *buf, size_t siz, struct slash_inode_od *ino)
+{
+	char nbuf[LINE_MAX], rbuf[LINE_MAX];
+	int nr, j;
+
+	nr = ino->ino_nrepls;
+	if (nr < 0)
+		nr = 1;
+	else if (nr > INO_DEF_NREPLS)
+		nr = INO_DEF_NREPLS;
+
+	rbuf[0] = '\0';
+	for (j = 0; j < nr; j++) {
+		if (j)
+			psc_strlcat(rbuf, ",", sizeof(rbuf));
+		snprintf(nbuf, sizeof(nbuf), "%u",
+		    ino->ino_repls[j].bs_id);
+		psc_strlcat(rbuf, nbuf, sizeof(rbuf));
+	}
+
+	snprintf(buf, siz,
+	    "f:"FIDFMT" v:%x bsz:%u nr:%u cs:%u repl:%s crc:%"PRIx64,
+	    FIDFMTARGS(&ino->ino_fg), ino->ino_version,
+	    ino->ino_bsz, ino->ino_nrepls,
+	    ino->ino_csnap, rbuf, ino->ino_crc);
+
+}
+
+static __inline void
+debug_ino(struct slash_inode_od *ino)
+{
+	char buf[BUFSIZ];
+
+	_debug_ino(buf, sizeof(buf), ino);
+	printf("%s\n", buf);
+}
+
+#define INOH_FLAGS_FMT "%s%s%s%s"
+
 #define DEBUG_INOH_FLAGS(i)						\
 	(i)->inoh_flags & INOH_INO_DIRTY	? "D" : "",		\
 	(i)->inoh_flags & INOH_EXTRAS_DIRTY	? "d" : "",		\
 	(i)->inoh_flags & INOH_HAVE_EXTRAS	? "X" : "",		\
 	(i)->inoh_flags & INOH_INO_NEW		? "N" : ""
 
-#define INOH_FLAGS_FMT "%s%s%s%s"
+static __inline void
+debug_inoh(struct slash_inode_handle *ih)
+{
+	char buf[BUFSIZ];
 
-#define DEBUG_INOH(level, i, fmt, ...)					\
-	psc_logs((level), PSS_GEN,					\
-		 " inoh@%p f:"FIDFMT" fl:"INOH_FLAGS_FMT		\
-		 "v:%x bsz:%u nr:%u cs:%u "				\
-		 "repl0:%u crc:%"PRIx64" :: "fmt,			\
-		 (i), FIDFMTARGS(&(i)->inoh_ino.ino_fg),		\
-		 DEBUG_INOH_FLAGS(i),					\
-		 (i)->inoh_ino.ino_version, (i)->inoh_ino.ino_bsz,	\
-		 (i)->inoh_ino.ino_nrepls, (i)->inoh_ino.ino_csnap,	\
-		 (i)->inoh_ino.ino_repls[0].bs_id,			\
-		 (i)->inoh_ino.ino_crc,					\
-		 ## __VA_ARGS__)
+	_debug_ino(buf, sizeof(buf), &ih->inoh_ino);
+	printf("fl:"INOH_FLAGS_FMT" %s\n",
+	    DEBUG_INOH_FLAGS(ih), buf);
+}
+
+static __inline void
+_log_debug_inoh(int level, struct slash_inode_handle *ih, const char *fmt, ...)
+{
+	char buf[LINE_MAX], mbuf[BUFSIZ];
+	va_list ap;
+
+	va_start(ap, fmt);
+	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
+	va_end(ap);
+
+	_debug_ino(buf, sizeof(buf), &ih->inoh_ino);
+	psc_logs(level, PSS_GEN,
+	    "fl:"INOH_FLAGS_FMT" %s :: %s",
+	    DEBUG_INOH_FLAGS(ih), buf, mbuf);
+}
+
+#define DEBUG_INOH(level, ih, fmt, ...)					\
+	_log_debug_inoh((level), (ih), (fmt), ## __VA_ARGS__)
 
 #endif
