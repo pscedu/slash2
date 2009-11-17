@@ -106,6 +106,7 @@ slmreplthr_main(void *arg)
 	int iosidx, val, nios, nrq, off, rc, ris;
 	struct sl_resource *src_res, *dst_res;
 	struct slash_bmap_od *bmapod;
+	struct bmap_mds_info *bmdsi;
 	struct slmrepl_thread *smrt;
 	struct mds_site_info *msi;
 	struct sl_resm *src_resm;
@@ -161,7 +162,7 @@ slmreplthr_main(void *arg)
 			}
 			freelock(&rrq->rrq_lock);
 
-			rc = mds_repl_inoh_ensure_loaded(rrq->rrq_inoh);
+			rc = mds_inox_ensure_loaded(rrq->rrq_inoh);
 			if (rc) {
 				psc_warnx("couldn't load inoh repl table: %s",
 				    slstrerror(rc));
@@ -201,7 +202,10 @@ slmreplthr_main(void *arg)
 					 * still open, hold off on this bmap for now.
 					 */
 					BMAP_LOCK(bcm);
-					bmapod = bmap_2_bmdsi(bcm)->bmdsi_od;
+					bmdsi = bmap_2_bmdsi(bcm);
+					bmapod = bmdsi->bmdsi_od;
+					if (bmdsi->bmdsi_repl_policy == BRP_PERSIST)
+						has_repl_work = 1;
 					val = SL_REPL_GET_BMAP_IOS_STAT(
 					    bmapod->bh_repls, off);
 					if (val != SL_REPL_OLD) {
@@ -230,10 +234,11 @@ slmreplthr_main(void *arg)
 							int k;
 
 							src_resm = libsl_nid2resm(src_res->res_nids[rin]);
-							if (slm_geticonn(src_resm) == NULL)
+							if (slm_geticonn(src_resm) == NULL) {
 								psc_multilock_addcond(&msi->msi_ml,
 								    &resm2mri(src_resm)->mri_mlcond, 1);
 								continue;
+							}
 
 							/* look for a destination resm */
 							for (k = 0; k < (int)dst_res->res_nnids; k++)
@@ -246,23 +251,15 @@ slmreplthr_main(void *arg)
 					mds_repl_bmap_rel(bcm);
 				}
 
-#if 0
-				spinlock(&rrq->rrq_lock);
-				if (has_repl_work &&
-				    (rrq->rrq_flags & REPLRQF_REQUEUE) == 0
-				    inode new bmap policy not persist &&
-				    every bmap not persistent) {
-					/* couldn't find any bmaps; remove from queue */
-					slmreplthr_removeq(rrq);
-					goto restart;
-				else
-#endif
 			}
 			/*
 			 * could not find a destination resource in
 			 * our site needed by this replrq
 			 */
-			if (has_repl_work)
+			spinlock(&rrq->rrq_lock);
+			if (has_repl_work ||
+			    (rrq->rrq_flags & REPLRQF_REQUEUE) == 0 ||
+			    REPLRQ_INOX(rrq)->inox_newbmap_policy == BRP_PERSIST)
 				mds_repl_unrefrq(rrq);
 			else {
 				slmreplthr_removeq(rrq);
@@ -279,7 +276,9 @@ slmreplthr_spawnall(void)
 	struct slmrepl_thread *smrt;
 	struct psc_thread *thr;
 	struct sl_site *site;
+	int locked;
 
+	locked = PLL_RLOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(site, &globalConfig.gconf_sites) {
 		thr = pscthr_init(SLMTHRT_REPL, 0, slmreplthr_main,
 		    NULL, sizeof(*smrt), "slmreplthr-%s",
@@ -288,4 +287,5 @@ slmreplthr_spawnall(void)
 		smrt->smrt_site = site;
 		pscthr_setready(thr);
 	}
+	PLL_URLOCK(&globalConfig.gconf_sites, locked);
 }
