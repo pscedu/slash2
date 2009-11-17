@@ -270,20 +270,48 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 }
 
 int
+slm_rmc_translate_flags(int in, int *out)
+{
+	*out = 0;
+
+	if (in & ~(SL_FREAD | SL_FWRITE | SL_FAPPEND | SL_FCREAT |
+	    SL_FTRUNC | SL_FOFFMAX | SL_FSYNC | SL_FDSYNC |
+	    SL_FRSYNC | SL_FEXCL | SL_FNODSYNC))
+		return (EINVAL);
+	/* XXX SL_FNOFOLLOW not implemented */
+	if ((in & (SL_FREAD | SL_FWRITE)) == 0)
+		return (EINVAL);
+
+	if (in & SL_FREAD)
+		*out |= SL_FREAD;
+	if (in & SL_FWRITE)
+		*out |= SL_FWRITE;
+	if (in & SL_FCREAT)
+		*out |= SL_FCREAT;
+	if (in & SL_FEXCL)
+		*out |= SL_FEXCL;
+	*out |= SL_FOFFMAX;
+	return (0);
+}
+
+int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
 	struct srm_create_req *mq;
 	struct srm_opencreate_rep *mp;
 	struct slash_fidgen fg;
 	void *data;
+	int fl;
 
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	mp->rc = zfsslash2_opencreate(zfsVfs, mq->pino, &mq->creds, mq->flags,
-				      mq->mode, mq->name, &fg,
-				      &mp->attr, &data);
+	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
+	if (mp->rc)
+		RETURN(0);
+	mp->rc = zfsslash2_opencreate(zfsVfs, mq->pino, &mq->creds, fl,
+	    mq->mode, mq->name, &fg, &mp->attr, &data);
 	if (!mp->rc) {
 		struct cfdent *cfd=NULL;
 
@@ -322,13 +350,16 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	struct srm_opencreate_rep *mp;
 	struct slash_fidgen fg;
 	void *data;
+	int fl;
 
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
-
-	mp->rc = zfsslash2_opencreate(zfsVfs, mq->ino, &mq->creds, mq->flags,
-				      0, NULL, &fg, &mp->attr, &data);
+	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
+	if (mp->rc)
+		RETURN(0);
+	mp->rc = zfsslash2_opencreate(zfsVfs, mq->ino, &mq->creds,
+	    fl, 0, NULL, &fg, &mp->attr, &data);
 
 	psc_info("zfsslash2_opencreate() fid %"PRId64" rc=%d",
 		 mq->ino, mp->rc);
