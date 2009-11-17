@@ -124,14 +124,15 @@ mdsio_zfs_inode_read(struct slash_inode_handle *i)
 	int rc;
 
 	INOH_LOCK_ENSURE(i);
-	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
-		    &i->inoh_ino, INO_OD_SZ, &nb,
-		    (off_t)SL_INODE_START_OFF, inoh_2_zfsdata(i));
+	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(i->inoh_fcmh),
+	    &rootcreds, &i->inoh_ino, INO_OD_SZ, &nb,
+	    SL_INODE_START_OFF, inoh_2_zfsdata(i));
 
 	if (rc) {
-		DEBUG_INOH(PLL_TRACE, i, "inode read error %d", rc);
+		DEBUG_INOH(PLL_ERROR, i, "inode read error %d", rc);
 	} else if (nb != INO_OD_SZ) {
-		DEBUG_INOH(PLL_ERROR, i, "short read I/O");
+		DEBUG_INOH(PLL_NOTICE, i, "short read I/O (%zd vs %zd)",
+		    nb, INO_OD_SZ);
 		rc = SLERR_SHORTIO;
 	} else {
 		DEBUG_INOH(PLL_TRACE, i, "read inode data=%p",
@@ -176,7 +177,6 @@ mdsio_zfs_inode_extras_read(struct slash_inode_handle *i)
 	size_t nb;
 	int rc;
 
-	psc_assert(i->inoh_flags & INOH_LOAD_EXTRAS);
 	psc_assert(i->inoh_extras);
 	rc = zfsslash2_read(zfsVfs, fcmh_2_fid(i->inoh_fcmh),
 	    &rootcreds, i->inoh_extras, INOX_OD_SZ, &nb,

@@ -19,7 +19,6 @@
 #include "slashd.h"
 #include "sljournal.h"
 
-struct slash_inode_extras_od	 zero_inox;
 struct psc_journal		*mdsJournal;
 
 /* master journal log replay function */
@@ -53,7 +52,7 @@ mds_inode_sync(void *data)
 			inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
 
 			if (inoh->inoh_extras == NULL) {
-				inoh->inoh_extras = &zero_inox;
+				inoh->inoh_extras = &null_inox_od;
 				tmpx = 1;
 			}
 		}

@@ -21,20 +21,21 @@
 #include "slashexport.h"
 #include "slerr.h"
 
-struct odtable		*mdsBmapAssignTable;
-struct slash_bmap_od	 null_bmap_od;
-struct slash_inode_od	 null_inode_od;
-struct cfdops		 mdsCfdOps;
-struct sl_fsops		 mdsFsops;
+struct odtable			*mdsBmapAssignTable;
+struct slash_bmap_od		 null_bmap_od;
+struct slash_inode_od		 null_inode_od;
+struct slash_inode_extras_od	 null_inox_od;
+struct cfdops			 mdsCfdOps;
+struct sl_fsops			 mdsFsops;
 
 __static SPLAY_GENERATE(fcm_exports, mexpfcm,
-			mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
+    mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
 
 __static SPLAY_GENERATE(exp_bmaptree, mexpbcm,
-			mexpbcm_exp_tentry, mexpbmapc_cmp);
+    mexpbcm_exp_tentry, mexpbmapc_cmp);
 
 __static SPLAY_GENERATE(bmap_exports, mexpbcm,
-			mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
+    mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
 
 __static void
 mds_inode_od_initnew(struct slash_inode_handle *i)
@@ -98,62 +99,64 @@ mds_inode_read(struct slash_inode_handle *i)
 	psc_assert(i->inoh_flags & INOH_INO_NOTLOADED);
 
 	rc = mdsio_zfs_inode_read(i);
-	if (rc) {
-		DEBUG_INOH(PLL_WARN, i, "mdsio_zfs_inode_read: %d", errno);
-		rc = -EIO;
-		goto out;
-	}
-
-	if ((!i->inoh_ino.ino_crc) &&
-	    (!memcmp(&i->inoh_ino, &null_inode_od, sizeof(null_inode_od)))) {
+	if (rc == SLERR_SHORTIO && i->inoh_ino.ino_crc == 0 &&
+	    memcmp(&i->inoh_ino, &null_inode_od,
+	    sizeof(null_inode_od)) == 0) {
 		DEBUG_INOH(PLL_INFO, i, "detected a new inode");
 		mds_inode_od_initnew(i);
-		goto out;
+		rc = 0;
+	} else if (rc) {
+		DEBUG_INOH(PLL_WARN, i, "mdsio_zfs_inode_read: %d", rc);
+	} else {
+		psc_crc_calc(&crc, &i->inoh_ino, INO_OD_CRCSZ);
+		if (crc == i->inoh_ino.ino_crc) {
+			i->inoh_flags &= ~INOH_INO_NOTLOADED;
+			DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
+		} else {
+			DEBUG_INOH(PLL_WARN, i, "CRC failed want=%"PRIx64", got=%"PRIx64,
+			    i->inoh_ino.ino_crc, crc);
+			rc = EIO;
+		}
 	}
-
-	psc_crc_calc(&crc, &i->inoh_ino, INO_OD_CRCSZ);
-	if (crc == i->inoh_ino.ino_crc) {
-		i->inoh_flags &= ~INOH_INO_NOTLOADED;
-		DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
-		goto out;
-	}
-
-	DEBUG_INOH(PLL_WARN, i, "CRC failed want=%"PRIx64", got=%"PRIx64,
-		   i->inoh_ino.ino_crc, crc);
-//	rc = -EIO;
-
- out:
 	ureqlock(&i->inoh_lock, locked);
 	return (rc);
 }
 
 int
-mds_inox_load_locked(struct slash_inode_handle *i)
+mds_inox_load_locked(struct slash_inode_handle *ih)
 {
 	psc_crc_t crc;
 	int rc;
 
-	INOH_LOCK_ENSURE(i);
+	INOH_LOCK_ENSURE(ih);
 
-	psc_assert(!(i->inoh_flags & INOH_HAVE_EXTRAS));
+	psc_assert(!(ih->inoh_flags & INOH_HAVE_EXTRAS));
 
-	if ((i->inoh_flags & INOH_LOAD_EXTRAS) == 0) {
-		i->inoh_flags |= INOH_LOAD_EXTRAS;
-		psc_assert(i->inoh_extras == NULL);
-		i->inoh_extras = PSCALLOC(sizeof(struct slash_inode_extras_od));
+	psc_assert(ih->inoh_extras == NULL);
+	ih->inoh_extras = PSCALLOC(sizeof(*ih->inoh_extras));
+
+	rc = mdsio_zfs_inode_extras_read(ih);
+	if (rc == SLERR_SHORTIO && ih->inoh_extras->inox_crc == 0 &&
+	    memcmp(&ih->inoh_extras, &null_inox_od,
+	    sizeof(null_inox_od)) == 0) {
+		rc = 0;
+	} else if (rc) {
+		DEBUG_INOH(PLL_WARN, ih, "mdsio_zfs_inode_extras_read: %d", rc);
+	} else {
+		psc_crc_calc(&crc, ih->inoh_extras, INOX_OD_CRCSZ);
+		if (crc == ih->inoh_extras->inox_crc)
+			ih->inoh_flags |= INOH_HAVE_EXTRAS;
+		else {
+			psc_errorx("inox CRC fail; disk %lx mem %lx",
+			    ih->inoh_extras->inox_crc, crc);
+			rc = EIO;
+		}
 	}
-
-	if ((rc = mdsio_zfs_inode_extras_read(i)))
-		return (rc);
-
-	psc_crc_calc(&crc, i->inoh_extras, INOX_OD_CRCSZ);
-	if (crc != i->inoh_extras->inox_crc) {
-		DEBUG_INOH(PLL_WARN, i, "failed CRC (%lx) for extras", crc);
-		return (-EIO);
+	if (rc) {
+		PSCFREE(ih->inoh_extras);
+		ih->inoh_extras = NULL;
 	}
-	i->inoh_flags |= INOH_HAVE_EXTRAS;
-	i->inoh_flags &= ~INOH_LOAD_EXTRAS;
-	return (0);
+	return (rc);
 }
 
 int
@@ -218,7 +221,9 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
 		if (isfile) {
 			/* XXX For now assert here */
 			psc_assert(i->fmdsi_inodeh.inoh_fcmh);
-			psc_assert(!mds_inode_read(&i->fmdsi_inodeh));
+			rc = mds_inode_read(&i->fmdsi_inodeh);
+			if (rc)
+				psc_fatalx("could not load inode; rc=%d", rc);
 		}
 
 		FCMH_ULOCK(f);
@@ -976,7 +981,8 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 	/* Try to pread() the bmap from the mds file.
 	 */
 	rc = mdsio_zfs_bmap_read(bcm);
-	if (rc) {
+	if (rc && rc != SLERR_SHORTIO) {
+ error:
 		DEBUG_FCMH(PLL_ERROR, f, "mdsio_zfs_bmap_read: "
 		    "blkno=%u, rc=%d", blkno, rc);
 		rc = -EIO;
@@ -995,8 +1001,12 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 		mds_bmapod_dump(bcm);
 		return (0);
 	}
-	/* Calculate and check the CRC now
-	 */
+
+	/* OK, the short I/O is an error since the bmap isn't zeros. */
+	if (rc)
+		goto error;
+
+	/* Calculate and check the CRC now */
 	mds_bmapod_dump(bcm);
 
 	psc_crc_calc(&crc, bmdsi->bmdsi_od, BMAP_OD_CRCSZ);

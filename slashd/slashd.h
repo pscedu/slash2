@@ -113,12 +113,13 @@ void	 slmfssyncthr_init(void);
 void	 slmreplthr_spawnall(void);
 void	*slmrcmthr_main(void *);
 
-extern struct vbitmap		 slmrcmthr_uniqidmap;
-extern psc_spinlock_t		 slmrcmthr_uniqidmap_lock;
+extern struct vbitmap			 slmrcmthr_uniqidmap;
+extern psc_spinlock_t			 slmrcmthr_uniqidmap_lock;
 
-extern struct cfdops		 mdsCfdOps;
-extern struct slash_creds	 rootcreds;
+extern struct cfdops			 mdsCfdOps;
+extern struct slash_creds		 rootcreds;
 
-extern struct psc_listcache	 dirtyMdsData;
+extern struct psc_listcache		 dirtyMdsData;
+extern struct slash_inode_extras_od	 null_inox_od;
 
 #endif /* _SLASHD_H_ */
