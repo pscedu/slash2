@@ -99,11 +99,14 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 		if ((sbdb->sbdb_secret.sbs_ios_id != ios_id) &&
 		    (sbdb->sbdb_secret.sbs_ios_id != IOS_ID_ANY))
 			return (EBADF);
-	} else {
+	} else if (rw == SL_WRITE) {
 		if (sbdb->sbdb_secret.sbs_ion_nid != ion_nid)
 			return (EBADF);
 		if (sbdb->sbdb_secret.sbs_ios_id != ios_id)
 			return (EBADF);
+	} else {
+		psc_errorx("bdbuf_check passed invalid rw mode: %d", rw);
+		return (EBADF);
 	}
 
 	gerr = gcry_md_copy(&hd, descbuf_hd);
