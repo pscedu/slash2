@@ -15,8 +15,8 @@
  *  in slash_bmap_inode_od.
  */
 struct msbmap_crcrepl_states {
-	u8 msbcr_crcstates[SL_CRCS_PER_BMAP]; /* crc descriptor bits  */
-	u8 msbcr_repls[SL_REPLICA_NBYTES];  /* replica bit map        */
+	uint8_t	msbcr_crcstates[SL_CRCS_PER_BMAP]; /* crc descriptor bits  */
+	uint8_t	msbcr_repls[SL_REPLICA_NBYTES];  /* replica bit map        */
 };
 
 /*

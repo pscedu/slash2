@@ -21,7 +21,7 @@ struct fidc_open_obj;
 struct bmap_refresh {
 	struct slash_fidgen	bmrfr_fg;
 	sl_blkno_t		bmrfr_blk;
-	u8			bmrfr_flags;
+	uint8_t			bmrfr_flags;
 };
 
 /*

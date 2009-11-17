@@ -91,10 +91,9 @@ typedef struct slash_block_gen {
 	unsigned int bl_gen; /* generation number     */
 } sl_blkgen_t;
 
-
 struct slash_bmap_cli_wire {
-	u8 bw_crcstates[SL_CRCS_PER_BMAP];
-	u8 bw_repls[SL_REPLICA_NBYTES];
+	uint8_t	bw_crcstates[SL_CRCS_PER_BMAP];
+	uint8_t	bw_repls[SL_REPLICA_NBYTES];
 };
 
 /**
@@ -107,11 +106,11 @@ struct slash_bmap_cli_wire {
  * @bh_bhcrc: on-disk checksum.
  */
 struct slash_bmap_od {
-	sl_blkgen_t bh_gen;
-	sl_gcrc_t   bh_crcs[SL_CRCS_PER_BMAP];
-	u8          bh_crcstates[SL_CRCS_PER_BMAP];
-	u8          bh_repls[SL_REPLICA_NBYTES];
-	psc_crc_t   bh_bhcrc;
+	sl_blkgen_t	bh_gen;
+	sl_gcrc_t	bh_crcs[SL_CRCS_PER_BMAP];
+	uint8_t		bh_crcstates[SL_CRCS_PER_BMAP];
+	uint8_t		bh_repls[SL_REPLICA_NBYTES];
+	psc_crc_t	bh_bhcrc;
 };
 
 #define	BMAP_OD_SZ	(sizeof(struct slash_bmap_od))
