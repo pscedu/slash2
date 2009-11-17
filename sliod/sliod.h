@@ -8,6 +8,7 @@
 #include "psc_util/thread.h"
 
 #include "fid.h"
+#include "sltypes.h"
 
 /* sliod thread types */
 #define SLITHRT_CTL		0	/* control */
@@ -19,6 +20,9 @@
 #define SLITHRT_TINTV		6	/* timer interval */
 #define SLITHRT_TIOS		7	/* iostats updater */
 #define SLITHRT_SLVR_CRC	8	/* sliver crc updaters */
+#define SLITHRT_REPLFIN		9	/* process finished replication requests */
+#define SLITHRT_REPLINF		10	/* monitor in-flight replication work */
+#define SLITHRT_REPLPND		11	/* process enqueued replication requests */
 
 #define NSLVRCRC_THRS		4	/* perhaps ncores? */
 
@@ -52,11 +56,10 @@ void	slitimerthr_spawn(void);
 __dead void slictlthr_main(const char *);
 
 struct fidc_membh *
-	iod_inode_lookup(struct slash_fidgen *);
+	iod_inode_lookup(const struct slash_fidgen *);
 int	iod_inode_open(struct fidc_membh *, int);
 
-int	iod_bmap_load(struct fidc_membh *, struct srt_bmapdesc_buf *,
-		int, struct bmapc_memb **);
+int	iod_bmap_load(struct fidc_membh *, sl_bmapno_t, int, struct bmapc_memb **);
 
 int     iod_inode_getsize(slfid_t, off_t *);
 

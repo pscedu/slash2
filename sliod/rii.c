@@ -11,12 +11,13 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
+#include "fidc_iod.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
 #include "sliod.h"
 
-#define SRII_READ_CBARG_WKRQ 0
+#define SRII_REPLREAD_CBARG_WKRQ 0
 
 struct psclist_head io_server_conns = PSCLIST_HEAD_INIT(io_server_conns);
 
@@ -33,6 +34,54 @@ sli_rii_handle_connect(struct pscrpc_request *rq)
 }
 
 int
+sli_rii_handle_replread(struct pscrpc_request *rq)
+{
+	const struct srm_repl_read_req *mq;
+	struct srm_repl_read_rep *mp;
+	struct pscrpc_bulk_desc *desc;
+	struct fidc_membh *fcmh;
+	struct bmapc_memb *bcm;
+	struct iovec iov;
+
+	RSX_ALLOCREP(rq, mq, mp);
+	if (mq->fg.fg_fid == FID_ANY) {
+		mp->rc = EINVAL;
+		return (mp->rc);
+	}
+	if (mq->len <= 0 || mq->len > SLASH_BMAP_SIZE) {
+		mp->rc = EINVAL;
+		return (mp->rc);
+	}
+
+	fcmh = iod_inode_lookup(&mq->fg);
+	if (iod_inode_open(fcmh, SL_READ)) {
+		DEBUG_FCMH(PLL_ERROR, fcmh, "iod_inode_open");
+		mp->rc = EIO;
+		goto out;
+	}
+
+	if (iod_bmap_load(fcmh, mq->bmapno, SL_READ, &bcm)) {
+		psc_errorx("failed to load fid %lx bmap %u",
+		    mq->fg.fg_fid, mq->bmapno);
+		mp->rc = EIO;
+		goto out;
+	}
+
+//	iov.iov_base = ;
+//	iov.iov_len = mq->len;
+
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRII_BULK_PORTAL, &iov, 1);
+	if (desc)
+		pscrpc_free_bulk(desc);
+
+ out:
+	/* XXX release our reference to the bmap */
+	fidc_membh_dropref(fcmh);
+	return (mp->rc);
+}
+
+int
 sli_rii_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
@@ -40,6 +89,9 @@ sli_rii_handler(struct pscrpc_request *rq)
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
 		rc = sli_rii_handle_connect(rq);
+		break;
+	case SRMT_REPL_READ:
+		rc = sli_rii_handle_replread(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
@@ -51,7 +103,7 @@ sli_rii_handler(struct pscrpc_request *rq)
 }
 
 int
-sli_rii_read_callback(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct srm_io_rep *mp;
 	int rc;
@@ -66,12 +118,12 @@ sli_rii_read_callback(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			rc = mp->rc;
 	}
 
-	sli_repl_finishwk(args->pointer_arg[SRII_READ_CBARG_WKRQ], rc);
+	sli_repl_finishwk(args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ], rc);
 	return (rc);
 }
 
 int
-sli_rii_issue_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
+sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 {
 	const struct srm_repl_read_rep *mp;
 	struct pscrpc_bulk_desc *desc;
@@ -90,8 +142,8 @@ sli_rii_issue_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	mq->bmapno = w->srw_bmapno;
 
 	/* Setup state for callbacks */
-	rq->rq_interpret_reply = sli_rii_read_callback;
-	rq->rq_async_args.pointer_arg[SRII_READ_CBARG_WKRQ] = w;
+	rq->rq_interpret_reply = sli_rii_replread_cb;
+	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
 
 	iov.iov_base = w->srw_srb->srb_data;
 	iov.iov_len = w->srw_len;
@@ -99,35 +151,5 @@ sli_rii_issue_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	    &iov, 1);
 
 	nbreqset_add(&sli_replwk_nbset, rq);
-	return (0);
-}
-
-struct io_server_conn {
-	struct psclist_head		 isc_lentry;
-	struct slashrpc_cservice	*isc_csvc;
-};
-
-/*
- * sli_rii_addconn - initiate a connection to ION from ION.
- */
-int
-sli_rii_addconn(const char *name)
-{
-	struct slashrpc_cservice *csvc;
-	struct io_server_conn *isc;
-	lnet_nid_t nid;
-
-	nid = libcfs_str2nid(name);
-	if (nid == LNET_NID_ANY)
-		psc_fatalx("invalid server name: %s", name);
-
-	csvc = rpc_csvc_create(SRII_REQ_PORTAL, SRII_REP_PORTAL);
-	if (rpc_issue_connect(nid, csvc->csvc_import,
-	    SRII_MAGIC, SRII_VERSION))
-		return (-1);
-
-	isc = PSCALLOC(sizeof(*isc));
-	isc->isc_csvc = csvc;
-	psclist_xadd(&isc->isc_lentry, &io_server_conns);
 	return (0);
 }

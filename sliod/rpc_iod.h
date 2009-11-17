@@ -49,7 +49,7 @@ int sli_rmi_connect(const char *);
 
 int sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
 
-int sli_rii_issue_read(struct pscrpc_import *, struct sli_repl_workrq *);
+int sli_rii_issue_repl_read(struct pscrpc_import *, struct sli_repl_workrq *);
 
 extern struct cfd_svrops	*cfdOps;
 extern struct slashrpc_cservice	*rmi_csvc;

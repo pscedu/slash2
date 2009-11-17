@@ -105,7 +105,7 @@ slireplpndthr_main(__unusedx void *arg)
 			psc_pool_return(sli_replwkrq_pool, w);
 			goto next;
 		}
-		w->srw_status = sli_rii_issue_read(csvc->csvc_import, w);
+		w->srw_status = sli_rii_issue_repl_read(csvc->csvc_import, w);
 		lc_add(&sli_replwkq_inflight, w);
  next:
 		sched_yield();
@@ -131,4 +131,11 @@ sli_repl_init(void)
 	    srw_lentry, "replwkinf");
 	lc_reginit(&sli_replwkq_finished, struct sli_repl_workrq,
 	    srw_lentry, "replwkfin");
+
+	pscthr_init(SLITHRT_REPLFIN, 0, slireplfinthr_main,
+	    NULL, 0, "slireplfinthr");
+	pscthr_init(SLITHRT_REPLINF, 0, slireplinfthr_main,
+	    NULL, 0, "slireplinfthr");
+	pscthr_init(SLITHRT_REPLPND, 0, slireplpndthr_main,
+	    NULL, 0, "slireplpndthr");
 }

@@ -45,7 +45,7 @@ iod_bmap_free(struct bmapc_memb *b)
 }
 
 __static int
-iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw, struct srt_bmapdesc_buf *sbdb)
+iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 {
 	int rc=0;
 	struct srm_bmap_wire_req *mq;
@@ -65,8 +65,8 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw, struct srt_bmapdesc_buf *sbdb)
 	}
 
 	mq->rw = rw;
-	mq->bmapno = sbdb->sbdb_secret.sbs_bmapno;
-	COPYFID(&mq->fg, &sbdb->sbdb_secret.sbs_fg);
+	mq->bmapno = b->bcm_blkno;
+	memcpy(&mq->fg, fcmh_2_fgp(b->bcm_fcmh), sizeof(mq->fg));
 	//memcpy(&mq->sbdb, sbdb, sizeof(*sbdb));
 
 	iov.iov_len = sizeof(struct slash_bmap_wire);
@@ -140,7 +140,7 @@ iod_inode_getsize(slfid_t fid, off_t *fsize)
 }
 
 struct fidc_membh *
-iod_inode_lookup(struct slash_fidgen *fg)
+iod_inode_lookup(const struct slash_fidgen *fg)
 {
 	int rc;
 	struct fidc_membh *f;
@@ -217,15 +217,15 @@ iod_inode_open(struct fidc_membh *f, int rw)
  * Return: error if rpc fails.
  */
 int
-iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
-	      int rw, struct bmapc_memb **bmap)
+iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
+    struct bmapc_memb **bmap)
 {
 	int rc=0;
 	struct bmapc_memb *b;
 
 	psc_assert(bmap);
 
-	b = bmap_lookup_add(f, sbdb->sbdb_secret.sbs_bmapno, iod_bmap_init);
+	b = bmap_lookup_add(f, bmapno, iod_bmap_init);
 
 	spinlock(&b->bcm_lock);
 	/* For the time being I don't think we need to key actions
@@ -255,7 +255,7 @@ iod_bmap_load(struct fidc_membh *f, struct srt_bmapdesc_buf *sbdb,
 				b->bcm_mode |= BMAP_IOD_RETRIEVE;
 				freelock(&b->bcm_lock);
 
-				rc = iod_bmap_fetch_crcs(b, rw, sbdb);
+				rc = iod_bmap_fetch_crcs(b, rw);
 			} else
 				/* biodi_wire already exists.
 				 */
