@@ -58,7 +58,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 
 	sl_blkno_t bmapno, slvrno;
 	uint64_t cfd;
-	uint32_t tsize, roff, sblk;
+	uint32_t csize, tsize, roff, sblk;
 	int rc=0, nslvrs, i;
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
@@ -137,14 +137,15 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 		slvr_slab_prep(slvr_ref[i], rw);
 		/* Fault in pages either for read or RBW.
 		 */
-		slvr_io_prep(slvr_ref[i], roff, tsize, rw);
+		csize = MIN(tsize, SLASH_SLVR_SIZE - roff);
+		slvr_io_prep(slvr_ref[i], roff, csize, rw);
 
 		DEBUG_SLVR(PLL_INFO, slvr_ref[i], "post io_prep rw=%d", rw);
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
 		 */
 		iovs[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + roff;
-		tsize -= iovs[i].iov_len = MIN(tsize, SLASH_SLVR_SIZE - roff);
+		tsize -= iovs[i].iov_len = csize;
 		/* Avoid more complicated errors within lnet by ensuring
 		 *   that len is non-zero.
 		 */

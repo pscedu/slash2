@@ -11,13 +11,18 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
+#include "bmap.h"
+#include "bmap_iod.h"
 #include "fidc_iod.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
+#include "slerr.h"
 #include "sliod.h"
+#include "slvr.h"
 
 #define SRII_REPLREAD_CBARG_WKRQ 0
+#define SRII_REPLREAD_CBARG_SLVR 1
 
 struct psclist_head io_server_conns = PSCLIST_HEAD_INIT(io_server_conns);
 
@@ -36,13 +41,18 @@ sli_rii_handle_connect(struct pscrpc_request *rq)
 int
 sli_rii_handle_replread(struct pscrpc_request *rq)
 {
+	int i, csize, tsize, slvrno, nslvrs, slvroff;
 	const struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
 	struct pscrpc_bulk_desc *desc;
+	struct slvr_ref *slvr_ref[2];
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
-	struct iovec iov;
+	struct iovec iov[2];
 
+	bcm = NULL;
+
+printf("handling replread\n");
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
 		mp->rc = EINVAL;
@@ -54,29 +64,46 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 	}
 
 	fcmh = iod_inode_lookup(&mq->fg);
-	if (iod_inode_open(fcmh, SL_READ)) {
-		DEBUG_FCMH(PLL_ERROR, fcmh, "iod_inode_open");
-		mp->rc = EIO;
+	mp->rc = iod_inode_open(fcmh, SL_READ);
+	if (mp->rc) {
+		DEBUG_FCMH(PLL_ERROR, fcmh, "iod_inode_open: %s",
+		    slstrerror(mp->rc));
 		goto out;
 	}
 
-	if (iod_bmap_load(fcmh, mq->bmapno, SL_READ, &bcm)) {
-		psc_errorx("failed to load fid %lx bmap %u",
-		    mq->fg.fg_fid, mq->bmapno);
-		mp->rc = EIO;
+	mp->rc = iod_bmap_load(fcmh, mq->bmapno, SL_READ, &bcm);
+	if (mp->rc) {
+		psc_errorx("failed to load fid %lx bmap %u: %s",
+		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
 		goto out;
 	}
 
-//	iov.iov_base = ;
-//	iov.iov_len = mq->len;
+	tsize = mq->len;
+	slvrno = (SLASH_BMAP_SIZE * bcm->bcm_blkno) / SLASH_SLVR_SIZE;
+	slvroff = (SLASH_BMAP_SIZE * bcm->bcm_blkno) % SLASH_SLVR_SIZE;
+	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, mq->len));
+	for (i = 0; i < nslvrs; i++, slvroff = 0) {
+		slvr_ref[i] = slvr_lookup(slvrno + i,
+		    bmap_2_biodi(bcm), SLVR_LOOKUP_ADD);
+		slvr_slab_prep(slvr_ref[i], SL_READ);
+		csize = MIN(tsize, SLASH_SLVR_SIZE - slvroff);
+		slvr_io_prep(slvr_ref[i], slvroff, csize, SL_READ);
+		iov[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + slvroff;
+		iov[i].iov_len = csize;
+		tsize -= csize;
+	}
 
 	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRII_BULK_PORTAL, &iov, 1);
+	    SRII_BULK_PORTAL, iov, nslvrs);
 	if (desc)
 		pscrpc_free_bulk(desc);
 
+	for (i = 0; i < nslvrs; i++)
+		slvr_io_done(slvr_ref[i], SL_READ);
+
  out:
-	/* XXX release our reference to the bmap */
+	if (bcm)
+		bmap_op_done(bcm);
 	fidc_membh_dropref(fcmh);
 	return (mp->rc);
 }
@@ -105,51 +132,121 @@ sli_rii_handler(struct pscrpc_request *rq)
 int
 sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
+	int nslvrs, sblk, rc, tsize, slvrno, slvroff, csize, i = 0;
+	struct slvr_ref **slvr_ref;
+	struct sli_repl_workrq *w;
 	struct srm_io_rep *mp;
-	int rc;
 
+	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
+	slvr_ref = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
 	rc = rq->rq_status;
+	if (rc)
+		goto out;
 	mp = psc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	if (mp == NULL) {
-		if (rc == 0)
-			rc = EBADMSG;
-	} else {
-		if (rc == 0 && mp->rc)
-			rc = mp->rc;
+		rc = EBADMSG;
+		goto out;
+	}
+	if (mp->rc) {
+		rc = mp->rc;
+		goto out;
 	}
 
-	sli_repl_finishwk(args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ], rc);
+	tsize = w->srw_len;
+	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
+	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) % SLASH_SLVR_SIZE;
+	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, w->srw_len));
+	sblk = slvroff / SLASH_SLVR_BLKSZ;
+	if (slvroff & SLASH_SLVR_BLKMASK)
+		tsize += slvroff & SLASH_SLVR_BLKMASK;
+	for (; i < nslvrs; i++) {
+		csize = MIN((SLASH_BLKS_PER_SLVR - sblk) *
+		    SLASH_SLVR_BLKSZ, tsize);
+		if ((rc = slvr_fsbytes_wio(slvr_ref[i], csize, sblk)))
+			break;
+		sblk = 0;
+		slvr_io_done(slvr_ref[i], SL_WRITE);
+		tsize -= csize;
+	}
+ out:
+	for (; i < nslvrs; i++)
+		slvr_io_done(slvr_ref[i], SL_WRITE);
+	bmap_op_done(w->srw_bcm);
+	fidc_membh_dropref(w->srw_fcmh);
+	sli_repl_finishwk(w, rc);
 	return (rc);
 }
 
 int
 sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 {
+	int i, rc, tsize, csize, slvrno, nslvrs, slvroff;
 	const struct srm_repl_read_rep *mp;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_repl_read_req *mq;
+	struct slvr_ref *slvr_ref[2];
 	struct pscrpc_request *rq;
-	struct iovec iov;
-	int rc;
+	struct iovec iov[2];
 
-	w->srw_srb = psc_pool_get(sli_replwkbuf_pool);
+	nslvrs = 0;
+	w->srw_fcmh = iod_inode_lookup(&w->srw_fg);
+	rc = iod_inode_open(w->srw_fcmh, SL_WRITE);
+	if (rc) {
+		DEBUG_FCMH(PLL_ERROR, w->srw_fcmh, "iod_inode_open");
+		goto out;
+	}
 
 	if ((rc = RSX_NEWREQ(imp, SRII_VERSION,
 	    SRMT_REPL_READ, rq, mq, mp)) != 0)
-		return (rc);
+		goto out;
 	mq->fg = w->srw_fg;
 	mq->len = w->srw_len;
 	mq->bmapno = w->srw_bmapno;
 
+	rc = iod_bmap_load(w->srw_fcmh, w->srw_bmapno, SL_WRITE, &w->srw_bcm);
+	if (rc) {
+		psc_errorx("iod_map_load %u: %s",
+		    w->srw_bmapno, slstrerror(rc));
+		goto out;
+	}
+
+	nslvrs = 1;
+	tsize = w->srw_len;
+	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
+	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) % SLASH_SLVR_SIZE;
+	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, w->srw_len));
+	for (i = 0; i < nslvrs; i++, slvroff = 0) {
+		csize = MIN(tsize, SLASH_SLVR_SIZE - slvroff);
+		slvr_ref[i] = slvr_lookup(slvrno + i,
+		    bmap_2_biodi(w->srw_bcm), SLVR_LOOKUP_ADD);
+		slvr_slab_prep(slvr_ref[i], SL_WRITE);
+		slvr_io_prep(slvr_ref[i], slvroff, csize, SL_WRITE);
+		iov[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + slvroff;
+		iov[i].iov_len = csize;
+		tsize -= csize;
+	}
+
+	rc = rsx_bulkclient(rq, &desc, BULK_GET_SINK,
+	    SRII_BULK_PORTAL, iov, nslvrs);
+	if (rc)
+		goto out;
+
 	/* Setup state for callbacks */
 	rq->rq_interpret_reply = sli_rii_replread_cb;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
+	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = slvr_ref;
 
-	iov.iov_base = w->srw_srb->srb_data;
-	iov.iov_len = w->srw_len;
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRII_BULK_PORTAL,
-	    &iov, 1);
-
+	atomic_inc(&w->srw_bcm->bcm_opcnt);
+	fidc_membh_incref(w->srw_fcmh);
 	nbreqset_add(&sli_replwk_nbset, rq);
-	return (0);
+
+ out:
+	if (rc)
+		for (i = 0; i < nslvrs; i++)
+			slvr_io_done(slvr_ref[i], SL_WRITE);
+	if (w->srw_bcm)
+		bmap_op_done(w->srw_bcm);
+	if (w->srw_fcmh)
+		fidc_membh_dropref(w->srw_fcmh);
+	return (rc);
 }

@@ -15,9 +15,6 @@
 struct pscrpc_nbreqset	 sli_replwk_nbset =
     PSCRPC_NBREQSET_INIT(sli_replwk_nbset, NULL, NULL);
 
-struct psc_poolmaster	 sli_replwkbuf_poolmaster;
-struct psc_poolmgr	*sli_replwkbuf_pool;
-
 struct psc_poolmaster	 sli_replwkrq_poolmaster;
 struct psc_poolmgr	*sli_replwkrq_pool;
 
@@ -53,7 +50,6 @@ slireplfinthr_main(__unusedx void *arg)
 	for (;;) {
 		w = lc_getwait(&sli_replwkq_finished);
 		sli_rmi_issue_repl_schedwk(w);
-		psc_pool_return(sli_replwkbuf_pool, w->srw_srb);
 		psc_pool_return(sli_replwkrq_pool, w);
 		sched_yield();
 	}
@@ -106,7 +102,8 @@ slireplpndthr_main(__unusedx void *arg)
 			goto next;
 		}
 		w->srw_status = sli_rii_issue_repl_read(csvc->csvc_import, w);
-		lc_add(&sli_replwkq_inflight, w);
+		lc_add(w->srw_status ? &sli_replwkq_finished :
+		    &sli_replwkq_inflight, w);
  next:
 		sched_yield();
 	}
@@ -118,12 +115,6 @@ sli_repl_init(void)
 	psc_poolmaster_init(&sli_replwkrq_poolmaster, struct sli_repl_workrq,
 	    srw_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL, "replwkrq");
 	sli_replwkrq_pool = psc_poolmaster_getmgr(&sli_replwkrq_poolmaster);
-
-	_psc_poolmaster_init(&sli_replwkbuf_poolmaster,
-	    sizeof(struct sli_repl_buf) + SLASH_BMAP_SIZE,
-	    offsetof(struct sli_repl_buf, srb_lentry),
-	    0, 0, 32, 0, NULL, NULL, NULL, NULL, "replwkbuf");
-	sli_replwkbuf_pool = psc_poolmaster_getmgr(&sli_replwkbuf_poolmaster);
 
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,
 	    srw_lentry, "replwkpnd");
