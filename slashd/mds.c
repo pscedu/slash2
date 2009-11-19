@@ -67,7 +67,7 @@ mds_inode_release(struct fidc_membh *f)
 	i = fcmh_2_fmdsi(f);
 
 	DEBUG_FCMH(PLL_DEBUG, f, "i->fmdsi_ref (%d) (oref=%d)",
-		   atomic_read(&i->fmdsi_ref), f->fcmh_fcoo->fcoo_oref_rw[0]);
+		   atomic_read(&i->fmdsi_ref), f->fcmh_fcoo->fcoo_oref_rd);
 
 	if (atomic_dec_and_test(&i->fmdsi_ref)) {
 		psc_assert(SPLAY_EMPTY(&i->fmdsi_exports));
@@ -81,7 +81,7 @@ mds_inode_release(struct fidc_membh *f)
 		rc = mdsio_zfs_release(&i->fmdsi_inodeh);
 		PSCFREE(i);
 		f->fcmh_fcoo->fcoo_pri = NULL;
-		f->fcmh_fcoo->fcoo_oref_rw[0] = 0;
+		f->fcmh_fcoo->fcoo_oref_rd = 0;
 		freelock(&f->fcmh_lock);
 		fidc_fcoo_remove(f);
 	} else
@@ -207,15 +207,16 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
 			psc_assert(f->fcmh_fcoo);
 			psc_assert(f->fcmh_fcoo->fcoo_pri);
 			i = f->fcmh_fcoo->fcoo_pri;
-			f->fcmh_fcoo->fcoo_oref_rw[0]++;
+			f->fcmh_fcoo->fcoo_oref_rd++;
 			psc_assert(i->fmdsi_data);
 			FCMH_ULOCK(f);
 		}
 	} else {
 		fidc_fcoo_start_locked(f);
  fcoo_start:
+		psc_assert(f->fcmh_fcoo->fcoo_pri == NULL);
 		f->fcmh_fcoo->fcoo_pri = i = PSCALLOC(sizeof(*i));
-		f->fcmh_fcoo->fcoo_oref_rw[0] = 1;
+		f->fcmh_fcoo->fcoo_oref_rd = 1;
 		fmdsi_init(i, f, data);
 		if (isfile) {
 			/* XXX For now assert here */

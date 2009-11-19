@@ -25,16 +25,14 @@ struct psc_listcache	 fidcDirtyList;
 struct psc_listcache	 fidcCleanList;
 struct hash_table	 fidcHtable;
 
-struct sl_fsops *slFsops;
-
-static struct fidc_membh * _fidc_lookup_fg(const struct slash_fidgen *, int);
+struct sl_fsops		*slFsops;
 
 void
 fidc_membh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 {
 	int locked = reqlock(&fcmh->fcmh_lock);
 
-	psc_assert(fcmh_2_gen(fcmh) != FID_ANY);
+	psc_assert(fcmh_2_gen(fcmh) != FIDGEN_ANY);
 
 	memcpy(fcmh_2_stb(fcmh), stb, sizeof(*stb));
 	fidc_gettime(fcmh_2_age(fcmh));
@@ -287,10 +285,10 @@ fidc_get(void)
 }
 
 /**
- * fidc_lookup_simple - perform a simple lookup of a fid in the cache.
+ * fidc_lookup_fg - perform a lookup of a fid in the cache.
  *	If the fid is found, its refcnt is incremented and it is returned.
  */
-static struct fidc_membh *
+struct fidc_membh *
 _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 {
 	struct hash_bucket *b;
@@ -338,7 +336,7 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				ureqlock(&tmp->fcmh_lock, locked[1]);
 				break;
 			}
-			if (fcmh_2_gen(tmp) == FID_ANY) {
+			if (fcmh_2_gen(tmp) == FIDGEN_ANY) {
 				/* The generation number has yet to be obtained
 				 *  from the server.  Wait for it and retry.
 				 */
@@ -356,7 +354,7 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				}
 				goto retry;
 			}
-			if (fg->fg_gen == FID_ANY) {
+			if (fg->fg_gen == FIDGEN_ANY) {
 				/* Look for highest generation number.
 				 */
 				if (!fcmh || (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh))) {
@@ -381,12 +379,6 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 	return (fcmh);
 }
 
-struct fidc_membh *
-fidc_lookup_fg(const struct slash_fidgen *fg)
-{
-	return (_fidc_lookup_fg(fg, 0));
-}
-
 /**
  * fidc_lookup_simple - Wrapper for fidc_lookup_fg().  Called when the
  *  generation number is not known.
@@ -394,7 +386,7 @@ fidc_lookup_fg(const struct slash_fidgen *fg)
 struct fidc_membh *
 fidc_lookup_simple(slfid_t f)
 {
-	struct slash_fidgen t = { f, FID_ANY };
+	struct slash_fidgen t = { f, FIDGEN_ANY };
 
 	return (fidc_lookup_fg(&t));
 }
@@ -510,14 +502,14 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 			 *  RPC.  This is used for file creates.
 			 */
 			fcmh->fcmh_state |= FCMH_FCOO_STARTING;
-			fcmh->fcmh_fcoo = (struct fidc_open_obj *)0x1;
+			fcmh->fcmh_fcoo = FCOO_STARTING;
 		}
 		/* Place the fcmh into the cache, note that the fmch was
 		 *  ref'd so no race condition exists here.
 		 */
-		if (fcmh_2_gen(fcmh) == FID_ANY)
-			DEBUG_FCMH(PLL_NOTIFY, fcmh,
-				   "adding FID_ANY to cache");
+		if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
+			DEBUG_FCMH(PLL_NOTICE, fcmh,
+			    "adding FIDGEN_ANY to cache");
 
 		init_hash_entry(&fcmh->fcmh_hentry, &(fcmh_2_fid(fcmh)), fcmh);
 
@@ -529,7 +521,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		 *  called while holding the hash bucket lock!
 		 */
 		if (flags & FIDC_LOOKUP_FCOOSTART) {
-			psc_assert(fcmh->fcmh_fcoo == (struct fidc_open_obj *)0x1);
+			psc_assert(fcmh->fcmh_fcoo == FCOO_STARTING);
 			fcmh->fcmh_fcoo = NULL;
 			fidc_fcoo_start_locked(fcmh);
 		}
@@ -579,7 +571,7 @@ fidc_memb_init(struct fidc_memb *fcm, slfid_t f)
 psc_fatalx("not ready");
 	fcm = PSCALLOC(sizeof(*fcm));
 	fcm->fcm_fg.fg_fid = f;
-	fcm->fcm_fg.fg_gen = FID_ANY;
+	fcm->fcm_fg.fg_gen = FIDGEN_ANY;
 }
 
 /**
@@ -634,9 +626,9 @@ fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
 	lc_reginit(&fidcDirtyList, struct fidc_membh,
-		   fcmh_lentry, "fcmdirty");
+		   fcmh_lentry, "fcmhdirty");
 	lc_reginit(&fidcCleanList, struct fidc_membh,
-		   fcmh_lentry, "fcmclean");
+		   fcmh_lentry, "fcmhclean");
 
 	init_hash_table(&fidcHtable, htsz, "fidc");
 	/*fidcHtable.htcompare = fidc_hash_cmp;*/

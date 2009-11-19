@@ -181,9 +181,9 @@ iod_inode_open(struct fidc_membh *f, int rw)
 
 	if (rw == SL_WRITE) {
 		oflags |= O_CREAT;
-		f->fcmh_fcoo->fcoo_oref_rw[1]++;
+		f->fcmh_fcoo->fcoo_oref_wr++;
 	} else {
-		f->fcmh_fcoo->fcoo_oref_rw[0]++;
+		f->fcmh_fcoo->fcoo_oref_rd++;
 	}
 
 	freelock(&f->fcmh_lock);

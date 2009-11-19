@@ -300,31 +300,31 @@ slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 	int locked=reqlock(&fcmh->fcmh_lock);
 
 #define SL2F_UPOPREF_READ() do {				\
-		if (!o->fcoo_oref_rw[0])			\
+		if (!o->fcoo_oref_rd)				\
 			*uord |= SL_FREAD;			\
-		o->fcoo_oref_rw[0]++;				\
+		o->fcoo_oref_rd++;				\
 	} while (0)
 
 #define SL2F_UPOPREF_WRITE() do {				\
-		if (!o->fcoo_oref_rw[1])			\
+		if (!o->fcoo_oref_wr)				\
 			*uord |= SL_FWRITE;			\
-		o->fcoo_oref_rw[1]++;				\
+		o->fcoo_oref_wr++;				\
 	} while (0)
 
 #define SL2F_DOWNOPREF_READ() do {				\
-		o->fcoo_oref_rw[0]--;				\
-		if (!o->fcoo_oref_rw[0])			\
+		o->fcoo_oref_rd--;				\
+		if (!o->fcoo_oref_rd)				\
 			*uord |= SL_FREAD;			\
 	} while (0)
 
 #define SL2F_DOWNOPREF_WRITE() do {				\
-		o->fcoo_oref_rw[1]--;				\
-		if (!o->fcoo_oref_rw[1])			\
+		o->fcoo_oref_wr--;				\
+		if (!o->fcoo_oref_wr)				\
 			*uord |= SL_FWRITE;			\
 	} while (0)
 
-	psc_assert(o->fcoo_oref_rw[0] >= 0);
-	psc_assert(o->fcoo_oref_rw[1] >= 0);
+	psc_assert(o->fcoo_oref_rd >= 0);
+	psc_assert(o->fcoo_oref_wr >= 0);
 
 	if (*uord) {
 		*uord = 0;
@@ -345,7 +345,7 @@ slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 			SL2F_DOWNOPREF_READ();
 	}
 
-	if (!(o->fcoo_oref_rw[0] || o->fcoo_oref_rw[1])) {
+	if (!(o->fcoo_oref_rd || o->fcoo_oref_wr)) {
 		fcmh->fcmh_state |= FCMH_FCOO_CLOSING;
 		*uord = 1;
 	}

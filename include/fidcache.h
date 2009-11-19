@@ -111,55 +111,55 @@ enum fcmh_states {
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)					\
 do {										\
-	int dbg_fcmh_locked=reqlock(&(fcmh)->fcmh_lock);			\
+	int _dbg_fcmh_locked = reqlock(&(fcmh)->fcmh_lock);			\
 										\
 	psc_logs((level), PSS_GEN,						\
 		 " fcmh@%p fcm@%p fcoo@%p fcooref(%d:%d) i+g:%"PRId64"+"	\
 		 "%"PRId64" s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s r:%d :: "fmt,	\
 		 (fcmh), (fcmh)->fcmh_fcm, (fcmh)->fcmh_fcoo,			\
-		 (int)(((fcmh)->fcmh_fcoo &&					\
-			(fcmh)->fcmh_fcoo != (struct fidc_open_obj *)0x01) ?	\
-		       (fcmh)->fcmh_fcoo->fcoo_oref_rw[0] : -66),		\
-		 (int)(((fcmh)->fcmh_fcoo &&					\
-			(fcmh)->fcmh_fcoo != (struct fidc_open_obj *)0x01) ?	\
-		       (fcmh)->fcmh_fcoo->fcoo_oref_rw[1] : -66),		\
-		 (uint64_t)(((fcmh)->fcmh_fcm) ? fcmh_2_fid((fcmh)) : FID_ANY),	\
-		 (uint64_t)(((fcmh)->fcmh_fcm) ? fcmh_2_gen((fcmh)) : FID_ANY),	\
+		 (fcmh)->fcmh_fcoo == NULL ||					\
+		    (fcmh)->fcmh_fcoo == FCOO_STARTING ? -66 :			\
+		    (fcmh)->fcmh_fcoo->fcoo_oref_rd,				\
+		 (fcmh)->fcmh_fcoo == NULL ||					\
+		    (fcmh)->fcmh_fcoo == FCOO_STARTING ? -66 :			\
+		    (fcmh)->fcmh_fcoo->fcoo_oref_wr,				\
+		 (fcmh)->fcmh_fcm ? fcmh_2_fid(fcmh) : FID_ANY,			\
+		 (fcmh)->fcmh_fcm ? fcmh_2_gen(fcmh) : FIDGEN_ANY,		\
 		 DEBUG_FCMH_FLAGS(fcmh), (fcmh)->fcmh_pri,			\
 		 fcmh_lc_2_string((fcmh)->fcmh_cache_owner),			\
 		 atomic_read(&(fcmh)->fcmh_refcnt),				\
 		 ## __VA_ARGS__);						\
-	ureqlock(&(fcmh)->fcmh_lock, dbg_fcmh_locked);				\
+	ureqlock(&(fcmh)->fcmh_lock, _dbg_fcmh_locked);				\
 } while (0)
 
-#define FCMHCACHE_PUT(fcmh, list)					\
-	do {								\
-		(fcmh)->fcmh_cache_owner = (list);			\
-		if ((list) == &fidcPool->ppm_lc)			\
-			psc_pool_return(fidcPool, (fcmh));		\
-		else							\
-			lc_put((list), &(fcmh)->fcmh_lentry);		\
+#define FCMHCACHE_PUT(fcmh, list)						\
+	do {									\
+		(fcmh)->fcmh_cache_owner = (list);				\
+		if ((list) == &fidcPool->ppm_lc)				\
+			psc_pool_return(fidcPool, (fcmh));			\
+		else								\
+			lc_put((list), &(fcmh)->fcmh_lentry);			\
 	} while (0)
 
 /* Increment an fcmh reference, fcmh_refcnt is used by the fidcache
  *  to determine which fcmh's may be reclaimed.
  */
-#define fidc_membh_incref(f)						\
-	do {								\
-		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);	\
-		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));		\
-		atomic_inc(&(f)->fcmh_refcnt);				\
-		DEBUG_FCMH(PLL_TRACE, (f), "incref");			\
+#define fidc_membh_incref(f)							\
+	do {									\
+		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);		\
+		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));			\
+		atomic_inc(&(f)->fcmh_refcnt);					\
+		DEBUG_FCMH(PLL_TRACE, (f), "incref");				\
 	} while (0)
 
 /* Drop an fcmh reference.
  */
-#define fidc_membh_dropref(f)						\
-	do {								\
-		atomic_dec(&(f)->fcmh_refcnt);				\
-		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));		\
-		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);	\
-		DEBUG_FCMH(PLL_TRACE, (f), "dropref");			\
+#define fidc_membh_dropref(f)							\
+	do {									\
+		atomic_dec(&(f)->fcmh_refcnt);					\
+		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));			\
+		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);		\
+		DEBUG_FCMH(PLL_TRACE, (f), "dropref");				\
 	} while (0)
 
 struct sl_finfo {
@@ -183,17 +183,16 @@ struct fidc_memb {
 #define fcm_2_fgp(f)	(&(f)->fcm_fg)
 #define fcm_2_fsz(f)	(f)->fcm_stb.st_size
 #define fcm_2_age(f)	(&(f)->fcm_slfinfo.slf_age)
-//#define fcm_2_inoh(f)	(&(f)->fcm_inodeh)
 
-#define FCM_CLEAR(fcm) memset((fcm), 0, sizeof(struct fidc_memb))
+#define FCM_CLEAR(fcm)	memset((fcm), 0, sizeof(struct fidc_memb))
 
-#define FCM_FROM_FG_ATTR(fcm, fg, a)					\
-	do {								\
-		memcpy(&(fcm)->fcm_stb, (a), sizeof((fcm)->fcm_stb));	\
-		memcpy(&(fcm)->fcm_fg, (fg), sizeof((fcm)->fcm_fg));	\
+#define FCM_FROM_FG_ATTR(fcm, fg, a)						\
+	do {									\
+		memcpy(&(fcm)->fcm_stb, (a), sizeof((fcm)->fcm_stb));		\
+		memcpy(&(fcm)->fcm_fg, (fg), sizeof((fcm)->fcm_fg));		\
 	} while (0)
 
-#define fcm_set_accesstime(f)						\
+#define fcm_set_accesstime(f)							\
 	clock_gettime(CLOCK_REALTIME, &(f)->fcmh_access)
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);
@@ -205,7 +204,11 @@ struct fidc_open_obj {
 	struct bmap_cache	 fcoo_bmapc;         /* bmap cache splay */
 	size_t			 fcoo_bmap_sz;
 	void			*fcoo_pri;           /* mds, client, ion */
+#define fcoo_oref_rd		 fcoo_oref_rw[0]
+#define fcoo_oref_wr		 fcoo_oref_rw[1]
 };
+
+#define FCOO_STARTING		((struct fidc_open_obj *)0x01)
 
 enum fidc_lookup_flags {
 	FIDC_LOOKUP_CREATE    = (1 << 0), /* Create if not present         */
@@ -214,30 +217,31 @@ enum fidc_lookup_flags {
 	FIDC_LOOKUP_LOAD      = (1 << 3), /* Create, get attrs from mds    */
 	FIDC_LOOKUP_REFRESH   = (1 << 3), /* load and refresh are the same */
 	FIDC_LOOKUP_FCOOSTART = (1 << 4), /* start the fcoo before exposing
-					   *  the cache entry.              */
+					   *  the cache entry.             */
 	FIDC_LOOKUP_NOREF     = (1 << 5)
 };
 
 /* Perform a simple fidcache lookup, returning NULL if DNE.
  */
-#define fidc_lookup_inode(fg) fidc_lookup_simple(fg)
+#define fidc_lookup_inode(fg)	fidc_lookup_simple(fg)
+#define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
 
 /* Create the inode from existing attributes.
  */
-#define fidc_lookup_copy_inode(fg, fcm, creds, fcmhp)			\
-	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |	\
+#define fidc_lookup_copy_inode(fg, fcm, creds, fcmhp)				\
+	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |		\
 	    FIDC_LOOKUP_REFRESH, (fcm), (creds), (fcmhp))
 
 /* Create the inode from existing attributes but don't ref it.
  *  This used for preloading the inode cache.
  */
-#define fidc_lookup_copy_inode_noref(fg, fcm, creds, fcmhp)		\
-	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |	\
-	    FIDC_LOOKUP_NOREF | FIDC_LOOKUP_REFRESH, (fcm), (creds),	\
+#define fidc_lookup_copy_inode_noref(fg, fcm, creds, fcmhp)			\
+	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |		\
+	    FIDC_LOOKUP_NOREF | FIDC_LOOKUP_REFRESH, (fcm), (creds),		\
 	    (fcmhp))
 
-#define fidc_lookup_load_fg(fg, creds, fcmhp)				\
-	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL,	\
+#define fidc_lookup_load_fg(fg, creds, fcmhp)					\
+	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL,		\
 	    (creds), (fcmhp))
 
 /* Create the inode from existing attributes only if one by the same id does not
@@ -245,14 +249,14 @@ enum fidc_lookup_flags {
  *  this thread may execute an open on the inode.
  * NOTE: This is needed for fuse create which does a create and open atomically.
  */
-#define fidc_lookup_createopen_inode(f, fcm, creds, fcmhp)		\
-	fidc_lookup(f, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL |		\
-	    FIDC_LOOKUP_COPY | FIDC_LOOKUP_FCOOSTART, (fcm), (creds),	\
+#define fidc_lookup_createopen_inode(f, fcm, creds, fcmhp)			\
+	fidc_lookup(f, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL |			\
+	    FIDC_LOOKUP_COPY | FIDC_LOOKUP_FCOOSTART, (fcm), (creds),		\
 	    (fcmhp))
 
-#define fidc_settimeo(age)						\
-	do {								\
-		*(age) = fidc_gettime() + FCMH_ATTR_TIMEO;		\
+#define fidc_settimeo(age)							\
+	do {									\
+		*(age) = fidc_gettime() + FCMH_ATTR_TIMEO;			\
 	} while (0)
 
 int			 fidc_membh_init(struct psc_poolmgr *, void *);
@@ -267,11 +271,12 @@ int			 fidc_fid2cfd(slfid_t, uint64_t *, struct fidc_membh **);
 int			 fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
 void			 fidcache_init(enum fid_cache_users, int (*)(struct fidc_membh *));
 
-struct fidc_membh	*fidc_lookup_fg(const struct slash_fidgen *);
 struct fidc_membh	*fidc_lookup_simple(slfid_t);
+struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
 
-int			 fidc_lookup(const struct slash_fidgen *, int, const struct fidc_memb *, 
-					const struct slash_creds *, struct fidc_membh **);
+int			 fidc_lookup(const struct slash_fidgen *, int,
+			    const struct fidc_memb *, const struct slash_creds *,
+			    struct fidc_membh **);
 
 extern struct sl_fsops		*slFsops;
 extern struct hash_table	 fidcHtable;
@@ -279,19 +284,19 @@ extern struct psc_poolmgr	*fidcPool;
 extern struct psc_listcache	 fidcDirtyList;
 extern struct psc_listcache	 fidcCleanList;
 
-#define DEBUG_STATBUF(stb, level)					\
-	psc_logs((level), PSS_GEN,					\
-	    "stb (%p) dev:%lu inode:%"PRId64" mode:0%o "		\
-	    "nlink:%lu uid:%u gid:%u rdev:%lu sz:%"PRId64" "		\
-	    "blk:%lu blkcnt:%zd atime:%lu mtime:%lu ctime:%lu",		\
-	    (stb),							\
-	    (stb)->st_dev, (stb)->st_ino, (stb)->st_mode,		\
-	    (stb)->st_nlink, (stb)->st_uid, (stb)->st_gid,		\
-	    (stb)->st_rdev, (stb)->st_size, (stb)->st_blksize,		\
-	    (stb)->st_blocks, (stb)->st_atime, (stb)->st_mtime,		\
+#define DEBUG_STATBUF(stb, level)						\
+	psc_logs((level), PSS_GEN,						\
+	    "stb (%p) dev:%lu inode:%"PRId64" mode:0%o "			\
+	    "nlink:%lu uid:%u gid:%u rdev:%lu sz:%"PRId64" "			\
+	    "blk:%lu blkcnt:%zd atime:%lu mtime:%lu ctime:%lu",			\
+	    (stb),								\
+	    (stb)->st_dev, (stb)->st_ino, (stb)->st_mode,			\
+	    (stb)->st_nlink, (stb)->st_uid, (stb)->st_gid,			\
+	    (stb)->st_rdev, (stb)->st_size, (stb)->st_blksize,			\
+	    (stb)->st_blocks, (stb)->st_atime, (stb)->st_mtime,			\
 	    (stb)->st_mtime)
 
-static inline void
+static __inline void
 dump_statbuf(struct stat *stb, int level)
 {
 	DEBUG_STATBUF(stb, level);
@@ -301,16 +306,16 @@ dump_statbuf(struct stat *stb, int level)
 
 extern void (*initFcooCb)(struct fidc_open_obj *);
 
-static inline void
+static __inline void
 fidc_gettime(struct timespec *ts)
 {
-	struct timespec tmp = {FCMH_ATTR_TIMEO, 0};
+	struct timespec tmp = { FCMH_ATTR_TIMEO, 0 };
 
 	clock_gettime(CLOCK_REALTIME, ts);
 	timespecadd(ts, &tmp, ts);
 }
 
-static inline const char *
+static __inline const char *
 fcmh_lc_2_string(struct psc_listcache *lc)
 {
 	if (lc == &fidcCleanList)
@@ -324,7 +329,7 @@ fcmh_lc_2_string(struct psc_listcache *lc)
 	psc_fatalx("bad fidc list cache %p", lc);
 }
 
-static inline void
+static __inline void
 dump_fcmh(struct fidc_membh *f)
 {
 	DEBUG_FCMH(PLL_ERROR, f, "");
@@ -332,7 +337,7 @@ dump_fcmh(struct fidc_membh *f)
 
 /* Create the inode if it doesn't exist loading its attributes from the network.
  */
-static inline int
+static __inline int
 fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *cr,
     struct fidc_membh **fp)
 {
@@ -345,7 +350,7 @@ fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *cr,
 /**
  * fcmh_clean_check - verify the validity of the fcmh.
  */
-static inline int
+static __inline int
 fcmh_clean_check(struct fidc_membh *f)
 {
 	int locked, clean = 0;
@@ -365,7 +370,7 @@ fcmh_clean_check(struct fidc_membh *f)
 	return (clean);
 }
 
-static inline void
+static __inline void
 fidc_fcoo_check_locked(struct fidc_membh *h)
 {
 	struct fidc_open_obj *o = h->fcmh_fcoo;
@@ -375,10 +380,10 @@ fidc_fcoo_check_locked(struct fidc_membh *h)
 	psc_assert(o);
 	psc_assert(h->fcmh_state & FCMH_FCOO_ATTACH);
 	psc_assert(!(h->fcmh_state & FCMH_FCOO_CLOSING));
-	psc_assert(o->fcoo_oref_rw[0] || o->fcoo_oref_rw[1]);
+	psc_assert(o->fcoo_oref_rd || o->fcoo_oref_wr);
 }
 
-static inline void
+static __inline void
 fidc_fcoo_start_locked(struct fidc_membh *h)
 {
 	psc_assert(!h->fcmh_fcoo);
@@ -394,7 +399,7 @@ fidc_fcoo_start_locked(struct fidc_membh *h)
 	DEBUG_FCMH(PLL_DEBUG, h, "start locked");
 }
 
-static inline void
+static __inline void
 fidc_fcoo_remove(struct fidc_membh *h)
 {
 	struct fidc_open_obj *o;
@@ -404,7 +409,7 @@ fidc_fcoo_remove(struct fidc_membh *h)
 	spinlock(&h->fcmh_lock);
 	o = h->fcmh_fcoo;
 	psc_assert(h->fcmh_cache_owner == &fidcDirtyList);
-	psc_assert(!(o->fcoo_oref_rw[0] || o->fcoo_oref_rw[1]));
+	psc_assert(!(o->fcoo_oref_rd || o->fcoo_oref_wr));
 	psc_assert(!o->fcoo_pri);
 	psc_assert(SPLAY_EMPTY(&o->fcoo_bmapc));
 
@@ -436,7 +441,7 @@ fidc_fcoo_remove(struct fidc_membh *h)
  * @h: the fcmh.
  * Notes:  always return locked.
  */
-static inline int
+static __inline int
 fidc_fcoo_wait_locked(struct fidc_membh *h, int nostart)
 {
 	psc_assert(h->fcmh_fcoo || (h->fcmh_state & FCMH_FCOO_CLOSING));
@@ -477,7 +482,7 @@ fidc_fcoo_wait_locked(struct fidc_membh *h, int nostart)
 	}
 }
 
-static inline void
+static __inline void
 fidc_fcoo_startdone(struct fidc_membh *h)
 {
 	lc_remove(&fidcCleanList, h);
@@ -502,7 +507,7 @@ fidc_fcoo_startdone(struct fidc_membh *h)
 	psc_waitq_wakeall(&h->fcmh_waitq);
 }
 
-static inline void
+static __inline void
 fidc_fcoo_startfailed(struct fidc_membh *h)
 {
 	psc_assert(h->fcmh_fcoo);
