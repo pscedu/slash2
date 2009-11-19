@@ -245,3 +245,4 @@ legend:
   slmkfs, slfmtfs, or slnewfs
 - rename rpc_csvc_create to slashrpc_csvc_create() and don't expose it
   outside of rpc_common.c
+- rename slashrpc_export to something per-conntype specific
