@@ -22,3 +22,5 @@ zbuild:
 
 prereq rezbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=2)
+
+fullbuild: zbuild build
