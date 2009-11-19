@@ -38,6 +38,7 @@ uint64_t sl_get_repls_inum(void);
 struct sl_replrq *
 	mds_repl_findrq(struct slash_fidgen *, int *);
 int	mds_repl_accessrq(struct sl_replrq *);
+void	mds_repl_reset_scheduled(sl_ios_id_t);
 int	mds_repl_addrq(struct slash_fidgen *, sl_blkno_t, sl_replica_t *, int);
 void	mds_repl_bmap_rel(struct bmapc_memb *);
 int	mds_repl_delrq(struct slash_fidgen *, sl_blkno_t, sl_replica_t *, int);

@@ -16,7 +16,7 @@ struct sli_repl_workrq {
 	sl_bmapno_t		 srw_bmapno;
 };
 
-void sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t);
+void sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t, int);
 void sli_repl_finishwk(struct sli_repl_workrq *, int);
 void sli_repl_init(void);
 

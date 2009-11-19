@@ -17,6 +17,7 @@
 #include "cfd.h"
 #include "fdbuf.h"
 #include "fid.h"
+#include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
@@ -165,6 +166,8 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 	/* initialize our reverse stream structures */
 	resm = libsl_nid2resm(rq->rq_peer.nid);
 	slm_geticonnx(resm, rq->rq_export);
+
+	slm_rmi_getdata(rq->rq_export);
 	return (0);
 }
 
@@ -194,3 +197,42 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }
+
+void
+slm_rmi_hldrop(void *p)
+{
+	struct slm_rmi_data *smid = p;
+	struct sl_resm *resm;
+
+	resm = libsl_nid2resm(smid->smid_exp->exp_connection->c_peer.nid);
+	if (resm)
+		mds_repl_reset_scheduled(resm->resm_res->res_id);
+	free(smid);
+}
+
+struct slm_rmi_data *
+slm_rmi_getdata(struct pscrpc_export *exp)
+{
+	struct slm_rmi_data *smid, *p;
+
+	spinlock(&exp->exp_lock);
+	if (exp->exp_private)
+		smid = exp->exp_private;
+	freelock(&exp->exp_lock);
+	if (smid)
+		return (smid);
+	p = PSCALLOC(sizeof(*p));
+	p->smid_exp = exp;
+	spinlock(&exp->exp_lock);
+	if (exp->exp_private)
+		smid = exp->exp_private;
+	else {
+		exp->exp_hldropf = slm_rmi_hldrop;
+		exp->exp_private = smid = p;
+		p = NULL;
+	}
+	freelock(&exp->exp_lock);
+	free(p);
+	return (smid);
+}
+

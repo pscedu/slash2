@@ -26,6 +26,19 @@ struct pscrpc_export;
 #define SLM_RMC_REPSZ      384
 #define SLM_RMC_SVCNAME    "slmrmc"
 
+struct slm_rmi_data {
+	struct pscrpc_export *smid_exp;
+};
+
+void	rpc_initsvc(void);
+
+int	slm_rmc_handler(struct pscrpc_request *);
+int	slm_rmi_handler(struct pscrpc_request *);
+int	slm_rmm_handler(struct pscrpc_request *);
+
+struct slm_rmi_data *
+	slm_rmi_getdata(struct pscrpc_export *);
+
 #define resm2mri(resm)	((struct mds_resm_info *)(resm)->resm_pri)
 
 static __inline void
@@ -59,11 +72,5 @@ slconn_wake_mlcond(void *arg)
 	    &(mexpcli)->mc_lock, NULL, NULL, SLCONNT_CLI)
 
 #define slm_getclconn(mexpcli)		slm_initclconn((mexpcli), NULL)
-
-void	rpc_initsvc(void);
-
-int	slm_rmc_handler(struct pscrpc_request *);
-int	slm_rmi_handler(struct pscrpc_request *);
-int	slm_rmm_handler(struct pscrpc_request *);
 
 #endif /* _MDS_RPC_H_ */

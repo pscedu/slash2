@@ -859,6 +859,7 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 void
 mds_repl_scandir(void)
 {
+	sl_replica_t iosv[SL_MAX_REPLICAS];
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct fuse_dirent *d;
@@ -867,6 +868,7 @@ mds_repl_scandir(void)
 	size_t siz, tsiz;
 	off64_t off, toff;
 	uint64_t inum;
+	uint32_t j;
 	void *data;
 	char *buf;
 	int rc;
@@ -919,6 +921,10 @@ mds_repl_scandir(void)
 			psc_atomic32_set(&rrq->rrq_refcnt, 1);
 			rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 			SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
+
+			for (j = 0; j < REPLRQ_NREPLS(rrq); j++)
+				iosv[j].bs_id = REPLRQ_GETREPL(rrq, j).bs_id;
+			mds_repl_enqueue_sites(rrq, iosv, REPLRQ_NREPLS(rrq));
 		}
 		off += tsiz;
 	}
@@ -1037,6 +1043,55 @@ mds_repl_buildbusytable(void)
 	repl_busytable = vbitmap_new(repl_busytable_nents *
 	    (repl_busytable_nents - 1) / 2);
 	freelock(&repl_busytable_lock);
+}
+
+void
+mds_repl_reset_scheduled(sl_ios_id_t resid)
+{
+	int tract[4], off, rc, iosidx;
+	struct bmapc_memb *bcm;
+	struct sl_replrq *rrq;
+	sl_replica_t repl;
+	sl_blkno_t n;
+
+	repl.bs_id = resid;
+
+	spinlock(&replrq_tree_lock);
+	SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
+		if (!mds_repl_accessrq(rrq))
+			continue;
+
+		rc = mds_inox_ensure_loaded(rrq->rrq_inoh);
+		if (rc) {
+			psc_warnx("couldn't load inoh repl table: %s",
+			    slstrerror(rc));
+			goto end;
+		}
+
+		iosidx = mds_repl_ios_lookup(rrq->rrq_inoh, resid);
+		if (iosidx < 0)
+			goto end;
+
+		off = SL_BITS_PER_REPLICA * iosidx;
+
+		tract[SL_REPL_INACTIVE] = -1;
+		tract[SL_REPL_SCHED] = SL_REPL_OLD;
+		tract[SL_REPL_OLD] = -1;
+		tract[SL_REPL_ACTIVE] = -1;
+
+		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
+			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+				continue;
+			BMAP_LOCK(bcm);
+			mds_repl_bmap_walk(bcm, tract,
+			    NULL, 0, &iosidx, 1);
+			mds_repl_bmap_rel(bcm);
+		}
+ end:
+		mds_repl_enqueue_sites(rrq, &repl, 1);
+		mds_repl_unrefrq(rrq);
+	}
+	freelock(&replrq_tree_lock);
 }
 
 void

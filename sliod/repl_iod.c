@@ -23,7 +23,7 @@ struct psc_listcache	 sli_replwkq_inflight;
 struct psc_listcache	 sli_replwkq_finished;
 
 void
-sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp, sl_bmapno_t bmapno)
+sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp, sl_bmapno_t bmapno, int len)
 {
 	struct sli_repl_workrq *w;
 
@@ -31,6 +31,7 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp, sl_bmapno_t bmapno)
 	w->srw_nid = nid;
 	w->srw_fg = *fgp;
 	w->srw_bmapno = bmapno;
+	w->srw_len = len;
 	lc_add(&sli_replwkq_pending, w);
 }
 
