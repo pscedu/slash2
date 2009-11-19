@@ -79,11 +79,12 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	if (rc)
 		goto fail;
 	mq->nid = src_resm->resm_nid;
+	mq->len = SLASH_BMAP_SIZE; /* XXX use bmap length */
 	mq->fg = *REPLRQ_FG(rrq);
 	mq->bmapno = bcm->bcm_blkno;
 	rc = RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
-	if (rc)
+	if (rc || mp->rc)
 		goto fail;
 
 	bmapod = bmap_2_bmdsi(bcm)->bmdsi_od;
@@ -95,7 +96,8 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 
  fail:
 	mds_repl_nodes_setbusy(src_mri, dst_mri, 0);
-	psc_multilock_addcond(&msi->msi_ml, &dst_mri->mri_mlcond, 1);
+	if (!psc_multilock_hascond(&msi->msi_ml, &dst_mri->mri_mlcond))
+		psc_multilock_addcond(&msi->msi_ml, &dst_mri->mri_mlcond, 1);
 	return (0);
 }
 
@@ -144,8 +146,8 @@ slmreplthr_main(void *arg)
 		nrq = psc_dynarray_len(&msi->msi_replq);
 		rir = psc_random32u(nrq);
 		for (ir = 0; ir < nrq; rir = (rir + 1) % nrq, ir++) {
+			reqlock(&msi->msi_lock);
 			if (msi->msi_flags & MSIF_DIRTYQ) {
-				msi->msi_flags &= ~MSIF_DIRTYQ;
 				freelock(&msi->msi_lock);
 				goto restart;
 			}
@@ -235,8 +237,11 @@ slmreplthr_main(void *arg)
 
 							src_resm = libsl_nid2resm(src_res->res_nids[rin]);
 							if (slm_geticonn(src_resm) == NULL) {
-								psc_multilock_addcond(&msi->msi_ml,
-								    &resm2mri(src_resm)->mri_mlcond, 1);
+								if (!psc_multilock_hascond(&msi->msi_ml,
+								    &resm2mri(src_resm)->mri_mlcond))
+									if (psc_multilock_addcond(&msi->msi_ml,
+									    &resm2mri(src_resm)->mri_mlcond, 1))
+										psc_fatal("multilock_addcond");
 								continue;
 							}
 
@@ -247,7 +252,6 @@ slmreplthr_main(void *arg)
 									goto restart;
 						}
 					}
-					psc_errorx("could not find replica src and dst");
 					mds_repl_bmap_rel(bcm);
 				}
 

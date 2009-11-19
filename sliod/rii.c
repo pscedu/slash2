@@ -22,7 +22,6 @@
 #include "slvr.h"
 
 #define SRII_REPLREAD_CBARG_WKRQ 0
-#define SRII_REPLREAD_CBARG_SLVR 1
 
 struct psclist_head io_server_conns = PSCLIST_HEAD_INIT(io_server_conns);
 
@@ -52,7 +51,6 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 
 	bcm = NULL;
 
-printf("handling replread\n");
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
 		mp->rc = EINVAL;
@@ -93,7 +91,7 @@ printf("handling replread\n");
 		tsize -= csize;
 	}
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
 	    SRII_BULK_PORTAL, iov, nslvrs);
 	if (desc)
 		pscrpc_free_bulk(desc);
@@ -133,12 +131,10 @@ int
 sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	int nslvrs, sblk, rc, tsize, slvrno, slvroff, csize, i = 0;
-	struct slvr_ref **slvr_ref;
 	struct sli_repl_workrq *w;
 	struct srm_io_rep *mp;
 
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
-	slvr_ref = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
 	rc = rq->rq_status;
 	if (rc)
 		goto out;
@@ -162,15 +158,15 @@ sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	for (; i < nslvrs; i++) {
 		csize = MIN((SLASH_BLKS_PER_SLVR - sblk) *
 		    SLASH_SLVR_BLKSZ, tsize);
-		if ((rc = slvr_fsbytes_wio(slvr_ref[i], csize, sblk)))
+		if ((rc = slvr_fsbytes_wio(w->srw_slvr_ref[i], csize, sblk)))
 			break;
 		sblk = 0;
-		slvr_io_done(slvr_ref[i], SL_WRITE);
+		slvr_io_done(w->srw_slvr_ref[i], SL_WRITE);
 		tsize -= csize;
 	}
  out:
 	for (; i < nslvrs; i++)
-		slvr_io_done(slvr_ref[i], SL_WRITE);
+		slvr_io_done(w->srw_slvr_ref[i], SL_WRITE);
 	bmap_op_done(w->srw_bcm);
 	fidc_membh_dropref(w->srw_fcmh);
 	sli_repl_finishwk(w, rc);
@@ -184,7 +180,6 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	const struct srm_repl_read_rep *mp;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_repl_read_req *mq;
-	struct slvr_ref *slvr_ref[2];
 	struct pscrpc_request *rq;
 	struct iovec iov[2];
 
@@ -217,16 +212,16 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, w->srw_len));
 	for (i = 0; i < nslvrs; i++, slvroff = 0) {
 		csize = MIN(tsize, SLASH_SLVR_SIZE - slvroff);
-		slvr_ref[i] = slvr_lookup(slvrno + i,
+		w->srw_slvr_ref[i] = slvr_lookup(slvrno + i,
 		    bmap_2_biodi(w->srw_bcm), SLVR_LOOKUP_ADD);
-		slvr_slab_prep(slvr_ref[i], SL_WRITE);
-		slvr_io_prep(slvr_ref[i], slvroff, csize, SL_WRITE);
-		iov[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + slvroff;
+		slvr_slab_prep(w->srw_slvr_ref[i], SL_WRITE);
+		slvr_io_prep(w->srw_slvr_ref[i], slvroff, csize, SL_WRITE);
+		iov[i].iov_base = w->srw_slvr_ref[i]->slvr_slab->slb_base + slvroff;
 		iov[i].iov_len = csize;
 		tsize -= csize;
 	}
 
-	rc = rsx_bulkclient(rq, &desc, BULK_GET_SINK,
+	rc = rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
 	    SRII_BULK_PORTAL, iov, nslvrs);
 	if (rc)
 		goto out;
@@ -234,7 +229,6 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	/* Setup state for callbacks */
 	rq->rq_interpret_reply = sli_rii_replread_cb;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
-	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = slvr_ref;
 
 	atomic_inc(&w->srw_bcm->bcm_opcnt);
 	fidc_membh_incref(w->srw_fcmh);
@@ -243,7 +237,7 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
  out:
 	if (rc)
 		for (i = 0; i < nslvrs; i++)
-			slvr_io_done(slvr_ref[i], SL_WRITE);
+			slvr_io_done(w->srw_slvr_ref[i], SL_WRITE);
 	if (w->srw_bcm)
 		bmap_op_done(w->srw_bcm);
 	if (w->srw_fcmh)

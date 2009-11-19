@@ -15,6 +15,7 @@
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
+#include "slerr.h"
 #include "sliod.h"
 
 int
@@ -22,9 +23,18 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 {
 	struct srm_repl_schedwk_req *mq;
 	struct srm_generic_rep *mp;
+	struct sl_resm *resm;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	sli_repl_addwk(mq->nid, &mq->fg, mq->bmapno);
+	resm = libsl_nid2resm(mq->nid);
+	if (resm == NULL)
+		mp->rc = SLERR_ION_UNKNOWN;
+	else if (mq->fg.fg_fid == FID_ANY)
+		mp->rc = EINVAL;
+	else if (mq->len < 1 || mq->len > SLASH_BMAP_SIZE)
+		mp->rc = EINVAL;
+	else
+		sli_repl_addwk(mq->nid, &mq->fg, mq->bmapno, mq->len);
 	return (0);
 }
 

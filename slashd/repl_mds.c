@@ -906,13 +906,19 @@ mds_repl_scandir(void)
 
 			if (d->name[0] == '.')
 				continue;
-			fg.fg_fid = d->ino;
-			fg.fg_gen = FIDGEN_ANY;
-			rc = mds_repl_loadino(&fg, &fcmh);
-			rc = fidc_lookup_load_fg(&fg, &rootcreds, &fcmh);
+
+			rc = zfsslash2_lookup(zfsVfs, inum,
+			    d->name, &fg, &rootcreds, NULL);
 			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
-				psc_fatal("fidc_lookup: %s", slstrerror(rc));
+				psc_fatal("zfsslash2_lookup: %s",
+				    slstrerror(rc));
+
+			rc = mds_repl_loadino(&fg, &fcmh);
+			if (rc)
+				/* XXX if ENOENT, remove from repldir and continue */
+				psc_fatal("mds_repl_loadino: %s",
+				    slstrerror(rc));
 
 			rrq = psc_pool_get(replrq_pool);
 			memset(rrq, 0, sizeof(*rrq));
