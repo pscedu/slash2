@@ -20,8 +20,8 @@ struct slash_fidgen {
 	uint64_t	fg_gen;
 };
 
-#define FID_ANY			0xffffffffffffULL
-#define FIDGEN_ANY		0xffffffffffffULL
+#define FID_ANY			UINT64_C(0xffffffffffff)
+#define FIDGEN_ANY		UINT64_C(0xffffffffffff)
 
 /* 16 bit server/filesystem id */
 #define FSID_FMT		"%016"PRIx64
