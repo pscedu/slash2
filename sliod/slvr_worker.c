@@ -42,7 +42,7 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 		return rc;
 	}
 
-	PSC_CRC_INIT(mq->crc);
+	PSC_CRC64_INIT(&mq->crc);
 
 	mq->ncrc_updates = dynarray_len(ref_array);
 	req->rq_async_args.pointer_arg[0] = (void *)ref_array;
@@ -56,7 +56,7 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 	for (i = 0; i < mq->ncrc_updates; i++) {
 		bcrc_ref = dynarray_getpos(ref_array, i);
 
-		(int)iod_inode_getsize(bcrc_ref->bcr_crcup.fid,
+		iod_inode_getsize(bcrc_ref->bcr_crcup.fid,
 				       (off_t *)&bcrc_ref->bcr_crcup.fsize);
 
 		mq->ncrcs_per_update[i] = bcrc_ref->bcr_crcup.nups;
@@ -66,18 +66,18 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 					   sizeof(struct srm_bmap_crcwire)) +
 					  sizeof(struct srm_bmap_crcup));
 
-		psc_crc_add(&mq->crc, iovs[i].iov_base, iovs[i].iov_len);
+		psc_crc64_add(&mq->crc, iovs[i].iov_base, iovs[i].iov_len);
 	}
 	psc_assert(len <= LNET_MTU);
 
-	PSC_CRC_FIN(mq->crc);
+	PSC_CRC64_FIN(&mq->crc);
 
-	(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
+	rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
 			     iovs, mq->ncrc_updates);
 	PSCFREE(iovs);
 
 	nbreqset_add(slvrNbReqSet, req);
-	(int)nbrequest_reap(slvrNbReqSet);
+	nbrequest_reap(slvrNbReqSet);
 
 	return (rc);
 }

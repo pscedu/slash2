@@ -279,7 +279,7 @@ fdbuf_createkeyfile(void)
 {
 	const char *keyfn;
 	int i, j, fd;
-	u32 r;
+	uint32_t r;
 
 	keyfn = globalConfig.gconf_fdbkeyfn;
 	if ((fd = open(keyfn, O_EXCL | O_WRONLY | O_CREAT, 0600)) == -1) {

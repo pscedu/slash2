@@ -27,7 +27,7 @@ struct slvr_ref {
 	uint16_t		 slvr_flags;
 	uint16_t		 slvr_pndgwrts;		/* # of writes in progess */
 	uint16_t		 slvr_pndgreads;	/* # of reads in progress */
-	psc_crc_t		 slvr_crc;		/* used if there's no bmap_wire present, only is valid if !SLVR_CRCDIRTY */
+	psc_crc64_t		 slvr_crc;		/* used if there's no bmap_wire present, only is valid if !SLVR_CRCDIRTY */
 	void			*slvr_pri;		/* private pointer used for backpointer to bmap_iod_info */
 	struct sl_buffer	*slvr_slab;
 	struct psclist_head	 slvr_lentry;		/* dirty queue */	

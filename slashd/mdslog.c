@@ -39,7 +39,7 @@ mds_inode_sync(void *data)
 		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
 
 	if (inoh->inoh_flags & INOH_INO_DIRTY) {
-		psc_crc_calc(&inoh->inoh_ino.ino_crc,
+		psc_crc64_calc(&inoh->inoh_ino.ino_crc,
 			     &inoh->inoh_ino, INO_OD_CRCSZ);
 		rc = mdsio_zfs_inode_write(inoh);
 
@@ -59,7 +59,7 @@ mds_inode_sync(void *data)
 	}
 
 	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
-		psc_crc_calc(&inoh->inoh_extras->inox_crc, inoh->inoh_extras,
+		psc_crc64_calc(&inoh->inoh_extras->inox_crc, inoh->inoh_extras,
 			     INOX_OD_CRCSZ);
 		rc = mdsio_zfs_inode_extras_write(inoh);
 
@@ -102,7 +102,7 @@ mds_bmap_sync(void *data)
 	 *  a pthread_rwlock.
 	 */
 	BMAP_LOCK(bmap);
-	psc_crc_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
+	psc_crc64_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
 	rc = mdsio_zfs_bmap_write(bmap);
 	if (rc)
 		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail",
@@ -204,7 +204,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	struct slash_bmap_od *bmapod = bmdsi->bmdsi_od;
 	int i, rc=0;
 	int n=crcup->nups;
-	u32 t=0, j=0;
+	uint32_t t=0, j=0;
 
 	mds_fcmh_apply_fsize(bmap->bcm_fcmh, crcup->fsize);
 

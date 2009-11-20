@@ -489,7 +489,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	struct fidc_membh *f;
 	struct iovec iovs[3];
 	int nblks, rc=-1;
-	u32 i, getreptbl=0;
+	uint32_t i, getreptbl=0;
 	struct msl_fcoo_data *mfd;
 
 	psc_assert(bmap->bcm_mode & BMAP_INIT);
@@ -672,7 +672,7 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
  *	rw==WRITE) then we must notify the mds of this.
  */
 __static struct bmapc_memb *
-msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, u32 rw)
+msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, uint32_t rw)
 {
 	struct fidc_membh *f = mfh->mfh_fcmh;
 	struct bmapc_memb *b;
@@ -1631,7 +1631,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	 */
 	for (nr=0; s <= e; s++, nr++) {
 		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
-			   "sz=%zu tlen=%zu off=%"PRIdOFF" roff=%"PRIdOFF
+			   "sz=%zu tlen=%zu off=%"PSCPRIdOFF" roff=%"PSCPRIdOFF
 			   " op=%d", tsize, tlen, off, roff, op);
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!

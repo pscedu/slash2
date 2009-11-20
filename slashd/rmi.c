@@ -74,8 +74,8 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	size_t len=0;
 	off_t  off;
 	int rc;
-	psc_crc_t crc;
-	u32 i;
+	psc_crc64_t crc;
+	uint32_t i;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
@@ -109,7 +109,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 
 	/* Crc the Crc's!
 	 */
-	psc_crc_calc(&crc, buf, len);
+	psc_crc64_calc(&crc, buf, len);
 	if (crc != mq->crc) {
 		psc_errorx("crc verification of crcwrt payload failed");
 		rc = -1;
@@ -118,7 +118,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 
 	for (i=0, off=0; i < mq->ncrc_updates; i++) {
 		struct srm_bmap_crcup *c = iovs[i].iov_base;
-		u32 j;
+		uint32_t j;
 		/* Does the bulk payload agree with the original request?
 		 */
 		if (c->nups != mq->ncrcs_per_update[i]) {

@@ -56,6 +56,8 @@
 #include "sliod/slvr.h"
 /* end includes */
 
+struct slash_bmap_od bmapod;
+char buf[1024 * 1024];
 const char *progname;
 
 void
@@ -84,6 +86,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	psc_crc_t crc;
 	int c;
 
 	progname = argv[0];
@@ -239,6 +242,12 @@ main(int argc, char *argv[])
 
 	PRVAL(INOX_OD_SZ);
 	PRVAL(INOX_OD_CRCSZ);
+
+	psc_crc64_calc(&crc, buf, sizeof(buf));
+	printf("NULL 1MB buf CRC is %#"PRIxCRC"\n", crc);
+
+	psc_crc_calc(&crc, &bmapod, sizeof(bmapod));
+	printf("NULL sl_blkh_t CRC is %#"PRIx64"\n", crc);
 
 	exit(0);
 }

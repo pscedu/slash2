@@ -16,7 +16,7 @@ struct fidc_mds_info {
 	struct fcm_exports        fmdsi_exports; /* tree of mexpfcm */
 	struct slash_inode_handle fmdsi_inodeh; // MDS sl_inodeh_t goes here
 	atomic_t                  fmdsi_ref;
-	u32                       fmdsi_xid;
+	uint32_t                       fmdsi_xid;
 	void                     *fmdsi_data;
 };
 

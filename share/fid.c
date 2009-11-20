@@ -112,7 +112,7 @@ fid_link(slfid_t fid, const char *fn)
 int
 fid_getxattr(const char *fidfn, const char *name, void *buf, ssize_t len)
 {
-	psc_crc_t crc;
+	psc_crc64_t crc;
 	ssize_t szrc;
 
 	szrc = lgetxattr(fidfn, name, buf, len);

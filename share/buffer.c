@@ -25,9 +25,9 @@ list_cache_t slBufsPin;
 
 int slCacheBlkSz=32768;
 int slCacheNblks=32;
-u32 slbFreeDef=100;
-u32 slbFreeMax=200;
-u32 slbFreeInc=10;
+uint32_t slbFreeDef=100;
+uint32_t slbFreeMax=200;
+uint32_t slbFreeInc=10;
 
 sl_iov_try_memrls   slMemRlsTrylock=NULL;
 sl_iov_memrls_ulock slMemRlsUlock=NULL;

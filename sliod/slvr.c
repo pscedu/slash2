@@ -67,7 +67,7 @@ slvr_do_crc(struct slvr_ref *s)
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
 
-			psc_crc_calc(&s->slvr_crc, slvr_2_buf(s, 0),
+			psc_crc64_calc(&s->slvr_crc, slvr_2_buf(s, 0),
 				     SL_CRC_SIZE);
 			if (s->slvr_crc != slvr_2_crc(s)) {
 				DEBUG_SLVR(PLL_ERROR, s, "crc failed want=%"
@@ -81,7 +81,7 @@ slvr_do_crc(struct slvr_ref *s)
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
 		psc_assert(s->slvr_flags & SLVR_CRCING);
 
-		psc_crc_calc(&s->slvr_crc, slvr_2_buf(s, 0), SL_CRC_SIZE);
+		psc_crc64_calc(&s->slvr_crc, slvr_2_buf(s, 0), SL_CRC_SIZE);
 
 		DEBUG_SLVR(PLL_TRACE, s, "crc=%"PRIx64, s->slvr_crc);
 

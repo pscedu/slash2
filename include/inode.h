@@ -80,7 +80,7 @@ typedef struct slash_replica {
  * Associate a crc with a generation id for a block.
  */
 typedef struct slash_gencrc {
-	psc_crc_t gc_crc;
+	psc_crc64_t gc_crc;
 } sl_gcrc_t;
 
 /*
@@ -110,11 +110,11 @@ struct slash_bmap_od {
 	sl_gcrc_t	bh_crcs[SL_CRCS_PER_BMAP];
 	uint8_t		bh_crcstates[SL_CRCS_PER_BMAP];
 	uint8_t		bh_repls[SL_REPLICA_NBYTES];
-	psc_crc_t	bh_bhcrc;
+	psc_crc64_t	bh_bhcrc;
 };
 
 #define	BMAP_OD_SZ	(sizeof(struct slash_bmap_od))
-#define	BMAP_OD_CRCSZ	(BMAP_OD_SZ - (sizeof(psc_crc_t)))
+#define	BMAP_OD_CRCSZ	(BMAP_OD_SZ - (sizeof(psc_crc64_t)))
 
 #define slash_bmap_wire slash_bmap_od
 
@@ -142,10 +142,10 @@ struct slash_inode_od {
 	sl_replica_t		ino_repls[INO_DEF_NREPLS];	/* embed a few replicas	*/
 
 	/* must be last */
-	psc_crc_t		ino_crc;			/* crc of the inode	*/
+	psc_crc64_t		ino_crc;			/* crc of the inode	*/
 };
 #define INO_OD_SZ		sizeof(struct slash_inode_od)
-#define INO_OD_CRCSZ		(INO_OD_SZ - (sizeof(psc_crc_t)))
+#define INO_OD_CRCSZ		(INO_OD_SZ - (sizeof(psc_crc64_t)))
 
 #define INO_VERSION		0x0003
 
@@ -159,10 +159,10 @@ struct slash_inode_extras_od {
 	uint32_t		inox_newbmap_policy;		/* see BRP_* values */
 
 	/* must be last */
-	psc_crc_t		inox_crc;
+	psc_crc64_t		inox_crc;
 };
 #define INOX_OD_SZ		sizeof(struct slash_inode_extras_od)
-#define INOX_OD_CRCSZ		(INOX_OD_SZ - (sizeof(psc_crc_t)))
+#define INOX_OD_CRCSZ		(INOX_OD_SZ - (sizeof(psc_crc64_t)))
 
 #define SL_ROOT_INUM		1
 
