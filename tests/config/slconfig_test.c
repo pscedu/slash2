@@ -12,8 +12,8 @@
 #include <unistd.h>
 
 #include "pfl/pfl.h"
-#include "psc_rpc/rpc.h"
 #include "pfl/cdefs.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
 
@@ -34,32 +34,19 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX],
 	strlcpy(buf, "test", PSC_THRNAME_MAX);
 }
 
-struct sl_resource *
-slcfg_new_res(void)
+void
+slcfg_init_res(__unusedx struct sl_resource *res)
 {
-	struct sl_resource *res;
-
-	res = PSCALLOC(sizeof(*res));
-	return (res);
 }
 
-struct sl_resm *
-slcfg_new_resm(void)
+void
+slcfg_init_resm(__unusedx struct sl_resm *resm)
 {
-	struct sl_resm *resm;
-
-	resm = PSCALLOC(sizeof(*resm));
-	return (resm);
 }
 
-struct sl_site *
-slcfg_new_site(void)
+void
+slcfg_init_site(__unusedx struct sl_site *site)
 {
-	struct sl_site *site;
-
-	site = PSCALLOC(sizeof(*site));
-	INIT_SITE(site);
-	return (site);
 }
 
 __dead void
