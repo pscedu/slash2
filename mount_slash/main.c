@@ -218,8 +218,9 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 		       const char *name, struct fidc_membh *parent,
 		       const struct slash_creds *creds, int flags)
 {
-	struct fidc_membh *c;
-	struct fidc_memb fcm;
+	struct fidc_membh	*c;
+	int			 rc;
+	struct fidc_memb	 fcm;
 
 	int lookupflags = (FIDC_LOOKUP_CREATE |
 			   FIDC_LOOKUP_COPY   |
@@ -227,10 +228,12 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 
 	FCM_FROM_FG_ATTR(&fcm, fg, stb);
 
-	fidc_lookup(fg, lookupflags, &fcm, creds, &c);
-
+	rc = fidc_lookup(fg, lookupflags, &fcm, creds, &c);
+	if (rc) {
+		psc_assert(!c);
+		return NULL;
+	}
 	psc_assert(c);
-
 	if (name) {
 		psc_assert(parent);
 		fidc_child_add(parent, c, name);
@@ -563,6 +566,9 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	m = slash2fuse_fidc_putget(&mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, name, p, &mq->creds,
 				   (FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART));
+	if (m == NULL)
+		goto out;
+
 	psc_assert(m);
 	psc_assert(m->fcmh_fcoo && (m->fcmh_state & FCMH_FCOO_STARTING));
 	memcpy(&m->fcmh_fcoo->fcoo_fdb, &mp->sfdb, sizeof(mp->sfdb));
