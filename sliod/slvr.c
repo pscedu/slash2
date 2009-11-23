@@ -286,6 +286,8 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 
 	if (s->slvr_flags & SLVR_NEW) {
 		s->slvr_flags &= ~SLVR_NEW;
+		
+		psc_assert(psclist_disjoint(&s->slvr_lentry));
 
 		/* note: we grab a second lock here */
 		s->slvr_slab = psc_pool_get(slBufsPool);
@@ -298,6 +300,13 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 		s->slvr_flags |= SLVR_LRU;
 		/* note: lc_addtail() will grab the list lock itself */
 		lc_addtail(&lruSlvrs, s);
+
+	} else if ((s->slvr_flags & SLVR_LRU) && !s->slvr_slab) {
+		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
+		s->slvr_slab = psc_pool_get(slBufsPool);
+                sl_buffer_fresh_assertions(s->slvr_slab);
+
+                DEBUG_SLVR(PLL_INFO, s, "should have slab");		
 	}
 
 	psc_assert(s->slvr_slab);
@@ -661,10 +670,15 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 				    slvr_lentry) {
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap");
 
-		/* we are reaping, so it is fine to back off on some sliver */
-		if (!SLVR_TRYLOCK(s)) {
+		/* We are reaping, so it is fine to back off on some 
+		 *   slivers.  We have to use a reqlock here because 
+		 *   slivers do not have private spinlocks, instead
+		 *   they use the lock of the biod.  So if this thread
+		 *   tries to free a slvr from the same biod trylock 
+		 *   will abort.
+		 */
+		if (!SLVR_TRYREQLOCK(s, &locked))
 			continue;
-		}
 
 		/* Look for slvrs which can be freed, slvr_lru_freeable()
 		 *   returning true means that no slab is attached.
@@ -690,7 +704,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		}
 	next:
 
-		SLVR_ULOCK(s);
+		SLVR_URLOCK(s, locked);
 		if (n >= atomic_read(&m->ppm_nwaiters))
 			break;
 	}
@@ -705,7 +719,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			psc_assert(s->slvr_slab);
 
 			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slab=%p", s->slvr_slab);
-			s->slvr_flags &= ~SLVR_SLBFREEING;
+			s->slvr_flags &= ~(SLVR_SLBFREEING|SLVR_DATARDY);
 			psc_pool_return(m, s->slvr_slab);
 			s->slvr_slab = NULL;
 

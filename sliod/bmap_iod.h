@@ -105,6 +105,7 @@ struct bmap_iod_info {
 #define SLVR_URLOCK(s, lk)	ureqlock(SLVR_GETLOCK(s), (lk))
 #define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(SLVR_GETLOCK(s))
 #define SLVR_TRYLOCK(s)		trylock(SLVR_GETLOCK(s))
+#define SLVR_TRYREQLOCK(s, lk)	tryreqlock(SLVR_GETLOCK(s), lk)
 
 #define SLVR_WAKEUP(s)							\
 	psc_waitq_wakeall(&(slvr_2_bmap((s)))->bcm_waitq)
@@ -168,14 +169,18 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 
 	psc_assert(s->slvr_flags & SLVR_LRU);
 
-	if (s->slvr_flags & SLVR_PINNED) {
+	if (!s->slvr_slab)
+		psc_assert(!(s->slvr_flags & 
+			     (SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|SLVR_INFLIGHT|
+                              SLVR_GETSLAB|SLVR_DATARDY)));
+
+	else if (s->slvr_flags & SLVR_PINNED) {
 		psc_assert(s->slvr_pndgwrts  ||
 			   s->slvr_pndgreads ||
 			   (s->slvr_flags & SLVR_CRCDIRTY));
 		freeable = 0;
-	}
-
-	if (s->slvr_flags & SLVR_DATARDY)
+		
+	} else if (s->slvr_flags & SLVR_DATARDY)
 		psc_assert(!(s->slvr_flags &
 			     (SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|SLVR_INFLIGHT|
 			      SLVR_GETSLAB)));
