@@ -18,7 +18,7 @@ struct psc_listcache rpcqSlvrs;  /* Slivers ready to be crc'd and have their
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 
 __static void
-slvr_lru_requeue(struct slvr_ref *s)
+slvr_lru_requeue(struct slvr_ref *s, int tail)
 {
 	/*
 	 * Locking convention: it is legal to request for a list lock while
@@ -27,7 +27,10 @@ slvr_lru_requeue(struct slvr_ref *s)
 	 * for the sliver lock or you should use trylock().
 	 */
 	LIST_CACHE_LOCK(&lruSlvrs);
-	lc_move2tail(&lruSlvrs, s);
+	if (tail)
+		lc_move2tail(&lruSlvrs, s);
+	else
+		lc_move2head(&lruSlvrs, s);
 	LIST_CACHE_ULOCK(&lruSlvrs);
 }
 
@@ -246,6 +249,29 @@ slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
 }
 
 void
+slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
+{
+	psc_assert((src_or_dst == SLVR_REPLDST) || 
+		   (src_or_dst == SLVR_REPLSRC));
+
+	SLVR_LOCK(s);
+	psc_assert(!(s->slvr_flags & SLVR_REPLDST) && 
+		   !(s->slvr_flags & SLVR_REPLSRC));
+	
+	if (src_or_dst == SLVR_REPLSRC)
+		psc_assert(s->slvr_pndgreads > 0);
+	else
+		psc_assert(s->slvr_pndgwrts > 0);	
+
+	s->slvr_flags |= src_or_dst;
+
+	DEBUG_SLVR(PLL_INFO, s, "replica_%s", (src_or_dst == SLVR_REPLSRC) ? 
+		   "src" : "dst");
+
+	SLVR_ULOCK(s);
+}
+
+void
 slvr_slab_prep(struct slvr_ref *s, int rw)
 {
 	SLVR_LOCK(s);
@@ -437,11 +463,14 @@ slvr_rio_done(struct slvr_ref *s)
 	SLVR_LOCK(s);
 
 	s->slvr_pndgreads--;
-	if (!s->slvr_pndgreads && !s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU)) {
+	if (!s->slvr_pndgreads         && 
+	    !s->slvr_pndgwrts          && 
+	    (s->slvr_flags & SLVR_LRU) && 
+	    !(s->slvr_flags & SLVR_CRCDIRTY)) {
 		/* Requeue does a listcache operation but using trylock so
 		 *   no deadlock should occur on its behalf.
 		 */
-		slvr_lru_requeue(s);
+		slvr_lru_requeue(s, 1);
 		slvr_lru_unpin(s);
 		DEBUG_SLVR(PLL_DEBUG, s, "unpinned");
 	} else
@@ -490,40 +519,58 @@ slvr_wio_done(struct slvr_ref *s)
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_pndgwrts > 0);
-	/* CRCDIRTY must have been marked and could not have been unset
-	 *   because we have yet to pass this slvr to the crc processing
-	 *   threads. XXX this is not the case, the slvr worker may be
-	 *   processing this slvr too.
-	 */
-	/* we have just done a write, so the CRC must be dirty */
-	s->slvr_flags |= SLVR_CRCDIRTY;
+
+	s->slvr_flags |= SLVR_CRCDIRTY;       
+
+	if (s->slvr_flags & SLVR_REPLDST) {
+		/* This was a replication dest slvr.  Adjust the slvr flags 
+		 *    so that the slvr may be freed on demand.
+		 */
+		DEBUG_SLVR(PLL_INFO, s, "replication complete");
+
+		psc_assert(s->slvr_pndgwrts == 1);
+		psc_assert(s->slvr_flags & SLVR_PINNED);
+		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
+		s->slvr_pndgwrts--;
+		s->slvr_flags &= ~SLVR_PINNED;
+			       
+		SLVR_ULOCK(s);
+
+		slvr_lru_requeue(s, 0);
+		return;
+	}
+
 	if (s->slvr_flags & SLVR_FAULTING) {
 		/* This sliver was being paged-in over the network.
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-
+		psc_assert(!(s->slvr_flags & SLVR_REPLDST));
+		
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
-
+		
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 		/* Other threads may be waiting for DATARDY to either
 		 *   read or write to this sliver.  At this point it's
 		 *   safe to wake them up.
-		 * Note: when iterating over the lru list for reclaiming,
-		 *   slvrs with pending writes must be skipped.
+		 * Note: when iterating over the lru list for 
+		 *   reclaiming, slvrs with pending writes must be 
+		 *   skipped.
 		 */
 		SLVR_WAKEUP(s);
-
-	} else {
-		psc_assert(s->slvr_flags & SLVR_DATARDY);
-		DEBUG_SLVR(PLL_INFO, s, "DATARDY");
-
+		
+	} else if (s->slvr_flags & SLVR_DATARDY) {
+		
+		DEBUG_SLVR(PLL_INFO, s, "%s", "datardy");
+		
 		if ((s->slvr_flags & SLVR_LRU) &&
 		    s->slvr_pndgwrts > 1)
-			slvr_lru_requeue(s);
-	}
-
-	if (--s->slvr_pndgwrts == 0 && !(s->slvr_flags & SLVR_RPCPNDG)) {
+			slvr_lru_requeue(s, 1);
+	} else
+		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
+	
+	if (--s->slvr_pndgwrts == 0 && 
+	    !(s->slvr_flags & SLVR_RPCPNDG)) {
 		/* No more pending writes, try to schedule the buffer
 		 *   to be crc'd.
 		 */
@@ -576,6 +623,7 @@ __static void
 slvr_remove(struct slvr_ref *s)
 {
 	struct bmap_iod_info	*b;
+	int                      locked;
 
 	DEBUG_SLVR(PLL_WARN, s, "freeing slvr");
 	/* Slvr should be detached from any listheads.
@@ -583,9 +631,9 @@ slvr_remove(struct slvr_ref *s)
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 
 	b = slvr_2_biod(s);
-	spinlock(&b->biod_lock);
+	locked = reqlock(&b->biod_lock);
 	SPLAY_REMOVE(biod_slvrtree, &b->biod_slvrs, s);
-	freelock(&b->biod_lock);
+	ureqlock(&b->biod_lock, locked);
 
 	PSCFREE(s);
 }
@@ -599,6 +647,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 {
 	int			 i;
 	int			 n;
+	int                      locked;
 	struct dynarray		 a;
 	struct slvr_ref		*s;
 	struct slvr_ref		*dummy;
@@ -610,7 +659,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	LIST_CACHE_LOCK(&lruSlvrs);
 	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd,
 				    slvr_lentry) {
-
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap");
 
 		/* we are reaping, so it is fine to back off on some sliver */
@@ -640,8 +688,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			s->slvr_flags |= SLVR_SLBFREEING;
 			n++;
 		}
-
-		next:
+	next:
 
 		SLVR_ULOCK(s);
 		if (n >= atomic_read(&m->ppm_nwaiters))

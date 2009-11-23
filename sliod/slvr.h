@@ -49,7 +49,9 @@ enum slvr_states {
 	SLVR_CRCDIRTY	= (1 <<  9),	/* crc does not match cached buffer */
 	SLVR_RPCPNDG	= (1 << 10),	/* buffer !dirty but crc dirty is set */
 	SLVR_FREEING	= (1 << 11),	/* sliver is being reaped */
-	SLVR_SLBFREEING	= (1 << 12)	/* slab of the sliver is being reaped */
+	SLVR_SLBFREEING	= (1 << 12),	/* slab of the sliver is being reaped */
+	SLVR_REPLSRC	= (1 << 13),    /* slvr is replication source */
+	SLVR_REPLDST	= (1 << 14)     /* slvr is replication destination */
 };
 
 
@@ -66,9 +68,11 @@ enum slvr_states {
 		SLVR_FLAG(((s)->slvr_flags & SLVR_LRU), "l"),		\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_RPCPNDG), "r"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_FREEING), "F"),	\
-		SLVR_FLAG(((s)->slvr_flags & SLVR_SLBFREEING), "b")
+		SLVR_FLAG(((s)->slvr_flags & SLVR_SLBFREEING), "b"),	\
+		SLVR_FLAG(((s)->slvr_flags & SLVR_REPLSRC), "R"),	\
+		SLVR_FLAG(((s)->slvr_flags & SLVR_REPLDST), "r")	\
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
@@ -106,6 +110,7 @@ int	slvr_fsbytes_io(struct slvr_ref *, int);
 int	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
 int	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, int);
 void	slvr_rio_done(struct slvr_ref *);
+void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_slab_prep(struct slvr_ref *, int);
 void	slvr_wio_done(struct slvr_ref *);
 void    slvr_try_rpcqueue(struct slvr_ref *);

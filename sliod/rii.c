@@ -83,7 +83,9 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 	for (i = 0; i < nslvrs; i++, slvroff = 0) {
 		slvr_ref[i] = slvr_lookup(slvrno + i,
 		    bmap_2_biodi(bcm), SLVR_LOOKUP_ADD);
+
 		slvr_slab_prep(slvr_ref[i], SL_READ);
+		slvr_repl_prep(slvr_ref[i], SLVR_REPLSRC);
 		csize = MIN(tsize, SLASH_SLVR_SIZE - slvroff);
 		slvr_io_prep(slvr_ref[i], slvroff, csize, SL_READ);
 		iov[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + slvroff;
@@ -215,6 +217,7 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 		w->srw_slvr_ref[i] = slvr_lookup(slvrno + i,
 		    bmap_2_biodi(w->srw_bcm), SLVR_LOOKUP_ADD);
 		slvr_slab_prep(w->srw_slvr_ref[i], SL_WRITE);
+		slvr_repl_prep(w->srw_slvr_ref[i], SLVR_REPLDST);
 		slvr_io_prep(w->srw_slvr_ref[i], slvroff, csize, SL_WRITE);
 		iov[i].iov_base = w->srw_slvr_ref[i]->slvr_slab->slb_base + slvroff;
 		iov[i].iov_len = csize;
