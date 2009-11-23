@@ -148,4 +148,47 @@ nbp) {
 463 
 464         return (error);
 465 }
+ 
+Perhaps a better example to illustrate the above point can be found in FreeBSD file vfs_bio.c:
+
+ 1366         if (BUF_LOCKRECURSED(bp)) {					<-- buffer is locked at this point
+ 1367                 /* do not release to free list */
+ 1368                 BUF_UNLOCK(bp);
+ 1369                 return;
+ 1370         }
+ 1371 
+ 1372         /* enqueue */
+ 1373         mtx_lock(&bqlock);						<-- list lock
+ 1374         /* Handle delayed bremfree() processing. */
+ 1375         if (bp->b_flags & B_REMFREE)
+ 1376                 bremfreel(bp);
+ 1377         if (bp->b_qindex != QUEUE_NONE)
+ 1378                 panic("brelse: free buffer onto another queue???");
+ 1379 
+
+ ......
+
+ 1428         mtx_unlock(&bqlock);
+ 1429 
+ 1430         /*
+ 1431          * Fixup numfreebuffers count.  The bp is on an appropriate queue
+ 1432          * unless locked.  We then bump numfreebuffers if it is not B_DELWRI.
+ 1433          * We've already handled the B_INVAL case ( B_DELWRI will be clear
+ 1434          * if B_INVAL is set ).
+ 1435          */
+ 1436 
+ 1437         if (!(bp->b_flags & B_DELWRI))
+ 1438                 bufcountwakeup();
+ 1439 
+ 1440         /*
+ 1441          * Something we can maybe free or reuse
+ 1442          */
+ 1443         if (bp->b_bufsize || bp->b_kvasize)
+ 1444                 bufspacewakeup();
+ 1445 
+ 1446         bp->b_flags &= ~(B_ASYNC | B_NOCACHE | B_AGE | B_RELBUF | B_DIRECT);
+ 1447         if ((bp->b_flags & B_DELWRI) == 0 && (bp->b_xflags & BX_VNDIRTY))
+ 1448                 panic("brelse: not dirty");
+ 1449         /* unlock */
+ 1450         BUF_UNLOCK(bp);
 
