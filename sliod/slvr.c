@@ -20,11 +20,17 @@ __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 __static void
 slvr_lru_requeue(struct slvr_ref *s)
 {
-	if (LIST_CACHE_TRYLOCK(&lruSlvrs)) {
-		lc_move2tail(&lruSlvrs, s);
-		LIST_CACHE_ULOCK(&lruSlvrs);
-	}
+	/*
+	 * Locking convention: it is legal to request for a list lock while
+	 * holding the sliver lock.  On the other hand, when you already hold
+	 * the list lock, you should drop the list lock first before asking
+	 * for the sliver lock or you should use trylock().
+	 */
+	LIST_CACHE_LOCK(&lruSlvrs);
+	lc_move2tail(&lruSlvrs, s);
+	LIST_CACHE_ULOCK(&lruSlvrs);
 }
+
 /**
  * slvr_do_crc - given a sliver reference, take the crc of the respective
  *   data and attach the ref to an srm_bmap_crcup structure.
@@ -264,6 +270,7 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 		 *  to the bmap's biod_slvrtree.
 		 */
 		s->slvr_flags |= SLVR_LRU;
+		/* note: lc_addtail() will grab the list lock itself */
 		lc_addtail(&lruSlvrs, s);
 	}
 
@@ -449,43 +456,25 @@ slvr_try_rpcqueue(struct slvr_ref *s)
 	SLVR_LOCK(s);
 
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-
-
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 
 	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc");
-
 	if (s->slvr_flags & SLVR_RPCPNDG) {
-		/* It's already here or it's in the process of being
-		 *   moved.
-		 */
 		SLVR_ULOCK(s);
 		return;
 	}
 
 	if (!s->slvr_pndgwrts) {
-		/* No writes are pending, perform the move to the rpcq
-		 *   list.  Set the bit first then drop the lock.
-		 */
-		s->slvr_flags |= SLVR_RPCPNDG;
-		SLVR_ULOCK(s);
 
-		lc_remove(&lruSlvrs, s);
-		/* Don't drop the SLVR_LRU bit until the sliver has been
-		 *   removed.
-		 */
-		SLVR_LOCK(s);
-		/* If we set SLVR_RPCPNDG then no one else may have
-		 *   unset SLVR_LRU.
-		 */
 		psc_assert(s->slvr_flags & SLVR_LRU);
 		s->slvr_flags &= ~SLVR_LRU;
-		SLVR_ULOCK(s);
+		s->slvr_flags |= SLVR_RPCPNDG;
 
+		lc_remove(&lruSlvrs, s);
 		lc_addqueue(&rpcqSlvrs, s);
 
-	} else
-		SLVR_ULOCK(s);
+	}
+	SLVR_ULOCK(s);
 }
 
 /**
@@ -621,8 +610,13 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	LIST_CACHE_LOCK(&lruSlvrs);
 	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd,
 				    slvr_lentry) {
-		SLVR_LOCK(s);
+
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap");
+
+		/* we are reaping, so it is fine to back off on some sliver */
+		if (!SLVR_TRYLOCK(s)) {
+			continue;
+		}
 
 		/* Look for slvrs which can be freed, slvr_lru_freeable()
 		 *   returning true means that no slab is attached.
@@ -630,8 +624,9 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (slvr_lru_freeable(s)) {
 			dynarray_add(&a, s);
 			s->slvr_flags |= SLVR_FREEING;
-			lc_del(&s->slvr_lentry, &lruSlvrs);
-			goto ulock;
+			psclist_del(&s->slvr_lentry);
+			lruSlvrs.lc_size--;
+			goto next;
 		}
 
 		psc_assert(s->slvr_slab);
@@ -645,9 +640,10 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			s->slvr_flags |= SLVR_SLBFREEING;
 			n++;
 		}
-	ulock:
-		SLVR_ULOCK(s);
 
+		next:
+
+		SLVR_ULOCK(s);
 		if (n >= atomic_read(&m->ppm_nwaiters))
 			break;
 	}

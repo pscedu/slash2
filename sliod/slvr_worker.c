@@ -237,32 +237,11 @@ slvr_worker_int(void)
 	 *   with slvr_wio_done().
 	 */
 	if (s->slvr_pndgwrts > 0) {
-		if (!LIST_CACHE_TRYLOCK(&lruSlvrs)) {
-			/* Don't deadlock, take the locks in the
-			 *   correct order.
-			 */
-			SLVR_ULOCK(s);
-			/* SLVR_RPCPNDG bit will prevent the sliver from
-			 *   being re-added to the rpcq list.
-			 */
-			LIST_CACHE_LOCK(&lruSlvrs);
-			SLVR_LOCK(s);
-		}
-		/* Guaranteed to have both locks.
-		 */
-		if (s->slvr_pndgwrts > 0) {
-			s->slvr_flags &= ~SLVR_RPCPNDG;
-			s->slvr_flags |= SLVR_LRU;
-			lc_addqueue(&lruSlvrs, s);
-			SLVR_ULOCK(s);
-			LIST_CACHE_ULOCK(&lruSlvrs);
-			goto start;
-
-		} else
-			/* It was > 0 but another write must have just
-			 *   finished.
-			 */
-			LIST_CACHE_ULOCK(&lruSlvrs);
+		s->slvr_flags &= ~SLVR_RPCPNDG;
+		s->slvr_flags |= SLVR_LRU;
+		lc_addqueue(&lruSlvrs, s);
+		SLVR_ULOCK(s);
+		goto start;
 	}
 	/* Ok, we've got a sliver to work on.
 	 *   From this point until we set to inflight, the slvr_lentry
