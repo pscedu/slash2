@@ -192,7 +192,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 			freelock(&bmpce->bmpce_lock);
 
 		} else {
-			/* Don't bother prefecthing blocks for unaligned
+			/* Don't bother prefetching blocks for unaligned
 			 *   requests if another request is already
 			 *   responsible for that block.
 			 */
