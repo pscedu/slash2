@@ -275,7 +275,7 @@ slvr_worker_int(void)
 
 	DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU");
 
-	if (!(s->slvr_pndgwrts) || s->slvr_pndgreads)
+	if (!s->slvr_pndgwrts && !s->slvr_pndgreads)
 		slvr_lru_unpin(s);
 	SLVR_ULOCK(s);
 	/* Put the slvr back to the LRU so it may have its slab reaped.
