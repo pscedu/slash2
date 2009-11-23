@@ -1,3 +1,28 @@
+11/22/09
+* Thinking about truncate.. in the event of an O_TRUNC or truncate() syscall we 
+should not invalidate replicas but rather queue truncate or reclamation requests
+for the affected storage backend systems and perform the appropriate truncate 
+on the metafile.  Somehow the truncate queue must be persistent on the mds.
+Additionally, a sliver's worth of data may need to be checksummed.  
+
+Other garbage collection requests must be handled in a similar fashion.  For 
+instance an 'rm' operation must record the fid+gen pair and queue a garbage
+collection request.  For this the replica IOS's should be read from the inode
+and used to generate the requests.  This type of GC should be easy due to ZFS's
+use fo fid+gen pairs.  
+
+Truncate is more of a problem because the fid+gen remains, thus making async IOS
+truncate operations problematic because new writes may come from the client before
+the truncate is processed by the IOS (whoops!).  Client to IOS truncate ops are 
+also unfavorable because replica maintenance may need to be done, the client may have
+the replica table but should he be the one directing the truncates to all IOS's?
+I'm inclined to say 'no'.  Care must be taken here so that we don't hurt performance
+for (O_CREAT|O_TRUNC) of existing files which is the case where the fid+gen is not 
+changed.  As an optimization we could possibly delete the file on the mds first, 
+invoking the GC routines for that fid+gen and then create a new inode.  Of course
+this may break semantics for some apps which assume the same inode # to be used.
+	 
+
 11/02/09
 * msl_io and rpc ION calls need to return actual size so that read() can
 be short circuited  on EOF.
