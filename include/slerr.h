@@ -13,7 +13,8 @@ char *slstrerror(int);
 #define SLERR_UNKNOWN_IOS		(_SLERR_START + 4)
 #define SLERR_ION_UNKNOWN		(_SLERR_START + 5)
 #define SLERR_ION_OFFLINE		(_SLERR_START + 6)
-#define SLERR_XACT_FAIL			(_SLERR_START + 7)
-#define SLERR_SHORTIO			(_SLERR_START + 8)
+#define SLERR_ION_NOTREPL		(_SLERR_START + 7)
+#define SLERR_XACT_FAIL			(_SLERR_START + 8)
+#define SLERR_SHORTIO			(_SLERR_START + 9)
 
 #endif /* _SLERR_H_ */

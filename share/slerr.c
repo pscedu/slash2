@@ -14,7 +14,8 @@ char *slash_errstrs[] = {
 	"Invalid bmap",
 	"Unknown I/O system",
 	"Unknown I/O node",
-	"I/O node connection coud not be established",
+	"I/O node connection could not be established",
+	"I/O node is not a replica",
 	"Transaction could not be started",
 	"Short I/O",
 	NULL
