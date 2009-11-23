@@ -169,6 +169,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 		spinlock(&bmpce->bmpce_lock);
 		if (biorq_is_my_bmpce(r, bmpce) &&
 		    (bmpce->bmpce_flags & BMPCE_GETBUF)) {
+			void *tmp;
 			/* Increase the rdref cnt in preparation for any
 			 *   RBW ops but only on new pages owned by this
 			 *   page cache entry.  For now bypass
@@ -182,10 +183,13 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 			psc_assert(bmpce->bmpce_flags & BMPCE_GETBUF);
 			freelock(&bmpce->bmpce_lock);
 
-			bmpce->bmpce_base = bmpc_alloc();
+			tmp = bmpc_alloc();
 
+			spinlock(&bmpce->bmpce_lock);
+			bmpce->bmpce_base = tmp;
 			bmpce->bmpce_flags &= ~BMPCE_GETBUF;
 			psc_waitq_wakeall(bmpce->bmpce_waitq);
+			freelock(&bmpce->bmpce_lock);
 
 		} else {
 			/* Don't bother prefecthing blocks for unaligned
@@ -294,7 +298,7 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 
 			} else {
 			remove:
-				psc_assert(pll_empty(&bmpc->bmpc_pndg));
+				//psc_assert(pll_empty(&bmpc->bmpc_pndg));
 				lc_remove(&bmapFlushQ, bmap_2_msbd(b));
 			}
 			LIST_CACHE_ULOCK(&bmapFlushQ);
@@ -338,16 +342,21 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 {
 	/* One last shot to wakeup any blocked threads.
 	 */
-	psc_waitq_wakeall(&r->biorq_waitq);
-
+	while (atomic_read(&r->biorq_waitq.wq_nwaitors)) {
+		psc_waitq_wakeall(&r->biorq_waitq);
+		sched_yield();
+	}
+	
 	msl_biorq_unref(r);
 	bmap_biorq_del(r);
-
+	
 	dynarray_free(&r->biorq_pages);
-
+	
 	if (r->biorq_rqset)
 		pscrpc_set_destroy(r->biorq_rqset);
-
+	
+	psc_assert(!atomic_read(&r->biorq_waitq.wq_nwaitors));
+	
 	PSCFREE(r);
 }
 
@@ -564,8 +573,8 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	bmap->bcm_mode &= ~BMAP_INIT;
 
 	if (getreptbl) {
-		/* XXX don't forget that on write we need to invalidate the local replication
-		 *   table..
+		/* XXX don't forget that on write we need to invalidate 
+		 *   the local replication table..
 		 */
 		FCMH_LOCK(f);
 		mfd->mfd_flags = MFD_HAVEREPTBL;
@@ -1253,8 +1262,8 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		/* Sanity checks.
 		 */
 		psc_assert(biorq_is_my_bmpce(r, bmpce));
-		/* BMPCE_DATARDY should not be set, otherwise we should
-		 *   not be here.
+		/* BMPCE_DATARDY should not be set, otherwise we wouldn't
+		 *   be here.
 		 */
 		psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
 		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
@@ -1418,6 +1427,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			 *    wait for them to become DATARDY.
 			 */
 			while (!(bmpce->bmpce_flags & BMPCE_DATARDY)) {
+				DEBUG_BMPCE(PLL_TRACE, bmpce, "waiting");
 				psc_waitq_wait(bmpce->bmpce_waitq,
 					       &bmpce->bmpce_lock);
 				spinlock(&bmpce->bmpce_lock);
