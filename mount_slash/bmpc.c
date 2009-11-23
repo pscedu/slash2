@@ -274,9 +274,9 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 			freelock(&bmpce->bmpce_lock);
 			continue;
 		}
-
+		
 		DEBUG_BMPCE(PLL_NOTIFY, bmpce, "freeing");
-		freelock(&bmpce->bmpce_lock);
+		bmpce_freeprep(bmpce);
 
 		bmpce_release_locked(bmpce, bmpc);
 		if (++freed == nfree)
@@ -309,7 +309,7 @@ bmpc_reap_locked(void)
 	LIST_CACHE_LOCK(&bmpcLru);
 	ulockBmpcSlabs;
 	
-	lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
+	//lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
 	/* Should be sorted from oldest bmpc to newest.  Skip bmpc whose
 	 *   bmpc_oldest time is too recent.
 	 */
@@ -338,6 +338,7 @@ bmpc_reap_locked(void)
 		if (nfreed == waiters)
 			break;
 	} 
+	LIST_CACHE_ULOCK(&bmpcLru);
 
 	if (nfreed) { 
 		atomic_sub(nfreed, &bmpcSlabs.bmms_waiters);
@@ -354,8 +355,10 @@ bmpc_reap_locked(void)
 		if (bmpc_grow(nslbs ? nslbs : 1) == -ENOMEM)
 			bmpc_decrease_minage();
 	}		
-}
 
+	bmpcSlabs.bmms_reap = 0;
+	psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
+}
 
 
 void
