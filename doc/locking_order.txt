@@ -99,9 +99,10 @@ nbp) {
 416                 if ((bp->b_vflags & BV_SCANNED) != 0)		<-- this is protected by vnode lock
 417                         continue;
 418                 bp->b_vflags |= BV_SCANNED;
-419                 if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL))
+419                 if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL))   <-- LK_NOWAIT means trylock in our terminology
 420                         continue;
-421                 VI_UNLOCK(vp);
+421                 VI_UNLOCK(vp);					<-- this acts like our list lock. they have to drop it because
+									    the following action on the buffer might request for it. 
 422                 KASSERT(bp->b_bufobj == &vp->v_bufobj,
 423                     ("bp %p wrong b_bufobj %p should be %p",
 424                     bp, bp->b_bufobj, &vp->v_bufobj));
