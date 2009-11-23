@@ -20,7 +20,8 @@
 #include "fidcache.h"
 
 /**
- * fidc_new - create a new fcc structure and initialize it using provided parameters.
+ * fidc_new - create a new fcc structure and initialize it using provided 
+ *     parameters.
  * @p: parent fcmh
  * @c: child fcmh
  * @name: name of child fcmh
