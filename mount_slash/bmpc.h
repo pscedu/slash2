@@ -332,7 +332,7 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 static inline int
 bmpc_lru_cmp(const void *x, const void *y)
 {
-	const struct bmap_pagecache *a=x, *b=y;
+	struct bmap_pagecache * const *pa = x, *a = *pa, * const *pb = y, *b = *pb;
 
 	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
 		return (-1);
