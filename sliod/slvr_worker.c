@@ -182,7 +182,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 			 *   otherwise may sit in the LRU forever.
 			 */
 			if (!s->slvr_pndgwrts && s->slvr_flags & SLVR_CRCDIRTY) {
-				slvr_try_rpcqueue(s);
+				slvr_schedule_crc(s);
 			} 
 			SLVR_ULOCK(s);
 		}

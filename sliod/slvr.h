@@ -113,7 +113,7 @@ void	slvr_rio_done(struct slvr_ref *);
 void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_slab_prep(struct slvr_ref *, int);
 void	slvr_wio_done(struct slvr_ref *);
-void    slvr_try_rpcqueue(struct slvr_ref *);
+void    slvr_schedule_crc(struct slvr_ref *);
 void    slvr_worker_init(void);
 
 #define slvr_io_done(s, rw) \

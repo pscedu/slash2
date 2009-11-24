@@ -489,7 +489,7 @@ slvr_rio_done(struct slvr_ref *s)
 }
 
 void
-slvr_try_rpcqueue(struct slvr_ref *s)
+slvr_schedule_crc(struct slvr_ref *s)
 {
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
@@ -575,7 +575,7 @@ slvr_wio_done(struct slvr_ref *s)
 	 */
 	s->slvr_pndgwrts--;
 	if (!s->slvr_pndgwrts && !(s->slvr_flags & SLVR_RPCPNDG)) {
-		slvr_try_rpcqueue(s);
+		slvr_schedule_crc(s);
 	}
 	SLVR_ULOCK(s);
 }
