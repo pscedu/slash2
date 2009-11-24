@@ -174,7 +174,6 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct srm_repl_schedwk_req *mq;
 	struct srm_generic_rep *mp;
 	struct mds_site_info *msi;
-	struct sl_resource *res;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 	struct sl_resm *resm;
@@ -223,7 +222,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	msi = resm->resm_res->res_site->site_pri;
 	spinlock(&msi->msi_lock);
-	psc_waitq_wakeall(&msi->msi_waitq);
+	psc_multilock_cond_wakeup(&msi->msi_mlcond);
 	freelock(&msi->msi_lock);
  out:
 	if (rrq)
