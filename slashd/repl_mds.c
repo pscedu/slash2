@@ -879,17 +879,17 @@ void
 mds_repl_scandir(void)
 {
 	sl_replica_t iosv[SL_MAX_REPLICAS];
+	char *buf, fn[NAME_MAX];
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct fuse_dirent *d;
 	struct sl_replrq *rrq;
 	struct stat stb;
-	size_t siz, tsiz;
 	off64_t off, toff;
+	size_t siz, tsiz;
 	uint64_t inum;
 	uint32_t j;
 	void *data;
-	char *buf;
 	int rc;
 
 	off = 0;
@@ -923,15 +923,20 @@ mds_repl_scandir(void)
 			d = (void *)(buf + toff);
 			off = d->off;
 
-			if (d->name[0] == '.')
+			if (strlcpy(fn, d->name, sizeof(fn)) > sizeof(fn))
+				psc_assert("impossible");
+			if (d->namelen < sizeof(fn))
+				fn[d->namelen] = '\0';
+
+			if (fn[0] == '.')
 				continue;
 
 			rc = zfsslash2_lookup(zfsVfs, inum,
-			    d->name, &fg, &rootcreds, NULL);
+			    fn, &fg, &rootcreds, NULL);
 			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
-				psc_fatal("zfsslash2_lookup: %s",
-				    slstrerror(rc));
+				psc_fatalx("zfsslash2_lookup %s/%s: %s",
+				    SL_PATH_REPLS, fn, slstrerror(rc));
 
 			rc = mds_repl_loadino(&fg, &fcmh);
 			if (rc)
