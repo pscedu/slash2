@@ -21,7 +21,14 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
+#include "slerr.h"
 
+/*
+ * slm_rmi_handle_bmap_getcrcs - handle a BMAPGETCRCS request from ION,
+ *	so the ION can load the CRCs for a bmap and verify them against
+ *	the data he has for the region of data that bmap represents.
+ * @rq: request.
+ */
 int
 slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 {
@@ -32,20 +39,18 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	struct bmapc_memb *b=NULL;
 	struct iovec iov;
 	__unusedx sl_blkno_t bmapno;
-	int rc;
 
 	RSX_ALLOCREP(rq, mq, mp);
 #if 0
 	mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer,
 	    lpid.nid, nodeInfo.node_res->res_id, mq->rw);
-#endif
-
 	if (mp->rc)
 		return (-1);
+#endif
 
-	rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &b);
-	if (rc)
-		return (rc);
+	mp->rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &b);
+	if (mp->rc)
+		return (mp->rc);
 
 	psc_assert(b);
 
@@ -63,6 +68,13 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	return (0);
 }
 
+/*
+ * slm_rmi_handle_bmap_crcwrt - handle a BMAPCRCWRT request from ION,
+ *	which receives the CRCs for the data contained in a bmap, checks
+ *	their integrity during transmission, and records them in our
+ *	metadata file system.
+ * @rq: request.
+ */
 int
 slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 {
@@ -107,7 +119,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	/* Crc the Crc's!
+	/* CRC the CRC's!
 	 */
 	psc_crc64_calc(&crc, buf, len);
 	if (crc != mq->crc) {
@@ -150,7 +162,78 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 }
 
 /*
+ * slm_rmi_handle_repl_schedwk - handle a REPL_SCHEDWK request from ION,
+ *	which is information pertaining to the status of a replication
+ *	request, either succesful finish or failure.
+ * @rq: request.
+ */
+int
+slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
+{
+	int tract[4], retifset[4], iosidx;
+	struct srm_repl_schedwk_req *mq;
+	struct srm_generic_rep *mp;
+	struct mds_site_info *msi;
+	struct sl_resource *res;
+	struct bmapc_memb *bcm;
+	struct sl_replrq *rrq;
+	struct sl_resm *resm;
+
+	RSX_ALLOCREP(rq, mq, mp);
+	rrq = mds_repl_findrq(&mq->fg, NULL);
+	if (rrq == NULL) {
+		mp->rc = ENOENT;
+		goto out;
+	}
+
+	resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
+	if (resm == NULL) {
+		mp->rc = SLERR_ION_UNKNOWN;
+		goto out;
+	}
+
+	iosidx = mds_repl_ios_lookup(rrq->rrq_inoh, resm->resm_res->res_id);
+	if (iosidx < 0) {
+		mp->rc = SLERR_ION_NOTREPL;
+		goto out;
+	}
+
+	if (!mds_bmap_valid(REPLRQ_FCMH(rrq), mq->bmapno)) {
+		mp->rc = SLERR_INVALID_BMAP;
+		goto out;
+	}
+
+	tract[SL_REPL_INACTIVE] = -1;
+	tract[SL_REPL_SCHED] = SL_REPL_ACTIVE;
+	tract[SL_REPL_OLD] = -1;
+	tract[SL_REPL_ACTIVE] = -1;
+
+	retifset[SL_REPL_INACTIVE] = EINVAL;
+	retifset[SL_REPL_SCHED] = 0;
+	retifset[SL_REPL_OLD] = EINVAL;
+	retifset[SL_REPL_ACTIVE] = EINVAL;
+
+	mp->rc = mds_bmap_load(REPLRQ_FCMH(rrq), mq->bmapno, &bcm);
+	if (mp->rc)
+		goto out;
+
+	BMAP_LOCK(bcm);
+	mp->rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
+	mds_repl_bmap_rel(bcm);
+
+	msi = resm->resm_res->res_site->site_pri;
+	spinlock(&msi->msi_lock);
+	psc_waitq_wakeall(&msi->msi_waitq);
+	freelock(&msi->msi_lock);
+ out:
+	if (rrq)
+		mds_repl_unrefrq(rrq);
+	return (0);
+}
+
+/*
  * slm_rmi_handle_connect - handle a CONNECT request from ION.
+ * @rq: request.
  */
 int
 slm_rmi_handle_connect(struct pscrpc_request *rq)
@@ -173,6 +256,7 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 
 /*
  * slm_rmi_handler - handle a request from ION.
+ * @rq: request.
  */
 int
 slm_rmi_handler(struct pscrpc_request *rq)
@@ -185,6 +269,9 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_GETBMAPCRCS:
 		rc = slm_rmi_handle_bmap_getcrcs(rq);
+		break;
+	case SRMT_REPL_SCHEDWK:
+		rc = slm_rmi_handle_repl_schedwk(rq);
 		break;
 	case SRMT_CONNECT:
 		rc = slm_rmi_handle_connect(rq);
