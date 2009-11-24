@@ -266,9 +266,12 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	 *  We do a simple lookup here because the inode should already exist
 	 *  in the cache.
 	 */
-	m->mexpfcm_fcmh = f =
-		fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
-	psc_assert(f);
+	m->mexpfcm_fcmh = f = fidc_lookup_fg(&c->cfd_fdb.sfdb_secret.sfs_fg);
+	//fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
+	//psc_assert(f);
+	if (!f)
+		return (-1);
+
 	/* Ensure our ref has been added.
 	 */
 	psc_assert(atomic_read(&f->fcmh_refcnt) > 0);
@@ -823,7 +826,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	struct slash_bmap_od *bmapod;
 	int rc=0;
 
-	fcmh = fidc_lookup_inode(c->fid);
+	fcmh = fidc_lookup_fg(&c->fg);
 	if (!fcmh)
 		return (-EBADF);
 

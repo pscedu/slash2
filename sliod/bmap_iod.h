@@ -30,6 +30,15 @@ struct biod_crcup_ref {
 	struct srm_bmap_crcup       bcr_crcup;
 };
 
+#define DEBUG_BCR(level, b, fmt, ...)					\
+        psc_logs((level), PSS_GEN,                                      \
+                 "bcr@%p fid="FIDFMT" num=%"PRIu64" nups=%d age=%lu"	\
+                 " bmap@%p:: "fmt,					\
+                 (b), FIDFMTARGS(&(b)->bcr_crcup.fg), (b)->bcr_id,	\
+		 (b)->bcr_nups, (b)->bcr_age.tv_sec,			\
+		 slvr_2_bmap((b)->bcr_slvrs[0]),			\
+		 ## __VA_ARGS__)
+
 static inline int
 bcr_cmp(const void *x, const void *y)
 {

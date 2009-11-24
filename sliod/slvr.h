@@ -69,8 +69,8 @@ enum slvr_states {
 		SLVR_FLAG(((s)->slvr_flags & SLVR_RPCPNDG), "r"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_FREEING), "F"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_SLBFREEING), "b"),	\
-		SLVR_FLAG(((s)->slvr_flags & SLVR_REPLSRC), "R"),	\
-		SLVR_FLAG(((s)->slvr_flags & SLVR_REPLDST), "r")	\
+		SLVR_FLAG(((s)->slvr_flags & SLVR_REPLSRC), "S"),	\
+		SLVR_FLAG(((s)->slvr_flags & SLVR_REPLDST), "T")	\
 
 #define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 

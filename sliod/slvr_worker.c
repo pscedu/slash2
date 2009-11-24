@@ -59,8 +59,10 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 	for (i = 0; i < mq->ncrc_updates; i++) {
 		bcrc_ref = dynarray_getpos(ref_array, i);
 
-		iod_inode_getsize(bcrc_ref->bcr_crcup.fid,
-				       (off_t *)&bcrc_ref->bcr_crcup.fsize);
+		DEBUG_BCR(PLL_NOTIFY, bcrc_ref, "ref_array pos=%d", i);
+
+		iod_inode_getsize(&bcrc_ref->bcr_crcup.fg,
+				  (off_t *)&bcrc_ref->bcr_crcup.fsize);
 
 		mq->ncrcs_per_update[i] = bcrc_ref->bcr_crcup.nups;
 
@@ -100,6 +102,10 @@ slvr_worker_push_crcups(void)
 
 	/* First, try to gather full crcup's */
 	SPLAY_FOREACH(bcrc_ref, crcup_reftree, &binfSlvrs.binfst_tree) {
+		
+		DEBUG_BCR(PLL_NOTIFY, bcrc_ref, "ref_array sz=%d", 
+			  dynarray_len(ref_array));
+
 		if (bcrc_ref->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
 			dynarray_add(ref_array, bcrc_ref);
 		if (dynarray_len(ref_array) >= MAX_BMAP_NCRC_UPDATES)
@@ -118,7 +124,11 @@ slvr_worker_push_crcups(void)
 	}
 	clock_gettime(CLOCK_REALTIME, &now);
 	SPLAY_FOREACH(bcrc_ref, crcup_reftree, &binfSlvrs.binfst_tree) {
-		if (now.tv_sec <= (bcrc_ref->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE))
+		
+		DEBUG_BCR(PLL_NOTIFY, bcrc_ref, "ref_array sz=%d now=%lu", 
+			  dynarray_len(ref_array), now.tv_sec);
+
+		if (now.tv_sec < (bcrc_ref->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE))
 			dynarray_add(ref_array, bcrc_ref);
 		if (dynarray_len(ref_array) >= MAX_BMAP_NCRC_UPDATES)
 			break;
@@ -243,6 +253,9 @@ slvr_worker_int(void)
 		s->slvr_flags &= ~SLVR_RPCPNDG;
 		s->slvr_flags |= SLVR_LRU;
 		lc_addqueue(&lruSlvrs, s);
+
+		DEBUG_SLVR(PLL_INFO, s, "descheduled due to pndg writes");
+
 		SLVR_ULOCK(s);
 		goto start;
 	}
@@ -310,7 +323,8 @@ slvr_worker_int(void)
 		bcrc_ref->bcr_id = slvr_2_biod(s)->biod_bcr_id;
 		clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
 
-		bcrc_ref->bcr_crcup.fid = fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh);
+		COPYFID(&bcrc_ref->bcr_crcup.fg, 
+			fcmh_2_fgp(slvr_2_bmap(s)->bcm_fcmh));
 		bcrc_ref->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_blkno;
 
 		bcrc_ref->bcr_crcup.crcs[0].crc = s->slvr_crc;
@@ -318,13 +332,14 @@ slvr_worker_int(void)
 		bcrc_ref->bcr_crcup.nups = 1;
 
 		SPLAY_INSERT(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
+		DEBUG_BCR(PLL_NOTIFY, bcrc_ref, "newly added");
 
 	} else {
 		psc_assert(bcrc_ref->bcr_crcup.blkno ==
 			   slvr_2_bmap(s)->bcm_blkno);
 
-		psc_assert(bcrc_ref->bcr_crcup.fid ==
-			   fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh));
+		psc_assert(SAMEFID(&bcrc_ref->bcr_crcup.fg,
+			   fcmh_2_fgp(slvr_2_bmap(s)->bcm_fcmh)));
 
 		psc_assert(bcrc_ref->bcr_nups < MAX_BMAP_NCRC_UPDATES);
 
@@ -338,6 +353,10 @@ slvr_worker_int(void)
 		bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups].crc = s->slvr_crc;
 		bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups].slot = s->slvr_num;
 		bcrc_ref->bcr_crcup.nups++;
+
+		DEBUG_BCR(PLL_NOTIFY, bcrc_ref, 
+			  "add to existing bcr (bcr.nups=%d crc.nups=%d)", 
+			  bcrc_ref->bcr_nups, bcrc_ref->bcr_crcup.nups);
 
 		psc_assert(bcrc_ref->bcr_nups == bcrc_ref->bcr_crcup.nups);
 

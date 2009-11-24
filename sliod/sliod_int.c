@@ -121,13 +121,13 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 }
 
 int
-iod_inode_getsize(slfid_t fid, off_t *fsize)
+iod_inode_getsize(struct slash_fidgen *fg, off_t *fsize)
 {
 	struct fidc_membh *f;
 	struct stat stb;
 	int rc;
 
-	f = fidc_lookup_simple(fid);
+	f = fidc_lookup_fg(fg);
 	psc_assert(f);
 	psc_assert(f->fcmh_fcoo);
 	/* XXX May want to replace this syscall with an inode cache

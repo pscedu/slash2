@@ -273,7 +273,7 @@ struct srm_bmap_crcwire {
 } __attribute__ ((__packed__));
 
 struct srm_bmap_crcup {
-	uint64_t		fid;
+	struct slash_fidgen     fg;
 	uint64_t                fsize;          /* largest known size */
 	uint32_t		blkno;		/* bmap block number */
 	uint32_t		nups;		/* number of crc updates */
