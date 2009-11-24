@@ -36,6 +36,8 @@ slmreplthr_removeq(struct sl_replrq *rrq)
 		psc_dynarray_remove(&msi->msi_replq, rrq);
 	ureqlock(&msi->msi_lock, locked);
 
+	reqlock(&rrq->rrq_lock);
+	psc_atomic32_dec(&rrq->rrq_refcnt);
 	mds_repl_tryrmqfile(rrq);
 }
 
@@ -155,6 +157,7 @@ slmreplthr_main(void *arg)
 			rrq = psc_dynarray_getpos(&msi->msi_replq, rir);
 			freelock(&msi->msi_lock);
 
+			psc_atomic32_inc(&rrq->rrq_refcnt);
 			rc = mds_repl_accessrq(rrq);
 
 			if (rc == 0) {

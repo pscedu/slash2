@@ -54,7 +54,7 @@ iosidx_cmp(const void *a, const void *b)
 }
 
 __static int
-iosidx_in(int idx, int iosidx[], int nios)
+iosidx_in(int idx, const int *iosidx, int nios)
 {
 	if (bsearch(&idx, iosidx, nios,
 	    sizeof(iosidx[0]), iosidx_cmp))
@@ -77,7 +77,7 @@ replrq_cmp(const void *a, const void *b)
 SPLAY_GENERATE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
 
 void
-mds_repl_dequeue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
+mds_repl_dequeue_sites(struct sl_replrq *rrq, const sl_replica_t *iosv, int nios)
 {
 	struct mds_site_info *msi;
 	struct sl_site *site;
@@ -101,7 +101,7 @@ mds_repl_dequeue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
 }
 
 void
-mds_repl_enqueue_sites(struct sl_replrq *rrq, sl_replica_t *iosv, int nios)
+mds_repl_enqueue_sites(struct sl_replrq *rrq, const sl_replica_t *iosv, int nios)
 {
 	struct mds_site_info *msi;
 	struct sl_site *site;
@@ -208,7 +208,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 
 __static int
 _mds_repl_iosv_lookup(struct slash_inode_handle *ih,
-    sl_replica_t iosv[], int iosidx[], int nios, int add)
+    const sl_replica_t iosv[], int iosidx[], int nios, int add)
 {
 	int k, last;
 
@@ -318,7 +318,7 @@ mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
  */
 int
 mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
-    const int retifset[4], int flags, int iosidx[], int nios)
+    const int retifset[4], int flags, const int *iosidx, int nios)
 {
 	int scircuit, nr, off, k, rc, trc;
 	struct slash_bmap_od *bmapod;
@@ -368,7 +368,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
 int
 mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 {
-	int dummy, rc, iosidx, tract[4], retifset[4];
+	int rc, iosidx, tract[4], retifset[4];
 	struct slash_bmap_od *bmapod;
 	struct bmap_mds_info *bmdsi;
 	struct sl_replrq *rrq;
@@ -386,10 +386,13 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 
 	/*
 	 * If this bmap is marked for persistent replication,
-	 * do not release the replication request for this file.
+	 * the repl request must exist and should be marked such
+	 * that the replication monitors do not release it in the
+	 * midst of processing it as this activity now means they
+	 * have more to do.
 	 */
 	if (bmdsi->bmdsi_repl_policy == BRP_PERSIST) {
-		rrq = mds_repl_findrq(fcmh_2_fgp(bcm->bcm_fcmh), &dummy);
+		rrq = mds_repl_findrq(fcmh_2_fgp(bcm->bcm_fcmh), NULL);
 		repl.bs_id = ios;
 		mds_repl_enqueue_sites(rrq, &repl, 1);
 		mds_repl_unrefrq(rrq);
@@ -473,13 +476,15 @@ mds_repl_accessrq(struct sl_replrq *rrq)
 		spinlock(&rrq->rrq_lock);
 	}
 
-	/* Release if going away. */
 	if (rrq->rrq_flags & REPLRQF_DIE) {
+		/* Release if going away. */
 		psc_atomic32_dec(&rrq->rrq_refcnt);
 		psc_waitq_wakeall(&rrq->rrq_waitq);
 		rc = 0;
-	} else
+	} else {
 		rrq->rrq_flags |= REPLRQF_BUSY;
+		freelock(&rrq->rrq_lock);
+	}
 	return (rc);
 }
 
@@ -494,36 +499,38 @@ mds_repl_unrefrq(struct sl_replrq *rrq)
 }
 
 struct sl_replrq *
-mds_repl_findrq(struct slash_fidgen *fgp, int *locked)
+mds_repl_findrq(const struct slash_fidgen *fgp, int *locked)
 {
 	struct slash_inode_handle inoh;
 	struct sl_replrq q, *rrq;
+	int rc, dummy;
+
+	if (locked == NULL)
+		locked = &dummy;
 
 	inoh.inoh_ino.ino_fg = *fgp;
 	q.rrq_inoh = &inoh;
 
 	*locked = reqlock(&replrq_tree_lock);
 	rrq = SPLAY_FIND(replrqtree, &replrq_tree, &q);
-	if (rrq) {
-		spinlock(&rrq->rrq_lock);
-		psc_atomic32_inc(&rrq->rrq_refcnt);
-	}
-
 	if (rrq == NULL) {
 		ureqlock(&replrq_tree_lock, *locked);
 		return (NULL);
 	}
+	spinlock(&rrq->rrq_lock);
+	psc_atomic32_inc(&rrq->rrq_refcnt);
 	freelock(&replrq_tree_lock);
 	*locked = 0;
 
-	mds_repl_accessrq(rrq);
-	freelock(&rrq->rrq_lock);
+	rc = mds_repl_accessrq(rrq);
+	if (!rc)
+		rrq = NULL;
 	return (rrq);
 }
 
 /* XXX this should be refactored into a generic inode loader in mds.c */
 int
-mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
+mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 {
 	struct slash_inode_handle *ih;
 	struct fidc_membh *fcmh;
@@ -562,8 +569,8 @@ mds_repl_loadino(struct slash_fidgen *fgp, struct fidc_membh **fp)
 }
 
 int
-mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
-    sl_replica_t *iosv, int nios)
+mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
+    const sl_replica_t *iosv, int nios)
 {
 	int iosidx[SL_MAX_REPLICAS], rc, locked, tract[4], retifset[4], retifset2[4];
 	struct sl_replrq *newrq, *rrq;
@@ -585,6 +592,11 @@ mds_repl_addrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	spinlock(&replrq_tree_lock);
 	rrq = mds_repl_findrq(fgp, &locked);
 	if (rrq == NULL) {
+		/*
+		 * If the tree stayed locked, the request
+		 * exists but we can't use it e.g. because it
+		 * is going away.
+		 */
 		if (!locked)
 			goto restart;
 
@@ -721,12 +733,19 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	retifset[SL_REPL_OLD] = 1;
 	retifset[SL_REPL_SCHED] = 1;
 
+	reqlock(&rrq->rrq_lock);
+	if (rrq->rrq_flags & REPLRQF_DIE) {
+		/* someone is already waiting for this to go away */
+		psc_waitq_wakeall(&rrq->rrq_waitq);
+		freelock(&rrq->rrq_lock);
+		return;
+	}
+
 	/*
 	 * If this request is currently being requeued, wait.
 	 * After such a time, if it was requeued again, there must have
 	 * been work to do, and some one else should tryrmqfile().
 	 */
-	reqlock(&rrq->rrq_lock);
 	while (rrq->rrq_flags & REPLRQF_REQUEUE) {
 		psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
 		spinlock(&rrq->rrq_lock);
@@ -793,10 +812,10 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 }
 
 int
-mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
-    sl_replica_t *iosv, int nios)
+mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
+    const sl_replica_t *iosv, int nios)
 {
-	int iosidx[SL_MAX_REPLICAS], locked, rc, tract[4], retifset[4];
+	int iosidx[SL_MAX_REPLICAS], rc, tract[4], retifset[4];
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 	sl_blkno_t n;
@@ -804,7 +823,7 @@ mds_repl_delrq(struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
 
-	rrq = mds_repl_findrq(fgp, &locked);
+	rrq = mds_repl_findrq(fgp, NULL);
 	if (rrq == NULL)
 		return (ENOENT);
 
@@ -971,9 +990,9 @@ mds_repl_scandir(void)
 	(((min) * ((nnodes) - ((min) - 1) / 2)) + ((max) - (min) - 1))
 
 int
-mds_repl_nodes_getbusy(struct mds_resm_info *ma, struct mds_resm_info *mb)
+mds_repl_nodes_getbusy(const struct mds_resm_info *ma, const struct mds_resm_info *mb)
 {
-	struct mds_resm_info *min, *max;
+	const struct mds_resm_info *min, *max;
 	int rc, locked;
 
 	psc_assert(ma->mri_busyid != mb->mri_busyid);
@@ -995,10 +1014,10 @@ mds_repl_nodes_getbusy(struct mds_resm_info *ma, struct mds_resm_info *mb)
 }
 
 int
-mds_repl_nodes_setbusy(struct mds_resm_info *ma,
-    struct mds_resm_info *mb, int busy)
+mds_repl_nodes_setbusy(const struct mds_resm_info *ma,
+    const struct mds_resm_info *mb, int busy)
 {
-	struct mds_resm_info *min, *max;
+	const struct mds_resm_info *min, *max;
 	int locked, rc;
 
 	psc_assert(ma->mri_busyid != mb->mri_busyid);
@@ -1054,7 +1073,7 @@ mds_repl_buildbusytable(void)
 void
 mds_repl_reset_scheduled(sl_ios_id_t resid)
 {
-	int tract[4], off, rc, iosidx;
+	int tract[4], rc, iosidx;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 	sl_replica_t repl;
@@ -1064,6 +1083,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 
 	spinlock(&replrq_tree_lock);
 	SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
+		psc_atomic32_inc(&rrq->rrq_refcnt);
 		if (!mds_repl_accessrq(rrq))
 			continue;
 
@@ -1077,8 +1097,6 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		iosidx = mds_repl_ios_lookup(rrq->rrq_inoh, resid);
 		if (iosidx < 0)
 			goto end;
-
-		off = SL_BITS_PER_REPLICA * iosidx;
 
 		tract[SL_REPL_INACTIVE] = -1;
 		tract[SL_REPL_SCHED] = SL_REPL_OLD;

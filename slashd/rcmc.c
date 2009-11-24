@@ -185,8 +185,8 @@ slmrcmthr_main(__unusedx void *arg)
 	struct psc_thread *thr;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
-	int rc, dummy;
 	sl_blkno_t n;
+	int rc;
 
 	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
@@ -217,7 +217,7 @@ slmrcmthr_main(__unusedx void *arg)
 				break;
 		}
 		freelock(&replrq_tree_lock);
-	} else if ((rrq = mds_repl_findrq(&srcm->srcm_fg, &dummy)) != NULL) {
+	} else if ((rrq = mds_repl_findrq(&srcm->srcm_fg, NULL)) != NULL) {
 		slm_rcm_issue_getreplst(rrq, 0);
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))

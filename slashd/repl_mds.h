@@ -36,17 +36,18 @@ SPLAY_PROTOTYPE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
 uint64_t sl_get_repls_inum(void);
 
 struct sl_replrq *
-	mds_repl_findrq(struct slash_fidgen *, int *);
+	mds_repl_findrq(const struct slash_fidgen *, int *);
 int	mds_repl_accessrq(struct sl_replrq *);
 void	mds_repl_reset_scheduled(sl_ios_id_t);
-int	mds_repl_addrq(struct slash_fidgen *, sl_blkno_t, sl_replica_t *, int);
+int	mds_repl_addrq(const struct slash_fidgen *, sl_blkno_t, const sl_replica_t *, int);
 void	mds_repl_bmap_rel(struct bmapc_memb *);
-int	mds_repl_delrq(struct slash_fidgen *, sl_blkno_t, sl_replica_t *, int);
+int	mds_repl_bmap_walk(struct bmapc_memb *, const int [], const int [], int, const int *, int);
+int	mds_repl_delrq(const struct slash_fidgen *, sl_blkno_t, const sl_replica_t *, int);
 void	mds_repl_init(void);
 int	mds_repl_inv_except_locked(struct bmapc_memb *, sl_ios_id_t);
-int	mds_repl_loadino(struct slash_fidgen *, struct fidc_membh **);
-int	mds_repl_nodes_getbusy(struct mds_resm_info *, struct mds_resm_info *);
-int	mds_repl_nodes_setbusy(struct mds_resm_info *, struct mds_resm_info *, int);
+int	mds_repl_loadino(const struct slash_fidgen *, struct fidc_membh **);
+int	mds_repl_nodes_getbusy(const struct mds_resm_info *, const struct mds_resm_info *);
+int	mds_repl_nodes_setbusy(const struct mds_resm_info *, const struct mds_resm_info *, int);
 void	mds_repl_tryrmqfile(struct sl_replrq *);
 void	mds_repl_unrefrq(struct sl_replrq *);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);
