@@ -34,7 +34,9 @@
 #include <pthread.h>
 
 #include "psc_util/alloc.h"
+#include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/waitq.h"
 
 #include "msl_fuse.h"
 #include "fuse_listener.h"
@@ -63,7 +65,6 @@ fuse_fs_info_t fsinfo[MAX_FDS];
 char *mountpoints[MAX_FDS];
 
 pthread_t fuse_threads[NUM_THREADS];
-pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
 int
 slash2fuse_listener_init(void)
@@ -204,10 +205,20 @@ destroy_fs(int i)
 static void *
 slash2fuse_listener_loop(__unusedx void *arg)
 {
+	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	static struct psc_waitq wq = PSC_WAITQ_INIT;
+	static int busy;
+
 	size_t bufsize = 0;
 	char *buf = NULL;
 
-	psc_assert(pthread_mutex_lock(&mtx) == 0);
+	spinlock(&lock);
+	while (busy) {
+		psc_waitq_wait(&wq, &lock);
+		spinlock(&lock);
+	}
+	busy = 1;
+	freelock(&lock);
 
 	while(!exit_fuse_listener) {
 		int i;
@@ -266,12 +277,21 @@ slash2fuse_listener_loop(__unusedx void *arg)
 				 * While we process this request, we let another
 				 * thread receive new events
 				 */
-				psc_assert(pthread_mutex_unlock(&mtx) == 0);
+				spinlock(&lock);
+				busy = 0;
+				psc_waitq_wakeall(&wq);
+				freelock(&lock);
 
 				fuse_session_process(se, buf, res, ch);
 
 				/* Acquire the mutex before proceeding */
-				psc_assert(pthread_mutex_lock(&mtx) == 0);
+				spinlock(&lock);
+				while (busy) {
+					psc_waitq_wait(&wq, &lock);
+					spinlock(&lock);
+				}
+				busy = 1;
+				freelock(&lock);
 
 				/*
 				 * At this point, we can no longer trust oldfds
@@ -296,7 +316,10 @@ slash2fuse_listener_loop(__unusedx void *arg)
 		nfds = write_ptr;
 	}
 
-	psc_assert(pthread_mutex_unlock(&mtx) == 0);
+	spinlock(&lock);
+	busy = 0;
+	psc_waitq_wakeall(&wq);
+	freelock(&lock);
 
 	return NULL;
 }
@@ -307,7 +330,7 @@ slash2fuse_listener_start(void)
 	int i;
 
 	for(i = 0; i < NUM_THREADS; i++)
-		psc_assert(pthread_create(&fuse_threads[i], NULL, 
+		psc_assert(pthread_create(&fuse_threads[i], NULL,
 					  slash2fuse_listener_loop, NULL) == 0);
 
 	for(i = 0; i < NUM_THREADS; i++) {
