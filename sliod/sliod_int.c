@@ -73,7 +73,12 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 	iov.iov_base = bmap_2_biodi_wire(b) =
 		PSCALLOC(sizeof(struct slash_bmap_wire));
 
-	(void)rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMI_BULK_PORTAL, &iov, 1);
+	rc = rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMI_BULK_PORTAL, &iov, 1);
+	if (rc) {
+		PSCFREE(bmap_2_biodi_wire(b));
+		psc_error("rsx_bulkclient() failed rc=%d ", rc);
+		goto out;
+	}
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
