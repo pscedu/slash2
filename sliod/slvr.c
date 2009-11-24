@@ -190,7 +190,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
 		rc = 0;
 	}
 
-	vbitmap_printbin1(s->slvr_slab->slb_inuse);
+	//vbitmap_printbin1(s->slvr_slab->slb_inuse);
 
 	return ((rc < 0) ? (int)-save_errno : (int)0);
 }
@@ -410,7 +410,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 			vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
 
-	vbitmap_printbin1(s->slvr_slab->slb_inuse);
+	//vbitmap_printbin1(s->slvr_slab->slb_inuse);
 	psc_info("vbitmap_nfree()=%d", vbitmap_nfree(s->slvr_slab->slb_inuse));
 	/* We must have found some work to do.
 	 */
@@ -437,7 +437,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		s->slvr_flags &= ~SLVR_FAULTING;
 
 		vbitmap_invert(s->slvr_slab->slb_inuse);
-		vbitmap_printbin1(s->slvr_slab->slb_inuse);
+		//vbitmap_printbin1(s->slvr_slab->slb_inuse);
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
@@ -458,7 +458,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 
 		if (unaligned[1] >= 0)
 			vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
-		vbitmap_printbin1(s->slvr_slab->slb_inuse);
+		//vbitmap_printbin1(s->slvr_slab->slb_inuse);
 	out:
 		SLVR_ULOCK(s);
 	}
