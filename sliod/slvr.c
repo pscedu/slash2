@@ -352,13 +352,15 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	 *  which is done asynchronously.
 	 */
 	if (rw == SL_WRITE) {
-		s->slvr_flags |= SLVR_CRCDIRTY;
-
-		if (s->slvr_flags & SLVR_DATARDY)
-			/* Either read or write ops can just proceed if
-			 *   SLVR_DATARDY is set, the sliver is prepared.
-			 */
-			goto set_write_dirty;
+		if (!(s->slvr_flags & SLVR_REPLDST)) {
+			s->slvr_flags |= SLVR_CRCDIRTY;
+			
+			if (s->slvr_flags & SLVR_DATARDY)
+				/* Either read or write ops can just proceed if
+				 *   SLVR_DATARDY is set, the sliver is prepared.
+				 */
+				goto set_write_dirty;
+		}
 
 	} else if (rw == SL_READ) {
 		if (s->slvr_flags & SLVR_DATARDY)
@@ -527,25 +529,28 @@ slvr_wio_done(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_pndgwrts > 0);
 
-	s->slvr_flags |= SLVR_CRCDIRTY;       
-
 	if (s->slvr_flags & SLVR_REPLDST) {
 		/* This was a replication dest slvr.  Adjust the slvr flags 
 		 *    so that the slvr may be freed on demand.
 		 */
 		DEBUG_SLVR(PLL_INFO, s, "replication complete");
-
+		
 		psc_assert(s->slvr_pndgwrts == 1);
 		psc_assert(s->slvr_flags & SLVR_PINNED);
+		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
 		s->slvr_pndgwrts--;
-		s->slvr_flags &= ~SLVR_PINNED;
+		s->slvr_flags &= ~(SLVR_PINNED|SLVR_FAULTING);
 			       
 		SLVR_ULOCK(s);
 
 		slvr_lru_requeue(s, 0);
 		return;
 	}
+	/* XXX SLVR_CRCDIRTY had already been applied so this may not 
+	 *   be necessary.
+	 */
+	s->slvr_flags |= SLVR_CRCDIRTY;
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		/* This sliver was being paged-in over the network.
@@ -748,8 +753,9 @@ slvr_cache_init(void)
 	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer,
 		    slb_mgmt_lentry, PPMF_AUTO, 64, 64, 128,
 		    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap,
-		    "svlr_slab", NULL);
+			    "svlr_slab", NULL);
 	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
-
+	
 	slvr_worker_init();
 }
+ 
