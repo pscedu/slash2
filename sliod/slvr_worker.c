@@ -198,10 +198,12 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 __static void
 slvr_worker_int(void)
 {
-	struct slvr_ref *s;
-	struct biod_crcup_ref tbcrc_ref, *bcrc_ref=NULL;
-	struct timespec now;
-	int add=0;
+	struct slvr_ref		*s;
+	struct timespec		 now;
+	struct biod_crcup_ref	*bcrc_ref;
+	struct biod_crcup_ref	 tbcrc_ref;
+
+	bcrc_ref = NULL;
 
  start:
 	clock_gettime(CLOCK_REALTIME, &now);
@@ -297,7 +299,22 @@ slvr_worker_int(void)
 		/* Don't have a ref in the tree, let's add one.
 		 */
 		slvr_2_biod(s)->biod_bcr_id = binfSlvrs.binfst_counter++;
-		add = 1;
+		bcrc_ref = PSCALLOC(sizeof(struct biod_crcup_ref) +
+				    (sizeof(struct srm_bmap_crcwire) *
+				     MAX_BMAP_INODE_PAIRS));
+
+		bcrc_ref->bcr_slvrs[0] = s;
+		bcrc_ref->bcr_id = slvr_2_biod(s)->biod_bcr_id;
+		clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
+
+		bcrc_ref->bcr_crcup.fid = fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh);
+		bcrc_ref->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_blkno;
+
+		bcrc_ref->bcr_crcup.crcs[0].crc = s->slvr_crc;
+		bcrc_ref->bcr_crcup.crcs[0].slot = s->slvr_num;
+		bcrc_ref->bcr_crcup.nups = 1;
+
+		SPLAY_INSERT(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
 
 	} else {
 		psc_assert(bcrc_ref->bcr_crcup.blkno ==
@@ -325,25 +342,6 @@ slvr_worker_int(void)
 	/* Should be done with the biodi, unlock it.
 	 */
 	freelock(&slvr_2_biod(s)->biod_lock);
-
-	if (add) {
-		bcrc_ref = PSCALLOC(sizeof(struct biod_crcup_ref) +
-				    (sizeof(struct srm_bmap_crcwire) *
-				     MAX_BMAP_INODE_PAIRS));
-
-		bcrc_ref->bcr_slvrs[0] = s;
-		bcrc_ref->bcr_id = slvr_2_biod(s)->biod_bcr_id;
-		clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
-
-		bcrc_ref->bcr_crcup.fid = fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh);
-		bcrc_ref->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_blkno;
-
-		bcrc_ref->bcr_crcup.crcs[0].crc = s->slvr_crc;
-		bcrc_ref->bcr_crcup.crcs[0].slot = s->slvr_num;
-		bcrc_ref->bcr_crcup.nups = 1;
-
-		SPLAY_INSERT(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
-	}
 
 	freelock(&binfSlvrs.binfst_lock);
 	slvr_worker_push_crcups();
