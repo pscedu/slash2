@@ -275,10 +275,11 @@ void
 slvr_slab_prep(struct slvr_ref *s, int rw)
 {
 	SLVR_LOCK(s);
-	/* Set the pin bit no matter what, but first set the correct
-	 *   pndg op refcnt so that the slvr can't be freed from
-	 *   underneath us.
+	/* slvr_lookup() must pin all slvrs to avoid racing with
+	 *   the reaper.
 	 */
+	psc_assert(s->slvr_flags & SLVR_PINNED);
+
 	if (rw == SL_WRITE)
 		s->slvr_pndgwrts++;
 	else
@@ -310,7 +311,6 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 	}
 
 	psc_assert(s->slvr_slab);
-	s->slvr_flags |= SLVR_PINNED;
 	SLVR_ULOCK(s);
 }
 
@@ -321,10 +321,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	int blks, rc, unaligned[2] = {-1, -1};
 	size_t i;
 
-
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-
 	/*
 	 * Common courtesy requires us to wait for another threads' work FIRST.
 	 * Otherwise, we could bail out prematurely when the data is ready without
@@ -623,6 +621,9 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int op)
 
 		SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, s);
 	}
+
+	s->slvr_flags |= SLVR_PINNED;
+
 	freelock(&b->biod_lock);
 
 	return (s);
