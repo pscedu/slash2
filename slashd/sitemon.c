@@ -165,7 +165,6 @@ slmreplthr_main(void *arg)
 				slmreplthr_removeq(rrq);
 				goto restart;
 			}
-			freelock(&rrq->rrq_lock);
 
 			rc = mds_inox_ensure_loaded(rrq->rrq_inoh);
 			if (rc) {
