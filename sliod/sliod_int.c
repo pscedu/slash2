@@ -47,12 +47,12 @@ iod_bmap_free(struct bmapc_memb *b)
 __static int
 iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 {
-	int rc=0;
-	struct srm_bmap_wire_req *mq;
-	struct srm_bmap_wire_rep *mp;
-	struct pscrpc_request *rq;
-	struct pscrpc_bulk_desc *desc;
-	struct iovec iov;
+	int				 rc;
+	struct srm_bmap_wire_req	*mq;
+	struct srm_bmap_wire_rep	*mp;
+	struct pscrpc_request		*rq;
+	struct iovec			 iov;
+	struct pscrpc_bulk_desc		*desc;
 
 	psc_assert(b->bcm_mode & BMAP_IOD_RETRIEVE);
 	psc_assert(!bmap_2_biodi_wire(b));
