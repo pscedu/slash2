@@ -580,8 +580,11 @@ slvr_wio_done(struct slvr_ref *s)
 	SLVR_ULOCK(s);
 }
 
+/*
+ * Lookup or create a sliver reference, ignoring one that is being freed.
+ */
 struct slvr_ref *
-slvr_lookup(uint16_t num, struct bmap_iod_info *b, int op)
+slvr_lookup(uint16_t num, struct bmap_iod_info *b)
 {
 	struct slvr_ref *s, ts;
 
@@ -594,16 +597,12 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int op)
 	/* Note, slvr lock and biod lock are the same.
 	 */
 	if (s && (s->slvr_flags & SLVR_FREEING)) {
-		if (op == SLVR_LOOKUP_DEL)
-			psc_assert(SPLAY_REMOVE(biod_slvrtree,
-					&b->biod_slvrs, s));
-		else {
-			freelock(&b->biod_lock);
-			sched_yield();
-			goto retry;
-		}
 
-	} else if (!s && (op == SLVR_LOOKUP_ADD)) {
+		freelock(&b->biod_lock);
+		sched_yield();
+		goto retry;
+
+	} else if (!s) {
 		s = PSCALLOC(sizeof(*s));
 
 		s->slvr_num = num;

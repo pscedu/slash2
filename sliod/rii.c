@@ -81,9 +81,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 	slvroff = (SLASH_BMAP_SIZE * bcm->bcm_blkno) % SLASH_SLVR_SIZE;
 	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, mq->len));
 	for (i = 0; i < nslvrs; i++, slvroff = 0) {
-		slvr_ref[i] = slvr_lookup(slvrno + i,
-		    bmap_2_biodi(bcm), SLVR_LOOKUP_ADD);
-
+		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bcm));
 		slvr_slab_prep(slvr_ref[i], SL_READ);
 		slvr_repl_prep(slvr_ref[i], SLVR_REPLSRC);
 		csize = MIN(tsize, SLASH_SLVR_SIZE - slvroff);
@@ -214,8 +212,7 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, w->srw_len));
 	for (i = 0; i < nslvrs; i++, slvroff = 0) {
 		csize = MIN(tsize, SLASH_SLVR_SIZE - slvroff);
-		w->srw_slvr_ref[i] = slvr_lookup(slvrno + i,
-		    bmap_2_biodi(w->srw_bcm), SLVR_LOOKUP_ADD);
+		w->srw_slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(w->srw_bcm));
 		slvr_slab_prep(w->srw_slvr_ref[i], SL_WRITE);
 		slvr_repl_prep(w->srw_slvr_ref[i], SLVR_REPLDST);
 		slvr_io_prep(w->srw_slvr_ref[i], slvroff, csize, SL_WRITE);
