@@ -47,9 +47,6 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 	mq->ncrc_updates = dynarray_len(ref_array);
 	req->rq_async_args.pointer_arg[0] = (void *)ref_array;
 
-	psc_assert((mq->ncrc_updates <= MAX_BMAP_NCRC_UPDATES) &&
-		   mq->ncrc_updates);
-
 	len = (mq->ncrc_updates * sizeof(struct srm_bmap_crcup));
 	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 
