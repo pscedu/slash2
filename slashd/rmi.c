@@ -203,9 +203,13 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	}
 
 	tract[SL_REPL_INACTIVE] = -1;
-	tract[SL_REPL_SCHED] = SL_REPL_ACTIVE;
 	tract[SL_REPL_OLD] = -1;
 	tract[SL_REPL_ACTIVE] = -1;
+
+	if (mp->rc)
+		tract[SL_REPL_SCHED] = SL_REPL_INACTIVE;
+	else
+		tract[SL_REPL_SCHED] = SL_REPL_ACTIVE;
 
 	retifset[SL_REPL_INACTIVE] = EINVAL;
 	retifset[SL_REPL_SCHED] = 0;
@@ -321,4 +325,3 @@ slm_rmi_getdata(struct pscrpc_export *exp)
 	free(p);
 	return (smid);
 }
-
