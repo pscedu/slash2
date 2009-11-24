@@ -491,28 +491,17 @@ slvr_rio_done(struct slvr_ref *s)
 void
 slvr_try_rpcqueue(struct slvr_ref *s)
 {
-	SLVR_LOCK(s);
-
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 
 	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc");
-	if (s->slvr_flags & SLVR_RPCPNDG) {
-		SLVR_ULOCK(s);
-		return;
-	}
 
-	if (!s->slvr_pndgwrts) {
+	psc_assert(s->slvr_flags & SLVR_LRU);
+	s->slvr_flags &= ~SLVR_LRU;
+	s->slvr_flags |= SLVR_RPCPNDG;
 
-		psc_assert(s->slvr_flags & SLVR_LRU);
-		s->slvr_flags &= ~SLVR_LRU;
-		s->slvr_flags |= SLVR_RPCPNDG;
-
-		lc_remove(&lruSlvrs, s);
-		lc_addqueue(&rpcqSlvrs, s);
-
-	}
-	SLVR_ULOCK(s);
+	lc_remove(&lruSlvrs, s);
+	lc_addqueue(&rpcqSlvrs, s);
 }
 
 /**
@@ -581,15 +570,14 @@ slvr_wio_done(struct slvr_ref *s)
 	} else
 		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
 	
-	if (--s->slvr_pndgwrts == 0 && 
-	    !(s->slvr_flags & SLVR_RPCPNDG)) {
-		/* No more pending writes, try to schedule the buffer
-		 *   to be crc'd.
-		 */
-		SLVR_ULOCK(s);
+	/*
+	 * If there are no more pending writes, schedule a CRC op.
+	 */
+	s->slvr_pndgwrts--;
+	if (!s->slvr_pndgwrts && !(s->slvr_flags & SLVR_RPCPNDG)) {
 		slvr_try_rpcqueue(s);
-	} else
-		SLVR_ULOCK(s);
+	}
+	SLVR_ULOCK(s);
 }
 
 struct slvr_ref *

@@ -174,19 +174,17 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 			psc_assert(s->slvr_flags & SLVR_RPCPNDG);
 			s->slvr_flags &= ~SLVR_RPCPNDG;
 
-			if (!s->slvr_pndgwrts &&
-			    s->slvr_flags & SLVR_CRCDIRTY) {
-				/* If the crc is dirty and there are no
-				 *   pending ops then the sliver was not
-				 *   moved to the rpc queue because
-				 *   SLVR_RPCPNDG had been set.  Therefore
-				 *   we should try to schedule the sliver,
-				 *   otherwise may sit in the LRU forever.
-				 */
-				SLVR_ULOCK(s);
+			/* If the crc is dirty and there are no
+			 *   pending ops then the sliver was not
+			 *   moved to the rpc queue because
+			 *   SLVR_RPCPNDG had been set.  Therefore
+			 *   we should try to schedule the sliver,
+			 *   otherwise may sit in the LRU forever.
+			 */
+			if (!s->slvr_pndgwrts && s->slvr_flags & SLVR_CRCDIRTY) {
 				slvr_try_rpcqueue(s);
-			} else
-				SLVR_ULOCK(s);
+			} 
+			SLVR_ULOCK(s);
 		}
 		PSCFREE(b);
 	}
