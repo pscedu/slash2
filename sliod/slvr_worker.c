@@ -327,6 +327,12 @@ slvr_worker_int(void)
 			   fcmh_2_fid(slvr_2_bmap(s)->bcm_fcmh));
 
 		psc_assert(bcrc_ref->bcr_nups < MAX_BMAP_NCRC_UPDATES);
+
+		/*
+		 * Refresh the age of this sliver reference.  If it gets full, it
+		 * will be sent out immediately regardless of its age.
+		 */
+		clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
 		bcrc_ref->bcr_slvrs[bcrc_ref->bcr_nups++] = s;
 
 		bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups].crc = s->slvr_crc;
