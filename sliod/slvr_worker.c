@@ -23,6 +23,12 @@ struct biod_infslvr_tree binfSlvrs;
 
 __static SPLAY_GENERATE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
 
+/*
+ * Send an RPC containing CRC updates for slivers to the metadata server.  To avoid 
+ * potential woes caused by out-of-order deliveries, we should allow at most one inflight
+ * CRC update RPC at any time.  Note that this does not prevent us from having multiple 
+ * threads to do the CRC calculation.
+ */
 __static int
 slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 {
