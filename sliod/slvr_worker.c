@@ -144,9 +144,8 @@ done:
 	rc = slvr_worker_crcup_genrq(ref_array);
 
 	/*
-	 * If we fail to send an RPC, we must leave the reference in the tree for
-	 * future attemp.  Otherwise, the callback function should remove them
-	 * from the tree.
+	 * If we fail to send an RPC, we must leave the reference in the tree for future attempt.  
+	 * Otherwise, the callback function (i.e., slvr_nbreqset_cb()) should remove them from the tree.
 	 */
 	if (rc) {
 		spinlock(&binfSlvrs.binfst_lock);
@@ -164,7 +163,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 		 struct pscrpc_async_args *args)
 {
 	struct dynarray *a = args->pointer_arg[0];
-	struct biod_crcup_ref *b=NULL;
+	struct biod_crcup_ref *bcrc_ref=NULL;
 	struct slvr_ref *s;
 	struct srm_generic_rep *mp;
 	int i, err=0;
@@ -176,13 +175,16 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 	if (req->rq_status || mp->rc)
 		err = 1;
 
+	if (!err)
+		spinlock(&binfSlvrs.binfst_lock);
+
 	psc_assert(a);
 
 	for (i=0; i < dynarray_len(a); i++) {
-		b = dynarray_getpos(a, i);
+		bcrc_ref = dynarray_getpos(a, i);
 
-		for (j=0; j < b->bcr_nups; j++) {
-			s = b->bcr_slvrs[j];
+		for (j=0; j < bcrc_ref->bcr_nups; j++) {
+			s = bcrc_ref->bcr_slvrs[j];
 
 			SLVR_LOCK(s);
 
@@ -210,8 +212,14 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 			} 
 			SLVR_ULOCK(s);
 		}
-		PSCFREE(b);
+		if (!err) {
+			SPLAY_REMOVE(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
+			PSCFREE(bcrc_ref);
+		}
 	}
+	if (!err)
+		freelock(&binfSlvrs.binfst_lock);
+
 	dynarray_free(a);
 	PSCFREE(a);
 
