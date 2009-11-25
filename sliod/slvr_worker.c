@@ -167,14 +167,18 @@ int
 slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 		 struct pscrpc_async_args *args)
 {
-	struct dynarray *a = args->pointer_arg[0];
-	struct biod_crcup_ref *bcrc_ref=NULL;
-	struct slvr_ref *s;
-	struct srm_generic_rep *mp;
-	int i, err=0;
-	uint32_t j;
+	struct dynarray		*a;
+	struct slvr_ref		*s;
+	int			 i;
+	int			 j;
+	struct srm_generic_rep	*mp;
+	int			 err;
+	struct biod_crcup_ref	*bcrc_ref;
 
 	ENTRY;
+
+	err = 0;
+	a = args->pointer_arg[0];
 
 	mp = psc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
 	if (req->rq_status || mp->rc)
