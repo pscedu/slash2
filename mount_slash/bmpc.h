@@ -291,12 +291,14 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	    ((r)->biorq_flags & BIORQ_RBWLP)))))
 
 static inline void
-bmpc_lru_del(struct bmap_pagecache *bmpc) {
+bmpc_lru_del(struct bmap_pagecache *bmpc)
+{
 	lc_remove(&bmpcLru, bmpc);
 }
 
 static inline void
-bmpc_init(struct bmap_pagecache *bmpc) {
+bmpc_init(struct bmap_pagecache *bmpc)
+{
 	memset(bmpc, 0, sizeof(*bmpc));
 
 	LOCK_INIT(&bmpc->bmpc_lock);

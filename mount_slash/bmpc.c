@@ -407,7 +407,8 @@ bmpc_free(void *base)
  * bmpc_mem_alloc - return a pointer to a single block of cache memory.
  */
 void *
-bmpc_alloc(void) {
+bmpc_alloc(void)
+{
 	struct sl_buffer *slb;
 	void *base=NULL;
 	size_t elem;

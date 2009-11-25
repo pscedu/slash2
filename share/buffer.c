@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <time.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
@@ -11,7 +12,6 @@
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
-#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
@@ -20,19 +20,16 @@
 
 struct psc_poolmaster	 slBufsPoolMaster;
 struct psc_poolmgr	*slBufsPool;
-list_cache_t slBufsLru;
-list_cache_t slBufsPin;
+struct psc_listcache	 slBufsLru;
+struct psc_listcache	 slBufsPin;
 
 int slCacheBlkSz=32768;
 int slCacheNblks=32;
 uint32_t slbFreeDef=100;
 uint32_t slbFreeMax=200;
-uint32_t slbFreeInc=10;
 
 sl_iov_try_memrls   slMemRlsTrylock=NULL;
 sl_iov_memrls_ulock slMemRlsUlock=NULL;
-
-typedef struct psc_lockedlist token_t;
 
 static void
 sl_buffer_free_assertions(const struct sl_buffer *b)
@@ -50,17 +47,20 @@ sl_buffer_free_assertions(const struct sl_buffer *b)
 	psc_assert(psclist_disjoint(&b->slb_fcm_lentry));
 }
 
+#if 0
 static void
-sl_buffer_lru_2_free_assertions(const struct sl_buffer *b) {
+sl_buffer_lru_2_free_assertions(const struct sl_buffer *b)
+{
 	psc_assert(b->slb_flags == (SLB_LRU|SLB_FREEING));
 	psc_assert(vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	psc_assert(psclist_empty(&b->slb_iov_list));
 	psc_assert(!atomic_read(&b->slb_ref));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
-        psc_assert((!atomic_read(&b->slb_inflight)) &&
-                   (!atomic_read(&b->slb_inflpndg)));
+	psc_assert((!atomic_read(&b->slb_inflight)) &&
+		   (!atomic_read(&b->slb_inflpndg)));
 
 }
+#endif
 
 static void
 sl_buffer_lru_assertions(const struct sl_buffer *b)
@@ -72,7 +72,7 @@ sl_buffer_lru_assertions(const struct sl_buffer *b)
 	psc_assert(atomic_read(&b->slb_ref));
 	//	psc_assert(!atomic_read(&b->slb_unmapd_ref));
 	psc_assert((!atomic_read(&b->slb_inflight)) &&
-                   (!atomic_read(&b->slb_inflpndg)));
+		   (!atomic_read(&b->slb_inflpndg)));
 }
 
 void
@@ -88,7 +88,7 @@ sl_buffer_fresh_assertions(const struct sl_buffer *b)
 	psc_assert(!atomic_read(&b->slb_ref));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
 	psc_assert((!atomic_read(&b->slb_inflight)) &&
-                   (!atomic_read(&b->slb_inflpndg)));
+		   (!atomic_read(&b->slb_inflpndg)));
 }
 
 static void
@@ -133,7 +133,7 @@ sl_buffer_pin_2_lru_assertions(const struct sl_buffer *b)
 	psc_assert(atomic_read(&b->slb_ref));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
 	psc_assert((!atomic_read(&b->slb_inflight)) &&
-                   (!atomic_read(&b->slb_inflpndg)));
+		   (!atomic_read(&b->slb_inflpndg)));
 }
 
 #if 0
@@ -141,7 +141,7 @@ static void
 sl_buffer_inflight_assertions(struct sl_buffer *b)
 {
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_DIRTY));
-        psc_assert(!ATTR_TEST(b->slb_flags, SLB_INFLIGHT));
+	psc_assert(!ATTR_TEST(b->slb_flags, SLB_INFLIGHT));
 	psc_assert(atomic_read(&b->slb_inflight));
 }
 #endif
@@ -172,10 +172,10 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 		if (lc == &slBufsLru) {
 			slb->slb_flags = SLB_LRU;
 
-			if (slb->slb_lc_owner == &slBufsPin) 
+			if (slb->slb_lc_owner == &slBufsPin)
 				sl_buffer_pin_2_lru_assertions(slb);
 
-			else 
+			else
 				sl_buffer_lru_assertions(slb);
 
 		} else if (lc == &slBufsPin)
@@ -233,7 +233,7 @@ sl_buffer_timedget(list_cache_t *lc)
 
 #if 0
 static void
-sl_slab_tryfree(struct sl_buffer *b) 
+sl_slab_tryfree(struct sl_buffer *b)
 {
 	int free=0;
 
@@ -263,15 +263,16 @@ sl_slab_tryfree(struct sl_buffer *b)
 #endif
 
 static int
-sl_slab_reap(__unusedx struct psc_poolmgr *pool) {
+sl_slab_reap(__unusedx struct psc_poolmgr *pool)
+{
 	struct sl_buffer        *b;
 	struct sl_buffer_iovref *r, *t;
 	int nslbs=0;
 	void *pri_bmap_tmp;
 
 	abort();
-	/* Grab one off the lru.  
-	 *    XXX it may be better to lock the entire list and 
+	/* Grab one off the lru.
+	 *    XXX it may be better to lock the entire list and
 	 *    iterate over each item to prevent having to restore
 	 *    the unreapable items.
 	 */
@@ -305,7 +306,7 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool) {
 	 */
 	b->slb_flags &= ~SLB_LRU;
 	/* Remove ourselves from the fidcache slab list
-	 */	
+	 */
 	pll_remove(b->slb_lc_fcm, b);
 	b->slb_lc_fcm = NULL;
 	INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);
@@ -352,7 +353,9 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 
 /**
  * sl_buffer_unpin_locked - decref and perhaps unpin an slb.
- * Notes:  the slb_inflight ref corresponding to this op must have already been dec'd, meaning that slb_inflpndg must be at least 1 greater than slb_inflight.
+ * Notes:  the slb_inflight ref corresponding to this op must have
+ *	already been dec'd, meaning that slb_inflpndg must be at least
+ *	+1 greater than slb_inflight.
  */
 #define sl_buffer_unpin_locked(slb)					\
 	{								\
