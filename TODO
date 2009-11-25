@@ -277,3 +277,6 @@ legend:
 - libsl_init() is getting an ENOMEM somewhere in slashd
 - inode new bmap replication policy get/set: msctl -f
   per-bmap replication policy get/set
+
+- do not keep sl_replrq in mem unless a bh_repl is OLD or SCHED
+- add bmap_hdr in replst ctlmsg
