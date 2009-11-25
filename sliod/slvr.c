@@ -102,8 +102,7 @@ slvr_do_crc(struct slvr_ref *s)
 		}
 		SLVR_ULOCK(s);
 
-	} else
-		abort();
+	}
 
 	return (1);
 }
