@@ -82,7 +82,6 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 	PSCFREE(iovs);
 
 	nbreqset_add(slvrNbReqSet, req);
-	nbrequest_reap(slvrNbReqSet);
 
 	return (rc);
 }
@@ -95,6 +94,12 @@ slvr_worker_push_crcups(void)
 	struct timespec		 now;
 	struct biod_crcup_ref	*bcrc_ref;
 	struct dynarray		*ref_array;
+
+	/* 
+	 * Check if an earlier CRC update RPC, if any, has finished.  If one
+	 * is still inflight, we won't be able to initiate a new one.
+	 */
+	nbrequest_reap(slvrNbReqSet);
 
 	spinlock(&binfSlvrs.binfst_lock);
 	if (binfSlvrs.binfst_inflight) {
