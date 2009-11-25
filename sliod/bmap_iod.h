@@ -170,7 +170,7 @@ slvr_lru_unpin(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
 
 	psc_assert(!(s->slvr_flags &
-		     (SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|SLVR_INFLIGHT|
+		     (SLVR_NEW|SLVR_FAULTING|SLVR_INFLIGHT|
 		      SLVR_GETSLAB|SLVR_CRCDIRTY)));
 
 	s->slvr_flags &= ~SLVR_PINNED;
@@ -186,7 +186,7 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 
 	if (!s->slvr_slab)
 		psc_assert(!(s->slvr_flags & 
-			     (SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|SLVR_INFLIGHT|
+			     (SLVR_NEW|SLVR_FAULTING|SLVR_INFLIGHT|
                               SLVR_GETSLAB|SLVR_DATARDY)));
 
 	else if (s->slvr_flags & SLVR_PINNED) {
@@ -197,7 +197,7 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 		
 	} else if (s->slvr_flags & SLVR_DATARDY)
 		psc_assert(!(s->slvr_flags &
-			     (SLVR_NEW|SLVR_CRCING|SLVR_FAULTING|SLVR_INFLIGHT|
+			     (SLVR_NEW|SLVR_FAULTING|SLVR_INFLIGHT|
 			      SLVR_GETSLAB)));
 	else
 		freeable = 0;

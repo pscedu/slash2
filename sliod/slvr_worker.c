@@ -295,8 +295,6 @@ slvr_worker_int(void)
 	 *   From this point until we set to inflight, the slvr_lentry
 	 *   should be disjointed.
 	 */
-	s->slvr_flags |= SLVR_CRCING;
-
 	SLVR_ULOCK(s);
 
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
