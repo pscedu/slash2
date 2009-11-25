@@ -18,8 +18,8 @@
 #include "sliod.h"
 #include "slvr.h"
 
-struct pscrpc_nbreqset *slvrNbReqSet;
-struct biod_infslvr_tree binfSlvrs;
+struct biod_infslvr_tree	 binfSlvrs;
+struct pscrpc_nbreqset		*slvrNbReqSet;
 
 __static SPLAY_GENERATE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
 
@@ -69,7 +69,7 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 		iovs[i].iov_base = &bcrc_ref->bcr_crcup;
 		len += iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
 					   sizeof(struct srm_bmap_crcwire)) +
-					  sizeof(struct srm_bmap_crcup));
+					   sizeof(struct srm_bmap_crcup));
 
 		psc_crc64_add(&mq->crc, iovs[i].iov_base, iovs[i].iov_len);
 	}
@@ -91,6 +91,7 @@ __static void
 slvr_worker_push_crcups(void)
 {
 	int			 i;
+	int			 rc;
 	struct timespec		 now;
 	struct biod_crcup_ref	*bcrc_ref;
 	struct dynarray		*ref_array;
@@ -105,19 +106,14 @@ slvr_worker_push_crcups(void)
 		DEBUG_BCR(PLL_NOTIFY, bcrc_ref, "ref_array sz=%d", 
 			  dynarray_len(ref_array));
 
-		if (bcrc_ref->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
+		if (bcrc_ref->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) {
+			bcrc_ref->bcr_flags |= BCR_SCANNED | BCR_UPDATED;
 			dynarray_add(ref_array, bcrc_ref);
+		}
 		if (dynarray_len(ref_array) >= MAX_BMAP_NCRC_UPDATES)
 			break;
 	}
-	/*
-	 * Second, try to gather old crcups. We need to purge the ones we already
-	 * have from the tree first.
-	 */
-	for (i = 0; i < dynarray_len(ref_array); i++) {
-		bcrc_ref = dynarray_getpos(ref_array, i);
-		SPLAY_REMOVE(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
-	}
+	/* Second, try to gather old crcups */
 	if (dynarray_len(ref_array) >= MAX_BMAP_NCRC_UPDATES) {
 		goto done;
 	}
@@ -127,8 +123,13 @@ slvr_worker_push_crcups(void)
 		DEBUG_BCR(PLL_NOTIFY, bcrc_ref, "ref_array sz=%d now=%lu", 
 			  dynarray_len(ref_array), now.tv_sec);
 
-		if (now.tv_sec < (bcrc_ref->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE))
+		if (bcrc_ref->bcr_flags & BCR_SCANNED)
+			continue;
+
+		if (now.tv_sec < (bcrc_ref->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE)) {
+			bcrc_ref->bcr_flags |= BCR_SCANNED | BCR_UPDATED;
 			dynarray_add(ref_array, bcrc_ref);
+		}
 		if (dynarray_len(ref_array) >= MAX_BMAP_NCRC_UPDATES)
 			break;
 	}
@@ -137,13 +138,24 @@ slvr_worker_push_crcups(void)
 		freelock(&binfSlvrs.binfst_lock);
 		return;
 	}
-	for (i = 0; i < dynarray_len(ref_array); i++) {
-		bcrc_ref = dynarray_getpos(ref_array, i);
-		SPLAY_REMOVE(crcup_reftree, &binfSlvrs.binfst_tree, bcrc_ref);
-	}
 done:
 	freelock(&binfSlvrs.binfst_lock);
-	slvr_worker_crcup_genrq(ref_array);
+
+	rc = slvr_worker_crcup_genrq(ref_array);
+
+	/*
+	 * If we fail to send an RPC, we must leave the reference in the tree for
+	 * future attemp.  Otherwise, the callback function should remove them
+	 * from the tree.
+	 */
+	if (rc) {
+		spinlock(&binfSlvrs.binfst_lock);
+		for (i = 0; i < dynarray_len(ref_array); i++) {
+			bcrc_ref = dynarray_getpos(ref_array, i);
+			bcrc_ref->bcr_flags &= ~(BCR_SCANNED | BCR_UPDATED);
+		}
+		spinlock(&binfSlvrs.binfst_lock);
+	}
 }
 
 

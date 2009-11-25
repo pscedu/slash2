@@ -272,16 +272,17 @@ struct srm_bmap_crcwire {
 	uint32_t		slot;		/* sliver number in the owning bmap */
 } __attribute__ ((__packed__));
 
+#define MAX_BMAP_INODE_PAIRS	28		/* ~520 bytes (max) per srm_bmap_crcup */
+
 struct srm_bmap_crcup {
-	struct slash_fidgen     fg;
-	uint64_t                fsize;          /* largest known size */
+	struct slash_fidgen	fg;
+	uint64_t		fsize;		/* largest known size */
 	uint32_t		blkno;		/* bmap block number */
 	uint32_t		nups;		/* number of crc updates */
-	struct srm_bmap_crcwire	crcs[0];	/* see above */
+	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
 };
 
-#define MAX_BMAP_INODE_PAIRS  28 /* ~520 bytes (max) per srm_bmap_crcup */
-#define MAX_BMAP_NCRC_UPDATES 64
+#define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC updates in a batch */
 
 struct srm_bmap_crcwrt_req {
 	uint32_t		ncrc_updates;
