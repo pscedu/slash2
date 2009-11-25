@@ -41,6 +41,7 @@ psc_spinlock_t		 replrq_tree_lock = LOCK_INITIALIZER;
 struct vbitmap		*repl_busytable;
 psc_spinlock_t		 repl_busytable_lock = LOCK_INITIALIZER;
 int			 repl_busytable_nents;
+sl_ino_t		 mds_repldir_inum;
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -580,7 +581,6 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	struct bmapc_memb *bcm;
 	struct stat stb;
 	char fn[FID_MAX_PATH];
-	uint64_t inum;
 	sl_blkno_t n;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
@@ -602,7 +602,6 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 			goto restart;
 
 		/* Not found, add it and its persistent link. */
-		inum = sl_get_repls_inum();
 		rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fgp->fg_fid);
 		if (rc == -1)
 			rc = errno;
@@ -621,7 +620,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 
 			/* Create persistent file system link */
 			rc = zfsslash2_link(zfsVfs, fgp->fg_fid,
-			    inum, fn, &fg, &rootcreds, &stb);
+			    mds_repldir_inum, fn, &fg, &rootcreds, &stb);
 			if (rc == 0) {
 				rrq = newrq;
 				newrq = NULL;
@@ -688,7 +687,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 				repl_all_act = 0;
 			mds_repl_bmap_rel(bcm);
 		}
-		if (repl_some_act == 0)
+		if (REPLRQ_NBMAPS(rrq) && repl_some_act == 0)
 			rc = EALREADY;
 		else if (repl_all_act)
 			rc = SLERR_REPL_ALREADY_ACT;
@@ -726,7 +725,6 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	struct bmap_mds_info *bmdsi;
 	struct bmapc_memb *bcm;
 	char fn[IMNS_NAME_MAX];
-	uint64_t inum;
 	sl_blkno_t n;
 
 	/* Scan for any OLD states. */
@@ -782,7 +780,6 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	 * All states are INACTIVE/ACTIVE;
 	 * remove it and its persistent link.
 	 */
-	inum = sl_get_repls_inum();
 	rc = snprintf(fn, sizeof(fn),
 	    "%016"PRIx64, REPLRQ_FID(rrq));
 	if (rc == -1)
@@ -790,7 +787,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	else if (rc >= (int)sizeof(fn))
 		rc = ENAMETOOLONG;
 	else
-		rc = zfsslash2_unlink(zfsVfs, inum, fn, &rootcreds);
+		rc = zfsslash2_unlink(zfsVfs,
+		    mds_repldir_inum, fn, &rootcreds);
 	SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
 	freelock(&replrq_tree_lock);
 
@@ -889,7 +887,6 @@ mds_repl_scandir(void)
 	struct stat stb;
 	off64_t off, toff;
 	size_t siz, tsiz;
-	uint64_t inum;
 	uint32_t j;
 	void *data;
 	int rc;
@@ -898,8 +895,7 @@ mds_repl_scandir(void)
 	siz = 8 * 1024;
 	buf = PSCALLOC(siz);
 
-	inum = sl_get_repls_inum();
-	rc = zfsslash2_opendir(zfsVfs, inum,
+	rc = zfsslash2_opendir(zfsVfs, mds_repldir_inum,
 	    &rootcreds, &fg, &stb, &data);
 	if (rc) {
 		if (rc == ENOENT) {
@@ -913,8 +909,8 @@ mds_repl_scandir(void)
 		    slstrerror(rc));
 	}
 	for (;;) {
-		rc = zfsslash2_readdir(zfsVfs, inum, &rootcreds,
-		    siz, off, buf, &tsiz, NULL, 0, data);
+		rc = zfsslash2_readdir(zfsVfs, mds_repldir_inum,
+		    &rootcreds, siz, off, buf, &tsiz, NULL, 0, data);
 		if (rc)
 			psc_fatalx("readdir %s: %s", SL_PATH_REPLS,
 			    slstrerror(rc));
@@ -933,7 +929,7 @@ mds_repl_scandir(void)
 			if (fn[0] == '.')
 				continue;
 
-			rc = zfsslash2_lookup(zfsVfs, inum,
+			rc = zfsslash2_lookup(zfsVfs, mds_repldir_inum,
 			    fn, &fg, &rootcreds, NULL);
 			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
@@ -960,7 +956,7 @@ mds_repl_scandir(void)
 		}
 		off += tsiz;
 	}
-	rc = zfsslash2_release(zfsVfs, inum, &rootcreds, data);
+	rc = zfsslash2_release(zfsVfs, mds_repldir_inum, &rootcreds, data);
 	if (rc)
 		psc_fatalx("release %s: %s", SL_PATH_REPLS,
 		    slstrerror(rc));
@@ -1128,10 +1124,19 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 void
 mds_repl_init(void)
 {
+	struct slash_fidgen fg;
+	int rc;
+
 	psc_poolmaster_init(&replrq_poolmaster, struct sl_replrq,
 	    rrq_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
 	    "replrq");
 	replrq_pool = psc_poolmaster_getmgr(&replrq_poolmaster);
+
+	rc = zfsslash2_lookup(zfsVfs, SL_ROOT_INUM,
+	    SL_PATH_REPLS, &fg, &rootcreds, NULL);
+	if (rc)
+		psc_fatalx("lookup repldir: %s", slstrerror(rc));
+	mds_repldir_inum = fg.fg_fid;
 
 	mds_repl_buildbusytable();
 	mds_repl_scandir();

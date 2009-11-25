@@ -29,20 +29,6 @@
 struct vbitmap	 slmrcmthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t	 slmrcmthr_uniqidmap_lock = LOCK_INITIALIZER;
 
-uint64_t
-sl_get_repls_inum(void)
-{
-	struct slash_fidgen fg;
-	struct stat stb;
-	int rc;
-
-	rc = zfsslash2_lookup(zfsVfs, SL_ROOT_INUM,
-	    SL_PATH_REPLS, &fg, &rootcreds, &stb);
-	if (rc)
-		psc_fatalx("lookup repldir: %s", slstrerror(rc));
-	return (fg.fg_fid);
-}
-
 int
 slmrmcthr_replst_slave_eof(struct sl_replrq *rrq)
 {

@@ -33,9 +33,6 @@ int replrq_cmp(const void *, const void *);
 SPLAY_HEAD(replrqtree, sl_replrq);
 SPLAY_PROTOTYPE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
 
-//uint64_t mds_repl_getrepldir_inum(void);
-uint64_t sl_get_repls_inum(void);
-
 struct sl_replrq *
 	mds_repl_findrq(const struct slash_fidgen *, int *);
 int	mds_repl_accessrq(struct sl_replrq *);
