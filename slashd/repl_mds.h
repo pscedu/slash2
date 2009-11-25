@@ -15,6 +15,7 @@ struct sl_replrq {
 	struct psc_waitq		 rrq_waitq;
 	int				 rrq_flags;
 	psc_atomic32_t			 rrq_refcnt;
+	int				 rrq_gen;
 	union {
 		struct psclist_head	 rrqu_lentry;
 		SPLAY_ENTRY(sl_replrq)	 rrqu_tentry;
@@ -26,13 +27,13 @@ struct sl_replrq {
 /* replication request flags */
 #define REPLRQF_BUSY	(1 << 0)
 #define REPLRQF_DIE	(1 << 1)
-#define REPLRQF_REQUEUE	(1 << 2)	/* replrq has been requeued, reprocess */
 
 int replrq_cmp(const void *, const void *);
 
 SPLAY_HEAD(replrqtree, sl_replrq);
 SPLAY_PROTOTYPE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
 
+//uint64_t mds_repl_getrepldir_inum(void);
 uint64_t sl_get_repls_inum(void);
 
 struct sl_replrq *

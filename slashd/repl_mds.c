@@ -16,6 +16,7 @@
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/strlcpy.h"
 #include "psc_util/waitq.h"
 
 #include "fid.h"
@@ -108,7 +109,7 @@ mds_repl_enqueue_sites(struct sl_replrq *rrq, const sl_replica_t *iosv, int nios
 	int locked, n;
 
 	locked = reqlock(&rrq->rrq_lock);
-	rrq->rrq_flags |= REPLRQF_REQUEUE;
+	rrq->rrq_gen++;
 	for (n = 0; n < nios; n++) {
 		site = libsl_resid2site(iosv[n].bs_id);
 		msi = site->site_pri;
@@ -721,9 +722,10 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 void
 mds_repl_tryrmqfile(struct sl_replrq *rrq)
 {
+	int rrq_gen, rc, retifset[4];
+	struct bmap_mds_info *bmdsi;
 	struct bmapc_memb *bcm;
-	char fn[FID_MAX_PATH];
-	int rc, retifset[4];
+	char fn[IMNS_NAME_MAX];
 	uint64_t inum;
 	sl_blkno_t n;
 
@@ -742,14 +744,10 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	}
 
 	/*
-	 * If this request is currently being requeued, wait.
-	 * After such a time, if it was requeued again, there must have
-	 * been work to do, and some one else should tryrmqfile().
+	 * If someone bumps the generation while we're processing, we'll
+	 * know there is work to do and that the replrq shouldn't go away.
 	 */
-	while (rrq->rrq_flags & REPLRQF_REQUEUE) {
-		psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
-		spinlock(&rrq->rrq_lock);
-	}
+	rrq_gen = rrq->rrq_gen;
 	freelock(&rrq->rrq_lock);
 
 	/* Scan bmaps to see if the inode should disappear. */
@@ -757,58 +755,62 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
 			continue;
 		BMAP_LOCK(bcm);
+		bmdsi = bmap_2_bmdsi(bcm);
 		rc = mds_repl_bmap_walk(bcm, NULL,
 		    retifset, REPL_WALKF_SCIRCUIT, NULL, 0);
+		if (rc == 0 &&
+		    bmdsi->bmdsi_repl_policy == BRP_PERSIST)
+			rc = 1;
 		mds_repl_bmap_rel(bcm);
 		if (rc)
-			goto out;
+			goto keep;
 	}
+
+	/* XXX or if inode new bmap policy == PERSIST */
+//	if (REPLRQ_INO(rrq)->ino_newbmap_policy == BRP_PERSIST)
+//		goto keep;
 
 	spinlock(&replrq_tree_lock);
 	spinlock(&rrq->rrq_lock);
-	/* XXX or if inode new bmap policy == PERSIST or if any bmap policy == PERSIST */
-	/* XXX or if someone else is rmqfile()'s this rrq */
-	if (rrq->rrq_flags & REPLRQF_REQUEUE) {
+	if (rrq->rrq_gen != rrq_gen) {
+		freelock(&replrq_tree_lock);
+ keep:
 		mds_repl_unrefrq(rrq);
-		rrq = NULL;
-	} else {
-		/*
-		 * All states are INACTIVE/ACTIVE;
-		 * remove it and its persistent link.
-		 */
-		inum = sl_get_repls_inum();
-		rc = snprintf(fn, sizeof(fn),
-		    "%016"PRIx64, REPLRQ_FID(rrq));
-		if (rc == -1)
-			rc = errno;
-		else if (rc >= (int)sizeof(fn))
-			rc = ENAMETOOLONG;
-		else
-			rc = zfsslash2_unlink(zfsVfs, inum, fn, &rootcreds);
-		SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
+		return;
 	}
+	/*
+	 * All states are INACTIVE/ACTIVE;
+	 * remove it and its persistent link.
+	 */
+	inum = sl_get_repls_inum();
+	rc = snprintf(fn, sizeof(fn),
+	    "%016"PRIx64, REPLRQ_FID(rrq));
+	if (rc == -1)
+		rc = errno;
+	else if (rc >= (int)sizeof(fn))
+		rc = ENAMETOOLONG;
+	else
+		rc = zfsslash2_unlink(zfsVfs, inum, fn, &rootcreds);
+	SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
 	freelock(&replrq_tree_lock);
 
- out:
-	if (rrq) {
-		reqlock(&rrq->rrq_lock);
-		psc_atomic32_dec(&rrq->rrq_refcnt);	/* removed from tree */
-		rrq->rrq_flags |= REPLRQF_DIE;
-		rrq->rrq_flags &= ~REPLRQF_BUSY;
+	reqlock(&rrq->rrq_lock);
+	psc_atomic32_dec(&rrq->rrq_refcnt);	/* removed from tree */
+	rrq->rrq_flags |= REPLRQF_DIE;
+	rrq->rrq_flags &= ~REPLRQF_BUSY;
 
-		while (psc_atomic32_read(&rrq->rrq_refcnt) > 1) {
-			psc_waitq_wakeall(&rrq->rrq_waitq);
-			psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
-			spinlock(&rrq->rrq_lock);
-		}
-
-		atomic_dec(&fcmh_2_fmdsi(REPLRQ_FCMH(rrq))->fmdsi_ref);
-		fidc_membh_dropref(REPLRQ_FCMH(rrq));
-
-		/* SPLAY_REMOVE() does not NULL out the field */
-		INIT_PSCLIST_ENTRY(&rrq->rrq_lentry);
-		psc_pool_return(replrq_pool, rrq);
+	while (psc_atomic32_read(&rrq->rrq_refcnt) > 1) {
+		psc_waitq_wakeall(&rrq->rrq_waitq);
+		psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
+		spinlock(&rrq->rrq_lock);
 	}
+
+	atomic_dec(&fcmh_2_fmdsi(REPLRQ_FCMH(rrq))->fmdsi_ref);
+	fidc_membh_dropref(REPLRQ_FCMH(rrq));
+
+	/* SPLAY_REMOVE() does not NULL out the field */
+	INIT_PSCLIST_ENTRY(&rrq->rrq_lentry);
+	psc_pool_return(replrq_pool, rrq);
 }
 
 int

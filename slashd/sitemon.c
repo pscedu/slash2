@@ -106,8 +106,8 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 __dead void *
 slmreplthr_main(void *arg)
 {
-	int is, rir, ir, rin, in, j, has_repl_work;
-	int iosidx, val, nios, nrq, off, rc, ris;
+	int iosidx, nios, nrq, off, j, rc, has_repl_work;
+	int rrq_gen, ris, is, rir, ir, rin, in, val;
 	struct sl_resource *src_res, *dst_res;
 	struct slash_bmap_od *bmapod;
 	struct bmap_mds_info *bmdsi;
@@ -128,7 +128,6 @@ slmreplthr_main(void *arg)
 	for (;;) {
  restart:
 		sched_yield();
-
 		/* select or wait for a repl rq */
 		spinlock(&msi->msi_lock);
 
@@ -176,7 +175,7 @@ slmreplthr_main(void *arg)
 
 			has_repl_work = 0;
 
-			/* find which resource in our site this repl is destined for */
+			/* find a resource in our site this replrq is destined for */
 			iosidx = -1;
 			for (j = 0; j < site->site_nres; j++) {
 				dst_res = site->site_resv[j];
@@ -186,12 +185,12 @@ slmreplthr_main(void *arg)
 					continue;
 				off = SL_BITS_PER_REPLICA * iosidx;
 
-				/* got a replication request; find a bmap this ios needs */
-				/* XXX lock fcmh to prohibit nbmaps changes? */
 				spinlock(&rrq->rrq_lock);
-				rrq->rrq_flags &= ~REPLRQF_REQUEUE;
+				rrq_gen = rrq->rrq_gen;
 				freelock(&rrq->rrq_lock);
 
+				/* got a replication request; find a bmap this ios needs */
+				/* XXX lock fcmh to prohibit nbmaps changes? */
 				nb = REPLRQ_NBMAPS(rrq);
 				bmapno = psc_random32u(nb);
 				for (ib = 0; ib < nb; ib++,
@@ -208,16 +207,20 @@ slmreplthr_main(void *arg)
 					BMAP_LOCK(bcm);
 					bmdsi = bmap_2_bmdsi(bcm);
 					bmapod = bmdsi->bmdsi_od;
-					if (bmdsi->bmdsi_repl_policy == BRP_PERSIST)
+					if (bmdsi->bmdsi_repl_policy ==
+					    BRP_PERSIST)
 						has_repl_work = 1;
 					val = SL_REPL_GET_BMAP_IOS_STAT(
 					    bmapod->bh_repls, off);
+					if (val == SL_REPL_OLD ||
+					    val == SL_REPL_SCHED)
+						has_repl_work = 1;
 					if (val != SL_REPL_OLD) {
 						BMAP_ULOCK(bcm);
 						continue;
 					}
 
-					/* Got a bmap; now look for a source and destination. */
+					/* Got a bmap; now look for a source. */
 					nios = REPLRQ_NREPLS(rrq);
 					ris = psc_random32u(nios);
 					for (is = 0; is < nios; is++,
@@ -229,9 +232,8 @@ slmreplthr_main(void *arg)
 						    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
 						    SL_BITS_PER_REPLICA * ris) != SL_REPL_ACTIVE)
 							continue;
-						has_repl_work = 1;
 
-						/* search nids for an idle, online connection */
+						/* search source nids for an idle, online connection */
 						rin = psc_random32u(src_res->res_nnids);
 						for (in = 0; in < (int)src_res->res_nnids; in++,
 						    rin = (rin + 1) % src_res->res_nnids) {
@@ -256,15 +258,13 @@ slmreplthr_main(void *arg)
 					}
 					mds_repl_bmap_rel(bcm);
 				}
-
 			}
 			/*
 			 * could not find a destination resource in
 			 * our site needed by this replrq
 			 */
 			spinlock(&rrq->rrq_lock);
-			if (has_repl_work ||
-			    (rrq->rrq_flags & REPLRQF_REQUEUE) == 0 ||
+			if (has_repl_work || rrq->rrq_gen != rrq_gen ||
 			    REPLRQ_INOX(rrq)->inox_newbmap_policy == BRP_PERSIST)
 				mds_repl_unrefrq(rrq);
 			else {
