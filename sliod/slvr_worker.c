@@ -321,7 +321,6 @@ slvr_worker_int(void)
 
 		bcrc_ref->bcr_slvrs[0] = s;
 		bcrc_ref->bcr_id = slvr_2_biod(s)->biod_bcr_id;
-		clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
 
 		COPYFID(&bcrc_ref->bcr_crcup.fg, 
 			fcmh_2_fgp(slvr_2_bmap(s)->bcm_fcmh));
@@ -343,11 +342,6 @@ slvr_worker_int(void)
 
 		psc_assert(bcrc_ref->bcr_nups < MAX_BMAP_NCRC_UPDATES);
 
-		/*
-		 * Refresh the age of this sliver reference.  If it gets full, it
-		 * will be sent out immediately regardless of its age.
-		 */
-		clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
 		bcrc_ref->bcr_slvrs[bcrc_ref->bcr_nups++] = s;
 
 		bcrc_ref->bcr_crcup.crcs[bcrc_ref->bcr_crcup.nups].crc = s->slvr_crc;
@@ -367,11 +361,16 @@ slvr_worker_int(void)
 			 */
 			slvr_2_biod(s)->biod_bcr_id = 0;
 	}
-	/* Should be done with the biodi, unlock it.
+	/*
+	 * Either set the initial age of a new sliver or extend the age of an
+	 * existing one. Note that if it gets full, it will be sent out immediately 
+	 * regardless of its age.
 	 */
-	freelock(&slvr_2_biod(s)->biod_lock);
+	clock_gettime(CLOCK_REALTIME, &bcrc_ref->bcr_age);
 
+	freelock(&slvr_2_biod(s)->biod_lock);
 	freelock(&binfSlvrs.binfst_lock);
+
 	slvr_worker_push_crcups();
 }
 
