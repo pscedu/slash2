@@ -316,8 +316,10 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 int
 slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 {
-	int blks, rc, unaligned[2] = {-1, -1};
-	size_t i;
+	int		i;
+	int		rc;
+	int		blks;
+	int		unaligned[2] = {-1, -1};
 
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
