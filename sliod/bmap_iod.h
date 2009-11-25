@@ -19,15 +19,15 @@
 
 extern struct psc_listcache iodBmapLru;
 
-#define BIOD_CRCUP_MAX_AGE 2
+#define BIOD_CRCUP_MAX_AGE		 2		/* in seconds */
 
 struct biod_crcup_ref {
-	uint64_t                    bcr_id;
-	uint32_t                    bcr_nups;
-	struct timespec             bcr_age;	
-	struct slvr_ref            *bcr_slvrs[MAX_BMAP_NCRC_UPDATES];
-	SPLAY_ENTRY(biod_crcup_ref) bcr_tentry;
-	struct srm_bmap_crcup       bcr_crcup;
+	uint64_t			 bcr_id;
+	uint32_t			 bcr_nups;
+	struct timespec			 bcr_age;	
+	struct slvr_ref			*bcr_slvrs[MAX_BMAP_NCRC_UPDATES];
+	SPLAY_ENTRY(biod_crcup_ref)	 bcr_tentry;
+	struct srm_bmap_crcup		 bcr_crcup;
 };
 
 #define DEBUG_BCR(level, b, fmt, ...)					\
