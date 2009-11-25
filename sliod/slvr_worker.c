@@ -97,6 +97,11 @@ slvr_worker_push_crcups(void)
 	struct dynarray		*ref_array;
 
 	spinlock(&binfSlvrs.binfst_lock);
+	if (binfSlvrs.binfst_inflight) {
+		freelock(&binfSlvrs.binfst_lock);
+		return;
+	}
+	binfSlvrs.binfst_inflight = 1;
 
 	ref_array = PSCALLOC(sizeof(struct dynarray));
 
@@ -175,8 +180,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 	if (req->rq_status || mp->rc)
 		err = 1;
 
-	if (!err)
-		spinlock(&binfSlvrs.binfst_lock);
+	spinlock(&binfSlvrs.binfst_lock);
 
 	psc_assert(a);
 
@@ -217,8 +221,8 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 			PSCFREE(bcrc_ref);
 		}
 	}
-	if (!err)
-		freelock(&binfSlvrs.binfst_lock);
+	binfSlvrs.binfst_inflight = 0;
+	freelock(&binfSlvrs.binfst_lock);
 
 	dynarray_free(a);
 	PSCFREE(a);
@@ -408,6 +412,7 @@ slvr_worker_init(void)
 	int i;
 
 	binfSlvrs.binfst_counter = 1;
+	binfSlvrs.binfst_inflight = 0;
 	LOCK_INIT(&binfSlvrs.binfst_lock);
 
 	slvrNbReqSet = nbreqset_init(NULL, slvr_nbreqset_cb);

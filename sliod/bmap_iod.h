@@ -63,9 +63,10 @@ SPLAY_PROTOTYPE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
  *   we'll need one per MDS.
  */
 struct biod_infslvr_tree {
-	uint64_t             binfst_counter;
-	psc_spinlock_t       binfst_lock;
-	struct crcup_reftree binfst_tree;
+	psc_spinlock_t		binfst_lock;
+	struct crcup_reftree	binfst_tree;
+	uint64_t		binfst_counter;
+	int			binfst_inflight;
 };
 
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
