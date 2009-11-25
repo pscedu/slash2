@@ -137,7 +137,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
 
 		/* XXX do the right thing when EOF is reached..
 		 */
-		if (nblks == SLASH_BLKS_PER_SLVR) {
+		if (rc > 0 && nblks == SLASH_BLKS_PER_SLVR) {
 			int crc_rc;
 
 			crc_rc = slvr_do_crc(s);
