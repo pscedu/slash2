@@ -95,8 +95,7 @@ slvr_worker_push_crcups(void)
 	struct biod_crcup_ref	*bcrc_ref;
 	struct dynarray		*ref_array;
 
-	if (!trylock(&binfSlvrs.binfst_lock))
-		return;
+	spinlock(&binfSlvrs.binfst_lock);
 
 	ref_array = PSCALLOC(sizeof(struct dynarray));
 
