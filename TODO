@@ -221,9 +221,9 @@ D_ANY
 - remove "iod" from bmdsiod
 - add a way to tag new bmaps with the persist flag, something like:
 
-  $ msctl -x bmap-persist:a,b,c
+  $ msctl -f bmap-persist:a,b,c
 
-  alias slfctl=msctl -x
+  alias slfctl=msctl -f
     slfctl -R -b a b c
 
   alias slrepls=msctl -r
@@ -242,23 +242,26 @@ use msctl -r to check status
 # msctl -r /slash/fn -r /slash/fn2:NCSA
 replication status
 ===========================================================
- fn                               btot        bold    %xfer
+ fn                                   btot    bold    %xfer
  /slash/fn
-    PSC                             25          15    40.0%
-	--------+------------------------------------------
-	---------------------------------------------------
-    ORNL                            17           1    94.1%
-	--------o------------------------------------------
-	---------------------------------------------------
+    PSC                                 25      15    40.0%
+	os--+---+-oo--+---o---s-+----o--soo-+--s--ooo-s--ss
+	-o--oooo--s---ss----+++-----s-+--+--
+    ORNL                                17       1    94.1%
+	--------o----+-----+------+++---------++++----+----
+	+-+---++----+--------------++-------
  /slash/fn2
-    NCSA                             3           2    33.3%
-	+--------------------------------------------------
-	---------------------------------------------------
+    NCSA                                 3       2    33.3%
+	+--s--------o--------------------------------------
+	-----------------
 
 legend:
-  -	inactive
-  +	active
-  o	old
+	persist		state
+ ========================================
+  -			inactive
+  +	*		active
+  o	O		old
+  s	S		scheduled
 
 ----------------------------------------------------------------------
 
@@ -272,3 +275,5 @@ legend:
   outside of rpc_common.c
 - rename slashrpc_export to something per-conntype specific
 - libsl_init() is getting an ENOMEM somewhere in slashd
+- inode new bmap replication policy get/set: msctl -f
+  per-bmap replication policy get/set
