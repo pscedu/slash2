@@ -211,32 +211,54 @@ D_ANY
 	their inodes cached.
 
 - differeniate I/O software terminology
-	(o) ion - an I/O node
-	(o) ios - an I/O system
+	(o) ion - an I/O node (resm)
+	(o) ios - an I/O system (res)
 	(o) iod - the sliod daemon
 - rename buffer.c -> slab.c
 - rename fdbuf.c -> descbuf.c
 - ensure fidc doesn't look up beyond SYM_NLOOPS #loops
 - run sliod as user _sliod
 - remove "iod" from bmdsiod
-- add a way to tag new bmaps with the persist flag, something like:
+- new ctls for managing persistent replication:
 
-  $ msctl -f bmap-persist:a,b,c
+  low-level persistence control primitives:
+    $ msctl [-R] -f new-repl-policy=persist|onetime:fn
+    $ msctl [-R] -f bmap-repl-policy=persist|onetime:4-6,9:fn
 
-  alias slfctl=msctl -f
-    slfctl -R -b a b c
+  mid-level persistence control aliases:
+    $ slfctl [-R] -p file ...				# new-repl-policy=persist
+    $ slfctl [-R] -o file ...				# new-repl-policy=onetime
+    $ slfctl -B bmapspec:file ...			# bmap-repl-policy=persist
+    $ slfctl -b bmapspec:file ...			# bmap-repl-policy=onetime
 
-  alias slrepls=msctl -r
-  alias slreplq=msctl -Q
-  alias slreplrm=msctl -U
+  mid-level replication request control aliases:
+    $ slrepls [-R] file ...				# msctl [-R] -r file -r...
+    $ slreplq [-R] site,...[|bmapspec]:file ...		# msctl [-R] -Q spec -Q...
+    $ slreplrm [-R] site,...[|bmapspec]:file ...	# msctl [-R] -U spec -U...
+
+  high-level aliases:
+    $ slreplicate [-Rp] site,...:file ...
+	if (-p)
+		slfctl [-R] -p file ...
+	msctl [-R] -Q site,...|*[P]:file ...
+    $ slreplcancel file[:site] ...
+	if (-p)
+		slfctl [-R] -o file ...
+	msctl [-R] -U site,...|*[P]:file ...
+    $ slreplpersist file ...
+	slfctl -p file ...
+	slfctl -B *:file *:...
+    $ slreplnopersist file ...
+	slfctl -o file ...
+	slfctl -b *:file *:...
 
 - use a sliding window to track valid cfd's and remove them from the window
   once they are CLOSE()'d
 
 ------------------------------------------------ replication interface
 
-# msctl -Q /slash/fn:PSC,ORNL:8
-bmap 8 being replicated to PSC, ORNL
+# msctl -Q /slash/fn:8-11:PSC,ORNL
+bmaps 8-11 inclusive being replicated to PSC,ORNL
 use msctl -r to check status
 
 # msctl -r /slash/fn -r /slash/fn2:NCSA
@@ -275,8 +297,8 @@ legend:
   outside of rpc_common.c
 - rename slashrpc_export to something per-conntype specific
 - libsl_init() is getting an ENOMEM somewhere in slashd
-- inode new bmap replication policy get/set: msctl -f
-  per-bmap replication policy get/set
-
 - do not keep sl_replrq in mem unless a bh_repl is OLD or SCHED
 - add bmap_hdr in replst ctlmsg
+- if P is specified in msctl -Q fn:*P:@SITE, ensure persist is turned on
+
+- filenames with , and : will not make the msctl repl parser happy, reorder
