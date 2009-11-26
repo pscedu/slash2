@@ -12,6 +12,7 @@ file system mount daemon runtime control
 .Nm msctl
 .Op Fl HIR
 .Op Fl c Ar cmd
+.Op Fl f Ar fn
 .Op Fl h Ar table
 .Op Fl i Ar iostatspec
 .Op Fl L Ar listspec
@@ -241,10 +242,17 @@ is not specified or is the special value
 .Sq Li * ,
 all bmaps will be replicated; otherwise, only the
 bmaps with the given indexes will be replicated.
+.Pp
 If the
 .Ic P
-modified, those bmaps specified will be marked for persistent
-replication.
+modifier is specified, bmaps will be marked for persistent replication.
+Note that only bmaps present at the time of issue can be marked
+persistent; future bmaps will only be marked for persistent
+replication upon creation if the file's default bmap replication
+policy is such.
+See
+.Fl f
+for information on modifying the default replication policy.
 .Pp
 This option may be specified multiple times.
 .It Fl R
@@ -312,10 +320,11 @@ See
 .Fl Q
 for details of the format of
 .Ar replrqspec .
-The bmap modifier flag
+Note that the bmap modifier flag
 .Ic P
-is not recognized in this mode:
-requests to cancel bmap replication will resist the persistent flag.
+will be ignored in this mode.
+.Pp
+This option may be specified multiple times.
 .El
 .Ss Thread Specification
 Options which take
