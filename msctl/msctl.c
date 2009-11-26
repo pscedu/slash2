@@ -189,27 +189,6 @@ parse_replrq(int code, char *replrqspec,
 }
 
 int
-replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
-{
-	const struct msctlmsg_replst *mrs = m;
-	int blen;
-
-	if (mh->mh_size != sizeof(*mrs))
-		return (sizeof(*mrs));
-
-	if (mrs->mrs_nios > SL_MAX_REPLICAS)
-		psc_fatalx("replication status has too many replicas");
-
-	memcpy(&current_mrs, mrs, sizeof(current_mrs));
-	vbitmap_resize(&current_mrs_bmask, current_mrs.mrs_nbmaps);
-	vbitmap_clearall(&current_mrs_bmask);
-
-	blen = current_mrs.mrs_nbmaps * howmany(SL_BITS_PER_REPLICA *
-	    current_mrs.mrs_nios, NBBY);
-	return (-1);
-}
-
-int
 replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct msctlmsg_replst_slave *mrsl = m;
@@ -254,7 +233,7 @@ replst_slave_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 	/* XXX add #repls, #bmaps */
 	printf("replication status\n"
 	    " %-62s %4s %4s %6s\n",
-	    "file", "#blk", "#old", "%xfer");
+	    "file", "#blk", "#old", "%prog");
 }
 
 void
@@ -303,6 +282,34 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		PSCFREE(rsb);
 	}
 	memcpy(&current_mrs, &zero_mrs, sizeof(current_mrs));
+}
+
+int
+replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct msctlmsg_replst *mrs = m;
+	int blen;
+
+	if (mh->mh_size != sizeof(*mrs))
+		return (sizeof(*mrs));
+
+	if (mrs->mrs_nios > SL_MAX_REPLICAS)
+		psc_fatalx("replication status has too many replicas");
+
+	memcpy(&current_mrs, mrs, sizeof(current_mrs));
+	vbitmap_resize(&current_mrs_bmask, current_mrs.mrs_nbmaps);
+	vbitmap_clearall(&current_mrs_bmask);
+
+	blen = current_mrs.mrs_nbmaps * howmany(SL_BITS_PER_REPLICA *
+	    current_mrs.mrs_nios, NBBY);
+	if (current_mrs.mrs_nbmaps == 0) {
+		replst_slave_prhdr(NULL, NULL);
+		for (blen = 0; blen < PSC_CTL_DISPLAY_WIDTH; blen++)
+			putchar('=');
+		putchar('\n');
+		replst_slave_prdat(NULL, NULL);
+	}
+	return (-1);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
