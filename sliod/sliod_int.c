@@ -110,12 +110,6 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 	/* Unblock threads no matter what.
 	 *  XXX need some way to denote that a crcget rpc failed?
 	 */
-	BMAP_LOCK(b);
-	b->bcm_mode &= ~BMAP_INFLIGHT;
-	if (rc)
-		b->bcm_mode |= BMAP_IOD_RETRFAIL;
-	psc_waitq_wakeall(&b->bcm_waitq);
-	BMAP_ULOCK(b);
 
 	return (rc);
 }
@@ -233,45 +227,40 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 
 	b = bmap_lookup_add(f, bmapno, iod_bmap_init);
 
-	spinlock(&b->bcm_lock);
 	/* For the time being I don't think we need to key actions
 	 *  off of the BMAP_INIT bit so just get rid of it.
 	 */
+	BMAP_LOCK(b);
 	b->bcm_mode &= ~BMAP_INIT;
+	if (rw == SL_WRITE)
+		goto done;
 
-	if (rw == SL_READ) {
- retry_getcrcs:
-		/* Check the retrieve bit first since it may be set
-		 *  before the biodi_wire pointer.
-		 */
-		if (b->bcm_mode & BMAP_INFLIGHT) {
+	if (bmap_2_biodi_wire(b)) {
+		while (b->bcm_mode & BMAP_INFLIGHT) {
 			/* Another thread is already getting this
 			 *  bmap's crc table.
 			 */
 			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-			spinlock(&b->bcm_lock);
-			goto retry_getcrcs;
-
-		} else {
-			if (!bmap_2_biodi_wire(b)) {
-				/* This thread will retrieve the crc
-				 *  table.  Set the bit and drop the
-				 *  lock prior to making the rpc.
-				 */
-				b->bcm_mode |= BMAP_INFLIGHT;
-				freelock(&b->bcm_lock);
-
-				rc = iod_bmap_fetch_crcs(b, rw);
-			} else
-				/* biodi_wire already exists.
-				 */
-				freelock(&b->bcm_lock);
+			BMAP_LOCK(b);
 		}
+	} else {
+		b->bcm_mode |= BMAP_INFLIGHT;
+		BMAP_ULOCK(b);
+		/* This thread will retrieve the crc
+		 *  table.  Set the bit and drop the
+		 *  lock prior to making the rpc.
+		 */
+		rc = iod_bmap_fetch_crcs(b, rw);
+		BMAP_LOCK(b);
+		b->bcm_mode &= ~BMAP_INFLIGHT;
+		if (rc)
+			b->bcm_mode |= BMAP_IOD_RETRFAIL;
+		psc_waitq_wakeall(&b->bcm_waitq);
+	}
 
-	} else
-		freelock(&b->bcm_lock);
+done:
 
+	BMAP_ULOCK(b);
 	*bmap = b;
-
 	return (rc);
 }
