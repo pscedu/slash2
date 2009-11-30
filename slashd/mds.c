@@ -1049,16 +1049,11 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 	b = bmap_lookup_add(f, bmapno, mds_bmap_init);
 
 	BMAP_LOCK(b);
-	if (bmap_2_bmdsiod(b)) {
-		while (b->bcm_mode & BMAP_INFLIGHT) {
-			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-			BMAP_LOCK(b);
-		}
-		/* Sanity check relevant pointers.
-		 */
-		psc_assert(b->bcm_pri);
-		psc_assert(b->bcm_fcmh);
-	} else {
+	while (b->bcm_mode & BMAP_INFLIGHT) {
+		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+		BMAP_LOCK(b);
+	}
+	if (!bmap_2_bmdsiod(b)) {
 		b->bcm_mode |= BMAP_INFLIGHT;
 		BMAP_ULOCK(b);
 		rc = mds_bmap_read(f, bmapno, b);

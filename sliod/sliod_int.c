@@ -235,15 +235,14 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 	if (rw == SL_WRITE)
 		goto done;
 
-	if (bmap_2_biodi_wire(b)) {
-		while (b->bcm_mode & BMAP_INFLIGHT) {
-			/* Another thread is already getting this
-			 *  bmap's crc table.
-			 */
-			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-			BMAP_LOCK(b);
-		}
-	} else {
+	while (b->bcm_mode & BMAP_INFLIGHT) {
+		/* Another thread is already getting this
+		 *  bmap's crc table.
+		 */
+		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+		BMAP_LOCK(b);
+	}
+	if (!bmap_2_biodi_wire(b)) {
 		b->bcm_mode |= BMAP_INFLIGHT;
 		BMAP_ULOCK(b);
 		/* This thread will retrieve the crc
