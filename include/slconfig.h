@@ -25,9 +25,11 @@ struct sl_site;
 #define LNET_NAME_MAX	32
 
 enum sl_res_type {
+	SLREST_NONE = 0,		/* must be zero */
 	SLREST_ARCHIVAL_FS,
 	SLREST_CLUSTER_NOSHARE_FS,
 	SLREST_COMPUTE,
+	SLREST_MDS,
 	SLREST_PARALLEL_FS
 };
 
@@ -36,7 +38,6 @@ struct sl_resource {
 	char			*res_desc;
 	char			*res_peertmp[SL_PEER_MAX];
 	sl_ios_id_t		 res_id;
-	int			 res_mds;
 	enum sl_res_type	 res_type;
 	sl_ios_id_t		*res_peers;
 	uint32_t		 res_npeers;
@@ -125,9 +126,9 @@ int			 slcfg_res_cmp(const void *, const void *);
 int			 slcfg_resnid_cmp(const void *, const void *);
 
 void			 slcfg_parse(const char *);
+void			 slcfg_store_tok_val(const char *, char *);
 
 void			 libsl_nid_associate(lnet_nid_t, struct sl_resource *);
-struct sl_resm		*libsl_resm_lookup(void);
 struct sl_site		*libsl_siteid2site(sl_siteid_t);
 struct sl_site		*libsl_resid2site(sl_ios_id_t);
 struct sl_resource	*libsl_id2res(sl_ios_id_t);
@@ -135,8 +136,7 @@ struct sl_resm		*libsl_nid2resm(lnet_nid_t);
 struct sl_resource	*libsl_str2res(const char *);
 sl_ios_id_t		 libsl_str2id(const char *);
 void			 libsl_profile_dump(void);
-uint32_t		 libsl_str2restype(const char *);
-void			 libsl_init(int);
+void			 libsl_init(int, int);
 
 extern struct sl_nodeh	 nodeInfo;
 extern struct sl_gconf	 globalConfig;

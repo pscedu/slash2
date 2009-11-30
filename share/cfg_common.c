@@ -39,7 +39,7 @@ int lnet_localnids_get(lnet_nid_t *, size_t);
  * Notes: must be called after LNET has been initialized.
  */
 struct sl_resm *
-libsl_resm_lookup(void)
+libsl_resm_lookup(int ismds)
 {
 	lnet_nid_t nids[MAX_LOCALNIDS];
 	char nidbuf[PSC_NIDSTR_SIZE];
@@ -61,13 +61,17 @@ libsl_resm_lookup(void)
 				   psc_nid2str(nids[i], nidbuf));
 
 		resm = e->private;
-		if (!i)
+		if (res == NULL)
 			res = resm->resm_res;
 		/* All nids must belong to the same resource */
 		else if (res != resm->resm_res)
 			psc_fatalx("nids must be members of same resource (%s)",
 				psc_nid2str(nids[i], nidbuf));
 	}
+	if (ismds && res->res_type != SLREST_MDS)
+		psc_fatal("%s: not configured as MDS", res->res_name);
+	else if (!ismds && res->res_type == SLREST_MDS)
+		psc_fatal("%s: not configured as ION", res->res_name);
 	return (resm);
 }
 
@@ -165,48 +169,32 @@ libsl_profile_dump(void)
 	uint32_t i;
 
 	fprintf(stderr,
-		"\nNode Info: resource %s\n"
-		"\tdesc: %s "
-		"\n\t id (global=%u, mds=%d)"
-		"\n\t type %d, npeers %u, nnids %u"
-		"\n\t fsroot %s\n",
+		"\nNode info: resource %s id %u\n"
+		"\tdesc: %s\n"
+		"\t type %d, npeers %u, nnids %u\n"
+		"\t fsroot %s\n",
 		z->node_res->res_name,
-		z->node_res->res_desc,
 		z->node_res->res_id,
-		z->node_res->res_mds,
+		z->node_res->res_desc,
 		z->node_res->res_type,
 		z->node_res->res_npeers,
 		z->node_res->res_nnids,
 		z->node_res->res_fsroot);
 
-	for (i=0; i < z->node_res->res_npeers; i++) {
+	for (i = 0; i < z->node_res->res_npeers; i++) {
 		r = libsl_id2res(z->node_res->res_peers[i]);
 		if (!r)
 			continue;
-		fprintf(stderr,"\tpeer %d ;%s;\t%s",
+		fprintf(stderr, "\tpeer %d ;%s;\t%s",
 			i, r->res_name, r->res_desc);
 	}
-	for (i=0; i < z->node_res->res_nnids; i++)
-		fprintf(stderr,"\tnid %d ;%s;\n",
+	for (i = 0; i < z->node_res->res_nnids; i++)
+		fprintf(stderr, "\tnid %d ;%s;\n",
 			i, libcfs_nid2str(z->node_res->res_nids[i]));
 }
 
-uint32_t
-libsl_str2restype(const char *res_type)
-{
-	if (!strcmp(res_type, "parallel_fs"))
-		return (SLREST_PARALLEL_FS);
-	else if (!strcmp(res_type, "archival_fs"))
-		return (SLREST_ARCHIVAL_FS);
-	else if (!strcmp(res_type, "cluster_noshare_fs"))
-		return (SLREST_CLUSTER_NOSHARE_FS);
-	else if (!strcmp(res_type, "compute"))
-		return (SLREST_COMPUTE);
-	psc_fatalx("invalid type");
-}
-
 void
-libsl_init(int pscnet_mode)
+libsl_init(int pscnet_mode, int ismds)
 {
 	struct sl_nodeh *z = &nodeInfo;
 	struct sl_resm *resm;
@@ -218,7 +206,7 @@ libsl_init(int pscnet_mode)
 	pscrpc_init_portals(pscnet_mode);
 
 	if (pscnet_mode == PSCNET_SERVER) {
-		resm = libsl_resm_lookup();
+		resm = libsl_resm_lookup(ismds);
 		if (!resm)
 			psc_fatalx("No resource for this node");
 		psc_errorx("Resource %s", resm->resm_res->res_name);

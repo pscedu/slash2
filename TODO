@@ -1,3 +1,5 @@
+$Id$
+
 11/22/09
 * Thinking about truncate.. in the event of an O_TRUNC or truncate() syscall we
 should not invalidate replicas but rather queue truncate or reclamation requests
@@ -27,9 +29,6 @@ this may break semantics for some apps which assume the same inode # to be used.
 * msl_io and rpc ION calls need to return actual size so that read() can
 be short circuited  on EOF.
 
-10/26/09
-* The config engine should use "type = mds" to describe metadata servers.
-
 09/28/09
 * Mds failure causes client to crash in fidc_fcoo_remove.
 
@@ -44,7 +43,6 @@ be short circuited  on EOF.
 [1254162324:006910 msfsthr23:25431:pscrpc_abort_inflight:1582] req@0x2aaab414b7d0 x43325/t0 c0 o25->@54321-128.182.58.80@tcp10:10 lens 192/80 ref 1 res 0 ret 2 fl Rpc:X/2/0 replyc 0 rc 0/0 to=60 :: inflight
 [1254162324:006939 msfsthr23:25431:pscrpc_abort_inflight:1582] req@0x2aaaac09f770 x43324/t0 c0 o25->@54321-128.182.58.80@tcp10:10 lens 192/80 ref 1 res 0 ret 2 fl Rpc:X/2/0 replyc 0 rc 0/0 to=60 :: inflight
 [1254162324:006979 msfsthr23:25431:fidc_fcoo_remove:416] [assert] SPLAY_EMPTY(&o->fcoo_bmapc)
-
 
 09/23/09
 * Sliod has too many open files but reports success anyway to mount_slash.
@@ -217,7 +215,7 @@ D_ANY
 - rename buffer.c -> slab.c
 - rename fdbuf.c -> descbuf.c
 - ensure fidc doesn't look up beyond SYM_NLOOPS #loops
-- run sliod as user _sliod
+- make it easy for sliod to run as user _sliod
 - remove "iod" from bmdsiod
 - new ctls for managing persistent replication:
 

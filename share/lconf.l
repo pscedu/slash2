@@ -119,6 +119,12 @@ archival_fs {
 	return RESOURCE_TYPE;
 }
 
+mds {
+	psc_trace("Resource type string %s", yytext);
+	yylval = strdup(yytext);
+	return RESOURCE_TYPE;
+}
+
 cluster_noshare_fs {
 	psc_trace("Resource type string %s", yytext);
 	yylval = strdup(yytext);

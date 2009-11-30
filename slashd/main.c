@@ -162,7 +162,7 @@ main(int argc, char *argv[])
 	slcfg_parse(cfn);
 	fdbuf_createkeyfile();
 	fdbuf_readkeyfile();
-	libsl_init(PSCNET_SERVER);
+	libsl_init(PSCNET_SERVER, 1);
 	mds_init();
 
 	_psc_poolmaster_init(&bmap_poolmaster, sizeof(struct bmapc_memb) +

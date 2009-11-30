@@ -27,7 +27,7 @@ sli_rmi_connect(const char *name)
 	}
 	if (res == NULL)
 		psc_fatalx("%s: unknown resource", name);
-	if (!res->res_mds)
+	if (!res->res_type != SLREST_MDS)
 		psc_fatalx("%s: not an MDS", name);
 
 	if (rpc_issue_connect(nid, rmi_csvc->csvc_import,

@@ -1671,7 +1671,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	if ((name = getenv("SLASH_MDS_NID")) == NULL)
 		psc_fatalx("please export SLASH_MDS_NID");
 
-	libsl_init(PSCNET_CLIENT);
+	libsl_init(PSCNET_CLIENT, 0);
 	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
 	bmpc_global_init();
 

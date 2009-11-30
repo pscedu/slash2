@@ -62,13 +62,13 @@ struct cfg_file {
 	struct psclist_head	 cf_lentry;
 };
 
-uint32_t	global_net_handler(const char *);
-void		slcfg_addif(char *, char *);
-void		slcfg_add_include(const char *);
-void		yyerror(const char *, ...);
-int		yyparse(void);
-int		yylex(void);
-void		store_tok_val(const char *, char *);
+void		 slcfg_add_include(const char *);
+void		 slcfg_addif(char *, char *);
+uint32_t	 slcfg_str2lnet(const char *);
+uint32_t	 slcfg_str2restype(const char *);
+void		 yyerror(const char *, ...);
+int		 yylex(void);
+int		 yyparse(void);
 
 /*
  * Define a table macro for each structure type filled in by the config
@@ -85,14 +85,13 @@ void		store_tok_val(const char *, char *);
 /* declare and initialize the global table */
 struct symtable sym_table[] = {
 	TABENT_GLBL("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
-	TABENT_GLBL("net",		SL_TYPE_INT,	0,		gconf_netid,	global_net_handler),
+	TABENT_GLBL("net",		SL_TYPE_INT,	0,		gconf_netid,	slcfg_str2lnet),
 	TABENT_GLBL("keyfn",		SL_TYPE_STR,	PATH_MAX,	gconf_fdbkeyfn,	NULL),
 	TABENT_SITE("site_id",		SL_TYPE_INT,	0,		site_id,	NULL),
 	TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
 	TABENT_RES ("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
-	TABENT_RES ("type",		SL_TYPE_INT,	0,		res_type,	libsl_str2restype),
+	TABENT_RES ("type",		SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
 	TABENT_RES ("id",		SL_TYPE_INT,	0,		res_id,		NULL),
-	TABENT_RES ("mds",		SL_TYPE_BOOL,	0,		res_mds,	NULL),
 	TABENT_RES ("fsroot",		SL_TYPE_STR,	PATH_MAX,	res_fsroot,	NULL),
 	{ NULL, 0, 0, 0, 0, 0, NULL }
 };
@@ -179,7 +178,8 @@ config		: globals includes site_profiles {
 						libsl_nid_associate(r->res_nids[i], r);
 				}
 			}
-		};
+		}
+		;
 
 globals		: /* NULL */
 		| global globals
@@ -251,6 +251,10 @@ site_resource	: resource_start resource_def SUBSECT_END {
 				yyerror("resource %s ID %d already assigned to %s",
 				    currentRes->res_name, currentRes->res_id,
 				    libsl_id2res(currentRes->res_id)->res_name);
+
+			if (currentRes->res_type == SLREST_NONE)
+				yyerror("resource %s ID %d has no type specified",
+				    currentRes->res_name, currentRes->res_id);
 
 			currentSite->site_resv = psc_realloc(currentSite->site_resv,
 			    sizeof(*currentSite->site_resv) *
@@ -331,7 +335,7 @@ statement	: restype_stmt
 restype_stmt	: NAME EQ RESOURCE_TYPE END {
 			psc_notify("Found Fstype Statement: Tok '%s' Val '%s'",
 			   $1, $3);
-			store_tok_val($1, $3);
+			slcfg_store_tok_val($1, $3);
 			free($1);
 			free($3);
 		}
@@ -340,7 +344,7 @@ restype_stmt	: NAME EQ RESOURCE_TYPE END {
 path_stmt	: NAME EQ PATHNAME END {
 			psc_notify("Found Path Statement: Tok '%s' Val '%s'",
 			       $1, $3);
-			store_tok_val($1, $3);
+			slcfg_store_tok_val($1, $3);
 			free($1);
 			free($3);
 		}
@@ -349,68 +353,76 @@ path_stmt	: NAME EQ PATHNAME END {
 glob_stmt	: NAME EQ GLOBPATH END {
 			psc_notify("Found Glob Statement: Tok '%s' Val '%s'",
 			       $1, $3);
-			store_tok_val($1, $3);
+			slcfg_store_tok_val($1, $3);
 			free($1);
 			free($3);
-		};
+		}
+		;
 
 bool_stmt	: NAME EQ BOOL END {
 			psc_notify("Found Bool Statement: Tok '%s' Val '%s'",
 			       $1, $3);
-			store_tok_val($1, $3);
+			slcfg_store_tok_val($1, $3);
 			free($1);
 			free($3);
-		};
+		}
+		;
 
 size_stmt	: NAME EQ SIZEVAL END {
 			psc_notify("Found Sizeval Statement: Tok '%s' Val '%s'",
 			       $1, $3);
-			store_tok_val($1, $3);
+			slcfg_store_tok_val($1, $3);
 			free($1);
 			free($3);
-		};
+		}
+		;
 
 num_stmt	: NAME EQ NUM END {
 			psc_notify("Found Num Statement: Tok '%s' Val '%s'",
 				$1, $3);
-			store_tok_val($1, $3);
+			slcfg_store_tok_val($1, $3);
 			free($1);
 			free($3);
-		};
+		}
+		;
 
 float_stmt	: NAME EQ FLOATVAL END {
 			psc_notify("Found Float Statement: Tok '%s' Val '%s'",
 			       $1, $3);
-			store_tok_val($1, $3);
+			slcfg_store_tok_val($1, $3);
 			free($1);
 			free($3);
-		};
+		}
+		;
 
 hexnum_stmt	: NAME EQ HEXNUM END {
 			psc_notify("Found Hexnum Statement: Tok '%s' Val '%s'",
 			       $1, $3);
-			store_tok_val($1, $3);
+			slcfg_store_tok_val($1, $3);
 			free($1);
 			free($3);
-		};
+		}
+		;
 
 quoteds_stmt	: NAME EQ QUOTEDS END {
 			psc_notify("Found Quoted String Statement: Tok '%s' Val '%s'",
 				   $1, $3);
-			store_tok_val($1, $3);
+			slcfg_store_tok_val($1, $3);
 			free($1);
 			free($3);
 			/* XXX: don't free, just copy the pointer */
-		};
+		}
+		;
 
 lnettcp_stmt	: NAME EQ LNETTCP END {
 			psc_notify("Found Lnettcp String Statement: Tok '%s' Val '%s'",
 				   $1, $3);
 
-			store_tok_val($1, $3);
+			slcfg_store_tok_val($1, $3);
 			free($1);
 			free($3);
-		};
+		}
+		;
 
 %%
 
@@ -448,16 +460,33 @@ slcfg_addif(char *ifname, char *netname)
 }
 
 uint32_t
-global_net_handler(const char *net)
+slcfg_str2lnet(const char *net)
 {
 	if (strlcpy(globalConfig.gconf_net, net,
-	    sizeof(globalConfig.gconf_net)) >= sizeof(globalConfig.gconf_net))
+	    sizeof(globalConfig.gconf_net)) >=
+	    sizeof(globalConfig.gconf_net))
 		psc_fatalx("LNET network name too long: %s", net);
 	return (libcfs_str2net(net));
 }
 
-static struct symtable *
-get_symbol(const char *name)
+uint32_t
+slcfg_str2restype(const char *res_type)
+{
+	if (!strcmp(res_type, "parallel_fs"))
+		return (SLREST_PARALLEL_FS);
+	else if (!strcmp(res_type, "archival_fs"))
+		return (SLREST_ARCHIVAL_FS);
+	else if (!strcmp(res_type, "cluster_noshare_fs"))
+		return (SLREST_CLUSTER_NOSHARE_FS);
+	else if (!strcmp(res_type, "compute"))
+		return (SLREST_COMPUTE);
+	else if (!strcmp(res_type, "mds"))
+		return (SLREST_MDS);
+	psc_fatalx("%s: invalid resource type", res_type);
+}
+
+struct symtable *
+slcfg_get_symbol(const char *name)
 {
 	struct symtable *e;
 
@@ -471,18 +500,18 @@ get_symbol(const char *name)
 		psc_warnx("Symbol '%s' was not found", name);
 		return NULL;
 	}
-	return e;
+	return (e);
 }
 
 void
-store_tok_val(const char *tok, char *val)
+slcfg_store_tok_val(const char *tok, char *val)
 {
 	struct symtable *e;
 	void            *ptr;
 
 	psc_notify("val %s tok %s", val, tok);
 
-	e = get_symbol(tok);
+	e = slcfg_get_symbol(tok);
 	if (!e)
 		psc_fatalx("%s: unknown symbol", tok);
 	psc_trace("%p %d", e, e->sym_type );
