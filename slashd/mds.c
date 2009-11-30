@@ -1050,17 +1050,7 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 
 	BMAP_LOCK(b);
 	if (bmap_2_bmdsiod(b)) {
-		/* Add check for directio mode. */
-		while (b->bcm_mode & BMAP_INIT) {
-			/* Only the init bit is allowed to be set.
-			 */
-			psc_assert(b->bcm_mode == BMAP_INIT);
-			/* Sanity checks for BMAP_INIT
-			 */
-			psc_assert(!b->bcm_pri);
-			psc_assert(!b->bcm_fcmh);
-			/* Block until the other thread has completed the io.
-			 */
+		while (b->bcm_mode & BMAP_INFLIGHT) {
 			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 			BMAP_LOCK(b);
 		}
@@ -1069,18 +1059,19 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 		psc_assert(b->bcm_pri);
 		psc_assert(b->bcm_fcmh);
 	} else {
+		b->bcm_mode |= BMAP_INFLIGHT;
+		BMAP_ULOCK(b);
 		rc = mds_bmap_read(f, bmapno, b);
+		BMAP_LOCK(b);
 		if (rc) {
 			DEBUG_FCMH(PLL_WARN, f,
 				   "mds_bmap_read() rc=%d blkno=%u",
 				   rc, bmapno);
 			b->bcm_mode |= BMAP_MDS_FAILED;
-		} else {
-			b->bcm_mode = 0;
 		}
 		/* Notify other threads that this bmap has been loaded,
-		 *  they're blocked on BMAP_INIT.
-		 */
+		 *  they're blocked on BMAP_INFLIGHT.  */
+		b->bcm_mode &= ~BMAP_INFLIGHT;
 		psc_waitq_wakeall(&b->bcm_waitq);
 	}
 	BMAP_ULOCK(b);
