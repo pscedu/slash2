@@ -6,7 +6,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "psc_util/alloc.h"
 #include "psc_util/log.h"
+#include "psc_util/strlcpy.h"
 
 #include "yconf.h"
 
@@ -34,10 +36,6 @@ quotedstr	\"[^"]*\"
 
 ";" {
 	return END;
-}
-
-":" {
-	return SEP;
 }
 
 "," {
@@ -198,8 +196,18 @@ compute {
 }
 
 {quotedstr} {
+	size_t len;
+
 	psc_trace("Quoted string %s", yytext);
-	yylval = strdup(yytext);
+	len = strlen(yytext);
+	psc_assert(len > 1);
+
+	/* len = q["] + str + q["] */
+	/* remove 2 for the quotes but add 1 for NUL; total: subtract 1 */
+	len--;
+
+	yylval = PSCALLOC(len);
+	strlcpy(yylval, yytext + 1, len);
 	return QUOTEDS;
 }
 
@@ -218,5 +226,5 @@ compute {
 int
 yywrap(void)
 {
-	return 1;
+	return (1);
 }

@@ -114,7 +114,6 @@ struct sl_gconf		*currentConf = &globalConfig;
 %token END
 %token EQ
 
-%token SEP
 %token ATSIGN
 %token NSEP
 
