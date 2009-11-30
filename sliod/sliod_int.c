@@ -229,6 +229,7 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 	struct bmapc_memb *b;
 
 	psc_assert(bmap);
+	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	b = bmap_lookup_add(f, bmapno, iod_bmap_init);
 
@@ -267,11 +268,8 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 				freelock(&b->bcm_lock);
 		}
 
-	} else if (rw == SL_WRITE)
+	} else
 		freelock(&b->bcm_lock);
-
-	else
-		psc_fatalx("invalid rw mode (%d)", rw);
 
 	*bmap = b;
 
