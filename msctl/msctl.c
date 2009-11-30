@@ -304,7 +304,7 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 	    current_mrs.mrs_nios, NBBY);
 	if (current_mrs.mrs_nbmaps == 0) {
 		replst_slave_prhdr(NULL, NULL);
-#if 0
+#if 1
 		for (blen = 0; blen < PSC_CTL_DISPLAY_WIDTH; blen++)
 			putchar('=');
 #endif
