@@ -39,9 +39,9 @@ struct slvr_ref {
 enum slvr_states {
 	SLVR_NEW	= (1 <<  0),	/* newly initialized */
 	SLVR_SPLAYTREE	= (1 <<  1),	/* registered in the splay tree */
-	SLVR_UNUSED	= (1 <<  2),	/* unused */
+	SLVR_UNUSED1	= (1 <<  2),	/* unused1 */
 	SLVR_FAULTING	= (1 <<  3),	/* contents being filled in from the disk or over the network */
-	SLVR_INFLIGHT	= (1 <<  4),	/* slvr crc is being sent the mds */ 
+	SLVR_UNUSED2	= (1 <<  4),	/* unused2 */
 	SLVR_GETSLAB	= (1 <<  5),	/* assigning memory buffer to slvr */
 	SLVR_PINNED	= (1 <<  6),	/* slab cannot be removed from the cache */
 	SLVR_DATARDY	= (1 <<  7),	/* ready for read / write activity */
@@ -59,7 +59,6 @@ enum slvr_states {
 #define DEBUG_SLVR_FLAGS(s)						\
 	SLVR_FLAG(((s)->slvr_flags & SLVR_NEW), "n"),			\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_FAULTING), "f"),	\
-		SLVR_FLAG(((s)->slvr_flags & SLVR_INFLIGHT), "i"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_GETSLAB), "G"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_PINNED), "p"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_CRCDIRTY), "D"),	\
@@ -71,7 +70,7 @@ enum slvr_states {
 		SLVR_FLAG(((s)->slvr_flags & SLVR_REPLSRC), "S"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_REPLDST), "T")	\
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
