@@ -1045,33 +1045,30 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 {
 	struct bmapc_memb *b;
 	struct bmap_mds_info *bmdsi;
-	int rc, initializing = 1;
+	int rc;
 
 	b = bmap_lookup_add(f, bmapno, mds_bmap_init);
 	bmdsi = b->bcm_pri;
 	if (bmdsi->bmdsi_od) {
 		/* Add check for directio mode. */
-		while (initializing) {
+		BMAP_LOCK(b);
+		while (b->bcm_mode & BMAP_INIT) {
+			/* Only the init bit is allowed to be set.
+			 */
+			psc_assert(b->bcm_mode == BMAP_INIT);
+			/* Sanity checks for BMAP_INIT
+			 */
+			psc_assert(!b->bcm_pri);
+			psc_assert(!b->bcm_fcmh);
+			/* Block until the other thread has completed the io.
+			 */
+			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 			BMAP_LOCK(b);
-			if (b->bcm_mode & BMAP_INIT) {
-				/* Only the init bit is allowed to be set.
-				 */
-				psc_assert(b->bcm_mode == BMAP_INIT);
-				/* Sanity checks for BMAP_INIT
-				 */
-				psc_assert(!b->bcm_pri);
-				psc_assert(!b->bcm_fcmh);
-				/* Block until the other thread has completed the io.
-				 */
-				psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-			} else {
-				/* Sanity check relevant pointers.
-				 */
-				psc_assert(b->bcm_pri);
-				psc_assert(b->bcm_fcmh);
-				initializing = 0;
-			}
 		}
+		/* Sanity check relevant pointers.
+		 */
+		psc_assert(b->bcm_pri);
+		psc_assert(b->bcm_fcmh);
 	} else {
 		rc = mds_bmap_read(f, bmapno, b);
 		if (rc) {
