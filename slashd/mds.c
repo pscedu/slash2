@@ -1044,12 +1044,11 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
     struct bmapc_memb **bp)
 {
 	struct bmapc_memb *b;
-	struct bmap_mds_info *bmdsi;
 	int rc;
 
 	b = bmap_lookup_add(f, bmapno, mds_bmap_init);
-	bmdsi = b->bcm_pri;
-	if (bmdsi->bmdsi_od) {
+	
+	if (bmap_2_bmdsiod(b)) {
 		/* Add check for directio mode. */
 		BMAP_LOCK(b);
 		while (b->bcm_mode & BMAP_INIT) {
