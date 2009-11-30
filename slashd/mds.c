@@ -1047,10 +1047,10 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 	int rc;
 
 	b = bmap_lookup_add(f, bmapno, mds_bmap_init);
-	
+
+	BMAP_LOCK(b);
 	if (bmap_2_bmdsiod(b)) {
 		/* Add check for directio mode. */
-		BMAP_LOCK(b);
 		while (b->bcm_mode & BMAP_INIT) {
 			/* Only the init bit is allowed to be set.
 			 */
@@ -1075,20 +1075,18 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 				   "mds_bmap_read() rc=%d blkno=%u",
 				   rc, bmapno);
 			b->bcm_mode |= BMAP_MDS_FAILED;
-			psc_waitq_wakeall(&b->bcm_waitq);
-			return (rc);
 		} else {
 			b->bcm_mode = 0;
-			/* Notify other threads that this bmap has been loaded,
-			 *  they're blocked on BMAP_INIT.
-			 */
-			psc_waitq_wakeall(&b->bcm_waitq);
 		}
+		/* Notify other threads that this bmap has been loaded,
+		 *  they're blocked on BMAP_INIT.
+		 */
+		psc_waitq_wakeall(&b->bcm_waitq);
 	}
 	BMAP_ULOCK(b);
 
 	*bp = b;
-	return (0);
+	return (rc);
 }
 
 int
