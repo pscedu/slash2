@@ -54,7 +54,7 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 	struct iovec			 iov;
 	struct pscrpc_bulk_desc		*desc;
 
-	psc_assert(b->bcm_mode & BMAP_IOD_RETRIEVE);
+	psc_assert(b->bcm_mode & BMAP_INFLIGHT);
 	psc_assert(!bmap_2_biodi_wire(b));
 
 	rc = RSX_NEWREQ(rmi_csvc->csvc_import, SRMC_VERSION,
@@ -111,7 +111,7 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 	 *  XXX need some way to denote that a crcget rpc failed?
 	 */
 	BMAP_LOCK(b);
-	b->bcm_mode &= ~BMAP_IOD_RETRIEVE;
+	b->bcm_mode &= ~BMAP_INFLIGHT;
 	if (rc)
 		b->bcm_mode |= BMAP_IOD_RETRFAIL;
 	psc_waitq_wakeall(&b->bcm_waitq);
@@ -244,7 +244,7 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 		/* Check the retrieve bit first since it may be set
 		 *  before the biodi_wire pointer.
 		 */
-		if (b->bcm_mode & BMAP_IOD_RETRIEVE) {
+		if (b->bcm_mode & BMAP_INFLIGHT) {
 			/* Another thread is already getting this
 			 *  bmap's crc table.
 			 */
@@ -258,7 +258,7 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 				 *  table.  Set the bit and drop the
 				 *  lock prior to making the rpc.
 				 */
-				b->bcm_mode |= BMAP_IOD_RETRIEVE;
+				b->bcm_mode |= BMAP_INFLIGHT;
 				freelock(&b->bcm_lock);
 
 				rc = iod_bmap_fetch_crcs(b, rw);
