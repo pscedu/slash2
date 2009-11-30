@@ -164,39 +164,38 @@ libsl_str2id(const char *name)
 void
 libsl_profile_dump(void)
 {
-	struct sl_nodeh *z = &nodeInfo;
+	struct sl_nodeh *n = &nodeInfo;
 	struct sl_resource *r;
 	uint32_t i;
 
-	fprintf(stderr,
-		"\nNode info: resource %s id %u\n"
-		"\tdesc: %s\n"
-		"\t type %d, npeers %u, nnids %u\n"
-		"\t fsroot %s\n",
-		z->node_res->res_name,
-		z->node_res->res_id,
-		z->node_res->res_desc,
-		z->node_res->res_type,
-		z->node_res->res_npeers,
-		z->node_res->res_nnids,
-		z->node_res->res_fsroot);
+	r = n->node_res;
 
-	for (i = 0; i < z->node_res->res_npeers; i++) {
-		r = libsl_id2res(z->node_res->res_peers[i]);
+	fprintf(stderr,
+	    "Node info: resource %s id %u\n"
+	    "\tdesc: %s\n"
+	    "\ttype %d, npeers %u, nnids %u\n"
+	    "\tfsroot %s\n",
+	    r->res_name, r->res_id,
+	    r->res_desc,
+	    r->res_type, r->res_npeers, r->res_nnids,
+	    r->res_fsroot);
+
+	for (i = 0; i < n->node_res->res_npeers; i++) {
+		r = libsl_id2res(n->node_res->res_peers[i]);
 		if (!r)
 			continue;
-		fprintf(stderr, "\tpeer %d ;%s;\t%s",
+		fprintf(stderr, "\tpeer %d ;%s;\t%s\n",
 			i, r->res_name, r->res_desc);
 	}
-	for (i = 0; i < z->node_res->res_nnids; i++)
+	for (i = 0; i < n->node_res->res_nnids; i++)
 		fprintf(stderr, "\tnid %d ;%s;\n",
-			i, libcfs_nid2str(z->node_res->res_nids[i]));
+			i, libcfs_nid2str(n->node_res->res_nids[i]));
 }
 
 void
 libsl_init(int pscnet_mode, int ismds)
 {
-	struct sl_nodeh *z = &nodeInfo;
+	struct sl_nodeh *n = &nodeInfo;
 	struct sl_resm *resm;
 
 	//lnet_acceptor_port = globalConfig.gconf_port;
@@ -210,8 +209,8 @@ libsl_init(int pscnet_mode, int ismds)
 		if (!resm)
 			psc_fatalx("No resource for this node");
 		psc_errorx("Resource %s", resm->resm_res->res_name);
-		z->node_res  = resm->resm_res;
-		z->node_site = libsl_resid2site(z->node_res->res_id);
+		n->node_res  = resm->resm_res;
+		n->node_site = libsl_resid2site(n->node_res->res_id);
 		libsl_profile_dump();
 	}
 }
