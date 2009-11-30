@@ -127,26 +127,12 @@ struct bmap_iod_info {
 
 #define SLVR_WAIT(s)							\
 	do {								\
- slvr_wait_retry:							\
 		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT");		\
-		psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,		\
-			       &(slvr_2_biod((s)))->biod_lock);		\
-		SLVR_LOCK((s));						\
-		if (!((s)->slvr_flags & SLVR_DATARDY))			\
-			goto slvr_wait_retry;				\
-	} while (0)
-
-#define SLVR_WAIT_SLAB(s)						\
-	do {								\
- slvr_wait_slab_retry:							\
-		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT_SLAB");		\
-		psc_assert((s)->slvr_flags & SLVR_GETSLAB);		\
-		psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,		\
-			       &(slvr_2_biod((s)))->biod_lock);		\
-		SLVR_LOCK((s));						\
-		if (!(s)->slvr_slab)					\
-			goto slvr_wait_slab_retry;			\
-		psc_assert(!((s)->slvr_flags & SLVR_GETSLAB));		\
+		while (!((s)->slvr_flags & SLVR_DATARDY)) {		\
+			psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,	\
+				       &(slvr_2_biod((s)))->biod_lock);	\
+			SLVR_LOCK((s));					\
+		}							\
 	} while (0)
 
 static inline void
