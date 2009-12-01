@@ -88,16 +88,19 @@ slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
+	struct srsm_replst_bhdr *srsb;
+	struct bmap_mds_info *bmdsi;
 	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
 	int len, rc;
 
 	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
+	bmdsi = bmap_2_bmdsi(bcm);
 
 	rc = 0;
 	len = howmany(rrq->rrq_inoh->inoh_ino.ino_nrepls *
-	    SL_BITS_PER_REPLICA, NBBY);
+	    SL_BITS_PER_REPLICA, NBBY) + sizeof(*srsb);
 	if (srcm->srcm_pagelen + len > SRM_REPLST_PAGESIZ) {
 		if (*rqp) {
 			rc = slmrmcthr_replst_slave_waitrep(*rqp);
@@ -116,8 +119,10 @@ slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 
 		srcm->srcm_pagelen = 0;
 	}
-	memcpy(srcm->srcm_page + srcm->srcm_pagelen,
-	    bmap_2_bmdsiod(bcm)->bh_repls, len);
+	srsb = (void *)(srcm->srcm_page + srcm->srcm_pagelen);
+	srsb->srsb_repl_policy = bmdsi->bmdsi_repl_policy;
+	memcpy(srcm->srcm_page + srcm->srcm_pagelen +
+	    sizeof(*srsb), bmdsi->bmdsi_od->bh_repls, len);
 	srcm->srcm_pagelen += len;
 	return (rc);
 }

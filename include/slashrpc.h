@@ -488,6 +488,13 @@ struct srm_replst_slave_req {
 /* bulk data is sections of bh_repls data */
 };
 
+#define SL_NBITS_REPLST_BHDR	(NBBY * sizeof(struct srm_replst_slave_req))
+
+/* per-bmap header submessage, prepended before each bh_repls content */
+struct srsm_replst_bhdr {
+	uint8_t			srsb_repl_policy;
+} __packed;
+
 #define SRM_REPLST_PAGESIZ	(1024 * 1024)	/* should be network MSS */
 
 #define srm_replst_slave_rep srm_replst_slave_req

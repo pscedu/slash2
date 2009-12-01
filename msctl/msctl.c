@@ -192,6 +192,7 @@ int
 replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct msctlmsg_replst_slave *mrsl = m;
+	__unusedx struct srsm_replst_bhdr *srsb;
 	struct replst_slave_bdata *rsb;
 	uint32_t nbytes, nbmaps, len;
 	int rc;
@@ -199,17 +200,17 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)) == 0)
 		errx(1, "received unexpected replication status slave message");
 
-	nbytes = howmany(SL_BITS_PER_REPLICA * current_mrs.mrs_nios, NBBY);
+	nbytes = howmany((SL_BITS_PER_REPLICA * current_mrs.mrs_nios +
+	    SL_NBITS_REPLST_BHDR) * mrsl->mrsl_nbmaps, NBBY);
 
 	if (mh->mh_size < sizeof(*mrsl))
 		return (sizeof(*mrsl));
 	len = mh->mh_size - sizeof(*mrsl);
-	if (len > SRM_REPLST_PAGESIZ || len % nbytes)
+	if (len > SRM_REPLST_PAGESIZ || len != nbytes)
 		return (sizeof(*mrsl));
-	nbmaps = (mh->mh_size - sizeof(*mrsl)) / nbytes;
-	if (nbmaps > current_mrs.mrs_nbmaps)
+	if (mrsl->mrsl_nbmaps > current_mrs.mrs_nbmaps)
 		errx(1, "invalid value in replication status slave message");
-	current_mrs.mrs_nbmaps -= nbmaps;
+	current_mrs.mrs_nbmaps -= mrsl->mrsl_nbmaps;
 
 	rc = vbitmap_setrange(&current_mrs_bmask, mrsl->mrsl_boff, nbmaps);
 	if (rc)
