@@ -487,7 +487,6 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	if (ch == NULL)
 		return;			/* it's no longer there */
 
-	psc_assert(c->fcmh_pri == NULL);
 	ch = c->fcmh_pri = psc_realloc(ch, sizeof(*ch) + len, 0);
 	ch->fcc_hash = str_hash(newname);
 	strlcpy(ch->fcc_name, newname, len);
