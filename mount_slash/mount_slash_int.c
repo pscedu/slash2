@@ -692,13 +692,18 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, uint32_t rw)
 	b = bmap_lookup_add(f, n, msl_bmap_init);
 	psc_assert(b);
 
+	BMAP_LOCK(b);
+	while (b->bcm_mode & BMAP_INFLIGHT) {
+		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+		BMAP_LOCK(b);
+	}
 	if (b->bcm_mode & BMAP_INIT) {
 		/* Retrieve the bmap from the sl_mds.
 		 */
+		b->bcm_mode |= BMAP_INFLIGHT;
+		BMAP_ULOCK(b);
 		rc = msl_bmap_fetch(b, n, rw);
-		if (rc) {
-			b = NULL;
-		} else {
+		if (!rc) {
 			mode = BML_NEW_BMAP;
 			psc_assert(!(b->bcm_mode & BMAP_INIT));
 			/* Verify that the mds has returned a 'write-enabled' bmap.
@@ -708,8 +713,13 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, uint32_t rw)
 
 			msl_bmap_fhcache_ref(mfh, b, mode, rw);
 		}
+		BMAP_LOCK(b);
+		b->bcm_mode &= ~BMAP_INFLIGHT;
+		psc_waitq_wakeall(&b->bcm_waitq);
+		BMAP_ULOCK(b);
 		return (b);
 	}
+	BMAP_ULOCK(b);
 	/* Else */
 	/* Ref now, otherwise our bmap may get downgraded while we're
 	 *  blocking on the waitq.
