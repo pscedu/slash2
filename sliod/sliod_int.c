@@ -231,11 +231,10 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 	/* For the time being I don't think we need to key actions
 	 *  off of the BMAP_INIT bit so just get rid of it.
 	 */
-	BMAP_LOCK(b);
-	b->bcm_mode &= ~BMAP_INIT;
 	if (rw == SL_WRITE)
 		goto done;
 
+	BMAP_LOCK(b);
 	while (b->bcm_mode & BMAP_INFLIGHT) {
 		/* Another thread is already getting this
 		 *  bmap's crc table.
@@ -259,10 +258,8 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 			b->bcm_mode &= BMAP_INIT;
 		psc_waitq_wakeall(&b->bcm_waitq);
 	}
-
-done:
-
 	BMAP_ULOCK(b);
+done:
 	*bmap = b;
 	return (rc);
 }
