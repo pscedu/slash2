@@ -35,6 +35,7 @@
 #include "mount_slash.h"
 #include "msl_fuse.h"
 #include "pathnames.h"
+#include "rpc_cli.h"
 #include "slashrpc.h"
 
 sl_ios_id_t	 prefIOS = IOS_ID_ANY;
@@ -78,7 +79,7 @@ static int set_signal_handler(int sig, void (*handler)(int))
  * @buf: value-result of the translated pathname.
  * Returns Boolean true on success or errno code on failure.
  *
- * XXX this should be rewritten to solely use slash_lookup_cache().
+ * XXX this should be rewritten to solely use ms_lookup_fidcache().
  */
 int
 translate_pathname(const char *fn, char buf[PATH_MAX])
@@ -1123,7 +1124,7 @@ slash_lookuprpc(const struct slash_creds *cr, struct fidc_membh *p,
 }
 
 int
-slash_lookup_cache(const struct slash_creds *cr, fuse_ino_t parent,
+ms_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
     const char *name, struct slash_fidgen *fgp, struct stat *stb)
 {
 	int rc=0;
@@ -1183,7 +1184,7 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 	int rc;
 
 	slash2fuse_getcred(req, &cr);
-	rc = slash_lookup_cache(&cr, parent, name, &fg, &stb);
+	rc = ms_lookup_fidcache(&cr, parent, name, &fg, &stb);
 	if (rc)
 		fuse_reply_err(req, rc);
 	else
@@ -1662,7 +1663,7 @@ slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
 }
 
 void *
-slash_init(__unusedx struct fuse_conn_info *conn)
+ms_init(__unusedx struct fuse_conn_info *conn)
 {
 	char *name;
 
@@ -1680,7 +1681,7 @@ slash_init(__unusedx struct fuse_conn_info *conn)
 	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 
-	rpc_initsvc();
+	slc_rpc_initsvc();
 
 	/* Start up service threads. */
 	mseqpollthr_spawn();
@@ -1847,7 +1848,7 @@ main(int argc, char *argv[])
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
 	slcfg_parse(cfg);
-	slash_init(NULL);
+	ms_init(NULL);
 
 	if (unmount) {
 		char cmdbuf[BUFSIZ];

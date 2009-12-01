@@ -31,7 +31,7 @@ slm_rim_issue_ping(struct pscrpc_import *imp)
 }
 
 void
-rpc_initsvc(void)
+slm_rpc_initsvc(void)
 {
 	struct pscrpc_svc_handle *svh;
 

@@ -13,21 +13,22 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
-#include "pfl/cdefs.h"
 #include "psc_util/log.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
 #include "buffer.h"
+#include "bmpc.h"
 #include "fidcache.h"
 #include "mount_slash.h"
-#include "bmpc.h"
+#include "rpc_cli.h"
 #include "slashrpc.h"
 #include "slconfig.h"
 

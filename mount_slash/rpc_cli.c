@@ -8,10 +8,10 @@
 #include "psc_util/strlcpy.h"
 
 #include "mount_slash.h"
+#include "rpc_cli.h"
 #include "slashrpc.h"
 
 struct slashrpc_cservice *mds_csvc;
-struct psclist_head io_server_conns = PSCLIST_HEAD_INIT(io_server_conns);
 
 lnet_process_id_t lpid;
 
@@ -23,10 +23,10 @@ lnet_process_id_t lpid;
 #define SRCM_SVCNAME	"msrcmthr"
 
 /*
- * rpc_initsvc: initialize RPC services.
+ * slc_rpc_initsvc: initialize RPC services.
  */
 void
-rpc_initsvc(void)
+slc_rpc_initsvc(void)
 {
 	pscrpc_svc_handle_t *svh;
 
@@ -47,7 +47,7 @@ rpc_initsvc(void)
 	strlcpy(svh->svh_svc_name, SRCM_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct msrcm_thread);
 
-	/* Setup client <-> MDS service */
+	/* Setup MDS <- client service */
 	mds_csvc = rpc_csvc_create(SRMC_REQ_PORTAL, SRMC_REP_PORTAL);
 }
 
@@ -62,50 +62,4 @@ msrmc_connect(const char *name)
 	if (rpc_issue_connect(nid, mds_import, SRMC_MAGIC, SRMC_VERSION))
 		psc_error("rpc_connect %s", name);
 	return (0);
-}
-
-int
-msric_connect(const char *name)
-{
-	struct io_server_conn *isc;
-	lnet_nid_t nid;
-
-	nid = libcfs_str2nid(name);
-	if (nid == LNET_NID_ANY)
-		psc_fatalx("invalid server name: %s", name);
-
-	isc = PSCALLOC(sizeof(*isc));
-	isc->isc_csvc = rpc_csvc_create(SRIC_REQ_PORTAL,
-	    SRIC_REP_PORTAL);
-	/* XXX use srm_ic_connect_req */
-	if (rpc_issue_connect(nid, isc->isc_csvc->csvc_import,
-	    SRIC_MAGIC, SRIC_VERSION))
-		psc_error("rpc_connect %s", name);
-	psclist_xadd(&isc->isc_lentry, &io_server_conns);
-	return (0);
-}
-
-struct slashrpc_cservice *
-ion_get(void)
-{
-	static psc_spinlock_t lock = LOCK_INITIALIZER;
-	static struct io_server_conn *isc;
-	struct slashrpc_cservice *csvc;
-	struct psclist_head *e;
-
-	spinlock(&lock);
-	if (psclist_empty(&io_server_conns))
-		psc_fatalx("no I/O nodes available");
-	if (isc == NULL)
-		isc = psclist_first_entry(&io_server_conns,
-		    struct io_server_conn, isc_lentry);
-	csvc = isc->isc_csvc;
-	e = psclist_next(&isc->isc_lentry);
-	if (e == &io_server_conns)
-		isc = NULL;
-	else
-		isc = psclist_entry(e, struct io_server_conn,
-		    isc_lentry);
-	freelock(&lock);
-	return (csvc);
 }

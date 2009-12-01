@@ -253,7 +253,7 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 	resm = libsl_nid2resm(rq->rq_peer.nid);
 	slm_geticonnx(resm, rq->rq_export);
 
-	slm_rmi_getdata(rq->rq_export);
+	slm_rmi_getexpdata(rq->rq_export);
 	return (0);
 }
 
@@ -291,37 +291,37 @@ slm_rmi_handler(struct pscrpc_request *rq)
 void
 slm_rmi_hldrop(void *p)
 {
-	struct slm_rmi_data *smid = p;
+	struct slm_rmi_expdata *smie = p;
 	struct sl_resm *resm;
 
-	resm = libsl_nid2resm(smid->smid_exp->exp_connection->c_peer.nid);
+	resm = libsl_nid2resm(smie->smie_exp->exp_connection->c_peer.nid);
 	if (resm)
 		mds_repl_reset_scheduled(resm->resm_res->res_id);
-	free(smid);
+	free(smie);
 }
 
-struct slm_rmi_data *
-slm_rmi_getdata(struct pscrpc_export *exp)
+struct slm_rmi_expdata *
+slm_rmi_getexpdata(struct pscrpc_export *exp)
 {
-	struct slm_rmi_data *smid, *p;
+	struct slm_rmi_expdata *smie, *p;
 
 	spinlock(&exp->exp_lock);
 	if (exp->exp_private)
-		smid = exp->exp_private;
+		smie = exp->exp_private;
 	freelock(&exp->exp_lock);
-	if (smid)
-		return (smid);
+	if (smie)
+		return (smie);
 	p = PSCALLOC(sizeof(*p));
-	p->smid_exp = exp;
+	p->smie_exp = exp;
 	spinlock(&exp->exp_lock);
 	if (exp->exp_private)
-		smid = exp->exp_private;
+		smie = exp->exp_private;
 	else {
 		exp->exp_hldropf = slm_rmi_hldrop;
-		exp->exp_private = smid = p;
+		exp->exp_private = smie = p;
 		p = NULL;
 	}
 	freelock(&exp->exp_lock);
 	free(p);
-	return (smid);
+	return (smie);
 }

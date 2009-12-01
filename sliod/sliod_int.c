@@ -18,6 +18,7 @@
 #include "bmap_iod.h"
 #include "fid.h"
 #include "fidcache.h"
+#include "rpc_iod.h"
 #include "slashrpc.h"
 #include "slashrpc.h"
 #include "slconfig.h"
@@ -57,7 +58,7 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 	psc_assert(b->bcm_mode & BMAP_INFLIGHT);
 	psc_assert(!bmap_2_biodi_wire(b));
 
-	rc = RSX_NEWREQ(rmi_csvc->csvc_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(sli_rmi_getimp(), SRMC_VERSION,
 			SRMT_GETBMAPCRCS, rq, mq, mp);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "could not create request (%d)", rc);

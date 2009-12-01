@@ -170,7 +170,7 @@ main(int argc, char *argv[])
 	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 
-	rpc_initsvc();
+	slm_rpc_initsvc();
 	slmreplthr_spawnall();
 	mds_repl_init();
 	slmtimerthr_spawn();

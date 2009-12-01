@@ -19,6 +19,7 @@
 #include "ctlsvr_cli.h"
 #include "mount_slash.h"
 #include "msl_fuse.h"
+#include "rpc_cli.h"
 #include "slashrpc.h"
 #include "slerr.h"
 
@@ -88,7 +89,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pinum = fg.fg_fid;
 		if ((next = strchr(cpn, '/')) != NULL)
 			*next++ = '\0';
-		rc = slash_lookup_cache(&cr, pinum, cpn, &fg, &stb);
+		rc = ms_lookup_fidcache(&cr, pinum, cpn, &fg, &stb);
 		if (rc)
 			return (psc_ctlsenderr(fd, mh, "%s: %s",
 			    mrq->mrq_fn, slstrerror(rc)));
@@ -173,7 +174,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		pinum = fg.fg_fid;
 		if ((next = strchr(cpn, '/')) != NULL)
 			*next++ = '\0';
-		rc = slash_lookup_cache(&cr, pinum, cpn, &fg, &stb);
+		rc = ms_lookup_fidcache(&cr, pinum, cpn, &fg, &stb);
 		if (rc)
 			return (psc_ctlsenderr(fd, mh,
 			    "%s: %s", mrq->mrq_fn, slstrerror(rc)));

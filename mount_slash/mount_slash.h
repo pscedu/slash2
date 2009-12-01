@@ -109,19 +109,7 @@ msl_mfd_release(struct msl_fcoo_data *mfd)
 	PSCFREE(mfd);
 }
 
-struct io_server_conn {
-	struct psclist_head		 isc_lentry;
-	struct slashrpc_cservice	*isc_csvc;
-};
-
-void	rpc_initsvc(void);
-int	msrmc_connect(const char *);
-int	msric_connect(const char *);
-int	msrcm_handler(struct pscrpc_request *);
-
 void	*msctlthr_begin(void *);
-
-struct slashrpc_cservice *ion_get(void);
 
 #define msl_read(fh, buf, size, off)  msl_io((fh), (buf), (size), (off), MSL_READ)
 #define msl_write(fh, buf, size, off) msl_io((fh), (buf), (size), (off), MSL_WRITE)
@@ -143,15 +131,12 @@ void	msctlthr_spawn(void);
 void	mstimerthr_spawn(void);
 void	msbmapflushthr_spawn(void);
 
-int	slash_lookup_cache(const struct slash_creds *, fuse_ino_t, const char *,
+int	ms_lookup_fidcache(const struct slash_creds *, fuse_ino_t, const char *,
 	    struct slash_fidgen *, struct stat *);
 
 int	checkcreds(const struct stat *, const struct slash_creds *, int);
 int	translate_pathname(const char *, char []);
 
-#define mds_import	(mds_csvc->csvc_import)
-
-extern struct slashrpc_cservice	*mds_csvc;
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;
 

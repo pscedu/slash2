@@ -108,13 +108,14 @@ main(int argc, char *argv[])
 	sl_buffer_cache_init();
 	slvr_cache_init();
 	sli_repl_init();
-	rpc_initsvc();
+	sli_rpc_initsvc();
 	slitimerthr_spawn();
 
 	if ((mds = getenv("SLASH_MDS_NID")) == NULL)
 		psc_fatalx("please export SLASH_MDS_NID");
 
-	if (sli_rmi_connect(mds))
+	sli_rmi_setmds(mds);
+	if (sli_rmi_getimp() == NULL)
 		psc_fatalx("MDS server unavailable");
 
 	slictlthr_main(sfn);

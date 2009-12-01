@@ -36,22 +36,29 @@ struct sli_repl_workrq;
 	    &resm2iri(resm)->iri_lock, slconn_wake_waitq,		\
 	    &resm2iri(resm)->iri_waitq, SLCONNT_IOD)
 
+#define sli_getmconn(resm)						\
+	slconn_get(&resm2iri(resm)->iri_csvc, NULL, (resm)->resm_nid,	\
+	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,	\
+	    &resm2iri(resm)->iri_lock, slconn_wake_waitq,		\
+	    &resm2iri(resm)->iri_waitq, SLCONNT_MDS)
+
 #define sli_ric_handle_read(rq)		sli_ric_handle_io((rq), SL_READ)
 #define sli_ric_handle_write(rq)	sli_ric_handle_io((rq), SL_WRITE)
 
-void rpc_initsvc(void);
+void	sli_rpc_initsvc(void);
 
-int sli_rim_handler(struct pscrpc_request *);
-int sli_ric_handler(struct pscrpc_request *);
-int sli_rii_handler(struct pscrpc_request *);
+int	sli_rim_handler(struct pscrpc_request *);
+int	sli_ric_handler(struct pscrpc_request *);
+int	sli_rii_handler(struct pscrpc_request *);
 
-int sli_rmi_connect(const char *);
+struct pscrpc_import *
+	sli_rmi_getimp(void);
+int	sli_rmi_setmds(const char *);
 
-int sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
+int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
 
-int sli_rii_issue_repl_read(struct pscrpc_import *, struct sli_repl_workrq *);
+int	sli_rii_issue_repl_read(struct pscrpc_import *, struct sli_repl_workrq *);
 
 extern struct cfd_svrops	*cfdOps;
-extern struct slashrpc_cservice	*rmi_csvc;
 
 #endif /* _IO_RPC_H_ */

@@ -15,6 +15,7 @@
 #include "bmap_iod.h"
 #include "fid.h"
 #include "fidcache.h"
+#include "rpc_iod.h"
 #include "sliod.h"
 #include "slvr.h"
 
@@ -42,7 +43,7 @@ slvr_worker_crcup_genrq(const struct dynarray *ref_array)
 	int rc;
 	uint32_t i;
 
-	rc = RSX_NEWREQ(rmi_csvc->csvc_import, SRMI_VERSION,
+	rc = RSX_NEWREQ(sli_rmi_getimp(), SRMI_VERSION,
 			SRMT_BMAPCRCWRT, req, mq, mp);
 	if (rc) {
 		return rc;

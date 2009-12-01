@@ -26,18 +26,18 @@ struct pscrpc_export;
 #define SLM_RMC_REPSZ      384
 #define SLM_RMC_SVCNAME    "slmrmc"
 
-struct slm_rmi_data {
-	struct pscrpc_export *smid_exp;
+struct slm_rmi_expdata {
+	struct pscrpc_export *smie_exp;
 };
 
-void	rpc_initsvc(void);
+void	slm_rpc_initsvc(void);
 
 int	slm_rmc_handler(struct pscrpc_request *);
 int	slm_rmi_handler(struct pscrpc_request *);
 int	slm_rmm_handler(struct pscrpc_request *);
 
-struct slm_rmi_data *
-	slm_rmi_getdata(struct pscrpc_export *);
+struct slm_rmi_expdata *
+	slm_rmi_getexpdata(struct pscrpc_export *);
 
 #define resm2mri(resm)	((struct mds_resm_info *)(resm)->resm_pri)
 

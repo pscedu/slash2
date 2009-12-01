@@ -17,10 +17,10 @@ lnet_process_id_t		 lpid;
 struct slashrpc_cservice	*rmi_csvc;
 
 /**
- * rpc_initsvc - create and initialize RPC services.
+ * sli_rpc_initsvc - create and initialize RPC services.
  */
 void
-rpc_initsvc(void)
+sli_rpc_initsvc(void)
 {
 	pscrpc_svc_handle_t *svh;
 
@@ -68,7 +68,4 @@ rpc_initsvc(void)
 	svh->svh_handler = sli_rii_handler;
 	strlcpy(svh->svh_svc_name, SLI_RII_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slirii_thread);
-
-	/* Create client service to issue requests to MDS. */
-	rmi_csvc = rpc_csvc_create(SRMI_REQ_PORTAL, SRMI_REP_PORTAL);
 }
