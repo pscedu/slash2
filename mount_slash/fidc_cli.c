@@ -20,7 +20,7 @@
 #include "fidcache.h"
 
 /**
- * fidc_new - create a new fcc structure and initialize it using provided 
+ * fidc_new - create a new fcc structure and initialize it using provided
  *     parameters.
  * @p: parent fcmh
  * @c: child fcmh
@@ -492,6 +492,9 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 		psc_warnx("missing source file %s in a rename", oldname);
 		return;
 	}
+
+	/* sanity check to ensure we don't lose fcmh_pri */
+	psc_assert(ch == c->fcmh_pri);
 
 	/* overwrite the old name with the new one in place */
 	psc_assert(c->fcmh_pri != NULL);
