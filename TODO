@@ -293,8 +293,7 @@ legend:
   slmkfs, slfmtfs, or slnewfs
 - rename rpc_csvc_create to slashrpc_csvc_create() and don't expose it
   outside of rpc_common.c
-- rename slashrpc_export to something per-conntype specific
-- libsl_init() is getting an ENOMEM somewhere in slashd
+- libsl_init() is getting an ENOMEM somewhere in slashd, maybe LNET
 - do not keep sl_replrq in mem unless a bh_repl is OLD or SCHED
 - add bmap_hdr in replst ctlmsg
 - if P is specified in msctl -Q fn:*P:@SITE, ensure persist is turned on
