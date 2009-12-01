@@ -36,10 +36,11 @@
 #include "mount_slash/fuse_listener.h"
 #include "mount_slash/mount_slash.h"
 #include "mount_slash/msl_fuse.h"
+#include "mount_slash/rpc_cli.h"
 #include "msctl/msctl.h"
+#include "slashd/bmap_mds.h"
 #include "slashd/ctl_mds.h"
 #include "slashd/fidc_mds.h"
-#include "slashd/mds_bmap.h"
 #include "slashd/mdscoh.h"
 #include "slashd/mdsexpc.h"
 #include "slashd/mdsio_zfs.h"
@@ -86,7 +87,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	psc_crc_t crc;
+	psc_crc64_t crc;
 	int c;
 
 	progname = argv[0];
@@ -104,6 +105,7 @@ main(int argc, char *argv[])
 
 	/* start structs */
 	PRTYPE(cred_t);
+	PRTYPE(sl_ino_t);
 	PRTYPE(sl_ios_id_t);
 	PRTYPE(sl_siteid_t);
 	PRTYPE(struct biod_crcup_ref);
@@ -127,7 +129,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct fidc_open_obj);
 	PRTYPE(struct fidc_private);
-	PRTYPE(struct io_server_conn);
 	PRTYPE(struct iod_resm_info);
 	PRTYPE(struct jflush_item);
 	PRTYPE(struct mds_resm_info);
@@ -169,11 +170,11 @@ main(int argc, char *argv[])
 	PRTYPE(struct slash_inode_od);
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slashrpc_export);
-	PRTYPE(struct sli_repl_buf);
 	PRTYPE(struct sli_repl_workrq);
 	PRTYPE(struct sliric_thread);
 	PRTYPE(struct slirii_thread);
 	PRTYPE(struct slirim_thread);
+	PRTYPE(struct slm_rmi_expdata);
 	PRTYPE(struct slmds_jent_crc);
 	PRTYPE(struct slmds_jent_ino_addrepl);
 	PRTYPE(struct slmds_jent_repgen);
@@ -234,19 +235,68 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_symlink_rep);
 	PRTYPE(struct srm_symlink_req);
 	PRTYPE(struct srm_unlink_req);
+	PRTYPE(struct srsm_replst_bhdr);
 	PRTYPE(struct srt_bdb_secret);
 	PRTYPE(struct srt_bmapdesc_buf);
 	PRTYPE(struct srt_fd_buf);
 	PRTYPE(struct srt_fdb_secret);
-/* end structs */
+	/* end structs */
+
+	/* start constants */
+	PRVAL(SRMT_ACCESS);
+	PRVAL(SRMT_BMAPCHMODE);
+	PRVAL(SRMT_BMAPCRCWRT);
+	PRVAL(SRMT_BMAPDIO);
+	PRVAL(SRMT_CHMOD);
+	PRVAL(SRMT_CHOWN);
+	PRVAL(SRMT_CONNECT);
+	PRVAL(SRMT_CREATE);
+	PRVAL(SRMT_DESTROY);
+	PRVAL(SRMT_DISCONNECT);
+	PRVAL(SRMT_FGETATTR);
+	PRVAL(SRMT_FTRUNCATE);
+	PRVAL(SRMT_GETATTR);
+	PRVAL(SRMT_GETBMAP);
+	PRVAL(SRMT_GETBMAPCRCS);
+	PRVAL(SRMT_GETREPTBL);
+	PRVAL(SRMT_LINK);
+	PRVAL(SRMT_LOCK);
+	PRVAL(SRMT_LOOKUP);
+	PRVAL(SRMT_MKDIR);
+	PRVAL(SRMT_MKNOD);
+	PRVAL(SRMT_OPEN);
+	PRVAL(SRMT_OPENDIR);
+	PRVAL(SRMT_PING);
+	PRVAL(SRMT_READ);
+	PRVAL(SRMT_READDIR);
+	PRVAL(SRMT_READLINK);
+	PRVAL(SRMT_RELEASE);
+	PRVAL(SRMT_RELEASEBMAP);
+	PRVAL(SRMT_RELEASEDIR);
+	PRVAL(SRMT_RENAME);
+	PRVAL(SRMT_REPL_ADDRQ);
+	PRVAL(SRMT_REPL_DELRQ);
+	PRVAL(SRMT_REPL_GETST);
+	PRVAL(SRMT_REPL_GETST_SLAVE);
+	PRVAL(SRMT_REPL_READ);
+	PRVAL(SRMT_REPL_SCHEDWK);
+	PRVAL(SRMT_RMDIR);
+	PRVAL(SRMT_SETATTR);
+	PRVAL(SRMT_STATFS);
+	PRVAL(SRMT_SYMLINK);
+	PRVAL(SRMT_TRUNCATE);
+	PRVAL(SRMT_UNLINK);
+	PRVAL(SRMT_UTIMES);
+	PRVAL(SRMT_WRITE);
+	/* end constants */
 
 	PRVAL(INOX_OD_SZ);
 	PRVAL(INOX_OD_CRCSZ);
 
 	psc_crc64_calc(&crc, buf, sizeof(buf));
-	printf("NULL 1MB buf CRC is %#"PRIxCRC"\n", crc);
+	printf("NULL 1MB buf CRC is %#"PSCPRIxCRC64"\n", crc);
 
-	psc_crc_calc(&crc, &bmapod, sizeof(bmapod));
+	psc_crc64_calc(&crc, &bmapod, sizeof(bmapod));
 	printf("NULL sl_blkh_t CRC is %#"PRIx64"\n", crc);
 
 	exit(0);
