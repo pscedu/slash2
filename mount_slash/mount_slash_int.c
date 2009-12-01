@@ -696,18 +696,18 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, uint32_t rw)
 		/* Retrieve the bmap from the sl_mds.
 		 */
 		rc = msl_bmap_fetch(b, n, rw);
-		if (rc)
-			return NULL;
-		else {
+		if (rc) {
+			b = NULL;
+		} else {
 			mode = BML_NEW_BMAP;
 			psc_assert(!(b->bcm_mode & BMAP_INIT));
-		}
-		/* Verify that the mds has returned a 'write-enabled' bmap.
-		 */
-		if (rw == SRIC_BMAP_WRITE)
-			psc_assert(b->bcm_mode & BMAP_WR);
+			/* Verify that the mds has returned a 'write-enabled' bmap.
+			 */
+			if (rw == SRIC_BMAP_WRITE)
+				psc_assert(b->bcm_mode & BMAP_WR);
 
-		msl_bmap_fhcache_ref(mfh, b, mode, rw);
+			msl_bmap_fhcache_ref(mfh, b, mode, rw);
+		}
 		return (b);
 	}
 	/* Else */
