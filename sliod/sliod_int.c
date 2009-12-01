@@ -255,7 +255,7 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 		if (rc)
 			b->bcm_mode |= BMAP_IOD_RETRFAIL;
 		else
-			b->bcm_mode &= BMAP_INIT;
+			b->bcm_mode &= ~BMAP_INIT;
 		psc_waitq_wakeall(&b->bcm_waitq);
 	}
 	BMAP_ULOCK(b);
