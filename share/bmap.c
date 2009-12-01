@@ -97,6 +97,8 @@ bmap_lookup_locked(struct fidc_open_obj *fcoo, sl_blkno_t n)
 {
 	struct bmapc_memb lb, *b;
 
+//	LOCK_ENSURE(&fcoo->fcmh_lock);
+
 	lb.bcm_blkno=n;
 	b = SPLAY_FIND(bmap_cache, &fcoo->fcoo_bmapc, &lb);
 	if (b)
@@ -117,6 +119,13 @@ bmap_lookup(struct fidc_membh *f, sl_blkno_t n)
 	return (b);
 }
 
+/**
+ * bmap_lookup_add - Lookup/load the bmap specified by index.
+ * @f: fcmh.
+ * @n: bmap number.
+ * @bmap_init_fn: CLI/ION/MDS-specific initialization routine.
+ * Notes: returns the bmap locked.
+ */
 struct bmapc_memb *
 bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n,
     void (*bmap_init_fn)(struct bmapc_memb *))
@@ -127,8 +136,8 @@ bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n,
 	psc_assert(f->fcmh_fcoo);
 
 	locked = reqlock(&f->fcmh_lock);
-	//psc_assert(n < fcmh_2_nbmaps(f));
 
+	/* bmap_lookup_locked() increments the opcnt if found */
 	b = bmap_lookup_locked(f->fcmh_fcoo, n);
 	if (!b) {
 		b = psc_pool_get(bmap_pool);
@@ -150,8 +159,6 @@ bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n,
 		 */
 		bmap_init_fn(b);
 		/* Add to the fcmh's bmap cache but first up the opcnt.
-		 *   If 'b' was found the opcnt was incremented within
-		 *   bmap_lookup_locked().
 		 */
 		atomic_inc(&b->bcm_opcnt);
 		SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);

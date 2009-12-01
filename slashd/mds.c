@@ -266,7 +266,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	 *  We do a simple lookup here because the inode should already exist
 	 *  in the cache.
 	 */
-	m->mexpfcm_fcmh = f = fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid); 
+	m->mexpfcm_fcmh = f = fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
 	//m->mexpfcm_fcmh = f = fidc_lookup_fg(&c->cfd_fdb.sfdb_secret.sfs_fg);
 	//fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
 	//psc_assert(f);
@@ -1033,9 +1033,6 @@ mds_bmap_init(struct bmapc_memb *bcm)
 	bmdsi = bcm->bcm_pri;
 	jfi_init(&bmdsi->bmdsi_jfi, mds_bmap_sync, bcm);
 	bmdsi->bmdsi_xid = 0;
-
-	/* must be locked before it is placed on the tree */
-	BMAP_LOCK(bcm);
 }
 
 int
@@ -1064,7 +1061,7 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 			b->bcm_mode |= BMAP_MDS_FAILED;
 		} else
 			b->bcm_mode &= ~BMAP_INIT;
-		/* Notify other threads that this bmap has been loaded,
+		/* Notify other threads that this bmap has been loaded;
 		 *  they're blocked on BMAP_INFLIGHT.  */
 		b->bcm_mode &= ~BMAP_INFLIGHT;
 		psc_waitq_wakeall(&b->bcm_waitq);
