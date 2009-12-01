@@ -89,9 +89,8 @@ struct bmap_iod_info {
 #define bmap_2_biodi_wire(b)	bmap_2_biodi(b)->biod_bmap_wire
 
 /* bmap iod modes */
-#define BMAP_IOD_RETRIEVE	(_BMAP_FLSHFT << 0)
-#define BMAP_IOD_RELEASING	(_BMAP_FLSHFT << 1)
-#define BMAP_IOD_RETRFAIL	(_BMAP_FLSHFT << 2)
+#define BMAP_IOD_RELEASING	(_BMAP_FLSHFT << 0)
+#define BMAP_IOD_RETRFAIL	(_BMAP_FLSHFT << 1)
 
 enum slash_bmap_slv_states {
 	BMAP_SLVR_DATA = (1<<0), /* Data present, otherwise slvr is hole */
