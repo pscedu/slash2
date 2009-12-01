@@ -521,7 +521,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	 */
 	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
 			     SRMT_GETBMAP, rq, mq, mp)) != 0)
-		return (rc);
+		goto done;
 
 	mq->sfdb  = *fcmh_2_fdb(f);
 	mq->pios  = prefIOS; /* Tell MDS of our preferred ION */
@@ -557,7 +557,8 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 		 */
 		if (!mp->nblks) {
 			psc_errorx("MDS returned 0 bmaps");
-			return (-1);
+			rc = -EINVAL;
+			goto done;
 		}
 		/* Add the bmaps to the tree.
 		 */
@@ -583,6 +584,9 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 		FCMH_ULOCK(f);
 	}
 
+done:
+	if (rc && getreptbl) 
+		PSCFREE(f->fcmh_fcoo->fcoo_pri);
 	return (rc);
 }
 
