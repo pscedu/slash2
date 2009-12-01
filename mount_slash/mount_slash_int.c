@@ -717,7 +717,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, uint32_t rw)
 		b->bcm_mode &= ~BMAP_INFLIGHT;
 		psc_waitq_wakeall(&b->bcm_waitq);
 		BMAP_ULOCK(b);
-		return (b);
+		return (rc ? NULL: b);
 	}
 	BMAP_ULOCK(b);
 	/* Else */
