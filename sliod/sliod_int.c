@@ -110,7 +110,6 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 	 */
 	if (rc) {
 		PSCFREE(bmap_2_biodi_wire(b));
-		bmap_2_biodi_wire(b) = NULL;
 	}
 	return (rc);
 }

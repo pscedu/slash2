@@ -1022,7 +1022,6 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 	rc = -EIO;
  out:
 	PSCFREE(bmdsi->bmdsi_od);
-	bmdsi->bmdsi_od = NULL;
 	return (rc);
 }
 
