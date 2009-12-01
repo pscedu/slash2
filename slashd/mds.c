@@ -1040,7 +1040,7 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
     struct bmapc_memb **bp)
 {
 	struct bmapc_memb *b;
-	int rc;
+	int rc = 0;
 
 	b = bmap_lookup_add(f, bmapno, mds_bmap_init);
 
