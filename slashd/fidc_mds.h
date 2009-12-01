@@ -13,11 +13,11 @@ SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
 
 struct fidc_mds_info {
-	struct fcm_exports        fmdsi_exports; /* tree of mexpfcm */
-	struct slash_inode_handle fmdsi_inodeh; // MDS sl_inodeh_t goes here
-	atomic_t                  fmdsi_ref;
-	uint32_t                       fmdsi_xid;
-	void                     *fmdsi_data;
+	struct fcm_exports	  fmdsi_exports;	/* tree of mexpfcm */
+	struct slash_inode_handle fmdsi_inodeh;		/* MDS sl_inodeh_t goes here */
+	atomic_t		  fmdsi_ref;
+	uint32_t		  fmdsi_xid;
+	void			 *fmdsi_data;
 };
 
 #define fcmh_2_fmdsi(f)		((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)
