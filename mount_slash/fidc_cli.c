@@ -484,9 +484,17 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	}
 	freelock(&op->fcmh_lock);
 
-	if (ch == NULL)
-		return;			/* it's no longer there */
+	/*
+	 * At this point, the rename RPC has been successful and we somehow
+	 * screw up locally. How could this happen?
+	 */
+	if (ch == NULL) {
+		psc_warnx("missing source file %s in a rename", oldname);
+		return;
+	}
 
+	/* overwrite the old name with the new one in place */
+	psc_assert(c->fcmh_pri != NULL);
 	ch = c->fcmh_pri = psc_realloc(ch, sizeof(*ch) + len, 0);
 	ch->fcc_hash = str_hash(newname);
 	strlcpy(ch->fcc_name, newname, len);
