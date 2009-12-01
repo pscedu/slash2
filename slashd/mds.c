@@ -1053,7 +1053,7 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 		BMAP_LOCK(b);
 	}
-	if (!bmap_2_bmdsiod(b)) {
+	if (b->bcm_mode & BMAP_INIT) {
 		b->bcm_mode |= BMAP_INFLIGHT;
 		BMAP_ULOCK(b);
 		rc = mds_bmap_read(f, bmapno, b);
@@ -1063,7 +1063,8 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 				   "mds_bmap_read() rc=%d blkno=%u",
 				   rc, bmapno);
 			b->bcm_mode |= BMAP_MDS_FAILED;
-		}
+		} else
+			b->bcm_mode &= ~BMAP_INIT;
 		/* Notify other threads that this bmap has been loaded,
 		 *  they're blocked on BMAP_INFLIGHT.  */
 		b->bcm_mode &= ~BMAP_INFLIGHT;

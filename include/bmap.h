@@ -51,8 +51,8 @@ struct bmapc_memb {
 /* common bmap modes */
 #define BMAP_RD			(1 << 0)
 #define BMAP_WR			(1 << 1)
-#define BMAP_INIT		(1 << 2)
-#define BMAP_INFLIGHT		(1 << 3)	/* contents being loaded from disk or over the network */
+#define BMAP_INIT		(1 << 2)	/* contents need to be loaded from disk or over the network */
+#define BMAP_INFLIGHT		(1 << 3)	/* contents are being loaded, please wait */
 #define BMAP_DIO		(1 << 4)
 #define BMAP_CLOSING		(1 << 5)
 #define BMAP_DIRTY		(1 << 6)

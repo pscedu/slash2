@@ -243,7 +243,7 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 		BMAP_LOCK(b);
 	}
-	if (!bmap_2_biodi_wire(b)) {
+	if (b->bcm_mode & BMAP_INIT) {
 		b->bcm_mode |= BMAP_INFLIGHT;
 		BMAP_ULOCK(b);
 		/* This thread will retrieve the crc
@@ -255,6 +255,8 @@ iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
 		b->bcm_mode &= ~BMAP_INFLIGHT;
 		if (rc)
 			b->bcm_mode |= BMAP_IOD_RETRFAIL;
+		else
+			b->bcm_mode &= BMAP_INIT;
 		psc_waitq_wakeall(&b->bcm_waitq);
 	}
 
