@@ -76,7 +76,6 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 
 	rc = rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMI_BULK_PORTAL, &iov, 1);
 	if (rc) {
-		PSCFREE(bmap_2_biodi_wire(b));
 		psc_error("rsx_bulkclient() failed rc=%d ", rc);
 		goto out;
 	}
@@ -84,8 +83,6 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
 		DEBUG_BMAP(PLL_ERROR, b, "req failed (%d)", rc);
-		PSCFREE(bmap_2_biodi_wire(b));
-		bmap_2_biodi_wire(b) = NULL;
 		goto out;
 	}
 	/* Need to copy any of our slvr crc's into the table.
@@ -111,7 +108,10 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 	/* Unblock threads no matter what.
 	 *  XXX need some way to denote that a crcget rpc failed?
 	 */
-
+	if (rc) {
+		PSCFREE(bmap_2_biodi_wire(b));
+		bmap_2_biodi_wire(b) = NULL;
+	}
 	return (rc);
 }
 
