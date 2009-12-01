@@ -26,6 +26,8 @@ SPLAY_HEAD(bmap_exports, mexpbcm);
  *   mode used at the clients.   Bmdsi_wr_ion is a shortcut pointer used
  *   only when the bmap has client writers - all writers (and readers) are
  *   directed to this ion once a client has invoked write mode on the bmap.
+ *
+ * XXX reorder this for word alignment, shrink repl_policy and pack it after flags
  */
 struct bmap_mds_info {
 	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
@@ -72,7 +74,7 @@ struct bmi_assign {
 #define bmap_2_bmdsjfi(b)	(&bmap_2_bmdsi(b)->bmdsi_jfi)
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 
-static inline void
+static __inline void
 bmap_dio_sanity_locked(struct bmapc_memb *bmap, int dio_check)
 {
 	BMAP_LOCK_ENSURE(bmap);

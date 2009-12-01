@@ -66,6 +66,30 @@ struct bmapc_memb {
 #define BMAP_RLOCK(b)		reqlock(&(b)->bcm_lock)
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
 
+/**
+ * slash_bmap_od - slash bmap over-wire/on-disk structure.  This
+ *	structure maps the persistent state of the bmap within the
+ *	inode's metafile.
+ * @bh_gen: current generation number.
+ * @bh_crcs: the crc table, one 8 byte crc per sliver.
+ * @bh_crcstates: some bits for describing the state of a sliver.
+ * @bh_repls: bitmap used for tracking the replication status of this bmap.
+ * @bh_bhcrc: on-disk checksum.
+ */
+#define slash_bmap_wire slash_bmap_od
+struct slash_bmap_od {
+	sl_blkgen_t	bh_gen;
+	sl_gcrc_t	bh_crcs[SL_CRCS_PER_BMAP];
+	uint8_t		bh_crcstates[SL_CRCS_PER_BMAP];
+	uint8_t		bh_repls[SL_REPLICA_NBYTES];
+
+	/* the CRC must be at the end */
+	psc_crc64_t	bh_bhcrc;
+};
+
+#define	BMAP_OD_SZ	(sizeof(struct slash_bmap_od))
+#define	BMAP_OD_CRCSZ	(BMAP_OD_SZ - (sizeof(psc_crc64_t)))
+
 /* get a replica's bmap replication status */
 #define SL_REPL_GET_BMAP_IOS_STAT(data, off)				\
 	(((data)[(off) / NBBY] >> ((off) % NBBY)) & SL_REPLICA_MASK)

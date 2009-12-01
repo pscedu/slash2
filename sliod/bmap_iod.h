@@ -5,9 +5,9 @@
 
 #include <sys/time.h>
 
-#include "psc_rpc/rpc.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/lock.h"
 
@@ -23,23 +23,23 @@ extern struct psc_listcache iodBmapLru;
 
 #define	BCR_NONE			 0x00
 #define	BCR_UPDATED			 0x01		/* already updated */
-#define	BCR_SCANNED		 	 0x02		/* already collected */
+#define	BCR_SCANNED			 0x02		/* already collected */
 
 struct biod_crcup_ref {
 	uint64_t			 bcr_id;
 	uint16_t			 bcr_nups;
 	uint16_t			 bcr_flags;
-	struct timespec			 bcr_age;	
+	struct timespec			 bcr_age;
 	struct slvr_ref			*bcr_slvrs[MAX_BMAP_NCRC_UPDATES];
 	SPLAY_ENTRY(biod_crcup_ref)	 bcr_tentry;
 	struct srm_bmap_crcup		 bcr_crcup;
 };
 
 #define DEBUG_BCR(level, b, fmt, ...)					\
-        psc_logs((level), PSS_GEN,                                      \
-                 "bcr@%p fid="FIDFMT" num=%"PRIu64" nups=%d age=%lu"	\
-                 " bmap@%p:: "fmt,					\
-                 (b), FIDFMTARGS(&(b)->bcr_crcup.fg), (b)->bcr_id,	\
+	psc_logs((level), PSS_GEN,                                      \
+		 "bcr@%p fid="FIDFMT" num=%"PRIu64" nups=%d age=%lu"	\
+		 " bmap@%p:: "fmt,					\
+		 (b), FIDFMTARGS(&(b)->bcr_crcup.fg), (b)->bcr_id,	\
 		 (b)->bcr_nups, (b)->bcr_age.tv_sec,			\
 		 slvr_2_bmap((b)->bcr_slvrs[0]),			\
 		 ## __VA_ARGS__)
@@ -92,6 +92,12 @@ struct bmap_iod_info {
 #define BMAP_IOD_RETRIEVE	(_BMAP_FLSHFT << 0)
 #define BMAP_IOD_RELEASING	(_BMAP_FLSHFT << 1)
 #define BMAP_IOD_RETRFAIL	(_BMAP_FLSHFT << 2)
+
+enum slash_bmap_slv_states {
+	BMAP_SLVR_DATA = (1<<0), /* Data present, otherwise slvr is hole */
+	BMAP_SLVR_CRC  = (1<<1)  /* Valid CRC */
+	//XXX ATM, 6 bits are left
+};
 
 #define slvr_2_biod(s)		((struct bmap_iod_info *)(s)->slvr_pri)
 #define slvr_2_bmap(s)		slvr_2_biod(s)->biod_bmap
@@ -171,16 +177,16 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_LRU);
 
 	if (!s->slvr_slab)
-		psc_assert(!(s->slvr_flags & 
+		psc_assert(!(s->slvr_flags &
 			     (SLVR_NEW|SLVR_FAULTING|
-                              SLVR_GETSLAB|SLVR_DATARDY)));
+			      SLVR_GETSLAB|SLVR_DATARDY)));
 
 	else if (s->slvr_flags & SLVR_PINNED) {
 		psc_assert(s->slvr_pndgwrts  ||
 			   s->slvr_pndgreads ||
 			   (s->slvr_flags & SLVR_CRCDIRTY));
 		freeable = 0;
-		
+
 	} else if (s->slvr_flags & SLVR_DATARDY)
 		psc_assert(!(s->slvr_flags &
 			     (SLVR_NEW|SLVR_FAULTING|
