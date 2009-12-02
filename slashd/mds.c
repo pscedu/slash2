@@ -615,7 +615,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 
 		/*
 		 * If we fail to establish a connection, try next node.
-		 * XXX: handle the case when we fail to contack all nodes.
+		 * The while loop guarantees that we always bail out.
 		 */
 		if (slm_geticonn(resm) == NULL) {
 			freelock(&mri->mri_lock);

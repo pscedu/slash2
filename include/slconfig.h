@@ -51,7 +51,7 @@ struct sl_resource {
 /* SLASH resource member structure */
 struct sl_resm {
 	char			 resm_addrbuf[RESM_ADDRBUF_SZ];
-	lnet_nid_t		 resm_nid;
+	lnet_nid_t		 resm_nid;			/* Node ID for the resource member */
 	struct sl_resource	*resm_res;
 	struct hash_entry	 resm_hentry;
 	void			*resm_pri;
