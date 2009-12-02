@@ -82,13 +82,14 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
     lnet_process_id_t cli_prid, lnet_nid_t ion_nid,
     sl_ios_id_t ios_id, int rw)
 {
+	const lnet_process_id_t *prid;
 	char buf[DESCBUF_REPRLEN];
-	lnet_process_id_t *prid;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 
 	if (sbdb->sbdb_secret.sbs_magic != SBDB_MAGIC)
 		return (EBADF);
+	prid = &sbdb->sbdb_secret.sbs_cli_prid;
 	if (prid->nid != cli_prid.nid || prid->pid != cli_prid.pid)
 		return (EBADF);
 	if (rw == SL_READ) {
@@ -166,14 +167,15 @@ int
 fdbuf_check(const struct srt_fd_buf *sfdb, uint64_t *cfdp,
     struct slash_fidgen *fgp, lnet_process_id_t cli_prid)
 {
+	const lnet_process_id_t *prid;
 	char buf[DESCBUF_REPRLEN];
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 
 	if (sfdb->sfdb_secret.sfs_magic != SFDB_MAGIC)
 		return (EBADF);
-	if (memcmp(&sfdb->sfdb_secret.sfs_cli_prid,
-	    &cli_prid, sizeof(cli_prid)))
+	prid = &sfdb->sfdb_secret.sfs_cli_prid;
+	if (prid->nid != cli_prid.nid || prid->pid != cli_prid.pid)
 		return (EBADF);
 
 	gerr = gcry_md_copy(&hd, descbuf_hd);
