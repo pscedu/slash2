@@ -11,6 +11,7 @@
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
+#include "psc_util/bitflag.h"
 #include "psc_util/lock.h"
 #include "psc_util/thread.h"
 
@@ -70,10 +71,10 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq)
 	srcm = slmrcmthr(thr);
 
 	iov.iov_base = srcm->srcm_page;
-	iov.iov_len = srcm->srcm_pagelen;
+	iov.iov_len = howmany(srcm->srcm_page_bitpos, NBBY);
 
 	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
-	mq->len = srcm->srcm_pagelen;
+	mq->len = iov.iov_len;
 	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 	    SRCM_BULK_PORTAL, &iov, 1);
 	if (rc == 0)
@@ -88,20 +89,21 @@ slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
-	struct srsm_replst_bhdr *srsb;
+	struct srsm_replst_bhdr bhdr;
 	struct bmap_mds_info *bmdsi;
 	struct slmrcm_thread *srcm;
 	struct psc_thread *thr;
-	int len, rc;
+	int nbits, rc;
 
 	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
 	bmdsi = bmap_2_bmdsi(bcm);
 
 	rc = 0;
-	len = howmany(rrq->rrq_inoh->inoh_ino.ino_nrepls *
-	    SL_BITS_PER_REPLICA, NBBY) + sizeof(*srsb);
-	if (srcm->srcm_pagelen + len > SRM_REPLST_PAGESIZ) {
+	nbits = rrq->rrq_inoh->inoh_ino.ino_nrepls *
+	    SL_BITS_PER_REPLICA + SL_NBITS_REPLST_BHDR;
+	if (howmany(srcm->srcm_page_bitpos + nbits,
+	    NBBY) > SRM_REPLST_PAGESIZ) {
 		if (*rqp) {
 			rc = slmrmcthr_replst_slave_waitrep(*rqp);
 			*rqp = NULL;
@@ -117,13 +119,15 @@ slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 		mq->boff = n;
 		mq->fg = *REPLRQ_FG(rrq);
 
-		srcm->srcm_pagelen = 0;
+		srcm->srcm_page_bitpos = 0;
 	}
-	srsb = (void *)(srcm->srcm_page + srcm->srcm_pagelen);
-	srsb->srsb_repl_policy = bmdsi->bmdsi_repl_policy;
-	memcpy(srcm->srcm_page + srcm->srcm_pagelen +
-	    sizeof(*srsb), bmdsi->bmdsi_od->bh_repls, len);
-	srcm->srcm_pagelen += len;
+	memset(&bhdr, 0, sizeof(bhdr));
+	bhdr.srsb_repl_policy = bmdsi->bmdsi_repl_policy;
+	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos,
+	    &bhdr, 0, SL_NBITS_REPLST_BHDR);
+	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos +
+	    SL_NBITS_REPLST_BHDR, bmdsi->bmdsi_od->bh_repls, 0, nbits);
+	srcm->srcm_page_bitpos += nbits;
 	return (rc);
 }
 
@@ -182,7 +186,7 @@ slmrcmthr_main(__unusedx void *arg)
 	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
 	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
-	srcm->srcm_pagelen = SRM_REPLST_PAGESIZ;
+	srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
 
 	rc = 0;
 	rq = NULL;

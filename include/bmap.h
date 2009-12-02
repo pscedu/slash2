@@ -92,7 +92,10 @@ struct slash_bmap_od {
 
 /* get a replica's bmap replication status */
 #define SL_REPL_GET_BMAP_IOS_STAT(data, off)				\
-	(((data)[(off) / NBBY] >> ((off) % NBBY)) & SL_REPLICA_MASK)
+	((((data)[(off) / NBBY] >> ((off) % NBBY)) |			\
+	  ((off) % NBBY + SL_BITS_PER_REPLICA > NBBY ? 0 :		\
+	   (data)[(off) / NBBY + 1] <<					\
+	    (NBBY - (off) % NBBY))) & SL_REPLICA_MASK)
 
 /* set a replica's bmap replication status */
 #define SL_REPL_SET_BMAP_IOS_STAT(data, off, val)			\

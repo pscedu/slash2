@@ -40,7 +40,7 @@ struct slmrcm_thread {
 	struct slash_fidgen	  srcm_fg;
 	int			  srcm_id;	/* private client ID */
 	char			 *srcm_page;
-	int			  srcm_pagelen;
+	int			  srcm_page_bitpos;
 };
 
 struct slmrmi_thread {
