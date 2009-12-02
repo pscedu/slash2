@@ -52,10 +52,6 @@ struct bmap_mds_info {
 #define BMIM_BUMPGEN		(1 << 0)
 #define BMIM_LOGCHG		(1 << 1)
 
-/* bmap replication policies */
-#define BRP_ONETIME		0
-#define BRP_PERSIST		1
-
 /*
  * bmi_assign - the structure used for tracking the mds's bmap/ion
  *   assignments.  These structures are stored in a odtable.

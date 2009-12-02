@@ -103,6 +103,10 @@ struct slash_bmap_od {
 	    ~(SL_REPLICA_MASK << ((off) % NBBY))) |			\
 	    ((val) << ((off) % NBBY)))
 
+/* bmap replication policies */
+#define BRP_ONETIME		0
+#define BRP_PERSIST		1
+
 #define DEBUG_BMAP(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 		 " bmap@%p b:%x m:%u i:%"PRIx64				\
