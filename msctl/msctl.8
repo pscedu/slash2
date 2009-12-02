@@ -258,14 +258,41 @@ This option may be specified multiple times.
 .It Fl R
 Apply file operations such as issuing replication requests recursively.
 .It Fl r Ar file
-List replication status for the given
-.Ar file
-bmaps.
+List the specified
+.Ar file Ap s
+replication status.
+Information about every bmap
+.Pq data region
+of the file including
+.Tn I/O
+systems where they have been registered for replication and their status
+is displayed.
+.Pp
 If
 .Ar file
 is the special name
 .Sq \&: ,
 all pending replications will be queried.
+Note that file names are unavailable in this mode.
+.Pp
+The following legend lists the states a block may be in:
+.Bl -column "schedul" "Replication poli" "Indicator" -offset indent
+.It Sy State  Ta Sy Replication Policy Ta Sy Indicator
+.It ============================================
+.It active    Ta one-time              Ta Ic +
+.It scheduled Ta one-time              Ta Ic s
+.It old       Ta one-time              Ta Ic o
+.Pp
+.It active    Ta persistent            Ta Ic *
+.It scheduled Ta persistent            Ta Ic S
+.It old       Ta persistent            Ta Ic O
+.Pp
+.It inactive  Ta either                Ta Ic -
+.El
+.Pp
+See
+.Fl f
+for details on modifying a bmap's replication policy.
 .Pp
 This option may be specified multiple times.
 .It Fl S Ar socket
