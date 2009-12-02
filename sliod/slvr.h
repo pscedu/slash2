@@ -93,7 +93,7 @@ slvr_cmp(const void *x, const void *y)
         return (0);
 }
 
-struct slvr_ref * slvr_lookup(uint16_t, struct bmap_iod_info *);
+struct slvr_ref * slvr_lookup(uint16_t, struct bmap_iod_info *, int);
 void	slvr_cache_init(void);
 int	slvr_do_crc(struct slvr_ref *);
 int	slvr_fsbytes_io(struct slvr_ref *, int);

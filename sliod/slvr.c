@@ -281,9 +281,9 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
 	if (rw == SL_WRITE)
-		s->slvr_pndgwrts++;
+		psc_assert(s->slvr_pndgwrts > 0);
 	else
-		s->slvr_pndgreads++;
+		psc_assert(s->slvr_pndgreads > 0);
 
  retry:
 	if (s->slvr_flags & SLVR_NEW) {
@@ -601,7 +601,7 @@ slvr_wio_done(struct slvr_ref *s)
  * Lookup or create a sliver reference, ignoring one that is being freed.
  */
 struct slvr_ref *
-slvr_lookup(uint16_t num, struct bmap_iod_info *b)
+slvr_lookup(uint16_t num, struct bmap_iod_info *b, int rw)
 {
 	struct slvr_ref *s, ts;
 
@@ -632,6 +632,13 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b)
 	}
 
 	s->slvr_flags |= SLVR_PINNED;
+
+        if (rw == SL_WRITE)		
+		s->slvr_pndgwrts++;
+	else if (rw == SL_READ)
+		s->slvr_pndgreads++;
+	else
+		abort();
 
 	freelock(&b->biod_lock);
 
