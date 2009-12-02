@@ -120,6 +120,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 				mrsc->mrsc_len = mq->len;
 				mrsc->mrsc_mrsl.mrsl_id = mq->id;
 				mrsc->mrsc_mrsl.mrsl_boff = mq->boff;
+				mrsc->mrsc_mrsl.mrsl_nbmaps = mq->nbmaps;
 				mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 				    SRCM_BULK_PORTAL, &iov, 1);
 				pll_add(&mrc->mrc_bdata, mrsc);

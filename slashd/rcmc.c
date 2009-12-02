@@ -57,7 +57,7 @@ slmrmcthr_replst_slave_eof(struct sl_replrq *rrq)
 }
 
 int
-slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq)
+slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct sl_replrq *rrq)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
@@ -75,6 +75,8 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq)
 
 	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	mq->len = iov.iov_len;
+	mq->nbmaps = srcm->srcm_page_bitpos / (SL_BITS_PER_REPLICA *
+	    rrq->rrq_inoh->inoh_ino.ino_nrepls + SL_NBITS_REPLST_BHDR);
 	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 	    SRCM_BULK_PORTAL, &iov, 1);
 	if (rc == 0)
@@ -105,7 +107,7 @@ slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 	if (howmany(srcm->srcm_page_bitpos + nbits,
 	    NBBY) > SRM_REPLST_PAGESIZ) {
 		if (*rqp) {
-			rc = slmrmcthr_replst_slave_waitrep(*rqp);
+			rc = slmrmcthr_replst_slave_waitrep(*rqp, rrq);
 			*rqp = NULL;
 			if (rc)
 				return (rc);
@@ -204,7 +206,7 @@ slmrcmthr_main(__unusedx void *arg)
 					break;
 			}
 			if (rq) {
-				slmrmcthr_replst_slave_waitrep(rq);
+				slmrmcthr_replst_slave_waitrep(rq, rrq);
 				rq = NULL;
 			}
 			slmrmcthr_replst_slave_eof(rrq);
@@ -224,7 +226,7 @@ slmrcmthr_main(__unusedx void *arg)
 				break;
 		}
 		if (rq)
-			slmrmcthr_replst_slave_waitrep(rq);
+			slmrmcthr_replst_slave_waitrep(rq, rrq);
 		slmrmcthr_replst_slave_eof(rrq);
 		mds_repl_unrefrq(rrq);
 	} else if (mds_repl_loadino(&srcm->srcm_fg, &fcmh) == 0) {
@@ -249,7 +251,7 @@ slmrcmthr_main(__unusedx void *arg)
 				break;
 		}
 		if (rq)
-			slmrmcthr_replst_slave_waitrep(rq);
+			slmrmcthr_replst_slave_waitrep(rq, rrq);
 		slmrmcthr_replst_slave_eof(rrq);
 		fidc_membh_dropref(fcmh);
 		psc_pool_return(replrq_pool, rrq);

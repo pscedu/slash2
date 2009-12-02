@@ -6,9 +6,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pfl/pfl.h"
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "psc_ds/vbitmap.h"
+#include "psc_util/bitflag.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/fmt.h"
@@ -194,17 +195,18 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	const struct msctlmsg_replst_slave *mrsl = m;
 	__unusedx struct srsm_replst_bhdr *srsb;
 	struct replst_slave_bdata *rsb;
-	uint32_t nbytes, nbmaps, len;
+	uint32_t nbytes, len;
 	int rc;
 
 	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)) == 0)
 		errx(1, "received unexpected replication status slave message");
 
+	if (mh->mh_size < sizeof(*mrsl))
+		return (sizeof(*mrsl));
+
 	nbytes = howmany((SL_BITS_PER_REPLICA * current_mrs.mrs_nios +
 	    SL_NBITS_REPLST_BHDR) * mrsl->mrsl_nbmaps, NBBY);
 
-	if (mh->mh_size < sizeof(*mrsl))
-		return (sizeof(*mrsl));
 	len = mh->mh_size - sizeof(*mrsl);
 	if (len > SRM_REPLST_PAGESIZ || len != nbytes)
 		return (sizeof(*mrsl));
@@ -212,12 +214,12 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 		errx(1, "invalid value in replication status slave message");
 	current_mrs.mrs_nbmaps -= mrsl->mrsl_nbmaps;
 
-	rc = vbitmap_setrange(&current_mrs_bmask, mrsl->mrsl_boff, nbmaps);
+	rc = vbitmap_setrange(&current_mrs_bmask, mrsl->mrsl_boff, mrsl->mrsl_nbmaps);
 	if (rc)
 		psc_fatalx("replication status bmap data: %s", slstrerror(rc));
 
 	rsb = PSCALLOC(sizeof(*rsb) + nbytes);
-	rsb->rsb_nbmaps = nbmaps;
+	rsb->rsb_nbmaps = mrsl->mrsl_nbmaps;
 	rsb->rsb_boff = mrsl->mrsl_boff;
 	memcpy(rsb->rsb_data, mrsl->mrsl_data, nbytes);
 	psclist_add_sorted(&current_mrs_bdata, &rsb->rsb_lentry, rsb_cmp,
@@ -241,8 +243,9 @@ void
 replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	char map[4], rbuf[PSCFMT_RATIO_BUFSIZ];
+	char map[4], pmap[4], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
+	struct srsm_replst_bhdr bhdr;
 	sl_blkno_t bact, bold, nb;
 	uint32_t iosidx;
 	int nbw, off;
@@ -251,6 +254,11 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	map[SL_REPL_OLD] = 'o';
 	map[SL_REPL_ACTIVE] = '+';
 	map[SL_REPL_INACTIVE] = '-';
+
+	pmap[SL_REPL_SCHED] = 'S';
+	pmap[SL_REPL_OLD] = 'O';
+	pmap[SL_REPL_ACTIVE] = '*';
+	pmap[SL_REPL_INACTIVE] = '-';
 
 	printf(" %s\n", current_mrs.mrs_fn);
 	for (iosidx = 0; iosidx < current_mrs.mrs_nios; iosidx++) {
@@ -264,14 +272,17 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		    current_mrs.mrs_iosv[iosidx],
 		    bact + bold, bold, rbuf);
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
-			off = SL_BITS_PER_REPLICA * iosidx;
+			pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data,
+			    SL_BITS_PER_REPLICA * iosidx, SL_NBITS_REPLST_BHDR);
+			off = SL_BITS_PER_REPLICA * iosidx + SL_NBITS_REPLST_BHDR;
 			for (nb = 0; nb < rsb->rsb_nbmaps; nb++, nbw++,
 			    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios) {
 				if (nbw > 76)
 					nbw = 0;
 				if (nbw == 0)
 					printf("\n\t");
-				putchar(map[SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)]);
+				putchar((bhdr.srsb_repl_policy == BRP_PERSIST ? pmap : map)
+				    [SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)]);
 			}
 		}
 		putchar('\n');
