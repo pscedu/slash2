@@ -44,11 +44,13 @@ int	mds_repl_delrq(const struct slash_fidgen *, sl_blkno_t, const sl_replica_t *
 void	mds_repl_init(void);
 int	mds_repl_inv_except_locked(struct bmapc_memb *, sl_ios_id_t);
 int	mds_repl_loadino(const struct slash_fidgen *, struct fidc_membh **);
-int	mds_repl_nodes_getbusy(const struct mds_resm_info *, const struct mds_resm_info *);
-int	mds_repl_nodes_setbusy(const struct mds_resm_info *, const struct mds_resm_info *, int);
+int	_mds_repl_nodes_setbusy(const struct mds_resm_info *, const struct mds_resm_info *, int, int);
 void	mds_repl_tryrmqfile(struct sl_replrq *);
 void	mds_repl_unrefrq(struct sl_replrq *);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);
+
+#define mds_repl_nodes_getbusy(a, b)		_mds_repl_nodes_setbusy((a), (b), 0, 0)
+#define mds_repl_nodes_setbusy(a, b, v)		_mds_repl_nodes_setbusy((a), (b), 1, (v))
 
 #define mds_repl_ios_lookup_add(ih, ios)	_mds_repl_ios_lookup((ih), (ios), 1)
 #define mds_repl_ios_lookup(ih, ios)		_mds_repl_ios_lookup((ih), (ios), 0)

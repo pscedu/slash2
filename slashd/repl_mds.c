@@ -993,14 +993,15 @@ mds_repl_scandir(void)
 	(((min) * ((nnodes) - ((min) - 1) / 2)) + ((max) - (min) - 1))
 
 int
-mds_repl_nodes_getbusy(const struct mds_resm_info *ma, const struct mds_resm_info *mb)
+_mds_repl_nodes_setbusy(const struct mds_resm_info *ma,
+    const struct mds_resm_info *mb, int set, int busy)
 {
 	const struct mds_resm_info *min, *max;
 	int rc, locked;
 
-	psc_assert(ma->mri_busyid != mb->mri_busyid);
+	psc_assert(ma->mrmi_busyid != mb->mrmi_busyid);
 
-	if (ma->mri_busyid < mb->mri_busyid) {
+	if (ma->mrmi_busyid < mb->mrmi_busyid) {
 		min = ma;
 		max = mb;
 	} else {
@@ -1009,34 +1010,14 @@ mds_repl_nodes_getbusy(const struct mds_resm_info *ma, const struct mds_resm_inf
 	}
 
 	locked = reqlock(&repl_busytable_lock);
-	rc = psc_vbitmap_get(repl_busytable,
-	    MDS_REPL_BUSYNODES(repl_busytable_nents,
-	    min->mri_busyid, max->mri_busyid));
-	ureqlock(&repl_busytable_lock, locked);
-	return (rc);
-}
-
-int
-mds_repl_nodes_setbusy(const struct mds_resm_info *ma,
-    const struct mds_resm_info *mb, int busy)
-{
-	const struct mds_resm_info *min, *max;
-	int locked, rc;
-
-	psc_assert(ma->mri_busyid != mb->mri_busyid);
-
-	if (ma->mri_busyid < mb->mri_busyid) {
-		min = ma;
-		max = mb;
-	} else {
-		min = mb;
-		max = ma;
-	}
-
-	locked = reqlock(&repl_busytable_lock);
-	rc = psc_vbitmap_xsetval(repl_busytable,
-	    MDS_REPL_BUSYNODES(repl_busytable_nents,
-	    min->mri_busyid, max->mri_busyid), busy);
+	if (set)
+		rc = psc_vbitmap_xsetval(repl_busytable,
+		    MDS_REPL_BUSYNODES(repl_busytable_nents,
+		    min->mrmi_busyid, max->mrmi_busyid), busy);
+	else
+		rc = psc_vbitmap_get(repl_busytable,
+		    MDS_REPL_BUSYNODES(repl_busytable_nents,
+		    min->mrmi_busyid, max->mrmi_busyid));
 	ureqlock(&repl_busytable_lock, locked);
 	return (rc);
 }
@@ -1044,7 +1025,7 @@ mds_repl_nodes_setbusy(const struct mds_resm_info *ma,
 void
 mds_repl_buildbusytable(void)
 {
-	struct mds_resm_info *mri;
+	struct mds_resm_info *mrmi;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
@@ -1060,8 +1041,8 @@ mds_repl_buildbusytable(void)
 			r = s->site_resv[n];
 			for (j = 0; j < r->res_nnids; j++) {
 				resm = libsl_nid2resm(r->res_nids[j]);
-				mri = resm->resm_pri;
-				mri->mri_busyid = repl_busytable_nents++;
+				mrmi = resm->resm_pri;
+				mrmi->mrmi_busyid = repl_busytable_nents++;
 			}
 		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
