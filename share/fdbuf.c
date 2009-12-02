@@ -92,7 +92,7 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 	    &cli_prid, sizeof(cli_prid))) {
 		char cp[PSC_NIDSTR_SIZE], sp[PSC_NIDSTR_SIZE];
 
-		psc_error("bad clipr, bdbuf says %s but client is %s",
+		psc_errorx("bad clipr, bdbuf says %s but client is %s",
 		    psc_id2str(sbdb->sbdb_secret.sbs_cli_prid, cp),
 		    psc_id2str(cli_prid, sp));
 		return (EBADF);
