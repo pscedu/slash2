@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "psc_util/ctl.h"
 
 /* start includes */
 #include "bmap.h"
@@ -243,6 +244,11 @@ main(int argc, char *argv[])
 	/* end structs */
 
 	/* start constants */
+	PRVAL(MSCMT_ADDREPLRQ);
+	PRVAL(MSCMT_DELREPLRQ);
+	PRVAL(MSCMT_GETREPLST);
+	PRVAL(MSCMT_GETREPLST_SLAVE);
+	PRVAL(MSCMT_RECONFIG);
 	PRVAL(SRMT_ACCESS);
 	PRVAL(SRMT_BMAPCHMODE);
 	PRVAL(SRMT_BMAPCRCWRT);
