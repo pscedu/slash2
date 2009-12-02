@@ -106,6 +106,7 @@ struct slash_bmap_od {
 /* bmap replication policies */
 #define BRP_ONETIME		0
 #define BRP_PERSIST		1
+#define NBRP			2
 
 #define DEBUG_BMAP(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\

@@ -44,6 +44,13 @@ struct replrq_arg {
 	int	bmapno;
 };
 
+/* keep in sync with BRP_* constants */
+const char *repl_policies[] = {
+	"one-time",
+	"persist",
+	NULL
+};
+
 int
 rsb_cmp(const void *a, const void *b)
 {
@@ -189,22 +196,14 @@ parse_replrq(int code, char *replrqspec,
 	}
 }
 
-struct repl_policy {
-	const char	*rp_name;
-	int		 rp_value;
-} repl_policies[] = {
-	{ "persist",	BRP_PERSIST },
-	{ "one-time",	BRP_ONETIME }
-};
-
 int
 lookup_repl_policy(const char *name)
 {
 	int n;
 
-	for (n = 0; n < nitems(repl_policies); n++)
-		if (strcmp(name, repl_policies[n].rp_name) == 0)
-			return (repl_policies[n].rp_value);
+	for (n = 0; n < NBRP; n++)
+		if (strcmp(name, repl_policies[n]) == 0)
+			return (n);
 	errx(1, "%s: invalid replication policy", name);
 }
 
@@ -370,8 +369,8 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
 	sl_blkno_t bact, bold, nb;
+	int n, nbw, off, dlen;
 	uint32_t iosidx;
-	int nbw, off;
 
 	map[SL_REPL_SCHED] = 's';
 	map[SL_REPL_OLD] = 'o';
@@ -383,7 +382,19 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	pmap[SL_REPL_ACTIVE] = '*';
 	pmap[SL_REPL_INACTIVE] = '-';
 
-	printf(" %s\n", current_mrs.mrs_fn);
+	dlen = PSC_CTL_DISPLAY_WIDTH - strlen("repl-policy: ") -
+	    strlen(repl_policies[BRP_ONETIME]);
+	n = printf(" %s", current_mrs.mrs_fn);
+	if (n > dlen)
+		printf("\n    ");
+	else
+		printf("%*s", dlen - n, "");
+	printf("repl-policy: ");
+	if (current_mrs.mrs_newreplpol >= NBRP)
+		printf("<unknown: %d>\n", current_mrs.mrs_newreplpol);
+	else
+		printf("%s\n", repl_policies[current_mrs.mrs_newreplpol]);
+
 	for (iosidx = 0; iosidx < current_mrs.mrs_nios; iosidx++) {
 		nbw = 0;
 		bact = bold = 0;
