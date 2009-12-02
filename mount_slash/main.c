@@ -128,7 +128,7 @@ checkcreds(const struct stat *stb, const struct slash_creds *cr, int xmode)
 	return (0);
 }
 
-static void
+__static void
 slash2fuse_getcred(fuse_req_t req, struct slash_creds *cred)
 {
 	const struct fuse_ctx *ctx = fuse_req_ctx(req);
@@ -137,7 +137,32 @@ slash2fuse_getcred(fuse_req_t req, struct slash_creds *cred)
 	cred->gid = ctx->gid;
 }
 
-static void
+int
+lookup_pathname_fg(const char *ofn, struct slash_creds *crp,
+    struct slash_fidgen *fgp, struct stat *stb)
+{
+	char *cpn, *next, fn[PATH_MAX];
+	fuse_ino_t pinum;
+	int rc;
+
+	rc = translate_pathname(ofn, fn);
+	if (rc)
+		return (rc);
+
+	fgp->fg_fid = SL_ROOT_INUM;
+	for (cpn = fn + 1; cpn; cpn = next) {
+		pinum = fgp->fg_fid;
+		if ((next = strchr(cpn, '/')) != NULL)
+			*next++ = '\0';
+		rc = ms_lookup_fidcache(crp, pinum,
+		    cpn, fgp, next ? NULL : stb);
+		if (rc)
+			return (rc);
+	}
+	return (0);
+}
+
+__static void
 msfsthr_teardown(void *arg)
 {
 	struct msfs_thread *mft = arg;
@@ -148,7 +173,7 @@ msfsthr_teardown(void *arg)
 	freelock(&msfsthr_uniqidmap_lock);
 }
 
-static void
+__static void
 msfsthr_ensure(void)
 {
 	struct msfs_thread *mft;
@@ -1119,7 +1144,8 @@ slash_lookuprpc(const struct slash_creds *cr, struct fidc_membh *p,
 		 */
 		slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, cr, 0);
 		*fgp = mp->fg;
-		*stb = mp->attr;
+		if (stb)
+			*stb = mp->attr;
 	}
 
 	pscrpc_req_finished(rq);
@@ -1164,7 +1190,8 @@ ms_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 		if (rc)
 			goto out;
 		*fgp = *fcmh_2_fgp(m);
-		*stb = *fcmh_2_attrp(m);
+		if (stb)
+			*stb = *fcmh_2_attrp(m);
 	} else
 		rc = slash_lookuprpc(cr, p, name, fgp, stb);
 

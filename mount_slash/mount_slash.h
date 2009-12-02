@@ -125,6 +125,8 @@ int	 ms_lookup_fidcache(const struct slash_creds *, fuse_ino_t, const char *,
 
 int	 checkcreds(const struct stat *, const struct slash_creds *, int);
 int	 translate_pathname(const char *, char []);
+int	 lookup_pathname_fg(const char *, struct slash_creds *,
+	    struct slash_fidgen *, struct stat *);
 
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;
