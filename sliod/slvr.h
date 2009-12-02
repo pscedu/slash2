@@ -16,7 +16,7 @@
 struct bmap_iod_info;
 
 extern struct psc_listcache lruSlvrs;
-extern struct psc_listcache rpcqSlvrs;
+extern struct psc_listcache crcqSlvrs;
 
 /**
  * slvr_ref - sliver reference used for scheduling dirty slivers to be crc'd and sent to the mds.
@@ -47,7 +47,7 @@ enum slvr_states {
 	SLVR_DATARDY	= (1 <<  7),	/* ready for read / write activity */
 	SLVR_LRU	= (1 <<  8),	/* cached but not dirty */
 	SLVR_CRCDIRTY	= (1 <<  9),	/* crc does not match cached buffer */
-	SLVR_RPCPNDG	= (1 << 10),	/* buffer !dirty but crc dirty is set */
+	SLVR_CRCING     = (1 << 10),
 	SLVR_FREEING	= (1 << 11),	/* sliver is being reaped */
 	SLVR_SLBFREEING	= (1 << 12),	/* slab of the sliver is being reaped */
 	SLVR_REPLSRC	= (1 << 13),    /* slvr is replication source */
@@ -55,7 +55,7 @@ enum slvr_states {
 };
 
 
-#define SLVR_FLAG(field, str) ((field) ? (str) : "")
+#define SLVR_FLAG(field, str) ((field) ? (str) : "-")
 #define DEBUG_SLVR_FLAGS(s)						\
 	SLVR_FLAG(((s)->slvr_flags & SLVR_NEW), "n"),			\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_FAULTING), "f"),	\
@@ -64,13 +64,12 @@ enum slvr_states {
 		SLVR_FLAG(((s)->slvr_flags & SLVR_CRCDIRTY), "D"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_DATARDY), "d"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_LRU), "l"),		\
-		SLVR_FLAG(((s)->slvr_flags & SLVR_RPCPNDG), "r"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_FREEING), "F"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_SLBFREEING), "b"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_REPLSRC), "S"),	\
 		SLVR_FLAG(((s)->slvr_flags & SLVR_REPLDST), "T")	\
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\

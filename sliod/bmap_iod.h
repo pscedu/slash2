@@ -19,55 +19,40 @@
 
 extern struct psc_listcache iodBmapLru;
 
-#define BIOD_CRCUP_MAX_AGE		 2		/* in seconds */
-
-#define	BCR_NONE			 0x00
-#define	BCR_UPDATED			 0x01		/* already updated */
-#define	BCR_SCANNED			 0x02		/* already collected */
-
-struct biod_crcup_ref {
-	uint64_t			 bcr_id;
-	uint16_t			 bcr_nups;
-	uint16_t			 bcr_flags;
-	struct timespec			 bcr_age;
-	struct slvr_ref			*bcr_slvrs[MAX_BMAP_NCRC_UPDATES];
-	SPLAY_ENTRY(biod_crcup_ref)	 bcr_tentry;
-	struct srm_bmap_crcup		 bcr_crcup;
-};
-
-#define DEBUG_BCR(level, b, fmt, ...)					\
-	psc_logs((level), PSS_GEN,                                      \
-		 "bcr@%p fid="FIDFMT" num=%"PRIu64" nups=%d age=%lu"	\
-		 " bmap@%p:: "fmt,					\
-		 (b), FIDFMTARGS(&(b)->bcr_crcup.fg), (b)->bcr_id,	\
-		 (b)->bcr_nups, (b)->bcr_age.tv_sec,			\
-		 slvr_2_bmap((b)->bcr_slvrs[0]),			\
-		 ## __VA_ARGS__)
-
-static inline int
-bcr_cmp(const void *x, const void *y)
-{
-	const struct biod_crcup_ref *a = x, *b = y;
-
-	if (a->bcr_id > b->bcr_id)
-		return (1);
-	if (a->bcr_id < b->bcr_id)
-		return (-1);
-	return (0);
-}
-
-SPLAY_HEAD(crcup_reftree, biod_crcup_ref);
-SPLAY_PROTOTYPE(crcup_reftree, biod_crcup_ref, bcr_tentry, bcr_cmp);
-
 /* For now only one of these structures is needed.  In the future
  *   we'll need one per MDS.
  */
-struct biod_infslvr_tree {
-	psc_spinlock_t		binfst_lock;
-	struct crcup_reftree	binfst_tree;
-	uint64_t		binfst_counter;
-	int			binfst_inflight;
+struct biod_infl_crcs {
+	psc_spinlock_t		binfcrcs_lock;
+	atomic_t                binfcrcs_nbcrs;
+	struct psc_lockedlist   binfcrcs_hold;
+	struct psc_lockedlist   binfcrcs_ready;
+	struct psc_lockedlist   binfcrcs_infl;
 };
+
+struct bmap_iod_info;
+
+struct biod_crcup_ref {
+	uint64_t			 bcr_xid;
+	uint16_t			 bcr_flags;
+	struct timespec			 bcr_age;
+	struct bmap_iod_info            *bcr_biodi;
+	struct psclist_head              bcr_lentry;
+	struct srm_bmap_crcup		 bcr_crcup;
+};
+
+#define	BCR_NONE			 0x00
+#define BCR_SCHEDULED                    0x01
+
+#define DEBUG_BCR(level, b, fmt, ...)					\
+        psc_logs((level), PSS_GEN,                                      \
+                 "bcr@%p fid="FIDFMT" xid=%"PRIu64" nups=%d fl=%d age=%lu" \
+                 " bmap@%p:%u :: "fmt,					\
+                 (b), FIDFMTARGS(&(b)->bcr_crcup.fg), (b)->bcr_xid,	\
+		 (b)->bcr_crcup.nups, (b)->bcr_flags, (b)->bcr_age.tv_sec, \
+		 (b)->bcr_biodi->biod_bmap,				\
+		 (b)->bcr_biodi->biod_bmap->bcm_blkno,			\
+		 ## __VA_ARGS__)
 
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
 SPLAY_PROTOTYPE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
@@ -75,12 +60,105 @@ SPLAY_PROTOTYPE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 struct bmap_iod_info {
 	psc_spinlock_t          biod_lock;
 	struct bmapc_memb      *biod_bmap;
+	struct biod_crcup_ref  *biod_bcr;
 	struct biod_slvrtree    biod_slvrs;
 	struct slash_bmap_wire *biod_bmap_wire;
 	struct psclist_head     biod_lentry;
 	struct timespec         biod_age;
-	uint32_t                biod_bcr_id;
+	uint64_t                biod_bcr_xid;
+	uint64_t                biod_bcr_xid_last;
+	uint32_t                biod_inflight;
 };
+
+
+
+static inline void
+bcr_hold_2_ready(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+{
+	int locked;
+
+	LOCK_ENSURE(&bcr->bcr_biodi->biod_lock);	
+	psc_assert(bcr->bcr_biodi->biod_bcr == bcr);
+
+	locked = reqlock(&inf->binfcrcs_lock);	
+	psc_assert(psclist_conjoint(&bcr->bcr_lentry));
+	pll_remove(&inf->binfcrcs_hold, bcr);
+	pll_addtail(&inf->binfcrcs_ready, bcr);
+	ureqlock(&inf->binfcrcs_lock, locked);
+
+	bcr->bcr_biodi->biod_bcr = NULL;
+}
+
+static inline void
+bcr_hold_add(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+{
+	psc_assert(psclist_disjoint(&bcr->bcr_lentry));
+	pll_addtail(&inf->binfcrcs_hold, bcr);
+	atomic_inc(&inf->binfcrcs_nbcrs);
+}
+
+static inline void
+bcr_hold_requeue(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+{
+	int locked;
+
+	locked = reqlock(&inf->binfcrcs_lock);
+	psc_assert(psclist_conjoint(&bcr->bcr_lentry));
+	pll_remove(&inf->binfcrcs_hold, bcr);
+	pll_addtail(&inf->binfcrcs_hold, bcr);
+	ureqlock(&inf->binfcrcs_lock, locked);
+}
+
+static inline void
+bcr_xid_check(struct biod_crcup_ref *bcr)
+{
+	int locked;
+
+	locked = reqlock(&bcr->bcr_biodi->biod_lock);
+	psc_assert(bcr->bcr_xid < bcr->bcr_biodi->biod_bcr_xid);
+	psc_assert(bcr->bcr_xid == bcr->bcr_biodi->biod_bcr_xid_last);
+	ureqlock(&bcr->bcr_biodi->biod_lock, locked);
+}
+
+static inline void
+bcr_xid_last_bump(struct biod_crcup_ref *bcr)
+{
+	int locked;
+
+        locked = reqlock(&bcr->bcr_biodi->biod_lock);
+	bcr_xid_check(bcr);
+	bcr->bcr_biodi->biod_bcr_xid_last++;
+	ureqlock(&bcr->bcr_biodi->biod_lock, locked);
+}
+
+static inline void
+bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+{
+	spinlock(&inf->binfcrcs_lock);
+	psc_assert(psclist_conjoint(&bcr->bcr_lentry));
+	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
+	pll_remove(&inf->binfcrcs_hold, bcr);
+	bcr_xid_last_bump(bcr);
+	PSCFREE(bcr);
+	freelock(&inf->binfcrcs_lock);
+
+	atomic_dec(&inf->binfcrcs_nbcrs);
+}
+
+
+#if 0
+static inline int
+bcr_cmp(const void *x, const void *y)
+{
+	const struct biod_crcup_ref *a = x, *b = y;
+
+	if (a->bcr_xid > b->bcr_xid)
+		return (1);
+	if (a->bcr_xid < b->bcr_xid)
+		return (-1);
+	return (0);
+}
+#endif
 
 #define bmap_2_biodi(b)		((struct bmap_iod_info *)(b)->bcm_pri)
 #define bmap_2_biodi_age(b)	bmap_2_biodi(b)->biod_age
@@ -91,6 +169,8 @@ struct bmap_iod_info {
 /* bmap iod modes */
 #define BMAP_IOD_RELEASING	(_BMAP_FLSHFT << 0)
 #define BMAP_IOD_RETRFAIL	(_BMAP_FLSHFT << 1)
+
+#define BIOD_CRCUP_MAX_AGE		 2		/* in seconds */
 
 enum slash_bmap_slv_states {
 	BMAP_SLVR_DATA = (1<<0), /* Data present, otherwise slvr is hole */
@@ -148,13 +228,14 @@ slvr_lru_pin_check(struct slvr_ref *s)
 	psc_assert(s->slvr_flags == (SLVR_LRU|SLVR_PINNED));
 }
 
-static inline void
-slvr_lru_unpin(struct slvr_ref *s)
+static inline int
+slvr_lru_tryunpin_locked(struct slvr_ref *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
-	psc_assert(!s->slvr_pndgreads);
-	psc_assert(!s->slvr_pndgwrts);
+	if (s->slvr_pndgwrts || s->slvr_pndgreads ||
+	    s->slvr_flags & SLVR_CRCDIRTY)
+		return (0);
 
 	psc_assert(s->slvr_flags & SLVR_LRU);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -165,32 +246,27 @@ slvr_lru_unpin(struct slvr_ref *s)
 		      SLVR_GETSLAB|SLVR_CRCDIRTY)));
 
 	s->slvr_flags &= ~SLVR_PINNED;
+	return (1);
 }
 
 static inline int
-slvr_lru_slab_freeable(struct slvr_ref *s)
+slvr_lru_slab_freeable(struct slvr_ref *s)	
 {
 	int freeable = 1;
 	SLVR_LOCK_ENSURE(s);
 
 	psc_assert(s->slvr_flags & SLVR_LRU);
 
+	if (s->slvr_flags & SLVR_DATARDY)
+		psc_assert(!(s->slvr_flags &
+			     (SLVR_NEW|SLVR_FAULTING|SLVR_GETSLAB)));
+
 	if (!s->slvr_slab)
-		psc_assert(!(s->slvr_flags &
+		psc_assert(!(s->slvr_flags & 
 			     (SLVR_NEW|SLVR_FAULTING|
-			      SLVR_GETSLAB|SLVR_DATARDY)));
-
-	else if (s->slvr_flags & SLVR_PINNED) {
-		psc_assert(s->slvr_pndgwrts  ||
-			   s->slvr_pndgreads ||
-			   (s->slvr_flags & SLVR_CRCDIRTY));
-		freeable = 0;
-
-	} else if (s->slvr_flags & SLVR_DATARDY)
-		psc_assert(!(s->slvr_flags &
-			     (SLVR_NEW|SLVR_FAULTING|
-			      SLVR_GETSLAB)));
-	else
+			      SLVR_GETSLAB|SLVR_DATARDY)));		
+	
+	if (s->slvr_flags & SLVR_PINNED)
 		freeable = 0;
 
 	DEBUG_SLVR(PLL_INFO, s, "freeable=%d", freeable);
@@ -203,7 +279,9 @@ slvr_lru_freeable(struct slvr_ref *s)
 {
 	int freeable=0;
 
-	if (s->slvr_slab || s->slvr_flags & SLVR_CRCDIRTY)
+	if (s->slvr_slab ||
+	    s->slvr_flags & SLVR_PINNED   ||
+	    s->slvr_flags & SLVR_CRCDIRTY)
 		goto out;
 
 	psc_assert(slvr_lru_slab_freeable(s));

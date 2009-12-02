@@ -12,7 +12,7 @@
 #include "slvr.h"
 
 struct psc_listcache lruSlvrs;   /* LRU list of clean slivers which may be reaped */
-struct psc_listcache rpcqSlvrs;  /* Slivers ready to be crc'd and have their
+struct psc_listcache crcqSlvrs;  /* Slivers ready to be crc'd and have their
 				    crc's shipped to the mds. */
 
 __static SPLAY_GENERATE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
@@ -44,7 +44,7 @@ int
 slvr_do_crc(struct slvr_ref *s)
 {
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-
+	psc_assert(s->slvr_flags & SLVR_CRCING);
 	/* SLVR_FAULTING implies that we're bringing this data buffer
 	 *   in from the filesystem.
 	 * SLVR_CRCDIRTY means that DATARDY has been set and that
@@ -272,6 +272,8 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 void
 slvr_slab_prep(struct slvr_ref *s, int rw)
 {
+	struct sl_buffer *tmp=NULL;
+
 	SLVR_LOCK(s);
 	/* slvr_lookup() must pin all slvrs to avoid racing with
 	 *   the reaper.
@@ -283,33 +285,56 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 	else
 		s->slvr_pndgreads++;
 
+ retry:
 	if (s->slvr_flags & SLVR_NEW) {
-		s->slvr_flags &= ~SLVR_NEW;
-		
+		if (!tmp) {
+			/* Drop the lock before potentially blocking
+			 *   in the pool reaper.
+			 */
+		getbuf:
+			SLVR_ULOCK(s);			
+			/* note: we grab a second lock here */
+			tmp = psc_pool_get(slBufsPool);
+			sl_buffer_fresh_assertions(tmp);
+			
+			SLVR_LOCK(s);
+			goto retry;
+
+		} else 
+			psc_assert(tmp);
+
 		psc_assert(psclist_disjoint(&s->slvr_lentry));
-
-		/* note: we grab a second lock here */
-		s->slvr_slab = psc_pool_get(slBufsPool);
-		sl_buffer_fresh_assertions(s->slvr_slab);
-
-		DEBUG_SLVR(PLL_INFO, s, "should have slab");
+		s->slvr_flags &= ~SLVR_NEW;
+		s->slvr_slab = tmp;
+		tmp = NULL;
 		/* Until the slab is added to the sliver, the sliver is private
 		 *  to the bmap's biod_slvrtree.
 		 */
 		s->slvr_flags |= SLVR_LRU;
 		/* note: lc_addtail() will grab the list lock itself */
-		lc_addtail(&lruSlvrs, s);
+		lc_addtail(&lruSlvrs, s);			
 
 	} else if ((s->slvr_flags & SLVR_LRU) && !s->slvr_slab) {
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		s->slvr_slab = psc_pool_get(slBufsPool);
-                sl_buffer_fresh_assertions(s->slvr_slab);
+		if (!tmp)
+			goto getbuf;
+		else {
+			s->slvr_slab = tmp;
+			tmp = NULL;
+		}
 
-                DEBUG_SLVR(PLL_INFO, s, "should have slab");		
+	} else if (s->slvr_flags & SLVR_SLBFREEING) {
+		DEBUG_SLVR(PLL_INFO, s, "caught slbfreeing");
+		sched_yield();
+		goto retry;
 	}
 
+	DEBUG_SLVR(PLL_INFO, s, "should have slab");
 	psc_assert(s->slvr_slab);
 	SLVR_ULOCK(s);
+
+	if (tmp)
+		psc_pool_return(slBufsPool, (void *)tmp);
 }
 
 
@@ -336,8 +361,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 		SLVR_WAIT(s);
 		psc_assert(s->slvr_flags & SLVR_DATARDY);
-
-		psc_assert(psclist_conjoint(&s->slvr_lentry));
 	}
 
 	DEBUG_SLVR(PLL_INFO, s, "slvrno=%hu off=%u size=%u rw=%o",
@@ -472,15 +495,8 @@ slvr_rio_done(struct slvr_ref *s)
 	SLVR_LOCK(s);
 
 	s->slvr_pndgreads--;
-	if (!s->slvr_pndgreads         && 
-	    !s->slvr_pndgwrts          && 
-	    (s->slvr_flags & SLVR_LRU) && 
-	    !(s->slvr_flags & SLVR_CRCDIRTY)) {
-		/* Requeue does a listcache operation but using trylock so
-		 *   no deadlock should occur on its behalf.
-		 */
-		slvr_lru_requeue(s, 1);
-		slvr_lru_unpin(s);
+	if (slvr_lru_tryunpin_locked(s)) {
+		slvr_lru_requeue(s, 1);	
 		DEBUG_SLVR(PLL_DEBUG, s, "unpinned");
 	} else
 		DEBUG_SLVR(PLL_DEBUG, s, "ops still pending or dirty");
@@ -489,19 +505,20 @@ slvr_rio_done(struct slvr_ref *s)
 }
 
 void
-slvr_schedule_crc(struct slvr_ref *s)
+slvr_schedule_crc_locked(struct slvr_ref *s)
 {
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 
 	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc");
-
-	psc_assert(s->slvr_flags & SLVR_LRU);
+	
+	if (!(s->slvr_flags & SLVR_LRU))
+		return;
+	
 	s->slvr_flags &= ~SLVR_LRU;
-	s->slvr_flags |= SLVR_RPCPNDG;
 
 	lc_remove(&lruSlvrs, s);
-	lc_addqueue(&rpcqSlvrs, s);
+	lc_addqueue(&crcqSlvrs, s);
 }
 
 /**
@@ -574,9 +591,9 @@ slvr_wio_done(struct slvr_ref *s)
 	 * If there are no more pending writes, schedule a CRC op.
 	 */
 	s->slvr_pndgwrts--;
-	if (!s->slvr_pndgwrts && !(s->slvr_flags & SLVR_RPCPNDG)) {
-		slvr_schedule_crc(s);
-	}
+	if (!s->slvr_pndgwrts)
+		slvr_schedule_crc_locked(s);
+
 	SLVR_ULOCK(s);
 }
 
@@ -684,8 +701,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			goto next;
 		}
 
-		psc_assert(s->slvr_slab);
-
 		if (slvr_lru_slab_freeable(s)) {
 			/* At this point we know that the slab can be
 			 *   reclaimed, however the slvr itself may
@@ -711,8 +726,10 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			psc_assert(!(s->slvr_flags & SLVR_FREEING));
 			psc_assert(s->slvr_slab);
 
-			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slab=%p", s->slvr_slab);
 			s->slvr_flags &= ~(SLVR_SLBFREEING|SLVR_DATARDY);
+
+			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slab=%p", 
+				   s->slvr_slab);
 			psc_pool_return(m, s->slvr_slab);
 			s->slvr_slab = NULL;
 
@@ -735,12 +752,12 @@ void
 slvr_cache_init(void)
 {
 	lc_reginit(&lruSlvrs,  struct slvr_ref, slvr_lentry, "lruSlvrs");
-	lc_reginit(&rpcqSlvrs,  struct slvr_ref, slvr_lentry, "rpcqSlvrs");
+	lc_reginit(&crcqSlvrs,  struct slvr_ref, slvr_lentry, "crcqSlvrs");
 
 	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer,
 		    slb_mgmt_lentry, PPMF_AUTO, 64, 64, 128,
 		    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap,
-			    "svlr_slab", NULL);
+		    "slvr_slab", NULL);
 	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
 	
 	slvr_worker_init();

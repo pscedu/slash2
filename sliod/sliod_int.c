@@ -34,6 +34,7 @@ iod_bmap_init(struct bmapc_memb *b)
 
 	biod = b->bcm_pri;
 	biod->biod_bmap = b;
+	biod->biod_bcr_xid = biod->biod_bcr_xid_last = 0;
 	INIT_PSCLIST_ENTRY(&biod->biod_lentry);
 	LOCK_INIT(&biod->biod_lock);
 	SPLAY_INIT(&biod->biod_slvrs);

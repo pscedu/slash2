@@ -105,7 +105,7 @@ main(int argc, char *argv[])
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 
 	fidcache_init(FIDC_USER_ION, NULL);
-	sl_buffer_cache_init();
+	//sl_buffer_cache_init();
 	slvr_cache_init();
 	sli_repl_init();
 	sli_rpc_initsvc();
