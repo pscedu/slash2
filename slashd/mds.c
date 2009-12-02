@@ -992,30 +992,29 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 	/* Try to pread() the bmap from the mds file.
 	 */
 	rc = mdsio_zfs_bmap_read(bcm);
-	if (rc && rc != SLERR_SHORTIO) {
- error:
+
+	/* Check for a NULL CRC if we had a good read.  NULL CRC can happen when
+	 * bmaps are gaps that have not been written yet.   Note that a short
+	 * read is tolerated as long as the bmap is zeroed.
+	 */
+	if (!rc || rc == SLERR_SHORTIO) {
+		if (bmdsi->bmdsi_od->bh_bhcrc == 0 && 
+		    memcmp(bmdsi->bmdsi_od, &null_bmap_od, sizeof(null_bmap_od)) == 0) {
+
+			mds_bmapod_dump(bcm);
+			mds_bmapod_initnew(bmdsi->bmdsi_od);
+			mds_bmapod_dump(bcm);
+			return (0);
+		}
+	}
+
+	/* At this point, the short I/O is an error since the bmap isn't zeros. */
+	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "mdsio_zfs_bmap_read: "
 		    "blkno=%u, rc=%d", blkno, rc);
 		rc = -EIO;
 		goto out;
 	}
-
-	/* Check for a NULL CRC, which can happen when
-	 * bmaps are gaps that have not been written yet.
-	 */
-	if (bmdsi->bmdsi_od->bh_bhcrc == 0 && memcmp(bmdsi->bmdsi_od,
-	    &null_bmap_od, sizeof(null_bmap_od)) == 0) {
-		mds_bmapod_dump(bcm);
-
-		mds_bmapod_initnew(bmdsi->bmdsi_od);
-
-		mds_bmapod_dump(bcm);
-		return (0);
-	}
-
-	/* OK, the short I/O is an error since the bmap isn't zeros. */
-	if (rc)
-		goto error;
 
 	/* Calculate and check the CRC now */
 	mds_bmapod_dump(bcm);
