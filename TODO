@@ -262,11 +262,11 @@ D_ANY
 - libsl_init() is getting an ENOMEM somewhere in slashd, maybe LNET
 - do not keep sl_replrq in mem unless a bh_repl is OLD or SCHED
 - add bmap_hdr in replst ctlmsg
-- if P is specified in msctl -Q fn:*P:@SITE, ensure persist is turned on
 - filenames with , and : will not make the msctl repl parser happy, reorder
+- fix pool names in -Lall -Pall -iall -hall -Mall in each of slmctl, slictl, msctl
+- handle msctl -Q bmap[P] persist policy overrider
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
 - use a sliding window to track valid cfd's and remove them from the window
   once they are CLOSE()'d
-
