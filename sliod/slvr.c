@@ -44,7 +44,7 @@ int
 slvr_do_crc(struct slvr_ref *s)
 {
 	psc_assert(s->slvr_flags & SLVR_PINNED);
-	psc_assert(s->slvr_flags & SLVR_CRCING);
+	//psc_assert(s->slvr_flags & SLVR_CRCING);
 	/* SLVR_FAULTING implies that we're bringing this data buffer
 	 *   in from the filesystem.
 	 * SLVR_CRCDIRTY means that DATARDY has been set and that
