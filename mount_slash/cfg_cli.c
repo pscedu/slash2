@@ -11,20 +11,20 @@
 void
 slcfg_init_res(struct sl_resource *res)
 {
-	struct resprof_cli_info *rci;
+	struct cli_resprof_info *crpi;
 
-	rci = res->res_pri = PSCALLOC(sizeof(*rci));
-	LOCK_INIT(&rci->rci_lock);
+	crpi = res->res_pri = PSCALLOC(sizeof(*crpi));
+	LOCK_INIT(&crpi->crpi_lock);
 }
 
 void
 slcfg_init_resm(struct sl_resm *resm)
 {
-	struct cli_imp_ion *c;
+	struct cli_resm_info *crmi;
 
-	c = resm->resm_pri = PSCALLOC(sizeof(*c));
-	LOCK_INIT(&c->ci_lock);
-	psc_waitq_init(&c->ci_waitq);
+	crmi = resm->resm_pri = PSCALLOC(sizeof(*crmi));
+	LOCK_INIT(&crmi->crmi_lock);
+	psc_waitq_init(&crmi->crmi_waitq);
 }
 
 void

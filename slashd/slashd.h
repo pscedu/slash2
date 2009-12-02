@@ -77,20 +77,22 @@ struct mds_site_info {
 #define MSIF_DIRTYQ		(1 << 0)	/* queue has changed */
 
 struct mds_resm_info {
-	psc_spinlock_t		  mri_lock;
-	struct slashrpc_cservice *mri_csvc;
-	struct psc_multilock_cond mri_mlcond;
-	struct timespec           mri_lastping;
-	int			  mri_busyid;
-	struct sl_resm           *mri_resm;
-	void                     *mri_data;
+	psc_spinlock_t		  mrmi_lock;
+	struct slashrpc_cservice *mrmi_csvc;
+	struct psc_multilock_cond mrmi_mlcond;
+	struct timespec           mrmi_lastping;
+	int			  mrmi_busyid;
+	struct sl_resm           *mrmi_resm;
+	void                     *mrmi_data;
 };
+
+#define resm2mrmi(resm)		((struct mds_resm_info *)(resm)->resm_pri)
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
  */
-struct resprof_mds_info {
-	int			  rmi_cnt;
-	psc_spinlock_t		  rmi_lock;
+struct mds_resprof_info {
+	int			  mrpi_cnt;
+	psc_spinlock_t		  mrpi_lock;
 };
 
 /* cfd private accessors */

@@ -45,7 +45,7 @@ int
 slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
     struct sl_resm *src_resm, struct sl_resource *dst_res, int j)
 {
-	struct mds_resm_info *src_mri, *dst_mri;
+	struct mds_resm_info *src_mrmi, *dst_mrmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
 	struct slash_bmap_od *bmapod;
@@ -65,10 +65,10 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 
 	dst_resm = libsl_nid2resm(dst_res->res_nids[j]);
 
-	dst_mri = dst_resm->resm_pri;
-	src_mri = src_resm->resm_pri;
+	dst_mrmi = dst_resm->resm_pri;
+	src_mrmi = src_resm->resm_pri;
 
-	if (!mds_repl_nodes_setbusy(src_mri, dst_mri, 1))
+	if (!mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 1))
 		goto fail;
 
 	csvc = slm_geticonn(dst_resm);
@@ -97,9 +97,11 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	return (1);
 
  fail:
-	mds_repl_nodes_setbusy(src_mri, dst_mri, 0);
-	if (!psc_multilock_hascond(&msi->msi_ml, &dst_mri->mri_mlcond))
-		psc_multilock_addcond(&msi->msi_ml, &dst_mri->mri_mlcond, 1);
+	mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 0);
+	if (!psc_multilock_hascond(&msi->msi_ml,
+	    &dst_mrmi->mrmi_mlcond))
+		psc_multilock_addcond(&msi->msi_ml,
+		    &dst_mrmi->mrmi_mlcond, 1);
 	return (0);
 }
 
@@ -242,9 +244,9 @@ slmreplthr_main(void *arg)
 							src_resm = libsl_nid2resm(src_res->res_nids[rin]);
 							if (slm_geticonn(src_resm) == NULL) {
 								if (!psc_multilock_hascond(&msi->msi_ml,
-								    &resm2mri(src_resm)->mri_mlcond))
+								    &resm2mrmi(src_resm)->mrmi_mlcond))
 									if (psc_multilock_addcond(&msi->msi_ml,
-									    &resm2mri(src_resm)->mri_mlcond, 1))
+									    &resm2mrmi(src_resm)->mrmi_mlcond, 1))
 										psc_fatal("multilock_addcond");
 								continue;
 							}

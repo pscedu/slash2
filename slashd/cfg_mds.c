@@ -13,22 +13,22 @@
 void
 slcfg_init_res(struct sl_resource *res)
 {
-	struct resprof_mds_info *rmi;
+	struct mds_resprof_info *mrpi;
 
-	rmi = res->res_pri = PSCALLOC(sizeof(*rmi));
-	LOCK_INIT(&rmi->rmi_lock);
+	mrpi = res->res_pri = PSCALLOC(sizeof(*mrpi));
+	LOCK_INIT(&mrpi->mrpi_lock);
 }
 
 void
 slcfg_init_resm(struct sl_resm *resm)
 {
-	struct mds_resm_info *mri;
+	struct mds_resm_info *mrmi;
 
-	mri = resm->resm_pri = PSCALLOC(sizeof(*mri));
-	LOCK_INIT(&mri->mri_lock);
-	psc_multilock_cond_init(&mri->mri_mlcond,
-	    NULL, 0, "mri-%s", resm->resm_addrbuf);
-	mri->mri_resm = resm;
+	mrmi = resm->resm_pri = PSCALLOC(sizeof(*mrmi));
+	LOCK_INIT(&mrmi->mrmi_lock);
+	psc_multilock_cond_init(&mrmi->mrmi_mlcond,
+	    NULL, 0, "mrmi-%s", resm->resm_addrbuf);
+	mrmi->mrmi_resm = resm;
 }
 
 void

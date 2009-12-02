@@ -69,29 +69,23 @@ struct msl_fhent {			 /* XXX rename */
 	struct fhbmap_cache		 mfh_fhbmap_cache;
 };
 
-struct resprof_cli_info {
-	int				 rci_cnt;
-	psc_spinlock_t			 rci_lock;
+struct cli_resprof_info {
+	int				 crpi_cnt;
+	psc_spinlock_t			 crpi_lock;
 };
 
 /*
- * cli_imp_ion - private client data for struct sl_resm.
- *  It is tasked with holding the import to the correct ION.
+ * CLIENT-specific private data for struct sl_resm.
  */
-struct cli_imp_ion {
-	struct pscrpc_import		*ci_import;
-	struct timespec			 ci_connect_time;
-	struct psc_waitq		 ci_waitq;
-	psc_spinlock_t			 ci_lock;
-	int				 ci_flags;
+struct cli_resm_info {
+	struct slashrpc_cservice	*crmi_csvc;
+	psc_spinlock_t			 crmi_lock;
+	struct psc_waitq		 crmi_waitq;
 };
 
-/* cli_imp_ion flags */
-#define CION_CONNECTING			(1 << 0)
-#define CION_CONNECTED			(1 << 1)
-#define CION_CONNECT_FAIL		(1 << 2)
+#define resm2crmi(resm)			((struct cli_resm_info *)(resm)->resm_pri)
 
-/* Mainly a place to store our replication table.
+/* Mainly a place to store our replication table, attached to fcoo_pri.
  */
 struct msl_fcoo_data {
 	int                              mfd_flags;
@@ -99,46 +93,43 @@ struct msl_fcoo_data {
 };
 
 enum {
-	MFD_HAVEREPTBL = (1<<0),
-	MFD_RETRREPTBL = (1<<1)
+	MFD_HAVEREPTBL = (1 << 0),
+	MFD_RETRREPTBL = (1 << 1)
 };
 
-static __inline void
-msl_mfd_release(struct msl_fcoo_data *mfd)
-{
-	PSCFREE(mfd);
-}
+#define msl_mfd_release(mfd)		PSCFREE(mfd)
 
-void	*msctlthr_begin(void *);
-
-#define msl_read(fh, buf, size, off)  msl_io((fh), (buf), (size), (off), MSL_READ)
-#define msl_write(fh, buf, size, off) msl_io((fh), (buf), (size), (off), MSL_WRITE)
+#define msl_read(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), MSL_READ)
+#define msl_write(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), MSL_WRITE)
 
 struct pscrpc_import *
-	msl_bmap_to_import(struct bmapc_memb *, int);
-void	msl_bmap_fhcache_clear(struct msl_fhent *);
-int	msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-int	msl_io(struct msl_fhent *, char *, size_t, off_t, int);
-int	msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-int	msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-int	msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
+	 msl_bmap_to_import(struct bmapc_memb *, int);
+void	 msl_bmap_fhcache_clear(struct msl_fhent *);
+int	 msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+int	 msl_io(struct msl_fhent *, char *, size_t, off_t, int);
+int	 msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+int	 msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+int	 msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
 
 struct msl_fhent *
-	msl_fhent_new(struct fidc_membh *);
+	 msl_fhent_new(struct fidc_membh *);
 
-void	mseqpollthr_spawn(void);
-void	msctlthr_spawn(void);
-void	mstimerthr_spawn(void);
-void	msbmapflushthr_spawn(void);
+void	 mseqpollthr_spawn(void);
+void	 msctlthr_spawn(void);
+void	 mstimerthr_spawn(void);
+void	 msbmapflushthr_spawn(void);
+void	*msctlthr_begin(void *);
 
-int	ms_lookup_fidcache(const struct slash_creds *, fuse_ino_t, const char *,
+int	 ms_lookup_fidcache(const struct slash_creds *, fuse_ino_t, const char *,
 	    struct slash_fidgen *, struct stat *);
 
-int	checkcreds(const struct stat *, const struct slash_creds *, int);
-int	translate_pathname(const char *, char []);
+int	 checkcreds(const struct stat *, const struct slash_creds *, int);
+int	 translate_pathname(const char *, char []);
 
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;
+extern struct psc_listcache	 bmapFlushQ;
+extern struct sl_resm		*slc_rmc_resm;
 
 static __inline void
 msl_fbr_ref(struct msl_fbr *r, int rw)
@@ -148,7 +139,6 @@ msl_fbr_ref(struct msl_fbr *r, int rw)
 	if (rw == FHENT_READ) {
 		atomic_inc(&r->mfbr_bmap->bcm_rd_ref);
 		atomic_inc(&r->mfbr_rd_ref);
-
 	} else if (rw == FHENT_WRITE) {
 		atomic_inc(&r->mfbr_bmap->bcm_wr_ref);
 		atomic_inc(&r->mfbr_wr_ref);

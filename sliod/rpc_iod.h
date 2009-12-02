@@ -27,20 +27,18 @@ struct sli_repl_workrq;
 #define SLI_RII_REPSZ		128
 #define SLI_RII_SVCNAME		"slirii"
 
-#define resm2iri(resm)		((struct iod_resm_info *)(resm)->resm_pri)
-
 /* aliases for connection management */
 #define sli_geticonn(resm)						\
-	slconn_get(&resm2iri(resm)->iri_csvc, NULL, (resm)->resm_nid,	\
+	slconn_get(&resm2irmi(resm)->irmi_csvc, NULL, (resm)->resm_nid,	\
 	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,	\
-	    &resm2iri(resm)->iri_lock, slconn_wake_waitq,		\
-	    &resm2iri(resm)->iri_waitq, SLCONNT_IOD)
+	    &resm2irmi(resm)->irmi_lock, slconn_wake_waitq,		\
+	    &resm2irmi(resm)->irmi_waitq, SLCONNT_IOD)
 
 #define sli_getmconn(resm)						\
-	slconn_get(&resm2iri(resm)->iri_csvc, NULL, (resm)->resm_nid,	\
+	slconn_get(&resm2irmi(resm)->irmi_csvc, NULL, (resm)->resm_nid,	\
 	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,	\
-	    &resm2iri(resm)->iri_lock, slconn_wake_waitq,		\
-	    &resm2iri(resm)->iri_waitq, SLCONNT_MDS)
+	    &resm2irmi(resm)->irmi_lock, slconn_wake_waitq,		\
+	    &resm2irmi(resm)->irmi_waitq, SLCONNT_MDS)
 
 #define sli_ric_handle_read(rq)		sli_ric_handle_io((rq), SL_READ)
 #define sli_ric_handle_write(rq)	sli_ric_handle_io((rq), SL_WRITE)

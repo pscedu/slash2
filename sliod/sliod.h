@@ -47,13 +47,15 @@ PSCTHR_MKCAST(slirimthr, slirim_thread, SLITHRT_RIM)
 PSCTHR_MKCAST(sliriithr, slirii_thread, SLITHRT_RII)
 
 struct iod_resm_info {
-	struct slashrpc_cservice *iri_csvc;
-	psc_spinlock_t		  iri_lock;
-	struct psc_waitq	  iri_waitq;
+	struct slashrpc_cservice *irmi_csvc;
+	psc_spinlock_t		  irmi_lock;
+	struct psc_waitq	  irmi_waitq;
 };
 
-void	slitimerthr_spawn(void);
-__dead void slictlthr_main(const char *);
+#define resm2irmi(resm)		((struct iod_resm_info *)(resm)->resm_pri)
+
+void		slitimerthr_spawn(void);
+__dead void	slictlthr_main(const char *);
 
 struct fidc_membh *
 	iod_inode_lookup(const struct slash_fidgen *);
@@ -63,7 +65,7 @@ int	iod_bmap_load(struct fidc_membh *, sl_bmapno_t, int, struct bmapc_memb **);
 
 int     iod_inode_getsize(struct slash_fidgen *, off_t *);
 
-extern struct sl_resm		*rmi_resm;
+extern struct sl_resm		*sli_rmi_resm;
 extern struct slash_creds	 rootcreds;
 
 #endif /* _SLIOD_H_ */

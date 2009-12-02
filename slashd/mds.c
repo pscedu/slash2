@@ -559,8 +559,8 @@ mds_mion_init(struct mexp_ion *mion, struct sl_resm *resm)
  * mds_bmap_ion_assign - bind a bmap to a ion node for writing.  The process
  *    involves a round-robin'ing of an i/o system's nodes and attaching a
  *    a mexp_ion to the bmap.  The mexp_ion is stored in the i/o node's
- *    resouce_member struct (resm_pri->rmi_data).  It is here that an initial connection
- *    to the i/o node may be created.
+ *    resouce_member struct (resm_pri->rmpi_data).  It is here that an initial
+ *	connection to the ION may be created.
  * @bref: the bmap reference
  * @pios: the preferred i/o system
  */
@@ -572,8 +572,8 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	struct bmi_assign bmi;
 	struct sl_resource *res=libsl_id2res(pios);
 	struct sl_resm *resm;
-	struct mds_resm_info *mri;
-	struct resprof_mds_info *rmi;
+	struct mds_resm_info *mrmi;
+	struct mds_resprof_info *mrpi;
 	int n, x;
 
 	psc_assert(!mdsi->bmdsi_wr_ion);
@@ -584,15 +584,15 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		psc_warnx("Failed to find pios %d", pios);
 		return (-SLERR_ION_UNKNOWN);
 	}
-	rmi = res->res_pri;
-	psc_assert(rmi);
+	mrpi = res->res_pri;
+	psc_assert(mrpi);
 	x = res->res_nnids;
 
 	do {
-		spinlock(&rmi->rmi_lock);
-		n = rmi->rmi_cnt++;
-		if (rmi->rmi_cnt >= (int)res->res_nnids)
-			n = rmi->rmi_cnt = 0;
+		spinlock(&mrpi->mrpi_lock);
+		n = mrpi->mrpi_cnt++;
+		if (mrpi->mrpi_cnt >= (int)res->res_nnids)
+			n = mrpi->mrpi_cnt = 0;
 
 		psc_trace("trying res(%s) ion(%s)",
 			  res->res_name, libcfs_nid2str(res->res_nids[n]));
@@ -602,23 +602,23 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 			psc_fatalx("Failed to lookup %s, verify that slash "
 				   "configs are uniform across all servers",
 				   libcfs_nid2str(res->res_nids[n]));
-		freelock(&rmi->rmi_lock);
+		freelock(&mrpi->mrpi_lock);
 
-		mri = resm->resm_pri;
-		spinlock(&mri->mri_lock);
+		mrmi = resm->resm_pri;
+		spinlock(&mrmi->mrmi_lock);
 
-		if (!mri->mri_data) {
-			mri->mri_data = PSCALLOC(sizeof(*mion));
-			mds_mion_init(mri->mri_data, resm);
+		if (!mrmi->mrmi_data) {
+			mrmi->mrmi_data = PSCALLOC(sizeof(*mion));
+			mds_mion_init(mrmi->mrmi_data, resm);
 		}
-		mion = mri->mri_data;
+		mion = mrmi->mrmi_data;
 
 		/*
 		 * If we fail to establish a connection, try next node.
 		 * The while loop guarantees that we always bail out.
 		 */
 		if (slm_geticonn(resm) == NULL) {
-			freelock(&mri->mri_lock);
+			freelock(&mrmi->mrmi_lock);
 			continue;
 		}
 
@@ -627,7 +627,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 
 		atomic_inc(&mion->mi_refcnt);
 		mdsi->bmdsi_wr_ion = mion;
-		freelock(&mri->mri_lock);
+		freelock(&mrmi->mrmi_lock);
 		break;
 
 	} while (--x);
@@ -638,8 +638,8 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	/* A mion has been assigned to the bmap, mark it in the odtable
 	 *   so that the assignment may be restored on reboot.
 	 */
-	bmi.bmi_ion_nid = mri->mri_resm->resm_nid;
-	bmi.bmi_ios = mri->mri_resm->resm_res->res_id;
+	bmi.bmi_ion_nid = mrmi->mrmi_resm->resm_nid;
+	bmi.bmi_ios = mrmi->mrmi_resm->resm_res->res_id;
 	bmi.bmi_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	bmi.bmi_bmapno = bmap->bcm_blkno;
 	bmi.bmi_start = time(NULL);
