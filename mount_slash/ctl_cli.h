@@ -19,6 +19,7 @@ struct msctlmsg_replst {
 	uint32_t		mrs_nios;
 	uint32_t		mrs_nbmaps;	/* accounting for # of slaves */
 	uint32_t		mrs_id;		/* user-provided identifer */
+	uint32_t		mrs_newreplpol;	/* default replication policy */
 };
 
 struct msctlmsg_replst_slave {
@@ -38,14 +39,13 @@ struct msctlmsg_replrq {
 
 struct msctlmsg_fncmd_newreplpol {
 	char			mfnrp_fn[PATH_MAX];
-	int			mfnrp_pol;
+	int32_t			mfnrp_pol;
 };
-
 
 struct msctlmsg_fncmd_bmapreplpol {
 	char			mfbrp_fn[PATH_MAX];
 	sl_bmapno_t		mfbrp_bmapno;
-	int			mfbrp_pol;
+	int32_t			mfbrp_pol;
 };
 
 #define REPLRQ_BMAPNO_ALL	(-1)

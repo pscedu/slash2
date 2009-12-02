@@ -7,8 +7,8 @@
 #include "psc_util/lock.h"
 
 #include "bmap.h"
-#include "inode.h"
 #include "bmpc.h"
+#include "inode.h"
 
 /*
  * msbmap_crcrepl_states - must be the same as bh_crcstates and bh_repls

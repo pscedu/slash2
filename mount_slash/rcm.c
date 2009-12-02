@@ -51,6 +51,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			mrc->mrc_mrs.mrs_id = mq->id;
 			mrc->mrc_mrs.mrs_fg = mq->fg;
 			mrc->mrc_mrs.mrs_nbmaps = mq->nbmaps;
+			mrc->mrc_mrs.mrs_newreplpol = mq->newreplpol;
 			mrc->mrc_mrs.mrs_nios = mq->nrepls;
 			for (n = 0; n < (int)mq->nrepls; n++) {
 				res = libsl_id2res(mq->repls[n].bs_id);
@@ -163,11 +164,11 @@ msrcm_handle_connect(struct pscrpc_request *rq)
 }
 
 /*
- * msrcm_handler - handle a request for client from MDS.
+ * slc_rcm_handler - handle a request for CLIENT from MDS.
  * @rq: request.
  */
 int
-msrcm_handler(struct pscrpc_request *rq)
+slc_rcm_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
 
