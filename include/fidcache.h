@@ -74,7 +74,7 @@ enum fcmh_states {
 	FCMH_GETTING_ATTRS = (1 << 11)
 };
 
-#define FCMH_ATTR_TIMEO		5			/* number of seconds in which attribute times out */
+#define FCMH_ATTR_TIMEO		8 /* number of seconds in which attribute times out */
 
 #define FCMH_LOCK(f)		spinlock(&(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock(&(f)->fcmh_lock)
@@ -277,6 +277,8 @@ struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
 int			 fidc_lookup(const struct slash_fidgen *, int,
 			    const struct fidc_memb *, const struct slash_creds *,
 			    struct fidc_membh **);
+
+void                     fidc_fcm_size_update(struct fidc_membh *, size_t);
 
 extern struct sl_fsops		*slFsops;
 extern struct hash_table	 fidcHtable;

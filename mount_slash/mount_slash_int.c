@@ -1565,7 +1565,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 
-	if ((op == MSL_READ) && off >= (fcmh_2_fsz(mfh->mfh_fcmh))) {
+	if (!size || ((op == MSL_READ) && 
+		      off >= (fcmh_2_fsz(mfh->mfh_fcmh)))) {
 		rc = 0;
 		goto out;
 	}
@@ -1634,6 +1635,10 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 				msl_pages_copyin(r[j], p);
 		}
 	}
+
+	if (op == MSL_WRITE)
+		fidc_fcm_size_update(mfh->mfh_fcmh, (size_t)(off + size));
+
 	rc = size;
  out:
 	return (rc);
