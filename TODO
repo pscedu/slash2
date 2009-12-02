@@ -250,43 +250,9 @@ D_ANY
 	slfctl -o file ...
 	slfctl -b *:file *:...
 
-- use a sliding window to track valid cfd's and remove them from the window
-  once they are CLOSE()'d
-
------------------------------------------------- replication interface
-
-# msctl -Q /slash/fn:8-11:PSC,ORNL
-bmaps 8-11 inclusive being replicated to PSC,ORNL
-use msctl -r to check status
-
-# msctl -r /slash/fn -r /slash/fn2:NCSA
-replication status
-===========================================================
- fn                                   btot    bold    %xfer
- /slash/fn
-    PSC                                 25      15    40.0%
-	os--+---+-oo--+---o---s-+----o--soo-+--s--ooo-s--ss
-	-o--oooo--s---ss----+++-----s-+--+--
-    ORNL                                17       1    94.1%
-	--------o----+-----+------+++---------++++----+----
-	+-+---++----+--------------++-------
- /slash/fn2
-    NCSA                                 3       2    33.3%
-	+--s--------o--------------------------------------
-	-----------------
-
-legend:
-	persist		state
- ========================================
-  -			inactive
-  +	*		active
-  o	O		old
-  s	S		scheduled
-
 ----------------------------------------------------------------------
 
-- merge sl_replrq directly into fidc_mds_info
-- get rid of lpid.  zest uses an array to listen on multiple
+- get rid of global lpid var.  zest uses an array to listen on multiple
   interfaces; slash should do the same.
 - slimmns does more than create the immutable namespace, and should
   be more intuitively named for formatting MDS file systems, such as
@@ -297,5 +263,10 @@ legend:
 - do not keep sl_replrq in mem unless a bh_repl is OLD or SCHED
 - add bmap_hdr in replst ctlmsg
 - if P is specified in msctl -Q fn:*P:@SITE, ensure persist is turned on
-
 - filenames with , and : will not make the msctl repl parser happy, reorder
+
+maybe not:
+- merge sl_replrq directly into fidc_mds_info
+- use a sliding window to track valid cfd's and remove them from the window
+  once they are CLOSE()'d
+

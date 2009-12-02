@@ -12,7 +12,7 @@ file system mount daemon runtime control
 .Nm msctl
 .Op Fl HIR
 .Op Fl c Ar cmd
-.Op Fl f Ar fn
+.Op Fl f Ar cmd
 .Op Fl h Ar table
 .Op Fl i Ar iostatspec
 .Op Fl L Ar listspec
@@ -43,6 +43,68 @@ to perform one of the following actions:
 Completely terminate
 .Xr mount_slash 8
 execution.
+.El
+.It Fl f Ar cmd
+Perform a
+.Tn SLASH
+file system operation.
+.Pp
+The following actions are available:
+.Bl -tag -offset 3n -width 3n
+.It Xo
+.Sm off
+.Ic new-repl-policy
+.Op Ic = Ar repl-policy
+.Ic : Ar fn
+.Sm on
+.Xc
+Set the default replication policy for new bmaps
+.Pq file data blocks
+for the specified file
+.Ar fn .
+.Pp
+The following replication policies are recognized:
+.Bl -tag -width one-time
+.It Ic one-time
+Replication requests are completed once then removed from the system.
+Data replicated will continue to exist at replicas even after new
+.Tn I/O
+invalidates these copies.
+.Pp
+See
+.Fl r
+for checking the replication status of bmaps.
+.Pp
+This is the default mode.
+.It Ic persist
+Perpetually propagate any new
+.Tn I/O
+done to a bmap to other replicas where the bmap is registered for replication.
+.El
+.It Xo
+.Sm off
+.Ic bmap-repl-policy= Ar repl-policy
+.Ic : Ar bmapspec Ic : Ar fn
+.Sm on
+.Xc
+Set the replication policy for all bmaps specified in
+.Ar bmapspec
+for the given file
+.Ar fn .
+.Pp
+.Ar bmapspec
+has the following format:
+.Bd -literal -offset indent
+.Sm off
+.Ar bmapno-min
+.Op Li -\& Ar bmapno-max
+.Op Li ,\& Ar ...
+.Sm on
+.Ed
+.Pp
+The value
+.Li Sq *
+will effect all bmaps currently residing in the file.
 .El
 .It Fl H
 Suppress display of headers.
