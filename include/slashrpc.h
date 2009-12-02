@@ -545,13 +545,13 @@ struct srm_setattr_req {
 	int32_t			to_set;
 };
 
-struct srm_set_newreplpol {
-	char			fn[PATH_MAX];
+struct srm_set_newreplpol_req {
+	struct slash_fidgen	fg;
 	int32_t			pol;
 };
 
-struct srm_set_bmapreplpol {
-	char			fn[PATH_MAX];
+struct srm_set_bmapreplpol_req {
+	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	int			pol;
 };

@@ -643,7 +643,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	fmdsi = fidc_fid2fmdsi((slfid_t)mq->ino, &fcmh);
+	fmdsi = fidc_fid2fmdsi(mq->ino, &fcmh);
 	if (fmdsi)
 		psc_assert(fcmh);
 	/* An fmdsi means that the file is 'open' and therefore
@@ -669,6 +669,39 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 }
 
 int
+slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
+{
+	struct srm_set_newreplpol_req *mq;
+	struct slash_inode_handle *ih;
+	struct srm_generic_rep *mp;
+	struct fidc_membh *fcmh;
+
+	RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = fidc_lookup_load_fg(&mq->fg, &rootcreds, &fcmh);
+	if (mp->rc)
+		return (0);
+	ih = fcmh_2_inoh(fcmh);
+	mp->rc = mds_inox_ensure_loaded(ih);
+	if (mp->rc == 0) {
+		ih->inoh_extras->inox_newbmap_policy = mq->pol;
+		ih->inoh_flags |= INOH_EXTRAS_DIRTY;
+		mds_inode_sync(ih);
+	}
+	fidc_membh_dropref(fcmh);
+	return (0);
+}
+
+int
+slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
+{
+	struct srm_set_bmapreplpol_req *mq;
+	struct srm_generic_rep *mp;
+
+	RSX_ALLOCREP(rq, mq, mp);
+	return (0);
+}
+
+int
 slm_rmc_handle_statfs(struct pscrpc_request *rq)
 {
 	struct srm_statfs_req *mq;
@@ -678,7 +711,6 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = zfsslash2_statfs(zfsVfs, &mp->stbv);
-
 	RETURN(0);
 }
 
@@ -849,6 +881,12 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_SETATTR:
 		rc = slm_rmc_handle_setattr(rq);
+		break;
+	case SRMT_SET_NEWREPLPOL:
+		rc = slm_rmc_handle_set_newreplpol(rq);
+		break;
+	case SRMT_SET_BMAPREPLPOL:
+		rc = slm_rmc_handle_set_bmapreplpol(rq);
 		break;
 	case SRMT_STATFS:
 		rc = slm_rmc_handle_statfs(rq);
