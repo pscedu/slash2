@@ -613,16 +613,23 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		}
 		mion = mri->mri_data;
 
-		if (slm_geticonn(resm) == NULL)
-			goto end_loop;
+		/*
+		 * If we fail to establish a connection, try next node.
+		 * XXX: handle the case when we fail to contack all nodes.
+		 */
+		if (slm_geticonn(resm) == NULL) {
+			freelock(&mri->mri_lock);
+			continue;
+		}
 
 		DEBUG_BMAP(PLL_TRACE, bmap, "res(%s) ion(%s)",
 			   res->res_name, libcfs_nid2str(res->res_nids[n]));
 
 		atomic_inc(&mion->mi_refcnt);
 		mdsi->bmdsi_wr_ion = mion;
- end_loop:
 		freelock(&mri->mri_lock);
+		break;
+
 	} while (--x);
 
 	if (!mdsi->bmdsi_wr_ion)
