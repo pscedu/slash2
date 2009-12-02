@@ -97,6 +97,7 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 
 	if (lk)
 		locked = reqlock(lk);
+ restart:
 
 	if (exp)
 		peernid = exp->exp_connection->c_peer.nid;
@@ -124,16 +125,34 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 		/* initialize service */
 		*csvcp = rpc_csvc_create(rqptl, rpptl);
 	}
+#define RECONNECT_INTV 30	/* seconds */
 	csvc = *csvcp;
 	if ((csvc->csvc_flags & CSVCF_INIT) == 0 ||
 	    ((csvc->csvc_flags & CSVCF_FAILED) &&
-	    csvc->csvc_mtime + 30 < time(NULL))) {
+	    csvc->csvc_mtime + RECONNECT_INTV < time(NULL))) {
 		if (exp) {
 			atomic_inc(&exp->exp_connection->c_refcount);
 			csvc->csvc_import->imp_connection = exp->exp_connection;
+		} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
+			if (wakef == (void *)psc_waitq_wakeall) {
+				psc_waitq_wait(wakearg, lk);
+				reqlock(lk);
+//			} else if (wakef == psc_multilock_cond_wake) {
+//				psc_multilock_addcond(ml, wakearg);
+//				if (lk)
+//					ureqlock(lk, locked);
+//				return (NULL);
+			} else
+				psc_fatalx("bad wakef");
+			goto restart;
 		} else {
+			csvc->csvc_flags |= CSVCF_CONNECTING;
+			freelock(lk);
 			rc = rpc_issue_connect(peernid, csvc->csvc_import,
 			    magic, version);
+			reqlock(lk);
+			csvc->csvc_flags &= ~CSVCF_CONNECTING;
+
 			csvc->csvc_mtime = time(NULL);
 			if (rc)
 				csvc->csvc_flags |= CSVCF_FAILED;
