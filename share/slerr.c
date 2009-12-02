@@ -18,6 +18,7 @@ char *slash_errstrs[] = {
 	"I/O node is not a replica",
 	"Transaction could not be started",
 	"Short I/O",
+	"Unknown resource",
 	NULL
 };
 
