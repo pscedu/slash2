@@ -41,8 +41,8 @@ struct sl_resource {
 	enum sl_res_type	 res_type;
 	sl_ios_id_t		*res_peers;
 	uint32_t		 res_npeers;
-	uint32_t		 res_nnids;			/* number of node ID */
-	lnet_nid_t		*res_nids;			/* array of node IDs */
+	uint32_t		 res_nnids;			/* number of res_nids */
+	lnet_nid_t		*res_nids;			/* network addresses */
 	char			 res_fsroot[PATH_MAX];
 	void			*res_pri;
 	struct sl_site		*res_site;
