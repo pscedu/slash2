@@ -83,20 +83,14 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
     sl_ios_id_t ios_id, int rw)
 {
 	char buf[DESCBUF_REPRLEN];
+	lnet_process_id_t *prid;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 
 	if (sbdb->sbdb_secret.sbs_magic != SBDB_MAGIC)
 		return (EBADF);
-	if (memcmp(&sbdb->sbdb_secret.sbs_cli_prid,
-	    &cli_prid, sizeof(cli_prid))) {
-		char cp[PSC_NIDSTR_SIZE], sp[PSC_NIDSTR_SIZE];
-
-		psc_errorx("bad clipr, bdbuf says %s but client is %s",
-		    psc_id2str(sbdb->sbdb_secret.sbs_cli_prid, cp),
-		    psc_id2str(cli_prid, sp));
+	if (prid->nid != cli_prid.nid || prid->pid != cli_prid.pid)
 		return (EBADF);
-	}
 	if (rw == SL_READ) {
 		/* Read requests can get by with looser authentication. */
 		if ((sbdb->sbdb_secret.sbs_ion_nid != ion_nid) &&
