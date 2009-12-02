@@ -124,7 +124,7 @@ bmap_lookup(struct fidc_membh *f, sl_blkno_t n)
  * @f: fcmh.
  * @n: bmap number.
  * @bmap_init_fn: CLI/ION/MDS-specific initialization routine.
- * Notes: returns the bmap locked.
+ * Notes: returns the bmap referenced.
  */
 struct bmapc_memb *
 bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n,

@@ -22,6 +22,6 @@ typedef uint64_t sl_ino_t;
 #define SL_RES_BITS		16
 
 #define SL_SITE_MASK		0xffff0000
-#define SL_RES_MASK		0x0000ffff
+#define SL_RES_MASK		0x0000ffff	/* resource mask */
 
 #endif /* _SL_TYPES_H_ */
