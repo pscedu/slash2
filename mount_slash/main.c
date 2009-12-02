@@ -13,17 +13,17 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "psc_ds/pool.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
-#include "pfl/cdefs.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
-#include "psc_util/time.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
+#include "psc_util/time.h"
 #include "psc_util/usklndthr.h"
 
 #include "bmap_cli.h"
@@ -37,12 +37,15 @@
 #include "pathnames.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
+#include "slerr.h"
 
 sl_ios_id_t	 prefIOS = IOS_ID_ANY;
 int		 fuse_debug;
 const char	*progname;
 char		 ctlsockfn[] = _PATH_MSCTLSOCK;
 char		 mountpoint[PATH_MAX];
+
+struct sl_resm	*slc_rmc_resm;
 
 struct vbitmap	 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t	 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
@@ -271,7 +274,7 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 
 	c = NULL;
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_ACCESS, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -409,7 +412,7 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	h = mfh->mfh_fcmh;
 	psc_assert(ino == fcmh_2_fid(h));
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    (fi->flags & O_DIRECTORY) ? SRMT_OPENDIR : SRMT_OPEN,
 	    rq, mq, mp);
 	if (rc)
@@ -533,7 +536,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	 *  any other creates to this pathame will block in
 	 *  fidc_child_wait_locked() until we release the fcc.
 	 */
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_CREATE, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -675,7 +678,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 	ureqlock(&fcmh->fcmh_lock, locked);
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_GETATTR, rq, mq, mp);
 	if (rc)
 		return (rc);
@@ -786,7 +789,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 
 	/* Create and initialize the LINK RPC.
 	 */
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_LINK, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -849,7 +852,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	}
 	/* Create and initialize the MKDIR RPC.
 	 */
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_MKDIR, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -902,7 +905,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	}
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    (isfile ? SRMT_UNLINK : SRMT_RMDIR), rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1007,7 +1010,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		return (ENOTDIR);
 	}
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_READDIR, rq, mq, mp);
 	if (rc) {
 		fidc_membh_dropref(d);
@@ -1097,7 +1100,7 @@ slash_lookuprpc(const struct slash_creds *cr, struct fidc_membh *p,
 	if (strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_LOOKUP, rq, mq, mp);
 	if (rc)
 		return (rc);
@@ -1204,7 +1207,7 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 
 	msfsthr_ensure();
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_READLINK, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1253,7 +1256,7 @@ slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	psc_assert(h->fcmh_state & FCMH_FCOO_CLOSING);
 	freelock(&h->fcmh_lock);
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_RELEASE, rq, mq, mp);
 	if (rc)
 		return (rc);
@@ -1334,7 +1337,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	    strlen(newname) > NAME_MAX)
 		return (ENAMETOOLONG);
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_RENAME, rq, mq, mp);
 	if (rc)
 		return (rc);
@@ -1405,7 +1408,7 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 
 	msfsthr_ensure();
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_STATFS, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1444,7 +1447,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	if (!p)
 		return (EINVAL);
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_SYMLINK, rq, mq, mp);
 	if (rc) {
 		fidc_membh_dropref(p);
@@ -1511,8 +1514,8 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 
 	c = NULL;
 
-	rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-			SRMT_SETATTR, rq, mq, mp);
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	    SRMT_SETATTR, rq, mq, mp);
 	if (rc)
 		goto out;
 
@@ -1666,6 +1669,7 @@ void *
 ms_init(__unusedx struct fuse_conn_info *conn)
 {
 	char *name;
+	int rc;
 
 	if (getenv("LNET_NETWORKS") == NULL)
 		psc_fatalx("please export LNET_NETWORKS");
@@ -1689,8 +1693,12 @@ ms_init(__unusedx struct fuse_conn_info *conn)
 	mstimerthr_spawn();
 	msbmapflushthr_spawn();
 
-	if (msrmc_connect(name))
+	rc = slc_rmc_setmds(name);
+	if (rc)
+		psc_fatalx("%s: %s", name, slstrerror(rc));
+	if (slc_rmc_getimp() == NULL)
 		psc_fatal("unable to connect to MDS");
+
 	if ((name = getenv("SLASH2_PIOS_ID")) != NULL) {
 		if ((prefIOS = libsl_str2id(name)) == IOS_ID_ANY)
 			psc_warnx("SLASH2_PIOS_ID (%s) does not resolve to "

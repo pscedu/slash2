@@ -1,19 +1,18 @@
 /* $Id$ */
 
+#include "pfl/cdefs.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
-#include "pfl/cdefs.h"
 #include "psc_util/strlcpy.h"
 
 #include "mount_slash.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
+#include "slerr.h"
 
-struct slashrpc_cservice *mds_csvc;
-
-lnet_process_id_t lpid;
+lnet_process_id_t	lpid;
 
 /* Slash RPC channel for client from MDS. */
 #define SRCM_NTHREADS	8
@@ -43,23 +42,44 @@ slc_rpc_initsvc(void)
 	svh->svh_rep_portal = SRCM_REP_PORTAL;
 	svh->svh_type = MSTHRT_RCM;
 	svh->svh_nthreads = SRCM_NTHREADS;
-	svh->svh_handler = msrcm_handler;
+	svh->svh_handler = slc_rcm_handler;
 	strlcpy(svh->svh_svc_name, SRCM_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct msrcm_thread);
-
-	/* Setup MDS <- client service */
-	mds_csvc = rpc_csvc_create(SRMC_REQ_PORTAL, SRMC_REP_PORTAL);
 }
 
 int
-msrmc_connect(const char *name)
+slc_rmc_setmds(const char *name)
 {
+	struct sl_resource *res;
+	struct sl_resm *resm;
 	lnet_nid_t nid;
 
 	nid = libcfs_str2nid(name);
-	if (nid == LNET_NID_ANY)
-		psc_fatalx("invalid server name: %s", name);
-	if (rpc_issue_connect(nid, mds_import, SRMC_MAGIC, SRMC_VERSION))
-		psc_error("rpc_connect %s", name);
+	if (nid == LNET_NID_ANY) {
+		res = libsl_str2res(name);
+		if (res == NULL) {
+			psc_fatalx("%s: unknown resource", name);
+			return (SLERR_RES_UNKNOWN);
+		}
+		nid = res->res_nids[0];
+	} else {
+		resm = libsl_nid2resm(nid);
+		res = resm->resm_res;
+	}
+	slc_rmc_resm = resm;
 	return (0);
+}
+
+struct pscrpc_import *
+slc_rmc_getimp(void)
+{
+	struct slashrpc_cservice *csvc;
+
+	do {
+		csvc = slc_getmconn(slc_rmc_resm);
+		if (csvc == NULL)
+			/* XXX try to connect to another MDS */
+			psc_fatalx("unable to establish MDS connection");
+	} while (csvc == NULL);
+	return (csvc->csvc_import);
 }
