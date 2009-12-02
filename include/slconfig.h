@@ -34,20 +34,21 @@ enum sl_res_type {
 };
 
 struct sl_resource {
-	char			 res_name[RES_NAME_MAX];
+	char			 res_name[RES_NAME_MAX];	/* resource name */
 	char			*res_desc;
 	char			*res_peertmp[SL_PEER_MAX];
 	sl_ios_id_t		 res_id;
 	enum sl_res_type	 res_type;
 	sl_ios_id_t		*res_peers;
 	uint32_t		 res_npeers;
-	uint32_t		 res_nnids;
-	lnet_nid_t		*res_nids;
+	uint32_t		 res_nnids;			/* number of node ID */
+	lnet_nid_t		*res_nids;			/* array of node IDs */
 	char			 res_fsroot[PATH_MAX];
 	void			*res_pri;
 	struct sl_site		*res_site;
 };
 
+/* SLASH resource member structure */
 struct sl_resm {
 	char			 resm_addrbuf[RESM_ADDRBUF_SZ];
 	lnet_nid_t		 resm_nid;
