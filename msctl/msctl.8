@@ -54,7 +54,7 @@ The following actions are available:
 .It Xo
 .Sm off
 .Ic new-repl-policy
-.Op Ic = Ar repl-policy
+.Ic = Ar repl-policy
 .Ic : Ar fn
 .Sm on
 .Xc
@@ -73,7 +73,8 @@ invalidates these copies.
 .Pp
 See
 .Fl r
-for checking the replication status of bmaps.
+for checking the replication status of bmaps and retrieving the current
+default replication policy of files.
 .Pp
 This is the default mode.
 .It Ic persist
@@ -105,6 +106,10 @@ has the following format:
 The value
 .Li Sq *
 will effect all bmaps currently residing in the file.
+.Pp
+See
+.Fl r
+for inspecting the replication policy of bmaps.
 .El
 .It Fl H
 Suppress display of headers.

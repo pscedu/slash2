@@ -189,6 +189,129 @@ parse_replrq(int code, char *replrqspec,
 	}
 }
 
+struct repl_policy {
+	const char	*rp_name;
+	int		 rp_value;
+} repl_policies[] = {
+	{ "persist",	BRP_PERSIST },
+	{ "one-time",	BRP_ONETIME }
+};
+
+int
+lookup_repl_policy(const char *name)
+{
+	int n;
+
+	for (n = 0; n < nitems(repl_policies); n++)
+		if (strcmp(name, repl_policies[n].rp_name) == 0)
+			return (repl_policies[n].rp_value);
+	errx(1, "%s: invalid replication policy", name);
+}
+
+void
+h_fncmd_new_repl_policy(char *val, char *fn)
+{
+	struct msctlmsg_fncmd_newreplpol *mfnrp;
+	int rp;
+
+	if (val)
+		errx(1, "new-repl-policy: no policy specified");
+	if (fn == NULL)
+		errx(1, "new-repl-policy: no file specified");
+
+	rp = lookup_repl_policy(val);
+
+	mfnrp = psc_ctlmsg_push(MSCMT_SET_NEWREPLPOL, sizeof(*mfnrp));
+	mfnrp->mfnrp_pol = rp;
+	if (strlcpy(mfnrp->mfnrp_fn, fn,
+	    sizeof(mfnrp->mfnrp_fn)) >= sizeof(mfnrp->mfnrp_fn)) {
+		errno = ENAMETOOLONG;
+		err(1, "%s", fn);
+	}
+}
+
+void
+h_fncmd_bmap_repl_policy(char *val, char *bmapspec)
+{
+	struct msctlmsg_fncmd_bmapreplpol *mfbrp;
+	char *fn, *bmapno, *next, *endp, *bend;
+	sl_bmapno_t bmin, bmax;
+	long l;
+	int rp;
+
+	if (val == NULL)
+		errx(1, "bmap-repl-policy: no policy specified");
+	if (bmapspec == NULL)
+		errx(1, "bmap-repl-policy: no bmapspec specified");
+
+	rp = lookup_repl_policy(val);
+
+	fn = strchr(bmapspec, ':');
+	if (fn == NULL)
+		errx(1, "bmap-repl-policy: no file specified");
+	*fn++ = '\0';
+
+	for (bmapno = bmapspec; bmapno; bmapno = next) {
+		if ((next = strchr(bmapno, ',')) != NULL)
+			*next++ = '\0';
+		l = strtol(bmapno, &endp, 10);
+		if (l < 0 || l > UINT32_MAX || endp == bmapno)
+			errx(1, "%s: invalid bmap number", bmapno);
+		bmin = bmax = l;
+
+		/* parse bmap range */
+		if (*endp == '-') {
+			endp++;
+			l = strtol(endp, &bend, 10);
+			if (l < 0 || l <= bmin ||
+			    bend == endp || *bend != '\0')
+				errx(1, "%s: invalid bmapspec", endp);
+			bmax = l;
+		} else if (*endp != '\0')
+			errx(1, "%s: invalid bmapspec", bmapno);
+		for (; bmin <= bmax; bmin++) {
+			mfbrp = psc_ctlmsg_push(MSCMT_SET_BMAPREPLPOL,
+			    sizeof(*mfbrp));
+			mfbrp->mfbrp_pol = rp;
+			mfbrp->mfbrp_bmapno = bmin;
+			if (strlcpy(mfbrp->mfbrp_fn, fn,
+			    sizeof(mfbrp->mfbrp_fn)) >=
+			    sizeof(mfbrp->mfbrp_fn)) {
+				errno = ENAMETOOLONG;
+				err(1, "%s", fn);
+			}
+		}
+	}
+}
+
+struct fncmd_handler {
+	const char	 *fh_name;
+	void		(*fh_handler)(char *, char *);
+} fncmds[] = {
+	{ "new-repl-policy",	h_fncmd_new_repl_policy },
+	{ "bmap-repl-policy",	h_fncmd_bmap_repl_policy }
+};
+
+void
+parse_fncmd(char *cmd)
+{
+	char *p, *val;
+	int n;
+
+	p = strchr(cmd, ':');
+	if (p)
+		*p++ = '\0';
+	val = strchr(cmd, '=');
+	if (val)
+		*val++ = '\0';
+	for (n = 0; n < nitems(fncmds); n++)
+		if (strcmp(fncmds[n].fh_name, cmd) == 0) {
+			fncmds[n].fh_handler(p, val);
+			return;
+		}
+	warnx("%s: unknown file command", cmd);
+}
+
 int
 replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 {
@@ -355,7 +478,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HIR] [-c cmd] [-h table] [-i iostat] [-L listspec] [-m meter]\n"
+	    "usage: %s [-HIR] [-c cmd] [-f cmd] [-h table] [-i iostat] [-L listspec] [-m meter]\n"
 	    "\t[-P pool] [-p param[=value]] [-Q replrqspec] [-r replrqspec] [-S socket]\n"
 	    "\t[-s value] [-U replrqspec]\n",
 	    progname);
@@ -371,10 +494,13 @@ main(int argc, char *argv[])
 	pfl_init();
 	progname = argv[0];
 	sockfn = _PATH_MSCTLSOCK;
-	while ((c = getopt(argc, argv, "c:Hh:Ii:L:m:P:p:Q:Rr:S:s:U:")) != -1)
+	while ((c = getopt(argc, argv, "c:f:Hh:Ii:L:m:P:p:Q:Rr:S:s:U:")) != -1)
 		switch (c) {
 		case 'c':
 			psc_ctlparse_cmd(optarg);
+			break;
+		case 'f':
+			parse_fncmd(optarg);
 			break;
 		case 'H':
 			psc_ctl_noheader = 1;

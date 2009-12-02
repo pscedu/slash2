@@ -36,6 +36,18 @@ struct msctlmsg_replrq {
 	sl_bmapno_t		mrq_bmapno;
 };
 
+struct msctlmsg_fncmd_newreplpol {
+	char			mfnrp_fn[PATH_MAX];
+	int			mfnrp_pol;
+};
+
+
+struct msctlmsg_fncmd_bmapreplpol {
+	char			mfbrp_fn[PATH_MAX];
+	sl_bmapno_t		mfbrp_bmapno;
+	int			mfbrp_pol;
+};
+
 #define REPLRQ_BMAPNO_ALL	(-1)
 
 /* custom mount_slash message types */
@@ -43,7 +55,8 @@ struct msctlmsg_replrq {
 #define MSCMT_DELREPLRQ		(NPCMT + 1)
 #define MSCMT_GETREPLST		(NPCMT + 2)
 #define MSCMT_GETREPLST_SLAVE	(NPCMT + 3)
-#define MSCMT_RECONFIG		(NPCMT + 4)
+#define MSCMT_SET_BMAPREPLPOL	(NPCMT + 4)
+#define MSCMT_SET_NEWREPLPOL	(NPCMT + 5)
 
 /* mount_slash control commands */
 #define MSCC_EXIT	0
