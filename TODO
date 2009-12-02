@@ -219,10 +219,6 @@ D_ANY
 - remove "iod" from bmdsiod
 - new ctls for managing persistent replication:
 
-  low-level persistence control primitives:
-    $ msctl [-R] -f new-repl-policy=persist|onetime:fn
-    $ msctl [-R] -f bmap-repl-policy=persist|onetime:4-6,9:fn
-
   mid-level persistence control aliases:
     $ slfctl [-R] -p file ...				# new-repl-policy=persist
     $ slfctl [-R] -o file ...				# new-repl-policy=onetime
