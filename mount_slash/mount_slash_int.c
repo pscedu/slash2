@@ -993,6 +993,10 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		// XXX Freeing of dynarray, bmpce's, etc
 		return (rq->rq_status);
 	}
+
+	spinlock(&r->biorq_lock);
+	psc_assert(r->biorq_flags & BIORQ_SCHED);
+
 	/* Call the inflight CB only on the iov's in the dynarray -
 	 *   not the iov's in the request since some of those may
 	 *   have already been staged in.
@@ -1024,7 +1028,11 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		bmpce->bmpce_waitq = NULL;
 		freelock(&bmpce->bmpce_lock);
 	}
+
+	r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP|BIORQ_SCHED);
+	DEBUG_BIORQ(PLL_INFO, r, "readio cb complete");
 	psc_waitq_wakeall(&r->biorq_waitq);
+	freelock(&r->biorq_lock);
 
 	/* Free the dynarray which was allocated in msl_readio_rpc_create().
 	 */
@@ -1078,7 +1086,8 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 
 	biorqs = args->pointer_arg[0];
 
-	DEBUG_REQ(PLL_INFO, req, "biorqs=%p", biorqs);
+	DEBUG_REQ(PLL_INFO, req, "biorqs=%p len=%d", 
+		  biorqs, dynarray_len(biorqs));
 
 	for (i=0; i < dynarray_len(biorqs); i++) {
 		r = dynarray_getpos(biorqs, i);
@@ -1087,6 +1096,8 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 		psc_assert(r->biorq_flags & BIORQ_INFL);
 		psc_assert(r->biorq_flags & BIORQ_SCHED);
 		r->biorq_flags &= ~BIORQ_INFL;
+
+		DEBUG_BIORQ(PLL_INFO, r, "destroying");
 		freelock(&r->biorq_lock);
 
 		msl_biorq_destroy(r);
@@ -1421,7 +1432,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 	struct bmap_pagecache_entry *bmpce;
 	int rc, i, npages=dynarray_len(&r->biorq_pages);
 
-		if (r->biorq_rqset) {
+	if (r->biorq_rqset) {
 		rc = pscrpc_set_wait(r->biorq_rqset);
 		if (rc)
 			// XXX need to cleanup properly

@@ -400,16 +400,35 @@ bmap_flush_coalesce_map(const struct dynarray *biorqs, struct iovec **iovset)
 			reqsz -= iovs[niovs].iov_len;
 			off += iovs[niovs].iov_len;
 			first_iov = 0;
-			niovs++;
 
 			psc_info("biorq=%p bmpce=%p base=%p len=%zu "
 				 "niov=%d reqsz=%u (new)",
 				 r, bmpce, iovs[niovs].iov_base,
 				 iovs[niovs].iov_len, niovs, reqsz);
+			niovs++;
 		}
 	}
 	psc_assert(!reqsz);
 	return (niovs);
+}
+
+__static int
+bmap_flush_biorq_rbwdone(const struct bmpc_ioreq *r)
+{	
+	struct bmap_pagecache_entry *bmpce;
+	int rc=0;
+	
+	bmpce = (r->biorq_flags & BIORQ_RBWFP) ?
+		psc_dynarray_getpos(&r->biorq_pages, 0) :
+		psc_dynarray_getpos(&r->biorq_pages, 
+				    dynarray_len(&r->biorq_pages)-1);
+	
+	spinlock(&bmpce->bmpce_lock);
+	if (bmpce->bmpce_flags & BMPCE_DATARDY)
+		rc = 1;
+	freelock(&bmpce->bmpce_lock);
+	
+	return (rc);
 }
 
 __static struct dynarray *
@@ -520,6 +539,9 @@ bmap_flush(void)
 
 		PLL_FOREACH(r, &bmpc->bmpc_pndg) {
 			spinlock(&r->biorq_lock);
+
+			DEBUG_BIORQ(PLL_TRACE, r, "consider for flush");
+
 			if (r->biorq_flags & BIORQ_INFL) {
 				psc_assert(r->biorq_flags & BIORQ_SCHED);
 				freelock(&r->biorq_lock);
@@ -528,6 +550,16 @@ bmap_flush(void)
 			} else if (r->biorq_flags & BIORQ_READ) {
 				freelock(&r->biorq_lock);
 				continue;
+
+			} else if ((r->biorq_flags & BIORQ_RBWFP) ||
+				   (r->biorq_flags & BIORQ_RBWLP)) {
+				/* Wait for RBW I/O to complete before 
+				 *  pushing out any pages.
+				 */
+				if (!bmap_flush_biorq_rbwdone(r)) {
+					freelock(&r->biorq_lock); 
+					continue;				
+				}
 			}
 
 			r->biorq_flags |= BIORQ_SCHED;
