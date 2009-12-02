@@ -146,13 +146,14 @@ enum {
 	SRMT_REPL_SCHEDWK,
 	SRMT_RMDIR,
 	SRMT_SETATTR,
+	SRMT_SET_BMAPREPLPOL,
+	SRMT_SET_NEWREPLPOL,
 	SRMT_STATFS,
 	SRMT_SYMLINK,
 	SRMT_TRUNCATE,
 	SRMT_UNLINK,
 	SRMT_UTIMES,
-	SRMT_WRITE,
-	SNRT
+	SRMT_WRITE
 };
 
 #define DESCBUF_REPRLEN	45
@@ -471,8 +472,9 @@ struct srm_replst_master_req {
 	struct slash_fidgen	fg;
 	int32_t			id;		/* user-provided passback value */
 	int32_t			rc;		/* or EOF */
-	uint32_t		nbmaps;
-	uint32_t		nrepls;
+	uint32_t		nbmaps;		/* # of bmaps in this payload */
+	uint32_t		newreplpol;	/* default replication policy */
+	uint32_t		nrepls;		/* # of I/O systems in 'repls' */
 	sl_replica_t		repls[SL_MAX_REPLICAS];
 };
 
@@ -543,6 +545,17 @@ struct srm_setattr_req {
 	int32_t			to_set;
 };
 
+struct srm_set_newreplpol {
+	char			fn[PATH_MAX];
+	int32_t			pol;
+};
+
+struct srm_set_bmapreplpol {
+	char			fn[PATH_MAX];
+	sl_bmapno_t		bmapno;
+	int			pol;
+};
+
 #define srm_setattr_rep srm_getattr_rep
 
 struct srm_statfs_req {
@@ -587,8 +600,9 @@ struct slashrpc_cservice {
 	time_t			 csvc_mtime;
 };
 
-#define CSVCF_INIT	(1 << 0)
-#define CSVCF_FAILED	(1 << 1)
+#define CSVCF_INIT		(1 << 0)
+#define CSVCF_FAILED		(1 << 1)
+#define CSVCF_CONNECTING	(1 << 2)
 
 enum slconn_type {
 	SLCONNT_CLI,

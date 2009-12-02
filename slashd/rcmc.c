@@ -158,6 +158,7 @@ slm_rcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 		mq->fg = *REPLRQ_FG(rrq);
 		mq->nbmaps = REPLRQ_NBMAPS(rrq);
 		mq->nrepls = REPLRQ_NREPLS(rrq);
+		mq->newreplpol = REPLRQ_INOX(rrq)->inox_newbmap_policy;
 		memcpy(mq->repls, REPLRQ_INO(rrq)->ino_repls,
 		    MIN(mq->nrepls, INO_DEF_NREPLS) * sizeof(*mq->repls));
 		if (mq->nrepls > INO_DEF_NREPLS)

@@ -458,7 +458,9 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ NULL,			NULL,			0, NULL },
 	{ NULL,			NULL,			0, NULL },
 	{ NULL,			NULL,			0, replst_savdat },
-	{ replst_slave_prhdr,	replst_slave_prdat,	0, replst_slave_check }
+	{ replst_slave_prhdr,	replst_slave_prdat,	0, replst_slave_check },
+	{ NULL,			NULL,			0, NULL },
+	{ NULL,			NULL,			0, NULL }
 };
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
