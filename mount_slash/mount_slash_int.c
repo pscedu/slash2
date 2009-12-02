@@ -24,21 +24,19 @@
 
 #include "bmap.h"
 #include "bmap_cli.h"
-#include "buffer.h"
 #include "bmpc.h"
+#include "buffer.h"
 #include "fidcache.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
 #include "slconfig.h"
+#include "slerr.h"
 
 #define MSL_PAGES_GET 0
 #define MSL_PAGES_PUT 1
 
-extern struct psc_listcache bmapFlushQ;
-
 __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
-
 
 __static void
 msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
@@ -236,7 +234,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 	pll_add(bmap_2_msbmpc(b).bmpc_pndg, r);
 }
 
-
 __static void
 bmap_biorq_del(struct bmpc_ioreq *r)
 {
@@ -347,20 +344,19 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 		psc_waitq_wakeall(&r->biorq_waitq);
 		sched_yield();
 	}
-	
+
 	msl_biorq_unref(r);
 	bmap_biorq_del(r);
-	
+
 	dynarray_free(&r->biorq_pages);
-	
+
 	if (r->biorq_rqset)
 		pscrpc_set_destroy(r->biorq_rqset);
-	
+
 	psc_assert(!atomic_read(&r->biorq_waitq.wq_nwaitors));
-	
+
 	PSCFREE(r);
 }
-
 
 struct msl_fhent *
 msl_fhent_new(struct fidc_membh *f)
@@ -423,7 +419,6 @@ msl_bmap_release(struct bmapc_memb *b)
 
 	bmap_remove(b);
 }
-
 
 __static void
 bmap_biorq_waitempty(struct bmapc_memb *b)
@@ -517,10 +512,8 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	}
 	FCMH_ULOCK(f);
 
-	/* Build the new RPC request.
-	 */
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-			     SRMT_GETBMAP, rq, mq, mp)) != 0)
+	if ((rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	    SRMT_GETBMAP, rq, mq, mp)) != 0)
 		goto done;
 
 	mq->sfdb  = *fcmh_2_fdb(f);
@@ -575,7 +568,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	bmap->bcm_mode &= ~BMAP_INIT;
 
 	if (getreptbl) {
-		/* XXX don't forget that on write we need to invalidate 
+		/* XXX don't forget that on write we need to invalidate
 		 *   the local replication table..
 		 */
 		FCMH_LOCK(f);
@@ -585,7 +578,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	}
 
 done:
-	if (rc && getreptbl) 
+	if (rc && getreptbl)
 		PSCFREE(f->fcmh_fcoo->fcoo_pri);
 	return (rc);
 }
@@ -608,8 +601,8 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
 
 	psc_assert(rw == SRIC_BMAP_WRITE || rw == SRIC_BMAP_READ);
 
-	if ((rc = RSX_NEWREQ(mds_import, SRMC_VERSION,
-			     SRMT_BMAPCHMODE, rq, mq, mp)) != 0)
+	if ((rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	    SRMT_BMAPCHMODE, rq, mq, mp)) != 0)
 		return (rc);
 
 	mq->sfdb = *fcmh_2_fdb(f);
@@ -618,8 +611,8 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
 
 	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
 		if (mp->rc)
-			psc_warn("msl_bmap_chmode() failed (f=%p) (b=%u)",
-				 f, b);
+			psc_warnx("msl_bmap_chmode() failed (f=%p) (b=%u): %s",
+				 f, b, slstrerror(mp->rc));
 	}
 	return (rc);
 }
@@ -807,72 +800,6 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, uint32_t rw)
 	return (b);
 }
 
-#define MIN_CONNECT_RETRY_SECS 30
-
-__static int
-msl_ion_connect(lnet_nid_t nid, struct cli_imp_ion *c)
-{
-	int rc;
-
-	psc_dbg("Creating new import to %s",
-		libcfs_nid2str(nid));
-
- retry:
-	spinlock(&c->ci_lock);
-
-	if (c->ci_flags & CION_CONNECTED) {
-		psc_assert(c->ci_import);
-		freelock(&c->ci_lock);
-		return (0);
-
-	} else if (c->ci_flags & CION_CONNECTING) {
-		psc_waitq_wait(&c->ci_waitq, &c->ci_lock);
-		goto retry;
-	}
-
-	if (c->ci_flags & CION_CONNECT_FAIL) {
-		struct timespec ts;
-
-		clock_gettime(CLOCK_REALTIME, &ts);
-		if ((ts.tv_sec - c->ci_connect_time.tv_sec) <
-		    MIN_CONNECT_RETRY_SECS)
-			return (-EAGAIN);
-	} else
-		c->ci_flags &= ~CION_CONNECT_FAIL;
-
-
-	psc_assert(!c->ci_import);
-	psc_assert(!((c->ci_flags & CION_CONNECTED) ||
-		     (c->ci_flags & CION_CONNECTING)));
-
-	c->ci_flags |= CION_CONNECTING;
-	freelock(&c->ci_lock);
-
-	if ((c->ci_import = pscrpc_new_import()) == NULL)
-		psc_fatalx("pscrpc_new_import");
-
-	c->ci_import->imp_client->cli_request_portal = SRIC_REQ_PORTAL;
-	c->ci_import->imp_client->cli_reply_portal = SRIC_REP_PORTAL;
-	clock_gettime(CLOCK_REALTIME, &c->ci_connect_time);
-
-	rc = rpc_issue_connect(nid, c->ci_import,
-			       SRIC_MAGIC, SRIC_VERSION);
-
-	spinlock(&c->ci_lock);
-	if (rc) {
-		psc_errorx("rpc_issue_connect() to %s", libcfs_nid2str(nid));
-		pscrpc_import_put(c->ci_import);
-		c->ci_import = NULL;
-		c->ci_flags |= CION_CONNECT_FAIL;
-	} else
-		c->ci_flags |= CION_CONNECTED;
-
-	c->ci_flags &= ~CION_CONNECTING;
-	psc_waitq_wakeall(&c->ci_waitq);
-	freelock(&c->ci_lock);
-
-	return (rc);
-}
 /**
  * msl_bmap_to_import - Given a bmap, perform a series of lookups to
  *	locate the ION import.  The ION was chosen by the mds and
@@ -890,8 +817,8 @@ msl_ion_connect(lnet_nid_t nid, struct cli_imp_ion *c)
 struct pscrpc_import *
 msl_bmap_to_import(struct bmapc_memb *b, int add)
 {
-	struct cli_imp_ion *c;
-	struct sl_resm *r;
+	struct slashrpc_cservice *csvc;
+	struct sl_resm *resm;
 	int locked;
 
 	/* Sanity check on the opcnt.
@@ -899,27 +826,26 @@ msl_bmap_to_import(struct bmapc_memb *b, int add)
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
 	locked = reqlock(&b->bcm_lock);
-	r = libsl_nid2resm(bmap_2_msion(b));
-	if (!r)
+	resm = libsl_nid2resm(bmap_2_msion(b));
+	ureqlock(&b->bcm_lock, locked);
+
+	if (!resm)
 		psc_fatalx("Failed to lookup %s, verify that the slash configs"
 			   " are uniform across all servers",
 			   libcfs_nid2str(bmap_2_msion(b)));
 
-	c = r->resm_pri;
-	ureqlock(&b->bcm_lock, locked);
+	if (!add)
+		return (NULL);
 
-	if (!c->ci_import && add)
-		msl_ion_connect(bmap_2_msion(b), c);
-
-	return (c->ci_import);
+	csvc = slc_geticonn(resm);
+	return (csvc ? csvc->csvc_import : NULL);
 }
-
 
 struct pscrpc_import *
 msl_bmap_choose_replica(struct bmapc_memb *b)
 {
-	struct cli_imp_ion *c;
-	struct resprof_cli_info *r;
+	struct slashrpc_cservice *csvc;
+	struct cli_resprof_info *crpi;
 	struct msl_fcoo_data *mfd;
 	struct sl_resource *res;
 	struct sl_resm *resm;
@@ -939,13 +865,13 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 			   "configs are uniform across all servers",
 			   mfd->mfd_reptbl[0].bs_id);
 
-	r = res->res_pri;
-	spinlock(&r->rci_lock);
-	n = r->rci_cnt++;
-	if (r->rci_cnt >= (int)res->res_nnids)
-		n = r->rci_cnt = 0;
+	crpi = res->res_pri;
+	spinlock(&crpi->crpi_lock);
+	n = crpi->crpi_cnt++;
+	if (crpi->crpi_cnt >= (int)res->res_nnids)
+		n = crpi->crpi_cnt = 0;
 	repl_nid = res->res_nids[n];
-	freelock(&r->rci_lock);
+	freelock(&crpi->crpi_lock);
 
 	psc_trace("trying res(%s) ion(%s)",
 		  res->res_name, libcfs_nid2str(repl_nid));
@@ -956,13 +882,12 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 			   " are uniform across all servers",
 			   libcfs_nid2str(repl_nid));
 
-	c = resm->resm_pri;
-	msl_ion_connect(repl_nid, c);
-
-	return (c->ci_import);
+	csvc = slc_geticonn(resm);
+	return (csvc ? csvc->csvc_import : NULL);
 }
 
-/** msl_readio_cb - rpc callback used only for read or RBW operations.
+/**
+ * msl_readio_cb - rpc callback used only for read or RBW operations.
  *    The primary purpose is to set the bmpce's to DATARDY so that other
  *    threads waiting for DATARDY may be unblocked.
  *  Note: Unref of the biorq will happen after the pages have been
@@ -1040,7 +965,6 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	return (0);
 }
 
-
 int
 msl_io_rpcset_cb_old(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 {
@@ -1050,7 +974,6 @@ msl_io_rpcset_cb_old(__unusedx struct pscrpc_request_set *set, void *arg, int rc
 
 	return (rc);
 }
-
 
 int
 msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
@@ -1076,7 +999,6 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 	return (rc);
 }
 
-
 int
 msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *args)
 {
@@ -1086,7 +1008,7 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 
 	biorqs = args->pointer_arg[0];
 
-	DEBUG_REQ(PLL_INFO, req, "biorqs=%p len=%d", 
+	DEBUG_REQ(PLL_INFO, req, "biorqs=%p len=%d",
 		  biorqs, dynarray_len(biorqs));
 
 	for (i=0; i < dynarray_len(biorqs); i++) {
@@ -1108,7 +1030,6 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 	return (0);
 }
 
-
 int
 msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 {
@@ -1125,7 +1046,6 @@ msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 
 	return (0);
 }
-
 
 __static void
 msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
@@ -1206,7 +1126,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 
 	msl_biorq_destroy(r);
 }
-
 
 __static void
 msl_pages_schedflush(struct bmpc_ioreq *r)
@@ -1559,7 +1478,6 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 	msl_pages_schedflush(r);
 }
 
-
 /**
  * msl_pages_copyout - copy pages to the user application buffer.
  */
@@ -1612,7 +1530,6 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 	psc_assert(!tsize);
 	msl_biorq_destroy(r);
 }
-
 
 /**
  * msl_io - I/O gateway routine which bridges FUSE and the slash2 client
