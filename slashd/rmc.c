@@ -32,7 +32,6 @@
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
-#include "slashexport.h"
 #include "slashrpc.h"
 #include "slerr.h"
 
@@ -79,6 +78,7 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 
 	if (e->exp_private) {
+psc_fatalx("impossible");
 		/*
 		 * XXX this should never happen; it should have been
 		 * cleaned up by the hldrop routine.
@@ -88,26 +88,16 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 		 *   the remaining cached bmaps.
 		 */
 		spinlock(&e->exp_lock);
-		slexp = slashrpc_export_get(e);
+		slexp = slashrpc_export_get(e, SLCONNT_CLI);
 		psc_assert(slexp->slexp_data);
-		slexp->slexp_type |= EXP_CLOSING;
+		slexp->slexp_flags |= EXP_CLOSING;
 		freelock(&e->exp_lock);
 		DEBUG_REQ(PLL_WARN, rq,
 			  "connect rq but export already exists");
 		slashrpc_export_destroy(slexp);
 	}
-	spinlock(&e->exp_lock);
-	slexp = slashrpc_export_get(e);
-
-	psc_assert(!slexp->slexp_data);
-	slexp->slexp_type = MDS_CLI_EXP;
-	slexp->slexp_export = e;
-
-	mexp_cli = slexp->slexp_data = PSCALLOC(sizeof(*mexp_cli));
-	LOCK_INIT(&mexp_cli->mc_lock);
-	slm_initclconn(mexp_cli, e);
-	freelock(&e->exp_lock);
-
+	mexp_cli = mexpcli_get(e);
+	slm_getclconn(e);
 	RETURN(0);
 }
 
@@ -169,7 +159,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	/* Access the reference
 	 */
-	mp->rc = cfdlookup(rq->rq_export, cfd, &m);
+	mp->rc = cfdlookup(rq->rq_export, SLCONNT_CLI, cfd, &m);
 	if (mp->rc)
 		RETURN(mp->rc);
 
@@ -320,7 +310,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-				data, &cfd, &mdsCfdOps, CFD_FILE);
+			    SLCONNT_CLI, data, &cfd, &mdsCfdOps, CFD_FILE);
 
 			if (!mp->rc && cfd) {
 				fdbuf_sign(&cfd->cfd_fdb,
@@ -376,7 +366,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-				data, &cfd, &mdsCfdOps, CFD_FILE);
+			    SLCONNT_CLI, data, &cfd, &mdsCfdOps, CFD_FILE);
 
 			if (!mp->rc && cfd) {
 				fdbuf_sign(&cfd->cfd_fdb,
@@ -424,7 +414,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 		mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-				data, &cfd, &mdsCfdOps, CFD_DIR);
+			    SLCONNT_CLI, data, &cfd, &mdsCfdOps, CFD_DIR);
 
 			if (mp->rc) {
 				psc_error("cfdnew failed rc=%d", mp->rc);
@@ -465,7 +455,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		RETURN(0);
 
-	if (cfdlookup(rq->rq_export, cfd, &m)) {
+	if (cfdlookup(rq->rq_export, SLCONNT_CLI, cfd, &m)) {
 		mp->rc = -errno;
 		RETURN(mp->rc);
 	}
@@ -564,7 +554,7 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 	if (mp->rc)
 		RETURN(0);
 
-	c = cfdget(rq->rq_export, cfd);
+	c = cfdget(rq->rq_export, SLCONNT_CLI, cfd);
 	if (!c) {
 		psc_info("cfdget() failed cfd %"PRId64, cfd);
 		mp->rc = ENOENT;
@@ -585,7 +575,7 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 	m->mexpfcm_flags |= MEXPFCM_CLOSING;
 	MEXPFCM_ULOCK(m);
 
-	rc = cfdfree(rq->rq_export, cfd);
+	rc = cfdfree(rq->rq_export, SLCONNT_CLI, cfd);
 	psc_warnx("cfdfree() cfd %"PRId64" rc=%d",
 		 cfd, rc);
 
@@ -679,6 +669,12 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	struct fidc_membh *fcmh;
 
 	RSX_ALLOCREP(rq, mq, mp);
+
+	if (mq->pol < 0 || mq->pol >= NBRP) {
+		mp->rc = EINVAL;
+		return (0);
+	}
+
 	mp->rc = fidc_lookup_load_fg(&mq->fg, &rootcreds, &fcmh);
 	if (mp->rc)
 		return (0);
@@ -697,9 +693,38 @@ int
 slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_bmapreplpol_req *mq;
+	struct slash_inode_handle *ih;
+	struct bmap_mds_info *bmdsi;
 	struct srm_generic_rep *mp;
+	struct fidc_membh *fcmh;
+	struct bmapc_memb *bcm;
 
 	RSX_ALLOCREP(rq, mq, mp);
+
+	if (mq->pol < 0 || mq->pol >= NBRP) {
+		mp->rc = EINVAL;
+		return (0);
+	}
+
+	mp->rc = fidc_lookup_load_fg(&mq->fg, &rootcreds, &fcmh);
+	if (mp->rc)
+		return (0);
+	ih = fcmh_2_inoh(fcmh);
+	if (!mds_bmap_valid(fcmh, mq->bmapno)) {
+		mp->rc = SLERR_INVALID_BMAP;
+		goto out;
+	}
+	mp->rc = mds_bmap_load(fcmh, mq->bmapno, &bcm);
+	if (mp->rc)
+		goto out;
+	BMAP_LOCK(bcm);
+	bmdsi = bmap_2_bmdsi(bcm);
+	bmdsi->bmdsi_repl_policy = mq->pol;
+	bmdsi->bmdsi_flags |= BMIM_LOGCHG;
+	mds_repl_bmap_rel(bcm);
+
+ out:
+	fidc_membh_dropref(fcmh);
 	return (0);
 }
 
@@ -800,6 +825,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct slmrcm_thread *srcm;
+	struct pscrpc_export *exp;
 	struct psc_thread *thr;
 	size_t id;
 
@@ -815,8 +841,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	srcm = thr->pscthr_private;
 	srcm->srcm_fg = mq->fg;
 	srcm->srcm_id = mq->id;
-	srcm->srcm_csvc = rpc_csvc_fromexp(rq->rq_export,
-	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL);
+	srcm->srcm_csvc = slm_getclconn(exp);
 	pscthr_setready(thr);
 	return (0);
 }

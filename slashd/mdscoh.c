@@ -15,7 +15,6 @@
 #include "mdsexpc.h"
 #include "rpc_mds.h"
 #include "slashd.h"
-#include "slashexport.h"
 #include "slashrpc.h"
 
 struct psc_listcache	pndgBmapCbs;
@@ -111,9 +110,6 @@ mdscoh_queue_req(struct mexpbcm *bref)
 	struct srm_bmap_dio_req *mq;
 	struct srm_generic_rep *mp;
 	struct pscrpc_export *exp=bref->mexpbcm_export;
-	//struct slashrpc_export *slexp=bref->mexpbcm_export->exp_private;
-	struct slashrpc_export *slexp=exp->exp_private;
-	struct mexp_cli *mexpc=slexp->slexp_data;
 	struct slashrpc_cservice *csvc;
 	int rc=0, mode=bref->mexpbcm_mode;
 
@@ -122,7 +118,7 @@ mdscoh_queue_req(struct mexpbcm *bref)
 
 	psc_assert(bref->mexpbcm_net_inf);
 
-	csvc = slm_getclconn(mexpc);
+	csvc = slm_getclconn(exp);
 	if (csvc == NULL)
 		return (-1);
 

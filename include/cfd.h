@@ -36,13 +36,15 @@ struct cfdops {
 	void	*(*cfd_get_pri)(struct cfdent *, struct pscrpc_export *);
 };
 
-struct cfdent * cfdget(struct pscrpc_export *, uint64_t);
+struct cfdent *
+	cfdget(struct pscrpc_export *, enum slconn_type, uint64_t);
 int	cfdcmp(const void *, const void *);
-int	cfdnew(slfid_t, struct pscrpc_export *, void *,
-	    struct cfdent **, struct cfdops *, int);
-int	cfdfree(struct pscrpc_export *, uint64_t);
-void	cfdfreeall(struct pscrpc_export *);
-int	cfdlookup(struct pscrpc_export *, uint64_t, void *);
+int	cfdnew(slfid_t, struct pscrpc_export *, enum slconn_type,
+	    void *, struct cfdent **, struct cfdops *, int);
+int	cfdfree(struct pscrpc_export *, enum slconn_type, uint64_t);
+void	cfdfreeall(struct pscrpc_export *, enum slconn_type);
+int	cfdlookup(struct pscrpc_export *, enum slconn_type, uint64_t,
+	    void *);
 
 SPLAY_HEAD(cfdtree, cfdent);
 SPLAY_PROTOTYPE(cfdtree, cfdent, cfd_entry, cfdcmp);

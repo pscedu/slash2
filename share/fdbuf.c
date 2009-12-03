@@ -122,7 +122,8 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 		return (EBADF);
 
 	*fgp = sbdb->sbdb_secret.sbs_fg;
-	*cfdp = sbdb->sbdb_secret.sbs_cfd;
+	if (cfdp)
+		*cfdp = sbdb->sbdb_secret.sbs_cfd;
 	*bmapnop = sbdb->sbdb_secret.sbs_bmapno;
 	return (0);
 }

@@ -8,8 +8,10 @@
 
 #include "repl_iod.h"
 #include "rpc_iod.h"
-#include "sliod.h"
+#include "slashrpc.h"
+#include "slconfig.h"
 #include "slerr.h"
+#include "sliod.h"
 #include "sltypes.h"
 
 struct pscrpc_nbreqset	 sli_replwk_nbset =

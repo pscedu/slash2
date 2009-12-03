@@ -18,9 +18,11 @@
 #include "psc_rpc/rpc.h"
 #include "psc_util/crc.h"
 
-#include "slconfig.h"
-#include "fid.h"
 #include "creds.h"
+#include "fid.h"
+#include "slconfig.h"
+
+struct cfdtree;
 
 #define SLASH_SVR_PID		54321
 
@@ -156,7 +158,14 @@ enum {
 	SRMT_WRITE
 };
 
-#define DESCBUF_REPRLEN	45
+enum slconn_type {
+	SLCONNT_CLI,
+	SLCONNT_IOD,
+	SLCONNT_MDS,
+	SLNCONNT
+};
+
+#define DESCBUF_REPRLEN	45		/* strlen(base64(SHA256(secret)) */
 
 struct srt_fdb_secret {
 	uint64_t		sfs_magic;
@@ -563,7 +572,7 @@ struct srm_statfs_req {
 };
 
 struct srm_statfs_rep {
-	struct statvfs		stbv;
+	struct statvfs		stbv;	/* XXX use a portable structure */
 	int32_t			rc;
 };
 
@@ -604,26 +613,31 @@ struct slashrpc_cservice {
 #define CSVCF_FAILED		(1 << 1)
 #define CSVCF_CONNECTING	(1 << 2)
 
-enum slconn_type {
-	SLCONNT_CLI,
-	SLCONNT_IOD,
-	SLCONNT_MDS
+struct slashrpc_export {
+	uint64_t		 slexp_nextcfd;
+	struct cfdtree		*slexp_cfdtree;
+	enum slconn_type	 slexp_peertype;
+	void			*slexp_data;
+	int			 slexp_flags;
+	struct pscrpc_export	*slexp_export;
 };
+
+/* slashrpc_export flags */
+#define EXP_CLOSING		(1 << 0)
 
 struct slashrpc_cservice *
 	slconn_get(struct slashrpc_cservice **, struct pscrpc_export *,
 	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
 	    psc_spinlock_t *, void (*)(void *), void *, enum slconn_type);
+
+struct slashrpc_export *
+	slashrpc_export_get(struct pscrpc_export *, enum slconn_type);
 void	slashrpc_export_destroy(void *);
+
 void	slashrpc_csvc_free(struct slashrpc_cservice *);
 
-struct slashrpc_cservice *
-	rpc_csvc_create(uint32_t, uint32_t);
-struct slashrpc_cservice *
-	rpc_csvc_fromexp(struct pscrpc_export *, uint32_t, uint32_t);
-int	rpc_issue_connect(lnet_nid_t, struct pscrpc_import *, uint64_t, uint32_t);
-
 extern lnet_process_id_t lpid;
+extern void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
 
 static __inline void
 slconn_wake_waitq(void *arg)

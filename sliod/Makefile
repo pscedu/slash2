@@ -18,14 +18,12 @@ SRCS+=		slvr_worker.c
 SRCS+=		timer_iod.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
-SRCS+=		${SLASH_BASE}/share/cfd.c
 SRCS+=		${SLASH_BASE}/share/cfg_common.c
 SRCS+=		${SLASH_BASE}/share/fdbuf.c
 SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c
 SRCS+=		${SLASH_BASE}/share/lconf.l
 SRCS+=		${SLASH_BASE}/share/rpc_common.c
-SRCS+=		${SLASH_BASE}/share/slashexport.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
 

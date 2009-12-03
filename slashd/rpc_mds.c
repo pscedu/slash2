@@ -8,11 +8,15 @@
 #include "psc_rpc/service.h"
 #include "psc_util/strlcpy.h"
 
+#include "cfd.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
 
 lnet_process_id_t lpid;
+void (*slexp_freef[SLNCONNT])(struct pscrpc_export *) = {
+	mexpcli_destroy
+};
 
 int
 slm_rim_issue_ping(struct pscrpc_import *imp)
@@ -79,4 +83,35 @@ slm_rpc_initsvc(void)
 	svh->svh_handler = slm_rmc_handler;
 	strlcpy(svh->svh_svc_name, SLM_RMC_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmc_thread);
+}
+
+struct mexp_cli *
+mexpcli_get(struct pscrpc_export *exp)
+{
+	struct slashrpc_export *slexp;
+	struct mexp_cli *mexp_cli;
+	int locked;
+
+	locked = reqlock(&exp->exp_lock);
+	slexp = slashrpc_export_get(exp, SLCONNT_CLI);
+	mexp_cli = slexp->slexp_data;
+	if (mexp_cli == NULL) {
+		mexp_cli = slexp->slexp_data =
+		    PSCALLOC(sizeof(*mexp_cli));
+		LOCK_INIT(&mexp_cli->mc_lock);
+	}
+	ureqlock(&exp->exp_lock, locked);
+	return (mexp_cli);
+}
+
+void
+mexpcli_destroy(struct pscrpc_export *exp)
+{
+	struct slashrpc_export *slexp = exp->exp_private;
+	struct mexp_cli *mexpc = slexp->slexp_data;
+
+	cfdfreeall(exp, slexp->slexp_peertype);
+	if (mexpc && mexpc->mc_csvc)
+		slashrpc_csvc_free(mexpc->mc_csvc);
+	PSCFREE(mexpc);
 }

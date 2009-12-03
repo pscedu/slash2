@@ -5,8 +5,6 @@
 
 #include <sys/types.h>
 
-#include "cfd.h"
-
 struct sli_repl_workrq;
 
 #define SLI_RIM_NTHREADS	8
@@ -56,7 +54,5 @@ int	sli_rmi_setmds(const char *);
 int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
 
 int	sli_rii_issue_repl_read(struct pscrpc_import *, struct sli_repl_workrq *);
-
-extern struct cfd_svrops	*cfdOps;
 
 #endif /* _IO_RPC_H_ */

@@ -5,6 +5,8 @@
 
 #include "psc_util/multilock.h"
 
+#include "mdsexpc.h"
+
 struct pscrpc_request;
 struct pscrpc_export;
 
@@ -64,11 +66,15 @@ slconn_wake_mlcond(void *arg)
 	    &resm2mrmi(resm)->mrmi_lock, slconn_wake_mlcond,		\
 	    &resm2mrmi(resm)->mrmi_mlcond, SLCONNT_MDS)
 
-#define slm_initclconn(mexpcli, exp)					\
-	slconn_get(&(mexpcli)->mc_csvc, (exp), LNET_NID_ANY,		\
-	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,	\
-	    &(mexpcli)->mc_lock, NULL, NULL, SLCONNT_CLI)
+static __inline struct slashrpc_cservice *
+slm_getclconn(struct pscrpc_export *exp)
+{
+	struct mexp_cli *mexpc;
 
-#define slm_getclconn(mexpcli)		slm_initclconn((mexpcli), NULL)
+	mexpc = mexpcli_get(exp);
+	return (slconn_get(&mexpc->mc_csvc, exp, LNET_NID_ANY,
+	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
+	    &mexpc->mc_lock, NULL, NULL, SLCONNT_CLI));
+}
 
 #endif /* _MDS_RPC_H_ */

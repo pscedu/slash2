@@ -166,7 +166,7 @@ fidc_fcm_size_update(struct fidc_membh *h, size_t size)
 	locked = reqlock(&h->fcmh_lock);
 	if (fcm_2_fsz(h->fcmh_fcm) < size)
 		fcm_2_fsz(h->fcmh_fcm) = size;
-	
+
 	ureqlock(&h->fcmh_lock, locked);
 }
 
@@ -665,14 +665,3 @@ fidc_fcmh2fdb(struct fidc_membh *fcmh, struct srt_fd_buf *fdb)
 	ureqlock(&fcmh->fcmh_lock, locked);
 	return (rc);
 }
-
-#if 0
-int
-fidc_fid2cfd(slfid_t f, uint64_t *cfd, struct fidc_membh **fcmh)
-{
-	if (!(*fcmh = fidc_lookup_inode(f)))
-		return (-1);
-
-	return (fidc_fcmh2cfd(*fcmh, cfd));
-}
-#endif

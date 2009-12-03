@@ -9,17 +9,18 @@
 #include "psc_util/lock.h"
 
 #include "slashrpc.h"
+#include "cfd.h"
 
 /*
- * rpc_issue_connect - attempt connection initiation with a peer.
+ * slashrpc_issue_connect - attempt connection initiation with a peer.
  * @server: NID of server peer.
  * @ptl: portal ID to initiate over.
  * @magic: agreed-upon connection message key.
  * @version: communication protocol version.
  */
-int
-rpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp, uint64_t magic,
-    uint32_t version)
+__static int
+slashrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
+    uint64_t magic, uint32_t version)
 {
 	lnet_process_id_t server_id = { server, 0 };
 	struct pscrpc_request *rq;
@@ -52,12 +53,12 @@ slashrpc_csvc_free(struct slashrpc_cservice *csvc)
 }
 
 /*
- * rpc_csvc_create - create a client RPC service.
+ * slashrpc_csvc_create - create a client RPC service.
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
  */
-struct slashrpc_cservice *
-rpc_csvc_create(uint32_t rqptl, uint32_t rpptl)
+__static struct slashrpc_cservice *
+slashrpc_csvc_create(uint32_t rqptl, uint32_t rpptl)
 {
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_import *imp;
@@ -71,17 +72,6 @@ rpc_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	imp->imp_client->cli_request_portal = rqptl;
 	imp->imp_client->cli_reply_portal = rpptl;
 	imp->imp_max_retries = 2;
-	return (csvc);
-}
-
-struct slashrpc_cservice *
-rpc_csvc_fromexp(struct pscrpc_export *exp, uint32_t rqptl, uint32_t rpptl)
-{
-	struct slashrpc_cservice *csvc;
-
-	csvc = rpc_csvc_create(rqptl, rpptl);
-	atomic_inc(&exp->exp_connection->c_refcount);
-	csvc->csvc_import->imp_connection = exp->exp_connection;
 	return (csvc);
 }
 
@@ -120,10 +110,12 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 			    resm->resm_res->res_type != SLREST_MDS)
 				goto out;
 			break;
+		default:
+			psc_fatalx("%d: bad connection type", ctype);
 		}
 
 		/* initialize service */
-		*csvcp = rpc_csvc_create(rqptl, rpptl);
+		*csvcp = slashrpc_csvc_create(rqptl, rpptl);
 	}
 #define RECONNECT_INTV 30	/* seconds */
 	csvc = *csvcp;
@@ -148,8 +140,8 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 		} else {
 			csvc->csvc_flags |= CSVCF_CONNECTING;
 			freelock(lk);
-			rc = rpc_issue_connect(peernid, csvc->csvc_import,
-			    magic, version);
+			rc = slashrpc_issue_connect(peernid,
+			    csvc->csvc_import, magic, version);
 			reqlock(lk);
 			csvc->csvc_flags &= ~CSVCF_CONNECTING;
 
@@ -171,4 +163,55 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 	if (lk)
 		ureqlock(lk, locked);
 	return (csvc);
+}
+
+/*
+ * slashrpc_export_get - access private data associated with an LNET peer.
+ * @exp: RPC export of peer.
+ * @peertype: peer type of connection.
+ */
+struct slashrpc_export *
+slashrpc_export_get(struct pscrpc_export *exp, enum slconn_type peertype)
+{
+	struct slashrpc_export *slexp;
+	int locked;
+
+	locked = reqlock(&exp->exp_lock);
+	if (exp->exp_private == NULL) {
+		slexp = exp->exp_private = PSCALLOC(sizeof(*slexp));
+		slexp->slexp_export = exp;
+		slexp->slexp_peertype = peertype;
+		slexp->slexp_cfdtree =
+		    PSCALLOC(sizeof(struct cfdtree));
+		SPLAY_INIT(slexp->slexp_cfdtree);
+		exp->exp_hldropf = slashrpc_export_destroy;
+	} else {
+		slexp = exp->exp_private;
+		psc_assert(slexp->slexp_export == exp);
+		psc_assert(slexp->slexp_peertype == peertype);
+	}
+	ureqlock(&exp->exp_lock, locked);
+	return (slexp);
+}
+
+void
+slashrpc_export_destroy(void *data)
+{
+	struct slashrpc_export *slexp = data;
+	struct pscrpc_export *exp = slexp->slexp_export;
+
+	psc_assert(exp);
+	/* There's no way to set this from the drop_callback()
+	 */
+	if (!(slexp->slexp_flags & EXP_CLOSING))
+		slexp->slexp_flags |= EXP_CLOSING;
+
+	if (slexp_freef[slexp->slexp_peertype])
+		slexp_freef[slexp->slexp_peertype](exp);
+
+	/* Ok, no one else should be in here.
+	 */
+	exp->exp_private = NULL;
+	PSCFREE(slexp->slexp_cfdtree);
+	PSCFREE(slexp);
 }

@@ -2,19 +2,19 @@
 
 #include <stdio.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/tree.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
-#include "pfl/cdefs.h"
 #include "psc_util/strlcpy.h"
 
 #include "rpc_iod.h"
 #include "slashrpc.h"
 #include "sliod.h"
 
-lnet_process_id_t		 lpid;
-struct slashrpc_cservice	*rmi_csvc;
+lnet_process_id_t lpid;
+void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
 
 /**
  * sli_rpc_initsvc - create and initialize RPC services.

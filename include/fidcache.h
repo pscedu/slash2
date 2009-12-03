@@ -267,7 +267,6 @@ void			 fidc_memb_init(struct fidc_memb *, slfid_t);
 
 struct fidc_membh	*fidc_get(void);
 void			 fidc_put(struct fidc_membh *, struct psc_listcache *);
-int			 fidc_fid2cfd(slfid_t, uint64_t *, struct fidc_membh **);
 int			 fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
 void			 fidcache_init(enum fid_cache_users, int (*)(struct fidc_membh *));
 

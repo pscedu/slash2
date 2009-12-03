@@ -18,7 +18,6 @@
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
-#include "slashexport.h"
 #include "slerr.h"
 
 struct odtable				*mdsBmapAssignTable;

@@ -58,7 +58,7 @@ struct mexpbcm {
 #define MEXPBCM_LOCK(m)		spinlock(&(m)->mexpbcm_export->exp_lock)
 #define MEXPBCM_ULOCK(m)	freelock(&(m)->mexpbcm_export->exp_lock)
 #define MEXPBCM_REQLOCK(m)	reqlock(&(m)->mexpbcm_export->exp_lock)
-#define MEXPBCM_UREQLOCK(m, l)	ureqlock(&(m)->mexpbcm_export->exp_lock, (l))
+#define MEXPBCM_UREQLOCK(m, lk)	ureqlock(&(m)->mexpbcm_export->exp_lock, (lk))
 #define MEXPBCM_LOCK_INIT(m)	LOCK_INIT(&(m)->mexpbcm_export->exp_lock)
 #define MEXPBCM_LOCK_ENSURE(m)	LOCK_ENSURE(&(m)->mexpbcm_export->exp_lock)
 
@@ -103,14 +103,14 @@ SPLAY_PROTOTYPE(exp_bmaptree, mexpbcm, mexpbcm_exp_tentry, mexpbmapc_cmp);
  *   GFC fcm tier.
  */
 struct mexpfcm {
-	struct fidc_membh    *mexpfcm_fcmh;       /* point to the fcm        */
-	int                   mexpfcm_flags;
-	psc_spinlock_t        mexpfcm_lock;
+	struct fidc_membh	*mexpfcm_fcmh;		/* point to the fcm        */
+	int			 mexpfcm_flags;
+	psc_spinlock_t		 mexpfcm_lock;
 	union {
-		struct exp_bmaptree f_bmaps;      /* tree of bmap pointers   */
+		struct exp_bmaptree f_bmaps;		/* tree of bmap pointers   */
 	} mexpfcm_ford;
-	struct pscrpc_export *mexpfcm_export;     /* backpointer to export   */
-	SPLAY_ENTRY(mexpfcm)  mexpfcm_fcm_tentry; /* fcm tree entry          */
+	struct pscrpc_export	*mexpfcm_export;	/* backpointer to export   */
+	SPLAY_ENTRY(mexpfcm)	 mexpfcm_fcm_tentry;	/* fcm tree entry          */
 #define mexpfcm_bmaps mexpfcm_ford.f_bmaps
 };
 
@@ -136,7 +136,6 @@ mexpfcm_cache_cmp(const void *x, const void *y)
 }
 
 struct mexp_cli {
-	struct timespec           mc_lastping;
 	struct slashrpc_cservice *mc_csvc;
 	psc_spinlock_t		  mc_lock;
 };
@@ -147,10 +146,10 @@ struct mexp_cli {
  *  (struct sl_resm *)->resm_pri.
  */
 struct mexp_ion {
-	struct dynarray       mi_bmaps;       /* array of struct mexpbcm     */
-	struct dynarray       mi_bmaps_deref; /* dereferencing bmaps         */
-	atomic_t              mi_refcnt;      /* num cli's using this ion    */
-	struct sl_resm       *mi_resm;
+	struct dynarray		 mi_bmaps;		/* array of struct mexpbcm     */
+	struct dynarray		 mi_bmaps_deref;	/* dereferencing bmaps         */
+	atomic_t		 mi_refcnt;		/* num cli's using this ion    */
+	struct sl_resm		*mi_resm;
 };
 
 /*
@@ -158,7 +157,9 @@ struct mexp_ion {
  */
 SPLAY_PROTOTYPE(bmap_exports, mexpbcm, mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
 
-extern void
-mexpfcm_release_brefs(struct mexpfcm *);
+void mexpfcm_release_brefs(struct mexpfcm *);
+
+struct mexp_cli *mexpcli_get(struct pscrpc_export *);
+void		 mexpcli_destroy(struct pscrpc_export *);
 
 #endif /* _MDSEXPC_H_ */

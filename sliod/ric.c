@@ -57,7 +57,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 	struct slvr_ref *slvr_ref[2];
 
 	sl_blkno_t bmapno, slvrno;
-	uint64_t cfd;
 	uint32_t csize, tsize, roff, sblk;
 	int rc=0, nslvrs, i;
 
@@ -74,7 +73,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 	/* A RBW (read-before-write) request from the client may have a
 	 *   write enabled bdbuf which he uses to fault in his page.
 	 */
-	mp->rc = bdbuf_check(&mq->sbdb, &cfd, &fg, &bmapno, rq->rq_peer,
+	mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer,
 			     lpid.nid, nodeInfo.node_res->res_id, rw);
 
 	if (mp->rc) {
