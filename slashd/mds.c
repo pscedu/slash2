@@ -684,15 +684,6 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 	atomic_t *a=(rw == SRIC_BMAP_READ ?
 		     &bmap->bcm_rd_ref : &bmap->bcm_wr_ref);
 
-	if (rw == SRIC_BMAP_READ)
-		psc_assert(bref->mexpbcm_mode & MEXPBCM_RD);
-
-	else if (rw == SRIC_BMAP_WRITE)
-		psc_assert(bref->mexpbcm_mode & MEXPBCM_WR);
-
-	else
-		psc_fatalx("mode value (%d) is invalid", rw);
-
 	locked = BMAP_RLOCK(bmap);
 	if (!atomic_read(a)) {
 		/* There are no refs for this mode, therefore the
@@ -1176,8 +1167,8 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	psc_assert(bref->mexpbcm_mode == MEXPBCM_INIT);
 
 	bref->mexpbcm_bmap = b;
-	bref->mexpbcm_mode = ((mq->rw == SRIC_BMAP_WRITE) ?
-			      MEXPBCM_WR : MEXPBCM_RD);
+	bref->mexpbcm_mode = ((mq->rw == SRIC_BMAP_WRITE) ?  MEXPBCM_WR : MEXPBCM_RD);
+
 	/* Check if the client requested directio, if so tag it in the
 	 *  bref.
 	 */
