@@ -196,19 +196,16 @@ mds.c
 
 	unique: 94876, opcode: UNLINK (10), nodeid: 379151, insize: 65
 
-	[1233209602:863246 msfsthr8:__fidc_lookup_inode:480]  fcmh@0x6f5a70 fcoo@(nil) f
-cooref(-66:-66) i+g:379151+281474976710655 s: CG lc:Free r:1 :: adding FID_ANY t
-o cache
+	[1233209602:863246 msfsthr8:__fidc_lookup_inode:480]  fcmh@0x6f5a70 fcoo@(nil) fcooref(-66:-66) i+g:379151+281474976710655 s: CG lc:Free r:1 :: adding FID_ANY to cache
 
-	[1233209602:866275 msfsthr5:__fidc_lookup_fg:320] [assert] fcmh_2_gen(tmp) != FI
-D_ANY
+	[1233209602:866275 msfsthr5:__fidc_lookup_fg:320] [assert] fcmh_2_gen(tmp) != FID_ANY
 
 
-	Look at removing load_inode alltogether.  Instead, maybe do an extra
+	Look at removing load_inode altogether.  Instead, maybe do an extra
 	ref on lookup so that proceeding operations are guaranteed to have
 	their inodes cached.
 
-- differeniate I/O software terminology
+- differentiate I/O software terminology
 	(o) ion - an I/O node (resm)
 	(o) ios - an I/O system (res)
 	(o) iod - the sliod daemon
@@ -257,10 +254,10 @@ D_ANY
   outside of rpc_common.c
 - libsl_init() is getting an ENOMEM somewhere in slashd, maybe LNET
 - do not keep sl_replrq in mem unless a bh_repl is OLD or SCHED
-- add bmap_hdr in replst ctlmsg
-- filenames with , and : will not make the msctl repl parser happy, reorder
 - fix pool names in -Lall -Pall -iall -hall -Mall in each of slmctl, slictl, msctl
-- handle msctl -Q bmap[P] persist policy overrider
+- ensure fidc_lookup_load_fg() will accept accept FID_ANY
+- rename cfd_type to cfd_flags
+- move cfdtree from slashrpc_export into mexpc
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
