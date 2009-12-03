@@ -215,7 +215,9 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		pscrpc_free_bulk(desc);
 	mp->nblks = 1;
 
-	RETURN(mp->rc);
+	bmap_op_done(bmap);
+
+	RETURN(0);
 }
 
 int

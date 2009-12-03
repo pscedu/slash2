@@ -1183,14 +1183,11 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	 */
 	rc = mds_bmap_ref_add(bref, mq);
 
-	/* Release the reference taken by mds_bmap_load().  This call
-	 *   established a read or write ref to pin the bmap.
-	 */
-	bmap_op_done(b);
  out:
-	if (rc)
+	if (rc) {
+		bmap_op_done(b);
 		PSCFREE(bref);
-	else
+	} else
 		*bmap = b;
 	/* XXX think about policy updates in fail mode.
 	 */
