@@ -305,6 +305,7 @@ slm_rmi_getexpdata(struct pscrpc_export *exp)
 {
 	struct slm_rmi_expdata *smie, *p;
 
+	smie = NULL;
 	spinlock(&exp->exp_lock);
 	if (exp->exp_private)
 		smie = exp->exp_private;
@@ -322,6 +323,6 @@ slm_rmi_getexpdata(struct pscrpc_export *exp)
 		p = NULL;
 	}
 	freelock(&exp->exp_lock);
-	free(p);
+	PSCFREE(p);
 	return (smie);
 }
