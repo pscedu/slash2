@@ -246,7 +246,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 	struct mexpfcm *m;
 	struct fidc_membh *f;
 	struct fidc_mds_info *fmdsi;
-	int rc=0;
+	int rc;
 
 	/* c->pri holds the zfs file info for this inode, it must be present.
 	 */
@@ -261,15 +261,8 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 	 *  in the cache.
 	 */
 	f = fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
-	//m->mexpfcm_fcmh = f = fidc_lookup_fg(&c->cfd_fdb.sfdb_secret.sfs_fg);
-	//fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
-	//psc_assert(f);
 	if (!f)
 		return (-1);
-
-	/* Ensure our ref has been added.
-	 */
-	psc_assert(atomic_read(&f->fcmh_refcnt) > 0);
 
 	rc = mds_fcmh_load_fmdsi(f, c->cfd_pri, c->cfd_type & CFD_FILE);
 	if (rc) {
