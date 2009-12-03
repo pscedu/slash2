@@ -45,7 +45,6 @@ int
 slc_rmc_setmds(const char *name)
 {
 	struct sl_resource *res;
-	struct sl_resm *resm;
 	lnet_nid_t nid;
 
 	nid = libcfs_str2nid(name);
@@ -56,11 +55,8 @@ slc_rmc_setmds(const char *name)
 			return (SLERR_RES_UNKNOWN);
 		}
 		nid = res->res_nids[0];
-	} else {
-		resm = libsl_nid2resm(nid);
-		res = resm->resm_res;
 	}
-	slc_rmc_resm = resm;
+	slc_rmc_resm = libsl_nid2resm(nid);
 	return (0);
 }
 
