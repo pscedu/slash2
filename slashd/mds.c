@@ -241,7 +241,7 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
  * @e: the export to which the cfd belongs.
  */
 int
-mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
+mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 {
 	struct slashrpc_export *slexp;
 	struct mexpfcm *m = PSCALLOC(sizeof(*m));
@@ -254,14 +254,14 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	psc_assert(c->cfd_pri);
 	psc_assert(c->cfd_type == CFD_DIR || c->cfd_type == CFD_FILE);
 
-	slexp = e->exp_private;
+	slexp = exp->exp_private;
 	psc_assert(slexp);
 	/* Serialize access to our bmap cache tree.
 	 */
 	LOCK_INIT(&m->mexpfcm_lock);
 	/* Back pointer to our export.
 	 */
-	m->mexpfcm_export = e;
+	m->mexpfcm_export = exp;
 	/* Locate our fcmh in the global cache bumps the refcnt.
 	 *  We do a simple lookup here because the inode should already exist
 	 *  in the cache.
@@ -304,7 +304,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 		rc = EINVAL;
 	} else
 		psc_info("Added m=%p e=%p to tree %p",
-			 m, e,  &fmdsi->fmdsi_exports);
+			 m, exp,  &fmdsi->fmdsi_exports);
 
 	FCMH_ULOCK(f);
 	/* Add the fidcache reference to the cfd's private slot.

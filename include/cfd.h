@@ -11,6 +11,7 @@
 struct pscrpc_export;
 struct cfdops;
 
+/* client file descriptor entry */
 struct cfdent {
 	struct srt_fd_buf	 cfd_fdb;
 	void			*cfd_pri;
@@ -29,10 +30,10 @@ struct cfdent {
  *  'pri' structure.  All calls must be made with the exp lock held.
  */
 struct cfdops {
-	int (*cfd_init)(struct cfdent *, struct pscrpc_export *);
-	int (*cfd_free)(struct cfdent *, struct pscrpc_export *);
-	int (*cfd_insert)(struct cfdent *, struct pscrpc_export *);
-	void *(*cfd_get_pri)(struct cfdent *, struct pscrpc_export *);
+	int	 (*cfd_init)(struct cfdent *, struct pscrpc_export *);
+	int	 (*cfd_free)(struct cfdent *, struct pscrpc_export *);
+	int	 (*cfd_insert)(struct cfdent *, struct pscrpc_export *);
+	void	*(*cfd_get_pri)(struct cfdent *, struct pscrpc_export *);
 };
 
 struct cfdent * cfdget(struct pscrpc_export *, uint64_t);
