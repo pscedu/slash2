@@ -1155,6 +1155,7 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	 *   the cache.
 	 */
 	newref = bref = PSCALLOC(sizeof(*bref));
+	MEXPBCM_LOCK_INIT(bref);
 	bref->mexpbcm_mode = MEXPBCM_INIT;
 	bref->mexpbcm_blkno = mq->blkno;
 	bref->mexpbcm_export = fref->mexpfcm_export;
