@@ -270,6 +270,18 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 	/* Ensure our ref has been added.
 	 */
 	psc_assert(atomic_read(&f->fcmh_refcnt) > 0);
+
+	rc = mds_fcmh_load_fmdsi(f, c->cfd_pri, c->cfd_type & CFD_FILE);
+	if (rc) {
+		fidc_membh_dropref(f);
+		return (-1);
+	}
+
+	m = PSCALLOC(sizeof(*m));
+	LOCK_INIT(&m->mexpfcm_lock);
+	m->mexpfcm_export = exp;
+	m->mexpfcm_fcmh = f;
+
 	/* Verify that the file type is consistent.
 	 */
 	if (fcmh_2_isdir(f))
@@ -277,21 +289,6 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 	else {
 		m->mexpfcm_flags |= MEXPFCM_REGFILE;
 		SPLAY_INIT(&m->mexpfcm_bmaps);
-	}
-	m = PSCALLOC(sizeof(*m));
-	/* Serialize access to our bmap cache tree.
-	 */
-	LOCK_INIT(&m->mexpfcm_lock);
-	/* Back pointer to our export.
-	 */
-	m->mexpfcm_export = exp;
-
-	m->mexpfcm_fcmh = f;
-
-	rc = mds_fcmh_load_fmdsi(f, c->cfd_pri, c->cfd_type & CFD_FILE);
-	if (rc) {
-		PSCFREE(m);
-		return (-1);
 	}
 
 	/* Add ourselves to the fidc_mds_info structure's splay tree.
