@@ -983,7 +983,7 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 {
 	struct bmap_mds_info *bmdsi;
 	psc_crc64_t crc;
-	int rc=0;
+	int rc;
 
 	bmdsi = bcm->bcm_pri;
 	psc_assert(bmdsi->bmdsi_od == NULL);
@@ -1149,17 +1149,17 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 		 */
 		MEXPFCM_ULOCK(fref);
 		return (-EBADF);
-	} else {
-		/* Establish a reference here, note that mexpbcm_bmap will
-		 *   be null until either the bmap is loaded or pulled from
-		 *   the cache.
-		 */
-		newref = bref = PSCALLOC(sizeof(*bref));
-		bref->mexpbcm_mode = MEXPBCM_INIT;
-		bref->mexpbcm_blkno = mq->blkno;
-		bref->mexpbcm_export = fref->mexpfcm_export;
-		SPLAY_INSERT(exp_bmaptree, &fref->mexpfcm_bmaps, bref);
 	}
+	/* Establish a reference here, note that mexpbcm_bmap will
+	 *   be null until either the bmap is loaded or pulled from
+	 *   the cache.
+	 */
+	newref = bref = PSCALLOC(sizeof(*bref));
+	bref->mexpbcm_mode = MEXPBCM_INIT;
+	bref->mexpbcm_blkno = mq->blkno;
+	bref->mexpbcm_export = fref->mexpfcm_export;
+	SPLAY_INSERT(exp_bmaptree, &fref->mexpfcm_bmaps, bref);
+
 	MEXPFCM_ULOCK(fref);
 	/* Ok, the bref has been initialized and loaded into the tree.  We
 	 *  still need to set the bmap pointer mexpbcm_bmap though.  Lock the
