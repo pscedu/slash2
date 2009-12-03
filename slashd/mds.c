@@ -679,12 +679,12 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
-	int locked, rc=0, rw=mq->rw;
+	int rc=0, rw=mq->rw;
 	int mode=(rw == SRIC_BMAP_READ ? BMAP_RD : BMAP_WR);
 	atomic_t *a=(rw == SRIC_BMAP_READ ?
 		     &bmap->bcm_rd_ref : &bmap->bcm_wr_ref);
 
-	locked = BMAP_RLOCK(bmap);
+	BMAP_LOCK(bmap);
 	if (!atomic_read(a)) {
 		/* There are no refs for this mode, therefore the
 		 *   bcm_bmapih.bmapi_mode should not be set.
@@ -734,7 +734,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, bmap,
 		   "ref_add (mion=%p) (rc=%d)",
 		   bmdsi->bmdsi_wr_ion, rc);
-	BMAP_URLOCK(bmap, locked);
+	BMAP_ULOCK(bmap);
 
 	return (rc);
 }
