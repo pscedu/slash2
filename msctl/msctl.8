@@ -234,16 +234,21 @@ may be one of the following:
 .Bl -tag -offset ind -width Ds
 .It Ic log.level Ns Op . Ns Ar subsystem
 The logging level of debug message output.
-Thread-specific.
 .Pp
 .Ar subsystem
 may be one of the following:
 .Pp
-.Bl -column addrcacheX addrcacheX addrcacheX -offset indent
-.It Cm addrcache Ta Cm chunkmap Ta Cm ciod
-.It Cm fileops Ta Cm inodecache Ta Cm lnet
-.It Cm other Ta Cm read Ta Cm svc
-.It Cm sync
+.Bl -tag -offset indent -width 12n -compact
+.It Ic jrnl
+Journaling operations
+.It Ic rpc
+Remote procedure calls
+.It Ic lnet
+Lustre networking stack
+.It Ic mem
+Memory allocations and releases
+.It Ic gen
+General/catch all
 .El
 .Pp
 If
@@ -293,37 +298,37 @@ systems specified.
 has the following format:
 .Bd -unfilled -offset indent
 .Sm off
-.Ar filename
-.Oo Li :\& Ar bmapno-min
-.Op Li -\& Ar bmapno-max
-.Op Ic P
-.Op Li ,\& Ar ...
-.Oc
-.Li : Ar ios Op Li ,\& Ar ...
+.Ar ios Op Ic ,\& Ar ...
+.Ic :\& Ar bmapno-min
+.Op Ic -\& Ar bmapno-max
+.Op Ic ,\& Ar ...
+.Ic :\& Ar filename
 .Sm on
 .Ed
 .Pp
-If
-.Ar bmapno
-is not specified or is the special value
-.Sq Li * ,
-all bmaps will be replicated; otherwise, only the
-bmaps with the given indexes will be replicated.
+If the special value
+.Sq Li *
+is supplied as the bmap specification, all present bmaps in the file
+will be replicated;
+otherwise, only the bmaps with the given indexes will be replicated.
 .Pp
-If the
-.Ic P
-modifier is specified, bmaps will be marked for persistent replication.
-Note that only bmaps present at the time of issue can be marked
-persistent; future bmaps will only be marked for persistent
-replication upon creation if the file's default bmap replication
-policy is such.
+By default, bmaps are registered for a single replication after which
+they can be invalidated on any replicas they were copied to if new
+.Tn I/O
+is done.
 See
 .Fl f
-for information on modifying the default replication policy.
+for information on modifying the replication policy.
 .Pp
 This option may be specified multiple times.
 .It Fl R
-Apply file operations such as issuing replication requests recursively.
+Apply operations on files specified in
+.Fl f ,
+.Fl Q ,
+.Fl r ,
+and
+.Fl U
+recursively.
 .It Fl r Ar file
 List the specified
 .Ar file Ap s
@@ -345,7 +350,7 @@ Note that file names are unavailable in this mode.
 The following legend lists the states a block may be in:
 .Bl -column "schedul" "Replication poli" "Indicator" -offset indent
 .It Sy State  Ta Sy Replication Policy Ta Sy Indicator
-.It ============================================
+.It ========================================
 .It active    Ta one-time              Ta Ic +
 .It scheduled Ta one-time              Ta Ic s
 .It old       Ta one-time              Ta Ic o
@@ -412,11 +417,8 @@ Cancel ongoing file replication requests as specified by
 .Ar replrqspec .
 See
 .Fl Q
-for details of the format of
+for details on the format of
 .Ar replrqspec .
-Note that the bmap modifier flag
-.Ic P
-will be ignored in this mode.
 .Pp
 This option may be specified multiple times.
 .El

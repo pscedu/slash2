@@ -139,16 +139,26 @@ parse_replrq(int code, char *replrqspec,
 	int bmax;
 	long l;
 
-	files = replrqspec;
+	iosv = replrqspec;
 	ra.code = code;
 
-	/* parse I/O systems */
-	iosv = strrchr(replrqspec, ':');
-	if (iosv == NULL) {
-		warnx("%s: invalid replication request", replrqspec);
+	bmapnos = strchr(replrqspec, ':');
+	if (bmapnos == NULL) {
+		warnx("%s: no bmaps specified in replication "
+		    "request specification", replrqspec);
 		return;
 	}
-	*iosv++ = '\0';
+	*bmapnos++ = '\0';
+
+	files = strchr(bmapnos, ':');
+	if (files == NULL) {
+		warnx("%s: no files specified in replication "
+		    "request specification", replrqspec);
+		return;
+	}
+	*files++ = '\0';
+
+	/* parse I/O systems */
 	ra.nios = 0;
 	for (site = iosv; site; site = next) {
 		if ((next = strchr(site, ',')) != NULL)
@@ -161,16 +171,14 @@ parse_replrq(int code, char *replrqspec,
 			errx(1, "%s: site name too long", site);
 	}
 
-	/* no bmap specified; apply to all */
-	bmapnos = strchr(replrqspec, ':');
-	if (bmapnos == NULL || strcmp(bmapnos, "*") == 0) {
+	/* handle special all-bmap case */
+	if (strcmp(bmapnos, "*") == 0) {
 		ra.bmapno = REPLRQ_BMAPNO_ALL;
 		walk(files, packf, &ra);
 		return;
 	}
 
 	/* parse bmap specs */
-	*bmapnos++ = '\0';
 	for (bmapno = bmapnos; bmapno; bmapno = next) {
 		if ((next = strchr(bmapno, ',')) != NULL)
 			*next++ = '\0';
