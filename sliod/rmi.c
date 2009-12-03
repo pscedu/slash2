@@ -30,7 +30,6 @@ int
 sli_rmi_setmds(const char *name)
 {
 	struct sl_resource *res;
-	struct sl_resm *resm;
 	lnet_nid_t nid;
 
 	nid = libcfs_str2nid(name);
@@ -39,12 +38,8 @@ sli_rmi_setmds(const char *name)
 		if (res == NULL)
 			psc_fatalx("%s: unknown resource", name);
 		nid = res->res_nids[0];
-	} else {
-		resm = libsl_nid2resm(nid);
-		res = resm->resm_res;
 	}
-
-	rmi_resm = resm;
+	rmi_resm = libsl_nid2resm(nid);
 	return (0);
 }
 
