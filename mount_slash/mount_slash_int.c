@@ -505,7 +505,8 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 
 	FCMH_LOCK(f);
 	psc_assert(f->fcmh_fcoo);
-	if (!f->fcmh_fcoo->fcoo_pri) {
+	mfd = f->fcmh_fcoo->fcoo_pri;
+	if (mfd == NULL) {
 		f->fcmh_fcoo->fcoo_pri = mfd = PSCALLOC(sizeof(*mfd));
 		mfd->mfd_flags |= MFD_RETRREPTBL;
 		getreptbl = 1;
@@ -577,7 +578,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 		FCMH_ULOCK(f);
 	}
 
-done:
+ done:
 	if (rc && getreptbl)
 		PSCFREE(f->fcmh_fcoo->fcoo_pri);
 	return (rc);
@@ -1565,7 +1566,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 
-	if (!size || ((op == MSL_READ) && 
+	if (!size || ((op == MSL_READ) &&
 		      off >= (fcmh_2_fsz(mfh->mfh_fcmh)))) {
 		rc = 0;
 		goto out;
