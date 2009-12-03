@@ -243,7 +243,7 @@ int
 mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 {
 	struct slashrpc_export *slexp;
-	struct mexpfcm *m = PSCALLOC(sizeof(*m));
+	struct mexpfcm *m;
 	struct fidc_membh *f;
 	struct fidc_mds_info *fmdsi;
 	int rc=0;
@@ -255,17 +255,12 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 
 	slexp = exp->exp_private;
 	psc_assert(slexp);
-	/* Serialize access to our bmap cache tree.
-	 */
-	LOCK_INIT(&m->mexpfcm_lock);
-	/* Back pointer to our export.
-	 */
-	m->mexpfcm_export = exp;
+
 	/* Locate our fcmh in the global cache bumps the refcnt.
 	 *  We do a simple lookup here because the inode should already exist
 	 *  in the cache.
 	 */
-	m->mexpfcm_fcmh = f = fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
+	f = fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
 	//m->mexpfcm_fcmh = f = fidc_lookup_fg(&c->cfd_fdb.sfdb_secret.sfs_fg);
 	//fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
 	//psc_assert(f);
@@ -283,6 +278,15 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 		m->mexpfcm_flags |= MEXPFCM_REGFILE;
 		SPLAY_INIT(&m->mexpfcm_bmaps);
 	}
+	m = PSCALLOC(sizeof(*m));
+	/* Serialize access to our bmap cache tree.
+	 */
+	LOCK_INIT(&m->mexpfcm_lock);
+	/* Back pointer to our export.
+	 */
+	m->mexpfcm_export = exp;
+
+	m->mexpfcm_fcmh = f;
 
 	rc = mds_fcmh_load_fmdsi(f, c->cfd_pri, c->cfd_type & CFD_FILE);
 	if (rc) {
