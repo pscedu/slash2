@@ -40,20 +40,19 @@ struct pscrpc_export;
  *   the GFC's bmap tier.
  */
 struct mexpbcm {
-	sl_blkno_t              mexpbcm_blkno;
-	uint32_t                mexpbcm_mode;
-	uint32_t                mexpbcm_net_cmd;
-	uint32_t                mexpbcm_net_inf;
-	struct bmapc_memb      *mexpbcm_bmap;
-	struct pscrpc_export   *mexpbcm_export;
-	struct psclist_head     mexpbcm_lentry;      /* ref for client cb   */
-	atomic_t                mexpbcm_msgcnt;      /* put to zero after rpc
-						      * has been issued */
-	SPLAY_ENTRY(mexpbcm)    mexpbcm_exp_tentry;  /* ref from mexpfcm    */
-	SPLAY_ENTRY(mexpbcm)    mexpbcm_bmap_tentry; /* ref from bmap tree  */
+	sl_blkno_t		 mexpbcm_blkno;
+	uint32_t		 mexpbcm_mode;
+	uint32_t		 mexpbcm_net_cmd;
+	uint32_t		 mexpbcm_net_inf;
+	struct bmapc_memb	*mexpbcm_bmap;
+	struct pscrpc_export	*mexpbcm_export;
+	struct psclist_head	 mexpbcm_lentry;	/* ref for client cb   */
+	atomic_t		 mexpbcm_msgcnt;	/* put to zero after rpc has been issued */
+	SPLAY_ENTRY(mexpbcm)	 mexpbcm_exp_tentry;	/* exp_bmaptree tree within a mexpfcm */
+	SPLAY_ENTRY(mexpbcm)	 mexpbcm_bmap_tentry;	/* bmap_exports tree within a bmap_mds_info */
 };
 
-#define mexpbcm2nid(b) (b)->mexpbcm_export->exp_connection->c_peer.nid
+#define mexpbcm2nid(b)		(b)->mexpbcm_export->exp_connection->c_peer.nid
 /* Borrow the export lock.
  */
 #define MEXPBCM_LOCK(m)		spinlock(&(m)->mexpbcm_export->exp_lock)
