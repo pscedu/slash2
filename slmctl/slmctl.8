@@ -166,16 +166,21 @@ may be one of the following:
 .Bl -tag -offset ind -width Ds
 .It Ic log.level Ns Op . Ns Ar subsystem
 The logging level of debug message output.
-Thread-specific.
 .Pp
 .Ar subsystem
 may be one of the following:
 .Pp
-.Bl -column addrcacheX addrcacheX addrcacheX -offset indent
-.It Cm addrcache Ta Cm chunkmap Ta Cm ciod
-.It Cm fileops Ta Cm inodecache Ta Cm lnet
-.It Cm other Ta Cm read Ta Cm svc
-.It Cm sync
+.Bl -tag -offset indent -width 12n -compact
+.It Ic jrnl
+Journaling operations
+.It Ic rpc
+Remote procedure calls
+.It Ic lnet
+Lustre networking stack
+.It Ic mem
+Memory allocations and releases
+.It Ic gen
+General/catch all
 .El
 .Pp
 If
