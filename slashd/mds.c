@@ -1125,10 +1125,9 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	struct fidc_membh *f=fref->mexpfcm_fcmh;
 	struct fidc_mds_info *fmdsi=f->fcmh_fcoo->fcoo_pri;
 	struct slash_inode_handle *inoh=&fmdsi->fmdsi_inodeh;
-	struct mexpbcm *bref, *newref, tbref;
+	struct mexpbcm *bref, tbref;
 	int rc=0;
 
-	newref = NULL;
 	psc_assert(inoh);
 	psc_assert(!*bmap);
 
@@ -1154,7 +1153,7 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	 *   be null until either the bmap is loaded or pulled from
 	 *   the cache.
 	 */
-	newref = bref = PSCALLOC(sizeof(*bref));
+	bref = PSCALLOC(sizeof(*bref));
 	MEXPBCM_LOCK_INIT(bref);
 	bref->mexpbcm_mode = MEXPBCM_INIT;
 	bref->mexpbcm_blkno = mq->blkno;
@@ -1198,7 +1197,7 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	bmap_op_done(b);
  out:
 	if (rc)
-		PSCFREE(newref);
+		PSCFREE(bref);
 	else
 		*bmap = b;
 	/* XXX think about policy updates in fail mode.
