@@ -60,6 +60,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 	uint32_t csize, tsize, roff, sblk;
 	int rc=0, nslvrs, i;
 
+	sblk = 0; /* gcc */
+
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	RSX_ALLOCREP(rq, mq, mp);
