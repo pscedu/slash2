@@ -189,7 +189,7 @@ mds_fcmh_tryref_fmdsi(struct fidc_membh *f)
 int
 mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
 {
-	struct fidc_mds_info *i;
+	struct fidc_mds_info *fmdsi;
 	int rc;
 
 	FCMH_LOCK(f);
@@ -206,22 +206,22 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
 		else {
 			psc_assert(f->fcmh_fcoo);
 			psc_assert(f->fcmh_fcoo->fcoo_pri);
-			i = f->fcmh_fcoo->fcoo_pri;
+			fmdsi = f->fcmh_fcoo->fcoo_pri;
 			f->fcmh_fcoo->fcoo_oref_rd++;
-			psc_assert(i->fmdsi_data);
+			psc_assert(fmdsi->fmdsi_data);
 			FCMH_ULOCK(f);
 		}
 	} else {
 		fidc_fcoo_start_locked(f);
  fcoo_start:
 		psc_assert(f->fcmh_fcoo->fcoo_pri == NULL);
-		f->fcmh_fcoo->fcoo_pri = i = PSCALLOC(sizeof(*i));
+		f->fcmh_fcoo->fcoo_pri = fmdsi = PSCALLOC(sizeof(*fmdsi));
 		f->fcmh_fcoo->fcoo_oref_rd = 1;
-		fmdsi_init(i, f, data);
+		fmdsi_init(fmdsi, f, data);
 		if (isfile) {
 			/* XXX For now assert here */
-			psc_assert(i->fmdsi_inodeh.inoh_fcmh);
-			rc = mds_inode_read(&i->fmdsi_inodeh);
+			psc_assert(fmdsi->fmdsi_inodeh.inoh_fcmh);
+			rc = mds_inode_read(&fmdsi->fmdsi_inodeh);
 			if (rc)
 				psc_fatalx("could not load inode; rc=%d", rc);
 		}
@@ -229,7 +229,7 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
 		FCMH_ULOCK(f);
 		fidc_fcoo_startdone(f);
 	}
-	atomic_inc(&i->fmdsi_ref);
+	atomic_inc(&fmdsi->fmdsi_ref);
 	return (0);
 }
 
