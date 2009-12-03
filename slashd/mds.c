@@ -246,7 +246,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	struct slashrpc_export *slexp;
 	struct mexpfcm *m = PSCALLOC(sizeof(*m));
 	struct fidc_membh *f;
-	struct fidc_mds_info *i;
+	struct fidc_mds_info *fmdsi;
 	int rc=0;
 
 	/* c->pri holds the zfs file info for this inode, it must be present.
@@ -297,14 +297,14 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *e)
 	 *  should no be passed to the mds.  However the open mode can change.
 	 */
 	FCMH_LOCK(f);
-	i = fcmh_2_fmdsi(f);
-	if (SPLAY_INSERT(fcm_exports, &i->fmdsi_exports, m)) {
+	fmdsi = fcmh_2_fmdsi(f);
+	if (SPLAY_INSERT(fcm_exports, &fmdsi->fmdsi_exports, m)) {
 		psc_warnx("Tried to reinsert m(%p) "FIDFMT,
 			   m, FIDFMTARGS(mexpfcm2fidgen(m)));
 		rc = EINVAL;
 	} else
 		psc_info("Added m=%p e=%p to tree %p",
-			 m, e,  &i->fmdsi_exports);
+			 m, e,  &fmdsi->fmdsi_exports);
 
 	FCMH_ULOCK(f);
 	/* Add the fidcache reference to the cfd's private slot.

@@ -552,7 +552,7 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 	struct mexpfcm *m;
 	struct fidc_membh *f;
 	struct cfdent *c;
-	struct fidc_mds_info *i;
+	struct fidc_mds_info *fmdsi;
 	uint64_t cfd;
 	int rc;
 
@@ -576,7 +576,7 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 	f = m->mexpfcm_fcmh;
 	psc_assert(f->fcmh_fcoo);
 
-	i = fcmh_2_fmdsi(f);
+	fmdsi = fcmh_2_fmdsi(f);
 
 	MEXPFCM_LOCK(m);
 	psc_assert(m->mexpfcm_fcmh);
