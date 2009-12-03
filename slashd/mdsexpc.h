@@ -59,7 +59,6 @@ struct mexpbcm {
 #define MEXPBCM_ULOCK(m)	freelock(&(m)->mexpbcm_export->exp_lock)
 #define MEXPBCM_REQLOCK(m)	reqlock(&(m)->mexpbcm_export->exp_lock)
 #define MEXPBCM_UREQLOCK(m, lk)	ureqlock(&(m)->mexpbcm_export->exp_lock, (lk))
-#define MEXPBCM_LOCK_INIT(m)	LOCK_INIT(&(m)->mexpbcm_export->exp_lock)
 #define MEXPBCM_LOCK_ENSURE(m)	LOCK_ENSURE(&(m)->mexpbcm_export->exp_lock)
 
 enum mexpbcm_modes {
