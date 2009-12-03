@@ -705,8 +705,10 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 		 *  replaced by a waitq and init flag.
 		 */
 		rc = mds_bmap_ion_assign(bmap, mq->pios);
-		if (rc)
+		if (rc) {
+			bmap->bcm_mode |= BMAP_MDS_NOION;
 			goto out;
+		}
 	}
 	/* Do directio checks here.
 	 */
@@ -1179,8 +1181,7 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	/* Place our bref on the tree, manage any mode changes that result
 	 *  from this new reference.  Also, on write choose an ION if needed.
 	 */
-	if ((rc = mds_bmap_ref_add(bref, mq)))
-		b->bcm_mode |= BMAP_MDS_NOION;
+	rc = mds_bmap_ref_add(bref, mq);
 
 	/* Release the reference taken by mds_bmap_load().  This call
 	 *   established a read or write ref to pin the bmap.
