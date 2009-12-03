@@ -825,7 +825,6 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct slmrcm_thread *srcm;
-	struct pscrpc_export *exp;
 	struct psc_thread *thr;
 	size_t id;
 
@@ -841,7 +840,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	srcm = thr->pscthr_private;
 	srcm->srcm_fg = mq->fg;
 	srcm->srcm_id = mq->id;
-	srcm->srcm_csvc = slm_getclconn(exp);
+	srcm->srcm_csvc = slm_getclconn(rq->rq_export);
 	pscthr_setready(thr);
 	return (0);
 }
