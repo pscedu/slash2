@@ -32,7 +32,6 @@ struct cfdent {
 struct cfdops {
 	int	 (*cfd_init)(struct cfdent *, struct pscrpc_export *);
 	int	 (*cfd_free)(struct cfdent *, struct pscrpc_export *);
-	int	 (*cfd_insert)(struct cfdent *, struct pscrpc_export *);
 	void	*(*cfd_get_pri)(struct cfdent *, struct pscrpc_export *);
 };
 

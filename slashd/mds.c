@@ -1272,7 +1272,6 @@ mds_cfdops_init(void)
 {
 	mdsCfdOps.cfd_init = mexpfcm_cfd_init;
 	mdsCfdOps.cfd_free = mexpfcm_cfd_free;
-	mdsCfdOps.cfd_insert = NULL;
 	mdsCfdOps.cfd_get_pri = mexpfcm_cfd_get_zfsdata;
 }
 

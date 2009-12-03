@@ -46,9 +46,6 @@ cfdinsert(struct cfdent *c, struct pscrpc_export *exp,
 	spinlock(&exp->exp_lock);
 	if (SPLAY_INSERT(cfdtree, slexp->slexp_cfdtree, c))
 		rc = EEXIST;
-	else
-		if (c->cfd_ops && c->cfd_ops->cfd_insert)
-			rc = c->cfd_ops->cfd_insert(c, exp);
 	freelock(&exp->exp_lock);
 	return (rc);
 }
