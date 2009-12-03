@@ -85,6 +85,7 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 	struct sl_resm *resm;
 	int rc = 0, locked;
 
+	locked = 0; /* gcc */
 	if (lk)
 		locked = reqlock(lk);
  restart:
