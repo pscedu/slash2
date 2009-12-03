@@ -59,9 +59,9 @@
  * is used to index up to sn_nblks.
  */
 typedef struct slash_snapshot {
-	off_t  sn_off;
-	size_t sn_nblks;
-	time_t sn_date;
+	off_t			sn_off;
+	size_t			sn_nblks;
+	time_t			sn_date;
 } sl_snap_t;
 
 /*
@@ -73,14 +73,14 @@ typedef struct slash_snapshot {
  * of limiting the number of iosystems which may manage our blocks.
  */
 typedef struct slash_replica {
-	sl_ios_id_t bs_id;     /* id of this block store    */
+	sl_ios_id_t		bs_id;     /* id of this block store    */
 } __packed sl_replica_t;
 
 /*
  * Associate a crc with a generation id for a block.
  */
 typedef struct slash_gencrc {
-	psc_crc64_t gc_crc;
+	psc_crc64_t		gc_crc;
 } sl_gcrc_t;
 
 /*
@@ -88,24 +88,22 @@ typedef struct slash_gencrc {
  * validation bit.  The io server id is held in the block store array.
  */
 typedef struct slash_block_gen {
-	unsigned int bl_gen; /* generation number     */
+	unsigned int		bl_gen; /* generation number     */
 } sl_blkgen_t;
 
 struct slash_bmap_cli_wire {
-	uint8_t	bw_crcstates[SL_CRCS_PER_BMAP];
-	uint8_t	bw_repls[SL_REPLICA_NBYTES];
+	uint8_t			bw_crcstates[SL_CRCS_PER_BMAP];
+	uint8_t			bw_repls[SL_REPLICA_NBYTES];
 };
 
-#define INO_DEF_NREPLS 4
+#define INO_DEF_NREPLS		4
 
 /*
  * The inode structure lives at the beginning of the metafile and holds
  * the block store array along with snapshot pointers.
- *
- * Replica tables are held here as opposed to
  */
 struct slash_inode_od {
-	struct slash_fidgen ino_fg;
+	struct slash_fidgen	ino_fg;
 	uint16_t		ino_version;
 	uint16_t		ino_flags;
 	uint32_t		ino_bsz;			/* bmap size		*/
