@@ -177,6 +177,10 @@ slmreplthr_main(void *arg)
 
 			has_repl_work = 0;
 
+			spinlock(&rrq->rrq_lock);
+			rrq_gen = rrq->rrq_gen;
+			freelock(&rrq->rrq_lock);
+
 			/* find a resource in our site this replrq is destined for */
 			iosidx = -1;
 			for (j = 0; j < site->site_nres; j++) {
@@ -186,10 +190,6 @@ slmreplthr_main(void *arg)
 				if (iosidx < 0)
 					continue;
 				off = SL_BITS_PER_REPLICA * iosidx;
-
-				spinlock(&rrq->rrq_lock);
-				rrq_gen = rrq->rrq_gen;
-				freelock(&rrq->rrq_lock);
 
 				/* got a replication request; find a bmap this ios needs */
 				/* XXX lock fcmh to prohibit nbmaps changes? */
