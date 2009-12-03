@@ -135,6 +135,8 @@ sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct srm_io_rep *mp;
 
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
+	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, w->srw_len));
+
 	rc = rq->rq_status;
 	if (rc)
 		goto out;
@@ -151,7 +153,6 @@ sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	tsize = w->srw_len;
 	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
 	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) % SLASH_SLVR_SIZE;
-	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, w->srw_len));
 	sblk = slvroff / SLASH_SLVR_BLKSZ;
 	if (slvroff & SLASH_SLVR_BLKMASK)
 		tsize += slvroff & SLASH_SLVR_BLKMASK;
