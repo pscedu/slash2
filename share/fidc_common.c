@@ -164,7 +164,7 @@ fidc_fcm_size_update(struct fidc_membh *h, size_t size)
 	int locked;
 
 	locked = reqlock(&h->fcmh_lock);
-	if (fcm_2_fsz(h->fcmh_fcm) < size)
+	if ((size_t)fcm_2_fsz(h->fcmh_fcm) < size)
 		fcm_2_fsz(h->fcmh_fcm) = size;
 
 	ureqlock(&h->fcmh_lock, locked);
