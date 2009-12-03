@@ -301,19 +301,18 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 	if (SPLAY_INSERT(fcm_exports, &fmdsi->fmdsi_exports, m)) {
 		psc_warnx("Tried to reinsert m(%p) "FIDFMT,
 			   m, FIDFMTARGS(mexpfcm2fidgen(m)));
-		rc = EINVAL;
+		rc = EEXIST;
 	} else
 		psc_info("Added m=%p e=%p to tree %p",
 			 m, exp,  &fmdsi->fmdsi_exports);
 
 	FCMH_ULOCK(f);
-	/* Add the fidcache reference to the cfd's private slot.
-	 */
-	c->cfd_pri = m;
 	fidc_membh_dropref(f);
 
 	if (rc)
 		PSCFREE(m);
+	else
+		c->cfd_pri = m;
 	return (rc);
 }
 
