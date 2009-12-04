@@ -300,11 +300,11 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 			 m, exp,  &fmdsi->fmdsi_exports);
 
 	FCMH_ULOCK(f);
-	fidc_membh_dropref(f);
 
-	if (rc)
+	if (rc) {
+		fidc_membh_dropref(f);
 		PSCFREE(m);
-	else
+	} else
 		c->cfd_pri = m;
 	return (rc);
 }
