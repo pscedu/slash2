@@ -84,9 +84,10 @@ rsb_accul_replica_stats(struct replst_slave_bdata *rsb, int iosidx,
 	sl_bmapno_t n;
 	int off;
 
-	off = iosidx * SL_BITS_PER_REPLICA;
+	off = iosidx * SL_BITS_PER_REPLICA + SL_NBITS_REPLST_BHDR;
 	for (n = 0; n < rsb->rsb_nbmaps; n++,
-	    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios) {
+	    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios +
+	    SL_NBITS_REPLST_BHDR) {
 		switch (SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)) {
 		case SL_REPL_SCHED:
 		case SL_REPL_OLD:
@@ -325,7 +326,7 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	const struct msctlmsg_replst_slave *mrsl = m;
 	__unusedx struct srsm_replst_bhdr *srsb;
 	struct replst_slave_bdata *rsb;
-	uint32_t nbytes, len;
+	uint32_t nb, nbytes, len;
 	int rc;
 
 	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)) == 0)
@@ -340,9 +341,9 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	len = mh->mh_size - sizeof(*mrsl);
 	if (len > SRM_REPLST_PAGESIZ || len != nbytes)
 		return (sizeof(*mrsl));
-	if (mrsl->mrsl_nbmaps > current_mrs.mrs_nbmaps)
+	nb = mrsl->mrsl_nbmaps + psc_vbitmap_nset(&current_mrs_bmask);
+	if (nb > current_mrs.mrs_nbmaps)
 		errx(1, "invalid value in replication status slave message");
-	current_mrs.mrs_nbmaps -= mrsl->mrsl_nbmaps;
 
 	rc = vbitmap_setrange(&current_mrs_bmask, mrsl->mrsl_boff, mrsl->mrsl_nbmaps);
 	if (rc)
@@ -355,7 +356,7 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	psclist_add_sorted(&current_mrs_bdata, &rsb->rsb_lentry, rsb_cmp,
 	    offsetof(struct replst_slave_bdata, rsb_lentry));
 
-	if (current_mrs.mrs_nbmaps || !rsb_isfull())
+	if (nb != current_mrs.mrs_nbmaps || !rsb_isfull())
 		return (-1);
 	return (0);
 }
