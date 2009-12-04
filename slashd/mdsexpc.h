@@ -105,12 +105,9 @@ struct mexpfcm {
 	struct fidc_membh	*mexpfcm_fcmh;		/* point to the fcm        */
 	int			 mexpfcm_flags;
 	psc_spinlock_t		 mexpfcm_lock;
-	union {
-		struct exp_bmaptree f_bmaps;		/* tree of bmap pointers   */
-	} mexpfcm_ford;
+	struct exp_bmaptree	 mexpfcm_bmaps;		/* tree of bmap pointers   */
 	struct pscrpc_export	*mexpfcm_export;	/* backpointer to export   */
 	SPLAY_ENTRY(mexpfcm)	 mexpfcm_fcm_tentry;	/* fcm tree entry          */
-#define mexpfcm_bmaps mexpfcm_ford.f_bmaps
 };
 
 #define MEXPFCM_LOCK(m)  spinlock(&(m)->mexpfcm_lock)
