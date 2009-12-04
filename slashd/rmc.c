@@ -292,7 +292,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct srm_create_req *mq;
 	struct srm_opencreate_rep *mp;
 	struct slash_fidgen fg;
-	file_info_t *finfo;
+	void *finfo;
 
 	int fl;
 
@@ -342,7 +342,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	struct srm_open_req *mq;
 	struct srm_opencreate_rep *mp;
 	struct slash_fidgen fg;
-	file_info_t *finfo;
+	void *finfo;
 	int fl;
 
 	ENTRY;
@@ -399,7 +399,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	struct srm_opendir_rep *mp;
 	struct slash_fidgen fg;
 	struct stat stb;
-	file_info_t *finfo;
+	void *finfo;
 
 	ENTRY;
 

@@ -17,7 +17,7 @@ struct fidc_mds_info {
 	struct slash_inode_handle fmdsi_inodeh;		/* MDS sl_inodeh_t goes here */
 	atomic_t		  fmdsi_ref;
 	uint32_t		  fmdsi_xid;
-	void			 *fmdsi_data;
+	void			 *fmdsi_data;		/* ZFS file info structure */
 };
 
 #define fcmh_2_fmdsi(f)		((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)
@@ -29,12 +29,12 @@ struct fidc_mds_info {
 #define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
 
 static inline void
-fmdsi_init(struct fidc_mds_info *mdsi, struct fidc_membh *fcmh, void *pri)
+fmdsi_init(struct fidc_mds_info *mdsi, struct fidc_membh *fcmh, void *finfo)
 {
 	SPLAY_INIT(&mdsi->fmdsi_exports);
 	atomic_set(&mdsi->fmdsi_ref, 0);
 	mdsi->fmdsi_xid = 0;
-	mdsi->fmdsi_data = pri;
+	mdsi->fmdsi_data = finfo;
 
 	slash_inode_handle_init(&mdsi->fmdsi_inodeh, fcmh, mds_inode_sync);
 }
