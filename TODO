@@ -258,6 +258,8 @@ mds.c
 - ensure fidc_lookup_load_fg() will accept accept FID_ANY
 - rename cfd_type to cfd_flags
 - move cfdtree from slashrpc_export into mexpc
+- no one does dequeue_sites() and thus wakes up ppl who msctl -U things
+  to dropref the rrq
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
