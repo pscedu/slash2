@@ -238,9 +238,10 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
  *	respective fcmh.
  * @c: the cfd, pre-initialized with fid and private data.
  * @e: the export to which the cfd belongs.
+ * @data: holds the zfs file info for this inode, it must be present.
  */
 int
-mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
+mexpfcm_cfd_init(struct cfdent *c, void *data, struct pscrpc_export *exp)
 {
 	struct slashrpc_export *slexp;
 	struct mexpfcm *m;
@@ -248,9 +249,6 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 	struct fidc_mds_info *fmdsi;
 	int rc;
 
-	/* c->pri holds the zfs file info for this inode, it must be present.
-	 */
-	psc_assert(c->cfd_pri);
 	psc_assert(c->cfd_type == CFD_DIR || c->cfd_type == CFD_FILE);
 
 	slexp = exp->exp_private;
@@ -264,7 +262,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 	if (!f)
 		return (-1);
 
-	rc = mds_fcmh_load_fmdsi(f, c->cfd_pri, c->cfd_type & CFD_FILE);
+	rc = mds_fcmh_load_fmdsi(f, data, c->cfd_type & CFD_FILE);
 	if (rc) {
 		fidc_membh_dropref(f);
 		return (-1);

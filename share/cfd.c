@@ -71,7 +71,6 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp,
 
 	c = PSCALLOC(sizeof(*c));
 	c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid = fid;
-	c->cfd_pri = pri;
 	c->cfd_ops = cfdops;
 	c->cfd_type = type;
 
@@ -83,7 +82,7 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp,
 	freelock(&exp->exp_lock);
 
 	if (c->cfd_ops && c->cfd_ops->cfd_init) {
-		rc = (c->cfd_ops->cfd_init)(c, exp);
+		rc = (c->cfd_ops->cfd_init)(c, pri, exp);
 		if (rc) {
 			psc_errorx("cfd_init() failed rc=%d", rc);
 			PSCFREE(c);

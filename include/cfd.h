@@ -30,7 +30,7 @@ struct cfdent {
  *  'pri' structure.  All calls must be made with the exp lock held.
  */
 struct cfdops {
-	int	 (*cfd_init)(struct cfdent *, struct pscrpc_export *);
+	int	 (*cfd_init)(struct cfdent *, void *, struct pscrpc_export *);
 	int	 (*cfd_free)(struct cfdent *, struct pscrpc_export *);
 	void	*(*cfd_get_pri)(struct cfdent *, struct pscrpc_export *);
 };
