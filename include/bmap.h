@@ -43,7 +43,7 @@ struct bmapc_memb {
 	struct psc_waitq	 bcm_waitq;     /* XXX think about replacing
 						   me with bcm_fcmh->fcmh_waitq
 						*/
-	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* fcm splay tree entry    */
+	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry    */
 	struct psclist_head	 bcm_lentry;	/* free pool */
 	void			*bcm_pri;	/* bmap_[mds|cli|iod]_info structure */
 };
