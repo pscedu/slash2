@@ -23,7 +23,6 @@
 #include "jflush.h"
 #include "mkfn.h"
 #include "pathnames.h"
-#include "slashexport.h"
 #include "slashrpc.h"
 #include "slconfig.h"
 #include "slerr.h"
@@ -110,7 +109,7 @@ main(int argc, char *argv[])
 	PRTYPE(sl_ios_id_t);
 	PRTYPE(sl_siteid_t);
 	PRTYPE(struct biod_crcup_ref);
-	PRTYPE(struct biod_infslvr_tree);
+	PRTYPE(struct biod_infl_crcs);
 	PRTYPE(struct bmap_cli_info);
 	PRTYPE(struct bmap_iod_info);
 	PRTYPE(struct bmap_mds_info);
@@ -123,7 +122,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmpc_mem_slbs);
 	PRTYPE(struct cfdent);
 	PRTYPE(struct cfdops);
-	PRTYPE(struct cli_imp_ion);
+	PRTYPE(struct cli_resm_info);
+	PRTYPE(struct cli_resprof_info);
 	PRTYPE(struct fidc_iod_info);
 	PRTYPE(struct fidc_mds_info);
 	PRTYPE(struct fidc_memb);
@@ -133,6 +133,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct iod_resm_info);
 	PRTYPE(struct jflush_item);
 	PRTYPE(struct mds_resm_info);
+	PRTYPE(struct mds_resprof_info);
 	PRTYPE(struct mds_site_info);
 	PRTYPE(struct mexp_cli);
 	PRTYPE(struct mexp_ion);
@@ -142,6 +143,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct msctl_replst_cont);
 	PRTYPE(struct msctl_replst_slave_cont);
 	PRTYPE(struct msctl_replstq);
+	PRTYPE(struct msctlmsg_fncmd_bmapreplpol);
+	PRTYPE(struct msctlmsg_fncmd_newreplpol);
 	PRTYPE(struct msctlmsg_replrq);
 	PRTYPE(struct msctlmsg_replst);
 	PRTYPE(struct msctlmsg_replst_slave);
@@ -150,8 +153,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct msl_fcoo_data);
 	PRTYPE(struct msl_fhent);
 	PRTYPE(struct msrcm_thread);
-	PRTYPE(struct resprof_cli_info);
-	PRTYPE(struct resprof_mds_info);
 	PRTYPE(struct sl_buffer);
 	PRTYPE(struct sl_buffer_iovref);
 	PRTYPE(struct sl_finfo);
@@ -230,6 +231,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_replrq_req);
 	PRTYPE(struct srm_replst_master_req);
 	PRTYPE(struct srm_replst_slave_req);
+	PRTYPE(struct srm_set_bmapreplpol_req);
+	PRTYPE(struct srm_set_newreplpol_req);
 	PRTYPE(struct srm_setattr_req);
 	PRTYPE(struct srm_statfs_rep);
 	PRTYPE(struct srm_statfs_req);
@@ -248,7 +251,8 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_DELREPLRQ);
 	PRVAL(MSCMT_GETREPLST);
 	PRVAL(MSCMT_GETREPLST_SLAVE);
-	PRVAL(MSCMT_RECONFIG);
+	PRVAL(MSCMT_SET_BMAPREPLPOL);
+	PRVAL(MSCMT_SET_NEWREPLPOL);
 	PRVAL(SRMT_ACCESS);
 	PRVAL(SRMT_BMAPCHMODE);
 	PRVAL(SRMT_BMAPCRCWRT);
@@ -288,6 +292,8 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_REPL_SCHEDWK);
 	PRVAL(SRMT_RMDIR);
 	PRVAL(SRMT_SETATTR);
+	PRVAL(SRMT_SET_BMAPREPLPOL);
+	PRVAL(SRMT_SET_NEWREPLPOL);
 	PRVAL(SRMT_STATFS);
 	PRVAL(SRMT_SYMLINK);
 	PRVAL(SRMT_TRUNCATE);
@@ -298,6 +304,8 @@ main(int argc, char *argv[])
 
 	PRVAL(INOX_OD_SZ);
 	PRVAL(INOX_OD_CRCSZ);
+
+	PRVAL(SLASH_BMAP_SIZE);
 
 	psc_crc64_calc(&crc, buf, sizeof(buf));
 	printf("NULL 1MB buf CRC is %#"PSCPRIxCRC64"\n", crc);
