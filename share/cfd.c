@@ -97,7 +97,6 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp,
 	rc = cfdinsert(c, exp, peertype);
 	if (rc) {
 		PSCFREE(c);
-		c = NULL;
 		if (rc == EEXIST) {
 			/* Client requested a cfd that's already been opened.
 			 */
