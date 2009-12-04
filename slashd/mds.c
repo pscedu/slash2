@@ -1070,7 +1070,7 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
 		  struct bmapc_memb **bmap)
 {
 	struct fidc_membh *f;
-	int rc;
+	int rc = 0;
 
 	psc_assert(!*bmap);
 
@@ -1079,9 +1079,7 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
 		return (-ENOENT);
 
 	rc = mds_bmap_load(f, bmapno, bmap);
-	if (rc)
-		return (rc);
-	return (0);
+	return (rc);
 }
 
 /**
