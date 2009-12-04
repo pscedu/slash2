@@ -765,7 +765,7 @@ slvr_cache_init(void)
 	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer,
 		    slb_mgmt_lentry, PPMF_AUTO, 64, 64, 128,
 		    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap,
-		    "slvr_slab", NULL);
+		    "slvrslab", NULL);
 	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
 	
 	slvr_worker_init();
