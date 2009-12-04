@@ -419,7 +419,8 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 			    SL_BITS_PER_REPLICA * iosidx, SL_NBITS_REPLST_BHDR);
 			off = SL_BITS_PER_REPLICA * iosidx + SL_NBITS_REPLST_BHDR;
 			for (nb = 0; nb < rsb->rsb_nbmaps; nb++, nbw++,
-			    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios) {
+			    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios +
+			    SL_NBITS_REPLST_BHDR) {
 				if (nbw > 76)
 					nbw = 0;
 				if (nbw == 0)
