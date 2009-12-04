@@ -349,12 +349,12 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	 */
 	if (!(f = m->mexpfcm_fcmh)) {
 		psc_errorx("mexpfcm %p has no fcmh", m);
-		goto out;
+		goto out2;
 	}
 
 	if (!(i = fidc_fcmh2fmdsi(f))) {
 		DEBUG_FCMH(PLL_WARN, f, "fid has no fcoo");
-		goto out;
+		goto out1;
 	}
 
 	if (c->cfd_type & CFD_FORCE_CLOSE)
@@ -383,7 +383,9 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	locked = reqlock(&f->fcmh_lock);
 	SPLAY_XREMOVE(fcm_exports, &i->fmdsi_exports, m);
 	ureqlock(&f->fcmh_lock, locked);
- out:
+ out1:
+	fidc_membh_dropref(f);
+ out2:
 	c->cfd_pri = NULL;
 	PSCFREE(m);
 	return (0);

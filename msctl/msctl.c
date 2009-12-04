@@ -341,7 +341,7 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	len = mh->mh_size - sizeof(*mrsl);
 	if (len > SRM_REPLST_PAGESIZ || len != nbytes)
 		return (sizeof(*mrsl));
-	nb = mrsl->mrsl_nbmaps + psc_vbitmap_nset(&current_mrs_bmask);
+	nb = mrsl->mrsl_nbmaps + 0; // psc_vbitmap_nset(&current_mrs_bmask);
 	if (nb > current_mrs.mrs_nbmaps)
 		errx(1, "invalid value in replication status slave message");
 
