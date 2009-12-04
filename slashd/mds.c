@@ -341,20 +341,21 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	int locked;
 	struct mexpfcm *m=c->cfd_pri;
 	struct fidc_membh *f=m->mexpfcm_fcmh;
-	struct fidc_mds_info *i=f->fcmh_fcoo->fcoo_pri;
+	struct fidc_mds_info *i;
 
 	spinlock(&m->mexpfcm_lock);
 	/* Ensure the mexpfcm has the correct pointers before
 	 *   dereferencing them.
 	 */
-	if (!(f = m->mexpfcm_fcmh)) {
+	if (f == NULL) {
 		psc_errorx("mexpfcm %p has no fcmh", m);
-		goto out2;
+		goto out;
 	}
 
-	if (!(i = fidc_fcmh2fmdsi(f))) {
+	i = fidc_fcmh2fmdsi(f);
+	if (i == NULL) {
 		DEBUG_FCMH(PLL_WARN, f, "fid has no fcoo");
-		goto out1;
+		goto out;
 	}
 
 	if (c->cfd_type & CFD_FORCE_CLOSE)
@@ -383,9 +384,9 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	locked = reqlock(&f->fcmh_lock);
 	SPLAY_XREMOVE(fcm_exports, &i->fmdsi_exports, m);
 	ureqlock(&f->fcmh_lock, locked);
- out1:
-	fidc_membh_dropref(f);
- out2:
+ out:
+	if (f)
+		fidc_membh_dropref(f);
 	c->cfd_pri = NULL;
 	PSCFREE(m);
 	return (0);
@@ -985,7 +986,7 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 	 * read is tolerated as long as the bmap is zeroed.
 	 */
 	if (!rc || rc == SLERR_SHORTIO) {
-		if (bmdsi->bmdsi_od->bh_bhcrc == 0 && 
+		if (bmdsi->bmdsi_od->bh_bhcrc == 0 &&
 		    memcmp(bmdsi->bmdsi_od, &null_bmap_od, sizeof(null_bmap_od)) == 0) {
 
 			mds_bmapod_dump(bcm);
