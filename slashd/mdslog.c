@@ -110,6 +110,8 @@ mds_bmap_sync(void *data)
 	else
 		DEBUG_BMAP(PLL_INFO, bmap, "sync ok");
 	BMAP_ULOCK(bmap);
+
+	bmap_op_done(bmap);
 }
 
 
@@ -179,6 +181,8 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 		psc_fatalx("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u rc=%d",
 			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen,
 			   rc);
+
+	atomic_inc(&bmap->bcm_opcnt);
 
 	jfi_schedule(&bmdsi->bmdsi_jfi, &dirtyMdsData);
 }
@@ -256,6 +260,8 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	BMAP_LOCK(bmap);
 	bmap->bcm_mode &= ~BMAP_MDS_CRC_UP;
 	BMAP_ULOCK(bmap);
+
+	atomic_inc(&bmap->bcm_opcnt);
 	/* Tell the 'syncer' thread to flush this bmap.
 	 */
 	jfi_schedule(&bmdsi->bmdsi_jfi, &dirtyMdsData);
