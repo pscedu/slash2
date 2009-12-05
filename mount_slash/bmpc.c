@@ -309,7 +309,7 @@ bmpc_reap_locked(void)
 	LIST_CACHE_LOCK(&bmpcLru);
 	ulockBmpcSlabs;
 	
-	//lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
+	lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
 	/* Should be sorted from oldest bmpc to newest.  Skip bmpc whose
 	 *   bmpc_oldest time is too recent.
 	 */
@@ -415,7 +415,7 @@ bmpc_alloc(void)
 	int found=0;
 
  retry:
-	lockBmpcSlabs;	
+	lockBmpcSlabs;
 	PLL_FOREACH(slb, &bmpcSlabs.bmms_slbs) {
 		spinlock(&slb->slb_lock);
 		if (vbitmap_next(slb->slb_inuse, &elem))
