@@ -187,7 +187,7 @@ fidc_fcm_update(struct fidc_membh *h, const struct fidc_memb *b)
 
 	psc_assert(SAMEFID(&a->fcm_fg, &b->fcm_fg));
 
-	if (timespeccmp(&b->fcm_slfinfo.slf_age, &a->fcm_slfinfo.slf_age, >))
+	if (timespeccmp(&b->fcm_age, &a->fcm_age, >))
 		memcpy(a, b, sizeof(*a));
 
 	ureqlock(&h->fcmh_lock, locked);

@@ -89,7 +89,7 @@ enum fcmh_states {
 #define fcmh_2_attrp(f)		(&(f)->fcmh_fcm->fcm_stb)
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE))
 
-#define fcmh_2_age(f)		(&(f)->fcmh_fcm->fcm_slfinfo.slf_age)
+#define fcmh_2_age(f)		(&(f)->fcmh_fcm->fcm_age)
 #define fcmh_2_stb(f)		(&(f)->fcmh_fcm->fcm_stb)
 #define fcmh_2_isdir(f)		(S_ISDIR((f)->fcmh_fcm->fcm_stb.st_mode))
 
@@ -175,6 +175,7 @@ struct sl_finfo {
 struct fidc_memb {
 	struct slash_fidgen	 fcm_fg;
 	struct sl_finfo		 fcm_slfinfo;
+	struct timespec		fcm_age;	/* when the cached info times out */
 	struct stat		 fcm_stb;
 };
 
