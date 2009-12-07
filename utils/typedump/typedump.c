@@ -155,7 +155,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct msrcm_thread);
 	PRTYPE(struct sl_buffer);
 	PRTYPE(struct sl_buffer_iovref);
-	PRTYPE(struct sl_finfo);
 	PRTYPE(struct sl_fsops);
 	PRTYPE(struct sl_gconf);
 	PRTYPE(struct sl_nodeh);

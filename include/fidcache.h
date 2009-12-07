@@ -166,9 +166,9 @@ do {										\
  * fidc_memb - holds inode filesystem related data
  */
 struct fidc_memb {
-	struct slash_fidgen	 fcm_fg;
-	struct timespec		fcm_age;	/* when the cached info times out */
-	struct stat		 fcm_stb;
+	struct slash_fidgen	fcm_fg;		/* identity of the file */
+	struct timespec		fcm_age;	/* age of the attributes */
+	struct stat		fcm_stb;	/* file attributes */
 };
 
 #define fcm_2_fid(f)	(f)->fcm_fg.fg_fid
