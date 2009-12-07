@@ -267,7 +267,7 @@ struct fidc_membh	*fidc_lookup_simple(slfid_t);
 struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
 
 int			 fidc_lookup(const struct slash_fidgen *, int,
-			    const struct fidc_memb *, const struct slash_creds *,
+			    const struct stat *, const struct slash_creds *,
 			    struct fidc_membh **);
 
 void                     fidc_fcm_size_update(struct fidc_membh *, size_t);

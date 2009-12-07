@@ -249,15 +249,12 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 {
 	struct fidc_membh	*c;
 	int			 rc;
-	struct fidc_memb	 fcm;
 
 	int lookupflags = (FIDC_LOOKUP_CREATE |
 			   FIDC_LOOKUP_COPY   |
 			   flags);
 
-	FCM_FROM_FG_ATTR(&fcm, fg, stb);
-
-	rc = fidc_lookup(fg, lookupflags, &fcm, creds, &c);
+	rc = fidc_lookup(fg, lookupflags, stb, creds, &c);
 	if (rc) {
 		psc_assert(!c);
 		return NULL;

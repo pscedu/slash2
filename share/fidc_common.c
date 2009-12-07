@@ -178,17 +178,14 @@ fidc_fcm_size_update(struct fidc_membh *h, size_t size)
  * @b: prospective fidcache contents.
  */
 static void
-fidc_fcm_update(struct fidc_membh *h, const struct fidc_memb *b)
+fidc_fcm_update(struct fidc_membh *h, const struct stat *stb)
 {
 	int locked;
 	struct fidc_memb *a = h->fcmh_fcm;
 
 	locked = reqlock(&h->fcmh_lock);
 
-	psc_assert(SAMEFID(&a->fcm_fg, &b->fcm_fg));
-
-	if (timespeccmp(&b->fcm_age, &a->fcm_age, >))
-		memcpy(a, b, sizeof(*a));
+	memcpy(&a->fcm_stb, stb, sizeof(struct stat));
 
 	ureqlock(&h->fcmh_lock, locked);
 }
@@ -405,7 +402,7 @@ fidc_lookup_simple(slfid_t f)
 
 int
 fidc_lookup(const struct slash_fidgen *fg, int flags,
-    const struct fidc_memb *fcm, const struct slash_creds *creds,
+    const struct stat *stb, const struct slash_creds *creds,
     struct fidc_membh **fcmhp)
 {
 	int rc, try_create=0, simple_lookup=0;
@@ -416,7 +413,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 	fcmh_new = NULL; /* gcc */
 
 	if (flags & FIDC_LOOKUP_COPY)
-		psc_assert(fcm);
+		psc_assert(stb);
 
 	if ((flags & FIDC_LOOKUP_LOAD) ||
 	    (flags & FIDC_LOOKUP_REFRESH))
@@ -457,10 +454,9 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 			sched_yield();
 			goto restart;
 		}
-		/* These attrs may be newer than the ones in the cache.
-		 */
-		if (fcm)
-			fidc_fcm_update(fcmh, fcm);
+	
+		/* apply provided attributes to the cache */
+		fidc_fcm_update(fcmh, stb);
 
 		freelock_hash_bucket(&fidcHtable, fg->fg_fid);
 
@@ -491,11 +487,10 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		fcmh->fcmh_fcm = PSCALLOC(sizeof(*fcmh->fcmh_fcm));
 
 		if (flags & FIDC_LOOKUP_COPY) {
-			psc_assert(SAMEFID(fg, fcm_2_fgp(fcm)));
 
-			COPYFID(fcmh->fcmh_fcm, fcm);
+			COPYFID(fcmh_2_fgp(fcmh), fg);
 			fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
-			fidc_membh_setattr(fcmh, &fcm->fcm_stb);
+			fidc_membh_setattr(fcmh, stb);
 
 		} else if (flags & FIDC_LOOKUP_LOAD) {
 			/* The caller has provided an incomplete
