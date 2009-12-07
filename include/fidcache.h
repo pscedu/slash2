@@ -199,11 +199,11 @@ SPLAY_HEAD(bmap_cache, bmapc_memb);
 
 struct fidc_open_obj {
 	struct srt_fd_buf	 fcoo_fdb;
-	int			 fcoo_oref_rw[2];    /* open cnt for r & w */
+	int			 fcoo_oref_rw[2];	/* open cnt for r & w */
 	int                      fcoo_fd;
-	struct bmap_cache	 fcoo_bmapc;         /* bmap cache splay */
+	struct bmap_cache	 fcoo_bmapc;		/* bmap cache splay */
 	size_t			 fcoo_bmap_sz;
-	void			*fcoo_pri;           /* mds, client, ion */
+	void			*fcoo_pri;		/* msl_fcoo_data or fidc_mds_info */
 #define fcoo_oref_rd		 fcoo_oref_rw[0]
 #define fcoo_oref_wr		 fcoo_oref_rw[1]
 };
