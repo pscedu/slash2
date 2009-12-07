@@ -432,17 +432,23 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 			fidc_membh_dropref(fcmh);
 			psc_warnx("FID "FIDFMT" already in cache",
 				  FIDFMTARGS(fg));
-			return (EEXIST);
+			rc = EEXIST;
 		}
 		/* Set to true so that we don't ref twice.
 		 */
 		simple_lookup = 1;
-		/* Test to see if we jumped here from fidcFreeList.
+		/* 
+		 * Test to see if we jumped here from fidcFreeList.
+		 * Note an unlucky thread could find that the fid
+		 * does not exist before allocation and exist after
+		 * that.
 		 */
 		if (try_create) {
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
 			fidc_put(fcmh_new, &fidcFreeList);
 		}
+		if (rc)
+			return rc;
 
 		psc_assert(fg->fg_fid == fcmh_2_fid(fcmh));
 		fcmh_clean_check(fcmh);
