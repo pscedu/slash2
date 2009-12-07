@@ -405,7 +405,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
     const struct stat *stb, const struct slash_creds *creds,
     struct fidc_membh **fcmhp)
 {
-	int rc, try_create=0, simple_lookup=0;
+	int rc, try_create=0;
 	struct fidc_membh *fcmh, *fcmh_new;
 
 	*fcmhp = NULL;
@@ -434,9 +434,6 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 				  FIDFMTARGS(fg));
 			rc = EEXIST;
 		}
-		/* Set to true so that we don't ref twice.
-		 */
-		simple_lookup = 1;
 		/* 
 		 * Test to see if we jumped here from fidcFreeList.
 		 * Note an unlucky thread could find that the fid
