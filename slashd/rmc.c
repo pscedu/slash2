@@ -43,12 +43,11 @@ int
 slmrmcthr_inode_cacheput(struct slash_fidgen *fg, struct stat *stb,
     struct slash_creds *creds)
 {
-	struct fidc_membh *fcmh;
-	int flags=(FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD);
+	struct fidc_membh	*fcmh;
 
 	ENTRY;
 
-	fidc_lookup(fg, flags, stb, creds, &fcmh);
+	fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, stb, creds, &fcmh);
 
 	if (fcmh) {
 		fidc_membh_dropref(fcmh);
