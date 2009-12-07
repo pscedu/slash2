@@ -162,19 +162,11 @@ do {										\
 		DEBUG_FCMH(PLL_TRACE, (f), "dropref");				\
 	} while (0)
 
-struct sl_finfo {
-	uint64_t		slf_opcnt;	/* count attr updates       */
-	size_t			slf_readb;	/* num bytes read           */
-	size_t			slf_writeb;	/* num bytes written        */
-	struct timespec		slf_age;	/* when the cached info times out */
-};
-
 /*
  * fidc_memb - holds inode filesystem related data
  */
 struct fidc_memb {
 	struct slash_fidgen	 fcm_fg;
-	struct sl_finfo		 fcm_slfinfo;
 	struct timespec		fcm_age;	/* when the cached info times out */
 	struct stat		 fcm_stb;
 };
@@ -183,7 +175,7 @@ struct fidc_memb {
 #define fcm_2_gen(f)	(f)->fcm_fg.fg_gen
 #define fcm_2_fgp(f)	(&(f)->fcm_fg)
 #define fcm_2_fsz(f)	(f)->fcm_stb.st_size
-#define fcm_2_age(f)	(&(f)->fcm_slfinfo.slf_age)
+#define fcm_2_age(f)	(&(f)->fcm_age)
 
 #define FCM_CLEAR(fcm)	memset((fcm), 0, sizeof(struct fidc_memb))
 
