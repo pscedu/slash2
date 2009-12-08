@@ -66,6 +66,7 @@ void
 fidc_put(struct fidc_membh *f, list_cache_t *lc)
 {
 	int clean;
+	struct fidc_membh *tmp;
 
 	/* Check for uninitialized
 	 */
@@ -104,27 +105,16 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 
 		psc_assert(f->fcmh_pri == NULL);
 
-		if (!f->fcmh_fcm)
-			/* No fcm, this probably came from
-			 *  fidc_lookup() try_create.
-			 */
-			psc_assert(f->fcmh_cache_owner == NULL);
-		else {
-			struct fidc_membh *tmp;
+		psc_assert(!atomic_read(&f->fcmh_refcnt));
+		if (f->fcmh_cache_owner == NULL)
+			DEBUG_FCMH(PLL_WARN, f,
+				   "null fcmh_cache_owner here");
 
-			psc_assert(!atomic_read(&f->fcmh_refcnt));
-			if (f->fcmh_cache_owner == NULL)
-				DEBUG_FCMH(PLL_WARN, f,
-					   "null fcmh_cache_owner here");
+		tmp = _fidc_lookup_fg(fcmh_2_fgp(f), 1);
 
-			tmp = _fidc_lookup_fg(fcmh_2_fgp(f), 1);
+		if (f != tmp)
+			abort();
 
-			if (f != tmp)
-				abort();
-
-			PSCFREE(f->fcmh_fcm);
-			f->fcmh_fcm = NULL;
-		}
 		if (psclist_conjoint(&f->fcmh_hentry.hentry_lentry)) {
 			struct hash_bucket *b;
 
@@ -164,8 +154,8 @@ fidc_fcm_size_update(struct fidc_membh *h, size_t size)
 	int locked;
 
 	locked = reqlock(&h->fcmh_lock);
-	if ((size_t)fcm_2_fsz(h->fcmh_fcm) < size)
-		fcm_2_fsz(h->fcmh_fcm) = size;
+	if ((size_t)fcm_2_fsz(h) < size)
+		fcm_2_fsz(h) = size;
 
 	ureqlock(&h->fcmh_lock, locked);
 }
@@ -181,11 +171,10 @@ static void
 fidc_fcm_update(struct fidc_membh *h, const struct stat *stb)
 {
 	int locked;
-	struct fidc_memb *a = h->fcmh_fcm;
 
 	locked = reqlock(&h->fcmh_lock);
 
-	memcpy(&a->fcm_stb, stb, sizeof(struct stat));
+	memcpy(&h->fcmh_stb, stb, sizeof(struct stat));
 
 	ureqlock(&h->fcmh_lock, locked);
 }
@@ -408,6 +397,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 	int rc, try_create=0;
 	struct fidc_membh *fcmh, *fcmh_new;
 
+	rc = 0;
 	*fcmhp = NULL;
 
 	fcmh_new = NULL; /* gcc */
@@ -447,8 +437,10 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
 			fidc_put(fcmh_new, &fidcFreeList);
 		}
-		if (rc)
+		if (rc) {
+			freelock_hash_bucket(&fidcHtable, fg->fg_fid);
 			return rc;
+		}
 
 		psc_assert(fg->fg_fid == fcmh_2_fid(fcmh));
 		fcmh_clean_check(fcmh);
@@ -462,7 +454,8 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		}
 	
 		/* apply provided attributes to the cache */
-		fidc_fcm_update(fcmh, stb);
+		if (stb)
+			fidc_fcm_update(fcmh, stb);
 
 		freelock_hash_bucket(&fidcHtable, fg->fg_fid);
 
@@ -489,8 +482,6 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		/* Ok we've got a new fcmh.  No need to lock it since
 		 *  it's not yet visible to other threads.
 		 */
-		psc_assert(!fcmh->fcmh_fcm);
-		fcmh->fcmh_fcm = PSCALLOC(sizeof(*fcmh->fcmh_fcm));
 
 		if (flags & FIDC_LOOKUP_COPY) {
 

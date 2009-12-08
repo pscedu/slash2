@@ -45,7 +45,9 @@ struct sl_fsops {
  * (via their exports) which hold cached bmaps (fcm_lessees).
  */
 struct fidc_membh {
-	struct fidc_memb	*fcmh_fcm;
+	struct slash_fidgen	 fcmh_fg;		/* identity of the file */
+	struct timespec		 fcmh_age;		/* age of the attributes */
+	struct stat		 fcmh_stb;		/* file attributes */
 	struct fidc_open_obj	*fcmh_fcoo;
 	int			 fcmh_state;
 	psc_spinlock_t		 fcmh_lock;
@@ -82,16 +84,16 @@ enum fcmh_states {
 #define FCMH_URLOCK(f, lk)	ureqlock(&(f)->fcmh_lock, (lk))
 #define FCMH_LOCK_ENSURE(f)	LOCK_ENSURE(&(f)->fcmh_lock)
 
-#define fcmh_2_fid(f)		(f)->fcmh_fcm->fcm_fg.fg_fid
-#define fcmh_2_gen(f)		(f)->fcmh_fcm->fcm_fg.fg_gen
-#define fcmh_2_fgp(f)		(&(f)->fcmh_fcm->fcm_fg)
-#define fcmh_2_fsz(f)		(f)->fcmh_fcm->fcm_stb.st_size
-#define fcmh_2_attrp(f)		(&(f)->fcmh_fcm->fcm_stb)
+#define fcmh_2_fid(f)		(f)->fcmh_fg.fg_fid
+#define fcmh_2_gen(f)		(f)->fcmh_fg.fg_gen
+#define fcmh_2_fgp(f)		(&(f)->fcmh_fg)
+#define fcmh_2_fsz(f)		(f)->fcmh_stb.st_size
+#define fcmh_2_attrp(f)		(&(f)->fcmh_stb)
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE))
 
-#define fcmh_2_age(f)		(&(f)->fcmh_fcm->fcm_age)
-#define fcmh_2_stb(f)		(&(f)->fcmh_fcm->fcm_stb)
-#define fcmh_2_isdir(f)		(S_ISDIR((f)->fcmh_fcm->fcm_stb.st_mode))
+#define fcmh_2_age(f)		(&(f)->fcmh_age)
+#define fcmh_2_stb(f)		(&(f)->fcmh_stb)
+#define fcmh_2_isdir(f)		(S_ISDIR((f)->fcmh_stb.st_mode))
 
 #define DEBUG_FCMH_FLAGS(fcmh)							\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_CLEAN)		? "C" : "",	\
@@ -114,17 +116,17 @@ do {										\
 	int _dbg_fcmh_locked = reqlock(&(fcmh)->fcmh_lock);			\
 										\
 	psc_logs((level), PSS_GEN,						\
-		 " fcmh@%p fcm@%p fcoo@%p fcooref(%d:%d) i+g:%"PRId64"+"	\
+		 " fcmh@%p fcoo@%p fcooref(%d:%d) i+g:%"PRId64"+"		\
 		 "%"PRId64" s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s r:%d :: "fmt,	\
-		 (fcmh), (fcmh)->fcmh_fcm, (fcmh)->fcmh_fcoo,			\
+		 (fcmh), (fcmh)->fcmh_fcoo,					\
 		 (fcmh)->fcmh_fcoo == NULL ||					\
 		    (fcmh)->fcmh_fcoo == FCOO_STARTING ? -66 :			\
 		    (fcmh)->fcmh_fcoo->fcoo_oref_rd,				\
 		 (fcmh)->fcmh_fcoo == NULL ||					\
 		    (fcmh)->fcmh_fcoo == FCOO_STARTING ? -66 :			\
 		    (fcmh)->fcmh_fcoo->fcoo_oref_wr,				\
-		 (fcmh)->fcmh_fcm ? fcmh_2_fid(fcmh) : FID_ANY,			\
-		 (fcmh)->fcmh_fcm ? fcmh_2_gen(fcmh) : FIDGEN_ANY,		\
+		 fcmh_2_fid(fcmh),						\
+		 fcmh_2_gen(fcmh),						\
 		 DEBUG_FCMH_FLAGS(fcmh), (fcmh)->fcmh_pri,			\
 		 fcmh_lc_2_string((fcmh)->fcmh_cache_owner),			\
 		 atomic_read(&(fcmh)->fcmh_refcnt),				\
@@ -171,11 +173,11 @@ struct fidc_memb {
 	struct stat		fcm_stb;	/* file attributes */
 };
 
-#define fcm_2_fid(f)	(f)->fcm_fg.fg_fid
-#define fcm_2_gen(f)	(f)->fcm_fg.fg_gen
-#define fcm_2_fgp(f)	(&(f)->fcm_fg)
-#define fcm_2_fsz(f)	(f)->fcm_stb.st_size
-#define fcm_2_age(f)	(&(f)->fcm_age)
+#define fcm_2_fid(f)	(f)->fcmh_fg.fg_fid
+#define fcm_2_gen(f)	(f)->fcmh_fg.fg_gen
+#define fcm_2_fgp(f)	(&(f)->fcmh_fg)
+#define fcm_2_fsz(f)	(f)->fcmh_stb.st_size
+#define fcm_2_age(f)	(&(f)->fcmh_age)
 
 #define FCM_CLEAR(fcm)	memset((fcm), 0, sizeof(struct fidc_memb))
 
