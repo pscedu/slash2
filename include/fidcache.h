@@ -192,14 +192,13 @@ struct fidc_open_obj {
 #define FCOO_STARTING		((struct fidc_open_obj *)0x01)
 
 enum fidc_lookup_flags {
-	FIDC_LOOKUP_CREATE    = (1 << 0), /* Create if not present         */
-	FIDC_LOOKUP_EXCL      = (1 << 1), /* Fail if fcmh is present       */
-	FIDC_LOOKUP_COPY      = (1 << 2), /* Create from existing attrs    */
-	FIDC_LOOKUP_LOAD      = (1 << 3), /* Create, get attrs from mds    */
-	FIDC_LOOKUP_REFRESH   = (1 << 3), /* load and refresh are the same */
-	FIDC_LOOKUP_FCOOSTART = (1 << 4), /* start the fcoo before exposing
-					   *  the cache entry.             */
-	FIDC_LOOKUP_NOREF     = (1 << 5)
+	FIDC_LOOKUP_CREATE	= (1 << 0),	/* Create if not present         */
+	FIDC_LOOKUP_EXCL	= (1 << 1),	/* Fail if fcmh is present       */
+	FIDC_LOOKUP_COPY	= (1 << 2),	/* Create from existing attrs    */
+	FIDC_LOOKUP_LOAD	= (1 << 3),	/* Create, get attrs from mds    */
+	FIDC_LOOKUP_REFRESH	= (1 << 3),	/* load and refresh are the same */
+	FIDC_LOOKUP_FCOOSTART	= (1 << 4),	/* start the fcoo before exposing the cache entry. */
+	FIDC_LOOKUP_NOREF	= (1 << 5)
 };
 
 /* Perform a simple fidcache lookup, returning NULL if DNE.
@@ -224,16 +223,6 @@ enum fidc_lookup_flags {
 #define fidc_lookup_load_fg(fg, creds, fcmhp)					\
 	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL,		\
 	    (creds), (fcmhp))
-
-/* Create the inode from existing attributes only if one by the same id does not
- *  already exist.  Once it's created call fidc_fcoo_start_locked() so that only
- *  this thread may execute an open on the inode.
- * NOTE: This is needed for fuse create which does a create and open atomically.
- */
-#define fidc_lookup_createopen_inode(f, stb, creds, fcmhp)			\
-	fidc_lookup(f, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL |			\
-	    FIDC_LOOKUP_COPY | FIDC_LOOKUP_FCOOSTART, (stb), (creds),		\
-	    (fcmhp))
 
 #define fidc_settimeo(age)							\
 	do {									\
