@@ -1080,8 +1080,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			fg.fg_fid = attr->attr.st_ino;
 			fg.fg_gen = attr->gen;
 
-			rc = fidc_lookup_copy_inode(&fg, &attr->attr,
-						      &mq->creds, &fcmh);
+			rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_COPY|FIDC_LOOKUP_REFRESH,
+					 &attr->attr, &mq->creds, &fcmh);
 			if (fcmh)
 				fidc_membh_dropref(fcmh);
 			else

@@ -206,12 +206,6 @@ enum fidc_lookup_flags {
 #define fidc_lookup_inode(fg)	fidc_lookup_simple(fg)
 #define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
 
-/* Create the inode from existing attributes.
- */
-#define fidc_lookup_copy_inode(fg, stb, creds, fcmhp)				\
-	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |		\
-	    FIDC_LOOKUP_REFRESH, (stb), (creds), (fcmhp))
-
 #define fidc_settimeo(age)							\
 	do {									\
 		*(age) = fidc_gettime() + FCMH_ATTR_TIMEO;			\
