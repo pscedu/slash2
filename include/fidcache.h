@@ -164,20 +164,6 @@ do {										\
 		DEBUG_FCMH(PLL_TRACE, (f), "dropref");				\
 	} while (0)
 
-/*
- * fidc_memb - holds inode filesystem related data
- */
-struct fidc_memb {
-	struct slash_fidgen	fcm_fg;		/* identity of the file */
-	struct timespec		fcm_age;	/* age of the attributes */
-	struct stat		fcm_stb;	/* file attributes */
-};
-
-#define fcm_2_fid(f)	(f)->fcmh_fg.fg_fid
-#define fcm_2_gen(f)	(f)->fcmh_fg.fg_gen
-#define fcm_2_fgp(f)	(&(f)->fcmh_fg)
-#define fcm_2_fsz(f)	(f)->fcmh_stb.st_size
-#define fcm_2_age(f)	(&(f)->fcmh_age)
 
 #define FCM_CLEAR(fcm)	memset((fcm), 0, sizeof(struct fidc_memb))
 

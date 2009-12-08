@@ -154,8 +154,8 @@ fidc_fcm_size_update(struct fidc_membh *h, size_t size)
 	int locked;
 
 	locked = reqlock(&h->fcmh_lock);
-	if ((size_t)fcm_2_fsz(h) < size)
-		fcm_2_fsz(h) = size;
+	if ((size_t)fcmh_2_fsz(h) < size)
+		fcmh_2_fsz(h) = size;
 
 	ureqlock(&h->fcmh_lock, locked);
 }
@@ -564,18 +564,6 @@ fidc_membh_init(__unusedx struct psc_poolmgr *pm, void *a)
 	f->fcmh_pri = NULL;
 	memset(&f->fcmh_hentry, 0, sizeof(struct hash_entry));
 	return (0);
-}
-
-/**
- * fidc_memb_init - init a fidcache member.
- */
-void
-fidc_memb_init(struct fidc_memb *fcm, slfid_t f)
-{
-psc_fatalx("not ready");
-	fcm = PSCALLOC(sizeof(*fcm));
-	fcm->fcm_fg.fg_fid = f;
-	fcm->fcm_fg.fg_gen = FIDGEN_ANY;
 }
 
 /**
