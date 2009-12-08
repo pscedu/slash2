@@ -144,13 +144,8 @@ iod_inode_lookup(const struct slash_fidgen *fg)
 {
 	int rc;
 	struct fidc_membh *f;
-	/* Note that these creds are bogus, just used to satisfy the current
-	 *  fidc_lookup_load_inode() code.
-	 */
-	struct fidc_memb m;
 
-	COPYFID(fcm_2_fgp(&m), fg);
-	rc = fidc_lookup_copy_inode(fg, &m, &rootcreds, &f);
+	rc = fidc_lookup_copy_inode(fg, NULL, &rootcreds, &f);
 	psc_assert(f);
 
 	return (f);

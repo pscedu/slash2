@@ -412,8 +412,11 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 
 	fcmh_new = NULL; /* gcc */
 
+#if 0
+	/* XXX need double check before turning it on */
 	if (flags & FIDC_LOOKUP_COPY)
 		psc_assert(stb);
+#endif
 
 	if ((flags & FIDC_LOOKUP_LOAD) ||
 	    (flags & FIDC_LOOKUP_REFRESH))

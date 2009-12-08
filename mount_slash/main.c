@@ -1059,7 +1059,6 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 
 	if (mq->nstbpref) {
 		uint32_t i;
-		struct fidc_memb fcm;
 		struct fidc_membh *fcmh;
 		struct srm_getattr_rep *attr = iov[1].iov_base;
 
@@ -1067,17 +1066,18 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			if (attr->rc || !attr->attr.st_ino)
 				continue;
 
+#ifdef KEEP_IT_FOR_NOW_AS_A_REFERENCE
 			memset(&fcm, 0, sizeof(struct fidc_memb));
 			memcpy(&fcm.fcm_stb, &attr->attr, sizeof(struct stat));
 			fcm.fcm_fg.fg_fid = attr->attr.st_ino;
 			fcm.fcm_fg.fg_gen = attr->gen;
+#endif
 
 			psc_trace("adding i+g:%"PRId64"+%"PRId64" rc=%d",
 				  fcm.fcm_fg.fg_fid, fcm.fcm_fg.fg_gen,
 				  attr->rc);
 
-			fidc_gettime(fcm_2_age(&fcm));
-			rc = fidc_lookup_copy_inode(&fcm.fcm_fg, &fcm,
+			rc = fidc_lookup_copy_inode(&fcm.fcm_fg, &attr->attr,
 						      &mq->creds, &fcmh);
 			if (fcmh)
 				fidc_membh_dropref(fcmh);

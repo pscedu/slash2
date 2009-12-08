@@ -221,16 +221,16 @@ enum fidc_lookup_flags {
 
 /* Create the inode from existing attributes.
  */
-#define fidc_lookup_copy_inode(fg, fcm, creds, fcmhp)				\
+#define fidc_lookup_copy_inode(fg, stb, creds, fcmhp)				\
 	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |		\
-	    FIDC_LOOKUP_REFRESH, (fcm), (creds), (fcmhp))
+	    FIDC_LOOKUP_REFRESH, (stb), (creds), (fcmhp))
 
 /* Create the inode from existing attributes but don't ref it.
  *  This used for preloading the inode cache.
  */
-#define fidc_lookup_copy_inode_noref(fg, fcm, creds, fcmhp)			\
+#define fidc_lookup_copy_inode_noref(fg, stb, creds, fcmhp)			\
 	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |		\
-	    FIDC_LOOKUP_NOREF | FIDC_LOOKUP_REFRESH, (fcm), (creds),		\
+	    FIDC_LOOKUP_NOREF | FIDC_LOOKUP_REFRESH, (stb), (creds),		\
 	    (fcmhp))
 
 #define fidc_lookup_load_fg(fg, creds, fcmhp)					\
@@ -242,9 +242,9 @@ enum fidc_lookup_flags {
  *  this thread may execute an open on the inode.
  * NOTE: This is needed for fuse create which does a create and open atomically.
  */
-#define fidc_lookup_createopen_inode(f, fcm, creds, fcmhp)			\
+#define fidc_lookup_createopen_inode(f, stb, creds, fcmhp)			\
 	fidc_lookup(f, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL |			\
-	    FIDC_LOOKUP_COPY | FIDC_LOOKUP_FCOOSTART, (fcm), (creds),		\
+	    FIDC_LOOKUP_COPY | FIDC_LOOKUP_FCOOSTART, (stb), (creds),		\
 	    (fcmhp))
 
 #define fidc_settimeo(age)							\
@@ -262,7 +262,6 @@ struct fidc_membh	*fidc_get(void);
 void			 fidc_put(struct fidc_membh *, struct psc_listcache *);
 int			 fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
 void			 fidcache_init(enum fid_cache_users, int (*)(struct fidc_membh *));
-
 struct fidc_membh	*fidc_lookup_simple(slfid_t);
 struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
 
