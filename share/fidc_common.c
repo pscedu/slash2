@@ -548,6 +548,9 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 	return (0);
 }
 
+/**
+ * fidc_membh_init - init a fidcache member handle.
+ */
 int
 fidc_membh_init(__unusedx struct psc_poolmgr *pm, void *a)
 {
@@ -566,9 +569,6 @@ fidc_membh_init(__unusedx struct psc_poolmgr *pm, void *a)
 	return (0);
 }
 
-/**
- * fidc_membh_init - init a fidcache member handle.
- */
 struct fidc_open_obj *
 fidc_fcoo_init(void)
 {
