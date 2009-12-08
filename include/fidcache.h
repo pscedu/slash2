@@ -212,10 +212,6 @@ enum fidc_lookup_flags {
 	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |		\
 	    FIDC_LOOKUP_REFRESH, (stb), (creds), (fcmhp))
 
-#define fidc_lookup_load_fg(fg, creds, fcmhp)					\
-	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL,		\
-	    (creds), (fcmhp))
-
 #define fidc_settimeo(age)							\
 	do {									\
 		*(age) = fidc_gettime() + FCMH_ATTR_TIMEO;			\

@@ -543,7 +543,7 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 
 	*fp = NULL;
 
-	rc = fidc_lookup_load_fg(fgp, &rootcreds, &fcmh);
+	rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL, &rootcreds, &fcmh);
 	if (rc)
 		return (rc);
 

@@ -670,7 +670,7 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	mp->rc = fidc_lookup_load_fg(&mq->fg, &rootcreds, &fcmh);
+	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL, &rootcreds, &fcmh);
 	if (mp->rc)
 		return (0);
 	ih = fcmh_2_inoh(fcmh);
@@ -701,7 +701,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	mp->rc = fidc_lookup_load_fg(&mq->fg, &rootcreds, &fcmh);
+	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL, &rootcreds, &fcmh);
 	if (mp->rc)
 		return (0);
 	ih = fcmh_2_inoh(fcmh);
