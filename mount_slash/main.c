@@ -250,11 +250,7 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 	struct fidc_membh	*c;
 	int			 rc;
 
-	int lookupflags = (FIDC_LOOKUP_CREATE |
-			   FIDC_LOOKUP_COPY   |
-			   flags);
-
-	rc = fidc_lookup(fg, lookupflags, stb, creds, &c);
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_COPY|flags, stb, creds, &c);
 	if (rc) {
 		psc_assert(!c);
 		return NULL;
