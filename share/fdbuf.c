@@ -53,7 +53,7 @@ bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
 	sbdb->sbdb_secret.sbs_ios_id = ios_id;
 	sbdb->sbdb_secret.sbs_bmapno = bmapno;
 	sbdb->sbdb_secret.sbs_magic = SBDB_MAGIC;
-	sbdb->sbdb_secret.sbs_nonce = psc_atomic64_inc_return(&nonce);
+	sbdb->sbdb_secret.sbs_nonce = psc_atomic64_inc_getnew(&nonce);
 
 	gerr = gcry_md_copy(&hd, descbuf_hd);
 	if (gerr)
@@ -145,7 +145,7 @@ fdbuf_sign(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
 	sfdb->sfdb_secret.sfs_fg = *fgp;
 	sfdb->sfdb_secret.sfs_cli_prid = cli_prid;
 	sfdb->sfdb_secret.sfs_magic = SFDB_MAGIC;
-	sfdb->sfdb_secret.sfs_nonce = psc_atomic64_inc_return(&nonce);
+	sfdb->sfdb_secret.sfs_nonce = psc_atomic64_inc_getnew(&nonce);
 
 	gerr = gcry_md_copy(&hd, descbuf_hd);
 	if (gerr)

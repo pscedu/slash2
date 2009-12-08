@@ -8,9 +8,9 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 
+#include "pfl/cdefs.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
-#include "pfl/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/strlcpy.h"
@@ -171,7 +171,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    displayfn, slstrerror(rc)));
 
 	mq->fg = fg;
-	mq->id = psc_atomic32_inc_return(&msctl_replstid);
+	mq->id = psc_atomic32_inc_getnew(&msctl_replstid);
 
 	rv = 1;
 	mrsq = PSCALLOC(sizeof(*mrsq));
