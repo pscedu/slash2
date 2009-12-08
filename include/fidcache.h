@@ -212,14 +212,6 @@ enum fidc_lookup_flags {
 	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |		\
 	    FIDC_LOOKUP_REFRESH, (stb), (creds), (fcmhp))
 
-/* Create the inode from existing attributes but don't ref it.
- *  This used for preloading the inode cache.
- */
-#define fidc_lookup_copy_inode_noref(fg, stb, creds, fcmhp)			\
-	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |		\
-	    FIDC_LOOKUP_NOREF | FIDC_LOOKUP_REFRESH, (stb), (creds),		\
-	    (fcmhp))
-
 #define fidc_lookup_load_fg(fg, creds, fcmhp)					\
 	fidc_lookup((fg), FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL,		\
 	    (creds), (fcmhp))
