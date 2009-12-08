@@ -27,7 +27,7 @@ dumpfid(const char *fn)
 	struct slash_inode_extras_od inox;
 	struct slash_inode_od ino;
 	char buf[BUFSIZ];
-	psc_crc_t crc;
+	psc_crc64_t crc;
 	int fd, j, nr;
 	ssize_t rc;
 
@@ -46,7 +46,7 @@ dumpfid(const char *fn)
 		    fn, INO_OD_SZ, rc);
 		goto out;
 	}
-	psc_crc_calc(&crc, &ino, INO_OD_CRCSZ);
+	psc_crc64_calc(&crc, &ino, INO_OD_CRCSZ);
 	_debug_ino(buf, sizeof(buf), &ino);
 	printf("%s\t%s %s\n", fn, buf, crc == ino.ino_crc ? "OK" : "BAD");
 
@@ -60,7 +60,7 @@ dumpfid(const char *fn)
 		    fn, INOX_OD_SZ, rc);
 		goto out;
 	}
-	psc_crc_calc(&crc, &inox, INOX_OD_CRCSZ);
+	psc_crc64_calc(&crc, &inox, INOX_OD_CRCSZ);
 	printf("\tcrc: %s xrepls:", crc == inox.inox_crc ? "OK" : "BAD");
 	nr = ino.ino_nrepls;
 	if (nr < INO_DEF_NREPLS)

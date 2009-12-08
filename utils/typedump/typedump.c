@@ -126,7 +126,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct cli_resprof_info);
 	PRTYPE(struct fidc_iod_info);
 	PRTYPE(struct fidc_mds_info);
-	PRTYPE(struct fidc_memb);
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct fidc_open_obj);
 	PRTYPE(struct fidc_private);
