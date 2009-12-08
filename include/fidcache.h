@@ -244,7 +244,6 @@ int			 fidc_membh_init(struct psc_poolmgr *, void *);
 void			 fidc_membh_setattr(struct fidc_membh *, const struct stat *);
 
 struct fidc_open_obj	*fidc_fcoo_init(void);
-void			 fidc_memb_init(struct fidc_memb *, slfid_t);
 
 struct fidc_membh	*fidc_get(void);
 void			 fidc_put(struct fidc_membh *, struct psc_listcache *);
