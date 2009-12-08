@@ -1067,16 +1067,6 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			if (attr->rc || !attr->attr.st_ino)
 				continue;
 
-#ifdef KEEP_IT_FOR_NOW_AS_A_REFERENCE
-			memset(&fcm, 0, sizeof(struct fidc_memb));
-			memcpy(&fcm.fcm_stb, &attr->attr, sizeof(struct stat));
-			fcm.fcm_fg.fg_fid = attr->attr.st_ino;
-			fcm.fcm_fg.fg_gen = attr->gen;
-
-			psc_trace("adding i+g:%"PRId64"+%"PRId64" rc=%d",
-				  fcm.fcm_fg.fg_fid, fcm.fcm_fg.fg_gen,
-				  attr->rc);
-#endif
 			fg.fg_fid = attr->attr.st_ino;
 			fg.fg_gen = attr->gen;
 

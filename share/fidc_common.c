@@ -403,7 +403,12 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 	fcmh_new = NULL; /* gcc */
 
 #if 0
-	/* XXX need double check before turning it on */
+	/*
+	 * The original code has a bug in iod_inode_lookup().  Even though that
+	 * it sets FIDC_LOOKUP_COPY, it does not pass in valid attributes (it
+	 * only uses COPYFID() to initialize part of the fcm. Need to investigate
+	 * how an I/O server uses attributes. - 12/08/2009.
+	 */
 	if (flags & FIDC_LOOKUP_COPY)
 		psc_assert(stb);
 #endif
