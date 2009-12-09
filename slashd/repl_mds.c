@@ -49,11 +49,7 @@ iosidx_cmp(const void *a, const void *b)
 {
 	const int *x = a, *y = b;
 
-	if (*x < *y)
-		return (-1);
-	else if (*x > *y)
-		return (1);
-	return (0);
+	return (CMP(*x, *y));
 }
 
 __static int
@@ -547,6 +543,18 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	return (0);
 }
 
+void
+mds_repl_initrq(struct sl_replrq *rrq, struct fidc_membh *fcmh)
+{
+	memset(rrq, 0, sizeof(*rrq));
+	psc_pthread_mutex_init(&rrq->rrq_mutex);
+	psc_multilock_cond_init(&rrq->rrq_mlcond,
+	    NULL, 0, "replrq-%lx", fcmh_2_fid(fcmh));
+	psc_atomic32_set(&rrq->rrq_refcnt, 1);
+	rrq->rrq_inoh = fcmh_2_inoh(fcmh);
+	SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
+}
+
 int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
     const sl_replica_t *iosv, int nios)
@@ -602,14 +610,9 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 				rrq = newrq;
 				newrq = NULL;
 
-				memset(rrq, 0, sizeof(*rrq));
-				psc_pthread_mutex_init(&rrq->rrq_mutex);
-				psc_multilock_cond_init(&rrq->rrq_mlcond,
-				    NULL, 0, "replrq-%lx", fcmh_2_fid(fcmh));
-				psc_atomic32_set(&rrq->rrq_refcnt, 1);
-				rrq->rrq_inoh = fcmh_2_inoh(fcmh);
+				mds_repl_initrq(rrq, fcmh);
+				psc_atomic32_inc(&rrq->rrq_refcnt);
 				rrq->rrq_flags |= REPLRQF_BUSY;
-				SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
 			}
 		}
 	} else {
@@ -705,17 +708,10 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	char fn[IMNS_NAME_MAX];
 	sl_blkno_t n;
 
-	/* Scan for any OLD states. */
-	retifset[SL_REPL_INACTIVE] = 0;
-	retifset[SL_REPL_ACTIVE] = 0;
-	retifset[SL_REPL_OLD] = 1;
-	retifset[SL_REPL_SCHED] = 1;
-
 	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
 	if (rrq->rrq_flags & REPLRQF_DIE) {
 		/* someone is already waiting for this to go away */
-		psc_multilock_cond_wakeup(&rrq->rrq_mlcond);
-		psc_pthread_mutex_unlock(&rrq->rrq_mutex);
+		mds_repl_unrefrq(rrq);
 		return;
 	}
 
@@ -726,6 +722,12 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	rrq_gen = rrq->rrq_gen;
 	psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 
+	/* Scan for any OLD states. */
+	retifset[SL_REPL_INACTIVE] = 0;
+	retifset[SL_REPL_ACTIVE] = 0;
+	retifset[SL_REPL_OLD] = 1;
+	retifset[SL_REPL_SCHED] = 1;
+
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 		if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
@@ -734,17 +736,10 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		bmdsi = bmap_2_bmdsi(bcm);
 		rc = mds_repl_bmap_walk(bcm, NULL,
 		    retifset, REPL_WALKF_SCIRCUIT, NULL, 0);
-		if (rc == 0 &&
-		    bmdsi->bmdsi_repl_policy == BRP_PERSIST)
-			rc = 1;
 		mds_repl_bmap_rel(bcm);
 		if (rc)
 			goto keep;
 	}
-
-	/* XXX or if inode new bmap policy == PERSIST */
-//	if (REPLRQ_INO(rrq)->ino_newbmap_policy == BRP_PERSIST)
-//		goto keep;
 
 	spinlock(&replrq_tree_lock);
 	psc_pthread_mutex_lock(&rrq->rrq_mutex);
@@ -813,7 +808,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	}
 
 	tract[SL_REPL_INACTIVE] = -1;
-	tract[SL_REPL_ACTIVE] = SL_REPL_INACTIVE;
+	tract[SL_REPL_ACTIVE] = -1;
 	tract[SL_REPL_OLD] = SL_REPL_INACTIVE;
 	tract[SL_REPL_SCHED] = SL_REPL_INACTIVE;
 
@@ -920,13 +915,7 @@ mds_repl_scandir(void)
 				    slstrerror(rc));
 
 			rrq = psc_pool_get(replrq_pool);
-			memset(rrq, 0, sizeof(*rrq));
-			psc_pthread_mutex_init(&rrq->rrq_mutex);
-			psc_multilock_cond_init(&rrq->rrq_mlcond,
-			    NULL, 0, "replrq-%lx", fcmh_2_fid(fcmh));
-			psc_atomic32_set(&rrq->rrq_refcnt, 1);
-			rrq->rrq_inoh = fcmh_2_inoh(fcmh);
-			SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
+			mds_repl_initrq(rrq, fcmh);
 
 			for (j = 0; j < REPLRQ_NREPLS(rrq); j++)
 				iosv[j].bs_id = REPLRQ_GETREPL(rrq, j).bs_id;

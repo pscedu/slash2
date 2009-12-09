@@ -33,8 +33,7 @@ slmreplthr_removeq(struct sl_replrq *rrq)
 
 	locked = reqlock(&msi->msi_lock);
 	msi->msi_flags |= MSIF_DIRTYQ;
-	if (psc_dynarray_exists(&msi->msi_replq, rrq))
-		psc_dynarray_remove(&msi->msi_replq, rrq);
+	psc_dynarray_remove(&msi->msi_replq, rrq);
 	ureqlock(&msi->msi_lock, locked);
 
 	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
@@ -157,9 +156,9 @@ slmreplthr_main(void *arg)
 			}
 
 			rrq = psc_dynarray_getpos(&msi->msi_replq, rir);
+			psc_atomic32_inc(&rrq->rrq_refcnt);
 			freelock(&msi->msi_lock);
 
-			psc_atomic32_inc(&rrq->rrq_refcnt);
 			rc = mds_repl_accessrq(rrq);
 
 			if (rc == 0) {
