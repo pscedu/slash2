@@ -127,7 +127,7 @@ cfdlookup(struct pscrpc_export *exp, uint64_t cfd, void *datap)
 	c = SPLAY_FIND(cfdtree, &mc->mc_cfdtree, &q);
 	if (c == NULL)
 		rc = ENOENT;
-	else if (datap)
+	else
 		*(void **)datap = c->cfd_pri;
 	freelock(&exp->exp_lock);
 	psc_trace("cfd pri data (%p)", c->cfd_pri);
