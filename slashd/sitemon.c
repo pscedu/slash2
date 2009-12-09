@@ -56,8 +56,9 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	struct sl_resm *dst_resm;
 	struct psc_thread *thr;
 	struct sl_site *site;
-	int rc;
+	int we_set_busy, rc;
 
+	we_set_busy = 0;
 	thr = pscthr_get();
 	smrt = slmreplthr(thr);
 	site = smrt->smrt_site;
@@ -70,6 +71,8 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 
 	if (!mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 1))
 		goto fail;
+
+	we_set_busy = 1;
 
 	csvc = slm_geticonn(dst_resm);
 	if (csvc == NULL)
@@ -97,7 +100,8 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	return (1);
 
  fail:
-	mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 0);
+	if (we_set_busy)
+		mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 0);
 	if (!psc_multilock_hascond(&msi->msi_ml,
 	    &dst_mrmi->mrmi_mlcond))
 		psc_multilock_addcond(&msi->msi_ml,
