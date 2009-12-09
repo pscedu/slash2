@@ -4,30 +4,59 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "pfl/pfl.h"
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
+#include "psc_util/fmt.h"
 #include "psc_util/log.h"
 
+#include "sliod/ctl_iod.h"
 #include "pathnames.h"
 
-#include "sliod/ctl_iod.h"
+void
+packshow_replwkst(__unusedx const char *arg)
+{
+	psc_ctlmsg_push(SLICMT_GET_REPLWKST, sizeof(struct slictlmsg_replwkst));
+}
 
 void
-slricthr_prdat(const struct psc_ctlmsg_stats *pcst)
+sliricthr_prdat(const struct psc_ctlmsg_stats *pcst)
 {
 	printf(" #write %8u", pcst->pcst_nwrite);
 }
 
+void
+replwkst_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("replication work status\n"
+	    " %-16s %5s %32s %10s %10s %6s\n",
+	    "fid", "bmap#", "peer", "offset", "len", "%prog");
+}
+
+void
+replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct slictlmsg_replwkst *srws = m;
+	char rbuf[PSCFMT_RATIO_BUFSIZ];
+
+	psc_fmt_ratio(rbuf, srws->srws_offset, srws->srws_len);
+	printf(" %016lx %5d %32s "
+	    "%10d %10d %6s\n",
+	    srws->srws_fg.fg_fid, srws->srws_bmapno, srws->srws_peer_addr,
+	    srws->srws_offset, srws->srws_len, rbuf);
+}
+
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "loglevels",	psc_ctl_packshow_loglevel },
+	{ "replwkst",	packshow_replwkst },
 	{ "stats",	psc_ctl_packshow_stats }
 };
 int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
-	PSC_CTLMSG_PRFMT_DEFS
+	PSC_CTLMSG_PRFMT_DEFS,
+	{ replwkst_prhdr,	replwkst_prdat,		sizeof(struct slictlmsg_replwkst), NULL }
 };
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
@@ -35,7 +64,7 @@ struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
 /* CTL		*/ { psc_ctlthr_prdat },
 /* LNETAC	*/ { NULL },
 /* USKLNDPL	*/ { NULL },
-/* RIC		*/ { slricthr_prdat }
+/* RIC		*/ { sliricthr_prdat }
 };
 int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 

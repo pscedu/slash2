@@ -50,7 +50,7 @@ struct msctlmsg_fncmd_bmapreplpol {
 
 #define REPLRQ_BMAPNO_ALL	(-1)
 
-/* custom mount_slash message types */
+/* mount_slash message types */
 #define MSCMT_ADDREPLRQ		(NPCMT + 0)
 #define MSCMT_DELREPLRQ		(NPCMT + 1)
 #define MSCMT_GETREPLST		(NPCMT + 2)

@@ -16,8 +16,8 @@
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
 
-#include "bmap.h"
 #include "mount_slash/ctl_cli.h"
+#include "bmap.h"
 #include "msctl.h"
 #include "pathnames.h"
 #include "slashrpc.h"

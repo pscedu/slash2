@@ -22,12 +22,19 @@ struct pscrpc_nbreqset	 sli_replwk_nbset =
 struct psc_poolmaster	 sli_replwkrq_poolmaster;
 struct psc_poolmgr	*sli_replwkrq_pool;
 
+/* a replication request exists on one of these */
 struct psc_listcache	 sli_replwkq_pending;
 struct psc_listcache	 sli_replwkq_inflight;
 struct psc_listcache	 sli_replwkq_finished;
 
+/* and all registered replication requests are listed here */
+struct psc_lockedlist	 sli_replwkq_active =
+    PLL_INITIALIZER(&sli_replwkq_active, struct sli_repl_workrq,
+	    srw_active_lentry);
+
 void
-sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp, sl_bmapno_t bmapno, int len)
+sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
+    sl_bmapno_t bmapno, int len)
 {
 	struct sli_repl_workrq *w;
 
@@ -37,6 +44,7 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp, sl_bmapno_t bmapno, int l
 	w->srw_bmapno = bmapno;
 	w->srw_len = len;
 	lc_add(&sli_replwkq_pending, w);
+	pll_add(&sli_replwkq_active, w);
 }
 
 __dead void *
@@ -46,6 +54,7 @@ slireplfinthr_main(__unusedx void *arg)
 
 	for (;;) {
 		w = lc_getwait(&sli_replwkq_finished);
+		pll_remove(&sli_replwkq_active, w);
 		sli_rmi_issue_repl_schedwk(w);
 
 		if (w->srw_bcm)
@@ -115,15 +124,15 @@ void
 sli_repl_init(void)
 {
 	psc_poolmaster_init(&sli_replwkrq_poolmaster, struct sli_repl_workrq,
-	    srw_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL, "replwkrq");
+	    srw_state_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL, "replwkrq");
 	sli_replwkrq_pool = psc_poolmaster_getmgr(&sli_replwkrq_poolmaster);
 
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,
-	    srw_lentry, "replwkpnd");
+	    srw_state_lentry, "replwkpnd");
 	lc_reginit(&sli_replwkq_inflight, struct sli_repl_workrq,
-	    srw_lentry, "replwkinf");
+	    srw_state_lentry, "replwkinf");
 	lc_reginit(&sli_replwkq_finished, struct sli_repl_workrq,
-	    srw_lentry, "replwkfin");
+	    srw_state_lentry, "replwkfin");
 
 	pscthr_init(SLITHRT_REPLFIN, 0, slireplfinthr_main,
 	    NULL, 0, "slireplfinthr");
