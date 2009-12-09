@@ -16,7 +16,6 @@ struct fidc_mds_info {
 	struct fcm_exports	  fmdsi_exports;	/* tree of mexpfcm */
 	struct slash_inode_handle fmdsi_inodeh;		/* MDS sl_inodeh_t goes here */
 	atomic_t		  fmdsi_ref;
-	uint32_t		  fmdsi_xid;
 	void			 *fmdsi_data;		/* ZFS file info structure */
 };
 
@@ -33,7 +32,6 @@ fmdsi_init(struct fidc_mds_info *mdsi, struct fidc_membh *fcmh, void *finfo)
 {
 	SPLAY_INIT(&mdsi->fmdsi_exports);
 	atomic_set(&mdsi->fmdsi_ref, 0);
-	mdsi->fmdsi_xid = 0;
 	mdsi->fmdsi_data = finfo;
 
 	slash_inode_handle_init(&mdsi->fmdsi_inodeh, fcmh, mds_inode_sync);
