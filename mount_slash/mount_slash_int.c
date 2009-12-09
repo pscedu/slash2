@@ -560,7 +560,6 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 		for (i=0; i < mp->nblks; i++) {
 			SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc,
 				     bmap);
-			//atomic_inc(&f->fcmh_fcoo->fcoo_bmapc_cnt);
 			bmap_2_msion(bmap) = mp->ios_nid;
 		}
 		freelock(&f->fcmh_lock);
