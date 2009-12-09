@@ -3,11 +3,11 @@
 #include <pthread.h>
 #include <stdio.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/pool.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
 
 #include "bmap.h"
 #include "buffer.h"
@@ -432,7 +432,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 				  FIDFMTARGS(fg));
 			rc = EEXIST;
 		}
-		/* 
+		/*
 		 * Test to see if we jumped here from fidcFreeList.
 		 * Note an unlucky thread could find that the fid
 		 * does not exist before allocation and exist after
@@ -457,7 +457,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 			sched_yield();
 			goto restart;
 		}
-	
+
 		/* apply provided attributes to the cache */
 		if (stb)
 			fidc_fcm_update(fcmh, stb);
@@ -489,10 +489,10 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		 */
 
 		if (flags & FIDC_LOOKUP_COPY) {
-
 			COPYFID(fcmh_2_fgp(fcmh), fg);
 			fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
-			fidc_membh_setattr(fcmh, stb);
+			if (stb)
+				fidc_membh_setattr(fcmh, stb);
 
 		} else if (flags & FIDC_LOOKUP_LOAD) {
 			/* The caller has provided an incomplete
