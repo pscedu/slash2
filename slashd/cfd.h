@@ -1,7 +1,7 @@
 /* $Id$ */
 
 #ifndef _SL_CFD_H_
-#define _CSL_FD_H_
+#define _SL_CFD_H_
 
 #include "psc_ds/tree.h"
 
@@ -35,14 +35,13 @@ struct cfdops {
 };
 
 struct cfdent *
-	cfdget(struct pscrpc_export *, enum slconn_type, uint64_t);
+	cfdget(struct pscrpc_export *, uint64_t);
 int	cfdcmp(const void *, const void *);
 int	cfdnew(slfid_t, struct pscrpc_export *, enum slconn_type,
 	    void *, struct cfdent **, int);
-int	cfdfree(struct pscrpc_export *, enum slconn_type, uint64_t);
+int	cfdfree(struct pscrpc_export *, uint64_t);
 void	cfdfreeall(struct pscrpc_export *, enum slconn_type);
-int	cfdlookup(struct pscrpc_export *, enum slconn_type, uint64_t,
-	    void *);
+int	cfdlookup(struct pscrpc_export *, uint64_t, void *);
 
 SPLAY_HEAD(cfdtree, cfdent);
 SPLAY_PROTOTYPE(cfdtree, cfdent, cfd_entry, cfdcmp);

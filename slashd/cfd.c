@@ -17,6 +17,7 @@
 #include "psc_util/lock.h"
 
 #include "cfd.h"
+#include "mdsexpc.h"
 #include "slashrpc.h"
 
 __static SPLAY_GENERATE(cfdtree, cfdent, cfd_entry, cfdcmp);
@@ -36,15 +37,14 @@ cfdcmp(const void *a, const void *b)
 }
 
 __static int
-cfdinsert(struct cfdent *c, struct pscrpc_export *exp,
-    enum slconn_type peertype)
+cfdinsert(struct cfdent *c, struct pscrpc_export *exp)
 {
-	struct slashrpc_export *slexp;
-	int rc=0;
+	struct mexp_cli *mc;
+	int rc;
 
-	slexp = slashrpc_export_get(exp, peertype);
 	spinlock(&exp->exp_lock);
-	if (SPLAY_INSERT(cfdtree, slexp->slexp_cfdtree, c))
+	mc = mexpcli_get(exp);
+	if (SPLAY_INSERT(cfdtree, &mc->mc_cfdtree, c))
 		rc = EEXIST;
 	freelock(&exp->exp_lock);
 	return (rc);
@@ -91,7 +91,7 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, enum slconn_type peertype,
 	psc_info("FID (%"PRId64") CFD (%"PRId64") PRI(%p)", fid,
 		 c->cfd_fdb.sfdb_secret.sfs_cfd, c->cfd_pri);
 
-	rc = cfdinsert(c, exp, peertype);
+	rc = cfdinsert(c, exp);
 	if (rc) {
 		PSCFREE(c);
 		if (rc == EEXIST) {
@@ -115,17 +115,16 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, enum slconn_type peertype,
  * @datap: value-result private data attached to cfd entry.
  */
 int
-cfdlookup(struct pscrpc_export *exp, enum slconn_type peertype,
-    uint64_t cfd, void *datap)
+cfdlookup(struct pscrpc_export *exp, uint64_t cfd, void *datap)
 {
-	struct slashrpc_export *slexp;
+	struct mexp_cli *mc;
 	struct cfdent *c, q;
 	int rc = 0;
 
 	q.cfd_fdb.sfdb_secret.sfs_cfd = cfd;
 	spinlock(&exp->exp_lock);
-	slexp = slashrpc_export_get(exp, peertype);
-	c = SPLAY_FIND(cfdtree, slexp->slexp_cfdtree, &q);
+	mc = mexpcli_get(exp);
+	c = SPLAY_FIND(cfdtree, &mc->mc_cfdtree, &q);
 	if (c == NULL)
 		rc = ENOENT;
 	else if (datap)
@@ -136,15 +135,15 @@ cfdlookup(struct pscrpc_export *exp, enum slconn_type peertype,
 }
 
 struct cfdent *
-cfdget(struct pscrpc_export *exp, enum slconn_type peertype, uint64_t cfd)
+cfdget(struct pscrpc_export *exp, uint64_t cfd)
 {
-	struct slashrpc_export *slexp;
+	struct mexp_cli *mc;
 	struct cfdent *c, q;
 
 	q.cfd_fdb.sfdb_secret.sfs_cfd = cfd;
 	spinlock(&exp->exp_lock);
-	slexp = slashrpc_export_get(exp, peertype);
-	c = SPLAY_FIND(cfdtree, slexp->slexp_cfdtree, &q);
+	mc = mexpcli_get(exp);
+	c = SPLAY_FIND(cfdtree, &mc->mc_cfdtree, &q);
 	freelock(&exp->exp_lock);
 	return (c);
 }
@@ -155,9 +154,9 @@ cfdget(struct pscrpc_export *exp, enum slconn_type peertype, uint64_t cfd)
  * @cfd: client fd to release.
  */
 int
-cfdfree(struct pscrpc_export *exp, enum slconn_type peertype, uint64_t cfd)
+cfdfree(struct pscrpc_export *exp, uint64_t cfd)
 {
-	struct slashrpc_export *slexp;
+	struct mexp_cli *mc;
 	struct cfdent *c, q;
 	int rc=0, locked;
 
@@ -165,13 +164,13 @@ cfdfree(struct pscrpc_export *exp, enum slconn_type peertype, uint64_t cfd)
 
 	rc = 0;
 	locked = reqlock(&exp->exp_lock);
-	slexp = slashrpc_export_get(exp, peertype);
-	c = SPLAY_FIND(cfdtree, slexp->slexp_cfdtree, &q);
+	mc = mexpcli_get(exp);
+	c = SPLAY_FIND(cfdtree, &mc->mc_cfdtree, &q);
 	if (c == NULL) {
 		rc = -ENOENT;
 		goto done;
 	}
-	if (SPLAY_REMOVE(cfdtree, slexp->slexp_cfdtree, c)) {
+	if (SPLAY_REMOVE(cfdtree, &mc->mc_cfdtree, c)) {
 		c->cfd_flags |= CFD_CLOSING;
 		if (cfd_ops.cfd_free)
 			rc = cfd_ops.cfd_free(c, exp);
@@ -188,6 +187,7 @@ void
 cfdfreeall(struct pscrpc_export *exp, enum slconn_type peertype)
 {
 	struct slashrpc_export *slexp;
+	struct mexp_cli *mc;
 	struct cfdent *c, *nxt;
 
 	psc_warnx("exp=%p", exp);
@@ -195,14 +195,14 @@ cfdfreeall(struct pscrpc_export *exp, enum slconn_type peertype)
 	slexp = slashrpc_export_get(exp, peertype);
 	psc_assert(slexp->slexp_flags & EXP_CLOSING);
 
-	/* Don't bother locking if EXP_CLOSING is set.
-	 */
-	for (c = SPLAY_MIN(cfdtree, slexp->slexp_cfdtree);
+	mc = mexpcli_get(exp);
+
+	for (c = SPLAY_MIN(cfdtree, &mc->mc_cfdtree);
 	     c != NULL; c = nxt) {
 		c->cfd_flags |= CFD_CLOSING | CFD_FORCE_CLOSE;
-		nxt = SPLAY_NEXT(cfdtree, slexp->slexp_cfdtree, c);
+		nxt = SPLAY_NEXT(cfdtree, &mc->mc_cfdtree, c);
 
-		SPLAY_REMOVE(cfdtree, slexp->slexp_cfdtree, c);
+		SPLAY_XREMOVE(cfdtree, &mc->mc_cfdtree, c);
 
 		if (cfd_ops.cfd_free)
 			cfd_ops.cfd_free(c, exp);

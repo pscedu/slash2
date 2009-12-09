@@ -9,7 +9,6 @@
 #include "psc_util/lock.h"
 
 #include "slashrpc.h"
-#include "cfd.h"
 
 /*
  * slashrpc_issue_connect - attempt connection initiation with a peer.
@@ -182,9 +181,6 @@ slashrpc_export_get(struct pscrpc_export *exp, enum slconn_type peertype)
 		slexp = exp->exp_private = PSCALLOC(sizeof(*slexp));
 		slexp->slexp_export = exp;
 		slexp->slexp_peertype = peertype;
-		slexp->slexp_cfdtree =
-		    PSCALLOC(sizeof(struct cfdtree));
-		SPLAY_INIT(slexp->slexp_cfdtree);
 		exp->exp_hldropf = slashrpc_export_destroy;
 	} else {
 		slexp = exp->exp_private;
@@ -213,6 +209,5 @@ slashrpc_export_destroy(void *data)
 	/* Ok, no one else should be in here.
 	 */
 	exp->exp_private = NULL;
-	PSCFREE(slexp->slexp_cfdtree);
 	PSCFREE(slexp);
 }

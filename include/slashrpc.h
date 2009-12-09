@@ -22,8 +22,6 @@
 #include "fid.h"
 #include "slconfig.h"
 
-struct cfdtree;
-
 #define SLASH_SVR_PID		54321
 
 /* Slash RPC channel to MDS from client. */
@@ -615,7 +613,6 @@ struct slashrpc_cservice {
 
 struct slashrpc_export {
 	uint64_t		 slexp_nextcfd;
-	struct cfdtree		*slexp_cfdtree;
 	enum slconn_type	 slexp_peertype;
 	void			*slexp_data;
 	int			 slexp_flags;

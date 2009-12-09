@@ -19,6 +19,7 @@
 
 #include "bmap.h"
 #include "bmap_mds.h"
+#include "cfd.h"
 #include "fidcache.h"
 #include "inodeh.h"
 #include "jflush.h"
@@ -133,6 +134,7 @@ mexpfcm_cache_cmp(const void *x, const void *y)
 
 struct mexp_cli {
 	struct slashrpc_cservice *mc_csvc;
+	struct cfdtree		  mc_cfdtree;
 	psc_spinlock_t		  mc_lock;
 };
 

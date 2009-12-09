@@ -99,6 +99,7 @@ mexpcli_get(struct pscrpc_export *exp)
 		mexp_cli = slexp->slexp_data =
 		    PSCALLOC(sizeof(*mexp_cli));
 		LOCK_INIT(&mexp_cli->mc_lock);
+		SPLAY_INIT(&mexp_cli->mc_cfdtree);
 	}
 	ureqlock(&exp->exp_lock, locked);
 	return (mexp_cli);

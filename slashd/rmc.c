@@ -153,7 +153,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	/* Access the reference
 	 */
-	mp->rc = cfdlookup(rq->rq_export, SLCONNT_CLI, cfd, &m);
+	mp->rc = cfdlookup(rq->rq_export, cfd, &m);
 	if (mp->rc)
 		RETURN(mp->rc);
 
@@ -450,7 +450,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		RETURN(0);
 
-	if (cfdlookup(rq->rq_export, SLCONNT_CLI, cfd, &m)) {
+	if (cfdlookup(rq->rq_export, cfd, &m)) {
 		mp->rc = -errno;
 		RETURN(mp->rc);
 	}
@@ -549,7 +549,7 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 	if (mp->rc)
 		RETURN(0);
 
-	c = cfdget(rq->rq_export, SLCONNT_CLI, cfd);
+	c = cfdget(rq->rq_export, cfd);
 	if (!c) {
 		psc_info("cfdget() failed cfd %"PRId64, cfd);
 		mp->rc = ENOENT;
@@ -570,7 +570,7 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 	m->mexpfcm_flags |= MEXPFCM_CLOSING;
 	MEXPFCM_ULOCK(m);
 
-	rc = cfdfree(rq->rq_export, SLCONNT_CLI, cfd);
+	rc = cfdfree(rq->rq_export, cfd);
 	psc_warnx("cfdfree() cfd %"PRId64" rc=%d",
 		 cfd, rc);
 

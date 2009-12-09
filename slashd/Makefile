@@ -3,6 +3,7 @@
 include Makefile.path
 
 PROG=		slashd
+SRCS+=		cfd.c
 SRCS+=		cfg_mds.c
 SRCS+=		ctl_mds.c
 SRCS+=		fidc_mds.c
@@ -24,7 +25,6 @@ SRCS+=		sitemon.c
 SRCS+=		timer_mds.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
-SRCS+=		${SLASH_BASE}/share/cfd.c
 SRCS+=		${SLASH_BASE}/share/cfg_common.c
 SRCS+=		${SLASH_BASE}/share/fdbuf.c
 SRCS+=		${SLASH_BASE}/share/fid.c
