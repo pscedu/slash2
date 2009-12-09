@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef _CFD_H_
-#define _CFD_H_
+#ifndef _SL_CFD_H_
+#define _CSL_FD_H_
 
 #include "psc_ds/tree.h"
 
@@ -15,8 +15,7 @@ struct cfdops;
 struct cfdent {
 	struct srt_fd_buf	 cfd_fdb;
 	void			*cfd_pri;
-	int			 cfd_type;
-	struct cfdops		*cfd_ops;
+	int			 cfd_flags;
 	SPLAY_ENTRY(cfdent)	 cfd_entry;
 };
 
@@ -39,7 +38,7 @@ struct cfdent *
 	cfdget(struct pscrpc_export *, enum slconn_type, uint64_t);
 int	cfdcmp(const void *, const void *);
 int	cfdnew(slfid_t, struct pscrpc_export *, enum slconn_type,
-	    void *, struct cfdent **, struct cfdops *, int);
+	    void *, struct cfdent **, int);
 int	cfdfree(struct pscrpc_export *, enum slconn_type, uint64_t);
 void	cfdfreeall(struct pscrpc_export *, enum slconn_type);
 int	cfdlookup(struct pscrpc_export *, enum slconn_type, uint64_t,
@@ -48,21 +47,6 @@ int	cfdlookup(struct pscrpc_export *, enum slconn_type, uint64_t,
 SPLAY_HEAD(cfdtree, cfdent);
 SPLAY_PROTOTYPE(cfdtree, cfdent, cfd_entry, cfdcmp);
 
-#if 0
-extern struct cfd_svrops *cfdOps;
-#define CFD_GEN_SVROP(OP)						\
-	static __inline int						\
-	cfd_svrop_##OP(struct cfdent *cfd, struct pscrpc_export *exp)	\
-	{								\
-		LOCK_ENSURE(&exp->exp_lock);				\
-		if (cfdOps && cfdOps->cfd_##OP)				\
-			return (*cfdOps->cfd_##OP)(cfd, exp);		\
-		return (-ENOTSUP);					\
-	}
+extern struct cfdops		cfd_ops;
 
-CFD_GEN_SVROP(init)
-CFD_GEN_SVROP(free)
-CFD_GEN_SVROP(insert)
-#endif
-
-#endif /* _CFD_H_ */
+#endif /* _SL_CFD_H_ */

@@ -56,9 +56,8 @@ cfdinsert(struct cfdent *c, struct pscrpc_export *exp,
  * @exp: RPC peer info.
  */
 int
-cfdnew(slfid_t fid, struct pscrpc_export *exp,
-    enum slconn_type peertype, void *finfo, struct cfdent **cfd,
-    struct cfdops *cfdops, int type)
+cfdnew(slfid_t fid, struct pscrpc_export *exp, enum slconn_type peertype,
+    void *finfo, struct cfdent **cfd, int flags)
 {
 	struct slashrpc_export *slexp;
 	struct cfdent *c;
@@ -67,12 +66,11 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp,
 	if (cfd)
 		*cfd = NULL;
 
-	psc_assert(type == CFD_DIR || type == CFD_FILE);
+	psc_assert(flags == CFD_DIR || flags == CFD_FILE);
 
 	c = PSCALLOC(sizeof(*c));
 	c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid = fid;
-	c->cfd_ops = cfdops;
-	c->cfd_type = type;
+	c->cfd_flags = flags;
 
 	spinlock(&exp->exp_lock);
 	slexp = slashrpc_export_get(exp, peertype);
@@ -81,8 +79,8 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp,
 		c->cfd_fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
 	freelock(&exp->exp_lock);
 
-	if (c->cfd_ops && c->cfd_ops->cfd_init) {
-		rc = (c->cfd_ops->cfd_init)(c, finfo, exp);
+	if (cfd_ops.cfd_init) {
+		rc = cfd_ops.cfd_init(c, finfo, exp);
 		if (rc) {
 			psc_errorx("cfd_init() failed rc=%d", rc);
 			PSCFREE(c);
@@ -174,9 +172,9 @@ cfdfree(struct pscrpc_export *exp, enum slconn_type peertype, uint64_t cfd)
 		goto done;
 	}
 	if (SPLAY_REMOVE(cfdtree, slexp->slexp_cfdtree, c)) {
-		c->cfd_type |= CFD_CLOSING;
-		if (c->cfd_ops && c->cfd_ops->cfd_free)
-			rc = c->cfd_ops->cfd_free(c, exp);
+		c->cfd_flags |= CFD_CLOSING;
+		if (cfd_ops.cfd_free)
+			rc = cfd_ops.cfd_free(c, exp);
 		PSCFREE(c);
 	} else
 		rc = -ENOENT;
@@ -201,13 +199,13 @@ cfdfreeall(struct pscrpc_export *exp, enum slconn_type peertype)
 	 */
 	for (c = SPLAY_MIN(cfdtree, slexp->slexp_cfdtree);
 	     c != NULL; c = nxt) {
-		c->cfd_type |= CFD_CLOSING | CFD_FORCE_CLOSE;
+		c->cfd_flags |= CFD_CLOSING | CFD_FORCE_CLOSE;
 		nxt = SPLAY_NEXT(cfdtree, slexp->slexp_cfdtree, c);
 
 		SPLAY_REMOVE(cfdtree, slexp->slexp_cfdtree, c);
 
-		if (c->cfd_ops && c->cfd_ops->cfd_free)
-			c->cfd_ops->cfd_free(c, exp);
+		if (cfd_ops.cfd_free)
+			cfd_ops.cfd_free(c, exp);
 		PSCFREE(c);
 	}
 }

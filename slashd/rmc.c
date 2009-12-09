@@ -305,7 +305,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-			    SLCONNT_CLI, finfo, &cfd, &mdsCfdOps, CFD_FILE);
+			    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
 
 			if (!mp->rc && cfd) {
 				fdbuf_sign(&cfd->cfd_fdb,
@@ -361,7 +361,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-			    SLCONNT_CLI, finfo, &cfd, &mdsCfdOps, CFD_FILE);
+			    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
 
 			if (!mp->rc && cfd) {
 				fdbuf_sign(&cfd->cfd_fdb,
@@ -409,7 +409,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 		mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
 		if (!mp->rc) {
 			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-			    SLCONNT_CLI, finfo, &cfd, &mdsCfdOps, CFD_DIR);
+			    SLCONNT_CLI, finfo, &cfd, CFD_DIR);
 
 			if (mp->rc) {
 				psc_error("cfdnew failed rc=%d", mp->rc);

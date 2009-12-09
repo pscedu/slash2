@@ -24,7 +24,6 @@ struct odtable				*mdsBmapAssignTable;
 const struct slash_bmap_od		 null_bmap_od;
 const struct slash_inode_od		 null_inode_od;
 const struct slash_inode_extras_od	 null_inox_od;
-struct cfdops				 mdsCfdOps;
 struct sl_fsops				 mdsFsops;
 
 __static SPLAY_GENERATE(fcm_exports, mexpfcm,
@@ -249,7 +248,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 	struct fidc_mds_info *fmdsi;
 	int rc;
 
-	psc_assert(c->cfd_type == CFD_DIR || c->cfd_type == CFD_FILE);
+	psc_assert(c->cfd_flags == CFD_DIR || c->cfd_flags == CFD_FILE);
 
 	slexp = exp->exp_private;
 	psc_assert(slexp);
@@ -262,7 +261,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 	if (!f)
 		return (-1);
 
-	rc = mds_fcmh_load_fmdsi(f, finfo, c->cfd_type & CFD_FILE);
+	rc = mds_fcmh_load_fmdsi(f, finfo, c->cfd_flags & CFD_FILE);
 	if (rc) {
 		fidc_membh_dropref(f);
 		return (-1);
@@ -356,7 +355,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		goto out;
 	}
 
-	if (c->cfd_type & CFD_FORCE_CLOSE)
+	if (c->cfd_flags & CFD_FORCE_CLOSE)
 		/* A force close comes from a network drop, don't make
 		 *  the export code have to know about our private
 		 *  structures.
@@ -372,7 +371,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		 */
 		mexpfcm_release_brefs(m);
 
-		psc_assert(c->cfd_type & CFD_CLOSING);
+		psc_assert(c->cfd_flags & CFD_CLOSING);
 		psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
 	}
 	freelock(&m->mexpfcm_lock);
@@ -625,7 +624,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		freelock(&mrmi->mrmi_lock);
 		break;
 
-		if (found) 
+		if (found)
 			break;
 	} while (--x);
 
@@ -1271,18 +1270,9 @@ mds_bmi_cb(void *data, struct odtable_receipt *odtr)
 	odtable_freeitem(mdsBmapAssignTable, odtr);
 }
 
-__static void
-mds_cfdops_init(void)
-{
-	mdsCfdOps.cfd_init = mexpfcm_cfd_init;
-	mdsCfdOps.cfd_free = mexpfcm_cfd_free;
-	mdsCfdOps.cfd_get_pri = mexpfcm_cfd_get_zfsdata;
-}
-
 void
 mds_init(void)
 {
-	mds_cfdops_init();
 	mds_journal_init();
 	psc_assert(!odtable_load(_PATH_SLODTABLE, &mdsBmapAssignTable));
 	odtable_scan(mdsBmapAssignTable, mds_bmi_cb);
@@ -1290,3 +1280,9 @@ mds_init(void)
 	slmfssyncthr_init();
 	mdscoh_init();
 }
+
+struct cfdops cfd_ops = {
+	mexpfcm_cfd_init,
+	mexpfcm_cfd_free,
+	mexpfcm_cfd_get_zfsdata
+};
