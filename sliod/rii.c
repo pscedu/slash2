@@ -60,6 +60,15 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 		return (mp->rc);
 	}
+	if (mq->offset > SLASH_BMAP_SIZE) {
+		mp->rc = EINVAL;
+		return (mp->rc);
+	}
+	/* check individually above to avoid overflow in this addition */
+	if (mq->len + mq->offset > SLASH_BMAP_SIZE) {
+		mp->rc = EINVAL;
+		return (mp->rc);
+	}
 
 	fcmh = iod_inode_lookup(&mq->fg);
 	mp->rc = iod_inode_open(fcmh, SL_READ);
@@ -77,8 +86,8 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 	}
 
 	tsize = mq->len;
-	slvrno = (SLASH_BMAP_SIZE * bcm->bcm_blkno) / SLASH_SLVR_SIZE;
-	slvroff = (SLASH_BMAP_SIZE * bcm->bcm_blkno) % SLASH_SLVR_SIZE;
+	slvrno = (SLASH_BMAP_SIZE * bcm->bcm_blkno + mq->offset) / SLASH_SLVR_SIZE;
+	slvroff = (SLASH_BMAP_SIZE * bcm->bcm_blkno + mq->offset) % SLASH_SLVR_SIZE;
 	nslvrs = 1;
 	if (slvroff)
 		nslvrs++;
@@ -137,8 +146,8 @@ sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct srm_io_rep *mp;
 
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
-	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
-	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) % SLASH_SLVR_SIZE;
+	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE + w->srw_offset) / SLASH_SLVR_SIZE;
+	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE + w->srw_offset) % SLASH_SLVR_SIZE;
 	nslvrs = 1;
 	if (slvroff)
 		nslvrs++;
@@ -173,9 +182,11 @@ sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
  out:
 	for (; i < nslvrs; i++)
 		slvr_io_done(w->srw_slvr_ref[i], SL_WRITE);
-	if (rc || w->srw_offset == SLASH_BMAP_SIZE)
-		sli_repl_finishwk(w, rc);
-	else
+	lc_remove(&sli_replwkq_inflight, w);
+	if (rc || w->srw_offset == SLASH_BMAP_SIZE) {
+		w->srw_status = rc;
+		lc_add(&sli_replwkq_finished, w);
+	} else
 		/* place back on pending queue until the last sliver finishes */
 		lc_add(&sli_replwkq_pending, w);
 	return (rc);
@@ -203,8 +214,9 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	    SRMT_REPL_READ, rq, mq, mp)) != 0)
 		goto out;
 	mq->fg = w->srw_fg;
-	mq->len = w->srw_len;
+	mq->len = SLASH_SLVR_SIZE;
 	mq->bmapno = w->srw_bmapno;
+	mq->offset = w->srw_offset;
 
 	rc = iod_bmap_load(w->srw_fcmh, w->srw_bmapno, SL_WRITE, &w->srw_bcm);
 	if (rc) {
@@ -215,8 +227,8 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 
 	nslvrs = 1;
 	tsize = w->srw_len;
-	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
-	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) % SLASH_SLVR_SIZE;
+	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE + w->srw_offset) / SLASH_SLVR_SIZE;
+	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE + w->srw_offset) % SLASH_SLVR_SIZE;
 	nslvrs = 1;
 	if (slvroff)
 		nslvrs++;

@@ -19,8 +19,9 @@ struct sli_repl_workrq {
 };
 
 void sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t, int);
-void sli_repl_finishwk(struct sli_repl_workrq *, int);
 void sli_repl_init(void);
 
 extern struct pscrpc_nbreqset	 sli_replwk_nbset;
 extern struct psc_listcache	 sli_replwkq_pending;
+extern struct psc_listcache	 sli_replwkq_finished;
+extern struct psc_listcache	 sli_replwkq_inflight;

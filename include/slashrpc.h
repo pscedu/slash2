@@ -521,6 +521,7 @@ struct srm_repl_read_req {
 	struct slash_fidgen	fg;
 	uint64_t		len;
 	sl_bmapno_t		bmapno;
+	int32_t			offset;	/* offset into bmap, slvr boundary */
 };
 
 #define srm_repl_read_rep srm_io_rep
@@ -541,6 +542,9 @@ struct srt_stat {
 	uint64_t	st_atime;	/* time of last access */
 	uint64_t	st_mtime;	/* time of last modification */
 	uint64_t	st_ctime;	/* time of last status change */
+};
+
+struct srt_statvfs {
 };
 #endif
 

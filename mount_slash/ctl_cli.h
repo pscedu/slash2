@@ -14,7 +14,7 @@
 /* for retrieving info about replication status */
 struct msctlmsg_replst {
 	char			mrs_fn[PATH_MAX];
-	struct slash_fidgen	mrs_fg;	/* used intermittenly */
+	struct slash_fidgen	mrs_fg;		/* used intermittenly */
 	char			mrs_iosv[SL_MAX_REPLICAS][SITE_NAME_MAX];
 	uint32_t		mrs_nios;
 	uint32_t		mrs_nbmaps;	/* accounting for # of slaves */

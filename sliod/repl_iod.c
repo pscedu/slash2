@@ -39,15 +39,6 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp, sl_bmapno_t bmapno, int l
 	lc_add(&sli_replwkq_pending, w);
 }
 
-void
-sli_repl_finishwk(struct sli_repl_workrq *w, int status)
-{
-	lc_remove(&sli_replwkq_inflight, w);
-
-	w->srw_status = status;
-	lc_add(&sli_replwkq_finished, w);
-}
-
 __dead void *
 slireplfinthr_main(__unusedx void *arg)
 {
