@@ -151,7 +151,12 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mp->rc)
 		RETURN(mp->rc);
 
-	/* Access the reference
+	if ((mq->rw != SRIC_BMAP_READ) && (mq->rw != SRIC_BMAP_WRITE))
+		RETURN(-EINVAL);
+
+	/*
+	 * Check the cfdent structure associated with the client.  If successful,
+	 * it also return the mexpfcm in the out argument.
 	 */
 	mp->rc = cfdlookup(rq->rq_export, cfd, &m);
 	if (mp->rc)

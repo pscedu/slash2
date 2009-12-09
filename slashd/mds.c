@@ -1119,9 +1119,6 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	psc_assert(inoh);
 	psc_assert(!*bmap);
 
-	if ((mq->rw != SRIC_BMAP_READ) && (mq->rw != SRIC_BMAP_WRITE))
-		return -EINVAL;
-
 	tbmap.bcm_blkno = mq->blkno;
 	tbref.mexpbcm_bmap = &tbmap;
 	/* This bmap load *should* be for a bmap which the client has not
