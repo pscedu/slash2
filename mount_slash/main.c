@@ -538,7 +538,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	}
 
-	p = fidc_lookup_inode(parent);
+	p = fidc_lookup_simple(parent);
 	if (!p) {
 		/* Parent inode must exist in the cache.
 		 */
@@ -858,7 +858,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	/* Check the parent inode.
 	 */
-	p = fidc_lookup_inode(parent);
+	p = fidc_lookup_simple(parent);
 	if (!p) {
 		rc = EINVAL;
 		goto out;
@@ -1456,7 +1456,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	    strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
 
-	p = fidc_lookup_inode(parent);
+	p = fidc_lookup_simple(parent);
 	if (!p)
 		return (EINVAL);
 
@@ -1532,7 +1532,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	if (rc)
 		goto out;
 
-	c = fidc_lookup_inode(ino);
+	c = fidc_lookup_simple(ino);
 	if (!c) {
 		rc = EINVAL;
 		goto out;

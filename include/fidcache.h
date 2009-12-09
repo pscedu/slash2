@@ -201,9 +201,6 @@ enum fidc_lookup_flags {
 	FIDC_LOOKUP_NOREF	= (1 << 5)
 };
 
-/* Perform a simple fidcache lookup, returning NULL if DNE.
- */
-#define fidc_lookup_inode(fg)	fidc_lookup_simple(fg)
 #define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
 
 #define fidc_settimeo(age)							\

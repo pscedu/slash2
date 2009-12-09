@@ -56,7 +56,7 @@ fidc_fid2fmdsi(slfid_t f, struct fidc_membh **fcmh)
 	struct fidc_mds_info *fmdsi=NULL;
 	int locked;
 
-	*fcmh = fidc_lookup_inode(f);
+	*fcmh = fidc_lookup_simple(f);
 
 	if (!*fcmh)
 		return NULL;
