@@ -26,7 +26,8 @@ struct bmap_refresh {
 
 /*
  * bmapc_memb - central structure for block map caching used in
- *    all slash service contexts (mds, ios, client).
+ *    all slash service contexts (mds, ios, client). It is allocated
+ *    by bmap_lookup_add().
  *
  * bmapc_memb sits in the middle of the GFC stratum.
  * XXX some of these elements may need to be moved into the bcm_info_pri
