@@ -340,7 +340,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 {
 	/* One last shot to wakeup any blocked threads.
 	 */
-	while (atomic_read(&r->biorq_waitq.wq_nwaitors)) {
+	while (atomic_read(&r->biorq_waitq.wq_nwaiters)) {
 		psc_waitq_wakeall(&r->biorq_waitq);
 		sched_yield();
 	}
@@ -353,7 +353,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	if (r->biorq_rqset)
 		pscrpc_set_destroy(r->biorq_rqset);
 
-	psc_assert(!atomic_read(&r->biorq_waitq.wq_nwaitors));
+	psc_assert(!atomic_read(&r->biorq_waitq.wq_nwaiters));
 
 	PSCFREE(r);
 }

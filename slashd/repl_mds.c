@@ -16,6 +16,7 @@
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/pthrutil.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/waitq.h"
 
@@ -79,37 +80,13 @@ replrq_cmp(const void *a, const void *b)
 SPLAY_GENERATE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
 
 void
-mds_repl_dequeue_sites(struct sl_replrq *rrq, const sl_replica_t *iosv, int nios)
-{
-	struct mds_site_info *msi;
-	struct sl_site *site;
-	int locked, n;
-
-	locked = reqlock(&rrq->rrq_lock);
-	for (n = 0; n < nios; n++) {
-		site = libsl_resid2site(iosv[n].bs_id);
-		msi = site->site_pri;
-
-		spinlock(&msi->msi_lock);
-		if (psc_dynarray_exists(&msi->msi_replq, rrq)) {
-			psc_dynarray_remove(&msi->msi_replq, rrq);
-			psc_atomic32_dec(&rrq->rrq_refcnt);
-			msi->msi_flags |= MSIF_DIRTYQ;
-			psc_multilock_cond_wakeup(&msi->msi_mlcond);
-		}
-		freelock(&msi->msi_lock);
-	}
-	ureqlock(&rrq->rrq_lock, locked);
-}
-
-void
 mds_repl_enqueue_sites(struct sl_replrq *rrq, const sl_replica_t *iosv, int nios)
 {
 	struct mds_site_info *msi;
 	struct sl_site *site;
 	int locked, n;
 
-	locked = reqlock(&rrq->rrq_lock);
+	locked = psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
 	rrq->rrq_gen++;
 	for (n = 0; n < nios; n++) {
 		site = libsl_resid2site(iosv[n].bs_id);
@@ -124,7 +101,7 @@ mds_repl_enqueue_sites(struct sl_replrq *rrq, const sl_replica_t *iosv, int nios
 		psc_multilock_cond_wakeup(&msi->msi_mlcond);
 		freelock(&msi->msi_lock);
 	}
-	ureqlock(&rrq->rrq_lock, locked);
+	psc_pthread_mutex_ureqlock(&rrq->rrq_mutex, locked);
 }
 
 int
@@ -470,22 +447,22 @@ mds_repl_accessrq(struct sl_replrq *rrq)
 {
 	int rc = 1;
 
-	reqlock(&rrq->rrq_lock);
+	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
 
 	/* Wait for someone else to finish processing. */
 	while (rrq->rrq_flags & REPLRQF_BUSY) {
-		psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
-		spinlock(&rrq->rrq_lock);
+		psc_multilock_cond_wait(&rrq->rrq_mlcond, &rrq->rrq_mutex);
+		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
 	if (rrq->rrq_flags & REPLRQF_DIE) {
 		/* Release if going away. */
 		psc_atomic32_dec(&rrq->rrq_refcnt);
-		psc_waitq_wakeall(&rrq->rrq_waitq);
+		psc_multilock_cond_wakeup(&rrq->rrq_mlcond);
 		rc = 0;
 	} else {
 		rrq->rrq_flags |= REPLRQF_BUSY;
-		freelock(&rrq->rrq_lock);
+		psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 	}
 	return (rc);
 }
@@ -493,11 +470,11 @@ mds_repl_accessrq(struct sl_replrq *rrq)
 void
 mds_repl_unrefrq(struct sl_replrq *rrq)
 {
-	reqlock(&rrq->rrq_lock);
+	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
 	psc_atomic32_dec(&rrq->rrq_refcnt);
 	rrq->rrq_flags &= ~REPLRQF_BUSY;
-	psc_waitq_wakeall(&rrq->rrq_waitq);
-	freelock(&rrq->rrq_lock);
+	psc_multilock_cond_wakeup(&rrq->rrq_mlcond);
+	psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 }
 
 struct sl_replrq *
@@ -519,7 +496,7 @@ mds_repl_findrq(const struct slash_fidgen *fgp, int *locked)
 		ureqlock(&replrq_tree_lock, *locked);
 		return (NULL);
 	}
-	spinlock(&rrq->rrq_lock);
+	psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	psc_atomic32_inc(&rrq->rrq_refcnt);
 	freelock(&replrq_tree_lock);
 	*locked = 0;
@@ -626,8 +603,9 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 				newrq = NULL;
 
 				memset(rrq, 0, sizeof(*rrq));
-				LOCK_INIT(&rrq->rrq_lock);
-				psc_waitq_init(&rrq->rrq_waitq);
+				psc_pthread_mutex_init(&rrq->rrq_mutex);
+				psc_multilock_cond_init(&rrq->rrq_mlcond,
+				    NULL, 0, "replrq-%lx", fcmh_2_fid(fcmh));
 				psc_atomic32_set(&rrq->rrq_refcnt, 1);
 				rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 				rrq->rrq_flags |= REPLRQF_BUSY;
@@ -733,11 +711,11 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	retifset[SL_REPL_OLD] = 1;
 	retifset[SL_REPL_SCHED] = 1;
 
-	reqlock(&rrq->rrq_lock);
+	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
 	if (rrq->rrq_flags & REPLRQF_DIE) {
 		/* someone is already waiting for this to go away */
-		psc_waitq_wakeall(&rrq->rrq_waitq);
-		freelock(&rrq->rrq_lock);
+		psc_multilock_cond_wakeup(&rrq->rrq_mlcond);
+		psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 		return;
 	}
 
@@ -746,7 +724,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	 * know there is work to do and that the replrq shouldn't go away.
 	 */
 	rrq_gen = rrq->rrq_gen;
-	freelock(&rrq->rrq_lock);
+	psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
@@ -769,7 +747,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 //		goto keep;
 
 	spinlock(&replrq_tree_lock);
-	spinlock(&rrq->rrq_lock);
+	psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	if (rrq->rrq_gen != rrq_gen) {
 		freelock(&replrq_tree_lock);
  keep:
@@ -792,15 +770,14 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
 	freelock(&replrq_tree_lock);
 
-	reqlock(&rrq->rrq_lock);
 	psc_atomic32_dec(&rrq->rrq_refcnt);	/* removed from tree */
 	rrq->rrq_flags |= REPLRQF_DIE;
 	rrq->rrq_flags &= ~REPLRQF_BUSY;
 
 	while (psc_atomic32_read(&rrq->rrq_refcnt) > 1) {
-		psc_waitq_wakeall(&rrq->rrq_waitq);
-		psc_waitq_wait(&rrq->rrq_waitq, &rrq->rrq_lock);
-		spinlock(&rrq->rrq_lock);
+		psc_multilock_cond_wakeup(&rrq->rrq_mlcond);
+		psc_multilock_cond_wait(&rrq->rrq_mlcond, &rrq->rrq_mutex);
+		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
 	atomic_dec(&fcmh_2_fmdsi(REPLRQ_FCMH(rrq))->fmdsi_ref);
@@ -944,8 +921,9 @@ mds_repl_scandir(void)
 
 			rrq = psc_pool_get(replrq_pool);
 			memset(rrq, 0, sizeof(*rrq));
-			LOCK_INIT(&rrq->rrq_lock);
-			psc_waitq_init(&rrq->rrq_waitq);
+			psc_pthread_mutex_init(&rrq->rrq_mutex);
+			psc_multilock_cond_init(&rrq->rrq_mlcond,
+			    NULL, 0, "replrq-%lx", fcmh_2_fid(fcmh));
 			psc_atomic32_set(&rrq->rrq_refcnt, 1);
 			rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 			SPLAY_INSERT(replrqtree, &replrq_tree, rrq);

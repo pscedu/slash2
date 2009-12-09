@@ -11,8 +11,8 @@ struct mds_resm_info;
 
 struct sl_replrq {
 	struct slash_inode_handle	*rrq_inoh;
-	psc_spinlock_t			 rrq_lock;
-	struct psc_waitq		 rrq_waitq;
+	pthread_mutex_t			 rrq_mutex;
+	struct psc_multilock_cond	 rrq_mlcond;
 	int				 rrq_flags;
 	psc_atomic32_t			 rrq_refcnt;
 	int				 rrq_gen;

@@ -38,7 +38,7 @@ bmap_remove(struct bmapc_memb *b)
 
 	psc_assert(b->bcm_mode & BMAP_CLOSING);
 	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
-	psc_assert(!atomic_read(&b->bcm_waitq.wq_nwaitors));
+	psc_assert(!atomic_read(&b->bcm_waitq.wq_nwaiters));
 	psc_assert(!atomic_read(&b->bcm_wr_ref) &&
 		   !atomic_read(&b->bcm_rd_ref));
 	psc_assert(!atomic_read(&b->bcm_opcnt));

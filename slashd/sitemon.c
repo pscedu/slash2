@@ -7,6 +7,7 @@
 #include "psc_ds/list.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/multilock.h"
+#include "psc_util/pthrutil.h"
 #include "psc_util/random.h"
 #include "psc_util/thread.h"
 
@@ -36,7 +37,7 @@ slmreplthr_removeq(struct sl_replrq *rrq)
 		psc_dynarray_remove(&msi->msi_replq, rrq);
 	ureqlock(&msi->msi_lock, locked);
 
-	reqlock(&rrq->rrq_lock);
+	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
 	psc_atomic32_dec(&rrq->rrq_refcnt);
 	mds_repl_tryrmqfile(rrq);
 }
@@ -177,9 +178,9 @@ slmreplthr_main(void *arg)
 
 			has_repl_work = 0;
 
-			spinlock(&rrq->rrq_lock);
+			psc_pthread_mutex_lock(&rrq->rrq_mutex);
 			rrq_gen = rrq->rrq_gen;
-			freelock(&rrq->rrq_lock);
+			psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 
 			/* find a resource in our site this replrq is destined for */
 			iosidx = -1;
@@ -209,9 +210,6 @@ slmreplthr_main(void *arg)
 					BMAP_LOCK(bcm);
 					bmdsi = bmap_2_bmdsi(bcm);
 					bmapod = bmdsi->bmdsi_od;
-					if (bmdsi->bmdsi_repl_policy ==
-					    BRP_PERSIST)
-						has_repl_work = 1;
 					val = SL_REPL_GET_BMAP_IOS_STAT(
 					    bmapod->bh_repls, off);
 					if (val == SL_REPL_OLD ||
@@ -262,14 +260,19 @@ slmreplthr_main(void *arg)
 				}
 			}
 			/*
-			 * could not find a destination resource in
-			 * our site needed by this replrq
+			 * At this point, we did not find a block/src/dst
+			 * resource involving our site needed by this replrq.
 			 */
-			spinlock(&rrq->rrq_lock);
-			if (has_repl_work || rrq->rrq_gen != rrq_gen ||
-			    REPLRQ_INOX(rrq)->inox_newbmap_policy == BRP_PERSIST)
+			psc_pthread_mutex_lock(&rrq->rrq_mutex);
+			if (has_repl_work || rrq->rrq_gen != rrq_gen) {
+				/*
+				 * This should be safe since the rrq
+				 * is refcounted in our dynarray.
+				 */
+				psc_multilock_addcond(&msi->msi_ml,
+				    &rrq->rrq_mlcond, 1);
 				mds_repl_unrefrq(rrq);
-			else {
+			} else {
 				slmreplthr_removeq(rrq);
 				goto restart;
 			}
