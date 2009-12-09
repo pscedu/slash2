@@ -960,8 +960,8 @@ mds_repl_scandir(void)
 	(((min) * ((nnodes) - ((min) - 1) / 2)) + ((max) - (min) - 1))
 
 int
-_mds_repl_nodes_setbusy(const struct mds_resm_info *ma,
-    const struct mds_resm_info *mb, int set, int busy)
+_mds_repl_nodes_setbusy(struct mds_resm_info *ma,
+    struct mds_resm_info *mb, int set, int busy)
 {
 	const struct mds_resm_info *min, *max;
 	int rc, locked;
@@ -986,6 +986,20 @@ _mds_repl_nodes_setbusy(const struct mds_resm_info *ma,
 		    MDS_REPL_BUSYNODES(repl_busytable_nents,
 		    min->mrmi_busyid, max->mrmi_busyid));
 	ureqlock(&repl_busytable_lock, locked);
+
+	/*
+	 * If we set the status to "not busy", alert anyone
+	 * waiting to utilize the new connection slots.
+	 */
+	if (set && busy == 0 && rc) {
+		locked = reqlock(&ma->mrmi_lock);
+		psc_multilock_cond_wakeup(&ma->mrmi_mlcond);
+		ureqlock(&ma->mrmi_lock, locked);
+
+		locked = reqlock(&mb->mrmi_lock);
+		psc_multilock_cond_wakeup(&mb->mrmi_mlcond);
+		ureqlock(&mb->mrmi_lock, locked);
+	}
 	return (rc);
 }
 

@@ -171,12 +171,12 @@ int
 slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 {
 	int tract[4], retifset[4], iosidx;
+	struct sl_resm *dst_resm, *src_resm;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_generic_rep *mp;
 	struct mds_site_info *msi;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
-	struct sl_resm *resm;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	rrq = mds_repl_findrq(&mq->fg, NULL);
@@ -185,13 +185,13 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
-	if (resm == NULL) {
+	dst_resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
+	if (dst_resm == NULL) {
 		mp->rc = SLERR_ION_UNKNOWN;
 		goto out;
 	}
 
-	iosidx = mds_repl_ios_lookup(rrq->rrq_inoh, resm->resm_res->res_id);
+	iosidx = mds_repl_ios_lookup(rrq->rrq_inoh, dst_resm->resm_res->res_id);
 	if (iosidx < 0) {
 		mp->rc = SLERR_ION_NOTREPL;
 		goto out;
@@ -224,11 +224,18 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	mp->rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_repl_bmap_rel(bcm);
 
-	msi = resm->resm_res->res_site->site_pri;
+	msi = dst_resm->resm_res->res_site->site_pri;
 	spinlock(&msi->msi_lock);
 	psc_multilock_cond_wakeup(&msi->msi_mlcond);
 	freelock(&msi->msi_lock);
  out:
+	if (dst_resm) {
+		/* XXX should we trust them to tell us who the src was? */
+		src_resm = libsl_nid2resm(mq->nid);
+		if (src_resm)
+			mds_repl_nodes_setbusy(src_resm->resm_pri,
+			    dst_resm->resm_pri, 0);
+	}
 	if (rrq)
 		mds_repl_unrefrq(rrq);
 	return (0);
