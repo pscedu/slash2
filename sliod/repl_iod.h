@@ -13,6 +13,7 @@ struct sli_repl_workrq {
 	uint64_t		 srw_nid;
 	uint32_t		 srw_len;
 	uint32_t		 srw_status;
+	uint32_t		 srw_offset;	/* which sliver we're transmitting */
 	sl_bmapno_t		 srw_bmapno;
 	struct slvr_ref		*srw_slvr_ref[2];
 };
@@ -22,3 +23,4 @@ void sli_repl_finishwk(struct sli_repl_workrq *, int);
 void sli_repl_init(void);
 
 extern struct pscrpc_nbreqset	 sli_replwk_nbset;
+extern struct psc_listcache	 sli_replwkq_pending;

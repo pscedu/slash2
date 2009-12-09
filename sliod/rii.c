@@ -56,7 +56,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 		return (mp->rc);
 	}
-	if (mq->len <= 0 || mq->len > SLASH_BMAP_SIZE) {
+	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE) {
 		mp->rc = EINVAL;
 		return (mp->rc);
 	}
@@ -79,7 +79,9 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 	tsize = mq->len;
 	slvrno = (SLASH_BMAP_SIZE * bcm->bcm_blkno) / SLASH_SLVR_SIZE;
 	slvroff = (SLASH_BMAP_SIZE * bcm->bcm_blkno) % SLASH_SLVR_SIZE;
-	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, mq->len));
+	nslvrs = 1;
+	if (slvroff)
+		nslvrs++;
 	for (i = 0; i < nslvrs; i++, slvroff = 0) {
 		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bcm), SL_READ);
 		slvr_slab_prep(slvr_ref[i], SL_READ);
@@ -135,7 +137,11 @@ sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct srm_io_rep *mp;
 
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
-	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, w->srw_len));
+	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
+	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) % SLASH_SLVR_SIZE;
+	nslvrs = 1;
+	if (slvroff)
+		nslvrs++;
 
 	rc = rq->rq_status;
 	if (rc)
@@ -151,8 +157,6 @@ sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	}
 
 	tsize = w->srw_len;
-	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
-	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) % SLASH_SLVR_SIZE;
 	sblk = slvroff / SLASH_SLVR_BLKSZ;
 	if (slvroff & SLASH_SLVR_BLKMASK)
 		tsize += slvroff & SLASH_SLVR_BLKMASK;
@@ -164,13 +168,16 @@ sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		sblk = 0;
 		slvr_io_done(w->srw_slvr_ref[i], SL_WRITE);
 		tsize -= csize;
+		w->srw_offset += csize;
 	}
  out:
 	for (; i < nslvrs; i++)
 		slvr_io_done(w->srw_slvr_ref[i], SL_WRITE);
-	bmap_op_done(w->srw_bcm);
-	fidc_membh_dropref(w->srw_fcmh);
-	sli_repl_finishwk(w, rc);
+	if (rc || w->srw_offset == SLASH_BMAP_SIZE)
+		sli_repl_finishwk(w, rc);
+	else
+		/* place back on pending queue until the last sliver finishes */
+		lc_add(&sli_replwkq_pending, w);
 	return (rc);
 }
 
@@ -210,7 +217,9 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	tsize = w->srw_len;
 	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) / SLASH_SLVR_SIZE;
 	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE) % SLASH_SLVR_SIZE;
-	nslvrs = howmany(SLASH_SLVR_SIZE, MIN(SLASH_BMAP_SIZE, w->srw_len));
+	nslvrs = 1;
+	if (slvroff)
+		nslvrs++;
 	for (i = 0; i < nslvrs; i++, slvroff = 0) {
 		csize = MIN(tsize, SLASH_SLVR_SIZE - slvroff);
 		w->srw_slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(w->srw_bcm), SL_WRITE);

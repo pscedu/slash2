@@ -6,6 +6,8 @@
 #include "psc_ds/pool.h"
 #include "psc_rpc/rpc.h"
 
+#include "bmap.h"
+#include "fidcache.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
@@ -40,8 +42,9 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp, sl_bmapno_t bmapno, int l
 void
 sli_repl_finishwk(struct sli_repl_workrq *w, int status)
 {
-	w->srw_status = status;
 	lc_remove(&sli_replwkq_inflight, w);
+
+	w->srw_status = status;
 	lc_add(&sli_replwkq_finished, w);
 }
 
@@ -53,6 +56,11 @@ slireplfinthr_main(__unusedx void *arg)
 	for (;;) {
 		w = lc_getwait(&sli_replwkq_finished);
 		sli_rmi_issue_repl_schedwk(w);
+
+		if (w->srw_bcm)
+			bmap_op_done(w->srw_bcm);
+		if (w->srw_fcmh)
+			fidc_membh_dropref(w->srw_fcmh);
 		psc_pool_return(sli_replwkrq_pool, w);
 		sched_yield();
 	}
