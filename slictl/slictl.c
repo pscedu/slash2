@@ -30,21 +30,28 @@ void
 replwkst_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("replication work status\n"
-	    " %-16s %5s %32s %10s %10s %6s\n",
+	    " %-16s %5s %33s %7s %7s %6s\n",
 	    "fid", "bmap#", "peer", "offset", "len", "%prog");
 }
 
 void
 replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
-	const struct slictlmsg_replwkst *srws = m;
+	char totbuf[PSCFMT_HUMAN_BUFSIZ], offbuf[PSCFMT_HUMAN_BUFSIZ];
 	char rbuf[PSCFMT_RATIO_BUFSIZ];
+	const struct slictlmsg_replwkst *srws = m;
 
 	psc_fmt_ratio(rbuf, srws->srws_offset, srws->srws_len);
-	printf(" %016lx %5d %32s "
-	    "%10d %10d %6s\n",
-	    srws->srws_fg.fg_fid, srws->srws_bmapno, srws->srws_peer_addr,
-	    srws->srws_offset, srws->srws_len, rbuf);
+	printf(" %016lx %5d %33s ",
+	    srws->srws_fg.fg_fid, srws->srws_bmapno, srws->srws_peer_addr);
+	if (psc_ctl_inhuman)
+		printf("%7d %7d", srws->srws_offset, srws->srws_len);
+	else {
+		psc_fmt_human(offbuf, srws->srws_offset);
+		psc_fmt_human(totbuf, srws->srws_len);
+		printf("%7s %7s", offbuf, totbuf);
+	}
+	printf(" %5s\n", rbuf);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
