@@ -201,8 +201,10 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
 int
 slvr_fsbytes_rio(struct slvr_ref *s)
 {
-	int nblks, blk, rc;
-	size_t i;
+	int	i;
+	int	rc;
+	int	blk;
+	int	nblks;
 
 	psc_trace("vbitmap_nfree() = %d",
 		  vbitmap_nfree(s->slvr_slab->slb_inuse));
@@ -212,8 +214,8 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 
-	blk = 0; /* gcc */
 	rc = 0;
+	blk = 0; /* gcc */
 	for (i = 0, nblks = 0; i < SLASH_BLKS_PER_SLVR; i++) {
 		if (vbitmap_get(s->slvr_slab->slb_inuse, i)) {
 			if (nblks == 0) {
