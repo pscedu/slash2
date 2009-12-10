@@ -340,6 +340,17 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
 	return (rc);
 }
 
+/*
+ * mds_repl_inv_except_locked - For the given bmap, change the status of
+ *	all its replicas marked "active" to "old" except for the replica
+ *	specified.
+ *
+ *	This is a high-level convenience call provided to easily update
+ *	status after an ION has received some new I/O, which would make
+ *	all other existing copies of the bmap on any other replicas old.
+ * @bcm: the bmap.
+ * @ios: the ION resource that should stay marked "active".
+ */
 int
 mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 {
