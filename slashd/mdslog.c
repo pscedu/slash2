@@ -23,7 +23,7 @@ struct psc_journal		*mdsJournal;
 
 /* master journal log replay function */
 void
-mds_journal_replay(__unusedx struct dynarray *logentrys, __unusedx int *rc)
+mds_journal_replay(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
 {
 }
 

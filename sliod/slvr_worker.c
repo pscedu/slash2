@@ -30,7 +30,7 @@ struct pscrpc_nbreqset	*slvrNbReqSet;
  *   calculation.
  */
 __static int
-slvr_worker_crcup_genrq(const struct dynarray *bcrs)
+slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 {
 	struct biod_crcup_ref *bcr;
 	struct srm_bmap_crcwrt_req *mq;
@@ -52,14 +52,14 @@ slvr_worker_crcup_genrq(const struct dynarray *bcrs)
 
 	PSC_CRC64_INIT(&mq->crc);
 
-	mq->ncrc_updates = dynarray_len(bcrs);
+	mq->ncrc_updates = psc_dynarray_len(bcrs);
 	req->rq_async_args.pointer_arg[0] = (void *)bcrs;
 
 	len = (mq->ncrc_updates * sizeof(struct srm_bmap_crcup));
 	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 
 	for (i = 0; i < mq->ncrc_updates; i++) {
-		bcr = dynarray_getpos(bcrs, i);
+		bcr = psc_dynarray_getpos(bcrs, i);
 
 		DEBUG_BCR(PLL_NOTIFY, bcr, "bcrs pos=%d", i);
 
@@ -97,7 +97,7 @@ slvr_worker_push_crcups(void)
 	int			 rc;
 	struct timespec		 now;
 	struct biod_crcup_ref	*bcr, *tmp;
-	struct dynarray		*bcrs;
+	struct psc_dynarray		*bcrs;
 	static atomic_t busy = ATOMIC_INIT(0);
 
 	if (atomic_xchg(&busy, 1))
@@ -111,7 +111,7 @@ slvr_worker_push_crcups(void)
 	 * is still inflight, we won't be able to initiate a new one.
 	 */
 	spinlock(&binflCrcs.binfcrcs_lock);	
-	bcrs = PSCALLOC(sizeof(struct dynarray));
+	bcrs = PSCALLOC(sizeof(struct psc_dynarray));
 	/* Leave scheduled bcr's on the list so that in case of a failure
 	 *   ordering will be maintained.
 	 */
@@ -125,10 +125,10 @@ slvr_worker_push_crcups(void)
 		bcr->bcr_flags |= BCR_SCHEDULED;
 		
 		DEBUG_BCR(PLL_INFO, bcr, "scheduled nbcrs=%d total_bcrs=%d", 
-			  dynarray_len(bcrs), 
+			  psc_dynarray_len(bcrs), 
 			  atomic_read(&binflCrcs.binfcrcs_nbcrs));
 		
-		if (dynarray_len(bcrs) == MAX_BMAP_NCRC_UPDATES)
+		if (psc_dynarray_len(bcrs) == MAX_BMAP_NCRC_UPDATES)
 			break;
 	}
 	
@@ -154,7 +154,7 @@ slvr_worker_push_crcups(void)
 	}
 	freelock(&binflCrcs.binfcrcs_lock);
 
-	if (!dynarray_len(bcrs))
+	if (!psc_dynarray_len(bcrs))
 		PSCFREE(bcrs);
 	else {
 		rc = slvr_worker_crcup_genrq(bcrs);
@@ -166,8 +166,8 @@ slvr_worker_push_crcups(void)
 		 */
 		if (rc) {
 			spinlock(&binflCrcs.binfcrcs_lock);
-			for (i = 0; i < dynarray_len(bcrs); i++) {
-				bcr = dynarray_getpos(bcrs, i);
+			for (i = 0; i < psc_dynarray_len(bcrs); i++) {
+				bcr = psc_dynarray_getpos(bcrs, i);
 				bcr->bcr_flags &= ~(BCR_SCHEDULED);
 				DEBUG_BCR(PLL_INFO, bcr, 
 					  "unsetting BCR_SCHEDULED");
@@ -185,7 +185,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 		 struct pscrpc_async_args *args)
 {
 	int			 i, err;
-	struct dynarray		*a;
+	struct psc_dynarray		*a;
 	struct srm_generic_rep	*mp;
 	struct biod_crcup_ref	*bcr;
 
@@ -199,8 +199,8 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 	if (req->rq_status || mp->rc)
 		err = 1;
        
-	for (i=0; i < dynarray_len(a); i++) {
-		bcr = dynarray_getpos(a, i);
+	for (i=0; i < psc_dynarray_len(a); i++) {
+		bcr = psc_dynarray_getpos(a, i);
 
 		DEBUG_BCR(PLL_INFO, bcr, "err=%d", err);
 		if (err) {
@@ -211,7 +211,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 		} else 
 			bcr_ready_remove(&binflCrcs, bcr);
 	}
-	dynarray_free(a);
+	psc_dynarray_free(a);
 	PSCFREE(a);
 
 	return (0);

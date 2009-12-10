@@ -677,14 +677,14 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	int			 i;
 	int			 n;
 	int                      locked;
-	struct dynarray		 a;
+	struct psc_dynarray		 a;
 	struct slvr_ref		*s;
 	struct slvr_ref		*dummy;
 
 	ENTRY;
 
 	n = 0;
-	dynarray_init(&a);
+	psc_dynarray_init(&a);
 	LIST_CACHE_LOCK(&lruSlvrs);
 	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd,
 				    slvr_lentry) {
@@ -704,7 +704,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		 *   returning true means that no slab is attached.
 		 */
 		if (slvr_lru_freeable(s)) {
-			dynarray_add(&a, s);
+			psc_dynarray_add(&a, s);
 			s->slvr_flags |= SLVR_FREEING;
 			psclist_del(&s->slvr_lentry);
 			lruSlvrs.lc_size--;
@@ -716,7 +716,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			 *   reclaimed, however the slvr itself may
 			 *   have to stay.
 			 */
-			dynarray_add(&a, s);
+			psc_dynarray_add(&a, s);
 			s->slvr_flags |= SLVR_SLBFREEING;
 			n++;
 		}
@@ -728,8 +728,8 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&lruSlvrs);
 
-	for (i = 0; i < dynarray_len(&a); i++) {
-		s = dynarray_getpos(&a, i);
+	for (i = 0; i < psc_dynarray_len(&a); i++) {
+		s = psc_dynarray_getpos(&a, i);
 
 		if (s->slvr_flags & SLVR_SLBFREEING) {
 
@@ -753,7 +753,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			}
 		}
 	}
-	dynarray_free(&a);
+	psc_dynarray_free(&a);
 
 	return (n);
 }

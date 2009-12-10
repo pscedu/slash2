@@ -144,8 +144,8 @@ struct mexp_cli {
  *  (struct sl_resm *)->resm_pri.
  */
 struct mexp_ion {
-	struct dynarray		 mi_bmaps;		/* array of struct mexpbcm     */
-	struct dynarray		 mi_bmaps_deref;	/* dereferencing bmaps         */
+	struct psc_dynarray		 mi_bmaps;		/* array of struct mexpbcm     */
+	struct psc_dynarray		 mi_bmaps_deref;	/* dereferencing bmaps         */
 	atomic_t		 mi_refcnt;		/* num cli's using this ion    */
 	struct sl_resm		*mi_resm;
 };

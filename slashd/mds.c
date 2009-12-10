@@ -541,8 +541,8 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 __static void
 mds_mion_init(struct mexp_ion *mion, struct sl_resm *resm)
 {
-	dynarray_init(&mion->mi_bmaps);
-	dynarray_init(&mion->mi_bmaps_deref);
+	psc_dynarray_init(&mion->mi_bmaps);
+	psc_dynarray_init(&mion->mi_bmaps_deref);
 	atomic_set(&mion->mi_refcnt, 0);
 	mion->mi_resm = resm;
 }

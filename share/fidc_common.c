@@ -188,7 +188,7 @@ fidc_reap(struct psc_poolmgr *m)
 	struct fidc_membh *f, *tmp;
 	static pthread_mutex_t mutex =
 		PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
-	struct dynarray da = DYNARRAY_INIT;
+	struct psc_dynarray da = DYNARRAY_INIT;
 	int i=0;
 
 	ENTRY;
@@ -204,7 +204,7 @@ fidc_reap(struct psc_poolmgr *m)
 
 		DEBUG_FCMH(PLL_INFO, f, "considering for reap");
 
-		if (psclg_size(&m->ppm_lg) + dynarray_len(&da) >=
+		if (psclg_size(&m->ppm_lg) + psc_dynarray_len(&da) >=
 		    atomic_read(&m->ppm_nwaiters) + 1)
 			break;
 
@@ -241,7 +241,7 @@ fidc_reap(struct psc_poolmgr *m)
 		if (fidcReapCb && ((fidcReapCb)(f))) {
 			f->fcmh_state |= FCMH_CAC_FREEING;
 			lc_del(&f->fcmh_lentry, &fidcCleanList);
-			dynarray_add(&da, f);
+			psc_dynarray_add(&da, f);
 		}
  end1:
 		freelock(&f->fcmh_lock);
@@ -252,13 +252,13 @@ fidc_reap(struct psc_poolmgr *m)
 
 	pthread_mutex_unlock(&mutex);
 
-	for (i=0; i < dynarray_len(&da); i++) {
-		f = dynarray_getpos(&da, i);
+	for (i=0; i < psc_dynarray_len(&da); i++) {
+		f = psc_dynarray_getpos(&da, i);
 		DEBUG_FCMH(PLL_WARN, f, "moving to free list");
 		fidc_put(f, &fidcFreeList);
 	}
 
-	dynarray_free(&da);
+	psc_dynarray_free(&da);
 	return (i);
 }
 

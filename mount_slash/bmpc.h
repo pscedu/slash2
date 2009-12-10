@@ -208,7 +208,7 @@ enum BMPC_IOREQ_FLAGS {
 		 " biorq@%p fl=%x o=%x l=%d np=%d b=%p ts=%ld:%ld "	\
 		 BIORQ_FLAGS_FORMAT" "fmt,				\
 		 (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
-		 dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
+		 psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 		 (b)->biorq_start.tv_sec, (b)->biorq_start.tv_nsec,	\
 		 DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
 
@@ -287,7 +287,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 #define bmpce_is_rbw_page(r, b, pos)					\
 	(biorq_is_my_bmpce(r, b) &&					\
 	 ((!pos && ((r)->biorq_flags & BIORQ_RBWFP)) ||			\
-	  ((pos == (dynarray_len(&(r)->biorq_pages)-1) &&		\
+	  ((pos == (psc_dynarray_len(&(r)->biorq_pages)-1) &&		\
 	    ((r)->biorq_flags & BIORQ_RBWLP)))))
 
 static inline void

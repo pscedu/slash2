@@ -10,7 +10,7 @@
 #include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 
-struct dynarray;
+struct psc_dynarray;
 struct vbitmap;
 
 #define SLB_SIZE (slCacheBlkSz * slCacheNblks)
