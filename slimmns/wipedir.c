@@ -42,7 +42,7 @@ wipefs(const char *dir)
 			if (strncmp(f->fts_name, SL_PATH_PREFIX,
 			    strlen(SL_PATH_PREFIX)) == 0)
 				fts_set(fp, f, FTS_SKIP);
-			else if ((f->fts_info & FTS_DP) &&
+			else if ((f->fts_info == FTS_DP) &&
 			    rmdir(f->fts_path) == -1)
 				psc_fatal("rmdir %s", f->fts_path);
 		} else if (unlink(f->fts_path) == -1)
@@ -63,7 +63,7 @@ wipefs(const char *dir)
 		if (f->fts_level < 1)
 			continue;
 		if (S_ISDIR(f->fts_statp->st_mode)) {
-			if ((f->fts_info & FTS_DP) &&
+			if ((f->fts_info == FTS_DP) &&
 			    rmdir(f->fts_path) == -1)
 				psc_fatal("rmdir %s", f->fts_path);
 			/* do not descend into hardlinked directories */
@@ -90,7 +90,7 @@ wipefs(const char *dir)
 		if (f->fts_level < 1)
 			continue;
 		if (S_ISDIR(f->fts_statp->st_mode)) {
-			if ((f->fts_info & FTS_DP) &&
+			if ((f->fts_info == FTS_DP) &&
 			    rmdir(f->fts_path) == -1)
 				psc_fatal("rmdir %s", f->fts_path);
 			/* do not descend into hardlinked directories */
