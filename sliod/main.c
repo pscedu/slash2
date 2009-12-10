@@ -94,7 +94,6 @@ main(int argc, char *argv[])
 	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slictlthr");
 
-	libsl_init(PSCNET_SERVER, 0);
 	slcfg_parse(cfn);
 	fdbuf_checkkeyfile();
 	fdbuf_readkeyfile();
@@ -104,8 +103,8 @@ main(int argc, char *argv[])
 	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
 
+	libsl_init(PSCNET_SERVER, 0);
 	fidcache_init(FIDC_USER_ION, NULL);
-	//sl_buffer_cache_init();
 	slvr_cache_init();
 	sli_repl_init();
 	sli_rpc_initsvc();

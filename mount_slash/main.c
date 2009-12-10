@@ -1684,6 +1684,7 @@ ms_init(__unusedx struct fuse_conn_info *conn)
 	char *name;
 	int rc;
 
+	libsl_init(PSCNET_CLIENT, 0);
 	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
 	bmpc_global_init();
 
@@ -1865,7 +1866,6 @@ main(int argc, char *argv[])
 
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
-	libsl_init(PSCNET_CLIENT, 0);
 	slcfg_parse(cfg);
 	ms_init(NULL);
 
