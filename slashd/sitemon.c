@@ -69,8 +69,18 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	dst_mrmi = dst_resm->resm_pri;
 	src_mrmi = src_resm->resm_pri;
 
-	if (!mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 1))
+	if (!mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 1)) {
+		/* multiwait for the src to become unbusy */
+		if (!psc_multilock_hascond(&msi->msi_ml,
+		    &src_mrmi->mrmi_mlcond))
+			psc_multilock_addcond(&msi->msi_ml,
+			    &src_mrmi->mrmi_mlcond, 1);
+		if (!psc_multilock_hascond(&msi->msi_ml,
+		    &dst_mrmi->mrmi_mlcond))
+			psc_multilock_addcond(&msi->msi_ml,
+			    &dst_mrmi->mrmi_mlcond, 1);
 		goto fail;
+	}
 
 	we_set_busy = 1;
 

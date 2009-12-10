@@ -1,8 +1,7 @@
 /* $Id$ */
 
 /*
- * Control interface for querying and modifying
- * parameters of a running slashd instance.
+ * Interface for controlling live operation of a slashd instance.
  */
 
 #include "pfl/cdefs.h"

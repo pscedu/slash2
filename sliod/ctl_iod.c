@@ -1,8 +1,7 @@
 /* $Id$ */
 
 /*
- * Control interface for accessing parameters of a running instance of
- * sliod.
+ * Interface for controlling live operation of a sliod instance.
  */
 
 #include "pfl/cdefs.h"

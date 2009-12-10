@@ -1,8 +1,7 @@
 /* $Id$ */
 
 /*
- * Control interface for querying and modifying
- * parameters of a running mount_slash instance.
+ * Interface for controlling live operation of a mount_slash instance.
  */
 
 #include <sys/param.h>
