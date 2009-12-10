@@ -59,7 +59,8 @@ struct bmapc_memb {
 #define BMAP_DIRTY		(1 << 6)
 #define BMAP_MEMRLS		(1 << 7)
 #define BMAP_DIRTY2LRU		(1 << 8)
-#define _BMAP_FLSHFT		(1 << 9)
+#define BMAP_LOAD_FAIL		(1 << 9)
+#define _BMAP_FLSHFT		(1 << 10)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)

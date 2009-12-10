@@ -166,10 +166,6 @@ bcr_cmp(const void *x, const void *y)
 #define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)
 #define bmap_2_biodi_wire(b)	bmap_2_biodi(b)->biod_bmap_wire
 
-/* bmap iod modes */
-#define BMAP_IOD_RELEASING	(_BMAP_FLSHFT << 0)
-#define BMAP_IOD_RETRFAIL	(_BMAP_FLSHFT << 1)
-
 #define BIOD_CRCUP_MAX_AGE		 2		/* in seconds */
 
 enum slash_bmap_slv_states {
