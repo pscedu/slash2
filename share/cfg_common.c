@@ -49,6 +49,9 @@ libsl_resm_lookup(int ismds)
 	int i;
 
 	DYNARRAY_FOREACH(np, i, &lnet_nids) {
+		if (LNET_NETTYP(LNET_NIDNET(*np)) == LOLND)
+			continue;
+
 		e = get_hash_entry(&globalConfig.gconf_nids_hash,
 		    *np, NULL, NULL);
 		/* Every nid found by lnet must be a resource member. */
