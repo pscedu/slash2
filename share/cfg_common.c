@@ -1,9 +1,12 @@
 /* $Id$ */
 
 #include "psc_ds/hash.h"
+#include "psc_ds/dynarray.h"
 #include "psc_util/log.h"
 
 #include "slconfig.h"
+
+struct psc_dynarray lnet_nids = DYNARRAY_INIT;
 
 void
 libsl_nid_associate(lnet_nid_t nid, struct sl_resource *res)
@@ -31,9 +34,6 @@ libsl_nid_associate(lnet_nid_t nid, struct sl_resource *res)
 	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hentry);
 }
 
-int lnet_localnids_get(lnet_nid_t *, size_t);
-
-#define MAX_LOCALNIDS 128
 /*
  * libsl_resm_lookup - Sanity check this node's resource membership.
  * Notes: must be called after LNET has been initialized.
@@ -41,24 +41,20 @@ int lnet_localnids_get(lnet_nid_t *, size_t);
 struct sl_resm *
 libsl_resm_lookup(int ismds)
 {
-	lnet_nid_t nids[MAX_LOCALNIDS];
 	char nidbuf[PSC_NIDSTR_SIZE];
 	struct sl_resource *res=NULL;
 	struct sl_resm *resm=NULL;
 	struct hash_entry *e;
-	int nnids, i;
+	lnet_nid_t *np;
+	int i;
 
-	nnids = lnet_localnids_get(nids, nitems(nids));
-	if (!nnids)
-		return (NULL);
-
-	for (i = 0; i < nnids; i++) {
+	DYNARRAY_FOREACH(np, i, &lnet_nids) {
 		e = get_hash_entry(&globalConfig.gconf_nids_hash,
-		    nids[i], NULL, NULL);
+		    *np, NULL, NULL);
 		/* Every nid found by lnet must be a resource member. */
 		if (!e)
 			psc_fatalx("nid %s is not a member of any resource",
-				   psc_nid2str(nids[i], nidbuf));
+				   psc_nid2str(*np, nidbuf));
 
 		resm = e->private;
 		if (res == NULL)
@@ -66,7 +62,7 @@ libsl_resm_lookup(int ismds)
 		/* All nids must belong to the same resource */
 		else if (res != resm->resm_res)
 			psc_fatalx("nids must be members of same resource (%s)",
-				psc_nid2str(nids[i], nidbuf));
+				psc_nid2str(*np, nidbuf));
 	}
 	if (ismds && res->res_type != SLREST_MDS)
 		psc_fatal("%s: not configured as MDS", res->res_name);
@@ -202,7 +198,11 @@ libsl_init(int pscnet_mode, int ismds)
 	//setenv("USOCK_CPORT", globalConfig.gconf_port, 1);
 	//setenv("LNET_ACCEPT_PORT", globalConfig.gconf_port, 1);
 
+	psc_assert(pscnet_mode == PSCNET_CLIENT ||
+	    pscnet_mode == PSCNET_SERVER);
+
 	pscrpc_init_portals(pscnet_mode);
+	pscrpc_getlocalnids(&lnet_nids);
 
 	if (pscnet_mode == PSCNET_SERVER) {
 		resm = libsl_resm_lookup(ismds);

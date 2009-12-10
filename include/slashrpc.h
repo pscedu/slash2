@@ -637,7 +637,8 @@ void	slashrpc_export_destroy(void *);
 
 void	slashrpc_csvc_free(struct slashrpc_cservice *);
 
-extern lnet_process_id_t lpid;
+extern struct psc_dynarray lnet_nids;
+
 extern void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
 
 static __inline void

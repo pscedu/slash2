@@ -55,6 +55,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap;
 	struct slvr_ref *slvr_ref[2];
+	lnet_nid_t *np;
 
 	sl_blkno_t bmapno, slvrno;
 	uint32_t csize, tsize, roff, sblk;
@@ -75,14 +76,17 @@ sli_ric_handle_io(struct pscrpc_request *rq, int rw)
 	/* A RBW (read-before-write) request from the client may have a
 	 *   write enabled bdbuf which he uses to fault in his page.
 	 */
-	mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer,
-			     lpid.nid, nodeInfo.node_res->res_id, rw);
-
-	if (mp->rc) {
-		psc_warnx("bdbuf failed for fid:"FIDFMT,
-			  FIDFMTARGS(&fg));
-		return (-1);
+	DYNARRAY_FOREACH(np, i, &lnet_nids) {
+		mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno,
+		    rq->rq_peer, *np, nodeInfo.node_res->res_id, rw);
+		if (mp->rc == 0)
+			goto bdbuf_ok;
 	}
+	psc_warnx("bdbuf failed for fid:"FIDFMT, FIDFMTARGS(&fg));
+	return (-1);
+
+ bdbuf_ok:
+
 	/* Ensure that this request fits into the bmap's address range.
 	 *   XXX this check assumes that mq->offset has not been made
 	 *     bmap relative (ie it's filewise.

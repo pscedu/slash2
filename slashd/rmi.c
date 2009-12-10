@@ -35,17 +35,23 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	struct srm_bmap_wire_req *mq;
 	struct srm_bmap_wire_rep *mp;
 	struct pscrpc_bulk_desc *desc;
-	__unusedx struct slash_fidgen fg;
 	struct bmapc_memb *b=NULL;
 	struct iovec iov;
-	__unusedx sl_blkno_t bmapno;
 
 	RSX_ALLOCREP(rq, mq, mp);
 #if 0
-	mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer,
-	    lpid.nid, nodeInfo.node_res->res_id, mq->rw);
-	if (mp->rc)
-		return (-1);
+	struct slash_fidgen fg;
+	sl_blkno_t bmapno;
+	int i;
+
+	DYNARRAY_FOREACH(np, i, &lnet_nids) {
+		mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno, rq->rq_peer,
+		    *np, nodeInfo.node_res->res_id, mq->rw);
+		if (mp->rc == 0)
+			goto bdbuf_ok;
+	}
+	return (-1);
+ bdbuf_ok:
 #endif
 
 	mp->rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &b);

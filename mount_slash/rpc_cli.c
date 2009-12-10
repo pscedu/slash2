@@ -12,7 +12,6 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
-lnet_process_id_t	lpid;
 void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
 
 /*
@@ -22,9 +21,6 @@ void
 slc_rpc_initsvc(void)
 {
 	pscrpc_svc_handle_t *svh;
-
-	if (LNetGetId(1, &lpid))
-		psc_fatalx("LNetGetId");
 
 	/* Setup request service for client from MDS. */
 	svh = PSCALLOC(sizeof(*svh));

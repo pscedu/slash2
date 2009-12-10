@@ -13,7 +13,6 @@
 #include "slashrpc.h"
 #include "sliod.h"
 
-lnet_process_id_t lpid;
 void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
 
 /**
@@ -23,9 +22,6 @@ void
 sli_rpc_initsvc(void)
 {
 	pscrpc_svc_handle_t *svh;
-
-	if (LNetGetId(1, &lpid))
-		psc_fatalx("LNetGetId");
 
 	/* Create server service to handle requests from clients. */
 	svh = PSCALLOC(sizeof(*svh));

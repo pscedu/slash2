@@ -1684,12 +1684,6 @@ ms_init(__unusedx struct fuse_conn_info *conn)
 	char *name;
 	int rc;
 
-	if (getenv("LNET_NETWORKS") == NULL)
-		psc_fatalx("please export LNET_NETWORKS");
-	if ((name = getenv("SLASH_MDS_NID")) == NULL)
-		psc_fatalx("please export SLASH_MDS_NID");
-
-	libsl_init(PSCNET_CLIENT, 0);
 	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
 	bmpc_global_init();
 
@@ -1705,6 +1699,9 @@ ms_init(__unusedx struct fuse_conn_info *conn)
 	msctlthr_spawn();
 	mstimerthr_spawn();
 	msbmapflushthr_spawn();
+
+	if ((name = getenv("SLASH_MDS_NID")) == NULL)
+		psc_fatalx("please export SLASH_MDS_NID");
 
 	rc = slc_rmc_setmds(name);
 	if (rc)
@@ -1868,6 +1865,7 @@ main(int argc, char *argv[])
 
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
+	libsl_init(PSCNET_CLIENT, 0);
 	slcfg_parse(cfg);
 	ms_init(NULL);
 

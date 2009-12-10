@@ -25,9 +25,14 @@ slashrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 	struct pscrpc_request *rq;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
+	lnet_nid_t nid;
 	int rc;
 
-	imp->imp_connection = pscrpc_get_connection(server_id, lpid.nid, NULL);
+	nid = pscrpc_getnidforpeer(&lnet_nids, server);
+	if (nid == LNET_NID_ANY)
+		return (ENETUNREACH);
+
+	imp->imp_connection = pscrpc_get_connection(server_id, nid, NULL);
 	imp->imp_connection->c_peer.pid = SLASH_SVR_PID;
 
 	if ((rc = RSX_NEWREQ(imp, version, SRMT_CONNECT, rq, mq, mp)) != 0)

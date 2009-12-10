@@ -13,7 +13,6 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
-lnet_process_id_t lpid;
 void (*slexp_freef[SLNCONNT])(struct pscrpc_export *) = {
 	mexpcli_destroy
 };
@@ -38,9 +37,6 @@ void
 slm_rpc_initsvc(void)
 {
 	struct pscrpc_svc_handle *svh;
-
-	if (LNetGetId(1, &lpid))
-		psc_fatalx("LNetGetId");
 
 	/* Setup request service for MDS from ION. */
 	svh = PSCALLOC(sizeof(*svh));

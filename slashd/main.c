@@ -153,15 +153,15 @@ main(int argc, char *argv[])
 	pscthr_init(SLMTHRT_CTL, 0, NULL, NULL,
 	    sizeof(struct psc_ctlthr), "slmctlthr");
 
+	libsl_init(PSCNET_SERVER, 1);
 	slcfg_parse(cfn);
 
 	/* Initialize the ZFS layer. */
-	do_init();
+	zfs_init();
 	import_zpool(argv[0], zfspoolcf);
 
 	fdbuf_createkeyfile();
 	fdbuf_readkeyfile();
-	libsl_init(PSCNET_SERVER, 1);
 	fidcache_init(FIDC_USER_MDS, NULL);
 	mds_init();
 
