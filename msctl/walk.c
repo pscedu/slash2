@@ -35,8 +35,9 @@ walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
 		if (fp == NULL)
 			psc_fatal("fts_open %s", fn);
 		while ((f = fts_read(fp)) != NULL) {
-			if (f->fts_info & FTS_NS) {
-				warn("%s", f->fts_path);
+			if (f->fts_info == FTS_NS) {
+				warnx("%s: %s", f->fts_path,
+				    strerror(f->fts_errno));
 				continue;
 			}
 			if (S_ISREG(f->fts_statp->st_mode)) {
