@@ -43,7 +43,6 @@ struct bmap_mds_info {
 
 /* bmap MDS modes */
 #define BMAP_MDS_FAILED		(_BMAP_FLSHFT << 0) /* CRC failure */
-#define BMAP_MDS_EMPTY		(_BMAP_FLSHFT << 1) /* new bmap, not yet committed to disk */
 #define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 2) /* CRC update in progress */
 #define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 3)
 #define BMAP_MDS_NOION		(_BMAP_FLSHFT << 4)

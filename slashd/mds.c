@@ -876,10 +876,6 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		 *  multiple requests for the same bmap.
 		 */
 		bmap->bcm_mode |= BMAP_MDS_CRC_UP;
-		/* If the bmap had no contents, denote that it now does.
-		 */
-		if (bmap->bcm_mode & BMAP_MDS_EMPTY)
-			bmap->bcm_mode &= ~BMAP_MDS_EMPTY;
 	}
 	/* XXX Note the lock ordering here BMAP -> INODEH
 	 * mds_repl_inv_except_locked() takes the lock.
@@ -892,8 +888,6 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		BMAP_ULOCK(bmap);
 		goto out;
 	}
-	if (bmap->bcm_mode & BMAP_MDS_EMPTY)
-		bmap->bcm_mode &= ~BMAP_MDS_EMPTY;
 
 	/* XXX ok if replicas exist, the gen has to be bumped and the
 	 *  replication bmap modified.
