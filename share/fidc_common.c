@@ -277,6 +277,7 @@ fidc_get(void)
 	psc_assert(f->fcmh_state == FCMH_CAC_FREE);
 	f->fcmh_state = FCMH_CAC_CLEAN;
 	psc_assert(fcmh_clean_check(f));
+	psc_assert(!f->fcmh_pri);
 	fidc_membh_incref(f);
 
 	return (f);
