@@ -41,8 +41,6 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
 
 	fcc = PSCALLOC(sizeof(*fcc) + len);
-	fcc->fcc_fg.fg_fid = fcmh_2_fid(c);
-	fcc->fcc_fg.fg_gen = fcmh_2_gen(c);
 	fcc->fcc_fcmh   = c;
 	fcc->fcc_parent = p;
 	fcc->fcc_hash   = str_hash(name);
@@ -168,7 +166,6 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 		/* Both of these must always be true.
 		 */
 		psc_assert(fcc->fcc_fcmh == c);
-		psc_assert(SAMEFID(fcmh_2_fgp(c), &fcc->fcc_fg));
 		if (strncmp(name, fcc->fcc_name, strnlen(name, NAME_MAX))) {
 			/* This inode may have been renamed, remove
 			 *  this fcc.
