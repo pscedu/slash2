@@ -88,7 +88,6 @@ debug_ino(struct slash_inode_od *ino)
 }
 
 #define INOH_FLAGS_FMT "%s%s%s%s"
-
 #define DEBUG_INOH_FLAGS(i)						\
 	(i)->inoh_flags & INOH_INO_DIRTY	? "D" : "",		\
 	(i)->inoh_flags & INOH_EXTRAS_DIRTY	? "d" : "",		\
@@ -101,7 +100,7 @@ debug_inoh(struct slash_inode_handle *ih)
 	char buf[BUFSIZ];
 
 	_debug_ino(buf, sizeof(buf), &ih->inoh_ino);
-	printf("fl:"INOH_FLAGS_FMT" %s\n", DEBUG_INOH_FLAGS(ih));
+	printf("fl:"INOH_FLAGS_FMT" %s\n", DEBUG_INOH_FLAGS(ih), buf);
 }
 
 static __inline void
