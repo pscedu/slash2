@@ -49,7 +49,7 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 
 #define FCMH_2_INODEP(f)	(&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
 
-static __inline void
+static __inline char *
 _debug_ino(char *buf, size_t siz, struct slash_inode_od *ino)
 {
 	char nbuf[LINE_MAX], rbuf[LINE_MAX];
@@ -75,7 +75,7 @@ _debug_ino(char *buf, size_t siz, struct slash_inode_od *ino)
 	    FIDFMTARGS(&ino->ino_fg), ino->ino_version,
 	    ino->ino_bsz, ino->ino_nrepls,
 	    ino->ino_csnap, rbuf, ino->ino_crc);
-
+	return (buf);
 }
 
 static __inline void
@@ -101,27 +101,28 @@ debug_inoh(struct slash_inode_handle *ih)
 	char buf[BUFSIZ];
 
 	_debug_ino(buf, sizeof(buf), &ih->inoh_ino);
-	printf("fl:"INOH_FLAGS_FMT" %s\n",
-	    DEBUG_INOH_FLAGS(ih), buf);
+	printf("fl:"INOH_FLAGS_FMT" %s\n", DEBUG_INOH_FLAGS(ih));
 }
 
 static __inline void
-_log_debug_inoh(int level, struct slash_inode_handle *ih, const char *fmt, ...)
+_log_debug_inoh(const char *file, const char *func, int lineno,
+    int level, struct slash_inode_handle *ih, const char *fmt, ...)
 {
-	char buf[LINE_MAX], mbuf[BUFSIZ];
+	char buf[LINE_MAX], mbuf[LINE_MAX];
 	va_list ap;
 
 	va_start(ap, fmt);
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 	va_end(ap);
 
-	_debug_ino(buf, sizeof(buf), &ih->inoh_ino);
-	psc_logs(level, PSS_GEN,
-	    "inoh@%p fl:"INOH_FLAGS_FMT" %s :: %s", ih,
-	    DEBUG_INOH_FLAGS(ih), buf, mbuf);
+	psclog(file, func, lineno, PSS_GEN, level, 0,
+	    "inoh@%p fl:"INOH_FLAGS_FMT" %s :: %s",
+	    ih, DEBUG_INOH_FLAGS(ih), _debug_ino(buf, sizeof(buf),
+	    &ih->inoh_ino), mbuf);
 }
 
 #define DEBUG_INOH(level, ih, fmt, ...)					\
-	_log_debug_inoh((level), (ih), (fmt), ## __VA_ARGS__)
+	_log_debug_inoh(__FILE__, __func__, __LINE__, (level), (ih),	\
+	    (fmt), ## __VA_ARGS__)
 
 #endif
