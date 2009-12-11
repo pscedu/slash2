@@ -17,7 +17,6 @@ struct fidc_private {
 	struct psclist_head fcc_lentry;
 	psc_spinlock_t      fcc_lock;
 	struct timespec		fcc_age;
-	atomic_t            fcc_ref;
 	int                 fcc_hash;
 	char                fcc_name[];
 };

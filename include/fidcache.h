@@ -117,7 +117,7 @@ do {										\
 										\
 	psc_logs((level), PSS_GEN,						\
 		 " fcmh@%p fcoo@%p fcooref(%d:%d) i+g:%"PRId64"+"		\
-		 "%"PRId64" s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s r:%d :: "fmt,	\
+		 "%"PRId64" s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s ref:%d :: "fmt,	\
 		 (fcmh), (fcmh)->fcmh_fcoo,					\
 		 (fcmh)->fcmh_fcoo == NULL ||					\
 		    (fcmh)->fcmh_fcoo == FCOO_STARTING ? -66 :			\
