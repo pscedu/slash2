@@ -42,29 +42,29 @@ struct slm_rmi_expdata *
 	slm_rmi_getexpdata(struct pscrpc_export *);
 
 static __inline void
-slconn_wake_mlcond(void *arg)
+slconn_wake_mwcond(void *arg)
 {
-	psc_multilock_cond_wakeup(arg);
+	psc_multiwaitcond_wakeup(arg);
 }
 
 /* aliases for connection management */
 #define slm_geticonn(resm)						\
 	slconn_get(&resm2mrmi(resm)->mrmi_csvc, NULL, (resm)->resm_nid,	\
 	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION,	\
-	    &resm2mrmi(resm)->mrmi_lock, slconn_wake_mlcond,		\
-	    &resm2mrmi(resm)->mrmi_mlcond, SLCONNT_IOD)
+	    &resm2mrmi(resm)->mrmi_lock, slconn_wake_mwcond,		\
+	    &resm2mrmi(resm)->mrmi_mwcond, SLCONNT_IOD)
 
 #define slm_geticonnx(resm, exp)					\
 	slconn_get(&resm2mrmi(resm)->mrmi_csvc, (exp), 0,		\
 	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION,	\
-	    &resm2mrmi(resm)->mrmi_lock, slconn_wake_mlcond,		\
-	    &resm2mrmi(resm)->mrmi_mlcond, SLCONNT_IOD)
+	    &resm2mrmi(resm)->mrmi_lock, slconn_wake_mwcond,		\
+	    &resm2mrmi(resm)->mrmi_mwcond, SLCONNT_IOD)
 
 #define slm_getmconn(resm)						\
 	slconn_get(&resm2mrmi(resm)->mrmi_csvc, NULL, (resm)->resm_nid,	\
 	    SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC, SRMM_VERSION,	\
-	    &resm2mrmi(resm)->mrmi_lock, slconn_wake_mlcond,		\
-	    &resm2mrmi(resm)->mrmi_mlcond, SLCONNT_MDS)
+	    &resm2mrmi(resm)->mrmi_lock, slconn_wake_mwcond,		\
+	    &resm2mrmi(resm)->mrmi_mwcond, SLCONNT_MDS)
 
 static __inline struct slashrpc_cservice *
 slm_getclconn(struct pscrpc_export *exp)

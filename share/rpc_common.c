@@ -134,8 +134,8 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 			if (wakef == (void *)psc_waitq_wakeall) {
 				psc_waitq_wait(wakearg, lk);
 				reqlock(lk);
-//			} else if (wakef == psc_multilock_cond_wake) {
-//				psc_multilock_addcond(ml, wakearg);
+//			} else if (wakef == psc_multiwaitcond_wake) {
+//				psc_multiwait_addcond(ml, wakearg);
 //				if (lk)
 //					ureqlock(lk, locked);
 //				return (NULL);

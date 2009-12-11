@@ -232,7 +232,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	msi = dst_resm->resm_res->res_site->site_pri;
 	spinlock(&msi->msi_lock);
-	psc_multilock_cond_wakeup(&msi->msi_mlcond);
+	psc_multiwaitcond_wakeup(&msi->msi_mwcond);
 	freelock(&msi->msi_lock);
  out:
 	if (dst_resm) {

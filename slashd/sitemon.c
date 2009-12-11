@@ -71,14 +71,14 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 
 	if (!mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 1)) {
 		/* multiwait for the src to become unbusy */
-		if (!psc_multilock_hascond(&msi->msi_ml,
-		    &src_mrmi->mrmi_mlcond))
-			psc_multilock_addcond(&msi->msi_ml,
-			    &src_mrmi->mrmi_mlcond, 1);
-		if (!psc_multilock_hascond(&msi->msi_ml,
-		    &dst_mrmi->mrmi_mlcond))
-			psc_multilock_addcond(&msi->msi_ml,
-			    &dst_mrmi->mrmi_mlcond, 1);
+		if (!psc_multiwait_hascond(&msi->msi_mw,
+		    &src_mrmi->mrmi_mwcond))
+			psc_multiwait_addcond(&msi->msi_mw,
+			    &src_mrmi->mrmi_mwcond);
+		if (!psc_multiwait_hascond(&msi->msi_mw,
+		    &dst_mrmi->mrmi_mwcond))
+			psc_multiwait_addcond(&msi->msi_mw,
+			    &dst_mrmi->mrmi_mwcond);
 		goto fail;
 	}
 
@@ -112,10 +112,10 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
  fail:
 	if (we_set_busy)
 		mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 0);
-	if (!psc_multilock_hascond(&msi->msi_ml,
-	    &dst_mrmi->mrmi_mlcond))
-		psc_multilock_addcond(&msi->msi_ml,
-		    &dst_mrmi->mrmi_mlcond, 1);
+	if (!psc_multiwait_hascond(&msi->msi_mw,
+	    &dst_mrmi->mrmi_mwcond))
+		psc_multiwait_addcond(&msi->msi_mw,
+		    &dst_mrmi->mrmi_mwcond);
 	return (0);
 }
 
@@ -147,14 +147,15 @@ slmreplthr_main(void *arg)
 		/* select or wait for a repl rq */
 		spinlock(&msi->msi_lock);
 
-		psc_multilock_reset(&msi->msi_ml);
-		if (psc_multilock_addcond(&msi->msi_ml, &msi->msi_mlcond, 1) == -1)
-			psc_fatal("psc_multilock_addcond");
-		psc_multilock_enter_critsect(&msi->msi_ml);
+		psc_multiwait_reset(&msi->msi_mw);
+		if (psc_multiwait_addcond(&msi->msi_mw,
+		    &msi->msi_mwcond) == -1)
+			psc_fatal("psc_multiwait_addcond");
+		psc_multiwait_entercritsect(&msi->msi_mw);
 
 		if (psc_dynarray_len(&msi->msi_replq) == 0) {
 			freelock(&msi->msi_lock);
-			psc_multilock_wait(&msi->msi_ml, &dummy, 0);
+			psc_multiwait(&msi->msi_mw, &dummy);
 			continue;
 		}
 
@@ -254,11 +255,11 @@ slmreplthr_main(void *arg)
 
 							src_resm = libsl_nid2resm(src_res->res_nids[rin]);
 							if (slm_geticonn(src_resm) == NULL) {
-								if (!psc_multilock_hascond(&msi->msi_ml,
-								    &resm2mrmi(src_resm)->mrmi_mlcond))
-									if (psc_multilock_addcond(&msi->msi_ml,
-									    &resm2mrmi(src_resm)->mrmi_mlcond, 1))
-										psc_fatal("multilock_addcond");
+								if (!psc_multiwait_hascond(&msi->msi_mw,
+								    &resm2mrmi(src_resm)->mrmi_mwcond))
+									if (psc_multiwait_addcond(&msi->msi_mw,
+									    &resm2mrmi(src_resm)->mrmi_mwcond))
+										psc_fatal("multiwait_addcond");
 								continue;
 							}
 
@@ -282,15 +283,15 @@ slmreplthr_main(void *arg)
 				 * This should be safe since the rrq
 				 * is refcounted in our dynarray.
 				 */
-				psc_multilock_addcond(&msi->msi_ml,
-				    &rrq->rrq_mlcond, 1);
+				psc_multiwait_addcond(&msi->msi_mw,
+				    &rrq->rrq_mwcond);
 				mds_repl_unrefrq(rrq);
 			} else {
 				slmreplthr_removeq(rrq);
 				goto restart;
 			}
 		}
-		psc_multilock_wait(&msi->msi_ml, &dummy, 0);
+		psc_multiwait(&msi->msi_mw, &dummy);
 	}
 }
 

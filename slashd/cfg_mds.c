@@ -26,7 +26,7 @@ slcfg_init_resm(struct sl_resm *resm)
 
 	mrmi = resm->resm_pri = PSCALLOC(sizeof(*mrmi));
 	LOCK_INIT(&mrmi->mrmi_lock);
-	psc_multilock_cond_init(&mrmi->mrmi_mlcond,
+	psc_multiwaitcond_init(&mrmi->mrmi_mwcond,
 	    NULL, 0, "mrmi-%s", resm->resm_addrbuf);
 	mrmi->mrmi_resm = resm;
 }
@@ -39,8 +39,8 @@ slcfg_init_site(struct sl_site *site)
 	msi = site->site_pri = PSCALLOC(sizeof(*msi));
 	psc_dynarray_init(&msi->msi_replq);
 	LOCK_INIT(&msi->msi_lock);
-	psc_multilock_init(&msi->msi_ml, "msi-%s",
+	psc_multiwait_init(&msi->msi_mw, "msi-%s",
 	    site->site_name + strspn(site->site_name, "@"));
-	psc_multilock_cond_init(&msi->msi_mlcond, NULL, 0, "msi-%s",
+	psc_multiwaitcond_init(&msi->msi_mwcond, NULL, 0, "msi-%s",
 	    site->site_name + strspn(site->site_name, "@"));
 }

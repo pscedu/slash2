@@ -69,8 +69,8 @@ PSCTHR_MKCAST(slmreplthr, slmrepl_thread, SLMTHRT_REPL)
 struct mds_site_info {
 	struct psc_dynarray	  msi_replq;
 	psc_spinlock_t		  msi_lock;
-	struct psc_multilock	  msi_ml;
-	struct psc_multilock_cond msi_mlcond;
+	struct psc_multiwait	  msi_mw;
+	struct psc_multiwaitcond  msi_mwcond;
 	int			  msi_flags;
 };
 
@@ -79,11 +79,11 @@ struct mds_site_info {
 struct mds_resm_info {
 	psc_spinlock_t		  mrmi_lock;
 	struct slashrpc_cservice *mrmi_csvc;
-	struct psc_multilock_cond mrmi_mlcond;
-	struct timespec           mrmi_lastping;
+	struct psc_multiwaitcond  mrmi_mwcond;
+	struct timespec		  mrmi_lastping;
 	int			  mrmi_busyid;
-	struct sl_resm           *mrmi_resm;
-	void                     *mrmi_data;
+	struct sl_resm		 *mrmi_resm;
+	void			 *mrmi_data;
 };
 
 #define resm2mrmi(resm)		((struct mds_resm_info *)(resm)->resm_pri)

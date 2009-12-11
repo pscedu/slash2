@@ -94,7 +94,7 @@ mds_repl_enqueue_sites(struct sl_replrq *rrq, const sl_replica_t *iosv, int nios
 			msi->msi_flags |= MSIF_DIRTYQ;
 			psc_atomic32_inc(&rrq->rrq_refcnt);
 		}
-		psc_multilock_cond_wakeup(&msi->msi_mlcond);
+		psc_multiwaitcond_wakeup(&msi->msi_mwcond);
 		freelock(&msi->msi_lock);
 	}
 	psc_pthread_mutex_ureqlock(&rrq->rrq_mutex, locked);
@@ -458,14 +458,14 @@ mds_repl_accessrq(struct sl_replrq *rrq)
 
 	/* Wait for someone else to finish processing. */
 	while (rrq->rrq_flags & REPLRQF_BUSY) {
-		psc_multilock_cond_wait(&rrq->rrq_mlcond, &rrq->rrq_mutex);
+		psc_multiwaitcond_wait(&rrq->rrq_mwcond, &rrq->rrq_mutex);
 		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
 	if (rrq->rrq_flags & REPLRQF_DIE) {
 		/* Release if going away. */
 		psc_atomic32_dec(&rrq->rrq_refcnt);
-		psc_multilock_cond_wakeup(&rrq->rrq_mlcond);
+		psc_multiwaitcond_wakeup(&rrq->rrq_mwcond);
 		rc = 0;
 	} else {
 		rrq->rrq_flags |= REPLRQF_BUSY;
@@ -480,7 +480,7 @@ mds_repl_unrefrq(struct sl_replrq *rrq)
 	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
 	psc_atomic32_dec(&rrq->rrq_refcnt);
 	rrq->rrq_flags &= ~REPLRQF_BUSY;
-	psc_multilock_cond_wakeup(&rrq->rrq_mlcond);
+	psc_multiwaitcond_wakeup(&rrq->rrq_mwcond);
 	psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 }
 
@@ -559,7 +559,7 @@ mds_repl_initrq(struct sl_replrq *rrq, struct fidc_membh *fcmh)
 {
 	memset(rrq, 0, sizeof(*rrq));
 	psc_pthread_mutex_init(&rrq->rrq_mutex);
-	psc_multilock_cond_init(&rrq->rrq_mlcond,
+	psc_multiwaitcond_init(&rrq->rrq_mwcond,
 	    NULL, 0, "replrq-%lx", fcmh_2_fid(fcmh));
 	psc_atomic32_set(&rrq->rrq_refcnt, 1);
 	rrq->rrq_inoh = fcmh_2_inoh(fcmh);
@@ -781,8 +781,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	rrq->rrq_flags &= ~REPLRQF_BUSY;
 
 	while (psc_atomic32_read(&rrq->rrq_refcnt) > 1) {
-		psc_multilock_cond_wakeup(&rrq->rrq_mlcond);
-		psc_multilock_cond_wait(&rrq->rrq_mlcond, &rrq->rrq_mutex);
+		psc_multiwaitcond_wakeup(&rrq->rrq_mwcond);
+		psc_multiwaitcond_wait(&rrq->rrq_mwcond, &rrq->rrq_mutex);
 		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
@@ -1004,11 +1004,11 @@ _mds_repl_nodes_setbusy(struct mds_resm_info *ma,
 	 */
 	if (set && busy == 0 && rc) {
 		locked = reqlock(&ma->mrmi_lock);
-		psc_multilock_cond_wakeup(&ma->mrmi_mlcond);
+		psc_multiwaitcond_wakeup(&ma->mrmi_mwcond);
 		ureqlock(&ma->mrmi_lock, locked);
 
 		locked = reqlock(&mb->mrmi_lock);
-		psc_multilock_cond_wakeup(&mb->mrmi_mlcond);
+		psc_multiwaitcond_wakeup(&mb->mrmi_mwcond);
 		ureqlock(&mb->mrmi_lock, locked);
 	}
 	return (rc);
