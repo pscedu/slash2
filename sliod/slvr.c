@@ -58,7 +58,7 @@ slvr_do_crc(struct slvr_ref *s)
 			/* Small RMW workaround
 			 */
 			psc_assert(s->slvr_pndgwrts);
-			return(1);
+			return (1);
 		}
 
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
@@ -100,9 +100,7 @@ slvr_do_crc(struct slvr_ref *s)
 			slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
 		}
 		SLVR_ULOCK(s);
-
 	}
-
 	return (1);
 }
 
@@ -121,6 +119,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
 
 	if (rw == SL_READ) {
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
+		errno = 0;
 		rc = pread(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 			   slvr_2_fileoff(s, sblk));
 		save_errno = errno;
@@ -146,9 +145,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
 				return (crc_rc);
 			}
 		}
-
 	} else {
-
 		/* Denote that this block(s) have been synced to the
 		 *  filesystem.
 		 * Should this check and set of the block bits be
@@ -163,6 +160,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
 			//	       sblk + i));
 			vbitmap_unset(s->slvr_slab->slb_inuse, sblk + i);
 		}
+		errno = 0;
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
 			    slvr_2_fileoff(s, sblk));
 		SLVR_ULOCK(s);
@@ -252,21 +250,21 @@ slvr_fsbytes_wio(struct slvr_ref *s, uint32_t size, uint32_t sblk)
 void
 slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 {
-	psc_assert((src_or_dst == SLVR_REPLDST) || 
+	psc_assert((src_or_dst == SLVR_REPLDST) ||
 		   (src_or_dst == SLVR_REPLSRC));
 
 	SLVR_LOCK(s);
-	psc_assert(!(s->slvr_flags & SLVR_REPLDST) && 
+	psc_assert(!(s->slvr_flags & SLVR_REPLDST) &&
 		   !(s->slvr_flags & SLVR_REPLSRC));
-	
+
 	if (src_or_dst == SLVR_REPLSRC)
 		psc_assert(s->slvr_pndgreads > 0);
 	else
-		psc_assert(s->slvr_pndgwrts > 0);	
+		psc_assert(s->slvr_pndgwrts > 0);
 
 	s->slvr_flags |= src_or_dst;
 
-	DEBUG_SLVR(PLL_INFO, s, "replica_%s", (src_or_dst == SLVR_REPLSRC) ? 
+	DEBUG_SLVR(PLL_INFO, s, "replica_%s", (src_or_dst == SLVR_REPLSRC) ?
 		   "src" : "dst");
 
 	SLVR_ULOCK(s);
@@ -295,15 +293,15 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 			 *   in the pool reaper.
 			 */
 		getbuf:
-			SLVR_ULOCK(s);			
+			SLVR_ULOCK(s);
 			/* note: we grab a second lock here */
 			tmp = psc_pool_get(slBufsPool);
 			sl_buffer_fresh_assertions(tmp);
-			
+
 			SLVR_LOCK(s);
 			goto retry;
 
-		} else 
+		} else
 			psc_assert(tmp);
 
 		psc_assert(psclist_disjoint(&s->slvr_lentry));
@@ -315,7 +313,7 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 		 */
 		s->slvr_flags |= SLVR_LRU;
 		/* note: lc_addtail() will grab the list lock itself */
-		lc_addtail(&lruSlvrs, s);			
+		lc_addtail(&lruSlvrs, s);
 
 	} else if ((s->slvr_flags & SLVR_LRU) && !s->slvr_slab) {
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
@@ -339,7 +337,6 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 	if (tmp)
 		psc_pool_return(slBufsPool, (void *)tmp);
 }
-
 
 int
 slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
@@ -380,7 +377,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	if (rw == SL_WRITE) {
 		if (!(s->slvr_flags & SLVR_REPLDST)) {
 			s->slvr_flags |= SLVR_CRCDIRTY;
-			
+
 			if (s->slvr_flags & SLVR_DATARDY)
 				/* Either read or write ops can just proceed if
 				 *   SLVR_DATARDY is set, the sliver is prepared.
@@ -454,7 +451,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	if ((rc = slvr_fsbytes_rio(s)))
 		return (rc);
 
-
 	if (rw == SL_READ) {
 		SLVR_LOCK(s);
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
@@ -499,7 +495,7 @@ slvr_rio_done(struct slvr_ref *s)
 
 	s->slvr_pndgreads--;
 	if (slvr_lru_tryunpin_locked(s)) {
-		slvr_lru_requeue(s, 1);	
+		slvr_lru_requeue(s, 1);
 		DEBUG_SLVR(PLL_DEBUG, s, "unpinned");
 	} else
 		DEBUG_SLVR(PLL_DEBUG, s, "ops still pending or dirty");
@@ -514,10 +510,10 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 
 	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc");
-	
+
 	if (!(s->slvr_flags & SLVR_LRU))
 		return;
-	
+
 	s->slvr_flags &= ~SLVR_LRU;
 
 	lc_remove(&lruSlvrs, s);
@@ -539,24 +535,24 @@ slvr_wio_done(struct slvr_ref *s)
 	psc_assert(s->slvr_pndgwrts > 0);
 
 	if (s->slvr_flags & SLVR_REPLDST) {
-		/* This was a replication dest slvr.  Adjust the slvr flags 
+		/* This was a replication dest slvr.  Adjust the slvr flags
 		 *    so that the slvr may be freed on demand.
 		 */
 		DEBUG_SLVR(PLL_INFO, s, "replication complete");
-		
+
 		psc_assert(s->slvr_pndgwrts == 1);
 		psc_assert(s->slvr_flags & SLVR_PINNED);
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
 		psc_assert(!(s->slvr_flags & SLVR_CRCDIRTY));
 		s->slvr_pndgwrts--;
 		s->slvr_flags &= ~(SLVR_PINNED|SLVR_FAULTING);
-			       
+
 		SLVR_ULOCK(s);
 
 		slvr_lru_requeue(s, 0);
 		return;
 	}
-	/* XXX SLVR_CRCDIRTY had already been applied so this may not 
+	/* XXX SLVR_CRCDIRTY had already been applied so this may not
 	 *   be necessary.
 	 */
 	s->slvr_flags |= SLVR_CRCDIRTY;
@@ -566,30 +562,30 @@ slvr_wio_done(struct slvr_ref *s)
 		 */
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 		psc_assert(!(s->slvr_flags & SLVR_REPLDST));
-		
+
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
-		
+
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 		/* Other threads may be waiting for DATARDY to either
 		 *   read or write to this sliver.  At this point it's
 		 *   safe to wake them up.
-		 * Note: when iterating over the lru list for 
-		 *   reclaiming, slvrs with pending writes must be 
+		 * Note: when iterating over the lru list for
+		 *   reclaiming, slvrs with pending writes must be
 		 *   skipped.
 		 */
 		SLVR_WAKEUP(s);
-		
+
 	} else if (s->slvr_flags & SLVR_DATARDY) {
-		
+
 		DEBUG_SLVR(PLL_INFO, s, "%s", "datardy");
-		
+
 		if ((s->slvr_flags & SLVR_LRU) &&
 		    s->slvr_pndgwrts > 1)
 			slvr_lru_requeue(s, 1);
 	} else
 		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
-	
+
 	/*
 	 * If there are no more pending writes, schedule a CRC op.
 	 */
@@ -636,7 +632,7 @@ slvr_lookup(uint16_t num, struct bmap_iod_info *b, int rw)
 
 	s->slvr_flags |= SLVR_PINNED;
 
-        if (rw == SL_WRITE)		
+	if (rw == SL_WRITE)
 		s->slvr_pndgwrts++;
 	else if (rw == SL_READ)
 		s->slvr_pndgreads++;
@@ -690,11 +686,11 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 				    slvr_lentry) {
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap");
 
-		/* We are reaping, so it is fine to back off on some 
-		 *   slivers.  We have to use a reqlock here because 
+		/* We are reaping, so it is fine to back off on some
+		 *   slivers.  We have to use a reqlock here because
 		 *   slivers do not have private spinlocks, instead
 		 *   they use the lock of the biod.  So if this thread
-		 *   tries to free a slvr from the same biod trylock 
+		 *   tries to free a slvr from the same biod trylock
 		 *   will abort.
 		 */
 		if (!SLVR_TRYREQLOCK(s, &locked))
@@ -738,7 +734,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 			s->slvr_flags &= ~(SLVR_SLBFREEING|SLVR_DATARDY);
 
-			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slab=%p", 
+			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slab=%p",
 				   s->slvr_slab);
 			psc_pool_return(m, s->slvr_slab);
 			s->slvr_slab = NULL;
@@ -769,7 +765,6 @@ slvr_cache_init(void)
 		    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap,
 		    "slvrslab", NULL);
 	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
-	
+
 	slvr_worker_init();
 }
- 
