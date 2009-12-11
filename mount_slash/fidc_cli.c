@@ -42,7 +42,7 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 
 	fcc = PSCALLOC(sizeof(*fcc) + len);
 	fcc->fcc_fcmh   = c;
-	fcc->fcc_parent = p;
+	c->fcmh_parent = p;
 	fcc->fcc_hash   = str_hash(name);
 	INIT_PSCLIST_ENTRY(&fcc->fcc_lentry);
 	fidc_gettime(&fcc->fcc_age);
@@ -64,8 +64,8 @@ fidc_child_prep_free_locked(struct fidc_membh *f)
 	psclist_for_each_entry_safe(fcc, tmp, &f->fcmh_children, fcc_lentry) {
 		DEBUG_FCMH(PLL_WARN, f, "fcc=%p fcc_name=%s detaching",
 			   f, fcc->fcc_name);
-		psc_assert(fcc->fcc_parent == f);
-		fcc->fcc_parent = NULL;
+		psc_assert(fcc->fcc_fcmh->fcmh_parent == f);
+		fcc->fcc_fcmh->fcmh_parent = NULL;
 		psclist_del(&fcc->fcc_lentry);
 	}
 }
@@ -85,7 +85,7 @@ fidc_child_free_plocked(struct fidc_private *fcc)
 	c = fcc->fcc_fcmh;
 	locked = reqlock(&c->fcmh_lock);
 
-	LOCK_ENSURE(&fcc->fcc_parent->fcmh_lock);
+	LOCK_ENSURE(&c->fcmh_lock);
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
 	if (c->fcmh_state & FCMH_ISDIR) {
@@ -99,7 +99,7 @@ fidc_child_free_plocked(struct fidc_private *fcc)
 
 	DEBUG_FCMH(PLL_WARN, c, "fcc=%p name=%s parent=%p freeing "
 		   "child_empty=%d",
-		   fcc, fcc->fcc_name, fcc->fcc_parent,
+		   fcc, fcc->fcc_name, c->fcmh_parent,
 		   ((c->fcmh_state & FCMH_ISDIR) ?
 		    psclist_empty(&c->fcmh_children) : -1));
 
@@ -122,7 +122,7 @@ fidc_child_free_orphan_locked(struct fidc_membh *f)
 	LOCK_ENSURE(&f->fcmh_lock);
 
 	psc_assert(fcc);
-	psc_assert(!fcc->fcc_parent);
+	psc_assert(!f->fcmh_parent);
 	psc_assert(!(f->fcmh_state & FCMH_CAC_FREEING));
 	f->fcmh_pri = NULL;
 
@@ -179,11 +179,11 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 			/* If the fcc is 'connected', then its parent inode
 			 *   must be 'p'.
 			 */
-			if (fcc->fcc_parent) {
-				psc_assert(fcc->fcc_parent == p);
+			if (c->fcmh_parent) {
+				psc_assert(c->fcmh_parent == p);
 				psc_assert(psclist_conjoint(&fcc->fcc_lentry));
 			} else {
-				fcc->fcc_parent = p;
+				c->fcmh_parent = p;
 				psclist_xadd_tail(&fcc->fcc_lentry,
 						  &p->fcmh_children);
 				DEBUG_FCMH(PLL_WARN, p, "reattaching fcc=%p",
@@ -226,7 +226,7 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	else if (!fcc)
 		return (1);
 
-	else if (!fcc->fcc_parent) {
+	else if (!f->fcmh_parent) {
 		fidc_child_free_orphan_locked(f);
 		return (1);
 
@@ -234,7 +234,7 @@ fidc_child_reap_cb(struct fidc_membh *f)
 		/* The parent needs to be unlocked after the fcc is freed,
 		 *  hence the need for the temp var 'p'.
 		 */
-		struct fidc_membh *p=fcc->fcc_parent;
+		struct fidc_membh *p=f->fcmh_parent;
 
 		psc_assert(p);
 		/* This trylock technically violates lock ordering
@@ -292,7 +292,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		return (NULL);
 
 	psc_assert(c->fcc_fcmh);
-	psc_assert(c->fcc_parent == p);
+	psc_assert(c->fcc_fcmh->fcmh_parent == p);
 	psc_assert(c->fcc_fcmh->fcmh_pri == c);
 
 	if (c->fcc_fcmh->fcmh_state & FCMH_CAC_FREEING)
@@ -376,7 +376,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	}
 	/* Perform some sanity checks on the cached data structure.
 	 */
-	psc_assert(fcc->fcc_parent == p);
+	psc_assert(fcc->fcc_fcmh->fcmh_parent == p);
 	psc_assert(fcc->fcc_hash == str_hash(name));
 	psc_assert(!strncmp(fcc->fcc_name, name,
 			    strnlen(fcc->fcc_name, NAME_MAX)));
@@ -483,7 +483,7 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	strlcpy(ch->fcc_name, newname, len);
 
 	spinlock(&np->fcmh_lock);
-	ch->fcc_parent = np;
+	c->fcmh_parent = np;
 	psclist_xadd_tail(&ch->fcc_lentry, &np->fcmh_children);
 	freelock(&np->fcmh_lock);
 
