@@ -255,7 +255,7 @@ mds.c
 - libsl_init() is getting an ENOMEM somewhere in slashd, maybe LNET
 - do not keep sl_replrq in mem unless a bh_repl is OLD or SCHED
 - fix pool names in -Lall -Pall -iall -hall -Mall in each of slmctl, slictl, msctl
-- ensure fidc_lookup_load_fg() will accept accept FID_ANY
+- ensure fidc_lookup_load_fg() will not accept FID_ANY
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info

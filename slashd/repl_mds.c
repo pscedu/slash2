@@ -39,7 +39,7 @@ struct psc_poolmaster	 replrq_poolmaster;
 struct psc_poolmgr	*replrq_pool;
 psc_spinlock_t		 replrq_tree_lock = LOCK_INITIALIZER;
 
-struct vbitmap		*repl_busytable;
+struct psc_vbitmap	*repl_busytable;
 psc_spinlock_t		 repl_busytable_lock = LOCK_INITIALIZER;
 int			 repl_busytable_nents;
 sl_ino_t		 mds_repldir_inum;
@@ -1040,8 +1040,8 @@ mds_repl_buildbusytable(void)
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
 	if (repl_busytable)
-		vbitmap_free(repl_busytable);
-	repl_busytable = vbitmap_new(repl_busytable_nents *
+		psc_vbitmap_free(repl_busytable);
+	repl_busytable = psc_vbitmap_new(repl_busytable_nents *
 	    (repl_busytable_nents - 1) / 2);
 	freelock(&repl_busytable_lock);
 }

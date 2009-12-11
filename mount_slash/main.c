@@ -39,16 +39,16 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
-sl_ios_id_t	 prefIOS = IOS_ID_ANY;
-int		 fuse_debug;
-const char	*progname;
-char		 ctlsockfn[] = _PATH_MSCTLSOCK;
-char		 mountpoint[PATH_MAX];
+sl_ios_id_t		 prefIOS = IOS_ID_ANY;
+int			 fuse_debug;
+const char		*progname;
+char			 ctlsockfn[] = _PATH_MSCTLSOCK;
+char			 mountpoint[PATH_MAX];
 
-struct sl_resm	*slc_rmc_resm;
+struct sl_resm		*slc_rmc_resm;
 
-struct vbitmap	 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
-psc_spinlock_t	 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
+struct psc_vbitmap	 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
+psc_spinlock_t		 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
 
 #if 0
 static void exit_handler(int sig)
@@ -168,8 +168,8 @@ msfsthr_teardown(void *arg)
 	struct msfs_thread *mft = arg;
 
 	spinlock(&msfsthr_uniqidmap_lock);
-	vbitmap_unset(&msfsthr_uniqidmap, mft->mft_uniqid);
-	vbitmap_setnextpos(&msfsthr_uniqidmap, 0);
+	psc_vbitmap_unset(&msfsthr_uniqidmap, mft->mft_uniqid);
+	psc_vbitmap_setnextpos(&msfsthr_uniqidmap, 0);
 	freelock(&msfsthr_uniqidmap_lock);
 }
 
@@ -183,8 +183,8 @@ msfsthr_ensure(void)
 	thr = pscthr_get_canfail();
 	if (thr == NULL) {
 		spinlock(&msfsthr_uniqidmap_lock);
-		if (vbitmap_next(&msfsthr_uniqidmap, &id) != 1)
-			psc_fatal("vbitmap_next");
+		if (psc_vbitmap_next(&msfsthr_uniqidmap, &id) != 1)
+			psc_fatal("psc_vbitmap_next");
 		freelock(&msfsthr_uniqidmap_lock);
 
 		thr = pscthr_init(MSTHRT_FS, PTF_FREE, NULL,

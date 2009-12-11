@@ -117,7 +117,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 static void 
 bmpc_slb_init(struct sl_buffer *slb)
 {
-	slb->slb_inuse = vbitmap_new(BMPC_SLB_NBLKS);
+	slb->slb_inuse = psc_vbitmap_new(BMPC_SLB_NBLKS);
         slb->slb_blksz = BMPC_BUFSZ;
         slb->slb_nblks = BMPC_SLB_NBLKS;
         slb->slb_base  = PSCALLOC(BMPC_SLB_NBLKS * BMPC_BUFSZ);
@@ -136,7 +136,7 @@ static void
 bmpc_slb_free(struct sl_buffer *slb)
 {
         DEBUG_SLB(PLL_TRACE, slb, "freeing slb");
-	psc_assert(vbitmap_nfree(slb->slb_inuse) == BMPC_SLB_NBLKS);
+	psc_assert(psc_vbitmap_nfree(slb->slb_inuse) == BMPC_SLB_NBLKS);
 	psc_assert(slb->slb_base == NULL);
 	psc_assert(psclist_conjoint(&slb->slb_mgmt_lentry));
 	psc_assert(!atomic_read(&slb->slb_ref));
@@ -381,9 +381,9 @@ bmpc_free(void *base)
 
 	psc_assert(!((uptr-sptr) % BMPC_BLKSZ));
 	spinlock(&slb->slb_lock);
-	vbitmap_unset(slb->slb_inuse, (size_t)(((uptr-sptr) / BMPC_BLKSZ)));
+	psc_vbitmap_unset(slb->slb_inuse, (size_t)(((uptr-sptr) / BMPC_BLKSZ)));
 	
-	if ((vbitmap_nfree(slb->slb_inuse) == BMPC_SLB_NBLKS) && 
+	if ((psc_vbitmap_nfree(slb->slb_inuse) == BMPC_SLB_NBLKS) && 
 	    pll_nitems(&bmpcSlabs.bmms_slbs) > BMPC_DEFSLBS) {
 		/* The entire slb has been freed, let's remove it
 		 *   remove it from the cache and free the memory.
@@ -418,7 +418,7 @@ bmpc_alloc(void)
 	lockBmpcSlabs;
 	PLL_FOREACH(slb, &bmpcSlabs.bmms_slbs) {
 		spinlock(&slb->slb_lock);
-		if (vbitmap_next(slb->slb_inuse, &elem))
+		if (psc_vbitmap_next(slb->slb_inuse, &elem))
 			found = 1;
 		freelock(&slb->slb_lock);
 		if (found)

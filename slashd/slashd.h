@@ -4,6 +4,7 @@
 #define _SLASHD_H_
 
 #include "psc_ds/dynarray.h"
+#include "psc_ds/vbitmap.h"
 #include "psc_rpc/service.h"
 #include "psc_util/multilock.h"
 
@@ -115,7 +116,7 @@ void	 slmfssyncthr_init(void);
 void	 slmreplthr_spawnall(void);
 void	*slmrcmthr_main(void *);
 
-extern struct vbitmap				 slmrcmthr_uniqidmap;
+extern struct psc_vbitmap			 slmrcmthr_uniqidmap;
 extern psc_spinlock_t				 slmrcmthr_uniqidmap_lock;
 
 extern struct cfdops				 mdsCfdOps;

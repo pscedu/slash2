@@ -42,7 +42,7 @@ sl_buffer_free_assertions(const struct sl_buffer *b)
 	/* do we point to any cache nodes? */
 	psc_assert(psclist_empty(&b->slb_iov_list));
 	/* all of our blocks in hand? */
-	psc_assert(vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
+	psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	/* prove our disassociation from the fidcm */
 	psc_assert(psclist_disjoint(&b->slb_fcm_lentry));
 }
@@ -52,7 +52,7 @@ static void
 sl_buffer_lru_2_free_assertions(const struct sl_buffer *b)
 {
 	psc_assert(b->slb_flags == (SLB_LRU|SLB_FREEING));
-	psc_assert(vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
+	psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	psc_assert(psclist_empty(&b->slb_iov_list));
 	psc_assert(!atomic_read(&b->slb_ref));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
@@ -66,7 +66,7 @@ static void
 sl_buffer_lru_assertions(const struct sl_buffer *b)
 {
 	psc_assert(b->slb_flags == SLB_LRU);
-	psc_assert(vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
+	psc_assert(psc_vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
 	psc_assert(!psclist_empty(&b->slb_iov_list));
 	psc_assert(psclist_conjoint(&b->slb_fcm_lentry));
 	psc_assert(atomic_read(&b->slb_ref));
@@ -79,8 +79,8 @@ void
 sl_buffer_fresh_assertions(const struct sl_buffer *b)
 {
 	psc_assert(b->slb_flags == SLB_FRESH);
-	vbitmap_printbin1(b->slb_inuse);
-	psc_assert(vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
+	psc_vbitmap_printbin1(b->slb_inuse);
+	psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	psc_assert(psclist_empty(&b->slb_iov_list));
 	psc_assert(!b->slb_lc_owner); /* Not on any cache mgmt lists */
 	psc_assert(psclist_empty(&b->slb_iov_list));
@@ -127,7 +127,7 @@ sl_buffer_pin_2_lru_assertions(const struct sl_buffer *b)
 		   (atomic_read(&b->slb_unmapd_ref) > 0));
 	psc_assert(!(atomic_read(&b->slb_inflight)) &&
 		   !(atomic_read(&b->slb_inflpndg)));
-	psc_assert(vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
+	psc_assert(psc_vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
 	psc_assert(!psclist_empty(&b->slb_iov_list));
 	psc_assert(psclist_conjoint(&b->slb_fcm_lentry));
 	psc_assert(atomic_read(&b->slb_ref));
@@ -246,7 +246,7 @@ sl_slab_tryfree(struct sl_buffer *b)
 	if (!free)
 		return;
 
-	psc_assert(vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
+	psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	sl_buffer_lru_2_free_assertions(b);
 	/* Get rid of the LRU bit.
 	 */
@@ -310,7 +310,7 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool)
 	pll_remove(b->slb_lc_fcm, b);
 	b->slb_lc_fcm = NULL;
 	INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);
-	psc_assert(vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
+	psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	/* Tally em up
 	 */
 	nslbs++;
@@ -374,7 +374,7 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 {
 	struct sl_buffer *slb = pri;
 
-	slb->slb_inuse = vbitmap_new(slCacheNblks);
+	slb->slb_inuse = psc_vbitmap_new(slCacheNblks);
 	slb->slb_blksz = slCacheBlkSz;
 	slb->slb_nblks = slCacheNblks;
 	slb->slb_base  = PSCALLOC(slCacheNblks * slCacheBlkSz);
@@ -399,7 +399,7 @@ sl_buffer_destroy(void *pri)
 	struct sl_buffer *slb = pri;
 
 	PSCFREE(slb->slb_base);
-	vbitmap_free(slb->slb_inuse);
+	psc_vbitmap_free(slb->slb_inuse);
 }
 
 void

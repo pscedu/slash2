@@ -70,7 +70,7 @@ slvr_do_crc(struct slvr_ref *s)
 		// XXX for now assert that all blocks are being processed,
 		//  otherwise there's no guarantee that the entire slvr
 		//  was read.
-		psc_assert(!vbitmap_nfree(s->slvr_slab->slb_inuse));
+		psc_assert(!psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 		psc_assert(slvr_2_biodi_wire(s));
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
@@ -156,9 +156,9 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
 		 */
 		SLVR_LOCK(s);
 		for (i = 0; i < nblks; i++) {
-			//psc_assert(vbitmap_get(s->slvr_slab->slb_inuse,
+			//psc_assert(psc_vbitmap_get(s->slvr_slab->slb_inuse,
 			//	       sblk + i));
-			vbitmap_unset(s->slvr_slab->slb_inuse, sblk + i);
+			psc_vbitmap_unset(s->slvr_slab->slb_inuse, sblk + i);
 		}
 		errno = 0;
 		rc = pwrite(slvr_2_fd(s), slvr_2_buf(s, sblk), size,
@@ -186,7 +186,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
 		rc = 0;
 	}
 
-	//vbitmap_printbin1(s->slvr_slab->slb_inuse);
+	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
 
 	return ((rc < 0) ? (int)-save_errno : (int)0);
 }
@@ -204,8 +204,8 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 	int	blk;
 	int	nblks;
 
-	psc_trace("vbitmap_nfree() = %d",
-		  vbitmap_nfree(s->slvr_slab->slb_inuse));
+	psc_trace("psc_vbitmap_nfree() = %d",
+		  psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 
 	if (!(s->slvr_flags & SLVR_DATARDY))
 		psc_assert(s->slvr_flags & SLVR_FAULTING);
@@ -215,7 +215,7 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 	rc = 0;
 	blk = 0; /* gcc */
 	for (i = 0, nblks = 0; i < SLASH_BLKS_PER_SLVR; i++) {
-		if (vbitmap_get(s->slvr_slab->slb_inuse, i)) {
+		if (psc_vbitmap_get(s->slvr_slab->slb_inuse, i)) {
 			if (nblks == 0) {
 				blk = i;
 			}
@@ -397,7 +397,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 	 */
 	s->slvr_flags |= SLVR_FAULTING;
 	if (rw == SL_READ) {
-		vbitmap_setall(s->slvr_slab->slb_inuse);
+		psc_vbitmap_setall(s->slvr_slab->slb_inuse);
 		goto do_read;
 	}
 
@@ -408,7 +408,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		/* Full sliver write, no need to read blocks from disk.
 		 *  All blocks will be dirtied by the incoming network IO.
 		 */
-		vbitmap_setall(s->slvr_slab->slb_inuse);
+		psc_vbitmap_setall(s->slvr_slab->slb_inuse);
 		goto out;
 	}
 	/*
@@ -422,7 +422,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 			unaligned[0] = blks;
 
 		for (i=0; i <= blks; i++)
-			vbitmap_set(s->slvr_slab->slb_inuse, i);
+			psc_vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
 	if ((offset + size) < SLASH_SLVR_SIZE) {
 		blks = (offset + size) / SLASH_SLVR_BLKSZ;
@@ -430,14 +430,14 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 			unaligned[1] = blks;
 
 		for (i = blks; i < SLASH_BLKS_PER_SLVR; i++)
-			vbitmap_set(s->slvr_slab->slb_inuse, i);
+			psc_vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
 
-	//vbitmap_printbin1(s->slvr_slab->slb_inuse);
-	psc_info("vbitmap_nfree()=%d", vbitmap_nfree(s->slvr_slab->slb_inuse));
+	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
+	psc_info("psc_vbitmap_nfree()=%d", psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 	/* We must have found some work to do.
 	 */
-	psc_assert(vbitmap_nfree(s->slvr_slab->slb_inuse) <
+	psc_assert(psc_vbitmap_nfree(s->slvr_slab->slb_inuse) <
 		   (int)SLASH_BLKS_PER_SLVR);
 
 	if (s->slvr_flags & SLVR_DATARDY)
@@ -458,8 +458,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		s->slvr_flags |= SLVR_DATARDY;
 		s->slvr_flags &= ~SLVR_FAULTING;
 
-		vbitmap_invert(s->slvr_slab->slb_inuse);
-		//vbitmap_printbin1(s->slvr_slab->slb_inuse);
+		psc_vbitmap_invert(s->slvr_slab->slb_inuse);
+		//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
 		DEBUG_SLVR(PLL_INFO, s, "FAULTING -> DATARDY");
 		SLVR_WAKEUP(s);
 		SLVR_ULOCK(s);
@@ -474,13 +474,13 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
 		 */
 		SLVR_LOCK(s);
 	invert:
-		vbitmap_invert(s->slvr_slab->slb_inuse);
+		psc_vbitmap_invert(s->slvr_slab->slb_inuse);
 		if (unaligned[0] >= 0)
-			vbitmap_set(s->slvr_slab->slb_inuse, unaligned[0]);
+			psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[0]);
 
 		if (unaligned[1] >= 0)
-			vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
-		//vbitmap_printbin1(s->slvr_slab->slb_inuse);
+			psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
+		//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
 	out:
 		SLVR_ULOCK(s);
 	}

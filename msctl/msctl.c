@@ -25,7 +25,7 @@
 #include "slerr.h"
 
 struct msctlmsg_replst		 current_mrs;
-struct vbitmap			 current_mrs_bmask;
+struct psc_vbitmap		 current_mrs_bmask;
 struct psclist_head		 current_mrs_bdata =
 				    PSCLIST_HEAD_INIT(current_mrs_bdata);
 const struct msctlmsg_replst	 zero_mrs;
@@ -345,7 +345,7 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	if (nb > current_mrs.mrs_nbmaps)
 		errx(1, "invalid value in replication status slave message");
 
-	rc = vbitmap_setrange(&current_mrs_bmask, mrsl->mrsl_boff, mrsl->mrsl_nbmaps);
+	rc = psc_vbitmap_setrange(&current_mrs_bmask, mrsl->mrsl_boff, mrsl->mrsl_nbmaps);
 	if (rc)
 		psc_fatalx("replication status bmap data: %s", slstrerror(rc));
 
@@ -453,8 +453,8 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 		psc_fatalx("replication status has too many replicas");
 
 	memcpy(&current_mrs, mrs, sizeof(current_mrs));
-	vbitmap_resize(&current_mrs_bmask, current_mrs.mrs_nbmaps);
-	vbitmap_clearall(&current_mrs_bmask);
+	psc_vbitmap_resize(&current_mrs_bmask, current_mrs.mrs_nbmaps);
+	psc_vbitmap_clearall(&current_mrs_bmask);
 
 	blen = current_mrs.mrs_nbmaps * howmany(SL_BITS_PER_REPLICA *
 	    current_mrs.mrs_nios, NBBY);
@@ -584,8 +584,8 @@ main(int argc, char *argv[])
 	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)))
 		errx(1, "communication error: replication status "
 		    "not completed (%zd/%zd)",
-		    vbitmap_getsize(&current_mrs_bmask) -
-		    vbitmap_nfree(&current_mrs_bmask),
-		    vbitmap_getsize(&current_mrs_bmask));
+		    psc_vbitmap_getsize(&current_mrs_bmask) -
+		    psc_vbitmap_nfree(&current_mrs_bmask),
+		    psc_vbitmap_getsize(&current_mrs_bmask));
 	exit(0);
 }

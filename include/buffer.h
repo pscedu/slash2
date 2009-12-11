@@ -3,15 +3,15 @@
 #ifndef _SL_BUFFER_H_
 #define _SL_BUFFER_H_
 
+#include "pfl/cdefs.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/pool.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 
 struct psc_dynarray;
-struct vbitmap;
+struct psc_vbitmap;
 
 #define SLB_SIZE (slCacheBlkSz * slCacheNblks)
 
@@ -26,7 +26,7 @@ enum slb_states {
 	SLB_FRESH    = 0x80,
 };
 
-#define SLB_FULL(slb) (!vbitmap_nfree((slb)->slb_inuse))
+#define SLB_FULL(slb) (!psc_vbitmap_nfree((slb)->slb_inuse))
 
 #define SLB_IOV2EBASE(iov, slb)						\
 	(((iov)->oftiov_base + ((iov)->oftiov_nblks * (slb)->slb_blksz)) - 1)
@@ -52,7 +52,7 @@ enum slb_states {
  *    with the bmap or have its regions allocated from within the bmap.
  */
 struct sl_buffer {
-	struct vbitmap		*slb_inuse;		/* track which segments are busy   */
+	struct psc_vbitmap	*slb_inuse;		/* track which segments are busy   */
 	int			 slb_nblks;		/* num blocks                      */
 	uint32_t		 slb_blksz;		/* blocksize                       */
 	void			*slb_base;		/* point to the data buffer        */
@@ -83,12 +83,12 @@ struct sl_buffer {
 #define SLB_FLAGS_FMT "%s%s%s%s%s%s%s%s"
 
 #define DEBUG_SLB(level, slb, fmt, ...)					\
-	psc_logs((level), PSS_GEN, 					\
+	psc_logs((level), PSS_GEN,					\
 		" slb@%p b:%p sz(%d/%d) bsz:%u"				\
 		" ref:%d umref:%d inf:%d infp:%d fl:"SLB_FLAGS_FMT	\
 		" fcm:%p lco:%p "fmt,					\
 		(slb), (slb)->slb_base, (slb)->slb_nblks,		\
-		vbitmap_nfree((slb)->slb_inuse),			\
+		psc_vbitmap_nfree((slb)->slb_inuse),			\
 		(slb)->slb_blksz,					\
 		atomic_read(&(slb)->slb_ref),				\
 		atomic_read(&(slb)->slb_unmapd_ref),			\
@@ -99,7 +99,7 @@ struct sl_buffer {
 		## __VA_ARGS__)
 
 #define DUMP_SLB(level, slb, fmt, ...)					\
-        do {                                                            \
+	do {                                                            \
 		int __l;						\
 		struct sl_buffer_iovref *__r;				\
 									\
@@ -117,7 +117,7 @@ struct sl_buffer {
 					     __m->oft_norl.oft_iov,	\
 					     "iov of memb %p", __m);	\
 			} else						\
-				psc_logs((level), PSS_GEN, 		\
+				psc_logs((level), PSS_GEN,		\
 					"--> Unmapped SLB ref %p memb " \
 					fmt, __r, ## __VA_ARGS__);	\
 		}							\

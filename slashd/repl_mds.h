@@ -72,7 +72,7 @@ extern struct psc_poolmgr	*replrq_pool;
 extern struct replrqtree	 replrq_tree;
 extern psc_spinlock_t		 replrq_tree_lock;
 
-extern struct vbitmap		*repl_busytable;
+extern struct psc_vbitmap	*repl_busytable;
 extern psc_spinlock_t		 repl_busytable_lock;
 
 #endif /* _SL_MDS_REPL_H_ */
