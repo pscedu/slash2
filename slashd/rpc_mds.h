@@ -41,12 +41,6 @@ int	slm_rmm_handler(struct pscrpc_request *);
 struct slm_rmi_expdata *
 	slm_rmi_getexpdata(struct pscrpc_export *);
 
-static __inline void
-slconn_wake_mwcond(void *arg)
-{
-	psc_multiwaitcond_wakeup(arg);
-}
-
 /* aliases for connection management */
 #define slm_geticonn(resm)						\
 	slconn_get(&resm2mrmi(resm)->mrmi_csvc, NULL, (resm)->resm_nid,	\
