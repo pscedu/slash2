@@ -69,6 +69,10 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	dst_mrmi = dst_resm->resm_pri;
 	src_mrmi = src_resm->resm_pri;
 
+	csvc = slm_geticonn(dst_resm);
+	if (csvc == NULL)
+		goto fail;
+
 	if (!mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 1)) {
 		/* multiwait for the src to become unbusy */
 		if (!psc_multiwait_hascond(&msi->msi_mw,
@@ -83,10 +87,6 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	}
 
 	we_set_busy = 1;
-
-	csvc = slm_geticonn(dst_resm);
-	if (csvc == NULL)
-		goto fail;
 
 	/* Issue replication work request */
 	rc = RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION,
@@ -283,15 +283,21 @@ slmreplthr_main(void *arg)
 				 * This should be safe since the rrq
 				 * is refcounted in our dynarray.
 				 */
-				psc_multiwait_addcond(&msi->msi_mw,
-				    &rrq->rrq_mwcond);
+				psc_multiwait_addcond_masked(&msi->msi_mw,
+				    &rrq->rrq_mwcond, 0);
 				mds_repl_unrefrq(rrq);
+				psc_multiwait_setcondwakeable(&msi->msi_mw,
+				    &rrq->rrq_mwcond, 1);
 			} else {
 				slmreplthr_removeq(rrq);
 				goto restart;
 			}
 		}
 		psc_multiwait(&msi->msi_mw, &dummy);
+		/*
+		 * XXX look at the event and process it directly
+		 * instead of doing all this work again.
+		 */
 	}
 }
 
