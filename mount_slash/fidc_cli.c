@@ -47,7 +47,6 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	fcc->fcc_parent = p;
 	fcc->fcc_hash   = str_hash(name);
 	INIT_PSCLIST_ENTRY(&fcc->fcc_lentry);
-	LOCK_INIT(&fcc->fcc_lock);
 	fidc_gettime(&fcc->fcc_age);
 	strlcpy(fcc->fcc_name, name, len);
 	return (fcc);
@@ -67,10 +66,8 @@ fidc_child_prep_free_locked(struct fidc_membh *f)
 	psclist_for_each_entry_safe(fcc, tmp, &f->fcmh_children, fcc_lentry) {
 		DEBUG_FCMH(PLL_WARN, f, "fcc=%p fcc_name=%s detaching",
 			   f, fcc->fcc_name);
-		spinlock(&fcc->fcc_lock);
 		psc_assert(fcc->fcc_parent == f);
 		fcc->fcc_parent = NULL;
-		freelock(&fcc->fcc_lock);
 		psclist_del(&fcc->fcc_lentry);
 	}
 }
@@ -168,7 +165,6 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 
 	fcc = c->fcmh_pri;
 	if (fcc) {
-		spinlock(&fcc->fcc_lock);
 		/* Both of these must always be true.
 		 */
 		psc_assert(fcc->fcc_fcmh == c);
@@ -177,7 +173,6 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 			/* This inode may have been renamed, remove
 			 *  this fcc.
 			 */
-			freelock(&fcc->fcc_lock);
 			fidc_child_free_plocked(fcc);
 			fcc = NULL;
 		} else {
@@ -197,7 +192,6 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 				DEBUG_FCMH(PLL_WARN, p, "reattaching fcc=%p",
 					   fcc);
 			}
-			freelock(&fcc->fcc_lock);
 		}
 	}
 	freelock(&c->fcmh_lock);
