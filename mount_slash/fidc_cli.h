@@ -10,10 +10,10 @@
 
 struct fidc_membh;
 
-struct fidc_private {
-	struct timespec		 fcc_age;
-	int			 fcc_hash;
-	char			 fcc_name[];
+struct fidc_nameinfo {
+	struct timespec		 fni_age;
+	int			 fni_hash;
+	char			 fni_name[];
 };
 
 struct fidc_membh *fidc_child_lookup(struct fidc_membh *, const char *);

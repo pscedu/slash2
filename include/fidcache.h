@@ -57,8 +57,8 @@ struct fidc_membh {
 	struct psc_listcache	*fcmh_cache_owner;
 	struct psc_waitq	 fcmh_waitq;
 	struct sl_fsops		*fcmh_fsops;
-	struct fidc_private	*fcmh_pri;
 
+	struct fidc_nameinfo	*fcmh_name;
 	struct fidc_membh	*fcmh_parent;
 	struct psclist_head	 fcmh_sibling;
 	struct psclist_head	 fcmh_children;
@@ -130,7 +130,7 @@ do {										\
 		    (fcmh)->fcmh_fcoo->fcoo_oref_wr,				\
 		 fcmh_2_fid(fcmh),						\
 		 fcmh_2_gen(fcmh),						\
-		 DEBUG_FCMH_FLAGS(fcmh), (fcmh)->fcmh_pri,			\
+		 DEBUG_FCMH_FLAGS(fcmh), (fcmh)->fcmh_name,			\
 		 fcmh_lc_2_string((fcmh)->fcmh_cache_owner),			\
 		 atomic_read(&(fcmh)->fcmh_refcnt),				\
 		 ## __VA_ARGS__);						\

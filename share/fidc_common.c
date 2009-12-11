@@ -103,7 +103,7 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 			psc_fatalx("Bad inode fcmh_cache_owner %p",
 			       f->fcmh_cache_owner);
 
-		psc_assert(f->fcmh_pri == NULL);
+		psc_assert(f->fcmh_name == NULL);
 
 		psc_assert(!atomic_read(&f->fcmh_refcnt));
 		if (f->fcmh_cache_owner == NULL)
@@ -277,7 +277,7 @@ fidc_get(void)
 	psc_assert(f->fcmh_state == FCMH_CAC_FREE);
 	f->fcmh_state = FCMH_CAC_CLEAN;
 	psc_assert(fcmh_clean_check(f));
-	psc_assert(!f->fcmh_pri);
+	psc_assert(!f->fcmh_name);
 	fidc_membh_incref(f);
 
 	return (f);
@@ -570,7 +570,7 @@ fidc_membh_init(__unusedx struct psc_poolmgr *pm, void *a)
 	f->fcmh_cache_owner = NULL;
 	f->fcmh_fsops = slFsops;
 	f->fcmh_state = FCMH_CAC_FREE;
-	f->fcmh_pri = NULL;
+	f->fcmh_name = NULL;
 	memset(&f->fcmh_hentry, 0, sizeof(struct hash_entry));
 	return (0);
 }
