@@ -112,7 +112,7 @@ struct slash_bmap_od {
 
 #define DEBUG_BMAP(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 " bmap@%p b:%x m:%u i:%"PRIx64				\
+		 "bmap@%p b:%x m:%u i:%"PRIx64				\
 		 " rref=%u wref=%u opcnt=%u "fmt,			\
 		 (b), (b)->bcm_blkno,					\
 		 (b)->bcm_mode,						\
