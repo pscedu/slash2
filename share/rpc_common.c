@@ -7,6 +7,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
+#include "psc_util/multilock.h"
 
 #include "slashrpc.h"
 
@@ -92,8 +93,6 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 	locked = 0; /* gcc */
 	if (lk)
 		locked = reqlock(lk);
- restart:
-
 	if (exp)
 		peernid = exp->exp_connection->c_peer.nid;
 	psc_assert(peernid != LNET_NID_ANY);
@@ -120,53 +119,64 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 		}
 
 		/* initialize service */
-		*csvcp = slashrpc_csvc_create(rqptl, rpptl);
-	}
-#define RECONNECT_INTV 30	/* seconds */
-	csvc = *csvcp;
-	if ((csvc->csvc_flags & CSVCF_INIT) == 0 ||
-	    ((csvc->csvc_flags & CSVCF_FAILED) &&
-	    csvc->csvc_mtime + RECONNECT_INTV < time(NULL))) {
-		if (exp) {
-			atomic_inc(&exp->exp_connection->c_refcount);
-			csvc->csvc_import->imp_connection = exp->exp_connection;
-		} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
-			if (wakef == (void *)psc_waitq_wakeall) {
-				psc_waitq_wait(wakearg, lk);
-				reqlock(lk);
-//			} else if (wakef == psc_multiwaitcond_wake) {
-//				psc_multiwait_addcond(ml, wakearg);
-//				if (lk)
-//					ureqlock(lk, locked);
-//				return (NULL);
-			} else
-				psc_fatalx("bad wakef");
-			goto restart;
-		} else {
-			csvc->csvc_flags |= CSVCF_CONNECTING;
-			freelock(lk);
-			rc = slashrpc_issue_connect(peernid,
-			    csvc->csvc_import, magic, version);
-			reqlock(lk);
-			csvc->csvc_flags &= ~CSVCF_CONNECTING;
+		csvc = *csvcp = slashrpc_csvc_create(rqptl, rpptl);
+		csvc->csvc_import->imp_failed = 1;
+	} else
+		csvc = *csvcp;
+ restart:
+	if (csvc->csvc_import->imp_failed == 0)
+		goto out;
 
-			csvc->csvc_mtime = time(NULL);
-			if (rc)
-				csvc->csvc_flags |= CSVCF_FAILED;
+	if (exp) {
+//		if (csvc->csvc_import->imp_connection)
+//			atomic_dec(&csvc->csvc_import->imp_connection->c_refcount);
+
+		atomic_inc(&exp->exp_connection->c_refcount);
+		csvc->csvc_import->imp_connection = exp->exp_connection;
+	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
+		if (wakef == slconn_wake_waitq) {
+			psc_waitq_wait(wakearg, lk);
+			reqlock(lk);
+		} else if (wakef == slconn_wake_mwcond) {
+			psc_fatalx("unimplemented wakef");
+//			psc_multiwait_addcond(ml, wakearg);
+//			csvc = NULL;
+//			goto out;
+		} else
+			psc_fatalx("invalid wakef");
+		goto restart;
+
+#define RECONNECT_INTV 30	/* seconds */
+	} else if (csvc->csvc_mtime + RECONNECT_INTV < time(NULL)) {
+		csvc->csvc_flags |= CSVCF_CONNECTING;
+		freelock(lk);
+		rc = slashrpc_issue_connect(peernid,
+		    csvc->csvc_import, magic, version);
+		reqlock(lk);
+		csvc->csvc_flags &= ~CSVCF_CONNECTING;
+
+		csvc->csvc_mtime = time(NULL);
+		if (rc) {
+			csvc->csvc_import->imp_failed = 1;
+			csvc->csvc_lasterr = rc;
+			csvc = NULL;
+			goto out;
 		}
-		if (rc == 0) {
-			if (wakef && wakearg)
-				wakef(wakearg);
-			csvc->csvc_flags |= CSVCF_INIT;
-			csvc->csvc_flags &= ~CSVCF_FAILED;
-		}
-	}
-	if (csvc->csvc_flags & CSVCF_FAILED)
+	} else {
+		rc = csvc->csvc_lasterr;
 		csvc = NULL;
+		goto out;
+	}
+	if (rc == 0) {
+		csvc->csvc_import->imp_failed = 0;
+		if (wakef && wakearg)
+			wakef(wakearg);
+	}
 
  out:
 	if (lk)
 		ureqlock(lk, locked);
+//	errno = rc;
 	return (csvc);
 }
 
@@ -203,16 +213,32 @@ slashrpc_export_destroy(void *data)
 	struct pscrpc_export *exp = slexp->slexp_export;
 
 	psc_assert(exp);
-	/* There's no way to set this from the drop_callback()
-	 */
+	/* There's no way to set this from the drop_callback() */
 	if (!(slexp->slexp_flags & EXP_CLOSING))
 		slexp->slexp_flags |= EXP_CLOSING;
 
 	if (slexp_freef[slexp->slexp_peertype])
 		slexp_freef[slexp->slexp_peertype](exp);
 
-	/* Ok, no one else should be in here.
-	 */
+	/* OK, no one else should be in here */
 	exp->exp_private = NULL;
 	PSCFREE(slexp);
+}
+
+__weak void
+psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
+{
+	psc_fatalx("unimplemented stub");
+}
+
+void
+slconn_wake_waitq(void *arg)
+{
+	psc_waitq_wakeall(arg);
+}
+
+void
+slconn_wake_mwcond(void *arg)
+{
+	psc_multiwaitcond_wakeup(arg);
 }

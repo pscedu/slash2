@@ -608,12 +608,11 @@ struct srm_generic_rep {
 struct slashrpc_cservice {
 	struct pscrpc_import	*csvc_import;
 	int			 csvc_flags;
+	int			 csvc_lasterr;
 	time_t			 csvc_mtime;
 };
 
-#define CSVCF_INIT		(1 << 0)
-#define CSVCF_FAILED		(1 << 1)
-#define CSVCF_CONNECTING	(1 << 2)
+#define CSVCF_CONNECTING	(1 << 0)
 
 struct slashrpc_export {
 	uint64_t		 slexp_nextcfd;
@@ -631,20 +630,18 @@ struct slashrpc_cservice *
 	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
 	    psc_spinlock_t *, void (*)(void *), void *, enum slconn_type);
 
+void	slconn_wake_waitq(void *);
+void	slconn_wake_mwcond(void *);
+
 struct slashrpc_export *
 	slashrpc_export_get(struct pscrpc_export *, enum slconn_type);
 void	slashrpc_export_destroy(void *);
 
 void	slashrpc_csvc_free(struct slashrpc_cservice *);
 
+
 extern struct psc_dynarray lnet_nids;
 
 extern void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
-
-static __inline void
-slconn_wake_waitq(void *arg)
-{
-	psc_waitq_wakeall(arg);
-}
 
 #endif /* _SLASHRPC_H_ */
