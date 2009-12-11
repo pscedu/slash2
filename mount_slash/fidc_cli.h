@@ -12,7 +12,6 @@ struct fidc_membh;
 
 struct fidc_private {
 	struct fidc_membh	*fcc_fcmh;
-	struct psclist_head	 fcc_lentry;
 	struct timespec		 fcc_age;
 	int			 fcc_hash;
 	char			 fcc_name[];

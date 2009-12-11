@@ -44,7 +44,7 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	fcc->fcc_fcmh   = c;
 	c->fcmh_parent = p;
 	fcc->fcc_hash   = str_hash(name);
-	INIT_PSCLIST_ENTRY(&fcc->fcc_lentry);
+	INIT_PSCLIST_ENTRY(&c->fcmh_sibling);
 	fidc_gettime(&fcc->fcc_age);
 	strlcpy(fcc->fcc_name, name, len);
 	return (fcc);
@@ -59,14 +59,14 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 static void
 fidc_child_prep_free_locked(struct fidc_membh *f)
 {
-	struct fidc_private *fcc, *tmp;
+	struct fidc_membh *c, *tmp;
 
-	psclist_for_each_entry_safe(fcc, tmp, &f->fcmh_children, fcc_lentry) {
-		DEBUG_FCMH(PLL_WARN, f, "fcc=%p fcc_name=%s detaching",
-			   f, fcc->fcc_name);
-		psc_assert(fcc->fcc_fcmh->fcmh_parent == f);
-		fcc->fcc_fcmh->fcmh_parent = NULL;
-		psclist_del(&fcc->fcc_lentry);
+	psclist_for_each_entry_safe(c, tmp, &f->fcmh_children, fcmh_sibling) {
+		DEBUG_FCMH(PLL_WARN, c, "fidc_membh=%p name=%s detaching",
+			   c, c->fcmh_pri->fcc_name);
+		psc_assert(c->fcmh_parent == f);
+		c->fcmh_parent = NULL;
+		psclist_del(&c->fcmh_sibling);
 	}
 }
 
@@ -93,7 +93,7 @@ fidc_child_free_plocked(struct fidc_private *fcc)
 		psc_assert(psclist_empty(&c->fcmh_children));
 	}
 
-	psclist_del(&fcc->fcc_lentry);
+	psclist_del(&c->fcmh_sibling);
 	psc_assert(c->fcmh_pri == fcc);
 	c->fcmh_pri = NULL;
 
@@ -181,11 +181,10 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 			 */
 			if (c->fcmh_parent) {
 				psc_assert(c->fcmh_parent == p);
-				psc_assert(psclist_conjoint(&fcc->fcc_lentry));
+				psc_assert(psclist_conjoint(&c->fcmh_sibling));
 			} else {
 				c->fcmh_parent = p;
-				psclist_xadd_tail(&fcc->fcc_lentry,
-						  &p->fcmh_children);
+				psclist_xadd_tail(&c->fcmh_sibling, &p->fcmh_children);
 				DEBUG_FCMH(PLL_WARN, p, "reattaching fcc=%p",
 					   fcc);
 			}
@@ -261,7 +260,7 @@ fidc_child_reap_cb(struct fidc_membh *f)
 static struct fidc_private *
 fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 {
-	struct fidc_private *c=NULL;
+	struct fidc_membh *c=NULL;
 	int found=0;
 	int hash=str_hash(name);
 	struct timespec	now;
@@ -273,17 +272,17 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	DEBUG_FCMH(PLL_INFO, p, "name %p (%s), hash=%d",
 		   name, name, hash);
 
-	psclist_for_each_entry(c, &p->fcmh_children, fcc_lentry) {
+	psclist_for_each_entry(c, &p->fcmh_children, fcmh_sibling) {
 
 		psc_traces(PSS_GEN, "p=fcmh@%p c=%p cname=%s hash=%d",
-			   p, c, c->fcc_name, c->fcc_hash);
+			   p, c, c->fcmh_pri->fcc_name, c->fcmh_pri->fcc_hash);
 
-		if ((c->fcc_hash == hash) &&
-		    (!strncmp(name, c->fcc_name, strnlen(name, NAME_MAX)))) {
+		if ((c->fcmh_pri->fcc_hash == hash) &&
+		    (!strncmp(name, c->fcmh_pri->fcc_name, strnlen(name, NAME_MAX)))) {
 			/* Pin down the fcc while the parent dir lock is held.
 			 */
 			found=1;
-			fidc_membh_incref(c->fcc_fcmh);
+			fidc_membh_incref(c);
 			break;
 		}
 	}
@@ -291,22 +290,19 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	if (!found)
 		return (NULL);
 
-	psc_assert(c->fcc_fcmh);
-	psc_assert(c->fcc_fcmh->fcmh_parent == p);
-	psc_assert(c->fcc_fcmh->fcmh_pri == c);
+	psc_assert(c->fcmh_parent == p);
 
-	if (c->fcc_fcmh->fcmh_state & FCMH_CAC_FREEING)
+	if (c->fcmh_state & FCMH_CAC_FREEING)
 		return (NULL);
 
 	clock_gettime(CLOCK_REALTIME, &now);
-	if (timespeccmp(&c->fcc_age, &now, <)) {
+	if (timespeccmp(&c->fcmh_pri->fcc_age, &now, <)) {
 		/* It's old, remove it.
 		 */
-		fidc_membh_dropref(c->fcc_fcmh);							\
-		fidc_child_free_plocked(c);
-		c = NULL;
+		fidc_membh_dropref(c);							\
+		fidc_child_free_plocked(c->fcmh_pri);
 	}
-	return (c);
+	return (c->fcmh_pri);
 }
 
 #if 0
@@ -424,7 +420,7 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	if (!(tmp = fidc_child_lookup_int_locked(p, name))) {
 		/* It doesn't yet exist, add it.
 		 */
-		psclist_xadd_tail(&fcc->fcc_lentry, &p->fcmh_children);
+		psclist_xadd_tail(&c->fcmh_sibling, &p->fcmh_children);
 		psc_assert(!c->fcmh_pri);
 		c->fcmh_pri = fcc;
 		DEBUG_FCMH(PLL_WARN, p, "fcc=%p, adding name: %s", fcc, fcc->fcc_name);
@@ -460,7 +456,7 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	if (ch) {
 		c = ch->fcc_fcmh;
 		spinlock(&c->fcmh_lock);
-		psclist_del(&ch->fcc_lentry);
+		psclist_del(&c->fcmh_sibling);
 	}
 	freelock(&op->fcmh_lock);
 
@@ -484,7 +480,7 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 
 	spinlock(&np->fcmh_lock);
 	c->fcmh_parent = np;
-	psclist_xadd_tail(&ch->fcc_lentry, &np->fcmh_children);
+	psclist_xadd_tail(&c->fcmh_sibling, &np->fcmh_children);
 	freelock(&np->fcmh_lock);
 
 	freelock(&c->fcmh_lock);

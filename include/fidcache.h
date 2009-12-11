@@ -58,7 +58,9 @@ struct fidc_membh {
 	struct psc_waitq	 fcmh_waitq;
 	struct sl_fsops		*fcmh_fsops;
 	struct fidc_private	*fcmh_pri;
+
 	struct fidc_membh	*fcmh_parent;
+	struct psclist_head	 fcmh_sibling;
 	struct psclist_head	 fcmh_children;
 };
 
