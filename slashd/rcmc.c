@@ -105,7 +105,7 @@ slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 	nbits = rrq->rrq_inoh->inoh_ino.ino_nrepls *
 	    SL_BITS_PER_REPLICA + SL_NBITS_REPLST_BHDR;
 	if (howmany(srcm->srcm_page_bitpos + nbits,
-	    NBBY) > SRM_REPLST_PAGESIZ) {
+	    NBBY) > SRM_REPLST_PAGESIZ || *rqp == NULL) {
 		if (*rqp) {
 			rc = slmrmcthr_replst_slave_waitrep(*rqp, rrq);
 			*rqp = NULL;
