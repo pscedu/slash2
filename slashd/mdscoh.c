@@ -26,7 +26,7 @@ struct pscrpc_nbreqset	*bmapCbSet;
 int
 mdscoh_reap(void)
 {
-	return (nbrequest_reap(bmapCbSet));
+	return (nbreqset_reap(bmapCbSet));
 }
 
 void

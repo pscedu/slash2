@@ -35,8 +35,6 @@ static int shutdown=0;
 #define MAX_OUTSTANDING_RPCS 64
 #define MIN_COALESCE_RPC_SZ  LNET_MTU /* Try for big RPC's */
 
-extern int slCacheBlkSz;
-
 __static void
 bmap_flush_reap_rpcs(void)
 {
@@ -53,8 +51,8 @@ bmap_flush_reap_rpcs(void)
 			i--;
 		}
 	}
-	shutdown ? (int)nbrequest_flush(pndgReqs) :
-		(int)nbrequest_reap(pndgReqs);
+	shutdown ? (int)nbreqset_flush(pndgReqs) :
+		(int)nbreqset_reap(pndgReqs);
 
 	psc_info("outstandingRpcCnt=%d (after)",
 		 atomic_read(&outstandingRpcCnt));

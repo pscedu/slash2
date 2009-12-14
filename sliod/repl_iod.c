@@ -73,7 +73,7 @@ slireplinfthr_main(__unusedx void *arg)
 
 	lc = &sli_replwkrq_pool->ppm_lc;
 	for (;;) {
-		nbrequest_reap(&sli_replwk_nbset);
+		nbreqset_reap(&sli_replwk_nbset);
 		/* wait for a few seconds unless the thing fills up */
 		LIST_CACHE_LOCK(lc);
 		if (lc_sz(lc))
