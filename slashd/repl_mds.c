@@ -874,23 +874,24 @@ mds_repl_scandir(void)
 	void *data;
 	int rc;
 
+	rc = zfsslash2_opendir(zfsVfs, mds_repldir_inum,
+	    &rootcreds, &fg, &stb, &data);
+	if (rc == ENOENT) {
+		rc = zfsslash2_mkdir(zfsVfs, SL_ROOT_INUM,
+		    SL_PATH_REPLS, 0700, &rootcreds, NULL, NULL, 1);
+		if (rc)
+			psc_fatalx("ZFS mkdir %s", SL_PATH_REPLS,
+			    slstrerror(rc));
+		return;
+	}
+	if (rc)
+		psc_fatalx("ZFS opendir %s: %s", SL_PATH_REPLS,
+		    slstrerror(rc));
+
 	off = 0;
 	siz = 8 * 1024;
 	buf = PSCALLOC(siz);
 
-	rc = zfsslash2_opendir(zfsVfs, mds_repldir_inum,
-	    &rootcreds, &fg, &stb, &data);
-	if (rc) {
-		if (rc == ENOENT) {
-			rc = zfsslash2_mkdir(zfsVfs, SL_ROOT_INUM,
-			    SL_PATH_REPLS, 0700, &rootcreds, NULL, NULL, 1);
-			if (rc == -1)
-				psc_fatal("zfs_mkdir %s", SL_PATH_REPLS);
-			return;
-		}
-		psc_fatalx("opendir %s: %s", SL_PATH_REPLS,
-		    slstrerror(rc));
-	}
 	for (;;) {
 		rc = zfsslash2_readdir(zfsVfs, mds_repldir_inum,
 		    &rootcreds, siz, off, buf, &tsiz, NULL, 0, data);
