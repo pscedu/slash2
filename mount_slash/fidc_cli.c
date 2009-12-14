@@ -394,10 +394,10 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 
 	if (fidc_child_try_validate(p, c, name))
 		return;
-	else
-		/* Couldn't validate an existing namespace reference.
-		 */
-		fni = fidc_new(p, c, name);
+
+	/* Couldn't validate an existing namespace reference.
+	 */
+	fni = fidc_new(p, c, name);
 
 	psc_assert(fni);
 
