@@ -259,7 +259,6 @@ mds.c
 - mds_bmap_lookup() flag to avoid loading
 - allow N slivers inflight at once between two sliods
 - sanity check that someone has an ACTIVE state for a bmap
-- sliver vbitmap_unset in the RII code on failure
 - trace the errors in RII (EAGAIN)
 - check crcstate bits in sliod to skip repl I/O
 

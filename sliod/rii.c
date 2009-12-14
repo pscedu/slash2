@@ -139,15 +139,20 @@ sli_rii_handler(struct pscrpc_request *rq)
 }
 
 int
-sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+sli_rii_replread_cb(struct pscrpc_request *rq,
+    struct pscrpc_async_args *args)
 {
 	int nslvrs, sblk, rc, tsize, slvrno, slvroff, csize, i = 0;
 	struct sli_repl_workrq *w;
 	struct srm_io_rep *mp;
 
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
+	tsize = w->srw_len;
+	sblk = slvroff / SLASH_SLVR_BLKSZ;
 	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE + w->srw_offset) / SLASH_SLVR_SIZE;
 	slvroff = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE + w->srw_offset) % SLASH_SLVR_SIZE;
+	if (slvroff & SLASH_SLVR_BLKMASK)
+		tsize += slvroff & SLASH_SLVR_BLKMASK;
 	nslvrs = 1;
 	if (slvroff)
 		nslvrs++;
@@ -165,23 +170,20 @@ sli_rii_replread_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		goto out;
 	}
 
-	tsize = w->srw_len;
-	sblk = slvroff / SLASH_SLVR_BLKSZ;
-	if (slvroff & SLASH_SLVR_BLKMASK)
-		tsize += slvroff & SLASH_SLVR_BLKMASK;
+ out:
 	for (; i < nslvrs; i++) {
 		csize = MIN((SLASH_BLKS_PER_SLVR - sblk) *
 		    SLASH_SLVR_BLKSZ, tsize);
-		if ((rc = slvr_fsbytes_wio(w->srw_slvr_ref[i], csize, sblk)))
-			break;
+		if (rc == 0)
+			rc = slvr_fsbytes_wio(w->srw_slvr_ref[i],
+			    csize, sblk);
+		if (rc)
+			slvr_clear_inuse(w->srw_slvr_ref[i], sblk, csize);
 		sblk = 0;
 		slvr_io_done(w->srw_slvr_ref[i], SL_WRITE);
 		tsize -= csize;
 		w->srw_offset += csize;
 	}
- out:
-	for (; i < nslvrs; i++)
-		slvr_io_done(w->srw_slvr_ref[i], SL_WRITE);
 	lc_remove(&sli_replwkq_inflight, w);
 	if (rc || w->srw_offset == SLASH_BMAP_SIZE) {
 		w->srw_status = rc;

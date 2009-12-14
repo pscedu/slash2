@@ -104,6 +104,18 @@ slvr_do_crc(struct slvr_ref *s)
 	return (1);
 }
 
+void
+slvr_clear_inuse(struct slvr_ref *s, int sblk, uint32_t size)
+{
+	int locked, nblks;
+
+	/* XXX trim startoff from size?? */
+	nblks = howmany(size, SLASH_SLVR_BLKSZ);
+	locked = SLVR_RLOCK(s);
+	psc_vbitmap_unsetrange(s->slvr_slab->slb_inuse, sblk, nblks);
+	SLVR_URLOCK(s, locked);
+}
+
 __static int
 slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
 {
