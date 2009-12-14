@@ -161,25 +161,6 @@ fidc_fcm_size_update(struct fidc_membh *h, size_t size)
 }
 
 /**
- * fidc_fcm_update - copy the contents of 'b' if it is newer than the
- *   contents of h->fcmh_fcm.  Generation number is included in the
- *   consideration.
- * @h: the fidc_membh which is already in the cache.
- * @b: prospective fidcache contents.
- */
-static void
-fidc_fcm_update(struct fidc_membh *h, const struct stat *stb)
-{
-	int locked;
-
-	locked = reqlock(&h->fcmh_lock);
-
-	memcpy(&h->fcmh_stb, stb, sizeof(struct stat));
-
-	ureqlock(&h->fcmh_lock, locked);
-}
-
-/**
  * fidc_reap - reap some inodes from the clean list.
  */
 int
@@ -395,6 +376,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
     const struct stat *stb, const struct slash_creds *creds,
     struct fidc_membh **fcmhp)
 {
+	int locked;
 	int rc, try_create=0;
 	struct fidc_membh *fcmh, *fcmh_new;
 
@@ -460,8 +442,11 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		}
 
 		/* apply provided attributes to the cache */
-		if (stb)
-			fidc_fcm_update(fcmh, stb);
+		if (stb) {
+			locked = reqlock(&fcmh->fcmh_lock);
+			memcpy(&fcmh->fcmh_stb, stb, sizeof(struct stat));
+			ureqlock(&fcmh->fcmh_lock, locked);
+		}
 
 		freelock_hash_bucket(&fidcHtable, fg->fg_fid);
 
