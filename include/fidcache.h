@@ -200,8 +200,7 @@ enum fidc_lookup_flags {
 	FIDC_LOOKUP_COPY	= (1 << 2),	/* Create from existing attrs    */
 	FIDC_LOOKUP_LOAD	= (1 << 3),	/* Create, get attrs from mds    */
 	FIDC_LOOKUP_REFRESH	= (1 << 3),	/* load and refresh are the same */
-	FIDC_LOOKUP_FCOOSTART	= (1 << 4),	/* start the fcoo before exposing the cache entry. */
-	FIDC_LOOKUP_NOREF	= (1 << 5)
+	FIDC_LOOKUP_FCOOSTART	= (1 << 4) 	/* start the fcoo before exposing the cache entry. */
 };
 
 #define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
