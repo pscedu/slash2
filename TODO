@@ -256,6 +256,13 @@ mds.c
 - do not keep sl_replrq in mem unless a bh_repl is OLD or SCHED
 - fix pool names in -Lall -Pall -iall -hall -Mall in each of slmctl, slictl, msctl
 - ensure fidc_lookup_load_fg() will not accept FID_ANY
+- use RPC waitqs for better RII performance
+- mds_bmap_lookup() flag to avoid loading
+- sanity check that someone has an ACTIVE state for a bmap
+- sliver vbitmap_unset in the RII code on failure
+- trace the errors in RII (EAGAIN)
+- listguts_add_sorted()
+  - maintain a median element for faster sorting
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
