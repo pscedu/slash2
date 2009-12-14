@@ -67,26 +67,6 @@ slireplfinthr_main(__unusedx void *arg)
 }
 
 __dead void *
-slireplinfthr_main(__unusedx void *arg)
-{
-	struct psc_listcache *lc;
-
-	lc = &sli_replwkrq_pool->ppm_lc;
-	for (;;) {
-		nbreqset_reap(&sli_replwk_nbset);
-		/* wait for a few seconds unless the thing fills up */
-		LIST_CACHE_LOCK(lc);
-		if (lc_sz(lc))
-			/* XXX add minimum wait time to avoid CPU hogging */
-			psc_waitq_waitrel_s(&lc->lc_wq_empty,
-			    &lc->lc_lock, 3);
-		else
-			LIST_CACHE_LOCK(lc);
-		sched_yield();
-	}
-}
-
-__dead void *
 slireplpndthr_main(__unusedx void *arg)
 {
 	struct slashrpc_cservice *csvc;
@@ -136,8 +116,8 @@ sli_repl_init(void)
 
 	pscthr_init(SLITHRT_REPLFIN, 0, slireplfinthr_main,
 	    NULL, 0, "slireplfinthr");
-	pscthr_init(SLITHRT_REPLINF, 0, slireplinfthr_main,
-	    NULL, 0, "slireplinfthr");
 	pscthr_init(SLITHRT_REPLPND, 0, slireplpndthr_main,
 	    NULL, 0, "slireplpndthr");
+
+	pscrpc_nbreapthr_spawn(&sli_replwk_nbset, SLITHRT_REPLREAP, "slireplreapthr");
 }

@@ -20,9 +20,9 @@
 #define SLITHRT_TINTV		6	/* timer interval */
 #define SLITHRT_TIOS		7	/* iostats updater */
 #define SLITHRT_SLVR_CRC	8	/* sliver crc updaters */
-#define SLITHRT_REPLFIN		9	/* process finished replication requests */
-#define SLITHRT_REPLINF		10	/* monitor in-flight replication work */
-#define SLITHRT_REPLPND		11	/* process enqueued replication requests */
+#define SLITHRT_REPLFIN		9	/* process finished replication work */
+#define SLITHRT_REPLREAP	10	/* reap in-flight replication work */
+#define SLITHRT_REPLPND		11	/* process enqueued replication work */
 
 #define NSLVRCRC_THRS		4	/* perhaps ncores? */
 
