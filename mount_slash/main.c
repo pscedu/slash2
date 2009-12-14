@@ -247,20 +247,20 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 		       const char *name, struct fidc_membh *parent,
 		       const struct slash_creds *creds, int flags)
 {
-	struct fidc_membh	*c;
+	struct fidc_membh	*m;
 	int			 rc;
 
-	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_COPY|flags, stb, creds, &c);
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_COPY|flags, stb, creds, &m);
 	if (rc) {
-		psc_assert(!c);
+		psc_assert(!m);
 		return NULL;
 	}
-	psc_assert(c);
+	psc_assert(m);
 	if (name) {
 		psc_assert(parent);
-		fidc_child_add(parent, c, name);
+		fidc_child_add(parent, m, name);
 	}
-	return (c);
+	return (m);
 }
 
 /**
@@ -273,10 +273,10 @@ slash2fuse_fidc_put(const struct slash_fidgen *fg, const struct stat *stb,
 		    const char *name, struct fidc_membh *parent,
 		    const struct slash_creds *creds, int flags)
 {
-	struct fidc_membh *c;
+	struct fidc_membh *m;
 
-	c = slash2fuse_fidc_putget(fg, stb, name, parent, creds, flags);
-	fidc_membh_dropref(c);
+	m = slash2fuse_fidc_putget(fg, stb, name, parent, creds, flags);
+	fidc_membh_dropref(m);
 }
 
 static void
