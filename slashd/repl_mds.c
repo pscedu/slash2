@@ -880,7 +880,7 @@ mds_repl_scandir(void)
 		rc = zfsslash2_mkdir(zfsVfs, SL_ROOT_INUM,
 		    SL_PATH_REPLS, 0700, &rootcreds, NULL, NULL, 1);
 		if (rc)
-			psc_fatalx("ZFS mkdir %s", SL_PATH_REPLS,
+			psc_fatalx("ZFS mkdir %s: %s", SL_PATH_REPLS,
 			    slstrerror(rc));
 		return;
 	}
