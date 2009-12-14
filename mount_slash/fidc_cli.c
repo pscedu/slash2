@@ -276,20 +276,13 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 
 		if ((c->fcmh_name->fni_hash == hash) &&
 		    (!strncmp(name, c->fcmh_name->fni_name, strnlen(name, NAME_MAX)))) {
-			/* Pin down the fni while the parent dir lock is held.
-			 */
-			found=1;
+			found = 1;
+			psc_assert(c->fcmh_parent == p);
 			fidc_membh_incref(c);
 			break;
 		}
 	}
-
-	if (!found)
-		return (NULL);
-
-	psc_assert(c->fcmh_parent == p);
-
-	if (c->fcmh_state & FCMH_CAC_FREEING)
+	if (!found || (c->fcmh_state & FCMH_CAC_FREEING))
 		return (NULL);
 
 	clock_gettime(CLOCK_REALTIME, &now);
