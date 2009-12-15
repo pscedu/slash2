@@ -960,9 +960,12 @@ mds_bmapod_initnew(struct slash_bmap_od *b)
  * @fcmh: inode structure containing the fid and the fd.
  * @blkno: the bmap block number.
  * @bmapod: on disk structure containing crc's and replication bitmap.
+ * @skip_zero: only return initialized bmaps.
+ * Returns zero on success, negative errno code on failure.
  */
 __static int
-mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
+mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
+    struct bmapc_memb *bcm, int skip_zero)
 {
 	struct bmap_mds_info *bmdsi;
 	psc_crc64_t crc;
@@ -982,7 +985,12 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno, struct bmapc_memb *bcm)
 	 */
 	if (!rc || rc == SLERR_SHORTIO) {
 		if (bmdsi->bmdsi_od->bh_bhcrc == 0 &&
-		    memcmp(bmdsi->bmdsi_od, &null_bmap_od, sizeof(null_bmap_od)) == 0) {
+		    memcmp(bmdsi->bmdsi_od, &null_bmap_od,
+		    sizeof(null_bmap_od)) == 0) {
+			if (skip_zero) {
+				rc = SLERR_BMAP_ZERO;
+				goto out;
+			}
 
 			mds_bmapod_dump(bcm);
 			mds_bmapod_initnew(bmdsi->bmdsi_od);
@@ -1026,8 +1034,8 @@ mds_bmap_init(struct bmapc_memb *bcm)
 }
 
 int
-mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
-    struct bmapc_memb **bp)
+_mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
+    struct bmapc_memb **bp, int skip_zero)
 {
 	struct bmapc_memb *b;
 	int rc = 0;
@@ -1042,7 +1050,7 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 	if (b->bcm_mode & BMAP_INIT) {
 		b->bcm_mode |= BMAP_INFLIGHT;
 		BMAP_ULOCK(b);
-		rc = mds_bmap_read(f, bmapno, b);
+		rc = mds_bmap_read(f, bmapno, b, skip_zero);
 		BMAP_LOCK(b);
 		if (rc) {
 			DEBUG_FCMH(PLL_WARN, f,
@@ -1059,6 +1067,21 @@ mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
 	BMAP_ULOCK(b);
 
 	*bp = b;
+	return (rc);
+}
+
+int
+mds_bmap_load_ifvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
+    struct bmapc_memb **bcmp)
+{
+	int rc;
+
+	*bcmp = NULL;
+	rc = _mds_bmap_load(f, bmapno, bcmp, 1);
+	if (rc) {
+		bmap_op_done(*bcmp);
+		*bcmp = NULL;
+	}
 	return (rc);
 }
 

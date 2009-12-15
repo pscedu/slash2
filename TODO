@@ -256,7 +256,6 @@ mds.c
 - do not keep sl_replrq in mem unless a bh_repl is OLD or SCHED
 - fix pool names in -Lall -Pall -iall -hall -Mall in each of slmctl, slictl, msctl
 - ensure fidc_lookup_load_fg() will not accept FID_ANY
-- mds_bmap_lookup() flag to avoid loading
 - allow N slivers inflight at once between two sliods
 - sanity check that someone has an ACTIVE state for a bmap
 - trace the errors in RII (EAGAIN)
