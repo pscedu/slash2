@@ -123,6 +123,7 @@ bcr_xid_last_bump(struct biod_crcup_ref *bcr)
 	locked = reqlock(&bcr->bcr_biodi->biod_lock);
 	bcr_xid_check(bcr);
 	bcr->bcr_biodi->biod_bcr_xid_last++;
+	bcr->bcr_biodi->biod_inflight = 0;
 	ureqlock(&bcr->bcr_biodi->biod_lock, locked);
 }
 
