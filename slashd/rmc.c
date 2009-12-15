@@ -715,8 +715,10 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		goto out;
 	}
 	mp->rc = mds_bmap_load(fcmh, mq->bmapno, &bcm);
-	if (mp->rc)
+	if (mp->rc) {
+		bmap_op_done(bcm);
 		goto out;
+	}
 	BMAP_LOCK(bcm);
 	bmdsi = bmap_2_bmdsi(bcm);
 	bmdsi->bmdsi_repl_policy = mq->pol;

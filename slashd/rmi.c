@@ -55,8 +55,10 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 #endif
 
 	mp->rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &b);
-	if (mp->rc)
+	if (mp->rc) {
+		bmap_op_done(b);
 		return (mp->rc);
+	}
 
 	psc_assert(b);
 
@@ -223,8 +225,10 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	retifset[SL_REPL_ACTIVE] = EINVAL;
 
 	mp->rc = mds_bmap_load(REPLRQ_FCMH(rrq), mq->bmapno, &bcm);
-	if (mp->rc)
+	if (mp->rc) {
+		bmap_op_done(bcm);
 		goto out;
+	}
 
 	BMAP_LOCK(bcm);
 	mp->rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
