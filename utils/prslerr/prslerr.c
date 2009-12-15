@@ -33,6 +33,7 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_REPL_ALREADY_INACT]: %s\n", SLERR_REPL_ALREADY_INACT, slstrerror(SLERR_REPL_ALREADY_INACT));
 	printf("%4d [SLERR_REPLS_ALL_INACT]: %s\n", SLERR_REPLS_ALL_INACT, slstrerror(SLERR_REPLS_ALL_INACT));
 	printf("%4d [SLERR_INVALID_BMAP]: %s\n", SLERR_INVALID_BMAP, slstrerror(SLERR_INVALID_BMAP));
+	printf("%4d [SLERR_BMAP_ZERO]: %s\n", SLERR_BMAP_ZERO, slstrerror(SLERR_BMAP_ZERO));
 	printf("%4d [SLERR_UNKNOWN_IOS]: %s\n", SLERR_UNKNOWN_IOS, slstrerror(SLERR_UNKNOWN_IOS));
 	printf("%4d [SLERR_ION_UNKNOWN]: %s\n", SLERR_ION_UNKNOWN, slstrerror(SLERR_ION_UNKNOWN));
 	printf("%4d [SLERR_ION_OFFLINE]: %s\n", SLERR_ION_OFFLINE, slstrerror(SLERR_ION_OFFLINE));
