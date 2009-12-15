@@ -1,5 +1,7 @@
 /* $Id$ */
 
+#include <time.h>
+
 #include "psc_ds/lockedlist.h"
 #include "psc_util/atomic.h"
 #include "psc_ds/pool.h"
@@ -29,10 +31,20 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *a)
 	return (0);
 }
 
+__static void
+bmpc_wake_reaper(void) {
+
+	spinlock(&bmpcSlabs.bmms_lock);
+	if (bmpcSlabs.bmms_reap > 1)
+		bmpcSlabs.bmms_reap = 0;
+	psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
+	freelock(&bmpcSlabs.bmms_lock);
+}
+
 void
 bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce, 
 			struct bmap_pagecache *bmpc, int op, int incref)
-{
+{	
 	psc_assert(op == BIORQ_WRITE || op == BIORQ_READ);
 
 	LOCK_ENSURE(&bmpc->bmpc_lock);
@@ -102,14 +114,16 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 			add_lru:
 				bmpce->bmpce_flags &= ~BMPCE_READPNDG;
 				bmpce->bmpce_flags |= BMPCE_LRU;
-				pll_addhead(&bmpc->bmpc_lru, bmpce);
-				if (timespeccmp(&bmpce->bmpce_laccess,
-						&bmpc->bmpc_oldest, <))
-					memcpy(&bmpc->bmpc_oldest,
-					       &bmpce->bmpce_laccess,
-					       sizeof(struct timespec));
+				pll_addtail(&bmpc->bmpc_lru, bmpce);
+				bmpc_wake_reaper();
 			}
 		}
+	}
+	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
+		pll_sort(&bmpc->bmpc_lru, qsort, bmpce_lrusort_cmp);
+		bmpce = pll_gethdpeek(&bmpc->bmpc_lru);
+		memcpy(&bmpc->bmpc_oldest, &bmpce->bmpce_laccess,
+		       sizeof(struct timespec));
 	}
 }
 
@@ -135,10 +149,10 @@ bmpc_slb_init(struct sl_buffer *slb)
 static void
 bmpc_slb_free(struct sl_buffer *slb)
 {
-        DEBUG_SLB(PLL_TRACE, slb, "freeing slb");
+        DEBUG_SLB(PLL_NOTIFY, slb, "freeing slb");
 	psc_assert(psc_vbitmap_nfree(slb->slb_inuse) == BMPC_SLB_NBLKS);
 	psc_assert(slb->slb_base == NULL);
-	psc_assert(psclist_conjoint(&slb->slb_mgmt_lentry));
+	//	psc_assert(psclist_conjoint(&slb->slb_mgmt_lentry));
 	psc_assert(!atomic_read(&slb->slb_ref));
 	
 	PSCFREE(slb);
@@ -152,6 +166,8 @@ bmpc_slb_new(void)
 	slb = TRY_PSCALLOC(sizeof(*slb));
 	if (slb)
 		bmpc_slb_init(slb);
+	
+	DEBUG_SLB(PLL_NOTIFY, slb, "adding slb");
 
 	return (slb);
 }
@@ -166,6 +182,8 @@ bmpc_grow(int nslbs)
 	
 	nalloced = pll_nitems(&bmpcSlabs.bmms_slbs);	
 	psc_assert(nalloced <= BMPC_MAXSLBS);
+
+	psc_notify("nalloced (%d/%d)", nalloced, BMPC_MAXSLBS);
 	
 	if (nalloced == BMPC_MAXSLBS) {
 		rc = -ENOMEM;
@@ -252,11 +270,15 @@ __static int
 bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree) 
 {
 	struct bmap_pagecache_entry *bmpce, *tmp;
-	struct timespec ts;
+	struct timespec ts, expire;
 	int freed=0;
 
 	clock_gettime(CLOCK_REALTIME, &ts);
 	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
+
+	timespecsub(&bmpc->bmpc_oldest, &ts, &expire);
+	psc_notify("bmpc oldest (%ld:%ld)", 
+		   expire.tv_sec, expire.tv_nsec);
 
 	BMPC_LOCK(bmpc);
 	PLL_FOREACH_SAFE(bmpce, tmp, &bmpc->bmpc_lru) {
@@ -269,19 +291,35 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 			freelock(&bmpce->bmpce_lock);
 			continue;
 		}
-		if (timespeccmp(&ts, &bmpce->bmpce_laccess, <)) {
-			DEBUG_BMPCE(PLL_TRACE, bmpce, "too recent, skip");
-			freelock(&bmpce->bmpce_lock);
-			continue;
-		}
-		
-		DEBUG_BMPCE(PLL_NOTIFY, bmpce, "freeing");
-		bmpce_freeprep(bmpce);
 
-		bmpce_release_locked(bmpce, bmpc);
-		if (++freed == nfree)
-			break;		
+		timespecsub(&bmpce->bmpce_laccess, &ts, &expire);
+
+		if (timespeccmp(&ts, &bmpce->bmpce_laccess, <)) {
+			DEBUG_BMPCE(PLL_NOTIFY, bmpce, 
+				    "expire=(%ld:%ld) too recent, skip", 
+				    expire.tv_sec, expire.tv_nsec);
+			
+			freelock(&bmpce->bmpce_lock);
+			break;
+
+		} else {
+			DEBUG_BMPCE(PLL_NOTIFY, bmpce, "freeing expire=(%ld:%ld)",
+				    expire.tv_sec, expire.tv_nsec);
+
+			bmpce_freeprep(bmpce);			
+			bmpce_release_locked(bmpce, bmpc);
+			if (++freed >= nfree)
+				break;		
+		}
 	}
+	/* Save CPU, assume that the head of the list is the oldest entry.
+	 */
+	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
+		bmpce = pll_gethdpeek(&bmpc->bmpc_lru);	
+		memcpy(&bmpc->bmpc_oldest, &bmpce->bmpce_laccess,
+		       sizeof(struct timespec));
+	}
+
 	BMPC_ULOCK(bmpc);
 	return (freed);
 }
@@ -291,15 +329,22 @@ bmpc_reap_locked(void)
 {
 	struct bmap_pagecache *bmpc;
 	struct timespec ts;
-	int nfreed=0, waiters=atomic_read(&bmpcSlabs.bmms_waiters);
+	int nfreed=0, waiters=1;
 
 	LOCK_ENSURE(&bmpcSlabs.bmms_lock);
+
+	waiters += atomic_read(&bmpcSlabs.bmms_waiters);
+
+	psc_notify("ENTRY waiters=%d", waiters);
 
 	if (bmpcSlabs.bmms_reap) {
 		/* Wait and return, the thread holding the reap lock
 		 *   should have freed a block for us.
 		 */
+	sleep:
+		atomic_inc(&bmpcSlabs.bmms_waiters);
 		psc_waitq_wait(&bmpcSlabs.bmms_waitq, &bmpcSlabs.bmms_lock);
+		atomic_dec(&bmpcSlabs.bmms_waiters);
 		return;
 	} else
 		/* This thread now holds the reap lock.
@@ -314,6 +359,8 @@ bmpc_reap_locked(void)
 	 *   bmpc_oldest time is too recent.
 	 */
 	clock_gettime(CLOCK_REALTIME, &ts);
+	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
+
 	psclist_for_each_entry(bmpc, &bmpcLru.lc_listhd, bmpc_lentry) {
 		/* First check for lru items.
 		 */
@@ -323,19 +370,14 @@ bmpc_reap_locked(void)
 		}
 		/* Second, check for age.
 		 */
-		timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 		if (timespeccmp(&ts, &bmpc->bmpc_oldest, <)) {
 			psc_trace("skip bmpc=%p, too recent", bmpc);
 			continue;
 		}
 			
 		nfreed += bmpc_lru_tryfree(bmpc, waiters);
-		if (nfreed) { 
-			atomic_sub(nfreed, &bmpcSlabs.bmms_waiters);
-			if (atomic_read(&bmpcSlabs.bmms_waiters) < 0)
-				atomic_set(&bmpcSlabs.bmms_waiters, 0);	
-		}
-		if (nfreed == waiters)
+
+		if (nfreed >= waiters)
 			break;
 	} 
 	LIST_CACHE_ULOCK(&bmpcLru);
@@ -344,7 +386,13 @@ bmpc_reap_locked(void)
 		atomic_sub(nfreed, &bmpcSlabs.bmms_waiters);
 		if (atomic_read(&bmpcSlabs.bmms_waiters) < 0)
 			atomic_set(&bmpcSlabs.bmms_waiters, 0);	
+	} else {
+		bmpcSlabs.bmms_reap = 2;
+		spinlock(&bmpcSlabs.bmms_lock);
+		goto sleep;
 	}
+
+	psc_notify("nfreed=%d, waiters=%d", nfreed, waiters);
 
 	if (waiters > nfreed) {
 		int nslbs = (waiters - nfreed) / BMPC_SLB_NBLKS;
@@ -358,6 +406,8 @@ bmpc_reap_locked(void)
 
 	bmpcSlabs.bmms_reap = 0;
 	psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
+
+	EXIT;
 }
 
 
@@ -446,10 +496,10 @@ bmpc_global_init(void)
 {
 	struct timespec ts = BMPC_DEF_MINAGE;
 
-	LOCK_INIT(&bmpcSlabs.bmms_lock);
 	timespecclear(&bmpcSlabs.bmms_minage);
 	timespecadd(&bmpcSlabs.bmms_minage, &ts, &bmpcSlabs.bmms_minage);
-	
+
+	LOCK_INIT(&bmpcSlabs.bmms_lock);
 	psc_waitq_init(&bmpcSlabs.bmms_waitq);
 
 	pll_init(&bmpcSlabs.bmms_slbs, struct sl_buffer, 

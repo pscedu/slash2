@@ -35,7 +35,7 @@ extern struct psc_listcache bmpcLru;
 #define BMPC_IOMAXBLKS  64
 #define BMPC_MAXBUFSRPC (1048576/BMPC_BUFSZ)
 
-#define BMPC_DEF_MINAGE { 2, 0 } /* seconds, nanoseconds */
+#define BMPC_DEF_MINAGE { 0, 600000000 } /* seconds, nanoseconds */
 #define BMPC_INTERVAL   { 0, 200000000 }
 
 extern uint32_t bmpcDefSlbs;
@@ -120,6 +120,25 @@ bmpce_sort_cmp(const void *x, const void *y)
 }
 
 static inline int
+bmpce_lrusort_cmp(const void *x, const void *y)
+{
+	const struct bmap_pagecache_entry *a = 
+		*(const struct bmap_pagecache_entry **)x;
+
+	const struct bmap_pagecache_entry *b = 
+		*(const struct bmap_pagecache_entry **)y;
+
+
+	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, <))
+		return (-1);
+
+	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, >))
+		return (1);
+
+	return (0);
+}
+
+static inline int
 bmpce_cmp(const void *x, const void *y)
 {
 	const struct bmap_pagecache_entry *a = x;
@@ -188,10 +207,12 @@ enum BMPC_IOREQ_FLAGS {
 	BIORQ_SCHED        = (1<<4),
 	BIORQ_INFL         = (1<<5),
 	BIORQ_DIO          = (1<<6),
-	BIORQ_FORCE_EXPIRE = (1<<7)
+	BIORQ_FORCE_EXPIRE = (1<<7),
+	BIORQ_DESTROY      = (1<<8),
+	BIORQ_FLUSHRDY     = (1<<9)
 };
 
-#define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s"
+#define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
 #define BIORQ_FLAG(field, str) ((field) ? (str) : "-")
 #define DEBUG_BIORQ_FLAGS(b)				        \
         BIORQ_FLAG(((b)->biorq_flags & BIORQ_READ), "r"),	\
@@ -201,7 +222,9 @@ enum BMPC_IOREQ_FLAGS {
 	BIORQ_FLAG(((b)->biorq_flags & BIORQ_SCHED), "s"),	\
 	BIORQ_FLAG(((b)->biorq_flags & BIORQ_INFL), "i"),	\
 	BIORQ_FLAG(((b)->biorq_flags & BIORQ_DIO), "d"),	\
-	BIORQ_FLAG(((b)->biorq_flags & BIORQ_FORCE_EXPIRE), "x")
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_FORCE_EXPIRE), "x"), \
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_DESTROY), "D"),	\
+	BIORQ_FLAG(((b)->biorq_flags & BIORQ_FLUSHRDY), "R")
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
@@ -331,6 +354,7 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
                 ioreq->biorq_flags |= BIORQ_DIO;
 }
 
+#if 0
 static inline int
 bmpc_lru_cmp(const void *x, const void *y)
 {
@@ -344,6 +368,34 @@ bmpc_lru_cmp(const void *x, const void *y)
 
 	return (0);
 }
+
+#else
+static inline int
+bmpc_lru_cmp(const void *x, const void *y)
+{
+	const struct bmap_pagecache *a = 
+		*(const struct bmap_pagecache **)x;
+
+	const struct bmap_pagecache *b = 
+		*(const struct bmap_pagecache **)y;
+
+#if 0
+	psc_notify("sort check a=%p %ld:%ld b=%p %ld:%ld",
+		   a, a->bmpc_oldest.tv_sec,
+		   a->bmpc_oldest.tv_nsec, 
+		   b, b->bmpc_oldest.tv_sec,
+                   b->bmpc_oldest.tv_nsec);
+#endif
+
+	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
+		return (-1);
+
+	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, >))
+		return (1);
+
+	return (0);
+}
+#endif
 
 static inline void
 bmpc_decrease_minage(void)

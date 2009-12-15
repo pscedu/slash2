@@ -286,11 +286,12 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		return (NULL);
 
 	clock_gettime(CLOCK_REALTIME, &now);
+	
 	if (timespeccmp(&c->fcmh_name->fni_age, &now, <)) {
 		/* It's old, remove it.
 		 */
 		fidc_child_free_plocked(c);
-		fidc_membh_dropref(c);							\
+		fidc_membh_dropref(c);
 		/* this will force an RPC to do the lookup */
 		c = NULL;
 	}

@@ -1070,8 +1070,15 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			fg.fg_fid = attr->attr.st_ino;
 			fg.fg_gen = attr->gen;
 
-			rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_COPY|FIDC_LOOKUP_REFRESH,
+			psc_trace("adding i+g:%"PRId64"+%"PRId64" rc=%d",
+				  fg.fg_fid, fg.fg_gen, attr->rc);
+
+			rc = fidc_lookup(&fg, 
+					 FIDC_LOOKUP_CREATE|
+					 FIDC_LOOKUP_COPY|
+					 FIDC_LOOKUP_REFRESH, 
 					 &attr->attr, &mq->creds, &fcmh);
+
 			if (fcmh)
 				fidc_membh_dropref(fcmh);
 			else

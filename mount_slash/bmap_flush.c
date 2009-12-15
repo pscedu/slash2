@@ -21,7 +21,7 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 
-static struct timespec bmapFlushDefMaxAge = {0, 1000000000L};
+static struct timespec bmapFlushDefMaxAge =  {0, 1000000L};
 __static struct timespec bmapFlushDefSleep = {0, 100000000L};
 
 struct psc_listcache bmapFlushQ;
@@ -31,8 +31,10 @@ static struct psc_dynarray pndgReqSets=DYNARRAY_INIT;
 static atomic_t outstandingRpcCnt;
 static atomic_t completedRpcCnt;
 static int shutdown=0;
+static struct psc_waitq rpcCompletion;
 
-#define MAX_OUTSTANDING_RPCS 64
+
+#define MAX_OUTSTANDING_RPCS 128
 #define MIN_COALESCE_RPC_SZ  LNET_MTU /* Try for big RPC's */
 
 __static void
@@ -41,8 +43,8 @@ bmap_flush_reap_rpcs(void)
 	int i;
 	struct pscrpc_request_set *set;
 
-	psc_info("outstandingRpcCnt=%d (before)",
-		 atomic_read(&outstandingRpcCnt));
+	psc_info("outstandingRpcCnt=%d (before) completedRpcCnt=%d",
+		 atomic_read(&outstandingRpcCnt), atomic_read(&completedRpcCnt));
 
 	for (i=0; i < psc_dynarray_len(&pndgReqSets); i++) {
 		set = psc_dynarray_getpos(&pndgReqSets, i);
@@ -144,6 +146,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 
 	req->rq_interpret_reply = bmap_flush_rpc_cb;
 	req->rq_compl_cntr = &completedRpcCnt;
+	req->rq_waitq = &rpcCompletion;
 
 	mq->offset = soff;
 	mq->size = size;
@@ -173,13 +176,13 @@ bmap_flush_inflight_ref(struct bmpc_ioreq *r)
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		spinlock(&bmpce->bmpce_lock);
 		bmpce->bmpce_flags |= BMPCE_INFL;
+		DEBUG_BMPCE(PLL_INFO, bmpce, "set inflight");
 		freelock(&bmpce->bmpce_lock);
-		DEBUG_BIORQ(PLL_INFO, r, "set inflight");
 	}
 }
 
 
-__static void
+__static int
 bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		     int niovs)
 {
@@ -189,7 +192,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	struct bmapc_memb *b;
 	off_t soff;
 	size_t size;
-	int i;
+	int i, nrpcs=0;
 
 	r = psc_dynarray_getpos(biorqs, 0);
 	imp = msl_bmap_to_import(r->biorq_bmap, 1);
@@ -220,6 +223,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		 */
 		req->rq_async_args.pointer_arg[0] = biorqs;
 		nbreqset_add(pndgReqs, req);
+		nrpcs++;
 
 	} else {
 		/* Deal with a multiple rpc operation
@@ -238,6 +242,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 				psc_fatalx("no failover yet");		\
 			}						\
 			soff += size;					\
+			nrpcs++;					\
 		}
 
 		size = 0;
@@ -278,6 +283,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 		psc_dynarray_add(&pndgReqSets, set);
 	}
+	return (nrpcs);
 }
 
 __static int
@@ -352,7 +358,8 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 		DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (use)", i);
 		psc_assert(reqsz);
 		/* Now iterate through the biorq's iov set, where the
-		 *   actual buffers are stored.
+		 *   actual buffers are stored.  Note that this dynarray
+		 *   is sorted.
 		 */
 		for (j=0, first_iov=1; j < psc_dynarray_len(&r->biorq_pages);
 		     j++) {
@@ -429,6 +436,30 @@ bmap_flush_biorq_rbwdone(const struct bmpc_ioreq *r)
 	return (rc);
 }
 
+__static int
+bmap_flush_bmpce_check_sched_locked(const struct bmpc_ioreq *r)
+{
+	struct bmap_pagecache_entry *bmpce;
+	int rc=0, i;
+	
+	for (i=0; i < psc_dynarray_len(&r->biorq_pages); i++) {
+		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
+		spinlock(&bmpce->bmpce_lock);
+		if (bmpce->bmpce_flags & BMPCE_IOSCHED) {
+			DEBUG_BMPCE(PLL_ERROR, bmpce, "already sched");    
+			rc = 1;
+		} else
+			DEBUG_BMPCE(PLL_INFO, bmpce, "not sched");
+		freelock(&bmpce->bmpce_lock);
+
+		if (rc)
+			break;
+	}
+
+	return (rc);
+}
+
+
 __static struct psc_dynarray *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 {
@@ -504,10 +535,18 @@ bmap_flush(void)
 	struct psc_dynarray a=DYNARRAY_INIT, bmaps=DYNARRAY_INIT, *biorqs;
 	struct bmpc_ioreq *r;
 	struct iovec *iovs=NULL;
-	int i=0, niovs;
+	int i=0, niovs, rc, nrpcs;
 
-	while ((atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS) &&
-	       (msbd = lc_getnb(&bmapFlushQ))) {
+	nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
+	psc_notify("nrpcs=%d", nrpcs);
+		
+        if (nrpcs <= 0)
+                return;
+
+	while (nrpcs > 0) {
+		msbd = lc_getnb(&bmapFlushQ);
+		if (!msbd) 
+			break;
 
 		b = msbd->msbd_bmap;
 		bmpc = bmap_2_msbmpc(b);
@@ -516,18 +555,22 @@ bmap_flush(void)
 		BMAP_LOCK(b);
 		DEBUG_BMAP(PLL_INFO, b, "try flush (outstandingRpcCnt=%d)",
 			   atomic_read(&outstandingRpcCnt));
+
+		psc_assert(b->bcm_mode & BMAP_CLI_FLUSHPROC);
 		/* Take the page cache lock too so that the bmap's
 		 *   dirty state may be sanity checked.
 		 */
 		BMPC_LOCK(bmpc);
-
 		if (b->bcm_mode & BMAP_DIRTY) {
 			psc_assert(bmpc_queued_writes(bmpc));
 			psc_dynarray_add(&bmaps, msbd);
+
 		} else {
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
 			psc_assert(!bmpc_queued_writes(bmpc));
-			freelock(&bmpc->bmpc_lock);
+			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
+			psc_waitq_wakeall(&b->bcm_waitq);
+			BMPC_ULOCK(bmpc);
 			BMAP_ULOCK(b);
 			continue;
 		}
@@ -545,20 +588,30 @@ bmap_flush(void)
 				freelock(&r->biorq_lock);
 				continue;
 
-			} else if (r->biorq_flags & BIORQ_READ) {
+			} else if ((r->biorq_flags & BIORQ_READ) ||
+				   (r->biorq_flags & BIORQ_DESTROY)) {
 				freelock(&r->biorq_lock);
 				continue;
 
+			} else if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
+				freelock(&r->biorq_lock);
+				continue;
+				
 			} else if ((r->biorq_flags & BIORQ_RBWFP) ||
 				   (r->biorq_flags & BIORQ_RBWLP)) {
 				/* Wait for RBW I/O to complete before 
-				 *  pushing out any pages.
+  				 *  pushing out any pages.
 				 */
 				if (!bmap_flush_biorq_rbwdone(r)) {
-					freelock(&r->biorq_lock); 
-					continue;				
+					freelock(&r->biorq_lock);
+					continue;
 				}
+
+			} else if (bmap_flush_bmpce_check_sched_locked(r)) {
+				freelock(&r->biorq_lock);
+				continue;
 			}
+				
 
 			r->biorq_flags |= BIORQ_SCHED;
 			freelock(&r->biorq_lock);
@@ -577,7 +630,7 @@ bmap_flush(void)
 		qsort(a.da_items, a.da_pos, sizeof(void *),
 		      bmap_flush_biorq_cmp);
 
-#if 1
+#if 0
 		for (i=0; i < psc_dynarray_len(&a); i++) {
 			r = psc_dynarray_getpos(&a, i);
 			DEBUG_BIORQ(PLL_TRACE, r, "sorted?");
@@ -594,7 +647,7 @@ bmap_flush(void)
 			/* Have a set of iov's now.  Let's create an rpc
 			 *   or rpc set and send it out.
 			 */
-			bmap_flush_send_rpcs(biorqs, iovs, niovs);
+			nrpcs -=  bmap_flush_send_rpcs(biorqs, iovs, niovs);
 			PSCFREE(iovs);
 		}
 	}
@@ -605,22 +658,21 @@ bmap_flush(void)
 		bmpc = bmap_2_msbmpc(b);
 
 		BMAP_LOCK(b);
-		spinlock(&bmpc->bmpc_lock);
+		BMPC_LOCK(bmpc);
+
 		if (bmpc_queued_writes(bmpc)) {
 			psc_assert(b->bcm_mode & BMAP_DIRTY);
-			BMAP_ULOCK(b);
 			DEBUG_BMAP(PLL_INFO, b, "restore to dirty list");
 			lc_addtail(&bmapFlushQ, msbd);
 
 		} else {
 			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
-			freelock(&bmpc->bmpc_lock);
-			BMAP_ULOCK(b);
-
+			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
-			continue;
+			psc_waitq_wakeall(&b->bcm_waitq);
 		}
-		freelock(&bmpc->bmpc_lock);
+		BMPC_ULOCK(bmpc);
+		BMAP_ULOCK(b);
 	}
 	psc_dynarray_free(&bmaps);
 }
@@ -629,33 +681,29 @@ void *
 msbmapflushthr_main(__unusedx void *arg)
 {
 	while (1) {
-		if (atomic_read(&completedRpcCnt))
-			bmap_flush_reap_rpcs();
-
-		if (atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS &&
-		    lc_sz(&bmapFlushQ))
+		if (atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS) {
 			bmap_flush();
-
-		if (atomic_read(&completedRpcCnt))
-			bmap_flush_reap_rpcs();
-
-		if (shutdown) {
-			bmap_flush_reap_rpcs();
-			break;
-		}
-		/* This sleep should be dynamic, determined by the time of the
-		 *   oldest pending oftrq.
-		 */
-		/*
-		if (!atomic_read(&outstandingRpcCnt)) {
-			LIST_CACHE_LOCK(&bmapFlushQ);
-			psc_waitq_timedwait(&bmapFlushQ.lc_wq_empty,
-				    &bmapFlushQ.lc_lock, &bmapFlushDefSleep);
+			usleep(2048);
 		} else
-		*/
-		usleep(100000);
+			usleep(2048);
+		
+		if (shutdown)
+			break;
 	}
 	return (NULL);
+}
+
+void *
+msbmapflushthrrpc_main(__unusedx void *arg)
+{
+	struct timespec ts = {1, 0};
+	while (1) {
+		psc_waitq_waitrel(&rpcCompletion, NULL, &ts);
+		bmap_flush_reap_rpcs();
+		if (shutdown)
+			break;
+	}
+
 }
 
 void
@@ -664,10 +712,14 @@ msbmapflushthr_spawn(void)
 	pndgReqs = nbreqset_init(NULL, msl_io_rpc_cb);
 	atomic_set(&outstandingRpcCnt, 0);
 	atomic_set(&completedRpcCnt, 0);
+	psc_waitq_init(&rpcCompletion);
 
 	lc_reginit(&bmapFlushQ, struct bmap_cli_info,
 	    msbd_lentry, "bmapflush");
 
 	pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
 	    NULL, 0, "msbflushthr");
+
+	pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushthrrpc_main,
+	    NULL, 0, "msbflushthrrpc");
 }

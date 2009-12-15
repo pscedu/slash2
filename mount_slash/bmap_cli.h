@@ -36,7 +36,8 @@ struct bmap_cli_info {
 #define bmap_2_msion(b)			bmap_2_msbd(b)->msbd_ion
 
 /* bmap client modes */
-#define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)	/* mode change in progress */
-#define	BMAP_CLI_MCC			(_BMAP_FLSHFT << 1)	/* mode change compete */
+#define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)  /* mode change in progress */
+#define	BMAP_CLI_MCC			(_BMAP_FLSHFT << 1)  /* mode change compete */
+#define BMAP_CLI_FLUSHPROC              (_BMAP_FLSHFT << 2)  /* proc'd by flush thr */
 
 #endif /* _SLASH_CLI_BMAP_H_ */
