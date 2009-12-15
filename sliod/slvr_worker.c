@@ -97,7 +97,7 @@ slvr_worker_push_crcups(void)
 	int			 rc;
 	struct timespec		 now;
 	struct biod_crcup_ref	*bcr, *tmp;
-	struct psc_dynarray		*bcrs;
+	struct psc_dynarray	*bcrs;
 	static atomic_t busy = ATOMIC_INIT(0);
 
 	if (atomic_xchg(&busy, 1))
@@ -105,7 +105,7 @@ slvr_worker_push_crcups(void)
 	
 	ENTRY;
 
-	nbreqset_reap(slvrNbReqSet);
+	nbrequest_reap(slvrNbReqSet);
 	/*
 	 * Check if an earlier CRC update RPC, if any, has finished.  If one
 	 * is still inflight, we won't be able to initiate a new one.
@@ -119,6 +119,21 @@ slvr_worker_push_crcups(void)
 		psc_assert(bcr->bcr_crcup.nups > 0);
 				
 		if (bcr->bcr_flags & BCR_SCHEDULED)
+			continue;
+		
+		if (trylock(&bcr->bcr_biodi->biod_lock)) {
+			if (bcr->bcr_biodi->biod_inflight) {
+				DEBUG_BCR(PLL_INFO, bcr, "waiting for xid=%"PRIu64, 
+					  bcr->bcr_biodi->biod_bcr_xid_last);
+				freelock(&bcr->bcr_biodi->biod_lock);
+				continue;
+			} else {
+				bcr->bcr_biodi->biod_inflight = 1;
+				freelock(&bcr->bcr_biodi->biod_lock);
+			}
+		} else
+			/* Don't deadlock trying for the biodi lock.
+			 */
 			continue;
 		
 		psc_dynarray_add(bcrs, bcr);
@@ -207,6 +222,13 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 			spinlock(&binflCrcs.binfcrcs_lock);
 			bcr->bcr_flags &= ~BCR_SCHEDULED;
 			freelock(&binflCrcs.binfcrcs_lock);
+			/* Unset the inflight bit on the biodi.
+			 */
+			spinlock(&bcr->bcr_biodi->biod_lock);
+			bcr_xid_check(bcr);
+			bcr->bcr_biodi->biod_inflight = 0;
+			freelock(&bcr->bcr_biodi->biod_lock);
+
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");	
 		} else 
 			bcr_ready_remove(&binflCrcs, bcr);
