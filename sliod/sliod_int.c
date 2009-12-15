@@ -145,7 +145,10 @@ iod_inode_lookup(const struct slash_fidgen *fg)
 	int rc;
 	struct fidc_membh *f;
 
-	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_COPY|FIDC_LOOKUP_REFRESH,
+	rc = fidc_lookup(fg, 
+			 FIDC_LOOKUP_CREATE|
+			 FIDC_LOOKUP_COPY|
+			 FIDC_LOOKUP_REFRESH,
 			 NULL, &rootcreds, &f);
 	psc_assert(f);
 
