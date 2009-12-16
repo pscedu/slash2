@@ -1507,7 +1507,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
  * @op: the operation type (SL_READ or SL_WRITE).
  */
 int
-msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int rw)
+msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 {
 #define MAX_BMAPS_REQ 4
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];

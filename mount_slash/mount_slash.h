@@ -79,8 +79,8 @@ struct cli_resm_info {
 /* Mainly a place to store our replication table, attached to fcoo_pri.
  */
 struct msl_fcoo_data {
-	int                              mfd_flags;
-	sl_replica_t                     mfd_reptbl[SL_MAX_REPLICAS];
+	int				 mfd_flags;
+	sl_replica_t			 mfd_reptbl[SL_MAX_REPLICAS];
 };
 
 enum {

@@ -159,7 +159,7 @@ iod_inode_lookup(const struct slash_fidgen *fg)
  * Attach the SLASH file to a file on the local file system.
  */
 int
-iod_inode_open(struct fidc_membh *f, int rw)
+iod_inode_open(struct fidc_membh *f, enum rw rw)
 {
 	int	rc;
 	int	oflags;
@@ -216,7 +216,7 @@ iod_inode_open(struct fidc_membh *f, int rw)
  * Return: error if rpc fails.
  */
 int
-iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, int rw,
+iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, enum rw rw,
     struct bmapc_memb **bmap)
 {
 	int rc=0;
