@@ -25,6 +25,7 @@ static struct timespec bmapFlushDefMaxAge =  {0, 1000000L};
 __static struct timespec bmapFlushDefSleep = {0, 100000000L};
 
 struct psc_listcache bmapFlushQ;
+struct psc_listcache bmapIOPndg;
 static struct pscrpc_nbreqset *pndgReqs;
 static struct psc_dynarray pndgReqSets=DYNARRAY_INIT;
 
@@ -174,10 +175,11 @@ bmap_flush_inflight_ref(struct bmpc_ioreq *r)
 
 	for (i=0; i < psc_dynarray_len(&r->biorq_pages); i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
-		spinlock(&bmpce->bmpce_lock);
-		bmpce->bmpce_flags |= BMPCE_INFL;
+		BMPCE_LOCK(bmpce);
+		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
+		psc_atomic16_inc(&bmpce->bmpce_infref);
 		DEBUG_BMPCE(PLL_INFO, bmpce, "set inflight");
-		freelock(&bmpce->bmpce_lock);
+		BMPCE_ULOCK(bmpce);
 	}
 }
 
@@ -348,9 +350,9 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 			 */
 			for (j=0; j < psc_dynarray_len(&r->biorq_pages); j++) {
 				bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
-				spinlock(&bmpce->bmpce_lock);
+				BMPCE_LOCK(bmpce);
 				psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
-				freelock(&bmpce->bmpce_lock);
+				BMPCE_ULOCK(bmpce);
 			}
 			DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (skip)", i);
 			continue;
@@ -364,7 +366,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 		for (j=0, first_iov=1; j < psc_dynarray_len(&r->biorq_pages);
 		     j++) {
 			bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
-			spinlock(&bmpce->bmpce_lock);
+			BMPCE_LOCK(bmpce);
 
 			if ((bmpce->bmpce_off <= r->biorq_off) && j)
 				abort();
@@ -376,7 +378,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 				 */
 				DEBUG_BMPCE(PLL_INFO, bmpce, "skip");
 				psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
-				freelock(&bmpce->bmpce_lock);
+				BMPCE_ULOCK(bmpce);
 				continue;
 			}
 
@@ -387,7 +389,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 			bmpce_usecheck(bmpce, BIORQ_WRITE,
 			       (first_iov ? (off & ~BMPC_BUFMASK) : off));
 
-			freelock(&bmpce->bmpce_lock);
+			BMPCE_ULOCK(bmpce);
 			/* Add a new iov!
 			 */
 			*iovset = iovs = PSC_REALLOC(iovs,
@@ -428,10 +430,10 @@ bmap_flush_biorq_rbwdone(const struct bmpc_ioreq *r)
 		psc_dynarray_getpos(&r->biorq_pages, 
 				    psc_dynarray_len(&r->biorq_pages)-1);
 	
-	spinlock(&bmpce->bmpce_lock);
+	BMPCE_LOCK(bmpce);
 	if (bmpce->bmpce_flags & BMPCE_DATARDY)
 		rc = 1;
-	freelock(&bmpce->bmpce_lock);
+	BMPCE_ULOCK(bmpce);
 	
 	return (rc);
 }
@@ -444,13 +446,13 @@ bmap_flush_bmpce_check_sched_locked(const struct bmpc_ioreq *r)
 	
 	for (i=0; i < psc_dynarray_len(&r->biorq_pages); i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
-		spinlock(&bmpce->bmpce_lock);
+		BMPCE_LOCK(bmpce);
 		if (bmpce->bmpce_flags & BMPCE_IOSCHED) {
 			DEBUG_BMPCE(PLL_ERROR, bmpce, "already sched");    
 			rc = 1;
 		} else
 			DEBUG_BMPCE(PLL_INFO, bmpce, "not sched");
-		freelock(&bmpce->bmpce_lock);
+		BMPCE_ULOCK(bmpce);
 
 		if (rc)
 			break;
@@ -606,12 +608,7 @@ bmap_flush(void)
 					freelock(&r->biorq_lock);
 					continue;
 				}
-
-			} else if (bmap_flush_bmpce_check_sched_locked(r)) {
-				freelock(&r->biorq_lock);
-				continue;
 			}
-				
 
 			r->biorq_flags |= BIORQ_SCHED;
 			freelock(&r->biorq_lock);
@@ -715,7 +712,10 @@ msbmapflushthr_spawn(void)
 	psc_waitq_init(&rpcCompletion);
 
 	lc_reginit(&bmapFlushQ, struct bmap_cli_info,
-	    msbd_lentry, "bmapflush");
+	    msbd_lentry, "bmapFlushQ");
+
+	lc_reginit(&bmapIOPndg, struct bmap_cli_info,
+	    msbd_lentry, "bmapIOPndg");
 
 	pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
 	    NULL, 0, "msbflushthr");

@@ -56,6 +56,10 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 	*newreq = r = PSCALLOC(sizeof(struct bmpc_ioreq));
 
 	bmpc_ioreq_init(r, off, len, op, b);
+	/* Take a ref on the bmap now so that it won't go away before
+	 *   pndg IO's complete.
+	 */
+	bmap_op_start(b);
 
 	if (b->bcm_mode & BMAP_DIO) {
 		/* The bmap is set to use directio, we may then skip
@@ -266,14 +270,11 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 		}
 	}
 	BMPC_ULOCK(bmpc);
-	// XXX where did this reference originate?
-	atomic_dec(&b->bcm_opcnt);
-
 	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg));
-
-	psc_waitq_wakeall(&b->bcm_waitq);
 	BMAP_ULOCK(b);
+	
+	bmap_op_done(b);
 }
 
 __static void
@@ -291,10 +292,10 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		BMPCE_LOCK(bmpce);
 
+		bmpce_inflight_dec_locked(bmpce);
+
 		bmpce_handle_lru_locked(bmpce, bmpc,
 		 (r->biorq_flags & BIORQ_WRITE) ? BIORQ_WRITE : BIORQ_READ, 0);
-
-		bmpce->bmpce_flags &= ~(BMPCE_INFL|BMPCE_IOSCHED);
 
 		BMPCE_ULOCK(bmpce);
 	}
@@ -453,7 +454,9 @@ msl_fbr_free(struct msl_fbr *r)
 	msl_fbr_unref(r);
 	PSCFREE(r);
 
-	return (msl_bmap_tryrelease(b));
+	//return (msl_bmap_tryrelease(b));
+	//XXX this won't call bmap_biorq_waitempty() or msl_bmap_release() 
+	bmap_op_done(b);
 }
 
 /**
@@ -915,10 +918,9 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 		psc_assert(bmpce->bmpce_waitq);
 		psc_assert(biorq_is_my_bmpce(r, bmpce));
-		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
-		psc_assert(bmpce->bmpce_flags & BMPCE_INFL);
 
-		bmpce->bmpce_flags &= ~(BMPCE_INFL|BMPCE_IOSCHED);
+		bmpce_inflight_dec_locked(bmpce);
+
 		bmpce->bmpce_flags |= BMPCE_DATARDY;
 		if (bmpce_is_rbw_page(r, bmpce, i)) {
 			/* The RBW stuff needs to be managed outside of
@@ -1123,6 +1125,10 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		b->bcm_mode |= BMAP_DIRTY;
 		if (!(b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
 			b->bcm_mode |= BMAP_CLI_FLUSHPROC;
+			/* Increment the ref count so that the
+			 *   bmap is not freed prior to its
+			 *   pages being flushed.
+			 */
 			lc_addtail(&bmapFlushQ, bmap_2_msbd(b));
 		}
 	}
@@ -1175,7 +1181,9 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
 		bmpce_usecheck(bmpce, BIORQ_READ,
 			       biorq_getaligned_off(r, (i+startpage)));
-		bmpce->bmpce_flags |= BMPCE_INFL;
+
+		psc_atomic16_inc(&bmpce->bmpce_infref);
+	       
 		DEBUG_BMPCE(PLL_TRACE, bmpce, "adding to rpc");
 
 		BMPCE_ULOCK(bmpce);
@@ -1511,7 +1519,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 {
 #define MAX_BMAPS_REQ 4
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
-	struct bmapc_memb *b;
+	struct bmapc_memb *b[MAX_BMAPS_REQ];
 	sl_blkno_t s, e;
 	size_t tlen, tsize=size;
 	off_t roff;
@@ -1551,13 +1559,13 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
 		 */
-		b = msl_bmap_load(mfh, s, rw);
-		if (!b) {
+		b[nr] = msl_bmap_load(mfh, s, rw);
+		if (!b[nr]) {
 			rc = -EIO;
 			goto out;
 		}
 
-		msl_biorq_build(&r[nr], b, roff, tlen,
+		msl_biorq_build(&r[nr], b[nr], roff, tlen,
 				(rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
 		/* Start prefetching our cached buffers.
 		 */
@@ -1589,6 +1597,9 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 				msl_pages_copyout(r[j], p) :
 				msl_pages_copyin(r[j], p);
 		}
+		/* Unwind our reference from bmap_lookup().
+		 */
+		bmap_op_done(b[j]);
 	}
 
 	if (rw == SL_WRITE)

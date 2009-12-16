@@ -152,6 +152,11 @@ msl_fbr_new(struct bmapc_memb *b, enum rw rw)
 {
 	struct msl_fbr *r = PSCALLOC(sizeof(*r));
 
+	/* Take a ref so that the bmap isn't freed while we
+	 *   still hold a ref our tree.
+	 */
+	bmap_op_start(b);
+
 	r->mfbr_bmap = b;
 	msl_fbr_ref(r, rw);
 	return (r);

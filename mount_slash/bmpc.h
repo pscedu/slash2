@@ -58,6 +58,7 @@ extern struct bmpc_mem_slbs bmpcSlabs;
 struct bmap_pagecache_entry {	
 	psc_atomic16_t            bmpce_wrref;   /* pending write ops        */
 	psc_atomic16_t            bmpce_rdref;   /* pending read ops         */
+	psc_atomic16_t            bmpce_infref;  /* inflight ref             */
 	uint32_t                  bmpce_flags;   /* state bits               */
 	uint32_t                  bmpce_off;     /* filewise, bmap relative  */
 	psc_spinlock_t            bmpce_lock;    /* serialize                */
@@ -74,15 +75,14 @@ struct bmap_pagecache_entry {
 enum BMPCE_STATES {
 	BMPCE_NEW       = (1<<0),
 	BMPCE_GETBUF    = (1<<1),
-	BMPCE_INFL      = (1<<2),
-        BMPCE_IOSCHED   = (1<<3),	
-	BMPCE_DATARDY   = (1<<4),
-	BMPCE_DIRTY2LRU = (1<<5),
-	BMPCE_LRU       = (1<<6),
-	BMPCE_FREE      = (1<<7),
-	BMPCE_FREEING   = (1<<8),
-	BMPCE_INIT      = (1<<9),
-	BMPCE_READPNDG  = (1<<10)
+	BMPCE_DATARDY   = (1<<2),
+	BMPCE_DIRTY2LRU = (1<<3),
+	BMPCE_LRU       = (1<<4),
+	BMPCE_FREE      = (1<<5),
+	BMPCE_FREEING   = (1<<6),
+	BMPCE_INIT      = (1<<7),
+	BMPCE_READPNDG  = (1<<8),
+	BMPCE_IOSCHED   = (1<<9)
 };
 
 #define BMPCE_2_BIORQ(b) ((b)->bmpce_waitq == NULL) ? NULL :	\
@@ -92,11 +92,12 @@ enum BMPCE_STATES {
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 		 " bmpce@%p fl=%u o=%x b=%p ts=%ld:%ld wr=%hu rd=%hu: "	\
-		 "lru=%d biorq=%p "fmt,					\
+		 "inf=%hu lru=%d biorq=%p "fmt,				\
 		 (b), (b)->bmpce_flags, (b)->bmpce_off, (b)->bmpce_base, \
 		 (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec, \
 		 psc_atomic16_read(&(b)->bmpce_wrref),			\
 		 psc_atomic16_read(&(b)->bmpce_rdref),			\
+		 psc_atomic16_read(&(b)->bmpce_infref),			\
 		 psclist_conjoint(&(b)->bmpce_lentry),			\
 		 BMPCE_2_BIORQ(b),					\
 		 ## __VA_ARGS__)
@@ -242,12 +243,12 @@ bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
 	LOCK_ENSURE(&bmpce->bmpce_lock);
 	
 	psc_assert(!(bmpce->bmpce_flags & 
-		     (BMPCE_FREEING|BMPCE_IOSCHED|BMPCE_INFL|
-		      BMPCE_GETBUF|BMPCE_NEW)));
+		     (BMPCE_FREEING|BMPCE_GETBUF|BMPCE_NEW)));
 	psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
+	psc_assert(!psc_atomic16_read(&bmpce->bmpce_infref));
 	
 	bmpce->bmpce_flags = BMPCE_FREEING;
 }
@@ -294,6 +295,14 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	ureqlock(&bmpce->bmpce_lock, locked);
 }
 
+
+static inline void bmpce_inflight_dec_locked(struct bmap_pagecache_entry *bmpce)
+{
+	psc_atomic16_dec(&bmpce->bmpce_infref);
+	psc_assert(psc_atomic16_read(&bmpce->bmpce_infref) >= 0);
+	if (!psc_atomic16_read(&bmpce->bmpce_infref)) 
+		bmpce->bmpce_flags &= ~BMPCE_IOSCHED;
+}
 
 /* biorq_is_my_bmpce - informs the caller that biorq, r, owns the 
  *    the page cache entry, b.  This state implies that the thread 
