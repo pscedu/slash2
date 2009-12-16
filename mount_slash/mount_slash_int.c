@@ -254,13 +254,13 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 
 		if (atomic_read(&bmpc->bmpc_pndgwr))
 			psc_assert(b->bcm_mode & BMAP_DIRTY);
-		
+
 		else {
 			b->bcm_mode &= ~BMAP_DIRTY;
 			/* Don't assert pll_empty(&bmpc->bmpc_pndg)
 			 *   since read requests may be present.
 			 */
-			DEBUG_BMAP(PLL_INFO, b, 
+			DEBUG_BMAP(PLL_INFO, b,
 				   "unset DIRTY nitems_pndg(%d)",
 				   pll_nitems(&bmpc->bmpc_pndg));
 		}
@@ -311,9 +311,9 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	r->biorq_flags |= BIORQ_DESTROY;
 	freelock(&r->biorq_lock);
 
-	DEBUG_BIORQ(PLL_INFO, r, "destroying (nwaiters=%d)", 
+	DEBUG_BIORQ(PLL_INFO, r, "destroying (nwaiters=%d)",
 		    atomic_read(&r->biorq_waitq.wq_nwaiters));
-	
+
 	/* One last shot to wakeup any blocked threads.
 	 */
 	while (atomic_read(&r->biorq_waitq.wq_nwaiters)) {
@@ -419,8 +419,8 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	}
 	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_pndg));
 	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
-			
-	BMAP_ULOCK(b);	
+
+	BMAP_ULOCK(b);
 }
 
 void
@@ -632,16 +632,14 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
 	spinlock(&mfh->mfh_lock);
 	r = fhcache_bmap_lookup(mfh, b);
 	if (!r) {
-		r = msl_fbr_new(b, (rw == SL_WRITE ?
-				    FHENT_WRITE : FHENT_READ));
+		r = msl_fbr_new(b, rw);
 		SPLAY_INSERT(fhbmap_cache, &mfh->mfh_fhbmap_cache, r);
 	} else {
 		/* Verify that the ref didn't not exist if the caller
 		 *  specified BML_NEW_BMAP.
 		 */
 		psc_assert(mode != BML_NEW_BMAP);
-		msl_fbr_ref(r, (rw == SL_WRITE ?
-				FHENT_WRITE : FHENT_READ));
+		msl_fbr_ref(r, rw);
 	}
 	freelock(&mfh->mfh_lock);
 }
@@ -1105,7 +1103,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
 	/* This req must already be attached to the cache.
-	 *   The BIORQ_FLUSHRDY bit prevents the request 
+	 *   The BIORQ_FLUSHRDY bit prevents the request
 	 *   from being processed prematurely.
 	 */
 	spinlock(&r->biorq_lock);
@@ -1128,7 +1126,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			lc_addtail(&bmapFlushQ, bmap_2_msbd(b));
 		}
 	}
- 
+
 	DEBUG_BMAP(PLL_INFO, b, "biorq=%p list_empty(%d)",
 		   r, pll_empty(&bmpc->bmpc_pndg));
 	BMPC_ULOCK(bmpc);
@@ -1506,10 +1504,10 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
  * @buf: the application source/dest buffer.
  * @size: size of buffer.
  * @off: file logical offset similar to pwrite().
- * @op: the operation type (MSL_READ or MSL_WRITE).
+ * @op: the operation type (SL_READ or SL_WRITE).
  */
 int
-msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
+msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int rw)
 {
 #define MAX_BMAPS_REQ 4
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
@@ -1523,7 +1521,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 
-	if (!size || ((op == MSL_READ) &&
+	if (!size || ((rw == SL_READ) &&
 		      off >= (fcmh_2_fsz(mfh->mfh_fcmh)))) {
 		rc = 0;
 		goto out;
@@ -1553,15 +1551,14 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
 		 */
-		b = msl_bmap_load(mfh, s, (op == MSL_READ) ?
-				  SL_READ : SL_WRITE);
+		b = msl_bmap_load(mfh, s, rw);
 		if (!b) {
 			rc = -EIO;
 			goto out;
 		}
 
 		msl_biorq_build(&r[nr], b, roff, tlen,
-				(op == MSL_READ) ? BIORQ_READ : BIORQ_WRITE);
+				(rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
 		/* Start prefetching our cached buffers.
 		 */
 		msl_pages_prefetch(r[nr]);
@@ -1582,19 +1579,19 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 			/* Wait here for any pages to be faulted in from
 			 *    the ION.
 			 */
-			if (op == MSL_READ ||
+			if (rw == SL_READ ||
 			    ((r[j]->biorq_flags & BIORQ_RBWFP) ||
 			     (r[j]->biorq_flags & BIORQ_RBWLP)))
 				if ((rc = msl_pages_blocking_load(r[j])))
 					goto out;
 
-			(op == MSL_READ) ?
+			(rw == SL_READ) ?
 				msl_pages_copyout(r[j], p) :
 				msl_pages_copyin(r[j], p);
 		}
 	}
 
-	if (op == MSL_WRITE)
+	if (rw == SL_WRITE)
 		fidc_fcm_size_update(mfh->mfh_fcmh, (size_t)(off + size));
 
 	rc = size;

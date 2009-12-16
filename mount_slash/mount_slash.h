@@ -36,14 +36,6 @@ struct pscrpc_request;
 #define MSL_WRITE_CB_POINTER_SLOT 2
 #define MSL_OFTRQ_CB_POINTER_SLOT 3
 
-/* I/O flags */
-#define MSL_READ 0
-#define MSL_WRITE 1
-
-/* file handle entry access flags */
-#define FHENT_READ	(1 << 0)
-#define FHENT_WRITE	(1 << 1)
-
 struct msrcm_thread {
 	struct pscrpc_thread		 mrcm_prt;
 };
@@ -52,9 +44,7 @@ struct msfs_thread {
 	size_t				 mft_uniqid;
 };
 
-/* msl_fbr (mount_slash fhent bmap ref).
- *
- */
+/* msl_fbr (mount_slash fhent bmap ref). */
 struct msl_fbr {
 	struct bmapc_memb		*mfbr_bmap;
 	atomic_t			 mfbr_wr_ref;
@@ -100,8 +90,8 @@ enum {
 
 #define msl_mfd_release(mfd)		PSCFREE(mfd)
 
-#define msl_read(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), MSL_READ)
-#define msl_write(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), MSL_WRITE)
+#define msl_read(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_READ)
+#define msl_write(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_WRITE)
 
 struct pscrpc_import *
 	 msl_bmap_to_import(struct bmapc_memb *, int);
@@ -139,14 +129,14 @@ msl_fbr_ref(struct msl_fbr *r, int rw)
 {
 	psc_assert(r->mfbr_bmap);
 
-	if (rw == FHENT_READ) {
+	if (rw == SL_READ) {
 		atomic_inc(&r->mfbr_bmap->bcm_rd_ref);
 		atomic_inc(&r->mfbr_rd_ref);
-	} else if (rw == FHENT_WRITE) {
+	} else if (rw == SL_WRITE) {
 		atomic_inc(&r->mfbr_bmap->bcm_wr_ref);
 		atomic_inc(&r->mfbr_wr_ref);
 	} else
-		abort();
+		psc_fatalx("%d: invalid I/O mode", rw);
 }
 
 static __inline void
