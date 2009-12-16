@@ -710,7 +710,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 	ih = fcmh_2_inoh(fcmh);
-	if (!mds_bmap_valid(fcmh, mq->bmapno)) {
+	if (!mds_bmap_exists(fcmh, mq->bmapno)) {
 		mp->rc = SLERR_INVALID_BMAP;
 		goto out;
 	}

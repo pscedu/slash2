@@ -391,7 +391,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 }
 
 int
-mds_bmap_valid(struct fidc_membh *f, sl_blkno_t n)
+mds_bmap_exists(struct fidc_membh *f, sl_blkno_t n)
 {
 	sl_blkno_t lblk;
 	int locked;

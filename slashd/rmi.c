@@ -205,7 +205,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	if (!mds_bmap_valid(REPLRQ_FCMH(rrq), mq->bmapno)) {
+	if (!mds_bmap_exists(REPLRQ_FCMH(rrq), mq->bmapno)) {
 		mp->rc = SLERR_INVALID_BMAP;
 		goto out;
 	}

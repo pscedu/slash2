@@ -76,7 +76,7 @@ int	_mds_bmap_load(struct fidc_membh *, sl_blkno_t, struct bmapc_memb **, int);
 int	mds_bmap_load_cli(struct mexpfcm *, const struct srm_bmap_req *, struct bmapc_memb **);
 int	mds_bmap_load_ifvalid(struct fidc_membh *, sl_blkno_t, struct bmapc_memb **);
 int	mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, struct bmapc_memb **);
-int	mds_bmap_valid(struct fidc_membh *, sl_blkno_t);
+int	mds_bmap_exists(struct fidc_membh *, sl_blkno_t);
 void	mds_bmap_ref_drop(struct bmapc_memb *, int);
 void	mds_bmapod_dump(const struct bmapc_memb *);
 
