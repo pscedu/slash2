@@ -571,8 +571,8 @@ slcfg_store_tok_val(const char *tok, char *val)
 				yyerror("%s: invalid integer", val);
 			*(int *)ptr = l;
 		}
-		psc_trace("SL_TYPE_INT Tok '%s' set to '%ld'",
-		       e->name, (long)*(long *)(ptr));
+		psc_trace("SL_TYPE_INT Tok '%s' set to '%d'",
+		       e->name, *(int *)(ptr));
 		break;
 
 	case SL_TYPE_BOOL:
