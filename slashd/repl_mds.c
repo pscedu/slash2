@@ -441,7 +441,7 @@ mds_repl_bmap_rel(struct bmapc_memb *bcm)
 		}
 		mds_bmap_repl_log(bcm);
 	}
-	bmap_op_done(bcm);
+	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 }
 
 /**

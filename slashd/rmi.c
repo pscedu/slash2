@@ -56,7 +56,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 
 	mp->rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &b);
 	if (mp->rc) {
-		bmap_op_done(b);
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 		return (mp->rc);
 	}
 
@@ -71,7 +71,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	if (desc)
 		pscrpc_free_bulk(desc);
 
-	bmap_op_done(b);
+	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 
 	return (0);
 }
@@ -226,7 +226,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	mp->rc = mds_bmap_load(REPLRQ_FCMH(rrq), mq->bmapno, &bcm);
 	if (mp->rc) {
-		bmap_op_done(bcm);
+		bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 		goto out;
 	}
 

@@ -700,7 +700,7 @@ slcfg_parse(const char *config_file)
 	if (cfg_errors)
 		errx(1, "%d error(s) encountered", cfg_errors);
 
-	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
+	//pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
 		qsort(s->site_resv, s->site_nres,
 		    sizeof(*s->site_resv), slcfg_res_cmp);

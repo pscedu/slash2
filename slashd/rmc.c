@@ -204,8 +204,6 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		pscrpc_free_bulk(desc);
 	mp->nblks = 1;
 
-	bmap_op_done(bmap);
-
 	RETURN(0);
 }
 
@@ -715,7 +713,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	}
 	mp->rc = mds_bmap_load(fcmh, mq->bmapno, &bcm);
 	if (mp->rc) {
-		bmap_op_done(bcm);
+		bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 		goto out;
 	}
 	BMAP_LOCK(bcm);

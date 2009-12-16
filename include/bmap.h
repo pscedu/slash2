@@ -120,24 +120,50 @@ struct slash_bmap_od {
 		 atomic_read(&(b)->bcm_opcnt),				\
 		 ## __VA_ARGS__)
 
-#define bmap_op_start(b)						\
-	do {								\
-		atomic_inc(&(b)->bcm_opcnt);				\
-		DEBUG_BMAP(PLL_NOTIFY, (b), "took reference");		\
-	} while (0)
-
 /* bmap_get flags */
 #define BMAPGETF_LOAD	(1 << 0)		/* allow loading if not in cache */
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
-void	 bmap_op_done(struct bmapc_memb *);
+void	_bmap_op_done(struct bmapc_memb *);
 int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
 	    struct bmapc_memb **, void *);
 
 #define bmap_lookup(f, n, bp)		_bmap_get((f), (n), 0, 0, (bp), NULL)
 #define bmap_get(f, n, rw, bp, arg)	_bmap_get((f), (n), (rw),	\
 					    BMAPGETF_LOAD, (bp), (arg))
+
+
+#define bmap_op_start_type(b, type)					\
+	do {								\
+		atomic_inc(&(b)->bcm_opcnt);				\
+		DEBUG_BMAP(PLL_NOTIFY, (b), "took reference (type=%d)", type); \
+	} while (0)
+
+#define bmap_op_start(b)						\
+	do {								\
+		atomic_inc(&(b)->bcm_opcnt);				\
+		DEBUG_BMAP(PLL_NOTIFY, (b), "took reference");		\
+	} while (0)
+
+#define bmap_op_done(b)							\
+	do {								\
+		DEBUG_BMAP(PLL_NOTIFY, (b), "removing reference");	\
+		_bmap_op_done((b));					\
+	} while (0)
+
+#define bmap_op_done_type(b, type)					\
+	do {								\
+		DEBUG_BMAP(PLL_NOTIFY, (b), "removing reference (type=%d)", type); \
+		_bmap_op_done((b));					\
+	} while (0)
+
+enum bmap_opcnt_types {
+	BMAP_OPCNT_LOOKUP,
+	BMAP_OPCNT_IONASSIGN, 
+	BMAP_OPCNT_BREF, 
+	BMAP_OPCNT_MDSLOG
+};
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 

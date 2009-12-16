@@ -570,6 +570,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	int n, x, found=0;
 
 	psc_assert(!mdsi->bmdsi_wr_ion);
+	psc_assert(atomic_read(&bmap->bcm_opcnt) > 0);
 	n = atomic_read(&bmap->bcm_wr_ref);
 	psc_assert(n == 0 || n == 1);
 
@@ -650,7 +651,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	 *   opcnt ref will stay in place until the ION informs us that
 	 *   he's finished with it.
 	 */
-	bmap_op_start(bmap);
+	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
 	atomic_inc(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
@@ -682,6 +683,10 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 		     &bmap->bcm_wr_ref : &bmap->bcm_rd_ref);
 
 	BMAP_LOCK(bmap);
+	/* BMAP_OP #1 unref'd in mds_bmap_ref_drop_locked()
+	 */
+	bmap_op_start_type(bmap, BMAP_OPCNT_BREF);
+
 	if (!atomic_read(a)) {
 		/* There are no refs for this mode, therefore the
 		 *   bcm_bmapih.bmapi_mode should not be set.
@@ -737,6 +742,11 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 		   "ref_add (mion=%p) (rc=%d)",
 		   bmdsi->bmdsi_wr_ion, rc);
 	BMAP_ULOCK(bmap);
+	
+	/* BMAP_OP #1 unref in the event of an error.
+	 */
+	if (rc)
+		bmap_op_done_type(bmap, BMAP_OPCNT_BREF);
 
 	return (rc);
 }
@@ -782,8 +792,9 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, enum rw rw)
 	    ((atomic_read(&bmap->bcm_wr_ref) == 1) &&
 	     (!atomic_read(&bmap->bcm_rd_ref))))
 		mds_bmap_directio_unset(bmap);
-
-	bmap_op_done(bmap);
+	/* BMAP_OP #1 Corresponds to the mds_bmap_ref_add() ref
+	 */
+	bmap_op_done_type(bmap, BMAP_OPCNT_BREF);
 }
 
 /**
@@ -833,6 +844,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	if (!fcmh)
 		return (-EBADF);
 
+	/* BMAP_OP #2
+	 */
 	rc = bmap_lookup(fcmh, c->blkno, &bmap);
 	if (rc) {
 		rc = -EBADF;
@@ -842,6 +855,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 
 	DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u sz=%"PRId64" ion=%s",
 		   c->blkno, c->fsize, libcfs_nid2str(ion_nid));
+
+	psc_assert(atomic_read(&bmap->bcm_opcnt) > 1);
 
 	bmdsi = bmap->bcm_pri;
 	bmapod = bmdsi->bmdsi_od;
@@ -908,7 +923,10 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	 *  - it was incref'd in fcmh_bmap_lookup().
 	 */
 	if (bmap)
-		bmap_op_done(bmap);
+		/* BMAP_OP #2, drop lookup ref
+		 */
+		bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
+
 	fidc_membh_dropref(fcmh);
 	return (rc);
 }
@@ -1053,6 +1071,8 @@ mds_bmap_retrieve(struct bmapc_memb *b, __unusedx enum rw rw, __unusedx void *ar
  * @f: fcmh.
  * @bmapno: bmap index number to load.
  * @bp: value-result bmap.
+ * NOTE: callers must issue bmap_op_done() if mds_bmap_loadvalid() is 
+ *     successful.
  */
 int
 mds_bmap_loadvalid(struct fidc_membh *f, sl_blkno_t bmapno,
@@ -1064,6 +1084,8 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_blkno_t bmapno,
 
 	*bp = NULL;
 
+	/* BMAP_OP #3 via lookup
+	 */
 	rc = mds_bmap_load(f, bmapno, &b);
 	if (rc)
 		return (rc);
@@ -1081,7 +1103,10 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_blkno_t bmapno,
 			*bp = b;
 			return (0);
 		}
-	bmap_op_done(b);
+	/* BMAP_OP #3, unref if bmap is empty.  
+	 *    NOTE that our callers must drop this ref.
+	 */
+	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	return (SLERR_BMAP_ZERO);
 }
 
@@ -1168,10 +1193,14 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	/* Ok, the bref has been initialized and loaded into the tree.  We
 	 *  still need to set the bmap pointer mexpbcm_bmap though.  Lock the
 	 *  fcmh during the bmap lookup.
+	 * 
+	 * BMAP_OP #4 via lookup.
 	 */
 	rc = mds_bmap_load(f, mq->blkno, &b);
-	if (rc)
-		goto out;
+	if (rc) {
+		PSCFREE(bref);
+		return (rc);
+	}
 	/* Sanity checks, make sure that we didn't let the client in
 	 *  before this bmap was ready.
 	 */
@@ -1193,13 +1222,15 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	 *  from this new reference.  Also, on write choose an ION if needed.
 	 */
 	rc = mds_bmap_ref_add(bref, mq);
-
- out:
-	if (rc) {
-		bmap_op_done(b);
+	if (rc)
 		PSCFREE(bref);
-	} else
+	else {
 		*bmap = b;
+	}
+	/* BMAP_OP #4, drop our lookup reference.
+	 */
+	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+
 	/* XXX think about policy updates in fail mode.
 	 */
 	return (rc);
