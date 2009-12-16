@@ -173,7 +173,7 @@ fhbmap_cache_cmp(const void *x, const void *y)
 {
 	const struct msl_fbr *rx = x, *ry = y;
 
-	return (bmapc_cmp(rx->mfbr_bmap, ry->mfbr_bmap));
+	return (bmap_cmp(rx->mfbr_bmap, ry->mfbr_bmap));
 }
 
 static __inline struct srt_fd_buf *

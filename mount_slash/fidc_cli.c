@@ -286,7 +286,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		return (NULL);
 
 	clock_gettime(CLOCK_REALTIME, &now);
-	
+
 	if (timespeccmp(&c->fcmh_name->fni_age, &now, <)) {
 		/* It's old, remove it.
 		 */
@@ -320,7 +320,6 @@ fidc_child_cmp(const void *x, const void *y)
 		return (-1);
 	return (0);
 }
-
 #endif
 
 /**

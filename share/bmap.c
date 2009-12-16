@@ -8,18 +8,18 @@
 #include "fidcache.h"
 #include "inode.h"
 
-__static SPLAY_GENERATE(bmap_cache, bmapc_memb, bcm_tentry, bmapc_cmp);
+__static SPLAY_GENERATE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 
 struct psc_poolmaster	 bmap_poolmaster;
 struct psc_poolmgr	*bmap_pool;
 
 /**
- * bmapc_cmp - bmap_cache splay tree comparator
+ * bmap_cmp - bmap_cache splay tree comparator
  * @a: a bmapc_memb
  * @b: another bmapc_memb
  */
 int
-bmapc_cmp(const void *x, const void *y)
+bmap_cmp(const void *x, const void *y)
 {
 	const struct bmapc_memb *a = x, *b = y;
 

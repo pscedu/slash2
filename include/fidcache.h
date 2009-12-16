@@ -251,7 +251,7 @@ dump_statbuf(struct stat *stb, int level)
 	DEBUG_STATBUF(stb, level);
 }
 
-//RB_PROTOTYPE(fcmh_childrbtree, fidc_membh, fcmh_children, bmapc_cmp);
+//RB_PROTOTYPE(fcmh_childrbtree, fidc_membh, fcmh_children, bmap_cmp);
 
 extern void (*initFcooCb)(struct fidc_open_obj *);
 
