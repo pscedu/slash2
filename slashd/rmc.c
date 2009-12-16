@@ -151,7 +151,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mp->rc)
 		RETURN(mp->rc);
 
-	if ((mq->rw != SRIC_BMAP_READ) && (mq->rw != SRIC_BMAP_WRITE))
+	if ((mq->rw != SL_READ) && (mq->rw != SL_WRITE))
 		RETURN(-EINVAL);
 
 	/*
@@ -193,8 +193,8 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	}
 
 	bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg, rq->rq_peer,
-	   (mq->rw == SRIC_BMAP_WRITE ? mp->ios_nid : LNET_NID_ANY),
-	   (mq->rw == SRIC_BMAP_WRITE ?
+	   (mq->rw == SL_WRITE ? mp->ios_nid : LNET_NID_ANY),
+	   (mq->rw == SL_WRITE ?
 	    bmdsi->bmdsi_wr_ion->mi_resm->resm_res->res_id : IOS_ID_ANY),
 	   bmap->bcm_blkno);
 

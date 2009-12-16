@@ -677,8 +677,8 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
 	int rc=0, rw=mq->rw;
-	int mode=(rw == SRIC_BMAP_READ ? BMAP_RD : BMAP_WR);
-	atomic_t *a=(rw == SRIC_BMAP_READ ?
+	int mode=(rw == SL_READ ? BMAP_RD : BMAP_WR);
+	atomic_t *a=(rw == SL_READ ?
 		     &bmap->bcm_rd_ref : &bmap->bcm_wr_ref);
 
 	BMAP_LOCK(bmap);
@@ -1178,7 +1178,7 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	psc_assert(bref->mexpbcm_mode == MEXPBCM_INIT);
 
 	bref->mexpbcm_bmap = b;
-	bref->mexpbcm_mode = ((mq->rw == SRIC_BMAP_WRITE) ?  MEXPBCM_WR : MEXPBCM_RD);
+	bref->mexpbcm_mode = ((mq->rw == SL_WRITE) ?  MEXPBCM_WR : MEXPBCM_RD);
 
 	/* Check if the client requested directio, if so tag it in the
 	 *  bref.

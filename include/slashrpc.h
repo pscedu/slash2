@@ -196,9 +196,6 @@ struct srt_bmapdesc_buf {
 	char			sbdb_hash[DESCBUF_REPRLEN];
 };
 
-#define SRIC_BMAP_READ  0
-#define SRIC_BMAP_WRITE 1
-
 struct srm_access_req {
 	struct slash_creds	creds;
 	uint64_t		ino;

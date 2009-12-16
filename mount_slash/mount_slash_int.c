@@ -505,7 +505,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 	mq->getreptbl = getreptbl ? 1 : 0;
 
 	msbd = bmap->bcm_pri;
-	bmap->bcm_mode |= (rw & SRIC_BMAP_WRITE) ? BMAP_WR : BMAP_RD;
+	bmap->bcm_mode |= (rw & SL_WRITE) ? BMAP_WR : BMAP_RD;
 
 	iovs[0].iov_base = &msbd->msbd_msbcr;
 	iovs[0].iov_len  = sizeof(msbd->msbd_msbcr);
@@ -579,7 +579,7 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
 	struct srm_generic_rep *mp;
 	int rc;
 
-	psc_assert(rw == SRIC_BMAP_WRITE || rw == SRIC_BMAP_READ);
+	psc_assert(rw == SL_WRITE || rw == SL_READ);
 
 	if ((rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_BMAPCHMODE, rq, mq, mp)) != 0)
@@ -632,7 +632,7 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
 	spinlock(&mfh->mfh_lock);
 	r = fhcache_bmap_lookup(mfh, b);
 	if (!r) {
-		r = msl_fbr_new(b, (rw == SRIC_BMAP_WRITE ?
+		r = msl_fbr_new(b, (rw == SL_WRITE ?
 				    FHENT_WRITE : FHENT_READ));
 		SPLAY_INSERT(fhbmap_cache, &mfh->mfh_fhbmap_cache, r);
 	} else {
@@ -640,7 +640,7 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
 		 *  specified BML_NEW_BMAP.
 		 */
 		psc_assert(mode != BML_NEW_BMAP);
-		msl_fbr_ref(r, (rw == SRIC_BMAP_WRITE ?
+		msl_fbr_ref(r, (rw == SL_WRITE ?
 				FHENT_WRITE : FHENT_READ));
 	}
 	freelock(&mfh->mfh_lock);
@@ -685,7 +685,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, uint32_t rw)
 			psc_assert(!(b->bcm_mode & BMAP_INIT));
 			/* Verify that the mds has returned a 'write-enabled' bmap.
 			 */
-			if (rw == SRIC_BMAP_WRITE)
+			if (rw == SL_WRITE)
 				psc_assert(b->bcm_mode & BMAP_WR);
 
 			msl_bmap_fhcache_ref(mfh, b, mode, rw);
@@ -713,7 +713,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, uint32_t rw)
 	 */
  retry:
 	spinlock(&b->bcm_lock);
-	if (rw != SRIC_BMAP_WRITE || (b->bcm_mode & BMAP_WR)) {
+	if (rw != SL_WRITE || (b->bcm_mode & BMAP_WR)) {
 		/* Either we're in read-mode here or the bmap
 		 *  has already been marked for writing therefore
 		 *  the mds already knows we're writing.
@@ -762,7 +762,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, uint32_t rw)
 		 * Correction.. this is not true, since if there was another
 		 *  writer then we would already be in directio mode.
 		 */
-		rc = msl_bmap_modeset(f, b->bcm_blkno, SRIC_BMAP_WRITE);
+		rc = msl_bmap_modeset(f, b->bcm_blkno, SL_WRITE);
 		psc_assert(!rc); /*  XXX for now.. */
 		/* We're the only thread allowed here, these
 		 *  bits could not have been set by another thread.
@@ -1554,7 +1554,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int op)
 		 *  luck because we have no idea where the data is!
 		 */
 		b = msl_bmap_load(mfh, s, (op == MSL_READ) ?
-				  SRIC_BMAP_READ : SRIC_BMAP_WRITE);
+				  SL_READ : SL_WRITE);
 		if (!b) {
 			rc = -EIO;
 			goto out;
