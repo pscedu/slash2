@@ -204,11 +204,6 @@ enum fidc_lookup_flags {
 
 #define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
 
-#define fidc_settimeo(age)							\
-	do {									\
-		*(age) = fidc_gettime() + FCMH_ATTR_TIMEO;			\
-	} while (0)
-
 int			 fidc_membh_init(struct psc_poolmgr *, void *);
 void			 fidc_membh_setattr(struct fidc_membh *, const struct stat *);
 
