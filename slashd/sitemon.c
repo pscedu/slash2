@@ -212,7 +212,7 @@ slmreplthr_main(void *arg)
 				bmapno = psc_random32u(nb);
 				for (ib = 0; ib < nb; ib++,
 				    bmapno = (bmapno + 1) % nb) {
-					rc = mds_bmap_load_ifvalid(REPLRQ_FCMH(rrq),
+					rc = mds_bmap_loadvalid(REPLRQ_FCMH(rrq),
 					    bmapno, &bcm);
 					if (rc)
 						continue;

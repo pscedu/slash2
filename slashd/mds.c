@@ -650,7 +650,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	 *   opcnt ref will stay in place until the ION informs us that
 	 *   he's finished with it.
 	 */
-	atomic_inc(&bmap->bcm_opcnt);
+	bmap_op_start(bmap);
 	atomic_inc(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
@@ -676,18 +676,24 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
-	int rc=0, rw=mq->rw;
-	int mode=(rw == SL_READ ? BMAP_RD : BMAP_WR);
-	atomic_t *a=(rw == SL_READ ?
-		     &bmap->bcm_rd_ref : &bmap->bcm_wr_ref);
+	enum rw rw = mq->rw;
+	int rc=0;
+	atomic_t *a=(rw == SL_WRITE ?
+		     &bmap->bcm_wr_ref : &bmap->bcm_rd_ref);
 
 	BMAP_LOCK(bmap);
 	if (!atomic_read(a)) {
 		/* There are no refs for this mode, therefore the
 		 *   bcm_bmapih.bmapi_mode should not be set.
 		 */
-		psc_assert(!(bmap->bcm_mode & mode));
-		bmap->bcm_mode = mode;
+		if (rw == SL_WRITE) {
+			psc_assert((bmap->bcm_mode & BMAP_WR) == 0);
+			bmap->bcm_mode |= BMAP_WR;
+		} else {
+			psc_assert((bmap->bcm_mode & BMAP_RD) == 0);
+			bmap->bcm_mode |= BMAP_RD;
+		}
+
 	}
 	/* Set and check ref cnts now.
 	 */
@@ -695,8 +701,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 	bmap_dio_sanity_locked(bmap, 0);
 
 	if ((atomic_read(&bmap->bcm_wr_ref) == 1) &&
-	    (mode == BMAP_WR) &&
-	    !bmdsi->bmdsi_wr_ion) {
+	    (rw == SL_WRITE) && !bmdsi->bmdsi_wr_ion) {
 		/* XXX Should not send connect rpc's here while
 		 *  the bmap is locked.  This may have to be
 		 *  replaced by a waitq and init flag.
@@ -742,7 +747,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
  * Notes:  I unlock the bmap or free it.
  */
 void
-mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, int mode)
+mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, enum rw rw)
 {
 	struct bmap_mds_info *mdsi;
 
@@ -751,7 +756,7 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, int mode)
 	DEBUG_BMAP(PLL_WARN, bmap, "try close 1");
 
 	mdsi = bmap->bcm_pri;
-	if (mode & BMAP_WR) {
+	if (rw == SL_WRITE) {
 		psc_assert(atomic_read(&bmap->bcm_wr_ref) > 0);
 		if (atomic_dec_and_test(&bmap->bcm_wr_ref)) {
 			psc_assert(bmap->bcm_mode & BMAP_WR);
@@ -778,7 +783,7 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, int mode)
 	     (!atomic_read(&bmap->bcm_rd_ref))))
 		mds_bmap_directio_unset(bmap);
 
-	bmap_try_release(bmap);
+	bmap_op_done(bmap);
 }
 
 /**
@@ -804,13 +809,13 @@ mexpfcm_release_bref(struct mexpbcm *bref)
 	 *   will unlock it for us.
 	 */
 	mds_bmap_ref_drop_locked(bmap, bref->mexpbcm_mode & MEXPBCM_WR ?
-				 BMAP_WR : BMAP_RD);
+				 SL_WRITE : SL_READ);
 	PSCFREE(bref);
 }
 
 /**
- * mds_bmap_crc_write - process an crc update request from an ION.
- * @mq: the rpc request containing the fid, the bmap blkno, and the bmap
+ * mds_bmap_crc_write - process an CRC update request from an ION.
+ * @mq: the RPC request containing the fid, the bmap blkno, and the bmap
  *	chunk id (cid).
  * @ion_nid:  the id of the io node which sent the request.  It is
  *	compared against the id stored in bmdsi.
@@ -828,8 +833,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	if (!fcmh)
 		return (-EBADF);
 
-	bmap = bmap_lookup(fcmh, c->blkno);
-	if (!bmap) {
+	rc = bmap_lookup(fcmh, c->blkno, &bmap);
+	if (rc) {
 		rc = -EBADF;
 		goto out;
 	}
@@ -965,9 +970,9 @@ mds_bmapod_initnew(struct slash_bmap_od *b)
  * Returns zero on success, negative errno code on failure.
  */
 __static int
-mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
-    struct bmapc_memb *bcm, int skip_zero)
+mds_bmap_read(struct bmapc_memb *bcm)
 {
+	struct fidc_membh *f = bcm->bcm_fcmh;
 	struct bmap_mds_info *bmdsi;
 	psc_crc64_t crc;
 	int rc;
@@ -980,7 +985,8 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
 	 */
 	rc = mdsio_zfs_bmap_read(bcm);
 
-	/* Check for a NULL CRC if we had a good read.  NULL CRC can happen when
+	/*
+	 * Check for a NULL CRC if we had a good read.  NULL CRC can happen when
 	 * bmaps are gaps that have not been written yet.   Note that a short
 	 * read is tolerated as long as the bmap is zeroed.
 	 */
@@ -988,11 +994,6 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
 		if (bmdsi->bmdsi_od->bh_bhcrc == 0 &&
 		    memcmp(bmdsi->bmdsi_od, &null_bmap_od,
 		    sizeof(null_bmap_od)) == 0) {
-			if (skip_zero) {
-				rc = SLERR_BMAP_ZERO;
-				goto out;
-			}
-
 			mds_bmapod_dump(bcm);
 			mds_bmapod_initnew(bmdsi->bmdsi_od);
 			mds_bmapod_dump(bcm);
@@ -1003,7 +1004,7 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
 	/* At this point, the short I/O is an error since the bmap isn't zeros. */
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "mdsio_zfs_bmap_read: "
-		    "blkno=%u, rc=%d", blkno, rc);
+		    "bmapno=%u, rc=%d", bcm->bcm_bmapno, rc);
 		rc = -EIO;
 		goto out;
 	}
@@ -1015,8 +1016,8 @@ mds_bmap_read(struct fidc_membh *f, sl_blkno_t blkno,
 	if (crc == bmdsi->bmdsi_od->bh_bhcrc)
 		return (0);
 
-	DEBUG_FCMH(PLL_ERROR, f, "CRC failed; blkno=%u, want=%"PRIx64", got=%"PRIx64,
-	    blkno, bmdsi->bmdsi_od->bh_bhcrc, crc);
+	DEBUG_FCMH(PLL_ERROR, f, "CRC failed; bmapno=%u, want=%"PRIx64", got=%"PRIx64,
+	    bcm->bcm_bmapno, bmdsi->bmdsi_od->bh_bhcrc, crc);
 	rc = -EIO;
  out:
 	PSCFREE(bmdsi->bmdsi_od);
@@ -1035,71 +1036,72 @@ mds_bmap_init(struct bmapc_memb *bcm)
 }
 
 int
-_mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno,
-    struct bmapc_memb **bp, int skip_zero)
+mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno, struct bmapc_memb **bp)
 {
-	struct bmapc_memb *b;
-	int rc = 0;
-
-	b = bmap_lookup_add(f, bmapno, mds_bmap_init);
-
-	BMAP_LOCK(b);
-	while (b->bcm_mode & BMAP_INFLIGHT) {
-		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-		BMAP_LOCK(b);
-	}
-	if (b->bcm_mode & BMAP_INIT) {
-		b->bcm_mode |= BMAP_INFLIGHT;
-		BMAP_ULOCK(b);
-		rc = mds_bmap_read(f, bmapno, b, skip_zero);
-		BMAP_LOCK(b);
-		if (rc) {
-			DEBUG_FCMH(PLL_WARN, f,
-				   "mds_bmap_read() rc=%d blkno=%u",
-				   rc, bmapno);
-			b->bcm_mode |= BMAP_MDS_FAILED;
-		} else
-			b->bcm_mode &= ~BMAP_INIT;
-		/* Notify other threads that this bmap has been loaded;
-		 *  they're blocked on BMAP_INFLIGHT.  */
-		b->bcm_mode &= ~BMAP_INFLIGHT;
-		psc_waitq_wakeall(&b->bcm_waitq);
-	}
-	BMAP_ULOCK(b);
-
-	*bp = b;
-	return (rc);
+	return (bmap_get(f, bmapno, 0, bp, NULL));
 }
 
 int
-mds_bmap_load_ifvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
-    struct bmapc_memb **bcmp)
+mds_bmap_retrieve(struct bmapc_memb *b, __unusedx enum rw rw, __unusedx void *arg)
 {
-	int rc;
+	return (mds_bmap_read(b));
+}
 
-	*bcmp = NULL;
-	rc = _mds_bmap_load(f, bmapno, bcmp, 1);
-	if (rc) {
-		bmap_op_done(*bcmp);
-		*bcmp = NULL;
-	}
-	return (rc);
+/**
+ * mds_bmap_loadvalid - Load a bmap if disk I/O is successful and the bmap
+ *	has been initialized (i.e. is not all zeroes).
+ * @f: fcmh.
+ * @bmapno: bmap index number to load.
+ * @bp: value-result bmap.
+ */
+int
+mds_bmap_loadvalid(struct fidc_membh *f, sl_blkno_t bmapno,
+    struct bmapc_memb **bp)
+{
+	struct bmap_mds_info *bmdsi;
+	struct bmapc_memb *b;
+	int n, rc;
+
+	*bp = NULL;
+
+	rc = mds_bmap_load(f, bmapno, &b);
+	if (rc)
+		return (rc);
+
+	BMAP_LOCK(b);
+	bmdsi = b->bcm_pri;
+	for (n = 0; n < SL_CRCS_PER_BMAP; n++)
+		/*
+		 * XXX need a bitmap to see which CRCs are
+		 * actually uninitialized and not just happen
+		 * to be zero.
+		 */
+		if (bmdsi->bmdsi_od->bh_crcstates[n]) {
+			BMAP_ULOCK(b);
+			*bp = b;
+			return (0);
+		}
+	bmap_op_done(b);
+	return (SLERR_BMAP_ZERO);
 }
 
 int
 mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
-		  struct bmapc_memb **bmap)
+    struct bmapc_memb **bp)
 {
 	struct fidc_membh *f;
+	struct bmapc_memb *b;
 	int rc = 0;
 
-	psc_assert(!*bmap);
+	psc_assert(*bp == NULL);
 
 	f = fidc_lookup_fg(fg);
 	if (!f)
 		return (-ENOENT);
 
-	rc = mds_bmap_load(f, bmapno, bmap);
+	rc = mds_bmap_load(f, bmapno, &b);
+	if (rc == 0)
+		*bp = b;
 	return (rc);
 }
 
@@ -1301,3 +1303,7 @@ struct cfdops cfd_ops = {
 	mexpfcm_cfd_free,
 	mexpfcm_cfd_get_zfsdata
 };
+
+void	(*bmap_init_privatef)(struct bmapc_memb *) = mds_bmap_init;
+int	(*bmap_retrievef)(struct bmapc_memb *, enum rw, void *) = mds_bmap_retrieve;
+void	(*bmap_final_cleanupf)(struct bmapc_memb *);

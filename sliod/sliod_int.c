@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/list.h"
 #include "psc_ds/tree.h"
 #include "psc_rpc/rsx.h"
@@ -40,14 +41,8 @@ iod_bmap_init(struct bmapc_memb *b)
 	SPLAY_INIT(&biod->biod_slvrs);
 }
 
-void
-iod_bmap_free(struct bmapc_memb *b)
-{
-	psc_pool_return(bmap_pool, b);
-}
-
 __static int
-iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
+iod_bmap_fetch_crcs(struct bmapc_memb *b, enum rw rw)
 {
 	int				 rc;
 	struct srm_bmap_wire_req	*mq;
@@ -56,7 +51,6 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, int rw)
 	struct iovec			 iov;
 	struct pscrpc_bulk_desc		*desc;
 
-	psc_assert(b->bcm_mode & BMAP_INFLIGHT);
 	psc_assert(!bmap_2_biodi_wire(b));
 
 	rc = RSX_NEWREQ(sli_rmi_getimp(), SRMC_VERSION,
@@ -145,7 +139,7 @@ iod_inode_lookup(const struct slash_fidgen *fg)
 	int rc;
 	struct fidc_membh *f;
 
-	rc = fidc_lookup(fg, 
+	rc = fidc_lookup(fg,
 			 FIDC_LOOKUP_CREATE|
 			 FIDC_LOOKUP_COPY|
 			 FIDC_LOOKUP_REFRESH,
@@ -205,60 +199,27 @@ iod_inode_open(struct fidc_membh *f, enum rw rw)
 }
 
 /**
- * iod_bmap_load - load the relevant bmap information from the metadata
+ * iod_bmap_retrieve - load the relevant bmap information from the metadata
  *   server.  In the case of the ION the bmap sections of interest are the
- *   crc table and the crc states bitmap.  For now we only load this
+ *   CRC table and the CRC states bitmap.  For now we only load this
  *   information on read.
- * @f: the fid cache handle for the inode in question.
- * @sdbd: the key to authenticate with the mds.
- * @rw: the bmap mode.
- * @bmap:  return the bmap that has been loaded.
- * Return: error if rpc fails.
+ * @b: bmap to load.
+ * @rw: the bmap access mode.
+ * Return zero on success or errno code on failure (likely an RPC problem).
  */
 int
-iod_bmap_load(struct fidc_membh *f, sl_bmapno_t bmapno, enum rw rw,
-    struct bmapc_memb **bmap)
+iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx void *arg)
 {
-	int rc=0;
-	struct bmapc_memb *b;
-
-	psc_assert(bmap);
-	psc_assert(rw == SL_READ || rw == SL_WRITE);
-
-	b = bmap_lookup_add(f, bmapno, iod_bmap_init);
-
-	/* For the time being I don't think we need to key actions
-	 *  off of the BMAP_INIT bit so just get rid of it.
-	 */
-	if (rw == SL_WRITE)
-		goto done;
-
-	BMAP_LOCK(b);
-	while (b->bcm_mode & BMAP_INFLIGHT) {
-		/* Another thread is already getting this
-		 *  bmap's crc table.
-		 */
-		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-		BMAP_LOCK(b);
-	}
-	if (b->bcm_mode & BMAP_INIT) {
-		b->bcm_mode |= BMAP_INFLIGHT;
-		BMAP_ULOCK(b);
-		/* This thread will retrieve the crc
-		 *  table.  Set the bit and drop the
-		 *  lock prior to making the rpc.
-		 */
-		rc = iod_bmap_fetch_crcs(b, rw);
-		BMAP_LOCK(b);
-		b->bcm_mode &= ~BMAP_INFLIGHT;
-		if (rc)
-			b->bcm_mode |= BMAP_LOAD_FAIL;
-		else
-			b->bcm_mode &= ~BMAP_INIT;
-		psc_waitq_wakeall(&b->bcm_waitq);
-	}
-	BMAP_ULOCK(b);
-done:
-	*bmap = b;
-	return (rc);
+	return (iod_bmap_fetch_crcs(b, rw));
 }
+
+int
+iod_bmap_load(struct fidc_membh *f, sl_blkno_t n, enum rw rw,
+    struct bmapc_memb **bp)
+{
+	return (bmap_get(f, n, rw, bp, NULL));
+}
+
+void	(*bmap_init_privatef)(struct bmapc_memb *) = iod_bmap_init;
+int	(*bmap_retrievef)(struct bmapc_memb *, enum rw, void *) = iod_bmap_retrieve;
+void	(*bmap_final_cleanupf)(struct bmapc_memb *);

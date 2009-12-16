@@ -26,20 +26,19 @@ struct bmap_refresh {
 
 /*
  * bmapc_memb - central structure for block map caching used in
- *    all slash service contexts (mds, ios, client). It is allocated
- *    by bmap_lookup_add().
+ *    all slash service contexts (mds, ios, client).
  *
  * bmapc_memb sits in the middle of the GFC stratum.
  * XXX some of these elements may need to be moved into the bcm_info_pri
  *     area (as part of new structures?) so save space on the mds.
  */
 struct bmapc_memb {
-	sl_blkno_t		 bcm_blkno;	/* Bmap blk number        */
+	sl_bmapno_t		 bcm_bmapno;	/* bmap index number        */
 	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info    */
 	atomic_t		 bcm_rd_ref;	/* one ref per write fd    */
 	atomic_t		 bcm_wr_ref;	/* one ref per read fd     */
 	atomic_t		 bcm_opcnt;	/* pending opcnt           */
-	uint32_t		 bcm_mode;
+	uint32_t		 bcm_mode;	/* see flags below */
 	psc_spinlock_t		 bcm_lock;
 	struct psc_waitq	 bcm_waitq;     /* XXX think about replacing
 						   me with bcm_fcmh->fcmh_waitq
@@ -47,20 +46,19 @@ struct bmapc_memb {
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry    */
 	struct psclist_head	 bcm_lentry;	/* free pool */
 	void			*bcm_pri;	/* bmap_mds_info, bmap_cli_info, or bmap_iod_info */
+#define bcm_blkno bcm_bmapno
 };
 
 /* common bmap modes */
-#define BMAP_RD			(1 << 0)
-#define BMAP_WR			(1 << 1)
-#define BMAP_INIT		(1 << 2)	/* contents need to be loaded from disk or over the network */
-#define BMAP_INFLIGHT		(1 << 3)	/* contents are being loaded, please wait */
-#define BMAP_DIO		(1 << 4)
-#define BMAP_CLOSING		(1 << 5)
-#define BMAP_DIRTY		(1 << 6)
-#define BMAP_MEMRLS		(1 << 7)
-#define BMAP_DIRTY2LRU		(1 << 8)
-#define BMAP_LOAD_FAIL		(1 << 9)
-#define _BMAP_FLSHFT		(1 << 10)
+#define BMAP_RD			(1 << 0)	/* XXX rename this to diassociate SL_READ */
+#define BMAP_WR			(1 << 1)	/* XXX rename this to diassociate SL_WRITE */
+#define BMAP_INIT		(1 << 2)	/* initializing from disk/network */
+#define BMAP_DIO		(1 << 3)
+#define BMAP_CLOSING		(1 << 4)
+#define BMAP_DIRTY		(1 << 5)
+#define BMAP_MEMRLS		(1 << 6)
+#define BMAP_DIRTY2LRU		(1 << 7)
+#define _BMAP_FLSHFT		(1 << 8)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
@@ -122,24 +120,29 @@ struct slash_bmap_od {
 		 atomic_read(&(b)->bcm_opcnt),				\
 		 ## __VA_ARGS__)
 
-#define bmap_op_start(b)				\
-	atomic_inc(&(b)->bcm_opcnt);			\
-	DEBUG_BMAP(PLL_NOTIFY, (b), "took reference")
+#define bmap_op_start(b)						\
+	do {								\
+		atomic_inc(&(b)->bcm_opcnt);				\
+		DEBUG_BMAP(PLL_NOTIFY, (b), "took reference");		\
+	} while (0)
 
-void bmap_cache_init(size_t);
-int  bmap_cmp(const void *, const void *);
-void bmap_op_done(struct bmapc_memb *);
-void bmap_remove(struct bmapc_memb *);
-void bmap_try_release(struct bmapc_memb *);
-int  bmap_try_release_locked(struct bmapc_memb *);
-struct bmapc_memb * bmap_lookup_locked(struct fidc_open_obj *, sl_blkno_t);
-struct bmapc_memb * bmap_lookup(struct fidc_membh *, sl_blkno_t);
-struct bmapc_memb * bmap_lookup_add(struct fidc_membh *, sl_blkno_t,
-				    void (*)(struct bmapc_memb *));
+/* bmap_get flags */
+#define BMAPGETF_LOAD	(1 << 0)		/* allow loading if not in cache */
+
+int	 bmap_cmp(const void *, const void *);
+void	 bmap_cache_init(size_t);
+void	 bmap_op_done(struct bmapc_memb *);
+int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
+	    struct bmapc_memb **, void *);
+
+#define bmap_lookup(f, n, bp)		_bmap_get((f), (n), 0, 0, (bp), NULL)
+#define bmap_get(f, n, rw, bp, arg)	_bmap_get((f), (n), (rw),	\
+					    BMAPLKF_LOAD, (bp), (arg))
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 
-extern struct psc_poolmaster	 bmap_poolmaster;
-extern struct psc_poolmgr	*bmap_pool;
+extern void	(*bmap_init_privatef)(struct bmapc_memb *);
+extern int	(*bmap_retrievef)(struct bmapc_memb *, enum rw, void *);
+extern void	(*bmap_final_cleanupf)(struct bmapc_memb *);
 
 #endif /* _BMAP_H_ */

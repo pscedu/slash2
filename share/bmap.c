@@ -1,6 +1,8 @@
 /* $Id$ */
 
+#include "pfl/cdefs.h"
 #include "psc_ds/tree.h"
+#include "psc_ds/treeutil.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 
@@ -14,7 +16,7 @@ struct psc_poolmaster	 bmap_poolmaster;
 struct psc_poolmgr	*bmap_pool;
 
 /**
- * bmap_cmp - bmap_cache splay tree comparator
+ * bmap_cmp - comparator for bmapc_membs in the splay cache.
  * @a: a bmapc_memb
  * @b: another bmapc_memb
  */
@@ -32,146 +34,155 @@ bmap_remove(struct bmapc_memb *b)
 	struct fidc_membh *f=b->bcm_fcmh;
 	int locked;
 
-	BMAP_LOCK(b);
+	BMAP_RLOCK(b);
 
 	DEBUG_BMAP(PLL_INFO, b, "removing");
 
+	psc_waitq_wakeall(&b->bcm_waitq);
+
 	psc_assert(b->bcm_mode & BMAP_CLOSING);
 	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
-	psc_assert(!atomic_read(&b->bcm_waitq.wq_nwaiters));
 	psc_assert(!atomic_read(&b->bcm_wr_ref) &&
 		   !atomic_read(&b->bcm_rd_ref));
 	psc_assert(!atomic_read(&b->bcm_opcnt));
+
 	BMAP_ULOCK(b);
 
 	locked = FCMH_RLOCK(f);
-
-	if (!SPLAY_REMOVE(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b))
-		DEBUG_BMAP(PLL_FATAL, b, "failed to locate bmap in fcoo");
-
+	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);
 	FCMH_URLOCK(f, locked);
 
 	psc_pool_return(bmap_pool, b);
 }
 
-int
-bmap_try_release_locked(struct bmapc_memb *b)
+void
+bmap_op_done(struct bmapc_memb *b)
 {
-	BMAP_LOCK_ENSURE(b);
+	BMAP_RLOCK(b);
 
-	DEBUG_BMAP(PLL_INFO, b, " ");
+	DEBUG_BMAP(PLL_INFO, b, "bmap_op_done");
+
+	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
+	psc_assert(atomic_read(&b->bcm_wr_ref) >= 0);
+	psc_assert(atomic_read(&b->bcm_rd_ref) >= 0);
+
+	atomic_dec(&b->bcm_opcnt);
 
 	if (!atomic_read(&b->bcm_rd_ref) &&
 	    !atomic_read(&b->bcm_wr_ref) &&
 	    !atomic_read(&b->bcm_opcnt)) {
 		b->bcm_mode |= BMAP_CLOSING;
+		/* XXX remove from fcmh tree? */
 		BMAP_ULOCK(b);
 
-#if 0
-		while (atomic_read(&b->bcm_waitq.wq_nwaiters)) {
-			psc_waitq_wakeall(&b->bcm_waitq);
-			sched_yield();
-		}
-#endif
+		if (bmap_final_cleanupf)
+			bmap_final_cleanupf(b);
+
 		bmap_remove(b);
-
-		return (1);
+		return;
 	}
-
-	return (0);
+	psc_waitq_wakeall(&b->bcm_waitq);
+	BMAP_ULOCK(b);
 }
 
-void
-bmap_try_release(struct bmapc_memb *b)
+__static struct bmapc_memb *
+bmap_lookup_cache(struct fidc_membh *f, sl_blkno_t n)
 {
-	BMAP_RLOCK(b);
-	if (!bmap_try_release_locked(b))
-		/* It wasn't freed.
-		 */
-		BMAP_ULOCK(b);
-}
-
-void
-bmap_op_done(struct bmapc_memb *b)
-{
-	atomic_dec(&b->bcm_opcnt);
-	bmap_try_release(b);
-}
-
-struct bmapc_memb *
-bmap_lookup_locked(struct fidc_open_obj *fcoo, sl_blkno_t n)
-{
+	struct fidc_open_obj *fcoo = f->fcmh_fcoo;
 	struct bmapc_memb lb, *b;
 
-//	LOCK_ENSURE(&fcoo->fcmh_lock);
-
-	lb.bcm_blkno=n;
+ restart:
+	lb.bcm_blkno = n;
 	b = SPLAY_FIND(bmap_cache, &fcoo->fcoo_bmapc, &lb);
 	if (b) {
+		BMAP_LOCK(b);
+		if (b->bcm_mode & BMAP_CLOSING) {
+			/*
+			 * This bmap is going away; wait for
+			 * it so we can reload it back.
+			 */
+			FCMH_ULOCK(f);
+			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+			FCMH_LOCK(f);
+			goto restart;
+		}
 		bmap_op_start(b);
 	}
-
-	return (b);
-}
-
-struct bmapc_memb *
-bmap_lookup(struct fidc_membh *f, sl_blkno_t n)
-{
-	struct bmapc_memb *b;
-	int locked;
-
-	locked = reqlock(&f->fcmh_lock);
-	b = bmap_lookup_locked(f->fcmh_fcoo, n);
-	ureqlock(&f->fcmh_lock, locked);
 	return (b);
 }
 
 /**
- * bmap_lookup_add - Lookup/load the bmap specified by index.
+ * bmap_get - Get the specified bmap.
  * @f: fcmh.
  * @n: bmap number.
- * @bmap_init_fn: CLI/ION/MDS-specific initialization routine.
- * Notes: returns the bmap referenced.
+ * @rw: bmap access mode.
+ * @flags: retrieval parameters.
+ * @arg: optional retrieval parameter.
+ * Notes: returns the bmap referenced via bcm_opcnt.
  */
-struct bmapc_memb *
-bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n,
-    void (*bmap_init_fn)(struct bmapc_memb *))
+int
+_bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
+    struct bmapc_memb **bp, void *arg)
 {
+	int rc = 0, do_load = 0, locked;
 	struct bmapc_memb *b;
-	int locked;
+
+	*bp = NULL;
 
 	psc_assert(f->fcmh_fcoo);
 
 	locked = reqlock(&f->fcmh_lock);
-
-	/* bmap_lookup_locked() increments the opcnt if found */
-	b = bmap_lookup_locked(f->fcmh_fcoo, n);
-	if (!b) {
+	b = bmap_lookup_cache(f, n);
+	if (b == NULL) {
+		if ((flags & BMAPLKF_LOAD) == 0) {
+			ureqlock(&f->fcmh_lock, locked);
+			return (ENOENT);
+		}
 		b = psc_pool_get(bmap_pool);
 		memset(b, 0, bmap_pool->ppm_master->pms_entsize);
 		LOCK_INIT(&b->bcm_lock);
-		atomic_set(&b->bcm_opcnt, 0);
+		atomic_set(&b->bcm_opcnt, 1);
 		atomic_set(&b->bcm_rd_ref, 0);
 		atomic_set(&b->bcm_wr_ref, 0);
 		psc_waitq_init(&b->bcm_waitq);
 		b->bcm_fcmh = f;
-		b->bcm_blkno = n;
+		b->bcm_bmapno = n;
 		b->bcm_pri = b + 1;
 
-		/* Note that the bmap is newly initialized and therefore
+		/* Signify that the bmap is newly initialized and therefore
 		 *  may not contain certain structures.
 		 */
 		b->bcm_mode = BMAP_INIT;
-		/* Call the provided init function.
-		 */
-		bmap_init_fn(b);
-		/* Add to the fcmh's bmap cache but first up the opcnt.
-		 */
-		bmap_op_start(b);
+
+		/* Perform app-specific substructure initialization. */
+		bmap_init_privatef(b);
+
+		/* Add to the fcmh's bmap cache */
 		SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);
+		do_load = 1;
 	}
 	ureqlock(&f->fcmh_lock, locked);
-	return (b);
+	if (do_load) {
+		rc = bmap_retrievef(b, rw, arg);
+
+		BMAP_LOCK(b);
+		b->bcm_mode &= ~BMAP_INIT;
+		psc_waitq_wakeall(&b->bcm_waitq);
+		if (rc) {
+			bmap_op_done(b);
+			return (rc);
+		}
+	} else {
+		while (b->bcm_mode & BMAP_INIT) {
+			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+			BMAP_LOCK(b);
+		}
+	}
+	if (b) {
+		BMAP_ULOCK(b);
+		*bp = b;
+	}
+	return (rc);
 }
 
 void

@@ -17,6 +17,7 @@
 #include "pfl/pfl.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/treeutil.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
@@ -272,8 +273,6 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg));
-	BMAP_ULOCK(b);
-	
 	bmap_op_done(b);
 }
 
@@ -361,43 +360,6 @@ msl_bmap_init(struct bmapc_memb *b)
 	bmpc_init(&msbd->msbd_bmpc);
 }
 
-/**
- * bmapc_memb_release - release a bmap structure and associated resources.
- * @b: the bmap.
- */
-void
-msl_bmap_release(struct bmapc_memb *b)
-{
-	struct bmap_pagecache *bmpc=bmap_2_msbmpc(b);
-
-	/* Mind lock ordering, remove from LRU first.
-	 */
-	bmpc_lru_del(bmpc);
-
-	psc_assert(b->bcm_fcmh->fcmh_fcoo);
-
-	BMAP_LOCK(b);
-	psc_assert(b->bcm_mode & BMAP_CLOSING);
-	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
-	/* Assert that this bmap can no longer be scheduled by the
-	 *   write back cache thread.
-	 */
-	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
-	/* Assert that this thread cannot be seen by the page cache
-	 *   reaper (it was lc_remove'd above by bmpc_lru_del()).
-	 */
-	psc_assert(psclist_disjoint(&bmpc->bmpc_lentry));
-	BMAP_ULOCK(b);
-
-	DEBUG_BMAP(PLL_INFO, b, "freeing");
-
-	BMPC_LOCK(bmpc);
-	bmpc_freeall_locked(bmpc);
-	BMPC_ULOCK(bmpc);
-
-	bmap_remove(b);
-}
-
 __static void
 bmap_biorq_waitempty(struct bmapc_memb *b)
 {
@@ -425,22 +387,36 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 }
 
 void
-msl_bmap_tryrelease(struct bmapc_memb *b)
+msl_bmap_final_cleanup(struct bmapc_memb *b)
 {
+	struct bmap_pagecache *bmpc = bmap_2_msbmpc(b);
+
+	bmap_biorq_waitempty(b);
+
+	/* Mind lock ordering, remove from LRU first.
+	 */
+	bmpc_lru_del(bmpc);
+
+	psc_assert(b->bcm_fcmh->fcmh_fcoo);
+
 	BMAP_LOCK(b);
-	psc_assert(atomic_read(&b->bcm_wr_ref) >= 0);
-	psc_assert(atomic_read(&b->bcm_rd_ref) >= 0);
+	psc_assert(b->bcm_mode & BMAP_CLOSING);
+	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
+	/* Assert that this bmap can no longer be scheduled by the
+	 *   write back cache thread.
+	 */
+	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
+	/* Assert that this thread cannot be seen by the page cache
+	 *   reaper (it was lc_remove'd above by bmpc_lru_del()).
+	 */
+	psc_assert(psclist_disjoint(&bmpc->bmpc_lentry));
+	BMAP_ULOCK(b);
 
-	DEBUG_BMAP(PLL_INFO, b, "free me?");
+	DEBUG_BMAP(PLL_INFO, b, "freeing");
 
-	if (!atomic_read(&b->bcm_wr_ref) && !atomic_read(&b->bcm_rd_ref)) {
-		b->bcm_mode |= BMAP_CLOSING;
-		BMAP_ULOCK(b);
-		/* Wait for any pending biorqs to clear.
-		 */
-		bmap_biorq_waitempty(b);
-		msl_bmap_release(b);
-	}
+	BMPC_LOCK(bmpc);
+	bmpc_freeall_locked(bmpc);
+	BMPC_ULOCK(bmpc);
 }
 
 void
@@ -454,8 +430,7 @@ msl_fbr_free(struct msl_fbr *r)
 	msl_fbr_unref(r);
 	PSCFREE(r);
 
-	//return (msl_bmap_tryrelease(b));
-	//XXX this won't call bmap_biorq_waitempty() or msl_bmap_release() 
+	bmap_biorq_waitempty(b);
 	bmap_op_done(b);
 }
 
@@ -467,7 +442,7 @@ msl_fbr_free(struct msl_fbr *r)
  * @n: the number of bmaps to retrieve (serves as a simple read-ahead mechanism)
  */
 __static int
-msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
+msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *rq;
@@ -502,13 +477,13 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 
 	mq->sfdb  = *fcmh_2_fdb(f);
 	mq->pios  = prefIOS; /* Tell MDS of our preferred ION */
-	mq->blkno = b;
+	mq->blkno = bmap->bcm_bmapno;
 	mq->nblks = 1;
 	mq->rw    = rw;
 	mq->getreptbl = getreptbl ? 1 : 0;
 
 	msbd = bmap->bcm_pri;
-	bmap->bcm_mode |= (rw & SL_WRITE) ? BMAP_WR : BMAP_RD;
+	bmap->bcm_mode |= (rw == SL_WRITE ? BMAP_WR : BMAP_RD);
 
 	iovs[0].iov_base = &msbd->msbd_msbcr;
 	iovs[0].iov_len  = sizeof(msbd->msbd_msbcr);
@@ -523,7 +498,8 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
 		iovs[2].iov_len  = sizeof(sl_replica_t) * INO_DEF_NREPLS;
 	}
 
-	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (s=%u) (rw=%d)", b, rw);
+	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (bmapno=%u) (rw=%d)",
+	    bmap->bcm_bmapno, rw);
 
 	nblks = 0;
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iovs,
@@ -575,7 +551,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, sl_blkno_t b, int rw)
  *    the mds.
  */
 __static int
-msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, int rw)
+msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, enum rw rw)
 {
 	struct pscrpc_request *rq;
 	struct srm_bmap_chmode_req *mq;
@@ -621,7 +597,7 @@ msl_bmap_fhcache_clear(struct msl_fhent *mfh)
 
 __static void
 msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
-		     int mode, int rw)
+		     int mode, enum rw rw)
 {
 	struct msl_fbr *r;
 
@@ -648,9 +624,8 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
 }
 
 /**
- * msl_bmap_load - locate a bmap in fcache_memb_handle's splay tree or retrieve it from the MDS.
+ * msl_bmap_retreive - Grab a bmap from the MDS.
  * @f: the msl_fhent for the owning file.
- * @n: bmap number.
  * @prefetch: the number of subsequent bmaps to prefetch.
  * @rw: tell the mds if we plan to read or write.
  * Notes: XXX Need a way to detect bmap mode changes here (ie from read
@@ -659,50 +634,36 @@ msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
  * TODO:  XXX if bmap is already cached but is not in write mode (but
  *	rw==WRITE) then we must notify the mds of this.
  */
-__static struct bmapc_memb *
-msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, uint32_t rw)
+int
+msl_bmap_retrieve(struct bmapc_memb *b, enum rw rw, void *arg)
+{
+	struct msl_fhent *mfh = arg;
+	int rc;
+
+	rc = msl_bmap_fetch(b, rw);
+	if (rc == 0)
+		msl_bmap_fhcache_ref(mfh, b, BML_NEW_BMAP, rw);
+	return (rc);
+}
+
+struct bmapc_memb *
+msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, enum rw rw)
 {
 	struct fidc_membh *f = mfh->mfh_fcmh;
 	struct bmapc_memb *b;
+	int rc;
 
-	int rc = 0, mode = BML_HAVE_BMAP;
+	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
-	b = bmap_lookup_add(f, n, msl_bmap_init);
-	psc_assert(b);
+	rc = bmap_get(f, n, rw, &b, mfh);
+	if (rc)
+		return (NULL);
 
-	BMAP_LOCK(b);
-	while (b->bcm_mode & BMAP_INFLIGHT) {
-		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-		BMAP_LOCK(b);
-	}
-	if (b->bcm_mode & BMAP_INIT) {
-		/* Retrieve the bmap from the sl_mds.
-		 */
-		b->bcm_mode |= BMAP_INFLIGHT;
-		BMAP_ULOCK(b);
-		rc = msl_bmap_fetch(b, n, rw);
-		if (!rc) {
-			mode = BML_NEW_BMAP;
-			psc_assert(!(b->bcm_mode & BMAP_INIT));
-			/* Verify that the mds has returned a 'write-enabled' bmap.
-			 */
-			if (rw == SL_WRITE)
-				psc_assert(b->bcm_mode & BMAP_WR);
-
-			msl_bmap_fhcache_ref(mfh, b, mode, rw);
-		}
-		BMAP_LOCK(b);
-		b->bcm_mode &= ~BMAP_INFLIGHT;
-		psc_waitq_wakeall(&b->bcm_waitq);
-		BMAP_ULOCK(b);
-		return (rc ? NULL: b);
-	}
-	BMAP_ULOCK(b);
-	/* Else */
 	/* Ref now, otherwise our bmap may get downgraded while we're
 	 *  blocking on the waitq.
 	 */
-	msl_bmap_fhcache_ref(mfh, b, mode, rw);
+	msl_bmap_fhcache_ref(mfh, b, BML_HAVE_BMAP, rw);
+
 
 	/* If our bmap is cached then we need to consider the current
 	 *   caching policy and possibly notify the mds.  I.e. if our
@@ -1129,6 +1090,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			 *   bmap is not freed prior to its
 			 *   pages being flushed.
 			 */
+			bmap_op_start(b);
 			lc_addtail(&bmapFlushQ, bmap_2_msbd(b));
 		}
 	}
@@ -1183,7 +1145,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 			       biorq_getaligned_off(r, (i+startpage)));
 
 		psc_atomic16_inc(&bmpce->bmpce_infref);
-	       
+
 		DEBUG_BMPCE(PLL_TRACE, bmpce, "adding to rpc");
 
 		BMPCE_ULOCK(bmpce);
@@ -1512,7 +1474,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
  * @buf: the application source/dest buffer.
  * @size: size of buffer.
  * @off: file logical offset similar to pwrite().
- * @op: the operation type (SL_READ or SL_WRITE).
+ * @rw: the operation type (SL_READ or SL_WRITE).
  */
 int
 msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
@@ -1597,7 +1559,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 				msl_pages_copyout(r[j], p) :
 				msl_pages_copyin(r[j], p);
 		}
-		/* Unwind our reference from bmap_lookup().
+		/* Unwind our reference from bmap_get().
 		 */
 		bmap_op_done(b[j]);
 	}
@@ -1609,3 +1571,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
  out:
 	return (rc);
 }
+
+void	(*bmap_init_privatef)(struct bmapc_memb *) = msl_bmap_init;
+int	(*bmap_retrievef)(struct bmapc_memb *, enum rw, void *) = msl_bmap_retrieve;
+void	(*bmap_final_cleanupf)(struct bmapc_memb *) = msl_bmap_final_cleanup;

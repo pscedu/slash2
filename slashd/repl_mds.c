@@ -528,7 +528,8 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 
 	*fp = NULL;
 
-	rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL, &rootcreds, &fcmh);
+	rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
+	    NULL, &rootcreds, &fcmh);
 	if (rc)
 		return (rc);
 
@@ -578,7 +579,6 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	struct bmapc_memb *bcm;
 	struct stat stb;
 	char fn[FID_MAX_PATH];
-	sl_blkno_t n;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
@@ -669,10 +669,11 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset2[SL_REPL_OLD] = 1;
 		retifset2[SL_REPL_ACTIVE] = 0;
 
-		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			if (mds_bmap_load_ifvalid(REPLRQ_FCMH(rrq),
-			    n, &bcm))
+		for (bmapno = 0; bmapno < REPLRQ_NBMAPS(rrq); bmapno++) {
+			if (mds_bmap_loadvalid(REPLRQ_FCMH(rrq),
+			    bmapno, &bcm))
 				continue;
+
 			BMAP_LOCK(bcm);
 			repl_some_act |= mds_repl_bmap_walk(bcm,
 			    tract, retifset, 0, iosidx, nios);
@@ -694,8 +695,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPL_SCHED] = EALREADY;
 		retifset[SL_REPL_OLD] = EALREADY;
 		retifset[SL_REPL_ACTIVE] = 0;
-		rc = mds_bmap_load_ifvalid(REPLRQ_FCMH(rrq),
-		    bmapno, &bcm);
+		rc = mds_bmap_loadvalid(REPLRQ_FCMH(rrq), bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
 			rc = mds_repl_bmap_walk(bcm,
@@ -744,10 +744,9 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-		if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm)) {
-			bmap_op_done(bcm);
+		if (mds_bmap_loadvalid(REPLRQ_FCMH(rrq), n, &bcm))
 			continue;
-		}
+
 		BMAP_LOCK(bcm);
 		bmdsi = bmap_2_bmdsi(bcm);
 		rc = mds_repl_bmap_walk(bcm, NULL,
@@ -806,7 +805,6 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	int iosidx[SL_MAX_REPLICAS], rc, tract[4], retifset[4];
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
-	sl_blkno_t n;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
@@ -835,10 +833,11 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPL_SCHED] = 1;
 
 		rc = SLERR_REPLS_ALL_INACT;
-		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			if (mds_bmap_load_ifvalid(REPLRQ_FCMH(rrq),
-			    n, &bcm))
+		for (bmapno = 0; bmapno < REPLRQ_NBMAPS(rrq); bmapno++) {
+			if (mds_bmap_loadvalid(REPLRQ_FCMH(rrq),
+			    bmapno, &bcm))
 				continue;
+
 			BMAP_LOCK(bcm);
 			if (mds_repl_bmap_walk(bcm, tract,
 			    retifset, 0, iosidx, nios))
@@ -850,7 +849,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPL_ACTIVE] = 0;
 		retifset[SL_REPL_OLD] = 0;
 		retifset[SL_REPL_SCHED] = 0;
-		rc = mds_bmap_load_ifvalid(REPLRQ_FCMH(rrq), bmapno, &bcm);
+		rc = mds_bmap_loadvalid(REPLRQ_FCMH(rrq), bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
 			rc = mds_repl_bmap_walk(bcm,
@@ -861,7 +860,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		rc = SLERR_INVALID_BMAP;
 
 	mds_repl_tryrmqfile(rrq);
-	return (0);
+	return (rc);
 }
 
 void
@@ -1087,10 +1086,10 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		tract[SL_REPL_ACTIVE] = -1;
 
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm)) {
-				bmap_op_done(bcm);
+			if (mds_bmap_loadvalid(REPLRQ_FCMH(rrq),
+			    n, &bcm))
 				continue;
-			}
+
 			BMAP_LOCK(bcm);
 			mds_repl_bmap_walk(bcm, tract,
 			    NULL, 0, &iosidx, 1);
