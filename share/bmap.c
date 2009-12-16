@@ -67,6 +67,12 @@ bmap_try_release_locked(struct bmapc_memb *b)
 		b->bcm_mode |= BMAP_CLOSING;
 		BMAP_ULOCK(b);
 
+#if 0
+		while (atomic_read(&b->bcm_waitq.wq_nwaiters)) {
+			psc_waitq_wakeall(&b->bcm_waitq);
+			sched_yield();
+		}
+#endif
 		bmap_remove(b);
 
 		return (1);
@@ -101,8 +107,9 @@ bmap_lookup_locked(struct fidc_open_obj *fcoo, sl_blkno_t n)
 
 	lb.bcm_blkno=n;
 	b = SPLAY_FIND(bmap_cache, &fcoo->fcoo_bmapc, &lb);
-	if (b)
-		atomic_inc(&b->bcm_opcnt);
+	if (b) {
+		bmap_op_start(b);
+	}
 
 	return (b);
 }
@@ -160,7 +167,7 @@ bmap_lookup_add(struct fidc_membh *f, sl_blkno_t n,
 		bmap_init_fn(b);
 		/* Add to the fcmh's bmap cache but first up the opcnt.
 		 */
-		atomic_inc(&b->bcm_opcnt);
+		bmap_op_start(b);
 		SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);
 	}
 	ureqlock(&f->fcmh_lock, locked);
