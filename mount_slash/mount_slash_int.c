@@ -1547,7 +1547,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, int rw)
 	for (nr=0; s <= e; s++, nr++) {
 		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
 			   "sz=%zu tlen=%zu off=%"PSCPRIdOFF" roff=%"PSCPRIdOFF
-			   " op=%d", tsize, tlen, off, roff, op);
+			   " rw=%d", tsize, tlen, off, roff, rw);
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
 		 */
