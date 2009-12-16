@@ -125,19 +125,18 @@ enum {
 		 ## __VA_ARGS__)
 
 struct slvr_ref *
-	slvr_lookup(uint16_t, struct bmap_iod_info *, int);
+	slvr_lookup(uint32_t, struct bmap_iod_info *, enum rw);
 void	slvr_cache_init(void);
-void    slvr_clear_inuse(struct slvr_ref *, int, uint32_t);
+void	slvr_clear_inuse(struct slvr_ref *, int, uint32_t);
 int	slvr_do_crc(struct slvr_ref *);
-int	slvr_fsbytes_io(struct slvr_ref *, int);
 int	slvr_fsbytes_wio(struct slvr_ref *, uint32_t, uint32_t);
-int	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, int);
+int	slvr_io_prep(struct slvr_ref *, uint32_t, uint32_t, enum rw);
 void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_rio_done(struct slvr_ref *);
-void    slvr_schedule_crc(struct slvr_ref *);
-void	slvr_slab_prep(struct slvr_ref *, int);
+void	slvr_schedule_crc(struct slvr_ref *);
+void	slvr_slab_prep(struct slvr_ref *, enum rw);
 void	slvr_wio_done(struct slvr_ref *);
-void    slvr_worker_init(void);
+void	slvr_worker_init(void);
 
 static __inline int
 slvr_cmp(const void *x, const void *y)

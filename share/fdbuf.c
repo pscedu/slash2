@@ -80,7 +80,7 @@ int
 bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
     struct slash_fidgen *fgp, sl_blkno_t *bmapnop,
     lnet_process_id_t cli_prid, lnet_nid_t ion_nid,
-    sl_ios_id_t ios_id, int rw)
+    sl_ios_id_t ios_id, enum rw rw)
 {
 	const lnet_process_id_t *prid;
 	char buf[DESCBUF_REPRLEN];

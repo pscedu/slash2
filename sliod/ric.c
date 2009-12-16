@@ -45,7 +45,7 @@ sli_ric_handle_connect(struct pscrpc_request *rq)
 }
 
 int
-sli_ric_handle_io(struct pscrpc_request *rq, int rw)
+sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct slash_fidgen fg;

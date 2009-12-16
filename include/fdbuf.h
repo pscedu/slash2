@@ -17,7 +17,7 @@ void bdbuf_sign(struct srt_bmapdesc_buf *, const struct slash_fidgen *,
 	lnet_process_id_t, lnet_nid_t, sl_ios_id_t, sl_blkno_t);
 int  bdbuf_check(const struct srt_bmapdesc_buf *, uint64_t *,
 	struct slash_fidgen *, sl_blkno_t *, lnet_process_id_t, lnet_nid_t,
-	sl_ios_id_t, int);
+	sl_ios_id_t, enum rw);
 
 void fdbuf_sign(struct srt_fd_buf *, const struct slash_fidgen *,
 	lnet_process_id_t);

@@ -97,7 +97,7 @@ struct pscrpc_import *
 	 msl_bmap_to_import(struct bmapc_memb *, int);
 void	 msl_bmap_fhcache_clear(struct msl_fhent *);
 int	 msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-int	 msl_io(struct msl_fhent *, char *, size_t, off_t, int);
+int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
@@ -125,7 +125,7 @@ extern struct psc_listcache	 bmapFlushQ;
 extern struct sl_resm		*slc_rmc_resm;
 
 static __inline void
-msl_fbr_ref(struct msl_fbr *r, int rw)
+msl_fbr_ref(struct msl_fbr *r, enum rw rw)
 {
 	psc_assert(r->mfbr_bmap);
 
@@ -148,13 +148,12 @@ msl_fbr_unref(const struct msl_fbr *r)
 }
 
 static __inline struct msl_fbr *
-msl_fbr_new(struct bmapc_memb *b, int rw)
+msl_fbr_new(struct bmapc_memb *b, enum rw rw)
 {
 	struct msl_fbr *r = PSCALLOC(sizeof(*r));
 
 	r->mfbr_bmap = b;
 	msl_fbr_ref(r, rw);
-
 	return (r);
 }
 

@@ -117,7 +117,7 @@ slvr_clear_inuse(struct slvr_ref *s, int sblk, uint32_t size)
 }
 
 __static int
-slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, int rw)
+slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 {
 	int	i;
 	ssize_t	rc;
@@ -283,7 +283,7 @@ slvr_repl_prep(struct slvr_ref *s, int src_or_dst)
 }
 
 void
-slvr_slab_prep(struct slvr_ref *s, int rw)
+slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 {
 	struct sl_buffer *tmp=NULL;
 
@@ -351,7 +351,7 @@ slvr_slab_prep(struct slvr_ref *s, int rw)
 }
 
 int
-slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, int rw)
+slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 {
 	int		i;
 	int		rc;
@@ -612,7 +612,7 @@ slvr_wio_done(struct slvr_ref *s)
  * Lookup or create a sliver reference, ignoring one that is being freed.
  */
 struct slvr_ref *
-slvr_lookup(uint16_t num, struct bmap_iod_info *b, int rw)
+slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 {
 	struct slvr_ref *s, ts;
 
