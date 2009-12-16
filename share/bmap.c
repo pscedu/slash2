@@ -134,7 +134,7 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 	locked = reqlock(&f->fcmh_lock);
 	b = bmap_lookup_cache(f, n);
 	if (b == NULL) {
-		if ((flags & BMAPLKF_LOAD) == 0) {
+		if ((flags & BMAPGETF_LOAD) == 0) {
 			ureqlock(&f->fcmh_lock, locked);
 			return (ENOENT);
 		}

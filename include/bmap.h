@@ -137,7 +137,7 @@ int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
 
 #define bmap_lookup(f, n, bp)		_bmap_get((f), (n), 0, 0, (bp), NULL)
 #define bmap_get(f, n, rw, bp, arg)	_bmap_get((f), (n), (rw),	\
-					    BMAPLKF_LOAD, (bp), (arg))
+					    BMAPGETF_LOAD, (bp), (arg))
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 
