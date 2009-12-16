@@ -164,11 +164,7 @@ main(int argc, char *argv[])
 	fidcache_init(FIDC_USER_MDS, NULL);
 	libsl_init(PSCNET_SERVER, 1);
 	mds_init();
-
-	_psc_poolmaster_init(&bmap_poolmaster, sizeof(struct bmapc_memb) +
-	    sizeof(struct bmap_mds_info), offsetof(struct bmapc_memb, bcm_lentry),
-	    PPMF_AUTO, 64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
-	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
+	bmap_cache_init(sizeof(struct bmap_mds_info));
 
 	slm_rpc_initsvc();
 	slmreplthr_spawnall();
