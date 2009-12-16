@@ -51,7 +51,7 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 		psc_fmt_human(totbuf, srws->srws_len);
 		printf("%7s %7s", offbuf, totbuf);
 	}
-	printf(" %5s\n", rbuf);
+	printf(" %6s\n", rbuf);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
