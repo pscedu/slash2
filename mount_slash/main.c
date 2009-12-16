@@ -386,10 +386,8 @@ slash2fuse_transflags(uint32_t flags, uint32_t *nflags)
 		*nflags = SLF_WRITE;
 	else if (flags & O_RDWR)
 		*nflags = SLF_READ | SLF_WRITE;
-	else if (flags & O_RDONLY)
-		*nflags = SLF_READ;
 	else
-		return (EINVAL);
+		*nflags = SLF_READ;
 
 	if (flags & O_CREAT)
 		*nflags |= SLF_CREAT;
