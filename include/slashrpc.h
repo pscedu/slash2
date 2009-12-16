@@ -211,7 +211,7 @@ struct srm_bmap_req {
 	uint32_t		blkno;		/* Starting block number                  */
 	uint32_t		nblks;		/* Read-ahead support                     */
 	uint32_t		dio;		/* Client wants directio                  */
-	uint32_t		rw;
+	int32_t			rw;
 	uint32_t                getreptbl;
 };
 
@@ -235,9 +235,9 @@ struct srm_bmap_rep {
  *  which was handed to him by the client.
  */
 struct srm_bmap_wire_req {
-	struct slash_fidgen fg;
-	sl_blkno_t bmapno;
-	int rw;
+	struct slash_fidgen	fg;
+	sl_blkno_t		bmapno;
+	int32_t			rw;
 	//struct srt_bmapdesc_buf sbdb;
 };
 
@@ -257,7 +257,7 @@ struct srm_bmap_wire_rep {
 struct srm_bmap_chmode_req {
 	struct srt_fd_buf	sfdb;
 	uint32_t		blkno;
-	uint32_t		rw;
+	int32_t			rw;
 };
 
 struct srm_bmap_chmode_rep {
@@ -319,7 +319,6 @@ struct srm_open_req {
 	struct slash_creds	creds;
 	uint64_t		ino;
 	uint32_t		flags;
-	uint32_t		mode;
 };
 
 struct srm_open_rep {

@@ -379,20 +379,17 @@ slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 	ureqlock(&fcmh->fcmh_lock, locked);
 }
 
-static void
-slash2fuse_transflags(uint32_t flags, uint32_t *nflags, uint32_t *nmode)
+__static int
+slash2fuse_transflags(uint32_t flags, uint32_t *nflags)
 {
-	if (flags & O_WRONLY) {
-		*nmode = SL_WRITE;
+	if (flags & O_WRONLY)
 		*nflags = SLF_WRITE;
-
-	} else if (flags & O_RDWR) {
-		*nmode = SL_WRITE | SL_READ;
+	else if (flags & O_RDWR)
 		*nflags = SLF_READ | SLF_WRITE;
-	} else {
-		*nmode = SL_READ;
+	else if (flags & O_RDONLY)
 		*nflags = SLF_READ;
-	}
+	else
+		return (EINVAL);
 
 	if (flags & O_CREAT)
 		*nflags |= SLF_CREAT;
@@ -404,7 +401,6 @@ slash2fuse_transflags(uint32_t flags, uint32_t *nflags, uint32_t *nmode)
 		*nflags |= SLF_RSYNC;
 	if (flags & O_APPEND)
 		*nflags |= SLF_APPEND;
-	*nflags |= SLF_OFFMAX;
 	if (flags & O_NOFOLLOW)
 		*nflags |= SLF_NOFOLLOW;
 	if (flags & O_TRUNC)
@@ -413,6 +409,8 @@ slash2fuse_transflags(uint32_t flags, uint32_t *nflags, uint32_t *nmode)
 		*nflags |= SLF_EXCL;
 	if (flags & O_DIRECTORY)
 		*nflags |= SLF_DIRECTORY;
+	*nflags |= SLF_OFFMAX;
+	return (0);
 }
 
 static int
@@ -436,7 +434,9 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		return (rc);
 
 	slash2fuse_getcred(req, &mq->creds);
-	slash2fuse_transflags(fi->flags, &mq->flags, &mq->mode);
+	rc = slash2fuse_transflags(fi->flags, &mq->flags);
+	if (rc)
+		goto out;
 	mq->ino = ino;
 
 	rc = RSX_WAITREP(rq, mp);
@@ -447,6 +447,7 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		    &mp->sfdb, sizeof(mp->sfdb));
 		//fidc_membh_setattr(h, &mp->attr);
 	}
+ out:
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -559,8 +560,9 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 
 	slash2fuse_getcred(req, &mq->creds);
-	slash2fuse_transflags((fi->flags | O_CREAT),
-			      &mq->flags, &mq->mode);
+	rc = slash2fuse_transflags(fi->flags | O_CREAT, &mq->flags);
+	if (rc)
+		goto out;
 	mq->mode = mode;
 	mq->pino = parent;
 	strlcpy(mq->name, name, sizeof(mq->name));
@@ -1263,7 +1265,6 @@ slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct msl_fhent *mfh;
 	struct fidc_membh *h;
 	int rc=0;
-	uint32_t mode;
 
 	mfh = (void *)fi->fh;
 	h = mfh->mfh_fcmh;
@@ -1281,13 +1282,16 @@ slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		return (rc);
 
 	slash2fuse_getcred(req, &mq->creds);
-	slash2fuse_transflags(fi->flags, &mq->flags, &mode);
+	rc = slash2fuse_transflags(fi->flags, &mq->flags);
+	if (rc)
+		goto out;
 	memcpy(&mq->sfdb, &h->fcmh_fcoo->fcoo_fdb, sizeof(mq->sfdb));
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
 
+ out:
 	pscrpc_req_finished(rq);
 	return (rc);
 }
