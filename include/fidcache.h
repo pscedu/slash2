@@ -46,8 +46,9 @@ struct sl_fsops {
  */
 struct fidc_membh {
 	struct slash_fidgen	 fcmh_fg;		/* identity of the file */
-	struct timespec		 fcmh_age;		/* age of the attributes */
+	struct timespec		 fcmh_age;		/* age of this entry */
 	struct stat		 fcmh_stb;		/* file attributes */
+	struct fidc_nameinfo	*fcmh_name;
 	struct fidc_open_obj	*fcmh_fcoo;
 	int			 fcmh_state;
 	psc_spinlock_t		 fcmh_lock;
@@ -58,7 +59,6 @@ struct fidc_membh {
 	struct psc_waitq	 fcmh_waitq;
 	struct sl_fsops		*fcmh_fsops;
 
-	struct fidc_nameinfo	*fcmh_name;
 	struct fidc_membh	*fcmh_parent;
 	struct psclist_head	 fcmh_sibling;
 	struct psclist_head	 fcmh_children;

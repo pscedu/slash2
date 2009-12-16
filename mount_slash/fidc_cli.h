@@ -11,7 +11,6 @@
 struct fidc_membh;
 
 struct fidc_nameinfo {
-	struct timespec		 fni_age;
 	int			 fni_hash;
 	char			 fni_name[];
 };
