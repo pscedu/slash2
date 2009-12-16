@@ -96,10 +96,6 @@
 #define SLF_NOFOLLOW	0x20000		/* don't follow symlinks */
 #define SLF_IGNORECASE	0x80000		/* request case-insensitive lookups */
 
-/* I/O modes */
-#define SL_READ		00400
-#define SL_WRITE	00200
-
 #define SL_GETREPTBL    01000
 
 /* Slash RPC message types. */
