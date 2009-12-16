@@ -81,28 +81,25 @@
 
 /* Slash OPEN message flags */
 /* XXX make system agnostic */
-#define SL_FREAD	1
-#define SL_FWRITE	2
-#define SL_FAPPEND	O_APPEND
-//#define FAPPEND	8
-#define SL_FCREAT	O_CREAT
-#define SL_FTRUNC	O_TRUNC
-#define SL_FOFFMAX	O_LARGEFILE
-#define SL_FSYNC	O_SYNC
-#define SL_FDSYNC	O_DSYNC
-#define SL_FRSYNC	O_RSYNC
-#define SL_FEXCL	O_EXCL
-#define SL_DIRECTORY	O_DIRECTORY
-#define SL_FNODSYNC	0x10000		/* fsync pseudo flag */
-#define SL_FNOFOLLOW	0x20000		/* don't follow symlinks */
-#define SL_FIGNORECASE	0x80000		/* request case-insensitive lookups */
+#define SLF_READ	1
+#define SLF_WRITE	2
+#define SLF_APPEND	O_APPEND
+#define SLF_CREAT	O_CREAT
+#define SLF_TRUNC	O_TRUNC
+#define SLF_OFFMAX	O_LARGEFILE
+#define SLF_SYNC	O_SYNC
+#define SLF_DSYNC	O_DSYNC
+#define SLF_RSYNC	O_RSYNC
+#define SLF_EXCL	O_EXCL
+#define SLF_DIRECTORY	O_DIRECTORY
+#define SLF_NODSYNC	0x10000		/* fsync pseudo flag */
+#define SLF_NOFOLLOW	0x20000		/* don't follow symlinks */
+#define SLF_IGNORECASE	0x80000		/* request case-insensitive lookups */
 
 /* I/O modes */
 #define SL_READ		00400
 #define SL_WRITE	00200
-#define SL_EXEC		00100
 
-/* */
 #define SL_GETREPTBL    01000
 
 /* Slash RPC message types. */

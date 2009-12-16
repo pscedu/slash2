@@ -326,26 +326,26 @@ slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 
 #define SL2F_UPOPREF_READ() do {				\
 		if (!o->fcoo_oref_rd)				\
-			*uord |= SL_FREAD;			\
+			*uord |= SLF_READ;			\
 		o->fcoo_oref_rd++;				\
 	} while (0)
 
 #define SL2F_UPOPREF_WRITE() do {				\
 		if (!o->fcoo_oref_wr)				\
-			*uord |= SL_FWRITE;			\
+			*uord |= SLF_WRITE;			\
 		o->fcoo_oref_wr++;				\
 	} while (0)
 
 #define SL2F_DOWNOPREF_READ() do {				\
 		o->fcoo_oref_rd--;				\
 		if (!o->fcoo_oref_rd)				\
-			*uord |= SL_FREAD;			\
+			*uord |= SLF_READ;			\
 	} while (0)
 
 #define SL2F_DOWNOPREF_WRITE() do {				\
 		o->fcoo_oref_wr--;				\
 		if (!o->fcoo_oref_wr)				\
-			*uord |= SL_FWRITE;			\
+			*uord |= SLF_WRITE;			\
 	} while (0)
 
 	psc_assert(o->fcoo_oref_rd >= 0);
@@ -384,36 +384,35 @@ slash2fuse_transflags(uint32_t flags, uint32_t *nflags, uint32_t *nmode)
 {
 	if (flags & O_WRONLY) {
 		*nmode = SL_WRITE;
-		*nflags = SL_FWRITE;
+		*nflags = SLF_WRITE;
 
 	} else if (flags & O_RDWR) {
 		*nmode = SL_WRITE | SL_READ;
-		*nflags = SL_FREAD | SL_FWRITE;
+		*nflags = SLF_READ | SLF_WRITE;
 	} else {
 		*nmode = SL_READ;
-		*nflags = SL_FREAD;
+		*nflags = SLF_READ;
 	}
 
 	if (flags & O_CREAT)
-		*nflags |= SL_FCREAT;
+		*nflags |= SLF_CREAT;
 	if (flags & O_SYNC)
-		*nflags |= SL_FSYNC;
+		*nflags |= SLF_SYNC;
 	if (flags & O_DSYNC)
-		*nflags |= SL_FDSYNC;
+		*nflags |= SLF_DSYNC;
 	if (flags & O_RSYNC)
-		*nflags |= SL_FRSYNC;
+		*nflags |= SLF_RSYNC;
 	if (flags & O_APPEND)
-		*nflags |= SL_FAPPEND;
-	//if (flags & O_LARGEFILE)
-	*nflags |= SL_FOFFMAX;
+		*nflags |= SLF_APPEND;
+	*nflags |= SLF_OFFMAX;
 	if (flags & O_NOFOLLOW)
-		*nflags |= SL_FNOFOLLOW;
+		*nflags |= SLF_NOFOLLOW;
 	if (flags & O_TRUNC)
-		*nflags |= SL_FTRUNC;
+		*nflags |= SLF_TRUNC;
 	if (flags & O_EXCL)
-		*nflags |= SL_FEXCL;
+		*nflags |= SLF_EXCL;
 	if (flags & O_DIRECTORY)
-		*nflags |= SL_DIRECTORY;
+		*nflags |= SLF_DIRECTORY;
 }
 
 static int
@@ -496,7 +495,7 @@ slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino,
 	 *  file is being opened for a new mode. (i.e. already opened
 	 *  read but is now being open for write).
 	 */
-	if (flags & SL_FWRITE || flags & SL_FREAD)
+	if (flags & SLF_WRITE || flags & SLF_READ)
 		rc = slash2fuse_openrpc(req, ino, fi);
 
 	if (c->fcmh_state & FCMH_FCOO_STARTING) {
@@ -504,7 +503,7 @@ slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino,
 		 *  sent an RPC above because either the read or
 		 *  write refcnt must have went to 1.
 		 */
-		psc_assert((flags & SL_FWRITE) || (flags & SL_FREAD));
+		psc_assert((flags & SLF_WRITE) || (flags & SLF_READ));
 
 		if (!rc)
 			fidc_fcoo_startdone(c);
@@ -1073,10 +1072,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			psc_trace("adding i+g:%"PRId64"+%"PRId64" rc=%d",
 				  fg.fg_fid, fg.fg_gen, attr->rc);
 
-			rc = fidc_lookup(&fg, 
-					 FIDC_LOOKUP_CREATE|
-					 FIDC_LOOKUP_COPY|
-					 FIDC_LOOKUP_REFRESH, 
+			rc = fidc_lookup(&fg,
+					 FIDC_LOOKUP_CREATE |
+					 FIDC_LOOKUP_COPY |
+					 FIDC_LOOKUP_REFRESH,
 					 &attr->attr, &mq->creds, &fcmh);
 
 			if (fcmh)

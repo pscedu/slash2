@@ -535,7 +535,7 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	rc = mds_fcmh_tryref_fmdsi(fcmh);
 	if (rc) {
 		rc = zfsslash2_opencreate(zfsVfs, fgp->fg_fid,
-		    &rootcreds, SL_FREAD, 0, NULL, &fg, &stb, &data);
+		    &rootcreds, SLF_READ, 0, NULL, &fg, &stb, &data);
 		if (rc)
 			return (rc);
 		rc = mds_fcmh_load_fmdsi(fcmh, data, 1);

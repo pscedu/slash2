@@ -265,23 +265,23 @@ slm_rmc_translate_flags(int in, int *out)
 {
 	*out = 0;
 
-	if (in & ~(SL_FREAD | SL_FWRITE | SL_FAPPEND | SL_FCREAT |
-	    SL_FTRUNC | SL_FOFFMAX | SL_FSYNC | SL_FDSYNC |
-	    SL_FRSYNC | SL_FEXCL | SL_FNODSYNC))
+	if (in & ~(SLF_READ | SLF_WRITE | SLF_APPEND | SLF_CREAT |
+	    SLF_TRUNC | SLF_OFFMAX | SLF_SYNC | SLF_DSYNC |
+	    SLF_RSYNC | SLF_EXCL | SLF_NODSYNC))
 		return (EINVAL);
-	/* XXX SL_FNOFOLLOW not implemented */
-	if ((in & (SL_FREAD | SL_FWRITE)) == 0)
+	/* XXX SLF_NOFOLLOW not implemented */
+	if ((in & (SLF_READ | SLF_WRITE)) == 0)
 		return (EINVAL);
 
-	if (in & SL_FREAD)
-		*out |= SL_FREAD;
-	if (in & SL_FWRITE)
-		*out |= SL_FWRITE;
-	if (in & SL_FCREAT)
-		*out |= SL_FCREAT;
-	if (in & SL_FEXCL)
-		*out |= SL_FEXCL;
-	*out |= SL_FOFFMAX;
+	if (in & SLF_READ)
+		*out |= SLF_READ;
+	if (in & SLF_WRITE)
+		*out |= SLF_WRITE;
+	if (in & SLF_CREAT)
+		*out |= SLF_CREAT;
+	if (in & SLF_EXCL)
+		*out |= SLF_EXCL;
+	*out |= SLF_OFFMAX;
 	return (0);
 }
 
