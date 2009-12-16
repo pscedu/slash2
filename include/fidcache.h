@@ -183,13 +183,12 @@ SPLAY_HEAD(bmap_cache, bmapc_memb);
 
 struct fidc_open_obj {
 	struct srt_fd_buf	 fcoo_fdb;
-	int			 fcoo_oref_rw[2];	/* open cnt for r & w */
+	int			 fcoo_oref_rd;
+	int			 fcoo_oref_wr;
 	int                      fcoo_fd;
 	struct bmap_cache	 fcoo_bmapc;		/* bmap cache splay */
 	size_t			 fcoo_bmap_sz;
 	void			*fcoo_pri;		/* msl_fcoo_data or fidc_mds_info */
-#define fcoo_oref_rd		 fcoo_oref_rw[0]
-#define fcoo_oref_wr		 fcoo_oref_rw[1]
 };
 
 #define FCOO_STARTING		((struct fidc_open_obj *)0x01)
@@ -200,7 +199,7 @@ enum fidc_lookup_flags {
 	FIDC_LOOKUP_COPY	= (1 << 2),	/* Create from existing attrs    */
 	FIDC_LOOKUP_LOAD	= (1 << 3),	/* Create, get attrs from mds    */
 	FIDC_LOOKUP_REFRESH	= (1 << 3),	/* load and refresh are the same */
-	FIDC_LOOKUP_FCOOSTART	= (1 << 4) 	/* start the fcoo before exposing the cache entry. */
+	FIDC_LOOKUP_FCOOSTART	= (1 << 4)	/* start the fcoo before exposing the cache entry. */
 };
 
 #define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
