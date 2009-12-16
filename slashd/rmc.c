@@ -292,7 +292,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct srm_opencreate_rep *mp;
 	struct slash_fidgen fg;
 	void *finfo;
-
 	int fl;
 
 	ENTRY;
