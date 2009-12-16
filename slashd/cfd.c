@@ -12,6 +12,7 @@
 #include <stdio.h>
 
 #include "psc_ds/tree.h"
+#include "psc_ds/treeutil.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
@@ -202,7 +203,7 @@ cfdfreeall(struct pscrpc_export *exp, enum slconn_type peertype)
 		c->cfd_flags |= CFD_CLOSING | CFD_FORCE_CLOSE;
 		nxt = SPLAY_NEXT(cfdtree, &mc->mc_cfdtree, c);
 
-		SPLAY_XREMOVE(cfdtree, &mc->mc_cfdtree, c);
+		PSC_SPLAY_XREMOVE(cfdtree, &mc->mc_cfdtree, c);
 
 		if (cfd_ops.cfd_free)
 			cfd_ops.cfd_free(c, exp);

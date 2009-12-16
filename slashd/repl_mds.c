@@ -11,6 +11,7 @@
 
 #include "psc_ds/pool.h"
 #include "psc_ds/tree.h"
+#include "psc_ds/treeutil.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
 #include "psc_util/crc.h"
@@ -777,7 +778,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	else
 		rc = zfsslash2_unlink(zfsVfs,
 		    mds_repldir_inum, fn, &rootcreds);
-	SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
+	PSC_SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
 	freelock(&replrq_tree_lock);
 
 	psc_atomic32_dec(&rrq->rrq_refcnt);	/* removed from tree */

@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include "psc_ds/tree.h"
+#include "psc_ds/treeutil.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
@@ -327,7 +328,7 @@ mexpfcm_release_brefs(struct mexpfcm *m)
 	for (bref = SPLAY_MIN(exp_bmaptree, &m->mexpfcm_bmaps);
 	    bref; bref = bn) {
 		bn = SPLAY_NEXT(exp_bmaptree, &m->mexpfcm_bmaps, bref);
-		SPLAY_XREMOVE(exp_bmaptree, &m->mexpfcm_bmaps, bref);
+		PSC_SPLAY_XREMOVE(exp_bmaptree, &m->mexpfcm_bmaps, bref);
 		mexpfcm_release_bref(bref);
 	}
 }
@@ -379,7 +380,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	 *  serialization) and remove ourselves from the tree.
 	 */
 	locked = reqlock(&f->fcmh_lock);
-	SPLAY_XREMOVE(fcm_exports, &i->fmdsi_exports, m);
+	PSC_SPLAY_XREMOVE(fcm_exports, &i->fmdsi_exports, m);
 	ureqlock(&f->fcmh_lock, locked);
  out:
 	if (f)
