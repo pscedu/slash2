@@ -122,6 +122,10 @@ struct slash_bmap_od {
 		 atomic_read(&(b)->bcm_opcnt),				\
 		 ## __VA_ARGS__)
 
+#define bmap_op_start(b)				\
+	atomic_inc(&(b)->bcm_opcnt);			\
+	DEBUG_BMAP(PLL_NOTIFY, (b), "took reference")
+
 void bmap_cache_init(size_t);
 int  bmap_cmp(const void *, const void *);
 void bmap_op_done(struct bmapc_memb *);
