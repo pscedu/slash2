@@ -254,7 +254,7 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	rq->rq_interpret_reply = sli_rii_replread_cb;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
 
-	bmap_op_start(&w->srw_bcm);
+	bmap_op_start(w->srw_bcm);
 	fidc_membh_incref(w->srw_fcmh);
 	nbreqset_add(&sli_replwk_nbset, rq);
 
