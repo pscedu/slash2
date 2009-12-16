@@ -262,6 +262,7 @@ mds.c
 - allow N slivers inflight at once between two sliods
 - trace the errors in RII (EAGAIN)
 - check crcstate bits in sliod to skip repl I/O
+- adapt tsuite
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
