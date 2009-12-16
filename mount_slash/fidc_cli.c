@@ -6,13 +6,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
-#include "psc_util/time.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "pfl/cdefs.h"
 #include "psc_util/strlcpy.h"
+#include "psc_util/time.h"
 
 #include "cache_params.h"
 #include "fid.h"
@@ -321,7 +321,6 @@ fidc_child_cmp(const void *x, const void *y)
 	return (0);
 }
 
-__static SPLAY_GENERATE(bmap_cache, bmapc_memb, bcm_tentry, bmapc_cmp);
 #endif
 
 /**
