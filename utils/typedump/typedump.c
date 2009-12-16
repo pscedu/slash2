@@ -127,8 +127,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct fidc_iod_info);
 	PRTYPE(struct fidc_mds_info);
 	PRTYPE(struct fidc_membh);
+	PRTYPE(struct fidc_nameinfo);
 	PRTYPE(struct fidc_open_obj);
-	PRTYPE(struct fidc_private);
 	PRTYPE(struct iod_resm_info);
 	PRTYPE(struct jflush_item);
 	PRTYPE(struct mds_resm_info);
@@ -171,6 +171,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slashrpc_export);
 	PRTYPE(struct sli_repl_workrq);
+	PRTYPE(struct slictlmsg_replwkst);
 	PRTYPE(struct sliric_thread);
 	PRTYPE(struct slirii_thread);
 	PRTYPE(struct slirim_thread);
