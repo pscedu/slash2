@@ -408,7 +408,7 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	BMAP_LOCK(b);
 	while (!pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs) ||
 	       !pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs)  ||
-	       psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry)) {
+	       (b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
 		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 		BMAP_LOCK(b);
 	}
