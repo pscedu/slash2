@@ -60,7 +60,7 @@ sub runfio {
 	close CONF;
 
 	my \$start = time;
-	system "perl $h{src}/zest/utils/tsuite/gdbtry.pl ./fio.pthreads -i \$conf";
+	system "perl $h{gdbtry} ./fio.pthreads -i \$conf";
 	exit \$? if \$?;
 	my \$diff = time - \$start;
 

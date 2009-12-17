@@ -126,7 +126,8 @@ print CLICMD cli_cmd(
 	base	=> $base,
 	src	=> $src,
 	logbase	=> $logbase,
-	doresults => "perl $zbase/utils/tsuite/doresults.pl " .
+	gdbtry	=> "$src/tools/gdbtry.pl ",
+	doresults => "perl $src/tools/tsuite_results.pl " .
 		($opts{N} ? "-N " : "") . ($opts{m} ? "-m " : "") .
 		" $testname $logbase");
 close CLICMD;
