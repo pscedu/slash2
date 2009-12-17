@@ -17,6 +17,13 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * Routines implementing replication features in the MDS.
+ *
+ * This ranges from tracking the replication state of each bmap's copy on
+ * each ION and managing replication requests and persistent behavior.
+ */
+
 #include <sys/param.h>
 
 #include <linux/fuse.h>
@@ -699,7 +706,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 				repl_all_act = 0;
 			mds_repl_bmap_rel(bcm);
 		}
-		if (REPLRQ_NBMAPS(rrq) && repl_some_act == 0)
+		if (bmapno && repl_some_act == 0)
 			rc = EALREADY;
 		else if (repl_all_act)
 			rc = SLERR_REPL_ALREADY_ACT;
