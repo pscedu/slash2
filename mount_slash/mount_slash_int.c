@@ -906,7 +906,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		BMPCE_ULOCK(bmpce);
 	}
 
-	r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP|BIORQ_SCHED);
+	r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP);
 	DEBUG_BIORQ(PLL_INFO, r, "readio cb complete");
 	psc_waitq_wakeall(&r->biorq_waitq);
 	freelock(&r->biorq_lock);
