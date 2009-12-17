@@ -1,0 +1,5 @@
+# $Id: mz.gdbcmd 6296 2009-05-15 15:24:17Z yanovich $
+
+set confirm off
+set height 0
+run -S ctl/mz.%h.sock fs mp
