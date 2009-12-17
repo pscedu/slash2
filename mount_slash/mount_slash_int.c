@@ -1169,6 +1169,10 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	memcpy(&mq->sbdb, &bmap_2_msbd(r->biorq_bmap)->msbd_bdb,
 	       sizeof(mq->sbdb));
 
+	r->biorq_flags |= BIORQ_INFL;
+	
+	DEBUG_BIORQ(PLL_NOTIFY, r, "launching read req");
+
 	pscrpc_set_add_new_req(r->biorq_rqset, req);
 	if (pscrpc_push_req(req)) {
 		DEBUG_REQ(PLL_ERROR, req,
