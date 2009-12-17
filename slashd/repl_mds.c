@@ -310,8 +310,15 @@ mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
  * mds_repl_bmap_walk - walk the bmap replication bits, performing any
  *	specified translations and returning any queried states.
  * @b: bmap.
- * @tract: action translation array.
- * @retifset: return given value, last one wins.
+ * @tract: translation actions; for each array slot, set states of the type
+ *	corresponding to the array index to the array value.  For example:
+ *
+ *		tract[SL_REPL_INACT] = SL_REPL_ACT
+ *
+ *	This changes any SL_REPL_INACT states into SL_REPL_ACT.
+ * @retifset: return the value of the slot in this array corresponding to
+ *	the state value as the slot index, if the array value is nonzero;
+ *	the last replica always gets priority unless SCIRCUIT is specified.
  * @flags: operational flags.
  * @iosidx: indexes of I/O systems to exclude or query, or NULL for everyone.
  * @nios: # I/O system indexes specified.
@@ -596,7 +603,7 @@ int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
     const sl_replica_t *iosv, int nios)
 {
-	int iosidx[SL_MAX_REPLICAS], rc, locked, tract[4], retifset[4], retifset2[4];
+	int iosidx[SL_MAX_REPLICAS], rc, locked, tract[4], retifset[4], retifzero[4];
 	struct sl_replrq *newrq, *rrq;
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
@@ -678,8 +685,13 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	tract[SL_REPL_OLD] = -1;
 	tract[SL_REPL_ACTIVE] = -1;
 
+	retifzero[SL_REPL_INACTIVE] = 0;
+	retifzero[SL_REPL_ACTIVE] = 1;
+	retifzero[SL_REPL_OLD] = 0;
+	retifzero[SL_REPL_SCHED] = 0;
+
 	if (bmapno == (sl_blkno_t)-1) {
-		int repl_some_act = 0, repl_all_act = 1;
+		int ret_if_inact[4], repl_some_act = 0, repl_all_act = 1;
 
 		/* check if all bmaps are already old/queued */
 		retifset[SL_REPL_INACTIVE] = 1;
@@ -688,21 +700,32 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPL_ACTIVE] = 1;
 
 		/* check if all bmaps are already active */
-		retifset2[SL_REPL_INACTIVE] = 1;
-		retifset2[SL_REPL_SCHED] = 1;
-		retifset2[SL_REPL_OLD] = 1;
-		retifset2[SL_REPL_ACTIVE] = 0;
+		ret_if_inact[SL_REPL_INACTIVE] = 1;
+		ret_if_inact[SL_REPL_SCHED] = 1;
+		ret_if_inact[SL_REPL_OLD] = 1;
+		ret_if_inact[SL_REPL_ACTIVE] = 0;
 
 		for (bmapno = 0; bmapno < REPLRQ_NBMAPS(rrq); bmapno++) {
-			if (mds_bmap_loadvalid(REPLRQ_FCMH(rrq),
+			if (mds_bmap_load(REPLRQ_FCMH(rrq),
 			    bmapno, &bcm))
 				continue;
 
 			BMAP_LOCK(bcm);
+
+			/*
+			 * If no ACTIVE replicas exist, the bmap must be
+			 * uninitialized/all zeroes.  Skip it.
+			 */
+			if (mds_repl_bmap_walk(bcm, NULL, retifzero,
+			    REPL_WALKF_SCIRCUIT, NULL, 0) == 0) {
+				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+				continue;
+			}
+
 			repl_some_act |= mds_repl_bmap_walk(bcm,
 			    tract, retifset, 0, iosidx, nios);
-			if (repl_all_act && mds_repl_bmap_walk(bcm,
-			    NULL, retifset2, REPL_WALKF_SCIRCUIT, NULL, 0))
+			if (repl_all_act && mds_repl_bmap_walk(bcm, NULL,
+			    ret_if_inact, REPL_WALKF_SCIRCUIT, NULL, 0))
 				repl_all_act = 0;
 			mds_repl_bmap_rel(bcm);
 		}
@@ -719,12 +742,22 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPL_SCHED] = EALREADY;
 		retifset[SL_REPL_OLD] = EALREADY;
 		retifset[SL_REPL_ACTIVE] = 0;
-		rc = mds_bmap_loadvalid(REPLRQ_FCMH(rrq), bmapno, &bcm);
+		rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
-			rc = mds_repl_bmap_walk(bcm,
-			    tract, retifset, 0, iosidx, nios);
-			mds_repl_bmap_rel(bcm);
+
+			/*
+			 * If no ACTIVE replicas exist, the bmap must be
+			 * uninitialized/all zeroes.  Skip it.
+			 */
+			if (mds_repl_bmap_walk(bcm, NULL, retifzero,
+			    REPL_WALKF_SCIRCUIT, NULL, 0) == 0)
+				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+			else {
+				rc = mds_repl_bmap_walk(bcm,
+				    tract, retifset, 0, iosidx, nios);
+				mds_repl_bmap_rel(bcm);
+			}
 		}
 	} else
 		rc = SLERR_INVALID_BMAP;
@@ -736,7 +769,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	return (rc);
 }
 
-/* XXX this should also remove any ios that are empty in all bmaps from the inode */
+/* XXX this should also remove any ios' that are empty in all bmaps from the inode */
 void
 mds_repl_tryrmqfile(struct sl_replrq *rrq)
 {
@@ -768,7 +801,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-		if (mds_bmap_loadvalid(REPLRQ_FCMH(rrq), n, &bcm))
+		if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
 			continue;
 
 		BMAP_LOCK(bcm);
@@ -858,7 +891,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 
 		rc = SLERR_REPLS_ALL_INACT;
 		for (bmapno = 0; bmapno < REPLRQ_NBMAPS(rrq); bmapno++) {
-			if (mds_bmap_loadvalid(REPLRQ_FCMH(rrq),
+			if (mds_bmap_load(REPLRQ_FCMH(rrq),
 			    bmapno, &bcm))
 				continue;
 
@@ -873,7 +906,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPL_ACTIVE] = 0;
 		retifset[SL_REPL_OLD] = 0;
 		retifset[SL_REPL_SCHED] = 0;
-		rc = mds_bmap_loadvalid(REPLRQ_FCMH(rrq), bmapno, &bcm);
+		rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
 			rc = mds_repl_bmap_walk(bcm,
@@ -1110,7 +1143,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		tract[SL_REPL_ACTIVE] = -1;
 
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			if (mds_bmap_loadvalid(REPLRQ_FCMH(rrq),
+			if (mds_bmap_load(REPLRQ_FCMH(rrq),
 			    n, &bcm))
 				continue;
 

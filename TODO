@@ -254,20 +254,19 @@ mds.c
   slmkfs, slfmtfs, or slnewfs
 - libsl_init() is getting an ENOMEM somewhere in slashd, maybe LNET
 - do not keep sl_replrq in mem unless a bh_repl is OLD or SCHED
-- fix pool names in -Lall -Pall -iall -hall -Mall in each of slmctl, slictl, msctl
 - ensure fidc_lookup_load_fg() will not accept FID_ANY
 - sanity check that someone has an ACTIVE state for a bmap
 - rename BMAPCHMODE -> BMAP_CHRWMODE
-
 - allow N slivers inflight at once between two sliods
 - trace the errors in RII (EAGAIN)
-- check crcstate bits in sliod to skip repl I/O
+- ensure that you can't msctl -U the single copy of data
+- removing the persistence policy on a bmap should mds_repl_delrq()
+  for that bmap
+
 - adapt tsuite
 
-- ensure that you can't msctl -U the single copy of data
-- remove bmap loadvalid, always do it
-- when enqueuing, if no ACTIVE replica exists, don't set the
-  bh_repls bits for the target replica to OLD
+- bump generation and assign ACTIVE bh_repls when assigning bmaps to
+  IONS
 - pass bmap generation number in replwk on ION
 - when updating bh_repls on replwk status update from ION in MDS,
   set immediately to OLD if incoming generation# is older than
@@ -277,3 +276,4 @@ maybe not:
 - merge sl_replrq directly into fidc_mds_info
 - use a sliding window to track valid cfd's and remove them from the window
   once they are CLOSE()'d
+- check crcstate bits in sliod to skip repl I/O

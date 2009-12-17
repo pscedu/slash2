@@ -229,7 +229,7 @@ slmreplthr_main(void *arg)
 				bmapno = psc_random32u(nb);
 				for (ib = 0; ib < nb; ib++,
 				    bmapno = (bmapno + 1) % nb) {
-					rc = mds_bmap_loadvalid(REPLRQ_FCMH(rrq),
+					rc = mds_bmap_load(REPLRQ_FCMH(rrq),
 					    bmapno, &bcm);
 					if (rc)
 						continue;
@@ -246,7 +246,7 @@ slmreplthr_main(void *arg)
 					if (val == SL_REPL_OLD ||
 					    val == SL_REPL_SCHED)
 						has_repl_work = 1;
-					if (val != SL_REPL_OLD) 
+					if (val != SL_REPL_OLD)
 						goto nextbmap;
 
 					/* Got a bmap; now look for a source. */
@@ -285,7 +285,7 @@ slmreplthr_main(void *arg)
 									goto restart;
 						}
 					}
-				nextbmap:
+ nextbmap:
 					mds_repl_bmap_rel(bcm);
 				}
 			}
