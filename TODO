@@ -264,6 +264,15 @@ mds.c
 - check crcstate bits in sliod to skip repl I/O
 - adapt tsuite
 
+- ensure that you can't msctl -U the single copy of data
+- remove bmap loadvalid, always do it
+- when enqueuing, if no ACTIVE replica exists, don't set the
+  bh_repls bits for the target replica to OLD
+- pass bmap generation number in replwk on ION
+- when updating bh_repls on replwk status update from ION in MDS,
+  set immediately to OLD if incoming generation# is older than
+  current existing one
+
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
 - use a sliding window to track valid cfd's and remove them from the window
