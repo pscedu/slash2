@@ -115,21 +115,25 @@ mds_inode_read(struct slash_inode_handle *i)
 	psc_assert(i->inoh_flags & INOH_INO_NOTLOADED);
 
 	rc = mdsio_zfs_inode_read(i);
+
 	if (rc == SLERR_SHORTIO && i->inoh_ino.ino_crc == 0 &&
 	    memcmp(&i->inoh_ino, &null_inode_od, INO_OD_CRCSZ) == 0) {
 		DEBUG_INOH(PLL_INFO, i, "detected a new inode");
 		mds_inode_od_initnew(i);
 		rc = 0;
+
 	} else if (rc) {
 		DEBUG_INOH(PLL_WARN, i, "mdsio_zfs_inode_read: %d", rc);
+
 	} else {
 		psc_crc64_calc(&crc, &i->inoh_ino, INO_OD_CRCSZ);
 		if (crc == i->inoh_ino.ino_crc) {
 			i->inoh_flags &= ~INOH_INO_NOTLOADED;
 			DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
 		} else {
-			DEBUG_INOH(PLL_WARN, i, "CRC failed want=%"PRIx64", got=%"PRIx64,
-			    i->inoh_ino.ino_crc, crc);
+			DEBUG_INOH(PLL_WARN, i, 
+				   "CRC failed want=%"PRIx64", got=%"PRIx64,
+				   i->inoh_ino.ino_crc, crc);
 			rc = EIO;
 		}
 	}

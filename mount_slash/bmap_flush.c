@@ -554,7 +554,7 @@ bmap_flush(void)
 	int i=0, niovs, nrpcs;
 
 	nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
-	psc_notify("nrpcs=%d", nrpcs);
+	psc_trace("nrpcs=%d", nrpcs);
 		
         if (nrpcs <= 0)
                 return;

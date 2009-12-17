@@ -701,7 +701,6 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, enum rw rw)
 	 */
 	msl_bmap_fhcache_ref(mfh, b, BML_HAVE_BMAP, rw);
 
-
 	/* If our bmap is cached then we need to consider the current
 	 *   caching policy and possibly notify the mds.  I.e. if our
 	 *   bmap is read-only (but we'd like to write) then the mds
