@@ -25,7 +25,6 @@ static struct timespec bmapFlushDefMaxAge =  {0, 1000000L};
 __static struct timespec bmapFlushDefSleep = {0, 100000000L};
 
 struct psc_listcache bmapFlushQ;
-struct psc_listcache bmapIOPndg;
 static struct pscrpc_nbreqset *pndgReqs;
 static struct psc_dynarray pndgReqSets=DYNARRAY_INIT;
 
@@ -537,7 +536,7 @@ bmap_flush(void)
 	struct psc_dynarray a=DYNARRAY_INIT, bmaps=DYNARRAY_INIT, *biorqs;
 	struct bmpc_ioreq *r;
 	struct iovec *iovs=NULL;
-	int i=0, niovs, rc, nrpcs;
+	int i=0, niovs, nrpcs;
 
 	nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
 	psc_notify("nrpcs=%d", nrpcs);
@@ -700,7 +699,7 @@ msbmapflushthrrpc_main(__unusedx void *arg)
 		if (shutdown)
 			break;
 	}
-
+	return (NULL);
 }
 
 void
@@ -713,9 +712,6 @@ msbmapflushthr_spawn(void)
 
 	lc_reginit(&bmapFlushQ, struct bmap_cli_info,
 	    msbd_lentry, "bmapFlushQ");
-
-	lc_reginit(&bmapIOPndg, struct bmap_cli_info,
-	    msbd_lentry, "bmapIOPndg");
 
 	pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
 	    NULL, 0, "msbflushthr");
