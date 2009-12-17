@@ -1178,6 +1178,9 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	
 	DEBUG_BIORQ(PLL_NOTIFY, r, "launching read req");
 
+	if (!r->biorq_rqset)
+		r->biorq_rqset = pscrpc_prep_set();
+
 	pscrpc_set_add_new_req(r->biorq_rqset, req);
 	if (pscrpc_push_req(req)) {
 		DEBUG_REQ(PLL_ERROR, req,
@@ -1210,10 +1213,10 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 
 	r->biorq_flags |= BIORQ_SCHED;
 
-	DEBUG_BIORQ(PLL_NOTIFY, r, "prefetch");
+	DEBUG_BIORQ(PLL_NOTIFY, r, "check prefetch");
 
 	psc_assert(!r->biorq_rqset);
-	r->biorq_rqset = pscrpc_prep_set();
+
 	/* Only read in the pages owned by this request.  To do this
 	 *   the below loop marks only the iov slots which correspond
 	 *   to page cache entries owned by this request as determined
