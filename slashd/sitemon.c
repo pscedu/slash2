@@ -246,10 +246,8 @@ slmreplthr_main(void *arg)
 					if (val == SL_REPL_OLD ||
 					    val == SL_REPL_SCHED)
 						has_repl_work = 1;
-					if (val != SL_REPL_OLD) {
-						BMAP_ULOCK(bcm);
-						continue;
-					}
+					if (val != SL_REPL_OLD) 
+						goto nextbmap;
 
 					/* Got a bmap; now look for a source. */
 					nios = REPLRQ_NREPLS(rrq);
@@ -287,6 +285,7 @@ slmreplthr_main(void *arg)
 									goto restart;
 						}
 					}
+				nextbmap:
 					mds_repl_bmap_rel(bcm);
 				}
 			}
