@@ -904,7 +904,8 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	spinlock(&r->biorq_lock);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
-
+	psc_assert(r->biorq_flags & BIORQ_INFL);
+	
 	/* Call the inflight CB only on the iov's in the dynarray -
 	 *   not the iov's in the request since some of those may
 	 *   have already been staged in.
@@ -925,6 +926,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref)
 				   == 1);
 			psc_atomic16_dec(&bmpce->bmpce_rdref);
+			bmpce_inflight_dec_locked(bmpce);
 		}
 		DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via readio_cb");
 
@@ -934,7 +936,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		BMPCE_ULOCK(bmpce);
 	}
 
-	r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP);
+	r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP|BIORQ_INFL);
 	DEBUG_BIORQ(PLL_INFO, r, "readio cb complete");
 	psc_waitq_wakeall(&r->biorq_waitq);
 	freelock(&r->biorq_lock);
