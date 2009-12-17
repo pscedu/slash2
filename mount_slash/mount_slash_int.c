@@ -60,7 +60,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 	/* Take a ref on the bmap now so that it won't go away before
 	 *   pndg IO's complete.
 	 */
-	bmap_op_start(b);
+	bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 
 	if (b->bcm_mode & BMAP_DIO) {
 		/* The bmap is set to use directio, we may then skip
@@ -273,7 +273,7 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg));
-	bmap_op_done(b);
+	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
 }
 
 __static void
@@ -366,6 +366,8 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	struct bmpc_ioreq *biorq;
 	struct bmap_pagecache *bmpc=bmap_2_msbmpc(b);
 
+	ENTRY;
+
 	BMPC_LOCK(bmpc);
 	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_pndg) {
 		spinlock(&biorq->biorq_lock);
@@ -384,12 +386,15 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 
 	BMAP_ULOCK(b);
+	EXIT;
 }
 
 void
 msl_bmap_final_cleanup(struct bmapc_memb *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_msbmpc(b);
+
+	ENTRY;
 
 	bmap_biorq_waitempty(b);
 
@@ -417,6 +422,8 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	BMPC_LOCK(bmpc);
 	bmpc_freeall_locked(bmpc);
 	BMPC_ULOCK(bmpc);
+
+	EXIT;
 }
 
 void
@@ -429,9 +436,8 @@ msl_fbr_free(struct msl_fbr *r)
 
 	msl_fbr_unref(r);
 	PSCFREE(r);
-
 	bmap_biorq_waitempty(b);
-	bmap_op_done(b);
+	bmap_op_done_type(b, BMAP_OPCNT_BREF);
 }
 
 /**
@@ -1086,11 +1092,6 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		b->bcm_mode |= BMAP_DIRTY;
 		if (!(b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
 			b->bcm_mode |= BMAP_CLI_FLUSHPROC;
-			/* Increment the ref count so that the
-			 *   bmap is not freed prior to its
-			 *   pages being flushed.
-			 */
-			bmap_op_start(b);
 			lc_addtail(&bmapFlushQ, bmap_2_msbd(b));
 		}
 	}
@@ -1561,7 +1562,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		}
 		/* Unwind our reference from bmap_get().
 		 */
-		bmap_op_done(b[j]);
+		bmap_op_done_type(b[j], BMAP_OPCNT_LOOKUP);
 	}
 
 	if (rw == SL_WRITE)

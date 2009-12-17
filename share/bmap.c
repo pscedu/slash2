@@ -60,13 +60,13 @@ _bmap_op_done(struct bmapc_memb *b)
 {
 	BMAP_RLOCK(b);
 
+	atomic_dec(&b->bcm_opcnt);
+
 	DEBUG_BMAP(PLL_INFO, b, "bmap_op_done");
 
-	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
+	psc_assert(atomic_read(&b->bcm_opcnt) >= 0);
 	psc_assert(atomic_read(&b->bcm_wr_ref) >= 0);
 	psc_assert(atomic_read(&b->bcm_rd_ref) >= 0);
-
-	atomic_dec(&b->bcm_opcnt);
 
 	if (!atomic_read(&b->bcm_rd_ref) &&
 	    !atomic_read(&b->bcm_wr_ref) &&

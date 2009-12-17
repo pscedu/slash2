@@ -162,7 +162,8 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_LOOKUP,
 	BMAP_OPCNT_IONASSIGN, 
 	BMAP_OPCNT_BREF, 
-	BMAP_OPCNT_MDSLOG
+	BMAP_OPCNT_MDSLOG,
+	BMAP_OPCNT_BIORQ
 };
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
