@@ -886,8 +886,6 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		psc_assert(bmpce->bmpce_waitq);
 		psc_assert(biorq_is_my_bmpce(r, bmpce));
 
-		bmpce_inflight_dec_locked(bmpce);
-
 		bmpce->bmpce_flags |= BMPCE_DATARDY;
 		if (bmpce_is_rbw_page(r, bmpce, i)) {
 			/* The RBW stuff needs to be managed outside of
