@@ -305,7 +305,10 @@ __static void
 msl_biorq_destroy(struct bmpc_ioreq *r)
 {
 	spinlock(&r->biorq_lock);
-	psc_assert(r->biorq_flags & BIORQ_INFL);
+
+	if (r->biorq_flags & BIORQ_WRITE)
+	  psc_assert(r->biorq_flags & BIORQ_INFL);
+
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 	r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
 	r->biorq_flags |= BIORQ_DESTROY;
@@ -1144,7 +1147,10 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 			       biorq_getaligned_off(r, (i+startpage)));
 
 		psc_atomic16_inc(&bmpce->bmpce_infref);
-
+		if (psc_atomic16_read(&bmpce->bmpce_infref) == 1) {
+		  psc_assert(!(bmpce->bmpce_flags & BMPCE_WIRE));
+		  bmpce->bmpce_flags |= BMPCE_WIRE;
+		}
 		DEBUG_BMPCE(PLL_TRACE, bmpce, "adding to rpc");
 
 		BMPCE_ULOCK(bmpce);
@@ -1202,6 +1208,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	npages = psc_dynarray_len(&r->biorq_pages);
 
 	r->biorq_flags |= BIORQ_SCHED;
+
+	DEBUG_BIORQ(PLL_NOTIFY, r, "prefetch");
 
 	psc_assert(!r->biorq_rqset);
 	r->biorq_rqset = pscrpc_prep_set();

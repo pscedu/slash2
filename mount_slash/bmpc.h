@@ -82,7 +82,8 @@ enum BMPCE_STATES {
 	BMPCE_FREEING   = (1<<6),
 	BMPCE_INIT      = (1<<7),
 	BMPCE_READPNDG  = (1<<8),
-	BMPCE_IOSCHED   = (1<<9)
+	BMPCE_IOSCHED   = (1<<9),
+	BMPCE_WIRE      = (1<<10)
 };
 
 #define BMPCE_2_BIORQ(b) ((b)->bmpce_waitq == NULL) ? NULL :	\
@@ -298,10 +299,13 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 
 static inline void bmpce_inflight_dec_locked(struct bmap_pagecache_entry *bmpce)
 {
+       if (!(bmpce->bmpce_flags & BMPCE_WIRE))
+                   return;
+
 	psc_atomic16_dec(&bmpce->bmpce_infref);
 	psc_assert(psc_atomic16_read(&bmpce->bmpce_infref) >= 0);
 	if (!psc_atomic16_read(&bmpce->bmpce_infref)) 
-		bmpce->bmpce_flags &= ~BMPCE_IOSCHED;
+	  bmpce->bmpce_flags &= ~(BMPCE_IOSCHED|BMPCE_WIRE);
 }
 
 /* biorq_is_my_bmpce - informs the caller that biorq, r, owns the 
