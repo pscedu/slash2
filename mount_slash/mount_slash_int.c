@@ -1114,8 +1114,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		 *   one other writer must be present.
 		 */
 		psc_assert(atomic_read(&bmpc->bmpc_pndgwr) > 1);
-		psc_assert((pll_nitems(&bmpc->bmpc_pndg_biorqs) > 1) ||
-			   (pll_nitems(&bmpc->bmpc_new_biorqs) > 1));
+		psc_assert((pll_nitems(&bmpc->bmpc_pndg_biorqs) +	    
+			    pll_nitems(&bmpc->bmpc_new_biorqs)) > 1);
 
 	} else {
 		b->bcm_mode |= BMAP_DIRTY;
