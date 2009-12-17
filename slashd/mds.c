@@ -531,7 +531,7 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 			   ((mode & MEXPBCM_DIO) ||        /* we're in dio mode OR */
 			    (mode & MEXPBCM_DIO_REQD))) {  /* we're going to dio mode */
 
-			psc_assert(!mode & MEXPBCM_CDIO);
+			psc_assert(!(mode & MEXPBCM_CDIO));
 			if (mode & MEXPBCM_DIO_REQD) {
 				/* We'd like to disable DIO mode but a re-enable request
 				 *  has been queued recently.  Determine if it's inflight
