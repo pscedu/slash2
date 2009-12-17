@@ -236,7 +236,10 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
 	}
  out:
 	DEBUG_BIORQ(PLL_TRACE, r, "new req");
-	pll_add(bmap_2_msbmpc(b).bmpc_pndg, r);
+	if (op == BIORQ_READ)
+		pll_add(bmap_2_msbmpc(b).bmpc_pndg_biorqs, r);
+	else
+		pll_add(bmap_2_msbmpc(b).bmpc_new_biorqs, r);
 }
 
 __static void
@@ -251,7 +254,7 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 	/* The request must be attached to the bmpc.
 	 */
 	psc_assert(psclist_conjoint(&r->biorq_lentry));
-	pll_remove(&bmpc->bmpc_pndg, r);
+	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_WRITE) {
 		atomic_dec(&bmpc->bmpc_pndgwr);
@@ -267,12 +270,12 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 			 */
 			DEBUG_BMAP(PLL_INFO, b,
 				   "unset DIRTY nitems_pndg(%d)",
-				   pll_nitems(&bmpc->bmpc_pndg));
+				   pll_nitems(&bmpc->bmpc_pndg_biorqs));
 		}
 	}
 	BMPC_ULOCK(bmpc);
 	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
-		   r, pll_nitems(&bmpc->bmpc_pndg));
+		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
 	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
 }
 
@@ -372,7 +375,13 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	ENTRY;
 
 	BMPC_LOCK(bmpc);
-	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_pndg) {
+	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_new_biorqs) {
+		spinlock(&biorq->biorq_lock);
+		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
+		freelock(&biorq->biorq_lock);
+	}
+
+	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_pndg_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		freelock(&biorq->biorq_lock);
@@ -380,12 +389,14 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	BMPC_ULOCK(bmpc);
 
 	BMAP_LOCK(b);
-	while (!pll_empty(bmap_2_msbmpc(b).bmpc_pndg) ||
+	while (!pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs) ||
+	       !pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs)  ||
 	       psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry)) {
 		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
 		BMAP_LOCK(b);
 	}
-	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_pndg));
+	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs));
+	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs));
 	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 
 	BMAP_ULOCK(b);
@@ -1087,7 +1098,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		 *   one other writer must be present.
 		 */
 		psc_assert(atomic_read(&bmpc->bmpc_pndgwr) > 1);
-		psc_assert(pll_nitems(&bmpc->bmpc_pndg) > 1);
+		psc_assert((pll_nitems(&bmpc->bmpc_pndg_biorqs) > 1) ||
+			   (pll_nitems(&bmpc->bmpc_new_biorqs) > 1));
 
 	} else {
 		b->bcm_mode |= BMAP_DIRTY;
@@ -1098,7 +1110,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	}
 
 	DEBUG_BMAP(PLL_INFO, b, "biorq=%p list_empty(%d)",
-		   r, pll_empty(&bmpc->bmpc_pndg));
+		   r, pll_empty(&bmpc->bmpc_pndg_biorqs));
 	BMPC_ULOCK(bmpc);
 	BMAP_ULOCK(b);
 }
@@ -1146,12 +1158,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		bmpce_usecheck(bmpce, BIORQ_READ,
 			       biorq_getaligned_off(r, (i+startpage)));
 		
-		psc_atomic16_inc(&bmpce->bmpce_infref);
-		if (psc_atomic16_read(&bmpce->bmpce_infref) == 1) {
-			psc_assert(!(bmpce->bmpce_flags & BMPCE_WIRE));
-			bmpce->bmpce_flags |= BMPCE_WIRE;
-		}
-
+		bmpce_inflight_inc_locked(bmpce);
 		DEBUG_BMPCE(PLL_TRACE, bmpce, "adding to rpc");
 
 		BMPCE_ULOCK(bmpce);

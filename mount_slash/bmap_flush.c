@@ -175,9 +175,7 @@ bmap_flush_inflight_ref(struct bmpc_ioreq *r)
 	for (i=0; i < psc_dynarray_len(&r->biorq_pages); i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		BMPCE_LOCK(bmpce);
-		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
-		psc_atomic16_inc(&bmpce->bmpce_infref);
-		DEBUG_BMPCE(PLL_INFO, bmpce, "set inflight");
+		bmpce_inflight_inc_locked(bmpce);
 		BMPCE_ULOCK(bmpce);
 	}
 }
@@ -534,7 +532,7 @@ bmap_flush(void)
 	struct bmap_cli_info *msbd;
 	struct bmap_pagecache *bmpc;
 	struct psc_dynarray a=DYNARRAY_INIT, bmaps=DYNARRAY_INIT, *biorqs;
-	struct bmpc_ioreq *r;
+	struct bmpc_ioreq *r, *tmp;
 	struct iovec *iovs=NULL;
 	int i=0, niovs, nrpcs;
 
@@ -579,22 +577,16 @@ bmap_flush(void)
 
 		psc_dynarray_reset(&a);
 
-		PLL_FOREACH(r, &bmpc->bmpc_pndg) {
+		PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
 			spinlock(&r->biorq_lock);
 
 			DEBUG_BIORQ(PLL_TRACE, r, "consider for flush");
 
-			if (r->biorq_flags & BIORQ_INFL) {
-				psc_assert(r->biorq_flags & BIORQ_SCHED);
-				freelock(&r->biorq_lock);
-				continue;
+			psc_assert(!(r->biorq_flags & BIORQ_INFL));
+			psc_assert(!(r->biorq_flags & BIORQ_READ));
+			psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 
-			} else if ((r->biorq_flags & BIORQ_READ) ||
-				   (r->biorq_flags & BIORQ_DESTROY)) {
-				freelock(&r->biorq_lock);
-				continue;
-
-			} else if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
+			if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
 				freelock(&r->biorq_lock);
 				continue;
 				
@@ -610,6 +602,12 @@ bmap_flush(void)
 			}
 
 			r->biorq_flags |= BIORQ_SCHED;
+			/* Limit the amount of scanning done by this 
+			 *   thread.  Move pending biorqs out of the way.
+			 */
+			pll_remove(&bmpc->bmpc_new_biorqs, r);
+			pll_addtail(&bmpc->bmpc_pndg_biorqs, r);
+
 			freelock(&r->biorq_lock);
 
 			DEBUG_BIORQ(PLL_TRACE, r, "try flush");

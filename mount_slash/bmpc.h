@@ -180,7 +180,8 @@ struct bmap_pagecache {
 	struct bmap_pagecachetree bmpc_tree;   /* tree of cbuf_handle        */
 	struct timespec           bmpc_oldest; /* LRU's oldest item          */
 	struct psc_lockedlist     bmpc_lru;    /* cleancnt can be kept here  */
-	struct psc_lockedlist     bmpc_pndg;   /* chain pending I/O requests */
+	struct psc_lockedlist     bmpc_new_biorqs; 
+	struct psc_lockedlist     bmpc_pndg_biorqs; /* chain pending I/O requests */
 	atomic_t                  bmpc_pndgwr; /* # pending wr req           */
 	psc_spinlock_t            bmpc_lock;   /* serialize tree and pll     */
 	struct psclist_head       bmpc_lentry; /* chain to global LRU lc     */
@@ -199,8 +200,9 @@ bmpc_queued_writes(struct bmap_pagecache *bmpc)
 	
 	psc_assert(nwrites >= 0);
 	
-	if (nwrites > 0)
-		psc_assert(pll_nitems(&bmpc->bmpc_pndg) > 0);
+	if (nwrites > 0) 
+		psc_assert((pll_nitems(&bmpc->bmpc_pndg_biorqs) > 0) ||
+			   (pll_nitems(&bmpc->bmpc_new_biorqs) > 0));
 	
 	return (nwrites);
 }
@@ -212,7 +214,7 @@ struct bmpc_ioreq {
 	psc_spinlock_t             biorq_lock;
 	struct timespec            biorq_start; /* issue time                */
 	struct psc_dynarray        biorq_pages; /* array of bmpce            */
-	struct psclist_head        biorq_lentry;/* chain on bmpc_pndg        */
+	struct psclist_head        biorq_lentry;/* chain on bmpc_pndg_biorqs        */
 	struct bmapc_memb         *biorq_bmap;  /* backpointer to our bmap   */
 	struct pscrpc_request_set *biorq_rqset;
 	struct psc_waitq           biorq_waitq;
@@ -322,7 +324,18 @@ static inline void bmpce_inflight_dec_locked(struct bmap_pagecache_entry *bmpce)
 	psc_atomic16_dec(&bmpce->bmpce_infref);
 	psc_assert(psc_atomic16_read(&bmpce->bmpce_infref) >= 0);
 	if (!psc_atomic16_read(&bmpce->bmpce_infref)) 
-	  bmpce->bmpce_flags &= ~(BMPCE_IOSCHED|BMPCE_WIRE);
+		bmpce->bmpce_flags &= ~(BMPCE_IOSCHED|BMPCE_WIRE);
+}
+
+static inline void bmpce_inflight_inc_locked(struct bmap_pagecache_entry *bmpce)
+{
+	psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
+	psc_atomic16_inc(&bmpce->bmpce_infref);
+	if (psc_atomic16_read(&bmpce->bmpce_infref) == 1) {
+		psc_assert(!(bmpce->bmpce_flags & BMPCE_WIRE));
+		bmpce->bmpce_flags |= BMPCE_WIRE;
+	}
+	DEBUG_BMPCE(PLL_INFO, bmpce, "set inflight");
 }
 
 /* biorq_is_my_bmpce - informs the caller that biorq, r, owns the 
@@ -359,7 +372,10 @@ bmpc_init(struct bmap_pagecache *bmpc)
 	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
                  bmpce_lentry, &bmpc->bmpc_lock);
 
-	pll_init(&bmpc->bmpc_pndg, struct bmpc_ioreq,
+	pll_init(&bmpc->bmpc_pndg_biorqs, struct bmpc_ioreq,
+                 biorq_lentry, &bmpc->bmpc_lock);
+
+	pll_init(&bmpc->bmpc_new_biorqs, struct bmpc_ioreq,
                  biorq_lentry, &bmpc->bmpc_lock);
 
 	/* Add the bmpc to the LRU where it will stay until it's freed.

@@ -243,7 +243,8 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 	struct bmap_pagecache_entry *a, *b;
 
 	LOCK_ENSURE(&bmpc->bmpc_lock);
-	psc_assert(pll_empty(&bmpc->bmpc_pndg));
+	psc_assert(pll_empty(&bmpc->bmpc_pndg_biorqs));
+	psc_assert(pll_empty(&bmpc->bmpc_new_biorqs));
 
 	for (a = SPLAY_MIN(bmap_pagecachetree, &bmpc->bmpc_tree); a; a = b) {
 		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
