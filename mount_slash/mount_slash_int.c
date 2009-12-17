@@ -305,9 +305,9 @@ __static void
 msl_biorq_destroy(struct bmpc_ioreq *r)
 {
 	spinlock(&r->biorq_lock);
-
-	if (r->biorq_flags & BIORQ_WRITE)
-	  psc_assert(r->biorq_flags & BIORQ_INFL);
+	
+	if (r->biorq_flags & BIORQ_WRITE) 
+		psc_assert(r->biorq_flags & BIORQ_INFL);
 
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 	r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
@@ -1145,12 +1145,13 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
 		bmpce_usecheck(bmpce, BIORQ_READ,
 			       biorq_getaligned_off(r, (i+startpage)));
-
+		
 		psc_atomic16_inc(&bmpce->bmpce_infref);
 		if (psc_atomic16_read(&bmpce->bmpce_infref) == 1) {
-		  psc_assert(!(bmpce->bmpce_flags & BMPCE_WIRE));
-		  bmpce->bmpce_flags |= BMPCE_WIRE;
+			psc_assert(!(bmpce->bmpce_flags & BMPCE_WIRE));
+			bmpce->bmpce_flags |= BMPCE_WIRE;
 		}
+
 		DEBUG_BMPCE(PLL_TRACE, bmpce, "adding to rpc");
 
 		BMPCE_ULOCK(bmpce);
