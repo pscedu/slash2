@@ -113,7 +113,6 @@ mds_bmap_sync(void *data)
 {
 	struct bmapc_memb *bmap=data;
 	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
-	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
 	int rc;
 
 	/* XXX At some point this lock should really be changed to
@@ -134,7 +133,6 @@ mds_bmap_sync(void *data)
 
 	bmap_op_done_type(bmap, BMAP_OPCNT_MDSLOG);
 }
-
 
 void
 mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
