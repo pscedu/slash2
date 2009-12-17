@@ -423,6 +423,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		 */
 		if (try_create) {
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
+			fidc_membh_dropref(fcmh_new);
 			fidc_put(fcmh_new, &fidcFreeList);
 		}
 		if (rc) {
