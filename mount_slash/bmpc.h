@@ -90,10 +90,27 @@ enum BMPCE_STATES {
 	(((char *)((b)->bmpce_waitq)) -				\
 	 offsetof(struct bmpc_ioreq, biorq_waitq))
 
+
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAG(field, str) ((field) ? (str) : "-")
+#define DEBUG_BMPCE_FLAGS(b)				        \
+        BMPCE_FLAG(((b)->bmpce_flags & BMPCE_NEW), "n"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_GETBUF), "w"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_DATARDY), "d"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_DIRTY2LRU), "D"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_LRU), "l"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_FREE), "f"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_FREEING), "F"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_INIT), "i"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_READPNDG), "r"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_IOSCHED), "I"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_WIRE), "w")
+
+
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 		 " bmpce@%p fl=%u o=%x b=%p ts=%ld:%ld wr=%hu rd=%hu: "	\
-		 "inf=%hu lru=%d biorq=%p "fmt,				\
+		 "inf=%hu lru=%d biorq=%p "BMPCE_FLAGS_FORMAT" "fmt,	\
 		 (b), (b)->bmpce_flags, (b)->bmpce_off, (b)->bmpce_base, \
 		 (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec, \
 		 psc_atomic16_read(&(b)->bmpce_wrref),			\
@@ -101,7 +118,7 @@ enum BMPCE_STATES {
 		 psc_atomic16_read(&(b)->bmpce_infref),			\
 		 psclist_conjoint(&(b)->bmpce_lentry),			\
 		 BMPCE_2_BIORQ(b),					\
-		 ## __VA_ARGS__)
+		 DEBUG_BMPCE_FLAGS(b), ## __VA_ARGS__)
 
 static inline int
 bmpce_sort_cmp(const void *x, const void *y)
