@@ -125,17 +125,21 @@ struct slash_bmap_od {
 #define BRP_PERSIST		1
 #define NBRP			2
 
+#define _DEBUG_BMAP(file, func, line, level, b, fmt, ...)		\
+	psclog((file), (func), (line), PSS_GEN, (level), 0,		\
+	    "bmap@%p b:%x m:%u i:%"PRIx64				\
+	    " rref=%u wref=%u opcnt=%u "fmt,				\
+	    (b), (b)->bcm_blkno,					\
+	    (b)->bcm_mode,						\
+	    (b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,		\
+	    atomic_read(&(b)->bcm_rd_ref),				\
+	    atomic_read(&(b)->bcm_wr_ref),				\
+	    atomic_read(&(b)->bcm_opcnt),				\
+	    ## __VA_ARGS__)
+
 #define DEBUG_BMAP(level, b, fmt, ...)					\
-	psc_logs((level), PSS_GEN,					\
-		 "bmap@%p b:%x m:%u i:%"PRIx64				\
-		 " rref=%u wref=%u opcnt=%u "fmt,			\
-		 (b), (b)->bcm_blkno,					\
-		 (b)->bcm_mode,						\
-		 (b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,		\
-		 atomic_read(&(b)->bcm_rd_ref),				\
-		 atomic_read(&(b)->bcm_wr_ref),				\
-		 atomic_read(&(b)->bcm_opcnt),				\
-		 ## __VA_ARGS__)
+	_DEBUG_BMAP(__FILE__, __func__, __LINE__, (level), (b), fmt,	\
+	    ## __VA_ARGS__)
 
 /* bmap_get flags */
 #define BMAPGETF_LOAD	(1 << 0)		/* allow loading if not in cache */
@@ -177,8 +181,8 @@ int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
 
 enum bmap_opcnt_types {
 	BMAP_OPCNT_LOOKUP,
-	BMAP_OPCNT_IONASSIGN, 
-	BMAP_OPCNT_BREF, 
+	BMAP_OPCNT_IONASSIGN,
+	BMAP_OPCNT_BREF,
 	BMAP_OPCNT_MDSLOG,
 	BMAP_OPCNT_BIORQ
 };

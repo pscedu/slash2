@@ -131,7 +131,7 @@ mds_inode_read(struct slash_inode_handle *i)
 			i->inoh_flags &= ~INOH_INO_NOTLOADED;
 			DEBUG_INOH(PLL_INFO, i, "successfully loaded inode od");
 		} else {
-			DEBUG_INOH(PLL_WARN, i, 
+			DEBUG_INOH(PLL_WARN, i,
 				   "CRC failed want=%"PRIx64", got=%"PRIx64,
 				   i->inoh_ino.ino_crc, crc);
 			rc = EIO;
@@ -763,7 +763,7 @@ mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
 		   "ref_add (mion=%p) (rc=%d)",
 		   bmdsi->bmdsi_wr_ion, rc);
 	BMAP_ULOCK(bmap);
-	
+
 	/* BMAP_OP #1 unref in the event of an error.
 	 */
 	if (rc)
@@ -952,31 +952,6 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	return (rc);
 }
 
-void
-mds_bmapod_dump(const struct bmapc_memb *bmap)
-{
-	uint8_t mask, *b = bmap_2_bmdsiod(bmap)->bh_repls;
-	char buf[SL_MAX_REPLICAS + 1], *ob=buf;
-	uint32_t pos, k;
-	int ch[4];
-
-	ch[SL_REPL_INACTIVE] = '-';
-	ch[SL_REPL_SCHED] = 's';
-	ch[SL_REPL_OLD] = 'o';
-	ch[SL_REPL_ACTIVE] = '+';
-
-	for (k = 0; k < SL_REPLICA_NBYTES; k++, mask = 0)
-		for (pos = mask = 0; pos < NBBY; pos += SL_BITS_PER_REPLICA) {
-			mask = (uint8_t)(SL_REPLICA_MASK << pos);
-			*ob++ = ch[(b[k] & mask) >> pos];
-		}
-
-	*ob = '\0';
-
-	DEBUG_BMAP(PLL_NOTICE, bmap, "replicas(%s) SL_REPLICA_NBYTES=%u",
-		   buf, SL_REPLICA_NBYTES);
-}
-
 /**
  * mds_bmapod_initnew - called when a read request offset exceeds the
  *	bounds of the file causing a new bmap to be created.
@@ -1033,9 +1008,9 @@ mds_bmap_read(struct bmapc_memb *bcm)
 		if (bmdsi->bmdsi_od->bh_bhcrc == 0 &&
 		    memcmp(bmdsi->bmdsi_od, &null_bmap_od,
 		    sizeof(null_bmap_od)) == 0) {
-			mds_bmapod_dump(bcm);
+			DEBUG_BMAPOD(PLL_INFO, bcm, "");
 			mds_bmapod_initnew(bmdsi->bmdsi_od);
-			mds_bmapod_dump(bcm);
+			DEBUG_BMAPOD(PLL_INFO, bcm, "");
 			return (0);
 		}
 	}
@@ -1048,9 +1023,9 @@ mds_bmap_read(struct bmapc_memb *bcm)
 		goto out;
 	}
 
-	/* Calculate and check the CRC now */
-	mds_bmapod_dump(bcm);
+	DEBUG_BMAPOD(PLL_INFO, bcm, "");
 
+	/* Calculate and check the CRC now */
 	psc_crc64_calc(&crc, bmdsi->bmdsi_od, BMAP_OD_CRCSZ);
 	if (crc == bmdsi->bmdsi_od->bh_bhcrc)
 		return (0);
@@ -1092,7 +1067,7 @@ mds_bmap_retrieve(struct bmapc_memb *b, __unusedx enum rw rw, __unusedx void *ar
  * @f: fcmh.
  * @bmapno: bmap index number to load.
  * @bp: value-result bmap.
- * NOTE: callers must issue bmap_op_done() if mds_bmap_loadvalid() is 
+ * NOTE: callers must issue bmap_op_done() if mds_bmap_loadvalid() is
  *     successful.
  */
 int
@@ -1124,7 +1099,7 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_blkno_t bmapno,
 			*bp = b;
 			return (0);
 		}
-	/* BMAP_OP #3, unref if bmap is empty.  
+	/* BMAP_OP #3, unref if bmap is empty.
 	 *    NOTE that our callers must drop this ref.
 	 */
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
@@ -1214,7 +1189,7 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	/* Ok, the bref has been initialized and loaded into the tree.  We
 	 *  still need to set the bmap pointer mexpbcm_bmap though.  Lock the
 	 *  fcmh during the bmap lookup.
-	 * 
+	 *
 	 * BMAP_OP #4 via lookup.
 	 */
 	rc = mds_bmap_load(f, mq->blkno, &b);

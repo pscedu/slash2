@@ -178,7 +178,7 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 
 	BMAP_LOCK_ENSURE(bmap);
 
-	mds_bmapod_dump(bmap);
+	DEBUG_BMAPOD(PLL_INFO, bmap, "");
 
 	jrpg.sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jrpg.sjp_bmapno = bmap->bcm_blkno;

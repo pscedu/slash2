@@ -93,7 +93,6 @@ int	mds_bmap_load_cli(struct mexpfcm *, const struct srm_bmap_req *, struct bmap
 int	mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, struct bmapc_memb **);
 int	mds_bmap_loadvalid(struct fidc_membh *, sl_blkno_t, struct bmapc_memb **);
 void	mds_bmap_ref_drop(struct bmapc_memb *, int);
-void	mds_bmapod_dump(const struct bmapc_memb *);
 
 static __inline void
 bmap_dio_sanity_locked(struct bmapc_memb *bmap, int dio_check)
@@ -109,5 +108,34 @@ bmap_dio_sanity_locked(struct bmapc_memb *bmap, int dio_check)
 	      atomic_read(&bmap->bcm_rd_ref))))
 		psc_assert(bmap->bcm_mode & BMAP_DIO);
 }
+
+static __inline void
+_log_debug_bmapod(const char *file, const char *func, int lineno,
+    int level, const struct bmapc_memb *bmap, const char *fmt, ...)
+{
+	unsigned char *b = bmap_2_bmdsiod(bmap)->bh_repls;
+	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1];
+	int off, k, ch[4];
+	va_list ap;
+
+	va_start(ap, fmt);
+	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
+	va_end(ap);
+
+	ch[SL_REPL_INACTIVE] = '-';
+	ch[SL_REPL_SCHED] = 's';
+	ch[SL_REPL_OLD] = 'o';
+	ch[SL_REPL_ACTIVE] = '+';
+
+	for (k = 0, off = 0; k < SL_MAX_REPLICAS; k++, off += SL_BITS_PER_REPLICA)
+		rbuf[k] = ch[SL_REPL_GET_BMAP_IOS_STAT(b, off)];
+	rbuf[k] = '\0';
+
+	_DEBUG_BMAP(file, func, lineno, level, bmap, "replica(s)=[%s] %s", rbuf, mbuf);
+}
+
+#define DEBUG_BMAPOD(level, bmap, fmt, ...)				\
+	_log_debug_bmapod(__FILE__, __func__, __LINE__, (level),	\
+	    (bmap), (fmt), ## __VA_ARGS__)
 
 #endif /* _SLASHD_MDS_BMAP_H_ */
