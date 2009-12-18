@@ -673,11 +673,11 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	 *   he's finished with it.
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
-	atomic_inc(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
+	atomic_inc(&(fcmh_2_fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
 		   "inc fmdsi_ref (%d) for bmap assignment",
-		   atomic_read(&(fidc_fcmh2fmdsi(bmap->bcm_fcmh))->fmdsi_ref));
+		   atomic_read(&(fcmh_2_fmdsi(bmap->bcm_fcmh))->fmdsi_ref));
 
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
 		   "mion(%p)", res->res_name,

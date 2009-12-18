@@ -38,7 +38,8 @@ bmap_2_zfs_fh(struct bmapc_memb *bmap)
 
 	psc_assert(bmap->bcm_fcmh);
 
-	fmdsi = fidc_fcmh2fmdsi(bmap->bcm_fcmh);
+	//fmdsi = fidc_fcmh2fmdsi(bmap->bcm_fcmh);
+	fmdsi = fcmh_2_fmdsi(bmap->bcm_fcmh);
 
 	psc_assert(fmdsi);
 	psc_assert(fmdsi->fmdsi_data);
