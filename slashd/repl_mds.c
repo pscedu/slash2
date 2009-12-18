@@ -339,6 +339,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
 	bmapod = bmdsi->bmdsi_od;
 
 	if (nios == 0)
+		/* no one specified; apply to all */
 		for (k = 0, off = 0; k < nr;
 		    k++, off += SL_BITS_PER_REPLICA) {
 			trc = mds_repl_bmap_apply(bcm, tract,
@@ -349,6 +350,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
 				break;
 		}
 	else if (flags & REPL_WALKF_MODOTH) {
+		/* modify sites all sites except those specified */
 		for (k = 0, off = 0; k < nr; k++,
 		    off += SL_BITS_PER_REPLICA)
 			if (!iosidx_in(k, iosidx, nios)) {
@@ -360,6 +362,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
 					break;
 			}
 	} else
+		/* modify only the sites specified */
 		for (k = 0; k < nios; k++) {
 			trc = mds_repl_bmap_apply(bcm, tract,
 			    retifset, flags, iosidx[k] *
@@ -751,9 +754,10 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 			 * uninitialized/all zeroes.  Skip it.
 			 */
 			if (mds_repl_bmap_walk(bcm, NULL, retifzero,
-			    REPL_WALKF_SCIRCUIT, NULL, 0) == 0)
+			    REPL_WALKF_SCIRCUIT, NULL, 0) == 0) {
 				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
-			else {
+				rc = SLERR_BMAP_ZERO;
+			} else {
 				rc = mds_repl_bmap_walk(bcm,
 				    tract, retifset, 0, iosidx, nios);
 				mds_repl_bmap_rel(bcm);
@@ -764,6 +768,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 
 	if (rc == 0)
 		mds_repl_enqueue_sites(rrq, iosv, nios);
+	else if (rc == SLERR_BMAP_ZERO)
+		rc = 0;
 
 	mds_repl_unrefrq(rrq);
 	return (rc);
