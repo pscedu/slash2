@@ -68,19 +68,45 @@ slashrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 }
 
 void
-slashrpc_csvc_free(struct slashrpc_cservice *csvc)
+sl_csvc_free(struct slashrpc_cservice *csvc)
 {
+//	psc_assert(psc_atomic32_read(&csvc->csvc_refcnt) == 0);
 	pscrpc_import_put(csvc->csvc_import);
 	free(csvc);
 }
 
+__weak void
+psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
+{
+	psc_fatalx("unimplemented stub");
+}
+
+void
+sl_csvc_decref(struct slashrpc_cservice *csvc)
+{
+	CSVC_RLOCK(csvc);
+	psc_atomic_dec(&csvc->csvc_refcnt);
+	if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT)
+		psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
+	else
+		psc_waitq_wakeall(csvc->csvc_waitinfo);
+	CSVC_ULOCK(csvc);
+}
+
+void
+sl_csvc_incref(struct slashrpc_cservice *csvc)
+{
+	CSVC_LOCK_ENSURE(csvc);
+	psc_atomic_inc(&csvc->csvc_refcnt);
+}
+
 /*
- * slashrpc_csvc_create - create a client RPC service.
+ * sl_csvc_create - create a client RPC service.
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
  */
 __static struct slashrpc_cservice *
-slashrpc_csvc_create(uint32_t rqptl, uint32_t rpptl)
+sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 {
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_import *imp;
@@ -98,23 +124,23 @@ slashrpc_csvc_create(uint32_t rqptl, uint32_t rpptl)
 }
 
 struct slashrpc_cservice *
-slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
-    lnet_nid_t peernid, uint32_t rqptl, uint32_t rpptl, uint64_t magic,
-    uint32_t version, psc_spinlock_t *lk, void (*wakef)(void *),
-    void *wakearg, enum slconn_type ctype)
+sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
+    struct pscrpc_export *exp, lnet_nid_t peernid, uint32_t rqptl,
+    uint32_t rpptl, uint64_t magic, uint32_t version,
+    psc_spinlock_t *lockp, void *waitinfo,
+    enum slconn_type ctype)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct sl_resm *resm;
 	int rc = 0, locked;
 
-	locked = 0; /* gcc */
-	if (lk)
-		locked = reqlock(lk);
+	locked = reqlock(lockp);
 	if (exp)
 		peernid = exp->exp_connection->c_peer.nid;
 	psc_assert(peernid != LNET_NID_ANY);
 
-	if (*csvcp == NULL) {
+	csvc = *csvcp;
+	if (csvc == NULL) {
 		/* ensure peer is of the given type */
 		switch (ctype) {
 		case SLCONNT_CLI:
@@ -136,74 +162,85 @@ slconn_get(struct slashrpc_cservice **csvcp, struct pscrpc_export *exp,
 		}
 
 		/* initialize service */
-		csvc = *csvcp = slashrpc_csvc_create(rqptl, rpptl);
+		csvc = *csvcp = sl_csvc_create(rqptl, rpptl);
+		csvc->csvc_flags = flags;
+		csvc->csvc_lockp = lockp;
+		csvc->csvc_waitinfo = waitinfo;
 		csvc->csvc_import->imp_failed = 1;
-	} else
-		csvc = *csvcp;
+	}
+
  restart:
 	if (csvc->csvc_import->imp_failed == 0)
 		goto out;
 
 	if (exp) {
+		/*
+		 * If an export was specified, the peer has already
+		 * established a connection to our service, so just
+		 * reuse the underhood connection to establish a
+		 * connection back to his service.
+		 */
 //		if (csvc->csvc_import->imp_connection)
 //			atomic_dec(&csvc->csvc_import->imp_connection->c_refcount);
 
 		atomic_inc(&exp->exp_connection->c_refcount);
 		csvc->csvc_import->imp_connection = exp->exp_connection;
 	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
-		if (wakef == slconn_wake_waitq) {
-			psc_waitq_wait(wakearg, lk);
-			reqlock(lk);
-		} else if (wakef == slconn_wake_mwcond) {
+		if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT) {
 			psc_fatalx("unimplemented wakef");
 //			psc_multiwait_addcond(ml, wakearg);
 //			csvc = NULL;
 //			goto out;
-		} else
-			psc_fatalx("invalid wakef");
+		} else {
+			psc_waitq_wait(csvc->csvc_waitinfo, csvc->csvc_lockp);
+			CSVC_RLOCK(csvc);
+		}
 		goto restart;
-
-#define RECONNECT_INTV 30	/* seconds */
-	} else if (csvc->csvc_mtime + RECONNECT_INTV < time(NULL)) {
+	} else if (csvc->csvc_mtime + CSVC_RECONNECT_INTV < time(NULL)) {
 		csvc->csvc_flags |= CSVCF_CONNECTING;
-		freelock(lk);
+		CSVC_ULOCK(csvc);
+
 		rc = slashrpc_issue_connect(peernid,
 		    csvc->csvc_import, magic, version);
-		reqlock(lk);
-		csvc->csvc_flags &= ~CSVCF_CONNECTING;
 
+		CSVC_RLOCK(csvc);
+		csvc->csvc_flags &= ~CSVCF_CONNECTING;
 		csvc->csvc_mtime = time(NULL);
 		if (rc) {
 			csvc->csvc_import->imp_failed = 1;
-			csvc->csvc_lasterr = rc;
+			csvc->csvc_lasterrno = rc;
 			csvc = NULL;
 			goto out;
 		}
 	} else {
-		rc = csvc->csvc_lasterr;
+		rc = csvc->csvc_lasterrno;
 		csvc = NULL;
 		goto out;
 	}
 	if (rc == 0) {
 		csvc->csvc_import->imp_failed = 0;
-		if (wakef && wakearg)
-			wakef(wakearg);
+		if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT)
+			psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
+		else
+			psc_waitq_wakeall(csvc->csvc_waitinfo);
 	}
 
  out:
-	if (lk)
-		ureqlock(lk, locked);
+	if (csvc) {
+		sl_csvc_incref(csvc);
+		CSVC_URLOCK(csvc, locked);
+	}
 //	errno = rc;
 	return (csvc);
 }
 
 /*
- * slashrpc_export_get - access private data associated with an LNET peer.
+ * slexp_get - access private data associated with an LNET peer.
  * @exp: RPC export of peer.
  * @peertype: peer type of connection.
  */
 struct slashrpc_export *
-slashrpc_export_get(struct pscrpc_export *exp, enum slconn_type peertype)
+slexp_get(struct pscrpc_export *exp, enum slconn_type peertype)
 {
 	struct slashrpc_export *slexp;
 	int locked;
@@ -213,7 +250,7 @@ slashrpc_export_get(struct pscrpc_export *exp, enum slconn_type peertype)
 		slexp = exp->exp_private = PSCALLOC(sizeof(*slexp));
 		slexp->slexp_export = exp;
 		slexp->slexp_peertype = peertype;
-		exp->exp_hldropf = slashrpc_export_destroy;
+		exp->exp_hldropf = slexp_destroy;
 	} else {
 		slexp = exp->exp_private;
 		psc_assert(slexp->slexp_export == exp);
@@ -224,15 +261,15 @@ slashrpc_export_get(struct pscrpc_export *exp, enum slconn_type peertype)
 }
 
 void
-slashrpc_export_destroy(void *data)
+slexp_destroy(void *data)
 {
 	struct slashrpc_export *slexp = data;
 	struct pscrpc_export *exp = slexp->slexp_export;
 
 	psc_assert(exp);
 	/* There's no way to set this from the drop_callback() */
-	if (!(slexp->slexp_flags & EXP_CLOSING))
-		slexp->slexp_flags |= EXP_CLOSING;
+	if (!(slexp->slexp_flags & SLEXPF_CLOSING))
+		slexp->slexp_flags |= SLEXPF_CLOSING;
 
 	if (slexp_freef[slexp->slexp_peertype])
 		slexp_freef[slexp->slexp_peertype](exp);
@@ -240,22 +277,4 @@ slashrpc_export_destroy(void *data)
 	/* OK, no one else should be in here */
 	exp->exp_private = NULL;
 	PSCFREE(slexp);
-}
-
-__weak void
-psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
-{
-	psc_fatalx("unimplemented stub");
-}
-
-void
-slconn_wake_waitq(void *arg)
-{
-	psc_waitq_wakeall(arg);
-}
-
-void
-slconn_wake_mwcond(void *arg)
-{
-	psc_multiwaitcond_wakeup(arg);
 }

@@ -45,6 +45,9 @@ slcfg_init_resm(struct sl_resm *resm)
 	LOCK_INIT(&mrmi->mrmi_lock);
 	psc_multiwaitcond_init(&mrmi->mrmi_mwcond,
 	    NULL, 0, "mrmi-%s", resm->resm_addrbuf);
+	psc_dynarray_init(&mrmi->mrmi_bmaps);
+	psc_dynarray_init(&mrmi->mrmi_bmaps_deref);
+	atomic_set(&mrmi->mrmi_refcnt, 0);
 	mrmi->mrmi_resm = resm;
 }
 

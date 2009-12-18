@@ -92,16 +92,18 @@ struct mds_site_info {
 	int			  msi_flags;
 };
 
-#define MSIF_DIRTYQ		(1 << 0)	/* queue has changed */
+#define MSIF_DIRTYQ		(1 << 0)		/* queue has changed */
 
 struct mds_resm_info {
-	psc_spinlock_t		  mrmi_lock;
 	struct slashrpc_cservice *mrmi_csvc;
+	psc_spinlock_t		  mrmi_lock;
 	struct psc_multiwaitcond  mrmi_mwcond;
-	struct timespec		  mrmi_lastping;
+
 	int			  mrmi_busyid;
 	struct sl_resm		 *mrmi_resm;
-	void			 *mrmi_data;
+	struct psc_dynarray	  mrmi_bmaps;		/* array of struct mexpbcm */
+	struct psc_dynarray	  mrmi_bmaps_deref;	/* dereferencing bmaps */
+	atomic_t		  mrmi_refcnt;		/* #CLIs using this ion */
 };
 
 #define resm2mrmi(resm)		((struct mds_resm_info *)(resm)->resm_pri)

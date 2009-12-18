@@ -135,7 +135,7 @@ mdscoh_queue_req(struct mexpbcm *bref)
 
 	psc_assert(bref->mexpbcm_net_inf);
 
-	csvc = slm_getclconn(exp);
+	csvc = slm_getclcsvc(exp);
 	if (csvc == NULL)
 		return (-1);
 

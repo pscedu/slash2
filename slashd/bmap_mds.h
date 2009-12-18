@@ -50,7 +50,7 @@ struct bmap_mds_info {
 	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
 	uint32_t			 bmdsi_repl_policy;
 	struct jflush_item		 bmdsi_jfi;	/* journal handle          */
-	struct mexp_ion			*bmdsi_wr_ion;	/* pointer to write ION    */
+	struct mds_resm_info		*bmdsi_wr_ion;	/* pointer to write ION    */
 	struct bmap_exports		 bmdsi_exports;	/* tree of client exports  */
 	struct slash_bmap_od		*bmdsi_od;	/* od-disk pointer         */
 	struct odtable_receipt		*bmdsi_assign;	/* odtable receipt         */

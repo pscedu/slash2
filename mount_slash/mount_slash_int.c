@@ -813,13 +813,13 @@ msl_bmap_to_import(struct bmapc_memb *b, int exclusive)
 			   libcfs_nid2str(bmap_2_msion(b)));
 
 	if (exclusive)
-		csvc = slc_geticonn(resm);
+		csvc = slc_geticsvc(resm);
 	else {
 		/* grab a random resm from any replica */
 //		for (n = 0; n < resm->resm_res->res_nnids; n++)
 //			for (j = 0; j < resm->resm_res->res_nnids; j++)
-//				slc_geticonn(resm);
-		csvc = slc_geticonn(resm);
+//				slc_geticsvc(resm);
+		csvc = slc_geticsvc(resm);
 	}
 	return (csvc ? csvc->csvc_import : NULL);
 }
@@ -865,7 +865,7 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 			   " are uniform across all servers",
 			   libcfs_nid2str(repl_nid));
 
-	csvc = slc_geticonn(resm);
+	csvc = slc_geticsvc(resm);
 	return (csvc ? csvc->csvc_import : NULL);
 }
 

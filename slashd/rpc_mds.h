@@ -59,33 +59,26 @@ struct slm_rmi_expdata *
 	slm_rmi_getexpdata(struct pscrpc_export *);
 
 /* aliases for connection management */
-#define slm_geticonn(resm)						\
-	slconn_get(&resm2mrmi(resm)->mrmi_csvc, NULL, (resm)->resm_nid,	\
-	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION,	\
-	    &resm2mrmi(resm)->mrmi_lock, slconn_wake_mwcond,		\
+#define slm_geticsvc(resm)							\
+	sl_csvc_get(&resm2mrmi(resm)->mrmi_csvc, CSVCF_USE_MULTIWAIT, NULL,	\
+	    (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC,	\
+	    SRIM_VERSION, &resm2mrmi(resm)->mrmi_lock,				\
 	    &resm2mrmi(resm)->mrmi_mwcond, SLCONNT_IOD)
 
-#define slm_geticonnx(resm, exp)					\
-	slconn_get(&resm2mrmi(resm)->mrmi_csvc, (exp), 0,		\
-	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION,	\
-	    &resm2mrmi(resm)->mrmi_lock, slconn_wake_mwcond,		\
-	    &resm2mrmi(resm)->mrmi_mwcond, SLCONNT_IOD)
-
-#define slm_getmconn(resm)						\
-	slconn_get(&resm2mrmi(resm)->mrmi_csvc, NULL, (resm)->resm_nid,	\
-	    SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC, SRMM_VERSION,	\
-	    &resm2mrmi(resm)->mrmi_lock, slconn_wake_mwcond,		\
-	    &resm2mrmi(resm)->mrmi_mwcond, SLCONNT_MDS)
+#define slm_geticsvcx(resm, exp)						\
+	sl_csvc_get(&resm2mrmi(resm)->mrmi_csvc, CSVCF_USE_MULTIWAIT, (exp), 0,	\
+	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION,		\
+	    &resm2mrmi(resm)->mrmi_lock, &resm2mrmi(resm)->mrmi_mwcond, SLCONNT_IOD)
 
 static __inline struct slashrpc_cservice *
-slm_getclconn(struct pscrpc_export *exp)
+slm_getclcsvc(struct pscrpc_export *exp)
 {
 	struct mexp_cli *mexpc;
 
 	mexpc = mexpcli_get(exp);
-	return (slconn_get(&mexpc->mc_csvc, exp, LNET_NID_ANY,
+	return (sl_csvc_get(&mexpc->mc_csvc, 0, exp, LNET_NID_ANY,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
-	    &mexpc->mc_lock, NULL, NULL, SLCONNT_CLI));
+	    &mexpc->mc_lock, &mexpc->mc_waitq, SLCONNT_CLI));
 }
 
 #endif /* _MDS_RPC_H_ */

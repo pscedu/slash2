@@ -35,7 +35,7 @@ sli_rmi_getimp(void)
 	struct slashrpc_cservice *csvc;
 
 	do {
-		csvc = sli_getmconn(rmi_resm);
+		csvc = sli_getmcsvc(rmi_resm);
 		if (csvc == NULL)
 			/* XXX try to connect to another MDS */
 			psc_fatalx("unable to establish MDS connection");

@@ -106,13 +106,14 @@ mexpcli_get(struct pscrpc_export *exp)
 	int locked;
 
 	locked = reqlock(&exp->exp_lock);
-	slexp = slashrpc_export_get(exp, SLCONNT_CLI);
+	slexp = slexp_get(exp, SLCONNT_CLI);
 	mexp_cli = slexp->slexp_data;
 	if (mexp_cli == NULL) {
 		mexp_cli = slexp->slexp_data =
 		    PSCALLOC(sizeof(*mexp_cli));
 		LOCK_INIT(&mexp_cli->mc_lock);
 		SPLAY_INIT(&mexp_cli->mc_cfdtree);
+		psc_waitq_init(&mexp_cli->mc_waitq);
 	}
 	ureqlock(&exp->exp_lock, locked);
 	return (mexp_cli);
@@ -126,6 +127,6 @@ mexpcli_destroy(struct pscrpc_export *exp)
 
 	cfdfreeall(exp, slexp->slexp_peertype);
 	if (mexpc && mexpc->mc_csvc)
-		slashrpc_csvc_free(mexpc->mc_csvc);
+		sl_csvc_free(mexpc->mc_csvc);
 	PSCFREE(mexpc);
 }

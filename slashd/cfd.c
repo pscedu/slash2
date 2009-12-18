@@ -91,7 +91,7 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, enum slconn_type peertype,
 	c->cfd_flags = flags;
 
 	spinlock(&exp->exp_lock);
-	slexp = slashrpc_export_get(exp, peertype);
+	slexp = slexp_get(exp, peertype);
 	c->cfd_fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
 	if (c->cfd_fdb.sfdb_secret.sfs_cfd == FID_ANY)
 		c->cfd_fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
@@ -210,8 +210,8 @@ cfdfreeall(struct pscrpc_export *exp, enum slconn_type peertype)
 
 	psc_warnx("exp=%p", exp);
 
-	slexp = slashrpc_export_get(exp, peertype);
-	psc_assert(slexp->slexp_flags & EXP_CLOSING);
+	slexp = slexp_get(exp, peertype);
+	psc_assert(slexp->slexp_flags & SLEXPF_CLOSING);
 
 	mc = mexpcli_get(exp);
 

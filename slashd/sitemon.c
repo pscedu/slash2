@@ -86,7 +86,7 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	dst_mrmi = dst_resm->resm_pri;
 	src_mrmi = src_resm->resm_pri;
 
-	csvc = slm_geticonn(dst_resm);
+	csvc = slm_geticsvc(dst_resm);
 	if (csvc == NULL)
 		goto fail;
 
@@ -269,7 +269,7 @@ slmreplthr_main(void *arg)
 							int k;
 
 							src_resm = libsl_nid2resm(src_res->res_nids[rin]);
-							if (slm_geticonn(src_resm) == NULL) {
+							if (slm_geticsvc(src_resm) == NULL) {
 								if (!psc_multiwait_hascond(&msi->msi_mw,
 								    &resm2mrmi(src_resm)->mrmi_mwcond))
 									if (psc_multiwait_addcond(&msi->msi_mw,

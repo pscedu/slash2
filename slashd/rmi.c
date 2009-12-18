@@ -285,7 +285,7 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 
 	/* initialize our reverse stream structures */
 	resm = libsl_nid2resm(rq->rq_peer.nid);
-	slm_geticonnx(resm, rq->rq_export);
+	slm_geticsvcx(resm, rq->rq_export);
 
 	slm_rmi_getexpdata(rq->rq_export);
 	return (0);

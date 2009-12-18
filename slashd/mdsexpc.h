@@ -153,18 +153,7 @@ struct mexp_cli {
 	struct slashrpc_cservice *mc_csvc;
 	struct cfdtree		  mc_cfdtree;
 	psc_spinlock_t		  mc_lock;
-};
-
-/*
- * mexp_ion - will be used to handle ion failover and the reassignment
- *   of bmaps to other ions.  mexp_ion is accessed from
- *  (struct sl_resm *)->resm_pri.
- */
-struct mexp_ion {
-	struct psc_dynarray		 mi_bmaps;		/* array of struct mexpbcm     */
-	struct psc_dynarray		 mi_bmaps_deref;	/* dereferencing bmaps         */
-	atomic_t		 mi_refcnt;		/* num cli's using this ion    */
-	struct sl_resm		*mi_resm;
+	struct psc_waitq	  mc_waitq;
 };
 
 /*

@@ -79,7 +79,7 @@ slc_rmc_getimp(void)
 	struct slashrpc_cservice *csvc;
 
 	do {
-		csvc = slc_getmconn(slc_rmc_resm);
+		csvc = slc_getmcsvc(slc_rmc_resm);
 		if (csvc == NULL)
 			/* XXX try to connect to another MDS */
 			psc_fatalx("unable to establish MDS connection");

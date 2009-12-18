@@ -560,21 +560,10 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 	}
 }
 
-__static void
-mds_mion_init(struct mexp_ion *mion, struct sl_resm *resm)
-{
-	psc_dynarray_init(&mion->mi_bmaps);
-	psc_dynarray_init(&mion->mi_bmaps_deref);
-	atomic_set(&mion->mi_refcnt, 0);
-	mion->mi_resm = resm;
-}
-
 /**
  * mds_bmap_ion_assign - bind a bmap to a ion node for writing.  The process
  *    involves a round-robin'ing of an i/o system's nodes and attaching a
- *    a mexp_ion to the bmap.  The mexp_ion is stored in the i/o node's
- *    resouce_member struct (resm_pri->rmpi_data).  It is here that an initial
- *	connection to the ION may be created.
+ *    a mds_resm_info to the bmap, used for establishing connection to the ION.
  * @bref: the bmap reference
  * @pios: the preferred i/o system
  */
@@ -582,7 +571,6 @@ __static int
 mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 {
 	struct bmap_mds_info *mdsi=bmap->bcm_pri;
-	struct mexp_ion *mion;
 	struct bmi_assign bmi;
 	struct sl_resource *res=libsl_id2res(pios);
 	struct sl_resm *resm;
@@ -622,17 +610,11 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		mrmi = resm->resm_pri;
 		spinlock(&mrmi->mrmi_lock);
 
-		if (!mrmi->mrmi_data) {
-			mrmi->mrmi_data = PSCALLOC(sizeof(*mion));
-			mds_mion_init(mrmi->mrmi_data, resm);
-		}
-		mion = mrmi->mrmi_data;
-
 		/*
 		 * If we fail to establish a connection, try next node.
 		 * The while loop guarantees that we always bail out.
 		 */
-		if (slm_geticonn(resm) == NULL) {
+		if (slm_geticsvc(resm) == NULL) {
 			freelock(&mrmi->mrmi_lock);
 			continue;
 		}
@@ -642,8 +624,8 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		DEBUG_BMAP(PLL_TRACE, bmap, "res(%s) ion(%s)",
 			   res->res_name, libcfs_nid2str(res->res_nids[n]));
 
-		atomic_inc(&mion->mi_refcnt);
-		mdsi->bmdsi_wr_ion = mion;
+		atomic_inc(&mrmi->mrmi_refcnt);
+		mdsi->bmdsi_wr_ion = mrmi;
 		freelock(&mrmi->mrmi_lock);
 		break;
 
@@ -654,7 +636,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	if (!mdsi->bmdsi_wr_ion)
 		return (-SLERR_ION_OFFLINE);
 
-	/* A mion has been assigned to the bmap, mark it in the odtable
+	/* An ION has been assigned to the bmap, mark it in the odtable
 	 *   so that the assignment may be restored on reboot.
 	 */
 	bmi.bmi_ion_nid = mrmi->mrmi_resm->resm_nid;
@@ -668,6 +650,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
 		return (-SLERR_XACT_FAIL);
 	}
+
 	/* Signify that a ION has been assigned to this bmap.  This
 	 *   opcnt ref will stay in place until the ION informs us that
 	 *   he's finished with it.
@@ -680,7 +663,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		   atomic_read(&(fcmh_2_fmdsi(bmap->bcm_fcmh))->fmdsi_ref));
 
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
-		   "mion(%p)", res->res_name,
+		   "mrmi(%p)", res->res_name,
 		   libcfs_nid2str(res->res_nids[n]), mdsi->bmdsi_wr_ion);
 	return (0);
 }
@@ -793,7 +776,7 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, enum rw rw)
 			psc_assert(bmap->bcm_mode & BMAP_WR);
 			bmap->bcm_mode &= ~BMAP_WR;
 			if (mdsi->bmdsi_wr_ion &&
-			    atomic_dec_and_test(&mdsi->bmdsi_wr_ion->mi_refcnt)) {
+			    atomic_dec_and_test(&mdsi->bmdsi_wr_ion->mrmi_refcnt)) {
 				//XXX cleanup mion here?
 			}
 			//mdsi->bmdsi_wr_ion = NULL;
@@ -889,7 +872,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	psc_assert(bmdsi->bmdsi_wr_ion);
 	bmap_dio_sanity_locked(bmap, 1);
 
-	if (ion_nid != bmdsi->bmdsi_wr_ion->mi_resm->resm_nid) {
+	if (ion_nid != bmdsi->bmdsi_wr_ion->mrmi_resm->resm_nid) {
 		/* Whoops, we recv'd a request from an unexpected nid.
 		 */
 		rc = -EINVAL;
@@ -926,7 +909,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	 *   . the bmap is locked.
 	 */
 	if ((rc = mds_repl_inv_except_locked(bmap,
-			     slresm_2_resid(bmdsi->bmdsi_wr_ion->mi_resm)))) {
+	    slresm_2_resid(bmdsi->bmdsi_wr_ion->mrmi_resm)))) {
 		BMAP_ULOCK(bmap);
 		goto out;
 	}

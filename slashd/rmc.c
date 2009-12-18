@@ -99,16 +99,16 @@ psc_fatalx("impossible");
 		 *   the remaining cached bmaps.
 		 */
 		spinlock(&e->exp_lock);
-		slexp = slashrpc_export_get(e, SLCONNT_CLI);
+		slexp = slexp_get(e, SLCONNT_CLI);
 		psc_assert(slexp->slexp_data);
-		slexp->slexp_flags |= EXP_CLOSING;
+		slexp->slexp_flags |= SLEXPF_CLOSING;
 		freelock(&e->exp_lock);
 		DEBUG_REQ(PLL_WARN, rq,
 			  "connect rq but export already exists");
-		slashrpc_export_destroy(slexp);
+		slexp_destroy(slexp);
 	}
 	mexp_cli = mexpcli_get(e);
-	slm_getclconn(e);
+	slm_getclcsvc(e);
 	RETURN(0);
 }
 
@@ -206,13 +206,13 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		/* Always return the write IOS if the bmap is in write mode.
 		 */
 		psc_assert(bmdsi->bmdsi_wr_ion);
-		mp->ios_nid = bmdsi->bmdsi_wr_ion->mi_resm->resm_nid;
+		mp->ios_nid = bmdsi->bmdsi_wr_ion->mrmi_resm->resm_nid;
 	}
 
 	bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg, rq->rq_peer,
 	   (mq->rw == SL_WRITE ? mp->ios_nid : LNET_NID_ANY),
 	   (mq->rw == SL_WRITE ?
-	    bmdsi->bmdsi_wr_ion->mi_resm->resm_res->res_id : IOS_ID_ANY),
+	    bmdsi->bmdsi_wr_ion->mrmi_resm->resm_res->res_id : IOS_ID_ANY),
 	   bmap->bcm_blkno);
 
 	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
@@ -856,7 +856,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	srcm = thr->pscthr_private;
 	srcm->srcm_fg = mq->fg;
 	srcm->srcm_id = mq->id;
-	srcm->srcm_csvc = slm_getclconn(rq->rq_export);
+	srcm->srcm_csvc = slm_getclcsvc(rq->rq_export);
 	pscthr_setready(thr);
 	return (0);
 }

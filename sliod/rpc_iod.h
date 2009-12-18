@@ -43,17 +43,15 @@ struct sli_repl_workrq;
 #define SLI_RII_SVCNAME		"slirii"
 
 /* aliases for connection management */
-#define sli_geticonn(resm)						\
-	slconn_get(&resm2irmi(resm)->irmi_csvc, NULL, (resm)->resm_nid,	\
-	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,	\
-	    &resm2irmi(resm)->irmi_lock, slconn_wake_waitq,		\
-	    &resm2irmi(resm)->irmi_waitq, SLCONNT_IOD)
+#define sli_geticsvc(resm)							\
+	sl_csvc_get(&resm2irmi(resm)->irmi_csvc, 0, NULL, (resm)->resm_nid,	\
+	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,		\
+	    &resm2irmi(resm)->irmi_lock, &resm2irmi(resm)->irmi_waitq, SLCONNT_IOD)
 
-#define sli_getmconn(resm)						\
-	slconn_get(&resm2irmi(resm)->irmi_csvc, NULL, (resm)->resm_nid,	\
-	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,	\
-	    &resm2irmi(resm)->irmi_lock, slconn_wake_waitq,		\
-	    &resm2irmi(resm)->irmi_waitq, SLCONNT_MDS)
+#define sli_getmcsvc(resm)							\
+	sl_csvc_get(&resm2irmi(resm)->irmi_csvc, 0, NULL, (resm)->resm_nid,	\
+	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,		\
+	    &resm2irmi(resm)->irmi_lock, &resm2irmi(resm)->irmi_waitq, SLCONNT_MDS)
 
 #define sli_ric_handle_read(rq)		sli_ric_handle_io((rq), SL_READ)
 #define sli_ric_handle_write(rq)	sli_ric_handle_io((rq), SL_WRITE)
