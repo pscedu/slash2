@@ -152,7 +152,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct mds_resprof_info);
 	PRTYPE(struct mds_site_info);
 	PRTYPE(struct mexp_cli);
-	PRTYPE(struct mexp_ion);
 	PRTYPE(struct mexpbcm);
 	PRTYPE(struct mexpfcm);
 	PRTYPE(struct msbmap_crcrepl_states);
