@@ -55,8 +55,6 @@ bmap_remove(struct bmapc_memb *b)
 
 	DEBUG_BMAP(PLL_INFO, b, "removing");
 
-	psc_waitq_wakeall(&b->bcm_waitq);
-
 	psc_assert(b->bcm_mode & BMAP_CLOSING);
 	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
 	psc_assert(!atomic_read(&b->bcm_wr_ref) &&
@@ -67,6 +65,7 @@ bmap_remove(struct bmapc_memb *b)
 
 	locked = FCMH_RLOCK(f);
 	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);
+	psc_waitq_wakeall(&f->fcmh_waitq);
 	FCMH_URLOCK(f, locked);
 
 	psc_pool_return(bmap_pool, b);
@@ -118,8 +117,8 @@ bmap_lookup_cache(struct fidc_membh *f, sl_blkno_t n)
 			 * This bmap is going away; wait for
 			 * it so we can reload it back.
 			 */
-			FCMH_ULOCK(f);
-			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+			BMAP_ULOCK(b);
+			psc_waitq_wait(&f->fcmh_waitq, &f->fcmh_lock);
 			FCMH_LOCK(f);
 			goto restart;
 		}
