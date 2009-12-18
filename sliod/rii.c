@@ -222,12 +222,6 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	struct iovec iov[2];
 
 	nslvrs = 0;
-	w->srw_fcmh = iod_inode_lookup(&w->srw_fg);
-	rc = iod_inode_open(w->srw_fcmh, SL_WRITE);
-	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, w->srw_fcmh, "iod_inode_open");
-		goto out;
-	}
 
 	if ((rc = RSX_NEWREQ(imp, SRII_VERSION,
 	    SRMT_REPL_READ, rq, mq, mp)) != 0)
@@ -236,13 +230,6 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	mq->len = SLASH_SLVR_SIZE;
 	mq->bmapno = w->srw_bmapno;
 	mq->offset = w->srw_offset;
-
-	rc = iod_bmap_load(w->srw_fcmh, w->srw_bmapno, SL_WRITE, &w->srw_bcm);
-	if (rc) {
-		psc_errorx("iod_map_load %u: %s",
-		    w->srw_bmapno, slstrerror(rc));
-		goto out;
-	}
 
 	nslvrs = 1;
 	tsize = w->srw_len;

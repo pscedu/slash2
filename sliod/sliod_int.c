@@ -162,7 +162,6 @@ iod_inode_lookup(const struct slash_fidgen *fg)
 			 FIDC_LOOKUP_REFRESH,
 			 NULL, &rootcreds, &f);
 	psc_assert(f);
-
 	return (f);
 }
 

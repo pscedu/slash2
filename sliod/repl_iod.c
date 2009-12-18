@@ -53,14 +53,48 @@ void
 sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
     sl_bmapno_t bmapno, int len)
 {
+	char buf[PSC_NIDSTR_SIZE];
 	struct sli_repl_workrq *w;
+	struct sl_resm *resm;
 
 	w = psc_pool_get(sli_replwkrq_pool);
+	memset(w, 0, sizeof(*w));
 	w->srw_nid = nid;
 	w->srw_fg = *fgp;
 	w->srw_bmapno = bmapno;
 	w->srw_len = len;
-	lc_add(&sli_replwkq_pending, w);
+
+	/* lookup replication source peer */
+	resm = libsl_nid2resm(w->srw_nid);
+	if (resm == NULL) {
+		psc_errorx("%s: unknown resource member",
+		    psc_nid2str(w->srw_nid, buf));
+		w->srw_status = SLERR_ION_UNKNOWN;
+		goto out;
+	}
+
+	/* get an fcmh for the file */
+	w->srw_fcmh = iod_inode_lookup(&w->srw_fg);
+	w->srw_status = iod_inode_open(w->srw_fcmh, SL_WRITE);
+	if (w->srw_status) {
+		DEBUG_FCMH(PLL_ERROR, w->srw_fcmh, "iod_inode_open");
+		goto out;
+	}
+
+	/* get the replication chunk's bmap */
+	w->srw_status = iod_bmap_load(w->srw_fcmh,
+	    w->srw_bmapno, SL_WRITE, &w->srw_bcm);
+	if (w->srw_status)
+		psc_errorx("iod_bmap_load %u: %s",
+		    w->srw_bmapno, slstrerror(w->srw_status));
+
+ out:
+	if (w->srw_status)
+		lc_add(&sli_replwkq_pending, w);
+	else
+		lc_add(&sli_replwkq_finished, w);
+
+	/* add to current processing list */
 	pll_add(&sli_replwkq_active, w);
 }
 
@@ -72,6 +106,7 @@ slireplfinthr_main(__unusedx void *arg)
 	for (;;) {
 		w = lc_getwait(&sli_replwkq_finished);
 		pll_remove(&sli_replwkq_active, w);
+		/* inform MDS we've finished */
 		sli_rmi_issue_repl_schedwk(w);
 
 		if (w->srw_bcm)
@@ -88,31 +123,18 @@ slireplpndthr_main(__unusedx void *arg)
 {
 	struct slashrpc_cservice *csvc;
 	struct sli_repl_workrq *w;
-	char buf[PSC_NIDSTR_SIZE];
-	struct sl_resm *resm;
 
 	for (;;) {
 		w = lc_getwait(&sli_replwkq_pending);
-		resm = libsl_nid2resm(w->srw_nid);
-		if (resm == NULL) {
-			psc_errorx("%s: unknown resource member",
-			    psc_nid2str(w->srw_nid, buf));
-			w->srw_status = SLERR_ION_UNKNOWN;
-			sli_rmi_issue_repl_schedwk(w);
-			psc_pool_return(sli_replwkrq_pool, w);
-			goto next;
-		}
-		csvc = sli_geticonn(resm);
-		if (csvc == NULL) {
+		csvc = sli_geticsvc(w->srw_resm);
+		if (csvc == NULL)
 			w->srw_status = SLERR_ION_OFFLINE;
-			sli_rmi_issue_repl_schedwk(w);
-			psc_pool_return(sli_replwkrq_pool, w);
-			goto next;
-		}
-		w->srw_status = sli_rii_issue_repl_read(csvc->csvc_import, w);
+		else
+			w->srw_status = sli_rii_issue_repl_read(csvc->csvc_import, w);
+		if (csvc)
+			sl_csvc_decref(csvc);
 		lc_add(w->srw_status ? &sli_replwkq_finished :
 		    &sli_replwkq_inflight, w);
- next:
 		sched_yield();
 	}
 }

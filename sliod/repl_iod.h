@@ -25,15 +25,16 @@
 struct sli_repl_workrq {
 	struct slash_fidgen	 srw_fg;
 	sl_bmapno_t		 srw_bmapno;
-
-	struct bmapc_memb	*srw_bcm;
-	struct fidc_membh	*srw_fcmh;
-	struct psclist_head	 srw_state_lentry;	/* entry for which state list */
-	struct psclist_head	 srw_active_lentry;	/* entry in global active list */
 	uint64_t		 srw_nid;
 	uint32_t		 srw_len;		/* bmap size */
 	uint32_t		 srw_status;		/* return code to pass back to MDS */
 	uint32_t		 srw_offset;		/* which sliver we're transmitting */
+
+	struct sl_resm		*srw_resm;
+	struct bmapc_memb	*srw_bcm;
+	struct fidc_membh	*srw_fcmh;
+	struct psclist_head	 srw_state_lentry;	/* entry for which state list */
+	struct psclist_head	 srw_active_lentry;	/* entry in global active list */
 
 	/* a single I/O may cross sliver boundaries, but is always <SLASH_SLVR_SIZE */
 	struct slvr_ref		*srw_slvr_ref[2];
