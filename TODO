@@ -271,8 +271,12 @@ mds.c
 - when updating bh_repls on replwk status update from ION in MDS,
   set immediately to OLD if incoming generation# is older than
   current existing one
-
-rename sitemon -> slmreplqthr-PSC
+- if an ION goes down while the MDS is waiting for an REPLWKST update,
+  the MDS needs to change SCHED->OLD
+- think about routing blips where MDS<->ION is not quite what a ION<->ION
+  can see each, causing unnecessary replication work processing
+- rename sitemon -> slmreplqthr-PSC
+- why isn't replication work finishing in the ION?
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
