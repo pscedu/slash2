@@ -118,7 +118,6 @@ slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 	srcm = slmrcmthr(thr);
 	bmdsi = bmap_2_bmdsi(bcm);
 
-	rc = 0;
 	nbits = rrq->rrq_inoh->inoh_ino.ino_nrepls *
 	    SL_BITS_PER_REPLICA + SL_NBITS_REPLST_BHDR;
 	if (howmany(srcm->srcm_page_bitpos + nbits,
@@ -145,9 +144,10 @@ slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos,
 	    &bhdr, 0, SL_NBITS_REPLST_BHDR);
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos +
-	    SL_NBITS_REPLST_BHDR, bmdsi->bmdsi_od->bh_repls, 0, nbits);
+	    SL_NBITS_REPLST_BHDR, bmdsi->bmdsi_od->bh_repls, 0,
+	    rrq->rrq_inoh->inoh_ino.ino_nrepls * SL_BITS_PER_REPLICA);
 	srcm->srcm_page_bitpos += nbits;
-	return (rc);
+	return (0);
 }
 
 /*
