@@ -23,7 +23,7 @@
 #include "psc_ds/dynarray.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rsx.h"
-#include "psc_util/multilock.h"
+#include "psc_util/multiwait.h"
 #include "psc_util/pthrutil.h"
 #include "psc_util/random.h"
 #include "psc_util/thread.h"

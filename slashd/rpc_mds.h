@@ -20,7 +20,7 @@
 #ifndef _MDS_RPC_H_
 #define _MDS_RPC_H_
 
-#include "psc_util/multilock.h"
+#include "psc_util/multiwait.h"
 
 #include "mdsexpc.h"
 

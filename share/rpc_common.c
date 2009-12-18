@@ -24,7 +24,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
-#include "psc_util/multilock.h"
+#include "psc_util/multiwait.h"
 
 #include "slashrpc.h"
 
