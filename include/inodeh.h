@@ -67,7 +67,7 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 #define FCMH_2_INODEP(f)	(&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
 
 static __inline char *
-_debug_ino(char *buf, size_t siz, struct slash_inode_od *ino)
+_debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 {
 	char nbuf[LINE_MAX], rbuf[LINE_MAX];
 	int nr, j;
@@ -96,7 +96,7 @@ _debug_ino(char *buf, size_t siz, struct slash_inode_od *ino)
 }
 
 static __inline void
-debug_ino(struct slash_inode_od *ino)
+debug_ino(const struct slash_inode_od *ino)
 {
 	char buf[BUFSIZ];
 
@@ -112,7 +112,7 @@ debug_ino(struct slash_inode_od *ino)
 	(i)->inoh_flags & INOH_INO_NEW		? "N" : ""
 
 static __inline void
-debug_inoh(struct slash_inode_handle *ih)
+debug_inoh(const struct slash_inode_handle *ih)
 {
 	char buf[BUFSIZ];
 
@@ -122,7 +122,7 @@ debug_inoh(struct slash_inode_handle *ih)
 
 static __inline void
 _log_debug_inoh(const char *file, const char *func, int lineno,
-    int level, struct slash_inode_handle *ih, const char *fmt, ...)
+    int level, const struct slash_inode_handle *ih, const char *fmt, ...)
 {
 	char buf[LINE_MAX], mbuf[LINE_MAX];
 	va_list ap;
