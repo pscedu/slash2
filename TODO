@@ -272,6 +272,8 @@ mds.c
   set immediately to OLD if incoming generation# is older than
   current existing one
 
+rename sitemon -> slmreplqthr-PSC
+
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
 - use a sliding window to track valid cfd's and remove them from the window
