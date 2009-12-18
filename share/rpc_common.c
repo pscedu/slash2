@@ -226,10 +226,9 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	}
 
  out:
-	if (csvc) {
+	if (csvc)
 		sl_csvc_incref(csvc);
-		CSVC_URLOCK(csvc, locked);
-	}
+	ureqlock(lockp, locked);
 //	errno = rc;
 	return (csvc);
 }
