@@ -89,13 +89,13 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 		    w->srw_bmapno, slstrerror(w->srw_status));
 
  out:
+	/* add to current processing list */
+	pll_add(&sli_replwkq_active, w);
+
 	if (w->srw_status)
 		lc_add(&sli_replwkq_pending, w);
 	else
 		lc_add(&sli_replwkq_finished, w);
-
-	/* add to current processing list */
-	pll_add(&sli_replwkq_active, w);
 }
 
 __dead void *
