@@ -127,10 +127,12 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 			DEBUG_FCMH(PLL_WARN, f,
 				   "null fcmh_cache_owner here");
 
-		tmp = _fidc_lookup_fg(fcmh_2_fgp(f), 1);
-
-		if (f != tmp)
-			abort();
+		else {
+			tmp = _fidc_lookup_fg(fcmh_2_fgp(f), 1);
+			
+			if (f != tmp)
+				abort();
+		}
 
 		if (psclist_conjoint(&f->fcmh_hentry.hentry_lentry)) {
 			struct hash_bucket *b;
