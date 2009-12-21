@@ -119,18 +119,19 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 		if (op == BIORQ_WRITE) {
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
 			psc_atomic16_dec(&bmpce->bmpce_wrref);
-			if (!psc_atomic16_read(&bmpce->bmpce_wrref)) {
-				bmpce->bmpce_flags &= ~BMPCE_READPNDG;
-				bmpce->bmpce_flags |= BMPCE_LRU;
-				pll_addtail(&bmpc->bmpc_lru, bmpce);
-				bmpc_wake_reaper();
-			}
 
 		} else {
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) > 0);
 			psc_atomic16_dec(&bmpce->bmpce_rdref);
-			if (!psc_atomic16_read(&bmpce->bmpce_wrref))
-				psc_assert(bmpce->bmpce_flags & BMPCE_LRU);
+			if (!psc_atomic16_read(&bmpce->bmpce_rdref))
+				bmpce->bmpce_flags &= ~BMPCE_READPNDG;
+		}
+
+		if (!(psc_atomic16_read(&bmpce->bmpce_wrref) ||
+		      psc_atomic16_read(&bmpce->bmpce_rdref))) {
+			bmpce->bmpce_flags |= BMPCE_LRU;
+			pll_addtail(&bmpc->bmpc_lru, bmpce);
+			bmpc_wake_reaper();
 		}
 	}
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
