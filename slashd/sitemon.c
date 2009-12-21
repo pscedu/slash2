@@ -91,7 +91,7 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 		goto fail;
 
 	if (!mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 1)) {
-		/* multiwait for the src to become unbusy */
+		/* add "src to become unbusy" to multiwait */
 		if (!psc_multiwait_hascond(&msi->msi_mw,
 		    &src_mrmi->mrmi_mwcond))
 			psc_multiwait_addcond(&msi->msi_mw,
@@ -212,6 +212,7 @@ slmreplthr_main(void *arg)
 
 			psc_pthread_mutex_lock(&rrq->rrq_mutex);
 			rrq_gen = rrq->rrq_gen;
+			rrq->rrq_flags &= ~REPLRQF_BUSY;
 			psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 
 			/* find a resource in our site this replrq is destined for */
@@ -225,20 +226,17 @@ slmreplthr_main(void *arg)
 				off = SL_BITS_PER_REPLICA * iosidx;
 
 				/* got a replication request; find a bmap this ios needs */
-				/* XXX lock fcmh to prohibit nbmaps changes? */
 				nb = REPLRQ_NBMAPS(rrq);
 				bmapno = psc_random32u(nb);
 				for (ib = 0; ib < nb; ib++,
 				    bmapno = (bmapno + 1) % nb) {
+					if (rrq_gen != rrq->rrq_gen)
+						goto skiprrq;
 					rc = mds_bmap_load(REPLRQ_FCMH(rrq),
 					    bmapno, &bcm);
 					if (rc)
 						continue;
 
-					/*
-					 * XXX if bmap has been recently modified or is
-					 * still open, hold off on this bmap for now.
-					 */
 					BMAP_LOCK(bcm);
 					bmdsi = bmap_2_bmdsi(bcm);
 					bmapod = bmdsi->bmdsi_od;
@@ -248,9 +246,9 @@ slmreplthr_main(void *arg)
 					    val == SL_REPL_SCHED)
 						has_repl_work = 1;
 					if (val != SL_REPL_OLD)
-						goto nextbmap;
+						goto skipbmap;
 //					if (bmap is leased to an ION)
-//						goto nextbmap;
+//						goto skipbmap;
 					BMAP_ULOCK(bcm);
 
 					/* Got a bmap; now look for a source. */
@@ -258,6 +256,10 @@ slmreplthr_main(void *arg)
 					ris = psc_random32u(nios);
 					for (is = 0; is < nios; is++,
 					    ris = (ris + 1) % nios) {
+						if (rrq_gen != rrq->rrq_gen) {
+							mds_repl_bmap_rel(bcm);
+							goto skiprrq;
+						}
 						src_res = libsl_id2res(REPLRQ_GETREPL(rrq, ris).bs_id);
 
 						/* skip ourself and old/inactive replicas */
@@ -289,23 +291,25 @@ slmreplthr_main(void *arg)
 									goto restart;
 						}
 					}
- nextbmap:
+ skipbmap:
 					mds_repl_bmap_rel(bcm);
 				}
 			}
+ skiprrq:
 			/*
 			 * At this point, we did not find a block/src/dst
 			 * resource involving our site needed by this replrq.
 			 */
 			psc_pthread_mutex_lock(&rrq->rrq_mutex);
 			if (has_repl_work || rrq->rrq_gen != rrq_gen) {
+				psc_multiwait_addcond_masked(&msi->msi_mw,
+				    &rrq->rrq_mwcond, 0);
+				mds_repl_unrefrq(rrq);
+
 				/*
 				 * This should be safe since the rrq
 				 * is refcounted in our dynarray.
 				 */
-				psc_multiwait_addcond_masked(&msi->msi_mw,
-				    &rrq->rrq_mwcond, 0);
-				mds_repl_unrefrq(rrq);
 				psc_multiwait_setcondwakeable(&msi->msi_mw,
 				    &rrq->rrq_mwcond, 1);
 			} else {
