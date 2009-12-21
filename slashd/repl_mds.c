@@ -462,7 +462,7 @@ mds_repl_bmap_rel(struct bmapc_memb *bcm)
 	struct bmap_mds_info *bmdsi;
 	struct slash_bmap_od *bmapod;
 
-	BMAP_LOCK_ENSURE(bcm);
+	BMAP_RLOCK(bcm);
 
 	bmdsi = bmap_2_bmdsi(bcm);
 	bmapod = bmdsi->bmdsi_od;

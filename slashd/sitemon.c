@@ -119,6 +119,7 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	if (rc || mp->rc)
 		goto fail;
 
+	BMAP_LOCK(bcm);
 	bmapod = bmap_2_bmdsi(bcm)->bmdsi_od;
 	SL_REPL_SET_BMAP_IOS_STAT(bmapod->bh_repls,
 	    off, SL_REPL_SCHED);
@@ -248,6 +249,9 @@ slmreplthr_main(void *arg)
 						has_repl_work = 1;
 					if (val != SL_REPL_OLD)
 						goto nextbmap;
+//					if (bmap is leased to an ION)
+//						goto nextbmap;
+					BMAP_ULOCK(bcm);
 
 					/* Got a bmap; now look for a source. */
 					nios = REPLRQ_NREPLS(rrq);
