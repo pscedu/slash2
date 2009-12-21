@@ -22,11 +22,14 @@
 #include "fid.h"
 #include "sltypes.h"
 
+#define REPL_MAX_INFLIGHT_SLVRS	64			/* maximum # inflight slivers between IONs */
+
 struct sli_repl_workrq {
 	struct slash_fidgen	 srw_fg;
 	sl_bmapno_t		 srw_bmapno;
 	uint64_t		 srw_nid;
 	uint32_t		 srw_len;		/* bmap size */
+	uint32_t		 srw_xferlen;		/* current transfer length */
 	uint32_t		 srw_status;		/* return code to pass back to MDS */
 	uint32_t		 srw_offset;		/* which sliver we're transmitting */
 

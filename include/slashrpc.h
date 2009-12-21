@@ -525,7 +525,7 @@ struct srm_repl_schedwk_req {
 
 struct srm_repl_read_req {
 	struct slash_fidgen	fg;
-	uint64_t		len;
+	uint64_t		len;	/* #bytes in this message, to find #slivers */
 	sl_bmapno_t		bmapno;
 	int32_t			offset;	/* offset into bmap, slvr boundary */
 };
