@@ -524,7 +524,7 @@ mds_repl_findrq(const struct slash_fidgen *fgp, int *locked)
 {
 	struct slash_inode_handle inoh;
 	struct sl_replrq q, *rrq;
-	int rc, dummy;
+	int dummy;
 
 	if (locked == NULL)
 		locked = &dummy;
@@ -543,10 +543,10 @@ mds_repl_findrq(const struct slash_fidgen *fgp, int *locked)
 	freelock(&replrq_tree_lock);
 	*locked = 0;
 
-	rc = mds_repl_accessrq(rrq);
-	if (!rc)
-		rrq = NULL;
-	return (rrq);
+	/* accessrq() drops the refcnt on failure */
+	if (mds_repl_accessrq(rrq))
+		return (rrq);
+	return (NULL);
 }
 
 /* XXX this should be refactored into a generic inode loader in mds.c */
@@ -797,6 +797,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	 * know there is work to do and that the replrq shouldn't go away.
 	 */
 	rrq_gen = rrq->rrq_gen;
+	rrq->rrq_flags |= REPLRQF_BUSY;
 	psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 
 	/* Scan for any OLD states. */
