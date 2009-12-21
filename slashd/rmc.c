@@ -282,21 +282,29 @@ slm_rmc_translate_flags(int in, int *out)
 
 	if (in & ~(SLF_READ | SLF_WRITE | SLF_APPEND | SLF_CREAT |
 	    SLF_TRUNC | SLF_OFFMAX | SLF_SYNC | SLF_DSYNC |
-	    SLF_RSYNC | SLF_EXCL | SLF_NODSYNC))
+	    SLF_RSYNC | SLF_EXCL))
 		return (EINVAL);
+
 	/* XXX SLF_NOFOLLOW not implemented */
+
 	if ((in & (SLF_READ | SLF_WRITE)) == 0)
 		return (EINVAL);
 
-	if (in & SLF_READ)
-		*out |= SLF_READ;
-	if (in & SLF_WRITE)
-		*out |= SLF_WRITE;
+	if (in & SLF_WRITE) {
+		if (in & SLF_READ)
+			*out = O_RDWR;
+		else
+			*out = O_WRONLY;
+	}
+
 	if (in & SLF_CREAT)
-		*out |= SLF_CREAT;
+		*out |= O_CREAT;
+
 	if (in & SLF_EXCL)
-		*out |= SLF_EXCL;
-	*out |= SLF_OFFMAX;
+		*out |= O_EXCL;
+
+	*out |= O_LARGEFILE;
+
 	return (0);
 }
 

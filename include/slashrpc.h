@@ -98,20 +98,19 @@
 
 /* Slash OPEN message flags */
 /* XXX make system agnostic */
-#define SLF_READ	1
-#define SLF_WRITE	2
-#define SLF_APPEND	O_APPEND
-#define SLF_CREAT	O_CREAT
-#define SLF_TRUNC	O_TRUNC
-#define SLF_OFFMAX	O_LARGEFILE
-#define SLF_SYNC	O_SYNC
-#define SLF_DSYNC	O_DSYNC
-#define SLF_RSYNC	O_RSYNC
-#define SLF_EXCL	O_EXCL
-#define SLF_DIRECTORY	O_DIRECTORY
-#define SLF_NODSYNC	0x10000		/* fsync pseudo flag */
-#define SLF_NOFOLLOW	0x20000		/* don't follow symlinks */
-#define SLF_IGNORECASE	0x80000		/* request case-insensitive lookups */
+#define SLF_READ	(1<<0)
+#define SLF_WRITE	(1<<1)
+#define SLF_APPEND	(1<<2)
+#define SLF_CREAT	(1<<3)
+#define SLF_TRUNC	(1<<4)
+#define SLF_OFFMAX	(1<<5)
+#define SLF_SYNC	(1<<6)
+#define SLF_DSYNC	(1<<7)
+#define SLF_RSYNC	(1<<8)
+#define SLF_EXCL	(1<<9)
+#define SLF_DIRECTORY	(1<<10)
+#define SLF_NOFOLLOW	(1<<11)		/* don't follow symlinks */
+//#define SLF_IGNORECASE   0x80000	/* request case-insensitive lookups */
 
 #define SL_GETREPTBL    01000
 
