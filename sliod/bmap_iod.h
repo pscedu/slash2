@@ -180,11 +180,6 @@ bcr_cmp(const void *x, const void *y)
 
 #define BIOD_CRCUP_MAX_AGE	 2		/* in seconds */
 
-enum slash_bmap_slv_states {
-	BMAP_SLVR_DATA = (1<<0), /* Data present, otherwise slvr is hole */
-	BMAP_SLVR_CRC  = (1<<1)  /* Valid CRC */
-	//XXX ATM, 6 bits are left
-};
 
 extern struct psc_listcache iodBmapLru;
 
