@@ -45,8 +45,7 @@ struct slash_inode_handle;
 #define SLMTHRT_TIOS		8	/* I/O stats updater */
 #define SLMTHRT_COH		9	/* coherency thread */
 #define SLMTHRT_FSSYNC		10	/* file system syncer */
-#define SLMTHRT_REPL		11	/* per-site replication monitor */
-#define SLMTHRT_IONCONN		12	/* I/O node connection maintainer */
+#define SLMTHRT_REPLQ		11	/* per-site replication queuer */
 
 struct slmrmc_thread {
 	struct pscrpc_thread	  smrct_prt;
@@ -69,20 +68,15 @@ struct slmrmm_thread {
 	struct pscrpc_thread	  smrmt_prt;
 };
 
-struct slmrepl_thread {
+struct slmreplq_thread {
 	struct sl_site		 *smrt_site;
-};
-
-struct slmiconn_thread {
-	struct sl_resm		 *smict_resm;
 };
 
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
-PSCTHR_MKCAST(slmiconnthr, slmiconn_thread, SLMTHRT_IONCONN)
-PSCTHR_MKCAST(slmreplthr, slmrepl_thread, SLMTHRT_REPL)
+PSCTHR_MKCAST(slmreplqthr, slmreplq_thread, SLMTHRT_REPLQ)
 
 struct mds_site_info {
 	struct psc_dynarray	  msi_replq;
@@ -132,7 +126,7 @@ int	 mds_inox_ensure_loaded(struct slash_inode_handle *);
 void	 slmtimerthr_spawn(void);
 void	 slmctlthr_main(const char *);
 void	 slmfssyncthr_init(void);
-void	 slmreplthr_spawnall(void);
+void	 slmreplqthr_spawnall(void);
 void	*slmrcmthr_main(void *);
 
 extern struct psc_vbitmap			 slmrcmthr_uniqidmap;

@@ -35,16 +35,16 @@
 #include "slerr.h"
 
 void
-slmreplthr_removeq(struct sl_replrq *rrq)
+slmreplqthr_removeq(struct sl_replrq *rrq)
 {
-	struct slmrepl_thread *smrt;
+	struct slmreplq_thread *smrt;
 	struct mds_site_info *msi;
 	struct psc_thread *thr;
 	struct sl_site *site;
 	int locked;
 
 	thr = pscthr_get();
-	smrt = slmreplthr(thr);
+	smrt = slmreplqthr(thr);
 	site = smrt->smrt_site;
 	msi = site->site_pri;
 
@@ -59,14 +59,14 @@ slmreplthr_removeq(struct sl_replrq *rrq)
 }
 
 int
-slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
+slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
     struct sl_resm *src_resm, struct sl_resource *dst_res, int j)
 {
 	struct mds_resm_info *src_mrmi, *dst_mrmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
 	struct slash_bmap_od *bmapod;
-	struct slmrepl_thread *smrt;
+	struct slmreplq_thread *smrt;
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *rq;
 	struct mds_site_info *msi;
@@ -77,7 +77,7 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 
 	we_set_busy = 0;
 	thr = pscthr_get();
-	smrt = slmreplthr(thr);
+	smrt = slmreplqthr(thr);
 	site = smrt->smrt_site;
 	msi = site->site_pri;
 
@@ -138,14 +138,14 @@ slmreplthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 }
 
 __dead void *
-slmreplthr_main(void *arg)
+slmreplqthr_main(void *arg)
 {
 	int iosidx, nios, nrq, off, j, rc, has_repl_work;
 	int rrq_gen, ris, is, rir, ir, rin, in, val;
 	struct sl_resource *src_res, *dst_res;
+	struct slmreplq_thread *smrt;
 	struct slash_bmap_od *bmapod;
 	struct bmap_mds_info *bmdsi;
-	struct slmrepl_thread *smrt;
 	struct mds_site_info *msi;
 	struct sl_resm *src_resm;
 	struct bmapc_memb *bcm;
@@ -156,7 +156,7 @@ slmreplthr_main(void *arg)
 	void *dummy;
 
 	thr = arg;
-	smrt = slmreplthr(thr);
+	smrt = slmreplqthr(thr);
 	site = smrt->smrt_site;
 	msi = site->site_pri;
 	for (;;) {
@@ -196,7 +196,7 @@ slmreplthr_main(void *arg)
 
 			if (rc == 0) {
 				/* repl must be going away, drop it */
-				slmreplthr_removeq(rrq);
+				slmreplqthr_removeq(rrq);
 				goto restart;
 			}
 
@@ -204,7 +204,7 @@ slmreplthr_main(void *arg)
 			if (rc) {
 				psc_warnx("couldn't load inoh repl table: %s",
 				    slstrerror(rc));
-				slmreplthr_removeq(rrq);
+				slmreplqthr_removeq(rrq);
 				goto restart;
 			}
 
@@ -286,7 +286,7 @@ slmreplthr_main(void *arg)
 
 							/* look for a destination resm */
 							for (k = 0; k < (int)dst_res->res_nnids; k++)
-								if (slmreplthr_trydst(rrq, bcm,
+								if (slmreplqthr_trydst(rrq, bcm,
 								    off, src_resm, dst_res, k))
 									goto restart;
 						}
@@ -313,7 +313,7 @@ slmreplthr_main(void *arg)
 				psc_multiwait_setcondwakeable(&msi->msi_mw,
 				    &rrq->rrq_mwcond, 1);
 			} else {
-				slmreplthr_removeq(rrq);
+				slmreplqthr_removeq(rrq);
 				goto restart;
 			}
 		}
@@ -325,20 +325,46 @@ slmreplthr_main(void *arg)
 	}
 }
 
-void
-slmreplthr_spawnall(void)
+#if 0
+__dead void *
+slmtruncthr_main(void *arg)
 {
-	struct slmrepl_thread *smrt;
+
+	thr = arg;
+	smtrt = slmtruncthr(thr);
+	site = smrt->smrt_site;
+	msi = site->site_pri;
+	for (;;) {
+//		trq = lc_get(msi->msi_truncq);
+
+		for (j = 0; j < site->site_nres; j++) {
+			res = site->site_resv[j];
+			rin = psc_random32u(res->res_nnids);
+			for (in = 0; in < (int)res->res_nnids; in++,
+			    rin = (rin + 1) % res->res_nnids) {
+				resm = libsl_nid2resm(res->res_nids[rin]);
+				if (slm_geticsvc(resm) == NULL)
+					continue;
+		}
+
+	}
+}
+#endif
+
+void
+slmreplqthr_spawnall(void)
+{
+	struct slmreplq_thread *smrt;
 	struct psc_thread *thr;
 	struct sl_site *site;
 	int locked;
 
 	locked = PLL_RLOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(site, &globalConfig.gconf_sites) {
-		thr = pscthr_init(SLMTHRT_REPL, 0, slmreplthr_main,
-		    NULL, sizeof(*smrt), "slmreplthr-%s",
+		thr = pscthr_init(SLMTHRT_REPLQ, 0, slmreplqthr_main,
+		    NULL, sizeof(*smrt), "slmreplqthr-%s",
 		    site->site_name + strspn(site->site_name, "@"));
-		smrt = slmreplthr(thr);
+		smrt = slmreplqthr(thr);
 		smrt->smrt_site = site;
 		pscthr_setready(thr);
 	}

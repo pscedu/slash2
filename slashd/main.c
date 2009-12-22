@@ -184,7 +184,7 @@ main(int argc, char *argv[])
 	bmap_cache_init(sizeof(struct bmap_mds_info));
 
 	slm_rpc_initsvc();
-	slmreplthr_spawnall();
+	slmreplqthr_spawnall();
 	mds_repl_init();
 	slmtimerthr_spawn();
 	slmctlthr_main(sfn);
