@@ -843,10 +843,14 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	/*  XXX need a more intelligent algorithm here.
 	 */
 	res = libsl_id2res(mfd->mfd_reptbl[0].bs_id);
-	if (!res)
-		psc_fatalx("Failed to lookup iosid %u, verify that the slash "
-			   "configs are uniform across all servers",
-			   mfd->mfd_reptbl[0].bs_id);
+	if (!res) {
+		if (!(resm = libsl_nid2resm(bmap_2_msion(b))))
+			psc_fatalx("Failed to lookup iosid %u, verify that the slash "
+				   "configs are uniform across all servers",
+				   mfd->mfd_reptbl[0].bs_id);
+		else
+			goto out;
+	}
 
 	crpi = res->res_pri;
 	spinlock(&crpi->crpi_lock);
@@ -864,7 +868,7 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 		psc_fatalx("Failed to lookup %s, verify that the slash configs"
 			   " are uniform across all servers",
 			   libcfs_nid2str(repl_nid));
-
+ out:
 	csvc = slc_geticsvc(resm);
 	return (csvc ? csvc->csvc_import : NULL);
 }
@@ -884,6 +888,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct bmapc_memb *b=r->biorq_bmap;
 	struct bmap_pagecache_entry *bmpce;
 	int op=rq->rq_reqmsg->opc, i;
+	int clearpages=0;
 
 	b = r->biorq_bmap;
 	psc_assert(b);
@@ -894,12 +899,16 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	DEBUG_BMAP(PLL_INFO, b, "callback");
 	DEBUG_BIORQ(PLL_INFO, r, "callback bmap=%p", b);
 
-	if (rq->rq_status) {
-		DEBUG_REQ(PLL_ERROR, rq, "non-zero status status %d",
-		    rq->rq_status);
-		psc_fatalx("Resolve issues surrounding this failure");
-		// XXX Freeing of dynarray, bmpce's, etc
-		return (rq->rq_status);
+	if (rq->rq_status && rq->rq_status != -ENOENT) {
+		if (rq->rq_status == -ENOENT)
+			clearpages = 0;
+		else {
+			DEBUG_REQ(PLL_ERROR, rq, "non-zero status status %d",
+				  rq->rq_status);
+			psc_fatalx("Resolve issues surrounding this failure");
+			// XXX Freeing of dynarray, bmpce's, etc
+			return (rq->rq_status);
+		}
 	}
 
 	spinlock(&r->biorq_lock);
@@ -928,6 +937,12 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			psc_atomic16_dec(&bmpce->bmpce_rdref);
 			bmpce_inflight_dec_locked(bmpce);
 		}
+
+		if (clearpages) {
+			DEBUG_BMPCE(PLL_WARN, bmpce, "clearing page");
+			memset(0, bmpce->bmpce_base, BMPC_BUFSZ);
+		}
+
 		DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via readio_cb");
 
 		/* Disown the bmpce by null'ing the waitq pointer.
