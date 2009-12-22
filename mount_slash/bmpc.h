@@ -112,7 +112,7 @@ enum BMPCE_STATES {
 #define BMPCE_FLAG(field, str) ((field) ? (str) : "-")
 #define DEBUG_BMPCE_FLAGS(b)				        \
         BMPCE_FLAG(((b)->bmpce_flags & BMPCE_NEW), "n"),	\
-	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_GETBUF), "w"),	\
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_GETBUF), "g"),	\
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_DATARDY), "d"),	\
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_DIRTY2LRU), "D"),	\
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_LRU), "l"),	\
