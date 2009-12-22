@@ -196,9 +196,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmds_jent_ino_addrepl);
 	PRTYPE(struct slmds_jent_repgen);
 	PRTYPE(struct slmds_jents);
-	PRTYPE(struct slmiconn_thread);
 	PRTYPE(struct slmrcm_thread);
-	PRTYPE(struct slmrepl_thread);
+	PRTYPE(struct slmreplq_thread);
 	PRTYPE(struct slmrmc_thread);
 	PRTYPE(struct slmrmi_thread);
 	PRTYPE(struct slmrmm_thread);
