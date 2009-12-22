@@ -55,7 +55,6 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 			strlcpy(srws->srws_peer_addr, "?",
 			    sizeof(srws->srws_peer_addr));
 		srws->srws_len = w->srw_len;
-		srws->srws_offset = w->srw_offset;
 
 		rc = psc_ctlmsg_sendv(fd, mh, srws);
 		if (!rc)

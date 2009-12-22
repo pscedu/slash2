@@ -23,6 +23,7 @@
 
 #include "psc_ds/list.h"
 #include "psc_ds/pool.h"
+#include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
@@ -38,9 +39,8 @@
 #include "sliod.h"
 #include "slvr.h"
 
-#define SRII_REPLREAD_CBARG_WKRQ 0
-
-struct psclist_head io_server_conns = PSCLIST_HEAD_INIT(io_server_conns);
+#define SRII_REPLREAD_CBARG_WKRQ	0
+#define SRII_REPLREAD_CBARG_SLVR	1
 
 int
 sli_rii_handle_connect(struct pscrpc_request *rq)
@@ -57,14 +57,13 @@ sli_rii_handle_connect(struct pscrpc_request *rq)
 int
 sli_rii_handle_replread(struct pscrpc_request *rq)
 {
-	int i, slvrsiz, tsize, slvrno, nslvrs;
-	struct iovec iov[REPL_MAX_INFLIGHT_SLVRS];
 	const struct srm_repl_read_req *mq;
 	struct srm_repl_read_rep *mp;
 	struct pscrpc_bulk_desc *desc;
-	struct slvr_ref *slvr_ref[2];
+	struct slvr_ref *slvr_ref;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
+	struct iovec iov;
 
 	bcm = NULL;
 
@@ -73,16 +72,11 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 		return (mp->rc);
 	}
-	/* check each individually here to avoid overflow in the addition following */
-	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE * REPL_MAX_INFLIGHT_SLVRS) {
+	if (mq->len <= 0 || mq->len > SLASH_SLVR_SIZE) {
 		mp->rc = EINVAL;
 		return (mp->rc);
 	}
-	if (mq->offset < 0 || mq->offset > SLASH_BMAP_SIZE - SLASH_SLVR_SIZE) {
-		mp->rc = EINVAL;
-		return (mp->rc);
-	}
-	if (mq->len + mq->offset > SLASH_BMAP_SIZE) {
+	if (mq->slvrno < 0 || mq->slvrno >= SLASH_SLVRS_PER_BMAP) {
 		mp->rc = EINVAL;
 		return (mp->rc);
 	}
@@ -102,29 +96,21 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	tsize = mq->len;
-	slvrno = (SLASH_BMAP_SIZE * bcm->bcm_blkno + mq->offset) / SLASH_SLVR_SIZE;
 	psc_assert((SLASH_BMAP_SIZE % SLASH_SLVR_SIZE) == 0);
-	psc_assert((mq->offset % SLASH_SLVR_SIZE) == 0);
-	nslvrs = howmany(tsize, SLASH_SLVR_SIZE);
-	for (i = 0; i < nslvrs; i++) {
-		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bcm), SL_READ);
-		slvr_slab_prep(slvr_ref[i], SL_READ);
-		slvr_repl_prep(slvr_ref[i], SLVR_REPLSRC);
-		slvrsiz = MIN(tsize, SLASH_SLVR_SIZE);
-		slvr_io_prep(slvr_ref[i], 0, slvrsiz, SL_READ);
-		iov[i].iov_base = slvr_ref[i]->slvr_slab->slb_base;
-		iov[i].iov_len = slvrsiz;
-		tsize -= slvrsiz;
-	}
+
+	slvr_ref = slvr_lookup(mq->slvrno, bmap_2_biodi(bcm), SL_READ);
+	slvr_slab_prep(slvr_ref, SL_READ);
+	slvr_repl_prep(slvr_ref, SLVR_REPLSRC);
+	slvr_io_prep(slvr_ref, 0, mq->len, SL_READ);
+	iov.iov_base = slvr_ref->slvr_slab->slb_base;
+	iov.iov_len = mq->len;
 
 	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
-	    SRII_BULK_PORTAL, iov, nslvrs);
+	    SRII_BULK_PORTAL, &iov, 1);
 	if (desc)
 		pscrpc_free_bulk(desc);
 
-	for (i = 0; i < nslvrs; i++)
-		slvr_io_done(slvr_ref[i], SL_READ);
+	slvr_io_done(slvr_ref, SL_READ);
 
  out:
 	if (bcm)
@@ -155,26 +141,23 @@ sli_rii_handler(struct pscrpc_request *rq)
 }
 
 int
-sli_rii_replread_clean_slivers(struct sli_repl_workrq *w, int rc)
+sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
+    int slvridx, int rc)
 {
-	int i, nslvrs, tsize, slvrno, slvrsiz;
+	struct slvr_ref *s;
+	int slvrsiz;
 
-	tsize = w->srw_xferlen;
-	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE +
-	    w->srw_offset) / SLASH_SLVR_SIZE;
-	psc_assert((SLASH_BMAP_SIZE % SLASH_SLVR_SIZE) == 0);
-	psc_assert((w->srw_offset % SLASH_SLVR_SIZE) == 0);
-	nslvrs = howmany(tsize, SLASH_SLVR_SIZE);
-	for (i = 0; i < nslvrs; i++) {
-		slvrsiz = MIN(SLASH_BLKS_PER_SLVR * SLASH_SLVR_BLKSZ, tsize);
-		if (rc == 0)
-			rc = slvr_fsbytes_wio(w->srw_slvr_ref[i], slvrsiz, 0);
-		if (rc)
-			slvr_clear_inuse(w->srw_slvr_ref[i], 0, slvrsiz);
-		slvr_io_done(w->srw_slvr_ref[i], SL_WRITE);
-		tsize -= slvrsiz;
-		w->srw_offset += slvrsiz;
-	}
+	s = w->srw_slvr_refs[slvridx];
+	slvrsiz = SLASH_SLVR_SIZE;
+	/* if last sliver in bmap, use short length if possible */
+	if (s->slvr_num == w->srw_len / SLASH_SLVR_SIZE)
+		slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
+	if (rc == 0)
+		rc = slvr_fsbytes_wio(s, slvrsiz, 0);
+	if (rc)
+		slvr_clear_inuse(s, 0, slvrsiz);
+	slvr_io_done(s, SL_WRITE);
+	w->srw_slvr_refs[slvridx] = NULL;
 	return (rc);
 }
 
@@ -184,9 +167,11 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 {
 	struct sli_repl_workrq *w;
 	struct srm_io_rep *mp;
-	int rc;
+	struct slvr_ref *s;
+	int rc, slvridx;
 
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
+	s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
 
 	rc = rq->rq_status;
 	if (rc)
@@ -198,57 +183,58 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 		rc = EBADMSG;
 
  out:
-	rc = sli_rii_replread_clean_slivers(w, rc);
+	for (slvridx = 0; slvridx < nitems(w->srw_slvr_refs); slvridx++)
+		if (w->srw_slvr_refs[slvridx] == s)
+			break;
+	psc_assert(slvridx < nitems(w->srw_slvr_refs));
+	rc = sli_rii_replread_release_sliver(w, slvridx, rc);
 
-	lc_remove(&sli_replwkq_inflight, w);
-	if (rc || w->srw_offset == SLASH_BMAP_SIZE) {
+	spinlock(&w->srw_lock);
+	if (psc_vbitmap_isfull(w->srw_inflight))
+		lc_remove(&sli_replwkq_inflight, w);
+	freelock(&w->srw_lock);
+
+	if (rc)
 		w->srw_status = rc;
-		lc_add(&sli_replwkq_finished, w);
-	} else
-		/* place back on pending queue until the last sliver finishes */
+
+	/* place back on pending queue until the last sliver finishes or error */
+	if (psclist_disjoint(&w->srw_state_lentry))
 		lc_add(&sli_replwkq_pending, w);
 	return (rc);
 }
 
 int
-sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
+sli_rii_issue_repl_read(struct pscrpc_import *imp, int slvrno,
+    int slvridx, struct sli_repl_workrq *w)
 {
-	int i, rc, tsize, slvrsiz, slvrno, nslvrs;
-	struct iovec iov[REPL_MAX_INFLIGHT_SLVRS];
 	const struct srm_repl_read_rep *mp;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_repl_read_req *mq;
 	struct pscrpc_request *rq;
-
-	w->srw_xferlen = 0;
+	struct slvr_ref *s;
+	struct iovec iov;
+	int rc;
 
 	if ((rc = RSX_NEWREQ(imp, SRII_VERSION,
 	    SRMT_REPL_READ, rq, mq, mp)) != 0)
-		goto out;
+		return (rc);
 
-	w->srw_xferlen = tsize = MIN(w->srw_len, SLASH_SLVR_SIZE * REPL_MAX_INFLIGHT_SLVRS);
-	slvrno = (w->srw_bcm->bcm_blkno * SLASH_BMAP_SIZE + w->srw_offset) / SLASH_SLVR_SIZE;
-	psc_assert((SLASH_BMAP_SIZE % SLASH_SLVR_SIZE) == 0);
-	psc_assert((w->srw_offset % SLASH_SLVR_SIZE) == 0);
-	nslvrs = howmany(tsize, SLASH_SLVR_SIZE);
-	for (i = 0; i < nslvrs; i++) {
-		slvrsiz = MIN(tsize, SLASH_SLVR_SIZE);
-		w->srw_slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(w->srw_bcm), SL_WRITE);
-		slvr_slab_prep(w->srw_slvr_ref[i], SL_WRITE);
-		slvr_repl_prep(w->srw_slvr_ref[i], SLVR_REPLDST);
-		slvr_io_prep(w->srw_slvr_ref[i], 0, slvrsiz, SL_WRITE);
-		iov[i].iov_base = w->srw_slvr_ref[i]->slvr_slab->slb_base;
-		iov[i].iov_len = slvrsiz;
-		tsize -= slvrsiz;
-	}
-
+	mq->len = MIN(w->srw_len, SLASH_SLVR_SIZE);
 	mq->fg = w->srw_fg;
-	mq->len = tsize;
 	mq->bmapno = w->srw_bmapno;
-	mq->offset = w->srw_offset;
+	mq->slvrno = slvrno;
+
+	psc_assert((SLASH_BMAP_SIZE % SLASH_SLVR_SIZE) == 0);
+	w->srw_slvr_refs[slvridx] = s =
+	    slvr_lookup(slvrno, bmap_2_biodi(w->srw_bcm), SL_WRITE);
+	slvr_slab_prep(s, SL_WRITE);
+	slvr_repl_prep(s, SLVR_REPLDST);
+	slvr_io_prep(s, 0, mq->len, SL_WRITE);
+	iov.iov_base = s->slvr_slab->slb_base;
+	iov.iov_len = mq->len;
 
 	rc = rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
-	    SRII_BULK_PORTAL, iov, nslvrs);
+	    SRII_BULK_PORTAL, &iov, 1);
 	if (rc)
 		goto out;
 
@@ -256,16 +242,10 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, struct sli_repl_workrq *w)
 	rq->rq_interpret_reply = sli_rii_replread_cb;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
 
-	bmap_op_start(w->srw_bcm);
-	fidc_membh_incref(w->srw_fcmh);
 	nbreqset_add(&sli_replwk_nbset, rq);
 
  out:
 	if (rc)
-		sli_rii_replread_clean_slivers(w, rc);
-	if (w->srw_bcm)
-		bmap_op_done(w->srw_bcm);
-	if (w->srw_fcmh)
-		fidc_membh_dropref(w->srw_fcmh);
+		sli_rii_replread_release_sliver(w, slvridx, rc);
 	return (rc);
 }

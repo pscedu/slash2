@@ -19,6 +19,7 @@
 
 #include "psc_ds/list.h"
 
+#include "cache_params.h"
 #include "fid.h"
 #include "sltypes.h"
 
@@ -29,9 +30,7 @@ struct sli_repl_workrq {
 	sl_bmapno_t		 srw_bmapno;
 	uint64_t		 srw_nid;
 	uint32_t		 srw_len;		/* bmap size */
-	uint32_t		 srw_xferlen;		/* current transfer length */
 	uint32_t		 srw_status;		/* return code to pass back to MDS */
-	uint32_t		 srw_offset;		/* which sliver we're transmitting */
 
 	struct sl_resm		*srw_resm;
 	struct bmapc_memb	*srw_bcm;
@@ -39,8 +38,10 @@ struct sli_repl_workrq {
 	struct psclist_head	 srw_state_lentry;	/* entry for which state list */
 	struct psclist_head	 srw_active_lentry;	/* entry in global active list */
 
-	/* a single I/O may cross sliver boundaries, but is always <SLASH_SLVR_SIZE */
-	struct slvr_ref		*srw_slvr_ref[2];
+	struct slvr_ref		*srw_slvr_refs[REPL_MAX_INFLIGHT_SLVRS];
+	psc_spinlock_t		 srw_lock;
+	struct psc_vbitmap	*srw_inflight;
+	uint8_t			 srw_sliver_rem[SLASH_SLVRS_PER_BMAP / NBBY];
 };
 
 void sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t, int);

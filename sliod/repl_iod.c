@@ -22,6 +22,7 @@
 #include "psc_ds/listcache.h"
 #include "psc_ds/pool.h"
 #include "psc_rpc/rpc.h"
+#include "psc_ds/vbitmap.h"
 
 #include "bmap.h"
 #include "fidcache.h"
@@ -41,8 +42,8 @@ struct psc_poolmgr	*sli_replwkrq_pool;
 
 /* a replication request exists on one of these */
 struct psc_listcache	 sli_replwkq_pending;
-struct psc_listcache	 sli_replwkq_inflight;
 struct psc_listcache	 sli_replwkq_finished;
+struct psc_listcache	 sli_replwkq_inflight;
 
 /* and all registered replication requests are listed here */
 struct psc_lockedlist	 sli_replwkq_active =
@@ -123,18 +124,55 @@ slireplpndthr_main(__unusedx void *arg)
 {
 	struct slashrpc_cservice *csvc;
 	struct sli_repl_workrq *w;
+	int slvridx, slvrno, locked;
+	size_t sz;
 
 	for (;;) {
+		csvc = NULL;
+		locked = 0;
+
 		w = lc_getwait(&sli_replwkq_pending);
+		if (w->srw_status)
+			goto end;
+
 		csvc = sli_geticsvc(w->srw_resm);
-		if (csvc == NULL)
+		if (csvc == NULL) {
 			w->srw_status = SLERR_ION_OFFLINE;
-		else
-			w->srw_status = sli_rii_issue_repl_read(csvc->csvc_import, w);
+			goto end;
+		}
+
+		slvridx = -1;
+
+		spinlock(&w->srw_lock);
+		locked = 1;
+		/* find a sliver we need to transmit */
+//		for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
+//			if (slvr_2_crcbits(s) SLVR_NEW)
+//				slvrno = i;
+
+		if (slvrno == SLASH_SLVRS_PER_BMAP)
+			goto end;
+
+		/* find a slot we can use to transmit it */
+		if (psc_vbitmap_next(w->srw_inflight, &sz))
+			goto end;
+		slvridx = sz;
+
+		w->srw_status = sli_rii_issue_repl_read(
+		    csvc->csvc_import, slvrno, slvridx, w);
+ end:
 		if (csvc)
 			sl_csvc_decref(csvc);
-		lc_add(w->srw_status ? &sli_replwkq_finished :
-		    &sli_replwkq_inflight, w);
+
+		if (w->srw_status || slvrno == SLASH_SLVRS_PER_BMAP)
+			lc_add(&sli_replwkq_finished, w);
+		else if (slvridx == -1)
+			/* unable to find a slot, wait */
+			lc_add(&sli_replwkq_inflight, w);
+		else
+			lc_addhead(&sli_replwkq_pending, w);
+		if (locked)
+			freelock(&w->srw_lock);
 		sched_yield();
 	}
 }
@@ -148,8 +186,6 @@ sli_repl_init(void)
 
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,
 	    srw_state_lentry, "replwkpnd");
-	lc_reginit(&sli_replwkq_inflight, struct sli_repl_workrq,
-	    srw_state_lentry, "replwkinf");
 	lc_reginit(&sli_replwkq_finished, struct sli_repl_workrq,
 	    srw_state_lentry, "replwkfin");
 
