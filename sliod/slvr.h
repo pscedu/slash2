@@ -133,7 +133,7 @@ enum {
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 " slvr@%p num=%hu pw=%hu pr=%hu pri@%p slab@%p flgs:"	\
+		 "slvr@%p num=%hu pw=%hu pr=%hu pri@%p slab@%p flgs:"	\
 		 SLVR_FLAGS_FMT" :: "fmt,				\
 		 (s), (s)->slvr_num,					\
 		 (s)->slvr_pndgwrts,					\
