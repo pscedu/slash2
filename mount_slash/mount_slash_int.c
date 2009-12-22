@@ -57,8 +57,8 @@
 __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 __static void
-msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, uint32_t off,
-		uint32_t len, int op)
+msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, 
+		uint32_t off, uint32_t len, int op)
 {
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
@@ -940,7 +940,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 		if (clearpages) {
 			DEBUG_BMPCE(PLL_WARN, bmpce, "clearing page");
-			memset(0, bmpce->bmpce_base, BMPC_BUFSZ);
+			memset(bmpce->bmpce_base, 0, BMPC_BUFSZ);
 		}
 
 		DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via readio_cb");
