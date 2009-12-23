@@ -107,10 +107,11 @@ struct slash_bmap_od {
 #define	BMAP_OD_SZ	(sizeof(struct slash_bmap_od))
 #define	BMAP_OD_CRCSZ	(BMAP_OD_SZ - (sizeof(psc_crc64_t)))
 
-enum slash_bmap_slv_states {
-	BMAP_SLVR_DATA = (1<<0), /* Data present, otherwise slvr is hole */
-	BMAP_SLVR_CRC  = (1<<1)  /* Valid CRC */
-	//XXX ATM, 6 bits are left
+/* Currently, 8 bits are available for flags. */
+enum {
+	BMAP_SLVR_DATA		= (1 << 0),	/* Data present, otherwise slvr is hole */
+	BMAP_SLVR_CRC		= (1 << 1),	/* Valid CRC */
+	BMAP_SLVR_WANTREPL	= (1 << 2)	/* Queued for replication */
 };
 
 /* get a replica's bmap replication status */

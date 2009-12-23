@@ -168,10 +168,11 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	struct sli_repl_workrq *w;
 	struct srm_io_rep *mp;
 	struct slvr_ref *s;
-	int rc, slvridx;
+	int rc, slvridx, slvrno;
 
 	w = args->pointer_arg[SRII_REPLREAD_CBARG_WKRQ];
 	s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
+	slvrno = s->slvr_num;
 
 	rc = rq->rq_status;
 	if (rc)
@@ -192,10 +193,13 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	spinlock(&w->srw_lock);
 	if (psc_vbitmap_isfull(w->srw_inflight))
 		lc_remove(&sli_replwkq_inflight, w);
+	psc_vbitmap_unset(w->srw_inflight, slvridx);
 	freelock(&w->srw_lock);
 
-	if (rc)
+	if (rc) {
 		w->srw_status = rc;
+		bmap_2_crcbits(w->srw_bcm, slvrno) |= BMAP_SLVR_WANTREPL;
+	}
 
 	/* place back on pending queue until the last sliver finishes or error */
 	if (psclist_disjoint(&w->srw_state_lentry))

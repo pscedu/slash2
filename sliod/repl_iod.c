@@ -25,6 +25,7 @@
 #include "psc_ds/vbitmap.h"
 
 #include "bmap.h"
+#include "bmap_iod.h"
 #include "fidcache.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
@@ -57,6 +58,7 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	char buf[PSC_NIDSTR_SIZE];
 	struct sli_repl_workrq *w;
 	struct sl_resm *resm;
+	int i;
 
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
@@ -88,6 +90,12 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	if (w->srw_status)
 		psc_errorx("iod_bmap_load %u: %s",
 		    w->srw_bmapno, slstrerror(w->srw_status));
+	else {
+		/* mark slivers for replication */
+		for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
+			if (bmap_2_crcbits(w->srw_bcm, i) & BMAP_SLVR_DATA)
+				bmap_2_crcbits(w->srw_bcm, i) |= BMAP_SLVR_WANTREPL;
+	}
 
  out:
 	/* add to current processing list */
@@ -122,9 +130,10 @@ slireplfinthr_main(__unusedx void *arg)
 __dead void *
 slireplpndthr_main(__unusedx void *arg)
 {
+	int slvridx, slvrno, locked;
 	struct slashrpc_cservice *csvc;
 	struct sli_repl_workrq *w;
-	int slvridx, slvrno, locked;
+	struct bmap_iod_info *biodi;
 	size_t sz;
 
 	for (;;) {
@@ -146,9 +155,13 @@ slireplpndthr_main(__unusedx void *arg)
 		spinlock(&w->srw_lock);
 		locked = 1;
 		/* find a sliver we need to transmit */
-//		for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
-//			if (slvr_2_crcbits(s) SLVR_NEW)
-//				slvrno = i;
+		biodi = w->srw_bcm->bcm_pri;
+		for (slvrno = 0; slvrno < SLASH_SLVRS_PER_BMAP; slvrno++)
+			if (biodi_2_crcbits(biodi, slvrno) & ~BMAP_SLVR_WANTREPL) {
+				biodi_2_crcbits(biodi, slvrno) &=
+				    ~BMAP_SLVR_WANTREPL;
+				break;
+			}
 
 		if (slvrno == SLASH_SLVRS_PER_BMAP)
 			goto end;
@@ -160,6 +173,9 @@ slireplpndthr_main(__unusedx void *arg)
 
 		w->srw_status = sli_rii_issue_repl_read(
 		    csvc->csvc_import, slvrno, slvridx, w);
+
+		if (w->srw_status)
+			psc_vbitmap_unset(w->srw_inflight, sz);
  end:
 		if (csvc)
 			sl_csvc_decref(csvc);

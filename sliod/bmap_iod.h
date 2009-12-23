@@ -84,6 +84,9 @@ struct bmap_iod_info {
 	uint32_t                biod_inflight;
 };
 
+#define biodi_2_wire(bi)	(bi)->biod_bmap_wire
+#define biodi_2_crcbits(bi, sl)	biodi_2_wire(bi)->bh_crcstates[sl]
+
 static __inline void
 bcr_hold_2_ready(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
@@ -178,8 +181,9 @@ bcr_cmp(const void *x, const void *y)
 #define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)
 #define bmap_2_biodi_wire(b)	bmap_2_biodi(b)->biod_bmap_wire
 
-#define BIOD_CRCUP_MAX_AGE	 2		/* in seconds */
+#define bmap_2_crcbits(b, sl)	biodi_2_crcbits(bmap_2_biodi(b), (sl))
 
+#define BIOD_CRCUP_MAX_AGE	 2		/* in seconds */
 
 extern struct psc_listcache iodBmapLru;
 
