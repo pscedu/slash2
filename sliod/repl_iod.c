@@ -60,6 +60,19 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	struct sl_resm *resm;
 	int i;
 
+	/*
+	 * Check if this work is already queued, e.g. from before the MDS
+	 * crashes, comes back online, and assigns gratitious requeue work.
+	 */
+	PLL_LOCK(&sli_replwkq_active);
+	PLL_FOREACH(w, &sli_replwkq_active)
+		if (SAMEFID(&w->srw_fg, fgp) &&
+		    w->srw_bmapno == bmapno)
+			break;
+	PLL_ULOCK(&sli_replwkq_active);
+	if (w)
+		return;
+
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
 	w->srw_nid = nid;
