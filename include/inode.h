@@ -102,11 +102,9 @@ typedef struct slash_gencrc {
 
 /*
  * Slim block structure just holds a generation number and a
- * validation bit.  The io server id is held in the block store array.
+ * validation bit.  The I/O server ID is held in the block store array.
  */
-typedef struct slash_block_gen {
-	unsigned int		bl_gen; /* generation number     */
-} sl_blkgen_t;
+typedef uint32_t sl_blkgen_t;
 
 struct slash_bmap_cli_wire {
 	uint8_t			bw_crcstates[SL_CRCS_PER_BMAP];

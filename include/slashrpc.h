@@ -518,6 +518,7 @@ struct srm_repl_schedwk_req {
 	uint64_t		nid;
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
+	sl_blkgen_t		bgen;
 	uint32_t		len;
 	uint32_t		rc;
 };

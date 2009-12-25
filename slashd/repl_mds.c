@@ -436,10 +436,15 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 		    "bmap %d iosidx %d", fcmh_2_fid(bcm->bcm_fcmh),
 		    bcm->bcm_blkno, iosidx);
 
-	/* invalidate all other replicas */
+	/*
+	 * Invalidate all other replicas.
+	 * Note: if the status is SCHED here, don't do anything; once
+	 * the replication status update comes from the ION, we will know
+	 * he copied an old bmap and mark it OLD then.
+	 */
 	tract[SL_REPL_INACTIVE] = -1;
 	tract[SL_REPL_OLD] = -1;
-	tract[SL_REPL_SCHED] = SL_REPL_OLD;
+	tract[SL_REPL_SCHED] = -1;
 	tract[SL_REPL_ACTIVE] = SL_REPL_OLD;
 
 	mds_repl_bmap_walk(bcm, tract, NULL, REPL_WALKF_MODOTH, &iosidx, 1);
@@ -449,7 +454,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 		bmdsi->bmdsi_flags &= ~BMIM_LOGCHG;
 		if (bmdsi->bmdsi_flags & BMIM_BUMPGEN) {
 			bmdsi->bmdsi_flags &= ~BMIM_BUMPGEN;
-			bmapod->bh_gen.bl_gen++;
+			bmapod->bh_gen++;
 		}
 		mds_bmap_repl_log(bcm);
 	}
@@ -471,7 +476,7 @@ mds_repl_bmap_rel(struct bmapc_memb *bcm)
 		bmdsi->bmdsi_flags &= ~BMIM_LOGCHG;
 		if (bmdsi->bmdsi_flags & BMIM_BUMPGEN) {
 			bmdsi->bmdsi_flags &= ~BMIM_BUMPGEN;
-			bmapod->bh_gen.bl_gen++;
+			bmapod->bh_gen++;
 		}
 		mds_bmap_repl_log(bcm);
 	}
@@ -933,15 +938,16 @@ mds_repl_scandir(void)
 	sl_replica_t iosv[SL_MAX_REPLICAS];
 	char *buf, fn[NAME_MAX];
 	struct fidc_membh *fcmh;
+	struct bmapc_memb *bcm;
 	struct slash_fidgen fg;
 	struct fuse_dirent *d;
 	struct sl_replrq *rrq;
 	struct stat stb;
+	int rc, tract[4];
 	off64_t off, toff;
 	size_t siz, tsiz;
 	uint32_t j;
 	void *data;
-	int rc;
 
 	rc = zfsslash2_opendir(zfsVfs, mds_repldir_inum,
 	    &rootcreds, &fg, &stb, &data);
@@ -998,6 +1004,31 @@ mds_repl_scandir(void)
 			rrq = psc_pool_get(replrq_pool);
 			mds_repl_initrq(rrq, fcmh);
 
+			tract[SL_REPL_INACTIVE] = -1;
+			tract[SL_REPL_ACTIVE] = -1;
+			tract[SL_REPL_OLD] = -1;
+			tract[SL_REPL_SCHED] = SL_REPL_OLD;
+
+			/*
+			 * If we crashed, revert all inflight SCHED'ed
+			 * bmaps to OLD.
+			 */
+			for (j = 0; j < REPLRQ_NBMAPS(rrq); j++) {
+				if (mds_bmap_load(REPLRQ_FCMH(rrq),
+				    j, &bcm))
+					continue;
+
+				BMAP_LOCK(bcm);
+				mds_repl_bmap_walk(bcm, tract,
+				    NULL, 0, NULL, 0);
+				mds_repl_bmap_rel(bcm);
+			}
+
+			/*
+			 * Requeue pending replications on all sites.
+			 * If there is no work to do, it will be promptly
+			 * removed by the replqthr.
+			 */
 			for (j = 0; j < REPLRQ_NREPLS(rrq); j++)
 				iosv[j].bs_id = REPLRQ_GETREPL(rrq, j).bs_id;
 			mds_repl_enqueue_sites(rrq, iosv, REPLRQ_NREPLS(rrq));

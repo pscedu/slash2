@@ -182,12 +182,12 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 
 	jrpg.sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jrpg.sjp_bmapno = bmap->bcm_blkno;
-	jrpg.sjp_gen.bl_gen = bmap_2_bmdsiod(bmap)->bh_gen.bl_gen;
+	jrpg.sjp_bgen = bmap_2_bgen(bmap);
 	memcpy(jrpg.sjp_reptbl, bmap_2_bmdsiod(bmap)->bh_repls,
 	       SL_REPLICA_NBYTES);
 
 	psc_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
-		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen);
+		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_bgen);
 
 	jfi_prep(&bmdsi->bmdsi_jfi, mdsJournal);
 
@@ -198,7 +198,7 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 			   sizeof(struct slmds_jent_repgen));
 	if (rc)
 		psc_fatalx("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u rc=%d",
-			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_gen.bl_gen,
+			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_bgen,
 			   rc);
 
 	if (!(bmap->bcm_mode & BMAP_MDS_LOGREF)) {

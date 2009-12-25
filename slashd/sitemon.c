@@ -62,10 +62,10 @@ int
 slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
     struct sl_resm *src_resm, struct sl_resource *dst_res, int j)
 {
+	int tract[4], we_set_busy, rc;
 	struct mds_resm_info *src_mrmi, *dst_mrmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
-	struct slash_bmap_od *bmapod;
 	struct slmreplq_thread *smrt;
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *rq;
@@ -73,7 +73,6 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	struct sl_resm *dst_resm;
 	struct psc_thread *thr;
 	struct sl_site *site;
-	int we_set_busy, rc;
 
 	we_set_busy = 0;
 	thr = pscthr_get();
@@ -114,18 +113,34 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	mq->len = SLASH_BMAP_SIZE; /* XXX use bmap length */
 	mq->fg = *REPLRQ_FG(rrq);
 	mq->bmapno = bcm->bcm_blkno;
+
+	tract[SL_REPL_ACTIVE] = -1;
+	tract[SL_REPL_INACTIVE] = -1;
+	tract[SL_REPL_OLD] = SL_REPL_SCHED;
+	tract[SL_REPL_SCHED] = -1;
+
+	/* mark it as SCHED here in case the RPC finishes really quickly... */
+	BMAP_LOCK(bcm);
+	mds_repl_bmap_apply(bcm, tract, NULL, 0, off, NULL);
+	BMAP_ULOCK(bcm);
+
 	rc = RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
-	if (rc || mp->rc)
-		goto fail;
+	if (rc == 0 && mp->rc == 0) {
+		bmap_op_start(bcm);
+		mds_repl_bmap_rel(bcm);
+		mds_repl_unrefrq(rrq);
+		return (1);
+	}
+
+	tract[SL_REPL_ACTIVE] = -1;
+	tract[SL_REPL_INACTIVE] = -1;
+	tract[SL_REPL_OLD] = -1;
+	tract[SL_REPL_SCHED] = SL_REPL_OLD;
 
 	BMAP_LOCK(bcm);
-	bmapod = bmap_2_bmdsi(bcm)->bmdsi_od;
-	SL_REPL_SET_BMAP_IOS_STAT(bmapod->bh_repls,
-	    off, SL_REPL_SCHED);
-	mds_repl_bmap_rel(bcm);
-	mds_repl_unrefrq(rrq);
-	return (1);
+	mds_repl_bmap_apply(bcm, tract, NULL, 0, off, NULL);
+	BMAP_ULOCK(bcm);
 
  fail:
 	if (we_set_busy)
@@ -160,8 +175,9 @@ slmreplqthr_main(void *arg)
 	site = smrt->smrt_site;
 	msi = site->site_pri;
 	for (;;) {
+		if (0)
  restart:
-		sched_yield();
+			sched_yield();
 		/* select or wait for a repl rq */
 		spinlock(&msi->msi_lock);
 

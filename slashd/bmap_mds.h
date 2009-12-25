@@ -75,7 +75,7 @@ struct bmap_mds_info {
 struct bmi_assign {
 	lnet_nid_t   bmi_ion_nid;
 	sl_ios_id_t  bmi_ios;
-	//	struct slash_fidgen bmi_fid;
+//	struct slash_fidgen bmi_fid;
 	slfid_t      bmi_fid;
 	sl_blkno_t   bmi_bmapno;
 	time_t       bmi_start;
@@ -85,6 +85,7 @@ struct bmi_assign {
 #define bmap_2_bmdsiod(b)	bmap_2_bmdsi(b)->bmdsi_od
 #define bmap_2_bmdsjfi(b)	(&bmap_2_bmdsi(b)->bmdsi_jfi)
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
+#define bmap_2_bgen(b)		bmap_2_bmdsiod(b)->bh_gen
 
 int	mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
 int	mds_bmap_exists(struct fidc_membh *, sl_blkno_t);

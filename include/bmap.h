@@ -95,17 +95,17 @@ struct bmapc_memb {
  */
 #define slash_bmap_wire slash_bmap_od
 struct slash_bmap_od {
-	sl_blkgen_t	bh_gen;
-	sl_gcrc_t	bh_crcs[SL_CRCS_PER_BMAP];
-	uint8_t		bh_crcstates[SL_CRCS_PER_BMAP];
-	uint8_t		bh_repls[SL_REPLICA_NBYTES];
+	sl_blkgen_t		bh_gen;
+	sl_gcrc_t		bh_crcs[SL_CRCS_PER_BMAP];
+	uint8_t			bh_crcstates[SL_CRCS_PER_BMAP];
+	uint8_t			bh_repls[SL_REPLICA_NBYTES];
 
 	/* the CRC must be at the end */
-	psc_crc64_t	bh_bhcrc;
+	psc_crc64_t		bh_bhcrc;
 };
 
-#define	BMAP_OD_SZ	(sizeof(struct slash_bmap_od))
-#define	BMAP_OD_CRCSZ	(BMAP_OD_SZ - (sizeof(psc_crc64_t)))
+#define	BMAP_OD_SZ		(sizeof(struct slash_bmap_od))
+#define	BMAP_OD_CRCSZ		(BMAP_OD_SZ - (sizeof(psc_crc64_t)))
 
 /* Currently, 8 bits are available for flags. */
 enum {
