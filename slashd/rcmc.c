@@ -215,10 +215,8 @@ slmrcmthr_main(__unusedx void *arg)
 		SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
 			slm_rcm_issue_getreplst(rrq, 0);
 			for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-				if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm)) {
-					bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+				if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
 					continue;
-				}
 				BMAP_LOCK(bcm);
 				rc = slmrcmthr_walk_brepls(rrq, bcm, n, &rq);
 				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
@@ -237,10 +235,8 @@ slmrcmthr_main(__unusedx void *arg)
 	} else if ((rrq = mds_repl_findrq(&srcm->srcm_fg, NULL)) != NULL) {
 		slm_rcm_issue_getreplst(rrq, 0);
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm)) {
-				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
 				continue;
-			}
 			BMAP_LOCK(bcm);
 			rc = slmrcmthr_walk_brepls(rrq, bcm, n, &rq);
 			bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
@@ -264,10 +260,8 @@ slmrcmthr_main(__unusedx void *arg)
 
 		slm_rcm_issue_getreplst(rrq, 0);
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm)) {
-				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
 				continue;
-			}
 			BMAP_LOCK(bcm);
 			rc = slmrcmthr_walk_brepls(rrq, bcm, n, &rq);
 			bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);

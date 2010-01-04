@@ -72,10 +72,8 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 #endif
 
 	mp->rc = mds_bmap_load_ion(&mq->fg, mq->bmapno, &b);
-	if (mp->rc) {
-		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	if (mp->rc)
 		return (mp->rc);
-	}
 
 	psc_assert(b);
 
@@ -229,10 +227,8 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	}
 
 	mp->rc = mds_bmap_load(REPLRQ_FCMH(rrq), mq->bmapno, &bcm);
-	if (mp->rc) {
-		bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+	if (mp->rc)
 		goto out;
-	}
 
 	BMAP_LOCK(bcm);
 
