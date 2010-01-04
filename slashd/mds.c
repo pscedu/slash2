@@ -576,7 +576,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	struct sl_resm *resm;
 	struct mds_resm_info *mrmi;
 	struct mds_resprof_info *mrpi;
-	int n, x, found=0;
+	int n, x;
 
 	psc_assert(!mdsi->bmdsi_wr_ion);
 	psc_assert(atomic_read(&bmap->bcm_opcnt) > 0);
@@ -618,8 +618,6 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 			freelock(&mrmi->mrmi_lock);
 			continue;
 		}
-		else
-			found = 1;
 
 		DEBUG_BMAP(PLL_TRACE, bmap, "res(%s) ion(%s)",
 			   res->res_name, libcfs_nid2str(res->res_nids[n]));
@@ -628,9 +626,6 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		mdsi->bmdsi_wr_ion = mrmi;
 		freelock(&mrmi->mrmi_lock);
 		break;
-
-		if (found)
-			break;
 	} while (--x);
 
 	if (!mdsi->bmdsi_wr_ion)
