@@ -45,6 +45,8 @@ jfi_prep(struct jflush_item *jfi, struct psc_journal *pj)
 		psc_assert(psclist_disjoint(&jfi->jfi_lentry));
 		jfi->jfi_xh = pjournal_xnew(pj);
 		jfi->jfi_state |= JFI_HAVE_XH;
+		if (jfi->jfi_prepcb)
+			(jfi->jfi_prepcb)(jfi->jfi_data);
 	}
 	jfi->jfi_state |= JFI_BUSY;
 

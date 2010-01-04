@@ -55,7 +55,8 @@ mdsfssyncthr_begin(__unusedx void *arg)
 			lc_addtail(&dirtyMdsData, jfi);
 			psc_info("fssync jfi(%p) xh(%p) BUSY",
 				 jfi, jfi->jfi_xh);
-			usleep(100);
+			if (lc_sz(&dirtyMdsData) == 1)
+				usleep(100);
 			continue;
 		}
 

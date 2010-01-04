@@ -36,6 +36,7 @@ struct srm_bmap_crcup;
 void mds_bmap_crc_log(struct bmapc_memb *, struct srm_bmap_crcup *);
 void mds_bmap_repl_log(struct bmapc_memb *);
 void mds_bmap_sync(void *);
+void mds_bmap_jfiprep(void *);
 void mds_inode_addrepl_log(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
 void mds_inode_sync(void *);
 void mds_journal_init(void);

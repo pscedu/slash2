@@ -62,7 +62,6 @@ struct bmap_mds_info {
 #define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 0) /* CRC update in progress */
 #define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 1)
 #define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)
-#define BMAP_MDS_LOGREF         (_BMAP_FLSHFT << 3) /* only ref once for mdslog */
 
 /* bmap_mds_info modes */
 #define BMIM_BUMPGEN		(1 << 0)

@@ -25,12 +25,14 @@
 #include "sljournal.h"
 
 typedef void (*jflush_handler)(void *);
+typedef void (*jflush_prepcb)(void *);
 
 struct jflush_item {
 	psc_spinlock_t              jfi_lock;
 	struct psc_journal_xidhndl *jfi_xh;
 	struct psclist_head         jfi_lentry;
 	jflush_handler              jfi_handler;
+	jflush_prepcb               jfi_prepcb;
 	void                       *jfi_data;
 	int                         jfi_state;
 	int                         jfi_type;
@@ -43,11 +45,13 @@ enum jfi_states {
 };
 
 static inline void
-jfi_init(struct jflush_item *j, jflush_handler handler, void *data)
+jfi_init(struct jflush_item *j, jflush_handler handler, 
+	 jflush_prepcb prepcb, void *data)
 {
 	LOCK_INIT(&j->jfi_lock);
 	INIT_PSCLIST_ENTRY(&j->jfi_lentry);
 	j->jfi_handler = handler;
+	j->jfi_prepcb = prepcb;
 	j->jfi_data = data;
 	j->jfi_state = 0;
 }

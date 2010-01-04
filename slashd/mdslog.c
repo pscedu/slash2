@@ -95,6 +95,15 @@ mds_inode_sync(void *data)
 	ureqlock(&inoh->inoh_lock, locked);
 }
 
+
+void
+mds_bmap_jfiprep(void *data)
+{
+	struct bmapc_memb *bmap=data;
+	
+	bmap_op_start_type(bmap, BMAP_OPCNT_MDSLOG);
+}
+
 /**
  * mds_bmap_sync - callback function which is called from
  *   mdsfssyncthr_begin().
@@ -127,8 +136,6 @@ mds_bmap_sync(void *data)
 	else
 		DEBUG_BMAP(PLL_INFO, bmap, "sync ok");
 
-	psc_assert(bmap->bcm_mode & BMAP_MDS_LOGREF);
-	bmap->bcm_mode &= ~BMAP_MDS_LOGREF;
 	BMAP_ULOCK(bmap);
 
 	bmap_op_done_type(bmap, BMAP_OPCNT_MDSLOG);
@@ -200,12 +207,6 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 		psc_fatalx("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u rc=%d",
 			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_bgen,
 			   rc);
-
-	if (!(bmap->bcm_mode & BMAP_MDS_LOGREF)) {
-		bmap->bcm_mode |= BMAP_MDS_LOGREF;
-		bmap_op_start_type(bmap, BMAP_OPCNT_MDSLOG);
-	}
-
 	jfi_schedule(&bmdsi->bmdsi_jfi, &dirtyMdsData);
 }
 
@@ -281,10 +282,6 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	 */
 	BMAP_LOCK(bmap);
 	bmap->bcm_mode &= ~BMAP_MDS_CRC_UP;
-	if (!(bmap->bcm_mode & BMAP_MDS_LOGREF)) {
-		bmap->bcm_mode |= BMAP_MDS_LOGREF;
-		bmap_op_start_type(bmap, BMAP_OPCNT_MDSLOG);
-	}
 	BMAP_ULOCK(bmap);
 	/* Tell the 'syncer' thread to flush this bmap.
 	 */

@@ -60,7 +60,7 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 	i->inoh_fcmh = f;
 	i->inoh_extras = NULL;
 	LOCK_INIT(&i->inoh_lock);
-	jfi_init(&i->inoh_jfi, handler, i);
+	jfi_init(&i->inoh_jfi, handler, NULL, i);
 	i->inoh_flags = INOH_INO_NOTLOADED;
 }
 

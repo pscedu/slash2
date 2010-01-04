@@ -1,5 +1,16 @@
 $Id$
 
+12/4/09
+* More about truncate, unlink GC.
+
+Unlinked inodes which contain bmaps we should link the fid file into a GC
+directory.  From here we can scan the bmaps and issue GC requests to the 
+appropriate IOS's.   If we implement a 2nd generation #, managed by slash2, 
+we would use fmt fid_zfs-gen_slash2-gen in the C directory.
+
+11/23/09
+* mds_bmap_ion_assign fails when the doesn't specify a PIOS.
+
 11/22/09
 * Thinking about truncate.. in the event of an O_TRUNC or truncate() syscall we
 should not invalidate replicas but rather queue truncate or reclamation requests
