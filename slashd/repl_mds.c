@@ -276,7 +276,10 @@ mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
 	struct bmap_mds_info *bmdsi;
 	int val, rc = 0;
 
-	*scircuit = 0;
+	if (scircuit)
+		*scircuit = 0;
+	else
+		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 
 	bmdsi = bmap_2_bmdsi(bcm);
 	bmapod = bmdsi->bmdsi_od;
