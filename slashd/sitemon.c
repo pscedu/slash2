@@ -62,7 +62,7 @@ int
 slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
     struct sl_resm *src_resm, struct sl_resource *dst_res, int j)
 {
-	int tract[4], we_set_busy, rc, sc;
+	int tract[4], we_set_busy, rc;
 	struct mds_resm_info *src_mrmi, *dst_mrmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
@@ -121,13 +121,12 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	BMAP_LOCK(bcm);
-	mds_repl_bmap_apply(bcm, tract, NULL, 0, off, &sc);
+	mds_repl_bmap_apply(bcm, tract, NULL, off);
 	BMAP_ULOCK(bcm);
 
 	rc = RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
 	if (rc == 0 && mp->rc == 0) {
-		bmap_op_start(bcm);
 		mds_repl_bmap_rel(bcm);
 		mds_repl_unrefrq(rrq);
 		return (1);
@@ -139,7 +138,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	tract[SL_REPL_SCHED] = SL_REPL_OLD;
 
 	BMAP_LOCK(bcm);
-	mds_repl_bmap_apply(bcm, tract, NULL, 0, off, &sc);
+	mds_repl_bmap_apply(bcm, tract, NULL, off);
 	BMAP_ULOCK(bcm);
 
  fail:
