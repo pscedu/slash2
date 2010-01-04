@@ -1039,6 +1039,20 @@ mds_bmap_retrieve(struct bmapc_memb *b, __unusedx enum rw rw, __unusedx void *ar
 	return (mds_bmap_read(b));
 }
 
+void
+mds_bmap_sync_if_changed(struct bmapc_memb *bcm)
+{
+	struct bmap_mds_info *bmdsi;
+
+	BMAP_LOCK_ENSURE(bcm);
+
+	bmdsi = bcm->bcm_pri;
+	if (bmdsi->bmdsi_flags & BMIM_LOGCHG) {
+		bmdsi->bmdsi_flags &= ~BMIM_LOGCHG;
+		mds_bmap_repl_log(bcm);
+	}
+}
+
 /**
  * mds_bmap_loadvalid - Load a bmap if disk I/O is successful and the bmap
  *	has been initialized (i.e. is not all zeroes).

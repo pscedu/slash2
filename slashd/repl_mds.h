@@ -54,7 +54,7 @@ struct sl_replrq *
 	 mds_repl_findrq(const struct slash_fidgen *, int *);
 int	 mds_repl_accessrq(struct sl_replrq *);
 int	 mds_repl_addrq(const struct slash_fidgen *, sl_blkno_t, const sl_replica_t *, int);
-int	 mds_repl_bmap_apply(struct bmapc_memb *, const int [], const int [], int, int, int *);
+int	_mds_repl_bmap_apply(struct bmapc_memb *, const int [], const int [], int, int, int *);
 void	 mds_repl_bmap_rel(struct bmapc_memb *);
 int	 mds_repl_bmap_walk(struct bmapc_memb *, const int [], const int [], int, const int *, int);
 int	 mds_repl_delrq(const struct slash_fidgen *, sl_blkno_t, const sl_replica_t *, int);
@@ -66,6 +66,9 @@ int	_mds_repl_nodes_setbusy(struct mds_resm_info *, struct mds_resm_info *, int,
 void	 mds_repl_reset_scheduled(sl_ios_id_t);
 void	 mds_repl_tryrmqfile(struct sl_replrq *);
 void	 mds_repl_unrefrq(struct sl_replrq *);
+
+#define mds_repl_bmap_apply(bcm, tract, retifset, off)			\
+	_mds_repl_bmap_apply((bcm), (tract), (retifset), 0, (off), NULL)
 
 #define mds_repl_nodes_getbusy(a, b)		_mds_repl_nodes_setbusy((a), (b), 0, 0)
 #define mds_repl_nodes_setbusy(a, b, v)		_mds_repl_nodes_setbusy((a), (b), 1, (v))

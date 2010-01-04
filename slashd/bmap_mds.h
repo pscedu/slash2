@@ -59,25 +59,24 @@ struct bmap_mds_info {
 };
 
 /* bmap MDS modes */
-#define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 0) /* CRC update in progress */
+#define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 0)	/* CRC update in progress */
 #define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 1)
 #define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)
 
 /* bmap_mds_info modes */
-#define BMIM_BUMPGEN		(1 << 0)
-#define BMIM_LOGCHG		(1 << 1)
+#define BMIM_LOGCHG		(1 << 0)		/* in-mem change made, needs logged */
 
 /*
  * bmi_assign - the structure used for tracking the mds's bmap/ion
  *   assignments.  These structures are stored in a odtable.
  */
 struct bmi_assign {
-	lnet_nid_t   bmi_ion_nid;
-	sl_ios_id_t  bmi_ios;
-//	struct slash_fidgen bmi_fid;
-	slfid_t      bmi_fid;
-	sl_blkno_t   bmi_bmapno;
-	time_t       bmi_start;
+	lnet_nid_t		bmi_ion_nid;
+	sl_ios_id_t		bmi_ios;
+//	struct slash_fidgen	bmi_fid;
+	slfid_t			bmi_fid;
+	sl_blkno_t		bmi_bmapno;
+	time_t			bmi_start;
 };
 
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)(b)->bcm_pri)
@@ -93,6 +92,7 @@ int	mds_bmap_load_cli(struct mexpfcm *, const struct srm_bmap_req *, struct bmap
 int	mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, struct bmapc_memb **);
 int	mds_bmap_loadvalid(struct fidc_membh *, sl_blkno_t, struct bmapc_memb **);
 void	mds_bmap_ref_drop(struct bmapc_memb *, int);
+void	mds_bmap_sync_if_changed(struct bmapc_memb *);
 
 static __inline void
 bmap_dio_sanity_locked(struct bmapc_memb *bmap, int dio_check)

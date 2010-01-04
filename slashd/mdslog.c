@@ -174,7 +174,7 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
  * Note:  bmap must be locked to prevent further changes from sneaking in
  *	before the repl table is committed to the journal.
  * XXX Another case for a rwlock, currently this code holds the lock while
- *     doing IO to the journal.
+ *     doing I/O to the journal.
  */
 void
 mds_bmap_repl_log(struct bmapc_memb *bmap)

@@ -269,12 +269,14 @@ mds_repl_xattr_load_locked(struct slash_inode_handle *i)
 #define REPL_WALKF_MODOTH	(1 << 1)	/* modify everyone except specified ios */
 
 int
-mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
+_mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
     const int retifset[4], int flags, int off, int *scircuit)
 {
 	struct slash_bmap_od *bmapod;
 	struct bmap_mds_info *bmdsi;
 	int val, rc = 0;
+
+	BMAP_LOCK_ENSURE(bcm);
 
 	if (scircuit)
 		*scircuit = 0;
@@ -303,8 +305,6 @@ mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
 		SL_REPL_SET_BMAP_IOS_STAT(bmapod->bh_repls,
 		    off, tract[val]);
 		bmdsi->bmdsi_flags |= BMIM_LOGCHG;
-		if (val == SL_REPL_ACTIVE)
-			bmdsi->bmdsi_flags |= BMIM_BUMPGEN;
 	}
 	return (rc);
 }
@@ -345,7 +345,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
 		/* no one specified; apply to all */
 		for (k = 0, off = 0; k < nr;
 		    k++, off += SL_BITS_PER_REPLICA) {
-			trc = mds_repl_bmap_apply(bcm, tract,
+			trc = _mds_repl_bmap_apply(bcm, tract,
 			    retifset, flags, off, &scircuit);
 			if (trc)
 				rc = trc;
@@ -357,7 +357,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
 		for (k = 0, off = 0; k < nr; k++,
 		    off += SL_BITS_PER_REPLICA)
 			if (!iosidx_in(k, iosidx, nios)) {
-				trc = mds_repl_bmap_apply(bcm, tract,
+				trc = _mds_repl_bmap_apply(bcm, tract,
 				    retifset, flags, off, &scircuit);
 				if (trc)
 					rc = trc;
@@ -367,7 +367,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
 	} else
 		/* modify only the sites specified */
 		for (k = 0; k < nios; k++) {
-			trc = mds_repl_bmap_apply(bcm, tract,
+			trc = _mds_repl_bmap_apply(bcm, tract,
 			    retifset, flags, iosidx[k] *
 			    SL_BITS_PER_REPLICA, &scircuit);
 			if (trc)
@@ -450,39 +450,23 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	tract[SL_REPL_SCHED] = -1;
 	tract[SL_REPL_ACTIVE] = SL_REPL_OLD;
 
-	mds_repl_bmap_walk(bcm, tract, NULL, REPL_WALKF_MODOTH, &iosidx, 1);
+	retifset[SL_REPL_INACTIVE] = 0;
+	retifset[SL_REPL_OLD] = 0;
+	retifset[SL_REPL_SCHED] = 0;
+	retifset[SL_REPL_ACTIVE] = 1;
 
-	/* write changes back to disk */
-	if (bmdsi->bmdsi_flags & BMIM_LOGCHG) {
-		bmdsi->bmdsi_flags &= ~BMIM_LOGCHG;
-		if (bmdsi->bmdsi_flags & BMIM_BUMPGEN) {
-			bmdsi->bmdsi_flags &= ~BMIM_BUMPGEN;
-			bmapod->bh_gen++;
-		}
-		mds_bmap_repl_log(bcm);
-	}
+	if (mds_repl_bmap_walk(bcm, tract, retifset,
+	    REPL_WALKF_MODOTH, &iosidx, 1))
+		bmapod->bh_gen++;
+	/* write changes to disk */
+	mds_bmap_sync_if_changed(bcm);
 	return (0);
 }
 
-__static void
+void
 mds_repl_bmap_rel(struct bmapc_memb *bcm)
 {
-	struct bmap_mds_info *bmdsi;
-	struct slash_bmap_od *bmapod;
-
-	BMAP_RLOCK(bcm);
-
-	bmdsi = bmap_2_bmdsi(bcm);
-	bmapod = bmdsi->bmdsi_od;
-
-	if (bmdsi->bmdsi_flags & BMIM_LOGCHG) {
-		bmdsi->bmdsi_flags &= ~BMIM_LOGCHG;
-		if (bmdsi->bmdsi_flags & BMIM_BUMPGEN) {
-			bmdsi->bmdsi_flags &= ~BMIM_BUMPGEN;
-			bmapod->bh_gen++;
-		}
-		mds_bmap_repl_log(bcm);
-	}
+	mds_bmap_sync_if_changed(bcm);
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 }
 
