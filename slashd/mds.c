@@ -1023,7 +1023,7 @@ mds_bmap_init(struct bmapc_memb *bcm)
 
 	bmdsi = bcm->bcm_pri;
 	SPLAY_INIT(&bmdsi->bmdsi_exports);
-	jfi_init(&bmdsi->bmdsi_jfi, mds_bmap_sync, bcm);
+	jfi_init(&bmdsi->bmdsi_jfi, mds_bmap_sync, mds_bmap_jfiprep, bcm);
 	bmdsi->bmdsi_xid = 0;
 }
 
