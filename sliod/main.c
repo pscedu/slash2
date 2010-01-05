@@ -116,6 +116,12 @@ main(int argc, char *argv[])
 	fdbuf_readkeyfile();
 
 	libsl_init(PSCNET_SERVER, 0);
+
+	if ((mds = getenv("SLASH_MDS_NID")) == NULL)
+		psc_fatalx("please export SLASH_MDS_NID");
+
+	sli_rmi_setmds(mds);
+
 	bmap_cache_init(sizeof(struct bmap_iod_info));
 	fidcache_init(FIDC_USER_ION, NULL);
 	slvr_cache_init();
@@ -123,10 +129,6 @@ main(int argc, char *argv[])
 	sli_rpc_initsvc();
 	slitimerthr_spawn();
 
-	if ((mds = getenv("SLASH_MDS_NID")) == NULL)
-		psc_fatalx("please export SLASH_MDS_NID");
-
-	sli_rmi_setmds(mds);
 	if (sli_rmi_getimp() == NULL)
 		psc_fatalx("MDS server unavailable");
 
