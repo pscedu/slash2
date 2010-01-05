@@ -125,8 +125,10 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	BMAP_ULOCK(bcm);
 
 	rc = RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
 	pscrpc_req_finished(rq);
-	if (rc == 0 && mp->rc == 0) {
+	if (rc == 0) {
 		mds_repl_bmap_rel(bcm);
 		mds_repl_unrefrq(rrq);
 		return (1);
