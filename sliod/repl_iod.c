@@ -23,6 +23,7 @@
 #include "psc_ds/pool.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/atomic.h"
 
 #include "bmap.h"
 #include "bmap_iod.h"
@@ -43,8 +44,6 @@ struct psc_poolmgr	*sli_replwkrq_pool;
 
 /* a replication request exists on one of these */
 struct psc_listcache	 sli_replwkq_pending;
-struct psc_listcache	 sli_replwkq_finished;
-struct psc_listcache	 sli_replwkq_inflight;
 
 /* and all registered replication requests are listed here */
 struct psc_lockedlist	 sli_replwkq_active =
@@ -75,6 +74,7 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
 	LOCK_INIT(&w->srw_lock);
+	psc_atomic32_set(&w->srw_refcnt, 1);
 	w->srw_nid = nid;
 	w->srw_fg = *fgp;
 	w->srw_bmapno = bmapno;
@@ -110,9 +110,12 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 		bmap_op_done_type(w->srw_bcm, BMAP_OPCNT_LOOKUP);
 
 		/* mark slivers for replication */
-		for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
+		BMAP_LOCK(w->srw_bcm);
+		for (i = len = 0; i < SLASH_SLVRS_PER_BMAP && len < (int)w->srw_len;
+		    i++, len += SLASH_SLVR_SIZE)
 			if (bmap_2_crcbits(w->srw_bcm, i) & BMAP_SLVR_DATA)
 				bmap_2_crcbits(w->srw_bcm, i) |= BMAP_SLVR_WANTREPL;
+		BMAP_ULOCK(w->srw_bcm);
 
 		w->srw_inflight = psc_vbitmap_new(REPL_MAX_INFLIGHT_SLVRS);
 	}
@@ -130,31 +133,35 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	return (rc);
 }
 
-__dead void *
-slireplfinthr_main(__unusedx void *arg)
+void
+sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 {
-	struct sli_repl_workrq *w;
+	reqlock(&w->srw_lock);
 
-	for (;;) {
-		w = lc_getwait(&sli_replwkq_finished);
-		pll_remove(&sli_replwkq_active, w);
-		/* inform MDS we've finished */
-		sli_rmi_issue_repl_schedwk(w);
+	if (rc && w->srw_status == 0)
+		w->srw_status = rc;
 
-		if (w->srw_bcm)
-			bmap_op_done_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
-		if (w->srw_fcmh)
-			fidc_membh_dropref(w->srw_fcmh);
-		psc_vbitmap_free(w->srw_inflight);
-		psc_pool_return(sli_replwkrq_pool, w);
-		sched_yield();
+	if (!psc_atomic32_dec_and_test0(&w->srw_refcnt)) {
+		freelock(&w->srw_lock);
+		return;
 	}
+
+	pll_remove(&sli_replwkq_active, w);
+	/* inform MDS we've finished */
+	sli_rmi_issue_repl_schedwk(w);
+
+	if (w->srw_bcm)
+		bmap_op_done_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
+	if (w->srw_fcmh)
+		fidc_membh_dropref(w->srw_fcmh);
+	psc_vbitmap_free(w->srw_inflight);
+	psc_pool_return(sli_replwkrq_pool, w);
 }
 
 __dead void *
 slireplpndthr_main(__unusedx void *arg)
 {
-	int slvridx, slvrno, locked;
+	int slvridx, slvrno;
 	struct slashrpc_cservice *csvc;
 	struct sli_repl_workrq *w;
 	struct bmap_iod_info *biodi;
@@ -162,36 +169,33 @@ slireplpndthr_main(__unusedx void *arg)
 
 	for (;;) {
 		csvc = NULL;
-		locked = 0;
+		slvridx = -1;
 
 		w = lc_getwait(&sli_replwkq_pending);
+
+		csvc = sli_geticsvc(w->srw_resm);
+		spinlock(&w->srw_lock);
+		if (csvc == NULL && w->srw_status == 0)
+			w->srw_status = SLERR_ION_OFFLINE;
 		if (w->srw_status)
 			goto end;
 
-		csvc = sli_geticsvc(w->srw_resm);
-		if (csvc == NULL) {
-			w->srw_status = SLERR_ION_OFFLINE;
-			goto end;
-		}
-
-		slvridx = -1;
-
-		spinlock(&w->srw_lock);
-		locked = 1;
 		/* find a sliver we need to transmit */
+		BMAP_LOCK(w->srw_bcm);
 		biodi = w->srw_bcm->bcm_pri;
 		for (slvrno = 0; slvrno < SLASH_SLVRS_PER_BMAP; slvrno++)
-			if (biodi_2_crcbits(biodi, slvrno) & ~BMAP_SLVR_WANTREPL) {
+			if (biodi_2_crcbits(biodi, slvrno) & BMAP_SLVR_WANTREPL) {
 				biodi_2_crcbits(biodi, slvrno) &=
 				    ~BMAP_SLVR_WANTREPL;
 				break;
 			}
+		BMAP_ULOCK(w->srw_bcm);
 
 		if (slvrno == SLASH_SLVRS_PER_BMAP)
 			goto end;
 
 		/* find a slot we can use to transmit it */
-		if (psc_vbitmap_next(w->srw_inflight, &sz))
+		if (!psc_vbitmap_next(w->srw_inflight, &sz))
 			goto end;
 		slvridx = sz;
 
@@ -204,15 +208,11 @@ slireplpndthr_main(__unusedx void *arg)
 		if (csvc)
 			sl_csvc_decref(csvc);
 
-		if (w->srw_status || slvrno == SLASH_SLVRS_PER_BMAP)
-			lc_add(&sli_replwkq_finished, w);
-		else if (slvridx == -1)
-			/* unable to find a slot, wait */
-			lc_add(&sli_replwkq_inflight, w);
-		else
+		if (slvridx != -1) {
 			lc_addhead(&sli_replwkq_pending, w);
-		if (locked)
-			freelock(&w->srw_lock);
+			psc_atomic32_inc(&w->srw_refcnt);
+		}
+		sli_replwkrq_decref(w, 0);
 		sched_yield();
 	}
 }
@@ -226,11 +226,7 @@ sli_repl_init(void)
 
 	lc_reginit(&sli_replwkq_pending, struct sli_repl_workrq,
 	    srw_state_lentry, "replwkpnd");
-	lc_reginit(&sli_replwkq_finished, struct sli_repl_workrq,
-	    srw_state_lentry, "replwkfin");
 
-	pscthr_init(SLITHRT_REPLFIN, 0, slireplfinthr_main,
-	    NULL, 0, "slireplfinthr");
 	pscthr_init(SLITHRT_REPLPND, 0, slireplpndthr_main,
 	    NULL, 0, "slireplpndthr");
 

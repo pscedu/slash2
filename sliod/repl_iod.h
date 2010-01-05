@@ -44,7 +44,10 @@ struct sli_repl_workrq {
 	sl_blkgen_t		 srw_bgen;		/* bmap generation */
 	uint64_t		 srw_nid;		/* repl source network address */
 	uint32_t		 srw_len;		/* bmap size */
+
 	uint32_t		 srw_status;		/* return code to pass back to MDS */
+	psc_spinlock_t		 srw_lock;
+	psc_atomic32_t		 srw_refcnt;
 
 	struct sl_resm		*srw_resm;		/* source peer info */
 	struct bmapc_memb	*srw_bcm;
@@ -53,17 +56,16 @@ struct sli_repl_workrq {
 	struct psclist_head	 srw_active_lentry;	/* entry in global active list */
 
 	struct slvr_ref		*srw_slvr_refs[REPL_MAX_INFLIGHT_SLVRS];
-	psc_spinlock_t		 srw_lock;
 	struct psc_vbitmap	*srw_inflight;		/* indexes into srw_slvr_refs */
 };
 
 int	sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t, sl_blkgen_t, int);
 void	sli_repl_init(void);
 
+void	sli_replwkrq_decref(struct sli_repl_workrq *, int);
+
 extern struct pscrpc_nbreqset	 sli_replwk_nbset;
-extern struct psc_listcache	 sli_replwkq_pending;
-extern struct psc_listcache	 sli_replwkq_finished;
-extern struct psc_listcache	 sli_replwkq_inflight;
 extern struct psc_lockedlist	 sli_replwkq_active;
+extern struct psc_listcache	 sli_replwkq_pending;
 
 #endif /* _REPL_IOD_H_ */

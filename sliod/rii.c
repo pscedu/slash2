@@ -149,7 +149,6 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 
 	s = w->srw_slvr_refs[slvridx];
 	slvrsiz = SLASH_SLVR_SIZE;
-	/* if last sliver in bmap, use short length if possible */
 	if (s->slvr_num == w->srw_len / SLASH_SLVR_SIZE)
 		slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
 	if (rc == 0)
@@ -190,20 +189,17 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	psc_assert(slvridx < nitems(w->srw_slvr_refs));
 	rc = sli_rii_replread_release_sliver(w, slvridx, rc);
 
-	spinlock(&w->srw_lock);
-	if (psc_vbitmap_isfull(w->srw_inflight))
-		lc_remove(&sli_replwkq_inflight, w);
-	psc_vbitmap_unset(w->srw_inflight, slvridx);
-	freelock(&w->srw_lock);
+	BMAP_LOCK(w->srw_bcm);
+	bmap_2_crcbits(w->srw_bcm, slvrno) |= BMAP_SLVR_WANTREPL;
+	BMAP_ULOCK(w->srw_bcm);
 
-	if (rc) {
-		w->srw_status = rc;
-		bmap_2_crcbits(w->srw_bcm, slvrno) |= BMAP_SLVR_WANTREPL;
-	}
+	spinlock(&w->srw_lock);
+	psc_vbitmap_unset(w->srw_inflight, slvridx);
 
 	/* place back on pending queue until the last sliver finishes or error */
 	if (psclist_disjoint(&w->srw_state_lentry))
 		lc_add(&sli_replwkq_pending, w);
+	sli_replwkrq_decref(w, rc);
 	return (rc);
 }
 
@@ -223,7 +219,9 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, int slvrno,
 	    SRMT_REPL_READ, rq, mq, mp)) != 0)
 		return (rc);
 
-	mq->len = MIN(w->srw_len, SLASH_SLVR_SIZE);
+	mq->len = SLASH_SLVR_SIZE;
+	if ((unsigned)slvrno == w->srw_len / SLASH_SLVR_SIZE)
+		mq->len = w->srw_len % SLASH_SLVR_SIZE;
 	mq->fg = w->srw_fg;
 	mq->bmapno = w->srw_bmapno;
 	mq->slvrno = slvrno;
@@ -245,6 +243,8 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, int slvrno,
 	/* Setup state for callbacks */
 	rq->rq_interpret_reply = sli_rii_replread_cb;
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_WKRQ] = w;
+	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
+	psc_atomic32_inc(&w->srw_refcnt);
 
 	nbreqset_add(&sli_replwk_nbset, rq);
 
