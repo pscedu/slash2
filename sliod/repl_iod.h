@@ -17,12 +17,24 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include "psc_ds/list.h"
+#ifndef _REPL_IOD_H_
+#define _REPL_IOD_H_
 
-#include "cache_params.h"
+#include "psc_ds/list.h"
+#include "psc_ds/listcache.h"
+#include "psc_ds/lockedlist.h"
+#include "psc_rpc/rpc.h"
+#include "psc_util/lock.h"
+
 #include "fid.h"
-#include "inode.h"
 #include "sltypes.h"
+
+struct psc_vbitmap;
+
+struct bmapc_memb;
+struct fidc_memb;
+struct sl_resm;
+struct slvr_ref;
 
 #define REPL_MAX_INFLIGHT_SLVRS	64			/* maximum # inflight slivers between IONs */
 
@@ -45,7 +57,7 @@ struct sli_repl_workrq {
 	struct psc_vbitmap	*srw_inflight;		/* indexes into srw_slvr_refs */
 };
 
-int	sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t, int);
+int	sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t, sl_blkgen_t, int);
 void	sli_repl_init(void);
 
 extern struct pscrpc_nbreqset	 sli_replwk_nbset;
@@ -53,3 +65,5 @@ extern struct psc_listcache	 sli_replwkq_pending;
 extern struct psc_listcache	 sli_replwkq_finished;
 extern struct psc_listcache	 sli_replwkq_inflight;
 extern struct psc_lockedlist	 sli_replwkq_active;
+
+#endif /* _REPL_IOD_H_ */

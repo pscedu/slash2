@@ -21,8 +21,8 @@
 
 #include "psc_ds/listcache.h"
 #include "psc_ds/pool.h"
-#include "psc_rpc/rpc.h"
 #include "psc_ds/vbitmap.h"
+#include "psc_rpc/rpc.h"
 
 #include "bmap.h"
 #include "bmap_iod.h"
@@ -53,11 +53,10 @@ struct psc_lockedlist	 sli_replwkq_active =
 
 int
 sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
-    sl_bmapno_t bmapno, int len)
+    sl_bmapno_t bmapno, sl_blkgen_t bgen, int len)
 {
 	char buf[PSC_NIDSTR_SIZE];
 	struct sli_repl_workrq *w;
-	struct sl_resm *resm;
 	int rc, i;
 
 	/*
@@ -75,14 +74,16 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
+	LOCK_INIT(&w->srw_lock);
 	w->srw_nid = nid;
 	w->srw_fg = *fgp;
 	w->srw_bmapno = bmapno;
+	w->srw_bgen = bgen;
 	w->srw_len = len;
 
 	/* lookup replication source peer */
-	resm = libsl_nid2resm(w->srw_nid);
-	if (resm == NULL) {
+	w->srw_resm = libsl_nid2resm(w->srw_nid);
+	if (w->srw_resm == NULL) {
 		psc_errorx("%s: unknown resource member",
 		    psc_nid2str(w->srw_nid, buf));
 		rc = SLERR_ION_UNKNOWN;
@@ -112,6 +113,8 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 		for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
 			if (bmap_2_crcbits(w->srw_bcm, i) & BMAP_SLVR_DATA)
 				bmap_2_crcbits(w->srw_bcm, i) |= BMAP_SLVR_WANTREPL;
+
+		w->srw_inflight = psc_vbitmap_new(REPL_MAX_INFLIGHT_SLVRS);
 	}
 
  out:
@@ -142,6 +145,7 @@ slireplfinthr_main(__unusedx void *arg)
 			bmap_op_done_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
 		if (w->srw_fcmh)
 			fidc_membh_dropref(w->srw_fcmh);
+		psc_vbitmap_free(w->srw_inflight);
 		psc_pool_return(sli_replwkrq_pool, w);
 		sched_yield();
 	}
