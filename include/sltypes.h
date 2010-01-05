@@ -20,8 +20,12 @@
 #ifndef _SL_TYPES_H_
 #define _SL_TYPES_H_
 
-typedef uint32_t sl_blkno_t;		/* deprecated */
+/* deprecated */
+typedef uint32_t sl_blkno_t;
+typedef uint32_t sl_blkgen_t;
+
 typedef uint32_t sl_bmapno_t;		/* bmap index number */
+typedef uint32_t sl_bgen_t;		/* bmap generation number */
 
 typedef uint16_t sl_siteid_t;
 typedef uint32_t sl_ios_id_t;

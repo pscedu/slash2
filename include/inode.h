@@ -32,7 +32,8 @@
 #include "fid.h"
 #include "sltypes.h"
 
-/* To save space in the bmaps, replica stores are kept in the sl-replicas
+/*
+ * To save space in the bmaps, replica stores are kept in the sl-replicas
  *   xattr.  Each bmap uses an array of char's as a bitmap to track which
  *   stores the bmap is replicated to.  Additional bits are used to specify
  *   the freshness of the replica bmaps.  '100' would mean that the bmap
@@ -99,12 +100,6 @@ typedef struct slash_replica {
 typedef struct slash_gencrc {
 	psc_crc64_t		gc_crc;
 } sl_gcrc_t;
-
-/*
- * Slim block structure just holds a generation number and a
- * validation bit.  The I/O server ID is held in the block store array.
- */
-typedef uint32_t sl_blkgen_t;
 
 struct slash_bmap_cli_wire {
 	uint8_t			bw_crcstates[SL_CRCS_PER_BMAP];
