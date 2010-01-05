@@ -466,6 +466,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 void
 mds_repl_bmap_rel(struct bmapc_memb *bcm)
 {
+	BMAP_RLOCK(bcm);
 	mds_bmap_sync_if_changed(bcm);
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 }

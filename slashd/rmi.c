@@ -203,31 +203,22 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	rrq = mds_repl_findrq(&mq->fg, NULL);
-	if (rrq == NULL) {
-		mp->rc = ENOENT;
+	if (rrq == NULL)
 		goto out;
-	}
 
 	dst_resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
-	if (dst_resm == NULL) {
-		mp->rc = SLERR_ION_UNKNOWN;
+	if (dst_resm == NULL)
 		goto out;
-	}
 
 	iosidx = mds_repl_ios_lookup(rrq->rrq_inoh,
 	    dst_resm->resm_res->res_id);
-	if (iosidx < 0) {
-		mp->rc = SLERR_ION_NOTREPL;
+	if (iosidx < 0)
 		goto out;
-	}
 
-	if (!mds_bmap_exists(REPLRQ_FCMH(rrq), mq->bmapno)) {
-		mp->rc = SLERR_INVALID_BMAP;
+	if (!mds_bmap_exists(REPLRQ_FCMH(rrq), mq->bmapno))
 		goto out;
-	}
 
-	mp->rc = mds_bmap_load(REPLRQ_FCMH(rrq), mq->bmapno, &bcm);
-	if (mp->rc)
+	if (mds_bmap_load(REPLRQ_FCMH(rrq), mq->bmapno, &bcm))
 		goto out;
 
 	BMAP_LOCK(bcm);
@@ -235,7 +226,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	tract[SL_REPL_INACTIVE] = -1;
 	tract[SL_REPL_ACTIVE] = -1;
 
-	if (mp->rc || mq->bgen != bmap_2_bgen(bcm)) {
+	if (mq->rc || mq->bgen != bmap_2_bgen(bcm)) {
 		tract[SL_REPL_OLD] = -1;
 		tract[SL_REPL_SCHED] = SL_REPL_OLD;
 	} else {
@@ -253,7 +244,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	retifset[SL_REPL_OLD] = EINVAL;
 	retifset[SL_REPL_ACTIVE] = EINVAL;
 
-	mp->rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
+	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_repl_bmap_rel(bcm);
 
 	msi = dst_resm->resm_res->res_site->site_pri;

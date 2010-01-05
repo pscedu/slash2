@@ -45,8 +45,8 @@ struct sli_repl_workrq {
 	struct psc_vbitmap	*srw_inflight;		/* indexes into srw_slvr_refs */
 };
 
-void sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t, int);
-void sli_repl_init(void);
+int	sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t, int);
+void	sli_repl_init(void);
 
 extern struct pscrpc_nbreqset	 sli_replwk_nbset;
 extern struct psc_listcache	 sli_replwkq_pending;

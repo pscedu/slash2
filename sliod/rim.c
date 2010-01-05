@@ -51,7 +51,7 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 	else if (mq->len < 1 || mq->len > SLASH_BMAP_SIZE)
 		mp->rc = EINVAL;
 	else
-		sli_repl_addwk(mq->nid, &mq->fg, mq->bmapno, mq->len);
+		mp->rc = sli_repl_addwk(mq->nid, &mq->fg, mq->bmapno, mq->len);
 	return (0);
 }
 

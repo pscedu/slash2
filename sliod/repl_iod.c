@@ -51,14 +51,14 @@ struct psc_lockedlist	 sli_replwkq_active =
     PLL_INITIALIZER(&sli_replwkq_active, struct sli_repl_workrq,
 	    srw_active_lentry);
 
-void
+int
 sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
     sl_bmapno_t bmapno, int len)
 {
 	char buf[PSC_NIDSTR_SIZE];
 	struct sli_repl_workrq *w;
 	struct sl_resm *resm;
-	int i;
+	int rc, i;
 
 	/*
 	 * Check if this work is already queued, e.g. from before the MDS
@@ -71,7 +71,7 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 			break;
 	PLL_ULOCK(&sli_replwkq_active);
 	if (w)
-		return;
+		return (EALREADY);
 
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
@@ -85,25 +85,29 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	if (resm == NULL) {
 		psc_errorx("%s: unknown resource member",
 		    psc_nid2str(w->srw_nid, buf));
-		w->srw_status = SLERR_ION_UNKNOWN;
+		rc = SLERR_ION_UNKNOWN;
 		goto out;
 	}
 
 	/* get an fcmh for the file */
 	w->srw_fcmh = iod_inode_lookup(&w->srw_fg);
-	w->srw_status = iod_inode_open(w->srw_fcmh, SL_WRITE);
-	if (w->srw_status) {
-		DEBUG_FCMH(PLL_ERROR, w->srw_fcmh, "iod_inode_open");
+	rc = iod_inode_open(w->srw_fcmh, SL_WRITE);
+	if (rc) {
+		DEBUG_FCMH(PLL_ERROR, w->srw_fcmh, "iod_inode_open: %s",
+		    slstrerror(rc));
 		goto out;
 	}
 
 	/* get the replication chunk's bmap */
-	w->srw_status = iod_bmap_load(w->srw_fcmh,
+	rc = iod_bmap_load(w->srw_fcmh,
 	    w->srw_bmapno, SL_WRITE, &w->srw_bcm);
-	if (w->srw_status)
+	if (rc)
 		psc_errorx("iod_bmap_load %u: %s",
-		    w->srw_bmapno, slstrerror(w->srw_status));
+		    w->srw_bmapno, slstrerror(rc));
 	else {
+		bmap_op_start_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
+		bmap_op_done_type(w->srw_bcm, BMAP_OPCNT_LOOKUP);
+
 		/* mark slivers for replication */
 		for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++)
 			if (bmap_2_crcbits(w->srw_bcm, i) & BMAP_SLVR_DATA)
@@ -111,13 +115,16 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	}
 
  out:
-	/* add to current processing list */
-	pll_add(&sli_replwkq_active, w);
-
-	if (w->srw_status)
+	if (rc) {
+		if (w->srw_fcmh)
+			fidc_membh_dropref(w->srw_fcmh);
+		psc_pool_return(sli_replwkrq_pool, w);
+	} else {
+		/* add to current processing list */
+		pll_add(&sli_replwkq_active, w);
 		lc_add(&sli_replwkq_pending, w);
-	else
-		lc_add(&sli_replwkq_finished, w);
+	}
+	return (rc);
 }
 
 __dead void *
@@ -132,7 +139,7 @@ slireplfinthr_main(__unusedx void *arg)
 		sli_rmi_issue_repl_schedwk(w);
 
 		if (w->srw_bcm)
-			bmap_op_done(w->srw_bcm);
+			bmap_op_done_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
 		if (w->srw_fcmh)
 			fidc_membh_dropref(w->srw_fcmh);
 		psc_pool_return(sli_replwkrq_pool, w);
