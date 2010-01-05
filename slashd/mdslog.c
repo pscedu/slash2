@@ -270,6 +270,10 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		for (t+=i; j < t; j++) {
 			bmapod->bh_crcs[(crcup->crcs[j].slot)].gc_crc =
 				crcup->crcs[j].crc;
+
+			bmapod->bh_crcstates[(crcup->crcs[j].slot)] = 
+				(BMAP_SLVR_DATA | BMAP_SLVR_CRC);
+
 			DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PRIx64")",
 				   crcup->crcs[j].slot, crcup->crcs[j].crc);
 		}
