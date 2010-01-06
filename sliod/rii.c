@@ -197,8 +197,10 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	psc_vbitmap_unset(w->srw_inflight, slvridx);
 
 	/* place back on pending queue until the last sliver finishes or error */
-	if (psclist_disjoint(&w->srw_state_lentry))
+	if (psclist_disjoint(&w->srw_state_lentry)) {
 		lc_add(&sli_replwkq_pending, w);
+		psc_atomic32_inc(&w->srw_refcnt);
+	}
 	sli_replwkrq_decref(w, rc);
 	return (rc);
 }
