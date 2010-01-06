@@ -599,7 +599,6 @@ bmap_flush(void)
 
 			DEBUG_BIORQ(PLL_TRACE, r, "consider for flush");
 
-			psc_assert(!(r->biorq_flags & BIORQ_INFL));
 			psc_assert(!(r->biorq_flags & BIORQ_READ));
 			psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 
@@ -617,6 +616,11 @@ bmap_flush(void)
 					continue;
 				}
 			}
+			/* Don't assert !BIORQ_INFL until ensuring that 
+			 *   we can actually work on this biorq.  A RBW
+			 *   process may be working on it.
+			 */
+			psc_assert(!(r->biorq_flags & BIORQ_INFL));
 
 			r->biorq_flags |= BIORQ_SCHED;
 			/* Limit the amount of scanning done by this 
