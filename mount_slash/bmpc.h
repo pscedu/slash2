@@ -29,7 +29,7 @@
 #include "psc_ds/tree.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/atomic.h"
-#include "psc_util/spinlock.h"
+#include "psc_util/lock.h"
 #include "psc_util/time.h"
 #include "psc_util/waitq.h"
 
@@ -83,7 +83,7 @@ struct bmap_pagecache_entry {
 #define BMPCE_LOCK(b)  spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b) freelock(&(b)->bmpce_lock)
 
-enum BMPCE_STATES {
+enum {
 	BMPCE_NEW       = (1<<0),
 	BMPCE_GETBUF    = (1<<1),
 	BMPCE_DATARDY   = (1<<2),
@@ -134,30 +134,17 @@ enum BMPCE_STATES {
 static inline int
 bmpce_sort_cmp(const void *x, const void *y)
 {
-	const struct bmap_pagecache_entry *a =
-		*(const struct bmap_pagecache_entry **)x;
+	const struct bmap_pagecache_entry * const *pa = x, *a = *pa;
+	const struct bmap_pagecache_entry * const *pb = y, *b = *pb;
 
-	const struct bmap_pagecache_entry *b =
-		*(const struct bmap_pagecache_entry **)y;
-
-	if (a->bmpce_off < b->bmpce_off)
-		return (-1);
-
-	if (a->bmpce_off > b->bmpce_off)
-		return (1);
-
-	return (0);
+	return (CMP(a->bmpce_off, b->bmpce_off));
 }
 
 static inline int
 bmpce_lrusort_cmp(const void *x, const void *y)
 {
-	const struct bmap_pagecache_entry *a =
-		*(const struct bmap_pagecache_entry **)x;
-
-	const struct bmap_pagecache_entry *b =
-		*(const struct bmap_pagecache_entry **)y;
-
+	const struct bmap_pagecache_entry * const *pa = x, *a = *pa;
+	const struct bmap_pagecache_entry * const *pb = y, *b = *pb;
 
 	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, <))
 		return (-1);
@@ -171,8 +158,7 @@ bmpce_lrusort_cmp(const void *x, const void *y)
 static inline int
 bmpce_cmp(const void *x, const void *y)
 {
-	const struct bmap_pagecache_entry *a = x;
-	const struct bmap_pagecache_entry *b = y;
+	const struct bmap_pagecache_entry *a = x, *b = y;
 
 	if (a->bmpce_off < b->bmpce_off)
 		return (-1);
@@ -198,8 +184,8 @@ struct bmap_pagecache {
 	struct psclist_head       bmpc_lentry; /* chain to global LRU lc     */
 };
 
-#define BMPC_LOCK(b)  spinlock(&(b)->bmpc_lock)
-#define BMPC_ULOCK(b) freelock(&(b)->bmpc_lock)
+#define BMPC_LOCK(b)	spinlock(&(b)->bmpc_lock)
+#define BMPC_ULOCK(b)	freelock(&(b)->bmpc_lock)
 
 static inline int
 bmpc_queued_writes(struct bmap_pagecache *bmpc)
@@ -228,7 +214,7 @@ struct bmpc_ioreq {
 	struct psc_waitq           biorq_waitq;
 };
 
-enum BMPC_IOREQ_FLAGS {
+enum {
 	BIORQ_READ         = (1<<0),
 	BIORQ_WRITE        = (1<<1),
 	BIORQ_RBWFP        = (1<<2),
@@ -324,7 +310,8 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 }
 
 
-static inline void bmpce_inflight_dec_locked(struct bmap_pagecache_entry *bmpce)
+static inline void
+bmpce_inflight_dec_locked(struct bmap_pagecache_entry *bmpce)
 {
        if (!(bmpce->bmpce_flags & BMPCE_WIRE))
 		   return;
@@ -335,7 +322,8 @@ static inline void bmpce_inflight_dec_locked(struct bmap_pagecache_entry *bmpce)
 		bmpce->bmpce_flags &= ~(BMPCE_IOSCHED|BMPCE_WIRE);
 }
 
-static inline void bmpce_inflight_inc_locked(struct bmap_pagecache_entry *bmpce)
+static inline void
+bmpce_inflight_inc_locked(struct bmap_pagecache_entry *bmpce)
 {
 	psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
 	psc_atomic16_inc(&bmpce->bmpce_infref);
@@ -354,14 +342,14 @@ static inline void bmpce_inflight_inc_locked(struct bmap_pagecache_entry *bmpce)
 #define biorq_is_my_bmpce(r, b)	(&(r)->biorq_waitq == (b)->bmpce_waitq)
 
 #define biorq_getaligned_off(r, nbmpce) (((r)->biorq_off & ~BMPC_BUFMASK) + \
-					 (nbmpce * BMPC_BUFSZ))
+					 ((nbmpce) * BMPC_BUFSZ))
 
 #define biorq_voff_get(r) ((r)->biorq_off + (r)->biorq_len)
 
 #define bmpce_is_rbw_page(r, b, pos)					\
 	(biorq_is_my_bmpce(r, b) &&					\
-	 ((!pos && ((r)->biorq_flags & BIORQ_RBWFP)) ||			\
-	  ((pos == (psc_dynarray_len(&(r)->biorq_pages)-1) &&		\
+	 ((!(pos) && ((r)->biorq_flags & BIORQ_RBWFP)) ||		\
+	  (((pos) == (psc_dynarray_len(&(r)->biorq_pages)-1) &&		\
 	    ((r)->biorq_flags & BIORQ_RBWLP)))))
 
 static inline void
@@ -411,11 +399,8 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 static inline int
 bmpc_lru_cmp(const void *x, const void *y)
 {
-	const struct bmap_pagecache *a =
-		*(const struct bmap_pagecache **)x;
-
-	const struct bmap_pagecache *b =
-		*(const struct bmap_pagecache **)y;
+	const struct bmap_pagecache * const *pa = x, *a = *pa;
+	const struct bmap_pagecache * const *pb = y, *b = *pb;
 
 	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
 		return (-1);
@@ -464,4 +449,4 @@ void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
 void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
 			      struct bmap_pagecache *, int, int);
-#endif
+#endif /* _SL_BMPC_H_ */
