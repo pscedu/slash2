@@ -50,7 +50,10 @@ slashrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 	if (nid == LNET_NID_ANY)
 		return (ENETUNREACH);
 
+	if (imp->imp_connection)
+		pscrpc_put_connection(imp->imp_connection);
 	imp->imp_connection = pscrpc_get_connection(server_id, nid, NULL);
+	imp->imp_connection->c_imp = imp;
 	imp->imp_connection->c_peer.pid = SLASH_SVR_PID;
 
 	if ((rc = RSX_NEWREQ(imp, version, SRMT_CONNECT, rq, mq, mp)) != 0)
@@ -174,20 +177,24 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		goto out;
 
 	if (exp) {
+		struct pscrpc_connection *c;
+
+		c = csvc->csvc_import->imp_connection;
+		atomic_inc(&exp->exp_connection->c_refcount);
+		csvc->csvc_import->imp_connection = exp->exp_connection;
+		csvc->csvc_import->imp_connection->c_imp = csvc->csvc_import;
+
 		/*
 		 * If an export was specified, the peer has already
 		 * established a connection to our service, so just
 		 * reuse the underhood connection to establish a
 		 * connection back to his service.
 		 */
-//		if (csvc->csvc_import->imp_connection)
-//			atomic_dec(&csvc->csvc_import->imp_connection->c_refcount);
-
-		atomic_inc(&exp->exp_connection->c_refcount);
-		csvc->csvc_import->imp_connection = exp->exp_connection;
+		if (c)
+			pscrpc_put_connection(c);
 	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
 		if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT) {
-			psc_fatalx("unimplemented wakef");
+			psc_fatalx("multiwaits not implemented");
 //			psc_multiwait_addcond(ml, wakearg);
 //			csvc = NULL;
 //			goto out;
