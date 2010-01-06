@@ -22,25 +22,24 @@
 
 #include <time.h>
 
-#include "psc_ds/tree.h"
 #include "psc_ds/list.h"
-#include "psc_ds/lockedlist.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/lockedlist.h"
 #include "psc_ds/pool.h"
-#include "psc_util/atomic.h"
-#include "psc_util/waitq.h"
-#include "psc_util/time.h"
-#include "psc_util/spinlock.h"
+#include "psc_ds/tree.h"
 #include "psc_ds/vbitmap.h"
+#include "psc_util/atomic.h"
+#include "psc_util/spinlock.h"
+#include "psc_util/time.h"
+#include "psc_util/waitq.h"
 
 #include "cache_params.h"
 #include "bmap.h"
 #include "buffer.h"
 
-extern struct psc_poolmaster bmpcePoolMaster;
-extern struct psc_poolmgr *bmpcePoolMgr;
-extern struct bmpc_mem_slbs bmpcSlabs;
-extern struct psc_listcache bmpcLru;
+extern struct psc_poolmgr	*bmpcePoolMgr;
+extern struct bmpc_mem_slbs	 bmpcSlabs;
+extern struct psc_listcache	 bmpcLru;
 
 #define BMPC_BUFSZ      SLASH_BMAP_BLKSZ
 #define BMPC_BLKSZ      BMPC_BUFSZ
@@ -55,9 +54,6 @@ extern struct psc_listcache bmpcLru;
 #define BMPC_DEF_MINAGE { 0, 600000000 } /* seconds, nanoseconds */
 #define BMPC_INTERVAL   { 0, 200000000 }
 
-extern uint32_t bmpcDefSlbs;
-extern uint32_t bmpcMaxSlbs;
-
 struct bmpc_mem_slbs {
 	atomic_t              bmms_waiters;
 	uint16_t              bmms_reap;
@@ -66,8 +62,6 @@ struct bmpc_mem_slbs {
 	struct psc_lockedlist bmms_slbs;
 	struct psc_waitq      bmms_waitq;
 };
-
-extern struct bmpc_mem_slbs bmpcSlabs;
 
 #define lockBmpcSlabs()		spinlock(&bmpcSlabs.bmms_lock)
 #define ulockBmpcSlabs()	freelock(&bmpcSlabs.bmms_lock)
@@ -206,9 +200,6 @@ struct bmap_pagecache {
 
 #define BMPC_LOCK(b)  spinlock(&(b)->bmpc_lock)
 #define BMPC_ULOCK(b) freelock(&(b)->bmpc_lock)
-
-#define BMPC_WAIT  psc_waitq_wait(&bmpcSlabs.bmms_waitq, &bmpcSlabs.bmms_lock)
-#define BMPC_WAKE  psc_waitq_wakeall(&bmpcSlabs.bmms_waitq)
 
 static inline int
 bmpc_queued_writes(struct bmap_pagecache *bmpc)
@@ -417,22 +408,6 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 		ioreq->biorq_flags |= BIORQ_DIO;
 }
 
-#if 0
-static inline int
-bmpc_lru_cmp(const void *x, const void *y)
-{
-	struct bmap_pagecache * const *pa = x, *a = *pa, * const *pb = y, *b = *pb;
-
-	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
-		return (-1);
-
-	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, >))
-		return (1);
-
-	return (0);
-}
-
-#else
 static inline int
 bmpc_lru_cmp(const void *x, const void *y)
 {
@@ -442,14 +417,6 @@ bmpc_lru_cmp(const void *x, const void *y)
 	const struct bmap_pagecache *b =
 		*(const struct bmap_pagecache **)y;
 
-#if 0
-	psc_notify("sort check a=%p %ld:%ld b=%p %ld:%ld",
-		   a, a->bmpc_oldest.tv_sec,
-		   a->bmpc_oldest.tv_nsec,
-		   b, b->bmpc_oldest.tv_sec,
-		   b->bmpc_oldest.tv_nsec);
-#endif
-
 	if (timespeccmp(&a->bmpc_oldest, &b->bmpc_oldest, <))
 		return (-1);
 
@@ -458,7 +425,6 @@ bmpc_lru_cmp(const void *x, const void *y)
 
 	return (0);
 }
-#endif
 
 static inline void
 bmpc_decrease_minage(void)

@@ -20,8 +20,8 @@
 #include <time.h>
 
 #include "psc_ds/lockedlist.h"
-#include "psc_util/atomic.h"
 #include "psc_ds/pool.h"
+#include "psc_util/atomic.h"
 
 #include "bmpc.h"
 
@@ -29,9 +29,6 @@ struct psc_poolmaster bmpcePoolMaster;
 struct psc_poolmgr *bmpcePoolMgr;
 struct bmpc_mem_slbs bmpcSlabs;
 struct psc_listcache bmpcLru;
-
-uint32_t bmpcDefSlbs = BMPC_DEFSLBS;
-uint32_t bmpcMaxSlbs = BMPC_MAXSLBS;
 
 __static SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry,
 			bmpce_tentry, bmpce_cmp);
@@ -229,8 +226,6 @@ bmpc_grow(int nslbs)
 
 	return (rc);
 }
-
-void bmpc_free(void *);
 
 __static void
 bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
