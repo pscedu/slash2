@@ -197,7 +197,7 @@ bmpc_grow(int nslbs)
 	struct sl_buffer *slb;
 	int i=0, nalloced, rc=0;
 
-	lockBmpcSlabs;
+	lockBmpcSlabs();
 
 	nalloced = pll_nitems(&bmpcSlabs.bmms_slbs);
 	psc_assert(nalloced <= BMPC_MAXSLBS);
@@ -225,7 +225,7 @@ bmpc_grow(int nslbs)
 	}
  out:
 	psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
-	ulockBmpcSlabs;
+	ulockBmpcSlabs();
 
 	return (rc);
 }
@@ -372,7 +372,7 @@ bmpc_reap_locked(void)
 		bmpcSlabs.bmms_reap = 1;
 
 	LIST_CACHE_LOCK(&bmpcLru);
-	ulockBmpcSlabs;
+	ulockBmpcSlabs();
 
 	lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
 	/* Should be sorted from oldest bmpc to newest.  Skip bmpc whose
@@ -438,7 +438,7 @@ bmpc_free(void *base)
 	uint64_t uptr=(uint64_t)base, sptr;
 	int found=0, freeslb=0;
 
-	lockBmpcSlabs;
+	lockBmpcSlabs();
 	PLL_FOREACH(slb, &bmpcSlabs.bmms_slbs) {
 		sptr = (uint64_t)slb->slb_base;
 		if (uptr >= sptr &&
@@ -465,7 +465,7 @@ bmpc_free(void *base)
 	freelock(&slb->slb_lock);
 
 	psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
-	ulockBmpcSlabs;
+	ulockBmpcSlabs();
 
 	if (freeslb) {
 		bmpc_increase_minage();
@@ -485,7 +485,7 @@ bmpc_alloc(void)
 	int found=0;
 
  retry:
-	lockBmpcSlabs;
+	lockBmpcSlabs();
 	PLL_FOREACH(slb, &bmpcSlabs.bmms_slbs) {
 		spinlock(&slb->slb_lock);
 		if (psc_vbitmap_next(slb->slb_inuse, &elem))
@@ -502,7 +502,7 @@ bmpc_alloc(void)
 		goto retry;
 
 	} else {
-		ulockBmpcSlabs;
+		ulockBmpcSlabs();
 		base = (char *)slb->slb_base + (elem * BMPC_BLKSZ);
 	}
 

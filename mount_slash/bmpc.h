@@ -69,8 +69,8 @@ struct bmpc_mem_slbs {
 
 extern struct bmpc_mem_slbs bmpcSlabs;
 
-#define lockBmpcSlabs  spinlock(&bmpcSlabs.bmms_lock)
-#define ulockBmpcSlabs freelock(&bmpcSlabs.bmms_lock)
+#define lockBmpcSlabs()		spinlock(&bmpcSlabs.bmms_lock)
+#define ulockBmpcSlabs()	freelock(&bmpcSlabs.bmms_lock)
 
 struct bmap_pagecache_entry {
 	psc_atomic16_t            bmpce_wrref;   /* pending write ops        */
@@ -465,7 +465,7 @@ bmpc_decrease_minage(void)
 {
 	struct timespec ts = BMPC_INTERVAL;
 
-	lockBmpcSlabs;
+	lockBmpcSlabs();
 
 	timespecsub(&bmpcSlabs.bmms_minage, &ts,
 		    &bmpcSlabs.bmms_minage);
@@ -473,7 +473,7 @@ bmpc_decrease_minage(void)
 	if (bmpcSlabs.bmms_minage.tv_sec < 0)
 		timespecclear(&bmpcSlabs.bmms_minage);
 
-	ulockBmpcSlabs;
+	ulockBmpcSlabs();
 }
 
 static inline void
@@ -481,12 +481,12 @@ bmpc_increase_minage(void)
 {
 	struct timespec ts = BMPC_INTERVAL;
 
-	lockBmpcSlabs;
+	lockBmpcSlabs();
 
 	timespecadd(&bmpcSlabs.bmms_minage, &ts,
 		    &bmpcSlabs.bmms_minage);
 
-	ulockBmpcSlabs;
+	ulockBmpcSlabs();
 }
 
 int   bmpce_init(struct psc_poolmgr *, void *);
