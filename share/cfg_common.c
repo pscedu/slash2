@@ -118,12 +118,12 @@ libsl_str2res(const char *res_name)
 	const char *site_name;
 	struct sl_resource *r;
 	struct sl_site *s;
-	int n;
+	int n, locked;
 
 	site_name = strchr(res_name, '@');
 	if (site_name == NULL)
 		return (NULL);
-	PLL_LOCK(&globalConfig.gconf_sites);
+	locked = PLL_RLOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		if (strcmp(s->site_name, site_name) == 0)
 			DYNARRAY_FOREACH(r, n, &s->site_resources)
@@ -132,7 +132,7 @@ libsl_str2res(const char *res_name)
 					goto done;
 	r = NULL;
  done:
-	PLL_ULOCK(&globalConfig.gconf_sites);
+	PLL_URLOCK(&globalConfig.gconf_sites, locked);
 	return (r);
 }
 
