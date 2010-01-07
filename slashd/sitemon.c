@@ -80,10 +80,22 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	site = smrt->smrt_site;
 	msi = site->site_pri;
 
-	dst_resm = libsl_nid2resm(dst_res->res_nids[j]);
+	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
 
 	dst_mrmi = dst_resm->resm_pri;
 	src_mrmi = src_resm->resm_pri;
+
+	/*
+	 * At this point, add this connection to our multiwait.
+	 * If a wakeup event comes while we are timing our own
+	 * establishment attempt below, we will wake up immediately
+	 * when we multiwait; otherwise, we the connection will
+	 * wake us when it becomes available.
+	 */
+	if (!psc_multiwait_hascond(&msi->msi_mw,
+	    &dst_mrmi->mrmi_mwcond))
+		psc_multiwait_addcond(&msi->msi_mw,
+		    &dst_mrmi->mrmi_mwcond);
 
 	csvc = slm_geticsvc(dst_resm);
 	if (csvc == NULL)
@@ -95,10 +107,6 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 		    &src_mrmi->mrmi_mwcond))
 			psc_multiwait_addcond(&msi->msi_mw,
 			    &src_mrmi->mrmi_mwcond);
-		if (!psc_multiwait_hascond(&msi->msi_mw,
-		    &dst_mrmi->mrmi_mwcond))
-			psc_multiwait_addcond(&msi->msi_mw,
-			    &dst_mrmi->mrmi_mwcond);
 		goto fail;
 	}
 
@@ -146,10 +154,6 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
  fail:
 	if (we_set_busy)
 		mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 0);
-	if (!psc_multiwait_hascond(&msi->msi_mw,
-	    &dst_mrmi->mrmi_mwcond))
-		psc_multiwait_addcond(&msi->msi_mw,
-		    &dst_mrmi->mrmi_mwcond);
 	return (0);
 }
 
@@ -157,7 +161,7 @@ __dead void *
 slmreplqthr_main(void *arg)
 {
 	int iosidx, nios, nrq, off, j, rc, has_repl_work;
-	int rrq_gen, ris, is, rir, ir, rin, in, val;
+	int rrq_gen, ris, is, rir, ir, rin, in, val, nmemb;
 	struct sl_resource *src_res, *dst_res;
 	struct slmreplq_thread *smrt;
 	struct slash_bmap_od *bmapod;
@@ -234,8 +238,7 @@ slmreplqthr_main(void *arg)
 
 			/* find a resource in our site this replrq is destined for */
 			iosidx = -1;
-			for (j = 0; j < site->site_nres; j++) {
-				dst_res = site->site_resv[j];
+			DYNARRAY_FOREACH(dst_res, j, &site->site_resources) {
 				iosidx = mds_repl_ios_lookup(rrq->rrq_inoh,
 				    dst_res->res_id);
 				if (iosidx < 0)
@@ -286,12 +289,13 @@ slmreplqthr_main(void *arg)
 							continue;
 
 						/* search source nids for an idle, online connection */
-						rin = psc_random32u(src_res->res_nnids);
-						for (in = 0; in < (int)src_res->res_nnids; in++,
-						    rin = (rin + 1) % src_res->res_nnids) {
+						nmemb = psc_dynarray_len(&src_res->res_members);
+						rin = psc_random32u(nmemb);
+						for (in = 0; in < nmemb; in++,
+						    rin = (rin + 1) % nmemb) {
 							int k;
 
-							src_resm = libsl_nid2resm(src_res->res_nids[rin]);
+							src_resm = psc_dynarray_getpos(&src_res->res_members, rin);
 							if (slm_geticsvc(src_resm) == NULL) {
 								if (!psc_multiwait_hascond(&msi->msi_mw,
 								    &resm2mrmi(src_resm)->mrmi_mwcond))
@@ -302,7 +306,7 @@ slmreplqthr_main(void *arg)
 							}
 
 							/* look for a destination resm */
-							for (k = 0; k < (int)dst_res->res_nnids; k++)
+							for (k = 0; k < psc_dynarray_len(&dst_res->res_members); k++)
 								if (slmreplqthr_trydst(rrq, bcm,
 								    off, src_resm, dst_res, k))
 									goto restart;
