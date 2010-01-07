@@ -271,6 +271,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 int
 slm_rmi_handle_connect(struct pscrpc_request *rq)
 {
+	struct slashrpc_cservice *csvc;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 	struct sl_resm *resm;
@@ -281,7 +282,8 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 
 	/* initialize our reverse stream structures */
 	resm = libsl_nid2resm(rq->rq_peer.nid);
-	slm_geticsvcx(resm, rq->rq_export);
+	csvc = slm_geticsvcx(resm, rq->rq_export);
+//	psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
 
 	slm_rmi_getexpdata(rq->rq_export);
 	return (0);
@@ -327,6 +329,7 @@ slm_rmi_hldrop(void *p)
 	resm = libsl_nid2resm(smie->smie_exp->exp_connection->c_peer.nid);
 	if (resm)
 		mds_repl_reset_scheduled(resm->resm_res->res_id);
+	mds_repl_node_clearallbusy(resm->resm_pri);
 	free(smie);
 }
 

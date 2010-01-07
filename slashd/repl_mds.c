@@ -1104,28 +1104,47 @@ _mds_repl_nodes_setbusy(struct mds_resm_info *ma,
 }
 
 void
+mds_repl_node_clearallbusy(struct mds_resm_info *mrmi)
+{
+	int n, j, locked, locked2;
+	struct sl_resource *r;
+	struct sl_resm *resm;
+	struct sl_site *s;
+
+	PLL_LOCK(&globalConfig.gconf_sites);
+	locked = reqlock(&repl_busytable_lock);
+	locked2 = reqlock(&mrmi->mrmi_lock);
+	PLL_FOREACH(s, &globalConfig.gconf_sites) {
+		DYNARRAY_FOREACH(r, n, &s->site_resources)
+			DYNARRAY_FOREACH(resm, j, &r->res_members)
+				if (resm->resm_pri != mrmi)
+					mds_repl_nodes_setbusy(mrmi,
+					    resm->resm_pri, 0);
+	}
+	ureqlock(&mrmi->mrmi_lock, locked2);
+	ureqlock(&repl_busytable_lock, locked);
+	PLL_ULOCK(&globalConfig.gconf_sites);
+}
+
+void
 mds_repl_buildbusytable(void)
 {
 	struct mds_resm_info *mrmi;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
-	uint32_t j;
-	int n;
+	int n, j;
 
 	/* count # resm's (IONs) and assign each a busy identifier */
 	PLL_LOCK(&globalConfig.gconf_sites);
 	spinlock(&repl_busytable_lock);
 	repl_busytable_nents = 0;
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
-		for (n = 0; n < s->site_nres; n++) {
-			r = s->site_resv[n];
-			for (j = 0; j < r->res_nnids; j++) {
-				resm = libsl_nid2resm(r->res_nids[j]);
+		DYNARRAY_FOREACH(r, n, &s->site_resources)
+			DYNARRAY_FOREACH(resm, j, &r->res_members) {
 				mrmi = resm->resm_pri;
 				mrmi->mrmi_busyid = repl_busytable_nents++;
 			}
-		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
 	if (repl_busytable)
