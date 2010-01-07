@@ -189,10 +189,6 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	psc_assert(slvridx < nitems(w->srw_slvr_refs));
 	rc = sli_rii_replread_release_sliver(w, slvridx, rc);
 
-	BMAP_LOCK(w->srw_bcm);
-	bmap_2_crcbits(w->srw_bcm, slvrno) |= BMAP_SLVR_WANTREPL;
-	BMAP_ULOCK(w->srw_bcm);
-
 	spinlock(&w->srw_lock);
 	psc_vbitmap_unset(w->srw_inflight, slvridx);
 
