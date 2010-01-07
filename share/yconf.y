@@ -668,7 +668,7 @@ slcfg_parse(const char *config_file)
 	struct sl_resource *r, *peer;
 	struct cfg_file *cf, *ncf;
 	struct sl_site *s;
-	int n;
+	int n, j;
 
 	cfg_errors = 0;
 
@@ -694,7 +694,7 @@ slcfg_parse(const char *config_file)
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
 		psc_dynarray_sort(&s->site_resources, qsort, slcfg_res_cmp);
-		DYNARRAY_FOREACH(r, n, &s->site_resources) {
+		DYNARRAY_FOREACH(r, j, &s->site_resources) {
 			psc_dynarray_sort(&r->res_members, qsort, slcfg_resm_cmp);
 
 			/* Resolve peer names. */
