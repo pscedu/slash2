@@ -760,7 +760,7 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = zfsslash2_statfs(zfsVfs, &mp->stbv);
+	mp->rc = zfsslash2_statfs(zfsVfs, &mp->stbv, 1);
 	RETURN(0);
 }
 
