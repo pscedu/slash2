@@ -693,13 +693,9 @@ slcfg_parse(const char *config_file)
 	PLL_LOCK(&globalConfig.gconf_sites);
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
-		qsort(psc_dynarray_get(&s->site_resources),
-		    psc_dynarray_len(&s->site_resources),
-		    sizeof(void *), slcfg_res_cmp);
+		psc_dynarray_sort(&s->site_resources, qsort, slcfg_res_cmp);
 		DYNARRAY_FOREACH(r, n, &s->site_resources) {
-			qsort(psc_dynarray_get(&r->res_members),
-			    psc_dynarray_len(&r->res_members),
-			    sizeof(void *), slcfg_resm_cmp);
+			psc_dynarray_sort(&r->res_members, qsort, slcfg_resm_cmp);
 
 			/* Resolve peer names. */
 			for (n = 0; n < r->res_npeers; n++) {

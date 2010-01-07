@@ -196,7 +196,8 @@ libsl_init(int pscnet_mode, int ismds)
 int
 slcfg_site_cmp(const void *a, const void *b)
 {
-	struct sl_site * const *px = a, *x = *px, * const *py = b, *y = *py;
+	struct sl_site * const *px = a, *x = *px;
+	struct sl_site * const *py = b, *y = *py;
 
 	return (CMP(x->site_id, y->site_id));
 }
@@ -204,7 +205,8 @@ slcfg_site_cmp(const void *a, const void *b)
 int
 slcfg_res_cmp(const void *a, const void *b)
 {
-	const struct sl_resource *x = a, *y = b;
+	const struct sl_resource * const *px = a, *x = *px;
+	const struct sl_resource * const *py = b, *y = *py;
 
 	return (CMP(x->res_id, y->res_id));
 }
@@ -212,7 +214,8 @@ slcfg_res_cmp(const void *a, const void *b)
 int
 slcfg_resm_cmp(const void *a, const void *b)
 {
-	const struct sl_resm *x = a, *y = b;
+	const struct sl_resm * const *px = a, *x = *px;
+	const struct sl_resm * const *py = b, *y = *py;
 
 	return (CMP(x->resm_nid, y->resm_nid));
 }
