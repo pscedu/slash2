@@ -530,10 +530,10 @@ slvr_rio_done(struct slvr_ref *s)
 		DEBUG_SLVR(PLL_DEBUG, s, "ops still pending or dirty");
 
 	if (s->slvr_flags & SLVR_REPLSRC) {
-		psc_assert(s->slvr_flags & SLVR_REPLDST);
+		psc_assert((s->slvr_flags & SLVR_REPLDST) == 0);
 		s->slvr_flags &= ~SLVR_REPLSRC;
 	}
-	
+
 	SLVR_ULOCK(s);
 }
 
