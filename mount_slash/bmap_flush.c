@@ -181,6 +181,7 @@ __static void
 bmap_flush_inflight_ref(struct bmpc_ioreq *r)
 {
 	int i;
+	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce;
 
 	spinlock(&r->biorq_lock);
@@ -189,6 +190,15 @@ bmap_flush_inflight_ref(struct bmpc_ioreq *r)
 	DEBUG_BIORQ(PLL_INFO, r, "set inflight");
 	freelock(&r->biorq_lock);
 
+	bmpc = bmap_2_msbmpc(r->biorq_bmap);
+	BMPC_LOCK(bmpc);
+	/* Limit the amount of scanning done by this 
+	 *   thread.  Move pending biorqs out of the way.
+	 */
+	pll_remove(&bmpc->bmpc_new_biorqs, r);
+	pll_addtail(&bmpc->bmpc_pndg_biorqs, r);	
+	BMPC_ULOCK(bmpc);
+	
 	for (i=0; i < psc_dynarray_len(&r->biorq_pages); i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		BMPCE_LOCK(bmpce);
@@ -519,8 +529,14 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 			     MIN_COALESCE_RPC_SZ) || expired)
 				goto make_coalesce;
 			else {
-				/* Start over.
-				 */
+				/* Start over but first deschedule the 
+				 *   biorq's which are being held back.
+				 */				
+				for (i=0; i < psc_dynarray_len(&b); i++) {
+					t = psc_dynarray_getpos(&b, i);
+					DEBUG_BIORQ(PLL_INFO, t, "descheduling");
+					t->biorq_flags &= ~BIORQ_SCHED;					
+				}
 				psc_dynarray_reset(&b);
 				psc_dynarray_add(&b, t);
 				r = t;
@@ -600,12 +616,16 @@ bmap_flush(void)
 			DEBUG_BIORQ(PLL_TRACE, r, "consider for flush");
 
 			psc_assert(!(r->biorq_flags & BIORQ_READ));
-			psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
+			psc_assert(!(r->biorq_flags & BIORQ_DESTROY));			
 
 			if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
 				freelock(&r->biorq_lock);
 				continue;
 				
+			} else if (r->biorq_flags & BIORQ_SCHED) {
+				DEBUG_BIORQ(PLL_WARN, r, "already sched");
+				continue;
+
 			} else if ((r->biorq_flags & BIORQ_RBWFP) ||
 				   (r->biorq_flags & BIORQ_RBWLP)) {
 				/* Wait for RBW I/O to complete before 
@@ -623,11 +643,6 @@ bmap_flush(void)
 			psc_assert(!(r->biorq_flags & BIORQ_INFL));
 
 			r->biorq_flags |= BIORQ_SCHED;
-			/* Limit the amount of scanning done by this 
-			 *   thread.  Move pending biorqs out of the way.
-			 */
-			pll_remove(&bmpc->bmpc_new_biorqs, r);
-			pll_addtail(&bmpc->bmpc_pndg_biorqs, r);
 
 			freelock(&r->biorq_lock);
 
