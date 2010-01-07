@@ -173,8 +173,10 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	}
 
  restart:
-	if (csvc->csvc_import->imp_failed == 0)
+	if (csvc->csvc_import->imp_failed == 0 &&
+	    csvc->csvc_import->imp_invalid == 0)
 		goto out;
+//	|| imp->imp_generation != csvc_impgen
 
 	if (exp) {
 		struct pscrpc_connection *c;
@@ -226,6 +228,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	}
 	if (rc == 0) {
 		csvc->csvc_import->imp_failed = 0;
+		csvc->csvc_import->imp_invalid = 0;
 		if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT)
 			psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
 		else
