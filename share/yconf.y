@@ -114,7 +114,7 @@ struct symtable sym_table[] = {
 };
 
 struct sl_gconf		 globalConfig;
-struct sl_nodeh		 nodeInfo;
+struct sl_resm		*nodeResm;
 
 int			 cfg_errors;
 int			 cfg_lineno;
@@ -163,38 +163,7 @@ struct sl_gconf		*currentConf = &globalConfig;
 
 %%
 
-config		: globals includes site_profiles {
-			struct sl_resource *r;
-			struct sl_site *s;
-			uint32_t i;
-			int n;
-
-			/*
-			 * Config has been loaded; iterate through the sites'
-			 *  peer lists and resolve names to numerical ID's.
-			 */
-			PLL_FOREACH(s, &globalConfig.gconf_sites) {
-				for (n = 0; n < s->site_nres; n++) {
-					r = s->site_resv[n];
-
-					r->res_peers = PSCALLOC(
-					    sizeof(sl_ios_id_t) * r->res_npeers);
-
-					for (i = 0; i < r->res_npeers; i++) {
-						r->res_peers[i] = libsl_str2id(r->res_peertmp[i]);
-						psc_assert(r->res_peers[i] != IOS_ID_ANY);
-						free(r->res_peertmp[i]);
-					}
-
-					/*
-					 * Associate nids with their respective resources,
-					 *   and add the nids to the global hash table.
-					 */
-					for (i = 0; i < r->res_nnids; i++)
-						libsl_nid_associate(r->res_nids[i], r);
-				}
-			}
-		}
+config		: globals includes site_profiles
 		;
 
 globals		: /* NULL */
@@ -242,7 +211,8 @@ site_profile	: site_prof_start site_defs SUBSECT_END {
 
 site_prof_start	: SITE_PROFILE SITE_NAME SUBSECT_START {
 			currentSite = PSCALLOC(sizeof(*currentSite));
-			INIT_SITE(currentSite);
+			psc_dynarray_init(&currentSite->site_resources);
+			INIT_PSCLIST_ENTRY(&currentSite->site_lentry);
 			if (strlcpy(currentSite->site_name, $2,
 			    sizeof(currentSite->site_name)) >=
 			    sizeof(currentSite->site_name))
@@ -272,10 +242,7 @@ site_resource	: resource_start resource_def SUBSECT_END {
 				yyerror("resource %s ID %d has no type specified",
 				    currentRes->res_name, currentRes->res_id);
 
-			currentSite->site_resv = psc_realloc(currentSite->site_resv,
-			    sizeof(*currentSite->site_resv) *
-			    (currentSite->site_nres + 1), 0);
-			currentSite->site_resv[currentSite->site_nres++] = currentRes;
+			psc_dynarray_add(&currentSite->site_resources, currentRes);
 			currentRes->res_site = currentSite;
 		}
 		;
@@ -284,6 +251,8 @@ resource_start	: RESOURCE_PROFILE NAME SUBSECT_START {
 			int rc;
 
 			currentRes = PSCALLOC(sizeof(*currentRes));
+			psc_dynarray_init(&currentRes->res_peers);
+			psc_dynarray_init(&currentRes->res_members);
 			rc = snprintf(currentRes->res_name,
 			    sizeof(currentRes->res_name), "%s%s",
 			    $2, currentSite->site_name);
@@ -446,18 +415,13 @@ void
 slcfg_addif(char *ifname, char *netname)
 {
 	char nidstr[PSC_NIDSTR_SIZE];
-	lnet_nid_t *i;
+	struct sl_resm *resm;
 	int rc;
 
 	if (strchr(ifname, '-')) {
 		yyerror("invalid interface name: %s", ifname);
 		return;
 	}
-
-	/* XXX dynarray */
-	i = realloc(currentRes->res_nids,
-	    (sizeof(lnet_nid_t) * (currentRes->res_nnids + 1)));
-	psc_assert(i);
 
 	rc = snprintf(nidstr, sizeof(nidstr), "%s@%s", ifname, netname);
 	if (rc == -1)
@@ -466,13 +430,23 @@ slcfg_addif(char *ifname, char *netname)
 		psc_fatalx("interface name too long: %s", ifname);
 	free(ifname);
 
-	i[currentRes->res_nnids] = libcfs_str2nid(nidstr);
+	resm = PSCALLOC(sizeof(*resm));
+	rc = snprintf(resm->resm_addrbuf, sizeof(resm->resm_addrbuf),
+	    "%s:%s", currentRes->res_name, nidstr);
+	if (rc == -1)
+		psc_fatal("resource member %s:%s", currentRes->res_name, nidstr);
+	if (rc >= (int)sizeof(resm->resm_addrbuf))
+		psc_fatalx("resource member %s:%s: address too long",
+		    currentRes->res_name, nidstr);
 
-	psc_info("Got nidstr %s nid2str %s\n",
-	    nidstr, libcfs_nid2str(i[currentRes->res_nnids]));
+	resm->resm_nid = libcfs_str2nid(nidstr);
+	resm->resm_res = currentRes;
+	slcfg_init_resm(resm);
 
-	currentRes->res_nnids++;
-	currentRes->res_nids = i;
+	init_hash_entry(&resm->resm_hentry, (void *)&resm->resm_nid, resm);
+	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hentry);
+
+	psc_dynarray_add(&currentRes->res_members, resm);
 }
 
 uint32_t
@@ -604,8 +578,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 			psc_trace("SL_TYPE_BOOL Option '%s' disabled", e->name);
 		break;
 
-	case SL_TYPE_FLOAT:
-		{
+	case SL_TYPE_FLOAT: {
 			char   *c, floatbuf[17];
 			float   f;
 
@@ -624,13 +597,12 @@ slcfg_store_tok_val(const char *tok, char *val)
 
 			*(long *)ptr = strtol(floatbuf, NULL, 10);
 
-			if ( *c != '\0' ) {
-				*(long *)(ptr+1) = strtol(c, NULL, 10);
-			}
+			if (*c != '\0')
+				*(long *)(ptr + 1) = strtol(c, NULL, 10);
 			psc_trace("SL_TYPE_FLOAT Tok '%s' Secs %ld Usecs %lu",
-				e->name, *(long *)ptr, *(long *)(ptr+1));
-		}
+				e->name, *(long *)ptr, *(long *)(ptr + 1));
 		break;
+	    }
 
 	case SL_TYPE_SIZET: {
 		uint64_t   i;
@@ -638,6 +610,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 		char *c;
 
 		j = strlen(val);
+		psc_assert(j > 0);
 		c = &val[j-1];
 
 		switch (tolower(*c)) {
@@ -692,8 +665,8 @@ void
 slcfg_parse(const char *config_file)
 {
 	extern FILE *yyin;
+	struct sl_resource *r, *peer;
 	struct cfg_file *cf, *ncf;
-	struct sl_resource *r;
 	struct sl_site *s;
 	int n;
 
@@ -717,16 +690,28 @@ slcfg_parse(const char *config_file)
 	if (cfg_errors)
 		errx(1, "%d error(s) encountered", cfg_errors);
 
+	PLL_LOCK(&globalConfig.gconf_sites);
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
-		qsort(s->site_resv, s->site_nres,
-		    sizeof(*s->site_resv), slcfg_res_cmp);
-		for (n = 0; n < s->site_nres; n++) {
-			r = s->site_resv[n];
-			qsort(r->res_nids, r->res_nnids,
-			    sizeof(*r->res_nids), slcfg_resnid_cmp);
+		qsort(psc_dynarray_get(&s->site_resources),
+		    psc_dynarray_len(&s->site_resources),
+		    sizeof(void *), slcfg_res_cmp);
+		DYNARRAY_FOREACH(r, n, &s->site_resources) {
+			qsort(psc_dynarray_get(&r->res_members),
+			    psc_dynarray_len(&r->res_members),
+			    sizeof(void *), slcfg_resm_cmp);
+
+			/* Resolve peer names. */
+			for (n = 0; n < r->res_npeers; n++) {
+				peer = libsl_str2res(r->res_peertmp[n]);
+				free(r->res_peertmp[n]);
+
+				psc_assert(peer);
+				psc_dynarray_add(&r->res_peers, peer);
+			}
 		}
 	}
+	PLL_ULOCK(&globalConfig.gconf_sites);
 }
 
 void

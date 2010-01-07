@@ -57,7 +57,7 @@
 __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
 __static void
-msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b, 
+msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		uint32_t off, uint32_t len, int op)
 {
 	struct bmpc_ioreq *r;
@@ -325,8 +325,8 @@ __static void
 msl_biorq_destroy(struct bmpc_ioreq *r)
 {
 	spinlock(&r->biorq_lock);
-	
-	if (r->biorq_flags & BIORQ_WRITE) 
+
+	if (r->biorq_flags & BIORQ_WRITE)
 		psc_assert(r->biorq_flags & BIORQ_INFL);
 
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
@@ -832,7 +832,6 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	struct msl_fcoo_data *mfd;
 	struct sl_resource *res;
 	struct sl_resm *resm;
-	lnet_nid_t repl_nid;
 	int n;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -855,19 +854,14 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	crpi = res->res_pri;
 	spinlock(&crpi->crpi_lock);
 	n = crpi->crpi_cnt++;
-	if (crpi->crpi_cnt >= (int)res->res_nnids)
+	if (crpi->crpi_cnt >= psc_dynarray_len(&res->res_members))
 		n = crpi->crpi_cnt = 0;
-	repl_nid = res->res_nids[n];
+	resm = psc_dynarray_getpos(&res->res_members, n);
 	freelock(&crpi->crpi_lock);
 
 	psc_trace("trying res(%s) ion(%s)",
-		  res->res_name, libcfs_nid2str(repl_nid));
+		  res->res_name, resm->resm_addrbuf);
 
-	resm = libsl_nid2resm(repl_nid);
-	if (!resm)
-		psc_fatalx("Failed to lookup %s, verify that the slash configs"
-			   " are uniform across all servers",
-			   libcfs_nid2str(repl_nid));
  out:
 	csvc = slc_geticsvc(resm);
 	return (csvc ? csvc->csvc_import : NULL);
@@ -914,7 +908,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	spinlock(&r->biorq_lock);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
 	psc_assert(r->biorq_flags & BIORQ_INFL);
-	
+
 	/* Call the inflight CB only on the iov's in the dynarray -
 	 *   not the iov's in the request since some of those may
 	 *   have already been staged in.
@@ -1131,7 +1125,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		 *   one other writer must be present.
 		 */
 		psc_assert(atomic_read(&bmpc->bmpc_pndgwr) > 1);
-		psc_assert((pll_nitems(&bmpc->bmpc_pndg_biorqs) +	    
+		psc_assert((pll_nitems(&bmpc->bmpc_pndg_biorqs) +
 			    pll_nitems(&bmpc->bmpc_new_biorqs)) > 1);
 
 	} else {
@@ -1190,7 +1184,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
 		bmpce_usecheck(bmpce, BIORQ_READ,
 			       biorq_getaligned_off(r, (i+startpage)));
-		
+
 		bmpce_inflight_inc_locked(bmpce);
 		DEBUG_BMPCE(PLL_TRACE, bmpce, "adding to rpc");
 
@@ -1215,7 +1209,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	       sizeof(mq->sbdb));
 
 	r->biorq_flags |= BIORQ_INFL;
-	
+
 	DEBUG_BIORQ(PLL_NOTIFY, r, "launching read req");
 
 	if (!r->biorq_rqset)

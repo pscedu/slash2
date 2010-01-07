@@ -25,32 +25,6 @@
 
 struct psc_dynarray lnet_nids = DYNARRAY_INIT;
 
-void
-libsl_nid_associate(lnet_nid_t nid, struct sl_resource *res)
-{
-	char nidbuf[PSC_NIDSTR_SIZE];
-	struct sl_resm *resm;
-	int rc;
-
-	psc_nid2str(nid, nidbuf);
-
-	resm = PSCALLOC(sizeof(*resm));
-	rc = snprintf(resm->resm_addrbuf, sizeof(resm->resm_addrbuf),
-	    "%s:%s", res->res_name, nidbuf);
-	if (rc == -1)
-		psc_fatal("resource member %s:%s", res->res_name, nidbuf);
-	if (rc >= (int)sizeof(resm->resm_addrbuf))
-		psc_fatalx("resource member %s:%s: address too long",
-		    res->res_name, nidbuf);
-
-	resm->resm_nid = nid;
-	resm->resm_res = res;
-	slcfg_init_resm(resm);
-
-	init_hash_entry(&resm->resm_hentry, (void *)&resm->resm_nid, resm);
-	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hentry);
-}
-
 /*
  * libsl_resm_lookup - Sanity check this node's resource membership.
  * Notes: must be called after LNET has been initialized.
@@ -119,11 +93,9 @@ libsl_id2res(sl_ios_id_t id)
 
 	if ((s = libsl_resid2site(id)) == NULL)
 		return (NULL);
-	for (n = 0; n < s->site_nres; n++) {
-		r = s->site_resv[n];
+	DYNARRAY_FOREACH(r, n, &s->site_resources)
 		if (id == r->res_id)
 			return (r);
-	}
 	return (NULL);
 }
 
@@ -154,12 +126,10 @@ libsl_str2res(const char *res_name)
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		if (strcmp(s->site_name, site_name) == 0)
-			for (n = 0; n < s->site_nres; n++) {
-				r = s->site_resv[n];
+			DYNARRAY_FOREACH(r, n, &s->site_resources)
 				/* res_name includes '@SITE' in both */
 				if (strcmp(r->res_name, res_name) == 0)
 					goto done;
-			}
 	r = NULL;
  done:
 	PLL_ULOCK(&globalConfig.gconf_sites);
@@ -180,11 +150,9 @@ libsl_str2id(const char *name)
 void
 libsl_profile_dump(void)
 {
-	struct sl_nodeh *n = &nodeInfo;
-	struct sl_resource *r;
-	uint32_t i;
-
-	r = n->node_res;
+	struct sl_resource *p, *r = nodeResm->resm_res;
+	struct sl_resm *resm;
+	int n;
 
 	fprintf(stderr,
 	    "Node info: resource %s id %u\n"
@@ -193,27 +161,19 @@ libsl_profile_dump(void)
 	    "\tfsroot %s\n",
 	    r->res_name, r->res_id,
 	    r->res_desc,
-	    r->res_type, r->res_npeers, r->res_nnids,
+	    r->res_type, r->res_npeers, psc_dynarray_len(&r->res_members),
 	    r->res_fsroot);
 
-	for (i = 0; i < n->node_res->res_npeers; i++) {
-		r = libsl_id2res(n->node_res->res_peers[i]);
-		if (!r)
-			continue;
-		fprintf(stderr, "\tpeer %d ;%s;\t%s\n",
-			i, r->res_name, r->res_desc);
-	}
-	for (i = 0; i < n->node_res->res_nnids; i++)
-		fprintf(stderr, "\tnid %d ;%s;\n",
-			i, libcfs_nid2str(n->node_res->res_nids[i]));
+	DYNARRAY_FOREACH(p, n, &r->res_peers)
+		fprintf(stderr, "\tpeer %d: %s\t%s\n",
+			n, p->res_name, p->res_desc);
+	DYNARRAY_FOREACH(resm, n, &r->res_members)
+		fprintf(stderr, "\tnid %d: %s\n", n, resm->resm_addrbuf);
 }
 
 void
 libsl_init(int pscnet_mode, int ismds)
 {
-	struct sl_nodeh *n = &nodeInfo;
-	struct sl_resm *resm;
-
 	//lnet_acceptor_port = globalConfig.gconf_port;
 	//setenv("USOCK_CPORT", globalConfig.gconf_port, 1);
 	//setenv("LNET_ACCEPT_PORT", globalConfig.gconf_port, 1);
@@ -225,12 +185,10 @@ libsl_init(int pscnet_mode, int ismds)
 	pscrpc_getlocalnids(&lnet_nids);
 
 	if (pscnet_mode == PSCNET_SERVER) {
-		resm = libsl_resm_lookup(ismds);
-		if (!resm)
-			psc_fatalx("No resource for this node");
-		psc_errorx("Resource %s", resm->resm_res->res_name);
-		n->node_res  = resm->resm_res;
-		n->node_site = libsl_resid2site(n->node_res->res_id);
+		nodeResm = libsl_resm_lookup(ismds);
+		if (nodeResm == NULL)
+			psc_fatalx("No resource member for this node");
+		psc_errorx("Resource %s", nodeResm->resm_res->res_name);
 		libsl_profile_dump();
 	}
 }
@@ -248,21 +206,13 @@ slcfg_res_cmp(const void *a, const void *b)
 {
 	const struct sl_resource *x = a, *y = b;
 
-	if (x->res_id < y->res_id)
-		return (-1);
-	else if (x->res_id > y->res_id)
-		return (1);
-	return (0);
+	return (CMP(x->res_id, y->res_id));
 }
 
 int
-slcfg_resnid_cmp(const void *a, const void *b)
+slcfg_resm_cmp(const void *a, const void *b)
 {
-	const lnet_nid_t *x = a, *y = b;
+	const struct sl_resm *x = a, *y = b;
 
-	if (*x < *y)
-		return (-1);
-	else if (*x > *y)
-		return (1);
-	return (0);
+	return (CMP(x->resm_nid, y->resm_nid));
 }

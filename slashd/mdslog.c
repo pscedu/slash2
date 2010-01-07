@@ -301,7 +301,7 @@ mds_journal_init(void)
 	int rc;
 
 	rc = snprintf(fn, sizeof(fn), "%s/%s",
-		      nodeInfo.node_res->res_fsroot, _PATH_SLJOURNAL);
+		      nodeResm->resm_res->res_fsroot, _PATH_SLJOURNAL);
 	if (rc == -1)
 		psc_fatal("snprintf");
 

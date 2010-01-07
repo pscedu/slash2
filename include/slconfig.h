@@ -23,6 +23,7 @@
 #include <sys/param.h>
 
 #include "pfl/types.h"
+#include "psc_ds/dynarray.h"
 #include "psc_ds/hash.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
@@ -50,22 +51,22 @@ enum sl_res_type {
 	SLREST_PARALLEL_FS
 };
 
+/* Resource (I/O system) */
 struct sl_resource {
 	char			 res_name[RES_NAME_MAX];	/* resource name */
 	char			*res_desc;
 	char			*res_peertmp[SL_PEER_MAX];
+	int			 res_npeers;
 	sl_ios_id_t		 res_id;
 	enum sl_res_type	 res_type;
-	sl_ios_id_t		*res_peers;
-	uint32_t		 res_npeers;
-	uint32_t		 res_nnids;			/* number of res_nids */
-	lnet_nid_t		*res_nids;			/* network addresses */
+	struct psc_dynarray	 res_peers;
+	struct psc_dynarray	 res_members;
 	char			 res_fsroot[PATH_MAX];
 	void			*res_pri;
 	struct sl_site		*res_site;
 };
 
-/* SLASH resource member structure */
+/* Resource member (a machine in the I/O system) */
 struct sl_resm {
 	char			 resm_addrbuf[RESM_ADDRBUF_SZ];
 	lnet_nid_t		 resm_nid;			/* Node ID for the resource member */
@@ -74,24 +75,16 @@ struct sl_resm {
 	void			*resm_pri;
 };
 
-#define slresm_2_resid(r)	(r)->resm_res->res_id
+#define resm_2_resid(r)		(r)->resm_res->res_id
 
+/* Site (a collection of I/O systems) */
 struct sl_site {
 	char			 site_name[SITE_NAME_MAX];
 	char			*site_desc;
 	void			*site_pri;
 	struct psclist_head	 site_lentry;
-	struct sl_resource	**site_resv;
-	int			 site_nres;
+	struct psc_dynarray	 site_resources;
 	sl_siteid_t		 site_id;
-};
-
-#define INIT_SITE(s)		INIT_PSCLIST_ENTRY(&(s)->site_lentry)
-
-/* structure for this node */
-struct sl_nodeh {
-	struct sl_resource	*node_res;
-	struct sl_site		*node_site;
 };
 
 struct sl_gconf {
@@ -105,15 +98,39 @@ struct sl_gconf {
 };
 
 #define GCONF_HASHTBL_SZ 63
-#define INIT_GCONF(g)						\
-	do {							\
-		memset((g), 0, sizeof(*(g)));			\
-		LOCK_INIT(&(g)->gconf_lock);			\
-		pll_init(&(g)->gconf_sites, struct sl_site,	\
-		    site_lentry, &(g)->gconf_lock);		\
-		init_hash_table(&(g)->gconf_nids_hash,		\
-				GCONF_HASHTBL_SZ, "resnid");	\
+#define INIT_GCONF(g)								\
+	do {									\
+		memset((g), 0, sizeof(*(g)));					\
+		LOCK_INIT(&(g)->gconf_lock);					\
+		pll_init(&(g)->gconf_sites, struct sl_site,			\
+		    site_lentry, &(g)->gconf_lock);				\
+		init_hash_table(&(g)->gconf_nids_hash,				\
+				GCONF_HASHTBL_SZ, "resnid");			\
 	} while (0)
+
+void			 slcfg_init_res(struct sl_resource *);
+void			 slcfg_init_resm(struct sl_resm *);
+void			 slcfg_init_site(struct sl_site *);
+
+int			 slcfg_site_cmp(const void *, const void *);
+int			 slcfg_res_cmp(const void *, const void *);
+int			 slcfg_resm_cmp(const void *, const void *);
+
+void			 slcfg_parse(const char *);
+void			 slcfg_store_tok_val(const char *, char *);
+
+void			 libsl_nid_associate(lnet_nid_t, struct sl_resource *);
+struct sl_site		*libsl_siteid2site(sl_siteid_t);
+struct sl_site		*libsl_resid2site(sl_ios_id_t);
+struct sl_resource	*libsl_id2res(sl_ios_id_t);
+struct sl_resm		*libsl_nid2resm(lnet_nid_t);
+struct sl_resource	*libsl_str2res(const char *);
+sl_ios_id_t		 libsl_str2id(const char *);
+void			 libsl_profile_dump(void);
+void			 libsl_init(int, int);
+
+extern struct sl_resm	*nodeResm;
+extern struct sl_gconf	 globalConfig;
 
 /*
  * sl_global_id_build - produce a global, unique identifier for a resource
@@ -134,29 +151,5 @@ sl_resid_to_siteid(sl_ios_id_t id)
 {
 	return ((id & SL_SITE_MASK) >> SL_SITE_BITS);
 }
-
-void			 slcfg_init_res(struct sl_resource *);
-void			 slcfg_init_resm(struct sl_resm *);
-void			 slcfg_init_site(struct sl_site *);
-
-int			 slcfg_site_cmp(const void *, const void *);
-int			 slcfg_res_cmp(const void *, const void *);
-int			 slcfg_resnid_cmp(const void *, const void *);
-
-void			 slcfg_parse(const char *);
-void			 slcfg_store_tok_val(const char *, char *);
-
-void			 libsl_nid_associate(lnet_nid_t, struct sl_resource *);
-struct sl_site		*libsl_siteid2site(sl_siteid_t);
-struct sl_site		*libsl_resid2site(sl_ios_id_t);
-struct sl_resource	*libsl_id2res(sl_ios_id_t);
-struct sl_resm		*libsl_nid2resm(lnet_nid_t);
-struct sl_resource	*libsl_str2res(const char *);
-sl_ios_id_t		 libsl_str2id(const char *);
-void			 libsl_profile_dump(void);
-void			 libsl_init(int, int);
-
-extern struct sl_nodeh	 nodeInfo;
-extern struct sl_gconf	 globalConfig;
 
 #endif /* _SLCONFIG_H_ */

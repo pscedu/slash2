@@ -55,7 +55,7 @@ fid_makepath(slfid_t fid, char *fid_path)
 		a[i] = (a[i] < 10) ? (a[i] += 0x30) : (a[i] += 0x57);
 
 	rc = snprintf(fid_path, SL_PATH_MAX, "%s/%s/%c/%c/%c/%016"PRIx64,
-	      nodeInfo.node_res->res_fsroot, FID_PATH_NAME,
+	      nodeResm->resm_res->res_fsroot, FID_PATH_NAME,
 	      a[0], a[1], a[2], fid);
 
 	psc_trace("fid=%"PRIx64" fidpath=;%s;", fid, fid_path);

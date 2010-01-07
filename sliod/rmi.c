@@ -54,9 +54,9 @@ sli_rmi_setmds(const char *name)
 		res = libsl_str2res(name);
 		if (res == NULL)
 			psc_fatalx("%s: unknown resource", name);
-		nid = res->res_nids[0];
-	}
-	rmi_resm = libsl_nid2resm(nid);
+		rmi_resm = psc_dynarray_getpos(&res->res_members, 0);
+	} else
+		rmi_resm = libsl_nid2resm(nid);
 	return (0);
 }
 

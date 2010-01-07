@@ -576,7 +576,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	struct sl_resm *resm;
 	struct mds_resm_info *mrmi;
 	struct mds_resprof_info *mrpi;
-	int n, x;
+	int j, n, len;
 
 	psc_assert(!mdsi->bmdsi_wr_ion);
 	psc_assert(atomic_read(&bmap->bcm_opcnt) > 0);
@@ -589,22 +589,18 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	}
 	mrpi = res->res_pri;
 	psc_assert(mrpi);
-	x = res->res_nnids;
+	len = psc_dynarray_len(&res->res_members);
 
-	do {
+	for (j = 0; j < len; j++) {
 		spinlock(&mrpi->mrpi_lock);
 		n = mrpi->mrpi_cnt++;
-		if (mrpi->mrpi_cnt >= (int)res->res_nnids)
+		if (mrpi->mrpi_cnt >= len)
 			n = mrpi->mrpi_cnt = 0;
+		resm = psc_dynarray_getpos(&res->res_members, n);
 
 		psc_trace("trying res(%s) ion(%s)",
-			  res->res_name, libcfs_nid2str(res->res_nids[n]));
+			  res->res_name, resm->resm_addrbuf);
 
-		resm = libsl_nid2resm(res->res_nids[n]);
-		if (!resm)
-			psc_fatalx("Failed to lookup %s, verify that slash "
-				   "configs are uniform across all servers",
-				   libcfs_nid2str(res->res_nids[n]));
 		freelock(&mrpi->mrpi_lock);
 
 		mrmi = resm->resm_pri;
@@ -620,13 +616,13 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		}
 
 		DEBUG_BMAP(PLL_TRACE, bmap, "res(%s) ion(%s)",
-			   res->res_name, libcfs_nid2str(res->res_nids[n]));
+			   res->res_name, resm->resm_addrbuf);
 
 		atomic_inc(&mrmi->mrmi_refcnt);
 		mdsi->bmdsi_wr_ion = mrmi;
 		freelock(&mrmi->mrmi_lock);
 		break;
-	} while (--x);
+	}
 
 	if (!mdsi->bmdsi_wr_ion)
 		return (-SLERR_ION_OFFLINE);
@@ -658,8 +654,8 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		   atomic_read(&(fcmh_2_fmdsi(bmap->bcm_fcmh))->fmdsi_ref));
 
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
-		   "mrmi(%p)", res->res_name,
-		   libcfs_nid2str(res->res_nids[n]), mdsi->bmdsi_wr_ion);
+	    "mrmi(%p)", res->res_name, resm->resm_addrbuf,
+	    mdsi->bmdsi_wr_ion);
 	return (0);
 }
 
@@ -904,7 +900,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	 *   . the bmap is locked.
 	 */
 	if ((rc = mds_repl_inv_except_locked(bmap,
-	    slresm_2_resid(bmdsi->bmdsi_wr_ion->mrmi_resm)))) {
+	    resm_2_resid(bmdsi->bmdsi_wr_ion->mrmi_resm)))) {
 		BMAP_ULOCK(bmap);
 		goto out;
 	}

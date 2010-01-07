@@ -67,9 +67,9 @@ slc_rmc_setmds(const char *name)
 			psc_fatalx("%s: unknown resource", name);
 			return (SLERR_RES_UNKNOWN);
 		}
-		nid = res->res_nids[0];
-	}
-	slc_rmc_resm = libsl_nid2resm(nid);
+		slc_rmc_resm = psc_dynarray_getpos(&res->res_members, 0);
+	} else
+		slc_rmc_resm = libsl_nid2resm(nid);
 	return (0);
 }
 
