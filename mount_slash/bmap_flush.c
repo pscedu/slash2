@@ -642,8 +642,7 @@ bmap_flush(void)
 		}
 		/* Sort the items by their offsets.
 		 */
-		qsort(a.da_items, a.da_pos, sizeof(void *),
-		      bmap_flush_biorq_cmp);
+		psc_dynarray_sort(&a, qsort, bmap_flush_biorq_cmp);
 
 #if 0
 		for (i=0; i < psc_dynarray_len(&a); i++) {

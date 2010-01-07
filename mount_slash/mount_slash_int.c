@@ -170,8 +170,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	/* Sort the list by offset.
 	 */
 	if (npages > 1)
-		qsort(r->biorq_pages.da_items, r->biorq_pages.da_pos,
-		      sizeof(void *), bmpce_sort_cmp);
+		psc_dynarray_sort(&r->biorq_pages, qsort, bmpce_sort_cmp);
 
 	/* XXX Note if we were move to a RD_DATARDY / WR_DATARDY then
 	 *   we wouldn't have to fault in pages like this unless the
