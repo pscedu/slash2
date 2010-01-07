@@ -651,10 +651,8 @@ bmap_flush(void)
 		}
 		BMPC_ULOCK(bmpc);
 
-		if (!psc_dynarray_len(&a)) {
-			psc_dynarray_free(&a);
+		if (!psc_dynarray_len(&a))
 			break;
-		}
 		/* Sort the items by their offsets.
 		 */
 		psc_dynarray_sort(&a, qsort, bmap_flush_biorq_cmp);
@@ -704,6 +702,7 @@ bmap_flush(void)
 		BMAP_ULOCK(b);
 	}
 	psc_dynarray_free(&bmaps);
+	psc_dynarray_free(&a);
 }
 
 void *

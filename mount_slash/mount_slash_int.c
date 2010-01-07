@@ -951,6 +951,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 
 	/* Free the dynarray which was allocated in msl_readio_rpc_create().
 	 */
+	psc_dynarray_free(a);
 	PSCFREE(a);
 	return (0);
 }
@@ -1199,6 +1200,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 
 	rc = rsx_bulkclient(req, &desc, BULK_PUT_SINK, SRIC_BULK_PORTAL,
 			    iovs, npages);
+	PSCFREE(iovs);
 	if (rc)
 		psc_fatalx("rsx_bulkclient() failed %d", rc);
 
