@@ -118,7 +118,9 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	if (rc)
 		goto fail;
 	mq->nid = src_resm->resm_nid;
-	mq->len = SLASH_BMAP_SIZE; /* XXX use bmap length */
+	mq->len = SLASH_BMAP_SIZE;
+	if (bcm->bcm_blkno == REPLRQ_NBMAPS(rrq) - 1)
+		mq->len = fcmh_2_fsz(REPLRQ_FCMH(rrq)) % SLASH_BMAP_SIZE;
 	mq->fg = *REPLRQ_FG(rrq);
 	mq->bmapno = bcm->bcm_blkno;
 
