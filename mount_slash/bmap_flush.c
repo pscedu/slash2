@@ -505,6 +505,9 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 			/* Assert 'lowest to highest' ordering.
 			 */
 			psc_assert(t->biorq_off >= r->biorq_off);
+		else 
+			r = t;
+
 		/* If any member is expired then we'll push everything out.
 		 */
 		if (!expired)
@@ -517,13 +520,17 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		 *   the group is empty) or because 't' overlaps or
 		 *   extends 'r'.
 		 */
-		if (!r || t->biorq_off <= biorq_voff_get(r)) {
+		if (t->biorq_off <= biorq_voff_get(r)) {
 			psc_dynarray_add(&b, t);
-			if (!r || biorq_voff_get(t) > biorq_voff_get(r))
+			if (biorq_voff_get(t) > biorq_voff_get(r))
 				/* If 'r' is not yet set or 't' is a larger
 				 *   extent then set 'r' to 't'.
 				 */
 				r = t;
+
+			if (psc_dynarray_len(biorqs) == 1 && !expired)
+				goto deschedule;
+
 		} else {
 			if ((bmap_flush_coalesce_size(&b) >=
 			     MIN_COALESCE_RPC_SZ) || expired)
@@ -531,7 +538,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 			else {
 				/* Start over but first deschedule the 
 				 *   biorq's which are being held back.
-				 */				
+				 */
+			deschedule:
 				for (i=0; i < psc_dynarray_len(&b); i++) {
 					t = psc_dynarray_getpos(&b, i);
 					DEBUG_BIORQ(PLL_INFO, t, "descheduling");
