@@ -944,7 +944,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		BMPCE_ULOCK(bmpce);
 	}
 
-	r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP|BIORQ_INFL);
+	r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP|BIORQ_INFL|BIORQ_SCHED);
 	DEBUG_BIORQ(PLL_INFO, r, "readio cb complete");
 	psc_waitq_wakeall(&r->biorq_waitq);
 	freelock(&r->biorq_lock);
@@ -1232,7 +1232,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 __static void
 msl_pages_prefetch(struct bmpc_ioreq *r)
 {
-	int i, npages;
+	int i, npages, sched=0;
 	struct bmapc_memb *bcm;
 	struct bmap_cli_info *msbd;
 	struct bmap_pagecache_entry *bmpce;
@@ -1284,18 +1284,22 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				if (!biorq_is_my_bmpce(r, bmpce)) {
 					msl_readio_rpc_create(r, j, i-j);
 					j = -1;
+					sched = 1;
 
 				} else if ((i-j) == BMPC_MAXBUFSRPC) {
 					msl_readio_rpc_create(r, j, i-j);
 					j = i;
+					sched = 1;
 				}
 			}
 		}
 
-		if (j >= 0)
+		if (j >= 0) {
 			/* Catch any unsent frags at the end of the array.
 			 */
 			msl_readio_rpc_create(r, j, i-j);
+			sched = 1;
+		}
 
 	} else if (r->biorq_flags & BIORQ_RBWFP) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, 0);
@@ -1305,6 +1309,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				     BMPCE_DATARDY));
 			bmpce->bmpce_flags |= BMPCE_IOSCHED;
 			msl_readio_rpc_create(r, 0, 1);
+			sched = 1;
 		}
 
 	} else if (r->biorq_flags & BIORQ_RBWLP) {
@@ -1317,8 +1322,12 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			bmpce->bmpce_flags |= BMPCE_IOSCHED;
 			msl_readio_rpc_create(r,
 			      psc_dynarray_len(&r->biorq_pages)-1, 1);
+			sched = 1;
 		}
 	}
+	
+	if (!sched)
+		r->biorq_flags &= ~BIORQ_SCHED;
 }
 
 /**
