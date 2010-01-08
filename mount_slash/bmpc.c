@@ -25,10 +25,10 @@
 
 #include "bmpc.h"
 
-struct psc_poolmaster bmpcePoolMaster;
-struct psc_poolmgr *bmpcePoolMgr;
-struct bmpc_mem_slbs bmpcSlabs;
-struct psc_listcache bmpcLru;
+struct psc_poolmaster	 bmpcePoolMaster;
+struct psc_poolmgr	*bmpcePoolMgr;
+struct bmpc_mem_slbs	 bmpcSlabs;
+struct psc_listcache	 bmpcLru;
 
 __static SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry,
 			bmpce_tentry, bmpce_cmp);
@@ -46,8 +46,8 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *a)
 }
 
 __static void
-bmpc_wake_reaper(void) {
-
+bmpc_wake_reaper(void)
+{
 	spinlock(&bmpcSlabs.bmms_lock);
 	if (bmpcSlabs.bmms_reap > 1)
 		bmpcSlabs.bmms_reap = 0;
@@ -533,6 +533,4 @@ bmpc_global_init(void)
 	lc_reginit(&bmpcLru, struct bmap_pagecache, bmpc_lentry, "bmpcLru");
 
 	psc_assert(!bmpc_grow(BMPC_DEFSLBS));
-
 }
-
