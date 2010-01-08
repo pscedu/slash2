@@ -161,7 +161,7 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 __dead void *
 slireplpndthr_main(__unusedx void *arg)
 {
-	int slvridx, slvrno;
+	int rc, slvridx, slvrno;
 	struct slashrpc_cservice *csvc;
 	struct sli_repl_workrq *w;
 	struct bmap_iod_info *biodi;
@@ -199,8 +199,13 @@ slireplpndthr_main(__unusedx void *arg)
 			goto end;
 		slvridx = sz;
 
-		w->srw_status = sli_rii_issue_repl_read(
+		freelock(&w->srw_lock);
+		rc = sli_rii_issue_repl_read(
 		    csvc->csvc_import, slvrno, slvridx, w);
+		spinlock(&w->srw_lock);
+
+		if (rc && w->srw_status == 0)
+			w->srw_status = rc;
 
 		if (w->srw_status)
 			psc_vbitmap_unset(w->srw_inflight, sz);
@@ -208,7 +213,7 @@ slireplpndthr_main(__unusedx void *arg)
 		if (csvc)
 			sl_csvc_decref(csvc);
 
-		if (slvridx != -1) {
+		if (slvridx != -1 && !psclist_conjoint(&w->srw_state_lentry)) {
 			lc_addhead(&sli_replwkq_pending, w);
 			psc_atomic32_inc(&w->srw_refcnt);
 		}
