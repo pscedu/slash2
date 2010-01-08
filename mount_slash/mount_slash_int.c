@@ -325,11 +325,19 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 {
 	spinlock(&r->biorq_lock);
 
-	if (r->biorq_flags & BIORQ_WRITE)
+	/* Reads req's have their BIORQ_SCHED and BIORQ_INFL flags
+	 *    cleared in msl_readio_cb to unblock waiting 
+	 *    threads at the earliest possible moment.
+	 */
+	if (r->biorq_flags & BIORQ_WRITE) {		
 		psc_assert(r->biorq_flags & BIORQ_INFL);
+		psc_assert(r->biorq_flags & BIORQ_SCHED);
+		r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);		
+	} else {
+		psc_assert(!(r->biorq_flags & BIORQ_INFL));
+		psc_assert(!(r->biorq_flags & BIORQ_SCHED));
+	}
 
-	psc_assert(r->biorq_flags & BIORQ_SCHED);
-	r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
 	r->biorq_flags |= BIORQ_DESTROY;
 	freelock(&r->biorq_lock);
 
