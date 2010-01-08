@@ -624,6 +624,7 @@ bmap_flush(void)
 				
 			} else if (r->biorq_flags & BIORQ_SCHED) {
 				DEBUG_BIORQ(PLL_WARN, r, "already sched");
+				freelock(&r->biorq_lock);
 				continue;
 
 			} else if ((r->biorq_flags & BIORQ_RBWFP) ||
