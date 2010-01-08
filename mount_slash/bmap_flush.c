@@ -527,19 +527,16 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 				 *   extent then set 'r' to 't'.
 				 */
 				r = t;
-
-			if (psc_dynarray_len(biorqs) == 1 && !expired)
-				goto deschedule;
-
 		} else {
 			if ((bmap_flush_coalesce_size(&b) >=
 			     MIN_COALESCE_RPC_SZ) || expired)
 				goto make_coalesce;
 			else {
-				/* Start over but first deschedule the 
-				 *   biorq's which are being held back.
+				/* This biorq is not contiguous with 
+				 *   the previous. Start over but first 
+				 *   deschedule the biorq's which are being 
+				 *   held back.
 				 */
-			deschedule:
 				for (i=0; i < psc_dynarray_len(&b); i++) {
 					t = psc_dynarray_getpos(&b, i);
 					DEBUG_BIORQ(PLL_INFO, t, "descheduling");
@@ -551,6 +548,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 			}
 		}
 	}
+
 	if (expired) {
 	make_coalesce:
 		a = PSCALLOC(sizeof(*a));
@@ -558,7 +556,15 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 			t = psc_dynarray_getpos(&b, i);
 			psc_dynarray_add(a, psc_dynarray_getpos(&b, i));
 		}
-	}
+		
+	} else
+		/* Clean up any lingering biorq's.
+		 */
+		for (i=0; i < psc_dynarray_len(&b); i++) {
+			t = psc_dynarray_getpos(&b, i);
+			DEBUG_BIORQ(PLL_INFO, t, "descheduling");
+			t->biorq_flags &= ~BIORQ_SCHED;
+		}
 
 	*offset += off;
 	psc_dynarray_free(&b);
