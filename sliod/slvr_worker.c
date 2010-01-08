@@ -205,6 +205,8 @@ slvr_worker_push_crcups(void)
 					  "unsetting BCR_SCHEDULED");
 			}
 			freelock(&binflCrcs.binfcrcs_lock);
+			psc_dynarray_free(bcrs);
+			PSCFREE(bcrs);
 		}
 	}
 	
@@ -217,7 +219,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 		 struct pscrpc_async_args *args)
 {
 	int			 i, err;
-	struct psc_dynarray		*a;
+	struct psc_dynarray	*a;
 	struct srm_generic_rep	*mp;
 	struct biod_crcup_ref	*bcr;
 
@@ -369,6 +371,7 @@ slvr_worker_int(void)
 			bcr_hold_requeue(&binflCrcs, bcr);
 
 	} else {		
+		/* XXX not freed? */
 		slvr_2_biod(s)->biod_bcr = bcr = 
 			PSCALLOC(sizeof(struct biod_crcup_ref) +
 				 (sizeof(struct srm_bmap_crcwire) *
