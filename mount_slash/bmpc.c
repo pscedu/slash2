@@ -154,7 +154,7 @@ bmpc_slb_init(struct sl_buffer *slb)
 	atomic_set(&slb->slb_ref, 0);
 	atomic_set(&slb->slb_unmapd_ref, 0);
 	atomic_set(&slb->slb_inflight, 0);
-	LOCK_INIT (&slb->slb_lock);
+	LOCK_INIT(&slb->slb_lock);
 	slb->slb_flags = SLB_FRESH;
 	INIT_PSCLIST_HEAD(&slb->slb_iov_list);
 	INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);
@@ -168,8 +168,12 @@ bmpc_slb_free(struct sl_buffer *slb)
 	DEBUG_SLB(PLL_NOTIFY, slb, "freeing slb");
 	psc_assert(psc_vbitmap_nfree(slb->slb_inuse) == BMPC_SLB_NBLKS);
 	psc_assert(slb->slb_base == NULL);
-	//	psc_assert(psclist_conjoint(&slb->slb_mgmt_lentry));
+//	psc_assert(psclist_disjoint(&slb->slb_mgmt_lentry));
+//	psc_assert(psclist_disjoint(&slb->slb_fcm_lentry));
+//	psc_assert(psclist_empty(&slb->slb_iov_list));
 	psc_assert(!atomic_read(&slb->slb_ref));
+
+	psc_vbitmap_free(slb->slb_inuse);
 
 	PSCFREE(slb);
 }
