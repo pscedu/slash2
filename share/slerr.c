@@ -25,18 +25,19 @@
 #include "slerr.h"
 
 char *slash_errstrs[] = {
-	"Replica already active",
-	"Replica already inactive",
+	"Replica is already active",
+	"Replication is not active",
+	"Replica is already inactive",
 	"All replicas inactive",
 	"Invalid bmap",
 	"Uninitialized bmap",
+	"Unknown resource",
 	"Unknown I/O system",
 	"Unknown I/O node",
 	"I/O node connection could not be established",
 	"I/O node is not a replica",
 	"Transaction could not be started",
 	"Short I/O",
-	"Unknown resource",
 	NULL
 };
 

@@ -868,7 +868,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 
 	rrq = mds_repl_findrq(fgp, NULL);
 	if (rrq == NULL)
-		return (SLERR_REPL_ALREADY_INACT);
+		return (SLERR_REPL_NOT_ACT);
 
 	/* Find replica IOS indexes */
 	rc = mds_repl_iosv_lookup_add(rrq->rrq_inoh,
