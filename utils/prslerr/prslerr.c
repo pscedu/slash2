@@ -47,17 +47,18 @@ main(int argc, char *argv[])
 
 	/* start custom errnos */
 	printf("%4d [SLERR_REPL_ALREADY_ACT]: %s\n", SLERR_REPL_ALREADY_ACT, slstrerror(SLERR_REPL_ALREADY_ACT));
+	printf("%4d [SLERR_REPL_NOT_ACT]: %s\n", SLERR_REPL_NOT_ACT, slstrerror(SLERR_REPL_NOT_ACT));
 	printf("%4d [SLERR_REPL_ALREADY_INACT]: %s\n", SLERR_REPL_ALREADY_INACT, slstrerror(SLERR_REPL_ALREADY_INACT));
 	printf("%4d [SLERR_REPLS_ALL_INACT]: %s\n", SLERR_REPLS_ALL_INACT, slstrerror(SLERR_REPLS_ALL_INACT));
-	printf("%4d [SLERR_INVALID_BMAP]: %s\n", SLERR_INVALID_BMAP, slstrerror(SLERR_INVALID_BMAP));
+	printf("%4d [SLERR_BMAP_INVALID]: %s\n", SLERR_BMAP_INVALID, slstrerror(SLERR_BMAP_INVALID));
 	printf("%4d [SLERR_BMAP_ZERO]: %s\n", SLERR_BMAP_ZERO, slstrerror(SLERR_BMAP_ZERO));
-	printf("%4d [SLERR_UNKNOWN_IOS]: %s\n", SLERR_UNKNOWN_IOS, slstrerror(SLERR_UNKNOWN_IOS));
+	printf("%4d [SLERR_RES_UNKNOWN]: %s\n", SLERR_RES_UNKNOWN, slstrerror(SLERR_RES_UNKNOWN));
+	printf("%4d [SLERR_IOS_UNKNOWN]: %s\n", SLERR_IOS_UNKNOWN, slstrerror(SLERR_IOS_UNKNOWN));
 	printf("%4d [SLERR_ION_UNKNOWN]: %s\n", SLERR_ION_UNKNOWN, slstrerror(SLERR_ION_UNKNOWN));
 	printf("%4d [SLERR_ION_OFFLINE]: %s\n", SLERR_ION_OFFLINE, slstrerror(SLERR_ION_OFFLINE));
 	printf("%4d [SLERR_ION_NOTREPL]: %s\n", SLERR_ION_NOTREPL, slstrerror(SLERR_ION_NOTREPL));
 	printf("%4d [SLERR_XACT_FAIL]: %s\n", SLERR_XACT_FAIL, slstrerror(SLERR_XACT_FAIL));
 	printf("%4d [SLERR_SHORTIO]: %s\n", SLERR_SHORTIO, slstrerror(SLERR_SHORTIO));
-	printf("%4d [SLERR_RES_UNKNOWN]: %s\n", SLERR_RES_UNKNOWN, slstrerror(SLERR_RES_UNKNOWN));
 	/* end custom errnos */
 	exit(0);
 }
