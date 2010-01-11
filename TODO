@@ -270,6 +270,8 @@ mds.c
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
 - make a better algorithm for selecting IONs for I/O
+- as soon as a write ION is assigned, invalidate other replicas; don't
+  wait for the actual WRITE to come
 
 - adapt tsuite
 
