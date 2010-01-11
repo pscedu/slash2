@@ -269,6 +269,7 @@ mds.c
 - ensure that you can't msctl -U the single copy of data
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
+- make a better algorithm for selecting IONs for I/O
 
 - adapt tsuite
 
