@@ -212,6 +212,7 @@ slmreplqthr_main(void *arg)
 			}
 
 			rrq = psc_dynarray_getpos(&msi->msi_replq, rir);
+			psc_atomic32_inc(&rrq->rrq_refcnt);
 			freelock(&msi->msi_lock);
 
 			rc = mds_repl_accessrq(rrq);
