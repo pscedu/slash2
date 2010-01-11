@@ -272,6 +272,7 @@ mds.c
 - make a better algorithm for selecting IONs for I/O
 - as soon as a write ION is assigned, invalidate other replicas; don't
   wait for the actual WRITE to come
+- rename SL_REPL_* -> SL_REPLST_*
 
 - adapt tsuite
 
