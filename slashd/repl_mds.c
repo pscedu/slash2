@@ -506,6 +506,7 @@ void
 mds_repl_unrefrq(struct sl_replrq *rrq)
 {
 	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
+	psc_assert(psc_atomic32_read(&rrq->rrq_refcnt) > 0);
 	psc_atomic32_dec(&rrq->rrq_refcnt);
 	rrq->rrq_flags &= ~REPLRQF_BUSY;
 	psc_multiwaitcond_wakeup(&rrq->rrq_mwcond);
@@ -587,6 +588,7 @@ void
 mds_repl_initrq(struct sl_replrq *rrq, struct fidc_membh *fcmh)
 {
 	memset(rrq, 0, sizeof(*rrq));
+	rrq->rrq_flags |= REPLRQF_BUSY;
 	psc_pthread_mutex_init(&rrq->rrq_mutex);
 	psc_multiwaitcond_init(&rrq->rrq_mwcond,
 	    NULL, 0, "replrq-%lx", fcmh_2_fid(fcmh));
@@ -650,8 +652,11 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 				newrq = NULL;
 
 				mds_repl_initrq(rrq, fcmh);
+				/*
+				 * Refcnt is 1 for tree on return here; bump again
+				 * though because we will unrefrq() when we're done.
+				 */
 				psc_atomic32_inc(&rrq->rrq_refcnt);
-				rrq->rrq_flags |= REPLRQF_BUSY;
 			}
 		}
 	} else {
@@ -757,7 +762,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 			}
 		}
 	} else
-		rc = SLERR_INVALID_BMAP;
+		rc = SLERR_BMAP_INVALID;
 
 	if (rc == 0)
 		mds_repl_enqueue_sites(rrq, iosv, nios);
@@ -914,7 +919,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 			mds_repl_bmap_rel(bcm);
 		}
 	} else
-		rc = SLERR_INVALID_BMAP;
+		rc = SLERR_BMAP_INVALID;
 
 	mds_repl_tryrmqfile(rrq);
 	return (rc);
@@ -991,6 +996,10 @@ mds_repl_scandir(void)
 
 			rrq = psc_pool_get(replrq_pool);
 			mds_repl_initrq(rrq, fcmh);
+
+			psc_pthread_mutex_lock(&rrq->rrq_mutex);
+			rrq->rrq_flags &= ~REPLRQF_BUSY;
+			psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 
 			tract[SL_REPL_INACTIVE] = -1;
 			tract[SL_REPL_ACTIVE] = -1;
