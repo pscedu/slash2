@@ -75,6 +75,7 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 	mq->nid = w->srw_nid;
 	mq->fg = w->srw_fg;
 	mq->bmapno = w->srw_bmapno;
+	mq->bgen = w->srw_bgen;
 	mq->rc = w->srw_status;
 	rc = RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);

@@ -123,6 +123,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 		mq->len = fcmh_2_fsz(REPLRQ_FCMH(rrq)) % SLASH_BMAP_SIZE;
 	mq->fg = *REPLRQ_FG(rrq);
 	mq->bmapno = bcm->bcm_blkno;
+	mq->bgen = bmap_2_bgen(bcm);
 
 	tract[SL_REPL_ACTIVE] = -1;
 	tract[SL_REPL_INACTIVE] = -1;
