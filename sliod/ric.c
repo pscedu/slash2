@@ -103,7 +103,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	return (-1);
 
  bdbuf_ok:
-
 	/* Ensure that this request fits into the bmap's address range.
 	 *   XXX this check assumes that mq->offset has not been made
 	 *     bmap relative (ie it's filewise.
@@ -124,9 +123,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	/* Ensure the fid in the local filesystem is created and open,
 	 *  otherwise fail.
 	 */
-	if (iod_inode_open(fcmh, rw)) {
+	if ((rc = iod_inode_open(fcmh, rw))) {
 		DEBUG_FCMH(PLL_ERROR, fcmh, "error fidopen bmap=%u", bmapno);
-		rc = -1;
 		goto out;
 	}
 	/* ATM, not much to do here for write operations.

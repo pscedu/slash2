@@ -106,7 +106,8 @@ slvr_do_crc(struct slvr_ref *s)
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
 
-		psc_crc64_calc(&s->slvr_crc, slvr_2_buf(s, 0), SL_CRC_SIZE);
+		//psc_crc64_calc(&s->slvr_crc, slvr_2_buf(s, 0), SL_CRC_SIZE);
+		s->slvr_crc = adler32(0, slvr_2_buf(s, 0), SL_CRC_SIZE);
 
 		DEBUG_SLVR(PLL_TRACE, s, "crc=%"PRIx64, s->slvr_crc);
 
@@ -167,13 +168,12 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 			int crc_rc;
 
 			crc_rc = slvr_do_crc(s);
-			if (crc_rc == -EINVAL) {
+			if (crc_rc == -EINVAL)
 				DEBUG_SLVR(PLL_ERROR, s,
 					   "bad crc blks=%d off=%"PRIx64,
 					   nblks, slvr_2_fileoff(s, sblk));
-				return (crc_rc);
-			}
 		}
+
 	} else {
 		/* Denote that this block(s) have been synced to the
 		 *  filesystem.
@@ -204,7 +204,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 			   nblks, slvr_2_fileoff(s, sblk), save_errno);
 
 	else if (rc != size)
-		DEBUG_SLVR(PLL_ERROR, s, "short io (rc=%zd, size=%u) "
+		DEBUG_SLVR(PLL_WARN, s, "short io (rc=%zd, size=%u) "
 			   "%s blks=%d off=%"PRIu64" errno=%d",
 			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 			   nblks, slvr_2_fileoff(s, sblk), save_errno);
@@ -245,23 +245,24 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 	blk = 0; /* gcc */
 	for (i = 0, nblks = 0; i < SLASH_BLKS_PER_SLVR; i++) {
 		if (psc_vbitmap_get(s->slvr_slab->slb_inuse, i)) {
-			if (nblks == 0) {
+			if (nblks == 0)
 				blk = i;
-			}
+
 			nblks++;
 			continue;
 		}
 		if (nblks) {
 			nblks = 0;
-			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, SL_READ);
-			if (rc) {
+			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, 
+				       SL_READ);
+			if (rc)
 				return (rc);
-			}
 		}
 	}
-	if (nblks) {
+
+	if (nblks)
 		rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, SL_READ);
-	}
+
 	return (rc);
 }
 
@@ -305,6 +306,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 	struct sl_buffer *tmp=NULL;
 
 	SLVR_LOCK(s);
+ restart:
 	/* slvr_lookup() must pin all slvrs to avoid racing with
 	 *   the reaper.
 	 */
@@ -315,20 +317,21 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 	else
 		psc_assert(s->slvr_pndgreads > 0);
 
- retry:
+ newbuf:
 	if (s->slvr_flags & SLVR_NEW) {
 		if (!tmp) {
 			/* Drop the lock before potentially blocking
-			 *   in the pool reaper.
+			 *   in the pool reaper.  To do this we 
+			 *   must first allocate to a tmp pointer.
 			 */
 		getbuf:
 			SLVR_ULOCK(s);
-			/* note: we grab a second lock here */
+
 			tmp = psc_pool_get(slBufsPool);
 			sl_buffer_fresh_assertions(tmp);
 
 			SLVR_LOCK(s);
-			goto retry;
+			goto newbuf;
 
 		} else
 			psc_assert(tmp);
@@ -355,8 +358,8 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 
 	} else if (s->slvr_flags & SLVR_SLBFREEING) {
 		DEBUG_SLVR(PLL_INFO, s, "caught slbfreeing");
-		sched_yield();
-		goto retry;
+		SLVR_WAIT(s, (!(s->slvr_flags & SLVR_SLBFREEING)));
+		goto restart;
 	}
 
 	DEBUG_SLVR(PLL_INFO, s, "should have slab");
@@ -378,17 +381,16 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	/*
-	 * Common courtesy requires us to wait for another threads' work FIRST.
-	 * Otherwise, we could bail out prematurely when the data is ready without
-	 * considering the range we want to write.
+	 * Common courtesy requires us to wait for another threads' work 
+	 *   FIRST. Otherwise, we could bail out prematurely when the 
+	 *   data is ready without considering the range we want to write.
 	 *
 	 * Note we have taken our read or write references, so the sliver won't
-	 * be freed from under us.
+	 *   be freed from under us.
 	 */
 	if (s->slvr_flags & SLVR_FAULTING) {
-
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		SLVR_WAIT(s);
+		SLVR_WAIT(s, (s->slvr_flags & SLVR_DATARDY));
 		psc_assert(s->slvr_flags & SLVR_DATARDY);
 	}
 
@@ -408,8 +410,9 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 			s->slvr_flags |= SLVR_CRCDIRTY;
 
 			if (s->slvr_flags & SLVR_DATARDY)
-				/* Either read or write ops can just proceed if
-				 *   SLVR_DATARDY is set, the sliver is prepared.
+				/* Either read or write ops can just proceed 
+				 *   if SLVR_DATARDY is set, the sliver is 
+				 *   prepared.
 				 */
 				goto set_write_dirty;
 		}
@@ -417,7 +420,6 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 	} else if (rw == SL_READ) {
 		if (s->slvr_flags & SLVR_DATARDY)
 			goto out;
-
 	}
 
 	/* Importing data into the sliver is now our responsibility,
@@ -721,7 +723,8 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	LIST_CACHE_LOCK(&lruSlvrs);
 	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd,
 				    slvr_lentry) {
-		DEBUG_SLVR(PLL_INFO, s, "considering for reap");
+		DEBUG_SLVR(PLL_INFO, s, "considering for reap, nwaiters=%d", 
+			   atomic_read(&m->ppm_nwaiters));
 
 		/* We are reaping, so it is fine to back off on some
 		 *   slivers.  We have to use a reqlock here because
@@ -754,7 +757,6 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			n++;
 		}
 	next:
-
 		SLVR_URLOCK(s, locked);
 		if (n >= atomic_read(&m->ppm_nwaiters))
 			break;
@@ -764,26 +766,35 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	for (i = 0; i < psc_dynarray_len(&a); i++) {
 		s = psc_dynarray_getpos(&a, i);
 
-		if (s->slvr_flags & SLVR_SLBFREEING) {
+		locked = SLVR_RLOCK(s);
 
+		if (s->slvr_flags & SLVR_SLBFREEING) {
+			struct sl_buffer *tmp=s->slvr_slab;
+			
 			psc_assert(!(s->slvr_flags & SLVR_FREEING));
 			psc_assert(s->slvr_slab);
-
+			
 			s->slvr_flags &= ~(SLVR_SLBFREEING|SLVR_DATARDY);
-
+			
 			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slab=%p",
 				   s->slvr_slab);
-			psc_pool_return(m, s->slvr_slab);
 			s->slvr_slab = NULL;
+			SLVR_WAKEUP(s);
+			SLVR_URLOCK(s, locked);
+
+			psc_pool_return(m, tmp);
 
 		} else if (s->slvr_flags & SLVR_FREEING) {
 
 			psc_assert(!(s->slvr_flags & SLVR_SLBFREEING));
+			psc_assert(!(s->slvr_flags & SLVR_PINNED));
 			psc_assert(!s->slvr_slab);
-			if (s->slvr_flags & SLVR_SPLAYTREE) {
+			if (s->slvr_flags & SLVR_SPLAYTREE) {	
 				s->slvr_flags &= ~SLVR_SPLAYTREE;
+				SLVR_URLOCK(s, locked);
 				slvr_remove(s);
-			}
+			} else
+				SLVR_URLOCK(s, locked);
 		}
 	}
 	psc_dynarray_free(&a);

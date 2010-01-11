@@ -84,10 +84,10 @@ enum {
 #define SLVR_WAKEUP(s)							\
 	psc_waitq_wakeall(&(slvr_2_bmap((s)))->bcm_waitq)
 
-#define SLVR_WAIT(s)							\
+#define SLVR_WAIT(s, cond)						\
 	do {								\
 		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT");		\
-		while (!((s)->slvr_flags & SLVR_DATARDY)) {		\
+		while (!(cond)) {					\
 			psc_waitq_wait(&(slvr_2_bmap((s)))->bcm_waitq,	\
 				       &(slvr_2_biod((s)))->biod_lock);	\
 			SLVR_LOCK((s));					\
