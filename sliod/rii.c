@@ -190,8 +190,6 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	rc = sli_rii_replread_release_sliver(w, slvridx, rc);
 
 	spinlock(&w->srw_lock);
-	psc_vbitmap_unset(w->srw_inflight, slvridx);
-
 	/* place back on pending queue until the last sliver finishes or error */
 	if (psclist_disjoint(&w->srw_state_lentry)) {
 		lc_add(&sli_replwkq_pending, w);

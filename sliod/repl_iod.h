@@ -38,6 +38,8 @@ struct slvr_ref;
 
 #define REPL_MAX_INFLIGHT_SLVRS	64			/* maximum # inflight slivers between IONs */
 
+#define SLI_REPL_SLVR_SCHED	((void *)0x1)
+
 struct sli_repl_workrq {
 	struct slash_fidgen	 srw_fg;
 	sl_bmapno_t		 srw_bmapno;
@@ -56,7 +58,6 @@ struct sli_repl_workrq {
 	struct psclist_head	 srw_active_lentry;	/* entry in global active list */
 
 	struct slvr_ref		*srw_slvr_refs[REPL_MAX_INFLIGHT_SLVRS];
-	struct psc_vbitmap	*srw_inflight;		/* indexes into srw_slvr_refs */
 };
 
 int	sli_repl_addwk(uint64_t, struct slash_fidgen *, sl_bmapno_t, sl_blkgen_t, int);

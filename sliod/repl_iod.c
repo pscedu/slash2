@@ -116,8 +116,6 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 			if (bmap_2_crcbits(w->srw_bcm, i) & BMAP_SLVR_DATA)
 				bmap_2_crcbits(w->srw_bcm, i) |= BMAP_SLVR_WANTREPL;
 		BMAP_ULOCK(w->srw_bcm);
-
-		w->srw_inflight = psc_vbitmap_new(REPL_MAX_INFLIGHT_SLVRS);
 	}
 
  out:
@@ -154,7 +152,6 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 		bmap_op_done_type(w->srw_bcm, BMAP_OPCNT_REPLWK);
 	if (w->srw_fcmh)
 		fidc_membh_dropref(w->srw_fcmh);
-	psc_vbitmap_free(w->srw_inflight);
 	psc_pool_return(sli_replwkrq_pool, w);
 }
 
@@ -165,22 +162,17 @@ slireplpndthr_main(__unusedx void *arg)
 	struct slashrpc_cservice *csvc;
 	struct sli_repl_workrq *w;
 	struct bmap_iod_info *biodi;
-	size_t sz;
 
 	for (;;) {
-		csvc = NULL;
-		slvridx = -1;
-
+		rc = 0;
+		slvridx = REPL_MAX_INFLIGHT_SLVRS;
 		w = lc_getwait(&sli_replwkq_pending);
 
-		csvc = sli_geticsvc(w->srw_resm);
 		spinlock(&w->srw_lock);
-		if (csvc == NULL && w->srw_status == 0)
-			w->srw_status = SLERR_ION_OFFLINE;
 		if (w->srw_status)
 			goto end;
 
-		/* find a sliver we need to transmit */
+		/* find a sliver to transmit */
 		BMAP_LOCK(w->srw_bcm);
 		biodi = w->srw_bcm->bcm_pri;
 		for (slvrno = 0; slvrno < SLASH_SLVRS_PER_BMAP; slvrno++)
@@ -194,30 +186,43 @@ slireplpndthr_main(__unusedx void *arg)
 		if (slvrno == SLASH_SLVRS_PER_BMAP)
 			goto end;
 
-		/* find a slot we can use to transmit it */
-		if (!psc_vbitmap_next(w->srw_inflight, &sz))
-			goto end;
-		slvridx = sz;
+		/* find a pointer slot we can use to transmit the sliver */
+		for (slvridx = 0; slvridx < REPL_MAX_INFLIGHT_SLVRS; slvridx++)
+			if (w->srw_slvr_refs[slvridx] == NULL)
+				break;
 
+		if (slvridx == REPL_MAX_INFLIGHT_SLVRS)
+			goto end;
+
+		/* mark slot as occupied */
+		w->srw_slvr_refs[slvridx] = SLI_REPL_SLVR_SCHED;
 		freelock(&w->srw_lock);
+
+		/* acquire connection to replication source & issue READ */
+		csvc = sli_geticsvc(w->srw_resm);
+		if (csvc == NULL) {
+			rc = SLERR_ION_OFFLINE;
+			goto end;
+		}
 		rc = sli_rii_issue_repl_read(
 		    csvc->csvc_import, slvrno, slvridx, w);
+		sl_csvc_decref(csvc);
+		if (rc)
+			goto end;
+
 		spinlock(&w->srw_lock);
-
-		if (rc && w->srw_status == 0)
-			w->srw_status = rc;
-
-		if (w->srw_status)
-			psc_vbitmap_unset(w->srw_inflight, sz);
- end:
-		if (csvc)
-			sl_csvc_decref(csvc);
-
-		if (slvridx != -1 && !psclist_conjoint(&w->srw_state_lentry)) {
+		/*
+		 * Place back on queue to process again on next iteration.
+		 * If it's full, we'll wait for a slot to open up then.
+		 */
+		if (psclist_disjoint(&w->srw_state_lentry)) {
 			lc_addhead(&sli_replwkq_pending, w);
 			psc_atomic32_inc(&w->srw_refcnt);
 		}
-		sli_replwkrq_decref(w, 0);
+ end:
+		if (rc && slvridx != REPL_MAX_INFLIGHT_SLVRS)
+			w->srw_slvr_refs[slvridx] = NULL;
+		sli_replwkrq_decref(w, rc);
 		sched_yield();
 	}
 }
