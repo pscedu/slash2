@@ -495,7 +495,6 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 	struct fidc_membh *f;
 	struct iovec iovs[3];
 	int rc, getreptbl = 0;
-	uint32_t i;
 
 	psc_assert(bmap->bcm_mode & BMAP_INIT);
 	psc_assert(bmap->bcm_pri);
