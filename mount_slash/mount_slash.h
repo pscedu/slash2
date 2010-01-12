@@ -77,11 +77,6 @@ struct msl_fhent {			 /* XXX rename */
 	struct fhbmap_cache		 mfh_fhbmap_cache;
 };
 
-struct cli_resprof_info {
-	int				 crpi_cnt;
-	psc_spinlock_t			 crpi_lock;
-};
-
 /*
  * CLIENT-specific private data for struct sl_resm.
  */
@@ -97,12 +92,13 @@ struct cli_resm_info {
  */
 struct msl_fcoo_data {
 	int				 mfd_flags;
+	int				 mfd_nrepls;
 	sl_replica_t			 mfd_reptbl[SL_MAX_REPLICAS];
 };
 
+/* mfd_flags */
 enum {
-	MFD_HAVEREPTBL = (1 << 0),
-	MFD_RETRREPTBL = (1 << 1)
+	MFD_HAVEREPTBL = (1 << 0)
 };
 
 #define msl_mfd_release(mfd)		PSCFREE(mfd)

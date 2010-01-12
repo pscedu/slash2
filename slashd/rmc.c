@@ -154,7 +154,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	const struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
 	struct bmapc_memb *bmap;
-	struct iovec iov[4];
+	struct iovec iov[5];
 	struct mexpfcm *m;
 	uint64_t cfd;
 	int niov;
@@ -198,12 +198,21 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 		niov++;
 		ih = fcmh_2_inoh(bmap->bcm_fcmh);
-		iov[2].iov_base = &ih->inoh_ino.ino_repls;
+		mp->nrepls = ih->inoh_ino.ino_nrepls;
+
+		iov[2].iov_base = ih->inoh_ino.ino_repls;
 		iov[2].iov_len = sizeof(sl_replica_t) * INO_DEF_NREPLS;
+
+		if (mp->nrepls > INO_DEF_NREPLS) {
+			niov++;
+			mds_inox_ensure_loaded(ih);
+			iov[3].iov_base = ih->inoh_extras->inox_repls;
+			iov[3].iov_len = sizeof(ih->inoh_extras->inox_repls);
+		}
 	}
 
 	if (bmap->bcm_mode & BMAP_WR) {
-		/* Always return the write IOS if the bmap is in write mode.
+		/* Return the write IOS if the bmap is in write mode.
 		 */
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		mp->ios_nid = bmdsi->bmdsi_wr_ion->mrmi_resm->resm_nid;
@@ -281,11 +290,8 @@ slm_rmc_translate_flags(int in, int *out)
 	*out = 0;
 
 	if (in & ~(SLF_READ | SLF_WRITE | SLF_APPEND | SLF_CREAT |
-	    SLF_TRUNC | SLF_OFFMAX | SLF_SYNC | SLF_DSYNC |
-	    SLF_RSYNC | SLF_EXCL))
+	    SLF_TRUNC | SLF_SYNC | SLF_EXCL))
 		return (EINVAL);
-
-	/* XXX SLF_NOFOLLOW not implemented */
 
 	if ((in & (SLF_READ | SLF_WRITE)) == 0)
 		return (EINVAL);
@@ -697,7 +703,8 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL, &rootcreds, &fcmh);
+	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE |
+	    FIDC_LOOKUP_LOAD, NULL, &rootcreds, &fcmh);
 	if (mp->rc)
 		return (0);
 	ih = fcmh_2_inoh(fcmh);

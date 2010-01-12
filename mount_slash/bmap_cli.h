@@ -29,11 +29,11 @@
 
 /*
  * msbmap_crcrepl_states - must be the same as bh_crcstates and bh_repls
- *  in slash_bmap_inode_od.
+ *  in slash_bmap_od.
  */
 struct msbmap_crcrepl_states {
-	uint8_t	msbcr_crcstates[SL_CRCS_PER_BMAP]; /* crc descriptor bits  */
-	uint8_t	msbcr_repls[SL_REPLICA_NBYTES];  /* replica bit map        */
+	uint8_t	msbcr_crcstates[SL_CRCS_PER_BMAP];	/* crc descriptor bits  */
+	uint8_t	msbcr_repls[SL_REPLICA_NBYTES];		/* replica bit map        */
 };
 
 /*

@@ -26,12 +26,8 @@
 #include "slconfig.h"
 
 void
-slcfg_init_res(struct sl_resource *res)
+slcfg_init_res(__unusedx struct sl_resource *res)
 {
-	struct cli_resprof_info *crpi;
-
-	crpi = res->res_pri = PSCALLOC(sizeof(*crpi));
-	LOCK_INIT(&crpi->crpi_lock);
 }
 
 void

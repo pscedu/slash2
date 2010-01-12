@@ -96,23 +96,14 @@
 #define SRIM_VERSION		1
 #define SRIM_MAGIC		UINT64_C(0xaabbccddeeff0088)
 
-/* Slash OPEN message flags */
-/* XXX make system agnostic */
-#define SLF_READ	(1<<0)
-#define SLF_WRITE	(1<<1)
-#define SLF_APPEND	(1<<2)
-#define SLF_CREAT	(1<<3)
-#define SLF_TRUNC	(1<<4)
-#define SLF_OFFMAX	(1<<5)
-#define SLF_SYNC	(1<<6)
-#define SLF_DSYNC	(1<<7)
-#define SLF_RSYNC	(1<<8)
-#define SLF_EXCL	(1<<9)
-#define SLF_DIRECTORY	(1<<10)
-#define SLF_NOFOLLOW	(1<<11)		/* don't follow symlinks */
-//#define SLF_IGNORECASE   0x80000	/* request case-insensitive lookups */
-
-#define SL_GETREPTBL    01000
+/* OPEN message flags */
+#define SLF_READ	(1 << 0)
+#define SLF_WRITE	(1 << 1)
+#define SLF_APPEND	(1 << 2)
+#define SLF_CREAT	(1 << 3)
+#define SLF_TRUNC	(1 << 4)
+#define SLF_SYNC	(1 << 6)
+#define SLF_EXCL	(1 << 7)
 
 /* Slash RPC message types. */
 enum {
@@ -216,31 +207,34 @@ struct srm_access_req {
 
 struct srm_bmap_req {
 	struct srt_fd_buf	sfdb;
-	uint32_t		pios;		/* preferred ios id (provided by client)  */
-	uint32_t		blkno;		/* Starting block number                  */
-	uint32_t		nblks;		/* Read-ahead support                     */
-	uint32_t		dio;		/* Client wants directio                  */
+	uint32_t		pios;		/* client's preferred IOS ID	*/
+	uint32_t		blkno;		/* Starting block number	*/
+	uint32_t		nblks;		/* Read-ahead support		*/
+	uint32_t		dio;		/* Client wants directio	*/
 	int32_t			rw;
-	uint32_t                getreptbl;
+	uint32_t                getreptbl;	/* whether to include inode replicas */
 };
 
 struct srm_bmap_rep {
 	uint32_t		nblks;		/* The number of bmaps actually returned */
 	uint64_t		ios_nid;	/* responsible I/O server ID if write */
+	uint32_t		nrepls;		/* # sl_replica_t's set in bulk */
 	uint32_t		rc;
 /*
- * Bulk data contains a number of the following structures:
+ * Bulk data contents:
  *
- *	+-------------------------+---------------+
- *	| data type               | description   |
- *	+-------------------------+---------------+
- *	| struct slash_bmap_od    | bmap contents |
- *	| struct srt_bmapdesc_buf | descriptor    |
- *	+-------------------------+---------------+
+ *	+-------------------------------+-------------------------------+
+ *	| data type			| description			|
+ *	+-------------------------------+-------------------------------+
+ *	| struct slash_bmap_od		| bmap contents			|
+ *	| struct srt_bmapdesc_buf	| descriptor			|
+ *	| sl_replica_t (if getreptbl)	| inode replica index list	|
+ *	+-------------------------------+-------------------------------+
  */
 };
 
-/* ION requesting crc table from the mds. Passes back the srt_bdb_secret
+/*
+ * ION requesting CRC table from the MDS.  Passes back the srt_bdb_secret
  *  which was handed to him by the client.
  */
 struct srm_bmap_wire_req {
@@ -252,15 +246,15 @@ struct srm_bmap_wire_req {
 
 struct srm_bmap_wire_rep {
 	int32_t                 rc;
-	/*
-	 * Bulk data contains a number of the following structures:
-	 *
-	 *      +-------------------------+---------------+
-	 *      | data type               | description   |
-	 *      +-------------------------+---------------+
-	 *      | struct slash_bmap_od    | bmap contents |
-	 *      +-------------------------+---------------+
-	 */
+/*
+ * Bulk data contains a number of the following structures:
+ *
+ *      +-------------------------+---------------+
+ *      | data type               | description   |
+ *      +-------------------------+---------------+
+ *      | struct slash_bmap_od    | bmap contents |
+ *      +-------------------------+---------------+
+ */
 };
 
 struct srm_bmap_chmode_req {

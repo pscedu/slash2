@@ -410,21 +410,12 @@ slash2fuse_transflags(uint32_t flags, uint32_t *nflags)
 		*nflags |= SLF_CREAT;
 	if (flags & O_SYNC)
 		*nflags |= SLF_SYNC;
-	if (flags & O_DSYNC)
-		*nflags |= SLF_DSYNC;
-	if (flags & O_RSYNC)
-		*nflags |= SLF_RSYNC;
 	if (flags & O_APPEND)
 		*nflags |= SLF_APPEND;
-	if (flags & O_NOFOLLOW)
-		*nflags |= SLF_NOFOLLOW;
 	if (flags & O_TRUNC)
 		*nflags |= SLF_TRUNC;
 	if (flags & O_EXCL)
 		*nflags |= SLF_EXCL;
-	if (flags & O_DIRECTORY)
-		*nflags |= SLF_DIRECTORY;
-	*nflags |= SLF_OFFMAX;
 	return (0);
 }
 

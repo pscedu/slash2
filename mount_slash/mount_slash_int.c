@@ -39,6 +39,7 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/log.h"
+#include "psc_util/random.h"
 
 #include "bmap.h"
 #include "bmap_cli.h"
@@ -50,9 +51,6 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 #include "slerr.h"
-
-#define MSL_PAGES_GET 0
-#define MSL_PAGES_PUT 1
 
 __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
 
@@ -326,13 +324,13 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	spinlock(&r->biorq_lock);
 
 	/* Reads req's have their BIORQ_SCHED and BIORQ_INFL flags
-	 *    cleared in msl_readio_cb to unblock waiting 
+	 *    cleared in msl_readio_cb to unblock waiting
 	 *    threads at the earliest possible moment.
 	 */
-	if (r->biorq_flags & BIORQ_WRITE) {		
+	if (r->biorq_flags & BIORQ_WRITE) {
 		psc_assert(r->biorq_flags & BIORQ_INFL);
 		psc_assert(r->biorq_flags & BIORQ_SCHED);
-		r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);		
+		r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
 	} else {
 		psc_assert(!(r->biorq_flags & BIORQ_INFL));
 		psc_assert(!(r->biorq_flags & BIORQ_SCHED));
@@ -489,15 +487,15 @@ __static int
 msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 {
 	struct pscrpc_bulk_desc *desc;
+	struct bmap_cli_info *msbd;
+	struct msl_fcoo_data *mfd;
 	struct pscrpc_request *rq;
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
-	struct bmap_cli_info *msbd;
 	struct fidc_membh *f;
 	struct iovec iovs[3];
-	int nblks, rc=-1;
-	uint32_t i, getreptbl=0;
-	struct msl_fcoo_data *mfd;
+	int rc, getreptbl = 0;
+	uint32_t i;
 
 	psc_assert(bmap->bcm_mode & BMAP_INIT);
 	psc_assert(bmap->bcm_pri);
@@ -510,7 +508,6 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 	mfd = f->fcmh_fcoo->fcoo_pri;
 	if (mfd == NULL) {
 		f->fcmh_fcoo->fcoo_pri = mfd = PSCALLOC(sizeof(*mfd));
-		mfd->mfd_flags |= MFD_RETRREPTBL;
 		getreptbl = 1;
 	}
 	FCMH_ULOCK(f);
@@ -536,18 +533,15 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 	iovs[1].iov_len  = sizeof(msbd->msbd_bdb);
 
 	if (getreptbl) {
-		/* This code only deals with SL_DEF_REPLICAS, not MAX.
-		 */
 		iovs[2].iov_base = &mfd->mfd_reptbl;
-		iovs[2].iov_len  = sizeof(sl_replica_t) * INO_DEF_NREPLS;
+		iovs[2].iov_len  = sizeof(mfd->mfd_reptbl);
 	}
 
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (bmapno=%u) (rw=%d)",
 	    bmap->bcm_bmapno, rw);
 
-	nblks = 0;
-	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iovs,
-		       2 + getreptbl);
+	rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
+	    SRMC_BULK_PORTAL, iovs, 2 + getreptbl);
 
 	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
 		/* Verify the return.
@@ -561,20 +555,19 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 		 */
 		spinlock(&f->fcmh_lock);
 		for (i=0; i < mp->nblks; i++) {
-			SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc,
-				     bmap);
+			PSC_SPLAY_XINSERT(bmap_cache,
+			    &f->fcmh_fcoo->fcoo_bmapc, bmap);
 			bmap_2_msion(bmap) = mp->ios_nid;
 		}
 		freelock(&f->fcmh_lock);
 	}
-
-	bmap->bcm_mode &= ~BMAP_INIT;
 
 	if (getreptbl) {
 		/* XXX don't forget that on write we need to invalidate
 		 *   the local replication table..
 		 */
 		FCMH_LOCK(f);
+		mfd->mfd_nrepls = mp->nrepls;
 		mfd->mfd_flags = MFD_HAVEREPTBL;
 		psc_waitq_wakeall(&f->fcmh_waitq);
 		FCMH_ULOCK(f);
@@ -832,46 +825,73 @@ msl_bmap_to_import(struct bmapc_memb *b, int exclusive)
 }
 
 struct pscrpc_import *
-msl_bmap_choose_replica(struct bmapc_memb *b)
+msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 {
 	struct slashrpc_cservice *csvc;
-	struct cli_resprof_info *crpi;
+	struct bmap_cli_info *msbd;
 	struct msl_fcoo_data *mfd;
 	struct sl_resource *res;
 	struct sl_resm *resm;
-	int n;
+	int j, rnd, nios;
+
+	mfd = bcm->bcm_fcmh->fcmh_fcoo->fcoo_pri;
+	msbd = bcm->bcm_pri;
+
+	if (SL_REPL_GET_BMAP_IOS_STAT(msbd->msbd_msbcr.msbcr_repls,
+	    iosidx * SL_BITS_PER_REPLICA) != SL_REPL_ACTIVE)
+		return (NULL);
+
+	res = libsl_id2res(mfd->mfd_reptbl[iosidx].bs_id);
+
+	nios = psc_dynarray_len(&res->res_members);
+	rnd = psc_random32u(nios);
+	for (j = 0; j < nios; j++, rnd++) {
+		if (rnd >= nios)
+			rnd = 0;
+		resm = psc_dynarray_getpos(&res->res_members, rnd);
+		csvc = slc_geticsvc(resm);
+		if (csvc)
+			return (csvc->csvc_import);
+	}
+	return (NULL);
+}
+
+struct pscrpc_import *
+msl_bmap_choose_replica(struct bmapc_memb *b)
+{
+	struct msl_fcoo_data *mfd;
+	struct pscrpc_import *imp;
+	int n, rnd;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 	psc_assert(b->bcm_fcmh->fcmh_fcoo);
 
 	mfd = b->bcm_fcmh->fcmh_fcoo->fcoo_pri;
 	psc_assert(mfd);
-	/*  XXX need a more intelligent algorithm here.
-	 */
-	res = libsl_id2res(mfd->mfd_reptbl[0].bs_id);
-	if (!res) {
-		if (!(resm = libsl_nid2resm(bmap_2_msion(b))))
-			psc_fatalx("Failed to lookup iosid %u, verify that the slash "
-				   "configs are uniform across all servers",
-				   mfd->mfd_reptbl[0].bs_id);
-		else
-			goto out;
+
+	/* first, try preferred IOS */
+	rnd = psc_random32u(mfd->mfd_nrepls);
+	for (n = 0; n < mfd->mfd_nrepls; n++, rnd++)
+		if (rnd >= mfd->mfd_nrepls)
+			rnd = 0;
+
+		if (mfd->mfd_reptbl[rnd].bs_id == prefIOS) {
+			imp = msl_try_get_replica_resm(b, rnd);
+			if (imp)
+				return (imp);
+		}
+
+	/* rats, not available; try anyone available now */
+	rnd = psc_random32u(mfd->mfd_nrepls);
+	for (n = 0; n < mfd->mfd_nrepls; n++) {
+		if (rnd >= mfd->mfd_nrepls)
+			rnd = 0;
+
+		imp = msl_try_get_replica_resm(b, rnd);
+		if (imp)
+			return (imp);
 	}
-
-	crpi = res->res_pri;
-	spinlock(&crpi->crpi_lock);
-	n = crpi->crpi_cnt++;
-	if (crpi->crpi_cnt >= psc_dynarray_len(&res->res_members))
-		n = crpi->crpi_cnt = 0;
-	resm = psc_dynarray_getpos(&res->res_members, n);
-	freelock(&crpi->crpi_lock);
-
-	psc_trace("trying res(%s) ion(%s)",
-		  res->res_name, resm->resm_addrbuf);
-
- out:
-	csvc = slc_geticsvc(resm);
-	return (csvc ? csvc->csvc_import : NULL);
+	return (NULL);
 }
 
 /**
@@ -1333,7 +1353,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			sched = 1;
 		}
 	}
-	
+
 	if (!sched)
 		r->biorq_flags &= ~BIORQ_SCHED;
 }

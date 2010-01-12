@@ -100,7 +100,7 @@ libsl_id2res(sl_ios_id_t id)
 }
 
 struct sl_resm *
-libsl_nid2resm(lnet_nid_t nid)
+libsl_try_nid2resm(lnet_nid_t nid)
 {
 	struct hash_entry *e;
 
@@ -110,6 +110,20 @@ libsl_nid2resm(lnet_nid_t nid)
 
 	psc_assert(*e->hentry_id == nid);
 	return (e->private);
+}
+
+struct sl_resm *
+libsl_nid2resm(lnet_nid_t nid)
+{
+	char nidbuf[PSC_NIDSTR_SIZE];
+	struct sl_resm *resm;
+
+	resm = libsl_try_nid2resm(nid);
+	if (resm)
+		return (resm);
+	psc_fatalx("IOS %s not found in SLASH configuration; "
+	    "verify uniformity across all servers.",
+	    psc_nid2str(nid, nidbuf));
 }
 
 struct sl_resource *
