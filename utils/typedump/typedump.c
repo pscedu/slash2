@@ -122,6 +122,8 @@ main(int argc, char *argv[])
 
 	/* start structs */
 	PRTYPE(cred_t);
+	PRTYPE(sl_blkgen_t);
+	PRTYPE(sl_blkno_t);
 	PRTYPE(sl_ino_t);
 	PRTYPE(sl_ios_id_t);
 	PRTYPE(sl_siteid_t);
@@ -140,7 +142,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct cfdent);
 	PRTYPE(struct cfdops);
 	PRTYPE(struct cli_resm_info);
-	PRTYPE(struct cli_resprof_info);
 	PRTYPE(struct fidc_iod_info);
 	PRTYPE(struct fidc_mds_info);
 	PRTYPE(struct fidc_membh);
@@ -172,7 +173,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_buffer_iovref);
 	PRTYPE(struct sl_fsops);
 	PRTYPE(struct sl_gconf);
-	PRTYPE(struct sl_nodeh);
 	PRTYPE(struct sl_replrq);
 	PRTYPE(struct sl_resm);
 	PRTYPE(struct sl_resource);
