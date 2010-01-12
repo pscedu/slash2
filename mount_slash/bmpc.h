@@ -93,8 +93,7 @@ enum {
 	BMPCE_FREEING   = (1<<6),
 	BMPCE_INIT      = (1<<7),
 	BMPCE_READPNDG  = (1<<8),
-	BMPCE_IOSCHED   = (1<<9),
-	BMPCE_WIRE      = (1<<10)
+	BMPCE_IOSCHED   = (1<<9)
 };
 
 #define BMPCE_2_BIORQ(b) ((b)->bmpce_waitq == NULL) ? NULL :	\
@@ -102,7 +101,7 @@ enum {
 	 offsetof(struct bmpc_ioreq, biorq_waitq))
 
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
 #define BMPCE_FLAG(field, str) ((field) ? (str) : "-")
 #define DEBUG_BMPCE_FLAGS(b)					\
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_NEW), "n"),	\
@@ -114,9 +113,7 @@ enum {
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_FREEING), "F"),	\
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_INIT), "i"),	\
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_READPNDG), "r"),	\
-	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_IOSCHED), "I"),	\
-	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_WIRE), "w")
-
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_IOSCHED), "I")
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
@@ -145,6 +142,21 @@ bmpce_lrusort_cmp(const void *x, const void *y)
 {
 	const struct bmap_pagecache_entry * const *pa = x, *a = *pa;
 	const struct bmap_pagecache_entry * const *pb = y, *b = *pb;
+
+	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, <))
+		return (-1);
+
+	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, >))
+		return (1);
+
+	return (0);
+}
+
+static inline int
+bmpce_lrusort_cmp1(const void *x, const void *y)
+{
+	const struct bmap_pagecache_entry *a = x;
+	const struct bmap_pagecache_entry *b = y;
 
 	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, <))
 		return (-1);
@@ -313,23 +325,22 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 static inline void
 bmpce_inflight_dec_locked(struct bmap_pagecache_entry *bmpce)
 {
-       if (!(bmpce->bmpce_flags & BMPCE_WIRE))
+       if (!(bmpce->bmpce_flags & BMPCE_IOSCHED))
 		   return;
 
 	psc_atomic16_dec(&bmpce->bmpce_infref);
 	psc_assert(psc_atomic16_read(&bmpce->bmpce_infref) >= 0);
 	if (!psc_atomic16_read(&bmpce->bmpce_infref))
-		bmpce->bmpce_flags &= ~(BMPCE_IOSCHED|BMPCE_WIRE);
+		bmpce->bmpce_flags &= ~BMPCE_IOSCHED;
 }
 
 static inline void
 bmpce_inflight_inc_locked(struct bmap_pagecache_entry *bmpce)
 {
-	psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
 	psc_atomic16_inc(&bmpce->bmpce_infref);
 	if (psc_atomic16_read(&bmpce->bmpce_infref) == 1) {
-		psc_assert(!(bmpce->bmpce_flags & BMPCE_WIRE));
-		bmpce->bmpce_flags |= BMPCE_WIRE;
+		psc_assert(!(bmpce->bmpce_flags & BMPCE_IOSCHED));
+		bmpce->bmpce_flags |= BMPCE_IOSCHED;
 	}
 	DEBUG_BMPCE(PLL_INFO, bmpce, "set inflight");
 }

@@ -1189,11 +1189,11 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		 *   be here.
 		 */
 		psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
-		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
 		bmpce_usecheck(bmpce, BIORQ_READ,
 			       biorq_getaligned_off(r, (i+startpage)));
 
-		bmpce_inflight_inc_locked(bmpce);
+		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
+
 		DEBUG_BMPCE(PLL_TRACE, bmpce, "adding to rpc");
 
 		BMPCE_ULOCK(bmpce);
@@ -1278,7 +1278,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			if (biorq_is_my_bmpce(r, bmpce)) {
 				psc_assert(!(bmpce->bmpce_flags &
 					     BMPCE_DATARDY));
-				bmpce->bmpce_flags |= BMPCE_IOSCHED;
+				bmpce_inflight_inc_locked(bmpce);
 			}
 			BMPCE_ULOCK(bmpce);
 
@@ -1315,7 +1315,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		if (biorq_is_my_bmpce(r, bmpce)) {
 			psc_assert(!(bmpce->bmpce_flags &
 				     BMPCE_DATARDY));
-			bmpce->bmpce_flags |= BMPCE_IOSCHED;
+			bmpce_inflight_inc_locked(bmpce);
 			msl_readio_rpc_create(r, 0, 1);
 			sched = 1;
 		}
@@ -1327,7 +1327,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		if (biorq_is_my_bmpce(r, bmpce)) {
 			psc_assert(!(bmpce->bmpce_flags &
 				     BMPCE_DATARDY));
-			bmpce->bmpce_flags |= BMPCE_IOSCHED;
+			bmpce_inflight_inc_locked(bmpce);
 			msl_readio_rpc_create(r,
 			      psc_dynarray_len(&r->biorq_pages)-1, 1);
 			sched = 1;

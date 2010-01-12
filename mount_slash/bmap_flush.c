@@ -178,7 +178,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 }
 
 __static void
-bmap_flush_inflight_ref(struct bmpc_ioreq *r)
+bmap_flush_inflight_set(struct bmpc_ioreq *r)
 {
 	int i;
 	struct bmap_pagecache *bmpc;
@@ -198,13 +198,15 @@ bmap_flush_inflight_ref(struct bmpc_ioreq *r)
 	pll_remove(&bmpc->bmpc_new_biorqs, r);
 	pll_addtail(&bmpc->bmpc_pndg_biorqs, r);	
 	BMPC_ULOCK(bmpc);
-	
+
+#if 0
 	for (i=0; i < psc_dynarray_len(&r->biorq_pages); i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		BMPCE_LOCK(bmpce);
 		bmpce_inflight_inc_locked(bmpce);
 		BMPCE_ULOCK(bmpce);
 	}
+#endif	
 }
 
 
@@ -234,7 +236,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		r = psc_dynarray_getpos(biorqs, i);
 		psc_assert(imp == msl_bmap_to_import(r->biorq_bmap, 0));
 		psc_assert(b == r->biorq_bmap);
-		bmap_flush_inflight_ref(r);
+		bmap_flush_inflight_set(r);
 	}
 
 	DEBUG_BIORQ(PLL_INFO, r, "biorq array cb arg (%p)", biorqs);
@@ -405,9 +407,11 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 				BMPCE_ULOCK(bmpce);
 				continue;
 			}
-
+#if 0			
 			bmpce->bmpce_flags |= BMPCE_IOSCHED;
 			DEBUG_BMPCE(PLL_INFO, bmpce, "scheduled");
+#endif
+			bmpce_inflight_inc_locked(bmpce);
 			/* Issue sanity checks on the bmpce.
 			 */
 			bmpce_usecheck(bmpce, BIORQ_WRITE,
@@ -540,7 +544,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 				for (i=0; i < psc_dynarray_len(&b); i++) {
 					t = psc_dynarray_getpos(&b, i);
 					DEBUG_BIORQ(PLL_INFO, t, "descheduling");
-					t->biorq_flags &= ~BIORQ_SCHED;					
+					t->biorq_flags &= ~BIORQ_SCHED;
 				}
 				psc_dynarray_reset(&b);
 				psc_dynarray_add(&b, t);
@@ -630,7 +634,7 @@ bmap_flush(void)
 			DEBUG_BIORQ(PLL_TRACE, r, "consider for flush");
 
 			psc_assert(!(r->biorq_flags & BIORQ_READ));
-			psc_assert(!(r->biorq_flags & BIORQ_DESTROY));			
+			psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 
 			if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
 				freelock(&r->biorq_lock);
@@ -650,12 +654,14 @@ bmap_flush(void)
 					freelock(&r->biorq_lock);
 					continue;
 				}
-			}
+			} else
+				psc_assert(!(r->biorq_flags & BIORQ_INFL));
 			/* Don't assert !BIORQ_INFL until ensuring that 
 			 *   we can actually work on this biorq.  A RBW
 			 *   process may be working on it.
 			 */
 			psc_assert(!(r->biorq_flags & BIORQ_INFL));
+
 
 			r->biorq_flags |= BIORQ_SCHED;
 
