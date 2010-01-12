@@ -22,12 +22,12 @@
  */
 
 #include "psc_ds/list.h"
-#include "psc_ds/pool.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
+#include "psc_util/pool.h"
 
 #include "bmap.h"
 #include "bmap_iod.h"

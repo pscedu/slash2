@@ -22,8 +22,8 @@
 
 #include "psc_ds/list.h"
 #include "psc_ds/lockedlist.h"
-#include "psc_ds/pool.h"
 #include "psc_util/completion.h"
+#include "psc_util/pool.h"
 
 #include "mount_slash/ctl_cli.h"
 

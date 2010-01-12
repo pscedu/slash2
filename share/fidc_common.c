@@ -23,8 +23,8 @@
 #include "pfl/cdefs.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
-#include "psc_ds/pool.h"
 #include "psc_util/atomic.h"
+#include "psc_util/pool.h"
 
 #include "bmap.h"
 #include "buffer.h"

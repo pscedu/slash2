@@ -25,11 +25,11 @@
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/lockedlist.h"
-#include "psc_ds/pool.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
+#include "psc_util/pool.h"
 #include "psc_util/time.h"
 #include "psc_util/waitq.h"
 

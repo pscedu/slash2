@@ -33,7 +33,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "psc_ds/pool.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/treeutil.h"
 #include "psc_ds/vbitmap.h"
@@ -41,6 +40,7 @@
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/pool.h"
 #include "psc_util/pthrutil.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/waitq.h"

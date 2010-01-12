@@ -20,10 +20,10 @@
 #include <stdio.h>
 
 #include "psc_ds/listcache.h"
-#include "psc_ds/pool.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/atomic.h"
+#include "psc_util/pool.h"
 
 #include "bmap.h"
 #include "bmap_iod.h"

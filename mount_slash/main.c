@@ -32,12 +32,12 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
-#include "psc_ds/pool.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
+#include "psc_util/pool.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 #include "psc_util/time.h"
