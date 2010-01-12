@@ -273,6 +273,7 @@ mds.c
 - as soon as a write ION is assigned, invalidate other replicas; don't
   wait for the actual WRITE to come
 - rename SL_REPL_* -> SL_REPLST_*
+- fix slictl -sr
 
 - adapt tsuite
 
