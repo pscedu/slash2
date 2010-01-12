@@ -176,23 +176,26 @@ slireplpndthr_main(__unusedx void *arg)
 		BMAP_LOCK(w->srw_bcm);
 		biodi = w->srw_bcm->bcm_pri;
 		for (slvrno = 0; slvrno < SLASH_SLVRS_PER_BMAP; slvrno++)
-			if (biodi_2_crcbits(biodi, slvrno) & BMAP_SLVR_WANTREPL) {
-				biodi_2_crcbits(biodi, slvrno) &=
-				    ~BMAP_SLVR_WANTREPL;
+			if (biodi_2_crcbits(biodi, slvrno) & BMAP_SLVR_WANTREPL)
 				break;
-			}
-		BMAP_ULOCK(w->srw_bcm);
 
-		if (slvrno == SLASH_SLVRS_PER_BMAP)
+		if (slvrno == SLASH_SLVRS_PER_BMAP) {
+			BMAP_ULOCK(w->srw_bcm);
 			goto end;
+		}
 
 		/* find a pointer slot we can use to transmit the sliver */
 		for (slvridx = 0; slvridx < REPL_MAX_INFLIGHT_SLVRS; slvridx++)
 			if (w->srw_slvr_refs[slvridx] == NULL)
 				break;
 
-		if (slvridx == REPL_MAX_INFLIGHT_SLVRS)
+		if (slvridx == REPL_MAX_INFLIGHT_SLVRS) {
+			BMAP_ULOCK(w->srw_bcm);
 			goto end;
+		}
+
+		biodi_2_crcbits(biodi, slvrno) &= ~BMAP_SLVR_WANTREPL;
+		BMAP_ULOCK(w->srw_bcm);
 
 		/* mark slot as occupied */
 		w->srw_slvr_refs[slvridx] = SLI_REPL_SLVR_SCHED;
