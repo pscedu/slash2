@@ -752,8 +752,10 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
-	dump_statbuf(fcmh_2_stb(f), PLL_INFO);
-	fuse_reply_attr(req, fcmh_2_stb(f), 0.0);
+	f->fcmh_stb.st_blksize = 32768;
+
+	dump_statbuf(&f->fcmh_stb, PLL_INFO);
+	fuse_reply_attr(req, &f->fcmh_stb, 0.0);
 
  out:
 	if (f)
@@ -1827,6 +1829,9 @@ msl_fuse_mount(const char *mp)
 		fuse_unmount(mp, ch);
 		psc_fatal("fuse_session_add_chan");
 	}
+
+	psc_warnx("Fuse Version %d.%d", FUSE_MAJOR_VERSION, 
+		  FUSE_MINOR_VERSION);
 }
 
 __dead void
