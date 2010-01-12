@@ -543,24 +543,21 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
 	    SRMC_BULK_PORTAL, iovs, 2 + getreptbl);
 
-	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
-		/* Verify the return.
-		 */
-		if (!mp->nblks) {
-			psc_errorx("MDS returned 0 bmaps");
-			rc = -EINVAL;
-			goto done;
-		}
-		/* Add the bmaps to the tree.
-		 */
-		spinlock(&f->fcmh_lock);
-		for (i=0; i < mp->nblks; i++) {
-			PSC_SPLAY_XINSERT(bmap_cache,
-			    &f->fcmh_fcoo->fcoo_bmapc, bmap);
-			bmap_2_msion(bmap) = mp->ios_nid;
-		}
-		freelock(&f->fcmh_lock);
+	rc = RSX_WAITREP(rq, mp);
+	if (rc == 0 && mp->rc)
+		rc = mp->rc;
+	if (rc)
+		goto done;
+
+	if (!mp->nblks) {
+		psc_errorx("MDS returned 0 bmaps");
+		rc = -EINVAL;
+		goto done;
 	}
+
+	spinlock(&f->fcmh_lock);
+	bmap_2_msion(bmap) = mp->ios_nid;
+	freelock(&f->fcmh_lock);
 
 	if (getreptbl) {
 		/* XXX don't forget that on write we need to invalidate
