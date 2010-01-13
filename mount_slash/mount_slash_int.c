@@ -174,7 +174,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	 *   we wouldn't have to fault in pages like this unless the
 	 *   bmap was open in RW mode.
 	 */
-	if ((fcmh_2_fsz(b->bcm_fcmh) > off) && op == BIORQ_WRITE && rbw)
+	if ((fidc_fcm_size_get(b->bcm_fcmh) > off) && op == BIORQ_WRITE && rbw)
 		r->biorq_flags |= rbw;
 
 	/* Pass1: Retrieve memory pages from the cache on behalf of our pages

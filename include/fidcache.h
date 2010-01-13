@@ -238,6 +238,8 @@ int			 fidc_lookup(const struct slash_fidgen *, int,
 			    struct fidc_membh **);
 
 void                     fidc_fcm_size_update(struct fidc_membh *, size_t);
+ssize_t                  fidc_fcm_size_get(struct fidc_membh *);
+
 
 extern struct sl_fsops		*slFsops;
 extern struct hash_table	 fidcHtable;

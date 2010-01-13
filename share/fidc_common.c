@@ -179,6 +179,21 @@ fidc_fcm_size_update(struct fidc_membh *h, size_t size)
 	ureqlock(&h->fcmh_lock, locked);
 }
 
+ssize_t
+fidc_fcm_size_get(struct fidc_membh *h)
+{
+	int locked;
+	ssize_t size;
+
+	locked = reqlock(&h->fcmh_lock);
+	if ((ssize_t)fcmh_2_fsz(h) < size)
+		size = fcmh_2_fsz(h);
+
+	ureqlock(&h->fcmh_lock, locked);
+
+	return (size);
+}
+
 /**
  * fidc_reap - reap some inodes from the clean list.
  */
