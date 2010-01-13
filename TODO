@@ -281,11 +281,11 @@ mds.c
   IONS
 - think about routing blips where MDS<->ION is not quite what a ION<->ION
   can see each, causing unnecessary replication work processing
+- use the in-tree fuse
+- add ctl for bcmp
+- add ctl for connections
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
 - use a sliding window to track valid cfd's and remove them from the window
   once they are CLOSE()'d
-
-add ctl for bcmp
-add ctl for connections
