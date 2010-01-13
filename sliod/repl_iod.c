@@ -54,7 +54,6 @@ int
 sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
     sl_bmapno_t bmapno, sl_blkgen_t bgen, int len)
 {
-	char buf[PSC_NIDSTR_SIZE];
 	struct sli_repl_workrq *w;
 	int rc, i;
 
@@ -83,12 +82,6 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 
 	/* lookup replication source peer */
 	w->srw_resm = libsl_nid2resm(w->srw_nid);
-	if (w->srw_resm == NULL) {
-		psc_errorx("%s: unknown resource member",
-		    psc_nid2str(w->srw_nid, buf));
-		rc = SLERR_ION_UNKNOWN;
-		goto out;
-	}
 
 	/* get an fcmh for the file */
 	w->srw_fcmh = iod_inode_lookup(&w->srw_fg);

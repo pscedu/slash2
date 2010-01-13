@@ -803,11 +803,6 @@ msl_bmap_to_import(struct bmapc_memb *b, int exclusive)
 	resm = libsl_nid2resm(bmap_2_msion(b));
 	ureqlock(&b->bcm_lock, locked);
 
-	if (!resm)
-		psc_fatalx("Failed to lookup %s, verify that the slash configs"
-			   " are uniform across all servers",
-			   libcfs_nid2str(bmap_2_msion(b)));
-
 	if (exclusive)
 		csvc = slc_geticsvc(resm);
 	else {

@@ -207,8 +207,6 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 		goto out;
 
 	dst_resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
-	if (dst_resm == NULL)
-		goto out;
 
 	iosidx = mds_repl_ios_lookup(rrq->rrq_inoh,
 	    dst_resm->resm_res->res_id);
@@ -255,9 +253,8 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (dst_resm) {
 		/* XXX should we trust them to tell us who the src was? */
 		src_resm = libsl_nid2resm(mq->nid);
-		if (src_resm)
-			mds_repl_nodes_setbusy(src_resm->resm_pri,
-			    dst_resm->resm_pri, 0);
+		mds_repl_nodes_setbusy(src_resm->resm_pri,
+		    dst_resm->resm_pri, 0);
 	}
 	if (rrq)
 		mds_repl_unrefrq(rrq);
@@ -327,8 +324,7 @@ slm_rmi_hldrop(void *p)
 	struct sl_resm *resm;
 
 	resm = libsl_nid2resm(smie->smie_exp->exp_connection->c_peer.nid);
-	if (resm)
-		mds_repl_reset_scheduled(resm->resm_res->res_id);
+	mds_repl_reset_scheduled(resm->resm_res->res_id);
 	mds_repl_node_clearallbusy(resm->resm_pri);
 	free(smie);
 }

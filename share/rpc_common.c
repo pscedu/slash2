@@ -150,14 +150,12 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 			break;
 		case SLCONNT_IOD:
 			resm = libsl_nid2resm(peernid);
-			if (resm == NULL ||
-			    resm->resm_res->res_type == SLREST_MDS)
+			if (resm->resm_res->res_type == SLREST_MDS)
 				goto out;
 			break;
 		case SLCONNT_MDS:
 			resm = libsl_nid2resm(peernid);
-			if (resm == NULL ||
-			    resm->resm_res->res_type != SLREST_MDS)
+			if (resm->resm_res->res_type != SLREST_MDS)
 				goto out;
 			break;
 		default:

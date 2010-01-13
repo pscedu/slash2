@@ -47,14 +47,10 @@ slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 		srws->srws_fg = w->srw_fg;
 		srws->srws_bmapno = w->srw_bmapno;
-		if (resm)
-			strlcpy(srws->srws_peer_addr,
-			    resm->resm_addrbuf,
-			    sizeof(srws->srws_peer_addr));
-		else
-			strlcpy(srws->srws_peer_addr, "?",
-			    sizeof(srws->srws_peer_addr));
 		srws->srws_len = w->srw_len;
+		strlcpy(srws->srws_peer_addr,
+		    resm->resm_addrbuf,
+		    sizeof(srws->srws_peer_addr));
 
 		rc = psc_ctlmsg_sendv(fd, mh, srws);
 		if (!rc)
