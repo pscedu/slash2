@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "pfl/cdefs.h"
+#include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/alloc.h"
@@ -58,7 +59,7 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
 
 	fni = PSCALLOC(sizeof(*fni) + len);
-	fni->fni_hash   = str_hash(name);
+	fni->fni_hash   = psc_str_hashify(name);
 	INIT_PSCLIST_ENTRY(&c->fcmh_sibling);
 	strlcpy(fni->fni_name, name, len);
 	return (fni);
@@ -275,7 +276,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 {
 	struct fidc_membh *c=NULL;
 	int found=0;
-	int hash=str_hash(name);
+	int hash=psc_str_hashify(name);
 	struct timespec	now;
 
 	LOCK_ENSURE(&p->fcmh_lock);
@@ -374,7 +375,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	/* Perform some sanity checks on the cached data structure.
 	 */
 	psc_assert(c->fcmh_parent == p);
-	psc_assert(c->fcmh_name->fni_hash == str_hash(name));
+	psc_assert(c->fcmh_name->fni_hash == psc_str_hashify(name));
 	psc_assert(!strncmp(c->fcmh_name->fni_name, name,
 			    strnlen(c->fcmh_name->fni_name, NAME_MAX)));
 
@@ -473,7 +474,7 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	/* overwrite the old name with the new one in place */
 	psc_assert(ch->fcmh_name != NULL);
 	fni = ch->fcmh_name = psc_realloc(fni, sizeof(*fni) + len, 0);
-	fni->fni_hash = str_hash(newname);
+	fni->fni_hash = psc_str_hashify(newname);
 	strlcpy(fni->fni_name, newname, len);
 
 	spinlock(&np->fcmh_lock);

@@ -40,7 +40,7 @@ struct psc_poolmgr	*fidcPool;
 #define fidcFreeList	 fidcPool->ppm_lc
 struct psc_listcache	 fidcDirtyList;
 struct psc_listcache	 fidcCleanList;
-struct hash_table	 fidcHtable;
+struct psc_hashtbl	 fidcHtable;
 
 struct sl_fsops		*slFsops;
 
@@ -129,19 +129,13 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 
 		else {
 			tmp = _fidc_lookup_fg(fcmh_2_fgp(f), 1);
-			
+
 			if (f != tmp)
 				abort();
 		}
 
-		if (psclist_conjoint(&f->fcmh_hentry.hentry_lentry)) {
-			struct hash_bucket *b;
-
-			b = hashbkt_get(&fidcHtable, fcmh_2_fid(f));
-			hashbkt_lock(b);
-			hashbkt_del_entry(b, &f->fcmh_hentry);
-			hashbkt_unlock(b);
-		}
+		if (psc_hashent_conjoint(&fidcHtable, f))
+			psc_hashent_remove(&fidcHtable, f);
 
 		/* Re-initialize it before placing onto the free list
 		 */
@@ -204,6 +198,7 @@ fidc_reap(struct psc_poolmgr *m)
 	static pthread_mutex_t mutex =
 		PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 	struct psc_dynarray da = DYNARRAY_INIT;
+	struct psc_hashbkt *b;
 	int i=0;
 
 	ENTRY;
@@ -223,7 +218,8 @@ fidc_reap(struct psc_poolmgr *m)
 		    atomic_read(&m->ppm_nwaiters) + 1)
 			break;
 
-		if (!trylock_hash_bucket(&fidcHtable, fcmh_2_fid(f))) {
+		b = psc_hashbkt_get(&fidcHtable, &fcmh_2_fid(f));
+		if (!psc_hashbkt_trylock(b)) {
 			LIST_CACHE_ULOCK(&fidcCleanList);
 			sched_yield();
 			goto startover;
@@ -261,7 +257,7 @@ fidc_reap(struct psc_poolmgr *m)
  end1:
 		freelock(&f->fcmh_lock);
  end2:
-		freelock_hash_bucket(&fidcHtable, fcmh_2_fid(f));
+		psc_hashbkt_unlock(b);
 	}
 	LIST_CACHE_ULOCK(&fidcCleanList);
 
@@ -305,20 +301,17 @@ fidc_get(void)
 struct fidc_membh *
 _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 {
-	struct hash_bucket *b;
-	struct hash_entry *e, *save=NULL;
+	struct psc_hashbkt *b;
 	struct fidc_membh *fcmh=NULL, *tmp;
 	int locked[2];
 
-	b = GET_BUCKET(&fidcHtable, fg->fg_fid);
+	b = psc_hashbkt_get(&fidcHtable, &fg->fg_fid);
 
  retry:
-	locked[0] = reqlock(&b->hbucket_lock);
-	psclist_for_each_entry(e, &b->hbucket_list, hentry_lentry) {
-		if (fg->fg_fid != *e->hentry_id)
+	locked[0] = psc_hashbkt_reqlock(b);
+	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
+		if (fcmh_2_fid(tmp) != fg->fg_fid)
 			continue;
-
-		tmp = e->private;
 
 		locked[1] = reqlock(&tmp->fcmh_lock);
 		/* Be sure to ignore any inodes which are freeing unless
@@ -332,7 +325,6 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 			if (tmp->fcmh_state & FCMH_CAC_FREEING) {
 				psc_assert(fg->fg_gen == fcmh_2_gen(tmp));
 				fcmh = tmp;
-				save = e;
 				ureqlock(&tmp->fcmh_lock, locked[1]);
 				break;
 			} else {
@@ -346,7 +338,6 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 			}
 			if (fg->fg_gen == fcmh_2_gen(tmp)) {
 				fcmh = tmp;
-				save = e;
 				ureqlock(&tmp->fcmh_lock, locked[1]);
 				break;
 			}
@@ -357,11 +348,11 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
 				if (locked[1])
 					atomic_inc(&tmp->fcmh_refcnt);
-				freelock(&b->hbucket_lock);
+				psc_hashbkt_unlock(b);
 				psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
 
 				if (locked[0])
-					spinlock(&b->hbucket_lock);
+					psc_hashbkt_lock(b);
 				if (locked[1]) {
 					spinlock(&tmp->fcmh_lock);
 					atomic_dec(&tmp->fcmh_refcnt);
@@ -371,21 +362,17 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 			if (fg->fg_gen == FIDGEN_ANY) {
 				/* Look for highest generation number.
 				 */
-				if (!fcmh || (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh))) {
+				if (!fcmh || (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh)))
 					fcmh = tmp;
-					save = e;
-				}
 			}
 			ureqlock(&tmp->fcmh_lock, locked[1]);
 		}
 	}
 
-	if (fcmh && (del == 1)) {
-		psc_assert(save);
-		psclist_del(&save->hentry_lentry);
-	}
+	if (fcmh && (del == 1))
+		psc_hashent_remove(&fidcHtable, fcmh);
 
-	ureqlock(&b->hbucket_lock, locked[0]);
+	psc_hashbkt_ureqlock(b, locked[0]);
 
 	if (fcmh)
 		fidc_membh_incref(fcmh);
@@ -413,6 +400,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 	int locked;
 	int rc, try_create=0;
 	struct fidc_membh *fcmh, *fcmh_new;
+	struct psc_hashbkt *b;
 
 	rc = 0;
 	*fcmhp = NULL;
@@ -438,8 +426,9 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		psc_assert((flags & FIDC_LOOKUP_COPY) ||
 			   (flags & FIDC_LOOKUP_LOAD));
 
+	b = psc_hashbkt_get(&fidcHtable, &fg->fg_fid);
  restart:
-	spinlock_hash_bucket(&fidcHtable, fg->fg_fid);
+	psc_hashbkt_lock(b);
  trycreate:
 	fcmh = fidc_lookup_fg(fg);
 	if (fcmh) {
@@ -461,8 +450,8 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 			fidc_put(fcmh_new, &fidcFreeList);
 		}
 		if (rc) {
-			freelock_hash_bucket(&fidcHtable, fg->fg_fid);
-			return rc;
+			psc_hashbkt_unlock(b);
+			return (rc);
 		}
 
 		psc_assert(fg->fg_fid == fcmh_2_fid(fcmh));
@@ -471,7 +460,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		if (fcmh->fcmh_state & FCMH_CAC_FREEING) {
 			DEBUG_FCMH(PLL_WARN, fcmh, "fcmh is FREEING..");
 			fidc_membh_dropref(fcmh);
-			freelock_hash_bucket(&fidcHtable, fg->fg_fid);
+			psc_hashbkt_unlock(b);
 			sched_yield();
 			goto restart;
 		}
@@ -483,20 +472,18 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 			ureqlock(&fcmh->fcmh_lock, locked);
 		}
 
-		freelock_hash_bucket(&fidcHtable, fg->fg_fid);
-
+		psc_hashbkt_unlock(b);
 	} else {
 		if (flags & FIDC_LOOKUP_CREATE)
 			if (!try_create) {
 				/* Allocate a fidc handle and attach the
 				 *   provided fcm.
 				 */
-				freelock_hash_bucket(&fidcHtable, fg->fg_fid);
+				psc_hashbkt_unlock(b);
 				fcmh_new = fidc_get();
-				spinlock_hash_bucket(&fidcHtable, fg->fg_fid);
+				psc_hashbkt_lock(b);
 				try_create = 1;
 				goto trycreate;
-
 			} else
 				fcmh = fcmh_new;
 		else
@@ -541,12 +528,11 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 			DEBUG_FCMH(PLL_NOTICE, fcmh,
 			    "adding FIDGEN_ANY to cache");
 
-		init_hash_entry(&fcmh->fcmh_hentry, &(fcmh_2_fid(fcmh)), fcmh);
-
 		FCMH_LOCK(fcmh);
 		fidc_put(fcmh, &fidcCleanList);
-		add_hash_entry(&fidcHtable, &fcmh->fcmh_hentry);
-		freelock_hash_bucket(&fidcHtable, fg->fg_fid);
+		psc_hashbkt_add_item(&fidcHtable, b, fcmh);
+		psc_hashbkt_unlock(b);
+
 		/* Do this dance so that fidc_fcoo_start_locked() is not
 		 *  called while holding the hash bucket lock!
 		 */
@@ -582,23 +568,20 @@ fidc_membh_init(__unusedx struct psc_poolmgr *pm, void *a)
 {
 	struct fidc_membh *f = a;
 
+	memset(f, 0, sizeof(*f));
 	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
-	atomic_set(&f->fcmh_refcnt, 0);
 	LOCK_INIT(&f->fcmh_lock);
-	f->fcmh_state = 0;
+	atomic_set(&f->fcmh_refcnt, 0);
 	psc_waitq_init(&f->fcmh_waitq);
-	f->fcmh_cache_owner = NULL;
 	f->fcmh_fsops = slFsops;
 	f->fcmh_state = FCMH_CAC_FREE;
-	f->fcmh_name = NULL;
-	memset(&f->fcmh_hentry, 0, sizeof(struct hash_entry));
 	return (0);
 }
 
 struct fidc_open_obj *
 fidc_fcoo_init(void)
 {
-	struct fidc_open_obj	*f;
+	struct fidc_open_obj *f;
 
 	f = PSCALLOC(sizeof(*f));
 	SPLAY_INIT(&f->fcoo_bmapc);
@@ -648,8 +631,8 @@ fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 	lc_reginit(&fidcCleanList, struct fidc_membh,
 		   fcmh_lentry, "fcmhclean");
 
-	init_hash_table(&fidcHtable, htsz, "fidc");
-	/*fidcHtable.htcompare = fidc_hash_cmp;*/
+	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
+	    fcmh_fg, fcmh_hentry, htsz, NULL, "fidc");
 	initFcooCb = NULL;
 	fidcReapCb = fcm_reap_cb;
 }

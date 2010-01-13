@@ -443,8 +443,7 @@ slcfg_addif(char *ifname, char *netname)
 	resm->resm_res = currentRes;
 	slcfg_init_resm(resm);
 
-	init_hash_entry(&resm->resm_hentry, (void *)&resm->resm_nid, resm);
-	add_hash_entry(&globalConfig.gconf_nids_hash, &resm->resm_hentry);
+	psc_hashtbl_add_item(&globalConfig.gconf_nid_hashtbl, resm);
 
 	psc_dynarray_add(&currentRes->res_members, resm);
 }

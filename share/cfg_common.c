@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include "psc_ds/hash.h"
 #include "psc_ds/dynarray.h"
+#include "psc_ds/hash2.h"
 #include "psc_util/log.h"
 
 #include "slconfig.h"
@@ -35,7 +35,6 @@ libsl_resm_lookup(int ismds)
 	char nidbuf[PSC_NIDSTR_SIZE];
 	struct sl_resource *res=NULL;
 	struct sl_resm *resm=NULL;
-	struct hash_entry *e;
 	lnet_nid_t *np;
 	int i;
 
@@ -43,20 +42,19 @@ libsl_resm_lookup(int ismds)
 		if (LNET_NETTYP(LNET_NIDNET(*np)) == LOLND)
 			continue;
 
-		e = get_hash_entry(&globalConfig.gconf_nids_hash,
-		    *np, NULL, NULL);
+		resm = psc_hashtbl_search(&globalConfig.gconf_nid_hashtbl,
+		    NULL, NULL, np);
 		/* Every nid found by lnet must be a resource member. */
-		if (!e)
+		if (resm == NULL)
 			psc_fatalx("nid %s is not a member of any resource",
-				   psc_nid2str(*np, nidbuf));
+			    psc_nid2str(*np, nidbuf));
 
-		resm = e->private;
 		if (res == NULL)
 			res = resm->resm_res;
 		/* All nids must belong to the same resource */
 		else if (res != resm->resm_res)
 			psc_fatalx("nids must be members of same resource (%s)",
-				psc_nid2str(*np, nidbuf));
+			    psc_nid2str(*np, nidbuf));
 	}
 	if (ismds && res->res_type != SLREST_MDS)
 		psc_fatal("%s: not configured as MDS", res->res_name);
@@ -102,14 +100,8 @@ libsl_id2res(sl_ios_id_t id)
 struct sl_resm *
 libsl_try_nid2resm(lnet_nid_t nid)
 {
-	struct hash_entry *e;
-
-	e = get_hash_entry(&globalConfig.gconf_nids_hash, nid, NULL, NULL);
-	if (!e)
-		return (NULL);
-
-	psc_assert(*e->hentry_id == nid);
-	return (e->private);
+	return (psc_hashtbl_search(&globalConfig.gconf_nid_hashtbl,
+	    NULL, NULL, &nid));
 }
 
 struct sl_resm *

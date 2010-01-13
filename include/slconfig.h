@@ -24,7 +24,7 @@
 
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
-#include "psc_ds/hash.h"
+#include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"
@@ -71,7 +71,7 @@ struct sl_resm {
 	char			 resm_addrbuf[RESM_ADDRBUF_SZ];
 	lnet_nid_t		 resm_nid;			/* Node ID for the resource member */
 	struct sl_resource	*resm_res;
-	struct hash_entry	 resm_hentry;
+	struct psc_hashent	 resm_hentry;
 	void			*resm_pri;
 };
 
@@ -93,7 +93,7 @@ struct sl_gconf {
 	uint32_t		 gconf_netid;
 	int			 gconf_port;
 	struct psc_lockedlist	 gconf_sites;
-	struct hash_table	 gconf_nids_hash;
+	struct psc_hashtbl	 gconf_nid_hashtbl;
 	psc_spinlock_t		 gconf_lock;
 };
 
@@ -104,8 +104,8 @@ struct sl_gconf {
 		LOCK_INIT(&(g)->gconf_lock);					\
 		pll_init(&(g)->gconf_sites, struct sl_site,			\
 		    site_lentry, &(g)->gconf_lock);				\
-		init_hash_table(&(g)->gconf_nids_hash,				\
-				GCONF_HASHTBL_SZ, "resnid");			\
+		psc_hashtbl_init(&(g)->gconf_nid_hashtbl, 0, struct sl_resm,	\
+		    resm_nid, resm_hentry, GCONF_HASHTBL_SZ, NULL, "resnid");	\
 	} while (0)
 
 void			 slcfg_init_res(struct sl_resource *);

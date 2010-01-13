@@ -70,7 +70,7 @@ struct fidc_membh {
 	int			 fcmh_state;
 	psc_spinlock_t		 fcmh_lock;
 	atomic_t		 fcmh_refcnt;
-	struct hash_entry	 fcmh_hentry;
+	struct psc_hashent	 fcmh_hentry;
 	struct psclist_head	 fcmh_lentry;
 	struct psc_listcache	*fcmh_cache_owner;
 	struct psc_waitq	 fcmh_waitq;
@@ -242,7 +242,7 @@ ssize_t                  fidc_fcm_size_get(struct fidc_membh *);
 
 
 extern struct sl_fsops		*slFsops;
-extern struct hash_table	 fidcHtable;
+extern struct psc_hashtbl	 fidcHtable;
 extern struct psc_poolmgr	*fidcPool;
 extern struct psc_listcache	 fidcDirtyList;
 extern struct psc_listcache	 fidcCleanList;
