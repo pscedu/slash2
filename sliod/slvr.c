@@ -256,12 +256,24 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, 
 				       SL_READ);
 			if (rc)
-				return (rc);
+				goto out;
 		}
 	}
 
 	if (nblks)
 		rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, SL_READ);
+
+ out:
+	if (rc) {
+		/* There was a problem, unblock any waiters and tell them
+		 *   the bad news.
+		 */
+		SLVR_LOCK(s);
+		s->slvr_flags |= SLVR_DATAERR;
+		DEBUG_SLVR(PLL_ERROR, s, "slvr_fsio() error, rc=%d", rc);
+		SLVR_WAKEUP(s);
+		SLVR_ULOCK(s);
+	}
 
 	return (rc);
 }
@@ -390,12 +402,18 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 	 */
 	if (s->slvr_flags & SLVR_FAULTING) {
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		SLVR_WAIT(s, (s->slvr_flags & SLVR_DATARDY));
-		psc_assert(s->slvr_flags & SLVR_DATARDY);
+		SLVR_WAIT(s, (s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
+		psc_assert((s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
 	}
 
-	DEBUG_SLVR(PLL_INFO, s, "slvrno=%hu off=%u size=%u rw=%o",
+	DEBUG_SLVR(((s->slvr_flags & SLVR_DATAERR) ? PLL_ERROR : PLL_INFO), s,
+		   "slvrno=%hu off=%u size=%u rw=%o",
 		   s->slvr_num, offset, size, rw);
+
+	if (s->slvr_flags & SLVR_DATAERR) {
+		rc = -1;
+		goto out;
+	}
 
 	/* Don't bother marking the bit in the slash_bmap_wire structure,
 	 *  in fact slash_bmap_wire may not even be present for this
@@ -417,10 +435,9 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 				goto set_write_dirty;
 		}
 
-	} else if (rw == SL_READ) {
+	} else if (rw == SL_READ) 
 		if (s->slvr_flags & SLVR_DATARDY)
 			goto out;
-	}
 
 	/* Importing data into the sliver is now our responsibility,
 	 *  other IO into this region will block until SLVR_FAULTING

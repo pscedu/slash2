@@ -57,10 +57,10 @@ enum {
 	SLVR_SPLAYTREE	= (1 <<  1),	/* registered in the splay tree */
 	SLVR_UNUSED1	= (1 <<  2),	/* unused1 */
 	SLVR_FAULTING	= (1 <<  3),	/* contents being filled in from the disk or over the network */
-	SLVR_UNUSED2	= (1 <<  4),	/* unused2 */
-	SLVR_GETSLAB	= (1 <<  5),	/* assigning memory buffer to slvr */
-	SLVR_PINNED	= (1 <<  6),	/* slab cannot be removed from the cache */
-	SLVR_DATARDY	= (1 <<  7),	/* ready for read / write activity */
+	SLVR_GETSLAB	= (1 <<  4),	/* assigning memory buffer to slvr */
+	SLVR_PINNED	= (1 <<  5),	/* slab cannot be removed from the cache */
+	SLVR_DATARDY	= (1 <<  6),	/* ready for read / write activity */
+	SLVR_DATAERR    = (1 <<  7),
 	SLVR_LRU	= (1 <<  8),	/* cached but not dirty */
 	SLVR_CRCDIRTY	= (1 <<  9),	/* crc does not match cached buffer */
 	SLVR_CRCING     = (1 << 10),
@@ -117,7 +117,7 @@ enum {
 #define slvr_io_done(s, rw)						\
 	((rw) == SL_WRITE ? slvr_wio_done(s) : slvr_rio_done(s))
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_SLVR_FLAGS(s)						\
 	(s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
 	(s)->slvr_flags & SLVR_FAULTING		? "f" : "-",		\
@@ -125,6 +125,7 @@ enum {
 	(s)->slvr_flags & SLVR_PINNED		? "p" : "-",		\
 	(s)->slvr_flags & SLVR_CRCDIRTY		? "D" : "-",		\
 	(s)->slvr_flags & SLVR_DATARDY		? "d" : "-",		\
+	(s)->slvr_flags & SLVR_DATAERR		? "E" : "-",		\
 	(s)->slvr_flags & SLVR_LRU		? "l" : "-",		\
 	(s)->slvr_flags & SLVR_FREEING		? "F" : "-",		\
 	(s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
