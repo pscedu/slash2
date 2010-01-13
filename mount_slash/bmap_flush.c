@@ -54,8 +54,10 @@ static struct psc_waitq rpcCompletion;
 #define MAX_OUTSTANDING_RPCS 128
 #define MIN_COALESCE_RPC_SZ  LNET_MTU /* Try for big RPC's */
 
-#define pndgReqsLock  spinlock(&pndgReqs->nb_lock)
-#define pndgReqsUlock freelock(&pndgReqs->nb_lock)
+static psc_spinlock_t pndgReqLock = LOCK_INITIALIZER;
+
+#define pndgReqsLock  spinlock(&pndgReqLock)
+#define pndgReqsUlock freelock(&pndgReqLock)
 
 __static void
 bmap_flush_reap_rpcs(void)
@@ -73,6 +75,7 @@ bmap_flush_reap_rpcs(void)
 	for (i=0; i < psc_dynarray_len(&pndgReqSets); i++) {
 		pndgReqsLock;
 		set = psc_dynarray_getpos(&pndgReqSets, i);
+		psc_assert(set);
 		pndgReqsUlock;
 
 		if (!pscrpc_set_finalize(set, shutdown, 0)) {
