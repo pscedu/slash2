@@ -604,7 +604,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	mfh = msl_fhent_new(m);
 	fi->fh = (uint64_t)mfh;
-	fi->keep_cache = 1;
+	fi->keep_cache = 0;
+	fi->direct_io = 1;
 	/* Increment the fcoo #refs.  The RPC has already taken place.
 	 */
 	slash2fuse_openref_update(m, fi->flags, &flags);
@@ -659,9 +660,9 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	mfh = msl_fhent_new(c);
 	fi->fh = (uint64_t)mfh;
-	fi->keep_cache = 1;
+	fi->keep_cache = 0;
+	fi->direct_io = 1;
 	rc = slash2fuse_fcoo_start(req, ino, fi);
-
 	if (rc)
 		goto out;
 
@@ -1645,7 +1646,8 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 
 	rc = msl_write(mfh, (char *)buf, size, off);
 
-	psc_info("msl_write() %p rc=%d sz=%zu off=%"PSCPRIdOFF, buf, rc, size, off);
+	DEBUG_FCMH(PLL_NOTIFY, mfh->mfh_fcmh, 
+		   "buf=%p rc=%d sz=%zu off=%"PSCPRIdOFF, buf, rc, size, off);
 
 	fidc_membh_dropref(mfh->mfh_fcmh);
 	if (rc < 0)
