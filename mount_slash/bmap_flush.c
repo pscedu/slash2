@@ -54,19 +54,31 @@ static struct psc_waitq rpcCompletion;
 #define MAX_OUTSTANDING_RPCS 128
 #define MIN_COALESCE_RPC_SZ  LNET_MTU /* Try for big RPC's */
 
+#define pndgReqsLock  spinlock(&pndgReqs->nb_lock)
+#define pndgReqsUlock freelock(&pndgReqs->nb_lock)
+
 __static void
 bmap_flush_reap_rpcs(void)
 {
-	int i;
+	int i, len;
 	struct pscrpc_request_set *set;
 
 	psc_info("outstandingRpcCnt=%d (before) completedRpcCnt=%d",
-		 atomic_read(&outstandingRpcCnt), atomic_read(&completedRpcCnt));
+	    atomic_read(&outstandingRpcCnt), atomic_read(&completedRpcCnt));
+
+	pndgReqsLock;
+	len = psc_dynarray_len(&pndgReqSets);
+	pndgReqsUlock;
 
 	for (i=0; i < psc_dynarray_len(&pndgReqSets); i++) {
+		pndgReqsLock;
 		set = psc_dynarray_getpos(&pndgReqSets, i);
+		pndgReqsUlock;
+
 		if (!pscrpc_set_finalize(set, shutdown, 0)) {
+			pndgReqsLock;
 			psc_dynarray_remove(&pndgReqSets, set);
+			pndgReqsUlock;
 			i--;
 		}
 	}
@@ -308,8 +320,9 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 			psc_assert(n);
 			launch_rpc;
 		}
-
+		pndgReqsLock;
 		psc_dynarray_add(&pndgReqSets, set);
+		pndgReqsUlock;
 	}
 	return (nrpcs);
 }
