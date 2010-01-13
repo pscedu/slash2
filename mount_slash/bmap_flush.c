@@ -349,20 +349,21 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 	struct bmap_pagecache_entry *bmpce;
 	struct iovec *iovs=NULL;
 	int i, j, niovs=0, first_iov;
-	uint32_t reqsz=bmap_flush_coalesce_size(biorqs);
+	uint32_t tot_reqsz=bmap_flush_coalesce_size(biorqs), reqsz;
 	off_t off=0;
 
+	psc_trace("ENTRY: biorqs=%p tot_reqsz=%u", biorqs, tot_reqsz);
+	
 	psc_assert(!*iovset);
 	psc_assert(psc_dynarray_len(biorqs) > 0);
-	/* Prime the pump with initial values from the first biorq.
-	 */
-	r = psc_dynarray_getpos(biorqs, 0);
-	off = r->biorq_off;
 
 	for (i=0; i < psc_dynarray_len(biorqs); i++, first_iov=1) {
 		r = psc_dynarray_getpos(biorqs, i);
+		off = r->biorq_off;
+		reqsz = r->biorq_len;
 
-		DEBUG_BIORQ(PLL_INFO, r, "r rreqsz=%u off=%zu", reqsz, off);
+ 		DEBUG_BIORQ(PLL_INFO, r, "r tot_reqsz=%u off=%zu", 
+			    tot_reqsz, off);
 		psc_assert(psc_dynarray_len(&r->biorq_pages));
 
 		if (biorq_voff_get(r) <= off) {
@@ -384,13 +385,15 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 			continue;
 		}
 		DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (use)", i);
-		psc_assert(reqsz);
+		psc_assert(tot_reqsz);
 		/* Now iterate through the biorq's iov set, where the
 		 *   actual buffers are stored.  Note that this dynarray
 		 *   is sorted.
 		 */
 		for (j=0, first_iov=1; j < psc_dynarray_len(&r->biorq_pages);
 		     j++) {
+			psc_assert(reqsz);
+
 			bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
 			BMPCE_LOCK(bmpce);
 
@@ -405,12 +408,15 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 				DEBUG_BMPCE(PLL_INFO, bmpce, "skip");
 				psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
 				BMPCE_ULOCK(bmpce);
+				
+				reqsz -= BMPC_BUFSZ;
 				continue;
 			}
 #if 0			
 			bmpce->bmpce_flags |= BMPCE_IOSCHED;
-			DEBUG_BMPCE(PLL_INFO, bmpce, "scheduled");
 #endif
+			DEBUG_BMPCE(PLL_INFO, bmpce, 
+				    "scheduling, first_iov=%d", first_iov);
 			bmpce_inflight_inc_locked(bmpce);
 			/* Issue sanity checks on the bmpce.
 			 */
@@ -432,18 +438,21 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 			  (first_iov ? bmpce->bmpce_off + BMPC_BUFSZ - off :
 			   BMPC_BUFSZ));
 
-			reqsz -= iovs[niovs].iov_len;
 			off += iovs[niovs].iov_len;
-			first_iov = 0;
+			reqsz -= iovs[niovs].iov_len;
+			tot_reqsz -= iovs[niovs].iov_len;
+
+			if (first_iov)
+				first_iov = 0;
 
 			psc_info("biorq=%p bmpce=%p base=%p len=%zu "
-				 "niov=%d reqsz=%u (new)",
+				 "niov=%d reqsz=%u tot_reqsz=%u(new)",
 				 r, bmpce, iovs[niovs].iov_base,
-				 iovs[niovs].iov_len, niovs, reqsz);
+				 iovs[niovs].iov_len, niovs, reqsz, tot_reqsz);
 			niovs++;
 		}
 	}
-	psc_assert(!reqsz);
+	psc_assert(!tot_reqsz);
 	return (niovs);
 }
 
