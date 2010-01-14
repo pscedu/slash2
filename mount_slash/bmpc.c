@@ -96,6 +96,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 		} else {
 			if (bmpce->bmpce_flags & BMPCE_LRU) {
 				pll_remove(&bmpc->bmpc_lru, bmpce);
+				// XXX should I be addtail?
 				pll_addhead(&bmpc->bmpc_lru, bmpce);
 
 			} else

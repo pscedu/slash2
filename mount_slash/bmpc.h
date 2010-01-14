@@ -93,7 +93,8 @@ enum {
 	BMPCE_FREEING   = (1<<6),
 	BMPCE_INIT      = (1<<7),
 	BMPCE_READPNDG  = (1<<8),
-	BMPCE_IOSCHED   = (1<<9)
+	BMPCE_IOSCHED   = (1<<9),
+	BMPCE_RBWPAGE   = (1<<10)
 };
 
 #define BMPCE_2_BIORQ(b) ((b)->bmpce_waitq == NULL) ? NULL :	\
@@ -101,7 +102,7 @@ enum {
 	 offsetof(struct bmpc_ioreq, biorq_waitq))
 
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s"
 #define BMPCE_FLAG(field, str) ((field) ? (str) : "-")
 #define DEBUG_BMPCE_FLAGS(b)					\
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_NEW), "n"),	\
@@ -113,7 +114,9 @@ enum {
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_FREEING), "F"),	\
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_INIT), "i"),	\
 	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_READPNDG), "r"),	\
-	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_IOSCHED), "I")
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_IOSCHED), "I"),    \
+	BMPCE_FLAG(((b)->bmpce_flags & BMPCE_RBWPAGE), "B")
+
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
@@ -300,7 +303,7 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 
 	locked = reqlock(&bmpce->bmpce_lock);
 
-	DEBUG_BMPCE(PLL_TRACE, bmpce, "op=%d off=%u", op, off);
+	DEBUG_BMPCE(PLL_NOTIFY, bmpce, "op=%d off=%u", op, off);
 
 	while (bmpce->bmpce_flags & BMPCE_GETBUF) {
 		psc_assert(!bmpce->bmpce_base);
@@ -357,11 +360,11 @@ bmpce_inflight_inc_locked(struct bmap_pagecache_entry *bmpce)
 
 #define biorq_voff_get(r) ((r)->biorq_off + (r)->biorq_len)
 
-#define bmpce_is_rbw_page(r, b, pos)					\
-	(biorq_is_my_bmpce(r, b) &&					\
-	 ((!(pos) && ((r)->biorq_flags & BIORQ_RBWFP)) ||		\
-	  (((pos) == (psc_dynarray_len(&(r)->biorq_pages)-1) &&		\
-	    ((r)->biorq_flags & BIORQ_RBWLP)))))
+#define bmpce_is_rbw_page(r, b, pos)                                    \
+        (biorq_is_my_bmpce(r, b) &&                                     \
+         ((!(pos) && ((r)->biorq_flags & BIORQ_RBWFP)) ||               \
+          (((pos) == (psc_dynarray_len(&(r)->biorq_pages)-1) &&         \
+            ((r)->biorq_flags & BIORQ_RBWLP)))))
 
 static inline void
 bmpc_lru_del(struct bmap_pagecache *bmpc)

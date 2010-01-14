@@ -170,7 +170,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	if (npages > 1)
 		psc_dynarray_sort(&r->biorq_pages, qsort, bmpce_sort_cmp);
 
-	/* XXX Note if we were move to a RD_DATARDY / WR_DATARDY then
+	/* XXX Note if we moved to RD_DATARDY / WR_DATARDY then
 	 *   we wouldn't have to fault in pages like this unless the
 	 *   bmap was open in RW mode.
 	 */
@@ -194,8 +194,10 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			 *   bmpce_handle_lru_locked() for this op.
 			 *  XXX how is this ref affected by the cb's?
 			 */
-			if (bmpce_is_rbw_page(r, bmpce, i))
+			if (bmpce_is_rbw_page(r, bmpce, i)) {
+				bmpce->bmpce_flags |= BMPCE_RBWPAGE;
 				psc_atomic16_inc(&bmpce->bmpce_rdref);
+			}
 
 			psc_assert(!bmpce->bmpce_base);
 			psc_assert(bmpce->bmpce_flags & BMPCE_GETBUF);
@@ -240,8 +242,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			 *   block has been assigned.
 			 */
 			psc_assert(bmpce->bmpce_base);
-			psc_assert(bmpce->bmpce_flags == BMPCE_INIT);
-			bmpce->bmpce_flags = 0;
+			psc_assert(bmpce->bmpce_flags & BMPCE_INIT);
+			bmpce->bmpce_flags &= ~BMPCE_INIT;
 
 			if (op == BIORQ_READ)
 				bmpce->bmpce_flags |= BMPCE_READPNDG;
@@ -935,11 +937,14 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		bmpce = psc_dynarray_getpos(a, i);
 		BMPCE_LOCK(bmpce);
 
+		DEBUG_BMPCE(PLL_INFO, bmpce, "DATARDY! i=%d len=%d", 
+			    i, psc_dynarray_len(a));
+
 		psc_assert(bmpce->bmpce_waitq);
 		psc_assert(biorq_is_my_bmpce(r, bmpce));
 
 		bmpce->bmpce_flags |= BMPCE_DATARDY;
-		if (bmpce_is_rbw_page(r, bmpce, i)) {
+		if (bmpce->bmpce_flags & BMPCE_RBWPAGE) {
 			/* The RBW stuff needs to be managed outside of
 			 *   the LRU, this is not the best place but should
 			 *   suffice for now.
@@ -948,6 +953,8 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 				   == 1);
 			psc_atomic16_dec(&bmpce->bmpce_rdref);
 			bmpce_inflight_dec_locked(bmpce);
+			bmpce->bmpce_flags &= ~BMPCE_RBWPAGE;
+			DEBUG_BMPCE(PLL_INFO, bmpce, "infl dec for RBW");
 		}
 
 		if (clearpages) {
@@ -1326,6 +1333,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		if (biorq_is_my_bmpce(r, bmpce)) {
 			psc_assert(!(bmpce->bmpce_flags &
 				     BMPCE_DATARDY));
+			psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
 			bmpce_inflight_inc_locked(bmpce);
 			msl_readio_rpc_create(r, 0, 1);
 			sched = 1;
@@ -1338,6 +1346,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		if (biorq_is_my_bmpce(r, bmpce)) {
 			psc_assert(!(bmpce->bmpce_flags &
 				     BMPCE_DATARDY));
+			psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
 			bmpce_inflight_inc_locked(bmpce);
 			msl_readio_rpc_create(r,
 			      psc_dynarray_len(&r->biorq_pages)-1, 1);
