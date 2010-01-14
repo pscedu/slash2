@@ -26,7 +26,6 @@ SRCS+=		${PFL_BASE}/psc_util/waitq.c
 SRCS+=		${LNET_SOCKLND_SRCS}
 SRCS+=		${PSCRPC_SRCS}
 
-LDFLAGS+=	${LIBL}
-MODULES+=	lnet pthread
+MODULES+=	lnet pthread l
 
 include ${SLASHMK}
