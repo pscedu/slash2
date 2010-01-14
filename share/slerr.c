@@ -48,6 +48,7 @@ slstrerror(int error)
 
 	if (error >= _SLERR_START &&
 	    error < _SLERR_START + nitems(slash_errstrs))
+		/* XXX ensure strerror(error) == unknown) */
 		return (slash_errstrs[error - _SLERR_START]);
 	return (strerror(error));
 }
