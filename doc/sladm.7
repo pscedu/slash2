@@ -126,21 +126,11 @@ server which manages the store of actual file data can be brought up with
   sliod -f slash.conf
 .Ed
 .Pp
-.Xr sliod 8
-actually be brought independently of site metadata servers.
-However, on its startup,
-.Xr sliod 8
-tries to resume any pending operations which have not finished from previous
-instances which were interrupted (for example, by machine power failure).
-For this reason, it is encouraged that metadata servers be brought up before
-.Tn I/O
-servers.
-.Pp
 .Xr slictl 8
 can be used to control live operation of the
 .Tn I/O
 server once it is running.
-.Ss Running Cm mount_slash Ns Ss ,\& the Client Mount Daemon
+.Ss Running Cm mount_slash Ns Ss ,\& the Client Mount Server
 .Xr mount_slash 8
 is used to mount a
 .Tn SLASH
