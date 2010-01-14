@@ -29,8 +29,8 @@
 
 #include "bmap.h"
 #include "fidcache.h"
+#include "fuse_listener.h"
 #include "inode.h"
-#include "msl_fuse.h"
 #include "slconfig.h"
 
 struct pscrpc_request;

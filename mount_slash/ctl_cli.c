@@ -33,8 +33,8 @@
 
 #include "ctl_cli.h"
 #include "ctlsvr_cli.h"
+#include "fuse_listener.h"
 #include "mount_slash.h"
-#include "msl_fuse.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
 #include "slerr.h"

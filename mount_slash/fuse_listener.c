@@ -37,7 +37,6 @@
 #include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
-#include "msl_fuse.h"
 #include "fuse_listener.h"
 
 #define NUM_THREADS 32

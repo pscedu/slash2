@@ -20,7 +20,7 @@
 #ifndef _FUSE_LISTENER_H_
 #define _FUSE_LISTENER_H_
 
-#include "msl_fuse.h"
+#include <fuse/fuse_lowlevel.h>
 
 #define FUSE_OPTIONS "fsname=%s,allow_other,suid,dev,max_write=131072"
 

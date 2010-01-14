@@ -50,7 +50,6 @@
 #include "fidcache.h"
 #include "fuse_listener.h"
 #include "mount_slash.h"
-#include "msl_fuse.h"
 #include "pathnames.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
@@ -1646,7 +1645,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 
 	rc = msl_write(mfh, (char *)buf, size, off);
 
-	DEBUG_FCMH(PLL_NOTIFY, mfh->mfh_fcmh, 
+	DEBUG_FCMH(PLL_NOTIFY, mfh->mfh_fcmh,
 		   "buf=%p rc=%d sz=%zu off=%"PSCPRIdOFF, buf, rc, size, off);
 
 	fidc_membh_dropref(mfh->mfh_fcmh);
@@ -1832,7 +1831,7 @@ msl_fuse_mount(const char *mp)
 		psc_fatal("fuse_session_add_chan");
 	}
 
-	psc_warnx("Fuse Version %d.%d", FUSE_MAJOR_VERSION, 
+	psc_warnx("Fuse Version %d.%d", FUSE_MAJOR_VERSION,
 		  FUSE_MINOR_VERSION);
 }
 
