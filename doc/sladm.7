@@ -117,10 +117,19 @@ can be used to control live operation of
 .Xr slashd 8
 once it is running.
 .Ss Running Cm sliod Ns Ss ,\& the Tn Ss I/O Ss Server
-The
+First, ensure the
 .Tn I/O
-server which manages the store of actual file data can be brought up with
-.Xr sliod 8 :
+server's file system has been initialized by
+.Xr slimmns_format 8 :
+.Bd -literal -offset indent
+# slimmns_format -i fsroot
+.Ed
+.Pp
+Now launch the
+.Tn I/O
+server
+.Xr sliod 8
+which manages this data store:
 .Bd -literal -offset indent
 # SLASH_MDS_NID="128.182.58.86@tcp10" USOCK_CPORT=50001 \e
   LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \e
