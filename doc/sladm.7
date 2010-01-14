@@ -74,6 +74,7 @@ daemon must be terminated before the
 .Tn Slash
 metadata server can access it:
 .Bd -literal -offset indent
+# umount /mypool
 # pkill zfs-fuse
 .Ed
 .Ss Running Cm slashd Ns Ss ,\& the Metadata Server
