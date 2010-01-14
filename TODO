@@ -1,5 +1,38 @@
 $Id$
 
+1/14/10
+* Deal with problems surrounding full odtable. ATM odtable put errors are not dealt with properly 
+leading to problems later in cfdfree where the bmap refcnt is wrong.
+
+gdb> bt
+#0  0x0000003c10c30265 in raise () from /lib64/libc.so.6
+#1  0x0000003c10c31d10 in abort () from /lib64/libc.so.6
+#2  0x0000000000463032 in _psclogv (fn=0x59b3e0 "/home/yanovich/code/advsys/p4/slash_nara/share/bmap.c", func=0x59b617 "_bmap_op_done", 
+    line=83, subsys=4, level=0, options=0, fmt=0x59b46d "[assert] %s", ap=0x2aaacb203580)
+    at /home/yanovich/code/advsys/p4/psc_fsutil_libs/psc_util/log.c:258
+#3  0x000000000046326a in _psc_fatal (fn=0x59b3e0 "/home/yanovich/code/advsys/p4/slash_nara/share/bmap.c", func=0x59b617 "_bmap_op_done", 
+    line=83, subsys=4, level=0, options=0, fmt=0x59b46d "[assert] %s") at /home/yanovich/code/advsys/p4/psc_fsutil_libs/psc_util/log.c:281
+#4  0x000000000043cabf in _bmap_op_done (b=0x11beb0f0) at /home/yanovich/code/advsys/p4/slash_nara/share/bmap.c:83
+#5  0x00000000004166da in mds_bmap_ref_drop_locked (bmap=0x11beb0f0, rw=SL_WRITE)
+    at /home/yanovich/code/advsys/p4/slash_nara/slashd/mds.c:792
+#6  0x00000000004169a1 in mexpfcm_release_bref (bref=0x11bd2870) at /home/yanovich/code/advsys/p4/slash_nara/slashd/mds.c:817
+#7  0x000000000041279c in mexpfcm_release_brefs (m=0x2aaad00a2570) at /home/yanovich/code/advsys/p4/slash_nara/slashd/mds.c:353
+#8  0x0000000000412ed7 in mexpfcm_cfd_free (c=0x2aaad00941e0, e=0x11b4ef40) at /home/yanovich/code/advsys/p4/slash_nara/slashd/mds.c:394
+#9  0x000000000040600a in cfdfree (exp=0x11b4ef40, cfd=1090) at /home/yanovich/code/advsys/p4/slash_nara/slashd/cfd.c:194
+#10 0x0000000000432fbf in slm_rmc_handle_release (rq=0x2aaac402c930) at /home/yanovich/code/advsys/p4/slash_nara/slashd/rmc.c:606
+#11 0x0000000000436bf2 in slm_rmc_handler (rq=0x2aaac402c930) at /home/yanovich/code/advsys/p4/slash_nara/slashd/rmc.c:930
+#12 0x00000000004a028d in pscrpc_server_handle_request (svc=0x11b36e70, thread=0x11b4ccc0)
+    at /home/yanovich/code/advsys/p4/psc_fsutil_libs/psc_rpc/service.c:366
+#13 0x00000000004a2fbc in pscrpc_main (thread=0x11b4ccc0, svc=0x11b36e70)
+    at /home/yanovich/code/advsys/p4/psc_fsutil_libs/psc_rpc/service.c:726
+#14 0x00000000004a531d in pscrpcthr_begin (arg=0x11b4ccc0) at /home/yanovich/code/advsys/p4/psc_fsutil_libs/psc_rpc/service.c:1033
+#15 0x000000000046d7b9 in _pscthr_begin (arg=0x7fffcfa2dae0) at /home/yanovich/code/advsys/p4/psc_fsutil_libs/psc_util/thread.c:256
+#16 0x0000003c11406617 in start_thread () from /lib64/libpthread.so.0
+#17 0x0000003c10cd3c2d in clone () from /lib64/libc.so.6
+
+
+
+
 12/4/09
 * More about truncate, unlink GC.
 
