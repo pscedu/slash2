@@ -589,9 +589,6 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	}
 
-	psc_warnx("FID %"PRId64" %s", mp->sfdb.sfdb_secret.sfs_fg.fg_fid,
-	    name);
-
 	m = slash2fuse_fidc_putget(&mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, name, p, &mq->creds,
 				   (FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART));
 	if (m == NULL)
@@ -1312,7 +1309,6 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct fidc_membh *c;
 
 	msfsthr_ensure();
-	psc_warnx("FID %"PRId64, ino);
 
 	mfh = (void *)fi->fh;
 	c = mfh->mfh_fcmh;
