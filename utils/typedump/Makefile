@@ -6,7 +6,8 @@ PROG=		typedump
 SRCS+=		typedump.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
 
-MODULES+=	lnet-hdrs
+# pthread is specified here to use correct struct sizes
+MODULES+=	lnet-hdrs pthread
 
 include ${SLASHMK}
 
