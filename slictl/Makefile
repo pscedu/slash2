@@ -12,7 +12,6 @@ SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 
-DEFINES+=	-DHAVE_LIBPTHREAD_DEFINED
-DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
+MODULES+=	lnet-hdrs
 
 include ${SLASHMK}

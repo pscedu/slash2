@@ -9,7 +9,6 @@ SRCS+=		${SLASH_BASE}/share/lconf.l
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
-SRCS+=		${PFL_BASE}/psc_ds/hash.c
 SRCS+=		${PFL_BASE}/psc_ds/hash2.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
@@ -24,14 +23,10 @@ SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
-SRCS+=		${LNET_CFS_SRCS}
-SRCS+=		${LNET_LIB_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 SRCS+=		${PSCRPC_SRCS}
 
-INCLUDES+=	-I${LNET_BASE}/include
-LDFLAGS+=	${LIBL} ${LNET_LIBS} ${THREAD_LIBS} -lrt
-DEFINES+=	-DHAVE_GETHOSTBYNAME -DHAVE_GETHOSTBYNAME_DEFINED
-DEFINES+=	-DHAVE_LIBPTHREAD_DEFINED -DHAVE_LIBPTHREAD
+LDFLAGS+=	${LIBL}
+MODULES+=	lnet pthread
 
 include ${SLASHMK}
