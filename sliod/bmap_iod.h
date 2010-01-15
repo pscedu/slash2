@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _SLASH_IOD_BMAP_H_
-#define _SLASH_IOD_BMAP_H_
+#ifndef _SLIOD_BMAP_H_
+#define _SLIOD_BMAP_H_
 
 #include <sys/time.h>
 
@@ -29,7 +29,6 @@
 #include "psc_util/lock.h"
 
 #include "bmap.h"
-#include "fidc_iod.h"
 #include "inode.h"
 #include "slashrpc.h"
 
@@ -188,4 +187,4 @@ bcr_cmp(const void *x, const void *y)
 
 extern struct psc_listcache iodBmapLru;
 
-#endif /* _SLASH_IOD_BMAP_H_ */
+#endif /* _SLIOD_BMAP_H_ */

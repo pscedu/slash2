@@ -589,8 +589,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	}
 
-	m = slash2fuse_fidc_putget(&mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, name, p, &mq->creds,
-				   (FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART));
+	m = slash2fuse_fidc_putget(&mp->sfdb.sfdb_secret.sfs_fg, &mp->attr,
+	    name, p, &mq->creds, FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART);
 	if (m == NULL)
 		goto out;
 
@@ -1726,9 +1726,6 @@ ms_init(__unusedx struct fuse_conn_info *conn)
 			psc_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
 				  "a valid IOS, defaulting to IOS_ID_ANY", name);
 	}
-
-	slFsops = PSCALLOC(sizeof(*slFsops));
-	slFsops->slfsop_getattr = slash2fuse_stat;
 	return (NULL);
 }
 

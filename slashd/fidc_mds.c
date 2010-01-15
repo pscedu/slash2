@@ -19,8 +19,8 @@
 
 #include <stdio.h>
 
-#include "psc_util/atomic.h"
 #include "pfl/cdefs.h"
+#include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
@@ -45,23 +45,23 @@ fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 
 	PSC_CRC_CALC(crc, &inoh->inoh_ino, sz);
 	if (crc != inoh->inoh_ino.ino_crc) {
-                psc_warnx("Crc failure on inode");
-                errno = EIO;
-                return -1;
-        }
+		psc_warnx("Crc failure on inode");
+		errno = EIO;
+		return -1;
+	}
 	/* XXX move me
 	if (inoh->inoh_ino.ino_nrepls) {
-                sz = sizeof(sl_replica_t) * inoh->inoh_ino.ino_nrepls;
-                inoh->inoh_replicas = PSCALLOC(sz);
+		sz = sizeof(sl_replica_t) * inoh->inoh_ino.ino_nrepls;
+		inoh->inoh_replicas = PSCALLOC(sz);
 		rc = fid_getxattr(fidfn, SFX_INODE,  inoh->inoh_replicas, sz);
 
-                PSC_CRC_CALC(&crc, inoh->inoh_replicas, sz);
-                if (crc != inoh->inoh_ino.ino_rs_crc) {
-                        psc_warnx("Crc failure on replicas");
-                        errno = EIO;
-                        return -1;
-                }
-        }
+		PSC_CRC_CALC(&crc, inoh->inoh_replicas, sz);
+		if (crc != inoh->inoh_ino.ino_rs_crc) {
+			psc_warnx("Crc failure on replicas");
+			errno = EIO;
+			return -1;
+		}
+	}
 	*/
 	return (0);
 }
@@ -112,3 +112,9 @@ fidc_fcmh2fmdsi(struct fidc_membh *fcmh)
 	ureqlock(&fcmh->fcmh_lock, locked);
 	return (fmdsi);
 }
+
+struct sl_fcmh_ops sl_fcmh_ops = {
+/* getattr */	NULL,
+/* init */	NULL,
+/* dtor */	NULL
+};

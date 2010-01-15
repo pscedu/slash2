@@ -42,7 +42,6 @@ struct odtable				*mdsBmapAssignTable;
 const struct slash_bmap_od		 null_bmap_od;
 const struct slash_inode_od		 null_inode_od;
 const struct slash_inode_extras_od	 null_inox_od;
-struct sl_fsops				 mdsFsops;
 
 __static SPLAY_GENERATE(fcm_exports, mexpfcm,
     mexpfcm_fcm_tentry, mexpfcm_cache_cmp);

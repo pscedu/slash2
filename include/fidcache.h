@@ -33,25 +33,10 @@ struct fidc_memb;
 struct fidc_membh;
 struct fidc_open_obj;
 
-struct sl_fsops {
-	int (*slfsop_open)(struct fidc_membh *, const struct slash_creds *);
-	int (*slfsop_getattr)(struct fidc_membh *, const struct slash_creds *);
-	int (*slfsop_setattr)(struct fidc_membh *, int, struct slash_creds *);
-	int (*slfsop_bmap_load)(struct fidc_membh *, size_t);
-	/* sl_write - Object write.  Either within mds or ios
-	 *  context.
-	 */
-	int (*slfsop_write)(struct fidc_membh *, const void *, int, off_t);
-	/* sl_read - Object read.  Either within mds or ios
-	 *  context.
-	 */
-	int (*slfsop_read)(struct fidc_membh *, const void *, int, off_t);
-	/* sl_getmap - load the data placement map for a given file.
-	 * On the client, the blk no's are determined by calculating the
-	 * request offset with the block size.
-	 */
-	int (*slfsop_getmap)(struct fidc_membh *, struct bmapc_memb *, int);
-	int (*slfsop_invmap)(struct fidc_membh *, struct bmap_refresh *);
+struct sl_fcmh_ops {
+	int	(*sfop_getattr)(struct fidc_membh *, const struct slash_creds *);
+	int	(*sfop_init)(struct fidc_membh *);
+	void	(*sfop_dtor)(struct fidc_membh *);
 };
 
 /*
@@ -74,7 +59,6 @@ struct fidc_membh {
 	struct psclist_head	 fcmh_lentry;
 	struct psc_listcache	*fcmh_cache_owner;
 	struct psc_waitq	 fcmh_waitq;
-	struct sl_fsops		*fcmh_fsops;
 
 	struct fidc_membh	*fcmh_parent;
 	struct psclist_head	 fcmh_sibling;
@@ -222,6 +206,7 @@ enum fidc_lookup_flags {
 #define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
 
 int			 fidc_membh_init(struct psc_poolmgr *, void *);
+void			 fidc_membh_dtor(void *);
 void			 fidc_membh_setattr(struct fidc_membh *, const struct stat *);
 
 struct fidc_open_obj	*fidc_fcoo_init(void);
@@ -241,7 +226,7 @@ void                     fidc_fcm_size_update(struct fidc_membh *, size_t);
 ssize_t                  fidc_fcm_size_get(struct fidc_membh *);
 
 
-extern struct sl_fsops		*slFsops;
+extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_hashtbl	 fidcHtable;
 extern struct psc_poolmgr	*fidcPool;
 extern struct psc_listcache	 fidcDirtyList;

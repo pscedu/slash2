@@ -132,6 +132,8 @@ int	 translate_pathname(const char *, char []);
 int	 lookup_pathname_fg(const char *, struct slash_creds *,
 	    struct slash_fidgen *, struct stat *);
 
+int	 slash2fuse_stat(struct fidc_membh *, const struct slash_creds *);
+
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;
 extern struct psc_listcache	 bmapFlushQ;

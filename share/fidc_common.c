@@ -42,8 +42,6 @@ struct psc_listcache	 fidcDirtyList;
 struct psc_listcache	 fidcCleanList;
 struct psc_hashtbl	 fidcHtable;
 
-struct sl_fsops		*slFsops;
-
 void
 fidc_membh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 {
@@ -139,7 +137,7 @@ fidc_put(struct fidc_membh *f, list_cache_t *lc)
 
 		/* Re-initialize it before placing onto the free list
 		 */
-		fidc_membh_init(fidcPool, f);
+		memset(f, 0, sizeof(*f));
 
 	} else if (lc == &fidcCleanList) {
 		psc_assert(f->fcmh_cache_owner == &fidcPool->ppm_lc ||
@@ -251,7 +249,7 @@ fidc_reap(struct psc_poolmgr *m)
 		 */
 		if (fidcReapCb && ((fidcReapCb)(f))) {
 			f->fcmh_state |= FCMH_CAC_FREEING;
-			lc_del(&f->fcmh_lentry, &fidcCleanList);
+			lc_remove(&fidcCleanList, f);
 			psc_dynarray_add(&da, f);
 		}
  end1:
@@ -545,14 +543,12 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 	}
 
-	if ((flags & FIDC_LOOKUP_LOAD) ||
-	    (flags & FIDC_LOOKUP_REFRESH)) {
-		if (slFsops) {
-			rc = slFsops->slfsop_getattr(fcmh, creds);
-			if (rc) {
-				DEBUG_FCMH(PLL_DEBUG, fcmh, "getattr failure");
-				return (-rc);
-			}
+	if ((flags & (FIDC_LOOKUP_LOAD | FIDC_LOOKUP_REFRESH)) &&
+	    sl_fcmh_ops.sfop_getattr) {
+		rc = sl_fcmh_ops.sfop_getattr(fcmh, creds);
+		if (rc) {
+			DEBUG_FCMH(PLL_DEBUG, fcmh, "getattr failure");
+			return (-rc);
 		}
 	}
 
@@ -564,18 +560,30 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
  * fidc_membh_init - init a fidcache member handle.
  */
 int
-fidc_membh_init(__unusedx struct psc_poolmgr *pm, void *a)
+fidc_membh_init(__unusedx struct psc_poolmgr *m, void *p)
 {
-	struct fidc_membh *f = a;
+	struct fidc_membh *f = p;
+	int rc = 0;
 
 	memset(f, 0, sizeof(*f));
 	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
 	LOCK_INIT(&f->fcmh_lock);
 	atomic_set(&f->fcmh_refcnt, 0);
 	psc_waitq_init(&f->fcmh_waitq);
-	f->fcmh_fsops = slFsops;
 	f->fcmh_state = FCMH_CAC_FREE;
-	return (0);
+
+	if (sl_fcmh_ops.sfop_init)
+		rc = sl_fcmh_ops.sfop_init(f);
+	return (rc);
+}
+
+void
+fidc_membh_dtor(void *p)
+{
+	struct fidc_membh *f = p;
+
+	if (sl_fcmh_ops.sfop_dtor)
+		sl_fcmh_ops.sfop_dtor(f);
 }
 
 struct fidc_open_obj *
@@ -621,8 +629,8 @@ fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 	}
 
 	psc_poolmaster_init(&fidcPoolMaster, struct fidc_membh,
-			    fcmh_lentry, 0, fcdsz, 0, fcmsz,
-			    fidc_membh_init, NULL, fidc_reap, "fcmh");
+	    fcmh_lentry, 0, fcdsz, 0, fcmsz, fidc_membh_init,
+	    fidc_membh_dtor, fidc_reap, "fcmh");
 
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 

@@ -36,6 +36,7 @@
 #include "fid.h"
 #include "fidc_cli.h"
 #include "fidcache.h"
+#include "mount_slash.h"
 
 /**
  * fidc_new - create a new fni structure and initialize it using provided
@@ -486,3 +487,9 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 
 	DEBUG_FCMH(PLL_WARN, ch, "fni=%p, rename file: %s -->  %s", fni, oldname, newname);
 }
+
+struct sl_fcmh_ops sl_fcmh_ops = {
+/* getattr */	slash2fuse_stat,
+/* init */	NULL,
+/* dtor */	NULL
+};
