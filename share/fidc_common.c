@@ -467,6 +467,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		if (stb) {
 			locked = reqlock(&fcmh->fcmh_lock);
 			memcpy(&fcmh->fcmh_stb, stb, sizeof(struct stat));
+			fidc_gettime(fcmh_2_age(fcmh));
 			ureqlock(&fcmh->fcmh_lock, locked);
 		}
 
