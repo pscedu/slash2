@@ -252,8 +252,6 @@ dump_statbuf(struct stat *stb, int level)
 
 //RB_PROTOTYPE(fcmh_childrbtree, fidc_membh, fcmh_children, bmap_cmp);
 
-extern void (*initFcooCb)(struct fidc_open_obj *);
-
 static __inline void
 fidc_gettime(struct timespec *ts)
 {

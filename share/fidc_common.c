@@ -33,7 +33,6 @@
 #include "fidcache.h"
 
 int (*fidcReapCb)(struct fidc_membh *);
-void (*initFcooCb)(struct fidc_open_obj *);
 
 struct psc_poolmaster	 fidcPoolMaster;
 struct psc_poolmgr	*fidcPool;
@@ -642,7 +641,6 @@ fidcache_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
 	    fcmh_fg, fcmh_hentry, htsz, NULL, "fidc");
-	initFcooCb = NULL;
 	fidcReapCb = fcm_reap_cb;
 }
 
