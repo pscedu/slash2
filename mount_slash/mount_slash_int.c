@@ -67,6 +67,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	DEBUG_BMAP(PLL_TRACE, b, "adding req for (off=%u) (size=%u)",
 		   off, len);
 
+	psc_assert(len);
 	psc_assert((off + len) <= SLASH_BMAP_SIZE);
 	psc_assert(op == BIORQ_WRITE || op == BIORQ_READ);
 	*newreq = r = PSCALLOC(sizeof(struct bmpc_ioreq));
@@ -470,7 +471,7 @@ msl_fbr_free(struct msl_fbr *r)
 	struct bmapc_memb *b = r->mfbr_bmap;
 
 	psc_assert(b);
-	psc_assert(SPLAY_ENTRY_DISJOINT(fhbmap_cache, r));
+	//	psc_assert(SPLAY_ENTRY_DISJOINT(fhbmap_cache, r));
 
 	msl_fbr_unref(r);
 	PSCFREE(r);
@@ -1586,9 +1587,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	/* Are these bytes in the cache?
 	 *  Get the start and end block regions from the input parameters.
 	 */
-	//XXX beware, I think 'e' can be short by 1.
 	s = off / mslfh_2_bmapsz(mfh);
-	e = (off + size) / mslfh_2_bmapsz(mfh);
+	e = ((off + size) - 1) / mslfh_2_bmapsz(mfh);
 
 	if ((e - s) > MAX_BMAPS_REQ)
 		return (-EINVAL);
@@ -1601,10 +1601,12 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	/* Foreach block range, get its bmap and make a request into its
 	 *  page cache.  This first loop retrieves all the pages.
 	 */
-	for (nr=0; s <= e; s++, nr++) {
+	for (nr=0; s <= e; s++, nr++) {		
 		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
 			   "sz=%zu tlen=%zu off=%"PSCPRIdOFF" roff=%"PSCPRIdOFF
 			   " rw=%d", tsize, tlen, off, roff, rw);
+
+		psc_assert(tsize);
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
 		 */
