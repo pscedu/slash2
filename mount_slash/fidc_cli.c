@@ -162,17 +162,13 @@ fidc_child_free_orphan_locked(struct fidc_membh *f)
  * Note: the locking order is [parent, child, child fni]
  */
 static struct fidc_nameinfo *
-fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
-			const char *name)
+fidc_child_try_validate_locked(struct fidc_membh *p, struct fidc_membh *c,
+			       const char *name)
 {
 	struct fidc_nameinfo *fni;
 
 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
-
-	spinlock(&p->fcmh_lock);
-	spinlock(&c->fcmh_lock);
-
 	psc_assert(p->fcmh_state & FCMH_ISDIR);
 	psc_assert(!(p->fcmh_state & FCMH_CAC_FREEING));
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
@@ -205,9 +201,6 @@ fidc_child_try_validate(struct fidc_membh *p, struct fidc_membh *c,
 			}
 		}
 	}
-	freelock(&c->fcmh_lock);
-	freelock(&p->fcmh_lock);
-
 	return (fni);
 }
 
@@ -290,10 +283,11 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	psclist_for_each_entry(c, &p->fcmh_children, fcmh_sibling) {
 
 		psc_traces(PSS_GEN, "p=fcmh@%p c=%p cname=%s hash=%d",
-			   p, c, c->fcmh_name->fni_name, c->fcmh_name->fni_hash);
+		       p, c, c->fcmh_name->fni_name, c->fcmh_name->fni_hash);
 
 		if ((c->fcmh_name->fni_hash == hash) &&
-		    (!strncmp(name, c->fcmh_name->fni_name, strnlen(name, NAME_MAX)))) {
+		    (!strncmp(name, c->fcmh_name->fni_name, 
+			      strnlen(name, NAME_MAX)))) {
 			found = 1;
 			psc_assert(c->fcmh_parent == p);
 			fidc_membh_incref(c);
@@ -398,7 +392,6 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 void
 fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 {
-	struct fidc_nameinfo *fni;
 	struct fidc_membh *tmp=NULL;
 
 	psc_assert(p && c && name);
@@ -406,35 +399,38 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
 
+	spinlock(&p->fcmh_lock);
+	spinlock(&c->fcmh_lock);
+
 	DEBUG_FCMH(PLL_INFO, p, "name(%s)", name);
 
-	if (fidc_child_try_validate(p, c, name))
+	if (fidc_child_try_validate_locked(p, c, name)) {
+		freelock(&c->fcmh_lock);
+		freelock(&p->fcmh_lock);
 		return;
-
-	/* Couldn't validate an existing namespace reference.
-	 */
-	fni = fidc_new(p, c, name);
-
-	psc_assert(fni);
+	}
 
 	/* Here's our atomic check+add onto the parent d_inode.
 	 */
-	spinlock(&p->fcmh_lock);
-	spinlock(&c->fcmh_lock);
 	if (!(tmp = fidc_child_lookup_int_locked(p, name))) {
+		struct fidc_nameinfo *fni;
+
 		/* It doesn't yet exist, add it.
 		 */
+		fni = fidc_new(p, c, name);
+		psc_assert(fni);
+
 		c->fcmh_name = fni;
 		c->fcmh_parent = p;
 		psclist_xadd_tail(&c->fcmh_sibling, &p->fcmh_children);
-		DEBUG_FCMH(PLL_WARN, p, "fni=%p, adding name: %s", fni, fni->fni_name);
-	} else {
+		DEBUG_FCMH(PLL_WARN, p, "fni=%p, adding name: %s", 
+			   fni, fni->fni_name);
+	} else
 		/* Someone beat us to the punch, do sanity checks and then
 		 *  clean up.
 		 */
 		fidc_membh_dropref(tmp);
-		PSCFREE(fni);
-	}
+
 	freelock(&c->fcmh_lock);
 	freelock(&p->fcmh_lock);
 }
