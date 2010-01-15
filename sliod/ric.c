@@ -108,7 +108,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *     bmap relative (ie it's filewise.
 	 */
 	//if ((mq->offset + mq->size) >= ((bmapno + 1) * SLASH_BMAP_SIZE)) {
-	if ((mq->offset + mq->size) >= SLASH_BMAP_SIZE) {
+	if ((mq->offset + mq->size - 1) >= SLASH_BMAP_SIZE) {
 		psc_errorx("req offset / size outside of the bmap's "
 		   "address range off=%u len=%u",
 			   mq->offset, mq->size);
