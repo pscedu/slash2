@@ -32,8 +32,9 @@ struct slictlmsg_replwkst {
 	struct slash_fidgen	srws_fg;
 	char			srws_peer_addr[RESM_ADDRBUF_SZ];
 	sl_bmapno_t		srws_bmapno;
-	uint32_t		srws_len;
-	uint32_t		srws_offset;
+	uint32_t		srws_data_tot;
+	uint32_t		srws_data_cur;
+	/* XXX #inflight slivers? */
 };
 
 /* sliricthr thread stat aliases */

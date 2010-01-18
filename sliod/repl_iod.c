@@ -106,8 +106,10 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 		BMAP_LOCK(w->srw_bcm);
 		for (i = len = 0; i < SLASH_SLVRS_PER_BMAP && len < (int)w->srw_len;
 		    i++, len += SLASH_SLVR_SIZE)
-			if (bmap_2_crcbits(w->srw_bcm, i) & BMAP_SLVR_DATA)
+			if (bmap_2_crcbits(w->srw_bcm, i) & BMAP_SLVR_DATA) {
 				bmap_2_crcbits(w->srw_bcm, i) |= BMAP_SLVR_WANTREPL;
+				w->srw_nslvr_tot++;
+			}
 		BMAP_ULOCK(w->srw_bcm);
 	}
 

@@ -311,8 +311,8 @@ mds.c
 - adapt tsuite
 - add ctl for bcmp
 - add ctl for connections
-- fix slictl -sr
 - more truncation framework
+- work on slictl fs import command
 
 - bump generation and assign ACTIVE bh_repls when assigning bmaps to
   IONS
