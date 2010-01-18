@@ -1,16 +1,16 @@
 $Id$
 
 1/14/10
-* Deal with problems surrounding full odtable. ATM odtable put errors are not dealt with properly 
+* Deal with problems surrounding full odtable. ATM odtable put errors are not dealt with properly
 leading to problems later in cfdfree where the bmap refcnt is wrong.
 
 gdb> bt
 #0  0x0000003c10c30265 in raise () from /lib64/libc.so.6
 #1  0x0000003c10c31d10 in abort () from /lib64/libc.so.6
-#2  0x0000000000463032 in _psclogv (fn=0x59b3e0 "/home/yanovich/code/advsys/p4/slash_nara/share/bmap.c", func=0x59b617 "_bmap_op_done", 
+#2  0x0000000000463032 in _psclogv (fn=0x59b3e0 "/home/yanovich/code/advsys/p4/slash_nara/share/bmap.c", func=0x59b617 "_bmap_op_done",
     line=83, subsys=4, level=0, options=0, fmt=0x59b46d "[assert] %s", ap=0x2aaacb203580)
     at /home/yanovich/code/advsys/p4/psc_fsutil_libs/psc_util/log.c:258
-#3  0x000000000046326a in _psc_fatal (fn=0x59b3e0 "/home/yanovich/code/advsys/p4/slash_nara/share/bmap.c", func=0x59b617 "_bmap_op_done", 
+#3  0x000000000046326a in _psc_fatal (fn=0x59b3e0 "/home/yanovich/code/advsys/p4/slash_nara/share/bmap.c", func=0x59b617 "_bmap_op_done",
     line=83, subsys=4, level=0, options=0, fmt=0x59b46d "[assert] %s") at /home/yanovich/code/advsys/p4/psc_fsutil_libs/psc_util/log.c:281
 #4  0x000000000043cabf in _bmap_op_done (b=0x11beb0f0) at /home/yanovich/code/advsys/p4/slash_nara/share/bmap.c:83
 #5  0x00000000004166da in mds_bmap_ref_drop_locked (bmap=0x11beb0f0, rw=SL_WRITE)
@@ -306,18 +306,18 @@ mds.c
 - as soon as a write ION is assigned, invalidate other replicas; don't
   wait for the actual WRITE to come
 - rename SL_REPL_* -> SL_REPLST_*
-- fix slictl -sr
 - msctl -Q as root on files that are read-only shouldn't give EPERM
 
 - adapt tsuite
+- add ctl for bcmp
+- add ctl for connections
+- fix slictl -sr
+- more truncation framework
 
 - bump generation and assign ACTIVE bh_repls when assigning bmaps to
   IONS
 - think about routing blips where MDS<->ION is not quite what a ION<->ION
   can see each, causing unnecessary replication work processing
-- use the in-tree fuse
-- add ctl for bcmp
-- add ctl for connections
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
