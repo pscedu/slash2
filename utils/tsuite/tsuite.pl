@@ -41,15 +41,15 @@ require $ARGV[0];
 my $testname = $ARGV[0];
 $testname =~ s!.*/!!;
 
-our ($rootdir, $svnroot, @zestions, @clients, $src,
+our ($rootdir, $svnroot, @mds, @cli, @ion, $src,
     @test_users, $intvtimeout, $runtimeout, $logbase);
 
 # Sanity check variables
 fatalx "rootdir not defined"	unless defined $rootdir;
 fatalx "svnroot not defined"	unless defined $svnroot;
-fatalx "zestions not defined"	unless defined @zestions;
-fatalx "clients not defined"	unless defined @clients;
-fatalx "test_users not defined"	unless defined @test_users;
+fatalx "mds not defined"	unless defined @mds;
+fatalx "cli not defined"	unless defined @cli;
+fatalx "ion not defined"	unless defined @ion;
 fatalx "intvtimeout not defined" unless defined $intvtimeout;
 fatalx "runtimeout not defined"	unless defined $runtimeout;
 fatalx "svnroot not defined"	unless defined $svnroot;
@@ -85,7 +85,7 @@ my $tsid;
 # Grab a unique base directory
 do {
 	$tsid = sprintf "%06d", int rand 1_000_000;
-	$base = "$rootdir/zsuite.$tsid";
+	$base = "$rootdir/slsuite.$tsid";
 } while -d $base;
 
 my $mp = "$base/mp";
@@ -102,98 +102,134 @@ chdir $base		or fatal "chdir $base";
 unless (defined($src)) {
 	$src = "$base/src";
 	debug_msg "svn checkout -q $svnroot $src";
-	`svn checkout -q $svnroot $src`;
+	system "svn checkout -q $svnroot $src";
 	fatalx "svn failed" if $?;
 
 	debug_msg "make build";
-	`cd $src/zest && make build >/dev/null`;
+	system "cd $src/fuse && make build >/dev/null";
+	fatalx "make failed" if $?;
+	system "cd $src/slash_nara && make zbuild >/dev/null";
+	fatalx "make failed" if $?;
+	system "cd $src/slash_nara && make build >/dev/null";
 	fatalx "make failed" if $?;
 }
 
-my $zbase = "$src/zest";
-my $ssh_init = "set -e; PATH=\$PATH:/cluster/packages/lustre_utils/1.6.6/bin; cd $base";
+my $slbase = "$src/slash_nara";
+my $zfs_fuse = "$slbase/utils/zfs-fuse.sh";
+my $zpool = "$slbase/utils/zpool.sh";
+my $slmkjrnl = "$slbase/utils/zpool.sh";
+my $ion_bmaps_odt = "/var/lib/slashd/ion_bmaps.odt";
+
+my $ssh_init = "set -e; cd $base";
 
 # Setup server configuration
-open ZESTCONF, ">", "$base/zest.conf" or fatal "open $base/zest.conf";
-print ZESTCONF zest_conf(base => $base);
-close ZESTCONF;
+open SLCONF, ">", "$base/slash.conf" or fatal "open $base/slash.conf";
+print SLCONF slash_conf(base => $base);
+close SLCONF;
 
 # Setup client commands
 open CLICMD, ">", "$base/cli_cmd" or fatal "open $base/cli_cmd";
-print CLICMD "set -e;";
+print CLICMD "set -e;\n";
 print CLICMD cli_cmd(
 	fspath	=> $mp,
 	base	=> $base,
 	src	=> $src,
 	logbase	=> $logbase,
-	gdbtry	=> "$src/tools/gdbtry.pl ",
+	gdbtry	=> "$src/tools/gdbtry.pl",
 	doresults => "perl $src/tools/tsuite_results.pl " .
 		($opts{N} ? "-N " : "") . ($opts{m} ? "-m " : "") .
 		" $testname $logbase");
 close CLICMD;
 
-my ($i, $_c);
+my ($i);
 
-# Format the zestions
-foreach $i (@zestions) {
-	debug_msg "zestFormat: $i";
+# Create the MDS' environments
+foreach $i (@mds) {
+	debug_msg "MDS environment: $i";
 	runcmd "ssh $i sh", <<EOF;
 	    $ssh_init
-	    $zbase/zestFormat/zestFormat -c $base/zest.conf -fQ
-	    lfs setstripe $base/zobjroot 0 -1 -1
+	    $zfs_fuse &
+	    sleep 2
+	    $zpool create $zpool_name
+	    $slimmns_format /$zpool_name
+	    sync; sync
+	    umount /$pool
+	    kill %1
+
+	    $slmkjrnl
+	    $odtable -C -N $ion_bmaps_odt
 EOF
 }
 
 waitjobs $intvtimeout;
 
-# Launch the zestions
-foreach $i (@zestions) {
-	debug_msg "zestion: $i";
+# Launch MDS
+foreach $i (@mds) {
+	debug_msg "MDS: $i";
 	runcmd "ssh $i sh", <<EOF;
 	    $ssh_init
-	    @{[zestion_env($i)]}
-	    screen -d -m -S ZSERVER.$tsid \\
-		gdb -f -x $zbase/utils/tsuite/zestion.gdbcmd $zbase/zestion/zestiond
+	    @{[slashd_env($i)]}
+	    screen -d -m -S SLMDS.$tsid \\
+		gdb -f -x $slbase/utils/tsuite/slashd.gdbcmd $slbase/slashd/slashd
 EOF
 }
 
 waitjobs $intvtimeout;
 
-# Wait for the server control sockets to appear,
-# which means the fscks have completed.
+# Wait for the server control sockets to appear
 alarm $intvtimeout;
-sleep 1 until scalar @{[ glob "$base/ctl/zestiond.*.sock" ]} == @zestions;
+sleep 1 until scalar @{[ glob "$base/ctl/slashd.*.sock" ]} == @mds;
 alarm 0;
 
-# Launch the mountpoints
-my $nmz = 0;
-foreach $_c (@clients) {
-	next unless ($i = $_c) =~ s/:mz$//;
+# Launch the IONs
+foreach $i (@ion) {
+	debug_msg "ION environment: $i";
+	runcmd "ssh $i sh", <<EOF;
+	    $ssh_init
+	    $slimmns_format -i $fsroot
+EOF
+}
 
-	$nmz++;	# Count instances to wait for control sockets later.
-	debug_msg "mount_zest: $i";
+waitjobs $intvtimeout;
+
+# Launch MDS
+foreach $i (@ion) {
+	debug_msg "ION: $i";
+	runcmd "ssh $i sh", <<EOF;
+	    $ssh_init
+	    @{[iod_env($i)]}
+	    screen -d -m -S SLIOD.$tsid \\
+		gdb -f -x $slbase/utils/tsuite/sliod.gdbcmd $slbase/sliod/sliod
+EOF
+}
+
+waitjobs $intvtimeout;
+
+# Wait for the server control sockets to appear
+alarm $intvtimeout;
+sleep 1 until scalar @{[ glob "$base/ctl/sliod.*.sock" ]} == @ion;
+alarm 0;
+
+# Launch the client mountpoints
+foreach $i (@cli) {
+	debug_msg "mount_slash: $i";
 	runcmd "ssh $i sh", <<EOF;
 		$ssh_init
 		@{[mz_env($i)]}
-		screen -d -m -S MZ.$tsid \\
-		    sh -c "gdb -f -x $zbase/utils/tsuite/mz.gdbcmd $zbase/mount_zest/mount_zest; umount $mp"
+		screen -d -m -S MSL.$tsid \\
+		    sh -c "gdb -f -x $slbase/utils/tsuite/msl.gdbcmd $slbase/mount_slash/mount_slash; umount $mp"
 EOF
 }
 
-if ($nmz) {
-	waitjobs $intvtimeout;
+waitjobs $intvtimeout;
 
-	# Wait for the client control sockets to appear,
-	# which means the mountpoints are up.
-	alarm $intvtimeout;
-	sleep 1 until scalar @{[ glob "$base/ctl/mz.*.sock" ]} == $nmz;
-	alarm 0;
-}
+# Wait for the client control sockets to appear
+alarm $intvtimeout;
+sleep 1 until scalar @{[ glob "$base/ctl/msl.*.sock" ]} == $cli;
+alarm 0;
 
 # Run the client applications
-foreach $_c (@clients) {
-	($i = $_c) =~ s/:mz$//;
-
+foreach $i (@cli) {
 	debug_msg "client: $i";
 	runcmd "ssh $i sh", <<EOF;
 	    $ssh_init
@@ -208,10 +244,8 @@ EOF
 waitjobs $runtimeout;
 
 # Unmount mountpoints
-foreach $_c (@clients) {
-	next unless ($i = $_c) =~ s/:mz$//;
-
-	debug_msg "unmounting MZ on $i";
+foreach $i (@cli) {
+	debug_msg "unmounting mount_slash: $i";
 	runcmd "ssh $i sh", <<EOF;
 	    $ssh_init
 	    umount $mp
@@ -220,27 +254,41 @@ EOF
 
 waitjobs $intvtimeout;
 
-# Kill zestions
-foreach $i (@zestions) {
-	debug_msg "stopping zestion on $i";
+# Kill IONs
+foreach $i (@ion) {
+	debug_msg "stopping sliod: $i";
 	runcmd "ssh $i sh", <<EOF;
 	    $ssh_init
-	    $zbase/zctl/zctl -S $base/ctl/zestiond.%h.sock -c exit
+	    $slbase/slictl/slictl -S $base/ctl/sliod.%h.sock -c exit
 EOF
 }
 
 waitjobs $intvtimeout;
 
-foreach $_c (@clients) {
-	next unless ($i = $_c) =~ s/:mz$//;
-
-	debug_msg "stopping client screens on $i";
-	`ssh $i "screen -S MZ.$tsid -X quit"`;
+# Kill MDS's
+foreach $i (@mds) {
+	debug_msg "stopping slashd: $i";
+	runcmd "ssh $i sh", <<EOF;
+	    $ssh_init
+	    $slbase/slmctl/slmctl -S $base/ctl/slashd.%h.sock -c exit
+EOF
 }
 
-foreach $i (@zestions) {
-	debug_msg "stopping zestion screens on $i";
-	`ssh $i screen -S ZSERVER.$tsid -X quit`;
+waitjobs $intvtimeout;
+
+foreach $i (@cli) {
+	debug_msg "force quitting mount_slash screens: $i";
+	system "ssh $i screen -S MSL.$tsid -X quit";
+}
+
+foreach $i (@ion) {
+	debug_msg "force quitting sliod screens: $i";
+	system "ssh $i screen -S SLIOD.$tsid -X quit";
+}
+
+foreach $i (@mds) {
+	debug_msg "force quitting slashd screens: $i";
+	system "ssh $i screen -S SLASHD.$tsid -X quit";
 }
 
 # Clean up files
@@ -251,7 +299,7 @@ if ($opts{r}) {
 	`rm -rf $base`;
 }
 
-};
+}; # end of eval
 
 my $emsg = $@;
 
@@ -262,10 +310,10 @@ if ($opts{m}) {
 
 	if (@lines || $emsg) {
 		my $smtp = Net::SMTP->new('mailer.psc.edu');
-		$smtp->mail('zest-devel@psc.edu');
-		$smtp->to('zest-devel@psc.edu');
+		$smtp->mail('slash2-devel@psc.edu');
+		$smtp->to('slash2-devel@psc.edu');
 		$smtp->data();
-		$smtp->datasend("To: zest-devel\@psc.edu\n");
+		$smtp->datasend("To: slash2-devel\@psc.edu\n");
 		$smtp->datasend("Subject: tsuite errors\n\n");
 		$smtp->datasend("Output from run by ",
 		    ($ENV{SUDO_USER} || $ENV{USER}), ":\n\n");
