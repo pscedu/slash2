@@ -54,7 +54,7 @@ jfi_prep(struct jflush_item *jfi, struct psc_journal *pj)
 }
 
 void
-jfi_schedule(struct jflush_item *jfi, list_cache_t *lc)
+jfi_schedule(struct jflush_item *jfi, struct psc_listcache *lc)
 {
 	spinlock(&jfi->jfi_lock);
 
@@ -66,7 +66,7 @@ jfi_schedule(struct jflush_item *jfi, list_cache_t *lc)
 	if (!(jfi->jfi_state & JFI_QUEUED)) {
 		psc_assert(psclist_disjoint(&jfi->jfi_lentry));
 		jfi->jfi_state |= JFI_QUEUED;
-		lc_queue(lc, &jfi->jfi_lentry);
+		lc_addqueue(lc, jfi);
 	}
 	freelock(&jfi->jfi_lock);
 }

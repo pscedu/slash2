@@ -164,7 +164,7 @@ sl_buffer_inflight_assertions(struct sl_buffer *b)
 #endif
 
 static void
-sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
+sl_buffer_put(struct sl_buffer *slb, struct psc_listcache *lc)
 {
 	int locked = reqlock(&slb->slb_lock);
 
@@ -199,7 +199,7 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
 			sl_buffer_pin_assertions(slb);
 		else
 			psc_fatalx("Invalid listcache address %p", lc);
-		lc_queue(lc, &slb->slb_mgmt_lentry);
+		lc_addqueue(lc, slb);
 		slb->slb_lc_owner = lc;
 	}
 	ureqlock(&slb->slb_lock, locked);
@@ -211,7 +211,7 @@ sl_buffer_put(struct sl_buffer *slb, list_cache_t *lc)
  * @block: wait (or not)
  */
 static struct sl_buffer *
-sl_buffer_get(list_cache_t *lc, int block)
+sl_buffer_get(struct psc_listcache *lc, int block)
 {
 	struct sl_buffer *slb;
 
@@ -224,7 +224,7 @@ sl_buffer_get(list_cache_t *lc, int block)
 }
 
 static struct sl_buffer *
-sl_buffer_timedget(list_cache_t *lc)
+sl_buffer_timedget(struct psc_listcache *lc)
 {
 	struct timespec ts;
 
@@ -236,7 +236,6 @@ sl_buffer_timedget(list_cache_t *lc)
 	return (lc_gettimed(lc, &ts));
 	//return (slb);
 }
-
 
 #define SLB_IOV_VERIFY(v) {						\
 		struct sl_buffer *SSs = (v)->oftiov_pri;		\
@@ -358,7 +357,7 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 		 *  otherwise there will be race conditions
 		 */
 		psc_assert(slb->slb_lc_owner == &slBufsLru);
-		lc_del(&slb->slb_mgmt_lentry, slb->slb_lc_owner);
+		lc_remove(slb->slb_lc_owner, slb);
 		slb_lru_2_pinned(slb);
 	} else {
 		DEBUG_SLB(PLL_FATAL, slb, "invalid slb");

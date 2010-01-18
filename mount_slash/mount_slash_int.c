@@ -471,7 +471,7 @@ msl_fbr_free(struct msl_fbr *r)
 	struct bmapc_memb *b = r->mfbr_bmap;
 
 	psc_assert(b);
-	//	psc_assert(SPLAY_ENTRY_DISJOINT(fhbmap_cache, r));
+//	psc_assert(PSC_SPLAY_ENTRY_DISJOINT(fhbmap_cache, r));
 
 	msl_fbr_unref(r);
 	PSCFREE(r);

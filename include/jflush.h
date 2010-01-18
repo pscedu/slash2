@@ -45,7 +45,7 @@ enum jfi_states {
 };
 
 static inline void
-jfi_init(struct jflush_item *j, jflush_handler handler, 
+jfi_init(struct jflush_item *j, jflush_handler handler,
 	 jflush_prepcb prepcb, void *data)
 {
 	LOCK_INIT(&j->jfi_lock);
@@ -57,6 +57,6 @@ jfi_init(struct jflush_item *j, jflush_handler handler,
 }
 
 void jfi_prep(struct jflush_item *, struct psc_journal *);
-void jfi_schedule(struct jflush_item *, list_cache_t *);
+void jfi_schedule(struct jflush_item *, struct psc_listcache *);
 
 #endif /* _SL_JFLUSH_ */

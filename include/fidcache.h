@@ -144,7 +144,7 @@ do {										\
 		if ((list) == &fidcPool->ppm_lc)				\
 			psc_pool_return(fidcPool, (fcmh));			\
 		else								\
-			lc_put((list), &(fcmh)->fcmh_lentry);			\
+			lc_add((list), (fcmh));					\
 	} while (0)
 
 /* Increment an fcmh reference, fcmh_refcnt is used by the fidcache

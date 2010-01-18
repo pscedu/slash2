@@ -77,7 +77,7 @@ fidc_membh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
  *        performed within fidc_clean_check()
  */
 void
-fidc_put(struct fidc_membh *f, list_cache_t *lc)
+fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 {
 	int clean;
 	struct fidc_membh *tmp;

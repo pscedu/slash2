@@ -467,7 +467,6 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 	 *   this bmap.
 	 */
 	SPLAY_FOREACH(bref, bmap_exports, &mdsi->bmdsi_exports) {
-		struct psclist_head *e=&bref->mexpbcm_lentry;
 		/* Lock while the attributes of the this bref are
 		 *  tested.
 		 */
@@ -503,7 +502,7 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 				 * Verify the current inflight mode.
 				 */
 				mdscoh_infmode_chk(bref, MEXPBCM_CIO_REQD);
-				psc_assert(psclist_conjoint(e));
+				psc_assert(psclist_conjoint(&bref->mexpbcm_lentry));
 				if (!bref->mexpbcm_net_inf) {
 					/* Unschedule this rpc, the coh
 					 *    thread will remove it from
@@ -522,8 +521,8 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 				 */
 				bref->mexpbcm_mode |= MEXPBCM_DIO_REQD;
 				bref->mexpbcm_net_cmd = MEXPBCM_DIO_REQD;
-				psc_assert(psclist_disjoint(e));
-				lc_queue(&pndgBmapCbs, e);
+				psc_assert(psclist_disjoint(&bref->mexpbcm_lentry));
+				lc_addqueue(&pndgBmapCbs, bref);
 			}
 
 		} else if (!enable_dio &&                  /* goto cache io */
@@ -536,7 +535,7 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 				 *  has been queued recently.  Determine if it's inflight
 				 *  of if it still queued.
 				 */
-				psc_assert(psclist_conjoint(e));
+				psc_assert(psclist_conjoint(&bref->mexpbcm_lentry));
 				mdscoh_infmode_chk(bref, MEXPBCM_DIO_REQD);
 				if (!bref->mexpbcm_net_inf) {
 					/* Unschedule this rpc, the coh thread will
@@ -551,8 +550,8 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 			} else {
 				bref->mexpbcm_mode |= MEXPBCM_CIO_REQD;
 				bref->mexpbcm_net_cmd = MEXPBCM_CIO_REQD;
-				psc_assert(psclist_disjoint(e));
-				lc_queue(&pndgBmapCbs, e);
+				psc_assert(psclist_disjoint(&bref->mexpbcm_lentry));
+				lc_addqueue(&pndgBmapCbs, bref);
 			}
 		}
 		MEXPBCM_UREQLOCK(bref, locked);

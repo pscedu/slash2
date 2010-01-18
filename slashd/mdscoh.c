@@ -76,7 +76,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	mq = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
 	mp = psc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
 
-	lc_del(&bref->mexpbcm_lentry, &inflBmapCbs);
+	lc_remove(&inflBmapCbs, bref);
 
 	MEXPBCM_LOCK(bref);
 
@@ -108,7 +108,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 			psc_fatalx("Invalid mode %d", bref->mexpbcm_mode);
 	} else {
 		mdscoh_infmode_chk(bref, mq->dio);
-		lc_queue(&pndgBmapCbs, &bref->mexpbcm_lentry);
+		lc_addqueue(&pndgBmapCbs, bref);
 	}
 	/* Don't unlock until the mexpbcm_net_inf bit is unset.
 	 */
@@ -153,7 +153,7 @@ mdscoh_queue_req(struct mexpbcm *bref)
 	nbreqset_add(bmapCbSet, req);
 	/* This lentry may need to be locked.
 	 */
-	lc_queue(&inflBmapCbs, &bref->mexpbcm_lentry);
+	lc_addqueue(&inflBmapCbs, bref);
 	/* Note that this req has been sent.
 	 */
 	atomic_set(&bref->mexpbcm_msgcnt, 0);
