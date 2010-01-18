@@ -4,30 +4,45 @@
 sub zest_conf {
 	my %h = @_;
 
-	return <<EOF;
-zestion_nodes {
-	citron:1:NONE:default,
-	lemon:2:NONE:default,
-	lime:3:NONE:default,
-	orange:4:NONE:default,
-	grapefruit:5:NONE:default,
-}
+	return <<'EOF';
+global port=1001;
+global net=tcp10;
+global keyfn=/home/jy.slkey;
 
-zestion_node_profile default {
-	block_size	= 1m;
-	bdcon_size	= 512b;
-	sector_size	= 512b;
-	disks		= /dev/sg{[0-9],1[0-6]};
-	keyfile		= /bessemer/zest/tmp/jy.zkey;
-	ndisks_needed	= 15;
-	num_blocks	= 33000;
-	group_size	= 1024;
-	object_root	= $h{base}/zobjroot;
-	sgio		= yes;
-	sgiosz		= 256K;
-	setuuid		= 0xa0824a0b627ef1ad;
-	directio	= yes;
-	startoff	= 1m;
+site @PSC {
+	site_desc	= "PSC";
+	site_id		= 100;
+
+	resource md {
+		desc	= "adamantium metadata";
+		type	= mds;
+		id	= 101;
+		ifs	= adamantium.psc.edu;
+	}
+
+	resource io {
+		desc	= "stryker fast I/O";
+		type	= parallel_fs;
+		id	= 102;
+		fsroot	= /slio-jy;
+		ifs	= stryker.psc.edu;
+	}
+
+	resource archiver {
+		desc	= "wolverine archiver";
+		type	= archival_fs;
+		id	= 103;
+		fsroot	= /slio-jy;
+		ifs	= wolverine.psc.edu;
+	}
+
+	resource gf {
+		desc	= "grapefruit";
+		type	= archival_fs;
+		id	= 104;
+		fsroot	= /local/slio-jy;
+		ifs	= grapefruit.psc.edu;
+	}
 }
 EOF
 }
@@ -113,239 +128,6 @@ group MyReadWrite {
 }
 EOF
 
-push \@res, runfio("fio24t24x10g", 60*2, <<EOF);
-group 8peReadWrite {
-	files_per_dir	= 24;
-	tree_depth	= 0;
-	tree_width	= 0;
-	pes		= 24;
-	test_freq	= 30;
-	block_freq	= 0;
-	path		= "$h{fspath}/%NAME%.\$clienthost";
-	output_path	= "\$fiolog";
-	file_size	= 10g;
-	filename	= %NAME%;
-	block_size	= 128k;
-	thrash_lock	= yes;
-	samedir		= yes;
-	samefile	= no;
-	intersperse	= no;
-	seekoff		= no;
-	fsync_block	= no;
-	verify		= yes;
-	barrier		= yes;
-	time_block	= no;
-	block_barrier	= no;
-	time_barrier	= no;
-	iterations	= 1;
-	debug_conf	= no;
-	debug_block	= no;
-	debug_memory	= no;
-	debug_buffer	= no;
-	debug_output	= no;
-	debug_dtree	= no;
-	debug_barrier	= no;
-	debug_iofunc	= no;
-
-	iotests (
-		WriteEmUp [create:openwr:write:close]
-	)
-}
-EOF
-
-push \@res, runfio("fio8t30Kx64M", 60 * 4, <<EOF);
-group 8pesmallfiles {
-	files_per_dir	= 128;
-	tree_depth	= 5;
-	tree_width	= 3;
-	pes		= 8;
-	test_freq	= 0;
-	block_freq	= 0;
-	path		= "$h{fspath}/%NAME%.\$clienthost";
-	output_path	= "\$fiolog";
-	filename	= %NAME%;
-	file_size	= 64m;
-	block_size	= 128k;
-	thrash_lock	= yes;
-	samedir		= yes;
-	samefile	= no;
-	intersperse	= no;
-	seekoff		= no;
-	fsync_block	= no;
-	verify		= yes;
-	barrier		= yes;
-	time_block	= no;
-	block_barrier	= no;
-	time_barrier	= no;
-	iterations	= 1;
-	debug_conf	= no;
-	debug_block	= no;
-	debug_memory	= no;
-	debug_buffer	= no;
-	debug_output	= no;
-	debug_dtree	= no;
-	debug_barrier	= no;
-	debug_iofunc	= no;
-
-	iotests (
-		WriteEmUp [create:openwr:write:close]
-		statem	[stat]
-	)
-}
-EOF
-
-push \@res, runfio("fio1t1M", 60, <<EOF);
-group 1peCreateOnly {
-	files_per_dir	= 1000000;
-	tree_depth	= 0;
-	tree_width	= 0;
-	pes		= 1;
-	test_freq	= 0;
-	path		= "$h{fspath}/%NAME%.\$clienthost";
-	output_path	= "\$fiolog";
-	filename	= %NAME%;
-	file_size	= 64m;
-	block_size	= 128k;
-	thrash_lock	= no;
-	samedir		= yes;
-	fsync_block	= no;
-	verify		= no;
-	barrier		= yes;
-	block_barrier	= no;
-	app_barrier	= no;
-	time_barrier	= no;
-	iterations	= 1;
-	debug_conf	= no;
-	debug_block	= no;
-	debug_memory	= no;
-	debug_buffer	= no;
-	debug_output	= no;
-	debug_dtree	= no;
-	debug_barrier	= no;
-	debug_iofunc	= no;
-
-	iotests (
-		createOnly [create]
-		unlink	   [unlink]
-	)
-}
-EOF
-
-push \@res, runfio("fio1t100K10k", 60, <<EOF);
-group 1peCreateOnly {
-	files_per_dir	= 100000;
-	tree_depth	= 0;
-	tree_width	= 0;
-	pes		= 1;
-	test_freq	= 0;
-	path		= "$h{fspath}/%NAME%.\$clienthost";
-	output_path	= "\$fiolog";
-	filename	= %NAME%;
-	file_size	= 10k;
-	block_size	= 2k;
-	thrash_lock	= no;
-	samedir		= yes;
-	fsync_block	= no;
-	verify		= no;
-	barrier		= yes;
-	block_barrier	= no;
-	app_barrier	= no;
-	time_barrier	= no;
-	iterations	= 1;
-	debug_conf	= no;
-	debug_block	= no;
-	debug_memory	= no;
-	debug_buffer	= no;
-	debug_output	= no;
-	debug_dtree	= no;
-	debug_barrier	= no;
-	debug_iofunc	= no;
-
-	iotests (
-		createOnly [create]
-		unlink	   [unlink]
-	)
-}
-EOF
-
-push \@res, runfio("fio1t1x16G", 60, <<EOF);
-group 1peWriter {
-	files_per_dir	= 1;
-	tree_depth	= 0;
-	tree_width	= 0;
-	pes		= 1;
-	test_freq	= 0;
-	path		= "$h{fspath}/%NAME%.\$clienthost";
-	output_path	= "\$fiolog";
-	filename	= %NAME%;
-	file_size	= 16g;
-	block_size	= 128k;
-	thrash_lock	= no;
-	samedir		= yes;
-	fsync_block	= no;
-	time_block	= yes;
-	verify		= no;
-	barrier		= yes;
-	block_barrier	= no;
-	app_barrier	= no;
-	time_barrier	= no;
-	iterations	= 1;
-	debug_conf	= no;
-	debug_block	= no;
-	debug_memory	= no;
-	debug_buffer	= no;
-	debug_output	= no;
-	debug_dtree	= no;
-	debug_barrier	= no;
-	debug_iofunc	= no;
-
-	iotests (
-		write00 [create:openwr:write:close]
-		unlinkOnly [unlink]
-	)
-}
-EOF
-
-push \@res, runfio("fio8t8x4G", 60, <<EOF);
-group 8peReadWrite {
-	files_per_dir	= 8;
-	tree_depth	= 0;
-	tree_width	= 0;
-	pes		= 8;
-	test_freq	= 0;
-	block_freq	= 0;
-	path		= "$h{fspath}/%NAME%.\$clienthost";
-	output_path	= "\$fiolog";
-	filename	= %NAME%;
-	file_size	= 4g;
-	block_size	= 128k;
-	thrash_lock	= yes;
-	samedir		= no;
-	samefile	= no;
-	intersperse	= no;
-	seekoff		= no;
-	fsync_block	= no;
-	verify		= yes;
-	barrier		= yes;
-	time_block	= no;
-	block_barrier	= no;
-	time_barrier	= no;
-	iterations	= 1;
-	debug_conf	= no;
-	debug_block	= no;
-	debug_memory	= no;
-	debug_buffer	= no;
-	debug_output	= no;
-	debug_dtree	= no;
-	debug_barrier	= no;
-	debug_iofunc	= no;
-
-	iotests (
-		WriteEmUp [create:openwr:write:close]
-	)
-}
-EOF
-
 my \$infh;
 open2(">&STDOUT", \$infh, "$h{doresults}");
 print \$infh \@res;
@@ -361,39 +143,24 @@ EOS
 ENDCMD
 }
 
-#
-# The value of USOCK_CPORT should match LNET_ACCEPT_PORT (e.g., 1300).
-#
-sub mz_env {
-	return <<'EOF'
-export LNET_USESDP=1
-export USOCK_CPORT=6668
-export LNET_NETWORKS='tcp9(ib0)'
-export ZEST_SERVER_NID='10.10.101.82@tcp9'
-export PSC_LOG_LEVEL=2
-export PSC_LOG_FORMAT='[%s:%06u %n:%f:%l] '
-EOF
-}
-
-sub zestion_env {
-	return <<'EOF'
-export LNET_USESDP=1
-export LNET_ACCEPT_PORT=6668
-export LNET_NETWORKS='tcp9(ib0)'
-export PSC_LOG_LEVEL=2
-export PSC_LOG_FORMAT='[%s:%06u %n:%f:%l] '
-EOF
-}
-
-our $logbase= "/home/zlog";
-our $rootdir = "/bessemer/zest/tmp";
+our $logbase= "/home/slog";
+our $rootdir = "/tmp/slog";
 our $svnroot = 'svn+ssh://frodo/cluster/svn/projects';
-our @zestions = qw(lime-ib);
-our @clients = qw(citron:mz);
-our @test_users = qw(zestusr1); # zestusr2
 our $intvtimeout = 60*7;	# single op interval timeout
 our $runtimeout = 60*60*8;	# client run duration
-# $src can point to top of the source tree used in testing
+our $src = "/home/yanovich/code/advsys/p4";
+
+our @msl = (
+	{
+		addr => "adamantium",
+		env => {
+			PSC_LOG_LEVEL => 2,
+			LNET_NETWORKS => "tcp9(eth0)",
+			SLASH_MDS_NID => "mds0",
+			SLASH2_PIOS_ID => "io0"
+		}
+	},
+);
 
 my $localcfg = __FILE__ . ".local";
 require $localcfg if -e $localcfg;

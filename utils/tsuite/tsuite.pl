@@ -296,7 +296,7 @@ if ($opts{r}) {
 	debug_msg "NOT deleting base dir";
 } else {
 	debug_msg "deleting base dir";
-	`rm -rf $base`;
+	system "rm -rf $base";
 }
 
 }; # end of eval
