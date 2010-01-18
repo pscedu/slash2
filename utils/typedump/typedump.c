@@ -51,7 +51,6 @@
 #include "mount_slash/fidc_cli.h"
 #include "mount_slash/fuse_listener.h"
 #include "mount_slash/mount_slash.h"
-#include "mount_slash/msl_fuse.h"
 #include "mount_slash/rpc_cli.h"
 #include "msctl/msctl.h"
 #include "slashd/bmap_mds.h"
@@ -67,7 +66,6 @@
 #include "slashd/slashd.h"
 #include "sliod/bmap_iod.h"
 #include "sliod/ctl_iod.h"
-#include "sliod/fidc_iod.h"
 #include "sliod/repl_iod.h"
 #include "sliod/rpc_iod.h"
 #include "sliod/sliod.h"
@@ -142,7 +140,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct cfdent);
 	PRTYPE(struct cfdops);
 	PRTYPE(struct cli_resm_info);
-	PRTYPE(struct fidc_iod_info);
 	PRTYPE(struct fidc_mds_info);
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct fidc_nameinfo);
@@ -171,7 +168,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct msrcm_thread);
 	PRTYPE(struct sl_buffer);
 	PRTYPE(struct sl_buffer_iovref);
-	PRTYPE(struct sl_fsops);
+	PRTYPE(struct sl_fcmh_ops);
 	PRTYPE(struct sl_gconf);
 	PRTYPE(struct sl_replrq);
 	PRTYPE(struct sl_resm);
