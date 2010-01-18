@@ -180,12 +180,20 @@ libsl_profile_dump(void)
 void
 libsl_init(int pscnet_mode, int ismds)
 {
-	//lnet_acceptor_port = globalConfig.gconf_port;
-	//setenv("USOCK_CPORT", globalConfig.gconf_port, 1);
-	//setenv("LNET_ACCEPT_PORT", globalConfig.gconf_port, 1);
+	char pbuf[6];
+	int rc;
 
 	psc_assert(pscnet_mode == PSCNET_CLIENT ||
 	    pscnet_mode == PSCNET_SERVER);
+
+	rc = snprintf(pbuf, sizeof(pbuf), "%d", globalConfig.gconf_port);
+	if (rc == -1)
+		psc_fatal("LNET port %d", globalConfig.gconf_port);
+	if (rc >= (int)sizeof(pbuf))
+		psc_fatalx("LNET port %d: too long", globalConfig.gconf_port);
+
+	setenv("USOCK_CPORT", pbuf, 0);
+	setenv("LNET_ACCEPT_PORT", pbuf, 0);
 
 	pscrpc_init_portals(pscnet_mode);
 	pscrpc_getlocalnids(&lnet_nids);
