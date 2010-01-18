@@ -308,9 +308,10 @@ mds.c
 - rename SL_REPL_* -> SL_REPLST_*
 - msctl -Q as root on files that are read-only shouldn't give EPERM
 
-- adapt tsuite
-- add ctl for bcmp
 - add ctl for connections
+- adapt tsuite
+
+- add ctl for bcmp
 - more truncation framework
 - work on slictl fs import command
 
