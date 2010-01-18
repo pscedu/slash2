@@ -43,7 +43,7 @@ struct pscrpc_nbreqset	*bmapCbSet;
 int
 mdscoh_reap(void)
 {
-	return (nbreqset_reap(bmapCbSet));
+	return (pscrpc_nbreqset_reap(bmapCbSet));
 }
 
 void
@@ -150,7 +150,7 @@ mdscoh_queue_req(struct mexpbcm *bref)
 	mq->dio = bref->mexpbcm_net_cmd;
 	mq->blkno = bref->mexpbcm_blkno;
 
-	nbreqset_add(bmapCbSet, req);
+	pscrpc_nbreqset_add(bmapCbSet, req);
 	/* This lentry may need to be locked.
 	 */
 	lc_addqueue(&inflBmapCbs, bref);
@@ -198,7 +198,7 @@ mdscoh_init(void)
 	lc_reginit(&inflBmapCbs, struct mexpbcm, mexpbcm_lentry,
 		   "inflightBmapCbs");
 
-	bmapCbSet = nbreqset_init(NULL, mdscoh_cb);
+	bmapCbSet = pscrpc_nbreqset_init(NULL, mdscoh_cb);
 	pscthr_init(SLMTHRT_COH, 0, mdscohthr_begin,
 	    NULL, 0, "slcohthr");
 }

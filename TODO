@@ -307,6 +307,7 @@ mds.c
   wait for the actual WRITE to come
 - rename SL_REPL_* -> SL_REPLST_*
 - fix slictl -sr
+- msctl -Q as root on files that are read-only shouldn't give EPERM
 
 - adapt tsuite
 

@@ -241,7 +241,7 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, int slvrno,
 	rq->rq_async_args.pointer_arg[SRII_REPLREAD_CBARG_SLVR] = s;
 	psc_atomic32_inc(&w->srw_refcnt);
 
-	nbreqset_add(&sli_replwk_nbset, rq);
+	pscrpc_nbreqset_add(&sli_replwk_nbset, rq);
 
  out:
 	if (rc)

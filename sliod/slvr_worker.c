@@ -102,7 +102,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 			     iovs, mq->ncrc_updates);
 	PSCFREE(iovs);
 
-	nbreqset_add(slvrNbReqSet, req);
+	pscrpc_nbreqset_add(slvrNbReqSet, req);
 
 	return (rc);
 }
@@ -122,7 +122,7 @@ slvr_worker_push_crcups(void)
 	
 	ENTRY;
 
-	nbreqset_reap(slvrNbReqSet);
+	pscrpc_nbreqset_reap(slvrNbReqSet);
 	/*
 	 * Check if an earlier CRC update RPC, if any, has finished.  If one
 	 * is still inflight, we won't be able to initiate a new one.
@@ -424,7 +424,7 @@ slvr_worker_init(void)
 	pll_init(&binflCrcs.binfcrcs_hold, struct biod_crcup_ref, 
 		 bcr_lentry, &binflCrcs.binfcrcs_lock);
 
-	slvrNbReqSet = nbreqset_init(NULL, slvr_nbreqset_cb);
+	slvrNbReqSet = pscrpc_nbreqset_init(NULL, slvr_nbreqset_cb);
 	if (!slvrNbReqSet)
 		psc_fatalx("nbreqset_init() failed");
 
