@@ -20,6 +20,14 @@ sub usage {
 	fatalx "usage: $0 [-mNqr] test\n";
 }
 
+sub init_env {
+	my $r = @_;
+
+	while (my ($k, $v) = each %$r) {
+		print "export $k='$v'";
+	}
+}
+
 my %opts;
 
 sub debug_msg {
@@ -41,15 +49,12 @@ require $ARGV[0];
 my $testname = $ARGV[0];
 $testname =~ s!.*/!!;
 
-our ($rootdir, $svnroot, @mds, @cli, @ion, $src,
-    @test_users, $intvtimeout, $runtimeout, $logbase);
+our ($rootdir, $svnroot, @cli, $src, $intvtimeout, $runtimeout, $logbase);
 
 # Sanity check variables
 fatalx "rootdir not defined"	unless defined $rootdir;
 fatalx "svnroot not defined"	unless defined $svnroot;
-fatalx "mds not defined"	unless defined @mds;
 fatalx "cli not defined"	unless defined @cli;
-fatalx "ion not defined"	unless defined @ion;
 fatalx "intvtimeout not defined" unless defined $intvtimeout;
 fatalx "runtimeout not defined"	unless defined $runtimeout;
 fatalx "svnroot not defined"	unless defined $svnroot;
@@ -115,17 +120,94 @@ unless (defined($src)) {
 }
 
 my $slbase = "$src/slash_nara";
-my $zfs_fuse = "$slbase/utils/zfs-fuse.sh";
 my $zpool = "$slbase/utils/zpool.sh";
-my $slmkjrnl = "$slbase/utils/zpool.sh";
+my $zfs_fuse = "$slbase/utils/zfs-fuse.sh";
+my $slmkjrnl = "$slbase/slmkjrnl/slmkjrnl";
+my $slimmns_format = "$slbase/slimmns/slimmns_format";
+my $odtable = "$src/psc_fsutil_libs/utils/odtable";
 my $ion_bmaps_odt = "/var/lib/slashd/ion_bmaps.odt";
 
 my $ssh_init = "set -e; cd $base";
 
-# Setup server configuration
+# Setup configuration
+my $conf = slash_conf(base => $base);
 open SLCONF, ">", "$base/slash.conf" or fatal "open $base/slash.conf";
-print SLCONF slash_conf(base => $base);
+print SLCONF $conf;
 close SLCONF;
+
+my @mds;
+my @ion;
+my $def_lnet;
+
+sub new_res {
+	my ($host, $site) = @_;
+
+	my %r = (
+		host => $host,
+		site => $site,
+	);
+	return \%r;
+}
+
+sub res_done {
+	my ($r) = @_;
+
+	if ($r->{type} eq "mds") {
+		push @mds, $r;
+	} else {
+		push @ion, $r;
+	}
+}
+
+# Parse configuration for MDS and IONs
+sub parse_conf {
+	my @conf_lines = split $conf;
+	my $in_site = 0;
+	my $site_name;
+	my $r = undef;
+	my @lines = split $conf;
+
+	for (my $ln = 0; $ln < @lines; $ln++) {
+		my $line = $lines[$ln];
+
+		if ($in_site) {
+			if ($r) {
+				if ($line =~ /^\s*type\s*=\s*(\S+)\s*;\s*$/) {
+					$r->{type} = $1;
+				} elsif ($line =~ /^\s*#\s*\@zfspool\s*=\s*(\w+)\s+(.*)\s*$/) {
+					$r->{zpoolname} = $1;
+					$r->{zpool_args} = $2;
+				} elsif ($line =~ /^\s*fsroot\s*=\s*(\S+)\s*;\s*$/) {
+					($r->{fsroot} = $1) =~ s/^"|"$//g;
+				} elsif ($line =~ /^\s*ifs\s*=\s*(.*)$/) {
+					my $tmp = $1;
+
+					for (; ($line = $lines[$ln]) !~ /;/; $ln++) {
+						$tmp .= $line;
+					}
+					$tmp =~ s/;\s*$//;
+					$r->{ifs} = [ split /\s*,\s*/ ];
+				} elsif ($line =~ /^\s*}\s*$/) {
+					res_done($r);
+					$r = undef;
+				}
+			} else {
+				if ($line =~ /^\s*resource\s+(\w+)\s*{\s*$/) {
+					$r = new_res($1, $site_name);
+				}
+			}
+		} else {
+			if ($line =~ /^\s*site\s+@(\w+)\s*{\s*$/) {
+				$site_name = $1;
+				$in_site = 1;
+			} elsif (/^\s*global\s+net\s*=\s*(".*?"|.*?);\s*$/) {
+				($def_lnet = $1) =~ s/^"|"$//g;
+			}
+		}
+	}
+
+	fatalx "could not parse default LNET network from config:\n$conf" unless $def_lnet;
+}
 
 # Setup client commands
 open CLICMD, ">", "$base/cli_cmd" or fatal "open $base/cli_cmd";
@@ -145,15 +227,15 @@ my ($i);
 
 # Create the MDS' environments
 foreach $i (@mds) {
-	debug_msg "MDS environment: $i";
-	runcmd "ssh $i sh", <<EOF;
+	debug_msg "MDS environment: $i->{host}";
+	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
 	    $zfs_fuse &
 	    sleep 2
-	    $zpool create $zpool_name
-	    $slimmns_format /$zpool_name
+	    $zpool create $i->{zpoolname} $i->{zpool_args}
+	    $slimmns_format /$i->{zpoolname}
 	    sync; sync
-	    umount /$pool
+	    umount /$i->{zpoolname}
 	    kill %1
 
 	    $slmkjrnl
@@ -165,10 +247,10 @@ waitjobs $intvtimeout;
 
 # Launch MDS
 foreach $i (@mds) {
-	debug_msg "MDS: $i";
-	runcmd "ssh $i sh", <<EOF;
+	debug_msg "MDS: $i->{host}";
+	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
-	    @{[slashd_env($i)]}
+	    @{[init_env()]}
 	    screen -d -m -S SLMDS.$tsid \\
 		gdb -f -x $slbase/utils/tsuite/slashd.gdbcmd $slbase/slashd/slashd
 EOF
@@ -183,10 +265,10 @@ alarm 0;
 
 # Launch the IONs
 foreach $i (@ion) {
-	debug_msg "ION environment: $i";
-	runcmd "ssh $i sh", <<EOF;
+	debug_msg "ION environment: $i->{host}";
+	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
-	    $slimmns_format -i $fsroot
+	    $slimmns_format -i $i->{fsroot}
 EOF
 }
 
@@ -194,8 +276,8 @@ waitjobs $intvtimeout;
 
 # Launch MDS
 foreach $i (@ion) {
-	debug_msg "ION: $i";
-	runcmd "ssh $i sh", <<EOF;
+	debug_msg "ION: $i->{host}";
+	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
 	    @{[iod_env($i)]}
 	    screen -d -m -S SLIOD.$tsid \\
@@ -212,10 +294,10 @@ alarm 0;
 
 # Launch the client mountpoints
 foreach $i (@cli) {
-	debug_msg "mount_slash: $i";
-	runcmd "ssh $i sh", <<EOF;
+	debug_msg "mount_slash: $i->{host}";
+	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		@{[mz_env($i)]}
+		@{[init_env($i->{env})]}
 		screen -d -m -S MSL.$tsid \\
 		    sh -c "gdb -f -x $slbase/utils/tsuite/msl.gdbcmd $slbase/mount_slash/mount_slash; umount $mp"
 EOF
@@ -225,15 +307,15 @@ waitjobs $intvtimeout;
 
 # Wait for the client control sockets to appear
 alarm $intvtimeout;
-sleep 1 until scalar @{[ glob "$base/ctl/msl.*.sock" ]} == $cli;
+sleep 1 until scalar @{[ glob "$base/ctl/msl.*.sock" ]} == @cli;
 alarm 0;
 
 # Run the client applications
 foreach $i (@cli) {
-	debug_msg "client: $i";
-	runcmd "ssh $i sh", <<EOF;
+	debug_msg "client: $i->{host}";
+	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
-	    screen -d -m -S ZCLIENT.$tsid sh -c "sh $base/cli_cmd $i || \$SHELL"
+	    screen -d -m -S MSL.$tsid sh -c "sh $base/cli_cmd $i->{host} || \$SHELL"
 	    while screen -ls | grep -q CLIENT.$tsid; do
 		[ \$SECONDS -lt $runtimeout ]
 		sleep 1
@@ -245,8 +327,8 @@ waitjobs $runtimeout;
 
 # Unmount mountpoints
 foreach $i (@cli) {
-	debug_msg "unmounting mount_slash: $i";
-	runcmd "ssh $i sh", <<EOF;
+	debug_msg "unmounting mount_slash: $i->{host}";
+	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
 	    umount $mp
 EOF
@@ -256,8 +338,8 @@ waitjobs $intvtimeout;
 
 # Kill IONs
 foreach $i (@ion) {
-	debug_msg "stopping sliod: $i";
-	runcmd "ssh $i sh", <<EOF;
+	debug_msg "stopping sliod: $i->{host}";
+	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
 	    $slbase/slictl/slictl -S $base/ctl/sliod.%h.sock -c exit
 EOF
@@ -267,8 +349,8 @@ waitjobs $intvtimeout;
 
 # Kill MDS's
 foreach $i (@mds) {
-	debug_msg "stopping slashd: $i";
-	runcmd "ssh $i sh", <<EOF;
+	debug_msg "stopping slashd: $i->{host}";
+	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
 	    $slbase/slmctl/slmctl -S $base/ctl/slashd.%h.sock -c exit
 EOF
@@ -277,18 +359,18 @@ EOF
 waitjobs $intvtimeout;
 
 foreach $i (@cli) {
-	debug_msg "force quitting mount_slash screens: $i";
-	system "ssh $i screen -S MSL.$tsid -X quit";
+	debug_msg "force quitting mount_slash screens: $i->{host}";
+	system "ssh $i->{host} screen -S MSL.$tsid -X quit";
 }
 
 foreach $i (@ion) {
-	debug_msg "force quitting sliod screens: $i";
-	system "ssh $i screen -S SLIOD.$tsid -X quit";
+	debug_msg "force quitting sliod screens: $i->{host}";
+	system "ssh $i->{host} screen -S SLIOD.$tsid -X quit";
 }
 
 foreach $i (@mds) {
-	debug_msg "force quitting slashd screens: $i";
-	system "ssh $i screen -S SLASHD.$tsid -X quit";
+	debug_msg "force quitting slashd screens: $i->{host}";
+	system "ssh $i->{host} screen -S SLMDS.$tsid -X quit";
 }
 
 # Clean up files
