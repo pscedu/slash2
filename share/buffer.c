@@ -344,7 +344,8 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 	if (ATTR_TEST(slb->slb_flags, SLB_PINNED)) {
 		 psc_assert(slb->slb_lc_owner == &slBufsPin);
 		 atomic_inc(&slb->slb_inflpndg);
-		 return (sl_buffer_pin_assertions(slb));
+		 sl_buffer_pin_assertions(slb);
+		 return;
 	}
 
 	if (ATTR_TEST(slb->slb_flags, SLB_FRESH)) {
