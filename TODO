@@ -307,6 +307,7 @@ mds.c
   wait for the actual WRITE to come
 - rename SL_REPL_* -> SL_REPLST_*
 - msctl -Q as root on files that are read-only shouldn't give EPERM
+- apply changes to fuse_listener.c from zfs-fuse 0.6.0
 
 - add ctl for connections
 - adapt tsuite
