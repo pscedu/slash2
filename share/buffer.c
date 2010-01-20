@@ -232,9 +232,9 @@ sl_buffer_timedget(struct psc_listcache *lc)
 	slb_set_alloctimer(&ts);
 
 	//struct sl_buffer *slb = lc_gettimed(lc, abstime);
+	//return (slb);
 	//return ((struct sl_buffer *)lc_gettimed(lc, abstime));
 	return (lc_gettimed(lc, &ts));
-	//return (slb);
 }
 
 #define SLB_IOV_VERIFY(v) {						\
