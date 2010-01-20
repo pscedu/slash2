@@ -189,6 +189,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		if (biorq_is_my_bmpce(r, bmpce) &&
 		    (bmpce->bmpce_flags & BMPCE_GETBUF)) {
 			void *tmp;
+
 			/* Increase the rdref cnt in preparation for any
 			 *   RBW ops but only on new pages owned by this
 			 *   page cache entry.  For now bypass
@@ -397,8 +398,6 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	struct bmpc_ioreq *biorq;
 	struct bmap_pagecache *bmpc=bmap_2_msbmpc(b);
 
-	ENTRY;
-
 	BMPC_LOCK(bmpc);
 	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_new_biorqs) {
 		spinlock(&biorq->biorq_lock);
@@ -425,15 +424,12 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 
 	BMAP_ULOCK(b);
-	EXIT;
 }
 
 void
 msl_bmap_final_cleanup(struct bmapc_memb *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_msbmpc(b);
-
-	ENTRY;
 
 	bmap_biorq_waitempty(b);
 
@@ -461,8 +457,6 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	BMPC_LOCK(bmpc);
 	bmpc_freeall_locked(bmpc);
 	BMPC_ULOCK(bmpc);
-
-	EXIT;
 }
 
 void
@@ -938,7 +932,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		bmpce = psc_dynarray_getpos(a, i);
 		BMPCE_LOCK(bmpce);
 
-		DEBUG_BMPCE(PLL_INFO, bmpce, "DATARDY! i=%d len=%d", 
+		DEBUG_BMPCE(PLL_INFO, bmpce, "DATARDY! i=%d len=%d",
 			    i, psc_dynarray_len(a));
 
 		psc_assert(bmpce->bmpce_waitq);
@@ -1181,8 +1175,6 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	struct iovec *iovs;
 	struct psc_dynarray *a;
 	int rc, i;
-
-	ENTRY;
 
 	psc_assert(startpage >= 0);
 	psc_assert(npages <= BMPC_MAXBUFSRPC);
@@ -1601,7 +1593,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	/* Foreach block range, get its bmap and make a request into its
 	 *  page cache.  This first loop retrieves all the pages.
 	 */
-	for (nr=0; s <= e; s++, nr++) {		
+	for (nr=0; s <= e; s++, nr++) {
 		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
 			   "sz=%zu tlen=%zu off=%"PSCPRIdOFF" roff=%"PSCPRIdOFF
 			   " rw=%d", tsize, tlen, off, roff, rw);

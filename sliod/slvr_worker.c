@@ -40,10 +40,10 @@ struct biod_infl_crcs	 binflCrcs;
 struct pscrpc_nbreqset	*slvrNbReqSet;
 
 /*
- * Send an RPC containing CRC updates for slivers to the metadata server.  
- *   To avoid potential woes caused by out-of-order deliveries, we should 
- *   allow at most one inflight CRC update RPC at any time.  Note that this 
- *   does not prevent us from having multiple threads to do the CRC 
+ * Send an RPC containing CRC updates for slivers to the metadata server.
+ *   To avoid potential woes caused by out-of-order deliveries, we should
+ *   allow at most one inflight CRC update RPC at any time.  Note that this
+ *   does not prevent us from having multiple threads to do the CRC
  *   calculation.
  */
 __static int
@@ -58,8 +58,6 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	size_t len;
 	int rc;
 	uint32_t i;
-
-	ENTRY;
 
 	rc = RSX_NEWREQ(sli_rmi_getimp(), SRMI_VERSION,
 			SRMT_BMAPCRCWRT, req, mq, mp);
@@ -119,28 +117,26 @@ slvr_worker_push_crcups(void)
 
 	if (atomic_xchg(&busy, 1))
 		return;
-	
-	ENTRY;
 
 	pscrpc_nbreqset_reap(slvrNbReqSet);
 	/*
 	 * Check if an earlier CRC update RPC, if any, has finished.  If one
 	 * is still inflight, we won't be able to initiate a new one.
 	 */
-	spinlock(&binflCrcs.binfcrcs_lock);	
+	spinlock(&binflCrcs.binfcrcs_lock);
 	bcrs = PSCALLOC(sizeof(struct psc_dynarray));
 	/* Leave scheduled bcr's on the list so that in case of a failure
 	 *   ordering will be maintained.
 	 */
 	PLL_FOREACH(bcr, &binflCrcs.binfcrcs_ready) {
 		psc_assert(bcr->bcr_crcup.nups > 0);
-				
+
 		if (bcr->bcr_flags & BCR_SCHEDULED)
 			continue;
-		
+
 		if (trylock(&bcr->bcr_biodi->biod_lock)) {
 			if (bcr->bcr_biodi->biod_inflight) {
-				DEBUG_BCR(PLL_INFO, bcr, "waiting for xid=%"PRIu64, 
+				DEBUG_BCR(PLL_INFO, bcr, "waiting for xid=%"PRIu64,
 					  bcr->bcr_biodi->biod_bcr_xid_last);
 				freelock(&bcr->bcr_biodi->biod_lock);
 				continue;
@@ -152,18 +148,18 @@ slvr_worker_push_crcups(void)
 			/* Don't deadlock trying for the biodi lock.
 			 */
 			continue;
-		
+
 		psc_dynarray_add(bcrs, bcr);
 		bcr->bcr_flags |= BCR_SCHEDULED;
-		
-		DEBUG_BCR(PLL_INFO, bcr, "scheduled nbcrs=%d total_bcrs=%d", 
-			  psc_dynarray_len(bcrs), 
+
+		DEBUG_BCR(PLL_INFO, bcr, "scheduled nbcrs=%d total_bcrs=%d",
+			  psc_dynarray_len(bcrs),
 			  atomic_read(&binflCrcs.binfcrcs_nbcrs));
-		
+
 		if (psc_dynarray_len(bcrs) == MAX_BMAP_NCRC_UPDATES)
 			break;
 	}
-	
+
 	clock_gettime(CLOCK_REALTIME, &now);
 	/* Now scan for old bcr's hanging about.
 	 */
@@ -172,8 +168,8 @@ slvr_worker_push_crcups(void)
 		 */
 		if (!trylock(&bcr->bcr_biodi->biod_lock))
 			continue;
-		
-		else if (now.tv_sec < 
+
+		else if (now.tv_sec <
 			 (bcr->bcr_age.tv_sec + BIOD_CRCUP_MAX_AGE)) {
 			freelock(&bcr->bcr_biodi->biod_lock);
 			continue;
@@ -191,9 +187,9 @@ slvr_worker_push_crcups(void)
 	else {
 		rc = slvr_worker_crcup_genrq(bcrs);
 		/*
-		 * If we fail to send an RPC, we must leave the reference 
-		 *   in the tree for future attempt.  Otherwise, the callback 
-		 *   function (i.e., slvr_nbreqset_cb()) should remove them 
+		 * If we fail to send an RPC, we must leave the reference
+		 *   in the tree for future attempt.  Otherwise, the callback
+		 *   function (i.e., slvr_nbreqset_cb()) should remove them
 		 *   from the tree.
 		 */
 		if (rc) {
@@ -201,7 +197,7 @@ slvr_worker_push_crcups(void)
 			for (i = 0; i < psc_dynarray_len(bcrs); i++) {
 				bcr = psc_dynarray_getpos(bcrs, i);
 				bcr->bcr_flags &= ~(BCR_SCHEDULED);
-				DEBUG_BCR(PLL_INFO, bcr, 
+				DEBUG_BCR(PLL_INFO, bcr,
 					  "unsetting BCR_SCHEDULED");
 			}
 			freelock(&binflCrcs.binfcrcs_lock);
@@ -209,7 +205,7 @@ slvr_worker_push_crcups(void)
 			PSCFREE(bcrs);
 		}
 	}
-	
+
 	atomic_set(&busy, 0);
 }
 
@@ -223,8 +219,6 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 	struct srm_generic_rep	*mp;
 	struct biod_crcup_ref	*bcr;
 
-	ENTRY;
-
 	err = 0;
 	a = args->pointer_arg[0];
 	psc_assert(a);
@@ -232,7 +226,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 	mp = psc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
 	if (req->rq_status || mp->rc)
 		err = 1;
-       
+
 	for (i=0; i < psc_dynarray_len(a); i++) {
 		bcr = psc_dynarray_getpos(a, i);
 
@@ -248,8 +242,8 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 			bcr->bcr_biodi->biod_inflight = 0;
 			freelock(&bcr->bcr_biodi->biod_lock);
 
-			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");	
-		} else 
+			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
+		} else
 			bcr_ready_remove(&binflCrcs, bcr);
 	}
 	psc_dynarray_free(a);
@@ -311,10 +305,10 @@ slvr_worker_int(void)
 	 *   should be disjointed.
 	 */
 	SLVR_ULOCK(s);
-	//XXX perhaps when we go to a lighter checksum we can hold the 
+	//XXX perhaps when we go to a lighter checksum we can hold the
 	// the lock for the duration
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
-	psc_assert(slvr_do_crc(s));	
+	psc_assert(slvr_do_crc(s));
 	/* Note that this lock covers the slvr lock too.
 	 */
 	spinlock(&slvr_2_biod(s)->biod_lock);
@@ -327,7 +321,7 @@ slvr_worker_int(void)
 	}
 	/* Be paraniod, ensure the sliver is not queued anywhere.
 	 */
-	psc_assert(psclist_disjoint(&s->slvr_lentry));		
+	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(s->slvr_flags & SLVR_CRCING);
 	s->slvr_flags &= ~SLVR_CRCING;
 
@@ -336,15 +330,15 @@ slvr_worker_int(void)
 		lc_addqueue(&crcqSlvrs, s);
 
 	} else {
-		/* Put the slvr back to the LRU so it may have its slab 
+		/* Put the slvr back to the LRU so it may have its slab
 		 *   reaped.
 		 */
 		DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU");
 		s->slvr_flags |= SLVR_LRU;
-		(int)slvr_lru_tryunpin_locked(s);		
+		(int)slvr_lru_tryunpin_locked(s);
 		lc_addqueue(&lruSlvrs, s);
 	}
-	/* Note that we're covered by the slvr_lock, which is actually 
+	/* Note that we're covered by the slvr_lock, which is actually
 	 *   a lock on the whole biodi.
 	 */
 	bcr = slvr_2_biod(s)->biod_bcr;
@@ -360,7 +354,7 @@ slvr_worker_int(void)
 		bcr->bcr_crcup.crcs[bcr->bcr_crcup.nups].slot = s->slvr_num;
 		bcr->bcr_crcup.nups++;
 
-		DEBUG_BCR(PLL_NOTIFY, bcr, "add to existing bcr nups=%d", 
+		DEBUG_BCR(PLL_NOTIFY, bcr, "add to existing bcr nups=%d",
 			  bcr->bcr_crcup.nups);
 
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
@@ -370,9 +364,9 @@ slvr_worker_int(void)
 			 */
 			bcr_hold_requeue(&binflCrcs, bcr);
 
-	} else {		
+	} else {
 		/* XXX not freed? */
-		slvr_2_biod(s)->biod_bcr = bcr = 
+		slvr_2_biod(s)->biod_bcr = bcr =
 			PSCALLOC(sizeof(struct biod_crcup_ref) +
 				 (sizeof(struct srm_bmap_crcwire) *
 				  MAX_BMAP_INODE_PAIRS));
@@ -380,8 +374,8 @@ slvr_worker_int(void)
 		bcr->bcr_biodi = slvr_2_biod(s);
 		bcr->bcr_xid = slvr_2_biod(s)->biod_bcr_xid;
 		slvr_2_biod(s)->biod_bcr_xid++;
-		
-		COPYFID(&bcr->bcr_crcup.fg, 
+
+		COPYFID(&bcr->bcr_crcup.fg,
 			fcmh_2_fgp(slvr_2_bmap(s)->bcm_fcmh));
 
 		bcr->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_blkno;
@@ -391,10 +385,10 @@ slvr_worker_int(void)
 
 		DEBUG_BCR(PLL_NOTIFY, bcr, "newly added");
 		bcr_hold_add(&binflCrcs, bcr);
-	} 
+	}
 	/*
-	 * Either set the initial age of a new sliver or extend the age 
-	 *   of an existing one. Note that if it gets full, it will be 
+	 * Either set the initial age of a new sliver or extend the age
+	 *   of an existing one. Note that if it gets full, it will be
 	 *   sent out immediately regardless of its age.
 	 */
 	clock_gettime(CLOCK_REALTIME, &bcr->bcr_age);
@@ -421,7 +415,7 @@ slvr_worker_init(void)
 	LOCK_INIT(&binflCrcs.binfcrcs_lock);
 	pll_init(&binflCrcs.binfcrcs_ready, struct biod_crcup_ref,
 		 bcr_lentry, &binflCrcs.binfcrcs_lock);
-	pll_init(&binflCrcs.binfcrcs_hold, struct biod_crcup_ref, 
+	pll_init(&binflCrcs.binfcrcs_hold, struct biod_crcup_ref,
 		 bcr_lentry, &binflCrcs.binfcrcs_lock);
 
 	slvrNbReqSet = pscrpc_nbreqset_init(NULL, slvr_nbreqset_cb);

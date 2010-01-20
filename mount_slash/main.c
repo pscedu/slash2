@@ -1535,8 +1535,6 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	struct fidc_membh *c;
 	int rc;
 
-	ENTRY;
-
 	msfsthr_ensure();
 
 	c = NULL;
@@ -1587,7 +1585,6 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		fidc_membh_dropref(c);
 	if (rq)
 		pscrpc_req_finished(rq);
-	EXIT;
 }
 
 //XXX convert me

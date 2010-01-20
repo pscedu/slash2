@@ -62,15 +62,13 @@ slmrmcthr_inode_cacheput(struct slash_fidgen *fg, struct stat *stb,
 {
 	struct fidc_membh	*fcmh;
 
-	ENTRY;
-
 	fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, stb, creds, &fcmh);
 
 	if (fcmh) {
 		fidc_membh_dropref(fcmh);
-		RETURN(0);
-	} else
-		RETURN(-1);
+		return (0);
+	}
+	return (-1);
 }
 
 int
@@ -81,8 +79,6 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 	struct slashrpc_export *slexp;
 	struct mexp_cli *mexp_cli;
-
-	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
@@ -109,7 +105,7 @@ psc_fatalx("impossible");
 	}
 	mexp_cli = mexpcli_get(e);
 	slm_getclcsvc(e);
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -118,12 +114,9 @@ slm_rmc_handle_access(struct pscrpc_request *rq)
 	struct srm_access_req *mq;
 	struct srm_generic_rep *mp;
 
-	ENTRY;
-
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = zfsslash2_access(zfsVfs, mq->ino, mq->mask, &mq->creds);
-
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -132,8 +125,6 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 
-	ENTRY;
-
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = zfsslash2_getattr(zfsVfs, mq->ino, &mq->creds, &mp->attr,
 				   &mp->gen);
@@ -141,7 +132,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	psc_info("zfsslash2_getattr() ino=%"PRId64" gen=%"PRId64" rc=%d",
 		 mq->ino, mp->gen, mp->rc);
 
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -159,17 +150,15 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	uint64_t cfd;
 	int niov;
 
-	ENTRY;
-
 	bmap = NULL;
 	RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = fdbuf_check(&mq->sfdb, &cfd, NULL, rq->rq_peer);
 	if (mp->rc)
-		RETURN(mp->rc);
+		return (mp->rc);
 
 	if ((mq->rw != SL_READ) && (mq->rw != SL_WRITE))
-		RETURN(-EINVAL);
+		return (-EINVAL);
 
 	/*
 	 * Check the cfdent structure associated with the client.  If successful,
@@ -177,12 +166,12 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	 */
 	mp->rc = cfdlookup(rq->rq_export, cfd, &m);
 	if (mp->rc)
-		RETURN(mp->rc);
+		return (mp->rc);
 
 	bmap = NULL;
 	mp->rc = mds_bmap_load_cli(m, mq, &bmap);
 	if (mp->rc)
-		RETURN(mp->rc);
+		return (mp->rc);
 
 	bmdsi = bmap->bcm_pri;
 	cw = (struct slash_bmap_cli_wire *)bmdsi->bmdsi_od->bh_crcstates;
@@ -230,7 +219,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		pscrpc_free_bulk(desc);
 	mp->nblks = 1;
 
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -239,14 +228,11 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	struct srm_link_req *mq;
 	struct srm_link_rep *mp;
 
-	ENTRY;
-
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = zfsslash2_link(zfsVfs, mq->ino, mq->pino, mq->name,
 				&mp->fg, &mq->creds, &mp->attr);
-
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -254,8 +240,6 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
-
-	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
@@ -266,7 +250,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	else
 		mp->rc = zfsslash2_lookup(zfsVfs, mq->pino,
 		    mq->name, &mp->fg, &mq->creds, &mp->attr);
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -275,13 +259,11 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
 
-	ENTRY;
-
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = zfsslash2_mkdir(zfsVfs, mq->pino, mq->name,
 	    mq->mode, &mq->creds, &mp->attr, &mp->fg, 0);
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -323,13 +305,11 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	void *finfo;
 	int fl;
 
-	ENTRY;
-
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
 	if (mp->rc)
-		RETURN(0);
+		return (0);
 	mp->rc = zfsslash2_opencreate(zfsVfs, mq->pino, &mq->creds, fl,
 	    mq->mode, mq->name, &fg, &mp->attr, &finfo);
 	if (!mp->rc) {
@@ -360,7 +340,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 			zfsslash2_release(zfsVfs, fg.fg_fid,
 			    &mq->creds, finfo);
 	}
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -369,54 +349,52 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	struct srm_open_req *mq;
 	struct srm_opencreate_rep *mp;
 	struct slash_fidgen fg;
+	struct cfdent *cfd=NULL;
 	void *finfo;
 	int fl;
-
-	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
 	if (mp->rc)
-		RETURN(0);
+		return (0);
 	mp->rc = zfsslash2_opencreate(zfsVfs, mq->ino, &mq->creds,
 	    fl, 0, NULL, &fg, &mp->attr, &finfo);
 
 	psc_info("zfsslash2_opencreate() fid %"PRId64" rc=%d",
-		 mq->ino, mp->rc);
+	    mq->ino, mp->rc);
+
+	if (mp->rc)
+		return (0);
+
+	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
+
+	psc_info("slmrmcthr_inode_cacheput() fid %"PRId64" rc=%d",
+	    mq->ino, mp->rc);
 
 	if (!mp->rc) {
-		struct cfdent *cfd=NULL;
+		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
+		    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
 
-		mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
-
-		psc_info("slmrmcthr_inode_cacheput() fid %"PRId64" rc=%d",
-			 mq->ino, mp->rc);
-
-		if (!mp->rc) {
-			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-			    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
-
-			if (!mp->rc && cfd) {
-				fdbuf_sign(&cfd->cfd_fdb,
-				    &fg, rq->rq_peer);
-				memcpy(&mp->sfdb, &cfd->cfd_fdb,
-				    sizeof(mp->sfdb));
-			}
-
-			psc_info("cfdnew() fid %"PRId64" rc=%d",
-			    fg.fg_fid, mp->rc);
+		if (!mp->rc && cfd) {
+			fdbuf_sign(&cfd->cfd_fdb,
+			    &fg, rq->rq_peer);
+			memcpy(&mp->sfdb, &cfd->cfd_fdb,
+			    sizeof(mp->sfdb));
 		}
 
-		/*
-		 * On success, the cfd private data, originally the ZFS
-		 * handle private data, is overwritten with an fmdsi,
-		 * so release the ZFS handle if we failed or didn't use it.
-		 */
-		if (cfd == NULL || cfd_2_zfsdata(cfd) != finfo)
-			zfsslash2_release(zfsVfs, fg.fg_fid,
-			    &mq->creds, finfo);
+		psc_info("cfdnew() fid %"PRId64" rc=%d",
+		    fg.fg_fid, mp->rc);
 	}
-	RETURN(0);
+
+	/*
+	 * On success, the cfd private data, originally the ZFS
+	 * handle private data, is overwritten with an fmdsi,
+	 * so release the ZFS handle if we failed or didn't use it.
+	 */
+	if (cfd == NULL || cfd_2_zfsdata(cfd) != finfo)
+		zfsslash2_release(zfsVfs, fg.fg_fid,
+		    &mq->creds, finfo);
+	return (0);
 }
 
 int
@@ -427,8 +405,6 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	struct slash_fidgen fg;
 	struct stat stb;
 	void *finfo;
-
-	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = zfsslash2_opendir(zfsVfs, mq->ino, &mq->creds, &fg,
@@ -446,7 +422,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 
 			if (mp->rc) {
 				psc_error("cfdnew failed rc=%d", mp->rc);
-				RETURN(0);
+				return (0);
 			}
 			fdbuf_sign(&cfd->cfd_fdb, &fg, rq->rq_peer);
 			memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
@@ -461,7 +437,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 			zfsslash2_release(zfsVfs, fg.fg_fid,
 			    &mq->creds, finfo);
 	}
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -475,17 +451,15 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct mexpfcm *m;
 	uint64_t cfd;
 
-	ENTRY;
-
 	RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = fdbuf_check(&mq->sfdb, &cfd, &fg, rq->rq_peer);
 	if (mp->rc)
-		RETURN(0);
+		return(0);
 
 	if (cfdlookup(rq->rq_export, cfd, &m)) {
 		mp->rc = -errno;
-		RETURN(mp->rc);
+		return (mp->rc);
 	}
 
 #define MAX_READDIR_NENTS	1000
@@ -493,7 +467,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mq->size > MAX_READDIR_BUFSIZ ||
 	    mq->nstbpref > MAX_READDIR_NENTS) {
 		mp->rc = EINVAL;
-		RETURN(mp->rc);
+		return (mp->rc);
 	}
 
 	iov[0].iov_base = PSCALLOC(mq->size);
@@ -517,7 +491,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		PSCFREE(iov[0].iov_base);
 		if (mq->nstbpref)
 			PSCFREE(iov[1].iov_base);
-		RETURN(mp->rc);
+		return (mp->rc);
 	}
 
 	if (mq->nstbpref)
@@ -533,7 +507,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	PSCFREE(iov[0].iov_base);
 	if (mq->nstbpref)
 		PSCFREE(iov[1].iov_base);
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -545,20 +519,18 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	struct iovec iov;
 	char buf[PATH_MAX];
 
-	ENTRY;
-
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf);
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = zfsslash2_readlink(zfsVfs, mq->ino, buf, &mq->creds);
 	if (mp->rc)
-		RETURN(0);
+		return (0);
 	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
 	    SRMC_BULK_PORTAL, &iov, 1);
 	if (desc)
 		pscrpc_free_bulk(desc);
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -574,19 +546,17 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 	uint64_t cfd;
 	int rc;
 
-	ENTRY;
-
 	RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = fdbuf_check(&mq->sfdb, &cfd, &fg, rq->rq_peer);
 	if (mp->rc)
-		RETURN(0);
+		return (0);
 
 	c = cfdget(rq->rq_export, cfd);
 	if (!c) {
 		psc_info("cfdget() failed cfd %"PRId64, cfd);
 		mp->rc = ENOENT;
-		RETURN(0);
+		return (0);
 	}
 	psc_assert(c->cfd_pri);
 	m = c->cfd_pri;
@@ -609,7 +579,7 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 
 	mp->rc = mds_inode_release(f);
 
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -621,18 +591,16 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 	struct iovec iov[2];
 
-	ENTRY;
-
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fromlen <= 1 ||
 	    mq->tolen <= 1) {
 		mp->rc = -ENOENT;
-		RETURN(0);
+		return (0);
 	}
 	if (mq->fromlen > NAME_MAX ||
 	    mq->tolen > NAME_MAX) {
 		mp->rc = -EINVAL;
-		RETURN(0);
+		return (0);
 	}
 	iov[0].iov_base = from;
 	iov[0].iov_len = mq->fromlen;
@@ -641,14 +609,14 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 	    SRMC_BULK_PORTAL, iov, 2)) != 0)
-		RETURN(0);
+		return (0);
 	from[sizeof(from) - 1] = '\0';
 	to[sizeof(to) - 1] = '\0';
 	pscrpc_free_bulk(desc);
 
 	mp->rc = zfsslash2_rename(zfsVfs, mq->opino, from,
 				  mq->npino, to, &mq->creds);
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -658,8 +626,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	struct srm_setattr_rep *mp;
 	struct fidc_membh *fcmh;
 	struct fidc_mds_info *fmdsi;
-
-	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
@@ -685,7 +651,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (fcmh)
 		fidc_membh_dropref(fcmh);
 
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -764,11 +730,9 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
 
-	ENTRY;
-
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = zfsslash2_statfs(zfsVfs, &mp->stbv, 1);
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -780,29 +744,27 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	struct iovec iov;
 	char linkname[PATH_MAX];
 
-	ENTRY;
-
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (mq->linklen == 0) {
 		mp->rc = -ENOENT;
-		RETURN(0);
+		return (0);
 	}
 	if (mq->linklen >= PATH_MAX) {
 		mp->rc = -ENAMETOOLONG;
-		RETURN(0);
+		return (0);
 	}
 	iov.iov_base = linkname;
 	iov.iov_len = mq->linklen;
 	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 	    SRMC_BULK_PORTAL, &iov, 1)) != 0)
-		RETURN(0);
+		return (0);
 	linkname[sizeof(linkname) - 1] = '\0';
 	pscrpc_free_bulk(desc);
 
 	mp->rc = zfsslash2_symlink(zfsVfs, linkname, mq->pino, mq->name,
 				   &mq->creds, &mp->attr, &mp->fg);
-	RETURN(0);
+	return (0);
 }
 
 int
@@ -810,8 +772,6 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
-
-	ENTRY;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
@@ -821,8 +781,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	else
 		mp->rc = zfsslash2_rmdir(zfsVfs, mq->pino,
 					 mq->name, &mq->creds);
-
-	RETURN(0);
+	return (0);
 }
 
 int

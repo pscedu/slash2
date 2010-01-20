@@ -430,7 +430,6 @@ bmpc_reap_locked(void)
 	bmpcSlabs.bmms_reap = 0;
 	psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
 	ulockBmpcSlabs();
-	EXIT;
 }
 
 

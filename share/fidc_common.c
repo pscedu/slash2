@@ -198,8 +198,6 @@ fidc_reap(struct psc_poolmgr *m)
 	struct psc_hashbkt *b;
 	int i=0;
 
-	ENTRY;
-
 	psc_assert(m == fidcPool);
 	/* Only one thread may be here.
 	 */
