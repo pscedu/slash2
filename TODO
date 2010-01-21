@@ -311,6 +311,8 @@ mds.c
 
 - add ctl for connections
 - adapt tsuite
+- don't need write perm on a file to enqueue replication,
+  especially root
 
 - add ctl for bcmp
 - more truncation framework
