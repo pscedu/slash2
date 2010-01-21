@@ -402,12 +402,14 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_new_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
+		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
 		freelock(&biorq->biorq_lock);
 	}
 
 	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_pndg_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
+		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
 		freelock(&biorq->biorq_lock);
 	}
 	BMPC_ULOCK(bmpc);
