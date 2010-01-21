@@ -398,7 +398,7 @@ slvr_worker_int(void)
 	slvr_worker_push_crcups();
 }
 
-void *
+__dead void *
 slvr_worker(__unusedx void *arg)
 {
 	for (;;) {
