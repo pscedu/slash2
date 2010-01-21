@@ -180,11 +180,12 @@ mdsio_zfs_inode_write(struct slash_inode_handle *i)
 	} else {
 		DEBUG_INOH(PLL_TRACE, i, "wrote inode (rc=%d) data=%p",
 		    rc, inoh_2_zfsdata(i));
-
+#ifdef SHITTY_PERFORMANCE
 		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
 			     1, inoh_2_zfsdata(i));
 		if (rc == -1)
 			psc_fatal("zfsslash2_fsync() failed");
+#endif
 	}
 	return (rc);
 }
@@ -226,10 +227,12 @@ mdsio_zfs_inode_extras_write(struct slash_inode_handle *i)
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() short I/O");
 		rc = SLERR_SHORTIO;
 	} else {
+#ifdef SHITTY_PERFORMANCE
 		rc = zfsslash2_fsync(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
 			     1, inoh_2_zfsdata(i));
 		if (rc == -1)
 			psc_fatal("zfsslash2_fsync() failed");
+#endif
 	}
 	return (rc);
 }
