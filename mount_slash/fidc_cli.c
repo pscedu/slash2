@@ -195,7 +195,8 @@ fidc_child_try_validate_locked(struct fidc_membh *p, struct fidc_membh *c,
 				psc_assert(psclist_conjoint(&c->fcmh_sibling));
 			} else {
 				c->fcmh_parent = p;
-				psclist_xadd_tail(&c->fcmh_sibling, &p->fcmh_children);
+				psclist_xadd_tail(&c->fcmh_sibling, 
+						  &p->fcmh_children);
 				DEBUG_FCMH(PLL_WARN, p, "reattaching fni=%p",
 					   fni);
 			}
@@ -237,23 +238,22 @@ fidc_child_reap_cb(struct fidc_membh *f)
 		fidc_child_free_orphan_locked(f);
 		return (1);
 
-	} else {
+	} else if (trylock(&f->fcmh_parent->fcmh_lock)) {
 		/* The parent needs to be unlocked after the fni is freed,
 		 *  hence the need for the temp var 'p'.
 		 */
 		struct fidc_membh *p=f->fcmh_parent;
-
+		
 		psc_assert(p);
 		/* This trylock technically violates lock ordering
 		 *  (parent / child / fni) which is why we bail if the
 		 *  parent lock cannot be obtained without blocking.
 		 */
-		if (trylock(&p->fcmh_lock)) {
-			fidc_child_free_plocked(f);
-			freelock(&p->fcmh_lock);
-			return (1);
-		}
+		fidc_child_free_plocked(f);
+		freelock(&p->fcmh_lock);
+		return (1);
 	}
+
 	return (0);
 }
 
@@ -404,13 +404,10 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 
 	DEBUG_FCMH(PLL_INFO, p, "name(%s)", name);
 
-	if (fidc_child_try_validate_locked(p, c, name)) {
-		freelock(&c->fcmh_lock);
-		freelock(&p->fcmh_lock);
-		return;
-	}
+	if (fidc_child_try_validate_locked(p, c, name))
+		goto end;
 
-	/* Here's our atomic check+add onto the parent d_inode.
+	/* Atomic check+add onto the parent d_inode.
 	 */
 	if (!(tmp = fidc_child_lookup_int_locked(p, name))) {
 		struct fidc_nameinfo *fni;
@@ -430,7 +427,7 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 		 *  clean up.
 		 */
 		fidc_membh_dropref(tmp);
-
+ end:
 	freelock(&c->fcmh_lock);
 	freelock(&p->fcmh_lock);
 }
