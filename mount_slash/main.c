@@ -266,7 +266,7 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 	struct fidc_membh	*c;
 	int			 rc;
 
-	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_COPY|flags, 
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_COPY|flags,
 			 stb, creds, &c);
 	if (rc) {
 		psc_assert(!c);
@@ -604,13 +604,12 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	fi->fh = (uint64_t)mfh;
 	fi->keep_cache = 0;
 	fi->direct_io = 1;
-	fi->direct_io = 1;
 
 	/* Increment the fcoo #refs.  The RPC has already taken place.
 	 */
 	slash2fuse_openref_update(m, fi->flags, &flags);
 	fidc_fcoo_startdone(m);
-	
+
 	slash2fuse_reply_create(req, &mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, fi);
 	fidc_membh_dropref(m);		/* slash2fuse_fidc_putget() bumped it. */
 
