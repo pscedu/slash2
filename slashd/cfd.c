@@ -58,7 +58,7 @@ __static int
 cfdinsert(struct cfdent *c, struct pscrpc_export *exp)
 {
 	struct mexp_cli *mc;
-	int rc;
+	int rc = 0;
 
 	spinlock(&exp->exp_lock);
 	mc = mexpcli_get(exp);
