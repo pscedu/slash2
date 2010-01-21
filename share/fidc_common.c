@@ -67,6 +67,8 @@ fidc_membh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 	ureqlock(&fcmh->fcmh_lock, locked);
 }
 
+int fidc_membh_init(__unusedx struct psc_poolmgr *m, void *p);
+ 
 /**
  * fidc_put - release an inode onto an inode list cache.
  *
@@ -136,8 +138,9 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 
 		/* Re-initialize it before placing onto the free list
 		 */
-		memset(f, 0, sizeof(*f));
-
+		//memset(f, 0, sizeof(*f));
+		fidc_membh_init(NULL, (void *)f);
+		
 	} else if (lc == &fidcCleanList) {
 		psc_assert(f->fcmh_cache_owner == &fidcPool->ppm_lc ||
 			   f->fcmh_cache_owner == &fidcDirtyList ||
@@ -244,7 +247,7 @@ fidc_reap(struct psc_poolmgr *m)
 		 *  On the client this means taking the fcc from the
 		 *  parent directory inode.
 		 */
-		if (fidcReapCb && ((fidcReapCb)(f))) {
+		if (!fidcReapCb || (fidcReapCb && ((fidcReapCb)(f)))) {
 			f->fcmh_state |= FCMH_CAC_FREEING;
 			lc_remove(&fidcCleanList, f);
 			psc_dynarray_add(&da, f);
