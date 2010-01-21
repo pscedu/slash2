@@ -61,15 +61,11 @@ __static psc_spinlock_t pndgReqLock = LOCK_INITIALIZER;
 __static void
 bmap_flush_reap_rpcs(void)
 {
-	int i, len;
+	int i;
 	struct pscrpc_request_set *set;
 
 	psc_info("outstandingRpcCnt=%d (before) completedRpcCnt=%d",
 	    atomic_read(&outstandingRpcCnt), atomic_read(&completedRpcCnt));
-
-	pndgReqsLock();
-	len = psc_dynarray_len(&pndgReqSets);
-	pndgReqsUlock();
 
 	for (i=0; i < psc_dynarray_len(&pndgReqSets); i++) {
 		pndgReqsLock();
@@ -196,9 +192,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 __static void
 bmap_flush_inflight_set(struct bmpc_ioreq *r)
 {
-	int i;
 	struct bmap_pagecache *bmpc;
-	struct bmap_pagecache_entry *bmpce;
 
 	spinlock(&r->biorq_lock);
 	psc_assert(r->biorq_flags & BIORQ_SCHED);
@@ -214,15 +208,6 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	pll_remove(&bmpc->bmpc_new_biorqs, r);
 	pll_addtail(&bmpc->bmpc_pndg_biorqs, r);
 	BMPC_ULOCK(bmpc);
-
-#if 0
-	for (i=0; i < psc_dynarray_len(&r->biorq_pages); i++) {
-		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
-		BMPCE_LOCK(bmpce);
-		bmpce_inflight_inc_locked(bmpce);
-		BMPCE_ULOCK(bmpce);
-	}
-#endif
 }
 
 
@@ -612,10 +597,11 @@ bmap_flush(void)
 	int i=0, niovs, nrpcs;
 
 	nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
-	psc_trace("nrpcs=%d", nrpcs);
 
-	if (nrpcs <= 0)
+	if (nrpcs <= 0) {
+		psc_trace("nrpcs=%d", nrpcs);	
 		return;
+	}
 
 	while (nrpcs > 0) {
 		msbd = lc_getnb(&bmapFlushQ);
@@ -695,9 +681,10 @@ bmap_flush(void)
 			psc_dynarray_add(&a, r);
 		}
 		BMPC_ULOCK(bmpc);
-
+		/* Didn't find any work on this bmap.
+		 */
 		if (!psc_dynarray_len(&a))
-			break;
+			continue;
 		/* Sort the items by their offsets.
 		 */
 		psc_dynarray_sort(&a, qsort, bmap_flush_biorq_cmp);
@@ -769,9 +756,12 @@ msbmapflushthr_main(__unusedx void *arg)
 void *
 msbmapflushthrrpc_main(__unusedx void *arg)
 {
-	struct timespec ts = {1, 0};
+	struct timespec ts = {0, 100000};
+	int rc;
+
 	while (1) {
-		psc_waitq_waitrel(&rpcCompletion, NULL, &ts);
+		rc = psc_waitq_waitrel(&rpcCompletion, NULL, &ts);
+		psc_trace("rc=%d", rc);
 		bmap_flush_reap_rpcs();
 		if (shutdown)
 			break;
