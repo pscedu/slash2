@@ -21,9 +21,9 @@ sub usage {
 }
 
 sub init_env {
-	my $r = @_;
+	my %r = @_;
 
-	while (my ($k, $v) = each %$r) {
+	while (my ($k, $v) = each %r) {
 		print "export $k='$v'";
 	}
 }
@@ -49,7 +49,8 @@ require $ARGV[0];
 my $testname = $ARGV[0];
 $testname =~ s!.*/!!;
 
-our ($rootdir, $svnroot, @cli, $src, $intvtimeout, $runtimeout, $logbase);
+our ($rootdir, $svnroot, @cli, $src, $intvtimeout, $runtimeout,
+    $logbase, $global_env);
 
 # Sanity check variables
 fatalx "rootdir not defined"	unless defined $rootdir;
@@ -59,6 +60,7 @@ fatalx "intvtimeout not defined" unless defined $intvtimeout;
 fatalx "runtimeout not defined"	unless defined $runtimeout;
 fatalx "svnroot not defined"	unless defined $svnroot;
 fatalx "logbase not defined"	unless defined $logbase;
+fatalx "global_env not defined"	unless defined $global_env;
 
 local $SIG{ALRM} = sub { fatal "interval timeout exceeded" };
 
@@ -153,8 +155,12 @@ sub res_done {
 	my ($r) = @_;
 
 	if ($r->{type} eq "mds") {
+		fatalx "MDS $r->{host} has no \@zfspool configuration"
+		    unless $r->{zpool_args};
 		push @mds, $r;
 	} else {
+		fatalx "MDS $r->{host} has no \@prefmds configuration"
+		    unless $r->{prefmds};
 		push @ion, $r;
 	}
 }
@@ -174,9 +180,13 @@ sub parse_conf {
 			if ($r) {
 				if ($line =~ /^\s*type\s*=\s*(\S+)\s*;\s*$/) {
 					$r->{type} = $1;
+				} elsif ($line =~ /^\s*id\s*=\s*(\d+)\s*;\s*$/) {
+					$r->{id} = $1;
 				} elsif ($line =~ /^\s*#\s*\@zfspool\s*=\s*(\w+)\s+(.*)\s*$/) {
 					$r->{zpoolname} = $1;
 					$r->{zpool_args} = $2;
+				} elsif ($line =~ /^\s*#\s*\@prefmds\s*=\s*(\w+\@\w+)\s*$/) {
+					$r->{prefmds} = $1;
 				} elsif ($line =~ /^\s*fsroot\s*=\s*(\S+)\s*;\s*$/) {
 					($r->{fsroot} = $1) =~ s/^"|"$//g;
 				} elsif ($line =~ /^\s*ifs\s*=\s*(.*)$/) {
@@ -205,7 +215,6 @@ sub parse_conf {
 			}
 		}
 	}
-
 	fatalx "could not parse default LNET network from config:\n$conf" unless $def_lnet;
 }
 
@@ -225,9 +234,9 @@ close CLICMD;
 
 my ($i);
 
-# Create the MDS' environments
+# Create the MDS file systems
 foreach $i (@mds) {
-	debug_msg "MDS environment: $i->{host}";
+	debug_msg "MDS file system: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
 	    $zfs_fuse &
@@ -245,14 +254,28 @@ EOF
 
 waitjobs $intvtimeout;
 
-# Launch MDS
+# Launch MDS servers
 foreach $i (@mds) {
 	debug_msg "MDS: $i->{host}";
+	my $dat;
+	{
+		local $/;
+		open G, "<", "$slbase/utils/tsuite/slashd.gdbcmd" or fatal "slashd.gdbcmd";
+		$dat = <G>;
+		close G;
+	}
+
+	$dat =~ s/%zpool_name%/$i->{zpoolname}/g;
+
+	open G, ">", "$base/slashd.$i->{id}.gdbcmd" or fatal "write slashd.gdbcmd";
+	print G $dat;
+	close G;
+
 	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
-	    @{[init_env()]}
+	    @{[init_env(%$global_env, )]}
 	    screen -d -m -S SLMDS.$tsid \\
-		gdb -f -x $slbase/utils/tsuite/slashd.gdbcmd $slbase/slashd/slashd
+		gdb -f -x $base/slashd.$i->{id}.gdbcmd $slbase/slashd/slashd
 EOF
 }
 
@@ -263,7 +286,7 @@ alarm $intvtimeout;
 sleep 1 until scalar @{[ glob "$base/ctl/slashd.*.sock" ]} == @mds;
 alarm 0;
 
-# Launch the IONs
+# Create the ION file systems
 foreach $i (@ion) {
 	debug_msg "ION environment: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
@@ -274,12 +297,12 @@ EOF
 
 waitjobs $intvtimeout;
 
-# Launch MDS
+# Launch the ION servers
 foreach $i (@ion) {
 	debug_msg "ION: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 	    $ssh_init
-	    @{[iod_env($i)]}
+	    @{[init_env(%$global_env, SLASH_MDS_NID => $i->{prefmds})]}
 	    screen -d -m -S SLIOD.$tsid \\
 		gdb -f -x $slbase/utils/tsuite/sliod.gdbcmd $slbase/sliod/sliod
 EOF
@@ -297,7 +320,7 @@ foreach $i (@cli) {
 	debug_msg "mount_slash: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		@{[init_env($i->{env})]}
+		@{[init_env(%$global_env, %{$i->{env}})]}
 		screen -d -m -S MSL.$tsid \\
 		    sh -c "gdb -f -x $slbase/utils/tsuite/msl.gdbcmd $slbase/mount_slash/mount_slash; umount $mp"
 EOF

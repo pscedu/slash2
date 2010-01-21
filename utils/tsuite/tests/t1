@@ -4,45 +4,39 @@
 sub zest_conf {
 	my %h = @_;
 
-	return <<'EOF';
-global port=1001;
+	return <<"EOF";
+global port=7001;
 global net=tcp10;
 global keyfn=/home/jy.slkey;
 
-site @PSC {
-	site_desc	= "PSC";
+site \@tsuite {
+	site_desc	= "test tsuite";
 	site_id		= 100;
 
-	resource md {
-		desc	= "adamantium metadata";
-		# @zfspool=adam_zpool hdb
+	resource mds0 {
+		desc	= "first MDS";
+		# \@zfspool=adam_zpool hdb
 		type	= mds;
 		id	= 101;
-		ifs	= adamantium.psc.edu;
+		ifs	= adamantium.psc.edu\@tcp10;
 	}
 
-	resource io {
-		desc	= "stryker fast I/O";
+	resource io0 {
+		desc	= "first ION";
 		type	= parallel_fs;
 		id	= 102;
 		fsroot	= /slio-jy;
-		ifs	= stryker.psc.edu;
+		# \@prefmds=md\@PSC
+		ifs	= stryker.psc.edu\@tcp10;
 	}
 
-	resource archiver {
-		desc	= "wolverine archiver";
+	resource io1 {
+		desc	= "second ION";
 		type	= archival_fs;
 		id	= 103;
 		fsroot	= /slio-jy;
-		ifs	= wolverine.psc.edu;
-	}
-
-	resource gf {
-		desc	= "grapefruit";
-		type	= archival_fs;
-		id	= 104;
-		fsroot	= /local/slio-jy;
-		ifs	= grapefruit.psc.edu;
+		# \@prefmds=md\@PSC
+		ifs	= wolverine.psc.edu\@tcp10;
 	}
 }
 EOF
@@ -150,13 +144,16 @@ our $svnroot = 'svn+ssh://frodo/cluster/svn/projects';
 our $intvtimeout = 60*7;	# single op interval timeout
 our $runtimeout = 60*60*8;	# client run duration
 our $src = "/home/yanovich/code/advsys/p4";
+our $global_env = {
+	PSC_LOG_LEVEL => 2,
+#	LNET_USESDP => 0,
+#	PSC_LOG_FORMAT => "[%s:%06u %n:%T:%f:%l] ",
+};
 
 our @msl = (
 	{
 		host => "adamantium",
 		env => {
-			PSC_LOG_LEVEL => 2,
-			LNET_NETWORKS => "tcp9(eth0)",
 			SLASH_MDS_NID => "mds0",
 			SLASH2_PIOS_ID => "io0"
 		}
