@@ -32,7 +32,7 @@
 
 struct psc_listcache dirtyMdsData;
 
-__static void *
+__dead void *
 mdsfssyncthr_begin(__unusedx void *arg)
 {
 	struct jflush_item *jfi;
