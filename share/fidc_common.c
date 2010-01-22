@@ -136,10 +136,6 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		if (psc_hashent_conjoint(&fidcHtable, f))
 			psc_hashent_remove(&fidcHtable, f);
 
-		/* Re-initialize it before placing onto the free list
-		 */
-		memset(f, 0, sizeof(*f));
-
 	} else if (lc == &fidcCleanList) {
 		psc_assert(f->fcmh_cache_owner == &fidcPool->ppm_lc ||
 			   f->fcmh_cache_owner == &fidcDirtyList ||
@@ -565,7 +561,7 @@ fidc_membh_init(__unusedx struct psc_poolmgr *m, void *p)
 	struct fidc_membh *f = p;
 	int rc = 0;
 
-	memset(f, 0, sizeof(*f));
+	memset(f, 0, sizeof(*f));	/* XXX not necessary, we do it on destroy */
 	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
 	LOCK_INIT(&f->fcmh_lock);
 	atomic_set(&f->fcmh_refcnt, 0);
@@ -584,6 +580,7 @@ fidc_membh_dtor(void *p)
 
 	if (sl_fcmh_ops.sfop_dtor)
 		sl_fcmh_ops.sfop_dtor(f);
+	memset(f, 0, sizeof(*f));
 }
 
 struct fidc_open_obj *
