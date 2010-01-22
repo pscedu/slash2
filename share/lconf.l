@@ -93,7 +93,6 @@ ifs {
 	return INTERFACETAG;
 }
 
-
 "{" {
 	psc_trace("SUBSECT_START TAG %s", yytext);
 	return SUBSECT_START;
