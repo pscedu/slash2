@@ -136,4 +136,5 @@ main(int argc, char *argv[])
 		psc_fatalx("MDS server unavailable");
 
 	slictlthr_main(sfn);
+	/* NOTREACHED */
 }

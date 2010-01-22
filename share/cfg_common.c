@@ -128,7 +128,7 @@ libsl_nid2resm(lnet_nid_t nid)
 	resm = libsl_try_nid2resm(nid);
 	if (resm)
 		return (resm);
-	psc_fatalx("IOS %s not found in SLASH configuration; "
+	psc_fatalx("IOS %s not found in SLASH configuration, "
 	    "verify uniformity across all servers.",
 	    psc_nid2str(nid, nidbuf));
 }

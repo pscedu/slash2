@@ -27,6 +27,7 @@
 #include "pfl/pfl.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
@@ -183,7 +184,5 @@ main(int argc, char *argv[])
 	mds_repl_init();
 	slmtimerthr_spawn();
 	slmctlthr_main(sfn);
-
-	do_exit();
-	exit(0);
+	/* NOTREACHED */
 }
