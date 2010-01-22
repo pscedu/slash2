@@ -286,7 +286,7 @@ peer		: RESOURCE_NAME {
 		}
 		;
 
-interfacelist	: INTERFACETAG EQ interfaces END {}
+interfacelist	: INTERFACETAG EQ interfaces END { }
 		;
 
 interfaces	: interface
@@ -578,28 +578,28 @@ slcfg_store_tok_val(const char *tok, char *val)
 		break;
 
 	case SL_TYPE_FLOAT: {
-			char   *c, floatbuf[17];
-			float   f;
+		char   *c, floatbuf[17];
+		float   f;
 
-			f = atof(val);
-			c = floatbuf;
+		f = atof(val);
+		c = floatbuf;
 
-			bzero(floatbuf, sizeof(floatbuf));
-			snprintf(floatbuf, sizeof(floatbuf), "%f", f);
+		bzero(floatbuf, sizeof(floatbuf));
+		snprintf(floatbuf, sizeof(floatbuf), "%f", f);
 
-			psc_trace("float_val %f '%s'",
-				f, floatbuf);
+		psc_trace("float_val %f '%s'",
+			f, floatbuf);
 
-			while (*(c++) != '\0')
-				if (*c == '.')
-					*c = '\0';
+		while (*(c++) != '\0')
+			if (*c == '.')
+				*c = '\0';
 
-			*(long *)ptr = strtol(floatbuf, NULL, 10);
+		*(long *)ptr = strtol(floatbuf, NULL, 10);
 
-			if (*c != '\0')
-				*(long *)(ptr + 1) = strtol(c, NULL, 10);
-			psc_trace("SL_TYPE_FLOAT Tok '%s' Secs %ld Usecs %lu",
-				e->name, *(long *)ptr, *(long *)(ptr + 1));
+		if (*c != '\0')
+			*(long *)(ptr + 1) = strtol(c, NULL, 10);
+		psc_trace("SL_TYPE_FLOAT Tok '%s' Secs %ld Usecs %lu",
+			e->name, *(long *)ptr, *(long *)(ptr + 1));
 		break;
 	    }
 
