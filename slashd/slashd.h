@@ -115,19 +115,19 @@ struct mds_resprof_info {
 #define cfd_2_fmdsi(cfd)	fcmh_2_fmdsi(cfd_2_fcmh(cfd))
 #define cfd_2_zfsdata(cfd)	fcmh_2_zfsdata(cfd_2_fcmh(cfd))
 
-int	 fid_get(const char *, struct slash_fidgen *,
-	    struct slash_creds *, int, mode_t);
+int		 fid_get(const char *, struct slash_fidgen *,
+		    struct slash_creds *, int, mode_t);
 
-void	 mds_init(void);
-int	 mds_inode_release(struct fidc_membh *);
-int	 mds_inox_load_locked(struct slash_inode_handle *);
-int	 mds_inox_ensure_loaded(struct slash_inode_handle *);
+void		 mds_init(void);
+int		 mds_inode_release(struct fidc_membh *);
+int		 mds_inox_load_locked(struct slash_inode_handle *);
+int		 mds_inox_ensure_loaded(struct slash_inode_handle *);
 
-void	 slmtimerthr_spawn(void);
-void	 slmctlthr_main(const char *);
-void	 slmfssyncthr_init(void);
-void	 slmreplqthr_spawnall(void);
-void	*slmrcmthr_main(void *);
+void		 slmtimerthr_spawn(void);
+__dead void	 slmctlthr_main(const char *);
+void		 slmfssyncthr_init(void);
+void		 slmreplqthr_spawnall(void);
+void		*slmrcmthr_main(void *);
 
 extern struct psc_vbitmap			 slmrcmthr_uniqidmap;
 extern psc_spinlock_t				 slmrcmthr_uniqidmap_lock;
