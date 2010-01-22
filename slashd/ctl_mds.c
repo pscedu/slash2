@@ -29,6 +29,15 @@
 
 struct psc_lockedlist psc_mlists;
 
+#if 0
+int
+exit(void)
+{
+	zfs_exit();
+	exit(0);
+}
+#endif
+
 struct psc_ctlop slmctlops[] = {
 	PSC_CTLDEFOPS
 };
