@@ -3,5 +3,3 @@
 ROOTDIR=${SLASH_BASE}/../
 SLASHMK=${SLASH_BASE}/mk/main.mk
 include ${ROOTDIR}/Makefile.path
-
-DEFINES+=	-DAPP_STRERROR=slstrerror
