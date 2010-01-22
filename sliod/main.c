@@ -75,7 +75,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	const char *cfn, *sfn, *mds;
+	const char *cfn, *sfn, *mds = NULL;
 	int c;
 
 	/* gcrypt must be initialized very early on */
