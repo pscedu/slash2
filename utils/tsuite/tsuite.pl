@@ -1,5 +1,5 @@
 #!/usr/bin/perl -W
-# $Id: tsuite.pl 8434 2009-10-16 20:53:38Z yanovich $
+# $Id$
 
 use Getopt::Std;
 use POSIX qw(:sys_wait_h);
