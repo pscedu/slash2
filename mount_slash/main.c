@@ -1842,9 +1842,6 @@ main(int argc, char *argv[])
 	char c, *nc_mp, *cfg = _PATH_SLASHCONF;
 	int unmount;
 
-	if (setenv("USOCK_PORTPID", "0", 1) == -1)
-		err(1, "setenv");
-
 	pfl_init();
 
 	unmount = 0;

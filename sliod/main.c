@@ -68,7 +68,7 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket]\n", progname);
+	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket] mds-host\n", progname);
 	exit(1);
 }
 
@@ -78,18 +78,12 @@ main(int argc, char *argv[])
 	const char *cfn, *sfn, *mds;
 	int c;
 
+	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION))
 		errx(1, "libgcrypt version mismatch");
 
-	if (setenv("USOCK_PORTPID", "0", 1) == -1)
-		err(1, "setenv");
-
-	if (getenv("LNET_NETWORKS") == NULL)
-		errx(1, "LNET_NETWORKS is not set");
-
 	pfl_init();
-
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLICTLSOCK;
@@ -105,7 +99,10 @@ main(int argc, char *argv[])
 			usage();
 		}
 	argc -= optind;
-	if (argc)
+	argv += optind;
+	if (argc == 1)
+		mds = argv[0];
+	else if (argc)
 		usage();
 
 	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
@@ -117,8 +114,14 @@ main(int argc, char *argv[])
 
 	libsl_init(PSCNET_SERVER, 0);
 
-	if ((mds = getenv("SLASH_MDS_NID")) == NULL)
-		psc_fatalx("please export SLASH_MDS_NID");
+	if (mds == NULL) {
+		mds = getenv("SLASH_MDS_NID");
+		if (mds)
+			warnx("SLASH_MDS_NID environment variable "
+			    "deprecated; use command line parameter");
+	}
+	if (mds == NULL)
+		errx(1, "no MDS host specified");
 
 	sli_rmi_setmds(mds);
 

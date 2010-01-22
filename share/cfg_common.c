@@ -17,11 +17,26 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <arpa/inet.h>
+
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+
+#include <err.h>
+#include <netdb.h>
+
 #include "psc_ds/dynarray.h"
 #include "psc_ds/hash2.h"
+#include "psc_ds/list.h"
 #include "psc_util/log.h"
+#include "psc_util/strlcat.h"
+#include "psc_util/strlcpy.h"
 
 #include "slconfig.h"
+#include "slerr.h"
 
 struct psc_dynarray lnet_nids = DYNARRAY_INIT;
 
@@ -177,11 +192,156 @@ libsl_profile_dump(void)
 		fprintf(stderr, "\tnid %d: %s\n", n, resm->resm_addrbuf);
 }
 
+__static void
+slcfg_getifname(int ifidx, char ifn[IFNAMSIZ])
+{
+	struct ifreq ifr;
+	int rc, s;
+
+	ifr.ifr_ifindex = ifidx;
+	s = socket(AF_INET, SOCK_DGRAM, 0);
+	if (s == -1)
+		psc_fatal("socket");
+
+	rc = ioctl(s, SIOCGIFNAME, &ifr);
+	if (rc == -1)
+		psc_fatal("ioctl SIOCGIFNAME");
+	close(s);
+	strlcpy(ifn, ifr.ifr_name, IFNAMSIZ);
+}
+
+__static void
+slcfg_getifaddrs(struct ifconf *ifc)
+{
+	int rc, s;
+
+	s = socket(AF_INET, SOCK_DGRAM, 0);
+	if (s == -1)
+		psc_fatal("socket");
+
+	ifc->ifc_buf = NULL;
+	rc = ioctl(s, SIOCGIFCONF, ifc);
+	if (rc == -1)
+		psc_fatal("ioctl SIOCGIFCONF");
+
+	/*
+	 * If an interface is being added during this run,
+	 * there is no way to determine that we didn't get
+	 * them all with this approach.
+	 */
+	ifc->ifc_buf = PSCALLOC(ifc->ifc_len);
+	rc = ioctl(s, SIOCGIFCONF, ifc);
+	if (rc == -1)
+		psc_fatal("ioctl SIOCGIFCONF");
+
+	close(s);
+}
+
+__static void
+slcfg_getif(struct ifconf *ifc, struct addrinfo *ai, char ifn[IFNAMSIZ])
+{
+	struct {
+		struct nlmsghdr	nmh;
+		struct rtmsg	rtm;
+#define RT_SPACE 8192
+		char		buf[RT_SPACE];
+	} rq;
+	struct sockaddr_in *sin;
+	struct rtattr *rta;
+	struct ifreq *ifr;
+	int n, s, ifidx;
+	ssize_t rc;
+
+	psc_assert(ai->ai_family == AF_INET);
+	sin = (void *)ai->ai_addr;
+
+	/*
+	 * Scan interfaces for addr since netlink
+	 * will always give us the lo interface.
+	 */
+	ifr = (void *)ifc->ifc_buf;
+	for (n = 0; n < ifc->ifc_len; n += sizeof(*ifr), ifr++) {
+		if (ifr->ifr_addr.sa_family == ai->ai_addr->sa_family &&
+		    memcmp(&sin->sin_addr,
+		    &((struct sockaddr_in *)&ifr->ifr_addr)->sin_addr,
+		    sizeof(sin->sin_addr)) == 0) {
+			strlcpy(ifn, ifr->ifr_name, IFNAMSIZ);
+			return;
+		}
+	}
+
+	/* use netlink to find the destination interface */
+	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (s == -1)
+		psc_fatal("socket");
+
+	memset(&rq, 0, sizeof(rq));
+	rq.nmh.nlmsg_len = NLMSG_SPACE(sizeof(rq.rtm)) +
+	    RTA_LENGTH(sizeof(sin->sin_addr));
+	rq.nmh.nlmsg_flags = NLM_F_REQUEST;
+	rq.nmh.nlmsg_type = RTM_GETROUTE;
+
+	rq.rtm.rtm_family = ai->ai_family;
+	rq.rtm.rtm_protocol = RTPROT_UNSPEC;
+	rq.rtm.rtm_table = RT_TABLE_MAIN;
+	/* # bits filled in target addr */
+	rq.rtm.rtm_dst_len = sizeof(sin->sin_addr) * NBBY;
+	rq.rtm.rtm_scope = RT_SCOPE_LINK;
+
+	rta = (void *)((char *)&rq + NLMSG_SPACE(sizeof(rq.rtm)));
+	rta->rta_type = RTA_DST;
+	rta->rta_len = RTA_LENGTH(sizeof(sin->sin_addr));
+	memcpy(RTA_DATA(rta), &sin->sin_addr,
+	    sizeof(sin->sin_addr));
+
+	errno = 0;
+	rc = write(s, &rq, rq.nmh.nlmsg_len);
+	if (rc != rq.nmh.nlmsg_len)
+		psc_fatal("routing socket length mismatch");
+
+	rc = read(s, &rq, sizeof(rq));
+	if (rc == -1)
+		psc_fatal("routing socket read");
+	close(s);
+
+	if (rq.nmh.nlmsg_type == NLMSG_ERROR) {
+		struct nlmsgerr *err;
+
+		err = NLMSG_DATA(&rq.nmh);
+		psc_fatalx("netlink: %s",
+		    slstrerror(err->error));
+	}
+
+	rc -= NLMSG_SPACE(sizeof(rq.rtm));
+	while (rc > 0) {
+		if (rta->rta_type == RTA_OIF &&
+		    RTA_PAYLOAD(rta) == sizeof(ifidx)) {
+			memcpy(&ifidx, RTA_DATA(rta),
+			    sizeof(ifidx));
+			slcfg_getifname(ifidx, ifn);
+			return;
+		}
+		rta = RTA_NEXT(rta, rc);
+	}
+	psc_fatalx("no route for addr");
+}
+
 void
 libsl_init(int pscnet_mode, int ismds)
 {
-	char pbuf[6];
-	int rc;
+	struct {
+		char			*net;
+		char			 ifn[IFNAMSIZ];
+		struct psclist_head	 lentry;
+	} *lent, *lnext;
+	char *p, pbuf[6], lnetstr[256], addrbuf[HOST_NAME_MAX];
+	struct addrinfo hints, *res, *res0;
+	int netcmp, error, rc, j, k;
+	PSCLIST_HEAD(lnets_hd);
+	struct sl_resource *r;
+	struct sl_resm *m;
+	struct sl_site *s;
+	struct ifconf ifc;
 
 	psc_assert(pscnet_mode == PSCNET_CLIENT ||
 	    pscnet_mode == PSCNET_SERVER);
@@ -194,6 +354,89 @@ libsl_init(int pscnet_mode, int ismds)
 
 	setenv("USOCK_CPORT", pbuf, 0);
 	setenv("LNET_ACCEPT_PORT", pbuf, 0);
+
+	if (setenv("USOCK_PORTPID", "0", 1) == -1)
+		err(1, "setenv");
+
+	slcfg_getifaddrs(&ifc);
+	lent = PSCALLOC(sizeof(*lent));
+
+	PLL_LOCK(&globalConfig.gconf_sites);
+	PLL_FOREACH(s, &globalConfig.gconf_sites)
+		DYNARRAY_FOREACH(r, j, &s->site_resources)
+			DYNARRAY_FOREACH(m, k, &r->res_members) {
+				p = strchr(m->resm_addrbuf, ':');
+				psc_assert(p);
+				strlcpy(addrbuf, p + 1, sizeof(addrbuf));
+				p = strrchr(addrbuf, '@');
+				psc_assert(p);
+				*p = '\0';
+
+				/* get numerical addresses */
+				memset(&hints, 0, sizeof(hints));
+				hints.ai_family = PF_INET;
+				hints.ai_socktype = SOCK_STREAM;
+				error = getaddrinfo(addrbuf, NULL, &hints, &res0);
+				if (error)
+					psc_fatalx("%s", gai_strerror(error));
+
+				for (res = res0; res; res = res->ai_next) {
+					/* get destination routing interface */
+					slcfg_getif(&ifc, res, lent->ifn);
+					lent->net = strrchr(m->resm_addrbuf, '@') + 1;
+
+					/*
+					 * Ensure mutual exclusion of this
+					 * interface and lustre network.
+					 */
+					netcmp = 1;
+					psclist_for_each_entry(lnext,
+					    &lnets_hd, lentry) {
+						netcmp = strcmp(lnext->net, lent->net);
+						if (netcmp ^
+						    (strcmp(lnext->ifn, lent->ifn) == 0))
+							break;
+						psc_fatalx("interface and lustre "
+						    "network not exclusive");
+					}
+
+					if (netcmp) {
+						psclist_xadd(&lent->lentry, &lnets_hd);
+						lent = PSCALLOC(sizeof(*lent));
+					}
+				}
+				freeaddrinfo(res0);
+			}
+	PLL_ULOCK(&globalConfig.gconf_sites);
+
+	PSCFREE(lent);
+	PSCFREE(ifc.ifc_buf);
+
+	lnetstr[0] = '\0';
+	psclist_for_each_entry_safe(lent, lnext, &lnets_hd, lentry) {
+		if (lnetstr[0] != '\0')
+			if (psc_strlcat(lnetstr, ",",
+			    sizeof(lnetstr)) >= sizeof(lnetstr))
+				psc_fatalx("too many lustre networks");
+
+		if (psc_strlcat(lnetstr, lent->net,
+		    sizeof(lnetstr)) >= sizeof(lnetstr))
+			psc_fatalx("too many lustre networks");
+		if (psc_strlcat(lnetstr, "(",
+		    sizeof(lnetstr)) >= sizeof(lnetstr))
+			psc_fatalx("too many lustre networks");
+		if (psc_strlcat(lnetstr, lent->ifn,
+		    sizeof(lnetstr)) >= sizeof(lnetstr))
+			psc_fatalx("too many lustre networks");
+		if (psc_strlcat(lnetstr, ")",
+		    sizeof(lnetstr)) >= sizeof(lnetstr))
+			psc_fatalx("too many lustre networks");
+
+		psclist_del(&lent->lentry);
+		PSCFREE(lent);
+	}
+
+	setenv("LNET_NETWORKS", lnetstr, 0);
 
 	pscrpc_init_portals(pscnet_mode);
 	pscrpc_getlocalnids(&lnet_nids);

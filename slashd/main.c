@@ -129,15 +129,10 @@ main(int argc, char *argv[])
 	char *zfspoolcf=NULL;
 	int c;
 
+	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	if (!gcry_check_version(GCRYPT_VERSION))
 		errx(1, "libgcrypt version mismatch");
-
-	if (setenv("USOCK_PORTPID", "0", 1) == -1)
-		err(1, "setenv");
-
-	if (getenv("LNET_NETWORKS") == NULL)
-		errx(1, "LNET_NETWORKS is not set");
 
 	pfl_init();
 

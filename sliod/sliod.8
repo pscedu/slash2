@@ -12,12 +12,22 @@ server daemon
 .Nm sliod
 .Op Fl f Ar conf
 .Op Fl S Ar socket
+.Ar mds-host
 .Sh DESCRIPTION
 The
 .Nm
-daemon serves I/O requests to
+daemon serves
+.Tn I/O
+requests to
 .Tn SLASH
 file system clients.
+.Pp
+The
+.Ar mds-host
+parameter specifies the
+.Xr slash.conf 5
+resource name of the primary metadata server to use for communicating
+file metadata.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
@@ -46,11 +56,6 @@ character
 .Pp
 The default is
 .Pa /var/run/sliod. Ns Ic %h Ns Pa .sock .
-.El
-.Sh ENVIRONMENT
-.Bl -tag -width Ev
-.It Ev SLASH_MDS_NID
-Primary metadata server address or resource name.
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact

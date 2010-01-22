@@ -48,6 +48,7 @@ SRCS+=		${PFL_BASE}/psc_util/pool.c
 SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
 SRCS+=		${PFL_BASE}/psc_util/random.c
 SRCS+=		${PFL_BASE}/psc_util/rlimit.c
+SRCS+=		${PFL_BASE}/psc_util/strlcat.c
 SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
