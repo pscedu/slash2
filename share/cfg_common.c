@@ -326,6 +326,25 @@ slcfg_getif(struct ifconf *ifc, struct addrinfo *ai, char ifn[IFNAMSIZ])
 	psc_fatalx("no route for addr");
 }
 
+int
+slcfg_ifcmp(const char *a, const char *b)
+{
+	char *p, ia[IFNAMSIZ], ib[IFNAMSIZ];
+
+	strlcpy(ia, a, IFNAMSIZ);
+	strlcpy(ib, b, IFNAMSIZ);
+
+	p = strchr(ia, ':');
+	if (p)
+		*p = '\0';
+
+	p = strchr(ib, ':');
+	if (p)
+		*p = '\0';
+
+	return (strcmp(ia, ib));
+}
+
 void
 libsl_init(int pscnet_mode, int ismds)
 {
@@ -334,7 +353,7 @@ libsl_init(int pscnet_mode, int ismds)
 		char			 ifn[IFNAMSIZ];
 		struct psclist_head	 lentry;
 	} *lent, *lnext;
-	char ch, *p, pbuf[6], lnetstr[256], addrbuf[HOST_NAME_MAX];
+	char *p, pbuf[6], lnetstr[256], addrbuf[HOST_NAME_MAX];
 	struct addrinfo hints, *res, *res0;
 	int netcmp, error, rc, j, k;
 	PSCLIST_HEAD(lnets_hd);
@@ -396,21 +415,16 @@ libsl_init(int pscnet_mode, int ismds)
 						netcmp = strcmp(lnext->net,
 						    lent->net);
 
-						if ((netcmp ^
-						    strncmp(lnext->ifn, lent->ifn,
-						     strcspn(lent->ifn, ":"))) == 0)
+						if (netcmp ^
+						    slcfg_ifcmp(lent->ifn, lnext->ifn))
+							psc_fatalx("interfaces (%s:%s) and "
+							    "lustre networks (%s:%s) "
+							    "not exclusive",
+							    lnext->net, lent->net,
+							    lnext->ifn, lent->ifn);
+						/* if the same, don't process more */
+						if (!netcmp)
 							break;
-
-						ch = lnext->ifn[
-						    strcspn(lnext->ifn, ":")];
-						if (ch != '\0' && ch != ':')
-							break;
-
-						psc_fatalx("interfaces (%s:%s) and "
-						    "lustre networks (%s:%s) "
-						    "not exclusive",
-						    lnext->net, lent->net,
-						    lnext->ifn, lent->ifn);
 					}
 
 					if (netcmp) {
