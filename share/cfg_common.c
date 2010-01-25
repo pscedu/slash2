@@ -334,7 +334,7 @@ libsl_init(int pscnet_mode, int ismds)
 		char			 ifn[IFNAMSIZ];
 		struct psclist_head	 lentry;
 	} *lent, *lnext;
-	char *p, pbuf[6], lnetstr[256], addrbuf[HOST_NAME_MAX];
+	char ch, *p, pbuf[6], lnetstr[256], addrbuf[HOST_NAME_MAX];
 	struct addrinfo hints, *res, *res0;
 	int netcmp, error, rc, j, k;
 	PSCLIST_HEAD(lnets_hd);
@@ -387,17 +387,30 @@ libsl_init(int pscnet_mode, int ismds)
 
 					/*
 					 * Ensure mutual exclusion of this
-					 * interface and lustre network.
+					 * interface and lustre network,
+					 * ignoring any interface aliases.
 					 */
 					netcmp = 1;
 					psclist_for_each_entry(lnext,
 					    &lnets_hd, lentry) {
-						netcmp = strcmp(lnext->net, lent->net);
-						if (netcmp ^
-						    (strcmp(lnext->ifn, lent->ifn) == 0))
+						netcmp = strcmp(lnext->net,
+						    lent->net);
+
+						if ((netcmp ^
+						    strncmp(lnext->ifn, lent->ifn,
+						     strcspn(lent->ifn, ":"))) == 0)
 							break;
-						psc_fatalx("interface and lustre "
-						    "network not exclusive");
+
+						ch = lnext->ifn[
+						    strcspn(lnext->ifn, ":")];
+						if (ch != '\0' && ch != ':')
+							break;
+
+						psc_fatalx("interfaces (%s:%s) and "
+						    "lustre networks (%s:%s) "
+						    "not exclusive",
+						    lnext->net, lent->net,
+						    lnext->ifn, lent->ifn);
 					}
 
 					if (netcmp) {
