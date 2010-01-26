@@ -319,6 +319,7 @@ mds.c
 - add ctl for bcmp
 - more truncation framework
 - work on slictl fs import command
+- do not spawn threads for replstatus in slashd
 
 - bump generation and assign ACTIVE bh_repls when assigning bmaps to
   IONS
