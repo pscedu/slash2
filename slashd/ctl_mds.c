@@ -25,7 +25,10 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 
+#include "creds.h"
 #include "ctl_mds.h"
+
+#include "zfs-fuse/zfs_slashlib.h"
 
 struct psc_lockedlist psc_mlists;
 
@@ -57,7 +60,7 @@ int psc_ctl_ncmds = nitems(psc_ctl_cmds);
 void
 slmctlthr_main(const char *fn)
 {
-	psc_ctlparam_register("faults", psc_ctlparam_faults);
+//	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
