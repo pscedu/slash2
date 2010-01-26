@@ -392,10 +392,14 @@ msctlthr_spawn(void)
 	msctl_replstsc_pool = psc_poolmaster_getmgr(
 	    &msctl_replstsc_poolmaster);
 
+	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);
 	psc_ctlparam_register("log.format", psc_ctlparam_log_format);
 	psc_ctlparam_register("log.level", psc_ctlparam_log_level);
+	psc_ctlparam_register("pause", psc_ctlparam_pause);
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
+	psc_ctlparam_register("rlim.nofile", psc_ctlparam_rlim_nofile);
+	psc_ctlparam_register("run", psc_ctlparam_run);
 
 	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_begin, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr");

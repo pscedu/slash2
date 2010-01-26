@@ -19,6 +19,8 @@ SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
+MAN+=		msctl.8
+
 MODULES+=	lnet-hdrs pthread
 
 include ${SLASHMK}

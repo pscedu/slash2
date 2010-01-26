@@ -11,7 +11,7 @@ file system mount daemon runtime control
 .Sh SYNOPSIS
 .Nm msctl
 .Op Fl HIR
-.Op Fl c Ar cmd
+.\" .Op Fl c Ar cmd
 .Op Fl f Ar cmd
 .Op Fl h Ar table
 .Op Fl i Ar iostatspec
@@ -33,17 +33,14 @@ behavior.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
-.It Fl c Ar cmd
-Instruct
-.Xr mount_slash 8
-to perform one of the following actions:
-.Pp
-.Bl -tag -compact -offset indent -width 12n
-.It Ic exit
-Completely terminate
-.Xr mount_slash 8
-execution.
-.El
+.\" .It Fl c Ar cmd
+.\" Instruct
+.\" .Xr mount_slash 8
+.\" to perform one of the following actions:
+.\" .Pp
+.\" .Bl -tag -compact -offset indent -width 12n
+.\" .It Ic reconfig
+.\" .El
 .It Fl f Ar cmd
 Perform a
 .Tn SLASH
