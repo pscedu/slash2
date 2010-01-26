@@ -45,15 +45,6 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *a)
 	return (0);
 }
 
-__static void
-bmpc_wake_reaper(void)
-{
-	spinlock(&bmpcSlabs.bmms_lock);
-	if (bmpcSlabs.bmms_reap > 1)
-		bmpcSlabs.bmms_reap = 0;
-	psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
-	freelock(&bmpcSlabs.bmms_lock);
-}
 
 void
 bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
@@ -76,11 +67,10 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 	} else {
 		if (bmpce->bmpce_flags & BMPCE_GETBUF)
 			psc_assert(!bmpce->bmpce_base);
-		else {
+		else
 			if (bmpce->bmpce_flags & BMPCE_LRU)
 				psc_assert(pll_conjoint(&bmpc->bmpc_lru,
 							bmpce));
-		}
 	}
 
 	if (incref) {
@@ -133,7 +123,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 				pll_addtail(&bmpc->bmpc_lru, bmpce);
 				//pll_add_sorted(&bmpc->bmpc_lru, bmpce, 
 				//	       bmpce_lrusort_cmp1);
-				bmpc_wake_reaper();
+				psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
 			}
 		}
 	}
@@ -366,7 +356,6 @@ bmpc_reap_locked(void)
 	sleep:
 		atomic_inc(&bmpcSlabs.bmms_waiters);
 		psc_waitq_wait(&bmpcSlabs.bmms_waitq, &bmpcSlabs.bmms_lock);
-		atomic_dec(&bmpcSlabs.bmms_waiters);
 		return;
 	} else
 		/* This thread now holds the reap lock.
@@ -380,6 +369,7 @@ bmpc_reap_locked(void)
 	/* Should be sorted from oldest bmpc to newest.  Skip bmpc whose
 	 *   bmpc_oldest time is too recent.
 	 */
+ retry:
 	clock_gettime(CLOCK_REALTIME, &ts);
 	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 
@@ -409,9 +399,9 @@ bmpc_reap_locked(void)
 		if (atomic_read(&bmpcSlabs.bmms_waiters) < 0)
 			atomic_set(&bmpcSlabs.bmms_waiters, 0);
 	} else {
-		bmpcSlabs.bmms_reap = 2;
-		spinlock(&bmpcSlabs.bmms_lock);
-		goto sleep;
+		psc_waitq_waitrel_us(&bmpcSlabs.bmms_waitq, NULL, 100);
+		LIST_CACHE_LOCK(&bmpcLru);
+		goto retry;
 	}
 
 	psc_notify("nfreed=%d, waiters=%d", nfreed, waiters);
