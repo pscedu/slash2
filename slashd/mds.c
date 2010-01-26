@@ -647,6 +647,8 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
 	atomic_inc(&(fcmh_2_fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
 
+	mds_repl_inv_except_locked(bmap, bmi.bmi_ios);
+
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
 		   "inc fmdsi_ref (%d) for bmap assignment",
 		   atomic_read(&(fcmh_2_fmdsi(bmap->bcm_fcmh))->fmdsi_ref));
@@ -1136,7 +1138,7 @@ int
 mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
     struct bmapc_memb **bmap)
 {
-	struct bmapc_memb *b, tbmap;
+	struct bmapc_memb *b;
 	struct fidc_membh *f=fref->mexpfcm_fcmh;
 	struct fidc_mds_info *fmdsi=f->fcmh_fcoo->fcoo_pri;
 	struct slash_inode_handle *inoh=&fmdsi->fmdsi_inodeh;
@@ -1146,8 +1148,7 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	psc_assert(inoh);
 	psc_assert(!*bmap);
 
-	tbmap.bcm_blkno = mq->blkno;
-	tbref.mexpbcm_bmap = &tbmap;
+	tbref.mexpbcm_blkno = mq->blkno;
 	/* This bmap load *should* be for a bmap which the client has not
 	 *   already referenced and therefore no mexpbcm should exist.  The
 	 *   mexpbcm exists for each bmap that the client has cached.
