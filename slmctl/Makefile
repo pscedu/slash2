@@ -3,6 +3,7 @@
 include Makefile.path
 
 PROG=		slmctl
+MAN+=		slmctl.8
 SRCS+=		slmctl.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c

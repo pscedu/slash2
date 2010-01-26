@@ -15,6 +15,9 @@ SUBDIRS+=	slmctl
 SUBDIRS+=	slmkjrnl
 SUBDIRS+=	${PFL_BASE}/utils/odtable
 
+MAN+=		doc/sladm.7
+MAN+=		doc/slash.conf.5
+
 zbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} -c && scons)
 	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=4 -c && \

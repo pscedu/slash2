@@ -3,6 +3,7 @@
 include Makefile.path
 
 PROG=		sliod
+MAN+=		sliod.8
 SRCS+=		cfg_iod.c
 SRCS+=		ctl_iod.c
 SRCS+=		fidc_iod.c

@@ -3,6 +3,7 @@
 include Makefile.path
 
 PROG=		msctl
+MAN+=		msctl.8
 SRCS+=		msctl.c
 SRCS+=		walk.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
@@ -18,8 +19,6 @@ SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
-
-MAN+=		msctl.8
 
 MODULES+=	lnet-hdrs pthread
 

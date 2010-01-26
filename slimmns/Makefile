@@ -3,6 +3,7 @@
 include Makefile.path
 
 PROG=		slimmns_format
+MAN+=		slimmns.8
 SRCS+=		slimmns_format.c
 SRCS+=		wipedir.c
 SRCS+=		${SLASH_BASE}/share/mkfn.c
