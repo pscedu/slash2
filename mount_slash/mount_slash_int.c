@@ -1139,6 +1139,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	 */
 	spinlock(&r->biorq_lock);
 	r->biorq_flags |= BIORQ_FLUSHRDY;
+	DEBUG_BIORQ(PLL_DEBUG, r, "BIORQ_FLUSHRDY");       
 	psc_assert(psclist_conjoint(&r->biorq_lentry));
 	atomic_inc(&bmpc->bmpc_pndgwr);
 	freelock(&r->biorq_lock);
@@ -1362,7 +1363,7 @@ __static int
 msl_pages_blocking_load(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *bmpce;
-	int rc, i, npages=psc_dynarray_len(&r->biorq_pages);
+	int rc=0, i, npages=psc_dynarray_len(&r->biorq_pages);
 
 	if (r->biorq_rqset) {
 		rc = pscrpc_set_wait(r->biorq_rqset);
@@ -1635,8 +1636,12 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 			if (rw == SL_READ ||
 			    ((r[j]->biorq_flags & BIORQ_RBWFP) ||
 			     (r[j]->biorq_flags & BIORQ_RBWLP)))
-				if ((rc = msl_pages_blocking_load(r[j])))
+				if ((rc = msl_pages_blocking_load(r[j]))) {
+					DEBUG_BIORQ(PLL_ERROR, r[j], 
+						    "msl_pages_blocking_load()"
+						    " error=%d", rc);
 					goto out;
+				}
 
 			(rw == SL_READ) ?
 				msl_pages_copyout(r[j], p) :
