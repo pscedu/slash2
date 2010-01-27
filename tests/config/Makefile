@@ -17,6 +17,7 @@ SRCS+=		${PFL_BASE}/psc_util/iostats.c
 SRCS+=		${PFL_BASE}/psc_util/list.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
+SRCS+=		${PFL_BASE}/psc_util/strlcat.c
 SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
