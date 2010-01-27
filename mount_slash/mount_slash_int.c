@@ -1660,7 +1660,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		/* The client cache is operating on pages (ie 32k) so 
 		 *   any short read must be caught here.
 		 */
-		if (fsz < (size + off))
+		if (fsz < (ssize_t)(size + off))
 			rc = (size - (size + off - fsz));
 		else
 			rc = size;
