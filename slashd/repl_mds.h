@@ -45,6 +45,13 @@ struct sl_replrq {
 #define REPLRQF_BUSY	(1 << 0)
 #define REPLRQF_DIE	(1 << 1)
 
+struct slm_replst_workreq {
+	struct slashrpc_cservice	*rsw_csvc;
+	struct slash_fidgen		 rsw_fg;
+	int				 rsw_cid;	/* client-issued ID */
+	struct psclist_head		 rsw_lentry;
+};
+
 int replrq_cmp(const void *, const void *);
 
 SPLAY_HEAD(replrqtree, sl_replrq);
@@ -93,6 +100,8 @@ extern struct psc_poolmgr	*replrq_pool;
 
 extern struct replrqtree	 replrq_tree;
 extern psc_spinlock_t		 replrq_tree_lock;
+
+extern struct psc_listcache	slm_replst_workq;
 
 extern struct psc_vbitmap	*repl_busytable;
 extern psc_spinlock_t		 repl_busytable_lock;

@@ -62,6 +62,8 @@ struct psc_poolmaster	 replrq_poolmaster;
 struct psc_poolmgr	*replrq_pool;
 psc_spinlock_t		 replrq_tree_lock = LOCK_INITIALIZER;
 
+struct psc_listcache	 slm_replst_workq;
+
 struct psc_vbitmap	*repl_busytable;
 psc_spinlock_t		 repl_busytable_lock = LOCK_INITIALIZER;
 int			 repl_busytable_nents;
@@ -1218,6 +1220,9 @@ mds_repl_init(void)
 	    rrq_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
 	    "replrq");
 	replrq_pool = psc_poolmaster_getmgr(&replrq_poolmaster);
+
+	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
+	    rsw_lentry, "replstwkq");
 
 	rc = mdsio_lookup(SL_ROOT_INUM, SL_PATH_REPLS, &fg, &rootcreds, NULL);
 	if (rc)

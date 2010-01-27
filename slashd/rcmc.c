@@ -44,29 +44,21 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
-struct psc_vbitmap	 slmrcmthr_uniqidmap = VBITMAP_INIT_AUTO;
-psc_spinlock_t		 slmrcmthr_uniqidmap_lock = LOCK_INITIALIZER;
-
 int
-slmrmcthr_replst_slave_eof(struct sl_replrq *rrq)
+slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
-	struct slmrcm_thread *srcm;
 	struct pscrpc_request *rq;
-	struct psc_thread *thr;
 	int rc;
 
-	thr = pscthr_get();
-	srcm = slmrcmthr(thr);
-
-	rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
+	rc = RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
 	    SRCM_VERSION, SRMT_REPL_GETST_SLAVE, rq, mq, mp);
 	if (rc)
 		return (rc);
 
-	mq->fg = *REPLRQ_FG(rrq);
-	mq->id = srcm->srcm_id;
+	mq->fg = rsw->rsw_fg;
+	mq->id = rsw->rsw_cid;
 	mq->rc = EOF;
 	rc = RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
@@ -103,8 +95,8 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct sl_replrq *rrq)
 }
 
 int
-slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
-    sl_blkno_t n, struct pscrpc_request **rqp)
+slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw, struct sl_replrq *rrq,
+    struct bmapc_memb *bcm, sl_blkno_t n, struct pscrpc_request **rqp)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
@@ -129,11 +121,11 @@ slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
 				return (rc);
 		}
 
-		rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
+		rc = RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
 		    SRCM_VERSION, SRMT_REPL_GETST_SLAVE, *rqp, mq, mp);
 		if (rc)
 			return (rc);
-		mq->id = srcm->srcm_id;
+		mq->id = rsw->rsw_cid;
 		mq->boff = n;
 		mq->fg = *REPLRQ_FG(rrq);
 
@@ -154,23 +146,19 @@ slmrcmthr_walk_brepls(struct sl_replrq *rrq, struct bmapc_memb *bcm,
  * slm_rcm_issue_getreplst - issue a GETREPLST reply to a CLIENT from MDS.
  */
 int
-slm_rcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
+slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
+    struct sl_replrq *rrq, int is_eof)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
-	struct slmrcm_thread *srcm;
 	struct pscrpc_request *rq;
-	struct psc_thread *thr;
 	int rc;
 
-	thr = pscthr_get();
-	srcm = slmrcmthr(thr);
-
-	rc = RSX_NEWREQ(srcm->srcm_csvc->csvc_import,
+	rc = RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
 	    SRCM_VERSION, SRMT_REPL_GETST, rq, mq, mp);
 	if (rc)
 		return (rc);
-	mq->id = srcm->srcm_id;
+	mq->id = rsw->rsw_cid;
 	if (rrq) {
 		mq->fg = *REPLRQ_FG(rrq);
 		mq->nbmaps = REPLRQ_NBMAPS(rrq);
@@ -194,6 +182,7 @@ slm_rcm_issue_getreplst(struct sl_replrq *rrq, int is_eof)
 void *
 slmrcmthr_main(__unusedx void *arg)
 {
+	struct slm_replst_workreq *rsw;
 	struct slmrcm_thread *srcm;
 	struct pscrpc_request *rq;
 	struct fidc_membh *fcmh;
@@ -205,86 +194,85 @@ slmrcmthr_main(__unusedx void *arg)
 
 	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
-	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
-	srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
+	for (;;) {
+		rsw = lc_getwait(&slm_replst_workq);
 
-	rc = 0;
-	rq = NULL;
-	if (srcm->srcm_fg.fg_fid == FID_ANY) {
-		spinlock(&replrq_tree_lock);
-		SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
-			slm_rcm_issue_getreplst(rrq, 0);
+		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
+
+		rc = 0;
+		rq = NULL;
+		if (rsw->rsw_fg.fg_fid == FID_ANY) {
+			spinlock(&replrq_tree_lock);
+			SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
+				slm_rcm_issue_getreplst(rsw, rrq, 0);
+				for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
+					if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+						continue;
+					BMAP_LOCK(bcm);
+					rc = slmrcmthr_walk_brepls(rsw, rrq, bcm, n, &rq);
+					bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+					if (rc)
+						break;
+				}
+				if (rq) {
+					slmrmcthr_replst_slave_waitrep(rq, rrq);
+					rq = NULL;
+				}
+				slmrmcthr_replst_slave_eof(rsw);
+				if (rc)
+					break;
+			}
+			freelock(&replrq_tree_lock);
+		} else if ((rrq = mds_repl_findrq(&rsw->rsw_fg, NULL)) != NULL) {
+			slm_rcm_issue_getreplst(rsw, rrq, 0);
 			for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 				if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
 					continue;
 				BMAP_LOCK(bcm);
-				rc = slmrcmthr_walk_brepls(rrq, bcm, n, &rq);
+				rc = slmrcmthr_walk_brepls(rsw, rrq, bcm, n, &rq);
 				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 				if (rc)
 					break;
 			}
-			if (rq) {
+			if (rq)
 				slmrmcthr_replst_slave_waitrep(rq, rrq);
-				rq = NULL;
+			slmrmcthr_replst_slave_eof(rsw);
+			mds_repl_unrefrq(rrq);
+		} else if (mds_repl_loadino(&rsw->rsw_fg, &fcmh) == 0) {
+			/*
+			 * file is not in cache, load it up
+			 * to report replication status
+			 *
+			 * grab a dummy replrq struct to pass around.
+			 */
+			rrq = psc_pool_get(replrq_pool);
+			memset(rrq, 0, sizeof(*rrq));
+			rrq->rrq_inoh = fcmh_2_inoh(fcmh);
+
+			slm_rcm_issue_getreplst(rsw, rrq, 0);
+			for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
+				if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+					continue;
+				BMAP_LOCK(bcm);
+				rc = slmrcmthr_walk_brepls(rsw, rrq, bcm, n, &rq);
+				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+				if (rc)
+					break;
 			}
-			slmrmcthr_replst_slave_eof(rrq);
-			if (rc)
-				break;
+			if (rq)
+				slmrmcthr_replst_slave_waitrep(rq, rrq);
+			slmrmcthr_replst_slave_eof(rsw);
+			fidc_membh_dropref(fcmh);
+			psc_pool_return(replrq_pool, rrq);
 		}
-		freelock(&replrq_tree_lock);
-	} else if ((rrq = mds_repl_findrq(&srcm->srcm_fg, NULL)) != NULL) {
-		slm_rcm_issue_getreplst(rrq, 0);
-		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
-				continue;
-			BMAP_LOCK(bcm);
-			rc = slmrcmthr_walk_brepls(rrq, bcm, n, &rq);
-			bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
-			if (rc)
-				break;
-		}
-		if (rq)
-			slmrmcthr_replst_slave_waitrep(rq, rrq);
-		slmrmcthr_replst_slave_eof(rrq);
-		mds_repl_unrefrq(rrq);
-	} else if (mds_repl_loadino(&srcm->srcm_fg, &fcmh) == 0) {
-		/*
-		 * file is not in cache, load it up
-		 * to report replication status
-		 *
-		 * grab a dummy replrq struct to pass around.
-		 */
-		rrq = psc_pool_get(replrq_pool);
-		memset(rrq, 0, sizeof(*rrq));
-		rrq->rrq_inoh = fcmh_2_inoh(fcmh);
 
-		slm_rcm_issue_getreplst(rrq, 0);
-		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
-				continue;
-			BMAP_LOCK(bcm);
-			rc = slmrcmthr_walk_brepls(rrq, bcm, n, &rq);
-			bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
-			if (rc)
-				break;
-		}
-		if (rq)
-			slmrmcthr_replst_slave_waitrep(rq, rrq);
-		slmrmcthr_replst_slave_eof(rrq);
-		fidc_membh_dropref(fcmh);
-		psc_pool_return(replrq_pool, rrq);
+		/* signal EOF */
+		slm_rcm_issue_getreplst(rsw, NULL, 1);
+
+		PSCFREE(rsw);
+		sched_yield();
 	}
-
-	/* signal EOF */
-	slm_rcm_issue_getreplst(NULL, 1);
-
-	free(srcm->srcm_page);
-
-	spinlock(&slmrcmthr_uniqidmap_lock);
-	psc_vbitmap_unset(&slmrcmthr_uniqidmap, srcm->srcm_uniqid);
-	psc_vbitmap_setnextpos(&slmrcmthr_uniqidmap, 0);
-	freelock(&slmrcmthr_uniqidmap_lock);
-	return (NULL);
+	/* NOTREACHED */
 }
 
 /*

@@ -54,6 +54,8 @@ void
 slm_rpc_initsvc(void)
 {
 	struct pscrpc_svc_handle *svh;
+	struct slmrcm_thread *srcm;
+	struct psc_thread *thr;
 
 	/* Setup request service for MDS from ION. */
 	svh = PSCALLOC(sizeof(*svh));
@@ -96,6 +98,12 @@ slm_rpc_initsvc(void)
 	svh->svh_handler = slm_rmc_handler;
 	strlcpy(svh->svh_svc_name, SLM_RMC_SVCNAME, sizeof(svh->svh_svc_name));
 	pscrpc_thread_spawn(svh, struct slmrmc_thread);
+
+	thr = pscthr_init(SLMTHRT_RCM, 0, slmrcmthr_main,
+	    NULL, sizeof(*srcm), "slmrcmthr");
+	srcm = thr->pscthr_private;
+	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
+	pscthr_setready(thr);
 }
 
 struct mexp_cli *

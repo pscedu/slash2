@@ -52,10 +52,6 @@ struct slmrmc_thread {
 };
 
 struct slmrcm_thread {
-	struct slashrpc_cservice *srcm_csvc;
-	int			  srcm_uniqid;	/* thread ID */
-	struct slash_fidgen	  srcm_fg;
-	int			  srcm_id;	/* private client ID */
 	char			 *srcm_page;
 	int			  srcm_page_bitpos;
 };
@@ -129,10 +125,6 @@ void		 slmfssyncthr_init(void);
 void		 slmreplqthr_spawnall(void);
 void		*slmrcmthr_main(void *);
 
-extern struct psc_vbitmap			 slmrcmthr_uniqidmap;
-extern psc_spinlock_t				 slmrcmthr_uniqidmap_lock;
-
-extern struct cfdops				 mdsCfdOps;
 extern struct slash_creds			 rootcreds;
 
 extern struct psc_listcache			 dirtyMdsData;

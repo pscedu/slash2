@@ -810,24 +810,15 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
-	struct slmrcm_thread *srcm;
-	struct psc_thread *thr;
-	size_t id;
+	struct slm_replst_workreq *rsw;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	spinlock(&slmrcmthr_uniqidmap_lock);
-	if (psc_vbitmap_next(&slmrcmthr_uniqidmap, &id) == -1)
-		psc_fatal("psc_vbitmap_next");
-	freelock(&slmrcmthr_uniqidmap_lock);
-
-	thr = pscthr_init(SLMTHRT_RCM, 0, slmrcmthr_main,
-	    NULL, sizeof(*srcm), "slmrcmthr%02zu", id);
-	srcm = thr->pscthr_private;
-	srcm->srcm_fg = mq->fg;
-	srcm->srcm_id = mq->id;
-	srcm->srcm_csvc = slm_getclcsvc(rq->rq_export);
-	pscthr_setready(thr);
+	rsw = PSCALLOC(sizeof(*rsw));
+	rsw->rsw_fg = mq->fg;
+	rsw->rsw_cid = mq->id;
+	rsw->rsw_csvc = slm_getclcsvc(rq->rq_export);
+	lc_add(&slm_replst_workq, rsw);
 	return (0);
 }
 
