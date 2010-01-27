@@ -1652,10 +1652,19 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		bmap_op_done_type(b[j], BMAP_OPCNT_LOOKUP);
 	}
 
-	if (rw == SL_WRITE)
+	if (rw == SL_WRITE) {
 		fidc_fcm_size_update(mfh->mfh_fcmh, (size_t)(off + size));
-
-	rc = size;
+		rc = size;
+	} else {
+		ssize_t fsz = fidc_fcm_size_get(mfh->mfh_fcmh);
+		/* The client cache is operating on pages (ie 32k) so 
+		 *   any short read must be caught here.
+		 */
+		if (fsz < (size + off))
+			rc = (size - (size + off - fsz));
+		else
+			rc = size;
+	}
  out:
 	return (rc);
 }
