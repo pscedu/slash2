@@ -33,14 +33,14 @@ struct fidc_mds_info {
 	struct fcm_exports	  fmdsi_exports;	/* tree of mexpfcm */
 	struct slash_inode_handle fmdsi_inodeh;		/* MDS sl_inodeh_t goes here */
 	atomic_t		  fmdsi_ref;
-	void			 *fmdsi_data;		/* ZFS file info structure */
+	void			 *fmdsi_data;		/* mdsio descriptor data */
 };
 
 #define fcmh_2_fmdsi(f)		((struct fidc_mds_info *)(f)->fcmh_fcoo->fcoo_pri)
 #define fcmh_2_inoh(f)		(&fcmh_2_fmdsi(f)->fmdsi_inodeh)
-#define fcmh_2_zfsdata(f)	fcmh_2_fmdsi(f)->fmdsi_data
+#define fcmh_2_mdsio_data(f)	fcmh_2_fmdsi(f)->fmdsi_data
 
-#define inoh_2_zfsdata(ih)	fcmh_2_zfsdata((ih)->inoh_fcmh)
+#define inoh_2_mdsio_data(ih)	fcmh_2_mdsio_data((ih)->inoh_fcmh)
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
 #define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
 

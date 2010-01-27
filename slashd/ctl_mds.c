@@ -27,8 +27,7 @@
 
 #include "creds.h"
 #include "ctl_mds.h"
-
-#include "zfs-fuse/zfs_slashlib.h"
+#include "mdsio_zfs.h"
 
 struct psc_lockedlist psc_mlists;
 
@@ -39,7 +38,7 @@ __dead int
 slmctlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
-	zfs_exit();
+	mdsio_exit();
 	exit(0);
 }
 

@@ -22,13 +22,17 @@
 
 #include <sys/types.h>
 
+#include "fid.h"
 #include "sltypes.h"
 
+struct stat;
+struct statvfs;
+
 struct bmapc_memb;
+struct fidc_membh;
 struct slash_creds;
 struct slash_fidgen;
 struct slash_inode_handle;
-struct stat;
 
 int mdsio_bmap_read(struct bmapc_memb *);
 int mdsio_bmap_write(struct bmapc_memb *);
@@ -39,7 +43,15 @@ int mdsio_inode_write(struct slash_inode_handle *);
 int mdsio_release(struct slash_inode_handle *);
 int mdsio_apply_fcmh_size(struct fidc_membh *, off64_t);
 
+void mdsio_init(void);
+void mdsio_exit(void);
+
+int mdsio_access(slfid_t, int, struct slash_creds *);
 int mdsio_frelease(slfid_t, struct slash_creds *, void *);
+int mdsio_getattr(slfid_t, struct slash_creds *, struct stat *, slfgen_t *);
+int mdsio_readlink(slfid_t, void *, struct slash_creds *);
+int mdsio_statfs(struct statvfs *);
+
 int mdsio_opencreate(slfid_t, struct slash_creds *, int, mode_t,
 	const char *, struct slash_fidgen *, struct stat *, void *);
 int mdsio_link(slfid_t, slfid_t, const char *, struct slash_fidgen *,
@@ -53,5 +65,12 @@ int mdsio_mkdir(slfid_t, const char *, mode_t, struct slash_creds *,
 	struct stat *, struct slash_fidgen *, int);
 int mdsio_readdir(slfid_t, struct slash_creds *, size_t, off_t, void *,
 	size_t *, void *, int, void *);
+int mdsio_rename(slfid_t, const char *, slfid_t, const char *,
+	struct slash_creds *);
+int mdsio_setattr(slfid_t, struct stat *, int, struct slash_creds *,
+	struct stat *, void *);
+int mdsio_symlink(const char *, slfid_t, const char *,
+	struct slash_creds *, struct stat *, struct slash_fidgen *);
+int mdsio_rmdir(slfid_t, const char *, struct slash_creds *);
 
 #endif

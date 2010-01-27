@@ -569,8 +569,8 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 		if (rc)
 			return (rc);
 		rc = mds_fcmh_load_fmdsi(fcmh, data, 1);
-		/* don't release the ZFS handle on success */
-		if (rc || fcmh_2_zfsdata(fcmh) != data)
+		/* don't release the mdsio data on success */
+		if (rc || fcmh_2_mdsio_data(fcmh) != data)
 			mdsio_frelease(fg.fg_fid, &rootcreds, data);
 		if (rc)
 			return (EINVAL); /* XXX need better errno */

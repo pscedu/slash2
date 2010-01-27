@@ -42,8 +42,6 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
-#include "zfs-fuse/zfs_slashlib.h"
-
 int
 slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw)
 {

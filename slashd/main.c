@@ -36,13 +36,12 @@
 #include "ctl_mds.h"
 #include "fdbuf.h"
 #include "fidcache.h"
+#include "mdsio_zfs.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
-
-#include "zfs-fuse/zfs_slashlib.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -168,8 +167,8 @@ main(int argc, char *argv[])
 
 	slcfg_parse(cfn);
 
-	/* Initialize the ZFS layer. */
-	zfs_init();
+	/* Initialize the mdsio layer. */
+	mdsio_init();
 	import_zpool(argv[0], zfspoolcf);
 
 	fdbuf_createkeyfile();

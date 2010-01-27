@@ -257,8 +257,8 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
  *	provided cfd to the export tree and attaches to the fid's
  *	respective fcmh.
  * @c: the cfd, pre-initialized with fid and private data.
- * @e: the export to which the cfd belongs.
- * @data: finfo the zfs file info for this inode, it must be present.
+ * @finfo: mdsio data for this inode.
+ * @exp: the export to which the cfd belongs.
  */
 int
 mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
@@ -328,9 +328,9 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 }
 
 void *
-mexpfcm_cfd_get_zfsdata(struct cfdent *c, __unusedx struct pscrpc_export *e)
+mexpfcm_cfd_get_mdsio_data(struct cfdent *c, __unusedx struct pscrpc_export *e)
 {
-	return (cfd_2_zfsdata(c));
+	return (cfd_2_mdsio_data(c));
 }
 
 __static void mexpfcm_release_bref(struct mexpbcm *);
@@ -1315,7 +1315,7 @@ mds_init(void)
 struct cfdops cfd_ops = {
 	mexpfcm_cfd_init,
 	mexpfcm_cfd_free,
-	mexpfcm_cfd_get_zfsdata
+	mexpfcm_cfd_get_mdsio_data
 };
 
 void	(*bmap_init_privatef)(struct bmapc_memb *) = mds_bmap_init;
