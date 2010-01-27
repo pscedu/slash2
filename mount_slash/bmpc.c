@@ -353,7 +353,6 @@ bmpc_reap_locked(void)
 		/* Wait and return, the thread holding the reap lock
 		 *   should have freed a block for us.
 		 */
-	sleep:
 		atomic_inc(&bmpcSlabs.bmms_waiters);
 		psc_waitq_wait(&bmpcSlabs.bmms_waitq, &bmpcSlabs.bmms_lock);
 		return;
