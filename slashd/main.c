@@ -45,9 +45,11 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-const char *progname;
+const char		*progname;
 
-struct slash_creds rootcreds = { 0, 0 };
+struct psc_poolmaster	 replrq_poolmaster;
+
+struct slash_creds	 rootcreds = { 0, 0 };
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -113,6 +115,18 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		psc_fatalx("zpool: returned %d", rc);
 }
 
+void
+slm_init(void)
+{
+	psc_poolmaster_init(&replrq_poolmaster, struct sl_replrq,
+	    rrq_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
+	    "replrq");
+	replrq_pool = psc_poolmaster_getmgr(&replrq_poolmaster);
+
+	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
+	    rsw_lentry, "replstwkq");
+}
+
 __dead void
 usage(void)
 {
@@ -170,6 +184,8 @@ main(int argc, char *argv[])
 	/* Initialize the mdsio layer. */
 	mdsio_init();
 	import_zpool(argv[0], zfspoolcf);
+
+	slm_init();
 
 	fdbuf_createkeyfile();
 	fdbuf_readkeyfile();

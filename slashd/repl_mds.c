@@ -58,7 +58,6 @@
 #include "slerr.h"
 
 struct replrqtree	 replrq_tree = SPLAY_INITIALIZER(&replrq_tree);
-struct psc_poolmaster	 replrq_poolmaster;
 struct psc_poolmgr	*replrq_pool;
 psc_spinlock_t		 replrq_tree_lock = LOCK_INITIALIZER;
 
@@ -1215,14 +1214,6 @@ mds_repl_init(void)
 {
 	struct slash_fidgen fg;
 	int rc;
-
-	psc_poolmaster_init(&replrq_poolmaster, struct sl_replrq,
-	    rrq_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
-	    "replrq");
-	replrq_pool = psc_poolmaster_getmgr(&replrq_poolmaster);
-
-	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
-	    rsw_lentry, "replstwkq");
 
 	rc = mdsio_lookup(SL_ROOT_INUM, SL_PATH_REPLS, &fg, &rootcreds, NULL);
 	if (rc)
