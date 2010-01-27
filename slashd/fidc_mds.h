@@ -59,6 +59,5 @@ struct fidc_mds_info *fidc_fcmh2fmdsi(struct fidc_membh *);
 
 int mds_fcmh_load_fmdsi(struct fidc_membh *, void *, int);
 int mds_fcmh_tryref_fmdsi(struct fidc_membh *);
-int mds_fcmh_apply_fsize(struct fidc_membh *, off64_t);
 
 #endif /* _FIDC_MDS_H_ */

@@ -57,8 +57,6 @@
 #include "slashd.h"
 #include "slerr.h"
 
-#include "zfs-fuse/zfs_slashlib.h"
-
 struct replrqtree	 replrq_tree = SPLAY_INITIALIZER(&replrq_tree);
 struct psc_poolmaster	 replrq_poolmaster;
 struct psc_poolmgr	*replrq_pool;
@@ -563,15 +561,15 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 
 	rc = mds_fcmh_tryref_fmdsi(fcmh);
 	if (rc) {
-		rc = zfsslash2_opencreate(zfsVfs, fgp->fg_fid,
-		    &rootcreds, SLF_READ, 0, NULL, &fg, &stb, &data);
+		rc = mdsio_opencreate(fgp->fg_fid, &rootcreds,
+		    O_RDWR | O_CREAT | O_LARGEFILE, 0, NULL, &fg, &stb,
+		    &data);
 		if (rc)
 			return (rc);
 		rc = mds_fcmh_load_fmdsi(fcmh, data, 1);
 		/* don't release the ZFS handle on success */
 		if (rc || fcmh_2_zfsdata(fcmh) != data)
-			zfsslash2_release(zfsVfs, fg.fg_fid,
-			    &rootcreds, data);
+			mdsio_frelease(fg.fg_fid, &rootcreds, data);
 		if (rc)
 			return (EINVAL); /* XXX need better errno */
 	}
@@ -645,8 +643,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 				goto bail;
 
 			/* Create persistent file system link */
-			rc = zfsslash2_link(zfsVfs, fgp->fg_fid,
-			    mds_repldir_inum, fn, &fg, &rootcreds, &stb);
+			rc = mdsio_link(fgp->fg_fid, mds_repldir_inum,
+			    fn, &fg, &rootcreds, &stb);
 			if (rc == 0) {
 				rrq = newrq;
 				newrq = NULL;
@@ -837,8 +835,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	else if (rc >= (int)sizeof(fn))
 		rc = ENAMETOOLONG;
 	else
-		rc = zfsslash2_unlink(zfsVfs,
-		    mds_repldir_inum, fn, &rootcreds);
+		rc = mdsio_unlink(mds_repldir_inum, fn, &rootcreds);
 	PSC_SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
 	freelock(&replrq_tree_lock);
 
@@ -942,18 +939,17 @@ mds_repl_scandir(void)
 	uint32_t j;
 	void *data;
 
-	rc = zfsslash2_opendir(zfsVfs, mds_repldir_inum,
-	    &rootcreds, &fg, &stb, &data);
+	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, &fg, &stb, &data);
 	if (rc == ENOENT) {
-		rc = zfsslash2_mkdir(zfsVfs, SL_ROOT_INUM,
-		    SL_PATH_REPLS, 0700, &rootcreds, NULL, NULL, 1);
+		rc = mdsio_mkdir(SL_ROOT_INUM, SL_PATH_REPLS, 0700,
+		    &rootcreds, NULL, NULL, 1);
 		if (rc)
-			psc_fatalx("ZFS mkdir %s: %s", SL_PATH_REPLS,
+			psc_fatalx("mdsio_mkdir %s: %s", SL_PATH_REPLS,
 			    slstrerror(rc));
 		return;
 	}
 	if (rc)
-		psc_fatalx("ZFS opendir %s: %s", SL_PATH_REPLS,
+		psc_fatalx("mdsio_opendir %s: %s", SL_PATH_REPLS,
 		    slstrerror(rc));
 
 	off = 0;
@@ -961,10 +957,10 @@ mds_repl_scandir(void)
 	buf = PSCALLOC(siz);
 
 	for (;;) {
-		rc = zfsslash2_readdir(zfsVfs, mds_repldir_inum,
-		    &rootcreds, siz, off, buf, &tsiz, NULL, 0, data);
+		rc = mdsio_readdir(mds_repldir_inum, &rootcreds, siz,
+		    off, buf, &tsiz, NULL, 0, data);
 		if (rc)
-			psc_fatalx("readdir %s: %s", SL_PATH_REPLS,
+			psc_fatalx("mdsio_readdir %s: %s", SL_PATH_REPLS,
 			    slstrerror(rc));
 		if (tsiz == 0)
 			break;
@@ -981,11 +977,10 @@ mds_repl_scandir(void)
 			if (fn[0] == '.')
 				continue;
 
-			rc = zfsslash2_lookup(zfsVfs, mds_repldir_inum,
-			    fn, &fg, &rootcreds, NULL);
+			rc = mdsio_lookup(mds_repldir_inum, fn, &fg, &rootcreds, NULL);
 			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
-				psc_fatalx("zfsslash2_lookup %s/%s: %s",
+				psc_fatalx("mdsio_lookup %s/%s: %s",
 				    SL_PATH_REPLS, fn, slstrerror(rc));
 
 			rc = mds_repl_loadino(&fg, &fcmh);
@@ -1032,9 +1027,9 @@ mds_repl_scandir(void)
 		}
 		off += tsiz;
 	}
-	rc = zfsslash2_release(zfsVfs, mds_repldir_inum, &rootcreds, data);
+	rc = mdsio_frelease(mds_repldir_inum, &rootcreds, data);
 	if (rc)
-		psc_fatalx("release %s: %s", SL_PATH_REPLS,
+		psc_fatalx("mdsio_release %s: %s", SL_PATH_REPLS,
 		    slstrerror(rc));
 
 	free(buf);
@@ -1224,8 +1219,7 @@ mds_repl_init(void)
 	    "replrq");
 	replrq_pool = psc_poolmaster_getmgr(&replrq_poolmaster);
 
-	rc = zfsslash2_lookup(zfsVfs, SL_ROOT_INUM,
-	    SL_PATH_REPLS, &fg, &rootcreds, NULL);
+	rc = mdsio_lookup(SL_ROOT_INUM, SL_PATH_REPLS, &fg, &rootcreds, NULL);
 	if (rc)
 		psc_fatalx("lookup repldir: %s", slstrerror(rc));
 	mds_repldir_inum = fg.fg_fid;

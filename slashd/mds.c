@@ -92,8 +92,8 @@ mds_inode_release(struct fidc_membh *f)
 		psc_assert(!fidc_fcoo_wait_locked(f, 1));
 
 		f->fcmh_state |= FCMH_FCOO_CLOSING;
-		DEBUG_FCMH(PLL_DEBUG, f, "calling zfsslash2_release");
-		rc = mdsio_zfs_release(&i->fmdsi_inodeh);
+		DEBUG_FCMH(PLL_DEBUG, f, "calling mdsio_release");
+		rc = mdsio_release(&i->fmdsi_inodeh);
 		PSCFREE(i);
 		f->fcmh_fcoo->fcoo_pri = NULL;
 		f->fcmh_fcoo->fcoo_oref_rd = 0;
@@ -113,7 +113,7 @@ mds_inode_read(struct slash_inode_handle *i)
 	locked = reqlock(&i->inoh_lock);
 	psc_assert(i->inoh_flags & INOH_INO_NOTLOADED);
 
-	rc = mdsio_zfs_inode_read(i);
+	rc = mdsio_inode_read(i);
 
 	if (rc == SLERR_SHORTIO && i->inoh_ino.ino_crc == 0 &&
 	    memcmp(&i->inoh_ino, &null_inode_od, INO_OD_CRCSZ) == 0) {
@@ -122,7 +122,7 @@ mds_inode_read(struct slash_inode_handle *i)
 		rc = 0;
 
 	} else if (rc) {
-		DEBUG_INOH(PLL_WARN, i, "mdsio_zfs_inode_read: %d", rc);
+		DEBUG_INOH(PLL_WARN, i, "mdsio_inode_read: %d", rc);
 
 	} else {
 		psc_crc64_calc(&crc, &i->inoh_ino, INO_OD_CRCSZ);
@@ -153,12 +153,12 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 	psc_assert(ih->inoh_extras == NULL);
 	ih->inoh_extras = PSCALLOC(sizeof(*ih->inoh_extras));
 
-	rc = mdsio_zfs_inode_extras_read(ih);
+	rc = mdsio_inode_extras_read(ih);
 	if (rc == SLERR_SHORTIO && ih->inoh_extras->inox_crc == 0 &&
 	    memcmp(&ih->inoh_extras, &null_inox_od, INOX_OD_CRCSZ) == 0) {
 		rc = 0;
 	} else if (rc) {
-		DEBUG_INOH(PLL_WARN, ih, "mdsio_zfs_inode_extras_read: %d", rc);
+		DEBUG_INOH(PLL_WARN, ih, "mdsio_inode_extras_read: %d", rc);
 	} else {
 		psc_crc64_calc(&crc, ih->inoh_extras, INOX_OD_CRCSZ);
 		if (crc == ih->inoh_extras->inox_crc)
@@ -971,7 +971,7 @@ mds_bmap_read(struct bmapc_memb *bcm)
 
 	/* Try to pread() the bmap from the mds file.
 	 */
-	rc = mdsio_zfs_bmap_read(bcm);
+	rc = mdsio_bmap_read(bcm);
 
 	/*
 	 * Check for a NULL CRC if we had a good read.  NULL CRC can happen when
@@ -991,7 +991,7 @@ mds_bmap_read(struct bmapc_memb *bcm)
 
 	/* At this point, the short I/O is an error since the bmap isn't zeros. */
 	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, f, "mdsio_zfs_bmap_read: "
+		DEBUG_FCMH(PLL_ERROR, f, "mdsio_bmap_read: "
 		    "bmapno=%u, rc=%d", bcm->bcm_bmapno, rc);
 		rc = -EIO;
 		goto out;

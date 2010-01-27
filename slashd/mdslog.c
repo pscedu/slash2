@@ -58,7 +58,7 @@ mds_inode_sync(void *data)
 	if (inoh->inoh_flags & INOH_INO_DIRTY) {
 		psc_crc64_calc(&inoh->inoh_ino.ino_crc,
 			     &inoh->inoh_ino, INO_OD_CRCSZ);
-		rc = mdsio_zfs_inode_write(inoh);
+		rc = mdsio_inode_write(inoh);
 
 		if (rc)
 			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
@@ -78,7 +78,7 @@ mds_inode_sync(void *data)
 	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
 		psc_crc64_calc(&inoh->inoh_extras->inox_crc, inoh->inoh_extras,
 			     INOX_OD_CRCSZ);
-		rc = mdsio_zfs_inode_extras_write(inoh);
+		rc = mdsio_inode_extras_write(inoh);
 
 		if (rc)
 			DEBUG_INOH(PLL_FATAL, inoh, "xtras rc=%d sync fail",
@@ -100,7 +100,7 @@ void
 mds_bmap_jfiprep(void *data)
 {
 	struct bmapc_memb *bmap=data;
-	
+
 	bmap_op_start_type(bmap, BMAP_OPCNT_MDSLOG);
 }
 
@@ -129,7 +129,7 @@ mds_bmap_sync(void *data)
 	 */
 	BMAP_LOCK(bmap);
 	psc_crc64_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
-	rc = mdsio_zfs_bmap_write(bmap);
+	rc = mdsio_bmap_write(bmap);
 	if (rc)
 		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail",
 			   rc, errno);
@@ -232,7 +232,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	int n=crcup->nups;
 	uint32_t t=0, j=0;
 
-	mds_fcmh_apply_fsize(bmap->bcm_fcmh, crcup->fsize);
+	mdsio_apply_fcmh_size(bmap->bcm_fcmh, crcup->fsize);
 
 	jfi_prep(&bmdsi->bmdsi_jfi, mdsJournal);
 
@@ -271,7 +271,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 			bmapod->bh_crcs[(crcup->crcs[j].slot)].gc_crc =
 				crcup->crcs[j].crc;
 
-			bmapod->bh_crcstates[(crcup->crcs[j].slot)] = 
+			bmapod->bh_crcstates[(crcup->crcs[j].slot)] =
 				(BMAP_SLVR_DATA | BMAP_SLVR_CRC);
 
 			DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PRIx64")",

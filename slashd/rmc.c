@@ -301,6 +301,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 {
 	struct srm_create_req *mq;
 	struct srm_opencreate_rep *mp;
+	struct cfdent *cfd=NULL;
 	struct slash_fidgen fg;
 	void *finfo;
 	int fl;
@@ -310,36 +311,34 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
 	if (mp->rc)
 		return (0);
-	mp->rc = zfsslash2_opencreate(zfsVfs, mq->pino, &mq->creds, fl,
+	mp->rc = mdsio_opencreate(mq->pino, &mq->creds, fl,
 	    mq->mode, mq->name, &fg, &mp->attr, &finfo);
+	if (mp->rc)
+		return (0);
+
+	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
 	if (!mp->rc) {
-		struct cfdent *cfd=NULL;
+		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
+		    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
 
-		mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
-		if (!mp->rc) {
-			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-			    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
-
-			if (!mp->rc && cfd) {
-				fdbuf_sign(&cfd->cfd_fdb,
-				    &fg, rq->rq_peer);
-				memcpy(&mp->sfdb, &cfd->cfd_fdb,
-				    sizeof(mp->sfdb));
-			}
-
-			psc_info("cfdnew() fid %"PRId64" rc=%d",
-				 fg.fg_fid, mp->rc);
+		if (!mp->rc && cfd) {
+			fdbuf_sign(&cfd->cfd_fdb,
+			    &fg, rq->rq_peer);
+			memcpy(&mp->sfdb, &cfd->cfd_fdb,
+			    sizeof(mp->sfdb));
 		}
 
-		/*
-		 * On success, the cfd private data, originally the ZFS
-		 * handle private data, is overwritten with an fmdsi,
-		 * so release the ZFS handle if we failed or didn't use it.
-		 */
-		if (cfd == NULL || cfd_2_zfsdata(cfd) != finfo)
-			zfsslash2_release(zfsVfs, fg.fg_fid,
-			    &mq->creds, finfo);
+		psc_info("cfdnew() fid %"PRId64" rc=%d",
+		    fg.fg_fid, mp->rc);
 	}
+
+	/*
+	 * On success, the cfd private data, originally the ZFS
+	 * handle private data, is overwritten with an fmdsi,
+	 * so release the ZFS handle if we failed or didn't use it.
+	 */
+	if (cfd == NULL || cfd_2_zfsdata(cfd) != finfo)
+		mdsio_frelease(fg.fg_fid, &mq->creds, finfo);
 	return (0);
 }
 
@@ -357,10 +356,10 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
 	if (mp->rc)
 		return (0);
-	mp->rc = zfsslash2_opencreate(zfsVfs, mq->ino, &mq->creds,
-	    fl, 0, NULL, &fg, &mp->attr, &finfo);
+	mp->rc = mdsio_opencreate(mq->ino, &mq->creds, fl, 0, NULL, &fg,
+	    &mp->attr, &finfo);
 
-	psc_info("zfsslash2_opencreate() fid %"PRId64" rc=%d",
+	psc_info("mdsio_opencreate() fid %"PRId64" rc=%d",
 	    mq->ino, mp->rc);
 
 	if (mp->rc)
@@ -392,8 +391,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	 * so release the ZFS handle if we failed or didn't use it.
 	 */
 	if (cfd == NULL || cfd_2_zfsdata(cfd) != finfo)
-		zfsslash2_release(zfsVfs, fg.fg_fid,
-		    &mq->creds, finfo);
+		mdsio_frelease(fg.fg_fid, &mq->creds, finfo);
 	return (0);
 }
 
@@ -402,6 +400,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 {
 	struct srm_opendir_req *mq;
 	struct srm_opendir_rep *mp;
+	struct cfdent *cfd = NULL;
 	struct slash_fidgen fg;
 	struct stat stb;
 	void *finfo;
@@ -412,31 +411,29 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 
 	psc_info("zfs opendir data (%p)", finfo);
 
+	if (mp->rc)
+		return (0);
+
+	mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
 	if (!mp->rc) {
-		struct cfdent *cfd;
+		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
+		    SLCONNT_CLI, finfo, &cfd, CFD_DIR);
 
-		mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
-		if (!mp->rc) {
-			mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-			    SLCONNT_CLI, finfo, &cfd, CFD_DIR);
-
-			if (mp->rc) {
-				psc_error("cfdnew failed rc=%d", mp->rc);
-				return (0);
-			}
-			fdbuf_sign(&cfd->cfd_fdb, &fg, rq->rq_peer);
-			memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
+		if (mp->rc) {
+			psc_error("cfdnew failed rc=%d", mp->rc);
+			return (0);
 		}
-
-		/*
-		 * On success, the cfd private data, originally the ZFS
-		 * handle private data, is overwritten with an fmdsi,
-		 * so release the ZFS handle if we failed or didn't use it.
-		 */
-		if (cfd == NULL || cfd_2_zfsdata(cfd) != finfo)
-			zfsslash2_release(zfsVfs, fg.fg_fid,
-			    &mq->creds, finfo);
+		fdbuf_sign(&cfd->cfd_fdb, &fg, rq->rq_peer);
+		memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
 	}
+
+	/*
+	 * On success, the cfd private data, originally the ZFS
+	 * handle private data, is overwritten with an fmdsi,
+	 * so release the ZFS handle if we failed or didn't use it.
+	 */
+	if (cfd == NULL || cfd_2_zfsdata(cfd) != finfo)
+		mdsio_frelease(fg.fg_fid, &mq->creds, finfo);
 	return (0);
 }
 

@@ -20,6 +20,7 @@
 #include "psc_util/lock.h"
 
 #include "bmap.h"
+#include "fid.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
@@ -48,7 +49,7 @@ bmap_2_zfs_fh(struct bmapc_memb *bmap)
 }
 
 int
-mdsio_zfs_release(struct slash_inode_handle *i)
+mdsio_release(struct slash_inode_handle *i)
 {
 	struct fidc_mds_info *fmdsi;
 
@@ -59,12 +60,16 @@ mdsio_zfs_release(struct slash_inode_handle *i)
 	fmdsi = fcmh_2_fmdsi(i->inoh_fcmh);
 	psc_assert(!atomic_read(&fmdsi->fmdsi_ref));
 
-	return (zfsslash2_release(zfsVfs, fcmh_2_fid(i->inoh_fcmh), &rootcreds,
-				  fmdsi->fmdsi_data));
+	/*
+	 * XXX should we pass the same creds here as the
+	 * file was opened with?  do we even have them?
+	 */
+	return (zfsslash2_release(zfsVfs, fcmh_2_fid(i->inoh_fcmh),
+	    &rootcreds, fmdsi->fmdsi_data));
 }
 
 int
-mds_fcmh_apply_fsize(struct fidc_membh *f, off64_t size)
+mdsio_apply_fcmh_size(struct fidc_membh *f, off64_t size)
 {
 	struct fidc_mds_info *fmdsi;
 
@@ -86,7 +91,7 @@ mds_fcmh_apply_fsize(struct fidc_membh *f, off64_t size)
 }
 
 int
-mdsio_zfs_bmap_read(struct bmapc_memb *bmap)
+mdsio_bmap_read(struct bmapc_memb *bmap)
 {
 	struct bmap_mds_info *bmdsi;
 	size_t nb;
@@ -106,7 +111,7 @@ mdsio_zfs_bmap_read(struct bmapc_memb *bmap)
 }
 
 int
-mdsio_zfs_bmap_write(struct bmapc_memb *bmap)
+mdsio_bmap_write(struct bmapc_memb *bmap)
 {
 	struct bmap_mds_info *bmdsi;
 	size_t nb;
@@ -136,7 +141,7 @@ mdsio_zfs_bmap_write(struct bmapc_memb *bmap)
 }
 
 int
-mdsio_zfs_inode_read(struct slash_inode_handle *i)
+mdsio_inode_read(struct slash_inode_handle *i)
 {
 	size_t nb;
 	int rc;
@@ -162,7 +167,7 @@ mdsio_zfs_inode_read(struct slash_inode_handle *i)
 }
 
 int
-mdsio_zfs_inode_write(struct slash_inode_handle *i)
+mdsio_inode_write(struct slash_inode_handle *i)
 {
 	size_t nb;
 	int rc;
@@ -191,7 +196,7 @@ mdsio_zfs_inode_write(struct slash_inode_handle *i)
 }
 
 int
-mdsio_zfs_inode_extras_read(struct slash_inode_handle *i)
+mdsio_inode_extras_read(struct slash_inode_handle *i)
 {
 	size_t nb;
 	int rc;
@@ -210,7 +215,7 @@ mdsio_zfs_inode_extras_read(struct slash_inode_handle *i)
 }
 
 int
-mdsio_zfs_inode_extras_write(struct slash_inode_handle *i)
+mdsio_inode_extras_write(struct slash_inode_handle *i)
 {
 	size_t nb;
 	int rc;
@@ -236,3 +241,67 @@ mdsio_zfs_inode_extras_write(struct slash_inode_handle *i)
 	}
 	return (rc);
 }
+
+int
+mdsio_frelease(slfid_t fid, struct slash_creds *cr, void *finfo)
+{
+	return (zfsslash2_release(zfsVfs, fid, cr, finfo));
+}
+
+#ifdef BTREE
+
+#else
+int
+mdsio_opencreate(slfid_t pfid, struct slash_creds *cr, int flags,
+    mode_t mode, const char *fn, struct slash_fidgen *fg,
+    struct stat *stb, void *finfop)
+{
+	return (zfsslash2_opencreate(zfsVfs, pfid, cr, flags, mode,
+	    fn, fg, stb, finfop));
+}
+
+int
+mdsio_link(slfid_t fid, slfid_t pfid, const char *fn,
+    struct slash_fidgen *fgp, struct slash_creds *cr, struct stat *stb)
+{
+	return (zfsslash2_link(zfsVfs, fid, pfid, fn, fgp, cr, stb));
+}
+
+int
+mdsio_unlink(slfid_t fid, const char *fn, struct slash_creds *cr)
+{
+	return (zfsslash2_unlink(zfsVfs, fid, fn, cr));
+}
+
+int
+mdsio_lookup(slfid_t fid, const char *cpn, struct slash_fidgen *fgp,
+    struct slash_creds *cr, struct stat *stb)
+{
+	return (zfsslash2_lookup(zfsVfs, fid, cpn, fgp, cr, stb));
+}
+
+int
+mdsio_opendir(slfid_t fid, struct slash_creds *cr,
+    struct slash_fidgen *fgp, struct stat *stb, void *finfop)
+{
+	return (zfsslash2_opendir(zfsVfs, fid, cr, fgp, stb, finfop));
+}
+
+int
+mdsio_mkdir(slfid_t pfid, const char *cpn, mode_t mode,
+    struct slash_creds *cr, struct stat *stb, struct slash_fidgen *fgp,
+    int supress_fidlink)
+{
+	return (zfsslash2_mkdir(zfsVfs, pfid, cpn, mode, cr, stb, fgp,
+	    supress_fidlink));
+}
+
+int
+mdsio_readdir(slfid_t fid, struct slash_creds *cr, size_t siz,
+    off_t off, void *buf, size_t *outlen, void *attrs, int nprefetch,
+    void *finfo)
+{
+	return (zfsslash2_readdir(zfsVfs, fid, cr, siz, off, buf,
+	    outlen, attrs, nprefetch, finfo));
+}
+#endif
