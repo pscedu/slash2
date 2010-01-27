@@ -221,26 +221,26 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	BMAP_LOCK(bcm);
 
-	tract[SL_REPL_INACTIVE] = -1;
-	tract[SL_REPL_ACTIVE] = -1;
+	tract[SL_REPLST_INACTIVE] = -1;
+	tract[SL_REPLST_ACTIVE] = -1;
 
 	if (mq->rc || mq->bgen != bmap_2_bgen(bcm)) {
-		tract[SL_REPL_OLD] = -1;
-		tract[SL_REPL_SCHED] = SL_REPL_OLD;
+		tract[SL_REPLST_OLD] = -1;
+		tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
 	} else {
 		/*
 		 * If the MDS crashed and came back up, the state
 		 * will have changed from SCHED->OLD, so change
 		 * OLD->ACTIVE here for that case as well.
 		 */
-		tract[SL_REPL_OLD] = SL_REPL_ACTIVE;
-		tract[SL_REPL_SCHED] = SL_REPL_ACTIVE;
+		tract[SL_REPLST_OLD] = SL_REPLST_ACTIVE;
+		tract[SL_REPLST_SCHED] = SL_REPLST_ACTIVE;
 	}
 
-	retifset[SL_REPL_INACTIVE] = EINVAL;
-	retifset[SL_REPL_SCHED] = 0;
-	retifset[SL_REPL_OLD] = EINVAL;
-	retifset[SL_REPL_ACTIVE] = EINVAL;
+	retifset[SL_REPLST_INACTIVE] = EINVAL;
+	retifset[SL_REPLST_SCHED] = 0;
+	retifset[SL_REPLST_OLD] = EINVAL;
+	retifset[SL_REPLST_ACTIVE] = EINVAL;
 
 	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_repl_bmap_rel(bcm);

@@ -316,9 +316,9 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
  * @tract: translation actions; for each array slot, set states of the type
  *	corresponding to the array index to the array value.  For example:
  *
- *		tract[SL_REPL_INACT] = SL_REPL_ACT
+ *		tract[SL_REPLST_INACTIVE] = SL_REPLST_ACTIVE
  *
- *	This changes any SL_REPL_INACT states into SL_REPL_ACT.
+ *	This changes any SL_REPLST_INACTIVE states into SL_REPLST_ACTIVE.
  * @retifset: return the value of the slot in this array corresponding to
  *	the state value as the slot index, if the array value is nonzero;
  *	the last replica always gets priority unless SCIRCUIT is specified.
@@ -423,15 +423,15 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	}
 
 	/* ensure this replica is marked active */
-	tract[SL_REPL_INACTIVE] = SL_REPL_ACTIVE;
-	tract[SL_REPL_OLD] = -1;
-	tract[SL_REPL_SCHED] = -1;
-	tract[SL_REPL_ACTIVE] = -1;
+	tract[SL_REPLST_INACTIVE] = SL_REPLST_ACTIVE;
+	tract[SL_REPLST_OLD] = -1;
+	tract[SL_REPLST_SCHED] = -1;
+	tract[SL_REPLST_ACTIVE] = -1;
 
-	retifset[SL_REPL_INACTIVE] = 0;
-	retifset[SL_REPL_OLD] = EINVAL;
-	retifset[SL_REPL_SCHED] = EINVAL;
-	retifset[SL_REPL_ACTIVE] = 0;
+	retifset[SL_REPLST_INACTIVE] = 0;
+	retifset[SL_REPLST_OLD] = EINVAL;
+	retifset[SL_REPLST_SCHED] = EINVAL;
+	retifset[SL_REPLST_ACTIVE] = 0;
 
 	rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	if (rc)
@@ -445,15 +445,15 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	 * the replication status update comes from the ION, we will know
 	 * he copied an old bmap and mark it OLD then.
 	 */
-	tract[SL_REPL_INACTIVE] = -1;
-	tract[SL_REPL_OLD] = -1;
-	tract[SL_REPL_SCHED] = -1;
-	tract[SL_REPL_ACTIVE] = SL_REPL_OLD;
+	tract[SL_REPLST_INACTIVE] = -1;
+	tract[SL_REPLST_OLD] = -1;
+	tract[SL_REPLST_SCHED] = -1;
+	tract[SL_REPLST_ACTIVE] = SL_REPLST_OLD;
 
-	retifset[SL_REPL_INACTIVE] = 0;
-	retifset[SL_REPL_OLD] = 0;
-	retifset[SL_REPL_SCHED] = 0;
-	retifset[SL_REPL_ACTIVE] = 1;
+	retifset[SL_REPLST_INACTIVE] = 0;
+	retifset[SL_REPLST_OLD] = 0;
+	retifset[SL_REPLST_SCHED] = 0;
+	retifset[SL_REPLST_ACTIVE] = 1;
 
 	if (mds_repl_bmap_walk(bcm, tract, retifset,
 	    REPL_WALKF_MODOTH, &iosidx, 1))
@@ -681,30 +681,30 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	 * Check inode's bmap state.  INACTIVE and ACTIVE states
 	 * become OLD, signifying that replication needs to happen.
 	 */
-	tract[SL_REPL_INACTIVE] = SL_REPL_OLD;
-	tract[SL_REPL_SCHED] = SL_REPL_OLD;
-	tract[SL_REPL_OLD] = -1;
-	tract[SL_REPL_ACTIVE] = -1;
+	tract[SL_REPLST_INACTIVE] = SL_REPLST_OLD;
+	tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
+	tract[SL_REPLST_OLD] = -1;
+	tract[SL_REPLST_ACTIVE] = -1;
 
-	retifzero[SL_REPL_INACTIVE] = 0;
-	retifzero[SL_REPL_ACTIVE] = 1;
-	retifzero[SL_REPL_OLD] = 0;
-	retifzero[SL_REPL_SCHED] = 0;
+	retifzero[SL_REPLST_INACTIVE] = 0;
+	retifzero[SL_REPLST_ACTIVE] = 1;
+	retifzero[SL_REPLST_OLD] = 0;
+	retifzero[SL_REPLST_SCHED] = 0;
 
 	if (bmapno == (sl_blkno_t)-1) {
 		int ret_if_inact[4], repl_some_act = 0, repl_all_act = 1;
 
 		/* check if all bmaps are already old/queued */
-		retifset[SL_REPL_INACTIVE] = 1;
-		retifset[SL_REPL_SCHED] = 0;
-		retifset[SL_REPL_OLD] = 0;
-		retifset[SL_REPL_ACTIVE] = 1;
+		retifset[SL_REPLST_INACTIVE] = 1;
+		retifset[SL_REPLST_SCHED] = 0;
+		retifset[SL_REPLST_OLD] = 0;
+		retifset[SL_REPLST_ACTIVE] = 1;
 
 		/* check if all bmaps are already active */
-		ret_if_inact[SL_REPL_INACTIVE] = 1;
-		ret_if_inact[SL_REPL_SCHED] = 1;
-		ret_if_inact[SL_REPL_OLD] = 1;
-		ret_if_inact[SL_REPL_ACTIVE] = 0;
+		ret_if_inact[SL_REPLST_INACTIVE] = 1;
+		ret_if_inact[SL_REPLST_SCHED] = 1;
+		ret_if_inact[SL_REPLST_OLD] = 1;
+		ret_if_inact[SL_REPLST_ACTIVE] = 0;
 
 		for (bmapno = 0; bmapno < REPLRQ_NBMAPS(rrq); bmapno++) {
 			if (mds_bmap_load(REPLRQ_FCMH(rrq),
@@ -739,10 +739,10 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		 * If this bmap is already being
 		 * replicated, return EALREADY.
 		 */
-		retifset[SL_REPL_INACTIVE] = 0;
-		retifset[SL_REPL_SCHED] = EALREADY;
-		retifset[SL_REPL_OLD] = EALREADY;
-		retifset[SL_REPL_ACTIVE] = 0;
+		retifset[SL_REPLST_INACTIVE] = 0;
+		retifset[SL_REPLST_SCHED] = EALREADY;
+		retifset[SL_REPLST_OLD] = EALREADY;
+		retifset[SL_REPLST_ACTIVE] = 0;
 		rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
@@ -799,10 +799,10 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 
 	/* Scan for any OLD states. */
-	retifset[SL_REPL_INACTIVE] = 0;
-	retifset[SL_REPL_ACTIVE] = 0;
-	retifset[SL_REPL_OLD] = 1;
-	retifset[SL_REPL_SCHED] = 1;
+	retifset[SL_REPLST_INACTIVE] = 0;
+	retifset[SL_REPLST_ACTIVE] = 0;
+	retifset[SL_REPLST_OLD] = 1;
+	retifset[SL_REPLST_SCHED] = 1;
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
@@ -882,16 +882,16 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		return (rc);
 	}
 
-	tract[SL_REPL_INACTIVE] = -1;
-	tract[SL_REPL_ACTIVE] = -1;
-	tract[SL_REPL_OLD] = SL_REPL_INACTIVE;
-	tract[SL_REPL_SCHED] = SL_REPL_INACTIVE;
+	tract[SL_REPLST_INACTIVE] = -1;
+	tract[SL_REPLST_ACTIVE] = -1;
+	tract[SL_REPLST_OLD] = SL_REPLST_INACTIVE;
+	tract[SL_REPLST_SCHED] = SL_REPLST_INACTIVE;
 
 	if (bmapno == (sl_blkno_t)-1) {
-		retifset[SL_REPL_INACTIVE] = 0;
-		retifset[SL_REPL_ACTIVE] = 1;
-		retifset[SL_REPL_OLD] = 1;
-		retifset[SL_REPL_SCHED] = 1;
+		retifset[SL_REPLST_INACTIVE] = 0;
+		retifset[SL_REPLST_ACTIVE] = 1;
+		retifset[SL_REPLST_OLD] = 1;
+		retifset[SL_REPLST_SCHED] = 1;
 
 		rc = SLERR_REPLS_ALL_INACT;
 		for (bmapno = 0; bmapno < REPLRQ_NBMAPS(rrq); bmapno++) {
@@ -906,10 +906,10 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 			mds_repl_bmap_rel(bcm);
 		}
 	} else if (mds_bmap_exists(REPLRQ_FCMH(rrq), bmapno)) {
-		retifset[SL_REPL_INACTIVE] = SLERR_REPL_ALREADY_INACT;
-		retifset[SL_REPL_ACTIVE] = 0;
-		retifset[SL_REPL_OLD] = 0;
-		retifset[SL_REPL_SCHED] = 0;
+		retifset[SL_REPLST_INACTIVE] = SLERR_REPL_ALREADY_INACT;
+		retifset[SL_REPLST_ACTIVE] = 0;
+		retifset[SL_REPLST_OLD] = 0;
+		retifset[SL_REPLST_SCHED] = 0;
 		rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
@@ -998,10 +998,10 @@ mds_repl_scandir(void)
 			rrq->rrq_flags &= ~REPLRQF_BUSY;
 			psc_pthread_mutex_unlock(&rrq->rrq_mutex);
 
-			tract[SL_REPL_INACTIVE] = -1;
-			tract[SL_REPL_ACTIVE] = -1;
-			tract[SL_REPL_OLD] = -1;
-			tract[SL_REPL_SCHED] = SL_REPL_OLD;
+			tract[SL_REPLST_INACTIVE] = -1;
+			tract[SL_REPLST_ACTIVE] = -1;
+			tract[SL_REPLST_OLD] = -1;
+			tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
 
 			/*
 			 * If we crashed, revert all inflight SCHED'ed
@@ -1188,10 +1188,10 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		if (iosidx < 0)
 			goto end;
 
-		tract[SL_REPL_INACTIVE] = -1;
-		tract[SL_REPL_SCHED] = SL_REPL_OLD;
-		tract[SL_REPL_OLD] = -1;
-		tract[SL_REPL_ACTIVE] = -1;
+		tract[SL_REPLST_INACTIVE] = -1;
+		tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
+		tract[SL_REPLST_OLD] = -1;
+		tract[SL_REPLST_ACTIVE] = -1;
 
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 			if (mds_bmap_load(REPLRQ_FCMH(rrq),

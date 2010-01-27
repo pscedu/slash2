@@ -828,7 +828,7 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 	msbd = bcm->bcm_pri;
 
 	if (SL_REPL_GET_BMAP_IOS_STAT(msbd->msbd_msbcr.msbcr_repls,
-	    iosidx * SL_BITS_PER_REPLICA) != SL_REPL_ACTIVE)
+	    iosidx * SL_BITS_PER_REPLICA) != SL_REPLST_ACTIVE)
 		return (NULL);
 
 	res = libsl_id2res(mfd->mfd_reptbl[iosidx].bs_id);

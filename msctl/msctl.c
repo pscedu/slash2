@@ -106,11 +106,11 @@ rsb_accul_replica_stats(struct replst_slave_bdata *rsb, int iosidx,
 	    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios +
 	    SL_NBITS_REPLST_BHDR) {
 		switch (SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)) {
-		case SL_REPL_SCHED:
-		case SL_REPL_OLD:
+		case SL_REPLST_SCHED:
+		case SL_REPLST_OLD:
 			++*bold;
 			break;
-		case SL_REPL_ACTIVE:
+		case SL_REPLST_ACTIVE:
 			++*bact;
 			break;
 		}
@@ -398,15 +398,15 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	int n, nbw, off, dlen;
 	uint32_t iosidx;
 
-	map[SL_REPL_SCHED] = 's';
-	map[SL_REPL_OLD] = 'o';
-	map[SL_REPL_ACTIVE] = '+';
-	map[SL_REPL_INACTIVE] = '-';
+	map[SL_REPLST_SCHED] = 's';
+	map[SL_REPLST_OLD] = 'o';
+	map[SL_REPLST_ACTIVE] = '+';
+	map[SL_REPLST_INACTIVE] = '-';
 
-	pmap[SL_REPL_SCHED] = 'S';
-	pmap[SL_REPL_OLD] = 'O';
-	pmap[SL_REPL_ACTIVE] = '*';
-	pmap[SL_REPL_INACTIVE] = '-';
+	pmap[SL_REPLST_SCHED] = 'S';
+	pmap[SL_REPLST_OLD] = 'O';
+	pmap[SL_REPLST_ACTIVE] = '*';
+	pmap[SL_REPLST_INACTIVE] = '-';
 
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen("repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);

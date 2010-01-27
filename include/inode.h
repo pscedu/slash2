@@ -65,10 +65,10 @@
 
 #define SL_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
 
-#define SL_REPL_INACTIVE	0
-#define SL_REPL_SCHED		1
-#define SL_REPL_OLD		2
-#define SL_REPL_ACTIVE		3
+#define SL_REPLST_INACTIVE	0
+#define SL_REPLST_SCHED		1
+#define SL_REPLST_OLD		2
+#define SL_REPLST_ACTIVE	3
 
 /*
  * Point to an offset within the linear metadata file which holds a

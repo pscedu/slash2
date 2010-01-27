@@ -125,10 +125,10 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	mq->bmapno = bcm->bcm_blkno;
 	mq->bgen = bmap_2_bgen(bcm);
 
-	tract[SL_REPL_ACTIVE] = -1;
-	tract[SL_REPL_INACTIVE] = -1;
-	tract[SL_REPL_OLD] = SL_REPL_SCHED;
-	tract[SL_REPL_SCHED] = -1;
+	tract[SL_REPLST_ACTIVE] = -1;
+	tract[SL_REPLST_INACTIVE] = -1;
+	tract[SL_REPLST_OLD] = SL_REPLST_SCHED;
+	tract[SL_REPLST_SCHED] = -1;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	BMAP_LOCK(bcm);
@@ -145,10 +145,10 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 		return (1);
 	}
 
-	tract[SL_REPL_ACTIVE] = -1;
-	tract[SL_REPL_INACTIVE] = -1;
-	tract[SL_REPL_OLD] = -1;
-	tract[SL_REPL_SCHED] = SL_REPL_OLD;
+	tract[SL_REPLST_ACTIVE] = -1;
+	tract[SL_REPLST_INACTIVE] = -1;
+	tract[SL_REPLST_OLD] = -1;
+	tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
 
 	BMAP_LOCK(bcm);
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
@@ -265,10 +265,10 @@ slmreplqthr_main(void *arg)
 					bmapod = bmdsi->bmdsi_od;
 					val = SL_REPL_GET_BMAP_IOS_STAT(
 					    bmapod->bh_repls, off);
-					if (val == SL_REPL_OLD ||
-					    val == SL_REPL_SCHED)
+					if (val == SL_REPLST_OLD ||
+					    val == SL_REPLST_SCHED)
 						has_repl_work = 1;
-					if (val != SL_REPL_OLD)
+					if (val != SL_REPLST_OLD)
 						goto skipbmap;
 //					if (bmap is leased to an ION)
 //						goto skipbmap;
@@ -288,7 +288,7 @@ slmreplqthr_main(void *arg)
 						/* skip ourself and old/inactive replicas */
 						if (ris == iosidx ||
 						    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
-						    SL_BITS_PER_REPLICA * ris) != SL_REPL_ACTIVE)
+						    SL_BITS_PER_REPLICA * ris) != SL_REPLST_ACTIVE)
 							continue;
 
 						/* search source nids for an idle, online connection */

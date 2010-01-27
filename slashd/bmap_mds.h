@@ -122,10 +122,10 @@ _log_debug_bmapod(const char *file, const char *func, int lineno,
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 	va_end(ap);
 
-	ch[SL_REPL_INACTIVE] = '-';
-	ch[SL_REPL_SCHED] = 's';
-	ch[SL_REPL_OLD] = 'o';
-	ch[SL_REPL_ACTIVE] = '+';
+	ch[SL_REPLST_INACTIVE] = '-';
+	ch[SL_REPLST_SCHED] = 's';
+	ch[SL_REPLST_OLD] = 'o';
+	ch[SL_REPLST_ACTIVE] = '+';
 
 	for (k = 0, off = 0; k < SL_MAX_REPLICAS; k++, off += SL_BITS_PER_REPLICA)
 		rbuf[k] = ch[SL_REPL_GET_BMAP_IOS_STAT(b, off)];
