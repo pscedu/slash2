@@ -102,8 +102,8 @@
 #define SLF_APPEND	(1 << 2)
 #define SLF_CREAT	(1 << 3)
 #define SLF_TRUNC	(1 << 4)
-#define SLF_SYNC	(1 << 6)
-#define SLF_EXCL	(1 << 7)
+#define SLF_SYNC	(1 << 5)
+#define SLF_EXCL	(1 << 6)
 
 /* Slash RPC message types. */
 enum {
