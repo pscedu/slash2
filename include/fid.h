@@ -32,10 +32,11 @@ struct slash_creds;
 struct slash_fidgen;
 
 typedef uint64_t slfid_t;	/* first 16 bits are the svr/fs id, rest are inum */
+typedef uint64_t slfgen_t;
 
 struct slash_fidgen {
 	slfid_t		fg_fid;
-	uint64_t	fg_gen;
+	slfgen_t	fg_gen;
 };
 
 #define FID_ANY			UINT64_C(0xffffffffffff)
