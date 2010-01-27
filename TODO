@@ -302,27 +302,24 @@ mds.c
 - ensure that you can't msctl -U the single copy of data
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
-- make a better algorithm for selecting IONs for I/O
-- as soon as a write ION is assigned, invalidate other replicas; don't
-  wait for the actual WRITE to come
-- rename SL_REPL_* -> SL_REPLST_*
-- msctl -Q as root on files that are read-only shouldn't give EPERM
-- apply changes to fuse_listener.c from zfs-fuse 0.6.0
 - have ACCESS() consult cache before issuing RPC
 
-- make slmctl and slictl knobs for showing listen addresses/options
-- add ctl for connections
 - adapt tsuite
-- don't need write perm on a file to enqueue replication,
-  especially root
 
 - add ctl for bcmp
 - more truncation framework
 - work on slictl fs import command
-- do not spawn threads for replstatus in slashd
+
+- make slmctl and slictl knobs for showing listen addresses/options
+- add ctl for connections
+- msctl -Q as root on files that are read-only shouldn't give EPERM
+
+- apply changes to fuse_listener.c from zfs-fuse 0.6.0
 
 - bump generation and assign ACTIVE bh_repls when assigning bmaps to
   IONS
+- as soon as a write ION is assigned, invalidate other replicas; don't
+  wait for the actual WRITE to come
 - think about routing blips where MDS<->ION is not quite what a ION<->ION
   can see each, causing unnecessary replication work processing
 
