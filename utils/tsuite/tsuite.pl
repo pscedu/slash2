@@ -1,5 +1,7 @@
 #!/usr/bin/perl -W
 # $Id$
+# TODO:
+# - pass fdbuf key between MDS/IONs
 
 use Getopt::Std;
 use POSIX qw(:sys_wait_h);
@@ -7,6 +9,8 @@ use IPC::Open3;
 use Net::SMTP;
 use strict;
 use warnings;
+
+my %opts;
 
 sub fatalx {
 	die "$0: @_\n";
@@ -28,10 +32,22 @@ sub init_env {
 	}
 }
 
-my %opts;
-
 sub debug_msg {
 	print WR @_, "\n" unless $opts{q};
+}
+
+sub execute {
+	debug_msg "executing: ", join ' ', @_;
+	system join ' ', @_;
+}
+
+sub dump_res {
+	my ($res) = @_;
+	print "resource:\n";
+	while (my ($k, $v) = each %$res) {
+		print "  $k: $v\n";
+	}
+	print "\n";
 }
 
 getopts("mNqr", \%opts) or usage();
@@ -111,15 +127,15 @@ if (defined($src)) {
 } else {
 	$src = "$base/src";
 	debug_msg "svn checkout -q $svnroot $src";
-	system "svn checkout -q $svnroot $src";
+	execute "svn checkout -q $svnroot $src";
 	fatalx "svn failed" if $?;
 
 	debug_msg "make build";
-	system "cd $src/fuse && make build >/dev/null";
+	execute "cd $src/fuse && make build >/dev/null";
 	fatalx "make failed" if $?;
-	system "cd $src/slash_nara && make zbuild >/dev/null";
+	execute "cd $src/slash_nara && make zbuild >/dev/null";
 	fatalx "make failed" if $?;
-	system "cd $src/slash_nara && make build >/dev/null";
+	execute "cd $src/slash_nara && make build >/dev/null";
 	fatalx "make failed" if $?;
 }
 
@@ -142,13 +158,12 @@ close SLCONF;
 
 my @mds;
 my @ion;
-my $def_lnet;
 
 sub new_res {
 	my ($host, $site) = @_;
 
 	my %r = (
-		host => $host,
+		rname => $host,
 		site => $site,
 	);
 	return \%r;
@@ -158,11 +173,11 @@ sub res_done {
 	my ($r) = @_;
 
 	if ($r->{type} eq "mds") {
-		fatalx "MDS $r->{host} has no \@zfspool configuration"
+		fatalx "MDS $r->{rname} has no \@zfspool configuration"
 		    unless $r->{zpool_args};
 		push @mds, $r;
 	} else {
-		fatalx "MDS $r->{host} has no \@prefmds configuration"
+		fatalx "MDS $r->{rname} has no \@prefmds configuration"
 		    unless $r->{prefmds};
 		push @ion, $r;
 	}
@@ -170,15 +185,13 @@ sub res_done {
 
 # Parse configuration for MDS and IONs
 sub parse_conf {
-	my @conf_lines = split $conf;
 	my $in_site = 0;
 	my $site_name;
 	my $r = undef;
-	my @lines = split $conf;
+	my @lines = split /\n/, $conf;
 
 	for (my $ln = 0; $ln < @lines; $ln++) {
 		my $line = $lines[$ln];
-
 		if ($in_site) {
 			if ($r) {
 				if ($line =~ /^\s*type\s*=\s*(\S+)\s*;\s*$/) {
@@ -199,7 +212,7 @@ sub parse_conf {
 						$tmp .= $line;
 					}
 					$tmp =~ s/;\s*$//;
-					$r->{ifs} = [ split /\s*,\s*/ ];
+					$r->{host} = (split /\s*,\s*/, $tmp, 1)[0];
 				} elsif ($line =~ /^\s*}\s*$/) {
 					res_done($r);
 					$r = undef;
@@ -213,12 +226,9 @@ sub parse_conf {
 			if ($line =~ /^\s*site\s+@(\w+)\s*{\s*$/) {
 				$site_name = $1;
 				$in_site = 1;
-			} elsif (/^\s*global\s+net\s*=\s*(".*?"|.*?);\s*$/) {
-				($def_lnet = $1) =~ s/^"|"$//g;
 			}
 		}
 	}
-	fatalx "could not parse default LNET network from config:\n$conf" unless $def_lnet;
 }
 
 # Setup client commands
@@ -234,6 +244,8 @@ print CLICMD cli_cmd(
 		($opts{N} ? "-N " : "") . ($opts{m} ? "-m " : "") .
 		" $testname $logbase");
 close CLICMD;
+
+parse_conf();
 
 my ($i);
 
@@ -432,28 +444,26 @@ waitjobs $intvtimeout;
 
 foreach $i (@cli) {
 	debug_msg "force quitting mount_slash screens: $i->{host}";
-	system "ssh $i->{host} screen -S MSL.$tsid -X quit";
-	system "ssh $i->{host} screen -S MSCTL.$tsid -X quit";
+	execute "ssh $i->{host} screen -S MSL.$tsid -X quit";
+	execute "ssh $i->{host} screen -S MSCTL.$tsid -X quit";
 }
 
 foreach $i (@ion) {
 	debug_msg "force quitting sliod screens: $i->{host}";
-	system "ssh $i->{host} screen -S SLIOD.$tsid -X quit";
-	system "ssh $i->{host} screen -S SLICTL.$tsid -X quit";
+	execute "ssh $i->{host} screen -S SLIOD.$tsid -X quit";
+	execute "ssh $i->{host} screen -S SLICTL.$tsid -X quit";
 }
 
 foreach $i (@mds) {
 	debug_msg "force quitting slashd screens: $i->{host}";
-	system "ssh $i->{host} screen -S SLMDS.$tsid -X quit";
-	system "ssh $i->{host} screen -S SLMCTL.$tsid -X quit";
+	execute "ssh $i->{host} screen -S SLMDS.$tsid -X quit";
+	execute "ssh $i->{host} screen -S SLMCTL.$tsid -X quit";
 }
 
 # Clean up files
 if ($opts{r}) {
-	debug_msg "NOT deleting base dir";
-} else {
 	debug_msg "deleting base dir";
-	system "rm -rf $base";
+	execute "rm -rf $base";
 }
 
 }; # end of eval

@@ -1,16 +1,16 @@
 #!/usr/bin/perl -W
 # $Id$
 
-sub zest_conf {
+sub slash_conf {
 	my %h = @_;
 
 	return <<"EOF";
 global port=7001;
 global net=tcp10;
-global keyfn=/home/jy.slkey;
+global keyfn=$h{base}/jy.slkey;
 
 site \@tsuite {
-	site_desc	= "test tsuite";
+	site_desc	= "slash test suite";
 	site_id		= 100;
 
 	resource mds0 {
@@ -18,25 +18,25 @@ site \@tsuite {
 		# \@zfspool=adam_zpool hdb
 		type	= mds;
 		id	= 101;
-		ifs	= adamantium.psc.edu\@tcp10;
+		ifs	= adamantium;
 	}
 
 	resource io0 {
 		desc	= "first ION";
 		type	= parallel_fs;
 		id	= 102;
-		fsroot	= /slio-jy;
+		fsroot	= $h{base}/sliots.io0;
 		# \@prefmds=md\@PSC
-		ifs	= stryker.psc.edu\@tcp10;
+		ifs	= stryker;
 	}
 
 	resource io1 {
 		desc	= "second ION";
 		type	= archival_fs;
 		id	= 103;
-		fsroot	= /slio-jy;
+		fsroot	= $h{base}/sliots.io1;
 		# \@prefmds=md\@PSC
-		ifs	= wolverine.psc.edu\@tcp10;
+		ifs	= wolverine;
 	}
 }
 EOF
@@ -46,6 +46,14 @@ sub cli_cmd {
 	my %h = @_;
 
 	return <<ENDCMD;
+set -x
+
+cp -R $h{src} $h{fspath}/srctest
+diff -ru $h{fspath}/srctest $h{src}
+
+
+exit 0
+
 cd $h{src}/fio
 make pthreads >/dev/null
 
@@ -57,6 +65,8 @@ use warnings;
 my \$clienthost = \$ARGV[0];
 my \$fiolog = "$h{base}/fiolog.\$clienthost";
 mkdir \$fiolog or die "mkdir \$fiolog: \$clienthost\\n";
+
+exit 0;
 
 sub runfio {
 	my (\$name, \$to, \$in) = \@_;
@@ -86,37 +96,22 @@ sub runfio {
 my \@res;
 push \@res, runfio("fio16t16x.2G", 15, <<EOF);
 group MyReadWrite {
-	files_per_dir	= 16;
+	files_per_dir	= 4;
 	tree_depth	= 0;
 	tree_width	= 0;
-	pes		= 16;
+	pes		= 4;
 	test_freq	= 0;
 	block_freq	= 0;
 	path		= "$h{fspath}/%NAME%.\$clienthost";
 	output_path	= "\$fiolog";
 	filename	= %NAME%;
-	file_size	= 200m;
+	file_size	= 20m;
 	block_size	= 128k;
 	thrash_lock	= yes;
 	samedir		= yes;
-	samefile	= no;
-	intersperse	= no;
-	seekoff		= no;
-	fsync_block	= no;
 	verify		= yes;
 	barrier		= yes;
-	time_block	= no;
-	block_barrier	= no;
-	time_barrier	= no;
 	iterations	= 1;
-	debug_conf	= no;
-	debug_block	= no;
-	debug_memory	= no;
-	debug_buffer	= no;
-	debug_output	= no;
-	debug_dtree	= no;
-	debug_barrier	= no;
-	debug_iofunc	= no;
 	iotests (
 		WriteEmUp	[openwr:write:close]
 	)
@@ -139,7 +134,7 @@ ENDCMD
 }
 
 our $logbase= "/home/slog";
-our $rootdir = "/tmp/slog";
+our $rootdir = "/tmp/sltest";
 our $svnroot = 'svn+ssh://frodo/cluster/svn/projects';
 our $intvtimeout = 60*7;	# single op interval timeout
 our $runtimeout = 60*60*8;	# client run duration
@@ -150,7 +145,7 @@ our $global_env = {
 #	PSC_LOG_FORMAT => "[%s:%06u %n:%T:%f:%l] ",
 };
 
-our @msl = (
+our @cli = (
 	{
 		host => "adamantium",
 		env => {
