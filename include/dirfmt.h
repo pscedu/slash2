@@ -20,11 +20,29 @@
 #ifndef _DIRFMT_H_
 #define _DIRFMT_H_
 
+/*
+ * Definitions for the directory entry format and the directory B+tree that lives
+ * in a POSIX file.
+ */
+
+/* Directory block, each block contains pointers to lower level blocks or directory
+   entries at the leaf level */
 struct slash_dirblk {
-	int	db_free;		/* free space in the block */
-	int	db_blkno;		/* where is the block */
-	u32	db_minhash;		/* min hash value of names */
-	u32	db_maxhash;		/* max hash vale of names */
+	u32	db_magic;		/* magic number */
+	u32	db_checksum;		/* CRC */
+	int	db_level;		/* tree level */
+	int	db_count;		/* number of records */
+	u32	db_left;		/* my left neighbor */
+	u32	db_right;		/* my right neighbor */
 };
 
+/* Directory record, each record describes a leaf directory block */
+struct slash_dirrec {			
+	int	dr_free;		/* free space in the block */
+	int	dr_blkno;		/* where is the block */
+	u32	dr_minhash;		/* min hash value of names */
+	u32	dr_maxhash;		/* max hash value of names */
+};
+
+	
 #endif /* _DIRFMT_H_ */
