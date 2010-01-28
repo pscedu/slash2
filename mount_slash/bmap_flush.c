@@ -64,7 +64,7 @@ bmap_flush_reap_rpcs(void)
 	int i;
 	struct pscrpc_request_set *set;
 
-	psc_info("outstandingRpcCnt=%d (before) completedRpcCnt=%d",
+	psc_trace("outstandingRpcCnt=%d (before) completedRpcCnt=%d",
 	    atomic_read(&outstandingRpcCnt), atomic_read(&completedRpcCnt));
 
 	for (i=0; i < psc_dynarray_len(&pndgReqSets); i++) {
@@ -85,7 +85,7 @@ bmap_flush_reap_rpcs(void)
 	else
 		pscrpc_nbreqset_reap(pndgReqs);
 
-	psc_info("outstandingRpcCnt=%d (after)",
+	psc_trace("outstandingRpcCnt=%d (after)",
 		 atomic_read(&outstandingRpcCnt));
 
 	if (shutdown) {
@@ -552,8 +552,11 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 				 */
 				for (i=0; i < psc_dynarray_len(&b); i++) {
 					t = psc_dynarray_getpos(&b, i);
-					DEBUG_BIORQ(PLL_INFO, t, "descheduling");
+					spinlock(&t->biorq_lock);
+					DEBUG_BIORQ(PLL_INFO, t, 
+						    "descheduling");
 					t->biorq_flags &= ~BIORQ_SCHED;
+					freelock(&t->biorq_lock);
 				}
 				psc_dynarray_reset(&b);
 				psc_dynarray_add(&b, t);
@@ -664,19 +667,15 @@ bmap_flush(void)
 					freelock(&r->biorq_lock);
 					continue;
 				}
-			} else
-				psc_assert(!(r->biorq_flags & BIORQ_INFL));
+			} 
 			/* Don't assert !BIORQ_INFL until ensuring that
 			 *   we can actually work on this biorq.  A RBW
 			 *   process may be working on it.
 			 */
 			psc_assert(!(r->biorq_flags & BIORQ_INFL));
-
-
 			r->biorq_flags |= BIORQ_SCHED;
-
 			freelock(&r->biorq_lock);
-
+			
 			DEBUG_BIORQ(PLL_TRACE, r, "try flush");
 			psc_dynarray_add(&a, r);
 		}
@@ -688,14 +687,12 @@ bmap_flush(void)
 		/* Sort the items by their offsets.
 		 */
 		psc_dynarray_sort(&a, qsort, bmap_flush_biorq_cmp);
-
 #if 0
 		for (i=0; i < psc_dynarray_len(&a); i++) {
 			r = psc_dynarray_getpos(&a, i);
 			DEBUG_BIORQ(PLL_TRACE, r, "sorted?");
 		}
 #endif
-
 		i=0;
 		while (i < psc_dynarray_len(&a) &&
 		       (biorqs = bmap_flush_trycoalesce(&a, &i))) {
