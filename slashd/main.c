@@ -36,7 +36,7 @@
 #include "ctl_mds.h"
 #include "fdbuf.h"
 #include "fidcache.h"
-#include "mdsio_zfs.h"
+#include "mdsio.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"

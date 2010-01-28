@@ -27,7 +27,7 @@
 
 #include "creds.h"
 #include "ctl_mds.h"
-#include "mdsio_zfs.h"
+#include "mdsio.h"
 
 struct psc_lockedlist psc_mlists;
 

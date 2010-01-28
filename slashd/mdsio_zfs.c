@@ -25,6 +25,7 @@
 #include "fidcache.h"
 #include "inode.h"
 #include "inodeh.h"
+#include "mdsio.h"
 #include "slashd.h"
 #include "slerr.h"
 

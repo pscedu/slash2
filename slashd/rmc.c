@@ -44,7 +44,7 @@
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "mdsexpc.h"
-#include "mdsio_zfs.h"
+#include "mdsio.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"

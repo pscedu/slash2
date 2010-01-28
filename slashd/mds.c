@@ -31,7 +31,7 @@
 #include "inode.h"
 #include "mdscoh.h"
 #include "mdsexpc.h"
-#include "mdsio_zfs.h"
+#include "mdsio.h"
 #include "mdslog.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"

@@ -32,7 +32,7 @@
 #include "inode.h"
 #include "jflush.h"
 #include "mdsexpc.h"
-#include "mdsio_zfs.h"
+#include "mdsio.h"
 #include "slashd.h"
 #include "sljournal.h"
 
