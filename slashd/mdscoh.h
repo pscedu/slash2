@@ -20,11 +20,16 @@
 #ifndef _MDSCOH_H_
 #define _MDSCOH_H_
 
+struct pscrpc_async_args;
+struct pscrpc_request;
+
 struct mexpbcm;
 
-void mdscoh_infmode_chk(struct mexpbcm *, int);
-void mdscoh_init(void);
+int	mdscoh_cb(struct pscrpc_request *, struct pscrpc_async_args *);
+void	mdscoh_infmode_chk(struct mexpbcm *, int);
+void	slmcohthr_spawn(void);
 
-extern struct psc_listcache pndgBmapCbs;
+extern struct psc_listcache	pndgBmapCbs;
+extern struct psc_listcache	inflBmapCbs;
 
 #endif /* _MDSCOH_H_ */

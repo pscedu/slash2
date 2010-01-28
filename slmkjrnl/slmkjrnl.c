@@ -26,6 +26,7 @@
 #include "psc_util/journal.h"
 #include "psc_util/log.h"
 
+#include "mkfn.h"
 #include "pathnames.h"
 #include "slerr.h"
 #include "sljournal.h"
@@ -33,28 +34,28 @@
 int format;
 int query;
 int verbose;
+const char *datadir = _PATH_SLASHD_DIR;
 const char *progname;
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: [-fqv] [-c file] %s\n", progname);
+	fprintf(stderr, "usage: [-fqv] [-D dir] %s\n", progname);
 	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
-	const char *fn = _PATH_SLJOURNAL;
-	char c;
+	char c, fn[PATH_MAX];
 	int rc;
 
 	pfl_init();
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "c:fqv")) != -1)
+	while ((c = getopt(argc, argv, "D:fqv")) != -1)
 		switch (c) {
-		case 'c':
-			fn = optarg;
+		case 'D':
+			datadir = optarg;
 			break;
 		case 'f':
 			format = 1;
@@ -76,9 +77,11 @@ main(int argc, char *argv[])
 	if (!format && !query)
 		usage();
 
-	if (mkdir(_PATH_SLASHD_DIR, 0700) == -1)
+	if (mkdir(datadir, 0700) == -1)
 		if (errno != EEXIST)
-			err(1, "mkdir: %s", _PATH_SLASHD_DIR);
+			err(1, "mkdir: %s", datadir);
+
+	xmkfn(fn, "%s/%s", datadir, _RELPATH_SLJOURNAL);
 
 	if (format) {
 		rc = pjournal_format(fn, SLJ_MDS_JNENTS,

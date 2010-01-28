@@ -93,7 +93,7 @@ mdsfssyncthr_begin(__unusedx void *arg)
 }
 
 void
-slmfssyncthr_init(void)
+slmfssyncthr_spawn(void)
 {
 	lc_reginit(&dirtyMdsData, struct jflush_item, jfi_lentry,
 		   "dirtyMdsData");

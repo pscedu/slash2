@@ -1282,7 +1282,7 @@ mds_fidfs_lookup(const char *path, struct slash_creds *creds,
 }
 #endif
 
-__static void
+void
 mds_bmi_cb(void *data, struct odtable_receipt *odtr)
 {
 	struct bmi_assign *bmi;
@@ -1299,17 +1299,6 @@ mds_bmi_cb(void *data, struct odtable_receipt *odtr)
 		  bmi->bmi_bmapno);
 
 	odtable_freeitem(mdsBmapAssignTable, odtr);
-}
-
-void
-mds_init(void)
-{
-	mds_journal_init();
-	psc_assert(!odtable_load(_PATH_SLODTABLE, &mdsBmapAssignTable));
-	odtable_scan(mdsBmapAssignTable, mds_bmi_cb);
-
-	slmfssyncthr_init();
-	mdscoh_init();
 }
 
 struct cfdops cfd_ops = {

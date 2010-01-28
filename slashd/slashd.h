@@ -28,6 +28,9 @@
 #include "inode.h"
 #include "slconfig.h"
 
+struct odtable;
+struct odtable_receipt;
+
 struct bmapc_memb;
 struct fidc_membh;
 struct mexpfcm;
@@ -114,20 +117,23 @@ struct mds_resprof_info {
 int		 fid_get(const char *, struct slash_fidgen *,
 		    struct slash_creds *, int, mode_t);
 
-void		 mds_init(void);
 int		 mds_inode_release(struct fidc_membh *);
 int		 mds_inox_load_locked(struct slash_inode_handle *);
 int		 mds_inox_ensure_loaded(struct slash_inode_handle *);
 
+void		 mds_bmi_cb(void *, struct odtable_receipt *);
+
 void		 slmtimerthr_spawn(void);
 __dead void	 slmctlthr_main(const char *);
-void		 slmfssyncthr_init(void);
+void		 slmfssyncthr_spawn(void);
 void		 slmreplqthr_spawnall(void);
 void		*slmrcmthr_main(void *);
 
 extern struct slash_creds			 rootcreds;
 
 extern struct psc_listcache			 dirtyMdsData;
+extern struct odtable				*mdsBmapAssignTable;
 extern const struct slash_inode_extras_od	 null_inox_od;
+extern const char				*slm_datadir;
 
 #endif /* _SLASHD_H_ */

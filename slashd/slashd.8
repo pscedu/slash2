@@ -10,6 +10,7 @@
 metadata server daemon
 .Sh SYNOPSIS
 .Nm slashd
+.Op Fl D Ar datadir
 .Op Fl f Ar slashconf
 .Op Fl p Ar zpoolcache
 .Op Fl S Ar socket
@@ -29,6 +30,10 @@ specifies the name of the
 pool to import for use as the backing metadata file system.
 The options are as follows:
 .Bl -tag -width Ds
+.It Fl D Ar datadir
+Specify an alternative directory where operation data is stored.
+Defaults to
+.Pa /var/lib/slashd .
 .It Fl f Ar conf
 Specify an alternative configuration file.
 Defaults to

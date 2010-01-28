@@ -111,14 +111,13 @@ do {
 	$base = "$rootdir/slsuite.$tsid";
 } while -d $base;
 
-my $mp = "$base/mp";
-
 debug_msg "base dir = $base";
 
 mkdir $base		or fatal "mkdir $base";
 mkdir "$base/ctl"	or fatal "mkdir $base/ctl";
-mkdir $mp		or fatal "mkdir $mp";
 mkdir "$base/fs"	or fatal "mkdir $base/fs";
+mkdir "$base/mp"	or fatal "mkdir $base/mp";
+mkdir "$base/data"	or fatal "mkdir $base/data";
 
 # Checkout the source and build it
 chdir $base		or fatal "chdir $base";
@@ -131,7 +130,7 @@ if (defined($src)) {
 	fatalx "svn failed" if $?;
 
 	debug_msg "make build";
-	execute "cd $src/fuse && make build >/dev/null";
+	execute "cd $src/fuse/fuse-2.8.1 && ./configure >/dev/null && make >/dev/null";
 	fatalx "make failed" if $?;
 	execute "cd $src/slash_nara && make zbuild >/dev/null";
 	fatalx "make failed" if $?;
@@ -139,14 +138,16 @@ if (defined($src)) {
 	fatalx "make failed" if $?;
 }
 
+my $mp = "$base/mp";
 my $slbase = "$src/slash_nara";
+my $datadir = "$src/data";
+my $tsbase = "$slbase/utils/tsuite";
+
 my $zpool = "$slbase/utils/zpool.sh";
 my $zfs_fuse = "$slbase/utils/zfs-fuse.sh";
 my $slmkjrnl = "$slbase/slmkjrnl/slmkjrnl";
-my $slimmns_format = "$slbase/slimmns/slimmns_format";
 my $odtable = "$src/psc_fsutil_libs/utils/odtable";
-my $ion_bmaps_odt = "/var/lib/slashd/ion_bmaps.odt";
-my $tsbase = "$slbase/utils/tsuite";
+my $slimmns_format = "$slbase/slimmns/slimmns_format";
 
 my $ssh_init = "set -e; cd $base";
 
@@ -160,11 +161,12 @@ my @mds;
 my @ion;
 
 sub new_res {
-	my ($host, $site) = @_;
+	my ($rname, $site) = @_;
 
 	my %r = (
-		rname => $host,
-		site => $site,
+		rname	=> $rname,
+		site	=> $site,
+		datadir	=> "$datadir/$rname\@$site",
 	);
 	return \%r;
 }
@@ -249,6 +251,8 @@ parse_conf();
 
 my ($i);
 
+exit;
+
 # Create the MDS file systems
 foreach $i (@mds) {
 	debug_msg "MDS file system: $i->{host}";
@@ -262,8 +266,8 @@ foreach $i (@mds) {
 	    umount /$i->{zpoolname}
 	    kill %1
 
-	    $slmkjrnl
-	    $odtable -C -N $ion_bmaps_odt
+	    $slmkjrnl -D $i->{datadir}
+	    $odtable -C -N $i->{datadir}/ion_bmaps.odt
 EOF
 }
 

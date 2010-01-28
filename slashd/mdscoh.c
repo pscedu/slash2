@@ -29,6 +29,7 @@
 #include "cache_params.h"
 #include "cfd.h"
 #include "fidc_mds.h"
+#include "mdscoh.h"
 #include "mdsexpc.h"
 #include "rpc_mds.h"
 #include "slashd.h"
@@ -36,14 +37,15 @@
 
 struct psc_listcache	pndgBmapCbs;
 struct psc_listcache	inflBmapCbs;
-struct pscrpc_nbreqset	*bmapCbSet;
+struct pscrpc_nbreqset	bmapCbSet =
+    PSCRPC_NBREQSET_INIT(bmapCbSet, NULL, mdscoh_cb);
 
 #define CB_ARG_SLOT 0
 
 int
 mdscoh_reap(void)
 {
-	return (pscrpc_nbreqset_reap(bmapCbSet));
+	return (pscrpc_nbreqset_reap(&bmapCbSet));
 }
 
 void
@@ -150,7 +152,7 @@ mdscoh_queue_req(struct mexpbcm *bref)
 	mq->dio = bref->mexpbcm_net_cmd;
 	mq->blkno = bref->mexpbcm_blkno;
 
-	pscrpc_nbreqset_add(bmapCbSet, req);
+	pscrpc_nbreqset_add(&bmapCbSet, req);
 	/* This lentry may need to be locked.
 	 */
 	lc_addqueue(&inflBmapCbs, bref);
@@ -162,7 +164,7 @@ mdscoh_queue_req(struct mexpbcm *bref)
 }
 
 __dead __static void *
-mdscohthr_begin(__unusedx void *arg)
+slmcohthr_begin(__unusedx void *arg)
 {
 	struct mexpbcm *bref;
 	int rc;
@@ -191,14 +193,8 @@ mdscohthr_begin(__unusedx void *arg)
 }
 
 void
-mdscoh_init(void)
+slmcohthr_spawn(void)
 {
-	lc_reginit(&pndgBmapCbs, struct mexpbcm, mexpbcm_lentry,
-		   "pendingBmapCbs");
-	lc_reginit(&inflBmapCbs, struct mexpbcm, mexpbcm_lentry,
-		   "inflightBmapCbs");
-
-	bmapCbSet = pscrpc_nbreqset_init(NULL, mdscoh_cb);
-	pscthr_init(SLMTHRT_COH, 0, mdscohthr_begin,
-	    NULL, 0, "slcohthr");
+	pscthr_init(SLMTHRT_COH, 0, slmcohthr_begin,
+	    NULL, 0, "slmcohthr");
 }

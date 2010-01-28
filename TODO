@@ -316,6 +316,7 @@ mds.c
 
 - apply changes to fuse_listener.c from zfs-fuse 0.6.0
 - RSX_ALLOCREP() should return() the error code when bulks are expected
+- ensure slash.conf has <= 1 MDS servers for each site
 
 - bump generation and assign ACTIVE bh_repls when assigning bmaps to
   IONS

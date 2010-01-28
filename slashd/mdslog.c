@@ -33,6 +33,7 @@
 #include "jflush.h"
 #include "mdsexpc.h"
 #include "mdsio.h"
+#include "mkfn.h"
 #include "slashd.h"
 #include "sljournal.h"
 
@@ -298,14 +299,9 @@ void
 mds_journal_init(void)
 {
 	char fn[PATH_MAX];
-	int rc;
 
-	rc = snprintf(fn, sizeof(fn), "%s/%s",
-		      nodeResm->resm_res->res_fsroot, _PATH_SLJOURNAL);
-	if (rc == -1)
-		psc_fatal("snprintf");
-
-	mdsJournal = pjournal_replay(_PATH_SLJOURNAL, mds_journal_replay);
+	xmkfn(fn, "%s/%s", slm_datadir, _RELPATH_SLJOURNAL);
+	mdsJournal = pjournal_replay(fn, mds_journal_replay);
 	if (mdsJournal == NULL)
-		psc_fatal("Fail to load/replay log file %s", _PATH_SLJOURNAL);
+		psc_fatal("Fail to load/replay log file %s", fn);
 }

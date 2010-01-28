@@ -36,7 +36,9 @@
 #include "ctl_mds.h"
 #include "fdbuf.h"
 #include "fidcache.h"
+#include "mdscoh.h"
 #include "mdsio.h"
+#include "mkfn.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
@@ -46,6 +48,7 @@
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 const char		*progname;
+const char		*slm_datadir = _PATH_SLASHD_DIR;
 
 struct psc_poolmaster	 replrq_poolmaster;
 
@@ -118,6 +121,8 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 void
 slm_init(void)
 {
+	char fn[PATH_MAX];
+
 	psc_poolmaster_init(&replrq_poolmaster, struct sl_replrq,
 	    rrq_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
 	    "replrq");
@@ -125,6 +130,19 @@ slm_init(void)
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
+
+	lc_reginit(&pndgBmapCbs, struct mexpbcm, mexpbcm_lentry,
+	    "pendingBmapCbs");
+	lc_reginit(&inflBmapCbs, struct mexpbcm, mexpbcm_lentry,
+	    "inflightBmapCbs");
+
+	bmap_cache_init(sizeof(struct bmap_mds_info));
+
+	mds_journal_init();
+
+	xmkfn(fn, "%s/%s", slm_datadir, _RELPATH_SLODTABLE);
+	psc_assert(!odtable_load(fn, &mdsBmapAssignTable));
+	odtable_scan(mdsBmapAssignTable, mds_bmi_cb);
 }
 
 __dead void
@@ -157,8 +175,11 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = _PATH_SLASHCONF;
 	sfn = _PATH_SLMCTLSOCK;
-	while ((c = getopt(argc, argv, "f:p:S:")) != -1)
+	while ((c = getopt(argc, argv, "D:f:p:S:")) != -1)
 		switch (c) {
+		case 'D':
+			slm_datadir = optarg;
+			break;
 		case 'f':
 			cfn = optarg;
 			break;
@@ -185,15 +206,15 @@ main(int argc, char *argv[])
 	mdsio_init();
 	import_zpool(argv[0], zfspoolcf);
 
-	slm_init();
-
 	fdbuf_createkeyfile();
 	fdbuf_readkeyfile();
 	fidcache_init(FIDC_USER_MDS, NULL);
 	libsl_init(PSCNET_SERVER, 1);
-	mds_init();
-	bmap_cache_init(sizeof(struct bmap_mds_info));
 
+	slm_init();
+
+	slmfssyncthr_spawn();
+	slmcohthr_spawn();
 	slm_rpc_initsvc();
 	slmreplqthr_spawnall();
 	mds_repl_init();
