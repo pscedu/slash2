@@ -378,6 +378,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	 *  fidc_child_lookup_int_locked()
 	 */
 	psc_assert(atomic_dec_and_test(&c->fcmh_refcnt));
+	//fidc_membh_dropref(c);
 	fidc_child_free_plocked(c);
 
 	ureqlock(&p->fcmh_lock, locked);
@@ -476,9 +477,14 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	psclist_xadd_tail(&ch->fcmh_sibling, &np->fcmh_children);
 	freelock(&np->fcmh_lock);
 
+	fidc_membh_dropref(ch);
 	freelock(&ch->fcmh_lock);
 
-	DEBUG_FCMH(PLL_WARN, ch, "fni=%p, rename file: %s -->  %s", fni, oldname, newname);
+	DEBUG_FCMH(PLL_WARN, ch, "fni=%p, rename file: "
+		   "%s op(i+g:%"PRId64"+""%"PRId64") --> " 
+		   "%s np(i+g:%"PRId64"+""%"PRId64")",
+		   fni, oldname, fcmh_2_fid(op), fcmh_2_gen(op),
+		   newname, fcmh_2_fid(np), fcmh_2_gen(np));
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
