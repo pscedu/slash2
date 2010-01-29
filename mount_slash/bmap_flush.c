@@ -363,7 +363,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset
 		off = r->biorq_off;
 		reqsz = r->biorq_len;
 
-		DEBUG_BIORQ(PLL_INFO, r, "r tot_reqsz=%u off=%zu",
+		DEBUG_BIORQ(PLL_INFO, r, "r tot_reqsz=%u off=%"PSCPRIdOFF,
 			    tot_reqsz, off);
 		psc_assert(psc_dynarray_len(&r->biorq_pages));
 

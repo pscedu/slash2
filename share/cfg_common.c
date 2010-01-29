@@ -296,7 +296,7 @@ slcfg_getif(struct ifconf *ifc, struct addrinfo *ai, char ifn[IFNAMSIZ])
 
 	errno = 0;
 	rc = write(s, &rq, rq.nmh.nlmsg_len);
-	if (rc != rq.nmh.nlmsg_len)
+	if (rc != (ssize_t)rq.nmh.nlmsg_len)
 		psc_fatal("routing socket length mismatch");
 
 	rc = read(s, &rq, sizeof(rq));

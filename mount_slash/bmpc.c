@@ -425,13 +425,13 @@ bmpc_reap_locked(void)
 void
 bmpc_free(void *base)
 {
+	unsigned long sptr, uptr = (unsigned long)base;
 	struct sl_buffer *slb;
-	uint64_t uptr=(uint64_t)base, sptr;
 	int found=0, freeslb=0;
 
 	lockBmpcSlabs();
 	PLL_FOREACH(slb, &bmpcSlabs.bmms_slbs) {
-		sptr = (uint64_t)slb->slb_base;
+		sptr = (unsigned long)slb->slb_base;
 		if (uptr >= sptr &&
 		    (uptr < sptr + (BMPC_SLB_NBLKS * BMPC_BUFSZ))) {
 			found = 1;

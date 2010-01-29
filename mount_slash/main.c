@@ -55,6 +55,9 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
+#define ffi_setmfh(fi, mfh)	((fi)->fh = (uint64_t)(unsigned long)(mfh))
+#define ffi_getmfh(fi)		((void *)(unsigned long)(fi)->fh)
+
 sl_ios_id_t		 prefIOS = IOS_ID_ANY;
 int			 fuse_debug;
 const char		*progname;
@@ -65,31 +68,6 @@ struct sl_resm		*slc_rmc_resm;
 
 struct psc_vbitmap	 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t		 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
-
-#if 0
-static void exit_handler(int sig)
-{
-	exit_fuse_listener = B_TRUE;
-}
-
-static int set_signal_handler(int sig, void (*handler)(int))
-{
-	struct sigaction sa;
-
-	memset(&sa, 0, sizeof(struct sigaction));
-
-	sa.sa_handler = handler;
-	sigemptyset(&(sa.sa_mask));
-	sa.sa_flags = 0;
-
-	if (sigaction(sig, &sa, NULL) == -1) {
-		perror("sigaction");
-		return -1;
-	}
-
-	return 0;
-}
-#endif
 
 /*
  * translate_pathname - convert an absolute file system path name into
@@ -227,7 +205,7 @@ slash2fuse_reply_create(fuse_req_t req, const struct slash_fidgen *fg,
 
 	memcpy(&e.attr, stb, sizeof(e.attr));
 
-	psc_trace("inode:%"PRId64" generation:%lu", e.ino, e.generation);
+	psc_trace("inode:%lu generation:%lu", e.ino, e.generation);
 	dump_statbuf(&e.attr, PLL_TRACE);
 
 	fuse_reply_create(req, &e, fi);
@@ -247,7 +225,7 @@ slash2fuse_reply_entry(fuse_req_t req, const struct slash_fidgen *fg,
 
 	memcpy(&e.attr, stb, sizeof(e.attr));
 
-	psc_trace("inode:%"PRId64" generation:%lu",
+	psc_trace("inode:%lu generation:%lu",
 		  e.ino, e.generation);
 	dump_statbuf(&e.attr, PLL_TRACE);
 
@@ -412,7 +390,7 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct fidc_membh *h;
 	int rc;
 
-	mfh = (void *)fi->fh;
+	mfh = ffi_getmfh(fi);
 	h = mfh->mfh_fcmh;
 	psc_assert(ino == fcmh_2_fid(h));
 
@@ -453,7 +431,7 @@ slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino,
 	struct msl_fhent *mfh;
 	int flags=1, rc=0;
 
-	mfh = (void *)fi->fh;
+	mfh = ffi_getmfh(fi);
 	c = mfh->mfh_fcmh;
 	psc_assert(ino == fcmh_2_fid(c));
 
@@ -583,7 +561,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	memcpy(&m->fcmh_fcoo->fcoo_fdb, &mp->sfdb, sizeof(mp->sfdb));
 
 	mfh = msl_fhent_new(m);
-	fi->fh = (uint64_t)mfh;
+	ffi_setmfh(fi, mfh);
 	fi->keep_cache = 0;
 	fi->direct_io = 1;
 
@@ -616,7 +594,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	msfsthr_ensure();
 
-	psc_trace("FID %"PRId64, ino);
+	psc_trace("FID %lu", ino);
 
 	rc = fidc_lookup_load_inode(ino, &creds, &c);
 	if (rc)
@@ -641,10 +619,10 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	}
 
 	mfh = msl_fhent_new(c);
-	
+
 	DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p", mfh);
 
-	fi->fh = (uint64_t)mfh;
+	ffi_setmfh(fi, mfh);
 	fi->keep_cache = 0;
 	fi->direct_io = 1;
 	rc = slash2fuse_fcoo_start(req, ino, fi);
@@ -1001,7 +979,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	if (fi->flags & (O_WRONLY | O_RDWR))
 		return (EINVAL);
 
-	mfh = (void *)fi->fh;
+	mfh = ffi_getmfh(fi);
 	d = mfh->mfh_fcmh;
 	psc_assert(d);
 
@@ -1151,13 +1129,12 @@ ms_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 
 	p = m = NULL;
 
-	psc_infos(PSS_GEN, "name %s inode %"PRId64,
-		  name, parent);
+	psc_infos(PSS_GEN, "name %s inode %lu", name, parent);
 
 	/* load or create the parent in the fid cache */
 	rc = fidc_lookup_load_inode(parent, cr, &p);
 	if (rc) {
-		psc_warnx("name %s - failed to load inode %"PRIx64,
+		psc_warnx("name %s - failed to load inode %lu",
 			  name, parent);
 		rc = EINVAL;
 		goto out;
@@ -1260,7 +1237,7 @@ slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct fidc_membh *h;
 	int rc=0;
 
-	mfh = (void *)fi->fh;
+	mfh = ffi_getmfh(fi);
 	h = mfh->mfh_fcmh;
 
 	spinlock(&h->fcmh_lock);
@@ -1299,7 +1276,7 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	msfsthr_ensure();
 
-	mfh = (void *)fi->fh;
+	mfh = ffi_getmfh(fi);
 	c = mfh->mfh_fcmh;
 	/* Remove bmap references associated with this fd.
 	 */
@@ -1548,7 +1525,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	freelock(&c->fcmh_lock);
 
 	if (fi && fi->fh) {
-		mfh = (void *)fi->fh;
+		mfh = ffi_getmfh(fi);
 		psc_assert(c == mfh->mfh_fcmh);
 	}
 
@@ -1616,7 +1593,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 
 	msfsthr_ensure();
 
-	mfh = (void *)fi->fh;
+	mfh = ffi_getmfh(fi);
 	if (fidc_lookup_fg(fcmh_2_fgp(mfh->mfh_fcmh)) != mfh->mfh_fcmh) {
 		rc = EBADF;
 		goto out;
@@ -1655,7 +1632,7 @@ slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
 
 	msfsthr_ensure();
 
-	mfh = (void *)fi->fh;
+	mfh = ffi_getmfh(fi);
 	if (fidc_lookup_fg(fcmh_2_fgp(mfh->mfh_fcmh)) != mfh->mfh_fcmh) {
 		rc = EBADF;
 		goto out;
