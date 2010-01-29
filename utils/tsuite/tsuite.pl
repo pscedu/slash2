@@ -41,6 +41,16 @@ sub execute {
 	system join ' ', @_;
 }
 
+sub slurp {
+	my ($fn) = @_;
+	local $/;
+
+	open G, "<", "$fn" or fatal $fn;
+	my $dat = <G>;
+	close G;
+	return ($dat);
+}
+
 sub dump_res {
 	my ($res) = @_;
 	print "resource:\n";
@@ -273,18 +283,15 @@ EOF
 
 waitjobs $intvtimeout;
 
+my $slmgdb = slurp "$tsbase/slashd.gdbcmd";
+
 # Launch MDS servers
 foreach $i (@mds) {
 	debug_msg "MDS: $i->{host}";
-	my $dat;
-	{
-		local $/;
-		open G, "<", "$tsbase/slashd.gdbcmd" or fatal "slashd.gdbcmd";
-		$dat = <G>;
-		close G;
-	}
 
+	my $dat = $slmgdb;
 	$dat =~ s/%zpool_name%/$i->{zpoolname}/g;
+	$dat =~ s/%slmdir%/$i->{datadir}/g;
 
 	open G, ">", "$base/slashd.$i->{id}.gdbcmd" or fatal "write slashd.gdbcmd";
 	print G $dat;
