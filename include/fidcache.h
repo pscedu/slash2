@@ -233,15 +233,15 @@ extern struct psc_listcache	 fidcCleanList;
 
 #define DEBUG_STATBUF(stb, level)						\
 	psc_logs((level), PSS_GEN,						\
-	    "stb (%p) dev:%lu inode:%"PRId64" mode:0%o "			\
-	    "nlink:%lu uid:%u gid:%u rdev:%lu sz:%"PRId64" "			\
-	    "blk:%lu blkcnt:%zd atime:%lu mtime:%lu ctime:%lu",			\
-	    (stb),								\
-	    (stb)->st_dev, (stb)->st_ino, (stb)->st_mode,			\
+	    "stb (%p) dev:%"PRIu64" inode:%"PRId64" mode:0%o "			\
+	    "nlink:%u uid:%u gid:%u "						\
+	    "rdev:%"PRIu64" sz:%"PRId64" blksz:%ld "				\
+	    "blkcnt:%"PRId64" atime:%lu mtime:%lu ctime:%lu",			\
+	    (stb), (uint64_t)(stb)->st_dev, (stb)->st_ino, (stb)->st_mode,	\
 	    (stb)->st_nlink, (stb)->st_uid, (stb)->st_gid,			\
-	    (stb)->st_rdev, (stb)->st_size, (stb)->st_blksize,			\
+	    (uint64_t)(stb)->st_rdev, (stb)->st_size, (stb)->st_blksize,	\
 	    (stb)->st_blocks, (stb)->st_atime, (stb)->st_mtime,			\
-	    (stb)->st_mtime)
+	    (stb)->st_ctime)
 
 static __inline void
 dump_statbuf(struct stat *stb, int level)
