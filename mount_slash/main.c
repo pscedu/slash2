@@ -300,40 +300,22 @@ slash2fuse_fidc_put(const struct slash_fidgen *fg, const struct stat *stb,
 static void
 slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 {
-	struct srm_generic_rep *mp;
-	struct srm_access_req *mq;
-	struct pscrpc_request *rq;
-	struct fidc_membh *c;
+	struct slash_creds creds;
+	struct fidc_membh *c=NULL;
 	int rc=0;
 
 	msfsthr_ensure();
 
-	c = NULL;
-
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
-	    SRMT_ACCESS, rq, mq, mp);
+	slash2fuse_getcred(req, &creds);
+	rc = fidc_lookup_load_inode(ino, &creds, &c);
 	if (rc)
 		goto out;
-
-	slash2fuse_getcred(req, &mq->creds);
-
-	mq->ino = ino;
-	mq->mask = mask;
-
-	rc = fidc_lookup_load_inode(ino, &mq->creds, &c);
-	if (rc)
-		goto out;
-
-	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc)
-		rc = rc ? rc : mp->rc;
-
+	
+	rc = checkcreds(fcmh_2_stb(c), &creds, mask);
  out:
 	fuse_reply_err(req, rc);
 	if (c)
 		fcmh_dropref(c);
-	if (rq)
-		pscrpc_req_finished(rq);
 }
 
 static void
