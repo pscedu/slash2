@@ -31,12 +31,13 @@ struct bmap_refresh;
 struct bmapc_memb;
 struct fidc_memb;
 struct fidc_membh;
+struct fidc_nameinfo;
 struct fidc_open_obj;
 
 struct sl_fcmh_ops {
 	int	(*sfop_getattr)(struct fidc_membh *, const struct slash_creds *);
-	int	(*sfop_init)(struct fidc_membh *);
-	void	(*sfop_dtor)(struct fidc_membh *);
+	int	(*sfop_grow)(void);
+	void	(*sfop_shrink)(void);
 };
 
 /*
@@ -150,7 +151,7 @@ do {										\
 /* Increment an fcmh reference, fcmh_refcnt is used by the fidcache
  *  to determine which fcmh's may be reclaimed.
  */
-#define fidc_membh_incref(f)							\
+#define fcmh_incref(f)								\
 	do {									\
 		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);		\
 		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));			\
@@ -160,7 +161,7 @@ do {										\
 
 /* Drop an fcmh reference.
  */
-#define fidc_membh_dropref(f)							\
+#define fcmh_dropref(f)								\
 	do {									\
 		atomic_dec(&(f)->fcmh_refcnt);					\
 		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));			\
@@ -205,26 +206,24 @@ enum fidc_lookup_flags {
 
 #define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
 
-int			 fidc_membh_init(struct psc_poolmgr *, void *);
-void			 fidc_membh_dtor(void *);
-void			 fidc_membh_setattr(struct fidc_membh *, const struct stat *);
+void			 fcmh_dtor(void *);
+struct fidc_membh	*fcmh_get(void);
+int			 fcmh_getfdbuf(struct fidc_membh *, struct srt_fd_buf *);
+ssize_t			 fcmh_getsize(struct fidc_membh *);
+int			 fcmh_init(struct psc_poolmgr *, void *);
+void			 fcmh_setattr(struct fidc_membh *, const struct stat *);
+void			 fcmh_setsize(struct fidc_membh *, size_t);
 
 struct fidc_open_obj	*fidc_fcoo_init(void);
 
-struct fidc_membh	*fidc_get(void);
 void			 fidc_put(struct fidc_membh *, struct psc_listcache *);
-int			 fidc_fcmh2fdb(struct fidc_membh *, struct srt_fd_buf *);
-void			 fidcache_init(enum fid_cache_users, int (*)(struct fidc_membh *));
+void			 fidc_init(enum fid_cache_users, int (*)(struct fidc_membh *));
 struct fidc_membh	*fidc_lookup_simple(slfid_t);
 struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
 
 int			 fidc_lookup(const struct slash_fidgen *, int,
 			    const struct stat *, const struct slash_creds *,
 			    struct fidc_membh **);
-
-void                     fidc_fcm_size_update(struct fidc_membh *, size_t);
-ssize_t                  fidc_fcm_size_get(struct fidc_membh *);
-
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_hashtbl	 fidcHtable;

@@ -284,7 +284,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 
 	rc = mds_fcmh_load_fmdsi(f, finfo, c->cfd_flags & CFD_FILE);
 	if (rc) {
-		fidc_membh_dropref(f);
+		fcmh_dropref(f);
 		return (-1);
 	}
 
@@ -320,7 +320,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 	FCMH_ULOCK(f);
 
 	if (rc) {
-		fidc_membh_dropref(f);
+		fcmh_dropref(f);
 		PSCFREE(m);
 	} else
 		c->cfd_pri = m;
@@ -404,7 +404,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	ureqlock(&f->fcmh_lock, locked);
  out:
 	if (f)
-		fidc_membh_dropref(f);
+		fcmh_dropref(f);
 	c->cfd_pri = NULL;
 	PSCFREE(m);
 	return (0);
@@ -922,7 +922,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		 */
 		bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
 
-	fidc_membh_dropref(fcmh);
+	fcmh_dropref(fcmh);
 	return (rc);
 }
 

@@ -126,7 +126,7 @@ main(int argc, char *argv[])
 	sli_rmi_setmds(mds);
 
 	bmap_cache_init(sizeof(struct bmap_iod_info));
-	fidcache_init(FIDC_USER_ION, NULL);
+	fidc_init(FIDC_USER_ION, NULL);
 	slvr_cache_init();
 	sli_repl_init();
 	sli_rpc_initsvc();

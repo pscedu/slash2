@@ -208,7 +208,7 @@ main(int argc, char *argv[])
 
 	fdbuf_createkeyfile();
 	fdbuf_readkeyfile();
-	fidcache_init(FIDC_USER_MDS, NULL);
+	fidc_init(FIDC_USER_MDS, NULL);
 	libsl_init(PSCNET_SERVER, 1);
 
 	slm_init();

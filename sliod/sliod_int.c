@@ -145,7 +145,7 @@ iod_inode_getsize(struct slash_fidgen *fg, off_t *fsize)
 	else
 		DEBUG_FCMH(PLL_ERROR, f, "fstat failed (rc=%d)", rc);
 
-	fidc_membh_dropref(f);
+	fcmh_dropref(f);
 
 	return (rc);
 }

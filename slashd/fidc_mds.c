@@ -115,6 +115,6 @@ fidc_fcmh2fmdsi(struct fidc_membh *fcmh)
 
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* getattr */	NULL,
-/* init */	NULL,
-/* dtor */	NULL
+/* grow */	NULL,
+/* shrink */	NULL
 };

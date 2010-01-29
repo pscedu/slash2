@@ -63,7 +63,7 @@ slmrmcthr_inode_cacheput(struct slash_fidgen *fg, struct stat *stb,
 	fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, stb, creds, &fcmh);
 
 	if (fcmh) {
-		fidc_membh_dropref(fcmh);
+		fcmh_dropref(fcmh);
 		return (0);
 	}
 	return (-1);
@@ -637,7 +637,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	}
 
 	if (fcmh)
-		fidc_membh_dropref(fcmh);
+		fcmh_dropref(fcmh);
 
 	return (0);
 }
@@ -668,7 +668,7 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 		ih->inoh_flags |= INOH_EXTRAS_DIRTY;
 		mds_inode_sync(ih);
 	}
-	fidc_membh_dropref(fcmh);
+	fcmh_dropref(fcmh);
 	return (0);
 }
 
@@ -708,7 +708,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	mds_repl_bmap_rel(bcm);
 
  out:
-	fidc_membh_dropref(fcmh);
+	fcmh_dropref(fcmh);
 	return (0);
 }
 

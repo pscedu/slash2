@@ -175,7 +175,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	 *   we wouldn't have to fault in pages like this unless the
 	 *   bmap was open in RW mode.
 	 */
-	if ((fidc_fcm_size_get(b->bcm_fcmh) > off) && op == BIORQ_WRITE && rbw)
+	if ((fcmh_getsize(b->bcm_fcmh) > off) && op == BIORQ_WRITE && rbw)
 		r->biorq_flags |= rbw;
 
 	/* Pass1: Retrieve memory pages from the cache on behalf of our pages
@@ -1653,10 +1653,10 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	}
 
 	if (rw == SL_WRITE) {
-		fidc_fcm_size_update(mfh->mfh_fcmh, (size_t)(off + size));
+		fcmh_setsize(mfh->mfh_fcmh, (size_t)(off + size));
 		rc = size;
 	} else {
-		ssize_t fsz = fidc_fcm_size_get(mfh->mfh_fcmh);
+		ssize_t fsz = fcmh_getsize(mfh->mfh_fcmh);
 		/* The client cache is operating on pages (ie 32k) so 
 		 *   any short read must be caught here.
 		 */

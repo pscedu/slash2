@@ -195,7 +195,7 @@ fidc_child_try_validate_locked(struct fidc_membh *p, struct fidc_membh *c,
 				psc_assert(psclist_conjoint(&c->fcmh_sibling));
 			} else {
 				c->fcmh_parent = p;
-				psclist_xadd_tail(&c->fcmh_sibling, 
+				psclist_xadd_tail(&c->fcmh_sibling,
 						  &p->fcmh_children);
 				DEBUG_FCMH(PLL_WARN, p, "reattaching fni=%p",
 					   fni);
@@ -243,7 +243,7 @@ fidc_child_reap_cb(struct fidc_membh *f)
 		 *  hence the need for the temp var 'p'.
 		 */
 		struct fidc_membh *p=f->fcmh_parent;
-		
+
 		psc_assert(p);
 		/* This trylock technically violates lock ordering
 		 *  (parent / child / fni) which is why we bail if the
@@ -286,11 +286,11 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		       p, c, c->fcmh_name->fni_name, c->fcmh_name->fni_hash);
 
 		if ((c->fcmh_name->fni_hash == hash) &&
-		    (!strncmp(name, c->fcmh_name->fni_name, 
+		    (!strncmp(name, c->fcmh_name->fni_name,
 			      strnlen(name, NAME_MAX)))) {
 			found = 1;
 			psc_assert(c->fcmh_parent == p);
-			fidc_membh_incref(c);
+			fcmh_incref(c);
 			break;
 		}
 	}
@@ -302,7 +302,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		/* It's old, remove it.
 		 */
 		fidc_child_free_plocked(c);
-		fidc_membh_dropref(c);
+		fcmh_dropref(c);
 		/* this will force an RPC to do the lookup */
 		c = NULL;
 	}
@@ -421,13 +421,13 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 		c->fcmh_name = fni;
 		c->fcmh_parent = p;
 		psclist_xadd_tail(&c->fcmh_sibling, &p->fcmh_children);
-		DEBUG_FCMH(PLL_WARN, p, "fni=%p, adding name: %s", 
+		DEBUG_FCMH(PLL_WARN, p, "fni=%p, adding name: %s",
 			   fni, fni->fni_name);
 	} else
 		/* Someone beat us to the punch, do sanity checks and then
 		 *  clean up.
 		 */
-		fidc_membh_dropref(tmp);
+		fcmh_dropref(tmp);
  end:
 	freelock(&c->fcmh_lock);
 	freelock(&p->fcmh_lock);
@@ -489,6 +489,6 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* getattr */	slash2fuse_stat,
-/* init */	NULL,
-/* dtor */	NULL
+/* grow */	NULL,
+/* shrink */	NULL
 };

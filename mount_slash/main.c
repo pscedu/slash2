@@ -294,7 +294,7 @@ slash2fuse_fidc_put(const struct slash_fidgen *fg, const struct stat *stb,
 	struct fidc_membh *m;
 
 	m = slash2fuse_fidc_putget(fg, stb, name, parent, creds, flags);
-	fidc_membh_dropref(m);
+	fcmh_dropref(m);
 }
 
 static void
@@ -331,7 +331,7 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
  out:
 	fuse_reply_err(req, rc);
 	if (c)
-		fidc_membh_dropref(c);
+		fcmh_dropref(c);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
@@ -452,7 +452,7 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	else {
 		memcpy(&h->fcmh_fcoo->fcoo_fdb,
 		    &mp->sfdb, sizeof(mp->sfdb));
-		//fidc_membh_setattr(h, &mp->attr);
+		//fcmh_setattr(h, &mp->attr);
 	}
  out:
 	pscrpc_req_finished(rq);
@@ -611,13 +611,13 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	fidc_fcoo_startdone(m);
 
 	slash2fuse_reply_create(req, &mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, fi);
-	fidc_membh_dropref(m);		/* slash2fuse_fidc_putget() bumped it. */
+	fcmh_dropref(m);		/* slash2fuse_fidc_putget() bumped it. */
 
  out:
 	if (rc)
 		fuse_reply_err(req, rc);
 	if (p)
-		fidc_membh_dropref(p);
+		fcmh_dropref(p);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
@@ -669,7 +669,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	fuse_reply_open(req, fi);
  out:
 	if (c)
-		fidc_membh_dropref(c);
+		fcmh_dropref(c);
 	if (rc)
 		fuse_reply_err(req, rc);
 }
@@ -719,7 +719,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		if (fcmh_2_gen(fcmh) == FIDGEN_ANY) {
 			fcmh_2_gen(fcmh) = mp->gen;
 		}
-		fidc_membh_setattr(fcmh, &mp->attr);
+		fcmh_setattr(fcmh, &mp->attr);
 	}
 
 	pscrpc_req_finished(rq);
@@ -760,7 +760,7 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 
  out:
 	if (f)
-		fidc_membh_dropref(f);
+		fcmh_dropref(f);
 	if (rc)
 		fuse_reply_err(req, rc);
 }
@@ -834,15 +834,15 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	}
 	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
 	//slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds);
-	fidc_membh_setattr(c, &mp->attr);
+	fcmh_setattr(c, &mp->attr);
 
  out:
 	if (rc)
 		fuse_reply_err(req, rc);
 	if (c)
-		fidc_membh_dropref(c);
+		fcmh_dropref(c);
 	if (p)
-		fidc_membh_dropref(p);
+		fcmh_dropref(p);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
@@ -908,7 +908,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		fuse_reply_err(req, rc);
 	if (p)
-		fidc_membh_dropref(p);
+		fcmh_dropref(p);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
@@ -964,7 +964,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 
  out:
 	if (p)
-		fidc_membh_dropref(p);
+		fcmh_dropref(p);
 	if (rq)
 		pscrpc_req_finished(rq);
 	return (rc);
@@ -1028,20 +1028,20 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	if (fidc_lookup_fg(fcmh_2_fgp(d)) != d)
 		return (EBADF);
 
-	if (fidc_fcmh2fdb(d, &fdb) < 0) {
-		fidc_membh_dropref(d);
+	if (fcmh_getfdbuf(d, &fdb) < 0) {
+		fcmh_dropref(d);
 		return (EBADF);
 	}
 
 	if (!fcmh_2_isdir(d)) {
-		fidc_membh_dropref(d);
+		fcmh_dropref(d);
 		return (ENOTDIR);
 	}
 
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_READDIR, rq, mq, mp);
 	if (rc) {
-		fidc_membh_dropref(d);
+		fcmh_dropref(d);
 		return (rc);
 	}
 
@@ -1090,7 +1090,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 					 &attr->attr, &mq->creds, &fcmh);
 
 			if (fcmh)
-				fidc_membh_dropref(fcmh);
+				fcmh_dropref(fcmh);
 			else
 				psc_warnx("fcmh is NULL");
 		}
@@ -1098,7 +1098,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 
 	fuse_reply_buf(req, iov[0].iov_base, (size_t)mp->size);
  out:
-	fidc_membh_dropref(d);
+	fcmh_dropref(d);
 	pscrpc_req_finished(rq);
 	PSCFREE(iov[0].iov_base);
 	if (mq->nstbpref)
@@ -1202,9 +1202,9 @@ ms_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	 */
  out:
 	if (p)
-		fidc_membh_dropref(p);
+		fcmh_dropref(p);
 	if (m)
-		fidc_membh_dropref(m);
+		fcmh_dropref(m);
 	return (rc);
 }
 
@@ -1411,9 +1411,9 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 
  out:
 	if (op)
-		fidc_membh_dropref(op);
+		fcmh_dropref(op);
 	if (np)
-		fidc_membh_dropref(np);
+		fcmh_dropref(np);
 	if (rq)
 		pscrpc_req_finished(rq);
 	return (rc);
@@ -1481,7 +1481,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_SYMLINK, rq, mq, mp);
 	if (rc) {
-		fidc_membh_dropref(p);
+		fcmh_dropref(p);
 		return (rc);
 	}
 
@@ -1504,7 +1504,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 		slash2fuse_fidc_put(&mp->fg, &mp->attr,
 		    name, p, &mq->creds, 0);
 	}
-	fidc_membh_dropref(p);
+	fcmh_dropref(p);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -1567,7 +1567,10 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		psc_assert(c == mfh->mfh_fcmh);
 	}
 
-	fidc_fcmh2fdb(c, &mq->sfdb);
+	if (fcmh_getfdbuf(c, &mq->sfdb) < 0) {
+		rc = EBADF;
+		goto out;
+	}
 
 	slash2fuse_getcred(req, &mq->creds);
 	mq->ino = ino;
@@ -1579,14 +1582,14 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		rc = rc ? rc : mp->rc;
 		goto out;
 	}
-	fidc_membh_setattr(c, &mp->attr);
+	fcmh_setattr(c, &mp->attr);
 	fuse_reply_attr(req, &mp->attr, 0.0);
 
  out:
 	if (rc)
 		fuse_reply_err(req, rc);
 	if (c)
-		fidc_membh_dropref(c);
+		fcmh_dropref(c);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
@@ -1635,7 +1638,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	}
 	/* XXX EBADF if fd is not open for writing */
 	if (fcmh_2_isdir(mfh->mfh_fcmh)) {
-		fidc_membh_dropref(mfh->mfh_fcmh);
+		fcmh_dropref(mfh->mfh_fcmh);
 		rc = EISDIR;
 		goto out;
 	}
@@ -1645,7 +1648,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	DEBUG_FCMH(PLL_NOTIFY, mfh->mfh_fcmh,
 		   "buf=%p rc=%d sz=%zu off=%"PSCPRIdOFF, buf, rc, size, off);
 
-	fidc_membh_dropref(mfh->mfh_fcmh);
+	fcmh_dropref(mfh->mfh_fcmh);
 	if (rc < 0)
 		rc = -rc;
 	else {
@@ -1674,14 +1677,14 @@ slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
 	}
 
 	if (fcmh_2_isdir(mfh->mfh_fcmh)) {
-		fidc_membh_dropref(mfh->mfh_fcmh);
+		fcmh_dropref(mfh->mfh_fcmh);
 		rc = EISDIR;
 		goto out;
 	}
 
 	buf = PSCALLOC(size);
 	rc = msl_read(mfh, buf, size, off);
-	fidc_membh_dropref(mfh->mfh_fcmh);
+	fcmh_dropref(mfh->mfh_fcmh);
 	if (rc < 0)
 		rc = -rc;
 	else {
@@ -1701,7 +1704,7 @@ ms_init(__unusedx struct fuse_conn_info *conn)
 	int rc;
 
 	libsl_init(PSCNET_CLIENT, 0);
-	fidcache_init(FIDC_USER_CLI, fidc_child_reap_cb);
+	fidc_init(FIDC_USER_CLI, fidc_child_reap_cb);
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));
 

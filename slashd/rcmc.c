@@ -260,7 +260,7 @@ slmrcmthr_main(__unusedx void *arg)
 			if (rq)
 				slmrmcthr_replst_slave_waitrep(rq, rrq);
 			slmrmcthr_replst_slave_eof(rsw);
-			fidc_membh_dropref(fcmh);
+			fcmh_dropref(fcmh);
 			psc_pool_return(replrq_pool, rrq);
 		}
 

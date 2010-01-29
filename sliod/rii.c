@@ -114,7 +114,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
  out:
 	if (bcm)
 		bmap_op_done(bcm);
-	fidc_membh_dropref(fcmh);
+	fcmh_dropref(fcmh);
 	return (mp->rc);
 }
 

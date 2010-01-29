@@ -10,7 +10,7 @@
 #include "fidcache.h"
 
 int
-sli_fcmh_init(__unusedx struct fidc_membh *fcmh)
+sli_fcmh_grow(void)
 {
 	rlim_t soft, hard;
 	int rc;
@@ -26,7 +26,7 @@ sli_fcmh_init(__unusedx struct fidc_membh *fcmh)
 }
 
 void
-sli_fcmh_dtor(__unusedx struct fidc_membh *fcmh)
+sli_fcmh_shrink(void)
 {
 	rlim_t soft, hard;
 	int rc;
@@ -42,6 +42,6 @@ sli_fcmh_dtor(__unusedx struct fidc_membh *fcmh)
 
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* getattr */	NULL,
-/* init */	sli_fcmh_init,
-/* dtor */	sli_fcmh_dtor
+/* grow */	sli_fcmh_grow,
+/* shrink */	sli_fcmh_shrink
 };
