@@ -634,7 +634,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	msfsthr_ensure();
 
-	psc_warnx("FID %"PRId64, ino);
+	psc_trace("FID %"PRId64, ino);
 
 	rc = fidc_lookup_load_inode(ino, &creds, &c);
 	if (rc)
@@ -659,6 +659,9 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	}
 
 	mfh = msl_fhent_new(c);
+	
+	DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p", mfh);
+
 	fi->fh = (uint64_t)mfh;
 	fi->keep_cache = 0;
 	fi->direct_io = 1;
