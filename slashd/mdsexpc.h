@@ -48,7 +48,7 @@ struct pscrpc_export;
  * mexpbcm (mds_export_bmapc_member) - mexpbcm references bmaps stored in
  *   the GFC (global fid cache) and acts as a bridge between GFC bmaps and
  *   the export(s) which reference them.  Mexpbcm is tracked by the global
- *   fidcache (through the fcm's bmap export tree (at the bottom of the GFC's
+ *   fidcache (through the fcmh's bmap export tree (at the bottom of the GFC's
  *   tree chain).
  *
  * mexpbcm_lentry is used for scheduling revocation of the bmap via a
@@ -114,18 +114,18 @@ SPLAY_PROTOTYPE(exp_bmaptree, mexpbcm, mexpbcm_exp_tentry, mexpbmapc_cmp);
  * mexpfcm (mds_export_fidc_memb) - this structure interacts with the mds
  *   fid cache and the clients cache by mediation within the export.  It
  *   tracks which bmaps the client has cached.  Mexpfcm is tracked by the
- *   export's fidcache and the fcm's bmap_lessees tree.
+ *   export's fidcache and the fcmh's bmap_lessees tree.
  *
  * mexpfcm is in the middle of the exp fc chain and corresponds with the
- *   GFC fcm tier.
+ *   GFC fcmh tier.
  */
 struct mexpfcm {
-	struct fidc_membh	*mexpfcm_fcmh;		/* point to the fcm        */
+	struct fidc_membh	*mexpfcm_fcmh;		/* point to the fcmh       */
 	int			 mexpfcm_flags;
 	psc_spinlock_t		 mexpfcm_lock;
 	struct exp_bmaptree	 mexpfcm_bmaps;		/* tree of bmap pointers   */
 	struct pscrpc_export	*mexpfcm_export;	/* backpointer to export   */
-	SPLAY_ENTRY(mexpfcm)	 mexpfcm_fcm_tentry;	/* fcm tree entry          */
+	SPLAY_ENTRY(mexpfcm)	 mexpfcm_fcmh_tentry;	/* fcmh tree entry         */
 };
 
 #define MEXPFCM_LOCK(m)  spinlock(&(m)->mexpfcm_lock)

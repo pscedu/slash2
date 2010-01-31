@@ -61,7 +61,7 @@ sl_buffer_free_assertions(const struct sl_buffer *b)
 	/* all of our blocks in hand? */
 	psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	/* prove our disassociation from the fidcm */
-	psc_assert(psclist_disjoint(&b->slb_fcm_lentry));
+	psc_assert(psclist_disjoint(&b->slb_fcmh_lentry));
 }
 
 #if 0
@@ -85,7 +85,7 @@ sl_buffer_lru_assertions(const struct sl_buffer *b)
 	psc_assert(b->slb_flags == SLB_LRU);
 	psc_assert(psc_vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
 	psc_assert(!psclist_empty(&b->slb_iov_list));
-	psc_assert(psclist_conjoint(&b->slb_fcm_lentry));
+	psc_assert(psclist_conjoint(&b->slb_fcmh_lentry));
 	psc_assert(atomic_read(&b->slb_ref));
 	//	psc_assert(!atomic_read(&b->slb_unmapd_ref));
 	psc_assert((!atomic_read(&b->slb_inflight)) &&
@@ -146,7 +146,7 @@ sl_buffer_pin_2_lru_assertions(const struct sl_buffer *b)
 		   !(atomic_read(&b->slb_inflpndg)));
 	psc_assert(psc_vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
 	psc_assert(!psclist_empty(&b->slb_iov_list));
-	psc_assert(psclist_conjoint(&b->slb_fcm_lentry));
+	psc_assert(psclist_conjoint(&b->slb_fcmh_lentry));
 	psc_assert(atomic_read(&b->slb_ref));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
 	psc_assert((!atomic_read(&b->slb_inflight)) &&
@@ -270,10 +270,10 @@ sl_slab_tryfree(struct sl_buffer *b)
 	DEBUG_SLB(PLL_INFO, b, "freeing slab via non-cb context");
 
 	lc_remove(&slBufsLru, b);
-	pll_remove(b->slb_lc_fcm, b);
+	pll_remove(b->slb_lc_fcmh, b);
 	b->slb_lc_owner = NULL;
-	b->slb_lc_fcm = NULL;
-	INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);
+	b->slb_lc_fcmh = NULL;
+	INIT_PSCLIST_ENTRY(&b->slb_fcmh_lentry);
 	sl_buffer_put(b, &slBufsPool->ppm_lc);
 }
 #endif
@@ -323,9 +323,9 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool)
 	b->slb_flags &= ~SLB_LRU;
 	/* Remove ourselves from the fidcache slab list
 	 */
-	pll_remove(b->slb_lc_fcm, b);
-	b->slb_lc_fcm = NULL;
-	INIT_PSCLIST_ENTRY(&b->slb_fcm_lentry);
+	pll_remove(b->slb_lc_fcmh, b);
+	b->slb_lc_fcmh = NULL;
+	INIT_PSCLIST_ENTRY(&b->slb_fcmh_lentry);
 	psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	/* Tally em up
 	 */
@@ -403,7 +403,7 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 	slb->slb_flags = SLB_FRESH;
 	INIT_PSCLIST_HEAD(&slb->slb_iov_list);
 	//INIT_PSCLIST_ENTRY(&slb->slb_mgmt_lentry);
-	INIT_PSCLIST_ENTRY(&slb->slb_fcm_lentry);
+	INIT_PSCLIST_ENTRY(&slb->slb_fcmh_lentry);
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
 	//sl_buffer_put(slb, &slBufsPool->ppm_lc);

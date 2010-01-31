@@ -80,10 +80,10 @@ struct sl_buffer {
 	psc_spinlock_t		 slb_lock;
 	uint32_t		 slb_flags;
 	struct psc_listcache	*slb_lc_owner;
-	struct psc_lockedlist	*slb_lc_fcm;
+	struct psc_lockedlist	*slb_lc_fcmh;
 	struct psclist_head	 slb_iov_list;		/* list iovref backpointers */
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
-	struct psclist_head	 slb_fcm_lentry;	/* chain to fidcm entry     */
+	struct psclist_head	 slb_fcmh_lentry;	/* chain to fidcm entry     */
 };
 
 #define SLB_FLAG(field, str) (field ? str : "")
@@ -103,7 +103,7 @@ struct sl_buffer {
 	psc_logs((level), PSS_GEN,					\
 		" slb@%p b:%p sz(%d/%d) bsz:%u"				\
 		" ref:%d umref:%d inf:%d infp:%d fl:"SLB_FLAGS_FMT	\
-		" fcm:%p lco:%p "fmt,					\
+		" fcmh:%p lco:%p "fmt,					\
 		(slb), (slb)->slb_base, (slb)->slb_nblks,		\
 		psc_vbitmap_nfree((slb)->slb_inuse),			\
 		(slb)->slb_blksz,					\
@@ -112,7 +112,7 @@ struct sl_buffer {
 		atomic_read(&(slb)->slb_inflight),			\
 		atomic_read(&(slb)->slb_inflpndg),			\
 		DEBUG_SLB_FLAGS(slb),					\
-		(slb)->slb_lc_fcm, (slb)->slb_lc_owner,			\
+		(slb)->slb_lc_fcmh, (slb)->slb_lc_owner,		\
 		## __VA_ARGS__)
 
 #define DUMP_SLB(level, slb, fmt, ...)					\

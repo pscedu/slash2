@@ -45,7 +45,7 @@ struct sl_fcmh_ops {
  * updates and lookups into the inode are done through here.
  *
  * fidc_memb tracks cached bmaps (bmap_cache) and clients
- * (via their exports) which hold cached bmaps (fcm_lessees).
+ * (via their exports) which hold cached bmaps.
  */
 struct fidc_membh {
 	struct slash_fidgen	 fcmh_fg;		/* identity of the file */
@@ -71,14 +71,13 @@ enum fcmh_states {
 	FCMH_CAC_DIRTY     = (1 << 1),
 	FCMH_CAC_FREEING   = (1 << 2),
 	FCMH_CAC_FREE      = (1 << 3),
-	FCMH_HAVE_FCM      = (1 << 4),
-	FCMH_ISDIR         = (1 << 5),
-	FCMH_FCOO_STARTING = (1 << 6),
-	FCMH_FCOO_ATTACH   = (1 << 7),
-	FCMH_FCOO_CLOSING  = (1 << 8),
-	FCMH_FCOO_FAILED   = (1 << 9),
-	FCMH_HAVE_ATTRS    = (1 << 10),
-	FCMH_GETTING_ATTRS = (1 << 11)
+	FCMH_ISDIR         = (1 << 4),
+	FCMH_FCOO_STARTING = (1 << 5),
+	FCMH_FCOO_ATTACH   = (1 << 6),
+	FCMH_FCOO_CLOSING  = (1 << 7),
+	FCMH_FCOO_FAILED   = (1 << 8),
+	FCMH_HAVE_ATTRS    = (1 << 9),
+	FCMH_GETTING_ATTRS = (1 << 10)
 };
 
 #define FCMH_ATTR_TIMEO		8 /* number of seconds in which attribute times out */
@@ -105,7 +104,6 @@ enum fcmh_states {
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_DIRTY)		? "D" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_FREEING)		? "R" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_FREE)		? "F" : "",	\
-	ATTR_TEST((fcmh)->fcmh_state, FCMH_HAVE_FCM)		? "f" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_ISDIR)		? "d" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_FCOO_STARTING)	? "S" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_FCOO_ATTACH)		? "a" : "",	\
@@ -114,7 +112,7 @@ enum fcmh_states {
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_HAVE_ATTRS)		? "A" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_GETTING_ATTRS)	? "G" : ""
 
-#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
+#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)					\
 do {										\
@@ -168,18 +166,6 @@ do {										\
 		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);		\
 		DEBUG_FCMH(PLL_TRACE, (f), "dropref");				\
 	} while (0)
-
-
-#define FCM_CLEAR(fcm)	memset((fcm), 0, sizeof(struct fidc_memb))
-
-#define FCM_FROM_FG_ATTR(fcm, fg, a)						\
-	do {									\
-		memcpy(&(fcm)->fcm_stb, (a), sizeof((fcm)->fcm_stb));		\
-		memcpy(&(fcm)->fcm_fg, (fg), sizeof((fcm)->fcm_fg));		\
-	} while (0)
-
-#define fcm_set_accesstime(f)							\
-	clock_gettime(CLOCK_REALTIME, &(f)->fcmh_access)
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);
 

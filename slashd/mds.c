@@ -44,7 +44,7 @@ const struct slash_inode_od		 null_inode_od;
 const struct slash_inode_extras_od	 null_inox_od;
 
 __static SPLAY_GENERATE(fcm_exports, mexpfcm,
-    mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
+    mexpfcm_fcmh_tentry, mexpfcm_cache_cmp);
 
 __static SPLAY_GENERATE(exp_bmaptree, mexpbcm,
     mexpbcm_exp_tentry, mexpbmapc_cmp);

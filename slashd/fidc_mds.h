@@ -27,7 +27,7 @@
 #include "mdslog.h"
 
 SPLAY_HEAD(fcm_exports, mexpfcm);
-SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcm_tentry, mexpfcm_cache_cmp);
+SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcmh_tentry, mexpfcm_cache_cmp);
 
 struct fidc_mds_info {
 	struct fcm_exports	  fmdsi_exports;	/* tree of mexpfcm */

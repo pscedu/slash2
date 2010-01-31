@@ -446,7 +446,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 	/*
 	 * The original code has a bug in iod_inode_lookup().  Even though that
 	 * it sets FIDC_LOOKUP_COPY, it does not pass in valid attributes (it
-	 * only uses COPYFID() to initialize part of the fcm. Need to investigate
+	 * only uses COPYFID() to initialize part of the fcmh.  Need to investigate
 	 * how an I/O server uses attributes. - 12/08/2009.
 	 */
 	if (flags & FIDC_LOOKUP_COPY)
@@ -513,7 +513,7 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		if (flags & FIDC_LOOKUP_CREATE)
 			if (!try_create) {
 				/* Allocate a fidc handle and attach the
-				 *   provided fcm.
+				 *   provided fcmh.
 				 */
 				psc_hashbkt_unlock(b);
 				fcmh_new = fcmh_get();

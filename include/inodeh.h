@@ -64,8 +64,6 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 	i->inoh_flags = INOH_INO_NOTLOADED;
 }
 
-#define FCMH_2_INODEP(f)	(&(f)->fcmh_memb.fcm_inodeh.inoh_ino)
-
 static __inline char *
 _debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 {
