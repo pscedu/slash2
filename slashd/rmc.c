@@ -107,18 +107,6 @@ psc_fatalx("impossible");
 }
 
 int
-slm_rmc_handle_access(struct pscrpc_request *rq)
-{
-	struct srm_access_req *mq;
-	struct srm_generic_rep *mp;
-
-	RSX_ALLOCREP(rq, mq, mp);
-	/* XXX consult fidcache first */
-	mp->rc = mdsio_access(mq->ino, mq->mask, &mq->creds);
-	return (0);
-}
-
-int
 slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
 	struct srm_getattr_req *mq;
@@ -817,9 +805,6 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
-	case SRMT_ACCESS:
-		rc = slm_rmc_handle_access(rq);
-		break;
 	case SRMT_REPL_ADDRQ:
 		rc = slm_rmc_handle_addreplrq(rq);
 		break;

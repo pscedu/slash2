@@ -107,7 +107,6 @@
 
 /* Slash RPC message types. */
 enum {
-	SRMT_ACCESS,
 	SRMT_BMAPCHMODE,
 	SRMT_BMAPCRCWRT,
 	SRMT_BMAPDIO,
@@ -197,12 +196,6 @@ struct srt_bdb_secret {
 struct srt_bmapdesc_buf {
 	struct srt_bdb_secret	sbdb_secret;	/* encrypted */
 	char			sbdb_hash[DESCBUF_REPRLEN];
-};
-
-struct srm_access_req {
-	struct slash_creds	creds;
-	uint64_t		ino;
-	uint32_t		mask;
 };
 
 struct srm_bmap_req {
