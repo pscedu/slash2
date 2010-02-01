@@ -20,6 +20,8 @@
 #include <pthread.h>
 #include <stdio.h>
 
+#include <fuse/fuse_lowlevel.h>
+
 #include "pfl/cdefs.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
@@ -438,7 +440,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	struct slash_fidgen searchfg = *fgp;
 
 #ifdef DEMOTED_INUM_WIDTHS
-	smallfg.fg_fid = (fuse_ino_t)smallfg.fg_fid;
+	searchfg.fg_fid = (fuse_ino_t)searchfg.fg_fid;
 #endif
 
 	rc = 0;
@@ -500,7 +502,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		 * allow collisions since '(unsigned long)uint64_t var'
 		 * will frequently be inequal to 'uint64_t var' uncasted.
 		 */
-		psc_assert(smallfg.fg_fid ==
+		psc_assert(searchfg.fg_fid ==
 		    (uint64_t)(fuse_ino_t)fcmh_2_fid(fcmh));
 		if (fgp->fg_fid != fcmh_2_fid(fcmh))
 			return (ENFILE);
@@ -545,14 +547,14 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			 */
 			return (ENOENT);
 
-		/* Ok we've got a new fcmh.  No need to lock it since
+		/* OK, we've got a new fcmh.  No need to lock it since
 		 *  it's not yet visible to other threads.
 		 */
 
 		if (flags & FIDC_LOOKUP_COPY) {
 			COPYFID(fcmh_2_fgp(fcmh), fgp);
 #ifdef DEMOTED_INUM_WIDTHS
-			COPYFID(&fcmh->fcmh_smallfg, &smallfg);
+			COPYFID(&fcmh->fcmh_smallfg, &searchfg);
 #endif
 			fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
 			if (stb)
@@ -568,7 +570,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 			COPYFID(fcmh_2_fgp(fcmh), fgp);
 #ifdef DEMOTED_INUM_WIDTHS
-			COPYFID(&fcmh->fcmh_smallfg, &smallfg);
+			COPYFID(&fcmh->fcmh_smallfg, &searchfg);
 #endif
 		} /* else is handled by the initial asserts */
 
