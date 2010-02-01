@@ -27,7 +27,7 @@
 
 #include "slashrpc.h"
 
-#ifndef _LP64
+#ifndef __LP64__
 #define DEMOTED_INUM_WIDTHS
 #endif
 
