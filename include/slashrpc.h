@@ -303,7 +303,7 @@ struct srm_connect_req {
 
 struct srm_create_req {
 	struct slash_creds	creds;
-	uint64_t		pino;		/* parent inode */
+	slfid_t			pfid;		/* parent dir FID */
 	char			name[NAME_MAX + 1];
 	uint32_t		mode;
 	uint32_t		flags;
@@ -313,7 +313,7 @@ struct srm_create_req {
 
 struct srm_open_req {
 	struct slash_creds	creds;
-	uint64_t		ino;
+	slfid_t			fid;
 	uint32_t		flags;
 };
 
@@ -332,7 +332,7 @@ struct srm_destroy_req {
 
 struct srm_getattr_req {
 	struct slash_creds	creds;
-	uint64_t		ino;
+	slfid_t			fid;
 };
 
 struct srm_getattr_rep {
@@ -360,8 +360,8 @@ struct srm_io_rep {
 
 struct srm_link_req {
 	struct slash_creds	creds;
-	uint64_t		pino;		/* parent inode */
-	uint64_t		ino;
+	slfid_t			pfid;		/* parent dir FID */
+	slfid_t			fid;
 	char			name[NAME_MAX + 1];
 };
 
@@ -373,7 +373,7 @@ struct srm_link_rep {
 
 struct srm_lookup_req {
 	struct slash_creds	creds;
-	uint64_t		pino;		/* parent inode */
+	slfid_t			pfid;		/* parent dir FID */
 	char			name[NAME_MAX + 1];
 };
 
@@ -385,7 +385,7 @@ struct srm_lookup_rep {
 
 struct srm_mkdir_req {
 	struct slash_creds	creds;
-	uint64_t		pino;		/* parent inode */
+	slfid_t			pfid;		/* parent dir FID */
 	char			name[NAME_MAX + 1];
 	uint32_t		mode;
 };
@@ -399,14 +399,14 @@ struct srm_mkdir_rep {
 struct srm_mknod_req {
 	struct slash_creds	creds;
 	char			name[NAME_MAX + 1];
-	uint64_t		pino;		/* parent inode */
+	slfid_t			pfid;		/* parent dir FID */
 	uint32_t		mode;
 	uint32_t		rdev;
 };
 
 struct srm_opendir_req {
 	struct slash_creds	creds;
-	uint64_t		ino;
+	slfid_t			fid;
 };
 
 #define srm_opendir_rep srm_open_rep
@@ -433,7 +433,7 @@ struct srm_readdir_rep {
 
 struct srm_readlink_req {
 	struct slash_creds	creds;
-	uint64_t		ino;
+	slfid_t			fid;
 };
 
 struct srm_readlink_rep {
@@ -452,8 +452,8 @@ struct srm_releasebmap_req {
 
 struct srm_rename_req {
 	struct slash_creds	creds;
-	uint64_t		npino;		/* new parent inode */
-	uint64_t		opino;		/* old parent inode */
+	uint64_t		npfid;		/* new parent dir FID */
+	uint64_t		opfid;		/* old parent dir FID */
 	uint32_t		fromlen;
 	uint32_t		tolen;
 /* 'from' and 'to' component names are in bulk data */
@@ -545,7 +545,7 @@ struct srm_setattr_req {
 	struct srt_fd_buf	sfdb;
 	struct slash_creds	creds;
 	struct stat		attr;		/* XXX struct srt_stat */
-	uint64_t		ino;
+	slfid_t			fid;
 	int32_t			to_set;
 };
 
@@ -573,7 +573,7 @@ struct srm_statfs_rep {
 
 struct srm_symlink_req {
 	struct slash_creds	creds;
-	uint64_t		pino;		/* parent inode */
+	slfid_t			pfid;		/* parent dir FID */
 	char			name[NAME_MAX + 1];
 	uint32_t		linklen;
 /* link path name is in bulk */
@@ -588,7 +588,7 @@ struct srm_symlink_rep {
 
 struct srm_unlink_req {
 	struct slash_creds	creds;
-	uint64_t		pino;		/* parent inode */
+	slfid_t			pfid;		/* parent dir FID */
 	char			name[NAME_MAX + 1];
 };
 

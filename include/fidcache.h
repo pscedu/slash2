@@ -27,9 +27,12 @@
 
 #include "slashrpc.h"
 
+#ifndef _LP64
+#define DEMOTED_INUM_WIDTHS
+#endif
+
 struct bmap_refresh;
 struct bmapc_memb;
-struct fidc_memb;
 struct fidc_membh;
 struct fidc_nameinfo;
 struct fidc_open_obj;
@@ -44,11 +47,14 @@ struct sl_fcmh_ops {
  * fidc_membh - the primary inode cache structure, all
  * updates and lookups into the inode are done through here.
  *
- * fidc_memb tracks cached bmaps (bmap_cache) and clients
+ * fidc_membh tracks cached bmaps (bmap_cache) and clients
  * (via their exports) which hold cached bmaps.
  */
 struct fidc_membh {
 	struct slash_fidgen	 fcmh_fg;		/* identity of the file */
+#ifdef DEMOTED_INUM_WIDTHS
+	struct slash_fidgen	 fcmh_smallfg;		/* integer-demoted fg_fid for hashing */
+#endif
 	struct timespec		 fcmh_age;		/* age of this entry */
 	struct stat		 fcmh_stb;		/* file attributes */
 	struct fidc_nameinfo	*fcmh_name;
@@ -79,6 +85,12 @@ enum fcmh_states {
 	FCMH_HAVE_ATTRS    = (1 << 9),
 	FCMH_GETTING_ATTRS = (1 << 10)
 };
+
+#ifdef DEMOTED_INUM_WIDTHS
+# define FCMH_HASH_FIELD	fcmh_smallfg
+#else
+# define FCMH_HASH_FIELD	fcmh_fg
+#endif
 
 #define FCMH_ATTR_TIMEO		8 /* number of seconds in which attribute times out */
 
@@ -173,7 +185,7 @@ struct fidc_open_obj {
 	struct srt_fd_buf	 fcoo_fdb;
 	int			 fcoo_oref_rd;
 	int			 fcoo_oref_wr;
-	int                      fcoo_fd;
+	int                      fcoo_fd;		/* XXX move to sliod */
 	struct bmap_cache	 fcoo_bmapc;		/* bmap cache splay */
 	size_t			 fcoo_bmap_sz;
 	void			*fcoo_pri;		/* msl_fcoo_data or fidc_mds_info */
@@ -186,9 +198,10 @@ enum fidc_lookup_flags {
 	FIDC_LOOKUP_EXCL	= (1 << 1),	/* Fail if fcmh is present       */
 	FIDC_LOOKUP_COPY	= (1 << 2),	/* Create from existing attrs    */
 	FIDC_LOOKUP_LOAD	= (1 << 3),	/* Create, get attrs from mds    */
-	FIDC_LOOKUP_REFRESH	= (1 << 3),	/* load and refresh are the same */
 	FIDC_LOOKUP_FCOOSTART	= (1 << 4)	/* start the fcoo before exposing the cache entry. */
 };
+
+#define FIDC_LOOKUP_REFRESH	FIDC_LOOKUP_LOAD	/* load and refresh are the same */
 
 #define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
 
@@ -217,7 +230,7 @@ extern struct psc_poolmgr	*fidcPool;
 extern struct psc_listcache	 fidcDirtyList;
 extern struct psc_listcache	 fidcCleanList;
 
-#define DEBUG_STATBUF(stb, level)						\
+#define DEBUG_STATBUF(level, stb)						\
 	psc_logs((level), PSS_GEN,						\
 	    "stb (%p) dev:%"PRIu64" inode:%"PRId64" mode:0%o "			\
 	    "nlink:%"PRIu64" uid:%u gid:%u "					\
@@ -230,12 +243,10 @@ extern struct psc_listcache	 fidcCleanList;
 	    (stb)->st_ctime)
 
 static __inline void
-dump_statbuf(struct stat *stb, int level)
+dump_statbuf(int level, struct stat *stb)
 {
-	DEBUG_STATBUF(stb, level);
+	DEBUG_STATBUF(level, stb);
 }
-
-//RB_PROTOTYPE(fcmh_childrbtree, fidc_membh, fcmh_children, bmap_cmp);
 
 static __inline void
 fidc_gettime(struct timespec *ts)

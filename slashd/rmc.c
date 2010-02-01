@@ -113,10 +113,10 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	struct srm_getattr_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_getattr(mq->ino, &mq->creds, &mp->attr, &mp->gen);
+	mp->rc = mdsio_getattr(mq->fid, &mq->creds, &mp->attr, &mp->gen);
 
-	psc_info("mdsio_getattr() ino=%"PRId64" gen=%"PRId64" rc=%d",
-		 mq->ino, mp->gen, mp->rc);
+	psc_info("mdsio_getattr() fid=%"PRId64" gen=%"PRId64" rc=%d",
+		 mq->fid, mp->gen, mp->rc);
 
 	return (0);
 }
@@ -216,7 +216,7 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	mp->rc = mdsio_link(mq->ino, mq->pino, mq->name, &mp->fg,
+	mp->rc = mdsio_link(mq->fid, mq->pfid, mq->name, &mp->fg,
 	    &mq->creds, &mp->attr);
 	return (0);
 }
@@ -229,12 +229,12 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (mq->pino == SL_ROOT_INUM &&
+	if (mq->pfid == SL_ROOT_INUM &&
 	    strncmp(mq->name, SL_PATH_PREFIX,
 	     strlen(SL_PATH_PREFIX)) == 0)
 		mp->rc = EINVAL;
 	else
-		mp->rc = mdsio_lookup(mq->pino, mq->name, &mp->fg,
+		mp->rc = mdsio_lookup(mq->pfid, mq->name, &mp->fg,
 		    &mq->creds, &mp->attr);
 	return (0);
 }
@@ -247,7 +247,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	mp->rc = mdsio_mkdir(mq->pino, mq->name,
+	mp->rc = mdsio_mkdir(mq->pfid, mq->name,
 	    mq->mode, &mq->creds, &mp->attr, &mp->fg, 0);
 	return (0);
 }
@@ -297,7 +297,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
 	if (mp->rc)
 		return (0);
-	mp->rc = mdsio_opencreate(mq->pino, &mq->creds, fl,
+	mp->rc = mdsio_opencreate(mq->pfid, &mq->creds, fl,
 	    mq->mode, mq->name, &fg, &mp->attr, &finfo);
 	if (mp->rc)
 		return (0);
@@ -342,19 +342,19 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
 	if (mp->rc)
 		return (0);
-	mp->rc = mdsio_opencreate(mq->ino, &mq->creds, fl, 0, NULL, &fg,
+	mp->rc = mdsio_opencreate(mq->fid, &mq->creds, fl, 0, NULL, &fg,
 	    &mp->attr, &finfo);
 
-	psc_info("mdsio_opencreate() fid %"PRId64" rc=%d",
-	    mq->ino, mp->rc);
+	psc_info("mdsio_opencreate() fid=%"PRId64" rc=%d",
+	    mq->fid, mp->rc);
 
 	if (mp->rc)
 		return (0);
 
 	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
 
-	psc_info("slmrmcthr_inode_cacheput() fid %"PRId64" rc=%d",
-	    mq->ino, mp->rc);
+	psc_info("slmrmcthr_inode_cacheput() fid=%"PRId64" rc=%d",
+	    mq->fid, mp->rc);
 
 	if (!mp->rc) {
 		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
@@ -392,7 +392,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	void *finfo;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_opendir(mq->ino, &mq->creds, &fg, &stb, &finfo);
+	mp->rc = mdsio_opendir(mq->fid, &mq->creds, &fg, &stb, &finfo);
 	psc_info("mdsio_opendir rc=%d data=%p", mp->rc, finfo);
 	if (mp->rc)
 		return (0);
@@ -501,7 +501,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	iov.iov_len = sizeof(buf);
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_readlink(mq->ino, buf, &mq->creds);
+	mp->rc = mdsio_readlink(mq->fid, buf, &mq->creds);
 	if (mp->rc == 0) {
 		mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
 		    SRMC_BULK_PORTAL, &iov, 1);
@@ -592,7 +592,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	to[sizeof(to) - 1] = '\0';
 	pscrpc_free_bulk(desc);
 
-	mp->rc = mdsio_rename(mq->opino, from, mq->npino, to, &mq->creds);
+	mp->rc = mdsio_rename(mq->opfid, from, mq->npfid, to, &mq->creds);
 	return (0);
 }
 
@@ -606,7 +606,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	fmdsi = fidc_fid2fmdsi(mq->ino, &fcmh);
+	fmdsi = fidc_fid2fmdsi(mq->fid, &fcmh);
 	if (fmdsi)
 		psc_assert(fcmh);
 	/* An fmdsi means that the file is 'open' and therefore
@@ -615,7 +615,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	 *  or not cached.  In that case try to pass the inode
 	 *  into mdsio with the hope that it has it cached.
 	 */
-	mp->rc = mdsio_setattr(mq->ino, &mq->attr, mq->to_set,
+	mp->rc = mdsio_setattr(mq->fid, &mq->attr, mq->to_set,
 	    &mq->creds, &mp->attr, fmdsi ? fmdsi->fmdsi_data : NULL);
 
 	if (mp->rc == ENOENT) {
@@ -677,7 +677,8 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, NULL, &rootcreds, &fcmh);
+	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE |
+	    FIDC_LOOKUP_LOAD, NULL, &rootcreds, &fcmh);
 	if (mp->rc)
 		return (0);
 	ih = fcmh_2_inoh(fcmh);
@@ -738,7 +739,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	linkname[sizeof(linkname) - 1] = '\0';
 	pscrpc_free_bulk(desc);
 
-	mp->rc = mdsio_symlink(linkname, mq->pino, mq->name,
+	mp->rc = mdsio_symlink(linkname, mq->pfid, mq->name,
 	    &mq->creds, &mp->attr, &mp->fg);
 	return (0);
 }
@@ -752,9 +753,9 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (isfile)
-		mp->rc = mdsio_unlink(mq->pino, mq->name, &mq->creds);
+		mp->rc = mdsio_unlink(mq->pfid, mq->name, &mq->creds);
 	else
-		mp->rc = mdsio_rmdir(mq->pino, mq->name, &mq->creds);
+		mp->rc = mdsio_rmdir(mq->pfid, mq->name, &mq->creds);
 	return (0);
 }
 

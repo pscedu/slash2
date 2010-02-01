@@ -428,14 +428,18 @@ fidc_lookup_simple(slfid_t f)
 }
 
 int
-fidc_lookup(const struct slash_fidgen *fg, int flags,
+fidc_lookup(const struct slash_fidgen *fgp, int flags,
     const struct stat *stb, const struct slash_creds *creds,
     struct fidc_membh **fcmhp)
 {
-	int locked;
-	int rc, try_create=0;
+	int locked, rc, try_create=0;
 	struct fidc_membh *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
+	struct slash_fidgen searchfg = *fgp;
+
+#ifdef DEMOTED_INUM_WIDTHS
+	smallfg.fg_fid = (fuse_ino_t)smallfg.fg_fid;
+#endif
 
 	rc = 0;
 	*fcmhp = NULL;
@@ -461,16 +465,16 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		psc_assert((flags & FIDC_LOOKUP_COPY) ||
 			   (flags & FIDC_LOOKUP_LOAD));
 
-	b = psc_hashbkt_get(&fidcHtable, &fg->fg_fid);
+	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
  restart:
 	psc_hashbkt_lock(b);
  trycreate:
-	fcmh = fidc_lookup_fg(fg);
+	fcmh = fidc_lookup_fg(&searchfg);
 	if (fcmh) {
 		if (flags & FIDC_LOOKUP_EXCL) {
 			fcmh_dropref(fcmh);
 			psc_warnx("FID "FIDFMT" already in cache",
-				  FIDFMTARGS(fg));
+			    FIDFMTARGS(fgp));
 			rc = EEXIST;
 		}
 		/*
@@ -489,11 +493,24 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 			return (rc);
 		}
 
-		psc_assert(fg->fg_fid == fcmh_2_fid(fcmh));
+#ifdef DEMOTED_INUM_WIDTHS
+		/*
+		 * Since fuse_ino_t is 'unsigned long', it will be 4
+		 * bytes on some architectures.  On these machines,
+		 * allow collisions since '(unsigned long)uint64_t var'
+		 * will frequently be inequal to 'uint64_t var' uncasted.
+		 */
+		psc_assert(smallfg.fg_fid ==
+		    (uint64_t)(fuse_ino_t)fcmh_2_fid(fcmh));
+		if (fgp->fg_fid != fcmh_2_fid(fcmh))
+			return (ENFILE);
+#else
+		psc_assert(fgp->fg_fid == fcmh_2_fid(fcmh));
+#endif
 		fcmh_clean_check(fcmh);
 
 		if (fcmh->fcmh_state & FCMH_CAC_FREEING) {
-			DEBUG_FCMH(PLL_WARN, fcmh, "fcmh is FREEING..");
+			DEBUG_FCMH(PLL_WARN, fcmh, "fcmh is FREEING");
 			fcmh_dropref(fcmh);
 			psc_hashbkt_unlock(b);
 			sched_yield();
@@ -533,7 +550,10 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 		 */
 
 		if (flags & FIDC_LOOKUP_COPY) {
-			COPYFID(fcmh_2_fgp(fcmh), fg);
+			COPYFID(fcmh_2_fgp(fcmh), fgp);
+#ifdef DEMOTED_INUM_WIDTHS
+			COPYFID(&fcmh->fcmh_smallfg, &smallfg);
+#endif
 			fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
 			if (stb)
 				fcmh_setattr(fcmh, stb);
@@ -546,7 +566,10 @@ fidc_lookup(const struct slash_fidgen *fg, int flags,
 			 */
 			fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
 			fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
-			COPYFID(fcmh_2_fgp(fcmh), fg);
+			COPYFID(fcmh_2_fgp(fcmh), fgp);
+#ifdef DEMOTED_INUM_WIDTHS
+			COPYFID(&fcmh->fcmh_smallfg, &smallfg);
+#endif
 		} /* else is handled by the initial asserts */
 
 		if (flags & FIDC_LOOKUP_FCOOSTART) {
@@ -609,7 +632,7 @@ fidc_fcoo_init(void)
  * fidc_init - Initialize the FID cache.
  */
 void
-fidc_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
+fidc_init(enum fid_cache_users t, int (*fcmh_reap_cb)(struct fidc_membh *))
 {
 	int htsz;
 	ssize_t	fcdsz, fcmsz;
@@ -643,13 +666,13 @@ fidc_init(enum fid_cache_users t, int (*fcm_reap_cb)(struct fidc_membh *))
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
 	lc_reginit(&fidcDirtyList, struct fidc_membh,
-		   fcmh_lentry, "fcmhdirty");
+	    fcmh_lentry, "fcmhdirty");
 	lc_reginit(&fidcCleanList, struct fidc_membh,
-		   fcmh_lentry, "fcmhclean");
+	    fcmh_lentry, "fcmhclean");
 
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
-	    fcmh_fg, fcmh_hentry, htsz, NULL, "fidc");
-	fidcReapCb = fcm_reap_cb;
+	    FCMH_HASH_FIELD, fcmh_hentry, htsz, NULL, "fidc");
+	fidcReapCb = fcmh_reap_cb;
 }
 
 int
