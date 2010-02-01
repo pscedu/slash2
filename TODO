@@ -299,7 +299,7 @@ mds.c
 - libsl_init() is getting an ENOMEM somewhere in slashd, maybe LNET
 - ensure fidc_lookup_load_fg() will not accept FID_ANY
 - rename BMAPCHMODE -> BMAP_CHRWMODE
-- ensure that you can't msctl -U the single copy of data
+- ensure that you can't msctl -U the single master copy of data
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
 - have ACCESS() consult cache before issuing RPC
@@ -310,13 +310,15 @@ mds.c
 - more truncation framework
 - work on slictl fs import command
 
+----------------
 - make slmctl and slictl knobs for showing listen addresses/options
 - add ctl for connections
 - msctl -Q as root on files that are read-only shouldn't give EPERM
-
 - apply changes to fuse_listener.c from zfs-fuse 0.6.0
-- RSX_ALLOCREP() should return() the error code when bulks are expected
 - ensure slash.conf has <= 1 MDS servers for each site
+----------------
+
+- RSX_ALLOCREP() should return() the error code when bulks are expected
 
 - bump generation and assign ACTIVE bh_repls when assigning bmaps to
   IONS
@@ -324,6 +326,10 @@ mds.c
   wait for the actual WRITE to come
 - think about routing blips where MDS<->ION is not quite what a ION<->ION
   can see each, causing unnecessary replication work processing
+
+- the BUS errors look like they are being caused in some error scenario
+  in PSCRPC
+- directories have no size in ls(1) over mount_slash
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
