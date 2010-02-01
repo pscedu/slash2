@@ -32,7 +32,7 @@
 struct psc_vbitmap;
 
 struct bmapc_memb;
-struct fidc_memb;
+struct fidc_membh;
 struct sl_resm;
 struct slvr_ref;
 
