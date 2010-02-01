@@ -190,7 +190,7 @@ msfsthr_ensure(void)
 	psc_assert(thr->pscthr_type == MSTHRT_FS);
 }
 
-static void
+__static void
 slash2fuse_reply_create(fuse_req_t req, const struct slash_fidgen *fg,
 			const struct stat *stb,
 			const struct fuse_file_info *fi)
@@ -211,7 +211,7 @@ slash2fuse_reply_create(fuse_req_t req, const struct slash_fidgen *fg,
 	fuse_reply_create(req, &e, fi);
 }
 
-static void
+__static void
 slash2fuse_reply_entry(fuse_req_t req, const struct slash_fidgen *fg,
 		       const struct stat *stb)
 {
@@ -236,7 +236,7 @@ slash2fuse_reply_entry(fuse_req_t req, const struct slash_fidgen *fg,
  * slash2fuse_fidc_putget - create a new fcmh based on the attrs provided,
  *  return a ref'd fcmh.
  */
-static struct fidc_membh *
+__static struct fidc_membh *
 slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 		       const char *name, struct fidc_membh *parent,
 		       const struct slash_creds *creds, int flags)
@@ -264,7 +264,7 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
  *  same call but deref's the fcmh and returns void.  For callers who don't
  *  want a pointer back the new fcmh.
  */
-static void
+__static void
 slash2fuse_fidc_put(const struct slash_fidgen *fg, const struct stat *stb,
 		    const char *name, struct fidc_membh *parent,
 		    const struct slash_creds *creds, int flags)
@@ -275,7 +275,7 @@ slash2fuse_fidc_put(const struct slash_fidgen *fg, const struct stat *stb,
 	fcmh_dropref(m);
 }
 
-static void
+__static void
 slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 {
 	struct slash_creds creds;
@@ -288,7 +288,7 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 	rc = fidc_lookup_load_inode(ino, &creds, &c);
 	if (rc)
 		goto out;
-	
+
 	rc = checkcreds(fcmh_2_stb(c), &creds, mask);
  out:
 	fuse_reply_err(req, rc);
@@ -296,7 +296,7 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 		fcmh_dropref(c);
 }
 
-static void
+__static void
 slash2fuse_openref_update(struct fidc_membh *fcmh, int flags, int *uord)
 {
 	struct fidc_open_obj *o=fcmh->fcmh_fcoo;
@@ -380,7 +380,7 @@ slash2fuse_transflags(uint32_t flags, uint32_t *nflags)
 	return (0);
 }
 
-static int
+__static int
 slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
 	struct pscrpc_request *rq;
@@ -423,7 +423,7 @@ slash2fuse_openrpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
  * slash2fuse_fcoo_start - helper for slash2fuse_create and slash2fuse_open.
  *  Starts the fcoo if one doesn't already exist.
  */
-static int
+__static int
 slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino,
 		      struct fuse_file_info *fi)
 {
@@ -485,7 +485,7 @@ slash2fuse_fcoo_start(fuse_req_t req, fuse_ino_t ino,
 	return (rc);
 }
 
-static void
+__static void
 slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		  mode_t mode, struct fuse_file_info *fi)
 {
@@ -582,7 +582,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		pscrpc_req_finished(rq);
 }
 
-static void
+__static void
 slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
 	struct slash_creds creds;
@@ -637,7 +637,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		fuse_reply_err(req, rc);
 }
 
-static void
+__static void
 slash2fuse_opendir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
 	fi->flags |= O_DIRECTORY;
@@ -692,7 +692,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	return (rc);
 }
 
-static void
+__static void
 slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
     __unusedx struct fuse_file_info *fi)
 {
@@ -728,7 +728,7 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 		fuse_reply_err(req, rc);
 }
 
-static void
+__static void
 slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		const char *newname)
 {
@@ -810,7 +810,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		pscrpc_req_finished(rq);
 }
 
-static void
+__static void
 slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		 mode_t mode)
 {
@@ -876,7 +876,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		pscrpc_req_finished(rq);
 }
 
-static int
+__static int
 slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 		  int isfile)
 {
@@ -933,7 +933,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	return (rc);
 }
 
-static void
+__static void
 slash2fuse_rmdir_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
 	int error = slash2fuse_unlink(req, parent, name, 0);
@@ -943,7 +943,7 @@ slash2fuse_rmdir_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 	fuse_reply_err(req, error);
 }
 
-static void
+__static void
 slash2fuse_mknod_helper(fuse_req_t req,
 			__unusedx fuse_ino_t parent,
 			__unusedx const char *name,
@@ -955,7 +955,7 @@ slash2fuse_mknod_helper(fuse_req_t req,
 	fuse_reply_err(req, ENOTSUP);
 }
 
-static int
+__static int
 slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		   off_t off, struct fuse_file_info *fi)
 {
@@ -1069,7 +1069,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	return (rc);
 }
 
-static void
+__static void
 slash2fuse_readdir_helper(fuse_req_t req, fuse_ino_t ino, size_t size,
 		       off_t off, struct fuse_file_info *fi)
 {
@@ -1079,7 +1079,7 @@ slash2fuse_readdir_helper(fuse_req_t req, fuse_ino_t ino, size_t size,
 		fuse_reply_err(req, error);
 }
 
-static int
+__static int
 slash_lookuprpc(const struct slash_creds *cr, struct fidc_membh *p,
     const char *name, struct slash_fidgen *fgp, struct stat *stb)
 {
@@ -1170,7 +1170,7 @@ ms_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	return (rc);
 }
 
-static void
+__static void
 slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
 	struct slash_fidgen fg;
@@ -1186,7 +1186,7 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 		slash2fuse_reply_entry(req, &fg, &stb);
 }
 
-static void
+__static void
 slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 {
 	struct pscrpc_bulk_desc *desc;
@@ -1227,7 +1227,7 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 		pscrpc_req_finished(rq);
 }
 
-static int
+__static int
 slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
 	struct srm_release_req *mq;
@@ -1267,7 +1267,7 @@ slash2fuse_releaserpc(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	return (rc);
 }
 
-static void
+__static void
 slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
 	int rc=0, fdstate=0;
@@ -1309,7 +1309,7 @@ slash2fuse_release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	fuse_reply_err(req, rc);
 }
 
-static int
+__static int
 slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
     const char *name, fuse_ino_t newparent, const char *newname)
 {
@@ -1381,7 +1381,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	return (rc);
 }
 
-static void
+__static void
 slash2fuse_rename_helper(fuse_req_t req, fuse_ino_t parent, const char *name,
 			 fuse_ino_t newparent, const char *newname)
 {
@@ -1391,7 +1391,7 @@ slash2fuse_rename_helper(fuse_req_t req, fuse_ino_t parent, const char *name,
 	fuse_reply_err(req, error);
 }
 
-static void
+__static void
 slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 {
 	struct pscrpc_request *rq;
@@ -1418,7 +1418,7 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 		pscrpc_req_finished(rq);
 }
 
-static int
+__static int
 slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
     const char *name)
 {
@@ -1471,7 +1471,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	return (rc);
 }
 
-static void
+__static void
 slash2fuse_symlink_helper(fuse_req_t req, const char *buf,
     fuse_ino_t parent, const char *name)
 {
@@ -1481,7 +1481,7 @@ slash2fuse_symlink_helper(fuse_req_t req, const char *buf,
 		fuse_reply_err(req, error);
 }
 
-static void
+__static void
 slash2fuse_unlink_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
 	int error = slash2fuse_unlink(req, parent, name, 1);
@@ -1490,7 +1490,7 @@ slash2fuse_unlink_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 	fuse_reply_err(req, error);
 }
 
-static void
+__static void
 slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		   int to_set, struct fuse_file_info *fi)
 {
@@ -1557,7 +1557,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 }
 
 //XXX convert me
-static int
+__static int
 slash2fuse_fsync(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino,
 		 __unusedx int datasync, __unusedx struct fuse_file_info *fi)
 {
@@ -1566,7 +1566,7 @@ slash2fuse_fsync(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino,
 	return (ENOTSUP);
 }
 
-static void
+__static void
 slash2fuse_fsync_helper(fuse_req_t req, fuse_ino_t ino, int datasync,
 		     struct fuse_file_info *fi)
 {
@@ -1576,7 +1576,7 @@ slash2fuse_fsync_helper(fuse_req_t req, fuse_ino_t ino, int datasync,
 	fuse_reply_err(req, error);
 }
 
-static void
+__static void
 slash2fuse_destroy(__unusedx void *userdata)
 {
 	//do an unmount of slash2
