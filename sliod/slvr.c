@@ -253,7 +253,7 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 		}
 		if (nblks) {
 			nblks = 0;
-			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ, 
+			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,
 				       SL_READ);
 			if (rc)
 				goto out;
@@ -333,7 +333,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 	if (s->slvr_flags & SLVR_NEW) {
 		if (!tmp) {
 			/* Drop the lock before potentially blocking
-			 *   in the pool reaper.  To do this we 
+			 *   in the pool reaper.  To do this we
 			 *   must first allocate to a tmp pointer.
 			 */
 		getbuf:
@@ -393,8 +393,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	/*
-	 * Common courtesy requires us to wait for another threads' work 
-	 *   FIRST. Otherwise, we could bail out prematurely when the 
+	 * Common courtesy requires us to wait for another threads' work
+	 *   FIRST. Otherwise, we could bail out prematurely when the
 	 *   data is ready without considering the range we want to write.
 	 *
 	 * Note we have taken our read or write references, so the sliver won't
@@ -428,14 +428,14 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 			s->slvr_flags |= SLVR_CRCDIRTY;
 
 			if (s->slvr_flags & SLVR_DATARDY)
-				/* Either read or write ops can just proceed 
-				 *   if SLVR_DATARDY is set, the sliver is 
+				/* Either read or write ops can just proceed
+				 *   if SLVR_DATARDY is set, the sliver is
 				 *   prepared.
 				 */
 				goto set_write_dirty;
 		}
 
-	} else if (rw == SL_READ) 
+	} else if (rw == SL_READ)
 		if (s->slvr_flags & SLVR_DATARDY)
 			goto out;
 
@@ -736,7 +736,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	LIST_CACHE_LOCK(&lruSlvrs);
 	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd,
 				    slvr_lentry) {
-		DEBUG_SLVR(PLL_INFO, s, "considering for reap, nwaiters=%d", 
+		DEBUG_SLVR(PLL_INFO, s, "considering for reap, nwaiters=%d",
 			   atomic_read(&m->ppm_nwaiters));
 
 		/* We are reaping, so it is fine to back off on some
@@ -783,12 +783,12 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 		if (s->slvr_flags & SLVR_SLBFREEING) {
 			struct sl_buffer *tmp=s->slvr_slab;
-			
+
 			psc_assert(!(s->slvr_flags & SLVR_FREEING));
 			psc_assert(s->slvr_slab);
-			
+
 			s->slvr_flags &= ~(SLVR_SLBFREEING|SLVR_DATARDY);
-			
+
 			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slab=%p",
 				   s->slvr_slab);
 			s->slvr_slab = NULL;
@@ -802,7 +802,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 			psc_assert(!(s->slvr_flags & SLVR_SLBFREEING));
 			psc_assert(!(s->slvr_flags & SLVR_PINNED));
 			psc_assert(!s->slvr_slab);
-			if (s->slvr_flags & SLVR_SPLAYTREE) {	
+			if (s->slvr_flags & SLVR_SPLAYTREE) {
 				s->slvr_flags &= ~SLVR_SPLAYTREE;
 				SLVR_URLOCK(s, locked);
 				slvr_remove(s);
