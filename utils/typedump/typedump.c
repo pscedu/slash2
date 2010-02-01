@@ -59,7 +59,7 @@
 #include "slashd/fidc_mds.h"
 #include "slashd/mdscoh.h"
 #include "slashd/mdsexpc.h"
-#include "slashd/mdsio_zfs.h"
+#include "slashd/mdsio.h"
 #include "slashd/mdslog.h"
 #include "slashd/repl_mds.h"
 #include "slashd/rpc_mds.h"
@@ -125,6 +125,7 @@ main(int argc, char *argv[])
 	PRTYPE(sl_ino_t);
 	PRTYPE(sl_ios_id_t);
 	PRTYPE(sl_siteid_t);
+	PRTYPE(slfgen_t);
 	PRTYPE(struct biod_crcup_ref);
 	PRTYPE(struct biod_infl_crcs);
 	PRTYPE(struct bmap_cli_info);
@@ -188,6 +189,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sliric_thread);
 	PRTYPE(struct slirii_thread);
 	PRTYPE(struct slirim_thread);
+	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_rmi_expdata);
 	PRTYPE(struct slmds_jent_crc);
 	PRTYPE(struct slmds_jent_ino_addrepl);
@@ -199,7 +201,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmrmi_thread);
 	PRTYPE(struct slmrmm_thread);
 	PRTYPE(struct slvr_ref);
-	PRTYPE(struct srm_access_req);
 	PRTYPE(struct srm_bmap_chmode_rep);
 	PRTYPE(struct srm_bmap_chmode_req);
 	PRTYPE(struct srm_bmap_crcup);
@@ -264,7 +265,6 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_GETREPLST_SLAVE);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
 	PRVAL(MSCMT_SET_NEWREPLPOL);
-	PRVAL(SRMT_ACCESS);
 	PRVAL(SRMT_BMAPCHMODE);
 	PRVAL(SRMT_BMAPCRCWRT);
 	PRVAL(SRMT_BMAPDIO);
