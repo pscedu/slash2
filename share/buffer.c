@@ -40,9 +40,11 @@ struct psc_poolmgr	*slBufsPool;
 struct psc_listcache	 slBufsLru;
 struct psc_listcache	 slBufsPin;
 
+/* XXX move to cacheparams.h? */
 int slCacheBlkSz=32768;
 int slCacheNblks=32;
 uint32_t slbFreeDef=100;
+uint32_t slbFreeMin=100;
 uint32_t slbFreeMax=200;
 
 sl_iov_try_memrls   slMemRlsTrylock=NULL;
@@ -425,7 +427,7 @@ sl_buffer_cache_init(void)
 	psc_assert(SLB_SIZE <= LNET_MTU);
 
 	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer, slb_mgmt_lentry,
-			    PPMF_AUTO, slbFreeDef, 0, slbFreeMax,
+			    PPMF_AUTO, slbFreeDef, slbFreeDef, slbFreeMax,
 			    sl_buffer_init, sl_buffer_destroy, sl_slab_reap, "slab", NULL);
 	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
 

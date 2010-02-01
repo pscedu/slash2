@@ -220,6 +220,7 @@ typedef void (*sl_iov_memrls_ulock)(void *);
 extern sl_iov_try_memrls   slMemRlsTrylock;
 extern sl_iov_memrls_ulock slMemRlsUlock;
 
+extern struct psc_poolmaster	 slBufsPoolMaster;
 extern struct psc_poolmgr	*slBufsPool;
 extern struct psc_listcache	 slBufsFree;
 extern struct psc_listcache	 slBufsLru;
