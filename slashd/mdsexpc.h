@@ -80,14 +80,14 @@ struct mexpbcm {
 #define MEXPBCM_LOCK_ENSURE(m)	LOCK_ENSURE(&(m)->mexpbcm_export->exp_lock)
 
 enum mexpbcm_modes {
-	MEXPBCM_DIO_REQD	= (1<<0),  /* dio callback outstanding             */
-	MEXPBCM_CIO_REQD	= (1<<1),  /* cached-io callback outstanding       */
-	MEXPBCM_RD		= (1<<2),
-	MEXPBCM_WR		= (1<<3),
-	MEXPBCM_CDIO		= (1<<4),  /* client requested directio            */
-	MEXPBCM_DIO		= (1<<5),  /* otherwise caching mode               */
-	MEXPBCM_INIT		= (1<<6),  /* on it's way, block on the fcmh waitq */
-	MEXPBCM_RPC_CANCEL	= (1<<7)
+	MEXPBCM_DIO_REQD	= (1 << 0),  /* dio callback outstanding             */
+	MEXPBCM_CIO_REQD	= (1 << 1),  /* cached-io callback outstanding       */
+	MEXPBCM_RD		= (1 << 2),
+	MEXPBCM_WR		= (1 << 3),
+	MEXPBCM_CDIO		= (1 << 4),  /* client requested directio            */
+	MEXPBCM_DIO		= (1 << 5),  /* otherwise caching mode               */
+	MEXPBCM_INIT		= (1 << 6),  /* on it's way, block on the fcmh waitq */
+	MEXPBCM_RPC_CANCEL	= (1 << 7)
 };
 
 static __inline int
@@ -120,7 +120,7 @@ SPLAY_PROTOTYPE(exp_bmaptree, mexpbcm, mexpbcm_exp_tentry, mexpbmapc_cmp);
  *   GFC fcmh tier.
  */
 struct mexpfcm {
-	struct fidc_membh	*mexpfcm_fcmh;		/* point to the fcmh       */
+	struct fidc_membh	*mexpfcm_fcmh;
 	int			 mexpfcm_flags;
 	psc_spinlock_t		 mexpfcm_lock;
 	struct exp_bmaptree	 mexpfcm_bmaps;		/* tree of bmap pointers   */
@@ -133,9 +133,9 @@ struct mexpfcm {
 #define MEXPFCM_LOCK_ENSURE(m) LOCK_ENSURE(&(m)->mexpfcm_lock)
 
 enum mexpfcm_states {
-	MEXPFCM_CLOSING   = (1<<0),
-	MEXPFCM_REGFILE   = (1<<1),
-	MEXPFCM_DIRECTORY = (1<<2)
+	MEXPFCM_CLOSING   = (1 << 0),
+	MEXPFCM_REGFILE   = (1 << 1),
+	MEXPFCM_DIRECTORY = (1 << 2)
 };
 
 #define mexpfcm2fid(m)		fcmh_2_fid((m)->mexpfcm_fcmh)
@@ -144,7 +144,7 @@ enum mexpfcm_states {
 static __inline int
 mexpfcm_cache_cmp(const void *x, const void *y)
 {
-	const struct mexpfcm *a=x, *b=y;
+	const struct mexpfcm *a = x, *b = y;
 
 	return (CMP(a->mexpfcm_export, b->mexpfcm_export));
 }

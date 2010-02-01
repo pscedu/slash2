@@ -121,7 +121,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 			if (!(bmpce->bmpce_flags & BMPCE_LRU)) {
 				bmpce->bmpce_flags |= BMPCE_LRU;
 				pll_addtail(&bmpc->bmpc_lru, bmpce);
-				//pll_add_sorted(&bmpc->bmpc_lru, bmpce, 
+				//pll_add_sorted(&bmpc->bmpc_lru, bmpce,
 				//	       bmpce_lrusort_cmp1);
 				psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
 			}

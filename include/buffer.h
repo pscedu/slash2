@@ -83,7 +83,7 @@ struct sl_buffer {
 	struct psc_lockedlist	*slb_lc_fcmh;
 	struct psclist_head	 slb_iov_list;		/* list iovref backpointers */
 	struct psclist_head	 slb_mgmt_lentry;	/* chain lru or outgoing q  */
-	struct psclist_head	 slb_fcmh_lentry;	/* chain to fidcm entry     */
+	struct psclist_head	 slb_fcmh_lentry;	/* chain in fidc_membh      */
 };
 
 #define SLB_FLAG(field, str) (field ? str : "")
