@@ -86,16 +86,15 @@ struct sl_buffer {
 	struct psclist_head	 slb_fcmh_lentry;	/* chain in fidc_membh      */
 };
 
-#define SLB_FLAG(field, str) (field ? str : "")
-#define DEBUG_SLB_FLAGS(slb)					  \
-	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_DIRTY),    "d"), \
-	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_INFLIGHT), "I"), \
-	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_FREEING),  "F"), \
-	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_PINNED),   "P"), \
-	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_LRU),      "L"), \
-	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_FREE),     "f"), \
-	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_INIT),     "i"), \
-	SLB_FLAG(ATTR_TEST((slb)->slb_flags, SLB_FRESH),    "r")
+#define DEBUG_SLB_FLAGS(slb)						\
+	ATTR_TEST((slb)->slb_flags, SLB_DIRTY)		? "d" : "",	\
+	ATTR_TEST((slb)->slb_flags, SLB_INFLIGHT)	? "I" : "",	\
+	ATTR_TEST((slb)->slb_flags, SLB_FREEING)	? "F" : "",	\
+	ATTR_TEST((slb)->slb_flags, SLB_PINNED)		? "P" : "",	\
+	ATTR_TEST((slb)->slb_flags, SLB_LRU)		? "L" : "",	\
+	ATTR_TEST((slb)->slb_flags, SLB_FREE)		? "f" : "",	\
+	ATTR_TEST((slb)->slb_flags, SLB_INIT)		? "i" : "",	\
+	ATTR_TEST((slb)->slb_flags, SLB_FRESH)		? "r" : ""
 
 #define SLB_FLAGS_FMT "%s%s%s%s%s%s%s%s"
 
@@ -120,8 +119,8 @@ struct sl_buffer {
 		int __l;						\
 		struct sl_buffer_iovref *__r;				\
 									\
-		DEBUG_SLB((level), (slb), fmt, ## __VA_ARGS__);	\
-		__l = reqlock(&slb->slb_lock);				\
+		DEBUG_SLB((level), (slb), fmt, ## __VA_ARGS__);		\
+		__l = reqlock(&(slb)->slb_lock);			\
 		psclist_for_each_entry(__r, &(slb)->slb_iov_list,	\
 				       slbir_lentry) {			\
 			if (__r->slbir_pri) {				\
@@ -130,7 +129,7 @@ struct sl_buffer {
 				__m = __r->slbir_pri;			\
 				DEBUG_OFT((level), __m,			\
 				    "SLB ref %p memb", __r);		\
-				DEBUG_OFFTIOV(level,			\
+				DEBUG_OFFTIOV((level),			\
 					     __m->oft_norl.oft_iov,	\
 					     "iov of memb %p", __m);	\
 			} else						\
@@ -158,16 +157,16 @@ enum slb_ref_flags {
 /* Should have been done earlier
  * have to add ref's before adding to pin list
  */
-#define slb_fresh_2_pinned(slb) do {				\
-		ATTR_UNSET((slb)->slb_flags, SLB_FRESH);	\
-		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
-		(slb)->slb_lc_owner = NULL;			\
+#define slb_fresh_2_pinned(slb) do {					\
+		ATTR_UNSET((slb)->slb_flags, SLB_FRESH);		\
+		ATTR_SET((slb)->slb_flags, SLB_PINNED);			\
+		(slb)->slb_lc_owner = NULL;				\
 	} while (0)
 
-#define slb_lru_2_pinned(slb) do {				\
-		sl_buffer_lru_assertions((slb));		\
-		ATTR_UNSET((slb)->slb_flags, SLB_LRU);		\
-		ATTR_SET((slb)->slb_flags, SLB_PINNED);		\
+#define slb_lru_2_pinned(slb) do {					\
+		sl_buffer_lru_assertions((slb));			\
+		ATTR_UNSET((slb)->slb_flags, SLB_LRU);			\
+		ATTR_SET((slb)->slb_flags, SLB_PINNED);			\
 	} while (0)
 
 #define slb_pinned_2_lru(slb) do {					\
@@ -180,31 +179,31 @@ enum slb_ref_flags {
 #define SLB_TIMEOUT_SECS  5
 #define SLB_TIMEOUT_NSECS 0
 
-#define slb_set_alloctimer(t) do {				\
-		clock_gettime(CLOCK_REALTIME, (t));		\
-		(t)->tv_sec  += SLB_TIMEOUT_SECS;		\
-		(t)->tv_nsec += SLB_TIMEOUT_NSECS;		\
+#define slb_set_alloctimer(t) do {					\
+		clock_gettime(CLOCK_REALTIME, (t));			\
+		(t)->tv_sec  += SLB_TIMEOUT_SECS;			\
+		(t)->tv_nsec += SLB_TIMEOUT_NSECS;			\
 	} while (0)
 
 #define SLB_RP_TIMEOUT_SECS  0
 #define SLB_RP_TIMEOUT_NSECS 200000
 
-#define slb_set_readpndg_timer(t) do {				\
-		clock_gettime(CLOCK_REALTIME, (t));		\
-		(t)->tv_sec  += SLB_RP_TIMEOUT_SECS;		\
-		(t)->tv_nsec += SLB_RP_TIMEOUT_NSECS;		\
+#define slb_set_readpndg_timer(t) do {					\
+		clock_gettime(CLOCK_REALTIME, (t));			\
+		(t)->tv_sec  += SLB_RP_TIMEOUT_SECS;			\
+		(t)->tv_nsec += SLB_RP_TIMEOUT_NSECS;			\
 	} while (0)
 
-#define slb_inflight_cb(iov, op)			\
-	do {						\
-		if (slInflightCb)			\
-			(*slInflightCb)(iov, op);	\
+#define slb_inflight_cb(iov, op)					\
+	do {								\
+		if (slInflightCb)					\
+			(*slInflightCb)(iov, op);			\
 	} while (0)
 
-#define slb_pin_cb(iov, op)				\
-	do {						\
-		if (bufSlPinCb)				\
-			(*bufSlPinCb)(iov, op);		\
+#define slb_pin_cb(iov, op)						\
+	do {								\
+		if (bufSlPinCb)						\
+			(*bufSlPinCb)(iov, op);				\
 	} while (0)
 
 #define SL_INFLIGHT_INC 0
@@ -213,7 +212,7 @@ enum slb_ref_flags {
 int  sl_buffer_init(struct psc_poolmgr *, void *);
 void sl_buffer_destroy(void *);
 void sl_buffer_cache_init(void);
-void sl_buffer_fresh_assertions(const struct sl_buffer *);
+void sl_buffer_fresh_assertions(struct sl_buffer *);
 
 typedef int (*sl_iov_try_memrls)(void *);
 typedef void (*sl_iov_memrls_ulock)(void *);
@@ -221,7 +220,6 @@ typedef void (*sl_iov_memrls_ulock)(void *);
 extern sl_iov_try_memrls   slMemRlsTrylock;
 extern sl_iov_memrls_ulock slMemRlsUlock;
 
-extern struct psc_poolmaster	 slBufsPoolMaster;
 extern struct psc_poolmgr	*slBufsPool;
 extern struct psc_listcache	 slBufsFree;
 extern struct psc_listcache	 slBufsLru;
