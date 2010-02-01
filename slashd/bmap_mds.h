@@ -111,7 +111,7 @@ bmap_dio_sanity_locked(struct bmapc_memb *bmap, int dio_check)
 
 static __inline void
 _log_debug_bmapod(const char *file, const char *func, int lineno,
-    int level, const struct bmapc_memb *bmap, const char *fmt, ...)
+    int level, struct bmapc_memb *bmap, const char *fmt, ...)
 {
 	unsigned char *b = bmap_2_bmdsiod(bmap)->bh_repls;
 	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1];
