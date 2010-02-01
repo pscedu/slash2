@@ -48,8 +48,8 @@ uint32_t slbFreeMax=200;
 sl_iov_try_memrls   slMemRlsTrylock=NULL;
 sl_iov_memrls_ulock slMemRlsUlock=NULL;
 
-static void
-sl_buffer_free_assertions(const struct sl_buffer *b)
+__static void
+sl_buffer_free_assertions(struct sl_buffer *b)
 {
 	/* The following asertions must be true: */
 	psc_assert(b->slb_flags == SLB_FREE);
@@ -65,8 +65,8 @@ sl_buffer_free_assertions(const struct sl_buffer *b)
 }
 
 #if 0
-static void
-sl_buffer_lru_2_free_assertions(const struct sl_buffer *b)
+__static void
+sl_buffer_lru_2_free_assertions(struct sl_buffer *b)
 {
 	psc_assert(b->slb_flags == (SLB_LRU|SLB_FREEING));
 	psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
@@ -79,8 +79,8 @@ sl_buffer_lru_2_free_assertions(const struct sl_buffer *b)
 }
 #endif
 
-static void
-sl_buffer_lru_assertions(const struct sl_buffer *b)
+__static void
+sl_buffer_lru_assertions(struct sl_buffer *b)
 {
 	psc_assert(b->slb_flags == SLB_LRU);
 	psc_assert(psc_vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
@@ -93,7 +93,7 @@ sl_buffer_lru_assertions(const struct sl_buffer *b)
 }
 
 void
-sl_buffer_fresh_assertions(const struct sl_buffer *b)
+sl_buffer_fresh_assertions(struct sl_buffer *b)
 {
 	psc_assert(b->slb_flags == SLB_FRESH);
 	psc_vbitmap_printbin1(b->slb_inuse);
@@ -108,8 +108,8 @@ sl_buffer_fresh_assertions(const struct sl_buffer *b)
 		   (!atomic_read(&b->slb_inflpndg)));
 }
 
-static void
-sl_buffer_pin_assertions(const struct sl_buffer *b)
+__static void
+sl_buffer_pin_assertions(struct sl_buffer *b)
 {
 	psc_assert(ATTR_TEST(b->slb_flags, SLB_PINNED));
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FRESH));
@@ -128,8 +128,8 @@ sl_buffer_pin_assertions(const struct sl_buffer *b)
 		   (atomic_read(&b->slb_inflight)));
 }
 
-static void
-sl_buffer_pin_2_lru_assertions(const struct sl_buffer *b)
+__static void
+sl_buffer_pin_2_lru_assertions(struct sl_buffer *b)
 {
 	psc_assert(ATTR_TEST(b->slb_flags, SLB_PINNED));
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_FRESH));
@@ -154,7 +154,7 @@ sl_buffer_pin_2_lru_assertions(const struct sl_buffer *b)
 }
 
 #if 0
-static void
+__static void
 sl_buffer_inflight_assertions(struct sl_buffer *b)
 {
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_DIRTY));
@@ -163,7 +163,7 @@ sl_buffer_inflight_assertions(struct sl_buffer *b)
 }
 #endif
 
-static void
+__static void
 sl_buffer_put(struct sl_buffer *slb, struct psc_listcache *lc)
 {
 	int locked = reqlock(&slb->slb_lock);
@@ -210,7 +210,7 @@ sl_buffer_put(struct sl_buffer *slb, struct psc_listcache *lc)
  * @lc: the list cache in question
  * @block: wait (or not)
  */
-static struct sl_buffer *
+__static struct sl_buffer *
 sl_buffer_get(struct psc_listcache *lc, int block)
 {
 	struct sl_buffer *slb;
@@ -223,7 +223,7 @@ sl_buffer_get(struct psc_listcache *lc, int block)
 	return (slb);
 }
 
-static struct sl_buffer *
+__static struct sl_buffer *
 sl_buffer_timedget(struct psc_listcache *lc)
 {
 	struct timespec ts;
@@ -248,7 +248,7 @@ sl_buffer_timedget(struct psc_listcache *lc)
 }
 
 #if 0
-static void
+__static void
 sl_slab_tryfree(struct sl_buffer *b)
 {
 	int free=0;
@@ -278,7 +278,7 @@ sl_slab_tryfree(struct sl_buffer *b)
 }
 #endif
 
-static int
+__static int
 sl_slab_reap(__unusedx struct psc_poolmgr *pool)
 {
 	struct sl_buffer        *b;

@@ -155,7 +155,7 @@ msl_fbr_ref(struct msl_fbr *r, enum rw rw)
 }
 
 static __inline void
-msl_fbr_unref(const struct msl_fbr *r)
+msl_fbr_unref(struct msl_fbr *r)
 {
 	psc_assert(r->mfbr_bmap);
 	atomic_sub(atomic_read(&r->mfbr_rd_ref), &r->mfbr_bmap->bcm_rd_ref);
