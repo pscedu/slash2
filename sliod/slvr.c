@@ -379,7 +379,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 	SLVR_ULOCK(s);
 
 	if (tmp)
-		psc_pool_return(slBufsPool, (void *)tmp);
+		psc_pool_return(slBufsPool, tmp);
 }
 
 int
@@ -718,7 +718,7 @@ slvr_remove(struct slvr_ref *s)
 }
 
 /*
- * The reclaim function for the slBufsPoolMaster pool.  Note that our
+ * The reclaim function for slBufsPool.  Note that our
  *   caller psc_pool_get() ensures that we are called exclusviely.
  */
 int
