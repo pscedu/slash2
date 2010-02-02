@@ -604,7 +604,7 @@ struct slashrpc_cservice {
 	void			*csvc_waitinfo;
 	int			 csvc_flags;
 	int			 csvc_lasterrno;
-	psc_atomic_t		 csvc_refcnt;
+	psc_atomic32_t		 csvc_refcnt;
 	time_t			 csvc_mtime;		/* last connection try */
 };
 

@@ -88,7 +88,7 @@ void
 sl_csvc_decref(struct slashrpc_cservice *csvc)
 {
 	CSVC_RLOCK(csvc);
-	psc_atomic_dec(&csvc->csvc_refcnt);
+	psc_atomic32_dec(&csvc->csvc_refcnt);
 	if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT)
 		psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
 	else
@@ -100,7 +100,7 @@ void
 sl_csvc_incref(struct slashrpc_cservice *csvc)
 {
 	CSVC_LOCK_ENSURE(csvc);
-	psc_atomic_inc(&csvc->csvc_refcnt);
+	psc_atomic32_inc(&csvc->csvc_refcnt);
 }
 
 /*
