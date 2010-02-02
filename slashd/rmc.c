@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/fsuid.h>
+#include <sys/statvfs.h>
 #include <sys/vfs.h>
 
 #include <errno.h>
@@ -75,32 +76,13 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 	struct pscrpc_export *e=rq->rq_export;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
-	struct slashrpc_export *slexp;
 	struct mexp_cli *mexp_cli;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
 		mp->rc = -EINVAL;
 
-	if (e->exp_private) {
-psc_fatalx("impossible");
-		/*
-		 * XXX this should never happen; it should have been
-		 * cleaned up by the hldrop routine.
-		 */
-
-		/* Client has issued a reconnect.  For now just dump
-		 *   the remaining cached bmaps.
-		 */
-		spinlock(&e->exp_lock);
-		slexp = slexp_get(e, SLCONNT_CLI);
-		psc_assert(slexp->slexp_data);
-		slexp->slexp_flags |= SLEXPF_CLOSING;
-		freelock(&e->exp_lock);
-		DEBUG_REQ(PLL_WARN, rq,
-			  "connect rq but export already exists");
-		slexp_destroy(slexp);
-	}
+	psc_assert(e->exp_private == NULL);
 	mexp_cli = mexpcli_get(e);
 	slm_getclcsvc(e);
 	return (0);
@@ -111,9 +93,11 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
+	struct stat stb;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_getattr(mq->fid, &mq->creds, &mp->attr, &mp->gen);
+	mp->rc = mdsio_getattr(mq->fid, &mq->creds, &stb, &mp->gen);
+	slrpc_externalize_stat(&stb, &mp->attr);
 
 	psc_info("mdsio_getattr() fid=%"PRId64" gen=%"PRId64" rc=%d",
 		 mq->fid, mp->gen, mp->rc);
@@ -213,11 +197,13 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 {
 	struct srm_link_req *mq;
 	struct srm_link_rep *mp;
+	struct stat stb;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = mdsio_link(mq->fid, mq->pfid, mq->name, &mp->fg,
-	    &mq->creds, &mp->attr);
+	    &mq->creds, &stb);
+	slrpc_externalize_stat(&stb, &mp->attr);
 	return (0);
 }
 
@@ -226,6 +212,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
+	struct stat stb;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
@@ -233,9 +220,11 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	    strncmp(mq->name, SL_PATH_PREFIX,
 	     strlen(SL_PATH_PREFIX)) == 0)
 		mp->rc = EINVAL;
-	else
+	else {
 		mp->rc = mdsio_lookup(mq->pfid, mq->name, &mp->fg,
-		    &mq->creds, &mp->attr);
+		    &mq->creds, &stb);
+		slrpc_externalize_stat(&stb, &mp->attr);
+	}
 	return (0);
 }
 
@@ -244,11 +233,13 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 {
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
+	struct stat stb;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = mdsio_mkdir(mq->pfid, mq->name,
-	    mq->mode, &mq->creds, &mp->attr, &mp->fg, 0);
+	    mq->mode, &mq->creds, &stb, &mp->fg, 0);
+	slrpc_externalize_stat(&stb, &mp->attr);
 	return (0);
 }
 
@@ -289,6 +280,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct srm_opencreate_rep *mp;
 	struct cfdent *cfd=NULL;
 	struct slash_fidgen fg;
+	struct stat stb;
 	void *finfo;
 	int fl;
 
@@ -298,11 +290,13 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 	mp->rc = mdsio_opencreate(mq->pfid, &mq->creds, fl,
-	    mq->mode, mq->name, &fg, &mp->attr, &finfo);
+	    mq->mode, mq->name, &fg, &stb, &finfo);
 	if (mp->rc)
 		return (0);
 
-	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
+	slrpc_externalize_stat(&stb, &mp->attr);
+
+	mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
 	if (!mp->rc) {
 		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
 		    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
@@ -335,6 +329,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	struct srm_opencreate_rep *mp;
 	struct slash_fidgen fg;
 	struct cfdent *cfd=NULL;
+	struct stat stb;
 	void *finfo;
 	int fl;
 
@@ -343,7 +338,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 	mp->rc = mdsio_opencreate(mq->fid, &mq->creds, fl, 0, NULL, &fg,
-	    &mp->attr, &finfo);
+	    &stb, &finfo);
 
 	psc_info("mdsio_opencreate() fid=%"PRId64" rc=%d",
 	    mq->fid, mp->rc);
@@ -351,7 +346,9 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
+	slrpc_externalize_stat(&stb, &mp->attr);
+
+	mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
 
 	psc_info("slmrmcthr_inode_cacheput() fid=%"PRId64" rc=%d",
 	    mq->fid, mp->rc);
@@ -603,20 +600,23 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	struct srm_setattr_rep *mp;
 	struct fidc_mds_info *fmdsi;
 	struct fidc_membh *fcmh;
+	struct stat stb;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
 	fmdsi = fidc_fid2fmdsi(mq->fid, &fcmh);
 	if (fmdsi)
 		psc_assert(fcmh);
+
 	/* An fmdsi means that the file is 'open' and therefore
 	 *  we have valid mdsio data.
 	 * A null fmdsi means that the file is either not opened
 	 *  or not cached.  In that case try to pass the inode
 	 *  into mdsio with the hope that it has it cached.
 	 */
-	mp->rc = mdsio_setattr(mq->fid, &mq->attr, mq->to_set,
-	    &mq->creds, &mp->attr, fmdsi ? fmdsi->fmdsi_data : NULL);
+	slrpc_internalize_stat(&mq->attr, &stb);
+	mp->rc = mdsio_setattr(mq->fid, &stb, mq->to_set,
+	    &mq->creds, NULL, fmdsi ? fmdsi->fmdsi_data : NULL);
 
 	if (mp->rc == ENOENT) {
 		//XXX need to figure out how to 'lookup' via the immns.
@@ -626,7 +626,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 	if (fcmh)
 		fcmh_dropref(fcmh);
-
 	return (0);
 }
 
@@ -706,9 +705,11 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 {
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
+	struct statvfs sfb;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_statfs(&mp->stbv);
+	mp->rc = mdsio_statfs(&sfb);
+	slrpc_externalize_statfs(&sfb, &mp->ssfb);
 	return (0);
 }
 
@@ -719,6 +720,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
 	struct iovec iov;
+	struct stat stb;
 	char linkname[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
@@ -740,7 +742,8 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 
 	mp->rc = mdsio_symlink(linkname, mq->pfid, mq->name,
-	    &mq->creds, &mp->attr, &mp->fg);
+	    &mq->creds, &stb, &mp->fg);
+	slrpc_externalize_stat(&stb, &mp->attr);
 	return (0);
 }
 
