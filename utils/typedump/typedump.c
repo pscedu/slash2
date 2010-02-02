@@ -179,10 +179,14 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_site);
 	PRTYPE(struct slash_bmap_cli_wire);
 	PRTYPE(struct slash_bmap_od);
+	PRTYPE(struct slash_creds);
 	PRTYPE(struct slash_fidgen);
+	PRTYPE(struct slash_gencrc);
 	PRTYPE(struct slash_inode_extras_od);
 	PRTYPE(struct slash_inode_handle);
 	PRTYPE(struct slash_inode_od);
+	PRTYPE(struct slash_replica);
+	PRTYPE(struct slash_snapshot);
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slashrpc_export);
 	PRTYPE(struct sli_repl_workrq);
