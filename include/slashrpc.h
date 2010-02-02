@@ -170,8 +170,9 @@ struct srt_fdb_secret {
 	struct slash_fidgen	sfs_fg;
 	uint64_t		sfs_cfd;	/* stream handle/ID */
 	lnet_process_id_t	sfs_cli_prid;	/* client NID/PID */
+	uint32_t		sfs__pad1;
 	uint64_t		sfs_nonce;
-	uint32_t		sfs__pad;
+	uint32_t		sfs__pad2;
 } __packed;
 
 /* hash = base64(SHA256(secret + key)) */
