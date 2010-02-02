@@ -25,9 +25,7 @@
 #define _SLASHRPC_H_
 
 #include <sys/vfs.h>
-#include <sys/statvfs.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -38,6 +36,9 @@
 #include "creds.h"
 #include "fid.h"
 #include "slconfig.h"
+
+struct stat;
+struct statvfs;
 
 #define SLASH_SVR_PID		54321
 
@@ -155,12 +156,12 @@ enum {
 	SRMT_WRITE
 };
 
-enum slconn_type {
-	SLCONNT_CLI,
-	SLCONNT_IOD,
-	SLCONNT_MDS,
-	SLNCONNT
-};
+/* ---------------------- BEGIN ENCAPSULATED MESSAGES ----------------------- */
+
+/*
+ * Note: these messages contained within other messages and thus must end on
+ * 64-bit boundaries.  Their ordering within should also follow 64-bit boundaries.
+ */
 
 #define DESCBUF_REPRLEN	45		/* strlen(base64(SHA256(secret)) */
 
@@ -204,22 +205,34 @@ struct srt_bmapdesc_buf {
 
 /* Slash RPC transportably safe structures. */
 struct srt_stat {
-	int32_t		st_dev;		/* ID of device containing file */
-	uint64_t	st_ino;		/* inode number */
-	int32_t		st_mode;	/* protection */
-	int32_t		st_nlink;	/* number of hard links */
-	int32_t		st_uid;		/* user ID of owner */
-	int32_t		st_gid;		/* group ID of owner */
-	int32_t		st_rdev;	/* device ID (if special file) */
-	uint64_t	st_size;	/* total size, in bytes */
-	int32_t		st_blksize;	/* blocksize for file system I/O */
-	uint64_t	st_blocks;	/* number of 512B blocks allocated */
-	uint64_t	st_atime;	/* time of last access */
-	uint64_t	st_mtime;	/* time of last modification */
-	uint64_t	st_ctime;	/* time of last status change */
+	uint64_t		sst_dev;	/* ID of device containing file */
+	uint64_t		sst_ino;	/* inode number */
+	uint32_t		sst_mode;	/* file permissions */
+	int32_t			sst__pad1;
+	uint64_t		sst_nlink;	/* number of hard links */
+	uint32_t		sst_uid;	/* user ID of owner */
+	uint32_t		sst_gid;	/* group ID of owner */
+	uint64_t		sst_rdev;	/* device ID (if special file) */
+	uint64_t		sst_size;	/* total size, in bytes */
+	int64_t			sst_blksize;	/* blocksize for file system I/O */
+	int64_t			sst_blocks;	/* number of 512B blocks allocated */
+	int64_t			sst_atime;	/* time of last access */
+	int64_t			sst_mtime;	/* time of last modification */
+	int64_t			sst_ctime;	/* time of last status change */
 } __packed;
 
-struct srt_statvfs {
+struct srt_statfs {
+	uint64_t		sf_bsize;	/* file system block size */
+	uint64_t		sf_frsize;	/* fragment size */
+	uint64_t		sf_blocks;	/* size of fs in f_frsize units */
+	uint64_t		sf_bfree;	/* # free blocks */
+	uint64_t		sf_bavail;	/* # free blocks for non-root */
+	uint64_t		sf_files;	/* # inodes */
+	uint64_t		sf_ffree;	/* # free inodes */
+	uint64_t		sf_favail;	/* # free inodes for non-root */
+	uint64_t		sf_fsid;	/* file system ID */
+	uint64_t		sf_flag;	/* mount flags */
+	uint64_t		sf_namemax;	/* maximum filename length */
 } __packed;
 
 /* -------------------------- BEGIN FULL MESSAGES -------------------------- */
@@ -345,7 +358,7 @@ struct srm_open_req {
 
 struct srm_open_rep {
 	struct srt_fd_buf	sfdb;
-	struct stat		attr;		/* XXX struct srt_stat */
+	struct srt_stat		attr;
 	int32_t			rc;
 } __packed;
 
@@ -362,9 +375,10 @@ struct srm_getattr_req {
 } __packed;
 
 struct srm_getattr_rep {
-	struct stat		attr;		/* XXX struct srt_stat */
+	struct srt_stat		attr;
 	uint64_t		gen;
 	int32_t			rc;
+	uint32_t		pad;
 } __packed;
 
 struct srm_io_req {
@@ -393,7 +407,7 @@ struct srm_link_req {
 
 struct srm_link_rep {
 	struct slash_fidgen	fg;
-	struct stat		attr;		/* XXX struct srt_stat */
+	struct srt_stat		attr;
 	int32_t			rc;
 } __packed;
 
@@ -405,7 +419,7 @@ struct srm_lookup_req {
 
 struct srm_lookup_rep {
 	struct slash_fidgen	fg;
-	struct stat		attr;		/* XXX struct srt_stat */
+	struct srt_stat		attr;
 	int32_t			rc;
 } __packed;
 
@@ -418,7 +432,7 @@ struct srm_mkdir_req {
 
 struct srm_mkdir_rep {
 	struct slash_fidgen	fg;
-	struct stat		attr;		/* XXX struct srt_stat */
+	struct srt_stat		attr;
 	int32_t			rc;
 } __packed;
 
@@ -549,7 +563,7 @@ struct srm_repl_read_req {
 struct srm_setattr_req {
 	struct srt_fd_buf	sfdb;
 	struct slash_creds	creds;
-	struct stat		attr;		/* XXX struct srt_stat */
+	struct srt_stat		attr;
 	slfid_t			fid;
 	int32_t			to_set;
 } __packed;
@@ -572,7 +586,7 @@ struct srm_statfs_req {
 } __packed;
 
 struct srm_statfs_rep {
-	struct statvfs		stbv;	/* XXX use a portable structure */
+	struct srt_statfs	ssfb;
 	int32_t			rc;
 } __packed;
 
@@ -587,7 +601,7 @@ struct srm_symlink_req {
 struct srm_symlink_rep {
 	struct slash_fidgen	fg;
 	struct slash_creds	creds;
-	struct stat		attr;
+	struct srt_stat		attr;
 	int32_t			rc;
 } __packed;
 
@@ -605,6 +619,13 @@ struct srm_generic_rep {
 
 /* --------------------------- END FULL MESSAGES --------------------------- */
 
+enum slconn_type {
+	SLCONNT_CLI,
+	SLCONNT_IOD,
+	SLCONNT_MDS,
+	SLNCONNT
+};
+
 struct slashrpc_cservice {
 	struct pscrpc_import	*csvc_import;
 	psc_spinlock_t		*csvc_lockp;
@@ -615,6 +636,7 @@ struct slashrpc_cservice {
 	time_t			 csvc_mtime;		/* last connection try */
 };
 
+/* csvc_flags */
 #define CSVCF_CONNECTING	(1 << 0)
 #define CSVCF_USE_MULTIWAIT	(1 << 1)
 
@@ -635,7 +657,12 @@ struct slashrpc_export {
 };
 
 /* slashrpc_export flags */
-#define SLEXPF_CLOSING		(1 << 0)
+#define SLEXPF_CLOSING		(1 << 0)		/* XXX why do we need this? */
+
+void slrpc_externalize_stat(const struct stat *, struct srt_stat *);
+void slrpc_internalize_stat(const struct srt_stat *, struct stat *);
+void slrpc_externalize_statfs(const struct statvfs *, struct srt_statfs *);
+void slrpc_internalize_statfs(const struct srt_statfs *, struct statvfs *);
 
 struct slashrpc_cservice *
 	sl_csvc_get(struct slashrpc_cservice **, int, struct pscrpc_export *,

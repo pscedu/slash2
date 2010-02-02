@@ -486,6 +486,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	struct srm_opencreate_rep *mp;
 	struct fidc_membh *p, *m;
 	struct msl_fhent *mfh;
+	struct stat stb;
 	int rc=0, flags=1;
 
 	msfsthr_ensure();
@@ -543,7 +544,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 		goto out;
 	}
 
-	rc = slash2fuse_fidc_putget(&mp->sfdb.sfdb_secret.sfs_fg, &mp->attr,
+	slrpc_internalize_stat(&mp->attr, &stb);
+	rc = slash2fuse_fidc_putget(&mp->sfdb.sfdb_secret.sfs_fg, &stb,
 	    name, p, &mq->creds, FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART, &m);
 	if (rc)
 		goto out;
@@ -562,7 +564,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	slash2fuse_openref_update(m, fi->flags, &flags);
 	fidc_fcoo_startdone(m);
 
-	slash2fuse_reply_create(req, &mp->sfdb.sfdb_secret.sfs_fg, &mp->attr, fi);
+	slash2fuse_reply_create(req, &mp->sfdb.sfdb_secret.sfs_fg, &stb, fi);
 	fcmh_dropref(m);		/* slash2fuse_fidc_putget() bumped it. */
 
  out:
@@ -643,8 +645,9 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	struct pscrpc_request *rq;
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
-	int rc=0, locked;
 	struct timespec now;
+	struct stat stb;
+	int rc=0, locked;
 
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
 		clock_gettime(CLOCK_REALTIME, &now);
@@ -675,7 +678,8 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		if (fcmh_2_gen(fcmh) == FIDGEN_ANY) {
 			fcmh_2_gen(fcmh) = mp->gen;
 		}
-		fcmh_setattr(fcmh, &mp->attr);
+		slrpc_internalize_stat(&mp->attr, &stb);
+		fcmh_setattr(fcmh, &stb);
 	}
 
 	pscrpc_req_finished(rq);
@@ -730,6 +734,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	struct slash_creds creds;
 	struct srm_link_req *mq;
 	struct srm_link_rep *mp;
+	struct stat stb;
 	int rc=0;
 
 	msfsthr_ensure();
@@ -786,9 +791,10 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		rc = rc ? rc : mp->rc;
 		goto out;
 	}
-	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
+	slrpc_internalize_stat(&mp->attr, &stb);
+	slash2fuse_reply_entry(req, &mp->fg, &stb);
 	//rc = slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds);
-	fcmh_setattr(c, &mp->attr);
+	fcmh_setattr(c, &stb);
 
  out:
 	if (rc)
@@ -809,6 +815,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
 	struct fidc_membh *p;
+	struct stat stb;
 	int rc;
 
 	msfsthr_ensure();
@@ -856,10 +863,11 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = mp->rc;
 		goto out;
 	}
-	rc = slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds, 0);
+	slrpc_internalize_stat(&mp->attr, &stb);
+	rc = slash2fuse_fidc_put(&mp->fg, &stb, name, p, &mq->creds, 0);
 	if (rc)
 		goto out;
-	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
+	slash2fuse_reply_entry(req, &mp->fg, &stb);
 
  out:
 	if (rc)
@@ -1026,22 +1034,23 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		struct slash_fidgen fg;
 		struct fidc_membh *fcmh;
 		struct srm_getattr_rep *attr = iov[1].iov_base;
+		struct stat stb;
 
 		for (i=0; i < mq->nstbpref; i++, attr++) {
-			if (attr->rc || !attr->attr.st_ino)
+			if (attr->rc || !attr->attr.sst_ino)
 				continue;
 
-			fg.fg_fid = attr->attr.st_ino;
+			fg.fg_fid = attr->attr.sst_ino;
 			fg.fg_gen = attr->gen;
 
 			psc_trace("adding i+g:%"PRId64"+%"PRId64" rc=%d",
-				  fg.fg_fid, fg.fg_gen, attr->rc);
+			    fg.fg_fid, fg.fg_gen, attr->rc);
 
-			rc = fidc_lookup(&fg,
-					 FIDC_LOOKUP_CREATE |
-					 FIDC_LOOKUP_COPY |
-					 FIDC_LOOKUP_REFRESH,
-					 &attr->attr, &mq->creds, &fcmh);
+			slrpc_internalize_stat(&attr->attr, &stb);
+
+			rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
+			    FIDC_LOOKUP_COPY | FIDC_LOOKUP_REFRESH,
+			    &stb, &mq->creds, &fcmh);
 
 			if (fcmh)
 				fcmh_dropref(fcmh);
@@ -1099,12 +1108,10 @@ slash_lookuprpc(const struct slash_creds *cr, struct fidc_membh *p,
 		 *  come to us with another request for the inode since it won't
 		 *  yet be visible in the cache.
 		 */
-		rc = slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, cr, 0);
-		if (rc == 0) {
+		slrpc_internalize_stat(&mp->attr, stb);
+		rc = slash2fuse_fidc_put(&mp->fg, stb, name, p, cr, 0);
+		if (rc == 0)
 			*fgp = mp->fg;
-			if (stb)
-				*stb = mp->attr;
-		}
 	}
 
 	pscrpc_req_finished(rq);
@@ -1390,6 +1397,7 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 	struct pscrpc_request *rq;
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
+	struct statvfs sfb;
 	int rc;
 
 	msfsthr_ensure();
@@ -1401,8 +1409,10 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
-	else
-		fuse_reply_statfs(req, &mp->stbv);
+	else {
+		slrpc_internalize_statfs(&mp->ssfb, &sfb);
+		fuse_reply_statfs(req, &sfb);
+	}
 
  out:
 	if (rc)
@@ -1421,6 +1431,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	struct srm_symlink_rep *mp;
 	struct fidc_membh *p;
 	struct iovec iov;
+	struct stat stb;
 	int rc;
 
 	msfsthr_ensure();
@@ -1459,11 +1470,11 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 		goto out;
 	}
 
-	rc = slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p,
-	    &mq->creds, 0);
+	slrpc_internalize_stat(&mp->attr, &stb);
+	rc = slash2fuse_fidc_put(&mp->fg, &stb, name, p, &mq->creds, 0);
 	if (rc)
 		goto out;
-	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
+	slash2fuse_reply_entry(req, &mp->fg, &stb);
 
  out:
 	fcmh_dropref(p);
@@ -1499,6 +1510,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	struct srm_setattr_rep *mp;
 	struct msl_fhent *mfh;
 	struct fidc_membh *c;
+	struct stat stb;
 	int rc;
 
 	msfsthr_ensure();
@@ -1537,15 +1549,16 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	slash2fuse_getcred(req, &mq->creds);
 	mq->fid = fcmh_2_fid(c);
 	mq->to_set = to_set;
-	memcpy(&mq->attr, attr, sizeof(*attr));
+	slrpc_externalize_stat(attr, &mq->attr);
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
 		goto out;
 	}
-	fcmh_setattr(c, &mp->attr);
-	fuse_reply_attr(req, &mp->attr, 0.0);
+	slrpc_internalize_stat(&mp->attr, &stb);
+	fcmh_setattr(c, &stb);
+	fuse_reply_attr(req, &stb, 0.0);
 
  out:
 	if (rc)

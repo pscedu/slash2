@@ -263,7 +263,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_fd_buf);
 	PRTYPE(struct srt_fdb_secret);
 	PRTYPE(struct srt_stat);
-	PRTYPE(struct srt_statvfs);
+	PRTYPE(struct srt_statfs);
 	/* end structs */
 
 	/* start constants */
