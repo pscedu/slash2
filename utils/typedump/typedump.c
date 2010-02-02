@@ -88,9 +88,9 @@ pr(const char *name, uint64_t value)
 			putchar('-');
 		if (n < 53)
 			printf("> ");
-		printf("%zu\n", value);
+		printf("%"PRIu64"\n", value);
 	} else
-		printf("%-52s %zu\n", name, value);
+		printf("%-52s %"PRIu64"\n", name, value);
 }
 
 __dead void
@@ -99,6 +99,7 @@ usage(void)
 	fprintf(stderr, "usage: %s\n", progname);
 	exit(1);
 }
+
 int
 main(int argc, char *argv[])
 {
