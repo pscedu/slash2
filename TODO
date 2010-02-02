@@ -330,6 +330,7 @@ mds.c
 - the BUS errors look like they are being caused in some error scenario
   in PSCRPC
 - directories have no size in ls(1) over mount_slash
+- use strcasecmp() in resource matching
 - convert slash_creds to zfs_creds
 
 maybe not:
