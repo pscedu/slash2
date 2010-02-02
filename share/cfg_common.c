@@ -146,10 +146,10 @@ libsl_str2res(const char *res_name)
 		return (NULL);
 	locked = PLL_RLOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
-		if (strcmp(s->site_name, site_name) == 0)
+		if (strcasecmp(s->site_name, site_name) == 0)
 			DYNARRAY_FOREACH(r, n, &s->site_resources)
 				/* res_name includes '@SITE' in both */
-				if (strcmp(r->res_name, res_name) == 0)
+				if (strcasecmp(r->res_name, res_name) == 0)
 					goto done;
 	r = NULL;
  done:
@@ -176,7 +176,7 @@ libsl_profile_dump(void)
 	int n;
 
 	fprintf(stderr,
-	    "Node info: resource %s id %u\n"
+	    "Node info: resource %s ID %u\n"
 	    "\tdesc: %s\n"
 	    "\ttype %d, npeers %u, nnids %u\n"
 	    "\tfsroot %s\n",
