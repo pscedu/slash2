@@ -22,11 +22,10 @@
 
 #include <stdint.h>
 
-struct slash_creds {
+/* must be aligned to wordsize and packed if necessary */
+typedef struct slash_creds {
 	uint32_t	uid;
 	uint32_t	gid;
-};
-
-typedef struct slash_creds cred_t;
+} cred_t;
 
 #endif /* _SLASH_CREDS_H_ */
