@@ -119,13 +119,15 @@ main(int argc, char *argv[])
 #define PRVAL(val)	pr(#val, (unsigned long)(val))
 
 	/* start structs */
-	PRTYPE(cred_t);
 	PRTYPE(sl_blkgen_t);
 	PRTYPE(sl_blkno_t);
+	PRTYPE(sl_bmapgen_t);
+	PRTYPE(sl_bmapno_t);
 	PRTYPE(sl_ino_t);
 	PRTYPE(sl_ios_id_t);
 	PRTYPE(sl_siteid_t);
 	PRTYPE(slfgen_t);
+	PRTYPE(slfid_t);
 	PRTYPE(struct biod_crcup_ref);
 	PRTYPE(struct biod_infl_crcs);
 	PRTYPE(struct bmap_cli_info);
@@ -177,7 +179,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_site);
 	PRTYPE(struct slash_bmap_cli_wire);
 	PRTYPE(struct slash_bmap_od);
-	PRTYPE(struct slash_creds);
 	PRTYPE(struct slash_fidgen);
 	PRTYPE(struct slash_inode_extras_od);
 	PRTYPE(struct slash_inode_handle);
@@ -256,6 +257,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_bmapdesc_buf);
 	PRTYPE(struct srt_fd_buf);
 	PRTYPE(struct srt_fdb_secret);
+	PRTYPE(struct srt_stat);
+	PRTYPE(struct srt_statvfs);
 	/* end structs */
 
 	/* start constants */
