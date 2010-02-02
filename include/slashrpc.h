@@ -170,13 +170,15 @@ struct srt_fdb_secret {
 	uint64_t		sfs_cfd;	/* stream handle/ID */
 	lnet_process_id_t	sfs_cli_prid;	/* client NID/PID */
 	uint64_t		sfs_nonce;
-};
+	uint32_t		sfs__pad;
+} __packed;
 
 /* hash = base64(SHA256(secret + key)) */
 struct srt_fd_buf {
 	struct srt_fdb_secret	sfdb_secret;	/* encrypted */
 	char			sfdb_hash[DESCBUF_REPRLEN];
-};
+	char			sfdb__pad[3];
+} __packed;
 
 #define SFDB_MAGIC		UINT64_C(0x1234123412341234)
 #define SBDB_MAGIC		UINT64_C(0x4321432143214321)
@@ -185,341 +187,21 @@ struct srt_bdb_secret {
 	uint64_t		sbs_magic;
 	struct slash_fidgen	sbs_fg;
 	uint64_t		sbs_cfd;	/* stream handle/ID */
-	lnet_process_id_t	sbs_cli_prid;	/* client NID/PID */
-	lnet_nid_t		sbs_ion_nid;
-	sl_ios_id_t		sbs_ios_id;
-	sl_blkno_t		sbs_bmapno;
 	uint64_t		sbs_nonce;
-};
+	lnet_nid_t		sbs_ion_nid;
+	sl_bmapno_t		sbs_bmapno;
+	sl_ios_id_t		sbs_ios_id;
+	lnet_process_id_t	sbs_cli_prid;	/* client NID/PID */
+	uint32_t		sbs__pad;
+} __packed;
 
 /* hash = base64(SHA256(secret + key)) */
 struct srt_bmapdesc_buf {
 	struct srt_bdb_secret	sbdb_secret;	/* encrypted */
 	char			sbdb_hash[DESCBUF_REPRLEN];
-};
+	char			sbdb__pad[3];
+} __packed;
 
-struct srm_bmap_req {
-	struct srt_fd_buf	sfdb;
-	uint32_t		pios;		/* client's preferred IOS ID	*/
-	uint32_t		blkno;		/* Starting block number	*/
-	uint32_t		nblks;		/* Read-ahead support		*/
-	uint32_t		dio;		/* Client wants directio	*/
-	int32_t			rw;
-	uint32_t                getreptbl;	/* whether to include inode replicas */
-};
-
-struct srm_bmap_rep {
-	uint32_t		nblks;		/* The number of bmaps actually returned */
-	uint64_t		ios_nid;	/* responsible I/O server ID if write */
-	uint32_t		nrepls;		/* # sl_replica_t's set in bulk */
-	uint32_t		rc;
-/*
- * Bulk data contents:
- *
- *	+-------------------------------+-------------------------------+
- *	| data type			| description			|
- *	+-------------------------------+-------------------------------+
- *	| struct slash_bmap_od		| bmap contents			|
- *	| struct srt_bmapdesc_buf	| descriptor			|
- *	| sl_replica_t (if getreptbl)	| inode replica index list	|
- *	+-------------------------------+-------------------------------+
- */
-};
-
-/*
- * ION requesting CRC table from the MDS.  Passes back the srt_bdb_secret
- *  which was handed to him by the client.
- */
-struct srm_bmap_wire_req {
-	struct slash_fidgen	fg;
-	sl_blkno_t		bmapno;
-	int32_t			rw;
-	//struct srt_bmapdesc_buf sbdb;
-};
-
-struct srm_bmap_wire_rep {
-	int32_t                 rc;
-/*
- * Bulk data contains a number of the following structures:
- *
- *      +-------------------------+---------------+
- *      | data type               | description   |
- *      +-------------------------+---------------+
- *      | struct slash_bmap_od    | bmap contents |
- *      +-------------------------+---------------+
- */
-};
-
-struct srm_bmap_chmode_req {
-	struct srt_fd_buf	sfdb;
-	uint32_t		blkno;
-	int32_t			rw;
-};
-
-struct srm_bmap_chmode_rep {
-	struct srt_bmapdesc_buf	sbdb;
-	int32_t			rc;
-};
-
-struct srm_bmap_dio_req {
-	uint64_t		fid;
-	uint32_t		blkno;
-	uint32_t		dio;
-	uint32_t		mode;
-};
-
-struct srm_bmap_crcwire {
-	uint64_t		crc;		/* CRC of the corresponding sliver */
-	uint32_t		slot;		/* sliver number in the owning bmap */
-} __attribute__ ((__packed__));
-
-#define MAX_BMAP_INODE_PAIRS	28		/* ~520 bytes (max) per srm_bmap_crcup */
-
-struct srm_bmap_crcup {
-	struct slash_fidgen	fg;
-	uint64_t		fsize;		/* largest known size */
-	uint32_t		blkno;		/* bmap block number */
-	uint32_t		nups;		/* number of crc updates */
-	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
-};
-
-#define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC updates in a batch */
-
-struct srm_bmap_crcwrt_req {
-	uint32_t		ncrc_updates;
-	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
-	uint64_t		crc;		/* yes, a crc of the crc's */
-};
-
-struct srm_bmap_iod_get {
-	uint64_t                fid;
-	uint32_t                blkno;
-};
-
-struct srm_connect_req {
-	uint64_t		magic;
-	uint32_t		version;
-};
-
-struct srm_create_req {
-	struct slash_creds	creds;
-	slfid_t			pfid;		/* parent dir FID */
-	char			name[NAME_MAX + 1];
-	uint32_t		mode;
-	uint32_t		flags;
-};
-
-#define srm_create_rep srm_open_rep
-
-struct srm_open_req {
-	struct slash_creds	creds;
-	slfid_t			fid;
-	uint32_t		flags;
-};
-
-struct srm_open_rep {
-	struct srt_fd_buf	sfdb;
-	struct stat		attr;		/* XXX struct srt_stat */
-	int32_t			rc;
-};
-
-#define srm_opencreate_rep srm_open_rep
-
-struct srm_destroy_req {
-};
-
-#define srm_disconnect_req srm_destroy_req
-
-struct srm_getattr_req {
-	struct slash_creds	creds;
-	slfid_t			fid;
-};
-
-struct srm_getattr_rep {
-	struct stat		attr;		/* XXX struct srt_stat */
-	uint64_t		gen;
-	int32_t			rc;
-};
-
-struct srm_io_req {
-	struct srt_bmapdesc_buf	sbdb;
-	uint32_t		size;
-	uint32_t		offset;
-	uint32_t		op;		/* read/write */
-/* WRITE data is bulk request. */
-};
-
-#define SRMIO_RD 0
-#define SRMIO_WR 1
-
-struct srm_io_rep {
-	int32_t			rc;
-	uint32_t		size;
-/* READ data is in bulk reply. */
-};
-
-struct srm_link_req {
-	struct slash_creds	creds;
-	slfid_t			pfid;		/* parent dir FID */
-	slfid_t			fid;
-	char			name[NAME_MAX + 1];
-};
-
-struct srm_link_rep {
-	struct slash_fidgen	fg;
-	struct stat		attr;		/* XXX struct srt_stat */
-	int32_t			rc;
-};
-
-struct srm_lookup_req {
-	struct slash_creds	creds;
-	slfid_t			pfid;		/* parent dir FID */
-	char			name[NAME_MAX + 1];
-};
-
-struct srm_lookup_rep {
-	struct slash_fidgen	fg;
-	struct stat		attr;		/* XXX struct srt_stat */
-	int32_t			rc;
-};
-
-struct srm_mkdir_req {
-	struct slash_creds	creds;
-	slfid_t			pfid;		/* parent dir FID */
-	char			name[NAME_MAX + 1];
-	uint32_t		mode;
-};
-
-struct srm_mkdir_rep {
-	struct slash_fidgen	fg;
-	struct stat		attr;		/* XXX struct srt_stat */
-	int32_t			rc;
-};
-
-struct srm_mknod_req {
-	struct slash_creds	creds;
-	char			name[NAME_MAX + 1];
-	slfid_t			pfid;		/* parent dir FID */
-	uint32_t		mode;
-	uint32_t		rdev;
-};
-
-struct srm_opendir_req {
-	struct slash_creds	creds;
-	slfid_t			fid;
-};
-
-#define srm_opendir_rep srm_open_rep
-
-struct srm_ping_req {
-};
-
-#define SRM_READDIR_STBUF_PREFETCH (1 << 0)
-
-struct srm_readdir_req {
-	struct srt_fd_buf	sfdb;
-	struct slash_creds	creds;
-	uint64_t		offset;
-	uint64_t		size;
-	uint32_t		nstbpref;
-};
-
-struct srm_readdir_rep {
-	uint64_t		size;
-	uint32_t		num;    /* how many dirents were returned */
-	int32_t			rc;
-	/* accompanied by bulk data in pure getdents(2) format */
-};
-
-struct srm_readlink_req {
-	struct slash_creds	creds;
-	slfid_t			fid;
-};
-
-struct srm_readlink_rep {
-	int32_t			rc;
-/* buf is in bulk of size PATH_MAX */
-};
-
-struct srm_release_req {
-	struct srt_fd_buf	sfdb;
-	struct slash_creds	creds;
-	uint32_t		flags;
-};
-
-struct srm_releasebmap_req {
-};
-
-struct srm_rename_req {
-	struct slash_creds	creds;
-	uint64_t		npfid;		/* new parent dir FID */
-	uint64_t		opfid;		/* old parent dir FID */
-	uint32_t		fromlen;
-	uint32_t		tolen;
-/* 'from' and 'to' component names are in bulk data */
-};
-
-struct srm_replrq_req {
-	struct slash_fidgen	fg;
-	sl_replica_t		repls[SL_MAX_REPLICAS];
-	uint32_t		nrepls;
-	sl_blkno_t		bmapno;		/* bmap to access or -1 for all */
-};
-
-/* request/response for a GETSTATUS on a replication request */
-struct srm_replst_master_req {
-	struct slash_fidgen	fg;
-	int32_t			id;		/* user-provided passback value */
-	int32_t			rc;		/* or EOF */
-	uint32_t		nbmaps;		/* # of bmaps in this payload */
-	uint32_t		newreplpol;	/* default replication policy */
-	uint32_t		nrepls;		/* # of I/O systems in 'repls' */
-	sl_replica_t		repls[SL_MAX_REPLICAS];
-};
-
-#define srm_replst_master_rep srm_replst_master_req
-
-/* bmap data carrier for a replrq GETSTATUS */
-struct srm_replst_slave_req {
-	struct slash_fidgen	fg;
-	int32_t			id;		/* user-provided passback value */
-	int32_t			len;		/* of bulk data */
-	uint32_t		rc;
-	int32_t			nbmaps;		/* # of bmaps in this chunk */
-	sl_blkno_t		boff;		/* offset into inode of first bmap in bulk */
-/* bulk data is sections of bh_repls data */
-};
-
-/* per-bmap header submessage, prepended before each bh_repls content */
-struct srsm_replst_bhdr {
-	uint8_t			srsb_repl_policy;
-};
-
-#define SL_NBITS_REPLST_BHDR	(8)
-
-#define SRM_REPLST_PAGESIZ	(1024 * 1024)	/* should be network MSS */
-
-#define srm_replst_slave_rep srm_replst_slave_req
-
-struct srm_repl_schedwk_req {
-	uint64_t		nid;
-	struct slash_fidgen	fg;
-	sl_bmapno_t		bmapno;
-	sl_blkgen_t		bgen;
-	uint32_t		len;
-	uint32_t		rc;
-};
-
-struct srm_repl_read_req {
-	struct slash_fidgen	fg;
-	uint64_t		len;	/* #bytes in this message, to find #slivers */
-	sl_bmapno_t		bmapno;
-	int32_t			slvrno;
-};
-
-#define srm_repl_read_rep srm_io_rep
-
-#if 0
 /* Slash RPC transportably safe structures. */
 struct srt_stat {
 	int32_t		st_dev;		/* ID of device containing file */
@@ -535,11 +217,334 @@ struct srt_stat {
 	uint64_t	st_atime;	/* time of last access */
 	uint64_t	st_mtime;	/* time of last modification */
 	uint64_t	st_ctime;	/* time of last status change */
-};
+} __packed;
 
 struct srt_statvfs {
-};
-#endif
+} __packed;
+
+/* -------------------------- BEGIN FULL MESSAGES -------------------------- */
+
+struct srm_bmap_req {
+	struct srt_fd_buf	sfdb;
+	uint32_t		pios;		/* client's preferred IOS ID	*/
+	uint32_t		blkno;		/* Starting block number	*/
+	uint32_t		nblks;		/* Read-ahead support		*/
+	uint32_t		dio;		/* Client wants directio	*/
+	int32_t			rw;
+	uint32_t                getreptbl;	/* whether to include inode replicas */
+} __packed;
+
+struct srm_bmap_rep {
+	uint64_t		ios_nid;	/* responsible I/O server ID if write */
+	uint32_t		nblks;		/* The number of bmaps actually returned */
+	uint32_t		nrepls;		/* # sl_replica_t's set in bulk */
+	uint32_t		rc;
+/*
+ * Bulk data contents:
+ *
+ *	+-------------------------------+-------------------------------+
+ *	| data type			| description			|
+ *	+-------------------------------+-------------------------------+
+ *	| struct slash_bmap_od		| bmap contents			|
+ *	| struct srt_bmapdesc_buf	| descriptor			|
+ *	| sl_replica_t (if getreptbl)	| inode replica index list	|
+ *	+-------------------------------+-------------------------------+
+ */
+} __packed;
+
+/*
+ * ION requesting CRC table from the MDS.  Passes back the srt_bdb_secret
+ *  which was handed to him by the client.
+ */
+struct srm_bmap_wire_req {
+	struct slash_fidgen	fg;
+	sl_bmapno_t		bmapno;
+	int32_t			rw;
+	//struct srt_bmapdesc_buf sbdb;
+} __packed;
+
+struct srm_bmap_wire_rep {
+	int32_t                 rc;
+/*
+ * Bulk data contains a number of the following structures:
+ *
+ *      +-------------------------+---------------+
+ *      | data type               | description   |
+ *      +-------------------------+---------------+
+ *      | struct slash_bmap_od    | bmap contents |
+ *      +-------------------------+---------------+
+ */
+} __packed;
+
+struct srm_bmap_chmode_req {
+	struct srt_fd_buf	sfdb;
+	uint32_t		blkno;
+	int32_t			rw;
+} __packed;
+
+struct srm_bmap_chmode_rep {
+	struct srt_bmapdesc_buf	sbdb;
+	int32_t			rc;
+} __packed;
+
+struct srm_bmap_dio_req {
+	uint64_t		fid;
+	uint32_t		blkno;
+	uint32_t		dio;
+	uint32_t		mode;
+} __packed;
+
+struct srm_bmap_crcwire {
+	uint64_t		crc;		/* CRC of the corresponding sliver */
+	uint32_t		slot;		/* sliver number in the owning bmap */
+} __packed;
+
+#define MAX_BMAP_INODE_PAIRS	28		/* ~520 bytes (max) per srm_bmap_crcup */
+
+struct srm_bmap_crcup {
+	struct slash_fidgen	fg;
+	uint64_t		fsize;		/* largest known size */
+	uint32_t		blkno;		/* bmap block number */
+	uint32_t		nups;		/* number of crc updates */
+	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
+} __packed;
+
+#define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC updates in a batch */
+
+struct srm_bmap_crcwrt_req {
+	uint64_t		crc;		/* yes, a crc of the crc's */
+	uint32_t		ncrc_updates;
+	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
+} __packed;
+
+struct srm_bmap_iod_get {
+	uint64_t                fid;
+	uint32_t                blkno;
+} __packed;
+
+struct srm_connect_req {
+	uint64_t		magic;
+	uint32_t		version;
+} __packed;
+
+struct srm_create_req {
+	struct slash_creds	creds;
+	slfid_t			pfid;		/* parent dir FID */
+	char			name[NAME_MAX + 1];
+	uint32_t		mode;
+	uint32_t		flags;
+} __packed;
+
+#define srm_create_rep srm_open_rep
+
+struct srm_open_req {
+	struct slash_creds	creds;
+	slfid_t			fid;
+	uint32_t		flags;
+} __packed;
+
+struct srm_open_rep {
+	struct srt_fd_buf	sfdb;
+	struct stat		attr;		/* XXX struct srt_stat */
+	int32_t			rc;
+} __packed;
+
+#define srm_opencreate_rep srm_open_rep
+
+struct srm_destroy_req {
+} __packed;
+
+#define srm_disconnect_req srm_destroy_req
+
+struct srm_getattr_req {
+	struct slash_creds	creds;
+	slfid_t			fid;
+} __packed;
+
+struct srm_getattr_rep {
+	struct stat		attr;		/* XXX struct srt_stat */
+	uint64_t		gen;
+	int32_t			rc;
+} __packed;
+
+struct srm_io_req {
+	struct srt_bmapdesc_buf	sbdb;
+	uint32_t		size;
+	uint32_t		offset;
+	uint32_t		op;		/* read/write */
+/* WRITE data is bulk request. */
+} __packed;
+
+#define SRMIO_RD 0
+#define SRMIO_WR 1
+
+struct srm_io_rep {
+	int32_t			rc;
+	uint32_t		size;
+/* READ data is in bulk reply. */
+} __packed;
+
+struct srm_link_req {
+	struct slash_creds	creds;
+	slfid_t			pfid;		/* parent dir FID */
+	slfid_t			fid;
+	char			name[NAME_MAX + 1];
+} __packed;
+
+struct srm_link_rep {
+	struct slash_fidgen	fg;
+	struct stat		attr;		/* XXX struct srt_stat */
+	int32_t			rc;
+} __packed;
+
+struct srm_lookup_req {
+	struct slash_creds	creds;
+	slfid_t			pfid;		/* parent dir FID */
+	char			name[NAME_MAX + 1];
+} __packed;
+
+struct srm_lookup_rep {
+	struct slash_fidgen	fg;
+	struct stat		attr;		/* XXX struct srt_stat */
+	int32_t			rc;
+} __packed;
+
+struct srm_mkdir_req {
+	struct slash_creds	creds;
+	slfid_t			pfid;		/* parent dir FID */
+	char			name[NAME_MAX + 1];
+	uint32_t		mode;
+} __packed;
+
+struct srm_mkdir_rep {
+	struct slash_fidgen	fg;
+	struct stat		attr;		/* XXX struct srt_stat */
+	int32_t			rc;
+} __packed;
+
+struct srm_mknod_req {
+	struct slash_creds	creds;
+	char			name[NAME_MAX + 1];
+	slfid_t			pfid;		/* parent dir FID */
+	uint32_t		mode;
+	uint32_t		rdev;
+} __packed;
+
+struct srm_opendir_req {
+	struct slash_creds	creds;
+	slfid_t			fid;
+} __packed;
+
+#define srm_opendir_rep srm_open_rep
+
+struct srm_ping_req {
+} __packed;
+
+#define SRM_READDIR_STBUF_PREFETCH (1 << 0)
+
+struct srm_readdir_req {
+	struct srt_fd_buf	sfdb;
+	struct slash_creds	creds;
+	uint64_t		offset;
+	uint64_t		size;
+	uint32_t		nstbpref;
+} __packed;
+
+struct srm_readdir_rep {
+	uint64_t		size;
+	uint32_t		num;    /* how many dirents were returned */
+	int32_t			rc;
+	/* XXX accompanied by bulk data is but should not be in fuse dirent format */
+} __packed;
+
+struct srm_readlink_req {
+	struct slash_creds	creds;
+	slfid_t			fid;
+} __packed;
+
+struct srm_readlink_rep {
+	int32_t			rc;
+/* buf is in bulk of size PATH_MAX */
+} __packed;
+
+struct srm_release_req {
+	struct srt_fd_buf	sfdb;
+	struct slash_creds	creds;
+	uint32_t		flags;
+} __packed;
+
+struct srm_releasebmap_req {
+} __packed;
+
+struct srm_rename_req {
+	struct slash_creds	creds;
+	uint64_t		npfid;		/* new parent dir FID */
+	uint64_t		opfid;		/* old parent dir FID */
+	uint32_t		fromlen;
+	uint32_t		tolen;
+/* 'from' and 'to' component names are in bulk data */
+} __packed;
+
+struct srm_replrq_req {
+	struct slash_fidgen	fg;
+	sl_replica_t		repls[SL_MAX_REPLICAS];
+	uint32_t		nrepls;
+	sl_bmapno_t		bmapno;		/* bmap to access or -1 for all */
+} __packed;
+
+/* request/response for a GETSTATUS on a replication request */
+struct srm_replst_master_req {
+	struct slash_fidgen	fg;
+	int32_t			id;		/* user-provided passback value */
+	int32_t			rc;		/* or EOF */
+	uint32_t		nbmaps;		/* # of bmaps in this payload */
+	uint32_t		newreplpol;	/* default replication policy */
+	uint32_t		nrepls;		/* # of I/O systems in 'repls' */
+	int32_t			pad;
+	sl_replica_t		repls[SL_MAX_REPLICAS];
+} __packed;
+
+#define srm_replst_master_rep srm_replst_master_req
+
+/* bmap data carrier for a replrq GETSTATUS */
+struct srm_replst_slave_req {
+	struct slash_fidgen	fg;
+	int32_t			id;		/* user-provided passback value */
+	int32_t			len;		/* of bulk data */
+	uint32_t		rc;
+	int32_t			nbmaps;		/* # of bmaps in this chunk */
+	sl_blkno_t		boff;		/* offset into inode of first bmap in bulk */
+/* bulk data is sections of bh_repls data */
+} __packed;
+
+/* per-bmap header submessage, prepended before each bh_repls content */
+struct srsm_replst_bhdr {
+	uint8_t			srsb_repl_policy;
+} __packed;
+
+#define SL_NBITS_REPLST_BHDR	(8)
+
+#define SRM_REPLST_PAGESIZ	(1024 * 1024)	/* should be network MSS */
+
+#define srm_replst_slave_rep srm_replst_slave_req
+
+struct srm_repl_schedwk_req {
+	uint64_t		nid;
+	struct slash_fidgen	fg;
+	sl_bmapno_t		bmapno;
+	sl_bmapgen_t		bgen;
+	uint32_t		len;
+	uint32_t		rc;
+} __packed;
+
+struct srm_repl_read_req {
+	struct slash_fidgen	fg;
+	uint64_t		len;	/* #bytes in this message, to find #slivers */
+	sl_bmapno_t		bmapno;
+	int32_t			slvrno;
+} __packed;
+
+#define srm_repl_read_rep srm_io_rep
 
 struct srm_setattr_req {
 	struct srt_fd_buf	sfdb;
@@ -547,29 +552,29 @@ struct srm_setattr_req {
 	struct stat		attr;		/* XXX struct srt_stat */
 	slfid_t			fid;
 	int32_t			to_set;
-};
+} __packed;
 
 struct srm_set_newreplpol_req {
 	struct slash_fidgen	fg;
 	int32_t			pol;
-};
+} __packed;
 
 struct srm_set_bmapreplpol_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
-	int			pol;
-};
+	int32_t			pol;
+} __packed;
 
 #define srm_setattr_rep srm_getattr_rep
 
 struct srm_statfs_req {
 	struct slash_creds	creds;
-};
+} __packed;
 
 struct srm_statfs_rep {
 	struct statvfs		stbv;	/* XXX use a portable structure */
 	int32_t			rc;
-};
+} __packed;
 
 struct srm_symlink_req {
 	struct slash_creds	creds;
@@ -577,26 +582,28 @@ struct srm_symlink_req {
 	char			name[NAME_MAX + 1];
 	uint32_t		linklen;
 /* link path name is in bulk */
-};
+} __packed;
 
 struct srm_symlink_rep {
 	struct slash_fidgen	fg;
 	struct slash_creds	creds;
 	struct stat		attr;
 	int32_t			rc;
-};
+} __packed;
 
 struct srm_unlink_req {
 	struct slash_creds	creds;
 	slfid_t			pfid;		/* parent dir FID */
 	char			name[NAME_MAX + 1];
-};
+} __packed;
 
 #define srm_unlink_rep srm_generic_rep
 
 struct srm_generic_rep {
 	int32_t			rc;
-};
+} __packed;
+
+/* --------------------------- END FULL MESSAGES --------------------------- */
 
 struct slashrpc_cservice {
 	struct pscrpc_import	*csvc_import;

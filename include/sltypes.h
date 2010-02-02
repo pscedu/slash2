@@ -24,8 +24,8 @@
 typedef uint32_t sl_blkno_t;
 typedef uint32_t sl_blkgen_t;
 
-typedef uint32_t sl_bmapno_t;		/* bmap index number */
-typedef uint32_t sl_bgen_t;		/* bmap generation number */
+typedef uint32_t sl_bmapno_t;		/* file block map index */
+typedef uint32_t sl_bmapgen_t;		/* file block map generation */
 
 typedef uint16_t sl_siteid_t;
 typedef uint32_t sl_ios_id_t;
