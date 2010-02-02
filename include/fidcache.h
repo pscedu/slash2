@@ -127,27 +127,28 @@ enum fcmh_states {
 #define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)					\
-do {										\
-	int _dbg_fcmh_locked = reqlock(&(fcmh)->fcmh_lock);			\
+	do {									\
+		int _dbg_fcmh_locked = reqlock(&(fcmh)->fcmh_lock);		\
 										\
-	psc_logs((level), PSS_GEN,						\
-		 " fcmh@%p fcoo@%p fcooref(%d:%d) i+g:%"PRId64"+"		\
-		 "%"PRId64" s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s ref:%d :: "fmt,	\
-		 (fcmh), (fcmh)->fcmh_fcoo,					\
-		 (fcmh)->fcmh_fcoo == NULL ||					\
+		psc_logs((level), PSS_GEN,					\
+		    "fcmh@%p fcoo@%p fcooref(%d:%d) i+g:%"PRId64"+"		\
+		    "%"PRId64" s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s "		\
+		    "ref:%d :: "fmt,						\
+		    (fcmh), (fcmh)->fcmh_fcoo,					\
+		    (fcmh)->fcmh_fcoo == NULL ||				\
 		    (fcmh)->fcmh_fcoo == FCOO_STARTING ? -66 :			\
 		    (fcmh)->fcmh_fcoo->fcoo_oref_rd,				\
-		 (fcmh)->fcmh_fcoo == NULL ||					\
+		    (fcmh)->fcmh_fcoo == NULL ||				\
 		    (fcmh)->fcmh_fcoo == FCOO_STARTING ? -66 :			\
 		    (fcmh)->fcmh_fcoo->fcoo_oref_wr,				\
-		 fcmh_2_fid(fcmh),						\
-		 fcmh_2_gen(fcmh),						\
-		 DEBUG_FCMH_FLAGS(fcmh), (fcmh)->fcmh_name,			\
-		 fcmh_lc_2_string((fcmh)->fcmh_cache_owner),			\
-		 atomic_read(&(fcmh)->fcmh_refcnt),				\
-		 ## __VA_ARGS__);						\
-	ureqlock(&(fcmh)->fcmh_lock, _dbg_fcmh_locked);				\
-} while (0)
+		    fcmh_2_fid(fcmh),						\
+		    fcmh_2_gen(fcmh),						\
+		    DEBUG_FCMH_FLAGS(fcmh), (fcmh)->fcmh_name,			\
+		    fcmh_lc_2_string((fcmh)->fcmh_cache_owner),			\
+		    atomic_read(&(fcmh)->fcmh_refcnt),				\
+		    ## __VA_ARGS__);						\
+		ureqlock(&(fcmh)->fcmh_lock, _dbg_fcmh_locked);			\
+	} while (0)
 
 #define FCMHCACHE_PUT(fcmh, list)						\
 	do {									\
