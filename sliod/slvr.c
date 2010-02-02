@@ -721,7 +721,7 @@ slvr_remove(struct slvr_ref *s)
  * The reclaim function for the slBufsPoolMaster pool.  Note that our
  *   caller psc_pool_get() ensures that we are called exclusviely.
  */
-static int
+int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
 	int			 i;
@@ -821,11 +821,7 @@ slvr_cache_init(void)
 	lc_reginit(&lruSlvrs,  struct slvr_ref, slvr_lentry, "lruSlvrs");
 	lc_reginit(&crcqSlvrs,  struct slvr_ref, slvr_lentry, "crcqSlvrs");
 
-	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer,
-		    slb_mgmt_lentry, PPMF_AUTO, 64, 64, 128,
-		    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap,
-		    "slvrslab", NULL);
-	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
+	sl_buffer_cache_init();
 
 	slvr_worker_init();
 }

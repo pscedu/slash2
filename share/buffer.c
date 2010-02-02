@@ -33,23 +33,16 @@
 #include "psc_util/pool.h"
 
 #include "buffer.h"
+#include "cache_params.h"
 #include "fidcache.h"
 
 struct psc_poolmaster	 slBufsPoolMaster;
 struct psc_poolmgr	*slBufsPool;
-struct psc_listcache	 slBufsLru;
-struct psc_listcache	 slBufsPin;
 
-/* XXX move to cacheparams.h? */
-int slCacheBlkSz=32768;
-int slCacheNblks=32;
-uint32_t slbFreeDef=100;
-uint32_t slbFreeMin=100;
-uint32_t slbFreeMax=200;
+sl_iov_try_memrls	 slMemRlsTrylock;
+sl_iov_memrls_ulock	 slMemRlsUlock;
 
-sl_iov_try_memrls   slMemRlsTrylock=NULL;
-sl_iov_memrls_ulock slMemRlsUlock=NULL;
-
+#if 0
 __static void
 sl_buffer_free_assertions(struct sl_buffer *b)
 {
@@ -66,7 +59,6 @@ sl_buffer_free_assertions(struct sl_buffer *b)
 	psc_assert(psclist_disjoint(&b->slb_fcmh_lentry));
 }
 
-#if 0
 __static void
 sl_buffer_lru_2_free_assertions(struct sl_buffer *b)
 {
@@ -163,7 +155,6 @@ sl_buffer_inflight_assertions(struct sl_buffer *b)
 	psc_assert(!ATTR_TEST(b->slb_flags, SLB_INFLIGHT));
 	psc_assert(atomic_read(&b->slb_inflight));
 }
-#endif
 
 __static void
 sl_buffer_put(struct sl_buffer *slb, struct psc_listcache *lc)
@@ -186,7 +177,6 @@ sl_buffer_put(struct sl_buffer *slb, struct psc_listcache *lc)
 		sl_buffer_fresh_assertions(slb);
 
 		psc_pool_return(slBufsPool, slb);
-
 	} else {
 		if (lc == &slBufsLru) {
 			slb->slb_flags = SLB_LRU;
@@ -206,6 +196,7 @@ sl_buffer_put(struct sl_buffer *slb, struct psc_listcache *lc)
 	}
 	ureqlock(&slb->slb_lock, locked);
 }
+#endif
 
 /**
  * sl_buffer_get - pull a buffer from the listcache
@@ -278,7 +269,6 @@ sl_slab_tryfree(struct sl_buffer *b)
 	INIT_PSCLIST_ENTRY(&b->slb_fcmh_lentry);
 	sl_buffer_put(b, &slBufsPool->ppm_lc);
 }
-#endif
 
 __static int
 sl_slab_reap(__unusedx struct psc_poolmgr *pool)
@@ -382,21 +372,24 @@ sl_buffer_pin_locked(struct sl_buffer *slb)
 		psc_assert(atomic_read(&(slb)->slb_inflpndg) >		\
 			   atomic_read(&(slb)->slb_inflight));		\
 		if (atomic_dec_and_test(&(slb)->slb_inflpndg)) {	\
-			lc_del(&(slb)->slb_mgmt_lentry, (slb)->slb_lc_owner); \
+			lc_del(&(slb)->slb_mgmt_lentry,			\
+			    (slb)->slb_lc_owner);			\
 			slb_pinned_2_lru((slb));			\
 			sl_buffer_put((slb), &slBufsLru);		\
 		}							\
-	}								\
+	}
+
+#endif
 
 int
 sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 {
 	struct sl_buffer *slb = pri;
 
-	slb->slb_inuse = psc_vbitmap_new(slCacheNblks);
-	slb->slb_blksz = slCacheBlkSz;
-	slb->slb_nblks = slCacheNblks;
-	slb->slb_base  = PSCALLOC(slCacheNblks * slCacheBlkSz);
+	slb->slb_inuse = psc_vbitmap_new(SLB_NBLK);
+	slb->slb_blksz = SLB_BLKSZ;
+	slb->slb_nblks = SLB_NBLK;
+	slb->slb_base  = PSCALLOC(SLB_NBLK * SLB_BLKSZ);
 	atomic_set(&slb->slb_ref, 0);
 	atomic_set(&slb->slb_unmapd_ref, 0);
 	atomic_set(&slb->slb_inflight, 0);
@@ -404,11 +397,9 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 	//ATTR_SET  (slb->slb_flags, SLB_FREEING);
 	slb->slb_flags = SLB_FRESH;
 	INIT_PSCLIST_HEAD(&slb->slb_iov_list);
-	//INIT_PSCLIST_ENTRY(&slb->slb_mgmt_lentry);
 	INIT_PSCLIST_ENTRY(&slb->slb_fcmh_lentry);
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
-	//sl_buffer_put(slb, &slBufsPool->ppm_lc);
 	return (0);
 }
 
@@ -417,6 +408,8 @@ sl_buffer_destroy(void *pri)
 {
 	struct sl_buffer *slb = pri;
 
+//	psc_assert(psclist_empty(&slb->slb_iov_list));
+
 	PSCFREE(slb->slb_base);
 	psc_vbitmap_free(slb->slb_inuse);
 }
@@ -424,15 +417,15 @@ sl_buffer_destroy(void *pri)
 void
 sl_buffer_cache_init(void)
 {
+	int slvr_buffer_reap(struct psc_poolmgr *);
+
 	psc_assert(SLB_SIZE <= LNET_MTU);
 
-	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer, slb_mgmt_lentry,
-			    PPMF_AUTO, slbFreeDef, slbFreeDef, slbFreeMax,
-			    sl_buffer_init, sl_buffer_destroy, sl_slab_reap, "slab", NULL);
+	psc_poolmaster_init(&slBufsPoolMaster, struct sl_buffer,
+	    slb_mgmt_lentry, PPMF_AUTO, SLB_NDEF, SLB_MIN, SLB_MAX,
+	    sl_buffer_init, sl_buffer_destroy, slvr_buffer_reap, "slab", NULL);
 	slBufsPool = psc_poolmaster_getmgr(&slBufsPoolMaster);
 
-	lc_reginit(&slBufsLru,  struct sl_buffer,
-		   slb_mgmt_lentry, "slabBufLru");
-	lc_reginit(&slBufsPin,  struct sl_buffer,
-		   slb_mgmt_lentry, "slabBufPin");
+//	lc_reginit(&slBufsLru,  struct sl_buffer, slb_mgmt_lentry, "slabBufLru");
+//	lc_reginit(&slBufsPin,  struct sl_buffer, slb_mgmt_lentry, "slabBufPin");
 }

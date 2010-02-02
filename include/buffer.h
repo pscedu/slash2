@@ -27,12 +27,11 @@
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"
 
-struct psc_dynarray;
 struct psc_vbitmap;
 
-#define SLB_SIZE (slCacheBlkSz * slCacheNblks)
+#define SLB_SIZE (SLB_BLKSZ * SLB_NBLK)
 
-enum slb_states {
+enum {
 	SLB_DIRTY    = 0x01, /* have dirty data          */
 	SLB_INFLIGHT = 0x02, /* data faulting in or out  */
 	SLB_FREEING  = 0x04,
@@ -149,7 +148,7 @@ struct sl_buffer_iovref {
 	struct psclist_head slbir_lentry; /* chain to slb                  */
 };
 
-enum slb_ref_flags {
+enum {
 	SLBREF_MAPPED = (1 << 0),      /* Backpointer to oftm in place */
 	SLBREF_REAP   = (1 << 1)       /* Freeing                      */
 };
@@ -217,17 +216,10 @@ void sl_buffer_fresh_assertions(struct sl_buffer *);
 typedef int (*sl_iov_try_memrls)(void *);
 typedef void (*sl_iov_memrls_ulock)(void *);
 
-extern sl_iov_try_memrls   slMemRlsTrylock;
-extern sl_iov_memrls_ulock slMemRlsUlock;
+extern sl_iov_try_memrls	 slMemRlsTrylock;
+extern sl_iov_memrls_ulock	 slMemRlsUlock;
 
 extern struct psc_poolmaster	 slBufsPoolMaster;
 extern struct psc_poolmgr	*slBufsPool;
-extern struct psc_listcache	 slBufsFree;
-extern struct psc_listcache	 slBufsLru;
-extern struct psc_listcache	 slBufsPin;
-extern int			 slCacheBlkSz;
-extern int			 slCacheNblks;
-extern uint32_t			 slbFreeDef;
-extern uint32_t			 slbFreeMax;
 
 #endif /* _SL_BUFFER_H_ */
