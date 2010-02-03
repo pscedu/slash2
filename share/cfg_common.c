@@ -187,7 +187,7 @@ libsl_profile_dump(void)
 
 	DYNARRAY_FOREACH(p, n, &r->res_peers)
 		fprintf(stderr, "\tpeer %d: %s\t%s\n",
-			n, p->res_name, p->res_desc);
+		    n, p->res_name, p->res_desc);
 	DYNARRAY_FOREACH(resm, n, &r->res_members)
 		fprintf(stderr, "\tnid %d: %s\n", n, resm->resm_addrbuf);
 }
@@ -237,8 +237,38 @@ slcfg_getifaddrs(struct ifconf *ifc)
 	close(s);
 }
 
+int
+slcfg_sockaddr_islocal(const struct sockaddr *sa)
+{
+	struct sockaddr_in *sin = (void *)sa;
+
+	switch (sa->sa_family) {
+	case AF_INET:
+		return (sin->sin_addr.s_addr == htonl(INADDR_LOOPBACK));
+	default:
+		psc_fatalx("address family not supported");
+	}
+	/* NOTREACHED */
+}
+
 __static void
-slcfg_getif(struct ifconf *ifc, struct addrinfo *ai, char ifn[IFNAMSIZ])
+slcfg_getfirstifaddr(const struct ifconf *ifc, struct sockaddr **sa)
+{
+	struct ifreq *ifr;
+	int n;
+
+	ifr = (void *)ifc->ifc_buf;
+	for (n = 0; n < ifc->ifc_len; n += sizeof(*ifr), ifr++)
+		if (ifr->ifr_addr.sa_family == (*sa)->sa_family &&
+		    !slcfg_sockaddr_islocal(&ifr->ifr_addr)) {
+			*sa = &ifr->ifr_addr;
+			return;
+		}
+	psc_fatalx("unable to find an interface address");
+}
+
+__static void
+slcfg_getif(struct ifconf *ifc, struct sockaddr *sa, char ifn[IFNAMSIZ])
 {
 	struct {
 		struct nlmsghdr	nmh;
@@ -252,8 +282,8 @@ slcfg_getif(struct ifconf *ifc, struct addrinfo *ai, char ifn[IFNAMSIZ])
 	int n, s, ifidx;
 	ssize_t rc;
 
-	psc_assert(ai->ai_family == AF_INET);
-	sin = (void *)ai->ai_addr;
+	psc_assert(sa->sa_family == AF_INET);
+	sin = (void *)sa;
 
 	/*
 	 * Scan interfaces for addr since netlink
@@ -261,7 +291,7 @@ slcfg_getif(struct ifconf *ifc, struct addrinfo *ai, char ifn[IFNAMSIZ])
 	 */
 	ifr = (void *)ifc->ifc_buf;
 	for (n = 0; n < ifc->ifc_len; n += sizeof(*ifr), ifr++) {
-		if (ifr->ifr_addr.sa_family == ai->ai_addr->sa_family &&
+		if (ifr->ifr_addr.sa_family == sa->sa_family &&
 		    memcmp(&sin->sin_addr,
 		    &((struct sockaddr_in *)&ifr->ifr_addr)->sin_addr,
 		    sizeof(sin->sin_addr)) == 0) {
@@ -281,7 +311,7 @@ slcfg_getif(struct ifconf *ifc, struct addrinfo *ai, char ifn[IFNAMSIZ])
 	rq.nmh.nlmsg_flags = NLM_F_REQUEST;
 	rq.nmh.nlmsg_type = RTM_GETROUTE;
 
-	rq.rtm.rtm_family = ai->ai_family;
+	rq.rtm.rtm_family = sa->sa_family;
 	rq.rtm.rtm_protocol = RTPROT_UNSPEC;
 	rq.rtm.rtm_table = RT_TABLE_MAIN;
 	/* # bits filled in target addr */
@@ -356,6 +386,7 @@ libsl_init(int pscnet_mode, int ismds)
 	char *p, pbuf[6], lnetstr[256], addrbuf[HOST_NAME_MAX];
 	struct addrinfo hints, *res, *res0;
 	int netcmp, error, rc, j, k;
+	struct sockaddr *sa;
 	PSCLIST_HEAD(lnets_hd);
 	struct sl_resource *r;
 	struct sl_resm *m;
@@ -400,8 +431,13 @@ libsl_init(int pscnet_mode, int ismds)
 					psc_fatalx("%s", gai_strerror(error));
 
 				for (res = res0; res; res = res->ai_next) {
+					sa = res->ai_addr;
+					/* if we got a local addr, use any interface addr */
+					if (slcfg_sockaddr_islocal(sa))
+						slcfg_getfirstifaddr(&ifc, &sa);
+
 					/* get destination routing interface */
-					slcfg_getif(&ifc, res, lent->ifn);
+					slcfg_getif(&ifc, sa, lent->ifn);
 					lent->net = strrchr(m->resm_addrbuf, '@') + 1;
 
 					/*
@@ -417,11 +453,11 @@ libsl_init(int pscnet_mode, int ismds)
 
 						if (netcmp ^
 						    slcfg_ifcmp(lent->ifn, lnext->ifn))
-							psc_fatalx("interfaces (%s:%s) and "
-							    "lustre networks (%s:%s) "
-							    "not exclusive",
-							    lnext->net, lent->net,
-							    lnext->ifn, lent->ifn);
+							psc_fatalx("network/interface "
+							    "pair %s:%s conflicts with "
+							    "%s:%s",
+							    lent->net, lent->ifn,
+							    lnext->net, lnext->ifn);
 						/* if the same, don't process more */
 						if (!netcmp)
 							break;
