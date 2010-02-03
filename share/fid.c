@@ -32,9 +32,6 @@
 #include "pathnames.h"
 #include "fidcache.h"
 
-#define FP_DEPTH 3
-#define BPHXC    4
-
 #define SL_PATH_MAX 128
 
 /**
