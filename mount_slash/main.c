@@ -405,6 +405,7 @@ slash2fuse_openrpc(fuse_req_t req, struct fuse_file_info *fi)
 		rc = rc ? rc : mp->rc;
 	else {
 		fcmh_setfdbuf(h, &mp->sfdb);
+		//XXX this could be wrong..
 		//fcmh_setattr(h, &mp->attr);
 	}
  out:
@@ -604,12 +605,11 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 			rc = EISDIR;
 			goto out;
 		}
-	} else {
+	} else
 		if (fi->flags & O_DIRECTORY) {
 			rc = ENOTDIR;
 			goto out;
 		}
-	}
 
 	mfh = msl_fhent_new(c);
 
