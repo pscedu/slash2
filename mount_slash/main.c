@@ -1228,7 +1228,8 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 }
 
 __static int
-slash2fuse_releaserpc(fuse_req_t req, struct fuse_file_info *fi)
+slash2fuse_releaserpc(fuse_req_t req, struct fuse_file_info *fi,
+    struct srt_fd_buf *fdb)
 {
 	struct srm_release_req *mq;
 	struct srm_generic_rep *mp;
@@ -1251,11 +1252,9 @@ slash2fuse_releaserpc(fuse_req_t req, struct fuse_file_info *fi)
 	if (rc)
 		return (rc);
 
+	mq->sfdb = *fdb;
 	slash2fuse_getcred(req, &mq->creds);
 	rc = slash2fuse_transflags(fi->flags, &mq->flags);
-	if (rc)
-		goto out;
-	rc = fcmh_getfdbuf(h, &mq->sfdb);
 	if (rc)
 		goto out;
 
@@ -1272,9 +1271,10 @@ __static void
 slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
     struct fuse_file_info *fi)
 {
-	int rc=0, fdstate=0;
 	struct msl_fhent *mfh;
+	struct srt_fd_buf fdb;
 	struct fidc_membh *c;
+	int rc=0, fdstate=0;
 
 	msfsthr_ensure();
 
@@ -1288,6 +1288,10 @@ slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
 
 	spinlock(&c->fcmh_lock);
 	psc_assert(c->fcmh_fcoo);
+
+	rc = fcmh_getfdbuf(c, &fdb);
+	psc_assert(rc == 0);
+
 	/* If the fcoo is going away FCMH_FCOO_CLOSING will be set.
 	 */
 	slash2fuse_openref_update(c, fi->flags, &fdstate);
@@ -1298,7 +1302,7 @@ slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
 	if ((c->fcmh_state & FCMH_FCOO_CLOSING) && fdstate) {
 		/* Tell the mds to release all of our bmaps.
 		 */
-		rc = slash2fuse_releaserpc(req, fi);
+		rc = slash2fuse_releaserpc(req, fi, &fdb);
 		if (c->fcmh_fcoo->fcoo_pri) {
 			msl_mfd_release(c->fcmh_fcoo->fcoo_pri);
 			c->fcmh_fcoo->fcoo_pri = NULL;
@@ -1504,15 +1508,14 @@ slash2fuse_unlink_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 }
 
 __static void
-slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
-		   int to_set, struct fuse_file_info *fi)
+slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *stb,
+    int to_set, struct fuse_file_info *fi)
 {
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct pscrpc_request *rq;
 	struct msl_fhent *mfh;
 	struct fidc_membh *c;
-	struct stat stb;
 	int rc;
 
 	msfsthr_ensure();
@@ -1546,16 +1549,15 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	slash2fuse_getcred(req, &mq->creds);
 	mq->fid = fcmh_2_fid(c);
 	mq->to_set = to_set;
-	slrpc_externalize_stat(attr, &mq->attr);
+	slrpc_externalize_stat(stb, &mq->attr);
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc) {
 		rc = rc ? rc : mp->rc;
 		goto out;
 	}
-	slrpc_internalize_stat(&mp->attr, &stb);
-	fcmh_setattr(c, &stb);
-	fuse_reply_attr(req, &stb, 0.0);
+	fcmh_setattr(c, stb);
+	fuse_reply_attr(req, stb, 0.0);
 
  out:
 	if (rc)
