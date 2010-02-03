@@ -128,6 +128,8 @@ struct sl_gconf		*currentConf = &globalConfig;
 
 %start config
 
+%error-verbose
+
 %token END
 %token EQ
 
