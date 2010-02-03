@@ -35,6 +35,8 @@ extern char *yylval;
 void yyerror(const char *, ...);
 %}
 
+%option nounput
+
 num		[0-9]+
 hexnum		0[Xx][0-9A-Fa-f]+
 sitename	@[A-Z]+
