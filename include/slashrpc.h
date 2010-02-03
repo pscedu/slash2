@@ -563,7 +563,6 @@ struct srm_repl_read_req {
 #define srm_repl_read_rep srm_io_rep
 
 struct srm_setattr_req {
-	struct srt_fd_buf	sfdb;
 	struct slash_creds	creds;
 	struct srt_stat		attr;
 	slfid_t			fid;

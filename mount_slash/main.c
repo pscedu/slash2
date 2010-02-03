@@ -404,8 +404,7 @@ slash2fuse_openrpc(fuse_req_t req, struct fuse_file_info *fi)
 	if (rc || mp->rc)
 		rc = rc ? rc : mp->rc;
 	else {
-		memcpy(&h->fcmh_fcoo->fcoo_fdb,
-		    &mp->sfdb, sizeof(mp->sfdb));
+		fcmh_setfdbuf(h, &mp->sfdb);
 		//fcmh_setattr(h, &mp->attr);
 	}
  out:
@@ -532,7 +531,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 		goto out;
 	if (mp->rc == EEXIST) {
 		psc_info("fid %"PRId64" already existed on mds",
-			 mp->sfdb.sfdb_secret.sfs_fg.fg_fid);
+		    mp->sfdb.sfdb_secret.sfs_fg.fg_fid);
 		/*  Handle the network side of O_EXCL.
 		 */
 		if (fi->flags & O_EXCL) {
@@ -552,7 +551,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 
 	psc_assert(m);
 	psc_assert(m->fcmh_fcoo && (m->fcmh_state & FCMH_FCOO_STARTING));
-	memcpy(&m->fcmh_fcoo->fcoo_fdb, &mp->sfdb, sizeof(mp->sfdb));
+	fcmh_setfdbuf(m, &mp->sfdb);
 
 	mfh = msl_fhent_new(m);
 	ffi_setmfh(fi, mfh);
@@ -990,9 +989,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	if (fidc_lookup_fg(fcmh_2_fgp(d)) != d)
 		return (EBADF);
 
-	if (fcmh_getfdbuf(d, &fdb) < 0) {
+	rc = fcmh_getfdbuf(d, &fdb);
+	if (rc) {
 		fcmh_dropref(d);
-		return (EBADF);
+		return (rc);
 	}
 
 	if (!fcmh_2_isdir(d)) {
@@ -1255,7 +1255,9 @@ slash2fuse_releaserpc(fuse_req_t req, struct fuse_file_info *fi)
 	rc = slash2fuse_transflags(fi->flags, &mq->flags);
 	if (rc)
 		goto out;
-	memcpy(&mq->sfdb, &h->fcmh_fcoo->fcoo_fdb, sizeof(mq->sfdb));
+	rc = fcmh_getfdbuf(h, &mq->sfdb);
+	if (rc)
+		goto out;
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc || mp->rc)
@@ -1505,9 +1507,9 @@ __static void
 slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		   int to_set, struct fuse_file_info *fi)
 {
-	struct pscrpc_request *rq;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
+	struct pscrpc_request *rq;
 	struct msl_fhent *mfh;
 	struct fidc_membh *c;
 	struct stat stb;
@@ -1539,11 +1541,6 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 	if (fi && fi->fh) {
 		mfh = ffi_getmfh(fi);
 		psc_assert(c == mfh->mfh_fcmh);
-	}
-
-	if (fcmh_getfdbuf(c, &mq->sfdb) < 0) {
-		rc = EBADF;
-		goto out;
 	}
 
 	slash2fuse_getcred(req, &mq->creds);

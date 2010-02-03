@@ -209,6 +209,7 @@ enum fidc_lookup_flags {
 void			 fcmh_dtor(void *);
 struct fidc_membh	*fcmh_get(void);
 int			 fcmh_getfdbuf(struct fidc_membh *, struct srt_fd_buf *);
+void			 fcmh_setfdbuf(struct fidc_membh *, const struct srt_fd_buf *);
 ssize_t			 fcmh_getsize(struct fidc_membh *);
 int			 fcmh_init(struct psc_poolmgr *, void *);
 void			 fcmh_setattr(struct fidc_membh *, const struct stat *);

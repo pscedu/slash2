@@ -680,11 +680,13 @@ fidc_init(enum fid_cache_users t, int (*fcmh_reap_cb)(struct fidc_membh *))
 int
 fcmh_getfdbuf(struct fidc_membh *fcmh, struct srt_fd_buf *fdb)
 {
-	int rc=0, locked=reqlock(&fcmh->fcmh_lock);
+	int rc, locked;
+
+	locked = reqlock(&fcmh->fcmh_lock);
 
 	if (!fcmh->fcmh_fcoo) {
 		ureqlock(&fcmh->fcmh_lock, locked);
-		return (-1);
+		return (EBADF);
 	}
 
 	rc = fidc_fcoo_wait_locked(fcmh, FCOO_NOSTART);
@@ -692,5 +694,16 @@ fcmh_getfdbuf(struct fidc_membh *fcmh, struct srt_fd_buf *fdb)
 		*fdb = fcmh->fcmh_fcoo->fcoo_fdb;
 
 	ureqlock(&fcmh->fcmh_lock, locked);
-	return (rc);
+	return (rc ? EBADF : 0);
+}
+
+void
+fcmh_setfdbuf(struct fidc_membh *fcmh, const struct srt_fd_buf *fdb)
+{
+	int locked;
+
+	locked = reqlock(&fcmh->fcmh_lock);
+	psc_assert(fcmh->fcmh_fcoo);
+	fcmh->fcmh_fcoo->fcoo_fdb = *fdb;
+	ureqlock(&fcmh->fcmh_lock, locked);
 }
