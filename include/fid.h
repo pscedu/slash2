@@ -49,7 +49,6 @@ struct slash_fidgen {
 #define FID_PATH_LEN		1024
 #define FID_PATH_NAME           ".slfidns"
 
-#define FP_DEPTH		3
 #define BPHXC			4
 
 #define FIDFMT			"%"PRId64":%"PRId64
