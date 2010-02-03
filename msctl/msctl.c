@@ -280,7 +280,7 @@ h_fncmd_bmap_repl_policy(char *val, char *bmapspec)
 		if ((next = strchr(bmapno, ',')) != NULL)
 			*next++ = '\0';
 		l = strtol(bmapno, &endp, 10);
-		if (l < 0 || l > UINT32_MAX || endp == bmapno)
+		if (l < 0 || (sl_bmapno_t)l >= UINT32_MAX || endp == bmapno)
 			errx(1, "%s: invalid bmap number", bmapno);
 		bmin = bmax = l;
 
@@ -288,7 +288,8 @@ h_fncmd_bmap_repl_policy(char *val, char *bmapspec)
 		if (*endp == '-') {
 			endp++;
 			l = strtol(endp, &bend, 10);
-			if (l < 0 || l <= bmin ||
+			if (l < 0 || (sl_bmapno_t)l <= bmin ||
+			    (sl_bmapno_t)l >= UINT32_MAX ||
 			    bend == endp || *bend != '\0')
 				errx(1, "%s: invalid bmapspec", endp);
 			bmax = l;
