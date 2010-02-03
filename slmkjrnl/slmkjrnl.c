@@ -40,7 +40,7 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: [-fqv] [-D dir] %s\n", progname);
+	fprintf(stderr, "usage: %s [-fqv] [-D dir]\n", progname);
 	exit(1);
 }
 
