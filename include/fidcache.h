@@ -307,7 +307,7 @@ fcmh_clean_check(struct fidc_membh *f)
 			psc_assert(atomic_read(&f->fcmh_refcnt) > 0);
 		}
 		psc_assert(!(f->fcmh_state &
-			     (FCMH_CAC_DIRTY | FCMH_CAC_FREE | FCMH_FCOO_ATTACH)));
+		     (FCMH_CAC_DIRTY | FCMH_CAC_FREE | FCMH_FCOO_ATTACH)));
 		clean = 1;
 	}
 	ureqlock(&f->fcmh_lock, locked);
