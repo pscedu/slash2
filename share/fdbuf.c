@@ -57,7 +57,7 @@ __static int		descbuf_alglen;
  */
 void
 bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
-    const struct slash_fidgen *fgp, lnet_process_id_t cli_prid,
+    const struct slash_fidgen *fgp, const lnet_process_id_t *cli_prid,
     lnet_nid_t ion_nid, sl_ios_id_t ios_id, sl_blkno_t bmapno)
 {
 	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0);
@@ -65,7 +65,8 @@ bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
 	gcry_md_hd_t hd;
 
 	sbdb->sbdb_secret.sbs_fg = *fgp;
-	sbdb->sbdb_secret.sbs_cli_prid = cli_prid;
+	sbdb->sbdb_secret.sbs_cli_nid = cli_prid->nid;
+	sbdb->sbdb_secret.sbs_cli_pid = cli_prid->pid;
 	sbdb->sbdb_secret.sbs_ion_nid = ion_nid;
 	sbdb->sbdb_secret.sbs_ios_id = ios_id;
 	sbdb->sbdb_secret.sbs_bmapno = bmapno;
@@ -96,7 +97,7 @@ bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
 int
 bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
     struct slash_fidgen *fgp, sl_blkno_t *bmapnop,
-    lnet_process_id_t cli_prid, lnet_nid_t ion_nid,
+    const lnet_process_id_t *cli_prid, lnet_nid_t ion_nid,
     sl_ios_id_t ios_id, enum rw rw)
 {
 	const lnet_process_id_t *prid;
@@ -106,8 +107,8 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 
 	if (sbdb->sbdb_secret.sbs_magic != SBDB_MAGIC)
 		return (EBADF);
-	prid = &sbdb->sbdb_secret.sbs_cli_prid;
-	if (prid->nid != cli_prid.nid || prid->pid != cli_prid.pid)
+	if (sbdb->sbdb_secret.sbs_cli_nid != cli_prid->nid ||
+	    sbdb->sbdb_secret.sbs_cli_pid != cli_prid->pid)
 		return (EBADF);
 	if (rw == SL_READ) {
 		/* Read requests can get by with looser authentication. */
@@ -153,14 +154,15 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
  */
 void
 fdbuf_sign(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
-    lnet_process_id_t cli_prid)
+    const lnet_process_id_t *cli_prid)
 {
 	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0);
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 
 	sfdb->sfdb_secret.sfs_fg = *fgp;
-	sfdb->sfdb_secret.sfs_cli_prid = cli_prid;
+	sfdb->sfdb_secret.sfs_cli_nid = cli_prid->nid;
+	sfdb->sfdb_secret.sfs_cli_pid = cli_prid->pid;
 	sfdb->sfdb_secret.sfs_magic = SFDB_MAGIC;
 	sfdb->sfdb_secret.sfs_nonce = psc_atomic64_inc_getnew(&nonce);
 
@@ -183,17 +185,16 @@ fdbuf_sign(struct srt_fd_buf *sfdb, const struct slash_fidgen *fgp,
  */
 int
 fdbuf_check(const struct srt_fd_buf *sfdb, uint64_t *cfdp,
-    struct slash_fidgen *fgp, lnet_process_id_t cli_prid)
+    struct slash_fidgen *fgp, const lnet_process_id_t *cli_prid)
 {
-	const lnet_process_id_t *prid;
 	char buf[DESCBUF_REPRLEN];
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 
 	if (sfdb->sfdb_secret.sfs_magic != SFDB_MAGIC)
 		return (EBADF);
-	prid = &sfdb->sfdb_secret.sfs_cli_prid;
-	if (prid->nid != cli_prid.nid || prid->pid != cli_prid.pid)
+	if (sfdb->sfdb_secret.sfs_cli_nid != cli_prid->nid ||
+	    sfdb->sfdb_secret.sfs_cli_pid != cli_prid->pid)
 		return (EBADF);
 
 	gerr = gcry_md_copy(&hd, descbuf_hd);

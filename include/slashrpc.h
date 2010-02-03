@@ -170,7 +170,8 @@ struct srt_fdb_secret {
 	struct slash_fidgen	sfs_fg;
 	uint64_t		sfs_cfd;	/* stream handle/ID */
 	uint64_t		sfs_nonce;
-	lnet_process_id_t	sfs_cli_prid;	/* client NID/PID */
+	uint64_t		sfs_cli_nid;
+	uint32_t		sfs_cli_pid;
 	uint32_t		sfs__pad2;
 } __packed;
 
@@ -189,10 +190,11 @@ struct srt_bdb_secret {
 	struct slash_fidgen	sbs_fg;
 	uint64_t		sbs_cfd;	/* stream handle/ID */
 	uint64_t		sbs_nonce;
-	lnet_nid_t		sbs_ion_nid;
+	uint64_t		sbs_ion_nid;
 	sl_bmapno_t		sbs_bmapno;
 	sl_ios_id_t		sbs_ios_id;
-	lnet_process_id_t	sbs_cli_prid;	/* client NID/PID */
+	uint64_t		sbs_cli_nid;
+	uint32_t		sbs_cli_pid;
 	uint32_t		sbs__pad;
 } __packed;
 
