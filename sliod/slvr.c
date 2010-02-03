@@ -203,7 +203,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 			   nblks, slvr_2_fileoff(s, sblk), save_errno);
 
-	else if (rc != size)
+	else if ((uint32_t)rc != size)
 		DEBUG_SLVR(PLL_WARN, s, "short io (rc=%zd, size=%u) "
 			   "%s blks=%d off=%"PRIu64" errno=%d",
 			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),

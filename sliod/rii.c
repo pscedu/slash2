@@ -90,7 +90,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 
 	mp->rc = iod_bmap_load(fcmh, mq->bmapno, SL_READ, &bcm);
 	if (mp->rc) {
-		psc_errorx("failed to load fid %lx bmap %u: %s",
+		psc_errorx("failed to load fid %"PRIx64" bmap %u: %s",
 		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
 		goto out;
 	}

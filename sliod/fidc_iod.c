@@ -20,7 +20,7 @@ sli_fcmh_grow(void)
 	rc = psc_getrlimit(RLIMIT_NOFILE, &soft, &hard);
 	if (rc == 0 && psc_setrlimit(RLIMIT_NOFILE,
 	    soft + 1, hard + 1) == -1)
-		psc_warn("setrlimit NOFILE %ld", soft + 1);
+		psc_warn("setrlimit NOFILE %"PRId64, soft + 1);
 	freelock(&psc_rlimit_lock);
 	return (rc);
 }
@@ -36,7 +36,7 @@ sli_fcmh_shrink(void)
 	rc = psc_getrlimit(RLIMIT_NOFILE, &soft, &hard);
 	if (rc == 0 && psc_setrlimit(RLIMIT_NOFILE,
 	    soft - 1, hard - 1) == -1)
-		psc_warn("setrlimit NOFILE %ld", soft - 1);
+		psc_warn("setrlimit NOFILE %"PRId64, soft - 1);
 	freelock(&psc_rlimit_lock);
 }
 
