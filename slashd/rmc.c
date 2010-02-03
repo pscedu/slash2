@@ -123,7 +123,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	bmap = NULL;
 	RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = fdbuf_check(&mq->sfdb, &cfd, NULL, rq->rq_peer);
+	mp->rc = fdbuf_check(&mq->sfdb, &cfd, NULL, &rq->rq_peer);
 	if (mp->rc)
 		return (mp->rc);
 
@@ -177,7 +177,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		mp->ios_nid = bmdsi->bmdsi_wr_ion->mrmi_resm->resm_nid;
 	}
 
-	bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg, rq->rq_peer,
+	bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg, &rq->rq_peer,
 	   (mq->rw == SL_WRITE ? mp->ios_nid : LNET_NID_ANY),
 	   (mq->rw == SL_WRITE ?
 	    bmdsi->bmdsi_wr_ion->mrmi_resm->resm_res->res_id : IOS_ID_ANY),
@@ -302,8 +302,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
 
 		if (!mp->rc && cfd) {
-			fdbuf_sign(&cfd->cfd_fdb,
-			    &fg, rq->rq_peer);
+			fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
 			memcpy(&mp->sfdb, &cfd->cfd_fdb,
 			    sizeof(mp->sfdb));
 		}
@@ -358,8 +357,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 		    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
 
 		if (!mp->rc && cfd) {
-			fdbuf_sign(&cfd->cfd_fdb,
-			    &fg, rq->rq_peer);
+			fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
 			memcpy(&mp->sfdb, &cfd->cfd_fdb,
 			    sizeof(mp->sfdb));
 		}
@@ -399,12 +397,12 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
 		    SLCONNT_CLI, finfo, &cfd, CFD_DIR);
 
-		if (mp->rc) {
-			psc_error("cfdnew failed rc=%d", mp->rc);
-			return (0);
+		if (!mp->rc && cfd) {
+			fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
+			memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
 		}
-		fdbuf_sign(&cfd->cfd_fdb, &fg, rq->rq_peer);
-		memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
+		psc_info("cfdnew() fid %"PRId64" rc=%d",
+		    fg.fg_fid, mp->rc);
 	}
 
 	/*
@@ -427,10 +425,11 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct iovec iov[2];
 	struct mexpfcm *m;
 	uint64_t cfd;
+	int niov;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = fdbuf_check(&mq->sfdb, &cfd, &fg, rq->rq_peer);
+	mp->rc = fdbuf_check(&mq->sfdb, &cfd, &fg, &rq->rq_peer);
 	if (mp->rc)
 		return (0);
 
@@ -440,7 +439,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	}
 
 #define MAX_READDIR_NENTS	1000
-#define MAX_READDIR_BUFSIZ	(sizeof(struct stat) * MAX_READDIR_NENTS)
+#define MAX_READDIR_BUFSIZ	(sizeof(struct srt_stat) * MAX_READDIR_NENTS)
 	if (mq->size > MAX_READDIR_BUFSIZ ||
 	    mq->nstbpref > MAX_READDIR_NENTS) {
 		mp->rc = EINVAL;
@@ -450,7 +449,9 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	iov[0].iov_base = PSCALLOC(mq->size);
 	iov[0].iov_len = mq->size;
 
+	niov = 1;
 	if (mq->nstbpref) {
+		niov++;
 		iov[1].iov_len = mq->nstbpref * sizeof(struct srm_getattr_rep);
 		iov[1].iov_base = PSCALLOC(iov[1].iov_len);
 	} else {
@@ -468,12 +469,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	if (mq->nstbpref)
-		mp->rc = rsx_bulkserver(rq, &desc,
-		    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, 2);
-	else
-		mp->rc = rsx_bulkserver(rq, &desc,
-		    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, 1);
+	mp->rc = rsx_bulkserver(rq, &desc,
+	    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, niov);
 
 	if (desc)
 		pscrpc_free_bulk(desc);
@@ -523,7 +520,7 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = fdbuf_check(&mq->sfdb, &cfd, &fg, rq->rq_peer);
+	mp->rc = fdbuf_check(&mq->sfdb, &cfd, &fg, &rq->rq_peer);
 	if (mp->rc)
 		return (0);
 

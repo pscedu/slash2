@@ -31,9 +31,9 @@
 #include <fcntl.h>
 #include <gcrypt.h>
 
+#include "pfl/cdefs.h"
 #include "psc_util/atomic.h"
 #include "psc_util/base64.h"
-#include "pfl/cdefs.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_util/random.h"
@@ -100,7 +100,6 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
     const lnet_process_id_t *cli_prid, lnet_nid_t ion_nid,
     sl_ios_id_t ios_id, enum rw rw)
 {
-	const lnet_process_id_t *prid;
 	char buf[DESCBUF_REPRLEN];
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;

@@ -95,7 +95,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 */
 	DYNARRAY_FOREACH(np, i, &lnet_nids) {
 		mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno,
-		    rq->rq_peer, *np, nodeResm->resm_res->res_id, rw);
+		    &rq->rq_peer, *np, nodeResm->resm_res->res_id, rw);
 		if (mp->rc == 0)
 			goto bdbuf_ok;
 	}
