@@ -33,8 +33,8 @@
 #define _PATH_SLICTLSOCK	"../sliod.%h.sock"
 #define _PATH_MSCTLSOCK		"../mount_slash.%h.sock"
 
-#define _RELPATH_SLODTABLE	"/ion_bmaps.odt"
-#define _RELPATH_SLJOURNAL	"/slopjrnl"
+#define _RELPATH_SLODTABLE	"ion_bmaps.odt"
+#define _RELPATH_SLJOURNAL	"slopjrnl"
 
 #define _PATH_SLASHD_DIR	"/var/lib/slashd"
 
