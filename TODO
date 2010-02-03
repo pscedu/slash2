@@ -331,6 +331,8 @@ mds.c
   in PSCRPC
 - directories have no size in ls(1) over mount_slash
 - convert slash_creds to zfs_creds
+- merge set_bmapreplpol and friends into a single interface
+- fdbufs should be used for FSYNC, GETBMAP
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
