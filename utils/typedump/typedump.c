@@ -326,6 +326,9 @@ main(int argc, char *argv[])
 
 	PRVAL(SLASH_BMAP_SIZE);
 
+	PRVAL(SL_CRCS_PER_BMAP);
+	PRVAL(SL_REPLICA_NBYTES);
+
 	psc_crc64_calc(&crc, buf, sizeof(buf));
 	printf("NULL 1MB buf CRC is %#"PSCPRIxCRC64"\n", crc);
 
