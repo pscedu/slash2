@@ -286,7 +286,89 @@ mdsio_statfs(struct statvfs *stbv)
 	return (zfsslash2_statfs(zfsVfs, stbv, 1));
 }
 
-#ifdef BTREE
+#ifdef NAMESPACE_EXPERIMENTAL
+
+int
+mdsio_opencreate(slfid_t pfid, struct slash_creds *cr, int flags,
+    mode_t mode, const char *fn, struct slash_fidgen *fg,
+    struct stat *stb, void *finfop)
+{
+	return (zfsslash2_opencreate(zfsVfs, pfid, cr, flags, mode,
+	    fn, fg, stb, finfop));
+}
+
+int
+mdsio_link(slfid_t fid, slfid_t pfid, const char *fn,
+    struct slash_fidgen *fgp, struct slash_creds *cr, struct stat *stb)
+{
+	return (zfsslash2_link(zfsVfs, fid, pfid, fn, fgp, cr, stb));
+}
+
+int
+mdsio_lookup(slfid_t pfid, const char *cpn, struct slash_fidgen *fgp,
+    struct slash_creds *cr, struct stat *stb)
+{
+	return (zfsslash2_lookup(zfsVfs, pfid, cpn, fgp, cr, stb));
+}
+
+int
+mdsio_opendir(slfid_t fid, struct slash_creds *cr,
+    struct slash_fidgen *fgp, struct stat *stb, void *finfop)
+{
+	return (zfsslash2_opendir(zfsVfs, fid, cr, fgp, stb, finfop));
+}
+
+int
+mdsio_mkdir(slfid_t pfid, const char *cpn, mode_t mode,
+    struct slash_creds *cr, struct stat *stb, struct slash_fidgen *fgp,
+    int supress_fidlink)
+{
+	return (zfsslash2_mkdir(zfsVfs, pfid, cpn, mode, cr, stb, fgp,
+	    supress_fidlink));
+}
+
+int
+mdsio_readdir(slfid_t fid, struct slash_creds *cr, size_t siz,
+    off_t off, void *buf, size_t *outlen, void *attrs, int nprefetch,
+    void *finfo)
+{
+	return (zfsslash2_readdir(zfsVfs, fid, cr, siz, off, buf,
+	    outlen, attrs, nprefetch, finfo));
+}
+
+int
+mdsio_rename(slfid_t opfid, const char *ocpn, slfid_t npfid,
+    const char *ncpn, struct slash_creds *cr)
+{
+	return (zfsslash2_rename(zfsVfs, opfid, ocpn, npfid, ncpn, cr));
+}
+
+int
+mdsio_setattr(slfid_t fid, struct stat *in_stb, int to_set,
+    struct slash_creds *cr, struct stat *out_stb, void *finfo)
+{
+	return (zfsslash2_setattr(zfsVfs, fid, in_stb, to_set, cr,
+	    out_stb, finfo));
+}
+
+int
+mdsio_symlink(const char *target, slfid_t pfid, const char *cpn,
+    struct slash_creds *cr, struct stat *stb, struct slash_fidgen *fgp)
+{
+	return (zfsslash2_symlink(zfsVfs, target, pfid, cpn, cr, stb, fgp));
+}
+
+int
+mdsio_unlink(slfid_t pfid, const char *cpn, struct slash_creds *cr)
+{
+	return (zfsslash2_unlink(zfsVfs, pfid, cpn, cr));
+}
+
+int
+mdsio_rmdir(slfid_t pfid, const char *cpn, struct slash_creds *cr)
+{
+	return (zfsslash2_rmdir(zfsVfs, pfid, cpn, cr));
+}
 
 #else
 int
