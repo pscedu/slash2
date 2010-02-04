@@ -319,11 +319,11 @@ mdsio_opendir(slfid_t fid, struct slash_creds *cr,
 }
 
 int
-mdsio_mkdir(slfid_t pfid, const char *cpn, mode_t mode,
+mdsio_mkdir(slfid_t pfid, slfid_t fid, const char *cpn, mode_t mode,
     struct slash_creds *cr, struct stat *stb, struct slash_fidgen *fgp,
     int supress_fidlink)
 {
-	return (zfsslash2_mkdir(zfsVfs, pfid, cpn, mode, cr, stb, fgp,
+	return (zfsslash2_mkdir(zfsVfs, fid, pfid, cpn, mode, cr, stb, fgp,
 	    supress_fidlink));
 }
 
@@ -402,11 +402,11 @@ mdsio_opendir(slfid_t fid, struct slash_creds *cr,
 }
 
 int
-mdsio_mkdir(slfid_t pfid, slfid_t fid, const char *cpn, mode_t mode,
+mdsio_mkdir(slfid_t pfid, const char *cpn, mode_t mode,
     struct slash_creds *cr, struct stat *stb, struct slash_fidgen *fgp,
     int supress_fidlink)
 {
-	return (zfsslash2_mkdir(zfsVfs, pfid, fid, cpn, mode, cr, stb, fgp,
+	return (zfsslash2_mkdir(zfsVfs, pfid, cpn, mode, cr, stb, fgp,
 	    supress_fidlink));
 }
 
