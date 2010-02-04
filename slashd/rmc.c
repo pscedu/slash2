@@ -59,7 +59,7 @@ psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 /*
  * TODO: SLASH ID should be logged on disk, so that it can be consumed continuously across reboots and crashes.
  */
-uint64_t	next_slash_id = 0;
+uint64_t	next_slash_id = 2;
 psc_spinlock_t	slash_id_lock = LOCK_INITIALIZER;
 #endif
 
@@ -243,10 +243,26 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct srm_mkdir_rep *mp;
 	struct stat stb;
 
+#ifdef NAMESPACE_EXPERIMENTAL
+	uint64_t fid;
+#endif
+
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
+
+#ifdef NAMESPACE_EXPERIMENTAL
+	spinlock(&slash_id_lock);
+	fid = next_slash_id++;
+	freelock(&slash_id_lock);
+
+	mp->rc = mdsio_mkdir(mq->pfid, fid, mq->name,
+	    mq->mode, &mq->creds, &stb, &mp->fg, 0);
+#else
+
 	mp->rc = mdsio_mkdir(mq->pfid, mq->name,
 	    mq->mode, &mq->creds, &stb, &mp->fg, 0);
+#endif
+
 	slrpc_externalize_stat(&stb, &mp->attr);
 	return (0);
 }
