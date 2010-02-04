@@ -129,7 +129,7 @@ struct slash_inode_od {
 #define INO_OD_SZ		sizeof(struct slash_inode_od)
 #define INO_OD_CRCSZ		(INO_OD_SZ - (sizeof(psc_crc64_t)))
 
-#define INO_VERSION		0x0003
+#define INO_VERSION		0x0004
 
 enum {
 	INO_FL_HAVE_EXTRAS = (1<<0)
