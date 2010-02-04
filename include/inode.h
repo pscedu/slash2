@@ -48,6 +48,8 @@
 #define SL_MAX_REPLICAS		64
 #define SL_BITS_PER_REPLICA	2
 #define SL_REPLICA_MASK		((uint8_t)((1 << SL_BITS_PER_REPLICA) - 1))
+
+/* must be 64-bit aligned */
 #define SL_REPLICA_NBYTES	((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) / NBBY)
 
 #define SL_DEF_SNAPSHOTS	1
@@ -55,7 +57,7 @@
 
 #define SL_BMAP_SIZE		SLASH_BMAP_SIZE
 #define SL_CRC_SIZE		(1024 * 1024)
-#define SL_CRCS_PER_BMAP	(SL_BMAP_SIZE / SL_CRC_SIZE)
+#define SL_CRCS_PER_BMAP	(SL_BMAP_SIZE / SL_CRC_SIZE)	/* must be 64-bit aligned in bytes */
 
 /* Define metafile offsets
  */
@@ -104,7 +106,7 @@ typedef struct slash_gencrc {
 struct slash_bmap_cli_wire {
 	uint8_t			bw_crcstates[SL_CRCS_PER_BMAP];
 	uint8_t			bw_repls[SL_REPLICA_NBYTES];
-};
+} __packed;
 
 #define INO_DEF_NREPLS		4
 

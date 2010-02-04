@@ -95,10 +95,11 @@ struct bmapc_memb {
  */
 #define slash_bmap_wire slash_bmap_od
 struct slash_bmap_od {
-	sl_blkgen_t		bh_gen;
 	sl_gcrc_t		bh_crcs[SL_CRCS_PER_BMAP];
 	uint8_t			bh_crcstates[SL_CRCS_PER_BMAP];
 	uint8_t			bh_repls[SL_REPLICA_NBYTES];
+	sl_blkgen_t		bh_gen;
+	uint32_t		bh__pad;
 
 	/* the CRC must be at the end */
 	psc_crc64_t		bh_bhcrc;

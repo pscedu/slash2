@@ -470,7 +470,10 @@ struct srm_readdir_rep {
 	uint64_t		size;
 	uint32_t		num;    /* how many dirents were returned */
 	int32_t			rc;
-	/* XXX accompanied by bulk data is but should not be in fuse dirent format */
+/*
+ * XXX accompanied by bulk data is but should not be in fuse dirent format
+ *	and must be 64-bit aligned.
+ */
 } __packed;
 
 struct srm_readlink_req {
