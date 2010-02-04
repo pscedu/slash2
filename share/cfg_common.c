@@ -38,7 +38,8 @@
 #include "slconfig.h"
 #include "slerr.h"
 
-struct psc_dynarray lnet_nids = DYNARRAY_INIT;
+struct psc_dynarray	lnet_nids = DYNARRAY_INIT;
+struct ifconf		sl_ifconf;
 
 /*
  * libsl_resm_lookup - Sanity check this node's resource membership.
@@ -210,8 +211,8 @@ slcfg_getifname(int ifidx, char ifn[IFNAMSIZ])
 	strlcpy(ifn, ifr.ifr_name, IFNAMSIZ);
 }
 
-__static void
-slcfg_getifaddrs(struct ifconf *ifc)
+void
+slcfg_getifaddrs(void)
 {
 	int rc, s;
 
@@ -219,8 +220,8 @@ slcfg_getifaddrs(struct ifconf *ifc)
 	if (s == -1)
 		psc_fatal("socket");
 
-	ifc->ifc_buf = NULL;
-	rc = ioctl(s, SIOCGIFCONF, ifc);
+	sl_ifconf.ifc_buf = NULL;
+	rc = ioctl(s, SIOCGIFCONF, &sl_ifconf);
 	if (rc == -1)
 		psc_fatal("ioctl SIOCGIFCONF");
 
@@ -229,8 +230,8 @@ slcfg_getifaddrs(struct ifconf *ifc)
 	 * there is no way to determine that we didn't get
 	 * them all with this approach.
 	 */
-	ifc->ifc_buf = PSCALLOC(ifc->ifc_len);
-	rc = ioctl(s, SIOCGIFCONF, ifc);
+	sl_ifconf.ifc_buf = PSCALLOC(sl_ifconf.ifc_len);
+	rc = ioctl(s, SIOCGIFCONF, &sl_ifconf);
 	if (rc == -1)
 		psc_fatal("ioctl SIOCGIFCONF");
 
@@ -252,13 +253,13 @@ slcfg_sockaddr_islocal(const struct sockaddr *sa)
 }
 
 __static void
-slcfg_getfirstifaddr(const struct ifconf *ifc, struct sockaddr **sa)
+slcfg_getfirstifaddr(struct sockaddr **sa)
 {
 	struct ifreq *ifr;
 	int n;
 
-	ifr = (void *)ifc->ifc_buf;
-	for (n = 0; n < ifc->ifc_len; n += sizeof(*ifr), ifr++)
+	ifr = (void *)sl_ifconf.ifc_buf;
+	for (n = 0; n < sl_ifconf.ifc_len; n += sizeof(*ifr), ifr++)
 		if (ifr->ifr_addr.sa_family == (*sa)->sa_family &&
 		    !slcfg_sockaddr_islocal(&ifr->ifr_addr)) {
 			*sa = &ifr->ifr_addr;
@@ -267,8 +268,33 @@ slcfg_getfirstifaddr(const struct ifconf *ifc, struct sockaddr **sa)
 	psc_fatalx("unable to find an interface address");
 }
 
+lnet_nid_t
+slcfg_str2nid(const char *nidstr)
+{
+	union {
+		struct sockaddr_storage ss;
+		struct sockaddr_in sin;
+		struct sockaddr sa;
+	} sun;
+	struct sockaddr_in *sin;
+	struct sockaddr *sa;
+	lnet_nid_t nid;
+
+	nid = libcfs_str2nid(nidstr);
+	sun.sa.sa_family = AF_INET;
+	sun.sin.sin_addr.s_addr = htonl(LNET_NIDADDR(nid));
+	sa = &sun.sa;
+	if (slcfg_sockaddr_islocal(&sun.sa)) {
+		slcfg_getfirstifaddr(&sa);
+		sin = (void *)sa;
+		nid = LNET_MKNID(LNET_NIDNET(nid),
+		    ntohl(sin->sin_addr.s_addr));
+	}
+	return (nid);
+}
+
 __static void
-slcfg_getif(struct ifconf *ifc, struct sockaddr *sa, char ifn[IFNAMSIZ])
+slcfg_getif(struct sockaddr *sa, char ifn[IFNAMSIZ])
 {
 	struct {
 		struct nlmsghdr	nmh;
@@ -289,8 +315,8 @@ slcfg_getif(struct ifconf *ifc, struct sockaddr *sa, char ifn[IFNAMSIZ])
 	 * Scan interfaces for addr since netlink
 	 * will always give us the lo interface.
 	 */
-	ifr = (void *)ifc->ifc_buf;
-	for (n = 0; n < ifc->ifc_len; n += sizeof(*ifr), ifr++) {
+	ifr = (void *)sl_ifconf.ifc_buf;
+	for (n = 0; n < sl_ifconf.ifc_len; n += sizeof(*ifr), ifr++) {
 		if (ifr->ifr_addr.sa_family == sa->sa_family &&
 		    memcmp(&sin->sin_addr,
 		    &((struct sockaddr_in *)&ifr->ifr_addr)->sin_addr,
@@ -391,7 +417,6 @@ libsl_init(int pscnet_mode, int ismds)
 	struct sl_resource *r;
 	struct sl_resm *m;
 	struct sl_site *s;
-	struct ifconf ifc;
 
 	psc_assert(pscnet_mode == PSCNET_CLIENT ||
 	    pscnet_mode == PSCNET_SERVER);
@@ -408,7 +433,6 @@ libsl_init(int pscnet_mode, int ismds)
 	if (setenv("USOCK_PORTPID", "0", 1) == -1)
 		err(1, "setenv");
 
-	slcfg_getifaddrs(&ifc);
 	lent = PSCALLOC(sizeof(*lent));
 
 	PLL_LOCK(&globalConfig.gconf_sites);
@@ -434,10 +458,10 @@ libsl_init(int pscnet_mode, int ismds)
 					sa = res->ai_addr;
 					/* if we got a local addr, use any interface addr */
 					if (slcfg_sockaddr_islocal(sa))
-						slcfg_getfirstifaddr(&ifc, &sa);
+						slcfg_getfirstifaddr(&sa);
 
 					/* get destination routing interface */
-					slcfg_getif(&ifc, sa, lent->ifn);
+					slcfg_getif(sa, lent->ifn);
 					lent->net = strrchr(m->resm_addrbuf, '@') + 1;
 
 					/*
@@ -473,7 +497,6 @@ libsl_init(int pscnet_mode, int ismds)
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
 	PSCFREE(lent);
-	PSCFREE(ifc.ifc_buf);
 
 	lnetstr[0] = '\0';
 	psclist_for_each_entry_safe(lent, lnext, &lnets_hd, lentry) {

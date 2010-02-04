@@ -439,7 +439,7 @@ slcfg_addif(char *ifname, char *netname)
 		psc_fatalx("resource member %s:%s: address too long",
 		    currentRes->res_name, nidstr);
 
-	resm->resm_nid = libcfs_str2nid(nidstr);
+	resm->resm_nid = slcfg_str2nid(nidstr);
 	resm->resm_res = currentRes;
 	slcfg_init_resm(resm);
 
@@ -463,13 +463,13 @@ slcfg_str2restype(const char *res_type)
 {
 	if (!strcmp(res_type, "parallel_fs"))
 		return (SLREST_PARALLEL_FS);
-	else if (!strcmp(res_type, "archival_fs"))
+	if (!strcmp(res_type, "archival_fs"))
 		return (SLREST_ARCHIVAL_FS);
-	else if (!strcmp(res_type, "cluster_noshare_fs"))
+	if (!strcmp(res_type, "cluster_noshare_fs"))
 		return (SLREST_CLUSTER_NOSHARE_FS);
-	else if (!strcmp(res_type, "compute"))
+	if (!strcmp(res_type, "compute"))
 		return (SLREST_COMPUTE);
-	else if (!strcmp(res_type, "mds"))
+	if (!strcmp(res_type, "mds"))
 		return (SLREST_MDS);
 	psc_fatalx("%s: invalid resource type", res_type);
 }
@@ -670,6 +670,8 @@ slcfg_parse(const char *config_file)
 	int n, j;
 
 	cfg_errors = 0;
+
+	slcfg_getifaddrs();
 
 	INIT_GCONF(&globalConfig);
 
