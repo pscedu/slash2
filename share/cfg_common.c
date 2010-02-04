@@ -211,7 +211,7 @@ slcfg_getifname(int ifidx, char ifn[IFNAMSIZ])
 	strlcpy(ifn, ifr.ifr_name, IFNAMSIZ);
 }
 
-void
+__static void
 slcfg_getifaddrs(void)
 {
 	int rc, s;
@@ -236,61 +236,6 @@ slcfg_getifaddrs(void)
 		psc_fatal("ioctl SIOCGIFCONF");
 
 	close(s);
-}
-
-int
-slcfg_sockaddr_islocal(const struct sockaddr *sa)
-{
-	struct sockaddr_in *sin = (void *)sa;
-
-	switch (sa->sa_family) {
-	case AF_INET:
-		return (sin->sin_addr.s_addr == htonl(INADDR_LOOPBACK));
-	default:
-		psc_fatalx("address family not supported");
-	}
-	/* NOTREACHED */
-}
-
-__static void
-slcfg_getfirstifaddr(struct sockaddr **sa)
-{
-	struct ifreq *ifr;
-	int n;
-
-	ifr = (void *)sl_ifconf.ifc_buf;
-	for (n = 0; n < sl_ifconf.ifc_len; n += sizeof(*ifr), ifr++)
-		if (ifr->ifr_addr.sa_family == (*sa)->sa_family &&
-		    !slcfg_sockaddr_islocal(&ifr->ifr_addr)) {
-			*sa = &ifr->ifr_addr;
-			return;
-		}
-	psc_fatalx("unable to find an interface address");
-}
-
-lnet_nid_t
-slcfg_str2nid(const char *nidstr)
-{
-	union {
-		struct sockaddr_storage ss;
-		struct sockaddr_in sin;
-		struct sockaddr sa;
-	} sun;
-	struct sockaddr_in *sin;
-	struct sockaddr *sa;
-	lnet_nid_t nid;
-
-	nid = libcfs_str2nid(nidstr);
-	sun.sa.sa_family = AF_INET;
-	sun.sin.sin_addr.s_addr = htonl(LNET_NIDADDR(nid));
-	sa = &sun.sa;
-	if (slcfg_sockaddr_islocal(&sun.sa)) {
-		slcfg_getfirstifaddr(&sa);
-		sin = (void *)sa;
-		nid = LNET_MKNID(LNET_NIDNET(nid),
-		    ntohl(sin->sin_addr.s_addr));
-	}
-	return (nid);
 }
 
 __static void
@@ -412,7 +357,6 @@ libsl_init(int pscnet_mode, int ismds)
 	char *p, pbuf[6], lnetstr[256], addrbuf[HOST_NAME_MAX];
 	struct addrinfo hints, *res, *res0;
 	int netcmp, error, rc, j, k;
-	struct sockaddr *sa;
 	PSCLIST_HEAD(lnets_hd);
 	struct sl_resource *r;
 	struct sl_resm *m;
@@ -432,6 +376,8 @@ libsl_init(int pscnet_mode, int ismds)
 
 	if (setenv("USOCK_PORTPID", "0", 1) == -1)
 		err(1, "setenv");
+
+	slcfg_getifaddrs();
 
 	lent = PSCALLOC(sizeof(*lent));
 
@@ -455,13 +401,8 @@ libsl_init(int pscnet_mode, int ismds)
 					psc_fatalx("%s", gai_strerror(error));
 
 				for (res = res0; res; res = res->ai_next) {
-					sa = res->ai_addr;
-					/* if we got a local addr, use any interface addr */
-					if (slcfg_sockaddr_islocal(sa))
-						slcfg_getfirstifaddr(&sa);
-
 					/* get destination routing interface */
-					slcfg_getif(sa, lent->ifn);
+					slcfg_getif(res->ai_addr, lent->ifn);
 					lent->net = strrchr(m->resm_addrbuf, '@') + 1;
 
 					/*

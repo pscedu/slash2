@@ -116,9 +116,6 @@ int			 slcfg_res_cmp(const void *, const void *);
 int			 slcfg_resm_cmp(const void *, const void *);
 int			 slcfg_site_cmp(const void *, const void *);
 
-void			 slcfg_getifaddrs(void);
-lnet_nid_t		 slcfg_str2nid(const char *);
-
 void			 slcfg_parse(const char *);
 void			 slcfg_store_tok_val(const char *, char *);
 

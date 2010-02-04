@@ -439,7 +439,7 @@ slcfg_addif(char *ifname, char *netname)
 		psc_fatalx("resource member %s:%s: address too long",
 		    currentRes->res_name, nidstr);
 
-	resm->resm_nid = slcfg_str2nid(nidstr);
+	resm->resm_nid = libcfs_str2nid(nidstr);
 	resm->resm_res = currentRes;
 	slcfg_init_resm(resm);
 
@@ -670,8 +670,6 @@ slcfg_parse(const char *config_file)
 	int n, j;
 
 	cfg_errors = 0;
-
-	slcfg_getifaddrs();
 
 	INIT_GCONF(&globalConfig);
 
