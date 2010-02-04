@@ -1626,7 +1626,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	 *   offsets into the buffer.
 	 */
 	for (j=0, p=buf; j < nr; j++, p+=tlen) {
-		if (!(r[j]->biorq_flags & BIORQ_DIO))
+		if (r[j]->biorq_flags & BIORQ_DIO)
 			msl_pages_dio_getput(r[j], p);
 
 		else {
