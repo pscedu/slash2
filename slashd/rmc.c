@@ -55,6 +55,14 @@
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
+#ifdef NAMESPACE_EXPERIMENTAL
+/*
+ * TODO: SLASH ID should be logged on disk, so that it can be consumed continuously across reboots and crashes.
+ */
+uint64_t	next_slash_id = 0;
+psc_spinlock_t	slash_id_lock = LOCK_INITIALIZER;
+#endif
+
 int
 slmrmcthr_inode_cacheput(struct slash_fidgen *fg, struct stat *stb,
     struct slash_creds *creds)
