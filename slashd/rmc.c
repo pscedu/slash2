@@ -462,6 +462,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct slash_fidgen fg;
 	struct iovec iov[2];
 	struct mexpfcm *m;
+	size_t outsize;
 	uint64_t cfd;
 	int niov;
 
@@ -498,8 +499,9 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	}
 
 	mp->rc = mdsio_readdir(fg.fg_fid, &mq->creds, mq->size,
-	    mq->offset, iov[0].iov_base, &mp->size, iov[1].iov_base,
+	    mq->offset, iov[0].iov_base, &outsize, iov[1].iov_base,
 	    mq->nstbpref, fcmh_2_mdsio_data(m->mexpfcm_fcmh));
+	mp->size = outsize;
 
 	psc_info("mdsio_readdir rc=%d data=%p", mp->rc,
 	    fcmh_2_mdsio_data(m->mexpfcm_fcmh));
