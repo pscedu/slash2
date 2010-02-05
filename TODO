@@ -1,7 +1,5 @@
 $Id$
 
-TEST
-
 1/14/10
 * Deal with problems surrounding full odtable. ATM odtable put errors are not dealt with properly
 leading to problems later in cfdfree where the bmap refcnt is wrong.
