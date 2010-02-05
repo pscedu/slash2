@@ -13,7 +13,6 @@ SUBDIRS+=	slimmns
 SUBDIRS+=	sliod
 SUBDIRS+=	slmctl
 SUBDIRS+=	slmkjrnl
-SUBDIRS+=	${PFL_BASE}/utils/odtable
 
 MAN+=		doc/sladm.7
 MAN+=		doc/slash.conf.5
