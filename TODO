@@ -316,6 +316,8 @@ mds.c
 - msctl -Q as root on files that are read-only shouldn't give EPERM
 - apply changes to fuse_listener.c from zfs-fuse 0.6.0
 - ensure slash.conf has <= 1 MDS servers for each site
+- move to zfs 0.6.0
+- apply zfs 0.5.0 patches to zfs 0.6.0
 ----------------
 
 - RSX_ALLOCREP() should return() the error code when bulks are expected
@@ -333,6 +335,7 @@ mds.c
 - convert slash_creds to zfs_creds
 - merge set_bmapreplpol and friends into a single interface
 - fdbufs should be used for FSYNC, GETBMAP
+- PAGE_SIZE may be in a translation unit, not a macro, deal
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
