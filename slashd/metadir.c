@@ -41,13 +41,15 @@ _meta_dir_create(uint32_t curdepth, uint32_t maxdepth)
 			psc_fatal("mkdir %s", d);
 
 		if (curdepth < (maxdepth - 1)) {
-			psc_assert_perror( !chdir(d) );
-			_meta_dir_create((curdepth + 1), maxdepth);
+			if (chdir(d) == -1)
+				psc_fatal("chdir %s", d);
+			_meta_dir_create(curdepth + 1, maxdepth);
 		}
 	}
 
 	if (curdepth > 1)
-		psc_assert_perror( !chdir("..") );
+		if (chdir("..") == -1)
+			psc_fatal("chdir ..");
 }
 
 /*
@@ -55,7 +57,8 @@ _meta_dir_create(uint32_t curdepth, uint32_t maxdepth)
  *  on a mapserver filesystem.
  */
 int
-meta_dir_create(const char *meta_root, uint64_t fs_set_uuid, uint32_t meta_dir_depth)
+meta_dir_create(const char *meta_root, uint64_t fs_set_uuid,
+    uint32_t meta_dir_depth)
 {
 	char wd[PATH_MAX], meta_fsid_str[FSID_LEN+1];
 	int  rc;
@@ -63,7 +66,8 @@ meta_dir_create(const char *meta_root, uint64_t fs_set_uuid, uint32_t meta_dir_d
 	if (getcwd(wd, sizeof(wd)) == NULL)
 		psc_fatal("getcwd");
 
-	psc_assert_perror(chdir(meta_root) == 0);
+	if (chdir(meta_root) == -1)
+		psc_fatal("chdir: %s", meta_root);
 
 	if (!meta_dir_depth)
 		meta_dir_depth = FID_PATH_DEPTH;
@@ -75,9 +79,11 @@ meta_dir_create(const char *meta_root, uint64_t fs_set_uuid, uint32_t meta_dir_d
 	if (rc < 0 && errno != EEXIST)
 		psc_fatal("mkdir %s", meta_fsid_str);
 
-	psc_assert_perror(chdir(meta_fsid_str) == 0);
+	if (chdir(meta_fsid_str) == -1)
+		psc_fatal("chdir: %s", meta_fsid_str);
 	_meta_dir_create(1, meta_dir_depth);
-	psc_assert_perror(chdir(wd) == 0);
+	if (chdir(wd) == -1)
+		psc_fatal("chdir: %s", wd);
 
 	return (0);
 }
