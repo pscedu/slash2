@@ -190,7 +190,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   buffer offsets since we're block aligned now
 	 */
 	if (rw == SL_WRITE) {
-		off_t roff = mq->offset - (slvrno * SLASH_SLVR_SIZE);
+		roff = mq->offset - (slvrno * SLASH_SLVR_SIZE);
 
 		tsize = mq->size;
 		sblk  = roff / SLASH_SLVR_BLKSZ;
