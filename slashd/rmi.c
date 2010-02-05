@@ -201,6 +201,8 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 
+	dst_resm = NULL;
+
 	RSX_ALLOCREP(rq, mq, mp);
 	rrq = mds_repl_findrq(&mq->fg, NULL);
 	if (rrq == NULL)
