@@ -306,11 +306,11 @@ slcfg_getif(struct sockaddr *sa, char ifn[IFNAMSIZ])
 	close(s);
 
 	if (rq.nmh.nlmsg_type == NLMSG_ERROR) {
-		struct nlmsgerr *err;
+		struct nlmsgerr *nlerr;
 
-		err = NLMSG_DATA(&rq.nmh);
+		nlerr = NLMSG_DATA(&rq.nmh);
 		psc_fatalx("netlink: %s",
-		    slstrerror(err->error));
+		    slstrerror(nlerr->error));
 	}
 
 	rc -= NLMSG_SPACE(sizeof(rq.rtm));
