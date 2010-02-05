@@ -164,7 +164,8 @@ mds_inox_load_locked(struct slash_inode_handle *ih)
 		if (crc == ih->inoh_extras->inox_crc)
 			ih->inoh_flags |= INOH_HAVE_EXTRAS;
 		else {
-			psc_errorx("inox CRC fail; disk %lx mem %lx",
+			psc_errorx("inox CRC fail; disk %"PSCPRIxCRC64
+			    " mem %"PSCPRIxCRC64,
 			    ih->inoh_extras->inox_crc, crc);
 			rc = EIO;
 		}
@@ -425,7 +426,7 @@ mds_bmap_exists(struct fidc_membh *f, sl_blkno_t n)
 
 	lblk = fcmh_2_nbmaps(f);
 
-	psc_trace("fid="FIDFMT" lblk=%u fsz=%zu",
+	psc_trace("fid="FIDFMT" lblk=%u fsz=%"PSCPRIdOFF,
 		  FIDFMTARGS(fcmh_2_fgp(f)), lblk, fcmh_2_fsz(f));
 
 	FCMH_URLOCK(f, locked);
