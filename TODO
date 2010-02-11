@@ -341,3 +341,10 @@ maybe not:
 - merge sl_replrq directly into fidc_mds_info
 - use a sliding window to track valid cfd's and remove them from the window
   once they are CLOSE()'d
+
+- implement mknod
+
+zfs
+- fix off-by-one in MAXNAMELEN
+- remove 'real_' double vars
+- fix ZFS_ENTER() sections
