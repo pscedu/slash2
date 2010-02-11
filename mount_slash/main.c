@@ -1566,6 +1566,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *stb,
 		rc = rc ? rc : mp->rc;
 		goto out;
 	}
+	slrpc_internalize_stat(&mp->attr, stb);
 	fcmh_setattr(c, stb);
 	fuse_reply_attr(req, stb, 0.0);
 
