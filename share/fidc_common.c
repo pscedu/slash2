@@ -116,6 +116,7 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 {
 	int locked = reqlock(&fcmh->fcmh_lock);
 
+	psc_assert(stb->st_ino == (ino_t)fcmh->fcmh_fg.fg_fid);
 	psc_assert(fcmh_2_gen(fcmh) != FIDGEN_ANY);
 
 	memcpy(&fcmh->fcmh_stb, stb, sizeof(*stb));
