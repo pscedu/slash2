@@ -140,7 +140,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	/*
 	 * Check the cfdent structure associated with the client.  If successful,
-	 * it also return the mexpfcm in the out argument.
+	 * it also returns the mexpfcm in the out argument.
 	 */
 	mp->rc = cfdlookup(rq->rq_export, cfd, &m);
 	if (mp->rc)
@@ -183,7 +183,8 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		 */
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		mp->ios_nid = bmdsi->bmdsi_wr_ion->mrmi_resm->resm_nid;
-	}
+	} else
+		mp->ios_nid = LNET_NID_ANY;
 
 	bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg, &rq->rq_peer,
 	   (mq->rw == SL_WRITE ? mp->ios_nid : LNET_NID_ANY),
@@ -586,8 +587,7 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 	MEXPFCM_ULOCK(m);
 
 	rc = cfdfree(rq->rq_export, cfd);
-	psc_warnx("cfdfree() cfd %"PRId64" rc=%d",
-		 cfd, rc);
+	psc_info("cfdfree() cfd %"PRId64" rc=%d", cfd, rc);
 
 	mp->rc = mds_inode_release(f);
 
@@ -637,7 +637,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	struct srm_setattr_rep *mp;
 	struct fidc_mds_info *fmdsi;
 	struct fidc_membh *fcmh;
-	struct stat stb;
+	struct stat stb, outstb;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
@@ -653,7 +653,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	 */
 	slrpc_internalize_stat(&mq->attr, &stb);
 	mp->rc = mdsio_setattr(mq->fid, &stb, mq->to_set,
-	    &mq->creds, NULL, fmdsi ? fmdsi->fmdsi_data : NULL);
+	    &mq->creds, &outstb, fmdsi ? fmdsi->fmdsi_data : NULL);
+	slrpc_externalize_stat(&outstb, &mp->attr);
 
 	if (mp->rc == ENOENT) {
 		//XXX need to figure out how to 'lookup' via the immns.
