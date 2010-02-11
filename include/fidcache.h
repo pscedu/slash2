@@ -60,6 +60,7 @@ struct fidc_membh {
 	struct fidc_nameinfo	*fcmh_name;
 	struct fidc_open_obj	*fcmh_fcoo;
 	int			 fcmh_state;
+	int			 fcmh_lasterror;
 	psc_spinlock_t		 fcmh_lock;
 	atomic_t		 fcmh_refcnt;
 	struct psc_hashent	 fcmh_hentry;
@@ -228,24 +229,6 @@ extern struct psc_poolmgr	*fidcPool;
 extern struct psc_listcache	 fidcDirtyList;
 extern struct psc_listcache	 fidcCleanList;
 
-#define DEBUG_STATBUF(level, stb)						\
-	psc_logs((level), PSS_GEN,						\
-	    "stb (%p) dev:%"PRIu64" inode:%"PRId64" mode:0%o "			\
-	    "nlink:%"PRIu64" uid:%u gid:%u "					\
-	    "rdev:%"PRIu64" sz:%"PRId64" blksz:%ld "				\
-	    "blkcnt:%"PRId64" atime:%lu mtime:%lu ctime:%lu",			\
-	    (stb), (uint64_t)(stb)->st_dev, (stb)->st_ino, (stb)->st_mode,	\
-	    (uint64_t)(stb)->st_nlink, (stb)->st_uid, (stb)->st_gid,		\
-	    (uint64_t)(stb)->st_rdev, (stb)->st_size, (stb)->st_blksize,	\
-	    (stb)->st_blocks, (stb)->st_atime, (stb)->st_mtime,			\
-	    (stb)->st_ctime)
-
-static __inline void
-dump_statbuf(int level, struct stat *stb)
-{
-	DEBUG_STATBUF(level, stb);
-}
-
 static __inline void
 fcmh_refresh_age(struct fidc_membh *fcmh)
 {
@@ -260,13 +243,13 @@ fcmh_lc_2_string(struct psc_listcache *lc)
 {
 	if (lc == &fidcCleanList)
 		return "Clean";
-	else if (lc == &fidcPool->ppm_lc)
+	if (lc == &fidcPool->ppm_lc)
 		return "Free";
-	else if (lc == &fidcDirtyList)
+	if (lc == &fidcDirtyList)
 		return "Dirty";
-	else if (lc == NULL)
+	if (lc == NULL)
 		return "Null";
-	psc_fatalx("bad fidc list cache %p", lc);
+	psc_fatalx("invalid fidcache list cache %p", lc);
 }
 
 static __inline void
@@ -275,7 +258,9 @@ dump_fcmh(struct fidc_membh *f)
 	DEBUG_FCMH(PLL_ERROR, f, "");
 }
 
-/* Create the inode if it doesn't exist loading its attributes from the network.
+/**
+ * fidc_lookup_load_inode - Create the inode if it doesn't exist loading
+ *	its attributes from the network.
  */
 static __inline int
 fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *cr,
@@ -288,7 +273,7 @@ fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *cr,
 }
 
 /**
- * fcmh_clean_check - verify the validity of the fcmh.
+ * fcmh_clean_check - Verify the validity of fid cache member.
  */
 static __inline int
 fcmh_clean_check(struct fidc_membh *f)
