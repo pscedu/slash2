@@ -456,8 +456,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		psc_assert(stb);
 #endif
 
-	if ((flags & FIDC_LOOKUP_LOAD) ||
-	    (flags & FIDC_LOOKUP_REFRESH))
+	if (flags & FIDC_LOOKUP_LOAD)
 		psc_assert(creds);
 
 	if (flags & FIDC_LOOKUP_CREATE)
@@ -603,8 +602,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 	}
 
-	if ((flags & (FIDC_LOOKUP_LOAD | FIDC_LOOKUP_REFRESH)) &&
-	    sl_fcmh_ops.sfop_getattr) {
+	if ((flags & FIDC_LOOKUP_LOAD) && sl_fcmh_ops.sfop_getattr) {
 		rc = sl_fcmh_ops.sfop_getattr(fcmh, creds);
 		if (rc) {
 			DEBUG_FCMH(PLL_DEBUG, fcmh, "getattr failure");
