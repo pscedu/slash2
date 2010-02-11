@@ -312,7 +312,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 	fmdsi = fcmh_2_fmdsi(f);
 	if (SPLAY_INSERT(fcm_exports, &fmdsi->fmdsi_exports, m)) {
 		psc_warnx("Tried to reinsert m(%p) "FIDFMT,
-			   m, FIDFMTARGS(mexpfcm2fidgen(m)));
+		    m, FIDFMTARGS(mexpfcm2fidgen(m)));
 		rc = EEXIST;
 	} else
 		psc_info("Added m=%p e=%p to tree %p",
@@ -427,7 +427,7 @@ mds_bmap_exists(struct fidc_membh *f, sl_blkno_t n)
 	lblk = fcmh_2_nbmaps(f);
 
 	psc_trace("fid="FIDFMT" lblk=%u fsz=%"PSCPRIdOFF,
-		  FIDFMTARGS(&f->fcmh_fg), lblk, fcmh_2_fsz(f));
+	    FIDFMTARGS(&f->fcmh_fg), lblk, fcmh_2_fsz(f));
 
 	FCMH_URLOCK(f, locked);
 	return (n < lblk);
@@ -592,9 +592,9 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 
 	for (j = 0; j < len; j++) {
 		spinlock(&mrpi->mrpi_lock);
-		n = mrpi->mrpi_cnt++;
 		if (mrpi->mrpi_cnt >= len)
-			n = mrpi->mrpi_cnt = 0;
+			mrpi->mrpi_cnt = 0;
+		n = mrpi->mrpi_cnt++;
 		resm = psc_dynarray_getpos(&res->res_members, n);
 
 		psc_trace("trying res(%s) ion(%s)",
@@ -607,7 +607,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 
 		/*
 		 * If we fail to establish a connection, try next node.
-		 * The while loop guarantees that we always bail out.
+		 * The loop guarantees that we always bail out.
 		 */
 		if (slm_geticsvc(resm) == NULL) {
 			freelock(&mrmi->mrmi_lock);
