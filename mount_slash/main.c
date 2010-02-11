@@ -101,6 +101,8 @@ translate_pathname(const char *fn, char buf[PATH_MAX])
 int
 checkcreds(const struct stat *stb, const struct slash_creds *cr, int xmode)
 {
+	if (stb->st_uid == 0)
+		return (0);
 	if (stb->st_uid == cr->uid) {
 		if (((xmode & R_OK) && (stb->st_mode & S_IRUSR) == 0) ||
 		    ((xmode & W_OK) && (stb->st_mode & S_IWUSR) == 0) ||
