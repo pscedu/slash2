@@ -71,7 +71,7 @@ struct sl_resm		*slc_rmc_resm;
 struct psc_vbitmap	 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
 psc_spinlock_t		 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
 
-/*
+/**
  * translate_pathname - convert an absolute file system path name into
  *	the relative location from the root of the mount point.
  * @fn: absolute file path.
@@ -99,6 +99,13 @@ translate_pathname(const char *fn, char buf[PATH_MAX])
 	return (0);
 }
 
+/**
+ * checkcreds - Perform a classic UNIX permission access check.
+ * @stb: ownership info.
+ * @cr: credentials of access.
+ * @xmode: type of access.
+ * Returns zero on success, errno code on failure.
+ */
 int
 checkcreds(const struct stat *stb, const struct slash_creds *cr, int xmode)
 {
@@ -135,6 +142,16 @@ slash2fuse_getcred(fuse_req_t req, struct slash_creds *cred)
 	cred->gid = ctx->gid;
 }
 
+/**
+ * lookup_pathname_fg - Get the fid+gen pair for a full pathname.  This
+ *	routine is only really invoked via the control subsystem as the
+ *	usual determinent for discovering this information is done by
+ *	each file name component via LOOKUP.
+ * @ofn: file path to lookup.
+ * @crp: credentials of lookup.
+ * @fgp: value-result fid+gen pair.
+ * @stb: optional value-result stat buffer for file.
+ */
 int
 lookup_pathname_fg(const char *ofn, struct slash_creds *crp,
     struct slash_fidgen *fgp, struct stat *stb)
@@ -228,14 +245,20 @@ slash2fuse_reply_entry(fuse_req_t req, const struct slash_fidgen *fgp,
 }
 
 /**
- * slash2fuse_fidc_putget - Create a new fcmh based on the attrs provided;
- *	return a ref'd fcmh.
+ * slash2fuse_fidc_putget - Create/update a FID cache member handle
+ *	based on the statbuf provided.
+ * @fg: file's fid+gen pair.
+ * @stb: file stat info.
+ * @name: base name of file.
+ * @parent: parent directory fcmh.
+ * @creds: credentials of access.
+ * @flags: fidcache lookup flags.
+ * @fchmp: value-result fcmh.
  */
 __static int
-slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
-    const char *name, struct fidc_membh *parent,
-    const struct slash_creds *creds, int flags,
-    struct fidc_membh **fcmhp)
+slash2fuse_fidc_putget(const struct slash_fidgen *fg,
+    const struct stat *stb, const char *name, struct fidc_membh *parent,
+    const struct slash_creds *creds, int flags, struct fidc_membh **fcmhp)
 {
 	int rc;
 
@@ -255,9 +278,9 @@ slash2fuse_fidc_putget(const struct slash_fidgen *fg, const struct stat *stb,
 }
 
 /**
- * slash2fuse_fidc_put - wrapper around slash2fuse_fidc_putget(), it makes
- *  same call but deref's the fcmh and returns void.  For callers who don't
- *  want a pointer back to the new fcmh.
+ * slash2fuse_fidc_put - wrapper around slash2fuse_fidc_putget(), it
+ *	makes same call but deref's the fcmh.  For callers who don't
+ *	need a pointer back to the fcmh.
  */
 __static int
 slash2fuse_fidc_put(const struct slash_fidgen *fg, const struct stat *stb,
@@ -586,9 +609,9 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	struct fidc_membh *c;
 	int rc=0;
 
-	slash2fuse_getcred(req, &creds);
-
 	msfsthr_ensure();
+
+	slash2fuse_getcred(req, &creds);
 
 	psc_trace("inum %lu", ino);
 
@@ -596,22 +619,31 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	if (rc)
 		goto out;
 
-	/* Don't allow writes on directory inodes.
-	 */
-	if (fcmh_isdir(c)) {
-		if ((fi->flags & O_WRONLY) || (fi->flags & O_RDWR)) {
-			rc = EBADF;
+	if ((fi->flags & O_ACCMODE) != O_WRONLY) {
+		rc = checkcreds(&c->fcmh_stb, &creds, R_OK);
+		if (rc)
 			goto out;
-		}
+	}
+	if (fi->flags & (O_WRONLY | O_RDWR)) {
+		rc = checkcreds(&c->fcmh_stb, &creds, W_OK);
+		if (rc)
+			goto out;
+	}
+
+	/* Directory sanity.  */
+	if (fcmh_isdir(c)) {
+		/* fuse shouldn't ever pass us WR with a dir */
+		psc_assert((fi->flags & (O_WRONLY | O_RDWR)) == 0);
 		if (!(fi->flags & O_DIRECTORY)) {
 			rc = EISDIR;
 			goto out;
 		}
-	} else
+	} else {
 		if (fi->flags & O_DIRECTORY) {
 			rc = ENOTDIR;
 			goto out;
 		}
+	}
 
 	mfh = msl_fhent_new(c);
 
@@ -692,7 +724,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc == 0)
-		rc =  mp->rc;
+		rc = mp->rc;
 	if (rc)
 		goto out;
 	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
@@ -742,6 +774,7 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
+//	if (!fcmh_isdir(f))
 	f->fcmh_stb.st_blksize = 32768;
 
 	dump_statbuf(PLL_INFO, &f->fcmh_stb);
@@ -868,8 +901,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = ENOTDIR;
 		goto out;
 	}
-	/* Create and initialize the MKDIR RPC.
-	 */
+	/* Issue an RPC request */
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_MKDIR, rq, mq, mp);
 	if (rc)
@@ -884,7 +916,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	rc = RSX_WAITREP(rq, mp);
 
 	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
-		 mq->pfid, mq->mode, mq->name, rc, mp->rc);
+	    mq->pfid, mq->mode, mq->name, rc, mp->rc);
 
 	if (rc == 0)
 		rc = mp->rc;
@@ -1140,6 +1172,7 @@ slash_lookuprpc(const struct slash_creds *cr, struct fidc_membh *p,
 	 */
 	slrpc_internalize_stat(&mp->attr, stb);
 	rc = slash2fuse_fidc_put(&mp->fg, stb, name, p, cr, 0);
+
 	if (rc == 0)
 		*fgp = mp->fg;
 
@@ -1205,6 +1238,8 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 	struct slash_creds cr;
 	struct stat stb;
 	int rc;
+
+	msfsthr_ensure();
 
 	slash2fuse_getcred(req, &cr);
 	rc = ms_lookup_fidcache(&cr, parent, name, &fg, &stb);
