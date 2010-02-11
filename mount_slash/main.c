@@ -54,6 +54,7 @@
 #include "rpc_cli.h"
 #include "slashrpc.h"
 #include "slerr.h"
+#include "slutil.h"
 
 #define ffi_setmfh(fi, mfh)	((fi)->fh = (uint64_t)(unsigned long)(mfh))
 #define ffi_getmfh(fi)		((void *)(unsigned long)(fi)->fh)
@@ -1804,8 +1805,8 @@ msl_fuse_mount(const char *mp)
 		psc_fatal("fuse_session_add_chan");
 	}
 
-	psc_warnx("Fuse Version %d.%d", FUSE_MAJOR_VERSION,
-		  FUSE_MINOR_VERSION);
+	psc_warnx("FUSE version %d.%d", FUSE_MAJOR_VERSION,
+	    FUSE_MINOR_VERSION);
 }
 
 __dead void
