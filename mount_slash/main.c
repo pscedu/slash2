@@ -620,7 +620,14 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	ffi_setmfh(fi, mfh);
 	fi->keep_cache = 0;
-	fi->direct_io = 1;
+	/*
+	 * FUSE direct_io does not work with mmap(), which is what the
+	 * kernel uses under the hood when running executables, so
+	 * disable it for this case.
+	 */
+	if ((c->fcmh_stb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+		fi->direct_io = 1;
+
 	rc = slash2fuse_fcoo_start(req, fi);
 	if (rc)
 		goto out;
