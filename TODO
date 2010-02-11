@@ -343,6 +343,7 @@ maybe not:
   once they are CLOSE()'d
 
 - implement mknod
+- add to_set attr to fcmh_setattr
 
 zfs
 - fix off-by-one in MAXNAMELEN
