@@ -415,7 +415,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	 * have more to do.
 	 */
 	if (bmdsi->bmdsi_repl_policy == BRP_PERSIST) {
-		rrq = mds_repl_findrq(fcmh_2_fgp(bcm->bcm_fcmh), NULL);
+		rrq = mds_repl_findrq(&bcm->bcm_fcmh->fcmh_fg, NULL);
 		repl.bs_id = ios;
 		mds_repl_enqueue_sites(rrq, &repl, 1);
 		mds_repl_unrefrq(rrq);

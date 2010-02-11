@@ -56,7 +56,7 @@ __static void
 mds_inode_od_initnew(struct slash_inode_handle *i)
 {
 	i->inoh_flags = (INOH_INO_NEW | INOH_INO_DIRTY);
-	COPYFID(&i->inoh_ino.ino_fg, fcmh_2_fgp(i->inoh_fcmh));
+	COPYFID(&i->inoh_ino.ino_fg, &i->inoh_fcmh->fcmh_fg);
 	/* For now this is a fixed size.
 	 */
 	i->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
@@ -296,7 +296,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 
 	/* Verify that the file type is consistent.
 	 */
-	if (fcmh_2_isdir(f))
+	if (fcmh_isdir(f))
 		m->mexpfcm_flags |= MEXPFCM_DIRECTORY;
 	else {
 		m->mexpfcm_flags |= MEXPFCM_REGFILE;
@@ -427,7 +427,7 @@ mds_bmap_exists(struct fidc_membh *f, sl_blkno_t n)
 	lblk = fcmh_2_nbmaps(f);
 
 	psc_trace("fid="FIDFMT" lblk=%u fsz=%"PSCPRIdOFF,
-		  FIDFMTARGS(fcmh_2_fgp(f)), lblk, fcmh_2_fsz(f));
+		  FIDFMTARGS(&f->fcmh_fg), lblk, fcmh_2_fsz(f));
 
 	FCMH_URLOCK(f, locked);
 	return (n < lblk);

@@ -284,7 +284,7 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 	if (rc)
 		goto out;
 
-	rc = checkcreds(fcmh_2_stb(c), &creds, mask);
+	rc = checkcreds(&c->fcmh_stb, &creds, mask);
  out:
 	fuse_reply_err(req, rc);
 	if (c)
@@ -506,7 +506,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 		goto out;
 	}
 
-	if (!fcmh_2_isdir(p)) {
+	if (!fcmh_isdir(p)) {
 		rc = ENOTDIR;
 		goto out;
 	}
@@ -596,7 +596,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	/* Don't allow writes on directory inodes.
 	 */
-	if (fcmh_2_isdir(c)) {
+	if (fcmh_isdir(c)) {
 		if ((fi->flags & O_WRONLY) || (fi->flags & O_RDWR)) {
 			rc = EBADF;
 			goto out;
@@ -650,7 +650,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
 		clock_gettime(CLOCK_REALTIME, &now);
-		if (timespeccmp(&now, fcmh_2_age(fcmh), <)) {
+		if (timespeccmp(&now, &fcmh->fcmh_age, <)) {
 			DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs cached - YES");
 			/* XXX Need to check creds here.
 			 */
@@ -757,7 +757,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	if (rc)
 		goto out;
 
-	if (!fcmh_2_isdir(p)) {
+	if (!fcmh_isdir(p)) {
 		rc = ENOTDIR;
 		goto out;
 	}
@@ -768,7 +768,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	if (rc)
 		goto out;
 
-	if (fcmh_2_isdir(c)) {
+	if (fcmh_isdir(c)) {
 		rc = EISDIR;
 		goto out;
 	}
@@ -834,7 +834,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	}
 
-	if (!fcmh_2_isdir(p)) {
+	if (!fcmh_isdir(p)) {
 		rc = ENOTDIR;
 		goto out;
 	}
@@ -909,7 +909,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		goto out;
 
-	if (!fcmh_2_isdir(p)) {
+	if (!fcmh_isdir(p)) {
 		rc = ENOTDIR;
 		goto out;
 	}
@@ -986,7 +986,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	 *  must be taken into account.
 	 * NOTE: 'd' must be decref'd.
 	 */
-	if (fidc_lookup_fg(fcmh_2_fgp(d)) != d)
+	if (fidc_lookup_fg(&d->fcmh_fg) != d)
 		return (EBADF);
 
 	rc = fcmh_getfdbuf(d, &fdb);
@@ -995,7 +995,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		return (rc);
 	}
 
-	if (!fcmh_2_isdir(d)) {
+	if (!fcmh_isdir(d)) {
 		fcmh_dropref(d);
 		return (ENOTDIR);
 	}
@@ -1140,7 +1140,7 @@ ms_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 		goto out;
 	}
 
-	if (!fcmh_2_isdir(p)) {
+	if (!fcmh_isdir(p)) {
 		rc = ENOTDIR;
 		goto out;
 	}
@@ -1154,9 +1154,9 @@ ms_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 		rc = slash2fuse_stat(m, cr);
 		if (rc)
 			goto out;
-		*fgp = *fcmh_2_fgp(m);
+		*fgp = m->fcmh_fg;
 		if (stb)
-			*stb = *fcmh_2_attrp(m);
+			*stb = m->fcmh_stb;
 	} else
 		rc = slash_lookuprpc(cr, p, name, fgp, stb);
 
@@ -1340,7 +1340,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	if (rc)
 		goto out;
 
-	if (!fcmh_2_isdir(op)) {
+	if (!fcmh_isdir(op)) {
 		rc = ENOTDIR;
 		goto out;
 	}
@@ -1349,7 +1349,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	if (rc)
 		goto out;
 
-	if (!fcmh_2_isdir(np)) {
+	if (!fcmh_isdir(np)) {
 		rc = ENOTDIR;
 		goto out;
 	}
@@ -1606,12 +1606,12 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	msfsthr_ensure();
 
 	mfh = ffi_getmfh(fi);
-	if (fidc_lookup_fg(fcmh_2_fgp(mfh->mfh_fcmh)) != mfh->mfh_fcmh) {
+	if (fidc_lookup_fg(&mfh->mfh_fcmh->fcmh_fg) != mfh->mfh_fcmh) {
 		rc = EBADF;
 		goto out;
 	}
 	/* XXX EBADF if fd is not open for writing */
-	if (fcmh_2_isdir(mfh->mfh_fcmh)) {
+	if (fcmh_isdir(mfh->mfh_fcmh)) {
 		fcmh_dropref(mfh->mfh_fcmh);
 		rc = EISDIR;
 		goto out;
@@ -1645,12 +1645,12 @@ slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
 	msfsthr_ensure();
 
 	mfh = ffi_getmfh(fi);
-	if (fidc_lookup_fg(fcmh_2_fgp(mfh->mfh_fcmh)) != mfh->mfh_fcmh) {
+	if (fidc_lookup_fg(&mfh->mfh_fcmh->fcmh_fg) != mfh->mfh_fcmh) {
 		rc = EBADF;
 		goto out;
 	}
 
-	if (fcmh_2_isdir(mfh->mfh_fcmh)) {
+	if (fcmh_isdir(mfh->mfh_fcmh)) {
 		fcmh_dropref(mfh->mfh_fcmh);
 		rc = EISDIR;
 		goto out;

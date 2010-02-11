@@ -117,8 +117,8 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 
 	psc_assert(fcmh_2_gen(fcmh) != FIDGEN_ANY);
 
-	memcpy(fcmh_2_stb(fcmh), stb, sizeof(*stb));
-	fidc_gettime(fcmh_2_age(fcmh));
+	memcpy(&fcmh->fcmh_stb, stb, sizeof(*stb));
+	fcmh_refresh_age(fcmh);
 
 	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
 		fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
@@ -127,7 +127,7 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 	} else
 		psc_assert(fcmh->fcmh_state & FCMH_HAVE_ATTRS);
 
-	if (fcmh_2_isdir(fcmh) && !(fcmh->fcmh_state & FCMH_ISDIR)) {
+	if (fcmh_isdir(fcmh) && !(fcmh->fcmh_state & FCMH_ISDIR)) {
 		fcmh->fcmh_state |= FCMH_ISDIR;
 		INIT_PSCLIST_HEAD(&fcmh->fcmh_children);
 	}
@@ -149,7 +149,6 @@ void
 fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 {
 	int clean;
-	struct fidc_membh *tmp;
 
 	/* Check for uninitialized
 	 */
@@ -193,10 +192,8 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 			DEBUG_FCMH(PLL_WARN, f,
 				   "null fcmh_cache_owner here");
 
-		else {
-			tmp = _fidc_lookup_fg(fcmh_2_fgp(f), 1);
-			psc_assert(f == tmp);
-		}
+		else
+			psc_assert(_fidc_lookup_fg(&f->fcmh_fg, 1) == f);
 
 		if (psc_hashent_conjoint(&fidcHtable, f))
 			psc_hashent_remove(&fidcHtable, f);
@@ -523,7 +520,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		if (stb) {
 			locked = reqlock(&fcmh->fcmh_lock);
 			memcpy(&fcmh->fcmh_stb, stb, sizeof(struct stat));
-			fidc_gettime(fcmh_2_age(fcmh));
+			fcmh_refresh_age(fcmh);
 			ureqlock(&fcmh->fcmh_lock, locked);
 		}
 
@@ -552,7 +549,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		 */
 
 		if (flags & FIDC_LOOKUP_COPY) {
-			COPYFID(fcmh_2_fgp(fcmh), fgp);
+			COPYFID(&fcmh->fcmh_fg, fgp);
 #ifdef DEMOTED_INUM_WIDTHS
 			COPYFID(&fcmh->fcmh_smallfg, &searchfg);
 #endif
@@ -568,7 +565,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			 */
 			fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
 			fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
-			COPYFID(fcmh_2_fgp(fcmh), fgp);
+			COPYFID(&fcmh->fcmh_fg, fgp);
 #ifdef DEMOTED_INUM_WIDTHS
 			COPYFID(&fcmh->fcmh_smallfg, &searchfg);
 #endif

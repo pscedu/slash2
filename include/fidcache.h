@@ -72,7 +72,7 @@ struct fidc_membh {
 	struct psclist_head	 fcmh_children;
 };
 
-enum fcmh_states {
+enum {
 	FCMH_CAC_CLEAN     = (1 << 0),
 	FCMH_CAC_DIRTY     = (1 << 1),
 	FCMH_CAC_FREEING   = (1 << 2),
@@ -102,14 +102,10 @@ enum fcmh_states {
 
 #define fcmh_2_fid(f)		(f)->fcmh_fg.fg_fid
 #define fcmh_2_gen(f)		(f)->fcmh_fg.fg_gen
-#define fcmh_2_fgp(f)		(&(f)->fcmh_fg)
 #define fcmh_2_fsz(f)		(f)->fcmh_stb.st_size
-#define fcmh_2_attrp(f)		(&(f)->fcmh_stb)
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE))
 
-#define fcmh_2_age(f)		(&(f)->fcmh_age)
-#define fcmh_2_stb(f)		(&(f)->fcmh_stb)
-#define fcmh_2_isdir(f)		(S_ISDIR((f)->fcmh_stb.st_mode))
+#define fcmh_isdir(f)		S_ISDIR((f)->fcmh_stb.st_mode)
 
 #define DEBUG_FCMH_FLAGS(fcmh)							\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_CLEAN)		? "C" : "",	\
@@ -194,7 +190,7 @@ struct fidc_open_obj {
 
 #define FCOO_STARTING		((struct fidc_open_obj *)0x01)
 
-enum fidc_lookup_flags {
+enum {
 	FIDC_LOOKUP_CREATE	= (1 << 0),	/* Create if not present         */
 	FIDC_LOOKUP_EXCL	= (1 << 1),	/* Fail if fcmh is present       */
 	FIDC_LOOKUP_COPY	= (1 << 2),	/* Create from existing attrs    */
@@ -251,12 +247,12 @@ dump_statbuf(int level, struct stat *stb)
 }
 
 static __inline void
-fidc_gettime(struct timespec *ts)
+fcmh_refresh_age(struct fidc_membh *fcmh)
 {
 	struct timespec tmp = { FCMH_ATTR_TIMEO, 0 };
 
-	clock_gettime(CLOCK_REALTIME, ts);
-	timespecadd(ts, &tmp, ts);
+	clock_gettime(CLOCK_REALTIME, &fcmh->fcmh_age);
+	timespecadd(&fcmh->fcmh_age, &tmp, &fcmh->fcmh_age);
 }
 
 static __inline const char *

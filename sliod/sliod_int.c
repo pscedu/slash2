@@ -79,7 +79,7 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, enum rw rw)
 
 	mq->rw = rw;
 	mq->bmapno = b->bcm_blkno;
-	memcpy(&mq->fg, fcmh_2_fgp(b->bcm_fcmh), sizeof(mq->fg));
+	memcpy(&mq->fg, &b->bcm_fcmh->fcmh_fg, sizeof(mq->fg));
 	//memcpy(&mq->sbdb, sbdb, sizeof(*sbdb));
 
 	iov.iov_len = sizeof(struct slash_bmap_wire);
@@ -199,7 +199,7 @@ iod_inode_open(struct fidc_membh *f, enum rw rw)
 
 	if (f->fcmh_state & FCMH_FCOO_STARTING) {
 
-		f->fcmh_fcoo->fcoo_fd = fid_fileops_fg(fcmh_2_fgp(f), oflags, 0600);
+		f->fcmh_fcoo->fcoo_fd = fid_fileops_fg(&f->fcmh_fg, oflags, 0600);
 		if (f->fcmh_fcoo->fcoo_fd < 0) {
 			fidc_fcoo_startfailed(f);
 			rc = -errno;
@@ -210,7 +210,7 @@ iod_inode_open(struct fidc_membh *f, enum rw rw)
  out:
 	if (rc)
 		psc_error("failed rc=%d "FIDFMT, rc,
-			  FIDFMTARGS(fcmh_2_fgp(f)));
+		    FIDFMTARGS(&f->fcmh_fg));
 	return (rc);
 }
 

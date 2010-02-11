@@ -186,7 +186,7 @@ fidc_child_try_validate_locked(struct fidc_membh *p, struct fidc_membh *c,
 		} else {
 			/* Increase the lifespan of this entry and return.
 			 */
-			fidc_gettime(fcmh_2_age(c));
+			fcmh_refresh_age(c);
 			/* If the fni is 'connected', then its parent inode
 			 *   must be 'p'.
 			 */
@@ -298,7 +298,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		return (NULL);
 
 	clock_gettime(CLOCK_REALTIME, &now);
-	if (timespeccmp(&now, fcmh_2_age(c), >)) {
+	if (timespeccmp(&now, &c->fcmh_age, >)) {
 		/* It's old, remove it.
 		 */
 		fidc_child_free_plocked(c);
