@@ -153,14 +153,11 @@ iod_inode_getsize(struct slash_fidgen *fg, off_t *fsize)
 struct fidc_membh *
 iod_inode_lookup(const struct slash_fidgen *fg)
 {
-	int rc;
 	struct fidc_membh *f;
+	int rc;
 
-	rc = fidc_lookup(fg,
-			 FIDC_LOOKUP_CREATE|
-			 FIDC_LOOKUP_COPY|
-			 FIDC_LOOKUP_REFRESH,
-			 NULL, &rootcreds, &f);
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |
+	    FIDC_LOOKUP_REFRESH, NULL, &rootcreds, &f);
 	psc_assert(f);
 	return (f);
 }
