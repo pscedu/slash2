@@ -1368,7 +1368,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_RENAME, rq, mq, mp);
 	if (rc)
-		return (rc);
+		goto out;
 
 	mq->opfid = fcmh_2_fid(op);
 	mq->npfid = fcmh_2_fid(np);
@@ -1466,10 +1466,8 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_SYMLINK, rq, mq, mp);
-	if (rc) {
-		fcmh_dropref(p);
-		return (rc);
-	}
+	if (rc)
+		goto out;
 
 	slash2fuse_getcred(req, &mq->creds);
 	mq->pfid = fcmh_2_fid(p);
@@ -1495,8 +1493,10 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	slash2fuse_reply_entry(req, &mp->fg, &stb);
 
  out:
-	fcmh_dropref(p);
-	pscrpc_req_finished(rq);
+	if (p)
+		fcmh_dropref(p);
+	if (rq)
+		pscrpc_req_finished(rq);
 	return (rc);
 }
 
