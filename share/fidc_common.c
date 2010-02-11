@@ -516,12 +516,8 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		}
 
 		/* apply provided attributes to the cache */
-		if (stb) {
-			locked = reqlock(&fcmh->fcmh_lock);
-			memcpy(&fcmh->fcmh_stb, stb, sizeof(struct stat));
-			fcmh_refresh_age(fcmh);
-			ureqlock(&fcmh->fcmh_lock, locked);
-		}
+		if (stb)
+			fcmh_setattr(fcmh, stb);
 
 		psc_hashbkt_unlock(b);
 	} else {
