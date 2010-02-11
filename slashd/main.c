@@ -101,6 +101,16 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 	char cmdbuf[BUFSIZ];
 	int rc;
 
+	rc = snprintf(cmdbuf, sizeof(cmdbuf), "zpool export '%s'",
+	    zpoolname);
+	if (rc == -1)
+		psc_fatal("%s", zpoolname);
+	else if (rc >= (int)sizeof(cmdbuf))
+		psc_fatalx("pool name too long: %s", zpoolname);
+	rc = system(cmdbuf);
+	if (rc == -1)
+		psc_fatal("zpool export");
+
 	if (zfspoolcf)
 		rc = snprintf(cmdbuf, sizeof(cmdbuf),
 		    "zpool import -c '%s' '%s'", zfspoolcf, zpoolname);
@@ -113,9 +123,9 @@ import_zpool(const char *zpoolname, const char *zfspoolcf)
 		psc_fatalx("pool name too long: %s", zpoolname);
 	rc = system(cmdbuf);
 	if (rc == -1)
-		psc_fatal("zpool");
+		psc_fatal("zpool import");
 	else if (rc)
-		psc_fatalx("zpool: returned %d", rc);
+		psc_fatalx("zpool import: returned %d", rc);
 }
 
 void
