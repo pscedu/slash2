@@ -52,6 +52,7 @@ fcmh_reset(struct fidc_membh *f)
 {
 	memset(f, 0, sizeof(*f));
 	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
+	INIT_PSCLIST_HEAD(&f->fcmh_children);
 	LOCK_INIT(&f->fcmh_lock);
 	atomic_set(&f->fcmh_refcnt, 0);
 	psc_waitq_init(&f->fcmh_waitq);
@@ -129,7 +130,7 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
 
 	if (fcmh_isdir(fcmh) && !(fcmh->fcmh_state & FCMH_ISDIR)) {
 		fcmh->fcmh_state |= FCMH_ISDIR;
-		INIT_PSCLIST_HEAD(&fcmh->fcmh_children);
+		psc_assert(psclist_empty(&fcmh->fcmh_children));
 	}
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attr set");
@@ -174,8 +175,7 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		psc_assert(!f->fcmh_fcoo);
 		/* Verify that no children are hanging about.
 		 */
-		if (f->fcmh_state & FCMH_ISDIR)
-			psc_assert(psclist_empty(&f->fcmh_children));
+		psc_assert(psclist_empty(&f->fcmh_children));
 
 		/* Valid sources of this inode.
 		 */
