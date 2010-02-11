@@ -380,8 +380,8 @@ msctlthr_spawn(void)
 	struct psc_thread *thr;
 
 	psc_poolmaster_init(&msctl_replstmc_poolmaster,
-	    struct msctl_replst_cont, mrc_lentry, 0,
-	    0, 32, 0, NULL, NULL, NULL, "replstmc");
+	    struct msctl_replst_cont, mrc_lentry, PPMF_AUTO,
+	    32, 32, 64, NULL, NULL, NULL, "replstmc");
 	msctl_replstmc_pool = psc_poolmaster_getmgr(
 	    &msctl_replstmc_poolmaster);
 
