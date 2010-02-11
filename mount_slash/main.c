@@ -404,13 +404,14 @@ slash2fuse_openrpc(fuse_req_t req, struct fuse_file_info *fi)
 	mq->fid = mfh_getfid(mfh);
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc)
-		rc = rc ? rc : mp->rc;
-	else {
-		fcmh_setfdbuf(h, &mp->sfdb);
-		//XXX this could be wrong..
-		//fcmh_setattr(h, &mp->attr);
-	}
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
+		goto out;
+	fcmh_setfdbuf(h, &mp->sfdb);
+	//XXX this could be wrong..
+	//fcmh_setattr(h, &mp->attr);
+
  out:
 	pscrpc_req_finished(rq);
 	return (rc);
@@ -633,6 +634,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		goto out;
 
 	fuse_reply_open(req, fi);
+
  out:
 	if (c)
 		fcmh_dropref(c);
@@ -656,7 +658,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	struct srm_getattr_rep *mp;
 	struct timespec now;
 	struct stat stb;
-	int rc=0, locked;
+	int rc, locked;
 
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
 		clock_gettime(CLOCK_REALTIME, &now);
@@ -675,23 +677,24 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_GETATTR, rq, mq, mp);
 	if (rc)
-		return (rc);
+		goto out;
 
 	memcpy(&mq->creds, creds, sizeof(*creds));
 	mq->fid = fcmh_2_fid(fcmh);
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc)
-		rc = rc ? rc : mp->rc;
-	else {
-		if (fcmh_2_gen(fcmh) == FIDGEN_ANY) {
-			fcmh_2_gen(fcmh) = mp->gen;
-		}
-		slrpc_internalize_stat(&mp->attr, &stb);
-		fcmh_setattr(fcmh, &stb);
-	}
+	if (rc == 0)
+		rc =  mp->rc;
+	if (rc)
+		goto out;
+	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
+		fcmh_2_gen(fcmh) = mp->gen;
+	slrpc_internalize_stat(&mp->attr, &stb);
+	fcmh_setattr(fcmh, &stb);
 
-	pscrpc_req_finished(rq);
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved via rpc rc=%d", rc);
 
@@ -796,10 +799,10 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	strlcpy(mq->name, newname, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc) {
-		rc = rc ? rc : mp->rc;
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
 		goto out;
-	}
 	slrpc_internalize_stat(&mp->attr, &stb);
 	slash2fuse_reply_entry(req, &mp->fg, &stb);
 	//rc = slash2fuse_fidc_put(&mp->fg, &mp->attr, name, p, &mq->creds);
@@ -866,12 +869,10 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
 		 mq->pfid, mq->mode, mq->name, rc, mp->rc);
 
+	if (rc == 0)
+		rc = mp->rc;
 	if (rc)
 		goto out;
-	if (mp->rc) {
-		rc = mp->rc;
-		goto out;
-	}
 	slrpc_internalize_stat(&mp->attr, &stb);
 	rc = slash2fuse_fidc_put(&mp->fg, &stb, name, p, &mq->creds, 0);
 	if (rc)
@@ -928,10 +929,10 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc) {
-		rc = rc ? rc : mp->rc;
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
 		goto out;
-	}
 	/* Remove ourselves from the namespace cache.
 	 */
 	fidc_child_unlink(p, name);
@@ -1034,10 +1035,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, 1);
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc) {
-		rc = rc ? rc : mp->rc;
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
 		goto out;
-	}
 
 	if (mq->nstbpref) {
 		uint32_t i;
@@ -1111,19 +1112,21 @@ slash_lookuprpc(const struct slash_creds *cr, struct fidc_membh *p,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc)
-		rc = rc ? rc : mp->rc;
-	else {
-		/* Add the inode to the cache first, otherwise fuse may
-		 *  come to us with another request for the inode since it won't
-		 *  yet be visible in the cache.
-		 */
-		slrpc_internalize_stat(&mp->attr, stb);
-		rc = slash2fuse_fidc_put(&mp->fg, stb, name, p, cr, 0);
-		if (rc == 0)
-			*fgp = mp->fg;
-	}
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
+		goto out;
 
+	/* Add the inode to the cache first, otherwise fuse may
+	 *  come to us with another request for the inode since it won't
+	 *  yet be visible in the cache.
+	 */
+	slrpc_internalize_stat(&mp->attr, stb);
+	rc = slash2fuse_fidc_put(&mp->fg, stb, name, p, cr, 0);
+	if (rc == 0)
+		*fgp = mp->fg;
+
+ out:
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -1134,8 +1137,6 @@ ms_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 {
 	int rc=0;
 	struct fidc_membh *p, *m;
-
-//	msfsthr_ensure();
 
 	p = m = NULL;
 
@@ -1223,8 +1224,8 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	    SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc)
-		rc = rc ? rc : mp->rc;
+	if (rc == 0)
+		rc = mp->rc;
 
  out:
 	if (rc)
@@ -1269,8 +1270,8 @@ slash2fuse_releaserpc(fuse_req_t req, struct fuse_file_info *fi,
 		goto out;
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc)
-		rc = rc ? rc : mp->rc;
+	if (rc == 0)
+		rc = mp->rc;
 
  out:
 	pscrpc_req_finished(rq);
@@ -1382,10 +1383,12 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL, iov, 2);
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc)
-		rc = rc ? rc : mp->rc;
-	else
-		fidc_child_rename(op, name, np, newname);
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
+		goto out;
+
+	fidc_child_rename(op, name, np, newname);
 
  out:
 	if (op)
@@ -1423,12 +1426,13 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 	if (rc)
 		goto out;
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc)
-		rc = rc ? rc : mp->rc;
-	else {
-		slrpc_internalize_statfs(&mp->ssfb, &sfb);
-		fuse_reply_statfs(req, &sfb);
-	}
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
+		goto out;
+
+	slrpc_internalize_statfs(&mp->ssfb, &sfb);
+	fuse_reply_statfs(req, &sfb);
 
  out:
 	if (rc)
@@ -1479,12 +1483,10 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	    SRMC_BULK_PORTAL, &iov, 1);
 
 	rc = RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
 	if (rc)
 		goto out;
-	if (mp->rc) {
-		rc = mp->rc;
-		goto out;
-	}
 
 	slrpc_internalize_stat(&mp->attr, &stb);
 	rc = slash2fuse_fidc_put(&mp->fg, &stb, name, p, &mq->creds, 0);
@@ -1562,10 +1564,11 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *stb,
 	slrpc_externalize_stat(stb, &mq->attr);
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc) {
-		rc = rc ? rc : mp->rc;
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
 		goto out;
-	}
+
 	slrpc_internalize_stat(&mp->attr, stb);
 	fcmh_setattr(c, stb);
 	fuse_reply_attr(req, stb, 0.0);
@@ -1640,8 +1643,9 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 		fuse_reply_write(req, size);
 		rc = 0;
 	}
-	if (rc)
+
  out:
+	if (rc)
 		fuse_reply_err(req, rc);
 }
 
@@ -1881,13 +1885,5 @@ main(int argc, char *argv[])
 
 	msl_fuse_mount(mountpoint);
 
-#if 0
-	if (set_signal_handler(SIGHUP, exit_handler) != 0 ||
-	    set_signal_handler(SIGINT, exit_handler) != 0 ||
-	    set_signal_handler(SIGTERM, exit_handler) != 0 ||
-	    set_signal_handler(SIGPIPE, SIG_IGN) != 0) {
-		return 2;
-	}
-#endif
 	exit(slash2fuse_listener_start());
 }
