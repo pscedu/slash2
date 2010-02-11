@@ -432,7 +432,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
     const struct stat *stb, const struct slash_creds *creds,
     struct fidc_membh **fcmhp)
 {
-	int rc, try_create=0;
+	int getting=0, rc, try_create=0;
 	struct fidc_membh *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
 	struct slash_fidgen searchfg = *fgp;
@@ -561,6 +561,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			 */
 			fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
 			fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
+			getting = 1;
 			COPYFID(&fcmh->fcmh_fg, fgp);
 #ifdef DEMOTED_INUM_WIDTHS
 			COPYFID(&fcmh->fcmh_smallfg, &searchfg);
@@ -600,7 +601,13 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	}
 
 	if ((flags & FIDC_LOOKUP_LOAD) && sl_fcmh_ops.sfop_getattr) {
+		if (getting) {
+			FCMH_LOCK(fcmh);
+			fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
+		}
 		rc = sl_fcmh_ops.sfop_getattr(fcmh, creds);
+		if (getting)
+			FCMH_ULOCK(fcmh);
 		if (rc) {
 			DEBUG_FCMH(PLL_DEBUG, fcmh, "getattr failure");
 			return (-rc);

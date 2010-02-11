@@ -653,24 +653,34 @@ slash2fuse_opendir(fuse_req_t req, fuse_ino_t ino,
 int
 slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 {
-	struct pscrpc_request *rq;
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
+	struct pscrpc_request *rq;
 	struct timespec now;
 	struct stat stb;
 	int rc, locked;
 
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
+ readcached:
 		clock_gettime(CLOCK_REALTIME, &now);
 		if (timespeccmp(&now, &fcmh->fcmh_age, <)) {
 			DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs cached - YES");
-			/* XXX Need to check creds here.
-			 */
-			return (0);
+			return (checkcreds(&fcmh->fcmh_stb, creds, R_OK));
 		}
 	}
 
 	locked = reqlock(&fcmh->fcmh_lock);
+	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
+		while (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
+			psc_waitq_wait(&fcmh->fcmh_waitq,
+			    &fcmh->fcmh_lock);
+			spinlock(&fcmh->fcmh_lock);
+		}
+		if (fcmh->fcmh_state & FCMH_HAVE_ATTRS)
+			goto readcached;
+		ureqlock(&fcmh->fcmh_lock, locked);
+		return (fcmh->fcmh_lasterror);
+	}
 	fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 	ureqlock(&fcmh->fcmh_lock, locked);
 
@@ -691,6 +701,15 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		fcmh_2_gen(fcmh) = mp->gen;
 	slrpc_internalize_stat(&mp->attr, &stb);
 	fcmh_setattr(fcmh, &stb);
+
+ out:
+	if (rc) {
+		locked = reqlock(&fcmh->fcmh_lock);
+		fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
+		fcmh->fcmh_lasterror = rc;
+		psc_waitq_wakeall(&fcmh->fcmh_waitq);
+		ureqlock(&fcmh->fcmh_lock, locked);
+	}
 
  out:
 	if (rq)
@@ -1528,7 +1547,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *stb,
 	struct pscrpc_request *rq;
 	struct msl_fhent *mfh;
 	struct fidc_membh *c;
-	int rc;
+	int rc, getting = 0;
 
 	msfsthr_ensure();
 
@@ -1548,9 +1567,10 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *stb,
 	spinlock(&c->fcmh_lock);
 	/* We're obtaining the attributes now.
 	 */
-	if (!((c->fcmh_state & FCMH_GETTING_ATTRS) ||
-	      (c->fcmh_state & FCMH_HAVE_ATTRS)))
+	if ((c->fcmh_state & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
+		getting = 1;
 		c->fcmh_state |= FCMH_GETTING_ATTRS;
+	}
 	freelock(&c->fcmh_lock);
 
 	if (fi && fi->fh) {
@@ -1574,8 +1594,16 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *stb,
 	fuse_reply_attr(req, stb, 0.0);
 
  out:
-	if (rc)
+	if (rc) {
 		fuse_reply_err(req, rc);
+		if (getting) {
+			spinlock(&c->fcmh_lock);
+			c->fcmh_state &= ~FCMH_GETTING_ATTRS;
+			c->fcmh_lasterror = rc;
+			psc_waitq_wakeall(&c->fcmh_waitq);
+			freelock(&c->fcmh_lock);
+		}
+	}
 	if (c)
 		fcmh_dropref(c);
 	if (rq)
