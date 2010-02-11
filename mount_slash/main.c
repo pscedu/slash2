@@ -510,10 +510,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 		goto out;
 	}
 
-	if (!fcmh_isdir(p)) {
-		rc = ENOTDIR;
-		goto out;
-	}
+	psc_assert(fcmh_isdir(p));
+
 	/* Now we've established a local placeholder for this create.
 	 *  any other creates to this pathame will block in
 	 *  fidc_child_wait_locked() until we release the fcc.
