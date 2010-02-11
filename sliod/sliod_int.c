@@ -198,8 +198,8 @@ iod_inode_open(struct fidc_membh *f, enum rw rw)
 	freelock(&f->fcmh_lock);
 
 	if (f->fcmh_state & FCMH_FCOO_STARTING) {
-
-		f->fcmh_fcoo->fcoo_fd = fid_fileops_fg(&f->fcmh_fg, oflags, 0600);
+		f->fcmh_fcoo->fcoo_fd = fid_fileops_fg(&f->fcmh_fg,
+		    oflags, 0600);
 		if (f->fcmh_fcoo->fcoo_fd < 0) {
 			fidc_fcoo_startfailed(f);
 			rc = -errno;

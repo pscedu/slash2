@@ -139,7 +139,7 @@ enum mexpfcm_states {
 };
 
 #define mexpfcm2fid(m)		fcmh_2_fid((m)->mexpfcm_fcmh)
-#define mexpfcm2fidgen(m)	&((m)->mexpfcm_fcmh->fcmh_fg)
+#define mexpfcm2fidgen(m)	(&(m)->mexpfcm_fcmh->fcmh_fg)
 
 static __inline int
 mexpfcm_cache_cmp(const void *x, const void *y)
