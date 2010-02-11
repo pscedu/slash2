@@ -431,7 +431,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
     const struct stat *stb, const struct slash_creds *creds,
     struct fidc_membh **fcmhp)
 {
-	int locked, rc, try_create=0;
+	int rc, try_create=0;
 	struct fidc_membh *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
 	struct slash_fidgen searchfg = *fgp;
