@@ -335,7 +335,6 @@ mds.c
 - convert slash_creds to zfs_creds
 - merge set_bmapreplpol and friends into a single interface
 - fdbufs should be used for FSYNC, GETBMAP
-- PAGE_SIZE may be in a translation unit, not a macro, deal
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
