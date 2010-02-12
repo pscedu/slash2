@@ -99,7 +99,7 @@ struct sl_buffer {
 
 #define DEBUG_SLB(level, slb, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		" slb@%p b:%p sz(%d/%d) bsz:%u"				\
+		"slb@%p b:%p sz(%d/%d) bsz:%u"				\
 		" ref:%d umref:%d inf:%d infp:%d fl:"SLB_FLAGS_FMT	\
 		" fcmh:%p lco:%p "fmt,					\
 		(slb), (slb)->slb_base, (slb)->slb_nblks,		\
