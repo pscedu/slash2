@@ -741,7 +741,6 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		ureqlock(&fcmh->fcmh_lock, locked);
 	}
 
- out:
 	if (rq)
 		pscrpc_req_finished(rq);
 
