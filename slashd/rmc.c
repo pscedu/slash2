@@ -244,25 +244,17 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct srm_mkdir_rep *mp;
 	struct stat stb;
 
-#ifdef NAMESPACE_EXPERIMENTAL
-	uint64_t fid;
-#endif
-
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
 #ifdef NAMESPACE_EXPERIMENTAL
 	spinlock(&slash_id_lock);
-	fid = next_slash_id++;
+	mp->fg.fg_fid = next_slash_id++;
 	freelock(&slash_id_lock);
-
-	mp->rc = mdsio_mkdir(mq->pfid, fid, mq->name,
-	    mq->mode, &mq->creds, &stb, &mp->fg, 0);
-#else
+#endif
 
 	mp->rc = mdsio_mkdir(mq->pfid, mq->name,
 	    mq->mode, &mq->creds, &stb, &mp->fg, 0);
-#endif
 
 	slrpc_externalize_stat(&stb, &mp->attr);
 	return (0);
