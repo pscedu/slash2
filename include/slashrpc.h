@@ -106,6 +106,11 @@ struct statvfs;
 #define SLF_SYNC	(1 << 5)
 #define SLF_EXCL	(1 << 6)
 
+/* MKDIR message flags */
+
+#define SLF_LOCAL	(1 << 0)		/* local access only - no SLASH ID involved */
+#define SLF_NOLINK	(1 << 1)		/* suppress link */
+
 /* Slash RPC message types. */
 enum {
 	SRMT_BMAPCHMODE,
