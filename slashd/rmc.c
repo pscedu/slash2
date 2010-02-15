@@ -247,6 +247,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
+	mp->fg.fg_fid = 0;
 #ifdef NAMESPACE_EXPERIMENTAL
 	spinlock(&slash_id_lock);
 	mp->fg.fg_fid = next_slash_id++;
@@ -307,9 +308,10 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
+	fg.fg_fid = 0; 
 #ifdef NAMESPACE_EXPERIMENTAL
 	spinlock(&slash_id_lock);
-	fg->fg_fid = next_slash_id++;
+	fg.fg_fid = next_slash_id++;
 	freelock(&slash_id_lock);
 #endif
 	mp->rc = mdsio_opencreate(mq->pfid, &mq->creds, fl,
