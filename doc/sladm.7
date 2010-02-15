@@ -92,7 +92,7 @@ can be created with the
 .Xr slmkjrnl 8
 utility:
 .Bd -literal -offset indent
-# slmkjrnl
+# slmkjrnl -f
 .Ed
 .Pp
 Next, an on-disk table for persistent storage of data pertaining to the
@@ -108,8 +108,7 @@ Next, bring up
 .Xr slashd 8 ,
 the metadata server:
 .Bd -literal -offset indent
-# LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \e
-  USOCK_CPORT=1202 slashd -f slash.conf -c mypool.zcf mypool
+# slashd -f slash.conf -c mypool.zcf mypool
 .Ed
 .Pp
 .Xr slmctl 8
@@ -131,9 +130,7 @@ server
 .Xr sliod 8
 which manages this data store:
 .Bd -literal -offset indent
-# SLASH_MDS_NID="128.182.58.86@tcp10" USOCK_CPORT=50001 \e
-  LNET_NETWORKS="tcp10(eth0)" LNET_ACCEPT_PORT=1202 \e
-  sliod -f slash.conf
+# sliod -f slash.conf md@SITE
 .Ed
 .Pp
 .Xr slictl 8
@@ -146,8 +143,7 @@ is used to mount a
 .Tn SLASH
 file system to a point on the local system:
 .Bd -literal -offset indent
-# SLASH_MDS_NID="10.32.5.82@tcp10" LNET_NETWORKS="tcp10(eth0)" \e
-  USOCK_CPORT=1202 SLASH2_PIOS_ID="ion@mysite" \e
+# SLASH_MDS_NID="10.32.5.82@tcp10" SLASH2_PIOS_ID="ion@mysite" \e
   mount_slash -U -f slash.conf /myfs
 .Ed
 .Pp
