@@ -573,7 +573,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	struct bmi_assign bmi;
 	struct sl_resource *res=libsl_id2res(pios);
 	struct sl_resm *resm;
-	struct mds_resm_info *mrmi;
+	struct mds_resm_info *rmmi;
 	struct mds_resprof_info *mrpi;
 	int j, n, len;
 
@@ -602,24 +602,24 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 
 		freelock(&mrpi->mrpi_lock);
 
-		mrmi = resm->resm_pri;
-		spinlock(&mrmi->mrmi_lock);
+		rmmi = resm->resm_pri;
+		spinlock(&rmmi->rmmi_lock);
 
 		/*
 		 * If we fail to establish a connection, try next node.
 		 * The loop guarantees that we always bail out.
 		 */
 		if (slm_geticsvc(resm) == NULL) {
-			freelock(&mrmi->mrmi_lock);
+			freelock(&rmmi->rmmi_lock);
 			continue;
 		}
 
 		DEBUG_BMAP(PLL_TRACE, bmap, "res(%s) ion(%s)",
 			   res->res_name, resm->resm_addrbuf);
 
-		atomic_inc(&mrmi->mrmi_refcnt);
-		mdsi->bmdsi_wr_ion = mrmi;
-		freelock(&mrmi->mrmi_lock);
+		atomic_inc(&rmmi->rmmi_refcnt);
+		mdsi->bmdsi_wr_ion = rmmi;
+		freelock(&rmmi->rmmi_lock);
 		break;
 	}
 
@@ -629,8 +629,8 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	/* An ION has been assigned to the bmap, mark it in the odtable
 	 *   so that the assignment may be restored on reboot.
 	 */
-	bmi.bmi_ion_nid = mrmi->mrmi_resm->resm_nid;
-	bmi.bmi_ios = mrmi->mrmi_resm->resm_res->res_id;
+	bmi.bmi_ion_nid = rmmi->rmmi_resm->resm_nid;
+	bmi.bmi_ios = rmmi->rmmi_resm->resm_res->res_id;
 	bmi.bmi_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	bmi.bmi_bmapno = bmap->bcm_blkno;
 	bmi.bmi_start = time(NULL);
@@ -655,7 +655,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		   atomic_read(&(fcmh_2_fmdsi(bmap->bcm_fcmh))->fmdsi_ref));
 
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
-	    "mrmi(%p)", res->res_name, resm->resm_addrbuf,
+	    "rmmi(%p)", res->res_name, resm->resm_addrbuf,
 	    mdsi->bmdsi_wr_ion);
 	return (0);
 }
@@ -768,7 +768,7 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, enum rw rw)
 			psc_assert(bmap->bcm_mode & BMAP_WR);
 			bmap->bcm_mode &= ~BMAP_WR;
 			if (mdsi->bmdsi_wr_ion &&
-			    atomic_dec_and_test(&mdsi->bmdsi_wr_ion->mrmi_refcnt)) {
+			    atomic_dec_and_test(&mdsi->bmdsi_wr_ion->rmmi_refcnt)) {
 				//XXX cleanup mion here?
 			}
 			//mdsi->bmdsi_wr_ion = NULL;
@@ -864,7 +864,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	psc_assert(bmdsi->bmdsi_wr_ion);
 	bmap_dio_sanity_locked(bmap, 1);
 
-	if (ion_nid != bmdsi->bmdsi_wr_ion->mrmi_resm->resm_nid) {
+	if (ion_nid != bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid) {
 		/* Whoops, we recv'd a request from an unexpected nid.
 		 */
 		rc = -EINVAL;
@@ -901,7 +901,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	 *   . the bmap is locked.
 	 */
 	if ((rc = mds_repl_inv_except_locked(bmap,
-	    resm_2_resid(bmdsi->bmdsi_wr_ion->mrmi_resm)))) {
+	    resm_2_resid(bmdsi->bmdsi_wr_ion->rmmi_resm)))) {
 		BMAP_ULOCK(bmap);
 		goto out;
 	}

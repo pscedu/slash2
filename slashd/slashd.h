@@ -87,19 +87,19 @@ struct site_mds_info {
 
 #define SMIF_DIRTYQ		(1 << 0)		/* queue has changed */
 
-struct mds_resm_info {
-	struct slashrpc_cservice *mrmi_csvc;
-	psc_spinlock_t		  mrmi_lock;
-	struct psc_multiwaitcond  mrmi_mwcond;
+struct resm_mds_info {
+	struct slashrpc_cservice *rmmi_csvc;
+	psc_spinlock_t		  rmmi_lock;
+	struct psc_multiwaitcond  rmmi_mwcond;
 
-	int			  mrmi_busyid;
-	struct sl_resm		 *mrmi_resm;
-	struct psc_dynarray	  mrmi_bmaps;		/* array of struct mexpbcm */
-	struct psc_dynarray	  mrmi_bmaps_deref;	/* dereferencing bmaps */
-	atomic_t		  mrmi_refcnt;		/* #CLIs using this ion */
+	int			  rmmi_busyid;
+	struct sl_resm		 *rmmi_resm;
+	struct psc_dynarray	  rmmi_bmaps;		/* array of struct mexpbcm */
+	struct psc_dynarray	  rmmi_bmaps_deref;	/* dereferencing bmaps */
+	atomic_t		  rmmi_refcnt;		/* #CLIs using this ion */
 };
 
-#define resm2mrmi(resm)		((struct mds_resm_info *)(resm)->resm_pri)
+#define resm2mrmi(resm)		((struct resm_mds_info *)(resm)->resm_pri)
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
  */

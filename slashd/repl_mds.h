@@ -24,7 +24,7 @@
 
 #include "fidc_mds.h"
 
-struct mds_resm_info;
+struct resm_mds_info;
 
 struct sl_replrq {
 	struct slash_inode_handle	*rrq_inoh;
@@ -69,8 +69,8 @@ void	 mds_repl_init(void);
 int	 mds_repl_inv_except_locked(struct bmapc_memb *, sl_ios_id_t);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);
 int	 mds_repl_loadino(const struct slash_fidgen *, struct fidc_membh **);
-void	 mds_repl_node_clearallbusy(struct mds_resm_info *);
-int	_mds_repl_nodes_setbusy(struct mds_resm_info *, struct mds_resm_info *, int, int);
+void	 mds_repl_node_clearallbusy(struct resm_mds_info *);
+int	_mds_repl_nodes_setbusy(struct resm_mds_info *, struct resm_mds_info *, int, int);
 void	 mds_repl_reset_scheduled(sl_ios_id_t);
 void	 mds_repl_tryrmqfile(struct sl_replrq *);
 void	 mds_repl_unrefrq(struct sl_replrq *);

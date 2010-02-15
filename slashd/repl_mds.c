@@ -1071,9 +1071,9 @@ _mds_repl_nodes_setbusy(struct mds_resm_info *ma,
 	const struct mds_resm_info *min, *max;
 	int rc, locked;
 
-	psc_assert(ma->mrmi_busyid != mb->mrmi_busyid);
+	psc_assert(ma->rmmi_busyid != mb->rmmi_busyid);
 
-	if (ma->mrmi_busyid < mb->mrmi_busyid) {
+	if (ma->rmmi_busyid < mb->rmmi_busyid) {
 		min = ma;
 		max = mb;
 	} else {
@@ -1085,11 +1085,11 @@ _mds_repl_nodes_setbusy(struct mds_resm_info *ma,
 	if (set)
 		rc = psc_vbitmap_xsetval(repl_busytable,
 		    MDS_REPL_BUSYNODES(repl_busytable_nents,
-		    min->mrmi_busyid, max->mrmi_busyid), busy);
+		    min->rmmi_busyid, max->rmmi_busyid), busy);
 	else
 		rc = psc_vbitmap_get(repl_busytable,
 		    MDS_REPL_BUSYNODES(repl_busytable_nents,
-		    min->mrmi_busyid, max->mrmi_busyid));
+		    min->rmmi_busyid, max->rmmi_busyid));
 	ureqlock(&repl_busytable_lock, locked);
 
 	/*
@@ -1097,19 +1097,19 @@ _mds_repl_nodes_setbusy(struct mds_resm_info *ma,
 	 * waiting to utilize the new connection slots.
 	 */
 	if (set && busy == 0 && rc) {
-		locked = reqlock(&ma->mrmi_lock);
-		psc_multiwaitcond_wakeup(&ma->mrmi_mwcond);
-		ureqlock(&ma->mrmi_lock, locked);
+		locked = reqlock(&ma->rmmi_lock);
+		psc_multiwaitcond_wakeup(&ma->rmmi_mwcond);
+		ureqlock(&ma->rmmi_lock, locked);
 
-		locked = reqlock(&mb->mrmi_lock);
-		psc_multiwaitcond_wakeup(&mb->mrmi_mwcond);
-		ureqlock(&mb->mrmi_lock, locked);
+		locked = reqlock(&mb->rmmi_lock);
+		psc_multiwaitcond_wakeup(&mb->rmmi_mwcond);
+		ureqlock(&mb->rmmi_lock, locked);
 	}
 	return (rc);
 }
 
 void
-mds_repl_node_clearallbusy(struct mds_resm_info *mrmi)
+mds_repl_node_clearallbusy(struct mds_resm_info *rmmi)
 {
 	int n, j, locked, locked2;
 	struct sl_resource *r;
@@ -1118,15 +1118,15 @@ mds_repl_node_clearallbusy(struct mds_resm_info *mrmi)
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	locked = reqlock(&repl_busytable_lock);
-	locked2 = reqlock(&mrmi->mrmi_lock);
+	locked2 = reqlock(&rmmi->rmmi_lock);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
 		DYNARRAY_FOREACH(r, n, &s->site_resources)
 			DYNARRAY_FOREACH(resm, j, &r->res_members)
-				if (resm->resm_pri != mrmi)
-					mds_repl_nodes_setbusy(mrmi,
+				if (resm->resm_pri != rmmi)
+					mds_repl_nodes_setbusy(rmmi,
 					    resm->resm_pri, 0);
 	}
-	ureqlock(&mrmi->mrmi_lock, locked2);
+	ureqlock(&rmmi->rmmi_lock, locked2);
 	ureqlock(&repl_busytable_lock, locked);
 	PLL_ULOCK(&globalConfig.gconf_sites);
 }
@@ -1134,7 +1134,7 @@ mds_repl_node_clearallbusy(struct mds_resm_info *mrmi)
 void
 mds_repl_buildbusytable(void)
 {
-	struct mds_resm_info *mrmi;
+	struct mds_resm_info *rmmi;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
@@ -1147,8 +1147,8 @@ mds_repl_buildbusytable(void)
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources)
 			DYNARRAY_FOREACH(resm, j, &r->res_members) {
-				mrmi = resm->resm_pri;
-				mrmi->mrmi_busyid = repl_busytable_nents++;
+				rmmi = resm->resm_pri;
+				rmmi->rmmi_busyid = repl_busytable_nents++;
 			}
 	PLL_ULOCK(&globalConfig.gconf_sites);
 

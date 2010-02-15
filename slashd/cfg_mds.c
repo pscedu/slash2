@@ -39,16 +39,16 @@ slcfg_init_res(struct sl_resource *res)
 void
 slcfg_init_resm(struct sl_resm *resm)
 {
-	struct mds_resm_info *mrmi;
+	struct mds_resm_info *rmmi;
 
-	mrmi = resm->resm_pri = PSCALLOC(sizeof(*mrmi));
-	LOCK_INIT(&mrmi->mrmi_lock);
-	psc_multiwaitcond_init(&mrmi->mrmi_mwcond,
-	    NULL, 0, "mrmi-%s", resm->resm_addrbuf);
-	psc_dynarray_init(&mrmi->mrmi_bmaps);
-	psc_dynarray_init(&mrmi->mrmi_bmaps_deref);
-	atomic_set(&mrmi->mrmi_refcnt, 0);
-	mrmi->mrmi_resm = resm;
+	rmmi = resm->resm_pri = PSCALLOC(sizeof(*rmmi));
+	LOCK_INIT(&rmmi->rmmi_lock);
+	psc_multiwaitcond_init(&rmmi->rmmi_mwcond,
+	    NULL, 0, "rmmi-%s", resm->resm_addrbuf);
+	psc_dynarray_init(&rmmi->rmmi_bmaps);
+	psc_dynarray_init(&rmmi->rmmi_bmaps_deref);
+	atomic_set(&rmmi->rmmi_refcnt, 0);
+	rmmi->rmmi_resm = resm;
 }
 
 void

@@ -182,14 +182,14 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		/* Return the write IOS if the bmap is in write mode.
 		 */
 		psc_assert(bmdsi->bmdsi_wr_ion);
-		mp->ios_nid = bmdsi->bmdsi_wr_ion->mrmi_resm->resm_nid;
+		mp->ios_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
 	} else
 		mp->ios_nid = LNET_NID_ANY;
 
 	bdbuf_sign(&bdb, &mq->sfdb.sfdb_secret.sfs_fg, &rq->rq_peer,
 	   (mq->rw == SL_WRITE ? mp->ios_nid : LNET_NID_ANY),
 	   (mq->rw == SL_WRITE ?
-	    bmdsi->bmdsi_wr_ion->mrmi_resm->resm_res->res_id : IOS_ID_ANY),
+	    bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id : IOS_ID_ANY),
 	   bmap->bcm_blkno);
 
 	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,

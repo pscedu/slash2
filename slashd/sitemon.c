@@ -63,7 +63,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
     struct sl_resm *src_resm, struct sl_resource *dst_res, int j)
 {
 	int tract[4], we_set_busy, rc;
-	struct mds_resm_info *src_mrmi, *dst_mrmi;
+	struct mds_resm_info *src_rmmi, *dst_rmmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
 	struct slmreplq_thread *smrt;
@@ -82,8 +82,8 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
 
-	dst_mrmi = dst_resm->resm_pri;
-	src_mrmi = src_resm->resm_pri;
+	dst_rmmi = dst_resm->resm_pri;
+	src_rmmi = src_resm->resm_pri;
 
 	/*
 	 * At this point, add this connection to our multiwait.
@@ -93,20 +93,20 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	 * wake us when it becomes available.
 	 */
 	if (!psc_multiwait_hascond(&smi->smi_mw,
-	    &dst_mrmi->mrmi_mwcond))
+	    &dst_rmmi->rmmi_mwcond))
 		psc_multiwait_addcond(&smi->smi_mw,
-		    &dst_mrmi->mrmi_mwcond);
+		    &dst_rmmi->rmmi_mwcond);
 
 	csvc = slm_geticsvc(dst_resm);
 	if (csvc == NULL)
 		goto fail;
 
-	if (!mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 1)) {
+	if (!mds_repl_nodes_setbusy(src_rmmi, dst_rmmi, 1)) {
 		/* add "src to become unbusy" to multiwait */
 		if (!psc_multiwait_hascond(&smi->smi_mw,
-		    &src_mrmi->mrmi_mwcond))
+		    &src_rmmi->rmmi_mwcond))
 			psc_multiwait_addcond(&smi->smi_mw,
-			    &src_mrmi->mrmi_mwcond);
+			    &src_rmmi->rmmi_mwcond);
 		goto fail;
 	}
 
@@ -156,7 +156,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 
  fail:
 	if (we_set_busy)
-		mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 0);
+		mds_repl_nodes_setbusy(src_rmmi, dst_rmmi, 0);
 	return (0);
 }
 
@@ -301,9 +301,9 @@ slmreplqthr_main(void *arg)
 							src_resm = psc_dynarray_getpos(&src_res->res_members, rin);
 							if (slm_geticsvc(src_resm) == NULL) {
 								if (!psc_multiwait_hascond(&smi->smi_mw,
-								    &resm2mrmi(src_resm)->mrmi_mwcond))
+								    &resm2mrmi(src_resm)->rmmi_mwcond))
 									if (psc_multiwait_addcond(&smi->smi_mw,
-									    &resm2mrmi(src_resm)->mrmi_mwcond))
+									    &resm2mrmi(src_resm)->rmmi_mwcond))
 										psc_fatal("multiwait_addcond");
 								continue;
 							}
