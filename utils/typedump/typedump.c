@@ -41,9 +41,11 @@
 #include "pathnames.h"
 #include "slashrpc.h"
 #include "slconfig.h"
+#include "slconn.h"
 #include "slerr.h"
 #include "sljournal.h"
 #include "sltypes.h"
+#include "slutil.h"
 #include "mount_slash/bmap_cli.h"
 #include "mount_slash/bmpc.h"
 #include "mount_slash/ctl_cli.h"
@@ -66,6 +68,7 @@
 #include "slashd/slashd.h"
 #include "sliod/bmap_iod.h"
 #include "sliod/ctl_iod.h"
+#include "sliod/fidc_iod.h"
 #include "sliod/repl_iod.h"
 #include "sliod/rpc_iod.h"
 #include "sliod/sliod.h"
@@ -143,16 +146,13 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmpc_mem_slbs);
 	PRTYPE(struct cfdent);
 	PRTYPE(struct cfdops);
-	PRTYPE(struct cli_resm_info);
-	PRTYPE(struct fidc_mds_info);
+	PRTYPE(struct fcoo_cli_info);
+	PRTYPE(struct fcoo_iod_info);
+	PRTYPE(struct fcoo_mds_info);
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct fidc_nameinfo);
 	PRTYPE(struct fidc_open_obj);
-	PRTYPE(struct iod_resm_info);
 	PRTYPE(struct jflush_item);
-	PRTYPE(struct mds_resm_info);
-	PRTYPE(struct mds_resprof_info);
-	PRTYPE(struct mds_site_info);
 	PRTYPE(struct mexp_cli);
 	PRTYPE(struct mexpbcm);
 	PRTYPE(struct mexpfcm);
@@ -167,9 +167,13 @@ main(int argc, char *argv[])
 	PRTYPE(struct msctlmsg_replst_slave);
 	PRTYPE(struct msfs_thread);
 	PRTYPE(struct msl_fbr);
-	PRTYPE(struct msl_fcoo_data);
 	PRTYPE(struct msl_fhent);
 	PRTYPE(struct msrcm_thread);
+	PRTYPE(struct resm_cli_info);
+	PRTYPE(struct resm_iod_info);
+	PRTYPE(struct resm_mds_info);
+	PRTYPE(struct resprof_mds_info);
+	PRTYPE(struct site_mds_info);
 	PRTYPE(struct sl_buffer);
 	PRTYPE(struct sl_buffer_iovref);
 	PRTYPE(struct sl_fcmh_ops);
