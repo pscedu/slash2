@@ -36,22 +36,22 @@
 struct pscrpc_request;
 
 /* thread types */
-#define MSTHRT_CTL	0	/* control interface */
-#define MSTHRT_FS	1	/* fuse filesystem syscall handlers */
-#define MSTHRT_RCM	2	/* service RPC reqs for client from MDS */
-#define MSTHRT_LNETAC	3	/* lustre net accept thr */
-#define MSTHRT_USKLNDPL	4	/* userland socket lustre net dev poll thr */
-#define MSTHRT_EQPOLL	5	/* LNET event queue polling */
-#define MSTHRT_TINTV	6	/* timer interval thread */
-#define MSTHRT_TIOS	7	/* timer iostat updater */
-#define MSTHRT_FUSE	8	/* fuse internal manager */
-#define MSTHRT_BMAPFLSH	9	/* async buffer thread */
-#define MSTHRT_BMAPFLSHRPC 10	/* async buffer thread for rpc reaping */
+#define MSTHRT_CTL			0	/* control interface */
+#define MSTHRT_FS			1	/* fuse filesystem syscall handlers */
+#define MSTHRT_RCM			2	/* service RPC reqs for client from MDS */
+#define MSTHRT_LNETAC			3	/* lustre net accept thr */
+#define MSTHRT_USKLNDPL			4	/* userland socket lustre net dev poll thr */
+#define MSTHRT_EQPOLL			5	/* LNET event queue polling */
+#define MSTHRT_TINTV			6	/* timer interval thread */
+#define MSTHRT_TIOS			7	/* timer iostat updater */
+#define MSTHRT_FUSE			8	/* fuse internal manager */
+#define MSTHRT_BMAPFLSH			9	/* async buffer thread */
+#define MSTHRT_BMAPFLSHRPC		10	/* async buffer thread for rpc reaping */
 
 /* async RPC pointers */
-#define MSL_IO_CB_POINTER_SLOT 1
-#define MSL_WRITE_CB_POINTER_SLOT 2
-#define MSL_OFTRQ_CB_POINTER_SLOT 3
+#define MSL_IO_CB_POINTER_SLOT		1
+#define MSL_WRITE_CB_POINTER_SLOT	2
+#define MSL_OFTRQ_CB_POINTER_SLOT	3
 
 struct msrcm_thread {
 	struct pscrpc_thread		 mrcm_prt;
@@ -88,21 +88,6 @@ struct resm_cli_info {
 
 #define resm2rmci(resm)			((struct resm_cli_info *)(resm)->resm_pri)
 
-/* Mainly a place to store our replication table, attached to fcoo_pri.
- */
-struct fcoo_cli_info {
-	int				 fci_flags;
-	int				 fci_nrepls;
-	sl_replica_t			 fci_reptbl[SL_MAX_REPLICAS];
-};
-
-/* fci_flags */
-enum {
-	FCIF_HAVEREPTBL = (1 << 0)
-};
-
-#define msl_mfd_release(fci)		PSCFREE(fci)
-
 #define msl_read(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_READ)
 #define msl_write(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_WRITE)
 
@@ -125,12 +110,12 @@ void	 msbmapflushthr_spawn(void);
 void	*msctlthr_begin(void *);
 
 int	 ms_lookup_fidcache(const struct slash_creds *, fuse_ino_t, const char *,
-	    struct slash_fidgen *, struct stat *);
+	    struct slash_fidgen *, struct srt_stat *);
 
-int	 checkcreds(const struct stat *, const struct slash_creds *, int);
+int	 checkcreds(const struct srt_stat *, const struct slash_creds *, int);
 int	 translate_pathname(const char *, char []);
 int	 lookup_pathname_fg(const char *, struct slash_creds *,
-	    struct slash_fidgen *, struct stat *);
+	    struct slash_fidgen *, struct srt_stat *);
 
 int	 slash2fuse_stat(struct fidc_membh *, const struct slash_creds *);
 
