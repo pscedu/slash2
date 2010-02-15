@@ -253,16 +253,11 @@ int
 fidc_reap(struct psc_poolmgr *m)
 {
 	struct fidc_membh *f, *tmp;
-	static pthread_mutex_t mutex =
-		PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 	struct psc_dynarray da = DYNARRAY_INIT;
 	struct psc_hashbkt *b;
 	int i=0;
 
 	psc_assert(m == fidcPool);
-	/* Only one thread may be here.
-	 */
-	pthread_mutex_lock(&mutex);
  startover:
 	LIST_CACHE_LOCK(&fidcCleanList);
 	psclist_for_each_entry_safe(f, tmp, &fidcCleanList.lc_listhd,
@@ -316,8 +311,6 @@ fidc_reap(struct psc_poolmgr *m)
 		psc_hashbkt_unlock(b);
 	}
 	LIST_CACHE_ULOCK(&fidcCleanList);
-
-	pthread_mutex_unlock(&mutex);
 
 	for (i=0; i < psc_dynarray_len(&da); i++) {
 		f = psc_dynarray_getpos(&da, i);
