@@ -86,7 +86,7 @@ struct resm_cli_info {
 	struct psc_waitq		 rmci_waitq;
 };
 
-#define resm2crmi(resm)			((struct resm_cli_info *)(resm)->resm_pri)
+#define resm2rmci(resm)			((struct resm_cli_info *)(resm)->resm_pri)
 
 /* Mainly a place to store our replication table, attached to fcoo_pri.
  */
