@@ -35,6 +35,7 @@
 #include "bmap.h"
 #include "bmap_iod.h"
 #include "fid.h"
+#include "fidc_iod.h"
 #include "fidcache.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
@@ -139,7 +140,7 @@ iod_inode_getsize(struct slash_fidgen *fg, off_t *fsize)
 	/* XXX May want to replace this syscall with an inode cache
 	 *   lookup.
 	 */
-	rc = fstat(f->fcmh_fcoo->fcoo_fd, &stb);
+	rc = fstat(fcmh_2_fd(f), &stb);
 	if (!rc)
 		*fsize = stb.st_size;
 	else
@@ -157,7 +158,7 @@ iod_inode_lookup(const struct slash_fidgen *fg)
 	int rc;
 
 	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |
-	    FIDC_LOOKUP_REFRESH, NULL, &rootcreds, &f);
+	    FIDC_LOOKUP_REFRESH, NULL, FCMH_SETATTRF_NONE, &rootcreds, &f);
 	psc_assert(f);
 	return (f);
 }
@@ -176,14 +177,9 @@ iod_inode_open(struct fidc_membh *f, enum rw rw)
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	spinlock(&f->fcmh_lock);
-	if (f->fcmh_fcoo || (f->fcmh_state & FCMH_FCOO_CLOSING)) {
-		rc = fidc_fcoo_wait_locked(f, FCOO_START);
-		if (rc < 0) {
-			freelock(&f->fcmh_lock);
-			goto out;
-		}
-	} else
-		fidc_fcoo_start_locked(f);
+	rc = fcmh_ensure_has_fii(f);
+	if (rc < 0)
+		goto out;
 
 	if (rw == SL_WRITE) {
 		oflags |= O_CREAT;
@@ -195,9 +191,9 @@ iod_inode_open(struct fidc_membh *f, enum rw rw)
 	freelock(&f->fcmh_lock);
 
 	if (f->fcmh_state & FCMH_FCOO_STARTING) {
-		f->fcmh_fcoo->fcoo_fd = fid_fileops_fg(&f->fcmh_fg,
+		fcmh_2_fd(f) = fid_fileops_fg(&f->fcmh_fg,
 		    oflags, 0600);
-		if (f->fcmh_fcoo->fcoo_fd < 0) {
+		if (fcmh_2_fd(f) < 0) {
 			fidc_fcoo_startfailed(f);
 			rc = -errno;
 		} else {
