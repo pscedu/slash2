@@ -22,10 +22,10 @@
 
 #include <stdint.h>
 
-/* must be aligned to wordsize and packed if necessary */
-typedef struct slash_creds {
+/* fields must aligned and length must be multiple of wordsize */
+struct slash_creds {
 	uint32_t	uid;
 	uint32_t	gid;
-} cred_t;
+};
 
 #endif /* _SLASH_CREDS_H_ */
