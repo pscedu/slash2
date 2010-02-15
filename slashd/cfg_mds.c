@@ -54,13 +54,13 @@ slcfg_init_resm(struct sl_resm *resm)
 void
 slcfg_init_site(struct sl_site *site)
 {
-	struct mds_site_info *msi;
+	struct site_mds_info *smi;
 
-	msi = site->site_pri = PSCALLOC(sizeof(*msi));
-	psc_dynarray_init(&msi->msi_replq);
-	LOCK_INIT(&msi->msi_lock);
-	psc_multiwait_init(&msi->msi_mw, "msi-%s",
+	smi = site->site_pri = PSCALLOC(sizeof(*smi));
+	psc_dynarray_init(&smi->smi_replq);
+	LOCK_INIT(&smi->smi_lock);
+	psc_multiwait_init(&smi->smi_mw, "smi-%s",
 	    site->site_name + strspn(site->site_name, "@"));
-	psc_multiwaitcond_init(&msi->msi_mwcond, NULL, 0, "msi-%s",
+	psc_multiwaitcond_init(&smi->smi_mwcond, NULL, 0, "smi-%s",
 	    site->site_name + strspn(site->site_name, "@"));
 }

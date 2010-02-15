@@ -102,7 +102,7 @@ SPLAY_GENERATE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
 void
 mds_repl_enqueue_sites(struct sl_replrq *rrq, const sl_replica_t *iosv, int nios)
 {
-	struct mds_site_info *msi;
+	struct site_mds_info *smi;
 	struct sl_site *site;
 	int locked, n;
 
@@ -110,16 +110,16 @@ mds_repl_enqueue_sites(struct sl_replrq *rrq, const sl_replica_t *iosv, int nios
 	rrq->rrq_gen++;
 	for (n = 0; n < nios; n++) {
 		site = libsl_resid2site(iosv[n].bs_id);
-		msi = site->site_pri;
+		smi = site->site_pri;
 
-		spinlock(&msi->msi_lock);
-		if (!psc_dynarray_exists(&msi->msi_replq, rrq)) {
-			psc_dynarray_add(&msi->msi_replq, rrq);
-			msi->msi_flags |= MSIF_DIRTYQ;
+		spinlock(&smi->smi_lock);
+		if (!psc_dynarray_exists(&smi->smi_replq, rrq)) {
+			psc_dynarray_add(&smi->smi_replq, rrq);
+			smi->smi_flags |= SMIF_DIRTYQ;
 			psc_atomic32_inc(&rrq->rrq_refcnt);
 		}
-		psc_multiwaitcond_wakeup(&msi->msi_mwcond);
-		freelock(&msi->msi_lock);
+		psc_multiwaitcond_wakeup(&smi->smi_mwcond);
+		freelock(&smi->smi_lock);
 	}
 	psc_pthread_mutex_ureqlock(&rrq->rrq_mutex, locked);
 }

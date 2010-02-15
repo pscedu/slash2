@@ -197,7 +197,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct sl_resm *dst_resm, *src_resm;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_generic_rep *mp;
-	struct mds_site_info *msi;
+	struct site_mds_info *smi;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 
@@ -247,10 +247,10 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_repl_bmap_rel(bcm);
 
-	msi = dst_resm->resm_res->res_site->site_pri;
-	spinlock(&msi->msi_lock);
-	psc_multiwaitcond_wakeup(&msi->msi_mwcond);
-	freelock(&msi->msi_lock);
+	smi = dst_resm->resm_res->res_site->site_pri;
+	spinlock(&smi->smi_lock);
+	psc_multiwaitcond_wakeup(&smi->smi_mwcond);
+	freelock(&smi->smi_lock);
  out:
 	if (dst_resm) {
 		/* XXX should we trust them to tell us who the src was? */

@@ -286,6 +286,7 @@ mdsio_statfs(struct statvfs *stbv)
 	return (zfsslash2_statfs(zfsVfs, stbv, 1));
 }
 
+int
 mdsio_opencreate(slfid_t pfid, struct slash_creds *cr, int flags,
     mode_t mode, const char *fn, struct slash_fidgen *fg,
     struct stat *stb, void *finfop)

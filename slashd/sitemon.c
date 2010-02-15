@@ -38,7 +38,7 @@ void
 slmreplqthr_removeq(struct sl_replrq *rrq)
 {
 	struct slmreplq_thread *smrt;
-	struct mds_site_info *msi;
+	struct site_mds_info *smi;
 	struct psc_thread *thr;
 	struct sl_site *site;
 	int locked;
@@ -46,12 +46,12 @@ slmreplqthr_removeq(struct sl_replrq *rrq)
 	thr = pscthr_get();
 	smrt = slmreplqthr(thr);
 	site = smrt->smrt_site;
-	msi = site->site_pri;
+	smi = site->site_pri;
 
-	locked = reqlock(&msi->msi_lock);
-	msi->msi_flags |= MSIF_DIRTYQ;
-	psc_dynarray_remove(&msi->msi_replq, rrq);
-	ureqlock(&msi->msi_lock, locked);
+	locked = reqlock(&smi->smi_lock);
+	smi->smi_flags |= SMIF_DIRTYQ;
+	psc_dynarray_remove(&smi->smi_replq, rrq);
+	ureqlock(&smi->smi_lock, locked);
 
 	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
 	psc_atomic32_dec(&rrq->rrq_refcnt);
@@ -69,7 +69,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	struct slmreplq_thread *smrt;
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *rq;
-	struct mds_site_info *msi;
+	struct site_mds_info *smi;
 	struct sl_resm *dst_resm;
 	struct psc_thread *thr;
 	struct sl_site *site;
@@ -78,7 +78,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	thr = pscthr_get();
 	smrt = slmreplqthr(thr);
 	site = smrt->smrt_site;
-	msi = site->site_pri;
+	smi = site->site_pri;
 
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
 
@@ -92,9 +92,9 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	 * when we multiwait; otherwise, we the connection will
 	 * wake us when it becomes available.
 	 */
-	if (!psc_multiwait_hascond(&msi->msi_mw,
+	if (!psc_multiwait_hascond(&smi->smi_mw,
 	    &dst_mrmi->mrmi_mwcond))
-		psc_multiwait_addcond(&msi->msi_mw,
+		psc_multiwait_addcond(&smi->smi_mw,
 		    &dst_mrmi->mrmi_mwcond);
 
 	csvc = slm_geticsvc(dst_resm);
@@ -103,9 +103,9 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 
 	if (!mds_repl_nodes_setbusy(src_mrmi, dst_mrmi, 1)) {
 		/* add "src to become unbusy" to multiwait */
-		if (!psc_multiwait_hascond(&msi->msi_mw,
+		if (!psc_multiwait_hascond(&smi->smi_mw,
 		    &src_mrmi->mrmi_mwcond))
-			psc_multiwait_addcond(&msi->msi_mw,
+			psc_multiwait_addcond(&smi->smi_mw,
 			    &src_mrmi->mrmi_mwcond);
 		goto fail;
 	}
@@ -169,7 +169,7 @@ slmreplqthr_main(void *arg)
 	struct slmreplq_thread *smrt;
 	struct slash_bmap_od *bmapod;
 	struct bmap_mds_info *bmdsi;
-	struct mds_site_info *msi;
+	struct site_mds_info *smi;
 	struct sl_resm *src_resm;
 	struct bmapc_memb *bcm;
 	struct psc_thread *thr;
@@ -181,40 +181,40 @@ slmreplqthr_main(void *arg)
 	thr = arg;
 	smrt = slmreplqthr(thr);
 	site = smrt->smrt_site;
-	msi = site->site_pri;
+	smi = site->site_pri;
 	for (;;) {
 		if (0)
  restart:
 			sched_yield();
 		/* select or wait for a repl rq */
-		spinlock(&msi->msi_lock);
+		spinlock(&smi->smi_lock);
 
-		psc_multiwait_reset(&msi->msi_mw);
-		if (psc_multiwait_addcond(&msi->msi_mw,
-		    &msi->msi_mwcond) == -1)
+		psc_multiwait_reset(&smi->smi_mw);
+		if (psc_multiwait_addcond(&smi->smi_mw,
+		    &smi->smi_mwcond) == -1)
 			psc_fatal("psc_multiwait_addcond");
-		psc_multiwait_entercritsect(&msi->msi_mw);
+		psc_multiwait_entercritsect(&smi->smi_mw);
 
-		if (psc_dynarray_len(&msi->msi_replq) == 0) {
-			freelock(&msi->msi_lock);
-			psc_multiwait(&msi->msi_mw, &dummy);
+		if (psc_dynarray_len(&smi->smi_replq) == 0) {
+			freelock(&smi->smi_lock);
+			psc_multiwait(&smi->smi_mw, &dummy);
 			continue;
 		}
 
-		msi->msi_flags &= ~MSIF_DIRTYQ;
+		smi->smi_flags &= ~SMIF_DIRTYQ;
 
-		nrq = psc_dynarray_len(&msi->msi_replq);
+		nrq = psc_dynarray_len(&smi->smi_replq);
 		rir = psc_random32u(nrq);
 		for (ir = 0; ir < nrq; rir = (rir + 1) % nrq, ir++) {
-			reqlock(&msi->msi_lock);
-			if (msi->msi_flags & MSIF_DIRTYQ) {
-				freelock(&msi->msi_lock);
+			reqlock(&smi->smi_lock);
+			if (smi->smi_flags & SMIF_DIRTYQ) {
+				freelock(&smi->smi_lock);
 				goto restart;
 			}
 
-			rrq = psc_dynarray_getpos(&msi->msi_replq, rir);
+			rrq = psc_dynarray_getpos(&smi->smi_replq, rir);
 			psc_atomic32_inc(&rrq->rrq_refcnt);
-			freelock(&msi->msi_lock);
+			freelock(&smi->smi_lock);
 
 			rc = mds_repl_accessrq(rrq);
 
@@ -300,9 +300,9 @@ slmreplqthr_main(void *arg)
 
 							src_resm = psc_dynarray_getpos(&src_res->res_members, rin);
 							if (slm_geticsvc(src_resm) == NULL) {
-								if (!psc_multiwait_hascond(&msi->msi_mw,
+								if (!psc_multiwait_hascond(&smi->smi_mw,
 								    &resm2mrmi(src_resm)->mrmi_mwcond))
-									if (psc_multiwait_addcond(&msi->msi_mw,
+									if (psc_multiwait_addcond(&smi->smi_mw,
 									    &resm2mrmi(src_resm)->mrmi_mwcond))
 										psc_fatal("multiwait_addcond");
 								continue;
@@ -326,7 +326,7 @@ slmreplqthr_main(void *arg)
 			 */
 			psc_pthread_mutex_lock(&rrq->rrq_mutex);
 			if (has_repl_work || rrq->rrq_gen != rrq_gen) {
-				psc_multiwait_addcond_masked(&msi->msi_mw,
+				psc_multiwait_addcond_masked(&smi->smi_mw,
 				    &rrq->rrq_mwcond, 0);
 				mds_repl_unrefrq(rrq);
 
@@ -334,14 +334,14 @@ slmreplqthr_main(void *arg)
 				 * This should be safe since the rrq
 				 * is refcounted in our dynarray.
 				 */
-				psc_multiwait_setcondwakeable(&msi->msi_mw,
+				psc_multiwait_setcondwakeable(&smi->smi_mw,
 				    &rrq->rrq_mwcond, 1);
 			} else {
 				slmreplqthr_removeq(rrq);
 				goto restart;
 			}
 		}
-		psc_multiwait(&msi->msi_mw, &dummy);
+		psc_multiwait(&smi->smi_mw, &dummy);
 		/*
 		 * XXX look at the event and process it directly
 		 * instead of doing all this work again.
@@ -357,9 +357,9 @@ slmtruncthr_main(void *arg)
 	thr = arg;
 	smtrt = slmtruncthr(thr);
 	site = smrt->smrt_site;
-	msi = site->site_pri;
+	smi = site->site_pri;
 	for (;;) {
-//		trq = lc_get(msi->msi_truncq);
+//		trq = lc_get(smi->smi_truncq);
 
 		for (j = 0; j < site->site_nres; j++) {
 			res = site->site_resv[j];

@@ -77,15 +77,15 @@ PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
 PSCTHR_MKCAST(slmreplqthr, slmreplq_thread, SLMTHRT_REPLQ)
 
-struct mds_site_info {
-	struct psc_dynarray	  msi_replq;
-	psc_spinlock_t		  msi_lock;
-	struct psc_multiwait	  msi_mw;
-	struct psc_multiwaitcond  msi_mwcond;
-	int			  msi_flags;
+struct site_mds_info {
+	struct psc_dynarray	  smi_replq;
+	psc_spinlock_t		  smi_lock;
+	struct psc_multiwait	  smi_mw;
+	struct psc_multiwaitcond  smi_mwcond;
+	int			  smi_flags;
 };
 
-#define MSIF_DIRTYQ		(1 << 0)		/* queue has changed */
+#define SMIF_DIRTYQ		(1 << 0)		/* queue has changed */
 
 struct mds_resm_info {
 	struct slashrpc_cservice *mrmi_csvc;
