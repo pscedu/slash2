@@ -20,6 +20,11 @@
 #ifndef _SL_TYPES_H_
 #define _SL_TYPES_H_
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <stdint.h>
+
 /* deprecated */
 typedef uint32_t sl_blkno_t;
 typedef uint32_t sl_blkgen_t;
@@ -50,5 +55,19 @@ enum rw {
 	SL_READ = 42,
 	SL_WRITE = 43
 };
+
+/*
+ * Defines a storage system which holds a block or blocks of the
+ * respective file.  A number of these structures are statically
+ * allocated within the inode and are fixed for the life of the file
+ * and apply to snapshots as well as the active file.  This structure
+ * saves us from storing the iosystem id within each block at the cost
+ * of limiting the number of iosystems which may manage our blocks.
+ */
+typedef struct slash_replica {
+	sl_ios_id_t		bs_id;     /* id of this block store    */
+} __packed sl_replica_t;
+
+#define SL_MAX_REPLICAS		64
 
 #endif /* _SL_TYPES_H_ */

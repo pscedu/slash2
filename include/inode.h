@@ -32,32 +32,8 @@
 #include "fid.h"
 #include "sltypes.h"
 
-/*
- * To save space in the bmaps, replica stores are kept in the sl-replicas
- *   xattr.  Each bmap uses an array of char's as a bitmap to track which
- *   stores the bmap is replicated to.  Additional bits are used to specify
- *   the freshness of the replica bmaps.  '100' would mean that the bmap
- *   is up-to-date, '110' would mean that the bmap is only one generation
- *   back and therefore may take partial updates.  111 means that the bmap
- *   is more than one generation old.
- * '00' - bmap is not replicated to this ios.
- * '01' - bmap is > one generation back.
- * '10' - bmap is one generation back.
- * '11' - bmap is replicated to the ios and current.
- */
-#define SL_MAX_REPLICAS		64
-#define SL_BITS_PER_REPLICA	2
-#define SL_REPLICA_MASK		((uint8_t)((1 << SL_BITS_PER_REPLICA) - 1))
-
-/* must be 64-bit aligned */
-#define SL_REPLICA_NBYTES	((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) / NBBY)
-
 #define SL_DEF_SNAPSHOTS	1
 #define SL_MAX_GENS_PER_BLK	4
-
-#define SL_BMAP_SIZE		SLASH_BMAP_SIZE
-#define SL_CRC_SIZE		(1024 * 1024)
-#define SL_CRCS_PER_BMAP	(SL_BMAP_SIZE / SL_CRC_SIZE)	/* must be 64-bit aligned in bytes */
 
 /* Define metafile offsets
  */
@@ -66,11 +42,6 @@
 #define SL_EXTRAS_START_OFF	UINT64_C(0x0400)
 
 #define SL_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
-
-#define SL_REPLST_INACTIVE	0
-#define SL_REPLST_SCHED		1
-#define SL_REPLST_OLD		2
-#define SL_REPLST_ACTIVE	3
 
 /*
  * Point to an offset within the linear metadata file which holds a
@@ -83,30 +54,6 @@ typedef struct slash_snapshot {
 	size_t			sn_nblks;
 	time_t			sn_date;
 } sl_snap_t;
-
-/*
- * Defines a storage system which holds a block or blocks of the
- * respective file.  A number of these structures are statically
- * allocated within the inode and are fixed for the life of the file
- * and apply to snapshots as well as the active file.  This structure
- * saves us from storing the iosystem id within each block at the cost
- * of limiting the number of iosystems which may manage our blocks.
- */
-typedef struct slash_replica {
-	sl_ios_id_t		bs_id;     /* id of this block store    */
-} __packed sl_replica_t;
-
-/*
- * Associate a crc with a generation id for a block.
- */
-typedef struct slash_gencrc {
-	psc_crc64_t		gc_crc;
-} sl_gcrc_t;
-
-struct slash_bmap_cli_wire {
-	uint8_t			bw_crcstates[SL_CRCS_PER_BMAP];
-	uint8_t			bw_repls[SL_REPLICA_NBYTES];
-} __packed;
 
 #define INO_DEF_NREPLS		4
 
