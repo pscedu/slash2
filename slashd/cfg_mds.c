@@ -30,10 +30,10 @@
 void
 slcfg_init_res(struct sl_resource *res)
 {
-	struct mds_resprof_info *mrpi;
+	struct resprof_mds_info *rpmi;
 
-	mrpi = res->res_pri = PSCALLOC(sizeof(*mrpi));
-	LOCK_INIT(&mrpi->mrpi_lock);
+	rpmi = res->res_pri = PSCALLOC(sizeof(*rpmi));
+	LOCK_INIT(&rpmi->rpmi_lock);
 }
 
 void

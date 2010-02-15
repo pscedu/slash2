@@ -574,7 +574,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	struct sl_resource *res=libsl_id2res(pios);
 	struct sl_resm *resm;
 	struct resm_mds_info *rmmi;
-	struct mds_resprof_info *mrpi;
+	struct resprof_mds_info *rpmi;
 	int j, n, len;
 
 	psc_assert(!mdsi->bmdsi_wr_ion);
@@ -586,21 +586,21 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		psc_warnx("Failed to find pios %d", pios);
 		return (-SLERR_ION_UNKNOWN);
 	}
-	mrpi = res->res_pri;
-	psc_assert(mrpi);
+	rpmi = res->res_pri;
+	psc_assert(rpmi);
 	len = psc_dynarray_len(&res->res_members);
 
 	for (j = 0; j < len; j++) {
-		spinlock(&mrpi->mrpi_lock);
-		if (mrpi->mrpi_cnt >= len)
-			mrpi->mrpi_cnt = 0;
-		n = mrpi->mrpi_cnt++;
+		spinlock(&rpmi->rpmi_lock);
+		if (rpmi->rpmi_cnt >= len)
+			rpmi->rpmi_cnt = 0;
+		n = rpmi->rpmi_cnt++;
 		resm = psc_dynarray_getpos(&res->res_members, n);
 
 		psc_trace("trying res(%s) ion(%s)",
 			  res->res_name, resm->resm_addrbuf);
 
-		freelock(&mrpi->mrpi_lock);
+		freelock(&rpmi->rpmi_lock);
 
 		rmmi = resm->resm_pri;
 		spinlock(&rmmi->rmmi_lock);

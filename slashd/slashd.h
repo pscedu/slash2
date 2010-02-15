@@ -103,9 +103,9 @@ struct resm_mds_info {
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
  */
-struct mds_resprof_info {
-	int			  mrpi_cnt;
-	psc_spinlock_t		  mrpi_lock;
+struct resprof_mds_info {
+	int			  rpmi_cnt;
+	psc_spinlock_t		  rpmi_lock;
 };
 
 /* cfd private accessors */
