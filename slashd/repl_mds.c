@@ -560,14 +560,14 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	if (rc)
 		return (rc);
 
-	rc = mds_fcmh_tryref_fmdsi(fcmh);
+	rc = mds_fcmh_tryref_fmi(fcmh);
 	if (rc) {
 		rc = mdsio_opencreate(fgp->fg_fid, &rootcreds,
 		    O_RDWR | O_CREAT | O_LARGEFILE, 0, NULL, &fg, &stb,
 		    &data);
 		if (rc)
 			return (rc);
-		rc = mds_fcmh_load_fmdsi(fcmh, data, 1);
+		rc = mds_fcmh_load_fmi(fcmh, data, 1);
 		/* don't release the mdsio data on success */
 		if (rc || fcmh_2_mdsio_data(fcmh) != data)
 			mdsio_frelease(fg.fg_fid, &rootcreds, data);
@@ -850,7 +850,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
-	atomic_dec(&fcmh_2_fmdsi(REPLRQ_FCMH(rrq))->fmdsi_ref);
+	atomic_dec(&fcmh_2_fmi(REPLRQ_FCMH(rrq))->fmi_ref);
 	fcmh_dropref(REPLRQ_FCMH(rrq));
 
 	/* SPLAY_REMOVE() does not NULL out the field */

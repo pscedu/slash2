@@ -67,10 +67,10 @@ fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 }
 #endif
 
-struct fidc_mds_info *
-fidc_fid2fmdsi(slfid_t f, struct fidc_membh **fcmh)
+struct fcoo_mds_info *
+fidc_fid2fmi(slfid_t f, struct fidc_membh **fcmh)
 {
-	struct fidc_mds_info *fmdsi=NULL;
+	struct fcoo_mds_info *fmi=NULL;
 	int locked;
 
 	*fcmh = fidc_lookup_simple(f);
@@ -86,19 +86,19 @@ fidc_fid2fmdsi(slfid_t f, struct fidc_membh **fcmh)
 		goto out;
 
 	psc_assert((*fcmh)->fcmh_fcoo->fcoo_pri);
-	fmdsi = (*fcmh)->fcmh_fcoo->fcoo_pri;
+	fmi = (*fcmh)->fcmh_fcoo->fcoo_pri;
  out:
 	ureqlock(&(*fcmh)->fcmh_lock, locked);
-	return (fmdsi);
+	return (fmi);
 }
 
-struct fidc_mds_info *
-fidc_fcmh2fmdsi(struct fidc_membh *fcmh)
+struct fcoo_mds_info *
+fidc_fcmh2fmi(struct fidc_membh *fcmh)
 {
-	struct fidc_mds_info *fmdsi=NULL;
+	struct fcoo_mds_info *fmi=NULL;
 	int locked;
 
-	fmdsi = NULL;
+	fmi = NULL;
 	locked = reqlock(&fcmh->fcmh_lock);
 	if (!fcmh->fcmh_fcoo)
 		goto out;
@@ -107,10 +107,10 @@ fidc_fcmh2fmdsi(struct fidc_membh *fcmh)
 		goto out;
 
 	psc_assert(fcmh->fcmh_fcoo->fcoo_pri);
-	fmdsi = fcmh->fcmh_fcoo->fcoo_pri;
+	fmi = fcmh->fcmh_fcoo->fcoo_pri;
  out:
 	ureqlock(&fcmh->fcmh_lock, locked);
-	return (fmdsi);
+	return (fmi);
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {

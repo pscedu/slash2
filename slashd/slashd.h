@@ -111,7 +111,7 @@ struct mds_resprof_info {
 /* cfd private accessors */
 #define cfd_2_mexpfcm(cfd)	((struct mexpfcm *)(cfd)->cfd_pri)
 #define cfd_2_fcmh(cfd)		cfd_2_mexpfcm(cfd)->mexpfcm_fcmh
-#define cfd_2_fmdsi(cfd)	fcmh_2_fmdsi(cfd_2_fcmh(cfd))
+#define cfd_2_fmi(cfd)	fcmh_2_fmi(cfd_2_fcmh(cfd))
 #define cfd_2_mdsio_data(cfd)	fcmh_2_mdsio_data(cfd_2_fcmh(cfd))
 
 int		 fid_get(const char *, struct slash_fidgen *,

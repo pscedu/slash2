@@ -69,23 +69,23 @@ mds_inode_od_initnew(struct slash_inode_handle *i)
 int
 mds_inode_release(struct fidc_membh *f)
 {
-	struct fidc_mds_info *i;
+	struct fcoo_mds_info *i;
 	int rc=0;
 
 	spinlock(&f->fcmh_lock);
 
 	psc_assert(f->fcmh_fcoo && f->fcmh_fcoo->fcoo_pri);
-	/* It should be safe to look at the fmdsi without calling
-	 *   fidc_fcmh2fmdsi() because this thread should absolutely have
+	/* It should be safe to look at the fmi without calling
+	 *   fidc_fcmh2fmi() because this thread should absolutely have
 	 *   a ref to the fcmh which should be open.
 	 */
-	i = fcmh_2_fmdsi(f);
+	i = fcmh_2_fmi(f);
 
-	DEBUG_FCMH(PLL_DEBUG, f, "i->fmdsi_ref (%d) (oref=%d)",
-		   atomic_read(&i->fmdsi_ref), f->fcmh_fcoo->fcoo_oref_rd);
+	DEBUG_FCMH(PLL_DEBUG, f, "i->fmi_ref (%d) (oref=%d)",
+		   atomic_read(&i->fmi_ref), f->fcmh_fcoo->fcoo_oref_rd);
 
-	if (atomic_dec_and_test(&i->fmdsi_ref)) {
-		psc_assert(SPLAY_EMPTY(&i->fmdsi_exports));
+	if (atomic_dec_and_test(&i->fmi_ref)) {
+		psc_assert(SPLAY_EMPTY(&i->fmi_exports));
 		/* We held the final reference to this fcoo, it must
 		 *   return attached.
 		 */
@@ -93,7 +93,7 @@ mds_inode_release(struct fidc_membh *f)
 
 		f->fcmh_state |= FCMH_FCOO_CLOSING;
 		DEBUG_FCMH(PLL_DEBUG, f, "calling mdsio_release");
-		rc = mdsio_release(&i->fmdsi_inodeh);
+		rc = mdsio_release(&i->fmi_inodeh);
 		PSCFREE(i);
 		f->fcmh_fcoo->fcoo_pri = NULL;
 		f->fcmh_fcoo->fcoo_oref_rd = 0;
@@ -191,15 +191,15 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 }
 
 int
-mds_fcmh_tryref_fmdsi(struct fidc_membh *f)
+mds_fcmh_tryref_fmi(struct fidc_membh *f)
 {
 	int rc;
 
 	rc = 0;
 	FCMH_LOCK(f);
-	if (f->fcmh_fcoo && fcmh_2_fmdsi(f) &&
+	if (f->fcmh_fcoo && fcmh_2_fmi(f) &&
 	    (f->fcmh_state & FCMH_FCOO_CLOSING) == 0)
-		atomic_inc(&fcmh_2_fmdsi(f)->fmdsi_ref);
+		atomic_inc(&fcmh_2_fmi(f)->fmi_ref);
 	else
 		rc = ENOENT;
 	FCMH_ULOCK(f);
@@ -207,9 +207,9 @@ mds_fcmh_tryref_fmdsi(struct fidc_membh *f)
 }
 
 int
-mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
+mds_fcmh_load_fmi(struct fidc_membh *f, void *data, int isfile)
 {
-	struct fidc_mds_info *fmdsi;
+	struct fcoo_mds_info *fmi;
 	int rc;
 
 	FCMH_LOCK(f);
@@ -226,22 +226,22 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
 		else {
 			psc_assert(f->fcmh_fcoo);
 			psc_assert(f->fcmh_fcoo->fcoo_pri);
-			fmdsi = f->fcmh_fcoo->fcoo_pri;
+			fmi = f->fcmh_fcoo->fcoo_pri;
 			f->fcmh_fcoo->fcoo_oref_rd++;
-			psc_assert(fmdsi->fmdsi_data);
+			psc_assert(fmi->fmi_data);
 			FCMH_ULOCK(f);
 		}
 	} else {
 		fidc_fcoo_start_locked(f);
  fcoo_start:
 		psc_assert(f->fcmh_fcoo->fcoo_pri == NULL);
-		f->fcmh_fcoo->fcoo_pri = fmdsi = PSCALLOC(sizeof(*fmdsi));
+		f->fcmh_fcoo->fcoo_pri = fmi = PSCALLOC(sizeof(*fmi));
 		f->fcmh_fcoo->fcoo_oref_rd = 1;
-		fmdsi_init(fmdsi, f, data);
+		fmi_init(fmi, f, data);
 		if (isfile) {
 			/* XXX For now assert here */
-			psc_assert(fmdsi->fmdsi_inodeh.inoh_fcmh);
-			rc = mds_inode_read(&fmdsi->fmdsi_inodeh);
+			psc_assert(fmi->fmi_inodeh.inoh_fcmh);
+			rc = mds_inode_read(&fmi->fmi_inodeh);
 			if (rc)
 				psc_fatalx("could not load inode; rc=%d", rc);
 		}
@@ -249,7 +249,7 @@ mds_fcmh_load_fmdsi(struct fidc_membh *f, void *data, int isfile)
 		FCMH_ULOCK(f);
 		fidc_fcoo_startdone(f);
 	}
-	atomic_inc(&fmdsi->fmdsi_ref);
+	atomic_inc(&fmi->fmi_ref);
 	return (0);
 }
 
@@ -267,7 +267,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 	struct slashrpc_export *slexp;
 	struct mexpfcm *m;
 	struct fidc_membh *f;
-	struct fidc_mds_info *fmdsi;
+	struct fcoo_mds_info *fmi;
 	int rc;
 
 	psc_assert(c->cfd_flags == CFD_DIR || c->cfd_flags == CFD_FILE);
@@ -283,7 +283,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 	if (!f)
 		return (-1);
 
-	rc = mds_fcmh_load_fmdsi(f, finfo, c->cfd_flags & CFD_FILE);
+	rc = mds_fcmh_load_fmi(f, finfo, c->cfd_flags & CFD_FILE);
 	if (rc) {
 		fcmh_dropref(f);
 		return (-1);
@@ -303,20 +303,20 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 		SPLAY_INIT(&m->mexpfcm_bmaps);
 	}
 
-	/* Add ourselves to the fidc_mds_info structure's splay tree.
-	 *  fmdsi_ref is the real open refcnt (one ref per export or client).
+	/* Add ourselves to the fcoo_mds_info structure's splay tree.
+	 *  fmi_ref is the real open refcnt (one ref per export or client).
 	 *  Note that muliple client opens are handled on the client and
 	 *  should no be passed to the mds.  However the open mode can change.
 	 */
 	FCMH_LOCK(f);
-	fmdsi = fcmh_2_fmdsi(f);
-	if (SPLAY_INSERT(fcm_exports, &fmdsi->fmdsi_exports, m)) {
+	fmi = fcmh_2_fmi(f);
+	if (SPLAY_INSERT(fcm_exports, &fmi->fmi_exports, m)) {
 		psc_warnx("Tried to reinsert m(%p) "FIDFMT,
 		    m, FIDFMTARGS(mexpfcm2fidgen(m)));
 		rc = EEXIST;
 	} else
 		psc_info("Added m=%p e=%p to tree %p",
-			 m, exp,  &fmdsi->fmdsi_exports);
+			 m, exp,  &fmi->fmi_exports);
 
 	FCMH_ULOCK(f);
 
@@ -360,7 +360,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	int locked;
 	struct mexpfcm *m=c->cfd_pri;
 	struct fidc_membh *f=m->mexpfcm_fcmh;
-	struct fidc_mds_info *i;
+	struct fcoo_mds_info *i;
 
 	spinlock(&m->mexpfcm_lock);
 	/* Ensure the mexpfcm has the correct pointers before
@@ -371,7 +371,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		goto out;
 	}
 
-	i = fidc_fcmh2fmdsi(f);
+	i = fidc_fcmh2fmi(f);
 	if (i == NULL) {
 		DEBUG_FCMH(PLL_WARN, f, "fid has no fcoo");
 		goto out;
@@ -397,11 +397,11 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
 	}
 	freelock(&m->mexpfcm_lock);
-	/* Grab the fcmh lock (it is responsible for fidc_mds_info
+	/* Grab the fcmh lock (it is responsible for fcoo_mds_info
 	 *  serialization) and remove ourselves from the tree.
 	 */
 	locked = reqlock(&f->fcmh_lock);
-	PSC_SPLAY_XREMOVE(fcm_exports, &i->fmdsi_exports, m);
+	PSC_SPLAY_XREMOVE(fcm_exports, &i->fmi_exports, m);
 	ureqlock(&f->fcmh_lock, locked);
  out:
 	if (f)
@@ -646,13 +646,13 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	 *   he's finished with it.
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
-	atomic_inc(&(fcmh_2_fmdsi(bmap->bcm_fcmh))->fmdsi_ref);
+	atomic_inc(&(fcmh_2_fmi(bmap->bcm_fcmh))->fmi_ref);
 
 	mds_repl_inv_except_locked(bmap, bmi.bmi_ios);
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
-		   "inc fmdsi_ref (%d) for bmap assignment",
-		   atomic_read(&(fcmh_2_fmdsi(bmap->bcm_fcmh))->fmdsi_ref));
+		   "inc fmi_ref (%d) for bmap assignment",
+		   atomic_read(&(fcmh_2_fmi(bmap->bcm_fcmh))->fmi_ref));
 
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
 	    "rmmi(%p)", res->res_name, resm->resm_addrbuf,
@@ -1141,8 +1141,8 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 {
 	struct bmapc_memb *b;
 	struct fidc_membh *f=fref->mexpfcm_fcmh;
-	struct fidc_mds_info *fmdsi=f->fcmh_fcoo->fcoo_pri;
-	struct slash_inode_handle *inoh=&fmdsi->fmdsi_inodeh;
+	struct fcoo_mds_info *fmi=f->fcmh_fcoo->fcoo_pri;
+	struct slash_inode_handle *inoh=&fmi->fmi_inodeh;
 	struct mexpbcm *bref, tbref;
 	int rc=0;
 

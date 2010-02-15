@@ -344,7 +344,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	/*
 	 * On success, the cfd private data, originally the mdsio
-	 * handle private data, is overwritten with an fmdsi,
+	 * handle private data, is overwritten with an fmi,
 	 * so release the mdsio data if we failed or didn't use it.
 	 */
 	if (cfd == NULL || cfd_2_mdsio_data(cfd) != finfo)
@@ -399,7 +399,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 
 	/*
 	 * On success, the cfd private data, originally the mdsio
-	 * handle private data, is overwritten with an fmdsi,
+	 * handle private data, is overwritten with an fmi,
 	 * so release the mdsio data if we failed or didn't use it.
 	 */
 	if (cfd == NULL || cfd_2_mdsio_data(cfd) != finfo)
@@ -438,7 +438,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 
 	/*
 	 * On success, the cfd private data, originally the mdsio
-	 * handle private data, is overwritten with an fmdsi,
+	 * handle private data, is overwritten with an fmi,
 	 * so release the mdsio handle if we failed or didn't use it.
 	 */
 	if (cfd == NULL || cfd_2_mdsio_data(cfd) != finfo)
@@ -541,7 +541,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 int
 slm_rmc_handle_release(struct pscrpc_request *rq)
 {
-	struct fidc_mds_info *fmdsi;
+	struct fcoo_mds_info *fmi;
 	struct srm_release_req *mq;
 	struct srm_generic_rep *mp;
 	struct slash_fidgen fg;
@@ -569,7 +569,7 @@ slm_rmc_handle_release(struct pscrpc_request *rq)
 	f = m->mexpfcm_fcmh;
 	psc_assert(f->fcmh_fcoo);
 
-	fmdsi = fcmh_2_fmdsi(f);
+	fmi = fcmh_2_fmi(f);
 
 	MEXPFCM_LOCK(m);
 	psc_assert(m->mexpfcm_fcmh);
@@ -627,25 +627,25 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
-	struct fidc_mds_info *fmdsi;
+	struct fcoo_mds_info *fmi;
 	struct fidc_membh *fcmh;
 	struct stat stb, outstb;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	fmdsi = fidc_fid2fmdsi(mq->fid, &fcmh);
-	if (fmdsi)
+	fmi = fidc_fid2fmi(mq->fid, &fcmh);
+	if (fmi)
 		psc_assert(fcmh);
 
-	/* An fmdsi means that the file is 'open' and therefore
+	/* An fmi means that the file is 'open' and therefore
 	 *  we have valid mdsio data.
-	 * A null fmdsi means that the file is either not opened
+	 * A null fmi means that the file is either not opened
 	 *  or not cached.  In that case try to pass the inode
 	 *  into mdsio with the hope that it has it cached.
 	 */
 	slrpc_internalize_stat(&mq->attr, &stb);
 	mp->rc = mdsio_setattr(mq->fid, &stb, mq->to_set,
-	    &mq->creds, &outstb, fmdsi ? fmdsi->fmdsi_data : NULL);
+	    &mq->creds, &outstb, fmi ? fmi->fmi_data : NULL);
 	slrpc_externalize_stat(&outstb, &mp->attr);
 
 	if (mp->rc == ENOENT) {

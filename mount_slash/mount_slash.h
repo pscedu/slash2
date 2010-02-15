@@ -90,18 +90,18 @@ struct resm_cli_info {
 
 /* Mainly a place to store our replication table, attached to fcoo_pri.
  */
-struct msl_fcoo_data {
-	int				 mfd_flags;
-	int				 mfd_nrepls;
-	sl_replica_t			 mfd_reptbl[SL_MAX_REPLICAS];
+struct fcoo_cli_info {
+	int				 fci_flags;
+	int				 fci_nrepls;
+	sl_replica_t			 fci_reptbl[SL_MAX_REPLICAS];
 };
 
-/* mfd_flags */
+/* fci_flags */
 enum {
-	MFD_HAVEREPTBL = (1 << 0)
+	FCIF_HAVEREPTBL = (1 << 0)
 };
 
-#define msl_mfd_release(mfd)		PSCFREE(mfd)
+#define msl_mfd_release(fci)		PSCFREE(fci)
 
 #define msl_read(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_READ)
 #define msl_write(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_WRITE)

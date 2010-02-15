@@ -188,7 +188,7 @@ struct fidc_open_obj {
 	int                      fcoo_fd;		/* XXX move to sliod */
 	struct bmap_cache	 fcoo_bmapc;		/* bmap cache splay */
 	size_t			 fcoo_bmap_sz;
-	void			*fcoo_pri;		/* msl_fcoo_data or fidc_mds_info */
+	void			*fcoo_pri;		/* fcoo_cli_info or fcoo_mds_info */
 };
 
 #define FCOO_STARTING		((struct fidc_open_obj *)0x01)

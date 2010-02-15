@@ -48,43 +48,43 @@ mdsio_exit(void)
 static inline void *
 bmap_2_zfs_fh(struct bmapc_memb *bmap)
 {
-	struct fidc_mds_info *fmdsi;
+	struct fcoo_mds_info *fmi;
 
 	psc_assert(bmap->bcm_fcmh);
 
-	//fmdsi = fidc_fcmh2fmdsi(bmap->bcm_fcmh);
-	fmdsi = fcmh_2_fmdsi(bmap->bcm_fcmh);
+	//fmi = fidc_fcmh2fmi(bmap->bcm_fcmh);
+	fmi = fcmh_2_fmi(bmap->bcm_fcmh);
 
-	psc_assert(fmdsi);
-	psc_assert(fmdsi->fmdsi_data);
+	psc_assert(fmi);
+	psc_assert(fmi->fmi_data);
 
-	return (fmdsi->fmdsi_data);
+	return (fmi->fmi_data);
 }
 
 int
 mdsio_release(struct slash_inode_handle *i)
 {
-	struct fidc_mds_info *fmdsi;
+	struct fcoo_mds_info *fmi;
 
 	psc_assert(i->inoh_fcmh);
 	psc_assert(i->inoh_fcmh->fcmh_fcoo);
 	psc_assert(i->inoh_fcmh->fcmh_state & FCMH_FCOO_CLOSING);
 
-	fmdsi = fcmh_2_fmdsi(i->inoh_fcmh);
-	psc_assert(!atomic_read(&fmdsi->fmdsi_ref));
+	fmi = fcmh_2_fmi(i->inoh_fcmh);
+	psc_assert(!atomic_read(&fmi->fmi_ref));
 
 	/*
 	 * XXX should we pass the same creds here as the
 	 * file was opened with?  do we even have them?
 	 */
 	return (zfsslash2_release(zfsVfs, fcmh_2_fid(i->inoh_fcmh),
-	    &rootcreds, fmdsi->fmdsi_data));
+	    &rootcreds, fmi->fmi_data));
 }
 
 int
 mdsio_apply_fcmh_size(struct fidc_membh *f, off64_t size)
 {
-	struct fidc_mds_info *fmdsi;
+	struct fcoo_mds_info *fmi;
 
 	FCMH_LOCK(f);
 
@@ -94,13 +94,13 @@ mdsio_apply_fcmh_size(struct fidc_membh *f, off64_t size)
 	}
 
 	DEBUG_FCMH(PLL_INFO, f, "sz=%"PRId64, size);
-	fmdsi = fcmh_2_fmdsi(f);
+	fmi = fcmh_2_fmi(f);
 	fcmh_2_fsz(f) = size;
 
 	FCMH_ULOCK(f);
 
 	return (zfsslash2_sets2szattr(zfsVfs, fcmh_2_fid(f), size,
-				      fmdsi->fmdsi_data));
+				      fmi->fmi_data));
 }
 
 int

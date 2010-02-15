@@ -488,7 +488,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_cli_info *msbd;
-	struct msl_fcoo_data *mfd;
+	struct fcoo_cli_info *fci;
 	struct pscrpc_request *rq;
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
@@ -504,9 +504,9 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 
 	FCMH_LOCK(f);
 	psc_assert(f->fcmh_fcoo);
-	mfd = f->fcmh_fcoo->fcoo_pri;
-	if (mfd == NULL) {
-		f->fcmh_fcoo->fcoo_pri = mfd = PSCALLOC(sizeof(*mfd));
+	fci = f->fcmh_fcoo->fcoo_pri;
+	if (fci == NULL) {
+		f->fcmh_fcoo->fcoo_pri = fci = PSCALLOC(sizeof(*fci));
 		getreptbl = 1;
 	}
 	FCMH_ULOCK(f);
@@ -532,8 +532,8 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 	iovs[1].iov_len  = sizeof(msbd->msbd_bdb);
 
 	if (getreptbl) {
-		iovs[2].iov_base = &mfd->mfd_reptbl;
-		iovs[2].iov_len  = sizeof(mfd->mfd_reptbl);
+		iovs[2].iov_base = &fci->fci_reptbl;
+		iovs[2].iov_len  = sizeof(fci->fci_reptbl);
 	}
 
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (bmapno=%u) (rw=%d)",
@@ -563,8 +563,8 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 		 *   the local replication table..
 		 */
 		FCMH_LOCK(f);
-		mfd->mfd_nrepls = mp->nrepls;
-		mfd->mfd_flags = MFD_HAVEREPTBL;
+		fci->fci_nrepls = mp->nrepls;
+		fci->fci_flags = FCIF_HAVEREPTBL;
 		psc_waitq_wakeall(&f->fcmh_waitq);
 		FCMH_ULOCK(f);
 	}
@@ -820,19 +820,19 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 {
 	struct slashrpc_cservice *csvc;
 	struct bmap_cli_info *msbd;
-	struct msl_fcoo_data *mfd;
+	struct fcoo_cli_info *fci;
 	struct sl_resource *res;
 	struct sl_resm *resm;
 	int j, rnd, nios;
 
-	mfd = bcm->bcm_fcmh->fcmh_fcoo->fcoo_pri;
+	fci = bcm->bcm_fcmh->fcmh_fcoo->fcoo_pri;
 	msbd = bcm->bcm_pri;
 
 	if (SL_REPL_GET_BMAP_IOS_STAT(msbd->msbd_msbcr.msbcr_repls,
 	    iosidx * SL_BITS_PER_REPLICA) != SL_REPLST_ACTIVE)
 		return (NULL);
 
-	res = libsl_id2res(mfd->mfd_reptbl[iosidx].bs_id);
+	res = libsl_id2res(fci->fci_reptbl[iosidx].bs_id);
 
 	nios = psc_dynarray_len(&res->res_members);
 	rnd = psc_random32u(nios);
@@ -850,32 +850,32 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 struct pscrpc_import *
 msl_bmap_choose_replica(struct bmapc_memb *b)
 {
-	struct msl_fcoo_data *mfd;
+	struct fcoo_cli_info *fci;
 	struct pscrpc_import *imp;
 	int n, rnd;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 	psc_assert(b->bcm_fcmh->fcmh_fcoo);
 
-	mfd = b->bcm_fcmh->fcmh_fcoo->fcoo_pri;
-	psc_assert(mfd);
+	fci = b->bcm_fcmh->fcmh_fcoo->fcoo_pri;
+	psc_assert(fci);
 
 	/* first, try preferred IOS */
-	rnd = psc_random32u(mfd->mfd_nrepls);
-	for (n = 0; n < mfd->mfd_nrepls; n++, rnd++)
-		if (rnd >= mfd->mfd_nrepls)
+	rnd = psc_random32u(fci->fci_nrepls);
+	for (n = 0; n < fci->fci_nrepls; n++, rnd++)
+		if (rnd >= fci->fci_nrepls)
 			rnd = 0;
 
-		if (mfd->mfd_reptbl[rnd].bs_id == prefIOS) {
+		if (fci->fci_reptbl[rnd].bs_id == prefIOS) {
 			imp = msl_try_get_replica_resm(b, rnd);
 			if (imp)
 				return (imp);
 		}
 
 	/* rats, not available; try anyone available now */
-	rnd = psc_random32u(mfd->mfd_nrepls);
-	for (n = 0; n < mfd->mfd_nrepls; n++) {
-		if (rnd >= mfd->mfd_nrepls)
+	rnd = psc_random32u(fci->fci_nrepls);
+	for (n = 0; n < fci->fci_nrepls; n++) {
+		if (rnd >= fci->fci_nrepls)
 			rnd = 0;
 
 		imp = msl_try_get_replica_resm(b, rnd);
