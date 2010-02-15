@@ -80,13 +80,13 @@ struct msl_fhent {			 /* XXX rename */
 /*
  * CLIENT-specific private data for struct sl_resm.
  */
-struct cli_resm_info {
-	struct slashrpc_cservice	*crmi_csvc;
-	psc_spinlock_t			 crmi_lock;
-	struct psc_waitq		 crmi_waitq;
+struct resm_cli_info {
+	struct slashrpc_cservice	*rmci_csvc;
+	psc_spinlock_t			 rmci_lock;
+	struct psc_waitq		 rmci_waitq;
 };
 
-#define resm2crmi(resm)			((struct cli_resm_info *)(resm)->resm_pri)
+#define resm2crmi(resm)			((struct resm_cli_info *)(resm)->resm_pri)
 
 /* Mainly a place to store our replication table, attached to fcoo_pri.
  */

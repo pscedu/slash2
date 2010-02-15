@@ -33,11 +33,11 @@ slcfg_init_res(__unusedx struct sl_resource *res)
 void
 slcfg_init_resm(struct sl_resm *resm)
 {
-	struct cli_resm_info *crmi;
+	struct resm_cli_info *rmci;
 
-	crmi = resm->resm_pri = PSCALLOC(sizeof(*crmi));
-	LOCK_INIT(&crmi->crmi_lock);
-	psc_waitq_init(&crmi->crmi_waitq);
+	rmci = resm->resm_pri = PSCALLOC(sizeof(*rmci));
+	LOCK_INIT(&rmci->rmci_lock);
+	psc_waitq_init(&rmci->rmci_waitq);
 }
 
 void
