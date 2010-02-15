@@ -301,10 +301,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	void *mdsio_data;
 	int fl;
 
-#ifdef NAMESPACE_EXPERIMENTAL
-	uint64_t fid;
-#endif
-
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
@@ -313,15 +309,11 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 #ifdef NAMESPACE_EXPERIMENTAL
 	spinlock(&slash_id_lock);
-	fid = next_slash_id++;
+	fg->fg_fid = next_slash_id++;
 	freelock(&slash_id_lock);
-
-	mp->rc = mdsio_opencreate(mq->pfid, fid, &mq->creds, fl,
-	    mq->mode, mq->name, &fg, &stb, &mdsio_data);
-#else
+#endif
 	mp->rc = mdsio_opencreate(mq->pfid, &mq->creds, fl,
 	    mq->mode, mq->name, &fg, &stb, &mdsio_data);
-#endif
 	if (mp->rc)
 		return (0);
 
