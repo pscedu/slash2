@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _MDS_RPC_H_
-#define _MDS_RPC_H_
+#ifndef _RPC_MDS_H_
+#define _RPC_MDS_H_
 
 #include "psc_util/multiwait.h"
 
@@ -81,4 +81,4 @@ slm_getclcsvc(struct pscrpc_export *exp)
 	    &mexpc->mc_lock, &mexpc->mc_waitq, SLCONNT_CLI));
 }
 
-#endif /* _MDS_RPC_H_ */
+#endif /* _RPC_MDS_H_ */
