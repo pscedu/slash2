@@ -18,24 +18,17 @@
  */
 
 /*
- * Slash RPC subsystem definitions including messages definitions.
+ * SLASH remote prodecure call message definitions.
  */
 
 #ifndef _SLASHRPC_H_
 #define _SLASHRPC_H_
 
-#include <sys/vfs.h>
-#include <sys/types.h>
-
-#include <fcntl.h>
-#include <unistd.h>
-
-#include "psc_rpc/rpc.h"
-#include "psc_util/crc.h"
+#include "pfl/cdefs.h"
 
 #include "creds.h"
 #include "fid.h"
-#include "slconfig.h"
+#include "sltypes.h"
 
 struct stat;
 struct statvfs;
@@ -98,13 +91,13 @@ struct statvfs;
 #define SRIM_MAGIC		UINT64_C(0xaabbccddeeff0088)
 
 /* OPEN message flags */
-#define SLF_READ	(1 << 0)
-#define SLF_WRITE	(1 << 1)
-#define SLF_APPEND	(1 << 2)
-#define SLF_CREAT	(1 << 3)
-#define SLF_TRUNC	(1 << 4)
-#define SLF_SYNC	(1 << 5)
-#define SLF_EXCL	(1 << 6)
+#define SLF_READ		(1 << 0)
+#define SLF_WRITE		(1 << 1)
+#define SLF_APPEND		(1 << 2)
+#define SLF_CREAT		(1 << 3)
+#define SLF_TRUNC		(1 << 4)
+#define SLF_SYNC		(1 << 5)
+#define SLF_EXCL		(1 << 6)
 
 /* MKDIR message flags */
 
@@ -168,7 +161,7 @@ enum {
  * 64-bit boundaries.  Their ordering within should also follow 64-bit boundaries.
  */
 
-#define DESCBUF_REPRLEN	45		/* strlen(base64(SHA256(secret)) */
+#define DESCBUF_REPRLEN		45		/* strlen(base64(SHA256(secret)) */
 
 struct srt_fdb_secret {
 	uint64_t		sfs_magic;
@@ -215,7 +208,7 @@ struct srt_stat {
 	uint64_t		sst_dev;	/* ID of device containing file */
 	uint64_t		sst_ino;	/* inode number */
 	uint32_t		sst_mode;	/* file permissions */
-	int32_t			sst__pad1;
+	uint32_t		sst_ptruncgen;	/* partial truncate generation */
 	uint64_t		sst_nlink;	/* number of hard links */
 	uint32_t		sst_uid;	/* user ID of owner */
 	uint32_t		sst_gid;	/* group ID of owner */
@@ -325,14 +318,14 @@ struct srm_bmap_crcup {
 	struct slash_fidgen	fg;
 	uint64_t		fsize;		/* largest known size */
 	uint32_t		blkno;		/* bmap block number */
-	uint32_t		nups;		/* number of crc updates */
+	uint32_t		nups;		/* number of CRC updates */
 	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
 } __packed;
 
 #define MAX_BMAP_NCRC_UPDATES	64		/* max number of CRC updates in a batch */
 
 struct srm_bmap_crcwrt_req {
-	uint64_t		crc;		/* yes, a crc of the crc's */
+	uint64_t		crc;		/* yes, a CRC of the CRC's */
 	uint32_t		ncrc_updates;
 	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
 } __packed;
@@ -390,14 +383,20 @@ struct srm_getattr_rep {
 
 struct srm_io_req {
 	struct srt_bmapdesc_buf	sbdb;
+	uint32_t		ptruncgen;
+	uint32_t		flags:31;
+	uint32_t		op:1;		/* read/write */
 	uint32_t		size;
 	uint32_t		offset;
-	uint32_t		op;		/* read/write */
 /* WRITE data is bulk request. */
 } __packed;
 
-#define SRMIO_RD 0
-#define SRMIO_WR 1
+/* operations */
+#define SRMIOP_RD		0
+#define SRMIOP_WR		1
+
+/* flags */
+#define SRMIOF_APPEND		(1 << 0)
 
 struct srm_io_rep {
 	int32_t			rc;
@@ -461,8 +460,6 @@ struct srm_opendir_req {
 struct srm_ping_req {
 } __packed;
 
-#define SRM_READDIR_STBUF_PREFETCH (1 << 0)
-
 struct srm_readdir_req {
 	struct srt_fd_buf	sfdb;
 	struct slash_creds	creds;
@@ -506,7 +503,7 @@ struct srm_rename_req {
 	uint64_t		opfid;		/* old parent dir FID */
 	uint32_t		fromlen;
 	uint32_t		tolen;
-/* 'from' and 'to' component names are in bulk data */
+/* 'from' and 'to' component names are in bulk data without terminating NULs */
 } __packed;
 
 struct srm_replrq_req {
@@ -516,21 +513,25 @@ struct srm_replrq_req {
 	sl_bmapno_t		bmapno;		/* bmap to access or -1 for all */
 } __packed;
 
-/* request/response for a GETSTATUS on a replication request */
+/* for a GETSTATUS on a replication request */
 struct srm_replst_master_req {
 	struct slash_fidgen	fg;
+	sl_replica_t		repls[SL_MAX_REPLICAS];
 	int32_t			id;		/* user-provided passback value */
 	int32_t			rc;		/* or EOF */
-	uint32_t		nbmaps;		/* # of bmaps in this payload */
+	uint32_t		nbmaps;		/* # of bmaps in file */
 	uint32_t		newreplpol;	/* default replication policy */
 	uint32_t		nrepls;		/* # of I/O systems in 'repls' */
 	int32_t			pad;
-	sl_replica_t		repls[SL_MAX_REPLICAS];
+	unsigned char		data[128];	/* slave data here if fits */
 } __packed;
 
 #define srm_replst_master_rep srm_replst_master_req
 
-/* bmap data carrier for a replrq GETSTATUS */
+/*
+ * bmap data carrier for a replrq GETSTATUS when data is larger than can
+ * fit in srm_replst_master_req.data
+ */
 struct srm_replst_slave_req {
 	struct slash_fidgen	fg;
 	int32_t			id;		/* user-provided passback value */
@@ -563,7 +564,7 @@ struct srm_repl_schedwk_req {
 
 struct srm_repl_read_req {
 	struct slash_fidgen	fg;
-	uint64_t		len;	/* #bytes in this message, to find #slivers */
+	uint64_t		len;		/* #bytes in this message, to find #slivers */
 	sl_bmapno_t		bmapno;
 	int32_t			slvrno;
 } __packed;
@@ -576,6 +577,16 @@ struct srm_setattr_req {
 	slfid_t			fid;
 	int32_t			to_set;
 } __packed;
+
+/* to_set flags */
+#define SRM_SETATTRF_MODE	(1 << 0)	/* chmod */
+#define SRM_SETATTRF_UID	(1 << 1)	/* chown */
+#define SRM_SETATTRF_GID	(1 << 2)	/* chgrp */
+#define SRM_SETATTRF_SIZE	(1 << 3)	/* metadata truncate */
+#define SRM_SETATTRF_ATIME	(1 << 4)	/* utimes */
+#define SRM_SETATTRF_MTIME	(1 << 5)	/* utimes */
+#define SRM_SETATTRF_FSIZE	(1 << 6)	/* file content size update */
+#define SRM_SETATTRF_PTRUNCGEN	(1 << 7)	/* file content non-zero trunc */
 
 struct srm_set_newreplpol_req {
 	struct slash_fidgen	fg;
@@ -628,65 +639,9 @@ struct srm_generic_rep {
 
 /* --------------------------- END FULL MESSAGES --------------------------- */
 
-enum slconn_type {
-	SLCONNT_CLI,
-	SLCONNT_IOD,
-	SLCONNT_MDS,
-	SLNCONNT
-};
-
-struct slashrpc_cservice {
-	struct pscrpc_import	*csvc_import;
-	psc_spinlock_t		*csvc_lockp;
-	void			*csvc_waitinfo;
-	int			 csvc_flags;
-	int			 csvc_lasterrno;
-	psc_atomic32_t		 csvc_refcnt;
-	time_t			 csvc_mtime;		/* last connection try */
-};
-
-/* csvc_flags */
-#define CSVCF_CONNECTING	(1 << 0)
-#define CSVCF_USE_MULTIWAIT	(1 << 1)
-
-#define CSVC_RECONNECT_INTV	30			/* seconds */
-
-#define CSVC_LOCK_ENSURE(c)	LOCK_ENSURE((c)->csvc_lockp)
-#define CSVC_LOCK(c)		spinlock((c)->csvc_lockp)
-#define CSVC_ULOCK(c)		freelock((c)->csvc_lockp)
-#define CSVC_RLOCK(c)		reqlock((c)->csvc_lockp)
-#define CSVC_URLOCK(c, lk)	ureqlock((c)->csvc_lockp, (lk))
-
-struct slashrpc_export {
-	uint64_t		 slexp_nextcfd;
-	enum slconn_type	 slexp_peertype;
-	void			*slexp_data;
-	int			 slexp_flags;
-	struct pscrpc_export	*slexp_export;
-};
-
-/* slashrpc_export flags */
-#define SLEXPF_CLOSING		(1 << 0)		/* XXX why do we need this? */
-
 void slrpc_externalize_stat(const struct stat *, struct srt_stat *);
 void slrpc_internalize_stat(const struct srt_stat *, struct stat *);
 void slrpc_externalize_statfs(const struct statvfs *, struct srt_statfs *);
 void slrpc_internalize_statfs(const struct srt_statfs *, struct statvfs *);
-
-struct slashrpc_cservice *
-	sl_csvc_get(struct slashrpc_cservice **, int, struct pscrpc_export *,
-	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
-	    psc_spinlock_t *, void *, enum slconn_type);
-void	sl_csvc_decref(struct slashrpc_cservice *);
-void	sl_csvc_incref(struct slashrpc_cservice *);
-void	sl_csvc_free(struct slashrpc_cservice *);
-
-struct slashrpc_export *
-	slexp_get(struct pscrpc_export *, enum slconn_type);
-void	slexp_destroy(void *);
-
-extern struct psc_dynarray lnet_nids;
-
-extern void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
 
 #endif /* _SLASHRPC_H_ */
