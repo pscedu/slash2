@@ -39,7 +39,7 @@ slcfg_init_res(struct sl_resource *res)
 void
 slcfg_init_resm(struct sl_resm *resm)
 {
-	struct mds_resm_info *rmmi;
+	struct resm_mds_info *rmmi;
 
 	rmmi = resm->resm_pri = PSCALLOC(sizeof(*rmmi));
 	LOCK_INIT(&rmmi->rmmi_lock);

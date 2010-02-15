@@ -25,6 +25,8 @@
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
+#include "slconfig.h"
+#include "slconn.h"
 #include "sliod.h"
 
 struct sl_resm *rmi_resm;

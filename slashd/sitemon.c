@@ -63,7 +63,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
     struct sl_resm *src_resm, struct sl_resource *dst_res, int j)
 {
 	int tract[4], we_set_busy, rc;
-	struct mds_resm_info *src_rmmi, *dst_rmmi;
+	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
 	struct slmreplq_thread *smrt;

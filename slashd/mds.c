@@ -562,7 +562,7 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 /**
  * mds_bmap_ion_assign - bind a bmap to a ion node for writing.  The process
  *    involves a round-robin'ing of an i/o system's nodes and attaching a
- *    a mds_resm_info to the bmap, used for establishing connection to the ION.
+ *    a resm_mds_info to the bmap, used for establishing connection to the ION.
  * @bref: the bmap reference
  * @pios: the preferred i/o system
  */
@@ -573,7 +573,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	struct bmi_assign bmi;
 	struct sl_resource *res=libsl_id2res(pios);
 	struct sl_resm *resm;
-	struct mds_resm_info *rmmi;
+	struct resm_mds_info *rmmi;
 	struct mds_resprof_info *mrpi;
 	int j, n, len;
 

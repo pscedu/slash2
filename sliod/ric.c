@@ -35,6 +35,7 @@
 #include "fidcache.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
+#include "slconn.h"
 #include "sliod.h"
 #include "slvr.h"
 

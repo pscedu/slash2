@@ -37,6 +37,7 @@
 #include "cfd.h"
 #include "mdsexpc.h"
 #include "slashrpc.h"
+#include "slconn.h"
 
 __static SPLAY_GENERATE(cfdtree, cfdent, cfd_entry, cfdcmp);
 

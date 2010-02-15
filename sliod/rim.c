@@ -29,9 +29,11 @@
 #include "psc_rpc/service.h"
 #include "psc_util/strlcpy.h"
 
+#include "bmap.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
+#include "slconn.h"
 #include "slerr.h"
 #include "sliod.h"
 

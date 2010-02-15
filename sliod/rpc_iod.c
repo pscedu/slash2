@@ -28,6 +28,7 @@
 
 #include "rpc_iod.h"
 #include "slashrpc.h"
+#include "slconn.h"
 #include "sliod.h"
 
 void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);

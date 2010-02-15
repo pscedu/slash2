@@ -1065,10 +1065,10 @@ mds_repl_scandir(void)
 	(((min) * ((nnodes) - ((min) - 1) / 2)) + ((max) - (min) - 1))
 
 int
-_mds_repl_nodes_setbusy(struct mds_resm_info *ma,
-    struct mds_resm_info *mb, int set, int busy)
+_mds_repl_nodes_setbusy(struct resm_mds_info *ma,
+    struct resm_mds_info *mb, int set, int busy)
 {
-	const struct mds_resm_info *min, *max;
+	const struct resm_mds_info *min, *max;
 	int rc, locked;
 
 	psc_assert(ma->rmmi_busyid != mb->rmmi_busyid);
@@ -1109,7 +1109,7 @@ _mds_repl_nodes_setbusy(struct mds_resm_info *ma,
 }
 
 void
-mds_repl_node_clearallbusy(struct mds_resm_info *rmmi)
+mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 {
 	int n, j, locked, locked2;
 	struct sl_resource *r;
@@ -1134,7 +1134,7 @@ mds_repl_node_clearallbusy(struct mds_resm_info *rmmi)
 void
 mds_repl_buildbusytable(void)
 {
-	struct mds_resm_info *rmmi;
+	struct resm_mds_info *rmmi;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;

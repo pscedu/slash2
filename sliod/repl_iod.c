@@ -32,6 +32,7 @@
 #include "rpc_iod.h"
 #include "slashrpc.h"
 #include "slconfig.h"
+#include "slconn.h"
 #include "slerr.h"
 #include "sliod.h"
 #include "sltypes.h"

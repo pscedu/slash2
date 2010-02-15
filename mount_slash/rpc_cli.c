@@ -27,6 +27,7 @@
 #include "mount_slash.h"
 #include "rpc_cli.h"
 #include "slashrpc.h"
+#include "slconn.h"
 #include "slerr.h"
 
 void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);

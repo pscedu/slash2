@@ -50,6 +50,7 @@
 #include "rpc_cli.h"
 #include "slashrpc.h"
 #include "slconfig.h"
+#include "slconn.h"
 #include "slerr.h"
 
 __static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
@@ -1104,7 +1105,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 
 		mq->offset = r->biorq_off + nbytes;
 		mq->size = len;
-		mq->op = (op == SRMT_WRITE ? SRMIO_WR : SRMIO_RD);
+		mq->op = (op == SRMT_WRITE ? SRMIOP_WR : SRMIOP_RD);
 		memcpy(&mq->sbdb, &msbd->msbd_bdb, sizeof(mq->sbdb));
 
 		pscrpc_set_add_new_req(r->biorq_rqset, req);
@@ -1227,7 +1228,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_fatalx("rsx_bulkclient() failed %d", rc);
 
 	mq->size = npages * BMPC_BUFSZ;
-	mq->op = SRMIO_RD;
+	mq->op = SRMIOP_RD;
 	memcpy(&mq->sbdb, &bmap_2_msbd(r->biorq_bmap)->msbd_bdb,
 	       sizeof(mq->sbdb));
 

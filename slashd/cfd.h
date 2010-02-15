@@ -24,6 +24,7 @@
 
 #include "fid.h"
 #include "slashrpc.h"
+#include "slconn.h"
 
 struct pscrpc_export;
 struct cfdops;

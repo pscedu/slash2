@@ -30,6 +30,8 @@
 #include "psc_util/multiwait.h"
 
 #include "slashrpc.h"
+#include "slconfig.h"
+#include "slconn.h"
 
 /*
  * slrpc_issue_connect - attempt connection initiation with a peer.

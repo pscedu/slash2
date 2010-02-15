@@ -20,11 +20,13 @@
 #ifndef _SL_FIDCACHE_H_
 #define _SL_FIDCACHE_H_
 
+#include "psc_ds/hash2.h"
 #include "psc_ds/tree.h"
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"
 #include "psc_util/time.h"
 
+#include "cache_params.h"
 #include "slashrpc.h"
 
 #ifndef __LP64__

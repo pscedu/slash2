@@ -179,7 +179,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 
 	mq->offset = soff;
 	mq->size = size;
-	mq->op = SRMIO_WR;
+	mq->op = SRMIOP_WR;
 
 	DEBUG_REQ(PLL_INFO, req, "off=%u sz=%u op=%u", mq->offset,
 		  mq->size, mq->op);
