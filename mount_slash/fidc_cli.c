@@ -60,7 +60,7 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
 
 	fni = PSCALLOC(sizeof(*fni) + len);
-	fni->fni_hash   = psc_str_hashify(name);
+	fni->fni_hash = psc_str_hashify(name);
 	INIT_PSCLIST_ENTRY(&c->fcmh_sibling);
 	strlcpy(fni->fni_name, name, len);
 	return (fni);
@@ -268,17 +268,16 @@ fidc_child_reap_cb(struct fidc_membh *f)
 static struct fidc_membh *
 fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 {
-	struct fidc_membh *c=NULL;
-	int found=0;
-	int hash=psc_str_hashify(name);
-	struct timespec	now;
+	int found=0, hash=psc_str_hashify(name);
+	struct fidc_membh *c;
+	struct timeval now;
 
 	LOCK_ENSURE(&p->fcmh_lock);
 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
 	psc_assert(p->fcmh_state & FCMH_ISDIR);
 
 	DEBUG_FCMH(PLL_INFO, p, "name %p (%s), hash=%d",
-		   name, name, hash);
+	    name, name, hash);
 
 	psclist_for_each_entry(c, &p->fcmh_children, fcmh_sibling) {
 
@@ -297,8 +296,8 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	if (!found || (c->fcmh_state & FCMH_CAC_FREEING))
 		return (NULL);
 
-	clock_gettime(CLOCK_REALTIME, &now);
-	if (timespeccmp(&now, &c->fcmh_age, >)) {
+	PFL_GETTIME(&now);
+	if (timercmp(&now, &c->fcmh_age, >)) {
 		/* It's old, remove it.
 		 */
 		fidc_child_free_plocked(c);
@@ -485,6 +484,33 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 		   "%s np(i+g:%"PRId64"+""%"PRId64")",
 		   fni, oldname, fcmh_2_fid(op), fcmh_2_gen(op),
 		   newname, fcmh_2_fid(np), fcmh_2_gen(np));
+}
+
+/**
+ * fcmh_setlocalsize - Apply a local WRITE update to a fid cache member
+ *	handle.
+ */
+void
+fcmh_setlocalsize(struct fidc_membh *h, uint64_t size)
+{
+	int locked;
+
+	locked = reqlock(&h->fcmh_lock);
+	if (size > fcmh_2_fsz(h))
+		fcmh_2_fsz(h) = size;
+	ureqlock(&h->fcmh_lock, locked);
+}
+
+ssize_t
+fcmh_getsize(struct fidc_membh *h)
+{
+	ssize_t size;
+	int locked;
+
+	locked = reqlock(&h->fcmh_lock);
+	size = fcmh_2_fsz(h);
+	ureqlock(&h->fcmh_lock, locked);
+	return (size);
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {

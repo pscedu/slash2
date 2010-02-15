@@ -1,10 +1,15 @@
 /* $Id$ */
 
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
 
 #include <fcntl.h>
 #include <stdio.h>
 
+#include "psc_util/log.h"
+
+#include "sltypes.h"
 #include "slutil.h"
 
 void
@@ -61,4 +66,72 @@ dump_fflags(int fflags)
 		print_flag("O_LARGEFILE", &seq);
 
 	printf("\n");
+}
+
+void
+sl_externalize_stat(const struct stat *stb, struct srt_stat *sstb)
+{
+	sstb->sst_dev		= stb->st_dev;
+	sstb->sst_ino		= stb->st_ino;
+	sstb->sst_mode		= stb->st_mode;
+	sstb->sst_nlink		= stb->st_nlink;
+	sstb->sst_uid		= stb->st_uid;
+	sstb->sst_gid		= stb->st_gid;
+	sstb->sst_rdev		= stb->st_rdev;
+	sstb->sst_size		= stb->st_size;
+	sstb->sst_blksize	= stb->st_blksize;
+	sstb->sst_blocks	= stb->st_blocks;
+	sstb->sst_atime		= stb->st_atime;
+	sstb->sst_mtime		= stb->st_mtime;
+	sstb->sst_ctime		= stb->st_ctime;
+}
+
+void
+sl_internalize_stat(const struct srt_stat *sstb, struct stat *stb)
+{
+	stb->st_dev		= sstb->sst_dev;
+	stb->st_ino		= sstb->sst_ino;
+	stb->st_mode		= sstb->sst_mode;
+	stb->st_nlink		= sstb->sst_nlink;
+	stb->st_uid		= sstb->sst_uid;
+	stb->st_gid		= sstb->sst_gid;
+	stb->st_rdev		= sstb->sst_rdev;
+	stb->st_size		= sstb->sst_size;
+	stb->st_blksize		= sstb->sst_blksize;
+	stb->st_blocks		= sstb->sst_blocks;
+	stb->st_atime		= sstb->sst_atime;
+	stb->st_mtime		= sstb->sst_mtime;
+	stb->st_ctime		= sstb->sst_ctime;
+}
+
+void
+sl_externalize_statfs(const struct statvfs *sfb, struct srt_statfs *ssfb)
+{
+	ssfb->sf_bsize		= sfb->f_bsize;
+	ssfb->sf_frsize		= sfb->f_frsize;
+	ssfb->sf_blocks		= sfb->f_blocks;
+	ssfb->sf_bfree		= sfb->f_bfree;
+	ssfb->sf_bavail		= sfb->f_bavail;
+	ssfb->sf_files		= sfb->f_files;
+	ssfb->sf_ffree		= sfb->f_ffree;
+	ssfb->sf_favail		= sfb->f_favail;
+	ssfb->sf_fsid		= sfb->f_fsid;
+	ssfb->sf_flag		= sfb->f_flag;
+	ssfb->sf_namemax	= sfb->f_namemax;
+}
+
+void
+sl_internalize_statfs(const struct srt_statfs *ssfb, struct statvfs *sfb)
+{
+	sfb->f_bsize		= ssfb->sf_bsize;
+	sfb->f_frsize		= ssfb->sf_frsize;
+	sfb->f_blocks		= ssfb->sf_blocks;
+	sfb->f_bfree		= ssfb->sf_bfree;
+	sfb->f_bavail		= ssfb->sf_bavail;
+	sfb->f_files		= ssfb->sf_files;
+	sfb->f_ffree		= ssfb->sf_ffree;
+	sfb->f_favail		= ssfb->sf_favail;
+	sfb->f_fsid		= ssfb->sf_fsid;
+	sfb->f_flag		= ssfb->sf_flag;
+	sfb->f_namemax		= ssfb->sf_namemax;
 }

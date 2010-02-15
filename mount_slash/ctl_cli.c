@@ -75,7 +75,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pscrpc_request *rq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
-	struct stat stb;
+	struct srt_stat sstb;
 	uint32_t n;
 	int rc;
 
@@ -92,16 +92,16 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fn, slstrerror(rc)));
 
 	/* ensure path exists in the slash fs */
-	rc = lookup_pathname_fg(mrq->mrq_fn, &cr, &fg, &stb);
+	rc = lookup_pathname_fg(mrq->mrq_fn, &cr, &fg, &sstb);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
-	if (!S_ISREG(stb.st_mode))
+	if (!S_ISREG(sstb.sst_mode))
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mrq->mrq_fn, slstrerror(ENOTSUP)));
 
-	rc = checkcreds(&stb, &cr, W_OK);
+	rc = checkcreds(&sstb, &cr, W_OK);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
@@ -147,7 +147,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pscrpc_request *rq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
-	struct stat stb;
+	struct srt_stat sstb;
 	char *displayfn;
 	int rv, rc;
 
@@ -165,16 +165,16 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    "unable to obtain credentials: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
-	rc = lookup_pathname_fg(mrq->mrq_fn, &cr, &fg, &stb);
+	rc = lookup_pathname_fg(mrq->mrq_fn, &cr, &fg, &sstb);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(rc)));
 
-	if (!S_ISREG(stb.st_mode))
+	if (!S_ISREG(sstb.sst_mode))
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(ENOTSUP)));
 
-	rc = -checkcreds(&stb, &cr, W_OK);
+	rc = -checkcreds(&sstb, &cr, W_OK);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
@@ -255,7 +255,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pscrpc_request *rq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
-	struct stat stb;
+	struct srt_stat sstb;
 	int rc;
 
 	rc = msctl_getcreds(fd, &cr);
@@ -265,16 +265,16 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfnrp->mfnrp_fn, slstrerror(rc)));
 
 	/* ensure path exists in the slash fs */
-	rc = lookup_pathname_fg(mfnrp->mfnrp_fn, &cr, &fg, &stb);
+	rc = lookup_pathname_fg(mfnrp->mfnrp_fn, &cr, &fg, &sstb);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mfnrp->mfnrp_fn, slstrerror(rc)));
 
-	if (!S_ISREG(stb.st_mode))
+	if (!S_ISREG(sstb.sst_mode))
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mfnrp->mfnrp_fn, slstrerror(ENOTSUP)));
 
-	rc = checkcreds(&stb, &cr, W_OK);
+	rc = checkcreds(&sstb, &cr, W_OK);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mfnrp->mfnrp_fn, slstrerror(rc)));
@@ -306,7 +306,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	struct pscrpc_request *rq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
-	struct stat stb;
+	struct srt_stat sstb;
 	int rc;
 
 	rc = msctl_getcreds(fd, &cr);
@@ -316,16 +316,16 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfbrp->mfbrp_fn, slstrerror(rc)));
 
 	/* ensure path exists in the slash fs */
-	rc = lookup_pathname_fg(mfbrp->mfbrp_fn, &cr, &fg, &stb);
+	rc = lookup_pathname_fg(mfbrp->mfbrp_fn, &cr, &fg, &sstb);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mfbrp->mfbrp_fn, slstrerror(rc)));
 
-	if (!S_ISREG(stb.st_mode))
+	if (!S_ISREG(sstb.sst_mode))
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mfbrp->mfbrp_fn, slstrerror(ENOTSUP)));
 
-	rc = checkcreds(&stb, &cr, W_OK);
+	rc = checkcreds(&sstb, &cr, W_OK);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mfbrp->mfbrp_fn, slstrerror(rc)));

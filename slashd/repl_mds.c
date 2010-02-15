@@ -549,21 +549,20 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	struct slash_inode_handle *ih;
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
-	struct stat stb;
 	void *data;
 	int rc;
 
 	*fp = NULL;
 
 	rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
-	    NULL, &rootcreds, &fcmh);
+	    NULL, FCMH_SETATTRF_NONE, &rootcreds, &fcmh);
 	if (rc)
 		return (rc);
 
 	rc = mds_fcmh_tryref_fmi(fcmh);
 	if (rc) {
 		rc = mdsio_opencreate(fgp->fg_fid, &rootcreds,
-		    O_RDWR | O_CREAT | O_LARGEFILE, 0, NULL, &fg, &stb,
+		    O_RDWR | O_CREAT | O_LARGEFILE, 0, NULL, &fg, NULL,
 		    &data);
 		if (rc)
 			return (rc);
@@ -605,7 +604,6 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	struct bmapc_memb *bcm;
-	struct stat stb;
 	char fn[FID_MAX_PATH];
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
@@ -645,7 +643,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 
 			/* Create persistent file system link */
 			rc = mdsio_link(fgp->fg_fid, mds_repldir_inum,
-			    fn, &fg, &rootcreds, &stb);
+			    fn, &fg, &rootcreds, NULL);
 			if (rc == 0) {
 				rrq = newrq;
 				newrq = NULL;
@@ -933,14 +931,13 @@ mds_repl_scandir(void)
 	struct slash_fidgen fg;
 	struct fuse_dirent *d;
 	struct sl_replrq *rrq;
-	struct stat stb;
-	int rc, tract[4];
 	off64_t off, toff;
+	int rc, tract[4];
 	size_t siz, tsiz;
 	uint32_t j;
 	void *data;
 
-	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, &fg, &stb, &data);
+	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, &fg, NULL, &data);
 	if (rc == ENOENT) {
 		rc = mdsio_mkdir(SL_ROOT_INUM, SL_PATH_REPLS, 0700,
 		    &rootcreds, NULL, NULL, 1);
@@ -1119,13 +1116,12 @@ mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 	PLL_LOCK(&globalConfig.gconf_sites);
 	locked = reqlock(&repl_busytable_lock);
 	locked2 = reqlock(&rmmi->rmmi_lock);
-	PLL_FOREACH(s, &globalConfig.gconf_sites) {
+	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources)
 			DYNARRAY_FOREACH(resm, j, &r->res_members)
 				if (resm->resm_pri != rmmi)
 					mds_repl_nodes_setbusy(rmmi,
 					    resm->resm_pri, 0);
-	}
 	ureqlock(&rmmi->rmmi_lock, locked2);
 	ureqlock(&repl_busytable_lock, locked);
 	PLL_ULOCK(&globalConfig.gconf_sites);

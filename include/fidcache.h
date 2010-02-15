@@ -57,8 +57,8 @@ struct fidc_membh {
 #ifdef DEMOTED_INUM_WIDTHS
 	struct slash_fidgen	 fcmh_smallfg;		/* integer-demoted fg_fid for hashing */
 #endif
-	struct timespec		 fcmh_age;		/* age of this entry */
-	struct stat		 fcmh_stb;		/* file attributes */
+	struct timeval		 fcmh_age;		/* age of this entry */
+	struct srt_stat		 fcmh_sstb;
 	struct fidc_nameinfo	*fcmh_name;
 	struct fidc_open_obj	*fcmh_fcoo;
 	int			 fcmh_state;
@@ -75,19 +75,18 @@ struct fidc_membh {
 	struct psclist_head	 fcmh_children;
 };
 
-enum {
-	FCMH_CAC_CLEAN     = (1 << 0),
-	FCMH_CAC_DIRTY     = (1 << 1),
-	FCMH_CAC_FREEING   = (1 << 2),
-	FCMH_CAC_FREE      = (1 << 3),
-	FCMH_ISDIR         = (1 << 4),
-	FCMH_FCOO_STARTING = (1 << 5),
-	FCMH_FCOO_ATTACH   = (1 << 6),
-	FCMH_FCOO_CLOSING  = (1 << 7),
-	FCMH_FCOO_FAILED   = (1 << 8),
-	FCMH_HAVE_ATTRS    = (1 << 9),
-	FCMH_GETTING_ATTRS = (1 << 10)
-};
+/* fcmh_flags */
+#define	FCMH_CAC_CLEAN		(1 << 0)	/* in clean cache */
+#define	FCMH_CAC_DIRTY		(1 << 1)	/* in dirty cache */
+#define	FCMH_CAC_FREEING	(1 << 2)	/* on clean cache */
+#define	FCMH_CAC_FREE		(1 << 3)	/* in free pool */
+#define	FCMH_ISDIR		(1 << 4)	/* is a directory */
+#define	FCMH_FCOO_STARTING	(1 << 5)	/* open obj initializing */
+#define	FCMH_FCOO_ATTACH	(1 << 6)	/* open obj present */
+#define	FCMH_FCOO_CLOSING	(1 << 7)	/* open obj going away */
+#define	FCMH_FCOO_FAILED	(1 << 8)	/* open obj didn't load */
+#define	FCMH_HAVE_ATTRS		(1 << 9)	/* has valid stat info */
+#define	FCMH_GETTING_ATTRS	(1 << 10)	/* fetching stat info */
 
 #ifdef DEMOTED_INUM_WIDTHS
 # define FCMH_HASH_FIELD	fcmh_smallfg
@@ -105,10 +104,11 @@ enum {
 
 #define fcmh_2_fid(f)		(f)->fcmh_fg.fg_fid
 #define fcmh_2_gen(f)		(f)->fcmh_fg.fg_gen
-#define fcmh_2_fsz(f)		(f)->fcmh_stb.st_size
+#define fcmh_2_fsz(f)		(f)->fcmh_sstb.sst_size
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE))
+#define fcmh_2_ptruncgen(f)	(f)->fcmh_sstb.sst_ptruncgen
 
-#define fcmh_isdir(f)		S_ISDIR((f)->fcmh_stb.st_mode)
+#define fcmh_isdir(f)		S_ISDIR((f)->fcmh_sstb.sst_mode)
 
 #define DEBUG_FCMH_FLAGS(fcmh)							\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_CLEAN)		? "C" : "",	\
@@ -131,7 +131,7 @@ enum {
 										\
 		psc_logs((level), PSS_GEN,					\
 		    "fcmh@%p fcoo@%p fcooref(%d:%d) i+g:%"PRId64"+"		\
-		    "%"PRId64" s: "REQ_FCMH_FLAGS_FMT" pri:%p lc:%s "		\
+		    "%"PRId64" s:"REQ_FCMH_FLAGS_FMT" pri:%p lc:%s "		\
 		    "ref:%d :: "fmt,						\
 		    (fcmh), (fcmh)->fcmh_fcoo,					\
 		    (fcmh)->fcmh_fcoo == NULL ||				\
@@ -185,23 +185,27 @@ struct fidc_open_obj {
 	struct srt_fd_buf	 fcoo_fdb;
 	int			 fcoo_oref_rd;
 	int			 fcoo_oref_wr;
-	int                      fcoo_fd;		/* XXX move to sliod */
 	struct bmap_cache	 fcoo_bmapc;		/* bmap cache splay */
 	size_t			 fcoo_bmap_sz;
-	void			*fcoo_pri;		/* fcoo_cli_info or fcoo_mds_info */
+	void			*fcoo_pri;		/* fcoo_{cli,iod,mds}_info */
 };
 
 #define FCOO_STARTING		((struct fidc_open_obj *)0x01)
 
+/* fidc_lookup() flags */
 enum {
-	FIDC_LOOKUP_CREATE	= (1 << 0),	/* Create if not present         */
-	FIDC_LOOKUP_EXCL	= (1 << 1),	/* Fail if fcmh is present       */
-	FIDC_LOOKUP_COPY	= (1 << 2),	/* Create from existing attrs    */
-	FIDC_LOOKUP_LOAD	= (1 << 3),	/* Create, get attrs from mds    */
-	FIDC_LOOKUP_FCOOSTART	= (1 << 4)	/* start the fcoo before exposing the cache entry. */
+	FIDC_LOOKUP_CREATE	= (1 << 0),		/* Create if not present         */
+	FIDC_LOOKUP_EXCL	= (1 << 1),		/* Fail if fcmh is present       */
+	FIDC_LOOKUP_COPY	= (1 << 2),		/* Create from existing attrs    */
+	FIDC_LOOKUP_LOAD	= (1 << 3),		/* Create, get attrs from mds    */
+	FIDC_LOOKUP_FCOOSTART	= (1 << 4)		/* start fcoo before exposing fcmh */
 };
 
 #define FIDC_LOOKUP_REFRESH	FIDC_LOOKUP_LOAD	/* load and refresh are the same */
+
+/* fcmh_setattr() flags */
+#define FCMH_SETATTRF_NONE	0
+#define FCMH_SETATTRF_SAVESIZE	(1 << 0)
 
 #define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
 
@@ -209,10 +213,8 @@ void			 fcmh_dtor(void *);
 struct fidc_membh	*fcmh_get(void);
 int			 fcmh_getfdbuf(struct fidc_membh *, struct srt_fd_buf *);
 void			 fcmh_setfdbuf(struct fidc_membh *, const struct srt_fd_buf *);
-ssize_t			 fcmh_getsize(struct fidc_membh *);
 int			 fcmh_init(struct psc_poolmgr *, void *);
-void			 fcmh_setattr(struct fidc_membh *, const struct stat *);
-void			 fcmh_setsize(struct fidc_membh *, size_t);
+void			 fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 
 struct fidc_open_obj	*fidc_fcoo_init(void);
 
@@ -222,7 +224,7 @@ struct fidc_membh	*fidc_lookup_simple(slfid_t);
 struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
 
 int			 fidc_lookup(const struct slash_fidgen *, int,
-			    const struct stat *, const struct slash_creds *,
+			    const struct srt_stat *, int, const struct slash_creds *,
 			    struct fidc_membh **);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
@@ -234,10 +236,10 @@ extern struct psc_listcache	 fidcCleanList;
 static __inline void
 fcmh_refresh_age(struct fidc_membh *fcmh)
 {
-	struct timespec tmp = { FCMH_ATTR_TIMEO, 0 };
+	struct timeval tmp = { FCMH_ATTR_TIMEO, 0 };
 
-	clock_gettime(CLOCK_REALTIME, &fcmh->fcmh_age);
-	timespecadd(&fcmh->fcmh_age, &tmp, &fcmh->fcmh_age);
+	PFL_GETTIME(&fcmh->fcmh_age);
+	timeradd(&fcmh->fcmh_age, &tmp, &fcmh->fcmh_age);
 }
 
 static __inline const char *
@@ -271,11 +273,11 @@ fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *cr,
 	struct slash_fidgen fg = { fid, FIDGEN_ANY };
 
 	return (fidc_lookup(&fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
-	    NULL, cr, fp));
+	    NULL, FCMH_SETATTRF_NONE, cr, fp));
 }
 
 /**
- * fcmh_clean_check - Verify the validity of fid cache member.
+ * fcmh_clean_check - Verify the validity of a fid cache member.
  */
 static __inline int
 fcmh_clean_check(struct fidc_membh *f)
@@ -430,8 +432,9 @@ fidc_fcoo_startdone(struct fidc_membh *h)
 	//fidc_put_locked(h, &fidcDirtyList);
 	fidc_put(h, &fidcDirtyList);
 
-	//freelock(&h->fcmh_lock);
 	psc_waitq_wakeall(&h->fcmh_waitq);
+	/* XXX we should hold be holding the lock while we wake */
+//	freelock(&h->fcmh_lock);
 }
 
 static __inline void

@@ -52,24 +52,27 @@
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
+#include "slutil.h"
 
 psc_spinlock_t fsidlock = LOCK_INITIALIZER;
 
 #ifdef NAMESPACE_EXPERIMENTAL
 /*
- * TODO: SLASH ID should be logged on disk, so that it can be consumed continuously across reboots and crashes.
+ * TODO: SLASH ID should be logged on disk, so that it can be consumed
+ *	continuously across reboots and crashes.
  */
 uint64_t	next_slash_id = 2;
 psc_spinlock_t	slash_id_lock = LOCK_INITIALIZER;
 #endif
 
 int
-slmrmcthr_inode_cacheput(struct slash_fidgen *fg, struct stat *stb,
-    struct slash_creds *creds)
+slmrmcthr_inode_cacheput(struct slash_fidgen *fg,
+    struct srt_stat *sstb, struct slash_creds *creds)
 {
 	struct fidc_membh	*fcmh;
 
-	fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD, stb, creds, &fcmh);
+	fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
+	    sstb, FCMH_SETATTRF_NONE, creds, &fcmh);
 
 	if (fcmh) {
 		fcmh_dropref(fcmh);
@@ -101,11 +104,9 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
-	struct stat stb;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_getattr(mq->fid, &mq->creds, &stb, &mp->gen);
-	slrpc_externalize_stat(&stb, &mp->attr);
+	mp->rc = mdsio_getattr(mq->fid, &mq->creds, &mp->attr, &mp->gen);
 
 	psc_info("mdsio_getattr() fid=%"PRId64" gen=%"PRId64" rc=%d",
 		 mq->fid, mp->gen, mp->rc);
@@ -206,13 +207,11 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 {
 	struct srm_link_req *mq;
 	struct srm_link_rep *mp;
-	struct stat stb;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = mdsio_link(mq->fid, mq->pfid, mq->name, &mp->fg,
-	    &mq->creds, &stb);
-	slrpc_externalize_stat(&stb, &mp->attr);
+	    &mq->creds, &mp->attr);
 	return (0);
 }
 
@@ -221,7 +220,6 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
-	struct stat stb;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
@@ -229,11 +227,9 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	    strncmp(mq->name, SL_PATH_PREFIX,
 	     strlen(SL_PATH_PREFIX)) == 0)
 		mp->rc = EINVAL;
-	else {
+	else
 		mp->rc = mdsio_lookup(mq->pfid, mq->name, &mp->fg,
-		    &mq->creds, &stb);
-		slrpc_externalize_stat(&stb, &mp->attr);
-	}
+		    &mq->creds, &mp->attr);
 	return (0);
 }
 
@@ -242,7 +238,6 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 {
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
-	struct stat stb;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
@@ -255,9 +250,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 #endif
 
 	mp->rc = mdsio_mkdir(mq->pfid, mq->name,
-	    mq->mode, &mq->creds, &stb, &mp->fg, 0);
-
-	slrpc_externalize_stat(&stb, &mp->attr);
+	    mq->mode, &mq->creds, &mp->attr, &mp->fg, 0);
 	return (0);
 }
 
@@ -298,7 +291,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct srm_opencreate_rep *mp;
 	struct cfdent *cfd=NULL;
 	struct slash_fidgen fg;
-	struct stat stb;
 	void *mdsio_data;
 	int fl;
 
@@ -308,20 +300,18 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	fg.fg_fid = 0; 
 #ifdef NAMESPACE_EXPERIMENTAL
 	spinlock(&slash_id_lock);
 	fg.fg_fid = next_slash_id++;
 	freelock(&slash_id_lock);
 #endif
+
 	mp->rc = mdsio_opencreate(mq->pfid, &mq->creds, fl,
-	    mq->mode, mq->name, &fg, &stb, &mdsio_data);
+	    mq->mode, mq->name, &fg, &mp->attr, &mdsio_data);
 	if (mp->rc)
 		return (0);
 
-	slrpc_externalize_stat(&stb, &mp->attr);
-
-	mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
+	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
 	if (!mp->rc) {
 		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
 		    SLCONNT_CLI, mdsio_data, &cfd, CFD_FILE);
@@ -353,7 +343,6 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	struct srm_opencreate_rep *mp;
 	struct slash_fidgen fg;
 	struct cfdent *cfd=NULL;
-	struct stat stb;
 	void *mdsio_data;
 	int fl;
 
@@ -362,7 +351,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 	mp->rc = mdsio_opencreate(mq->fid, &mq->creds, fl, 0, NULL, &fg,
-	    &stb, &mdsio_data);
+	    &mp->attr, &mdsio_data);
 
 	psc_info("mdsio_opencreate() fid=%"PRId64" rc=%d",
 	    mq->fid, mp->rc);
@@ -370,9 +359,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	slrpc_externalize_stat(&stb, &mp->attr);
-
-	mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
+	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
 
 	psc_info("slmrmcthr_inode_cacheput() fid=%"PRId64" rc=%d",
 	    mq->fid, mp->rc);
@@ -408,16 +395,16 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	struct srm_opendir_rep *mp;
 	struct cfdent *cfd = NULL;
 	struct slash_fidgen fg;
-	struct stat stb;
 	void *mdsio_data;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_opendir(mq->fid, &mq->creds, &fg, &stb, &mdsio_data);
+	mp->rc = mdsio_opendir(mq->fid, &mq->creds, &fg, &mp->attr,
+	    &mdsio_data);
 	psc_info("mdsio_opendir rc=%d data=%p", mp->rc, mdsio_data);
 	if (mp->rc)
 		return (0);
 
-	mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
+	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
 	if (!mp->rc) {
 		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
 		    SLCONNT_CLI, mdsio_data, &cfd, CFD_DIR);
@@ -535,9 +522,9 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 int
 slm_rmc_handle_release(struct pscrpc_request *rq)
 {
-	struct fcoo_mds_info *fmi;
 	struct srm_release_req *mq;
 	struct srm_generic_rep *mp;
+	struct fcoo_mds_info *fmi;
 	struct slash_fidgen fg;
 	struct fidc_membh *f;
 	struct mexpfcm *m;
@@ -623,9 +610,10 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	struct srm_setattr_rep *mp;
 	struct fcoo_mds_info *fmi;
 	struct fidc_membh *fcmh;
-	struct stat stb, outstb;
+	int to_set;
 
 	RSX_ALLOCREP(rq, mq, mp);
+	to_set = mq->to_set;
 
 	fmi = fidc_fid2fmi(mq->fid, &fcmh);
 	if (fmi)
@@ -637,10 +625,19 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	 *  or not cached.  In that case try to pass the inode
 	 *  into mdsio with the hope that it has it cached.
 	 */
-	slrpc_internalize_stat(&mq->attr, &stb);
-	mp->rc = mdsio_setattr(mq->fid, &stb, mq->to_set,
-	    &mq->creds, &outstb, fmi ? fmi->fmi_mdsio_data : NULL);
-	slrpc_externalize_stat(&outstb, &mp->attr);
+	if (to_set & SRM_SETATTRF_SIZE) {
+		to_set &= ~SRM_SETATTRF_SIZE;
+		to_set |= SRM_SETATTRF_FSIZE;
+		if (mq->attr.sst_size == 0) {
+			/* full truncate */
+		} else {
+			to_set |= SRM_SETATTRF_PTRUNCGEN;
+			/* partial truncate */
+			fcmh_2_ptruncgen(fcmh)++;
+		}
+	}
+	mp->rc = mdsio_setattr(mq->fid, &mq->attr, to_set,
+	    &mq->creds, &mp->attr, fmi ? fmi->fmi_mdsio_data : NULL);
 
 	if (mp->rc == ENOENT) {
 		//XXX need to figure out how to 'lookup' via the immns.
@@ -669,7 +666,7 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	}
 
 	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, &rootcreds, &fcmh);
+	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE, &rootcreds, &fcmh);
 	if (mp->rc)
 		return (0);
 	ih = fcmh_2_inoh(fcmh);
@@ -701,7 +698,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	}
 
 	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, &rootcreds, &fcmh);
+	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE, &rootcreds, &fcmh);
 	if (mp->rc)
 		return (0);
 	ih = fcmh_2_inoh(fcmh);
@@ -733,7 +730,7 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_statfs(&sfb);
-	slrpc_externalize_statfs(&sfb, &mp->ssfb);
+	sl_externalize_statfs(&sfb, &mp->ssfb);
 	return (0);
 }
 
@@ -744,7 +741,6 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
 	struct iovec iov;
-	struct stat stb;
 	char linkname[PATH_MAX];
 
 	RSX_ALLOCREP(rq, mq, mp);
@@ -766,8 +762,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 
 	mp->rc = mdsio_symlink(linkname, mq->pfid, mq->name,
-	    &mq->creds, &stb, &mp->fg);
-	slrpc_externalize_stat(&stb, &mp->attr);
+	    &mq->creds, &mp->attr, &mp->fg);
 	return (0);
 }
 

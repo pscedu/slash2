@@ -45,6 +45,7 @@
 #include "bmap_cli.h"
 #include "bmpc.h"
 #include "buffer.h"
+#include "fidc_cli.h"
 #include "fidcache.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
@@ -806,10 +807,15 @@ msl_bmap_to_import(struct bmapc_memb *b, int exclusive)
 	if (exclusive)
 		csvc = slc_geticsvc(resm);
 	else {
+#if 0
 		/* grab a random resm from any replica */
-//		for (n = 0; n < resm->resm_res->res_nnids; n++)
-//			for (j = 0; j < resm->resm_res->res_nnids; j++)
-//				slc_geticsvc(resm);
+		for (n = 0; n < resm->resm_res->res_nnids; n++)
+			for (j = 0; j < resm->resm_res->res_nnids; j++) {
+				csvc = slc_geticsvc(resm);
+				if (csvc)
+					return (csvc->csvc_import);
+			}
+#endif
 		csvc = slc_geticsvc(resm);
 	}
 	return (csvc ? csvc->csvc_import : NULL);
@@ -1140,7 +1146,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	 */
 	spinlock(&r->biorq_lock);
 	r->biorq_flags |= BIORQ_FLUSHRDY;
-	DEBUG_BIORQ(PLL_DEBUG, r, "BIORQ_FLUSHRDY");       
+	DEBUG_BIORQ(PLL_DEBUG, r, "BIORQ_FLUSHRDY");
 	psc_assert(psclist_conjoint(&r->biorq_lentry));
 	atomic_inc(&bmpc->bmpc_pndgwr);
 	freelock(&r->biorq_lock);
@@ -1575,8 +1581,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 
-	if (!size || ((rw == SL_READ) &&
-		      off >= (fcmh_2_fsz(mfh->mfh_fcmh)))) {
+	if (!size || (rw == SL_READ &&
+	    (uint64_t)off >= fcmh_2_fsz(mfh->mfh_fcmh))) {
 		rc = 0;
 		goto out;
 	}
@@ -1638,7 +1644,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 			    ((r[j]->biorq_flags & BIORQ_RBWFP) ||
 			     (r[j]->biorq_flags & BIORQ_RBWLP)))
 				if ((rc = msl_pages_blocking_load(r[j]))) {
-					DEBUG_BIORQ(PLL_ERROR, r[j], 
+					DEBUG_BIORQ(PLL_ERROR, r[j],
 						    "msl_pages_blocking_load()"
 						    " error=%d", rc);
 					goto out;
@@ -1654,11 +1660,11 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	}
 
 	if (rw == SL_WRITE) {
-		fcmh_setsize(mfh->mfh_fcmh, (size_t)(off + size));
+		fcmh_setlocalsize(mfh->mfh_fcmh, (size_t)(off + size));
 		rc = size;
 	} else {
 		ssize_t fsz = fcmh_getsize(mfh->mfh_fcmh);
-		/* The client cache is operating on pages (ie 32k) so 
+		/* The client cache is operating on pages (ie 32k) so
 		 *   any short read must be caught here.
 		 */
 		if (fsz < (ssize_t)(size + off))

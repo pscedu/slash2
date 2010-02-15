@@ -82,25 +82,17 @@ mdsio_release(struct slash_inode_handle *i)
 }
 
 int
-mdsio_apply_fcmh_size(struct fidc_membh *f, off64_t size)
+mdsio_apply_fcmh_size(struct fidc_membh *f, size_t size)
 {
-	struct fcoo_mds_info *fmi;
+	int locked;
 
-	FCMH_LOCK(f);
-
-	if (size <= fcmh_2_fsz(f)) {
-		FCMH_ULOCK(f);
-		return (0);
-	}
-
-	DEBUG_FCMH(PLL_INFO, f, "sz=%"PRId64, size);
-	fmi = fcmh_2_fmi(f);
+	locked = reqlock(&f->fcmh_lock);
 	fcmh_2_fsz(f) = size;
+	ureqlock(&f->fcmh_lock, locked);
 
-	FCMH_ULOCK(f);
-
-	return (zfsslash2_sets2szattr(zfsVfs, fcmh_2_fid(f), size,
-				      fmi->fmi_mdsio_data));
+	return (zfsslash2_setattr(zfsVfs, fcmh_2_fid(f), &f->fcmh_sstb,
+	    SRM_SETATTRF_FSIZE, &rootcreds, NULL,
+	    fcmh_2_fmi(f)->fmi_mdsio_data));
 }
 
 int
@@ -173,8 +165,8 @@ mdsio_inode_read(struct slash_inode_handle *i)
 	} else {
 		DEBUG_INOH(PLL_TRACE, i, "read inode data=%p",
 		    inoh_2_mdsio_data(i));
-		rc = zfsslash2_gets2szattr(zfsVfs, inoh_2_fid(i),
-		    &inoh_2_fsz(i), inoh_2_mdsio_data(i));
+//		rc = zfsslash2_getattr(zfsVfs, inoh_2_fid(i),
+//		    &inoh_2_fsz(i), inoh_2_mdsio_data(i));
 	}
 	return (rc);
 }
@@ -256,26 +248,26 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 }
 
 int
-mdsio_frelease(slfid_t fid, struct slash_creds *cr, void *mdsio_data)
+mdsio_frelease(slfid_t fid, const struct slash_creds *cr, void *mdsio_data)
 {
 	return (zfsslash2_release(zfsVfs, fid, cr, mdsio_data));
 }
 
 int
-mdsio_access(slfid_t fid, int mask, struct slash_creds *cr)
+mdsio_access(slfid_t fid, int mask, const struct slash_creds *cr)
 {
 	return (zfsslash2_access(zfsVfs, fid, mask, cr));
 }
 
 int
-mdsio_getattr(slfid_t fid, struct slash_creds *cr, struct stat *stb,
-    slfgen_t *gen)
+mdsio_getattr(slfid_t fid, const struct slash_creds *cr,
+    struct srt_stat *sstb, slfgen_t *gen)
 {
-	return (zfsslash2_getattr(zfsVfs, fid, cr, stb, gen));
+	return (zfsslash2_getattr(zfsVfs, fid, cr, sstb, gen));
 }
 
 int
-mdsio_readlink(slfid_t fid, void *buf, struct slash_creds *cr)
+mdsio_readlink(slfid_t fid, void *buf, const struct slash_creds *cr)
 {
 	return (zfsslash2_readlink(zfsVfs, fid, buf, cr));
 }
@@ -287,46 +279,47 @@ mdsio_statfs(struct statvfs *stbv)
 }
 
 int
-mdsio_opencreate(slfid_t pfid, struct slash_creds *cr, int flags,
+mdsio_opencreate(slfid_t pfid, const struct slash_creds *cr, int flags,
     mode_t mode, const char *fn, struct slash_fidgen *fg,
-    struct stat *stb, void *mdsio_datap)
+    struct srt_stat *sstb, void *mdsio_datap)
 {
 	return (zfsslash2_opencreate(zfsVfs, pfid, cr, flags, mode,
-	    fn, fg, stb, mdsio_datap));
+	    fn, fg, sstb, mdsio_datap));
 }
 
 int
 mdsio_link(slfid_t fid, slfid_t pfid, const char *fn,
-    struct slash_fidgen *fgp, struct slash_creds *cr, struct stat *stb)
+    struct slash_fidgen *fgp, const struct slash_creds *cr,
+    struct srt_stat *sstb)
 {
-	return (zfsslash2_link(zfsVfs, fid, pfid, fn, fgp, cr, stb));
+	return (zfsslash2_link(zfsVfs, fid, pfid, fn, fgp, cr, sstb));
 }
 
 int
 mdsio_lookup(slfid_t pfid, const char *cpn, struct slash_fidgen *fgp,
-    struct slash_creds *cr, struct stat *stb)
+    const struct slash_creds *cr, struct srt_stat *sstb)
 {
-	return (zfsslash2_lookup(zfsVfs, pfid, cpn, fgp, cr, stb));
+	return (zfsslash2_lookup(zfsVfs, pfid, cpn, fgp, cr, sstb));
 }
 
 int
-mdsio_opendir(slfid_t fid, struct slash_creds *cr,
-    struct slash_fidgen *fgp, struct stat *stb, void *mdsio_datap)
+mdsio_opendir(slfid_t fid, const struct slash_creds *cr,
+    struct slash_fidgen *fgp, struct srt_stat *sstb, void *mdsio_datap)
 {
-	return (zfsslash2_opendir(zfsVfs, fid, cr, fgp, stb, mdsio_datap));
+	return (zfsslash2_opendir(zfsVfs, fid, cr, fgp, sstb, mdsio_datap));
 }
 
 int
 mdsio_mkdir(slfid_t pfid, const char *cpn, mode_t mode,
-    struct slash_creds *cr, struct stat *stb, struct slash_fidgen *fgp,
-    int flags)
+    const struct slash_creds *cr, struct srt_stat *sstb,
+    struct slash_fidgen *fgp, int flags)
 {
-	return (zfsslash2_mkdir(zfsVfs, pfid, cpn, mode, cr, stb, fgp,
-	    flags));
+	return (zfsslash2_mkdir(zfsVfs, pfid, cpn, mode, cr, sstb,
+	    fgp, flags));
 }
 
 int
-mdsio_readdir(slfid_t fid, struct slash_creds *cr, size_t siz,
+mdsio_readdir(slfid_t fid, const struct slash_creds *cr, size_t siz,
     off_t off, void *buf, size_t *outlen, void *attrs, int nprefetch,
     void *mdsio_data)
 {
@@ -336,34 +329,37 @@ mdsio_readdir(slfid_t fid, struct slash_creds *cr, size_t siz,
 
 int
 mdsio_rename(slfid_t opfid, const char *ocpn, slfid_t npfid,
-    const char *ncpn, struct slash_creds *cr)
+    const char *ncpn, const struct slash_creds *cr)
 {
 	return (zfsslash2_rename(zfsVfs, opfid, ocpn, npfid, ncpn, cr));
 }
 
 int
-mdsio_setattr(slfid_t fid, struct stat *in_stb, int to_set,
-    struct slash_creds *cr, struct stat *out_stb, void *mdsio_data)
+mdsio_setattr(slfid_t fid, struct srt_stat *sstb_in, int to_set,
+    const struct slash_creds *cr, struct srt_stat *sstb_out,
+    void *mdsio_data)
 {
-	return (zfsslash2_setattr(zfsVfs, fid, in_stb, to_set, cr,
-	    out_stb, mdsio_data));
+	return (zfsslash2_setattr(zfsVfs, fid, sstb_in, to_set, cr,
+	    sstb_out, mdsio_data));
 }
 
 int
 mdsio_symlink(const char *target, slfid_t pfid, const char *cpn,
-    struct slash_creds *cr, struct stat *stb, struct slash_fidgen *fgp)
+    const struct slash_creds *cr, struct srt_stat *sstb,
+    struct slash_fidgen *fgp)
 {
-	return (zfsslash2_symlink(zfsVfs, target, pfid, cpn, cr, stb, fgp));
+	return (zfsslash2_symlink(zfsVfs, target, pfid, cpn, cr, sstb,
+	    fgp));
 }
 
 int
-mdsio_unlink(slfid_t pfid, const char *cpn, struct slash_creds *cr)
+mdsio_unlink(slfid_t pfid, const char *cpn, const struct slash_creds *cr)
 {
 	return (zfsslash2_unlink(zfsVfs, pfid, cpn, cr));
 }
 
 int
-mdsio_rmdir(slfid_t pfid, const char *cpn, struct slash_creds *cr)
+mdsio_rmdir(slfid_t pfid, const char *cpn, const struct slash_creds *cr)
 {
 	return (zfsslash2_rmdir(zfsVfs, pfid, cpn, cr));
 }

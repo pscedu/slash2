@@ -25,6 +25,8 @@
 
 #include <stdint.h>
 
+#include "pfl/cdefs.h"
+
 /* deprecated */
 typedef uint32_t sl_blkno_t;
 typedef uint32_t sl_blkgen_t;
@@ -69,5 +71,37 @@ typedef struct slash_replica {
 } __packed sl_replica_t;
 
 #define SL_MAX_REPLICAS		64
+
+/* Slash RPC transportably safe structures. */
+struct srt_stat {
+	uint64_t		sst_dev;	/* ID of device containing file */
+	uint64_t		sst_ino;	/* inode number */
+	uint32_t		sst_mode;	/* file permissions */
+	uint32_t		sst_ptruncgen;	/* partial truncate generation */
+	uint64_t		sst_nlink;	/* number of hard links */
+	uint32_t		sst_uid;	/* user ID of owner */
+	uint32_t		sst_gid;	/* group ID of owner */
+	uint64_t		sst_rdev;	/* device ID (if special file) */
+	uint64_t		sst_size;	/* total size, in bytes */
+	int64_t			sst_blksize;	/* blocksize for file system I/O */
+	int64_t			sst_blocks;	/* number of 512B blocks allocated */
+	int64_t			sst_atime;	/* time of last access */
+	int64_t			sst_mtime;	/* time of last modification */
+	int64_t			sst_ctime;	/* time of last status change */
+} __packed;
+
+struct srt_statfs {
+	uint64_t		sf_bsize;	/* file system block size */
+	uint64_t		sf_frsize;	/* fragment size */
+	uint64_t		sf_blocks;	/* size of fs in f_frsize units */
+	uint64_t		sf_bfree;	/* # free blocks */
+	uint64_t		sf_bavail;	/* # free blocks for non-root */
+	uint64_t		sf_files;	/* # inodes */
+	uint64_t		sf_ffree;	/* # free inodes */
+	uint64_t		sf_favail;	/* # free inodes for non-root */
+	uint64_t		sf_fsid;	/* file system ID */
+	uint64_t		sf_flag;	/* mount flags */
+	uint64_t		sf_namemax;	/* maximum filename length */
+} __packed;
 
 #endif /* _SL_TYPES_H_ */

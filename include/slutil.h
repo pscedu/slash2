@@ -1,10 +1,14 @@
 /* $Id$ */
 
+#ifndef _SLUTIL_H_
+#define _SLUTIL_H_
+
 #include <sys/types.h>
 
 #include <inttypes.h>
 
-#include "psc_util/log.h"
+struct stat;
+struct statvfs;
 
 #define DEBUG_STATBUF(level, stb, fmt, ...)					\
 	psc_logs((level), PSS_GEN,						\
@@ -20,3 +24,10 @@
 
 void dump_fflags(int);
 void dump_statbuf(int, const struct stat *);
+
+void sl_externalize_stat(const struct stat *, struct srt_stat *);
+void sl_internalize_stat(const struct srt_stat *, struct stat *);
+void sl_externalize_statfs(const struct statvfs *, struct srt_statfs *);
+void sl_internalize_statfs(const struct srt_statfs *, struct statvfs *);
+
+#endif /* _SLUTIL_H_ */

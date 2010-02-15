@@ -112,15 +112,24 @@ fcmh_get(void)
 }
 
 void
-fcmh_setattr(struct fidc_membh *fcmh, const struct stat *stb)
+fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
+    int flags)
 {
 	int locked = reqlock(&fcmh->fcmh_lock);
+	uint64_t size = 0;
 
-	psc_assert(stb->st_ino == (ino_t)fcmh->fcmh_fg.fg_fid);
 	psc_assert(fcmh_2_gen(fcmh) != FIDGEN_ANY);
+	psc_assert(sstb->sst_ino == (ino_t)fcmh->fcmh_fg.fg_fid);
 
-	memcpy(&fcmh->fcmh_stb, stb, sizeof(*stb));
+	if ((flags & FCMH_SETATTRF_SAVESIZE) &&
+	    fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen)
+		size = fcmh_2_fsz(fcmh);
+
+	fcmh->fcmh_sstb = *sstb;
 	fcmh_refresh_age(fcmh);
+
+	if (size)
+		fcmh_2_fsz(fcmh) = size;
 
 	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
 		fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
@@ -220,30 +229,6 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 	/* Place onto the respective list.
 	 */
 	FCMHCACHE_PUT(f, lc);
-}
-
-void
-fcmh_setsize(struct fidc_membh *h, size_t size)
-{
-	int locked;
-
-	locked = reqlock(&h->fcmh_lock);
-	/* if our cache copy has newer data, ignore old updates */
-	if ((size_t)fcmh_2_fsz(h) < size)
-		fcmh_2_fsz(h) = size;
-	ureqlock(&h->fcmh_lock, locked);
-}
-
-ssize_t
-fcmh_getsize(struct fidc_membh *h)
-{
-	ssize_t size;
-	int locked;
-
-	locked = reqlock(&h->fcmh_lock);
-	size = fcmh_2_fsz(h);
-	ureqlock(&h->fcmh_lock, locked);
-	return (size);
 }
 
 /**
@@ -422,8 +407,8 @@ fidc_lookup_simple(slfid_t f)
 
 int
 fidc_lookup(const struct slash_fidgen *fgp, int flags,
-    const struct stat *stb, const struct slash_creds *creds,
-    struct fidc_membh **fcmhp)
+    const struct srt_stat *sstb, int setattrflags,
+    const struct slash_creds *creds, struct fidc_membh **fcmhp)
 {
 	int getting=0, rc, try_create=0;
 	struct fidc_membh *fcmh, *fcmh_new;
@@ -447,7 +432,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 * how an I/O server uses attributes. - 12/08/2009.
 	 */
 	if (flags & FIDC_LOOKUP_COPY)
-		psc_assert(stb);
+		psc_assert(sstb);
 #endif
 
 	if (flags & FIDC_LOOKUP_LOAD)
@@ -510,8 +495,8 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		}
 
 		/* apply provided attributes to the cache */
-		if (stb)
-			fcmh_setattr(fcmh, stb);
+		if (sstb)
+			fcmh_setattr(fcmh, sstb, setattrflags);
 
 		psc_hashbkt_unlock(b);
 	} else {
@@ -543,8 +528,8 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			COPYFID(&fcmh->fcmh_smallfg, &searchfg);
 #endif
 			fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
-			if (stb)
-				fcmh_setattr(fcmh, stb);
+			if (sstb)
+				fcmh_setattr(fcmh, sstb, setattrflags);
 
 		} else if (flags & FIDC_LOOKUP_LOAD) {
 			/* The caller has provided an incomplete
