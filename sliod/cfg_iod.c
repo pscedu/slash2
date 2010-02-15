@@ -31,11 +31,11 @@ slcfg_init_res(__unusedx struct sl_resource *res)
 void
 slcfg_init_resm(struct sl_resm *resm)
 {
-	struct iod_resm_info *irmi;
+	struct resm_iod_info *rmii;
 
-	irmi = resm->resm_pri = PSCALLOC(sizeof(*irmi));
-	LOCK_INIT(&irmi->irmi_lock);
-	psc_waitq_init(&irmi->irmi_waitq);
+	rmii = resm->resm_pri = PSCALLOC(sizeof(*rmii));
+	LOCK_INIT(&rmii->rmii_lock);
+	psc_waitq_init(&rmii->rmii_waitq);
 }
 
 void

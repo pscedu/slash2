@@ -44,14 +44,14 @@ struct sli_repl_workrq;
 
 /* aliases for connection management */
 #define sli_geticsvc(resm)							\
-	sl_csvc_get(&resm2irmi(resm)->irmi_csvc, 0, NULL, (resm)->resm_nid,	\
+	sl_csvc_get(&resm2rmii(resm)->rmii_csvc, 0, NULL, (resm)->resm_nid,	\
 	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,		\
-	    &resm2irmi(resm)->irmi_lock, &resm2irmi(resm)->irmi_waitq, SLCONNT_IOD)
+	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq, SLCONNT_IOD)
 
 #define sli_getmcsvc(resm)							\
-	sl_csvc_get(&resm2irmi(resm)->irmi_csvc, 0, NULL, (resm)->resm_nid,	\
+	sl_csvc_get(&resm2rmii(resm)->rmii_csvc, 0, NULL, (resm)->resm_nid,	\
 	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,		\
-	    &resm2irmi(resm)->irmi_lock, &resm2irmi(resm)->irmi_waitq, SLCONNT_MDS)
+	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq, SLCONNT_MDS)
 
 #define sli_ric_handle_read(rq)		sli_ric_handle_io((rq), SL_READ)
 #define sli_ric_handle_write(rq)	sli_ric_handle_io((rq), SL_WRITE)

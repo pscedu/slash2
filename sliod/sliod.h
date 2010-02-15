@@ -63,13 +63,13 @@ PSCTHR_MKCAST(sliricthr, sliric_thread, SLITHRT_RIC)
 PSCTHR_MKCAST(slirimthr, slirim_thread, SLITHRT_RIM)
 PSCTHR_MKCAST(sliriithr, slirii_thread, SLITHRT_RII)
 
-struct iod_resm_info {
-	struct slashrpc_cservice *irmi_csvc;
-	psc_spinlock_t		  irmi_lock;
-	struct psc_waitq	  irmi_waitq;
+struct resm_iod_info {
+	struct slashrpc_cservice *rmii_csvc;
+	psc_spinlock_t		  rmii_lock;
+	struct psc_waitq	  rmii_waitq;
 };
 
-#define resm2irmi(resm)		((struct iod_resm_info *)(resm)->resm_pri)
+#define resm2rmii(resm)		((struct resm_iod_info *)(resm)->resm_pri)
 
 void		slitimerthr_spawn(void);
 __dead void	slictlthr_main(const char *);
