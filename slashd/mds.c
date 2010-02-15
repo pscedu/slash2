@@ -81,10 +81,10 @@ mds_inode_release(struct fidc_membh *f)
 	 */
 	i = fcmh_2_fmi(f);
 
-	DEBUG_FCMH(PLL_DEBUG, f, "i->fmi_ref (%d) (oref=%d)",
-		   atomic_read(&i->fmi_ref), f->fcmh_fcoo->fcoo_oref_rd);
+	DEBUG_FCMH(PLL_DEBUG, f, "i->fmi_refcnt (%d) (oref=%d)",
+		   atomic_read(&i->fmi_refcnt), f->fcmh_fcoo->fcoo_oref_rd);
 
-	if (atomic_dec_and_test(&i->fmi_ref)) {
+	if (atomic_dec_and_test(&i->fmi_refcnt)) {
 		psc_assert(SPLAY_EMPTY(&i->fmi_exports));
 		/* We held the final reference to this fcoo, it must
 		 *   return attached.
@@ -199,7 +199,7 @@ mds_fcmh_tryref_fmi(struct fidc_membh *f)
 	FCMH_LOCK(f);
 	if (f->fcmh_fcoo && fcmh_2_fmi(f) &&
 	    (f->fcmh_state & FCMH_FCOO_CLOSING) == 0)
-		atomic_inc(&fcmh_2_fmi(f)->fmi_ref);
+		atomic_inc(&fcmh_2_fmi(f)->fmi_refcnt);
 	else
 		rc = ENOENT;
 	FCMH_ULOCK(f);
@@ -228,7 +228,7 @@ mds_fcmh_load_fmi(struct fidc_membh *f, void *data, int isfile)
 			psc_assert(f->fcmh_fcoo->fcoo_pri);
 			fmi = f->fcmh_fcoo->fcoo_pri;
 			f->fcmh_fcoo->fcoo_oref_rd++;
-			psc_assert(fmi->fmi_data);
+			psc_assert(fmi->fmi_mdsio_data);
 			FCMH_ULOCK(f);
 		}
 	} else {
@@ -249,7 +249,7 @@ mds_fcmh_load_fmi(struct fidc_membh *f, void *data, int isfile)
 		FCMH_ULOCK(f);
 		fidc_fcoo_startdone(f);
 	}
-	atomic_inc(&fmi->fmi_ref);
+	atomic_inc(&fmi->fmi_refcnt);
 	return (0);
 }
 
@@ -258,11 +258,11 @@ mds_fcmh_load_fmi(struct fidc_membh *f, void *data, int isfile)
  *	provided cfd to the export tree and attaches to the fid's
  *	respective fcmh.
  * @c: the cfd, pre-initialized with fid and private data.
- * @finfo: mdsio data for this inode.
+ * @mdsio_data: mdsio data for this inode.
  * @exp: the export to which the cfd belongs.
  */
 int
-mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
+mexpfcm_cfd_init(struct cfdent *c, void *mdsio_data, struct pscrpc_export *exp)
 {
 	struct slashrpc_export *slexp;
 	struct mexpfcm *m;
@@ -283,7 +283,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 	if (!f)
 		return (-1);
 
-	rc = mds_fcmh_load_fmi(f, finfo, c->cfd_flags & CFD_FILE);
+	rc = mds_fcmh_load_fmi(f, mdsio_data, c->cfd_flags & CFD_FILE);
 	if (rc) {
 		fcmh_dropref(f);
 		return (-1);
@@ -304,7 +304,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *finfo, struct pscrpc_export *exp)
 	}
 
 	/* Add ourselves to the fcoo_mds_info structure's splay tree.
-	 *  fmi_ref is the real open refcnt (one ref per export or client).
+	 *  fmi_refcnt is the real open refcnt (one ref per export or client).
 	 *  Note that muliple client opens are handled on the client and
 	 *  should no be passed to the mds.  However the open mode can change.
 	 */
@@ -646,13 +646,13 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	 *   he's finished with it.
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
-	atomic_inc(&(fcmh_2_fmi(bmap->bcm_fcmh))->fmi_ref);
+	atomic_inc(&(fcmh_2_fmi(bmap->bcm_fcmh))->fmi_refcnt);
 
 	mds_repl_inv_except_locked(bmap, bmi.bmi_ios);
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
-		   "inc fmi_ref (%d) for bmap assignment",
-		   atomic_read(&(fcmh_2_fmi(bmap->bcm_fcmh))->fmi_ref));
+		   "inc fmi_refcnt (%d) for bmap assignment",
+		   atomic_read(&(fcmh_2_fmi(bmap->bcm_fcmh))->fmi_refcnt));
 
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
 	    "rmmi(%p)", res->res_name, resm->resm_addrbuf,

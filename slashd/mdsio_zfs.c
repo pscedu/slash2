@@ -56,9 +56,9 @@ bmap_2_zfs_fh(struct bmapc_memb *bmap)
 	fmi = fcmh_2_fmi(bmap->bcm_fcmh);
 
 	psc_assert(fmi);
-	psc_assert(fmi->fmi_data);
+	psc_assert(fmi->fmi_mdsio_data);
 
-	return (fmi->fmi_data);
+	return (fmi->fmi_mdsio_data);
 }
 
 int
@@ -71,14 +71,14 @@ mdsio_release(struct slash_inode_handle *i)
 	psc_assert(i->inoh_fcmh->fcmh_state & FCMH_FCOO_CLOSING);
 
 	fmi = fcmh_2_fmi(i->inoh_fcmh);
-	psc_assert(!atomic_read(&fmi->fmi_ref));
+	psc_assert(!atomic_read(&fmi->fmi_refcnt));
 
 	/*
 	 * XXX should we pass the same creds here as the
 	 * file was opened with?  do we even have them?
 	 */
 	return (zfsslash2_release(zfsVfs, fcmh_2_fid(i->inoh_fcmh),
-	    &rootcreds, fmi->fmi_data));
+	    &rootcreds, fmi->fmi_mdsio_data));
 }
 
 int
@@ -100,7 +100,7 @@ mdsio_apply_fcmh_size(struct fidc_membh *f, off64_t size)
 	FCMH_ULOCK(f);
 
 	return (zfsslash2_sets2szattr(zfsVfs, fcmh_2_fid(f), size,
-				      fmi->fmi_data));
+				      fmi->fmi_mdsio_data));
 }
 
 int
@@ -256,9 +256,9 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 }
 
 int
-mdsio_frelease(slfid_t fid, struct slash_creds *cr, void *finfo)
+mdsio_frelease(slfid_t fid, struct slash_creds *cr, void *mdsio_data)
 {
-	return (zfsslash2_release(zfsVfs, fid, cr, finfo));
+	return (zfsslash2_release(zfsVfs, fid, cr, mdsio_data));
 }
 
 int
@@ -289,10 +289,10 @@ mdsio_statfs(struct statvfs *stbv)
 int
 mdsio_opencreate(slfid_t pfid, struct slash_creds *cr, int flags,
     mode_t mode, const char *fn, struct slash_fidgen *fg,
-    struct stat *stb, void *finfop)
+    struct stat *stb, void *mdsio_datap)
 {
 	return (zfsslash2_opencreate(zfsVfs, pfid, cr, flags, mode,
-	    fn, fg, stb, finfop));
+	    fn, fg, stb, mdsio_datap));
 }
 
 int
@@ -311,9 +311,9 @@ mdsio_lookup(slfid_t pfid, const char *cpn, struct slash_fidgen *fgp,
 
 int
 mdsio_opendir(slfid_t fid, struct slash_creds *cr,
-    struct slash_fidgen *fgp, struct stat *stb, void *finfop)
+    struct slash_fidgen *fgp, struct stat *stb, void *mdsio_datap)
 {
-	return (zfsslash2_opendir(zfsVfs, fid, cr, fgp, stb, finfop));
+	return (zfsslash2_opendir(zfsVfs, fid, cr, fgp, stb, mdsio_datap));
 }
 
 int
@@ -328,10 +328,10 @@ mdsio_mkdir(slfid_t pfid, const char *cpn, mode_t mode,
 int
 mdsio_readdir(slfid_t fid, struct slash_creds *cr, size_t siz,
     off_t off, void *buf, size_t *outlen, void *attrs, int nprefetch,
-    void *finfo)
+    void *mdsio_data)
 {
 	return (zfsslash2_readdir(zfsVfs, fid, cr, siz, off, buf,
-	    outlen, attrs, nprefetch, finfo));
+	    outlen, attrs, nprefetch, mdsio_data));
 }
 
 int
@@ -343,10 +343,10 @@ mdsio_rename(slfid_t opfid, const char *ocpn, slfid_t npfid,
 
 int
 mdsio_setattr(slfid_t fid, struct stat *in_stb, int to_set,
-    struct slash_creds *cr, struct stat *out_stb, void *finfo)
+    struct slash_creds *cr, struct stat *out_stb, void *mdsio_data)
 {
 	return (zfsslash2_setattr(zfsVfs, fid, in_stb, to_set, cr,
-	    out_stb, finfo));
+	    out_stb, mdsio_data));
 }
 
 int

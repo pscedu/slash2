@@ -32,24 +32,24 @@ SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcmh_tentry, mexpfcm_cache_cmp);
 struct fcoo_mds_info {
 	struct fcm_exports	  fmi_exports;	/* tree of mexpfcm */
 	struct slash_inode_handle fmi_inodeh;		/* MDS sl_inodeh_t goes here */
-	atomic_t		  fmi_ref;
-	void			 *fmi_data;		/* mdsio descriptor data */
+	atomic_t		  fmi_refcnt;
+	void			 *fmi_mdsio_data;		/* mdsio descriptor data */
 };
 
 #define fcmh_2_fmi(f)		((struct fcoo_mds_info *)(f)->fcmh_fcoo->fcoo_pri)
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
-#define fcmh_2_mdsio_data(f)	fcmh_2_fmi(f)->fmi_data
+#define fcmh_2_mdsio_data(f)	fcmh_2_fmi(f)->fmi_mdsio_data
 
 #define inoh_2_mdsio_data(ih)	fcmh_2_mdsio_data((ih)->inoh_fcmh)
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
 #define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
 
 static inline void
-fmi_init(struct fcoo_mds_info *mdsi, struct fidc_membh *fcmh, void *finfo)
+fmi_init(struct fcoo_mds_info *mdsi, struct fidc_membh *fcmh, void *mdsio_data)
 {
 	SPLAY_INIT(&mdsi->fmi_exports);
-	atomic_set(&mdsi->fmi_ref, 0);
-	mdsi->fmi_data = finfo;
+	atomic_set(&mdsi->fmi_refcnt, 0);
+	mdsi->fmi_mdsio_data = mdsio_data;
 
 	slash_inode_handle_init(&mdsi->fmi_inodeh, fcmh, mds_inode_sync);
 }

@@ -298,7 +298,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct cfdent *cfd=NULL;
 	struct slash_fidgen fg;
 	struct stat stb;
-	void *finfo;
+	void *mdsio_data;
 	int fl;
 
 #ifdef NAMESPACE_EXPERIMENTAL
@@ -317,10 +317,10 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	freelock(&slash_id_lock);
 
 	mp->rc = mdsio_opencreate(mq->pfid, fid, &mq->creds, fl,
-	    mq->mode, mq->name, &fg, &stb, &finfo);
+	    mq->mode, mq->name, &fg, &stb, &mdsio_data);
 #else
 	mp->rc = mdsio_opencreate(mq->pfid, &mq->creds, fl,
-	    mq->mode, mq->name, &fg, &stb, &finfo);
+	    mq->mode, mq->name, &fg, &stb, &mdsio_data);
 #endif
 	if (mp->rc)
 		return (0);
@@ -330,7 +330,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
 	if (!mp->rc) {
 		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-		    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
+		    SLCONNT_CLI, mdsio_data, &cfd, CFD_FILE);
 
 		if (!mp->rc && cfd) {
 			fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
@@ -347,8 +347,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	 * handle private data, is overwritten with an fmi,
 	 * so release the mdsio data if we failed or didn't use it.
 	 */
-	if (cfd == NULL || cfd_2_mdsio_data(cfd) != finfo)
-		mdsio_frelease(fg.fg_fid, &mq->creds, finfo);
+	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
+		mdsio_frelease(fg.fg_fid, &mq->creds, mdsio_data);
 	return (0);
 }
 
@@ -360,7 +360,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	struct slash_fidgen fg;
 	struct cfdent *cfd=NULL;
 	struct stat stb;
-	void *finfo;
+	void *mdsio_data;
 	int fl;
 
 	RSX_ALLOCREP(rq, mq, mp);
@@ -368,7 +368,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 	mp->rc = mdsio_opencreate(mq->fid, &mq->creds, fl, 0, NULL, &fg,
-	    &stb, &finfo);
+	    &stb, &mdsio_data);
 
 	psc_info("mdsio_opencreate() fid=%"PRId64" rc=%d",
 	    mq->fid, mp->rc);
@@ -385,7 +385,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 
 	if (!mp->rc) {
 		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-		    SLCONNT_CLI, finfo, &cfd, CFD_FILE);
+		    SLCONNT_CLI, mdsio_data, &cfd, CFD_FILE);
 
 		if (!mp->rc && cfd) {
 			fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
@@ -402,8 +402,8 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	 * handle private data, is overwritten with an fmi,
 	 * so release the mdsio data if we failed or didn't use it.
 	 */
-	if (cfd == NULL || cfd_2_mdsio_data(cfd) != finfo)
-		mdsio_frelease(fg.fg_fid, &mq->creds, finfo);
+	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
+		mdsio_frelease(fg.fg_fid, &mq->creds, mdsio_data);
 	return (0);
 }
 
@@ -415,18 +415,18 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	struct cfdent *cfd = NULL;
 	struct slash_fidgen fg;
 	struct stat stb;
-	void *finfo;
+	void *mdsio_data;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_opendir(mq->fid, &mq->creds, &fg, &stb, &finfo);
-	psc_info("mdsio_opendir rc=%d data=%p", mp->rc, finfo);
+	mp->rc = mdsio_opendir(mq->fid, &mq->creds, &fg, &stb, &mdsio_data);
+	psc_info("mdsio_opendir rc=%d data=%p", mp->rc, mdsio_data);
 	if (mp->rc)
 		return (0);
 
 	mp->rc = slmrmcthr_inode_cacheput(&fg, &stb, &mq->creds);
 	if (!mp->rc) {
 		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-		    SLCONNT_CLI, finfo, &cfd, CFD_DIR);
+		    SLCONNT_CLI, mdsio_data, &cfd, CFD_DIR);
 
 		if (!mp->rc && cfd) {
 			fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
@@ -441,8 +441,8 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	 * handle private data, is overwritten with an fmi,
 	 * so release the mdsio handle if we failed or didn't use it.
 	 */
-	if (cfd == NULL || cfd_2_mdsio_data(cfd) != finfo)
-		mdsio_frelease(fg.fg_fid, &mq->creds, finfo);
+	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
+		mdsio_frelease(fg.fg_fid, &mq->creds, mdsio_data);
 	return (0);
 }
 
@@ -645,7 +645,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	 */
 	slrpc_internalize_stat(&mq->attr, &stb);
 	mp->rc = mdsio_setattr(mq->fid, &stb, mq->to_set,
-	    &mq->creds, &outstb, fmi ? fmi->fmi_data : NULL);
+	    &mq->creds, &outstb, fmi ? fmi->fmi_mdsio_data : NULL);
 	slrpc_externalize_stat(&outstb, &mp->attr);
 
 	if (mp->rc == ENOENT) {

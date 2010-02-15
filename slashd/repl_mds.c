@@ -850,7 +850,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
-	atomic_dec(&fcmh_2_fmi(REPLRQ_FCMH(rrq))->fmi_ref);
+	atomic_dec(&fcmh_2_fmi(REPLRQ_FCMH(rrq))->fmi_refcnt);
 	fcmh_dropref(REPLRQ_FCMH(rrq));
 
 	/* SPLAY_REMOVE() does not NULL out the field */
