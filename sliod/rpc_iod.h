@@ -17,10 +17,13 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _IO_RPC_H_
-#define _IO_RPC_H_
+#ifndef _RPC_IOD_H_
+#define _RPC_IOD_H_
 
 #include <sys/types.h>
+
+#include "slconfig.h"
+#include "slconn.h"
 
 struct sli_repl_workrq;
 
@@ -70,4 +73,4 @@ int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
 
 int	sli_rii_issue_repl_read(struct pscrpc_import *, int, int, struct sli_repl_workrq *);
 
-#endif /* _IO_RPC_H_ */
+#endif /* _RPC_IOD_H_ */

@@ -69,7 +69,7 @@ mds_inode_od_initnew(struct slash_inode_handle *i)
 int
 mds_inode_release(struct fidc_membh *f)
 {
-	struct fcoo_mds_info *i;
+	struct fcoo_mds_info *fmi;
 	int rc=0;
 
 	spinlock(&f->fcmh_lock);
@@ -79,13 +79,13 @@ mds_inode_release(struct fidc_membh *f)
 	 *   fidc_fcmh2fmi() because this thread should absolutely have
 	 *   a ref to the fcmh which should be open.
 	 */
-	i = fcmh_2_fmi(f);
+	fmi = fcmh_2_fmi(f);
 
-	DEBUG_FCMH(PLL_DEBUG, f, "i->fmi_refcnt (%d) (oref=%d)",
-		   atomic_read(&i->fmi_refcnt), f->fcmh_fcoo->fcoo_oref_rd);
+	DEBUG_FCMH(PLL_DEBUG, f, "fmi_refcnt (%d) (oref=%d)",
+	    atomic_read(&fmi->fmi_refcnt), f->fcmh_fcoo->fcoo_oref_rd);
 
-	if (atomic_dec_and_test(&i->fmi_refcnt)) {
-		psc_assert(SPLAY_EMPTY(&i->fmi_exports));
+	if (atomic_dec_and_test(&fmi->fmi_refcnt)) {
+		psc_assert(SPLAY_EMPTY(&fmi->fmi_exports));
 		/* We held the final reference to this fcoo, it must
 		 *   return attached.
 		 */
@@ -93,8 +93,8 @@ mds_inode_release(struct fidc_membh *f)
 
 		f->fcmh_state |= FCMH_FCOO_CLOSING;
 		DEBUG_FCMH(PLL_DEBUG, f, "calling mdsio_release");
-		rc = mdsio_release(&i->fmi_inodeh);
-		PSCFREE(i);
+		rc = mdsio_release(&fmi->fmi_inodeh);
+		PSCFREE(fmi);
 		f->fcmh_fcoo->fcoo_pri = NULL;
 		f->fcmh_fcoo->fcoo_oref_rd = 0;
 		freelock(&f->fcmh_lock);
@@ -360,7 +360,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	int locked;
 	struct mexpfcm *m=c->cfd_pri;
 	struct fidc_membh *f=m->mexpfcm_fcmh;
-	struct fcoo_mds_info *i;
+	struct fcoo_mds_info *fmi;
 
 	spinlock(&m->mexpfcm_lock);
 	/* Ensure the mexpfcm has the correct pointers before
@@ -371,8 +371,8 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		goto out;
 	}
 
-	i = fidc_fcmh2fmi(f);
-	if (i == NULL) {
+	fmi = fidc_fcmh2fmi(f);
+	if (fmi == NULL) {
 		DEBUG_FCMH(PLL_WARN, f, "fid has no fcoo");
 		goto out;
 	}
@@ -401,7 +401,7 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	 *  serialization) and remove ourselves from the tree.
 	 */
 	locked = reqlock(&f->fcmh_lock);
-	PSC_SPLAY_XREMOVE(fcm_exports, &i->fmi_exports, m);
+	PSC_SPLAY_XREMOVE(fcm_exports, &fmi->fmi_exports, m);
 	ureqlock(&f->fcmh_lock, locked);
  out:
 	if (f)
@@ -505,7 +505,7 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 				mdscoh_infmode_chk(bref, MEXPBCM_CIO_REQD);
 				psc_assert(psclist_conjoint(&bref->mexpbcm_lentry));
 				if (!bref->mexpbcm_net_inf) {
-					/* Unschedule this rpc, the coh
+					/* Unschedule this RPC, the coh
 					 *    thread will remove it from
 					 *    the listcache.
 					 */
@@ -561,10 +561,10 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
 
 /**
  * mds_bmap_ion_assign - bind a bmap to a ion node for writing.  The process
- *    involves a round-robin'ing of an i/o system's nodes and attaching a
+ *    involves a round-robin'ing of an I/O system's nodes and attaching a
  *    a resm_mds_info to the bmap, used for establishing connection to the ION.
  * @bref: the bmap reference
- * @pios: the preferred i/o system
+ * @pios: the preferred I/O system
  */
 __static int
 mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
@@ -598,7 +598,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		resm = psc_dynarray_getpos(&res->res_members, n);
 
 		psc_trace("trying res(%s) ion(%s)",
-			  res->res_name, resm->resm_addrbuf);
+		    res->res_name, resm->resm_addrbuf);
 
 		freelock(&rpmi->rpmi_lock);
 
@@ -615,7 +615,7 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		}
 
 		DEBUG_BMAP(PLL_TRACE, bmap, "res(%s) ion(%s)",
-			   res->res_name, resm->resm_addrbuf);
+		    res->res_name, resm->resm_addrbuf);
 
 		atomic_inc(&rmmi->rmmi_refcnt);
 		mdsi->bmdsi_wr_ion = rmmi;
@@ -651,8 +651,8 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	mds_repl_inv_except_locked(bmap, bmi.bmi_ios);
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
-		   "inc fmi_refcnt (%d) for bmap assignment",
-		   atomic_read(&(fcmh_2_fmi(bmap->bcm_fcmh))->fmi_refcnt));
+	    "inc fmi_refcnt (%d) for bmap assignment",
+	    atomic_read(&(fcmh_2_fmi(bmap->bcm_fcmh))->fmi_refcnt));
 
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
 	    "rmmi(%p)", res->res_name, resm->resm_addrbuf,

@@ -26,6 +26,7 @@
 
 #include "bmap_iod.h"
 #include "buffer.h"
+#include "fidc_iod.h"
 #include "slvr.h"
 
 struct psc_listcache lruSlvrs;   /* LRU list of clean slivers which may be reaped */

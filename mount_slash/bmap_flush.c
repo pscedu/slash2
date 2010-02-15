@@ -61,8 +61,8 @@ __static psc_spinlock_t pndgReqLock = LOCK_INITIALIZER;
 __static void
 bmap_flush_reap_rpcs(void)
 {
-	int i;
 	struct pscrpc_request_set *set;
+	int i;
 
 	psc_trace("outstandingRpcCnt=%d (before) completedRpcCnt=%d",
 	    atomic_read(&outstandingRpcCnt), atomic_read(&completedRpcCnt));
@@ -147,7 +147,6 @@ bmap_flush_rpc_cb(struct pscrpc_request *req,
 
 	return (0);
 }
-
 
 __static struct pscrpc_request *
 bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
@@ -553,7 +552,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 				for (i=0; i < psc_dynarray_len(&b); i++) {
 					t = psc_dynarray_getpos(&b, i);
 					spinlock(&t->biorq_lock);
-					DEBUG_BIORQ(PLL_INFO, t, 
+					DEBUG_BIORQ(PLL_INFO, t,
 						    "descheduling");
 					t->biorq_flags &= ~BIORQ_SCHED;
 					freelock(&t->biorq_lock);
@@ -602,7 +601,7 @@ bmap_flush(void)
 	nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
 
 	if (nrpcs <= 0) {
-		psc_trace("nrpcs=%d", nrpcs);	
+		psc_trace("nrpcs=%d", nrpcs);
 		return;
 	}
 
@@ -667,7 +666,7 @@ bmap_flush(void)
 					freelock(&r->biorq_lock);
 					continue;
 				}
-			} 
+			}
 			/* Don't assert !BIORQ_INFL until ensuring that
 			 *   we can actually work on this biorq.  A RBW
 			 *   process may be working on it.
@@ -675,7 +674,7 @@ bmap_flush(void)
 			psc_assert(!(r->biorq_flags & BIORQ_INFL));
 			r->biorq_flags |= BIORQ_SCHED;
 			freelock(&r->biorq_lock);
-			
+
 			DEBUG_BIORQ(PLL_TRACE, r, "try flush");
 			psc_dynarray_add(&a, r);
 		}

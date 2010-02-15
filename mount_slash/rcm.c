@@ -31,7 +31,7 @@
 #include "ctlsvr_cli.h"
 #include "slashrpc.h"
 
-/*
+/**
  * msrcm_handle_getreplst - handle a GETREPLST request for client from MDS,
  *	which would have been initiated by a client request originally.
  * @rq: request.
@@ -89,7 +89,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	return (0);
 }
 
-/*
+/**
  * msrcm_handle_getreplst_slave - handle a GETREPLST request for client from MDS,
  *	which would have been initiated by a client request originally.
  * @rq: request.
@@ -152,8 +152,9 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
-/*
+/**
  * msrcm_handle_releasebmap - handle a RELEASEBMAP request for client from MDS.
+ * @rq: request.
  */
 int
 msrcm_handle_releasebmap(struct pscrpc_request *rq)
@@ -165,8 +166,9 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 	return (0);
 }
 
-/*
+/**
  * msrcm_handle_connect - handle a CONNECT request for client from MDS.
+ * @rq: request.
  */
 int
 msrcm_handle_connect(struct pscrpc_request *rq)
@@ -180,7 +182,7 @@ msrcm_handle_connect(struct pscrpc_request *rq)
 	return (0);
 }
 
-/*
+/**
  * slc_rcm_handler - handle a request for CLIENT from MDS.
  * @rq: request.
  */

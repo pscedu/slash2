@@ -33,14 +33,14 @@ SPLAY_HEAD(bmap_exports, mexpbcm);
 
 /*
  * bmap_mds_info - the bcm_pri data structure for the slash2 mds.
- *   Bmap_mds_info holds all bmap specific context for the mds which
+ *   bmap_mds_info holds all bmap specific context for the mds which
  *   includes the journal handle, ref counts for client readers and writers
  *   a point to our ION, a tree of our client's exports, a pointer to the
  *   on-disk structure, a receipt for the odtable, and a reqset for issuing
  *   callbacks (XXX is that really needed?).
  * Notes: both read and write clients are stored to bmdsi_exports, the ref
  *   counts are used to determine the number of both and hence the caching
- *   mode used at the clients.   Bmdsi_wr_ion is a shortcut pointer used
+ *   mode used at the clients.   bmdsi_wr_ion is a shortcut pointer used
  *   only when the bmap has client writers - all writers (and readers) are
  *   directed to this ion once a client has invoked write mode on the bmap.
  *
