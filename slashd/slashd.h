@@ -99,7 +99,7 @@ struct resm_mds_info {
 	atomic_t		  rmmi_refcnt;		/* #CLIs using this ion */
 };
 
-#define resm2mrmi(resm)		((struct resm_mds_info *)(resm)->resm_pri)
+#define resm2rmmi(resm)		((struct resm_mds_info *)(resm)->resm_pri)
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
  */

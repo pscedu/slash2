@@ -60,15 +60,15 @@ struct slm_rmi_expdata *
 
 /* aliases for connection management */
 #define slm_geticsvc(resm)							\
-	sl_csvc_get(&resm2mrmi(resm)->rmmi_csvc, CSVCF_USE_MULTIWAIT, NULL,	\
+	sl_csvc_get(&resm2rmmi(resm)->rmmi_csvc, CSVCF_USE_MULTIWAIT, NULL,	\
 	    (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC,	\
-	    SRIM_VERSION, &resm2mrmi(resm)->rmmi_lock,				\
-	    &resm2mrmi(resm)->rmmi_mwcond, SLCONNT_IOD)
+	    SRIM_VERSION, &resm2rmmi(resm)->rmmi_lock,				\
+	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD)
 
 #define slm_geticsvcx(resm, exp)						\
-	sl_csvc_get(&resm2mrmi(resm)->rmmi_csvc, CSVCF_USE_MULTIWAIT, (exp), 0,	\
+	sl_csvc_get(&resm2rmmi(resm)->rmmi_csvc, CSVCF_USE_MULTIWAIT, (exp), 0,	\
 	    SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC, SRIM_VERSION,		\
-	    &resm2mrmi(resm)->rmmi_lock, &resm2mrmi(resm)->rmmi_mwcond, SLCONNT_IOD)
+	    &resm2rmmi(resm)->rmmi_lock, &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD)
 
 static __inline struct slashrpc_cservice *
 slm_getclcsvc(struct pscrpc_export *exp)

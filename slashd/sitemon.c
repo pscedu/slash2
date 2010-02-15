@@ -301,9 +301,9 @@ slmreplqthr_main(void *arg)
 							src_resm = psc_dynarray_getpos(&src_res->res_members, rin);
 							if (slm_geticsvc(src_resm) == NULL) {
 								if (!psc_multiwait_hascond(&smi->smi_mw,
-								    &resm2mrmi(src_resm)->rmmi_mwcond))
+								    &resm2rmmi(src_resm)->rmmi_mwcond))
 									if (psc_multiwait_addcond(&smi->smi_mw,
-									    &resm2mrmi(src_resm)->rmmi_mwcond))
+									    &resm2rmmi(src_resm)->rmmi_mwcond))
 										psc_fatal("multiwait_addcond");
 								continue;
 							}
