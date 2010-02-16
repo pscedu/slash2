@@ -48,7 +48,6 @@
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 const char		*progname;
-const char		*slm_datadir = _PATH_SLASHD_DIR;
 
 struct psc_poolmaster	 replrq_poolmaster;
 
@@ -150,7 +149,7 @@ slm_init(void)
 
 	mds_journal_init();
 
-	xmkfn(fn, "%s/%s", slm_datadir, _RELPATH_SLODTABLE);
+	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_IONBMAPS_ODT);
 	psc_assert(!odtable_load(fn, &mdsBmapAssignTable));
 	odtable_scan(mdsBmapAssignTable, mds_bmi_cb);
 }
@@ -183,12 +182,12 @@ main(int argc, char *argv[])
 #endif
 
 	progname = argv[0];
-	cfn = _PATH_SLASHCONF;
-	sfn = _PATH_SLMCTLSOCK;
+	cfn = SL_PATH_CONF;
+	sfn = SL_PATH_SLMCTLSOCK;
 	while ((c = getopt(argc, argv, "D:f:p:S:")) != -1)
 		switch (c) {
 		case 'D':
-			slm_datadir = optarg;
+			sl_datadir = optarg;
 			break;
 		case 'f':
 			cfn = optarg;

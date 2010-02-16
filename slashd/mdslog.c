@@ -300,7 +300,7 @@ mds_journal_init(void)
 {
 	char fn[PATH_MAX];
 
-	xmkfn(fn, "%s/%s", slm_datadir, _RELPATH_SLJOURNAL);
+	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
 	mdsJournal = pjournal_replay(fn, mds_journal_replay);
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", fn);

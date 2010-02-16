@@ -134,6 +134,5 @@ extern struct slash_creds			 rootcreds;
 extern struct psc_listcache			 dirtyMdsData;
 extern struct odtable				*mdsBmapAssignTable;
 extern const struct slash_inode_extras_od	 null_inox_od;
-extern const char				*slm_datadir;
 
 #endif /* _SLASHD_H_ */

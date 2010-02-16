@@ -9,8 +9,11 @@
 
 #include "psc_util/log.h"
 
+#include "pathnames.h"
 #include "sltypes.h"
 #include "slutil.h"
+
+const char *sl_datadir = SL_PATH_DATADIR;
 
 void
 dump_statbuf(int level, const struct stat *stb)

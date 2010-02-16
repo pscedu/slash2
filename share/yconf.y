@@ -103,7 +103,6 @@ int		 yyparse(void);
 struct symtable sym_table[] = {
 	TABENT_GLBL("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
 	TABENT_GLBL("net",		SL_TYPE_INT,	0,		gconf_netid,	slcfg_str2lnet),
-	TABENT_GLBL("keyfn",		SL_TYPE_STR,	PATH_MAX,	gconf_fdbkeyfn,	NULL),
 	TABENT_SITE("site_id",		SL_TYPE_INT,	0,		site_id,	NULL),
 	TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
 	TABENT_RES ("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),

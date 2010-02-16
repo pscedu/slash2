@@ -89,7 +89,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	sockfn = _PATH_SLMCTLSOCK;
+	sockfn = SL_PATH_SLMCTLSOCK;
 	while ((c = getopt(argc, argv, "c:Hh:Ii:L:m:P:p:S:s:")) != -1)
 		switch (c) {
 		case 'c':

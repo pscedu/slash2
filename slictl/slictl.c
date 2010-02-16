@@ -119,7 +119,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	sockfn = _PATH_SLICTLSOCK;
+	sockfn = SL_PATH_SLICTLSOCK;
 	while ((c = getopt(argc, argv, "c:Hh:Ii:L:m:P:p:S:s:")) != -1)
 		switch (c) {
 		case 'c':

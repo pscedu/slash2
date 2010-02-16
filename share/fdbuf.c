@@ -39,6 +39,8 @@
 #include "psc_util/random.h"
 
 #include "fdbuf.h"
+#include "mkfn.h"
+#include "pathnames.h"
 #include "slashrpc.h"
 
 #define DESCBUF_KEYSIZE	1024
@@ -220,12 +222,12 @@ fdbuf_check(const struct srt_fd_buf *sfdb, uint64_t *cfdp,
 void
 fdbuf_readkeyfile(void)
 {
+	char keyfn[PATH_MAX];
 	gcry_error_t gerr;
-	const char *keyfn;
 	struct stat stb;
 	int alg, fd;
 
-	keyfn = globalConfig.gconf_fdbkeyfn;
+	xmkfn(keyfn, "%s/%s", sl_datadir, SL_FN_DESCBUFKEY);
 	if ((fd = open(keyfn, O_RDONLY)) == -1)
 		psc_fatal("open %s", keyfn);
 	if (fstat(fd, &stb) == -1)
@@ -256,10 +258,10 @@ fdbuf_readkeyfile(void)
 void
 fdbuf_checkkeyfile(void)
 {
-	const char *keyfn;
+	char keyfn[PATH_MAX];
 	struct stat stb;
 
-	keyfn = globalConfig.gconf_fdbkeyfn;
+	xmkfn(keyfn, "%s/%s", sl_datadir, SL_FN_DESCBUFKEY);
 	if (stat(keyfn, &stb) == -1)
 		psc_fatal("stat %s", keyfn);
 	fdbuf_checkkey(keyfn, &stb);
@@ -291,11 +293,11 @@ fdbuf_checkkey(const char *fn, struct stat *stb)
 void
 fdbuf_createkeyfile(void)
 {
-	const char *keyfn;
+	char keyfn[PATH_MAX];
 	int i, j, fd;
 	uint32_t r;
 
-	keyfn = globalConfig.gconf_fdbkeyfn;
+	xmkfn(keyfn, "%s/%s", sl_datadir, SL_FN_DESCBUFKEY);
 	if ((fd = open(keyfn, O_EXCL | O_WRONLY | O_CREAT, 0600)) == -1) {
 		if (errno == EEXIST) {
 			fdbuf_checkkeyfile();

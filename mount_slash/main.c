@@ -63,7 +63,7 @@
 sl_ios_id_t		 prefIOS = IOS_ID_ANY;
 int			 fuse_debug;
 const char		*progname;
-char			 ctlsockfn[] = _PATH_MSCTLSOCK;
+char			 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
 char			 mountpoint[PATH_MAX];
 
 struct sl_resm		*slc_rmc_resm;
@@ -1917,7 +1917,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char c, *nc_mp, *cfg = _PATH_SLASHCONF;
+	char c, *nc_mp, *cfg = SL_PATH_CONF;
 	int unmount;
 
 	pfl_init();
@@ -1935,7 +1935,7 @@ main(int argc, char *argv[])
 			break;
 		case 'S':
 			if (strlcpy(ctlsockfn, optarg,
-			    PATH_MAX) >= PATH_MAX)
+			    sizeof(ctlsockfn)) >= sizeof(ctlsockfn))
 				psc_fatalx("%s: too long", optarg);
 			break;
 		case 'U':

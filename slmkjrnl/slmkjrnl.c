@@ -34,7 +34,7 @@
 int format;
 int query;
 int verbose;
-const char *datadir = _PATH_SLASHD_DIR;
+const char *datadir = SL_PATH_DATADIR;
 const char *progname;
 
 __dead void
@@ -81,7 +81,7 @@ main(int argc, char *argv[])
 		if (errno != EEXIST)
 			err(1, "mkdir: %s", datadir);
 
-	xmkfn(fn, "%s/%s", datadir, _RELPATH_SLJOURNAL);
+	xmkfn(fn, "%s/%s", datadir, SL_FN_OPJOURNAL);
 
 	if (format) {
 		rc = pjournal_format(fn, SLJ_MDS_JNENTS,

@@ -537,7 +537,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	sockfn = _PATH_MSCTLSOCK;
+	sockfn = SL_PATH_MSCTLSOCK;
 	while ((c = getopt(argc, argv, "c:f:Hh:Ii:L:m:P:p:Q:Rr:S:s:U:")) != -1)
 		switch (c) {
 		case 'c':

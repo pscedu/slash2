@@ -85,8 +85,8 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	progname = argv[0];
-	cfn = _PATH_SLASHCONF;
-	sfn = _PATH_SLICTLSOCK;
+	cfn = SL_PATH_CONF;
+	sfn = SL_PATH_SLICTLSOCK;
 	while ((c = getopt(argc, argv, "f:S:")) != -1)
 		switch (c) {
 		case 'f':

@@ -323,6 +323,7 @@ mds.c
 - push O_APPEND writes always to EOF
 
 - implement mknod
+- verify sliod's fdbuf key is the same as slashd's on CONNECT
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
