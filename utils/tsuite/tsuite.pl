@@ -159,7 +159,7 @@ my $slmkjrnl = "$slbase/slmkjrnl/slmkjrnl";
 my $odtable = "$src/psc_fsutil_libs/utils/odtable";
 my $slimmns_format = "$slbase/slimmns/slimmns_format";
 
-my $ssh_init = "set -e; cd $base";
+my $ssh_init = "set -e; set -x; cd $base";
 
 # Setup configuration
 my $conf = slash_conf(base => $base);
@@ -261,8 +261,6 @@ parse_conf();
 
 my ($i);
 
-exit;
-
 # Create the MDS file systems
 foreach $i (@mds) {
 	debug_msg "MDS file system: $i->{host}";
@@ -270,13 +268,14 @@ foreach $i (@mds) {
 	    $ssh_init
 	    $zfs_fuse &
 	    sleep 2
+	    $zpool destroy $i->{zpoolname}
 	    $zpool create $i->{zpoolname} $i->{zpool_args}
 	    $slimmns_format /$i->{zpoolname}
 	    sync; sync
 	    umount /$i->{zpoolname}
 	    kill %1
 
-	    $slmkjrnl -D $i->{datadir}
+	    $slmkjrnl -D $i->{datadir} -f
 	    $odtable -C -N $i->{datadir}/ion_bmaps.odt
 EOF
 }
@@ -311,6 +310,8 @@ waitjobs $intvtimeout;
 alarm $intvtimeout;
 sleep 1 until scalar @{[ glob "$base/ctl/slashd.*.sock" ]} == @mds;
 alarm 0;
+
+exit;
 
 # Create the ION file systems
 foreach $i (@ion) {
