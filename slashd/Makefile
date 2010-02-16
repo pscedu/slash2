@@ -68,7 +68,7 @@ SRCS+=		${PFL_BASE}/psc_util/waitq.c
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 
-DEFINES+=	-DZPOOL_PATH=\"${ZFS_BASE}/cmd/zpool\"
+DEFINES+=	-DZPOOL_PATH=\"$(realpath ${ZFS_BASE}/cmd/zpool)\"
 LDFLAGS+=	-lz -laio -lgcrypt
 MODULES+=	lnet pthread zfs
 
