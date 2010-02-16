@@ -1,5 +1,5 @@
 .\" $Id$
-.Dd January 28, 2010
+.Dd February 16, 2010
 .Dt SLASHD 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -71,13 +71,15 @@ The default is
 .Bl -tag -width Pa -compact
 .It Pa /etc/slash.conf
 default
-.Nm
+.Tn SLASH
 configuration
+.It Pa /var/lib/slashd/descbuf.key
+assigned descriptor verification key
 .It Pa /var/lib/slashd/ion_bmaps.odt
 map of
 .Tn I/O
 node file block ownership
-.It Pa /var/lib/slashd/slopjrnl
+.It Pa /var/lib/slashd/op-journal
 pending operations journal
 .It Xo
 .Pa /var/run/slashd. Ns Ic %h Ns Pa .sock

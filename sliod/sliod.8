@@ -1,5 +1,5 @@
 .\" $Id$
-.Dd February 15, 2010
+.Dd February 16, 2010
 .Dt SLIOD 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -10,6 +10,7 @@
 server daemon
 .Sh SYNOPSIS
 .Nm sliod
+.Op Fl D Ar datadir
 .Op Fl f Ar conf
 .Op Fl S Ar socket
 .Ar mds-resource
@@ -30,7 +31,11 @@ resource name of the primary metadata server to use for communicating
 file metadata.
 .Pp
 The options are as follows:
-.Bl -tag -width Ds
+.Bl -tag -width Ds.It Fl D Ar datadir
+Specify an alternative directory where operation data is stored.
+Defaults to
+.Pa /var/lib/slashd .
+.
 .It Fl f Ar conf
 Specify an alternative configuration file.
 Defaults to
@@ -61,8 +66,10 @@ The default is
 .Bl -tag -width Pa -compact
 .It Pa /etc/slash.conf
 default
-.Nm
+.Tn SLASH
 configuration
+.It Pa /var/lib/slashd/descbuf.key
+assigned descriptor verification key
 .It Xo
 .Pa /var/run/sliod. Ns Ic %h Ns Pa .sock
 .Xc
