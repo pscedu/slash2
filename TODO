@@ -250,7 +250,7 @@ mds.c
 
 
 	Look at removing load_inode altogether.  Instead, maybe do an extra
-	ref on lookup so that proceeding operations are guaranteed to have
+	ref on lookup so that proceeding operations are guarenteed to have
 	their inodes cached.
 
 - differentiate I/O software terminology
@@ -271,23 +271,23 @@ mds.c
     $ slfctl -b bmapspec:file ...			# msctl -f bmap-repl-policy=onetime
 
   mid-level replication request control aliases:
-    $ slrepls [-R] file ...				# msctl [-R] -r file -r...
-    $ slreplq [-R] site,...[|bmapspec]:file ...		# msctl [-R] -Q spec -Q...
-    $ slreplrm [-R] site,...[|bmapspec]:file ...	# msctl [-R] -U spec -U...
+    $ slfs replstatus [-R] file ...			# msctl [-R] -r file -r...
+    $ slfs replqueue [-R] res[,...]:bmapspec:file ...	# msctl [-R] -Q spec -Q...
+    $ slfs replremove [-R] res[,...]:bmapspec:file ...	# msctl [-R] -U spec -U...
 
   high-level aliases:
-    $ slreplicate [-Rp] site,...:file ...
+    $ slfs replicate [-Rp] res[,...] file ...
 	if (-p)
 		slfctl [-R] -p file ...
-	msctl [-R] -Q site,...|*[P]:file ...
-    $ slreplcancel file[:site] ...
+	msctl [-R] -Q res,...|*[P]:file ...
+    $ slfs replcancel|cancel [res,...] file ...
 	if (-p)
 		slfctl [-R] -o file ...
-	msctl [-R] -U site,...|*[P]:file ...
-    $ slreplpersist file ...
+	msctl [-R] -U res,...|*[P]:file ...
+    $ slfs setpersist file ...
 	slfctl -p file ...
 	slfctl -B *:file *:...
-    $ slreplnopersist file ...
+    $ slfs setonetime file ...
 	slfctl -o file ...
 	slfctl -b *:file *:...
 
@@ -302,22 +302,18 @@ mds.c
 - ensure that you can't msctl -U the single master copy of data
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
-- have ACCESS() consult cache before issuing RPC
 
 - adapt tsuite
 
 - add ctl for bcmp
-- more truncation framework
 - work on slictl fs import command
 
 ----------------
 - make slmctl and slictl knobs for showing listen addresses/options
 - add ctl for connections
-- msctl -Q as root on files that are read-only shouldn't give EPERM
 - apply changes to fuse_listener.c from zfs-fuse 0.6.0
 - ensure slash.conf has <= 1 MDS servers for each site
 - move to zfs 0.6.0
-- apply zfs 0.5.0 patches to zfs 0.6.0
 ----------------
 
 - RSX_ALLOCREP() should return() the error code when bulks are expected
@@ -331,8 +327,6 @@ mds.c
 
 - the BUS errors look like they are being caused in some error scenario
   in PSCRPC
-- directories have no size in ls(1) over mount_slash
-- convert slash_creds to zfs_creds
 - merge set_bmapreplpol and friends into a single interface
 - fdbufs should be used for FSYNC, GETBMAP
 - remove 'slash_' prefix from inode API
@@ -344,9 +338,3 @@ maybe not:
   once they are CLOSE()'d
 
 - implement mknod
-- add to_set attr to fcmh_setattr
-
-zfs
-- fix off-by-one in MAXNAMELEN
-- remove 'real_' double vars
-- fix ZFS_ENTER() sections
