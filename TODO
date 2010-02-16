@@ -300,41 +300,34 @@ mds.c
 - ensure fidc_lookup_load_fg() will not accept FID_ANY
 - rename BMAPCHMODE -> BMAP_CHRWMODE
 - ensure that you can't msctl -U the single master copy of data
-- removing the persistence policy on a bmap should mds_repl_delrq()
-  for that bmap
 
+----------------------------------------------------
 - adapt tsuite
-
-- add ctl for bcmp
+- fdbufs should be used for FSYNC, GETBMAP
 - work on slictl fs import command
-
-----------------
 - make slmctl and slictl knobs for showing listen addresses/options
 - add ctl for connections
 - apply changes to fuse_listener.c from zfs-fuse 0.6.0
 - ensure slash.conf has <= 1 MDS servers for each site
-- move to zfs 0.6.0
-----------------
+- removing the persistence policy on a bmap should mds_repl_delrq()
+  for that bmap
+-----------------------------------------------------
 
 - RSX_ALLOCREP() should return() the error code when bulks are expected
 
-- bump generation and assign ACTIVE bh_repls when assigning bmaps to
-  IONS
-- as soon as a write ION is assigned, invalidate other replicas; don't
-  wait for the actual WRITE to come
 - think about routing blips where MDS<->ION is not quite what a ION<->ION
   can see each, causing unnecessary replication work processing
 
 - the BUS errors look like they are being caused in some error scenario
   in PSCRPC
 - merge set_bmapreplpol and friends into a single interface
-- fdbufs should be used for FSYNC, GETBMAP
 - remove 'slash_' prefix from inode API
 - push O_APPEND writes always to EOF
+
+- implement mknod
 
 maybe not:
 - merge sl_replrq directly into fidc_mds_info
 - use a sliding window to track valid cfd's and remove them from the window
   once they are CLOSE()'d
-
-- implement mknod
+- add ctl for bcmp
