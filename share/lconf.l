@@ -39,7 +39,7 @@ void yyerror(const char *, ...);
 
 num		[0-9]+
 hexnum		0[Xx][0-9A-Fa-f]+
-sitename	@[A-Z]+
+sitename	@[A-Za-z]+
 char		[A-Za-z]
 ipquad		[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
 name		[A-Za-z][0-9A-Za-z_.-]+
