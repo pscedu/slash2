@@ -26,10 +26,12 @@ sub usage {
 
 sub init_env {
 	my %r = @_;
+	my $s = "";
 
 	while (my ($k, $v) = each %r) {
-		print "export $k='$v'";
+		$s .= "export $k='$v'\n";
 	}
+	return $s;
 }
 
 sub debug_msg {
@@ -123,11 +125,14 @@ do {
 
 debug_msg "base dir = $base";
 
+my $mp = "$base/mp";
+my $datadir = "$base/data";
+
 mkdir $base		or fatal "mkdir $base";
 mkdir "$base/ctl"	or fatal "mkdir $base/ctl";
 mkdir "$base/fs"	or fatal "mkdir $base/fs";
-mkdir "$base/mp"	or fatal "mkdir $base/mp";
-mkdir "$base/data"	or fatal "mkdir $base/data";
+mkdir $mp		or fatal "mkdir $mp";
+mkdir $datadir		or fatal "mkdir $datadir";
 
 # Checkout the source and build it
 chdir $base		or fatal "chdir $base";
@@ -148,15 +153,13 @@ if (defined($src)) {
 	fatalx "make failed" if $?;
 }
 
-my $mp = "$base/mp";
 my $slbase = "$src/slash_nara";
-my $datadir = "$src/data";
 my $tsbase = "$slbase/utils/tsuite";
 
 my $zpool = "$slbase/utils/zpool.sh";
 my $zfs_fuse = "$slbase/utils/zfs-fuse.sh";
 my $slmkjrnl = "$slbase/slmkjrnl/slmkjrnl";
-my $odtable = "$src/psc_fsutil_libs/utils/odtable";
+my $odtable = "$src/psc_fsutil_libs/utils/odtable/odtable";
 my $slimmns_format = "$slbase/slimmns/slimmns_format";
 
 my $ssh_init = "set -e; set -x; cd $base";
@@ -265,18 +268,19 @@ my ($i);
 foreach $i (@mds) {
 	debug_msg "MDS file system: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
-	    $ssh_init
-	    $zfs_fuse &
-	    sleep 2
-	    $zpool destroy $i->{zpoolname}
-	    $zpool create $i->{zpoolname} $i->{zpool_args}
-	    $slimmns_format /$i->{zpoolname}
-	    sync; sync
-	    umount /$i->{zpoolname}
-	    kill %1
+		$ssh_init
+		@{[init_env(%$global_env)]}
+		$zfs_fuse &
+		sleep 2
+		$zpool destroy $i->{zpoolname}
+		$zpool create $i->{zpoolname} $i->{zpool_args}
+		$slimmns_format /$i->{zpoolname}
+		sync; sync
+		umount /$i->{zpoolname}
+		kill %1
 
-	    $slmkjrnl -D $i->{datadir} -f
-	    $odtable -C -N $i->{datadir}/ion_bmaps.odt
+		$slmkjrnl -D $i->{datadir} -f
+		$odtable -C -N $i->{datadir}/ion_bmaps.odt
 EOF
 }
 
@@ -298,7 +302,7 @@ foreach $i (@mds) {
 
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		@{[init_env(%$global_env, )]}
+		@{[init_env(%$global_env)]}
 		screen -d -m -S SLMDS.$tsid \\
 		    gdb -f -x $base/slashd.$i->{id}.gdbcmd $slbase/slashd/slashd
 EOF
