@@ -16,7 +16,6 @@ SUBDIRS+=	slmkjrnl
 
 MAN+=		doc/sladm.7
 MAN+=		doc/slash.conf.5
-MAN+=		${ROOTDIR}/doc/pflenv.7
 
 zbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} -c && scons)
