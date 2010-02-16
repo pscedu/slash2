@@ -272,8 +272,8 @@ foreach $i (@mds) {
 		@{[init_env(%$global_env)]}
 		$zfs_fuse &
 		sleep 2
-		$zpool destroy $i->{zpoolname}
-		$zpool create $i->{zpoolname} $i->{zpool_args}
+		$zpool destroy $i->{zpoolname} || true
+		$zpool create -f $i->{zpoolname} $i->{zpool_args}
 		$slimmns_format /$i->{zpoolname}
 		sync; sync
 		umount /$i->{zpoolname}
