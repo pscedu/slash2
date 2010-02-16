@@ -7,7 +7,6 @@ sub slash_conf {
 	return <<"EOF";
 global port=7001;
 global net=tcp10;
-global keyfn=$h{base}/jy.slkey;
 
 site \@tsuite {
 	site_desc	= "slash test suite";
@@ -26,7 +25,7 @@ site \@tsuite {
 		type	= parallel_fs;
 		id	= 102;
 		fsroot	= $h{base}/sliots.io0;
-		# \@prefmds=md\@PSC
+		# \@prefmds=mds0\@tsuite
 		ifs	= stryker;
 	}
 
@@ -35,7 +34,7 @@ site \@tsuite {
 		type	= archival_fs;
 		id	= 103;
 		fsroot	= $h{base}/sliots.io1;
-		# \@prefmds=md\@PSC
+		# \@prefmds=mds0\@tsuite
 		ifs	= wolverine;
 	}
 }

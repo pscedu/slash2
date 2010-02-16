@@ -277,7 +277,7 @@ foreach $i (@mds) {
 		$slimmns_format /$i->{zpoolname}
 		sync; sync
 		umount /$i->{zpoolname}
-		kill %1
+		pkill zfs-fuse
 
 		$slmkjrnl -D $i->{datadir} -f
 		$odtable -C -N $i->{datadir}/ion_bmaps.odt
