@@ -210,6 +210,12 @@ site_profile	: site_prof_start site_defs SUBSECT_END {
 		;
 
 site_prof_start	: SITE_PROFILE SITE_NAME SUBSECT_START {
+			struct sl_site *s;
+
+			PLL_FOREACH(s, &globalConfig.gconf_sites)
+				if (strcasecmp(s->site_name, $2) == 0)
+					yyerror("duplicate site name: %s", $2);
+
 			currentSite = PSCALLOC(sizeof(*currentSite));
 			psc_dynarray_init(&currentSite->site_resources);
 			INIT_PSCLIST_ENTRY(&currentSite->site_lentry);
@@ -230,6 +236,13 @@ site_resources	: site_resource
 		;
 
 site_resource	: resource_start resource_def SUBSECT_END {
+			struct sl_resource *r;
+			int j, nmds = 0;
+
+			if (currentRes->res_type == SLREST_NONE)
+				yyerror("resource %s has no type specified",
+				    currentRes->res_name, currentRes->res_id);
+
 			currentRes->res_id = sl_global_id_build(
 			    currentSite->site_id, currentRes->res_id);
 
@@ -238,19 +251,21 @@ site_resource	: resource_start resource_def SUBSECT_END {
 				    currentRes->res_name, currentRes->res_id,
 				    libsl_id2res(currentRes->res_id)->res_name);
 
-			if (currentRes->res_type == SLREST_NONE)
-				yyerror("resource %s ID %d has no type specified",
-				    currentRes->res_name, currentRes->res_id);
-
 			psc_dynarray_add(&currentSite->site_resources, currentRes);
-			currentRes->res_site = currentSite;
+
+			DYNARRAY_FOREACH(r, j, &currentSite->site_resources)
+				if (r->res_type == SLREST_MDS &&
+				    ++nmds > 1)
+					yyerror("more than one metadata server");
 		}
 		;
 
 resource_start	: RESOURCE_PROFILE NAME SUBSECT_START {
-			int rc;
+			struct sl_resource *r;
+			int j, rc;
 
 			currentRes = PSCALLOC(sizeof(*currentRes));
+			currentRes->res_site = currentSite;
 			psc_dynarray_init(&currentRes->res_peers);
 			psc_dynarray_init(&currentRes->res_members);
 			rc = snprintf(currentRes->res_name,
@@ -262,6 +277,13 @@ resource_start	: RESOURCE_PROFILE NAME SUBSECT_START {
 			if (rc >= (int)sizeof(currentRes->res_name))
 				psc_fatalx("resource %s@%s: name too long",
 				    $2, currentSite->site_name);
+
+			DYNARRAY_FOREACH(r, j, &currentSite->site_resources)
+				if (strcasecmp(r->res_name,
+				    currentRes->res_name) == 0)
+					yyerror("duplicate resource name: %s",
+					    r->res_name);
+
 			slcfg_init_res(currentRes);
 			free($2);
 		}
