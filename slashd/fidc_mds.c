@@ -68,31 +68,6 @@ fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 #endif
 
 struct fcoo_mds_info *
-fidc_fid2fmi(slfid_t f, struct fidc_membh **fcmh)
-{
-	struct fcoo_mds_info *fmi=NULL;
-	int locked;
-
-	*fcmh = fidc_lookup_simple(f);
-
-	if (!*fcmh)
-		return NULL;
-
-	locked = reqlock(&(*fcmh)->fcmh_lock);
-	if (!(*fcmh)->fcmh_fcoo)
-		goto out;
-
-	if (fidc_fcoo_wait_locked((*fcmh), FCOO_NOSTART) < 0)
-		goto out;
-
-	psc_assert((*fcmh)->fcmh_fcoo->fcoo_pri);
-	fmi = (*fcmh)->fcmh_fcoo->fcoo_pri;
- out:
-	ureqlock(&(*fcmh)->fcmh_lock, locked);
-	return (fmi);
-}
-
-struct fcoo_mds_info *
 fidc_fcmh2fmi(struct fidc_membh *fcmh)
 {
 	struct fcoo_mds_info *fmi=NULL;
@@ -111,6 +86,16 @@ fidc_fcmh2fmi(struct fidc_membh *fcmh)
  out:
 	ureqlock(&fcmh->fcmh_lock, locked);
 	return (fmi);
+}
+
+struct fcoo_mds_info *
+fidc_fid2fmi(slfid_t f, struct fidc_membh **fcmh)
+{
+	*fcmh = fidc_lookup_simple(f);
+
+	if (!*fcmh)
+		return (NULL);
+	return (fidc_fcmh2fmi(*fcmh));
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
