@@ -31,7 +31,13 @@
 struct slash_creds;
 struct slash_fidgen;
 
-typedef uint64_t slfid_t;	/* first 16 bits are the svr/fs id, rest are inum */
+/* see comments in file zfs-fuse/zfs_slashlib.h */
+
+#define	SLASH_ID_FLAG_BITS	4
+#define	SLASH_ID_SITE_BITS	10
+#define	SLASH_ID_FID_BITS	50
+
+typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
 
 struct slash_fidgen {
