@@ -85,19 +85,10 @@ struct bmapc_memb {
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
 
 /*
- * To save space in the bmaps, replica stores are kept in the sl-replicas
- *   xattr.  Each bmap uses an array of char's as a bitmap to track which
- *   stores the bmap is replicated to.  Additional bits are used to specify
- *   the freshness of the replica bmaps.  '100' would mean that the bmap
- *   is up-to-date, '110' would mean that the bmap is only one generation
- *   back and therefore may take partial updates.  111 means that the bmap
- *   is more than one generation old.
- * '00' - bmap is not replicated to this ios.
- * '01' - bmap is > one generation back.
- * '10' - bmap is one generation back.
- * '11' - bmap is replicated to the ios and current.
+ *   Each bmap uses a char array as a bitmap to track which
+ *   stores the bmap is replicated to.
  */
-#define SL_BITS_PER_REPLICA	2
+#define SL_BITS_PER_REPLICA	3
 #define SL_REPLICA_MASK		((uint8_t)((1 << SL_BITS_PER_REPLICA) - 1))
 
 /* must be 64-bit aligned */
@@ -112,6 +103,8 @@ struct bmapc_memb {
 #define SL_REPLST_SCHED		1
 #define SL_REPLST_OLD		2
 #define SL_REPLST_ACTIVE	3
+#define SL_REPLST_TRUNCPNDG	4
+#define SL_NREPLST		5
 
 /*
  * Associate a CRC with a generation ID for a block.

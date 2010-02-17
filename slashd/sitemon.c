@@ -62,7 +62,7 @@ int
 slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
     struct sl_resm *src_resm, struct sl_resource *dst_res, int j)
 {
-	int tract[4], we_set_busy, rc;
+	int tract[SL_NREPLST], retifset[SL_NREPLST], we_set_busy, rc;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
@@ -129,15 +129,28 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	tract[SL_REPLST_INACTIVE] = -1;
 	tract[SL_REPLST_OLD] = SL_REPLST_SCHED;
 	tract[SL_REPLST_SCHED] = -1;
+	tract[SL_REPLST_TRUNCPNDG] = -1;
+
+	retifset[SL_REPLST_ACTIVE] = SL_REPLST_ACTIVE;
+	retifset[SL_REPLST_INACTIVE] = SL_REPLST_INACTIVE;
+	retifset[SL_REPLST_OLD] = SL_REPLST_OLD;
+	retifset[SL_REPLST_SCHED] = SL_REPLST_SCHED;
+	retifset[SL_REPLST_TRUNCPNDG] = SL_REPLST_TRUNCPNDG;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	BMAP_LOCK(bcm);
-	mds_repl_bmap_apply(bcm, tract, NULL, off);
+	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
 	BMAP_ULOCK(bcm);
 
-	rc = RSX_WAITREP(rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
+	if (rc == SL_REPLST_ACTIVE ||
+	    rc == SL_REPLST_SCHED)
+		psc_fatalx("invalid bmap replica state: %d", rc);
+
+	if (rc == SL_REPLST_OLD) {
+		rc = RSX_WAITREP(rq, mp);
+		if (rc == 0)
+			rc = mp->rc;
+	}
 	pscrpc_req_finished(rq);
 	if (rc == 0) {
 		mds_repl_bmap_rel(bcm);
@@ -149,6 +162,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	tract[SL_REPLST_INACTIVE] = -1;
 	tract[SL_REPLST_OLD] = -1;
 	tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
+	tract[SL_REPLST_TRUNCPNDG] = -1;
 
 	BMAP_LOCK(bcm);
 	mds_repl_bmap_apply(bcm, tract, NULL, off);

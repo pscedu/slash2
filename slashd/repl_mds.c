@@ -268,8 +268,8 @@ mds_repl_xattr_load_locked(struct slash_inode_handle *i)
 #define REPL_WALKF_MODOTH	(1 << 1)	/* modify everyone except specified ios */
 
 int
-_mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
-    const int retifset[4], int flags, int off, int *scircuit)
+_mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
+    const int *retifset, int flags, int off, int *scircuit)
 {
 	struct slash_bmap_od *bmapod;
 	struct bmap_mds_info *bmdsi;
@@ -285,6 +285,9 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
 	bmdsi = bmap_2_bmdsi(bcm);
 	bmapod = bmdsi->bmdsi_od;
 	val = SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls, off);
+
+	if (val >= SL_NREPLST)
+		psc_fatalx("corrupt bmap");
 
 	/* Check for return values */
 	if (retifset && retifset[val]) {
@@ -326,8 +329,8 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int tract[4],
  * @nios: # I/O system indexes specified.
  */
 int
-mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
-    const int retifset[4], int flags, const int *iosidx, int nios)
+mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
+    const int *retifset, int flags, const int *iosidx, int nios)
 {
 	int scircuit, nr, off, k, rc, trc;
 	struct slash_bmap_od *bmapod;
@@ -391,7 +394,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int tract[4],
 int
 mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 {
-	int rc, iosidx, tract[4], retifset[4];
+	int rc, iosidx, tract[SL_NREPLST], retifset[SL_NREPLST];
 	struct slash_bmap_od *bmapod;
 	struct bmap_mds_info *bmdsi;
 	struct sl_replrq *rrq;
@@ -426,11 +429,13 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	tract[SL_REPLST_OLD] = -1;
 	tract[SL_REPLST_SCHED] = -1;
 	tract[SL_REPLST_ACTIVE] = -1;
+	tract[SL_REPLST_TRUNCPNDG] = -1;
 
 	retifset[SL_REPLST_INACTIVE] = 0;
 	retifset[SL_REPLST_OLD] = EINVAL;
 	retifset[SL_REPLST_SCHED] = EINVAL;
 	retifset[SL_REPLST_ACTIVE] = 0;
+	retifset[SL_REPLST_TRUNCPNDG] = EINVAL;
 
 	rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	if (rc)
@@ -448,11 +453,13 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	tract[SL_REPLST_OLD] = -1;
 	tract[SL_REPLST_SCHED] = -1;
 	tract[SL_REPLST_ACTIVE] = SL_REPLST_OLD;
+	tract[SL_REPLST_TRUNCPNDG] = -1;
 
 	retifset[SL_REPLST_INACTIVE] = 0;
 	retifset[SL_REPLST_OLD] = 0;
 	retifset[SL_REPLST_SCHED] = 0;
 	retifset[SL_REPLST_ACTIVE] = 1;
+	retifset[SL_REPLST_TRUNCPNDG] = 0;
 
 	if (mds_repl_bmap_walk(bcm, tract, retifset,
 	    REPL_WALKF_MODOTH, &iosidx, 1))
@@ -599,7 +606,8 @@ int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
     const sl_replica_t *iosv, int nios)
 {
-	int iosidx[SL_MAX_REPLICAS], rc, locked, tract[4], retifset[4], retifzero[4];
+	int tract[SL_NREPLST], retifset[SL_NREPLST], retifzero[SL_NREPLST];
+	int iosidx[SL_MAX_REPLICAS], rc, locked;
 	struct sl_replrq *newrq, *rrq;
 	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
@@ -682,26 +690,31 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
 	tract[SL_REPLST_OLD] = -1;
 	tract[SL_REPLST_ACTIVE] = -1;
+	tract[SL_REPLST_TRUNCPNDG] = -1;
 
 	retifzero[SL_REPLST_INACTIVE] = 0;
 	retifzero[SL_REPLST_ACTIVE] = 1;
 	retifzero[SL_REPLST_OLD] = 0;
 	retifzero[SL_REPLST_SCHED] = 0;
+	retifzero[SL_REPLST_TRUNCPNDG] = 0;
 
 	if (bmapno == (sl_blkno_t)-1) {
-		int ret_if_inact[4], repl_some_act = 0, repl_all_act = 1;
+		int repl_some_act = 0, repl_all_act = 1;
+		int ret_if_inact[SL_NREPLST];
 
 		/* check if all bmaps are already old/queued */
 		retifset[SL_REPLST_INACTIVE] = 1;
 		retifset[SL_REPLST_SCHED] = 0;
 		retifset[SL_REPLST_OLD] = 0;
 		retifset[SL_REPLST_ACTIVE] = 1;
+		retifset[SL_REPLST_TRUNCPNDG] = 0;
 
 		/* check if all bmaps are already active */
 		ret_if_inact[SL_REPLST_INACTIVE] = 1;
 		ret_if_inact[SL_REPLST_SCHED] = 1;
 		ret_if_inact[SL_REPLST_OLD] = 1;
 		ret_if_inact[SL_REPLST_ACTIVE] = 0;
+		ret_if_inact[SL_REPLST_TRUNCPNDG] = 1;
 
 		for (bmapno = 0; bmapno < REPLRQ_NBMAPS(rrq); bmapno++) {
 			if (mds_bmap_load(REPLRQ_FCMH(rrq),
@@ -740,6 +753,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPLST_SCHED] = EALREADY;
 		retifset[SL_REPLST_OLD] = EALREADY;
 		retifset[SL_REPLST_ACTIVE] = 0;
+		retifset[SL_REPLST_TRUNCPNDG] = SLERR_REPL_NOT_ACT;
+
 		rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
@@ -774,7 +789,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 void
 mds_repl_tryrmqfile(struct sl_replrq *rrq)
 {
-	int rrq_gen, rc, retifset[4];
+	int rrq_gen, rc, retifset[SL_NREPLST];
 	struct bmap_mds_info *bmdsi;
 	struct bmapc_memb *bcm;
 	char fn[IMNS_NAME_MAX];
@@ -800,6 +815,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	retifset[SL_REPLST_ACTIVE] = 0;
 	retifset[SL_REPLST_OLD] = 1;
 	retifset[SL_REPLST_SCHED] = 1;
+	retifset[SL_REPLST_TRUNCPNDG] = 0;
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
@@ -860,7 +876,8 @@ int
 mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
     const sl_replica_t *iosv, int nios)
 {
-	int iosidx[SL_MAX_REPLICAS], rc, tract[4], retifset[4];
+	int tract[SL_NREPLST], retifset[SL_NREPLST];
+	int iosidx[SL_MAX_REPLICAS], rc;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 
@@ -883,12 +900,14 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	tract[SL_REPLST_ACTIVE] = -1;
 	tract[SL_REPLST_OLD] = SL_REPLST_INACTIVE;
 	tract[SL_REPLST_SCHED] = SL_REPLST_INACTIVE;
+	tract[SL_REPLST_TRUNCPNDG] = -1;
 
 	if (bmapno == (sl_blkno_t)-1) {
 		retifset[SL_REPLST_INACTIVE] = 0;
 		retifset[SL_REPLST_ACTIVE] = 1;
 		retifset[SL_REPLST_OLD] = 1;
 		retifset[SL_REPLST_SCHED] = 1;
+		retifset[SL_REPLST_TRUNCPNDG] = 0;
 
 		rc = SLERR_REPLS_ALL_INACT;
 		for (bmapno = 0; bmapno < REPLRQ_NBMAPS(rrq); bmapno++) {
@@ -907,6 +926,8 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 		retifset[SL_REPLST_ACTIVE] = 0;
 		retifset[SL_REPLST_OLD] = 0;
 		retifset[SL_REPLST_SCHED] = 0;
+		retifset[SL_REPLST_TRUNCPNDG] = 0;
+
 		rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
@@ -925,6 +946,7 @@ void
 mds_repl_scandir(void)
 {
 	sl_replica_t iosv[SL_MAX_REPLICAS];
+	int rc, tract[SL_NREPLST];
 	char *buf, fn[NAME_MAX];
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
@@ -932,7 +954,6 @@ mds_repl_scandir(void)
 	struct fuse_dirent *d;
 	struct sl_replrq *rrq;
 	off64_t off, toff;
-	int rc, tract[4];
 	size_t siz, tsiz;
 	uint32_t j;
 	void *data;
@@ -998,6 +1019,7 @@ mds_repl_scandir(void)
 			tract[SL_REPLST_ACTIVE] = -1;
 			tract[SL_REPLST_OLD] = -1;
 			tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
+			tract[SL_REPLST_TRUNCPNDG] = -1;
 
 			/*
 			 * If we crashed, revert all inflight SCHED'ed
@@ -1158,7 +1180,7 @@ mds_repl_buildbusytable(void)
 void
 mds_repl_reset_scheduled(sl_ios_id_t resid)
 {
-	int tract[4], rc, iosidx;
+	int tract[SL_NREPLST], rc, iosidx;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 	sl_replica_t repl;
@@ -1187,6 +1209,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
 		tract[SL_REPLST_OLD] = -1;
 		tract[SL_REPLST_ACTIVE] = -1;
+		tract[SL_REPLST_TRUNCPNDG] = -1;
 
 		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
 			if (mds_bmap_load(REPLRQ_FCMH(rrq),

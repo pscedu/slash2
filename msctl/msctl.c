@@ -392,7 +392,7 @@ void
 replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	char map[4], pmap[4], rbuf[PSCFMT_RATIO_BUFSIZ];
+	char map[SL_NREPLST], pmap[SL_NREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
 	sl_blkno_t bact, bold, nb;
@@ -403,11 +403,13 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	map[SL_REPLST_OLD] = 'o';
 	map[SL_REPLST_ACTIVE] = '+';
 	map[SL_REPLST_INACTIVE] = '-';
+	map[SL_REPLST_TRUNCPNDG] = 't';
 
 	pmap[SL_REPLST_SCHED] = 'S';
 	pmap[SL_REPLST_OLD] = 'O';
 	pmap[SL_REPLST_ACTIVE] = '*';
 	pmap[SL_REPLST_INACTIVE] = '-';
+	map[SL_REPLST_TRUNCPNDG] = 'T';
 
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen("repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);
