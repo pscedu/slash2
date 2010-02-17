@@ -611,35 +611,10 @@ fidc_fcoo_init(void)
  * fidc_init - Initialize the FID cache.
  */
 void
-fidc_init(enum fid_cache_users t, int (*fcmh_reap_cb)(struct fidc_membh *))
+fidc_init(int nobj, int max, int (*fcmh_reap_cb)(struct fidc_membh *))
 {
-	int htsz;
-	ssize_t	fcdsz, fcmsz;
-
-	switch (t) {
-	case FIDC_USER_CLI:
-		htsz  = FIDC_CLI_HASH_SZ;
-		fcdsz = FIDC_CLI_DEFSZ;
-		fcmsz = FIDC_CLI_MAXSZ;
-		break;
-
-	case FIDC_USER_ION:
-		htsz  = FIDC_ION_HASH_SZ;
-		fcdsz = FIDC_ION_DEFSZ;
-		fcmsz = FIDC_ION_MAXSZ;
-		break;
-
-	case FIDC_USER_MDS:
-		htsz  = FIDC_MDS_HASH_SZ;
-		fcdsz = FIDC_MDS_DEFSZ;
-		fcmsz = FIDC_MDS_MAXSZ;
-		break;
-	default:
-		psc_fatalx("Invalid fidcache user type");
-	}
-
 	psc_poolmaster_init(&fidcPoolMaster, struct fidc_membh,
-	    fcmh_lentry, 0, fcdsz, 0, fcmsz, fcmh_init,
+	    fcmh_lentry, PPMF_NONE, nobj, nobj, max, fcmh_init,
 	    fcmh_dtor, fidc_reap, "fcmh");
 
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
@@ -650,7 +625,7 @@ fidc_init(enum fid_cache_users t, int (*fcmh_reap_cb)(struct fidc_membh *))
 	    fcmh_lentry, "fcmhclean");
 
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
-	    FCMH_HASH_FIELD, fcmh_hentry, htsz, NULL, "fidc");
+	    FCMH_HASH_FIELD, fcmh_hentry, nobj * 2, NULL, "fidc");
 	fidcReapCb = fcmh_reap_cb;
 }
 

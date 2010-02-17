@@ -219,7 +219,7 @@ void			 fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 struct fidc_open_obj	*fidc_fcoo_init(void);
 
 void			 fidc_put(struct fidc_membh *, struct psc_listcache *);
-void			 fidc_init(enum fid_cache_users, int (*)(struct fidc_membh *));
+void			 fidc_init(int, int, int (*)(struct fidc_membh *));
 struct fidc_membh	*fidc_lookup_simple(slfid_t);
 struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
 
