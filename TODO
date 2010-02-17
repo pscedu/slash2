@@ -307,8 +307,24 @@ mds.c
 - get tsuite working
 - merge set_bmapreplpol and friends into a single interface
 - push O_APPEND writes always to EOF
+-----------------------------------------------------
 - make slmctl and slictl knobs for showing listen addresses/options
 - add ctl for connections
+
+msctl/slictl/slmctl -n -s conn
+
+connections	host		type	 #refs	status
+ ===================================================================
+ @PSC
+   mds		adamantium	MDS	 1	online
+   io0		stryker		parallel 1	offline
+		wolverine	parallel 0	connecting
+   io1		grapefruit	archiver 0	inactive
+
+(not available on msctl)
+ clients
+		kaminari	client	 0	online
+
 -----------------------------------------------------
 
 - think about routing blips where MDS<->ION is not quite what a ION<->ION
@@ -344,3 +360,24 @@ sliod import/export
 - slictl -X path
     lookup path FID and move file to destination
     if recursive, lookup recursively
+
+---------------------------------------------------------
+
+network scheduling
+- preferentiate users
+    (o) need classes, always complete a class before moving
+	to next one, files in the same class have same fairness
+- link bandwidth
+- aggregate small files, keep MAX inflight at all times between links
+- need way to prioritize specific endpoint <-> endpoint instead of
+  random to avoid scheduling slow streams over faster streams
+
+netqueued - universal interface
+- LD_PRELOAD
+- intercept for recompiling
+- API
+
+tracks endpoint connections
+- if new ones are made that utilize the same link, manage and
+  limit and wait until bandwidth is available
+
