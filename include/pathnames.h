@@ -33,7 +33,7 @@
 #define SL_PATH_MSCTLSOCK	"/var/run/slash/mount_slash.%h.sock"
 #endif
 
-#define SL_PATH_CONF		"../slashd/config/example.conf"
+#define SL_PATH_CONF		"../config/example.conf"
 #define SL_PATH_SLMCTLSOCK	"../slashd.%h.sock"
 #define SL_PATH_SLICTLSOCK	"../sliod.%h.sock"
 #define SL_PATH_MSCTLSOCK	"../mount_slash.%h.sock"
