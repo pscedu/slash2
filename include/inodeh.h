@@ -45,12 +45,11 @@ struct slash_inode_handle {
 #define INOH_LOCK_ENSURE(ih)	LOCK_ENSURE(&(ih)->inoh_lock)
 
 enum slash_inode_handle_flags {
-	INOH_INO_DIRTY     = (1<<0), /* Inode structures need to be written */
-	INOH_EXTRAS_DIRTY  = (1<<1), /* Replication structures need written */
-	INOH_HAVE_EXTRAS   = (1<<2),
-	INOH_INO_NEW       = (1<<3), /* The inode info has never been written
-					to disk */
-	INOH_INO_NOTLOADED = (1<<4),
+	INOH_INO_DIRTY     = (1 << 0), /* Inode structures need to be written */
+	INOH_EXTRAS_DIRTY  = (1 << 1), /* Replication structures need written */
+	INOH_HAVE_EXTRAS   = (1 << 2), /* inoh_extras loaded into mem */
+	INOH_INO_NEW       = (1 << 3), /* Inode has never been written to disk */
+	INOH_INO_NOTLOADED = (1 << 4),
 };
 
 static __inline void
