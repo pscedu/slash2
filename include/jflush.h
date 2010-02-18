@@ -28,25 +28,24 @@ typedef void (*jflush_handler)(void *);
 typedef void (*jflush_prepcb)(void *);
 
 struct jflush_item {
-	psc_spinlock_t              jfi_lock;
-	struct psc_journal_xidhndl *jfi_xh;
-	struct psclist_head         jfi_lentry;
-	jflush_handler              jfi_handler;
-	jflush_prepcb               jfi_prepcb;
-	void                       *jfi_data;
-	int                         jfi_state;
-	int                         jfi_type;
+	psc_spinlock_t			 jfi_lock;
+	struct psc_journal_xidhndl	*jfi_xh;
+	struct psclist_head		 jfi_lentry;
+	jflush_handler			 jfi_handler;
+	jflush_prepcb			 jfi_prepcb;
+	void				*jfi_data;
+	int				 jfi_state;
 };
 
 enum {
 	JFI_QUEUED  = (1 << 0),
-	JFI_HAVE_XH = (1 << 1),		/* has transaction handle */
+	JFI_HAVE_XH = (1 << 1),		/* transaction handle present */
 	JFI_BUSY    = (1 << 2)
 };
 
 static __inline void
 jfi_init(struct jflush_item *j, jflush_handler handler,
-	 jflush_prepcb prepcb, void *data)
+    jflush_prepcb prepcb, void *data)
 {
 	LOCK_INIT(&j->jfi_lock);
 	INIT_PSCLIST_ENTRY(&j->jfi_lentry);
@@ -59,7 +58,6 @@ jfi_init(struct jflush_item *j, jflush_handler handler,
 static __inline void
 jfi_ensure_empty(struct jflush_item *jfi)
 {
-	psc_assert(jfi->jfi_data == NULL);
 	psc_assert(jfi->jfi_xh == NULL);
 	psc_assert(psclist_disjoint(&jfi->jfi_lentry));
 }
