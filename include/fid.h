@@ -47,6 +47,7 @@ struct slash_fidgen {
 
 #define SLASH_ROOT_ID		UINT64_C(2)
 
+/* We could use FID_ANY as the SLASH ID of the "local" files that are internal to SLASH */
 #define FID_ANY			UINT64_C(0xffffffffffff)
 #define FIDGEN_ANY		UINT64_C(0xffffffffffff)
 
