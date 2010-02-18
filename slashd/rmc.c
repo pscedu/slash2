@@ -243,6 +243,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
 	mp->fg.fg_fid = 0;
+
 #ifdef NAMESPACE_EXPERIMENTAL
 	spinlock(&slash_id_lock);
 	mp->fg.fg_fid = next_slash_id++;
