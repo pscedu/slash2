@@ -24,8 +24,9 @@
 
 #include "jflush.h"
 
-/*
- * Prepare a journal flush item (jfi), make sure it has an associated transaction handle.
+/**
+ * jfi_prep - Prepare a journal flush item and make sure it has an
+ *	associated transaction handle.
  */
 void
 jfi_prep(struct jflush_item *jfi, struct psc_journal *pj)
