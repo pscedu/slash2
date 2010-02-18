@@ -38,13 +38,13 @@ struct jflush_item {
 	int                         jfi_type;
 };
 
-enum jfi_states {
-	JFI_QUEUED  = (1<<0),
-	JFI_HAVE_XH = (1<<1),
-	JFI_BUSY    = (1<<2)
+enum {
+	JFI_QUEUED  = (1 << 0),
+	JFI_HAVE_XH = (1 << 1),		/* has transaction handle */
+	JFI_BUSY    = (1 << 2)
 };
 
-static inline void
+static __inline void
 jfi_init(struct jflush_item *j, jflush_handler handler,
 	 jflush_prepcb prepcb, void *data)
 {
@@ -54,6 +54,14 @@ jfi_init(struct jflush_item *j, jflush_handler handler,
 	j->jfi_prepcb = prepcb;
 	j->jfi_data = data;
 	j->jfi_state = 0;
+}
+
+static __inline void
+jfi_ensure_empty(struct jflush_item *jfi)
+{
+	psc_assert(jfi->jfi_data == NULL);
+	psc_assert(jfi->jfi_xh == NULL);
+	psc_assert(psclist_disjoint(&jfi->jfi_lentry));
 }
 
 void jfi_prep(struct jflush_item *, struct psc_journal *);
