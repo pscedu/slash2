@@ -30,26 +30,26 @@
 #include "fidcache.h"
 
 struct slash_inode_handle {
-	struct slash_inode_od         inoh_ino;
-	struct slash_inode_extras_od *inoh_extras;
-	struct fidc_membh            *inoh_fcmh;
-	psc_spinlock_t                inoh_lock;
-	struct jflush_item            inoh_jfi;
-	int                           inoh_flags;
+	struct slash_inode_od		 inoh_ino;
+	struct slash_inode_extras_od	*inoh_extras;
+	struct fidc_membh		*inoh_fcmh;
+	psc_spinlock_t			 inoh_lock;
+	struct jflush_item		 inoh_jfi;
+	int				 inoh_flags;
 };
 
-#define INOH_LOCK(ih)		spinlock(&(ih)->inoh_lock)
-#define INOH_ULOCK(ih)		freelock(&(ih)->inoh_lock)
-#define INOH_RLOCK(ih)		reqlock(&(ih)->inoh_lock)
-#define INOH_URLOCK(ih, lk)	ureqlock(&(ih)->inoh_lock, (lk))
-#define INOH_LOCK_ENSURE(ih)	LOCK_ENSURE(&(ih)->inoh_lock)
+#define INOH_LOCK(ih)			spinlock(&(ih)->inoh_lock)
+#define INOH_ULOCK(ih)			freelock(&(ih)->inoh_lock)
+#define INOH_RLOCK(ih)			reqlock(&(ih)->inoh_lock)
+#define INOH_URLOCK(ih, lk)		ureqlock(&(ih)->inoh_lock, (lk))
+#define INOH_LOCK_ENSURE(ih)		LOCK_ENSURE(&(ih)->inoh_lock)
 
-enum slash_inode_handle_flags {
-	INOH_INO_DIRTY     = (1 << 0), /* Inode structures need to be written */
-	INOH_EXTRAS_DIRTY  = (1 << 1), /* Replication structures need written */
-	INOH_HAVE_EXTRAS   = (1 << 2), /* inoh_extras loaded into mem */
-	INOH_INO_NEW       = (1 << 3), /* Inode has never been written to disk */
-	INOH_INO_NOTLOADED = (1 << 4),
+enum {
+	INOH_INO_DIRTY     = (1 << 0),	/* Inode structures need to be written */
+	INOH_EXTRAS_DIRTY  = (1 << 1),	/* Replication structures need written */
+	INOH_HAVE_EXTRAS   = (1 << 2),	/* inoh_extras are loaded in mem */
+	INOH_INO_NEW       = (1 << 3),	/* Inode has never been written to disk */
+	INOH_INO_NOTLOADED = (1 << 4)
 };
 
 static __inline void
