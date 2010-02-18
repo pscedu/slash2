@@ -996,7 +996,7 @@ mds_repl_scandir(void)
 			if (fn[0] == '.')
 				continue;
 
-			rc = mdsio_lookup(mds_repldir_inum, fn, &fg, &rootcreds, NULL);
+			rc = mdsio_lookup(mds_repldir_inum, fn, &fg, &rootcreds, NULL, MDSIO_LOCAL);
 			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
 				psc_fatalx("mdsio_lookup %s/%s: %s",
@@ -1234,7 +1234,7 @@ mds_repl_init(void)
 	struct slash_fidgen fg;
 	int rc;
 
-	rc = mdsio_lookup(SL_ROOT_INUM, SL_PATH_REPLS, &fg, &rootcreds, NULL);
+	rc = mdsio_lookup(SL_ROOT_INUM, SL_PATH_REPLS, &fg, &rootcreds, NULL, MDSIO_LOCAL);
 	if (rc)
 		psc_fatalx("lookup repldir: %s", slstrerror(rc));
 	mds_repldir_inum = fg.fg_fid;

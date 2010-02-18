@@ -25,6 +25,14 @@
 #include "fid.h"
 #include "sltypes.h"
 
+/*
+ * Currently, some mdsio calls (e.g., mdsio_lookup()) are used to serve an RPC and local service.
+ * We need to differentiate these two cases.  For remote accesses, we would return a SLASH ID.
+ * For local accesses, we would return a ZFS inode number.
+ */
+#define	MDSIO_LOCAL	0
+#define	MDSIO_REMOTE	1
+
 struct statvfs;
 
 struct bmapc_memb;
@@ -58,7 +66,7 @@ int mdsio_link(slfid_t, slfid_t, const char *, struct slash_fidgen *,
 	const struct slash_creds *, struct srt_stat *);
 int mdsio_unlink(slfid_t, const char *, const struct slash_creds *);
 int mdsio_lookup(slfid_t, const char *, struct slash_fidgen *,
-	const struct slash_creds *, struct srt_stat *);
+	const struct slash_creds *, struct srt_stat *, int);
 int mdsio_opendir(slfid_t, const struct slash_creds *, struct slash_fidgen *,
 	struct srt_stat *, void *);
 int mdsio_mkdir(slfid_t, const char *, mode_t, const struct slash_creds *,

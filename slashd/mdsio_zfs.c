@@ -297,9 +297,9 @@ mdsio_link(slfid_t fid, slfid_t pfid, const char *fn,
 
 int
 mdsio_lookup(slfid_t pfid, const char *cpn, struct slash_fidgen *fgp,
-    const struct slash_creds *cr, struct srt_stat *sstb)
+    const struct slash_creds *cr, struct srt_stat *sstb, int flags)
 {
-	return (zfsslash2_lookup(zfsVfs, pfid, cpn, fgp, cr, sstb));
+	return (zfsslash2_lookup(zfsVfs, pfid, cpn, fgp, cr, sstb, flags));
 }
 
 int

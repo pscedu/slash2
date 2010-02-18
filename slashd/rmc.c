@@ -229,7 +229,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 	else
 		mp->rc = mdsio_lookup(mq->pfid, mq->name, &mp->fg,
-		    &mq->creds, &mp->attr);
+		    &mq->creds, &mp->attr, MDSIO_REMOTE);
 	return (0);
 }
 
