@@ -133,7 +133,8 @@ ENDCMD
 }
 
 our $logbase= "/home/slog";
-our $rootdir = "/tmp/sltest";
+our $rootdir = "/home/sltest";
+our $tmp_base = "/tmp/sltest";
 our $svnroot = 'svn+ssh://frodo/cluster/svn/projects';
 our $intvtimeout = 60*7;	# single op interval timeout
 our $runtimeout = 60*60*8;	# client run duration

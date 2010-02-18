@@ -1,7 +1,5 @@
 #!/usr/bin/perl -W
 # $Id$
-# TODO:
-# - pass fdbuf key between MDS/IONs
 
 use Getopt::Std;
 use POSIX qw(:sys_wait_h);
@@ -21,17 +19,12 @@ sub fatal {
 }
 
 sub usage {
-	fatalx "usage: $0 [-mNqr] test\n";
+	fatalx "usage: $0 [-mNqr] test-file\n";
 }
 
 sub init_env {
 	my %r = @_;
-	my $s = "";
-
-	while (my ($k, $v) = each %r) {
-		$s .= "export $k='$v'\n";
-	}
-	return $s;
+	return join '', map { "export $_='$r{$_}'\n" } keys %r;
 }
 
 sub debug_msg {
@@ -78,7 +71,7 @@ my $testname = $ARGV[0];
 $testname =~ s!.*/!!;
 
 our ($rootdir, $svnroot, @cli, $src, $intvtimeout, $runtimeout,
-    $logbase, $global_env);
+    $logbase, $global_env, $tmp_base);
 
 # Sanity check variables
 fatalx "rootdir not defined"	unless defined $rootdir;
@@ -89,6 +82,7 @@ fatalx "runtimeout not defined"	unless defined $runtimeout;
 fatalx "svnroot not defined"	unless defined $svnroot;
 fatalx "logbase not defined"	unless defined $logbase;
 fatalx "global_env not defined"	unless defined $global_env;
+fatalx "tmp_base not defined"	unless defined $tmp_base;
 
 local $SIG{ALRM} = sub { fatal "interval timeout exceeded" };
 
@@ -126,9 +120,11 @@ do {
 debug_msg "base dir = $base";
 
 my $mp = "$base/mp";
-my $datadir = "$base/data";
+my $tmpdir = "$tmp_base/slsuite.$tsid";
+my $datadir = "$tmpdir/data";
 
 mkdir $base		or fatal "mkdir $base";
+mkdir $tmpdir		or fatal "mkdir $tmpdir";
 mkdir "$base/ctl"	or fatal "mkdir $base/ctl";
 mkdir "$base/fs"	or fatal "mkdir $base/fs";
 mkdir $mp		or fatal "mkdir $mp";
@@ -263,10 +259,11 @@ close CLICMD;
 parse_conf();
 
 my ($i);
+my $need_descbuf_key = 1;
 
 # Create the MDS file systems
 foreach $i (@mds) {
-	debug_msg "MDS file system: $i->{host}";
+	debug_msg "initializing slashd environment: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env)]}
@@ -281,20 +278,26 @@ foreach $i (@mds) {
 
 		$slmkjrnl -D $i->{datadir} -f
 		$odtable -C -N $i->{datadir}/ion_bmaps.odt
+
+		@{[$need_descbuf_key ? <<EOS : "" ]}
+		@{[init_env(%$global_env)]}
+		slkeymgt -c -D $i->{datadir}
+		cp -p $i->{datadir}/descbuf.key $datadir
+EOS
 EOF
+	$need_descbuf_key = 0;
 }
 
 waitjobs $intvtimeout;
 
-my $slmgdb = slurp "$tsbase/slashd.gdbcmd";
-
 # Launch MDS servers
+my $slmgdb = slurp "$tsbase/slashd.gdbcmd";
 foreach $i (@mds) {
-	debug_msg "MDS: $i->{host}";
+	debug_msg "launching slashd: $i->{rname} : $i->{host}";
 
 	my $dat = $slmgdb;
 	$dat =~ s/%zpool_name%/$i->{zpoolname}/g;
-	$dat =~ s/%slmdir%/$i->{datadir}/g;
+	$dat =~ s/%datadir%/$i->{datadir}/g;
 
 	open G, ">", "$base/slashd.$i->{id}.gdbcmd" or fatal "write slashd.gdbcmd";
 	print G $dat;
@@ -303,6 +306,7 @@ foreach $i (@mds) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env)]}
+		cp -p $datadir/descbuf.key $i->{datadir}
 		screen -d -m -S SLMDS.$tsid \\
 		    gdb -f -x $base/slashd.$i->{id}.gdbcmd $slbase/slashd/slashd
 EOF
@@ -315,27 +319,36 @@ alarm $intvtimeout;
 sleep 1 until scalar @{[ glob "$base/ctl/slashd.*.sock" ]} == @mds;
 alarm 0;
 
-exit;
-
 # Create the ION file systems
 foreach $i (@ion) {
-	debug_msg "ION environment: $i->{host}";
+	debug_msg "initializing sliod environment: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		$slimmns_format -i $i->{fsroot}
+		cp -p $datadir/descbuf.key $i->{datadir}
 EOF
 }
 
 waitjobs $intvtimeout;
 
 # Launch the ION servers
+my $sligdb = slurp "$tsbase/sliod.gdbcmd";
 foreach $i (@ion) {
-	debug_msg "ION: $i->{host}";
+	debug_msg "launching sliod: $i->{rname} : $i->{host}";
+
+	my $dat = $sligdb;
+	$dat =~ s/%datadir%/$i->{datadir}/g;
+
+	open G, ">", "$base/sliod.$i->{id}.gdbcmd"
+	    or fatal "write sliod.gdbcmd";
+	print G $dat;
+	close G;
+
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env, SLASH_MDS_NID => $i->{prefmds})]}
 		screen -d -m -S SLIOD.$tsid \\
-		    gdb -f -x $tsbase/sliod.gdbcmd $slbase/sliod/sliod
+		    gdb -f -x $base/sliod.$i->{id}.gdbcmd $slbase/sliod/sliod
 EOF
 }
 
@@ -346,9 +359,11 @@ alarm $intvtimeout;
 sleep 1 until scalar @{[ glob "$base/ctl/sliod.*.sock" ]} == @ion;
 alarm 0;
 
+exit;
+
 # Launch the client mountpoints
 foreach $i (@cli) {
-	debug_msg "mount_slash: $i->{host}";
+	debug_msg "launching mount_slash: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env, %{$i->{env}})]}
@@ -366,7 +381,7 @@ alarm 0;
 
 # Spawn monitors/gatherers of control stats
 foreach $i (@mds) {
-	debug_msg "client: $i->{host}";
+	debug_msg "spawning slashd stats tracker: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		screen -d -m -S SLMCTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \
@@ -381,7 +396,7 @@ EOF
 waitjobs $runtimeout;
 
 foreach $i (@ion) {
-	debug_msg "client: $i->{host}";
+	debug_msg "spawning sliod stats tracker: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		screen -d -m -S SLICTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \
@@ -396,7 +411,7 @@ EOF
 waitjobs $runtimeout;
 
 foreach $i (@cli) {
-	debug_msg "client: $i->{host}";
+	debug_msg "spawning mount_slash stats tracker: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		screen -d -m -S MSCTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \
@@ -438,7 +453,7 @@ waitjobs $intvtimeout;
 
 # Kill IONs
 foreach $i (@ion) {
-	debug_msg "stopping sliod: $i->{host}";
+	debug_msg "stopping sliod: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		$slbase/slictl/slictl -S $base/ctl/sliod.%h.sock -c exit
@@ -449,7 +464,7 @@ waitjobs $intvtimeout;
 
 # Kill MDS's
 foreach $i (@mds) {
-	debug_msg "stopping slashd: $i->{host}";
+	debug_msg "stopping slashd: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		$slbase/slmctl/slmctl -S $base/ctl/slashd.%h.sock -c exit
@@ -465,13 +480,13 @@ foreach $i (@cli) {
 }
 
 foreach $i (@ion) {
-	debug_msg "force quitting sliod screens: $i->{host}";
+	debug_msg "force quitting sliod screens: $i->{rname} : $i->{host}";
 	execute "ssh $i->{host} screen -S SLIOD.$tsid -X quit";
 	execute "ssh $i->{host} screen -S SLICTL.$tsid -X quit";
 }
 
 foreach $i (@mds) {
-	debug_msg "force quitting slashd screens: $i->{host}";
+	debug_msg "force quitting slashd screens: $i->{rname} : $i->{host}";
 	execute "ssh $i->{host} screen -S SLMDS.$tsid -X quit";
 	execute "ssh $i->{host} screen -S SLMCTL.$tsid -X quit";
 }
