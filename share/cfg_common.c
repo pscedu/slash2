@@ -177,7 +177,7 @@ libsl_profile_dump(void)
 	int n;
 
 	fprintf(stderr,
-	    "Node info: resource %s ID %u\n"
+	    "Node info: resource %s ID %#x\n"
 	    "\tdesc: %s\n"
 	    "\ttype %d, npeers %u, nnids %u\n"
 	    "\tfsroot %s\n",
