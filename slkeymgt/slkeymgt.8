@@ -1,0 +1,44 @@
+.\" $Id$
+.Dd February 18, 2010
+.Dt SLKEYMGT 8
+.ds volume PSC \- SLASH Administrator's Manual
+.Os http://www.psc.edu/
+.Sh NAME
+.Nm slkeymgt
+.Nd manage shared keys for
+.Tn SLASH
+services
+.Sh SYNOPSIS
+.Nm slkeymgt
+.Op Fl c
+.Op Fl D Ar datadir
+.Sh DESCRIPTION
+The
+.Nm
+utility provides management capabilities for the administration of the
+shared keys used for communication among various
+.Tn SLASH
+services.
+The default behavior checks the integrity of an installed key.
+.Pp
+The following options are available:
+.Bl -tag -width Ds
+.It Fl D Ar datadir
+Specify an alternative directory where operation data is stored.
+Defaults to
+.Pa /var/lib/slashd .
+.It Fl c
+Create a new key.
+This operation is carried out automatically by
+.Tn MDS
+servers on startup if no key is installed.
+.El
+.Sh FILES
+.Bl -tag -width Pa -compact
+.It Pa /var/lib/slashd/descbuf.key
+shared key
+.El
+.Sh SEE ALSO
+.Xr sladm 7 ,
+.Xr slashd 8 ,
+.Xr sliod 8
