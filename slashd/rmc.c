@@ -251,7 +251,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 #endif
 
 	mp->rc = mdsio_mkdir(mq->pfid, mq->name,
-	    mq->mode, &mq->creds, &mp->attr, &mp->fg, 0);
+	    mq->mode, &mq->creds, &mp->attr, &mp->fg, MDSIO_REMOTE);
 	return (0);
 }
 

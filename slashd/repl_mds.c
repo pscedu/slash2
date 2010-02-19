@@ -961,7 +961,7 @@ mds_repl_scandir(void)
 	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, &fg, NULL, &data);
 	if (rc == ENOENT) {
 		rc = mdsio_mkdir(SL_ROOT_INUM, SL_PATH_REPLS, 0700,
-		    &rootcreds, NULL, NULL, 1);
+		    &rootcreds, NULL, NULL, MDSIO_LOCAL);
 		if (rc)
 			psc_fatalx("mdsio_mkdir %s: %s", SL_PATH_REPLS,
 			    slstrerror(rc));
