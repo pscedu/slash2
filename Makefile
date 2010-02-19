@@ -11,6 +11,7 @@ SUBDIRS+=	slashd
 SUBDIRS+=	slictl
 SUBDIRS+=	slimmns
 SUBDIRS+=	sliod
+SUBDIRS+=	slkeymgt
 SUBDIRS+=	slmctl
 SUBDIRS+=	slmkjrnl
 
