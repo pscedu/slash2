@@ -98,7 +98,7 @@ slimmns_create(const char *root, uint32_t depth)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-iW] /slash_rootfs\n", progname);
+	fprintf(stderr, "usage: %s [-iW] fsroot\n", progname);
 	exit(1);
 }
 
