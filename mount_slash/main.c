@@ -668,6 +668,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
 		fi->direct_io = 1;
 
+	/* this will start an RPC as need be */
 	rc = slash2fuse_fcoo_start(req, fi);
 	if (rc)
 		goto out;
