@@ -155,6 +155,7 @@ my $tsbase = "$slbase/utils/tsuite";
 my $zpool = "$slbase/utils/zpool.sh";
 my $zfs_fuse = "$slbase/utils/zfs-fuse.sh";
 my $slmkjrnl = "$slbase/slmkjrnl/slmkjrnl";
+my $slkeymgt = "$slbase/slkeymgt/slkeymgt";
 my $odtable = "$src/psc_fsutil_libs/utils/odtable/odtable";
 my $slimmns_format = "$slbase/slimmns/slimmns_format";
 
@@ -281,7 +282,7 @@ foreach $i (@mds) {
 
 		@{[$need_descbuf_key ? <<EOS : "" ]}
 		@{[init_env(%$global_env)]}
-		slkeymgt -c -D $i->{datadir}
+		$slkeymgt -c -D $i->{datadir}
 		cp -p $i->{datadir}/descbuf.key $datadir
 EOS
 EOF
@@ -324,6 +325,9 @@ foreach $i (@ion) {
 	debug_msg "initializing sliod environment: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
+		@{[init_env(%$global_env)]}
+		mkdir -p $i->{datadir}
+		mkdir -p $i->{fsroot}
 		$slimmns_format -i $i->{fsroot}
 		cp -p $datadir/descbuf.key $i->{datadir}
 EOF
