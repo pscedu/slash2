@@ -325,7 +325,13 @@ connections	host		type	 #refs	status
  clients
 		kaminari	client	 0	online
 
+ listening
+  128.87.87.6
+
 -----------------------------------------------------
+
+- add ctl knobs for changing preferred IOS
+- allow multiple preferred IOS servers
 
 - think about routing blips where MDS<->ION is not quite what a ION<->ION
   can see each, causing unnecessary replication work processing
