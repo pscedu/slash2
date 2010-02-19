@@ -45,7 +45,8 @@ struct slash_fidgen {
 	slfgen_t	fg_gen;
 };
 
-#define SLASH_ROOT_ID		UINT64_C(2)
+/* FUSE defines FUSE_ROOT_ID to be 1 and it opens by ID (creates by name). */
+#define SLASH_ROOT_ID		UINT64_C(1)
 
 /* We could use FID_ANY as the SLASH ID of the "local" files that are internal to SLASH */
 #define FID_ANY			UINT64_C(0xffffffffffff)
