@@ -68,7 +68,9 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-f cfgfile] [-S socket] mds-host\n", progname);
+	fprintf(stderr,
+	    "usage: %s [-D datadir] [-f cfgfile] [-S socket] mds-resource\n",
+	    progname);
 	exit(1);
 }
 
@@ -87,8 +89,11 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = SL_PATH_CONF;
 	sfn = SL_PATH_SLICTLSOCK;
-	while ((c = getopt(argc, argv, "f:S:")) != -1)
+	while ((c = getopt(argc, argv, "D:f:S:")) != -1)
 		switch (c) {
+		case 'D':
+			sl_datadir = optarg;
+			break;
 		case 'f':
 			cfn = optarg;
 			break;
