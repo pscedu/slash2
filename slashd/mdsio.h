@@ -68,7 +68,7 @@ int mdsio_unlink(slfid_t, const char *, const struct slash_creds *);
 int mdsio_lookup(slfid_t, const char *, struct slash_fidgen *,
 	const struct slash_creds *, struct srt_stat *, int);
 int mdsio_opendir(slfid_t, const struct slash_creds *, struct slash_fidgen *,
-	struct srt_stat *, void *);
+	struct srt_stat *, void *, int);
 int mdsio_mkdir(slfid_t, const char *, mode_t, const struct slash_creds *,
 	struct srt_stat *, struct slash_fidgen *, int);
 int mdsio_readdir(slfid_t, const struct slash_creds *, size_t, off_t, void *,

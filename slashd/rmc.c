@@ -400,7 +400,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_opendir(mq->fid, &mq->creds, &fg, &mp->attr,
-	    &mdsio_data);
+	    &mdsio_data, MDSIO_REMOTE);
 	psc_info("mdsio_opendir rc=%d data=%p", mp->rc, mdsio_data);
 	if (mp->rc)
 		return (0);
