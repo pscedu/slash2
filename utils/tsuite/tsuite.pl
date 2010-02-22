@@ -128,7 +128,6 @@ mkdir $tmpdir		or fatal "mkdir $tmpdir";
 mkdir "$base/ctl"	or fatal "mkdir $base/ctl";
 mkdir "$base/fs"	or fatal "mkdir $base/fs";
 mkdir $mp		or fatal "mkdir $mp";
-mkdir $datadir		or fatal "mkdir $datadir";
 
 # Checkout the source and build it
 chdir $base		or fatal "chdir $base";
@@ -176,7 +175,6 @@ sub new_res {
 	my %r = (
 		rname	=> $rname,
 		site	=> $site,
-		datadir	=> "$datadir/$rname\@$site",
 	);
 	return \%r;
 }
@@ -277,13 +275,15 @@ foreach $i (@mds) {
 		umount /$i->{zpoolname}
 		pkill zfs-fuse
 
-		$slmkjrnl -D $i->{datadir} -f
-		$odtable -C -N $i->{datadir}/ion_bmaps.odt
+		mkdir -p $datadir
+
+		$slmkjrnl -D $datadir -f
+		$odtable -C -N $datadir/ion_bmaps.odt
 
 		@{[$need_descbuf_key ? <<EOS : "" ]}
 		@{[init_env(%$global_env)]}
-		$slkeymgt -c -D $i->{datadir}
-		cp -p $i->{datadir}/descbuf.key $datadir
+		$slkeymgt -c -D $datadir
+		cp -p $datadir/descbuf.key $base
 EOS
 EOF
 	$need_descbuf_key = 0;
@@ -298,7 +298,7 @@ foreach $i (@mds) {
 
 	my $dat = $slmgdb;
 	$dat =~ s/%zpool_name%/$i->{zpoolname}/g;
-	$dat =~ s/%datadir%/$i->{datadir}/g;
+	$dat =~ s/%datadir%/$datadir/g;
 
 	open G, ">", "$base/slashd.$i->{id}.gdbcmd" or fatal "write slashd.gdbcmd";
 	print G $dat;
@@ -307,7 +307,7 @@ foreach $i (@mds) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env)]}
-		cp -p $datadir/descbuf.key $i->{datadir}
+		cp -p $base/descbuf.key $datadir
 		screen -d -m -S SLMDS.$tsid \\
 		    gdb -f -x $base/slashd.$i->{id}.gdbcmd $slbase/slashd/slashd
 EOF
@@ -326,10 +326,10 @@ foreach $i (@ion) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env)]}
-		mkdir -p $i->{datadir}
+		mkdir -p $datadir
 		mkdir -p $i->{fsroot}
 		$slimmns_format -i $i->{fsroot}
-		cp -p $datadir/descbuf.key $i->{datadir}
+		cp -p $base/descbuf.key $datadir
 EOF
 }
 
@@ -341,7 +341,7 @@ foreach $i (@ion) {
 	debug_msg "launching sliod: $i->{rname} : $i->{host}";
 
 	my $dat = $sligdb;
-	$dat =~ s/%datadir%/$i->{datadir}/g;
+	$dat =~ s/%datadir%/$datadir/g;
 
 	open G, ">", "$base/sliod.$i->{id}.gdbcmd"
 	    or fatal "write sliod.gdbcmd";
