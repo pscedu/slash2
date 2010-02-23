@@ -73,6 +73,7 @@ struct sl_resm {
 	struct sl_resource	*resm_res;
 	struct psc_hashent	 resm_hentry;
 	void			*resm_pri;
+#define resm_site		 resm_res->res_site
 };
 
 #define resm_2_resid(r)		(r)->resm_res->res_id
