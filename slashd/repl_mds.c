@@ -576,7 +576,7 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 		rc = mds_fcmh_load_fmi(fcmh, data, 1);
 		/* don't release the mdsio data on success */
 		if (rc || fcmh_2_mdsio_data(fcmh) != data)
-			mdsio_frelease(fg.fg_fid, &rootcreds, data);
+			mdsio_frelease(&rootcreds, data);
 		if (rc)
 			return (EINVAL); /* XXX need better errno */
 	}
@@ -958,15 +958,7 @@ mds_repl_scandir(void)
 	uint32_t j;
 	void *data;
 
-	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, &fg, NULL, &data, MDSIO_LOCAL);
-	if (rc == ENOENT) {
-		rc = mdsio_mkdir(SL_ROOT_INUM, SL_PATH_REPLS, 0700,
-		    &rootcreds, NULL, NULL, MDSIO_LOCAL);
-		if (rc)
-			psc_fatalx("mdsio_mkdir %s: %s", SL_PATH_REPLS,
-			    slstrerror(rc));
-		return;
-	}
+	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, &fg, NULL, &data);
 	if (rc)
 		psc_fatalx("mdsio_opendir %s: %s", SL_PATH_REPLS,
 		    slstrerror(rc));
@@ -976,7 +968,7 @@ mds_repl_scandir(void)
 	buf = PSCALLOC(siz);
 
 	for (;;) {
-		rc = mdsio_readdir(mds_repldir_inum, &rootcreds, siz,
+		rc = mdsio_readdir(&rootcreds, siz,
 		    off, buf, &tsiz, NULL, 0, data);
 		if (rc)
 			psc_fatalx("mdsio_readdir %s: %s", SL_PATH_REPLS,
@@ -996,7 +988,7 @@ mds_repl_scandir(void)
 			if (fn[0] == '.')
 				continue;
 
-			rc = mdsio_lookup(mds_repldir_inum, fn, &fg, &rootcreds, NULL, MDSIO_LOCAL);
+			rc = mdsio_lookup(mds_repldir_inum, fn, &fg, &rootcreds, NULL);
 			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
 				psc_fatalx("mdsio_lookup %s/%s: %s",
@@ -1047,7 +1039,7 @@ mds_repl_scandir(void)
 		}
 		off += tsiz;
 	}
-	rc = mdsio_frelease(mds_repldir_inum, &rootcreds, data);
+	rc = mdsio_frelease(&rootcreds, data);
 	if (rc)
 		psc_fatalx("mdsio_release %s: %s", SL_PATH_REPLS,
 		    slstrerror(rc));
@@ -1234,7 +1226,7 @@ mds_repl_init(void)
 	struct slash_fidgen fg;
 	int rc;
 
-	rc = mdsio_lookup(SL_ROOT_INUM, SL_PATH_REPLS, &fg, &rootcreds, NULL, MDSIO_LOCAL);
+	rc = mdsio_lookup(SL_ROOT_INUM, SL_PATH_REPLS, &fg, &rootcreds, NULL);
 	if (rc)
 		psc_fatalx("lookup repldir: %s", slstrerror(rc));
 	mds_repldir_inum = fg.fg_fid;

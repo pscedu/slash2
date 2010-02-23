@@ -54,16 +54,32 @@
 #include "slerr.h"
 #include "slutil.h"
 
-psc_spinlock_t fsidlock = LOCK_INITIALIZER;
-
-#ifdef NAMESPACE_EXPERIMENTAL
 /*
- * TODO: SLASH ID should be logged on disk, so that it can be consumed
+ * The following SLASHIDs are automatically assigned:
+ *	1		-> /
+ *	2		-> /.slfidns
+ *	3 .. 4099	-> /.slfidns/...
+ *	5000		-> /.slrepls
+ */
+#define SLASHID_MIN	5001
+
+/*
+ * TODO: SLASH ID should be logged on disk, so that it can be advanced
  *	continuously across reboots and crashes.
  */
-uint64_t	next_slash_id = 2;
-psc_spinlock_t	slash_id_lock = LOCK_INITIALIZER;
-#endif
+psc_atomic64_t next_slash_id = PSC_ATOMIC64_INIT(SLASHID_MIN);
+
+uint64_t
+slm_get_next_slashid(void)
+{
+	uint64_t slid;
+
+	do
+		slid = psc_atomic64_inc_getnew(&next_slash_id) - 1;
+	while (slid < SLASHID_MIN);
+	return (slid | ((uint64_t)nodeResm->resm_site->site_id <<
+	    SLASH_ID_FID_BITS));
+}
 
 int
 slmrmcthr_inode_cacheput(struct slash_fidgen *fg,
@@ -229,7 +245,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 	else
 		mp->rc = mdsio_lookup(mq->pfid, mq->name, &mp->fg,
-		    &mq->creds, &mp->attr, MDSIO_REMOTE);
+		    &mq->creds, &mp->attr);
 	return (0);
 }
 
@@ -245,13 +261,11 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	mp->fg.fg_fid = 0;
 
 #ifdef NAMESPACE_EXPERIMENTAL
-	spinlock(&slash_id_lock);
-	mp->fg.fg_fid = next_slash_id++;
-	freelock(&slash_id_lock);
+	mp->fg.fg_fid = slm_get_next_slashid();
 #endif
 
 	mp->rc = mdsio_mkdir(mq->pfid, mq->name,
-	    mq->mode, &mq->creds, &mp->attr, &mp->fg, MDSIO_REMOTE);
+	    mq->mode, &mq->creds, &mp->attr, &mp->fg);
 	return (0);
 }
 
@@ -302,9 +316,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		return (0);
 
 #ifdef NAMESPACE_EXPERIMENTAL
-	spinlock(&slash_id_lock);
-	fg.fg_fid = next_slash_id++;
-	freelock(&slash_id_lock);
+	fg.fg_fid = slm_get_next_slashid();
 #endif
 
 	mp->rc = mdsio_opencreate(mq->pfid, &mq->creds, fl,
@@ -333,7 +345,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	 * so release the mdsio data if we failed or didn't use it.
 	 */
 	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
-		mdsio_frelease(fg.fg_fid, &mq->creds, mdsio_data);
+		mdsio_frelease(&mq->creds, mdsio_data);
 	return (0);
 }
 
@@ -385,7 +397,7 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	 * so release the mdsio data if we failed or didn't use it.
 	 */
 	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
-		mdsio_frelease(fg.fg_fid, &mq->creds, mdsio_data);
+		mdsio_frelease(&mq->creds, mdsio_data);
 	return (0);
 }
 
@@ -400,7 +412,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_opendir(mq->fid, &mq->creds, &fg, &mp->attr,
-	    &mdsio_data, MDSIO_REMOTE);
+	    &mdsio_data);
 	psc_info("mdsio_opendir rc=%d data=%p", mp->rc, mdsio_data);
 	if (mp->rc)
 		return (0);
@@ -424,7 +436,7 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	 * so release the mdsio handle if we failed or didn't use it.
 	 */
 	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
-		mdsio_frelease(fg.fg_fid, &mq->creds, mdsio_data);
+		mdsio_frelease(&mq->creds, mdsio_data);
 	return (0);
 }
 
@@ -473,9 +485,9 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		iov[1].iov_base = NULL;
 	}
 
-	mp->rc = mdsio_readdir(fg.fg_fid, &mq->creds, mq->size,
-	    mq->offset, iov[0].iov_base, &outsize, iov[1].iov_base,
-	    mq->nstbpref, fcmh_2_mdsio_data(m->mexpfcm_fcmh));
+	mp->rc = mdsio_readdir(&mq->creds, mq->size, mq->offset,
+	    iov[0].iov_base, &outsize, iov[1].iov_base, mq->nstbpref,
+	    fcmh_2_mdsio_data(m->mexpfcm_fcmh));
 	mp->size = outsize;
 
 	psc_info("mdsio_readdir rc=%d data=%p", mp->rc,
