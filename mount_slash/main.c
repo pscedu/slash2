@@ -596,6 +596,12 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	slash2fuse_openref_update(m, fi->flags, &flags);
 	fidc_fcoo_startdone(m);
 
+	if (fi->flags & O_APPEND) {
+		FCMH_LOCK(m);
+		m->fcmh_state |= FCMH_CLI_APPENDWR;
+		FCMH_ULOCK(m);
+	}
+
 	slash2fuse_reply_create(req, &mp->sfdb.sfdb_secret.sfs_fg,
 	    &mp->attr, fi);
 	fcmh_dropref(m);		/* slash2fuse_fidc_putget() bumped it. */
@@ -674,6 +680,12 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		goto out;
 
 	fuse_reply_open(req, fi);
+
+	if (fi->flags & O_APPEND) {
+		FCMH_LOCK(c);
+		c->fcmh_state |= FCMH_CLI_APPENDWR;
+		FCMH_ULOCK(c);
+	}
 
  out:
 	if (c)
@@ -1372,10 +1384,6 @@ slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
 		/* Tell the mds to release all of our bmaps.
 		 */
 		rc = slash2fuse_releaserpc(req, fi, &fdb);
-		if (c->fcmh_fcoo->fcoo_pri) {
-			msl_release_fci(c->fcmh_fcoo->fcoo_pri);
-			c->fcmh_fcoo->fcoo_pri = NULL;
-		}
 		fidc_fcoo_remove(c);
 	}
 	DEBUG_FCMH(PLL_INFO, c, "done with slash2fuse_release");
@@ -1774,7 +1782,7 @@ slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
 }
 
 void *
-ms_init(__unusedx struct fuse_conn_info *conn)
+msl_init(__unusedx struct fuse_conn_info *conn)
 {
 	char *name;
 	int rc;
@@ -1801,10 +1809,12 @@ ms_init(__unusedx struct fuse_conn_info *conn)
 	if (slc_rmc_getimp() == NULL)
 		psc_fatal("unable to connect to MDS");
 
-	if ((name = getenv("SLASH2_PIOS_ID")) != NULL) {
-		if ((prefIOS = libsl_str2id(name)) == IOS_ID_ANY)
+	name = getenv("SLASH2_PIOS_ID");
+	if (name) {
+		prefIOS = libsl_str2id(name);
+		if (prefIOS == IOS_ID_ANY)
 			psc_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
-				  "a valid IOS, defaulting to IOS_ID_ANY", name);
+			    "a valid IOS, defaulting to IOS_ID_ANY", name);
 	}
 	return (NULL);
 }
@@ -1911,7 +1921,9 @@ msl_fuse_mount(const char *mp)
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-dU] [-f conf] [-S socket] node\n", progname);
+	fprintf(stderr,
+	    "usage: %s [-dU] [-f conf] [-S socket] node\n",
+	    progname);
 	exit(1);
 }
 
@@ -1955,7 +1967,7 @@ main(int argc, char *argv[])
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
 	slcfg_parse(cfg);
-	ms_init(NULL);
+	msl_init(NULL);
 
 	if (unmount) {
 		char cmdbuf[BUFSIZ];
