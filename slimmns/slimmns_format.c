@@ -30,26 +30,24 @@
 #include "psc_util/log.h"
 
 #include "fid.h"
+#include "mkfn.h"
 #include "pathnames.h"
 
 void wipefs(const char *);
 
-const char *progname;
-int wipe;
-int ion;
+const char	*progname;
+int		 wipe;
+int		 ion;
 
 void
 slimmns_create_int(const char *fn, uint32_t curdepth, uint32_t maxdepth)
 {
 	char d[PATH_MAX];
-	int i, rc;
+	int i;
 
 	for (i = 0; i < 16; i++) {
-		rc = snprintf(d, sizeof(d), "%s/%x", fn, i);
-		if ((rc == -1) || (rc >= (int)sizeof(d)))
-			psc_fatal("snprintf");
-
-		if ((mkdir(d, 0711) == -1) && (errno != EEXIST))
+		xmkfn(d, "%s/%x", fn, i);
+		if (mkdir(d, 0711) == -1 && errno != EEXIST)
 			psc_fatal("mkdir %s", d);
 
 		if (curdepth < maxdepth)
@@ -58,8 +56,7 @@ slimmns_create_int(const char *fn, uint32_t curdepth, uint32_t maxdepth)
 }
 
 /*
- * Routine for creating the directory structure
- *  on a mapserver filesystem.
+ * slimmns_create - Create an immutable namespace directory structure.
  */
 void
 slimmns_create(const char *root, uint32_t depth)
@@ -71,10 +68,7 @@ slimmns_create(const char *root, uint32_t depth)
 		depth = FID_PATH_DEPTH;
 
 	/* create immutable namespace root directory */
-	rc = snprintf(fn, sizeof(fn), "%s/%s",
-	    root, FID_PATH_NAME);
-	psc_assert(rc != -1 && rc < PATH_MAX);
-
+	xmkfn(fn, "%s/%s", root, FID_PATH_NAME);
 	rc = mkdir(fn, 0711);
 	if (rc == -1 && errno != EEXIST)
 		psc_fatal("mkdir %s", fn);
@@ -86,10 +80,7 @@ slimmns_create(const char *root, uint32_t depth)
 		return;
 
 	/* create replication queue directory */
-	rc = snprintf(fn, sizeof(fn), "%s/%s",
-	    root, SL_PATH_REPLS);
-	psc_assert(rc != -1 && rc < (int)sizeof(fn));
-
+	xmkfn(fn, "%s/%s", root, SL_PATH_REPLS);
 	rc = mkdir(fn, 0700);
 	if (rc == -1 && errno != EEXIST)
 		psc_fatal("mkdir %s", fn);
