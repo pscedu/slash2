@@ -67,16 +67,19 @@
  * TODO: SLASH ID should be logged on disk, so that it can be advanced
  *	continuously across reboots and crashes.
  */
-psc_atomic64_t next_slash_id = PSC_ATOMIC64_INIT(SLASHID_MIN);
+uint64_t next_slash_id = SLASHID_MIN;
 
 uint64_t
 slm_get_next_slashid(void)
 {
+	static psc_spinlock_t lock = LOCK_INITIALIZER;
 	uint64_t slid;
 
-	do
-		slid = psc_atomic64_inc_getnew(&next_slash_id) - 1;
-	while (slid < SLASHID_MIN);
+	spinlock(&lock);
+	if (next_slash_id >= (UINT64_C(1) << SLASH_ID_FID_BITS))
+		next_slash_id = SLASHID_MIN;
+	slid = next_slash_id++;
+	freelock(&lock);
 	return (slid | ((uint64_t)nodeResm->resm_site->site_id <<
 	    SLASH_ID_FID_BITS));
 }
