@@ -26,7 +26,10 @@
 
 #include "cache_params.h"
 #include "fid.h"
+#include "fidc_mds.h"
 #include "fidcache.h"
+
+int fcoo_priv_size = sizeof(struct fcoo_mds_info);
 
 #if 0
 __static int
@@ -70,10 +73,9 @@ fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 struct fcoo_mds_info *
 fidc_fcmh2fmi(struct fidc_membh *fcmh)
 {
-	struct fcoo_mds_info *fmi=NULL;
+	struct fcoo_mds_info *fmi = NULL;
 	int locked;
 
-	fmi = NULL;
 	locked = reqlock(&fcmh->fcmh_lock);
 	if (!fcmh->fcmh_fcoo)
 		goto out;
@@ -81,8 +83,7 @@ fidc_fcmh2fmi(struct fidc_membh *fcmh)
 	if (fidc_fcoo_wait_locked(fcmh, FCOO_NOSTART) < 0)
 		goto out;
 
-	psc_assert(fcmh->fcmh_fcoo->fcoo_pri);
-	fmi = fcmh->fcmh_fcoo->fcoo_pri;
+	fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
  out:
 	ureqlock(&fcmh->fcmh_lock, locked);
 	return (fmi);

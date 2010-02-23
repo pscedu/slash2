@@ -34,7 +34,7 @@
 #include "fid.h"
 #include "fidcache.h"
 
-int (*fidcReapCb)(struct fidc_membh *);
+int  (*fidcReapCb)(struct fidc_membh *);
 
 struct psc_poolmaster	 fidcPoolMaster;
 struct psc_poolmgr	*fidcPool;
@@ -42,6 +42,7 @@ struct psc_poolmgr	*fidcPool;
 struct psc_listcache	 fidcDirtyList;
 struct psc_listcache	 fidcCleanList;
 struct psc_hashtbl	 fidcHtable;
+int			 fcoo_priv_size;
 
 /**
  * fcmh_reset - Invalidate a FID cache member handle.
@@ -273,7 +274,7 @@ fidc_reap(struct psc_poolmgr *m)
 		 */
 		if (!fcmh_clean_check(f)) {
 			DEBUG_FCMH(PLL_FATAL, f,
-				   "Invalid fcmh state for clean list");
+			    "Invalid fcmh state for clean list");
 			psc_fatalx("Invalid state for clean list");
 		}
 		/* Skip inodes which already claim to be freeing
@@ -285,7 +286,7 @@ fidc_reap(struct psc_poolmgr *m)
 		 *  On the client this means taking the fcc from the
 		 *  parent directory inode.
 		 */
-		if (!fidcReapCb || (fidcReapCb && ((fidcReapCb)(f)))) {
+		if (!fidcReapCb || fidcReapCb(f)) {
 			f->fcmh_state |= FCMH_CAC_FREEING;
 			lc_remove(&fidcCleanList, f);
 			psc_dynarray_add(&da, f);
@@ -297,9 +298,9 @@ fidc_reap(struct psc_poolmgr *m)
 	}
 	LIST_CACHE_ULOCK(&fidcCleanList);
 
-	for (i=0; i < psc_dynarray_len(&da); i++) {
+	for (i = 0; i < psc_dynarray_len(&da); i++) {
 		f = psc_dynarray_getpos(&da, i);
-		DEBUG_FCMH(PLL_WARN, f, "moving to free list");
+		DEBUG_FCMH(PLL_DEBUG, f, "moving to free list");
 		fidc_put(f, &fidcFreeList);
 	}
 
@@ -601,10 +602,10 @@ fidc_fcoo_init(void)
 {
 	struct fidc_open_obj *f;
 
-	f = PSCALLOC(sizeof(*f));
+	f = PSCALLOC(sizeof(*f) + fcoo_priv_size);
 	SPLAY_INIT(&f->fcoo_bmapc);
 	f->fcoo_bmap_sz = SLASH_BMAP_SIZE;
-	return f;
+	return (f);
 }
 
 /**
@@ -616,7 +617,6 @@ fidc_init(int nobj, int max, int (*fcmh_reap_cb)(struct fidc_membh *))
 	psc_poolmaster_init(&fidcPoolMaster, struct fidc_membh,
 	    fcmh_lentry, PPMF_NONE, nobj, nobj, max, fcmh_init,
 	    fcmh_dtor, fidc_reap, "fcmh");
-
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
 	lc_reginit(&fidcDirtyList, struct fidc_membh,

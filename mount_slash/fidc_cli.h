@@ -23,34 +23,34 @@
 #include "psc_ds/list.h"
 #include "psc_util/lock.h"
 
-#include "fid.h"
 #include "sltypes.h"
 
 struct fidc_membh;
 
-/* Mainly a place to store our replication table, attached to fcoo_pri.
+/*
+ * FID cache member handle open object CLIENT-specific data.
  */
 struct fcoo_cli_info {
-	int			 fci_flags;
 	int			 fci_nrepls;
 	sl_replica_t		 fci_reptbl[SL_MAX_REPLICAS];
 };
 
-/* fci_flags */
-#define FCIF_HAVEREPTBL		(1 << 0)
+/* client-specific fcmh_state flags */
+#define FCMH_CLI_HAVEREPLTBL	(_FCMH_FLGSHFT << 0)	/* file replica table present */
+#define FCMH_CLI_FETCHREPLTBL	(_FCMH_FLGSHFT << 1)	/* file replica table loading */
+#define FCMH_CLI_APPENDWR	(_FCMH_FLGSHFT << 2)	/* file opened with O_APPEND */
 
 struct fidc_nameinfo {
 	int			 fni_hash;
 	char			 fni_name[0];
 };
 
-#define msl_release_fci(fci)	PSCFREE(fci)
-
-struct fidc_membh *fidc_child_lookup(struct fidc_membh *, const char *);
-
+struct fidc_membh *
+	fidc_child_lookup(struct fidc_membh *, const char *);
 void	fidc_child_add(struct fidc_membh *, struct fidc_membh *, const char *);
 int	fidc_child_reap_cb(struct fidc_membh *);
-void	fidc_child_rename(struct fidc_membh *, const char *, struct fidc_membh *, const char *);
+void	fidc_child_rename(struct fidc_membh *, const char *,
+	    struct fidc_membh *, const char *);
 void	fidc_child_unlink(struct fidc_membh *, const char *);
 
 ssize_t	fcmh_getsize(struct fidc_membh *);

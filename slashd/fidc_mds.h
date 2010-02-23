@@ -36,7 +36,8 @@ struct fcoo_mds_info {
 	void			 *fmi_mdsio_data;	/* mdsio descriptor */
 };
 
-#define fcmh_2_fmi(f)		((struct fcoo_mds_info *)(f)->fcmh_fcoo->fcoo_pri)
+#define fcmh_2_fmi(f)		((struct fcoo_mds_info *)		\
+				    fcoo_get_pri((f)->fcmh_fcoo))
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_mdsio_data(f)	fcmh_2_fmi(f)->fmi_mdsio_data
 

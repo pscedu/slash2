@@ -10,6 +10,8 @@
 #include "fidc_iod.h"
 #include "fidcache.h"
 
+int fcoo_priv_size = sizeof(struct fcoo_iod_info);
+
 int
 sli_fcmh_grow(void)
 {
@@ -42,9 +44,8 @@ sli_fcmh_shrink(void)
 }
 
 int
-fcmh_ensure_has_fii(struct fidc_membh *fcmh)
+fcmh_load_fcoo(struct fidc_membh *fcmh)
 {
-	struct fcoo_iod_info *fii;
 	int rc = 0, locked;
 
 	locked = FCMH_RLOCK(fcmh);
@@ -55,8 +56,6 @@ fcmh_ensure_has_fii(struct fidc_membh *fcmh)
 			goto out;
 	} else
 		fidc_fcoo_start_locked(fcmh);
-	if (fcmh->fcmh_fcoo->fcoo_pri == NULL)
-		fcmh->fcmh_fcoo->fcoo_pri = PSCALLOC(sizeof(*fii));
  out:
 	FCMH_URLOCK(fcmh, locked);
 	return (rc);

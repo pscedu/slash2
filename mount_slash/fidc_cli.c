@@ -38,6 +38,8 @@
 #include "fidcache.h"
 #include "mount_slash.h"
 
+int fcoo_priv_size = sizeof(struct fcoo_cli_info);
+
 /**
  * fidc_new - create a new fni structure and initialize it using provided
  *     parameters.

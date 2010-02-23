@@ -164,20 +164,22 @@ iod_inode_lookup(const struct slash_fidgen *fg)
 }
 
 /*
- * Attach the SLASH file to a file on the local file system.
+ * iod_inode_open - Associate an fcmh with a file handle to a data
+ *	store for the file on the local file system.
+ * @f: FID cache member handle of file to open.
+ * @rw: read or write operation.
  */
 int
 iod_inode_open(struct fidc_membh *f, enum rw rw)
 {
-	int	rc;
-	int	oflags;
+	int rc, oflags;
 
 	rc = 0;
 	oflags = O_RDWR;
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	spinlock(&f->fcmh_lock);
-	rc = fcmh_ensure_has_fii(f);
+	rc = fcmh_load_fcoo(f);
 	if (rc < 0)
 		goto out;
 

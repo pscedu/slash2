@@ -87,7 +87,14 @@ struct fidc_membh {
 #define	FCMH_FCOO_FAILED	(1 << 8)	/* open obj didn't load */
 #define	FCMH_HAVE_ATTRS		(1 << 9)	/* has valid stat info */
 #define	FCMH_GETTING_ATTRS	(1 << 10)	/* fetching stat info */
+#define	_FCMH_FLGSHFT		(1 << 11)
 
+/*
+ * If fuse_ino_t, declared 'unsigned long', is 4 bytes, inums will get
+ * integer demoted, so we must store two: the original inum, used when
+ * communicating information about the actual fcmh, as well as the
+ * demoted value, used in hash table lookups from FUSE syscall handlers.
+ */
 #ifdef DEMOTED_INUM_WIDTHS
 # define FCMH_HASH_FIELD	fcmh_smallfg
 #else
@@ -187,10 +194,15 @@ struct fidc_open_obj {
 	int			 fcoo_oref_wr;
 	struct bmap_cache	 fcoo_bmapc;		/* bmap cache splay */
 	size_t			 fcoo_bmap_sz;
-	void			*fcoo_pri;		/* fcoo_{cli,iod,mds}_info */
 };
 
 #define FCOO_STARTING		((struct fidc_open_obj *)0x01)
+
+static __inline void *
+fcoo_get_pri(struct fidc_open_obj *fcoo)
+{
+	return (fcoo + 1);
+}
 
 /* fidc_lookup() flags */
 enum {
@@ -228,10 +240,10 @@ int			 fidc_lookup(const struct slash_fidgen *, int,
 			    struct fidc_membh **);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
-extern struct psc_hashtbl	 fidcHtable;
 extern struct psc_poolmgr	*fidcPool;
 extern struct psc_listcache	 fidcDirtyList;
 extern struct psc_listcache	 fidcCleanList;
+extern int			 fcoo_priv_size;
 
 static __inline void
 fcmh_refresh_age(struct fidc_membh *fcmh)
@@ -339,7 +351,6 @@ fidc_fcoo_remove(struct fidc_membh *h)
 	o = h->fcmh_fcoo;
 	psc_assert(h->fcmh_cache_owner == &fidcDirtyList);
 	psc_assert(!(o->fcoo_oref_rd || o->fcoo_oref_wr));
-	psc_assert(!o->fcoo_pri);
 	psc_assert(SPLAY_EMPTY(&o->fcoo_bmapc));
 
 	h->fcmh_state &= ~FCMH_FCOO_ATTACH;
@@ -355,8 +366,8 @@ fidc_fcoo_remove(struct fidc_membh *h)
 	spinlock(&h->fcmh_lock);
 	h->fcmh_state &= ~FCMH_FCOO_CLOSING;
 	DEBUG_FCMH(PLL_DEBUG, h, "fidc_fcoo_remove");
-	freelock(&h->fcmh_lock);
 	psc_waitq_wakeall(&h->fcmh_waitq);
+	freelock(&h->fcmh_lock);
 }
 
 /* fcoo wait flags */
