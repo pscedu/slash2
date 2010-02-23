@@ -24,15 +24,13 @@
 
 #include <inttypes.h>
 
-#define FID_MAX_PATH	96
-#define IMNS_NAME_MAX	17
-#define FID_FD_NOTOPEN	(-2)
+#define FID_MAX_PATH		96
+#define IMNS_NAME_MAX		17
 
 struct slash_creds;
 struct slash_fidgen;
 
 /* see comments in file zfs-fuse/zfs_slashlib.h */
-
 #define	SLASH_ID_FLAG_BITS	4
 #define	SLASH_ID_SITE_BITS	10
 #define	SLASH_ID_FID_BITS	50
@@ -44,9 +42,6 @@ struct slash_fidgen {
 	slfid_t		fg_fid;
 	slfgen_t	fg_gen;
 };
-
-/* FUSE defines FUSE_ROOT_ID to be 1 and it opens by ID (creates by name). */
-#define SLASH_ROOT_ID		UINT64_C(1)
 
 /* We could use FID_ANY as the SLASH ID of the "local" files that are internal to SLASH */
 #define FID_ANY			UINT64_C(0xffffffffffff)
@@ -60,6 +55,7 @@ struct slash_fidgen {
 #define FID_PATH_LEN		1024
 #define FID_PATH_NAME           ".slfidns"
 
+/* bits per hex char e.g. 0xffff=16 */
 #define BPHXC			4
 
 #define FIDFMT			"%"PRId64":%"PRId64
