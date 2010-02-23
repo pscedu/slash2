@@ -19,11 +19,13 @@ MAN+=		doc/sladm.7
 MAN+=		doc/slash.conf.5
 
 zbuild:
-	@(cd ${ZFS_BASE} && ${SCONS} -c && scons)
-	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=4 -c && \
-	    ${SCONS} slashlib=1 debug=4)
+	@(cd ${ZFS_BASE} && ${SCONS} ${ZFS_SCONSOPTS} -c &&		\
+	    ${SCONS} ${ZFS_SCONSOPTS})
+	@(cd ${ZFS_BASE} &&						\
+	    ${SCONS} slashlib=1 debug=4 ${ZFS_SCONSOPTS} -c &&		\
+	    ${SCONS} slashlib=1 debug=4 ${ZFS_SCONSOPTS})
 
 build-prereq rezbuild:
-	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=4)
+	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=4 ${ZFS_SCONSOPTS})
 
 fullbuild: zbuild build

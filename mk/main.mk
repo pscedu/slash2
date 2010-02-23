@@ -8,7 +8,4 @@ INCLUDES+=	-I${SLASH_BASE}
 
 DEFINES+=	-DAPP_STRERROR=slstrerror
 
-# Add additional flags here
-# DEFINES+=	-DNAMESPACE_EXPERIMENTAL
-
 include ${MAINMK}
