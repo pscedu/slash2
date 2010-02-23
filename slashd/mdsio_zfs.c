@@ -17,6 +17,12 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * This file contains routines for accessing the backing store of the MDS
+ * file system, where each file in existence here actually contains the
+ * SLASH file's metadata.
+ */
+
 #include "psc_util/lock.h"
 
 #include "bmap.h"
@@ -71,12 +77,7 @@ mdsio_release(struct slash_inode_handle *i)
 	fmi = fcmh_2_fmi(i->inoh_fcmh);
 	psc_assert(!atomic_read(&fmi->fmi_refcnt));
 
-	/*
-	 * XXX should we pass the same creds here as the
-	 * file was opened with?  do we even have them?
-	 */
-	return (zfsslash2_release(fcmh_2_fid(i->inoh_fcmh),
-	    &rootcreds, fmi->fmi_mdsio_data));
+	return (zfsslash2_release(&rootcreds, fmi->fmi_mdsio_data));
 }
 
 int
@@ -102,8 +103,7 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 
 	bmdsi = bmap->bcm_pri;
 
-	rc = zfsslash2_read(fcmh_2_fid(bmap->bcm_fcmh), &rootcreds,
-	    bmdsi->bmdsi_od, BMAP_OD_SZ, &nb,
+	rc = zfsslash2_read(&rootcreds, bmdsi->bmdsi_od, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
 	    bmap_2_zfs_fh(bmap));
 	if (rc == 0 && nb != BMAP_OD_SZ)
@@ -121,22 +121,20 @@ mdsio_bmap_write(struct bmapc_memb *bmap)
 	int rc;
 
 	bmdsi = bmap->bcm_pri;
-	rc = zfsslash2_write(fcmh_2_fid(bmap->bcm_fcmh), &rootcreds,
-	    bmdsi->bmdsi_od, BMAP_OD_SZ, &nb,
+	rc = zfsslash2_write(&rootcreds, bmdsi->bmdsi_od, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
 	    bmap_2_zfs_fh(bmap));
 
 	if (rc) {
-		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write() error (rc=%d)",
+		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
 			   rc);
 	} else if (nb != BMAP_OD_SZ) {
-		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write() short I/O");
+		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	} else {
-		rc = zfsslash2_fsync(fcmh_2_fid(bmap->bcm_fcmh),
-		    &rootcreds, 1, bmap_2_zfs_fh(bmap));
+		rc = zfsslash2_fsync(&rootcreds, 1, bmap_2_zfs_fh(bmap));
 		if (rc == -1)
-			psc_fatal("zfsslash2_fsync() failed");
+			psc_fatal("zfsslash2_fsync");
 	}
 	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)",rc);
 
@@ -150,8 +148,7 @@ mdsio_inode_read(struct slash_inode_handle *i)
 	int rc;
 
 	INOH_LOCK_ENSURE(i);
-	rc = zfsslash2_read(fcmh_2_fid(i->inoh_fcmh),
-	    &rootcreds, &i->inoh_ino, INO_OD_SZ, &nb,
+	rc = zfsslash2_read(&rootcreds, &i->inoh_ino, INO_OD_SZ, &nb,
 	    SL_INODE_START_OFF, inoh_2_mdsio_data(i));
 
 	if (rc) {
@@ -175,24 +172,22 @@ mdsio_inode_write(struct slash_inode_handle *i)
 	size_t nb;
 	int rc;
 
-	rc = zfsslash2_write(fcmh_2_fid(i->inoh_fcmh),
-	    &rootcreds, &i->inoh_ino, INO_OD_SZ, &nb,
+	rc = zfsslash2_write(&rootcreds, &i->inoh_ino, INO_OD_SZ, &nb,
 	    SL_INODE_START_OFF, inoh_2_mdsio_data(i));
 
 	if (rc) {
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() error (rc=%d)",
+		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: error (rc=%d)",
 			   rc);
 	} else if (nb != INO_OD_SZ) {
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() short I/O");
+		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	} else {
 		DEBUG_INOH(PLL_TRACE, i, "wrote inode (rc=%d) data=%p",
 		    rc, inoh_2_mdsio_data(i));
 #ifdef SHITTY_PERFORMANCE
-		rc = zfsslash2_fsync(fcmh_2_fid(i->inoh_fcmh), &rootcreds,
-			     1, inoh_2_mdsio_data(i));
+		rc = zfsslash2_fsync(&rootcreds, 1, inoh_2_mdsio_data(i));
 		if (rc == -1)
-			psc_fatal("zfsslash2_fsync() failed");
+			psc_fatal("zfsslash2_fsync");
 #endif
 	}
 	return (rc);
@@ -205,13 +200,12 @@ mdsio_inode_extras_read(struct slash_inode_handle *i)
 	int rc;
 
 	psc_assert(i->inoh_extras);
-	rc = zfsslash2_read(fcmh_2_fid(i->inoh_fcmh),
-	    &rootcreds, i->inoh_extras, INOX_OD_SZ, &nb,
+	rc = zfsslash2_read(&rootcreds, i->inoh_extras, INOX_OD_SZ, &nb,
 	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(i));
 	if (rc)
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_read() error (rc=%d)", rc);
+		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_read: error (rc=%d)", rc);
 	else if (nb != INOX_OD_SZ) {
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_read() short I/O");
+		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_read: short I/O");
 		rc = SLERR_SHORTIO;
 	}
 	return (rc);
@@ -224,31 +218,29 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 	int rc;
 
 	psc_assert(i->inoh_extras);
-	rc = zfsslash2_write(fcmh_2_fid(i->inoh_fcmh),
-	    &rootcreds, i->inoh_extras, INOX_OD_SZ, &nb,
+	rc = zfsslash2_write(&rootcreds, i->inoh_extras, INOX_OD_SZ, &nb,
 	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(i));
 
 	if (rc) {
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() error (rc=%d)",
+		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: error (rc=%d)",
 			   rc);
 	} else if (nb != INOX_OD_SZ) {
-		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write() short I/O");
+		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
 	} else {
 #ifdef SHITTY_PERFORMANCE
-		rc = zfsslash2_fsync(fcmh_2_fid(i->inoh_fcmh), &rootcreds,
-			     1, inoh_2_mdsio_data(i));
+		rc = zfsslash2_fsync(&rootcreds, 1, inoh_2_mdsio_data(i));
 		if (rc == -1)
-			psc_fatal("zfsslash2_fsync() failed");
+			psc_fatal("zfsslash2_fsync");
 #endif
 	}
 	return (rc);
 }
 
 int
-mdsio_frelease(slfid_t fid, const struct slash_creds *cr, void *mdsio_data)
+mdsio_frelease(const struct slash_creds *cr, void *mdsio_data)
 {
-	return (zfsslash2_release(fid, cr, mdsio_data));
+	return (zfsslash2_release(cr, mdsio_data));
 }
 
 int
@@ -295,33 +287,33 @@ mdsio_link(slfid_t fid, slfid_t pfid, const char *fn,
 
 int
 mdsio_lookup(slfid_t pfid, const char *cpn, struct slash_fidgen *fgp,
-    const struct slash_creds *cr, struct srt_stat *sstb, int flags)
+    const struct slash_creds *cr, struct srt_stat *sstb)
 {
-	return (zfsslash2_lookup(pfid, cpn, fgp, cr, sstb, flags));
+	return (zfsslash2_lookup(pfid, cpn, fgp, cr, sstb));
 }
 
 int
 mdsio_opendir(slfid_t fid, const struct slash_creds *cr,
-    struct slash_fidgen *fgp, struct srt_stat *sstb, void *mdsio_datap, int flags)
+    struct slash_fidgen *fgp, struct srt_stat *sstb, void *mdsio_datap)
 {
-	return (zfsslash2_opendir(fid, cr, fgp, sstb, mdsio_datap, flags));
+	return (zfsslash2_opendir(fid, cr, fgp, sstb, mdsio_datap));
 }
 
 int
 mdsio_mkdir(slfid_t pfid, const char *cpn, mode_t mode,
     const struct slash_creds *cr, struct srt_stat *sstb,
-    struct slash_fidgen *fgp, int flags)
+    struct slash_fidgen *fgp)
 {
 	return (zfsslash2_mkdir(pfid, cpn, mode, cr, sstb,
-	    fgp, flags));
+	    fgp));
 }
 
 int
-mdsio_readdir(slfid_t fid, const struct slash_creds *cr, size_t siz,
+mdsio_readdir(const struct slash_creds *cr, size_t siz,
     off_t off, void *buf, size_t *outlen, void *attrs, int nprefetch,
     void *mdsio_data)
 {
-	return (zfsslash2_readdir(fid, cr, siz, off, buf,
+	return (zfsslash2_readdir(cr, siz, off, buf,
 	    outlen, attrs, nprefetch, mdsio_data));
 }
 
