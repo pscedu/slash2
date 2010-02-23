@@ -503,11 +503,13 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 
 	f = bmap->bcm_fcmh;
 
-	FCMH_LOCK(f);
 	psc_assert(f->fcmh_fcoo);
-	fci = f->fcmh_fcoo->fcoo_pri;
-	if (fci == NULL) {
-		f->fcmh_fcoo->fcoo_pri = fci = PSCALLOC(sizeof(*fci));
+	fci = fcoo_get_pri(f->fcmh_fcoo);
+
+	FCMH_LOCK(f);
+	if ((f->fcmh_state & (FCMH_CLI_HAVEREPLTBL |
+	    FCMH_CLI_FETCHREPLTBL)) == 0) {
+		f->fcmh_state |= FCMH_CLI_FETCHREPLTBL;
 		getreptbl = 1;
 	}
 	FCMH_ULOCK(f);
@@ -555,24 +557,22 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 		goto done;
 	}
 
-	spinlock(&f->fcmh_lock);
+	FCMH_LOCK(f);
 	bmap_2_msion(bmap) = mp->ios_nid;
-	freelock(&f->fcmh_lock);
 
 	if (getreptbl) {
 		/* XXX don't forget that on write we need to invalidate
 		 *   the local replication table..
 		 */
-		FCMH_LOCK(f);
 		fci->fci_nrepls = mp->nrepls;
-		fci->fci_flags = FCIF_HAVEREPTBL;
+		f->fcmh_state |= FCMH_CLI_HAVEREPLTBL;
 		psc_waitq_wakeall(&f->fcmh_waitq);
-		FCMH_ULOCK(f);
 	}
 
  done:
-	if (rc && getreptbl)
-		PSCFREE(f->fcmh_fcoo->fcoo_pri);
+	FCMH_RLOCK(f);
+	f->fcmh_state &= ~FCMH_CLI_FETCHREPLTBL;
+	FCMH_ULOCK(f);
 	return (rc);
 }
 
@@ -831,7 +831,7 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 	struct sl_resm *resm;
 	int j, rnd, nios;
 
-	fci = bcm->bcm_fcmh->fcmh_fcoo->fcoo_pri;
+	fci = fcoo_get_pri(bcm->bcm_fcmh->fcmh_fcoo);
 	msbd = bcm->bcm_pri;
 
 	if (SL_REPL_GET_BMAP_IOS_STAT(msbd->msbd_msbcr.msbcr_repls,
@@ -863,8 +863,7 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 	psc_assert(b->bcm_fcmh->fcmh_fcoo);
 
-	fci = b->bcm_fcmh->fcmh_fcoo->fcoo_pri;
-	psc_assert(fci);
+	fci = fcoo_get_pri(b->bcm_fcmh->fcmh_fcoo);
 
 	/* first, try preferred IOS */
 	rnd = psc_random32u(fci->fci_nrepls);
