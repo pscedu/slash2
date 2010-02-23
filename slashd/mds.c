@@ -74,7 +74,7 @@ mds_inode_release(struct fidc_membh *f)
 
 	spinlock(&f->fcmh_lock);
 
-	psc_assert(f->fcmh_fcoo && f->fcmh_fcoo->fcoo_pri);
+	psc_assert(f->fcmh_fcoo);
 	/* It should be safe to look at the fmi without calling
 	 *   fidc_fcmh2fmi() because this thread should absolutely have
 	 *   a ref to the fcmh which should be open.
@@ -94,8 +94,11 @@ mds_inode_release(struct fidc_membh *f)
 		f->fcmh_state |= FCMH_FCOO_CLOSING;
 		DEBUG_FCMH(PLL_DEBUG, f, "calling mdsio_release");
 		rc = mdsio_release(&fmi->fmi_inodeh);
-		PSCFREE(fmi);
-		f->fcmh_fcoo->fcoo_pri = NULL;
+
+		jfi_ensure_empty(&fmi->fmi_inodeh.inoh_jfi);
+		if (fmi->fmi_inodeh.inoh_extras)
+			PSCFREE(fmi->fmi_inodeh.inoh_extras);
+
 		f->fcmh_fcoo->fcoo_oref_rd = 0;
 		freelock(&f->fcmh_lock);
 		fidc_fcoo_remove(f);
@@ -225,8 +228,7 @@ mds_fcmh_load_fmi(struct fidc_membh *f, void *data, int isfile)
 			goto fcoo_start;
 		else {
 			psc_assert(f->fcmh_fcoo);
-			psc_assert(f->fcmh_fcoo->fcoo_pri);
-			fmi = f->fcmh_fcoo->fcoo_pri;
+			fmi = fcoo_get_pri(f->fcmh_fcoo);
 			f->fcmh_fcoo->fcoo_oref_rd++;
 			psc_assert(fmi->fmi_mdsio_data);
 			FCMH_ULOCK(f);
@@ -234,8 +236,7 @@ mds_fcmh_load_fmi(struct fidc_membh *f, void *data, int isfile)
 	} else {
 		fidc_fcoo_start_locked(f);
  fcoo_start:
-		psc_assert(f->fcmh_fcoo->fcoo_pri == NULL);
-		f->fcmh_fcoo->fcoo_pri = fmi = PSCALLOC(sizeof(*fmi));
+		fmi = fcoo_get_pri(f->fcmh_fcoo);
 		f->fcmh_fcoo->fcoo_oref_rd = 1;
 		fmi_init(fmi, f, data);
 		if (isfile) {
@@ -821,11 +822,10 @@ mexpfcm_release_bref(struct mexpbcm *bref)
 }
 
 /**
- * mds_bmap_crc_write - process an CRC update request from an ION.
- * @mq: the RPC request containing the fid, the bmap blkno, and the bmap
- *	chunk id (cid).
+ * mds_bmap_crc_write - process a CRC update request from an ION.
+ * @c: the RPC request containing the FID, bmapno, and chunk ID (cid).
  * @ion_nid:  the id of the io node which sent the request.  It is
- *	compared against the id stored in bmdsi.
+ *	compared against the ID stored in the bmdsi.
  */
 int
 mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
@@ -1140,9 +1140,9 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
     struct bmapc_memb **bmap)
 {
 	struct bmapc_memb *b;
-	struct fidc_membh *f=fref->mexpfcm_fcmh;
-	struct fcoo_mds_info *fmi=f->fcmh_fcoo->fcoo_pri;
-	struct slash_inode_handle *inoh=&fmi->fmi_inodeh;
+	struct fidc_membh *f = fref->mexpfcm_fcmh;
+	struct fcoo_mds_info *fmi = fcoo_get_pri(f->fcmh_fcoo);
+	struct slash_inode_handle *inoh = &fmi->fmi_inodeh;
 	struct mexpbcm *bref, tbref;
 	int rc=0;
 
@@ -1208,9 +1208,9 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	rc = mds_bmap_ref_add(bref, mq);
 	if (rc)
 		PSCFREE(bref);
-	else {
+	else
 		*bmap = b;
-	}
+
 	/* BMAP_OP #4, drop our lookup reference.
 	 */
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
