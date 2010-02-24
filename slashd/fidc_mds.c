@@ -28,6 +28,7 @@
 #include "fid.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
+#include "mdsio.h"
 
 int fcoo_priv_size = sizeof(struct fcoo_mds_info);
 
@@ -99,8 +100,16 @@ fidc_fid2fmi(slfid_t f, struct fidc_membh **fcmh)
 	return (fidc_fcmh2fmi(*fcmh));
 }
 
+int
+slm_fidc_getattr(struct fidc_membh *fcmh,
+    const struct slash_creds *cr)
+{
+	return (mdsio_getattr(fcmh->fcmh_fg.fg_fid, cr, &fcmh->fcmh_sstb,
+	    &fcmh->fcmh_fg.fg_gen));
+}
+
 struct sl_fcmh_ops sl_fcmh_ops = {
-/* getattr */	NULL,
+/* getattr */	slm_fidc_getattr,
 /* grow */	NULL,
 /* shrink */	NULL
 };

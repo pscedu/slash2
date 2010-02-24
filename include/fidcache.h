@@ -209,8 +209,8 @@ enum {
 	FIDC_LOOKUP_CREATE	= (1 << 0),		/* Create if not present         */
 	FIDC_LOOKUP_EXCL	= (1 << 1),		/* Fail if fcmh is present       */
 	FIDC_LOOKUP_COPY	= (1 << 2),		/* Create from existing attrs    */
-	FIDC_LOOKUP_LOAD	= (1 << 3),		/* Create, get attrs from mds    */
-	FIDC_LOOKUP_FCOOSTART	= (1 << 4)		/* start fcoo before exposing fcmh */
+	FIDC_LOOKUP_LOAD	= (1 << 3),		/* Use external fetching mechanism */
+	FIDC_LOOKUP_FCOOSTART	= (1 << 4)		/* Start fcoo before exposing fcmh */
 };
 
 #define FIDC_LOOKUP_REFRESH	FIDC_LOOKUP_LOAD	/* load and refresh are the same */

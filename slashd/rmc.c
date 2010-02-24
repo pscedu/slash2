@@ -85,19 +85,17 @@ slm_get_next_slashid(void)
 }
 
 int
-slmrmcthr_inode_cacheput(struct slash_fidgen *fg,
-    struct srt_stat *sstb, struct slash_creds *creds)
+slmrmcthr_inode_cacheput(struct slash_fidgen *fg, struct srt_stat *sstb,
+    struct slash_creds *creds)
 {
-	struct fidc_membh	*fcmh;
+	struct fidc_membh *fcmh;
+	int rc;
 
-	fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY,
 	    sstb, FCMH_SETATTRF_NONE, creds, &fcmh);
-
-	if (fcmh) {
+	if (fcmh)
 		fcmh_dropref(fcmh);
-		return (0);
-	}
-	return (-1);
+	return (rc);
 }
 
 int
@@ -682,7 +680,8 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	}
 
 	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE, &rootcreds, &fcmh);
+	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE, &rootcreds,
+	    &fcmh);
 	if (mp->rc)
 		return (0);
 	ih = fcmh_2_inoh(fcmh);
@@ -714,7 +713,8 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	}
 
 	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE, &rootcreds, &fcmh);
+	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE, &rootcreds,
+	    &fcmh);
 	if (mp->rc)
 		return (0);
 	ih = fcmh_2_inoh(fcmh);
