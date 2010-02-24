@@ -52,6 +52,18 @@ struct slm_replst_workreq {
 	struct psclist_head		 rsw_lentry;
 };
 
+#define REPLRQ_INO(rrq)		(&(rrq)->rrq_inoh->inoh_ino)
+#define REPLRQ_INOX(rrq)	(rrq)->rrq_inoh->inoh_extras
+#define REPLRQ_NREPLS(rrq)	REPLRQ_INO(rrq)->ino_nrepls
+#define REPLRQ_FG(rrq)		(&REPLRQ_INO(rrq)->ino_fg)
+#define REPLRQ_FID(rrq)		REPLRQ_FG(rrq)->fg_fid
+#define REPLRQ_FCMH(rrq)	(rrq)->rrq_inoh->inoh_fcmh
+#define REPLRQ_NBMAPS(rrq)	fcmh_2_nbmaps(REPLRQ_FCMH(rrq))
+
+#define REPLRQ_GETREPL(rrq, n)	((n) < INO_DEF_NREPLS ?			\
+				    REPLRQ_INO(rrq)->ino_repls[n] :	\
+				    REPLRQ_INOX(rrq)->inox_repls[(n) - 1])
+
 int replrq_cmp(const void *, const void *);
 
 SPLAY_HEAD(replrqtree, sl_replrq);
@@ -83,18 +95,6 @@ void	 mds_repl_unrefrq(struct sl_replrq *);
 
 #define mds_repl_ios_lookup_add(ih, ios)	_mds_repl_ios_lookup((ih), (ios), 1)
 #define mds_repl_ios_lookup(ih, ios)		_mds_repl_ios_lookup((ih), (ios), 0)
-
-#define REPLRQ_INO(rrq)		(&(rrq)->rrq_inoh->inoh_ino)
-#define REPLRQ_INOX(rrq)	(rrq)->rrq_inoh->inoh_extras
-#define REPLRQ_NREPLS(rrq)	REPLRQ_INO(rrq)->ino_nrepls
-#define REPLRQ_FG(rrq)		(&REPLRQ_INO(rrq)->ino_fg)
-#define REPLRQ_FID(rrq)		REPLRQ_FG(rrq)->fg_fid
-#define REPLRQ_FCMH(rrq)	(rrq)->rrq_inoh->inoh_fcmh
-#define REPLRQ_NBMAPS(rrq)	fcmh_2_nbmaps(REPLRQ_FCMH(rrq))
-
-#define REPLRQ_GETREPL(rrq, n)	((n) < INO_DEF_NREPLS ?			\
-				    REPLRQ_INO(rrq)->ino_repls[n] :	\
-				    REPLRQ_INOX(rrq)->inox_repls[(n) - 1])
 
 extern struct psc_poolmgr	*replrq_pool;
 
