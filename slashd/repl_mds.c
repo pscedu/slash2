@@ -569,8 +569,7 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	rc = mds_fcmh_tryref_fmi(fcmh);
 	if (rc) {
 		rc = mdsio_opencreate(fgp->fg_fid, &rootcreds,
-		    O_RDWR | O_CREAT | O_LARGEFILE, 0, NULL, &fg, NULL,
-		    &data);
+		    O_RDWR, 0, NULL, &fg, NULL, &data);
 		if (rc)
 			return (rc);
 		rc = mds_fcmh_load_fmi(fcmh, data, 1);
