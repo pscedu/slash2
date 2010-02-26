@@ -152,7 +152,7 @@ void
 parse_replrq(int code, char *replrqspec,
     void (*packf)(const char *, void *))
 {
-	char *files, *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *site;
+	char *files, *endp, *bmapnos, *bmapno, *next, *bend, *iosv, *ios;
 	struct replrq_arg ra;
 	int bmax;
 	long l;
@@ -178,15 +178,17 @@ parse_replrq(int code, char *replrqspec,
 
 	/* parse I/O systems */
 	ra.nios = 0;
-	for (site = iosv; site; site = next) {
-		if ((next = strchr(site, ',')) != NULL)
+	for (ios = iosv; ios; ios = next) {
+		if ((next = strchr(ios, ',')) != NULL)
 			*next++ = '\0';
 		if (ra.nios >= nitems(ra.iosv))
-			errx(1, "%s: too many site replicas specified",
+			errx(1, "%s: too many replicas specified",
 			    replrqspec);
-		if (strlcpy(ra.iosv[ra.nios++], site,
+		if (strchr(ios, '@') == NULL)
+			errx(1, "%s: no I/O system site specified", ios);
+		if (strlcpy(ra.iosv[ra.nios++], ios,
 		    sizeof(ra.iosv[0])) >= sizeof(ra.iosv[0]))
-			errx(1, "%s: site name too long", site);
+			errx(1, "%s: I/O system name too long", ios);
 	}
 
 	/* handle special all-bmap case */
