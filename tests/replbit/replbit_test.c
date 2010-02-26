@@ -78,5 +78,12 @@ main(int argc, char *argv[])
 	for (i = 0; i < 20; i++)
 		CHECK(buf, i * SL_BITS_PER_REPLICA, i % SL_NREPLST);
 
+	memset(buf, 0, sizeof(buf));
+
+	for (i = 0; i < 8; i++)
+		SL_REPL_SET_BMAP_IOS_STAT(buf,
+		    i * SL_BITS_PER_REPLICA, SL_REPLST_ACTIVE);
+	for (i = 0; i < 8; i++)
+		CHECK(buf, i * SL_BITS_PER_REPLICA, SL_REPLST_ACTIVE);
 	exit(0);
 }
