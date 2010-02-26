@@ -157,7 +157,7 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 		b = psc_pool_get(bmap_pool);
 		memset(b, 0, bmap_pool->ppm_master->pms_entsize);
 		LOCK_INIT(&b->bcm_lock);
-		
+
 		atomic_set(&b->bcm_opcnt, 0);
 		atomic_set(&b->bcm_rd_ref, 0);
 		atomic_set(&b->bcm_wr_ref, 0);
@@ -210,4 +210,14 @@ bmap_cache_init(size_t priv_size)
 	    priv_size, offsetof(struct bmapc_memb, bcm_lentry), PPMF_AUTO,
 	    64, 64, 0, NULL, NULL, NULL, NULL, "bmap");
 	bmap_pool = psc_poolmaster_getmgr(&bmap_poolmaster);
+}
+
+void
+_debug_bmapod(struct bmapc_memb *bmap, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	DEBUG_BMAPODV(PLL_MAX, bmap, fmt, ap);
+	va_end(ap);
 }

@@ -97,13 +97,10 @@ mdsio_apply_fcmh_size(struct fidc_membh *f, size_t size)
 int
 mdsio_bmap_read(struct bmapc_memb *bmap)
 {
-	struct bmap_mds_info *bmdsi;
 	size_t nb;
 	int rc;
 
-	bmdsi = bmap->bcm_pri;
-
-	rc = zfsslash2_read(&rootcreds, bmdsi->bmdsi_od, BMAP_OD_SZ, &nb,
+	rc = zfsslash2_read(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
 	    bmap_2_zfs_fh(bmap));
 	if (rc == 0 && nb != BMAP_OD_SZ)
@@ -116,12 +113,10 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 int
 mdsio_bmap_write(struct bmapc_memb *bmap)
 {
-	struct bmap_mds_info *bmdsi;
 	size_t nb;
 	int rc;
 
-	bmdsi = bmap->bcm_pri;
-	rc = zfsslash2_write(&rootcreds, bmdsi->bmdsi_od, BMAP_OD_SZ, &nb,
+	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
 	    bmap_2_zfs_fh(bmap));
 

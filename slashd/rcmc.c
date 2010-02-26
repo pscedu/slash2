@@ -25,7 +25,6 @@
 
 #include <dirent.h>
 
-#include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/bitflag.h"
@@ -130,11 +129,11 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw, struct sl_replrq *rrq,
 		srcm->srcm_page_bitpos = 0;
 	}
 	memset(&bhdr, 0, sizeof(bhdr));
-	bhdr.srsb_repl_policy = bmdsi->bmdsi_repl_policy;
+	bhdr.srsb_repl_policy = bcm->bcm_od->bh_repl_policy;
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos,
 	    &bhdr, 0, SL_NBITS_REPLST_BHDR);
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos +
-	    SL_NBITS_REPLST_BHDR, bmdsi->bmdsi_od->bh_repls, 0,
+	    SL_NBITS_REPLST_BHDR, bcm->bcm_od->bh_repls, 0,
 	    rrq->rrq_inoh->inoh_ino.ino_nrepls * SL_BITS_PER_REPLICA);
 	srcm->srcm_page_bitpos += nbits;
 	return (0);

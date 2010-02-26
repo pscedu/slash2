@@ -283,7 +283,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 
 	bmdsi = bmap_2_bmdsi(bcm);
-	bmapod = bmdsi->bmdsi_od;
+	bmapod = bcm->bcm_od;
 	val = SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls, off);
 
 	if (val >= SL_NREPLST)
@@ -334,14 +334,12 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 {
 	int scircuit, nr, off, k, rc, trc;
 	struct slash_bmap_od *bmapod;
-	struct bmap_mds_info *bmdsi;
 
 	BMAP_LOCK_ENSURE(bcm);
 
 	scircuit = rc = 0;
 	nr = fcmh_2_inoh(bcm->bcm_fcmh)->inoh_ino.ino_nrepls;
-	bmdsi = bmap_2_bmdsi(bcm);
-	bmapod = bmdsi->bmdsi_od;
+	bmapod = bcm->bcm_od;
 
 	if (nios == 0)
 		/* no one specified; apply to all */
@@ -396,7 +394,6 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 {
 	int rc, iosidx, tract[SL_NREPLST], retifset[SL_NREPLST];
 	struct slash_bmap_od *bmapod;
-	struct bmap_mds_info *bmdsi;
 	struct sl_replrq *rrq;
 	sl_replica_t repl;
 
@@ -407,8 +404,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	if (iosidx < 0)
 		psc_fatalx("lookup ios %d: %s", ios, slstrerror(iosidx));
 
-	bmdsi = bmap_2_bmdsi(bcm);
-	bmapod = bmdsi->bmdsi_od;
+	bmapod = bcm->bcm_od;
 
 	/*
 	 * If this bmap is marked for persistent replication,
@@ -417,7 +413,7 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	 * midst of processing it as this activity now means they
 	 * have more to do.
 	 */
-	if (bmdsi->bmdsi_repl_policy == BRP_PERSIST) {
+	if (bmapod->bh_repl_policy == BRP_PERSIST) {
 		rrq = mds_repl_findrq(&bcm->bcm_fcmh->fcmh_fg, NULL);
 		repl.bs_id = ios;
 		mds_repl_enqueue_sites(rrq, &repl, 1);
@@ -789,7 +785,6 @@ void
 mds_repl_tryrmqfile(struct sl_replrq *rrq)
 {
 	int rrq_gen, rc, retifset[SL_NREPLST];
-	struct bmap_mds_info *bmdsi;
 	struct bmapc_memb *bcm;
 	char fn[IMNS_NAME_MAX];
 	sl_blkno_t n;
@@ -822,7 +817,6 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 			continue;
 
 		BMAP_LOCK(bcm);
-		bmdsi = bmap_2_bmdsi(bcm);
 		rc = mds_repl_bmap_walk(bcm, NULL,
 		    retifset, REPL_WALKF_SCIRCUIT, NULL, 0);
 		mds_repl_bmap_rel(bcm);

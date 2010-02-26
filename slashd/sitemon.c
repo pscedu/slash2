@@ -182,7 +182,6 @@ slmreplqthr_main(void *arg)
 	struct sl_resource *src_res, *dst_res;
 	struct slmreplq_thread *smrt;
 	struct slash_bmap_od *bmapod;
-	struct bmap_mds_info *bmdsi;
 	struct site_mds_info *smi;
 	struct sl_resm *src_resm;
 	struct bmapc_memb *bcm;
@@ -275,8 +274,7 @@ slmreplqthr_main(void *arg)
 						continue;
 
 					BMAP_LOCK(bcm);
-					bmdsi = bmap_2_bmdsi(bcm);
-					bmapod = bmdsi->bmdsi_od;
+					bmapod = bcm->bcm_od;
 					val = SL_REPL_GET_BMAP_IOS_STAT(
 					    bmapod->bh_repls, off);
 					if (val == SL_REPLST_OLD ||

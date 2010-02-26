@@ -63,6 +63,7 @@ struct bmapc_memb {
 						*/
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry    */
 	struct psclist_head	 bcm_lentry;	/* free pool */
+	struct slash_bmap_od	*bcm_od;	/* on-disk representation */
 	void			*bcm_pri;	/* bmap_mds_info, bmap_cli_info, or bmap_iod_info */
 #define bcm_blkno bcm_bmapno
 };
@@ -84,8 +85,24 @@ struct bmapc_memb {
 #define BMAP_RLOCK(b)		reqlock(&(b)->bcm_lock)
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
 
+#define _DEBUG_BMAP(file, func, line, level, b, fmt, ...)		\
+	psclog((file), (func), (line), PSS_GEN, (level), 0,		\
+	    "bmap@%p b:%x m:%u i:%"PRIx64				\
+	    " rref=%u wref=%u opcnt=%u "fmt,				\
+	    (b), (b)->bcm_blkno,					\
+	    (b)->bcm_mode,						\
+	    (b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,		\
+	    atomic_read(&(b)->bcm_rd_ref),				\
+	    atomic_read(&(b)->bcm_wr_ref),				\
+	    atomic_read(&(b)->bcm_opcnt),				\
+	    ## __VA_ARGS__)
+
+#define DEBUG_BMAP(level, b, fmt, ...)					\
+	_DEBUG_BMAP(__FILE__, __func__, __LINE__, (level), (b), fmt,	\
+	    ## __VA_ARGS__)
+
 /*
- *   Each bmap uses a char array as a bitmap to track which
+ *   Each bmapod uses a char array as a bitmap to track which
  *   stores the bmap is replicated to.
  */
 #define SL_BITS_PER_REPLICA	3
@@ -134,7 +151,7 @@ struct slash_bmap_od {
 	uint8_t			bh_crcstates[SL_CRCS_PER_BMAP];
 	uint8_t			bh_repls[SL_REPLICA_NBYTES];
 	sl_blkgen_t		bh_gen;
-	uint32_t		bh__pad;
+	uint32_t		bh_repl_policy;
 
 	/* the CRC must be at the end */
 	psc_crc64_t		bh_bhcrc;
@@ -150,39 +167,81 @@ enum {
 	BMAP_SLVR_WANTREPL	= (1 << 2)	/* Queued for replication */
 };
 
-/* get a replica's bmap replication status */
+/*
+ * Routines to get and fetch a bmap replica's status.
+ * This code assumes SL_NREPLST is < 256 !
+ */
 #define SL_REPL_GET_BMAP_IOS_STAT(data, off)				\
-	((((data)[(off) / NBBY] >> ((off) % NBBY)) |			\
-	  ((off) % NBBY + SL_BITS_PER_REPLICA > NBBY ? 0 :		\
-	   (data)[(off) / NBBY + 1] <<					\
-	    (NBBY - (off) % NBBY))) & SL_REPLICA_MASK)
+	(SL_REPLICA_MASK &						\
+	    (((data)[(off) / NBBY] >> ((off) % NBBY)) |			\
+	    ((off) % NBBY + SL_BITS_PER_REPLICA > NBBY ?		\
+	     (data)[(off) / NBBY + 1] << (SL_BITS_PER_REPLICA -		\
+	      ((off) % NBBY + SL_BITS_PER_REPLICA - NBBY)) : 0)))
 
-/* set a replica's bmap replication status */
 #define SL_REPL_SET_BMAP_IOS_STAT(data, off, val)			\
-	((data)[(off) / NBBY] = ((data)[(off) / NBBY] &			\
-	    ~(SL_REPLICA_MASK << ((off) % NBBY))) |			\
-	    ((val) << ((off) % NBBY)))
+	do {								\
+		int _j;							\
+									\
+		(data)[(off) / NBBY] = ((data)[(off) / NBBY] &		\
+		    ~(SL_REPLICA_MASK << ((off) % NBBY))) |		\
+		    ((val) << ((off) % NBBY));				\
+		_j = (off) % NBBY + SL_BITS_PER_REPLICA - NBBY;		\
+		if (_j > 0) {						\
+			_j = SL_BITS_PER_REPLICA - _j;			\
+			(data)[(off) / NBBY + 1] =			\
+			    ((data)[(off) / NBBY + 1] &			\
+			    ~(SL_REPLICA_MASK >> _j)) | ((val) >> _j);	\
+		}							\
+	} while (0)
 
 /* bmap replication policies */
 #define BRP_ONETIME		0
 #define BRP_PERSIST		1
 #define NBRP			2
 
-#define _DEBUG_BMAP(file, func, line, level, b, fmt, ...)		\
-	psclog((file), (func), (line), PSS_GEN, (level), 0,		\
-	    "bmap@%p b:%x m:%u i:%"PRIx64				\
-	    " rref=%u wref=%u opcnt=%u "fmt,				\
-	    (b), (b)->bcm_blkno,					\
-	    (b)->bcm_mode,						\
-	    (b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,		\
-	    atomic_read(&(b)->bcm_rd_ref),				\
-	    atomic_read(&(b)->bcm_wr_ref),				\
-	    atomic_read(&(b)->bcm_opcnt),				\
-	    ## __VA_ARGS__)
+static __inline void
+_log_debug_bmapodv(const char *file, const char *func, int lineno,
+    int level, struct bmapc_memb *bmap, const char *fmt, va_list ap)
+{
+	unsigned char *b = bmap->bcm_od->bh_repls;
+	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1];
+	int off, k, ch[SL_NREPLST];
 
-#define DEBUG_BMAP(level, b, fmt, ...)					\
-	_DEBUG_BMAP(__FILE__, __func__, __LINE__, (level), (b), fmt,	\
-	    ## __VA_ARGS__)
+	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
+
+	ch[SL_REPLST_INACTIVE] = '-';
+	ch[SL_REPLST_SCHED] = 's';
+	ch[SL_REPLST_OLD] = 'o';
+	ch[SL_REPLST_ACTIVE] = '+';
+	ch[SL_REPLST_TRUNCPNDG] = 't';
+
+	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
+	    k++, off += SL_BITS_PER_REPLICA)
+		rbuf[k] = ch[SL_REPL_GET_BMAP_IOS_STAT(b, off)];
+	rbuf[k] = '\0';
+
+	_DEBUG_BMAP(file, func, lineno, level, bmap, "pol %d repls=[%s] %s",
+	    bmap->bcm_od->bh_repl_policy, rbuf, mbuf);
+}
+
+static __inline void
+_log_debug_bmapod(const char *file, const char *func, int lineno,
+    int level, struct bmapc_memb *bmap, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	_log_debug_bmapodv(file, func, lineno, level, bmap, fmt, ap);
+	va_end(ap);
+}
+
+#define DEBUG_BMAPOD(level, bmap, fmt, ...)				\
+	_log_debug_bmapod(__FILE__, __func__, __LINE__, (level),	\
+	    (bmap), (fmt), ## __VA_ARGS__)
+
+#define DEBUG_BMAPODV(level, bmap, fmt, ap)				\
+	_log_debug_bmapodv(__FILE__, __func__, __LINE__, (level),	\
+	    (bmap), (fmt), (ap))
 
 /* bmap_get flags */
 #define BMAPGETF_LOAD	(1 << 0)		/* allow loading if not in cache */
@@ -196,7 +255,6 @@ int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
 #define bmap_lookup(f, n, bp)		_bmap_get((f), (n), 0, 0, (bp), NULL)
 #define bmap_get(f, n, rw, bp, arg)	_bmap_get((f), (n), (rw),	\
 					    BMAPGETF_LOAD, (bp), (arg))
-
 
 #define bmap_op_start_type(b, type)					\
 	do {								\

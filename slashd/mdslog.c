@@ -27,6 +27,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 
+#include "bmap.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
@@ -121,8 +122,8 @@ mds_bmap_jfiprep(void *data)
 void
 mds_bmap_sync(void *data)
 {
-	struct bmapc_memb *bmap=data;
-	struct slash_bmap_od *bmapod=bmap_2_bmdsiod(bmap);
+	struct bmapc_memb *bmap = data;
+	struct slash_bmap_od *bmapod = bmap->bcm_od;
 	int rc;
 
 	/* XXX At some point this lock should really be changed to
@@ -191,7 +192,7 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	jrpg.sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jrpg.sjp_bmapno = bmap->bcm_blkno;
 	jrpg.sjp_bgen = bmap_2_bgen(bmap);
-	memcpy(jrpg.sjp_reptbl, bmap_2_bmdsiod(bmap)->bh_repls,
+	memcpy(jrpg.sjp_reptbl, bmap->bcm_od->bh_repls,
 	       SL_REPLICA_NBYTES);
 
 	psc_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
@@ -228,7 +229,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 {
 	struct slmds_jent_crc *jcrc = PSCALLOC(sizeof(struct slmds_jent_crc));
 	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
-	struct slash_bmap_od *bmapod = bmdsi->bmdsi_od;
+	struct slash_bmap_od *bmapod = bmap->bcm_od;
 	int i, rc=0;
 	int n=crcup->nups;
 	uint32_t t=0, j=0;

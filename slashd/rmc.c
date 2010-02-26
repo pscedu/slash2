@@ -170,7 +170,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		return (mp->rc);
 
 	bmdsi = bmap->bcm_pri;
-	cw = (struct slash_bmap_cli_wire *)bmdsi->bmdsi_od->bh_crcstates;
+	cw = (struct slash_bmap_cli_wire *)bmap->bcm_od->bh_crcstates;
 
 	niov = 2;
 	iov[0].iov_base = cw;
@@ -728,7 +728,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
 	BMAP_LOCK(bcm);
 	bmdsi = bmap_2_bmdsi(bcm);
-	bmdsi->bmdsi_repl_policy = mq->pol;
+	bcm->bcm_od->bh_repl_policy = mq->pol;
 	bmdsi->bmdsi_flags |= BMIM_LOGCHG;
 	mds_repl_bmap_rel(bcm);
 

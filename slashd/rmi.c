@@ -80,7 +80,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	DEBUG_BMAP(PLL_INFO, b, "sending to sliod");
 
 	iov.iov_len = sizeof(struct slash_bmap_wire);
-	iov.iov_base = bmap_2_bmdsiod(b);
+	iov.iov_base = b->bcm_od;
 
 	rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE, SRMI_BULK_PORTAL, &iov, 1);
 	if (desc)

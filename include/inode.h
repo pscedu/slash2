@@ -76,7 +76,7 @@ struct slash_inode_od {
 #define INO_OD_SZ		sizeof(struct slash_inode_od)
 #define INO_OD_CRCSZ		(INO_OD_SZ - (sizeof(psc_crc64_t)))
 
-#define INO_VERSION		0x0005
+#define INO_VERSION		0x0006
 
 struct slash_inode_extras_od {
 	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers      */

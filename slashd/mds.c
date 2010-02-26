@@ -855,7 +855,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	psc_assert(atomic_read(&bmap->bcm_opcnt) > 1);
 
 	bmdsi = bmap->bcm_pri;
-	bmapod = bmdsi->bmdsi_od;
+	bmapod = bmap->bcm_od;
 	/* These better check out.
 	 */
 	psc_assert(bmap->bcm_fcmh == fcmh);
@@ -962,13 +962,12 @@ __static int
 mds_bmap_read(struct bmapc_memb *bcm)
 {
 	struct fidc_membh *f = bcm->bcm_fcmh;
-	struct bmap_mds_info *bmdsi;
+	struct slash_bmap_od *bod;
 	psc_crc64_t crc;
 	int rc;
 
-	bmdsi = bcm->bcm_pri;
-	psc_assert(bmdsi->bmdsi_od == NULL);
-	bmdsi->bmdsi_od = PSCALLOC(BMAP_OD_SZ);
+	psc_assert(bcm->bcm_od == NULL);
+	bod = bcm->bcm_od = PSCALLOC(BMAP_OD_SZ);
 
 	/* Try to pread() the bmap from the mds file.
 	 */
@@ -980,11 +979,11 @@ mds_bmap_read(struct bmapc_memb *bcm)
 	 * read is tolerated as long as the bmap is zeroed.
 	 */
 	if (!rc || rc == SLERR_SHORTIO) {
-		if (bmdsi->bmdsi_od->bh_bhcrc == 0 &&
-		    memcmp(bmdsi->bmdsi_od, &null_bmap_od,
+		if (bod->bh_bhcrc == 0 &&
+		    memcmp(bod, &null_bmap_od,
 		    sizeof(null_bmap_od)) == 0) {
 			DEBUG_BMAPOD(PLL_INFO, bcm, "");
-			mds_bmapod_initnew(bmdsi->bmdsi_od);
+			mds_bmapod_initnew(bod);
 			DEBUG_BMAPOD(PLL_INFO, bcm, "");
 			return (0);
 		}
@@ -1001,15 +1000,15 @@ mds_bmap_read(struct bmapc_memb *bcm)
 	DEBUG_BMAPOD(PLL_INFO, bcm, "");
 
 	/* Calculate and check the CRC now */
-	psc_crc64_calc(&crc, bmdsi->bmdsi_od, BMAP_OD_CRCSZ);
-	if (crc == bmdsi->bmdsi_od->bh_bhcrc)
+	psc_crc64_calc(&crc, bod, BMAP_OD_CRCSZ);
+	if (crc == bod->bh_bhcrc)
 		return (0);
 
 	DEBUG_FCMH(PLL_ERROR, f, "CRC failed; bmapno=%u, want=%"PRIx64", got=%"PRIx64,
-	    bcm->bcm_bmapno, bmdsi->bmdsi_od->bh_bhcrc, crc);
+	    bcm->bcm_bmapno, bod->bh_bhcrc, crc);
 	rc = -EIO;
  out:
-	PSCFREE(bmdsi->bmdsi_od);
+	PSCFREE(bcm->bcm_od);
 	return (rc);
 }
 
@@ -1063,7 +1062,6 @@ int
 mds_bmap_loadvalid(struct fidc_membh *f, sl_blkno_t bmapno,
     struct bmapc_memb **bp)
 {
-	struct bmap_mds_info *bmdsi;
 	struct bmapc_memb *b;
 	int n, rc;
 
@@ -1076,14 +1074,13 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_blkno_t bmapno,
 		return (rc);
 
 	BMAP_LOCK(b);
-	bmdsi = b->bcm_pri;
 	for (n = 0; n < SL_CRCS_PER_BMAP; n++)
 		/*
 		 * XXX need a bitmap to see which CRCs are
 		 * actually uninitialized and not just happen
 		 * to be zero.
 		 */
-		if (bmdsi->bmdsi_od->bh_crcstates[n]) {
+		if (b->bcm_od->bh_crcstates[n]) {
 			BMAP_ULOCK(b);
 			*bp = b;
 			return (0);
