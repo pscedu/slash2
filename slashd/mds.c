@@ -760,7 +760,7 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, enum rw rw)
 
 	BMAP_LOCK_ENSURE(bmap);
 
-	DEBUG_BMAP(PLL_WARN, bmap, "try close 1");
+	DEBUG_BMAP(PLL_DEBUG, bmap, "try close 1");
 
 	mdsi = bmap->bcm_pri;
 	if (rw == SL_WRITE) {

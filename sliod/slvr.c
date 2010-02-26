@@ -205,7 +205,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 			   nblks, slvr_2_fileoff(s, sblk), save_errno);
 
 	else if ((uint32_t)rc != size)
-		DEBUG_SLVR(PLL_WARN, s, "short io (rc=%zd, size=%u) "
+		DEBUG_SLVR(PLL_NOTICE, s, "short io (rc=%zd, size=%u) "
 			   "%s blks=%d off=%"PRIu64" errno=%d",
 			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 			   nblks, slvr_2_fileoff(s, sblk), save_errno);
@@ -705,7 +705,7 @@ slvr_remove(struct slvr_ref *s)
 	struct bmap_iod_info	*b;
 	int                      locked;
 
-	DEBUG_SLVR(PLL_WARN, s, "freeing slvr");
+	DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr");
 	/* Slvr should be detached from any listheads.
 	 */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
@@ -790,7 +790,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 
 			s->slvr_flags &= ~(SLVR_SLBFREEING|SLVR_DATARDY);
 
-			DEBUG_SLVR(PLL_WARN, s, "freeing slvr slab=%p",
+			DEBUG_SLVR(PLL_DEBUG, s, "freeing slvr slab=%p",
 				   s->slvr_slab);
 			s->slvr_slab = NULL;
 			SLVR_WAKEUP(s);
