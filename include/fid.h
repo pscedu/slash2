@@ -30,7 +30,14 @@
 struct slash_creds;
 struct slash_fidgen;
 
-/* see comments in file zfs-fuse/zfs_slashlib.h */
+/*
+ * SLASH file IDs consist of three parts: flag bits, site ID, and a file
+ * sequence number.  FIDs are used always used for external communication
+ * among other clients, I/O servers, and MDS to identify files.
+ *
+ * Underlying backend MDS file system inode tracking is contained within the
+ * mdsio layer and is only used internally.
+ */
 #define	SLASH_ID_FLAG_BITS	4
 #define	SLASH_ID_SITE_BITS	10
 #define	SLASH_ID_FID_BITS	50
@@ -61,8 +68,10 @@ struct slash_fidgen {
 #define FIDFMT			"%"PRId64":%"PRId64
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
 
-#define FID_FSID(fid)		((uint32_t)((fid) >> 48))
-#define FID_INUM(fid)		((uint64_t)((fid) & UINT64_C(0xffffffffffff)))
+#define FID_FLAGS(fid)		((fid) >> (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS))
+#define FID_SITEID(fid)		(((fid) >> SLASH_ID_FID_BITS) &		\
+				    ~(~UINT64_C(0) << SLASH_ID_SITE_BITS))
+#define FID_INUM(fid)		((fid) & ~(~UINT64_C(0) << (SLASH_ID_FID_BITS)))
 
 #define SAMEFID(a, b)							\
 	(((a)->fg_fid == (b)->fg_fid) && ((a)->fg_gen == (b)->fg_gen))
@@ -76,7 +85,7 @@ int	fid_link(slfid_t, const char *);
 int	fid_fileops(slfid_t, int);
 int	fid_fileops_fg(struct slash_fidgen *, int, mode_t);
 
-#define fid_open(f)	fid_fileops((f), O_RDWR)
-#define fid_ocreat(f)	fid_fileops((f), O_RDWR | O_CREAT)
+#define fid_open(f)		fid_fileops((f), O_RDWR)
+#define fid_ocreat(f)		fid_fileops((f), O_RDWR | O_CREAT)
 
 #endif /* _SLASH_FID_H_ */
