@@ -56,12 +56,10 @@
 
 /*
  * The following SLASHIDs are automatically assigned:
- *	1		-> /
- *	2		-> /.slfidns
- *	3 .. 4099	-> /.slfidns/...
- *	5000		-> /.slrepls
+ *	0	not used
+ *	1	-> /
  */
-#define SLASHID_MIN	5001
+#define SLASHID_MIN	2
 
 /*
  * TODO: SLASH ID should be logged on disk, so that it can be advanced
