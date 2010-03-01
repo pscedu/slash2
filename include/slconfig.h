@@ -78,6 +78,8 @@ struct sl_resm {
 
 #define resm_2_resid(r)		(r)->resm_res->res_id
 
+#define RES_MAXID		((UINT64_C(1) << (64 - SLASH_ID_SITE_BITS)) - 1)
+
 /* Site (a collection of I/O systems) */
 struct sl_site {
 	char			 site_name[SITE_NAME_MAX];
@@ -87,6 +89,8 @@ struct sl_site {
 	struct psc_dynarray	 site_resources;
 	sl_siteid_t		 site_id;
 };
+
+#define SITE_MAXID		((1 << SLASH_ID_SITE_BITS) - 1)
 
 struct sl_gconf {
 	char			 gconf_net[LNET_NAME_MAX];
