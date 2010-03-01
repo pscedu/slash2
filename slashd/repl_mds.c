@@ -604,7 +604,6 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	int iosidx[SL_MAX_REPLICAS], rc, locked;
 	struct sl_replrq *newrq, *rrq;
 	struct fidc_membh *fcmh;
-	struct slash_fidgen fg;
 	struct bmapc_memb *bcm;
 	char fn[FID_MAX_PATH];
 
@@ -645,7 +644,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 
 			/* Create persistent file system link */
 			rc = mdsio_link(fgp->fg_fid, mds_repldir_inum,
-			    fn, &fg, &rootcreds, NULL);
+			    fn, NULL, &rootcreds, NULL);
 			if (rc == 0) {
 				rrq = newrq;
 				newrq = NULL;
