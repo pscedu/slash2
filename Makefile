@@ -4,6 +4,11 @@ SLASH_BASE=.
 PROJECT_BASE=${SLASH_BASE}
 include Makefile.path
 
+MAN+=		doc/sladm.7
+MAN+=		doc/slash.conf.5
+
+include ${SLASHMK}
+
 ifneq ($(filter cli,${SLASH_MODULES}),)
 SUBDIRS+=	mount_slash
 SUBDIRS+=	msctl
@@ -24,11 +29,6 @@ SUBDIRS+=	slimmns
 SUBDIRS+=	slkeymgt
 SUBDIRS+=	slmkjrnl
 endif
-
-MAN+=		doc/sladm.7
-MAN+=		doc/slash.conf.5
-
-include ${SLASHMK}
 
 zbuild: recurse-zbuild
 rezbuild: recurse-rezbuild
