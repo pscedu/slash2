@@ -551,7 +551,6 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 {
 	struct slash_inode_handle *ih;
 	struct fidc_membh *fcmh;
-	struct slash_fidgen fg;
 	void *data;
 	int rc;
 
@@ -565,7 +564,7 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	rc = mds_fcmh_tryref_fmi(fcmh);
 	if (rc) {
 		rc = mdsio_opencreate(fgp->fg_fid, &rootcreds,
-		    O_RDWR, 0, NULL, &fg, NULL, &data);
+		    O_RDWR, 0, NULL, NULL, NULL, &data);
 		if (rc)
 			return (rc);
 		rc = mds_fcmh_load_fmi(fcmh, data, 1);
