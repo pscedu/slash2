@@ -582,11 +582,23 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if ((flags & FIDC_LOOKUP_LOAD) && sl_fcmh_ops.sfop_getattr) {
 		if (getting) {
 			FCMH_LOCK(fcmh);
+			while (fcmh->fcmh_state &
+			    (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) {
+				psc_waitq_wait(&fcmh->fcmh_waitq,
+				    &fcmh->fcmh_lock);
+				FCMH_LOCK(fcmh);
+			}
 			fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
 		}
-		rc = sl_fcmh_ops.sfop_getattr(fcmh, creds);
-		if (getting)
+		if ((fcmh->fcmh_state & FCMH_HAVE_ATTRS) == 0) {
+			rc = sl_fcmh_ops.sfop_getattr(fcmh, creds);
+			if (rc == 0)
+				fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
+		}
+		if (getting) {
+			fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
 			FCMH_ULOCK(fcmh);
+		}
 		if (rc) {
 			DEBUG_FCMH(PLL_DEBUG, fcmh, "getattr failure");
 			return (-rc);

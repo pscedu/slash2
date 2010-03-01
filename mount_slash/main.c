@@ -720,20 +720,20 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		}
 	}
 
-	locked = reqlock(&fcmh->fcmh_lock);
+	locked = FCMH_RLOCK(fcmh);
 	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
 		while (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
 			psc_waitq_wait(&fcmh->fcmh_waitq,
 			    &fcmh->fcmh_lock);
-			spinlock(&fcmh->fcmh_lock);
+			FCMH_LOCK(fcmh);
 		}
 		if (fcmh->fcmh_state & FCMH_HAVE_ATTRS)
 			goto readcached;
-		ureqlock(&fcmh->fcmh_lock, locked);
+		FCMH_URLOCK(fcmh, locked);
 		return (fcmh->fcmh_lasterror);
 	}
 	fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
-	ureqlock(&fcmh->fcmh_lock, locked);
+	FCMH_ULOCK(fcmh);
 
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_GETATTR, rq, mq, mp);
@@ -748,23 +748,27 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		rc = mp->rc;
 	if (rc)
 		goto out;
+
+	FCMH_LOCK(fcmh);
+
 	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
 		fcmh_2_gen(fcmh) = mp->gen;
 	fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE);
 
  out:
 	if (rc) {
-		locked = reqlock(&fcmh->fcmh_lock);
+		FCMH_RLOCK(fcmh);
 		fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
 		fcmh->fcmh_lasterror = rc;
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);
-		ureqlock(&fcmh->fcmh_lock, locked);
 	}
 
 	if (rq)
 		pscrpc_req_finished(rq);
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved via rpc rc=%d", rc);
+
+	FCMH_URLOCK(fcmh, locked);
 
 	return (rc);
 }
