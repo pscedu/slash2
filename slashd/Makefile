@@ -73,3 +73,13 @@ LDFLAGS+=	-lz -laio -lgcrypt
 MODULES+=	lnet pthread zfs
 
 include ${SLASHMK}
+
+zbuild:
+	@(cd ${ZFS_BASE} && ${SCONS} ${ZFS_SCONSOPTS} -c build &&	\
+	    ${SCONS} ${ZFS_SCONSOPTS})
+	@(cd ${ZFS_BASE} &&						\
+	    ${SCONS} slashlib=1 debug=4 ${ZFS_SCONSOPTS} -c build &&	\
+	    ${SCONS} slashlib=1 debug=4 ${ZFS_SCONSOPTS})
+
+build-prereq rezbuild:
+	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=4 ${ZFS_SCONSOPTS})

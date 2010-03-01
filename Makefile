@@ -3,29 +3,33 @@
 SLASH_BASE=.
 PROJECT_BASE=${SLASH_BASE}
 include Makefile.path
-include ${SLASHMK}
 
+ifneq ($(filter cli,${SLASH_MODULES}),)
 SUBDIRS+=	mount_slash
 SUBDIRS+=	msctl
+endif
+
+ifneq ($(filter mds,${SLASH_MODULES}),)
 SUBDIRS+=	slashd
-SUBDIRS+=	slictl
-SUBDIRS+=	slimmns
-SUBDIRS+=	sliod
-SUBDIRS+=	slkeymgt
 SUBDIRS+=	slmctl
+endif
+
+ifneq ($(filter ion,${SLASH_MODULES}),)
+SUBDIRS+=	slictl
+SUBDIRS+=	sliod
+endif
+
+ifneq ($(filter ion,${SLASH_MODULES})$(filter mds,${SLASH_MODULES}),)
+SUBDIRS+=	slimmns
+SUBDIRS+=	slkeymgt
 SUBDIRS+=	slmkjrnl
+endif
 
 MAN+=		doc/sladm.7
 MAN+=		doc/slash.conf.5
 
-zbuild:
-	@(cd ${ZFS_BASE} && ${SCONS} ${ZFS_SCONSOPTS} -c build &&	\
-	    ${SCONS} ${ZFS_SCONSOPTS})
-	@(cd ${ZFS_BASE} &&						\
-	    ${SCONS} slashlib=1 debug=4 ${ZFS_SCONSOPTS} -c build &&	\
-	    ${SCONS} slashlib=1 debug=4 ${ZFS_SCONSOPTS})
+include ${SLASHMK}
 
-build-prereq rezbuild:
-	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=4 ${ZFS_SCONSOPTS})
-
+zbuild: recurse-zbuild
+rezbuild: recurse-rezbuild
 fullbuild: zbuild build
