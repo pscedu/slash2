@@ -387,3 +387,9 @@ tracks endpoint connections
 - if new ones are made that utilize the same link, manage and
   limit and wait until bandwidth is available
 
+------------------------------
+
+- always cache / on mount_slash, that will save tons of RPCs
+
+zfs
+- standalone should create slash IDs, this will allow removal of the MDSIO_LOCAL flags
