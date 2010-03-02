@@ -235,6 +235,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
+	struct fidc_membh *fcmh;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
@@ -242,9 +243,18 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	    strncmp(mq->name, SL_PATH_PREFIX,
 	     strlen(SL_PATH_PREFIX)) == 0)
 		mp->rc = EINVAL;
-	else
-		mp->rc = mdsio_lookup(mq->pfid, mq->name, &mp->fg,
-		    &mq->creds, &mp->attr);
+	else {
+		mp->fg.fg_fid = mq->pfid;
+		mp->fg.fg_gen = FIDGEN_ANY;
+		mp->rc = fidc_lookup(&mp->fg, FIDC_LOOKUP_CREATE |
+		    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE,
+		    &mq->creds, &fcmh);
+		if (mp->rc)
+			return (0);
+		mp->rc = mdsio_lookup(fcmh_2_fmi(fcmh)->fmi_mdsio_fid,
+		    mq->name, &mp->fg, NULL, &mq->creds, &mp->attr);
+		fcmh_dropref(fcmh);
+	}
 	return (0);
 }
 
@@ -253,18 +263,27 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 {
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
+	struct fidc_membh *fcmh;
+	struct slash_fidgen fg;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-
-	mp->fg.fg_fid = 0;
 
 #ifdef NAMESPACE_EXPERIMENTAL
 	mp->fg.fg_fid = slm_get_next_slashid();
 #endif
 
-	mp->rc = mdsio_mkdir(mq->pfid, mq->name,
-	    mq->mode, &mq->creds, &mp->attr, &mp->fg);
+	fg.fg_fid = mq->pfid;
+	fg.fg_gen = FIDGEN_ANY;
+	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
+	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE,
+	    &mq->creds, &fcmh);
+	if (mp->rc)
+		return (0);
+
+	mp->rc = mdsio_mkdir(fcmh_2_fmi(fcmh)->fmi_mdsio_fid, mq->name,
+	    mq->mode, &mq->creds, &mp->attr, &mp->fg, NULL);
+	fcmh_dropref(fcmh);
 	return (0);
 }
 
@@ -305,6 +324,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct srm_opencreate_rep *mp;
 	struct cfdent *cfd=NULL;
 	struct slash_fidgen fg;
+	struct fidc_membh *p;
 	void *mdsio_data;
 	int fl;
 
@@ -314,14 +334,22 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
+	fg.fg_fid = mq->pfid;
+	fg.fg_gen = FIDGEN_ANY;
+	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
+	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE,
+	    &mq->creds, &p);
+	if (mp->rc)
+		return (0);
+
 #ifdef NAMESPACE_EXPERIMENTAL
 	fg.fg_fid = slm_get_next_slashid();
 #endif
 
-	mp->rc = mdsio_opencreate(mq->pfid, &mq->creds, fl,
-	    mq->mode, mq->name, &fg, &mp->attr, &mdsio_data);
+	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds, fl,
+	    mq->mode, mq->name, &fg, NULL, &mp->attr, &mdsio_data);
 	if (mp->rc)
-		return (0);
+		goto out;
 
 	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
 	if (!mp->rc) {
@@ -345,16 +373,19 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	 */
 	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
 		mdsio_frelease(&mq->creds, mdsio_data);
+ out:
+	fcmh_dropref(p);
 	return (0);
 }
 
 int
 slm_rmc_handle_open(struct pscrpc_request *rq)
 {
-	struct srm_open_req *mq;
 	struct srm_opencreate_rep *mp;
-	struct slash_fidgen fg;
+	struct srm_open_req *mq;
+	struct fidc_membh *fcmh;
 	struct cfdent *cfd=NULL;
+	struct slash_fidgen fg;
 	void *mdsio_data;
 	int fl;
 
@@ -362,8 +393,17 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
 	if (mp->rc)
 		return (0);
-	mp->rc = mdsio_opencreate(mq->fid, &mq->creds, fl, 0, NULL, &fg,
-	    &mp->attr, &mdsio_data);
+
+	fg.fg_fid = mq->fid;
+	fg.fg_gen = FIDGEN_ANY;
+	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
+	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE,
+	    &mq->creds, &fcmh);
+	if (mp->rc)
+		return (0);
+
+	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh), &mq->creds,
+	    fl, 0, NULL, &fg, NULL, &mp->attr, &mdsio_data);
 
 	psc_info("mdsio_opencreate() fid=%"PRId64" rc=%d",
 	    mq->fid, mp->rc);
@@ -776,7 +816,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 
 	mp->rc = mdsio_symlink(linkname, mq->pfid, mq->name,
-	    &mq->creds, &mp->attr, &mp->fg);
+	    &mq->creds, &mp->attr, &mp->fg, NULL);
 	return (0);
 }
 

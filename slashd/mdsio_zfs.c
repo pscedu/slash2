@@ -239,68 +239,75 @@ mdsio_frelease(const struct slash_creds *cr, void *mdsio_data)
 }
 
 int
-mdsio_access(slfid_t fid, int mask, const struct slash_creds *cr)
+mdsio_access(mdsio_fid_t ino, int mask, const struct slash_creds *cr)
 {
-	return (zfsslash2_access(fid, mask, cr));
+	return (zfsslash2_access(ino, mask, cr));
 }
 
 int
-mdsio_getattr(slfid_t fid, const struct slash_creds *cr,
+mdsio_getattr(mdsio_fid_t ino, const struct slash_creds *cr,
     struct srt_stat *sstb, slfgen_t *gen)
 {
-	return (zfsslash2_getattr(fid, cr, sstb, gen));
+	return (zfsslash2_getattr(ino, cr, sstb, gen));
 }
 
 int
-mdsio_readlink(slfid_t fid, void *buf, const struct slash_creds *cr)
+mdsio_readlink(mdsio_fid_t ino, void *buf, const struct slash_creds *cr)
 {
-	return (zfsslash2_readlink(fid, buf, cr));
+	return (zfsslash2_readlink(ino, buf, cr));
 }
 
 int
 mdsio_statfs(struct statvfs *stbv)
 {
-	return (zfsslash2_statfs(stbv, 1));
+	return (zfsslash2_statfs(stbv));
 }
 
 int
-mdsio_opencreate(slfid_t pfid, const struct slash_creds *cr, int flags,
-    mode_t mode, const char *fn, struct slash_fidgen *fg,
-    struct srt_stat *sstb, void *mdsio_datap)
+mdsio_opencreate(mdsio_fid_t pino, const struct slash_creds *cr,
+    int flags, mode_t mode, const char *fn, struct slash_fidgen *fgp,
+    mdsio_fid_t *mfp, struct srt_stat *sstb, void *mdsio_datap)
 {
-	return (zfsslash2_opencreate(pfid, cr, flags, mode,
-	    fn, fg, sstb, mdsio_datap));
+	return (zfsslash2_opencreate(pino, cr, flags, mode,
+	    fn, fgp, mfp, sstb, mdsio_datap));
 }
 
 int
-mdsio_link(slfid_t fid, slfid_t pfid, const char *fn,
+mdsio_link(mdsio_fid_t ino, mdsio_fid_t pino, const char *fn,
     struct slash_fidgen *fgp, const struct slash_creds *cr,
     struct srt_stat *sstb)
 {
-	return (zfsslash2_link(fid, pfid, fn, fgp, cr, sstb));
+	return (zfsslash2_link(ino, pino, fn, fgp, cr, sstb));
 }
 
 int
-mdsio_lookup(slfid_t pfid, const char *cpn, struct slash_fidgen *fgp,
-    const struct slash_creds *cr, struct srt_stat *sstb)
+mdsio_lookup(mdsio_fid_t pino, const char *cpn, struct slash_fidgen *fgp,
+    mdsio_fid_t *mfp, const struct slash_creds *cr, struct srt_stat *sstb)
 {
-	return (zfsslash2_lookup(pfid, cpn, fgp, cr, sstb));
+	return (zfsslash2_lookup(pino, cpn, fgp, mfp, cr, sstb));
 }
 
 int
-mdsio_opendir(slfid_t fid, const struct slash_creds *cr,
+mdsio_lookup_slfid(slfid_t fid, const struct slash_creds *crp,
+    struct srt_stat *sstb, slfgen_t *gp, mdsio_fid_t *mfp)
+{
+	return (zfsslash2_lookup_slfid(fid, crp, sstb, gp, mfp));
+}
+
+int
+mdsio_opendir(mdsio_fid_t ino, const struct slash_creds *cr,
     struct slash_fidgen *fgp, struct srt_stat *sstb, void *mdsio_datap)
 {
-	return (zfsslash2_opendir(fid, cr, fgp, sstb, mdsio_datap));
+	return (zfsslash2_opendir(ino, cr, fgp, sstb, mdsio_datap));
 }
 
 int
-mdsio_mkdir(slfid_t pfid, const char *cpn, mode_t mode,
+mdsio_mkdir(mdsio_fid_t pino, const char *cpn, mode_t mode,
     const struct slash_creds *cr, struct srt_stat *sstb,
-    struct slash_fidgen *fgp)
+    struct slash_fidgen *fgp, mdsio_fid_t *mfp)
 {
-	return (zfsslash2_mkdir(pfid, cpn, mode, cr, sstb,
-	    fgp));
+	return (zfsslash2_mkdir(pino, cpn, mode, cr, sstb,
+	    fgp, mfp));
 }
 
 int
@@ -313,38 +320,38 @@ mdsio_readdir(const struct slash_creds *cr, size_t siz,
 }
 
 int
-mdsio_rename(slfid_t opfid, const char *ocpn, slfid_t npfid,
+mdsio_rename(mdsio_fid_t opino, const char *ocpn, mdsio_fid_t npino,
     const char *ncpn, const struct slash_creds *cr)
 {
-	return (zfsslash2_rename(opfid, ocpn, npfid, ncpn, cr));
+	return (zfsslash2_rename(opino, ocpn, npino, ncpn, cr));
 }
 
 int
-mdsio_setattr(slfid_t fid, struct srt_stat *sstb_in, int to_set,
+mdsio_setattr(mdsio_fid_t ino, struct srt_stat *sstb_in, int to_set,
     const struct slash_creds *cr, struct srt_stat *sstb_out,
     void *mdsio_data)
 {
-	return (zfsslash2_setattr(fid, sstb_in, to_set, cr,
+	return (zfsslash2_setattr(ino, sstb_in, to_set, cr,
 	    sstb_out, mdsio_data));
 }
 
 int
-mdsio_symlink(const char *target, slfid_t pfid, const char *cpn,
+mdsio_symlink(const char *target, mdsio_fid_t pino, const char *cpn,
     const struct slash_creds *cr, struct srt_stat *sstb,
-    struct slash_fidgen *fgp)
+    struct slash_fidgen *fgp, mdsio_fid_t *mfp)
 {
-	return (zfsslash2_symlink(target, pfid, cpn, cr, sstb,
-	    fgp));
+	return (zfsslash2_symlink(target, pino, cpn, cr, sstb,
+	    fgp, mfp));
 }
 
 int
-mdsio_unlink(slfid_t pfid, const char *cpn, const struct slash_creds *cr)
+mdsio_unlink(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
 {
-	return (zfsslash2_unlink(pfid, cpn, cr));
+	return (zfsslash2_unlink(pino, cpn, cr));
 }
 
 int
-mdsio_rmdir(slfid_t pfid, const char *cpn, const struct slash_creds *cr)
+mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
 {
-	return (zfsslash2_rmdir(pfid, cpn, cr));
+	return (zfsslash2_rmdir(pino, cpn, cr));
 }

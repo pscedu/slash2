@@ -545,7 +545,6 @@ mds_repl_findrq(const struct slash_fidgen *fgp, int *locked)
 	return (NULL);
 }
 
-/* XXX this should be refactored into a generic inode loader in mds.c */
 int
 mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 {
@@ -556,21 +555,23 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 
 	*fp = NULL;
 
-	rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
-	    NULL, FCMH_SETATTRF_NONE, &rootcreds, &fcmh);
+	rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD |
+	    FIDC_LOOKUP_FCOOSTART, NULL, FCMH_SETATTRF_NONE, &rootcreds,
+	    &fcmh);
 	if (rc)
 		return (rc);
 
 	rc = mds_fcmh_tryref_fmi(fcmh);
 	if (rc) {
-		rc = mdsio_opencreate(fgp->fg_fid, &rootcreds,
-		    O_RDWR, 0, NULL, NULL, NULL, &data);
+		rc = mdsio_opencreate(fcmh_2_fmi(fcmh)->fmi_mdsio_fid,
+		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL, NULL, &data);
 		if (rc)
 			return (rc);
-		rc = mds_fcmh_load_fmi(fcmh, data, 1);
+		rc = mds_fcmh_load_fmi(fcmh, data);
 		/* don't release the mdsio data on success */
 		if (rc || fcmh_2_mdsio_data(fcmh) != data)
 			mdsio_frelease(&rootcreds, data);
+		/* XXX we don't handle this error correctly */
 		if (rc)
 			return (EINVAL); /* XXX need better errno */
 	}
@@ -855,7 +856,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
-	atomic_dec(&fcmh_2_fmi(REPLRQ_FCMH(rrq))->fmi_refcnt);
+	mds_inode_release(REPLRQ_FCMH(rrq));
 	fcmh_dropref(REPLRQ_FCMH(rrq));
 
 	/* SPLAY_REMOVE() does not NULL out the field */
@@ -949,7 +950,7 @@ mds_repl_scandir(void)
 	uint32_t j;
 	void *data;
 
-	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, &fg, NULL, &data);
+	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, NULL, NULL, &data);
 	if (rc)
 		psc_fatalx("mdsio_opendir %s: %s", SL_PATH_REPLS,
 		    slstrerror(rc));
@@ -979,7 +980,8 @@ mds_repl_scandir(void)
 			if (fn[0] == '.')
 				continue;
 
-			rc = mdsio_lookup(mds_repldir_inum, fn, &fg, &rootcreds, NULL);
+			rc = mdsio_lookup(mds_repldir_inum, fn, &fg,
+			    NULL, &rootcreds, NULL);
 			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
 				psc_fatalx("mdsio_lookup %s/%s: %s",
@@ -1214,13 +1216,12 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 void
 mds_repl_init(void)
 {
-	struct slash_fidgen fg;
 	int rc;
 
-	rc = mdsio_lookup(SL_ROOT_INUM, SL_PATH_REPLS, &fg, &rootcreds, NULL);
+	rc = mdsio_lookup(SL_ROOT_INUM, SL_PATH_REPLS, NULL,
+	    &mds_repldir_inum, &rootcreds, NULL);
 	if (rc)
 		psc_fatalx("lookup repldir: %s", slstrerror(rc));
-	mds_repldir_inum = fg.fg_fid;
 
 	mds_repl_buildbusytable();
 	mds_repl_scandir();

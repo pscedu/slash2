@@ -200,7 +200,7 @@ mds_fcmh_tryref_fmi(struct fidc_membh *f)
 
 	rc = 0;
 	FCMH_LOCK(f);
-	if (f->fcmh_fcoo && fcmh_2_fmi(f) &&
+	if (f->fcmh_fcoo &&
 	    (f->fcmh_state & FCMH_FCOO_CLOSING) == 0)
 		atomic_inc(&fcmh_2_fmi(f)->fmi_refcnt);
 	else
@@ -210,7 +210,7 @@ mds_fcmh_tryref_fmi(struct fidc_membh *f)
 }
 
 int
-mds_fcmh_load_fmi(struct fidc_membh *f, void *data, int isfile)
+mds_fcmh_load_fmi(struct fidc_membh *f, void *data)
 {
 	struct fcoo_mds_info *fmi;
 	int rc;
@@ -239,7 +239,7 @@ mds_fcmh_load_fmi(struct fidc_membh *f, void *data, int isfile)
 		fmi = fcoo_get_pri(f->fcmh_fcoo);
 		f->fcmh_fcoo->fcoo_oref_rd = 1;
 		fmi_init(fmi, f, data);
-		if (isfile) {
+		if (!fcmh_isdir(f)) {
 			/* XXX For now assert here */
 			psc_assert(fmi->fmi_inodeh.inoh_fcmh);
 			rc = mds_inode_read(&fmi->fmi_inodeh);
@@ -284,7 +284,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *mdsio_data, struct pscrpc_export *exp)
 	if (!f)
 		return (-1);
 
-	rc = mds_fcmh_load_fmi(f, mdsio_data, c->cfd_flags & CFD_FILE);
+	rc = mds_fcmh_load_fmi(f, mdsio_data);
 	if (rc) {
 		fcmh_dropref(f);
 		return (-1);

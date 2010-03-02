@@ -34,6 +34,9 @@ struct slash_fidgen;
 struct slash_inode_handle;
 struct srt_stat;
 
+typedef uint64_t mdsio_fid_t;
+
+int mdsio_apply_fcmh_size(struct fidc_membh *, size_t);
 int mdsio_bmap_read(struct bmapc_memb *);
 int mdsio_bmap_write(struct bmapc_memb *);
 int mdsio_inode_extras_read(struct slash_inode_handle *);
@@ -41,36 +44,27 @@ int mdsio_inode_extras_write(struct slash_inode_handle *);
 int mdsio_inode_read(struct slash_inode_handle *);
 int mdsio_inode_write(struct slash_inode_handle *);
 int mdsio_release(struct slash_inode_handle *);
-int mdsio_apply_fcmh_size(struct fidc_membh *, size_t);
 
 void mdsio_init(void);
 void mdsio_exit(void);
 
-int mdsio_access(slfid_t, int, const struct slash_creds *);
+int mdsio_access(mdsio_fid_t, int, const struct slash_creds *);
 int mdsio_frelease(const struct slash_creds *, void *);
-int mdsio_getattr(slfid_t, const struct slash_creds *, struct srt_stat *, slfgen_t *);
-int mdsio_readlink(slfid_t, void *, const struct slash_creds *);
+int mdsio_getattr(mdsio_fid_t, const struct slash_creds *, struct srt_stat *, slfgen_t *);
+int mdsio_readlink(mdsio_fid_t, void *, const struct slash_creds *);
 int mdsio_statfs(struct statvfs *);
 
-int mdsio_opencreate(slfid_t, const struct slash_creds *, int, mode_t,
-	const char *, struct slash_fidgen *, struct srt_stat *, void *);
-int mdsio_link(slfid_t, slfid_t, const char *, struct slash_fidgen *,
-	const struct slash_creds *, struct srt_stat *);
-int mdsio_unlink(slfid_t, const char *, const struct slash_creds *);
-int mdsio_lookup(slfid_t, const char *, struct slash_fidgen *,
-	const struct slash_creds *, struct srt_stat *);
-int mdsio_opendir(slfid_t, const struct slash_creds *, struct slash_fidgen *,
-	struct srt_stat *, void *);
-int mdsio_mkdir(slfid_t, const char *, mode_t, const struct slash_creds *,
-	struct srt_stat *, struct slash_fidgen *);
-int mdsio_readdir(const struct slash_creds *, size_t, off_t, void *,
-	size_t *, void *, int, void *);
-int mdsio_rename(slfid_t, const char *, slfid_t, const char *,
-	const struct slash_creds *);
-int mdsio_setattr(slfid_t, struct srt_stat *, int, const struct slash_creds *,
-	struct srt_stat *, void *);
-int mdsio_symlink(const char *, slfid_t, const char *,
-	const struct slash_creds *, struct srt_stat *, struct slash_fidgen *);
-int mdsio_rmdir(slfid_t, const char *, const struct slash_creds *);
+int mdsio_link(mdsio_fid_t, mdsio_fid_t, const char *, struct slash_fidgen *, const struct slash_creds *, struct srt_stat *);
+int mdsio_lookup(mdsio_fid_t, const char *, struct slash_fidgen *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
+int mdsio_lookup_slfid(slfid_t, const struct slash_creds *, struct srt_stat *, slfgen_t *, mdsio_fid_t *);
+int mdsio_mkdir(mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *, struct slash_fidgen *, mdsio_fid_t *);
+int mdsio_opencreate(mdsio_fid_t, const struct slash_creds *, int, mode_t, const char *, struct slash_fidgen *, mdsio_fid_t *, struct srt_stat *, void *);
+int mdsio_opendir(mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, struct srt_stat *, void *);
+int mdsio_readdir(const struct slash_creds *, size_t, off_t, void *, size_t *, void *, int, void *);
+int mdsio_rename(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *);
+int mdsio_rmdir(mdsio_fid_t, const char *, const struct slash_creds *);
+int mdsio_setattr(mdsio_fid_t, struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *);
+int mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, struct slash_fidgen *, mdsio_fid_t *);
+int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *);
 
 #endif

@@ -104,8 +104,12 @@ int
 slm_fidc_getattr(struct fidc_membh *fcmh,
     const struct slash_creds *cr)
 {
-	return (mdsio_getattr(fcmh->fcmh_fg.fg_fid, cr, &fcmh->fcmh_sstb,
-	    &fcmh->fcmh_fg.fg_gen));
+	struct fcoo_mds_info *fmi;
+
+	fmi = fcmh_2_fmi(fcmh);
+	return (mdsio_lookup_slfid(fcmh->fcmh_fg.fg_fid, cr,
+	    &fcmh->fcmh_sstb, &fcmh->fcmh_fg.fg_gen,
+	    &fmi->fmi_mdsio_fid));
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
