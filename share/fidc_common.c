@@ -440,8 +440,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		psc_assert(creds);
 
 	if (flags & FIDC_LOOKUP_CREATE)
-		psc_assert((flags & FIDC_LOOKUP_COPY) ||
-			   (flags & FIDC_LOOKUP_LOAD));
+		psc_assert(flags & (FIDC_LOOKUP_COPY | FIDC_LOOKUP_LOAD));
 
 	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
  restart:
