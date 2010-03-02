@@ -30,6 +30,10 @@ SUBDIRS+=	slkeymgt
 SUBDIRS+=	slmkjrnl
 endif
 
-zbuild: recurse-zbuild
-rezbuild: recurse-rezbuild
+zbuild:
+	@(cd slashd && ${MAKE} zbuild)
+
+rezbuild:
+	@(cd slashd && ${MAKE} rezbuild)
+
 fullbuild: zbuild build
