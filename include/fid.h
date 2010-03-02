@@ -49,8 +49,8 @@ typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
 
 struct slash_fidgen {
-	slfid_t		fg_fid;
-	slfgen_t	fg_gen;
+	slfid_t			fg_fid;
+	slfgen_t		fg_gen;
 };
 
 /* We could use FID_ANY as the SLASH ID of the "local" files that are internal to SLASH */
@@ -71,10 +71,12 @@ struct slash_fidgen {
 #define FIDFMT			"%"PRId64":%"PRId64
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
 
-#define FID_FLAGS(fid)		((fid) >> (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS))
-#define FID_SITEID(fid)		(((fid) >> SLASH_ID_FID_BITS) &		\
+#define FID_GET_FLAGS(fid)	((fid) >> (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS))
+#define FID_GET_SITEID(fid)	(((fid) >> SLASH_ID_FID_BITS) &		\
 				    ~(~UINT64_C(0) << SLASH_ID_SITE_BITS))
-#define FID_INUM(fid)		((fid) & ~(~UINT64_C(0) << (SLASH_ID_FID_BITS)))
+#define FID_GET_INUM(fid)	((fid) & ~(~UINT64_C(0) << (SLASH_ID_FID_BITS)))
+
+#define FID_SET_FLAGS(fid, fl)	((fid) |= ((fl) << (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS)))
 
 #define SAMEFID(a, b)							\
 	(((a)->fg_fid == (b)->fg_fid) && ((a)->fg_gen == (b)->fg_gen))
