@@ -499,6 +499,9 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			fcmh_setattr(fcmh, sstb, setattrflags);
 
 		psc_hashbkt_unlock(b);
+
+		*fcmhp = fcmh;
+		return (0);
 	} else {
 		if (flags & FIDC_LOOKUP_CREATE)
 			if (!try_create) {
@@ -581,13 +584,13 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if ((flags & FIDC_LOOKUP_LOAD) && sl_fcmh_ops.sfop_getattr) {
 		if (getting) {
 			FCMH_LOCK(fcmh);
-			while (fcmh->fcmh_state &
-			    (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) {
-				psc_waitq_wait(&fcmh->fcmh_waitq,
-				    &fcmh->fcmh_lock);
-				FCMH_LOCK(fcmh);
-			}
 			fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
+		}
+		while (fcmh->fcmh_state &
+		    (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) {
+			psc_waitq_wait(&fcmh->fcmh_waitq,
+			    &fcmh->fcmh_lock);
+			FCMH_LOCK(fcmh);
 		}
 		if ((fcmh->fcmh_state & FCMH_HAVE_ATTRS) == 0) {
 			rc = sl_fcmh_ops.sfop_getattr(fcmh, creds);
@@ -669,4 +672,10 @@ fcmh_setfdbuf(struct fidc_membh *fcmh, const struct srt_fd_buf *fdb)
 	psc_assert(fcmh->fcmh_fcoo);
 	fcmh->fcmh_fcoo->fcoo_fdb = *fdb;
 	ureqlock(&fcmh->fcmh_lock, locked);
+}
+
+void
+dump_fcmh(struct fidc_membh *f)
+{
+	DEBUG_FCMH(PLL_MAX, f, "");
 }

@@ -239,6 +239,8 @@ int			 fidc_lookup(const struct slash_fidgen *, int,
 			    const struct srt_stat *, int, const struct slash_creds *,
 			    struct fidc_membh **);
 
+void			 dump_fcmh(struct fidc_membh *);
+
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_poolmgr	*fidcPool;
 extern struct psc_listcache	 fidcDirtyList;
@@ -266,12 +268,6 @@ fcmh_lc_2_string(struct psc_listcache *lc)
 	if (lc == NULL)
 		return "Null";
 	psc_fatalx("invalid fidcache list cache %p", lc);
-}
-
-static __inline void
-dump_fcmh(struct fidc_membh *f)
-{
-	DEBUG_FCMH(PLL_ERROR, f, "");
 }
 
 /**
