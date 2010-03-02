@@ -78,7 +78,8 @@ struct sl_resm {
 
 #define resm_2_resid(r)		(r)->resm_res->res_id
 
-#define RES_MAXID		((UINT64_C(1) << SLASH_ID_SITE_BITS) - 1)
+#define RES_MAXID		((UINT64_C(1) << (sizeof(sl_ios_id_t) * \
+				    NBBY - SLASH_ID_SITE_BITS)) - 1)
 
 /* Site (a collection of I/O systems) */
 struct sl_site {
