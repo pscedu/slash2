@@ -305,7 +305,7 @@ struct srm_connect_req {
 
 struct srm_create_req {
 	struct slash_creds	creds;
-	slfid_t			pfid;		/* parent dir FID */
+	struct slash_fidgen	pfg;
 	char			name[NAME_MAX + 1];
 	uint32_t		mode;
 	uint32_t		flags;
@@ -315,7 +315,7 @@ struct srm_create_req {
 
 struct srm_open_req {
 	struct slash_creds	creds;
-	slfid_t			fid;
+	struct slash_fidgen	fg;
 	uint32_t		flags;
 } __packed;
 
@@ -334,7 +334,7 @@ struct srm_destroy_req {
 
 struct srm_getattr_req {
 	struct slash_creds	creds;
-	slfid_t			fid;
+	struct slash_fidgen	fg;
 } __packed;
 
 struct srm_getattr_rep {
@@ -369,8 +369,8 @@ struct srm_io_rep {
 
 struct srm_link_req {
 	struct slash_creds	creds;
-	slfid_t			pfid;		/* parent dir FID */
-	slfid_t			fid;
+	struct slash_fidgen	pfg;		/* parent dir */
+	struct slash_fidgen	fg;
 	char			name[NAME_MAX + 1];
 } __packed;
 
@@ -382,7 +382,7 @@ struct srm_link_rep {
 
 struct srm_lookup_req {
 	struct slash_creds	creds;
-	slfid_t			pfid;		/* parent dir FID */
+	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[NAME_MAX + 1];
 } __packed;
 
@@ -394,7 +394,7 @@ struct srm_lookup_rep {
 
 struct srm_mkdir_req {
 	struct slash_creds	creds;
-	slfid_t			pfid;		/* parent dir FID */
+	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[NAME_MAX + 1];
 	uint32_t		mode;
 } __packed;
@@ -408,14 +408,14 @@ struct srm_mkdir_rep {
 struct srm_mknod_req {
 	struct slash_creds	creds;
 	char			name[NAME_MAX + 1];
-	slfid_t			pfid;		/* parent dir FID */
+	struct slash_fidgen	pfg;		/* parent dir */
 	uint32_t		mode;
 	uint32_t		rdev;
 } __packed;
 
 struct srm_opendir_req {
 	struct slash_creds	creds;
-	slfid_t			fid;
+	struct slash_fidgen	fg;
 } __packed;
 
 #define srm_opendir_rep srm_open_rep
@@ -443,7 +443,7 @@ struct srm_readdir_rep {
 
 struct srm_readlink_req {
 	struct slash_creds	creds;
-	slfid_t			fid;
+	struct slash_fidgen	fg;
 } __packed;
 
 struct srm_readlink_rep {
@@ -462,8 +462,8 @@ struct srm_releasebmap_req {
 
 struct srm_rename_req {
 	struct slash_creds	creds;
-	uint64_t		npfid;		/* new parent dir FID */
-	uint64_t		opfid;		/* old parent dir FID */
+	struct slash_fidgen	npfg;		/* new parent dir */
+	struct slash_fidgen	opfg;		/* old parent dir */
 	uint32_t		fromlen;
 	uint32_t		tolen;
 /* 'from' and 'to' component names are in bulk data without terminating NULs */
@@ -536,8 +536,8 @@ struct srm_repl_read_req {
 
 struct srm_setattr_req {
 	struct slash_creds	creds;
+	struct slash_fidgen	fg;
 	struct srt_stat		attr;
-	slfid_t			fid;
 	int32_t			to_set;
 } __packed;
 
@@ -552,11 +552,13 @@ struct srm_setattr_req {
 #define SRM_SETATTRF_PTRUNCGEN	(1 << 7)	/* file content non-zero trunc */
 
 struct srm_set_newreplpol_req {
+	struct slash_creds	creds;
 	struct slash_fidgen	fg;
 	int32_t			pol;
 } __packed;
 
 struct srm_set_bmapreplpol_req {
+	struct slash_creds	creds;
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	int32_t			pol;
@@ -575,7 +577,7 @@ struct srm_statfs_rep {
 
 struct srm_symlink_req {
 	struct slash_creds	creds;
-	slfid_t			pfid;		/* parent dir FID */
+	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[NAME_MAX + 1];
 	uint32_t		linklen;
 /* link path name is in bulk */
@@ -583,14 +585,13 @@ struct srm_symlink_req {
 
 struct srm_symlink_rep {
 	struct slash_fidgen	fg;
-	struct slash_creds	creds;
 	struct srt_stat		attr;
 	int32_t			rc;
 } __packed;
 
 struct srm_unlink_req {
 	struct slash_creds	creds;
-	slfid_t			pfid;		/* parent dir FID */
+	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[NAME_MAX + 1];
 } __packed;
 

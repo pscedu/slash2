@@ -59,6 +59,7 @@
 #define ffi_setmfh(fi, mfh)	((fi)->fh = (uint64_t)(unsigned long)(mfh))
 #define ffi_getmfh(fi)		((void *)(unsigned long)(fi)->fh)
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
+#define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
 
 sl_ios_id_t		 prefIOS = IOS_ID_ANY;
 int			 fuse_debug;
@@ -96,41 +97,6 @@ translate_pathname(const char *fn, char buf[PATH_MAX])
 		return (EINVAL);
 	memmove(buf, buf + len, strlen(buf) - len);
 	buf[strlen(buf) - len] = '\0';
-	return (0);
-}
-
-/**
- * checkcreds - Perform a classic UNIX permission access check.
- * @sstb: ownership info.
- * @cr: credentials of access.
- * @xmode: type of access.
- * Returns zero on success, errno code on failure.
- */
-int
-checkcreds(const struct srt_stat *sstb, const struct slash_creds *cr,
-    int xmode)
-{
-	if (sstb->sst_uid == 0)
-		return (0);
-	if (sstb->sst_uid == cr->uid) {
-		if (((xmode & R_OK) && (sstb->sst_mode & S_IRUSR) == 0) ||
-		    ((xmode & W_OK) && (sstb->sst_mode & S_IWUSR) == 0) ||
-		    ((xmode & X_OK) && (sstb->sst_mode & S_IXUSR) == 0))
-			return (EACCES);
-		return (0);
-	}
-	/* XXX check process supplementary group list */
-	if (sstb->sst_gid == cr->gid) {
-		if (((xmode & R_OK) && (sstb->sst_mode & S_IRGRP) == 0) ||
-		    ((xmode & W_OK) && (sstb->sst_mode & S_IWGRP) == 0) ||
-		    ((xmode & X_OK) && (sstb->sst_mode & S_IXGRP) == 0))
-			return (EACCES);
-		return (0);
-	}
-	if (((xmode & R_OK) && (sstb->sst_mode & S_IROTH) == 0) ||
-	    ((xmode & W_OK) && (sstb->sst_mode & S_IWOTH) == 0) ||
-	    ((xmode & X_OK) && (sstb->sst_mode & S_IXOTH) == 0))
-		return (EACCES);
 	return (0);
 }
 
@@ -432,7 +398,7 @@ slash2fuse_openrpc(fuse_req_t req, struct fuse_file_info *fi)
 	rc = slash2fuse_transflags(fi->flags, &mq->flags);
 	if (rc)
 		goto out;
-	mq->fid = mfh_getfid(mfh);
+	mq->fg = mfh_getfg(mfh);
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc == 0)
@@ -556,7 +522,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	if (rc)
 		goto out;
 	mq->mode = mode;
-	mq->pfid = fcmh_2_fid(p);
+	mq->pfg = p->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
@@ -741,7 +707,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		goto out;
 
 	memcpy(&mq->creds, creds, sizeof(*creds));
-	mq->fid = fcmh_2_fid(fcmh);
+	mq->fg = fcmh->fcmh_fg;
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc == 0)
@@ -868,8 +834,8 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		goto out;
 
 	memcpy(&mq->creds, &creds, sizeof(mq->creds));
-	mq->pfid = fcmh_2_fid(p);
-	mq->fid = fcmh_2_fid(c);
+	mq->pfg = p->fcmh_fg;
+	mq->fg = c->fcmh_fg;
 	strlcpy(mq->name, newname, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
@@ -932,14 +898,14 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	slash2fuse_getcred(req, &mq->creds);
 
-	mq->pfid = fcmh_2_fid(p);
+	mq->pfg = p->fcmh_fg;
 	mq->mode = mode;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
 
 	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
-	    mq->pfid, mq->mode, mq->name, rc, mp->rc);
+	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
 	if (rc == 0)
 		rc = mp->rc;
@@ -997,7 +963,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	}
 
-	mq->pfid = fcmh_2_fid(p);
+	mq->pfg = p->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
@@ -1178,7 +1144,7 @@ slash_lookuprpc(const struct slash_creds *cr, struct fidc_membh *p,
 		return (rc);
 
 	mq->creds = *cr;
-	mq->pfid = fcmh_2_fid(p);
+	mq->pfg = p->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
@@ -1228,7 +1194,8 @@ ms_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 		goto out;
 	}
 
-	if ((m = fidc_child_lookup(p, name))) {
+	m = fidc_child_lookup(p, name);
+	if (m) {
 		/* At this point the namespace reference is still valid but
 		 *  the fcmh contents may be old, use slash2fuse_stat() to
 		 *  determine attr age and possibly invoke an RPC to refresh
@@ -1243,8 +1210,6 @@ ms_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	} else
 		rc = slash_lookuprpc(cr, p, name, fgp, sstb);
 
-	/* Drop the parent's refcnt.
-	 */
  out:
 	if (p)
 		fcmh_dropref(p);
@@ -1278,11 +1243,14 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	struct srm_readlink_req *mq;
 	struct srm_readlink_rep *mp;
 	struct pscrpc_request *rq;
+	struct fidc_membh *c;
 	struct iovec iov;
 	char buf[PATH_MAX];
 	int rc;
 
 	msfsthr_ensure();
+
+	c = NULL;
 
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_READLINK, rq, mq, mp);
@@ -1290,7 +1258,12 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 		goto out;
 
 	slash2fuse_getcred(req, &mq->creds);
-	mq->fid = ino;
+
+	rc = fidc_lookup_load_inode(ino, &mq->creds, &c);
+	if (rc)
+		goto out;
+
+	mq->fg = c->fcmh_fg;
 
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf);
@@ -1302,6 +1275,8 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 		rc = mp->rc;
 
  out:
+	if (c)
+		fcmh_dropref(c);
 	if (rc)
 		fuse_reply_err(req, rc);
 	else {
@@ -1440,8 +1415,8 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	if (rc)
 		goto out;
 
-	mq->opfid = fcmh_2_fid(op);
-	mq->npfid = fcmh_2_fid(np);
+	mq->opfg = op->fcmh_fg;
+	mq->npfg = np->fcmh_fg;
 	mq->fromlen = strlen(name) + 1;
 	mq->tolen = strlen(newname) + 1;
 
@@ -1539,7 +1514,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 		goto out;
 
 	slash2fuse_getcred(req, &mq->creds);
-	mq->pfid = fcmh_2_fid(p);
+	mq->pfg = p->fcmh_fg;
 	mq->linklen = strlen(buf) + 1;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -1649,7 +1624,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	}
 
 	slash2fuse_getcred(req, &mq->creds);
-	mq->fid = fcmh_2_fid(c);
+	mq->fg = c->fcmh_fg;
 	mq->to_set = slash2fuse_translate_setattr_flags(to_set);
 	sl_externalize_stat(stb, &mq->attr);
 	mq->attr.sst_ptruncgen = fcmh_2_ptruncgen(c);

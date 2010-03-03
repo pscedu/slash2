@@ -10,6 +10,9 @@
 struct stat;
 struct statvfs;
 
+struct slash_creds;
+struct srt_stat;
+
 #define DEBUG_STATBUF(level, stb, fmt, ...)					\
 	psc_logs((level), PSS_GEN,						\
 	    "stb (%p) dev:%"PRIu64" inode:%"PRId64" mode:0%o "			\
@@ -22,12 +25,14 @@ struct statvfs;
 	    (stb)->st_blocks, (stb)->st_atime, (stb)->st_mtime,			\
 	    (stb)->st_ctime, ## __VA_ARGS__)
 
-void dump_fflags(int);
-void dump_statbuf(int, const struct stat *);
+void	dump_fflags(int);
+void	dump_statbuf(int, const struct stat *);
 
-void sl_externalize_stat(const struct stat *, struct srt_stat *);
-void sl_internalize_stat(const struct srt_stat *, struct stat *);
-void sl_externalize_statfs(const struct statvfs *, struct srt_statfs *);
-void sl_internalize_statfs(const struct srt_statfs *, struct statvfs *);
+void	sl_externalize_stat(const struct stat *, struct srt_stat *);
+void	sl_internalize_stat(const struct srt_stat *, struct stat *);
+void	sl_externalize_statfs(const struct statvfs *, struct srt_statfs *);
+void	sl_internalize_statfs(const struct srt_statfs *, struct statvfs *);
+
+int	checkcreds(const struct srt_stat *, const struct slash_creds *, int);
 
 #endif /* _SLUTIL_H_ */

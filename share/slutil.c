@@ -4,11 +4,13 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 
 #include "psc_util/log.h"
 
+#include "creds.h"
 #include "pathnames.h"
 #include "sltypes.h"
 #include "slutil.h"
@@ -137,4 +139,39 @@ sl_internalize_statfs(const struct srt_statfs *ssfb, struct statvfs *sfb)
 	sfb->f_fsid		= ssfb->sf_fsid;
 	sfb->f_flag		= ssfb->sf_flag;
 	sfb->f_namemax		= ssfb->sf_namemax;
+}
+
+/**
+ * checkcreds - Perform a classic UNIX permission access check.
+ * @sstb: ownership info.
+ * @cr: credentials of access.
+ * @xmode: type of access.
+ * Returns zero on success, errno code on failure.
+ */
+int
+checkcreds(const struct srt_stat *sstb, const struct slash_creds *cr,
+    int xmode)
+{
+	if (sstb->sst_uid == 0)
+		return (0);
+	if (sstb->sst_uid == cr->uid) {
+		if (((xmode & R_OK) && (sstb->sst_mode & S_IRUSR) == 0) ||
+		    ((xmode & W_OK) && (sstb->sst_mode & S_IWUSR) == 0) ||
+		    ((xmode & X_OK) && (sstb->sst_mode & S_IXUSR) == 0))
+			return (EACCES);
+		return (0);
+	}
+	/* XXX check process supplementary group list */
+	if (sstb->sst_gid == cr->gid) {
+		if (((xmode & R_OK) && (sstb->sst_mode & S_IRGRP) == 0) ||
+		    ((xmode & W_OK) && (sstb->sst_mode & S_IWGRP) == 0) ||
+		    ((xmode & X_OK) && (sstb->sst_mode & S_IXGRP) == 0))
+			return (EACCES);
+		return (0);
+	}
+	if (((xmode & R_OK) && (sstb->sst_mode & S_IROTH) == 0) ||
+	    ((xmode & W_OK) && (sstb->sst_mode & S_IWOTH) == 0) ||
+	    ((xmode & X_OK) && (sstb->sst_mode & S_IXOTH) == 0))
+		return (EACCES);
+	return (0);
 }

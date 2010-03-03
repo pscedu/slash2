@@ -83,17 +83,23 @@ slm_get_next_slashid(void)
 }
 
 int
-slmrmcthr_inode_cacheput(struct slash_fidgen *fg, struct srt_stat *sstb,
-    struct slash_creds *creds)
+slm_fcmh_get(struct slash_fidgen *fg, struct slash_creds *crp,
+    struct fidc_membh **fcmhp)
 {
-	struct fidc_membh *fcmh;
 	int rc;
 
-	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY,
-	    sstb, FCMH_SETATTRF_NONE, creds, &fcmh);
-	if (fcmh)
-		fcmh_dropref(fcmh);
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD |
+	    FIDC_LOOKUP_FCOOSTART, NULL, FCMH_SETATTRF_NONE, crp, fcmhp);
 	return (rc);
+}
+
+void
+slm_fcmh_release(struct fidc_membh *fcmh)
+{
+	if (fcmh) {
+		mds_inode_release(fcmh);
+		fcmh_dropref(fcmh);
+	}
 }
 
 int
@@ -119,13 +125,18 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
+	struct fidc_membh *fcmh;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_getattr(mq->fid, &mq->creds, &mp->attr, &mp->gen);
-
-	psc_info("mdsio_getattr() fid=%"PRId64" gen=%"PRId64" rc=%d",
-		 mq->fid, mp->gen, mp->rc);
-
+	mp->rc = slm_fcmh_get(&mq->fg, &mq->creds, &fcmh);
+	if (mp->rc)
+		goto out;
+	mp->rc = checkcreds(&fcmh->fcmh_sstb, &mq->creds, R_OK);
+	if (mp->rc)
+		goto out;
+	mp->attr = fcmh->fcmh_sstb;
+ out:
+	slm_fcmh_release(fcmh);
 	return (0);
 }
 
@@ -151,7 +162,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (mp->rc);
 
-	if ((mq->rw != SL_READ) && (mq->rw != SL_WRITE))
+	if (mq->rw != SL_READ && mq->rw != SL_WRITE)
 		return (-EINVAL);
 
 	/*
@@ -220,13 +231,24 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 int
 slm_rmc_handle_link(struct pscrpc_request *rq)
 {
+	struct fidc_membh *p, *c;
 	struct srm_link_req *mq;
 	struct srm_link_rep *mp;
 
+	p = c = NULL;
 	RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = slm_fcmh_get(&mq->fg, &mq->creds, &c);
+	if (mp->rc)
+		goto out;
+	mp->rc = slm_fcmh_get(&mq->pfg, &mq->creds, &p);
+	if (mp->rc)
+		goto out;
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	mp->rc = mdsio_link(mq->fid, mq->pfid, mq->name, &mp->fg,
-	    &mq->creds, &mp->attr);
+	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
+	    mq->name, &mp->fg, &mq->creds, &mp->attr);
+ out:
+	slm_fcmh_release(c);
+	slm_fcmh_release(p);
 	return (0);
 }
 
@@ -238,23 +260,24 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	struct fidc_membh *fcmh;
 
 	RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = slm_fcmh_get(&mq->pfg, &mq->creds, &fcmh);
+	if (mp->rc)
+		goto out;
+	mp->rc = checkcreds(&fcmh->fcmh_sstb, &mq->creds, X_OK);
+	if (mp->rc)
+		goto out;
+
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (mq->pfid == SL_ROOT_INUM &&
+	if (fcmh_2_mdsio_fid(fcmh) == SL_ROOT_INUM &&
 	    strncmp(mq->name, SL_PATH_PREFIX,
-	     strlen(SL_PATH_PREFIX)) == 0)
+	     strlen(SL_PATH_PREFIX)) == 0) {
 		mp->rc = EINVAL;
-	else {
-		mp->fg.fg_fid = mq->pfid;
-		mp->fg.fg_gen = FIDGEN_ANY;
-		mp->rc = fidc_lookup(&mp->fg, FIDC_LOOKUP_CREATE |
-		    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE,
-		    &mq->creds, &fcmh);
-		if (mp->rc)
-			return (0);
-		mp->rc = mdsio_lookup(fcmh_2_fmi(fcmh)->fmi_mdsio_fid,
-		    mq->name, &mp->fg, NULL, &mq->creds, &mp->attr);
-		fcmh_dropref(fcmh);
+		goto out;
 	}
+	mp->rc = mdsio_lookup(fcmh_2_mdsio_fid(fcmh),
+	    mq->name, &mp->fg, NULL, &mq->creds, &mp->attr);
+ out:
+	slm_fcmh_release(fcmh);
 	return (0);
 }
 
@@ -264,26 +287,21 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
 	struct fidc_membh *fcmh;
-	struct slash_fidgen fg;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mq->name[sizeof(mq->name) - 1] = '\0';
+	mp->rc = slm_fcmh_get(&mq->pfg, &mq->creds, &fcmh);
+	if (mp->rc)
+		goto out;
 
 #ifdef NAMESPACE_EXPERIMENTAL
 	mp->fg.fg_fid = slm_get_next_slashid();
 #endif
 
-	fg.fg_fid = mq->pfid;
-	fg.fg_gen = FIDGEN_ANY;
-	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE,
-	    &mq->creds, &fcmh);
-	if (mp->rc)
-		return (0);
-
-	mp->rc = mdsio_mkdir(fcmh_2_fmi(fcmh)->fmi_mdsio_fid, mq->name,
+	mq->name[sizeof(mq->name) - 1] = '\0';
+	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(fcmh), mq->name,
 	    mq->mode, &mq->creds, &mp->attr, &mp->fg, NULL);
-	fcmh_dropref(fcmh);
+ out:
+	slm_fcmh_release(fcmh);
 	return (0);
 }
 
@@ -322,36 +340,38 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 {
 	struct srm_create_req *mq;
 	struct srm_opencreate_rep *mp;
+	struct fidc_membh *p, *c;
 	struct cfdent *cfd=NULL;
 	struct slash_fidgen fg;
-	struct fidc_membh *p;
+	mdsio_fid_t mdsio_fid;
 	void *mdsio_data;
 	int fl;
+
+	p = c = NULL;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
 	if (mp->rc)
-		return (0);
+		goto out;
 
-	fg.fg_fid = mq->pfid;
-	fg.fg_gen = FIDGEN_ANY;
-	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE,
-	    &mq->creds, &p);
+	mp->rc = slm_fcmh_get(&mq->pfg, &mq->creds, &p);
 	if (mp->rc)
-		return (0);
+		goto out;
 
 #ifdef NAMESPACE_EXPERIMENTAL
 	fg.fg_fid = slm_get_next_slashid();
 #endif
 
-	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds, fl,
-	    mq->mode, mq->name, &fg, NULL, &mp->attr, &mdsio_data);
+	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
+	    fl | O_EXCL | O_CREAT, mq->mode, mq->name, &fg, &mdsio_fid,
+	    &mp->attr, &mdsio_data);
 	if (mp->rc)
 		goto out;
 
-	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
+	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |
+	    FIDC_LOOKUP_FCOOSTART, &mp->attr, FCMH_SETATTRF_NONE,
+	    &mq->creds, &c);
 	if (!mp->rc) {
 		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
 		    SLCONNT_CLI, mdsio_data, &cfd, CFD_FILE);
@@ -361,9 +381,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 			memcpy(&mp->sfdb, &cfd->cfd_fdb,
 			    sizeof(mp->sfdb));
 		}
-
-		psc_info("cfdnew() fid %"PRId64" rc=%d",
-		    fg.fg_fid, mp->rc);
 	}
 
 	/*
@@ -374,7 +391,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
 		mdsio_frelease(&mq->creds, mdsio_data);
  out:
-	fcmh_dropref(p);
+	slm_fcmh_release(c);
+	slm_fcmh_release(p);
 	return (0);
 }
 
@@ -394,40 +412,22 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (0);
 
-	fg.fg_fid = mq->fid;
-	fg.fg_gen = FIDGEN_ANY;
-	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE,
-	    &mq->creds, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->fg, &mq->creds, &fcmh);
 	if (mp->rc)
-		return (0);
+		goto out;
 
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh), &mq->creds,
 	    fl, 0, NULL, &fg, NULL, &mp->attr, &mdsio_data);
-
-	psc_info("mdsio_opencreate() fid=%"PRId64" rc=%d",
-	    mq->fid, mp->rc);
-
 	if (mp->rc)
 		return (0);
 
-	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
+	mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
+	    SLCONNT_CLI, mdsio_data, &cfd, CFD_FILE);
 
-	psc_info("slmrmcthr_inode_cacheput() fid=%"PRId64" rc=%d",
-	    mq->fid, mp->rc);
-
-	if (!mp->rc) {
-		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-		    SLCONNT_CLI, mdsio_data, &cfd, CFD_FILE);
-
-		if (!mp->rc && cfd) {
-			fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
-			memcpy(&mp->sfdb, &cfd->cfd_fdb,
-			    sizeof(mp->sfdb));
-		}
-
-		psc_info("cfdnew() fid %"PRId64" rc=%d",
-		    fg.fg_fid, mp->rc);
+	if (!mp->rc && cfd) {
+		fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
+		memcpy(&mp->sfdb, &cfd->cfd_fdb,
+		    sizeof(mp->sfdb));
 	}
 
 	/*
@@ -437,6 +437,8 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	 */
 	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
 		mdsio_frelease(&mq->creds, mdsio_data);
+ out:
+	slm_fcmh_release(fcmh);
 	return (0);
 }
 
@@ -446,37 +448,29 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	struct srm_opendir_req *mq;
 	struct srm_opendir_rep *mp;
 	struct cfdent *cfd = NULL;
-	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
+	struct fidc_membh *d;
 	void *mdsio_data;
 
 	RSX_ALLOCREP(rq, mq, mp);
-
-	fg.fg_fid = mq->fid;
-	fg.fg_gen = FIDGEN_ANY;
-	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE,
-	    &mq->creds, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->fg, &mq->creds, &d);
 	if (mp->rc)
-		return (0);
+		goto out;
 
-	mp->rc = mdsio_opendir(fcmh_2_fmi(fcmh)->fmi_mdsio_fid, &mq->creds, &fg, &mp->attr,
-	    &mdsio_data);
-	psc_info("mdsio_opendir rc=%d data=%p", mp->rc, mdsio_data);
-	if (mp->rc)
-		return (0);
+	mdsio_data = fcmh_2_mdsio_data(d);
+	if (mdsio_data == NULL) {
+		mp->rc = mdsio_opendir(fcmh_2_mdsio_fid(d), &mq->creds,
+		    &fg, &mp->attr, &mdsio_data);
+		if (mp->rc)
+			goto out;
+	}
 
-	mp->rc = slmrmcthr_inode_cacheput(&fg, &mp->attr, &mq->creds);
-	if (!mp->rc) {
-		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-		    SLCONNT_CLI, mdsio_data, &cfd, CFD_DIR);
+	mp->rc = cfdnew(fg.fg_fid, rq->rq_export, SLCONNT_CLI,
+	    mdsio_data, &cfd, CFD_DIR);
 
-		if (!mp->rc && cfd) {
-			fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
-			memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
-		}
-		psc_info("cfdnew() fid %"PRId64" rc=%d",
-		    fg.fg_fid, mp->rc);
+	if (!mp->rc && cfd) {
+		fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
+		memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
 	}
 
 	/*
@@ -486,6 +480,8 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	 */
 	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
 		mdsio_frelease(&mq->creds, mdsio_data);
+ out:
+	slm_fcmh_release(d);
 	return (0);
 }
 
@@ -564,20 +560,28 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct srm_readlink_req *mq;
 	struct srm_readlink_rep *mp;
+	struct fidc_membh *fcmh;
 	struct iovec iov;
 	char buf[PATH_MAX];
 
+	RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = slm_fcmh_get(&mq->fg, &mq->creds, &fcmh);
+	if (mp->rc)
+		goto out;
+
+	mp->rc = mdsio_readlink(fcmh_2_mdsio_fid(fcmh), buf, &mq->creds);
+	if (mp->rc)
+		goto out;
+
 	iov.iov_base = buf;
 	iov.iov_len = sizeof(buf);
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
+	    SRMC_BULK_PORTAL, &iov, 1);
+	if (desc)
+		pscrpc_free_bulk(desc);
 
-	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_readlink(mq->fid, buf, &mq->creds);
-	if (mp->rc == 0) {
-		mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
-		    SRMC_BULK_PORTAL, &iov, 1);
-		if (desc)
-			pscrpc_free_bulk(desc);
-	}
+ out:
+	slm_fcmh_release(fcmh);
 	return (mp->rc);
 }
 
@@ -634,10 +638,12 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 {
 	char from[NAME_MAX+1], to[NAME_MAX+1];
 	struct pscrpc_bulk_desc *desc;
-	struct srm_rename_req *mq;
+	struct fidc_membh *op, *np;
 	struct srm_generic_rep *mp;
+	struct srm_rename_req *mq;
 	struct iovec iov[2];
 
+	op = np = NULL;
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fromlen <= 1 ||
 	    mq->tolen <= 1) {
@@ -649,20 +655,34 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 		mp->rc = -EINVAL;
 		return (0);
 	}
+
+	mp->rc = slm_fcmh_get(&mq->opfg, &mq->creds, &op);
+	if (mp->rc)
+		goto out;
+
+	mp->rc = slm_fcmh_get(&mq->npfg, &mq->creds, &np);
+	if (mp->rc)
+		goto out;
+
 	iov[0].iov_base = from;
 	iov[0].iov_len = mq->fromlen;
 	iov[1].iov_base = to;
 	iov[1].iov_len = mq->tolen;
 
-	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRMC_BULK_PORTAL, iov, 2)) != 0)
-		return (0);
-	from[sizeof(from) - 1] = '\0';
-	to[sizeof(to) - 1] = '\0';
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRMC_BULK_PORTAL, iov, 2);
+	if (mp->rc)
+		goto out;
 	pscrpc_free_bulk(desc);
 
-	mp->rc = mdsio_rename(mq->opfid, from, mq->npfid, to, &mq->creds);
-	return (0);
+	from[sizeof(from) - 1] = '\0';
+	to[sizeof(to) - 1] = '\0';
+	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
+	    fcmh_2_mdsio_fid(np), to, &mq->creds);
+ out:
+	slm_fcmh_release(np);
+	slm_fcmh_release(op);
+	return (mp->rc);
 }
 
 int
@@ -670,23 +690,15 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
-	struct fcoo_mds_info *fmi;
 	struct fidc_membh *fcmh;
 	int to_set;
 
 	RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = slm_fcmh_get(&mq->fg, &mq->creds, &fcmh);
+	if (mp->rc)
+		goto out;
+
 	to_set = mq->to_set;
-
-	fmi = fidc_fid2fmi(mq->fid, &fcmh);
-	if (fmi)
-		psc_assert(fcmh);
-
-	/* An fmi means that the file is 'open' and therefore
-	 *  we have valid mdsio data.
-	 * A null fmi means that the file is either not opened
-	 *  or not cached.  In that case try to pass the inode
-	 *  into mdsio with the hope that it has it cached.
-	 */
 	if (to_set & SRM_SETATTRF_SIZE) {
 		to_set &= ~SRM_SETATTRF_SIZE;
 		to_set |= SRM_SETATTRF_FSIZE;
@@ -698,17 +710,14 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			fcmh_2_ptruncgen(fcmh)++;
 		}
 	}
-	mp->rc = mdsio_setattr(mq->fid, &mq->attr, to_set,
-	    &mq->creds, &mp->attr, fmi ? fmi->fmi_mdsio_data : NULL);
+	/* If the file is open, mdsio_data will be valid and used.
+	 * Otherwise, it will be NULL, and we'll use the mdsio_fid.
+	 */
+	mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &mq->attr, to_set,
+	    &mq->creds, &mp->attr, fcmh_2_mdsio_data(fcmh));
 
-	if (mp->rc == ENOENT) {
-		//XXX need to figure out how to 'lookup' via the immns.
-		// right now I don't know how to start a lookup from "/"?
-		//  it's either inode # 1 or 3
-	}
-
-	if (fcmh)
-		fcmh_dropref(fcmh);
+ out:
+	slm_fcmh_release(fcmh);
 	return (0);
 }
 
@@ -727,11 +736,10 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE, &rootcreds,
-	    &fcmh);
+	mp->rc = slm_fcmh_get(&mq->fg, &mq->creds, &fcmh);
 	if (mp->rc)
-		return (0);
+		goto out;
+
 	ih = fcmh_2_inoh(fcmh);
 	mp->rc = mds_inox_ensure_loaded(ih);
 	if (mp->rc == 0) {
@@ -739,7 +747,8 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 		ih->inoh_flags |= INOH_EXTRAS_DIRTY;
 		mds_inode_sync(ih);
 	}
-	fcmh_dropref(fcmh);
+ out:
+	slm_fcmh_release(fcmh);
 	return (0);
 }
 
@@ -760,11 +769,9 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 		return (0);
 	}
 
-	mp->rc = fidc_lookup(&mq->fg, FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE, &rootcreds,
-	    &fcmh);
+	mp->rc = slm_fcmh_get(&mq->fg, &mq->creds, &fcmh);
 	if (mp->rc)
-		return (0);
+		goto out;
 	ih = fcmh_2_inoh(fcmh);
 	if (!mds_bmap_exists(fcmh, mq->bmapno)) {
 		mp->rc = SLERR_BMAP_INVALID;
@@ -781,7 +788,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	mds_repl_bmap_rel(bcm);
 
  out:
-	fcmh_dropref(fcmh);
+	slm_fcmh_release(fcmh);
 	return (0);
 }
 
@@ -804,30 +811,41 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
+	struct fidc_membh *p;
 	struct iovec iov;
 	char linkname[PATH_MAX];
+
+	p = NULL;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (mq->linklen == 0) {
-		mp->rc = -ENOENT;
-		return (0);
+		mp->rc = ENOENT;
+		goto out;
 	}
 	if (mq->linklen >= PATH_MAX) {
-		mp->rc = -ENAMETOOLONG;
-		return (0);
+		mp->rc = ENAMETOOLONG;
+		goto out;
 	}
+
+	mp->rc = slm_fcmh_get(&mq->pfg, &mq->creds, &p);
+	if (mp->rc)
+		goto out;
+
 	iov.iov_base = linkname;
 	iov.iov_len = mq->linklen;
-	if ((mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-	    SRMC_BULK_PORTAL, &iov, 1)) != 0)
-		return (0);
-	linkname[sizeof(linkname) - 1] = '\0';
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRMC_BULK_PORTAL, &iov, 1);
+	if (mp->rc)
+		goto out;
 	pscrpc_free_bulk(desc);
 
-	mp->rc = mdsio_symlink(linkname, mq->pfid, mq->name,
+	linkname[sizeof(linkname) - 1] = '\0';
+	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
 	    &mq->creds, &mp->attr, &mp->fg, NULL);
-	return (0);
+ out:
+	slm_fcmh_release(p);
+	return (mp->rc);
 }
 
 int
@@ -835,13 +853,23 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
+	struct fidc_membh *p;
 
 	RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = slm_fcmh_get(&mq->pfg, &mq->creds, &p);
+	if (mp->rc)
+		goto out;
+
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (isfile)
-		mp->rc = mdsio_unlink(mq->pfid, mq->name, &mq->creds);
+		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p),
+		    mq->name, &mq->creds);
 	else
-		mp->rc = mdsio_rmdir(mq->pfid, mq->name, &mq->creds);
+		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p),
+		    mq->name, &mq->creds);
+	/* XXX update fidc to reflect change */
+ out:
+	slm_fcmh_release(p);
 	return (0);
 }
 
