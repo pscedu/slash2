@@ -209,6 +209,11 @@ mds_fcmh_tryref_fmi(struct fidc_membh *f)
 	return (rc);
 }
 
+/*
+ * Read the replication information of a SLASH2 file.  Each SLASH2 file has a metafile
+ * stored on the MDS.  The metafile consists of replication information and block map
+ * CRCs.  fmi stands fcoo_mds_info.
+ */
 int
 mds_fcmh_load_fmi(struct fidc_membh *f, void *data)
 {
