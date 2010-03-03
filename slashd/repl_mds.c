@@ -634,7 +634,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 			rc = ENAMETOOLONG;
 		else if ((rc = mds_repl_loadino(fgp, &fcmh)) != ENOENT) {
 			if (rc)
-				psc_fatalx("fidc_lookup_load_fg: %s",
+				psc_fatalx("mds_repl_loadino: %s",
 				    slstrerror(rc));
 
 			/* Find/add our replica's IOS ID */
