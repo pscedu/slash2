@@ -90,6 +90,23 @@ slm_fcmh_get(struct slash_fidgen *fg, struct slash_creds *crp,
 
 	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD |
 	    FIDC_LOOKUP_FCOOSTART, NULL, FCMH_SETATTRF_NONE, crp, fcmhp);
+	if (rc == 0) {
+		struct fidc_membh *fcmh = *fcmhp;
+
+		FCMH_LOCK(fcmh);
+		if (fcmh->fcmh_fcoo ||
+		    (fcmh->fcmh_state & FCMH_FCOO_CLOSING)) {
+			rc = fidc_fcoo_wait_locked(fcmh, FCOO_START);
+			if (rc < 0) {
+				FCMH_ULOCK(fcmh);
+				return (rc);
+			}
+		} else
+			fidc_fcoo_start_locked(fcmh);
+		if (fcmh->fcmh_state & FCMH_FCOO_STARTING)
+			fidc_fcoo_startdone(fcmh);
+		FCMH_ULOCK(fcmh);
+	}
 	return (rc);
 }
 
@@ -369,9 +386,9 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |
-	    FIDC_LOOKUP_FCOOSTART, &mp->attr, FCMH_SETATTRF_NONE,
-	    &mq->creds, &c);
+	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL |
+	    FIDC_LOOKUP_COPY | FIDC_LOOKUP_FCOOSTART, &mp->attr,
+	    FCMH_SETATTRF_NONE, &mq->creds, &c);
 	if (!mp->rc) {
 		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
 		    SLCONNT_CLI, mdsio_data, &cfd, CFD_FILE);
