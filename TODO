@@ -389,6 +389,8 @@ tracks endpoint connections
 
 ------------------------------
 
+- sstb shouldn't have an ino field
+
 - always cache / on mount_slash, that will save tons of RPCs
 
 zfs
