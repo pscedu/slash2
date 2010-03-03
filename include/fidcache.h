@@ -320,6 +320,11 @@ fidc_fcoo_check_locked(struct fidc_membh *h)
 	psc_assert(o->fcoo_oref_rd || o->fcoo_oref_wr);
 }
 
+/*
+ * Used to open a file after fidc_membh has been locked down.  When done,
+ * the caller should call fidc_fcoo_startdone() or fidc_fcoo_startfailed()
+ * to wake up any waiters.
+ */
 static __inline void
 fidc_fcoo_start_locked(struct fidc_membh *h)
 {
