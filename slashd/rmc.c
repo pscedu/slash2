@@ -446,11 +446,21 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	struct srm_opendir_req *mq;
 	struct srm_opendir_rep *mp;
 	struct cfdent *cfd = NULL;
+	struct fidc_membh *fcmh;
 	struct slash_fidgen fg;
 	void *mdsio_data;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = mdsio_opendir(mq->fid, &mq->creds, &fg, &mp->attr,
+
+	fg.fg_fid = mq->fid;
+	fg.fg_gen = FIDGEN_ANY;
+	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE |
+	    FIDC_LOOKUP_LOAD, NULL, FCMH_SETATTRF_NONE,
+	    &mq->creds, &fcmh);
+	if (mp->rc)
+		return (0);
+
+	mp->rc = mdsio_opendir(fcmh_2_fmi(fcmh)->fmi_mdsio_fid, &mq->creds, &fg, &mp->attr,
 	    &mdsio_data);
 	psc_info("mdsio_opendir rc=%d data=%p", mp->rc, mdsio_data);
 	if (mp->rc)
