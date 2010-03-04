@@ -76,18 +76,18 @@ struct fidc_membh {
 };
 
 /* fcmh_flags */
-#define	FCMH_CAC_CLEAN		(1 << 0)	/* in clean cache */
-#define	FCMH_CAC_DIRTY		(1 << 1)	/* in dirty cache */
-#define	FCMH_CAC_FREEING	(1 << 2)	/* on clean cache */
-#define	FCMH_CAC_FREE		(1 << 3)	/* in free pool */
-#define	FCMH_ISDIR		(1 << 4)	/* is a directory */
-#define	FCMH_FCOO_STARTING	(1 << 5)	/* open obj initializing */
-#define	FCMH_FCOO_ATTACH	(1 << 6)	/* open obj present */
-#define	FCMH_FCOO_CLOSING	(1 << 7)	/* open obj going away */
-#define	FCMH_FCOO_FAILED	(1 << 8)	/* open obj didn't load */
-#define	FCMH_HAVE_ATTRS		(1 << 9)	/* has valid stat info */
-#define	FCMH_GETTING_ATTRS	(1 << 10)	/* fetching stat info */
-#define	_FCMH_FLGSHFT		(1 << 11)
+#define	FCMH_CAC_CLEAN		0x0001		/* (1 << 0) in clean cache */
+#define	FCMH_CAC_DIRTY		0x0002		/* (1 << 1) in dirty cache */
+#define	FCMH_CAC_FREEING	0x0004		/* (1 << 2) on clean cache */
+#define	FCMH_CAC_FREE		0x0008		/* (1 << 3) in free pool */
+#define	FCMH_ISDIR		0x0010		/* (1 << 4) is a directory */
+#define	FCMH_FCOO_STARTING	0x0020		/* (1 << 5) open obj initializing */
+#define	FCMH_FCOO_ATTACH	0x0040		/* (1 << 6) open obj present */
+#define	FCMH_FCOO_CLOSING	0x0080		/* (1 << 7) open obj going away */
+#define	FCMH_FCOO_FAILED	0x0100		/* (1 << 8) open obj didn't load */
+#define	FCMH_HAVE_ATTRS		0x0200		/* (1 << 9) has valid stat info */
+#define	FCMH_GETTING_ATTRS	0x0400		/* (1 << 10 fetching stat info */
+#define	_FCMH_FLGSHFT		0x0800		/* (1 << 11) */
 
 /*
  * If fuse_ino_t, declared 'unsigned long', is 4 bytes, inums will get
