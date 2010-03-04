@@ -550,7 +550,6 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 {
 	struct slash_inode_handle *ih;
 	struct fidc_membh *fcmh;
-	void *data;
 	int rc;
 
 	*fp = NULL;
