@@ -127,7 +127,6 @@ slm_fcmh_get(const struct slash_fidgen *fg, struct slash_creds *crp,
 
 		FCMH_LOCK(fcmh);
 		if (fcmh->fcmh_state & FCMH_FCOO_STARTING) {
-			fidc_fcoo_start_locked(fcmh);
 
  init_fmi:
 			fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
