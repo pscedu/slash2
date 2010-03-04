@@ -126,9 +126,8 @@ slm_fcmh_get(const struct slash_fidgen *fg, struct slash_creds *crp,
 		struct fidc_membh *fcmh = *fcmhp;
 
 		FCMH_LOCK(fcmh);
-		if (fcmh->fcmh_state & FCMH_FCOO_STARTING) {
-
- init_fmi:
+		if ((fcmh->fcmh_state & FCMH_FCOO_STARTING) ||
+		    (rc = fidc_fcoo_wait_locked(fcmh, FCOO_START)) == 1) {
 			fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
 			SPLAY_INIT(&fmi->fmi_exports);
 			atomic_set(&fmi->fmi_refcnt, 0);
@@ -137,10 +136,6 @@ slm_fcmh_get(const struct slash_fidgen *fg, struct slash_creds *crp,
 			    mds_inode_sync);
 
 			fidc_fcoo_startdone(fcmh);
-		} else {
-			rc = fidc_fcoo_wait_locked(fcmh, FCOO_START);
-			if (rc == 1)
-				goto init_fmi;
 		}
 		if (rc == 0)
 			rc = mds_fcmh_tryref_fmi(fcmh);
