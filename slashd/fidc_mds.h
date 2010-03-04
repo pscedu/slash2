@@ -48,21 +48,13 @@ struct fcoo_mds_info {
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
 #define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
 
-static __inline void
-fmi_init(struct fcoo_mds_info *fmi, struct fidc_membh *fcmh,
-    void *mdsio_data)
-{
-	SPLAY_INIT(&fmi->fmi_exports);
-	atomic_set(&fmi->fmi_refcnt, 0);
-	fmi->fmi_mdsio_data = mdsio_data;
-
-	slash_inode_handle_init(&fmi->fmi_inodeh, fcmh, mds_inode_sync);
-}
-
 struct fcoo_mds_info *fidc_fid2fmi(slfid_t, struct fidc_membh **);
 struct fcoo_mds_info *fidc_fcmh2fmi(struct fidc_membh *);
 
-int mds_fcmh_load_fmi(struct fidc_membh *, void *);
-int mds_fcmh_tryref_fmi(struct fidc_membh *);
+int	mds_fcmh_load_fmi(struct fidc_membh *);
+int	mds_fcmh_tryref_fmi(struct fidc_membh *);
+
+int	slm_fcmh_get(struct slash_fidgen *, struct slash_creds *, struct fidc_membh **);
+void	slm_fcmh_release(struct fidc_membh *);
 
 #endif /* _FIDC_MDS_H_ */

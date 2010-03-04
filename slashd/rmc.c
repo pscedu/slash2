@@ -83,43 +83,6 @@ slm_get_next_slashid(void)
 }
 
 int
-slm_fcmh_get(struct slash_fidgen *fg, struct slash_creds *crp,
-    struct fidc_membh **fcmhp)
-{
-	int rc;
-
-	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD |
-	    FIDC_LOOKUP_FCOOSTART, NULL, FCMH_SETATTRF_NONE, crp, fcmhp);
-	if (rc == 0) {
-		struct fidc_membh *fcmh = *fcmhp;
-
-		FCMH_LOCK(fcmh);
-		if (fcmh->fcmh_fcoo ||
-		    (fcmh->fcmh_state & FCMH_FCOO_CLOSING)) {
-			rc = fidc_fcoo_wait_locked(fcmh, FCOO_START);
-			if (rc < 0) {
-				FCMH_ULOCK(fcmh);
-				return (rc);
-			}
-		} else
-			fidc_fcoo_start_locked(fcmh);
-		if (fcmh->fcmh_state & FCMH_FCOO_STARTING)
-			fidc_fcoo_startdone(fcmh);
-		FCMH_ULOCK(fcmh);
-	}
-	return (rc);
-}
-
-void
-slm_fcmh_release(struct fidc_membh *fcmh)
-{
-	if (fcmh) {
-		mds_inode_release(fcmh);
-		fcmh_dropref(fcmh);
-	}
-}
-
-int
 slm_rmc_handle_connect(struct pscrpc_request *rq)
 {
 	struct pscrpc_export *e=rq->rq_export;
@@ -355,12 +318,11 @@ slm_rmc_translate_flags(int in, int *out)
 int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
-	struct srm_create_req *mq;
 	struct srm_opencreate_rep *mp;
+	struct srm_create_req *mq;
 	struct fidc_membh *p, *c;
-	struct cfdent *cfd=NULL;
 	struct slash_fidgen fg;
-	mdsio_fid_t mdsio_fid;
+	struct cfdent *cfd;
 	void *mdsio_data;
 	int fl;
 
@@ -376,37 +338,29 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
+	mp->rc = checkcreds(&p->fcmh_sstb, &mq->creds, W_OK);
+	if (mp->rc)
+		goto out;
+
 #ifdef NAMESPACE_EXPERIMENTAL
 	fg.fg_fid = slm_get_next_slashid();
 #endif
 
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
-	    fl | O_EXCL | O_CREAT, mq->mode, mq->name, &fg, &mdsio_fid,
+	    fl | O_EXCL | O_CREAT, mq->mode, mq->name, &fg, NULL,
 	    &mp->attr, &mdsio_data);
 	if (mp->rc)
 		goto out;
+	mdsio_frelease(&mq->creds, mdsio_data);
 
-	mp->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL |
-	    FIDC_LOOKUP_COPY | FIDC_LOOKUP_FCOOSTART, &mp->attr,
-	    FCMH_SETATTRF_NONE, &mq->creds, &c);
-	if (!mp->rc) {
-		mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-		    SLCONNT_CLI, mdsio_data, &cfd, CFD_FILE);
-
-		if (!mp->rc && cfd) {
-			fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
-			memcpy(&mp->sfdb, &cfd->cfd_fdb,
-			    sizeof(mp->sfdb));
-		}
+	mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
+	    SLCONNT_CLI, &cfd, CFD_FILE);
+	if (mp->rc == 0) {
+		fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
+		memcpy(&mp->sfdb, &cfd->cfd_fdb,
+		    sizeof(mp->sfdb));
 	}
 
-	/*
-	 * On success, the cfd private data, originally the mdsio
-	 * handle private data, is overwritten with an fmi,
-	 * so release the mdsio data if we failed or didn't use it.
-	 */
-	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
-		mdsio_frelease(&mq->creds, mdsio_data);
  out:
 	slm_fcmh_release(c);
 	slm_fcmh_release(p);
@@ -419,10 +373,8 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	struct srm_opencreate_rep *mp;
 	struct srm_open_req *mq;
 	struct fidc_membh *fcmh;
-	struct cfdent *cfd=NULL;
-	struct slash_fidgen fg;
-	void *mdsio_data;
-	int fl;
+	struct cfdent *cfd;
+	int fl, accmode;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
@@ -433,27 +385,25 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh), &mq->creds,
-	    fl, 0, NULL, &fg, NULL, &mp->attr, &mdsio_data);
+	accmode = 0;
+	if (fl & O_RDWR)
+		accmode = R_OK | W_OK;
+	else if (fl & O_WRONLY)
+		accmode = W_OK;
+	else
+		accmode = R_OK;
+	mp->rc = checkcreds(&fcmh->fcmh_sstb, &mq->creds, accmode);
 	if (mp->rc)
-		return (0);
+		goto out;
 
-	mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
-	    SLCONNT_CLI, mdsio_data, &cfd, CFD_FILE);
-
-	if (!mp->rc && cfd) {
-		fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
-		memcpy(&mp->sfdb, &cfd->cfd_fdb,
-		    sizeof(mp->sfdb));
+	mp->rc = cfdnew(mq->fg.fg_fid, rq->rq_export,
+	    SLCONNT_CLI, &cfd, CFD_FILE);
+	if (mp->rc == 0) {
+		fdbuf_sign(&cfd->cfd_fdb, &mq->fg, &rq->rq_peer);
+		memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
+		mp->attr = fcmh->fcmh_sstb;
 	}
 
-	/*
-	 * On success, the cfd private data, originally the mdsio
-	 * handle private data, is overwritten with an fmi,
-	 * so release the mdsio data if we failed or didn't use it.
-	 */
-	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
-		mdsio_frelease(&mq->creds, mdsio_data);
  out:
 	slm_fcmh_release(fcmh);
 	return (0);
@@ -464,39 +414,26 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 {
 	struct srm_opendir_req *mq;
 	struct srm_opendir_rep *mp;
-	struct cfdent *cfd = NULL;
-	struct slash_fidgen fg;
 	struct fidc_membh *d;
-	void *mdsio_data;
+	struct cfdent *cfd;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &mq->creds, &d);
 	if (mp->rc)
 		goto out;
 
-	mdsio_data = fcmh_2_mdsio_data(d);
-	if (mdsio_data == NULL) {
-		mp->rc = mdsio_opendir(fcmh_2_mdsio_fid(d), &mq->creds,
-		    &fg, &mp->attr, &mdsio_data);
-		if (mp->rc)
-			goto out;
-	}
+	mp->rc = checkcreds(&d->fcmh_sstb, &mq->creds, X_OK);
+	if (mp->rc)
+		goto out;
 
-	mp->rc = cfdnew(fg.fg_fid, rq->rq_export, SLCONNT_CLI,
-	    mdsio_data, &cfd, CFD_DIR);
-
-	if (!mp->rc && cfd) {
-		fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
+	mp->rc = cfdnew(mq->fg.fg_fid, rq->rq_export,
+	    SLCONNT_CLI, &cfd, CFD_DIR);
+	if (mp->rc == 0) {
+		fdbuf_sign(&cfd->cfd_fdb, &mq->fg, &rq->rq_peer);
 		memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
+		mp->attr = d->fcmh_sstb;
 	}
 
-	/*
-	 * On success, the cfd private data, originally the mdsio
-	 * handle private data, is overwritten with an fmi,
-	 * so release the mdsio handle if we failed or didn't use it.
-	 */
-	if (cfd == NULL || cfd_2_mdsio_data(cfd) != mdsio_data)
-		mdsio_frelease(&mq->creds, mdsio_data);
  out:
 	slm_fcmh_release(d);
 	return (0);
@@ -515,24 +452,30 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	uint64_t cfd;
 	int niov;
 
+	iov[0].iov_base = NULL;
+	iov[1].iov_base = NULL;
+
 	RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = fdbuf_check(&mq->sfdb, &cfd, &fg, &rq->rq_peer);
 	if (mp->rc)
-		return (0);
+		goto out;
 
-	if (cfdlookup(rq->rq_export, cfd, &m)) {
-		mp->rc = -errno;
-		return (mp->rc);
-	}
+	mp->rc = cfdlookup(rq->rq_export, cfd, &m);
+	if (mp->rc)
+		goto out;
 
 #define MAX_READDIR_NENTS	1000
 #define MAX_READDIR_BUFSIZ	(sizeof(struct srt_stat) * MAX_READDIR_NENTS)
 	if (mq->size > MAX_READDIR_BUFSIZ ||
 	    mq->nstbpref > MAX_READDIR_NENTS) {
 		mp->rc = EINVAL;
-		return (mp->rc);
+		goto out;
 	}
+
+	mp->rc = mds_fcmh_load_fmi(m->mexpfcm_fcmh);
+	if (mp->rc)
+		goto out;
 
 	iov[0].iov_base = PSCALLOC(mq->size);
 	iov[0].iov_len = mq->size;

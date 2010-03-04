@@ -215,48 +215,36 @@ mds_fcmh_tryref_fmi(struct fidc_membh *f)
  * CRCs.  fmi stands fcoo_mds_info.
  */
 int
-mds_fcmh_load_fmi(struct fidc_membh *f, void *data)
+mds_fcmh_load_fmi(struct fidc_membh *f)
 {
 	struct fcoo_mds_info *fmi;
 	int rc;
 
+	rc = 0;
 	FCMH_LOCK(f);
-	if (f->fcmh_fcoo || (f->fcmh_state & FCMH_FCOO_CLOSING)) {
-		rc = fidc_fcoo_wait_locked(f, FCOO_START);
+	if (fcmh_2_mdsio_data(f))
+		goto out;
 
-		if (rc < 0) {
-			DEBUG_FCMH(PLL_ERROR, f,
-				   "fidc_fcoo_wait_locked() failed");
-			FCMH_ULOCK(f);
-			return (rc);
-		} else if (rc == 1)
-			goto fcoo_start;
-		else {
-			psc_assert(f->fcmh_fcoo);
-			fmi = fcoo_get_pri(f->fcmh_fcoo);
-			f->fcmh_fcoo->fcoo_oref_rd++;
-			psc_assert(fmi->fmi_mdsio_data);
-			FCMH_ULOCK(f);
-		}
-	} else {
-		fidc_fcoo_start_locked(f);
- fcoo_start:
-		fmi = fcoo_get_pri(f->fcmh_fcoo);
-		f->fcmh_fcoo->fcoo_oref_rd = 1;
-		fmi_init(fmi, f, data);
-		if (!fcmh_isdir(f)) {
-			/* XXX For now assert here */
-			psc_assert(fmi->fmi_inodeh.inoh_fcmh);
-			rc = mds_inode_read(&fmi->fmi_inodeh);
-			if (rc)
-				psc_fatalx("could not load inode; rc=%d", rc);
-		}
+	fmi = fcoo_get_pri(f->fcmh_fcoo);
 
-		FCMH_ULOCK(f);
-		fidc_fcoo_startdone(f);
+	if (fcmh_isdir(f))
+		rc = mdsio_opendir(fmi->fmi_mdsio_fid, &rootcreds,
+		    NULL, NULL, &fmi->fmi_mdsio_data);
+	 else {
+		rc = mdsio_opencreate(fmi->fmi_mdsio_fid, &rootcreds,
+		    O_RDWR, 0, NULL, NULL, NULL, NULL, &fmi->fmi_mdsio_data);
+		if (rc)
+			goto out;
+
+		rc = mds_inode_read(&fmi->fmi_inodeh);
+		if (rc)
+			psc_fatalx("could not load inode; rc=%d", rc);
 	}
-	atomic_inc(&fmi->fmi_refcnt);
-	return (0);
+ out:
+	if (rc == 0)
+		f->fcmh_fcoo->fcoo_oref_rd++;
+	FCMH_ULOCK(f);
+	return (rc);
 }
 
 /**
@@ -264,11 +252,10 @@ mds_fcmh_load_fmi(struct fidc_membh *f, void *data)
  *	provided cfd to the export tree and attaches to the fid's
  *	respective fcmh.
  * @c: the cfd, pre-initialized with fid and private data.
- * @mdsio_data: mdsio data for this inode.
  * @exp: the export to which the cfd belongs.
  */
 int
-mexpfcm_cfd_init(struct cfdent *c, void *mdsio_data, struct pscrpc_export *exp)
+mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 {
 	struct slashrpc_export *slexp;
 	struct mexpfcm *m;
@@ -289,7 +276,7 @@ mexpfcm_cfd_init(struct cfdent *c, void *mdsio_data, struct pscrpc_export *exp)
 	if (!f)
 		return (-1);
 
-	rc = mds_fcmh_load_fmi(f, mdsio_data);
+	rc = mds_fcmh_load_fmi(f);
 	if (rc) {
 		fcmh_dropref(f);
 		return (-1);

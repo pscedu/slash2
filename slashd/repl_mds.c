@@ -555,32 +555,23 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 
 	*fp = NULL;
 
-	rc = fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD |
-	    FIDC_LOOKUP_FCOOSTART, NULL, FCMH_SETATTRF_NONE, &rootcreds,
-	    &fcmh);
+	rc = slm_fcmh_get(fgp, &rootcreds, &fcmh);
 	if (rc)
 		return (rc);
 
-	rc = mds_fcmh_tryref_fmi(fcmh);
-	if (rc) {
-		rc = mdsio_opencreate(fcmh_2_fmi(fcmh)->fmi_mdsio_fid,
-		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL, NULL, &data);
-		if (rc)
-			return (rc);
-		rc = mds_fcmh_load_fmi(fcmh, data);
-		/* don't release the mdsio data on success */
-		if (rc || fcmh_2_mdsio_data(fcmh) != data)
-			mdsio_frelease(&rootcreds, data);
-		/* XXX we don't handle this error correctly */
-		if (rc)
-			return (EINVAL); /* XXX need better errno */
-	}
+	rc = mds_fcmh_load_fmi(fcmh);
+	if (rc)
+		goto out;
 
 	ih = fcmh_2_inoh(fcmh);
 	rc = mds_inox_ensure_loaded(ih);
 	if (rc)
 		psc_fatalx("mds_inox_ensure_loaded: %s", slstrerror(rc));
 	*fp = fcmh;
+
+ out:
+	if (rc)
+		slm_fcmh_release(fcmh);
 	return (0);
 }
 
@@ -856,8 +847,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
-	mds_inode_release(REPLRQ_FCMH(rrq));
-	fcmh_dropref(REPLRQ_FCMH(rrq));
+	slm_fcmh_release(REPLRQ_FCMH(rrq));
 
 	/* SPLAY_REMOVE() does not NULL out the field */
 	INIT_PSCLIST_ENTRY(&rrq->rrq_lentry);

@@ -47,7 +47,7 @@ struct cfdent {
  *  'pri' structure.  All calls must be made with the exp lock held.
  */
 struct cfdops {
-	int	 (*cfd_init)(struct cfdent *, void *, struct pscrpc_export *);
+	int	 (*cfd_init)(struct cfdent *, struct pscrpc_export *);
 	int	 (*cfd_free)(struct cfdent *, struct pscrpc_export *);
 	void	*(*cfd_get_pri)(struct cfdent *, struct pscrpc_export *);
 };
@@ -56,7 +56,7 @@ struct cfdent *
 	cfdget(struct pscrpc_export *, uint64_t);
 int	cfdcmp(const void *, const void *);
 int	cfdnew(slfid_t, struct pscrpc_export *, enum slconn_type,
-	    void *, struct cfdent **, int);
+	    struct cfdent **, int);
 int	cfdfree(struct pscrpc_export *, uint64_t);
 void	cfdfreeall(struct pscrpc_export *, enum slconn_type);
 int	cfdlookup(struct pscrpc_export *, uint64_t, void *);

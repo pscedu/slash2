@@ -112,6 +112,52 @@ slm_fidc_getattr(struct fidc_membh *fcmh,
 	    &fmi->fmi_mdsio_fid));
 }
 
+int
+slm_fcmh_get(struct slash_fidgen *fg, struct slash_creds *crp,
+    struct fidc_membh **fcmhp)
+{
+	struct fcoo_mds_info *fmi;
+	int rc;
+
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD |
+	    FIDC_LOOKUP_FCOOSTART, NULL, FCMH_SETATTRF_NONE, crp, fcmhp);
+	if (rc == 0) {
+		struct fidc_membh *fcmh = *fcmhp;
+
+		FCMH_LOCK(fcmh);
+		if (fcmh->fcmh_state & FCMH_FCOO_STARTING) {
+			fidc_fcoo_start_locked(fcmh);
+
+ init_fmi:
+			fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
+			SPLAY_INIT(&fmi->fmi_exports);
+			atomic_set(&fmi->fmi_refcnt, 0);
+
+			slash_inode_handle_init(&fmi->fmi_inodeh, fcmh,
+			    mds_inode_sync);
+
+			fidc_fcoo_startdone(fcmh);
+		} else {
+			rc = fidc_fcoo_wait_locked(fcmh, FCOO_START);
+			if (rc == 1)
+				goto init_fmi;
+		}
+		if (rc == 0)
+			rc = mds_fcmh_tryref_fmi(fcmh);
+		FCMH_ULOCK(fcmh);
+	}
+	return (rc);
+}
+
+void
+slm_fcmh_release(struct fidc_membh *fcmh)
+{
+	if (fcmh) {
+		mds_inode_release(fcmh);
+		fcmh_dropref(fcmh);
+	}
+}
+
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* getattr */	slm_fidc_getattr,
 /* grow */	NULL,
