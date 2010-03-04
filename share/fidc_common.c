@@ -56,10 +56,6 @@ fcmh_reset(struct fidc_membh *f)
 	atomic_set(&f->fcmh_refcnt, 0);
 	psc_waitq_init(&f->fcmh_waitq);
 	f->fcmh_state = FCMH_CAC_FREE;
-
-	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
-	INIT_PSCLIST_ENTRY(&f->fcmh_sibling);
-	INIT_PSCLIST_HEAD(&f->fcmh_children);
 }
 
 /**
@@ -627,11 +623,14 @@ fidc_fcoo_init(void)
  * fidc_init - Initialize the FID cache.
  */
 void
-fidc_init(int nobj, int max, int (*fcmh_reap_cb)(struct fidc_membh *))
+fidc_init(int privsiz, int nobj, int max,
+    int (*fcmh_reap_cb)(struct fidc_membh *))
 {
-	psc_poolmaster_init(&fidcPoolMaster, struct fidc_membh,
-	    fcmh_lentry, PPMF_NONE, nobj, nobj, max, fcmh_init,
-	    fcmh_dtor, fidc_reap, "fcmh");
+	_psc_poolmaster_init(&fidcPoolMaster,
+	    sizeof(struct fidc_membh) + privsiz,
+	    offsetof(struct fidc_memh, fcmh_lentry),
+	    PPMF_NONE, nobj, nobj, max, fcmh_init,
+	    fcmh_dtor, fidc_reap, NULL, "fcmh");
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
 	lc_reginit(&fidcDirtyList, struct fidc_membh,

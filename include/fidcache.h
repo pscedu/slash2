@@ -59,7 +59,6 @@ struct fidc_membh {
 #endif
 	struct timeval		 fcmh_age;		/* age of this entry */
 	struct srt_stat		 fcmh_sstb;
-	struct fidc_nameinfo	*fcmh_name;
 	struct fidc_open_obj	*fcmh_fcoo;
 	int			 fcmh_state;
 	int			 fcmh_lasterror;
@@ -69,10 +68,6 @@ struct fidc_membh {
 	struct psclist_head	 fcmh_lentry;
 	struct psc_listcache	*fcmh_cache_owner;
 	struct psc_waitq	 fcmh_waitq;
-
-	struct fidc_membh	*fcmh_parent;
-	struct psclist_head	 fcmh_sibling;
-	struct psclist_head	 fcmh_children;
 };
 
 /* fcmh_flags */
@@ -187,6 +182,12 @@ struct fidc_membh {
 		DEBUG_FCMH(PLL_TRACE, (f), "dropref");				\
 	} while (0)
 
+static __inline void *
+fcmh_get_pri(struct fidc_membh *fcmh)
+{
+	return (fcmh + 1);
+}
+
 SPLAY_HEAD(bmap_cache, bmapc_memb);
 
 struct fidc_open_obj {
@@ -232,7 +233,7 @@ void			 fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 struct fidc_open_obj	*fidc_fcoo_init(void);
 
 void			 fidc_put(struct fidc_membh *, struct psc_listcache *);
-void			 fidc_init(int, int, int (*)(struct fidc_membh *));
+void			 fidc_init(int, int, int, int (*)(struct fidc_membh *));
 struct fidc_membh	*fidc_lookup_simple(slfid_t);
 struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
 

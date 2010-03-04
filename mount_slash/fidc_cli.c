@@ -63,7 +63,9 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 
 	fni = PSCALLOC(sizeof(*fni) + len);
 	fni->fni_hash = psc_str_hashify(name);
+	INIT_PSCLIST_ENTRY(&c->fcmh_lentry);
 	INIT_PSCLIST_ENTRY(&c->fcmh_sibling);
+	INIT_PSCLIST_HEAD(&f->fcmh_children);
 	strlcpy(fni->fni_name, name, len);
 	return (fni);
 }

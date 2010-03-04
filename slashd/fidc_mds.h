@@ -30,11 +30,14 @@
 SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcmh_tentry, mexpfcm_cache_cmp);
 
+struct fcmh_mds_info {
+	mdsio_fid_t		  fcmi_mdsio_fid;	/* underlying mdsio file ID */
+};
+
 struct fcoo_mds_info {
 	struct fcm_exports	  fmi_exports;		/* tree of mexpfcm */
 	struct slash_inode_handle fmi_inodeh;		/* MDS sl_inodeh_t goes here */
 	atomic_t		  fmi_refcnt;		/* # active references */
-	mdsio_fid_t		  fmi_mdsio_fid;	/* underlying mdsio file ID */
 	void			 *fmi_mdsio_data;	/* mdsio descriptor */
 };
 

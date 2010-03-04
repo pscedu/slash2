@@ -1767,7 +1767,8 @@ msl_init(__unusedx struct fuse_conn_info *conn)
 	int rc;
 
 	libsl_init(PSCNET_CLIENT, 0);
-	fidc_init(FIDC_CLI_DEFSZ, FIDC_CLI_MAXSZ, fidc_child_reap_cb);
+	fidc_init(sizeof(struct fcmh_cli_info), FIDC_CLI_DEFSZ,
+	    FIDC_CLI_MAXSZ, fidc_child_reap_cb);
 	bmpc_global_init();
 	bmap_cache_init(sizeof(struct bmap_cli_info));
 
