@@ -334,7 +334,7 @@ fidc_fcoo_start_locked(struct fidc_membh *h)
 
 	if (h->fcmh_state & FCMH_FCOO_FAILED) {
 		DEBUG_FCMH(PLL_WARN, h,
-			   "trying to start a formerly failed fcmh");
+		    "trying to start a formerly failed fcmh");
 		h->fcmh_state &= ~FCMH_FCOO_FAILED;
 	}
 	h->fcmh_fcoo = fidc_fcoo_init();
@@ -376,11 +376,13 @@ fidc_fcoo_remove(struct fidc_membh *h)
 #define FCOO_NOSTART 1
 
 /**
- * fidc_fcoo_wait_locked - if the fcoo is in 'STARTING' state, wait
- *	for it to complete.  Otherwise return 1 if ATTACHED and zero
- *	otherwise.
+ * fidc_fcoo_wait_locked - Wait for an open object to becomd ready.
  * @h: the fcmh.
- * Notes:  always return locked.
+ * @nostart: whether to kick start it if there isn't an open object.
+ * Returns:
+ *	-1	open object couldn't load.
+ *	 0	open object is available.
+ *	 1	open object was freshly initialized.
  */
 static __inline int
 fidc_fcoo_wait_locked(struct fidc_membh *h, int nostart)
@@ -416,11 +418,9 @@ fidc_fcoo_wait_locked(struct fidc_membh *h, int nostart)
 	} else if (h->fcmh_state & FCMH_FCOO_FAILED)
 		return (-1);
 
-	else {
-		DEBUG_FCMH(PLL_FATAL, h, "invalid fcmh_state (%d)",
-			   h->fcmh_state);
-		abort();
-	}
+	DEBUG_FCMH(PLL_FATAL, h, "invalid fcmh_state (%d)",
+	    h->fcmh_state);
+	abort();
 }
 
 static __inline void
