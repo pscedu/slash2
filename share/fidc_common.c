@@ -58,7 +58,7 @@ fcmh_reset(struct fidc_membh *f)
 	f->fcmh_state = FCMH_CAC_FREE;
 
 	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
-	INIT_PSCLIST_HEAD(&f->fcmh_sibling);
+	INIT_PSCLIST_ENTRY(&f->fcmh_sibling);
 	INIT_PSCLIST_HEAD(&f->fcmh_children);
 }
 
@@ -545,6 +545,11 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 #endif
 		} /* else is handled by the initial asserts */
 
+		/* if there is already an fcoo, don't overwrite */
+		if ((flags & FIDC_LOOKUP_FCOOSTART) &&
+		    (fcmh->fcmh_state & FCMH_FCOO_ATTACH))
+			flags &= ~FIDC_LOOKUP_FCOOSTART;
+
 		if (flags & FIDC_LOOKUP_FCOOSTART) {
 			/* Set an 'open' placeholder so that
 			 *  only the caller may perform an open
@@ -553,7 +558,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			fcmh->fcmh_state |= FCMH_FCOO_STARTING;
 			fcmh->fcmh_fcoo = FCOO_STARTING;
 		}
-		/* Place the fcmh into the cache, note that the fmch was
+		/* Place the fcmh into the cache, note that the fcmh was
 		 *  ref'd so no race condition exists here.
 		 */
 		if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
