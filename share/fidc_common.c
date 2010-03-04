@@ -257,13 +257,13 @@ fidc_reap(struct psc_poolmgr *m)
 			sched_yield();
 			goto startover;
 		}
-		/* - Skip the root inode.
+		/* - Inode must be lockable now
+		 * - Skip the root inode.
 		 * - Clean inodes may have non-zero refcnts,
-		 * - Inode must be lockable now
 		 */
-		if ((fcmh_2_fid(f) == 1)           ||
-		    (atomic_read(&f->fcmh_refcnt)) ||
-		    (!trylock(&f->fcmh_lock)))
+		if ((!trylock(&f->fcmh_lock)) ||
+		    (fcmh_2_fid(f) == 1) ||
+		    (atomic_read(&f->fcmh_refcnt)))
 			goto end2;
 		/* Make sure our clean list is 'clean' by
 		 *  verifying the following conditions.
