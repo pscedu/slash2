@@ -42,8 +42,8 @@ struct slash_fidgen;
 #define	SLASH_ID_SITE_BITS	10
 #define	SLASH_ID_FID_BITS	50
 
-#define SLFIDF_HIDE_DENTRY	(1 << 0)	/* keep but hide an entry until its log arrives */
-#define SLFIDF_LOCAL_DENTRY	(1 << 1)	/* don't expose to external nodes */
+#define SLFIDF_HIDE_DENTRY	(uint64_t)(1 << 0)	/* keep but hide an entry until its log arrives */
+#define SLFIDF_LOCAL_DENTRY	(uint64_t)(1 << 1)	/* don't expose to external nodes */
 
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
