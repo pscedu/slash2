@@ -28,6 +28,8 @@ struct srt_stat;
 void	dump_fflags(int);
 void	dump_statbuf(int, const struct stat *);
 
+void	print_flag(const char *, int *);
+
 void	sl_externalize_stat(const struct stat *, struct srt_stat *);
 void	sl_internalize_stat(const struct srt_stat *, struct stat *);
 void	sl_externalize_statfs(const struct statvfs *, struct srt_statfs *);

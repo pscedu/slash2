@@ -228,10 +228,10 @@ mds_fcmh_load_fmi(struct fidc_membh *f)
 	fmi = fcoo_get_pri(f->fcmh_fcoo);
 
 	if (fcmh_isdir(f))
-		rc = mdsio_opendir(fmi->fmi_mdsio_fid, &rootcreds,
+		rc = mdsio_opendir(fcmh_2_mdsio_fid(f), &rootcreds,
 		    NULL, NULL, &fmi->fmi_mdsio_data);
 	 else {
-		rc = mdsio_opencreate(fmi->fmi_mdsio_fid, &rootcreds,
+		rc = mdsio_opencreate(fcmh_2_mdsio_fid(f), &rootcreds,
 		    O_RDWR, 0, NULL, NULL, NULL, NULL, &fmi->fmi_mdsio_data);
 		if (rc)
 			goto out;

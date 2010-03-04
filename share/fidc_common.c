@@ -33,6 +33,7 @@
 #include "cache_params.h"
 #include "fid.h"
 #include "fidcache.h"
+#include "slutil.h"
 
 int  (*fidcReapCb)(struct fidc_membh *);
 
@@ -56,6 +57,7 @@ fcmh_reset(struct fidc_membh *f)
 	atomic_set(&f->fcmh_refcnt, 0);
 	psc_waitq_init(&f->fcmh_waitq);
 	f->fcmh_state = FCMH_CAC_FREE;
+	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
 }
 
 /**
@@ -104,7 +106,6 @@ fcmh_get(void)
 	psc_assert(f->fcmh_state == FCMH_CAC_FREE);
 	f->fcmh_state = FCMH_CAC_CLEAN;
 	psc_assert(fcmh_clean_check(f));
-	psc_assert(!f->fcmh_name);
 	psc_assert(!f->fcmh_fcoo);
 	fcmh_incref(f);
 	return (f);
@@ -137,10 +138,8 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	} else
 		psc_assert(fcmh->fcmh_state & FCMH_HAVE_ATTRS);
 
-	if (fcmh_isdir(fcmh) && !(fcmh->fcmh_state & FCMH_ISDIR)) {
+	if (fcmh_isdir(fcmh) && !(fcmh->fcmh_state & FCMH_ISDIR))
 		fcmh->fcmh_state |= FCMH_ISDIR;
-		psc_assert(psclist_empty(&fcmh->fcmh_children));
-	}
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attr set");
 	ureqlock(&fcmh->fcmh_lock, locked);
@@ -186,9 +185,6 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		psc_assert(!f->fcmh_fcoo);
 		/* Verify that no children are hanging about.
 		 */
-		psc_assert(psclist_empty(&f->fcmh_children));
-
-		psc_assert(f->fcmh_name == NULL);
 
 		psc_assert(!atomic_read(&f->fcmh_refcnt));
 		if (f->fcmh_cache_owner == NULL)
@@ -628,7 +624,7 @@ fidc_init(int privsiz, int nobj, int max,
 {
 	_psc_poolmaster_init(&fidcPoolMaster,
 	    sizeof(struct fidc_membh) + privsiz,
-	    offsetof(struct fidc_memh, fcmh_lentry),
+	    offsetof(struct fidc_membh, fcmh_lentry),
 	    PPMF_NONE, nobj, nobj, max, fcmh_init,
 	    fcmh_dtor, fidc_reap, NULL, "fcmh");
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);

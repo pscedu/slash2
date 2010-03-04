@@ -110,7 +110,7 @@ slm_fidc_getattr(struct fidc_membh *fcmh,
 	fmi = fcmh_2_fmi(fcmh);
 	return (mdsio_lookup_slfid(fcmh->fcmh_fg.fg_fid, cr,
 	    &fcmh->fcmh_sstb, &fcmh->fcmh_fg.fg_gen,
-	    &fmi->fmi_mdsio_fid));
+	    &fcmh_2_mdsio_fid(fcmh)));
 }
 
 int

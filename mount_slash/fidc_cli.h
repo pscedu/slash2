@@ -39,6 +39,8 @@ struct fcmh_cli_info {
 	struct fidc_nameinfo	*fcci_name;
 };
 
+#define fcmh_2_fcci(f)		((struct fcmh_cli_info *)fcmh_get_pri(f))
+
 /*
  * FID cache member handle open object CLIENT-specific data.
  */
