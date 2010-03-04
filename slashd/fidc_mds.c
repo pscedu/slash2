@@ -126,8 +126,17 @@ slm_fcmh_get(const struct slash_fidgen *fg, struct slash_creds *crp,
 		struct fidc_membh *fcmh = *fcmhp;
 
 		FCMH_LOCK(fcmh);
+		/*
+		 * Even if we set FIDC_LOOKUP_FCOOSTART above, FCMH_FCOO_STARTING is
+		 * only set when the fcmh does not already exist.  
+		 *
+		 * XXX suppose two RPCs want to access the same file come in, they
+		 * can both see the FCMH_FCOO_STARTING flag being set.
+		 */
 		if ((fcmh->fcmh_state & FCMH_FCOO_STARTING) ||
 		    (rc = fidc_fcoo_wait_locked(fcmh, FCOO_START)) == 1) {
+
+			FCMH_ULOCK(fcmh);
 			fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
 			SPLAY_INIT(&fmi->fmi_exports);
 			atomic_set(&fmi->fmi_refcnt, 0);
@@ -139,7 +148,6 @@ slm_fcmh_get(const struct slash_fidgen *fg, struct slash_creds *crp,
 		}
 		if (rc == 0)
 			rc = mds_fcmh_tryref_fmi(fcmh);
-		FCMH_ULOCK(fcmh);
 	}
 	return (rc);
 }
