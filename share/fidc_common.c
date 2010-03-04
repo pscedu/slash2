@@ -179,6 +179,8 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 	clean = fcmh_clean_check(f);
 
 	if (lc == &fidcPool->ppm_lc) {
+		psc_assert(f->fcmh_cache_owner == &fidcCleanList ||
+			   f->fcmh_cache_owner == NULL);
 		/* FCMH_CAC_FREEING should have already been set so that
 		 *  other threads will ignore the freeing hash entry.
 		 */
@@ -189,14 +191,6 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		/* Verify that no children are hanging about.
 		 */
 		psc_assert(psclist_empty(&f->fcmh_children));
-
-		/* Valid sources of this inode.
-		 */
-		if (!((f->fcmh_cache_owner == &fidcPool->ppm_lc) ||
-		      (f->fcmh_cache_owner == &fidcCleanList) ||
-		      (f->fcmh_cache_owner == NULL)))
-			psc_fatalx("Bad inode fcmh_cache_owner %p",
-			       f->fcmh_cache_owner);
 
 		psc_assert(f->fcmh_name == NULL);
 
