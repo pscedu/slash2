@@ -332,8 +332,8 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 		 *  in Bug #13.
 		 */
 		if (del) {
-			if (tmp->fcmh_state & FCMH_CAC_FREEING) {
-				psc_assert(fg->fg_gen == fcmh_2_gen(tmp));
+			if (fg->fg_gen == fcmh_2_gen(tmp)) {
+				psc_assert(tmp->fcmh_state & FCMH_CAC_FREEING);
 				fcmh = tmp;
 				ureqlock(&tmp->fcmh_lock, locked[1]);
 				break;
