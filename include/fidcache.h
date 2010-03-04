@@ -86,7 +86,7 @@ struct fidc_membh {
 #define	FCMH_FCOO_CLOSING	0x0080		/* (1 << 7) open obj going away */
 #define	FCMH_FCOO_FAILED	0x0100		/* (1 << 8) open obj didn't load */
 #define	FCMH_HAVE_ATTRS		0x0200		/* (1 << 9) has valid stat info */
-#define	FCMH_GETTING_ATTRS	0x0400		/* (1 << 10 fetching stat info */
+#define	FCMH_GETTING_ATTRS	0x0400		/* (1 << 10) fetching stat info */
 #define	_FCMH_FLGSHFT		0x0800		/* (1 << 11) */
 
 /*
@@ -240,6 +240,7 @@ int			 fidc_lookup(const struct slash_fidgen *, int,
 			    struct fidc_membh **);
 
 void			 dump_fcmh(struct fidc_membh *);
+void			 dump_fcmh_flags(int);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_poolmgr	*fidcPool;

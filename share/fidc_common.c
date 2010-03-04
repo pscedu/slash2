@@ -680,3 +680,33 @@ dump_fcmh(struct fidc_membh *f)
 {
 	DEBUG_FCMH(PLL_MAX, f, "");
 }
+
+void
+dump_fcmh_flags(int flags)
+{
+	int seq = 0;
+
+	if (flags & FCMH_CAC_CLEAN)
+		print_flag("FCMH_CAC_CLEAN", &seq);
+	if (flags & FCMH_CAC_DIRTY)
+		print_flag("FCMH_CAC_DIRTY", &seq);
+	if (flags & FCMH_CAC_FREEING)
+		print_flag("FCMH_CAC_FREEING", &seq);
+	if (flags & FCMH_CAC_FREE)
+		print_flag("FCMH_CAC_FREE", &seq);
+	if (flags & FCMH_ISDIR)
+		print_flag("FCMH_CAC_ISDIR", &seq);
+	if (flags & FCMH_FCOO_STARTING)
+		print_flag("FCMH_FCOO_STARTING", &seq);
+	if (flags & FCMH_FCOO_ATTACH)
+		print_flag("FCMH_FCOO_ATTACH", &seq);
+	if (flags & FCMH_FCOO_CLOSING)
+		print_flag("FCMH_FCOO_CLOSING", &seq);
+	if (flags & FCMH_FCOO_FAILED)
+		print_flag("FCMH_FCOO_FAILED", &seq);
+	if (flags & FCMH_HAVE_ATTRS)
+		print_flag("FCMH_HAVE_ATTRS", &seq);
+	if (flags & FCMH_GETTING_ATTRS)
+		print_flag("FCMH_GETTING_ATTRS", &seq);
+	printf("\n");
+}
