@@ -52,12 +52,14 @@ void
 fcmh_reset(struct fidc_membh *f)
 {
 	memset(f, 0, sizeof(*f));
-	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
-	INIT_PSCLIST_HEAD(&f->fcmh_children);
 	LOCK_INIT(&f->fcmh_lock);
 	atomic_set(&f->fcmh_refcnt, 0);
 	psc_waitq_init(&f->fcmh_waitq);
 	f->fcmh_state = FCMH_CAC_FREE;
+
+	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
+	INIT_PSCLIST_HEAD(&f->fcmh_sibling);
+	INIT_PSCLIST_HEAD(&f->fcmh_children);
 }
 
 /**
