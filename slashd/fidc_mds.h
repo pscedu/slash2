@@ -54,7 +54,8 @@ struct fcoo_mds_info *fidc_fcmh2fmi(struct fidc_membh *);
 int	mds_fcmh_load_fmi(struct fidc_membh *);
 int	mds_fcmh_tryref_fmi(struct fidc_membh *);
 
-int	slm_fcmh_get(struct slash_fidgen *, struct slash_creds *, struct fidc_membh **);
+int	slm_fcmh_get(const struct slash_fidgen *, struct slash_creds *,
+	    struct fidc_membh **);
 void	slm_fcmh_release(struct fidc_membh *);
 
 #endif /* _FIDC_MDS_H_ */

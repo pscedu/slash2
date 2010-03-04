@@ -29,6 +29,7 @@
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "mdsio.h"
+#include "slashd.h"
 
 int fcoo_priv_size = sizeof(struct fcoo_mds_info);
 
@@ -113,7 +114,7 @@ slm_fidc_getattr(struct fidc_membh *fcmh,
 }
 
 int
-slm_fcmh_get(struct slash_fidgen *fg, struct slash_creds *crp,
+slm_fcmh_get(const struct slash_fidgen *fg, struct slash_creds *crp,
     struct fidc_membh **fcmhp)
 {
 	struct fcoo_mds_info *fmi;
