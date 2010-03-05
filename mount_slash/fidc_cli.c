@@ -121,7 +121,7 @@ fidc_child_free_plocked(struct fidc_membh *c)
 	}
 
 	DEBUG_FCMH(PLL_DEBUG, c, "name=%s parent=%p freeing "
-	    "child_empty=%d", fcci->fcci_name, cc->fcci_parent,
+	    "child_empty=%d", cc->fcci_name, cc->fcci_parent,
 	    fcmh_isdir(c) ? psclist_empty(&cc->fcci_children) : -1);
 
 	PSCFREE(cc->fcci_name);
@@ -152,12 +152,12 @@ fidc_child_free_orphan_locked(struct fidc_membh *f)
 	cc->fcci_name = NULL;
 
 	DEBUG_FCMH(PLL_WARN, f, "name=%s freeing orphan",
-	    fcci->fcci_name);
+	    cc->fcci_name);
 
 	if (fcmh_isdir(f))
 		psc_assert(psclist_empty(&cc->fcci_children));
 
-	PSCFREE(fcci->fcci_name);
+	PSCFREE(cc->fcci_name);
 }
 
 /**
@@ -183,9 +183,8 @@ fidc_child_try_validate_locked(struct fidc_membh *p,
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
 	cc = fcmh_get_pri(c);
-	/* Both of these must always be true.
-	 */
-	if (strcmp(name, fcci->fcci_name)) {
+	/* Both of these must always be true. */
+	if (strcmp(name, cc->fcci_name)) {
 		/* This inode may have been renamed, remove fcmh. */
 		fidc_child_free_plocked(c);
 		return (0);
@@ -223,8 +222,7 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	cc = fcmh_get_pri(f);
 
 	LOCK_ENSURE(&f->fcmh_lock);
-	/* Don't free the root inode.
-	 */
+	/* Don't free the root inode. */
 	psc_assert(fcmh_2_fid(f) != 1);
 
 	DEBUG_FCMH(PLL_WARN, f, "fcmh_no_children=%d",
@@ -301,8 +299,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 
 	PFL_GETTIME(&now);
 	if (timercmp(&now, &c->fcmh_age, >)) {
-		/* It's old, remove it.
-		 */
+		/* It's old, remove it. */
 		fidc_child_free_plocked(c);
 		fcmh_dropref(c);
 		/* this will force an RPC to do the lookup */
@@ -349,8 +346,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 		return;
 	}
 
-	/* Perform some sanity checks on the cached data structure.
-	 */
+	/* Perform some sanity checks on the cached data structure. */
 	psc_assert(cc->fcci_parent == p);
 	psc_assert(cc->fcci_hash == psc_str_hashify(name));
 	psc_assert(strcmp(cc->fcci_name, name));
@@ -403,7 +399,7 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 		cc->fcci_parent = p;
 		psclist_xadd_tail(&cc->fcci_sibling, &pc->fcci_children);
 		DEBUG_FCMH(PLL_WARN, p, "adding name: %s",
-		    fcci->fcci_name);
+		    cc->fcci_name);
 	} else
 		/* Someone beat us to the punch, do sanity checks and then
 		 *  clean up.
@@ -452,7 +448,7 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	psc_assert(cc->fcci_name);
 	cc->fcci_name = psc_realloc(cc->fcci_name, len, 0);
 	cc->fcci_hash = psc_str_hashify(newname);
-	strlcpy(fcci->fcci_name, newname, len);
+	strlcpy(cc->fcci_name, newname, len);
 
 	spinlock(&np->fcmh_lock);
 	cc->fcci_parent = np;
