@@ -120,7 +120,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		if (mrsq->mrsq_id == mq->id) {
 			PLL_LOCK(&mrsq->mrsq_mrcs);
 			PLL_FOREACH(mrc, &mrsq->mrsq_mrcs)
-				if (SAMEFID(&mrc->mrc_mrs.mrs_fg, &mq->fg))
+				if (SAMEFG(&mrc->mrc_mrs.mrs_fg, &mq->fg))
 					break;
 			PLL_ULOCK(&mrsq->mrsq_mrcs);
 

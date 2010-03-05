@@ -414,7 +414,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	/*
 	 * The original code has a bug in iod_inode_lookup().  Even though that
 	 * it sets FIDC_LOOKUP_COPY, it does not pass in valid attributes (it
-	 * only uses COPYFID() to initialize part of the fcmh.  Need to investigate
+	 * only uses COPYFG() to initialize part of the fcmh.  Need to investigate
 	 * how an I/O server uses attributes. - 12/08/2009.
 	 */
 	if (flags & FIDC_LOOKUP_COPY)
@@ -511,9 +511,9 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		 */
 
 		if (flags & FIDC_LOOKUP_COPY) {
-			COPYFID(&fcmh->fcmh_fg, fgp);
+			COPYFG(&fcmh->fcmh_fg, fgp);
 #ifdef DEMOTED_INUM_WIDTHS
-			COPYFID(&fcmh->fcmh_smallfg, &searchfg);
+			COPYFG(&fcmh->fcmh_smallfg, &searchfg);
 #endif
 			fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
 			if (sstb)
@@ -528,9 +528,9 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
 			fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 			getting = 1;
-			COPYFID(&fcmh->fcmh_fg, fgp);
+			COPYFG(&fcmh->fcmh_fg, fgp);
 #ifdef DEMOTED_INUM_WIDTHS
-			COPYFID(&fcmh->fcmh_smallfg, &searchfg);
+			COPYFG(&fcmh->fcmh_smallfg, &searchfg);
 #endif
 		} /* else is handled by the initial asserts */
 

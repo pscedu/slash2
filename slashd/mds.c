@@ -56,9 +56,9 @@ __static void
 mds_inode_od_initnew(struct slash_inode_handle *i)
 {
 	i->inoh_flags = (INOH_INO_NEW | INOH_INO_DIRTY);
-	COPYFID(&i->inoh_ino.ino_fg, &i->inoh_fcmh->fcmh_fg);
-	/* For now this is a fixed size.
-	 */
+	COPYFG(&i->inoh_ino.ino_fg, &i->inoh_fcmh->fcmh_fg);
+
+	/* For now this is a fixed size. */
 	i->inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
 	i->inoh_ino.ino_version = INO_VERSION;
 	i->inoh_ino.ino_flags = 0;

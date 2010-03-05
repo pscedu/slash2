@@ -345,7 +345,7 @@ slvr_worker_int(void)
 	if (bcr) {
 		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_blkno);
 
-		psc_assert(SAMEFID(&bcr->bcr_crcup.fg,
+		psc_assert(SAMEFG(&bcr->bcr_crcup.fg,
 		    &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg));
 
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_NCRC_UPDATES);
@@ -375,7 +375,7 @@ slvr_worker_int(void)
 		bcr->bcr_xid = slvr_2_biod(s)->biod_bcr_xid;
 		slvr_2_biod(s)->biod_bcr_xid++;
 
-		COPYFID(&bcr->bcr_crcup.fg,
+		COPYFG(&bcr->bcr_crcup.fg,
 		    &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg);
 
 		bcr->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_blkno;

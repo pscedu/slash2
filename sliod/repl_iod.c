@@ -64,7 +64,7 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	 */
 	PLL_LOCK(&sli_replwkq_active);
 	PLL_FOREACH(w, &sli_replwkq_active)
-		if (SAMEFID(&w->srw_fg, fgp) &&
+		if (SAMEFG(&w->srw_fg, fgp) &&
 		    w->srw_bmapno == bmapno)
 			break;
 	PLL_ULOCK(&sli_replwkq_active);

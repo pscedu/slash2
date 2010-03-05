@@ -71,17 +71,21 @@ struct slash_fidgen {
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
 
 #define FID_GET_FLAGS(fid)	((fid) >> (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS))
-#define FID_GET_SITEID(fid)	(((fid) >> SLASH_ID_FID_BITS) &		\
+#define FID_GET_SITEID(fid)	(((fid) >> SLASH_ID_FID_BITS) &			\
 				    ~(~UINT64_C(0) << SLASH_ID_SITE_BITS))
 #define FID_GET_INUM(fid)	((fid) & ~(~UINT64_C(0) << (SLASH_ID_FID_BITS)))
 
 #define FID_SET_FLAGS(fid, fl)	((fid) |= ((fl) << (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS)))
 
-#define SAMEFID(a, b)							\
-	(((a)->fg_fid == (b)->fg_fid) && ((a)->fg_gen == (b)->fg_gen))
+#define SAMEFG(a, b)								\
+	((a)->fg_fid == (b)->fg_fid && (a)->fg_gen == (b)->fg_gen)
 
-#define COPYFID(d, s)		memcpy((d), (s), sizeof(*(d)))
-#define COPYFG(d, s)		memcpy((d), (s), sizeof(*(d)))
+#define COPYFG(d, s)								\
+	do {									\
+		psc_assert(sizeof(*(d)) == sizeof(struct slash_fidgen));	\
+		psc_assert(sizeof(*(s)) == sizeof(struct slash_fidgen));	\
+		memcpy((d), (s), sizeof(*(d)));					\
+	} while (0)
 
 void	fid_makepath(slfid_t, char *);
 int	fid_link(slfid_t, const char *);
