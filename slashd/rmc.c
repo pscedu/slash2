@@ -103,7 +103,7 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 int
 slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
-	struct srm_getattr_req *mq;
+	const struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 	struct fidc_membh *fcmh;
 
@@ -113,7 +113,8 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 		goto out;
 	mp->attr = fcmh->fcmh_sstb;
  out:
-	slm_fcmh_release(fcmh);
+	if (fcmh)
+		fcmh_dropref(fcmh);
 	return (0);
 }
 
@@ -219,8 +220,10 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
 	    mq->name, &mp->fg, &mq->creds, &mp->attr);
  out:
-	slm_fcmh_release(c);
-	slm_fcmh_release(p);
+	if (c)
+		fcmh_dropref(c);
+	if (p)
+		fcmh_dropref(p);
 	return (0);
 }
 
