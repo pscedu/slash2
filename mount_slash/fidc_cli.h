@@ -28,16 +28,12 @@
 
 struct fidc_membh;
 
-struct fidc_nameinfo {
-	int			 fni_hash;
-	char			 fni_name[0];
-};
-
 struct fcmh_cli_info {
 	struct fidc_membh	*fcci_parent;
 	struct psclist_head	 fcci_children;
 	struct psclist_head	 fcci_sibling;
-	struct fidc_nameinfo	*fcci_name;
+	int			 fcci_hash;
+	char			*fcci_name;
 };
 
 #define fcmh_2_fcci(f)		((struct fcmh_cli_info *)fcmh_get_pri(f))

@@ -52,17 +52,14 @@
 int fcoo_priv_size = sizeof(struct fcoo_cli_info);
 
 /**
- * fidc_new - create a new fni structure and initialize it using provided
- *     parameters.
- * @p: parent fcmh
- * @c: child fcmh
- * @name: name of child fcmh
+ * fcci_init - Initialize the client-specific fcmh substructure.
+ * @c: fcmh.
+ * @name: link name of fcmh.
  */
-static struct fidc_nameinfo *
-fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
+__static void
+fcci_init(struct fidc_membh *c, const char *name)
 {
 	struct fcmh_cli_info *cc;
-	struct fidc_nameinfo *fni;
 	int len;
 
 	cc = fcmh_get_pri(c);
@@ -72,24 +69,19 @@ fidc_new(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 		psc_fatalx("name too long");
 	len++;
 
-	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
-	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
-
-	fni = PSCALLOC(sizeof(*fni) + len);
-	fni->fni_hash = psc_str_hashify(name);
+	cc->fcci_name = psc_strdup(name);
+	cc->fcci_hash = psc_str_hashify(name);
 	INIT_PSCLIST_ENTRY(&cc->fcci_sibling);
 	INIT_PSCLIST_HEAD(&cc->fcci_children);
-	strlcpy(fni->fni_name, name, len);
-	return (fni);
 }
 
 /**
  * fidc_child_prep_free_locked - if the fcmh is a directory then detach
- *	any cached fni's from fcci_children.  This ensures that the
- *	children's fni_parent backpointer reference is properly erased.
+ *	any cached fcci_children.  This ensures that the
+ *	children's backpointer reference is properly erased.
  * @f:  the fcmh object to be freed.
  */
-static void
+__static void
 fidc_child_prep_free_locked(struct fidc_membh *f)
 {
 	struct fidc_membh *c, *tmp;
@@ -98,7 +90,7 @@ fidc_child_prep_free_locked(struct fidc_membh *f)
 	FCMH_FOREACH_CHILD_SAFE(c, tmp, f) {
 		cc = fcmh_get_pri(c);
 		DEBUG_FCMH(PLL_WARN, c, "fidc_membh=%p name=%s detaching",
-		    c, cc->fcci_name->fni_name);
+		    c, cc->fcci_name);
 		psc_assert(cc->fcci_parent == f);
 		cc->fcci_parent = NULL;
 		psclist_del(&cc->fcci_sibling);
@@ -106,17 +98,16 @@ fidc_child_prep_free_locked(struct fidc_membh *f)
 }
 
 /**
- * fidc_child_free - release a child fni.  The parent must already be
- *	locked (plocked == 'parent locked') so that the fni may be freed
+ * fidc_child_free - Release a child.  The parent must already be
+ *	locked (plocked == 'parent locked') so that the fcmh may be freed
  *	from the parent's fcci_children list.
- * @fni: the fni to be freed.
+ * @c: the fcmh to be freed.
  */
-static void
+__static void
 fidc_child_free_plocked(struct fidc_membh *c)
 {
-	int			 locked;
-	struct fidc_nameinfo	*fni;
 	struct fcmh_cli_info *cc;
+	int locked;
 
 	cc = fcmh_get_pri(c);
 	locked = reqlock(&c->fcmh_lock);
@@ -129,21 +120,19 @@ fidc_child_free_plocked(struct fidc_membh *c)
 		psc_assert(psclist_empty(&cc->fcci_children));
 	}
 
-	fni = cc->fcci_name;
-	DEBUG_FCMH(PLL_DEBUG, c, "fni=%p name=%s parent=%p freeing "
-	    "child_empty=%d", fni, fni->fni_name, cc->fcci_parent,
+	DEBUG_FCMH(PLL_DEBUG, c, "name=%s parent=%p freeing "
+	    "child_empty=%d", fcci->fcci_name, cc->fcci_parent,
 	    fcmh_isdir(c) ? psclist_empty(&cc->fcci_children) : -1);
 
-	cc->fcci_name = NULL;
+	PSCFREE(cc->fcci_name);
 	cc->fcci_parent = NULL;
 	psclist_del(&cc->fcci_sibling);
 
-	PSCFREE(fni);
 	ureqlock(&c->fcmh_lock, locked);
 }
 
 /**
- * fidc_child_free_orphan_locked - free an fni which has no parent
+ * fidc_child_free_orphan_locked - free an fcmh which has no parent
  *	pointer (and hence, is an 'orphan').  The freeing process here
  *	is less involved than fidc_child_free_plocked() because no
  *	parent data structure needs to be managed.
@@ -153,43 +142,39 @@ static void
 fidc_child_free_orphan_locked(struct fidc_membh *f)
 {
 	struct fcmh_cli_info *cc;
-	struct fidc_nameinfo *fni;
 
 	cc = fcmh_get_pri(f);
-	fni = cc->fcci_name;
 
 	LOCK_ENSURE(&f->fcmh_lock);
 
-	psc_assert(fni);
 	psc_assert(!cc->fcci_parent);
 	psc_assert(!(f->fcmh_state & FCMH_CAC_FREEING));
 	cc->fcci_name = NULL;
 
-	DEBUG_FCMH(PLL_WARN, f, "fni=%p name=%s freeing orphan",
-		   fni, fni->fni_name);
+	DEBUG_FCMH(PLL_WARN, f, "name=%s freeing orphan",
+	    fcci->fcci_name);
 
 	if (fcmh_isdir(f))
 		psc_assert(psclist_empty(&cc->fcci_children));
 
-	PSCFREE(fni);
+	PSCFREE(fcci->fcci_name);
 }
 
 /**
  * fidc_child_try_validate - given a parent fcmh, child, and a name, try
- *	to validate the child's fni if one exists.  On success the fni
- *	timeout is increased and if the fni was orphaned then is
+ *	to validate the child's fcmh if one exists.  On success, the fcmh
+ *	timeout is increased and if the fcmh was orphaned then it is
  *	reattached to the parent 'p'.
  * @p: parent fcmh
  * @c: child fcmh
- * @name: name of the fni entry associated with child.
- * Note: the locking order is [parent, child, child fni]
+ * @name: link name of child fcmh.
+ * Note: the locking order is [parent, child]
  */
-static struct fidc_nameinfo *
-fidc_child_try_validate_locked(struct fidc_membh *p, struct fidc_membh *c,
-			       const char *name)
+__static int
+fidc_child_try_validate_locked(struct fidc_membh *p,
+    struct fidc_membh *c, const char *name)
 {
 	struct fcmh_cli_info *cc, *pc;
-	struct fidc_nameinfo *fni;
 
 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
@@ -198,37 +183,29 @@ fidc_child_try_validate_locked(struct fidc_membh *p, struct fidc_membh *c,
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
 	cc = fcmh_get_pri(c);
-	fni = cc->fcci_name;
-	if (fni) {
-		/* Both of these must always be true.
-		 */
-		if (strncmp(name, fni->fni_name, strnlen(name, NAME_MAX))) {
-			/* This inode may have been renamed, remove
-			 *  this fni.
-			 */
-			fidc_child_free_plocked(c);
-			fni = NULL;
-		} else {
-			/* Increase the lifespan of this entry and return.
-			 */
-			fcmh_refresh_age(c);
-			/* If the fni is 'connected', then its parent inode
-			 *   must be 'p'.
-			 */
-			if (cc->fcci_parent) {
-				psc_assert(cc->fcci_parent == p);
-				psc_assert(psclist_conjoint(&cc->fcci_sibling));
-			} else {
-				cc->fcci_parent = p;
-				pc = fcmh_get_pri(p);
-				psclist_xadd_tail(&cc->fcci_sibling,
-						  &pc->fcci_children);
-				DEBUG_FCMH(PLL_WARN, p, "reattaching fni=%p",
-					   fni);
-			}
-		}
+	/* Both of these must always be true.
+	 */
+	if (strcmp(name, fcci->fcci_name)) {
+		/* This inode may have been renamed, remove fcmh. */
+		fidc_child_free_plocked(c);
+		return (0);
 	}
-	return (fni);
+
+	/* Increase the lifespan of this entry and return. */
+	fcmh_refresh_age(c);
+	/* If the child is 'connected', then its parent inode
+	 *   must be 'p'.
+	 */
+	if (cc->fcci_parent) {
+		psc_assert(cc->fcci_parent == p);
+		psc_assert(psclist_conjoint(&cc->fcci_sibling));
+	} else {
+		cc->fcci_parent = p;
+		pc = fcmh_get_pri(p);
+		psclist_xadd_tail(&cc->fcci_sibling,
+		    &pc->fcci_children);
+	}
+	return (1);
 }
 
 /**
@@ -242,23 +219,21 @@ int
 fidc_child_reap_cb(struct fidc_membh *f)
 {
 	struct fcmh_cli_info *cc;
-	struct fidc_nameinfo *fni;
 
 	cc = fcmh_get_pri(f);
-	fni = cc->fcci_name;
 
 	LOCK_ENSURE(&f->fcmh_lock);
 	/* Don't free the root inode.
 	 */
 	psc_assert(fcmh_2_fid(f) != 1);
 
-	DEBUG_FCMH(PLL_WARN, f, "fni=%p fcmh_no_children=%d", fni,
+	DEBUG_FCMH(PLL_WARN, f, "fcmh_no_children=%d",
 	    fcmh_isdir(f) ? psclist_empty(&cc->fcci_children) : -1);
 
 	if (fcmh_isdir(f) && !psclist_empty(&cc->fcci_children))
 		return (0);
 
-	else if (!fni)
+	else if (cc->fcci_name == NULL)
 		return (1);
 
 	else if (!cc->fcci_parent) {
@@ -266,14 +241,14 @@ fidc_child_reap_cb(struct fidc_membh *f)
 		return (1);
 
 	} else if (trylock(&cc->fcci_parent->fcmh_lock)) {
-		/* The parent needs to be unlocked after the fni is freed,
+		/* The parent needs to be unlocked after the child is freed,
 		 *  hence the need for the temp var 'p'.
 		 */
 		struct fidc_membh *p = cc->fcci_parent;
 
 		psc_assert(p);
 		/* This trylock technically violates lock ordering
-		 *  (parent / child / fni) which is why we bail if the
+		 *  (parent / child) which is why we bail if the
 		 *  parent lock cannot be obtained without blocking.
 		 */
 		fidc_child_free_plocked(f);
@@ -286,7 +261,7 @@ fidc_child_reap_cb(struct fidc_membh *f)
 
 /**
  * fidc_child_get_int_locked - given a parent directory inode, try to
- *	locate a child.  If the fni is too old then it is freed and NULL
+ *	locate a child.  If the child is too old then it is freed and NULL
  *	is returned.
  * @parent: the parent directory inode.
  * @name: name of the child.
@@ -311,11 +286,10 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		cc = fcmh_get_pri(c);
 
 		psc_traces(PSS_GEN, "p=fcmh@%p c=%p cname=%s hash=%d",
-		       p, c, cc->fcci_name->fni_name, cc->fcci_name->fni_hash);
+		    p, c, cc->fcci_name, cc->fcci_hash);
 
-		if (cc->fcci_name->fni_hash == hash &&
-		    strncmp(name, cc->fcci_name->fni_name,
-		    strnlen(name, NAME_MAX)) == 0) {
+		if (cc->fcci_hash == hash &&
+		    strcmp(name, cc->fcci_name) == 0) {
 			found = 1;
 			psc_assert(cc->fcci_parent == p);
 			fcmh_incref(c);
@@ -336,30 +310,6 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	}
 	return (c);
 }
-
-#if 0
-int
-fidc_child_cmp(const void *x, const void *y)
-{
-	const struct fidc_nameinfo *a=x, *b=y;
-	if ((c->fni_hash == hash) &&
-	    (!strncmp(name, c->fni_name, strnlen(name, NAME_MAX)))) {
-		/* Pin down the fni while the parent dir lock is held.
-		 */
-		found=1;
-		atomic_inc(&c->fni_ref);
-		break;
-	}
-
-	if (a->
-
-	if (a->bcm_blkno > b->bcm_blkno)
-		return (1);
-	else if (a->bcm_blkno < b->bcm_blkno)
-		return (-1);
-	return (0);
-}
-#endif
 
 /**
  * fidc_child_lookup - search the parent inode for the child entry 'name'.
@@ -402,11 +352,10 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	/* Perform some sanity checks on the cached data structure.
 	 */
 	psc_assert(cc->fcci_parent == p);
-	psc_assert(cc->fcci_name->fni_hash == psc_str_hashify(name));
-	psc_assert(!strncmp(cc->fcci_name->fni_name, name,
-	    strnlen(cc->fcci_name->fni_name, NAME_MAX)));
+	psc_assert(cc->fcci_hash == psc_str_hashify(name));
+	psc_assert(strcmp(cc->fcci_name, name));
 
-	/* The only ref on the fni should be the one taken above in
+	/* The only ref on the child should be the one taken above in
 	 *  fidc_child_lookup_int_locked()
 	 */
 	psc_assert(atomic_dec_and_test(&c->fcmh_refcnt));
@@ -440,25 +389,21 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	if (fidc_child_try_validate_locked(p, c, name))
 		goto end;
 
-	/* Atomic check+add onto the parent d_inode.
-	 */
-	if (!(tmp = fidc_child_lookup_int_locked(p, name))) {
-		struct fidc_nameinfo *fni;
+	/* Atomic check+add onto the parent d_inode. */
+	tmp = fidc_child_lookup_int_locked(p, name);
+	if (tmp == NULL) {
 		struct fcmh_cli_info *cc, *pc;
 
 		pc = fcmh_get_pri(p);
 
-		/* It doesn't yet exist, add it.
-		 */
-		fni = fidc_new(p, c, name);
-		psc_assert(fni);
+		/* It doesn't yet exist, add it. */
+		fcci_init(c, name);
 
 		cc = fcmh_get_pri(c);
-		cc->fcci_name = fni;
 		cc->fcci_parent = p;
 		psclist_xadd_tail(&cc->fcci_sibling, &pc->fcci_children);
-		DEBUG_FCMH(PLL_WARN, p, "fni=%p, adding name: %s",
-			   fni, fni->fni_name);
+		DEBUG_FCMH(PLL_WARN, p, "adding name: %s",
+		    fcci->fcci_name);
 	} else
 		/* Someone beat us to the punch, do sanity checks and then
 		 *  clean up.
@@ -473,9 +418,8 @@ void
 fidc_child_rename(struct fidc_membh *op, const char *oldname,
     struct fidc_membh *np, const char *newname)
 {
-	struct fidc_membh *ch;
-	struct fidc_nameinfo *fni;
 	struct fcmh_cli_info *cc, *pc;
+	struct fidc_membh *ch;
 	size_t len;
 
 	pc = fcmh_get_pri(np);
@@ -504,13 +448,11 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 		return;
 	}
 
-	fni = cc->fcci_name;
-
 	/* overwrite the old name with the new one in place */
 	psc_assert(cc->fcci_name);
-	fni = cc->fcci_name = psc_realloc(fni, sizeof(*fni) + len, 0);
-	fni->fni_hash = psc_str_hashify(newname);
-	strlcpy(fni->fni_name, newname, len);
+	cc->fcci_name = psc_realloc(cc->fcci_name, len, 0);
+	cc->fcci_hash = psc_str_hashify(newname);
+	strlcpy(fcci->fcci_name, newname, len);
 
 	spinlock(&np->fcmh_lock);
 	cc->fcci_parent = np;
@@ -520,11 +462,11 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	fcmh_dropref(ch);
 	freelock(&ch->fcmh_lock);
 
-	DEBUG_FCMH(PLL_WARN, ch, "fni=%p, rename file: "
-		   "%s op(i+g:%"PRId64"+""%"PRId64") --> "
-		   "%s np(i+g:%"PRId64"+""%"PRId64")",
-		   fni, oldname, fcmh_2_fid(op), fcmh_2_gen(op),
-		   newname, fcmh_2_fid(np), fcmh_2_gen(np));
+	DEBUG_FCMH(PLL_WARN, ch, "rename file: "
+	    "%s op(i+g:%"PRId64"+""%"PRId64") --> "
+	    "%s np(i+g:%"PRId64"+""%"PRId64")",
+	    oldname, fcmh_2_fid(op), fcmh_2_gen(op),
+	    newname, fcmh_2_fid(np), fcmh_2_gen(np));
 }
 
 /**

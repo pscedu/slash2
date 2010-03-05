@@ -886,8 +886,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		return (rc);
 	}
 
-	mq->cfd = fcmh_2_cfd(fcmh);
-	mq->fg = fcmh->fcmh_fg;
+	mq->cfd = fcmh_2_cfd(d);
+	mq->fg = d->fcmh_fg;
 	mq->size = size;
 	mq->offset = off;
 
