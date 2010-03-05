@@ -51,8 +51,7 @@ cfdcmp(const void *a, const void *b)
 {
 	const struct cfdent *ca = a, *cb = b;
 
-	return (CMP(ca->cfd_fdb.sfdb_secret.sfs_cfd,
-	    cb->cfd_fdb.sfdb_secret.sfs_cfd));
+	return (CMP(ca->cfd_cfd, cb->cfd_cfd));
 }
 
 __static int
@@ -88,14 +87,12 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, enum slconn_type peertype,
 	psc_assert(flags == CFD_DIR || flags == CFD_FILE);
 
 	c = PSCALLOC(sizeof(*c));
-	c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid = fid;
+	c->cfd_fg.fg_fid = fid;
 	c->cfd_flags = flags;
 
 	spinlock(&exp->exp_lock);
 	slexp = slexp_get(exp, peertype);
-	c->cfd_fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
-	if (c->cfd_fdb.sfdb_secret.sfs_cfd == FID_ANY)
-		c->cfd_fdb.sfdb_secret.sfs_cfd = ++slexp->slexp_nextcfd;
+	c->cfd_cfd = ++slexp->slexp_nextcfd;
 	freelock(&exp->exp_lock);
 
 	if (cfd_ops.cfd_init) {
@@ -108,7 +105,7 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, enum slconn_type peertype,
 	}
 
 	psc_info("FID (%"PRId64") CFD (%"PRId64") PRI(%p)", fid,
-		 c->cfd_fdb.sfdb_secret.sfs_cfd, c->cfd_pri);
+	    c->cfd_cfd, c->cfd_pri);
 
 	rc = cfdinsert(c, exp);
 	if (rc) {
@@ -140,7 +137,7 @@ cfdlookup(struct pscrpc_export *exp, uint64_t cfd, void *datap)
 	struct cfdent *c, q;
 	int rc = 0;
 
-	q.cfd_fdb.sfdb_secret.sfs_cfd = cfd;
+	q.cfd_cfd = cfd;
 	spinlock(&exp->exp_lock);
 	mc = mexpcli_get(exp);
 	c = SPLAY_FIND(cfdtree, &mc->mc_cfdtree, &q);
@@ -159,7 +156,7 @@ cfdget(struct pscrpc_export *exp, uint64_t cfd)
 	struct mexp_cli *mc;
 	struct cfdent *c, q;
 
-	q.cfd_fdb.sfdb_secret.sfs_cfd = cfd;
+	q.cfd_cfd = cfd;
 	spinlock(&exp->exp_lock);
 	mc = mexpcli_get(exp);
 	c = SPLAY_FIND(cfdtree, &mc->mc_cfdtree, &q);
@@ -179,7 +176,7 @@ cfdfree(struct pscrpc_export *exp, uint64_t cfd)
 	struct cfdent *c, q;
 	int rc=0, locked;
 
-	q.cfd_fdb.sfdb_secret.sfs_cfd = cfd;
+	q.cfd_cfd = cfd;
 
 	rc = 0;
 	locked = reqlock(&exp->exp_lock);

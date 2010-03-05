@@ -31,7 +31,8 @@ struct cfdops;
 
 /* client file descriptor entry */
 struct cfdent {
-	struct srt_fd_buf	 cfd_fdb;
+	uint64_t		 cfd_cfd;
+	struct slash_fidgen	 cfd_fg;
 	void			*cfd_pri;
 	int			 cfd_flags;
 	SPLAY_ENTRY(cfdent)	 cfd_entry;

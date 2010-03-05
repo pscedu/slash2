@@ -272,7 +272,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 	 *  We do a simple lookup here because the inode should already exist
 	 *  in the cache.
 	 */
-	f = fidc_lookup_simple(c->cfd_fdb.sfdb_secret.sfs_fg.fg_fid);
+	f = fidc_lookup_simple(c->cfd_fg.fg_fid);
 	if (!f)
 		return (-1);
 

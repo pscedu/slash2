@@ -356,9 +356,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc = cfdnew(fg.fg_fid, rq->rq_export,
 	    SLCONNT_CLI, &cfd, CFD_FILE);
 	if (mp->rc == 0) {
-		fdbuf_sign(&cfd->cfd_fdb, &fg, &rq->rq_peer);
-		memcpy(&mp->sfdb, &cfd->cfd_fdb,
-		    sizeof(mp->sfdb));
+		mp->cfd = cfd->cfd_cfd;
+		mp->fg = fg;
 	}
 
  out:
@@ -399,9 +398,8 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	mp->rc = cfdnew(mq->fg.fg_fid, rq->rq_export,
 	    SLCONNT_CLI, &cfd, CFD_FILE);
 	if (mp->rc == 0) {
-		fdbuf_sign(&cfd->cfd_fdb, &mq->fg, &rq->rq_peer);
-		memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
 		mp->attr = fcmh->fcmh_sstb;
+		mp->cfd = cfd->cfd_cfd;
 	}
 
  out:
@@ -429,9 +427,8 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	mp->rc = cfdnew(mq->fg.fg_fid, rq->rq_export,
 	    SLCONNT_CLI, &cfd, CFD_DIR);
 	if (mp->rc == 0) {
-		fdbuf_sign(&cfd->cfd_fdb, &mq->fg, &rq->rq_peer);
-		memcpy(&mp->sfdb, &cfd->cfd_fdb, sizeof(mp->sfdb));
 		mp->attr = d->fcmh_sstb;
+		mp->cfd = cfd->cfd_cfd;
 	}
 
  out:
