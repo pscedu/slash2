@@ -320,6 +320,8 @@ struct srm_open_req {
 } __packed;
 
 struct srm_open_rep {
+	uint64_t		cfd;
+	struct slash_fidgen	fg;
 	struct srt_fd_buf	sfdb;
 	struct srt_stat		attr;
 	int32_t			rc;
