@@ -72,20 +72,6 @@ fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 }
 #endif
 
-struct fcoo_mds_info *
-fcmh_load_fmi_nostart(struct fidc_membh *fcmh, enum rw rw)
-{
-	struct fcoo_mds_info *fmi = NULL;
-	int rc, locked;
-
-	locked = FCMH_RLOCK(fcmh);
-	rc = fcmh_load_fcoo(fcmh, rw);
-	if (rc == 0)
-		fmi = fcmh_2_fmi(fcmh);
-	FCMH_URLOCK(fcmh, locked);
-	return (fmi);
-}
-
 int
 slm_fidc_getattr(struct fidc_membh *fcmh,
     const struct slash_creds *cr)
@@ -102,16 +88,13 @@ int
 fcmh_load_fmi(struct fidc_membh *fcmh, enum rw rw)
 {
 	struct fcoo_mds_info *fmi;
-	int rc, locked;
+	int rc;
 
-	locked = FCMH_RLOCK(fcmh);
 	rc = fcmh_load_fcoo(fcmh, rw);
-	if (rc <= 0) {
-		FCMH_URLOCK(fcmh, locked);
+	if (rc <= 0)
 		return (rc);
-	}
+
 	fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
-	FCMH_ULOCK(fcmh);
 
 	SPLAY_INIT(&fmi->fmi_exports);
 	atomic_set(&fmi->fmi_refcnt, 0);
@@ -138,8 +121,6 @@ fcmh_load_fmi(struct fidc_membh *fcmh, enum rw rw)
 		fidc_fcoo_startfailed(fcmh);
 	else
 		fidc_fcoo_startdone(fcmh);
-	if (locked)
-		FCMH_LOCK(fcmh);
 	return (rc);
 }
 

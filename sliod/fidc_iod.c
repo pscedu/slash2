@@ -70,16 +70,12 @@ sli_fcmh_shrink(void)
 int
 fcmh_load_fii(struct fidc_membh *fcmh, enum rw rw)
 {
-	int flags, rc, locked;
 	char fidfn[PATH_MAX];
+	int flags, rc;
 
-	locked = FCMH_RLOCK(fcmh);
 	rc = fcmh_load_fcoo(fcmh, rw);
-	if (rc <= 0) {
-		FCMH_URLOCK(fcmh, locked);
+	if (rc <= 0)
 		return (rc);
-	}
-	FCMH_ULOCK(fcmh);
 
 	flags = O_RDWR;
 	if (rw == SL_WRITE)
@@ -92,8 +88,6 @@ fcmh_load_fii(struct fidc_membh *fcmh, enum rw rw)
 		fidc_fcoo_startfailed(fcmh);
 	} else
 		fidc_fcoo_startdone(fcmh);
-	if (locked)
-		FCMH_LOCK(fcmh);
 	return (rc);
 }
 

@@ -561,17 +561,13 @@ fcmh_load_fci(struct fidc_membh *fcmh, enum rw rw)
 	struct pscrpc_request *rq;
 	struct srm_open_req *mq;
 	struct srm_open_rep *mp;
-	int rc, locked;
+	int rc;
 
-	locked = FCMH_RLOCK(fcmh);
 	rc = fcmh_load_fcoo(fcmh, rw);
-	if (rc <= 0) {
-		FCMH_URLOCK(fcmh, locked);
+	if (rc <= 0)
 		return (rc);
-	}
 
 	fci = fcoo_get_pri(fcmh->fcmh_fcoo);
-	FCMH_ULOCK(fcmh);
 
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    fcmh_isdir(fcmh) ? SRMT_OPENDIR : SRMT_OPEN,
@@ -595,8 +591,6 @@ fcmh_load_fci(struct fidc_membh *fcmh, enum rw rw)
 		fidc_fcoo_startfailed(fcmh);
 	else
 		fidc_fcoo_startdone(fcmh);
-	if (locked)
-		FCMH_LOCK(fcmh);
 	return (rc);
 }
 
