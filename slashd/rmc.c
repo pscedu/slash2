@@ -238,9 +238,6 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	mp->rc = slm_fcmh_get(&mq->pfg, &fcmh);
 	if (mp->rc)
 		goto out;
-	mp->rc = checkcreds(&fcmh->fcmh_sstb, &rootcreds, X_OK);
-	if (mp->rc)
-		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (fcmh_2_mdsio_fid(fcmh) == SL_ROOT_INUM &&
@@ -252,7 +249,8 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	mp->rc = mdsio_lookup(fcmh_2_mdsio_fid(fcmh),
 	    mq->name, &mp->fg, NULL, &rootcreds, &mp->attr);
  out:
-	slm_fcmh_release(fcmh);
+	if (fcmh)
+		fcmh_dropref(fcmh);
 	return (0);
 }
 
@@ -276,7 +274,8 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(fcmh), mq->name,
 	    mq->mode, &mq->creds, &mp->attr, &mp->fg, NULL);
  out:
-	slm_fcmh_release(fcmh);
+	if (fcmh)
+		fcmh_dropref(fcmh);
 	return (0);
 }
 
@@ -320,7 +319,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	void *mdsio_data;
 	int fl;
 
-	p = c = NULL;
+	p = NULL;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
@@ -349,8 +348,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		mp->cfd = cfd->cfd_cfd;
 
  out:
-	slm_fcmh_release(c);
-	slm_fcmh_release(p);
+	if (p)
+		fcmh_dropref(p);
 	return (0);
 }
 
@@ -375,7 +374,8 @@ slm_rmc_handle_open(struct pscrpc_request *rq)
 	}
 
  out:
-	slm_fcmh_release(fcmh);
+	if (fcmh)
+		fcmh_dropref(fcmh);
 	return (0);
 }
 
@@ -400,7 +400,8 @@ slm_rmc_handle_opendir(struct pscrpc_request *rq)
 	}
 
  out:
-	slm_fcmh_release(d);
+	if (d)
+		fcmh_dropref(d);
 	return (0);
 }
 
@@ -500,7 +501,8 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 		pscrpc_free_bulk(desc);
 
  out:
-	slm_fcmh_release(fcmh);
+	if (fcmh)
+		fcmh_dropref(fcmh);
 	return (mp->rc);
 }
 
@@ -593,8 +595,10 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &mq->creds);
  out:
-	slm_fcmh_release(np);
-	slm_fcmh_release(op);
+	if (np)
+		fcmh_dropref(np);
+	if (op)
+		fcmh_dropref(op);
 	return (mp->rc);
 }
 
