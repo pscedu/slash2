@@ -59,13 +59,4 @@ int	mds_fcmh_tryref_fmi(struct fidc_membh *);
 
 int	fcmh_load_fmi(struct fidc_membh *, enum rw);
 
-static __inline void
-slm_fcmh_release(struct fidc_membh *fcmh)
-{
-	if (fcmh) {
-		mds_inode_release(fcmh);
-		fcmh_dropref(fcmh);
-	}
-}
-
 #endif /* _FIDC_MDS_H_ */

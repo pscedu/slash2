@@ -634,7 +634,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	    &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh));
 
  out:
-	slm_fcmh_release(fcmh);
+	if (fcmh)
+		fcmh_dropref(fcmh);
 	return (0);
 }
 
@@ -657,6 +658,10 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
+	mp->rc = fcmh_load_fmi(fcmh, SL_WRITE);
+	if (mp->rc)
+		goto out;
+
 	ih = fcmh_2_inoh(fcmh);
 	mp->rc = mds_inox_ensure_loaded(ih);
 	if (mp->rc == 0) {
@@ -664,8 +669,11 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 		ih->inoh_flags |= INOH_EXTRAS_DIRTY;
 		mds_inode_sync(ih);
 	}
+
+	mds_inode_release(fcmh);
  out:
-	slm_fcmh_release(fcmh);
+	if (fcmh)
+		fcmh_dropref(fcmh);
 	return (0);
 }
 
@@ -676,8 +684,11 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	struct slash_inode_handle *ih;
 	struct bmap_mds_info *bmdsi;
 	struct srm_generic_rep *mp;
+	struct fcoo_mds_info *fmi;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
+
+	fmi = NULL;
 
 	RSX_ALLOCREP(rq, mq, mp);
 
@@ -689,7 +700,12 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		goto out;
-	ih = fcmh_2_inoh(fcmh);
+
+	mp->rc = fcmh_load_fmi(fcmh, SL_WRITE);
+	if (mp->rc)
+		goto out;
+	fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
+
 	if (!mds_bmap_exists(fcmh, mq->bmapno)) {
 		mp->rc = SLERR_BMAP_INVALID;
 		goto out;
@@ -705,7 +721,10 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	mds_repl_bmap_rel(bcm);
 
  out:
-	slm_fcmh_release(fcmh);
+	if (fmi)
+		mds_inode_release(fcmh);
+	if (fcmh)
+		fcmh_dropref(fcmh);
 	return (0);
 }
 
@@ -761,7 +780,8 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
 	    &mq->creds, &mp->attr, &mp->fg, NULL);
  out:
-	slm_fcmh_release(p);
+	if (p)
+		fcmh_dropref(p);
 	return (mp->rc);
 }
 
@@ -784,9 +804,9 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	else
 		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p),
 		    mq->name, &rootcreds);
-	/* XXX update fidc to reflect change */
  out:
-	slm_fcmh_release(p);
+	if (p)
+		fcmh_dropref(p);
 	return (0);
 }
 
