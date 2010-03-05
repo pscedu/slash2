@@ -158,24 +158,6 @@ enum {
 
 #define DESCBUF_REPRLEN		45		/* strlen(base64(SHA256(secret)) */
 
-struct srt_fdb_secret {
-	uint64_t		sfs_magic;
-	struct slash_fidgen	sfs_fg;
-	uint64_t		sfs_cfd;	/* stream handle/ID */
-	uint64_t		sfs_nonce;
-	uint64_t		sfs_cli_nid;
-	uint32_t		sfs_cli_pid;
-	uint32_t		sfs__pad2;
-} __packed;
-
-/* hash = base64(SHA256(secret + key)) */
-struct srt_fd_buf {
-	struct srt_fdb_secret	sfdb_secret;	/* encrypted */
-	char			sfdb_hash[DESCBUF_REPRLEN];
-	char			sfdb__pad[3];
-} __packed;
-
-#define SFDB_MAGIC		UINT64_C(0x1234123412341234)
 #define SBDB_MAGIC		UINT64_C(0x4321432143214321)
 
 struct srt_bdb_secret {
@@ -201,7 +183,8 @@ struct srt_bmapdesc_buf {
 /* -------------------------- BEGIN FULL MESSAGES -------------------------- */
 
 struct srm_bmap_req {
-	struct srt_fd_buf	sfdb;
+	struct slash_fidgen	fg;
+	uint64_t		cfd;
 	uint32_t		pios;		/* client's preferred IOS ID	*/
 	uint32_t		blkno;		/* Starting block number	*/
 	uint32_t		nblks;		/* Read-ahead support		*/
@@ -253,7 +236,8 @@ struct srm_bmap_wire_rep {
 } __packed;
 
 struct srm_bmap_chmode_req {
-	struct srt_fd_buf	sfdb;
+	struct slash_fidgen	fg;
+	uint64_t		cfd;
 	uint32_t		blkno;
 	int32_t			rw;
 } __packed;
@@ -304,30 +288,18 @@ struct srm_connect_req {
 } __packed;
 
 struct srm_create_req {
-	struct slash_creds	creds;
 	struct slash_fidgen	pfg;
 	char			name[NAME_MAX + 1];
 	uint32_t		mode;
 	uint32_t		flags;
 } __packed;
 
-#define srm_create_rep srm_open_rep
-
-struct srm_open_req {
-	struct slash_creds	creds;
+struct srm_create_rep {
 	struct slash_fidgen	fg;
-	uint32_t		flags;
-} __packed;
-
-struct srm_open_rep {
 	uint64_t		cfd;
-	struct slash_fidgen	fg;
-	struct srt_fd_buf	sfdb;
 	struct srt_stat		attr;
 	int32_t			rc;
 } __packed;
-
-#define srm_opencreate_rep srm_open_rep
 
 struct srm_destroy_req {
 } __packed;
@@ -335,7 +307,6 @@ struct srm_destroy_req {
 #define srm_disconnect_req srm_destroy_req
 
 struct srm_getattr_req {
-	struct slash_creds	creds;
 	struct slash_fidgen	fg;
 } __packed;
 
@@ -383,7 +354,6 @@ struct srm_link_rep {
 } __packed;
 
 struct srm_lookup_req {
-	struct slash_creds	creds;
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[NAME_MAX + 1];
 } __packed;
@@ -415,19 +385,25 @@ struct srm_mknod_req {
 	uint32_t		rdev;
 } __packed;
 
-struct srm_opendir_req {
-	struct slash_creds	creds;
+struct srm_open_req {
 	struct slash_fidgen	fg;
 } __packed;
 
+struct srm_open_rep {
+	uint64_t		cfd;
+	struct srt_stat		attr;
+	int32_t			rc;
+} __packed;
+
+#define srm_opendir_req srm_open_req
 #define srm_opendir_rep srm_open_rep
 
 struct srm_ping_req {
 } __packed;
 
 struct srm_readdir_req {
-	struct srt_fd_buf	sfdb;
-	struct slash_creds	creds;
+	struct slash_fidgen	fg;
+	uint64_t		cfd;
 	uint64_t		offset;
 	uint64_t		size;
 	uint32_t		nstbpref;
@@ -444,7 +420,6 @@ struct srm_readdir_rep {
 } __packed;
 
 struct srm_readlink_req {
-	struct slash_creds	creds;
 	struct slash_fidgen	fg;
 } __packed;
 
@@ -454,8 +429,8 @@ struct srm_readlink_rep {
 } __packed;
 
 struct srm_release_req {
-	struct srt_fd_buf	sfdb;
-	struct slash_creds	creds;
+	struct slash_fidgen	fg;
+	uint64_t		cfd;
 	uint32_t		flags;
 } __packed;
 
@@ -537,7 +512,6 @@ struct srm_repl_read_req {
 #define srm_repl_read_rep srm_io_rep
 
 struct srm_setattr_req {
-	struct slash_creds	creds;
 	struct slash_fidgen	fg;
 	struct srt_stat		attr;
 	int32_t			to_set;
@@ -554,13 +528,11 @@ struct srm_setattr_req {
 #define SRM_SETATTRF_PTRUNCGEN	(1 << 7)	/* file content non-zero trunc */
 
 struct srm_set_newreplpol_req {
-	struct slash_creds	creds;
 	struct slash_fidgen	fg;
 	int32_t			pol;
 } __packed;
 
 struct srm_set_bmapreplpol_req {
-	struct slash_creds	creds;
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	int32_t			pol;
@@ -569,7 +541,6 @@ struct srm_set_bmapreplpol_req {
 #define srm_setattr_rep srm_getattr_rep
 
 struct srm_statfs_req {
-	struct slash_creds	creds;
 } __packed;
 
 struct srm_statfs_rep {
@@ -592,7 +563,6 @@ struct srm_symlink_rep {
 } __packed;
 
 struct srm_unlink_req {
-	struct slash_creds	creds;
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[NAME_MAX + 1];
 } __packed;
@@ -601,6 +571,7 @@ struct srm_unlink_req {
 
 struct srm_generic_rep {
 	int32_t			rc;
+	struct srt_stat		sstb;
 } __packed;
 
 /* --------------------------- END FULL MESSAGES --------------------------- */

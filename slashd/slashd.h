@@ -108,16 +108,11 @@ struct resprof_mds_info {
 	psc_spinlock_t		  rpmi_lock;
 };
 
-/* cfd private accessors */
-#define cfd_2_mexpfcm(cfd)	((struct mexpfcm *)(cfd)->cfd_pri)
-#define cfd_2_fcmh(cfd)		cfd_2_mexpfcm(cfd)->mexpfcm_fcmh
-#define cfd_2_fmi(cfd)		fcmh_2_fmi(cfd_2_fcmh(cfd))
-#define cfd_2_mdsio_data(cfd)	fcmh_2_mdsio_data(cfd_2_fcmh(cfd))
-
 int		 fid_get(const char *, struct slash_fidgen *,
 		    struct slash_creds *, int, mode_t);
 
 int		 mds_inode_release(struct fidc_membh *);
+int		 mds_inode_read(struct slash_inode_handle *);
 int		 mds_inox_load_locked(struct slash_inode_handle *);
 int		 mds_inox_ensure_loaded(struct slash_inode_handle *);
 

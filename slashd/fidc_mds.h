@@ -26,6 +26,7 @@
 #include "mdsexpc.h"
 #include "mdsio.h"
 #include "mdslog.h"
+#include "slashd.h"
 
 SPLAY_HEAD(fcm_exports, mexpfcm);
 SPLAY_PROTOTYPE(fcm_exports, mexpfcm, mexpfcm_fcmh_tentry, mexpfcm_cache_cmp);
@@ -52,14 +53,19 @@ struct fcoo_mds_info {
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
 #define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
 
-struct fcoo_mds_info *fidc_fid2fmi(slfid_t, struct fidc_membh **);
-struct fcoo_mds_info *fidc_fcmh2fmi(struct fidc_membh *);
+#define slm_fcmh_get(fgp, fcmhp)	fcmh_getload((fgp), &rootcreds, (fcmhp))
 
-int	mds_fcmh_load_fmi(struct fidc_membh *);
 int	mds_fcmh_tryref_fmi(struct fidc_membh *);
 
-int	slm_fcmh_get(const struct slash_fidgen *, struct slash_creds *,
-	    struct fidc_membh **);
-void	slm_fcmh_release(struct fidc_membh *);
+int	fcmh_load_fmi(struct fidc_membh *, enum rw);
+
+static __inline void
+slm_fcmh_release(struct fidc_membh *fcmh)
+{
+	if (fcmh) {
+		mds_inode_release(fcmh);
+		fcmh_dropref(fcmh);
+	}
+}
 
 #endif /* _FIDC_MDS_H_ */

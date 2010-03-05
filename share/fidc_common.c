@@ -392,7 +392,7 @@ fidc_lookup_simple(slfid_t f)
 }
 
 int
-fidc_lookup(const struct slash_fidgen *fgp, int flags,
+fidc_lookupf(const struct slash_fidgen *fgp, int flags,
     const struct srt_stat *sstb, int setattrflags,
     const struct slash_creds *creds, struct fidc_membh **fcmhp)
 {
@@ -534,19 +534,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 #endif
 		} /* else is handled by the initial asserts */
 
-		/* if there is already an fcoo, don't overwrite */
-		if ((flags & FIDC_LOOKUP_FCOOSTART) &&
-		    (fcmh->fcmh_state & FCMH_FCOO_ATTACH))
-			flags &= ~FIDC_LOOKUP_FCOOSTART;
-
-		if (flags & FIDC_LOOKUP_FCOOSTART) {
-			/* Set an 'open' placeholder so that
-			 *  only the caller may perform an open
-			 *  RPC.  This is used for file creates.
-			 */
-			fcmh->fcmh_state |= FCMH_FCOO_STARTING;
-			fcmh->fcmh_fcoo = FCOO_STARTING;
-		}
 		/* Place the fcmh into the cache, note that the fcmh was
 		 *  ref'd so no race condition exists here.
 		 */
@@ -554,19 +541,15 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			DEBUG_FCMH(PLL_NOTICE, fcmh,
 			    "adding FIDGEN_ANY to cache");
 
+		if (flags & FIDC_LOOKUP_FCOOSTART)
+			fidc_fcoo_start_locked(fcmh);
+
+		/* XXX lock CleanList first */
 		FCMH_LOCK(fcmh);
 		fidc_put(fcmh, &fidcCleanList);
 		psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 		psc_hashbkt_unlock(b);
 
-		/* Do this dance so that fidc_fcoo_start_locked() is not
-		 *  called while holding the hash bucket lock!
-		 */
-		if (flags & FIDC_LOOKUP_FCOOSTART) {
-			psc_assert(fcmh->fcmh_fcoo == FCOO_STARTING);
-			fcmh->fcmh_fcoo = NULL;
-			fidc_fcoo_start_locked(fcmh);
-		}
 		FCMH_ULOCK(fcmh);
 		DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 	}
@@ -613,6 +596,69 @@ fidc_fcoo_init(void)
 }
 
 /**
+ * fidc_load_fcoo - Require an open object for the backed fcmh.
+ * @fcmh: FID cache member handle.
+ * Returns:
+ *	-1	object could not be loaded
+ *	 0	success, object loaded
+ *	 1	caller must initialize substructure
+ */
+int
+fcmh_load_fcoo(struct fidc_membh *fcmh, enum rw rw)
+{
+	int rc = 0;
+
+	FCMH_LOCK(fcmh);
+	fcmh->fcmh_state &= ~FCMH_FCOO_FAILED;
+ restart:
+	if (fcmh->fcmh_state & FCMH_FCOO_STARTING) {
+		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
+		FCMH_LOCK(fcmh);
+		goto restart;
+	} else if (fcmh->fcmh_state & FCMH_FCOO_CLOSING) {
+		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
+		FCMH_LOCK(fcmh);
+		goto restart;
+	} else if (fcmh->fcmh_state & FCMH_FCOO_FAILED) {
+		rc = -1;
+	} else if (fcmh->fcmh_state & FCMH_FCOO_ATTACH) {
+		FCOO_INC_REFCNTS(fcmh->fcmh_fcoo, rw);
+	} else {
+		fidc_fcoo_start_locked(fcmh);
+		FCOO_INC_REFCNTS(fcmh->fcmh_fcoo, rw);
+		rc = 1;
+	}
+	FCMH_ULOCK(fcmh);
+	return (rc);
+}
+
+int
+fcmh_load_fcoo_nostart(struct fidc_membh *fcmh)
+{
+	int rc = 0;
+
+	FCMH_LOCK(fcmh);
+	fcmh->fcmh_state &= ~FCMH_FCOO_FAILED;
+ restart:
+	if (fcmh->fcmh_state & FCMH_FCOO_STARTING) {
+		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
+		FCMH_LOCK(fcmh);
+		goto restart;
+	} else if (fcmh->fcmh_state & FCMH_FCOO_CLOSING) {
+		rc = -1;
+	} else if (fcmh->fcmh_state & FCMH_FCOO_FAILED) {
+		rc = -1;
+	} else if (fcmh->fcmh_state & FCMH_FCOO_ATTACH) {
+		fidc_fcoo_check_locked(fcmh);
+	} else {
+		psc_assert(fcmh->fcmh_fcoo == NULL);
+		rc = -1;
+	}
+	FCMH_ULOCK(fcmh);
+	return (rc);
+}
+
+/**
  * fidc_init - Initialize the FID cache.
  */
 void
@@ -634,37 +680,6 @@ fidc_init(int privsiz, int nobj, int max,
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
 	    FCMH_HASH_FIELD, fcmh_hentry, nobj * 2, NULL, "fidc");
 	fidcReapCb = fcmh_reap_cb;
-}
-
-int
-fcmh_getfdbuf(struct fidc_membh *fcmh, struct srt_fd_buf *fdb)
-{
-	int rc, locked;
-
-	locked = reqlock(&fcmh->fcmh_lock);
-
-	if (!fcmh->fcmh_fcoo) {
-		ureqlock(&fcmh->fcmh_lock, locked);
-		return (EBADF);
-	}
-
-	rc = fidc_fcoo_wait_locked(fcmh, FCOO_NOSTART);
-	if (!rc)
-		*fdb = fcmh->fcmh_fcoo->fcoo_fdb;
-
-	ureqlock(&fcmh->fcmh_lock, locked);
-	return (rc ? EBADF : 0);
-}
-
-void
-fcmh_setfdbuf(struct fidc_membh *fcmh, const struct srt_fd_buf *fdb)
-{
-	int locked;
-
-	locked = reqlock(&fcmh->fcmh_lock);
-	psc_assert(fcmh->fcmh_fcoo);
-	fcmh->fcmh_fcoo->fcoo_fdb = *fdb;
-	ureqlock(&fcmh->fcmh_lock, locked);
 }
 
 void

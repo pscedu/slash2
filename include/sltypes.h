@@ -58,6 +58,8 @@ enum rw {
 	SL_WRITE = 43
 };
 
+enum rw fflags_2_rw(int);
+
 /*
  * Defines a storage system which holds a block or blocks of the
  * respective file.  A number of these structures are statically

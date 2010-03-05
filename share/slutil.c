@@ -73,6 +73,14 @@ dump_fflags(int fflags)
 	printf("\n");
 }
 
+enum rw
+fflags_2_rw(int fflags)
+{
+	if (fflags & (O_WRONLY | O_RDWR))
+		return (SL_WRITE);
+	return (SL_READ);
+}
+
 void
 sl_externalize_stat(const struct stat *stb, struct srt_stat *sstb)
 {

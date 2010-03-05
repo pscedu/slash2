@@ -89,8 +89,6 @@ mds_inode_release(struct fidc_membh *f)
 		/* We held the final reference to this fcoo, it must
 		 *   return attached.
 		 */
-		psc_assert(!fidc_fcoo_wait_locked(f, 1));
-
 		f->fcmh_state |= FCMH_FCOO_CLOSING;
 		DEBUG_FCMH(PLL_DEBUG, f, "calling mdsio_release");
 		rc = mdsio_release(&fmi->fmi_inodeh);
@@ -107,7 +105,7 @@ mds_inode_release(struct fidc_membh *f)
 	return (rc);
 }
 
-__static int
+int
 mds_inode_read(struct slash_inode_handle *i)
 {
 	psc_crc64_t crc;
@@ -193,60 +191,6 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 	return (rc);
 }
 
-int
-mds_fcmh_tryref_fmi(struct fidc_membh *f)
-{
-	int rc;
-
-	rc = 0;
-	FCMH_LOCK(f);
-	if (f->fcmh_fcoo &&
-	    (f->fcmh_state & FCMH_FCOO_CLOSING) == 0)
-		atomic_inc(&fcmh_2_fmi(f)->fmi_refcnt);
-	else
-		rc = ENOENT;
-	FCMH_ULOCK(f);
-	return (rc);
-}
-
-/*
- * Read the replication information of a SLASH2 file.  Each SLASH2 file has a metafile
- * stored on the MDS.  The metafile consists of replication information and block map
- * CRCs.  fmi stands fcoo_mds_info.
- */
-int
-mds_fcmh_load_fmi(struct fidc_membh *f)
-{
-	struct fcoo_mds_info *fmi;
-	int rc;
-
-	rc = 0;
-	FCMH_LOCK(f);
-	if (fcmh_2_mdsio_data(f))
-		goto out;
-
-	fmi = fcoo_get_pri(f->fcmh_fcoo);
-
-	if (fcmh_isdir(f))
-		rc = mdsio_opendir(fcmh_2_mdsio_fid(f), &rootcreds,
-		    NULL, NULL, &fmi->fmi_mdsio_data);
-	 else {
-		rc = mdsio_opencreate(fcmh_2_mdsio_fid(f), &rootcreds,
-		    O_RDWR, 0, NULL, NULL, NULL, NULL, &fmi->fmi_mdsio_data);
-		if (rc)
-			goto out;
-
-		rc = mds_inode_read(&fmi->fmi_inodeh);
-		if (rc)
-			psc_fatalx("could not load inode; rc=%d", rc);
-	}
- out:
-	if (rc == 0)
-		f->fcmh_fcoo->fcoo_oref_rd++;
-	FCMH_ULOCK(f);
-	return (rc);
-}
-
 /**
  * mexpfcm_cfd_init - callback issued from cfdnew() which adds the
  *	provided cfd to the export tree and attaches to the fid's
@@ -255,12 +199,12 @@ mds_fcmh_load_fmi(struct fidc_membh *f)
  * @exp: the export to which the cfd belongs.
  */
 int
-mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
+mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp, enum rw rw)
 {
 	struct slashrpc_export *slexp;
-	struct mexpfcm *m;
-	struct fidc_membh *f;
 	struct fcoo_mds_info *fmi;
+	struct fidc_membh *f;
+	struct mexpfcm *m;
 	int rc;
 
 	psc_assert(c->cfd_flags == CFD_DIR || c->cfd_flags == CFD_FILE);
@@ -276,7 +220,7 @@ mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp)
 	if (!f)
 		return (-1);
 
-	rc = mds_fcmh_load_fmi(f);
+	rc = fcmh_load_fmi(f, rw);
 	if (rc) {
 		fcmh_dropref(f);
 		return (-1);
@@ -350,10 +294,10 @@ mexpfcm_release_brefs(struct mexpfcm *m)
 int
 mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 {
-	int locked;
-	struct mexpfcm *m=c->cfd_pri;
-	struct fidc_membh *f=m->mexpfcm_fcmh;
+	struct mexpfcm *m = c->cfd_pri;
+	struct fidc_membh *f = m->mexpfcm_fcmh;
 	struct fcoo_mds_info *fmi;
+	int rc, locked;
 
 	spinlock(&m->mexpfcm_lock);
 	/* Ensure the mexpfcm has the correct pointers before
@@ -364,11 +308,11 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 		goto out;
 	}
 
-	fmi = fidc_fcmh2fmi(f);
-	if (fmi == NULL) {
-		DEBUG_FCMH(PLL_WARN, f, "fid has no fcoo");
+	rc = fcmh_load_fmi(f, SL_READ);
+	if (rc)
 		goto out;
-	}
+
+	fmi = fcmh_2_fmi(f);
 
 	if (c->cfd_flags & CFD_FORCE_CLOSE)
 		/* A force close comes from a network drop, don't make
@@ -396,6 +340,8 @@ mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
 	locked = reqlock(&f->fcmh_lock);
 	PSC_SPLAY_XREMOVE(fcm_exports, &fmi->fmi_exports, m);
 	ureqlock(&f->fcmh_lock, locked);
+
+	mds_inode_release(f);
  out:
 	if (f)
 		fcmh_dropref(f);

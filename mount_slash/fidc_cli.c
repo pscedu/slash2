@@ -27,6 +27,7 @@
 #include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
+#include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/strlcpy.h"
@@ -37,6 +38,7 @@
 #include "fidc_cli.h"
 #include "fidcache.h"
 #include "mount_slash.h"
+#include "rpc_cli.h"
 
 #define FCMH_FOREACH_CHILD(c, p)						\
 	psclist_for_each_entry2((c), &fcmh_2_fcci(p)->fcci_children,		\
@@ -128,7 +130,7 @@ fidc_child_free_plocked(struct fidc_membh *c)
 	}
 
 	fni = cc->fcci_name;
-	DEBUG_FCMH(PLL_WARN, c, "fni=%p name=%s parent=%p freeing "
+	DEBUG_FCMH(PLL_DEBUG, c, "fni=%p name=%s parent=%p freeing "
 	    "child_empty=%d", fni, fni->fni_name, cc->fcci_parent,
 	    fcmh_isdir(c) ? psclist_empty(&cc->fcci_children) : -1);
 
@@ -396,6 +398,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 		ureqlock(&p->fcmh_lock, locked);
 		return;
 	}
+
 	/* Perform some sanity checks on the cached data structure.
 	 */
 	psc_assert(cc->fcci_parent == p);
@@ -549,6 +552,52 @@ fcmh_getsize(struct fidc_membh *h)
 	size = fcmh_2_fsz(h);
 	ureqlock(&h->fcmh_lock, locked);
 	return (size);
+}
+
+int
+fcmh_load_fci(struct fidc_membh *fcmh, enum rw rw)
+{
+	struct fcoo_cli_info *fci;
+	struct pscrpc_request *rq;
+	struct srm_open_req *mq;
+	struct srm_open_rep *mp;
+	int rc, locked;
+
+	locked = FCMH_RLOCK(fcmh);
+	rc = fcmh_load_fcoo(fcmh, rw);
+	if (rc <= 0) {
+		FCMH_URLOCK(fcmh, locked);
+		return (rc);
+	}
+
+	fci = fcoo_get_pri(fcmh->fcmh_fcoo);
+	FCMH_ULOCK(fcmh);
+
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	    fcmh_isdir(fcmh) ? SRMT_OPENDIR : SRMT_OPEN,
+	    rq, mq, mp);
+	if (rc)
+		goto error;
+
+	mq->fg = fcmh->fcmh_fg;
+
+	rc = RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
+		goto error;
+
+	fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE);
+
+ error:
+	pscrpc_req_finished(rq);
+	if (rc)
+		fidc_fcoo_startfailed(fcmh);
+	else
+		fidc_fcoo_startdone(fcmh);
+	if (locked)
+		FCMH_LOCK(fcmh);
+	return (rc);
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {

@@ -27,6 +27,7 @@
 
 #include "bmap.h"
 #include "bmap_iod.h"
+#include "fidc_iod.h"
 #include "fidcache.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
@@ -85,8 +86,10 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	w->srw_resm = libsl_nid2resm(w->srw_nid);
 
 	/* get an fcmh for the file */
-	w->srw_fcmh = iod_inode_lookup(&w->srw_fg);
-	rc = iod_inode_open(w->srw_fcmh, SL_WRITE);
+	sli_fcmh_get(&w->srw_fg, &w->srw_fcmh);
+	if (rc)
+		goto out;
+	rc = fcmh_load_fii(w->srw_fcmh, SL_WRITE);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, w->srw_fcmh, "iod_inode_open: %s",
 		    slstrerror(rc));

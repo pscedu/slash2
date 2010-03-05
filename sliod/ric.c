@@ -32,6 +32,7 @@
 #include "bmap_iod.h"
 #include "fdbuf.h"
 #include "fid.h"
+#include "fidc_iod.h"
 #include "fidcache.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
@@ -116,18 +117,22 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		mp->rc = -ERANGE;
 		return (-1);
 	}
+
 	/* Lookup inode and fetch bmap, don't forget to decref bmap
 	 *  on failure.
 	 */
-	fcmh = iod_inode_lookup(&fg);
-	psc_assert(fcmh);
+	rc = sli_fcmh_get(&fg, &fcmh);
+	psc_assert(rc == 0);
+
 	/* Ensure the fid in the local filesystem is created and open,
 	 *  otherwise fail.
 	 */
-	if ((rc = iod_inode_open(fcmh, rw))) {
+	rc = fcmh_load_fii(fcmh, rw);
+	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, fcmh, "error fidopen bmap=%u", bmapno);
 		goto out;
 	}
+
 	/* ATM, not much to do here for write operations.
 	 */
 	if (iod_bmap_load(fcmh, bmapno, rw, &bmap)) {

@@ -554,11 +554,11 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 
 	*fp = NULL;
 
-	rc = slm_fcmh_get(fgp, &rootcreds, &fcmh);
+	rc = slm_fcmh_get(fgp, &fcmh);
 	if (rc)
 		return (rc);
 
-	rc = mds_fcmh_load_fmi(fcmh);
+	rc = fcmh_load_fmi(fcmh, SL_WRITE);
 	if (rc)
 		goto out;
 

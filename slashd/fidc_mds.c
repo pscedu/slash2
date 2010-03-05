@@ -73,32 +73,17 @@ fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 #endif
 
 struct fcoo_mds_info *
-fidc_fcmh2fmi(struct fidc_membh *fcmh)
+fcmh_load_fmi_nostart(struct fidc_membh *fcmh, enum rw rw)
 {
 	struct fcoo_mds_info *fmi = NULL;
-	int locked;
+	int rc, locked;
 
-	locked = reqlock(&fcmh->fcmh_lock);
-	if (!fcmh->fcmh_fcoo)
-		goto out;
-
-	if (fidc_fcoo_wait_locked(fcmh, FCOO_NOSTART) < 0)
-		goto out;
-
-	fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
- out:
-	ureqlock(&fcmh->fcmh_lock, locked);
+	locked = FCMH_RLOCK(fcmh);
+	rc = fcmh_load_fcoo(fcmh, rw);
+	if (rc == 0)
+		fmi = fcmh_2_fmi(fcmh);
+	FCMH_URLOCK(fcmh, locked);
 	return (fmi);
-}
-
-struct fcoo_mds_info *
-fidc_fid2fmi(slfid_t f, struct fidc_membh **fcmh)
-{
-	*fcmh = fidc_lookup_simple(f);
-
-	if (!*fcmh)
-		return (NULL);
-	return (fidc_fcmh2fmi(*fcmh));
 }
 
 int
@@ -114,54 +99,48 @@ slm_fidc_getattr(struct fidc_membh *fcmh,
 }
 
 int
-slm_fcmh_get(const struct slash_fidgen *fg, struct slash_creds *crp,
-    struct fidc_membh **fcmhp)
+fcmh_load_fmi(struct fidc_membh *fcmh, enum rw rw)
 {
 	struct fcoo_mds_info *fmi;
-	struct fidc_membh *fcmh;
-	int rc;
+	int rc, locked;
 
-	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD |
-	    FIDC_LOOKUP_FCOOSTART, NULL, FCMH_SETATTRF_NONE, crp, fcmhp);
-	if (rc == 0) {
+	locked = FCMH_RLOCK(fcmh);
+	rc = fcmh_load_fcoo(fcmh, rw);
+	if (rc <= 0) {
+		FCMH_URLOCK(fcmh, locked);
+		return (rc);
+	}
+	fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
+	FCMH_ULOCK(fcmh);
 
-		fcmh = *fcmhp;
+	SPLAY_INIT(&fmi->fmi_exports);
+	atomic_set(&fmi->fmi_refcnt, 0);
+
+	slash_inode_handle_init(&fmi->fmi_inodeh, fcmh, mds_inode_sync);
+
+	if (fcmh_isdir(fcmh))
+		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh),
+		    &rootcreds, NULL, NULL, &fmi->fmi_mdsio_data);
+	else {
+		rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh),
+		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL, NULL,
+		    &fcmh_2_mdsio_data(fcmh));
+		if (rc)
+			goto out;
+
+		rc = mds_inode_read(&fmi->fmi_inodeh);
+		if (rc)
+			psc_fatalx("could not load inode; rc=%d", rc);
+	}
+
+ out:
+	if (rc)
+		fidc_fcoo_startfailed(fcmh);
+	else
+		fidc_fcoo_startdone(fcmh);
+	if (locked)
 		FCMH_LOCK(fcmh);
-		/*
-		 * Even if we set FIDC_LOOKUP_FCOOSTART above, FCMH_FCOO_STARTING is
-		 * only set when the fcmh does not already exist.  
-		 *
-		 * XXX suppose two RPCs want to access the same file come in, they
-		 * can both see the FCMH_FCOO_STARTING flag being set.
-		 */
-		if ((fcmh->fcmh_state & FCMH_FCOO_STARTING) ||
-		    (rc = fidc_fcoo_wait_locked(fcmh, FCOO_START)) == 1) {
-
-			FCMH_ULOCK(fcmh);
-			fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
-			SPLAY_INIT(&fmi->fmi_exports);
-			atomic_set(&fmi->fmi_refcnt, 0);
-
-			slash_inode_handle_init(&fmi->fmi_inodeh, fcmh,
-			    mds_inode_sync);
-
-			fidc_fcoo_startdone(fcmh);
-		}
-		if (rc == 0)
-			rc = mds_fcmh_tryref_fmi(fcmh);
-	}
-	if (rc == 0)
-		fcmh->fcmh_fcoo->fcoo_oref_rd++;
 	return (rc);
-}
-
-void
-slm_fcmh_release(struct fidc_membh *fcmh)
-{
-	if (fcmh) {
-		mds_inode_release(fcmh);
-		fcmh_dropref(fcmh);
-	}
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {

@@ -70,7 +70,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	mq->ncrc_updates = psc_dynarray_len(bcrs);
 	req->rq_async_args.pointer_arg[0] = (void *)bcrs;
 
-	len = (mq->ncrc_updates * sizeof(struct srm_bmap_crcup));
+	len = mq->ncrc_updates * sizeof(struct srm_bmap_crcup);
 	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 
 	for (i = 0; i < mq->ncrc_updates; i++) {
@@ -80,8 +80,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 		bcr_xid_check(bcr);
 
-		iod_inode_getsize(&bcr->bcr_crcup.fg,
-				  (off_t *)&bcr->bcr_crcup.fsize);
+		bcr->bcr_crcup.fsize =
+		    iod_inode_getsize(&bcr->bcr_crcup.fg);
 
 		mq->ncrcs_per_update[i] = bcr->bcr_crcup.nups;
 

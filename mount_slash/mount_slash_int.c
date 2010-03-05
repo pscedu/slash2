@@ -518,7 +518,8 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 	    SRMT_GETBMAP, rq, mq, mp)) != 0)
 		goto done;
 
-	mq->sfdb  = *fcmh_2_fdb(f);
+	mq->fg = f->fcmh_fg;
+	mq->cfd = fcmh_2_cfd(f);
 	mq->pios  = prefIOS; /* Tell MDS of our preferred ION */
 	mq->blkno = bmap->bcm_bmapno;
 	mq->nblks = 1;
@@ -598,7 +599,8 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, enum rw rw)
 	    SRMT_BMAPCHMODE, rq, mq, mp)) != 0)
 		return (rc);
 
-	mq->sfdb = *fcmh_2_fdb(f);
+	mq->fg = f->fcmh_fg;
+	mq->cfd = fcmh_2_cfd(f);
 	mq->blkno = b;
 	mq->rw = rw;
 

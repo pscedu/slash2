@@ -23,6 +23,7 @@
 #include "psc_ds/list.h"
 #include "psc_util/lock.h"
 
+#include "fidcache.h"
 #include "sltypes.h"
 
 struct fidc_membh;
@@ -45,9 +46,13 @@ struct fcmh_cli_info {
  * FID cache member handle open object CLIENT-specific data.
  */
 struct fcoo_cli_info {
+	uint64_t		 fci_cfd;
 	int			 fci_nrepls;
 	sl_replica_t		 fci_reptbl[SL_MAX_REPLICAS];
 };
+
+#define fcmh_2_fci(f)		((struct fcoo_cli_info *)fcmh_2_fcci(f))
+#define fcmh_2_cfd(f)		fcmh_2_fci(f)->fci_cfd
 
 /* client-specific fcmh_state flags */
 #define FCMH_CLI_HAVEREPLTBL	(_FCMH_FLGSHFT << 0)	/* file replica table present */
@@ -64,5 +69,20 @@ void	fidc_child_unlink(struct fidc_membh *, const char *);
 
 ssize_t	fcmh_getsize(struct fidc_membh *);
 void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
+
+int	fcmh_load_fci(struct fidc_membh *, enum rw);
+
+/**
+ * fidc_lookup_load_inode - Create the inode if it doesn't exist loading
+ *	its attributes from the network.
+ */
+static __inline int
+fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *crp,
+    struct fidc_membh **fcmhp)
+{
+	struct slash_fidgen fg = { fid, FIDGEN_ANY };
+
+	return (fcmh_getload(&fg, crp, fcmhp));
+}
 
 #endif /* _FIDC_CLI_H_ */

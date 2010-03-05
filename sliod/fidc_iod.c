@@ -1,7 +1,25 @@
 /* $Id$ */
+/*
+ * %PSC_START_COPYRIGHT%
+ * -----------------------------------------------------------------------------
+ * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ *
+ * Permission to use, copy, and modify this software and its documentation
+ * without fee for personal use or non-commercial use within your organization
+ * is hereby granted, provided that the above copyright notice is preserved in
+ * all copies and that the copyright and this permission notice appear in
+ * supporting documentation.  Permission to redistribute this software to other
+ * organizations or individuals is not permitted without the written permission
+ * of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+ * the suitability of this software for any purpose.  It is provided "as is"
+ * without express or implied warranty.
+ * -----------------------------------------------------------------------------
+ * %PSC_END_COPYRIGHT%
+ */
 
 #include <sys/resource.h>
 
+#include <fcntl.h>
 #include <stddef.h>
 
 #include "psc_util/log.h"
@@ -43,21 +61,39 @@ sli_fcmh_shrink(void)
 	freelock(&psc_rlimit_lock);
 }
 
+/*
+ * fcmh_load_fii - Associate an fcmh with a file handle to a data
+ *	store for the file on the local file system.
+ * @f: FID cache member handle of file to open.
+ * @rw: read or write operation.
+ */
 int
-fcmh_load_fcoo(struct fidc_membh *fcmh)
+fcmh_load_fii(struct fidc_membh *fcmh, enum rw rw)
 {
-	int rc = 0, locked;
+	int flags, rc, locked;
+	char fidfn[PATH_MAX];
 
 	locked = FCMH_RLOCK(fcmh);
-	if (fcmh->fcmh_fcoo ||
-	    (fcmh->fcmh_state & FCMH_FCOO_CLOSING)) {
-		rc = fidc_fcoo_wait_locked(fcmh, FCOO_START);
-		if (rc < 0)
-			goto out;
+	rc = fcmh_load_fcoo(fcmh, rw);
+	if (rc <= 0) {
+		FCMH_URLOCK(fcmh, locked);
+		return (rc);
+	}
+	FCMH_ULOCK(fcmh);
+
+	flags = O_RDWR;
+	if (rw == SL_WRITE)
+		flags |= O_CREAT;
+
+	fg_makepath(&fcmh->fcmh_fg, fidfn);
+	fcmh_2_fd(fcmh) = open(fidfn, flags, 0600);
+	if (fcmh_2_fd(fcmh) == -1) {
+		rc = errno;
+		fidc_fcoo_startfailed(fcmh);
 	} else
-		fidc_fcoo_start_locked(fcmh);
- out:
-	FCMH_URLOCK(fcmh, locked);
+		fidc_fcoo_startdone(fcmh);
+	if (locked)
+		FCMH_LOCK(fcmh);
 	return (rc);
 }
 

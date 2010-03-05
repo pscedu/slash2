@@ -38,17 +38,24 @@ struct cfdent {
 	SPLAY_ENTRY(cfdent)	 cfd_entry;
 };
 
+/* cfd_flags */
 #define CFD_FILE		(1 << 0)
 #define CFD_DIR			(1 << 1)
 #define CFD_CLOSING		(1 << 2)
 #define CFD_FORCE_CLOSE		(1 << 3)
+
+/* cfd private accessors */
+#define cfd_2_mexpfcm(cfd)	((struct mexpfcm *)(cfd)->cfd_pri)
+#define cfd_2_fcmh(cfd)		cfd_2_mexpfcm(cfd)->mexpfcm_fcmh
+#define cfd_2_fmi(cfd)		fcmh_2_fmi(cfd_2_fcmh(cfd))
+#define cfd_2_mdsio_data(cfd)	fcmh_2_mdsio_data(cfd_2_fcmh(cfd))
 
 /*
  * Server specific cfd ops.  Primarily used to operate on the cfdent's
  *  'pri' structure.  All calls must be made with the exp lock held.
  */
 struct cfdops {
-	int	 (*cfd_init)(struct cfdent *, struct pscrpc_export *);
+	int	 (*cfd_init)(struct cfdent *, struct pscrpc_export *, enum rw);
 	int	 (*cfd_free)(struct cfdent *, struct pscrpc_export *);
 	void	*(*cfd_get_pri)(struct cfdent *, struct pscrpc_export *);
 };
@@ -57,7 +64,7 @@ struct cfdent *
 	cfdget(struct pscrpc_export *, uint64_t);
 int	cfdcmp(const void *, const void *);
 int	cfdnew(slfid_t, struct pscrpc_export *, enum slconn_type,
-	    struct cfdent **, int);
+	    struct cfdent **, int, enum rw);
 int	cfdfree(struct pscrpc_export *, uint64_t);
 void	cfdfreeall(struct pscrpc_export *, enum slconn_type);
 int	cfdlookup(struct pscrpc_export *, uint64_t, void *);

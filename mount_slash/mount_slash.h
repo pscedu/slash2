@@ -109,7 +109,7 @@ void	 mstimerthr_spawn(void);
 void	 msbmapflushthr_spawn(void);
 void	*msctlthr_begin(void *);
 
-int	 ms_lookup_fidcache(const struct slash_creds *, fuse_ino_t, const char *,
+int	 msl_lookup_fidcache(const struct slash_creds *, fuse_ino_t, const char *,
 	    struct slash_fidgen *, struct srt_stat *);
 
 int	 checkcreds(const struct srt_stat *, const struct slash_creds *, int);
@@ -170,14 +170,6 @@ fhbmap_cache_cmp(const void *x, const void *y)
 	return (bmap_cmp(rx->mfbr_bmap, ry->mfbr_bmap));
 }
 
-static __inline struct srt_fd_buf *
-mslfh_2_fdb(struct msl_fhent *mfh)
-{
-	psc_assert(mfh->mfh_fcmh);
-	psc_assert(mfh->mfh_fcmh->fcmh_fcoo);
-	return (&mfh->mfh_fcmh->fcmh_fcoo->fcoo_fdb);
-}
-
 static __inline size_t
 mslfh_2_bmapsz(struct msl_fhent *mfh)
 {
@@ -185,12 +177,6 @@ mslfh_2_bmapsz(struct msl_fhent *mfh)
 	psc_assert(mfh->mfh_fcmh->fcmh_fcoo);
 	psc_assert(mfh->mfh_fcmh->fcmh_fcoo->fcoo_bmap_sz);
 	return (mfh->mfh_fcmh->fcmh_fcoo->fcoo_bmap_sz);
-}
-
-static __inline struct srt_fd_buf *
-fcmh_2_fdb(struct fidc_membh *f)
-{
-	return (&f->fcmh_fcoo->fcoo_fdb);
 }
 
 SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);

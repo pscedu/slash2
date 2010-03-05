@@ -75,7 +75,7 @@ cfdinsert(struct cfdent *c, struct pscrpc_export *exp)
  */
 int
 cfdnew(slfid_t fid, struct pscrpc_export *exp, enum slconn_type peertype,
-    struct cfdent **cfd, int flags)
+    struct cfdent **cfd, int flags, enum rw rw)
 {
 	struct slashrpc_export *slexp;
 	struct cfdent *c;
@@ -96,7 +96,7 @@ cfdnew(slfid_t fid, struct pscrpc_export *exp, enum slconn_type peertype,
 	freelock(&exp->exp_lock);
 
 	if (cfd_ops.cfd_init) {
-		rc = cfd_ops.cfd_init(c, exp);
+		rc = cfd_ops.cfd_init(c, exp, rw);
 		if (rc) {
 			psc_errorx("cfd_init() failed rc=%d", rc);
 			PSCFREE(c);

@@ -28,69 +28,38 @@
 #include "psc_util/mkdirs.h"
 
 #include "fid.h"
-#include "slconfig.h"
-#include "pathnames.h"
 #include "fidcache.h"
-
-#define SL_PATH_MAX 128
+#include "mkfn.h"
+#include "pathnames.h"
+#include "slconfig.h"
 
 /**
  * fid_makepath - build the pathname in the FID object root that corresponds
  *	to a FID, allowing easily lookup of file metadata via FIDs.
  */
 void
-fid_makepath(slfid_t fid, char *fid_path)
+_fg_makepath(const struct slash_fidgen *fg, char *fid_path, int usegen)
 {
-	int rc, i;
 	char a[FID_PATH_DEPTH];
+	int i;
 
-	a[0] = (uint8_t)((fid & UINT64_C(0x0000000000f00000)) >> (BPHXC*5));
-	a[1] = (uint8_t)((fid & UINT64_C(0x00000000000f0000)) >> (BPHXC*4));
-	a[2] = (uint8_t)((fid & UINT64_C(0x000000000000f000)) >> (BPHXC*3));
+	a[0] = (uint8_t)((fg->fg_fid & UINT64_C(0x0000000000f00000)) >> (BPHXC * 5));
+	a[1] = (uint8_t)((fg->fg_fid & UINT64_C(0x00000000000f0000)) >> (BPHXC * 4));
+	a[2] = (uint8_t)((fg->fg_fid & UINT64_C(0x000000000000f000)) >> (BPHXC * 3));
 
 	for (i=0; i < FID_PATH_DEPTH; i++)
-		a[i] = (a[i] < 10) ? (a[i] += 0x30) : (a[i] += 0x57);
+		a[i] += a[i] < 10 ? 0x30 : 0x57;
 
-	rc = snprintf(fid_path, SL_PATH_MAX, "%s/%s/%c/%c/%c/%016"PRIx64,
-	      nodeResm->resm_res->res_fsroot, FID_PATH_NAME,
-	      a[0], a[1], a[2], fid);
+	if (usegen)
+		xmkfn(fid_path, "%s/%s/%c/%c/%c/%016"PRIx64"_%"PRIx64,
+		    nodeResm->resm_res->res_fsroot, FID_PATH_NAME,
+		    a[0], a[1], a[2], fg->fg_fid, fg->fg_gen);
+	else
+		xmkfn(fid_path, "%s/%s/%c/%c/%c/%016"PRIx64,
+		    nodeResm->resm_res->res_fsroot, FID_PATH_NAME,
+		    a[0], a[1], a[2], fg->fg_fid);
 
-	psc_trace("fid=%"PRIx64" fidpath=;%s;", fid, fid_path);
-	if (rc == -1)
-		psc_fatal("snprintf");
-}
-
-/**
- * fid_fileops - create or open a fid on the IO server.
- * @fid: the numeric id.
- * @flags: open options.
- */
-int
-fid_fileops(slfid_t fid, int flags)
-{
-	char fidfn[SL_PATH_MAX];
-
-	fid_makepath(fid, fidfn);
-
-	return (open(fidfn, flags));
-}
-
-/**
- * fid_fileops_fg - create or open a fid on the IO server using the generation
- *    number as a file suffix.
- * @fg: file ID and generation.
- * @flags: open options.
- */
-int
-fid_fileops_fg(struct slash_fidgen *fg, int flags, mode_t mode)
-{
-	char fidfn[SL_PATH_MAX];
-
-	fid_makepath(fg->fg_fid, fidfn);
-	snprintf((fidfn + strlen(fidfn)), SL_PATH_MAX,
-		 "_%"PRIx64, fg->fg_gen);
-
-	return (open(fidfn, flags, mode));
+	psc_trace("fid=%"PRIx64" fidpath=%s", fg->fg_fid, fid_path);
 }
 
 /**
@@ -102,9 +71,11 @@ fid_fileops_fg(struct slash_fidgen *fg, int flags, mode_t mode)
 int
 fid_link(slfid_t fid, const char *fn)
 {
-	char *p, fidpath[SL_PATH_MAX];
+	char *p, fidpath[PATH_MAX];
+	struct slash_fidgen fg;
 
-	fid_makepath(fid, fidpath);
+	fg.fg_fid = fid;
+	fid_makepath(&fg, fidpath);
 	if ((p = strrchr(fidpath, '/')) != NULL) {
 		*p = '\0';
 		if (mkdirs(fidpath, 0711) == -1) /* XXX must be done as root */
@@ -119,8 +90,6 @@ fid_link(slfid_t fid, const char *fn)
 	}
 	return (0);
 }
-
-
 
 #if SLASH_XATTR
 int

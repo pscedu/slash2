@@ -31,6 +31,7 @@
 
 #include "bmap.h"
 #include "bmap_iod.h"
+#include "fidc_iod.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
@@ -80,8 +81,10 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 		return (mp->rc);
 	}
 
-	fcmh = iod_inode_lookup(&mq->fg);
-	mp->rc = iod_inode_open(fcmh, SL_READ);
+	mp->rc = sli_fcmh_get(&mq->fg, &fcmh);
+	if (mp->rc)
+		goto out;
+	mp->rc = fcmh_load_fii(fcmh, SL_READ);
 	if (mp->rc) {
 		DEBUG_FCMH(PLL_ERROR, fcmh, "iod_inode_open: %s",
 		    slstrerror(mp->rc));

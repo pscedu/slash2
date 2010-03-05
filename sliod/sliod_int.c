@@ -59,8 +59,42 @@ iod_bmap_init(struct bmapc_memb *b)
 	SPLAY_INIT(&biod->biod_slvrs);
 }
 
-__static int
-iod_bmap_fetch_crcs(struct bmapc_memb *b, enum rw rw)
+uint64_t
+iod_inode_getsize(struct slash_fidgen *fg)
+{
+	struct fidc_membh *f;
+	uint64_t size;
+
+	f = fidc_lookup_fg(fg);
+	psc_assert(f);
+	size = f->fcmh_sstb.sst_size;
+	fcmh_dropref(f);
+	return (size);
+}
+
+struct fidc_membh *
+iod_inode_lookup(const struct slash_fidgen *fg)
+{
+	struct fidc_membh *f;
+	int rc;
+
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
+	    NULL, &rootcreds, &f);
+	psc_assert(rc == 0);
+	return (f);
+}
+
+/**
+ * iod_bmap_retrieve - load the relevant bmap information from the metadata
+ *   server.  In the case of the ION the bmap sections of interest are the
+ *   CRC table and the CRC states bitmap.  For now we only load this
+ *   information on read.
+ * @b: bmap to load.
+ * @rw: the bmap access mode.
+ * Return zero on success or errno code on failure (likely an RPC problem).
+ */
+int
+iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx void *arg)
 {
 	int				 rc;
 	struct srm_bmap_wire_req	*mq;
@@ -121,107 +155,9 @@ iod_bmap_fetch_crcs(struct bmapc_memb *b, enum rw rw)
 	/* Unblock threads no matter what.
 	 *  XXX need some way to denote that a crcget rpc failed?
 	 */
-	if (rc) {
-		PSCFREE(bmap_2_biodi_wire(b));
-	}
-	return (rc);
-}
-
-int
-iod_inode_getsize(struct slash_fidgen *fg, off_t *fsize)
-{
-	struct fidc_membh *f;
-	struct stat stb;
-	int rc;
-
-	f = fidc_lookup_fg(fg);
-	psc_assert(f);
-	psc_assert(f->fcmh_fcoo);
-	/* XXX May want to replace this syscall with an inode cache
-	 *   lookup.
-	 */
-	rc = fstat(fcmh_2_fd(f), &stb);
-	if (!rc)
-		*fsize = stb.st_size;
-	else
-		DEBUG_FCMH(PLL_ERROR, f, "fstat failed (rc=%d)", rc);
-
-	fcmh_dropref(f);
-
-	return (rc);
-}
-
-struct fidc_membh *
-iod_inode_lookup(const struct slash_fidgen *fg)
-{
-	struct fidc_membh *f;
-	int rc;
-
-	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_COPY |
-	    FIDC_LOOKUP_REFRESH, NULL, FCMH_SETATTRF_NONE, &rootcreds, &f);
-	psc_assert(f);
-	return (f);
-}
-
-/*
- * iod_inode_open - Associate an fcmh with a file handle to a data
- *	store for the file on the local file system.
- * @f: FID cache member handle of file to open.
- * @rw: read or write operation.
- */
-int
-iod_inode_open(struct fidc_membh *f, enum rw rw)
-{
-	int rc, oflags;
-
-	rc = 0;
-	oflags = O_RDWR;
-	psc_assert(rw == SL_READ || rw == SL_WRITE);
-
-	spinlock(&f->fcmh_lock);
-	rc = fcmh_load_fcoo(f);
-	if (rc < 0)
-		goto out;
-
-	if (rw == SL_WRITE) {
-		oflags |= O_CREAT;
-		f->fcmh_fcoo->fcoo_oref_wr++;
-	} else {
-		f->fcmh_fcoo->fcoo_oref_rd++;
-	}
-
-	freelock(&f->fcmh_lock);
-
-	if (f->fcmh_state & FCMH_FCOO_STARTING) {
-		fcmh_2_fd(f) = fid_fileops_fg(&f->fcmh_fg,
-		    oflags, 0600);
-		if (fcmh_2_fd(f) < 0) {
-			fidc_fcoo_startfailed(f);
-			rc = -errno;
-		} else {
-			fidc_fcoo_startdone(f);
-		}
-	}
- out:
 	if (rc)
-		psc_error("failed rc=%d "FIDFMT, rc,
-		    FIDFMTARGS(&f->fcmh_fg));
+		PSCFREE(bmap_2_biodi_wire(b));
 	return (rc);
-}
-
-/**
- * iod_bmap_retrieve - load the relevant bmap information from the metadata
- *   server.  In the case of the ION the bmap sections of interest are the
- *   CRC table and the CRC states bitmap.  For now we only load this
- *   information on read.
- * @b: bmap to load.
- * @rw: the bmap access mode.
- * Return zero on success or errno code on failure (likely an RPC problem).
- */
-int
-iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx void *arg)
-{
-	return (iod_bmap_fetch_crcs(b, rw));
 }
 
 int
