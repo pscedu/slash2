@@ -118,13 +118,14 @@ slm_fcmh_get(const struct slash_fidgen *fg, struct slash_creds *crp,
     struct fidc_membh **fcmhp)
 {
 	struct fcoo_mds_info *fmi;
+	struct fidc_membh *fcmh;
 	int rc;
 
 	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD |
 	    FIDC_LOOKUP_FCOOSTART, NULL, FCMH_SETATTRF_NONE, crp, fcmhp);
 	if (rc == 0) {
-		struct fidc_membh *fcmh = *fcmhp;
 
+		fcmh = *fcmhp;
 		FCMH_LOCK(fcmh);
 		/*
 		 * Even if we set FIDC_LOOKUP_FCOOSTART above, FCMH_FCOO_STARTING is
@@ -149,6 +150,8 @@ slm_fcmh_get(const struct slash_fidgen *fg, struct slash_creds *crp,
 		if (rc == 0)
 			rc = mds_fcmh_tryref_fmi(fcmh);
 	}
+	if (rc == 0)
+		fcmh->fcmh_fcoo->fcoo_oref_rd++;
 	return (rc);
 }
 
