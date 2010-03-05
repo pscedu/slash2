@@ -584,6 +584,7 @@ fcmh_load_fci(struct fidc_membh *fcmh, enum rw rw)
 		goto error;
 
 	fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE);
+	fcmh_2_cfd(fcmh) = mp->cfd;
 
  error:
 	pscrpc_req_finished(rq);

@@ -386,6 +386,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	if (rc)
 		goto out;
 
+	fcmh_2_cfd(m) = mp->cfd;
+
 	mfh = msl_fhent_new(m);
 	ffi_setmfh(fi, mfh);
 	fi->keep_cache = 0;
@@ -884,6 +886,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		return (rc);
 	}
 
+	mq->cfd = fcmh_2_cfd(fcmh);
+	mq->fg = fcmh->fcmh_fg;
 	mq->size = size;
 	mq->offset = off;
 
@@ -1148,6 +1152,8 @@ slash2fuse_releaserpc(struct fuse_file_info *fi)
 	if (rc)
 		return (rc);
 
+	mq->fg = h->fcmh_fg;
+	mq->cfd = fcmh_2_cfd(h);
 	rc = slash2fuse_transflags(fi->flags, &mq->flags);
 	if (rc)
 		goto out;
