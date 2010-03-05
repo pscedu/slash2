@@ -314,7 +314,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 {
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
-	struct fidc_membh *p, *c;
+	struct fidc_membh *p;
 	struct cfdent *cfd;
 	void *mdsio_data;
 	int fl;
@@ -681,7 +681,6 @@ int
 slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 {
 	struct srm_set_bmapreplpol_req *mq;
-	struct slash_inode_handle *ih;
 	struct bmap_mds_info *bmdsi;
 	struct srm_generic_rep *mp;
 	struct fcoo_mds_info *fmi;

@@ -559,8 +559,10 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 		return (rc);
 
 	rc = fcmh_load_fmi(fcmh, SL_WRITE);
-	if (rc)
-		goto out;
+	if (rc) {
+		fcmh_dropref(fcmh);
+		return (rc);
+	}
 
 	ih = fcmh_2_inoh(fcmh);
 	rc = mds_inox_ensure_loaded(ih);
@@ -568,10 +570,11 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 		psc_fatalx("mds_inox_ensure_loaded: %s", slstrerror(rc));
 	*fp = fcmh;
 
- out:
-	if (rc)
-		slm_fcmh_release(fcmh);
-	return (0);
+	if (rc) {
+		mds_inode_release(fcmh);
+		fcmh_dropref(fcmh);
+	}
+	return (rc);
 }
 
 void
@@ -846,7 +849,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
-	slm_fcmh_release(REPLRQ_FCMH(rrq));
+	mds_inode_release(REPLRQ_FCMH(rrq));
+	fcmh_dropref(REPLRQ_FCMH(rrq));
 
 	/* SPLAY_REMOVE() does not NULL out the field */
 	INIT_PSCLIST_ENTRY(&rrq->rrq_lentry);
