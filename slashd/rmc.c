@@ -342,10 +342,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	mp->rc = cfdnew(mp->fg.fg_fid, rq->rq_export,
 	    SLCONNT_CLI, &cfd, CFD_FILE, fflags_2_rw(fl));
-	if (mp->rc == 0) {
+	if (mp->rc == 0)
 		mp->cfd = cfd->cfd_cfd;
-		mp->fg = fg;
-	}
 
  out:
 	slm_fcmh_release(c);
