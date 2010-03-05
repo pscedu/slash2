@@ -126,6 +126,7 @@ fcmh_load_fmi(struct fidc_membh *fcmh, enum rw rw)
 
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* getattr */	slm_fidc_getattr,
+/* initpri */	NULL,
 /* grow */	NULL,
 /* shrink */	NULL
 };

@@ -41,6 +41,7 @@ struct fidc_open_obj;
 
 struct sl_fcmh_ops {
 	int	(*sfop_getattr)(struct fidc_membh *, const struct slash_creds *);
+	void	(*sfop_initpri)(struct fidc_membh *);
 	int	(*sfop_grow)(void);
 	void	(*sfop_shrink)(void);
 };

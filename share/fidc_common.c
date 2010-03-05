@@ -58,6 +58,8 @@ fcmh_reset(struct fidc_membh *f)
 	psc_waitq_init(&f->fcmh_waitq);
 	f->fcmh_state = FCMH_CAC_FREE;
 	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
+	if (sl_fcmh_ops.sfop_initpri)
+		sl_fcmh_ops.sfop_initpri(f);
 }
 
 /**

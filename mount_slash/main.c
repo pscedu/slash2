@@ -589,7 +589,7 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 	/* Lookup and possibly create a new fidcache handle for ino.
 	 *  If the fid does not exist in the cache then a placeholder will
 	 *  be allocated.  slash2fuse_stat() will detect incomplete attrs via
-	 *  FCMH_GETTING_ATTRS flag and rpc for them.
+	 *  FCMH_GETTING_ATTRS flag and RPC for them.
 	 */
 	rc = fidc_lookup_load_inode(ino, &creds, &f);
 	if (rc)

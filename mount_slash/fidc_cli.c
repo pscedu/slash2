@@ -52,30 +52,6 @@
 int fcoo_priv_size = sizeof(struct fcoo_cli_info);
 
 /**
- * fcci_init - Initialize the client-specific fcmh substructure.
- * @c: fcmh.
- * @name: link name of fcmh.
- */
-__static void
-fcci_init(struct fidc_membh *c, const char *name)
-{
-	struct fcmh_cli_info *cc;
-	int len;
-
-	cc = fcmh_get_pri(c);
-
-	len = strlen(name);
-	if (len > NAME_MAX)
-		psc_fatalx("name too long");
-	len++;
-
-	cc->fcci_name = psc_strdup(name);
-	cc->fcci_hash = psc_str_hashify(name);
-	INIT_PSCLIST_ENTRY(&cc->fcci_sibling);
-	INIT_PSCLIST_HEAD(&cc->fcci_children);
-}
-
-/**
  * fidc_child_prep_free_locked - if the fcmh is a directory then detach
  *	any cached fcci_children.  This ensures that the
  *	children's backpointer reference is properly erased.
@@ -390,13 +366,13 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	if (tmp == NULL) {
 		struct fcmh_cli_info *cc, *pc;
 
-		pc = fcmh_get_pri(p);
-
 		/* It doesn't yet exist, add it. */
-		fcci_init(c, name);
-
+		pc = fcmh_get_pri(p);
 		cc = fcmh_get_pri(c);
+
 		cc->fcci_parent = p;
+		cc->fcci_name = psc_strdup(name);
+		cc->fcci_hash = psc_str_hashify(name);
 		psclist_xadd_tail(&cc->fcci_sibling, &pc->fcci_children);
 		DEBUG_FCMH(PLL_WARN, p, "adding name: %s",
 		    cc->fcci_name);
@@ -533,8 +509,19 @@ fcmh_load_fci(struct fidc_membh *fcmh, enum rw rw)
 	return (rc);
 }
 
+void
+slc_fcmh_initpri(struct fidc_membh *fcmh)
+{
+	struct fcmh_cli_info *cc;
+
+	cc = fcmh_get_pri(fcmh);
+	INIT_PSCLIST_ENTRY(&cc->fcci_sibling);
+	INIT_PSCLIST_HEAD(&cc->fcci_children);
+}
+
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* getattr */	slash2fuse_stat,
+/* initpri */	slc_fcmh_initpri,
 /* grow */	NULL,
 /* shrink */	NULL
 };

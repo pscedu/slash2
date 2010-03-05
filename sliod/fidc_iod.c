@@ -93,6 +93,7 @@ fcmh_load_fii(struct fidc_membh *fcmh, enum rw rw)
 
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* getattr */	NULL,
+/* initpri */	NULL,
 /* grow */	sli_fcmh_grow,
 /* shrink */	sli_fcmh_shrink
 };
