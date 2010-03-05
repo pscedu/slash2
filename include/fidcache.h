@@ -75,15 +75,14 @@ struct fidc_membh {
 #define	FCMH_CAC_DIRTY		0x0002		/* (1 << 1) in dirty cache */
 #define	FCMH_CAC_FREEING	0x0004		/* (1 << 2) on clean cache */
 #define	FCMH_CAC_FREE		0x0008		/* (1 << 3) in free pool */
-#define	FCMH_ISDIR		0x0010		/* (1 << 4) is a directory */
-#define	FCMH_FCOO_STARTING	0x0020		/* (1 << 5) open obj is initializing */
-#define	FCMH_FCOO_STARTWAIT	0x0040		/* (1 << 6) someone is initializing */
-#define	FCMH_FCOO_ATTACH	0x0080		/* (1 << 7) open obj present */
-#define	FCMH_FCOO_CLOSING	0x0100		/* (1 << 8) open obj going away */
-#define	FCMH_FCOO_FAILED	0x0200		/* (1 << 9) open obj didn't load */
-#define	FCMH_HAVE_ATTRS		0x0400		/* (1 << 10) has valid stat info */
-#define	FCMH_GETTING_ATTRS	0x0800		/* (1 << 11) fetching stat info */
-#define	_FCMH_FLGSHFT		0x1000		/* (1 << 12) */
+#define	FCMH_FCOO_STARTING	0x0010		/* (1 << 5) open obj is initializing */
+#define	FCMH_FCOO_STARTWAIT	0x0020		/* (1 << 6) someone is initializing */
+#define	FCMH_FCOO_ATTACH	0x0040		/* (1 << 7) open obj present */
+#define	FCMH_FCOO_CLOSING	0x0080		/* (1 << 8) open obj going away */
+#define	FCMH_FCOO_FAILED	0x0100		/* (1 << 9) open obj didn't load */
+#define	FCMH_HAVE_ATTRS		0x0200		/* (1 << 10) has valid stat info */
+#define	FCMH_GETTING_ATTRS	0x0400		/* (1 << 11) fetching stat info */
+#define	_FCMH_FLGSHFT		0x8000		/* (1 << 12) */
 
 /*
  * If fuse_ino_t, declared 'unsigned long', is 4 bytes, inums will get
@@ -118,7 +117,6 @@ struct fidc_membh {
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_DIRTY)		? "D" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_FREEING)		? "R" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_FREE)		? "F" : "",	\
-	ATTR_TEST((fcmh)->fcmh_state, FCMH_ISDIR)		? "d" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_FCOO_STARTING)	? "S" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_FCOO_ATTACH)		? "a" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_FCOO_CLOSING)	? "c" : "",	\
@@ -126,7 +124,7 @@ struct fidc_membh {
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_HAVE_ATTRS)		? "A" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_GETTING_ATTRS)	? "G" : ""
 
-#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s"
+#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s"
 
 #define FIDFMT			"%"PRId64":%"PRId64
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen

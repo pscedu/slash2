@@ -138,9 +138,6 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	} else
 		psc_assert(fcmh->fcmh_state & FCMH_HAVE_ATTRS);
 
-	if (fcmh_isdir(fcmh) && !(fcmh->fcmh_state & FCMH_ISDIR))
-		fcmh->fcmh_state |= FCMH_ISDIR;
-
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attr set");
 	ureqlock(&fcmh->fcmh_lock, locked);
 }
@@ -689,8 +686,6 @@ dump_fcmh_flags(int flags)
 		print_flag("FCMH_CAC_FREEING", &seq);
 	if (flags & FCMH_CAC_FREE)
 		print_flag("FCMH_CAC_FREE", &seq);
-	if (flags & FCMH_ISDIR)
-		print_flag("FCMH_CAC_ISDIR", &seq);
 	if (flags & FCMH_FCOO_STARTING)
 		print_flag("FCMH_FCOO_STARTING", &seq);
 	if (flags & FCMH_FCOO_ATTACH)
