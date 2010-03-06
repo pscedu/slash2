@@ -232,25 +232,26 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 {
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *p;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->pfg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (fcmh_2_mdsio_fid(fcmh) == SL_ROOT_INUM &&
+	if (fcmh_2_mdsio_fid(p) == SL_ROOT_INUM &&
 	    strncmp(mq->name, SL_PATH_PREFIX,
 	     strlen(SL_PATH_PREFIX)) == 0) {
 		mp->rc = EINVAL;
 		goto out;
 	}
-	mp->rc = mdsio_lookup(fcmh_2_mdsio_fid(fcmh),
+	mp->rc = mdsio_lookup(fcmh_2_mdsio_fid(p),
 	    mq->name, &mp->fg, NULL, &rootcreds, &mp->attr);
+
  out:
-	if (fcmh)
-		fcmh_dropref(fcmh);
+	if (p)
+		fcmh_dropref(p);
 	return (0);
 }
 
