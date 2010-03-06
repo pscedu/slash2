@@ -1735,7 +1735,7 @@ msl_fuse_mount(const char *mp)
 		psc_fatal("fuse_session_add_chan");
 	}
 
-	psc_warnx("FUSE version %d.%d", FUSE_MAJOR_VERSION,
+	psc_info("FUSE version %d.%d", FUSE_MAJOR_VERSION,
 	    FUSE_MINOR_VERSION);
 }
 
