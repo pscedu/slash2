@@ -159,15 +159,20 @@ fidc_child_try_validate_locked(struct fidc_membh *p,
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
 	cc = fcmh_get_pri(c);
+
+	if (cc->fcci_name == NULL)
+		return (0);
+
 	/* Both of these must always be true. */
 	if (strcmp(name, cc->fcci_name)) {
-		/* This inode may have been renamed, remove fcmh. */
+		/* This fcmh must have been renamed, remove. */
 		fidc_child_free_plocked(c);
 		return (0);
 	}
 
-	/* Increase the lifespan of this entry and return. */
+	/* Increase the lifespan of this entry. */
 	fcmh_refresh_age(c);
+
 	/* If the child is 'connected', then its parent inode
 	 *   must be 'p'.
 	 */
