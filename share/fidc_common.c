@@ -429,15 +429,17 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	if (flags & FIDC_LOOKUP_CREATE)
 		psc_assert(flags & (FIDC_LOOKUP_COPY | FIDC_LOOKUP_LOAD));
 
- restart:
 	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
+ restart:
 	psc_hashbkt_lock(b);
 	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
 		if (searchfg.fg_fid != fcmh_2_fid(tmp))
 			continue;
-		FCMH_LOCK(fcmh);
+		FCMH_LOCK(tmp);
 		if (tmp->fcmh_state & FCMH_CAC_FREEING) {
-			FCMH_ULOCK(fcmh);
+			DEBUG_FCMH(PLL_WARN, tmp, "tmp fcmh is FREEING");
+			FCMH_ULOCK(tmp);
+			sched_yield();
 			continue;
 		}
 		if (searchfg.fg_gen == fcmh_2_gen(tmp)) {
@@ -446,10 +448,17 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		}
 		/* Look for the highest generation number.  */
 		if (searchfg.fg_gen == FIDGEN_ANY) {
-			if (!fcmh || (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh)))
+			if (!fcmh) {
 				fcmh = tmp;
+				continue;
+			}
+			if (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh)) {
+				FCMH_ULOCK(fcmh);
+				fcmh = tmp;
+				continue;
+			}
 		}
-		FCMH_ULOCK(fcmh);
+		FCMH_ULOCK(tmp);
 	}
 	/* 
 	 * If the above lookup is a success, we hold the lock, but
@@ -491,14 +500,6 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		psc_assert(fgp->fg_fid == fcmh_2_fid(fcmh));
 #endif
 		fcmh_clean_check(fcmh);
-
-		if (fcmh->fcmh_state & FCMH_CAC_FREEING) {
-			DEBUG_FCMH(PLL_WARN, fcmh, "fcmh is FREEING");
-			fcmh_dropref(fcmh);
-			FCMH_ULOCK(fcmh);
-			sched_yield();
-			goto restart;
-		}
 
 		/* apply provided attributes to the cache */
 		if (sstb)
