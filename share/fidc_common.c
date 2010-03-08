@@ -445,15 +445,17 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			fcmh = tmp;
 			break;
 		}
-		/* Look for highest generation number.  */
+		/* Look for the highest generation number.  */
 		if (searchfg.fg_gen == FIDGEN_ANY) {
 			if (!fcmh || (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh)))
 				fcmh = tmp;
 		}
 		FCMH_ULOCK(fcmh);
 	}
-		
-	/* If the above lookup is a success, we hold the lock */
+	/* 
+	 * If the above lookup is a success, we hold the lock, but
+	 * we haven't take a reference yet.
+	 */
 	if (fcmh) {
 		fcmh_incref(fcmh);
 		if (flags & FIDC_LOOKUP_EXCL) {
@@ -509,8 +511,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		if (sstb)
 			fcmh_setattr(fcmh, sstb, setattrflags);
 
-		psc_hashbkt_unlock(b);
-
+		FCMH_ULOCK(fcmh);
 		*fcmhp = fcmh;
 		return (0);
 	} else {
