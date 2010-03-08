@@ -413,23 +413,19 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 
 	fcmh_new = NULL; /* gcc */
 
-#if 0
-	/*
-	 * The original code has a bug in iod_inode_lookup().  Even though that
-	 * it sets FIDC_LOOKUP_COPY, it does not pass in valid attributes (it
-	 * only uses COPYFG() to initialize part of the fcmh.  Need to investigate
-	 * how an I/O server uses attributes. - 12/08/2009.
-	 */
-	if (flags & FIDC_LOOKUP_COPY)
-		psc_assert(sstb);
-#endif
-
+	/* sanity checks */
 	if (flags & FIDC_LOOKUP_LOAD)
 		psc_assert(creds);
 
 	if (flags & FIDC_LOOKUP_CREATE)
-		psc_assert(flags & (FIDC_LOOKUP_COPY | FIDC_LOOKUP_LOAD));
+		psc_assert(sstb | (flags & FIDC_LOOKUP_LOAD));
 
+	if (flags & FIDC_LOOKUP_LOAD)
+		psc_assert(sstb == NULL);
+	if (sstb)
+		psc_assert((flags & FIDC_LOOKUP_LOAD) == 0);
+
+	/* first, check if its already in the cache */
 	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
  restart:
 	fcmh = NULL;
@@ -462,7 +458,8 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		}
 		FCMH_ULOCK(tmp);
 	}
-	/* 
+
+	/*
 	 * If the above lookup is a success, we hold the lock, but
 	 * we haven't take a reference yet.  Also, we need to keep
 	 * the bucket lock in case we need to insert a new item.
@@ -541,29 +538,22 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	 *  it's not yet visible to other threads.
 	 */
 
-	if (flags & FIDC_LOOKUP_COPY) {
-		COPYFG(&fcmh->fcmh_fg, fgp);
+	COPYFG(&fcmh->fcmh_fg, fgp);
 #ifdef DEMOTED_INUM_WIDTHS
-		COPYFG(&fcmh->fcmh_smallfg, &searchfg);
+	COPYFG(&fcmh->fcmh_smallfg, &searchfg);
 #endif
-		fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
-		if (sstb)
-			fcmh_setattr(fcmh, sstb, setattrflags);
-
-		} else if (flags & FIDC_LOOKUP_LOAD) {
+	if (sstb) {
+		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
+		fcmh_setattr(fcmh, sstb, setattrflags);
+	} else if (flags & FIDC_LOOKUP_LOAD) {
 		/* The caller has provided an incomplete
 		 *  attribute set.  This fcmh will be a
 		 *  placeholder and our caller will do the
 		 *  stat.
 		 */
-		fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
 		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 		getting = 1;
-		COPYFG(&fcmh->fcmh_fg, fgp);
-#ifdef DEMOTED_INUM_WIDTHS
-		COPYFG(&fcmh->fcmh_smallfg, &searchfg);
-#endif
-	} /* else is handled by the initial asserts */
+	}
 
 	/* Place the fcmh into the cache, note that the fcmh was
 	 *  ref'd so no race condition exists here.

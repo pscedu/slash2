@@ -237,8 +237,8 @@ slc_fcmh_get(const struct slash_fidgen *fg, const struct srt_stat *sstb,
 {
 	int rc;
 
-	rc = fidc_lookupf(fg, lookupflags | FIDC_LOOKUP_CREATE |
-	    FIDC_LOOKUP_COPY, sstb, setattrflags, creds, fcmhp);
+	rc = fidc_lookupf(fg, lookupflags | FIDC_LOOKUP_CREATE,
+	     sstb, setattrflags, creds, fcmhp);
 	if (rc)
 		return (rc);
 
@@ -381,8 +381,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	}
 
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE, name,
-	    p, &rootcreds, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL |
-	    FIDC_LOOKUP_COPY | FIDC_LOOKUP_FCOOSTART, &m);
+	    p, &rootcreds, FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART, &m);
 	if (rc)
 		goto out;
 
@@ -924,8 +923,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			psc_trace("adding i+g:%"PRId64"+%"PRId64" rc=%d",
 			    fg.fg_fid, fg.fg_gen, attr->rc);
 
-			rc = fidc_lookupf(&fg, FIDC_LOOKUP_CREATE |
-			    FIDC_LOOKUP_COPY | FIDC_LOOKUP_LOAD,
+			rc = fidc_lookupf(&fg, FIDC_LOOKUP_CREATE,
 			    &attr->attr, FCMH_SETATTRF_SAVESIZE,
 			    &rootcreds, &fcmh);
 
