@@ -485,7 +485,6 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			    FIDFMTARGS(fgp));
 			return (EEXIST);
 		}
-		fcmh_incref(fcmh);
 
 #ifdef DEMOTED_INUM_WIDTHS
 		/*
@@ -496,17 +495,22 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		 */
 		psc_assert(searchfg.fg_fid ==
 		    (uint64_t)(fuse_ino_t)fcmh_2_fid(fcmh));
-		if (fgp->fg_fid != fcmh_2_fid(fcmh))
+		if (fgp->fg_fid != fcmh_2_fid(fcmh)) {
+			FCMH_ULOCK(fcmh);
 			return (ENFILE);
+		}
 #else
 		psc_assert(fgp->fg_fid == fcmh_2_fid(fcmh));
 #endif
+
 		fcmh_clean_check(fcmh);
 
 		/* apply provided attributes to the cache */
 		if (sstb)
 			fcmh_setattr(fcmh, sstb, setattrflags);
 
+		/* keep me around after unlocking */
+		fcmh_incref(fcmh);
 		FCMH_ULOCK(fcmh);
 		*fcmhp = fcmh;
 		return (0);
