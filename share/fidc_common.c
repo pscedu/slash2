@@ -337,6 +337,7 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				ureqlock(&tmp->fcmh_lock, locked[1]);
 				continue;
 			}
+			/* XXX should we wait if fg->fg_gen is FIDGEN_ANY? */
 			if (fg->fg_gen == fcmh_2_gen(tmp)) {
 				fcmh = tmp;
 				ureqlock(&tmp->fcmh_lock, locked[1]);
