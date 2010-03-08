@@ -514,73 +514,72 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		FCMH_ULOCK(fcmh);
 		*fcmhp = fcmh;
 		return (0);
-	} else {
-		if (flags & FIDC_LOOKUP_CREATE)
-			if (!try_create) {
-				/* Allocate a fidc handle and attach the
-				 *   provided fcmh.
-				 */
-				psc_hashbkt_unlock(b);
-				fcmh_new = fcmh_get();
-				try_create = 1;
-				goto restart;
-			} else
-				fcmh = fcmh_new;
-		else {
-			/* FIDC_LOOKUP_CREATE was not specified and the fcmh
-			 *  is not present.
+	}
+	if (flags & FIDC_LOOKUP_CREATE)
+		if (!try_create) {
+			/* Allocate a fidc handle and attach the
+			 *   provided fcmh.
 			 */
 			psc_hashbkt_unlock(b);
-			return (ENOENT);
-		}
-
-		/* OK, we've got a new fcmh.  No need to lock it since
-		 *  it's not yet visible to other threads.
+			fcmh_new = fcmh_get();
+			try_create = 1;
+			goto restart;
+		} else
+			fcmh = fcmh_new;
+	else {
+		/* FIDC_LOOKUP_CREATE was not specified and the fcmh
+		 *  is not present.
 		 */
+		psc_hashbkt_unlock(b);
+		return (ENOENT);
+	}
 
-		if (flags & FIDC_LOOKUP_COPY) {
-			COPYFG(&fcmh->fcmh_fg, fgp);
+	/* OK, we've got a new fcmh.  No need to lock it since
+	 *  it's not yet visible to other threads.
+	 */
+
+	if (flags & FIDC_LOOKUP_COPY) {
+		COPYFG(&fcmh->fcmh_fg, fgp);
 #ifdef DEMOTED_INUM_WIDTHS
-			COPYFG(&fcmh->fcmh_smallfg, &searchfg);
+		COPYFG(&fcmh->fcmh_smallfg, &searchfg);
 #endif
-			fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
-			if (sstb)
-				fcmh_setattr(fcmh, sstb, setattrflags);
+		fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
+		if (sstb)
+			fcmh_setattr(fcmh, sstb, setattrflags);
 
 		} else if (flags & FIDC_LOOKUP_LOAD) {
-			/* The caller has provided an incomplete
-			 *  attribute set.  This fcmh will be a
-			 *  placeholder and our caller will do the
-			 *  stat.
-			 */
-			fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
-			fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
-			getting = 1;
-			COPYFG(&fcmh->fcmh_fg, fgp);
-#ifdef DEMOTED_INUM_WIDTHS
-			COPYFG(&fcmh->fcmh_smallfg, &searchfg);
-#endif
-		} /* else is handled by the initial asserts */
-
-		/* Place the fcmh into the cache, note that the fcmh was
-		 *  ref'd so no race condition exists here.
+		/* The caller has provided an incomplete
+		 *  attribute set.  This fcmh will be a
+		 *  placeholder and our caller will do the
+		 *  stat.
 		 */
-		if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
-			DEBUG_FCMH(PLL_NOTICE, fcmh,
-			    "adding FIDGEN_ANY to cache");
+		fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
+		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
+		getting = 1;
+		COPYFG(&fcmh->fcmh_fg, fgp);
+#ifdef DEMOTED_INUM_WIDTHS
+		COPYFG(&fcmh->fcmh_smallfg, &searchfg);
+#endif
+	} /* else is handled by the initial asserts */
 
-		if (flags & FIDC_LOOKUP_FCOOSTART)
-			fidc_fcoo_start_locked(fcmh);
+	/* Place the fcmh into the cache, note that the fcmh was
+	 *  ref'd so no race condition exists here.
+	 */
+	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
+		DEBUG_FCMH(PLL_NOTICE, fcmh,
+		    "adding FIDGEN_ANY to cache");
 
-		/* XXX lock CleanList first */
-		FCMH_LOCK(fcmh);
-		fidc_put(fcmh, &fidcCleanList);
-		psc_hashbkt_add_item(&fidcHtable, b, fcmh);
-		psc_hashbkt_unlock(b);
+	if (flags & FIDC_LOOKUP_FCOOSTART)
+		fidc_fcoo_start_locked(fcmh);
 
-		FCMH_ULOCK(fcmh);
-		DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
-	}
+	/* XXX lock CleanList first */
+	FCMH_LOCK(fcmh);
+	fidc_put(fcmh, &fidcCleanList);
+	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
+	psc_hashbkt_unlock(b);
+
+	FCMH_ULOCK(fcmh);
+	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 
 	if ((flags & FIDC_LOOKUP_LOAD) && sl_fcmh_ops.sfop_getattr) {
 		if (getting) {
