@@ -429,10 +429,9 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	if (flags & FIDC_LOOKUP_CREATE)
 		psc_assert(flags & (FIDC_LOOKUP_COPY | FIDC_LOOKUP_LOAD));
 
-	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
  restart:
+	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
 	psc_hashbkt_lock(b);
- trycreate:
 	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
 		if (searchfg.fg_fid != fcmh_2_fid(tmp))
 			continue;
@@ -452,20 +451,12 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		}
 		FCMH_ULOCK(fcmh);
 	}
-	psc_hashbkt_unlock(b);
 	/* 
 	 * If the above lookup is a success, we hold the lock, but
-	 * we haven't take a reference yet.
+	 * we haven't take a reference yet.  Also, we need to keep
+	 * the bucket lock in case we need to insert a new item.
 	 */
 	if (fcmh) {
-		fcmh_incref(fcmh);
-		if (flags & FIDC_LOOKUP_EXCL) {
-			fcmh_dropref(fcmh);
-			FCMH_ULOCK(fcmh);
-			psc_warnx("FID "FIDFMT" already in cache",
-			    FIDFMTARGS(fgp));
-			rc = EEXIST;
-		}
 		/*
 		 * Test to see if we jumped here from fidcFreeList.
 		 * Note an unlucky thread could find that the fid
@@ -474,14 +465,16 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		 */
 		if (try_create) {
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
-			FCMH_ULOCK(fcmh);
 			fcmh_dropref(fcmh_new);
 			fidc_put(fcmh_new, &fidcFreeList);
 		}
-		if (rc) {
-			psc_hashbkt_unlock(b);
-			return (rc);
+		if (flags & FIDC_LOOKUP_EXCL) {
+			FCMH_ULOCK(fcmh);
+			psc_warnx("FID "FIDFMT" already in cache",
+			    FIDFMTARGS(fgp));
+			return (EEXIST);
 		}
+		fcmh_incref(fcmh);
 
 #ifdef DEMOTED_INUM_WIDTHS
 		/*
@@ -522,9 +515,8 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 				 */
 				psc_hashbkt_unlock(b);
 				fcmh_new = fcmh_get();
-				psc_hashbkt_lock(b);
 				try_create = 1;
-				goto trycreate;
+				goto restart;
 			} else
 				fcmh = fcmh_new;
 		else
