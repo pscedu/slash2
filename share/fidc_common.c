@@ -452,6 +452,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		}
 		FCMH_ULOCK(fcmh);
 	}
+	psc_hashbkt_unlock(b);
 	/* 
 	 * If the above lookup is a success, we hold the lock, but
 	 * we haven't take a reference yet.
@@ -499,10 +500,9 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		fcmh_clean_check(fcmh);
 
 		if (fcmh->fcmh_state & FCMH_CAC_FREEING) {
-			FCMH_ULOCK(fcmh);
 			DEBUG_FCMH(PLL_WARN, fcmh, "fcmh is FREEING");
 			fcmh_dropref(fcmh);
-			psc_hashbkt_unlock(b);
+			FCMH_ULOCK(fcmh);
 			sched_yield();
 			goto restart;
 		}
