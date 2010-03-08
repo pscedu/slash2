@@ -418,7 +418,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		psc_assert(creds);
 
 	if (flags & FIDC_LOOKUP_CREATE)
-		psc_assert(sstb | (flags & FIDC_LOOKUP_LOAD));
+		psc_assert(sstb || (flags & FIDC_LOOKUP_LOAD));
 
 	if (flags & FIDC_LOOKUP_LOAD)
 		psc_assert(sstb == NULL);
