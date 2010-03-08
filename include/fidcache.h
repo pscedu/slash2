@@ -216,6 +216,10 @@ fcoo_get_pri(struct fidc_open_obj *fcoo)
 			(fcoo)->fcoo_oref_wr--;				\
 		else							\
 			psc_fatalx("invalid RW mode: %d", (rw));	\
+		psc_assert((fcoo)->fcoo_oref_rd >= 0);			\
+		psc_assert((fcoo)->fcoo_oref_wr >= 0);			\
+		if (!(fcoo)->fcoo_oref_rd && !(fcoo)->fcoo_oref_wr)	\
+			c->fcmh_state |= FCMH_FCOO_CLOSING;		\
 	} while (0)
 
 /* fidc_lookup() flags */
