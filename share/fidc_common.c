@@ -431,6 +431,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 
 	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
  restart:
+	fcmh = NULL;
 	psc_hashbkt_lock(b);
 	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
 		if (searchfg.fg_fid != fcmh_2_fid(tmp))
@@ -476,6 +477,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
 			fcmh_dropref(fcmh_new);
 			fidc_put(fcmh_new, &fidcFreeList);
+			fcmh_new = NULL;			/* defensive */
 		}
 		if (flags & FIDC_LOOKUP_EXCL) {
 			FCMH_ULOCK(fcmh);
@@ -520,11 +522,13 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 				goto restart;
 			} else
 				fcmh = fcmh_new;
-		else
+		else {
 			/* FIDC_LOOKUP_CREATE was not specified and the fcmh
 			 *  is not present.
 			 */
+			psc_hashbkt_unlock(b);
 			return (ENOENT);
+		}
 
 		/* OK, we've got a new fcmh.  No need to lock it since
 		 *  it's not yet visible to other threads.
