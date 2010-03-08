@@ -399,7 +399,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
     const struct slash_creds *creds, struct fidc_membh **fcmhp)
 {
 	int getting=0, rc, try_create=0;
-	struct fidc_membh *fcmh, *fcmh_new;
+	struct fidc_membh *tmp, *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
 	struct slash_fidgen searchfg = *fgp;
 
@@ -433,10 +433,32 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
  restart:
 	psc_hashbkt_lock(b);
  trycreate:
-	fcmh = _fidc_lookup_fg(&searchfg, 0);
+	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
+		if (searchfg.fg_fid != fcmh_2_fid(tmp))
+			continue;
+		FCMH_LOCK(fcmh);
+		if (tmp->fcmh_state & FCMH_CAC_FREEING) {
+			FCMH_ULOCK(fcmh);
+			continue;
+		}
+		if (searchfg.fg_gen == fcmh_2_gen(tmp)) {
+			fcmh = tmp;
+			break;
+		}
+		/* Look for highest generation number.  */
+		if (searchfg.fg_gen == FIDGEN_ANY) {
+			if (!fcmh || (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh)))
+				fcmh = tmp;
+		}
+		FCMH_ULOCK(fcmh);
+	}
+		
+	/* If the above lookup is a success, we hold the lock */
 	if (fcmh) {
+		fcmh_incref(fcmh);
 		if (flags & FIDC_LOOKUP_EXCL) {
 			fcmh_dropref(fcmh);
+			FCMH_ULOCK(fcmh);
 			psc_warnx("FID "FIDFMT" already in cache",
 			    FIDFMTARGS(fgp));
 			rc = EEXIST;
@@ -449,6 +471,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		 */
 		if (try_create) {
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
+			FCMH_ULOCK(fcmh);
 			fcmh_dropref(fcmh_new);
 			fidc_put(fcmh_new, &fidcFreeList);
 		}
@@ -474,6 +497,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		fcmh_clean_check(fcmh);
 
 		if (fcmh->fcmh_state & FCMH_CAC_FREEING) {
+			FCMH_ULOCK(fcmh);
 			DEBUG_FCMH(PLL_WARN, fcmh, "fcmh is FREEING");
 			fcmh_dropref(fcmh);
 			psc_hashbkt_unlock(b);
