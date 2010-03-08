@@ -390,7 +390,7 @@ fidc_lookup_simple(slfid_t f)
 {
 	struct slash_fidgen t = { f, FIDGEN_ANY };
 
-	return (fidc_lookup_fg(&t));
+	return (_fidc_lookup_fg(&t, 0));
 }
 
 int
@@ -433,7 +433,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
  restart:
 	psc_hashbkt_lock(b);
  trycreate:
-	fcmh = fidc_lookup_fg(&searchfg);
+	fcmh = _fidc_lookup_fg(&searchfg, 0);
 	if (fcmh) {
 		if (flags & FIDC_LOOKUP_EXCL) {
 			fcmh_dropref(fcmh);
