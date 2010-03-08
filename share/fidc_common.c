@@ -454,7 +454,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 				fcmh = tmp;
 				continue;
 			}
-			if (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh)) {
+			if (fcmh_2_gen(fcmh) < fcmh_2_gen(tmp)) {
 				FCMH_ULOCK(fcmh);
 				fcmh = tmp;
 				continue;
