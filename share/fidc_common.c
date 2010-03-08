@@ -501,6 +501,8 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 #else
 		psc_assert(fgp->fg_fid == fcmh_2_fid(fcmh));
 #endif
+		/* keep me around after unlocking later */
+		fcmh_incref(fcmh);
 
 		fcmh_clean_check(fcmh);
 
@@ -508,8 +510,6 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		if (sstb)
 			fcmh_setattr(fcmh, sstb, setattrflags);
 
-		/* keep me around after unlocking */
-		fcmh_incref(fcmh);
 		FCMH_ULOCK(fcmh);
 		*fcmhp = fcmh;
 		return (0);
