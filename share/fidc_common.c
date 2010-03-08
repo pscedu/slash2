@@ -468,6 +468,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	 * the bucket lock in case we need to insert a new item.
 	 */
 	if (fcmh) {
+		psc_hashbkt_unlock(b);
 		/*
 		 * Test to see if we jumped here from fidcFreeList.
 		 * Note an unlucky thread could find that the fid
@@ -516,6 +517,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		*fcmhp = fcmh;
 		return (0);
 	}
+	/* we have failed to find a match in the cache */
 	if (flags & FIDC_LOOKUP_CREATE)
 		if (!try_create) {
 			/* Allocate a fidc handle and attach the
