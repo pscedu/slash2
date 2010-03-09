@@ -137,11 +137,13 @@ struct fidc_membh {
 
 #define FCMHCACHE_PUT(fcmh, list)						\
 	do {									\
-		(fcmh)->fcmh_cache_owner = (list);				\
 		if ((list) == &fidcFreeList)					\
 			fcmh_destroy(fcmh);					\
-		else								\
+		else {								\
+			psc_assert((fcmh)->fcmh_cache_owner == NULL);		\
+			(fcmh)->fcmh_cache_owner = (list);			\
 			lc_add((list), (fcmh));					\
+		}								\
 	} while (0)
 
 /* Increment an fcmh reference, fcmh_refcnt is used by the fidcache

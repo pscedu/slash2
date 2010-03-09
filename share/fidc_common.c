@@ -50,6 +50,7 @@ struct psc_hashtbl	 fidcHtable;
 void
 fcmh_destroy(struct fidc_membh *f)
 {
+	psc_assert(f->fcmh_cache_owner == NULL);
 	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
 	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
 	psc_assert(psc_atomic32_read(&f->fcmh_refcnt) == 1);
@@ -237,6 +238,7 @@ fidc_reap(struct psc_poolmgr *m)
 		if (!fidcReapCb || fidcReapCb(f)) {
 			f->fcmh_state |= FCMH_CAC_FREEING;
 			lc_remove(&fidcCleanList, f);
+			f->fcmh_cache_owner = NULL;
 			psc_dynarray_add(&da, f);
 		}
  end1:

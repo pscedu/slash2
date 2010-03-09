@@ -338,7 +338,6 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	mq->mode = mode;
 	mq->pfg = p->fcmh_fg;
 	mq->creds = cr;
-	mq->flags = fi->flags;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
@@ -1123,6 +1122,7 @@ slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
 	
 	c->fcmh_state = FCMH_CAC_FREEING;
 	lc_remove(&fidcCleanList, c);
+	c->fcmh_cache_owner = NULL;
 	fidc_put(c, &fidcFreeList);
 
 	PSCFREE(mfh);
