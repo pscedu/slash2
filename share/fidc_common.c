@@ -50,7 +50,6 @@ struct psc_hashtbl	 fidcHtable;
 void
 fcmh_destroy(struct fidc_membh *f)
 {
-	psc_assert(f->fcmh_cache_owner == NULL);
 	psc_assert(psc_waitq_nwaiters(&f->fcmh_waitq));
 	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
 	psc_assert(psclist_disjoint(&f->fcmh_lentry));
