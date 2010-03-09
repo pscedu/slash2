@@ -34,7 +34,6 @@
 #include "fidcache.h"
 
 struct fidc_membh;
-struct fidc_open_obj;
 
 struct bmap_refresh {
 	struct slash_fidgen	bmrfr_fg;

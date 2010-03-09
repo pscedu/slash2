@@ -90,7 +90,6 @@ void	 mds_repl_unrefrq(struct sl_replrq *);
 #define mds_repl_bmap_apply(bcm, tract, retifset, off)			\
 	_mds_repl_bmap_apply((bcm), (tract), (retifset), 0, (off), NULL)
 
-#define mds_repl_nodes_getbusy(a, b)		_mds_repl_nodes_setbusy((a), (b), 0, 0)
 #define mds_repl_nodes_setbusy(a, b, v)		_mds_repl_nodes_setbusy((a), (b), 1, (v))
 
 #define mds_repl_ios_lookup_add(ih, ios)	_mds_repl_ios_lookup((ih), (ios), 1)

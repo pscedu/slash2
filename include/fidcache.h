@@ -36,8 +36,6 @@
 struct bmap_refresh;
 struct bmapc_memb;
 struct fidc_membh;
-struct fidc_nameinfo;
-struct fidc_open_obj;
 
 /* XXX move to bmap.h */
 SPLAY_HEAD(bmap_cache, bmapc_memb);
@@ -192,7 +190,6 @@ enum {
 
 void			 fcmh_dtor(void *);
 struct fidc_membh	*fcmh_get(void);
-int			 fcmh_init(struct psc_poolmgr *, void *);
 void			 fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 
 void			 fidc_put(struct fidc_membh *, struct psc_listcache *);

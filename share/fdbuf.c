@@ -20,8 +20,8 @@
 /*
  * fdbuf - file descriptor buffer routines.
  *
- * File descriptor buffers (struct srt_fd_buf and srt_iofd_buf) are used
- * as global file descriptors which identify a FID as they are signed
+ * Block map descriptors buffers (srt_iofd_buf) are used
+ * as global identifiers to access bmaps as they are signed
  * by a shared private key.
  */
 

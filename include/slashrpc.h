@@ -294,8 +294,6 @@ struct srm_create_rep {
 struct srm_destroy_req {
 } __packed;
 
-#define srm_disconnect_req srm_destroy_req
-
 struct srm_getattr_req {
 	struct slash_fidgen	fg;
 } __packed;

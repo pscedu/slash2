@@ -78,7 +78,6 @@ int		iod_bmap_load(struct fidc_membh *, sl_bmapno_t, enum rw, struct bmapc_memb 
 
 uint64_t	iod_inode_getsize(struct slash_fidgen *);
 
-extern struct sl_resm		*sli_rmi_resm;
 extern struct slash_creds	 rootcreds;
 
 #endif /* _SLIOD_H_ */

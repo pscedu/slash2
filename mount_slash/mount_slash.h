@@ -96,7 +96,6 @@ struct pscrpc_import *
 void	 msl_bmap_fhcache_clear(struct msl_fhent *);
 int	 msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);
-int	 msl_io_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
 

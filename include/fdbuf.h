@@ -27,7 +27,6 @@
 #include "slconfig.h"
 
 struct stat;
-struct srt_fd_buf;
 struct srt_bmapdesc_buf;
 
 void bdbuf_sign(struct srt_bmapdesc_buf *, const struct slash_fidgen *,

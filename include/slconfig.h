@@ -39,7 +39,6 @@ struct sl_site;
 #define RES_NAME_MAX	(SITE_NAME_MAX + INTRES_NAME_MAX)
 #define RESM_ADDRBUF_SZ	(RES_NAME_MAX + 1 + PSC_NIDSTR_SIZE)	/* foo@BAR:1.1.1.1@tcp0 */
 #define SL_PEER_MAX	16
-#define DEVNAMEMAX	128
 #define LNET_NAME_MAX	32
 
 enum sl_res_type {
@@ -124,7 +123,6 @@ int			 slcfg_site_cmp(const void *, const void *);
 void			 slcfg_parse(const char *);
 void			 slcfg_store_tok_val(const char *, char *);
 
-void			 libsl_nid_associate(lnet_nid_t, struct sl_resource *);
 struct sl_site		*libsl_siteid2site(sl_siteid_t);
 struct sl_site		*libsl_resid2site(sl_ios_id_t);
 struct sl_resource	*libsl_id2res(sl_ios_id_t);
