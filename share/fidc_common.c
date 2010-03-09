@@ -51,7 +51,6 @@ void
 fcmh_destroy(struct fidc_membh *f)
 {
 	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
-	psc_assert(psclist_disjoint(&f->fcmh_lentry));
 	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
 	psc_assert(psc_atomic32_read(&f->fcmh_refcnt) == 1);
 	psc_assert(psc_hashent_disjoint(&fidcHtable, &f->fcmh_hentry));
@@ -137,6 +136,10 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		DEBUG_FCMH(PLL_FATAL, f, "invalid list move");
 		psc_fatalx("Tried to move to the same list (%p)", lc);
 	}
+
+	/* it's caller's responsiblity to remove me from the previous list */
+	psc_assert(psclist_disjoint(&f->fcmh_lentry));
+
 	/* Validate the inode and check if it has some dirty blocks
 	 */
 	clean = fcmh_clean_check(f);
