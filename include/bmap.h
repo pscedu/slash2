@@ -30,8 +30,8 @@
 #include "psc_util/lock.h"
 #include "psc_util/waitq.h"
 
-#include "fidcache.h"
 #include "fid.h"
+#include "fidcache.h"
 
 struct fidc_membh;
 struct fidc_open_obj;
@@ -89,8 +89,7 @@ struct bmapc_memb {
 	psclog((file), (func), (line), PSS_GEN, (level), 0,		\
 	    "bmap@%p b:%x m:%u i:%"PRIx64				\
 	    " rref=%u wref=%u opcnt=%u "fmt,				\
-	    (b), (b)->bcm_blkno,					\
-	    (b)->bcm_mode,						\
+	    (b), (b)->bcm_blkno, (b)->bcm_mode,				\
 	    (b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,		\
 	    atomic_read(&(b)->bcm_rd_ref),				\
 	    atomic_read(&(b)->bcm_wr_ref),				\
