@@ -45,6 +45,7 @@
 #include "fidcache.h"
 #include "mdsexpc.h"
 #include "mdsio.h"
+#include "mkfn.h"
 #include "pathnames.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
@@ -70,12 +71,44 @@ uint64_t
 slm_get_next_slashid(void)
 {
 	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	static int init;
+	char fn[PATH_MAX];
 	uint64_t slid;
+	FILE *fp;
 
+	/* XXX XXX disgusting XXX XXX */
 	spinlock(&lock);
+	if (!init) {
+		xmkfn(fn, "%s/%s", sl_datadir, SL_FN_HACK_FID);
+
+		fp = fopen(fn, "a+");
+		if (fp == NULL)
+			psc_fatal("%s", fn);
+		fchmod(fileno(fp), 0600);
+		fscanf(fp, "%"PRId64, &next_slash_id);
+		fclose(fp);
+
+		next_slash_id += 1000;
+
+		init = 1;
+	}
+
 	if (next_slash_id >= (UINT64_C(1) << SLASH_ID_FID_BITS))
 		next_slash_id = SLASHID_MIN;
 	slid = next_slash_id++;
+
+	/* XXX XXX disgusting XXX XXX */
+	if ((next_slash_id % 1000) == 0) {
+		xmkfn(fn, "%s/%s", sl_datadir, SL_FN_HACK_FID);
+
+		fp = fopen(fn, "r+");
+		if (fp == NULL)
+			psc_fatal("%s", fn);
+		fprintf(fp, "%"PRId64, next_slash_id);
+		ftruncate(fileno(fp), ftell(fp));
+		fclose(fp);
+	}
+
 	freelock(&lock);
 	return (slid | ((uint64_t)nodeResm->resm_site->site_id <<
 	    SLASH_ID_FID_BITS));
@@ -296,7 +329,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->fg.fg_fid = slm_get_next_slashid();
 
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
-	    mq->flags, mq->mode, mq->name, &mp->fg,
+	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
 	    NULL, &mp->attr, &mdsio_data);
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);

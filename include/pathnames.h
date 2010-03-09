@@ -45,6 +45,8 @@
 #define SL_FN_IONBMAPS_ODT	"ion_bmaps.odt"
 #define SL_FN_OPJOURNAL		"op-journal"
 
+#define SL_FN_HACK_FID		"hack-fid"
+
 extern const char *sl_datadir;
 
 #endif /* _SLASH_PATHNAMES_H_ */
