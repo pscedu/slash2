@@ -140,7 +140,7 @@ struct fidc_membh {
 #define FCMHCACHE_PUT(fcmh, list)						\
 	do {									\
 		(fcmh)->fcmh_cache_owner = (list);				\
-		if ((list) == &fidcPool->ppm_lc)				\
+		if ((list) == &fidcFreeList)					\
 			fcmh_destroy(fcmh);					\
 		else								\
 			lc_add((list), (fcmh));					\
