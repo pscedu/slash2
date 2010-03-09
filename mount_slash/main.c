@@ -1389,6 +1389,10 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	sl_externalize_stat(stb, &mq->attr);
 	mq->attr.sst_ptruncgen = fcmh_2_ptruncgen(c);
 
+	/* 
+	 * Even though we know our fid, we expect the server to fill it
+	 * along with the rest of the new attributes (mp->attr).
+	 */
 	rc = RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
