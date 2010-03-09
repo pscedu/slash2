@@ -396,6 +396,8 @@ tracks endpoint connections
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
 - apply rlim adjustments for fcmh to MDS
 - rename {bd,desc}buf to authbuf
+- only grab the next slash ID right before ZFS plans to use it to
+  avoid DoS
 
 zfs
 - standalone should create slash IDs, this will allow removal of the MDSIO_LOCAL flags
