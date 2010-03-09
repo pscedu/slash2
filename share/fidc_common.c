@@ -163,8 +163,7 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 			psc_hashent_remove(&fidcHtable, f);
 
 	} else if (lc == &fidcCleanList) {
-		psc_assert(f->fcmh_cache_owner == &fidcFreeList ||
-			   f->fcmh_cache_owner == &fidcDirtyList ||
+		psc_assert(f->fcmh_cache_owner == &fidcDirtyList ||
 			   f->fcmh_cache_owner == NULL);
 		psc_assert(ATTR_TEST(f->fcmh_state, FCMH_CAC_CLEAN));
 		psc_assert(clean);
