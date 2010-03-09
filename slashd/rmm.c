@@ -30,7 +30,6 @@
 #include "psc_util/lock.h"
 #include "psc_util/strlcpy.h"
 
-#include "cfd.h"
 #include "fid.h"
 #include "rpc_mds.h"
 #include "slashd.h"

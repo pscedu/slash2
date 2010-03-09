@@ -29,26 +29,16 @@
 struct fidc_membh;
 
 struct fcmh_cli_info {
-	struct fidc_membh	*fcci_parent;
-	struct psclist_head	 fcci_children;
-	struct psclist_head	 fcci_sibling;
-	int			 fcci_hash;
-	char			*fcci_name;
-};
-
-#define fcmh_2_fcci(f)		((struct fcmh_cli_info *)fcmh_get_pri(f))
-
-/*
- * FID cache member handle open object CLIENT-specific data.
- */
-struct fcoo_cli_info {
-	uint64_t		 fci_cfd;
-	int			 fci_nrepls;
+	struct fidc_membh	*fci_parent;
+	struct psclist_head	 fci_children;
+	struct psclist_head	 fci_sibling;
 	sl_replica_t		 fci_reptbl[SL_MAX_REPLICAS];
+	int			 fci_nrepls;
+	int			 fci_hash;
+	char			*fci_name;
 };
 
-#define fcmh_2_fci(f)		((struct fcoo_cli_info *)fcmh_2_fcci(f))
-#define fcmh_2_cfd(f)		fcmh_2_fci(f)->fci_cfd
+#define fcmh_2_fci(f)		((struct fcmh_cli_info *)fcmh_get_pri(f))
 
 /* client-specific fcmh_state flags */
 #define FCMH_CLI_HAVEREPLTBL	(_FCMH_FLGSHFT << 0)	/* file replica table present */
@@ -65,8 +55,6 @@ void	fidc_child_unlink(struct fidc_membh *, const char *);
 
 ssize_t	fcmh_getsize(struct fidc_membh *);
 void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
-
-int	fcmh_load_fci(struct fidc_membh *, enum rw);
 
 /**
  * fidc_lookup_load_inode - Create the inode if it doesn't exist loading

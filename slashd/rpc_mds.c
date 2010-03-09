@@ -25,7 +25,6 @@
 #include "psc_rpc/service.h"
 #include "psc_util/strlcpy.h"
 
-#include "cfd.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
@@ -120,7 +119,6 @@ mexpcli_get(struct pscrpc_export *exp)
 		mexp_cli = slexp->slexp_data =
 		    PSCALLOC(sizeof(*mexp_cli));
 		LOCK_INIT(&mexp_cli->mc_lock);
-		SPLAY_INIT(&mexp_cli->mc_cfdtree);
 		psc_waitq_init(&mexp_cli->mc_waitq);
 	}
 	ureqlock(&exp->exp_lock, locked);
@@ -133,7 +131,6 @@ mexpcli_destroy(struct pscrpc_export *exp)
 	struct slashrpc_export *slexp = exp->exp_private;
 	struct mexp_cli *mexpc = slexp->slexp_data;
 
-	cfdfreeall(exp, slexp->slexp_peertype);
 	if (mexpc && mexpc->mc_csvc)
 		sl_csvc_free(mexpc->mc_csvc);
 	PSCFREE(mexpc);

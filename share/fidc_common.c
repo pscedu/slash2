@@ -39,60 +39,29 @@ int  (*fidcReapCb)(struct fidc_membh *);
 
 struct psc_poolmaster	 fidcPoolMaster;
 struct psc_poolmgr	*fidcPool;
-#define fidcFreeList	 fidcPool->ppm_lc
 struct psc_listcache	 fidcDirtyList;
 struct psc_listcache	 fidcCleanList;
 struct psc_hashtbl	 fidcHtable;
-int			 fcoo_priv_size;
-
-/**
- * fcmh_reset - Invalidate a FID cache member handle.
- * @fcmh: handle to clear.
- */
-void
-fcmh_reset(struct fidc_membh *f)
-{
-	memset(f, 0, sizeof(*f));
-	LOCK_INIT(&f->fcmh_lock);
-	atomic_set(&f->fcmh_refcnt, 0);
-	psc_waitq_init(&f->fcmh_waitq);
-	f->fcmh_state = FCMH_CAC_FREE;
-	INIT_PSCLIST_ENTRY(&f->fcmh_lentry);
-	if (sl_fcmh_ops.sfop_initpri)
-		sl_fcmh_ops.sfop_initpri(f);
-}
-
-/**
- * fcmh_init - Init a newly allocated FID cache member handle.
- * @m: pool the fcmh was allocated for/from.
- * @p: object that was allocated.
- */
-int
-fcmh_init(__unusedx struct psc_poolmgr *m, void *p)
-{
-	struct fidc_membh *f = p;
-	int rc = 0;
-
-	if (sl_fcmh_ops.sfop_grow)
-		rc = sl_fcmh_ops.sfop_grow();
-	if (rc == 0)
-		fcmh_reset(f);
-	return (rc);
-}
 
 /**
  * fcmh_dtor - Destructor for FID cache member handles.
- * @p: object being destroyed.
+ * @r: fcmh being destroyed.
  */
 void
-fcmh_dtor(__unusedx void *p)
+fcmh_destroy(struct fidc_membh *f)
 {
-	if (sl_fcmh_ops.sfop_shrink)
-		sl_fcmh_ops.sfop_shrink();
-	/*
-	 * We don't need to reset() it here because that
-	 * was done before it was returned to the pool.
-	 */
+	psc_assert(f->fcmh_cache_owner == NULL);
+	psc_assert(psc_waitq_nwaiters(&f->fcmh_waitq));
+	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
+	psc_assert(psclist_disjoint(&f->fcmh_lentry));
+	psc_assert(psc_atomic32_read(&f->fcmh_refcnt) == 1);
+	psc_assert(psc_hashent_disjoint(&fidcHtable, &f->fcmh_hentry));
+
+	if (sl_fcmh_ops.sfop_dtor)
+		sl_fcmh_ops.sfop_dtor(f);
+
+	memset(f, 0, fidcPoolMaster.pms_entsize);
+	psc_pool_return(fidcPool, f);
 }
 
 /**
@@ -105,11 +74,12 @@ fcmh_get(void)
 	struct fidc_membh *f;
 
 	f = psc_pool_get(fidcPool);
-	psc_assert(f->fcmh_state == FCMH_CAC_FREE);
+	memset(f, 0, sizeof(*f));
+	SPLAY_INIT(&f->fcmh_bmaptree);
+	LOCK_INIT(&f->fcmh_lock);
+	psc_atomic32_set(&f->fcmh_refcnt, 1);
+	psc_waitq_init(&f->fcmh_waitq);
 	f->fcmh_state = FCMH_CAC_CLEAN;
-	psc_assert(fcmh_clean_check(f));
-	psc_assert(!f->fcmh_fcoo);
-	fcmh_incref(f);
 	return (f);
 }
 
@@ -179,13 +149,8 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		 *  other threads will ignore the freeing hash entry.
 		 */
 		psc_assert(f->fcmh_state & FCMH_CAC_FREEING);
-		/* No open object allowed here.
-		 */
-		psc_assert(!f->fcmh_fcoo);
-		/* Verify that no children are hanging about.
-		 */
 
-		psc_assert(!atomic_read(&f->fcmh_refcnt));
+		psc_assert(!psc_atomic32_read(&f->fcmh_refcnt));
 		if (f->fcmh_cache_owner == NULL)
 			DEBUG_FCMH(PLL_WARN, f,
 				   "null fcmh_cache_owner here");
@@ -195,9 +160,6 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 
 		if (psc_hashent_conjoint(&fidcHtable, f))
 			psc_hashent_remove(&fidcHtable, f);
-
-		/* invalidate to reveal mismanaged refs */
-		fcmh_reset(f);
 
 	} else if (lc == &fidcCleanList) {
 		psc_assert(f->fcmh_cache_owner == &fidcPool->ppm_lc ||
@@ -233,9 +195,7 @@ fidc_reap(struct psc_poolmgr *m)
 	psc_assert(m == fidcPool);
  startover:
 	LIST_CACHE_LOCK(&fidcCleanList);
-	psclist_for_each_entry_safe(f, tmp, &fidcCleanList.lc_listhd,
-				    fcmh_lentry) {
-
+	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcCleanList) {
 		DEBUG_FCMH(PLL_INFO, f, "considering for reap");
 
 		if (psclg_size(&m->ppm_lg) + psc_dynarray_len(&da) >=
@@ -248,13 +208,14 @@ fidc_reap(struct psc_poolmgr *m)
 			sched_yield();
 			goto startover;
 		}
+
 		/* - Inode must be lockable now
 		 * - Skip the root inode.
 		 * - Clean inodes may have non-zero refcnts,
 		 */
 		if ((!trylock(&f->fcmh_lock)) ||
 		    (fcmh_2_fid(f) == 1) ||
-		    (atomic_read(&f->fcmh_refcnt)))
+		    (psc_atomic32_read(&f->fcmh_refcnt)))
 			goto end2;
 		/* Make sure our clean list is 'clean' by
 		 *  verifying the following conditions.
@@ -349,7 +310,7 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				 */
 				psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
 				if (locked[1])
-					atomic_inc(&tmp->fcmh_refcnt);
+					psc_atomic32_inc(&tmp->fcmh_refcnt);
 				psc_hashbkt_unlock(b);
 				psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
 
@@ -357,7 +318,7 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 					psc_hashbkt_lock(b);
 				if (locked[1]) {
 					spinlock(&tmp->fcmh_lock);
-					atomic_dec(&tmp->fcmh_refcnt);
+					psc_atomic32_dec(&tmp->fcmh_refcnt);
 				}
 				goto retry;
 			}
@@ -546,13 +507,17 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 		fcmh_setattr(fcmh, sstb, setattrflags);
 	} else if (flags & FIDC_LOOKUP_LOAD) {
-		/* The caller has provided an incomplete
-		 *  attribute set.  This fcmh will be a
-		 *  placeholder and our caller will do the
-		 *  stat.
-		 */
 		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 		getting = 1;
+	}
+
+	if (sl_fcmh_ops.sfop_ctor) {
+		rc = sl_fcmh_ops.sfop_ctor(fcmh);
+		if (rc) {
+			psc_hashbkt_unlock(b);
+			psc_pool_return(fidcPool, fcmh);
+			return (rc);
+		}
 	}
 
 	/* Place the fcmh into the cache, note that the fcmh was
@@ -561,9 +526,6 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
 		DEBUG_FCMH(PLL_NOTICE, fcmh,
 		    "adding FIDGEN_ANY to cache");
-
-	if (flags & FIDC_LOOKUP_FCOOSTART)
-		fidc_fcoo_start_locked(fcmh);
 
 	/* XXX lock CleanList first */
 	FCMH_LOCK(fcmh);
@@ -586,7 +548,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			FCMH_LOCK(fcmh);
 		}
 		if ((fcmh->fcmh_state & FCMH_HAVE_ATTRS) == 0) {
-			rc = sl_fcmh_ops.sfop_getattr(fcmh, creds);
+			rc = sl_fcmh_ops.sfop_getattr(fcmh);
 			if (rc == 0)
 				fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
 		}
@@ -604,80 +566,6 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	return (0);
 }
 
-struct fidc_open_obj *
-fidc_fcoo_init(void)
-{
-	struct fidc_open_obj *f;
-
-	f = PSCALLOC(sizeof(*f) + fcoo_priv_size);
-	SPLAY_INIT(&f->fcoo_bmapc);
-	f->fcoo_bmap_sz = SLASH_BMAP_SIZE;
-	return (f);
-}
-
-/**
- * fidc_load_fcoo - Require an open object for the backed fcmh.
- * @fcmh: FID cache member handle.
- * Returns:
- *	-1	object could not be loaded
- *	 0	success, object loaded
- *	 1	caller must initialize substructure
- */
-int
-fcmh_load_fcoo(struct fidc_membh *fcmh, enum rw rw)
-{
-	int rc = 0;
-
-	FCMH_LOCK(fcmh);
-	fcmh->fcmh_state &= ~FCMH_FCOO_FAILED;
- restart:
-	if (fcmh->fcmh_state & FCMH_FCOO_STARTING) {
-		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
-		FCMH_LOCK(fcmh);
-		goto restart;
-	} else if (fcmh->fcmh_state & FCMH_FCOO_CLOSING) {
-		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
-		FCMH_LOCK(fcmh);
-		goto restart;
-	} else if (fcmh->fcmh_state & FCMH_FCOO_FAILED) {
-		rc = -1;
-	} else if (fcmh->fcmh_state & FCMH_FCOO_ATTACH) {
-		FCOO_INC_REFCNTS(fcmh->fcmh_fcoo, rw);
-	} else {
-		fidc_fcoo_start_locked(fcmh);
-		FCOO_INC_REFCNTS(fcmh->fcmh_fcoo, rw);
-		rc = 1;
-	}
-	FCMH_ULOCK(fcmh);
-	return (rc);
-}
-
-int
-fcmh_load_fcoo_nostart(struct fidc_membh *fcmh)
-{
-	int rc = 0;
-
-	FCMH_LOCK(fcmh);
-	fcmh->fcmh_state &= ~FCMH_FCOO_FAILED;
- restart:
-	if (fcmh->fcmh_state & FCMH_FCOO_STARTING) {
-		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
-		FCMH_LOCK(fcmh);
-		goto restart;
-	} else if (fcmh->fcmh_state & FCMH_FCOO_CLOSING) {
-		rc = -1;
-	} else if (fcmh->fcmh_state & FCMH_FCOO_FAILED) {
-		rc = -1;
-	} else if (fcmh->fcmh_state & FCMH_FCOO_ATTACH) {
-		fidc_fcoo_check_locked(fcmh);
-	} else {
-		psc_assert(fcmh->fcmh_fcoo == NULL);
-		rc = -1;
-	}
-	FCMH_ULOCK(fcmh);
-	return (rc);
-}
-
 /**
  * fidc_init - Initialize the FID cache.
  */
@@ -688,8 +576,8 @@ fidc_init(int privsiz, int nobj, int max,
 	_psc_poolmaster_init(&fidcPoolMaster,
 	    sizeof(struct fidc_membh) + privsiz,
 	    offsetof(struct fidc_membh, fcmh_lentry),
-	    PPMF_NONE, nobj, nobj, max, fcmh_init,
-	    fcmh_dtor, fidc_reap, NULL, "fcmh");
+	    PPMF_NONE, nobj, nobj, max, NULL,
+	    NULL, fidc_reap, NULL, "fcmh");
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
 	lc_reginit(&fidcDirtyList, struct fidc_membh,
@@ -721,14 +609,6 @@ dump_fcmh_flags(int flags)
 		print_flag("FCMH_CAC_FREEING", &seq);
 	if (flags & FCMH_CAC_FREE)
 		print_flag("FCMH_CAC_FREE", &seq);
-	if (flags & FCMH_FCOO_STARTING)
-		print_flag("FCMH_FCOO_STARTING", &seq);
-	if (flags & FCMH_FCOO_ATTACH)
-		print_flag("FCMH_FCOO_ATTACH", &seq);
-	if (flags & FCMH_FCOO_CLOSING)
-		print_flag("FCMH_FCOO_CLOSING", &seq);
-	if (flags & FCMH_FCOO_FAILED)
-		print_flag("FCMH_FCOO_FAILED", &seq);
 	if (flags & FCMH_HAVE_ATTRS)
 		print_flag("FCMH_HAVE_ATTRS", &seq);
 	if (flags & FCMH_GETTING_ATTRS)

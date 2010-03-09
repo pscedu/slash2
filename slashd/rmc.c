@@ -40,7 +40,6 @@
 #include "psc_util/lock.h"
 #include "psc_util/strlcpy.h"
 
-#include "cfd.h"
 #include "fdbuf.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
@@ -128,8 +127,8 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	const struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
 	struct bmapc_memb *bmap;
+	struct fidc_membh *fcmh;
 	struct iovec iov[5];
-	struct mexpfcm *m;
 	int niov;
 
 	bmap = NULL;
@@ -138,16 +137,12 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mq->rw != SL_READ && mq->rw != SL_WRITE)
 		return (-EINVAL);
 
-	/*
-	 * Check the cfdent structure associated with the client.  If successful,
-	 * it also returns the mexpfcm in the out argument.
-	 */
-	mp->rc = cfdlookup(rq->rq_export, mq->cfd, &m);
+	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		return (mp->rc);
 
 	bmap = NULL;
-	mp->rc = mds_bmap_load_cli(m, mq, &bmap);
+	mp->rc = mds_bmap_load_cli(fcmh, mq, rq->rq_export, &bmap);
 	if (mp->rc)
 		return (mp->rc);
 
@@ -281,52 +276,17 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 }
 
 int
-slm_rmc_translate_flags(int in, int *out)
-{
-	*out = 0;
-
-	if (in & ~(SLF_READ | SLF_WRITE | SLF_APPEND | SLF_CREAT |
-	    SLF_TRUNC | SLF_SYNC | SLF_EXCL))
-		return (EINVAL);
-
-	if ((in & (SLF_READ | SLF_WRITE)) == 0)
-		return (EINVAL);
-
-	if (in & SLF_WRITE) {
-		if (in & SLF_READ)
-			*out = O_RDWR;
-		else
-			*out = O_WRONLY;
-	}
-
-	if (in & SLF_CREAT)
-		*out |= O_CREAT;
-
-	if (in & SLF_EXCL)
-		*out |= O_EXCL;
-
-	*out |= O_LARGEFILE;
-
-	return (0);
-}
-
-int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
 	struct fidc_membh *p;
-	struct cfdent *cfd;
 	void *mdsio_data;
-	int fl;
 
 	p = NULL;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	mp->rc = slm_rmc_translate_flags(mq->flags, &fl);
-	if (mp->rc)
-		goto out;
 
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
@@ -337,72 +297,14 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 #endif
 
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
-	    fl | O_EXCL | O_CREAT, mq->mode, mq->name, &mp->fg, NULL,
-	    &mp->attr, &mdsio_data);
-	if (mp->rc)
-		goto out;
-	mdsio_frelease(&rootcreds, mdsio_data);
-
-	mp->rc = cfdnew(mp->fg.fg_fid, rq->rq_export,
-	    SLCONNT_CLI, &cfd, CFD_FILE, fflags_2_rw(fl));
+	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
+	    NULL, &mp->attr, &mdsio_data);
 	if (mp->rc == 0)
-		mp->cfd = cfd->cfd_cfd;
+		mdsio_release(&rootcreds, mdsio_data);
 
  out:
 	if (p)
 		fcmh_dropref(p);
-	return (0);
-}
-
-int
-slm_rmc_handle_open(struct pscrpc_request *rq)
-{
-	struct srm_open_rep *mp;
-	struct srm_open_req *mq;
-	struct fidc_membh *fcmh;
-	struct cfdent *cfd;
-
-	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
-	if (mp->rc)
-		goto out;
-
-	mp->rc = cfdnew(mq->fg.fg_fid, rq->rq_export,
-	    SLCONNT_CLI, &cfd, CFD_FILE, SL_READ);
-	if (mp->rc == 0) {
-		mp->attr = fcmh->fcmh_sstb;
-		mp->cfd = cfd->cfd_cfd;
-	}
-
- out:
-	if (fcmh)
-		fcmh_dropref(fcmh);
-	return (0);
-}
-
-int
-slm_rmc_handle_opendir(struct pscrpc_request *rq)
-{
-	struct srm_opendir_req *mq;
-	struct srm_opendir_rep *mp;
-	struct fidc_membh *d;
-	struct cfdent *cfd;
-
-	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->fg, &d);
-	if (mp->rc)
-		goto out;
-
-	mp->rc = cfdnew(mq->fg.fg_fid, rq->rq_export,
-	    SLCONNT_CLI, &cfd, CFD_DIR, SL_READ);
-	if (mp->rc == 0) {
-		mp->attr = d->fcmh_sstb;
-		mp->cfd = cfd->cfd_cfd;
-	}
-
- out:
-	if (d)
-		fcmh_dropref(d);
 	return (0);
 }
 
@@ -412,8 +314,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
+	struct fidc_membh *fcmh;
 	struct iovec iov[2];
-	struct mexpfcm *m;
 	size_t outsize;
 	int niov;
 
@@ -422,7 +324,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 
-	mp->rc = cfdlookup(rq->rq_export, mq->cfd, &m);
+	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		goto out;
 
@@ -433,10 +335,6 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 		goto out;
 	}
-
-	mp->rc = fcmh_load_fmi(m->mexpfcm_fcmh, SL_READ);
-	if (mp->rc)
-		goto out;
 
 	iov[0].iov_base = PSCALLOC(mq->size);
 	iov[0].iov_len = mq->size;
@@ -453,11 +351,11 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 	mp->rc = mdsio_readdir(&rootcreds, mq->size, mq->offset,
 	    iov[0].iov_base, &outsize, iov[1].iov_base, mq->nstbpref,
-	    fcmh_2_mdsio_data(m->mexpfcm_fcmh));
+	    fcmh_2_mdsio_data(fcmh));
 	mp->size = outsize;
 
 	psc_info("mdsio_readdir rc=%d data=%p", mp->rc,
-	    fcmh_2_mdsio_data(m->mexpfcm_fcmh));
+	    fcmh_2_mdsio_data(fcmh));
 
 	if (mp->rc)
 		goto out;
@@ -505,48 +403,6 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	if (fcmh)
 		fcmh_dropref(fcmh);
 	return (mp->rc);
-}
-
-int
-slm_rmc_handle_release(struct pscrpc_request *rq)
-{
-	struct srm_release_req *mq;
-	struct srm_generic_rep *mp;
-	struct fcoo_mds_info *fmi;
-	struct fidc_membh *f;
-	struct mexpfcm *m;
-	struct cfdent *c;
-	uint64_t cfd;
-	int rc;
-
-	RSX_ALLOCREP(rq, mq, mp);
-
-	c = cfdget(rq->rq_export, mq->cfd);
-	if (!c) {
-		psc_info("cfdget() failed cfd %"PRId64, cfd);
-		mp->rc = ENOENT;
-		return (0);
-	}
-	m = c->cfd_pri;
-
-	f = m->mexpfcm_fcmh;
-	psc_assert(f->fcmh_fcoo);
-
-	fmi = fcmh_2_fmi(f);
-
-	MEXPFCM_LOCK(m);
-	psc_assert(m->mexpfcm_fcmh);
-	/* Prevent others from trying to access the mexpfcm.
-	 */
-	m->mexpfcm_flags |= MEXPFCM_CLOSING;
-	MEXPFCM_ULOCK(m);
-
-	rc = cfdfree(rq->rq_export, cfd);
-	psc_info("cfdfree() cfd %"PRId64" rc=%d", cfd, rc);
-
-	mp->rc = mds_inode_release(f);
-
-	return (0);
 }
 
 int
@@ -659,10 +515,6 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	mp->rc = fcmh_load_fmi(fcmh, SL_WRITE);
-	if (mp->rc)
-		goto out;
-
 	ih = fcmh_2_inoh(fcmh);
 	mp->rc = mds_inox_ensure_loaded(ih);
 	if (mp->rc == 0) {
@@ -671,7 +523,6 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 		mds_inode_sync(ih);
 	}
 
-	mds_inode_release(fcmh);
  out:
 	if (fcmh)
 		fcmh_dropref(fcmh);
@@ -684,7 +535,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	struct srm_set_bmapreplpol_req *mq;
 	struct bmap_mds_info *bmdsi;
 	struct srm_generic_rep *mp;
-	struct fcoo_mds_info *fmi;
+	struct fcmh_mds_info *fmi;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
 
@@ -701,10 +552,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	mp->rc = fcmh_load_fmi(fcmh, SL_WRITE);
-	if (mp->rc)
-		goto out;
-	fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
+	fmi = fcmh_2_fmi(fcmh);
 
 	if (!mds_bmap_exists(fcmh, mq->bmapno)) {
 		mp->rc = SLERR_BMAP_INVALID;
@@ -721,8 +569,6 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	mds_repl_bmap_rel(bcm);
 
  out:
-	if (fmi)
-		mds_inode_release(fcmh);
 	if (fcmh)
 		fcmh_dropref(fcmh);
 	return (0);
@@ -887,20 +733,11 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	case SRMT_LOOKUP:
 		rc = slm_rmc_handle_lookup(rq);
 		break;
-	case SRMT_OPEN:
-		rc = slm_rmc_handle_open(rq);
-		break;
-	case SRMT_OPENDIR:
-		rc = slm_rmc_handle_opendir(rq);
-		break;
 	case SRMT_READDIR:
 		rc = slm_rmc_handle_readdir(rq);
 		break;
 	case SRMT_READLINK:
 		rc = slm_rmc_handle_readlink(rq);
-		break;
-	case SRMT_RELEASE:
-		rc = slm_rmc_handle_release(rq);
 		break;
 	case SRMT_RENAME:
 		rc = slm_rmc_handle_rename(rq);

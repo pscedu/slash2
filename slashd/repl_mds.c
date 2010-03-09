@@ -558,22 +558,14 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	if (rc)
 		return (rc);
 
-	rc = fcmh_load_fmi(fcmh, SL_WRITE);
-	if (rc) {
-		fcmh_dropref(fcmh);
-		return (rc);
-	}
-
 	ih = fcmh_2_inoh(fcmh);
 	rc = mds_inox_ensure_loaded(ih);
 	if (rc)
 		psc_fatalx("mds_inox_ensure_loaded: %s", slstrerror(rc));
 	*fp = fcmh;
 
-	if (rc) {
-		mds_inode_release(fcmh);
+	if (rc)
 		fcmh_dropref(fcmh);
-	}
 	return (rc);
 }
 
@@ -849,7 +841,6 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
-	mds_inode_release(REPLRQ_FCMH(rrq));
 	fcmh_dropref(REPLRQ_FCMH(rrq));
 
 	/* SPLAY_REMOVE() does not NULL out the field */
@@ -1025,7 +1016,7 @@ mds_repl_scandir(void)
 		}
 		off += tsiz;
 	}
-	rc = mdsio_frelease(&rootcreds, data);
+	rc = mdsio_release(&rootcreds, data);
 	if (rc)
 		psc_fatalx("mdsio_release %s: %s", SL_PATH_REPLS,
 		    slstrerror(rc));

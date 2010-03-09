@@ -28,18 +28,31 @@
 #include "fidc_iod.h"
 #include "fidcache.h"
 
-int fcoo_priv_size = sizeof(struct fcoo_iod_info);
-
 int
-sli_fcmh_grow(void)
+sli_fcmh_ctor(struct fidc_membh *fcmh)
 {
+	struct fcmh_iod_info *fii;
+	char fidfn[PATH_MAX];
 	rlim_t soft, hard;
-	int rc;
+	int tryset, rc;
 
 	/* increase #fd resource limit */
 	spinlock(&psc_rlimit_lock);
 	rc = psc_getrlimit(RLIMIT_NOFILE, &soft, &hard);
-	if (rc == 0 && psc_setrlimit(RLIMIT_NOFILE,
+	tryset = (rc == 0);
+	if (tryset && psc_setrlimit(RLIMIT_NOFILE,
+	    soft + 1, hard + 1) == -1)
+		psc_warn("setrlimit NOFILE %"PRId64, soft + 1);
+
+	/* try to get an file descriptor for this backing obj */
+	fii = fcmh_2_fii(fcmh);
+	fg_makepath(&fcmh->fcmh_fg, fidfn);
+	fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
+	if (fcmh_2_fd(fcmh) == -1)
+		rc = errno;
+
+	/* oops, an error; if we increased the rlim, decrease it */
+	if (rc && tryset && psc_setrlimit(RLIMIT_NOFILE,
 	    soft + 1, hard + 1) == -1)
 		psc_warn("setrlimit NOFILE %"PRId64, soft + 1);
 	freelock(&psc_rlimit_lock);
@@ -47,7 +60,7 @@ sli_fcmh_grow(void)
 }
 
 void
-sli_fcmh_shrink(void)
+sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 {
 	rlim_t soft, hard;
 	int rc;
@@ -61,39 +74,8 @@ sli_fcmh_shrink(void)
 	freelock(&psc_rlimit_lock);
 }
 
-/*
- * fcmh_load_fii - Associate an fcmh with a file handle to a data
- *	store for the file on the local file system.
- * @f: FID cache member handle of file to open.
- * @rw: read or write operation.
- */
-int
-fcmh_load_fii(struct fidc_membh *fcmh, enum rw rw)
-{
-	char fidfn[PATH_MAX];
-	int flags, rc;
-
-	rc = fcmh_load_fcoo(fcmh, rw);
-	if (rc <= 0)
-		return (rc);
-
-	flags = O_RDWR;
-	if (rw == SL_WRITE)
-		flags |= O_CREAT;
-
-	fg_makepath(&fcmh->fcmh_fg, fidfn);
-	fcmh_2_fd(fcmh) = open(fidfn, flags, 0600);
-	if (fcmh_2_fd(fcmh) == -1) {
-		rc = errno;
-		fidc_fcoo_startfailed(fcmh);
-	} else
-		fidc_fcoo_startdone(fcmh);
-	return (rc);
-}
-
 struct sl_fcmh_ops sl_fcmh_ops = {
-/* getattr */	NULL,
-/* initpri */	NULL,
-/* grow */	sli_fcmh_grow,
-/* shrink */	sli_fcmh_shrink
+/* ctor */	sli_fcmh_ctor,
+/* dtor */	sli_fcmh_dtor,
+/* getattr */	NULL
 };

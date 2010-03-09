@@ -41,19 +41,17 @@
 #include "rpc_cli.h"
 
 #define FCMH_FOREACH_CHILD(c, p)						\
-	psclist_for_each_entry2((c), &fcmh_2_fcci(p)->fcci_children,		\
-	    sizeof(struct fidc_membh) +	offsetof(struct fcmh_cli_info, fcci_sibling))
+	psclist_for_each_entry2((c), &fcmh_2_fci(p)->fci_children,		\
+	    sizeof(struct fidc_membh) +	offsetof(struct fcmh_cli_info, fci_sibling))
 
 #define FCMH_FOREACH_CHILD_SAFE(c0, cn, p)					\
 	psclist_for_each_entry2_safe((c0), (cn),				\
-	    &fcmh_2_fcci(p)->fcci_children, sizeof(struct fidc_membh) +		\
-	    offsetof(struct fcmh_cli_info, fcci_sibling))			\
-
-int fcoo_priv_size = sizeof(struct fcoo_cli_info);
+	    &fcmh_2_fci(p)->fci_children, sizeof(struct fidc_membh) +		\
+	    offsetof(struct fcmh_cli_info, fci_sibling))			\
 
 /**
  * fidc_child_prep_free_locked - if the fcmh is a directory then detach
- *	any cached fcci_children.  This ensures that the
+ *	any cached fci_children.  This ensures that the
  *	children's backpointer reference is properly erased.
  * @f:  the fcmh object to be freed.
  */
@@ -61,31 +59,31 @@ __static void
 fidc_child_prep_free_locked(struct fidc_membh *f)
 {
 	struct fidc_membh *c, *tmp;
-	struct fcmh_cli_info *cc;
+	struct fcmh_cli_info *fci;
 
 	FCMH_FOREACH_CHILD_SAFE(c, tmp, f) {
-		cc = fcmh_get_pri(c);
+		fci = fcmh_get_pri(c);
 		DEBUG_FCMH(PLL_WARN, c, "fidc_membh=%p name=%s detaching",
-		    c, cc->fcci_name);
-		psc_assert(cc->fcci_parent == f);
-		cc->fcci_parent = NULL;
-		psclist_del(&cc->fcci_sibling);
+		    c, fci->fci_name);
+		psc_assert(fci->fci_parent == f);
+		fci->fci_parent = NULL;
+		psclist_del(&fci->fci_sibling);
 	}
 }
 
 /**
  * fidc_child_free - Release a child.  The parent must already be
  *	locked (plocked == 'parent locked') so that the fcmh may be freed
- *	from the parent's fcci_children list.
+ *	from the parent's fci_children list.
  * @c: the fcmh to be freed.
  */
 __static void
 fidc_child_free_plocked(struct fidc_membh *c)
 {
-	struct fcmh_cli_info *cc;
+	struct fcmh_cli_info *fci;
 	int locked;
 
-	cc = fcmh_get_pri(c);
+	fci = fcmh_get_pri(c);
 	locked = reqlock(&c->fcmh_lock);
 
 	LOCK_ENSURE(&c->fcmh_lock);
@@ -93,16 +91,16 @@ fidc_child_free_plocked(struct fidc_membh *c)
 
 	if (fcmh_isdir(c)) {
 		fidc_child_prep_free_locked(c);
-		psc_assert(psclist_empty(&cc->fcci_children));
+		psc_assert(psclist_empty(&fci->fci_children));
 	}
 
 	DEBUG_FCMH(PLL_DEBUG, c, "name=%s parent=%p freeing "
-	    "child_empty=%d", cc->fcci_name, cc->fcci_parent,
-	    fcmh_isdir(c) ? psclist_empty(&cc->fcci_children) : -1);
+	    "child_empty=%d", fci->fci_name, fci->fci_parent,
+	    fcmh_isdir(c) ? psclist_empty(&fci->fci_children) : -1);
 
-	PSCFREE(cc->fcci_name);
-	cc->fcci_parent = NULL;
-	psclist_del(&cc->fcci_sibling);
+	PSCFREE(fci->fci_name);
+	fci->fci_parent = NULL;
+	psclist_del(&fci->fci_sibling);
 
 	ureqlock(&c->fcmh_lock, locked);
 }
@@ -117,23 +115,23 @@ fidc_child_free_plocked(struct fidc_membh *c)
 static void
 fidc_child_free_orphan_locked(struct fidc_membh *f)
 {
-	struct fcmh_cli_info *cc;
+	struct fcmh_cli_info *fci;
 
-	cc = fcmh_get_pri(f);
+	fci = fcmh_get_pri(f);
 
 	LOCK_ENSURE(&f->fcmh_lock);
 
-	psc_assert(!cc->fcci_parent);
+	psc_assert(!fci->fci_parent);
 	psc_assert(!(f->fcmh_state & FCMH_CAC_FREEING));
-	cc->fcci_name = NULL;
+	fci->fci_name = NULL;
 
 	DEBUG_FCMH(PLL_WARN, f, "name=%s freeing orphan",
-	    cc->fcci_name);
+	    fci->fci_name);
 
 	if (fcmh_isdir(f))
-		psc_assert(psclist_empty(&cc->fcci_children));
+		psc_assert(psclist_empty(&fci->fci_children));
 
-	PSCFREE(cc->fcci_name);
+	PSCFREE(fci->fci_name);
 }
 
 /**
@@ -150,7 +148,7 @@ __static int
 fidc_child_try_validate_locked(struct fidc_membh *p,
     struct fidc_membh *c, const char *name)
 {
-	struct fcmh_cli_info *cc, *pc;
+	struct fcmh_cli_info *fci, *pci;
 
 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
 	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
@@ -158,13 +156,13 @@ fidc_child_try_validate_locked(struct fidc_membh *p,
 	psc_assert(!(p->fcmh_state & FCMH_CAC_FREEING));
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
-	cc = fcmh_get_pri(c);
+	fci = fcmh_get_pri(c);
 
-	if (cc->fcci_name == NULL)
+	if (fci->fci_name == NULL)
 		return (0);
 
 	/* Both of these must always be true. */
-	if (strcmp(name, cc->fcci_name)) {
+	if (strcmp(name, fci->fci_name)) {
 		/* This fcmh must have been renamed, remove. */
 		fidc_child_free_plocked(c);
 		return (0);
@@ -176,14 +174,14 @@ fidc_child_try_validate_locked(struct fidc_membh *p,
 	/* If the child is 'connected', then its parent inode
 	 *   must be 'p'.
 	 */
-	if (cc->fcci_parent) {
-		psc_assert(cc->fcci_parent == p);
-		psc_assert(psclist_conjoint(&cc->fcci_sibling));
+	if (fci->fci_parent) {
+		psc_assert(fci->fci_parent == p);
+		psc_assert(psclist_conjoint(&fci->fci_sibling));
 	} else {
-		cc->fcci_parent = p;
-		pc = fcmh_get_pri(p);
-		psclist_xadd_tail(&cc->fcci_sibling,
-		    &pc->fcci_children);
+		fci->fci_parent = p;
+		pci = fcmh_get_pri(p);
+		psclist_xadd_tail(&fci->fci_sibling,
+		    &pci->fci_children);
 	}
 	return (1);
 }
@@ -198,32 +196,32 @@ fidc_child_try_validate_locked(struct fidc_membh *p,
 int
 fidc_child_reap_cb(struct fidc_membh *f)
 {
-	struct fcmh_cli_info *cc;
+	struct fcmh_cli_info *fci;
 
-	cc = fcmh_get_pri(f);
+	fci = fcmh_get_pri(f);
 
 	LOCK_ENSURE(&f->fcmh_lock);
 	/* Don't free the root inode. */
 	psc_assert(fcmh_2_fid(f) != 1);
 
 	DEBUG_FCMH(PLL_WARN, f, "fcmh_no_children=%d",
-	    fcmh_isdir(f) ? psclist_empty(&cc->fcci_children) : -1);
+	    fcmh_isdir(f) ? psclist_empty(&fci->fci_children) : -1);
 
-	if (fcmh_isdir(f) && !psclist_empty(&cc->fcci_children))
+	if (fcmh_isdir(f) && !psclist_empty(&fci->fci_children))
 		return (0);
 
-	else if (cc->fcci_name == NULL)
+	else if (fci->fci_name == NULL)
 		return (1);
 
-	else if (!cc->fcci_parent) {
+	else if (!fci->fci_parent) {
 		fidc_child_free_orphan_locked(f);
 		return (1);
 
-	} else if (trylock(&cc->fcci_parent->fcmh_lock)) {
+	} else if (trylock(&fci->fci_parent->fcmh_lock)) {
 		/* The parent needs to be unlocked after the child is freed,
 		 *  hence the need for the temp var 'p'.
 		 */
-		struct fidc_membh *p = cc->fcci_parent;
+		struct fidc_membh *p = fci->fci_parent;
 
 		psc_assert(p);
 		/* This trylock technically violates lock ordering
@@ -250,7 +248,7 @@ static struct fidc_membh *
 fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 {
 	int found=0, hash=psc_str_hashify(name);
-	struct fcmh_cli_info *cc;
+	struct fcmh_cli_info *fci;
 	struct fidc_membh *c;
 	struct timeval now;
 
@@ -262,15 +260,15 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	    name, name, hash);
 
 	FCMH_FOREACH_CHILD(c, p) {
-		cc = fcmh_get_pri(c);
+		fci = fcmh_get_pri(c);
 
 		psc_traces(PSS_GEN, "p=fcmh@%p c=%p cname=%s hash=%d",
-		    p, c, cc->fcci_name, cc->fcci_hash);
+		    p, c, fci->fci_name, fci->fci_hash);
 
-		if (cc->fcci_hash == hash &&
-		    strcmp(name, cc->fcci_name) == 0) {
+		if (fci->fci_hash == hash &&
+		    strcmp(name, fci->fci_name) == 0) {
 			found = 1;
-			psc_assert(cc->fcci_parent == p);
+			psc_assert(fci->fci_parent == p);
 			fcmh_incref(c);
 			break;
 		}
@@ -312,11 +310,12 @@ fidc_child_lookup(struct fidc_membh *p, const char *name)
 void
 fidc_child_unlink(struct fidc_membh *p, const char *name)
 {
+	struct fcmh_cli_info *fci;
 	struct fidc_membh *c;
-	struct fcmh_cli_info *cc;
-	int locked=reqlock(&p->fcmh_lock);
+	int locked;
 
-	cc = fcmh_get_pri(c);
+	locked = reqlock(&p->fcmh_lock);
+	fci = fcmh_get_pri(c);
 
 	psc_assert(fcmh_isdir(p));
 	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
@@ -328,9 +327,9 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	}
 
 	/* Perform some sanity checks on the cached data structure. */
-	psc_assert(cc->fcci_parent == p);
-	psc_assert(cc->fcci_hash == psc_str_hashify(name));
-	psc_assert(strcmp(cc->fcci_name, name));
+	psc_assert(fci->fci_parent == p);
+	psc_assert(fci->fci_hash == psc_str_hashify(name));
+	psc_assert(strcmp(fci->fci_name, name));
 
 	/* The only ref on the child should be the one taken above in
 	 *  fidc_child_lookup_int_locked()
@@ -369,18 +368,18 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	/* Atomic check+add onto the parent d_inode. */
 	tmp = fidc_child_lookup_int_locked(p, name);
 	if (tmp == NULL) {
-		struct fcmh_cli_info *cc, *pc;
+		struct fcmh_cli_info *fci, *pci;
 
 		/* It doesn't yet exist, add it. */
-		pc = fcmh_get_pri(p);
-		cc = fcmh_get_pri(c);
+		pci = fcmh_get_pri(p);
+		fci = fcmh_get_pri(c);
 
-		cc->fcci_parent = p;
-		cc->fcci_name = psc_strdup(name);
-		cc->fcci_hash = psc_str_hashify(name);
-		psclist_xadd_tail(&cc->fcci_sibling, &pc->fcci_children);
+		fci->fci_parent = p;
+		fci->fci_name = psc_strdup(name);
+		fci->fci_hash = psc_str_hashify(name);
+		psclist_xadd_tail(&fci->fci_sibling, &pci->fci_children);
 		DEBUG_FCMH(PLL_WARN, p, "adding name: %s",
-		    cc->fcci_name);
+		    fci->fci_name);
 	} else
 		/* Someone beat us to the punch, do sanity checks and then
 		 *  clean up.
@@ -395,11 +394,11 @@ void
 fidc_child_rename(struct fidc_membh *op, const char *oldname,
     struct fidc_membh *np, const char *newname)
 {
-	struct fcmh_cli_info *cc, *pc;
+	struct fcmh_cli_info *fci, *pci;
 	struct fidc_membh *ch;
 	size_t len;
 
-	pc = fcmh_get_pri(np);
+	pci = fcmh_get_pri(np);
 
 	len = strlen(newname);
 	if (len > NAME_MAX)
@@ -408,11 +407,11 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 
 	spinlock(&op->fcmh_lock);
 	ch = fidc_child_lookup_int_locked(op, oldname);
-	cc = fcmh_get_pri(ch);
+	fci = fcmh_get_pri(ch);
 	if (ch) {
 		spinlock(&ch->fcmh_lock);
-		cc->fcci_parent = NULL;
-		psclist_del(&cc->fcci_sibling);
+		fci->fci_parent = NULL;
+		psclist_del(&fci->fci_sibling);
 	}
 	freelock(&op->fcmh_lock);
 
@@ -426,14 +425,14 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	}
 
 	/* overwrite the old name with the new one in place */
-	psc_assert(cc->fcci_name);
-	cc->fcci_name = psc_realloc(cc->fcci_name, len, 0);
-	cc->fcci_hash = psc_str_hashify(newname);
-	strlcpy(cc->fcci_name, newname, len);
+	psc_assert(fci->fci_name);
+	fci->fci_name = psc_realloc(fci->fci_name, len, 0);
+	fci->fci_hash = psc_str_hashify(newname);
+	strlcpy(fci->fci_name, newname, len);
 
 	spinlock(&np->fcmh_lock);
-	cc->fcci_parent = np;
-	psclist_xadd_tail(&cc->fcci_sibling, &pc->fcci_children);
+	fci->fci_parent = np;
+	psclist_xadd_tail(&fci->fci_sibling, &pci->fci_children);
 	freelock(&np->fcmh_lock);
 
 	fcmh_dropref(ch);
@@ -474,59 +473,36 @@ fcmh_getsize(struct fidc_membh *h)
 }
 
 int
-fcmh_load_fci(struct fidc_membh *fcmh, enum rw rw)
+slc_fcmh_ctor(struct fidc_membh *fcmh)
 {
-	struct fcoo_cli_info *fci;
-	struct pscrpc_request *rq;
-	struct srm_open_req *mq;
-	struct srm_open_rep *mp;
-	int rc;
+	struct fcmh_cli_info *fci;
+	int rc = 0;
 
-	rc = fcmh_load_fcoo(fcmh, rw);
-	if (rc <= 0)
-		return (rc);
-
-	fci = fcoo_get_pri(fcmh->fcmh_fcoo);
-
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
-	    fcmh_isdir(fcmh) ? SRMT_OPENDIR : SRMT_OPEN,
-	    rq, mq, mp);
-	if (rc)
-		goto error;
-
-	mq->fg = fcmh->fcmh_fg;
-
-	rc = RSX_WAITREP(rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
-	if (rc)
-		goto error;
-
-	fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE);
-	fcmh_2_cfd(fcmh) = mp->cfd;
-
- error:
-	pscrpc_req_finished(rq);
-	if (rc)
-		fidc_fcoo_startfailed(fcmh);
-	else
-		fidc_fcoo_startdone(fcmh);
+	fci = fcmh_get_pri(fcmh);
+	INIT_PSCLIST_ENTRY(&fci->fci_sibling);
+	INIT_PSCLIST_HEAD(&fci->fci_children);
 	return (rc);
 }
 
 void
-slc_fcmh_initpri(struct fidc_membh *fcmh)
+slc_fcmh_dtor(struct fidc_membh *fcmh)
 {
-	struct fcmh_cli_info *cc;
+	struct fcmh_cli_info *fci;
 
-	cc = fcmh_get_pri(fcmh);
-	INIT_PSCLIST_ENTRY(&cc->fcci_sibling);
-	INIT_PSCLIST_HEAD(&cc->fcci_children);
+	fci = fcmh_2_fci(fcmh);
+	PSCFREE(fci->fci_name);
+	psc_assert(psclist_empty(&fci->fci_children));
+	psc_assert(psclist_disjoint(&fci->fci_sibling));
+}
+
+int
+slc_fcmh_getattr(struct fidc_membh *fcmh)
+{
+	return (slash2fuse_stat(fcmh, &rootcreds));
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
-/* getattr */	slash2fuse_stat,
-/* initpri */	slc_fcmh_initpri,
-/* grow */	NULL,
-/* shrink */	NULL
+/* ctor */	slc_fcmh_ctor,
+/* dtor */	slc_fcmh_dtor,
+/* getattr */	slc_fcmh_getattr
 };

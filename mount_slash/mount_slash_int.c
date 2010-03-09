@@ -441,8 +441,6 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	 */
 	bmpc_lru_del(bmpc);
 
-	psc_assert(b->bcm_fcmh->fcmh_fcoo);
-
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_mode & BMAP_CLOSING);
 	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
@@ -489,7 +487,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_cli_info *msbd;
-	struct fcoo_cli_info *fci;
+	struct fcmh_cli_info *fci;
 	struct pscrpc_request *rq;
 	struct srm_bmap_req *mq;
 	struct srm_bmap_rep *mp;
@@ -502,9 +500,7 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 	psc_assert(bmap->bcm_fcmh);
 
 	f = bmap->bcm_fcmh;
-
-	psc_assert(f->fcmh_fcoo);
-	fci = fcoo_get_pri(f->fcmh_fcoo);
+	fci = fcmh_2_fci(f);
 
 	FCMH_LOCK(f);
 	if ((f->fcmh_state & (FCMH_CLI_HAVEREPLTBL |
@@ -519,7 +515,6 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 		goto done;
 
 	mq->fg = f->fcmh_fg;
-	mq->cfd = fcmh_2_cfd(f);
 	mq->pios  = prefIOS; /* Tell MDS of our preferred ION */
 	mq->blkno = bmap->bcm_bmapno;
 	mq->nblks = 1;
@@ -600,7 +595,6 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, enum rw rw)
 		return (rc);
 
 	mq->fg = f->fcmh_fg;
-	mq->cfd = fcmh_2_cfd(f);
 	mq->blkno = b;
 	mq->rw = rw;
 
@@ -828,12 +822,12 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 {
 	struct slashrpc_cservice *csvc;
 	struct bmap_cli_info *msbd;
-	struct fcoo_cli_info *fci;
+	struct fcmh_cli_info *fci;
 	struct sl_resource *res;
 	struct sl_resm *resm;
 	int j, rnd, nios;
 
-	fci = fcoo_get_pri(bcm->bcm_fcmh->fcmh_fcoo);
+	fci = fcmh_2_fci(bcm->bcm_fcmh);
 	msbd = bcm->bcm_pri;
 
 	if (SL_REPL_GET_BMAP_IOS_STAT(msbd->msbd_msbcr.msbcr_repls,
@@ -858,14 +852,13 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 struct pscrpc_import *
 msl_bmap_choose_replica(struct bmapc_memb *b)
 {
-	struct fcoo_cli_info *fci;
+	struct fcmh_cli_info *fci;
 	struct pscrpc_import *imp;
 	int n, rnd;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
-	psc_assert(b->bcm_fcmh->fcmh_fcoo);
 
-	fci = fcoo_get_pri(b->bcm_fcmh->fcmh_fcoo);
+	fci = fcmh_get_pri(b->bcm_fcmh);
 
 	/* first, try preferred IOS */
 	rnd = psc_random32u(fci->fci_nrepls);
@@ -1590,8 +1583,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	/* Are these bytes in the cache?
 	 *  Get the start and end block regions from the input parameters.
 	 */
-	s = off / mslfh_2_bmapsz(mfh);
-	e = ((off + size) - 1) / mslfh_2_bmapsz(mfh);
+	s = off / SLASH_BMAP_SIZE;
+	e = ((off + size) - 1) / SLASH_BMAP_SIZE;
 
 	if ((e - s) > MAX_BMAPS_REQ)
 		return (-EINVAL);

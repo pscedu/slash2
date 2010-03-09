@@ -25,7 +25,6 @@
 
 #include "bmap.h"
 #include "cache_params.h"
-#include "cfd.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
@@ -43,19 +42,13 @@ const struct slash_bmap_od		 null_bmap_od;
 const struct slash_inode_od		 null_inode_od;
 const struct slash_inode_extras_od	 null_inox_od;
 
-__static SPLAY_GENERATE(fcm_exports, mexpfcm,
-    mexpfcm_fcmh_tentry, mexpfcm_cache_cmp);
-
-__static SPLAY_GENERATE(exp_bmaptree, mexpbcm,
-    mexpbcm_exp_tentry, mexpbmapc_cmp);
-
 __static SPLAY_GENERATE(bmap_exports, mexpbcm,
     mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
 
 __static void
 mds_inode_od_initnew(struct slash_inode_handle *i)
 {
-	i->inoh_flags = (INOH_INO_NEW | INOH_INO_DIRTY);
+	i->inoh_flags = INOH_INO_NEW | INOH_INO_DIRTY;
 	COPYFG(&i->inoh_ino.ino_fg, &i->inoh_fcmh->fcmh_fg);
 
 	/* For now this is a fixed size. */
@@ -64,45 +57,6 @@ mds_inode_od_initnew(struct slash_inode_handle *i)
 	i->inoh_ino.ino_flags = 0;
 	i->inoh_ino.ino_nrepls = 0;
 	mds_inode_sync(i);
-}
-
-int
-mds_inode_release(struct fidc_membh *f)
-{
-	struct fcoo_mds_info *fmi;
-	int rc=0;
-
-	spinlock(&f->fcmh_lock);
-
-	psc_assert(f->fcmh_fcoo);
-	/* It should be safe to look at the fmi without calling
-	 *   fidc_fcmh2fmi() because this thread should absolutely have
-	 *   a ref to the fcmh which should be open.
-	 */
-	fmi = fcmh_2_fmi(f);
-
-	DEBUG_FCMH(PLL_DEBUG, f, "fmi_refcnt (%d) (oref=%d)",
-	    atomic_read(&fmi->fmi_refcnt), f->fcmh_fcoo->fcoo_oref_rd);
-
-	if (atomic_dec_and_test(&fmi->fmi_refcnt)) {
-		psc_assert(SPLAY_EMPTY(&fmi->fmi_exports));
-		/* We held the final reference to this fcoo, it must
-		 *   return attached.
-		 */
-		f->fcmh_state |= FCMH_FCOO_CLOSING;
-		DEBUG_FCMH(PLL_DEBUG, f, "calling mdsio_release");
-		rc = mdsio_release(&fmi->fmi_inodeh);
-
-		jfi_ensure_empty(&fmi->fmi_inodeh.inoh_jfi);
-		if (fmi->fmi_inodeh.inoh_extras)
-			PSCFREE(fmi->fmi_inodeh.inoh_extras);
-
-		f->fcmh_fcoo->fcoo_oref_rd = 0;
-		freelock(&f->fcmh_lock);
-		fidc_fcoo_remove(f);
-	} else
-		freelock(&f->fcmh_lock);
-	return (rc);
 }
 
 int
@@ -189,165 +143,6 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 		rc = mds_inox_load_locked(ih);
 	INOH_URLOCK(ih, locked);
 	return (rc);
-}
-
-/**
- * mexpfcm_cfd_init - callback issued from cfdnew() which adds the
- *	provided cfd to the export tree and attaches to the fid's
- *	respective fcmh.
- * @c: the cfd, pre-initialized with fid and private data.
- * @exp: the export to which the cfd belongs.
- */
-int
-mexpfcm_cfd_init(struct cfdent *c, struct pscrpc_export *exp, enum rw rw)
-{
-	struct slashrpc_export *slexp;
-	struct fcoo_mds_info *fmi;
-	struct fidc_membh *f;
-	struct mexpfcm *m;
-	int rc;
-
-	psc_assert(c->cfd_flags == CFD_DIR || c->cfd_flags == CFD_FILE);
-
-	slexp = exp->exp_private;
-	psc_assert(slexp);
-
-	/* Locate our fcmh in the global cache bumps the refcnt.
-	 *  We do a simple lookup here because the inode should already exist
-	 *  in the cache.
-	 */
-	f = fidc_lookup_simple(c->cfd_fg.fg_fid);
-	if (!f)
-		return (-1);
-
-	rc = fcmh_load_fmi(f, rw);
-	if (rc) {
-		fcmh_dropref(f);
-		return (-1);
-	}
-
-	m = PSCALLOC(sizeof(*m));
-	LOCK_INIT(&m->mexpfcm_lock);
-	m->mexpfcm_export = exp;
-	m->mexpfcm_fcmh = f;
-
-	/* Verify that the file type is consistent.
-	 */
-	if (fcmh_isdir(f))
-		m->mexpfcm_flags |= MEXPFCM_DIRECTORY;
-	else {
-		m->mexpfcm_flags |= MEXPFCM_REGFILE;
-		SPLAY_INIT(&m->mexpfcm_bmaps);
-	}
-
-	/* Add ourselves to the fcoo_mds_info structure's splay tree.
-	 *  fmi_refcnt is the real open refcnt (one ref per export or client).
-	 *  Note that muliple client opens are handled on the client and
-	 *  should no be passed to the mds.  However the open mode can change.
-	 */
-	FCMH_LOCK(f);
-	fmi = fcmh_2_fmi(f);
-	if (SPLAY_INSERT(fcm_exports, &fmi->fmi_exports, m)) {
-		psc_warnx("Tried to reinsert m(%p) "FIDFMT,
-		    m, FIDFMTARGS(mexpfcm2fidgen(m)));
-		rc = EEXIST;
-	} else
-		psc_info("Added m=%p e=%p to tree %p",
-			 m, exp,  &fmi->fmi_exports);
-
-	FCMH_ULOCK(f);
-
-	if (rc) {
-		fcmh_dropref(f);
-		PSCFREE(m);
-	} else
-		c->cfd_pri = m;
-	return (rc);
-}
-
-void *
-mexpfcm_cfd_get_mdsio_data(struct cfdent *c, __unusedx struct pscrpc_export *e)
-{
-	return (cfd_2_mdsio_data(c));
-}
-
-__static void mexpfcm_release_bref(struct mexpbcm *);
-
-void
-mexpfcm_release_brefs(struct mexpfcm *m)
-{
-	struct mexpbcm *bref, *bn;
-
-	MEXPFCM_LOCK_ENSURE(m);
-	psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
-	psc_assert(m->mexpfcm_flags & MEXPFCM_REGFILE);
-	psc_assert(!(m->mexpfcm_flags & MEXPFCM_DIRECTORY));
-
-	for (bref = SPLAY_MIN(exp_bmaptree, &m->mexpfcm_bmaps);
-	    bref; bref = bn) {
-		bn = SPLAY_NEXT(exp_bmaptree, &m->mexpfcm_bmaps, bref);
-		PSC_SPLAY_XREMOVE(exp_bmaptree, &m->mexpfcm_bmaps, bref);
-		mexpfcm_release_bref(bref);
-	}
-}
-
-int
-mexpfcm_cfd_free(struct cfdent *c, __unusedx struct pscrpc_export *e)
-{
-	struct mexpfcm *m = c->cfd_pri;
-	struct fidc_membh *f = m->mexpfcm_fcmh;
-	struct fcoo_mds_info *fmi;
-	int rc, locked;
-
-	spinlock(&m->mexpfcm_lock);
-	/* Ensure the mexpfcm has the correct pointers before
-	 *   dereferencing them.
-	 */
-	if (f == NULL) {
-		psc_errorx("mexpfcm %p has no fcmh", m);
-		goto out;
-	}
-
-	rc = fcmh_load_fmi(f, SL_READ);
-	if (rc)
-		goto out;
-
-	fmi = fcmh_2_fmi(f);
-
-	if (c->cfd_flags & CFD_FORCE_CLOSE)
-		/* A force close comes from a network drop, don't make
-		 *  the export code have to know about our private
-		 *  structures.
-		 */
-		m->mexpfcm_flags |= MEXPFCM_CLOSING;
-	else
-		psc_assert(m->mexpfcm_flags & MEXPFCM_CLOSING);
-
-	/* Verify that all of our bmap references have already been freed.
-	 */
-	if (m->mexpfcm_flags & MEXPFCM_REGFILE) {
-		/* Iterate across our brefs dropping this cfd's reference.
-		 */
-		mexpfcm_release_brefs(m);
-
-		psc_assert(c->cfd_flags & CFD_CLOSING);
-		psc_assert(SPLAY_EMPTY(&m->mexpfcm_bmaps));
-	}
-	freelock(&m->mexpfcm_lock);
-	/* Grab the fcmh lock (it is responsible for fcoo_mds_info
-	 *  serialization) and remove ourselves from the tree.
-	 */
-	locked = reqlock(&f->fcmh_lock);
-	PSC_SPLAY_XREMOVE(fcm_exports, &fmi->fmi_exports, m);
-	ureqlock(&f->fcmh_lock, locked);
-
-	mds_inode_release(f);
- out:
-	if (f)
-		fcmh_dropref(f);
-	c->cfd_pri = NULL;
-	PSCFREE(m);
-	return (0);
 }
 
 int
@@ -585,13 +380,10 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	 *   he's finished with it.
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
-	atomic_inc(&(fcmh_2_fmi(bmap->bcm_fcmh))->fmi_refcnt);
 
 	mds_repl_inv_except_locked(bmap, bmi.bmi_ios);
 
-	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh,
-	    "inc fmi_refcnt (%d) for bmap assignment",
-	    atomic_read(&(fcmh_2_fmi(bmap->bcm_fcmh))->fmi_refcnt));
+	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assignment");
 
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
 	    "rmmi(%p)", res->res_name, resm->resm_addrbuf,
@@ -712,7 +504,6 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, enum rw rw)
 			}
 			//mdsi->bmdsi_wr_ion = NULL;
 		}
-
 	} else {
 		psc_assert(atomic_read(&bmap->bcm_rd_ref) > 0);
 		if (atomic_dec_and_test(&bmap->bcm_rd_ref))
@@ -733,11 +524,11 @@ mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, enum rw rw)
 }
 
 /**
- * mexpfcm_release_bref - Drop a read or write reference to the bmap's tree.
+ * mexpbcm_release - Drop a read or write reference to the bmap's tree.
  * @bref: the bmap link to unref
  */
 void
-mexpfcm_release_bref(struct mexpbcm *bref)
+mexpbcm_release(struct mexpbcm *bref)
 {
 	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
 	struct bmap_mds_info *mdsi=bmap->bcm_pri;
@@ -1055,7 +846,7 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
  *	it may be sent to a client.  It first checks for existence in
  *	the cache, if needed, the bmap is retrieved from disk.
  *
- *	mds_bmap_load_cli() also manages the mexpfcm's mexpbcm reference
+ *	mds_bmap_load_cli() also manages the mexpbcm reference
  *	which is used to track the bmaps a particular client knows
  *	about.  mds_bmap_read() is used to retrieve the bmap from disk
  *	or create a new 'blank-slate' bmap if one does not exist.
@@ -1063,22 +854,20 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
  *	depending on the client request.  This is factored in with
  *	existing references to determine whether or not the bmap should
  *	be in DIO mode.
- * @fref: the fidcache reference for the inode (stored in the private
- *	pointer of the cfd).
+ * @fcmh: the FID cache handle for the inode.
  * @mq: the client RPC request.
  * @bmap: structure to be allocated and returned to the client.
  * Note: the bmap is not locked during disk I/O, instead it is marked
  *	with a bit (ie INIT) and other threads block on the waitq.
  */
 int
-mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
-    struct bmapc_memb **bmap)
+mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
+    struct pscrpc_export *exp, struct bmapc_memb **bmap)
 {
-	struct bmapc_memb *b;
-	struct fidc_membh *f = fref->mexpfcm_fcmh;
-	struct fcoo_mds_info *fmi = fcoo_get_pri(f->fcmh_fcoo);
+	struct fcmh_mds_info *fmi = fcmh_2_fmi(f);
 	struct slash_inode_handle *inoh = &fmi->fmi_inodeh;
 	struct mexpbcm *bref, tbref;
+	struct bmapc_memb *b;
 	int rc=0;
 
 	psc_assert(inoh);
@@ -1089,15 +878,7 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	 *   already referenced and therefore no mexpbcm should exist.  The
 	 *   mexpbcm exists for each bmap that the client has cached.
 	 */
-	MEXPFCM_LOCK(fref);
-	bref = SPLAY_FIND(exp_bmaptree, &fref->mexpfcm_bmaps, &tbref);
-	if (bref) {
-		/* If we're here then the same client tried to cache this
-		 *  bmap more than once which is an invalid behavior.
-		 */
-		MEXPFCM_ULOCK(fref);
-		return (-EBADF);
-	}
+
 	/* Establish a reference here, note that mexpbcm_bmap will
 	 *   be null until either the bmap is loaded or pulled from
 	 *   the cache.
@@ -1105,10 +886,8 @@ mds_bmap_load_cli(struct mexpfcm *fref, const struct srm_bmap_req *mq,
 	bref = PSCALLOC(sizeof(*bref));
 	bref->mexpbcm_mode = MEXPBCM_INIT;
 	bref->mexpbcm_blkno = mq->blkno;
-	bref->mexpbcm_export = fref->mexpfcm_export;
-	SPLAY_INSERT(exp_bmaptree, &fref->mexpfcm_bmaps, bref);
+	bref->mexpbcm_export = exp;
 
-	MEXPFCM_ULOCK(fref);
 	/* Ok, the bref has been initialized and loaded into the tree.  We
 	 *  still need to set the bmap pointer mexpbcm_bmap though.  Lock the
 	 *  fcmh during the bmap lookup.
@@ -1236,12 +1015,6 @@ mds_bmi_cb(void *data, struct odtable_receipt *odtr)
 
 	odtable_freeitem(mdsBmapAssignTable, odtr);
 }
-
-struct cfdops cfd_ops = {
-	mexpfcm_cfd_init,
-	mexpfcm_cfd_free,
-	mexpfcm_cfd_get_mdsio_data
-};
 
 void	(*bmap_init_privatef)(struct bmapc_memb *) = mds_bmap_init;
 int	(*bmap_retrievef)(struct bmapc_memb *, enum rw, void *) = mds_bmap_retrieve;

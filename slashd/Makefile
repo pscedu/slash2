@@ -4,7 +4,6 @@ include Makefile.path
 
 PROG=		slashd
 MAN+=		slashd.8
-SRCS+=		cfd.c
 SRCS+=		cfg_mds.c
 SRCS+=		ctl_mds.c
 SRCS+=		fidc_mds.c

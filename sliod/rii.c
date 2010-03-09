@@ -84,12 +84,6 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 	mp->rc = sli_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		goto out;
-	mp->rc = fcmh_load_fii(fcmh, SL_READ);
-	if (mp->rc) {
-		DEBUG_FCMH(PLL_ERROR, fcmh, "iod_inode_open: %s",
-		    slstrerror(mp->rc));
-		goto out;
-	}
 
 	mp->rc = iod_bmap_load(fcmh, mq->bmapno, SL_READ, &bcm);
 	if (mp->rc) {

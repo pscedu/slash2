@@ -31,8 +31,6 @@
 #include "mdsio.h"
 #include "slashd.h"
 
-int fcoo_priv_size = sizeof(struct fcoo_mds_info);
-
 #if 0
 __static int
 fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
@@ -73,33 +71,20 @@ fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
 #endif
 
 int
-slm_fidc_getattr(struct fidc_membh *fcmh,
-    const struct slash_creds *cr)
+slm_fcmh_ctor(struct fidc_membh *fcmh)
 {
-	struct fcoo_mds_info *fmi;
-
-	fmi = fcmh_2_fmi(fcmh);
-	return (mdsio_lookup_slfid(fcmh->fcmh_fg.fg_fid, cr,
-	    &fcmh->fcmh_sstb, &fcmh->fcmh_fg.fg_gen,
-	    &fcmh_2_mdsio_fid(fcmh)));
-}
-
-int
-fcmh_load_fmi(struct fidc_membh *fcmh, enum rw rw)
-{
-	struct fcoo_mds_info *fmi;
+	struct fcmh_mds_info *fmi;
 	int rc;
 
-	rc = fcmh_load_fcoo(fcmh, rw);
-	if (rc <= 0)
-		return (rc);
-
-	fmi = fcoo_get_pri(fcmh->fcmh_fcoo);
-
-	SPLAY_INIT(&fmi->fmi_exports);
-	atomic_set(&fmi->fmi_refcnt, 0);
+	fmi = fcmh_2_fmi(fcmh);
 
 	slash_inode_handle_init(&fmi->fmi_inodeh, fcmh, mds_inode_sync);
+
+	rc = mdsio_lookup_slfid(fcmh->fcmh_fg.fg_fid, &rootcreds,
+	    &fcmh->fcmh_sstb, &fcmh->fcmh_fg.fg_gen,
+	    &fcmh_2_mdsio_fid(fcmh));
+	if (rc)
+		return (rc);
 
 	if (fcmh_isdir(fcmh))
 		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh),
@@ -108,25 +93,32 @@ fcmh_load_fmi(struct fidc_membh *fcmh, enum rw rw)
 		rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh),
 		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL, NULL,
 		    &fcmh_2_mdsio_data(fcmh));
-		if (rc)
-			goto out;
-
-		rc = mds_inode_read(&fmi->fmi_inodeh);
-		if (rc)
-			psc_fatalx("could not load inode; rc=%d", rc);
+		if (rc == 0) {
+			rc = mds_inode_read(&fmi->fmi_inodeh);
+			if (rc)
+				psc_fatalx("could not load inode; rc=%d", rc);
+		}
 	}
-
- out:
-	if (rc)
-		fidc_fcoo_startfailed(fcmh);
-	else
-		fidc_fcoo_startdone(fcmh);
 	return (rc);
 }
 
+void
+slm_fcmh_dtor(struct fidc_membh *fcmh)
+{
+	struct fcmh_mds_info *fmi;
+	int rc;
+
+	fmi = fcmh_2_fmi(fcmh);
+	rc = mdsio_release(&rootcreds, fmi->fmi_mdsio_data);
+	psc_assert(rc == 0);
+
+	jfi_ensure_empty(&fmi->fmi_inodeh.inoh_jfi);
+	if (fmi->fmi_inodeh.inoh_extras)
+		PSCFREE(fmi->fmi_inodeh.inoh_extras);
+}
+
 struct sl_fcmh_ops sl_fcmh_ops = {
-/* getattr */	slm_fidc_getattr,
-/* initpri */	NULL,
-/* grow */	NULL,
-/* shrink */	NULL
+/* ctor */	slm_fcmh_ctor,
+/* dtor */	slm_fcmh_dtor,
+/* getattr */	NULL
 };

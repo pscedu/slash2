@@ -27,7 +27,6 @@
 #include "mdslog.h"
 
 struct mexpbcm;
-struct mexpfcm;
 
 SPLAY_HEAD(bmap_exports, mexpbcm);
 
@@ -83,7 +82,8 @@ struct bmi_assign {
 int	mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
 int	mds_bmap_exists(struct fidc_membh *, sl_blkno_t);
 int	mds_bmap_load(struct fidc_membh *, sl_blkno_t, struct bmapc_memb **);
-int	mds_bmap_load_cli(struct mexpfcm *, const struct srm_bmap_req *, struct bmapc_memb **);
+int	mds_bmap_load_cli(struct fidc_membh *, const struct srm_bmap_req *,
+	    struct pscrpc_export *, struct bmapc_memb **);
 int	mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, struct bmapc_memb **);
 int	mds_bmap_loadvalid(struct fidc_membh *, sl_blkno_t, struct bmapc_memb **);
 void	mds_bmap_ref_drop(struct bmapc_memb *, int);

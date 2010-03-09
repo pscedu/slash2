@@ -237,8 +237,8 @@ slc_fcmh_get(const struct slash_fidgen *fg, const struct srt_stat *sstb,
 {
 	int rc;
 
-	rc = fidc_lookupf(fg, lookupflags | FIDC_LOOKUP_CREATE,
-	     sstb, setattrflags, creds, fcmhp);
+	rc = fidc_lookupf(fg, lookupflags | FIDC_LOOKUP_CREATE, sstb,
+	    setattrflags, creds, fcmhp);
 	if (rc)
 		return (rc);
 
@@ -288,29 +288,6 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 		fcmh_dropref(c);
 }
 
-__static int
-slash2fuse_transflags(uint32_t flags, uint32_t *nflags)
-{
-	if (flags & O_WRONLY)
-		*nflags = SLF_WRITE;
-	else if (flags & O_RDWR)
-		*nflags = SLF_READ | SLF_WRITE;
-	else
-		*nflags = SLF_READ;
-
-	if (flags & O_CREAT)
-		*nflags |= SLF_CREAT;
-	if (flags & O_SYNC)
-		*nflags |= SLF_SYNC;
-	if (flags & O_APPEND)
-		*nflags |= SLF_APPEND;
-	if (flags & O_TRUNC)
-		*nflags |= SLF_TRUNC;
-	if (flags & O_EXCL)
-		*nflags |= SLF_EXCL;
-	return (0);
-}
-
 __static void
 slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
     mode_t mode, struct fuse_file_info *fi)
@@ -349,18 +326,16 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 
 	/* Now we've established a local placeholder for this create.
 	 *  any other creates to this pathame will block in
-	 *  fidc_child_wait_locked() until we release the fcc.
+	 *  fidc_child_wait_locked() until we release the fcmh.
 	 */
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_CREATE, rq, mq, mp);
 	if (rc)
 		goto out;
 
-	rc = slash2fuse_transflags(fi->flags | O_CREAT, &mq->flags);
-	if (rc)
-		goto out;
 	mq->mode = mode;
 	mq->pfg = p->fcmh_fg;
+	mq->creds = cr;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
@@ -381,26 +356,22 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	}
 
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE, name,
-	    p, &rootcreds, FIDC_LOOKUP_EXCL | FIDC_LOOKUP_FCOOSTART, &m);
+	    p, &rootcreds, FIDC_LOOKUP_EXCL, &m);
 	if (rc)
 		goto out;
-
-	fcmh_2_cfd(m) = mp->cfd;
 
 	mfh = msl_fhent_new(m);
 	ffi_setmfh(fi, mfh);
 	fi->keep_cache = 0;
 	fi->direct_io = 1;
 
-	/* Increment the fcoo #refs.  The RPC has already taken place.
-	 */
-	FCOO_INC_REFCNTS(m->fcmh_fcoo, fflags_2_rw(fi->flags));
-	fidc_fcoo_startdone(m);
-
 	if (fi->flags & O_APPEND) {
 		FCMH_LOCK(m);
 		m->fcmh_state |= FCMH_CLI_APPENDWR;
 		FCMH_ULOCK(m);
+	}
+	if (fi->flags & O_SYNC) {
+		/* XXX write me */
 	}
 
 	slash2fuse_reply_create(req, &mp->fg, &mp->attr, fi);
@@ -444,7 +415,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 			goto out;
 	}
 
-	/* Directory sanity.  */
+	/* Directory sanity. */
 	if (fcmh_isdir(c)) {
 		/* fuse shouldn't ever pass us WR with a dir */
 		psc_assert((fi->flags & (O_WRONLY | O_RDWR)) == 0);
@@ -465,6 +436,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	ffi_setmfh(fi, mfh);
 	fi->keep_cache = 0;
+
 	/*
 	 * FUSE direct_io does not work with mmap(), which is what the
 	 * kernel uses under the hood when running executables, so
@@ -474,17 +446,18 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
 		fi->direct_io = 1;
 
-	/* this will start an RPC as need be */
-	rc = fcmh_load_fci(c, fflags_2_rw(fi->flags));
-	if (rc)
-		goto out;
-
 	fuse_reply_open(req, fi);
 
 	if (fi->flags & O_APPEND) {
 		FCMH_LOCK(c);
 		c->fcmh_state |= FCMH_CLI_APPENDWR;
 		FCMH_ULOCK(c);
+	}
+	if (fi->flags & O_TRUNC) {
+		/* XXX write me */
+	}
+	if (fi->flags & O_SYNC) {
+		/* XXX write me */
 	}
 
  out:
@@ -885,7 +858,6 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		return (rc);
 	}
 
-	mq->cfd = fcmh_2_cfd(d);
 	mq->fg = d->fcmh_fg;
 	mq->size = size;
 	mq->offset = off;
@@ -1126,83 +1098,27 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 		pscrpc_req_finished(rq);
 }
 
-__static int
-slash2fuse_releaserpc(struct fuse_file_info *fi)
-{
-	struct srm_release_req *mq;
-	struct srm_generic_rep *mp;
-	struct pscrpc_request *rq;
-	struct msl_fhent *mfh;
-	struct fidc_membh *h;
-	int rc=0;
-
-	mfh = ffi_getmfh(fi);
-	h = mfh->mfh_fcmh;
-
-	spinlock(&h->fcmh_lock);
-	DEBUG_FCMH(PLL_INFO, h, "releaserpc");
-	psc_assert(h->fcmh_fcoo);
-	psc_assert(h->fcmh_state & FCMH_FCOO_CLOSING);
-	freelock(&h->fcmh_lock);
-
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
-	    SRMT_RELEASE, rq, mq, mp);
-	if (rc)
-		return (rc);
-
-	mq->fg = h->fcmh_fg;
-	mq->cfd = fcmh_2_cfd(h);
-	rc = slash2fuse_transflags(fi->flags, &mq->flags);
-	if (rc)
-		goto out;
-
-	rc = RSX_WAITREP(rq, mp);
-	if (rc == 0)
-		rc = mp->rc;
-
- out:
-	pscrpc_req_finished(rq);
-	return (rc);
-}
-
 __static void
 slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
     struct fuse_file_info *fi)
 {
 	struct msl_fhent *mfh;
 	struct fidc_membh *c;
-	int rc=0;
 
 	msfsthr_ensure();
 
 	mfh = ffi_getmfh(fi);
 	c = mfh->mfh_fcmh;
-	/* Remove bmap references associated with this fd.
-	 */
+	/* Remove bmap references associated with this fd.  */
 	msl_bmap_fhcache_clear(mfh);
 
 	psc_assert(SPLAY_EMPTY(&mfh->mfh_fhbmap_cache));
 
-	spinlock(&c->fcmh_lock);
-	psc_assert(c->fcmh_fcoo);
-
-	/* If the fcoo is going away FCMH_FCOO_CLOSING will be set.
-	 */
-	FCOO_DEC_REFCNTS(c->fcmh_fcoo, fflags_2_rw(fi->flags));
-
-	DEBUG_FCMH(PLL_INFO, c, "slash2fuse_release");
-	freelock(&c->fcmh_lock);
-
-	if (c->fcmh_state & FCMH_FCOO_CLOSING) {
-		/* Tell the mds to release all of our bmaps.
-		 */
-		rc = slash2fuse_releaserpc(fi);
-		fidc_fcoo_remove(c);
-	}
 	DEBUG_FCMH(PLL_INFO, c, "done with slash2fuse_release");
+	fidc_put(c, &fidcFreeList);
 
 	PSCFREE(mfh);
-	fuse_reply_err(req, rc);
+	fuse_reply_err(req, 0);
 }
 
 __static int

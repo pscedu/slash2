@@ -41,16 +41,6 @@
 #include "slvr.h"
 
 int
-sli_ric_handle_disconnect(struct pscrpc_request *rq)
-{
-	struct srm_disconnect_req *mq;
-	struct srm_generic_rep *mp;
-
-	RSX_ALLOCREP(rq, mq, mp);
-	return (0);
-}
-
-int
 sli_ric_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
@@ -96,7 +86,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   write enabled bdbuf which he uses to fault in his page.
 	 */
 	DYNARRAY_FOREACH(np, i, &lnet_nids) {
-		mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno,
+		mp->rc = bdbuf_check(&mq->sbdb, &fg, &bmapno,
 		    &rq->rq_peer, *np, nodeResm->resm_res->res_id, rw);
 		if (mp->rc == 0)
 			goto bdbuf_ok;
@@ -123,15 +113,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 */
 	rc = sli_fcmh_get(&fg, &fcmh);
 	psc_assert(rc == 0);
-
-	/* Ensure the fid in the local filesystem is created and open,
-	 *  otherwise fail.
-	 */
-	rc = fcmh_load_fii(fcmh, rw);
-	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, fcmh, "error fidopen bmap=%u", bmapno);
-		goto out;
-	}
 
 	/* ATM, not much to do here for write operations.
 	 */
@@ -237,9 +218,6 @@ sli_ric_handler(struct pscrpc_request *rq)
 
 	rc = 0; /* gcc */
 	switch (rq->rq_reqmsg->opc) {
-	case SRMT_DISCONNECT:
-		rc = sli_ric_handle_disconnect(rq);
-		break;
 	case SRMT_CONNECT:
 		rc = sli_ric_handle_connect(rq);
 		break;

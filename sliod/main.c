@@ -34,6 +34,7 @@
 #include "bmap_iod.h"
 #include "buffer.h"
 #include "fdbuf.h"
+#include "fidc_iod.h"
 #include "fidcache.h"
 #include "pathnames.h"
 #include "repl_iod.h"
@@ -131,7 +132,8 @@ main(int argc, char *argv[])
 	sli_rmi_setmds(mds);
 
 	bmap_cache_init(sizeof(struct bmap_iod_info));
-	fidc_init(0, FIDC_ION_DEFSZ, FIDC_ION_MAXSZ, NULL);
+	fidc_init(sizeof(struct fcmh_iod_info),
+	    FIDC_ION_DEFSZ, FIDC_ION_MAXSZ, NULL);
 	slvr_cache_init();
 	sli_repl_init();
 	sli_rpc_initsvc();

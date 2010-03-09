@@ -23,6 +23,7 @@
 #include "psc_util/multiwait.h"
 
 #include "mdsexpc.h"
+#include "slconn.h"
 
 struct pscrpc_request;
 struct pscrpc_export;

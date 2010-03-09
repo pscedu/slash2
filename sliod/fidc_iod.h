@@ -27,15 +27,13 @@
 
 struct fidc_membh;
 
-struct fcoo_iod_info {
+struct fcmh_iod_info {
 	int			fii_fd;		/* open file descriptor */
 };
 
-#define fcoo_2_fii(fcoo)	((struct fcoo_iod_info *)fcoo_get_pri(fcoo))
-#define fcmh_2_fd(fcmh)		fcoo_2_fii((fcmh)->fcmh_fcoo)->fii_fd
+#define fcmh_2_fii(fcmh)	((struct fcmh_iod_info *)fcmh_get_pri(fcmh))
+#define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
 
-#define sli_fcmh_get(fgp, fcmhp)	fcmh_getload((fgp), &rootcreds, (fcmhp))
-
-int fcmh_load_fii(struct fidc_membh *, enum rw);
+#define sli_fcmh_get(fgp, fp)	fcmh_getload((fgp), &rootcreds, (fp))
 
 #endif /* _FIDC_IOD_H_ */

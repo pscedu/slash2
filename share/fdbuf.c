@@ -50,7 +50,7 @@ __static int		descbuf_alglen;
 
 /*
  * bdbuf_sign - Sign a bmapdesc buf with the private key.
- * @sbdb: the descriptor to sign; cfd should be filled in.
+ * @sbdb: the descriptor to sign.
  * @fgp: the file ID and generation.
  * @cli_prid: client address to prevent spoofing.
  * @ion_nid: ION address to prevent spoofing.
@@ -58,9 +58,9 @@ __static int		descbuf_alglen;
  * @bmapno: bmap index number in file.
  */
 void
-bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
-    const struct slash_fidgen *fgp, const lnet_process_id_t *cli_prid,
-    lnet_nid_t ion_nid, sl_ios_id_t ios_id, sl_blkno_t bmapno)
+bdbuf_sign(struct srt_bmapdesc_buf *sbdb, const struct slash_fidgen *fgp,
+    const lnet_process_id_t *cli_prid, lnet_nid_t ion_nid,
+    sl_ios_id_t ios_id, sl_blkno_t bmapno)
 {
 	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0);
 	gcry_error_t gerr;
@@ -88,7 +88,6 @@ bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
 /*
  * bdbuf_check - Check signature validity of a bmapdesc buf.
  * @sbdb: the descriptor to check.
- * @cfdp: value-result client file descriptor.
  * @fgp: value-result file ID and generation, after validation.
  * @bmapnop: value-result bmap index number in file.
  * @cli_prid: client address to prevent spoofing.
@@ -97,7 +96,7 @@ bdbuf_sign(struct srt_bmapdesc_buf *sbdb,
  * @rw: SL_READ or SL_WRITE, indicating type of access for this bmapdesc.
  */
 int
-bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
+bdbuf_check(const struct srt_bmapdesc_buf *sbdb,
     struct slash_fidgen *fgp, sl_blkno_t *bmapnop,
     const lnet_process_id_t *cli_prid, lnet_nid_t ion_nid,
     sl_ios_id_t ios_id, enum rw rw)
@@ -141,8 +140,6 @@ bdbuf_check(const struct srt_bmapdesc_buf *sbdb, uint64_t *cfdp,
 		return (EBADF);
 
 	*fgp = sbdb->sbdb_secret.sbs_fg;
-	if (cfdp)
-		*cfdp = sbdb->sbdb_secret.sbs_cfd;
 	*bmapnop = sbdb->sbdb_secret.sbs_bmapno;
 	return (0);
 }

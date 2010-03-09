@@ -123,6 +123,7 @@ extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;
 extern struct psc_listcache	 bmapFlushQ;
 extern struct sl_resm		*slc_rmc_resm;
+extern struct slash_creds	 rootcreds;
 
 static __inline void
 msl_fbr_ref(struct msl_fbr *r, enum rw rw)
@@ -168,15 +169,6 @@ fhbmap_cache_cmp(const void *x, const void *y)
 	const struct msl_fbr *rx = x, *ry = y;
 
 	return (bmap_cmp(rx->mfbr_bmap, ry->mfbr_bmap));
-}
-
-static __inline size_t
-mslfh_2_bmapsz(struct msl_fhent *mfh)
-{
-	psc_assert(mfh->mfh_fcmh);
-	psc_assert(mfh->mfh_fcmh->fcmh_fcoo);
-	psc_assert(mfh->mfh_fcmh->fcmh_fcoo->fcoo_bmap_sz);
-	return (mfh->mfh_fcmh->fcmh_fcoo->fcoo_bmap_sz);
 }
 
 SPLAY_PROTOTYPE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);

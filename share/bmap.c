@@ -64,7 +64,7 @@ bmap_remove(struct bmapc_memb *b)
 	BMAP_ULOCK(b);
 
 	locked = FCMH_RLOCK(f);
-	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);
+	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
 	psc_waitq_wakeall(&f->fcmh_waitq);
 	FCMH_URLOCK(f, locked);
 
@@ -104,12 +104,11 @@ _bmap_op_done(struct bmapc_memb *b)
 __static struct bmapc_memb *
 bmap_lookup_cache(struct fidc_membh *f, sl_blkno_t n)
 {
-	struct fidc_open_obj *fcoo = f->fcmh_fcoo;
 	struct bmapc_memb lb, *b;
 
  restart:
 	lb.bcm_blkno = n;
-	b = SPLAY_FIND(bmap_cache, &fcoo->fcoo_bmapc, &lb);
+	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		BMAP_LOCK(b);
 		if (b->bcm_mode & BMAP_CLOSING) {
@@ -145,8 +144,6 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 
 	*bp = NULL;
 
-	psc_assert(f->fcmh_fcoo);
-
 	locked = reqlock(&f->fcmh_lock);
 	b = bmap_lookup_cache(f, n);
 	if (b == NULL) {
@@ -176,7 +173,7 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 		bmap_init_privatef(b);
 
 		/* Add to the fcmh's bmap cache */
-		SPLAY_INSERT(bmap_cache, &f->fcmh_fcoo->fcoo_bmapc, b);
+		SPLAY_INSERT(bmap_cache, &f->fcmh_bmaptree, b);
 		do_load = 1;
 	}
 	ureqlock(&f->fcmh_lock, locked);

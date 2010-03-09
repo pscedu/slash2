@@ -31,7 +31,6 @@
 #include "psc_util/strlcpy.h"
 
 #include "bmap_mds.h"
-#include "cfd.h"
 #include "fdbuf.h"
 #include "fid.h"
 #include "repl_mds.h"

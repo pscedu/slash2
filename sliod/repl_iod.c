@@ -89,12 +89,6 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	sli_fcmh_get(&w->srw_fg, &w->srw_fcmh);
 	if (rc)
 		goto out;
-	rc = fcmh_load_fii(w->srw_fcmh, SL_WRITE);
-	if (rc) {
-		DEBUG_FCMH(PLL_ERROR, w->srw_fcmh, "iod_inode_open: %s",
-		    slstrerror(rc));
-		goto out;
-	}
 
 	/* get the replication chunk's bmap */
 	rc = iod_bmap_load(w->srw_fcmh,

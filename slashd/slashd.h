@@ -33,7 +33,6 @@ struct odtable_receipt;
 
 struct bmapc_memb;
 struct fidc_membh;
-struct mexpfcm;
 struct slash_inode_handle;
 
 /* Slash server thread types. */
@@ -108,10 +107,6 @@ struct resprof_mds_info {
 	psc_spinlock_t		  rpmi_lock;
 };
 
-int		 fid_get(const char *, struct slash_fidgen *,
-		    struct slash_creds *, int, mode_t);
-
-int		 mds_inode_release(struct fidc_membh *);
 int		 mds_inode_read(struct slash_inode_handle *);
 int		 mds_inox_load_locked(struct slash_inode_handle *);
 int		 mds_inox_ensure_loaded(struct slash_inode_handle *);

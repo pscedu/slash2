@@ -52,32 +52,11 @@ mdsio_exit(void)
 static inline void *
 bmap_2_zfs_fh(struct bmapc_memb *bmap)
 {
-	struct fcoo_mds_info *fmi;
+	struct fcmh_mds_info *fmi;
 
-	psc_assert(bmap->bcm_fcmh);
-
-	//fmi = fidc_fcmh2fmi(bmap->bcm_fcmh);
 	fmi = fcmh_2_fmi(bmap->bcm_fcmh);
-
-	psc_assert(fmi);
 	psc_assert(fmi->fmi_mdsio_data);
-
 	return (fmi->fmi_mdsio_data);
-}
-
-int
-mdsio_release(struct slash_inode_handle *i)
-{
-	struct fcoo_mds_info *fmi;
-
-	psc_assert(i->inoh_fcmh);
-	psc_assert(i->inoh_fcmh->fcmh_fcoo);
-	psc_assert(i->inoh_fcmh->fcmh_state & FCMH_FCOO_CLOSING);
-
-	fmi = fcmh_2_fmi(i->inoh_fcmh);
-	psc_assert(!atomic_read(&fmi->fmi_refcnt));
-
-	return (zfsslash2_release(&rootcreds, fmi->fmi_mdsio_data));
 }
 
 int
@@ -233,7 +212,7 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 }
 
 int
-mdsio_frelease(const struct slash_creds *cr, void *mdsio_data)
+mdsio_release(const struct slash_creds *cr, void *mdsio_data)
 {
 	return (zfsslash2_release(cr, mdsio_data));
 }

@@ -90,57 +90,50 @@ struct statvfs;
 #define SRIM_VERSION		1
 #define SRIM_MAGIC		UINT64_C(0xaabbccddeeff0088)
 
-/* OPEN message flags */
-#define SLF_READ		(1 << 0)
-#define SLF_WRITE		(1 << 1)
-#define SLF_APPEND		(1 << 2)
-#define SLF_CREAT		(1 << 3)
-#define SLF_TRUNC		(1 << 4)
-#define SLF_SYNC		(1 << 5)
-#define SLF_EXCL		(1 << 6)
-
 /* Slash RPC message types. */
 enum {
+	/* bmap operations */
 	SRMT_BMAPCHMODE,
 	SRMT_BMAPCRCWRT,
 	SRMT_BMAPDIO,
-	SRMT_CHMOD,
-	SRMT_CHOWN,
-	SRMT_CONNECT,
-	SRMT_CREATE,
-	SRMT_DESTROY,
-	SRMT_DISCONNECT,
-	SRMT_FGETATTR,
-	SRMT_FTRUNCATE,
-	SRMT_GETATTR,
 	SRMT_GETBMAP,
 	SRMT_GETBMAPCRCS,
-	SRMT_GETREPTBL,
-	SRMT_LINK,
-	SRMT_LOCK,
-	SRMT_LOOKUP,
-	SRMT_MKDIR,
-	SRMT_MKNOD,
-	SRMT_OPEN,
-	SRMT_OPENDIR,
-	SRMT_PING,
-	SRMT_READ,
-	SRMT_READDIR,
-	SRMT_READLINK,
-	SRMT_RELEASE,
 	SRMT_RELEASEBMAP,
-	SRMT_RELEASEDIR,
-	SRMT_RENAME,
+
+	/* control operations */
+	SRMT_CONNECT,
+	SRMT_DESTROY,
+	SRMT_PING,
+
+	/* replication operations */
+	SRMT_GETREPTBL,
 	SRMT_REPL_ADDRQ,
 	SRMT_REPL_DELRQ,
 	SRMT_REPL_GETST,
 	SRMT_REPL_GETST_SLAVE,
 	SRMT_REPL_READ,
 	SRMT_REPL_SCHEDWK,
-	SRMT_RMDIR,
-	SRMT_SETATTR,
 	SRMT_SET_BMAPREPLPOL,
 	SRMT_SET_NEWREPLPOL,
+
+	/* syscall/file operations */
+	SRMT_CHMOD,
+	SRMT_CHOWN,
+	SRMT_CREATE,
+	SRMT_FGETATTR,
+	SRMT_FTRUNCATE,
+	SRMT_GETATTR,
+	SRMT_LINK,
+	SRMT_LOCK,
+	SRMT_LOOKUP,
+	SRMT_MKDIR,
+	SRMT_MKNOD,
+	SRMT_READ,
+	SRMT_READDIR,
+	SRMT_READLINK,
+	SRMT_RENAME,
+	SRMT_RMDIR,
+	SRMT_SETATTR,
 	SRMT_STATFS,
 	SRMT_SYMLINK,
 	SRMT_TRUNCATE,
@@ -163,7 +156,6 @@ enum {
 struct srt_bdb_secret {
 	uint64_t		sbs_magic;
 	struct slash_fidgen	sbs_fg;
-	uint64_t		sbs_cfd;	/* stream handle/ID */
 	uint64_t		sbs_nonce;
 	uint64_t		sbs_ion_nid;
 	sl_bmapno_t		sbs_bmapno;
@@ -184,7 +176,6 @@ struct srt_bmapdesc_buf {
 
 struct srm_bmap_req {
 	struct slash_fidgen	fg;
-	uint64_t		cfd;
 	uint32_t		pios;		/* client's preferred IOS ID	*/
 	uint32_t		blkno;		/* Starting block number	*/
 	uint32_t		nblks;		/* Read-ahead support		*/
@@ -237,7 +228,6 @@ struct srm_bmap_wire_rep {
 
 struct srm_bmap_chmode_req {
 	struct slash_fidgen	fg;
-	uint64_t		cfd;
 	uint32_t		blkno;
 	int32_t			rw;
 } __packed;
@@ -289,6 +279,7 @@ struct srm_connect_req {
 
 struct srm_create_req {
 	struct slash_fidgen	pfg;
+	struct slash_creds	creds;
 	char			name[NAME_MAX + 1];
 	uint32_t		mode;
 	uint32_t		flags;
@@ -296,7 +287,6 @@ struct srm_create_req {
 
 struct srm_create_rep {
 	struct slash_fidgen	fg;
-	uint64_t		cfd;
 	struct srt_stat		attr;
 	int32_t			rc;
 } __packed;
@@ -385,25 +375,11 @@ struct srm_mknod_req {
 	uint32_t		rdev;
 } __packed;
 
-struct srm_open_req {
-	struct slash_fidgen	fg;
-} __packed;
-
-struct srm_open_rep {
-	uint64_t		cfd;
-	struct srt_stat		attr;
-	int32_t			rc;
-} __packed;
-
-#define srm_opendir_req srm_open_req
-#define srm_opendir_rep srm_open_rep
-
 struct srm_ping_req {
 } __packed;
 
 struct srm_readdir_req {
 	struct slash_fidgen	fg;
-	uint64_t		cfd;
 	uint64_t		offset;
 	uint64_t		size;
 	uint32_t		nstbpref;
@@ -426,12 +402,6 @@ struct srm_readlink_req {
 struct srm_readlink_rep {
 	int32_t			rc;
 /* buf is in bulk of size PATH_MAX */
-} __packed;
-
-struct srm_release_req {
-	struct slash_fidgen	fg;
-	uint64_t		cfd;
-	uint32_t		flags;
 } __packed;
 
 struct srm_releasebmap_req {

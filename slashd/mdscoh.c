@@ -27,7 +27,6 @@
 #include "psc_util/log.h"
 
 #include "cache_params.h"
-#include "cfd.h"
 #include "fidc_mds.h"
 #include "mdscoh.h"
 #include "mdsexpc.h"

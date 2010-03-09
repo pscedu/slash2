@@ -43,13 +43,12 @@ int mdsio_inode_extras_read(struct slash_inode_handle *);
 int mdsio_inode_extras_write(struct slash_inode_handle *);
 int mdsio_inode_read(struct slash_inode_handle *);
 int mdsio_inode_write(struct slash_inode_handle *);
-int mdsio_release(struct slash_inode_handle *);
 
 void mdsio_init(void);
 void mdsio_exit(void);
 
 int mdsio_access(mdsio_fid_t, int, const struct slash_creds *);
-int mdsio_frelease(const struct slash_creds *, void *);
+int mdsio_release(const struct slash_creds *, void *);
 int mdsio_getattr(mdsio_fid_t, const struct slash_creds *, struct srt_stat *, slfgen_t *);
 int mdsio_readlink(mdsio_fid_t, void *, const struct slash_creds *);
 int mdsio_statfs(struct statvfs *);
