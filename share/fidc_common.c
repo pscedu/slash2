@@ -137,7 +137,7 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		psc_fatalx("Tried to move to the same list (%p)", lc);
 	}
 
-	/* it's caller's responsiblity to remove me from the previous list */
+	/* it's the caller's responsibility to remove me from the previous list */
 	psc_assert(psclist_disjoint(&f->fcmh_lentry));
 
 	/* Validate the inode and check if it has some dirty blocks
@@ -231,8 +231,8 @@ fidc_reap(struct psc_poolmgr *m)
 			goto end1;
 
 		/* Call into the system specific 'reap' code.
-		 *  On the client this means taking the fcc from the
-		 *  parent directory inode.
+		 *  On the client this means taking the fcmh from the
+		 *  parent directory fcmh.
 		 */
 		if (!fidcReapCb || fidcReapCb(f)) {
 			f->fcmh_state |= FCMH_CAC_FREEING;
@@ -451,7 +451,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		 * Since fuse_ino_t is 'unsigned long', it will be 4
 		 * bytes on some architectures.  On these machines,
 		 * allow collisions since '(unsigned long)uint64_t var'
-		 * will frequently be inequal to 'uint64_t var' uncasted.
+		 * will frequently be unequal to 'uint64_t var' uncasted.
 		 */
 		psc_assert(searchfg.fg_fid ==
 		    (uint64_t)(fuse_ino_t)fcmh_2_fid(fcmh));
