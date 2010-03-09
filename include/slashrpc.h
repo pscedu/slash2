@@ -282,7 +282,6 @@ struct srm_create_req {
 	struct slash_creds	creds;
 	char			name[NAME_MAX + 1];
 	uint32_t		mode;
-	uint32_t		flags;
 } __packed;
 
 struct srm_create_rep {
