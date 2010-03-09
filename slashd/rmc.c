@@ -211,6 +211,9 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
+
+	mp->fg.fg_fid = slm_get_next_slashid();
+
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
 	    mq->name, &mp->fg, &mq->creds, &mp->attr);
@@ -262,9 +265,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-#ifdef NAMESPACE_EXPERIMENTAL
 	mp->fg.fg_fid = slm_get_next_slashid();
-#endif
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(fcmh), mq->name,
@@ -292,9 +293,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-#ifdef NAMESPACE_EXPERIMENTAL
 	mp->fg.fg_fid = slm_get_next_slashid();
-#endif
 
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
@@ -621,6 +620,8 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 	pscrpc_free_bulk(desc);
+
+	mp->fg.fg_fid = slm_get_next_slashid();
 
 	linkname[sizeof(linkname) - 1] = '\0';
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
