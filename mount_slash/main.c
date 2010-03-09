@@ -1115,7 +1115,11 @@ slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
 	psc_assert(SPLAY_EMPTY(&mfh->mfh_fhbmap_cache));
 
 	DEBUG_FCMH(PLL_INFO, c, "done with slash2fuse_release");
+
+	psc_assert(c->fcmh_cache_owner == &fidcCleanList);
+	
 	c->fcmh_state = FCMH_CAC_FREEING;
+	lc_remove(&fidcCleanList, c);
 	fidc_put(c, &fidcFreeList);
 
 	PSCFREE(mfh);
