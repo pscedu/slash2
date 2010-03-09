@@ -141,8 +141,7 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 	/* Validate the inode and check if it has some dirty blocks
 	 */
 	clean = fcmh_clean_check(f);
-
-	if (lc == &fidcPool->ppm_lc) {
+	if (lc == &fidcFreeList) {
 		psc_assert(f->fcmh_cache_owner == &fidcCleanList ||
 			   f->fcmh_cache_owner == NULL);
 		/* FCMH_CAC_FREEING should have already been set so that
@@ -162,7 +161,7 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 			psc_hashent_remove(&fidcHtable, f);
 
 	} else if (lc == &fidcCleanList) {
-		psc_assert(f->fcmh_cache_owner == &fidcPool->ppm_lc ||
+		psc_assert(f->fcmh_cache_owner == &fidcFreeList ||
 			   f->fcmh_cache_owner == &fidcDirtyList ||
 			   f->fcmh_cache_owner == NULL);
 		psc_assert(ATTR_TEST(f->fcmh_state, FCMH_CAC_CLEAN));
