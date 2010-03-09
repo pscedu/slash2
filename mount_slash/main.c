@@ -336,6 +336,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	mq->mode = mode;
 	mq->pfg = p->fcmh_fg;
 	mq->creds = cr;
+	mq->flags = fi->flags;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = RSX_WAITREP(rq, mp);
