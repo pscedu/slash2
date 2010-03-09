@@ -1,11 +1,6 @@
 # $Id$
 
-#NAMESPACE=		1
-
-ifdef NAMESPACE
-DEFINES+=		-DNAMESPACE_EXPERIMENTAL
 ZFS_SCONSOPTS+=		namespace=1
-endif
 
 SLASH_MODULES+=		cli
 SLASH_MODULES+=		ion
