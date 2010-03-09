@@ -304,6 +304,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 
 	p = NULL;
 
+	psc_assert(fi->flags & O_CREAT);
+
 	if (strlen(name) > NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;

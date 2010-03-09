@@ -296,7 +296,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->fg.fg_fid = slm_get_next_slashid();
 
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
-	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
+	    mq->flags, mq->mode, mq->name, &mp->fg,
 	    NULL, &mp->attr, &mdsio_data);
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);
