@@ -484,15 +484,16 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 	return (rc);
 }
 
+/* destructor function called by fcmh_destroy() */
 void
 slc_fcmh_dtor(struct fidc_membh *fcmh)
 {
 	struct fcmh_cli_info *fci;
 
 	fci = fcmh_2_fci(fcmh);
-	PSCFREE(fci->fci_name);
 	psc_assert(psclist_empty(&fci->fci_children));
 	psc_assert(psclist_disjoint(&fci->fci_sibling));
+	PSCFREE(fci->fci_name);
 }
 
 int
