@@ -514,6 +514,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	}
 
 	if (sl_fcmh_ops.sfop_ctor) {
+		/* slc_fcmh_ctor(), slm_fcmh_ctor(), and sli_fcmh_ctor() */
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		if (rc) {
 			psc_hashbkt_unlock(b);

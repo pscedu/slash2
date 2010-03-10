@@ -97,8 +97,10 @@ slm_get_next_slashid(void)
 		next_slash_id = SLASHID_MIN;
 	slid = next_slash_id++;
 
+#if 0
 	/* XXX XXX disgusting XXX XXX */
 	if ((next_slash_id % 1000) == 0) {
+#endif
 		xmkfn(fn, "%s/%s", sl_datadir, SL_FN_HACK_FID);
 
 		fp = fopen(fn, "r+");
@@ -107,8 +109,10 @@ slm_get_next_slashid(void)
 		fprintf(fp, "%"PRId64, next_slash_id);
 		ftruncate(fileno(fp), ftell(fp));
 		fclose(fp);
+#if 0
 	}
 
+#endif
 	freelock(&lock);
 	return (slid | ((uint64_t)nodeResm->resm_site->site_id <<
 	    SLASH_ID_FID_BITS));
