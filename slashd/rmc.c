@@ -326,6 +326,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
+	/* note that we don't create a cache entry after the creation */
 	mp->fg.fg_fid = slm_get_next_slashid();
 
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &rootcreds,
