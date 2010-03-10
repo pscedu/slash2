@@ -1100,6 +1100,7 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 		pscrpc_req_finished(rq);
 }
 
+/* Note that this function is called once for each open */
 __static void
 slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
     struct fuse_file_info *fi)
@@ -1116,14 +1117,17 @@ slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
 
 	psc_assert(SPLAY_EMPTY(&mfh->mfh_fhbmap_cache));
 
-	DEBUG_FCMH(PLL_INFO, c, "done with slash2fuse_release");
-
-	psc_assert(c->fcmh_cache_owner == &fidcCleanList);
-	
-	c->fcmh_state = FCMH_CAC_FREEING;
-	lc_remove(&fidcCleanList, c);
-	c->fcmh_cache_owner = NULL;
-	fidc_put(c, &fidcFreeList);
+	FCMH_LOCK(c);
+	fcmh_dropref(c);
+	if (!atomic_read(&(c)->fcmh_refcnt)) {
+		FCMH_ULOCK(c);
+		psc_assert(c->fcmh_cache_owner == &fidcCleanList);
+		c->fcmh_state = FCMH_CAC_FREEING;
+		lc_remove(&fidcCleanList, c);
+		c->fcmh_cache_owner = NULL;
+		fidc_put(c, &fidcFreeList);
+	} else
+		FCMH_ULOCK(c);
 
 	PSCFREE(mfh);
 	fuse_reply_err(req, 0);

@@ -74,7 +74,7 @@ SPLAY_HEAD(fhbmap_cache, msl_fbr);
 struct msl_fhent {			 /* XXX rename */
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
-	struct fhbmap_cache		 mfh_fhbmap_cache;
+	struct fhbmap_cache		 mfh_fhbmap_cache;	/* bmap splay tree */
 };
 
 /*
