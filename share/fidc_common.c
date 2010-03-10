@@ -550,7 +550,8 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			FCMH_LOCK(fcmh);
 		}
 		if ((fcmh->fcmh_state & FCMH_HAVE_ATTRS) == 0) {
-			rc = sl_fcmh_ops.sfop_getattr(fcmh);
+			/* only client defines this op, and it is slc_fcmh_getattr() */
+			rc = sl_fcmh_ops.sfop_getattr(fcmh);		
 			if (rc == 0)
 				fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
 		}
