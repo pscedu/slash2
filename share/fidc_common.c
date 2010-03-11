@@ -594,7 +594,6 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 
 		} else if ((f)->fcmh_refcnt == 1) {
 			psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
-			psc_assert(fcmh_clean_check(f));
 
 			f->fcmh_state &= ~FCMH_CAC_CLEAN;
 			f->fcmh_state |= FCMH_CAC_DIRTY;
