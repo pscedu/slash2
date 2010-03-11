@@ -147,8 +147,8 @@ struct fidc_membh {
 	} while (0)
 
 
+/* debugging aid: spit out the reason for the reference count taking/dropping */
 enum fcmh_opcnt_types {
-	FCMH_OPCNT_NEW,
 	FCMH_OPCNT_LOOKUP_FIDC,
 	FCMH_OPCNT_LOOKUP_PARENT,
 	FCMH_OPCNT_OPEN,
