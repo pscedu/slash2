@@ -352,15 +352,15 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 void
 fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 {
-	struct fidc_membh *tmp=NULL;
+	struct fidc_membh *tmp;
+
+	spinlock(&p->fcmh_lock);
+	spinlock(&c->fcmh_lock);
 
 	psc_assert(p && c && name);
 	psc_assert(fcmh_isdir(p));
 	psc_assert(p->fcmh_refcnt > 0);
 	psc_assert(c->fcmh_refcnt > 0);
-
-	spinlock(&p->fcmh_lock);
-	spinlock(&c->fcmh_lock);
 
 	DEBUG_FCMH(PLL_INFO, p, "name(%s)", name);
 
