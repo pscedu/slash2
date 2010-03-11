@@ -504,7 +504,9 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	rc = sl_fcmh_ops.sfop_ctor(fcmh);
 	if (rc) {
 		psc_hashbkt_unlock(b);
-		psc_pool_return(fidcPool, fcmh);
+		fcmh->fcmh_state = FCMH_CAC_FREEING;
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fidc_put(fcmh_new, &fidcFreeList);
 		return (rc);
 	}
 
