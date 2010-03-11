@@ -497,14 +497,15 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		getting = 1;
 	}
 
-	if (sl_fcmh_ops.sfop_ctor) {
-		/* slc_fcmh_ctor(), slm_fcmh_ctor(), and sli_fcmh_ctor() */
-		rc = sl_fcmh_ops.sfop_ctor(fcmh);
-		if (rc) {
-			psc_hashbkt_unlock(b);
-			psc_pool_return(fidcPool, fcmh);
-			return (rc);
-		}
+	/* 
+	 * Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(), and sli_fcmh_ctor()
+	 * to initialize their private fields that follow the main fcmh structure.
+	 */
+	rc = sl_fcmh_ops.sfop_ctor(fcmh);
+	if (rc) {
+		psc_hashbkt_unlock(b);
+		psc_pool_return(fidcPool, fcmh);
+		return (rc);
 	}
 
 	/* Place the fcmh into the cache, note that the fcmh was
