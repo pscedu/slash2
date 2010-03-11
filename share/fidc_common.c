@@ -170,11 +170,14 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 			   f->fcmh_cache_owner == NULL);
 		psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
 		psc_assert(clean);
+		f->fcmh_cache_owner = lc;
 		lc_add(lc, f);
+		
 
 	} else if (lc == &fidcDirtyList) {
 		psc_assert(f->fcmh_cache_owner == &fidcCleanList);
 		psc_assert(f->fcmh_state & FCMH_CAC_DIRTY);
+		f->fcmh_cache_owner = lc;
 		lc_add(lc, f);
 		//XXX psc_assert(clean == 0);
 
@@ -592,6 +595,9 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	psc_assert(!(f->fcmh_state & FCMH_CAC_FREE));
 	psc_assert(f->fcmh_refcnt >= 0);
 	f->fcmh_refcnt++;
+
+	DEBUG_FCMH(PLL_NOTIFY, f, "took ref (type=%d)", type);
+
 	/* Only 2 types of references may be long standing, FCMH_OPCNT_OPEN
 	 *   and FCMH_OPCNT_BMAP.  Other ref types should not move the fcmh
 	 *   to the dirty list.
@@ -610,8 +616,6 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 			fidc_put(f, &fidcDirtyList);
 		}
 	}
-
-	DEBUG_FCMH(PLL_NOTIFY, f, "took ref (type=%d)", type);
 	FCMH_URLOCK(f, locked);
 }
 
