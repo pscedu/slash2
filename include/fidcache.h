@@ -176,10 +176,6 @@ enum {
 
 #define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
 
-#define fidc_lookup(fgp, fl, sstb, crp, fcmhp)				\
-	fidc_lookupf((fgp), (fl), (sstb), 0, (crp), (fcmhp))		\
-
-
 void			 fcmh_dtor(void *);
 struct fidc_membh	*fcmh_get(void);
 void			 fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
@@ -253,8 +249,8 @@ static __inline int
 fcmh_getload(const struct slash_fidgen *fgp, const struct slash_creds *crp,
     struct fidc_membh **fcmhp)
 {
-	return (fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
-	    NULL, crp, fcmhp));
+	return (fidc_lookupf(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
+	    NULL, 0, crp, fcmhp));
 }
 
 #endif /* _SL_FIDCACHE_H_ */
