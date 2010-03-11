@@ -747,21 +747,67 @@ msbmaprlsthr_main(__unusedx void *arg)
 {
 	struct bmapc_memb *b;
 	struct psc_dynarray a;
-	struct timespec current, ts = {1, 0};
-	int rc=0;
+	struct timespec ctime, wtime = {0, 0};
+	struct psc_waitq waitq = PSC_WAITQ_INIT;
+	size_t z;
 
 	while (1) {
-		/* Sort the bmaps on the timeoutQ by their expiration time.
-		 *   Bmaps which have an opcnt > 1 may not be released.  
-		 *   Not sure what the protocol should look like?? Should
-		 *   the bmap be freed first, followed by an rpc?  That
-		 *   seems racy.
-		 */
-		//lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
-		//lc_gettimed(&bmapTimeoutQ, &ts);
+		z = lc_sz(&bmapTimeoutQ);
+		lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
+		clock_gettime(CLOCK_REALTIME, &ctime);
+		psc_dynarray_init(&a);
+
+		while (z--) {
+			b = lc_getnb(&bmapTimeoutQ);
+			if (!b)
+				break;
+			
+			BMAP_LOCK(b);
+			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+
+			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
+				BMAP_ULOCK(b);
+				psc_dynarray_add(&a, b);
+				continue;
+			}
+			
+			if (timespeccmp(&ctime, &bmap_2_msbd(b)->msbd_etime, >)) {
+				timespecsub(&ctime, &bmap_2_msbd(b)->msbd_etime, 
+					    &wtime);
+				break;
+			} else
+				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+		}
+		
+
 		if (shutdown)
 			break;
-		sleep(1);
+		else {
+			int i = psc_dynarray_len(&a);
+			
+			while (i--) {
+				/* Check the bmap which had refs.
+				 */
+				b = psc_dynarray_getpos(&a, i-1);
+				BMAP_LOCK(b);
+				if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
+					bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+					BMAP_ULOCK(b);
+				} else {
+					BMAP_ULOCK(b);
+					/* These have already timed out, try
+					 *   to free them quickly.
+					 */
+					wtime.tv_sec = 0 ; wtime.tv_nsec = 131072;
+					lc_addhead(&bmapTimeoutQ, b);
+				}
+			}
+
+			if (!wtime.tv_sec && !wtime.tv_nsec) 
+				wtime.tv_sec = 1;
+
+			psc_waitq_waitrel(&waitq, NULL, &wtime);
+		}
 	}
 	return (NULL);
 }

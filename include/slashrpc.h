@@ -272,6 +272,17 @@ struct srm_bmap_iod_get {
 	uint32_t                blkno;
 } __packed;
 
+struct srm_bmap_id {
+	struct slash_fidgen fg;
+	sl_bmapno_t bmapno;
+} __packed;
+
+#define MAX_BMAP_RELEASE 12
+struct srm_bmap_release_req {
+	struct srm_bmap_id      bmaps[MAX_BMAP_RELEASE];
+	uint32_t                nbmaps;
+} __packed;
+
 struct srm_connect_req {
 	uint64_t		magic;
 	uint32_t		version;
@@ -399,9 +410,6 @@ struct srm_readlink_req {
 struct srm_readlink_rep {
 	int32_t			rc;
 /* buf is in bulk of size PATH_MAX */
-} __packed;
-
-struct srm_releasebmap_req {
 } __packed;
 
 struct srm_rename_req {

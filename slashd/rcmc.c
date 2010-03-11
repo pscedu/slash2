@@ -279,7 +279,7 @@ slmrcmthr_main(__unusedx void *arg)
 int
 slm_rcm_issue_releasebmap(struct pscrpc_import *imp)
 {
-	struct srm_releasebmap_req *mq;
+	struct srm_bmap_release_req *mq;
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *rq;
 	int rc;

@@ -159,7 +159,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 int
 msrcm_handle_releasebmap(struct pscrpc_request *rq)
 {
-	struct srm_releasebmap_req *mq;
+	struct srm_bmap_release_req *mq;
 	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
