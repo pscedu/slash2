@@ -27,6 +27,9 @@
 #include "bmpc.h"
 #include "inode.h"
 
+extern struct timespec msl_bmap_max_lease;
+extern struct timespec msl_bmap_timeo_inc;
+
 /*
  * msbmap_crcrepl_states - must be the same as bh_crcstates and bh_repls
  *  in slash_bmap_od.
@@ -44,13 +47,47 @@ struct bmap_cli_info {
 	struct bmapc_memb		*msbd_bmap;
 	lnet_nid_t			 msbd_ion;
 	struct msbmap_crcrepl_states	 msbd_msbcr;
-	struct srt_bmapdesc_buf		 msbd_bdb;	/* open bmap descriptor */
+	struct srt_bmapdesc_buf		 msbd_bdb;   /* open bmap descriptor */
 	struct psclist_head		 msbd_lentry;
+	struct timespec                  msbd_xtime; /* max time */
+        struct timespec                  msbd_etime; /* current expire time */
 };
+
+#define BMAP_CLI_MAX_LEASE 60 /* seconds */
+#define BMAP_CLI_TIMEO_INC 5
 
 #define bmap_2_msbd(b)			((struct bmap_cli_info *)(b)->bcm_pri)
 #define bmap_2_msbmpc(b)		&(bmap_2_msbd(b)->msbd_bmpc)
 #define bmap_2_msion(b)			bmap_2_msbd(b)->msbd_ion
+
+static __inline int
+bmap_cli_timeo_cmp(const void *x, const void *y)
+{
+	const struct bmap_cli_info * const *pa = x, *a = *pa;
+	const struct bmap_cli_info * const *pb = y, *b = *pb;
+
+	if (timespeccmp(&a->msbd_etime, &b->msbd_etime, <))
+		return (-1);
+
+	if (timespeccmp(&a->msbd_etime, &b->msbd_etime, >))
+		return (1);
+
+	return (0);
+}
+
+#define BMAP_CLI_BUMP_TIMEO(b)                                          \
+        do {                                                            \
+		BMAP_LOCK(b);                                           \
+		timespecadd(&(bmap_2_msbd(b))->msbd_etime,              \
+			    &msl_bmap_timeo_inc,                        \
+			    &(bmap_2_msbd(b))->msbd_etime);             \
+		if (timespeccmp(&(bmap_2_msbd(b))->msbd_etime,          \
+				&(bmap_2_msbd(b))->msbd_xtime, >))      \
+			memcpy(&bmap_2_msbd(b)->msbd_etime,             \
+			       &bmap_2_msbd(b)->msbd_xtime,             \
+			       sizeof(struct timespec));                \
+		BMAP_ULOCK(b);                                          \
+	} while (0)
 
 /* bmap client modes */
 #define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)  /* mode change in progress */

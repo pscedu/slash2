@@ -150,7 +150,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	mp->attr = fcmh->fcmh_sstb;
  out:
 	if (fcmh)
-		fcmh_dropref(fcmh);
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
@@ -256,9 +256,9 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	    mq->name, &mp->fg, &mq->creds, &mp->attr);
  out:
 	if (c)
-		fcmh_dropref(c);
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
@@ -286,7 +286,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 
  out:
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
@@ -309,7 +309,8 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	    mq->mode, &mq->creds, &mp->attr, &mp->fg, NULL);
  out:
 	if (fcmh)
-		fcmh_dropref(fcmh);
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (0);
 }
 
@@ -341,7 +342,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
  out:
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (0);
 }
 
@@ -438,7 +440,8 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 
  out:
 	if (fcmh)
-		fcmh_dropref(fcmh);
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (mp->rc);
 }
 
@@ -490,9 +493,9 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	    fcmh_2_mdsio_fid(np), to, &mq->creds);
  out:
 	if (np)
-		fcmh_dropref(np);
+		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
 	if (op)
-		fcmh_dropref(op);
+		fcmh_op_done_type(op, FCMH_OPCNT_LOOKUP_FIDC);
 	return (mp->rc);
 }
 
@@ -529,7 +532,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
  out:
 	if (fcmh)
-		fcmh_dropref(fcmh);
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (0);
 }
 
@@ -562,7 +566,8 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 
  out:
 	if (fcmh)
-		fcmh_dropref(fcmh);
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (0);
 }
 
@@ -607,7 +612,8 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
  out:
 	if (fcmh)
-		fcmh_dropref(fcmh);
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (0);
 }
 
@@ -666,7 +672,8 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	    &mq->creds, &mp->attr, &mp->fg, NULL);
  out:
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (mp->rc);
 }
 
@@ -691,7 +698,8 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		    mq->name, &rootcreds);
  out:
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (0);
 }
 

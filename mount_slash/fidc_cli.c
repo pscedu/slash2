@@ -83,10 +83,11 @@ fidc_child_free_plocked(struct fidc_membh *c)
 	struct fcmh_cli_info *fci;
 	int locked;
 
-	fci = fcmh_get_pri(c);
 	locked = reqlock(&c->fcmh_lock);
 
-	LOCK_ENSURE(&c->fcmh_lock);
+	fci = fcmh_get_pri(c);
+
+	LOCK_ENSURE(&fci->fci_parent->fcmh_lock);
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
 	if (fcmh_isdir(c)) {
@@ -269,7 +270,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		    strcmp(name, fci->fci_name) == 0) {
 			found = 1;
 			psc_assert(fci->fci_parent == p);
-			fcmh_incref(c);
+			fcmh_op_start_type(c, FCMH_OPCNT_LOOKUP_PARENT);
 			break;
 		}
 	}
@@ -278,10 +279,12 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 
 	PFL_GETTIME(&now);
 	if (timercmp(&now, &c->fcmh_age, >)) {
-		/* It's old, remove it. */
+		/* It's old, remove it. 
+		 */
 		fidc_child_free_plocked(c);
-		fcmh_dropref(c);
-		/* this will force an RPC to do the lookup */
+		fcmh_op_start_type(c, FCMH_OPCNT_LOOKUP_PARENT);
+		/* Force a lookuprpc 
+		 */
 		c = NULL;
 	}
 	return (c);
@@ -334,9 +337,11 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	/* The only ref on the child should be the one taken above in
 	 *  fidc_child_lookup_int_locked()
 	 */
-	psc_assert(atomic_dec_and_test(&c->fcmh_refcnt));
-	//fcmh_dropref(c);
+	spinlock(&c->fcmh_lock);
+	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_PARENT);
+	psc_assert(!psc_atomic32_read(&c->fcmh_refcnt));
 	fidc_child_free_plocked(c);
+	freelock(&c->fcmh_lock);
 
 	ureqlock(&p->fcmh_lock, locked);
 }
@@ -384,7 +389,8 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 		/* Someone beat us to the punch, do sanity checks and then
 		 *  clean up.
 		 */
-		fcmh_dropref(tmp);
+		fcmh_op_done_type(tmp, FCMH_OPCNT_LOOKUP_PARENT);
+
  end:
 	freelock(&c->fcmh_lock);
 	freelock(&p->fcmh_lock);
@@ -435,7 +441,7 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	psclist_xadd_tail(&fci->fci_sibling, &pci->fci_children);
 	freelock(&np->fcmh_lock);
 
-	fcmh_dropref(ch);
+	fcmh_op_done_type(ch, FCMH_OPCNT_LOOKUP_PARENT);
 	freelock(&ch->fcmh_lock);
 
 	DEBUG_FCMH(PLL_WARN, ch, "rename file: "

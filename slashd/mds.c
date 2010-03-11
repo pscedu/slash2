@@ -652,7 +652,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		 */
 		bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
 
-	fcmh_dropref(fcmh);
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
 }
 

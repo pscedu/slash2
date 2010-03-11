@@ -146,26 +146,15 @@ struct fidc_membh {
 		}								\
 	} while (0)
 
-/* Increment an fcmh reference, fcmh_refcnt is used by the fidcache
- *  to determine which fcmh's may be reclaimed.
- */
-#define fcmh_incref(f)								\
-	do {									\
-		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);		\
-		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));			\
-		atomic_inc(&(f)->fcmh_refcnt);					\
-		DEBUG_FCMH(PLL_TRACE, (f), "incref");				\
-	} while (0)
 
-/* Drop an fcmh reference.
- */
-#define fcmh_dropref(f)								\
-	do {									\
-		atomic_dec(&(f)->fcmh_refcnt);					\
-		psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));			\
-		psc_assert(atomic_read(&(f)->fcmh_refcnt) >= 0);		\
-		DEBUG_FCMH(PLL_TRACE, (f), "dropref");				\
-	} while (0)
+enum fcmh_opcnt_types {
+	FCMH_OPCNT_NEW,
+	FCMH_OPCNT_LOOKUP_FIDC,
+	FCMH_OPCNT_LOOKUP_PARENT,
+	FCMH_OPCNT_OPEN,
+	FCMH_OPCNT_BMAP,
+	FCMH_OPCNT_CHILD
+};
 
 static __inline void *
 fcmh_get_pri(struct fidc_membh *fcmh)
@@ -202,6 +191,10 @@ struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
 int			 fidc_lookupf(const struct slash_fidgen *, int,
 			    const struct srt_stat *, int, const struct slash_creds *,
 			    struct fidc_membh **);
+
+void                     fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
+
+void                     fcmh_op_done_type(struct fidc_membh *, enum fcmh_opcnt_types);
 
 void			 dump_fcmh(struct fidc_membh *);
 void			 dump_fcmh_flags(int);

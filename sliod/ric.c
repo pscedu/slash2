@@ -207,7 +207,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   iod_inode_open()) then we must have a way to notify other
 	 *   threads blocked on DATARDY.
 	 */
-	fcmh_dropref(fcmh);	/* reaper will return it to the pool */
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC); /* reaper will return it to the pool */
+
 	return (rc);
 }
 

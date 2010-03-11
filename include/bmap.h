@@ -76,7 +76,8 @@ struct bmapc_memb {
 #define BMAP_DIRTY		(1 << 5)
 #define BMAP_MEMRLS		(1 << 6)
 #define BMAP_DIRTY2LRU		(1 << 7)
-#define _BMAP_FLSHFT		(1 << 8)
+#define BMAP_REAPABLE           (1 << 8)
+#define _BMAP_FLSHFT		(1 << 9)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
@@ -278,13 +279,22 @@ int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
 		_bmap_op_done((b));					\
 	} while (0)
 
+#define bmap_op_done_type_simple(b, type)				\
+	do {								\
+		psc_assert(atomic_read(&(b)->bcm_opcnt) > 1);		\
+		atomic_dec(&(b)->bcm_opcnt);				\
+		DEBUG_BMAP(PLL_NOTIFY, (b),				\
+			   "removing reference (type=%d)", type);	\
+	} while (0)
+
 enum bmap_opcnt_types {
 	BMAP_OPCNT_LOOKUP,
 	BMAP_OPCNT_IONASSIGN,
 	BMAP_OPCNT_BREF,
 	BMAP_OPCNT_MDSLOG,
 	BMAP_OPCNT_BIORQ,
-	BMAP_OPCNT_REPLWK			/* ION */
+	BMAP_OPCNT_REPLWK,			/* ION */
+	BMAP_OPCNT_REAPER                       /* Client bmap timeout */
 };
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);

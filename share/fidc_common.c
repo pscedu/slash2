@@ -76,9 +76,10 @@ fcmh_get(void)
 	memset(f, 0, sizeof(*f));
 	SPLAY_INIT(&f->fcmh_bmaptree);
 	LOCK_INIT(&f->fcmh_lock);
-	psc_atomic32_set(&f->fcmh_refcnt, 1);
+	psc_atomic32_set(&f->fcmh_refcnt, 0);
 	psc_waitq_init(&f->fcmh_waitq);
 	f->fcmh_state = FCMH_CAC_CLEAN;
+	fcmh_op_done_type(f, FCMH_OPCNT_NEW);
 	return (f);
 }
 
@@ -163,23 +164,23 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		if (psc_hashent_conjoint(&fidcHtable, f))
 			psc_hashent_remove(&fidcHtable, f);
 
+		fcmh_destroy(f);
+
 	} else if (lc == &fidcCleanList) {
 		psc_assert(f->fcmh_cache_owner == &fidcDirtyList ||
 			   f->fcmh_cache_owner == NULL);
-		psc_assert(ATTR_TEST(f->fcmh_state, FCMH_CAC_CLEAN));
+		psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
 		psc_assert(clean);
+		lc_add(lc, f);
 
 	} else if (lc == &fidcDirtyList) {
 		psc_assert(f->fcmh_cache_owner == &fidcCleanList);
-		psc_assert(ATTR_TEST(f->fcmh_state, FCMH_CAC_DIRTY));
+		psc_assert(f->fcmh_state & FCMH_CAC_DIRTY);
+		lc_add(lc, f);
 		//XXX psc_assert(clean == 0);
 
 	} else
 		psc_fatalx("lc %p is a bogus list cache", lc);
-
-	/* Place onto the respective list.
-	 */
-	FCMHCACHE_PUT(f, lc);
 }
 
 /**
@@ -271,7 +272,6 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 
 	b = psc_hashbkt_get(&fidcHtable, &fg->fg_fid);
 
- retry:
 	locked[0] = psc_hashbkt_reqlock(b);
 	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
 		if (fcmh_2_fid(tmp) != fg->fg_fid)
@@ -306,24 +306,9 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				ureqlock(&tmp->fcmh_lock, locked[1]);
 				break;
 			}
-			if (fcmh_2_gen(tmp) == FIDGEN_ANY) {
-				/* The generation number has yet to be obtained
-				 *  from the server.  Wait for it and retry.
-				 */
-				psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
-				if (locked[1])
-					psc_atomic32_inc(&tmp->fcmh_refcnt);
-				psc_hashbkt_unlock(b);
-				psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
+			if (fcmh_2_gen(tmp) == FIDGEN_ANY) 
+				abort();
 
-				if (locked[0])
-					psc_hashbkt_lock(b);
-				if (locked[1]) {
-					spinlock(&tmp->fcmh_lock);
-					psc_atomic32_dec(&tmp->fcmh_refcnt);
-				}
-				goto retry;
-			}
 			if (fg->fg_gen == FIDGEN_ANY) {
 				/* Look for highest generation number.
 				 */
@@ -334,13 +319,11 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 		}
 	}
 
-	if (fcmh && (del == 1))
-		psc_hashent_remove(&fidcHtable, fcmh);
+	if (fcmh)
+		del ? psc_hashent_remove(&fidcHtable, fcmh) :
+		      fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
 	psc_hashbkt_ureqlock(b, locked[0]);
-
-	if (fcmh)
-		fcmh_incref(fcmh);
 
 	return (fcmh);
 }
@@ -437,7 +420,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		 */
 		if (try_create) {
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
-			fcmh_dropref(fcmh_new);
+			fcmh_op_done_type(fcmh_new, FCMH_OPCNT_NEW);
 			fidc_put(fcmh_new, &fidcFreeList);
 			fcmh_new = NULL;			/* defensive */
 		}
@@ -465,7 +448,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		psc_assert(fgp->fg_fid == fcmh_2_fid(fcmh));
 #endif
 		/* keep me around after unlocking later */
-		fcmh_incref(fcmh);
+		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
 		fcmh_clean_check(fcmh);
 
@@ -488,6 +471,8 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			try_create = 1;
 			goto restart;
 		} else
+			/* Continue to hold the FCMH_OPCNT_NEW ref.
+			 */
 			fcmh = fcmh_new;
 	else {
 		/* FIDC_LOOKUP_CREATE was not specified and the fcmh
@@ -592,6 +577,58 @@ fidc_init(int privsiz, int nobj, int max,
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
 	    FCMH_HASH_FIELD, fcmh_hentry, nobj * 2, NULL, "fidc");
 	fidcReapCb = fcmh_reap_cb;
+}
+
+void
+fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
+{
+	int locked=FCMH_RLOCK(f);
+
+	psc_assert(psc_atomic32_read(&(f)->fcmh_refcnt) >= 0);
+	psc_atomic32_inc(&(f)->fcmh_refcnt);
+	psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));
+
+	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
+		if (psc_atomic32_read(&(f)->fcmh_refcnt) > 1) {
+			psc_assert(f->fcmh_state & FCMH_CAC_DIRTY);
+			psc_assert(f->fcmh_cache_owner == &fidcDirtyList);
+
+		} else if (psc_atomic32_read(&(f)->fcmh_refcnt) == 1) {
+			psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
+			psc_assert(fcmh_clean_check(f));
+
+			f->fcmh_state &= ~FCMH_CAC_CLEAN;
+			f->fcmh_state |= FCMH_CAC_DIRTY;
+			fidc_put(f, &fidcDirtyList);
+		} else
+			abort();
+	}
+	DEBUG_FCMH(PLL_NOTIFY, (f), "took ref (type=%d)", type);
+	FCMH_URLOCK(f, locked);
+}
+
+void
+fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
+{
+	int locked=FCMH_RLOCK(f);
+	
+	psc_assert(psc_atomic32_read(&(f)->fcmh_refcnt) > 0);
+	psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));
+	
+	if (psc_atomic32_dec_and_test0(&(f)->fcmh_refcnt)) {
+		if (f->fcmh_state & FCMH_CAC_DIRTY) {
+			psc_assert(!fcmh_clean_check(f));
+			
+			f->fcmh_state &= ~FCMH_CAC_DIRTY;
+			f->fcmh_state |= FCMH_CAC_CLEAN;
+			
+			fidc_put(f, &fidcCleanList);
+		} else
+			/* It's already on the clean list. */
+			psc_assert(fcmh_clean_check(f));
+	}	
+	DEBUG_FCMH(PLL_NOTIFY, (f), "release ref (type=%d)", type);
+	FCMH_URLOCK(f, locked);
 }
 
 void

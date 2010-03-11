@@ -54,7 +54,12 @@
 #include "slconn.h"
 #include "slerr.h"
 
-__static SPLAY_GENERATE(fhbmap_cache, msl_fbr, mfbr_tentry, fhbmap_cache_cmp);
+/* Flushing fuse threads wait here for I/O completion.
+ */
+struct psc_waitq msl_fhent_flush_waitq = PSC_WAITQ_INIT;
+
+struct timespec msl_bmap_max_lease = {BMAP_CLI_MAX_LEASE, 0};
+struct timespec msl_bmap_timeo_inc = {BMAP_CLI_TIMEO_INC, 0};
 
 __static void
 msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
@@ -296,6 +301,18 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
+
+	/* Bmap lock is still held, will be released by bmap_op_done_type().
+         */
+        if (!(b->bcm_mode & BMAP_DIRTY)) {
+                /* Schedule the bmap to be released by placing it on the     
+                 *   bmapTimeoutQ.                                           
+                 */
+                b->bcm_mode |= BMAP_REAPABLE;
+                bmap_op_start_type(b, BMAP_OPCNT_REAPER);
+                lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
+                DEBUG_BMAP(PLL_INFO, b, "added to bmapTimeoutQ");
+        }
 	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
 }
 
@@ -327,6 +344,11 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 __static void
 msl_biorq_destroy(struct bmpc_ioreq *r)
 {
+	struct msl_fhent *f = r->biorq_fhent;
+#if FHENT_EARLY_RELEASE
+	int fhent=1;
+#endif
+
 	spinlock(&r->biorq_lock);
 
 	/* Reads req's have their BIORQ_SCHED and BIORQ_INFL flags
@@ -343,6 +365,12 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	}
 
 	r->biorq_flags |= BIORQ_DESTROY;
+
+#if FHENT_EARLY_RELEASE
+	if (r->biorq_flags & BIORQ_NOFHENT)
+		fhent = 0;
+#endif
+
 	freelock(&r->biorq_lock);
 
 	DEBUG_BIORQ(PLL_INFO, r, "destroying (nwaiters=%d)",
@@ -358,6 +386,20 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	msl_biorq_unref(r);
 	bmap_biorq_del(r);
 
+#if FHENT_EARLY_RELEASE       
+	if (fhent) {
+		spinlock(&f->mfh_lock);
+		pll_remove(&f->mfh_biorqs, r);
+		psc_waitq_wakeall(&msl_fhent_flush_waitq);
+		freelock(&f->mfh_lock);
+	}
+#else
+	spinlock(&f->mfh_lock);
+	pll_remove(&f->mfh_biorqs, r);
+	psc_waitq_wakeall(&msl_fhent_flush_waitq);
+	freelock(&f->mfh_lock);
+#endif	
+
 	psc_dynarray_free(&r->biorq_pages);
 
 	if (r->biorq_rqset)
@@ -368,15 +410,20 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	PSCFREE(r);
 }
 
+
 struct msl_fhent *
 msl_fhent_new(struct fidc_membh *f)
 {
 	struct msl_fhent *mfh;
 
+	fcmh_op_start_type(f, FCMH_OPCNT_OPEN);
+
 	mfh = PSCALLOC(sizeof(*mfh));
+	mfh->mfh_fcmh = f;	
 	LOCK_INIT(&mfh->mfh_lock);
-	SPLAY_INIT(&mfh->mfh_fhbmap_cache);
-	mfh->mfh_fcmh = f;
+	pll_init(&mfh->mfh_biorqs, struct bmpc_ioreq, biorq_mfh_lentry,
+                 &mfh->mfh_lock);
+
 	return (mfh);
 }
 
@@ -395,39 +442,42 @@ msl_bmap_init(struct bmapc_memb *b)
 }
 
 __static void
+bmap_biorq_expire(struct bmapc_memb *b)
+{
+        struct bmpc_ioreq *biorq;
+
+        BMPC_LOCK(bmap_2_msbmpc(b));
+        PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_new_biorqs) {
+                spinlock(&biorq->biorq_lock);
+                biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
+                DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
+                freelock(&biorq->biorq_lock);
+        }
+
+        PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_pndg_biorqs) {
+                spinlock(&biorq->biorq_lock);
+                biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
+                DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
+                freelock(&biorq->biorq_lock);
+        }
+        BMPC_ULOCK(bmap_2_msbmpc(b));
+}
+
+__static void
 bmap_biorq_waitempty(struct bmapc_memb *b)
 {
-	struct bmpc_ioreq *biorq;
-	struct bmap_pagecache *bmpc=bmap_2_msbmpc(b);
+        BMAP_LOCK(b);
+        while (!pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs) ||
+               !pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs)  ||
+               (b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
+                psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+                BMAP_LOCK(b);
+        }
+        psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs));
+        psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs));
+        psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 
-	BMPC_LOCK(bmpc);
-	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_new_biorqs) {
-		spinlock(&biorq->biorq_lock);
-		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
-		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
-		freelock(&biorq->biorq_lock);
-	}
-
-	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_pndg_biorqs) {
-		spinlock(&biorq->biorq_lock);
-		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
-		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
-		freelock(&biorq->biorq_lock);
-	}
-	BMPC_ULOCK(bmpc);
-
-	BMAP_LOCK(b);
-	while (!pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs) ||
-	       !pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs)  ||
-	       (b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
-		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-		BMAP_LOCK(b);
-	}
-	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs));
-	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs));
-	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
-
-	BMAP_ULOCK(b);
+        BMAP_ULOCK(b);
 }
 
 void
@@ -459,20 +509,6 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	BMPC_LOCK(bmpc);
 	bmpc_freeall_locked(bmpc);
 	BMPC_ULOCK(bmpc);
-}
-
-void
-msl_fbr_free(struct msl_fbr *r)
-{
-	struct bmapc_memb *b = r->mfbr_bmap;
-
-	psc_assert(b);
-//	psc_assert(PSC_SPLAY_ENTRY_DISJOINT(fhbmap_cache, r));
-
-	msl_fbr_unref(r);
-	PSCFREE(r);
-	bmap_biorq_waitempty(b);
-	bmap_op_done_type(b, BMAP_OPCNT_BREF);
 }
 
 /**
@@ -565,6 +601,17 @@ msl_bmap_fetch(struct bmapc_memb *bmap, enum rw rw)
 		psc_waitq_wakeall(&f->fcmh_waitq);
 	}
 
+	/* Record the start time, 
+	 *  XXX the directio status of the bmap needs to be returned by the 
+	 *     mds so we can set the proper expiration time.
+	 */
+	clock_gettime(CLOCK_REALTIME, &bmap_2_msbd(bmap)->msbd_xtime);
+	timespecadd(&bmap_2_msbd(bmap)->msbd_xtime, &msl_bmap_max_lease, 
+		    &bmap_2_msbd(bmap)->msbd_xtime);
+	
+	memcpy(&bmap_2_msbd(bmap)->msbd_etime, &bmap_2_msbd(bmap)->msbd_xtime, 
+	       sizeof(struct timespec));
+
  done:
 	FCMH_RLOCK(f);
 	f->fcmh_state &= ~FCMH_CLI_FETCHREPLTBL;
@@ -606,74 +653,10 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, enum rw rw)
 	return (rc);
 }
 
-void
-msl_bmap_fhcache_clear(struct msl_fhent *mfh)
-{
-	struct msl_fbr *r, *n;
-
-	spinlock(&mfh->mfh_lock);
-	for (r = SPLAY_MIN(fhbmap_cache, &mfh->mfh_fhbmap_cache);
-	    r; r = n) {
-		n = SPLAY_NEXT(fhbmap_cache, &mfh->mfh_fhbmap_cache, r);
-		psc_assert(SPLAY_REMOVE(fhbmap_cache,
-		    &mfh->mfh_fhbmap_cache, r));
-		msl_fbr_free(r);
-	}
-	freelock(&mfh->mfh_lock);
-}
-
-#define BML_NEW_BMAP  0
-#define BML_HAVE_BMAP 1
-
-__static void
-msl_bmap_fhcache_ref(struct msl_fhent *mfh, struct bmapc_memb *b,
-		     int mode, enum rw rw)
-{
-	struct msl_fbr *r;
-
-	/* Now handle the fhent's bmap cache, adding a new reference
-	 *  if needed.
-	 *
-	 * A new bmap may not already exist in the file handle's
-	 *  reference cache.  Lock around the fhcache_bmap_lookup()
-	 *  test to prevent another thread from inserting before us.
-	 */
-	spinlock(&mfh->mfh_lock);
-	r = fhcache_bmap_lookup(mfh, b);
-	if (!r) {
-		r = msl_fbr_new(b, rw);
-		SPLAY_INSERT(fhbmap_cache, &mfh->mfh_fhbmap_cache, r);
-	} else {
-		/* Verify that the ref didn't not exist if the caller
-		 *  specified BML_NEW_BMAP.
-		 */
-		psc_assert(mode != BML_NEW_BMAP);
-		msl_fbr_ref(r, rw);
-	}
-	freelock(&mfh->mfh_lock);
-}
-
-/**
- * msl_bmap_retreive - Grab a bmap from the MDS.
- * @f: the msl_fhent for the owning file.
- * @prefetch: the number of subsequent bmaps to prefetch.
- * @rw: tell the mds if we plan to read or write.
- * Notes: XXX Need a way to detect bmap mode changes here (ie from read
- *	to rw) and take the neccessary actions to notify the mds, this
- *	detection will be done by looking at the refcnts on the bmap.
- * TODO:  XXX if bmap is already cached but is not in write mode (but
- *	rw==WRITE) then we must notify the mds of this.
- */
 int
 msl_bmap_retrieve(struct bmapc_memb *b, enum rw rw, void *arg)
 {
-	struct msl_fhent *mfh = arg;
-	int rc;
-
-	rc = msl_bmap_fetch(b, rw);
-	if (rc == 0)
-		msl_bmap_fhcache_ref(mfh, b, BML_NEW_BMAP, rw);
-	return (rc);
+	return (msl_bmap_fetch(b, rw));
 }
 
 struct bmapc_memb *
@@ -685,14 +668,9 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, enum rw rw)
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
-	rc = bmap_get(f, n, rw, &b, mfh);
+	rc = bmap_get(f, n, rw, &b, NULL);
 	if (rc)
 		return (NULL);
-
-	/* Ref now, otherwise our bmap may get downgraded while we're
-	 *  blocking on the waitq.
-	 */
-	msl_bmap_fhcache_ref(mfh, b, BML_HAVE_BMAP, rw);
 
 	/* If our bmap is cached then we need to consider the current
 	 *   caching policy and possibly notify the mds.  I.e. if our
@@ -704,71 +682,69 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, enum rw rw)
 	 */
  retry:
 	spinlock(&b->bcm_lock);
-	if (rw != SL_WRITE || (b->bcm_mode & BMAP_WR)) {
+	if (rw == SL_READ || (b->bcm_mode & BMAP_WR)) {
 		/* Either we're in read-mode here or the bmap
 		 *  has already been marked for writing therefore
 		 *  the mds already knows we're writing.
 		 */
 		freelock(&b->bcm_lock);
-		goto out;
-
-	} else if (b->bcm_mode & BMAP_CLI_MCIP) {
-		/* If some other thread has set BMAP_CLI_MCIP then HE
-		 *  must set BMAP_CLI_MCC when he's done (at that time
-		 *  he also must unset BMAP_CLI_MCIP and set BMAP_WR
-		 */
-		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-		/* Done waiting, double check our refcnt, it should be at
-		 *  least '1' (our ref).
-		 * XXX Not sure if both checks are needed.
-		 */
-		psc_assert(atomic_read(&b->bcm_opcnt) > 0);
-		psc_assert(atomic_read(&b->bcm_wr_ref) > 0);
-		if (b->bcm_mode & BMAP_CLI_MCC) {
-			/* Another thread has completed the upgrade
-			 *  in mode change.  Verify that the bmap
-			 *  is in the appropriate state.
-			 *  Note: since our wr_ref has been set above,
-			 *   the bmap MUST have BMAP_WR set here.
-			 */
-			psc_assert(!(b->bcm_mode & BMAP_CLI_MCIP));
-			psc_assert((b->bcm_mode & BMAP_WR));
-		} else
-			/* We were woken up for a different
-			 *  reason - try again.
-			 */
-			goto retry;
-
-	} else { /* !BMAP_CLI_MCIP not set, we will set it and
-		  *    proceed with the modechange operation.
-		  */
-		psc_assert(!(b->bcm_mode & BMAP_WR)   &&
-			   !(b->bcm_mode & BMAP_CLI_MCIP) &&
-			   !(b->bcm_mode & BMAP_CLI_MCC));
-
-		b->bcm_mode |= BMAP_CLI_MCIP;
-		freelock(&b->bcm_lock);
-		/* An interesting fallout here is that the mds may callback
-		 *  to us causing our pagecache to be purged :)
-		 * Correction.. this is not true, since if there was another
-		 *  writer then we would already be in directio mode.
-		 */
-		rc = msl_bmap_modeset(f, b->bcm_blkno, SL_WRITE);
-		psc_assert(!rc); /*  XXX for now.. */
-		/* We're the only thread allowed here, these
-		 *  bits could not have been set by another thread.
-		 */
-		spinlock(&b->bcm_lock);
-		psc_assert(b->bcm_mode & BMAP_CLI_MCIP);
-		psc_assert(!(b->bcm_mode & BMAP_CLI_MCC) &&
-			   !(b->bcm_mode & BMAP_WR));
-		b->bcm_mode &= ~BMAP_CLI_MCIP;
-		b->bcm_mode |= (BMAP_WR | BMAP_CLI_MCC);
-		freelock(&b->bcm_lock);
-		psc_waitq_wakeall(&b->bcm_waitq);
+		return (b);
 	}
- out:
-	return (b);
+
+	/* Need to upgrade the bmap to write mode.
+         */
+        psc_assert((b->bcm_mode & BMAP_RD) && (rw == SL_WRITE));
+
+        if (b->bcm_mode & BMAP_CLI_MCIP) {
+                psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+                psc_assert(atomic_read(&b->bcm_opcnt) > 0);
+
+                if (b->bcm_mode & BMAP_CLI_MCC) {
+                        /* Another thread has completed the upgrade
+                         *  in mode change.  Verify that the bmap
+                         *  is in the appropriate state.
+                         *  Note: since our wr_ref has been set above,
+                         *   the bmap MUST have BMAP_WR set here.
+                         */
+                        psc_assert(!(b->bcm_mode & BMAP_CLI_MCIP));
+                        psc_assert((b->bcm_mode & BMAP_WR));
+                } else
+                        /* We were woken up for a different
+                         *  reason - try again.
+                         */
+                        goto retry;
+
+        } else {
+                /* !BMAP_CLI_MCIP not set, we will set it and
+		 *    proceed with the modechange operation.
+		 */
+                psc_assert(!(b->bcm_mode & BMAP_WR)   &&
+                           !(b->bcm_mode & BMAP_CLI_MCIP) &&
+                           !(b->bcm_mode & BMAP_CLI_MCC));
+
+                b->bcm_mode |= BMAP_CLI_MCIP;
+                freelock(&b->bcm_lock);
+                /* An interesting fallout here is that the mds may callback
+                 *  to us causing our pagecache to be purged :)
+                 * Correction.. this is not true, since if there was another
+                 *  writer then we would already be in directio mode.
+                 */
+                rc = msl_bmap_modeset(f, b->bcm_blkno, SL_WRITE);
+                psc_assert(!rc); /*  XXX for now.. */
+                /* We're the only thread allowed here, these
+                 *  bits could not have been set by another thread.
+                 */
+                spinlock(&b->bcm_lock);
+                psc_assert(b->bcm_mode & BMAP_CLI_MCIP);
+                psc_assert(!(b->bcm_mode & BMAP_CLI_MCC) &&
+                           !(b->bcm_mode & BMAP_WR));
+                b->bcm_mode &= ~BMAP_CLI_MCIP;
+                b->bcm_mode |= (BMAP_WR | BMAP_CLI_MCC);
+                freelock(&b->bcm_lock);
+                psc_waitq_wakeall(&b->bcm_waitq);
+        }
+
+        return (b);
 }
 
 /**
@@ -1155,6 +1131,35 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 
 	} else {
 		b->bcm_mode |= BMAP_DIRTY;
+
+		if (b->bcm_mode & BMAP_REAPABLE) {
+                        /* XXX msbrlsthr must check BMAP_DIRTY before        
+                         *   replacing this bmap to the bmapTimeoutQ. This   
+                         *   avoids the race condition where this thread     
+                         *   grabs the lock before the msbrlsthr is able to.
+                         * This is a strange case because I have to guarantee
+			 *   that the msbrlsthr doesn't race with us to      
+			 *   remove the bmap.                                
+			 */
+                        LIST_CACHE_LOCK(&bmapTimeoutQ);
+			/* Conditionally remove ourselves from the timeoutQ.
+			 */
+                        if (psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry))
+                                lc_remove(&bmapTimeoutQ, bmap_2_msbd(b));
+                        LIST_CACHE_ULOCK(&bmapTimeoutQ);
+
+                        DEBUG_BMAP(PLL_INFO, b, "reapable to dirty");
+                        b->bcm_mode &= ~BMAP_REAPABLE;
+                        bmap_op_done_type_simple(b, BMAP_OPCNT_REAPER);
+                        psc_assert(atomic_read(&b->bcm_opcnt) > 0);
+
+                        /* At this point since we're no longer BMAP_REAPABLE
+                         *  and BMAP_DIRTY is set, the msbrlsthr must not try
+			 *  to replace this bmap on the bmapTimeoutQ.        
+			 */
+                        psc_assert(!(b->bcm_mode & BMAP_CLI_FLUSHPROC));
+                }
+
 		if (!(b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
 			b->bcm_mode |= BMAP_CLI_FLUSHPROC;
 			lc_addtail(&bmapFlushQ, bmap_2_msbd(b));
@@ -1621,6 +1626,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		roff += tlen;
 		tsize -= tlen;
 		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
+
+		BMAP_CLI_BUMP_TIMEO(b[nr]);
 	}
 
 	/* Note that the offsets used here are file-wise offsets not
@@ -1644,13 +1651,15 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 					goto out;
 				}
 
-			(rw == SL_READ) ?
-				msl_pages_copyout(r[j], p) :
-				msl_pages_copyin(r[j], p);
+			(rw == SL_READ) ? msl_pages_copyout(r[j], p) :
+				          msl_pages_copyin(r[j], p);
 		}
 		/* Unwind our reference from bmap_get().
 		 */
 		bmap_op_done_type(b[j], BMAP_OPCNT_LOOKUP);
+		/* Associate the biorq's with the mfh.
+                 */
+                pll_addtail(&mfh->mfh_biorqs, r[j]);
 	}
 
 	if (rw == SL_WRITE) {

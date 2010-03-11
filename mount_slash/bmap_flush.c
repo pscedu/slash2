@@ -42,6 +42,8 @@ __static struct timespec	 bmapFlushDefMaxAge = { 0, 1000000L };
 __static struct timespec	 bmapFlushDefSleep = { 0, 100000000L };
 
 struct psc_listcache		 bmapFlushQ;
+struct psc_listcache             bmapTimeoutQ;
+
 __static struct pscrpc_nbreqset	*pndgReqs;
 __static struct psc_dynarray	 pndgReqSets = DYNARRAY_INIT;
 
@@ -67,12 +69,19 @@ bmap_flush_reap_rpcs(void)
 	psc_trace("outstandingRpcCnt=%d (before) completedRpcCnt=%d",
 	    atomic_read(&outstandingRpcCnt), atomic_read(&completedRpcCnt));
 
+	/* Only this thread may pull from pndgReqSets dynarray,
+	 *   therefore it can never shrink except by way of this
+	 *   routine.
+	 */
 	for (i=0; i < psc_dynarray_len(&pndgReqSets); i++) {
 		pndgReqsLock();
 		set = psc_dynarray_getpos(&pndgReqSets, i);
 		psc_assert(set);
 		pndgReqsUlock();
 
+		/* XXX handle the return code from pscrpc_set_finalize
+		 *   properly.
+		 */
 		if (!pscrpc_set_finalize(set, shutdown, 0)) {
 			pndgReqsLock();
 			psc_dynarray_remove(&pndgReqSets, set);
@@ -733,6 +742,30 @@ bmap_flush(void)
 	psc_dynarray_free(&a);
 }
 
+void * 
+msbmaprlsthr_main(__unusedx void *arg)
+{
+	struct bmapc_memb *b;
+	struct psc_dynarray a;
+	struct timespec current, ts = {1, 0};
+	int rc=0;
+
+	while (1) {
+		/* Sort the bmaps on the timeoutQ by their expiration time.
+		 *   Bmaps which have an opcnt > 1 may not be released.  
+		 *   Not sure what the protocol should look like?? Should
+		 *   the bmap be freed first, followed by an rpc?  That
+		 *   seems racy.
+		 */
+		//lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
+		//lc_gettimed(&bmapTimeoutQ, &ts);
+		if (shutdown)
+			break;
+		sleep(1);
+	}
+	return (NULL);
+}
+
 void *
 msbmapflushthr_main(__unusedx void *arg)
 {
@@ -776,9 +809,15 @@ msbmapflushthr_spawn(void)
 	lc_reginit(&bmapFlushQ, struct bmap_cli_info,
 	    msbd_lentry, "bmapFlushQ");
 
+	lc_reginit(&bmapTimeoutQ, struct bmap_cli_info,
+		   msbd_lentry, "bmapTimeoutQ");
+
 	pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
 	    NULL, 0, "msbflushthr");
 
 	pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushthrrpc_main,
 	    NULL, 0, "msbflushthrrpc");
+
+	pscthr_init(MSTHRT_BMAPFLSHRLS, 0, msbmaprlsthr_main,
+	    NULL, 0, "msbrlsthr");
 }

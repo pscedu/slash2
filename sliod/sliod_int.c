@@ -68,7 +68,7 @@ iod_inode_getsize(struct slash_fidgen *fg)
 	f = fidc_lookup_fg(fg);
 	psc_assert(f);
 	size = f->fcmh_sstb.sst_size;
-	fcmh_dropref(f);
+	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (size);
 }
 

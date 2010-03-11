@@ -215,10 +215,12 @@ struct bmpc_ioreq {
 	psc_spinlock_t             biorq_lock;
 	struct timespec            biorq_start; /* issue time                */
 	struct psc_dynarray        biorq_pages; /* array of bmpce            */
-	struct psclist_head        biorq_lentry;/* chain on bmpc_pndg_biorqs        */
+	struct psclist_head        biorq_lentry;/* chain on bmpc_pndg_biorqs */
+	struct psclist_head        biorq_mfh_lentry; /* chain on file handle */
 	struct bmapc_memb         *biorq_bmap;  /* backpointer to our bmap   */
 	struct pscrpc_request_set *biorq_rqset;
 	struct psc_waitq           biorq_waitq;
+	void                      *biorq_fhent; /* back pointer to msl_fhent */
 };
 
 enum {
@@ -231,7 +233,8 @@ enum {
 	BIORQ_DIO          = (1<<6),
 	BIORQ_FORCE_EXPIRE = (1<<7),
 	BIORQ_DESTROY      = (1<<8),
-	BIORQ_FLUSHRDY     = (1<<9)
+	BIORQ_FLUSHRDY     = (1<<9),
+	BIORQ_NOFHENT      = (1<<10)
 };
 
 #define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"

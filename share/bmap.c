@@ -65,6 +65,7 @@ bmap_remove(struct bmapc_memb *b)
 
 	locked = FCMH_RLOCK(f);
 	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
+	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
 	psc_waitq_wakeall(&f->fcmh_waitq);
 	FCMH_URLOCK(f, locked);
 
@@ -174,11 +175,12 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 
 		/* Add to the fcmh's bmap cache */
 		SPLAY_INSERT(bmap_cache, &f->fcmh_bmaptree, b);
+		fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
 		do_load = 1;
 	}
 	ureqlock(&f->fcmh_lock, locked);
 	if (do_load) {
-		rc = bmap_retrievef(b, rw, arg);
+		rc = bmap_retrievef(b, rw, NULL);
 
 		BMAP_LOCK(b);
 		b->bcm_mode &= ~BMAP_INIT;

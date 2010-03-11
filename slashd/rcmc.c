@@ -259,7 +259,8 @@ slmrcmthr_main(__unusedx void *arg)
 			if (rq)
 				slmrmcthr_replst_slave_waitrep(rq, rrq);
 			slmrmcthr_replst_slave_eof(rsw);
-			fcmh_dropref(fcmh);
+			/* XXX where does this ref come from? */
+			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 			psc_pool_return(replrq_pool, rrq);
 		}
 

@@ -263,7 +263,7 @@ slc_fcmh_put(const struct slash_fidgen *fg, const struct srt_stat *sstb,
 	rc = slc_fcmh_get(fg, sstb, setattrflags, name,
 	    parent, creds, lookupflags, &m);
 	if (m)
-		fcmh_dropref(m);
+		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
 }
 
@@ -285,7 +285,7 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
  out:
 	fuse_reply_err(req, rc);
 	if (c)
-		fcmh_dropref(c);
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 }
 
 __static void
@@ -376,14 +376,16 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 		/* XXX write me */
 	}
 
-	slash2fuse_reply_create(req, &mp->fg, &mp->attr, fi);
-	fcmh_dropref(m);
-
  out:
-	if (rc)
+	if (rc) {
 		fuse_reply_err(req, rc);
+ 	} else {
+		slash2fuse_reply_create(req, &mp->fg, &mp->attr, fi);
+		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
+	}
+
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
@@ -464,7 +466,8 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
  out:
 	if (c)
-		fcmh_dropref(c);
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+
 	if (rc)
 		fuse_reply_err(req, rc);
 }
@@ -582,7 +585,7 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 
  out:
 	if (f)
-		fcmh_dropref(f);
+		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rc)
 		fuse_reply_err(req, rc);
 }
@@ -661,9 +664,10 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	if (rc)
 		fuse_reply_err(req, rc);
 	if (c)
-		fcmh_dropref(c);
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 }
@@ -730,7 +734,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		fuse_reply_err(req, rc);
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
@@ -788,7 +792,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 
  out:
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
 	return (rc);
@@ -849,14 +853,14 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		return (EBADF);
 
 	if (!fcmh_isdir(d)) {
-		fcmh_dropref(d);
+		fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
 		return (ENOTDIR);
 	}
 
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 	    SRMT_READDIR, rq, mq, mp);
 	if (rc) {
-		fcmh_dropref(d);
+		fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
 		return (rc);
 	}
 
@@ -902,7 +906,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			    &rootcreds, &fcmh);
 
 			if (fcmh)
-				fcmh_dropref(fcmh);
+				fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 			else
 				psc_warnx("fcmh is NULL");
 		}
@@ -910,7 +914,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 
 	fuse_reply_buf(req, iov[0].iov_base, (size_t)mp->size);
  out:
-	fcmh_dropref(d);
+	fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
 	pscrpc_req_finished(rq);
 	PSCFREE(iov[0].iov_base);
 	if (mq->nstbpref)
@@ -998,6 +1002,7 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	}
 
 	if (!fcmh_isdir(p)) {
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 		rc = ENOTDIR;
 		goto out;
 	}
@@ -1020,9 +1025,10 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 
  out:
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	if (m)
-		fcmh_dropref(m);
+		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (rc);
 }
 
@@ -1089,7 +1095,7 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 
  out:
 	if (c)
-		fcmh_dropref(c);
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rc)
 		fuse_reply_err(req, rc);
 	else {
@@ -1102,6 +1108,41 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 
 /* Note that this function is called once for each open */
 __static void
+slash2fuse_flush_int_locked(struct msl_fhent *mfh)
+{
+        struct bmpc_ioreq *r;
+
+	PLL_FOREACH(r, &mfh->mfh_biorqs) {
+                spinlock(&r->biorq_lock);
+                r->biorq_flags |= BIORQ_FORCE_EXPIRE;
+                freelock(&r->biorq_lock);
+        }
+
+        while (!pll_empty(&mfh->mfh_biorqs)) {
+                psc_waitq_wait(&msl_fhent_flush_waitq, &mfh->mfh_lock);
+                spinlock(&mfh->mfh_lock);
+        }
+}
+
+__static void
+slash2fuse_flush(fuse_req_t req, __unusedx fuse_ino_t ino,
+		 struct fuse_file_info *fi)
+{
+        struct msl_fhent *mfh;
+
+        mfh = ffi_getmfh(fi);
+
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "flushing");
+
+        spinlock(&mfh->mfh_lock);
+	slash2fuse_flush_int_locked(mfh);
+        freelock(&mfh->mfh_lock);
+	
+	fuse_reply_err(req, 0);
+}
+
+
+__static void
 slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
     struct fuse_file_info *fi)
 {
@@ -1112,22 +1153,21 @@ slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
 
 	mfh = ffi_getmfh(fi);
 	c = mfh->mfh_fcmh;
-	/* Remove bmap references associated with this fd.  */
-	msl_bmap_fhcache_clear(mfh);
 
-	psc_assert(SPLAY_EMPTY(&mfh->mfh_fhbmap_cache));
+        spinlock(&mfh->mfh_lock);
+#if FHENT_EARLY_RELEASE
+        PLL_FOREACH(r, &mfh->mfh_biorqs) {
+                spinlock(&r->biorq_lock);
+                r->biorq_flags |= BIORQ_NOFHENT;
+                freelock(&r->biorq_lock);
+        }
+#else
+	slash2fuse_flush_int_locked(mfh);
+	psc_assert(pll_empty(&mfh->mfh_biorqs));
+#endif
+        freelock(&mfh->mfh_lock);
 
-	FCMH_LOCK(c);
-	fcmh_dropref(c);
-	if (!atomic_read(&(c)->fcmh_refcnt)) {
-		FCMH_ULOCK(c);
-		psc_assert(c->fcmh_cache_owner == &fidcCleanList);
-		c->fcmh_state = FCMH_CAC_FREEING;
-		lc_remove(&fidcCleanList, c);
-		c->fcmh_cache_owner = NULL;
-		fidc_put(c, &fidcFreeList);
-	} else
-		FCMH_ULOCK(c);
+	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 
 	PSCFREE(mfh);
 	fuse_reply_err(req, 0);
@@ -1199,9 +1239,9 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 
  out:
 	if (op)
-		fcmh_dropref(op);
+		fcmh_op_done_type(op, FCMH_OPCNT_LOOKUP_FIDC);
 	if (np)
-		fcmh_dropref(np);
+		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
 	return (rc);
@@ -1300,7 +1340,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 
  out:
 	if (p)
-		fcmh_dropref(p);
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
 	return (rc);
@@ -1422,7 +1462,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		}
 	}
 	if (c)
-		fcmh_dropref(c);
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
@@ -1471,7 +1511,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	}
 	/* XXX EBADF if fd is not open for writing */
 	if (fcmh_isdir(mfh->mfh_fcmh)) {
-		fcmh_dropref(mfh->mfh_fcmh);
+		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		rc = EISDIR;
 		goto out;
 	}
@@ -1481,7 +1521,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	DEBUG_FCMH(PLL_NOTIFY, mfh->mfh_fcmh,
 		   "buf=%p rc=%d sz=%zu off=%"PSCPRIdOFF, buf, rc, size, off);
 
-	fcmh_dropref(mfh->mfh_fcmh);
+	fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rc < 0)
 		rc = -rc;
 	else {
@@ -1511,14 +1551,15 @@ slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
 	}
 
 	if (fcmh_isdir(mfh->mfh_fcmh)) {
-		fcmh_dropref(mfh->mfh_fcmh);
+		fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		rc = EISDIR;
 		goto out;
 	}
 
 	buf = PSCALLOC(size);
 	rc = msl_read(mfh, buf, size, off);
-	fcmh_dropref(mfh->mfh_fcmh);
+
+	fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rc < 0)
 		rc = -rc;
 	else {
@@ -1574,6 +1615,7 @@ struct fuse_lowlevel_ops zfs_operations = {
 	.access		= slash2fuse_access,
 	.create		= slash2fuse_create,
 	.destroy	= slash2fuse_destroy,
+	.flush          = slash2fuse_flush,
 	.fsync		= slash2fuse_fsync_helper,
 	.fsyncdir	= slash2fuse_fsync_helper,
 	.getattr	= slash2fuse_getattr,

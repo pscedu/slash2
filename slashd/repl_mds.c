@@ -565,7 +565,8 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	*fp = fcmh;
 
 	if (rc)
-		fcmh_dropref(fcmh);
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (rc);
 }
 
@@ -841,7 +842,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 		psc_pthread_mutex_lock(&rrq->rrq_mutex);
 	}
 
-	fcmh_dropref(REPLRQ_FCMH(rrq));
+	/* XXX where does this ref come from? */
+	fcmh_op_done_type(REPLRQ_FCMH(rrq), FCMH_OPCNT_LOOKUP_FIDC);
 
 	/* SPLAY_REMOVE() does not NULL out the field */
 	INIT_PSCLIST_ENTRY(&rrq->rrq_lentry);
