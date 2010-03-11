@@ -587,6 +587,9 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	f->fcmh_refcnt++;
 	psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));
 
+#if 0
+	/* nested type reference is hard, in this case, we alread taken
+	 * a reference for FDIC, but did not mark it as DIRTY. */
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
 		if ((f)->fcmh_refcnt > 1) {
 			psc_assert(f->fcmh_state & FCMH_CAC_DIRTY);
@@ -601,6 +604,7 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 		} else
 			abort();
 	}
+#endif
 	DEBUG_FCMH(PLL_NOTIFY, (f), "took ref (type=%d)", type);
 	FCMH_URLOCK(f, locked);
 }
