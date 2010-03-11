@@ -153,7 +153,8 @@ enum fcmh_opcnt_types {
 	FCMH_OPCNT_LOOKUP_PARENT,
 	FCMH_OPCNT_OPEN,
 	FCMH_OPCNT_BMAP,
-	FCMH_OPCNT_CHILD
+	FCMH_OPCNT_CHILD,
+	FCMH_OPCNT_NEW
 };
 
 static __inline void *

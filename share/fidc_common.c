@@ -78,6 +78,7 @@ fcmh_get(void)
 	LOCK_INIT(&f->fcmh_lock);
 	psc_waitq_init(&f->fcmh_waitq);
 	f->fcmh_state = FCMH_CAC_CLEAN;
+	fcmh_op_start_type(f, FCMH_OPCNT_NEW);
 	return (f);
 }
 
@@ -338,6 +339,11 @@ fidc_lookup_simple(slfid_t f)
 	return (_fidc_lookup_fg(&t, 0));
 }
 
+/**
+ * fidc_lookupf - 
+ * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused ones
+ *         are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
+ */
 int
 fidc_lookupf(const struct slash_fidgen *fgp, int flags,
     const struct srt_stat *sstb, int setattrflags,
@@ -418,7 +424,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		 */
 		if (try_create) {
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
-			fcmh_op_done_type(fcmh_new, FCMH_OPCNT_LOOKUP_FIDC);
+			fcmh_op_done_type(fcmh_new, FCMH_OPCNT_NEW);
 			fidc_put(fcmh_new, &fidcFreeList);
 			fcmh_new = NULL;			/* defensive */
 		}
@@ -466,7 +472,6 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			 */
 			psc_hashbkt_unlock(b);
 			fcmh_new = fcmh_get();
-			fcmh_op_start_type(fcmh_new, FCMH_OPCNT_LOOKUP_FIDC);
 			try_create = 1;
 			goto restart;
 		}
@@ -503,7 +508,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	if (rc) {
 		psc_hashbkt_unlock(b);
 		fcmh->fcmh_state = FCMH_CAC_FREEING;
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 		fidc_put(fcmh_new, &fidcFreeList);
 		return (rc);
 	}
@@ -584,29 +589,27 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	int locked=FCMH_RLOCK(f);
 
-	psc_assert((f)->fcmh_refcnt >= 0);
+	psc_assert(!(f->fcmh_state & FCMH_CAC_FREE));
+	psc_assert(f->fcmh_refcnt >= 0);
 	f->fcmh_refcnt++;
-	psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));
-
-#if 0
-	/* nested type reference is hard, in this case, we alread taken
-	 * a reference for FDIC, but did not mark it as DIRTY. */
+	/* Only 2 types of references may be long standing, FCMH_OPCNT_OPEN
+	 *   and FCMH_OPCNT_BMAP.  Other ref types should not move the fcmh
+	 *   to the dirty list.
+	 */
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
-		if ((f)->fcmh_refcnt > 1) {
-			psc_assert(f->fcmh_state & FCMH_CAC_DIRTY);
+		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(f->fcmh_cache_owner == &fidcDirtyList);
+			psc_assert(!fcmh_clean_check(f));
 
-		} else if ((f)->fcmh_refcnt == 1) {
-			psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
-
+		} else {
+			psc_assert(fcmh_clean_check(f));
 			f->fcmh_state &= ~FCMH_CAC_CLEAN;
 			f->fcmh_state |= FCMH_CAC_DIRTY;
 			fidc_put(f, &fidcDirtyList);
-		} else
-			abort();
+		}
 	}
-#endif
-	DEBUG_FCMH(PLL_NOTIFY, (f), "took ref (type=%d)", type);
+
+	DEBUG_FCMH(PLL_NOTIFY, f, "took ref (type=%d)", type);
 	FCMH_URLOCK(f, locked);
 }
 
