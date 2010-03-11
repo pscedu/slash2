@@ -78,7 +78,6 @@ fcmh_get(void)
 	LOCK_INIT(&f->fcmh_lock);
 	psc_waitq_init(&f->fcmh_waitq);
 	f->fcmh_state = FCMH_CAC_CLEAN;
-	fcmh_op_done_type(f, FCMH_OPCNT_NEW);
 	return (f);
 }
 
@@ -419,7 +418,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		 */
 		if (try_create) {
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
-			fcmh_op_done_type(fcmh_new, FCMH_OPCNT_NEW);
+			fcmh_op_done_type(fcmh_new, FCMH_OPCNT_LOOKUP_FIDC);
 			fidc_put(fcmh_new, &fidcFreeList);
 			fcmh_new = NULL;			/* defensive */
 		}
@@ -467,6 +466,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			 */
 			psc_hashbkt_unlock(b);
 			fcmh_new = fcmh_get();
+			fcmh_op_start_type(fcmh_new, FCMH_OPCNT_LOOKUP_FIDC);
 			try_create = 1;
 			goto restart;
 		} else
