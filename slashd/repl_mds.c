@@ -593,6 +593,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
 	char fn[FID_MAX_PATH];
+	void *mdsio_data;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
@@ -629,10 +630,13 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 			if (rc)
 				goto bail;
 
-			/* Create persistent file system link */
-			rc = mdsio_link(fgp->fg_fid, mds_repldir_inum,
-			    fn, NULL, &rootcreds, NULL);
+			/* Create persistent marker */
+			rc = mdsio_opencreate(mds_repldir_inum,
+			    &rootcreds, O_CREAT | O_EXCL | O_RDWR, 0600,
+			    fn, NULL, NULL, NULL, &mdsio_data);
 			if (rc == 0) {
+				mdsio_release(&rootcreds, &mdsio_data);
+
 				rrq = newrq;
 				newrq = NULL;
 
