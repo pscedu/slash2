@@ -151,9 +151,6 @@ fidc_child_try_validate_locked(struct fidc_membh *p,
 {
 	struct fcmh_cli_info *fci, *pci;
 
-	psc_assert(p->fcmh_refcnt > 0);
-	psc_assert(c->fcmh_refcnt > 0);
-	psc_assert(fcmh_isdir(p));
 	psc_assert(!(p->fcmh_state & FCMH_CAC_FREEING));
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
 
