@@ -73,7 +73,7 @@ struct fidc_membh {
 
 /* fcmh_flags */
 #define	FCMH_CAC_CLEAN		0x0001		/* (1 << 0) in clean cache */
-#define	FCMH_CAC_DIRTY		0x0002		/* (1 << 1) in dirty cache */
+#define	FCMH_CAC_DIRTY		0x0002		/* (1 << 1) in dirty cache, "dirty" means not reapable */
 #define	FCMH_CAC_FREEING	0x0004		/* (1 << 2) on clean cache */
 #define	FCMH_CAC_FREE		0x0008		/* (1 << 3) in free pool */
 #define	FCMH_HAVE_ATTRS		0x0010		/* (1 << 4) has valid stat info */
