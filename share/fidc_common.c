@@ -615,10 +615,11 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	int locked=FCMH_RLOCK(f);
 	
-	psc_assert((f)->fcmh_refcnt > 0);
-	psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));
+	psc_assert(f->fcmh_refcnt > 0);
+	psc_assert(!(f->fcmh_state & FCMH_CAC_FREE));
 	
-	if (--(f)->fcmh_refcnt) {
+	f->fcmh_refcnt--;
+	if (f->fcmh_refcnt == 0) {
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(!fcmh_clean_check(f));
 			
