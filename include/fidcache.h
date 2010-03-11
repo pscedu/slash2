@@ -63,7 +63,7 @@ struct fidc_membh {
 	int			 fcmh_state;
 	int			 fcmh_lasterror;
 	psc_spinlock_t		 fcmh_lock;
-	psc_atomic32_t		 fcmh_refcnt;
+	int			 fcmh_refcnt;
 	struct psc_hashent	 fcmh_hentry;
 	struct psclist_head	 fcmh_lentry;
 	struct psc_listcache	*fcmh_cache_owner;
@@ -130,7 +130,7 @@ struct fidc_membh {
 		    "lc:%s ref:%d :: "fmt,					\
 		    (fcmh), FIDFMTARGS(&fcmh->fcmh_fg), DEBUG_FCMH_FLAGS(fcmh),	\
 		    fcmh_lc_2_string((fcmh)->fcmh_cache_owner),			\
-		    atomic_read(&(fcmh)->fcmh_refcnt),				\
+		    (fcmh)->fcmh_refcnt,				\
 		    ## __VA_ARGS__);						\
 		ureqlock(&(fcmh)->fcmh_lock, _dbg_fcmh_locked);			\
 	} while (0)

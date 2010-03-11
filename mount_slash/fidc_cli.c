@@ -151,8 +151,8 @@ fidc_child_try_validate_locked(struct fidc_membh *p,
 {
 	struct fcmh_cli_info *fci, *pci;
 
-	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
-	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
+	psc_assert(p->fcmh_refcnt > 0);
+	psc_assert(c->fcmh_refcnt > 0);
 	psc_assert(fcmh_isdir(p));
 	psc_assert(!(p->fcmh_state & FCMH_CAC_FREEING));
 	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
@@ -254,7 +254,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	struct timeval now;
 
 	LOCK_ENSURE(&p->fcmh_lock);
-	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
+	psc_assert(p->fcmh_refcnt > 0);
 	psc_assert(fcmh_isdir(p));
 
 	DEBUG_FCMH(PLL_INFO, p, "name %p (%s), hash=%d",
@@ -303,7 +303,7 @@ fidc_child_lookup(struct fidc_membh *p, const char *name)
 	int locked=reqlock(&p->fcmh_lock);
 
 	psc_assert(fcmh_isdir(p));
-	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
+	psc_assert(p->fcmh_refcnt > 0);
 
 	m = fidc_child_lookup_int_locked(p, name);
 	ureqlock(&p->fcmh_lock, locked);
@@ -321,7 +321,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	fci = fcmh_get_pri(c);
 
 	psc_assert(fcmh_isdir(p));
-	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
+	psc_assert(p->fcmh_refcnt > 0);
 
 	c = fidc_child_lookup_int_locked(p, name);
 	if (!c) {
@@ -339,7 +339,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	 */
 	spinlock(&c->fcmh_lock);
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_PARENT);
-	psc_assert(!psc_atomic32_read(&c->fcmh_refcnt));
+	psc_assert(!c->fcmh_refcnt);
 	fidc_child_free_plocked(c);
 	freelock(&c->fcmh_lock);
 
@@ -359,8 +359,8 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 
 	psc_assert(p && c && name);
 	psc_assert(fcmh_isdir(p));
-	psc_assert(atomic_read(&p->fcmh_refcnt) > 0);
-	psc_assert(atomic_read(&c->fcmh_refcnt) > 0);
+	psc_assert(p->fcmh_refcnt > 0);
+	psc_assert(c->fcmh_refcnt > 0);
 
 	spinlock(&p->fcmh_lock);
 	spinlock(&c->fcmh_lock);

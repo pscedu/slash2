@@ -53,7 +53,7 @@ fcmh_destroy(struct fidc_membh *f)
 	psc_assert(f->fcmh_cache_owner == NULL);
 	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
 	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
-	psc_assert(psc_atomic32_read(&f->fcmh_refcnt) == 1);
+	psc_assert(f->fcmh_refcnt == 1);
 	psc_assert(psc_hashent_disjoint(&fidcHtable, &f->fcmh_hentry));
 
 	if (sl_fcmh_ops.sfop_dtor)
@@ -76,7 +76,6 @@ fcmh_get(void)
 	memset(f, 0, sizeof(*f));
 	SPLAY_INIT(&f->fcmh_bmaptree);
 	LOCK_INIT(&f->fcmh_lock);
-	psc_atomic32_set(&f->fcmh_refcnt, 0);
 	psc_waitq_init(&f->fcmh_waitq);
 	f->fcmh_state = FCMH_CAC_CLEAN;
 	fcmh_op_done_type(f, FCMH_OPCNT_NEW);
@@ -153,7 +152,7 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		 */
 		psc_assert(f->fcmh_state & FCMH_CAC_FREEING);
 
-		psc_assert(!psc_atomic32_read(&f->fcmh_refcnt));
+		psc_assert(!f->fcmh_refcnt);
 		if (f->fcmh_cache_owner == NULL)
 			DEBUG_FCMH(PLL_WARN, f,
 				   "null fcmh_cache_owner here");
@@ -217,7 +216,7 @@ fidc_reap(struct psc_poolmgr *m)
 		 */
 		if ((!trylock(&f->fcmh_lock)) ||
 		    (fcmh_2_fid(f) == 1) ||
-		    (psc_atomic32_read(&f->fcmh_refcnt)))
+		    (f->fcmh_refcnt))
 			goto end2;
 		/* Make sure our clean list is 'clean' by
 		 *  verifying the following conditions.
@@ -584,16 +583,16 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	int locked=FCMH_RLOCK(f);
 
-	psc_assert(psc_atomic32_read(&(f)->fcmh_refcnt) >= 0);
-	psc_atomic32_inc(&(f)->fcmh_refcnt);
+	psc_assert((f)->fcmh_refcnt >= 0);
+	f->fcmh_refcnt++;
 	psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));
 
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
-		if (psc_atomic32_read(&(f)->fcmh_refcnt) > 1) {
+		if ((f)->fcmh_refcnt > 1) {
 			psc_assert(f->fcmh_state & FCMH_CAC_DIRTY);
 			psc_assert(f->fcmh_cache_owner == &fidcDirtyList);
 
-		} else if (psc_atomic32_read(&(f)->fcmh_refcnt) == 1) {
+		} else if ((f)->fcmh_refcnt == 1) {
 			psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
 			psc_assert(fcmh_clean_check(f));
 
@@ -612,10 +611,10 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	int locked=FCMH_RLOCK(f);
 	
-	psc_assert(psc_atomic32_read(&(f)->fcmh_refcnt) > 0);
+	psc_assert((f)->fcmh_refcnt > 0);
 	psc_assert(!((f)->fcmh_state & FCMH_CAC_FREE));
 	
-	if (psc_atomic32_dec_and_test0(&(f)->fcmh_refcnt)) {
+	if (--(f)->fcmh_refcnt) {
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(!fcmh_clean_check(f));
 			
