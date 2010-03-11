@@ -459,7 +459,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		return (0);
 	}
 	/* we have failed to find a match in the cache */
-	if (flags & FIDC_LOOKUP_CREATE)
+	if (flags & FIDC_LOOKUP_CREATE) {
 		if (!try_create) {
 			/* Allocate a fidc handle and attach the
 			 *   provided fcmh.
@@ -470,7 +470,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			try_create = 1;
 			goto restart;
 		}
-	else {
+	 } else {
 		/* FIDC_LOOKUP_CREATE was not specified and the fcmh
 		 *  is not present.
 		 */
