@@ -779,7 +779,6 @@ msbmaprlsthr_main(__unusedx void *arg)
 				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 		}
 		
-
 		if (shutdown)
 			break;
 		else {
@@ -798,11 +797,11 @@ msbmaprlsthr_main(__unusedx void *arg)
 					/* These have already timed out, try
 					 *   to free them quickly.
 					 */
-					wtime.tv_sec = 0 ; wtime.tv_nsec = 131072;
+					wtime.tv_sec = 0; 
+					wtime.tv_nsec = 131072;
 					lc_addhead(&bmapTimeoutQ, b);
 				}
 			}
-
 			if (!wtime.tv_sec && !wtime.tv_nsec) 
 				wtime.tv_sec = 1;
 
