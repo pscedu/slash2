@@ -479,12 +479,14 @@ int
 slc_fcmh_ctor(struct fidc_membh *fcmh)
 {
 	struct fcmh_cli_info *fci;
-	int rc = 0;
 
 	fci = fcmh_get_pri(fcmh);
+	memset(fci, 0, sizeof(struct fcmh_cli_info));
+	
 	INIT_PSCLIST_ENTRY(&fci->fci_sibling);
 	INIT_PSCLIST_HEAD(&fci->fci_children);
-	return (rc);
+
+	return (0);
 }
 
 /* destructor function called by fcmh_destroy() */
