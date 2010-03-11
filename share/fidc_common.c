@@ -609,10 +609,11 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 
 		} else {
 			psc_assert(fcmh_clean_check(f));
-			f->fcmh_state &= ~FCMH_CAC_CLEAN;
-			f->fcmh_state |= FCMH_CAC_DIRTY;
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			lc_remove(&fidcCleanList, f);
+
+			f->fcmh_state &= ~FCMH_CAC_CLEAN;
+			f->fcmh_state |= FCMH_CAC_DIRTY;
 			fidc_put(f, &fidcDirtyList);
 		}
 	}
@@ -631,6 +632,8 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	if (f->fcmh_refcnt == 0) {
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(!fcmh_clean_check(f));
+			psc_assert(psclist_conjoint(&f->fcmh_lentry));
+			lc_remove(&fidcDirtyList, f);
 			
 			f->fcmh_state &= ~FCMH_CAC_DIRTY;
 			f->fcmh_state |= FCMH_CAC_CLEAN;
