@@ -469,10 +469,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			fcmh_op_start_type(fcmh_new, FCMH_OPCNT_LOOKUP_FIDC);
 			try_create = 1;
 			goto restart;
-		} else
-			/* Continue to hold the FCMH_OPCNT_NEW ref.
-			 */
-			fcmh = fcmh_new;
+		}
 	else {
 		/* FIDC_LOOKUP_CREATE was not specified and the fcmh
 		 *  is not present.
@@ -484,6 +481,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	/* OK, we've got a new fcmh.  No need to lock it since
 	 *  it's not yet visible to other threads.
 	 */
+	fcmh = fcmh_new;
 
 	COPYFG(&fcmh->fcmh_fg, fgp);
 #ifdef DEMOTED_INUM_WIDTHS
