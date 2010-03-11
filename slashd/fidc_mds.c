@@ -77,6 +77,7 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 	int rc;
 
 	fmi = fcmh_2_fmi(fcmh);
+	memset(fmi, 0, sizeof(struct fcmh_mds_info));
 
 	slash_inode_handle_init(&fmi->fmi_inodeh, fcmh, mds_inode_sync);
 

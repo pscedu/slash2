@@ -46,6 +46,8 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 
 	/* try to get an file descriptor for this backing obj */
 	fii = fcmh_2_fii(fcmh);
+	memset(fii, 0, sizeof(struct fcmh_iod_info));
+
 	fg_makepath(&fcmh->fcmh_fg, fidfn);
 	fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
 	if (fcmh_2_fd(fcmh) == -1)
