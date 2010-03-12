@@ -487,28 +487,25 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	struct srm_getattr_rep *mp;
 	struct pscrpc_request *rq;
 	struct timeval now;
-	int rc, locked;
+	int rc;
 
-	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
  readcached:
-		PFL_GETTIME(&now);
+
+	PFL_GETTIME(&now);
+
+	FCMH_LOCK(fcmh);
+	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
 		if (timercmp(&now, &fcmh->fcmh_age, <)) {
+			FCMH_ULOCK(fcmh);
 			DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs cached - YES");
 			return (checkcreds(&fcmh->fcmh_sstb, creds, R_OK));
 		}
+		fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
 	}
-
-	locked = FCMH_RLOCK(fcmh);
+	/* if someone is aleady fetching attributes, wait for it to complete */
 	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
-		while (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
-			psc_waitq_wait(&fcmh->fcmh_waitq,
-			    &fcmh->fcmh_lock);
-			FCMH_LOCK(fcmh);
-		}
-		if (fcmh->fcmh_state & FCMH_HAVE_ATTRS)
-			goto readcached;
-		FCMH_URLOCK(fcmh, locked);
-		return (fcmh->fcmh_lasterror);
+		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
+		goto readcached;
 	}
 	fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(fcmh);
@@ -523,28 +520,23 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	rc = RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-	if (rc)
-		goto out;
-
-	FCMH_LOCK(fcmh);
-	
-	fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE);
-	rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
-
  out:
-	if (rc) {
-		FCMH_RLOCK(fcmh);
-		fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
-		fcmh->fcmh_lasterror = rc;
-		psc_waitq_wakeall(&fcmh->fcmh_waitq);
+	FCMH_LOCK(fcmh);
+	if (!rc) {
+		fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE);
+		rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
 	}
+
+	fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
+	fcmh->fcmh_lasterror = rc;
+	psc_waitq_wakeall(&fcmh->fcmh_waitq);
 
 	if (rq)
 		pscrpc_req_finished(rq);
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved via rpc rc=%d", rc);
 
-	FCMH_URLOCK(fcmh, locked);
+	FCMH_ULOCK(fcmh);
 
 	return (rc);
 }
