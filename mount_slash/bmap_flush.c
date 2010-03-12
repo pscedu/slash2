@@ -755,11 +755,12 @@ msbmaprlsthr_main(__unusedx void *arg)
 
 	rel_bmaps = PSCALLOC(sizeof(struct srm_bmap_id) * MAX_BMAP_RELEASE);
 
+	psc_dynarray_init(&a);
 	while (1) {
 		z = lc_sz(&bmapTimeoutQ);
 		lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
 		clock_gettime(CLOCK_REALTIME, &ctime);
-		psc_dynarray_init(&a);
+		psc_dynarray_reset(&a);
 
 		while (z--) {
 			b = lc_getnb(&bmapTimeoutQ);
