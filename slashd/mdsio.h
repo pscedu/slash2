@@ -49,7 +49,7 @@ void mdsio_exit(void);
 
 int mdsio_access(mdsio_fid_t, int, const struct slash_creds *);
 int mdsio_release(const struct slash_creds *, void *);
-int mdsio_getattr(mdsio_fid_t, const struct slash_creds *, struct srt_stat *, slfgen_t *);
+int mdsio_getattr(mdsio_fid_t, const struct slash_creds *, struct srt_stat *);
 int mdsio_readlink(mdsio_fid_t, void *, const struct slash_creds *);
 int mdsio_statfs(struct statvfs *);
 

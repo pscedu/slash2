@@ -310,7 +310,6 @@ struct srm_getattr_req {
 
 struct srm_getattr_rep {
 	struct srt_stat		attr;
-	uint64_t		gen;
 	int32_t			rc;
 	uint32_t		pad;
 } __packed;

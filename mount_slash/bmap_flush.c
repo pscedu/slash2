@@ -749,7 +749,11 @@ msbmaprlsthr_main(__unusedx void *arg)
 	struct psc_dynarray a;
 	struct timespec ctime, wtime = {0, 0};
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
+	struct srm_bmap_id *rel_bmaps;
 	size_t z;
+	int nbmaps, i;
+
+	rel_bmaps = PSCALLOC(sizeof(struct srm_bmap_id) * MAX_BMAP_RELEASE);
 
 	while (1) {
 		z = lc_sz(&bmapTimeoutQ);
@@ -775,37 +779,52 @@ msbmaprlsthr_main(__unusedx void *arg)
 				timespecsub(&ctime, &bmap_2_msbd(b)->msbd_etime, 
 					    &wtime);
 				break;
-			} else
+			} else {
+				rel_bmaps[nbmaps].fg.fg_fid = fcmh_2_fid(b->bcm_fcmh);
+				rel_bmaps[nbmaps].fg.fg_gen = fcmh_2_gen(b->bcm_fcmh);
+				rel_bmaps[nbmaps].bmapno = b->bcm_bmapno;
+				nbmaps++;
+
 				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+			}
+
+			if (nbmaps == MAX_BMAP_RELEASE) {
+				// XXX make rpc call
+				nbmaps = 0;
+			}
 		}
 		
-		if (shutdown)
-			break;
-		else {
-			int i = psc_dynarray_len(&a);
-			
-			while (i--) {
-				/* Check the bmap which had refs.
-				 */
-				b = psc_dynarray_getpos(&a, i-1);
-				BMAP_LOCK(b);
-				if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
-					bmap_op_done_type(b, BMAP_OPCNT_REAPER);
-					BMAP_ULOCK(b);
-				} else {
-					BMAP_ULOCK(b);
-					/* These have already timed out, try
-					 *   to free them quickly.
-					 */
-					wtime.tv_sec = 0; 
-					wtime.tv_nsec = 131072;
-					lc_addhead(&bmapTimeoutQ, b);
-				}
-			}
-			if (!wtime.tv_sec && !wtime.tv_nsec) 
-				wtime.tv_sec = 1;
+		if (nbmaps)
+			// XXX make rpc call
+			;
 
-			psc_waitq_waitrel(&waitq, NULL, &wtime);
+		i = psc_dynarray_len(&a);		
+		while (i--) {
+			/* Check the bmap which had refs.
+			 */
+			b = psc_dynarray_getpos(&a, i-1);
+			BMAP_LOCK(b);
+			if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
+				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+				BMAP_ULOCK(b);
+			} else {
+				BMAP_ULOCK(b);
+				/* These have already timed out, try
+				 *   to free them quickly.
+				 */
+				wtime.tv_sec = 0; 
+				wtime.tv_nsec = 131072;
+				lc_addhead(&bmapTimeoutQ, b);
+			}
+		}
+		if (!wtime.tv_sec && !wtime.tv_nsec) 
+			wtime.tv_sec = 1;
+		
+		psc_waitq_waitrel(&waitq, NULL, &wtime);
+
+		if (shutdown) {
+			PSCFREE(rel_bmaps);
+			break;
 		}
 	}
 	return (NULL);

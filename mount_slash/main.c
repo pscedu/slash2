@@ -527,9 +527,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		goto out;
 
 	FCMH_LOCK(fcmh);
-
-	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
-		fcmh_2_gen(fcmh) = mp->gen;
+	
 	fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE);
 	rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
 
@@ -896,7 +894,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 				continue;
 
 			fg.fg_fid = attr->attr.sst_ino;
-			fg.fg_gen = attr->gen;
+			fg.fg_gen = attr->attr.sst_gen;
 
 			psc_trace("adding i+g:%"PRId64"+%"PRId64" rc=%d",
 			    fg.fg_fid, fg.fg_gen, attr->rc);

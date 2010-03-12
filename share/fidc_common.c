@@ -97,6 +97,7 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 		size = fcmh_2_fsz(fcmh);
 
 	fcmh->fcmh_sstb = *sstb;
+	fcmh_2_gen(fcmh) = sstb->sst_gen;
 	fcmh_refresh_age(fcmh);
 
 	if (size)
@@ -274,6 +275,7 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 
 	b = psc_hashbkt_get(&fidcHtable, &fg->fg_fid);
 
+ restart:
 	locked[0] = psc_hashbkt_reqlock(b);
 	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
 		if (fcmh_2_fid(tmp) != fg->fg_fid)
@@ -302,14 +304,23 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
 				ureqlock(&tmp->fcmh_lock, locked[1]);
 				continue;
 			}
-			/* XXX should we wait if fg->fg_gen is FIDGEN_ANY? */
+
+			if (fcmh_2_gen(tmp) == FIDGEN_ANY) {
+				/* The generation number has yet to be obtained from
+				 *   the server.  Another thread should be issuing
+				 *   the RPC, wait for him.
+				 */
+				psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
+				psc_hashbkt_unlock(b);
+				psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
+				goto restart;
+			}
+
 			if (fg->fg_gen == fcmh_2_gen(tmp)) {
 				fcmh = tmp;
 				ureqlock(&tmp->fcmh_lock, locked[1]);
 				break;
 			}
-			if (fcmh_2_gen(tmp) == FIDGEN_ANY) 
-				abort();
 
 			if (fg->fg_gen == FIDGEN_ANY) {
 				/* Look for highest generation number.
@@ -367,14 +378,14 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 	fcmh_new = NULL; /* gcc */
 
 	/* sanity checks */
-	if (flags & FIDC_LOOKUP_LOAD)
+	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(creds);
+		psc_assert(sstb == NULL);
+	}
 
 	if (flags & FIDC_LOOKUP_CREATE)
 		psc_assert(sstb || (flags & FIDC_LOOKUP_LOAD));
 
-	if (flags & FIDC_LOOKUP_LOAD)
-		psc_assert(sstb == NULL);
 	if (sstb)
 		psc_assert((flags & FIDC_LOOKUP_LOAD) == 0);
 
@@ -393,6 +404,19 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			sched_yield();
 			continue;
 		}
+
+		if (fcmh_2_gen(tmp) == FIDGEN_ANY) {
+			/* The generation number has yet to be obtained from
+			 *   the server.  Another thread should be issuing
+			 *   the RPC, wait for him.  (Note: FIDGEN_ANY should
+			 *   only be used on the client.)
+			 */
+			psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
+			psc_hashbkt_unlock(b);
+			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
+			goto restart;
+		}
+		
 		if (searchfg.fg_gen == fcmh_2_gen(tmp)) {
 			fcmh = tmp;
 			break;
@@ -503,9 +527,9 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		getting = 1;
 	}
 
-	/* 
-	 * Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(), and sli_fcmh_ctor()
-	 * to initialize their private fields that follow the main fcmh structure.
+	/* Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(), 
+	 *   and sli_fcmh_ctor() to initialize their private fields that 
+	 *   follow the main fcmh structure.
 	 */
 	rc = sl_fcmh_ops.sfop_ctor(fcmh);
 	if (rc) {
@@ -544,7 +568,9 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			FCMH_LOCK(fcmh);
 		}
 		if ((fcmh->fcmh_state & FCMH_HAVE_ATTRS) == 0) {
-			/* only client defines this op, and it is slc_fcmh_getattr() */
+			/* Only client defines this op, it is 
+			 *   slc_fcmh_getattr().
+			 */
 			rc = sl_fcmh_ops.sfop_getattr(fcmh);		
 			if (rc == 0)
 				fcmh->fcmh_state |= FCMH_HAVE_ATTRS;

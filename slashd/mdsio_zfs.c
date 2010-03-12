@@ -225,9 +225,9 @@ mdsio_access(mdsio_fid_t ino, int mask, const struct slash_creds *cr)
 
 int
 mdsio_getattr(mdsio_fid_t ino, const struct slash_creds *cr,
-    struct srt_stat *sstb, slfgen_t *gen)
+    struct srt_stat *sstb)
 {
-	return (zfsslash2_getattr(ino, cr, sstb, gen));
+	return (zfsslash2_getattr(ino, cr, sstb));
 }
 
 int

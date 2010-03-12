@@ -149,12 +149,12 @@ struct fidc_membh {
 
 /* debugging aid: spit out the reason for the reference count taking/dropping */
 enum fcmh_opcnt_types {
-	FCMH_OPCNT_LOOKUP_FIDC,
-	FCMH_OPCNT_LOOKUP_PARENT,
-	FCMH_OPCNT_OPEN,
-	FCMH_OPCNT_BMAP,
-	FCMH_OPCNT_CHILD,
-	FCMH_OPCNT_NEW
+	FCMH_OPCNT_LOOKUP_FIDC,   //0
+	FCMH_OPCNT_LOOKUP_PARENT, //1
+	FCMH_OPCNT_OPEN,          //2
+	FCMH_OPCNT_BMAP,          //3
+	FCMH_OPCNT_CHILD,         //4
+	FCMH_OPCNT_NEW            //5
 };
 
 static __inline void *
