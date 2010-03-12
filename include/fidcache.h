@@ -130,7 +130,7 @@ struct fidc_membh {
 		    "lc:%s ref:%d :: "fmt,					\
 		    (fcmh), FIDFMTARGS(&fcmh->fcmh_fg), DEBUG_FCMH_FLAGS(fcmh),	\
 		    fcmh_lc_2_string((fcmh)->fcmh_cache_owner),			\
-		    (fcmh)->fcmh_refcnt,				\
+		    (fcmh)->fcmh_refcnt,					\
 		    ## __VA_ARGS__);						\
 		ureqlock(&(fcmh)->fcmh_lock, _dbg_fcmh_locked);			\
 	} while (0)

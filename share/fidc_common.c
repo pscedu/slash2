@@ -173,7 +173,7 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		psc_assert(clean);
 		f->fcmh_cache_owner = lc;
 		lc_add(lc, f);
-		
+
 
 	} else if (lc == &fidcDirtyList) {
 		psc_assert(f->fcmh_cache_owner == &fidcCleanList);
@@ -354,7 +354,7 @@ fidc_lookup_simple(slfid_t f)
 }
 
 /**
- * fidc_lookupf - 
+ * fidc_lookupf -
  * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused ones
  *         are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
  */
@@ -416,7 +416,7 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
 			goto restart;
 		}
-		
+
 		if (searchfg.fg_gen == fcmh_2_gen(tmp)) {
 			fcmh = tmp;
 			break;
@@ -527,8 +527,8 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 		getting = 1;
 	}
 
-	/* Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(), 
-	 *   and sli_fcmh_ctor() to initialize their private fields that 
+	/* Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(),
+	 *   and sli_fcmh_ctor() to initialize their private fields that
 	 *   follow the main fcmh structure.
 	 */
 	rc = sl_fcmh_ops.sfop_ctor(fcmh);
@@ -568,10 +568,10 @@ fidc_lookupf(const struct slash_fidgen *fgp, int flags,
 			FCMH_LOCK(fcmh);
 		}
 		if ((fcmh->fcmh_state & FCMH_HAVE_ATTRS) == 0) {
-			/* Only client defines this op, it is 
+			/* Only client defines this op, it is
 			 *   slc_fcmh_getattr().
 			 */
-			rc = sl_fcmh_ops.sfop_getattr(fcmh);		
+			rc = sl_fcmh_ops.sfop_getattr(fcmh);
 			if (rc == 0)
 				fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
 		}
@@ -650,25 +650,25 @@ void
 fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	int locked=FCMH_RLOCK(f);
-	
+
 	psc_assert(f->fcmh_refcnt > 0);
 	psc_assert(!(f->fcmh_state & FCMH_CAC_FREE));
-	
+
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(!fcmh_clean_check(f));
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			lc_remove(&fidcDirtyList, f);
-			
+
 			f->fcmh_state &= ~FCMH_CAC_DIRTY;
 			f->fcmh_state |= FCMH_CAC_CLEAN;
-			
+
 			fidc_put(f, &fidcCleanList);
 		} else
 			/* It's already on the clean list. */
 			psc_assert(fcmh_clean_check(f));
-	}	
+	}
 	DEBUG_FCMH(PLL_NOTIFY, (f), "release ref (type=%d)", type);
 	FCMH_URLOCK(f, locked);
 }
