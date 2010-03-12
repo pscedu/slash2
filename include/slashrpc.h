@@ -157,6 +157,7 @@ struct srt_bdb_secret {
 	uint64_t		sbs_magic;
 	struct slash_fidgen	sbs_fg;
 	uint64_t		sbs_nonce;
+	uint64_t                sbs_seq;
 	uint64_t		sbs_ion_nid;
 	sl_bmapno_t		sbs_bmapno;
 	sl_ios_id_t		sbs_ios_id;
