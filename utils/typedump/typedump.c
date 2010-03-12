@@ -56,7 +56,6 @@
 #include "mount_slash/rpc_cli.h"
 #include "msctl/msctl.h"
 #include "slashd/bmap_mds.h"
-#include "slashd/cfd.h"
 #include "slashd/ctl_mds.h"
 #include "slashd/fidc_mds.h"
 #include "slashd/mdscoh.h"
@@ -123,6 +122,7 @@ main(int argc, char *argv[])
 #define PRVAL(val)	pr(#val, (unsigned long)(val))
 
 	/* start structs */
+	PRTYPE(mdsio_fid_t);
 	PRTYPE(sl_blkgen_t);
 	PRTYPE(sl_blkno_t);
 	PRTYPE(sl_bmapgen_t);
@@ -137,6 +137,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_cli_info);
 	PRTYPE(struct bmap_iod_info);
 	PRTYPE(struct bmap_mds_info);
+	PRTYPE(struct bmap_ops);
 	PRTYPE(struct bmap_pagecache);
 	PRTYPE(struct bmap_pagecache_entry);
 	PRTYPE(struct bmap_refresh);
@@ -144,18 +145,13 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmi_assign);
 	PRTYPE(struct bmpc_ioreq);
 	PRTYPE(struct bmpc_mem_slbs);
-	PRTYPE(struct cfdent);
-	PRTYPE(struct cfdops);
-	PRTYPE(struct fcoo_cli_info);
-	PRTYPE(struct fcoo_iod_info);
-	PRTYPE(struct fcoo_mds_info);
+	PRTYPE(struct fcmh_cli_info);
+	PRTYPE(struct fcmh_iod_info);
+	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
-	PRTYPE(struct fidc_nameinfo);
-	PRTYPE(struct fidc_open_obj);
 	PRTYPE(struct jflush_item);
 	PRTYPE(struct mexp_cli);
 	PRTYPE(struct mexpbcm);
-	PRTYPE(struct mexpfcm);
 	PRTYPE(struct msbmap_crcrepl_states);
 	PRTYPE(struct msctl_replst_cont);
 	PRTYPE(struct msctl_replst_slave_cont);
@@ -166,7 +162,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct msctlmsg_replst);
 	PRTYPE(struct msctlmsg_replst_slave);
 	PRTYPE(struct msfs_thread);
-	PRTYPE(struct msl_fbr);
 	PRTYPE(struct msl_fhent);
 	PRTYPE(struct msrcm_thread);
 	PRTYPE(struct resm_cli_info);
@@ -217,12 +212,15 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_bmap_crcwire);
 	PRTYPE(struct srm_bmap_crcwrt_req);
 	PRTYPE(struct srm_bmap_dio_req);
+	PRTYPE(struct srm_bmap_id);
 	PRTYPE(struct srm_bmap_iod_get);
+	PRTYPE(struct srm_bmap_release_req);
 	PRTYPE(struct srm_bmap_rep);
 	PRTYPE(struct srm_bmap_req);
 	PRTYPE(struct srm_bmap_wire_rep);
 	PRTYPE(struct srm_bmap_wire_req);
 	PRTYPE(struct srm_connect_req);
+	PRTYPE(struct srm_create_rep);
 	PRTYPE(struct srm_create_req);
 	PRTYPE(struct srm_destroy_req);
 	PRTYPE(struct srm_generic_rep);
@@ -237,16 +235,11 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_mkdir_rep);
 	PRTYPE(struct srm_mkdir_req);
 	PRTYPE(struct srm_mknod_req);
-	PRTYPE(struct srm_open_rep);
-	PRTYPE(struct srm_open_req);
-	PRTYPE(struct srm_opendir_req);
 	PRTYPE(struct srm_ping_req);
 	PRTYPE(struct srm_readdir_rep);
 	PRTYPE(struct srm_readdir_req);
 	PRTYPE(struct srm_readlink_rep);
 	PRTYPE(struct srm_readlink_req);
-	PRTYPE(struct srm_release_req);
-	PRTYPE(struct srm_releasebmap_req);
 	PRTYPE(struct srm_rename_req);
 	PRTYPE(struct srm_repl_read_req);
 	PRTYPE(struct srm_repl_schedwk_req);
@@ -264,8 +257,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srsm_replst_bhdr);
 	PRTYPE(struct srt_bdb_secret);
 	PRTYPE(struct srt_bmapdesc_buf);
-	PRTYPE(struct srt_fd_buf);
-	PRTYPE(struct srt_fdb_secret);
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
 	/* end structs */
@@ -285,7 +276,6 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_CONNECT);
 	PRVAL(SRMT_CREATE);
 	PRVAL(SRMT_DESTROY);
-	PRVAL(SRMT_DISCONNECT);
 	PRVAL(SRMT_FGETATTR);
 	PRVAL(SRMT_FTRUNCATE);
 	PRVAL(SRMT_GETATTR);
@@ -297,15 +287,11 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_LOOKUP);
 	PRVAL(SRMT_MKDIR);
 	PRVAL(SRMT_MKNOD);
-	PRVAL(SRMT_OPEN);
-	PRVAL(SRMT_OPENDIR);
 	PRVAL(SRMT_PING);
 	PRVAL(SRMT_READ);
 	PRVAL(SRMT_READDIR);
 	PRVAL(SRMT_READLINK);
-	PRVAL(SRMT_RELEASE);
 	PRVAL(SRMT_RELEASEBMAP);
-	PRVAL(SRMT_RELEASEDIR);
 	PRVAL(SRMT_RENAME);
 	PRVAL(SRMT_REPL_ADDRQ);
 	PRVAL(SRMT_REPL_DELRQ);
