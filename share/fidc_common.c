@@ -164,8 +164,11 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 			DEBUG_FCMH(PLL_WARN, f,
 				   "null fcmh_cache_owner here");
 
-		else
-			psc_assert(_fidc_lookup_fg(&f->fcmh_fg, 1) == f);
+		else {
+			struct fidc_membh *tmpf;
+			(void)fidc_lookup(&f->fcmh_fg, FIDC_LOOKUP_REMOVE, NULL, 0, NULL, &tmpf);
+			psc_assert(tmpf == f);
+		}
 
 		if (psc_hashent_conjoint(&fidcHtable, f))
 			psc_hashent_remove(&fidcHtable, f);
@@ -268,83 +271,14 @@ fidc_reap(struct psc_poolmgr *m)
 	return (i);
 }
 
-/**
- * fidc_lookup_fg - perform a lookup of a fid in the cache.
- *	If the fid is found, its refcnt is incremented and it is returned.
- */
 struct fidc_membh *
-_fidc_lookup_fg(const struct slash_fidgen *fg, int del)
+fidc_lookup_fg(const struct slash_fidgen *fg)
 {
-	struct psc_hashbkt *b;
-	struct fidc_membh *fcmh=NULL, *tmp;
-	int locked[2];
+	int rc;
+	struct fidc_membh *fcmhp;
 
-	b = psc_hashbkt_get(&fidcHtable, &fg->fg_fid);
-
- restart:
-	locked[0] = psc_hashbkt_reqlock(b);
-	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
-		if (fcmh_2_fid(tmp) != fg->fg_fid)
-			continue;
-
-		locked[1] = reqlock(&tmp->fcmh_lock);
-		/* Be sure to ignore any inodes which are freeing unless
-		 *  we are removing the inode from the cache.
-		 *  This is necessary to avoid a deadlock between fidc_reap()
-		 *  which has the fcmh_lock before calling fidc_put_locked,
-		 *  which calls this function with del==1.  This is described
-		 *  in Bug #13.
-		 */
-		if (del) {
-			if (fg->fg_gen == fcmh_2_gen(tmp)) {
-				psc_assert(tmp->fcmh_state & FCMH_CAC_FREEING);
-				fcmh = tmp;
-				ureqlock(&tmp->fcmh_lock, locked[1]);
-				break;
-			} else {
-				ureqlock(&tmp->fcmh_lock, locked[1]);
-				continue;
-			}
-		} else {
-			if (tmp->fcmh_state & FCMH_CAC_FREEING) {
-				ureqlock(&tmp->fcmh_lock, locked[1]);
-				continue;
-			}
-
-			if (fcmh_2_gen(tmp) == FIDGEN_ANY) {
-				/* The generation number has yet to be obtained from
-				 *   the server.  Another thread should be issuing
-				 *   the RPC, wait for him.
-				 */
-				psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
-				psc_hashbkt_unlock(b);
-				psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
-				goto restart;
-			}
-
-			if (fg->fg_gen == fcmh_2_gen(tmp)) {
-				fcmh = tmp;
-				ureqlock(&tmp->fcmh_lock, locked[1]);
-				break;
-			}
-
-			if (fg->fg_gen == FIDGEN_ANY) {
-				/* Look for highest generation number.
-				 */
-				if (!fcmh || (fcmh_2_gen(tmp) > fcmh_2_gen(fcmh)))
-					fcmh = tmp;
-			}
-			ureqlock(&tmp->fcmh_lock, locked[1]);
-		}
-	}
-
-	if (fcmh)
-		del ? psc_hashent_remove(&fidcHtable, fcmh) :
-		      fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
-	psc_hashbkt_ureqlock(b, locked[0]);
-
-	return (fcmh);
+	rc = fidc_lookup(fg, 0, NULL, 0, NULL, &fcmhp);
+	return rc == 0 ? fcmhp: NULL;
 }
 
 /**
@@ -352,13 +286,16 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, int del)
  *  generation number is not known.
  */
 struct fidc_membh *
-fidc_lookup_simple(slfid_t f)
+fidc_lookup_simple(const slfid_t f)
 {
+	int rc;
+	struct fidc_membh *fcmhp;
 	struct slash_fidgen t = { f, FIDGEN_ANY };
 
-	return (_fidc_lookup_fg(&t, 0));
-}
+	rc = fidc_lookup(&t, 0, NULL, 0, NULL, &fcmhp);
+	return rc == 0 ? fcmhp: NULL;
 
+} 
 /**
  * fidc_lookup -
  * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused ones
@@ -404,6 +341,13 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		if (searchfg.fg_fid != fcmh_2_fid(tmp))
 			continue;
 		FCMH_LOCK(tmp);
+		/* Be sure to ignore any inodes which are freeing unless
+		 *  we are removing the inode from the cache.
+		 *  This is necessary to avoid a deadlock between fidc_reap()
+		 *  which has the fcmh_lock before calling fidc_put_locked,
+		 *  which calls this function with del==1.  This is described
+		 *  in Bug #13.
+		 */
 		if (tmp->fcmh_state & FCMH_CAC_FREEING) {
 			DEBUG_FCMH(PLL_WARN, tmp, "tmp fcmh is FREEING");
 			FCMH_ULOCK(tmp);
@@ -448,6 +392,14 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 * the bucket lock in case we need to insert a new item.
 	 */
 	if (fcmh) {
+		if (flags & FIDC_LOOKUP_REMOVE) {
+			/* no reference taken here */
+			psc_hashbkt_del_item(&fidcHtable, b, fcmh);
+			psc_hashbkt_unlock(b);
+			FCMH_ULOCK(fcmh);
+			*fcmhp = fcmh;
+			return (0);
+		}
 		psc_hashbkt_unlock(b);
 		/*
 		 * Test to see if we jumped here from fidcFreeList.

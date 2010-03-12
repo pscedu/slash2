@@ -163,18 +163,9 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 	return (fcmh + 1);
 }
 
-/* fidc_lookup() flags */
-enum {
-	FIDC_LOOKUP_CREATE	= (1 << 0),		/* Create if not present         */
-	FIDC_LOOKUP_EXCL	= (1 << 1),		/* Fail if fcmh is present       */
-	FIDC_LOOKUP_LOAD	= (1 << 2)		/* Use external fetching mechanism */
-};
-
 /* fcmh_setattr() flags */
 #define FCMH_SETATTRF_NONE	0
 #define FCMH_SETATTRF_SAVESIZE	(1 << 0)
-
-#define fidc_lookup_fg(fg)	_fidc_lookup_fg((fg), 0)
 
 void			 fcmh_dtor(void *);
 struct fidc_membh	*fcmh_get(void);
@@ -182,12 +173,22 @@ void			 fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 
 void			 fidc_put(struct fidc_membh *, struct psc_listcache *);
 void			 fidc_init(int, int, int, int (*)(struct fidc_membh *));
-struct fidc_membh	*fidc_lookup_simple(slfid_t);
-struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
+
+/* fidc_lookup() flags */
+enum {
+	FIDC_LOOKUP_CREATE	= (1 << 0),		/* Create if not present         */
+	FIDC_LOOKUP_EXCL	= (1 << 1),		/* Fail if fcmh is present       */
+	FIDC_LOOKUP_LOAD	= (1 << 2),		/* Use external fetching mechanism */
+	FIDC_LOOKUP_REMOVE	= (1 << 3)		/* remove the fcmh from the hash table */
+};
 
 int			 fidc_lookup(const struct slash_fidgen *, int,
 			    const struct srt_stat *, int, const struct slash_creds *,
 			    struct fidc_membh **);
+
+/* two wrappers of fidc_lookup(), they are used to do simple lookups without any special flags */
+struct fidc_membh	*fidc_lookup_simple(const slfid_t);
+struct fidc_membh	*fidc_lookup_fg(const struct slash_fidgen *);
 
 void                     fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
 
