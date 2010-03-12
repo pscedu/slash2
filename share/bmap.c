@@ -133,12 +133,11 @@ bmap_lookup_cache(struct fidc_membh *f, sl_blkno_t n)
  * @n: bmap number.
  * @rw: bmap access mode.
  * @flags: retrieval parameters.
- * @arg: optional retrieval parameter.
  * Notes: returns the bmap referenced via bcm_opcnt.
  */
 int
 _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
-    struct bmapc_memb **bp, void *arg)
+    struct bmapc_memb **bp)
 {
 	int rc = 0, do_load = 0, locked;
 	struct bmapc_memb *b;
@@ -180,7 +179,7 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 	}
 	ureqlock(&f->fcmh_lock, locked);
 	if (do_load) {
-		rc = bmap_retrievef(b, rw, NULL);
+		rc = bmap_retrievef(b, rw);
 
 		BMAP_LOCK(b);
 		b->bcm_mode &= ~BMAP_INIT;

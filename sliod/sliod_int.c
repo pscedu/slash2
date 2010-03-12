@@ -94,7 +94,7 @@ iod_inode_lookup(const struct slash_fidgen *fg)
  * Return zero on success or errno code on failure (likely an RPC problem).
  */
 int
-iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw, __unusedx void *arg)
+iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 {
 	int				 rc;
 	struct srm_bmap_wire_req	*mq;
@@ -164,9 +164,9 @@ int
 iod_bmap_load(struct fidc_membh *f, sl_blkno_t n, enum rw rw,
     struct bmapc_memb **bp)
 {
-	return (bmap_get(f, n, rw, bp, NULL));
+	return (bmap_get(f, n, rw, bp));
 }
 
 void	(*bmap_init_privatef)(struct bmapc_memb *) = iod_bmap_init;
-int	(*bmap_retrievef)(struct bmapc_memb *, enum rw, void *) = iod_bmap_retrieve;
+int	(*bmap_retrievef)(struct bmapc_memb *, enum rw) = iod_bmap_retrieve;
 void	(*bmap_final_cleanupf)(struct bmapc_memb *);

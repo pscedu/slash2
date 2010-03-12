@@ -519,7 +519,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
  * @n: the number of bmaps to retrieve (serves as a simple read-ahead mechanism)
  */
 int
-msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw, __unusedx void *arg)
+msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_cli_info *msbd;
@@ -662,7 +662,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, enum rw rw)
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
-	rc = bmap_get(f, n, rw, &b, NULL);
+	rc = bmap_get(f, n, rw, &b);
 	if (rc)
 		return (NULL);
 
@@ -1674,5 +1674,5 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 }
 
 void	(*bmap_init_privatef)(struct bmapc_memb *) = msl_bmap_init;
-int	(*bmap_retrievef)(struct bmapc_memb *, enum rw, void *) = msl_bmap_retrieve;
+int	(*bmap_retrievef)(struct bmapc_memb *, enum rw) = msl_bmap_retrieve;
 void	(*bmap_final_cleanupf)(struct bmapc_memb *) = msl_bmap_final_cleanup;

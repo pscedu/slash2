@@ -687,8 +687,8 @@ mds_bmapod_initnew(struct slash_bmap_od *b)
  * @skip_zero: only return initialized bmaps.
  * Returns zero on success, negative errno code on failure.
  */
-__static int
-mds_bmap_read(struct bmapc_memb *bcm)
+int
+mds_bmap_read(struct bmapc_memb *bcm,  __unusedx enum rw rw)
 {
 	struct fidc_membh *f = bcm->bcm_fcmh;
 	struct slash_bmap_od *bod;
@@ -755,13 +755,7 @@ mds_bmap_init(struct bmapc_memb *bcm)
 int
 mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno, struct bmapc_memb **bp)
 {
-	return (bmap_get(f, bmapno, 0, bp, NULL));
-}
-
-int
-mds_bmap_retrieve(struct bmapc_memb *b, __unusedx enum rw rw, __unusedx void *arg)
-{
-	return (mds_bmap_read(b));
+	return (bmap_get(f, bmapno, 0, bp));
 }
 
 void
@@ -1017,5 +1011,5 @@ mds_bmi_cb(void *data, struct odtable_receipt *odtr)
 }
 
 void	(*bmap_init_privatef)(struct bmapc_memb *) = mds_bmap_init;
-int	(*bmap_retrievef)(struct bmapc_memb *, enum rw, void *) = mds_bmap_retrieve;
+int	(*bmap_retrievef)(struct bmapc_memb *, enum rw) = mds_bmap_read;
 void	(*bmap_final_cleanupf)(struct bmapc_memb *);

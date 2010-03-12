@@ -249,16 +249,17 @@ int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
 void	_bmap_op_done(struct bmapc_memb *);
 int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
-	    struct bmapc_memb **, void *);
+	    struct bmapc_memb **);
 
-#define bmap_lookup(f, n, bp)		_bmap_get((f), (n), 0, 0, (bp), NULL)
-#define bmap_get(f, n, rw, bp, arg)	_bmap_get((f), (n), (rw),	\
-					    BMAPGETF_LOAD, (bp), (arg))
+#define bmap_lookup(f, n, bp)		_bmap_get((f), (n), 0, 0, (bp))
+#define bmap_get(f, n, rw, bp)		_bmap_get((f), (n), (rw),	\
+					    BMAPGETF_LOAD, (bp))
 
 #define bmap_op_start_type(b, type)					\
 	do {								\
 		atomic_inc(&(b)->bcm_opcnt);				\
-		DEBUG_BMAP(PLL_NOTIFY, (b), "took reference (type=%d)", type); \
+		DEBUG_BMAP(PLL_NOTIFY, (b),				\
+		    "took reference (type=%d)", (type));		\
 	} while (0)
 
 #define bmap_op_start(b)						\
@@ -270,13 +271,14 @@ int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
 #define bmap_op_done(b)							\
 	do {								\
 		DEBUG_BMAP(PLL_NOTIFY, (b), "removing reference");	\
-		_bmap_op_done((b));					\
+		_bmap_op_done(b);					\
 	} while (0)
 
 #define bmap_op_done_type(b, type)					\
 	do {								\
-		DEBUG_BMAP(PLL_NOTIFY, (b), "removing reference (type=%d)", type); \
-		_bmap_op_done((b));					\
+		DEBUG_BMAP(PLL_NOTIFY, (b),				\
+		    "removing reference (type=%d)", (type));		\
+		_bmap_op_done(b);					\
 	} while (0)
 
 #define bmap_op_done_type_simple(b, type)				\
@@ -284,7 +286,7 @@ int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
 		psc_assert(atomic_read(&(b)->bcm_opcnt) > 1);		\
 		atomic_dec(&(b)->bcm_opcnt);				\
 		DEBUG_BMAP(PLL_NOTIFY, (b),				\
-			   "removing reference (type=%d)", type);	\
+		    "removing reference (type=%d)", (type));		\
 	} while (0)
 
 enum bmap_opcnt_types {
@@ -294,13 +296,13 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_MDSLOG,
 	BMAP_OPCNT_BIORQ,
 	BMAP_OPCNT_REPLWK,			/* ION */
-	BMAP_OPCNT_REAPER                       /* Client bmap timeout */
+	BMAP_OPCNT_REAPER			/* Client bmap timeout */
 };
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 
 extern void	(*bmap_init_privatef)(struct bmapc_memb *);
-extern int	(*bmap_retrievef)(struct bmapc_memb *, enum rw, void *);
+extern int	(*bmap_retrievef)(struct bmapc_memb *, enum rw);
 extern void	(*bmap_final_cleanupf)(struct bmapc_memb *);
 
 #endif /* _BMAP_H_ */
