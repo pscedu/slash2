@@ -504,7 +504,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if (sstb || (flags & FIDC_LOOKUP_LOAD)) 
 		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 	if (sstb)
-		fcmh_setattr(fcmh< sstb, setattrflags);
+		fcmh_setattr(fcmh, sstb, setattrflags);
 
 	fidc_put(fcmh, &fidcCleanList);
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
