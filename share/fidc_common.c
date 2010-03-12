@@ -89,7 +89,13 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	int locked = reqlock(&fcmh->fcmh_lock);
 	uint64_t size = 0;
 
+#if 0
+	/* right now, we allow item with FIGGEN_ANY into cache, and
+	 * cache lookup will trigger a getattr on the client, which
+	 * lead to us.  So we can't assert here.
+	 */
 	psc_assert(fcmh_2_gen(fcmh) != FIDGEN_ANY);
+#endif
 	psc_assert(sstb->sst_ino == (ino_t)fcmh->fcmh_fg.fg_fid);
 
 	if ((flags & FCMH_SETATTRF_SAVESIZE) &&
