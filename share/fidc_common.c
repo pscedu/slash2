@@ -73,7 +73,7 @@ fcmh_get(void)
 	struct fidc_membh *f;
 
 	f = psc_pool_get(fidcPool);
-	memset(f, 0, sizeof(*f));
+	memset(f, 0, fidcPoolMaster.pms_entsize);
 	SPLAY_INIT(&f->fcmh_bmaptree);
 	LOCK_INIT(&f->fcmh_lock);
 	psc_waitq_init(&f->fcmh_waitq);
@@ -185,7 +185,6 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		f->fcmh_cache_owner = lc;
 		lc_add(lc, f);
 
-
 	} else if (lc == &fidcDirtyList) {
 		psc_assert(f->fcmh_cache_owner == &fidcCleanList);
 		psc_assert(f->fcmh_state & FCMH_CAC_DIRTY);
@@ -275,7 +274,7 @@ fidc_reap(struct psc_poolmgr *m)
 
 /**
  * fidc_lookup_fg - Wrapper for fidc_lookup().  Called when the
- *  generation number is known.
+ *	generation number is known.
  */
 struct fidc_membh *
 fidc_lookup_fg(const struct slash_fidgen *fg)
@@ -284,12 +283,12 @@ fidc_lookup_fg(const struct slash_fidgen *fg)
 	struct fidc_membh *fcmhp;
 
 	rc = fidc_lookup(fg, 0, NULL, 0, NULL, &fcmhp);
-	return rc == 0 ? fcmhp: NULL;
+	return rc == 0 ? fcmhp : NULL;
 }
 
 /**
  * fidc_lookup_fid - Wrapper for fidc_lookup().  Called when the
- *  generation number is not known.
+ *	generation number is not known.
  */
 struct fidc_membh *
 fidc_lookup_fid(slfid_t f)
@@ -299,13 +298,15 @@ fidc_lookup_fid(slfid_t f)
 	struct slash_fidgen t = { f, FIDGEN_ANY };
 
 	rc = fidc_lookup(&t, 0, NULL, 0, NULL, &fcmhp);
-	return rc == 0 ? fcmhp: NULL;
+	return rc == 0 ? fcmhp : NULL;
 
 }
+
 /**
- * fidc_lookup -
+ * fidc_lookup - Search the FID cache for a member by its FID,
+ *	optionally creating it.
  * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused ones
- *         are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
+ *	are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
  */
 int
 fidc_lookup(const struct slash_fidgen *fgp, int flags,
@@ -510,7 +511,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 
 	fidc_put(fcmh, &fidcCleanList);
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
-
 	psc_hashbkt_unlock(b);
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
