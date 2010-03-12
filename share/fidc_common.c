@@ -359,13 +359,12 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			continue;
 		}
 
-		if (fcmh_2_gen(tmp) == FIDGEN_ANY) {
+		if (tmp->fcmh_state & FCMH_GETTING_ATTRS) {
 			/* The generation number has yet to be obtained from
 			 *   the server.  Another thread should be issuing
 			 *   the RPC, wait for him.  (Note: FIDGEN_ANY should
 			 *   only be used on the client.)
 			 */
-			psc_assert(tmp->fcmh_state & FCMH_GETTING_ATTRS);
 			psc_hashbkt_unlock(b);
 			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
 			goto restart;
@@ -502,21 +501,20 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		DEBUG_FCMH(PLL_NOTICE, fcmh,
 		    "adding FIDGEN_ANY to cache");
 
-	if (sstb) {
+	if (sstb || (flags & FIDC_LOOKUP_LOAD)) 
 		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
-		fcmh_setattr(fcmh, sstb, setattrflags);
-	}
+	if (sstb)
+		fcmh_setattr(fcmh< sstb, setattrflags);
 
-	FCMH_LOCK(fcmh);
 	fidc_put(fcmh, &fidcCleanList);
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
+
 	psc_hashbkt_unlock(b);
-	FCMH_ULOCK(fcmh);
+
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 
-	if ((flags & FIDC_LOOKUP_LOAD) && sl_fcmh_ops.sfop_getattr) {
+	if (flags & FIDC_LOOKUP_LOAD)
 		rc = sl_fcmh_ops.sfop_getattr(fcmh);
-	}
 
 	*fcmhp = fcmh;
 	return (0);

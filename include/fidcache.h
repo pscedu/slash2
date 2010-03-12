@@ -250,7 +250,7 @@ static __inline int
 fcmh_getload(const struct slash_fidgen *fgp, const struct slash_creds *crp,
     struct fidc_membh **fcmhp)
 {
-	return (fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
+	return (fidc_lookup(fgp, FIDC_LOOKUP_CREATE,
 	    NULL, 0, crp, fcmhp));
 }
 
