@@ -286,11 +286,11 @@ fidc_lookup_fg(const struct slash_fidgen *fg)
 }
 
 /**
- * fidc_lookup_simple - Wrapper for fidc_lookup().  Called when the
+ * fidc_lookup_fid - Wrapper for fidc_lookup().  Called when the
  *  generation number is not known.
  */
 struct fidc_membh *
-fidc_lookup_simple(const slfid_t f)
+fidc_lookup_fid(const slfid_t f)
 {
 	int rc;
 	struct fidc_membh *fcmhp;

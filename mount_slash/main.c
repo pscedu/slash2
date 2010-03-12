@@ -311,7 +311,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 		goto out;
 	}
 
-	p = fidc_lookup_simple(pino);
+	p = fidc_lookup_fid(pino);
 	if (!p) {
 		/* Parent fcmh must exist in the cache.
 		 */
@@ -683,7 +683,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	/* Check the parent fcmh.
 	 */
-	p = fidc_lookup_simple(parent);
+	p = fidc_lookup_fid(parent);
 	if (!p) {
 		rc = EINVAL;
 		goto out;
@@ -1296,7 +1296,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	    strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
 
-	p = fidc_lookup_simple(parent);
+	p = fidc_lookup_fid(parent);
 	if (!p)
 		return (EINVAL);
 
@@ -1396,7 +1396,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
-	c = fidc_lookup_simple(ino);
+	c = fidc_lookup_fid(ino);
 	if (!c) {
 		rc = EINVAL;
 		goto out;
