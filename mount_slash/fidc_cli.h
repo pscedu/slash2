@@ -66,7 +66,7 @@ fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *crp,
 {
 	struct slash_fidgen fg = { fid, FIDGEN_ANY };
 
-	return (fidc_lookup(fgp, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_LOAD, NULL, 0, crp, fcmhp));
+	return (fidc_lookup(&fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_LOAD, NULL, 0, crp, fcmhp));
 }
 
 #endif /* _FIDC_CLI_H_ */

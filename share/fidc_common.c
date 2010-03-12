@@ -513,8 +513,10 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 
-	if (flags & FIDC_LOOKUP_LOAD)
+	if (flags & FIDC_LOOKUP_LOAD) {
+		psc_assert(sl_fcmh_ops.sfop_getattr);
 		rc = sl_fcmh_ops.sfop_getattr(fcmh);
+	}
 
 	*fcmhp = fcmh;
 	return (0);
