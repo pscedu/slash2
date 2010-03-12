@@ -166,7 +166,9 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 
 		else {
 			struct fidc_membh *tmpf;
-			(void)fidc_lookup(&f->fcmh_fg, FIDC_LOOKUP_REMOVE, NULL, 0, NULL, &tmpf);
+
+			fidc_lookup(&f->fcmh_fg, FIDC_LOOKUP_REMOVE,
+			    NULL, 0, NULL, &tmpf);
 			psc_assert(tmpf == f);
 		}
 
@@ -290,7 +292,7 @@ fidc_lookup_fg(const struct slash_fidgen *fg)
  *  generation number is not known.
  */
 struct fidc_membh *
-fidc_lookup_fid(const slfid_t f)
+fidc_lookup_fid(slfid_t f)
 {
 	int rc;
 	struct fidc_membh *fcmhp;
@@ -299,7 +301,7 @@ fidc_lookup_fid(const slfid_t f)
 	rc = fidc_lookup(&t, 0, NULL, 0, NULL, &fcmhp);
 	return rc == 0 ? fcmhp: NULL;
 
-} 
+}
 /**
  * fidc_lookup -
  * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused ones
@@ -501,7 +503,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		DEBUG_FCMH(PLL_NOTICE, fcmh,
 		    "adding FIDGEN_ANY to cache");
 
-	if (sstb || (flags & FIDC_LOOKUP_LOAD)) 
+	if (sstb || (flags & FIDC_LOOKUP_LOAD))
 		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 	if (sstb)
 		fcmh_setattr(fcmh, sstb, setattrflags);

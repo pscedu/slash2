@@ -187,7 +187,7 @@ int			 fidc_lookup(const struct slash_fidgen *, int,
 			    struct fidc_membh **);
 
 /* two wrappers of fidc_lookup(), they are used to do simple lookups without any special flags */
-struct fidc_membh	*fidc_lookup_fid(const slfid_t);
+struct fidc_membh	*fidc_lookup_fid(slfid_t);
 struct fidc_membh	*fidc_lookup_fg(const struct slash_fidgen *);
 
 void                     fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
