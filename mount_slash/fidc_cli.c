@@ -276,11 +276,11 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 
 	PFL_GETTIME(&now);
 	if (timercmp(&now, &c->fcmh_age, >)) {
-		/* It's old, remove it. 
+		/* It's old, remove it.
 		 */
 		fidc_child_free_plocked(c);
 		fcmh_op_start_type(c, FCMH_OPCNT_LOOKUP_PARENT);
-		/* Force a lookuprpc 
+		/* Force a lookuprpc
 		 */
 		c = NULL;
 	}
@@ -482,10 +482,8 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 
 	fci = fcmh_get_pri(fcmh);
 	memset(fci, 0, sizeof(struct fcmh_cli_info));
-	
 	INIT_PSCLIST_ENTRY(&fci->fci_sibling);
 	INIT_PSCLIST_HEAD(&fci->fci_children);
-
 	return (0);
 }
 
