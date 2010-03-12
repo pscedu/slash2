@@ -379,7 +379,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
  out:
 	if (rc) {
 		fuse_reply_err(req, rc);
- 	} else {
+	} else {
 		slash2fuse_reply_create(req, &mp->fg, &mp->attr, fi);
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 	}
@@ -490,11 +490,9 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	int rc;
 
  readcached:
-
-	PFL_GETTIME(&now);
-
 	FCMH_LOCK(fcmh);
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
+		PFL_GETTIME(&now);
 		if (timercmp(&now, &fcmh->fcmh_age, <)) {
 			FCMH_ULOCK(fcmh);
 			DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs cached - YES");
@@ -1100,37 +1098,36 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 __static void
 slash2fuse_flush_int_locked(struct msl_fhent *mfh)
 {
-        struct bmpc_ioreq *r;
+	struct bmpc_ioreq *r;
 
 	PLL_FOREACH(r, &mfh->mfh_biorqs) {
-                spinlock(&r->biorq_lock);
-                r->biorq_flags |= BIORQ_FORCE_EXPIRE;
-                freelock(&r->biorq_lock);
-        }
+		spinlock(&r->biorq_lock);
+		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
+		freelock(&r->biorq_lock);
+	}
 
-        while (!pll_empty(&mfh->mfh_biorqs)) {
-                psc_waitq_wait(&msl_fhent_flush_waitq, &mfh->mfh_lock);
-                spinlock(&mfh->mfh_lock);
-        }
+	while (!pll_empty(&mfh->mfh_biorqs)) {
+		psc_waitq_wait(&msl_fhent_flush_waitq, &mfh->mfh_lock);
+		spinlock(&mfh->mfh_lock);
+	}
 }
 
 __static void
 slash2fuse_flush(fuse_req_t req, __unusedx fuse_ino_t ino,
 		 struct fuse_file_info *fi)
 {
-        struct msl_fhent *mfh;
+	struct msl_fhent *mfh;
 
-        mfh = ffi_getmfh(fi);
+	mfh = ffi_getmfh(fi);
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "flushing");
 
-        spinlock(&mfh->mfh_lock);
+	spinlock(&mfh->mfh_lock);
 	slash2fuse_flush_int_locked(mfh);
-        freelock(&mfh->mfh_lock);
-	
+	freelock(&mfh->mfh_lock);
+
 	fuse_reply_err(req, 0);
 }
-
 
 __static void
 slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
@@ -1144,18 +1141,18 @@ slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
 	mfh = ffi_getmfh(fi);
 	c = mfh->mfh_fcmh;
 
-        spinlock(&mfh->mfh_lock);
+	spinlock(&mfh->mfh_lock);
 #if FHENT_EARLY_RELEASE
-        PLL_FOREACH(r, &mfh->mfh_biorqs) {
-                spinlock(&r->biorq_lock);
-                r->biorq_flags |= BIORQ_NOFHENT;
-                freelock(&r->biorq_lock);
-        }
+	PLL_FOREACH(r, &mfh->mfh_biorqs) {
+		spinlock(&r->biorq_lock);
+		r->biorq_flags |= BIORQ_NOFHENT;
+		freelock(&r->biorq_lock);
+	}
 #else
 	slash2fuse_flush_int_locked(mfh);
 	psc_assert(pll_empty(&mfh->mfh_biorqs));
 #endif
-        freelock(&mfh->mfh_lock);
+	freelock(&mfh->mfh_lock);
 
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 
@@ -1426,7 +1423,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	sl_externalize_stat(stb, &mq->attr);
 	mq->attr.sst_ptruncgen = fcmh_2_ptruncgen(c);
 
-	/* 
+	/*
 	 * Even though we know our fid, we expect the server to fill it
 	 * along with the rest of the new attributes (mp->attr).
 	 */
