@@ -742,7 +742,7 @@ bmap_flush(void)
 	psc_dynarray_free(&a);
 }
 
-void * 
+void *
 msbmaprlsthr_main(__unusedx void *arg)
 {
 	struct bmapc_memb *b;
@@ -766,7 +766,7 @@ msbmaprlsthr_main(__unusedx void *arg)
 			b = lc_getnb(&bmapTimeoutQ);
 			if (!b)
 				break;
-			
+
 			BMAP_LOCK(b);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
@@ -775,9 +775,9 @@ msbmaprlsthr_main(__unusedx void *arg)
 				psc_dynarray_add(&a, b);
 				continue;
 			}
-			
+
 			if (timespeccmp(&ctime, &bmap_2_msbd(b)->msbd_etime, >)) {
-				timespecsub(&ctime, &bmap_2_msbd(b)->msbd_etime, 
+				timespecsub(&ctime, &bmap_2_msbd(b)->msbd_etime,
 					    &wtime);
 				break;
 			} else {
@@ -794,12 +794,12 @@ msbmaprlsthr_main(__unusedx void *arg)
 				nbmaps = 0;
 			}
 		}
-		
+
 		if (nbmaps)
 			// XXX make rpc call
 			;
 
-		i = psc_dynarray_len(&a);		
+		i = psc_dynarray_len(&a);
 		while (i--) {
 			/* Check the bmap which had refs.
 			 */
@@ -813,21 +813,21 @@ msbmaprlsthr_main(__unusedx void *arg)
 				/* These have already timed out, try
 				 *   to free them quickly.
 				 */
-				wtime.tv_sec = 0; 
+				wtime.tv_sec = 0;
 				wtime.tv_nsec = 131072;
 				lc_addhead(&bmapTimeoutQ, b);
 			}
 		}
-		if (!wtime.tv_sec && !wtime.tv_nsec) 
+		if (!wtime.tv_sec && !wtime.tv_nsec)
 			wtime.tv_sec = 1;
-		
+
 		psc_waitq_waitrel(&waitq, NULL, &wtime);
 
-		if (shutdown) {
-			PSCFREE(rel_bmaps);
+		if (shutdown)
 			break;
-		}
 	}
+	PSCFREE(rel_bmaps);
+	psc_dynarray_free(&a);
 	return (NULL);
 }
 
