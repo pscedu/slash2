@@ -271,6 +271,10 @@ fidc_reap(struct psc_poolmgr *m)
 	return (i);
 }
 
+/**
+ * fidc_lookup_fg - Wrapper for fidc_lookup().  Called when the
+ *  generation number is known.
+ */
 struct fidc_membh *
 fidc_lookup_fg(const struct slash_fidgen *fg)
 {
@@ -282,7 +286,7 @@ fidc_lookup_fg(const struct slash_fidgen *fg)
 }
 
 /**
- * fidc_lookup_simple - Wrapper for fidc_lookup_fg().  Called when the
+ * fidc_lookup_simple - Wrapper for fidc_lookup().  Called when the
  *  generation number is not known.
  */
 struct fidc_membh *
