@@ -310,7 +310,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
     const struct srt_stat *sstb, int setattrflags,
     const struct slash_creds *creds, struct fidc_membh **fcmhp)
 {
-	int getting=0, rc, try_create=0;
+	int rc, try_create=0;
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
 	struct slash_fidgen searchfg = *fgp;
@@ -481,13 +481,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 #ifdef DEMOTED_INUM_WIDTHS
 	COPYFG(&fcmh->fcmh_smallfg, &searchfg);
 #endif
-	if (sstb) {
-		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
-		fcmh_setattr(fcmh, sstb, setattrflags);
-	} else if (flags & FIDC_LOOKUP_LOAD) {
-		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
-		getting = 1;
-	}
 
 	/* Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(),
 	 *   and sli_fcmh_ctor() to initialize their private fields that
@@ -509,42 +502,20 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		DEBUG_FCMH(PLL_NOTICE, fcmh,
 		    "adding FIDGEN_ANY to cache");
 
-	/* XXX lock CleanList first */
+	if (sstb) {
+		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
+		fcmh_setattr(fcmh, sstb, setattrflags);
+	}
+
 	FCMH_LOCK(fcmh);
 	fidc_put(fcmh, &fidcCleanList);
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
-
 	FCMH_ULOCK(fcmh);
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 
 	if ((flags & FIDC_LOOKUP_LOAD) && sl_fcmh_ops.sfop_getattr) {
-		if (getting) {
-			FCMH_LOCK(fcmh);
-			fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
-		}
-		while (fcmh->fcmh_state &
-		    (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) {
-			psc_waitq_wait(&fcmh->fcmh_waitq,
-			    &fcmh->fcmh_lock);
-			FCMH_LOCK(fcmh);
-		}
-		if ((fcmh->fcmh_state & FCMH_HAVE_ATTRS) == 0) {
-			/* Only client defines this op, it is
-			 *   slc_fcmh_getattr().
-			 */
-			rc = sl_fcmh_ops.sfop_getattr(fcmh);
-			if (rc == 0)
-				fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
-		}
-		if (getting) {
-			fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
-			FCMH_ULOCK(fcmh);
-		}
-		if (rc) {
-			DEBUG_FCMH(PLL_DEBUG, fcmh, "getattr failure");
-			return (-rc);
-		}
+		rc = sl_fcmh_ops.sfop_getattr(fcmh);
 	}
 
 	*fcmhp = fcmh;
