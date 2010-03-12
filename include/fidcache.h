@@ -185,7 +185,7 @@ void			 fidc_init(int, int, int, int (*)(struct fidc_membh *));
 struct fidc_membh	*fidc_lookup_simple(slfid_t);
 struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, int);
 
-int			 fidc_lookupf(const struct slash_fidgen *, int,
+int			 fidc_lookup(const struct slash_fidgen *, int,
 			    const struct srt_stat *, int, const struct slash_creds *,
 			    struct fidc_membh **);
 
@@ -249,7 +249,7 @@ static __inline int
 fcmh_getload(const struct slash_fidgen *fgp, const struct slash_creds *crp,
     struct fidc_membh **fcmhp)
 {
-	return (fidc_lookupf(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
+	return (fidc_lookup(fgp, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
 	    NULL, 0, crp, fcmhp));
 }
 

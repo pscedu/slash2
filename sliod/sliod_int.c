@@ -78,7 +78,7 @@ iod_inode_lookup(const struct slash_fidgen *fg)
 	struct fidc_membh *f;
 	int rc;
 
-	rc = fidc_lookupf(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
 	    NULL, 0, &rootcreds, &f);
 	psc_assert(rc == 0);
 	return (f);

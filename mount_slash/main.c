@@ -237,7 +237,7 @@ slc_fcmh_get(const struct slash_fidgen *fg, const struct srt_stat *sstb,
 {
 	int rc;
 
-	rc = fidc_lookupf(fg, lookupflags | FIDC_LOOKUP_CREATE, sstb,
+	rc = fidc_lookup(fg, lookupflags | FIDC_LOOKUP_CREATE, sstb,
 	    setattrflags, creds, fcmhp);
 	if (rc)
 		return (rc);
@@ -899,7 +899,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			psc_trace("adding i+g:%"PRId64"+%"PRId64" rc=%d",
 			    fg.fg_fid, fg.fg_gen, attr->rc);
 
-			rc = fidc_lookupf(&fg, FIDC_LOOKUP_CREATE,
+			rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE,
 			    &attr->attr, FCMH_SETATTRF_SAVESIZE,
 			    &rootcreds, &fcmh);
 

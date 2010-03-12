@@ -360,12 +360,12 @@ fidc_lookup_simple(slfid_t f)
 }
 
 /**
- * fidc_lookupf -
+ * fidc_lookup -
  * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused ones
  *         are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
  */
 int
-fidc_lookupf(const struct slash_fidgen *fgp, int flags,
+fidc_lookup(const struct slash_fidgen *fgp, int flags,
     const struct srt_stat *sstb, int setattrflags,
     const struct slash_creds *creds, struct fidc_membh **fcmhp)
 {
