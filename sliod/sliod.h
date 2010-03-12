@@ -74,8 +74,6 @@ struct resm_iod_info {
 void		slitimerthr_spawn(void);
 __dead void	slictlthr_main(const char *);
 
-int		iod_bmap_load(struct fidc_membh *, sl_bmapno_t, enum rw, struct bmapc_memb **);
-
 uint64_t	iod_inode_getsize(struct slash_fidgen *);
 
 extern struct slash_creds	 rootcreds;

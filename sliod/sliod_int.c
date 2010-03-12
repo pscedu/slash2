@@ -160,13 +160,8 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	return (rc);
 }
 
-int
-iod_bmap_load(struct fidc_membh *f, sl_blkno_t n, enum rw rw,
-    struct bmapc_memb **bp)
-{
-	return (bmap_get(f, n, rw, bp));
-}
-
-void	(*bmap_init_privatef)(struct bmapc_memb *) = iod_bmap_init;
-int	(*bmap_retrievef)(struct bmapc_memb *, enum rw) = iod_bmap_retrieve;
-void	(*bmap_final_cleanupf)(struct bmapc_memb *);
+struct bmap_ops bmap_ops = {
+	iod_bmap_init,
+	iod_bmap_retrieve,
+	NULL
+};

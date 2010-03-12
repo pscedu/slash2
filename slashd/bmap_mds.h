@@ -79,9 +79,10 @@ struct bmi_assign {
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 #define bmap_2_bgen(b)		(b)->bcm_od->bh_gen
 
+#define mds_bmap_load(f, n, bp)	bmap_get((f), (n), 0, (bp))
+
 int	mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
 int	mds_bmap_exists(struct fidc_membh *, sl_blkno_t);
-int	mds_bmap_load(struct fidc_membh *, sl_blkno_t, struct bmapc_memb **);
 int	mds_bmap_load_cli(struct fidc_membh *, const struct srm_bmap_req *,
 	    struct pscrpc_export *, struct bmapc_memb **);
 int	mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, struct bmapc_memb **);

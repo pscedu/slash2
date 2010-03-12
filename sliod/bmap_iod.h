@@ -167,11 +167,7 @@ bcr_cmp(const void *x, const void *y)
 {
 	const struct biod_crcup_ref *a = x, *b = y;
 
-	if (a->bcr_xid > b->bcr_xid)
-		return (1);
-	if (a->bcr_xid < b->bcr_xid)
-		return (-1);
-	return (0);
+	return (CMP(a->bcr_xid, b->bcr_xid));
 }
 #endif
 

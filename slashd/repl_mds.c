@@ -45,6 +45,7 @@
 #include "psc_util/strlcpy.h"
 #include "psc_util/waitq.h"
 
+#include "bmap_mds.h"
 #include "fid.h"
 #include "fidc_mds.h"
 #include "fidcache.h"

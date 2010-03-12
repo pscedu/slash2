@@ -116,9 +116,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	/* ATM, not much to do here for write operations.
 	 */
-	if (iod_bmap_load(fcmh, bmapno, rw, &bmap)) {
+	rc = bmap_get(fcmh, bmapno, rw, &bmap);
+	if (rc) {
 		psc_errorx("failed to load bmap %u", bmapno);
-		rc = -1;
 		goto out;
 	}
 

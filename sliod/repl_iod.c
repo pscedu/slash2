@@ -91,10 +91,10 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 		goto out;
 
 	/* get the replication chunk's bmap */
-	rc = iod_bmap_load(w->srw_fcmh,
-	    w->srw_bmapno, SL_WRITE, &w->srw_bcm);
+	rc = bmap_get(w->srw_fcmh, w->srw_bmapno,
+	    SL_WRITE, &w->srw_bcm);
 	if (rc)
-		psc_errorx("iod_bmap_load %u: %s",
+		psc_errorx("bmap_get %u: %s",
 		    w->srw_bmapno, slstrerror(rc));
 	else {
 		bmap_op_start_type(w->srw_bcm, BMAP_OPCNT_REPLWK);

@@ -301,8 +301,12 @@ enum bmap_opcnt_types {
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 
-extern void	(*bmap_init_privatef)(struct bmapc_memb *);
-extern int	(*bmap_retrievef)(struct bmapc_memb *, enum rw);
-extern void	(*bmap_final_cleanupf)(struct bmapc_memb *);
+struct bmap_ops {
+	void	(*bmo_init_privatef)(struct bmapc_memb *);
+	int	(*bmo_retrievef)(struct bmapc_memb *, enum rw);
+	void	(*bmo_final_cleanupf)(struct bmapc_memb *);
+};
+
+extern struct bmap_ops bmap_ops;
 
 #endif /* _BMAP_H_ */

@@ -752,12 +752,6 @@ mds_bmap_init(struct bmapc_memb *bcm)
 	bmdsi->bmdsi_xid = 0;
 }
 
-int
-mds_bmap_load(struct fidc_membh *f, sl_blkno_t bmapno, struct bmapc_memb **bp)
-{
-	return (bmap_get(f, bmapno, 0, bp));
-}
-
 void
 mds_bmap_sync_if_changed(struct bmapc_memb *bcm)
 {
@@ -1010,6 +1004,8 @@ mds_bmi_cb(void *data, struct odtable_receipt *odtr)
 	odtable_freeitem(mdsBmapAssignTable, odtr);
 }
 
-void	(*bmap_init_privatef)(struct bmapc_memb *) = mds_bmap_init;
-int	(*bmap_retrievef)(struct bmapc_memb *, enum rw) = mds_bmap_read;
-void	(*bmap_final_cleanupf)(struct bmapc_memb *);
+struct bmap_ops bmap_ops = {
+	mds_bmap_init,
+	mds_bmap_read,
+	NULL
+};

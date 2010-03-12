@@ -92,8 +92,8 @@ _bmap_op_done(struct bmapc_memb *b)
 		/* XXX remove from fcmh tree? */
 		BMAP_ULOCK(b);
 
-		if (bmap_final_cleanupf)
-			bmap_final_cleanupf(b);
+		if (bmap_ops.bmo_final_cleanupf)
+			bmap_ops.bmo_final_cleanupf(b);
 
 		bmap_remove(b);
 		return;
@@ -170,7 +170,7 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 		/* Perform app-specific substructure initialization. */
-		bmap_init_privatef(b);
+		bmap_ops.bmo_init_privatef(b);
 
 		/* Add to the fcmh's bmap cache */
 		SPLAY_INSERT(bmap_cache, &f->fcmh_bmaptree, b);
@@ -179,7 +179,7 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 	}
 	ureqlock(&f->fcmh_lock, locked);
 	if (do_load) {
-		rc = bmap_retrievef(b, rw);
+		rc = bmap_ops.bmo_retrievef(b, rw);
 
 		BMAP_LOCK(b);
 		b->bcm_mode &= ~BMAP_INIT;

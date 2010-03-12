@@ -1673,6 +1673,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	return (rc);
 }
 
-void	(*bmap_init_privatef)(struct bmapc_memb *) = msl_bmap_init;
-int	(*bmap_retrievef)(struct bmapc_memb *, enum rw) = msl_bmap_retrieve;
-void	(*bmap_final_cleanupf)(struct bmapc_memb *) = msl_bmap_final_cleanup;
+struct bmap_ops bmap_ops = {
+	msl_bmap_init,
+	msl_bmap_retrieve,
+	msl_bmap_final_cleanup
+};
