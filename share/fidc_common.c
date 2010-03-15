@@ -260,7 +260,8 @@ fidc_reap(struct psc_poolmgr *m)
 	for (i = 0; i < psc_dynarray_len(&da); i++) {
 		f = psc_dynarray_getpos(&da, i);
 		DEBUG_FCMH(PLL_DEBUG, f, "moving to free list");
-		fidc_put(f, &fidcFreeList);
+		psc_hashent_remove(&fidcHtable, f);
+		fcmh_destroy(f);
 	}
 
 	psc_dynarray_free(&da);
