@@ -570,7 +570,6 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	int locked=FCMH_RLOCK(f);
 
-	psc_assert(!(f->fcmh_state & FCMH_CAC_FREE));
 	psc_assert(f->fcmh_refcnt >= 0);
 	f->fcmh_refcnt++;
 
@@ -604,7 +603,6 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	int locked=FCMH_RLOCK(f);
 
 	psc_assert(f->fcmh_refcnt > 0);
-	psc_assert(!(f->fcmh_state & FCMH_CAC_FREE));
 
 	DEBUG_FCMH(PLL_NOTIFY, (f), "release ref (type=%d)", type);
 
@@ -645,8 +643,6 @@ dump_fcmh_flags(int flags)
 		print_flag("FCMH_CAC_DIRTY", &seq);
 	if (flags & FCMH_CAC_FREEING)
 		print_flag("FCMH_CAC_FREEING", &seq);
-	if (flags & FCMH_CAC_FREE)
-		print_flag("FCMH_CAC_FREE", &seq);
 	if (flags & FCMH_HAVE_ATTRS)
 		print_flag("FCMH_HAVE_ATTRS", &seq);
 	if (flags & FCMH_GETTING_ATTRS)

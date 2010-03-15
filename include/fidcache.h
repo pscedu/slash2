@@ -79,7 +79,6 @@ struct fidc_membh {
 #define	FCMH_CAC_INITING	0x0008		/* (1 << 4) this item is being initialized */
 #define	FCMH_CAC_WAITING	0x0010		/* (1 << 8) this item is being waited on */
 
-#define	FCMH_CAC_FREE		0x0010		/* (1 << 9) in free pool */
 #define	FCMH_HAVE_ATTRS		0x0020		/* (1 << 10) has valid stat info */
 #define	FCMH_GETTING_ATTRS	0x0040		/* (1 << 11) fetching stat info */
 #define	FCMH_WAITING_ATTRS	0x0080		/* (1 << 12) someone is waiting */
@@ -118,11 +117,10 @@ struct fidc_membh {
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_CLEAN)		? "C" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_DIRTY)		? "D" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_FREEING)		? "R" : "",	\
-	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_FREE)		? "F" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_HAVE_ATTRS)		? "A" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_GETTING_ATTRS)	? "G" : ""
 
-#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s"
+#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s"
 
 #define FIDFMT			"%"PRId64":%"PRId64
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
@@ -245,8 +243,7 @@ fcmh_clean_check(struct fidc_membh *f)
 	locked = reqlock(&f->fcmh_lock);
 	DEBUG_FCMH(PLL_INFO, f, "clean_check");
 	if (f->fcmh_state & FCMH_CAC_CLEAN) {
-		psc_assert(!(f->fcmh_state &
-		     (FCMH_CAC_DIRTY | FCMH_CAC_FREE)));
+		psc_assert(!(f->fcmh_state & FCMH_CAC_DIRTY));
 		clean = 1;
 	}
 	ureqlock(&f->fcmh_lock, locked);
