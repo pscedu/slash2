@@ -114,13 +114,14 @@ struct fidc_membh {
 #define fcmh_isdir(f)		S_ISDIR((f)->fcmh_sstb.sst_mode)
 
 #define DEBUG_FCMH_FLAGS(fcmh)							\
+	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_FREE)		? "F" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_CLEAN)		? "C" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_DIRTY)		? "D" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_FREEING)		? "R" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_HAVE_ATTRS)		? "A" : "",	\
 	ATTR_TEST((fcmh)->fcmh_state, FCMH_GETTING_ATTRS)	? "G" : ""
 
-#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s"
+#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s"
 
 #define FIDFMT			"%"PRId64":%"PRId64
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
@@ -131,7 +132,7 @@ struct fidc_membh {
 										\
 		psc_logs((level), PSS_GEN,					\
 		    "fcmh@%p fg:"FIDFMT" "REQ_FCMH_FLAGS_FMT" "			\
-		    "lc:%s ref:%d :: "fmt,					\
+		    "ref:%d :: "fmt,					\
 		    (fcmh), FIDFMTARGS(&fcmh->fcmh_fg), DEBUG_FCMH_FLAGS(fcmh),	\
 		    (fcmh)->fcmh_refcnt,					\
 		    ## __VA_ARGS__);						\
