@@ -419,7 +419,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		if (try_create) {
 			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
 			fcmh_op_done_type(fcmh_new, FCMH_OPCNT_NEW);
-			fidc_put(fcmh_new, &fidcFreeList);
 			fcmh_new = NULL;			/* defensive */
 		}
 		if (flags & FIDC_LOOKUP_EXCL) {
@@ -491,7 +490,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 * If we fail to initialize it, we should mark it as FREEING.
 	 */
 	tmp->fcmh_state |= FCMH_CAC_INITING;
-	fidc_put(fcmh, &fidcCleanList);
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
 
@@ -500,13 +498,8 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 *   follow the main fcmh structure.
 	 */
 	rc = sl_fcmh_ops.sfop_ctor(fcmh);
-	if (rc) {
-		psc_hashbkt_unlock(b);
-		fcmh->fcmh_state = FCMH_CAC_FREEING;
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
-		fidc_put(fcmh_new, &fidcFreeList);
-		return (rc);
-	}
+	if (rc) 
+		goto out;
 
 	/* Place the fcmh into the cache, note that the fcmh was
 	 *  ref'd so no race condition exists here.
@@ -526,16 +519,22 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		psc_assert(sl_fcmh_ops.sfop_getattr);
 		rc = sl_fcmh_ops.sfop_getattr(fcmh);
 	}
-	FCMH_LOCK(tmp);
+
+ out:
+	FCMH_LOCK(fcmh);
 	if (rc) {
 		fcmh->fcmh_state = FCMH_CAC_FREEING;
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
-	} else {
-		tmp->fcmh_state &= ~FCMH_CAC_INITING;
 		*fcmhp = fcmh;
 	}
-	FCMH_ULOCK(tmp);
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 
+	fcmh->fcmh_state &= ~FCMH_CAC_INITING;
+	if (fcmh->fcmh_state & FCMH_CAC_WAITING) {
+		fcmh->fcmh_state &= ~FCMH_CAC_WAITING;
+		psc_waitq_wakeall(&fcmh->fcmh_waitq);
+	}
+
+	FCMH_ULOCK(fcmh);
 	return (rc);
 }
 
@@ -610,20 +609,25 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	psc_assert(f->fcmh_refcnt > 0);
 	psc_assert(!(f->fcmh_state & FCMH_CAC_FREE));
 
+	DEBUG_FCMH(PLL_NOTIFY, (f), "release ref (type=%d)", type);
+
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(!fcmh_clean_check(f));
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			lc_remove(&fidcDirtyList, f);
-
 			f->fcmh_state &= ~FCMH_CAC_DIRTY;
-			f->fcmh_state |= FCMH_CAC_CLEAN;
-		} else
 			lc_remove(&fidcDirtyList, f);
-		fidc_put(f, &fidcCleanList);
+		}
+		if (f->fcmh_state & FCMH_CAC_FREEING) {
+			fidc_put(f, &fidcFreeList);
+			return;
+		} else {
+			f->fcmh_state |= FCMH_CAC_CLEAN;
+			fidc_put(f, &fidcCleanList);
+		}
 	}
-	DEBUG_FCMH(PLL_NOTIFY, (f), "release ref (type=%d)", type);
 	FCMH_URLOCK(f, locked);
 }
 
