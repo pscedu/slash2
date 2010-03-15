@@ -361,14 +361,8 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			sched_yield();
 			continue;
 		}
-
 		if (tmp->fcmh_state & FCMH_CAC_INITING) {
 			psc_hashbkt_unlock(b);
-			/* The generation number has yet to be obtained from
-			 *   the server.  Another thread should be issuing
-			 *   the RPC, wait for him.  (Note: FIDGEN_ANY should
-			 *   only be used on the client.)
-			 */
 			tmp->fcmh_state |= FCMH_CAC_WAITING;
 			fcmh_op_start_type(tmp, FCMH_OPCNT_WAIT);
 			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
@@ -486,7 +480,8 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	COPYFG(&fcmh->fcmh_smallfg, &searchfg);
 #endif
 	/* Place the fcmh into the cache, note that the fcmh was
-	 *  ref'd so no race condition exists here.
+	 *  ref'd so no race condition exists here. We need a way
+	 * to suppress this warning if on client.
 	 */
 	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
 		DEBUG_FCMH(PLL_NOTICE, fcmh,
