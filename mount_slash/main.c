@@ -500,7 +500,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		}
 		fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
 	}
-	/* if someone is aleady fetching attributes, wait for it to complete */
+	/* if someone is already fetching attributes, wait for it to complete */
 	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
 		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
 		goto readcached;
@@ -526,7 +526,6 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	}
 
 	fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
-	fcmh->fcmh_lasterror = rc;
 	psc_waitq_wakeall(&fcmh->fcmh_waitq);
 
 	if (rq)
@@ -1443,7 +1442,6 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		if (getting) {
 			spinlock(&c->fcmh_lock);
 			c->fcmh_state &= ~FCMH_GETTING_ATTRS;
-			c->fcmh_lasterror = rc;
 			psc_waitq_wakeall(&c->fcmh_waitq);
 			freelock(&c->fcmh_lock);
 		}

@@ -61,7 +61,6 @@ struct fidc_membh {
 	struct timeval		 fcmh_age;		/* age of this entry */
 	struct srt_stat		 fcmh_sstb;
 	int			 fcmh_state;
-	int			 fcmh_lasterror;
 	psc_spinlock_t		 fcmh_lock;
 	int			 fcmh_refcnt;
 	struct psc_hashent	 fcmh_hentry;
