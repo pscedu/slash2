@@ -65,7 +65,6 @@ struct fidc_membh {
 	int			 fcmh_refcnt;
 	struct psc_hashent	 fcmh_hentry;
 	struct psclist_head	 fcmh_lentry;
-	struct psc_listcache	*fcmh_cache_owner;
 	struct psc_waitq	 fcmh_waitq;
 	struct bmap_cache	 fcmh_bmaptree;		/* bmap cache splay */
 };
@@ -130,10 +129,9 @@ struct fidc_membh {
 		int _dbg_fcmh_locked = reqlock(&(fcmh)->fcmh_lock);		\
 										\
 		psc_logs((level), PSS_GEN,					\
-		    "fcmh@%p fg:"FIDFMT" s:"REQ_FCMH_FLAGS_FMT" "		\
+		    "fcmh@%p fg:"FIDFMT" "REQ_FCMH_FLAGS_FMT" "			\
 		    "lc:%s ref:%d :: "fmt,					\
 		    (fcmh), FIDFMTARGS(&fcmh->fcmh_fg), DEBUG_FCMH_FLAGS(fcmh),	\
-		    fcmh_lc_2_string((fcmh)->fcmh_cache_owner),			\
 		    (fcmh)->fcmh_refcnt,					\
 		    ## __VA_ARGS__);						\
 		ureqlock(&(fcmh)->fcmh_lock, _dbg_fcmh_locked);			\
@@ -203,20 +201,6 @@ fcmh_refresh_age(struct fidc_membh *fcmh)
 
 	PFL_GETTIME(&fcmh->fcmh_age);
 	timeradd(&fcmh->fcmh_age, &tmp, &fcmh->fcmh_age);
-}
-
-static __inline const char *
-fcmh_lc_2_string(struct psc_listcache *lc)
-{
-	if (lc == &fidcCleanList)
-		return "Clean";
-	if (lc == &fidcPool->ppm_lc)
-		return "Free";
-	if (lc == &fidcDirtyList)
-		return "Dirty";
-	if (lc == NULL)
-		return "Null";
-	psc_fatalx("invalid fidcache list cache %p", lc);
 }
 
 static __inline int

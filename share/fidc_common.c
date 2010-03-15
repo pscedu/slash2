@@ -50,7 +50,6 @@ struct psc_hashtbl	 fidcHtable;
 void
 fcmh_destroy(struct fidc_membh *f)
 {
-	psc_assert(f->fcmh_cache_owner == NULL);
 	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
 	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
 	psc_assert(f->fcmh_refcnt == 1);
@@ -175,7 +174,6 @@ fidc_reap(struct psc_poolmgr *m)
 		if (!fidcReapCb || fidcReapCb(f)) {
 			f->fcmh_state |= FCMH_CAC_FREEING;
 			lc_remove(&fidcCleanList, f);
-			f->fcmh_cache_owner = NULL;
 			psc_dynarray_add(&da, f);
 		}
  end1:
@@ -503,10 +501,7 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	 *   to the dirty list.
 	 */
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
-		if (f->fcmh_state & FCMH_CAC_DIRTY) {
-			psc_assert(f->fcmh_cache_owner == &fidcDirtyList);
-
-		} else {
+		if (f->fcmh_state & FCMH_CAC_CLEAN) {
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			lc_remove(&fidcCleanList, f);
 
