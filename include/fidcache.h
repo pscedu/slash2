@@ -170,8 +170,7 @@ void			 fidc_init(int, int, int, int (*)(struct fidc_membh *));
 enum {
 	FIDC_LOOKUP_CREATE	= (1 << 0),		/* Create if not present         */
 	FIDC_LOOKUP_EXCL	= (1 << 1),		/* Fail if fcmh is present       */
-	FIDC_LOOKUP_LOAD	= (1 << 2),		/* Use external fetching mechanism */
-	FIDC_LOOKUP_REMOVE	= (1 << 3)		/* remove the fcmh from the hash table */
+	FIDC_LOOKUP_LOAD	= (1 << 2)		/* Use external fetching mechanism */
 };
 
 int			 fidc_lookup(const struct slash_fidgen *, int,

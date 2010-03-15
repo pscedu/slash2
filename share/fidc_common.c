@@ -286,6 +286,8 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		}
 		if (tmp->fcmh_state & FCMH_CAC_INITING) {
 			psc_hashbkt_unlock(b);
+			/* take a reference before waiting, in case the item
+			 * goes away beneath us */
 			tmp->fcmh_state |= FCMH_CAC_WAITING;
 			fcmh_op_start_type(tmp, FCMH_OPCNT_WAIT);
 			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
@@ -318,14 +320,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 * the bucket lock in case we need to insert a new item.
 	 */
 	if (fcmh) {
-		if (flags & FIDC_LOOKUP_REMOVE) {
-			/* no reference taken here */
-			psc_hashbkt_del_item(&fidcHtable, b, fcmh);
-			psc_hashbkt_unlock(b);
-			FCMH_ULOCK(fcmh);
-			*fcmhp = fcmh;
-			return (0);
-		}
 		psc_hashbkt_unlock(b);
 		/*
 		 * Test to see if we jumped here from fidcFreeList.
