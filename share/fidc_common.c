@@ -485,6 +485,12 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 #ifdef DEMOTED_INUM_WIDTHS
 	COPYFG(&fcmh->fcmh_smallfg, &searchfg);
 #endif
+	/* Place the fcmh into the cache, note that the fcmh was
+	 *  ref'd so no race condition exists here.
+	 */
+	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
+		DEBUG_FCMH(PLL_NOTICE, fcmh,
+		    "adding FIDGEN_ANY to cache");
 	/*
 	 * Add the new item to the hash list, but mark it as INITING.
 	 * If we fail to initialize it, we should mark it as FREEING.
@@ -502,13 +508,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if (rc) 
 		goto out;
 
-	/* Place the fcmh into the cache, note that the fcmh was
-	 *  ref'd so no race condition exists here.
-	 */
-	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
-		DEBUG_FCMH(PLL_NOTICE, fcmh,
-		    "adding FIDGEN_ANY to cache");
-
 	if (sstb || (flags & FIDC_LOOKUP_LOAD))
 		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 	if (sstb)
@@ -523,11 +522,13 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 
  out:
 	FCMH_LOCK(fcmh);
-	if (rc)
+	if (rc) {
 		fcmh->fcmh_state |= FCMH_CAC_FREEING;
-	else
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
+	} else {
 		*fcmhp = fcmh;
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
+		fidc_put(fcmh, &fidcCleanList);
+	}
 
 	fcmh->fcmh_state &= ~FCMH_CAC_INITING;
 	if (fcmh->fcmh_state & FCMH_CAC_WAITING) {
