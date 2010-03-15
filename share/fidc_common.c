@@ -132,8 +132,6 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 void
 fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 {
-	int clean;
-
 	/* Check for uninitialized
 	 */
 	if (!f->fcmh_state) {
@@ -150,7 +148,6 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 
 	/* Validate the inode and check if it has some dirty blocks
 	 */
-	clean = fcmh_clean_check(f);
 	if (lc == &fidcFreeList) {
 		psc_assert(f->fcmh_cache_owner == &fidcCleanList ||
 			   f->fcmh_cache_owner == NULL);
@@ -181,7 +178,6 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		psc_assert(f->fcmh_cache_owner == &fidcDirtyList ||
 			   f->fcmh_cache_owner == NULL);
 		psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
-		psc_assert(clean);
 		f->fcmh_cache_owner = lc;
 		lc_add(lc, f);
 
@@ -190,7 +186,6 @@ fidc_put(struct fidc_membh *f, struct psc_listcache *lc)
 		psc_assert(f->fcmh_state & FCMH_CAC_DIRTY);
 		f->fcmh_cache_owner = lc;
 		lc_add(lc, f);
-		//XXX psc_assert(clean == 0);
 
 	} else
 		psc_fatalx("lc %p is a bogus list cache", lc);
@@ -235,7 +230,7 @@ fidc_reap(struct psc_poolmgr *m)
 		/* Make sure our clean list is 'clean' by
 		 *  verifying the following conditions.
 		 */
-		if (!fcmh_clean_check(f)) {
+		if (!(f->fcmh_state & FCMH_CAC_CLEAN)) {
 			DEBUG_FCMH(PLL_FATAL, f,
 			    "Invalid fcmh state for clean list");
 			psc_fatalx("Invalid state for clean list");
@@ -441,8 +436,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		/* keep me around after unlocking later */
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
-		fcmh_clean_check(fcmh);
-
 		/* apply provided attributes to the cache */
 		if (sstb)
 			fcmh_setattr(fcmh, sstb, setattrflags);
@@ -582,10 +575,8 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(f->fcmh_cache_owner == &fidcDirtyList);
-			psc_assert(!fcmh_clean_check(f));
 
 		} else {
-			psc_assert(fcmh_clean_check(f));
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			lc_remove(&fidcCleanList, f);
 
@@ -609,7 +600,6 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
-			psc_assert(!fcmh_clean_check(f));
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			lc_remove(&fidcDirtyList, f);
 			f->fcmh_state &= ~FCMH_CAC_DIRTY;

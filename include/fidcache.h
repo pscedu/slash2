@@ -232,24 +232,6 @@ fcmh_lc_2_string(struct psc_listcache *lc)
 	psc_fatalx("invalid fidcache list cache %p", lc);
 }
 
-/**
- * fcmh_clean_check - Verify the validity of a fid cache member.
- */
-static __inline int
-fcmh_clean_check(struct fidc_membh *f)
-{
-	int locked, clean = 0;
-
-	locked = reqlock(&f->fcmh_lock);
-	DEBUG_FCMH(PLL_INFO, f, "clean_check");
-	if (f->fcmh_state & FCMH_CAC_CLEAN) {
-		psc_assert(!(f->fcmh_state & FCMH_CAC_DIRTY));
-		clean = 1;
-	}
-	ureqlock(&f->fcmh_lock, locked);
-	return (clean);
-}
-
 static __inline int
 fcmh_getload(const struct slash_fidgen *fgp, const struct slash_creds *crp,
     struct fidc_membh **fcmhp)
