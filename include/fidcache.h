@@ -72,13 +72,20 @@ struct fidc_membh {
 };
 
 /* fcmh_flags */
+
 #define	FCMH_CAC_CLEAN		0x0001		/* (1 << 0) in clean cache */
 #define	FCMH_CAC_DIRTY		0x0002		/* (1 << 1) in dirty cache, "dirty" means not reapable */
-#define	FCMH_CAC_FREEING	0x0004		/* (1 << 2) on clean cache */
-#define	FCMH_CAC_FREE		0x0008		/* (1 << 3) in free pool */
-#define	FCMH_HAVE_ATTRS		0x0010		/* (1 << 4) has valid stat info */
-#define	FCMH_GETTING_ATTRS	0x0020		/* (1 << 5) fetching stat info */
-#define	_FCMH_FLGSHFT		0x0040		/* (1 << 6) */
+
+#define	FCMH_CAC_FREEING	0x0004		/* (1 << 2) this item is being freed */
+#define	FCMH_CAC_INITING	0x0008		/* (1 << 4) this item is being initialized */
+#define	FCMH_CAC_WAITING	0x0010		/* (1 << 8) this item is being waited on */
+
+#define	FCMH_CAC_FREE		0x0010		/* (1 << 9) in free pool */
+#define	FCMH_HAVE_ATTRS		0x0020		/* (1 << 10) has valid stat info */
+#define	FCMH_GETTING_ATTRS	0x0040		/* (1 << 11) fetching stat info */
+#define	FCMH_WAITING_ATTRS	0x0080		/* (1 << 12) someone is waiting */
+
+#define	_FCMH_FLGSHFT		0x0100		/* (1 << 13) */
 
 /*
  * If fuse_ino_t, declared 'unsigned long', is 4 bytes, inums will get
@@ -154,7 +161,8 @@ enum fcmh_opcnt_types {
 	FCMH_OPCNT_OPEN,          //2
 	FCMH_OPCNT_BMAP,          //3
 	FCMH_OPCNT_CHILD,         //4
-	FCMH_OPCNT_NEW            //5
+	FCMH_OPCNT_NEW,           //5
+	FCMH_OPCNT_WAIT           //6
 };
 
 static __inline void *

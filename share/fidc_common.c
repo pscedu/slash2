@@ -362,14 +362,17 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			continue;
 		}
 
-		if (tmp->fcmh_state & FCMH_GETTING_ATTRS) {
+		if (tmp->fcmh_state & FCMH_CAC_INITING) {
 			/* The generation number has yet to be obtained from
 			 *   the server.  Another thread should be issuing
 			 *   the RPC, wait for him.  (Note: FIDGEN_ANY should
 			 *   only be used on the client.)
 			 */
+			tmp->fcmh_state |= FCMH_CAC_WAITING;
+			fcmh_op_start_type(tmp, FCMH_OPCNT_WAIT);
 			psc_hashbkt_unlock(b);
 			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
+			fcmh_op_done_type(tmp, FCMH_OPCNT_WAIT);
 			goto restart;
 		}
 
@@ -598,11 +601,9 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 
 			f->fcmh_state &= ~FCMH_CAC_DIRTY;
 			f->fcmh_state |= FCMH_CAC_CLEAN;
-
-			fidc_put(f, &fidcCleanList);
 		} else
-			/* It's already on the clean list. */
-			psc_assert(fcmh_clean_check(f));
+			lc_remove(&fidcDirtyList, f);
+		fidc_put(f, &fidcCleanList);
 	}
 	DEBUG_FCMH(PLL_NOTIFY, (f), "release ref (type=%d)", type);
 	FCMH_URLOCK(f, locked);
