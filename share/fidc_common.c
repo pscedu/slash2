@@ -583,7 +583,7 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 
 			f->fcmh_state &= ~FCMH_CAC_CLEAN;
 			f->fcmh_state |= FCMH_CAC_DIRTY;
-			fidc_put(f, &fidcDirtyList);
+			lc_add(&fidcDirtyList, f);
 		}
 	}
 	FCMH_URLOCK(f, locked);
