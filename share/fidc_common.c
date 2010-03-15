@@ -77,7 +77,6 @@ fcmh_get(void)
 	SPLAY_INIT(&f->fcmh_bmaptree);
 	LOCK_INIT(&f->fcmh_lock);
 	psc_waitq_init(&f->fcmh_waitq);
-	f->fcmh_state = FCMH_CAC_CLEAN;
 	fcmh_op_start_type(f, FCMH_OPCNT_NEW);
 	return (f);
 }
@@ -516,7 +515,8 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	} else {
 		*fcmhp = fcmh;
-		fidc_put(fcmh, &fidcCleanList);
+		fcmh->fcmh_state |= FCMH_CAC_CLEAN;
+		lc_add(&fidcCleanList, fcmh);
 	}
 
 	fcmh->fcmh_state &= ~FCMH_CAC_INITING;
