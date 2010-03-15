@@ -486,6 +486,14 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 #ifdef DEMOTED_INUM_WIDTHS
 	COPYFG(&fcmh->fcmh_smallfg, &searchfg);
 #endif
+	/*
+	 * Add the new item to the hash list, but mark it as INITING.
+	 * If we fail to initialize it, we should mark it as FREEING.
+	 */
+	tmp->fcmh_state |= FCMH_CAC_INITING;
+	fidc_put(fcmh, &fidcCleanList);
+	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
+	psc_hashbkt_unlock(b);
 
 	/* Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(),
 	 *   and sli_fcmh_ctor() to initialize their private fields that
@@ -512,19 +520,19 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if (sstb)
 		fcmh_setattr(fcmh, sstb, setattrflags);
 
-	fidc_put(fcmh, &fidcCleanList);
-	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
-	psc_hashbkt_unlock(b);
-
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
 		rc = sl_fcmh_ops.sfop_getattr(fcmh);
 	}
+	if (rc) {
+		fcmh->fcmh_state = FCMH_CAC_FREEING;
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
+	} else
+		*fcmhp = fcmh;
 
-	*fcmhp = fcmh;
-	return (0);
+	return (rc);
 }
 
 /**
