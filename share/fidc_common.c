@@ -611,7 +611,7 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 			return;
 		} else {
 			f->fcmh_state |= FCMH_CAC_CLEAN;
-			fidc_put(f, &fidcCleanList);
+			lc_add(&fidcCleanList, f);
 		}
 	}
 	FCMH_URLOCK(f, locked);
