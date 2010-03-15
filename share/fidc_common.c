@@ -606,7 +606,8 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 			lc_remove(&fidcDirtyList, f);
 		}
 		if (f->fcmh_state & FCMH_CAC_FREEING) {
-			fidc_put(f, &fidcFreeList);
+			psc_hashent_remove(&fidcHtable, f);
+			fcmh_destroy(f);
 			return;
 		} else {
 			f->fcmh_state |= FCMH_CAC_CLEAN;
