@@ -526,11 +526,15 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		psc_assert(sl_fcmh_ops.sfop_getattr);
 		rc = sl_fcmh_ops.sfop_getattr(fcmh);
 	}
+	FCMH_LOCK(tmp);
 	if (rc) {
 		fcmh->fcmh_state = FCMH_CAC_FREEING;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
-	} else
+	} else {
+		tmp->fcmh_state &= ~FCMH_CAC_INITING;
 		*fcmhp = fcmh;
+	}
+	FCMH_ULOCK(tmp);
 
 	return (rc);
 }
