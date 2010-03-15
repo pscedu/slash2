@@ -563,6 +563,12 @@ fidc_init(int privsiz, int nobj, int max,
 	fidcReapCb = fcmh_reap_cb;
 }
 
+/*
+ * fcmh_op_start/done_type(): we only move a cache item to the dirty list if we
+ * know that the reference being taken is a long one. For short-lived references,
+ * we avoid moving the cache item around.  Also, we only move a cache item back
+ * to the clean list when the _last_ reference is dropped.
+ */
 void
 fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
