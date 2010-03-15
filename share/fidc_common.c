@@ -50,6 +50,9 @@ struct psc_hashtbl	 fidcHtable;
 void
 fcmh_destroy(struct fidc_membh *f)
 {
+	/* mark the item as free, we will re-init fields when it is reused */
+	f->fcmh_state = FCMH_CAC_FREE;
+
 	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
 	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
 	psc_assert(f->fcmh_refcnt == 1);
@@ -58,7 +61,6 @@ fcmh_destroy(struct fidc_membh *f)
 	if (sl_fcmh_ops.sfop_dtor)
 		sl_fcmh_ops.sfop_dtor(f);
 
-	memset(f, 0, fidcPoolMaster.pms_entsize);
 	psc_pool_return(fidcPool, f);
 }
 
