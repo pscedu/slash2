@@ -488,6 +488,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	/*
 	 * Add the new item to the hash list, but mark it as INITING.
 	 * If we fail to initialize it, we should mark it as FREEING.
+	 * Also note that the item is not on any other list yet.
 	 */
 	tmp->fcmh_state |= FCMH_CAC_INITING;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
@@ -517,15 +518,15 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
-		rc = sl_fcmh_ops.sfop_getattr(fcmh);
+		rc = sl_fcmh_ops.sfop_getattr(fcmh);	/* slc_fcmh_getattr() */
 	}
 
  out:
 	FCMH_LOCK(fcmh);
-	if (rc) {
-		fcmh->fcmh_state = FCMH_CAC_FREEING;
+	if (rc)
+		fcmh->fcmh_state |= FCMH_CAC_FREEING;
+	else
 		*fcmhp = fcmh;
-	}
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 
 	fcmh->fcmh_state &= ~FCMH_CAC_INITING;
