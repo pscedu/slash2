@@ -139,18 +139,6 @@ struct fidc_membh {
 		ureqlock(&(fcmh)->fcmh_lock, _dbg_fcmh_locked);			\
 	} while (0)
 
-#define FCMHCACHE_PUT(fcmh, list)						\
-	do {									\
-		if ((list) == &fidcFreeList)					\
-			fcmh_destroy(fcmh);					\
-		else {								\
-			psc_assert((fcmh)->fcmh_cache_owner == NULL);		\
-			(fcmh)->fcmh_cache_owner = (list);			\
-			lc_add((list), (fcmh));					\
-		}								\
-	} while (0)
-
-
 /* debugging aid: spit out the reason for the reference count taking/dropping */
 enum fcmh_opcnt_types {
 	FCMH_OPCNT_LOOKUP_FIDC,   //0
