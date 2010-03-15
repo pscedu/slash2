@@ -164,7 +164,6 @@ void			 fcmh_dtor(void *);
 struct fidc_membh	*fcmh_get(void);
 void			 fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 
-void			 fidc_put(struct fidc_membh *, struct psc_listcache *);
 void			 fidc_init(int, int, int, int (*)(struct fidc_membh *));
 
 /* fidc_lookup() flags */
