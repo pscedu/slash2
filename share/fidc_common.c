@@ -363,6 +363,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		}
 
 		if (tmp->fcmh_state & FCMH_CAC_INITING) {
+			psc_hashbkt_unlock(b);
 			/* The generation number has yet to be obtained from
 			 *   the server.  Another thread should be issuing
 			 *   the RPC, wait for him.  (Note: FIDGEN_ANY should
@@ -370,7 +371,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			 */
 			tmp->fcmh_state |= FCMH_CAC_WAITING;
 			fcmh_op_start_type(tmp, FCMH_OPCNT_WAIT);
-			psc_hashbkt_unlock(b);
 			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
 			fcmh_op_done_type(tmp, FCMH_OPCNT_WAIT);
 			goto restart;
