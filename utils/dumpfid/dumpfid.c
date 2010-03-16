@@ -59,7 +59,7 @@ dumpfid(const char *fn)
 		goto out;
 	}
 	if (rc != INO_OD_SZ) {
-		warnx("%s: short I/O, want %ld got %ld",
+		warnx("%s: short I/O, want %zd got %zd",
 		    fn, INO_OD_SZ, rc);
 		goto out;
 	}
@@ -73,7 +73,7 @@ dumpfid(const char *fn)
 		goto out;
 	}
 	if (rc != INOX_OD_SZ) {
-		warnx("%s: short I/O, want %ld got %ld",
+		warnx("%s: short I/O, want %zd got %zd",
 		    fn, INOX_OD_SZ, rc);
 		goto out;
 	}

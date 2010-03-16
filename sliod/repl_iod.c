@@ -86,7 +86,7 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 	w->srw_resm = libsl_nid2resm(w->srw_nid);
 
 	/* get an fcmh for the file */
-	sli_fcmh_get(&w->srw_fg, &w->srw_fcmh);
+	rc = sli_fcmh_get(&w->srw_fg, &w->srw_fcmh);
 	if (rc)
 		goto out;
 
