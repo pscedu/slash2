@@ -315,7 +315,6 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	int locked;
 
 	locked = reqlock(&p->fcmh_lock);
-	fci = fcmh_get_pri(p);
 
 	psc_assert(fcmh_isdir(p));
 	psc_assert(p->fcmh_refcnt > 0);
@@ -327,6 +326,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	}
 
 	/* Perform some sanity checks on the cached data structure. */
+	fci = fcmh_get_pri(c);
 	psc_assert(fci->fci_parent == p);
 	psc_assert(fci->fci_hash == psc_str_hashify(name));
 	psc_assert(strcmp(fci->fci_name, name));
