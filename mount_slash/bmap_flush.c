@@ -751,7 +751,7 @@ msbmaprlsthr_main(__unusedx void *arg)
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct srm_bmap_id *rel_bmaps;
 	size_t z;
-	int nbmaps, i;
+	int nbmaps = 0, i;
 
 	rel_bmaps = PSCALLOC(sizeof(struct srm_bmap_id) * MAX_BMAP_RELEASE);
 
