@@ -315,7 +315,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	int locked;
 
 	locked = reqlock(&p->fcmh_lock);
-	fci = fcmh_get_pri(c);
+	fci = fcmh_get_pri(p);
 
 	psc_assert(fcmh_isdir(p));
 	psc_assert(p->fcmh_refcnt > 0);
