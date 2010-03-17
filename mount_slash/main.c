@@ -930,6 +930,7 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	struct pscrpc_request *rq;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
+	struct fidc_membh *m;
 	int rc;
 
 	if (strlen(name) > NAME_MAX)
@@ -953,8 +954,9 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	 *  come to us with another request for the inode since it won't
 	 *  yet be visible in the cache.
 	 */
-	rc = slc_fcmh_put(&mp->fg, &mp->attr,
-	    FCMH_SETATTRF_SAVESIZE, name, p, &rootcreds, 0);
+	m = NULL;
+	rc = slc_fcmh_get(&mp->fg, &mp->attr,
+	    FCMH_SETATTRF_SAVESIZE, name, p, &rootcreds, 0, &m);
 	if (rc)
 		goto out;
 
@@ -968,6 +970,8 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 		*fgp = mp->fg;
 
  out:
+	if (m)
+		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
