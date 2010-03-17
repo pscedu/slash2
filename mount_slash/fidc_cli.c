@@ -353,14 +353,18 @@ void
 fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 {
 	struct fidc_membh *tmp;
+	struct fcmh_cli_info *fci, *pci;
 
 	spinlock(&p->fcmh_lock);
 	spinlock(&c->fcmh_lock);
 
-	psc_assert(p && c && name);
-	psc_assert(fcmh_isdir(p));
-	psc_assert(p->fcmh_refcnt > 0);
-	psc_assert(c->fcmh_refcnt > 0);
+	fci = fcmh_get_pri(c);
+	if (fci->fci_parent) {
+		psc_assert(fci->fci_parent == p);
+		freelock(&c->fcmh_lock);
+		freelock(&p->fcmh_lock);
+		return;
+	}
 
 	DEBUG_FCMH(PLL_INFO, p, "name(%s)", name);
 
@@ -370,7 +374,6 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	/* Atomic check+add onto the parent d_inode. */
 	tmp = fidc_child_lookup_int_locked(p, name);
 	if (tmp == NULL) {
-		struct fcmh_cli_info *fci, *pci;
 
 		/* It doesn't yet exist, add it. */
 		pci = fcmh_get_pri(p);
