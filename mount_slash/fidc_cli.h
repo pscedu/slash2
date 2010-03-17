@@ -28,6 +28,13 @@
 
 struct fidc_membh;
 
+/*
+ * Currently, we don't use reference count to protect the child-parent relationship.
+ * This gives the reaper the maximum flexibility to reclaim fcmh.  However, we do 
+ * have to follow some rules: (1) the reaper does not choose a non-empty directory
+ * as a victim.  This makes sure that the parent pointer of a child is always valid.
+ * (2) we should lock a parent when adding or removing a child from its children list.
+ */
 struct fcmh_cli_info {
 	struct fidc_membh	*fci_parent;
 	struct psclist_head	 fci_children;
