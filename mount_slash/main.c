@@ -241,6 +241,7 @@ slc_fcmh_get(const struct slash_fidgen *fg, const struct srt_stat *sstb,
 	if (rc)
 		return (rc);
 	fidc_child_add(parent, *fcmhp, name);
+	return (0);
 }
 
 __static void
