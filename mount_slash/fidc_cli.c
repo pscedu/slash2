@@ -135,55 +135,6 @@ fidc_child_free_orphan_locked(struct fidc_membh *f)
 }
 
 /**
- * fidc_child_try_validate - given a parent fcmh, child, and a name, try
- *	to validate the child's fcmh if one exists.  On success, the fcmh
- *	timeout is increased and if the fcmh was orphaned then it is
- *	reattached to the parent 'p'.
- * @p: parent fcmh
- * @c: child fcmh
- * @name: link name of child fcmh.
- * Note: the locking order is [parent, child]
- */
-__static int
-fidc_child_try_validate_locked(struct fidc_membh *p,
-    struct fidc_membh *c, const char *name)
-{
-	struct fcmh_cli_info *fci, *pci;
-
-	psc_assert(!(p->fcmh_state & FCMH_CAC_FREEING));
-	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
-
-	fci = fcmh_get_pri(c);
-
-	if (fci->fci_name == NULL)
-		return (0);
-
-	/* Both of these must always be true. */
-	if (strcmp(name, fci->fci_name)) {
-		/* This fcmh must have been renamed, remove. */
-		fidc_child_free_plocked(c);
-		return (0);
-	}
-
-	/* Increase the lifespan of this entry. */
-	fcmh_refresh_age(c);
-
-	/* If the child is 'connected', then its parent inode
-	 *   must be 'p'.
-	 */
-	if (fci->fci_parent) {
-		psc_assert(fci->fci_parent == p);
-		psc_assert(psclist_conjoint(&fci->fci_sibling));
-	} else {
-		fci->fci_parent = p;
-		pci = fcmh_get_pri(p);
-		psclist_xadd_tail(&fci->fci_sibling,
-		    &pci->fci_children);
-	}
-	return (1);
-}
-
-/**
  * fidc_child_reap_cb - the callback handler for fidc_reap() is
  *	responsible for notifying the fcmh reaper if the fcmh is
  *	eligible for reaping.
