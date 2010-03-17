@@ -69,7 +69,7 @@ fcmh_destroy(struct fidc_membh *f)
 {
 	psc_assert(SPLAY_EMPTY(&f->fcmh_bmaptree));
 	psc_assert(!psc_waitq_nwaiters(&f->fcmh_waitq));
-	psc_assert(f->fcmh_refcnt == 1);
+	psc_assert(f->fcmh_refcnt == 0);
 	psc_assert(psc_hashent_disjoint(&fidcHtable, &f->fcmh_hentry));
 
 	if (sl_fcmh_ops.sfop_dtor)
@@ -150,10 +150,11 @@ fidc_reap(struct psc_poolmgr *m)
 		 * - Skip the root inode.
 		 * - Clean inodes may have non-zero refcnts,
 		 */
-		if ((!trylock(&f->fcmh_lock)) ||
-		    (fcmh_2_fid(f) == 1) ||
-		    (f->fcmh_refcnt))
+		if (!trylock(&f->fcmh_lock))
 			goto end2;
+
+		if (fcmh_2_fid(f) == 1 || (f->fcmh_refcnt))
+			goto end1;
 		/* Make sure our clean list is 'clean' by
 		 *  verifying the following conditions.
 		 */
