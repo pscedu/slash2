@@ -436,10 +436,21 @@ void
 slc_fcmh_dtor(struct fidc_membh *fcmh)
 {
 	struct fcmh_cli_info *fci;
+	struct fidc_membh *p;
 
 	fci = fcmh_2_fci(fcmh);
+	p = fci->fci_parent;
+	/*
+	 * The reaper should never reclaim a directory that
+	 * has one or more children.
+	 */
+	if (p) {
+		spinlock(&p->fcmh_lock);
+		fci->fci_parent = NULL;
+		psclist_del(&fci->fci_sibling);
+		freelock(&p->fcmh_lock);
+	}
 	psc_assert(psclist_empty(&fci->fci_children));
-	psc_assert(psclist_disjoint(&fci->fci_sibling));
 	PSCFREE(fci->fci_name);
 }
 
