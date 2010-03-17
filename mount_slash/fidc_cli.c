@@ -352,46 +352,26 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 void
 fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 {
-	struct fidc_membh *tmp;
 	struct fcmh_cli_info *fci, *pci;
+
+	DEBUG_FCMH(PLL_INFO, p, "name(%s)", name);
 
 	spinlock(&p->fcmh_lock);
 	spinlock(&c->fcmh_lock);
 
 	fci = fcmh_get_pri(c);
-	if (fci->fci_parent) {
-		psc_assert(fci->fci_parent == p);
-		freelock(&c->fcmh_lock);
-		freelock(&p->fcmh_lock);
-		return;
-	}
-
-	DEBUG_FCMH(PLL_INFO, p, "name(%s)", name);
-
-	if (fidc_child_try_validate_locked(p, c, name))
-		goto end;
-
-	/* Atomic check+add onto the parent d_inode. */
-	tmp = fidc_child_lookup_int_locked(p, name);
-	if (tmp == NULL) {
-
+	if (fci->fci_parent == NULL) {
 		/* It doesn't yet exist, add it. */
-		pci = fcmh_get_pri(p);
-		fci = fcmh_get_pri(c);
-
 		fci->fci_parent = p;
 		fci->fci_name = psc_strdup(name);
 		fci->fci_hash = psc_str_hashify(name);
-		psclist_xadd_tail(&fci->fci_sibling, &pci->fci_children);
-		DEBUG_FCMH(PLL_WARN, p, "adding name: %s",
-		    fci->fci_name);
-	} else
-		/* Someone beat us to the punch, do sanity checks and then
-		 *  clean up.
-		 */
-		fcmh_op_done_type(tmp, FCMH_OPCNT_LOOKUP_PARENT);
 
- end:
+		pci = fcmh_get_pri(p);
+		psclist_xadd_tail(&fci->fci_sibling, &pci->fci_children);
+		DEBUG_FCMH(PLL_WARN, p, "adding name: %s", fci->fci_name);
+	} else 
+		psc_assert(fci->fci_parent == p);
+
 	freelock(&c->fcmh_lock);
 	freelock(&p->fcmh_lock);
 }
