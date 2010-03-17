@@ -77,7 +77,6 @@ fcmh_get(void)
 	SPLAY_INIT(&f->fcmh_bmaptree);
 	LOCK_INIT(&f->fcmh_lock);
 	psc_waitq_init(&f->fcmh_waitq);
-	fcmh_op_start_type(f, FCMH_OPCNT_NEW);
 	return (f);
 }
 
@@ -328,8 +327,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		 * that.
 		 */
 		if (try_create) {
-			fcmh_new->fcmh_state = FCMH_CAC_FREEING;
-			fcmh_op_done_type(fcmh_new, FCMH_OPCNT_NEW);
+			fcmh_destroy(fcmh_new);
 			fcmh_new = NULL;			/* defensive */
 		}
 		if (flags & FIDC_LOOKUP_EXCL) {
@@ -389,6 +387,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 *  it's not yet visible to other threads.
 	 */
 	fcmh = fcmh_new;
+	fcmh_op_start_type(fcmh, FCMH_OPCNT_NEW);
 
 	COPYFG(&fcmh->fcmh_fg, fgp);
 #ifdef DEMOTED_INUM_WIDTHS
@@ -401,6 +400,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
 		DEBUG_FCMH(PLL_NOTICE, fcmh,
 		    "adding FIDGEN_ANY to cache");
+
 	/*
 	 * Add the new item to the hash list, but mark it as INITING.
 	 * If we fail to initialize it, we should mark it as FREEING.
@@ -525,14 +525,8 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 			f->fcmh_state &= ~FCMH_CAC_DIRTY;
 			lc_remove(&fidcDirtyList, f);
 		}
-		if (f->fcmh_state & FCMH_CAC_FREEING) {
-			psc_hashent_remove(&fidcHtable, f);
-			fcmh_destroy(f);
-			return;
-		} else {
-			f->fcmh_state |= FCMH_CAC_CLEAN;
-			lc_add(&fidcCleanList, f);
-		}
+		f->fcmh_state |= FCMH_CAC_CLEAN;
+		lc_add(&fidcCleanList, f);
 	}
 	FCMH_URLOCK(f, locked);
 }
