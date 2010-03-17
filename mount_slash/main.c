@@ -282,7 +282,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 
 	msfsthr_ensure();
 
-	p = NULL;
+	p = m = NULL;
 
 	psc_assert(fi->flags & O_CREAT);
 
@@ -652,7 +652,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	msfsthr_ensure();
 
-	p = NULL;
+	p = m = NULL;
 
 	if (strlen(name) > NAME_MAX) {
 		rc = ENAMETOOLONG;
@@ -692,7 +692,6 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = mp->rc;
 	if (rc)
 		goto out;
-	m = NULL;
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
 	    name, p, &mq->creds, FIDC_LOOKUP_NONE, &m);
 	if (rc)
@@ -913,6 +912,8 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	struct fidc_membh *m;
 	int rc;
 
+	m = NULL;
+
 	if (strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
 
@@ -934,7 +935,6 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	 *  come to us with another request for the inode since it won't
 	 *  yet be visible in the cache.
 	 */
-	m = NULL;
 	rc = slc_fcmh_get(&mp->fg, &mp->attr,
 	    FCMH_SETATTRF_SAVESIZE, name, p, &rootcreds, FIDC_LOOKUP_NONE, &m);
 	if (rc)
@@ -1275,6 +1275,8 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	struct iovec iov;
 	int rc;
 
+	m = NULL;
+
 	msfsthr_ensure();
 
 	if (strlen(buf) >= PATH_MAX ||
@@ -1307,7 +1309,6 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	if (rc)
 		goto out;
 
-	m = NULL;
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
 	    name, p, &mq->creds, FIDC_LOOKUP_NONE, &m);
 	if (rc)
