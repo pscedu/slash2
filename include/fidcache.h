@@ -69,6 +69,13 @@ struct fidc_membh {
 	struct bmap_cache	 fcmh_bmaptree;		/* bmap cache splay */
 };
 
+/* service specific private fields follow the above fidc_membh structure */
+static __inline void *
+fcmh_get_pri(struct fidc_membh *fcmh)
+{
+	return (fcmh + 1);
+}
+
 /* fcmh_flags */
 
 #define	FCMH_CAC_FREE		0x0001		/* (1 << 0) totally free item */
@@ -149,12 +156,6 @@ enum fcmh_opcnt_types {
 	FCMH_OPCNT_NEW,           //5
 	FCMH_OPCNT_WAIT           //6
 };
-
-static __inline void *
-fcmh_get_pri(struct fidc_membh *fcmh)
-{
-	return (fcmh + 1);
-}
 
 /* fcmh_setattr() flags */
 #define FCMH_SETATTRF_NONE	0
