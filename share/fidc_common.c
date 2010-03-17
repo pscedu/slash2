@@ -43,6 +43,23 @@ struct psc_listcache	 fidcDirtyList;
 struct psc_listcache	 fidcCleanList;
 struct psc_hashtbl	 fidcHtable;
 
+
+/**
+ * fcmh_get - Grab/Allocate a clean/unused FID cache member handle from
+ *	the pool.
+ */
+struct fidc_membh *
+fcmh_get(void)
+{
+	return (psc_pool_get(fidcPool));
+}
+
+void
+fcmh_put(struct fidc_membh *f)
+{
+	psc_pool_return(fidcPool, f);
+}
+
 /**
  * fcmh_dtor - Destructor for FID cache member handles.
  * @r: fcmh being destroyed.
@@ -60,24 +77,7 @@ fcmh_destroy(struct fidc_membh *f)
 
 	memset(f, 0, fidcPoolMaster.pms_entsize);
 	f->fcmh_state = FCMH_CAC_FREE;
-	psc_pool_return(fidcPool, f);
-}
-
-/**
- * fcmh_get - Grab/Allocate a clean/unused FID cache member handle from
- *	the pool.
- */
-struct fidc_membh *
-fcmh_get(void)
-{
-	struct fidc_membh *f;
-
-	f = psc_pool_get(fidcPool);
-	memset(f, 0, fidcPoolMaster.pms_entsize);
-	SPLAY_INIT(&f->fcmh_bmaptree);
-	LOCK_INIT(&f->fcmh_lock);
-	psc_waitq_init(&f->fcmh_waitq);
-	return (f);
+	fcmh_put(f);
 }
 
 void
@@ -327,7 +327,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		 * that.
 		 */
 		if (try_create) {
-			fcmh_destroy(fcmh_new);
+			fcmh_put(fcmh_new);
 			fcmh_new = NULL;			/* defensive */
 		}
 		if (flags & FIDC_LOOKUP_EXCL) {
@@ -387,6 +387,12 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 *  it's not yet visible to other threads.
 	 */
 	fcmh = fcmh_new;
+
+	memset(fcmh, 0, fidcPoolMaster.pms_entsize);
+	SPLAY_INIT(&fcmh->fcmh_bmaptree);
+	LOCK_INIT(&fcmh->fcmh_lock);
+	psc_waitq_init(&fcmh->fcmh_waitq);
+
 	fcmh_op_start_type(fcmh, FCMH_OPCNT_NEW);
 
 	COPYFG(&fcmh->fcmh_fg, fgp);
