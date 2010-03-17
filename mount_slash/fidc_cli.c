@@ -149,12 +149,15 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	fci = fcmh_get_pri(f);
 
 	LOCK_ENSURE(&f->fcmh_lock);
-	/* Don't free the root inode. */
-	psc_assert(fcmh_2_fid(f) != 1);
 
 	DEBUG_FCMH(PLL_WARN, f, "fcmh_no_children=%d",
 	    fcmh_isdir(f) ? psclist_empty(&fci->fci_children) : -1);
 
+	/*
+	 * Keep a directory around if it has any children.  We can do
+	 * better by checking any of its children (and grandchildren)
+	 * is actually in use.  But doing that requires a global lock.
+	 */
 	if (fcmh_isdir(f) && !psclist_empty(&fci->fci_children))
 		return (0);
 
