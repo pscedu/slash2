@@ -211,7 +211,16 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	DEBUG_FCMH(PLL_INFO, p, "name %p (%s), hash=%d",
 	    name, name, hash);
 
+	/* 
+	 * Note we can be racing with the reaper because we don't
+	 * use reference count to protect parent-child relationship.
+	 */
 	FCMH_FOREACH_CHILD(c, p) {
+		spinlock(&c->fcmh_lock);
+		if (c->fcmh_state & FCMH_CAC_FREEING) {
+			freelock(&c->fcmh_lock);
+			continue;
+		}
 		fci = fcmh_get_pri(c);
 
 		psc_traces(PSS_GEN, "p=fcmh@%p c=%p cname=%s hash=%d",
@@ -221,21 +230,19 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		    strcmp(name, fci->fci_name) == 0) {
 			found = 1;
 			psc_assert(fci->fci_parent == p);
-			fcmh_op_start_type(c, FCMH_OPCNT_LOOKUP_PARENT);
 			break;
 		}
+		freelock(&c->fcmh_lock);
 	}
-	if (!found || (c->fcmh_state & FCMH_CAC_FREEING))
+	if (c == NULL)
 		return (NULL);
 
 	PFL_GETTIME(&now);
-	if (timercmp(&now, &c->fcmh_age, >)) {
-		/* It's old, remove it.
-		 */
-		fidc_child_free_plocked(c);
+	if (timercmp(&now, &c->fcmh_age, <)) {
 		fcmh_op_start_type(c, FCMH_OPCNT_LOOKUP_PARENT);
-		/* Force a lookuprpc
-		 */
+		freelock(&c->fcmh_lock);
+	} else {
+		freelock(&c->fcmh_lock);
 		c = NULL;
 	}
 	return (c);
