@@ -169,6 +169,7 @@ void			 fidc_init(int, int, int, int (*)(struct fidc_membh *));
 
 /* fidc_lookup() flags */
 enum {
+	FIDC_LOOKUP_NONE	= (0 << 0),		/* no flag */
 	FIDC_LOOKUP_CREATE	= (1 << 0),		/* Create if not present         */
 	FIDC_LOOKUP_EXCL	= (1 << 1),		/* Fail if fcmh is present       */
 	FIDC_LOOKUP_LOAD	= (1 << 2)		/* Use external fetching mechanism */

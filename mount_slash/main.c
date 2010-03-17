@@ -694,7 +694,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	m = NULL;
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
-	    name, p, &mq->creds, 0, &m);
+	    name, p, &mq->creds, FIDC_LOOKUP_NONE, &m);
 	if (rc)
 		goto out;
 	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
@@ -936,7 +936,7 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	 */
 	m = NULL;
 	rc = slc_fcmh_get(&mp->fg, &mp->attr,
-	    FCMH_SETATTRF_SAVESIZE, name, p, &rootcreds, 0, &m);
+	    FCMH_SETATTRF_SAVESIZE, name, p, &rootcreds, FIDC_LOOKUP_NONE, &m);
 	if (rc)
 		goto out;
 
@@ -1309,7 +1309,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 
 	m = NULL;
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
-	    name, p, &mq->creds, 0, &m);
+	    name, p, &mq->creds, FIDC_LOOKUP_NONE, &m);
 	if (rc)
 		goto out;
 	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
