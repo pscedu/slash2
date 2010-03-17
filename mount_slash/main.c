@@ -667,6 +667,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
 	struct fidc_membh *p;
+	struct fidc_membh *m;
 	int rc;
 
 	msfsthr_ensure();
@@ -711,8 +712,9 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = mp->rc;
 	if (rc)
 		goto out;
-	rc = slc_fcmh_put(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
-	    name, p, &mq->creds, 0);
+	m = NULL;
+	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
+	    name, p, &mq->creds, 0, &m);
 	if (rc)
 		goto out;
 	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
@@ -722,6 +724,8 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		fuse_reply_err(req, rc);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+	if (m)
+		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
 }
