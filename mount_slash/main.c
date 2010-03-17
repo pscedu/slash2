@@ -232,12 +232,11 @@ slash2fuse_reply_entry(fuse_req_t req, const struct slash_fidgen *fgp,
 __static int
 slc_fcmh_get(const struct slash_fidgen *fg, const struct srt_stat *sstb,
     int setattrflags, const char *name, struct fidc_membh *parent,
-    const struct slash_creds *creds, int lookupflags,
-    struct fidc_membh **fcmhp)
+    const struct slash_creds *creds, struct fidc_membh **fcmhp)
 {
 	int rc;
 
-	rc = fidc_lookup(fg, lookupflags | FIDC_LOOKUP_CREATE, sstb,
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL, sstb,
 	    setattrflags, creds, fcmhp);
 	if (rc)
 		return (rc);
@@ -338,7 +337,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	}
 
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE, name,
-	    p, &rootcreds, FIDC_LOOKUP_EXCL, &m);
+	    p, &rootcreds, &m);
 	if (rc)
 		goto out;
 
@@ -693,7 +692,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		goto out;
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
-	    name, p, &mq->creds, FIDC_LOOKUP_NONE, &m);
+	    name, p, &mq->creds, &m);
 	if (rc)
 		goto out;
 	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
@@ -936,7 +935,7 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	 *  yet be visible in the cache.
 	 */
 	rc = slc_fcmh_get(&mp->fg, &mp->attr,
-	    FCMH_SETATTRF_SAVESIZE, name, p, &rootcreds, FIDC_LOOKUP_NONE, &m);
+	    FCMH_SETATTRF_SAVESIZE, name, p, &rootcreds, &m);
 	if (rc)
 		goto out;
 
@@ -1310,7 +1309,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 		goto out;
 
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
-	    name, p, &mq->creds, FIDC_LOOKUP_NONE, &m);
+	    name, p, &mq->creds, &m);
 	if (rc)
 		goto out;
 	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
