@@ -124,7 +124,7 @@ fidc_child_free_orphan_locked(struct fidc_membh *f)
 
 	psc_assert(!fci->fci_parent);
 	psc_assert(!(f->fcmh_state & FCMH_CAC_FREEING));
-	fci->fci_name = NULL;
+	PSCFREE(fci->fci_name);
 
 	DEBUG_FCMH(PLL_WARN, f, "name=%s freeing orphan",
 	    fci->fci_name);
@@ -132,7 +132,6 @@ fidc_child_free_orphan_locked(struct fidc_membh *f)
 	if (fcmh_isdir(f))
 		psc_assert(psclist_empty(&fci->fci_children));
 
-	PSCFREE(fci->fci_name);
 }
 
 /**
