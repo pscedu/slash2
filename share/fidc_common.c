@@ -48,13 +48,13 @@ struct psc_hashtbl	 fidcHtable;
  * fcmh_get - Grab/Allocate a clean/unused FID cache member handle from
  *	the pool.
  */
-struct fidc_membh *
+static struct fidc_membh *
 fcmh_get(void)
 {
 	return (psc_pool_get(fidcPool));
 }
 
-void
+static void
 fcmh_put(struct fidc_membh *f)
 {
 	psc_pool_return(fidcPool, f);

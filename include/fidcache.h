@@ -161,11 +161,9 @@ enum fcmh_opcnt_types {
 #define FCMH_SETATTRF_NONE	0
 #define FCMH_SETATTRF_SAVESIZE	(1 << 0)
 
-void			 fcmh_dtor(void *);
-struct fidc_membh	*fcmh_get(void);
+void			 fidc_init(int, int, int, int (*)(struct fidc_membh *));
 void			 fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 
-void			 fidc_init(int, int, int, int (*)(struct fidc_membh *));
 
 /* fidc_lookup() flags */
 enum {
