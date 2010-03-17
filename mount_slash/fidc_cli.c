@@ -207,14 +207,15 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	if (fcmh_isdir(f) && !psclist_empty(&fci->fci_children))
 		return (0);
 
-	else if (fci->fci_name == NULL)
+	if (fci->fci_name == NULL)
 		return (1);
 
-	else if (!fci->fci_parent) {
+	if (!fci->fci_parent) {
 		fidc_child_free_orphan_locked(f);
 		return (1);
+	} 
 
-	} else if (trylock(&fci->fci_parent->fcmh_lock)) {
+	if (trylock(&fci->fci_parent->fcmh_lock)) {
 		/* The parent needs to be unlocked after the child is freed,
 		 *  hence the need for the temp var 'p'.
 		 */
