@@ -247,26 +247,6 @@ slc_fcmh_get(const struct slash_fidgen *fg, const struct srt_stat *sstb,
 	return (0);
 }
 
-/**
- * slc_fcmh_put - wrapper around slc_fcmh_get(), it
- *	makes same call but deref's the fcmh.  For callers who don't
- *	need a pointer back to the fcmh.
- */
-__static int
-slc_fcmh_put(const struct slash_fidgen *fg, const struct srt_stat *sstb,
-    int setattrflags, const char *name, struct fidc_membh *parent,
-    const struct slash_creds *creds, int lookupflags)
-{
-	struct fidc_membh *m;
-	int rc;
-
-	rc = slc_fcmh_get(fg, sstb, setattrflags, name,
-	    parent, creds, lookupflags, &m);
-	if (m)
-		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
-	return (rc);
-}
-
 __static void
 slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 {
