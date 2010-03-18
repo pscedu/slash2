@@ -498,7 +498,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
  out:
 	FCMH_LOCK(fcmh);
 	if (!rc) {
-		fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE);
+		fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE|FCMH_SETATTRF_HAVELOCK);
 		rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
 	}
 
