@@ -356,12 +356,12 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 #else
 		psc_assert(fgp->fg_fid == fcmh_2_fid(fcmh));
 #endif
-		/* keep me around after unlocking later */
-		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
 		/* apply provided attributes to the cache */
 		if (sstb)
 			fcmh_setattr(fcmh, sstb, setattrflags|FCMH_SETATTRF_HAVELOCK);
+
+		/* keep me around after unlocking later */
+		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
 		FCMH_ULOCK(fcmh);
 		*fcmhp = fcmh;
