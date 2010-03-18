@@ -427,13 +427,15 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if (rc) 
 		goto out;
 
-
+	if (sstb) {
+		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
+		fcmh_setattr(fcmh, sstb, setattrflags);
+		goto out;
+	}
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
 		rc = sl_fcmh_ops.sfop_getattr(fcmh);	/* slc_fcmh_getattr() */
 	} 
-	if (sstb)
-		fcmh_setattr(fcmh, sstb, setattrflags);
 
  out:
 	FCMH_LOCK(fcmh);
