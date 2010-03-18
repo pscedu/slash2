@@ -197,12 +197,18 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	 */
 	if (fcmh_isdir(c)) {
 		FCMH_FOREACH_CHILD_SAFE(tmp1, tmp2, c) {
+			spinlock(&tmp1->fcmh_lock);
+			if (tmp1->fcmh_state & FCMH_CAC_FREEING) {
+				freelock(&tmp1->fcmh_lock);
+				continue;
+			}
 			fci = fcmh_get_pri(tmp1);
 			DEBUG_FCMH(PLL_WARN, tmp1, "fidc_membh=%p name=%s detaching", 
 			    tmp1, fci->fci_name);
 			psc_assert(fci->fci_parent == c);
 			fci->fci_parent = NULL;
 			psclist_del(&fci->fci_sibling);
+			freelock(&tmp1->fcmh_lock);
 		}
 	}
 
