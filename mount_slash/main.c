@@ -620,8 +620,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 	if (rc)
 		goto out;
 	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
-//	rc = slash2fuse_fidc_put(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
-//	    name, p, &mq->creds);
+
 	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_NONE);
 
  out:

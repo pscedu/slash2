@@ -72,6 +72,7 @@ fcmh_destroy(struct fidc_membh *f)
 	psc_assert(f->fcmh_refcnt == 0);
 	psc_assert(psc_hashent_disjoint(&fidcHtable, &f->fcmh_hentry));
 
+	/* slc_fcmh_dtor(), slm_fcmh_dtor(), sli_fcmh_dtor() */
 	if (sl_fcmh_ops.sfop_dtor)
 		sl_fcmh_ops.sfop_dtor(f);
 
@@ -127,7 +128,7 @@ fidc_reap(struct psc_poolmgr *m)
 	struct fidc_membh *f, *tmp;
 	struct psc_dynarray da = DYNARRAY_INIT;
 	struct psc_hashbkt *b;
-	int i=0;
+	int i;
 
 	psc_assert(m == fidcPool);
  startover:
@@ -368,9 +369,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	/* we have failed to find a match in the cache */
 	if (flags & FIDC_LOOKUP_CREATE) {
 		if (!try_create) {
-			/* Allocate a fidc handle and attach the
-			 *   provided fcmh.
-			 */
+			/* allocate a new fidc handle */
 			psc_hashbkt_unlock(b);
 			fcmh_new = fcmh_get();
 			try_create = 1;
