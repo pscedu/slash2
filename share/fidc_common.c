@@ -504,10 +504,9 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
 		if (f->fcmh_state & FCMH_CAC_CLEAN) {
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
-			lc_remove(&fidcCleanList, f);
-
 			f->fcmh_state &= ~FCMH_CAC_CLEAN;
 			f->fcmh_state |= FCMH_CAC_DIRTY;
+			lc_remove(&fidcCleanList, f);
 			lc_add(&fidcDirtyList, f);
 		}
 	}
@@ -528,10 +527,10 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			f->fcmh_state &= ~FCMH_CAC_DIRTY;
+			f->fcmh_state |= FCMH_CAC_CLEAN;
 			lc_remove(&fidcDirtyList, f);
+			lc_add(&fidcCleanList, f);
 		}
-		f->fcmh_state |= FCMH_CAC_CLEAN;
-		lc_add(&fidcCleanList, f);
 	}
 	FCMH_URLOCK(f, locked);
 }
