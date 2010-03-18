@@ -49,27 +49,6 @@
 	    &fcmh_2_fci(p)->fci_children, sizeof(struct fidc_membh) +		\
 	    offsetof(struct fcmh_cli_info, fci_sibling))			\
 
-/**
- * fidc_child_prep_free_locked - if the fcmh is a directory then detach
- *	any cached fci_children.  This ensures that the
- *	children's backpointer reference is properly erased.
- * @f:  the fcmh object to be freed.
- */
-__static void
-fidc_child_prep_free_locked(struct fidc_membh *f)
-{
-	struct fidc_membh *c, *tmp;
-	struct fcmh_cli_info *fci;
-
-	FCMH_FOREACH_CHILD_SAFE(c, tmp, f) {
-		fci = fcmh_get_pri(c);
-		DEBUG_FCMH(PLL_WARN, c, "fidc_membh=%p name=%s detaching",
-		    c, fci->fci_name);
-		psc_assert(fci->fci_parent == f);
-		fci->fci_parent = NULL;
-		psclist_del(&fci->fci_sibling);
-	}
-}
 
 /**
  * fidc_child_reap_cb - the callback handler for fidc_reap() is
