@@ -388,12 +388,11 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 */
 	fcmh = fcmh_new;
 
-	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
-
 	memset(fcmh, 0, fidcPoolMaster.pms_entsize);
 	SPLAY_INIT(&fcmh->fcmh_bmaptree);
 	LOCK_INIT(&fcmh->fcmh_lock);
 	psc_waitq_init(&fcmh->fcmh_waitq);
+
 
 	fcmh_op_start_type(fcmh, FCMH_OPCNT_NEW);
 
@@ -409,6 +408,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		DEBUG_FCMH(PLL_NOTICE, fcmh,
 		    "adding FIDGEN_ANY to cache");
 
+	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 	/*
 	 * Add the new item to the hash list, but mark it as INITING.
 	 * If we fail to initialize it, we should mark it as FREEING.
