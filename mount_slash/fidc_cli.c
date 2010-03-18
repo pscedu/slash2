@@ -179,6 +179,8 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 		ureqlock(&p->fcmh_lock, locked);
 		return;
 	}
+	ureqlock(&p->fcmh_lock, locked);
+
 	spinlock(&c->fcmh_lock);
 
 	/* Perform some sanity checks on the cached data structure. */
@@ -220,7 +222,6 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 
 	freelock(&c->fcmh_lock);
 
-	ureqlock(&p->fcmh_lock, locked);
 }
 
 /**
