@@ -222,6 +222,8 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 {
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *c;
+	struct fidc_membh *tmp1;
+	struct fidc_membh *tmp2;
 	int locked;
 
 	locked = reqlock(&p->fcmh_lock);
@@ -234,6 +236,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 		ureqlock(&p->fcmh_lock, locked);
 		return;
 	}
+	spinlock(&c->fcmh_lock);
 
 	/* Perform some sanity checks on the cached data structure. */
 	fci = fcmh_get_pri(c);
@@ -241,13 +244,31 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	psc_assert(fci->fci_hash == psc_str_hashify(name));
 	psc_assert(strcmp(fci->fci_name, name));
 
+	/* detach myself to my parent */
+	fci->fci_parent = NULL;
+	psclist_del(&fci->fci_sibling);
+	
+	/*
+	 * If we can unlink this directory, then it should not have any children.
+	 * Perhaps a unlink can bypass our cache.
+	 */
+	if (fcmh_isdir(c)) {
+		FCMH_FOREACH_CHILD_SAFE(tmp1, tmp2, c) {
+			fci = fcmh_get_pri(tmp1);
+			DEBUG_FCMH(PLL_WARN, tmp1, "fidc_membh=%p name=%s detaching", 
+			    tmp1, fci->fci_name);
+			psc_assert(fci->fci_parent == c);
+			fci->fci_parent = NULL;
+			psclist_del(&fci->fci_sibling);
+		}
+	}
+
 	/* The only ref on the child should be the one taken above in
 	 *  fidc_child_lookup_int_locked()
 	 */
-	spinlock(&c->fcmh_lock);
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_PARENT);
 	psc_assert(!c->fcmh_refcnt);
-	fidc_child_free_plocked(c);
+
 	freelock(&c->fcmh_lock);
 
 	ureqlock(&p->fcmh_lock, locked);
