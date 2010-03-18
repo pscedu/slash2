@@ -253,10 +253,13 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(creds);
 		psc_assert(sstb == NULL);
-	}
+	} 
 
+#if 0
+	/* this only applies to client */
 	if (flags & FIDC_LOOKUP_CREATE)
 		psc_assert(sstb || (flags & FIDC_LOOKUP_LOAD));
+#endif
 
 	if (sstb)
 		psc_assert((flags & FIDC_LOOKUP_LOAD) == 0);
