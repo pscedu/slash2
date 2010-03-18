@@ -418,14 +418,17 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
 
-	/* Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(),
-	 *   and sli_fcmh_ctor() to initialize their private fields that
-	 *   follow the main fcmh structure.
+	/* 
+	 * Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(),
+	 * and sli_fcmh_ctor() to initialize their private fields that follow 
+	 * the main fcmh structure. It is safe to not lock because we don't
+	 * touch the state, and other thread should be waiting for us.
 	 */
 	rc = sl_fcmh_ops.sfop_ctor(fcmh);
 	if (rc) 
 		goto out;
 
+	FCMH_LOCK(fcmh);
 	if (sstb) {
 		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 		fcmh_setattr(fcmh, sstb, setattrflags);
@@ -437,7 +440,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	} 
 
  out:
-	FCMH_LOCK(fcmh);
 	if (rc) {
 		fcmh->fcmh_state |= FCMH_CAC_FREEING;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
