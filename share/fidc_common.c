@@ -389,6 +389,8 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 */
 	fcmh = fcmh_new;
 
+	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
+
 	memset(fcmh, 0, fidcPoolMaster.pms_entsize);
 	SPLAY_INIT(&fcmh->fcmh_bmaptree);
 	LOCK_INIT(&fcmh->fcmh_lock);
@@ -425,17 +427,13 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if (rc) 
 		goto out;
 
-	if (sstb || (flags & FIDC_LOOKUP_LOAD))
-		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
-	if (sstb)
-		fcmh_setattr(fcmh, sstb, setattrflags);
-
-	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
 		rc = sl_fcmh_ops.sfop_getattr(fcmh);	/* slc_fcmh_getattr() */
-	}
+	} 
+	if (sstb)
+		fcmh_setattr(fcmh, sstb, setattrflags);
 
  out:
 	FCMH_LOCK(fcmh);
@@ -447,13 +445,11 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		fcmh->fcmh_state |= FCMH_CAC_CLEAN;
 		lc_add(&fidcCleanList, fcmh);
 	}
-
 	fcmh->fcmh_state &= ~FCMH_CAC_INITING;
 	if (fcmh->fcmh_state & FCMH_CAC_WAITING) {
 		fcmh->fcmh_state &= ~FCMH_CAC_WAITING;
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);
 	}
-
 	FCMH_ULOCK(fcmh);
 	return (rc);
 }
