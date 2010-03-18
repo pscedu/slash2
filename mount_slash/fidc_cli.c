@@ -72,42 +72,6 @@ fidc_child_prep_free_locked(struct fidc_membh *f)
 }
 
 /**
- * fidc_child_free - Release a child.  The parent must already be
- *	locked (plocked == 'parent locked') so that the fcmh may be freed
- *	from the parent's fci_children list.
- * @c: the fcmh to be freed.
- */
-__static void
-fidc_child_free_plocked(struct fidc_membh *c)
-{
-	struct fcmh_cli_info *fci;
-	int locked;
-
-	locked = reqlock(&c->fcmh_lock);
-
-	fci = fcmh_get_pri(c);
-
-	LOCK_ENSURE(&fci->fci_parent->fcmh_lock);
-	psc_assert(!(c->fcmh_state & FCMH_CAC_FREEING));
-
-	if (fcmh_isdir(c)) {
-		fidc_child_prep_free_locked(c);
-		psc_assert(psclist_empty(&fci->fci_children));
-	}
-
-	DEBUG_FCMH(PLL_DEBUG, c, "name=%s parent=%p freeing "
-	    "child_empty=%d", fci->fci_name, fci->fci_parent,
-	    fcmh_isdir(c) ? psclist_empty(&fci->fci_children) : -1);
-
-	PSCFREE(fci->fci_name);
-	fci->fci_parent = NULL;
-	psclist_del(&fci->fci_sibling);
-
-	ureqlock(&c->fcmh_lock, locked);
-}
-
-
-/**
  * fidc_child_reap_cb - the callback handler for fidc_reap() is
  *	responsible for notifying the fcmh reaper if the fcmh is
  *	eligible for reaping.
