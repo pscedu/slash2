@@ -123,9 +123,6 @@ fidc_child_reap_cb(struct fidc_membh *f)
 
 	fci = fcmh_get_pri(f);
 
-	DEBUG_FCMH(PLL_WARN, f, "fcmh_no_children=%d",
-	    fcmh_isdir(f) ? psclist_empty(&fci->fci_children) : -1);
-
 	/*
 	 * Keep a directory around if it has any children.  We can do
 	 * better by checking any of its children (and grandchildren)
@@ -134,23 +131,10 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	if (fcmh_isdir(f) && !psclist_empty(&fci->fci_children))
 		return (0);
 
-	if (trylock(&fci->fci_parent->fcmh_lock)) {
-		/* The parent needs to be unlocked after the child is freed,
-		 *  hence the need for the temp var 'p'.
-		 */
-		struct fidc_membh *p = fci->fci_parent;
+	DEBUG_FCMH(PLL_WARN, f, "reaping: %s (%s)", fci->fci_name,
+	    fcmh_isdir(f) ? "dir": "file");
 
-		psc_assert(p);
-		/* This trylock technically violates lock ordering
-		 *  (parent / child) which is why we bail if the
-		 *  parent lock cannot be obtained without blocking.
-		 */
-		fidc_child_free_plocked(f);
-		freelock(&p->fcmh_lock);
-		return (1);
-	}
-
-	return (0);
+	return (1);
 }
 
 /**
