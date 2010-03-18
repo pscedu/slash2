@@ -159,8 +159,9 @@ enum fcmh_opcnt_types {
 };
 
 /* fcmh_setattr() flags */
-#define FCMH_SETATTRF_NONE	0
-#define FCMH_SETATTRF_SAVESIZE	(1 << 0)
+#define FCMH_SETATTRF_NONE		(0 << 0)
+#define FCMH_SETATTRF_SAVESIZE		(1 << 0)
+#define FCMH_SETATTRF_HAVELOCK		(1 << 1)
 
 void			 fidc_init(int, int, int, int (*)(struct fidc_membh *));
 void			 fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);

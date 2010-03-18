@@ -85,9 +85,10 @@ void
 fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
     int flags)
 {
-	int locked = reqlock(&fcmh->fcmh_lock);
 	uint64_t size = 0;
 
+	if (!(flags & FCMH_SETATTRF_HAVELOCK))
+		FCMH_LOCK(fcmh);
 #if 0
 	/* right now, we allow item with FIGGEN_ANY into cache, and
 	 * cache lookup will trigger a getattr on the client, which
@@ -108,15 +109,12 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	if (size)
 		fcmh_2_fsz(fcmh) = size;
 
-	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
-		fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
-		fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
-		psc_waitq_wakeall(&fcmh->fcmh_waitq);
-	} else
-		psc_assert(fcmh->fcmh_state & FCMH_HAVE_ATTRS);
+	fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
+
+	if (!(flags & FCMH_SETATTRF_HAVELOCK))
+		FCMH_ULOCK(fcmh);
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attr set");
-	ureqlock(&fcmh->fcmh_lock, locked);
 }
 
 /**
@@ -360,7 +358,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 
 		/* apply provided attributes to the cache */
 		if (sstb)
-			fcmh_setattr(fcmh, sstb, setattrflags);
+			fcmh_setattr(fcmh, sstb, setattrflags|FCMH_SETATTRF_HAVELOCK);
 
 		FCMH_ULOCK(fcmh);
 		*fcmhp = fcmh;
@@ -414,7 +412,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 * If we fail to initialize it, we should mark it as FREEING.
 	 * Also note that the item is not on any other list yet.
 	 */
-	tmp->fcmh_state |= FCMH_CAC_INITING;
+	fcmh->fcmh_state |= FCMH_CAC_INITING;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
 
@@ -426,20 +424,21 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 */
 	rc = sl_fcmh_ops.sfop_ctor(fcmh);
 	if (rc) 
-		goto out;
+		goto out1;
 
-	FCMH_LOCK(fcmh);
 	if (sstb) {
-		fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
-		fcmh_setattr(fcmh, sstb, setattrflags);
-		goto out;
+		FCMH_LOCK(fcmh);
+		fcmh_setattr(fcmh, sstb, setattrflags | FCMH_SETATTRF_HAVELOCK);
+		goto out2;
 	}
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
 		rc = sl_fcmh_ops.sfop_getattr(fcmh);	/* slc_fcmh_getattr() */
 	} 
 
- out:
+ out1:
+	FCMH_LOCK(fcmh);
+ out2:
 	if (rc) {
 		fcmh->fcmh_state |= FCMH_CAC_FREEING;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
