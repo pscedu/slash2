@@ -394,7 +394,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	LOCK_INIT(&fcmh->fcmh_lock);
 	psc_waitq_init(&fcmh->fcmh_waitq);
 
-
 	fcmh_op_start_type(fcmh, FCMH_OPCNT_NEW);
 
 	COPYFG(&fcmh->fcmh_fg, fgp);
@@ -418,7 +417,6 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	fcmh->fcmh_state |= FCMH_CAC_INITING;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
-
 	/* 
 	 * Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(),
 	 * and sli_fcmh_ctor() to initialize their private fields that follow 
@@ -431,7 +429,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 
 	if (sstb) {
 		FCMH_LOCK(fcmh);
-		fcmh_setattr(fcmh, sstb, setattrflags | FCMH_SETATTRF_HAVELOCK);
+		fcmh_setattr(fcmh, sstb, setattrflags|FCMH_SETATTRF_HAVELOCK);
 		goto out2;
 	}
 	if (flags & FIDC_LOOKUP_LOAD) {
@@ -529,7 +527,6 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	if (f->fcmh_refcnt == 0) {
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
-			lc_remove(&fidcDirtyList, f);
 			f->fcmh_state &= ~FCMH_CAC_DIRTY;
 			lc_remove(&fidcDirtyList, f);
 		}
