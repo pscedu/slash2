@@ -244,7 +244,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	psc_assert(fci->fci_hash == psc_str_hashify(name));
 	psc_assert(strcmp(fci->fci_name, name));
 
-	/* detach myself to my parent */
+	/* detach myself from my parent */
 	fci->fci_parent = NULL;
 	psclist_del(&fci->fci_sibling);
 	
