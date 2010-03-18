@@ -106,33 +106,6 @@ fidc_child_free_plocked(struct fidc_membh *c)
 	ureqlock(&c->fcmh_lock, locked);
 }
 
-/**
- * fidc_child_free_orphan_locked - free an fcmh which has no parent
- *	pointer (and hence, is an 'orphan').  The freeing process here
- *	is less involved than fidc_child_free_plocked() because no
- *	parent data structure needs to be managed.
- * @f: fcmh to be freed.
- */
-static void
-fidc_child_free_orphan_locked(struct fidc_membh *f)
-{
-	struct fcmh_cli_info *fci;
-
-	fci = fcmh_get_pri(f);
-
-	LOCK_ENSURE(&f->fcmh_lock);
-
-	psc_assert(!fci->fci_parent);
-	psc_assert(!(f->fcmh_state & FCMH_CAC_FREEING));
-
-	DEBUG_FCMH(PLL_WARN, f, "name=%s freeing orphan",
-	    fci->fci_name);
-	PSCFREE(fci->fci_name);
-
-	if (fcmh_isdir(f))
-		psc_assert(psclist_empty(&fci->fci_children));
-
-}
 
 /**
  * fidc_child_reap_cb - the callback handler for fidc_reap() is
@@ -146,9 +119,9 @@ fidc_child_reap_cb(struct fidc_membh *f)
 {
 	struct fcmh_cli_info *fci;
 
-	fci = fcmh_get_pri(f);
-
 	LOCK_ENSURE(&f->fcmh_lock);
+
+	fci = fcmh_get_pri(f);
 
 	DEBUG_FCMH(PLL_WARN, f, "fcmh_no_children=%d",
 	    fcmh_isdir(f) ? psclist_empty(&fci->fci_children) : -1);
@@ -160,14 +133,6 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	 */
 	if (fcmh_isdir(f) && !psclist_empty(&fci->fci_children))
 		return (0);
-
-	if (fci->fci_name == NULL)
-		return (1);
-
-	if (!fci->fci_parent) {
-		fidc_child_free_orphan_locked(f);
-		return (1);
-	} 
 
 	if (trylock(&fci->fci_parent->fcmh_lock)) {
 		/* The parent needs to be unlocked after the child is freed,

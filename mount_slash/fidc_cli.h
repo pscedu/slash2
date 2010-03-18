@@ -42,7 +42,7 @@ struct fcmh_cli_info {
 	sl_replica_t		 fci_reptbl[SL_MAX_REPLICAS];
 	int			 fci_nrepls;
 	int			 fci_hash;
-	char			*fci_name;
+	char			*fci_name;	/* what's the name for root? */
 };
 
 #define fcmh_2_fci(f)		((struct fcmh_cli_info *)fcmh_get_pri(f))
