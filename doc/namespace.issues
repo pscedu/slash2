@@ -1,0 +1,44 @@
+03/19/2010
+----------
+
+Looks like the hide_vnode() on a local fuse mount is failing:
+
+root@citron: ~$ tree -a /zhihui_slash2/ | head -20
+/zhihui_slash2/
+|-- .slfidns
+|   |-- 0
+|   |   |-- 0
+|   |   |   |-- 0
+|   |   |   |-- 1
+|   |   |   |-- 2
+|   |   |   |-- 3
+|   |   |   |   |-- 0004000000003ac2
+|   |   |   |   |-- 0004000000003ac7
+|   |   |   |   |-- 0004000000003ac8
+|   |   |   |   `-- 0004000000003eb4
+|   |   |   |-- 4
+|   |   |   |   |-- 000400000000468d
+|   |   |   |   `-- 000400000000468e
+|   |   |   |       `-- newfilehere
+|   |   |   |-- 5
+|   |   |   |-- 6
+|   |   |   |-- 7
+|   |   |   |-- 8
+
+
+We probably can't present both namespaces to the use at the same time to avoid confusing people/shell.
+
+We can do some trick to convert a directory link to a regular file. But ZFS is going to read
+the znode on disk and find out it is really a directory. 
+
+Right now, I have:
+
+root@citron: ~$ ls -ali /zhihui_slash2/.slfidns/0/0/4/
+total 39
+  12 drwx--x--x  6 root root  6 Mar 19 14:56 .
+   7 drwx--x--x 18 root root 18 Mar 19 11:04 ..
+4382 drwxr-xr-x  4 root root  3 Mar 19 14:56 000400000000468d
+4383 drwxr-xr-x  3 root root  3 Mar 19 15:25 000400000000468e
+   ? ?---------  ? ?    ?     ?            ? /zhihui_slash2/.slfidns/0/0/4/000400000000468b	<-- bug here
+   ? ?---------  ? ?    ?     ?            ? /zhihui_slash2/.slfidns/0/0/4/000400000000468c
+
