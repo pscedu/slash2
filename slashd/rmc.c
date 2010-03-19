@@ -334,7 +334,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	/* note that we don't create a cache entry after the creation */
 	mp->fg.fg_fid = slm_get_next_slashid();
 
-	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mp->attr,
+	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
 	    NULL, &mp->attr, &mdsio_data);
 	if (mp->rc == 0)
