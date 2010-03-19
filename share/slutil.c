@@ -177,7 +177,7 @@ int
 checkcreds(const struct srt_stat *sstb, const struct slash_creds *cr,
     int xmode)
 {
-	if (sstb->sst_uid == 0)
+	if (cr->uid == 0)
 		return (0);
 	if (sstb->sst_uid == cr->uid) {
 		if (((xmode & R_OK) && (sstb->sst_mode & S_IRUSR) == 0) ||
