@@ -44,6 +44,12 @@ struct slash_fidgen;
 
 #define SLFIDF_HIDE_DENTRY	(UINT64_C(1) << 0)	/* keep but hide an entry until its log arrives */
 #define SLFIDF_LOCAL_DENTRY	(UINT64_C(1) << 1)	/* don't expose to external nodes */
+/*
+ * Looks like the links in our by-id namespace are all created as regular files.
+ * But some of them are really links to directories. We need a way to only 
+ * allow them to be used as directories for remote clients.
+ */
+#define SLFIDF_DIR_DENTRY	(UINT64_C(1) << 2)	/* a director link */
 
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
