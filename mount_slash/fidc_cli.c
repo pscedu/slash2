@@ -167,19 +167,13 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	struct fidc_membh *c;
 	struct fidc_membh *tmp1;
 	struct fidc_membh *tmp2;
-	int locked;
 
-	locked = reqlock(&p->fcmh_lock);
-
-	psc_assert(fcmh_isdir(p));
-	psc_assert(p->fcmh_refcnt > 0);
-
+	FCMH_LOCK(p);
 	c = fidc_child_lookup_int_locked(p, name);
-	if (!c) {
-		ureqlock(&p->fcmh_lock, locked);
+	FCMH_ULOCK(p);
+
+	if (!c)
 		return;
-	}
-	ureqlock(&p->fcmh_lock, locked);
 
 	spinlock(&c->fcmh_lock);
 
