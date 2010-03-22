@@ -175,7 +175,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	if (!c)
 		return;
 
-	spinlock(&c->fcmh_lock);
+	FCMH_LOCK(c);
 
 	/* Perform some sanity checks on the cached data structure. */
 	fci = fcmh_get_pri(c);
@@ -214,7 +214,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_PARENT);
 	psc_assert(!c->fcmh_refcnt);
 
-	freelock(&c->fcmh_lock);
+	FCMH_ULOCK(c);
 }
 
 /**
@@ -230,8 +230,8 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 
 	DEBUG_FCMH(PLL_INFO, p, "name(%s)", name);
 
-	spinlock(&p->fcmh_lock);
-	spinlock(&c->fcmh_lock);
+	FCMH_LOCK(p);
+	FCMH_LOCK(c);
 
 	fci = fcmh_get_pri(c);
 	if (fci->fci_parent == NULL) {
@@ -246,8 +246,8 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 	} else 
 		psc_assert(fci->fci_parent == p);
 
-	freelock(&c->fcmh_lock);
-	freelock(&p->fcmh_lock);
+	FCMH_ULOCK(c);
+	FCMH_ULOCK(p);
 }
 
 void
