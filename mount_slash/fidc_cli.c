@@ -187,7 +187,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	fci = fcmh_get_pri(c);
 	psc_assert(fci->fci_parent == p);
 	psc_assert(fci->fci_hash == psc_str_hashify(name));
-	psc_assert(strcmp(fci->fci_name, name));
+	psc_assert(strcmp(fci->fci_name, name) == 0);
 
 	/* detach myself from my parent */
 	fci->fci_parent = NULL;
@@ -221,7 +221,6 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	psc_assert(!c->fcmh_refcnt);
 
 	freelock(&c->fcmh_lock);
-
 }
 
 /**
