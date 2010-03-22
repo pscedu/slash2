@@ -42,3 +42,7 @@ total 39
    ? ?---------  ? ?    ?     ?            ? /zhihui_slash2/.slfidns/0/0/4/000400000000468b	<-- bug here
    ? ?---------  ? ?    ?     ?            ? /zhihui_slash2/.slfidns/0/0/4/000400000000468c
 
+We can avoid traverse the two namespaces this way:
+
+yanovich@psc.edu: we knew this when we investigated using directory hardlinking
+yanovich@psc.edu: we just have to use find -maxdepth 3 on the .slfidns
