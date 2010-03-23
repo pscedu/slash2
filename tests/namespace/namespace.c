@@ -1,71 +1,26 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <string.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <signal.h>
-#include <errno.h>
-#include <sys/stat.h>
+/* $Id$ */
+
 #include <sys/types.h>
+#include <sys/stat.h>
+
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "psc_ds/queue.h"
+
 
 /*
- * Tail queue declarations from BSD world.
- */
-#define	TAILQ_HEAD(name, type)						\
-struct name {								\
-	struct type *tqh_first;	/* first element */			\
-	struct type **tqh_last;	/* addr of last next element */		\
-}
-
-#define	TAILQ_NEXT(elm, field) 	((elm)->field.tqe_next)
-#define	TAILQ_EMPTY(head)	((head)->tqh_first == NULL)
-#define	TAILQ_FIRST(head)	((head)->tqh_first)
-
-#define	TAILQ_INIT(head) do {						\
-	TAILQ_FIRST((head)) = NULL;					\
-	(head)->tqh_last = &TAILQ_FIRST((head));			\
-} while (0)
-
-#define	TAILQ_HEAD_INITIALIZER(head)					\
-	{ NULL, &(head).tqh_first }
-
-#define	TAILQ_ENTRY(type)						\
-struct {								\
-	struct type *tqe_next;	/* next element */			\
-	struct type **tqe_prev;	/* address of previous next element */	\
-}
-
-#define	TAILQ_INSERT_HEAD(head, elm, field) do {			\
-	if ((TAILQ_NEXT((elm), field) = TAILQ_FIRST((head))) != NULL)	\
-		TAILQ_FIRST((head))->field.tqe_prev =			\
-		    &TAILQ_NEXT((elm), field);				\
-	else								\
-		(head)->tqh_last = &TAILQ_NEXT((elm), field);		\
-	TAILQ_FIRST((head)) = (elm);					\
-	(elm)->field.tqe_prev = &TAILQ_FIRST((head));			\
-} while (0)
-
-
-#define	TAILQ_PREV(elm, headname, field)				\
-	(*(((struct headname *)((elm)->field.tqe_prev))->tqh_last))
-
-#define	TAILQ_REMOVE(head, elm, field) do {				\
-	if ((TAILQ_NEXT((elm), field)) != NULL)				\
-		TAILQ_NEXT((elm), field)->field.tqe_prev = 		\
-		    (elm)->field.tqe_prev;				\
-	else {								\
-		(head)->tqh_last = (elm)->field.tqe_prev;		\
-	}								\
-	*(elm)->field.tqe_prev = TAILQ_NEXT((elm), field);		\
-} while (0)
-
-/* 
  * I know that the max filename length is something like 1024.
  * But, hey, most filenames are short.  This makes "ls" easier to read.
  */
 
-#define MaxNameLen		32		
+#define MaxNameLen		32
 
 #define	INITIAL_SEED		123
 #define	FILE_PER_DIRECTORY	150
@@ -81,10 +36,10 @@ unsigned long			total_operations = TOTAL_OPERATIONS;
 char random_chars[] = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 struct dir_item {
-	TAILQ_ENTRY(dir_item) list; 
+	TAILQ_ENTRY(dir_item) list;
 	long count;		/* How many entries in this directory */
 	/*
-	 * Inside gdb, use command "print &currentdir->name[0]" to 
+	 * Inside gdb, use command "print &currentdir->name[0]" to
 	 * show its entirety.
 	 */
 	char name[1];		/* This is the complete path */
@@ -149,7 +104,7 @@ int main(int argc, char * argv[])
 		printf("Usage: a.out directory.\n");
 		exit(1);
 	}
- 	ret = chdir(argv[optind]);
+	ret = chdir(argv[optind]);
 	if (ret < 0) {
 		printf("Cannot set working directory to %s!\n", argv[1]);
 		exit(1);
@@ -170,7 +125,7 @@ int main(int argc, char * argv[])
 	strcpy(thisdir->name, ptr);
 
 	TAILQ_INIT(&dirlist);
-	TAILQ_INSERT_HEAD(&dirlist, thisdir, list); 
+	TAILQ_INSERT_HEAD(&dirlist, thisdir, list);
 	totaldirs = 1;
 
 	signal(SIGINT, sigcatch);
@@ -189,7 +144,7 @@ int main(int argc, char * argv[])
 		choose_working_directory();
 		delete_create_file();
 		if ((print ++ % 5) == 0) {
-			printf("Files = %08ld, dirs = %06ld, ops = %08ld\n", 
+			printf("Files = %08ld, dirs = %06ld, ops = %08ld\n",
 				totalfiles, totaldirs, operation_count);
 		}
 	}
@@ -285,7 +240,7 @@ void delete_random_file(void)
 			print_statistics();
 			exit(0);
 		}
-			
+
 		bcopy(dirp->d_name, entry->name, strlen(dirp->d_name)+1);
 		entry->type = dirp->d_type;
 		preventry = NULL;
@@ -310,7 +265,7 @@ void delete_random_file(void)
 		 * This must be a file system code bug.
 		 */
 		printf("Directory: %s, ", currentdir->name);
-		printf("%ld entries expected, %d found!\007\n", 
+		printf("%ld entries expected, %d found!\007\n",
 				currentdir->count, totalentry);
 		time(&time2);
 		print_statistics();
@@ -321,13 +276,13 @@ void delete_random_file(void)
 		entry = entry->next;
 		whichfile --;
 	}
-	if (entry->type == DT_DIR) { 
+	if (entry->type == DT_DIR) {
 		ret = rmdir(entry->name);
 		if (ret < 0) {
 			if (errno == ENOTEMPTY)
 				goto out;
 
-			printf("Fail to delete directory %s, errno = %d\n", 
+			printf("Fail to delete directory %s, errno = %d\n",
 				entry->name, errno);
 			exit(1);
 		}
@@ -365,13 +320,13 @@ void delete_random_file(void)
 	} else {
 		ret = stat(entry->name, &sb);
 		if (ret < 0) {
-			printf("Fail to stat file %s, ret = %d, errno = %d\n", 
+			printf("Fail to stat file %s, ret = %d, errno = %d\n",
 				entry->name, ret, errno);
 			exit(1);
 		}
 		ret = unlink(entry->name);
 		if (ret < 0) {
-			printf("Fail to delete file %s, errno = %d\n", 
+			printf("Fail to delete file %s, errno = %d\n",
 				entry->name, errno);
 			exit(1);
 		}
@@ -402,7 +357,7 @@ void create_random_file(void)
 	x = (1.0 * random()) / RAND_MAX;
 
 	filename = make_name();
-	
+
 	if (x < dirprob) {
 		/*
 		 * Using strcat() is dangerous because I must make sure that
@@ -505,7 +460,7 @@ void print_statistics(void)
 	printf("Delete file operations: %ld\n", delete_file_count);
 	printf("Create dir operations: %ld\n", create_dir_count);
 	printf("Create file operations: %ld\n", create_file_count);
-	printf("\nTotal files: %ld, dirs: %ld, ops: %lu\n", 	
+	printf("\nTotal files: %ld, dirs: %ld, ops: %lu\n",
 			totalfiles, totaldirs, operation_count);
 	/*
 	 * lib/libc/stdtime/difftime.c.
