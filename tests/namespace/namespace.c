@@ -27,7 +27,8 @@
 #define	TOTAL_OPERATIONS	1000
 
 unsigned int			seed = INITIAL_SEED;
-unsigned long			total_operations = TOTAL_OPERATIONS;
+long				total_operations = TOTAL_OPERATIONS;
+int				file_per_directory = FILE_PER_DIRECTORY;
 
 /*
  * If you include '-' in the following list, you can have a little
@@ -83,7 +84,6 @@ int main(int argc, char * argv[])
 	int c;
 	int size;
 	int ret, print;
-	const char * p;
 	struct dir_item * thisdir;
 	char *buf;
 	char *ptr;
@@ -95,6 +95,9 @@ int main(int argc, char * argv[])
 				break;
 			case 'o':
 				total_operations = atol(optarg);
+				break;
+			case 'f':
+				file_per_directory = atoi(optarg);
 				break;
 			default:
 				break;
@@ -351,9 +354,9 @@ void create_random_file(void)
 	int fd, ret, len;
 	struct dir_item * tmpdir;
 	char * filename, * newdirname;
-	double x, y, dirprob;
+	double x, dirprob;
 
-	dirprob = 1.0 / FILE_PER_DIRECTORY;
+	dirprob = 1.0 / file_per_directory;
 	x = (1.0 * random()) / RAND_MAX;
 
 	filename = make_name();
@@ -418,7 +421,7 @@ char * make_name(void)
 {
 	char * namebuf;
 	struct stat sb;
-	int i, x, len, ret;
+	int i, len, ret;
 
 again:
 
@@ -443,7 +446,7 @@ again:
 
 } /* end of make_name() */
 
-void sigcatch(int n)
+void sigcatch(int sig)
 {
 	time(&time2);
 	print_statistics();
