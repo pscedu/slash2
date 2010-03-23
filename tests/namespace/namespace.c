@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 
 #include <dirent.h>
+#include <time.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -13,7 +14,6 @@
 #include <unistd.h>
 
 #include "psc_ds/queue.h"
-
 
 /*
  * I know that the max filename length is something like 1024.
