@@ -798,9 +798,6 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 
 	msfsthr_ensure();
 
-	iov[0].iov_base = NULL;
-	iov[1].iov_base = NULL;
-
 	/* Don't allow writes on directory inodes.
 	 */
 	if (fi->flags & (O_WRONLY | O_RDWR))
