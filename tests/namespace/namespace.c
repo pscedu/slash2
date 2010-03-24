@@ -295,7 +295,8 @@ void delete_random_file(void)
 		whichfile --;
 	}
 	/* /usr/include/dirent.h: DT_DIR = 4, DT_REG = 8, DT_UNKNOWN = 0 */
-	if (entry->type == DT_DIR) {
+	switch (entry->type) {
+	    case DT_DIR:
 		/* Hmm, looks like directory almost will never be removed */
 		ret = rmdir(entry->name);
 		if (ret < 0) {
@@ -337,7 +338,8 @@ void delete_random_file(void)
 		TAILQ_REMOVE(&dirlist, tmpdir, list);
 		free(tmpdir);
 		totaldirs --;
-	} else {
+		break;
+	    case DT_REG:
 		ret = stat(entry->name, &sb);
 		if (ret < 0) {
 			printf("Fail to stat file %s, ret = %d, errno = %d\n",
@@ -353,6 +355,11 @@ void delete_random_file(void)
 		totalfiles --;
 		delete_file_count ++;
 		operation_count ++;
+		break;
+	    default:
+		printf("Unexpected directory type %d\n", entry->type);
+		exit(1);
+		break;
 	}
 	currentdir->count --;
 out:
@@ -467,6 +474,7 @@ again:
 void sigcatch(__unusedx int sig)
 {
 	time(&time2);
+	printf("Operation interrupted by signal %d.\n", sig); 
 	print_statistics();
 	exit(1);
 
