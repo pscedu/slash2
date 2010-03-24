@@ -67,7 +67,7 @@ long create_dir_count;
 long create_file_count;
 long operation_count;
 
-char * make_name(void);
+char * make_name(int);
 void delete_create_file(void);
 void delete_random_file(void);
 void create_random_file(void);
@@ -225,7 +225,6 @@ void delete_create_file(void)
 void delete_random_file(void)
 {
 	DIR * dp;
-	struct stat sb;
 	struct dirent * dirp;
 	struct dir_item * tmpdir;
 	char * olddirname, * tmpdirname;
@@ -256,6 +255,7 @@ void delete_random_file(void)
 		}
 
 		bcopy(dirp->d_name, entry->name, strlen(dirp->d_name)+1);
+		/* /usr/include/dirent.h: DT_DIR = 4, DT_REG = 8, DT_UNKNOWN = 0 */
 		entry->type = dirp->d_type;
 		preventry = NULL;
 		tempentry = listhead;
@@ -291,9 +291,13 @@ void delete_random_file(void)
 		entry = entry->next;
 		whichfile --;
 	}
-	/* /usr/include/dirent.h: DT_DIR = 4, DT_REG = 8, DT_UNKNOWN = 0 */
-	switch (entry->type) {
-	    case DT_DIR:
+	/*
+	 * Looks like d_type is not supported by FUSE/slash2.  Instead of
+	 * doing a stat() to find out the file type, I use the first
+	 * letter of the names to distinguish them.
+	 */
+	switch (entry->name[0]) {
+	    case 'd':
 		/* Hmm, looks like directory almost will never be removed */
 		ret = rmdir(entry->name);
 		if (ret < 0) {
@@ -304,8 +308,6 @@ void delete_random_file(void)
 				entry->name, errno);
 			exit(1);
 		}
-		delete_dir_count ++;
-		operation_count ++;
 
 		len = strlen(currentdir->name) + 1 + strlen(entry->name);
 		tmpdirname = olddirname = malloc(len + 1);
@@ -335,14 +337,9 @@ void delete_random_file(void)
 		TAILQ_REMOVE(&dirlist, tmpdir, list);
 		free(tmpdir);
 		totaldirs --;
+		delete_dir_count ++;
 		break;
-	    case DT_REG:
-		ret = stat(entry->name, &sb);
-		if (ret < 0) {
-			printf("Fail to stat file %s, ret = %d, errno = %d\n",
-				entry->name, ret, errno);
-			exit(1);
-		}
+	    case 'f':
 		ret = unlink(entry->name);
 		if (ret < 0) {
 			printf("Fail to delete file %s, errno = %d\n",
@@ -351,13 +348,13 @@ void delete_random_file(void)
 		}
 		totalfiles --;
 		delete_file_count ++;
-		operation_count ++;
 		break;
 	    default:
-		printf("Unexpected directory type %d\n", entry->type);
+		printf("Unexpected directory entry type %c\n", entry->name[0]);
 		exit(1);
 		break;
 	}
+	operation_count ++;
 	currentdir->count --;
 out:
 	entry = listhead;
@@ -380,9 +377,9 @@ void create_random_file(void)
 	dirprob = 1.0 / file_per_directory;
 	x = (1.0 * random()) / RAND_MAX;
 
-	filename = make_name();
 
 	if (x < dirprob) {
+		filename = make_name(1);
 		/*
 		 * Using strcat() is dangerous because I must make sure that
 		 * the destination string has enough memory.  Otherwise,
@@ -408,28 +405,25 @@ void create_random_file(void)
 					newdirname, errno);
 			exit(1);
 		}
-
 		TAILQ_INSERT_HEAD(&dirlist, tmpdir, list);
 
-		currentdir->count ++;
-		free(filename);
 		totaldirs ++;
 		create_dir_count ++;
-		operation_count ++;
-		return;
+	} else {
+		filename = make_name(0);
+		fd = creat(filename, S_IRWXU);
+		if (fd < 0) {
+			printf("Fail to create file %s, errno = %d!\n",
+					filename, errno);
+			exit(1);
+		}
+		close(fd);
+		totalfiles ++;
+		create_file_count ++;
 	}
-	fd = creat(filename, S_IRWXU);
-	if (fd < 0) {
-		printf("Fail to create file %s, errno = %d!\n",
-				filename, errno);
-		exit(1);
-	}
-	close(fd);
-	free(filename);
-	totalfiles ++;
-	create_file_count ++;
-	operation_count ++;
 
+	free(filename);
+	operation_count ++;
 	currentdir->count ++;
 
 } /* end of create_random_file() */
@@ -438,7 +432,7 @@ void create_random_file(void)
  * Create a random file name of random length.  If this name is for
  * a regular file, it will be freed up immediately after use.
  */
-char * make_name(void)
+char * make_name(int dir)
 {
 	char * namebuf;
 	struct stat sb;
@@ -449,10 +443,14 @@ again:
 	len = random() % MaxNameLen + 1;	/* make sure len >= 1 */
 	namebuf = malloc(len + 1);
 
-	for (i = 0; i < len; i++) {
+	for (i = 1; i < len; i++) {
 		namebuf[i] = random_chars[random() % strlen(random_chars)];
 	}
 	namebuf[i] = '\0';
+	if (dir)
+		namebuf[0] = 'd';
+	else
+		namebuf[0] = 'f';
 
 	/* this slows things down for each operation */
 	ret = stat(namebuf, &sb);
