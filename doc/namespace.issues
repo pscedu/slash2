@@ -46,3 +46,50 @@ We can avoid traverse the two namespaces this way:
 
 yanovich@psc.edu: we knew this when we investigated using directory hardlinking
 yanovich@psc.edu: we just have to use find -maxdepth 3 on the .slfidns
+
+03/24/2010
+----------
+
+We did an almost rewrite of the FID cache, and I did some experiments with a new test.  The setup are as follows:
+
+root@citron: ~/projects/slash_nara/slashd$ PSC_LOG_LEVEL=3 gdb ./slashd
+(gdb) r -p ~/zhihui_slash2.cf zhihui_slash2 2>/local/mds.log
+
+
+root@grapefruit: ~/projects/slash_nara/mount_slash$ PSC_LOG_LEVEL=3 SLASH_MDS_NID="citron@PSC" SLASH2_PIOS_ID="bessemer@PSC" gdb ./mount_slash
+(gdb) r /slash2 2> /local/client.log
+
+
+
+zhihui@grapefruit: ~/projects/slash_nara/tests/namespace$ ./namespace -o 100000 /slash2/zhihui/testdir/
+
+......
+
+
+Files = 00011542, dirs = 000075, ops = 00011616
+Files = 00011547, dirs = 000075, ops = 00011621
+Files = 00011552, dirs = 000075, ops = 00011626
+Files = 00011557, dirs = 000075, ops = 00011631
+
+Delete dir operations: 0
+Delete file operations: 0
+Create dir operations: 74
+Create file operations: 11560
+
+Total files: 11560, dirs: 75, ops: 11634
+Time used to age the directory is 1100.000000
+
+It is very slow until I pressed control+C to stop it.
+
+Potential reasons for slowness:
+
+(1) Logging
+	
+	(gdb) shell ls -al /local/mds.log 
+	-rw-r--r-- 1 root root 118159248 Mar 24 10:25 /local/mds.log
+	(gdb) shell ls -al /local/client.log
+	-rw-r--r-- 1 root root 360103727 Mar 24 10:26 /local/client.log
+
+(2) test program: it has to do a lot of small allocations to scan a directory.
+
+(3) FID cache issues: too many duplicate asserts.
