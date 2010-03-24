@@ -121,9 +121,9 @@ int main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	ret = chdir(argv[0]);
+	ret = chdir(argv[optind]);
 	if (ret < 0) {
-		printf("Cannot set working directory to %s!\n", argv[0]);
+		printf("Cannot set working directory to %s!\n", argv[optind]);
 		exit(1);
 	}
 	size = pathconf(".", _PC_PATH_MAX);
