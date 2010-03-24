@@ -90,6 +90,7 @@ Potential reasons for slowness:
 	(gdb) shell ls -al /local/client.log
 	-rw-r--r-- 1 root root 360103727 Mar 24 10:26 /local/client.log
 
-(2) test program: it has to do a lot of small allocations to scan a directory.
+(2) test program: it has to do a lot of small allocations to scan a directory. It also
+    has to do stat() to avoid reuse a filename.
 
 (3) FID cache issues: too many duplicate asserts.

@@ -437,6 +437,7 @@ again:
 	}
 	namebuf[i] = '\0';
 
+	/* this slows things down for each operation */
 	ret = stat(namebuf, &sb);
 	if (ret == 0) {
 		printf("Filename %s was used before, try again...\n", namebuf);
