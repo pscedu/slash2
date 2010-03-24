@@ -73,6 +73,7 @@ void create_random_file(void);
 void choose_working_directory(void);
 
 void sigcatch(int);
+
 void print_statistics(void);
 
 time_t time1, time2;
@@ -104,7 +105,7 @@ int main(int argc, char * argv[])
 		}
 	}
 	if (argc <= optind) {
-		printf("Usage: a.out directory.\n");
+		printf("Usage: a.out [-s seed] [-o operations] [-f fileperdir] directory.\n");
 		exit(1);
 	}
 	ret = chdir(argv[optind]);
