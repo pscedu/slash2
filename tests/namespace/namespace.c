@@ -440,7 +440,7 @@ char * make_name(int dir)
 
 again:
 
-	len = random() % MaxNameLen + 1;	/* make sure len >= 1 */
+	len = random() % MaxNameLen + 2;	/* make sure len >= 2, because we now reserve the first character */
 	namebuf = malloc(len + 1);
 
 	for (i = 1; i < len; i++) {
