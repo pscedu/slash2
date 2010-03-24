@@ -32,7 +32,7 @@ int				file_per_directory = FILE_PER_DIRECTORY;
 
 /*
  * If you include '-' in the following list, you can have a little
- * trouble deleting the files whose name begins with '-'.
+ * trouble deleting a file whose name begins with '-'.
  */
 char random_chars[] = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -105,7 +105,7 @@ int main(int argc, char * argv[])
 		}
 	}
 	if (argc <= optind) {
-		printf("Usage: a.out [-s seed] [-o operations] [-f fileperdir] directory.\n");
+		printf("Usage: a.out [-s seed] [-o operations] [-f fileperdir] empty-directory.\n");
 		exit(1);
 	}
 	ret = chdir(argv[optind]);
@@ -173,7 +173,7 @@ void choose_working_directory(void)
 	 * This function returns a number between 0 and totaldirs - 1
 	 * inclusive.
 	 */
-	whichdir = (totaldirs / RAND_MAX) * random();
+	whichdir = totaldirs  * (1.0 * random() / RAND_MAX);
 
 	currentdir = TAILQ_FIRST(&dirlist);
 	for (i = 0; i < whichdir; i++) {
@@ -223,7 +223,6 @@ void delete_random_file(void)
 	if (currentdir->count == 0)
 		return;
 
-	whichfile = random();
 	dp = opendir(currentdir->name);
 	if (dp == NULL) {
 		printf("Fail to open directory %s, errno = %d!\n",
@@ -234,7 +233,7 @@ void delete_random_file(void)
 	totalentry = 0;
 	listhead = NULL;
 	while ((dirp = readdir(dp)) != NULL) {
-		/* skip special files: dot, dotdot, and others begin with a dot*/
+		/* skip special files: dot, dotdot, and others begin with a dot. */
 		if (dirp->d_name[0] == '.')
 			continue;
 		entry = malloc(sizeof(struct dir_entry) + strlen(dirp->d_name));
@@ -276,6 +275,7 @@ void delete_random_file(void)
 		print_statistics();
 		exit(0);
 	}
+	whichfile = totalentry * (1.0 * random() / RAND_MAX);
 	entry = listhead;
 	while (whichfile) {
 		entry = entry->next;
@@ -468,9 +468,7 @@ void print_statistics(void)
 	printf("Create file operations: %ld\n", create_file_count);
 	printf("\nTotal files: %ld, dirs: %ld, ops: %lu\n",
 			totalfiles, totaldirs, operation_count);
-	/*
-	 * lib/libc/stdtime/difftime.c.
-	 */
+
 	elapsetime = difftime(time2, time1);
 	printf("Time used to age the directory is %f seconds.\n", elapsetime);
 
