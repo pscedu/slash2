@@ -13,6 +13,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pfl/cdefs.h"
 #include "psc_ds/queue.h"
 
 /*
@@ -80,7 +81,18 @@ time_t time1, time2;
 
 long file_count_16384 = 0;
 
-int main(int argc, char * argv[])
+const char *progname;
+
+__dead void
+usage(void)
+{
+	fprintf(stderr,
+	    "usage: %s [-s seed] [-o operations] [-f fileperdir] empty-directory\n",
+	    progname);
+	exit(1);
+}
+
+int main(int argc, char *argv[])
 {
 	int c;
 	int size;
@@ -89,7 +101,8 @@ int main(int argc, char * argv[])
 	char *buf;
 	char *ptr;
 
-	while ((c = getopt (argc, argv, "o:s:")) != -1) {
+	progname = argv[0];
+	while ((c = getopt (argc, argv, "f:o:s:")) != -1) {
 		switch (c) {
 			case 's':
 				seed = atoi(optarg);
@@ -101,20 +114,20 @@ int main(int argc, char * argv[])
 				file_per_directory = atoi(optarg);
 				break;
 			default:
-				break;
+				usage();
 		}
 	}
-	if (argc <= optind) {
-		printf("Usage: a.out [-s seed] [-o operations] [-f fileperdir] empty-directory.\n");
-		exit(1);
-	}
-	ret = chdir(argv[optind]);
+	argc -= optind;
+	if (argc != 1)
+		usage();
+
+	ret = chdir(argv[0]);
 	if (ret < 0) {
-		printf("Cannot set working directory to %s!\n", argv[1]);
+		printf("Cannot set working directory to %s!\n", argv[0]);
 		exit(1);
 	}
 	size = pathconf(".", _PC_PATH_MAX);
-	if ((buf = (char *)malloc((size_t)size)) != NULL)
+	if ((buf = malloc((size_t)size)) != NULL)
 		 ptr = getcwd(buf, (size_t)size);
 
 	printf("Seed = %u, total operation = %ld\n", seed, total_operations);
@@ -451,7 +464,7 @@ again:
 
 } /* end of make_name() */
 
-void sigcatch(int sig)
+void sigcatch(__unusedx int sig)
 {
 	time(&time2);
 	print_statistics();
