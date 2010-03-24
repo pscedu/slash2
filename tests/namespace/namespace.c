@@ -165,7 +165,6 @@ int main(int argc, char *argv[])
 				totalfiles, totaldirs, operation_count);
 		}
 	}
-	time(&time2);
 	print_statistics();
 
 	exit(0);
@@ -252,7 +251,6 @@ void delete_random_file(void)
 		entry = malloc(sizeof(struct dir_entry) + strlen(dirp->d_name));
 		if (entry == NULL) {
 			printf("Not enough memory to continue...\n");
-			time(&time2);
 			print_statistics();
 			exit(0);
 		}
@@ -284,7 +282,6 @@ void delete_random_file(void)
 		printf("Directory: %s, ", currentdir->name);
 		printf("%ld entries expected, %d found!\007\n",
 				currentdir->count, totalentry);
-		time(&time2);
 		print_statistics();
 		exit(0);
 	}
@@ -473,7 +470,6 @@ again:
 
 void sigcatch(__unusedx int sig)
 {
-	time(&time2);
 	printf("Operation interrupted by signal %d.\n", sig); 
 	print_statistics();
 	exit(1);
@@ -484,6 +480,7 @@ void print_statistics(void)
 {
 	double elapsetime;
 
+	time(&time2);
 	printf("\n");
 	printf("Delete dir operations: %ld\n", delete_dir_count);
 	printf("Delete file operations: %ld\n", delete_file_count);
