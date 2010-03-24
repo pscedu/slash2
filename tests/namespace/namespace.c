@@ -281,6 +281,7 @@ void delete_random_file(void)
 		entry = entry->next;
 		whichfile --;
 	}
+	/* /usr/include/dirent.h: DT_DIR = 4, DT_REG = 8, DT_UNKNOWN = 0 */
 	if (entry->type == DT_DIR) {
 		/* Hmm, looks like directory almost will never be removed */
 		ret = rmdir(entry->name);
