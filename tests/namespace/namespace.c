@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
 	/*
 	 * I assume that the root directory is empty.
 	 */
-	thisdir = malloc(sizeof(struct dir_item) + size);
+	thisdir = malloc(sizeof(struct dir_item) + strlen(ptr) + 1);
 	thisdir->count = 0;
 	strcpy(thisdir->name, ptr);
 
