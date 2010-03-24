@@ -195,10 +195,10 @@ void choose_working_directory(void)
  */
 void delete_create_file(void)
 {
-	long x;
+	double x;
 
-	x = random() / RAND_MAX ;
-	if (x >= 0.7 * RAND_MAX) {
+	x = (1.0 * random()) / RAND_MAX ;
+	if (x >= 0.7) {
 		delete_random_file();
 	} else {
 		create_random_file();
@@ -234,7 +234,7 @@ void delete_random_file(void)
 	totalentry = 0;
 	listhead = NULL;
 	while ((dirp = readdir(dp)) != NULL) {
-		/* skip special files: dot, dotdot, and others */
+		/* skip special files: dot, dotdot, and others begin with a dot*/
 		if (dirp->d_name[0] == '.')
 			continue;
 		entry = malloc(sizeof(struct dir_entry) + strlen(dirp->d_name));
@@ -266,7 +266,8 @@ void delete_random_file(void)
 	}
 	if (currentdir->count != totalentry) {
 		/*
-		 * This must be a file system code bug.
+		 * This may be a file system code bug if the test directory
+		 * is empty when the test started.
 		 */
 		printf("Directory: %s, ", currentdir->name);
 		printf("%ld entries expected, %d found!\007\n",
@@ -281,6 +282,7 @@ void delete_random_file(void)
 		whichfile --;
 	}
 	if (entry->type == DT_DIR) {
+		/* Hmm, looks like directory almost will never be removed */
 		ret = rmdir(entry->name);
 		if (ret < 0) {
 			if (errno == ENOTEMPTY)
@@ -470,6 +472,6 @@ void print_statistics(void)
 	 * lib/libc/stdtime/difftime.c.
 	 */
 	elapsetime = difftime(time2, time1);
-	printf("Time used to age the directory is %f\n", elapsetime);
+	printf("Time used to age the directory is %f seconds.\n", elapsetime);
 
 } /* end of print_statistics() */
