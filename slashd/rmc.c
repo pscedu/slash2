@@ -393,7 +393,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	    fcmh_2_mdsio_data(fcmh));
 	mp->size = outsize;
 
-	psc_info("mdsio_readdir rc=%d data=%p", mp->rc,
+	psc_info("mdsio_readdir: rc=%d, data=%p", mp->rc,
 	    fcmh_2_mdsio_data(fcmh));
 
 	if (mp->rc)
@@ -682,23 +682,26 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
-	struct fidc_membh *p;
+	struct fidc_membh *fcmh;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->pfg, &p);
+	mp->rc = slm_fcmh_get(&mq->pfg, &fcmh);
 	if (mp->rc)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (isfile)
-		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p),
+		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(fcmh),
 		    mq->name, &rootcreds);
 	else
-		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p),
+		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(fcmh),
 		    mq->name, &rootcreds);
+
+	psc_info("mdsio_unlink: name = %s, rc=%d, data=%p", mq->name, mp->rc,
+	    fcmh_2_mdsio_data(fcmh));
  out:
-	if (p)
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+	if (fcmh)
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
 	return (0);
 }
