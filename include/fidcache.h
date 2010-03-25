@@ -86,15 +86,16 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 #define	FCMH_CAC_CLEAN		0x0002		/* (1 << 1) in clean cache */
 #define	FCMH_CAC_DIRTY		0x0004		/* (1 << 2) in dirty cache, "dirty" means not reapable */
 
-#define	FCMH_CAC_FREEING	0x0008		/* (1 << 3) this item is being freed */
-#define	FCMH_CAC_INITING	0x0010		/* (1 << 4) this item is being initialized */
-#define	FCMH_CAC_WAITING	0x0020		/* (1 << 5) this item is being waited on */
+#define	FCMH_CAC_FAILED		0x0008		/* (1 << 3) fail in lookup */
+#define	FCMH_CAC_FREEING	0x0010		/* (1 << 4) this item is being freed */
+#define	FCMH_CAC_INITING	0x0020		/* (1 << 5) this item is being initialized */
+#define	FCMH_CAC_WAITING	0x0040		/* (1 << 6) this item is being waited on */
 
-#define	FCMH_HAVE_ATTRS		0x0040		/* (1 << 6) has valid stat info */
-#define	FCMH_GETTING_ATTRS	0x0080		/* (1 << 7) fetching stat info */
-#define	FCMH_WAITING_ATTRS	0x0100		/* (1 << 8) someone is waiting */
+#define	FCMH_HAVE_ATTRS		0x0080		/* (1 << 7) has valid stat info */
+#define	FCMH_GETTING_ATTRS	0x0100		/* (1 << 8) fetching stat info */
+#define	FCMH_WAITING_ATTRS	0x0200		/* (1 << 9) someone is waiting */
 
-#define	_FCMH_FLGSHFT		0x0200		/* (1 << 9) */
+#define	_FCMH_FLGSHFT		0x0400		/* (1 << 10) */
 
 /*
  * If fuse_ino_t, declared 'unsigned long', is 4 bytes, inums will get

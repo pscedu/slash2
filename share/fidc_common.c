@@ -406,7 +406,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	FCMH_LOCK(fcmh);
  out2:
 	if (rc) {
-		fcmh->fcmh_state |= FCMH_CAC_FREEING;
+		fcmh->fcmh_state |= FCMH_CAC_FAILED;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	} else {
 		*fcmhp = fcmh;
@@ -490,6 +490,12 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
+		/* check if we fail to initialize a new fcmh */
+		if (f->fcmh_state & FCMH_CAC_FAILED) {
+			psc_hashent_remove(&fidcHtable, f);
+			fcmh_put(f);
+			return;
+		}
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			f->fcmh_state &= ~FCMH_CAC_DIRTY;
