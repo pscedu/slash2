@@ -44,22 +44,8 @@ struct psc_listcache	 fidcDirtyList;
 struct psc_listcache	 fidcCleanList;
 struct psc_hashtbl	 fidcHtable;
 
-
-/**
- * fcmh_get - Grab/Allocate a clean/unused FID cache member handle from
- *	the pool.
- */
-static struct fidc_membh *
-fcmh_get(void)
-{
-	return (psc_pool_get(fidcPool));
-}
-
-static void
-fcmh_put(struct fidc_membh *f)
-{
-	psc_pool_return(fidcPool, f);
-}
+#define	fcmh_get()	psc_pool_get(fidcPool)
+#define	fcmh_put(f)	psc_pool_return(fidcPool, f)
 
 /**
  * fcmh_dtor - Destructor for FID cache member handles.
