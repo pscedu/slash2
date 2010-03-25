@@ -271,50 +271,31 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	fcmh = NULL;
 	psc_hashbkt_lock(b);
 	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
+		/*
+		 * Note that generation number is only used to track truncations.
+		 */
 		if (searchfg.fg_fid != fcmh_2_fid(tmp))
 			continue;
 		FCMH_LOCK(tmp);
-		/* Be sure to ignore any inodes which are freeing unless
-		 *  we are removing the inode from the cache.
-		 *  This is necessary to avoid a deadlock between fidc_reap()
-		 *  which has the fcmh_lock before calling fidc_put_locked,
-		 *  which calls this function with del==1.  This is described
-		 *  in Bug #13.
-		 */
+
+		/* if the item is being freed, ingore it */
 		if (tmp->fcmh_state & FCMH_CAC_FREEING) {
 			DEBUG_FCMH(PLL_WARN, tmp, "tmp fcmh is FREEING");
 			FCMH_ULOCK(tmp);
 			sched_yield();
 			continue;
 		}
+		/* if the item is being inited, take a reference and wait */
 		if (tmp->fcmh_state & FCMH_CAC_INITING) {
 			psc_hashbkt_unlock(b);
-			/* take a reference before waiting, in case the item
-			 * goes away beneath us */
 			tmp->fcmh_state |= FCMH_CAC_WAITING;
 			fcmh_op_start_type(tmp, FCMH_OPCNT_WAIT);
 			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
 			fcmh_op_done_type(tmp, FCMH_OPCNT_WAIT);
 			goto restart;
 		}
-
-		if (searchfg.fg_gen == fcmh_2_gen(tmp)) {
-			fcmh = tmp;
-			break;
-		}
-		/* Look for the highest generation number.  */
-		if (searchfg.fg_gen == FIDGEN_ANY) {
-			if (!fcmh) {
-				fcmh = tmp;
-				continue;
-			}
-			if (fcmh_2_gen(fcmh) < fcmh_2_gen(tmp)) {
-				FCMH_ULOCK(fcmh);
-				fcmh = tmp;
-				continue;
-			}
-		}
-		FCMH_ULOCK(tmp);
+		fcmh = tmp;
+		break;
 	}
 
 	/*
