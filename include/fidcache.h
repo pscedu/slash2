@@ -112,6 +112,7 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 
 #define FCMH_LOCK(f)		spinlock(&(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock(&(f)->fcmh_lock)
+#define FCMH_TRYLOCK(f)		trylock(&(f)->fcmh_lock)
 #define FCMH_RLOCK(f)		reqlock(&(f)->fcmh_lock)
 #define FCMH_URLOCK(f, lk)	ureqlock(&(f)->fcmh_lock, (lk))
 #define FCMH_LOCK_ENSURE(f)	LOCK_ENSURE(&(f)->fcmh_lock)

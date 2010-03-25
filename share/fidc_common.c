@@ -126,47 +126,33 @@ fidc_reap(struct psc_poolmgr *m)
 {
 	struct fidc_membh *f, *tmp;
 	struct psc_dynarray da = DYNARRAY_INIT;
-	struct psc_hashbkt *b;
 	int i;
 
 	psc_assert(m == fidcPool);
- startover:
+
 	LIST_CACHE_LOCK(&fidcCleanList);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcCleanList) {
-		DEBUG_FCMH(PLL_INFO, f, "considering for reap");
 
 		if (psclg_size(&m->ppm_lg) + psc_dynarray_len(&da) >=
 		    atomic_read(&m->ppm_nwaiters) + 1)
 			break;
 
-		b = psc_hashbkt_get(&fidcHtable, &fcmh_2_fid(f));
-		if (!psc_hashbkt_trylock(b)) {
-			LIST_CACHE_ULOCK(&fidcCleanList);
-			sched_yield();
-			goto startover;
-		}
+		/* skip the root right now, no need for locking */
+		if (fcmh_2_fid(f) == 1)
+			continue;
 
-		/* - Inode must be lockable now
-		 * - Skip the root inode.
-		 * - Clean inodes may have non-zero refcnts,
-		 */
-		if (!trylock(&f->fcmh_lock))
-			goto end2;
+		if (!FCMH_TRYLOCK(f))
+			continue;
 
-		if (fcmh_2_fid(f) == 1 || (f->fcmh_refcnt))
-			goto end1;
-		/* Make sure our clean list is 'clean' by
-		 *  verifying the following conditions.
-		 */
-		if (!(f->fcmh_state & FCMH_CAC_CLEAN)) {
-			DEBUG_FCMH(PLL_FATAL, f,
-			    "Invalid fcmh state for clean list");
-			psc_fatalx("Invalid state for clean list");
-		}
-		/* Skip inodes which already claim to be freeing
-		 */
+		/* skip items in use */
+		if (f->fcmh_refcnt)
+			goto end;
+
+		psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
+
+		/* already vitimized */
 		if (f->fcmh_state & FCMH_CAC_FREEING)
-			goto end1;
+			goto end;
 
 		/* Call into the system specific 'reap' code.
 		 *  On the client this means taking the fcmh from the
@@ -177,10 +163,8 @@ fidc_reap(struct psc_poolmgr *m)
 			lc_remove(&fidcCleanList, f);
 			psc_dynarray_add(&da, f);
 		}
- end1:
-		freelock(&f->fcmh_lock);
- end2:
-		psc_hashbkt_unlock(b);
+ end:
+		FCMH_ULOCK(f);
 	}
 	LIST_CACHE_ULOCK(&fidcCleanList);
 
