@@ -82,10 +82,10 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 	slash_inode_handle_init(&fmi->fmi_inodeh, fcmh, mds_inode_sync);
 
 	rc = mdsio_lookup_slfid(fcmh->fcmh_fg.fg_fid, &rootcreds,
-	    &fcmh->fcmh_sstb, &fcmh->fcmh_fg.fg_gen,
-	    &fcmh_2_mdsio_fid(fcmh));
+	    &fcmh->fcmh_sstb, &fcmh_2_mdsio_fid(fcmh));
 	if (rc)
 		return (rc);
+	fcmh->fcmh_fg.fg_gen = fcmh->fcmh_sstb.sst_gen;
 
 	if (fcmh_isdir(fcmh))
 		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh),

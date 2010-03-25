@@ -268,9 +268,9 @@ mdsio_lookup(mdsio_fid_t pino, const char *cpn, struct slash_fidgen *fgp,
 
 int
 mdsio_lookup_slfid(slfid_t fid, const struct slash_creds *crp,
-    struct srt_stat *sstb, slfgen_t *gp, mdsio_fid_t *mfp)
+    struct srt_stat *sstb, mdsio_fid_t *mfp)
 {
-	return (zfsslash2_lookup_slfid(fid, crp, sstb, gp, mfp));
+	return (zfsslash2_lookup_slfid(fid, crp, sstb, mfp));
 }
 
 int
