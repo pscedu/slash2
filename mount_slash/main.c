@@ -236,7 +236,7 @@ slc_fcmh_get(const struct slash_fidgen *fg, const struct srt_stat *sstb,
 {
 	int rc;
 
-	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_EXCL, sstb,
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE, sstb,
 	    setattrflags, creds, fcmhp);
 	if (rc)
 		return (rc);
