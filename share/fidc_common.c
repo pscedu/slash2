@@ -35,7 +35,8 @@
 #include "fidcache.h"
 #include "slutil.h"
 
-int  (*fidcReapCb)(struct fidc_membh *);
+int	  fidcUser;
+int	(*fidcReapCb)(struct fidc_membh *);
 
 struct psc_poolmaster	 fidcPoolMaster;
 struct psc_poolmgr	*fidcPool;
@@ -462,7 +463,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
  */
 void
 fidc_init(int privsiz, int nobj, int max,
-    int (*fcmh_reap_cb)(struct fidc_membh *))
+    int (*fcmh_reap_cb)(struct fidc_membh *), int subsys)
 {
 	_psc_poolmaster_init(&fidcPoolMaster,
 	    sizeof(struct fidc_membh) + privsiz,
@@ -479,6 +480,7 @@ fidc_init(int privsiz, int nobj, int max,
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
 	    FCMH_HASH_FIELD, fcmh_hentry, nobj * 2, NULL, "fidc");
 	fidcReapCb = fcmh_reap_cb;
+	fidcUser = subsys;
 }
 
 /*

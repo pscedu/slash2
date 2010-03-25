@@ -163,8 +163,13 @@ enum fcmh_opcnt_types {
 #define FCMH_SETATTRF_SAVESIZE		(1 << 0)
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)
 
-void			 fidc_init(int, int, int, int (*)(struct fidc_membh *));
-void			 fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
+/* users of FIDC cache */
+#define	FIDC_MDS			1
+#define FIDC_IOD			2
+#define	FIDC_CLIENT			3
+
+void	fidc_init(int, int, int, int (*)(struct fidc_membh *), int);
+void	fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 
 
 /* fidc_lookup() flags */

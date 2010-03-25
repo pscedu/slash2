@@ -218,7 +218,7 @@ main(int argc, char *argv[])
 	fdbuf_createkeyfile();
 	fdbuf_readkeyfile();
 	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ,
-	    FIDC_MDS_MAXSZ, NULL);
+	    FIDC_MDS_MAXSZ, NULL, FIDC_MDS);
 	libsl_init(PSCNET_SERVER, 1);
 
 	slm_init();
