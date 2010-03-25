@@ -401,3 +401,4 @@ tracks endpoint connections
 
 zfs
 - standalone should create slash IDs, this will allow removal of the MDSIO_LOCAL flags
+- rename the zfs_init() alias, it is already a routine in ZFS
