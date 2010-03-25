@@ -235,19 +235,18 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	fcmh_new = NULL; /* gcc */
 
 	/* sanity checks */
-	if (flags & FIDC_LOOKUP_LOAD) {
-		psc_assert(creds);
-		psc_assert(sstb == NULL);
+	if (fidcUser == FIDC_CLIENT) {
+
+		if (FIDC_LOOKUP_CREATE)
+			psc_assert(sstb || (flags & FIDC_LOOKUP_LOAD));
+
+		if (flags & FIDC_LOOKUP_LOAD) {
+			psc_assert(creds);
+			psc_assert(sstb == NULL);
+		}
+		if (sstb)
+			psc_assert((flags & FIDC_LOOKUP_LOAD) == 0);
 	}
-
-#if 0
-	/* this only applies to client */
-	if (flags & FIDC_LOOKUP_CREATE)
-		psc_assert(sstb || (flags & FIDC_LOOKUP_LOAD));
-#endif
-
-	if (sstb)
-		psc_assert((flags & FIDC_LOOKUP_LOAD) == 0);
 
 	/* first, check if its already in the cache */
 	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
