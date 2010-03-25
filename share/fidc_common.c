@@ -150,7 +150,7 @@ fidc_reap(struct psc_poolmgr *m)
 
 		psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
 
-		/* already vitimized */
+		/* already victimized */
 		if (f->fcmh_state & FCMH_CAC_FREEING)
 			goto end;
 
@@ -238,7 +238,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(creds);
 		psc_assert(sstb == NULL);
-	} 
+	}
 
 #if 0
 	/* this only applies to client */
@@ -383,14 +383,14 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	fcmh->fcmh_state |= FCMH_CAC_INITING;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
-	/* 
+	/*
 	 * Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(),
-	 * and sli_fcmh_ctor() to initialize their private fields that follow 
+	 * and sli_fcmh_ctor() to initialize their private fields that follow
 	 * the main fcmh structure. It is safe to not lock because we don't
 	 * touch the state, and other thread should be waiting for us.
 	 */
 	rc = sl_fcmh_ops.sfop_ctor(fcmh);
-	if (rc) 
+	if (rc)
 		goto out1;
 
 	if (sstb) {
@@ -401,7 +401,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
 		rc = sl_fcmh_ops.sfop_getattr(fcmh);	/* slc_fcmh_getattr() */
-	} 
+	}
 
  out1:
 	FCMH_LOCK(fcmh);
