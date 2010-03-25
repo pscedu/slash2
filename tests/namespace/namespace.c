@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 
 #include <dirent.h>
+#include <err.h>
 #include <time.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -118,17 +119,18 @@ int main(int argc, char *argv[])
 		}
 	}
 	argc -= optind;
+	argv += optind;
 	if (argc != 1)
 		usage();
 
-	ret = chdir(argv[optind]);
-	if (ret < 0) {
-		printf("Cannot set working directory to %s!\n", argv[optind]);
-		exit(1);
-	}
+	ret = chdir(argv[0]);
+	if (ret < 0)
+		err(1, "chdir %s", argv[0]);
 	size = pathconf(".", _PC_PATH_MAX);
-	if ((buf = malloc((size_t)size)) != NULL)
-		 ptr = getcwd(buf, (size_t)size);
+	buf = malloc((size_t)size);
+	if (buf == NULL)
+		err(1, NULL);
+	ptr = getcwd(buf, (size_t)size);
 
 	printf("Seed = %u, total operation = %ld\n", seed, total_operations);
 
@@ -468,7 +470,7 @@ again:
 
 void sigcatch(__unusedx int sig)
 {
-	printf("Operation interrupted by signal %d.\n", sig); 
+	printf("Operation interrupted by signal %d.\n", sig);
 	print_statistics();
 	exit(1);
 
