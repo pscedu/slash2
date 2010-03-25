@@ -1,6 +1,7 @@
 # $Id$
 
-include ../Makefile.path
+ROOTDIR=../../..
+include ${ROOTDIR}/Makefile.path
 
 PROG=		replbit_test
 SRCS+=		replbit_test.c

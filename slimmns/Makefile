@@ -1,6 +1,7 @@
 # $Id$
 
-include Makefile.path
+ROOTDIR=../..
+include ${ROOTDIR}/Makefile.path
 
 PROG=		slimmns_format
 MAN+=		slimmns.8

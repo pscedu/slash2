@@ -1,6 +1,7 @@
 # $Id$
 
-include ../Makefile.path
+ROOTDIR=../../..
+include ${ROOTDIR}/Makefile.path
 
 PROG=		slconfig_test
 SRCS+=		slconfig_test.c

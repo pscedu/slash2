@@ -1,6 +1,7 @@
 # $Id$
 
-include Makefile.path
+ROOTDIR=../..
+include ${ROOTDIR}/Makefile.path
 
 SUBDIRS+=	config
 SUBDIRS+=	replbit

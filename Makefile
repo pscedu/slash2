@@ -1,8 +1,7 @@
 # $Id$
 
-SLASH_BASE=.
-PROJECT_BASE=${SLASH_BASE}
-include Makefile.path
+ROOTDIR=..
+include ${ROOTDIR}/Makefile.path
 
 MAN+=		doc/sladm.7
 MAN+=		doc/slash.conf.5

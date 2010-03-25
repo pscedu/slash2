@@ -1,10 +1,13 @@
 # $Id$
 
-include ../Makefile.path
+ROOTDIR=../../..
+include ${ROOTDIR}/Makefile.path
 
 PROG=		prslerr
 SRCS+=		prslerr.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
+
+MODULES+=	pfl
 
 include ${SLASHMK}
 

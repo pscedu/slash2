@@ -1,5 +1,0 @@
-# $Id$
-
-ROOTDIR=${SLASH_BASE}/../
-SLASHMK=${SLASH_BASE}/mk/main.mk
-include ${ROOTDIR}/Makefile.path
