@@ -405,20 +405,21 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
  out1:
 	FCMH_LOCK(fcmh);
  out2:
-	if (rc) {
-		fcmh->fcmh_state |= FCMH_CAC_FAILED;
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
-	} else {
-		*fcmhp = fcmh;
-		fcmh->fcmh_state |= FCMH_CAC_CLEAN;
-		lc_add(&fidcCleanList, fcmh);
-	}
 	fcmh->fcmh_state &= ~FCMH_CAC_INITING;
 	if (fcmh->fcmh_state & FCMH_CAC_WAITING) {
 		fcmh->fcmh_state &= ~FCMH_CAC_WAITING;
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);
 	}
-	FCMH_ULOCK(fcmh);
+	if (rc) {
+		fcmh->fcmh_state |= FCMH_CAC_FAILED;
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
+		/* fcmh could be gone at this point */
+	} else {
+		*fcmhp = fcmh;
+		fcmh->fcmh_state |= FCMH_CAC_CLEAN;
+		lc_add(&fidcCleanList, fcmh);
+		FCMH_ULOCK(fcmh);
+	}
 	return (rc);
 }
 
