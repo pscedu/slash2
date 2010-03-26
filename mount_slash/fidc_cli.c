@@ -172,13 +172,8 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 
 	FCMH_LOCK(c);
 
-	/* Perform some sanity checks on the cached data structure. */
-	fci = fcmh_get_pri(c);
-	psc_assert(fci->fci_parent == p);
-	psc_assert(fci->fci_hash == psc_str_hashify(name));
-	psc_assert(strcmp(fci->fci_name, name) == 0);
-
 	/* detach myself from my parent */
+	fci = fcmh_get_pri(c);
 	fci->fci_parent = NULL;
 	psclist_del(&fci->fci_sibling);
 	
