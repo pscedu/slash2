@@ -222,8 +222,7 @@ fidc_lookup(const struct slash_fidgen *fgp, int flags,
 
 	/* sanity checks */
 	if (fidcUser == FIDC_CLIENT) {
-
-		if (FIDC_LOOKUP_CREATE)
+		if (flags & FIDC_LOOKUP_CREATE)
 			psc_assert(sstb || (flags & FIDC_LOOKUP_LOAD));
 
 		if (flags & FIDC_LOOKUP_LOAD) {
