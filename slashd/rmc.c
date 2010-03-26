@@ -362,14 +362,15 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
-		goto out;
+		goto out2;
 
 #define MAX_READDIR_NENTS	1000
 #define MAX_READDIR_BUFSIZ	(sizeof(struct srt_stat) * MAX_READDIR_NENTS)
+
 	if (mq->size > MAX_READDIR_BUFSIZ ||
 	    mq->nstbpref > MAX_READDIR_NENTS) {
 		mp->rc = EINVAL;
-		goto out;
+		goto out2;
 	}
 
 	iov[0].iov_base = PSCALLOC(mq->size);
@@ -394,7 +395,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	    fcmh_2_mdsio_data(fcmh));
 
 	if (mp->rc)
-		goto out;
+		goto out1;
 
 	mp->rc = rsx_bulkserver(rq, &desc,
 	    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, niov);
@@ -402,10 +403,12 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (desc)
 		pscrpc_free_bulk(desc);
 
- out:
+ out1:
 	PSCFREE(iov[0].iov_base);
-	if (mq->nstbpref)
-		PSCFREE(iov[1].iov_base);
+	PSCFREE(iov[1].iov_base);
+ out2:
+	if (fcmh)
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	return (mp->rc);
 }
 
