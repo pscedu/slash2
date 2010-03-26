@@ -956,10 +956,11 @@ int
 msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
     const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
 {
-	int rc=0;
-	struct fidc_membh *p, *m;
+	int rc;
+	struct fidc_membh *p;
+	struct fidc_membh *c;
 
-	p = m = NULL;
+	p = c = NULL;
 
 	psc_infos(PSS_GEN, "name %s inode %lu", name, parent);
 
@@ -975,27 +976,27 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 		goto out;
 	}
 
-	m = fidc_child_lookup(p, name);
-	if (m) {
+	c = fidc_child_lookup(p, name);
+	if (c) {
 		/* At this point the namespace reference is still valid but
 		 *  the fcmh contents may be old, use slash2fuse_stat() to
 		 *  determine attr age and possibly invoke an RPC to refresh
 		 *  the fcmh contents.
 		 */
-		rc = slash2fuse_stat(m, cr);
+		rc = slash2fuse_stat(c, cr);
 		if (rc)
 			goto out;
-		*fgp = m->fcmh_fg;
+		*fgp = c->fcmh_fg;
 		if (sstb)
-			*sstb = m->fcmh_sstb;
+			*sstb = c->fcmh_sstb;
 	} else
 		rc = slash_lookuprpc(cr, p, name, fgp, sstb);
 
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-	if (m)
-		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
+	if (c)
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 
 	return (rc);
 }
