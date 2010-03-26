@@ -471,9 +471,8 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
 		PFL_GETTIME(&now);
 		if (timercmp(&now, &fcmh->fcmh_age, <)) {
-			FCMH_ULOCK(fcmh);
 			DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs cached - YES");
-			return (checkcreds(&fcmh->fcmh_sstb, creds, R_OK));
+			goto check;
 		}
 		fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
 	}
@@ -497,10 +496,8 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		rc = mp->rc;
  out:
 	FCMH_LOCK(fcmh);
-	if (!rc) {
+	if (!rc) 
 		fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE|FCMH_SETATTRF_HAVELOCK);
-		rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
-	}
 
 	fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
 	psc_waitq_wakeall(&fcmh->fcmh_waitq);
@@ -510,8 +507,12 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved via rpc rc=%d", rc);
 
+check:
 	FCMH_ULOCK(fcmh);
-
+	if (!rc) {
+		rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
+		psc_info("stat: fcmh=%p, checkcreds rc= %d\n", fcmh, rc);
+	}
 	return (rc);
 }
 
