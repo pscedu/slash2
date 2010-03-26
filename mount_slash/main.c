@@ -966,14 +966,11 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	/* load or create the parent in the fid cache */
 	rc = fidc_lookup_load_inode(parent, cr, &p);
 	if (rc) {
-		psc_warnx("name %s - failed to load inode %lu",
-			  name, parent);
 		rc = EINVAL;
 		goto out;
 	}
 
 	if (!fcmh_isdir(p)) {
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 		rc = ENOTDIR;
 		goto out;
 	}
