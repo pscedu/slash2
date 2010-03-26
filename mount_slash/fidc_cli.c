@@ -97,8 +97,6 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	struct timeval now;
 
 	LOCK_ENSURE(&p->fcmh_lock);
-	psc_assert(p->fcmh_refcnt > 0);
-	psc_assert(fcmh_isdir(p));
 
 	DEBUG_FCMH(PLL_INFO, p, "name=%s  hash=%d", name, hash);
 
@@ -252,15 +250,15 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 		psc_fatalx("name too long");
 	len++;
 
-	spinlock(&op->fcmh_lock);
+	FCMH_LOCK(op);
 	ch = fidc_child_lookup_int_locked(op, oldname);
 	fci = fcmh_get_pri(ch);
 	if (ch) {
-		spinlock(&ch->fcmh_lock);
+		FCMH_LOCK(ch);
 		fci->fci_parent = NULL;
 		psclist_del(&fci->fci_sibling);
 	}
-	freelock(&op->fcmh_lock);
+	FCMH_ULOCK(op);
 
 	/*
 	 * At this point, the rename RPC has been successful and we somehow
@@ -277,13 +275,13 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	fci->fci_hash = psc_str_hashify(newname);
 	strlcpy(fci->fci_name, newname, len);
 
-	spinlock(&np->fcmh_lock);
+	FCMH_LOCK(np);
 	fci->fci_parent = np;
 	psclist_xadd_tail(&fci->fci_sibling, &pci->fci_children);
-	freelock(&np->fcmh_lock);
+	FCMH_ULOCK(np);
 
 	fcmh_op_done_type(ch, FCMH_OPCNT_LOOKUP_PARENT);
-	freelock(&ch->fcmh_lock);
+	FCMH_ULOCK(ch);
 
 	DEBUG_FCMH(PLL_WARN, ch, "rename file: "
 	    "%s op(i+g:%"PRId64"+""%"PRId64") --> "
