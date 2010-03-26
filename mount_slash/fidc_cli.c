@@ -91,7 +91,7 @@ fidc_child_reap_cb(struct fidc_membh *f)
 static struct fidc_membh *
 fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 {
-	int found=0, hash=psc_str_hashify(name);
+	int hash=psc_str_hashify(name);
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *c;
 	struct timeval now;
@@ -100,8 +100,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	psc_assert(p->fcmh_refcnt > 0);
 	psc_assert(fcmh_isdir(p));
 
-	DEBUG_FCMH(PLL_INFO, p, "name %p (%s), hash=%d",
-	    name, name, hash);
+	DEBUG_FCMH(PLL_INFO, p, "name=%s  hash=%d", name, hash);
 
 	/* 
 	 * Note we can be racing with the reaper because we don't
@@ -114,25 +113,21 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 			continue;
 		}
 		fci = fcmh_get_pri(c);
-
-		psc_traces(PSS_GEN, "p=fcmh@%p c=%p cname=%s hash=%d",
-		    p, c, fci->fci_name, fci->fci_hash);
-
 		if (fci->fci_hash == hash &&
 		    strcmp(name, fci->fci_name) == 0) {
-			found = 1;
 			psc_assert(fci->fci_parent == p);
 			break;
 		}
 		freelock(&c->fcmh_lock);
 	}
 	if (c == NULL)
-		return (NULL);
+		return NULL;
 
 	PFL_GETTIME(&now);
 	if (timercmp(&now, &c->fcmh_age, <)) {
 		fcmh_op_start_type(c, FCMH_OPCNT_LOOKUP_PARENT);
 		freelock(&c->fcmh_lock);
+		DEBUG_FCMH(PLL_INFO, c, "name=%s  hash=%d", name, hash);
 	} else {
 		freelock(&c->fcmh_lock);
 		c = NULL;
