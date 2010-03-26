@@ -465,6 +465,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	struct pscrpc_request *rq;
 	struct timeval now;
 	int rc = 0;
+	int hit = 0;
 
  restart:
 
@@ -472,6 +473,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
 		PFL_GETTIME(&now);
 		if (timercmp(&now, &fcmh->fcmh_age, <)) {
+			hit = 1;
 			DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved from local cache");
 			goto check;
 		}
@@ -512,7 +514,8 @@ check:
 	FCMH_ULOCK(fcmh);
 	if (!rc) {
 		rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
-		psc_info("stat: fcmh=%p, checkcreds rc= %d\n", fcmh, rc);
+		if (rc)
+			psc_info("stat: fcmh=%p, checkcreds rc= %d\n", fcmh, rc);
 	}
 	return (rc);
 }
