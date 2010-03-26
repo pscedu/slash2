@@ -358,9 +358,6 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	size_t outsize;
 	int niov;
 
-	iov[0].iov_base = NULL;
-	iov[1].iov_base = NULL;
-
 	RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
