@@ -464,14 +464,15 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	struct srm_getattr_rep *mp;
 	struct pscrpc_request *rq;
 	struct timeval now;
-	int rc;
+	int rc = 0;
 
- readcached:
+ restart:
+
 	FCMH_LOCK(fcmh);
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
 		PFL_GETTIME(&now);
 		if (timercmp(&now, &fcmh->fcmh_age, <)) {
-			DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs cached - YES");
+			DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved from local cache");
 			goto check;
 		}
 		fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
@@ -479,7 +480,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	/* if someone is already fetching attributes, wait for it to complete */
 	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
 		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
-		goto readcached;
+		goto restart;
 	}
 	fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(fcmh);
