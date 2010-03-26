@@ -297,15 +297,13 @@ mds.c
   be more intuitively named for formatting MDS file systems, such as
   slmkfs, slfmtfs, or slnewfs
 - libsl_init() is getting an ENOMEM somewhere in slashd, maybe LNET
-- ensure fidc_lookup_load_fg() will not accept FID_ANY
 - rename BMAPCHMODE -> BMAP_CHRWMODE
 ----------------------------------------------------
-- fdbufs should be used for FSYNC, GETBMAP
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
 -----------------------------------------------------
 - get tsuite working
-- merge set_bmapreplpol and friends into a single interface
+- merge set_bmapreplpol and friends into a single slfattr interface
 - push O_APPEND writes always to EOF
 -----------------------------------------------------
 - make slmctl and slictl knobs for showing listen addresses/options
@@ -390,15 +388,13 @@ tracks endpoint connections
 ------------------------------
 
 - sstb shouldn't have an ino field
-- get rid of FCMH_ISDIR and use fcmh_isdir()
 
 - always cache / on mount_slash, that will save tons of RPCs
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
-- apply rlim adjustments for fcmh to MDS
+- CREATE in slashd should adjust rlim since it opens a filedesc
 - rename {bd,desc}buf to authbuf
 - only grab the next slash ID right before ZFS plans to use it to
   avoid DoS
 
 zfs
-- standalone should create slash IDs, this will allow removal of the MDSIO_LOCAL flags
 - rename the zfs_init() alias, it is already a routine in ZFS

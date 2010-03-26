@@ -33,16 +33,9 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 {
 	struct fcmh_iod_info *fii;
 	char fidfn[PATH_MAX];
-	rlim_t soft, hard;
-	int tryset, rc;
+	int incr, rc;
 
-	/* increase #fd resource limit */
-	spinlock(&psc_rlimit_lock);
-	rc = psc_getrlimit(RLIMIT_NOFILE, &soft, &hard);
-	tryset = (rc == 0);
-	if (tryset && psc_setrlimit(RLIMIT_NOFILE,
-	    soft + 1, hard + 1) == -1)
-		psc_warn("setrlimit NOFILE %"PRId64, soft + 1);
+	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 
 	/* try to get an file descriptor for this backing obj */
 	fii = fcmh_2_fii(fcmh);
@@ -54,9 +47,9 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 		rc = errno;
 
 	/* oops, an error; if we increased the rlim, decrease it */
-	if (rc && tryset && psc_setrlimit(RLIMIT_NOFILE,
-	    soft + 1, hard + 1) == -1)
-		psc_warn("setrlimit NOFILE %"PRId64, soft + 1);
+	if (rc && incr)
+		psc_rlim_adj(RLIMIT_NOFILE, -1);
+
 	freelock(&psc_rlimit_lock);
 	return (rc);
 }
@@ -64,16 +57,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 void
 sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 {
-	rlim_t soft, hard;
-	int rc;
-
-	/* decrease #fd resource limit */
-	spinlock(&psc_rlimit_lock);
-	rc = psc_getrlimit(RLIMIT_NOFILE, &soft, &hard);
-	if (rc == 0 && psc_setrlimit(RLIMIT_NOFILE,
-	    soft - 1, hard - 1) == -1)
-		psc_warn("setrlimit NOFILE %"PRId64, soft - 1);
-	freelock(&psc_rlimit_lock);
+	psc_rlim_adj(RLIMIT_NOFILE, -1);
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {

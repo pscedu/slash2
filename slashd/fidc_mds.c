@@ -23,6 +23,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/rlimit.h"
 
 #include "cache_params.h"
 #include "fid.h"
@@ -74,10 +75,10 @@ int
 slm_fcmh_ctor(struct fidc_membh *fcmh)
 {
 	struct fcmh_mds_info *fmi;
-	int rc;
+	int rc, incr;
 
 	fmi = fcmh_2_fmi(fcmh);
-	memset(fmi, 0, sizeof(struct fcmh_mds_info));
+	memset(fmi, 0, sizeof(*fmi));
 
 	slash_inode_handle_init(&fmi->fmi_inodeh, fcmh, mds_inode_sync);
 
@@ -86,6 +87,8 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 	if (rc)
 		return (rc);
 	fcmh->fcmh_fg.fg_gen = fcmh->fcmh_sstb.sst_gen;
+
+	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 
 	if (fcmh_isdir(fcmh))
 		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh),
@@ -100,6 +103,8 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 				psc_fatalx("could not load inode; rc=%d", rc);
 		}
 	}
+	if (rc && incr)
+		psc_rlim_adj(RLIMIT_NOFILE, -1);
 	return (rc);
 }
 
@@ -116,6 +121,8 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 	jfi_ensure_empty(&fmi->fmi_inodeh.inoh_jfi);
 	if (fmi->fmi_inodeh.inoh_extras)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
+
+	psc_rlim_adj(RLIMIT_NOFILE, -1);
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
