@@ -192,14 +192,8 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 			freelock(&tmp1->fcmh_lock);
 		}
 	}
-
-	/* The only ref on the child should be the one taken above in
-	 *  fidc_child_lookup_int_locked()
-	 */
-	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_PARENT);
-	psc_assert(!c->fcmh_refcnt);
-
 	FCMH_ULOCK(c);
+	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_PARENT);
 }
 
 /**
