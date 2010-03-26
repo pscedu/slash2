@@ -144,15 +144,12 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 struct fidc_membh *
 fidc_child_lookup(struct fidc_membh *p, const char *name)
 {
-	struct fidc_membh *m=NULL;
-	int locked=reqlock(&p->fcmh_lock);
+	struct fidc_membh *c;
 
-	psc_assert(fcmh_isdir(p));
-	psc_assert(p->fcmh_refcnt > 0);
-
-	m = fidc_child_lookup_int_locked(p, name);
-	ureqlock(&p->fcmh_lock, locked);
-	return (m);
+	FCMH_LOCK(p);
+	c = fidc_child_lookup_int_locked(p, name);
+	FCMH_ULOCK(p);
+	return (c);
 }
 
 void
