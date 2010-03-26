@@ -961,6 +961,7 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	struct fidc_membh *p;
 	struct fidc_membh *c;
 
+	rc = 0;
 	p = c = NULL;
 
 	psc_infos(PSS_GEN, "name %s inode %lu", name, parent);
