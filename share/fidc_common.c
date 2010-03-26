@@ -35,17 +35,16 @@
 #include "fidcache.h"
 #include "slutil.h"
 
-int	  fidcUser;
-int	(*fidcReapCb)(struct fidc_membh *);
-
-struct psc_poolmaster	 fidcPoolMaster;
-struct psc_poolmgr	*fidcPool;
-struct psc_listcache	 fidcDirtyList;
-struct psc_listcache	 fidcCleanList;
-struct psc_hashtbl	 fidcHtable;
+int			  fidcUser;
+int			(*fidcReapCb)(struct fidc_membh *);
+struct psc_poolmaster	  fidcPoolMaster;
+struct psc_poolmgr	 *fidcPool;
+struct psc_listcache	  fidcDirtyList;
+struct psc_listcache	  fidcCleanList;
+struct psc_hashtbl	  fidcHtable;
 
 #define	fcmh_get()	psc_pool_get(fidcPool)
-#define	fcmh_put(f)	psc_pool_return(fidcPool, f)
+#define	fcmh_put(f)	psc_pool_return(fidcPool, (f))
 
 /**
  * fcmh_dtor - Destructor for FID cache member handles.
