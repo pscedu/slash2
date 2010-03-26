@@ -165,22 +165,20 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	if (!c)
 		return;
 
-	FCMH_LOCK(c);
-
 	/* detach myself from my parent */
+	FCMH_LOCK(c);
 	fci = fcmh_get_pri(c);
 	fci->fci_parent = NULL;
 	psclist_del(&fci->fci_sibling);
-	
 	/*
 	 * If we can unlink this directory, then it should not have any children.
 	 * Perhaps a unlink can bypass our cache.
 	 */
 	if (fcmh_isdir(c)) {
 		FCMH_FOREACH_CHILD_SAFE(tmp1, tmp2, c) {
-			spinlock(&tmp1->fcmh_lock);
+			FCMH_LOCK(tmp1);
 			if (tmp1->fcmh_state & FCMH_CAC_FREEING) {
-				freelock(&tmp1->fcmh_lock);
+				FCMH_ULOCK(tmp1);
 				continue;
 			}
 			fci = fcmh_get_pri(tmp1);
@@ -189,7 +187,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 			psc_assert(fci->fci_parent == c);
 			fci->fci_parent = NULL;
 			psclist_del(&fci->fci_sibling);
-			freelock(&tmp1->fcmh_lock);
+			FCMH_ULOCK(tmp1);
 		}
 	}
 	FCMH_ULOCK(c);
@@ -274,7 +272,6 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	psclist_xadd_tail(&fci->fci_sibling, &pci->fci_children);
 	FCMH_ULOCK(np);
 
-	fcmh_op_done_type(ch, FCMH_OPCNT_LOOKUP_PARENT);
 	FCMH_ULOCK(ch);
 
 	DEBUG_FCMH(PLL_WARN, ch, "rename file: "
@@ -282,6 +279,8 @@ fidc_child_rename(struct fidc_membh *op, const char *oldname,
 	    "%s np(i+g:%"PRId64"+""%"PRId64")",
 	    oldname, fcmh_2_fid(op), fcmh_2_gen(op),
 	    newname, fcmh_2_fid(np), fcmh_2_gen(np));
+
+	fcmh_op_done_type(ch, FCMH_OPCNT_LOOKUP_PARENT);
 }
 
 /**
