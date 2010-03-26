@@ -364,9 +364,6 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out2;
 
-#define MAX_READDIR_NENTS	1000
-#define MAX_READDIR_BUFSIZ	(sizeof(struct srt_stat) * MAX_READDIR_NENTS)
-
 	if (mq->size > MAX_READDIR_BUFSIZ ||
 	    mq->nstbpref > MAX_READDIR_NENTS) {
 		mp->rc = EINVAL;

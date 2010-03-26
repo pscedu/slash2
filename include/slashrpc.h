@@ -386,11 +386,14 @@ struct srm_mknod_req {
 struct srm_ping_req {
 } __packed;
 
+#define MAX_READDIR_NENTS	1000
+#define MAX_READDIR_BUFSIZ	(sizeof(struct srt_stat) * MAX_READDIR_NENTS)
+
 struct srm_readdir_req {
 	struct slash_fidgen	fg;
 	uint64_t		offset;
 	uint64_t		size;
-	uint32_t		nstbpref;
+	uint32_t		nstbpref;	/* number of prefetched attributes */
 } __packed;
 
 struct srm_readdir_rep {
