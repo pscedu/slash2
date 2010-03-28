@@ -371,7 +371,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 
 	} else if (s->slvr_flags & SLVR_SLBFREEING) {
 		DEBUG_SLVR(PLL_INFO, s, "caught slbfreeing");
-		SLVR_WAIT(s, (!(s->slvr_flags & SLVR_SLBFREEING)));
+		SLVR_WAIT(s, (s->slvr_flags & SLVR_SLBFREEING));
 		goto restart;
 	}
 
@@ -403,7 +403,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 	 */
 	if (s->slvr_flags & SLVR_FAULTING) {
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
-		SLVR_WAIT(s, (s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
+		SLVR_WAIT(s, !(s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
 		psc_assert((s->slvr_flags & (SLVR_DATARDY|SLVR_DATAERR)));
 	}
 
