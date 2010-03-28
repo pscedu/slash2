@@ -55,6 +55,7 @@ struct slashrpc_export {
 	void			*slexp_data;
 	int			 slexp_flags;
 	struct pscrpc_export	*slexp_export;
+	struct psclist_head      slexp_list;
 };
 
 /* slashrpc_export flags */
@@ -70,6 +71,7 @@ void	sl_csvc_free(struct slashrpc_cservice *);
 
 struct slashrpc_export *
 	slexp_get(struct pscrpc_export *, enum slconn_type);
+void    slexp_put(struct pscrpc_export *);
 void	slexp_destroy(void *);
 
 extern struct psc_dynarray lnet_nids;
