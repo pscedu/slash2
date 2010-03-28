@@ -640,7 +640,7 @@ bmap_flush(void)
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
 			psc_assert(!bmpc_queued_writes(bmpc));
 			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
-			psc_waitq_wakeall(&b->bcm_waitq);
+			bcm_wake_locked(b);
 			BMPC_ULOCK(bmpc);
 			BMAP_ULOCK(b);
 			continue;
@@ -733,7 +733,7 @@ bmap_flush(void)
 			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
 			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
-			psc_waitq_wakeall(&b->bcm_waitq);
+			bcm_wake_locked(b);
 		}
 		BMPC_ULOCK(bmpc);
 		BMAP_ULOCK(b);
@@ -746,6 +746,7 @@ void *
 msbmaprlsthr_main(__unusedx void *arg)
 {
 	struct bmapc_memb *b;
+	struct bmap_cli_info *msbd;
 	struct psc_dynarray a;
 	struct timespec ctime, wtime = {0, 0};
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
@@ -768,6 +769,7 @@ msbmaprlsthr_main(__unusedx void *arg)
 				break;
 
 			BMAP_LOCK(b);
+			msbd = b->bcm_pri;
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
@@ -781,9 +783,10 @@ msbmaprlsthr_main(__unusedx void *arg)
 					    &wtime);
 				break;
 			} else {
-				rel_bmaps[nbmaps].fg.fg_fid = fcmh_2_fid(b->bcm_fcmh);
-				rel_bmaps[nbmaps].fg.fg_gen = fcmh_2_gen(b->bcm_fcmh);
+				rel_bmaps[nbmaps].fid = fcmh_2_fid(b->bcm_fcmh);
 				rel_bmaps[nbmaps].bmapno = b->bcm_bmapno;
+				rel_bmaps[nbmaps].seq = msbd->msbd_seq;
+				rel_bmaps[nbmaps].key = msbd->msbd_key;
 				nbmaps++;
 
 				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
@@ -795,10 +798,6 @@ msbmaprlsthr_main(__unusedx void *arg)
 			}
 		}
 
-		if (nbmaps)
-			// XXX make rpc call
-			;
-
 		i = psc_dynarray_len(&a);
 		while (i--) {
 			/* Check the bmap which had refs.
@@ -806,8 +805,19 @@ msbmaprlsthr_main(__unusedx void *arg)
 			b = psc_dynarray_getpos(&a, i-1);
 			BMAP_LOCK(b);
 			if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
+				rel_bmaps[nbmaps].fid = fcmh_2_fid(b->bcm_fcmh);
+				rel_bmaps[nbmaps].bmapno = b->bcm_bmapno;
+				rel_bmaps[nbmaps].seq = msbd->msbd_seq;
+				rel_bmaps[nbmaps].key = msbd->msbd_key;
+				nbmaps++;
+
 				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+				
 				BMAP_ULOCK(b);
+				if (nbmaps == MAX_BMAP_RELEASE) {
+					// XXX make rpc call
+					nbmaps = 0;
+				}				
 			} else {
 				BMAP_ULOCK(b);
 				/* These have already timed out, try
@@ -818,6 +828,11 @@ msbmaprlsthr_main(__unusedx void *arg)
 				lc_addhead(&bmapTimeoutQ, b);
 			}
 		}
+		psc_dynarray_free(&a);
+
+		if (nbmaps) {}
+			// XXX make rpc call
+
 		if (!wtime.tv_sec && !wtime.tv_nsec)
 			wtime.tv_sec = 1;
 
@@ -827,7 +842,6 @@ msbmaprlsthr_main(__unusedx void *arg)
 			break;
 	}
 	PSCFREE(rel_bmaps);
-	psc_dynarray_free(&a);
 	return (NULL);
 }
 
