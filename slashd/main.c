@@ -26,6 +26,7 @@
 
 #include "pfl/pfl.h"
 #include "psc_util/alloc.h"
+#include "psc_util/odtable.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
 #include "psc_util/strlcpy.h"
@@ -137,13 +138,19 @@ slm_init(void)
 	    "replrq");
 	replrq_pool = psc_poolmaster_getmgr(&replrq_poolmaster);
 
+	psc_poolmaster_init(&bmapMdsLeasePoolMaster, struct bmap_mds_lease,
+	    bml_bmdsi_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
+	    "bmap_leases");
+	bmapMdsLeasePool = psc_poolmaster_getmgr(&bmapMdsLeasePoolMaster);
+       
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
 
-	lc_reginit(&pndgBmapCbs, struct mexpbcm, mexpbcm_lentry,
+	lc_reginit(&pndgBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
 	    "pendingBmapCbs");
-	lc_reginit(&inflBmapCbs, struct mexpbcm, mexpbcm_lentry,
-	    "inflightBmapCbs");
+
+	lc_reginit(&inflBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
+	    "inflBmapCbs");
 
 	bmap_cache_init(sizeof(struct bmap_mds_info));
 
@@ -151,7 +158,7 @@ slm_init(void)
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_IONBMAPS_ODT);
 	psc_assert(!odtable_load(fn, &mdsBmapAssignTable));
-	odtable_scan(mdsBmapAssignTable, mds_bmi_cb);
+	odtable_scan(mdsBmapAssignTable, mds_bmi_odtable_startup_cb);
 }
 
 __dead void
@@ -225,6 +232,7 @@ main(int argc, char *argv[])
 
 	slmfssyncthr_spawn();
 	slmcohthr_spawn();
+	slmbmaptimeothr_spawn();
 	slm_rpc_initsvc();
 	slmreplqthr_spawnall();
 	mds_repl_init();

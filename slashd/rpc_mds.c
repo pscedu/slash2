@@ -26,6 +26,7 @@
 #include "psc_util/strlcpy.h"
 
 #include "rpc_mds.h"
+#include "bmap_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
 
@@ -122,6 +123,8 @@ mexpcli_get(struct pscrpc_export *exp)
 		psc_waitq_init(&mexp_cli->mc_waitq);
 	}
 	ureqlock(&exp->exp_lock, locked);
+	slexp_put(exp);
+
 	return (mexp_cli);
 }
 
@@ -130,6 +133,16 @@ mexpcli_destroy(struct pscrpc_export *exp)
 {
 	struct slashrpc_export *slexp = exp->exp_private;
 	struct mexp_cli *mexpc = slexp->slexp_data;
+	struct bmap_mds_lease *bml, *tmp;
+
+	psclist_for_each_entry_safe(bml, tmp, &slexp->slexp_list, 
+	    bml_timeo_lentry) {
+		BML_LOCK(bml);
+		psc_assert(bml->bml_flags & BML_EXP);
+		bml->bml_flags &= ~BML_EXP;
+		BML_ULOCK(bml);
+		psclist_del(&bml->bml_timeo_lentry);
+	}
 
 	if (mexpc && mexpc->mc_csvc)
 		sl_csvc_free(mexpc->mc_csvc);

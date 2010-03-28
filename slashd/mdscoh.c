@@ -28,8 +28,8 @@
 
 #include "cache_params.h"
 #include "fidc_mds.h"
+#include "bmap_mds.h"
 #include "mdscoh.h"
-#include "mdsexpc.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
@@ -47,117 +47,91 @@ mdscoh_reap(void)
 	return (pscrpc_nbreqset_reap(&bmapCbSet));
 }
 
-void
-mdscoh_infmode_chk(struct mexpbcm *bref, int rq_mode)
-{
-	int mode=bref->mexpbcm_mode;
-
-	psc_assert(bref->mexpbcm_net_cmd != MEXPBCM_RPC_CANCEL);
-	if (mode & MEXPBCM_CIO_REQD)
-		psc_assert(mode & MEXPBCM_DIO);
-
-	else if (mode & MEXPBCM_DIO_REQD) {
-		psc_assert(!(mode & MEXPBCM_DIO));
-
-	} else
-		psc_fatalx("Neither MEXPBCM_CIO_REQD or MEXPBCM_DIO_REQD set");
-
-	psc_assert(rq_mode == (int)bref->mexpbcm_net_cmd);
-}
-
 int
 mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 {
-	struct mexpbcm *bref=req->rq_async_args.pointer_arg[CB_ARG_SLOT];
 	struct srm_bmap_dio_req *mq;
-	struct srm_generic_rep *mp;
-
-	psc_assert(bref);
+	struct srm_simple_rep *mp;
+	struct bmap_mds_lease *bml;
+	int rls;
 
 	mq = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
 	mp = psc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
+	bml = req->rq_async_args.pointer_arg[CB_ARG_SLOT];
 
-	lc_remove(&inflBmapCbs, bref);
+	DEBUG_BMAP(mp->rc ? PLL_ERROR : PLL_NOTIFY, bml_2_bmap(bml), 
+	   "cli=%s bml=%p seq=%"PRId64" rc=%d",  
+	   libcfs_id2str(req->rq_import->imp_connection->c_peer), 
+	   bml, bml->bml_seq, mp->rc);
+	
+	lc_remove(&inflBmapCbs, bml);
 
-	MEXPBCM_LOCK(bref);
-
-	DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap,
-		   "bref=%p m=%u rc=%d netcmd=%d",
-		   bref, mq->mode, mp->rc, bref->mexpbcm_net_cmd);
-	/* XXX figure what to do here if mp->rc < 0
-	 * or rq_status or !mq or !mp
+	BML_LOCK(bml);
+	psc_assert(bml->bml_flags & BML_COH);
+	bml->bml_flags &= ~BML_COH;
+	if (bml->bml_flags & BML_COHRLS)
+		rls = 1;
+	BML_ULOCK(bml);	
+	if (rls)
+		mds_bmap_bml_release(bml_2_bmap(bml), bml->bml_seq,
+		     bml->bml_key);	
+	/* bmap_op_done_type() will wake any waiters.
 	 */
-	psc_assert((bref->mexpbcm_net_cmd != MEXPBCM_RPC_CANCEL) &&
-		   bref->mexpbcm_net_inf);
-	psc_assert(mq->mode & bref->mexpbcm_mode);
-	bref->mexpbcm_mode &= ~mq->dio;
+	bmap_op_done_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
 
-	if (mq->dio == bref->mexpbcm_net_cmd) {
-		/* This rpc was the last one queued for this bref, or,
-		 *  in other words, the dio mode has not changed since this
-		 *  rpc was processed.
-		 */
-		bref->mexpbcm_net_cmd = 0;
-		if (mq->dio == MEXPBCM_CIO_REQD) {
-			psc_assert(bref->mexpbcm_mode & MEXPBCM_DIO);
-			bref->mexpbcm_mode &= ~MEXPBCM_DIO;
-
-		} else if (mq->dio == MEXPBCM_DIO_REQD) {
-			psc_assert(!(bref->mexpbcm_mode & MEXPBCM_DIO));
-			bref->mexpbcm_mode |= MEXPBCM_DIO;
-		} else
-			psc_fatalx("Invalid mode %d", bref->mexpbcm_mode);
-	} else {
-		mdscoh_infmode_chk(bref, mq->dio);
-		lc_addqueue(&pndgBmapCbs, bref);
-	}
-	/* Don't unlock until the mexpbcm_net_inf bit is unset.
-	 */
-	bref->mexpbcm_net_inf = 0;
-	DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap,
-		   "mode change complete bref=%p", bref);
-	MEXPBCM_ULOCK(bref);
 	return (0);
 }
 
-
-__static int
-mdscoh_queue_req(struct mexpbcm *bref)
+int
+mdscoh_req(struct bmap_mds_lease *bml, int block)
 {
 	struct pscrpc_request *req;
 	struct srm_bmap_dio_req *mq;
-	struct srm_generic_rep *mp;
-	struct pscrpc_export *exp=bref->mexpbcm_export;
+	struct srm_simple_rep *mp;
+	struct pscrpc_export *exp=bml->bml_exp;
 	struct slashrpc_cservice *csvc;
-	int rc=0, mode=bref->mexpbcm_mode;
+	int rc=0;
 
-	DEBUG_BMAP(PLL_TRACE, bref->mexpbcm_bmap, "bref=%p m=%u msgc=%u",
-		   bref, mode, atomic_read(&bref->mexpbcm_msgcnt));
+	DEBUG_BMAP(PLL_NOTIFY, bml_2_bmap(bml), "bml=%p",  bml);	
 
-	psc_assert(bref->mexpbcm_net_inf);
+	BML_LOCK(bml);
+	psc_assert(!(bml->bml_flags & BML_COH));
 
-	csvc = slm_getclcsvc(exp);
-	if (csvc == NULL)
-		return (-1);
+	if (!(bml->bml_flags & BML_EXP)) {
+		BML_ULOCK(bml);
+		return (-ENOTCONN);
+	} else {
+		bml->bml_flags |= BML_COH;		
+		/* XXX How do we deal with a closing export?
+		 */
+		csvc = slm_getclcsvc(exp);
+		if (csvc == NULL)
+			return (-1);
+	}
+	BML_ULOCK(bml);
 
 	rc = RSX_NEWREQ(csvc->csvc_import, SRCM_VERSION,
-	    SRMT_BMAPDIO, req, mq, mp);
+		SRMT_BMAPDIO, req, mq, mp);
 	if (rc)
 		return (rc);
 
-	req->rq_async_args.pointer_arg[CB_ARG_SLOT] = bref;
+	mq->fid = fcmh_2_fid(bml_2_bmap(bml)->bcm_fcmh);
+	mq->blkno = bml_2_bmap(bml)->bcm_bmapno;
+	mq->dio = 1;
+	mq->seq = bml->bml_seq;
 
-	mq->fid = fcmh_2_fid(bref->mexpbcm_bmap->bcm_fcmh);
-	mq->dio = bref->mexpbcm_net_cmd;
-	mq->blkno = bref->mexpbcm_blkno;
+	if (block == MDSCOH_BLOCK) {
+		
+		rc = RSX_WAITREP(req, mp);
+		if (rc)
+			return (rc);
+	
+		if (req)
+			pscrpc_req_finished(req);
 
-	pscrpc_nbreqset_add(&bmapCbSet, req);
-	/* This lentry may need to be locked.
-	 */
-	lc_addqueue(&inflBmapCbs, bref);
-	/* Note that this req has been sent.
-	 */
-	atomic_set(&bref->mexpbcm_msgcnt, 0);
+		rc = mp->rc;
+	} else
+		pscrpc_nbreqset_add(&bmapCbSet, req);
 
 	return (rc);
 }
@@ -165,29 +139,33 @@ mdscoh_queue_req(struct mexpbcm *bref)
 __dead __static void *
 slmcohthr_begin(__unusedx void *arg)
 {
-	struct mexpbcm *bref;
+	struct bmap_mds_lease *bml;
+	struct timespec abstime;
 	int rc;
 
 	while (1) {
-		bref = lc_getwait(&pndgBmapCbs);
-
-		MEXPBCM_LOCK(bref);
-		if (bref->mexpbcm_net_cmd != MEXPBCM_RPC_CANCEL) {
-			bref->mexpbcm_net_inf = 1;
-			mdscoh_infmode_chk(bref, bref->mexpbcm_net_cmd);
-			MEXPBCM_ULOCK(bref);
-			rc = mdscoh_queue_req(bref);
-			if (rc)
-				psc_fatalx("mdscoh_queue_req_locked() failed "
-					   "with (rc==%d) for bref %p",
-					   rc, bref);
-		} else {
-			/* Deschedule
-			 */
-			bref->mexpbcm_net_cmd = 0;
-			MEXPBCM_ULOCK(bref);
-		}
 		mdscoh_reap();
+
+		clock_gettime(CLOCK_REALTIME, &abstime);
+		abstime.tv_sec += 5;
+
+		bml = lc_peekheadtimed(&pndgBmapCbs, &abstime);
+		if (!bml)
+			continue;
+
+		BML_LOCK(bml);
+		psc_assert(bml->bml_flags & BML_COH);
+		BML_ULOCK(bml);
+
+		lc_remove(&pndgBmapCbs, bml);
+		lc_addtail(&inflBmapCbs, bml);
+		bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
+
+		rc = mdscoh_req(bml, MDSCOH_NONBLOCK);
+		if (rc)
+			DEBUG_BMAP(PLL_ERROR, bml_2_bmap(bml), "bml=%p "
+			   "mdscoh_queue_req_locked() failed with (rc==%d)", 
+			   bml, rc);
 	}
 }
 

@@ -23,7 +23,6 @@
 #include "fid.h"
 #include "fidcache.h"
 #include "inodeh.h"
-#include "mdsexpc.h"
 #include "mdsio.h"
 #include "mdslog.h"
 #include "slashd.h"

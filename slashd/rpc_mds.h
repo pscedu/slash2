@@ -22,8 +22,8 @@
 
 #include "psc_util/multiwait.h"
 
-#include "mdsexpc.h"
 #include "slconn.h"
+#include "slashrpc.h"
 
 struct pscrpc_request;
 struct pscrpc_export;
@@ -49,6 +49,15 @@ struct pscrpc_export;
 struct slm_rmi_expdata {
 	struct pscrpc_export *smie_exp;
 };
+
+struct mexp_cli {
+        struct slashrpc_cservice *mc_csvc;
+        psc_spinlock_t            mc_lock;
+        struct psc_waitq          mc_waitq;
+};
+
+struct mexp_cli *mexpcli_get(struct pscrpc_export *);
+void             mexpcli_destroy(struct pscrpc_export *);
 
 void	slm_rpc_initsvc(void);
 

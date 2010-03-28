@@ -33,6 +33,7 @@
 #include "slashd.h"
 #include "slconfig.h"
 #include "slerr.h"
+#include "bmap_mds.h"
 
 void
 slmreplqthr_removeq(struct sl_replrq *rrq)

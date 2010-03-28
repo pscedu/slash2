@@ -22,14 +22,16 @@
 
 struct pscrpc_async_args;
 struct pscrpc_request;
+struct bmap_mds_lease;
 
-struct mexpbcm;
-
+int     mdscoh_req(struct bmap_mds_lease *, int);
 int	mdscoh_cb(struct pscrpc_request *, struct pscrpc_async_args *);
-void	mdscoh_infmode_chk(struct mexpbcm *, int);
 void	slmcohthr_spawn(void);
 
-extern struct psc_listcache	pndgBmapCbs;
-extern struct psc_listcache	inflBmapCbs;
+#define MDSCOH_BLOCK 1
+#define MDSCOH_NONBLOCK 0
+
+extern struct psc_listcache pndgBmapCbs;
+extern struct psc_listcache inflBmapCbs;
 
 #endif /* _MDSCOH_H_ */

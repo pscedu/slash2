@@ -93,8 +93,6 @@ struct resm_mds_info {
 
 	int			  rmmi_busyid;
 	struct sl_resm		 *rmmi_resm;
-	struct psc_dynarray	  rmmi_bmaps;		/* array of struct mexpbcm */
-	struct psc_dynarray	  rmmi_bmaps_deref;	/* dereferencing bmaps */
 	atomic_t		  rmmi_refcnt;		/* #CLIs using this ion */
 };
 

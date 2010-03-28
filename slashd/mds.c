@@ -19,17 +19,19 @@
 
 #include "psc_ds/tree.h"
 #include "psc_ds/treeutil.h"
+#include "psc_ds/lockedlist.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
+#include "psc_util/odtable.h"
 #include "psc_util/log.h"
 
 #include "bmap.h"
+#include "bmap_mds.h"
 #include "cache_params.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
 #include "mdscoh.h"
-#include "mdsexpc.h"
 #include "mdsio.h"
 #include "mdslog.h"
 #include "repl_mds.h"
@@ -38,12 +40,10 @@
 #include "slerr.h"
 
 struct odtable				*mdsBmapAssignTable;
+uint64_t                                 mdsBmapSequenceNo;
 const struct slash_bmap_od		 null_bmap_od;
 const struct slash_inode_od		 null_inode_od;
 const struct slash_inode_extras_od	 null_inox_od;
-
-__static SPLAY_GENERATE(bmap_exports, mexpbcm,
-    mexpbcm_bmap_tentry, mexpbmapc_exp_cmp);
 
 __static void
 mds_inode_od_initnew(struct slash_inode_handle *i)
@@ -167,130 +167,138 @@ mds_bmap_exists(struct fidc_membh *f, sl_blkno_t n)
 	return (n < lblk);
 }
 
-/**
- * mexpbcm_directio - queue mexpbcm's so that their clients may be
- *	notified of the cache policy change (to directio) for this bmap.
- *	The mds_coherency thread is responsible for actually issuing and
- *	checking the status of the rpc's.  Communication between this
- *	thread and the mds_coherency thread occurs by placing the
- *	mexpbcm's onto the pndgBmapCbs listcache.
- * @bmap: the bmap which is going dio.
- * Notes:  XXX this needs help but it's making my brain explode right now.
- */
-#define mds_bmap_directio_check(b) mds_bmap_directio((b), 1, 1)
-#define mds_bmap_directio_set(b)   mds_bmap_directio((b), 1, 0)
-#define mds_bmap_directio_unset(b) mds_bmap_directio((b), 0, 0)
-
-static void
-mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
+static int
+mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 {
-	struct bmap_mds_info *mdsi=bmap->bcm_pri;
-	struct mexpbcm *bref;
-	int mode, locked;
+	struct bmap_mds_info *bmdsi=b->bcm_pri;
+	struct bmap_mds_lease *bml;
+	int dio=0;
 
-	psc_assert(mdsi);
+	psc_assert(bmdsi);
+	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
 
-	BMAP_LOCK_ENSURE(bmap);
-
-	if (atomic_read(&bmap->bcm_wr_ref))
-		psc_assert(mdsi->bmdsi_wr_ion);
-
-	DEBUG_BMAP(PLL_TRACE, bmap, "enable=%d check=%d",
-		   enable_dio, check);
-
-	/* Iterate over the tree and pick up any clients which still cache
-	 *   this bmap.
-	 */
-	SPLAY_FOREACH(bref, bmap_exports, &mdsi->bmdsi_exports) {
-		/* Lock while the attributes of the this bref are
-		 *  tested.
+	BMAP_LOCK(b);
+	if (!bmdsi->bmdsi_writers || 
+	    ((bmdsi->bmdsi_writers == 1) &&
+	     (pll_nitems(&bmdsi->bmdsi_leases) == 1))) {
+		psc_assert(!bmdsi->bmdsi_wr_ion);		
+		if (b->bcm_mode & BMAP_DIO) 
+			b->bcm_mode &= ~BMAP_DIO;
+		/* Unset.
 		 */
-		locked = MEXPBCM_REQLOCK(bref);
-		psc_assert(bref->mexpbcm_export);
+		goto out;
 
-		mode = bref->mexpbcm_mode;
-		/* Don't send rpc if the client is already using DIO or
-		 *  has an rpc in flight (_REQD).
+	} else {
+		psc_assert(bmdsi->bmdsi_wr_ion);
+		if ((pll_nitems(&bmdsi->bmdsi_leases) > 1) && 
+		    !(b->bcm_mode & BMAP_DIO)) {
+			/* Set.
+			 */
+			b->bcm_mode |= BMAP_DIO;
+			dio = 1;
+		}
+	}
+	
+	if (!dio)
+		goto out;
+
+	if (rw == SL_READ) {
+		/* A read request has forced the bmap into directio mode.
+		 *   Inform the write-client to drop his cache.  This call
+		 *   is blocking.
 		 */
-		if (enable_dio &&                 /* turn dio on */
-		    !(mode & MEXPBCM_CDIO) &&     /* client already uses dio */
-		    (!((mode & MEXPBCM_DIO) ||       /* dio not already on */
-		       (mode & MEXPBCM_DIO_REQD)) || /* dio not coming on */
-		     (mode & MEXPBCM_CIO_REQD))) {   /* dio being disabled */
-			if (check) {
-				char clinidstr[PSC_NIDSTR_SIZE];
-				psc_nid2str(mexpbcm2nid(bref), clinidstr);
-
-				DEBUG_BMAP(PLL_WARN, bref->mexpbcm_bmap,
-					   "cli(%s) has not acknowledged dio "
-					   "rpc for bmap(%p) bref(%p) "
-					   "sent:(%d 0==true)",
-					   clinidstr, bmap, bref,
-					   atomic_read(&bref->mexpbcm_msgcnt));
-					   continue;
-			}
-			bref->mexpbcm_mode |= MEXPBCM_DIO_REQD;
-
-			if (mode & MEXPBCM_CIO_REQD) {
-				/* This bref is already enqueued and may
-				 *     have completed.
-				 * Verify the current inflight mode.
-				 */
-				mdscoh_infmode_chk(bref, MEXPBCM_CIO_REQD);
-				psc_assert(psclist_conjoint(&bref->mexpbcm_lentry));
-				if (!bref->mexpbcm_net_inf) {
-					/* Unschedule this RPC, the coh
-					 *    thread will remove it from
-					 *    the listcache.
-					 */
-					bref->mexpbcm_mode &= ~MEXPBCM_CIO_REQD;
-					bref->mexpbcm_net_cmd = MEXPBCM_RPC_CANCEL;
-				} else {
-					/* Inform the coh thread to requeue.
-					 */
-					bref->mexpbcm_net_cmd = MEXPBCM_DIO_REQD;
-					bref->mexpbcm_mode |= MEXPBCM_DIO_REQD;
-				}
-			} else {
-				/* Queue this one.
-				 */
-				bref->mexpbcm_mode |= MEXPBCM_DIO_REQD;
-				bref->mexpbcm_net_cmd = MEXPBCM_DIO_REQD;
-				psc_assert(psclist_disjoint(&bref->mexpbcm_lentry));
-				lc_addqueue(&pndgBmapCbs, bref);
-			}
-
-		} else if (!enable_dio &&                  /* goto cache io */
-			   ((mode & MEXPBCM_DIO) ||        /* we're in dio mode OR */
-			    (mode & MEXPBCM_DIO_REQD))) {  /* we're going to dio mode */
-
-			psc_assert(!(mode & MEXPBCM_CDIO));
-			if (mode & MEXPBCM_DIO_REQD) {
-				/* We'd like to disable DIO mode but a re-enable request
-				 *  has been queued recently.  Determine if it's inflight
-				 *  of if it still queued.
-				 */
-				psc_assert(psclist_conjoint(&bref->mexpbcm_lentry));
-				mdscoh_infmode_chk(bref, MEXPBCM_DIO_REQD);
-				if (!bref->mexpbcm_net_inf) {
-					/* Unschedule this rpc, the coh thread will
-					 *  remove it from the listcache.
-					 */
-					bref->mexpbcm_mode &= ~MEXPBCM_DIO_REQD;
-					bref->mexpbcm_net_cmd = MEXPBCM_RPC_CANCEL;
-				} else {
-					bref->mexpbcm_net_cmd = MEXPBCM_CIO_REQD;
-					bref->mexpbcm_mode |= MEXPBCM_CIO_REQD;
-				}
-			} else {
-				bref->mexpbcm_mode |= MEXPBCM_CIO_REQD;
-				bref->mexpbcm_net_cmd = MEXPBCM_CIO_REQD;
-				psc_assert(psclist_disjoint(&bref->mexpbcm_lentry));
-				lc_addqueue(&pndgBmapCbs, bref);
+		psc_assert(pll_nitems(&bmdsi->bmdsi_leases) == 1);
+		bml = pll_gethdpeek(&bmdsi->bmdsi_leases);
+		psc_assert(bml->bml_flags & BML_WRITE);
+		BMAP_ULOCK(b);
+		/* A failure here could be handled through the bmap timeout
+		 *   mechanism where the client will block on this I/O until 
+		 *   the client has either closed the bmap or the mds has
+		 *   phased out the seq number.
+		 */
+		if (bml->bml_flags & BML_CDIO)
+			return (0);
+		else
+			return (mdscoh_req(bml, MDSCOH_BLOCK));
+	} else {
+		int wtrs=0;
+		/* Inform our readers to use directio mode.
+		 */
+		PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
+			if (bml->bml_flags & BML_WRITE)
+				wtrs++;
+			else {
+				if (bml->bml_flags & BML_CDIO)
+					continue;
+				(int)mdscoh_req(bml, MDSCOH_NONBLOCK);
 			}
 		}
-		MEXPBCM_UREQLOCK(bref, locked);
+		psc_assert(wtrs == 1);
 	}
+ out:
+	BMAP_ULOCK(b);
+	return (0);
+}
+
+void
+mds_bmi_obtable_release(struct bmap_mds_info *bmdsi, uint64_t seq)
+{
+	struct bmapc_memb *b=bmdsi->bmdsi_bmap;
+	struct bmi_assign *bmi;
+	struct odtable_receipt *odtr;
+	int rc;
+
+	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
+	
+	bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
+	if (!bmi) {
+		DEBUG_BMAP(PLL_WARN, b, "odtable_getitem() failed");
+		return;
+	}
+	
+	psc_assert(bmi->bmi_seq == bmdsi->bmdsi_seq);
+	psc_assert(bmi->bmi_seq <= seq);
+	
+	BMAP_LOCK(b);
+	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
+	odtr = bmdsi->bmdsi_assign;
+
+	bmdsi->bmdsi_wr_ion = NULL;
+	bmdsi->bmdsi_assign = NULL;
+	bmdsi->bmdsi_seq = BMAPSEQ_ANY;
+	b->bcm_mode &= ~BMAP_IONASSIGN;
+
+	bcm_wake_locked(b);
+	BMAP_ULOCK(b);	
+
+	if ((rc = odtable_freeitem(mdsBmapAssignTable, odtr)))
+		DEBUG_BMAP(PLL_ERROR, b, "odtable release error (rc=%d)", rc);
+	else
+		DEBUG_BMAP(PLL_NOTIFY, b, "release odtable assignment");
+
+	return;
+}
+
+void
+mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
+{
+	struct bmi_assign *bmi;
+	struct sl_resm *resm;
+
+	bmi = data;
+
+	resm = libsl_nid2resm(bmi->bmi_ion_nid);
+
+	psc_warnx("fid=%"PRId64" res=(%s) ion=(%s) bmapno=%u",
+		  bmi->bmi_fid,
+		  resm->resm_res->res_name,
+		  libcfs_nid2str(bmi->bmi_ion_nid),
+		  bmi->bmi_bmapno);
+
+	odtable_freeitem(mdsBmapAssignTable, odtr);
+
+	//XXX pull the current min and max mdsbmap sequence number from 
+	//  the odtable.
 }
 
 /**
@@ -301,9 +309,10 @@ mds_bmap_directio(struct bmapc_memb *bmap, int enable_dio, int check)
  * @pios: the preferred I/O system
  */
 __static int
-mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
+mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 {
-	struct bmap_mds_info *mdsi=bmap->bcm_pri;
+	struct bmapc_memb *bmap=bml_2_bmap(bml);
+	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
 	struct bmi_assign bmi;
 	struct sl_resource *res=libsl_id2res(pios);
 	struct sl_resm *resm;
@@ -311,10 +320,10 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	struct resprof_mds_info *rpmi;
 	int j, n, len;
 
-	psc_assert(!mdsi->bmdsi_wr_ion);
-	psc_assert(atomic_read(&bmap->bcm_opcnt) > 0);
-	n = atomic_read(&bmap->bcm_wr_ref);
-	psc_assert(n == 0 || n == 1);
+	psc_assert(bmap->bcm_mode & BMAP_IONASSIGN);	
+	psc_assert(!bmdsi->bmdsi_wr_ion);
+	psc_assert(!bmdsi->bmdsi_assign);
+	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 0);
 
 	if (!res) {
 		psc_warnx("Failed to find pios %d", pios);
@@ -352,12 +361,12 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 		    res->res_name, resm->resm_addrbuf);
 
 		atomic_inc(&rmmi->rmmi_refcnt);
-		mdsi->bmdsi_wr_ion = rmmi;
+		bmdsi->bmdsi_wr_ion = rmmi;
 		freelock(&rmmi->rmmi_lock);
 		break;
 	}
 
-	if (!mdsi->bmdsi_wr_ion)
+	if (!bmdsi->bmdsi_wr_ion)
 		return (-SLERR_ION_OFFLINE);
 
 	/* An ION has been assigned to the bmap, mark it in the odtable
@@ -368,26 +377,58 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
 	bmi.bmi_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	bmi.bmi_bmapno = bmap->bcm_blkno;
 	bmi.bmi_start = time(NULL);
+	bmdsi->bmdsi_seq = bmi.bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 
-	mdsi->bmdsi_assign = odtable_putitem(mdsBmapAssignTable, &bmi);
-	if (!mdsi->bmdsi_assign) {
+	bmdsi->bmdsi_assign = odtable_putitem(mdsBmapAssignTable, &bmi);
+	if (!bmdsi->bmdsi_assign) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
 		return (-SLERR_XACT_FAIL);
 	}
 
 	/* Signify that a ION has been assigned to this bmap.  This
-	 *   opcnt ref will stay in place until the ION informs us that
-	 *   he's finished with it.
+	 *   opcnt ref will stay in place until the bmap has been released
+	 *   by the last client or has been timed out.
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
 
 	mds_repl_inv_except_locked(bmap, bmi.bmi_ios);
 
-	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assignment");
+ 	bml->bml_seq = bmi.bmi_seq;
+ 	bml->bml_key = bmdsi->bmdsi_assign->odtr_key;		
 
+	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assignment");
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
 	    "rmmi(%p)", res->res_name, resm->resm_addrbuf,
-	    mdsi->bmdsi_wr_ion);
+	    bmdsi->bmdsi_wr_ion);
+
+	return (0);
+}
+
+__static int
+mds_bmap_ion_update(struct bmap_mds_lease *bml)
+{
+	struct bmapc_memb *b=bml_2_bmap(bml);
+	struct bmap_mds_info *bmdsi=b->bcm_pri;
+	struct bmi_assign *bmi;
+	
+	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
+	
+	bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
+	if (!bmi) {
+		DEBUG_BMAP(PLL_WARN, b, "odtable_getitem() failed");
+		return (-1);
+	}
+	
+	psc_assert(bmi->bmi_seq == bmdsi->bmdsi_seq);
+	bmi->bmi_start = time(NULL);
+	bmi->bmi_seq = bmdsi->bmdsi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
+	bmdsi->bmdsi_assign = odtable_replaceitem(mdsBmapAssignTable, 
+					  bmdsi->bmdsi_assign, bmi);
+
+	bml->bml_seq = bmi->bmi_seq;
+        bml->bml_key = bmdsi->bmdsi_assign->odtr_key;
+
+	psc_assert(bmdsi->bmdsi_assign);
 	return (0);
 }
 
@@ -400,154 +441,222 @@ mds_bmap_ion_assign(struct bmapc_memb *bmap, sl_ios_id_t pios)
  * @mq: the RPC request for examining the bmap access mode (read/write).
  */
 __static int
-mds_bmap_ref_add(struct mexpbcm *bref, const struct srm_bmap_req *mq)
+mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
 {
-	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
-	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
-	enum rw rw = mq->rw;
+	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
+	struct bmapc_memb *b=bmdsi->bmdsi_bmap;
 	int rc=0;
-	atomic_t *a=(rw == SL_WRITE ?
-		     &bmap->bcm_wr_ref : &bmap->bcm_rd_ref);
 
-	BMAP_LOCK(bmap);
-	/* BMAP_OP #1 unref'd in mds_bmap_ref_drop_locked()
+	BMAP_LOCK(b);
+	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
+	/* Wait for BMAP_IONASSIGN to be removed before proceeding.
 	 */
-	bmap_op_start_type(bmap, BMAP_OPCNT_BREF);
-
-	if (!atomic_read(a)) {
-		/* There are no refs for this mode, therefore the
-		 *   bcm_bmapih.bmapi_mode should not be set.
+	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));	
+	pll_addtail(&bmdsi->bmdsi_leases, bml);
+	
+	if (mq->rw == SL_WRITE) {
+		/* Drop the lock prior to doing disk and possibly network
+		 *    I/O.
 		 */
-		if (rw == SL_WRITE) {
-			psc_assert((bmap->bcm_mode & BMAP_WR) == 0);
-			bmap->bcm_mode |= BMAP_WR;
+		bmdsi->bmdsi_writers++;
+		b->bcm_mode |= BMAP_IONASSIGN;
+		bml->bml_flags |= BML_TIMEOQ;
+		
+		if (bmdsi->bmdsi_writers == 1) {
+			psc_assert(!bmdsi->bmdsi_wr_ion);
+			BMAP_ULOCK(b);
+			rc = mds_bmap_ion_assign(bml, mq->pios);
 		} else {
-			psc_assert((bmap->bcm_mode & BMAP_RD) == 0);
-			bmap->bcm_mode |= BMAP_RD;
+			psc_assert(bmdsi->bmdsi_wr_ion);
+			BMAP_ULOCK(b);
+			rc = mds_bmap_ion_update(bml);
 		}
 
-	}
-	/* Set and check ref cnts now.
-	 */
-	atomic_inc(a);
-	bmap_dio_sanity_locked(bmap, 0);
-
-	if ((atomic_read(&bmap->bcm_wr_ref) == 1) &&
-	    (rw == SL_WRITE) && !bmdsi->bmdsi_wr_ion) {
-		/* XXX Should not send connect rpc's here while
-		 *  the bmap is locked.  This may have to be
-		 *  replaced by a waitq and init flag.
-		 */
-		rc = mds_bmap_ion_assign(bmap, mq->pios);
 		if (rc) {
-			bmap->bcm_mode |= BMAP_MDS_NOION;
+			BMAP_LOCK(b);
+			bmdsi->bmdsi_writers--;
+			b->bcm_mode &= ~BMAP_IONASSIGN;
+			b->bcm_mode |= BMAP_MDS_NOION;
+			pll_remove(&bmdsi->bmdsi_leases, bml);
 			goto out;
 		}
+		rc = mds_bmap_directio(b, SL_WRITE);
+		BMAP_LOCK(b);
+		b->bcm_mode &= ~BMAP_IONASSIGN;
+
+	} else {
+		/* Read leases aren't required to be present in the 
+		 *   timeout table though their sequence number must
+		 *   be accounted for.
+		 */
+		bml->bml_seq = mds_bmap_timeotbl_getnextseq();
+		bml->bml_key = BMAPSEQ_ANY;
+
+		if (bmdsi->bmdsi_writers) {
+			b->bcm_mode |= BMAP_IONASSIGN;
+			BMAP_ULOCK(b);
+			/* Don't hold the lock when calling 
+			 *   mds_bmap_directio_handle_locked(), it will likely 
+			 *   send an RPC.
+			 */
+			rc = mds_bmap_directio(b, SL_READ);
+			BMAP_LOCK(b);
+			b->bcm_mode &= ~BMAP_IONASSIGN;
+		}
 	}
-	/* Do directio checks here.
-	 */
-	if (atomic_read(&bmap->bcm_wr_ref) > 2)
-		/* It should have already been set.
-		 */
-		mds_bmap_directio_check(bmap);
-
-	else if (atomic_read(&bmap->bcm_wr_ref) == 2 ||
-		 (atomic_read(&bmap->bcm_wr_ref) == 1 &&
-		  atomic_read(&bmap->bcm_rd_ref)))
-		/* These represent the two possible 'add' related transitional
-		 *  states, more than 1 writer or the first writer amidst
-		 *  existing readers.
-		 */
-		mds_bmap_directio_set(bmap);
-	/* Pop it on the tree.
-	 */
-	if (SPLAY_INSERT(bmap_exports, &bmdsi->bmdsi_exports, bref))
-		psc_fatalx("found duplicate bref on bmap_exports");
-
  out:
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, bmap,
-		   "ref_add (mion=%p) (rc=%d)",
-		   bmdsi->bmdsi_wr_ion, rc);
-	BMAP_ULOCK(bmap);
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "bml_add (mion=%p) (rc=%d)", 
+	   bmdsi->bmdsi_wr_ion, rc);
 
-	/* BMAP_OP #1 unref in the event of an error.
-	 */
+	bcm_wake_locked(b);
+	BMAP_ULOCK(b);
 	if (rc)
-		bmap_op_done_type(bmap, BMAP_OPCNT_BREF);
+		bmap_op_done_type(b, BMAP_OPCNT_LEASE);
 
 	return (rc);
 }
 
-
 /**
- *
- * Notes:  I unlock the bmap or free it.
+ * mds_bmap_bml_release - remove a bmap lease from the mds.  This can be
+ *   called from the bmap_timeo thread, from a client bmap_release rpc, 
+ *   or from the nbreqset cb context.
+ * Notes:  the bml must be removed from the timeotbl in all cases.  
+ *    otherwise we determine list removals on a case by case basis.
  */
-void
-mds_bmap_ref_drop_locked(struct bmapc_memb *bmap, enum rw rw)
+int 
+mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 {
-	struct bmap_mds_info *mdsi;
+	struct bmap_mds_info *bmdsi;
+	struct bmap_mds_lease *bml;
+	struct odtable_receipt *odtr=NULL;
+	int found=0, rc;
 
-	BMAP_LOCK_ENSURE(bmap);
+        bmdsi = b->bcm_pri;
+	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-	DEBUG_BMAP(PLL_DEBUG, bmap, "try close 1");
+	DEBUG_BMAP(PLL_INFO, b, "seq=%"PRId64" key=%"PRId64, seq, key);
+	BMAP_LOCK(b);
+	/* BMAP_IONASSIGN acts as a barrier for operations which 
+	 *   may modify bmdsi_wr_ion.  Since ops associated with 
+	 *   BMAP_IONASSIGN do disk and net i/o, the spinlock is 
+	 *   dropped.
+	 */
+	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));
+	b->bcm_mode |= BMAP_IONASSIGN;
 
-	mdsi = bmap->bcm_pri;
-	if (rw == SL_WRITE) {
-		psc_assert(atomic_read(&bmap->bcm_wr_ref) > 0);
-		if (atomic_dec_and_test(&bmap->bcm_wr_ref)) {
-			psc_assert(bmap->bcm_mode & BMAP_WR);
-			bmap->bcm_mode &= ~BMAP_WR;
-			if (mdsi->bmdsi_wr_ion &&
-			    atomic_dec_and_test(&mdsi->bmdsi_wr_ion->rmmi_refcnt)) {
-				//XXX cleanup mion here?
-			}
-			//mdsi->bmdsi_wr_ion = NULL;
+	PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
+		if (bml->bml_seq == seq) {
+			found = 1;
+			break;
 		}
-	} else {
-		psc_assert(atomic_read(&bmap->bcm_rd_ref) > 0);
-		if (atomic_dec_and_test(&bmap->bcm_rd_ref))
-			bmap->bcm_mode &= ~BMAP_RD;
+	}	
+	if (!found) {
+		BMAP_ULOCK(b);
+		return (-ENOENT);
 	}
 
-	bmap_dio_sanity_locked(bmap, 1);
-	/* Disable directio if the last writer has left OR
-	 *   no readers exist amongst a single writer.
+	BML_LOCK(bml);
+	if (bml->bml_flags & BML_COHRLS) {
+		/* Called from the mdscoh callback.  Nothing should be left
+		 *   except for removing the bml from the bmdsi.
+		 */
+		psc_assert(!(bml->bml_flags & (BML_COH|BML_EXP|BML_TIMEOQ)));
+		psc_assert(psclist_disjoint(&bml->bml_coh_lentry));
+		psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
+		psc_assert(psclist_disjoint(&bml->bml_timeo_lentry));
+		bml->bml_flags &= ~BML_COHRLS;
+	}
+	
+	if (bml->bml_flags & BML_COH)
+		/* Don't wait for any outstanding coherency callbacks 
+		 *   to complete.  Mark the bml so that the coh thread 
+		 *   will call this function upon rpc completion.
+		 */		
+		bml->bml_flags |= BML_COHRLS;
+
+	if (bml->bml_flags & BML_EXP) {
+		struct slashrpc_export *slexp;
+
+		/* Take the locks in the correct order.
+		 */
+		BML_ULOCK(bml);
+		slexp = slexp_get(bml->bml_exp, SLCONNT_MDS);
+		spinlock(&slexp->slexp_export->exp_lock);
+		BML_LOCK(bml);
+		if (bml->bml_flags & BML_EXP) {
+			psc_assert(psclist_conjoint(&bml->bml_exp_lentry));
+			psclist_del(&bml->bml_exp_lentry);
+			bml->bml_flags &= ~BML_EXP;
+		} else
+			psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
+
+		freelock(&slexp->slexp_export->exp_lock);
+		slexp_put(bml->bml_exp);
+
+		bml->bml_flags &= ~BML_EXP;
+	}
+	/* Note: reads are not attached to the timeout table.
 	 */
-	if (!atomic_read(&bmap->bcm_wr_ref) ||
-	    ((atomic_read(&bmap->bcm_wr_ref) == 1) &&
-	     (!atomic_read(&bmap->bcm_rd_ref))))
-		mds_bmap_directio_unset(bmap);
-	/* BMAP_OP #1 Corresponds to the mds_bmap_ref_add() ref
+	if (bml->bml_flags & BML_TIMEOQ) 
+		(uint64_t)mds_bmap_timeotbl_mdsi(bml, BTE_DEL);
+
+	/* If BML_COHRLS was set above then the lease must remain on the 
+	 *    bmdsi so that directio can be managed properly.
 	 */
-	bmap_op_done_type(bmap, BMAP_OPCNT_BREF);
-}
+	if (bml->bml_flags & BML_COHRLS) {
+		BML_ULOCK(bml);
+		return (-EAGAIN);
+	} 
 
-/**
- * mexpbcm_release - Drop a read or write reference to the bmap's tree.
- * @bref: the bmap link to unref
- */
-void
-mexpbcm_release(struct mexpbcm *bref)
-{
-	struct bmapc_memb *bmap=bref->mexpbcm_bmap;
-	struct bmap_mds_info *mdsi=bmap->bcm_pri;
+	pll_remove(&bmdsi->bmdsi_leases, bml);
+	if (bmdsi->bmdsi_writers)
+		psc_assert(bmdsi->bmdsi_wr_ion);
+       	
+	if (bml->bml_flags & BML_WRITE)
+		bmdsi->bmdsi_writers--;
 
-	BMAP_LOCK(bmap);
+	BML_ULOCK(bml);
 
-	if (!SPLAY_REMOVE(bmap_exports, &mdsi->bmdsi_exports, bref) &&
-	    !(bmap->bcm_mode & BMAP_MDS_NOION))
-		psc_fatalx("bref not found on bmap_exports");
+	if ((((!bmdsi->bmdsi_writers) ||
+	      ((bmdsi->bmdsi_writers == 1))) && 
+	     (pll_nitems(&bmdsi->bmdsi_leases) == 1)) && 
+	    (b->bcm_mode & BMAP_DIO))
+		/* Remove the directio flag if possible.
+		 */
+		b->bcm_mode &= ~BMAP_DIO;
 
-	DEBUG_BMAP(PLL_INFO, bmap, "done with ref_del bref=%p", bref);
-
-	/* mds_bmap_ref_drop_locked() may free the bmap therefore
-	 *   we don't try to unlock it here, mds_bmap_ref_drop_locked()
-	 *   will unlock it for us.
+	/* Only release the odtable entry if the key matches.  If a match
+	 *   is found then verify the sequence number matches.
 	 */
-	mds_bmap_ref_drop_locked(bmap, bref->mexpbcm_mode & MEXPBCM_WR ?
-				 SL_WRITE : SL_READ);
-	PSCFREE(bref);
+	if (!bmdsi->bmdsi_writers && (key == bmdsi->bmdsi_assign->odtr_key)) {
+		/* odtable sanity checks:
+		 */
+		struct bmi_assign *bmi;
+
+		bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
+		psc_assert(bmi->bmi_seq == seq);
+		psc_assert(bmi->bmi_bmapno == b->bcm_bmapno);
+		/* End Sanity Checks.
+		 */
+		psc_assert(seq == bmdsi->bmdsi_seq);
+		atomic_dec(&bmdsi->bmdsi_wr_ion->rmmi_refcnt);
+		odtr = bmdsi->bmdsi_assign;
+		bmdsi->bmdsi_assign = NULL;
+		bmdsi->bmdsi_wr_ion = NULL;
+		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
+	}	       	
+	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
+	BMAP_ULOCK(b);
+	
+	if (odtr) {
+		rc = odtable_freeitem(mdsBmapAssignTable, odtr);
+		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%"
+		   PRId64, seq, key);
+	}
+
+	psc_pool_return(bmapMdsLeasePool, bml);
+	
+	return (rc);
 }
 
 /**
@@ -581,7 +690,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u sz=%"PRId64" ion=%s",
 		   c->blkno, c->fsize, libcfs_nid2str(ion_nid));
 
-	psc_assert(atomic_read(&bmap->bcm_opcnt) > 1);
+	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
 
 	bmdsi = bmap->bcm_pri;
 	bmapod = bmap->bcm_od;
@@ -591,7 +700,6 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	psc_assert(bmdsi);
 	psc_assert(bmapod);
 	psc_assert(bmdsi->bmdsi_wr_ion);
-	bmap_dio_sanity_locked(bmap, 1);
 
 	if (ion_nid != bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid) {
 		/* Whoops, we recv'd a request from an unexpected nid.
@@ -747,7 +855,8 @@ mds_bmap_init(struct bmapc_memb *bcm)
 	struct bmap_mds_info *bmdsi;
 
 	bmdsi = bcm->bcm_pri;
-	SPLAY_INIT(&bmdsi->bmdsi_exports);
+	pll_init(&bmdsi->bmdsi_leases, struct bmap_mds_lease, 
+		 bml_bmdsi_lentry, NULL);
 	jfi_init(&bmdsi->bmdsi_jfi, mds_bmap_sync, mds_bmap_jfiprep, bcm);
 	bmdsi->bmdsi_xid = 0;
 }
@@ -834,7 +943,7 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
  *	it may be sent to a client.  It first checks for existence in
  *	the cache, if needed, the bmap is retrieved from disk.
  *
- *	mds_bmap_load_cli() also manages the mexpbcm reference
+ *	mds_bmap_load_cli() also manages the bmap_lease reference
  *	which is used to track the bmaps a particular client knows
  *	about.  mds_bmap_read() is used to retrieve the bmap from disk
  *	or create a new 'blank-slate' bmap if one does not exist.
@@ -850,158 +959,51 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
  */
 int
 mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
-    struct pscrpc_export *exp, struct bmapc_memb **bmap)
+  struct pscrpc_export *exp, struct bmapc_memb **bmap, struct srm_bmap_rep *mp)
 {
-	struct fcmh_mds_info *fmi = fcmh_2_fmi(f);
-	struct slash_inode_handle *inoh = &fmi->fmi_inodeh;
-	struct mexpbcm *bref, tbref;
-	struct bmapc_memb *b;
+	struct bmapc_memb *b;	
+	struct bmap_mds_lease *bml;
+	struct slashrpc_export *slexp;
 	int rc=0;
 
-	psc_assert(inoh);
 	psc_assert(!*bmap);
 
-	tbref.mexpbcm_blkno = mq->blkno;
-	/* This bmap load *should* be for a bmap which the client has not
-	 *   already referenced and therefore no mexpbcm should exist.  The
-	 *   mexpbcm exists for each bmap that the client has cached.
-	 */
-
-	/* Establish a reference here, note that mexpbcm_bmap will
-	 *   be null until either the bmap is loaded or pulled from
-	 *   the cache.
-	 */
-	bref = PSCALLOC(sizeof(*bref));
-	bref->mexpbcm_mode = MEXPBCM_INIT;
-	bref->mexpbcm_blkno = mq->blkno;
-	bref->mexpbcm_export = exp;
-
-	/* Ok, the bref has been initialized and loaded into the tree.  We
-	 *  still need to set the bmap pointer mexpbcm_bmap though.  Lock the
-	 *  fcmh during the bmap lookup.
-	 *
-	 * BMAP_OP #4 via lookup.
-	 */
 	rc = mds_bmap_load(f, mq->blkno, &b);
-	if (rc) {
-		PSCFREE(bref);
-		return (rc);
-	}
-	/* Sanity checks, make sure that we didn't let the client in
-	 *  before this bmap was ready.
-	 */
-	MEXPBCM_LOCK(bref);
-
-	psc_assert(bref->mexpbcm_mode == MEXPBCM_INIT);
-
-	bref->mexpbcm_bmap = b;
-	bref->mexpbcm_mode = ((mq->rw == SL_WRITE) ?  MEXPBCM_WR : MEXPBCM_RD);
-
-	/* Check if the client requested directio, if so tag it in the
-	 *  bref.
-	 */
-	if (mq->dio)
-		bref->mexpbcm_mode |= MEXPBCM_CDIO;
-
-	MEXPBCM_ULOCK(bref);
-	/* Place our bref on the tree, manage any mode changes that result
-	 *  from this new reference.  Also, on write choose an ION if needed.
-	 */
-	rc = mds_bmap_ref_add(bref, mq);
 	if (rc)
-		PSCFREE(bref);
+		return (rc);
+
+	bml = psc_pool_get(bmapMdsLeasePool);
+	memset(bml, 0, bmapMdsLeasePool->ppm_master->pms_entsize);
+	LOCK_INIT(&bml->bml_lock);
+	bml->bml_exp = exp;
+	bml->bml_bmdsi = b->bcm_pri;
+	bml->bml_flags = (mq->rw == SL_WRITE ? SL_WRITE : SL_READ);
+
+	if (mq->dio)
+		bml->bml_flags |= BML_CDIO;
+       
+	rc = mds_bmap_bml_add(bml, mq);
+	if (rc)
+		psc_pool_return(bmapMdsLeasePool, bml);
 	else
 		*bmap = b;
 
-	/* BMAP_OP #4, drop our lookup reference.
+	/* Note the lock ordering here.
 	 */
+	slexp = slexp_get(exp, SLCONNT_MDS);
+	spinlock(&exp->exp_lock);
+	psclist_xadd_tail(&bml->bml_exp_lentry, &slexp->slexp_list);
+	BML_LOCK(bml);
+	bml->bml_flags |= BML_EXP;
+	BML_ULOCK(bml);
+	freelock(&exp->exp_lock);
+	slexp_put(exp);
+
+	mp->seq = bml->bml_seq;
+	mp->key = bml->bml_bmdsi->bmdsi_assign->odtr_key;
+
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-
-	/* XXX think about policy updates in fail mode.
-	 */
 	return (rc);
-}
-
-/**
- * mds_fidfs_lookup - "lookup file id via filesystem".  This call does a
- *	getattr on the provided pathname, loads (and verifies) the info
- *	from the getattr and then does a lookup into the fidcache.
- * XXX clean me up.. extract crc stuff..
- * XXX until dcache is done, this must be done for every lookup.
- */
-#if 0
-int
-mds_fidfs_lookup(const char *path, struct slash_creds *creds,
-		 struct fidc_membh **fcmh)
-{
-	int rc;
-	struct slash_inode_handle inoh;
-	size_t       sz = sizeof(struct slash_inode_od);
-	psc_crc64_t    crc;
-
-	psc_assert(fcmh && !(*fcmh));
-
-	rc = access_fsop(ACSOP_GETATTR, creds->uid, creds->gid, path,
-			 SFX_INODE, &inoh.inoh_ino, sz);
-
-	if (rc < 0)
-		psc_warn("Attr lookup on (%s) failed", path);
-	else if (rc != sz)
-		psc_warn("Attr lookup on (%s) gave invalid sz (%d)", path, rc);
-	else
-		rc=0;
-
-	psc_crc64_calc(&crc, &inoh.inoh_ino, sz);
-	if (crc != inoh.inoh_ino.ino_crc) {
-		psc_warnx("Crc failure on inode");
-		errno = EIO;
-		return -1;
-	}
-	if (inoh.inoh_ino.ino_nrepls) {
-		sz = sizeof(sl_replica_t) * inoh.inoh_ino.ino_nrepls;
-		inoh->inoh_replicas = PSCALLOC(sz);
-		rc = access_fsop(ACSOP_GETATTR, creds->uid, creds->gid, path,
-				 SFX_REPLICAS, inoh.inoh_replicas, sz);
-		if (rc < 0)
-			psc_warn("Attr lookup on (%s) failed", path);
-		else if (rc != sz)
-			psc_warn("Attr lookup on (%s) gave invalid sz (%d)",
-				 path, rc);
-		else
-			rc=0;
-
-		psc_crc64_calc(&crc, inoh.inoh_replicas, sz);
-		if (crc != inoh.inoh_ino.ino_rs_crc) {
-			psc_warnx("Crc failure on replicas");
-			errno = EIO;
-			*fcmh = NULL;
-			return -1;
-		}
-	}
-	*fcmh = fidc_lookup_ino(&inoh.inoh_ino);
-	psc_assert(*fcmh);
-
-	return(rc);
-}
-#endif
-
-void
-mds_bmi_cb(void *data, struct odtable_receipt *odtr)
-{
-	struct bmi_assign *bmi;
-	struct sl_resm *resm;
-
-	bmi = data;
-
-	resm = libsl_nid2resm(bmi->bmi_ion_nid);
-
-	psc_warnx("fid=%"PRId64" res=(%s) ion=(%s) bmapno=%u",
-		  bmi->bmi_fid,
-		  resm->resm_res->res_name,
-		  libcfs_nid2str(bmi->bmi_ion_nid),
-		  bmi->bmi_bmapno);
-
-	odtable_freeitem(mdsBmapAssignTable, odtr);
 }
 
 struct bmap_ops bmap_ops = {

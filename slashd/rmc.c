@@ -42,8 +42,8 @@
 
 #include "fdbuf.h"
 #include "fidc_mds.h"
+#include "bmap_mds.h"
 #include "fidcache.h"
-#include "mdsexpc.h"
 #include "mdsio.h"
 #include "mkfn.h"
 #include "pathnames.h"
@@ -129,7 +129,9 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
 		mp->rc = -EINVAL;
-
+	/* XXX this assert will crash the mds should the client try to 
+	 *  reconnect on his own.  Zhihui's namespace tester is causing this.
+	 */
 	psc_assert(e->exp_private == NULL);
 	mexp_cli = mexpcli_get(e);
 	slm_getclcsvc(e);
@@ -179,7 +181,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		return (mp->rc);
 
 	bmap = NULL;
-	mp->rc = mds_bmap_load_cli(fcmh, mq, rq->rq_export, &bmap);
+	mp->rc = mds_bmap_load_cli(fcmh, mq, rq->rq_export, &bmap, mp);
 	if (mp->rc)
 		return (mp->rc);
 
@@ -210,25 +212,25 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		}
 	}
 
-	if (bmap->bcm_mode & BMAP_WR) {
-		/* Return the write IOS if the bmap is in write mode.
-		 */
+	mp->nblks = 1;
+
+	if (mq->rw == SL_WRITE) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		mp->ios_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
-	} else
-		mp->ios_nid = LNET_NID_ANY;
+		bdbuf_sign(&bdb, &mq->fg, &rq->rq_peer, mp->ios_nid, 
+			   bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id, 
+			   bmap->bcm_blkno, mp->seq, mp->key);
 
-	bdbuf_sign(&bdb, &mq->fg, &rq->rq_peer,
-	   (mq->rw == SL_WRITE ? mp->ios_nid : LNET_NID_ANY),
-	   (mq->rw == SL_WRITE ?
-	    bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id : IOS_ID_ANY),
-	   bmap->bcm_blkno);
+	} else {
+		mp->ios_nid = LNET_NID_ANY;
+		bdbuf_sign(&bdb, &mq->fg, &rq->rq_peer, LNET_NID_ANY, 
+			   IOS_ID_ANY, bmap->bcm_blkno, mp->seq, mp->key);
+	}
 
 	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
 	    SRMC_BULK_PORTAL, iov, niov);
 	if (desc)
 		pscrpc_free_bulk(desc);
-	mp->nblks = 1;
 
 	return (0);
 }
@@ -337,6 +339,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
 	    NULL, &mp->attr, &mdsio_data);
+	//XXX fix me.  Place an fcmh into the cache and don't close 
+	// my zfs handle.
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);
 
@@ -440,6 +444,44 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
 	return (mp->rc);
+}
+
+int
+slm_rmc_handle_rls_bmap(struct pscrpc_request *rq)
+{
+	struct srm_bmap_release_req *mq;
+	struct srm_bmap_release_rep *mp;
+	struct slash_fidgen fg;
+	struct fidc_membh *f;
+	struct bmapc_memb *b;
+	struct srm_bmap_id *bid;
+	uint32_t i;
+
+	RSX_ALLOCREP(rq, mq, mp);
+
+	for (i=0; i < mq->nbmaps; i++) {
+		bid = &mq->bmaps[i];
+		
+		fg.fg_fid = bid->fid; 
+		fg.fg_gen = FIDGEN_ANY;
+
+		mp->bidrc[i] = slm_fcmh_get(&fg, &f);
+		if (mp->bidrc[i])
+			continue;
+		
+		DEBUG_FCMH(PLL_INFO, f, "rls bmap=%u", bid->bmapno);
+
+		mp->bidrc[i] = bmap_lookup(f, bid->bmapno, &b);
+		if (mp->bidrc[i])
+                        continue;
+		
+		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64, bid->seq);
+
+		mp->bidrc[i] = mds_bmap_bml_release(b, bid->seq, bid->key);
+		if (mp->bidrc[i])
+                        continue;
+	}
+	return (0);
 }
 
 int
@@ -785,6 +827,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_READLINK:
 		rc = slm_rmc_handle_readlink(rq);
+		break;
+	case SRMT_RELEASEBMAP:
+		rc = slm_rmc_handle_rls_bmap(rq);
 		break;
 	case SRMT_RENAME:
 		rc = slm_rmc_handle_rename(rq);

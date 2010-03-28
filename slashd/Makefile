@@ -24,6 +24,7 @@ SRCS+=		rmm.c
 SRCS+=		rpc_mds.c
 SRCS+=		sitemon.c
 SRCS+=		timer_mds.c
+SRCS+=		mds_bmap_timeo.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/cfg_common.c
 SRCS+=		${SLASH_BASE}/share/fdbuf.c
