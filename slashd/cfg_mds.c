@@ -23,7 +23,6 @@
 #include "psc_util/lock.h"
 #include "psc_util/multiwait.h"
 
-#include "mdsexpc.h"
 #include "slashd.h"
 #include "slconfig.h"
 
@@ -45,8 +44,6 @@ slcfg_init_resm(struct sl_resm *resm)
 	LOCK_INIT(&rmmi->rmmi_lock);
 	psc_multiwaitcond_init(&rmmi->rmmi_mwcond,
 	    NULL, 0, "rmmi-%s", resm->resm_addrbuf);
-	psc_dynarray_init(&rmmi->rmmi_bmaps);
-	psc_dynarray_init(&rmmi->rmmi_bmaps_deref);
 	atomic_set(&rmmi->rmmi_refcnt, 0);
 	rmmi->rmmi_resm = resm;
 }
