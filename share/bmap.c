@@ -57,8 +57,6 @@ bmap_remove(struct bmapc_memb *b)
 
 	psc_assert(b->bcm_mode & BMAP_CLOSING);
 	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
-	psc_assert(!atomic_read(&b->bcm_wr_ref) &&
-		   !atomic_read(&b->bcm_rd_ref));
 	psc_assert(!atomic_read(&b->bcm_opcnt));
 
 	BMAP_ULOCK(b);
@@ -82,12 +80,8 @@ _bmap_op_done(struct bmapc_memb *b)
 	DEBUG_BMAP(PLL_INFO, b, "bmap_op_done");
 
 	psc_assert(atomic_read(&b->bcm_opcnt) >= 0);
-	psc_assert(atomic_read(&b->bcm_wr_ref) >= 0);
-	psc_assert(atomic_read(&b->bcm_rd_ref) >= 0);
 
-	if (!atomic_read(&b->bcm_rd_ref) &&
-	    !atomic_read(&b->bcm_wr_ref) &&
-	    !atomic_read(&b->bcm_opcnt)) {
+	if (!atomic_read(&b->bcm_opcnt)) {
 		b->bcm_mode |= BMAP_CLOSING;
 		/* XXX remove from fcmh tree? */
 		BMAP_ULOCK(b);
@@ -98,7 +92,7 @@ _bmap_op_done(struct bmapc_memb *b)
 		bmap_remove(b);
 		return;
 	}
-	psc_waitq_wakeall(&b->bcm_waitq);
+	bcm_wake_locked(b);
 	BMAP_ULOCK(b);
 }
 
@@ -144,7 +138,7 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 
 	*bp = NULL;
 
-	locked = reqlock(&f->fcmh_lock);
+	locked = FCMH_RLOCK(f);
 	b = bmap_lookup_cache(f, n);
 	if (b == NULL) {
 		if ((flags & BMAPGETF_LOAD) == 0) {
@@ -156,9 +150,6 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 		LOCK_INIT(&b->bcm_lock);
 
 		atomic_set(&b->bcm_opcnt, 0);
-		atomic_set(&b->bcm_rd_ref, 0);
-		atomic_set(&b->bcm_wr_ref, 0);
-		psc_waitq_init(&b->bcm_waitq);
 		b->bcm_fcmh = f;
 		b->bcm_bmapno = n;
 		b->bcm_pri = b + 1;
@@ -177,23 +168,24 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 		fcmh_op_start_type(f, FCMH_OPCNT_BMAP);
 		do_load = 1;
 	}
-	ureqlock(&f->fcmh_lock, locked);
+	FCMH_URLOCK(f, locked);
+
 	if (do_load) {
 		rc = bmap_ops.bmo_retrievef(b, rw);
 
 		BMAP_LOCK(b);
 		b->bcm_mode &= ~BMAP_INIT;
-		psc_waitq_wakeall(&b->bcm_waitq);
+		bcm_wake_locked(b);
 		if (rc) {
 			bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 			return (rc);
 		}
 	} else {
-		while (b->bcm_mode & BMAP_INIT) {
-			psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-			BMAP_LOCK(b);
-		}
+		/* Wait while BMAP_INIT is set.
+		 */
+		bcm_wait_locked(b, (b->bcm_mode & BMAP_INIT));
 	}
+
 	if (b) {
 		BMAP_ULOCK(b);
 		*bp = b;
