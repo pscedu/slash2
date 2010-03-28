@@ -51,6 +51,8 @@ struct bmap_cli_info {
 	struct psclist_head		 msbd_lentry;
 	struct timespec                  msbd_xtime; /* max time */
         struct timespec                  msbd_etime; /* current expire time */
+	uint64_t                         msbd_seq;
+	uint64_t                         msbd_key;
 };
 
 #define BMAP_CLI_MAX_LEASE 60 /* seconds */
