@@ -158,6 +158,7 @@ struct srt_bdb_secret {
 	struct slash_fidgen	sbs_fg;
 	uint64_t		sbs_nonce;
 	uint64_t                sbs_seq;
+	uint64_t                sbs_key;
 	uint64_t		sbs_ion_nid;
 	sl_bmapno_t		sbs_bmapno;
 	sl_ios_id_t		sbs_ios_id;
@@ -187,8 +188,11 @@ struct srm_bmap_req {
 
 struct srm_bmap_rep {
 	uint64_t		ios_nid;	/* responsible I/O server ID if write */
+	uint64_t                seq;            /* bmap global sequence number */
+	uint64_t                key;            /* mds odtable key */
 	uint32_t		nblks;		/* The number of bmaps actually returned */
 	uint32_t		nrepls;		/* # sl_replica_t's set in bulk */
+	uint32_t                dio;
 	uint32_t		rc;
 /*
  * Bulk data contents:
@@ -240,6 +244,7 @@ struct srm_bmap_chmode_rep {
 
 struct srm_bmap_dio_req {
 	uint64_t		fid;
+	uint64_t                seq;
 	uint32_t		blkno;
 	uint32_t		dio;
 	uint32_t		mode;
@@ -274,14 +279,21 @@ struct srm_bmap_iod_get {
 } __packed;
 
 struct srm_bmap_id {
-	struct slash_fidgen fg;
-	sl_bmapno_t bmapno;
+	uint64_t                fid;
+	uint64_t                key;
+	uint64_t                seq;	
+	sl_bmapno_t             bmapno;	
 } __packed;
 
-#define MAX_BMAP_RELEASE 12
+#define MAX_BMAP_RELEASE 8
 struct srm_bmap_release_req {
 	struct srm_bmap_id      bmaps[MAX_BMAP_RELEASE];
 	uint32_t                nbmaps;
+} __packed;
+
+struct srm_bmap_release_rep {
+	int32_t                rc;
+	uint32_t               bidrc[MAX_BMAP_RELEASE];
 } __packed;
 
 struct srm_connect_req {
@@ -550,6 +562,10 @@ struct srm_unlink_req {
 struct srm_generic_rep {
 	int32_t			rc;
 	struct srt_stat		sstb;
+} __packed;
+
+struct srm_simple_rep {
+	int32_t                 rc;
 } __packed;
 
 /* --------------------------- END FULL MESSAGES --------------------------- */
