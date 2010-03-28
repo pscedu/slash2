@@ -84,6 +84,11 @@ struct slmds_jent_ino_addrepl {
 } __packed;
 
 
+struct slmds_jent_bmapseq {
+	uint64_t sjbsq_high_wm;
+	uint64_t sjbsq_low_wm;
+} __packed;
+
 /* List all of the journaling structures here so that the maximum
  *  size can be obtained.
  */
@@ -92,6 +97,7 @@ struct slmds_jents {
 		struct slmds_jent_repgen	sjr;
 		struct slmds_jent_crc		sjc;
 		struct slmds_jent_ino_addrepl	sjia;
+		struct slmds_jent_bmapseq       sjsq;
 	} slmds_jent_types;
 };
 
