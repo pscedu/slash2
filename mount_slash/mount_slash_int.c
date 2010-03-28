@@ -467,16 +467,13 @@ __static void
 bmap_biorq_waitempty(struct bmapc_memb *b)
 {
 	BMAP_LOCK(b);
-	while (!pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs) ||
-	       !pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs)  ||
-	       (b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
-		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
-		BMAP_LOCK(b);
-	}
+	bcm_wait_locked(b, (!pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs) ||
+			    !pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs)  ||
+			    (b->bcm_mode & BMAP_CLI_FLUSHPROC)));
+
 	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs));
 	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs));
 	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
-
 	BMAP_ULOCK(b);
 }
 
@@ -590,7 +587,9 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	}
 
 	FCMH_LOCK(f);
-	bmap_2_msion(bmap) = mp->ios_nid;
+	msbd->msbd_ion = mp->ios_nid;
+	msbd->msbd_seq = mp->seq;
+	msbd->msbd_key = mp->key;
 
 	if (getreptbl) {
 		/* XXX don't forget that on write we need to invalidate
@@ -674,14 +673,13 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, enum rw rw)
 	 *  msl_io() has already verified that this file is writable.
 	 *  XXX has it?
 	 */
- retry:
-	spinlock(&b->bcm_lock);
+	BMAP_LOCK(b);
 	if (rw == SL_READ || (b->bcm_mode & BMAP_WR)) {
 		/* Either we're in read-mode here or the bmap
 		 *  has already been marked for writing therefore
 		 *  the mds already knows we're writing.
 		 */
-		freelock(&b->bcm_lock);
+		BMAP_ULOCK(b);
 		return (b);
 	}
 
@@ -690,23 +688,9 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, enum rw rw)
 	psc_assert((b->bcm_mode & BMAP_RD) && (rw == SL_WRITE));
 
 	if (b->bcm_mode & BMAP_CLI_MCIP) {
-		psc_waitq_wait(&b->bcm_waitq, &b->bcm_lock);
+		bcm_wait_locked(b, (b->bcm_mode & BMAP_CLI_MCIP));
 		psc_assert(atomic_read(&b->bcm_opcnt) > 0);
-
-		if (b->bcm_mode & BMAP_CLI_MCC) {
-			/* Another thread has completed the upgrade
-			 *  in mode change.  Verify that the bmap
-			 *  is in the appropriate state.
-			 *  Note: since our wr_ref has been set above,
-			 *   the bmap MUST have BMAP_WR set here.
-			 */
-			psc_assert(!(b->bcm_mode & BMAP_CLI_MCIP));
-			psc_assert((b->bcm_mode & BMAP_WR));
-		} else
-			/* We were woken up for a different
-			 *  reason - try again.
-			 */
-			goto retry;
+		psc_assert((b->bcm_mode & BMAP_WR));
 
 	} else {
 		/* !BMAP_CLI_MCIP not set, we will set it and
@@ -717,7 +701,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, enum rw rw)
 			   !(b->bcm_mode & BMAP_CLI_MCC));
 
 		b->bcm_mode |= BMAP_CLI_MCIP;
-		freelock(&b->bcm_lock);
+		BMAP_ULOCK(b);
 		/* An interesting fallout here is that the mds may callback
 		 *  to us causing our pagecache to be purged :)
 		 * Correction.. this is not true, since if there was another
@@ -728,14 +712,14 @@ msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, enum rw rw)
 		/* We're the only thread allowed here, these
 		 *  bits could not have been set by another thread.
 		 */
-		spinlock(&b->bcm_lock);
+		BMAP_LOCK(b);
 		psc_assert(b->bcm_mode & BMAP_CLI_MCIP);
 		psc_assert(!(b->bcm_mode & BMAP_CLI_MCC) &&
 			   !(b->bcm_mode & BMAP_WR));
 		b->bcm_mode &= ~BMAP_CLI_MCIP;
 		b->bcm_mode |= (BMAP_WR | BMAP_CLI_MCC);
-		freelock(&b->bcm_lock);
-		psc_waitq_wakeall(&b->bcm_waitq);
+		bcm_wake_locked(b);
+		BMAP_ULOCK(b);
 	}
 
 	return (b);
