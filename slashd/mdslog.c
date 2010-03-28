@@ -28,11 +28,11 @@
 #include "psc_util/log.h"
 
 #include "bmap.h"
+#include "bmap_mds.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
 #include "jflush.h"
-#include "mdsexpc.h"
 #include "mdsio.h"
 #include "mkfn.h"
 #include "slashd.h"
