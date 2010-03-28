@@ -45,6 +45,8 @@ typedef uint64_t sl_ino_t;
 #define IOS_ID_ANY	((sl_ios_id_t)~0U)
 #define SITE_ID_ANY	((sl_siteid_t)~0U)
 
+#define BMAPSEQ_ANY     ((uint64_t)~0U)
+
 /* breakdown of I/O system ID: # of bits for each part */
 #define SL_SITE_BITS		16
 #define SL_RES_BITS		16
