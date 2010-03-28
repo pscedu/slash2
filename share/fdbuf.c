@@ -60,7 +60,7 @@ __static int		descbuf_alglen;
 void
 bdbuf_sign(struct srt_bmapdesc_buf *sbdb, const struct slash_fidgen *fgp,
     const lnet_process_id_t *cli_prid, lnet_nid_t ion_nid,
-    sl_ios_id_t ios_id, sl_blkno_t bmapno)
+    sl_ios_id_t ios_id, sl_blkno_t bmapno, uint64_t seq, uint64_t key)
 {
 	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0);
 	gcry_error_t gerr;
@@ -74,6 +74,8 @@ bdbuf_sign(struct srt_bmapdesc_buf *sbdb, const struct slash_fidgen *fgp,
 	sbdb->sbdb_secret.sbs_bmapno = bmapno;
 	sbdb->sbdb_secret.sbs_magic = SBDB_MAGIC;
 	sbdb->sbdb_secret.sbs_nonce = psc_atomic64_inc_getnew(&nonce);
+	sbdb->sbdb_secret.sbs_seq = seq;
+	sbdb->sbdb_secret.sbs_key = key;
 
 	gerr = gcry_md_copy(&hd, descbuf_hd);
 	if (gerr)
