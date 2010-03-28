@@ -51,7 +51,6 @@
 #include "fidcache.h"
 #include "inode.h"
 #include "inodeh.h"
-#include "mdsexpc.h"
 #include "mdsio.h"
 #include "mdslog.h"
 #include "repl_mds.h"
