@@ -52,14 +52,9 @@ struct bmap_refresh {
 struct bmapc_memb {
 	sl_bmapno_t		 bcm_bmapno;	/* bmap index number        */
 	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info    */
-	atomic_t		 bcm_rd_ref;	/* one ref per write fd    */
-	atomic_t		 bcm_wr_ref;	/* one ref per read fd     */
-	atomic_t		 bcm_opcnt;	/* pending opcnt           */
+	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt           */
 	uint32_t		 bcm_mode;	/* see flags below */
 	psc_spinlock_t		 bcm_lock;
-	struct psc_waitq	 bcm_waitq;     /* XXX think about replacing
-						   me with bcm_fcmh->fcmh_waitq
-						*/
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry    */
 	struct psclist_head	 bcm_lentry;	/* free pool */
 	struct slash_bmap_od	*bcm_od;	/* on-disk representation */
@@ -77,7 +72,8 @@ struct bmapc_memb {
 #define BMAP_MEMRLS		(1 << 6)
 #define BMAP_DIRTY2LRU		(1 << 7)
 #define BMAP_REAPABLE           (1 << 8)
-#define _BMAP_FLSHFT		(1 << 9)
+#define BMAP_IONASSIGN          (1 << 9)
+#define _BMAP_FLSHFT		(1 << 10)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
@@ -85,14 +81,26 @@ struct bmapc_memb {
 #define BMAP_RLOCK(b)		reqlock(&(b)->bcm_lock)
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
 
+#define bcm_wait_locked(b, cond)					\
+	do {								\
+		BMAP_LOCK_ENSURE((b));					\
+		while (cond) {						\
+			psc_waitq_wait(&(b)->bcm_fcmh->fcmh_waitq,	\
+				       &(b)->bcm_lock);			\
+			BMAP_LOCK(b);					\
+		}							\
+	} while (0)
+
+#define bcm_wake_locked(b) do {					\
+		BMAP_LOCK_ENSURE((b));				\
+		psc_waitq_wakeall(&(b)->bcm_fcmh->fcmh_waitq);	\
+	} while (0)
+
 #define _DEBUG_BMAP(file, func, line, level, b, fmt, ...)		\
 	psclog((file), (func), (line), PSS_GEN, (level), 0,		\
-	    "bmap@%p b:%x m:%u i:%"PRIx64				\
-	    " rref=%u wref=%u opcnt=%u "fmt,				\
+	       "bmap@%p b:%x m:%u i:%"PRIx64" opcnt=%u "fmt,		\
 	    (b), (b)->bcm_blkno, (b)->bcm_mode,				\
 	    (b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,		\
-	    atomic_read(&(b)->bcm_rd_ref),				\
-	    atomic_read(&(b)->bcm_wr_ref),				\
 	    atomic_read(&(b)->bcm_opcnt),				\
 	    ## __VA_ARGS__)
 
@@ -292,11 +300,12 @@ int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
 enum bmap_opcnt_types {
 	BMAP_OPCNT_LOOKUP,
 	BMAP_OPCNT_IONASSIGN,
-	BMAP_OPCNT_BREF,
+	BMAP_OPCNT_LEASE,
 	BMAP_OPCNT_MDSLOG,
 	BMAP_OPCNT_BIORQ,
 	BMAP_OPCNT_REPLWK,			/* ION */
-	BMAP_OPCNT_REAPER			/* Client bmap timeout */
+	BMAP_OPCNT_REAPER,			/* Client bmap timeout */
+	BMAP_OPCNT_COHCB,			/* MDS coh callback */
 };
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
