@@ -24,6 +24,7 @@
 
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/export.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
@@ -258,10 +259,14 @@ slexp_get(struct pscrpc_export *exp, enum slconn_type peertype)
 	int locked;
 
 	locked = reqlock(&exp->exp_lock);
+
+	pscrpc_export_get(exp);
+
 	if (exp->exp_private == NULL) {
 		slexp = exp->exp_private = PSCALLOC(sizeof(*slexp));
 		slexp->slexp_export = exp;
 		slexp->slexp_peertype = peertype;
+		INIT_PSCLIST_HEAD(&slexp->slexp_list);
 		exp->exp_hldropf = slexp_destroy;
 	} else {
 		slexp = exp->exp_private;
@@ -273,12 +278,18 @@ slexp_get(struct pscrpc_export *exp, enum slconn_type peertype)
 }
 
 void
+slexp_put(struct pscrpc_export *exp)
+{
+	pscrpc_export_put(exp);
+}
+
+void
 slexp_destroy(void *data)
 {
 	struct slashrpc_export *slexp = data;
 	struct pscrpc_export *exp = slexp->slexp_export;
 
-	psc_assert(exp);
+	psc_assert(exp);	
 	/* There's no way to set this from the drop_callback() */
 	if (!(slexp->slexp_flags & SLEXPF_CLOSING))
 		slexp->slexp_flags |= SLEXPF_CLOSING;
@@ -287,6 +298,8 @@ slexp_destroy(void *data)
 		slexp_freef[slexp->slexp_peertype](exp);
 
 	/* OK, no one else should be in here */
+	psc_assert(psclist_empty(&slexp->slexp_list));
+
 	exp->exp_private = NULL;
 	PSCFREE(slexp);
 }
