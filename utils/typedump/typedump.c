@@ -59,7 +59,6 @@
 #include "slashd/ctl_mds.h"
 #include "slashd/fidc_mds.h"
 #include "slashd/mdscoh.h"
-#include "slashd/mdsexpc.h"
 #include "slashd/mdsio.h"
 #include "slashd/mdslog.h"
 #include "slashd/repl_mds.h"
