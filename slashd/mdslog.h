@@ -25,7 +25,8 @@
 enum {
 	MDS_LOG_BMAP_REPL     = (1 << (1 + PJE_LASTBIT)),
 	MDS_LOG_BMAP_CRC      = (1 << (2 + PJE_LASTBIT)),
-	MDS_LOG_INO_ADDREPL   = (1 << (3 + PJE_LASTBIT))
+	MDS_LOG_BMAP_SEQ      = (1 << (3 + PJE_LASTBIT)),
+	MDS_LOG_INO_ADDREPL   = (1 << (4 + PJE_LASTBIT))
 };
 
 struct bmapc_memb;
