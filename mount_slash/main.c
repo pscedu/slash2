@@ -379,7 +379,8 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	slash2fuse_getcred(req, &creds);
 
-	psc_trace("inum %lu", ino);
+	psc_trace("inum %lu dir=%s", ino, (fi->flags & O_DIRECTORY) ? 
+		  "yes" : "no");
 
 	rc = fidc_lookup_load_inode(ino, &creds, &c);
 	if (rc)
@@ -413,7 +414,8 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	mfh = msl_fhent_new(c);
 
-	DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p", mfh);
+	DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p dir=%s", mfh,
+		   (fi->flags & O_DIRECTORY) ? "yes" : "no");
 
 	ffi_setmfh(fi, mfh);
 	fi->keep_cache = 0;
