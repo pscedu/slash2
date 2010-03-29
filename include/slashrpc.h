@@ -219,6 +219,7 @@ struct srm_bmap_wire_req {
 } __packed;
 
 struct srm_bmap_wire_rep {
+	uint64_t                minseq;
 	int32_t                 rc;
 /*
  * Bulk data contains a number of the following structures:
@@ -565,6 +566,7 @@ struct srm_generic_rep {
 } __packed;
 
 struct srm_simple_rep {
+	uint64_t                minseq;
 	int32_t                 rc;
 } __packed;
 
