@@ -79,11 +79,10 @@ _bmap_op_done(struct bmapc_memb *b)
 
 	DEBUG_BMAP(PLL_INFO, b, "bmap_op_done");
 
-	psc_assert(atomic_read(&b->bcm_opcnt) >= 0);
+	psc_assert(psc_atomic32_read(&b->bcm_opcnt) >= 0);
 
-	if (!atomic_read(&b->bcm_opcnt)) {
+	if (!psc_atomic32_read(&b->bcm_opcnt)) {
 		b->bcm_mode |= BMAP_CLOSING;
-		/* XXX remove from fcmh tree? */
 		BMAP_ULOCK(b);
 
 		if (bmap_ops.bmo_final_cleanupf)
@@ -97,7 +96,7 @@ _bmap_op_done(struct bmapc_memb *b)
 }
 
 __static struct bmapc_memb *
-bmap_lookup_cache(struct fidc_membh *f, sl_blkno_t n)
+bmap_lookup_cache_locked(struct fidc_membh *f, sl_blkno_t n)
 {
 	struct bmapc_memb lb, *b;
 
@@ -139,7 +138,7 @@ _bmap_get(struct fidc_membh *f, sl_blkno_t n, enum rw rw, int flags,
 	*bp = NULL;
 
 	locked = FCMH_RLOCK(f);
-	b = bmap_lookup_cache(f, n);
+	b = bmap_lookup_cache_locked(f, n);
 	if (b == NULL) {
 		if ((flags & BMAPGETF_LOAD) == 0) {
 			ureqlock(&f->fcmh_lock, locked);
