@@ -515,7 +515,7 @@ check:
 	if (!rc) {
 		rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
 		if (rc)
-			psc_info("stat: fcmh=%p, checkcreds rc= %d\n", fcmh, rc);
+			psc_info("stat: fcmh=%p, mode=%x, checkcreds rc= %d\n", fcmh, fcmh->fcmh_sstb.sst_mode, rc);
 	}
 	return (rc);
 }
