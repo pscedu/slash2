@@ -34,6 +34,7 @@
 #include "bmap_cli.h"
 #include "buffer.h"
 #include "mount_slash.h"
+#include "rpc_cli.h"
 #include "bmpc.h"
 #include "slashrpc.h"
 #include "slconfig.h"
@@ -742,96 +743,96 @@ bmap_flush(void)
 	psc_dynarray_free(&a);
 }
 
+static inline void
+bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
+{
+	bid->bmapno = b->bcm_bmapno;
+	bid->fid = fcmh_2_fid(b->bcm_fcmh);
+	bid->seq = bmap_2_msbd(b)->msbd_seq;
+	bid->key = bmap_2_msbd(b)->msbd_key;	
+}
+
+static void
+ms_bmap_release(struct srm_bmap_release_req *bid)
+{
+	struct pscrpc_request *rq;
+	struct srm_bmap_release_req *mq;
+	struct srm_bmap_release_rep *mp;
+	int rc, i;
+
+	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+			SRMT_RELEASEBMAP, rq, mq, mp);
+	
+	memcpy(mq, bid, sizeof(*mq));
+	rc = RSX_WAITREP(rq, mp);
+	
+	if (rc)
+		psc_errorx("bmap release rpc failed");
+	else {
+		for (i=0; i < bid->nbmaps; i++) 
+			psc_notify("Fid%"PRId64" bmap=%u key=%"PRId64
+			   " seq=%"PRId64" rc=%d", 
+			   bid->bmaps[i].fid, bid->bmaps[i].bmapno, 
+			   bid->bmaps[i].key, bid->bmaps[i].seq, 
+			   mp->bidrc[i]);
+	}
+}
+
 void *
 msbmaprlsthr_main(__unusedx void *arg)
 {
 	struct bmapc_memb *b;
 	struct bmap_cli_info *msbd;
-	struct psc_dynarray a;
 	struct timespec ctime, wtime = {0, 0};
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
-	struct srm_bmap_id *rel_bmaps;
+	struct srm_bmap_release_req *bids;
 	size_t z;
-	int nbmaps = 0, i;
+	int nbmaps, i;
 
-	rel_bmaps = PSCALLOC(sizeof(struct srm_bmap_id) * MAX_BMAP_RELEASE);
+	bids = PSCALLOC(sizeof(struct srm_bmap_release_req));
 
-	psc_dynarray_init(&a);
 	while (1) {
 		z = lc_sz(&bmapTimeoutQ);
 		lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
 		clock_gettime(CLOCK_REALTIME, &ctime);
-		psc_dynarray_reset(&a);
+		nbmaps = 0;
 
 		while (z--) {
-			b = lc_getnb(&bmapTimeoutQ);
+			b = lc_peekhead(&bmapTimeoutQ);
 			if (!b)
 				break;
 
-			BMAP_LOCK(b);
+			BMAP_LOCK(b);			
+			DEBUG_BMAP(PLL_INFO, b, "timeoq try reap");
+
 			msbd = b->bcm_pri;
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
-				BMAP_ULOCK(b);
-				psc_dynarray_add(&a, b);
-				continue;
-			}
-
-			if (timespeccmp(&ctime, &bmap_2_msbd(b)->msbd_etime, >)) {
-				timespecsub(&ctime, &bmap_2_msbd(b)->msbd_etime,
-					    &wtime);
+			if (timespeccmp(&ctime, &msbd->msbd_etime, >)) {
+				timespecsub(&ctime, &msbd->msbd_etime, &wtime);
 				break;
-			} else {
-				rel_bmaps[nbmaps].fid = fcmh_2_fid(b->bcm_fcmh);
-				rel_bmaps[nbmaps].bmapno = b->bcm_bmapno;
-				rel_bmaps[nbmaps].seq = msbd->msbd_seq;
-				rel_bmaps[nbmaps].key = msbd->msbd_key;
-				nbmaps++;
-
-				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 			}
 
-			if (nbmaps == MAX_BMAP_RELEASE) {
-				// XXX make rpc call
-				nbmaps = 0;
-			}
-		}
-
-		i = psc_dynarray_len(&a);
-		while (i--) {
-			/* Check the bmap which had refs.
-			 */
-			b = psc_dynarray_getpos(&a, i-1);
-			BMAP_LOCK(b);
 			if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
-				rel_bmaps[nbmaps].fid = fcmh_2_fid(b->bcm_fcmh);
-				rel_bmaps[nbmaps].bmapno = b->bcm_bmapno;
-				rel_bmaps[nbmaps].seq = msbd->msbd_seq;
-				rel_bmaps[nbmaps].key = msbd->msbd_key;
-				nbmaps++;
-
-				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
-				
-				BMAP_ULOCK(b);
-				if (nbmaps == MAX_BMAP_RELEASE) {
-					// XXX make rpc call
-					nbmaps = 0;
-				}				
-			} else {
-				BMAP_ULOCK(b);
-				/* These have already timed out, try
-				 *   to free them quickly.
+				lc_remove(&bmapTimeoutQ, b);
+				bmap_2_bid(b, &bids->bmaps[bids->nbmaps++]);
+				/* The bmap should be going away now.
 				 */
+				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+			} else
+				BMAP_ULOCK(b);
+						
+			if (bids->nbmaps == MAX_BMAP_RELEASE) {
 				wtime.tv_sec = 0;
-				wtime.tv_nsec = 131072;
-				lc_addhead(&bmapTimeoutQ, b);
+				wtime.tv_nsec = 100;
+				break;
 			}
 		}
-		psc_dynarray_free(&a);
 
-		if (nbmaps) {}
-			// XXX make rpc call
+		if (bids->nbmaps) {
+			ms_bmap_release(bids);
+			bids->nbmaps = 0;
+		}
 
 		if (!wtime.tv_sec && !wtime.tv_nsec)
 			wtime.tv_sec = 1;
@@ -841,7 +842,7 @@ msbmaprlsthr_main(__unusedx void *arg)
 		if (shutdown)
 			break;
 	}
-	PSCFREE(rel_bmaps);
+	PSCFREE(bids);
 	return (NULL);
 }
 
