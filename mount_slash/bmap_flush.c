@@ -798,7 +798,7 @@ msbmaprlsthr_main(__unusedx void *arg)
 		nbmaps = 0;
 
 		while (z--) {
-			b = lc_peekhead(&bmapTimeoutQ);
+			b = lc_peekheadtimed(&bmapTimeoutQ, NULL);
 			if (!b)
 				break;
 
