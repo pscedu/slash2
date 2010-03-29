@@ -125,7 +125,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	if (timercmp(&now, &c->fcmh_age, <)) {
 		fcmh_op_start_type(c, FCMH_OPCNT_LOOKUP_PARENT);
 		freelock(&c->fcmh_lock);
-		DEBUG_FCMH(PLL_INFO, c, "name=%s  hash=%d", name, hash);
+		DEBUG_FCMH(PLL_INFO, c, "name=%s, dir: %s", name, fcmh_isdir(c)? "yes" : "no");
 	} else {
 		freelock(&c->fcmh_lock);
 		c = NULL;
