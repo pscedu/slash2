@@ -66,7 +66,7 @@ int
 sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 {
 	struct srm_repl_schedwk_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_simple_rep *mp;
 	struct pscrpc_request *rq;
 	int rc;
 
