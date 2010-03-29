@@ -186,5 +186,6 @@ void
 slmbmaptimeothr_spawn(void)
 {
 	mds_bmap_timeotbl_init();
-	slmbmaptimeothr_begin(NULL);
+	pscthr_init(SLMTHRT_BMAPTIMEO, 0, slmbmaptimeothr_begin,
+	    NULL, 0, "slmbmaptimeo");
 }

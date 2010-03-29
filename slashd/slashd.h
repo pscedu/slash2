@@ -48,6 +48,7 @@ struct slash_inode_handle;
 #define SLMTHRT_COH		9	/* coherency thread */
 #define SLMTHRT_FSSYNC		10	/* file system syncer */
 #define SLMTHRT_REPLQ		11	/* per-site replication queuer */
+#define SLMTHRT_BMAPTIMEO	12	/* bmap timeout thread */
 
 struct slmrmc_thread {
 	struct pscrpc_thread	  smrct_prt;
