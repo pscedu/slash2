@@ -51,7 +51,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 {
 	struct biod_crcup_ref *bcr;
 	struct srm_bmap_crcwrt_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_simple_rep *mp;
 	struct pscrpc_request *req;
 	struct pscrpc_bulk_desc *desc;
 	struct iovec *iovs;
@@ -216,7 +216,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 {
 	int			 i, err;
 	struct psc_dynarray	*a;
-	struct srm_generic_rep	*mp;
+	struct srm_simple_rep	*mp;
 	struct biod_crcup_ref	*bcr;
 
 	err = 0;
