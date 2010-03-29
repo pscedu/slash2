@@ -126,15 +126,17 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 
 #define fcmh_isdir(f)		S_ISDIR((f)->fcmh_sstb.sst_mode)
 
-#define DEBUG_FCMH_FLAGS(fcmh)							\
-	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_FREE)		? "F" : "",	\
-	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_CLEAN)		? "C" : "",	\
-	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_DIRTY)		? "D" : "",	\
-	ATTR_TEST((fcmh)->fcmh_state, FCMH_CAC_FREEING)		? "R" : "",	\
-	ATTR_TEST((fcmh)->fcmh_state, FCMH_HAVE_ATTRS)		? "A" : "",	\
-	ATTR_TEST((fcmh)->fcmh_state, FCMH_GETTING_ATTRS)	? "G" : ""
-
-#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s"
+#define DEBUG_FCMH_FLAGS(fcmh)						\
+(((fcmh)->fcmh_state & FCMH_CAC_FREE) ? "F" : ""),			\
+	(((fcmh)->fcmh_state & FCMH_CAC_CLEAN)		? "C" : ""),	\
+	(((fcmh)->fcmh_state & FCMH_CAC_DIRTY)		? "D" : ""),	\
+	(((fcmh)->fcmh_state & FCMH_CAC_FREEING)	? "R" : ""),	\
+	(((fcmh)->fcmh_state & FCMH_HAVE_ATTRS)		? "A" : ""),	\
+	(((fcmh)->fcmh_state & FCMH_GETTING_ATTRS)	? "G" : ""),	\
+	(fcmh_isdir((fcmh)) ? "d" : "")
+	
+								
+#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s"
 
 #define FIDFMT			"%"PRId64":%"PRId64
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
