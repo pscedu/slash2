@@ -150,6 +150,7 @@ void	mds_bmap_ref_drop(struct bmapc_memb *, int);
 void	mds_bmap_sync_if_changed(struct bmapc_memb *);
 void    mds_bmi_odtable_startup_cb(void *, struct odtable_receipt *);
 
+void     mds_bmap_getcurseq(uint64_t *, uint64_t *);
 uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
 

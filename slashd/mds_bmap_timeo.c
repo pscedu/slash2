@@ -69,6 +69,21 @@ mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 				   sizeof(struct slmds_jent_bmapseq)));
 }
 
+void
+mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
+{
+	int locked;
+	
+	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);	
+
+	if (maxseq)
+		*maxseq = mdsBmapTimeoTbl.btt_maxseq;
+	if (minseq)
+		*minseq = mdsBmapTimeoTbl.btt_minseq;
+
+	ureqlock(&mdsBmapTimeoTbl.btt_lock, locked);
+}
+
 uint64_t
 mds_bmap_timeotbl_getnextseq(void)
 {
