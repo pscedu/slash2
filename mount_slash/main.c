@@ -947,10 +947,10 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	if (rc)
 		goto out;
 
-	*sstb = mp->attr;
+	if (sstb)
+		*sstb = mp->attr;
 
-	if (rc == 0)
-		*fgp = mp->fg;
+	*fgp = mp->fg;
 
  out:
 	if (m)
