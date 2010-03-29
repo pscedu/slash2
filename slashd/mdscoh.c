@@ -26,9 +26,9 @@
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
 
+#include "bmap_mds.h"
 #include "cache_params.h"
 #include "fidc_mds.h"
-#include "bmap_mds.h"
 #include "mdscoh.h"
 #include "rpc_mds.h"
 #include "slashd.h"

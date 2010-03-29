@@ -40,9 +40,9 @@
 #include "psc_util/lock.h"
 #include "psc_util/strlcpy.h"
 
+#include "bmap_mds.h"
 #include "fdbuf.h"
 #include "fidc_mds.h"
-#include "bmap_mds.h"
 #include "fidcache.h"
 #include "mdsio.h"
 #include "mkfn.h"

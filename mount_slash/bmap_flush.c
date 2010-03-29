@@ -32,10 +32,10 @@
 
 #include "bmap.h"
 #include "bmap_cli.h"
+#include "bmpc.h"
 #include "buffer.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
-#include "bmpc.h"
 #include "slashrpc.h"
 #include "slconfig.h"
 

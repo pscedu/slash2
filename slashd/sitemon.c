@@ -28,12 +28,12 @@
 #include "psc_util/random.h"
 #include "psc_util/thread.h"
 
+#include "bmap_mds.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
 #include "slerr.h"
-#include "bmap_mds.h"
 
 void
 slmreplqthr_removeq(struct sl_replrq *rrq)

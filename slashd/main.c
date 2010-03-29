@@ -26,9 +26,9 @@
 
 #include "pfl/pfl.h"
 #include "psc_util/alloc.h"
-#include "psc_util/odtable.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
+#include "psc_util/odtable.h"
 #include "psc_util/strlcpy.h"
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"

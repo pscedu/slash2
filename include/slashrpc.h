@@ -282,8 +282,8 @@ struct srm_bmap_iod_get {
 struct srm_bmap_id {
 	uint64_t                fid;
 	uint64_t                key;
-	uint64_t                seq;	
-	sl_bmapno_t             bmapno;	
+	uint64_t                seq;
+	sl_bmapno_t             bmapno;
 } __packed;
 
 #define MAX_BMAP_RELEASE 8
@@ -561,8 +561,8 @@ struct srm_unlink_req {
 #define srm_unlink_rep srm_generic_rep
 
 struct srm_generic_rep {
+//	struct srt_stat		sstb;
 	int32_t			rc;
-	struct srt_stat		sstb;
 } __packed;
 
 struct srm_simple_rep {

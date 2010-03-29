@@ -17,13 +17,13 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include "psc_ds/lockedlist.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/treeutil.h"
-#include "psc_ds/lockedlist.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "psc_util/odtable.h"
 #include "psc_util/log.h"
+#include "psc_util/odtable.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -275,8 +275,6 @@ mds_bmi_obtable_release(struct bmap_mds_info *bmdsi, uint64_t seq)
 		DEBUG_BMAP(PLL_ERROR, b, "odtable release error (rc=%d)", rc);
 	else
 		DEBUG_BMAP(PLL_NOTIFY, b, "release odtable assignment");
-
-	return;
 }
 
 void
