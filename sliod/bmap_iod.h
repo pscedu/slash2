@@ -56,16 +56,16 @@ struct biod_crcup_ref {
 };
 
 struct bmap_iod_minseq {
-	psc_spinlock_t   bim_lock;
-	struct timespec  bim_age;
-	struct psc_waitq bim_waitq;
-	uint64_t         bim_minseq;
-	int              bim_flags;
+	psc_spinlock_t		 bim_lock;
+	struct timespec		 bim_age;
+	struct psc_waitq	 bim_waitq;
+	uint64_t		 bim_minseq;
+	int			 bim_flags;
 };
 
-#define BIM_RETRIEVE_SEQ 1
+#define BIM_RETRIEVE_SEQ	1
 
-#define BIM_MINAGE 10 /* Seconds */
+#define BIM_MINAGE		10	/* Seconds */
 
 /* bcr_flags */
 #define	BCR_NONE		0x00
@@ -109,10 +109,9 @@ struct bmap_iod_info {
 
 #define BIOD_CRCUP_MAX_AGE	 2		/* in seconds */
 
-void bim_updateseq(uint64_t);
-uint64_t bim_getcurseq(void);
-void bim_updateseq(uint64_t);
-void bim_init(void);
+uint64_t	bim_getcurseq(void);
+void		bim_init(void);
+void		bim_updateseq(uint64_t);
 
 
 void bcr_hold_2_ready(struct biod_infl_crcs *, struct biod_crcup_ref *);
@@ -121,7 +120,6 @@ void bcr_hold_requeue(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_xid_check(struct biod_crcup_ref *);
 void bcr_xid_last_bump(struct biod_crcup_ref *);
 void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
-
 
 extern struct psc_listcache iodBmapLru;
 
