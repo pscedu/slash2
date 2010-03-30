@@ -30,6 +30,7 @@
 #include "psc_util/strlcpy.h"
 
 #include "bmap.h"
+#include "bmap_iod.h"
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slashrpc.h"
