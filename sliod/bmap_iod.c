@@ -86,7 +86,7 @@ bim_getcurseq(void)
 	      
 		rc = RSX_WAITREP(req, mp);
 		if (!rc)
-			bim_updateseq(&mp->data);
+			bim_updateseq(mp->data);
 
 		spinlock(&bimSeq.bim_lock);		
 		bimSeq.bim_flags &= ~BIM_RETRIEVE_SEQ;
