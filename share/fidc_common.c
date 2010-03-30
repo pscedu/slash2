@@ -88,6 +88,15 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	    fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen)
 		size = fcmh_2_fsz(fcmh);
 
+	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
+		if (fcmh_isdir(fcmh)) {
+			psc_assert(S_ISDIR(sstb->sst_mode));
+		}
+		if (!fcmh_isdir(fcmh)) {
+			psc_assert(!S_ISDIR(sstb->sst_mode));
+		}
+	}
+	
 	fcmh->fcmh_sstb = *sstb;
 	fcmh_2_gen(fcmh) = sstb->sst_gen;
 	fcmh_refresh_age(fcmh);
