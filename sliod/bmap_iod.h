@@ -55,6 +55,18 @@ struct biod_crcup_ref {
 	struct srm_bmap_crcup	 bcr_crcup;
 };
 
+struct bmap_iod_minseq {
+	psc_spinlock_t   bim_lock;
+	struct timespec  bim_age;
+	struct psc_waitq bim_waitq;
+	uint64_t         bim_minseq;
+	int              bim_flags;
+};
+
+#define BIM_RETRIEVE_SEQ 1
+
+#define BIM_MINAGE 3 /* Seconds */
+
 /* bcr_flags */
 #define	BCR_NONE		0x00
 #define BCR_SCHEDULED		0x01
@@ -87,90 +99,6 @@ struct bmap_iod_info {
 #define biodi_2_wire(bi)	(bi)->biod_bmap_wire
 #define biodi_2_crcbits(bi, sl)	biodi_2_wire(bi)->bh_crcstates[sl]
 
-static __inline void
-bcr_hold_2_ready(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
-{
-	int locked;
-
-	LOCK_ENSURE(&bcr->bcr_biodi->biod_lock);
-	psc_assert(bcr->bcr_biodi->biod_bcr == bcr);
-
-	locked = reqlock(&inf->binfcrcs_lock);
-	psc_assert(psclist_conjoint(&bcr->bcr_lentry));
-	pll_remove(&inf->binfcrcs_hold, bcr);
-	pll_addtail(&inf->binfcrcs_ready, bcr);
-	ureqlock(&inf->binfcrcs_lock, locked);
-
-	bcr->bcr_biodi->biod_bcr = NULL;
-}
-
-static __inline void
-bcr_hold_add(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
-{
-	psc_assert(psclist_disjoint(&bcr->bcr_lentry));
-	pll_addtail(&inf->binfcrcs_hold, bcr);
-	atomic_inc(&inf->binfcrcs_nbcrs);
-}
-
-static __inline void
-bcr_hold_requeue(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
-{
-	int locked;
-
-	locked = reqlock(&inf->binfcrcs_lock);
-	psc_assert(psclist_conjoint(&bcr->bcr_lentry));
-	pll_remove(&inf->binfcrcs_hold, bcr);
-	pll_addtail(&inf->binfcrcs_hold, bcr);
-	ureqlock(&inf->binfcrcs_lock, locked);
-}
-
-static __inline void
-bcr_xid_check(struct biod_crcup_ref *bcr)
-{
-	int locked;
-
-	locked = reqlock(&bcr->bcr_biodi->biod_lock);
-	psc_assert(bcr->bcr_xid < bcr->bcr_biodi->biod_bcr_xid);
-	psc_assert(bcr->bcr_xid == bcr->bcr_biodi->biod_bcr_xid_last);
-	ureqlock(&bcr->bcr_biodi->biod_lock, locked);
-}
-
-static __inline void
-bcr_xid_last_bump(struct biod_crcup_ref *bcr)
-{
-	int locked;
-
-	locked = reqlock(&bcr->bcr_biodi->biod_lock);
-	bcr_xid_check(bcr);
-	bcr->bcr_biodi->biod_bcr_xid_last++;
-	bcr->bcr_biodi->biod_inflight = 0;
-	ureqlock(&bcr->bcr_biodi->biod_lock, locked);
-}
-
-static __inline void
-bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
-{
-	spinlock(&inf->binfcrcs_lock);
-	psc_assert(psclist_conjoint(&bcr->bcr_lentry));
-	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
-	pll_remove(&inf->binfcrcs_hold, bcr);
-	freelock(&inf->binfcrcs_lock);
-
-	atomic_dec(&inf->binfcrcs_nbcrs);
-	bcr_xid_last_bump(bcr);
-	PSCFREE(bcr);
-}
-
-#if 0
-static inline int
-bcr_cmp(const void *x, const void *y)
-{
-	const struct biod_crcup_ref *a = x, *b = y;
-
-	return (CMP(a->bcr_xid, b->bcr_xid));
-}
-#endif
-
 #define bmap_2_biodi(b)		((struct bmap_iod_info *)(b)->bcm_pri)
 #define bmap_2_biodi_age(b)	bmap_2_biodi(b)->biod_age
 #define bmap_2_biodi_lentry(b)	bmap_2_biodi(b)->biod_lentry
@@ -180,6 +108,17 @@ bcr_cmp(const void *x, const void *y)
 #define bmap_2_crcbits(b, sl)	biodi_2_crcbits(bmap_2_biodi(b), (sl))
 
 #define BIOD_CRCUP_MAX_AGE	 2		/* in seconds */
+
+void bim_updateseq(uint64_t);
+uint64_t bim_getcurseq(void);
+
+void bcr_hold_2_ready(struct biod_infl_crcs *, struct biod_crcup_ref *);
+void bcr_hold_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
+void bcr_hold_requeue(struct biod_infl_crcs *, struct biod_crcup_ref *);
+void bcr_xid_check(struct biod_crcup_ref *);
+void bcr_xid_last_bump(struct biod_crcup_ref *);
+void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
+
 
 extern struct psc_listcache iodBmapLru;
 
