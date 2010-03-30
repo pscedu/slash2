@@ -871,7 +871,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			fg.fg_fid = attr->attr.sst_ino;
 			fg.fg_gen = attr->attr.sst_gen;
 
-			psc_trace("adding i+g:%"PRId64"+%"PRId64" rc=%d",
+			psc_info("adding i+g:%"PRId64"+%"PRId64" rc=%d",
 			    fg.fg_fid, fg.fg_gen, attr->rc);
 
 			rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE,
