@@ -874,14 +874,12 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			psc_info("adding i+g:%"PRId64"+%"PRId64" rc=%d",
 			    fg.fg_fid, fg.fg_gen, attr->rc);
 
-			rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE,
+			attr->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE,
 			    &attr->attr, FCMH_SETATTRF_SAVESIZE,
 			    &rootcreds, &fcmh, __FILE__, __LINE__);
 
 			if (fcmh)
 				fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-			else
-				psc_warnx("fcmh is NULL");
 		}
 	}
 
