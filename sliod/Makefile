@@ -5,6 +5,7 @@ include ${ROOTDIR}/Makefile.path
 
 PROG=		sliod
 MAN+=		sliod.8
+SRCS+=		bmap_iod.c
 SRCS+=		cfg_iod.c
 SRCS+=		ctl_iod.c
 SRCS+=		fidc_iod.c
@@ -16,7 +17,6 @@ SRCS+=		rim.c
 SRCS+=		rmi.c
 SRCS+=		rpc_iod.c
 SRCS+=		sliod_int.c
-SRCS+=		bmap_iod.c
 SRCS+=		slvr.c
 SRCS+=		slvr_worker.c
 SRCS+=		timer_iod.c
