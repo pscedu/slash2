@@ -51,7 +51,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 {
 	struct biod_crcup_ref *bcr;
 	struct srm_bmap_crcwrt_req *mq;
-	struct srm_simple_rep *mp;
+	struct srm_generic_rep *mp;
 	struct pscrpc_request *req;
 	struct pscrpc_bulk_desc *desc;
 	struct iovec *iovs;
@@ -61,9 +61,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 	rc = RSX_NEWREQ(sli_rmi_getimp(), SRMI_VERSION,
 			SRMT_BMAPCRCWRT, req, mq, mp);
-	if (rc) {
+	if (rc)
 		return rc;
-	}
 
 	PSC_CRC64_INIT(&mq->crc);
 
@@ -216,7 +215,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 {
 	int			 i, err;
 	struct psc_dynarray	*a;
-	struct srm_simple_rep	*mp;
+	struct srm_generic_rep	*mp;
 	struct biod_crcup_ref	*bcr;
 
 	err = 0;
@@ -226,6 +225,8 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 	mp = psc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
 	if (req->rq_status || mp->rc)
 		err = 1;
+
+	bim_updateseq(mp->data);
 
 	for (i=0; i < psc_dynarray_len(a); i++) {
 		bcr = psc_dynarray_getpos(a, i);

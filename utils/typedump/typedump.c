@@ -47,6 +47,7 @@
 #include "sltypes.h"
 #include "slutil.h"
 #include "mount_slash/bmap_cli.h"
+#include "mount_slash/bmapc_mem.h"
 #include "mount_slash/bmpc.h"
 #include "mount_slash/ctl_cli.h"
 #include "mount_slash/ctlsvr_cli.h"
@@ -136,10 +137,13 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_cli_info);
 	PRTYPE(struct bmap_iod_info);
 	PRTYPE(struct bmap_mds_info);
+	PRTYPE(struct bmap_mds_lease);
 	PRTYPE(struct bmap_ops);
 	PRTYPE(struct bmap_pagecache);
 	PRTYPE(struct bmap_pagecache_entry);
 	PRTYPE(struct bmap_refresh);
+	PRTYPE(struct bmap_timeo_entry);
+	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmapc_memb);
 	PRTYPE(struct bmi_assign);
 	PRTYPE(struct bmpc_ioreq);
@@ -150,7 +154,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct jflush_item);
 	PRTYPE(struct mexp_cli);
-	PRTYPE(struct mexpbcm);
 	PRTYPE(struct msbmap_crcrepl_states);
 	PRTYPE(struct msctl_replst_cont);
 	PRTYPE(struct msctl_replst_slave_cont);
@@ -195,6 +198,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slirim_thread);
 	PRTYPE(struct slm_replst_workreq);
 	PRTYPE(struct slm_rmi_expdata);
+	PRTYPE(struct slmds_jent_bmapseq);
 	PRTYPE(struct slmds_jent_crc);
 	PRTYPE(struct slmds_jent_ino_addrepl);
 	PRTYPE(struct slmds_jent_repgen);
@@ -213,6 +217,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_bmap_dio_req);
 	PRTYPE(struct srm_bmap_id);
 	PRTYPE(struct srm_bmap_iod_get);
+	PRTYPE(struct srm_bmap_release_rep);
 	PRTYPE(struct srm_bmap_release_req);
 	PRTYPE(struct srm_bmap_rep);
 	PRTYPE(struct srm_bmap_req);
@@ -248,6 +253,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_set_bmapreplpol_req);
 	PRTYPE(struct srm_set_newreplpol_req);
 	PRTYPE(struct srm_setattr_req);
+	PRTYPE(struct srm_simple_rep);
 	PRTYPE(struct srm_statfs_rep);
 	PRTYPE(struct srm_statfs_req);
 	PRTYPE(struct srm_symlink_rep);

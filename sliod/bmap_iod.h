@@ -65,7 +65,7 @@ struct bmap_iod_minseq {
 
 #define BIM_RETRIEVE_SEQ 1
 
-#define BIM_MINAGE 3 /* Seconds */
+#define BIM_MINAGE 10 /* Seconds */
 
 /* bcr_flags */
 #define	BCR_NONE		0x00
@@ -111,6 +111,9 @@ struct bmap_iod_info {
 
 void bim_updateseq(uint64_t);
 uint64_t bim_getcurseq(void);
+void bim_updateseq(uint64_t);
+void bim_init(void);
+
 
 void bcr_hold_2_ready(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_add(struct biod_infl_crcs *, struct biod_crcup_ref *);

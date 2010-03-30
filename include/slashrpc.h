@@ -97,6 +97,7 @@ enum {
 	SRMT_BMAPCRCWRT,
 	SRMT_BMAPDIO,
 	SRMT_GETBMAP,
+	SRMT_GETBMAPMINSEQ,
 	SRMT_GETBMAPCRCS,
 	SRMT_RELEASEBMAP,
 
@@ -295,6 +296,10 @@ struct srm_bmap_release_req {
 struct srm_bmap_release_rep {
 	int32_t                rc;
 	uint32_t               bidrc[MAX_BMAP_RELEASE];
+} __packed;
+
+struct srm_bmap_minseq_get {
+	int32_t                data;
 } __packed;
 
 struct srm_connect_req {
@@ -561,13 +566,8 @@ struct srm_unlink_req {
 #define srm_unlink_rep srm_generic_rep
 
 struct srm_generic_rep {
-//	struct srt_stat		sstb;
+	uint64_t                data;
 	int32_t			rc;
-} __packed;
-
-struct srm_simple_rep {
-	uint64_t                minseq;
-	int32_t                 rc;
 } __packed;
 
 /* --------------------------- END FULL MESSAGES --------------------------- */

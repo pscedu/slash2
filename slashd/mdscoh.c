@@ -51,7 +51,7 @@ int
 mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 {
 	struct srm_bmap_dio_req *mq;
-	struct srm_simple_rep *mp;
+	struct srm_generic_rep *mp;
 	struct bmap_mds_lease *bml;
 	int rls;
 
@@ -87,7 +87,7 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 {
 	struct pscrpc_request *req;
 	struct srm_bmap_dio_req *mq;
-	struct srm_simple_rep *mp;
+	struct srm_generic_rep *mp;
 	struct pscrpc_export *exp=bml->bml_exp;
 	struct slashrpc_cservice *csvc;
 	int rc=0;

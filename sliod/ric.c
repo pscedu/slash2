@@ -86,8 +86,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   write enabled bdbuf which he uses to fault in his page.
 	 */
 	DYNARRAY_FOREACH(np, i, &lnet_nids) {
-		mp->rc = bdbuf_check(&mq->sbdb, &fg, &bmapno,
-		    &rq->rq_peer, *np, nodeResm->resm_res->res_id, rw);
+		mp->rc = bdbuf_check(&mq->sbdb, &fg, &bmapno, &rq->rq_peer, 
+			     *np, nodeResm->resm_res->res_id, rw);
 		if (mp->rc == 0)
 			goto bdbuf_ok;
 	}
@@ -107,7 +107,16 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		mp->rc = -ERANGE;
 		return (-1);
 	}
-
+	
+	if (mq->sbdb.sbdb_secret.sbs_seq < bim_getcurseq()) {
+		/* Reject old bdbufs.
+		 */
+		psc_warnx("seq %"PRId64" is too old", 
+			  mq->sbdb.sbdb_secret.sbs_seq);
+		mp->rc = -EINVAL;
+		return (-1);		
+	}
+	
 	/* Lookup inode and fetch bmap, don't forget to decref bmap
 	 *  on failure.
 	 */

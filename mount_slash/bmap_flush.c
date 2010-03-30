@@ -764,9 +764,14 @@ ms_bmap_release(struct srm_bmap_release_req *bid)
 			SRMT_RELEASEBMAP, rq, mq, mp);
 	
 	memcpy(mq, bid, sizeof(*mq));
-	rc = RSX_WAITREP(rq, mp);
-	
+	rc = RSX_WAITREP(rq, mp);	
 	if (rc)
+		/* At this point the bmaps have already been purged from 
+		 *   our cache.  If the mds rls request fails then the
+		 *   mds should time them out on his own.  In any case, 
+		 *   the client must reacquire leases to perform further
+		 *   I/O on any bmap in this set.
+		 */
 		psc_errorx("bmap release rpc failed");
 	else {
 		for (i=0; i < bid->nbmaps; i++) 

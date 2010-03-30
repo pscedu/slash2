@@ -134,6 +134,7 @@ main(int argc, char *argv[])
 	bmap_cache_init(sizeof(struct bmap_iod_info));
 	fidc_init(sizeof(struct fcmh_iod_info),
 	    FIDC_ION_DEFSZ, FIDC_ION_MAXSZ, NULL, FIDC_IOD);
+	bim_init();
 	slvr_cache_init();
 	sli_repl_init();
 	sli_rpc_initsvc();

@@ -41,7 +41,7 @@ int
 sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 {
 	struct srm_repl_schedwk_req *mq;
-	struct srm_simple_rep *mp;
+	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY)
@@ -51,6 +51,9 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 	else
 		mp->rc = sli_repl_addwk(mq->nid, &mq->fg,
 		    mq->bmapno, mq->bgen, mq->len);
+
+	bim_updateseq(mp->data);
+
 	return (0);
 }
 
@@ -58,11 +61,14 @@ int
 sli_rim_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
-	struct srm_simple_rep *mp;
+	struct srm_generic_rep *mp;
 
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRIM_MAGIC || mq->version != SRIM_VERSION)
 		mp->rc = -EINVAL;
+
+	bim_updateseq(mp->data);
+
 	return (0);
 }
 

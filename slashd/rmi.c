@@ -102,7 +102,7 @@ int
 slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 {
 	struct srm_bmap_crcwrt_req *mq;
-	struct srm_simple_rep *mp;
+	struct srm_generic_rep *mp;
 	struct pscrpc_bulk_desc *desc;
 	struct iovec *iovs;
 	void *buf;
@@ -182,7 +182,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	PSCFREE(buf);
 	PSCFREE(iovs);
 
-	mds_bmap_getcurseq(NULL, &mp->minseq);
+	mds_bmap_getcurseq(NULL, &mp->data);
 
 	return (rc);
 }
@@ -199,7 +199,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	int tract[SL_NREPLST], retifset[SL_NREPLST], iosidx;
 	struct sl_resm *dst_resm, *src_resm;
 	struct srm_repl_schedwk_req *mq;
-	struct srm_simple_rep *mp;
+	struct srm_generic_rep *mp;
 	struct site_mds_info *smi;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
@@ -266,7 +266,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (rrq)
 		mds_repl_unrefrq(rrq);
 
-	mds_bmap_getcurseq(NULL, &mp->minseq);
+	mds_bmap_getcurseq(NULL, &mp->data);
 
 	return (0);
 }
@@ -280,7 +280,7 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 {
 	struct slashrpc_cservice *csvc;
 	struct srm_connect_req *mq;
-	struct srm_simple_rep *mp;
+	struct srm_generic_rep *mp;
 	struct sl_resm *resm;
 
 	RSX_ALLOCREP(rq, mq, mp);
@@ -293,7 +293,7 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 //	psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
 
 	slm_rmi_getexpdata(rq->rq_export);
-	mds_bmap_getcurseq(NULL, &mp->minseq);
+	mds_bmap_getcurseq(NULL, &mp->data);
 	return (0);
 }
 
