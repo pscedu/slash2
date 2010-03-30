@@ -398,6 +398,20 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out1;
 
+	{	
+		/* debugging only */
+		int i;
+		struct srm_getattr_rep *attr;
+		attr = iov[1].iov_base;
+		for (i = 0; i < mq->nstbpref; i++, attr++) {
+			if (attr->rc || !attr->attr.sst_ino)
+				break;
+			psc_info("adding i+g:%"PRId64"+%"PRId64" mode=0%o", 
+				attr->attr.sst_ino, attr->attr.sst_gen, 
+				attr->attr.sst_mode);
+		}
+	}
+
 	mp->rc = rsx_bulkserver(rq, &desc,
 	    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, niov);
 
