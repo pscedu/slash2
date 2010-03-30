@@ -1,4 +1,4 @@
-/* $Id $ */
+/* $Id$ */
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
@@ -19,8 +19,8 @@
 
 #include <sys/time.h>
 
-#include "psc_util/lock.h"
 #include "psc_rpc/rpc.h"
+#include "psc_util/lock.h"
 
 #include "bmap_iod.h"
 

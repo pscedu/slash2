@@ -30,7 +30,7 @@ struct fidc_membh;
 
 /*
  * Currently, we don't use reference count to protect the child-parent relationship.
- * This gives the reaper the maximum flexibility to reclaim fcmh.  However, we do 
+ * This gives the reaper the maximum flexibility to reclaim fcmh.  However, we do
  * have to follow some rules: (1) the reaper does not choose a non-empty directory
  * as a victim.  This makes sure that the parent pointer of a child is always valid.
  * (2) we should lock a parent when adding or removing a child from its children list.
@@ -63,17 +63,22 @@ void	fidc_child_unlink(struct fidc_membh *, const char *);
 ssize_t	fcmh_getsize(struct fidc_membh *);
 void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 
+#define fidc_lookup_load_inode(fid, crp, fcmhp)				\
+	_fidc_lookup_load_inode((fid), (crp), (fcmhp),			\
+	    __FILE__, __func__, __LINE__)
+
 /**
  * fidc_lookup_load_inode - Create the inode if it doesn't exist loading
  *	its attributes from the network.
  */
 static __inline int
-fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *crp,
-    struct fidc_membh **fcmhp, char *file, int line)
+_fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *crp,
+    struct fidc_membh **fcmhp, const char *file, const char *func, int line)
 {
 	struct slash_fidgen fg = { fid, FIDGEN_ANY };
 
-	return (fidc_lookup(&fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_LOAD, NULL, 0, crp, fcmhp, file, line));
+	return (_fidc_lookup(&fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_LOAD,
+	    NULL, 0, crp, fcmhp, file, func, line));
 }
 
 #endif /* _FIDC_CLI_H_ */

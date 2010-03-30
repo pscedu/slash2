@@ -65,7 +65,7 @@ iod_inode_getsize(struct slash_fidgen *fg)
 	struct fidc_membh *f;
 	uint64_t size;
 
-	f = fidc_lookup_fg(fg, __FILE__, __LINE__);
+	f = fidc_lookup_fg(fg);
 	psc_assert(f);
 	size = f->fcmh_sstb.sst_size;
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
@@ -79,7 +79,7 @@ iod_inode_lookup(const struct slash_fidgen *fg)
 	int rc;
 
 	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE,
-	    NULL, 0, &rootcreds, &f, __FILE__, __LINE__);
+	    NULL, 0, &rootcreds, &f);
 	psc_assert(rc == 0);
 	return (f);
 }

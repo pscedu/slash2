@@ -178,11 +178,11 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
 
 	BMAP_LOCK(b);
-	if (!bmdsi->bmdsi_writers || 
+	if (!bmdsi->bmdsi_writers ||
 	    ((bmdsi->bmdsi_writers == 1) &&
 	     (pll_nitems(&bmdsi->bmdsi_leases) == 1))) {
-		psc_assert(!bmdsi->bmdsi_wr_ion);		
-		if (b->bcm_mode & BMAP_DIO) 
+		psc_assert(!bmdsi->bmdsi_wr_ion);
+		if (b->bcm_mode & BMAP_DIO)
 			b->bcm_mode &= ~BMAP_DIO;
 		/* Unset.
 		 */
@@ -190,7 +190,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 
 	} else {
 		psc_assert(bmdsi->bmdsi_wr_ion);
-		if ((pll_nitems(&bmdsi->bmdsi_leases) > 1) && 
+		if ((pll_nitems(&bmdsi->bmdsi_leases) > 1) &&
 		    !(b->bcm_mode & BMAP_DIO)) {
 			/* Set.
 			 */
@@ -198,7 +198,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 			dio = 1;
 		}
 	}
-	
+
 	if (!dio)
 		goto out;
 
@@ -212,7 +212,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 		psc_assert(bml->bml_flags & BML_WRITE);
 		BMAP_ULOCK(b);
 		/* A failure here could be handled through the bmap timeout
-		 *   mechanism where the client will block on this I/O until 
+		 *   mechanism where the client will block on this I/O until
 		 *   the client has either closed the bmap or the mds has
 		 *   phased out the seq number.
 		 */
@@ -249,16 +249,16 @@ mds_bmi_obtable_release(struct bmap_mds_info *bmdsi, uint64_t seq)
 	int rc;
 
 	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
-	
+
 	bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
 	if (!bmi) {
 		DEBUG_BMAP(PLL_WARN, b, "odtable_getitem() failed");
 		return;
 	}
-	
+
 	psc_assert(bmi->bmi_seq == bmdsi->bmdsi_seq);
 	psc_assert(bmi->bmi_seq <= seq);
-	
+
 	BMAP_LOCK(b);
 	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
 	odtr = bmdsi->bmdsi_assign;
@@ -269,7 +269,7 @@ mds_bmi_obtable_release(struct bmap_mds_info *bmdsi, uint64_t seq)
 	b->bcm_mode &= ~BMAP_IONASSIGN;
 
 	bcm_wake_locked(b);
-	BMAP_ULOCK(b);	
+	BMAP_ULOCK(b);
 
 	if ((rc = odtable_freeitem(mdsBmapAssignTable, odtr)))
 		DEBUG_BMAP(PLL_ERROR, b, "odtable release error (rc=%d)", rc);
@@ -295,7 +295,7 @@ mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	odtable_freeitem(mdsBmapAssignTable, odtr);
 
-	//XXX pull the current min and max mdsbmap sequence number from 
+	//XXX pull the current min and max mdsbmap sequence number from
 	//  the odtable.
 }
 
@@ -318,7 +318,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct resprof_mds_info *rpmi;
 	int j, n, len;
 
-	psc_assert(bmap->bcm_mode & BMAP_IONASSIGN);	
+	psc_assert(bmap->bcm_mode & BMAP_IONASSIGN);
 	psc_assert(!bmdsi->bmdsi_wr_ion);
 	psc_assert(!bmdsi->bmdsi_assign);
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 0);
@@ -391,8 +391,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	mds_repl_inv_except_locked(bmap, bmi.bmi_ios);
 
- 	bml->bml_seq = bmi.bmi_seq;
- 	bml->bml_key = bmdsi->bmdsi_assign->odtr_key;		
+	bml->bml_seq = bmi.bmi_seq;
+	bml->bml_key = bmdsi->bmdsi_assign->odtr_key;
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assignment");
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
@@ -408,23 +408,23 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	struct bmapc_memb *b=bml_2_bmap(bml);
 	struct bmap_mds_info *bmdsi=b->bcm_pri;
 	struct bmi_assign *bmi;
-	
+
 	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
-	
+
 	bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
 	if (!bmi) {
 		DEBUG_BMAP(PLL_WARN, b, "odtable_getitem() failed");
 		return (-1);
 	}
-	
+
 	psc_assert(bmi->bmi_seq == bmdsi->bmdsi_seq);
 	bmi->bmi_start = time(NULL);
 	bmi->bmi_seq = bmdsi->bmdsi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
-	bmdsi->bmdsi_assign = odtable_replaceitem(mdsBmapAssignTable, 
+	bmdsi->bmdsi_assign = odtable_replaceitem(mdsBmapAssignTable,
 					  bmdsi->bmdsi_assign, bmi);
 
 	bml->bml_seq = bmi->bmi_seq;
-        bml->bml_key = bmdsi->bmdsi_assign->odtr_key;
+	bml->bml_key = bmdsi->bmdsi_assign->odtr_key;
 
 	psc_assert(bmdsi->bmdsi_assign);
 	return (0);
@@ -449,9 +449,9 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 	/* Wait for BMAP_IONASSIGN to be removed before proceeding.
 	 */
-	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));	
+	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));
 	pll_addtail(&bmdsi->bmdsi_leases, bml);
-	
+
 	if (mq->rw == SL_WRITE) {
 		/* Drop the lock prior to doing disk and possibly network
 		 *    I/O.
@@ -459,7 +459,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
 		bmdsi->bmdsi_writers++;
 		b->bcm_mode |= BMAP_IONASSIGN;
 		bml->bml_flags |= BML_TIMEOQ;
-		
+
 		if (bmdsi->bmdsi_writers == 1) {
 			psc_assert(!bmdsi->bmdsi_wr_ion);
 			BMAP_ULOCK(b);
@@ -483,7 +483,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
 		b->bcm_mode &= ~BMAP_IONASSIGN;
 
 	} else {
-		/* Read leases aren't required to be present in the 
+		/* Read leases aren't required to be present in the
 		 *   timeout table though their sequence number must
 		 *   be accounted for.
 		 */
@@ -493,8 +493,8 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
 		if (bmdsi->bmdsi_writers) {
 			b->bcm_mode |= BMAP_IONASSIGN;
 			BMAP_ULOCK(b);
-			/* Don't hold the lock when calling 
-			 *   mds_bmap_directio_handle_locked(), it will likely 
+			/* Don't hold the lock when calling
+			 *   mds_bmap_directio_handle_locked(), it will likely
 			 *   send an RPC.
 			 */
 			rc = mds_bmap_directio(b, SL_READ);
@@ -503,7 +503,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
 		}
 	}
  out:
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "bml_add (mion=%p) (rc=%d)", 
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "bml_add (mion=%p) (rc=%d)",
 	   bmdsi->bmdsi_wr_ion, rc);
 
 	bcm_wake_locked(b);
@@ -516,12 +516,12 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
 
 /**
  * mds_bmap_bml_release - remove a bmap lease from the mds.  This can be
- *   called from the bmap_timeo thread, from a client bmap_release rpc, 
+ *   called from the bmap_timeo thread, from a client bmap_release rpc,
  *   or from the nbreqset cb context.
- * Notes:  the bml must be removed from the timeotbl in all cases.  
+ * Notes:  the bml must be removed from the timeotbl in all cases.
  *    otherwise we determine list removals on a case by case basis.
  */
-int 
+int
 mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 {
 	struct bmap_mds_info *bmdsi;
@@ -529,14 +529,14 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	struct odtable_receipt *odtr=NULL;
 	int found=0, rc;
 
-        bmdsi = b->bcm_pri;
+	bmdsi = b->bcm_pri;
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 	DEBUG_BMAP(PLL_INFO, b, "seq=%"PRId64" key=%"PRId64, seq, key);
 	BMAP_LOCK(b);
-	/* BMAP_IONASSIGN acts as a barrier for operations which 
-	 *   may modify bmdsi_wr_ion.  Since ops associated with 
-	 *   BMAP_IONASSIGN do disk and net i/o, the spinlock is 
+	/* BMAP_IONASSIGN acts as a barrier for operations which
+	 *   may modify bmdsi_wr_ion.  Since ops associated with
+	 *   BMAP_IONASSIGN do disk and net i/o, the spinlock is
 	 *   dropped.
 	 */
 	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));
@@ -547,7 +547,7 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 			found = 1;
 			break;
 		}
-	}	
+	}
 	if (!found) {
 		BMAP_ULOCK(b);
 		return (-ENOENT);
@@ -564,12 +564,12 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 		psc_assert(psclist_disjoint(&bml->bml_timeo_lentry));
 		bml->bml_flags &= ~BML_COHRLS;
 	}
-	
+
 	if (bml->bml_flags & BML_COH)
-		/* Don't wait for any outstanding coherency callbacks 
-		 *   to complete.  Mark the bml so that the coh thread 
+		/* Don't wait for any outstanding coherency callbacks
+		 *   to complete.  Mark the bml so that the coh thread
 		 *   will call this function upon rpc completion.
-		 */		
+		 */
 		bml->bml_flags |= BML_COHRLS;
 
 	if (bml->bml_flags & BML_EXP) {
@@ -595,29 +595,29 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	}
 	/* Note: reads are not attached to the timeout table.
 	 */
-	if (bml->bml_flags & BML_TIMEOQ) 
+	if (bml->bml_flags & BML_TIMEOQ)
 		(uint64_t)mds_bmap_timeotbl_mdsi(bml, BTE_DEL);
 
-	/* If BML_COHRLS was set above then the lease must remain on the 
+	/* If BML_COHRLS was set above then the lease must remain on the
 	 *    bmdsi so that directio can be managed properly.
 	 */
 	if (bml->bml_flags & BML_COHRLS) {
 		BML_ULOCK(bml);
 		return (-EAGAIN);
-	} 
+	}
 
 	pll_remove(&bmdsi->bmdsi_leases, bml);
 	if (bmdsi->bmdsi_writers)
 		psc_assert(bmdsi->bmdsi_wr_ion);
-       	
+
 	if (bml->bml_flags & BML_WRITE)
 		bmdsi->bmdsi_writers--;
 
 	BML_ULOCK(bml);
 
 	if ((((!bmdsi->bmdsi_writers) ||
-	      ((bmdsi->bmdsi_writers == 1))) && 
-	     (pll_nitems(&bmdsi->bmdsi_leases) == 1)) && 
+	      ((bmdsi->bmdsi_writers == 1))) &&
+	     (pll_nitems(&bmdsi->bmdsi_leases) == 1)) &&
 	    (b->bcm_mode & BMAP_DIO))
 		/* Remove the directio flag if possible.
 		 */
@@ -642,10 +642,10 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 		bmdsi->bmdsi_assign = NULL;
 		bmdsi->bmdsi_wr_ion = NULL;
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
-	}	       	
+	}
 	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
 	BMAP_ULOCK(b);
-	
+
 	if (odtr) {
 		rc = odtable_freeitem(mdsBmapAssignTable, odtr);
 		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%"
@@ -653,7 +653,7 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	}
 
 	psc_pool_return(bmapMdsLeasePool, bml);
-	
+
 	return (rc);
 }
 
@@ -672,7 +672,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	struct slash_bmap_od *bmapod;
 	int rc=0;
 
-	fcmh = fidc_lookup_fg(&c->fg, __FILE__, __LINE__);
+	fcmh = fidc_lookup_fg(&c->fg);
 	if (!fcmh)
 		return (-EBADF);
 
@@ -853,7 +853,7 @@ mds_bmap_init(struct bmapc_memb *bcm)
 	struct bmap_mds_info *bmdsi;
 
 	bmdsi = bcm->bcm_pri;
-	pll_init(&bmdsi->bmdsi_leases, struct bmap_mds_lease, 
+	pll_init(&bmdsi->bmdsi_leases, struct bmap_mds_lease,
 		 bml_bmdsi_lentry, NULL);
 	jfi_init(&bmdsi->bmdsi_jfi, mds_bmap_sync, mds_bmap_jfiprep, bcm);
 	bmdsi->bmdsi_xid = 0;
@@ -926,7 +926,7 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
 
 	psc_assert(*bp == NULL);
 
-	f = fidc_lookup_fg(fg, __FILE__, __LINE__);
+	f = fidc_lookup_fg(fg);
 	if (!f)
 		return (-ENOENT);
 
@@ -959,7 +959,7 @@ int
 mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
   struct pscrpc_export *exp, struct bmapc_memb **bmap, struct srm_bmap_rep *mp)
 {
-	struct bmapc_memb *b;	
+	struct bmapc_memb *b;
 	struct bmap_mds_lease *bml;
 	struct slashrpc_export *slexp;
 	int rc=0;
@@ -979,7 +979,7 @@ mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
 
 	if (mq->dio)
 		bml->bml_flags |= BML_CDIO;
-       
+
 	rc = mds_bmap_bml_add(bml, mq);
 	if (rc)
 		psc_pool_return(bmapMdsLeasePool, bml);

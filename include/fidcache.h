@@ -52,7 +52,7 @@ struct sl_fcmh_ops {
  *
  * fidc_membh tracks cached bmaps (bmap_cache) and clients
  * (via their exports) which hold cached bmaps.
- * 
+ *
  * Service specific private structures (i.e., fcmh_mds_info,
  * fcmh_cli_info, and fcmh_iod_info) are allocated along with
  * the fidc_membh structure.  They can be accessed by calling
@@ -134,8 +134,8 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 	(((fcmh)->fcmh_state & FCMH_HAVE_ATTRS)		? "A" : ""),	\
 	(((fcmh)->fcmh_state & FCMH_GETTING_ATTRS)	? "G" : ""),	\
 	(fcmh_isdir((fcmh)) ? "d" : "")
-	
-								
+
+
 #define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s"
 
 #define FIDFMT			"%"PRId64":%"PRId64
@@ -153,13 +153,13 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 
 /* debugging aid: spit out the reason for the reference count taking/dropping */
 enum fcmh_opcnt_types {
-	FCMH_OPCNT_LOOKUP_FIDC,   //0
-	FCMH_OPCNT_LOOKUP_PARENT, //1
-	FCMH_OPCNT_OPEN,          //2
-	FCMH_OPCNT_BMAP,          //3
-	FCMH_OPCNT_CHILD,         //4
-	FCMH_OPCNT_NEW,           //5
-	FCMH_OPCNT_WAIT           //6
+	FCMH_OPCNT_LOOKUP_FIDC,		//0
+	FCMH_OPCNT_LOOKUP_PARENT,	//1
+	FCMH_OPCNT_OPEN,		//2
+	FCMH_OPCNT_BMAP,		//3
+	FCMH_OPCNT_CHILD,		//4
+	FCMH_OPCNT_NEW,			//5
+	FCMH_OPCNT_WAIT			//6
 };
 
 /* fcmh_setattr() flags */
@@ -184,17 +184,17 @@ enum {
 	FIDC_LOOKUP_LOAD	= (1 << 2)		/* Use external fetching mechanism */
 };
 
-int			 fidc_lookup(const struct slash_fidgen *, int,
+int			 _fidc_lookup(const struct slash_fidgen *, int,
 			    const struct srt_stat *, int, const struct slash_creds *,
-			    struct fidc_membh **, char *, int);
+			    struct fidc_membh **, const char *, const char *, int);
 
-/* two wrappers of fidc_lookup(), they are used to do simple lookups without any special flags */
-struct fidc_membh	*fidc_lookup_fid(slfid_t, char *, int);
-struct fidc_membh	*fidc_lookup_fg(const struct slash_fidgen *, char *, int);
+/* these fidc_lookup() wrappers are used for simple lookups no flags */
+struct fidc_membh	*_fidc_lookup_fid(slfid_t, const char *, const char *, int);
+struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, const char *, const char *, int);
 
-void                     fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
+void			 fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
 
-void                     fcmh_op_done_type(struct fidc_membh *, enum fcmh_opcnt_types);
+void			 fcmh_op_done_type(struct fidc_membh *, enum fcmh_opcnt_types);
 
 void			 dump_fcmh(struct fidc_membh *);
 void			 dump_fcmh_flags(int);
@@ -215,12 +215,17 @@ fcmh_refresh_age(struct fidc_membh *fcmh)
 	timeradd(&fcmh->fcmh_age, &tmp, &fcmh->fcmh_age);
 }
 
-static __inline int
-fcmh_getload(const struct slash_fidgen *fgp, const struct slash_creds *crp,
-    struct fidc_membh **fcmhp)
-{
-	return (fidc_lookup(fgp, FIDC_LOOKUP_CREATE,
-	    NULL, 0, crp, fcmhp, __FILE__, __LINE__));
-}
+#define fidc_lookup(fgp, lkfl, sstb, safl, crp, fcmhp)			\
+	_fidc_lookup((fgp), (lkfl), (sstb), (safl), (crp), (fcmhp),	\
+	    __FILE__, __func__, __LINE__)
+
+#define fidc_lookup_fid(fid)						\
+	_fidc_lookup_fid((fid), __FILE__, __func__, __LINE__)
+
+#define fidc_lookup_fg(fgp)						\
+	_fidc_lookup_fg((fgp), __FILE__, __func__, __LINE__)
+
+#define fcmh_getload(fgp, crp, fcmhp)					\
+	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (crp), (fcmhp))
 
 #endif /* _SL_FIDCACHE_H_ */
