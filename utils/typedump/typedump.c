@@ -47,7 +47,6 @@
 #include "sltypes.h"
 #include "slutil.h"
 #include "mount_slash/bmap_cli.h"
-#include "mount_slash/bmapc_mem.h"
 #include "mount_slash/bmpc.h"
 #include "mount_slash/ctl_cli.h"
 #include "mount_slash/ctlsvr_cli.h"
@@ -136,6 +135,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct biod_infl_crcs);
 	PRTYPE(struct bmap_cli_info);
 	PRTYPE(struct bmap_iod_info);
+	PRTYPE(struct bmap_iod_minseq);
 	PRTYPE(struct bmap_mds_info);
 	PRTYPE(struct bmap_mds_lease);
 	PRTYPE(struct bmap_ops);
@@ -217,6 +217,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_bmap_dio_req);
 	PRTYPE(struct srm_bmap_id);
 	PRTYPE(struct srm_bmap_iod_get);
+	PRTYPE(struct srm_bmap_minseq_get);
 	PRTYPE(struct srm_bmap_release_rep);
 	PRTYPE(struct srm_bmap_release_req);
 	PRTYPE(struct srm_bmap_rep);
@@ -253,7 +254,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_set_bmapreplpol_req);
 	PRTYPE(struct srm_set_newreplpol_req);
 	PRTYPE(struct srm_setattr_req);
-	PRTYPE(struct srm_simple_rep);
 	PRTYPE(struct srm_statfs_rep);
 	PRTYPE(struct srm_statfs_req);
 	PRTYPE(struct srm_symlink_rep);
@@ -286,6 +286,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_GETATTR);
 	PRVAL(SRMT_GETBMAP);
 	PRVAL(SRMT_GETBMAPCRCS);
+	PRVAL(SRMT_GETBMAPMINSEQ);
 	PRVAL(SRMT_GETREPTBL);
 	PRVAL(SRMT_LINK);
 	PRVAL(SRMT_LOCK);
