@@ -186,11 +186,11 @@ enum {
 
 int			 fidc_lookup(const struct slash_fidgen *, int,
 			    const struct srt_stat *, int, const struct slash_creds *,
-			    struct fidc_membh **);
+			    struct fidc_membh **, char *, int);
 
 /* two wrappers of fidc_lookup(), they are used to do simple lookups without any special flags */
-struct fidc_membh	*fidc_lookup_fid(slfid_t);
-struct fidc_membh	*fidc_lookup_fg(const struct slash_fidgen *);
+struct fidc_membh	*fidc_lookup_fid(slfid_t, char *, int);
+struct fidc_membh	*fidc_lookup_fg(const struct slash_fidgen *, char *, int);
 
 void                     fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
 
@@ -220,7 +220,7 @@ fcmh_getload(const struct slash_fidgen *fgp, const struct slash_creds *crp,
     struct fidc_membh **fcmhp)
 {
 	return (fidc_lookup(fgp, FIDC_LOOKUP_CREATE,
-	    NULL, 0, crp, fcmhp));
+	    NULL, 0, crp, fcmhp, __FILE__, __LINE__));
 }
 
 #endif /* _SL_FIDCACHE_H_ */

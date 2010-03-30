@@ -672,7 +672,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	struct slash_bmap_od *bmapod;
 	int rc=0;
 
-	fcmh = fidc_lookup_fg(&c->fg);
+	fcmh = fidc_lookup_fg(&c->fg, __FILE__, __LINE__);
 	if (!fcmh)
 		return (-EBADF);
 
@@ -926,7 +926,7 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
 
 	psc_assert(*bp == NULL);
 
-	f = fidc_lookup_fg(fg);
+	f = fidc_lookup_fg(fg, __FILE__, __LINE__);
 	if (!f)
 		return (-ENOENT);
 

@@ -232,12 +232,12 @@ slash2fuse_reply_entry(fuse_req_t req, const struct slash_fidgen *fgp,
 __static int
 slc_fcmh_get(const struct slash_fidgen *fg, const struct srt_stat *sstb,
     int setattrflags, const char *name, struct fidc_membh *parent,
-    const struct slash_creds *creds, struct fidc_membh **fcmhp)
+    const struct slash_creds *creds, struct fidc_membh **fcmhp, char *file, int line)
 {
 	int rc;
 
 	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE, sstb,
-	    setattrflags, creds, fcmhp);
+	    setattrflags, creds, fcmhp, file, line);
 	if (rc)
 		return (rc);
 	fidc_child_add(parent, *fcmhp, name);
@@ -254,7 +254,7 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 	msfsthr_ensure();
 
 	slash2fuse_getcred(req, &creds);
-	rc = fidc_lookup_load_inode(ino, &creds, &c);
+	rc = fidc_lookup_load_inode(ino, &creds, &c, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -288,7 +288,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 		goto out;
 	}
 
-	p = fidc_lookup_fid(pino);
+	p = fidc_lookup_fid(pino, __FILE__, __LINE__);
 	if (!p) {
 		/* Parent fcmh must exist in the cache.
 		 */
@@ -335,7 +335,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	}
 
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE, name,
-	    p, &rootcreds, &m);
+	    p, &rootcreds, &m, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -382,7 +382,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	psc_trace("inum %lu dir=%s", ino, (fi->flags & O_DIRECTORY) ? 
 		  "yes" : "no");
 
-	rc = fidc_lookup_load_inode(ino, &creds, &c);
+	rc = fidc_lookup_load_inode(ino, &creds, &c, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -539,7 +539,7 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 	 *  be allocated.  slash2fuse_stat() will detect incomplete attrs via
 	 *  FCMH_GETTING_ATTRS flag and RPC for them.
 	 */
-	rc = fidc_lookup_load_inode(ino, &creds, &f);
+	rc = fidc_lookup_load_inode(ino, &creds, &f, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -589,7 +589,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 
 	/* Check the newparent inode.
 	 */
-	rc = fidc_lookup_load_inode(newparent, &creds, &p);
+	rc = fidc_lookup_load_inode(newparent, &creds, &p, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -600,7 +600,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 
 	/* Check the child inode.
 	 */
-	rc = fidc_lookup_load_inode(ino, &creds, &c);
+	rc = fidc_lookup_load_inode(ino, &creds, &c, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -664,7 +664,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	/* Check the parent fcmh.
 	 */
-	p = fidc_lookup_fid(parent);
+	p = fidc_lookup_fid(parent, __FILE__, __LINE__);
 	if (!p) {
 		rc = EINVAL;
 		goto out;
@@ -696,7 +696,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		goto out;
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
-	    name, p, &mq->creds, &m);
+	    name, p, &mq->creds, &m, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
@@ -741,7 +741,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	slash2fuse_getcred(req, &cr);
 	/* Check the parent fcmh.
 	 */
-	rc = fidc_lookup_load_inode(parent, &cr, &p);
+	rc = fidc_lookup_load_inode(parent, &cr, &p, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -822,7 +822,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	 *  must be taken into account.
 	 * NOTE: 'd' must be decref'd.
 	 */
-	if (fidc_lookup_fg(&d->fcmh_fg) != d)
+	if (fidc_lookup_fg(&d->fcmh_fg, __FILE__, __LINE__) != d)
 		return (EBADF);
 
 	if (!fcmh_isdir(d)) {
@@ -876,7 +876,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 
 			rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE,
 			    &attr->attr, FCMH_SETATTRF_SAVESIZE,
-			    &rootcreds, &fcmh);
+			    &rootcreds, &fcmh, __FILE__, __LINE__);
 
 			if (fcmh)
 				fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
@@ -939,7 +939,7 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	 *  yet be visible in the cache.
 	 */
 	rc = slc_fcmh_get(&mp->fg, &mp->attr,
-	    FCMH_SETATTRF_SAVESIZE, name, p, &rootcreds, &m);
+	    FCMH_SETATTRF_SAVESIZE, name, p, &rootcreds, &m, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -973,7 +973,7 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	psc_infos(PSS_GEN, "name %s inode %lu", name, parent);
 
 	/* load or create the parent in the fid cache */
-	rc = fidc_lookup_load_inode(parent, cr, &p);
+	rc = fidc_lookup_load_inode(parent, cr, &p, __FILE__, __LINE__);
 	if (rc) {
 		rc = EINVAL;
 		goto out;
@@ -1051,7 +1051,7 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 
 	slash2fuse_getcred(req, &cr);
 
-	rc = fidc_lookup_load_inode(ino, &cr, &c);
+	rc = fidc_lookup_load_inode(ino, &cr, &c, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -1170,7 +1170,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	    strlen(newname) > NAME_MAX)
 		return (ENAMETOOLONG);
 
-	rc = fidc_lookup_load_inode(parent, &mq->creds, &op);
+	rc = fidc_lookup_load_inode(parent, &mq->creds, &op, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -1179,7 +1179,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 		goto out;
 	}
 
-	rc = fidc_lookup_load_inode(newparent, &mq->creds, &np);
+	rc = fidc_lookup_load_inode(newparent, &mq->creds, &np, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 
@@ -1285,7 +1285,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	    strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
 
-	p = fidc_lookup_fid(parent);
+	p = fidc_lookup_fid(parent, __FILE__, __LINE__);
 	if (!p)
 		return (EINVAL);
 
@@ -1312,7 +1312,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 		goto out;
 
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE,
-	    name, p, &mq->creds, &m);
+	    name, p, &mq->creds, &m, __FILE__, __LINE__);
 	if (rc)
 		goto out;
 	slash2fuse_reply_entry(req, &mp->fg, &mp->attr);
@@ -1387,7 +1387,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
-	c = fidc_lookup_fid(ino);
+	c = fidc_lookup_fid(ino, __FILE__, __LINE__);
 	if (!c) {
 		rc = EINVAL;
 		goto out;
@@ -1485,7 +1485,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	msfsthr_ensure();
 
 	mfh = ffi_getmfh(fi);
-	if (fidc_lookup_fg(&mfh->mfh_fcmh->fcmh_fg) != mfh->mfh_fcmh) {
+	if (fidc_lookup_fg(&mfh->mfh_fcmh->fcmh_fg, __FILE__, __LINE__) != mfh->mfh_fcmh) {
 		rc = EBADF;
 		goto out;
 	}
@@ -1525,7 +1525,7 @@ slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
 	msfsthr_ensure();
 
 	mfh = ffi_getmfh(fi);
-	if (fidc_lookup_fg(&mfh->mfh_fcmh->fcmh_fg) != mfh->mfh_fcmh) {
+	if (fidc_lookup_fg(&mfh->mfh_fcmh->fcmh_fg, __FILE__, __LINE__) != mfh->mfh_fcmh) {
 		rc = EBADF;
 		goto out;
 	}

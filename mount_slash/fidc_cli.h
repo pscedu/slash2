@@ -69,11 +69,11 @@ void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
  */
 static __inline int
 fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *crp,
-    struct fidc_membh **fcmhp)
+    struct fidc_membh **fcmhp, char *file, int line)
 {
 	struct slash_fidgen fg = { fid, FIDGEN_ANY };
 
-	return (fidc_lookup(&fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_LOAD, NULL, 0, crp, fcmhp));
+	return (fidc_lookup(&fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_LOAD, NULL, 0, crp, fcmhp, file, line));
 }
 
 #endif /* _FIDC_CLI_H_ */

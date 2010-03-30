@@ -178,12 +178,12 @@ fidc_reap(struct psc_poolmgr *m)
  *	generation number is known.
  */
 struct fidc_membh *
-fidc_lookup_fg(const struct slash_fidgen *fg)
+fidc_lookup_fg(const struct slash_fidgen *fg, char *file, int line)
 {
 	int rc;
 	struct fidc_membh *fcmhp;
 
-	rc = fidc_lookup(fg, 0, NULL, 0, NULL, &fcmhp);
+	rc = fidc_lookup(fg, 0, NULL, 0, NULL, &fcmhp, file, line);
 	return rc == 0 ? fcmhp : NULL;
 }
 
@@ -192,13 +192,13 @@ fidc_lookup_fg(const struct slash_fidgen *fg)
  *	generation number is not known.
  */
 struct fidc_membh *
-fidc_lookup_fid(slfid_t f)
+fidc_lookup_fid(slfid_t f, char *file, int line)
 {
 	int rc;
 	struct fidc_membh *fcmhp;
 	struct slash_fidgen t = { f, FIDGEN_ANY };
 
-	rc = fidc_lookup(&t, 0, NULL, 0, NULL, &fcmhp);
+	rc = fidc_lookup(&t, 0, NULL, 0, NULL, &fcmhp, file, line);
 	return rc == 0 ? fcmhp : NULL;
 
 }
@@ -212,16 +212,19 @@ fidc_lookup_fid(slfid_t f)
 int
 fidc_lookup(const struct slash_fidgen *fgp, int flags,
     const struct srt_stat *sstb, int setattrflags,
-    const struct slash_creds *creds, struct fidc_membh **fcmhp)
+    const struct slash_creds *creds, struct fidc_membh **fcmhp, char *file, int line)
 {
 	int rc, try_create=0;
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
 	struct psc_hashbkt *b;
 	struct slash_fidgen searchfg = *fgp;
 
+	psc_info("Looking for fid %lx from file %s, line %d\n", searchfg.fg_fid, file, line);
+
 #ifdef DEMOTED_INUM_WIDTHS
 	searchfg.fg_fid = (fuse_ino_t)searchfg.fg_fid;
 #endif
+
 
 	rc = 0;
 	*fcmhp = NULL;
