@@ -400,13 +400,13 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 
 	{	
 		/* debugging only */
-		int i;
+		unsigned int i;
 		struct srm_getattr_rep *attr;
 		attr = iov[1].iov_base;
 		for (i = 0; i < mq->nstbpref; i++, attr++) {
 			if (attr->rc || !attr->attr.sst_ino)
 				break;
-			psc_info("adding i+g:%"PRId64"+%"PRId64" mode=0%o", 
+			psc_info("reply: i+g:%"PRId64"+%"PRId32", mode=0%o", 
 				attr->attr.sst_ino, attr->attr.sst_gen, 
 				attr->attr.sst_mode);
 		}
