@@ -105,9 +105,6 @@ void	 mstimerthr_spawn(void);
 void	 msbmapflushthr_spawn(void);
 void	*msctlthr_begin(void *);
 
-int	 msl_lookup_fidcache(const struct slash_creds *, fuse_ino_t, const char *,
-	    struct slash_fidgen *, struct srt_stat *);
-
 int	 checkcreds(const struct srt_stat *, const struct slash_creds *, int);
 int	 translate_pathname(const char *, char []);
 int	 lookup_pathname_fg(const char *, struct slash_creds *,

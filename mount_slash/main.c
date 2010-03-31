@@ -74,6 +74,9 @@ psc_spinlock_t		 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
 
 struct slash_creds	 rootcreds = { 0, 0 };
 
+static int  msl_lookup_fidcache(const struct slash_creds *, fuse_ino_t, const char *,
+		struct slash_fidgen *, struct srt_stat *);
+
 /**
  * translate_pathname - convert an absolute file system path name into
  *	the relative location from the root of the mount point.
@@ -962,7 +965,7 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	return (rc);
 }
 
-int
+static int
 msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
     const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
 {
@@ -973,7 +976,7 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	rc = 0;
 	p = c = NULL;
 
-	psc_infos(PSS_GEN, "name %s inode %lu", name, parent);
+	psc_infos(PSS_GEN, "looking for file: %s under inode: %lu", name, parent);
 
 	/* load or create the parent in the fid cache */
 	rc = fidc_lookup_load_inode(parent, cr, &p);
