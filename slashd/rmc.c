@@ -406,7 +406,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		for (i = 0; i < mq->nstbpref; i++, attr++) {
 			if (attr->rc || !attr->attr.sst_ino)
 				break;
-			psc_info("reply: i+g:%"PRId64"+%"PRId32", mode=0%o", 
+			psc_info("reply: i+g:%"PRIx64"+%"PRIx32", mode=0%o", 
 				attr->attr.sst_ino, attr->attr.sst_gen, 
 				attr->attr.sst_mode);
 		}
