@@ -417,7 +417,7 @@ struct srm_readdir_req {
 
 struct srm_readdir_rep {
 	uint64_t		size;
-	uint32_t		num;    /* how many dirents were returned */
+	uint32_t		num;   		/* how many dirents were returned */
 	int32_t			rc;
 /*
  * XXX accompanied by bulk data is but should not be in fuse dirent format
