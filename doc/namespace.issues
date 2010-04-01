@@ -94,3 +94,29 @@ Potential reasons for slowness:
     has to do stat() to avoid reuse a filename.
 
 (3) FID cache issues: too many duplicate asserts.
+
+04/01/2010
+----------
+
+As of this change, fdic code seems to be in shape, albeit slow:
+
+zhihui@grapefruit: ~$ ./projects/slash_nara/tests/namespace/namespace  -o 1000000 /slash2/zhihui/testdir39
+
+....
+
+Files = 00165256, dirs = 001925, ops = 00408488
+Files = 00165257, dirs = 001925, ops = 00408493
+Files = 00165258, dirs = 001925, ops = 00408498
+Files = 00165262, dirs = 001926, ops = 00408503
+Files = 00165259, dirs = 001926, ops = 00408508
+Files = 00165260, dirs = 001926, ops = 00408513
+Operation interrupted by signal 2.				<-- press control+C
+
+Delete dir operations: 36
+Delete file operations: 120628
+Create dir operations: 1961
+Create file operations: 285888
+
+Total files: 165260, dirs: 1926, ops: 408513
+Time used to age the directory is 19105.000000 seconds.
+
