@@ -398,6 +398,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out1;
 
+#if 0
 	{	
 		/* debugging only */
 		unsigned int i;
@@ -411,6 +412,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 				attr->attr.sst_mode);
 		}
 	}
+#endif
 
 	mp->rc = rsx_bulkserver(rq, &desc,
 	    BULK_PUT_SOURCE, SRMC_BULK_PORTAL, iov, niov);
