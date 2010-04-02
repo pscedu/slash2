@@ -98,7 +98,7 @@ Potential reasons for slowness:
 04/01/2010
 ----------
 
-As of this change, fdic code seems to be in shape, albeit slow:
+As of this change, new fid cache code seems to be in shape, albeit slow:
 
 zhihui@grapefruit: ~$ ./projects/slash_nara/tests/namespace/namespace  -o 1000000 /slash2/zhihui/testdir39
 
