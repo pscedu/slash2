@@ -2,4 +2,4 @@
 
 SLASH_MODULES+=		cli
 SLASH_MODULES+=		ion
-SLASH_MODULES+=		mds
+#SLASH_MODULES+=		mds
