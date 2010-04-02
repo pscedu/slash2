@@ -21,11 +21,11 @@
  * Routines for handling RPC requests for CLIENT from MDS.
  */
 
+#include "pfl/str.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/log.h"
 #include "psc_util/pool.h"
-#include "psc_util/strlcpy.h"
 
 #include "ctl_cli.h"
 #include "ctlsvr_cli.h"

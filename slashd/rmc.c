@@ -33,12 +33,12 @@
 #include <inttypes.h>
 #include <unistd.h>
 
+#include "pfl/str.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/service.h"
 #include "psc_util/lock.h"
-#include "psc_util/strlcpy.h"
 
 #include "bmap_mds.h"
 #include "fdbuf.h"

@@ -22,8 +22,8 @@
 
 #include <inttypes.h>
 
+#include "pfl/str.h"
 #include "psc_util/lock.h"
-#include "psc_util/strlcat.h"
 
 #include "inode.h"
 #include "jflush.h"
@@ -78,10 +78,10 @@ _debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 	rbuf[0] = '\0';
 	for (j = 0; j < nr; j++) {
 		if (j)
-			psc_strlcat(rbuf, ",", sizeof(rbuf));
+			strlcat(rbuf, ",", sizeof(rbuf));
 		snprintf(nbuf, sizeof(nbuf), "%u",
 		    ino->ino_repls[j].bs_id);
-		psc_strlcat(rbuf, nbuf, sizeof(rbuf));
+		strlcat(rbuf, nbuf, sizeof(rbuf));
 	}
 
 	snprintf(buf, siz,

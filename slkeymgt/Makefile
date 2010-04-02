@@ -14,7 +14,6 @@ SRCS+=		${PFL_BASE}/psc_util/base64.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/random.c
-SRCS+=		${PFL_BASE}/psc_util/strlcpy.c
 LDFLAGS+=	-lgcrypt
 
 MODULES+=	lnet-hdrs

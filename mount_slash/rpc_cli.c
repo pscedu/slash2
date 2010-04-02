@@ -18,11 +18,11 @@
  */
 
 #include "pfl/cdefs.h"
+#include "pfl/str.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
-#include "psc_util/strlcpy.h"
 
 #include "mount_slash.h"
 #include "rpc_cli.h"

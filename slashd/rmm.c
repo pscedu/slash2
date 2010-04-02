@@ -23,12 +23,12 @@
 
 #include <stdio.h>
 
+#include "pfl/str.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 #include "psc_util/lock.h"
-#include "psc_util/strlcpy.h"
 
 #include "fid.h"
 #include "rpc_mds.h"

@@ -25,11 +25,11 @@
 #include <sys/socket.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/str.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
-#include "psc_util/strlcpy.h"
 
 #include "ctl_cli.h"
 #include "ctlsvr_cli.h"

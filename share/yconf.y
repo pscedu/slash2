@@ -33,9 +33,9 @@
 
 #include "libcfs/kp30.h"
 
+#include "pfl/str.h"
 #include "psc_util/alloc.h"
 #include "psc_util/log.h"
-#include "psc_util/strlcpy.h"
 
 #include "slconfig.h"
 

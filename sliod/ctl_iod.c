@@ -22,10 +22,10 @@
  */
 
 #include "pfl/cdefs.h"
+#include "pfl/str.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
-#include "psc_util/strlcpy.h"
 
 #include "ctl_iod.h"
 #include "repl_iod.h"

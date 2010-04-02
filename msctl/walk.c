@@ -27,11 +27,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "pfl/str.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
-#include "psc_util/strlcpy.h"
 
 #include "mount_slash/ctl_cli.h"
 #include "msctl.h"

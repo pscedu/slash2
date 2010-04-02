@@ -30,9 +30,9 @@
 
 #include "pfl/pfl.h"
 #include "pfl/cdefs.h"
+#include "pfl/str.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/log.h"
-#include "psc_util/strlcpy.h"
 
 #include "slconfig.h"
 

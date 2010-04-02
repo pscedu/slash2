@@ -28,12 +28,11 @@
 #include <err.h>
 #include <netdb.h>
 
+#include "pfl/str.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_util/log.h"
-#include "psc_util/strlcat.h"
-#include "psc_util/strlcpy.h"
 
 #include "slconfig.h"
 #include "slerr.h"
@@ -442,20 +441,20 @@ libsl_init(int pscnet_mode, int ismds)
 	lnetstr[0] = '\0';
 	psclist_for_each_entry_safe(lent, lnext, &lnets_hd, lentry) {
 		if (lnetstr[0] != '\0')
-			if (psc_strlcat(lnetstr, ",",
+			if (strlcat(lnetstr, ",",
 			    sizeof(lnetstr)) >= sizeof(lnetstr))
 				psc_fatalx("too many lustre networks");
 
-		if (psc_strlcat(lnetstr, lent->net,
+		if (strlcat(lnetstr, lent->net,
 		    sizeof(lnetstr)) >= sizeof(lnetstr))
 			psc_fatalx("too many lustre networks");
-		if (psc_strlcat(lnetstr, "(",
+		if (strlcat(lnetstr, "(",
 		    sizeof(lnetstr)) >= sizeof(lnetstr))
 			psc_fatalx("too many lustre networks");
-		if (psc_strlcat(lnetstr, lent->ifn,
+		if (strlcat(lnetstr, lent->ifn,
 		    sizeof(lnetstr)) >= sizeof(lnetstr))
 			psc_fatalx("too many lustre networks");
-		if (psc_strlcat(lnetstr, ")",
+		if (strlcat(lnetstr, ")",
 		    sizeof(lnetstr)) >= sizeof(lnetstr))
 			psc_fatalx("too many lustre networks");
 

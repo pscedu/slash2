@@ -24,13 +24,13 @@
 #include <string.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/str.h"
 #include "psc_ds/hash2.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "psc_util/strlcpy.h"
 #include "psc_util/time.h"
 
 #include "cache_params.h"

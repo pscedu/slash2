@@ -25,13 +25,13 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_util/bitflag.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 #include "psc_util/fmt.h"
 #include "psc_util/log.h"
-#include "psc_util/strlcpy.h"
 
 #include "mount_slash/ctl_cli.h"
 #include "bmap.h"
