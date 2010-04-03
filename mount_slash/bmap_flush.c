@@ -758,7 +758,8 @@ ms_bmap_release(struct srm_bmap_release_req *bid)
 	struct pscrpc_request *rq;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
-	int rc, i;
+	uint32_t i;
+	int rc;
 
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 			SRMT_RELEASEBMAP, rq, mq, mp);
@@ -792,7 +793,7 @@ msbmaprlsthr_main(__unusedx void *arg)
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct srm_bmap_release_req *bids;
 	size_t z;
-	int nbmaps, i;
+	int nbmaps;
 
 	bids = PSCALLOC(sizeof(struct srm_bmap_release_req));
 
