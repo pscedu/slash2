@@ -63,7 +63,7 @@ struct timespec msl_bmap_timeo_inc = {BMAP_CLI_TIMEO_INC, 0};
 
 __static void
 msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
-		uint32_t off, uint32_t len, int op)
+		struct msl_fhent *mfh, uint32_t off, uint32_t len, int op)
 {
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
@@ -79,7 +79,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	psc_assert(op == BIORQ_WRITE || op == BIORQ_READ);
 	*newreq = r = PSCALLOC(sizeof(struct bmpc_ioreq));
 
-	bmpc_ioreq_init(r, off, len, op, b);
+	bmpc_ioreq_init(r, off, len, op, b, mfh);
 	/* Take a ref on the bmap now so that it won't go away before
 	 *   pndg IO's complete.
 	 */
@@ -344,7 +344,7 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 __static void
 msl_biorq_destroy(struct bmpc_ioreq *r)
 {
-	struct msl_fhent *f = r->biorq_fhent;
+	struct msl_fhent *f=r->biorq_fhent;
 #if FHENT_EARLY_RELEASE
 	int fhent=1;
 #endif
@@ -1595,7 +1595,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 			goto out;
 		}
 
-		msl_biorq_build(&r[nr], b[nr], roff, tlen,
+		msl_biorq_build(&r[nr], b[nr], mfh, roff, tlen,
 				(rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
 		/* Start prefetching our cached buffers.
 		 */
