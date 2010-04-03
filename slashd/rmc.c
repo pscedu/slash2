@@ -341,6 +341,9 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	    NULL, &mp->attr, &mdsio_data);
 	//XXX fix me.  Place an fcmh into the cache and don't close 
 	// my zfs handle.
+	// XXX to increase the performance of small write i/o's we should
+	//   consider allocating a write bmap at this time and return 
+	//   it to the client.
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);
 
