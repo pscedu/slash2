@@ -389,7 +389,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 
 static __inline void
 bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
-		struct bmapc_memb *bmap)
+		struct bmapc_memb *bmap, void *fhent)
 {
 	memset(ioreq, 0, sizeof(*ioreq));
 	psc_waitq_init(&ioreq->biorq_waitq);
@@ -400,6 +400,7 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 	ioreq->biorq_len  = len;
 	ioreq->biorq_bmap = bmap;
 	ioreq->biorq_flags = op;
+	ioreq->biorq_fhent = fhent;
 	if (bmap->bcm_mode & BMAP_DIO)
 		ioreq->biorq_flags |= BIORQ_DIO;
 }
