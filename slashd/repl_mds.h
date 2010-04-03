@@ -78,7 +78,7 @@ void	 mds_repl_bmap_rel(struct bmapc_memb *);
 int	 mds_repl_bmap_walk(struct bmapc_memb *, const int [], const int [], int, const int *, int);
 int	 mds_repl_delrq(const struct slash_fidgen *, sl_blkno_t, const sl_replica_t *, int);
 void	 mds_repl_init(void);
-int	 mds_repl_inv_except_locked(struct bmapc_memb *, sl_ios_id_t);
+int	 mds_repl_inv_except(struct bmapc_memb *, sl_ios_id_t);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);
 int	 mds_repl_loadino(const struct slash_fidgen *, struct fidc_membh **);
 void	 mds_repl_node_clearallbusy(struct resm_mds_info *);

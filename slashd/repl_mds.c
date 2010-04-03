@@ -379,7 +379,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 }
 
 /*
- * mds_repl_inv_except_locked - For the given bmap, change the status of
+ * mds_repl_inv_except - For the given bmap, change the status of
  *	all its replicas marked "active" to "old" except for the replica
  *	specified.
  *
@@ -390,14 +390,15 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
  * @ios: the ION resource that should stay marked "active".
  */
 int
-mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
+mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 {
 	int rc, iosidx, tract[SL_NREPLST], retifset[SL_NREPLST];
+	int locked;
 	struct slash_bmap_od *bmapod;
 	struct sl_replrq *rrq;
 	sl_replica_t repl;
 
-	BMAP_LOCK_ENSURE(bcm);
+	locked = BMAP_RLOCK(bcm);
 
 	/* Find/add our replica's IOS ID */
 	iosidx = mds_repl_ios_lookup_add(fcmh_2_inoh(bcm->bcm_fcmh), ios);
@@ -462,6 +463,9 @@ mds_repl_inv_except_locked(struct bmapc_memb *bcm, sl_ios_id_t ios)
 		bmapod->bh_gen++;
 	/* write changes to disk */
 	mds_bmap_sync_if_changed(bcm);
+	
+	BMAP_URLOCK(bcm, locked);
+
 	return (0);
 }
 

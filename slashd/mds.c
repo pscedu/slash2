@@ -174,14 +174,13 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 	struct bmap_mds_lease *bml;
 	int dio=0;
 
-	psc_assert(bmdsi);
 	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
+	psc_assert(bmdsi->bmdsi_wr_ion);
 
 	BMAP_LOCK(b);
 	if (!bmdsi->bmdsi_writers ||
 	    ((bmdsi->bmdsi_writers == 1) &&
 	     (pll_nitems(&bmdsi->bmdsi_leases) == 1))) {
-		psc_assert(!bmdsi->bmdsi_wr_ion);
 		if (b->bcm_mode & BMAP_DIO)
 			b->bcm_mode &= ~BMAP_DIO;
 		/* Unset.
@@ -189,7 +188,6 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 		goto out;
 
 	} else {
-		psc_assert(bmdsi->bmdsi_wr_ion);
 		if ((pll_nitems(&bmdsi->bmdsi_leases) > 1) &&
 		    !(b->bcm_mode & BMAP_DIO)) {
 			/* Set.
@@ -389,7 +387,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
 
-	mds_repl_inv_except_locked(bmap, bmi.bmi_ios);
+	mds_repl_inv_except(bmap, bmi.bmi_ios);
 
 	bml->bml_seq = bmi.bmi_seq;
 	bml->bml_key = bmdsi->bmdsi_assign->odtr_key;
@@ -730,12 +728,12 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		bmap->bcm_mode |= BMAP_MDS_CRC_UP;
 	}
 	/* XXX Note the lock ordering here BMAP -> INODEH
-	 * mds_repl_inv_except_locked() takes the lock.
+	 * mds_repl_inv_except() takes the lock.
 	 *  This shouldn't be racy because
 	 *   . only one export may be here (ion_nid)
 	 *   . the bmap is locked.
 	 */
-	if ((rc = mds_repl_inv_except_locked(bmap,
+	if ((rc = mds_repl_inv_except(bmap,
 	    resm_2_resid(bmdsi->bmdsi_wr_ion->rmmi_resm)))) {
 		BMAP_ULOCK(bmap);
 		goto out;
@@ -853,6 +851,7 @@ mds_bmap_init(struct bmapc_memb *bcm)
 	struct bmap_mds_info *bmdsi;
 
 	bmdsi = bcm->bcm_pri;
+	bmdsi->bmdsi_bmap = bcm;
 	pll_init(&bmdsi->bmdsi_leases, struct bmap_mds_lease,
 		 bml_bmdsi_lentry, NULL);
 	jfi_init(&bmdsi->bmdsi_jfi, mds_bmap_sync, mds_bmap_jfiprep, bcm);
@@ -988,7 +987,7 @@ mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
 
 	/* Note the lock ordering here.
 	 */
-	slexp = slexp_get(exp, SLCONNT_MDS);
+	slexp = slexp_get(exp, SLCONNT_CLI);
 	spinlock(&exp->exp_lock);
 	psclist_xadd_tail(&bml->bml_exp_lentry, &slexp->slexp_list);
 	BML_LOCK(bml);
