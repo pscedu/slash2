@@ -20,6 +20,8 @@
 #ifndef _SLASH_PATHNAMES_H_
 #define _SLASH_PATHNAMES_H_
 
+#define SL_MAXNAMELEN		256
+
 /* immutable namespace paths */
 #define SL_PATH_PREFIX		".sl"
 #define SL_PATH_REPLS		".slrepls"
