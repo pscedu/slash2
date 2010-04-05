@@ -258,9 +258,8 @@ mds.c
 	(o) ios - an I/O system (res)
 	(o) iod - the sliod daemon
 - rename buffer.c -> slab.c
-- rename fdbuf.c -> descbuf.c
 - ensure fidc doesn't look up beyond SYM_NLOOPS #loops
-- make it easy for sliod to run as user _sliod
+- make it easy for sliod/slimmns_format to run as user _sliod
 - remove "iod" from bmdsiod
 - add some high-level aliases to the replication interface for users:
 
@@ -323,13 +322,14 @@ connections	host		type	 #refs	status
  clients
 		kaminari	client	 0	online
 
- listening
+ listening (not needed, use lsof...)
   128.87.87.6
 
 -----------------------------------------------------
 
 - add ctl knobs for changing preferred IOS
 - allow multiple preferred IOS servers
+- add flag to wait/return error/crash ms when slashd goes down
 
 - think about routing blips where MDS<->ION is not quite what a ION<->ION
   can see each, causing unnecessary replication work processing
@@ -391,7 +391,6 @@ tracks endpoint connections
 
 - always cache / on mount_slash, that will save tons of RPCs
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
-- CREATE in slashd should adjust rlim since it opens a filedesc
 - rename {bd,desc}buf to authbuf
 - only grab the next slash ID right before ZFS plans to use it to
   avoid DoS
