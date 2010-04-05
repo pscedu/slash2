@@ -556,6 +556,17 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	from[sizeof(from) - 1] = '\0';
 	to[sizeof(to) - 1] = '\0';
+	/*
+	 * Steps for rename (we may have to perform some steps by sending
+	 * a request to a remote MDS:
+	 *
+	 * (1) Remove the exiting target if any.
+	 * (2) Create the new target in place.
+	 * (3) Remove the old object.
+	 *
+	 * Whoever performs a step should log before proceed.
+	 */
+
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &mq->creds);
  out:

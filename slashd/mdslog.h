@@ -35,6 +35,10 @@ struct fidc_membh;
 struct slash_inode_handle;
 struct srm_bmap_crcup;
 
+#define	MDS_NAMESPACE_CREATE	1
+#define	MDS_NAMESPACE_UNLINK	2
+#define	MDS_NAMESPACE_RENAME	3
+
 void mds_namespace_log(char *, uint64_t, int);
 void mds_bmap_crc_log(struct bmapc_memb *, struct srm_bmap_crcup *);
 void mds_bmap_repl_log(struct bmapc_memb *);
