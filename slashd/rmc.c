@@ -328,14 +328,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (!mq->name) {
-		mp->rc = EINVAL;
-		goto out;
-	}
-	if (strlen(mq->name) > SL_MAXNAMELEN) {
-		mp->rc = ENAMETOOLONG;
-		goto out;
-	}
+
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
