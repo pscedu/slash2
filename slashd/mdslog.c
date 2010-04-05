@@ -301,7 +301,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
  * that it will be propagated towards other MDSes and made permanent before
  * we reply to the client.
  */
-void
+int
 mds_namespace_log(char *name, uint64_t s2id, int flag)
 {
 

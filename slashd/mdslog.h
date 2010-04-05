@@ -23,11 +23,11 @@
 #include "inode.h"
 
 enum {
-	MDS_LOG_BMAP_REPL     = (1 << (1 + PJE_LASTBIT)),
-	MDS_LOG_BMAP_CRC      = (1 << (2 + PJE_LASTBIT)),
-	MDS_LOG_BMAP_SEQ      = (1 << (3 + PJE_LASTBIT)),
-	MDS_LOG_INO_ADDREPL   = (1 << (4 + PJE_LASTBIT)),
-	MDS_LOG_NAMESPACE     = (1 << (5 + PJE_LASTBIT))
+	MDS_LOG_BMAP_REPL	= (1 << (1 + PJE_LASTBIT)),
+	MDS_LOG_BMAP_CRC	= (1 << (2 + PJE_LASTBIT)),
+	MDS_LOG_BMAP_SEQ	= (1 << (3 + PJE_LASTBIT)),
+	MDS_LOG_INO_ADDREPL	= (1 << (4 + PJE_LASTBIT)),
+	MDS_LOG_NAMESPACE	= (1 << (5 + PJE_LASTBIT))
 };
 
 struct bmapc_memb;
@@ -39,14 +39,14 @@ struct srm_bmap_crcup;
 #define	MDS_NAMESPACE_UNLINK	2
 #define	MDS_NAMESPACE_RENAME	3
 
-void mds_namespace_log(char *, uint64_t, int);
 void mds_bmap_crc_log(struct bmapc_memb *, struct srm_bmap_crcup *);
+void mds_bmap_jfiprep(void *);
 void mds_bmap_repl_log(struct bmapc_memb *);
 void mds_bmap_sync(void *);
-void mds_bmap_jfiprep(void *);
 void mds_inode_addrepl_log(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
 void mds_inode_sync(void *);
 void mds_journal_init(void);
+int  mds_namespace_log(char *, uint64_t, int);
 
 extern struct psc_journal *mdsJournal;
 

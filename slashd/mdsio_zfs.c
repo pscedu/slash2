@@ -246,7 +246,7 @@ int
 mdsio_opencreate(mdsio_fid_t pino, const struct slash_creds *cr,
     int flags, mode_t mode, const char *fn, struct slash_fidgen *fgp,
     mdsio_fid_t *mfp, struct srt_stat *sstb, void *mdsio_datap,
-    int(*logfunc)(char *, uint64_t, int))
+    int (*logfunc)(char *, uint64_t, int))
 {
 	return (zfsslash2_opencreate(pino, cr, flags, mode,
 	    fn, fgp, mfp, sstb, mdsio_datap, logfunc));
