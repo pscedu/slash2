@@ -35,6 +35,7 @@ struct fidc_membh;
 struct slash_inode_handle;
 struct srm_bmap_crcup;
 
+void mds_namespace_log(char *, uint64_t, int);
 void mds_bmap_crc_log(struct bmapc_memb *, struct srm_bmap_crcup *);
 void mds_bmap_repl_log(struct bmapc_memb *);
 void mds_bmap_sync(void *);

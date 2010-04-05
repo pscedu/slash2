@@ -296,6 +296,19 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	PSCFREE(jcrc);
 }
 
+/*
+ * Log namespace operation before we attempt the operation.  This makes sure
+ * that it will be propagated towards other MDSes and made permanent before
+ * we reply to the client.
+ */
+void
+mds_namespace_log(char *name, uint64_t s2id, int flags)
+{
+
+
+
+}
+
 void
 mds_journal_init(void)
 {
