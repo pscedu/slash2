@@ -342,12 +342,9 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	/* note that we don't create a cache entry after the creation */
 	mp->fg.fg_fid = slm_get_next_slashid();
-
-	mds_namespace_log(mq->name, mp->fg.fg_fid, 0);
-
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
-	    NULL, &mp->attr, &mdsio_data);
+	    NULL, &mp->attr, &mdsio_data, mds_namespace_log);
 	//XXX fix me.  Place an fcmh into the cache and don't close 
 	// my zfs handle.
 	// XXX to increase the performance of small write i/o's we should
@@ -567,6 +564,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	 * Whoever performs a step should log before proceed.
 	 */
 
+	/* if we get here, op and np must be owned by the current MDS */
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &mq->creds);
  out:
