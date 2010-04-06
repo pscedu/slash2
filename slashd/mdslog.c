@@ -302,11 +302,9 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
  * we reply to the client.
  */
 int
-mds_namespace_log(char *name, uint64_t s2id, int flag)
+mds_namespace_log(int op, int type, int perm, uint64_t s2id, char *name)
 {
-
-
-
+	struct slmds_jent_namespace *jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
 }
 
 void
