@@ -638,11 +638,15 @@ bmap_flush(void)
 			psc_dynarray_add(&bmaps, msbd);
 
 		} else {
-			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
 			psc_assert(!bmpc_queued_writes(bmpc));
 			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
 			bcm_wake_locked(b);
 			BMPC_ULOCK(bmpc);
+
+			psc_assert(b->bcm_mode & BMAP_REAPABLE);
+
+			lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
+			DEBUG_BMAP(PLL_INFO, b, "added to bmapTimeoutQ");
 			BMAP_ULOCK(b);
 			continue;
 		}
@@ -804,23 +808,25 @@ msbmaprlsthr_main(__unusedx void *arg)
 		nbmaps = 0;
 
 		while (z--) {
-			b = lc_peekheadtimed(&bmapTimeoutQ, NULL);
-			if (!b)
+			msbd = lc_peekheadtimed(&bmapTimeoutQ, NULL);
+			if (!msbd)
 				break;
 
-			BMAP_LOCK(b);			
-			DEBUG_BMAP(PLL_INFO, b, "timeoq try reap");
+			b = msbd->msbd_bmap;
 
-			msbd = b->bcm_pri;
+			BMAP_LOCK(b);			
+			DEBUG_BMAP(PLL_INFO, b, "timeoq try reap (nbmaps=%zd)", z);
+
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-			if (timespeccmp(&ctime, &msbd->msbd_etime, >)) {
-				timespecsub(&ctime, &msbd->msbd_etime, &wtime);
+			if (timespeccmp(&ctime, &msbd->msbd_etime, <)) {
+				BMAP_ULOCK(b);
+				timespecsub(&msbd->msbd_etime, &ctime, &wtime);
 				break;
 			}
 
 			if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
-				lc_remove(&bmapTimeoutQ, b);
+				lc_remove(&bmapTimeoutQ, msbd);
 				bmap_2_bid(b, &bids->bmaps[bids->nbmaps++]);
 				/* The bmap should be going away now.
 				 */
