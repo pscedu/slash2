@@ -488,7 +488,7 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	struct bmap_mds_info *bmdsi;
 	struct bmap_mds_lease *bml;
 	struct odtable_receipt *odtr=NULL;
-	int found=0, rc;
+	int found=0, rc = 0;
 
 	bmdsi = b->bcm_pri;
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
