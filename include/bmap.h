@@ -294,7 +294,7 @@ int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
 		psc_assert(atomic_read(&(b)->bcm_opcnt) > 1);		\
 		atomic_dec(&(b)->bcm_opcnt);				\
 		DEBUG_BMAP(PLL_NOTIFY, (b),				\
-		    "removing reference (type=%d)", (type));		\
+		    "removed reference (type=%d)", (type));		\
 	} while (0)
 
 enum bmap_opcnt_types {
