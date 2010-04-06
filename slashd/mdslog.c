@@ -303,7 +303,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
  * we reply to the client.
  */
 void
-mds_namespace_log(int op, int type, int perm, uint64_t s2id, char *name)
+mds_namespace_log(int op, int type, int perm, uint64_t s2id, const char *name)
 {
 	int rc;
 	struct slmds_jent_namespace *jnamespace;

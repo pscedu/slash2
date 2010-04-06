@@ -129,7 +129,7 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 	RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
 		mp->rc = -EINVAL;
-	/* XXX this assert will crash the mds should the client try to 
+	/* XXX this assert will crash the mds should the client try to
 	 *  reconnect on his own.  Zhihui's namespace tester is causing this.
 	 */
 	psc_assert(e->exp_private == NULL);
@@ -217,13 +217,13 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mq->rw == SL_WRITE) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		mp->ios_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
-		bdbuf_sign(&bdb, &mq->fg, &rq->rq_peer, mp->ios_nid, 
-			   bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id, 
+		bdbuf_sign(&bdb, &mq->fg, &rq->rq_peer, mp->ios_nid,
+			   bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id,
 			   bmap->bcm_blkno, mp->seq, mp->key);
 
 	} else {
 		mp->ios_nid = LNET_NID_ANY;
-		bdbuf_sign(&bdb, &mq->fg, &rq->rq_peer, LNET_NID_ANY, 
+		bdbuf_sign(&bdb, &mq->fg, &rq->rq_peer, LNET_NID_ANY,
 			   IOS_ID_ANY, bmap->bcm_blkno, mp->seq, mp->key);
 	}
 
@@ -250,8 +250,6 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
-
-	mp->fg.fg_fid = slm_get_next_slashid();
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
@@ -304,15 +302,13 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	mp->fg.fg_fid = slm_get_next_slashid();
-
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(fcmh), mq->name,
-	    mq->mode, &mq->creds, &mp->attr, &mp->fg, NULL);
+	    mq->mode, &mq->creds, &mp->attr, &mp->fg, NULL,
+	    slm_get_next_slashid);
  out:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
 	return (0);
 }
 
@@ -334,14 +330,14 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		goto out;
 
 	/* note that we don't create a cache entry after the creation */
-	mp->fg.fg_fid = slm_get_next_slashid();
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
-	    NULL, &mp->attr, &mdsio_data, mds_namespace_log);
-	//XXX fix me.  Place an fcmh into the cache and don't close 
+	    NULL, &mp->attr, &mdsio_data, mds_namespace_log,
+	    slm_get_next_slashid);
+	//XXX fix me.  Place an fcmh into the cache and don't close
 	// my zfs handle.
 	// XXX to increase the performance of small write i/o's we should
-	//   consider allocating a write bmap at this time and return 
+	//   consider allocating a write bmap at this time and return
 	//   it to the client.
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);
@@ -349,7 +345,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-
 	return (0);
 }
 
@@ -401,7 +396,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		goto out1;
 
 #if 0
-	{	
+	{
 		/* debugging only */
 		unsigned int i;
 		struct srm_getattr_rep *attr;
@@ -409,8 +404,8 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 		for (i = 0; i < mq->nstbpref; i++, attr++) {
 			if (attr->rc || !attr->attr.sst_ino)
 				break;
-			psc_info("reply: i+g:%"PRIx64"+%"PRIx32", mode=0%o", 
-				attr->attr.sst_ino, attr->attr.sst_gen, 
+			psc_info("reply: i+g:%"PRIx64"+%"PRIx32", mode=0%o",
+				attr->attr.sst_ino, attr->attr.sst_gen,
 				attr->attr.sst_mode);
 		}
 	}
@@ -479,25 +474,25 @@ slm_rmc_handle_rls_bmap(struct pscrpc_request *rq)
 
 	for (i=0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
-		
-		fg.fg_fid = bid->fid; 
+
+		fg.fg_fid = bid->fid;
 		fg.fg_gen = FIDGEN_ANY;
 
 		mp->bidrc[i] = slm_fcmh_get(&fg, &f);
 		if (mp->bidrc[i])
 			continue;
-		
+
 		DEBUG_FCMH(PLL_INFO, f, "rls bmap=%u", bid->bmapno);
 
 		mp->bidrc[i] = bmap_lookup(f, bid->bmapno, &b);
 		if (mp->bidrc[i])
-                        continue;
-		
+			continue;
+
 		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64, bid->seq);
 
 		mp->bidrc[i] = mds_bmap_bml_release(b, bid->seq, bid->key);
 		if (mp->bidrc[i])
-                        continue;
+			continue;
 	}
 	return (0);
 }
@@ -734,15 +729,12 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 		goto out;
 	pscrpc_free_bulk(desc);
 
-	mp->fg.fg_fid = slm_get_next_slashid();
-
 	linkname[sizeof(linkname) - 1] = '\0';
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
-	    &mq->creds, &mp->attr, &mp->fg, NULL);
+	    &mq->creds, &mp->attr, &mp->fg, NULL, slm_get_next_slashid);
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-
 	return (mp->rc);
 }
 

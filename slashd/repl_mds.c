@@ -463,7 +463,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 		bmapod->bh_gen++;
 	/* write changes to disk */
 	mds_bmap_sync_if_changed(bcm);
-	
+
 	BMAP_URLOCK(bcm, locked);
 
 	return (0);
@@ -587,6 +587,12 @@ mds_repl_initrq(struct sl_replrq *rrq, struct fidc_membh *fcmh)
 	SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
 }
 
+slfid_t
+mds_repl_getslfid(void)
+{
+	return (0);
+}
+
 int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
     const sl_replica_t *iosv, int nios)
@@ -637,7 +643,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 			/* Create persistent marker */
 			rc = mdsio_opencreate(mds_repldir_inum,
 			    &rootcreds, O_CREAT | O_EXCL | O_RDWR, 0600,
-			    fn, NULL, NULL, NULL, &mdsio_data, NULL);
+			    fn, NULL, NULL, NULL, &mdsio_data, NULL,
+			    mds_repl_getslfid);
 			if (rc == 0) {
 				mdsio_release(&rootcreds, &mdsio_data);
 
