@@ -39,12 +39,15 @@ struct srm_bmap_crcup;
 #define	MDS_NAMESPACE_UNLINK	2
 #define	MDS_NAMESPACE_RENAME	3
 
+/* if something is wrong with logging, we take a crash.
+ * Our MDS should be able to recover after being restarted */
 void mds_bmap_crc_log(struct bmapc_memb *, struct srm_bmap_crcup *);
 void mds_bmap_jfiprep(void *);
 void mds_bmap_repl_log(struct bmapc_memb *);
 void mds_bmap_sync(void *);
 void mds_inode_addrepl_log(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
-int  mds_namespace_log(int, int, int, uint64_t, char *);
+void mds_namespace_log(int, int, int, uint64_t, char *);
+
 void mds_inode_sync(void *);
 void mds_journal_init(void);
 

@@ -301,10 +301,25 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
  * that it will be propagated towards other MDSes and made permanent before
  * we reply to the client.
  */
-int
+void
 mds_namespace_log(int op, int type, int perm, uint64_t s2id, char *name)
 {
-	struct slmds_jent_namespace *jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
+	int rc;
+	struct slmds_jent_namespace *jnamespace;
+
+	jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
+	jnamespace->sjnm_op = op;
+	jnamespace->sjnm_type = type;
+	jnamespace->sjnm_perm = perm;
+	jnamespace->sjnm_s2id = s2id;
+	strcpy(jnamespace->sjnm_name, name);
+
+	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace, 
+		sizeof(struct slmds_jent_namespace));
+	if (rc)
+		psc_fatalx("jlog fid=%"PRIx64", name=%s, rc=%d", s2id, name, rc);
+
+	PSCFREE(jnamespace);
 }
 
 void
