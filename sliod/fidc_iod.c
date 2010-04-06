@@ -50,7 +50,6 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	if (rc && incr)
 		psc_rlim_adj(RLIMIT_NOFILE, -1);
 
-	freelock(&psc_rlimit_lock);
 	return (rc);
 }
 
