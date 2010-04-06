@@ -239,43 +239,6 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 }
 
 void
-mds_bmi_obtable_release(struct bmap_mds_info *bmdsi, uint64_t seq)
-{
-	struct bmapc_memb *b=bmdsi->bmdsi_bmap;
-	struct bmi_assign *bmi;
-	struct odtable_receipt *odtr;
-	int rc;
-
-	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
-
-	bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
-	if (!bmi) {
-		DEBUG_BMAP(PLL_WARN, b, "odtable_getitem() failed");
-		return;
-	}
-
-	psc_assert(bmi->bmi_seq == bmdsi->bmdsi_seq);
-	psc_assert(bmi->bmi_seq <= seq);
-
-	BMAP_LOCK(b);
-	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
-	odtr = bmdsi->bmdsi_assign;
-
-	bmdsi->bmdsi_wr_ion = NULL;
-	bmdsi->bmdsi_assign = NULL;
-	bmdsi->bmdsi_seq = BMAPSEQ_ANY;
-	b->bcm_mode &= ~BMAP_IONASSIGN;
-
-	bcm_wake_locked(b);
-	BMAP_ULOCK(b);
-
-	if ((rc = odtable_freeitem(mdsBmapAssignTable, odtr)))
-		DEBUG_BMAP(PLL_ERROR, b, "odtable release error (rc=%d)", rc);
-	else
-		DEBUG_BMAP(PLL_NOTIFY, b, "release odtable assignment");
-}
-
-void
 mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 {
 	struct bmi_assign *bmi;
@@ -525,7 +488,7 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	struct bmap_mds_info *bmdsi;
 	struct bmap_mds_lease *bml;
 	struct odtable_receipt *odtr=NULL;
-	int found=0, rc;
+	int found=0, locked, rc;
 
 	bmdsi = b->bcm_pri;
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
@@ -536,6 +499,9 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	 *   may modify bmdsi_wr_ion.  Since ops associated with
 	 *   BMAP_IONASSIGN do disk and net i/o, the spinlock is
 	 *   dropped.
+	 * XXX actually, the bcm_lock is not dropped until the very end.
+	 *   if this becomes problematic we should investigate more.
+	 *   ATM the BMAP_IONASSIGN is not relied upon
 	 */
 	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));
 	b->bcm_mode |= BMAP_IONASSIGN;
@@ -547,11 +513,14 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 		}
 	}
 	if (!found) {
+		b->bcm_mode &= ~BMAP_IONASSIGN;
+		bcm_wake_locked(b);
 		BMAP_ULOCK(b);
 		return (-ENOENT);
 	}
 
 	BML_LOCK(bml);
+
 	if (bml->bml_flags & BML_COHRLS) {
 		/* Called from the mdscoh callback.  Nothing should be left
 		 *   except for removing the bml from the bmdsi.
@@ -576,7 +545,7 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 		/* Take the locks in the correct order.
 		 */
 		BML_ULOCK(bml);
-		slexp = slexp_get(bml->bml_exp, SLCONNT_MDS);
+		slexp = slexp_get(bml->bml_exp, SLCONNT_CLI);
 		spinlock(&slexp->slexp_export->exp_lock);
 		BML_LOCK(bml);
 		if (bml->bml_flags & BML_EXP) {
@@ -641,8 +610,12 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 		bmdsi->bmdsi_wr_ion = NULL;
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
 	}
+	/* bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN) may have released the lock.
+	 */
+	(int)BMAP_RLOCK(b);
+	b->bcm_mode &= ~BMAP_IONASSIGN;
+	bcm_wake_locked(b);
 	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
-	BMAP_ULOCK(b);
 
 	if (odtr) {
 		rc = odtable_freeitem(mdsBmapAssignTable, odtr);
@@ -974,7 +947,7 @@ mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
 	LOCK_INIT(&bml->bml_lock);
 	bml->bml_exp = exp;
 	bml->bml_bmdsi = b->bcm_pri;
-	bml->bml_flags = (mq->rw == SL_WRITE ? SL_WRITE : SL_READ);
+	bml->bml_flags = (mq->rw == SL_WRITE ? BML_WRITE : BML_READ);
 
 	if (mq->dio)
 		bml->bml_flags |= BML_CDIO;
@@ -997,7 +970,8 @@ mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
 	slexp_put(exp);
 
 	mp->seq = bml->bml_seq;
-	mp->key = bml->bml_bmdsi->bmdsi_assign->odtr_key;
+	mp->key = (mq->rw == SL_WRITE) ? 
+		   bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
 
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	return (rc);
