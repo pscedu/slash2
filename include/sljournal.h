@@ -89,6 +89,23 @@ struct slmds_jent_bmapseq {
 	uint64_t sjbsq_low_wm;
 } __packed;
 
+#define	SJ_NAMESPACE_OP_CREATE		1
+#define	SJ_NAMESPACE_OP_REMOVE		2
+
+#define	SJ_NAMESPACE_TYPE_DIR		1
+#define	SJ_NAMESPACE_TYPE_FILE		2
+#define	SJ_NAMESPACE_TYPE_LINK		3
+#define	SJ_NAMESPACE_TYPE_SYMLINK	4
+
+struct slmds_jent_namespace {
+	uint8_t			sjnm_op;
+	uint8_t			sjnm_type;
+	uint8_t			sjnm_perm;
+	uint8_t			sjnm__pad;
+	uint64_t		sjnm_s2id;
+	char			sjnm_name[256];
+} __packed;
+
 /* List all of the journaling structures here so that the maximum
  *  size can be obtained.
  */
@@ -98,6 +115,7 @@ struct slmds_jents {
 		struct slmds_jent_crc		sjc;
 		struct slmds_jent_ino_addrepl	sjia;
 		struct slmds_jent_bmapseq       sjsq;
+		struct slmds_jent_namespace	sjnm;
 	} slmds_jent_types;
 };
 
