@@ -39,7 +39,7 @@ typedef uint32_t sl_ios_id_t;
 
 typedef uint64_t sl_ino_t;
 
-typedef void (*LogFunc) (int, int, int, uint64_t, char *);
+typedef void (*LogFunc) (int, int, int, uint64_t, const char *);
 
 #define BLKNO_ANY	(~(sl_blkno_t)0)	/* deprecated */
 #define BMAPNO_ANY	((sl_bmapno_t)~0U)
