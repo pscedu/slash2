@@ -488,7 +488,7 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	struct bmap_mds_info *bmdsi;
 	struct bmap_mds_lease *bml;
 	struct odtable_receipt *odtr=NULL;
-	int found=0, locked, rc;
+	int found=0, rc;
 
 	bmdsi = b->bcm_pri;
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
@@ -970,7 +970,7 @@ mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
 	slexp_put(exp);
 
 	mp->seq = bml->bml_seq;
-	mp->key = (mq->rw == SL_WRITE) ? 
+	mp->key = (mq->rw == SL_WRITE) ?
 		   bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
 
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
