@@ -33,7 +33,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 {
 	struct fcmh_iod_info *fii;
 	char fidfn[PATH_MAX];
-	int incr, rc;
+	int incr, rc = 0;
 
 	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 
