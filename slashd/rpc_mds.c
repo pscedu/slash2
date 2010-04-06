@@ -136,12 +136,12 @@ mexpcli_destroy(struct pscrpc_export *exp)
 	struct bmap_mds_lease *bml, *tmp;
 
 	psclist_for_each_entry_safe(bml, tmp, &slexp->slexp_list, 
-	    bml_timeo_lentry) {
+	    bml_exp_lentry) {
 		BML_LOCK(bml);
 		psc_assert(bml->bml_flags & BML_EXP);
 		bml->bml_flags &= ~BML_EXP;
 		BML_ULOCK(bml);
-		psclist_del(&bml->bml_timeo_lentry);
+		psclist_del(&bml->bml_exp_lentry);
 	}
 
 	if (mexpc && mexpc->mc_csvc)
