@@ -290,29 +290,24 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 
 		else {
 			b->bcm_mode &= ~BMAP_DIRTY;
+			b->bcm_mode |= BMAP_REAPABLE;
+			/* Set reapable now and take a ref
+			 *   so that the bmap will not be reaped
+			 *   by this thread but rather the 
+			 *   bmap_timeo thread.
+			 */
+			bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 			/* Don't assert pll_empty(&bmpc->bmpc_pndg)
 			 *   since read requests may be present.
 			 */
-			DEBUG_BMAP(PLL_INFO, b,
-				   "unset DIRTY nitems_pndg(%d)",
-				   pll_nitems(&bmpc->bmpc_pndg_biorqs));
+			DEBUG_BMAP(PLL_INFO, b, "unset DIRTY nitems_pndg(%d)",
+			   pll_nitems(&bmpc->bmpc_pndg_biorqs));
 		}
 	}
 	BMPC_ULOCK(bmpc);
 	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
 
-	/* Bmap lock is still held, will be released by bmap_op_done_type().
-	 */
-	if (!(b->bcm_mode & BMAP_DIRTY)) {
-		/* Schedule the bmap to be released by placing it on the
-		 *   bmapTimeoutQ.
-		 */
-		b->bcm_mode |= BMAP_REAPABLE;
-		bmap_op_start_type(b, BMAP_OPCNT_REAPER);
-		lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
-		DEBUG_BMAP(PLL_INFO, b, "added to bmapTimeoutQ");
-	}
 	bmap_op_done_type(b, BMAP_OPCNT_BIORQ);
 }
 
@@ -473,7 +468,6 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 
 	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs));
 	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs));
-	psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 	BMAP_ULOCK(b);
 }
 
@@ -1554,7 +1548,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	off_t roff;
 	int nr, j, rc;
 	char *p;
-
+	
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 
@@ -1604,7 +1598,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		roff += tlen;
 		tsize -= tlen;
 		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
-
+		
 		BMAP_CLI_BUMP_TIMEO(b[nr]);
 	}
 
