@@ -35,10 +35,6 @@ struct fidc_membh;
 struct slash_inode_handle;
 struct srm_bmap_crcup;
 
-#define	MDS_NAMESPACE_CREATE	1
-#define	MDS_NAMESPACE_UNLINK	2
-#define	MDS_NAMESPACE_RENAME	3
-
 /* if something is wrong with logging, we take a crash.
  * Our MDS should be able to recover after being restarted */
 void mds_bmap_crc_log(struct bmapc_memb *, struct srm_bmap_crcup *);

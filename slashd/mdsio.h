@@ -25,6 +25,10 @@
 #include "fid.h"
 #include "sltypes.h"
 
+#define	MDS_NAMESPACE_CREATE	1
+#define	MDS_NAMESPACE_UNLINK	2
+#define	MDS_NAMESPACE_RENAME	3
+
 struct statvfs;
 
 struct bmapc_memb;

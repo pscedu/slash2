@@ -34,6 +34,7 @@
 #include "inode.h"
 #include "jflush.h"
 #include "mdsio.h"
+#include "mdslog.h"
 #include "mkfn.h"
 #include "slashd.h"
 #include "sljournal.h"
