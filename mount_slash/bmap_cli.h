@@ -77,12 +77,13 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 	return (0);
 }
 
-#define BMAP_CLI_BUMP_TIMEO(b)                                          \
+#define BMAP_CLI_BUMP_TIMEO(b)						\
         do {                                                            \
+		struct timespec __ctime;				\
+		clock_gettime(CLOCK_REALTIME, &__ctime);		\
 		BMAP_LOCK(b);                                           \
-		timespecadd(&(bmap_2_msbd(b))->msbd_etime,              \
-			    &msl_bmap_timeo_inc,                        \
-			    &(bmap_2_msbd(b))->msbd_etime);             \
+		timespecadd(&__ctime, &msl_bmap_timeo_inc,		\
+			    &(bmap_2_msbd(b))->msbd_etime);		\
 		if (timespeccmp(&(bmap_2_msbd(b))->msbd_etime,          \
 				&(bmap_2_msbd(b))->msbd_xtime, >))      \
 			memcpy(&bmap_2_msbd(b)->msbd_etime,             \
