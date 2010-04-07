@@ -34,7 +34,7 @@ struct srt_stat;
 	psc_logs((level), PSS_GEN,						\
 	    "stb (%p) dev:%"PRIu64" inode:%"PRId64" mode:0%o "			\
 	    "nlink:%"PRIu64" uid:%u gid:%u "					\
-	    "rdev:%"PRIu64" sz:%"PRId64" blksz:%ld "				\
+	    "rdev:%"PRIu64" sz:%"PRId64" blksz:%"PSCPRI_BLKSIZE_T" "		\
 	    "blkcnt:%"PRId64" atime:%lu mtime:%lu ctime:%lu " fmt,		\
 	    (stb), (uint64_t)(stb)->st_dev, (stb)->st_ino, (stb)->st_mode,	\
 	    (uint64_t)(stb)->st_nlink, (stb)->st_uid, (stb)->st_gid,		\
