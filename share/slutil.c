@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "pfl/fcntl.h"
 #include "psc_util/log.h"
 
 #include "creds.h"
@@ -48,55 +49,50 @@ print_flag(const char *str, int *seq)
 	*seq = 1;
 }
 
+#define PR_O_FLAG(fl, val, seq)						\
+	do {								\
+		if ((val) & (fl)) {					\
+			print_flag(#fl, (seq));				\
+			(val) &= ~(fl);					\
+		}							\
+	} while (0)
+
 void
 dump_fflags(int fflags)
 {
 	int seq = 0;
 
-	if (fflags & O_WRONLY)
-		print_flag("O_WRONLY", &seq);
-	if (fflags & O_RDWR)
-		print_flag("O_RDWR", &seq);
+	PR_O_FLAG(O_WRONLY, fflags, &seq);
+	PR_O_FLAG(O_RDWR, fflags, &seq);
 	if ((fflags & O_ACCMODE) == O_RDONLY)
 		print_flag("O_RDONLY", &seq);
 
-	if (fflags & O_CREAT)
-		print_flag("O_CREAT", &seq);
-	if (fflags & O_EXCL)
-		print_flag("O_EXCL", &seq);
-	if (fflags & O_NOCTTY)
-		print_flag("O_NOCTTY", &seq);
-	if (fflags & O_TRUNC)
-		print_flag("O_TRUNC", &seq);
-	if (fflags & O_APPEND)
-		print_flag("O_APPEND", &seq);
-	if (fflags & O_NONBLOCK)
-		print_flag("O_NONBLOCK", &seq);
-	if (fflags & O_SYNC)
-		print_flag("O_SYNC", &seq);
-	if (fflags & O_ASYNC)
-		print_flag("O_ASYNC", &seq);
+	PR_O_FLAG(O_CREAT, fflags, &seq);
+	PR_O_FLAG(O_EXCL, fflags, &seq);
+	PR_O_FLAG(O_TRUNC, fflags, &seq);
+	PR_O_FLAG(O_APPEND, fflags, &seq);
+	PR_O_FLAG(O_NONBLOCK, fflags, &seq);
+	PR_O_FLAG(O_SYNC, fflags, &seq);
+	PR_O_FLAG(O_NOCTTY, fflags, &seq);
+	PR_O_FLAG(O_NOFOLLOW, fflags, &seq);
 
-#ifdef O_DIRECT
-	if (fflags & O_DIRECT)
-		print_flag("O_DIRECT", &seq);
-#endif
+	PR_O_FLAG(O_DSYNC, fflags, &seq);
+	PR_O_FLAG(O_RSYNC, fflags, &seq);
+	PR_O_FLAG(O_ASYNC, fflags, &seq);
+	PR_O_FLAG(O_DIRECTORY, fflags, &seq);
+	PR_O_FLAG(O_EXLOCK, fflags, &seq);
+	PR_O_FLAG(O_SHLOCK, fflags, &seq);
 
-	if (fflags & O_DIRECTORY)
-		print_flag("O_DIRECTORY", &seq);
-	if (fflags & O_NOFOLLOW)
-		print_flag("O_NOFOLLOW", &seq);
+	PR_O_FLAG(O_DIRECT, fflags, &seq);
+	PR_O_FLAG(O_CLOEXEC, fflags, &seq);
+	PR_O_FLAG(O_SYMLINK, fflags, &seq);
+	PR_O_FLAG(O_NOATIME, fflags, &seq);
+	PR_O_FLAG(O_LARGEFILE, fflags, &seq);
 
-#ifdef O_NOATIME
-	if (fflags & O_NOATIME)
-		print_flag("O_NOATIME", &seq);
-#endif
-
-#ifdef O_LARGEFILE
-	if (fflags & O_LARGEFILE)
-		print_flag("O_LARGEFILE", &seq);
-#endif
-
+	if (fflags) {
+		print_flag("", &seq);
+		printf("%x", fflags);
+	}
 	printf("\n");
 }
 
