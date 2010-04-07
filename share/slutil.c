@@ -27,6 +27,7 @@
 #include <unistd.h>
 
 #include "pfl/fcntl.h"
+#include "pfl/types.h"
 #include "psc_util/log.h"
 
 #include "creds.h"
