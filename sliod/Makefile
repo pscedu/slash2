@@ -63,7 +63,6 @@ SRCS+=		${PFL_BASE}/psc_util/waitq.c
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 
-LDFLAGS+=	-lgcrypt
-MODULES+=	pthread lnet
+MODULES+=	pthread lnet fuse-hdrs gcrypt
 
 include ${SLASHMK}
