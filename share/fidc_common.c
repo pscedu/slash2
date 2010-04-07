@@ -20,7 +20,7 @@
 #include <pthread.h>
 #include <stdio.h>
 
-#include <fuse/fuse_lowlevel.h>
+#include <fuse_lowlevel.h>
 
 #include "pfl/cdefs.h"
 #include "psc_ds/list.h"
