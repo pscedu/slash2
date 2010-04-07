@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "psc_util/log.h"
 
@@ -76,16 +77,25 @@ dump_fflags(int fflags)
 	if (fflags & O_ASYNC)
 		print_flag("O_ASYNC", &seq);
 
+#ifdef O_DIRECT
 	if (fflags & O_DIRECT)
 		print_flag("O_DIRECT", &seq);
+#endif
+
 	if (fflags & O_DIRECTORY)
 		print_flag("O_DIRECTORY", &seq);
 	if (fflags & O_NOFOLLOW)
 		print_flag("O_NOFOLLOW", &seq);
+
+#ifdef O_NOATIME
 	if (fflags & O_NOATIME)
 		print_flag("O_NOATIME", &seq);
+#endif
+
+#ifdef O_LARGEFILE
 	if (fflags & O_LARGEFILE)
 		print_flag("O_LARGEFILE", &seq);
+#endif
 
 	printf("\n");
 }
