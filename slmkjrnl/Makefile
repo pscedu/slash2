@@ -18,8 +18,6 @@ SRCS+=		${PFL_BASE}/psc_util/waitq.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/subsys.c
 
-MODULES+=	lnet-hdrs
+MODULES+=	lnet-hdrs rt
 
 include ${SLASHMK}
-
-LDFLAGS+=       -lrt
