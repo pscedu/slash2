@@ -30,6 +30,7 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/net.h"
 
 #include "ctl_cli.h"
 #include "ctlsvr_cli.h"
