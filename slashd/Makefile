@@ -69,8 +69,7 @@ SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 
 DEFINES+=	-DZPOOL_PATH=\"$(realpath ${ZFS_BASE}/cmd/zpool)\"
-LDFLAGS+=	-laio
-MODULES+=	lnet pthread zfs z gcrypt
+MODULES+=	lnet pthread zfs z gcrypt fuse-hdrs aio
 
 include ${SLASHMK}
 
@@ -78,7 +77,7 @@ zbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} -c build && ${SCONS})
 	@(cd ${ZFS_BASE} &&						\
 	    ${SCONS} slashlib=1 debug=4 -c build &&			\
-	    ${SCONS} slashlib=1 debug=4 )
+	    ${SCONS} slashlib=1 debug=4)
 
 build-prereq rezbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=4)
