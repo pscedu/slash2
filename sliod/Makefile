@@ -49,6 +49,7 @@ SRCS+=		${PFL_BASE}/psc_util/list.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 SRCS+=		${PFL_BASE}/psc_util/meter.c
 SRCS+=		${PFL_BASE}/psc_util/mkdirs.c
+SRCS+=		${PFL_BASE}/psc_util/netutil.c
 SRCS+=		${PFL_BASE}/psc_util/pool.c
 SRCS+=		${PFL_BASE}/psc_util/pthrutil.c
 SRCS+=		${PFL_BASE}/psc_util/random.c

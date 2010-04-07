@@ -53,17 +53,9 @@ struct psc_lockedlist	 msctl_replsts = PLL_INITIALIZER(&msctl_replsts,
 #define REPLRQ_BMAPNO_ALL (-1)
 
 int
-msctl_getcreds(int fd, struct slash_creds *cr)
+msctl_getcreds(int s, struct slash_creds *crp)
 {
-	struct ucred ucr;
-	socklen_t len;
-
-	len = sizeof(ucr);
-	if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &ucr, &len))
-		return (-errno);
-	cr->uid = ucr.uid;
-	cr->gid = ucr.gid;
-	return (0);
+	return (pfl_socket_getpeercred(s, &crp->uid, &crp->gid));
 }
 
 int
