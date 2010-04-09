@@ -163,7 +163,7 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
 	psc_assert(inoh->inoh_jfi.jfi_handler == mds_inode_sync);
 	psc_assert(inoh->inoh_jfi.jfi_data == inoh);
 
-	rc = pjournal_xadd(inoh->inoh_jfi.jfi_xh, MDS_LOG_INO_ADDREPL, &jrir,
+	rc = pjournal_xadd(inoh->inoh_jfi.jfi_xh, PJE_INO_ADDREPL, &jrir,
 			   sizeof(struct slmds_jent_ino_addrepl));
 	if (rc)
 		psc_trace("jlog fid=%"PRIx64" ios=%x pos=%u rc=%d",
@@ -204,7 +204,7 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
 	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
 
-	rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_REPL, &jrpg,
+	rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, PJE_BMAP_REPL, &jrpg,
 			   sizeof(struct slmds_jent_repgen));
 	if (rc)
 		psc_fatalx("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u rc=%d",
@@ -257,7 +257,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
 		       (i * sizeof(struct srm_bmap_crcwire)));
 
-		rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_CRC,
+		rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, PJE_BMAP_CRC,
 				   jcrc, sizeof(struct slmds_jent_crc));
 		if (rc)
 			psc_fatalx("jlog fid=%"PRIx64" bmapno=%u rc=%d",
@@ -315,7 +315,7 @@ mds_namespace_log(int op, int type, int perm, uint64_t s2id, const char *name)
 	jnamespace->sjnm_s2id = s2id;
 	strcpy(jnamespace->sjnm_name, name);
 
-	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
+	rc = pjournal_xadd_sngl(mdsJournal, PJE_NAMESPACE, jnamespace,
 		sizeof(struct slmds_jent_namespace));
 	if (rc)
 		psc_fatalx("jlog fid=%"PRIx64", name=%s, rc=%d", s2id, name, rc);
