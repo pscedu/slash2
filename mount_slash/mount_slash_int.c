@@ -464,7 +464,7 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	BMAP_LOCK(b);
 	bcm_wait_locked(b, (!pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs) ||
 			    !pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs)  ||
-			    (b->bcm_mode & BMAP_CLI_FLUSHPROC)));
+			    (b->bcm_mode & BMAP_DIRTY)));
 
 	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs));
 	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs));
