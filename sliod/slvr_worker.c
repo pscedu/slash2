@@ -79,8 +79,11 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 		bcr_xid_check(bcr);
 
-		bcr->bcr_crcup.fsize =
-		    iod_inode_getsize(&bcr->bcr_crcup.fg);
+		rc = iod_inode_getsize(&bcr->bcr_crcup.fg, 
+		       &bcr->bcr_crcup.fsize);
+		/* Bail for now if we can't stat() our file objects.
+		 */
+		psc_assert(!rc);
 
 		mq->ncrcs_per_update[i] = bcr->bcr_crcup.nups;
 
