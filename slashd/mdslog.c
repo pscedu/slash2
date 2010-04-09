@@ -315,7 +315,7 @@ mds_namespace_log(int op, int type, int perm, uint64_t s2id, const char *name)
 	jnamespace->sjnm_s2id = s2id;
 	strcpy(jnamespace->sjnm_name, name);
 
-	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace, 
+	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
 		sizeof(struct slmds_jent_namespace));
 	if (rc)
 		psc_fatalx("jlog fid=%"PRIx64", name=%s, rc=%d", s2id, name, rc);
@@ -329,7 +329,8 @@ mds_journal_init(void)
 	char fn[PATH_MAX];
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
-	mdsJournal = pjournal_replay(fn, mds_journal_replay);
+	mdsJournal = pjournal_replay(fn, mds_journal_replay,
+	    SLMTHRT_JRNLSHDW, "slmjshadowthr");
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", fn);
 }
