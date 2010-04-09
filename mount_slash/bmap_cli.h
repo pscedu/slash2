@@ -95,6 +95,5 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 /* bmap client modes */
 #define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)  /* mode change in progress */
 #define	BMAP_CLI_MCC			(_BMAP_FLSHFT << 1)  /* mode change compete */
-#define BMAP_CLI_FLUSHPROC              (_BMAP_FLSHFT << 2)  /* proc'd by flush thr */
 
 #endif /* _SLASH_CLI_BMAP_H_ */

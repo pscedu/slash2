@@ -628,7 +628,6 @@ bmap_flush(void)
 		DEBUG_BMAP(PLL_INFO, b, "try flush (outstandingRpcCnt=%d)",
 			   atomic_read(&outstandingRpcCnt));
 
-		psc_assert(b->bcm_mode & BMAP_CLI_FLUSHPROC);
 		/* Take the page cache lock too so that the bmap's
 		 *   dirty state may be sanity checked.
 		 */
@@ -639,7 +638,6 @@ bmap_flush(void)
 
 		} else {
 			psc_assert(!bmpc_queued_writes(bmpc));
-			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
 			bcm_wake_locked(b);
 			BMPC_ULOCK(bmpc);
 
@@ -736,7 +734,6 @@ bmap_flush(void)
 
 		} else {
 			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
-			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
 			bcm_wake_locked(b);
 		}

@@ -1125,17 +1125,10 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			bmap_op_done_type_simple(b, BMAP_OPCNT_REAPER);
 			psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
-			/* At this point since we're no longer BMAP_REAPABLE
-			 *  and BMAP_DIRTY is set, the msbrlsthr must not try
-			 *  to replace this bmap on the bmapTimeoutQ.
-			 */
-			psc_assert(!(b->bcm_mode & BMAP_CLI_FLUSHPROC));
 		}
 
-		if (!(b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
-			b->bcm_mode |= BMAP_CLI_FLUSHPROC;
-			lc_addtail(&bmapFlushQ, bmap_2_msbd(b));
-		}
+		psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
+		lc_addtail(&bmapFlushQ, bmap_2_msbd(b));
 	}
 
 	DEBUG_BMAP(PLL_INFO, b, "biorq=%p list_empty(%d)",
