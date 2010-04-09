@@ -1606,6 +1606,10 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	 *   offsets into the buffer.
 	 */
 	for (j=0, p=buf; j < nr; j++, p+=tlen) {
+		/* Associate the biorq's with the mfh.
+		 */
+		pll_addtail(&mfh->mfh_biorqs, r[j]);
+		
 		if (r[j]->biorq_flags & BIORQ_DIO)
 			msl_pages_dio_getput(r[j], p);
 
@@ -1629,9 +1633,6 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		/* Unwind our reference from bmap_get().
 		 */
 		bmap_op_done_type(b[j], BMAP_OPCNT_LOOKUP);
-		/* Associate the biorq's with the mfh.
-		 */
-		pll_addtail(&mfh->mfh_biorqs, r[j]);
 	}
 
 	if (rw == SL_WRITE) {
