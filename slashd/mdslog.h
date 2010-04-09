@@ -22,6 +22,14 @@
 
 #include "inode.h"
 
+enum {
+	MDS_LOG_BMAP_REPL = _PJE_FLSHFT << 0,
+	MDS_LOG_BMAP_CRC = _PJE_FLSHFT << 1,
+	MDS_LOG_BMAP_SEQ = _PJE_FLSHFT << 2,
+	MDS_LOG_INO_ADDREPL = _PJE_FLSHFT << 3,
+	MDS_LOG_NAMESPACE = _PJE_FLSHFT << 4
+};
+
 struct bmapc_memb;
 struct fidc_membh;
 struct slash_inode_handle;
