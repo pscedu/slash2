@@ -22,6 +22,7 @@
 
 #include "inode.h"
 
+struct bmapc_memb;
 struct fidc_membh;
 struct slash_inode_handle;
 struct srm_bmap_crcup;
