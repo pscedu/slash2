@@ -74,7 +74,7 @@ struct resm_iod_info {
 void		slitimerthr_spawn(void);
 __dead void	slictlthr_main(const char *);
 
-uint64_t	iod_inode_getsize(struct slash_fidgen *);
+int 	        iod_inode_getsize(struct slash_fidgen *, uint64_t *);
 
 extern struct slash_creds	 rootcreds;
 
