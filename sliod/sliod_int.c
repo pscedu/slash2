@@ -59,17 +59,22 @@ iod_bmap_init(struct bmapc_memb *b)
 	SPLAY_INIT(&biod->biod_slvrs);
 }
 
-uint64_t
-iod_inode_getsize(struct slash_fidgen *fg)
+int
+iod_inode_getsize(struct slash_fidgen *fg, uint64_t *size)
 {
 	struct fidc_membh *f;
-	uint64_t size;
+	struct stat stb;
 
 	f = fidc_lookup_fg(fg);
 	psc_assert(f);
-	size = f->fcmh_sstb.sst_size;
+	
+	if (fstat(fcmh_2_fd(f), &stb))
+		return (-errno);
+
+	*size = stb.st_size;
+	
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
-	return (size);
+	return (0);
 }
 
 struct fidc_membh *
