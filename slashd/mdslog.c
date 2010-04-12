@@ -78,7 +78,8 @@ mds_journal_replay(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
 }
 
 /* Distill information from the system journal and write into change log files */
-void mds_shadow_handler(struct psc_journal_enthdr *pje)
+void
+mds_shadow_handler(struct psc_journal_enthdr *pje)
 {
 	uint64_t seqno;
         char fn[PATH_MAX];
@@ -87,11 +88,21 @@ void mds_shadow_handler(struct psc_journal_enthdr *pje)
 	jnamespace = (struct slmds_jent_namespace *)&pje->pje_data[0];
 	seqno = jnamespace->sjnm_seqno;
 
+	/* see if we can open a new change log file */
 	if ((seqno % MDS_NAMESPACE_BATCH) == 0) {
 		psc_assert(current_logfile == -1);
         	xmkfn(fn, "%s/%s", SL_PATH_DATADIR, SL_FN_NAMESPACELOG);
+		current_logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
+		if (current_logfile == -1)
+			psc_fatal("Fail to open change log file %s", fn);
 	} else 
 		psc_assert(current_logfile != -1);
+ 
+	/* see if we need to close the current change log file */
+	if (((seqno + 1) % MDS_NAMESPACE_BATCH) == 0) {
+		close(current_logfile);
+		current_logfile = -1;
+	}
 }
 
 void
