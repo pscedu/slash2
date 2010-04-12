@@ -35,10 +35,10 @@ Indicates that the journal being written should be marked to use
 shadowing.
 When shadowing is enabled for a journal, all
 .Tn I/O
-to the journal is done on in-memory regions called tiles which are
-scheduled for later processing.
-This is to increase performance and efficiency when a large number of
-transactions are open simultaneously.
+to the journal is done on in-memory regions called tiles.
+The tiles are scheduled and processed so that log entries written within
+a tile can have additional processing performed as seen fit if deemed
+necessary by the application.
 .It Fl v
 Display verbose information about activity performed.
 .El
