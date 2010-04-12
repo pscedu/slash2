@@ -37,6 +37,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctlsvr.h"
+#include "psc_util/eqpollthr.h"
 #include "psc_util/log.h"
 #include "psc_util/pool.h"
 #include "psc_util/thread.h"
@@ -1573,7 +1574,7 @@ msl_init(__unusedx struct fuse_conn_info *conn)
 	slc_rpc_initsvc();
 
 	/* Start up service threads. */
-	mseqpollthr_spawn();
+	psc_eqpollthr_spawn(MSTHRT_EQPOLL, "mseqpollthr");
 	msctlthr_spawn();
 	mstimerthr_spawn();
 	msbmapflushthr_spawn();
