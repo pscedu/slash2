@@ -10,7 +10,7 @@
 metadata server operations journal
 .Sh SYNOPSIS
 .Nm slmkjrnl
-.Op Fl fqv
+.Op Fl fqsv
 .Op Fl D Ar datadir
 .Sh DESCRIPTION
 The
@@ -30,6 +30,15 @@ Format the operations journal.
 .It Fl q
 Query and display current journal information.
 No formatting is performed.
+.It Fl s
+Indicates that the journal being written should be marked to use
+shadowing.
+When shadowing is enabled for a journal, all
+.Tn I/O
+to the journal is done on in-memory regions called tiles which are
+scheduled for later processing.
+This is to increase performance and efficiency when a large number of
+transactions are open simultaneously.
 .It Fl v
 Display verbose information about activity performed.
 .El
