@@ -116,7 +116,7 @@ void		 mds_bmi_cb(void *, struct odtable_receipt *);
 __dead void	 slmctlthr_main(const char *);
 void		 slmbmaptimeothr_spawn(void);
 void		 slmfssyncthr_spawn(void);
-void		*slmrcmthr_main(void *);
+void		 slmrcmthr_main(struct psc_thread *);
 void		 slmreplqthr_spawnall(void);
 void		 slmtimerthr_spawn(void);
 
