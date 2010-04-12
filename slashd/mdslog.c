@@ -78,11 +78,20 @@ mds_journal_replay(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
 }
 
 /* Distill information from the system journal and write into change log files */
-void mds_shadow_handler(__unusedx struct psc_journal_enthdr *pje)
+void mds_shadow_handler(struct psc_journal_enthdr *pje)
 {
 	uint64_t seqno;
         char fn[PATH_MAX];
-        xmkfn(fn, "%s/%s", SL_PATH_DATADIR, SL_FN_NAMESPACELOG);
+	struct slmds_jent_namespace *jnamespace;
+
+	jnamespace = (struct slmds_jent_namespace *)&pje->pje_data[0];
+	seqno = jnamespace->sjnm_seqno;
+
+	if ((seqno % MDS_NAMESPACE_BATCH) == 0) {
+		psc_assert(current_logfile == -1);
+        	xmkfn(fn, "%s/%s", SL_PATH_DATADIR, SL_FN_NAMESPACELOG);
+	} else 
+		psc_assert(current_logfile != -1);
 }
 
 void
