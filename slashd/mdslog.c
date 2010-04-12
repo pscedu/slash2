@@ -83,6 +83,7 @@ mds_shadow_handler(struct psc_journal_enthdr *pje)
 {
 	uint64_t seqno;
         char fn[PATH_MAX];
+	struct namespace_log_entry *logentry;
 	struct slmds_jent_namespace *jnamespace;
 
 	jnamespace = (struct slmds_jent_namespace *)&pje->pje_data[0];
