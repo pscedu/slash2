@@ -47,7 +47,8 @@ struct psc_journal	*mdsJournal;
  */
 uint64_t		 next_update_seqno;
 
-slm_get_next_seq_no(void)
+uint64_t
+mds_get_next_seqno(void)
 {
 	static psc_spinlock_t lock = LOCK_INITIALIZER;
 	uint64_t seqno;
@@ -334,7 +335,7 @@ mds_namespace_log(int op, int type, int perm, uint64_t s2id, const char *name)
 	jnamespace->sjnm_type = type;
 	jnamespace->sjnm_perm = perm;
 	jnamespace->sjnm_s2id = s2id;
-	jnamespace->sjnm_seqno = slm_get_next_seq_no();
+	jnamespace->sjnm_seqno = mds_get_next_seqno();
 	strcpy(jnamespace->sjnm_name, name);
 
 	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
