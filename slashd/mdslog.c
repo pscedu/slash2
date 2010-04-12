@@ -47,6 +47,13 @@ struct psc_journal	*mdsJournal;
  */
 uint64_t		 next_update_seqno;
 
+int			 current_logfile = -1;
+
+/*
+ * The number of namespace operations that are recorded in the same change log.
+ */
+#define MDS_NAMESPACE_BATCH	4096
+
 uint64_t
 mds_get_next_seqno(void)
 {
@@ -59,14 +66,23 @@ mds_get_next_seqno(void)
 	return (seqno);
 }
 
+void
+mds_create_logname(uint seqno, char *name)
+{
+}
+
 /* master journal log replay function */
 void
 mds_journal_replay(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
 {
 }
 
+/* Distill information from the system journal and write into change log files */
 void mds_shadow_handler(__unusedx struct psc_journal_enthdr *pje)
 {
+	uint64_t seqno;
+        char fn[PATH_MAX];
+        xmkfn(fn, "%s/%s", SL_PATH_DATADIR, SL_FN_NAMESPACELOG);
 }
 
 void
