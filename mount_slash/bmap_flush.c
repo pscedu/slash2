@@ -750,7 +750,7 @@ bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 	bid->bmapno = b->bcm_bmapno;
 	bid->fid = fcmh_2_fid(b->bcm_fcmh);
 	bid->seq = bmap_2_msbd(b)->msbd_seq;
-	bid->key = bmap_2_msbd(b)->msbd_key;	
+	bid->key = bmap_2_msbd(b)->msbd_key;
 }
 
 static void
@@ -764,29 +764,29 @@ ms_bmap_release(struct srm_bmap_release_req *bid)
 
 	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
 			SRMT_RELEASEBMAP, rq, mq, mp);
-	
+
 	memcpy(mq, bid, sizeof(*mq));
-	rc = RSX_WAITREP(rq, mp);	
+	rc = RSX_WAITREP(rq, mp);
 	if (rc)
-		/* At this point the bmaps have already been purged from 
+		/* At this point the bmaps have already been purged from
 		 *   our cache.  If the mds rls request fails then the
-		 *   mds should time them out on his own.  In any case, 
+		 *   mds should time them out on his own.  In any case,
 		 *   the client must reacquire leases to perform further
 		 *   I/O on any bmap in this set.
 		 */
 		psc_errorx("bmap release rpc failed");
 	else {
-		for (i=0; i < bid->nbmaps; i++) 
+		for (i=0; i < bid->nbmaps; i++)
 			psc_notify("Fid%"PRId64" bmap=%u key=%"PRId64
-			   " seq=%"PRId64" rc=%d", 
-			   bid->bmaps[i].fid, bid->bmaps[i].bmapno, 
-			   bid->bmaps[i].key, bid->bmaps[i].seq, 
+			   " seq=%"PRId64" rc=%d",
+			   bid->bmaps[i].fid, bid->bmaps[i].bmapno,
+			   bid->bmaps[i].key, bid->bmaps[i].seq,
 			   mp->bidrc[i]);
 	}
 }
 
-void *
-msbmaprlsthr_main(__unusedx void *arg)
+void
+msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
 	struct bmapc_memb *b;
 	struct bmap_cli_info *msbd;
@@ -798,7 +798,7 @@ msbmaprlsthr_main(__unusedx void *arg)
 
 	bids = PSCALLOC(sizeof(struct srm_bmap_release_req));
 
-	while (1) {
+	while (pscthr_run() && !shutdown) {
 		z = lc_sz(&bmapTimeoutQ);
 		lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
 		clock_gettime(CLOCK_REALTIME, &ctime);
@@ -811,7 +811,7 @@ msbmaprlsthr_main(__unusedx void *arg)
 
 			b = msbd->msbd_bmap;
 
-			BMAP_LOCK(b);			
+			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_INFO, b, "timeoq try reap (nbmaps=%zd)", z);
 
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
@@ -830,7 +830,7 @@ msbmaprlsthr_main(__unusedx void *arg)
 				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 			} else
 				BMAP_ULOCK(b);
-						
+
 			if (bids->nbmaps == MAX_BMAP_RELEASE) {
 				wtime.tv_sec = 0;
 				wtime.tv_nsec = 100;
@@ -847,44 +847,31 @@ msbmaprlsthr_main(__unusedx void *arg)
 			wtime.tv_sec = 1;
 
 		psc_waitq_waitrel(&waitq, NULL, &wtime);
-
-		if (shutdown)
-			break;
 	}
 	PSCFREE(bids);
-	return (NULL);
 }
 
-void *
-msbmapflushthr_main(__unusedx void *arg)
+void
+msbmapflushthr_main(__unusedx struct psc_thread *thr)
 {
-	while (1) {
-		if (atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS) {
+	while (pscthr_run() && !shutdown) {
+		if (atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS)
 			bmap_flush();
-			usleep(2048);
-		} else
-			usleep(2048);
-
-		if (shutdown)
-			break;
+		usleep(2048);
 	}
-	return (NULL);
 }
 
-void *
-msbmapflushthrrpc_main(__unusedx void *arg)
+void
+msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 {
 	struct timespec ts = {0, 100000};
 	int rc;
 
-	while (1) {
+	while (pscthr_run() && !shutdown) {
 		rc = psc_waitq_waitrel(&rpcCompletion, NULL, &ts);
 		psc_trace("rc=%d", rc);
 		bmap_flush_reap_rpcs();
-		if (shutdown)
-			break;
 	}
-	return (NULL);
 }
 
 void
@@ -899,7 +886,7 @@ msbmapflushthr_spawn(void)
 	    msbd_lentry, "bmapFlushQ");
 
 	lc_reginit(&bmapTimeoutQ, struct bmap_cli_info,
-		   msbd_lentry, "bmapTimeoutQ");
+	    msbd_lentry, "bmapTimeoutQ");
 
 	pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
 	    NULL, 0, "msbflushthr");

@@ -49,11 +49,11 @@ mds_bmap_timeotbl_init(void)
 	struct bmap_timeo_entry *e;
 
 	LOCK_INIT(&mdsBmapTimeoTbl.btt_lock);
-	
+
 	mdsBmapTimeoTbl.btt_nentries = BMAP_TIMEO_TBL_SZ;
-	mdsBmapTimeoTbl.btt_entries = 
+	mdsBmapTimeoTbl.btt_entries =
 		PSCALLOC(sizeof(struct bmap_timeo_entry) * BMAP_TIMEO_TBL_SZ);
-	
+
 	for (i=0; i < BMAP_TIMEO_TBL_SZ; i++) {
 		e = &mdsBmapTimeoTbl.btt_entries[i];
 		e->bte_maxseq = BMAPSEQ_ANY;
@@ -65,7 +65,7 @@ mds_bmap_timeotbl_init(void)
 static int
 mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 {
-	return (pjournal_xadd_sngl(mdsJournal, MDS_LOG_BMAP_SEQ, sjbsq, 
+	return (pjournal_xadd_sngl(mdsJournal, MDS_LOG_BMAP_SEQ, sjbsq,
 				   sizeof(struct slmds_jent_bmapseq)));
 }
 
@@ -73,8 +73,8 @@ void
 mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 {
 	int locked;
-	
-	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);	
+
+	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
 
 	if (maxseq)
 		*maxseq = mdsBmapTimeoTbl.btt_maxseq;
@@ -89,18 +89,18 @@ mds_bmap_timeotbl_getnextseq(void)
 {
 	struct slmds_jent_bmapseq sjbsq;
 	int locked;
-	
+
 	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
-	
+
 	mdsBmapTimeoTbl.btt_maxseq++;
 	if (mdsBmapTimeoTbl.btt_maxseq == BMAPSEQ_ANY)
 		mdsBmapTimeoTbl.btt_maxseq = 0;
-	
+
 	sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 	sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq;
-	
+
 	ureqlock(&mdsBmapTimeoTbl.btt_lock, locked);
-	
+
 	if (!(sjbsq.sjbsq_high_wm % BMAP_SEQLOG_FACTOR))
 		mds_bmap_journal_bmapseq(&sjbsq);
 
@@ -114,7 +114,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	struct bmap_timeo_entry *e;
 
 	psc_assert(bml->bml_flags & BML_TIMEOQ);
-	
+
 	spinlock(&mdsBmapTimeoTbl.btt_lock);
 
 	if (flags & BTE_DEL) {
@@ -127,13 +127,13 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	e = &mdsBmapTimeoTbl.btt_entries[mds_bmap_timeotbl_curslot];
 	seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
 	psclist_xadd_tail(&bml->bml_timeo_lentry, &e->bte_bmaps);
-       
+
 	freelock(&mdsBmapTimeoTbl.btt_lock);
 	return (seq);
 }
 
-void * 
-slmbmaptimeothr_begin(__unusedx void *arg)
+void
+slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 {
 	int timeoslot, i;
 	struct bmap_timeo_entry *e;
@@ -141,7 +141,7 @@ slmbmaptimeothr_begin(__unusedx void *arg)
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct slmds_jent_bmapseq sjbsq;
 
-	while (1) {
+	while (pscthr_run()) {
 		spinlock(&mdsBmapTimeoTbl.btt_lock);
 		/* The oldest slot is always curslot + 1.
 		 */
@@ -149,17 +149,17 @@ slmbmaptimeothr_begin(__unusedx void *arg)
 		if (timeoslot == BMAP_TIMEO_TBL_SZ)
 			timeoslot = 0;
 
-		e = &mdsBmapTimeoTbl.btt_entries[timeoslot];		
+		e = &mdsBmapTimeoTbl.btt_entries[timeoslot];
 		if (e->bte_maxseq == BMAPSEQ_ANY) {
 			freelock(&mdsBmapTimeoTbl.btt_lock);
 			goto sleep;
 		}
-		
+
 		psclist_for_each_entry(bml, &e->bte_bmaps, bml_timeo_lentry)
 			psc_dynarray_add(&a, bml);
-	       		
-		sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;	
-		sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq = 
+
+		sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
+		sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq =
 			e->bte_maxseq;
 
 		freelock(&mdsBmapTimeoTbl.btt_lock);
@@ -167,7 +167,7 @@ slmbmaptimeothr_begin(__unusedx void *arg)
 		 */
 		mds_bmap_journal_bmapseq(&sjbsq);
 
-		for (i=0; i < psc_dynarray_len(&a); i++) {		
+		for (i=0; i < psc_dynarray_len(&a); i++) {
 			bml = psc_dynarray_getpos(&a, i);
 			psc_assert(bml->bml_seq <= e->bte_maxseq);
 			if (mds_bmap_bml_release(bml_2_bmap(bml), bml->bml_seq,
@@ -175,10 +175,9 @@ slmbmaptimeothr_begin(__unusedx void *arg)
 				abort();
 		}
 		psc_dynarray_free(&a);
-	sleep:
+ sleep:
 		sleep(mds_bmap_timeotbl_nextwakeup);
 	}
-	return (NULL);
 }
 
 

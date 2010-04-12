@@ -150,15 +150,15 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 	psc_pool_return(sli_replwkrq_pool, w);
 }
 
-__dead void *
-slireplpndthr_main(__unusedx void *arg)
+void
+slireplpndthr_main(__unusedx struct psc_thread *thr)
 {
 	int rc, slvridx, slvrno;
 	struct slashrpc_cservice *csvc;
 	struct sli_repl_workrq *w;
 	struct bmap_iod_info *biodi;
 
-	for (;;) {
+	while (pscthr_run()) {
 		rc = 0;
 		slvridx = REPL_MAX_INFLIGHT_SLVRS;
 		w = lc_getwait(&sli_replwkq_pending);

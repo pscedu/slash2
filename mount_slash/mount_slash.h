@@ -103,7 +103,7 @@ void	 mseqpollthr_spawn(void);
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
 void	 msbmapflushthr_spawn(void);
-void	*msctlthr_begin(void *);
+void	 msctlthr_begin(struct psc_thread *);
 
 int	 checkcreds(const struct srt_stat *, const struct slash_creds *, int);
 int	 translate_pathname(const char *, char []);

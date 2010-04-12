@@ -32,15 +32,15 @@
 
 struct psc_listcache dirtyMdsData;
 
-__dead void *
-mdsfssyncthr_begin(__unusedx void *arg)
+void
+mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 {
 	struct jflush_item *jfi;
 	struct psc_journal_xidhndl *xh;
 	jflush_handler jfih;
 	void *data;
 
-	while (1) {
+	while (pscthr_run()) {
 		jfi = lc_getwait(&dirtyMdsData);
 		spinlock(&jfi->jfi_lock);
 
@@ -95,8 +95,8 @@ mdsfssyncthr_begin(__unusedx void *arg)
 void
 slmfssyncthr_spawn(void)
 {
-	lc_reginit(&dirtyMdsData, struct jflush_item, jfi_lentry,
-		   "dirtyMdsData");
+	lc_reginit(&dirtyMdsData, struct jflush_item,
+	    jfi_lentry, "dirtyMdsData");
 	pscthr_init(SLMTHRT_FSSYNC, 0, mdsfssyncthr_begin,
 	    NULL, 0, "slmfssyncthr");
 }

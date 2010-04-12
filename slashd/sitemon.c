@@ -175,8 +175,8 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	return (0);
 }
 
-__dead void *
-slmreplqthr_main(void *arg)
+void
+slmreplqthr_main(struct psc_thread *thr)
 {
 	int iosidx, nios, nrq, off, j, rc, has_repl_work;
 	int rrq_gen, ris, is, rir, ir, rin, in, val, nmemb;
@@ -186,17 +186,15 @@ slmreplqthr_main(void *arg)
 	struct site_mds_info *smi;
 	struct sl_resm *src_resm;
 	struct bmapc_memb *bcm;
-	struct psc_thread *thr;
 	struct sl_replrq *rrq;
 	struct sl_site *site;
 	sl_bmapno_t bmapno, nb, ib;
 	void *dummy;
 
-	thr = arg;
 	smrt = slmreplqthr(thr);
 	site = smrt->smrt_site;
 	smi = site->site_pri;
-	for (;;) {
+	while (pscthr_run()) {
 		if (0)
  restart:
 			sched_yield();
@@ -363,11 +361,10 @@ slmreplqthr_main(void *arg)
 }
 
 #if 0
-__dead void *
-slmtruncthr_main(void *arg)
+void
+slmtruncthr_main(struct psc_thread *thr)
 {
 
-	thr = arg;
 	smtrt = slmtruncthr(thr);
 	site = smrt->smrt_site;
 	smi = site->site_pri;

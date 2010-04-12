@@ -59,11 +59,11 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	mp = psc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
 	bml = req->rq_async_args.pointer_arg[CB_ARG_SLOT];
 
-	DEBUG_BMAP(mp->rc ? PLL_ERROR : PLL_NOTIFY, bml_2_bmap(bml), 
-	   "cli=%s bml=%p seq=%"PRId64" rc=%d",  
-	   libcfs_id2str(req->rq_import->imp_connection->c_peer), 
+	DEBUG_BMAP(mp->rc ? PLL_ERROR : PLL_NOTIFY, bml_2_bmap(bml),
+	   "cli=%s bml=%p seq=%"PRId64" rc=%d",
+	   libcfs_id2str(req->rq_import->imp_connection->c_peer),
 	   bml, bml->bml_seq, mp->rc);
-	
+
 	lc_remove(&inflBmapCbs, bml);
 
 	BML_LOCK(bml);
@@ -71,10 +71,10 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	bml->bml_flags &= ~BML_COH;
 	if (bml->bml_flags & BML_COHRLS)
 		rls = 1;
-	BML_ULOCK(bml);	
+	BML_ULOCK(bml);
 	if (rls)
 		mds_bmap_bml_release(bml_2_bmap(bml), bml->bml_seq,
-		     bml->bml_key);	
+		     bml->bml_key);
 	/* bmap_op_done_type() will wake any waiters.
 	 */
 	bmap_op_done_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
@@ -92,7 +92,7 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	struct slashrpc_cservice *csvc;
 	int rc=0;
 
-	DEBUG_BMAP(PLL_NOTIFY, bml_2_bmap(bml), "bml=%p",  bml);	
+	DEBUG_BMAP(PLL_NOTIFY, bml_2_bmap(bml), "bml=%p",  bml);
 
 	BML_LOCK(bml);
 	psc_assert(!(bml->bml_flags & BML_COH));
@@ -101,7 +101,7 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 		BML_ULOCK(bml);
 		return (-ENOTCONN);
 	} else {
-		bml->bml_flags |= BML_COH;		
+		bml->bml_flags |= BML_COH;
 		/* XXX How do we deal with a closing export?
 		 */
 		csvc = slm_getclcsvc(exp);
@@ -121,11 +121,11 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	mq->seq = bml->bml_seq;
 
 	if (block == MDSCOH_BLOCK) {
-		
+
 		rc = RSX_WAITREP(req, mp);
 		if (rc)
 			return (rc);
-	
+
 		if (req)
 			pscrpc_req_finished(req);
 
@@ -136,14 +136,14 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	return (rc);
 }
 
-__dead __static void *
-slmcohthr_begin(__unusedx void *arg)
+void
+slmcohthr_begin(__unusedx struct psc_thread *thr)
 {
 	struct bmap_mds_lease *bml;
 	struct timespec abstime;
 	int rc;
 
-	while (1) {
+	while (pscthr_run()) {
 		mdscoh_reap();
 
 		clock_gettime(CLOCK_REALTIME, &abstime);
@@ -164,7 +164,7 @@ slmcohthr_begin(__unusedx void *arg)
 		rc = mdscoh_req(bml, MDSCOH_NONBLOCK);
 		if (rc)
 			DEBUG_BMAP(PLL_ERROR, bml_2_bmap(bml), "bml=%p "
-			   "mdscoh_queue_req_locked() failed with (rc==%d)", 
+			   "mdscoh_queue_req_locked() failed with (rc==%d)",
 			   bml, rc);
 	}
 }

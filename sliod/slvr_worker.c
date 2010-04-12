@@ -79,7 +79,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 		bcr_xid_check(bcr);
 
-		rc = iod_inode_getsize(&bcr->bcr_crcup.fg, 
+		rc = iod_inode_getsize(&bcr->bcr_crcup.fg,
 		       &bcr->bcr_crcup.fsize);
 		/* Bail for now if we can't stat() our file objects.
 		 */
@@ -402,13 +402,11 @@ slvr_worker_int(void)
 	slvr_worker_push_crcups();
 }
 
-__dead void *
-slvr_worker(__unusedx void *arg)
+void
+slvr_worker(__unusedx struct psc_thread *thr)
 {
-	for (;;) {
+	while (pscthr_run())
 		slvr_worker_int();
-		sched_yield();
-	}
 }
 
 void
@@ -426,7 +424,7 @@ slvr_worker_init(void)
 	if (!slvrNbReqSet)
 		psc_fatalx("nbreqset_init() failed");
 
-	for (i=0; i < NSLVRCRC_THRS; i++)
+	for (i = 0; i < NSLVRCRC_THRS; i++)
 		pscthr_init(SLITHRT_SLVR_CRC, 0, slvr_worker, NULL, 0,
 			    "slislvrthr%d", i);
 }

@@ -176,22 +176,20 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	return (rc);
 }
 
-void *
-slmrcmthr_main(__unusedx void *arg)
+void
+slmrcmthr_main(struct psc_thread *thr)
 {
 	struct slm_replst_workreq *rsw;
 	struct slmrcm_thread *srcm;
 	struct pscrpc_request *rq;
 	struct fidc_membh *fcmh;
-	struct psc_thread *thr;
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 	sl_blkno_t n;
 	int rc;
 
-	thr = pscthr_get();
 	srcm = slmrcmthr(thr);
-	for (;;) {
+	while (pscthr_run()) {
 		rsw = lc_getwait(&slm_replst_workq);
 
 		srcm->srcm_page_bitpos = SRM_REPLST_PAGESIZ * NBBY;
@@ -268,9 +266,7 @@ slmrcmthr_main(__unusedx void *arg)
 		slm_rcm_issue_getreplst(rsw, NULL, 1);
 
 		PSCFREE(rsw);
-		sched_yield();
 	}
-	/* NOTREACHED */
 }
 
 /*

@@ -361,8 +361,8 @@ int (*psc_ctl_cmds[])(int, struct psc_ctlmsghdr *, void *) = {
 };
 int psc_ctl_ncmds = nitems(psc_ctl_cmds);
 
-void *
-msctlthr_begin(__unusedx void *arg)
+void
+msctlthr_begin(__unusedx struct psc_thread *thr)
 {
 	psc_ctlthr_main(ctlsockfn, msctlops, nitems(msctlops));
 }
