@@ -39,7 +39,24 @@
 #include "slashd.h"
 #include "sljournal.h"
 
-struct psc_journal		*mdsJournal;
+struct psc_journal	*mdsJournal;
+
+/*
+ * Eventually, we are going to retrieve the namespace update sequence number
+ * from the system journal.
+ */
+uint64_t		 next_update_seqno;
+
+slm_get_next_seq_no(void)
+{
+	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	uint64_t seqno;
+
+	spinlock(&lock);
+	seqno = next_update_seqno++;
+	freelock(&lock);
+	return (seqno);
+}
 
 /* master journal log replay function */
 void
@@ -317,6 +334,7 @@ mds_namespace_log(int op, int type, int perm, uint64_t s2id, const char *name)
 	jnamespace->sjnm_type = type;
 	jnamespace->sjnm_perm = perm;
 	jnamespace->sjnm_s2id = s2id;
+	jnamespace->sjnm_seqno = slm_get_next_seq_no();
 	strcpy(jnamespace->sjnm_name, name);
 
 	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
