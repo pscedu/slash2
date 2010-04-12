@@ -33,7 +33,6 @@
 
 int format;
 int query;
-int shadow;
 int verbose;
 const char *datadir = SL_PATH_DATADIR;
 const char *progname;
@@ -67,7 +66,6 @@ main(int argc, char *argv[])
 			query = 1;
 			break;
 		case 's':
-			shadow = 1;
 			options |= PJH_OPT_SHADOW;
 			break;
 		case 'v':
