@@ -33,6 +33,7 @@
 
 int format;
 int query;
+int shadow;
 int verbose;
 const char *datadir = SL_PATH_DATADIR;
 const char *progname;
@@ -40,7 +41,7 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-fqv] [-D dir]\n", progname);
+	fprintf(stderr, "usage: %s [-fqsv] [-D dir]\n", progname);
 	exit(1);
 }
 
@@ -49,10 +50,12 @@ main(int argc, char *argv[])
 {
 	char c, fn[PATH_MAX];
 	int rc;
+	unsigned int options;
 
 	pfl_init();
+	options = PJH_OPT_NONE;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "D:fqv")) != -1)
+	while ((c = getopt(argc, argv, "D:fqsv")) != -1)
 		switch (c) {
 		case 'D':
 			datadir = optarg;
@@ -62,6 +65,10 @@ main(int argc, char *argv[])
 			break;
 		case 'q':
 			query = 1;
+			break;
+		case 's':
+			shadow = 1;
+			options |= PJH_OPT_SHADOW;
 			break;
 		case 'v':
 			verbose = 1;
@@ -85,7 +92,7 @@ main(int argc, char *argv[])
 
 	if (format) {
 		rc = pjournal_format(fn, SLJ_MDS_JNENTS,
-		    SLJ_MDS_ENTSIZE, SLJ_MDS_RA, 0);
+		    SLJ_MDS_ENTSIZE, SLJ_MDS_RA, options);
 		if (rc)
 			psc_fatalx("failing formatting journal %s: %s",
 			    fn, slstrerror(rc));
