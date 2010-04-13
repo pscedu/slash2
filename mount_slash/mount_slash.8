@@ -12,6 +12,7 @@ file system
 .Nm mount_slash
 .Op Fl dU
 .Op Fl f Ar conf
+.Op Fl o Ar fuseopt
 .Op Fl S Ar socket
 .Ar mountpoint
 .Sh DESCRIPTION
@@ -23,7 +24,7 @@ file system under the specified
 .Ar mountpoint .
 .Pp
 The options are as follows:
-.Bl -tag -width Ds -offset indent
+.Bl -tag -width Ds
 .It Fl d
 Enable
 .Tn FUSE
@@ -32,6 +33,9 @@ debug messages.
 Specify an alternative configuration file.
 Defaults to
 .Pa /etc/slash.conf .
+.It Fl o Ar fuseopt
+Pass an additional option to
+.Tn FUSE .
 .It Fl S Ar socket
 Specify an alternative path for the named socket through which
 .Nm
@@ -51,7 +55,9 @@ character
 The default is
 .Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock .
 .It Fl U
-Perform an unmount at the location specified by
+Perform a
+.Xr umount 8
+at the location specified by
 .Ar mountpoint
 before attempting to bring up the file system.
 .El

@@ -17,7 +17,7 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 
@@ -63,7 +63,6 @@
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
 
 sl_ios_id_t		 prefIOS = IOS_ID_ANY;
-int			 fuse_debug;
 const char		*progname;
 char			 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
 char			 mountpoint[PATH_MAX];
@@ -1477,7 +1476,6 @@ slash2fuse_fsync_helper(fuse_req_t req, fuse_ino_t ino, int datasync,
 __static void
 slash2fuse_destroy(__unusedx void *userdata)
 {
-	//do an unmount of slash2
 	//fuse_reply_err(req, ENOTSUP);
 }
 
@@ -1559,6 +1557,27 @@ slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
 		fuse_reply_err(req, rc);
 }
 
+void
+unmount(const char *mp)
+{
+	char buf[BUFSIZ];
+	int rc;
+
+	rc = snprintf(buf, sizeof(buf), "umount %s", mp);
+	if (rc == -1)
+		psc_fatal("snprintf: umount %s", mp);
+	if (rc >= (int)sizeof(buf))
+		psc_fatalx("snprintf: umount %s: too long", mp);
+	if (system(buf) == -1)
+		psc_warn("system(%s)", buf);
+}
+
+void
+unmount_mp(void)
+{
+	unmount(mountpoint);
+}
+
 void *
 msl_init(__unusedx struct fuse_conn_info *conn)
 {
@@ -1595,6 +1614,7 @@ msl_init(__unusedx struct fuse_conn_info *conn)
 			psc_warnx("SLASH2_PIOS_ID (%s) does not resolve to "
 			    "a valid IOS, defaulting to IOS_ID_ANY", name);
 	}
+	atexit(unmount_mp);
 	return (NULL);
 }
 
@@ -1653,33 +1673,30 @@ msl_fuse_addarg(struct fuse_args *av, const char *arg)
 }
 
 void
-msl_fuse_mount(const char *mp)
+msl_fuse_mount(const char *mp, struct fuse_args *args)
 {
 	struct fuse_session *se;
 	struct fuse_chan *ch;
-	struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
-	char *fuse_opts;
+	char nameopt[BUFSIZ];
+	int rc;
 
 	slash2fuse_listener_init();
 
-	if (asprintf(&fuse_opts, FUSE_OPTIONS, mp) == -1)
-		psc_fatal("asprintf");
+	rc = snprintf(nameopt, sizeof(nameopt), "fsname=%s", mp);
+	if (rc == -1)
+		psc_fatal("snprintf: fsname=%s", mp);
+	if (rc >= (int)sizeof(nameopt))
+		psc_fatalx("snprintf: fsname=%s: too long", mp);
 
-	msl_fuse_addarg(&args, "");
-	msl_fuse_addarg(&args, "-o");
-	msl_fuse_addarg(&args, fuse_opts);
-	free(fuse_opts);
+	msl_fuse_addarg(args, "-o");
+	msl_fuse_addarg(args, nameopt);
 
-	if (fuse_debug)
-		msl_fuse_addarg(&args, "-odebug");
-
-	ch = fuse_mount(mp, &args);
+	ch = fuse_mount(mp, args);
 	if (ch == NULL)
 		psc_fatal("fuse_mount");
 
-	se = fuse_lowlevel_new(&args, &zfs_operations,
+	se = fuse_lowlevel_new(args, &zfs_operations,
 	    sizeof(zfs_operations), NULL);
-	fuse_opt_free_args(&args);
 
 	if (se == NULL) {
 		fuse_unmount(mp, ch);
@@ -1702,7 +1719,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-dU] [-f conf] [-S socket] node\n",
+	    "usage: %s [-dU] [-f conf] [-o fuseopt] [-S socket] node\n",
 	    progname);
 	exit(1);
 }
@@ -1710,21 +1727,28 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char c, *nc_mp, *cfg = SL_PATH_CONF;
-	int unmount;
+	char c, *noncanon_mp = NULL, *cfg = SL_PATH_CONF;
+	struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
+	int unmount_first = 0;
 
 	pfl_init();
 
-	unmount = 0;
-	nc_mp = NULL;
+	msl_fuse_addarg(&args, "");		/* progname/argv[0] */
+	msl_fuse_addarg(&args, "-o");
+	msl_fuse_addarg(&args, FUSE_OPTIONS);
+
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "df:S:U")) != -1)
 		switch (c) {
 		case 'd':
-			fuse_debug = 1;
+			msl_fuse_addarg(&args, "-odebug");
 			break;
 		case 'f':
 			cfg = optarg;
+			break;
+		case 'o':
+			msl_fuse_addarg(&args, "-o");
+			msl_fuse_addarg(&args, optarg);
 			break;
 		case 'S':
 			if (strlcpy(ctlsockfn, optarg,
@@ -1732,7 +1756,7 @@ main(int argc, char *argv[])
 				psc_fatalx("%s: too long", optarg);
 			break;
 		case 'U':
-			unmount = 1;
+			unmount_first = 1;
 			break;
 		default:
 			usage();
@@ -1740,8 +1764,8 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 	if (argc == 1)
-		nc_mp = argv[0];
-	else if (argc || nc_mp == NULL)
+		noncanon_mp = argv[0];
+	else if (argc || noncanon_mp == NULL)
 		usage();
 
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
@@ -1749,20 +1773,15 @@ main(int argc, char *argv[])
 	slcfg_parse(cfg);
 	msl_init(NULL);
 
-	if (unmount) {
-		char cmdbuf[BUFSIZ];
+	if (unmount_first)
+		unmount(noncanon_mp);
 
-		if ((size_t)snprintf(cmdbuf, sizeof(cmdbuf),
-		    "umount %s", nc_mp) >= sizeof(cmdbuf))
-			psc_error("snprintf");
-		else if (system(cmdbuf) == -1)
-			psc_error("%s", cmdbuf);
-	}
 	/* canonicalize mount path */
-	if (realpath(nc_mp, mountpoint) == NULL)
-		psc_fatal("realpath %s", nc_mp);
+	if (realpath(noncanon_mp, mountpoint) == NULL)
+		psc_fatal("realpath %s", noncanon_mp);
 
-	msl_fuse_mount(mountpoint);
+	msl_fuse_mount(mountpoint, &args);
+	fuse_opt_free_args(&args);
 
 	exit(slash2fuse_listener_start());
 }

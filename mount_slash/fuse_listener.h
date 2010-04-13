@@ -22,7 +22,7 @@
 
 #include <fuse_lowlevel.h>
 
-#define FUSE_OPTIONS "fsname=%s,allow_other,suid,dev,max_write=134217728,big_writes"
+#define FUSE_OPTIONS "allow_other,max_write=134217728,big_writes"
 
 void	slash2fuse_listener_exit(void);
 int	slash2fuse_listener_init(void);
