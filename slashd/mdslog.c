@@ -66,19 +66,24 @@ mds_get_next_seqno(void)
 	return (seqno);
 }
 
-/* master journal log replay function */
+/**
+ * mds_replay_handle - Handle journal replay events.
+ */
 void
 mds_replay_handler(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
 {
 }
 
-/* Distill information from the system journal and write into change log files */
+/**
+ * mds_shadow_handler - Distill information from the system journal and
+ *	write into change log files.
+ */
 void
 mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 {
 	int sz;
 	uint64_t seqno;
-        char fn[PATH_MAX];
+	char fn[PATH_MAX];
 	struct slmds_jent_namespace *jnamespace;
 
 	jnamespace = (struct slmds_jent_namespace *)&pje->pje_data[0];
@@ -87,17 +92,17 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 	/* see if we can open a new change log file */
 	if ((seqno % MDS_NAMESPACE_BATCH) == 0) {
 		psc_assert(current_logfile == -1);
-        	xmkfn(fn, "%s/%s", SL_PATH_DATADIR, SL_FN_NAMESPACELOG);
+		xmkfn(fn, "%s/%s", SL_PATH_DATADIR, SL_FN_NAMESPACELOG);
 		current_logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
 		if (current_logfile == -1)
 			psc_fatal("Fail to open change log file %s", fn);
-	} else 
+	} else
 		psc_assert(current_logfile != -1);
 
 	sz = write(current_logfile, pje, size);
 	if (sz != size)
 		psc_fatal("Fail to write change log file %s", fn);
- 
+
 	/* see if we need to close the current change log file */
 	if (((seqno + 1) % MDS_NAMESPACE_BATCH) == 0) {
 		close(current_logfile);
@@ -166,7 +171,7 @@ mds_bmap_jfiprep(void *data)
 }
 
 /**
- * mds_bmap_sync - callback function which is called from
+ * mds_bmap_sync - Callback function which is called from
  *   mdsfssyncthr_begin().
  * @data: void * which is the bmap.
  * Notes: this call allows slash2 to optimize crc calculation by only
@@ -231,7 +236,7 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
 }
 
 /**
- * mds_bmap_repl_log - write a modified replication table to the journal.
+ * mds_bmap_repl_log - Write a modified replication table to the journal.
  * Note:  bmap must be locked to prevent further changes from sneaking in
  *	before the repl table is committed to the journal.
  * XXX Another case for a rwlock, currently this code holds the lock while
@@ -395,7 +400,8 @@ mds_journal_init(void)
 	struct psc_thread *thr;
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
-	mdsJournal = pjournal_init(fn, mds_replay_handler, mds_shadow_handler);
+	mdsJournal = pjournal_init(fn, SLMTHRT_JRNL_SHDW, "slmjshdwthr",
+	    mds_replay_handler, mds_shadow_handler);
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", fn);
 
