@@ -171,6 +171,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct resm_mds_info);
 	PRTYPE(struct resprof_mds_info);
 	PRTYPE(struct site_mds_info);
+	PRTYPE(struct site_progress);
 	PRTYPE(struct sl_buffer);
 	PRTYPE(struct sl_buffer_iovref);
 	PRTYPE(struct sl_fcmh_ops);
