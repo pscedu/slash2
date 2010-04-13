@@ -464,7 +464,6 @@ slm_rmc_handle_rls_bmap(struct pscrpc_request *rq)
 {
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
-	struct slash_fidgen fg;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
 	struct srm_bmap_id *bid;
@@ -475,10 +474,7 @@ slm_rmc_handle_rls_bmap(struct pscrpc_request *rq)
 	for (i=0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
 
-		fg.fg_fid = bid->fid;
-		fg.fg_gen = FIDGEN_ANY;
-
-		mp->bidrc[i] = slm_fcmh_get(&fg, &f);
+		mp->bidrc[i] = slm_fcmh_get(&bid->fg, &f);
 		if (mp->bidrc[i])
 			continue;
 
