@@ -71,14 +71,15 @@ struct bmap_iod_minseq {
 #define	BCR_NONE		0x00
 #define BCR_SCHEDULED		0x01
 
-#define DEBUG_BCR(level, b, fmt, ...)						\
-	psc_logs((level), PSS_GEN,						\
-		 "bcr@%p fid="FIDFMT" xid=%"PRIu64" nups=%d fl=%d age=%lu"	\
-		 " bmap@%p:%u :: "fmt,						\
-		 (b), FIDFMTARGS(&(b)->bcr_crcup.fg), (b)->bcr_xid,		\
-		 (b)->bcr_crcup.nups, (b)->bcr_flags, (b)->bcr_age.tv_sec,	\
-		 (b)->bcr_biodi->biod_bmap,					\
-		 (b)->bcr_biodi->biod_bmap->bcm_blkno,				\
+#define DEBUG_BCR(level, b, fmt, ...)					\
+	psc_logs((level), PSS_GEN,					\
+		 "bcr@%p fid="FIDFMT" xid=%"PRIu64" nups=%d fl=%d age=%lu" \
+		 " rls=%u seq=%"PRId64" key=%"PRId64" bmap@%p:%u :: "fmt, \
+		 (b), FIDFMTARGS(&(b)->bcr_crcup.fg), (b)->bcr_xid,	\
+		 (b)->bcr_crcup.nups, (b)->bcr_flags, (b)->bcr_age.tv_sec, \
+		 (b)->bcr_crcup.rls, (b)->bcr_crcup.seq,		\
+		 (b)->bcr_crcup.key, (b)->bcr_biodi->biod_bmap,		\
+		 (b)->bcr_biodi->biod_bmap->bcm_blkno,			\
 		 ## __VA_ARGS__)
 
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
@@ -93,7 +94,11 @@ struct bmap_iod_info {
 	struct timespec		 biod_age;
 	uint64_t		 biod_bcr_xid;
 	uint64_t		 biod_bcr_xid_last;
-	uint32_t		 biod_inflight;
+	uint64_t                 biod_cur_seqkey[2];
+	uint64_t                 biod_rls_seqkey[2];
+	uint32_t                 biod_crcdrty_slvrs:30;
+	uint32_t                 biod_inflight:1;
+	uint32_t                 biod_rlsseq:1;
 };
 
 #define biodi_2_wire(bi)	(bi)->biod_bmap_wire
