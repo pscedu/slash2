@@ -68,7 +68,7 @@ mds_get_next_seqno(void)
 
 /* master journal log replay function */
 void
-mds_journal_replay(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
+mds_replay_handler(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
 {
 }
 
@@ -395,10 +395,11 @@ mds_journal_init(void)
 	struct psc_thread *thr;
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
-	mdsJournal = pjournal_init(fn, mds_journal_replay, mds_shadow_handler);
+	mdsJournal = pjournal_init(fn, mds_replay_handler, mds_shadow_handler);
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", fn);
 
+	/* start a thread to propagate local namespace changes */
 	thr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
 	    NULL, 0, "slmjsendthr");
 }
