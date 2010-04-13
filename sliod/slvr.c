@@ -562,8 +562,10 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 {
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
+	slvr_2_biod(s)->biod_crcdrty_slvrs++;
 
-	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc");
+	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc (ndirty=%u)", 
+		   slvr_2_biod(s)->biod_crcdrty_slvrs);
 
 	if (!(s->slvr_flags & SLVR_LRU))
 		return;
@@ -644,7 +646,7 @@ slvr_wio_done(struct slvr_ref *s)
 	/*
 	 * If there are no more pending writes, schedule a CRC op.
 	 */
-	s->slvr_pndgwrts--;
+	s->slvr_pndgwrts--;	
 	if (!s->slvr_pndgwrts)
 		slvr_schedule_crc_locked(s);
 
