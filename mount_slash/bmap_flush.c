@@ -747,25 +747,37 @@ bmap_flush(void)
 static inline void
 bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 {
-	bid->bmapno = b->bcm_bmapno;
-	bid->fid = fcmh_2_fid(b->bcm_fcmh);
+	bid->fg.fg_fid = fcmh_2_fid(b->bcm_fcmh);
+	bid->fg.fg_gen = fcmh_2_gen(b->bcm_fcmh);
 	bid->seq = bmap_2_msbd(b)->msbd_seq;
 	bid->key = bmap_2_msbd(b)->msbd_key;
+	bid->bmapno = b->bcm_bmapno;
 }
 
 static void
-ms_bmap_release(struct srm_bmap_release_req *bid)
+ms_bmap_release(struct sl_resm *resm)
 {
 	struct pscrpc_request *rq;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
+	struct resm_cli_info *rmci;
+	struct slashrpc_cservice *csvc;
 	uint32_t i;
 	int rc;
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	csvc = (resm == slc_rmc_resm) ? 
+		slc_geticsvc(resm) : slc_getmcsvc(resm);
+
+	rmci = resm2rmci(resm);
+	psc_assert(rmci->rmci_bmaprls.nbmaps);
+       	
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 			SRMT_RELEASEBMAP, rq, mq, mp);
 
-	memcpy(mq, bid, sizeof(*mq));
+	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
+
+	rmci->rmci_bmaprls.nbmaps = 0;
+
 	rc = RSX_WAITREP(rq, mp);
 	if (rc)
 		/* At this point the bmaps have already been purged from
@@ -776,11 +788,13 @@ ms_bmap_release(struct srm_bmap_release_req *bid)
 		 */
 		psc_errorx("bmap release rpc failed");
 	else {
-		for (i=0; i < bid->nbmaps; i++)
-			psc_notify("Fid%"PRId64" bmap=%u key=%"PRId64
+		for (i=0; i < rmci->rmci_bmaprls.nbmaps; i++)
+			psc_notify("Fid "FIDFMT" bmap=%u key=%"PRId64
 			   " seq=%"PRId64" rc=%d",
-			   bid->bmaps[i].fid, bid->bmaps[i].bmapno,
-			   bid->bmaps[i].key, bid->bmaps[i].seq,
+			   FIDFMTARGS(&rmci->rmci_bmaprls.bmaps[i].fg),
+			   rmci->rmci_bmaprls.bmaps[i].bmapno,
+			   rmci->rmci_bmaprls.bmaps[i].key,
+			   rmci->rmci_bmaprls.bmaps[i].seq,
 			   mp->bidrc[i]);
 	}
 }
@@ -792,17 +806,22 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	struct bmap_cli_info *msbd;
 	struct timespec ctime, wtime = {0, 0};
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
-	struct srm_bmap_release_req *bids;
+	struct psc_dynarray a = DYNARRAY_INIT;
+	struct sl_resm *resm;
+	struct resm_cli_info *rmci;
+
 	size_t z;
-	int nbmaps;
+	int i;
 
-	bids = PSCALLOC(sizeof(struct srm_bmap_release_req));
+	// just put the resm's in the dynarray. when pushing out the bid's
+	//   assume an ion unless resm == slc_rmc_resm
 
-	while (pscthr_run() && !shutdown) {
+	do {
 		z = lc_sz(&bmapTimeoutQ);
+#ifdef BMAP_FLUSH_SORT
 		lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
+#endif
 		clock_gettime(CLOCK_REALTIME, &ctime);
-		nbmaps = 0;
 
 		while (z--) {
 			msbd = lc_peekheadtimed(&bmapTimeoutQ, NULL);
@@ -810,45 +829,68 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				break;
 
 			b = msbd->msbd_bmap;
+			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			BMAP_LOCK(b);
-			DEBUG_BMAP(PLL_INFO, b, "timeoq try reap (nbmaps=%zd)", z);
-
-			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+			DEBUG_BMAP(PLL_INFO, b, 
+			   "timeoq try reap (nbmaps=%zd)", z);
 
 			if (timespeccmp(&ctime, &msbd->msbd_etime, <)) {
 				BMAP_ULOCK(b);
 				timespecsub(&msbd->msbd_etime, &ctime, &wtime);
+#ifdef BMAP_FLUSH_SORT
 				break;
+#endif
 			}
-
+			/* Maintain the lock, bmap_op_done_type() will take
+			 *   it anyway.
+			 */
 			if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
+				/* Note that only this thread calls 
+				 *   ms_bmap_release() so no reentrancy 
+				 *   exist unless another rls thr is
+				 *   introduced.
+				 */
 				lc_remove(&bmapTimeoutQ, msbd);
-				bmap_2_bid(b, &bids->bmaps[bids->nbmaps++]);
+
+				if (b->bcm_mode & BMAP_WR) {
+					/* Setup a MSG to an ION.
+					 */
+					psc_assert(msbd->msbd_ion != LNET_NID_ANY);
+					resm = libsl_nid2resm(msbd->msbd_ion);
+					rmci = resm2rmci(resm);
+				} else
+					rmci = resm2rmci(slc_rmc_resm);
+				
+				bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[rmci->rmci_bmaprls.nbmaps++]);
+
 				/* The bmap should be going away now.
 				 */
 				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 			} else
 				BMAP_ULOCK(b);
+			
+			if (rmci->rmci_bmaprls.nbmaps == MAX_BMAP_RELEASE)
+				ms_bmap_release(resm);
+			else
+				psc_dynarray_add(&a, resm);
 
-			if (bids->nbmaps == MAX_BMAP_RELEASE) {
-				wtime.tv_sec = 0;
-				wtime.tv_nsec = 100;
-				break;
-			}
 		}
+		/* Send out partially filled release request.
+		 */
+		DYNARRAY_FOREACH(resm, i, &a)
+			ms_bmap_release(resm);
 
-		if (bids->nbmaps) {
-			ms_bmap_release(bids);
-			bids->nbmaps = 0;
+		psc_dynarray_reset(&a);
+
+		if (!pscthr_run() || shutdown)
+			break;
+		else {
+			if (!wtime.tv_sec && !wtime.tv_nsec)
+				wtime.tv_sec = 1;
+			psc_waitq_waitrel(&waitq, NULL, &wtime);
 		}
-
-		if (!wtime.tv_sec && !wtime.tv_nsec)
-			wtime.tv_sec = 1;
-
-		psc_waitq_waitrel(&waitq, NULL, &wtime);
-	}
-	PSCFREE(bids);
+	} while (1);
 }
 
 void
