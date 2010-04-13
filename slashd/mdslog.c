@@ -66,11 +66,6 @@ mds_get_next_seqno(void)
 	return (seqno);
 }
 
-void
-mds_create_logname(uint seqno, char *name)
-{
-}
-
 /* master journal log replay function */
 void
 mds_journal_replay(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
@@ -371,7 +366,7 @@ mds_namespace_log(int op, int type, int perm, uint64_t s2id, const char *name)
 	jnamespace->sjnm_op = op;
 	jnamespace->sjnm_type = type;
 	jnamespace->sjnm_perm = perm;
-	jnamespace->sjnm_s2id = s2id;
+	jnamespace->sjnm_target_s2id = s2id;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
 	strcpy(jnamespace->sjnm_name, name);
 
