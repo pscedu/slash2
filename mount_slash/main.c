@@ -135,7 +135,7 @@ lookup_pathname_fg(const char *ofn, struct slash_creds *crp,
 	if (rc)
 		return (rc);
 
-	fgp->fg_fid = SL_ROOT_INUM;
+	fgp->fg_fid = SLFID_ROOT;
 	for (cpn = fn + 1; cpn; cpn = next) {
 		if ((next = strchr(cpn, '/')) != NULL)
 			*next++ = '\0';

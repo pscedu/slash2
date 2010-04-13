@@ -46,10 +46,10 @@ struct slash_fidgen;
 #define SLFIDF_LOCAL_DENTRY	(UINT64_C(1) << 1)	/* don't expose to external nodes */
 /*
  * Looks like the links in our by-id namespace are all created as regular files.
- * But some of them are really links to directories. We need a way to only 
+ * But some of them are really links to directories. We need a way to only
  * allow them to be used as directories for remote clients.
  */
-#define SLFIDF_DIR_DENTRY	(UINT64_C(1) << 2)	/* a director link */
+#define SLFIDF_DIR_DENTRY	(UINT64_C(1) << 2)	/* a directory link */
 
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
@@ -59,9 +59,10 @@ struct slash_fidgen {
 	slfgen_t		fg_gen;
 };
 
-/* We could use FID_ANY as the SLASH ID of the "local" files that are internal to SLASH */
 #define FID_ANY			UINT64_C(0xffffffffffff)
 #define FIDGEN_ANY		UINT64_C(0xffffffffffff)
+
+#define SLFID_ROOT		1
 
 #define FSID_FMT		"%016"PRIx64
 #define FSID_LEN		16

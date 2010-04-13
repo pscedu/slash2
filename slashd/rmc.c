@@ -275,7 +275,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
-	if (fcmh_2_mdsio_fid(p) == SL_ROOT_INUM &&
+	if (fcmh_2_mdsio_fid(p) == SLFID_ROOT &&
 	    strncmp(mq->name, SL_PATH_PREFIX,
 	     strlen(SL_PATH_PREFIX)) == 0) {
 		mp->rc = EINVAL;
