@@ -31,8 +31,8 @@
 #include "fidcache.h"
 #include "fuse_listener.h"
 #include "inode.h"
-#include "slconfig.h"
 #include "slashrpc.h"
+#include "slconfig.h"
 
 struct pscrpc_request;
 
