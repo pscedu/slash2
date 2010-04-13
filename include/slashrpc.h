@@ -92,6 +92,11 @@ struct statvfs;
 
 /* Slash RPC message types. */
 enum {
+	/* control operations */
+	SRMT_CONNECT,
+	SRMT_DESTROY,
+	SRMT_PING,
+
 	/* bmap operations */
 	SRMT_BMAPCHMODE,
 	SRMT_BMAPCRCWRT,
@@ -100,11 +105,6 @@ enum {
 	SRMT_GETBMAPMINSEQ,
 	SRMT_GETBMAPCRCS,
 	SRMT_RELEASEBMAP,
-
-	/* control operations */
-	SRMT_CONNECT,
-	SRMT_DESTROY,
-	SRMT_PING,
 
 	/* replication operations */
 	SRMT_GETREPTBL,
