@@ -383,12 +383,22 @@ mds_namespace_log(int op, int type, int perm, uint64_t s2id, const char *name)
 }
 
 void
+mds_namespace_propagate(__unusedx struct psc_thread *thr)
+{
+
+}
+
+void
 mds_journal_init(void)
 {
 	char fn[PATH_MAX];
+	struct psc_thread *thr;
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
 	mdsJournal = pjournal_replay(fn, mds_journal_replay, mds_shadow_handler);
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", fn);
+
+	thr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
+	    NULL, 0, "slmjsendthr");
 }
