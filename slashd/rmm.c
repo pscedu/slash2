@@ -84,7 +84,7 @@ slm_rmm_handler(struct pscrpc_request *rq)
 		rc = slm_rmm_handle_recv_namespace(rq);
 		break;
 	case SRMT_SEND_NAMESPACE:
-		rc = slm_rmm_handle_sned_namespace(rq);
+		rc = slm_rmm_handle_send_namespace(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
