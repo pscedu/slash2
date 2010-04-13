@@ -1219,7 +1219,7 @@ mds_repl_init(void)
 {
 	int rc;
 
-	rc = mdsio_lookup(SLFID_ROOT, SL_PATH_REPLS, NULL,
+	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_REPLS, NULL,
 	    &mds_repldir_inum, &rootcreds, NULL);
 	if (rc)
 		psc_fatalx("lookup repldir: %s", slstrerror(rc));

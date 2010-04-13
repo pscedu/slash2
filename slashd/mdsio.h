@@ -25,9 +25,13 @@
 #include "fid.h"
 #include "sltypes.h"
 
+/* journal log callback operations */
 #define	MDS_NAMESPACE_CREATE	1
 #define	MDS_NAMESPACE_UNLINK	2
 #define	MDS_NAMESPACE_RENAME	3
+
+/* predefined mdsio layer "fids" */
+#define MDSIO_FID_ROOT	3
 
 struct statvfs;
 
