@@ -32,6 +32,7 @@
 #include "fuse_listener.h"
 #include "inode.h"
 #include "slconfig.h"
+#include "slashrpc.h"
 
 struct pscrpc_request;
 
@@ -75,6 +76,7 @@ struct resm_cli_info {
 	struct slashrpc_cservice	*rmci_csvc;
 	psc_spinlock_t			 rmci_lock;
 	struct psc_waitq		 rmci_waitq;
+	struct srm_bmap_release_req      rmci_bmaprls;
 };
 
 extern struct psc_waitq msl_fhent_flush_waitq;
