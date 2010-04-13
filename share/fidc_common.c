@@ -221,7 +221,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	struct psc_hashbkt *b;
 	struct slash_fidgen searchfg = *fgp;
 
-	_psclog(file, func, line, PSC_SUBSYS, PLL_INFO, 0,
+	psclog(file, func, line, PSC_SUBSYS, PLL_INFO, 0,
 	    "fidc_lookup called for fid %#"PRIx64, searchfg.fg_fid);
 
 #ifdef DEMOTED_INUM_WIDTHS
