@@ -40,7 +40,7 @@
 #include "sliod.h"
 #include "slvr.h"
 
-int
+static int
 sli_ric_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
@@ -53,7 +53,7 @@ sli_ric_handle_connect(struct pscrpc_request *rq)
 	return (0);
 }
 
-int
+static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
 	struct pscrpc_bulk_desc *desc;
@@ -63,6 +63,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct iovec iovs[2];
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap;
+	struct bmap_iod_info *biodi;
 	struct slvr_ref *slvr_ref[2];
 	lnet_nid_t *np;
 
@@ -107,7 +108,8 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		mp->rc = -ERANGE;
 		return (-1);
 	}
-	
+
+#if 0	
 	if (mq->sbdb.sbdb_secret.sbs_seq < bim_getcurseq()) {
 		/* Reject old bdbufs.
 		 */
@@ -116,6 +118,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		mp->rc = -EINVAL;
 		return (-1);		
 	}
+#endif
 	
 	/* Lookup inode and fetch bmap, don't forget to decref bmap
 	 *  on failure.
@@ -131,8 +134,22 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out;
 	}
 
-	DEBUG_FCMH(PLL_INFO, fcmh, "blkno=%u size=%u off=%u rw=%d",
-		   bmap->bcm_blkno, mq->size, mq->offset, rw);
+	biodi = bmap_2_biodi(bmap);
+
+	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%d "
+		   " biod_seq=%"PRId64" biod_key=%"PRId64,
+		   bmap->bcm_blkno, mq->size, mq->offset, rw, 
+		   biodi->biod_cur_seqkey[0], biodi->biod_cur_seqkey[1]);
+
+	/* If warranted, bump the sequence number.
+	 */
+	spinlock(&biodi->biod_lock);
+	if (mq->sbdb.sbdb_secret.sbs_seq > biodi->biod_cur_seqkey[0]) {
+		biodi->biod_cur_seqkey[0] = mq->sbdb.sbdb_secret.sbs_seq;
+		biodi->biod_cur_seqkey[1] = mq->sbdb.sbdb_secret.sbs_key;
+	}
+	freelock(&biodi->biod_lock);
+	
 	/*
 	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MB, therefore
 	 * we would never exceed two slivers.
@@ -216,10 +233,65 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   iod_inode_open()) then we must have a way to notify other
 	 *   threads blocked on DATARDY.
 	 */
+	bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC); /* reaper will return it to the pool */
 
 	return (rc);
 }
+
+static int
+sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
+{
+	struct srm_bmap_release_req *mq;
+	struct srm_bmap_release_rep *mp;
+	struct srm_bmap_id *bid;
+	struct bmap_iod_info *biodi;
+	struct fidc_membh *f;
+	struct bmapc_memb *b;
+	uint32_t i;
+	int rc;
+	
+	RSX_ALLOCREP(rq, mq, mp);
+	
+	for (i=0; i < mq->nbmaps; i++) {
+		bid = &mq->bmaps[i];
+		
+		rc = sli_fcmh_get(&bid->fg, &f);
+		psc_assert(rc == 0);
+		
+		rc = bmap_get(f, bid->bmapno, SL_READ, &b);
+		if (rc) {
+			mp->bidrc[i] = rc;
+			psc_errorx("failed to load bmap %u", bid->bmapno);
+			continue;
+		}		
+		/* Bmap is attached, safe to unref.
+		 */
+		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+		
+		biodi = bmap_2_biodi(b);
+		spinlock(&biodi->biod_lock);
+		
+		DEBUG_FCMH((biodi->biod_cur_seqkey[0] < bid->seq) ? 
+			   PLL_WARN : PLL_INFO,
+			   f, "bmapno=%d seq=%"PRId64" key=%"PRId64
+			   " biod_seq=%"PRId64" biod_key=%"PRId64, 
+			   b->bcm_blkno, bid->seq, bid->key, 
+			   biodi->biod_cur_seqkey[0], 
+			   biodi->biod_cur_seqkey[1]);
+		/* Note:  this technique is flawed because it does not
+		 *   track all released seq#'s, only the last one recv'd.
+		 */
+		biodi->biod_rls_seqkey[0] = bid->seq;
+		biodi->biod_rls_seqkey[1] = bid->key;
+		biodi->biod_rlsseq = 1;
+
+		freelock(&biodi->biod_lock);
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	}
+	return (0);
+}
+
 
 int
 sli_ric_handler(struct pscrpc_request *rq)
@@ -236,6 +308,9 @@ sli_ric_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_WRITE:
 		rc = sli_ric_handle_write(rq);
+		break;
+	case SRMT_RELEASEBMAP:
+		rc = sli_ric_handle_rlsbmap(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
