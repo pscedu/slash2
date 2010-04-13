@@ -30,6 +30,14 @@ enum {
 	MDS_LOG_NAMESPACE	= _PJE_FLSHFT << 4
 };
 
+/*
+ * A structure used to describe the log application progress on each site.
+ */
+struct site_progress {
+	int		sp_siteid;
+	uint64_t	sp_seqno;
+};
+
 struct bmapc_memb;
 struct fidc_membh;
 struct slash_inode_handle;
