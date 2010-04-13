@@ -137,9 +137,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	biodi = bmap_2_biodi(bmap);
 
 	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%d "
-		   " biod_seq=%"PRId64" biod_key=%"PRId64,
+		   " bdbuf_seq=%"PRId64" biod_key=%"PRId64,
 		   bmap->bcm_blkno, mq->size, mq->offset, rw, 
-		   biodi->biod_cur_seqkey[0], biodi->biod_cur_seqkey[1]);
+		   mq->sbdb.sbdb_secret.sbs_seq, biodi->biod_cur_seqkey[0]);
 
 	/* If warranted, bump the sequence number.
 	 */
