@@ -35,7 +35,7 @@ struct sli_repl_workrq;
 
 #define SLI_RIC_NTHREADS	32
 #define SLI_RIC_NBUFS		1024
-#define SLI_RIC_BUFSZ		256
+#define SLI_RIC_BUFSZ		640
 #define SLI_RIC_REPSZ		128
 #define SLI_RIC_SVCNAME		"sliric"
 
