@@ -395,7 +395,7 @@ mds_journal_init(void)
 	struct psc_thread *thr;
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
-	mdsJournal = pjournal_replay(fn, mds_journal_replay, mds_shadow_handler);
+	mdsJournal = pjournal_init(fn, mds_journal_replay, mds_shadow_handler);
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", fn);
 
