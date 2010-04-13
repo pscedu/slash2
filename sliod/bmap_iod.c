@@ -35,7 +35,7 @@ bim_init(void)
 {
 	LOCK_INIT(&bimSeq.bim_lock);
 	psc_waitq_init(&bimSeq.bim_waitq);
-	bimSeq.bim_minseq = BMAPSEQ_ANY;
+	bimSeq.bim_minseq = 0;
 }
 
 void
@@ -66,13 +66,13 @@ bim_getcurseq(void)
 	timespecsub(&ctime, &bim_timeo, &ctime);
 
 	spinlock(&bimSeq.bim_lock);
-	if (bimSeq.bim_flags & BIM_RETRIEVE_SEQ || 
-	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
+	if (bimSeq.bim_flags & BIM_RETRIEVE_SEQ) {
 		psc_waitq_wait(&bimSeq.bim_waitq, &bimSeq.bim_lock);
 		goto retry;
 	}
 
-	if (timespeccmp(&ctime, &bimSeq.bim_age, >)) {
+	if (timespeccmp(&ctime, &bimSeq.bim_age, >) ||
+	    bimSeq.bim_minseq == BMAPSEQ_ANY) {
 		struct pscrpc_request *req;
 		struct srm_bmap_minseq_get *mq;
 		struct srm_generic_rep *mp;
