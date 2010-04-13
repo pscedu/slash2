@@ -22,22 +22,6 @@
 
 #include "inode.h"
 
-/*
- * Structure of the namespace change log.
- */
-struct namespace_log_entry {
-	uint64_t	le_magic;		/* magic number */
-	uint64_t	le_seq_no;		/* namespace update sequence number */
-	int		le_size;		/* size of the entry */
-	uint16_t	le_site_id;		/* site ID */
-	int		le_type;		/* type of the target object */
-	int		le_perm;		/* permission of the target object */
-	uint64_t	le_parent_s2id;		/* SLASH ID of the parent */
-	uint64_t	le_target_s2id;		/* SLASH ID of the target */
-	uint64_t	le_checksum;		/* CRC checksum */
-	char		le_name[1];		/* name of the target */
-};
-
 enum {
 	MDS_LOG_BMAP_REPL	= _PJE_FLSHFT << 0,
 	MDS_LOG_BMAP_CRC	= _PJE_FLSHFT << 1,
