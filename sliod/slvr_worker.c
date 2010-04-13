@@ -85,12 +85,48 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		 */
 		psc_assert(!rc);
 
+		bcr->bcr_crcup.rls = 0;
+
+		spinlock(&bcr->bcr_biodi->biod_lock);	
+		if (bcr->bcr_biodi->biod_rlsseq) {		
+			psc_assert(bcr->bcr_biodi->biod_rls_seqkey[0] <= 
+				   bcr->bcr_biodi->biod_cur_seqkey[0]);
+			
+			if (bcr->bcr_biodi->biod_rls_seqkey[0] ==
+			    bcr->bcr_biodi->biod_cur_seqkey[0]) {
+				/* Don't instruct the MDS to drop our 
+				 *   odtable ref unless we're done with it.
+				 */
+				if (!bcr->bcr_biodi->biod_crcdrty_slvrs &&
+				    (bcr->bcr_biodi->biod_bcr_xid ==
+				     bcr->bcr_xid + 1)) {
+					bcr_xid_check(bcr);
+					bcr->bcr_crcup.rls = 1;					
+				}
+			} else
+				bcr->bcr_crcup.rls = 1;
+
+			if (bcr->bcr_crcup.rls) {
+				bcr->bcr_crcup.seq = 
+					bcr->bcr_biodi->biod_rls_seqkey[0];
+				bcr->bcr_crcup.key = 
+					bcr->bcr_biodi->biod_rls_seqkey[1];
+				bcr->bcr_biodi->biod_rlsseq = 0;
+			}
+		}
+		DEBUG_BCR(PLL_INFO, bcr, "ndirty=%u cseq=%"PRId64" rseq=%"PRId64, 
+			  bcr->bcr_biodi->biod_crcdrty_slvrs, 
+			  bcr->bcr_biodi->biod_cur_seqkey[0], 
+			  bcr->bcr_biodi->biod_rls_seqkey[0]);
+
+		freelock(&bcr->bcr_biodi->biod_lock);
+
 		mq->ncrcs_per_update[i] = bcr->bcr_crcup.nups;
 
 		iovs[i].iov_base = &bcr->bcr_crcup;
 		len += iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
 					   sizeof(struct srm_bmap_crcwire)) +
-					   sizeof(struct srm_bmap_crcup));
+					  sizeof(struct srm_bmap_crcup));
 
 		psc_crc64_add(&mq->crc, iovs[i].iov_base, iovs[i].iov_len);
 	}
@@ -138,7 +174,8 @@ slvr_worker_push_crcups(void)
 
 		if (trylock(&bcr->bcr_biodi->biod_lock)) {
 			if (bcr->bcr_biodi->biod_inflight) {
-				DEBUG_BCR(PLL_INFO, bcr, "waiting for xid=%"PRIu64,
+				DEBUG_BCR(PLL_INFO, bcr, 
+					  "waiting for xid=%"PRIu64,
 					  bcr->bcr_biodi->biod_bcr_xid_last);
 				freelock(&bcr->bcr_biodi->biod_lock);
 				continue;
@@ -337,7 +374,9 @@ slvr_worker_int(void)
 		/* Put the slvr back to the LRU so it may have its slab
 		 *   reaped.
 		 */
-		DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU");
+		slvr_2_biod(s)->biod_crcdrty_slvrs--;
+		DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)", 
+			   slvr_2_biod(s)->biod_crcdrty_slvrs);
 		s->slvr_flags |= SLVR_LRU;
 		(int)slvr_lru_tryunpin_locked(s);
 		lc_addqueue(&lruSlvrs, s);
