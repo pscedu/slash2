@@ -75,10 +75,8 @@ _bmap_op_done(struct bmapc_memb *b)
 {
 	BMAP_RLOCK(b);
 
-	atomic_dec(&b->bcm_opcnt);
-
+	psc_atomic32_dec(&b->bcm_opcnt);
 	DEBUG_BMAP(PLL_INFO, b, "bmap_op_done");
-
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) >= 0);
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
