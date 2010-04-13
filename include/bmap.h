@@ -306,6 +306,8 @@ enum bmap_opcnt_types {
 	BMAP_OPCNT_REPLWK,			/* ION */
 	BMAP_OPCNT_REAPER,			/* Client bmap timeout */
 	BMAP_OPCNT_COHCB,			/* MDS coh callback */
+	BMAP_OPCNT_SLVRIO,
+	BMAP_OPCNT_CRCSCHED
 };
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);

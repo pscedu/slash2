@@ -134,6 +134,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out;
 	}
 
+	bmap_op_start_type(bmap, BMAP_OPCNT_SLVRIO);
+	bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
+
 	biodi = bmap_2_biodi(bmap);
 
 	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%d "
@@ -228,12 +231,16 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	if (rw == SL_WRITE)
 		psc_assert(!tsize);
+
+	/* Slvr I/O is done and bcr ops have been scheduled, safe to drop the ref cnt.
+	 */
+	bmap_op_done_type(bmap, BMAP_OPCNT_SLVRIO);
  out:
 	/* XXX In situations where errors occur (such as an ENOSPC from
 	 *   iod_inode_open()) then we must have a way to notify other
 	 *   threads blocked on DATARDY.
 	 */
-	bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
+	
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC); /* reaper will return it to the pool */
 
 	return (rc);

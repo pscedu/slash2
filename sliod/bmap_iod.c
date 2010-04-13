@@ -172,6 +172,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 
 	atomic_dec(&inf->binfcrcs_nbcrs);
 	bcr_xid_last_bump(bcr);
+	bmap_op_done_type(bcr->bcr_biodi->biod_bmap, BMAP_OPCNT_CRCSCHED);
 	PSCFREE(bcr);
 }
 
