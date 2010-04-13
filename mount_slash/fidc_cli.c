@@ -100,7 +100,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 
 	DEBUG_FCMH(PLL_INFO, p, "name=%s  hash=%d", name, hash);
 
-	/* 
+	/*
 	 * Note we can be racing with the reaper because we don't
 	 * use reference count to protect parent-child relationship.
 	 */
@@ -182,7 +182,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 				continue;
 			}
 			fci = fcmh_get_pri(tmp1);
-			DEBUG_FCMH(PLL_WARN, tmp1, "fidc_membh=%p name=%s detaching", 
+			DEBUG_FCMH(PLL_WARN, tmp1, "fidc_membh=%p name=%s detaching",
 			    tmp1, fci->fci_name);
 			psc_assert(fci->fci_parent == c);
 			fci->fci_parent = NULL;
@@ -219,8 +219,8 @@ fidc_child_add(struct fidc_membh *p, struct fidc_membh *c, const char *name)
 
 		pci = fcmh_get_pri(p);
 		psclist_xadd_tail(&fci->fci_sibling, &pci->fci_children);
-		DEBUG_FCMH(PLL_WARN, p, "adding name: %s", fci->fci_name);
-	} else 
+		DEBUG_FCMH(PLL_DEBUG, p, "adding name: %s", fci->fci_name);
+	} else
 		psc_assert(fci->fci_parent == p);
 
 	FCMH_ULOCK(c);
