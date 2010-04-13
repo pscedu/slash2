@@ -720,6 +720,11 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	/* Call the journal and update the in-memory crc's.
 	 */
 	mds_bmap_crc_log(bmap, c);
+
+	if (c->rls)
+		/* Sliod may be finished with this bmap.
+		 */
+		(int)mds_bmap_bml_release(bmap, c->seq, c->key);
  out:
 	/* Mark that mds_bmap_crc_write() is done with this bmap
 	 *  - it was incref'd in fcmh_bmap_lookup().
