@@ -120,3 +120,10 @@ Create file operations: 285888
 Total files: 165260, dirs: 1926, ops: 408513
 Time used to age the directory is 19105.000000 seconds.
 
+04/14/2010
+----------
+
+Make sure that the zp_parent field always points to the parent in the regular namespace, not the
+by-id namespace.  This fixes the issue of readdir returning the right ".." information.
+
+This fix only affects directories. We should re-create the ZFS pool to make this change take effect.
