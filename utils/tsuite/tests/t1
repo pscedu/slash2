@@ -149,8 +149,8 @@ our @cli = (
 	{
 		host => "adamantium",
 		env => {
-			SLASH_MDS_NID => "mds0",
-			SLASH2_PIOS_ID => "io0"
+			SLASH_MDS_NID => "mds0\@tsuite",
+			SLASH2_PIOS_ID => "io0\@tsuite"
 		}
 	},
 );

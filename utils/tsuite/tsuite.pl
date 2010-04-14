@@ -2,7 +2,7 @@
 # $Id$
 
 use Getopt::Std;
-use POSIX qw(:sys_wait_h);
+use POSIX qw(:sys_wait_h :errno_h);
 use IPC::Open3;
 use Net::SMTP;
 use strict;
@@ -106,6 +106,21 @@ sub runcmd {
 	close $infh;
 }
 
+sub mkdirs {
+	my ($dir) = @_;
+	my @cpn = split m!/!, $dir;
+	my $fn = "";
+	while (@cpn) {
+		my $cpn = shift @cpn;
+		next if $cpn eq "";
+		$fn .= "/$cpn";
+		unless (mkdir $fn) {
+			return 0 unless $! == EEXIST;
+		}
+	}
+	return 1;
+}
+
 fatal "$rootdir" unless -d $rootdir;
 
 my $base;
@@ -123,8 +138,8 @@ my $mp = "$base/mp";
 my $tmpdir = "$tmp_base/slsuite.$tsid";
 my $datadir = "$tmpdir/data";
 
-mkdir $base		or fatal "mkdir $base";
-mkdir $tmpdir		or fatal "mkdir $tmpdir";
+mkdirs $base		or fatal "mkdirs $base";
+mkdirs $tmpdir		or fatal "mkdirs $tmpdir";
 mkdir "$base/ctl"	or fatal "mkdir $base/ctl";
 mkdir "$base/fs"	or fatal "mkdir $base/fs";
 mkdir $mp		or fatal "mkdir $mp";
@@ -363,15 +378,13 @@ alarm $intvtimeout;
 sleep 1 until scalar @{[ glob "$base/ctl/sliod.*.sock" ]} == @ion;
 alarm 0;
 
-exit;
-
 # Launch the client mountpoints
 foreach $i (@cli) {
 	debug_msg "launching mount_slash: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env, %{$i->{env}})]}
-		screen -d -m -S MSL.$tsid sh -c "gdb -f -x $tsbase/msl.gdbcmd \
+		screen -d -m -S MSL.$tsid sh -c "gdb -f -x $tsbase/msl.gdbcmd \\
 		    $slbase/mount_slash/mount_slash; umount $mp"
 EOF
 }
@@ -383,12 +396,14 @@ alarm $intvtimeout;
 sleep 1 until scalar @{[ glob "$base/ctl/msl.*.sock" ]} == @cli;
 alarm 0;
 
+exit;
+
 # Spawn monitors/gatherers of control stats
 foreach $i (@mds) {
 	debug_msg "spawning slashd stats tracker: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		screen -d -m -S SLMCTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \
+		screen -d -m -S SLMCTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
 		    $slbase/slmctl/slmctl ctl/slashd.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
 		while screen -ls | grep -q SLMCTL.$tsid; do
 			[ \$SECONDS -lt $runtimeout ]
@@ -403,7 +418,7 @@ foreach $i (@ion) {
 	debug_msg "spawning sliod stats tracker: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		screen -d -m -S SLICTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \
+		screen -d -m -S SLICTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
 		    $slbase/slictl/slictl ctl/sliod.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
 		while screen -ls | grep -q SLICTL.$tsid; do
 			[ \$SECONDS -lt $runtimeout ]
@@ -418,7 +433,7 @@ foreach $i (@cli) {
 	debug_msg "spawning mount_slash stats tracker: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		screen -d -m -S MSCTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \
+		screen -d -m -S MSCTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
 		    $slbase/msctl/msctl ctl/msl.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
 		while screen -ls | grep -q MSCTL.$tsid; do
 			[ \$SECONDS -lt $runtimeout ]
