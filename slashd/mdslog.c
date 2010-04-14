@@ -366,7 +366,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
  * we reply to the client.
  */
 void
-mds_namespace_log(int op, int type, int perm, uint64_t s2id, const char *name)
+mds_namespace_log(int op, int type, int perm, uint64_t parent, uint64_t target, const char *name)
 {
 	int rc;
 	struct slmds_jent_namespace *jnamespace;
@@ -375,22 +375,30 @@ mds_namespace_log(int op, int type, int perm, uint64_t s2id, const char *name)
 	jnamespace->sjnm_op = op;
 	jnamespace->sjnm_type = type;
 	jnamespace->sjnm_perm = perm;
-	jnamespace->sjnm_target_s2id = s2id;
+	jnamespace->sjnm_parent_s2id = parent;
+	jnamespace->sjnm_target_s2id = target;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
 	strcpy(jnamespace->sjnm_name, name);
 
 	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
 		sizeof(struct slmds_jent_namespace));
 	if (rc)
-		psc_fatalx("jlog fid=%"PRIx64", name=%s, rc=%d", s2id, name, rc);
+		psc_fatalx("jlog fid=%"PRIx64", name=%s, rc=%d", target, name, rc);
 
 	PSCFREE(jnamespace);
 }
 
+/*
+ * Send local namespace updates to peer MDSes.
+ */
 void
 mds_namespace_propagate(__unusedx struct psc_thread *thr)
 {
+	while (pscthr_run()) {
 
+
+
+	}
 }
 
 void
