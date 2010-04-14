@@ -18,7 +18,7 @@
  */
 
 /*
- * SLASH remote prodecure call message definitions.
+ * SLASH Remote prodecure call Message (SRM) definitions.
  */
 
 #ifndef _SLASHRPC_H_
@@ -180,6 +180,25 @@ struct srt_bmapdesc_buf {
 } __packed;
 
 /* -------------------------- BEGIN FULL MESSAGES -------------------------- */
+
+struct namespace_entry {
+	uint8_t			op;
+	uint8_t			type;
+	uint8_t			perm;
+	uint64_t		parent;
+	uint64_t		target;
+	uint64_t		seqno;
+	char			name[NAME_MAX + 1];
+} __packed;
+
+struct srm_send_namespace_req {
+	int			count;
+	struct namespace_entry	entries[0];
+} __packed;
+
+struct srm_send_namespace_rep {
+	uint32_t		rc;
+} __packed;
 
 struct srm_bmap_req {
 	struct slash_fidgen	fg;
