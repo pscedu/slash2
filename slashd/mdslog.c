@@ -47,7 +47,7 @@ struct psc_journal	*mdsJournal;
  */
 uint64_t		 next_update_seqno;
 
-int			 current_logfile = -1;
+static int		 current_logfile = -1;
 
 /*
  * The number of namespace operations that are recorded in the same change log.
