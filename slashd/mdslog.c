@@ -49,10 +49,14 @@ uint64_t		 next_update_seqno;
 
 static int		 current_logfile = -1;
 
+struct psc_waitq	 mds_namespace_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t		 mds_namespace_waitqlock = LOCK_INITIALIZER;
+
 /*
  * The number of namespace operations that are recorded in the same change log.
  */
 #define MDS_NAMESPACE_BATCH	4096
+#define MDS_NAMESPACE_MAXAGE	30
 
 uint64_t
 mds_get_next_seqno(void)
@@ -107,6 +111,56 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 	if (((seqno + 1) % MDS_NAMESPACE_BATCH) == 0) {
 		close(current_logfile);
 		current_logfile = -1;
+
+		/* wait up the namespace log propagator */
+		spinlock(&mds_namespace_waitqlock);
+		psc_waitq_wakeall(&mds_namespace_waitq);
+		freelock(&mds_namespace_waitqlock);
+	}
+}
+
+/*
+ * Log namespace operation before we attempt the operation.  This makes sure
+ * that it will be propagated towards other MDSes and made permanent before
+ * we reply to the client.
+ */
+void
+mds_namespace_log(int op, int type, int perm, uint64_t parent, uint64_t target, const char *name)
+{
+	int rc;
+	struct slmds_jent_namespace *jnamespace;
+
+	jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
+	jnamespace->sjnm_op = op;
+	jnamespace->sjnm_type = type;
+	jnamespace->sjnm_perm = perm;
+	jnamespace->sjnm_parent_s2id = parent;
+	jnamespace->sjnm_target_s2id = target;
+	jnamespace->sjnm_seqno = mds_get_next_seqno();
+	strcpy(jnamespace->sjnm_name, name);
+
+	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
+		sizeof(struct slmds_jent_namespace));
+	if (rc)
+		psc_fatalx("jlog fid=%"PRIx64", name=%s, rc=%d", target, name, rc);
+
+	PSCFREE(jnamespace);
+}
+
+/*
+ * Send local namespace updates to peer MDSes.
+ */
+void
+mds_namespace_propagate(__unusedx struct psc_thread *thr)
+{
+	int rv;
+
+	while (pscthr_run()) {
+
+
+		spinlock(&mds_namespace_waitqlock);
+		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
+		    &mds_namespace_waitqlock, MDS_NAMESPACE_MAXAGE);
 	}
 }
 
@@ -360,46 +414,6 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	PSCFREE(jcrc);
 }
 
-/*
- * Log namespace operation before we attempt the operation.  This makes sure
- * that it will be propagated towards other MDSes and made permanent before
- * we reply to the client.
- */
-void
-mds_namespace_log(int op, int type, int perm, uint64_t parent, uint64_t target, const char *name)
-{
-	int rc;
-	struct slmds_jent_namespace *jnamespace;
-
-	jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
-	jnamespace->sjnm_op = op;
-	jnamespace->sjnm_type = type;
-	jnamespace->sjnm_perm = perm;
-	jnamespace->sjnm_parent_s2id = parent;
-	jnamespace->sjnm_target_s2id = target;
-	jnamespace->sjnm_seqno = mds_get_next_seqno();
-	strcpy(jnamespace->sjnm_name, name);
-
-	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
-		sizeof(struct slmds_jent_namespace));
-	if (rc)
-		psc_fatalx("jlog fid=%"PRIx64", name=%s, rc=%d", target, name, rc);
-
-	PSCFREE(jnamespace);
-}
-
-/*
- * Send local namespace updates to peer MDSes.
- */
-void
-mds_namespace_propagate(__unusedx struct psc_thread *thr)
-{
-	while (pscthr_run()) {
-
-
-
-	}
-}
 
 void
 mds_journal_init(void)
