@@ -253,6 +253,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_replrq_req);
 	PRTYPE(struct srm_replst_master_req);
 	PRTYPE(struct srm_replst_slave_req);
+	PRTYPE(struct srm_send_namespace_rep);
+	PRTYPE(struct srm_send_namespace_req);
 	PRTYPE(struct srm_set_bmapreplpol_req);
 	PRTYPE(struct srm_set_newreplpol_req);
 	PRTYPE(struct srm_setattr_req);
@@ -264,6 +266,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srsm_replst_bhdr);
 	PRTYPE(struct srt_bdb_secret);
 	PRTYPE(struct srt_bmapdesc_buf);
+	PRTYPE(struct srt_namespace_entry);
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
 	/* end structs */
