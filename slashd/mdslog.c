@@ -47,6 +47,8 @@ struct psc_journal	*mdsJournal;
  */
 uint64_t		 next_update_seqno;
 
+uint64_t		 next_propagate_seqno;
+
 static int		 current_logfile = -1;
 
 struct psc_waitq	 mds_namespace_waitq = PSC_WAITQ_INIT;
@@ -96,7 +98,7 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 	/* see if we can open a new change log file */
 	if ((seqno % MDS_NAMESPACE_BATCH) == 0) {
 		psc_assert(current_logfile == -1);
-		xmkfn(fn, "%s/%s", SL_PATH_DATADIR, SL_FN_NAMESPACELOG);
+		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
 		current_logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
 		if (current_logfile == -1)
 			psc_fatal("Fail to open change log file %s", fn);
@@ -154,8 +156,14 @@ void
 mds_namespace_propagate(__unusedx struct psc_thread *thr)
 {
 	int rv;
+	int logfile;
+	uint64_t seqno;
+	char fn[PATH_MAX];
 
 	while (pscthr_run()) {
+		seqno = next_propagate_seqno - next_propagate_seqno % MDS_NAMESPACE_BATCH;
+		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
+		logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
 
 
 		spinlock(&mds_namespace_waitqlock);
