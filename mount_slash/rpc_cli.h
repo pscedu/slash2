@@ -20,10 +20,10 @@
 #ifndef _SLC_RPC_H_
 #define _SLC_RPC_H_
 
+#include "slconn.h"
+
 struct pscrpc_import;
 struct pscrpc_request;
-
-#include "slconn.h"
 
 /* Slash RPC channel for client from MDS. */
 #define SRCM_NTHREADS	8
