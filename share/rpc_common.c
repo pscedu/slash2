@@ -90,16 +90,15 @@ psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
 	psc_fatalx("unimplemented stub");
 }
 
-void
+void __inline
 sl_csvc_decref(struct slashrpc_cservice *csvc)
 {
 	psc_atomic32_dec(&csvc->csvc_refcnt);
 }
 
-void
+void __inline
 sl_csvc_incref(struct slashrpc_cservice *csvc)
 {
-	CSVC_LOCK_ENSURE(csvc);
 	psc_atomic32_inc(&csvc->csvc_refcnt);
 }
 
