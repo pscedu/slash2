@@ -150,21 +150,21 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 
 	csvc = *csvcp;
 	if (csvc == NULL) {
-		/* ensure peer is of the given type */
+		/* ensure that our peer is of the given resource type (REST) */
 		switch (ctype) {
-		case SLCONNT_CLI:
+		    case SLCONNT_CLI:
 			break;
-		case SLCONNT_IOD:
+		    case SLCONNT_IOD:
 			resm = libsl_nid2resm(peernid);
 			if (resm->resm_res->res_type == SLREST_MDS)
 				goto out;
 			break;
-		case SLCONNT_MDS:
+		    case SLCONNT_MDS:
 			resm = libsl_nid2resm(peernid);
 			if (resm->resm_res->res_type != SLREST_MDS)
 				goto out;
 			break;
-		default:
+		    default:
 			psc_fatalx("%d: bad connection type", ctype);
 		}
 
