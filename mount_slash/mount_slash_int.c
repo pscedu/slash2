@@ -1128,6 +1128,12 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			    pll_nitems(&bmpc->bmpc_new_biorqs)) > 1);
 
 	} else {
+		if (b->bcm_mode & BMAP_REAPABLE) {
+			b->bcm_mode &= ~BMAP_REAPABLE;
+			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
+			lc_remove(&bmapTimeoutQ, bmap_2_msbd(b));
+		}
+
 		b->bcm_mode |= BMAP_DIRTY;
 
 		if (!(b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
