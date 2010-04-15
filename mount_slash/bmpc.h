@@ -208,6 +208,12 @@ bmpc_queued_writes(struct bmap_pagecache *bmpc)
 	return (nwrites);
 }
 
+static __inline int
+bmpc_queued_ios(struct bmap_pagecache *bmpc) {
+	return (pll_nitems(&bmpc->bmpc_pndg_biorqs) + 
+		pll_nitems(&bmpc->bmpc_new_biorqs));
+}
+
 struct bmpc_ioreq {
 	uint32_t                   biorq_off;   /* filewise, bmap relative   */
 	uint32_t                   biorq_len;   /* non-aligned, real length  */
