@@ -90,13 +90,13 @@ psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
 	psc_fatalx("unimplemented stub");
 }
 
-void __inline
+inline void 
 sl_csvc_decref(struct slashrpc_cservice *csvc)
 {
 	psc_atomic32_dec(&csvc->csvc_refcnt);
 }
 
-void __inline
+inline void
 sl_csvc_incref(struct slashrpc_cservice *csvc)
 {
 	psc_atomic32_inc(&csvc->csvc_refcnt);
@@ -131,6 +131,11 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
  * @ctype: connect type.
+ *
+ * If we acquire a connection successfully, this function will return
+ * the same slashrpc_cservice struct pointer as referred to by its
+ * first argument csvcp.  Otherwise, it returns NULL, but the structure 
+ * is left in the location referred to by csvcp for retry.
  */
 struct slashrpc_cservice *
 sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
@@ -182,21 +187,26 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		goto out;
 
 	if (exp) {
+		struct pscrpc_connection *c;
 		/*
 		 * If an export was specified, the peer has already
 		 * established a connection to our service, so just
 		 * reuse the underhood connection to establish a
 		 * connection back to his service.
 		 *
-		 * The idea is the share the same connection between
-		 * an export and an import.
+		 * The idea is to share the same connection between
+		 * an export and an import.  Note we use a local
+		 * variable to keep the existing connection intact
+		 * until the export connection is assigned to us.
 		 */
-		if (csvc->csvc_import->imp_connection)
-			pscrpc_put_connection(csvc->csvc_import->imp_connection);
+		c = csvc->csvc_import->imp_connection;
 
 		atomic_inc(&exp->exp_connection->c_refcount);
 		csvc->csvc_import->imp_connection = exp->exp_connection;
 		csvc->csvc_import->imp_connection->c_imp = csvc->csvc_import;
+
+		if (c)
+			pscrpc_put_connection(c);
 
 	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
 		if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT) {
@@ -222,7 +232,11 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		if (rc) {
 			csvc->csvc_import->imp_failed = 1;
 			csvc->csvc_lasterrno = rc;
-			sl_csvc_free(csvc);
+			/*
+			 * Leave the slashrpc_cservice structure in csvcp intact,
+			 * while return NULL to signal that we fail to establish
+			 * a connection.
+			 */
 			csvc = NULL;
 			goto out;
 		}
