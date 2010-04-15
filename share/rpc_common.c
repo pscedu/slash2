@@ -110,7 +110,7 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
 }
 
 /*
- * sl_csvc_create - create a client RPC service.
+ * sl_csvc_create - create a new client RPC service.
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
  */
@@ -132,6 +132,13 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	return (csvc);
 }
 
+/*
+ * sl_csvc_get - acquire or create a client RPC service.
+ *
+ * @rqptl: request portal ID.
+ * @rpptl: reply portal ID.
+ * @ctype: connect type.
+ */
 struct slashrpc_cservice *
 sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, lnet_nid_t peernid, uint32_t rqptl,
