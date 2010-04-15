@@ -1098,6 +1098,7 @@ slash2fuse_flush_int_locked(struct msl_fhent *mfh)
 	PLL_FOREACH(r, &mfh->mfh_biorqs) {
 		spinlock(&r->biorq_lock);
 		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
+		DEBUG_BIORQ(PLL_INFO, r, "force expire");
 		freelock(&r->biorq_lock);
 	}
 

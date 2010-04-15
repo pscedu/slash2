@@ -535,7 +535,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		if (!expired)
 			expired = bmap_flush_biorq_expired(t);
 
-		DEBUG_BIORQ(PLL_TRACE, t, "biorq #%d (expired=%d)",
+		DEBUG_BIORQ(PLL_NOTIFY, t, "biorq #%d (expired=%d)",
 			      off, expired);
 		/* The next request, 't', can be added to the coalesce
 		 *   group either because 'r' is not yet set (meaning
@@ -628,6 +628,7 @@ bmap_flush(void)
 		DEBUG_BMAP(PLL_INFO, b, "try flush (outstandingRpcCnt=%d)",
 			   atomic_read(&outstandingRpcCnt));
 
+		psc_assert(b->bcm_mode & BMAP_CLI_FLUSHPROC);
 		/* Take the page cache lock too so that the bmap's
 		 *   dirty state may be sanity checked.
 		 */
@@ -635,16 +636,19 @@ bmap_flush(void)
 		if (b->bcm_mode & BMAP_DIRTY) {
 			psc_assert(bmpc_queued_writes(bmpc));
 			psc_dynarray_add(&bmaps, msbd);
-
+			
 		} else {
 			psc_assert(!bmpc_queued_writes(bmpc));
+			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
 			bcm_wake_locked(b);
 			BMPC_ULOCK(bmpc);
-
-			psc_assert(b->bcm_mode & BMAP_REAPABLE);
-
-			lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
-			DEBUG_BMAP(PLL_INFO, b, "added to bmapTimeoutQ");
+			
+			if (!bmpc_queued_ios(bmpc)) {
+				/* No remaining reads or writes.
+				 */
+				lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
+				DEBUG_BMAP(PLL_INFO, b, "added to bmapTimeoutQ");
+			}
 			BMAP_ULOCK(b);
 			continue;
 		}
@@ -655,7 +659,7 @@ bmap_flush(void)
 		PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
 			spinlock(&r->biorq_lock);
 
-			DEBUG_BIORQ(PLL_TRACE, r, "consider for flush");
+			DEBUG_BIORQ(PLL_NOTIFY, r, "consider for flush");
 
 			psc_assert(!(r->biorq_flags & BIORQ_READ));
 			psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
@@ -687,7 +691,7 @@ bmap_flush(void)
 			r->biorq_flags |= BIORQ_SCHED;
 			freelock(&r->biorq_lock);
 
-			DEBUG_BIORQ(PLL_TRACE, r, "try flush");
+			DEBUG_BIORQ(PLL_NOTIFY, r, "try flush");
 			psc_dynarray_add(&a, r);
 		}
 		BMPC_ULOCK(bmpc);
@@ -701,7 +705,7 @@ bmap_flush(void)
 #if 0
 		for (i=0; i < psc_dynarray_len(&a); i++) {
 			r = psc_dynarray_getpos(&a, i);
-			DEBUG_BIORQ(PLL_TRACE, r, "sorted?");
+			DEBUG_BIORQ(PLL_NOTIFY, r, "sorted?");
 		}
 #endif
 		i=0;
@@ -714,7 +718,7 @@ bmap_flush(void)
 			/* Have a set of iov's now.  Let's create an rpc
 			 *   or rpc set and send it out.
 			 */
-			nrpcs -=  bmap_flush_send_rpcs(biorqs, iovs, niovs);
+			nrpcs -= bmap_flush_send_rpcs(biorqs, iovs, niovs);
 			PSCFREE(iovs);
 		}
 	}
@@ -729,11 +733,23 @@ bmap_flush(void)
 
 		if (bmpc_queued_writes(bmpc)) {
 			psc_assert(b->bcm_mode & BMAP_DIRTY);
+			if (b->bcm_mode & BMAP_REAPABLE)
+				b->bcm_mode &= ~BMAP_REAPABLE;
 			DEBUG_BMAP(PLL_INFO, b, "restore to dirty list");
 			lc_addtail(&bmapFlushQ, msbd);
-
 		} else {
 			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
+			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
+
+			if (!bmpc_queued_ios(bmpc)) {
+				if (!(b->bcm_mode & BMAP_REAPABLE)) {
+					psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
+					b->bcm_mode |= BMAP_REAPABLE;
+					lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
+				} else
+					psc_assert(psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry));
+			}
+
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
 			bcm_wake_locked(b);
 		}
@@ -776,8 +792,6 @@ ms_bmap_release(struct sl_resm *resm)
 
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
 
-	rmci->rmci_bmaprls.nbmaps = 0;
-
 	rc = RSX_WAITREP(rq, mp);
 	if (rc)
 		/* At this point the bmaps have already been purged from
@@ -797,6 +811,8 @@ ms_bmap_release(struct sl_resm *resm)
 			   rmci->rmci_bmaprls.bmaps[i].seq,
 			   mp->bidrc[i]);
 	}
+
+	rmci->rmci_bmaprls.nbmaps = 0;
 }
 
 void
@@ -834,7 +850,19 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_INFO, b, 
 			   "timeoq try reap (nbmaps=%zd)", z);
-
+			
+			if (bmpc_queued_ios(&msbd->msbd_bmpc)) {
+				psc_assert(b->bcm_mode & BMAP_REAPABLE);
+				b->bcm_mode &= ~BMAP_REAPABLE;				
+				/* New incoming reqs have unset 'reapable' and 
+				 *   removed the bmap from the timeoq.
+				 */
+				lc_remove(&bmapTimeoutQ, msbd);
+				DEBUG_BMAP(PLL_INFO, b, "descheduling from timeoq");
+				BMAP_ULOCK(b);
+				continue;
+			}
+			
 			if (timespeccmp(&ctime, &msbd->msbd_etime, <)) {
 				BMAP_ULOCK(b);
 				timespecsub(&msbd->msbd_etime, &ctime, &wtime);
@@ -851,30 +879,35 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				 *   exist unless another rls thr is
 				 *   introduced.
 				 */
+				psc_assert(!bmpc_queued_ios(&msbd->msbd_bmpc));
 				lc_remove(&bmapTimeoutQ, msbd);
-
+				
 				if (b->bcm_mode & BMAP_WR) {
 					/* Setup a MSG to an ION.
 					 */
 					psc_assert(msbd->msbd_ion != LNET_NID_ANY);
 					resm = libsl_nid2resm(msbd->msbd_ion);
 					rmci = resm2rmci(resm);
-				} else
+				} else {
+					resm = slc_rmc_resm;
 					rmci = resm2rmci(slc_rmc_resm);
-				
-				bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[rmci->rmci_bmaprls.nbmaps++]);
+				}
+				bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[rmci->rmci_bmaprls.nbmaps]);
+				rmci->rmci_bmaprls.nbmaps++;				
 
-				/* The bmap should be going away now.
+				/* The bmap should be going away now, this will call 
+				 *    BMAP_URLOCK().
 				 */
 				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
+
+				if (rmci->rmci_bmaprls.nbmaps == MAX_BMAP_RELEASE) {
+					ms_bmap_release(resm);
+					if (psc_dynarray_exists(&a, resm))
+						psc_dynarray_remove(&a, resm);
+				} else
+					psc_dynarray_add_ifdne(&a, resm);
 			} else
 				BMAP_ULOCK(b);
-			
-			if (rmci->rmci_bmaprls.nbmaps == MAX_BMAP_RELEASE)
-				ms_bmap_release(resm);
-			else
-				psc_dynarray_add(&a, resm);
-
 		}
 		/* Send out partially filled release request.
 		 */

@@ -130,6 +130,14 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			 *   function.
 			 */
 			bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
+			if (!i && (bmpce->bmpce_flags & BMPCE_DATARDY) && 
+			    (rbw & BIORQ_RBWFP))
+				rbw &= ~BIORQ_RBWFP;
+			else if (i == (npages - 1) && 
+				 (bmpce->bmpce_flags & BMPCE_DATARDY) && 
+				 (rbw & BIORQ_RBWLP))
+				rbw &= ~BIORQ_RBWFP;
+
 			BMPCE_ULOCK(bmpce);
 			/* Mark this cache block as being already present
 			 *   in the cache.
@@ -145,7 +153,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	PSCFREE(bmpce_tmp);
 	/* Obtain any bmpce's which were not already present in the cache.
 	 */
-	for (i=0; i < npages; i++) {
+	for (i=0; i < npages; i++) {		
 		if (bmpce_pagemap & (1 << i))
 			continue;
 
@@ -181,6 +189,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	/* XXX Note if we moved to RD_DATARDY / WR_DATARDY then
 	 *   we wouldn't have to fault in pages like this unless the
 	 *   bmap was open in RW mode.
+	 * XXX changeme.. this is causing unnecessary RBW rpc's!
+	 *    key off the BMPCE flags
 	 */
 	if ((fcmh_getsize(b->bcm_fcmh) > off) && op == BIORQ_WRITE && rbw)
 		r->biorq_flags |= rbw;
@@ -260,11 +270,21 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		BMPCE_ULOCK(bmpce);
 	}
  out:
-	DEBUG_BIORQ(PLL_TRACE, r, "new req");
+	DEBUG_BIORQ(PLL_NOTIFY, r, "new req");
 	if (op == BIORQ_READ)
 		pll_add(bmap_2_msbmpc(b).bmpc_pndg_biorqs, r);
 	else
 		pll_add(bmap_2_msbmpc(b).bmpc_new_biorqs, r);
+
+	/* Inform the bmap reaper to skip this bmap.
+	 */
+	BMAP_LOCK(b);
+	if (b->bcm_mode & BMAP_REAPABLE) {
+		b->bcm_mode &= ~BMAP_REAPABLE;
+		psc_assert(!(b->bcm_mode & BMAP_DIRTY));
+		lc_remove(&bmapTimeoutQ, bmap_2_msbd(b));
+	}
+	BMAP_ULOCK(b);
 }
 
 __static void
@@ -290,13 +310,6 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 
 		else {
 			b->bcm_mode &= ~BMAP_DIRTY;
-			b->bcm_mode |= BMAP_REAPABLE;
-			/* Set reapable now and take a ref
-			 *   so that the bmap will not be reaped
-			 *   by this thread but rather the 
-			 *   bmap_timeo thread.
-			 */
-			bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 			/* Don't assert pll_empty(&bmpc->bmpc_pndg)
 			 *   since read requests may be present.
 			 */
@@ -304,6 +317,16 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 			   pll_nitems(&bmpc->bmpc_pndg_biorqs));
 		}
 	}
+
+	if (!bmpc_queued_ios(bmpc) && !(b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
+		if (!(b->bcm_mode & BMAP_REAPABLE)) {
+			psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
+			b->bcm_mode |= BMAP_REAPABLE;
+			lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
+		} else
+			psc_assert(psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry));
+	}
+	
 	BMPC_ULOCK(bmpc);
 	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
@@ -434,6 +457,9 @@ msl_bmap_init(struct bmapc_memb *b)
 	msbd = b->bcm_pri;
 	msbd->msbd_bmap = b;
 	bmpc_init(&msbd->msbd_bmpc);
+	/* Take the reaper ref cnt early.
+	 */
+	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 }
 
 __static void
@@ -464,7 +490,7 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	BMAP_LOCK(b);
 	bcm_wait_locked(b, (!pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs) ||
 			    !pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs)  ||
-			    (b->bcm_mode & BMAP_DIRTY)));
+			    (b->bcm_mode & BMAP_CLI_FLUSHPROC)));
 
 	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs));
 	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs));
@@ -1104,31 +1130,14 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	} else {
 		b->bcm_mode |= BMAP_DIRTY;
 
-		if (b->bcm_mode & BMAP_REAPABLE) {
-			/* XXX msbrlsthr must check BMAP_DIRTY before
-			 *   replacing this bmap to the bmapTimeoutQ. This
-			 *   avoids the race condition where this thread
-			 *   grabs the lock before the msbrlsthr is able to.
-			 * This is a strange case because I have to guarantee
-			 *   that the msbrlsthr doesn't race with us to
-			 *   remove the bmap.
+		if (!(b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
+			/* Give control of the msdb_lentry to the bmap_flush 
+			 *   thread.
 			 */
-			LIST_CACHE_LOCK(&bmapTimeoutQ);
-			/* Conditionally remove ourselves from the timeoutQ.
-			 */
-			if (psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry))
-				lc_remove(&bmapTimeoutQ, bmap_2_msbd(b));
-			LIST_CACHE_ULOCK(&bmapTimeoutQ);
-
-			DEBUG_BMAP(PLL_INFO, b, "reapable to dirty");
-			b->bcm_mode &= ~BMAP_REAPABLE;
-			bmap_op_done_type_simple(b, BMAP_OPCNT_REAPER);
-			psc_assert(atomic_read(&b->bcm_opcnt) > 0);
-
+			b->bcm_mode |= BMAP_CLI_FLUSHPROC;
+			psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
+			lc_addtail(&bmapFlushQ, bmap_2_msbd(b));
 		}
-
-		psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
-		lc_addtail(&bmapFlushQ, bmap_2_msbd(b));
 	}
 
 	DEBUG_BMAP(PLL_INFO, b, "biorq=%p list_empty(%d)",
