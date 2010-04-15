@@ -182,8 +182,8 @@ struct srt_bmapdesc_buf {
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
 
 struct srt_namespace_entry {
-	uint64_t		parent;
-	uint64_t		target;
+	uint64_t		parent;		/* SLASH ID of the parent directory */
+	uint64_t		target;		/* SLASH ID of the target */
 	uint64_t		seqno;
 	char			name[NAME_MAX + 1];
 	uint8_t			op;

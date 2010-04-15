@@ -139,7 +139,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
     psc_spinlock_t *lockp, void *waitinfo,
     enum slconn_type ctype)
 {
-	struct slashrpc_cservice *csvc = NULL;
+	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm;
 	int rc = 0, locked;
 
