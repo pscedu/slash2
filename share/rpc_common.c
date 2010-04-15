@@ -90,15 +90,22 @@ psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
 	psc_fatalx("unimplemented stub");
 }
 
-inline void 
+__inline void
 sl_csvc_decref(struct slashrpc_cservice *csvc)
 {
+	CSVC_RLOCK(csvc);
 	psc_atomic32_dec(&csvc->csvc_refcnt);
+	if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT)
+		psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
+	else
+		psc_waitq_wakeall(csvc->csvc_waitinfo);
+	CSVC_ULOCK(csvc);
 }
 
-inline void
+__inline void
 sl_csvc_incref(struct slashrpc_cservice *csvc)
 {
+	CSVC_LOCK_ENSURE(csvc);
 	psc_atomic32_inc(&csvc->csvc_refcnt);
 }
 
@@ -134,7 +141,7 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
  *
  * If we acquire a connection successfully, this function will return
  * the same slashrpc_cservice struct pointer as referred to by its
- * first argument csvcp.  Otherwise, it returns NULL, but the structure 
+ * first argument csvcp.  Otherwise, it returns NULL, but the structure
  * is left in the location referred to by csvcp for retry.
  */
 struct slashrpc_cservice *
@@ -303,7 +310,7 @@ slexp_destroy(void *data)
 	struct slashrpc_export *slexp = data;
 	struct pscrpc_export *exp = slexp->slexp_export;
 
-	psc_assert(exp);	
+	psc_assert(exp);
 	/* There's no way to set this from the drop_callback() */
 	if (!(slexp->slexp_flags & SLEXPF_CLOSING))
 		slexp->slexp_flags |= SLEXPF_CLOSING;
