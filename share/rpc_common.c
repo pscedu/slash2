@@ -93,13 +93,7 @@ psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
 void
 sl_csvc_decref(struct slashrpc_cservice *csvc)
 {
-	CSVC_RLOCK(csvc);
 	psc_atomic32_dec(&csvc->csvc_refcnt);
-	if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT)
-		psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
-	else
-		psc_waitq_wakeall(csvc->csvc_waitinfo);
-	CSVC_ULOCK(csvc);
 }
 
 void
