@@ -187,7 +187,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	if (csvc->csvc_import->imp_failed == 0 &&
 	    csvc->csvc_import->imp_invalid == 0)
 		goto out;
-//	|| imp->imp_generation != csvc_impgen
 
 	if (exp) {
 		struct pscrpc_connection *c;
@@ -250,7 +249,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	if (csvc)
 		sl_csvc_incref(csvc);
 	ureqlock(lockp, locked);
-//	errno = rc;
 	return (csvc);
 }
 
