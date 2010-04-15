@@ -205,7 +205,6 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 		 *   Inform the write-client to drop his cache.  This call
 		 *   is blocking.
 		 */
-		psc_assert(pll_nitems(&bmdsi->bmdsi_leases) == 1);
 		bml = pll_gethdpeek(&bmdsi->bmdsi_leases);
 		psc_assert(bml->bml_flags & BML_WRITE);
 		BMAP_ULOCK(b);
@@ -411,7 +410,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
 	/* Wait for BMAP_IONASSIGN to be removed before proceeding.
 	 */
 	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));
-	pll_addtail(&bmdsi->bmdsi_leases, bml);
 
 	if (mq->rw == SL_WRITE) {
 		/* Drop the lock prior to doing disk and possibly network
@@ -463,6 +461,8 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
 			b->bcm_mode &= ~BMAP_IONASSIGN;
 		}
 	}
+	pll_addtail(&bmdsi->bmdsi_leases, bml);
+
  out:
 	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "bml_add (mion=%p) (rc=%d)",
 	   bmdsi->bmdsi_wr_ion, rc);
@@ -593,7 +593,9 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	/* Only release the odtable entry if the key matches.  If a match
 	 *   is found then verify the sequence number matches.
 	 */
-	if (!bmdsi->bmdsi_writers && (key == bmdsi->bmdsi_assign->odtr_key)) {
+	if ((bml->bml_flags & BML_WRITE) && 
+	    !bmdsi->bmdsi_writers        && 
+	    (key == bmdsi->bmdsi_assign->odtr_key)) {
 		/* odtable sanity checks:
 		 */
 		struct bmi_assign *bmi;
