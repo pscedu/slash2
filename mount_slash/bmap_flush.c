@@ -646,6 +646,8 @@ bmap_flush(void)
 			if (!bmpc_queued_ios(bmpc)) {
 				/* No remaining reads or writes.
 				 */
+				psc_assert(!(b->bcm_mode & BMAP_REAPABLE));
+				b->bcm_mode |= BMAP_REAPABLE;
 				lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
 				DEBUG_BMAP(PLL_INFO, b, "added to bmapTimeoutQ");
 			}
@@ -730,24 +732,26 @@ bmap_flush(void)
 
 		BMAP_LOCK(b);
 		BMPC_LOCK(bmpc);
+		/* BMAP_CLI_FLUSHPROC must be present, only the section
+		 *   below may remove it.  BMAP_CLI_FLUSHPROC and 
+		 *   BMAP_REAPABLE are mutually exclusive.
+		 */
+		psc_assert(b->bcm_mode & BMAP_CLI_FLUSHPROC);
+		psc_assert(!(b->bcm_mode & BMAP_REAPABLE));
 
 		if (bmpc_queued_writes(bmpc)) {
 			psc_assert(b->bcm_mode & BMAP_DIRTY);
-			if (b->bcm_mode & BMAP_REAPABLE)
-				b->bcm_mode &= ~BMAP_REAPABLE;
 			DEBUG_BMAP(PLL_INFO, b, "restore to dirty list");
 			lc_addtail(&bmapFlushQ, msbd);
+
 		} else {
 			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
 			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
 
-			if (!bmpc_queued_ios(bmpc)) {
-				if (!(b->bcm_mode & BMAP_REAPABLE)) {
-					psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
-					b->bcm_mode |= BMAP_REAPABLE;
-					lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
-				} else
-					psc_assert(psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry));
+			if (!bmpc_queued_ios(bmpc)) {				
+				psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
+				b->bcm_mode |= BMAP_REAPABLE;
+				lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
 			}
 
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
