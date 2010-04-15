@@ -127,7 +127,8 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
  * we reply to the client.
  */
 void
-mds_namespace_log(int op, int type, int perm, uint64_t parent, uint64_t target, const char *name)
+mds_namespace_log(int op, int type, int perm, uint64_t parent,
+    uint64_t target, const char *name)
 {
 	int rc;
 	struct slmds_jent_namespace *jnamespace;
