@@ -189,21 +189,22 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		goto out;
 
 	if (exp) {
-		struct pscrpc_connection *c;
-
-		c = csvc->csvc_import->imp_connection;
-		atomic_inc(&exp->exp_connection->c_refcount);
-		csvc->csvc_import->imp_connection = exp->exp_connection;
-		csvc->csvc_import->imp_connection->c_imp = csvc->csvc_import;
-
 		/*
 		 * If an export was specified, the peer has already
 		 * established a connection to our service, so just
 		 * reuse the underhood connection to establish a
 		 * connection back to his service.
+		 *
+		 * The idea is the share the same connection between
+		 * an export and an import.
 		 */
-		if (c)
-			pscrpc_put_connection(c);
+		if (csvc->csvc_import->imp_connection)
+			pscrpc_put_connection(csvc->csvc_import->imp_connection);
+
+		atomic_inc(&exp->exp_connection->c_refcount);
+		csvc->csvc_import->imp_connection = exp->exp_connection;
+		csvc->csvc_import->imp_connection->c_imp = csvc->csvc_import;
+
 	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
 		if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT) {
 			psc_fatalx("multiwaits not implemented");
