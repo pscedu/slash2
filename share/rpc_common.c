@@ -229,6 +229,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		if (rc) {
 			csvc->csvc_import->imp_failed = 1;
 			csvc->csvc_lasterrno = rc;
+			sl_csvc_free(csvc);
 			csvc = NULL;
 			goto out;
 		}
