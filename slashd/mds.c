@@ -434,7 +434,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
 			bmdsi->bmdsi_writers--;
 			b->bcm_mode &= ~BMAP_IONASSIGN;
 			b->bcm_mode |= BMAP_MDS_NOION;
-			pll_remove(&bmdsi->bmdsi_leases, bml);
 			goto out;
 		}
 		rc = mds_bmap_directio(b, SL_WRITE);
