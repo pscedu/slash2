@@ -522,7 +522,8 @@ slcfg_store_tok_val(const char *tok, char *val)
 		   e, e->name, e->sym_param_type);
 	/*
 	 * Access the correct structure based on the
-	 *  type stored in the symtab entry.
+	 *  type stored in the symtab entry. The offset
+	 *  of the symbol was obtained with offsetof().
 	 */
 	switch (e->sym_struct_type) {
 	case SL_STRUCT_GLOBAL:
