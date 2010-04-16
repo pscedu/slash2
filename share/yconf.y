@@ -685,7 +685,7 @@ slcfg_parse(const char *config_file)
 	struct sl_resource *r, *peer;
 	struct cfg_file *cf, *ncf;
 	struct sl_site *s;
-	int i, j, n;
+	int i, j;
 
 	cfg_errors = 0;
 
@@ -710,7 +710,6 @@ slcfg_parse(const char *config_file)
 	PLL_LOCK(&globalConfig.gconf_sites);
 	pll_sort(&globalConfig.gconf_sites, qsort, slcfg_site_cmp);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
-		n++;
 		psc_dynarray_sort(&s->site_resources, qsort, slcfg_res_cmp);
 		DYNARRAY_FOREACH(r, j, &s->site_resources) {
 			psc_dynarray_sort(&r->res_members, qsort, slcfg_resm_cmp);
@@ -725,8 +724,9 @@ slcfg_parse(const char *config_file)
 			}
 		}
 	}
+	peer_mds = PSCALLOC(pll_nitems(&globalConfig.gconf_sites) *
+	    sizeof(struct slm_peer_md));
 	PLL_ULOCK(&globalConfig.gconf_sites);
-	peer_mds = PSCALLOC(n * sizeof(struct slm_peer_md));
 }
 
 void
