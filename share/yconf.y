@@ -231,7 +231,7 @@ site_resource	: resource_start resource_def SUBSECT_END {
 			int j, nmds = 0;
 
 			if (currentRes->res_type == SLREST_NONE)
-				yyerror("resource %s has no type specified",
+				yyerror("resource %s ID %d has no type specified",
 				    currentRes->res_name, currentRes->res_id);
 
 			currentRes->res_id = sl_global_id_build(
