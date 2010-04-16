@@ -154,6 +154,7 @@ libsl_str2res(const char *res_name)
 	return (r);
 }
 
+/* Use to convert SLASH2_PIOS_ID name to its ID */
 sl_ios_id_t
 libsl_str2id(const char *name)
 {
