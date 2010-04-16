@@ -84,7 +84,7 @@ struct sl_resm {
 struct sl_site {
 	char			 site_name[SITE_NAME_MAX];
 	char			*site_desc;
-	void			*site_pri;
+	void			*site_pri;			/* struct site_mds_info */
 	struct psclist_head	 site_lentry;
 	struct psc_dynarray	 site_resources;
 	sl_siteid_t		 site_id;
