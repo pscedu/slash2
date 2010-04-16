@@ -40,7 +40,7 @@
 #include "slerr.h"
 
 struct odtable				*mdsBmapAssignTable;
-uint64_t                                 mdsBmapSequenceNo;
+uint64_t				 mdsBmapSequenceNo;
 const struct slash_bmap_od		 null_bmap_od;
 const struct slash_inode_od		 null_inode_od;
 const struct slash_inode_extras_od	 null_inox_od;
@@ -399,7 +399,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
  * @mq: the RPC request for examining the bmap access mode (read/write).
  */
 __static int
-mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_bmap_req *mq)
+mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_getbmap_req *mq)
 {
 	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
 	struct bmapc_memb *b=bmdsi->bmdsi_bmap;
@@ -592,8 +592,8 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	/* Only release the odtable entry if the key matches.  If a match
 	 *   is found then verify the sequence number matches.
 	 */
-	if ((bml->bml_flags & BML_WRITE) && 
-	    !bmdsi->bmdsi_writers        && 
+	if ((bml->bml_flags & BML_WRITE) &&
+	    !bmdsi->bmdsi_writers        &&
 	    (key == bmdsi->bmdsi_assign->odtr_key)) {
 		/* odtable sanity checks:
 		 */

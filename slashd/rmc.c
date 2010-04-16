@@ -159,12 +159,12 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 int
 slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
+	const struct srm_getbmap_req *mq;
+	struct srm_getbmap_rep *mp;
 	struct slash_bmap_cli_wire *cw;
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_mds_info *bmdsi;
 	struct srt_bmapdesc_buf bdb;
-	const struct srm_bmap_req *mq;
-	struct srm_bmap_rep *mp;
 	struct bmapc_memb *bmap;
 	struct fidc_membh *fcmh;
 	struct iovec iov[5];
