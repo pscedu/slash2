@@ -90,11 +90,20 @@ struct site_mds_info {
 
 #define SMIF_DIRTYQ		(1 << 0)		/* queue has changed */
 
+/* progress of namespace log application on a MDS */
+struct sl_mds_loginfo {
+	int			 sml_flags;
+	uint64_t		 sml_send_seqno;	/* outstanding log sequence */
+	uint64_t		 sml_recv_seqno;
+	time_t			 sml_last_send;		/* last contact and response */
+	time_t			 sml_last_recv;
+};
+
 struct resm_mds_info {
 	struct slashrpc_cservice *rmmi_csvc;
 	psc_spinlock_t		  rmmi_lock;
 	struct psc_multiwaitcond  rmmi_mwcond;
-
+	struct sl_mds_loginfo	  rmmi_loginfo;
 	int			  rmmi_busyid;
 	struct sl_resm		 *rmmi_resm;
 	atomic_t		  rmmi_refcnt;		/* #CLIs using this ion */

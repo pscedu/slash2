@@ -724,8 +724,6 @@ slcfg_parse(const char *config_file)
 			}
 		}
 	}
-	peer_mds = PSCALLOC(pll_nitems(&globalConfig.gconf_sites) *
-	    sizeof(struct slm_peer_md));
 	PLL_ULOCK(&globalConfig.gconf_sites);
 }
 

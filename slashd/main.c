@@ -54,8 +54,6 @@ struct psc_poolmaster	 replrq_poolmaster;
 
 struct slash_creds	 rootcreds = { 0, 0 };
 
-struct slm_peer_md	*peer_mds;
-
 int
 psc_usklndthr_get_type(const char *namefmt)
 {
