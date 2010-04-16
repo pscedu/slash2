@@ -219,6 +219,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 			return (mdscoh_req(bml, MDSCOH_BLOCK));
 	} else {
 		int wtrs=0;
+
 		/* Inform our readers to use directio mode.
 		 */
 		PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
@@ -934,8 +935,9 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
  *	with a bit (ie INIT) and other threads block on the waitq.
  */
 int
-mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
-  struct pscrpc_export *exp, struct bmapc_memb **bmap, struct srm_bmap_rep *mp)
+mds_bmap_load_cli(struct fidc_membh *f, const struct srm_getbmap_req *mq,
+  struct pscrpc_export *exp, struct bmapc_memb **bmap,
+  struct srm_getbmap_rep *mp)
 {
 	struct bmapc_memb *b;
 	struct bmap_mds_lease *bml;
@@ -944,7 +946,7 @@ mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
 
 	psc_assert(!*bmap);
 
-	rc = mds_bmap_load(f, mq->blkno, &b);
+	rc = mds_bmap_load(f, mq->bmapno, &b);
 	if (rc)
 		return (rc);
 
@@ -955,7 +957,7 @@ mds_bmap_load_cli(struct fidc_membh *f, const struct srm_bmap_req *mq,
 	bml->bml_bmdsi = b->bcm_pri;
 	bml->bml_flags = (mq->rw == SL_WRITE ? BML_WRITE : BML_READ);
 
-	if (mq->dio)
+	if (mq->flags & SRM_GETBMAPF_DIRECTIO)
 		bml->bml_flags |= BML_CDIO;
 
 	rc = mds_bmap_bml_add(bml, mq);
