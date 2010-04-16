@@ -25,13 +25,10 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_util/odtable.h"
 
-#include "jflush.h"
 #include "bmap.h"
+#include "jflush.h"
 #include "mdslog.h"
 #include "slashd.h"
-
-extern struct psc_poolmaster bmapMdsLeasePoolMaster;
-extern struct psc_poolmgr *bmapMdsLeasePool;
 
 /*
  * bmap_mds_info - the bcm_pri data structure for the slash2 mds.
@@ -47,15 +44,15 @@ extern struct psc_poolmgr *bmapMdsLeasePool;
  *   directed to this ion once a client has invoked write mode on the bmap.
  */
 struct bmap_mds_info {
-	struct bmapc_memb               *bmdsi_bmap;    /* back pointer            */
+	struct bmapc_memb		*bmdsi_bmap;    /* back pointer            */
 	struct jflush_item		 bmdsi_jfi;	/* journal handle          */
 	struct resm_mds_info		*bmdsi_wr_ion;	/* pointer to write ION    */
 	struct odtable_receipt		*bmdsi_assign;	/* odtable receipt         */
-	struct psc_lockedlist            bmdsi_leases;  /* tracked bmap leases     */
-	uint64_t                         bmdsi_seq;     /* Largest write bml seq # */
- 	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
-	uint32_t                         bmdsi_writers;
-	int				 bmdsi_flags;	
+	struct psc_lockedlist		 bmdsi_leases;  /* tracked bmap leases     */
+	uint64_t			 bmdsi_seq;     /* Largest write bml seq # */
+	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
+	uint32_t			 bmdsi_writers;
+	int				 bmdsi_flags;
 };
 
 /* bmap MDS modes */
@@ -65,49 +62,49 @@ struct bmap_mds_info {
 
 /* bmap_mds_info modes */
 #define BMIM_LOGCHG		(1 << 0)	/* in-mem change made, needs logged */
-#define BMIM_DIO		(1 << 1)        /* directio enabled                 */
+#define BMIM_DIO		(1 << 1)	/* directio enabled                 */
 
 struct bmap_timeo_entry {
-	uint64_t bte_maxseq;
-	struct psclist_head bte_bmaps;
+	uint64_t		 bte_maxseq;
+	struct psclist_head	 bte_bmaps;
 };
 
 struct bmap_timeo_table {
-	psc_spinlock_t btt_lock;
-	uint64_t btt_maxseq;
-	uint64_t btt_minseq;
-	struct bmap_timeo_entry *btt_entries;
-	struct jflush_item btt_jfi;
-	int btt_nentries;
+	psc_spinlock_t		 btt_lock;
+	uint64_t		 btt_maxseq;
+	uint64_t		 btt_minseq;
+	struct bmap_timeo_entry	*btt_entries;
+	struct jflush_item	 btt_jfi;
+	int			 btt_nentries;
 };
 
-#define BTE_ADD  0
-#define BTE_DEL  1
+#define BTE_ADD			0
+#define BTE_DEL			1
 
-#define BMAP_TIMEO_TBL_SZ  20
-#define BMAP_TIMEO_MAX     120 //Seconds
-#define BMAP_SEQLOG_FACTOR 100
+#define BMAP_TIMEO_TBL_SZ	20
+#define BMAP_TIMEO_MAX		120 //Seconds
+#define BMAP_SEQLOG_FACTOR	100
 
 struct bmap_mds_lease {
-	uint64_t bml_seq;
-	uint64_t bml_key;
-	uint32_t bml_flags;
-	uint32_t bml__pad;
-	psc_spinlock_t bml_lock;
-	struct bmap_mds_info *bml_bmdsi;
-	struct pscrpc_export *bml_exp;
-	struct psclist_head bml_bmdsi_lentry;
-	struct psclist_head bml_timeo_lentry;
-	struct psclist_head bml_exp_lentry;
-	struct psclist_head bml_coh_lentry;
+	uint64_t		  bml_seq;
+	uint64_t		  bml_key;
+	uint32_t		  bml_flags;
+	uint32_t		  bml__pad;
+	psc_spinlock_t		  bml_lock;
+	struct bmap_mds_info	 *bml_bmdsi;
+	struct pscrpc_export	 *bml_exp;
+	struct psclist_head	  bml_bmdsi_lentry;
+	struct psclist_head	  bml_timeo_lentry;
+	struct psclist_head	  bml_exp_lentry;
+	struct psclist_head	  bml_coh_lentry;
 };
 
-#define bml_2_bmap(b) ((b)->bml_bmdsi->bmdsi_bmap)
+#define bml_2_bmap(b)		(b)->bml_bmdsi->bmdsi_bmap
 
-#define BML_LOCK(b)  spinlock(&(b)->bml_lock)
-#define BML_ULOCK(b) freelock(&(b)->bml_lock)
+#define BML_LOCK(b)		spinlock(&(b)->bml_lock)
+#define BML_ULOCK(b)		freelock(&(b)->bml_lock)
 
-enum bmap_mds_lease_flags {
+enum {
 	BML_READ   = (1 << 0),
 	BML_WRITE  = (1 << 1),
 	BML_CDIO   = (1 << 2),
@@ -125,7 +122,7 @@ struct bmi_assign {
 	lnet_nid_t		bmi_ion_nid;
 	sl_ios_id_t		bmi_ios;
 	slfid_t			bmi_fid;
-	uint64_t                bmi_seq;
+	uint64_t		bmi_seq;
 	sl_blkno_t		bmi_bmapno;
 	time_t			bmi_start;
 };
@@ -137,21 +134,24 @@ struct bmi_assign {
 
 #define mds_bmap_load(f, n, bp)	bmap_get((f), (n), 0, (bp))
 
-int	mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
-int	mds_bmap_exists(struct fidc_membh *, sl_blkno_t);
-int	mds_bmap_load_cli(struct fidc_membh *, const struct srm_bmap_req *,
-	  struct pscrpc_export *, struct bmapc_memb **, struct srm_bmap_rep *);
-int	mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t, 
-	  struct bmapc_memb **);
-int	mds_bmap_loadvalid(struct fidc_membh *, sl_blkno_t, 
-	  struct bmapc_memb **);
-int     mds_bmap_bml_release(struct bmapc_memb *, uint64_t, uint64_t);
-void	mds_bmap_ref_drop(struct bmapc_memb *, int);
-void	mds_bmap_sync_if_changed(struct bmapc_memb *);
-void    mds_bmi_odtable_startup_cb(void *, struct odtable_receipt *);
+int	 mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
+int	 mds_bmap_exists(struct fidc_membh *, sl_blkno_t);
+int	 mds_bmap_load_cli(struct fidc_membh *, const struct srm_getbmap_req *,
+	    struct pscrpc_export *, struct bmapc_memb **, struct srm_getbmap_rep *);
+int	 mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t,
+	    struct bmapc_memb **);
+int	 mds_bmap_loadvalid(struct fidc_membh *, sl_blkno_t,
+	    struct bmapc_memb **);
+int	 mds_bmap_bml_release(struct bmapc_memb *, uint64_t, uint64_t);
+void	 mds_bmap_ref_drop(struct bmapc_memb *, int);
+void	 mds_bmap_sync_if_changed(struct bmapc_memb *);
+void	 mds_bmi_odtable_startup_cb(void *, struct odtable_receipt *);
 
-void     mds_bmap_getcurseq(uint64_t *, uint64_t *);
+void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
 uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
+
+extern struct psc_poolmaster	 bmapMdsLeasePoolMaster;
+extern struct psc_poolmgr	*bmapMdsLeasePool;
 
 #endif /* _SLASHD_MDS_BMAP_H_ */
