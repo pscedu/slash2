@@ -92,11 +92,11 @@ struct site_mds_info {
 
 /* progress of namespace log application on a MDS */
 struct sl_mds_loginfo {
-	int			 sml_flags;
-	uint64_t		 sml_send_seqno;	/* outstanding log sequence */
-	uint64_t		 sml_recv_seqno;
-	time_t			 sml_last_send;		/* last contact and response */
-	time_t			 sml_last_recv;
+	int			  sml_flags;
+	uint64_t		  sml_send_seqno;	/* outstanding log sequence */
+	uint64_t		  sml_recv_seqno;
+	time_t			  sml_last_send;	/* last contact and response */
+	time_t			  sml_last_recv;
 };
 
 struct resm_mds_info {
