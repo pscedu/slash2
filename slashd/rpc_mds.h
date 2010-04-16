@@ -56,6 +56,8 @@ struct slm_peer_md {
 	int			 spm_flags;		/* misc flags */
 };
 
+struct slm_peer_md		*peer_mds;
+
 struct slm_rmi_expdata {
 	struct pscrpc_export *smie_exp;
 };
