@@ -194,7 +194,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	iov[1].iov_base = &bdb;
 	iov[1].iov_len = sizeof(bdb);
 
-	if (mq->getreptbl) {
+	if (mq->flags & SRM_GETBMAPF_GETREPLTBL) {
 		struct slash_inode_handle *ih;
 
 		niov++;
@@ -212,7 +212,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		}
 	}
 
-	mp->nblks = 1;
+	mp->nbmaps = 1;
 
 	if (mq->rw == SL_WRITE) {
 		psc_assert(bmdsi->bmdsi_wr_ion);

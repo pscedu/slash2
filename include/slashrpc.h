@@ -33,8 +33,6 @@
 struct stat;
 struct statvfs;
 
-#define SLASH_SVR_PID		54321
-
 /* Slash RPC channel to MDS from client. */
 #define SRMC_REQ_PORTAL		10
 #define SRMC_REP_PORTAL		11
@@ -111,7 +109,6 @@ enum {
 	SRMT_RELEASEBMAP,
 
 	/* replication operations */
-	SRMT_GETREPTBL,
 	SRMT_REPL_ADDRQ,
 	SRMT_REPL_DELRQ,
 	SRMT_REPL_GETST,
@@ -147,14 +144,27 @@ enum {
 	SRMT_WRITE
 };
 
+/* ----------------------------- BEGIN MESSAGES ----------------------------- */
+
+/*
+ * Note: Member ordering within structures must always follow 64-bit boundaries
+ * to preserve compatibility between 32-bit and 64-bit machines.
+ */
+
+struct srm_generic_rep {
+	uint64_t		data;		/* context overloadable data */
+	int32_t			rc;		/* return code, 0 for success or slerrno */
+	int32_t			_pad;
+} __packed;
+
 /* ---------------------- BEGIN ENCAPSULATED MESSAGES ----------------------- */
 
 /*
- * Note: these messages contained within other messages and thus must end on
- * 64-bit boundaries.  Their ordering within should also follow 64-bit boundaries.
+ * Note: these messages are contained within other messages and thus must end on
+ * 64-bit boundaries.
  */
 
-#define DESCBUF_REPRLEN		45		/* strlen(base64(SHA256(secret)) */
+#define DESCBUF_REPRLEN		45		/* strlen(base64(SHA256(secret)) + NUL */
 
 #define SBDB_MAGIC		UINT64_C(0x4321432143214321)
 
@@ -189,7 +199,7 @@ struct srt_namespace_entry {
 	uint8_t			op;
 	uint8_t			type;
 	uint8_t			perm;
-	uint8_t			_pad;
+	int8_t			_pad;
 } __packed;
 
 struct srm_send_namespace_req {
@@ -200,29 +210,32 @@ struct srm_send_namespace_req {
 
 struct srm_send_namespace_rep {
 	uint32_t		rc;
-	uint32_t		_pad;
+	int32_t			_pad;
 } __packed;
 
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
 
-struct srm_bmap_req {
+struct srm_getbmap_req {
 	struct slash_fidgen	fg;
-	uint32_t		pios;		/* client's preferred IOS ID	*/
-	uint32_t		blkno;		/* Starting block number	*/
-	uint32_t		nblks;		/* Read-ahead support		*/
-	uint32_t		dio;		/* Client wants directio	*/
-	int32_t			rw;
-	uint32_t		getreptbl;	/* whether to include inode replicas */
+	sl_ios_id_t		pios;		/* client's preferred IOS ID */
+	sl_bmapno_t		bmapno;		/* Starting bmap index number */
+	uint32_t		nbmaps;		/* read-ahead support */
+	int32_t			rw;		/* 'enum rw' value for access */
+	uint32_t		flags;		/* see SRM_BMAPF_* flags below */
+	int32_t			_pad;
 } __packed;
 
-struct srm_bmap_rep {
+#define SRM_GETBMAPF_DIRECTIO	(1 << 0)	/* client wants direct I/O */
+#define SRM_GETBMAPF_GETREPLTBL	(1 << 1)	/* fetch inode replica table */
+
+struct srm_getbmap_rep {
 	uint64_t		ios_nid;	/* responsible I/O server ID if write */
 	uint64_t		seq;		/* bmap global sequence number */
-	uint64_t		key;		/* mds odtable key */
-	uint32_t		nblks;		/* The number of bmaps actually returned */
+	uint64_t		key;		/* MDS odtable key */
+	uint32_t		nbmaps;		/* number of bmaps actually returned */
 	uint32_t		nrepls;		/* # sl_replica_t's set in bulk */
-	uint32_t		dio;
-	uint32_t		rc;
+	uint32_t		flags;		/* see SRM_BMAPF_* flags */
+	uint32_t		rc;		/* 0 for success or slerrno */
 /*
  * Bulk data contents:
  *
@@ -231,7 +244,7 @@ struct srm_bmap_rep {
  *	+-------------------------------+-------------------------------+
  *	| struct slash_bmap_od		| bmap contents			|
  *	| struct srt_bmapdesc_buf	| descriptor			|
- *	| sl_replica_t (if getreptbl)	| inode replica index list	|
+ *	| sl_replica_t (if GETREPLTBL)	| inode replica index list	|
  *	+-------------------------------+-------------------------------+
  */
 } __packed;
@@ -272,6 +285,7 @@ struct srm_bmap_chmode_req {
 struct srm_bmap_chmode_rep {
 	struct srt_bmapdesc_buf	sbdb;
 	int32_t			rc;
+	int32_t			_pad;
 } __packed;
 
 struct srm_bmap_dio_req {
@@ -306,9 +320,9 @@ struct srm_bmap_crcup {
 
 struct srm_bmap_crcwrt_req {
 	uint64_t		crc;		/* yes, a CRC of the CRC's */
+	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
 	uint32_t		ncrc_updates;
 	int32_t			_pad;
-	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
 } __packed;
 
 struct srm_bmap_iod_get {
@@ -333,8 +347,9 @@ struct srm_bmap_release_req {
 } __packed;
 
 struct srm_bmap_release_rep {
-	int32_t			rc;
 	uint32_t		bidrc[MAX_BMAP_RELEASE];
+	int32_t			rc;
+	int32_t			_pad;
 } __packed;
 
 struct srm_bmap_minseq_get {
@@ -351,6 +366,7 @@ struct srm_connect_req {
 } __packed;
 
 struct srm_ping_req {
+	int64_t			data;		/* context overloadable data */
 } __packed;
 
 /* ----------------------- BEGIN REPLICATION MESSAGES ----------------------- */
@@ -429,18 +445,39 @@ struct srm_set_bmapreplpol_req {
 /* ----------------------- BEGIN FILE SYSTEM MESSAGES ----------------------- */
 
 struct srm_create_req {
-	struct slash_fidgen	pfg;
-	struct slash_creds	creds;
+	struct slash_fidgen	pfg;		/* parent dir's file ID + generation */
+	struct slash_creds	creds;		/* credentials of user */
 	char			name[NAME_MAX + 1];
-	uint32_t		mode;
+	uint32_t		mode;		/* mode_t permission for new file */
+
+	/* parameters for fetching first bmap */
+	sl_ios_id_t		pios;		/* preferred I/O system ID */
+	uint32_t		flags;		/* see SRM_BMAPF_* flags */
 	int32_t			_pad;
 } __packed;
 
 struct srm_create_rep {
-	struct slash_fidgen	fg;
-	struct srt_stat		attr;
-	int32_t			rc;
+	struct slash_fidgen	fg;		/* new file's file ID */
+	struct srt_stat		attr;		/* stat(2) buffer of new file attrs */
+	int32_t			rc;		/* 0 for success or slerrno */
+
+	/* parameters for fetching first bmap */
+	uint32_t		rc2;		/* (for GETBMAP) 0 or slerrno */
+	uint64_t		ios_nid;	/* responsible I/O server ID if write */
+	uint64_t		seq;		/* bmap global sequence number */
+	uint64_t		key;		/* MDS odtable key */
+	uint32_t		flags;		/* see SRM_BMAPF_* flags */
 	int32_t			_pad;
+/*
+ * Bulk data contents:
+ *
+ *	+-------------------------------+-------------------------------+
+ *	| data type			| description			|
+ *	+-------------------------------+-------------------------------+
+ *	| struct slash_bmap_od		| bmap contents			|
+ *	| struct srt_bmapdesc_buf	| descriptor			|
+ *	+-------------------------------+-------------------------------+
+ */
 } __packed;
 
 struct srm_destroy_req {
@@ -450,6 +487,7 @@ struct srm_getattr_req {
 	struct slash_fidgen	fg;
 } __packed;
 
+/* XXX factor out since this is encapsulated within READDIR */
 struct srm_getattr_rep {
 	struct srt_stat		attr;
 	int32_t			rc;
@@ -466,12 +504,12 @@ struct srm_io_req {
 /* WRITE data is bulk request. */
 } __packed;
 
-/* operations */
+/* I/O operations */
 #define SRMIOP_RD		0
 #define SRMIOP_WR		1
 
-/* flags */
-#define SRMIOF_APPEND		(1 << 0)
+/* I/O flags */
+#define SRM_IOF_APPEND		(1 << 0)
 
 struct srm_io_rep {
 	int32_t			rc;
@@ -543,7 +581,6 @@ struct srm_readdir_rep {
 	uint64_t		size;
 	uint32_t		num;		/* how many dirents were returned */
 	int32_t			rc;
-	int32_t			_pad;
 /*
  * XXX accompanied by bulk data is but should not be in fuse dirent format
  *	and must be 64-bit aligned.
@@ -626,11 +663,5 @@ struct srm_unlink_req {
 } __packed;
 
 #define srm_unlink_rep srm_generic_rep
-
-struct srm_generic_rep {
-	uint64_t		data;
-	int32_t			rc;
-	int32_t			_pad;
-} __packed;
 
 #endif /* _SLASHRPC_H_ */

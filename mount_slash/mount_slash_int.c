@@ -130,11 +130,11 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			 *   function.
 			 */
 			bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
-			if (!i && (bmpce->bmpce_flags & BMPCE_DATARDY) && 
+			if (!i && (bmpce->bmpce_flags & BMPCE_DATARDY) &&
 			    (rbw & BIORQ_RBWFP))
 				rbw &= ~BIORQ_RBWFP;
-			else if (i == (npages - 1) && 
-				 (bmpce->bmpce_flags & BMPCE_DATARDY) && 
+			else if (i == (npages - 1) &&
+				 (bmpce->bmpce_flags & BMPCE_DATARDY) &&
 				 (rbw & BIORQ_RBWLP))
 				rbw &= ~BIORQ_RBWFP;
 
@@ -153,7 +153,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	PSCFREE(bmpce_tmp);
 	/* Obtain any bmpce's which were not already present in the cache.
 	 */
-	for (i=0; i < npages; i++) {		
+	for (i=0; i < npages; i++) {
 		if (bmpce_pagemap & (1 << i))
 			continue;
 
@@ -326,7 +326,7 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 		} else
 			psc_assert(psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry));
 	}
-	
+
 	BMPC_ULOCK(bmpc);
 	DEBUG_BMAP(PLL_INFO, b, "remove biorq=%p nitems_pndg(%d)",
 		   r, pll_nitems(&bmpc->bmpc_pndg_biorqs));
@@ -540,10 +540,10 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 {
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_cli_info *msbd;
+	struct srm_getbmap_req *mq;
+	struct srm_getbmap_rep *mp;
 	struct fcmh_cli_info *fci;
 	struct pscrpc_request *rq;
-	struct srm_bmap_req *mq;
-	struct srm_bmap_rep *mp;
 	struct fidc_membh *f;
 	struct iovec iovs[3];
 	int rc, getreptbl = 0;
@@ -568,11 +568,12 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 		goto done;
 
 	mq->fg = f->fcmh_fg;
-	mq->pios  = prefIOS; /* Tell MDS of our preferred ION */
-	mq->blkno = bmap->bcm_bmapno;
-	mq->nblks = 1;
-	mq->rw    = rw;
-	mq->getreptbl = getreptbl ? 1 : 0;
+	mq->pios = prefIOS; /* Tell MDS of our preferred ION */
+	mq->bmapno = bmap->bcm_bmapno;
+	mq->nbmaps = 1;
+	mq->rw = rw;
+	if (getreptbl)
+		mq->flags |= SRM_GETBMAPF_GETREPLTBL;
 
 	msbd = bmap->bcm_pri;
 	bmap->bcm_mode |= (rw == SL_WRITE ? BMAP_WR : BMAP_RD);
@@ -595,12 +596,12 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	    SRMC_BULK_PORTAL, iovs, 2 + getreptbl);
 
 	rc = RSX_WAITREP(rq, mp);
-	if (rc == 0 && mp->rc)
+	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
 		goto done;
 
-	if (!mp->nblks) {
+	if (!mp->nbmaps) {
 		psc_errorx("MDS returned 0 bmaps");
 		rc = -EINVAL;
 		goto done;
@@ -1137,7 +1138,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 		b->bcm_mode |= BMAP_DIRTY;
 
 		if (!(b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
-			/* Give control of the msdb_lentry to the bmap_flush 
+			/* Give control of the msdb_lentry to the bmap_flush
 			 *   thread.
 			 */
 			b->bcm_mode |= BMAP_CLI_FLUSHPROC;
@@ -1556,7 +1557,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	off_t roff;
 	int nr, j, rc;
 	char *p;
-	
+
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 
@@ -1606,7 +1607,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		roff += tlen;
 		tsize -= tlen;
 		tlen  = MIN(SLASH_BMAP_SIZE, tsize);
-		
+
 		BMAP_CLI_BUMP_TIMEO(b[nr]);
 	}
 
@@ -1617,7 +1618,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		/* Associate the biorq's with the mfh.
 		 */
 		pll_addtail(&mfh->mfh_biorqs, r[j]);
-		
+
 		if (r[j]->biorq_flags & BIORQ_DIO)
 			msl_pages_dio_getput(r[j], p);
 
