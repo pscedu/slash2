@@ -45,7 +45,7 @@ __static int
 slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
     uint64_t magic, uint32_t version)
 {
-	lnet_process_id_t server_id = { server, 0 };
+	lnet_process_id_t server_id = { server, PSCRPC_SVR_PID };
 	struct pscrpc_request *rq;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
@@ -60,7 +60,7 @@ slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 		pscrpc_put_connection(imp->imp_connection);
 	imp->imp_connection = pscrpc_get_connection(server_id, nid, NULL);
 	imp->imp_connection->c_imp = imp;
-	imp->imp_connection->c_peer.pid = SLASH_SVR_PID;
+	imp->imp_connection->c_peer.pid = PSCRPC_SVR_PID;
 
 	if ((rc = RSX_NEWREQ(imp, version, SRMT_CONNECT, rq, mq, mp)) != 0)
 		return (rc);
