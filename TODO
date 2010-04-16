@@ -394,6 +394,7 @@ tracks endpoint connections
 - rename {bd,desc}buf to authbuf
 - only grab the next slash ID right before ZFS plans to use it to
   avoid DoS
+- do enums in typedump
 
 zfs
 - rename the zfs_init() alias, it is already a routine in ZFS
