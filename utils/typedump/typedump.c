@@ -176,6 +176,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_buffer_iovref);
 	PRTYPE(struct sl_fcmh_ops);
 	PRTYPE(struct sl_gconf);
+	PRTYPE(struct sl_mds_loginfo);
 	PRTYPE(struct sl_replrq);
 	PRTYPE(struct sl_resm);
 	PRTYPE(struct sl_resource);
@@ -222,8 +223,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_bmap_minseq_get);
 	PRTYPE(struct srm_bmap_release_rep);
 	PRTYPE(struct srm_bmap_release_req);
-	PRTYPE(struct srm_bmap_rep);
-	PRTYPE(struct srm_bmap_req);
 	PRTYPE(struct srm_bmap_wire_rep);
 	PRTYPE(struct srm_bmap_wire_req);
 	PRTYPE(struct srm_connect_req);
@@ -233,6 +232,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_generic_rep);
 	PRTYPE(struct srm_getattr_rep);
 	PRTYPE(struct srm_getattr_req);
+	PRTYPE(struct srm_getbmap_rep);
+	PRTYPE(struct srm_getbmap_req);
 	PRTYPE(struct srm_io_rep);
 	PRTYPE(struct srm_io_req);
 	PRTYPE(struct srm_link_rep);
@@ -292,7 +293,6 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_GETBMAP);
 	PRVAL(SRMT_GETBMAPCRCS);
 	PRVAL(SRMT_GETBMAPMINSEQ);
-	PRVAL(SRMT_GETREPTBL);
 	PRVAL(SRMT_LINK);
 	PRVAL(SRMT_LOCK);
 	PRVAL(SRMT_LOOKUP);
