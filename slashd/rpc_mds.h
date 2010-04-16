@@ -46,6 +46,16 @@ struct pscrpc_export;
 #define SLM_RMC_REPSZ      384
 #define SLM_RMC_SVCNAME    "slmrmc"
 
+/*
+ * Structure used to describe peer MDSes that mirror our namespace.
+ */
+struct slm_peer_md {
+	struct sl_resm		*spm_resm;		/* pointer to the MDS from the config */
+	uint64_t		 spm_seqno;		/* change log progress */		 
+	time_t			 spm_contact;		/* last time it was contacted */
+	int			 spm_flags;		/* misc flags */
+};
+
 struct slm_rmi_expdata {
 	struct pscrpc_export *smie_exp;
 };
