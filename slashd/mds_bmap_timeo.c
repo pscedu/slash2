@@ -19,21 +19,21 @@
 
 #include <sys/time.h>
 
-#include "psc_ds/list.h"
 #include "psc_ds/dynarray.h"
+#include "psc_ds/list.h"
 #include "psc_util/alloc.h"
-#include "psc_util/log.h"
 #include "psc_util/lock.h"
+#include "psc_util/log.h"
 #include "psc_util/waitq.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
-#include "sljournal.h"
 #include "mdslog.h"
+#include "sljournal.h"
 
-struct bmap_timeo_table mdsBmapTimeoTbl;
-struct psc_poolmaster bmapMdsLeasePoolMaster;
-struct psc_poolmgr *bmapMdsLeasePool;
+struct bmap_timeo_table	 mdsBmapTimeoTbl;
+struct psc_poolmaster	 bmapMdsLeasePoolMaster;
+struct psc_poolmgr	*bmapMdsLeasePool;
 
 #define mds_bmap_timeotbl_curslot				\
 	((time(NULL) % BMAP_TIMEO_MAX) / BMAP_TIMEO_TBL_SZ)
@@ -186,5 +186,5 @@ slmbmaptimeothr_spawn(void)
 {
 	mds_bmap_timeotbl_init();
 	pscthr_init(SLMTHRT_BMAPTIMEO, 0, slmbmaptimeothr_begin,
-	    NULL, 0, "slmbmaptimeo");
+	    NULL, 0, "slmbmaptimeothr");
 }
