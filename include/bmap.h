@@ -251,19 +251,20 @@ _log_debug_bmapod(const char *file, const char *func, int lineno,
 	    (bmap), (fmt), (ap))
 
 /* bmap_get flags */
-#define BMAPGETF_LOAD	(1 << 0)		/* allow loading if not in cache */
+#define BMAPGETF_LOAD		(1 << 0)	/* allow loading if not in cache */
+#define BMAPGETF_NORETRIEVE	(1 << 1)	/* when loading, do not invoke retrievef */
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
 void	_bmap_op_done(struct bmapc_memb *);
-int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
+int	 bmap_getf(struct fidc_membh *, sl_blkno_t, enum rw, int,
 	    struct bmapc_memb **);
 
 int	bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
 	    sl_ios_id_t, lnet_nid_t);
 
-#define bmap_lookup(f, n, bp)		_bmap_get((f), (n), 0, 0, (bp))
-#define bmap_get(f, n, rw, bp)		_bmap_get((f), (n), (rw),	\
+#define bmap_lookup(f, n, bp)		bmap_getf((f), (n), 0, 0, (bp))
+#define bmap_get(f, n, rw, bp)		bmap_getf((f), (n), (rw),	\
 					    BMAPGETF_LOAD, (bp))
 
 #define bmap_op_start_type(b, type)					\

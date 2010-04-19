@@ -76,16 +76,17 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 
 #define BMAP_CLI_BUMP_TIMEO(b)						\
 	do {								\
-		struct timespec __ctime;				\
-		clock_gettime(CLOCK_REALTIME, &__ctime);		\
+		struct timespec _ctime;					\
+									\
+		clock_gettime(CLOCK_REALTIME, &_ctime);			\
 		BMAP_LOCK(b);						\
-		timespecadd(&__ctime, &msl_bmap_timeo_inc,		\
-			    &(bmap_2_msbd(b))->msbd_etime);		\
+		timespecadd(&_ctime, &msl_bmap_timeo_inc,		\
+		    &(bmap_2_msbd(b))->msbd_etime);			\
 		if (timespeccmp(&(bmap_2_msbd(b))->msbd_etime,		\
-				&(bmap_2_msbd(b))->msbd_xtime, >))	\
+		    &(bmap_2_msbd(b))->msbd_xtime, >))			\
 			memcpy(&bmap_2_msbd(b)->msbd_etime,		\
-			       &bmap_2_msbd(b)->msbd_xtime,		\
-			       sizeof(struct timespec));		\
+			    &bmap_2_msbd(b)->msbd_xtime,		\
+			    sizeof(struct timespec));			\
 		BMAP_ULOCK(b);						\
 	} while (0)
 
@@ -93,4 +94,5 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 #define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)	/* mode change in progress */
 #define	BMAP_CLI_MCC			(_BMAP_FLSHFT << 1)	/* mode change compete */
 #define BMAP_CLI_FLUSHPROC		(_BMAP_FLSHFT << 2)	/* proc'd by flush thr */
+
 #endif /* _SLASH_CLI_BMAP_H_ */

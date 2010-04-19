@@ -538,6 +538,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 int
 msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 {
+	int rc, getreptbl = 0, niov = 0;
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_cli_info *msbd;
 	struct srm_getbmap_req *mq;
@@ -545,8 +546,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	struct fcmh_cli_info *fci;
 	struct pscrpc_request *rq;
 	struct fidc_membh *f;
-	struct iovec iovs[3];
-	int rc, getreptbl = 0;
+	struct iovec iovs[2];
 
 	psc_assert(bmap->bcm_mode & BMAP_INIT);
 	psc_assert(bmap->bcm_pri);
@@ -577,28 +577,29 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	msbd = bmap->bcm_pri;
 	bmap->bcm_mode |= (rw == SL_WRITE ? BMAP_WR : BMAP_RD);
 
+	niov++;
 	iovs[0].iov_base = &msbd->msbd_msbcr;
 	iovs[0].iov_len  = sizeof(msbd->msbd_msbcr);
 
-	iovs[1].iov_base = &msbd->msbd_sbd;
-	iovs[1].iov_len  = sizeof(msbd->msbd_sbd);
-
 	if (getreptbl) {
-		iovs[2].iov_base = &fci->fci_reptbl;
-		iovs[2].iov_len  = sizeof(fci->fci_reptbl);
+		niov++;
+		iovs[1].iov_base = &fci->fci_reptbl;
+		iovs[1].iov_len  = sizeof(fci->fci_reptbl);
 	}
 
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (bmapno=%u) (rw=%d)",
 	    bmap->bcm_bmapno, rw);
 
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
-	    SRMC_BULK_PORTAL, iovs, 2 + getreptbl);
+	    SRMC_BULK_PORTAL, iovs, niov);
 
 	rc = RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
 		goto done;
+
+	msbd->msbd_sbd = mp->sbd;
 
 	FCMH_LOCK(f);
 

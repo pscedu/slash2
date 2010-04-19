@@ -500,15 +500,6 @@ struct srm_create_rep {
 	uint32_t		rc2;		/* (for GETBMAP) 0 or slerrno */
 	uint32_t		flags;		/* see SRM_BMAPF_* flags */
 	struct srt_bmapdesc	sbd;
-/*
- * Bulk data contents:
- *
- *	+-------------------------------+-------------------------------+
- *	| data type			| description			|
- *	+-------------------------------+-------------------------------+
- *	| struct slash_bmap_od		| bmap contents			|
- *	+-------------------------------+-------------------------------+
- */
 } __packed;
 
 struct srm_destroy_req {

@@ -21,12 +21,10 @@
  * Routines for handling RPC requests for MDS from CLIENT.
  */
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
-//#include <sys/fsuid.h>
 #include <sys/statvfs.h>
-//#include <sys/vfs.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -332,9 +330,9 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
+	struct fidc_membh *p, *fcmh;
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
-	struct fidc_membh *p;
 	void *mdsio_data;
 
 	p = NULL;
@@ -358,9 +356,13 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);
 
-//	mp->flags = mq->flags;
-//	mp->rc2 = slm_rmc_getbmap_common(fcmh, mq->prefios, 0,
-//	    SL_WRITE, &mp->flags, NULL, &mp->sbd, rq);
+	mp->rc2 = slm_fcmh_get(&mp->fg, &fcmh);
+	if (mp->rc2)
+		goto out;
+
+	mp->flags = mq->flags;
+	mp->rc2 = slm_rmc_getbmap_common(fcmh, mq->prefios, 0,
+	    SL_WRITE, &mp->flags, NULL, &mp->sbd, rq);
 
  out:
 	if (p)

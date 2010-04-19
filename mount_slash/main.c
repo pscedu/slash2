@@ -277,10 +277,13 @@ __static void
 slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
     mode_t mode, struct fuse_file_info *fi)
 {
-	struct pscrpc_request *rq=NULL;
+	struct pscrpc_request *rq = NULL;
+	struct bmap_cli_info *msbd;
+	struct fcmh_cli_info *fci;
 	struct srm_create_req *mq;
 	struct srm_create_rep *mp;
 	struct fidc_membh *p, *m;
+	struct bmapc_memb *bcm;
 	struct msl_fhent *mfh;
 	struct slash_creds cr;
 	int rc=0;
@@ -361,16 +364,37 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 		/* XXX write me */
 	}
 
- out:
-	if (rc) {
-		fuse_reply_err(req, rc);
-	} else {
-		slash2fuse_reply_create(req, &mp->fg, &mp->attr, fi);
-		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
-	}
+	FCMH_LOCK(m);
+	fci = fcmh_2_fci(m);
+	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios_id;
+	m->fcmh_state |= FCMH_CLI_HAVEREPLTBL;
+	FCMH_ULOCK(m);
 
+	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD |
+	    BMAPGETF_NORETRIEVE, &bcm);
+	if (rc)
+		goto out;
+
+	msbd = bcm->bcm_pri;
+	clock_gettime(CLOCK_REALTIME, &msbd->msbd_xtime);
+	timespecadd(&msbd->msbd_xtime, &msl_bmap_max_lease,
+	    &msbd->msbd_xtime);
+	memcpy(&msbd->msbd_etime, &msbd->msbd_xtime,
+	    sizeof(struct timespec));
+	SL_REPL_SET_BMAP_IOS_STAT(msbd->msbd_msbcr.msbcr_repls,
+	    0, SL_REPLST_ACTIVE);
+
+ out:
+	if (m)
+		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+
+	if (rc)
+		fuse_reply_err(req, rc);
+	else
+		slash2fuse_reply_create(req, &mp->fg, &mp->attr, fi);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 }
