@@ -74,16 +74,14 @@ slc_rmc_setmds(const char *name)
 	return (0);
 }
 
-struct pscrpc_import *
-slc_rmc_getimp(void)
+int
+slc_rmc_getimp(struct slashrpc_cservice **csvcp)
 {
-	struct slashrpc_cservice *csvc;
-
 	do {
-		csvc = slc_getmcsvc(slc_rmc_resm);
-		if (csvc == NULL)
+		*csvcp = slc_getmcsvc(slc_rmc_resm);
+		if (*csvcp == NULL)
 			/* XXX try to connect to another MDS */
 			psc_fatalx("unable to establish MDS connection");
-	} while (csvc == NULL);
-	return (csvc->csvc_import);
+	} while (*csvcp == NULL);
+	return (0);
 }

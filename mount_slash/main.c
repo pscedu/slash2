@@ -277,20 +277,19 @@ __static void
 slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
     mode_t mode, struct fuse_file_info *fi)
 {
+	struct fidc_membh *p = NULL, *m = NULL;
+	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_cli_info *msbd;
 	struct fcmh_cli_info *fci;
 	struct srm_create_req *mq;
 	struct srm_create_rep *mp;
-	struct fidc_membh *p, *m;
 	struct bmapc_memb *bcm;
 	struct msl_fhent *mfh;
 	struct slash_creds cr;
-	int rc=0;
+	int rc = 0;
 
 	msfsthr_ensure();
-
-	p = m = NULL;
 
 	psc_assert(fi->flags & O_CREAT);
 
@@ -314,11 +313,15 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	if (rc)
 		goto out;
 
-	/* Now we've established a local placeholder for this create.
+	/*
+	 * Now we've established a local placeholder for this create.
 	 *  any other creates to this pathame will block in
 	 *  fidc_child_wait_locked() until we release the fcmh.
 	 */
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_CREATE, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -332,7 +335,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	if (rc)
 		goto out;
 	if (mp->rc == EEXIST) {
-		psc_info("fid %"PRId64" already existed on mds",
+		psc_info("fid %"PRId64" already existed on MDS",
 		    mp->fg.fg_fid);
 		/*  Handle the network side of O_EXCL.
 		 */
@@ -397,6 +400,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 
 	if (rq)
 		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 }
 
 __static void
@@ -494,21 +499,21 @@ slash2fuse_opendir(fuse_req_t req, fuse_ino_t ino,
 int
 slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 {
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
-	struct pscrpc_request *rq;
 	struct timeval now;
-	int rc = 0;
-	int hit = 0;
+	int hit = 0, rc = 0;
 
  restart:
-
 	FCMH_LOCK(fcmh);
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
 		PFL_GETTIME(&now);
 		if (timercmp(&now, &fcmh->fcmh_age, <)) {
 			hit = 1;
-			DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved from local cache");
+			DEBUG_FCMH(PLL_DEBUG, fcmh,
+			    "attrs retrieved from local cache");
 			goto check;
 		}
 		fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
@@ -521,7 +526,10 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(fcmh);
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_GETATTR, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -534,7 +542,8 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
  out:
 	FCMH_LOCK(fcmh);
 	if (!rc)
-		fcmh_setattr(fcmh, &mp->attr, FCMH_SETATTRF_SAVESIZE|FCMH_SETATTRF_HAVELOCK);
+		fcmh_setattr(fcmh, &mp->attr,
+		    FCMH_SETATTRF_SAVESIZE | FCMH_SETATTRF_HAVELOCK);
 
 	fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
 	psc_waitq_wakeall(&fcmh->fcmh_waitq);
@@ -544,13 +553,16 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved via rpc rc=%d", rc);
 
-check:
+ check:
 	FCMH_ULOCK(fcmh);
 	if (!rc) {
 		rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
 		if (rc)
-			psc_info("stat: fcmh=%p, mode=%x, checkcreds rc= %d\n", fcmh, fcmh->fcmh_sstb.sst_mode, rc);
+			psc_info("fcmh=%p, mode=%x, checkcreds rc=%d\n",
+			    fcmh, fcmh->fcmh_sstb.sst_mode, rc);
 	}
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -597,8 +609,9 @@ __static void
 slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		const char *newname)
 {
-	struct pscrpc_request *rq;
-	struct fidc_membh *p, *c;
+	struct fidc_membh *p = NULL, *c = NULL;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct slash_creds creds;
 	struct srm_link_req *mq;
 	struct srm_link_rep *mp;
@@ -606,11 +619,8 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 
 	msfsthr_ensure();
 
-	p = c = NULL;
-	rq = NULL;
-
-	rc = ENOTSUP;
-	goto out;
+rc = ENOTSUP;
+goto out;
 
 	if (strlen(newname) > NAME_MAX) {
 		rc = ENAMETOOLONG;
@@ -619,8 +629,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 
 	slash2fuse_getcred(req, &creds);
 
-	/* Check the newparent inode.
-	 */
+	/* Check the newparent inode. */
 	rc = fidc_lookup_load_inode(newparent, &creds, &p);
 	if (rc)
 		goto out;
@@ -630,8 +639,7 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		goto out;
 	}
 
-	/* Check the child inode.
-	 */
+	/* Check the child inode. */
 	rc = fidc_lookup_load_inode(ino, &creds, &c);
 	if (rc)
 		goto out;
@@ -641,9 +649,11 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		goto out;
 	}
 
-	/* Create and initialize the LINK RPC.
-	 */
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	/* Create, initialize, and send RPC. */
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_LINK, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -672,22 +682,22 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 
 	if (rq)
 		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 }
 
 __static void
 slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		 mode_t mode)
 {
-	struct pscrpc_request *rq=NULL;
+	struct fidc_membh *p = NULL, *m = NULL;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
-	struct fidc_membh *p;
-	struct fidc_membh *m;
 	int rc;
 
 	msfsthr_ensure();
-
-	p = m = NULL;
 
 	if (strlen(name) > NAME_MAX) {
 		rc = ENAMETOOLONG;
@@ -706,8 +716,11 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = ENOTDIR;
 		goto out;
 	}
-	/* Issue an RPC request */
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_MKDIR, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -742,37 +755,40 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 }
 
 __static int
 slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 		  int isfile)
 {
-	struct pscrpc_request *rq;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct fidc_membh *p = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	struct slash_creds cr;
-	struct fidc_membh *p;
 	int rc;
 
 	msfsthr_ensure();
-
-	rq = NULL;
-	p = NULL;
 
 	if (strlen(name) > NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
 	}
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    isfile ? SRMT_UNLINK : SRMT_RMDIR, rq, mq, mp);
 	if (rc)
 		goto out;
 
 	slash2fuse_getcred(req, &cr);
-	/* Check the parent fcmh.
-	 */
+
+	/* Check the parent fcmh. */
 	rc = fidc_lookup_load_inode(parent, &cr, &p);
 	if (rc)
 		goto out;
@@ -791,8 +807,8 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 		rc = mp->rc;
 	if (rc)
 		goto out;
-	/* Remove ourselves from the namespace cache.
-	*/
+
+	/* Remove ourselves from the namespace cache. */
 	fidc_child_unlink(p, name);
 
  out:
@@ -800,9 +816,8 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
-
-	psc_info("unlink: name=%s rc=%d", name, rc);
-
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -829,14 +844,18 @@ __static int
 slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		   off_t off, struct fuse_file_info *fi)
 {
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
+	struct fidc_membh *d = NULL;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
-	struct pscrpc_request *rq;
 	struct msl_fhent *mfh;
-	struct fidc_membh *d;
 	struct iovec iov[2];
-	int rc;
+	int rc, niov = 0;
+
+	iov[0].iov_base = NULL;
+	iov[1].iov_base = NULL;
 
 	msfsthr_ensure();
 
@@ -858,32 +877,34 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		return (EBADF);
 
 	if (!fcmh_isdir(d)) {
-		fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
-		return (ENOTDIR);
+		rc = ENOTDIR;
+		goto out;
 	}
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_READDIR, rq, mq, mp);
-	if (rc) {
-		fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
-		return (rc);
-	}
+	if (rc)
+		goto out;
 
 	mq->fg = d->fcmh_fg;
 	mq->size = size;
 	mq->offset = off;
 
-	iov[0].iov_base = PSCALLOC(size);
-	iov[0].iov_len = size;
+	iov[niov].iov_base = PSCALLOC(size);
+	iov[niov].iov_len = size;
+	niov++;
 
 	mq->nstbpref = 100;
 	if (mq->nstbpref) {
-		iov[1].iov_len = mq->nstbpref * sizeof(struct srm_getattr_rep);
-		iov[1].iov_base = PSCALLOC(iov[1].iov_len);
-		rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, 2);
-	} else
-		rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, 1);
+		iov[niov].iov_len = mq->nstbpref * sizeof(struct srm_getattr_rep);
+		iov[niov].iov_base = PSCALLOC(iov[1].iov_len);
+		niov++;
+	}
 
+	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
 	rc = RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
@@ -917,11 +938,14 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 
 	fuse_reply_buf(req, iov[0].iov_base, (size_t)mp->size);
  out:
-	fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
-	pscrpc_req_finished(rq);
+	if (d)
+		fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	PSCFREE(iov[0].iov_base);
-	if (mq->nstbpref)
-		PSCFREE(iov[1].iov_base);
+	PSCFREE(iov[1].iov_base);
 	return (rc);
 }
 
@@ -939,21 +963,23 @@ __static int
 slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
     const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
 {
-	struct pscrpc_request *rq;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
-	struct fidc_membh *m;
+	struct fidc_membh *m = NULL;
 	int rc;
-
-	m = NULL;
 
 	if (strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_LOOKUP, rq, mq, mp);
 	if (rc)
-		return (rc);
+		goto out;
 
 	mq->pfg = p->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
@@ -985,7 +1011,10 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
  out:
 	if (m)
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
-	pscrpc_req_finished(rq);
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -1060,21 +1089,23 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 __static void
 slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 {
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_readlink_req *mq;
 	struct srm_readlink_rep *mp;
-	struct pscrpc_request *rq;
+	struct fidc_membh *c = NULL;
 	struct slash_creds cr;
-	struct fidc_membh *c;
 	struct iovec iov;
 	char buf[PATH_MAX];
 	int rc;
 
 	msfsthr_ensure();
 
-	c = NULL;
-
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_READLINK, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1111,6 +1142,8 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	}
 	if (rq)
 		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 }
 
 /* Note that this function is called once for each open */
@@ -1184,18 +1217,16 @@ __static int
 slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
     const char *name, fuse_ino_t newparent, const char *newname)
 {
+	struct fidc_membh *op = NULL, *np = NULL;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
-	struct fidc_membh *op, *np;
 	struct srm_generic_rep *mp;
 	struct srm_rename_req *mq;
-	struct pscrpc_request *rq;
 	struct iovec iov[2];
 	int rc;
 
 	msfsthr_ensure();
-
-	op = np = NULL;
-	rq = NULL;
 
 	if (strlen(name) > NAME_MAX ||
 	    strlen(newname) > NAME_MAX)
@@ -1219,7 +1250,10 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 		goto out;
 	}
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_RENAME, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1251,6 +1285,8 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -1267,7 +1303,8 @@ slash2fuse_rename_helper(fuse_req_t req, fuse_ino_t parent,
 __static void
 slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 {
-	struct pscrpc_request *rq;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_statfs_req *mq;
 	struct srm_statfs_rep *mp;
 	struct statvfs sfb;
@@ -1275,7 +1312,10 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 
 	msfsthr_ensure();
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_STATFS, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1293,22 +1333,22 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 		fuse_reply_err(req, rc);
 	if (rq)
 		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 }
 
 __static int
 slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
     const char *name)
 {
+	struct fidc_membh *p = NULL, *m = NULL;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
-	struct pscrpc_request *rq=NULL;
 	struct srm_symlink_req *mq;
 	struct srm_symlink_rep *mp;
-	struct fidc_membh *p;
-	struct fidc_membh *m;
 	struct iovec iov;
 	int rc;
-
-	m = NULL;
 
 	msfsthr_ensure();
 
@@ -1320,7 +1360,10 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	if (!p)
 		return (EINVAL);
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_SYMLINK, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1355,6 +1398,8 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -1401,19 +1446,21 @@ __static void
 slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
     struct stat *stb, int to_set, struct fuse_file_info *fi)
 {
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct fidc_membh *c = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
-	struct pscrpc_request *rq;
 	struct slash_creds cr;
 	struct msl_fhent *mfh;
-	struct fidc_membh *c;
 	int rc, getting = 0;
 
 	msfsthr_ensure();
 
-	c = NULL;
-
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_SETATTR, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1606,6 +1653,7 @@ unmount_mp(void)
 void *
 msl_init(__unusedx struct fuse_conn_info *conn)
 {
+	struct slashrpc_cservice *csvc;
 	char *name;
 	int rc;
 
@@ -1629,8 +1677,10 @@ msl_init(__unusedx struct fuse_conn_info *conn)
 	rc = slc_rmc_setmds(name);
 	if (rc)
 		psc_fatalx("%s: %s", name, slstrerror(rc));
-	if (slc_rmc_getimp() == NULL)
-		psc_fatal("unable to connect to MDS");
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		psc_fatalx("unable to connect to MDS: %s", slstrerror(rc));
+	sl_csvc_decref(csvc);
 
 	name = getenv("SLASH2_PIOS_ID");
 	if (name) {

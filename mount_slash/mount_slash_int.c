@@ -539,12 +539,13 @@ int
 msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 {
 	int rc, getreptbl = 0, niov = 0;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_cli_info *msbd;
 	struct srm_getbmap_req *mq;
 	struct srm_getbmap_rep *mp;
 	struct fcmh_cli_info *fci;
-	struct pscrpc_request *rq;
 	struct fidc_membh *f;
 	struct iovec iovs[2];
 
@@ -563,9 +564,13 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	}
 	FCMH_ULOCK(f);
 
-	if ((rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
-	    SRMT_GETBMAP, rq, mq, mp)) != 0)
-		goto done;
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	    SRMT_GETBMAP, rq, mq, mp);
+	if (rc)
+		goto out;
 
 	mq->fg = f->fcmh_fg;
 	mq->prefios = prefIOS; /* Tell MDS of our preferred ION */
@@ -577,14 +582,14 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	msbd = bmap->bcm_pri;
 	bmap->bcm_mode |= (rw == SL_WRITE ? BMAP_WR : BMAP_RD);
 
+	iovs[niov].iov_base = &msbd->msbd_msbcr;
+	iovs[niov].iov_len  = sizeof(msbd->msbd_msbcr);
 	niov++;
-	iovs[0].iov_base = &msbd->msbd_msbcr;
-	iovs[0].iov_len  = sizeof(msbd->msbd_msbcr);
 
 	if (getreptbl) {
+		iovs[niov].iov_base = &fci->fci_reptbl;
+		iovs[niov].iov_len  = sizeof(fci->fci_reptbl);
 		niov++;
-		iovs[1].iov_base = &fci->fci_reptbl;
-		iovs[1].iov_len  = sizeof(fci->fci_reptbl);
 	}
 
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (bmapno=%u) (rw=%d)",
@@ -597,7 +602,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
-		goto done;
+		goto out;
 
 	msbd->msbd_sbd = mp->sbd;
 
@@ -623,15 +628,26 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	memcpy(&bmap_2_msbd(bmap)->msbd_etime, &bmap_2_msbd(bmap)->msbd_xtime,
 	       sizeof(struct timespec));
 
- done:
+ out:
 	FCMH_RLOCK(f);
 	f->fcmh_state &= ~FCMH_CLI_FETCHREPLTBL;
 	FCMH_ULOCK(f);
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 
 /**
- * msl_bmap_modeset -
+ * msl_bmap_modeset - Set READ or WRITE as access mode on an open file
+ *	block map.
+ * @f: file.
+ * @b: bmap index number.
+ * @rw: access mode to set the bmap to.
+ *
+ * XXX have this take a bmapc_memb.
+ *
  * Notes:  XXX I think this logic can be simplified when setting mode from
  *    WRONLY to RDWR.  In WRONLY this client already knows the address
  *    of the only ION from which this bmap can be read.  Therefore, it
@@ -641,26 +657,34 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 __static int
 msl_bmap_modeset(struct fidc_membh *f, sl_bmapno_t b, enum rw rw)
 {
-	struct pscrpc_request *rq;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chmode_req *mq;
 	struct srm_generic_rep *mp;
 	int rc;
 
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
 
-	if ((rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
-	    SRMT_BMAPCHMODE, rq, mq, mp)) != 0)
-		return (rc);
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	    SRMT_BMAPCHMODE, rq, mq, mp);
+	if (rc)
+		goto out;
 
 	mq->fg = f->fcmh_fg;
 	mq->blkno = b;
 	mq->rw = rw;
+	rc = RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
 
-	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
-		if (mp->rc)
-			psc_warnx("msl_bmap_chmode() failed (f=%p) (b=%u): %s",
-				 f, b, slstrerror(mp->rc));
-	}
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 

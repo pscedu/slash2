@@ -46,8 +46,7 @@ struct pscrpc_request;
 
 void	slc_rpc_initsvc(void);
 
-struct pscrpc_import *
-	slc_rmc_getimp(void);
+int	slc_rmc_getimp(struct slashrpc_cservice **);
 int	slc_rmc_setmds(const char *);
 
 int	slc_rcm_handler(struct pscrpc_request *);

@@ -62,10 +62,11 @@ msctl_getcreds(int s, struct slash_creds *crp)
 int
 msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct msctlmsg_replrq *mrq = m;
 	struct srm_generic_rep *mp;
 	struct srm_replrq_req *mq;
-	struct pscrpc_request *rq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
@@ -91,58 +92,73 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fn, slstrerror(rc)));
 
 	if (!S_ISREG(sstb.sst_mode))
-		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, slstrerror(ENOTSUP)));
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    mrq->mrq_fn, slstrerror(ENOTSUP)));
 
 	rc = checkcreds(&sstb, &cr, W_OK);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    mrq->mrq_fn, slstrerror(rc)));
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc) {
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mrq->mrq_fn, slstrerror(rc));
+		goto out;
+	}
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    mh->mh_type == MSCMT_ADDREPLRQ ?
 	    SRMT_REPL_ADDRQ : SRMT_REPL_DELRQ, rq, mq, mp);
-	if (rc)
-		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
+	if (rc) {
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mrq->mrq_fn, slstrerror(rc));
+		goto out;
+	}
 
 	/* parse I/O systems specified */
 	for (n = 0; n < mrq->mrq_nios; n++, mq->nrepls++)
 		if ((mq->repls[n].bs_id =
 		    libsl_str2id(mrq->mrq_iosv[n])) == IOS_ID_ANY) {
-			pscrpc_req_finished(rq);
-			return (psc_ctlsenderr(fd, mh,
-			    "%s: unknown I/O system", mrq->mrq_iosv[n]));
+			rc = psc_ctlsenderr(fd, mh,
+			    "%s: unknown I/O system", mrq->mrq_iosv[n]);
+			goto out;
 		}
 	memcpy(&mq->fg, &fg, sizeof(mq->fg));
 	mq->bmapno = mrq->mrq_bmapno;
 
 	rc = RSX_WAITREP(rq, mp);
-	pscrpc_req_finished(rq);
+	if (rc == 0)
+		rc = mp->rc;
 	if (rc)
-		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
-	if (mp->rc)
-		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mrq->mrq_fn, slstrerror(mp->rc)));
-	return (1);
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mrq->mrq_fn, slstrerror(rc));
+	else
+		rc = 1;
+
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
 }
 
 int
 msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
+	struct slashrpc_cservice *csvc = NULL;
 	struct msctl_replst_slave_cont *mrsc;
+	struct pscrpc_request *rq = NULL;
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replrq *mrq = m;
 	struct msctl_replst_cont *mrc;
 	struct msctl_replstq *mrsq;
-	struct pscrpc_request *rq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
 	char *displayfn;
-	int rv, rc;
+	int rc;
 
 	displayfn = mrq->mrq_fn;
 	if (strcmp(mrq->mrq_fn, "") == 0) {
@@ -173,16 +189,23 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
 
  issue:
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc) {
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    displayfn, slstrerror(rc));
+		goto out;
+	}
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_REPL_GETST, rq, mq, mp);
-	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    displayfn, slstrerror(rc)));
+	if (rc) {
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    displayfn, slstrerror(rc));
+		goto out;
+	}
 
 	mq->fg = fg;
 	mq->id = psc_atomic32_inc_getnew(&msctl_replstid);
 
-	rv = 1;
 	mrsq = PSCALLOC(sizeof(*mrsq));
 	mrsq->mrsq_id = mq->id;
 	pll_init(&mrsq->mrsq_mrcs, struct msctl_replst_cont,
@@ -191,20 +214,17 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	pll_add(&msctl_replsts, mrsq);
 
 	rc = RSX_WAITREP(rq, mp);
-	pscrpc_req_finished(rq);
+	if (rc == 0)
+		rc = mp->rc;
 	if (rc) {
-		rv = psc_ctlsenderr(fd, mh, "%s: %s",
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
 		    displayfn, slstrerror(rc));
 		goto out;
 	}
-	if (mp->rc) {
-		rv = psc_ctlsenderr(fd, mh, "%s: %s",
-		    displayfn, slstrerror(mp->rc));
-		goto out;
-	}
 
+	rc = 1;
 	psc_completion_wait(&mrsq->mrsq_compl);
-	while (rv && (mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
+	while (rc && (mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
 		if (mrq->mrq_fn[0] != '\0')
 			strlcpy(mrc->mrc_mrs.mrs_fn, mrq->mrq_fn,
 			    sizeof(mrc->mrc_mrs.mrs_fn));
@@ -213,11 +233,11 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 			snprintf(mrc->mrc_mrs.mrs_fn,
 			    sizeof(mrc->mrc_mrs.mrs_fn),
 			    "%"PRIx64, mrc->mrc_mrs.mrs_fg.fg_fid);
-		rv = psc_ctlmsg_sendv(fd, mh, &mrc->mrc_mrs);
+		rc = psc_ctlmsg_sendv(fd, mh, &mrc->mrc_mrs);
 
 		psc_completion_wait(&mrc->mrc_compl);
-		while (rv && (mrsc = pll_get(&mrc->mrc_bdata)) != NULL) {
-			rv = psc_ctlmsg_send(fd, mh->mh_id,
+		while (rc && (mrsc = pll_get(&mrc->mrc_bdata)) != NULL) {
+			rc = psc_ctlmsg_send(fd, mh->mh_id,
 			    MSCMT_GETREPLST_SLAVE, mrsc->mrsc_len +
 			    sizeof(mrsc->mrsc_mrsl), &mrsc->mrsc_mrsl);
 			psc_pool_return(msctl_replstsc_pool, mrsc);
@@ -236,16 +256,21 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		psc_pool_return(msctl_replstmc_pool, mrc);
 	}
 	free(mrsq);
-	return (rv);
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
 }
 
 int
 msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct msctlmsg_fncmd_newreplpol *mfnrp = m;
+	struct slashrpc_cservice *csvc = NULL;
 	struct srm_set_newreplpol_req *mq;
+	struct pscrpc_request *rq = NULL;
 	struct srm_generic_rep *mp;
-	struct pscrpc_request *rq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
@@ -272,31 +297,44 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mfnrp->mfnrp_fn, slstrerror(rc)));
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
+	rc = slc_rmc_getimp(&csvc);
+	if (rc) {
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mfnrp->mfnrp_fn, slstrerror(rc));
+		goto out;
+	}
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_SET_NEWREPLPOL, rq, mq, mp);
-	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfnrp->mfnrp_fn, slstrerror(rc)));
+	if (rc) {
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mfnrp->mfnrp_fn, slstrerror(rc));
+		goto out;
+	}
 	mq->pol = mfnrp->mfnrp_pol;
 	mq->fg = fg;
 	rc = RSX_WAITREP(rq, mp);
-	pscrpc_req_finished(rq);
-	if (rc == 0 && mp->rc)
+	if (rc == 0)
 		rc = mp->rc;
-
 	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfnrp->mfnrp_fn, slstrerror(rc)));
-	return (1);
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mfnrp->mfnrp_fn, slstrerror(rc));
+
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
 }
 
 int
 msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct msctlmsg_fncmd_bmapreplpol *mfbrp = m;
+	struct slashrpc_cservice *csvc = NULL;
 	struct srm_set_bmapreplpol_req *mq;
+	struct pscrpc_request *rq = NULL;
 	struct srm_generic_rep *mp;
-	struct pscrpc_request *rq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
@@ -308,7 +346,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    "unable to obtain credentials: %s",
 		    mfbrp->mfbrp_fn, slstrerror(rc)));
 
-	/* ensure path exists in the slash fs */
+	/* ensure path exists in the file system */
 	rc = lookup_pathname_fg(mfbrp->mfbrp_fn, &cr, &fg, &sstb);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
@@ -320,27 +358,38 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 	rc = checkcreds(&sstb, &cr, W_OK);
 	if (rc)
-		return (psc_ctlsenderr(fd, mh,
-		    "%s: %s", mfbrp->mfbrp_fn, slstrerror(rc)));
+		return (psc_ctlsenderr(fd, mh, "%s: %s",
+		    mfbrp->mfbrp_fn, slstrerror(rc)));
 
-	rc = RSX_NEWREQ(slc_rmc_getimp(), SRMC_VERSION,
-	    SRMT_SET_BMAPREPLPOL, rq, mq, mp);
-	if (rc)
+	rc = slc_rmc_getimp(&csvc);
+	if (rc) {
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mfbrp->mfbrp_fn, slstrerror(rc));
 		goto out;
+	}
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	    SRMT_SET_BMAPREPLPOL, rq, mq, mp);
+	if (rc) {
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mfbrp->mfbrp_fn, slstrerror(rc));
+		goto out;
+	}
 	mq->pol = mfbrp->mfbrp_pol;
 	mq->bmapno = mfbrp->mfbrp_bmapno;
 	mq->fg = fg;
 	rc = RSX_WAITREP(rq, mp);
-	pscrpc_req_finished(rq);
+	if (rc == 0)
+		rc = mp->rc;
 	if (rc)
-		goto out;
-	rc = mp->rc;
+		rc = psc_ctlsenderr(fd, mh, "%s: %s",
+		    mfbrp->mfbrp_fn, slstrerror(rc));
 
  out:
-	if (rc)
-		return (psc_ctlsenderr(fd, mh, "%s: %s",
-		    mfbrp->mfbrp_fn, slstrerror(rc)));
-	return (1);
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (rc);
 }
 
 struct psc_ctlop msctlops[] = {
