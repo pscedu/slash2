@@ -90,7 +90,13 @@ struct site_mds_info {
 
 #define SMIF_DIRTYQ		(1 << 0)		/* queue has changed */
 
-/* progress of namespace log application on a MDS */
+/* 
+ * This structure tracks the progress of namespace log application on a MDS.
+ * We allow one pending request per MDS until it responds or timeouts.
+ */
+#define	SML_FLAG_NONE			(0 << 0)
+#define	SML_FLAG_INFLIGHT		(1 << 0)
+
 struct sl_mds_loginfo {
 	int			  sml_flags;
 	uint64_t		  sml_send_seqno;	/* outstanding log sequence */

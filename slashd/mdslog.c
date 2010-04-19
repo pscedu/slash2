@@ -43,13 +43,8 @@
 #include "rpc_mds.h"
 #include "sljournal.h"
 
-struct psc_journal	*mdsJournal;
-
-
-__static struct pscrpc_nbreqset	*logPndgReqs;
-__static atomic_t		 logCompletedRpcCnt;
-__static atomic_t		 logOutstandingRpcCnt;
-__static struct psc_waitq	 logRpcCompletion;
+struct psc_journal			*mdsJournal;
+__static struct pscrpc_nbreqset		*logPndgReqs;
 
 /*
  * Eventually, we are going to retrieve the namespace update sequence number
@@ -161,7 +156,6 @@ __static int
 mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 		  __unusedx struct pscrpc_async_args *args)
 {
-	atomic_dec(&logOutstandingRpcCnt);
 	return (0);
 }
 /*
@@ -202,10 +196,6 @@ mds_namespace_propagate_batch(char *buf)
 
 		rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
 			 &iov, 1);
-
-		req->rq_interpret_reply = mds_namespace_rpc_cb;
-		req->rq_compl_cntr = &logCompletedRpcCnt;
-		req->rq_waitq = &logRpcCompletion;
 
 		pscrpc_nbreqset_add(logPndgReqs, req);
 	}
@@ -512,7 +502,4 @@ mds_journal_init(void)
 	    NULL, 0, "slmjsendthr");
 
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
-	atomic_set(&logOutstandingRpcCnt, 0);
-	atomic_set(&logCompletedRpcCnt, 0);
-	psc_waitq_init(&logRpcCompletion);
 }
