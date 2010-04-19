@@ -86,8 +86,7 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 	return (fcmh + 1);
 }
 
-/* fcmh_flags */
-
+/* fcmh_state flags */
 #define	FCMH_CAC_FREE		0x0001		/* (1 << 0) totally free item */
 #define	FCMH_CAC_CLEAN		0x0002		/* (1 << 1) in clean cache */
 #define	FCMH_CAC_DIRTY		0x0004		/* (1 << 2) in dirty cache, "dirty" means not reapable */
@@ -169,7 +168,7 @@ enum fcmh_opcnt_types {
 };
 
 /* fcmh_setattr() flags */
-#define FCMH_SETATTRF_NONE		(0 << 0)
+#define FCMH_SETATTRF_NONE		0
 #define FCMH_SETATTRF_SAVESIZE		(1 << 0)
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)
 
@@ -184,7 +183,7 @@ void	fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 
 /* fidc_lookup() flags */
 enum {
-	FIDC_LOOKUP_NONE	= (0 << 0),		/* no flag */
+	FIDC_LOOKUP_NONE	= 0,			/* no flag */
 	FIDC_LOOKUP_CREATE	= (1 << 0),		/* Create if not present         */
 	FIDC_LOOKUP_EXCL	= (1 << 1),		/* Fail if fcmh is present       */
 	FIDC_LOOKUP_LOAD	= (1 << 2)		/* Use external fetching mechanism */
