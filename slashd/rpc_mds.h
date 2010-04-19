@@ -28,36 +28,36 @@
 struct pscrpc_request;
 struct pscrpc_export;
 
-#define SLM_RMM_NTHREADS   8
-#define SLM_RMM_NBUFS      1024
-#define SLM_RMM_BUFSZ      128
-#define SLM_RMM_REPSZ      128
-#define SLM_RMM_SVCNAME    "slmrmm"
+#define SLM_RMM_NTHREADS		8
+#define SLM_RMM_NBUFS			1024
+#define SLM_RMM_BUFSZ			128
+#define SLM_RMM_REPSZ			128
+#define SLM_RMM_SVCNAME			"slmrmm"
 
-#define SLM_RMI_NTHREADS   8
-#define SLM_RMI_NBUFS      1024
-#define SLM_RMI_BUFSZ      256
-#define SLM_RMI_REPSZ      256
-#define SLM_RMI_SVCNAME    "slmrmi"
+#define SLM_RMI_NTHREADS		8
+#define SLM_RMI_NBUFS			1024
+#define SLM_RMI_BUFSZ			256
+#define SLM_RMI_REPSZ			256
+#define SLM_RMI_SVCNAME			"slmrmi"
 
-#define SLM_RMC_NTHREADS   8
-#define SLM_RMC_NBUFS      1024
-#define SLM_RMC_BUFSZ      384
-#define SLM_RMC_REPSZ      384
-#define SLM_RMC_SVCNAME    "slmrmc"
+#define SLM_RMC_NTHREADS		8
+#define SLM_RMC_NBUFS			1024
+#define SLM_RMC_BUFSZ			384
+#define SLM_RMC_REPSZ			384
+#define SLM_RMC_SVCNAME			"slmrmc"
 
 struct slm_rmi_expdata {
-	struct pscrpc_export *smie_exp;
+	struct pscrpc_export		 *smie_exp;
 };
 
 struct mexp_cli {
-        struct slashrpc_cservice *mc_csvc;
-        psc_spinlock_t            mc_lock;
-        struct psc_waitq          mc_waitq;
+	struct slashrpc_cservice	*mc_csvc;
+	psc_spinlock_t			 mc_lock;
+	struct psc_waitq		 mc_waitq;
 };
 
-struct mexp_cli *mexpcli_get(struct pscrpc_export *);
-void             mexpcli_destroy(struct pscrpc_export *);
+struct mexp_cli	*mexpcli_get(struct pscrpc_export *);
+void		 mexpcli_destroy(struct pscrpc_export *);
 
 void	slm_rpc_initsvc(void);
 
@@ -78,7 +78,7 @@ struct slm_rmi_expdata *
 #define slm_geticsvcx(resm, exp)						\
 	sl_csvc_get(&resm2rmmi(resm)->rmmi_csvc, CSVCF_USE_MULTIWAIT, (exp),	\
 	    0, SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC,			\
-	    SRIM_VERSION, &resm2rmmi(resm)->rmmi_lock, 				\
+	    SRIM_VERSION, &resm2rmmi(resm)->rmmi_lock,				\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD)
 
 static __inline struct slashrpc_cservice *
