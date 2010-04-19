@@ -65,7 +65,7 @@ psc_spinlock_t		 mds_namespace_waitqlock = LOCK_INITIALIZER;
 /*
  * The number of namespace operations that are recorded in the same change log.
  */
-#define MDS_NAMESPACE_BATCH	4096
+#define MDS_NAMESPACE_BATCH	2048
 #define MDS_NAMESPACE_MAXAGE	30
 
 uint64_t
@@ -160,7 +160,7 @@ mds_namespace_log(int op, int type, int perm, uint64_t parent,
 
 
 __static int
-mds_namespace_rpc_cb(struct pscrpc_request *req,
+mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 		  __unusedx struct pscrpc_async_args *args)
 {
 	atomic_dec(&logOutstandingRpcCnt);
@@ -170,10 +170,9 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
  * Send the newest batch of changes to peer MDSes that seem to be active.
  */
 void
-mds_namespace_propagate_batch()
+mds_namespace_propagate_batch(char *buf)
 {
 	int rc;
-	int niovs;
 	struct sl_site *s;
 	struct resm_mds_info *rmmi;
 	struct srm_send_namespace_req *mq;
@@ -181,7 +180,11 @@ mds_namespace_propagate_batch()
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_request *req;
 	struct pscrpc_bulk_desc *desc;
-	struct iovec *iovs;
+	struct iovec iov;
+
+	/* XXX: need condense */
+	iov.iov_base = buf;
+	iov.iov_len = MDS_NAMESPACE_BATCH * 512;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
@@ -200,7 +203,7 @@ mds_namespace_propagate_batch()
 			goto fail;
 
 		rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
-			 iovs, niovs);
+			 &iov, 1);
 
 		req->rq_interpret_reply = mds_namespace_rpc_cb;
 		req->rq_compl_cntr = &logCompletedRpcCnt;
@@ -224,13 +227,18 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	int logfile;
 	uint64_t seqno;
 	char fn[PATH_MAX];
+	char *buf = NULL;
 
 	while (pscthr_run()) {
 		seqno = next_propagate_seqno - next_propagate_seqno % MDS_NAMESPACE_BATCH;
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
 		logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
 
-		mds_namespace_propagate_batch();
+		if (!buf)
+			buf = PSCALLOC(MDS_NAMESPACE_BATCH * 512);
+
+		read(logfile, buf, MDS_NAMESPACE_BATCH * 512);
+		mds_namespace_propagate_batch(buf);
 
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
