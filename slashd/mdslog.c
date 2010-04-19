@@ -38,6 +38,7 @@
 #include "mdslog.h"
 #include "mkfn.h"
 #include "slashd.h"
+#include "rpc_mds.h"
 #include "sljournal.h"
 
 struct psc_journal	*mdsJournal;
@@ -163,6 +164,16 @@ mds_namespace_propagate_batch()
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
 		rmmi = s->site_pri;
+		/*
+		 * Add logic here to decide if we should skip
+		 * the current site because it is lagging.
+		 */
+		spinlock(&rmmi->rmmi_lock);
+		if (slm_geticsvc(rmmi->rmmi_resm) == NULL) {
+			freelock(&rmmi->rmmi_lock);
+			continue;
+		}
+		freelock(&rmmi->rmmi_lock);
 	}
 }
 
