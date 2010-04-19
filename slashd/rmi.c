@@ -292,6 +292,7 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 	resm = libsl_nid2resm(rq->rq_peer.nid);
 	csvc = slm_geticsvcx(resm, rq->rq_export);
 //	psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
+	sl_csvc_decref(csvc);
 
 	slm_rmi_getexpdata(rq->rq_export);
 	mds_bmap_getcurseq(NULL, &mp->data);
@@ -325,7 +326,8 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-	target_send_reply_msg(rq, rc, 0);
+//	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }
 
