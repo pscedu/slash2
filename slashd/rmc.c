@@ -908,6 +908,6 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		return (pscrpc_error(rq));
 	}
 //	authbuf_sign(rq, PSCRPC_MSG_REPLY);
-	target_send_reply_msg(rq, rc, 0);
+	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

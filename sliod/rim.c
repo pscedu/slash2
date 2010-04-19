@@ -90,6 +90,6 @@ sli_rim_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-	target_send_reply_msg(rq, rc, 0);
+	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }
