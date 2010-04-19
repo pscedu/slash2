@@ -76,6 +76,12 @@ struct slm_rmi_expdata *
 	slm_rmi_getexpdata(struct pscrpc_export *);
 
 /* aliases for connection management */
+#define slm_getmcsvc(resm)							\
+	sl_csvc_get(&resm2rmmi(resm)->rmmi_csvc, CSVCF_USE_MULTIWAIT, NULL,	\
+	    (resm)->resm_nid, SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC,	\
+	    SRMM_VERSION, &resm2rmmi(resm)->rmmi_lock,				\
+	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_MDS)
+
 #define slm_geticsvc(resm)							\
 	sl_csvc_get(&resm2rmmi(resm)->rmmi_csvc, CSVCF_USE_MULTIWAIT, NULL,	\
 	    (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC,	\
