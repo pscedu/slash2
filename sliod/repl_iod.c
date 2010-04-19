@@ -202,8 +202,8 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			rc = SLERR_ION_OFFLINE;
 			goto end;
 		}
-		rc = sli_rii_issue_repl_read(
-		    csvc->csvc_import, slvrno, slvridx, w);
+		rc = sli_rii_issue_repl_read(csvc->csvc_import,
+		    slvrno, slvridx, w);
 		sl_csvc_decref(csvc);
 		if (rc)
 			goto end;

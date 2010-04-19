@@ -31,18 +31,16 @@
 
 struct sl_resm *rmi_resm;
 
-struct pscrpc_import *
-sli_rmi_getimp(void)
+int
+sli_rmi_getimp(struct slashrpc_cservice **csvcp)
 {
-	struct slashrpc_cservice *csvc;
-
 	do {
-		csvc = sli_getmcsvc(rmi_resm);
-		if (csvc == NULL)
+		*csvcp = sli_getmcsvc(rmi_resm);
+		if (*csvcp == NULL)
 			/* XXX try to connect to another MDS */
 			psc_fatalx("unable to establish MDS connection");
-	} while (csvc == NULL);
-	return (csvc->csvc_import);
+	} while (*csvcp == NULL);
+	return (0);
 }
 
 int
@@ -65,22 +63,32 @@ sli_rmi_setmds(const char *name)
 int
 sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 {
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_generic_rep *mp;
-	struct pscrpc_request *rq;
 	int rc;
 
-	rc = RSX_NEWREQ(sli_rmi_getimp(), SRMI_VERSION,
+	rc = sli_rmi_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMI_VERSION,
 	    SRMT_REPL_SCHEDWK, rq, mq, mp);
 	if (rc)
-		return (rc);
+		goto out;
 	mq->nid = w->srw_nid;
 	mq->fg = w->srw_fg;
 	mq->bmapno = w->srw_bmapno;
 	mq->bgen = w->srw_bgen;
 	mq->rc = w->srw_status;
 	rc = RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
 
-	pscrpc_req_finished(rq);
+ out:
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }

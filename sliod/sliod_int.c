@@ -67,12 +67,12 @@ iod_inode_getsize(struct slash_fidgen *fg, uint64_t *size)
 
 	f = fidc_lookup_fg(fg);
 	psc_assert(f);
-	
+
 	if (fstat(fcmh_2_fd(f), &stb))
 		return (-errno);
 
 	*size = stb.st_size;
-	
+
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
@@ -101,17 +101,21 @@ iod_inode_lookup(const struct slash_fidgen *fg)
 int
 iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 {
-	int				 rc;
-	struct srm_bmap_wire_req	*mq;
-	struct srm_bmap_wire_rep	*mp;
-	struct pscrpc_request		*rq;
-	struct iovec			 iov;
-	struct pscrpc_bulk_desc		*desc;
+	struct pscrpc_request *rq = NULL;
+	struct slashrpc_cservice *csvc;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_bmap_wire_req *mq;
+	struct srm_bmap_wire_rep *mp;
+	struct iovec iov;
+	int rc;
 
 	psc_assert(!bmap_2_biodi_wire(b));
 
-	rc = RSX_NEWREQ(sli_rmi_getimp(), SRMC_VERSION,
-			SRMT_GETBMAPCRCS, rq, mq, mp);
+	rc = sli_rmi_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	    SRMT_GETBMAPCRCS, rq, mq, mp);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "could not create request (%d)", rc);
 		goto out;
@@ -132,13 +136,14 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 		goto out;
 	}
 	rc = RSX_WAITREP(rq, mp);
-	if (rc || mp->rc) {
-		rc = rc ? rc : mp->rc;
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "req failed (%d)", rc);
 		goto out;
 	}
-	/* Need to copy any of our slvr crc's into the table.
-	 */
+
+	/* Need to copy any of our slvr CRCs into the table. */
 	spinlock(&bmap_2_biodi(b)->biod_lock);
 	if (!SPLAY_EMPTY(bmap_2_biodi_slvrs(b))) {
 		struct slvr_ref *s;
@@ -162,6 +167,10 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	 */
 	if (rc)
 		PSCFREE(bmap_2_biodi_wire(b));
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 

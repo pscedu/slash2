@@ -49,25 +49,32 @@ struct pscrpc_nbreqset	*slvrNbReqSet;
 __static int
 slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 {
-	struct biod_crcup_ref *bcr;
+	struct slashrpc_cservice *csvc;
+	struct pscrpc_bulk_desc *desc;
 	struct srm_bmap_crcwrt_req *mq;
 	struct srm_generic_rep *mp;
-	struct pscrpc_request *req;
-	struct pscrpc_bulk_desc *desc;
+	struct biod_crcup_ref *bcr;
+	struct pscrpc_request *rq;
 	struct iovec *iovs;
 	size_t len;
 	uint32_t i;
 	int rc;
 
-	rc = RSX_NEWREQ(sli_rmi_getimp(), SRMI_VERSION,
-			SRMT_BMAPCRCWRT, req, mq, mp);
+	rc = sli_rmi_getimp(&csvc);
 	if (rc)
-		return rc;
+		return (rc);
+	rc = RSX_NEWREQ(csvc->csvc_import, SRMI_VERSION,
+	    SRMT_BMAPCRCWRT, rq, mq, mp);
+	if (rc) {
+		sl_csvc_decref(csvc);
+		return (rc);
+	}
 
 	PSC_CRC64_INIT(&mq->crc);
 
 	mq->ncrc_updates = psc_dynarray_len(bcrs);
-	req->rq_async_args.pointer_arg[0] = (void *)bcrs;
+	rq->rq_async_args.pointer_arg[0] = (void *)bcrs;
+	rq->rq_async_args.pointer_arg[1] = csvc;
 
 	len = mq->ncrc_updates * sizeof(struct srm_bmap_crcup);
 	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
@@ -134,11 +141,11 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 	PSC_CRC64_FIN(&mq->crc);
 
-	rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
+	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMI_BULK_PORTAL,
 			     iovs, mq->ncrc_updates);
 	PSCFREE(iovs);
 
-	pscrpc_nbreqset_add(slvrNbReqSet, req);
+	pscrpc_nbreqset_add(slvrNbReqSet, rq);
 
 	return (rc);
 }
@@ -250,20 +257,22 @@ slvr_worker_push_crcups(void)
 
 
 int
-slvr_nbreqset_cb(struct pscrpc_request *req,
+slvr_nbreqset_cb(struct pscrpc_request *rq,
 		 struct pscrpc_async_args *args)
 {
 	int			 i, err;
 	struct psc_dynarray	*a;
 	struct srm_generic_rep	*mp;
 	struct biod_crcup_ref	*bcr;
+	struct slashrpc_cservice *csvc;
 
 	err = 0;
 	a = args->pointer_arg[0];
+	csvc = args->pointer_arg[1];
 	psc_assert(a);
 
-	mp = pscrpc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
-	if (req->rq_status || mp->rc)
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	if (rq->rq_status || mp->rc)
 		err = 1;
 
 	bim_updateseq(mp->data);
@@ -290,7 +299,9 @@ slvr_nbreqset_cb(struct pscrpc_request *req,
 	psc_dynarray_free(a);
 	PSCFREE(a);
 
-	return (0);
+	pscrpc_req_finished(rq);
+	sl_csvc_decref(csvc);
+	return (1);
 }
 
 __static void

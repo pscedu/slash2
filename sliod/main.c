@@ -40,6 +40,7 @@
 #include "repl_iod.h"
 #include "rpc_iod.h"
 #include "slconfig.h"
+#include "slerr.h"
 #include "sliod.h"
 #include "slvr.h"
 
@@ -79,7 +80,8 @@ int
 main(int argc, char *argv[])
 {
 	const char *cfn, *sfn, *mds = NULL;
-	int c;
+	struct slashrpc_cservice *csvc;
+	int rc, c;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -140,8 +142,10 @@ main(int argc, char *argv[])
 	sli_rpc_initsvc();
 	slitimerthr_spawn();
 
-	if (sli_rmi_getimp() == NULL)
-		psc_fatalx("MDS server unavailable");
+	rc = sli_rmi_getimp(&csvc);
+	if (rc)
+		psc_fatalx("MDS server unavailable: %s", slstrerror(rc));
+	sl_csvc_decref(csvc);
 
 	slictlthr_main(sfn);
 	/* NOTREACHED */
