@@ -56,7 +56,23 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
 int
 slm_rmm_handle_send_namespace(__unusedx struct pscrpc_request *rq)
 {
-	return (0);
+	int rc;
+	struct iovec iov;
+	struct pscrpc_request *req;
+	struct pscrpc_bulk_desc *desc;
+	
+	iov.iov_len = SLM_NAMESPACE_BATCH * 512;
+	iov.iov_base = PSCALLOC(SLM_NAMESPACE_BATCH * 512);
+	
+	rc = rsx_bulkserver(req, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL,
+		&iov, 1);
+	if (rc)
+		goto out;
+
+out:
+
+	PSCFREE(iov.iov_base);
+	return (rc);
 }
 
 /*

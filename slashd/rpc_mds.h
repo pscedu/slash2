@@ -46,6 +46,13 @@ struct pscrpc_export;
 #define SLM_RMC_REPSZ			384
 #define SLM_RMC_SVCNAME			"slmrmc"
 
+/*
+ * The number of namespace operations that are recorded in the same change log.
+ * We make the size of each log file to be less than LNET_MTU, so that we can
+ * send it out in one bulk RPC.
+ */
+#define SLM_NAMESPACE_BATCH	2048
+
 struct slm_rmi_expdata {
 	struct pscrpc_export		 *smie_exp;
 };

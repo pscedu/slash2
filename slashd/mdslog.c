@@ -62,10 +62,6 @@ static int		 current_logfile = -1;
 struct psc_waitq	 mds_namespace_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t		 mds_namespace_waitqlock = LOCK_INITIALIZER;
 
-/*
- * The number of namespace operations that are recorded in the same change log.
- */
-#define MDS_NAMESPACE_BATCH	2048
 #define MDS_NAMESPACE_MAXAGE	30
 
 uint64_t
@@ -104,7 +100,7 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 	seqno = jnamespace->sjnm_seqno;
 
 	/* see if we can open a new change log file */
-	if ((seqno % MDS_NAMESPACE_BATCH) == 0) {
+	if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
 		psc_assert(current_logfile == -1);
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
 		current_logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
@@ -118,7 +114,7 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 		psc_fatal("Fail to write change log file %s", fn);
 
 	/* see if we need to close the current change log file */
-	if (((seqno + 1) % MDS_NAMESPACE_BATCH) == 0) {
+	if (((seqno + 1) % SLM_NAMESPACE_BATCH) == 0) {
 		close(current_logfile);
 		current_logfile = -1;
 
@@ -184,7 +180,7 @@ mds_namespace_propagate_batch(char *buf)
 
 	/* XXX: need condense */
 	iov.iov_base = buf;
-	iov.iov_len = MDS_NAMESPACE_BATCH * 512;
+	iov.iov_len = SLM_NAMESPACE_BATCH * 512;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
@@ -230,14 +226,14 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	char *buf = NULL;
 
 	while (pscthr_run()) {
-		seqno = next_propagate_seqno - next_propagate_seqno % MDS_NAMESPACE_BATCH;
+		seqno = next_propagate_seqno - next_propagate_seqno % SLM_NAMESPACE_BATCH;
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
 		logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
 
 		if (!buf)
-			buf = PSCALLOC(MDS_NAMESPACE_BATCH * 512);
+			buf = PSCALLOC(SLM_NAMESPACE_BATCH * 512);
 
-		read(logfile, buf, MDS_NAMESPACE_BATCH * 512);
+		read(logfile, buf, SLM_NAMESPACE_BATCH * 512);
 		mds_namespace_propagate_batch(buf);
 
 		spinlock(&mds_namespace_waitqlock);
