@@ -763,7 +763,7 @@ bmap_flush(void)
 	psc_dynarray_free(&a);
 }
 
-static inline void
+static __inline void
 bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 {
 	bid->fg.fg_fid = fcmh_2_fid(b->bcm_fcmh);
@@ -787,7 +787,7 @@ ms_bmap_release(struct sl_resm *resm)
 	csvc = (resm == slc_rmc_resm) ?
 		slc_geticsvc(resm) : slc_getmcsvc(resm);
 	if (csvc == NULL) {
-		rc = resm2rmci(resm)->rmci_csvc->csvc_lasterror;
+		rc = resm2rmci(resm)->rmci_csvc->csvc_lasterrno;
 		goto out;
 	}
 
@@ -808,7 +808,7 @@ ms_bmap_release(struct sl_resm *resm)
 		goto out;
 
 	for (i = 0; i < rmci->rmci_bmaprls.nbmaps; i++)
-		psc_notify("Fid "FIDFMT" bmap=%u key=%"PRId64
+		psc_notify("fid "FIDFMT" bmap=%u key=%"PRId64
 		    " seq=%"PRId64" rc=%d",
 		    FIDFMTARGS(&rmci->rmci_bmaprls.bmaps[i].fg),
 		    rmci->rmci_bmaprls.bmaps[i].bmapno,
