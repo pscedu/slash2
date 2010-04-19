@@ -400,7 +400,8 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
  * @mq: the RPC request for examining the bmap access mode (read/write).
  */
 __static int
-mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_getbmap_req *mq)
+mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
+    sl_ios_id_t prefios)
 {
 	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
 	struct bmapc_memb *b=bmdsi->bmdsi_bmap;
@@ -412,7 +413,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_getbmap_req *mq)
 	 */
 	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));
 
-	if (mq->rw == SL_WRITE) {
+	if (rw == SL_WRITE) {
 		/* Drop the lock prior to doing disk and possibly network
 		 *    I/O.
 		 */
@@ -423,7 +424,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, const struct srm_getbmap_req *mq)
 		if (bmdsi->bmdsi_writers == 1) {
 			psc_assert(!bmdsi->bmdsi_wr_ion);
 			BMAP_ULOCK(b);
-			rc = mds_bmap_ion_assign(bml, mq->pios);
+			rc = mds_bmap_ion_assign(bml, prefios);
 		} else {
 			psc_assert(bmdsi->bmdsi_wr_ion);
 			BMAP_ULOCK(b);
@@ -935,18 +936,18 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
  *	with a bit (ie INIT) and other threads block on the waitq.
  */
 int
-mds_bmap_load_cli(struct fidc_membh *f, const struct srm_getbmap_req *mq,
-  struct pscrpc_export *exp, struct bmapc_memb **bmap,
-  struct srm_getbmap_rep *mp)
+mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
+    enum rw rw, sl_ios_id_t prefios, struct srt_bmapdesc *sbd,
+    struct pscrpc_export *exp, struct bmapc_memb **bmap)
 {
-	struct bmapc_memb *b;
-	struct bmap_mds_lease *bml;
 	struct slashrpc_export *slexp;
-	int rc=0;
+	struct bmap_mds_lease *bml;
+	struct bmapc_memb *b;
+	int rc;
 
 	psc_assert(!*bmap);
 
-	rc = mds_bmap_load(f, mq->bmapno, &b);
+	rc = mds_bmap_load(f, bmapno, &b);
 	if (rc)
 		return (rc);
 
@@ -955,15 +956,16 @@ mds_bmap_load_cli(struct fidc_membh *f, const struct srm_getbmap_req *mq,
 	LOCK_INIT(&bml->bml_lock);
 	bml->bml_exp = exp;
 	bml->bml_bmdsi = b->bcm_pri;
-	bml->bml_flags = (mq->rw == SL_WRITE ? BML_WRITE : BML_READ);
+	bml->bml_flags = (rw == SL_WRITE ? BML_WRITE : BML_READ);
 
-	if (mq->flags & SRM_GETBMAPF_DIRECTIO)
+	if (flags & SRM_GETBMAPF_DIRECTIO)
 		bml->bml_flags |= BML_CDIO;
 
-	rc = mds_bmap_bml_add(bml, mq);
-	if (rc)
+	rc = mds_bmap_bml_add(bml, rw, prefios);
+	if (rc) {
 		psc_pool_return(bmapMdsLeasePool, bml);
-	else
+		goto out;
+	} else
 		*bmap = b;
 
 	/* Note the lock ordering here.
@@ -977,10 +979,10 @@ mds_bmap_load_cli(struct fidc_membh *f, const struct srm_getbmap_req *mq,
 	freelock(&exp->exp_lock);
 	slexp_put(exp);
 
-	mp->seq = bml->bml_seq;
-	mp->key = (mq->rw == SL_WRITE) ?
+	sbd->sbd_seq = bml->bml_seq;
+	sbd->sbd_key = (rw == SL_WRITE) ?
 		   bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
-
+ out:
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	return (rc);
 }

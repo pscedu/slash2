@@ -53,46 +53,49 @@ sli_ric_handle_connect(struct pscrpc_request *rq)
 	return (0);
 }
 
-static int
+__static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
+	uint32_t csize, tsize, roff, sblk;
 	struct pscrpc_bulk_desc *desc;
-	struct slash_fidgen fg;
+	struct slvr_ref *slvr_ref[2];
+	struct bmap_iod_info *biodi;
+	struct slash_fidgen *fgp;
+	struct fidc_membh *fcmh;
+	struct bmapc_memb *bmap;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec iovs[2];
-	struct fidc_membh *fcmh;
-	struct bmapc_memb *bmap;
-	struct bmap_iod_info *biodi;
-	struct slvr_ref *slvr_ref[2];
-	lnet_nid_t *np;
-
 	sl_blkno_t bmapno, slvrno;
-	uint32_t csize, tsize, roff, sblk;
 	int rc=0, nslvrs, i;
+	lnet_nid_t *np;
 
 	sblk = 0; /* gcc */
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
 	RSX_ALLOCREP(rq, mq, mp);
+	fgp = &mq->sbd.sbd_fg;
+	bmapno = mq->sbd.sbd_bmapno;
 
 	if (mq->size <= 0 || mq->size > LNET_MTU) {
 		psc_errorx("invalid size %u, fid:"FIDFMT,
-			   mq->size,  FIDFMTARGS(&fg));
-		mp->rc = -EINVAL;
+		    mq->size,  FIDFMTARGS(fgp));
+		mp->rc = EINVAL;
 		return (-1);
 	}
-	/* A RBW (read-before-write) request from the client may have a
+
+	/*
+	 * A RBW (read-before-write) request from the client may have a
 	 *   write enabled bdbuf which he uses to fault in his page.
 	 */
 	DYNARRAY_FOREACH(np, i, &lnet_nids) {
-		mp->rc = bdbuf_check(&mq->sbdb, &fg, &bmapno, &rq->rq_peer, 
-			     *np, nodeResm->resm_res->res_id, rw);
+		mp->rc = bmapdesc_access_check(&mq->sbd, rw,
+		    nodeResm->resm_res->res_id, *np);
 		if (mp->rc == 0)
 			goto bdbuf_ok;
 	}
-	psc_warnx("bdbuf failed for fid:"FIDFMT, FIDFMTARGS(&fg));
+	psc_warnx("bdbuf failed for fid:"FIDFMT, FIDFMTARGS(fgp));
 	return (-1);
 
  bdbuf_ok:
@@ -109,21 +112,19 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		return (-1);
 	}
 
-#if 0	
-	if (mq->sbdb.sbdb_secret.sbs_seq < bim_getcurseq()) {
-		/* Reject old bdbufs.
-		 */
-		psc_warnx("seq %"PRId64" is too old", 
-			  mq->sbdb.sbdb_secret.sbs_seq);
+#if 0
+	if (mq->sbd.sbd_seq < bim_getcurseq()) {
+		/* Reject old bdbufs. */
+		psc_warnx("seq %"PRId64" is too old", mq->sbd.sbd_seq);
 		mp->rc = -EINVAL;
-		return (-1);		
+		return (-1);
 	}
 #endif
-	
+
 	/* Lookup inode and fetch bmap, don't forget to decref bmap
 	 *  on failure.
 	 */
-	rc = sli_fcmh_get(&fg, &fcmh);
+	rc = sli_fcmh_get(fgp, &fcmh);
 	psc_assert(rc == 0);
 
 	/* ATM, not much to do here for write operations.
@@ -141,18 +142,18 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%d "
 		   " bdbuf_seq=%"PRId64" biod_key=%"PRId64,
-		   bmap->bcm_blkno, mq->size, mq->offset, rw, 
-		   mq->sbdb.sbdb_secret.sbs_seq, biodi->biod_cur_seqkey[0]);
+		   bmap->bcm_blkno, mq->size, mq->offset, rw,
+		   mq->sbd.sbd_seq, biodi->biod_cur_seqkey[0]);
 
 	/* If warranted, bump the sequence number.
 	 */
 	spinlock(&biodi->biod_lock);
-	if (mq->sbdb.sbdb_secret.sbs_seq > biodi->biod_cur_seqkey[0]) {
-		biodi->biod_cur_seqkey[0] = mq->sbdb.sbdb_secret.sbs_seq;
-		biodi->biod_cur_seqkey[1] = mq->sbdb.sbdb_secret.sbs_key;
+	if (mq->sbd.sbd_seq > biodi->biod_cur_seqkey[0]) {
+		biodi->biod_cur_seqkey[0] = mq->sbd.sbd_seq;
+		biodi->biod_cur_seqkey[1] = mq->sbd.sbd_key;
 	}
 	freelock(&biodi->biod_lock);
-	
+
 	/*
 	 * Currently we have LNET_MTU = SLASH_SLVR_SIZE = 1MB, therefore
 	 * we would never exceed two slivers.
@@ -240,7 +241,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   iod_inode_open()) then we must have a way to notify other
 	 *   threads blocked on DATARDY.
 	 */
-	
+
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC); /* reaper will return it to the pool */
 
 	return (rc);
@@ -257,34 +258,34 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct bmapc_memb *b;
 	uint32_t i;
 	int rc;
-	
+
 	RSX_ALLOCREP(rq, mq, mp);
-	
+
 	for (i=0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
-		
+
 		rc = sli_fcmh_get(&bid->fg, &f);
 		psc_assert(rc == 0);
-		
+
 		rc = bmap_get(f, bid->bmapno, SL_READ, &b);
 		if (rc) {
 			mp->bidrc[i] = rc;
 			psc_errorx("failed to load bmap %u", bid->bmapno);
 			continue;
-		}		
+		}
 		/* Bmap is attached, safe to unref.
 		 */
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
-		
+
 		biodi = bmap_2_biodi(b);
 		spinlock(&biodi->biod_lock);
-		
-		DEBUG_FCMH((biodi->biod_cur_seqkey[0] < bid->seq) ? 
+
+		DEBUG_FCMH((biodi->biod_cur_seqkey[0] < bid->seq) ?
 			   PLL_WARN : PLL_INFO,
 			   f, "bmapno=%d seq=%"PRId64" key=%"PRId64
-			   " biod_seq=%"PRId64" biod_key=%"PRId64, 
-			   b->bcm_blkno, bid->seq, bid->key, 
-			   biodi->biod_cur_seqkey[0], 
+			   " biod_seq=%"PRId64" biod_key=%"PRId64,
+			   b->bcm_blkno, bid->seq, bid->key,
+			   biodi->biod_cur_seqkey[0],
 			   biodi->biod_cur_seqkey[1]);
 		/* Note:  this technique is flawed because it does not
 		 *   track all released seq#'s, only the last one recv'd.

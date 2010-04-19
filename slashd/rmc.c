@@ -24,9 +24,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
-#include <sys/fsuid.h>
+//#include <sys/fsuid.h>
 #include <sys/statvfs.h>
-#include <sys/vfs.h>
+//#include <sys/vfs.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -164,7 +164,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	struct slash_bmap_cli_wire *cw;
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_mds_info *bmdsi;
-	struct srt_bmapdesc_buf bdb;
+	struct srt_bmapdesc bdb;
 	struct bmapc_memb *bmap;
 	struct fidc_membh *fcmh;
 	struct iovec iov[5];
@@ -181,7 +181,8 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		return (mp->rc);
 
 	bmap = NULL;
-	mp->rc = mds_bmap_load_cli(fcmh, mq, rq->rq_export, &bmap, mp);
+	mp->rc = mds_bmap_load_cli(fcmh, mq->bmapno, mq->flags, mq->rw,
+	    mq->pios, &mp->sbd, rq->rq_export, &bmap);
 	if (mp->rc)
 		return (mp->rc);
 
@@ -214,17 +215,16 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	mp->nbmaps = 1;
 
+	mp->sbd.sbd_fg = bmap->bcm_fcmh->fcmh_fg;
+	mp->sbd.sbd_bmapno = bmap->bcm_bmapno;
+
 	if (mq->rw == SL_WRITE) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
-		mp->ios_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
-		bdbuf_sign(&bdb, &mq->fg, &rq->rq_peer, mp->ios_nid,
-			   bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id,
-			   bmap->bcm_blkno, mp->seq, mp->key);
-
+		mp->sbd.sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
+		mp->sbd.sbd_ios_id = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
 	} else {
-		mp->ios_nid = LNET_NID_ANY;
-		bdbuf_sign(&bdb, &mq->fg, &rq->rq_peer, LNET_NID_ANY,
-			   IOS_ID_ANY, bmap->bcm_blkno, mp->seq, mp->key);
+		mp->sbd.sbd_ion_nid = LNET_NID_ANY;
+		mp->sbd.sbd_ios_id = IOS_ID_ANY;
 	}
 
 	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
@@ -878,6 +878,7 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
+//	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

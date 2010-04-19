@@ -61,6 +61,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	int i;
 
 	DYNARRAY_FOREACH(np, i, &lnet_nids) {
+bmap_access_check()
 		mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno,
 		    &rq->rq_peer, *np, nodeInfo.node_res->res_id, mq->rw);
 		if (mp->rc == 0)

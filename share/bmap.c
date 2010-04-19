@@ -208,3 +208,27 @@ _debug_bmapod(struct bmapc_memb *bmap, const char *fmt, ...)
 	DEBUG_BMAPODV(PLL_MAX, bmap, fmt, ap);
 	va_end(ap);
 }
+
+int
+bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
+    sl_ios_id_t ios_id, lnet_nid_t ion_nid)
+{
+	if (rw == SL_READ) {
+		/* Read requests can get by with looser authentication. */
+		if (sbd->sbd_ion_nid != ion_nid &&
+		    sbd->sbd_ion_nid != LNET_NID_ANY)
+			return (EBADF);
+		if (sbd->sbd_ios_id != ios_id &&
+		    sbd->sbd_ios_id != IOS_ID_ANY)
+			return (EBADF);
+	} else if (rw == SL_WRITE) {
+		if (sbd->sbd_ion_nid != ion_nid)
+			return (EBADF);
+		if (sbd->sbd_ios_id != ios_id)
+			return (EBADF);
+	} else {
+		psc_errorx("bdbuf_check passed invalid rw mode: %d", rw);
+		return (EBADF);
+	}
+	return (0);
+}

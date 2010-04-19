@@ -42,7 +42,7 @@
 /* runtime/data paths */
 #define SL_PATH_DATADIR		"/var/lib/slashd"
 
-#define SL_FN_DESCBUFKEY	"descbuf.key"
+#define SL_FN_AUTHBUFKEY	"authbuf.key"
 #define SL_FN_IONBMAPS_ODT	"ion_bmaps.odt"
 #define SL_FN_OPJOURNAL		"op-journal"
 #define SL_FN_NAMESPACELOG	"op-namespace"

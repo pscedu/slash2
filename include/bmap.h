@@ -259,6 +259,9 @@ void	_bmap_op_done(struct bmapc_memb *);
 int	_bmap_get(struct fidc_membh *, sl_blkno_t, enum rw, int,
 	    struct bmapc_memb **);
 
+int	bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
+	    sl_ios_id_t, lnet_nid_t);
+
 #define bmap_lookup(f, n, bp)		_bmap_get((f), (n), 0, 0, (bp))
 #define bmap_get(f, n, rw, bp)		_bmap_get((f), (n), (rw),	\
 					    BMAPGETF_LOAD, (bp))

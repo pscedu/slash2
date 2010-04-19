@@ -387,7 +387,7 @@ tracks endpoint connections
 
 ------------------------------
 
-- sstb shouldn't have an ino field
+- sstb shouldn't have an ino field, fill it out each time from fg_fid
 
 - always cache / on mount_slash, that will save tons of RPCs
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
@@ -395,6 +395,7 @@ tracks endpoint connections
 - only grab the next slash ID right before ZFS plans to use it to
   avoid DoS
 - do enums in typedump
+- put authbuf around RPC bulk data
 
 zfs
 - rename the zfs_init() alias, it is already a routine in ZFS

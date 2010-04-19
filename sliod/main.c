@@ -115,8 +115,8 @@ main(int argc, char *argv[])
 	    sizeof(struct psc_ctlthr), "slictlthr");
 
 	slcfg_parse(cfn);
-	fdbuf_checkkeyfile();
-	fdbuf_readkeyfile();
+	authbuf_checkkeyfile();
+	authbuf_readkeyfile();
 
 	libsl_init(PSCNET_SERVER, 0);
 

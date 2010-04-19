@@ -93,7 +93,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		goto out;
 	}
 
-	bmpc = bmap_2_msbmpc(b);
+	bmpc = bmap_2_bmpc(b);
 	/* How many pages are needed to accommodate the request?
 	 *   Determine and record whether RBW operations are needed on
 	 *   the first or last pages.
@@ -272,9 +272,9 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
  out:
 	DEBUG_BIORQ(PLL_NOTIFY, r, "new req");
 	if (op == BIORQ_READ)
-		pll_add(bmap_2_msbmpc(b).bmpc_pndg_biorqs, r);
+		pll_add(bmap_2_bmpc(b).bmpc_pndg_biorqs, r);
 	else
-		pll_add(bmap_2_msbmpc(b).bmpc_new_biorqs, r);
+		pll_add(bmap_2_bmpc(b).bmpc_new_biorqs, r);
 
 	/* Inform the bmap reaper to skip this bmap.
 	 */
@@ -291,7 +291,7 @@ __static void
 bmap_biorq_del(struct bmpc_ioreq *r)
 {
 	struct bmapc_memb *b=r->biorq_bmap;
-	struct bmap_pagecache *bmpc=bmap_2_msbmpc(b);
+	struct bmap_pagecache *bmpc=bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
@@ -338,7 +338,7 @@ __static void
 msl_biorq_unref(struct bmpc_ioreq *r)
 {
 	struct bmap_pagecache_entry *bmpce;
-	struct bmap_pagecache *bmpc=bmap_2_msbmpc(r->biorq_bmap);
+	struct bmap_pagecache *bmpc=bmap_2_bmpc(r->biorq_bmap);
 	int i;
 
 	psc_assert(r->biorq_flags & BIORQ_DESTROY);
@@ -467,40 +467,40 @@ bmap_biorq_expire(struct bmapc_memb *b)
 {
 	struct bmpc_ioreq *biorq;
 
-	BMPC_LOCK(bmap_2_msbmpc(b));
-	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_new_biorqs) {
+	BMPC_LOCK(bmap_2_bmpc(b));
+	PLL_FOREACH(biorq, bmap_2_bmpc(b).bmpc_new_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
 		freelock(&biorq->biorq_lock);
 	}
 
-	PLL_FOREACH(biorq, bmap_2_msbmpc(b).bmpc_pndg_biorqs) {
+	PLL_FOREACH(biorq, bmap_2_bmpc(b).bmpc_pndg_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
 		freelock(&biorq->biorq_lock);
 	}
-	BMPC_ULOCK(bmap_2_msbmpc(b));
+	BMPC_ULOCK(bmap_2_bmpc(b));
 }
 
 __static void
 bmap_biorq_waitempty(struct bmapc_memb *b)
 {
 	BMAP_LOCK(b);
-	bcm_wait_locked(b, (!pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs) ||
-			    !pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs)  ||
+	bcm_wait_locked(b, (!pll_empty(bmap_2_bmpc(b).bmpc_pndg_biorqs) ||
+			    !pll_empty(bmap_2_bmpc(b).bmpc_new_biorqs)  ||
 			    (b->bcm_mode & BMAP_CLI_FLUSHPROC)));
 
-	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_pndg_biorqs));
-	psc_assert(pll_empty(bmap_2_msbmpc(b).bmpc_new_biorqs));
+	psc_assert(pll_empty(bmap_2_bmpc(b).bmpc_pndg_biorqs));
+	psc_assert(pll_empty(bmap_2_bmpc(b).bmpc_new_biorqs));
 	BMAP_ULOCK(b);
 }
 
 void
 msl_bmap_final_cleanup(struct bmapc_memb *b)
 {
-	struct bmap_pagecache *bmpc = bmap_2_msbmpc(b);
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
 	bmap_biorq_waitempty(b);
 
@@ -581,8 +581,8 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	iovs[0].iov_base = &msbd->msbd_msbcr;
 	iovs[0].iov_len  = sizeof(msbd->msbd_msbcr);
 
-	iovs[1].iov_base = &msbd->msbd_bdb;
-	iovs[1].iov_len  = sizeof(msbd->msbd_bdb);
+	iovs[1].iov_base = &msbd->msbd_sbd;
+	iovs[1].iov_len  = sizeof(msbd->msbd_sbd);
 
 	if (getreptbl) {
 		iovs[2].iov_base = &fci->fci_reptbl;
@@ -608,9 +608,6 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	}
 
 	FCMH_LOCK(f);
-	msbd->msbd_ion = mp->ios_nid;
-	msbd->msbd_seq = mp->seq;
-	msbd->msbd_key = mp->key;
 
 	if (getreptbl) {
 		/* XXX don't forget that on write we need to invalidate
@@ -772,7 +769,7 @@ msl_bmap_to_import(struct bmapc_memb *b, int exclusive)
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
 
 	locked = reqlock(&b->bcm_lock);
-	resm = libsl_nid2resm(bmap_2_msion(b));
+	resm = libsl_nid2resm(bmap_2_ion(b));
 	ureqlock(&b->bcm_lock, locked);
 
 	if (exclusive)
@@ -1081,7 +1078,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 		mq->offset = r->biorq_off + nbytes;
 		mq->size = len;
 		mq->op = (op == SRMT_WRITE ? SRMIOP_WR : SRMIOP_RD);
-		memcpy(&mq->sbdb, &msbd->msbd_bdb, sizeof(mq->sbdb));
+		memcpy(&mq->sbd, &msbd->msbd_sbd, sizeof(mq->sbd));
 
 		pscrpc_set_add_new_req(r->biorq_rqset, req);
 		if (pscrpc_push_req(req)) {
@@ -1105,7 +1102,7 @@ __static void
 msl_pages_schedflush(struct bmpc_ioreq *r)
 {
 	struct bmapc_memb *b=r->biorq_bmap;
-	struct bmap_pagecache *bmpc=bmap_2_msbmpc(b);
+	struct bmap_pagecache *bmpc=bmap_2_bmpc(b);
 
 	BMAP_LOCK(b);
 	BMPC_LOCK(bmpc);
@@ -1215,8 +1212,8 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 
 	mq->size = npages * BMPC_BUFSZ;
 	mq->op = SRMIOP_RD;
-	memcpy(&mq->sbdb, &bmap_2_msbd(r->biorq_bmap)->msbd_bdb,
-	       sizeof(mq->sbdb));
+	memcpy(&mq->sbd, &bmap_2_msbd(r->biorq_bmap)->msbd_sbd,
+	    sizeof(mq->sbd));
 
 	r->biorq_flags |= BIORQ_INFL;
 

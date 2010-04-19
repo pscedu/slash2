@@ -222,8 +222,8 @@ main(int argc, char *argv[])
 	mdsio_init();
 	import_zpool(argv[0], zfspoolcf);
 
-	fdbuf_createkeyfile();
-	fdbuf_readkeyfile();
+	authbuf_createkeyfile();
+	authbuf_readkeyfile();
 	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ,
 	    FIDC_MDS_MAXSZ, NULL, FIDC_MDS);
 	libsl_init(PSCNET_SERVER, 1);

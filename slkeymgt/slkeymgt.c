@@ -60,8 +60,8 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 	if (create)
-		fdbuf_createkeyfile();
+		authbuf_createkeyfile();
 	else
-		fdbuf_checkkeyfile();
+		authbuf_checkkeyfile();
 	exit(0);
 }

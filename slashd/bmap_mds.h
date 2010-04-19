@@ -136,8 +136,9 @@ struct bmi_assign {
 
 int	 mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
 int	 mds_bmap_exists(struct fidc_membh *, sl_blkno_t);
-int	 mds_bmap_load_cli(struct fidc_membh *, const struct srm_getbmap_req *,
-	    struct pscrpc_export *, struct bmapc_memb **, struct srm_getbmap_rep *);
+int	 mds_bmap_load_cli(struct fidc_membh *, sl_bmapno_t, int, enum rw,
+	    sl_ios_id_t, struct srt_bmapdesc *, struct pscrpc_export *,
+	    struct bmapc_memb **);
 int	 mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t,
 	    struct bmapc_memb **);
 int	 mds_bmap_loadvalid(struct fidc_membh *, sl_blkno_t,

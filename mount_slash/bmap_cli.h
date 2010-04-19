@@ -45,22 +45,19 @@ struct msbmap_crcrepl_states {
 struct bmap_cli_info {
 	struct bmap_pagecache		 msbd_bmpc;
 	struct bmapc_memb		*msbd_bmap;
-	lnet_nid_t			 msbd_ion;
 	struct msbmap_crcrepl_states	 msbd_msbcr;
-	struct srt_bmapdesc_buf		 msbd_bdb;   /* open bmap descriptor */
+	struct srt_bmapdesc		 msbd_sbd;   /* open bmap descriptor */
 	struct psclist_head		 msbd_lentry;
-	struct timespec                  msbd_xtime; /* max time */
-        struct timespec                  msbd_etime; /* current expire time */
-	uint64_t                         msbd_seq;
-	uint64_t                         msbd_key;
+	struct timespec			 msbd_xtime; /* max time */
+	struct timespec			 msbd_etime; /* current expire time */
 };
 
-#define BMAP_CLI_MAX_LEASE 60 /* seconds */
-#define BMAP_CLI_TIMEO_INC 5
+#define BMAP_CLI_MAX_LEASE		60 /* seconds */
+#define BMAP_CLI_TIMEO_INC		5
 
 #define bmap_2_msbd(b)			((struct bmap_cli_info *)(b)->bcm_pri)
-#define bmap_2_msbmpc(b)		&(bmap_2_msbd(b)->msbd_bmpc)
-#define bmap_2_msion(b)			bmap_2_msbd(b)->msbd_ion
+#define bmap_2_bmpc(b)			&(bmap_2_msbd(b)->msbd_bmpc)
+#define bmap_2_ion(b)			bmap_2_msbd(b)->msbd_sbd.sbd_ion_nid
 
 static __inline int
 bmap_cli_timeo_cmp(const void *x, const void *y)
@@ -78,22 +75,22 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 }
 
 #define BMAP_CLI_BUMP_TIMEO(b)						\
-        do {                                                            \
+	do {								\
 		struct timespec __ctime;				\
 		clock_gettime(CLOCK_REALTIME, &__ctime);		\
-		BMAP_LOCK(b);                                           \
+		BMAP_LOCK(b);						\
 		timespecadd(&__ctime, &msl_bmap_timeo_inc,		\
 			    &(bmap_2_msbd(b))->msbd_etime);		\
-		if (timespeccmp(&(bmap_2_msbd(b))->msbd_etime,          \
-				&(bmap_2_msbd(b))->msbd_xtime, >))      \
-			memcpy(&bmap_2_msbd(b)->msbd_etime,             \
-			       &bmap_2_msbd(b)->msbd_xtime,             \
-			       sizeof(struct timespec));                \
-		BMAP_ULOCK(b);                                          \
+		if (timespeccmp(&(bmap_2_msbd(b))->msbd_etime,		\
+				&(bmap_2_msbd(b))->msbd_xtime, >))	\
+			memcpy(&bmap_2_msbd(b)->msbd_etime,		\
+			       &bmap_2_msbd(b)->msbd_xtime,		\
+			       sizeof(struct timespec));		\
+		BMAP_ULOCK(b);						\
 	} while (0)
 
 /* bmap client modes */
-#define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)  /* mode change in progress */
-#define	BMAP_CLI_MCC			(_BMAP_FLSHFT << 1)  /* mode change compete */
-#define BMAP_CLI_FLUSHPROC              (_BMAP_FLSHFT << 2)  /* proc'd by flush thr */
+#define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)	/* mode change in progress */
+#define	BMAP_CLI_MCC			(_BMAP_FLSHFT << 1)	/* mode change compete */
+#define BMAP_CLI_FLUSHPROC		(_BMAP_FLSHFT << 2)	/* proc'd by flush thr */
 #endif /* _SLASH_CLI_BMAP_H_ */

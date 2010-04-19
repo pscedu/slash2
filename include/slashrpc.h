@@ -33,6 +33,44 @@
 struct stat;
 struct statvfs;
 
+#define _SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
+	{								\
+		int _qlens, _plens;					\
+									\
+		_qlens[0] = sizeof(*(mq));				\
+		_qlens[1] = sizeof(struct srt_authbuf_footer);		\
+									\
+		_plens[0] = sizeof(*(mp));				\
+		_plens[1] = sizeof(struct srt_authbuf_footer);		\
+									\
+		RSX_NEWREQN((imp), (version), (op), (rq),		\
+		    2, qlens, 2, plens, mq);				\
+	}
+
+#define SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
+	(_SL_RSX_NEWREQ((imp), (version), (op), (rq), (mq), (mp)))
+
+#define _SL_RSX_WAITREP(rq, mp)						\
+	{								\
+		int _rc;						\
+									\
+		authbuf_sign((rq), PSCRPC_MSG_REQUEST);			\
+		_rc = RSX_WAITREP((rq), (mp));				\
+		if (_rc == 0)						\
+			_rc = authbuf_check((rq), PSCRPC_MSG_REPLY);	\
+	}
+
+#define SL_RSX_WAITREP(rq, mp)						\
+	(_SL_RSX_WAITREP((rq), (mp))
+
+#define SL_RSX_ALLOCREP(rq, mq, mp)					\
+	 do {								\
+		RSX_ALLOCREP((rq), (mq), (mp));				\
+		(mp)->rc = authbuf_check((rq), PSCRPC_MSG_REQUEST);	\
+		if ((mp)->rc)						\
+			return ((mp)->rc);				\
+	 } while (0)
+
 /* Slash RPC channel to MDS from client. */
 #define SRMC_REQ_PORTAL		10
 #define SRMC_REP_PORTAL		11
@@ -164,30 +202,33 @@ struct srm_generic_rep {
  * 64-bit boundaries.
  */
 
-#define DESCBUF_REPRLEN		45		/* strlen(base64(SHA256(secret)) + NUL */
+#define AUTHBUF_REPRLEN		45		/* strlen(base64(SHA256(secret)) + NUL */
+#define AUTHBUF_MAGIC		UINT64_C(0x4321432143214321)
 
-#define SBDB_MAGIC		UINT64_C(0x4321432143214321)
-
-struct srt_bdb_secret {
-	uint64_t		sbs_magic;
-	struct slash_fidgen	sbs_fg;
-	uint64_t		sbs_nonce;
-	uint64_t		sbs_seq;
-	uint64_t		sbs_key;
-	uint64_t		sbs_ion_nid;
-	sl_bmapno_t		sbs_bmapno;
-	sl_ios_id_t		sbs_ios_id;
-	uint64_t		sbs_cli_nid;
-	uint32_t		sbs_cli_pid;
-	uint32_t		sbs__pad;
+struct srt_authbuf_secret {
+	uint64_t			sas_magic;
+	uint64_t			sas_nonce;
+	uint64_t			sas_dst_nid;
+	uint64_t			sas_src_nid;
+	uint32_t			sas_dst_pid;
+	uint32_t			sas_src_pid;
 } __packed;
 
-/* hash = base64(SHA256(secret + key)) */
-struct srt_bmapdesc_buf {
-	struct srt_bdb_secret	sbdb_secret;	/* encrypted */
-	char			sbdb_hash[DESCBUF_REPRLEN];
-	char			sbdb__pad[3];
+/* this is appended after every RPC message */
+struct srt_authbuf_footer {
+	struct srt_authbuf_secret	saf_secret;
+	char				saf_hash[AUTHBUF_REPRLEN];
+	char				saf__pad[3];
 } __packed;
+
+struct srt_bmapdesc {
+	struct slash_fidgen		sbd_fg;
+	uint64_t			sbd_seq;
+	uint64_t			sbd_key;
+	uint64_t			sbd_ion_nid;	/* owning I/O node if write */
+	sl_ios_id_t			sbd_ios_id;
+	sl_bmapno_t			sbd_bmapno;
+};
 
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
 
@@ -229,9 +270,7 @@ struct srm_getbmap_req {
 #define SRM_GETBMAPF_GETREPLTBL	(1 << 1)	/* fetch inode replica table */
 
 struct srm_getbmap_rep {
-	uint64_t		ios_nid;	/* responsible I/O server ID if write */
-	uint64_t		seq;		/* bmap global sequence number */
-	uint64_t		key;		/* MDS odtable key */
+	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
 	uint32_t		nbmaps;		/* number of bmaps actually returned */
 	uint32_t		nrepls;		/* # sl_replica_t's set in bulk */
 	uint32_t		flags;		/* see SRM_BMAPF_* flags */
@@ -243,22 +282,19 @@ struct srm_getbmap_rep {
  *	| data type			| description			|
  *	+-------------------------------+-------------------------------+
  *	| struct slash_bmap_od		| bmap contents			|
- *	| struct srt_bmapdesc_buf	| descriptor			|
  *	| sl_replica_t (if GETREPLTBL)	| inode replica index list	|
  *	+-------------------------------+-------------------------------+
  */
 } __packed;
 
 /*
- * ION requesting CRC table from the MDS.  Passes back the srt_bdb_secret
- *  which was handed to him by the client.
+ * ION requesting CRC table from the MDS.
  */
 struct srm_bmap_wire_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	int32_t			rw;
 	int32_t			_pad;
-	//struct srt_bmapdesc_buf sbdb;
 } __packed;
 
 struct srm_bmap_wire_rep {
@@ -283,7 +319,7 @@ struct srm_bmap_chmode_req {
 } __packed;
 
 struct srm_bmap_chmode_rep {
-	struct srt_bmapdesc_buf	sbdb;
+	struct srt_bmapdesc	sbd;
 	int32_t			rc;
 	int32_t			_pad;
 } __packed;
@@ -460,14 +496,12 @@ struct srm_create_rep {
 	struct slash_fidgen	fg;		/* new file's file ID */
 	struct srt_stat		attr;		/* stat(2) buffer of new file attrs */
 	int32_t			rc;		/* 0 for success or slerrno */
+	int32_t			_pad;
 
 	/* parameters for fetching first bmap */
 	uint32_t		rc2;		/* (for GETBMAP) 0 or slerrno */
-	uint64_t		ios_nid;	/* responsible I/O server ID if write */
-	uint64_t		seq;		/* bmap global sequence number */
-	uint64_t		key;		/* MDS odtable key */
 	uint32_t		flags;		/* see SRM_BMAPF_* flags */
-	int32_t			_pad;
+	struct srt_bmapdesc	sbd;
 /*
  * Bulk data contents:
  *
@@ -475,7 +509,6 @@ struct srm_create_rep {
  *	| data type			| description			|
  *	+-------------------------------+-------------------------------+
  *	| struct slash_bmap_od		| bmap contents			|
- *	| struct srt_bmapdesc_buf	| descriptor			|
  *	+-------------------------------+-------------------------------+
  */
 } __packed;
@@ -495,7 +528,7 @@ struct srm_getattr_rep {
 } __packed;
 
 struct srm_io_req {
-	struct srt_bmapdesc_buf	sbdb;
+	struct srt_bmapdesc	sbd;
 	uint32_t		ptruncgen;
 	uint32_t		flags:31;
 	uint32_t		op:1;		/* read/write */

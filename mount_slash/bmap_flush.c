@@ -193,8 +193,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 	DEBUG_REQ(PLL_INFO, req, "off=%u sz=%u op=%u", mq->offset,
 		  mq->size, mq->op);
 
-	memcpy(&mq->sbdb, &bmap_2_msbd(b)->msbd_bdb, sizeof(mq->sbdb));
-
+	memcpy(&mq->sbd, &bmap_2_msbd(b)->msbd_sbd, sizeof(mq->sbd));
 	return (req);
 }
 
@@ -209,7 +208,7 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	DEBUG_BIORQ(PLL_INFO, r, "set inflight");
 	freelock(&r->biorq_lock);
 
-	bmpc = bmap_2_msbmpc(r->biorq_bmap);
+	bmpc = bmap_2_bmpc(r->biorq_bmap);
 	BMPC_LOCK(bmpc);
 	/* Limit the amount of scanning done by this
 	 *   thread.  Move pending biorqs out of the way.
@@ -621,7 +620,7 @@ bmap_flush(void)
 			break;
 
 		b = msbd->msbd_bmap;
-		bmpc = bmap_2_msbmpc(b);
+		bmpc = bmap_2_bmpc(b);
 		/* Bmap lock only needed to test the dirty bit.
 		 */
 		BMAP_LOCK(b);
@@ -636,13 +635,13 @@ bmap_flush(void)
 		if (b->bcm_mode & BMAP_DIRTY) {
 			psc_assert(bmpc_queued_writes(bmpc));
 			psc_dynarray_add(&bmaps, msbd);
-			
+
 		} else {
 			psc_assert(!bmpc_queued_writes(bmpc));
 			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
 			bcm_wake_locked(b);
 			BMPC_ULOCK(bmpc);
-			
+
 			if (!bmpc_queued_ios(bmpc)) {
 				/* No remaining reads or writes.
 				 */
@@ -728,12 +727,12 @@ bmap_flush(void)
 	for (i=0; i < psc_dynarray_len(&bmaps); i++) {
 		msbd = psc_dynarray_getpos(&bmaps, i);
 		b = msbd->msbd_bmap;
-		bmpc = bmap_2_msbmpc(b);
+		bmpc = bmap_2_bmpc(b);
 
 		BMAP_LOCK(b);
 		BMPC_LOCK(bmpc);
 		/* BMAP_CLI_FLUSHPROC must be present, only the section
-		 *   below may remove it.  BMAP_CLI_FLUSHPROC and 
+		 *   below may remove it.  BMAP_CLI_FLUSHPROC and
 		 *   BMAP_REAPABLE are mutually exclusive.
 		 */
 		psc_assert(b->bcm_mode & BMAP_CLI_FLUSHPROC);
@@ -748,7 +747,7 @@ bmap_flush(void)
 			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
 			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
 
-			if (!bmpc_queued_ios(bmpc)) {				
+			if (!bmpc_queued_ios(bmpc)) {
 				psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
 				b->bcm_mode |= BMAP_REAPABLE;
 				lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
@@ -769,8 +768,8 @@ bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 {
 	bid->fg.fg_fid = fcmh_2_fid(b->bcm_fcmh);
 	bid->fg.fg_gen = fcmh_2_gen(b->bcm_fcmh);
-	bid->seq = bmap_2_msbd(b)->msbd_seq;
-	bid->key = bmap_2_msbd(b)->msbd_key;
+	bid->seq = bmap_2_msbd(b)->msbd_sbd.sbd_seq;
+	bid->key = bmap_2_msbd(b)->msbd_sbd.sbd_key;
 	bid->bmapno = b->bcm_bmapno;
 }
 
@@ -785,12 +784,12 @@ ms_bmap_release(struct sl_resm *resm)
 	uint32_t i;
 	int rc;
 
-	csvc = (resm == slc_rmc_resm) ? 
+	csvc = (resm == slc_rmc_resm) ?
 		slc_geticsvc(resm) : slc_getmcsvc(resm);
 
 	rmci = resm2rmci(resm);
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
-       	
+
 	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 			SRMT_RELEASEBMAP, rq, mq, mp);
 
@@ -852,13 +851,13 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			BMAP_LOCK(b);
-			DEBUG_BMAP(PLL_INFO, b, 
+			DEBUG_BMAP(PLL_INFO, b,
 			   "timeoq try reap (nbmaps=%zd)", z);
-			
+
 			if (bmpc_queued_ios(&msbd->msbd_bmpc)) {
 				psc_assert(b->bcm_mode & BMAP_REAPABLE);
-				b->bcm_mode &= ~BMAP_REAPABLE;				
-				/* New incoming reqs have unset 'reapable' and 
+				b->bcm_mode &= ~BMAP_REAPABLE;
+				/* New incoming reqs have unset 'reapable' and
 				 *   removed the bmap from the timeoq.
 				 */
 				lc_remove(&bmapTimeoutQ, msbd);
@@ -866,7 +865,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				BMAP_ULOCK(b);
 				continue;
 			}
-			
+
 			if (timespeccmp(&ctime, &msbd->msbd_etime, <)) {
 				BMAP_ULOCK(b);
 				timespecsub(&msbd->msbd_etime, &ctime, &wtime);
@@ -878,28 +877,28 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			 *   it anyway.
 			 */
 			if (psc_atomic32_read(&b->bcm_opcnt) == 1) {
-				/* Note that only this thread calls 
-				 *   ms_bmap_release() so no reentrancy 
+				/* Note that only this thread calls
+				 *   ms_bmap_release() so no reentrancy
 				 *   exist unless another rls thr is
 				 *   introduced.
 				 */
 				psc_assert(!bmpc_queued_ios(&msbd->msbd_bmpc));
 				lc_remove(&bmapTimeoutQ, msbd);
-				
+
 				if (b->bcm_mode & BMAP_WR) {
-					/* Setup a MSG to an ION.
+					/* Setup a msg to an ION.
 					 */
-					psc_assert(msbd->msbd_ion != LNET_NID_ANY);
-					resm = libsl_nid2resm(msbd->msbd_ion);
+					psc_assert(bmap_2_ion(b) != LNET_NID_ANY);
+					resm = libsl_nid2resm(bmap_2_ion(b));
 					rmci = resm2rmci(resm);
 				} else {
 					resm = slc_rmc_resm;
 					rmci = resm2rmci(slc_rmc_resm);
 				}
 				bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[rmci->rmci_bmaprls.nbmaps]);
-				rmci->rmci_bmaprls.nbmaps++;				
+				rmci->rmci_bmaprls.nbmaps++;
 
-				/* The bmap should be going away now, this will call 
+				/* The bmap should be going away now, this will call
 				 *    BMAP_URLOCK().
 				 */
 				bmap_op_done_type(b, BMAP_OPCNT_REAPER);

@@ -18,28 +18,31 @@
  */
 
 /*
- * fdbuf - file descriptor buffer routines.
+ * authbuf - RPC message buffer authorization routines.
  */
 
-#ifndef _SL_FDBUF_H_
-#define _SL_FDBUF_H_
+#ifndef _SL_AUTHBUF_H_
+#define _SL_AUTHBUF_H_
+
+#include <gcrypt.h>
 
 #include "slconfig.h"
 
 struct stat;
 struct srt_bmapdesc_buf;
 
-void bdbuf_sign(struct srt_bmapdesc_buf *, const struct slash_fidgen *,
-	const lnet_process_id_t *, lnet_nid_t, sl_ios_id_t, sl_blkno_t, 
-	uint64_t, uint64_t);
+#define AUTHBUF_KEYSIZE	1024
 
-int  bdbuf_check(const struct srt_bmapdesc_buf *, struct slash_fidgen *,
-	sl_blkno_t *, const lnet_process_id_t *, lnet_nid_t, sl_ios_id_t,
-	enum rw);
+int	authbuf_check(struct pscrpc_request *, int);
+void	authbuf_sign(struct pscrpc_request *, int);
 
-void fdbuf_readkeyfile(void);
-void fdbuf_checkkeyfile(void);
-void fdbuf_checkkey(const char *, struct stat *);
-void fdbuf_createkeyfile(void);
+void	authbuf_checkkey(const char *, struct stat *);
+void	authbuf_checkkeyfile(void);
+void	authbuf_createkeyfile(void);
+void	authbuf_readkeyfile(void);
 
-#endif /* _SL_FDBUF_H_ */
+extern unsigned char	authbuf_key[AUTHBUF_KEYSIZE];
+extern gcry_md_hd_t	authbuf_hd;
+extern int		authbuf_alglen;
+
+#endif /* _SL_AUTHBUF_H_ */

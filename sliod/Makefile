@@ -21,6 +21,7 @@ SRCS+=		slvr.c
 SRCS+=		slvr_worker.c
 SRCS+=		timer_iod.c
 SRCS+=		${SLASH_BASE}/share/adler32.c
+SRCS+=		${SLASH_BASE}/share/authbuf_sign.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/buffer.c
 SRCS+=		${SLASH_BASE}/share/cfg_common.c
@@ -59,9 +60,8 @@ SRCS+=		${PFL_BASE}/psc_util/timerthr.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
-SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 
-MODULES+=	pthread lnet fuse-hdrs gcrypt
+MODULES+=	pthread lnet fuse-hdrs gcrypt rpc
 
 include ${SLASHMK}
