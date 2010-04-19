@@ -23,11 +23,12 @@
 #include <string.h>
 
 #include "pfl/fcntl.h"
+#include "psc_ds/dynarray.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/crc.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
-#include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 
 #include "bmap.h"
@@ -39,8 +40,9 @@
 #include "mdsio.h"
 #include "mdslog.h"
 #include "mkfn.h"
-#include "slashd.h"
 #include "rpc_mds.h"
+#include "slashd.h"
+#include "slashrpc.h"
 #include "sljournal.h"
 
 struct psc_journal			*mdsJournal;
@@ -162,53 +164,57 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	return (0);
 }
 
-/*
- * Send the newest batch of changes to peer MDSes that seem to be active.
+/**
+ * mds_namespace_propagate_batch - Send the newest batch of changes to
+ *	peer MDSes that seem to be active.
  */
 void
 mds_namespace_propagate_batch(char *buf)
 {
-	int rc;
-	struct sl_site *s;
-	struct resm_mds_info *rmmi;
 	struct srm_send_namespace_req *mq;
 	struct srm_generic_rep *mp;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_request *req;
 	struct pscrpc_bulk_desc *desc;
 	struct iovec iov;
+	struct sl_resource *r;
+	struct sl_resm *resm;
+	struct sl_site *s;
+	int rc, n;
 
 	/* XXX: need condense */
 	iov.iov_base = buf;
 	iov.iov_len = SLM_NAMESPACE_BATCH * 512;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
-	PLL_FOREACH(s, &globalConfig.gconf_sites) {
-		rmmi = s->site_pri;
-		/*
-		 * Add logic here to decide if we should skip
-		 * the current site because it is lagging.
-		 */
-		csvc = slm_geticsvc(rmmi->rmmi_resm);
-		if (csvc == NULL) {
-			continue;
+	PLL_FOREACH(s, &globalConfig.gconf_sites)
+		DYNARRAY_FOREACH(r, n, &s->site_resources) {
+			if (r->res_type != SLREST_MDS)
+				continue;
+
+			/* MDS cannot have one member */
+			resm = psc_dynarray_getpos(&r->res_members, 0);
+
+			/*
+			 * Add logic here to decide if we should skip
+			 * the current site because it is lagging.
+			 */
+			csvc = slm_getmcsvc(resm);
+			if (csvc == NULL)
+				continue;
+			rc = RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
+			    SRMT_SEND_NAMESPACE, req, mq, mp);
+			if (rc) {
+				sl_csvc_decref(csvc);
+				continue;
+			}
+
+			rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE,
+			    SRMM_BULK_PORTAL, &iov, 1);
+
+			pscrpc_nbreqset_add(logPndgReqs, req);
 		}
-		rc = RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION, 
-			SRMT_SEND_NAMESPACE, req, mq, mp);
-		if (rc) {
-			sl_csvc_decref(csvc);
-			continue;
-		} 
-
-		rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
-			 &iov, 1);
-
-		pscrpc_nbreqset_add(logPndgReqs, req);
-	}
 	PLL_ULOCK(&globalConfig.gconf_sites);
-
-fail:
-	return;
 }
 
 /*
