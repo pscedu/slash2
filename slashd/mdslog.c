@@ -207,7 +207,7 @@ mds_namespace_propagate_batch(char *buf)
 		req->rq_compl_cntr = &logCompletedRpcCnt;
 		req->rq_waitq = &logRpcCompletion;
 
-		pscrpc_push_req(req);
+		pscrpc_nbreqset_add(logPndgReqs, req);
 	}
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
