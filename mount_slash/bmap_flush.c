@@ -776,46 +776,61 @@ bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 static void
 ms_bmap_release(struct sl_resm *resm)
 {
-	struct pscrpc_request *rq;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct resm_cli_info *rmci;
-	struct slashrpc_cservice *csvc;
 	uint32_t i;
 	int rc;
 
 	csvc = (resm == slc_rmc_resm) ?
 		slc_geticsvc(resm) : slc_getmcsvc(resm);
+	if (csvc == NULL) {
+		rc = resm2rmci(resm)->rmci_csvc->csvc_lasterror;
+		goto out;
+	}
 
 	rmci = resm2rmci(resm);
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
 
 	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-			SRMT_RELEASEBMAP, rq, mq, mp);
+	    SRMT_RELEASEBMAP, rq, mq, mp);
+	if (rc)
+		goto out;
 
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
 
 	rc = RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
 	if (rc)
+		goto out;
+
+	for (i = 0; i < rmci->rmci_bmaprls.nbmaps; i++)
+		psc_notify("Fid "FIDFMT" bmap=%u key=%"PRId64
+		    " seq=%"PRId64" rc=%d",
+		    FIDFMTARGS(&rmci->rmci_bmaprls.bmaps[i].fg),
+		    rmci->rmci_bmaprls.bmaps[i].bmapno,
+		    rmci->rmci_bmaprls.bmaps[i].key,
+		    rmci->rmci_bmaprls.bmaps[i].seq,
+		    mp->bidrc[i]);
+	rmci->rmci_bmaprls.nbmaps = 0;
+
+ out:
+	if (rc) {
 		/* At this point the bmaps have already been purged from
 		 *   our cache.  If the mds rls request fails then the
 		 *   mds should time them out on his own.  In any case,
 		 *   the client must reacquire leases to perform further
 		 *   I/O on any bmap in this set.
 		 */
-		psc_errorx("bmap release rpc failed");
-	else {
-		for (i=0; i < rmci->rmci_bmaprls.nbmaps; i++)
-			psc_notify("Fid "FIDFMT" bmap=%u key=%"PRId64
-			   " seq=%"PRId64" rc=%d",
-			   FIDFMTARGS(&rmci->rmci_bmaprls.bmaps[i].fg),
-			   rmci->rmci_bmaprls.bmaps[i].bmapno,
-			   rmci->rmci_bmaprls.bmaps[i].key,
-			   rmci->rmci_bmaprls.bmaps[i].seq,
-			   mp->bidrc[i]);
+		psc_errorx("bmap release RPC failed");
 	}
-
-	rmci->rmci_bmaprls.nbmaps = 0;
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 }
 
 void
