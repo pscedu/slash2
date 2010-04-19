@@ -99,6 +99,7 @@ struct sl_mds_loginfo {
 	time_t			  sml_last_recv;
 };
 
+/* allocated by slcfg_init_resm(), which is tied into the lex/yacc code */
 struct resm_mds_info {
 	struct slashrpc_cservice *rmmi_csvc;
 	psc_spinlock_t		  rmmi_lock;

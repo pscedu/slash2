@@ -152,6 +152,21 @@ mds_namespace_log(int op, int type, int perm, uint64_t parent,
 }
 
 /*
+ * Send the newest batch of changes to peer MDSes that seem to be active.
+ */
+void
+mds_namespace_propagate_batch()
+{
+	struct sl_site *s;
+	struct resm_mds_info *rmmi;
+
+	PLL_LOCK(&globalConfig.gconf_sites);
+	PLL_FOREACH(s, &globalConfig.gconf_sites) {
+		rmmi = s->site_pri;
+	}
+}
+
+/*
  * Send local namespace updates to peer MDSes.
  */
 void
@@ -167,6 +182,7 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
 		logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
 
+		mds_namespace_propagate_batch();
 
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
