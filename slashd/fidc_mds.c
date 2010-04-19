@@ -17,6 +17,7 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <fcntl.h>
 #include <stdio.h>
 
 #include "pfl/cdefs.h"
