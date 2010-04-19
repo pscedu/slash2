@@ -160,6 +160,7 @@ mds_namespace_propagate_batch()
 {
 	struct sl_site *s;
 	struct resm_mds_info *rmmi;
+	struct slashrpc_cservice *csvc;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
@@ -169,7 +170,8 @@ mds_namespace_propagate_batch()
 		 * the current site because it is lagging.
 		 */
 		spinlock(&rmmi->rmmi_lock);
-		if (slm_geticsvc(rmmi->rmmi_resm) == NULL) {
+		csvc = slm_geticsvc(rmmi->rmmi_resm);
+		if (csvc == NULL) {
 			freelock(&rmmi->rmmi_lock);
 			continue;
 		}
