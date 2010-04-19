@@ -45,9 +45,11 @@
 
 struct psc_journal	*mdsJournal;
 
-__static atomic_t		logCompletedRpcCnt;
-__static atomic_t		logOutstandingRpcCnt;
-__static struct psc_waitq	logRpcCompletion;
+
+__static struct pscrpc_nbreqset	*logPndgReqs;
+__static atomic_t		 logCompletedRpcCnt;
+__static atomic_t		 logOutstandingRpcCnt;
+__static struct psc_waitq	 logRpcCompletion;
 
 /*
  * Eventually, we are going to retrieve the namespace update sequence number
@@ -508,4 +510,9 @@ mds_journal_init(void)
 	/* start a thread to propagate local namespace changes */
 	thr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
 	    NULL, 0, "slmjsendthr");
+
+	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
+	atomic_set(&logOutstandingRpcCnt, 0);
+	atomic_set(&logCompletedRpcCnt, 0);
+	psc_waitq_init(&logRpcCompletion);
 }
