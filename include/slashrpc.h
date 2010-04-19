@@ -83,6 +83,7 @@ struct statvfs;
 /* Slash RPC channel to MDS from MDS. */
 #define SRMM_REQ_PORTAL		15
 #define SRMM_REP_PORTAL		16
+#define SRMM_BULK_PORTAL	17
 
 #define SRMM_VERSION		1
 #define SRMM_MAGIC		UINT64_C(0xaabbccddeeff0033)
