@@ -90,12 +90,12 @@ struct site_mds_info {
 
 #define SMIF_DIRTYQ		(1 << 0)		/* queue has changed */
 
-/* 
+/*
  * This structure tracks the progress of namespace log application on a MDS.
  * We allow one pending request per MDS until it responds or timeouts.
  */
-#define	SML_FLAG_NONE			(0 << 0)
-#define	SML_FLAG_INFLIGHT		(1 << 0)
+#define	SML_FLAG_NONE		0
+#define	SML_FLAG_INFLIGHT	(1 << 0)
 
 struct sl_mds_loginfo {
 	int			  sml_flags;
@@ -110,7 +110,6 @@ struct resm_mds_info {
 	struct slashrpc_cservice *rmmi_csvc;
 	psc_spinlock_t		  rmmi_lock;
 	struct psc_multiwaitcond  rmmi_mwcond;
-	struct sl_mds_loginfo	  rmmi_loginfo;
 	int			  rmmi_busyid;
 	struct sl_resm		 *rmmi_resm;
 	atomic_t		  rmmi_refcnt;		/* #CLIs using this ion */
@@ -123,6 +122,7 @@ struct resm_mds_info {
 struct resprof_mds_info {
 	int			  rpmi_cnt;
 	psc_spinlock_t		  rpmi_lock;
+	struct sl_mds_loginfo	 *rpmi_loginfo;
 };
 
 int		 mds_inode_read(struct slash_inode_handle *);
