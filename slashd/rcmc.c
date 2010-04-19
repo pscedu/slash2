@@ -265,26 +265,7 @@ slmrcmthr_main(struct psc_thread *thr)
 		/* signal EOF */
 		slm_rcm_issue_getreplst(rsw, NULL, 1);
 
+		sl_csvc_decref(rsw->rsw_csvc);
 		PSCFREE(rsw);
 	}
-}
-
-/*
- * slm_rcm_issue_releasebmap - issue a RELEASEBMAP request to a CLIENT from MDS.
- */
-int
-slm_rcm_issue_releasebmap(struct pscrpc_import *imp)
-{
-	struct srm_bmap_release_req *mq;
-	struct srm_generic_rep *mp;
-	struct pscrpc_request *rq;
-	int rc;
-
-	if ((rc = RSX_NEWREQ(imp, SRCM_VERSION,
-	    SRMT_RELEASEBMAP, rq, mq, mp)) != 0)
-		return (rc);
-	if ((rc = RSX_WAITREP(rq, mp)) == 0)
-		rc = mp->rc;
-	pscrpc_req_finished(rq);
-	return (rc);
 }

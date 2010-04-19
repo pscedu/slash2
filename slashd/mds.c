@@ -272,6 +272,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 {
 	struct bmapc_memb *bmap=bml_2_bmap(bml);
 	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
+	struct slashrpc_cservice *csvc;
 	struct bmi_assign bmi;
 	struct sl_resource *res=libsl_id2res(pios);
 	struct sl_resm *resm;
@@ -311,10 +312,12 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		 * If we fail to establish a connection, try next node.
 		 * The loop guarantees that we always bail out.
 		 */
-		if (slm_geticsvc(resm) == NULL) {
+		csvc = slm_geticsvc(resm);
+		if (csvc == NULL) {
 			freelock(&rmmi->rmmi_lock);
 			continue;
 		}
+		sl_csvc_decref(csvc);
 
 		DEBUG_BMAP(PLL_TRACE, bmap, "res(%s) ion(%s)",
 		    res->res_name, resm->resm_addrbuf);

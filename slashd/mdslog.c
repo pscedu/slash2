@@ -156,8 +156,12 @@ __static int
 mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 		  __unusedx struct pscrpc_async_args *args)
 {
+	struct slashrpc_cservice *csvc;
+
+	sl_csvc_decref(csvc);
 	return (0);
 }
+
 /*
  * Send the newest batch of changes to peer MDSes that seem to be active.
  */
@@ -191,8 +195,10 @@ mds_namespace_propagate_batch(char *buf)
 		}
 		rc = RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION, 
 			SRMT_SEND_NAMESPACE, req, mq, mp);
-		if (rc)
-			goto fail;
+		if (rc) {
+			sl_csvc_decref(csvc);
+			continue;
+		} 
 
 		rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
 			 &iov, 1);

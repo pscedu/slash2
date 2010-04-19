@@ -119,7 +119,8 @@ slm_get_next_slashid(void)
 int
 slm_rmc_handle_connect(struct pscrpc_request *rq)
 {
-	struct pscrpc_export *e=rq->rq_export;
+	struct pscrpc_export *e = rq->rq_export;
+	struct slashrpc_cservice *csvc;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 	struct mexp_cli *mexp_cli;
@@ -132,7 +133,8 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 	 */
 	psc_assert(e->exp_private == NULL);
 	mexp_cli = mexpcli_get(e);
-	slm_getclcsvc(e);
+	csvc = slm_getclcsvc(e);
+	sl_csvc_decref(csvc);
 	return (0);
 }
 

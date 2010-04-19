@@ -172,6 +172,8 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
  fail:
 	if (we_set_busy)
 		mds_repl_nodes_setbusy(src_rmmi, dst_rmmi, 0);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (0);
 }
 
@@ -307,10 +309,12 @@ slmreplqthr_main(struct psc_thread *thr)
 						rin = psc_random32u(nmemb);
 						for (in = 0; in < nmemb; in++,
 						    rin = (rin + 1) % nmemb) {
+							struct slashrpc_cservice *csvc;
 							int k;
 
 							src_resm = psc_dynarray_getpos(&src_res->res_members, rin);
-							if (slm_geticsvc(src_resm) == NULL) {
+							csvc = slm_geticsvc(src_resm);
+							if (csvc == NULL) {
 								if (!psc_multiwait_hascond(&smi->smi_mw,
 								    &resm2rmmi(src_resm)->rmmi_mwcond))
 									if (psc_multiwait_addcond(&smi->smi_mw,
@@ -318,6 +322,7 @@ slmreplqthr_main(struct psc_thread *thr)
 										psc_fatal("multiwait_addcond");
 								continue;
 							}
+							sl_csvc_decref(csvc);
 
 							/* look for a destination resm */
 							for (k = 0; k < psc_dynarray_len(&dst_res->res_members); k++)
@@ -377,8 +382,10 @@ slmtruncthr_main(struct psc_thread *thr)
 			for (in = 0; in < (int)res->res_nnids; in++,
 			    rin = (rin + 1) % res->res_nnids) {
 				resm = libsl_nid2resm(res->res_nids[rin]);
-				if (slm_geticsvc(resm) == NULL)
+				csvc = slm_geticsvc(resm);
+				if (csvc == NULL)
 					continue;
+				sl_csvc_decref(csvc);
 		}
 
 	}
