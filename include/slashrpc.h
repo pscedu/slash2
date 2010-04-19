@@ -258,12 +258,10 @@ struct srm_send_namespace_rep {
 
 struct srm_getbmap_req {
 	struct slash_fidgen	fg;
-	sl_ios_id_t		pios;		/* client's preferred IOS ID */
+	sl_ios_id_t		prefios;	/* client's preferred IOS ID */
 	sl_bmapno_t		bmapno;		/* Starting bmap index number */
-	uint32_t		nbmaps;		/* read-ahead support */
 	int32_t			rw;		/* 'enum rw' value for access */
 	uint32_t		flags;		/* see SRM_BMAPF_* flags below */
-	int32_t			_pad;
 } __packed;
 
 #define SRM_GETBMAPF_DIRECTIO	(1 << 0)	/* client wants direct I/O */
@@ -271,19 +269,19 @@ struct srm_getbmap_req {
 
 struct srm_getbmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
-	uint32_t		nbmaps;		/* number of bmaps actually returned */
-	uint32_t		nrepls;		/* # sl_replica_t's set in bulk */
 	uint32_t		flags;		/* see SRM_BMAPF_* flags */
+	uint32_t		nrepls;		/* if SRM_GETBMAPF_GETREPLTBL */
 	uint32_t		rc;		/* 0 for success or slerrno */
+	int32_t			_pad;
 /*
  * Bulk data contents:
  *
- *	+-------------------------------+-------------------------------+
- *	| data type			| description			|
- *	+-------------------------------+-------------------------------+
- *	| struct slash_bmap_od		| bmap contents			|
- *	| sl_replica_t (if GETREPLTBL)	| inode replica index list	|
- *	+-------------------------------+-------------------------------+
+ *	+-----------------------+-----------------------------------------------+
+ *	| data type		| description					|
+ *	+-----------------------+-----------------------------------------------+
+ *	| struct slash_bmap_od	| bmap contents					|
+ *	| sl_replica_t		| inode replica index list (if GETREPLTBL)	|
+ *	+-----------------------+-----------------------------------------------+
  */
 } __packed;
 
@@ -487,7 +485,7 @@ struct srm_create_req {
 	uint32_t		mode;		/* mode_t permission for new file */
 
 	/* parameters for fetching first bmap */
-	sl_ios_id_t		pios;		/* preferred I/O system ID */
+	sl_ios_id_t		prefios;	/* preferred I/O system ID */
 	uint32_t		flags;		/* see SRM_BMAPF_* flags */
 	int32_t			_pad;
 } __packed;

@@ -156,83 +156,100 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	return (0);
 }
 
-int
-slm_rmc_handle_getbmap(struct pscrpc_request *rq)
+/**
+ * slm_rmc_getbmap_common - Handle common GETBMAP code.  This routine
+ *	is used by GETBMAP and CREATE for granting an ION/CLI a bmap
+ *	lease.
+ * @fcmh: file.
+ * @prefios: preferred IOS input, actual IOS assigned output.
+ * @bmapno: bmap index number.
+ * @rw: read/write mode for bmap access.
+ * @flags: SRM_GETBMAPF_* flags for input/output.
+ * @nrepls: number of entries in inode replica table.
+ * @sbd: value-result bmap descriptor.
+ */
+__static int
+slm_rmc_getbmap_common(struct fidc_membh *fcmh, sl_ios_id_t prefios,
+    sl_bmapno_t bmapno, enum rw rw, uint32_t *flags, uint32_t *nrepls,
+    struct srt_bmapdesc *sbd, struct pscrpc_request *rq)
 {
 	const struct srm_getbmap_req *mq;
 	struct srm_getbmap_rep *mp;
 	struct slash_bmap_cli_wire *cw;
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_mds_info *bmdsi;
-	struct srt_bmapdesc bdb;
 	struct bmapc_memb *bmap;
-	struct fidc_membh *fcmh;
-	struct iovec iov[5];
-	int niov;
+	struct iovec iov[3];
+	int niov, rc;
+
+	if (rw != SL_READ && rw != SL_WRITE)
+		return (EINVAL);
 
 	bmap = NULL;
-	RSX_ALLOCREP(rq, mq, mp);
-
-	if (mq->rw != SL_READ && mq->rw != SL_WRITE)
-		return (-EINVAL);
-
-	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
-	if (mp->rc)
-		return (mp->rc);
-
-	bmap = NULL;
-	mp->rc = mds_bmap_load_cli(fcmh, mq->bmapno, mq->flags, mq->rw,
-	    mq->pios, &mp->sbd, rq->rq_export, &bmap);
+	mp->rc = mds_bmap_load_cli(fcmh, bmapno, *flags, rw, prefios,
+	    sbd, rq->rq_export, &bmap);
 	if (mp->rc)
 		return (mp->rc);
 
 	bmdsi = bmap->bcm_pri;
 	cw = (struct slash_bmap_cli_wire *)bmap->bcm_od->bh_crcstates;
 
-	niov = 2;
+	niov = 1;
 	iov[0].iov_base = cw;
 	iov[0].iov_len = sizeof(*cw);
-	iov[1].iov_base = &bdb;
-	iov[1].iov_len = sizeof(bdb);
 
-	if (mq->flags & SRM_GETBMAPF_GETREPLTBL) {
+	if (*flags & SRM_GETBMAPF_GETREPLTBL) {
 		struct slash_inode_handle *ih;
 
 		niov++;
 		ih = fcmh_2_inoh(bmap->bcm_fcmh);
-		mp->nrepls = ih->inoh_ino.ino_nrepls;
+		*nrepls = ih->inoh_ino.ino_nrepls;
 
-		iov[2].iov_base = ih->inoh_ino.ino_repls;
-		iov[2].iov_len = sizeof(sl_replica_t) * INO_DEF_NREPLS;
+		iov[1].iov_base = ih->inoh_ino.ino_repls;
+		iov[1].iov_len = sizeof(sl_replica_t) * INO_DEF_NREPLS;
 
 		if (mp->nrepls > INO_DEF_NREPLS) {
 			niov++;
 			mds_inox_ensure_loaded(ih);
-			iov[3].iov_base = ih->inoh_extras->inox_repls;
-			iov[3].iov_len = sizeof(ih->inoh_extras->inox_repls);
+			iov[2].iov_base = ih->inoh_extras->inox_repls;
+			iov[2].iov_len = sizeof(ih->inoh_extras->inox_repls);
 		}
 	}
 
-	mp->nbmaps = 1;
-
-	mp->sbd.sbd_fg = bmap->bcm_fcmh->fcmh_fg;
-	mp->sbd.sbd_bmapno = bmap->bcm_bmapno;
+	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
+	sbd->sbd_bmapno = bmap->bcm_bmapno;
 
 	if (mq->rw == SL_WRITE) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
-		mp->sbd.sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
-		mp->sbd.sbd_ios_id = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
+		sbd->sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
+		sbd->sbd_ios_id = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
 	} else {
-		mp->sbd.sbd_ion_nid = LNET_NID_ANY;
-		mp->sbd.sbd_ios_id = IOS_ID_ANY;
+		sbd->sbd_ion_nid = LNET_NID_ANY;
+		sbd->sbd_ios_id = IOS_ID_ANY;
 	}
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
+	rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
 	    SRMC_BULK_PORTAL, iov, niov);
 	if (desc)
 		pscrpc_free_bulk(desc);
+	return (rc);
+}
 
-	return (0);
+int
+slm_rmc_handle_getbmap(struct pscrpc_request *rq)
+{
+	const struct srm_getbmap_req *mq;
+	struct srm_getbmap_rep *mp;
+	struct fidc_membh *fcmh;
+
+	RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
+	if (mp->rc)
+		return (mp->rc);
+	mp->flags = mq->flags;
+	mp->rc = slm_rmc_getbmap_common(fcmh, mq->prefios, mq->bmapno,
+	    mq->rw, &mp->flags, &mp->nrepls, &mp->sbd, rq);
+	return (mp->rc);
 }
 
 int
@@ -323,24 +340,27 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	p = NULL;
 
 	RSX_ALLOCREP(rq, mq, mp);
-	mq->name[sizeof(mq->name) - 1] = '\0';
+	if (mq->flags & SRM_GETBMAPF_GETREPLTBL) {
+		mp->rc = EINVAL;
+		goto out;
+	}
 
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
-	/* note that we don't create a cache entry after the creation */
+	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
 	    NULL, &mp->attr, &mdsio_data, mds_namespace_log,
 	    slm_get_next_slashid);
-	//XXX fix me.  Place an fcmh into the cache and don't close
-	// my zfs handle.
-	// XXX to increase the performance of small write i/o's we should
-	//   consider allocating a write bmap at this time and return
-	//   it to the client.
+	/* XXX enter this into the fcmh cache instead of doing it again */
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);
+
+//	mp->flags = mq->flags;
+//	mp->rc2 = slm_rmc_getbmap_common(fcmh, mq->prefios, 0,
+//	    SL_WRITE, &mp->flags, NULL, &mp->sbd, rq);
 
  out:
 	if (p)
@@ -810,26 +830,42 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
+	/* bmap messages */
+	case SRMT_GETBMAP:
+		rc = slm_rmc_handle_getbmap(rq);
+		break;
+	case SRMT_RELEASEBMAP:
+		rc = slm_rmc_handle_rls_bmap(rq);
+		break;
+
+	/* replication messages */
+	case SRMT_SET_NEWREPLPOL:
+		rc = slm_rmc_handle_set_newreplpol(rq);
+		break;
+	case SRMT_SET_BMAPREPLPOL:
+		rc = slm_rmc_handle_set_bmapreplpol(rq);
+		break;
 	case SRMT_REPL_ADDRQ:
 		rc = slm_rmc_handle_addreplrq(rq);
-		break;
-	case SRMT_CONNECT:
-		rc = slm_rmc_handle_connect(rq);
-		break;
-	case SRMT_CREATE:
-		rc = slm_rmc_handle_create(rq);
 		break;
 	case SRMT_REPL_DELRQ:
 		rc = slm_rmc_handle_delreplrq(rq);
 		break;
-	case SRMT_GETATTR:
-		rc = slm_rmc_handle_getattr(rq);
-		break;
-	case SRMT_GETBMAP:
-		rc = slm_rmc_handle_getbmap(rq);
-		break;
 	case SRMT_REPL_GETST:
 		rc = slm_rmc_handle_getreplst(rq);
+		break;
+
+	/* control messages */
+	case SRMT_CONNECT:
+		rc = slm_rmc_handle_connect(rq);
+		break;
+
+	/* file system messages */
+	case SRMT_CREATE:
+		rc = slm_rmc_handle_create(rq);
+		break;
+	case SRMT_GETATTR:
+		rc = slm_rmc_handle_getattr(rq);
 		break;
 	case SRMT_LINK:
 		rc = slm_rmc_handle_link(rq);
@@ -846,9 +882,6 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	case SRMT_READLINK:
 		rc = slm_rmc_handle_readlink(rq);
 		break;
-	case SRMT_RELEASEBMAP:
-		rc = slm_rmc_handle_rls_bmap(rq);
-		break;
 	case SRMT_RENAME:
 		rc = slm_rmc_handle_rename(rq);
 		break;
@@ -857,12 +890,6 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_SETATTR:
 		rc = slm_rmc_handle_setattr(rq);
-		break;
-	case SRMT_SET_NEWREPLPOL:
-		rc = slm_rmc_handle_set_newreplpol(rq);
-		break;
-	case SRMT_SET_BMAPREPLPOL:
-		rc = slm_rmc_handle_set_bmapreplpol(rq);
 		break;
 	case SRMT_STATFS:
 		rc = slm_rmc_handle_statfs(rq);

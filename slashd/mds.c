@@ -167,7 +167,7 @@ mds_bmap_exists(struct fidc_membh *f, sl_blkno_t n)
 	return (n < lblk);
 }
 
-static int
+__static int
 mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 {
 	struct bmap_mds_info *bmdsi=b->bcm_pri;

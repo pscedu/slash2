@@ -568,9 +568,8 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 		goto done;
 
 	mq->fg = f->fcmh_fg;
-	mq->pios = prefIOS; /* Tell MDS of our preferred ION */
+	mq->prefios = prefIOS; /* Tell MDS of our preferred ION */
 	mq->bmapno = bmap->bcm_bmapno;
-	mq->nbmaps = 1;
 	mq->rw = rw;
 	if (getreptbl)
 		mq->flags |= SRM_GETBMAPF_GETREPLTBL;
@@ -600,12 +599,6 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 		rc = mp->rc;
 	if (rc)
 		goto done;
-
-	if (!mp->nbmaps) {
-		psc_errorx("MDS returned 0 bmaps");
-		rc = -EINVAL;
-		goto done;
-	}
 
 	FCMH_LOCK(f);
 
