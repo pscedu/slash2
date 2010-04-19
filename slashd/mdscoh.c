@@ -55,8 +55,8 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	struct bmap_mds_lease *bml;
 	int rls;
 
-	mq = psc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
-	mp = psc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
+	mq = pscrpc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
+	mp = pscrpc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
 	bml = req->rq_async_args.pointer_arg[CB_ARG_SLOT];
 
 	DEBUG_BMAP(mp->rc ? PLL_ERROR : PLL_NOTIFY, bml_2_bmap(bml),

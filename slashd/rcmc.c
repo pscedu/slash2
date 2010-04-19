@@ -79,7 +79,7 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct sl_replrq *rrq)
 	iov.iov_base = srcm->srcm_page;
 	iov.iov_len = howmany(srcm->srcm_page_bitpos, NBBY);
 
-	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	mq->len = iov.iov_len;
 	mq->nbmaps = srcm->srcm_page_bitpos / (SL_BITS_PER_REPLICA *
 	    rrq->rrq_inoh->inoh_ino.ino_nrepls + SL_NBITS_REPLST_BHDR);
