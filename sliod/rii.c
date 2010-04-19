@@ -172,7 +172,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	rc = rq->rq_status;
 	if (rc)
 		goto out;
-	mp = psc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
+	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	if (mp)
 		rc = mp->rc;
 	else

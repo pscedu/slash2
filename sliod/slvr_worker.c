@@ -56,8 +56,8 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	struct pscrpc_bulk_desc *desc;
 	struct iovec *iovs;
 	size_t len;
-	int rc;
 	uint32_t i;
+	int rc;
 
 	rc = RSX_NEWREQ(sli_rmi_getimp(), SRMI_VERSION,
 			SRMT_BMAPCRCWRT, req, mq, mp);
@@ -87,36 +87,36 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 
 		bcr->bcr_crcup.rls = 0;
 
-		spinlock(&bcr->bcr_biodi->biod_lock);	
-		if (bcr->bcr_biodi->biod_rlsseq) {		
-			psc_assert(bcr->bcr_biodi->biod_rls_seqkey[0] <= 
+		spinlock(&bcr->bcr_biodi->biod_lock);
+		if (bcr->bcr_biodi->biod_rlsseq) {
+			psc_assert(bcr->bcr_biodi->biod_rls_seqkey[0] <=
 				   bcr->bcr_biodi->biod_cur_seqkey[0]);
-			
+
 			if (bcr->bcr_biodi->biod_rls_seqkey[0] ==
 			    bcr->bcr_biodi->biod_cur_seqkey[0]) {
-				/* Don't instruct the MDS to drop our 
+				/* Don't instruct the MDS to drop our
 				 *   odtable ref unless we're done with it.
 				 */
 				if (!bcr->bcr_biodi->biod_crcdrty_slvrs &&
 				    (bcr->bcr_biodi->biod_bcr_xid ==
 				     bcr->bcr_xid + 1)) {
 					bcr_xid_check(bcr);
-					bcr->bcr_crcup.rls = 1;					
+					bcr->bcr_crcup.rls = 1;
 				}
 			} else
 				bcr->bcr_crcup.rls = 1;
 
 			if (bcr->bcr_crcup.rls) {
-				bcr->bcr_crcup.seq = 
+				bcr->bcr_crcup.seq =
 					bcr->bcr_biodi->biod_rls_seqkey[0];
-				bcr->bcr_crcup.key = 
+				bcr->bcr_crcup.key =
 					bcr->bcr_biodi->biod_rls_seqkey[1];
 				bcr->bcr_biodi->biod_rlsseq = 0;
 			}
 		}
-		DEBUG_BCR(PLL_INFO, bcr, "ndirty=%u cseq=%"PRId64" rseq=%"PRId64, 
-			  bcr->bcr_biodi->biod_crcdrty_slvrs, 
-			  bcr->bcr_biodi->biod_cur_seqkey[0], 
+		DEBUG_BCR(PLL_INFO, bcr, "ndirty=%u cseq=%"PRId64" rseq=%"PRId64,
+			  bcr->bcr_biodi->biod_crcdrty_slvrs,
+			  bcr->bcr_biodi->biod_cur_seqkey[0],
 			  bcr->bcr_biodi->biod_rls_seqkey[0]);
 
 		freelock(&bcr->bcr_biodi->biod_lock);
@@ -174,7 +174,7 @@ slvr_worker_push_crcups(void)
 
 		if (trylock(&bcr->bcr_biodi->biod_lock)) {
 			if (bcr->bcr_biodi->biod_inflight) {
-				DEBUG_BCR(PLL_INFO, bcr, 
+				DEBUG_BCR(PLL_INFO, bcr,
 					  "waiting for xid=%"PRIu64,
 					  bcr->bcr_biodi->biod_bcr_xid_last);
 				freelock(&bcr->bcr_biodi->biod_lock);
@@ -250,7 +250,7 @@ slvr_worker_push_crcups(void)
 
 
 int
-slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
+slvr_nbreqset_cb(struct pscrpc_request *req,
 		 struct pscrpc_async_args *args)
 {
 	int			 i, err;
@@ -262,7 +262,7 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 	a = args->pointer_arg[0];
 	psc_assert(a);
 
-	mp = psc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
+	mp = pscrpc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
 	if (req->rq_status || mp->rc)
 		err = 1;
 
@@ -292,7 +292,6 @@ slvr_nbreqset_cb(__unusedx struct pscrpc_request *req,
 
 	return (0);
 }
-
 
 __static void
 slvr_worker_int(void)
@@ -375,7 +374,7 @@ slvr_worker_int(void)
 		 *   reaped.
 		 */
 		slvr_2_biod(s)->biod_crcdrty_slvrs--;
-		DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)", 
+		DEBUG_SLVR(PLL_INFO, s, "prep for move to LRU (ndirty=%u)",
 			   slvr_2_biod(s)->biod_crcdrty_slvrs);
 		s->slvr_flags |= SLVR_LRU;
 		(int)slvr_lru_tryunpin_locked(s);

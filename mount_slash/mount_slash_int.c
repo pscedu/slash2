@@ -1003,7 +1003,7 @@ msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
 
-	mq = psc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
+	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	psc_assert(mq);
 
 	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u s=%u",

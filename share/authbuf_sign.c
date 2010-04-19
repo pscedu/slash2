@@ -1,4 +1,27 @@
 /* $Id$ */
+/*
+ * %PSC_START_COPYRIGHT%
+ * -----------------------------------------------------------------------------
+ * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ *
+ * Permission to use, copy, and modify this software and its documentation
+ * without fee for personal use or non-commercial use within your organization
+ * is hereby granted, provided that the above copyright notice is preserved in
+ * all copies and that the copyright and this permission notice appear in
+ * supporting documentation.  Permission to redistribute this software to other
+ * organizations or individuals is not permitted without the written permission
+ * of the Pittsburgh Supercomputing Center.  PSC makes no representations about
+ * the suitability of this software for any purpose.  It is provided "as is"
+ * without express or implied warranty.
+ * -----------------------------------------------------------------------------
+ * %PSC_END_COPYRIGHT%
+ */
+
+/*
+ * authbuf_sign - routines for signing and checking the signatures of
+ * authbufs on RPC messages.  The secret key is shared among all hosts
+ * in a SLASH network.
+ */
 
 #include <string.h>
 
@@ -21,7 +44,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 {
 	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0); /* random */
 	struct srt_authbuf_footer *saf;
-	struct psc_msg *m;
+	struct pscrpc_msg *m;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 
@@ -30,7 +53,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	else
 		m = rq->rq_repmsg;
 
-	saf = psc_msg_buf(m, 1, sizeof(*saf));
+	saf = pscrpc_msg_buf(m, 1, sizeof(*saf));
 	saf->saf_secret.sas_magic = AUTHBUF_MAGIC;
 	saf->saf_secret.sas_nonce = psc_atomic64_inc_getnew(&nonce);
 	saf->saf_secret.sas_src_nid = rq->rq_self;
@@ -42,8 +65,8 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	if (gerr)
 		psc_fatalx("gcry_md_copy: %d", gerr);
 
-	gcry_md_write(hd, psc_msg_buf(m, 0, 0),
-	    psc_msg_buflen(m, 0));
+	gcry_md_write(hd, pscrpc_msg_buf(m, 0, 0),
+	    pscrpc_msg_buflen(m, 0));
 	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
 
 	psc_base64_encode(gcry_md_read(hd, 0),
@@ -62,7 +85,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 {
 	struct srt_authbuf_footer *saf;
 	char buf[AUTHBUF_REPRLEN];
-	struct psc_msg *m;
+	struct pscrpc_msg *m;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 
@@ -71,7 +94,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	else
 		m = rq->rq_repmsg;
 
-	saf = psc_msg_buf(m, 1, sizeof(*saf));
+	saf = pscrpc_msg_buf(m, 1, sizeof(*saf));
 
 	if (saf->saf_secret.sas_magic != AUTHBUF_MAGIC)
 		return (SLERR_AUTHBUF_BADMAGIC);
@@ -86,7 +109,7 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 	if (gerr)
 		psc_fatalx("gcry_md_copy: %d", gerr);
 
-	gcry_md_write(hd, psc_msg_buf(m, 0, 0), psc_msg_buflen(m, 0));
+	gcry_md_write(hd, pscrpc_msg_buf(m, 0, 0), pscrpc_msg_buflen(m, 0));
 	gcry_md_write(hd, &saf->saf_secret, sizeof(saf->saf_secret));
 
 	psc_base64_encode(gcry_md_read(hd, 0), buf, authbuf_alglen);

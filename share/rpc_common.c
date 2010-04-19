@@ -70,7 +70,7 @@ slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 		if (mp->rc)
 			rc = mp->rc;
 		else
-			imp->imp_state = PSC_IMP_FULL;
+			imp->imp_state = PSCRPC_IMP_FULL;
 	}
 	pscrpc_req_finished(rq);
 	return (rc);

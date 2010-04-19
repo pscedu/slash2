@@ -18,11 +18,8 @@
  */
 
 /*
- * authbuf - RPC integrity/authorization buffer routines.
- *
- * All RPC messages are signed by a secret key to ensure integrity over
- * transmissions.  The secret key is shared on all machines in a SLASH
- * network.
+ * authbuf_mgt - routines for managing the secret key used to provide
+ * in RPC messages sent between hosts in a SLASH network.
  */
 
 #include <sys/types.h>

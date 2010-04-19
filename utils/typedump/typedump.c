@@ -27,11 +27,11 @@
 #include "psc_util/ctl.h"
 
 /* start includes */
+#include "authbuf.h"
 #include "bmap.h"
 #include "buffer.h"
 #include "cache_params.h"
 #include "creds.h"
-#include "fdbuf.h"
 #include "fid.h"
 #include "fidcache.h"
 #include "inode.h"
