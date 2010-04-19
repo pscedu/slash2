@@ -85,14 +85,14 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 int
 mdscoh_req(struct bmap_mds_lease *bml, int block)
 {
-	struct pscrpc_request *req;
+	struct pscrpc_export *exp = bml->bml_exp;
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_dio_req *mq;
 	struct srm_generic_rep *mp;
-	struct pscrpc_export *exp=bml->bml_exp;
-	struct slashrpc_cservice *csvc;
-	int rc=0;
+	int rc = 0;
 
-	DEBUG_BMAP(PLL_NOTIFY, bml_2_bmap(bml), "bml=%p",  bml);
+	DEBUG_BMAP(PLL_NOTIFY, bml_2_bmap(bml), "bml=%p", bml);
 
 	BML_LOCK(bml);
 	psc_assert(!(bml->bml_flags & BML_COH));
@@ -100,20 +100,21 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	if (!(bml->bml_flags & BML_EXP)) {
 		BML_ULOCK(bml);
 		return (-ENOTCONN);
-	} else {
-		bml->bml_flags |= BML_COH;
-		/* XXX How do we deal with a closing export?
-		 */
-		csvc = slm_getclcsvc(exp);
-		if (csvc == NULL)
-			return (-1);
 	}
+	bml->bml_flags |= BML_COH;
+	/* XXX How do we deal with a closing export?
+	*/
+	csvc = slm_getclcsvc(exp);
+	if (csvc == NULL)
+		bml->bml_flags &= ~BML_COH;
 	BML_ULOCK(bml);
+	if (csvc == NULL)
+		return (-1);
 
 	rc = RSX_NEWREQ(csvc->csvc_import, SRCM_VERSION,
-		SRMT_BMAPDIO, req, mq, mp);
+	    SRMT_BMAPDIO, rq, mq, mp);
 	if (rc)
-		return (rc);
+		goto out;
 
 	mq->fid = fcmh_2_fid(bml_2_bmap(bml)->bcm_fcmh);
 	mq->blkno = bml_2_bmap(bml)->bcm_bmapno;
@@ -121,18 +122,21 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	mq->seq = bml->bml_seq;
 
 	if (block == MDSCOH_BLOCK) {
+		rc = RSX_WAITREP(rq, mp);
+		if (rc == 0)
+			rc = mp->rc;
+	} else {
+		pscrpc_nbreqset_add(&bmapCbSet, rq);
+		rq = NULL;
+		csvc = NULL;
+	}
 
-		rc = RSX_WAITREP(req, mp);
-		if (rc)
-			return (rc);
+ out:
 
-		if (req)
-			pscrpc_req_finished(req);
-
-		rc = mp->rc;
-	} else
-		pscrpc_nbreqset_add(&bmapCbSet, req);
-
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 	return (rc);
 }
 
