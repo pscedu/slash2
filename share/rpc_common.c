@@ -134,10 +134,21 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 
 /*
  * sl_csvc_get - acquire or create a client RPC service.
- *
+ * @csvcp: value-result permanent storage for connection structures.
+ * @flags: CSVCF_* flags the connection should take on, only used for
+ *	csvc initialization.
+ * @exp: RPC peer export.  This or @peernid is required.
+ * @peernid: RPC peer network address (NID).  This or @exp is required.
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
- * @ctype: connect type.
+ * @magic: connection magic bits.
+ * @version: version of application protocol.
+ * @lockp: point to lock for mutually exclusive access to critical
+ *	sections involving this connection structure, whereever @csvcp
+ *	is stored.
+ * @waitinfo: waitq or multiwait argument to wait/wakeup depending on
+ *	connection availability.
+ * @ctype: peer type.
  *
  * If we acquire a connection successfully, this function will return
  * the same slashrpc_cservice struct pointer as referred to by its
@@ -148,8 +159,7 @@ struct slashrpc_cservice *
 sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, lnet_nid_t peernid, uint32_t rqptl,
     uint32_t rpptl, uint64_t magic, uint32_t version,
-    psc_spinlock_t *lockp, void *waitinfo,
-    enum slconn_type ctype)
+    psc_spinlock_t *lockp, void *waitinfo, enum slconn_type ctype)
 {
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm;
