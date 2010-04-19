@@ -27,6 +27,8 @@
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_rpc/rpc.h"
+#include "psc_rpc/rsx.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -42,6 +44,10 @@
 #include "sljournal.h"
 
 struct psc_journal	*mdsJournal;
+
+__static atomic_t		logCompletedRpcCnt;
+__static atomic_t		logOutstandingRpcCnt;
+__static struct psc_waitq	logRpcCompletion;
 
 /*
  * Eventually, we are going to retrieve the namespace update sequence number
@@ -152,15 +158,30 @@ mds_namespace_log(int op, int type, int perm, uint64_t parent,
 	PSCFREE(jnamespace);
 }
 
+
+__static int
+mds_namespace_rpc_cb(struct pscrpc_request *req,
+		  __unusedx struct pscrpc_async_args *args)
+{
+	atomic_dec(&logOutstandingRpcCnt);
+	return (0);
+}
 /*
  * Send the newest batch of changes to peer MDSes that seem to be active.
  */
 void
 mds_namespace_propagate_batch()
 {
+	int rc;
+	int niovs;
 	struct sl_site *s;
 	struct resm_mds_info *rmmi;
+	struct srm_send_namespace_req *mq;
+	struct srm_generic_rep *mp;
 	struct slashrpc_cservice *csvc;
+	struct pscrpc_request *req;
+	struct pscrpc_bulk_desc *desc;
+	struct iovec *iovs;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites) {
@@ -169,14 +190,28 @@ mds_namespace_propagate_batch()
 		 * Add logic here to decide if we should skip
 		 * the current site because it is lagging.
 		 */
-		spinlock(&rmmi->rmmi_lock);
 		csvc = slm_geticsvc(rmmi->rmmi_resm);
 		if (csvc == NULL) {
-			freelock(&rmmi->rmmi_lock);
 			continue;
 		}
-		freelock(&rmmi->rmmi_lock);
+		rc = RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION, 
+			SRMT_SEND_NAMESPACE, req, mq, mp);
+		if (rc)
+			goto fail;
+
+		rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
+			 iovs, niovs);
+
+		req->rq_interpret_reply = mds_namespace_rpc_cb;
+		req->rq_compl_cntr = &logCompletedRpcCnt;
+		req->rq_waitq = &logRpcCompletion;
+
+		pscrpc_push_req(req);
 	}
+	PLL_ULOCK(&globalConfig.gconf_sites);
+
+fail:
+	return;
 }
 
 /*
