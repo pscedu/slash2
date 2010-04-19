@@ -248,6 +248,8 @@ site_resource	: resource_start resource_def SUBSECT_END {
 				if (r->res_type == SLREST_MDS &&
 				    ++nmds > 1)
 					yyerror("more than one metadata server");
+
+			slcfg_init_res(currentRes);
 		}
 		;
 
@@ -275,7 +277,6 @@ resource_start	: RESOURCE_PROFILE NAME SUBSECT_START {
 					yyerror("duplicate resource name: %s",
 					    r->res_name);
 
-			slcfg_init_res(currentRes);
 			free($2);
 		}
 		;
