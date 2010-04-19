@@ -17,6 +17,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * Metadata about files resident in a SLASH network is stored in inodes.
+ */
+
 #ifndef _SLASH_INODE_H_
 #define _SLASH_INODE_H_
 

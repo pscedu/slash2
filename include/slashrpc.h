@@ -18,7 +18,8 @@
  */
 
 /*
- * SLASH Remote prodecure call Message (SRM) definitions.
+ * SLASH remote procedure call message (SRM) definitions, for issuing
+ * operations on and communicating with other hosts in a SLASH network.
  */
 
 #ifndef _SLASHRPC_H_

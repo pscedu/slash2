@@ -17,6 +17,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * Simple API for constructing path file names in a POSIX file system.
+ */
+
 #ifndef _SL_MKFN_H_
 #define _SL_MKFN_H_
 

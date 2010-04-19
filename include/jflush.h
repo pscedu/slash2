@@ -17,6 +17,12 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * This interface describes the mechanisms and objects for  writing log
+ * entries into the activity journal for recovering state when failure
+ * occurs.
+ */
+
 #ifndef _SL_JFLUSH_
 #define _SL_JFLUSH_
 

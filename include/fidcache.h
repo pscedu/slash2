@@ -17,6 +17,12 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * The fidcache manages a pool of handles in memory representing files
+ * resident in a SLASH network.  Entries in this pool are thusly
+ * fidcache member handles (fcmh).
+ */
+
 #ifndef _SL_FIDCACHE_H_
 #define _SL_FIDCACHE_H_
 

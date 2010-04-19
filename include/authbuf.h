@@ -18,7 +18,9 @@
  */
 
 /*
- * authbuf - RPC message buffer authorization routines.
+ * authbuf - routines for managing, signing, and checking the signatures
+ * messages sent between hosts in a SLASH network for integrity with a
+ * secret key.
  */
 
 #ifndef _SL_AUTHBUF_H_

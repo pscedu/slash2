@@ -17,6 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * This interface provides access to the information parsed from the
+ * SLASH configuration file about sites and servers in a SLASH network.
+ */
+
 #ifndef _SLCONFIG_H_
 #define _SLCONFIG_H_
 

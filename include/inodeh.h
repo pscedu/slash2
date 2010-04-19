@@ -17,6 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * The inode layer corresponding to file metadata is managed in memory
+ * by inode handles.
+ */
+
 #ifndef _SLASH_INODEH_H_
 #define _SLASH_INODEH_H_
 

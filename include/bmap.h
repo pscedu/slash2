@@ -17,6 +17,17 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * The bmap (block map) interface divides the space of a file in a SLASH
+ * network into manageable units.  bmaps are ordered sequentially from
+ * the beginning of the file space and are the fundamental elements of
+ * I/O node file region ownership and in replication management.
+ *
+ * bmaps store information such as the state on each replicated instance
+ * and are themselves subdivided into slivers which track cyclic redundancy
+ * checksums for integrity and such.
+ */
+
 #ifndef _BMAP_H_
 #define _BMAP_H_
 

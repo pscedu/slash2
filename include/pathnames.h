@@ -20,7 +20,6 @@
 #ifndef _SLASH_PATHNAMES_H_
 #define _SLASH_PATHNAMES_H_
 
-
 /* immutable namespace paths */
 #define SL_PATH_PREFIX		".sl"
 #define SL_PATH_REPLS		".slrepls"

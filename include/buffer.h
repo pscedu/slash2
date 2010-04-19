@@ -17,6 +17,12 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * The slab interface provides a backing for storing regions of file
+ * space in CLI memory.  The slab API provides hooks into the RPC
+ * layer for managing transportation over the network.
+ */
+
 #ifndef _SL_BUFFER_H_
 #define _SL_BUFFER_H_
 

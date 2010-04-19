@@ -17,6 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * This interface provides connections to hosts (servers and clients) in
+ * a SLASH network.
+ */
+
 #ifndef _SLCONN_H_
 #define _SLCONN_H_
 

@@ -17,6 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * This file contains definitions related to the assignment and
+ * orchestration of the identifers of files (FID) in a SLASH network.
+ */
+
 #ifndef _SLASH_FID_H_
 #define _SLASH_FID_H_
 
