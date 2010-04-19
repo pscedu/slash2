@@ -29,8 +29,8 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
+#include "authbuf.h"
 #include "bmap_iod.h"
-#include "fdbuf.h"
 #include "fid.h"
 #include "fidc_iod.h"
 #include "fidcache.h"

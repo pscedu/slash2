@@ -38,7 +38,7 @@
 #include "psc_util/log.h"
 #include "psc_util/random.h"
 
-#include "fdbuf.h"
+#include "authbuf.h"
 #include "mkfn.h"
 #include "pathnames.h"
 #include "slashrpc.h"

@@ -24,7 +24,7 @@
 #include "pfl/pfl.h"
 #include "psc_util/log.h"
 
-#include "fdbuf.h"
+#include "authbuf.h"
 #include "pathnames.h"
 
 int		 create;

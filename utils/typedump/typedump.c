@@ -122,8 +122,6 @@ main(int argc, char *argv[])
 
 	/* start structs */
 	PRTYPE(mdsio_fid_t);
-	PRTYPE(sl_blkgen_t);
-	PRTYPE(sl_blkno_t);
 	PRTYPE(sl_bmapgen_t);
 	PRTYPE(sl_bmapno_t);
 	PRTYPE(sl_ino_t);

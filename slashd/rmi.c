@@ -30,8 +30,8 @@
 #include "psc_rpc/service.h"
 #include "psc_util/lock.h"
 
+#include "authbuf.h"
 #include "bmap_mds.h"
-#include "fdbuf.h"
 #include "fid.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"

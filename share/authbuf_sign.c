@@ -7,7 +7,7 @@
 #include "psc_util/base64.h"
 #include "psc_util/log.h"
 
-#include "fdbuf.h"
+#include "authbuf.h"
 #include "slashrpc.h"
 #include "slerr.h"
 

@@ -33,9 +33,9 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
+#include "authbuf.h"
 #include "bmap_mds.h"
 #include "ctl_mds.h"
-#include "fdbuf.h"
 #include "fidcache.h"
 #include "mdscoh.h"
 #include "mdsio.h"
@@ -142,7 +142,7 @@ slm_init(void)
 	    bml_bmdsi_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
 	    "bmap_leases");
 	bmapMdsLeasePool = psc_poolmaster_getmgr(&bmapMdsLeasePoolMaster);
-       
+
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
 	    rsw_lentry, "replstwkq");
 

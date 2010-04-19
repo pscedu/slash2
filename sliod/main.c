@@ -31,9 +31,9 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
+#include "authbuf.h"
 #include "bmap_iod.h"
 #include "buffer.h"
-#include "fdbuf.h"
 #include "fidc_iod.h"
 #include "fidcache.h"
 #include "pathnames.h"
