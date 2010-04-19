@@ -94,7 +94,7 @@ _bmap_op_done(struct bmapc_memb *b)
 }
 
 __static struct bmapc_memb *
-bmap_lookup_cache_locked(struct fidc_membh *f, sl_blkno_t n)
+bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n)
 {
 	struct bmapc_memb lb, *b;
 

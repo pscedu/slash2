@@ -639,7 +639,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
  *    the mds.
  */
 __static int
-msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, enum rw rw)
+msl_bmap_modeset(struct fidc_membh *f, sl_bmapno_t b, enum rw rw)
 {
 	struct pscrpc_request *rq;
 	struct srm_bmap_chmode_req *mq;
@@ -665,7 +665,7 @@ msl_bmap_modeset(struct fidc_membh *f, sl_blkno_t b, enum rw rw)
 }
 
 struct bmapc_memb *
-msl_bmap_load(struct msl_fhent *mfh, sl_blkno_t n, enum rw rw)
+msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw)
 {
 	struct fidc_membh *f = mfh->mfh_fcmh;
 	struct bmapc_memb *b;
@@ -1543,7 +1543,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 #define MAX_BMAPS_REQ 4
 	struct bmpc_ioreq *r[MAX_BMAPS_REQ];
 	struct bmapc_memb *b[MAX_BMAPS_REQ];
-	sl_blkno_t s, e;
+	sl_bmapno_t s, e;
 	size_t tlen, tsize=size;
 	off_t roff;
 	int nr, j, rc;

@@ -146,9 +146,9 @@ mds_inox_ensure_loaded(struct slash_inode_handle *ih)
 }
 
 int
-mds_bmap_exists(struct fidc_membh *f, sl_blkno_t n)
+mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 {
-	sl_blkno_t lblk;
+	sl_bmapno_t lblk;
 	int locked;
 	//int rc;
 
@@ -863,7 +863,7 @@ mds_bmap_sync_if_changed(struct bmapc_memb *bcm)
  *     successful.
  */
 int
-mds_bmap_loadvalid(struct fidc_membh *f, sl_blkno_t bmapno,
+mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
     struct bmapc_memb **bp)
 {
 	struct bmapc_memb *b;
@@ -897,7 +897,7 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_blkno_t bmapno,
 }
 
 int
-mds_bmap_load_ion(const struct slash_fidgen *fg, sl_blkno_t bmapno,
+mds_bmap_load_ion(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
     struct bmapc_memb **bp)
 {
 	struct fidc_membh *f;

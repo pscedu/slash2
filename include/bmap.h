@@ -37,7 +37,7 @@ struct fidc_membh;
 
 struct bmap_refresh {
 	struct slash_fidgen	bmrfr_fg;
-	sl_blkno_t		bmrfr_blk;
+	sl_bmapno_t		bmrfr_blk;
 	uint8_t			bmrfr_flags;
 };
 
@@ -157,7 +157,7 @@ struct slash_bmap_od {
 	sl_gcrc_t		bh_crcs[SL_CRCS_PER_BMAP];
 	uint8_t			bh_crcstates[SL_CRCS_PER_BMAP];
 	uint8_t			bh_repls[SL_REPLICA_NBYTES];
-	sl_blkgen_t		bh_gen;
+	sl_bmapgen_t		bh_gen;
 	uint32_t		bh_repl_policy;
 
 	/* the CRC must be at the end */
@@ -257,7 +257,7 @@ _log_debug_bmapod(const char *file, const char *func, int lineno,
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
 void	_bmap_op_done(struct bmapc_memb *);
-int	 bmap_getf(struct fidc_membh *, sl_blkno_t, enum rw, int,
+int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
 	    struct bmapc_memb **);
 
 int	bmapdesc_access_check(struct srt_bmapdesc *, enum rw,

@@ -54,7 +54,7 @@ struct psc_lockedlist	 sli_replwkq_active =
 
 int
 sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
-    sl_bmapno_t bmapno, sl_blkgen_t bgen, int len)
+    sl_bmapno_t bmapno, sl_bmapgen_t bgen, int len)
 {
 	struct sli_repl_workrq *w;
 	int rc, i;

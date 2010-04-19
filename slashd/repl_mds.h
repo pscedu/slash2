@@ -72,11 +72,11 @@ SPLAY_PROTOTYPE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
 struct sl_replrq *
 	 mds_repl_findrq(const struct slash_fidgen *, int *);
 int	 mds_repl_accessrq(struct sl_replrq *);
-int	 mds_repl_addrq(const struct slash_fidgen *, sl_blkno_t, const sl_replica_t *, int);
+int	 mds_repl_addrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
 int	_mds_repl_bmap_apply(struct bmapc_memb *, const int [], const int [], int, int, int *);
 void	 mds_repl_bmap_rel(struct bmapc_memb *);
 int	 mds_repl_bmap_walk(struct bmapc_memb *, const int [], const int [], int, const int *, int);
-int	 mds_repl_delrq(const struct slash_fidgen *, sl_blkno_t, const sl_replica_t *, int);
+int	 mds_repl_delrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
 void	 mds_repl_init(void);
 int	 mds_repl_inv_except(struct bmapc_memb *, sl_ios_id_t);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int);

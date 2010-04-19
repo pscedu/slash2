@@ -397,7 +397,7 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	char map[SL_NREPLST], pmap[SL_NREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
-	sl_blkno_t bact, bold, nb;
+	sl_bmapno_t bact, bold, nb;
 	int n, nbw, off, dlen;
 	uint32_t iosidx;
 

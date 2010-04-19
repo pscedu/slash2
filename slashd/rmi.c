@@ -57,7 +57,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	RSX_ALLOCREP(rq, mq, mp);
 #if 0
 	struct slash_fidgen fg;
-	sl_blkno_t bmapno;
+	sl_bmapno_t bmapno;
 	int i;
 
 	DYNARRAY_FOREACH(np, i, &lnet_nids) {

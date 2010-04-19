@@ -27,10 +27,6 @@
 
 #include "pfl/cdefs.h"
 
-/* deprecated */
-typedef uint32_t sl_blkno_t;
-typedef uint32_t sl_blkgen_t;
-
 typedef uint32_t sl_bmapno_t;		/* file block map index */
 typedef uint32_t sl_bmapgen_t;		/* file block map generation */
 
@@ -39,13 +35,13 @@ typedef uint32_t sl_ios_id_t;
 
 typedef uint64_t sl_ino_t;
 
-#define BLKNO_ANY	(~(sl_blkno_t)0)	/* deprecated */
-#define BMAPNO_ANY	((sl_bmapno_t)~0U)
+#define BLKNO_ANY		(~(sl_bmapno_t)0)	/* deprecated */
+#define BMAPNO_ANY		((sl_bmapno_t)~0U)
 
-#define IOS_ID_ANY	((sl_ios_id_t)~0U)
-#define SITE_ID_ANY	((sl_siteid_t)~0U)
+#define IOS_ID_ANY		((sl_ios_id_t)~0U)
+#define SITE_ID_ANY		((sl_siteid_t)~0U)
 
-#define BMAPSEQ_ANY     ((uint64_t)~0U)
+#define BMAPSEQ_ANY	 ((uint64_t)~0U)
 
 /* breakdown of I/O system ID: # of bits for each part */
 #define SL_SITE_BITS		16
@@ -56,8 +52,8 @@ typedef uint64_t sl_ino_t;
 
 /* I/O flags */
 enum rw {
-	SL_READ = 42,
-	SL_WRITE = 43
+	SL_READ			= 42,
+	SL_WRITE		= 43
 };
 
 enum rw fflags_2_rw(int);
@@ -80,7 +76,7 @@ typedef struct slash_replica {
 struct srt_stat {
 	uint64_t		sst_dev;	/* ID of device containing file */
 	uint64_t		sst_ino;	/* inode number */
-	uint32_t                sst_gen;	/* full truncate generation */
+	uint32_t		sst_gen;	/* full truncate generation */
 	uint32_t		sst_ptruncgen;	/* partial truncate generation */
 	uint32_t		sst_mode;	/* file permissions */
 	uint32_t		sst__pad;

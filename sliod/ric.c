@@ -66,7 +66,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
 	struct iovec iovs[2];
-	sl_blkno_t bmapno, slvrno;
+	sl_bmapno_t bmapno, slvrno;
 	int rc=0, nslvrs, i;
 	lnet_nid_t *np;
 

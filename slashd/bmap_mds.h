@@ -123,7 +123,7 @@ struct bmi_assign {
 	sl_ios_id_t		bmi_ios;
 	slfid_t			bmi_fid;
 	uint64_t		bmi_seq;
-	sl_blkno_t		bmi_bmapno;
+	sl_bmapno_t		bmi_bmapno;
 	time_t			bmi_start;
 };
 
@@ -135,13 +135,13 @@ struct bmi_assign {
 #define mds_bmap_load(f, n, bp)	bmap_get((f), (n), 0, (bp))
 
 int	 mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
-int	 mds_bmap_exists(struct fidc_membh *, sl_blkno_t);
+int	 mds_bmap_exists(struct fidc_membh *, sl_bmapno_t);
 int	 mds_bmap_load_cli(struct fidc_membh *, sl_bmapno_t, int, enum rw,
 	    sl_ios_id_t, struct srt_bmapdesc *, struct pscrpc_export *,
 	    struct bmapc_memb **);
-int	 mds_bmap_load_ion(const struct slash_fidgen *, sl_blkno_t,
+int	 mds_bmap_load_ion(const struct slash_fidgen *, sl_bmapno_t,
 	    struct bmapc_memb **);
-int	 mds_bmap_loadvalid(struct fidc_membh *, sl_blkno_t,
+int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
 	    struct bmapc_memb **);
 int	 mds_bmap_bml_release(struct bmapc_memb *, uint64_t, uint64_t);
 void	 mds_bmap_ref_drop(struct bmapc_memb *, int);

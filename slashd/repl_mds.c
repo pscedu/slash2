@@ -594,7 +594,7 @@ mds_repl_getslfid(void)
 }
 
 int
-mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
+mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     const sl_replica_t *iosv, int nios)
 {
 	int tract[SL_NREPLST], retifset[SL_NREPLST], retifzero[SL_NREPLST];
@@ -693,7 +693,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	retifzero[SL_REPLST_SCHED] = 0;
 	retifzero[SL_REPLST_TRUNCPNDG] = 0;
 
-	if (bmapno == (sl_blkno_t)-1) {
+	if (bmapno == (sl_bmapno_t)-1) {
 		int repl_some_act = 0, repl_all_act = 1;
 		int ret_if_inact[SL_NREPLST];
 
@@ -787,7 +787,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	int rrq_gen, rc, retifset[SL_NREPLST];
 	struct bmapc_memb *bcm;
 	char fn[IMNS_NAME_MAX];
-	sl_blkno_t n;
+	sl_bmapno_t n;
 
 	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
 	if (rrq->rrq_flags & REPLRQF_DIE) {
@@ -866,7 +866,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 }
 
 int
-mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
+mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     const sl_replica_t *iosv, int nios)
 {
 	int tract[SL_NREPLST], retifset[SL_NREPLST];
@@ -895,7 +895,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_blkno_t bmapno,
 	tract[SL_REPLST_SCHED] = SL_REPLST_INACTIVE;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
 
-	if (bmapno == (sl_blkno_t)-1) {
+	if (bmapno == (sl_bmapno_t)-1) {
 		retifset[SL_REPLST_INACTIVE] = 0;
 		retifset[SL_REPLST_ACTIVE] = 1;
 		retifset[SL_REPLST_OLD] = 1;
@@ -1170,7 +1170,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 	struct bmapc_memb *bcm;
 	struct sl_replrq *rrq;
 	sl_replica_t repl;
-	sl_blkno_t n;
+	sl_bmapno_t n;
 
 	repl.bs_id = resid;
 

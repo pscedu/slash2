@@ -45,7 +45,7 @@
  */
 struct slmds_jent_crc {
 	slfid_t			sjc_fid;
-	sl_blkno_t		sjc_bmapno;
+	sl_bmapno_t		sjc_bmapno;
 	sl_ios_id_t		sjc_ion; /* Track the ion which did the I/O */
 	uint32_t		sjc_ncrcs;
 	uint64_t		sjc_fsize;
@@ -64,8 +64,8 @@ struct slmds_jent_crc {
  */
 struct slmds_jent_repgen {
 	slfid_t			sjp_fid;
-	sl_blkno_t		sjp_bmapno;
-	sl_blkgen_t		sjp_bgen;
+	sl_bmapno_t		sjp_bmapno;
+	sl_bmapgen_t		sjp_bgen;
 	uint8_t			sjp_reptbl[SL_REPLICA_NBYTES];
 } __packed;
 
