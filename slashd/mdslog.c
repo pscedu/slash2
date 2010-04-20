@@ -195,6 +195,9 @@ mds_namespace_propagate_batch(char *buf)
 			/* MDS cannot have one member */
 			resm = psc_dynarray_getpos(&r->res_members, 0);
 
+			if (resm == nodeResm)
+				continue;
+
 			/*
 			 * Add logic here to decide if we should skip
 			 * the current site because it is lagging.
