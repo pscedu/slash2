@@ -380,6 +380,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 		goto out;
 
 	msbd = bcm->bcm_pri;
+	msbd->msbd_sbd = mp->sbd;
 	clock_gettime(CLOCK_REALTIME, &msbd->msbd_xtime);
 	timespecadd(&msbd->msbd_xtime, &msl_bmap_max_lease,
 	    &msbd->msbd_xtime);
