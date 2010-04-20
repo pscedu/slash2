@@ -881,13 +881,14 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				continue;
 			}
 
+#ifdef BMAP_FLUSH_SORT
 			if (timespeccmp(&ctime, &msbd->msbd_etime, <)) {
 				BMAP_ULOCK(b);
 				timespecsub(&msbd->msbd_etime, &ctime, &wtime);
-#ifdef BMAP_FLUSH_SORT
 				break;
-#endif
 			}
+#endif
+
 			/* Maintain the lock, bmap_op_done_type() will take
 			 *   it anyway.
 			 */
