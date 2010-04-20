@@ -37,7 +37,8 @@ extern struct psc_listcache lruSlvrs;
 extern struct psc_listcache crcqSlvrs;
 
 /**
- * slvr_ref - sliver reference used for scheduling dirty slivers to be crc'd and sent to the mds.
+ * slvr_ref - sliver reference used for scheduling dirty slivers to be
+ *	CRC'd and sent to the mds.
  * Note: slivers are locked through their bmap_iod_info lock.
  */
 struct slvr_ref {
@@ -56,23 +57,23 @@ enum {
 	SLVR_NEW	= (1 <<  0),	/* newly initialized */
 	SLVR_SPLAYTREE	= (1 <<  1),	/* registered in the splay tree */
 	SLVR_UNUSED1	= (1 <<  2),	/* unused1 */
-	SLVR_FAULTING	= (1 <<  3),	/* contents being filled in from the disk or over the network */
+	SLVR_FAULTING	= (1 <<  3),	/* contents loading from disk or net */
 	SLVR_GETSLAB	= (1 <<  4),	/* assigning memory buffer to slvr */
 	SLVR_PINNED	= (1 <<  5),	/* slab cannot be removed from the cache */
 	SLVR_DATARDY	= (1 <<  6),	/* ready for read / write activity */
-	SLVR_DATAERR    = (1 <<  7),
+	SLVR_DATAERR	= (1 <<  7),
 	SLVR_LRU	= (1 <<  8),	/* cached but not dirty */
 	SLVR_CRCDIRTY	= (1 <<  9),	/* crc does not match cached buffer */
-	SLVR_CRCING     = (1 << 10),
+	SLVR_CRCING	= (1 << 10),
 	SLVR_FREEING	= (1 << 11),	/* sliver is being reaped */
 	SLVR_SLBFREEING	= (1 << 12),	/* slab of the sliver is being reaped */
-	SLVR_REPLSRC	= (1 << 13),    /* slvr is replication source */
-	SLVR_REPLDST	= (1 << 14)     /* slvr is replication destination */
+	SLVR_REPLSRC	= (1 << 13),	/* slvr is replication source */
+	SLVR_REPLDST	= (1 << 14)	/* slvr is replication destination */
 };
 
 #define SLVR_2_BLK(s)		((s)->slvr_num * (SLASH_BMAP_SIZE / SLASH_BMAP_BLKSZ))
 
-#define SLVR_GETLOCK(s)		(&(slvr_2_biod(s))->biod_lock)
+#define SLVR_GETLOCK(s)		(&slvr_2_biod(s)->biod_lock)
 #define SLVR_LOCK(s)		spinlock(SLVR_GETLOCK(s))
 #define SLVR_ULOCK(s)		freelock(SLVR_GETLOCK(s))
 #define SLVR_RLOCK(s)		reqlock(SLVR_GETLOCK(s))
