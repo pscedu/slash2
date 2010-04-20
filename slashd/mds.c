@@ -306,25 +306,23 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		freelock(&rpmi->rpmi_lock);
 
 		rmmi = resm->resm_pri;
-		spinlock(&rmmi->rmmi_lock);
 
 		/*
 		 * If we fail to establish a connection, try next node.
 		 * The loop guarantees that we always bail out.
 		 */
 		csvc = slm_geticsvc(resm);
-		if (csvc == NULL) {
-			freelock(&rmmi->rmmi_lock);
+		if (csvc == NULL)
 			continue;
-		}
+		spinlock(&rmmi->rmmi_lock);
+		atomic_inc(&rmmi->rmmi_refcnt);
+		freelock(&rmmi->rmmi_lock);
 		sl_csvc_decref(csvc);
 
 		DEBUG_BMAP(PLL_TRACE, bmap, "res(%s) ion(%s)",
 		    res->res_name, resm->resm_addrbuf);
 
-		atomic_inc(&rmmi->rmmi_refcnt);
 		bmdsi->bmdsi_wr_ion = rmmi;
-		freelock(&rmmi->rmmi_lock);
 		break;
 	}
 
