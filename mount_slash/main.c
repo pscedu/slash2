@@ -30,6 +30,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <gcrypt.h>
+
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
@@ -62,20 +64,22 @@
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
 
-sl_ios_id_t		 prefIOS = IOS_ID_ANY;
-const char		*progname;
-char			 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
-char			 mountpoint[PATH_MAX];
+sl_ios_id_t			 prefIOS = IOS_ID_ANY;
+const char			*progname;
+char				 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
+char				 mountpoint[PATH_MAX];
 
-struct sl_resm		*slc_rmc_resm;
+struct sl_resm			*slc_rmc_resm;
 
-struct psc_vbitmap	 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
-psc_spinlock_t		 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
+struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
+psc_spinlock_t			 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
 
-struct slash_creds	 rootcreds = { 0, 0 };
+struct slash_creds		 rootcreds = { 0, 0 };
 
-static int  msl_lookup_fidcache(const struct slash_creds *, fuse_ino_t, const char *,
-		struct slash_fidgen *, struct srt_stat *);
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
+
+static int  msl_lookup_fidcache(const struct slash_creds *, fuse_ino_t,
+    const char *, struct slash_fidgen *, struct srt_stat *);
 
 /**
  * translate_pathname - convert an absolute file system path name into
@@ -1807,6 +1811,11 @@ main(int argc, char *argv[])
 	char c, *noncanon_mp = NULL, *cfg = SL_PATH_CONF;
 	struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
 	int unmount_first = 0;
+
+	/* gcrypt must be initialized very early on */
+	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	if (!gcry_check_version(GCRYPT_VERSION))
+		errx(1, "libgcrypt version mismatch");
 
 	pfl_init();
 
