@@ -114,7 +114,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_GETBMAPCRCS, rq, mq, mp);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "could not create request (%d)", rc);
@@ -135,7 +135,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 		psc_error("rsx_bulkclient() failed rc=%d ", rc);
 		goto out;
 	}
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc) {

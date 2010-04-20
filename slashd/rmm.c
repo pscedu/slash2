@@ -44,7 +44,7 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMM_MAGIC || mq->version != SRMM_VERSION)
 		mp->rc = -EINVAL;
 	return (0);
@@ -60,10 +60,10 @@ slm_rmm_handle_send_namespace(__unusedx struct pscrpc_request *rq)
 	struct iovec iov;
 	struct pscrpc_request *req;
 	struct pscrpc_bulk_desc *desc;
-	
+
 	iov.iov_len = SLM_NAMESPACE_BATCH * 512;
 	iov.iov_base = PSCALLOC(SLM_NAMESPACE_BATCH * 512);
-	
+
 	rc = rsx_bulkserver(req, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL,
 		&iov, 1);
 	if (rc)
@@ -107,7 +107,9 @@ slm_rmm_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-//	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#ifdef AUTHBUF
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#endif
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

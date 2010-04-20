@@ -49,7 +49,7 @@ slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw)
 	struct pscrpc_request *rq;
 	int rc;
 
-	rc = RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
+	rc = SL_RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
 	    SRCM_VERSION, SRMT_REPL_GETST_SLAVE, rq, mq, mp);
 	if (rc)
 		return (rc);
@@ -57,7 +57,7 @@ slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw)
 	mq->fg = rsw->rsw_fg;
 	mq->id = rsw->rsw_cid;
 	mq->rc = EOF;
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -86,7 +86,7 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct sl_replrq *rrq)
 	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 	    SRCM_BULK_PORTAL, &iov, 1);
 	if (rc == 0)
-		rc = RSX_WAITREP(rq, mp);
+		rc = SL_RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -118,7 +118,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw, struct sl_replrq *rrq,
 				return (rc);
 		}
 
-		rc = RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
+		rc = SL_RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
 		    SRCM_VERSION, SRMT_REPL_GETST_SLAVE, *rqp, mq, mp);
 		if (rc)
 			return (rc);
@@ -151,7 +151,7 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	struct pscrpc_request *rq;
 	int rc;
 
-	rc = RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
+	rc = SL_RSX_NEWREQ(rsw->rsw_csvc->csvc_import,
 	    SRCM_VERSION, SRMT_REPL_GETST, rq, mq, mp);
 	if (rc)
 		return (rc);
@@ -171,7 +171,7 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	}
 	if (is_eof)
 		mq->rc = EOF;
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
 }

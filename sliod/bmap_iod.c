@@ -85,11 +85,11 @@ bim_getcurseq(void)
 		rc = sli_rmi_getimp(&csvc);
 		if (rc)
 			psc_fatalx("mds");
-		rc = RSX_NEWREQ(csvc->csvc_import, SRMI_VERSION,
+		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMI_VERSION,
 		    SRMT_GETBMAPMINSEQ, req, mq, mp);
 		if (rc)
 			psc_fatalx("mds");
-		rc = RSX_WAITREP(req, mp);
+		rc = SL_RSX_WAITREP(req, mp);
 		if (rc)
 			psc_fatalx("mds");
 

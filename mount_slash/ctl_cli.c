@@ -106,7 +106,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mrq->mrq_fn, slstrerror(rc));
 		goto out;
 	}
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    mh->mh_type == MSCMT_ADDREPLRQ ?
 	    SRMT_REPL_ADDRQ : SRMT_REPL_DELRQ, rq, mq, mp);
 	if (rc) {
@@ -126,7 +126,7 @@ msctlrep_replrq(int fd, struct psc_ctlmsghdr *mh, void *m)
 	memcpy(&mq->fg, &fg, sizeof(mq->fg));
 	mq->bmapno = mrq->mrq_bmapno;
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -195,7 +195,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    displayfn, slstrerror(rc));
 		goto out;
 	}
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_REPL_GETST, rq, mq, mp);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
@@ -213,7 +213,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	psc_completion_init(&mrsq->mrsq_compl);
 	pll_add(&msctl_replsts, mrsq);
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc) {
@@ -303,7 +303,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfnrp->mfnrp_fn, slstrerror(rc));
 		goto out;
 	}
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_SET_NEWREPLPOL, rq, mq, mp);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
@@ -312,7 +312,7 @@ msctlhnd_set_newreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 	mq->pol = mfnrp->mfnrp_pol;
 	mq->fg = fg;
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -367,7 +367,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 		    mfbrp->mfbrp_fn, slstrerror(rc));
 		goto out;
 	}
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_SET_BMAPREPLPOL, rq, mq, mp);
 	if (rc) {
 		rc = psc_ctlsenderr(fd, mh, "%s: %s",
@@ -377,7 +377,7 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	mq->pol = mfbrp->mfbrp_pol;
 	mq->bmapno = mfbrp->mfbrp_bmapno;
 	mq->fg = fg;
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)

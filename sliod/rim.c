@@ -44,7 +44,7 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct srm_repl_schedwk_req *mq;
 	struct srm_generic_rep *mp;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY)
 		mp->rc = EINVAL;
 	else if (mq->len < 1 || mq->len > SLASH_BMAP_SIZE)
@@ -64,7 +64,7 @@ sli_rim_handle_connect(struct pscrpc_request *rq)
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRIM_MAGIC || mq->version != SRIM_VERSION)
 		mp->rc = -EINVAL;
 
@@ -90,7 +90,9 @@ sli_rim_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-//	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#ifdef AUTHBUF
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#endif
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

@@ -72,7 +72,7 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMI_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMI_VERSION,
 	    SRMT_REPL_SCHEDWK, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -81,7 +81,7 @@ sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *w)
 	mq->bmapno = w->srw_bmapno;
 	mq->bgen = w->srw_bgen;
 	mq->rc = w->srw_status;
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 

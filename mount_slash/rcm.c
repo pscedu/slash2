@@ -46,7 +46,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	struct sl_resource *res;
 	int n;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	mrc = psc_pool_get(msctl_replstmc_pool);
 
@@ -105,7 +105,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	struct msctl_replstq *mrsq;
 	struct iovec iov;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->len < 0 || mq->len > SRM_REPLST_PAGESIZ) {
 		mp->rc = EINVAL;
@@ -162,7 +162,7 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 	struct srm_bmap_release_req *mq;
 	struct srm_generic_rep *mp;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	return (0);
 }
 
@@ -176,7 +176,7 @@ msrcm_handle_connect(struct pscrpc_request *rq)
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRCM_MAGIC || mq->version != SRCM_VERSION)
 		mp->rc = -EINVAL;
 	return (0);
@@ -209,7 +209,9 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-//	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#ifdef AUTHBUF
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#endif
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

@@ -325,7 +325,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_CREATE, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -336,7 +336,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	mq->prefios = prefIOS;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc)
 		goto out;
 	if (mp->rc == EEXIST) {
@@ -535,14 +535,14 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_GETATTR, rq, mq, mp);
 	if (rc)
 		goto out;
 
 	mq->fg = fcmh->fcmh_fg;
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
  out:
@@ -659,7 +659,7 @@ goto out;
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_LINK, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -669,7 +669,7 @@ goto out;
 	mq->fg = c->fcmh_fg;
 	strlcpy(mq->name, newname, sizeof(mq->name));
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -726,7 +726,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_MKDIR, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -737,7 +737,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	mq->mode = mode;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 
 	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
@@ -787,7 +787,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    isfile ? SRMT_UNLINK : SRMT_RMDIR, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -808,7 +808,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	mq->pfg = p->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -890,7 +890,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_READDIR, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -911,7 +911,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	}
 
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -982,7 +982,7 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_LOOKUP, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -990,7 +990,7 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 	mq->pfg = p->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1111,7 +1111,7 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_READLINK, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1133,7 +1133,7 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
 	    SRMC_BULK_PORTAL, &iov, 1);
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 
@@ -1259,7 +1259,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_RENAME, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1276,7 +1276,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL, iov, 2);
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1321,11 +1321,11 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_STATFS, rq, mq, mp);
 	if (rc)
 		goto out;
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1369,7 +1369,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_SYMLINK, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1385,7 +1385,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 	    SRMC_BULK_PORTAL, &iov, 1);
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
@@ -1466,7 +1466,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_SETATTR, rq, mq, mp);
 	if (rc)
 		goto out;
@@ -1505,7 +1505,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	 * Even though we know our fid, we expect the server to fill it
 	 * along with the rest of the new attributes (mp->attr).
 	 */
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)

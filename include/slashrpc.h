@@ -34,6 +34,7 @@
 struct stat;
 struct statvfs;
 
+#ifdef AUTHBUF
 #define _SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
 	{								\
 		int _qlens, _plens;					\
@@ -71,6 +72,16 @@ struct statvfs;
 		if ((mp)->rc)						\
 			return ((mp)->rc);				\
 	 } while (0)
+#else
+#define SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
+	RSX_NEWREQ((imp), (version), (op), (rq), (mq), (mp))
+
+#define SL_RSX_WAITREP(rq, mp)						\
+	RSX_WAITREP((rq), (mp))
+
+#define SL_RSX_ALLOCREP(rq, mq, mp)					\
+	RSX_ALLOCREP((rq), (mq), (mp))
+#endif
 
 /* Slash RPC channel to MDS from client. */
 #define SRMC_REQ_PORTAL		10

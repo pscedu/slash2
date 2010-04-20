@@ -173,9 +173,9 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 
 	imp = msl_bmap_to_import(b, 1);
 
-	rc = RSX_NEWREQ(imp, SRIC_VERSION, SRMT_WRITE, req, mq, mp);
+	rc = SL_RSX_NEWREQ(imp, SRIC_VERSION, SRMT_WRITE, req, mq, mp);
 	if (rc)
-		psc_fatalx("RSX_NEWREQ() bad time to fail :( rc=%d", -rc);
+		psc_fatalx("SL_RSX_NEWREQ() bad time to fail :( rc=%d", -rc);
 
 	rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE, SRIC_BULK_PORTAL,
 			    iovs, niovs);
@@ -794,14 +794,14 @@ ms_bmap_release(struct sl_resm *resm)
 	rmci = resm2rmci(resm);
 	psc_assert(rmci->rmci_bmaprls.nbmaps);
 
-	rc = RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_RELEASEBMAP, rq, mq, mp);
 	if (rc)
 		goto out;
 
 	memcpy(mq, &rmci->rmci_bmaprls, sizeof(*mq));
 
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)

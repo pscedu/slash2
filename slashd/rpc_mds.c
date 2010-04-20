@@ -42,10 +42,10 @@ slm_rim_issue_ping(struct pscrpc_import *imp)
 	struct srm_ping_req *mq;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(imp, SRIM_VERSION,
-	    SRMT_PING, rq, mq, mp)) != 0)
+	rc = SL_RSX_NEWREQ(imp, SRIM_VERSION, SRMT_PING, rq, mq, mp);
+	if (rc)
 		return (rc);
-	rc = RSX_WAITREP(rq, mp);
+	rc = SL_RSX_WAITREP(rq, mp);
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -135,7 +135,7 @@ mexpcli_destroy(struct pscrpc_export *exp)
 	struct mexp_cli *mexpc = slexp->slexp_data;
 	struct bmap_mds_lease *bml, *tmp;
 
-	psclist_for_each_entry_safe(bml, tmp, &slexp->slexp_list, 
+	psclist_for_each_entry_safe(bml, tmp, &slexp->slexp_list,
 	    bml_exp_lentry) {
 		BML_LOCK(bml);
 		psc_assert(bml->bml_flags & BML_EXP);

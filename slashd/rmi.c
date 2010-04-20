@@ -54,7 +54,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	struct bmapc_memb *b=NULL;
 	struct iovec iov;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 #if 0
 	struct slash_fidgen fg;
 	sl_bmapno_t bmapno;
@@ -113,7 +113,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	psc_crc64_t crc;
 	uint32_t i;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	len = (mq->ncrc_updates * sizeof(struct srm_bmap_crcup));
 	for (i=0; i < mq->ncrc_updates; i++)
@@ -207,7 +207,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	dst_resm = NULL;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	rrq = mds_repl_findrq(&mq->fg, NULL);
 	if (rrq == NULL)
 		goto out;
@@ -284,7 +284,7 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 	struct sl_resm *resm;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION)
 		mp->rc = -EINVAL;
 
@@ -326,7 +326,9 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-//	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#ifdef AUTHBUF
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#endif
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

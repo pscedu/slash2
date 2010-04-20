@@ -205,7 +205,7 @@ mds_namespace_propagate_batch(char *buf)
 			csvc = slm_getmcsvc(resm);
 			if (csvc == NULL)
 				continue;
-			rc = RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
+			rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
 			    SRMT_SEND_NAMESPACE, req, mq, mp);
 			if (rc) {
 				sl_csvc_decref(csvc);

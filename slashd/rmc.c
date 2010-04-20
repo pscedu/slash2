@@ -125,7 +125,7 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 	struct mexp_cli *mexp_cli;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
 		mp->rc = -EINVAL;
 	/* XXX this assert will crash the mds should the client try to
@@ -145,7 +145,7 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	struct srm_getattr_rep *mp;
 	struct fidc_membh *fcmh;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		goto out;
@@ -244,7 +244,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	struct srm_getbmap_rep *mp;
 	struct fidc_membh *fcmh;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		return (mp->rc);
@@ -262,7 +262,7 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	struct srm_link_rep *mp;
 
 	p = c = NULL;
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &c);
 	if (mp->rc)
 		goto out;
@@ -288,7 +288,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 	struct srm_lookup_rep *mp;
 	struct fidc_membh *p;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
@@ -316,7 +316,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	struct srm_mkdir_rep *mp;
 	struct fidc_membh *fcmh;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->pfg, &fcmh);
 	if (mp->rc)
 		goto out;
@@ -341,7 +341,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	p = NULL;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->flags & SRM_GETBMAPF_GETREPLTBL) {
 		mp->rc = EINVAL;
 		goto out;
@@ -385,7 +385,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	size_t outsize;
 	int niov;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
@@ -462,7 +462,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 	struct iovec iov;
 	char buf[PATH_MAX];
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		goto out;
@@ -495,7 +495,7 @@ slm_rmc_handle_rls_bmap(struct pscrpc_request *rq)
 	struct srm_bmap_id *bid;
 	uint32_t i;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	for (i=0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
@@ -530,7 +530,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	struct iovec iov[2];
 
 	op = np = NULL;
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fromlen <= 1 ||
 	    mq->tolen <= 1) {
 		mp->rc = -ENOENT;
@@ -593,7 +593,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	struct fidc_membh *fcmh;
 	int to_set;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		goto out;
@@ -631,7 +631,7 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 	struct fidc_membh *fcmh;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->pol < 0 || mq->pol >= NBRP) {
 		mp->rc = EINVAL;
@@ -669,7 +669,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 
 	fmi = NULL;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	if (mq->pol < 0 || mq->pol >= NBRP) {
 		mp->rc = EINVAL;
@@ -710,7 +710,7 @@ slm_rmc_handle_statfs(struct pscrpc_request *rq)
 	struct srm_statfs_rep *mp;
 	struct statvfs sfb;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mdsio_statfs(&sfb);
 	sl_externalize_statfs(&sfb, &mp->ssfb);
 	return (0);
@@ -728,7 +728,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 
 	p = NULL;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (mq->linklen == 0) {
 		mp->rc = ENOENT;
@@ -767,7 +767,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	struct srm_unlink_rep *mp;
 	struct fidc_membh *fcmh;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->pfg, &fcmh);
 	if (mp->rc)
 		goto out;
@@ -795,7 +795,7 @@ slm_rmc_handle_addreplrq(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 	struct srm_replrq_req *mq;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mds_repl_addrq(&mq->fg,
 	    mq->bmapno, mq->repls, mq->nrepls);
 	return (0);
@@ -807,7 +807,7 @@ slm_rmc_handle_delreplrq(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 	struct srm_replrq_req *mq;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = mds_repl_delrq(&mq->fg,
 	    mq->bmapno, mq->repls, mq->nrepls);
 	return (0);
@@ -820,7 +820,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 	struct srm_replst_master_rep *mp;
 	struct slm_replst_workreq *rsw;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	rsw = PSCALLOC(sizeof(*rsw));
 	rsw->rsw_fg = mq->fg;
@@ -911,7 +911,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-//	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#ifdef AUTHBUF
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#endif
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

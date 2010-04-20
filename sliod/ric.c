@@ -46,7 +46,7 @@ sli_ric_handle_connect(struct pscrpc_request *rq)
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRIC_MAGIC ||
 	    mq->version != SRIC_VERSION)
 		mp->rc = -EINVAL;
@@ -74,7 +74,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	fgp = &mq->sbd.sbd_fg;
 	bmapno = mq->sbd.sbd_bmapno;
 
@@ -259,7 +259,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	uint32_t i;
 	int rc;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 
 	for (i=0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
@@ -325,7 +325,9 @@ sli_ric_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-//	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#ifdef AUTHBUF
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#endif
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

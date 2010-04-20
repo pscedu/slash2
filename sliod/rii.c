@@ -48,7 +48,7 @@ sli_rii_handle_connect(struct pscrpc_request *rq)
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRII_MAGIC || mq->version != SRII_VERSION)
 		mp->rc = -EINVAL;
 	return (0);
@@ -67,7 +67,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 
 	bcm = NULL;
 
-	RSX_ALLOCREP(rq, mq, mp);
+	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->fg.fg_fid == FID_ANY) {
 		mp->rc = EINVAL;
 		return (mp->rc);
@@ -132,7 +132,9 @@ sli_rii_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-//	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#ifdef AUTHBUF
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+#endif
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }
@@ -209,8 +211,8 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, int slvrno,
 	struct iovec iov;
 	int rc;
 
-	if ((rc = RSX_NEWREQ(imp, SRII_VERSION,
-	    SRMT_REPL_READ, rq, mq, mp)) != 0)
+	rc = SL_RSX_NEWREQ(imp, SRII_VERSION, SRMT_REPL_READ, rq, mq, mp);
+	if (rc)
 		return (rc);
 
 	mq->len = SLASH_SLVR_SIZE;

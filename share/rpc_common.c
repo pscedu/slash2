@@ -62,16 +62,16 @@ slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 	imp->imp_connection->c_imp = imp;
 	imp->imp_connection->c_peer.pid = PSCRPC_SVR_PID;
 
-	if ((rc = RSX_NEWREQ(imp, version, SRMT_CONNECT, rq, mq, mp)) != 0)
+	rc = SL_RSX_NEWREQ(imp, version, SRMT_CONNECT, rq, mq, mp);
+	if (rc)
 		return (rc);
 	mq->magic = magic;
 	mq->version = version;
-	if ((rc = RSX_WAITREP(rq, mp)) == 0) {
-		if (mp->rc)
-			rc = mp->rc;
-		else
-			imp->imp_state = PSCRPC_IMP_FULL;
-	}
+	rc = SL_RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc == 0)
+		imp->imp_state = PSCRPC_IMP_FULL;
 	pscrpc_req_finished(rq);
 	return (rc);
 }

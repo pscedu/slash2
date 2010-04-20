@@ -114,7 +114,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	we_set_busy = 1;
 
 	/* Issue replication work request */
-	rc = RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION,
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION,
 	    SRMT_REPL_SCHEDWK, rq, mq, mp);
 	if (rc)
 		goto fail;
@@ -148,7 +148,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 		psc_fatalx("invalid bmap replica state: %d", rc);
 
 	if (rc == SL_REPLST_OLD) {
-		rc = RSX_WAITREP(rq, mp);
+		rc = SL_RSX_WAITREP(rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
 	}
