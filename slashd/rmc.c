@@ -171,55 +171,55 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 __static int
 slm_rmc_getbmap_common(struct fidc_membh *fcmh, sl_ios_id_t prefios,
     sl_bmapno_t bmapno, enum rw rw, uint32_t *flags, uint32_t *nrepls,
-    struct srt_bmapdesc *sbd, struct pscrpc_request *rq)
+    struct srt_bmapdesc *sbd, struct pscrpc_request *rq, int bulk)
 {
-	const struct srm_getbmap_req *mq;
-	struct srm_getbmap_rep *mp;
 	struct slash_bmap_cli_wire *cw;
 	struct pscrpc_bulk_desc *desc;
 	struct bmap_mds_info *bmdsi;
 	struct bmapc_memb *bmap;
 	struct iovec iov[3];
-	int niov, rc;
+	int niov = 0, rc;
 
 	if (rw != SL_READ && rw != SL_WRITE)
 		return (EINVAL);
 
 	bmap = NULL;
-	mp->rc = mds_bmap_load_cli(fcmh, bmapno, *flags, rw, prefios,
+	rc = mds_bmap_load_cli(fcmh, bmapno, *flags, rw, prefios,
 	    sbd, rq->rq_export, &bmap);
-	if (mp->rc)
-		return (mp->rc);
+	if (rc)
+		return (rc);
 
 	bmdsi = bmap->bcm_pri;
 	cw = (struct slash_bmap_cli_wire *)bmap->bcm_od->bh_crcstates;
 
-	niov = 1;
-	iov[0].iov_base = cw;
-	iov[0].iov_len = sizeof(*cw);
+	if (bulk) {
+		iov[niov].iov_base = cw;
+		iov[niov].iov_len = sizeof(*cw);
+		niov++;
+	}
 
 	if (*flags & SRM_GETBMAPF_GETREPLTBL) {
 		struct slash_inode_handle *ih;
 
-		niov++;
 		ih = fcmh_2_inoh(bmap->bcm_fcmh);
 		*nrepls = ih->inoh_ino.ino_nrepls;
 
-		iov[1].iov_base = ih->inoh_ino.ino_repls;
-		iov[1].iov_len = sizeof(sl_replica_t) * INO_DEF_NREPLS;
+		iov[niov].iov_base = ih->inoh_ino.ino_repls;
+		iov[niov].iov_len = sizeof(sl_replica_t) * INO_DEF_NREPLS;
+		niov++;
 
-		if (mp->nrepls > INO_DEF_NREPLS) {
-			niov++;
+		if (*nrepls > INO_DEF_NREPLS) {
 			mds_inox_ensure_loaded(ih);
-			iov[2].iov_base = ih->inoh_extras->inox_repls;
-			iov[2].iov_len = sizeof(ih->inoh_extras->inox_repls);
+			iov[niov].iov_base = ih->inoh_extras->inox_repls;
+			iov[niov].iov_len = sizeof(ih->inoh_extras->inox_repls);
+			niov++;
 		}
 	}
 
 	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = bmap->bcm_bmapno;
 
-	if (mq->rw == SL_WRITE) {
+	if (rw == SL_WRITE) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		sbd->sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
 		sbd->sbd_ios_id = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
@@ -228,10 +228,12 @@ slm_rmc_getbmap_common(struct fidc_membh *fcmh, sl_ios_id_t prefios,
 		sbd->sbd_ios_id = IOS_ID_ANY;
 	}
 
-	rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
-	    SRMC_BULK_PORTAL, iov, niov);
-	if (desc)
-		pscrpc_free_bulk(desc);
+	if (niov) {
+		rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
+		    SRMC_BULK_PORTAL, iov, niov);
+		if (desc)
+			pscrpc_free_bulk(desc);
+	}
 	return (rc);
 }
 
@@ -248,7 +250,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		return (mp->rc);
 	mp->flags = mq->flags;
 	mp->rc = slm_rmc_getbmap_common(fcmh, mq->prefios, mq->bmapno,
-	    mq->rw, &mp->flags, &mp->nrepls, &mp->sbd, rq);
+	    mq->rw, &mp->flags, &mp->nrepls, &mp->sbd, rq, 1);
 	return (mp->rc);
 }
 
@@ -364,7 +366,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	mp->flags = mq->flags;
 	mp->rc2 = slm_rmc_getbmap_common(fcmh, mq->prefios, 0,
-	    SL_WRITE, &mp->flags, NULL, &mp->sbd, rq);
+	    SL_WRITE, &mp->flags, NULL, &mp->sbd, rq, 0);
 
  out:
 	if (p)
