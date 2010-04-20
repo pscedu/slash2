@@ -152,10 +152,12 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		b->bcm_bmapno = n;
 		b->bcm_pri = b + 1;
 
-		/* Signify that the bmap is newly initialized and therefore
+		/*
+		 * Signify that the bmap is newly initialized and therefore
 		 *  may not contain certain structures.
 		 */
-		b->bcm_mode = BMAP_INIT;
+		b->bcm_mode = BMAP_INIT |
+		    (rw == SL_WRITE ? BMAP_WR : BMAP_RD);
 
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 		/* Perform app-specific substructure initialization. */

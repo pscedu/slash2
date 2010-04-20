@@ -580,7 +580,6 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 		mq->flags |= SRM_GETBMAPF_GETREPLTBL;
 
 	msbd = bmap->bcm_pri;
-	bmap->bcm_mode |= (rw == SL_WRITE ? BMAP_WR : BMAP_RD);
 
 	iovs[niov].iov_base = &msbd->msbd_msbcr;
 	iovs[niov].iov_len  = sizeof(msbd->msbd_msbcr);
