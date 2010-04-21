@@ -85,7 +85,7 @@ enum {
 #define SLVR_WAKEUP(b)							\
 	do {								\
 		SLVR_LOCK_ENSURE(s);					\
-		psc_waitq_wakeall(&(slvr_2_fcmh(s)->fcmh_waitq));	\
+		psc_waitq_wakeall(&slvr_2_fcmh(s)->fcmh_waitq);		\
 	} while (0)
 
 #define SLVR_WAIT(s, cond)						\
@@ -93,9 +93,9 @@ enum {
 		SLVR_LOCK_ENSURE(s);					\
 		DEBUG_SLVR(PLL_NOTIFY, (s), "SLVR_WAIT");		\
 		while (cond) {						\
-			psc_waitq_wait(&(slvr_2_fcmh(s))->fcmh_waitq,	\
-				       &(slvr_2_biod(s))->biod_lock);	\
-			SLVR_LOCK((s));					\
+			psc_waitq_wait(&slvr_2_fcmh(s)->fcmh_waitq,	\
+				       &slvr_2_biod(s)->biod_lock);	\
+			SLVR_LOCK(s);					\
 		}							\
 	} while (0)
 
