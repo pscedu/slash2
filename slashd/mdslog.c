@@ -60,7 +60,7 @@ uint64_t		 next_propagate_seqno;
 
 /*
  * Low and high water marks of update sequence numbers that need to be propagated.
- * Not that the pace of each MDS is different.
+ * Note that the pace of each MDS is different.
  */
 static uint64_t		 propagate_seqno_lwm;
 static uint64_t		 propagate_seqno_hwm;
@@ -247,7 +247,7 @@ mds_namespace_propagate_batch(char *buf, int size)
 }
 
 /*
- * Send local namespace updates to peer MDSes.
+ * mds_namespace_propagate - Send local namespace updates to peer MDSes.
  */
 void
 mds_namespace_propagate(__unusedx struct psc_thread *thr)
@@ -261,6 +261,11 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	char *ptr, *buf = NULL;
 	struct slmds_jent_namespace *jnamespace;
 
+	/*
+	 * The thread scans the batches of changes between the low and high
+	 * water marks and sends them to peer MDSes.  Although different MDSes
+	 * have different paces, we send updates in order for each MDS.
+	 */
 	seqno = propagate_seqno_lwm;
 	while (pscthr_run()) {
 
