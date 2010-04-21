@@ -183,6 +183,7 @@ mds_namespace_propagate_batch(char *buf, int size)
 	struct sl_resm *resm;
 	struct sl_site *s;
 	int rc, n;
+	struct sl_mds_loginfo *loginfo;
 
 	iov.iov_base = buf;
 	iov.iov_len = size;
@@ -203,6 +204,10 @@ mds_namespace_propagate_batch(char *buf, int size)
 			 * Add logic here to decide if we should skip
 			 * the current site because it is lagging.
 			 */
+			loginfo = ((struct resprof_mds_info *)r->res_pri)->rpmi_loginfo;
+			if (loginfo->sml_flags & SML_FLAG_INFLIGHT)
+				continue;
+
 			csvc = slm_getmcsvc(resm);
 			if (csvc == NULL)
 				continue;
