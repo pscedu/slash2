@@ -48,6 +48,8 @@
 struct psc_journal			*mdsJournal;
 __static struct pscrpc_nbreqset		*logPndgReqs;
 
+__static int				 logentrysize;
+
 /*
  * Eventually, we are going to retrieve the namespace update sequence number
  * from the system journal.
@@ -240,16 +242,16 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
 
 		if (!buf)
-			buf = PSCALLOC(SLM_NAMESPACE_BATCH * 512);
+			buf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 
 		/*
 		 * Short read is allowed, but the returned size must
 		 * be a multiple of 512 bytes.
 		 */
-		size = read(logfile, buf, SLM_NAMESPACE_BATCH * 512);
-		psc_assert((size % 512) == 0);
+		size = read(logfile, buf, SLM_NAMESPACE_BATCH * logentrysize);
+		psc_assert((size % logentrysize) == 0);
 
-		nitems =  size / 512;
+		nitems =  size / logentrysize;
 
 		jnamespace = (struct slmds_jent_namespace *) buf;
 		ptr += jnamespace->sjnm_reclen;
@@ -530,6 +532,8 @@ mds_journal_init(void)
 	    mds_replay_handler, mds_shadow_handler);
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", fn);
+
+	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
 
 	/* start a thread to propagate local namespace changes */
 	thr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
