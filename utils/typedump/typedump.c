@@ -151,6 +151,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct jflush_item);
+	PRTYPE(struct mds_log_batch);
 	PRTYPE(struct mexp_cli);
 	PRTYPE(struct msbmap_crcrepl_states);
 	PRTYPE(struct msctl_replst_cont);
