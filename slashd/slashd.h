@@ -98,6 +98,7 @@ struct site_mds_info {
 #define	SML_FLAG_INFLIGHT	  (1 << 0)
 
 struct sl_mds_loginfo {
+	psc_spinlock_t		  sml_lock;
 	int			  sml_flags;
 	uint64_t		  sml_send_seqno;	/* outstanding log sequence */
 	uint64_t		  sml_recv_seqno;

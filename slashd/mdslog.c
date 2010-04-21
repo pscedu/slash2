@@ -158,10 +158,12 @@ mds_namespace_log(int op, int type, int perm, uint64_t parent,
 
 __static int
 mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
-		  __unusedx struct pscrpc_async_args *args)
+		  struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc;
+	struct sl_mds_loginfo *loginfo;
 
+	loginfo = args->pointer_arg[0];
 	sl_csvc_decref(csvc);
 	return (0);
 }
@@ -221,6 +223,7 @@ mds_namespace_propagate_batch(char *buf, int size)
 			rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE,
 			    SRMM_BULK_PORTAL, &iov, 1);
 
+			req->rq_async_args.pointer_arg[0] = loginfo;
 			pscrpc_nbreqset_add(logPndgReqs, req);
 		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
