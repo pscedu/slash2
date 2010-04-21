@@ -1824,7 +1824,7 @@ main(int argc, char *argv[])
 	msl_fuse_addarg(&args, FUSE_OPTIONS);
 
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "df:S:U")) != -1)
+	while ((c = getopt(argc, argv, "df:o:S:U")) != -1)
 		switch (c) {
 		case 'd':
 			msl_fuse_addarg(&args, "-odebug");

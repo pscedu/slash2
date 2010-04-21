@@ -1,5 +1,5 @@
 .\" $Id$
-.Dd April 13, 2010
+.Dd April 21, 2010
 .Dt MOUNT_SLASH 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -77,7 +77,9 @@ resource name.
 .It Pa /etc/slash.conf
 default
 .Tn SLASH
-configuration
+network configuration
+.It Pa /var/lib/slashd/authbuf.key
+inter-server communication key
 .It Xo
 .Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
 .Xc
