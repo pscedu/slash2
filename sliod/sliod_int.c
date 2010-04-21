@@ -59,6 +59,18 @@ iod_bmap_init(struct bmapc_memb *b)
 	SPLAY_INIT(&biod->biod_slvrs);
 }
 
+void
+iod_bmap_finalcleanup(struct bmapc_memb *b)
+{
+	struct bmap_iod_info *biod;
+
+	biod = b->bcm_pri;
+	psc_assert(biod->biod_bmap == b);
+	psc_assert(SPLAY_EMPTY(&biod->biod_slvrs));
+	psc_assert(psclist_disjoint(&biod->biod_lentry));
+}
+
+
 int
 iod_inode_getsize(struct slash_fidgen *fg, uint64_t *size)
 {
@@ -177,5 +189,5 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 struct bmap_ops bmap_ops = {
 	iod_bmap_init,
 	iod_bmap_retrieve,
-	NULL
+	iod_bmap_finalcleanup
 };

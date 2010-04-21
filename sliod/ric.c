@@ -135,7 +135,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		goto out;
 	}
 
-	bmap_op_start_type(bmap, BMAP_OPCNT_SLVRIO);
+	bmap_op_start_type(bmap, BMAP_OPCNT_SLVR);
 	bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
 
 	biodi = bmap_2_biodi(bmap);
@@ -233,9 +233,6 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	if (rw == SL_WRITE)
 		psc_assert(!tsize);
 
-	/* Slvr I/O is done and bcr ops have been scheduled, safe to drop the ref cnt.
-	 */
-	bmap_op_done_type(bmap, BMAP_OPCNT_SLVRIO);
  out:
 	/* XXX In situations where errors occur (such as an ENOSPC from
 	 *   iod_inode_open()) then we must have a way to notify other

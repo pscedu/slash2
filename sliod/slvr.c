@@ -719,6 +719,8 @@ slvr_remove(struct slvr_ref *s)
 	SPLAY_REMOVE(biod_slvrtree, &b->biod_slvrs, s);
 	ureqlock(&b->biod_lock, locked);
 
+	bmap_op_done_type(b->biod_bmap, BMAP_OPCNT_SLVR);
+
 	PSCFREE(s);
 }
 
