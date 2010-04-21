@@ -169,7 +169,7 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
  *	peer MDSes that seem to be active.
  */
 void
-mds_namespace_propagate_batch(char *buf)
+mds_namespace_propagate_batch(char *buf, int size)
 {
 	struct srm_send_namespace_req *mq;
 	struct srm_generic_rep *mp;
@@ -182,9 +182,8 @@ mds_namespace_propagate_batch(char *buf)
 	struct sl_site *s;
 	int rc, n;
 
-	/* XXX: need condense */
 	iov.iov_base = buf;
-	iov.iov_len = SLM_NAMESPACE_BATCH * 512;
+	iov.iov_len = size;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
@@ -261,7 +260,7 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		}
 		size = ptr - buf;
 
-		mds_namespace_propagate_batch(buf);
+		mds_namespace_propagate_batch(buf, (int)size);
 
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
