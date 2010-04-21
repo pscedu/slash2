@@ -58,6 +58,13 @@ uint64_t		 next_update_seqno;
 
 uint64_t		 next_propagate_seqno;
 
+/*
+ * Low and high water marks of update sequence numbers that need to be propagated.
+ * Not that the pace of each MDS is different.
+ */
+static uint64_t		 propagate_seqno_lwm;
+static uint64_t		 propagate_seqno_hwm;
+
 static int		 current_logfile = -1;
 
 struct psc_waitq	 mds_namespace_waitq = PSC_WAITQ_INIT;
@@ -168,6 +175,16 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	return (0);
 }
 
+/*
+ * mds_namespace_check_peers - Check if we can send a batch of changes
+ * 	to any of our peer MDSes.
+ */
+int
+mds_namespace_check_peers(__unusedx uint64_t seqno)
+{
+	return (0);
+}
+
 /**
  * mds_namespace_propagate_batch - Send the newest batch of changes to
  *	peer MDSes that seem to be active.
@@ -244,7 +261,20 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	char *ptr, *buf = NULL;
 	struct slmds_jent_namespace *jnamespace;
 
+	seqno = propagate_seqno_lwm;
 	while (pscthr_run()) {
+
+		if (seqno >= propagate_seqno_hwm)
+			goto done;
+		/*
+		 * Make sure we can send the current batch to at least one
+		 * MDS before reading the on-disk log change file.
+		 */
+		if (!mds_namespace_check_peers(seqno)) {
+			seqno += SLM_NAMESPACE_BATCH;
+			continue;
+		}
+			
 		seqno = next_propagate_seqno - next_propagate_seqno % SLM_NAMESPACE_BATCH;
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
 		logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
@@ -271,10 +301,11 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		size = ptr - buf;
 
 		mds_namespace_propagate_batch(buf, (int)size);
-
+done:
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
 		    &mds_namespace_waitqlock, MDS_NAMESPACE_MAXAGE);
+		seqno = propagate_seqno_lwm;
 	}
 }
 
