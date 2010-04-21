@@ -100,8 +100,7 @@ struct site_mds_info {
 struct sl_mds_loginfo {
 	psc_spinlock_t		  sml_lock;
 	int			  sml_flags;
-	uint64_t		  sml_send_seqno;	/* outstanding log sequence */
-	uint64_t		  sml_recv_seqno;
+	uint64_t		  sml_next_seqno;	/* next log sequence */
 	time_t			  sml_last_send;	/* last contact and response */
 	time_t			  sml_last_recv;
 };

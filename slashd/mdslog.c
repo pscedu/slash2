@@ -180,15 +180,15 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
  * 	to any of our peer MDSes.
  */
 int
-mds_namespace_check_peers(__unusedx uint64_t seqno)
+mds_namespace_check_peers(uint64_t seqno, int length)
 {
-	int rc, n;
+	int found, n;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
 	struct sl_mds_loginfo *loginfo;
 
-	rc = 0;
+	found = 0;
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources) {
@@ -201,14 +201,18 @@ mds_namespace_check_peers(__unusedx uint64_t seqno)
 				continue;
 
 			loginfo = ((struct resprof_mds_info *)r->res_pri)->rpmi_loginfo;
-			if (loginfo->sml_flags & SML_FLAG_INFLIGHT)
-				continue;
-			rc = 1;
-			break;
-
+			spinlock(&loginfo->sml_lock);
+			if (!(loginfo->sml_flags & SML_FLAG_INFLIGHT) &&
+			     (loginfo->sml_next_seqno >= seqno) && 
+			     (loginfo->sml_next_seqno < seqno + length)) {
+				freelock(&loginfo->sml_lock);
+				found = 1;
+				break;
+			}
+			freelock(&loginfo->sml_lock);
 		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
-	return (rc);
+	return (found);
 }
 
 /**
@@ -286,6 +290,7 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	ssize_t size;
 	char *ptr, *buf = NULL;
 	struct slmds_jent_namespace *jnamespace;
+	struct stat sb;
 
 	/*
 	 * The thread scans the batches of changes between the low and high
@@ -297,18 +302,26 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 
 		if (seqno >= propagate_seqno_hwm)
 			goto done;
+
+		seqno = next_propagate_seqno - next_propagate_seqno % SLM_NAMESPACE_BATCH;
+		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
+		logfile = open(fn, O_RDONLY);
+		fstat(logfile, &sb);
+
+		size = sb.st_size;
+		psc_assert((size % logentrysize) == 0);
+		nitems =  size / logentrysize;
+
 		/*
 		 * Make sure we can send the current batch to at least one
 		 * MDS before reading the on-disk log change file.
 		 */
-		if (!mds_namespace_check_peers(seqno)) {
+		if (!mds_namespace_check_peers(seqno, nitems)) {
 			seqno += SLM_NAMESPACE_BATCH;
+			close(logfile);
 			continue;
 		}
 			
-		seqno = next_propagate_seqno - next_propagate_seqno % SLM_NAMESPACE_BATCH;
-		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
-		logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
 
 		if (!buf)
 			buf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
@@ -318,9 +331,6 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		 * be a multiple of 512 bytes.
 		 */
 		size = read(logfile, buf, SLM_NAMESPACE_BATCH * logentrysize);
-		psc_assert((size % logentrysize) == 0);
-
-		nitems =  size / logentrysize;
 
 		jnamespace = (struct slmds_jent_namespace *) buf;
 		ptr += jnamespace->sjnm_reclen;
