@@ -98,14 +98,21 @@ struct slmds_jent_bmapseq {
 #define	SJ_NAMESPACE_TYPE_SYMLINK	4
 
 struct slmds_jent_namespace {
-	uint8_t			sjnm_op;
-	uint8_t			sjnm_type;
-	uint8_t			sjnm_perm;
-	uint8_t			sjnm__pad;
-	uint64_t		sjnm_parent_s2id;
-	uint64_t		sjnm_target_s2id;
-	uint64_t		sjnm_seqno;
-	char			sjnm_name[256];
+	uint8_t			sjnm_op;			/* 0 */
+	uint8_t			sjnm_type;			/* 1 */
+	uint8_t			sjnm_perm;			/* 2 */
+	uint8_t			sjnm__pad;			/* 3 */
+	uint64_t		sjnm_parent_s2id;		/* 4 */
+	uint64_t		sjnm_target_s2id;		/* 12 */
+	uint64_t		sjnm_seqno;			/* 20 */
+	/*
+	 * For easy seek within a change log file, each entry
+	 * has a fixed length of 512 bytes.  But when we send
+	 * log entries over the network, we condense them to
+	 * save network bandwidth.
+	 */
+	uint16_t		sjnm_namelen;			/* 28 */
+	char			sjnm_name[256];			/* 30 */
 } __packed;
 
 /* List all of the journaling structures here so that the maximum
