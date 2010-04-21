@@ -182,7 +182,33 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 int
 mds_namespace_check_peers(__unusedx uint64_t seqno)
 {
-	return (0);
+	int rc, n;
+	struct sl_resource *r;
+	struct sl_resm *resm;
+	struct sl_site *s;
+	struct sl_mds_loginfo *loginfo;
+
+	rc = 0;
+	PLL_LOCK(&globalConfig.gconf_sites);
+	PLL_FOREACH(s, &globalConfig.gconf_sites)
+		DYNARRAY_FOREACH(r, n, &s->site_resources) {
+			if (r->res_type != SLREST_MDS)
+				continue;
+
+			/* MDS cannot have one member */
+			resm = psc_dynarray_getpos(&r->res_members, 0);
+			if (resm == nodeResm)
+				continue;
+
+			loginfo = ((struct resprof_mds_info *)r->res_pri)->rpmi_loginfo;
+			if (loginfo->sml_flags & SML_FLAG_INFLIGHT)
+				continue;
+			rc = 1;
+			break;
+
+		}
+	PLL_ULOCK(&globalConfig.gconf_sites);
+	return (rc);
 }
 
 /**
@@ -264,7 +290,7 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	/*
 	 * The thread scans the batches of changes between the low and high
 	 * water marks and sends them to peer MDSes.  Although different MDSes
-	 * have different paces, we send updates in order for each MDS.
+	 * have different paces, we send updates in order within one MDS.
 	 */
 	seqno = propagate_seqno_lwm;
 	while (pscthr_run()) {
