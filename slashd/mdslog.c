@@ -226,11 +226,14 @@ mds_namespace_propagate_batch(char *buf)
 void
 mds_namespace_propagate(__unusedx struct psc_thread *thr)
 {
-	int rv;
+	int i, rv;
+	int nitems;
 	int logfile;
 	uint64_t seqno;
 	char fn[PATH_MAX];
-	char *buf = NULL;
+	ssize_t size;
+	char *ptr, *buf = NULL;
+	struct slmds_jent_namespace *jnamespace;
 
 	while (pscthr_run()) {
 		seqno = next_propagate_seqno - next_propagate_seqno % SLM_NAMESPACE_BATCH;
@@ -240,7 +243,24 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		if (!buf)
 			buf = PSCALLOC(SLM_NAMESPACE_BATCH * 512);
 
-		read(logfile, buf, SLM_NAMESPACE_BATCH * 512);
+		/*
+		 * Short read is allowed, but the returned size must
+		 * be a multiple of 512 bytes.
+		 */
+		size = read(logfile, buf, SLM_NAMESPACE_BATCH * 512);
+		psc_assert((size % 512) == 0);
+
+		nitems =  size / 512;
+
+		jnamespace = (struct slmds_jent_namespace *) buf;
+		ptr += jnamespace->sjnm_reclen;
+		for (i = 0; i < nitems - 1; i++) {
+			jnamespace++;
+			memcpy((void *)ptr, (void *)jnamespace, jnamespace->sjnm_reclen);
+			ptr += jnamespace->sjnm_reclen;
+		}
+		size = ptr - buf;
+
 		mds_namespace_propagate_batch(buf);
 
 		spinlock(&mds_namespace_waitqlock);
