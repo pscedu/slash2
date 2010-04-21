@@ -205,7 +205,7 @@ mds_namespace_check_peers(uint64_t seqno, int length)
 			if (r->res_type != SLREST_MDS)
 				continue;
 
-			/* MDS cannot have one member */
+			/* MDS cannot have more than one member */
 			resm = psc_dynarray_getpos(&r->res_members, 0);
 			if (resm == nodeResm)
 				continue;
@@ -253,7 +253,7 @@ mds_namespace_propagate_batch(char *buf, int size)
 			if (r->res_type != SLREST_MDS)
 				continue;
 
-			/* MDS cannot have one member */
+			/* MDS cannot have more than one member */
 			resm = psc_dynarray_getpos(&r->res_members, 0);
 
 			if (resm == nodeResm)
