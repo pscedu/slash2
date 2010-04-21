@@ -31,6 +31,22 @@ enum {
 };
 
 /*
+ * If all MDSes are perfectly in sync, then we can use one buffer to read
+ * log entries from the log file and send it to all MDSes.  Otherwise, we
+ * need to maintain a list of buffers to avoid reading the same log file
+ * repeatedly.
+ */
+
+#define	MDS_LOG_MAX_LOG_BATCH	8
+struct mds_log_batch {
+	int		 	 slb_refcnt;
+	int		 	 sbl_seqno;
+	int		 	 slb_size;
+	struct md_log_batch	*slb_next;
+	char			*slb_buf;
+};
+
+/*
  * A structure used to describe the log application progress on each site.
  */
 struct site_progress {

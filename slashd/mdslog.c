@@ -176,6 +176,16 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 }
 
 /*
+ * mds_namespace_read - read a batch of updates from the corresponding log file
+ *	and packed them for RPC later.
+ */
+char *
+mds_namespace_read_batch(__unusedx uint64_t seqno)
+{
+	return NULL;
+}
+
+/*
  * mds_namespace_check_peers - Check if we can send a batch of changes
  * 	to any of our peer MDSes.
  */
