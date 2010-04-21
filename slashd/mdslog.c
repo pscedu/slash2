@@ -322,15 +322,15 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 			continue;
 		}
 			
-
-		if (!buf)
-			buf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
+		/* Allocate a buffer used to read disk and bulk RPC */
+		buf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 
 		/*
 		 * Short read is allowed, but the returned size must
 		 * be a multiple of 512 bytes.
 		 */
 		size = read(logfile, buf, SLM_NAMESPACE_BATCH * logentrysize);
+		close(logfile);
 
 		jnamespace = (struct slmds_jent_namespace *) buf;
 		ptr += jnamespace->sjnm_reclen;

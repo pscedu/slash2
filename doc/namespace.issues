@@ -127,3 +127,40 @@ Make sure that the zp_parent field always points to the parent in the regular na
 by-id namespace.  This fixes the issue of readdir returning the right ".." information.
 
 This fix only affects directories. We should re-create the ZFS pool to make this change take effect.
+
+04/21/2010
+----------
+
+I have planned to let each log file to have a constant number of log entries.  That makes it easy
+to find the right file that contains a log entry given its update sequence number.
+
+We also need to support aging of updates.  If an update is, say, 30 seconds old, it will be propagated
+to other MDSes immediately before the current log file is filled.
+
+Paul proposes a idea of using batch numbers.  Basically one batch is stored in one log file.  A
+log file is closed after its capacity is reached or when its old entry is too old.
+
+Correspondingly, we can store batch numbers in the progress table for each MDS.  The problem with
+this idea is that we can have lots of small files.
+
+The other problem concerns the receiving MDS.  If it crashes in the middle of applying a log,
+how can we maintain atomicity?  Should be because
+
+	(1) We never re-use SLASH ID - used to detect if a file is already created/deleted.
+	(2) ZFS guarantees internal consistency
+
+We do have to make sure that the a file or a directory exist in both namespace (by-name
+and by-id).  ZFS can only make sure one link exists or not.
+
+We may have to stored an update sequence number in the disk inode (like zp_gen in znode_phys,
+but that's used by ZFS transaction internally I guess).
+
+Another idea is to use a different SLASH ID for each rename (possibly keep the original ZFS 
+inode number).  But this does not cover the case of chmod etc.
+
+A generation number is the best way to cope with this.  Note that within the same batch of 
+changes, the same file can be changed multiple times.  But we have to add more fields into
+znode_phys.
+
+For now, we can settle down with using the timestamp fields.  They are originating from the 
+same site that owns a file.
