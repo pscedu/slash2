@@ -38,11 +38,11 @@ enum {
  */
 
 #define	MDS_LOG_MAX_LOG_BATCH	8
-struct mds_log_batch {
+struct sl_mds_logbuf {
 	int		 	 slb_refcnt;
-	int		 	 sbl_seqno;
 	int		 	 slb_size;
-	struct md_log_batch	*slb_next;
+	uint64_t	 	 slb_seqno;
+	struct sl_mds_logbuf	*slb_next;
 	char			*slb_buf;
 };
 

@@ -45,32 +45,38 @@
 #include "slashrpc.h"
 #include "sljournal.h"
 
-struct psc_journal			*mdsJournal;
-__static struct pscrpc_nbreqset		*logPndgReqs;
+struct psc_journal		*mdsJournal;
+static struct pscrpc_nbreqset	*logPndgReqs;
 
-__static int				 logentrysize;
+static int			 logentrysize;
 
 /*
  * Eventually, we are going to retrieve the namespace update sequence number
  * from the system journal.
  */
-uint64_t		 next_update_seqno;
+uint64_t			 next_update_seqno;
 
-uint64_t		 next_propagate_seqno;
+uint64_t			 next_propagate_seqno;
 
 /*
  * Low and high water marks of update sequence numbers that need to be propagated.
  * Note that the pace of each MDS is different.
  */
-static uint64_t		 propagate_seqno_lwm;
-static uint64_t		 propagate_seqno_hwm;
+static uint64_t			 propagate_seqno_lwm;
+static uint64_t			 propagate_seqno_hwm;
 
-static int		 current_logfile = -1;
+static int			 current_logfile = -1;
 
-struct psc_waitq	 mds_namespace_waitq = PSC_WAITQ_INIT;
-psc_spinlock_t		 mds_namespace_waitqlock = LOCK_INITIALIZER;
+struct psc_waitq		 mds_namespace_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t			 mds_namespace_waitqlock = LOCK_INITIALIZER;
 
-#define MDS_NAMESPACE_MAXAGE	30
+/* max # of buffers used to decrease I/O */
+#define	MDS_NAMESPACE_MAX_BUF	 8
+
+/* max # of seconds before an update is propagated */
+#define MDS_NAMESPACE_MAX_AGE	 30
+
+static struct sl_mds_logbuf	*mds_namespace_logbuf = NULL;
 
 uint64_t
 mds_get_next_seqno(void)
@@ -179,10 +185,33 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
  * mds_namespace_read - read a batch of updates from the corresponding log file
  *	and packed them for RPC later.
  */
-char *
+struct sl_mds_logbuf *
 mds_namespace_read_batch(__unusedx uint64_t seqno)
 {
-	return NULL;
+	int i = 0;
+	struct sl_mds_logbuf	*buf;
+
+restart:
+
+	buf = mds_namespace_logbuf;
+	while (buf) {
+		i++;
+		if (buf->slb_seqno == seqno)
+			break;
+		buf = buf->slb_next;
+	}
+	if (buf) {
+		buf->slb_refcnt++;
+		return buf;
+	}
+	/* Over the limit, wait until an RPC returns or times out */
+	if (i >  MDS_NAMESPACE_MAX_BUF) {
+		goto restart;
+	}
+	buf = PSCALLOC(sizeof(struct sl_mds_logbuf) + SLM_NAMESPACE_BATCH * logentrysize);
+	buf->slb_refcnt = 1;
+	buf->slb_seqno = seqno;
+	buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
 }
 
 /*
@@ -355,7 +384,7 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 done:
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
-		    &mds_namespace_waitqlock, MDS_NAMESPACE_MAXAGE);
+		    &mds_namespace_waitqlock, MDS_NAMESPACE_MAX_AGE);
 		seqno = propagate_seqno_lwm;
 	}
 }
