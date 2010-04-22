@@ -120,7 +120,7 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 	/* see if we can open a new change log file */
 	if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
 		psc_assert(current_logfile == -1);
-		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
+		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
 		current_logfile = open(fn, O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
 		if (current_logfile == -1)
 			psc_fatal("Fail to open change log file %s", fn);
