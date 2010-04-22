@@ -185,34 +185,62 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 /*
  * mds_namespace_read - read a batch of updates from the corresponding log file
  *	and packed them for RPC later.
+ *
  */
 struct sl_mds_logbuf *
 mds_namespace_read_batch(__unusedx uint64_t seqno)
 {
-	int i = 0;
+	int i;
 	struct psclist_head *tmp;
 	struct sl_mds_logbuf *buf;
+	struct sl_mds_logbuf *victim;
 
 restart:
-
+	/*
+	 * Currently, there is only one thread manipulating the list.
+	 * But we do have to lock each individual buffer.
+	 */
+	i = 0;
+	victim = NULL;
 	psclist_for_each(tmp, &mds_namespace_buflist) {
 		buf = psclist_entry(tmp, struct sl_mds_logbuf, slb_link);
 		i++;
 		if (buf->slb_seqno == seqno)
 			break;
+		if (!victim && buf->slb_refcnt == 0)
+			victim = buf;
 	}
 	if (buf) {
 		buf->slb_refcnt++;
-		return buf;
+		if (buf->slb_count == SLM_NAMESPACE_BATCH)
+			return buf;
+		goto readit;
 	}
-	/* Over the limit, wait until an RPC returns or times out */
-	if (i >  MDS_NAMESPACE_MAX_BUF) {
+	if (i < MDS_NAMESPACE_MAX_BUF) {
+		buf = PSCALLOC(sizeof(struct sl_mds_logbuf) + SLM_NAMESPACE_BATCH * logentrysize);
+		buf->slb_refcnt = 1;
+		buf->slb_count = 0;
+		buf->slb_seqno = seqno;
+		buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
+		goto readit;
+	}
+	/* 
+	 * If we are over the limit and we don't have a victim,
+	 * wait until an RPC returns or times out.
+	 */
+	if (!victim) {
 		goto restart;
 	}
-	buf = PSCALLOC(sizeof(struct sl_mds_logbuf) + SLM_NAMESPACE_BATCH * logentrysize);
+	buf = victim;
 	buf->slb_refcnt = 1;
+	buf->slb_count = 0;
 	buf->slb_seqno = seqno;
-	buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
+
+readit:
+
+	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
+	logfile = open(fn, O_RDONLY);
+	fstat(logfile, &sb);
 	return buf;
 }
 

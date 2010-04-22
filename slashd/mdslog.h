@@ -40,7 +40,7 @@ enum {
 #define	MDS_LOG_MAX_LOG_BATCH	8
 struct sl_mds_logbuf {
 	int		 	 slb_refcnt;
-	int		 	 slb_size;
+	int		 	 slb_count;
 	uint64_t	 	 slb_seqno;
 	struct psclist_head	 slb_link;
 	char			*slb_buf;
