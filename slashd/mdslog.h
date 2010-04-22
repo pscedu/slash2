@@ -42,7 +42,7 @@ struct sl_mds_logbuf {
 	int		 	 slb_refcnt;
 	int		 	 slb_size;
 	uint64_t	 	 slb_seqno;
-	struct sl_mds_logbuf	*slb_next;
+	struct psclist_head	 slb_link;
 	char			*slb_buf;
 };
 

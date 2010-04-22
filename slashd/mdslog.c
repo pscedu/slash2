@@ -76,7 +76,8 @@ psc_spinlock_t			 mds_namespace_waitqlock = LOCK_INITIALIZER;
 /* max # of seconds before an update is propagated */
 #define MDS_NAMESPACE_MAX_AGE	 30
 
-static struct sl_mds_logbuf	*mds_namespace_logbuf = NULL;
+/* we only have a few buffers, so a list is fine */
+static struct psclist_head	mds_namespace_buflist = PSCLIST_HEAD_INIT(mds_namespace_buflist);
 
 uint64_t
 mds_get_next_seqno(void)
@@ -189,16 +190,16 @@ struct sl_mds_logbuf *
 mds_namespace_read_batch(__unusedx uint64_t seqno)
 {
 	int i = 0;
-	struct sl_mds_logbuf	*buf;
+	struct psclist_head *tmp;
+	struct sl_mds_logbuf *buf;
 
 restart:
 
-	buf = mds_namespace_logbuf;
-	while (buf) {
+	psclist_for_each(tmp, &mds_namespace_buflist) {
+		buf = psclist_entry(tmp, struct sl_mds_logbuf, slb_link);
 		i++;
 		if (buf->slb_seqno == seqno)
 			break;
-		buf = buf->slb_next;
 	}
 	if (buf) {
 		buf->slb_refcnt++;
@@ -212,6 +213,7 @@ restart:
 	buf->slb_refcnt = 1;
 	buf->slb_seqno = seqno;
 	buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
+	return buf;
 }
 
 /*
