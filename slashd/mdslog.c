@@ -45,39 +45,42 @@
 #include "slashrpc.h"
 #include "sljournal.h"
 
-struct psc_journal		*mdsJournal;
-static struct pscrpc_nbreqset	*logPndgReqs;
+struct psc_journal		 *mdsJournal;
+static struct pscrpc_nbreqset	 *logPndgReqs;
 
-static int			 logentrysize;
+static int			  logentrysize;
 
 /*
  * Eventually, we are going to retrieve the namespace update sequence number
  * from the system journal.
  */
-uint64_t			 next_update_seqno;
-
-uint64_t			 next_propagate_seqno;
+uint64_t			  next_update_seqno;
+ 
+uint64_t			  next_propagate_seqno;
 
 /*
  * Low and high water marks of update sequence numbers that need to be propagated.
  * Note that the pace of each MDS is different.
  */
-static uint64_t			 propagate_seqno_lwm;
-static uint64_t			 propagate_seqno_hwm;
+static uint64_t			  propagate_seqno_lwm;
+static uint64_t			  propagate_seqno_hwm;
 
-static int			 current_logfile = -1;
+static int			  current_logfile = -1;
 
-struct psc_waitq		 mds_namespace_waitq = PSC_WAITQ_INIT;
-psc_spinlock_t			 mds_namespace_waitqlock = LOCK_INITIALIZER;
+struct psc_waitq		  mds_namespace_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t			  mds_namespace_waitqlock = LOCK_INITIALIZER;
 
 /* max # of buffers used to decrease I/O */
-#define	MDS_NAMESPACE_MAX_BUF	 8
+#define	MDS_NAMESPACE_MAX_BUF	  8
 
 /* max # of seconds before an update is propagated */
 #define MDS_NAMESPACE_MAX_AGE	 30
 
+/* a buffer used to read on-disk log file */
+static char			*stagebuf;
+
 /* we only have a few buffers, so a list is fine */
-static struct psclist_head	mds_namespace_buflist = PSCLIST_HEAD_INIT(mds_namespace_buflist);
+static struct psclist_head	 mds_namespace_buflist = PSCLIST_HEAD_INIT(mds_namespace_buflist);
 
 uint64_t
 mds_get_next_seqno(void)
@@ -188,9 +191,12 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
  *
  */
 struct sl_mds_logbuf *
-mds_namespace_read_batch(__unusedx uint64_t seqno)
+mds_namespace_read_batch(uint64_t seqno)
 {
 	int i;
+	int logfile;
+	ssize_t size;
+	char fn[PATH_MAX];
 	struct psclist_head *tmp;
 	struct sl_mds_logbuf *buf;
 	struct sl_mds_logbuf *victim;
@@ -240,7 +246,16 @@ readit:
 
 	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
 	logfile = open(fn, O_RDONLY);
-	fstat(logfile, &sb);
+	/*
+	 * Short read is allowed, but the returned size must
+	 * be a multiple of 512 bytes.
+	 */
+	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
+	size = read(logfile, stagebuf, 
+		   (SLM_NAMESPACE_BATCH - buf->slb_count) * logentrysize);
+	psc_assert((size % logentrysize) == 0);
+	close(logfile);
+
 	return buf;
 }
 
@@ -353,13 +368,8 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 {
 	int i, rv;
 	int nitems;
-	int logfile;
 	uint64_t seqno;
-	char fn[PATH_MAX];
-	ssize_t size;
-	char *ptr, *buf = NULL;
-	struct slmds_jent_namespace *jnamespace;
-	struct stat sb;
+	struct sl_mds_logbuf *buf;
 
 	/*
 	 * The thread scans the batches of changes between the low and high
@@ -373,13 +383,6 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 			goto done;
 
 		seqno = next_propagate_seqno - next_propagate_seqno % SLM_NAMESPACE_BATCH;
-		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
-		logfile = open(fn, O_RDONLY);
-		fstat(logfile, &sb);
-
-		size = sb.st_size;
-		psc_assert((size % logentrysize) == 0);
-		nitems =  size / logentrysize;
 
 		/*
 		 * Make sure we can send the current batch to at least one
@@ -387,20 +390,12 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		 */
 		if (!mds_namespace_check_peers(seqno, nitems)) {
 			seqno += SLM_NAMESPACE_BATCH;
-			close(logfile);
 			continue;
 		}
-			
-		/* Allocate a buffer used to read disk and bulk RPC */
-		buf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 
-		/*
-		 * Short read is allowed, but the returned size must
-		 * be a multiple of 512 bytes.
-		 */
-		size = read(logfile, buf, SLM_NAMESPACE_BATCH * logentrysize);
-		close(logfile);
+		buf = mds_namespace_read_batch(seqno);
 
+#if 0
 		jnamespace = (struct slmds_jent_namespace *) buf;
 		ptr += jnamespace->sjnm_reclen;
 		for (i = 0; i < nitems - 1; i++) {
@@ -411,6 +406,8 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		size = ptr - buf;
 
 		mds_namespace_propagate_batch(buf, (int)size);
+#endif
+
 done:
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
@@ -689,4 +686,6 @@ mds_journal_init(void)
 	    NULL, 0, "slmjsendthr");
 
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
+			
+	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 }
