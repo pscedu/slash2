@@ -183,7 +183,7 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 
 	loginfo = args->pointer_arg[0];
 	buf = loginfo->sml_logbuf;
-	buf->slb_refcnt--;
+	atomic_dec(&buf->slb_refcnt);
 	sl_csvc_decref(csvc);
 	return (0);
 }
@@ -219,7 +219,7 @@ restart:
 		i++;
 		if (buf->slb_seqno == seqno)
 			break;
-		if (!victim && buf->slb_refcnt == 0)
+		if (!victim && atomic_read(&buf->slb_refcnt) == 0)
 			victim = buf;
 	}
 	if (buf) {
@@ -229,7 +229,7 @@ restart:
 	}
 	if (i < MDS_NAMESPACE_MAX_BUF) {
 		buf = PSCALLOC(sizeof(struct sl_mds_logbuf) + SLM_NAMESPACE_BATCH * logentrysize);
-		buf->slb_refcnt = 0;
+		atomic_set(&buf->slb_refcnt, 0);
 		buf->slb_count = 0;
 		buf->slb_seqno = seqno;
 		buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
@@ -243,7 +243,7 @@ restart:
 		goto restart;
 	}
 	buf = victim;
-	buf->slb_refcnt = 0;
+	atomic_set(&buf->slb_refcnt, 0);
 	buf->slb_count = 0;
 	buf->slb_size = 0;
 	buf->slb_seqno = seqno;
@@ -351,7 +351,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, 
 				SRMM_BULK_PORTAL, &iov, 1);
 
-			logbuf->slb_refcnt++;
+			atomic_inc(&logbuf->slb_refcnt);
 			loginfo->sml_logbuf = logbuf;
 
 			req->rq_async_args.pointer_arg[0] = loginfo;

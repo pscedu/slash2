@@ -38,7 +38,7 @@ enum {
  */
 #define	MDS_LOG_MAX_LOG_BATCH	8
 struct sl_mds_logbuf {
-	int		 	 slb_refcnt;
+	atomic_t	 	 slb_refcnt;
 	int		 	 slb_count;			/* total # of entries */
 	int			 slb_size;			/* total size in bytes */
 	uint64_t	 	 slb_seqno;			/* starting sequence number */
