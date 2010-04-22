@@ -73,17 +73,10 @@ struct msl_fhent {			 /* XXX rename */
  * CLIENT-specific private data for struct sl_resm.
  */
 struct resm_cli_info {
-	struct slashrpc_cservice	*rmci_csvc;
 	psc_spinlock_t			 rmci_lock;
 	struct psc_waitq		 rmci_waitq;
 	struct srm_bmap_release_req      rmci_bmaprls;
 };
-
-extern struct psc_waitq msl_fhent_flush_waitq;
-extern struct timespec msl_bmap_max_lease;
-extern struct timespec msl_bmap_timeo_inc;
-
-extern struct psc_listcache bmapTimeoutQ;
 
 #define resm2rmci(resm)			((struct resm_cli_info *)(resm)->resm_pri)
 
@@ -119,5 +112,11 @@ extern sl_ios_id_t		 prefIOS;
 extern struct psc_listcache	 bmapFlushQ;
 extern struct sl_resm		*slc_rmc_resm;
 extern struct slash_creds	 rootcreds;
+
+extern struct psc_waitq		 msl_fhent_flush_waitq;
+extern struct timespec		 msl_bmap_max_lease;
+extern struct timespec		 msl_bmap_timeo_inc;
+
+extern struct psc_listcache	 bmapTimeoutQ;
 
 #endif /* _MOUNT_SLASH_H_ */

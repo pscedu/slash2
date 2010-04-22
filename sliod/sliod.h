@@ -64,7 +64,6 @@ PSCTHR_MKCAST(slirimthr, slirim_thread, SLITHRT_RIM)
 PSCTHR_MKCAST(sliriithr, slirii_thread, SLITHRT_RII)
 
 struct resm_iod_info {
-	struct slashrpc_cservice *rmii_csvc;
 	psc_spinlock_t		  rmii_lock;
 	struct psc_waitq	  rmii_waitq;
 };
@@ -74,7 +73,7 @@ struct resm_iod_info {
 void		slitimerthr_spawn(void);
 __dead void	slictlthr_main(const char *);
 
-int 	        iod_inode_getsize(struct slash_fidgen *, uint64_t *);
+int		iod_inode_getsize(struct slash_fidgen *, uint64_t *);
 
 extern struct slash_creds	 rootcreds;
 

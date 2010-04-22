@@ -38,6 +38,7 @@
 #include "inode.h"
 
 struct sl_site;
+struct slashrpc_cservice;
 
 #define SITE_NAME_MAX	32
 #define INTRES_NAME_MAX	32
@@ -76,6 +77,7 @@ struct sl_resm {
 	lnet_nid_t		 resm_nid;			/* Node ID for the resource member */
 	struct sl_resource	*resm_res;
 	struct psc_hashent	 resm_hentry;
+	struct slashrpc_cservice*resm_csvc;
 	void			*resm_pri;
 #define resm_site		 resm_res->res_site
 };
@@ -106,7 +108,7 @@ struct sl_gconf {
 	psc_spinlock_t		 gconf_lock;
 };
 
-#define GCONF_HASHTBL_SZ 63
+#define GCONF_HASHTBL_SZ	63
 #define INIT_GCONF(g)								\
 	do {									\
 		memset((g), 0, sizeof(*(g)));					\
@@ -116,6 +118,13 @@ struct sl_gconf {
 		psc_hashtbl_init(&(g)->gconf_nid_hashtbl, 0, struct sl_resm,	\
 		    resm_nid, resm_hentry, GCONF_HASHTBL_SZ, NULL, "resnid");	\
 	} while (0)
+
+#define CONF_LOCK()			PLL_LOCK(&globalConfig.gconf_lock)
+#define CONF_UNLOCK()			PLL_ULOCK(&globalConfig.gconf_lock)
+
+#define CONF_FOREACH_SITE(s)		PLL_FOREACH((s), &globalConfig.gconf_sites)
+#define SITE_FOREACH_RES(s, r, i)	DYNARRAY_FOREACH((r), (i), &(s)->site_resources)
+#define RES_FOREACH_MEMB(r, m, j)	DYNARRAY_FOREACH((m), (j), &(r)->res_members)
 
 void			 slcfg_init_res(struct sl_resource *);
 void			 slcfg_init_resm(struct sl_resm *);

@@ -108,7 +108,6 @@ struct sl_mds_loginfo {
 
 /* allocated by slcfg_init_resm(), which is tied into the lex/yacc code */
 struct resm_mds_info {
-	struct slashrpc_cservice *rmmi_csvc;
 	psc_spinlock_t		  rmmi_lock;
 	struct psc_multiwaitcond  rmmi_mwcond;
 	int			  rmmi_busyid;
