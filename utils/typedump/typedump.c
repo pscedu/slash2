@@ -31,6 +31,7 @@
 #include "bmap.h"
 #include "buffer.h"
 #include "cache_params.h"
+#include "control.h"
 #include "creds.h"
 #include "fid.h"
 #include "fidcache.h"
@@ -151,7 +152,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct jflush_item);
-	PRTYPE(struct mds_log_batch);
 	PRTYPE(struct mexp_cli);
 	PRTYPE(struct msbmap_crcrepl_states);
 	PRTYPE(struct msctl_replst_cont);
@@ -175,6 +175,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_buffer_iovref);
 	PRTYPE(struct sl_fcmh_ops);
 	PRTYPE(struct sl_gconf);
+	PRTYPE(struct sl_mds_logbuf);
 	PRTYPE(struct sl_mds_loginfo);
 	PRTYPE(struct sl_replrq);
 	PRTYPE(struct sl_resm);
@@ -192,6 +193,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slash_snapshot);
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slashrpc_export);
+	PRTYPE(struct slctlmsg_conn);
 	PRTYPE(struct sli_repl_workrq);
 	PRTYPE(struct slictlmsg_replwkst);
 	PRTYPE(struct sliric_thread);
@@ -275,6 +277,7 @@ main(int argc, char *argv[])
 	/* start constants */
 	PRVAL(MSCMT_ADDREPLRQ);
 	PRVAL(MSCMT_DELREPLRQ);
+	PRVAL(MSCMT_GETCONNS);
 	PRVAL(MSCMT_GETREPLST);
 	PRVAL(MSCMT_GETREPLST_SLAVE);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
@@ -331,6 +334,8 @@ main(int argc, char *argv[])
 
 	PRVAL(SL_CRCS_PER_BMAP);
 	PRVAL(SL_REPLICA_NBYTES);
+
+	PRVAL(sizeof(((struct sl_resm *)NULL)->resm_addrbuf));
 
 	psc_crc64_calc(&crc, buf, sizeof(buf));
 	printf("NULL 1MB buf CRC is %#"PSCPRIxCRC64"\n", crc);
