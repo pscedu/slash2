@@ -140,7 +140,7 @@ slm_init(void)
 
 	psc_poolmaster_init(&bmapMdsLeasePoolMaster, struct bmap_mds_lease,
 	    bml_bmdsi_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
-	    "bmap_leases");
+	    "bmplease");
 	bmapMdsLeasePool = psc_poolmaster_getmgr(&bmapMdsLeasePoolMaster);
 
 	lc_reginit(&slm_replst_workq, struct slm_replst_workreq,
