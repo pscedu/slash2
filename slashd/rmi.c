@@ -56,19 +56,16 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 #if 0
-	struct slash_fidgen fg;
-	sl_bmapno_t bmapno;
 	int i;
 
 	DYNARRAY_FOREACH(np, i, &lnet_nids) {
-bmap_access_check()
-		mp->rc = bdbuf_check(&mq->sbdb, NULL, &fg, &bmapno,
-		    &rq->rq_peer, *np, nodeInfo.node_res->res_id, mq->rw);
+		mp->rc = bmapdesc_access_check(&mq->sbd, mq->rw,
+		    nodeInfo.node_res->res_id, *np);
 		if (mp->rc == 0)
-			goto bdbuf_ok;
+			break;
 	}
-	return (-1);
- bdbuf_ok:
+	if (mp->rc)
+		return (mp->rc);
 #endif
 	mds_bmap_getcurseq(NULL, &mp->minseq);
 

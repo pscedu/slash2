@@ -87,18 +87,20 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 	/*
 	 * A RBW (read-before-write) request from the client may have a
-	 *   write enabled bdbuf which he uses to fault in his page.
+	 *   write enabled bmapdesc which he uses to fault in his page.
 	 */
 	DYNARRAY_FOREACH(np, i, &lnet_nids) {
 		mp->rc = bmapdesc_access_check(&mq->sbd, rw,
 		    nodeResm->resm_res->res_id, *np);
 		if (mp->rc == 0)
-			goto bdbuf_ok;
+			break;
 	}
-	psc_warnx("bdbuf failed for fid:"FIDFMT, FIDFMTARGS(fgp));
-	return (-1);
+	if (mp->rc) {
+		psc_warnx("bmapdesc_access_check failed for fid:"FIDFMT,
+		    FIDFMTARGS(fgp));
+		return (mp->rc);
+	}
 
- bdbuf_ok:
 	/* Ensure that this request fits into the bmap's address range.
 	 *   XXX this check assumes that mq->offset has not been made
 	 *     bmap relative (ie it's filewise.
@@ -114,7 +116,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 
 #if 0
 	if (mq->sbd.sbd_seq < bim_getcurseq()) {
-		/* Reject old bdbufs. */
+		/* Reject old bmapdesc. */
 		psc_warnx("seq %"PRId64" is too old", mq->sbd.sbd_seq);
 		mp->rc = -EINVAL;
 		return (-1);
@@ -141,7 +143,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	biodi = bmap_2_biodi(bmap);
 
 	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%d "
-		   " bdbuf_seq=%"PRId64" biod_key=%"PRId64,
+		   " sbd_seq=%"PRId64" biod_key=%"PRId64,
 		   bmap->bcm_blkno, mq->size, mq->offset, rw,
 		   mq->sbd.sbd_seq, biodi->biod_cur_seqkey[0]);
 
