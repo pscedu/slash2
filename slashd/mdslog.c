@@ -319,7 +319,7 @@ mds_namespace_check_peers(uint64_t seqno, int length)
  *	peer MDSes that seem to be active.
  */
 void
-mds_namespace_propagate_batch(char *buf, int size)
+mds_namespace_propagate_batch(struct sl_mds_logbuf *buf)
 {
 	struct srm_send_namespace_req *mq;
 	struct srm_generic_rep *mp;
@@ -332,9 +332,7 @@ mds_namespace_propagate_batch(char *buf, int size)
 	struct sl_site *s;
 	int rc, n;
 	struct sl_mds_loginfo *loginfo;
-
-	iov.iov_base = buf;
-	iov.iov_len = size;
+	struct slmds_jent_namespace *jnamespace;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
@@ -348,12 +346,15 @@ mds_namespace_propagate_batch(char *buf, int size)
 			if (resm == nodeResm)
 				continue;
 
-			/*
-			 * Add logic here to decide if we should skip
-			 * the current site because it is lagging.
-			 */
 			loginfo = ((struct resprof_mds_info *)r->res_pri)->rpmi_loginfo;
+			/*
+			 * Skip if the MDS is busy or the current batch is out of
+			 * its windows.  Note for each MDS, we send updates in order.
+			 */
 			if (loginfo->sml_flags & SML_FLAG_INFLIGHT)
+				continue;
+			if (loginfo->sml_next_seqno < buf->slb_seqno ||
+			    loginfo->sml_next_seqno >= buf->slb_seqno + buf->slb_count)
 				continue;
 
 			csvc = slm_getmcsvc(resm);
@@ -400,26 +401,14 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		 * MDS before reading the on-disk log change file.
 		 */
 		nitems = propagate_seqno_hwm - seqno;
+		if (nitems > SLM_NAMESPACE_BATCH)
+			nitems = SLM_NAMESPACE_BATCH;
 		if (!mds_namespace_check_peers(seqno, nitems)) {
 			seqno += SLM_NAMESPACE_BATCH;
 			continue;
 		}
-
 		buf = mds_namespace_read_batch(seqno);
-
-#if 0
-		jnamespace = (struct slmds_jent_namespace *) buf;
-		ptr += jnamespace->sjnm_reclen;
-		for (i = 0; i < nitems - 1; i++) {
-			jnamespace++;
-			memcpy((void *)ptr, (void *)jnamespace, jnamespace->sjnm_reclen);
-			ptr += jnamespace->sjnm_reclen;
-		}
-		size = ptr - buf;
-
-		mds_namespace_propagate_batch(buf, (int)size);
-#endif
-
+		mds_namespace_propagate_batch(buf);
 done:
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
