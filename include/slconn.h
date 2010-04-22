@@ -25,6 +25,12 @@
 #ifndef _SLCONN_H_
 #define _SLCONN_H_
 
+#include "psc_util/lock.h"
+#include "psc_util/atomic.h"
+
+struct pscrpc_import;
+struct pscrpc_export;
+
 enum slconn_type {
 	SLCONNT_CLI,
 	SLCONNT_IOD,
