@@ -36,13 +36,18 @@ enum {
  * need to maintain a list of buffers to avoid reading the same log file
  * repeatedly.
  */
-
 #define	MDS_LOG_MAX_LOG_BATCH	8
 struct sl_mds_logbuf {
 	int		 	 slb_refcnt;
-	int		 	 slb_count;
-	uint64_t	 	 slb_seqno;
+	int		 	 slb_count;			/* total # of entries */
+	int			 slb_size;			/* total size in bytes */
+	uint64_t	 	 slb_seqno;			/* starting sequence number */
 	struct psclist_head	 slb_link;
+	/*
+	 * A buffer that is ready for RPC (i.e., packed). In order to deal
+	 * with timeouts of log entries, we allow a buffer to be filled
+	 * gradually.
+	 */
 	char			*slb_buf;
 };
 

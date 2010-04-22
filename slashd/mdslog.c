@@ -194,12 +194,15 @@ struct sl_mds_logbuf *
 mds_namespace_read_batch(uint64_t seqno)
 {
 	int i;
+	char *ptr;
+	int nitems;
 	int logfile;
 	ssize_t size;
 	char fn[PATH_MAX];
 	struct psclist_head *tmp;
 	struct sl_mds_logbuf *buf;
 	struct sl_mds_logbuf *victim;
+	struct slmds_jent_namespace *jnamespace;
 
 restart:
 	/*
@@ -240,21 +243,33 @@ restart:
 	buf = victim;
 	buf->slb_refcnt = 1;
 	buf->slb_count = 0;
+	buf->slb_size = 0;
 	buf->slb_seqno = seqno;
 
 readit:
 
+	/*
+	 * A short read is allowed, but the returned size must be a 
+	 * multiple of the log entry size (should be 512 bytes).
+	 */
 	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
 	logfile = open(fn, O_RDONLY);
-	/*
-	 * Short read is allowed, but the returned size must
-	 * be a multiple of 512 bytes.
-	 */
 	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
 	size = read(logfile, stagebuf, 
 		   (SLM_NAMESPACE_BATCH - buf->slb_count) * logentrysize);
-	psc_assert((size % logentrysize) == 0);
 	close(logfile);
+
+	nitems = size / logentrysize;
+	psc_assert((size % logentrysize) == 0);
+	psc_assert(nitems + buf->slb_count <= SLM_NAMESPACE_BATCH);
+
+	ptr = buf->slb_buf + buf->slb_size;
+	jnamespace = (struct slmds_jent_namespace *)stagebuf + buf->slb_count * logentrysize;
+	for (i = 0; i < nitems; i++, jnamespace++) {
+		memcpy((void *)ptr, (void *)jnamespace, jnamespace->sjnm_reclen);
+		ptr += jnamespace->sjnm_reclen;
+		buf->slb_size += jnamespace->sjnm_reclen;
+	}
 
 	return buf;
 }
@@ -378,16 +393,13 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	 */
 	seqno = propagate_seqno_lwm;
 	while (pscthr_run()) {
-
 		if (seqno >= propagate_seqno_hwm)
 			goto done;
-
-		seqno = next_propagate_seqno - next_propagate_seqno % SLM_NAMESPACE_BATCH;
-
 		/*
 		 * Make sure we can send the current batch to at least one
 		 * MDS before reading the on-disk log change file.
 		 */
+		nitems = propagate_seqno_hwm - seqno;
 		if (!mds_namespace_check_peers(seqno, nitems)) {
 			seqno += SLM_NAMESPACE_BATCH;
 			continue;
