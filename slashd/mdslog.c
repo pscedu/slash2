@@ -278,46 +278,6 @@ readit:
 	return buf;
 }
 
-/*
- * mds_namespace_check_peers - Check if we can send a batch of changes
- * 	to any of our peer MDSes.
- */
-int
-mds_namespace_check_peers(uint64_t seqno, int length)
-{
-	int found, n;
-	struct sl_resource *r;
-	struct sl_resm *resm;
-	struct sl_site *s;
-	struct sl_mds_loginfo *loginfo;
-
-	found = 0;
-	PLL_LOCK(&globalConfig.gconf_sites);
-	PLL_FOREACH(s, &globalConfig.gconf_sites)
-		DYNARRAY_FOREACH(r, n, &s->site_resources) {
-			if (r->res_type != SLREST_MDS)
-				continue;
-
-			/* MDS cannot have more than one member */
-			resm = psc_dynarray_getpos(&r->res_members, 0);
-			if (resm == nodeResm)
-				continue;
-
-			loginfo = ((struct resprof_mds_info *)r->res_pri)->rpmi_loginfo;
-			spinlock(&loginfo->sml_lock);
-			if (!(loginfo->sml_flags & SML_FLAG_INFLIGHT) &&
-			     (loginfo->sml_next_seqno >= seqno) && 
-			     (loginfo->sml_next_seqno < seqno + length)) {
-				freelock(&loginfo->sml_lock);
-				found = 1;
-				break;
-			}
-			freelock(&loginfo->sml_lock);
-		}
-	PLL_ULOCK(&globalConfig.gconf_sites);
-	return (found);
-}
-
 /**
  * mds_namespace_propagate_batch - Send the newest batch of changes to
  *	peer MDSes that seem to be active.
@@ -386,7 +346,6 @@ void
 mds_namespace_propagate(__unusedx struct psc_thread *thr)
 {
 	int rv;
-	int nitems;
 	uint64_t seqno;
 	struct sl_mds_logbuf *buf;
 
@@ -397,22 +356,12 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	 */
 	seqno = propagate_seqno_lwm;
 	while (pscthr_run()) {
-		if (seqno >= propagate_seqno_hwm)
-			goto done;
-		/*
-		 * Make sure we can send the current batch to at least one
-		 * MDS before reading the on-disk log change file.
-		 */
-		nitems = propagate_seqno_hwm - seqno;
-		if (nitems > SLM_NAMESPACE_BATCH)
-			nitems = SLM_NAMESPACE_BATCH;
-		if (!mds_namespace_check_peers(seqno, nitems)) {
+		if (seqno < propagate_seqno_hwm) {
+			buf = mds_namespace_read_batch(seqno);
+			mds_namespace_propagate_batch(buf);
 			seqno += SLM_NAMESPACE_BATCH;
 			continue;
 		}
-		buf = mds_namespace_read_batch(seqno);
-		mds_namespace_propagate_batch(buf);
-done:
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
 		    &mds_namespace_waitqlock, MDS_NAMESPACE_MAX_AGE);
