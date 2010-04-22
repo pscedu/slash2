@@ -249,8 +249,9 @@ in release but I don't see good performance for 'ls -al'.
 
 msctl/slictl/slmctl -n -s conn
 
-connections	host		type	 #refs	status
- ===================================================================
+connections
+ resource	host		type	 #refs	status
+===================================================================
  @PSC
    mds		adamantium	MDS	 1	online
    io0		stryker		parallel 1	offline
@@ -325,6 +326,7 @@ tracks endpoint connections
 - authbuf RPC bulk data, use wrappers of rsx_bulk routines to
   aid this
 - sprinkle some iostats on zfs, namespace changelog
+- move fsroot option to a 'set option'
 
 zfs
 - rename the zfs_init() alias, it is already a routine in ZFS
