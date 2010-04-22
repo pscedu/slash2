@@ -18,8 +18,7 @@
  */
 
 /*
- * Control interface for querying and modifying
- * parameters of a running mount_slash instance.
+ * Interface for controlling live operation of a mount_slash instance.
  */
 
 #ifndef _SL_CTL_CLI_H_
@@ -74,6 +73,7 @@ struct msctlmsg_fncmd_bmapreplpol {
 #define MSCMT_GETREPLST_SLAVE	(NPCMT + 3)
 #define MSCMT_SET_BMAPREPLPOL	(NPCMT + 4)
 #define MSCMT_SET_NEWREPLPOL	(NPCMT + 5)
+#define MSCMT_GETCONNS		(NPCMT + 6)
 
 /* mount_slash control commands */
 #define MSCC_EXIT	0

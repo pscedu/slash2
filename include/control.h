@@ -17,32 +17,22 @@
  * %PSC_END_COPYRIGHT%
  */
 
-/*
- * Interface for controlling live operation of a sliod instance.
- */
+#ifndef _SL_CONTROL_H_
+#define _SL_CONTROL_H_
 
-#include "psc_rpc/rpc.h"
-
-#include "fid.h"
 #include "slconfig.h"
-#include "sltypes.h"
 
-struct slictlmsg_replwkst {
-	struct slash_fidgen	srws_fg;
-	char			srws_peer_addr[RESM_ADDRBUF_SZ];
-	sl_bmapno_t		srws_bmapno;
-	uint32_t		srws_data_tot;
-	uint32_t		srws_data_cur;
-	/* XXX #inflight slivers? */
+struct slctlmsg_conn {
+	char		scc_sitename[SITE_NAME_MAX];
+	char		scc_resname[RES_NAME_MAX];
+	char		scc_resmaddr[PSC_ALIGN(RESM_ADDRBUF_SZ, 4)];
+	int32_t		scc_type;
+	int32_t		scc_refcnt;
+	int32_t		scc_flags;
+	int32_t		scc_xflags;
 };
 
-/* sliricthr thread stat aliases */
-#define pcst_nwrite		pcst_u32_1
+#define SCCF_ONLINE	(1 << 0)
+#define SCCF_CLIENT	(1 << 1)	/* peer is a client (MDS & ION only) */
 
-/* sliod message types */
-#define SLICMT_GET_REPLWKST	(NPCMT + 0)
-#define SLICMT_GETCONNS		(NPCMT + 1)
-
-/* sliod control commands */
-#define SICC_EXIT		0
-#define SICC_RECONFIG		1
+#endif /* _SL_CONTROL_H_ */

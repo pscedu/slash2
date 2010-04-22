@@ -18,15 +18,17 @@
  */
 
 /*
- * Control interface for querying and modifying
- * parameters of a running slashd instance.
+ * Interface for controlling live operation of a slashd instance.
  */
 
 /* slrmcthr stats */
-#define pcst_nopen	pcst_u32_1
-#define pcst_nstat	pcst_u32_2
-#define pcst_nclose	pcst_u32_3
+#define pcst_nopen		pcst_u32_1
+#define pcst_nstat		pcst_u32_2
+#define pcst_nclose		pcst_u32_3
+
+/* sliod message types */
+#define SLMCMT_GETCONNS		(NPCMT + 0)
 
 /* slashd control commands */
-#define SMCC_EXIT	0
-#define SMCC_RECONFIG	1
+#define SMCC_EXIT		0
+#define SMCC_RECONFIG		1
