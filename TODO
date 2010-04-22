@@ -324,6 +324,7 @@ tracks endpoint connections
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
 - authbuf RPC bulk data, use wrappers of rsx_bulk routines to
   aid this
+- sprinkle some iostats on journal
 
 zfs
 - rename the zfs_init() alias, it is already a routine in ZFS
