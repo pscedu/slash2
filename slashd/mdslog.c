@@ -210,7 +210,6 @@ mds_namespace_read_batch(uint64_t seqno)
 restart:
 	/*
 	 * Currently, there is only one thread manipulating the list.
-	 * But we do have to lock each individual buffer.
 	 */
 	i = 0;
 	victim = NULL;
@@ -255,7 +254,7 @@ readit:
 	 * A short read is allowed, but the returned size must be a 
 	 * multiple of the log entry size (should be 512 bytes).
 	 */
-	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno);
+	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
 	logfile = open(fn, O_RDONLY);
 	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
 	size = read(logfile, stagebuf, 
@@ -276,7 +275,11 @@ readit:
 		jnamespace = (struct slmds_jent_namespace *)((char *)jnamespace + logentrysize);
 	}
 
-	psclist_xadd_head(&buf->slb_link, &mds_namespace_buflist);
+	psclist_xadd_tail(&buf->slb_link, &mds_namespace_buflist);
+	/*
+	 * Return the loaded buffer without taking a reference.  This is
+	 * only possible because we are the only thread involved.
+	 */
 	return buf;
 }
 
