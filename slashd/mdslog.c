@@ -179,8 +179,11 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 {
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_loginfo *loginfo;
+	struct sl_mds_logbuf *buf;
 
 	loginfo = args->pointer_arg[0];
+	buf = loginfo->sml_logbuf;
+	buf->slb_refcnt--;
 	sl_csvc_decref(csvc);
 	return (0);
 }
@@ -220,14 +223,13 @@ restart:
 			victim = buf;
 	}
 	if (buf) {
-		buf->slb_refcnt++;
 		if (buf->slb_count == SLM_NAMESPACE_BATCH)
 			return buf;
 		goto readit;
 	}
 	if (i < MDS_NAMESPACE_MAX_BUF) {
 		buf = PSCALLOC(sizeof(struct sl_mds_logbuf) + SLM_NAMESPACE_BATCH * logentrysize);
-		buf->slb_refcnt = 1;
+		buf->slb_refcnt = 0;
 		buf->slb_count = 0;
 		buf->slb_seqno = seqno;
 		buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
@@ -241,7 +243,7 @@ restart:
 		goto restart;
 	}
 	buf = victim;
-	buf->slb_refcnt = 1;
+	buf->slb_refcnt = 0;
 	buf->slb_count = 0;
 	buf->slb_size = 0;
 	buf->slb_seqno = seqno;
@@ -283,7 +285,7 @@ readit:
  *	peer MDSes that seem to be active.
  */
 void
-mds_namespace_propagate_batch(struct sl_mds_logbuf *buf)
+mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 {
 	struct srm_send_namespace_req *mq;
 	struct srm_generic_rep *mp;
@@ -294,8 +296,10 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *buf)
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
-	int rc, n;
+	int rc, n, i;
 	struct sl_mds_loginfo *loginfo;
+	struct slmds_jent_namespace *jnamespace;
+	char *buf;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
@@ -316,9 +320,23 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *buf)
 			 */
 			if (loginfo->sml_flags & SML_FLAG_INFLIGHT)
 				continue;
-			if (loginfo->sml_next_seqno < buf->slb_seqno ||
-			    loginfo->sml_next_seqno >= buf->slb_seqno + buf->slb_count)
+			if (loginfo->sml_next_seqno < logbuf->slb_seqno ||
+			    loginfo->sml_next_seqno >= logbuf->slb_seqno + logbuf->slb_count)
 				continue;
+
+			/* Find out which part of the buffer should be send out */
+			i = logbuf->slb_count;
+			buf = logbuf->slb_buf;
+			do {
+				jnamespace = (struct slmds_jent_namespace *)buf;
+				if (jnamespace->sjnm_seqno == loginfo->sml_next_seqno)
+					break;
+				buf = buf + jnamespace->sjnm_reclen;
+				i--;
+			} while (i);
+			psc_assert(i);
+			iov.iov_base = buf;
+			iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
 
 			csvc = slm_getmcsvc(resm);
 			if (csvc == NULL)
@@ -330,8 +348,11 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *buf)
 				continue;
 			}
 
-			rc = rsx_bulkclient(req, &desc, BULK_GET_SOURCE,
-			    SRMM_BULK_PORTAL, &iov, 1);
+			(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, 
+				SRMM_BULK_PORTAL, &iov, 1);
+
+			logbuf->slb_refcnt++;
+			loginfo->sml_logbuf = logbuf;
 
 			req->rq_async_args.pointer_arg[0] = loginfo;
 			pscrpc_nbreqset_add(logPndgReqs, req);
