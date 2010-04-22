@@ -245,6 +245,7 @@ restart:
 	buf->slb_count = 0;
 	buf->slb_size = 0;
 	buf->slb_seqno = seqno;
+	psclist_del(&buf->slb_link);
 
 readit:
 
@@ -265,12 +266,15 @@ readit:
 
 	ptr = buf->slb_buf + buf->slb_size;
 	jnamespace = (struct slmds_jent_namespace *)stagebuf + buf->slb_count * logentrysize;
-	for (i = 0; i < nitems; i++, jnamespace++) {
+	for (i = 0; i < nitems; i++) {
 		memcpy((void *)ptr, (void *)jnamespace, jnamespace->sjnm_reclen);
 		ptr += jnamespace->sjnm_reclen;
 		buf->slb_size += jnamespace->sjnm_reclen;
+		/* sizeof(struct slmds_jent_namespace) is less than logentrysize */
+		jnamespace = (struct slmds_jent_namespace *)((char *)jnamespace + logentrysize);
 	}
 
+	psclist_xadd_head(&buf->slb_link, &mds_namespace_buflist);
 	return buf;
 }
 
@@ -332,7 +336,6 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *buf)
 	struct sl_site *s;
 	int rc, n;
 	struct sl_mds_loginfo *loginfo;
-	struct slmds_jent_namespace *jnamespace;
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
@@ -382,7 +385,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *buf)
 void
 mds_namespace_propagate(__unusedx struct psc_thread *thr)
 {
-	int i, rv;
+	int rv;
 	int nitems;
 	uint64_t seqno;
 	struct sl_mds_logbuf *buf;
