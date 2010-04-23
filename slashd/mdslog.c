@@ -81,6 +81,8 @@ static char			*stagebuf;
 
 /* we only have a few buffers, so a list is fine */
 static struct psclist_head	 mds_namespace_buflist = PSCLIST_HEAD_INIT(mds_namespace_buflist);
+/* list of peer MDSes */
+static struct psclist_head	 mds_namespace_loglist = PSCLIST_HEAD_INIT(mds_namespace_loglist);
 
 uint64_t
 mds_get_next_seqno(void)
@@ -186,6 +188,27 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	atomic_dec(&buf->slb_refcnt);
 	sl_csvc_decref(csvc);
 	return (0);
+}
+
+void
+mds_namespace_update_lwm(void)
+{
+	int first = 1;
+	uint64_t seqno;
+	struct psclist_head *tmp;
+	struct sl_mds_loginfo *loginfo;
+
+	psclist_for_each(tmp, &mds_namespace_loglist) {
+		loginfo = psclist_entry(tmp, struct sl_mds_loginfo, sml_link);
+		if (first) {
+			first = 0;
+			seqno = loginfo->sml_next_seqno;
+			continue;
+		}
+		if (seqno > loginfo->sml_next_seqno)
+			seqno = loginfo->sml_next_seqno;
+	}
+	propagate_seqno_lwm = seqno;
 }
 
 /*
@@ -303,64 +326,53 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	struct sl_mds_loginfo *loginfo;
 	struct slmds_jent_namespace *jnamespace;
 	char *buf;
+	struct psclist_head *tmp;
 
-	PLL_LOCK(&globalConfig.gconf_sites);
-	PLL_FOREACH(s, &globalConfig.gconf_sites)
-		DYNARRAY_FOREACH(r, n, &s->site_resources) {
-			if (r->res_type != SLREST_MDS)
-				continue;
+	psclist_for_each(tmp, &mds_namespace_loglist) {
+		loginfo = psclist_entry(tmp, struct sl_mds_loginfo, sml_link);
+		/*
+		 * Skip if the MDS is busy or the current batch is out of
+		 * its windows.  Note for each MDS, we send updates in order.
+		 */
+		if (loginfo->sml_flags & SML_FLAG_INFLIGHT)
+			continue;
+		if (loginfo->sml_next_seqno < logbuf->slb_seqno ||
+		    loginfo->sml_next_seqno >= logbuf->slb_seqno + logbuf->slb_count)
+			continue;
 
-			/* MDS cannot have more than one member */
-			resm = psc_dynarray_getpos(&r->res_members, 0);
-
-			if (resm == nodeResm)
-				continue;
-
-			loginfo = ((struct resprof_mds_info *)r->res_pri)->rpmi_loginfo;
-			/*
-			 * Skip if the MDS is busy or the current batch is out of
-			 * its windows.  Note for each MDS, we send updates in order.
-			 */
-			if (loginfo->sml_flags & SML_FLAG_INFLIGHT)
-				continue;
-			if (loginfo->sml_next_seqno < logbuf->slb_seqno ||
-			    loginfo->sml_next_seqno >= logbuf->slb_seqno + logbuf->slb_count)
-				continue;
-
-			/* Find out which part of the buffer should be send out */
-			i = logbuf->slb_count;
-			buf = logbuf->slb_buf;
-			do {
-				jnamespace = (struct slmds_jent_namespace *)buf;
-				if (jnamespace->sjnm_seqno == loginfo->sml_next_seqno)
-					break;
-				buf = buf + jnamespace->sjnm_reclen;
-				i--;
+		/* Find out which part of the buffer should be send out */
+		i = logbuf->slb_count;
+		buf = logbuf->slb_buf;
+		do {
+			jnamespace = (struct slmds_jent_namespace *)buf;
+			if (jnamespace->sjnm_seqno == loginfo->sml_next_seqno)
+				break;
+			buf = buf + jnamespace->sjnm_reclen;
+			i--;
 			} while (i);
-			psc_assert(i);
-			iov.iov_base = buf;
-			iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
+		psc_assert(i);
+		iov.iov_base = buf;
+		iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
 
-			csvc = slm_getmcsvc(resm);
-			if (csvc == NULL)
-				continue;
-			rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
-			    SRMT_SEND_NAMESPACE, req, mq, mp);
-			if (rc) {
-				sl_csvc_decref(csvc);
-				continue;
-			}
-
-			(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, 
-				SRMM_BULK_PORTAL, &iov, 1);
-
-			atomic_inc(&logbuf->slb_refcnt);
-			loginfo->sml_logbuf = logbuf;
-
-			req->rq_async_args.pointer_arg[0] = loginfo;
-			pscrpc_nbreqset_add(logPndgReqs, req);
+		csvc = slm_getmcsvc(resm);
+		if (csvc == NULL)
+			continue;
+		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
+		    SRMT_SEND_NAMESPACE, req, mq, mp);
+		if (rc) {
+			sl_csvc_decref(csvc);
+			continue;
 		}
-	PLL_ULOCK(&globalConfig.gconf_sites);
+
+		(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, 
+			SRMM_BULK_PORTAL, &iov, 1);
+
+		atomic_inc(&logbuf->slb_refcnt);
+
+		loginfo->sml_logbuf = logbuf;
+		req->rq_async_args.pointer_arg[0] = loginfo;
+		pscrpc_nbreqset_add(logPndgReqs, req);
+	}
 }
 
 /*
@@ -665,4 +677,26 @@ mds_journal_init(void)
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 			
 	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
+
+	/*
+	 * Construct a list of MDSes from the global configuration file
+	 * to save some run time.  It also allows us to dynamically add
+	 * or remove MDSes to/from our private list in the future.
+	 */
+	PLL_LOCK(&globalConfig.gconf_sites);
+	PLL_FOREACH(s, &globalConfig.gconf_sites)
+		DYNARRAY_FOREACH(r, n, &s->site_resources) {
+			if (r->res_type != SLREST_MDS)
+				continue;
+
+			/* MDS cannot have more than one member */
+			resm = psc_dynarray_getpos(&r->res_members, 0);
+			/* skip myself */
+			if (resm == nodeResm)
+				continue;
+
+			loginfo = ((struct resprof_mds_info *)r->res_pri)->rpmi_loginfo;
+			psclist_xadd_tail(&loginfo->sml_link, &mds_namespace_loglist);
+		}
+	PLL_ULOCK(&globalConfig.gconf_sites);
 }

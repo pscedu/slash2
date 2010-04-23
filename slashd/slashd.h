@@ -99,6 +99,7 @@ struct site_mds_info {
 
 struct sl_mds_loginfo {
 	psc_spinlock_t		  sml_lock;
+	struct psclist_head	  sml_link;
 	int			  sml_flags;
 	struct sl_mds_logbuf	 *sml_logbuf;		/* the log buffer being used */
 	uint64_t		  sml_next_seqno;	/* next log sequence */
