@@ -184,13 +184,19 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	struct sl_mds_logbuf *buf;
 
 	loginfo = args->pointer_arg[0];
+	spinlock(&loginfo->slm_lock);
+
 	buf = loginfo->sml_logbuf;
 	atomic_dec(&buf->slb_refcnt);
+	loginfo->sml_next_seqno += loginfo->sml_next_batch; 
+	loginfo->sml_flags &= ~SML_FLAG_INFLIGHT;
+
+	freelock(&loginfo->slm_lock);
 	sl_csvc_decref(csvc);
 	return (0);
 }
 
-void
+__static uint64_t
 mds_namespace_update_lwm(void)
 {
 	int first = 1;
@@ -200,15 +206,19 @@ mds_namespace_update_lwm(void)
 
 	psclist_for_each(tmp, &mds_namespace_loglist) {
 		loginfo = psclist_entry(tmp, struct sl_mds_loginfo, sml_link);
+		spinlock(&loginfo->slm_lock);
 		if (first) {
 			first = 0;
 			seqno = loginfo->sml_next_seqno;
+			freelock(&loginfo->slm_lock);
 			continue;
 		}
 		if (seqno > loginfo->sml_next_seqno)
 			seqno = loginfo->sml_next_seqno;
+		freelock(&loginfo->slm_lock);
 	}
 	propagate_seqno_lwm = seqno;
+	return (seqno);
 }
 
 /*
@@ -390,7 +400,7 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	 * water marks and sends them to peer MDSes.  Although different MDSes
 	 * have different paces, we send updates in order within one MDS.
 	 */
-	seqno = propagate_seqno_lwm;
+	seqno = mds_namespace_update_lwm();
 	while (pscthr_run()) {
 		if (seqno < propagate_seqno_hwm) {
 			buf = mds_namespace_read_batch(seqno);
@@ -401,7 +411,7 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
 		    &mds_namespace_waitqlock, MDS_NAMESPACE_MAX_AGE);
-		seqno = propagate_seqno_lwm;
+		seqno = mds_namespace_update_lwm();
 	}
 }
 

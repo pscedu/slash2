@@ -103,6 +103,7 @@ struct sl_mds_loginfo {
 	int			  sml_flags;
 	struct sl_mds_logbuf	 *sml_logbuf;		/* the log buffer being used */
 	uint64_t		  sml_next_seqno;	/* next log sequence */
+	int			  sml_next_batch;	/* # of updates */
 	time_t			  sml_last_send;	/* last contact and response */
 	time_t			  sml_last_recv;
 };
