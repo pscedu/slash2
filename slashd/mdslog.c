@@ -181,7 +181,6 @@ __static int
 mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 		  struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc;
 	struct sl_mds_loginfo *loginfo;
 	struct sl_mds_logbuf *buf;
 
@@ -194,7 +193,9 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	loginfo->sml_flags &= ~SML_FLAG_INFLIGHT;
 
 	freelock(&loginfo->sml_lock);
-	sl_csvc_decref(csvc);
+
+	/* drop the reference taken by slm_getmcsvc() */
+	sl_csvc_decref((loginfo->sml_resm)->resm_csvc);
 	return (0);
 }
 
