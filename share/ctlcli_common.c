@@ -17,11 +17,16 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include <stdio.h>
+#include <string.h>
 
+#include "pfl/cdefs.h"
+#include "pfl/str.h"
+#include "psc_util/ctl.h"
+#include "psc_util/ctlcli.h"
 
-//flags - Multiwait
-
+#include "control.h"
+#include "slconfig.h"
+#include "slconn.h"
 
 __static const char *slconn_restypes[] = {
 	"client",
@@ -31,12 +36,6 @@ __static const char *slconn_restypes[] = {
 	"mds",
 	"parallelfs"
 };
-
-void
-sl_packshow_conn(__unusedx const char *thr)
-{
-	psc_ctlmsg_push(SLICMT_GETCONNS, sizeof(struct slctlmsg_conn));
-}
 
 void
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
@@ -50,22 +49,22 @@ void
 sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 {
 	static char lastsite[SITE_NAME_MAX], lastres[RES_NAME_MAX];
-	const char *site, *nid, *res, *status;
+	char *site, *nid, *res, *status, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
-	int sitelen;
 
 	/* res@site:1.1.1.1@tcp0 */
-	res = scc->scc_addrbuf;
-	site = res + strcpsn(res, "@");
+	strlcpy(addrbuf, scc->scc_addrbuf, sizeof(addrbuf));
+	res = addrbuf;
+	site = res + strcspn(res, "@");
 	if (*site != '\0')
 		*site++ = '\0';
-	nid = site + strcpsn(site, ":");
+	nid = site + strcspn(site, ":");
 	if (*nid != '\0')
 		*nid++ = '\0';
 	if (psc_ctl_lastmsgtype != mh->mh_type ||
-	    strcmp(lastsite, scc->scc_sitename)) {
-		strlcpy(lastsite, scc->scc_sitename, sizeof(lastsite));
-		printf(" %s\n", scc->scc_sitename);
+	    strcmp(lastsite, site)) {
+		strlcpy(lastsite, site, sizeof(lastsite));
+		printf(" %s\n", site);
 	}
 	if (strcmp(lastres, res))
 		strlcpy(lastres, res, sizeof(lastres));
@@ -73,13 +72,13 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		res = "";
 	if (scc->scc_flags & SCCF_ONLINE)
 		status = "online";
-	else if (scc->scc_cflags & CSVC_CONNECTING)
+	else if (scc->scc_cflags & CSVCF_CONNECTING)
 		status = "connecting";
 	else
 		/* XXX differentiate between down and inactive */
 		status = "offline";
 	printf("   %12s %15s %8s     %c %4d %s\n", res, nid,
 	    slconn_restypes[scc->scc_type],
-	    scc->scc_flags & CSVCF_MULTIWAIT ? "M" : "-",
+	    scc->scc_flags & CSVCF_USE_MULTIWAIT ? 'M' : '-',
 	    scc->scc_refcnt, status);
 }

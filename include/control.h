@@ -23,7 +23,7 @@
 #include "slconfig.h"
 
 struct slctlmsg_conn {
-	char		scc_resmaddr[PSC_ALIGN(RESM_ADDRBUF_SZ, 4)];
+	char		scc_addrbuf[PSC_ALIGN(RESM_ADDRBUF_SZ, 4)];
 	int32_t		scc_type;	/* client is 0 */
 	int32_t		scc_refcnt;
 	int32_t		scc_cflags;	/* CSVCF_* */
@@ -32,5 +32,8 @@ struct slctlmsg_conn {
 
 /* scc_flags */
 #define SCCF_ONLINE	(1 << 0)
+
+void sl_conn_prhdr(struct psc_ctlmsghdr *, const void *);
+void sl_conn_prdat(const struct psc_ctlmsghdr *, const void *);
 
 #endif /* _SL_CONTROL_H_ */

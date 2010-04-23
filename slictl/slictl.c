@@ -33,6 +33,12 @@
 #include "pathnames.h"
 
 void
+packshow_conns(__unusedx const char *thr)
+{
+	psc_ctlmsg_push(SLICMT_GETCONNS, sizeof(struct slctlmsg_conn));
+}
+
+void
 packshow_replwkst(__unusedx const char *arg)
 {
 	psc_ctlmsg_push(SLICMT_GET_REPLWKST, sizeof(struct slictlmsg_replwkst));
@@ -75,7 +81,7 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
-	{ "connections",	sl_packshow_conn },
+	{ "connections",	packshow_conns },
 	{ "loglevels",		psc_ctl_packshow_loglevel },
 	{ "replwkst",		packshow_replwkst },
 	{ "stats",		psc_ctl_packshow_stats }

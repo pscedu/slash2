@@ -119,8 +119,8 @@ struct sl_gconf {
 		    resm_nid, resm_hentry, GCONF_HASHTBL_SZ, NULL, "resnid");	\
 	} while (0)
 
-#define CONF_LOCK()			PLL_LOCK(&globalConfig.gconf_lock)
-#define CONF_UNLOCK()			PLL_ULOCK(&globalConfig.gconf_lock)
+#define CONF_LOCK()			PLL_LOCK(&globalConfig.gconf_sites)
+#define CONF_UNLOCK()			PLL_ULOCK(&globalConfig.gconf_sites)
 
 #define CONF_FOREACH_SITE(s)		PLL_FOREACH((s), &globalConfig.gconf_sites)
 #define SITE_FOREACH_RES(s, r, i)	DYNARRAY_FOREACH((r), (i), &(s)->site_resources)

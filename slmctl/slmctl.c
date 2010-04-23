@@ -45,8 +45,14 @@ slmrmmthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 	printf(" #open %8d", pcst->pcst_nopen);
 }
 
+void
+packshow_conns(__unusedx const char *thr)
+{
+	psc_ctlmsg_push(SLMCMT_GETCONNS, sizeof(struct slctlmsg_conn));
+}
+
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
-	{ "connections",	sl_packshow_conn },
+	{ "connections",	packshow_conns },
 	{ "loglevels",		psc_ctl_packshow_loglevel },
 	{ "stats",		psc_ctl_packshow_stats }
 };

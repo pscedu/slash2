@@ -119,6 +119,12 @@ rsb_accul_replica_stats(struct replst_slave_bdata *rsb, int iosidx,
 }
 
 void
+packshow_conns(__unusedx const char *thr)
+{
+	psc_ctlmsg_push(MSCMT_GETCONNS, sizeof(struct slctlmsg_conn));
+}
+
+void
 pack_replst(const char *fn, __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;
@@ -495,7 +501,7 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
-	{ "connections",	sl_packshow_conn },
+	{ "connections",	packshow_conns },
 	{ "loglevels",		psc_ctl_packshow_loglevel },
 	{ "stats",		psc_ctl_packshow_stats },
 };

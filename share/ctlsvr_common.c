@@ -21,6 +21,8 @@
 
 #include "pfl/str.h"
 #include "psc_util/ctl.h"
+#include "psc_util/ctlsvr.h"
+#include "psc_util/lock.h"
 
 #include "control.h"
 #include "slconfig.h"
@@ -36,7 +38,7 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slctlmsg_conn *scc = m;
 	struct sl_resource *r;
-	struct sl_resm *m;
+	struct sl_resm *resm;
 	struct sl_site *s;
 	int i, j, rc = 1;
 
@@ -45,21 +47,25 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	CONF_LOCK();
 	CONF_FOREACH_SITE(s)
 		SITE_FOREACH_RES(s, r, i)
-			RES_FOREACH_MEMB(r, m, j) {
+			RES_FOREACH_MEMB(r, resm, j) {
 				/* XXX strip off ad@PSC:1.1.1.1@tcp9 */
-				strlcpy(scc->scc_resmaddr, m->resm_addrbuf,
-				    sizeof(scc->scc_resmaddr));
+				strlcpy(scc->scc_addrbuf,
+				    resm->resm_addrbuf,
+				    sizeof(scc->scc_addrbuf));
 				scc->scc_type = r->res_type;
-//				if (zexp->zexp_exp->exp_connection)
-//					psc_id2str(zexp->zexp_exp->exp_connection->c_peer,
-//					    zcc->zcc_nidstr);
 
-//				scc->scc_flags = m->resm_csvc->csvc_flags;
-//				scc->scc_refcnt = m->resm_csvc->csvc_refcnt;
-//				scc->scc_xflags = 0;
-//				if (imp->imp_failed == 0 &&
-//				    imp->imp_invalid == 0)
-//					scc->scc_xflags |= SCCF_ONLINE;
+#if 0
+				if (zexp->zexp_exp->exp_connection)
+					psc_id2str(zexp->zexp_exp->exp_connection->c_peer,
+					    zcc->zcc_nidstr);
+
+				scc->scc_flags = resm->resm_csvc->csvc_flags;
+				scc->scc_refcnt = resm->resm_csvc->csvc_refcnt;
+				scc->scc_xflags = 0;
+				if (imp->imp_failed == 0 &&
+				    imp->imp_invalid == 0)
+					scc->scc_xflags |= SCCF_ONLINE;
+#endif
 
 				rc = psc_ctlmsg_sendv(fd, mh, scc);
 				if (!rc)
@@ -67,23 +73,19 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 			}
  done:
 	CONF_UNLOCK();
-	return (rc);
-}
 
-int
-slctlrep_getclients(int fd, struct psc_ctlmsghdr *mh, void *m)
-{
-//				if ()
-//					scc->scc_xflags |= SCCF_CLIENT;
-}
+#if 0
+	lock
+	foreach (mexpcli) {
+		snprintf(scc->scc_addrbuf, sizeof(scc->scc_addrbuf),
+		    "@clients:%s", psc_nid2str());
+		scc->scc_type = 0;
+		rc = psc_ctlmsg_sendv(fd, mh, scc);
+		if (!rc)
+			break;
+	}
+	unlock
+#endif
 
-int
-slctlrep_getallconns(int fd, struct psc_ctlmsghdr *mh, void *m)
-{
-	int rc;
-
-	rc = slctlrep_getconns(fd, mh, m);
-	if (rc)
-		rc = slctlrep_getclients(fd, mh, m);
 	return (rc);
 }
