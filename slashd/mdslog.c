@@ -164,6 +164,8 @@ mds_namespace_log(int op, int type, int perm, uint64_t parent,
 	jnamespace->sjnm_parent_s2id = parent;
 	jnamespace->sjnm_target_s2id = target;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
+	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, jnamespace->sjnm_name);
+	jnamespace->sjnm_reclen += strlen(name) + 1;
 	strcpy(jnamespace->sjnm_name, name);
 
 	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
@@ -217,6 +219,7 @@ mds_namespace_update_lwm(void)
 			seqno = loginfo->sml_next_seqno;
 		freelock(&loginfo->slm_lock);
 	}
+	/* XXX purge old log files here before bumping lwm */
 	propagate_seqno_lwm = seqno;
 	return (seqno);
 }
@@ -318,8 +321,7 @@ readit:
 }
 
 /**
- * mds_namespace_propagate_batch - Send the newest batch of changes to
- *	peer MDSes that seem to be active.
+ * mds_namespace_propagate_batch - Send a batch of updates to peer MDSes that want them.
  */
 void
 mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
