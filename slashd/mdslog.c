@@ -265,9 +265,11 @@ restart:
 	}
 	if (i < MDS_NAMESPACE_MAX_BUF) {
 		buf = PSCALLOC(sizeof(struct sl_mds_logbuf) + SLM_NAMESPACE_BATCH * logentrysize);
-		atomic_set(&buf->slb_refcnt, 0);
+		buf->slb_size = 0;
 		buf->slb_count = 0;
 		buf->slb_seqno = seqno;
+		atomic_set(&buf->slb_refcnt, 0);
+		PSCLIST_INIT_ENTRY(&buf->slb_link);
 		buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
 		goto readit;
 	}
@@ -279,10 +281,10 @@ restart:
 		goto restart;
 	}
 	buf = victim;
-	atomic_set(&buf->slb_refcnt, 0);
-	buf->slb_count = 0;
 	buf->slb_size = 0;
+	buf->slb_count = 0;
 	buf->slb_seqno = seqno;
+	atomic_set(&buf->slb_refcnt, 0);
 	psclist_del(&buf->slb_link);
 
 readit:
