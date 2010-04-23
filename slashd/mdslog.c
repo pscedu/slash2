@@ -251,6 +251,7 @@ restart:
 		i++;
 		if (buf->slb_seqno == seqno)
 			break;
+		/* I am the only thread that can add a reference to a buf */
 		if (!victim && atomic_read(&buf->slb_refcnt) == 0)
 			victim = buf;
 	}
@@ -359,7 +360,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 				break;
 			buf = buf + jnamespace->sjnm_reclen;
 			i--;
-			} while (i);
+		} while (i);
 		psc_assert(i);
 		iov.iov_base = buf;
 		iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
@@ -378,8 +379,14 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			SRMM_BULK_PORTAL, &iov, 1);
 
 		atomic_inc(&logbuf->slb_refcnt);
-
+		/* 
+		 * Until I send out the request, no callback will touch
+		 * these fields.
+		 */
+		loginfo->sml_next_batch = i;
 		loginfo->sml_logbuf = logbuf;
+		loginfo->sml_flags |= SML_FLAG_INFLIGHT;
+
 		req->rq_async_args.pointer_arg[0] = loginfo;
 		pscrpc_nbreqset_add(logPndgReqs, req);
 	}
