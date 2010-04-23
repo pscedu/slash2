@@ -35,6 +35,7 @@
 
 #include "mount_slash/ctl_cli.h"
 #include "bmap.h"
+#include "control.h"
 #include "msctl.h"
 #include "pathnames.h"
 #include "slashrpc.h"
@@ -494,19 +495,21 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
-	{ "loglevels",	psc_ctl_packshow_loglevel },
-	{ "stats",	psc_ctl_packshow_stats }
+	{ "connections",	sl_packshow_conn },
+	{ "loglevels",		psc_ctl_packshow_loglevel },
+	{ "stats",		psc_ctl_packshow_stats },
 };
 int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
-	{ NULL,			NULL,			0, NULL },
-	{ NULL,			NULL,			0, NULL },
-	{ NULL,			NULL,			0, replst_savdat },
-	{ replst_slave_prhdr,	replst_slave_prdat,	0, replst_slave_check },
-	{ NULL,			NULL,			0, NULL },
-	{ NULL,			NULL,			0, NULL }
+	{ NULL,			NULL,			0,				NULL },
+	{ NULL,			NULL,			0,				NULL },
+	{ NULL,			NULL,			0,				replst_savdat },
+	{ replst_slave_prhdr,	replst_slave_prdat,	0,				replst_slave_check },
+	{ NULL,			NULL,			0,				NULL },
+	{ NULL,			NULL,			0,				NULL },
+	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),	NULL }
 };
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 

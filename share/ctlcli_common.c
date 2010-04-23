@@ -23,7 +23,7 @@
 //flags - Multiwait
 
 
-const char *slconn_restypes[] = {
+__static const char *slconn_restypes[] = {
 	"client",
 	"archiver",
 	"serialfs",
@@ -32,3 +32,54 @@ const char *slconn_restypes[] = {
 	"parallelfs"
 };
 
+void
+sl_packshow_conn(__unusedx const char *thr)
+{
+	psc_ctlmsg_push(SLICMT_GETCONNS, sizeof(struct slctlmsg_conn));
+}
+
+void
+sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("network connection status\n"
+	    " %-16s %5s %33s %7s %7s %6s\n",
+	    "resource", "host", "type", "flags", "#refs", "status");
+}
+
+void
+sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
+{
+	static char lastsite[SITE_NAME_MAX], lastres[RES_NAME_MAX];
+	const char *site, *nid, *res, *status;
+	const struct slctlmsg_conn *scc = m;
+	int sitelen;
+
+	/* res@site:1.1.1.1@tcp0 */
+	res = scc->scc_addrbuf;
+	site = res + strcpsn(res, "@");
+	if (*site != '\0')
+		*site++ = '\0';
+	nid = site + strcpsn(site, ":");
+	if (*nid != '\0')
+		*nid++ = '\0';
+	if (psc_ctl_lastmsgtype != mh->mh_type ||
+	    strcmp(lastsite, scc->scc_sitename)) {
+		strlcpy(lastsite, scc->scc_sitename, sizeof(lastsite));
+		printf(" %s\n", scc->scc_sitename);
+	}
+	if (strcmp(lastres, res))
+		strlcpy(lastres, res, sizeof(lastres));
+	else
+		res = "";
+	if (scc->scc_flags & SCCF_ONLINE)
+		status = "online";
+	else if (scc->scc_cflags & CSVC_CONNECTING)
+		status = "connecting";
+	else
+		/* XXX differentiate between down and inactive */
+		status = "offline";
+	printf("   %12s %15s %8s     %c %4d %s\n", res, nid,
+	    slconn_restypes[scc->scc_type],
+	    scc->scc_flags & CSVCF_MULTIWAIT ? "M" : "-",
+	    scc->scc_refcnt, status);
+}

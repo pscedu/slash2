@@ -29,6 +29,7 @@
 #include "psc_util/log.h"
 
 #include "sliod/ctl_iod.h"
+#include "control.h"
 #include "pathnames.h"
 
 void
@@ -74,15 +75,17 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
-	{ "loglevels",	psc_ctl_packshow_loglevel },
-	{ "replwkst",	packshow_replwkst },
-	{ "stats",	psc_ctl_packshow_stats }
+	{ "connections",	sl_packshow_conn },
+	{ "loglevels",		psc_ctl_packshow_loglevel },
+	{ "replwkst",		packshow_replwkst },
+	{ "stats",		psc_ctl_packshow_stats }
 };
 int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
-	{ replwkst_prhdr,	replwkst_prdat,		sizeof(struct slictlmsg_replwkst), NULL }
+	{ replwkst_prhdr,	replwkst_prdat,	sizeof(struct slictlmsg_replwkst),	NULL },
+	{ sl_conn_prhdr,	sl_conn_prdat,	sizeof(struct slctlmsg_conn),		NULL }
 };
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 

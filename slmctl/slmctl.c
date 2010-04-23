@@ -27,6 +27,7 @@
 #include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
 
+#include "control.h"
 #include "pathnames.h"
 
 #include "slashd/ctl_mds.h"
@@ -45,13 +46,15 @@ slmrmmthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
-	{ "loglevels",	psc_ctl_packshow_loglevel },
-	{ "stats",	psc_ctl_packshow_stats }
+	{ "connections",	sl_packshow_conn },
+	{ "loglevels",		psc_ctl_packshow_loglevel },
+	{ "stats",		psc_ctl_packshow_stats }
 };
 int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
-	PSC_CTLMSG_PRFMT_DEFS
+	PSC_CTLMSG_PRFMT_DEFS,
+	{ sl_conn_prhdr,	sl_conn_prdat,	sizeof(struct slctlmsg_conn),		NULL }
 };
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 

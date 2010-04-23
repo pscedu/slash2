@@ -6,6 +6,7 @@ include ${ROOTDIR}/Makefile.path
 PROG=		slictl
 MAN+=		slictl.8
 SRCS+=		slictl.c
+SRCS+=		${SLASH_BASE}/share/ctlcli_common.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c

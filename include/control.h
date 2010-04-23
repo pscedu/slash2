@@ -23,16 +23,14 @@
 #include "slconfig.h"
 
 struct slctlmsg_conn {
-	char		scc_sitename[SITE_NAME_MAX];
-	char		scc_resname[RES_NAME_MAX];
 	char		scc_resmaddr[PSC_ALIGN(RESM_ADDRBUF_SZ, 4)];
-	int32_t		scc_type;
+	int32_t		scc_type;	/* client is 0 */
 	int32_t		scc_refcnt;
+	int32_t		scc_cflags;	/* CSVCF_* */
 	int32_t		scc_flags;
-	int32_t		scc_xflags;
 };
 
+/* scc_flags */
 #define SCCF_ONLINE	(1 << 0)
-#define SCCF_CLIENT	(1 << 1)	/* peer is a client (MDS & ION only) */
 
 #endif /* _SL_CONTROL_H_ */

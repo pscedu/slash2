@@ -43,13 +43,10 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	memset(scc, 0, sizeof(*scc));
 
 	CONF_LOCK();
-	CONF_FOREACH_SITE(s) {
-		strlcpy(scc->scc_sitename, s->site_name,
-		    sizeof(scc->scc_sitename));
-		SITE_FOREACH_RES(s, r, i) {
-			strlcpy(scc->scc_resname, r->res_name,
-			    sizeof(scc->scc_resname));
+	CONF_FOREACH_SITE(s)
+		SITE_FOREACH_RES(s, r, i)
 			RES_FOREACH_MEMB(r, m, j) {
+				/* XXX strip off ad@PSC:1.1.1.1@tcp9 */
 				strlcpy(scc->scc_resmaddr, m->resm_addrbuf,
 				    sizeof(scc->scc_resmaddr));
 				scc->scc_type = r->res_type;
@@ -68,8 +65,6 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 				if (!rc)
 					goto done;
 			}
-		}
-	}
  done:
 	CONF_UNLOCK();
 	return (rc);

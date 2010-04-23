@@ -20,6 +20,7 @@ SRCS+=		${SLASH_BASE}/share/authbuf_mgt.c
 SRCS+=		${SLASH_BASE}/share/authbuf_sign.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
 SRCS+=		${SLASH_BASE}/share/cfg_common.c
+SRCS+=		${SLASH_BASE}/share/ctlsvr_common.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c
 SRCS+=		${SLASH_BASE}/share/lconf.l
 SRCS+=		${SLASH_BASE}/share/mkfn.c
