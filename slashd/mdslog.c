@@ -164,7 +164,7 @@ mds_namespace_log(int op, int type, int perm, uint64_t parent,
 	jnamespace->sjnm_parent_s2id = parent;
 	jnamespace->sjnm_target_s2id = target;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
-	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, jnamespace->sjnm_name);
+	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
 	jnamespace->sjnm_reclen += strlen(name) + 1;
 	strcpy(jnamespace->sjnm_name, name);
 
@@ -186,14 +186,14 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	struct sl_mds_logbuf *buf;
 
 	loginfo = args->pointer_arg[0];
-	spinlock(&loginfo->slm_lock);
+	spinlock(&loginfo->sml_lock);
 
 	buf = loginfo->sml_logbuf;
 	atomic_dec(&buf->slb_refcnt);
 	loginfo->sml_next_seqno += loginfo->sml_next_batch; 
 	loginfo->sml_flags &= ~SML_FLAG_INFLIGHT;
 
-	freelock(&loginfo->slm_lock);
+	freelock(&loginfo->sml_lock);
 	sl_csvc_decref(csvc);
 	return (0);
 }
@@ -208,16 +208,16 @@ mds_namespace_update_lwm(void)
 
 	psclist_for_each(tmp, &mds_namespace_loglist) {
 		loginfo = psclist_entry(tmp, struct sl_mds_loginfo, sml_link);
-		spinlock(&loginfo->slm_lock);
+		spinlock(&loginfo->sml_lock);
 		if (first) {
 			first = 0;
 			seqno = loginfo->sml_next_seqno;
-			freelock(&loginfo->slm_lock);
+			freelock(&loginfo->sml_lock);
 			continue;
 		}
 		if (seqno > loginfo->sml_next_seqno)
 			seqno = loginfo->sml_next_seqno;
-		freelock(&loginfo->slm_lock);
+		freelock(&loginfo->sml_lock);
 	}
 	/* XXX purge old log files here before bumping lwm */
 	propagate_seqno_lwm = seqno;
@@ -269,7 +269,7 @@ restart:
 		buf->slb_count = 0;
 		buf->slb_seqno = seqno;
 		atomic_set(&buf->slb_refcnt, 0);
-		PSCLIST_INIT_ENTRY(&buf->slb_link);
+		INIT_PSCLIST_ENTRY(&buf->slb_link);
 		buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
 		goto readit;
 	}
@@ -334,10 +334,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	struct pscrpc_request *req;
 	struct pscrpc_bulk_desc *desc;
 	struct iovec iov;
-	struct sl_resource *r;
-	struct sl_resm *resm;
-	struct sl_site *s;
-	int rc, n, i;
+	int rc, i;
 	struct sl_mds_loginfo *loginfo;
 	struct slmds_jent_namespace *jnamespace;
 	char *buf;
@@ -369,7 +366,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		iov.iov_base = buf;
 		iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
 
-		csvc = slm_getmcsvc(resm);
+		csvc = slm_getmcsvc(loginfo->sml_resm);
 		if (csvc == NULL)
 			continue;
 		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
@@ -680,7 +677,12 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 void
 mds_journal_init(void)
 {
+	int n;
+	struct sl_resource *r;
+	struct sl_resm *resm;
+	struct sl_site *s;
 	char fn[PATH_MAX];
+	struct sl_mds_loginfo *loginfo;
 	struct psc_thread *thr;
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
@@ -717,6 +719,7 @@ mds_journal_init(void)
 				continue;
 
 			loginfo = ((struct resprof_mds_info *)r->res_pri)->rpmi_loginfo;
+			loginfo->sml_resm = resm;
 			psclist_xadd_tail(&loginfo->sml_link, &mds_namespace_loglist);
 		}
 	PLL_ULOCK(&globalConfig.gconf_sites);

@@ -245,21 +245,11 @@ struct srt_bmapdesc {
 
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
 
-struct srt_namespace_entry {
-	uint64_t		parent;		/* SLASH ID of the parent directory */
-	uint64_t		target;		/* SLASH ID of the target */
-	uint64_t		seqno;
-	char			name[NAME_MAX + 1];
-	uint8_t			op;
-	uint8_t			type;
-	uint8_t			perm;
-	int8_t			_pad;
-} __packed;
-
 struct srm_send_namespace_req {
-	int32_t			count;
-	int32_t			_pad;
-	struct srt_namespace_entry entries[0];
+	uint64_t		seqno;
+	uint64_t		crc;		/* CRC of the bulk data */
+	int32_t			size;		/* size of the bulk data to follow */
+	int32_t			_pad;		/* 64-bit alignment */
 } __packed;
 
 struct srm_send_namespace_rep {
