@@ -102,6 +102,7 @@ struct slmds_jent_namespace {
 	uint8_t			sjnm_op;			/* 0 */
 	uint8_t			sjnm_type;			/* 1 */
 	uint8_t			sjnm_perm;			/* 2 */
+	mode_t			sjnm_mode;
 	uint8_t			sjnm__pad;			/* 3 */
 	uint64_t		sjnm_parent_s2id;		/* 4 */
 	uint64_t		sjnm_target_s2id;		/* 12 */
