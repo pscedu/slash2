@@ -230,7 +230,4 @@ fcmh_refresh_age(struct fidc_membh *fcmh)
 #define fidc_lookup_fg(fgp)						\
 	_fidc_lookup_fg((fgp), __FILE__, __func__, __LINE__)
 
-#define fcmh_getload(fgp, crp, fcmhp)					\
-	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (crp), (fcmhp))
-
 #endif /* _SL_FIDCACHE_H_ */

@@ -42,6 +42,6 @@ struct fcmh_mds_info {
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)
 #define inoh_2_fid(ih)		fcmh_2_fid((ih)->inoh_fcmh)
 
-#define slm_fcmh_get(fgp, fp)	fcmh_getload((fgp), &rootcreds, (fp))
+#define slm_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, &rootcreds, (fcmhp))
 
 #endif /* _FIDC_MDS_H_ */
