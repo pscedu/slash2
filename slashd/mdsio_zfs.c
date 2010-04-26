@@ -335,3 +335,16 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
 {
 	return (zfsslash2_rmdir(pino, cpn, cr));
 }
+
+
+void
+mdsio_replay_create(void)
+{
+
+}
+void
+
+mdsio_replay_remove(void)
+{
+
+}

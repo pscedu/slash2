@@ -48,6 +48,15 @@ slm_rmm_apply_log_entry(__unusedx struct slmds_jent_namespace *jnamespace)
 	pfg.fg_gen = FIDGEN_ANY;			/* XXX */
 
 	rc = slm_fcmh_get(&pfg, &p);
+	
+	switch (jnamespace->sjnm_op) {
+	    case SJ_NAMESPACE_OP_CREATE:
+		mdsio_replay_create();
+		break;
+	    case SJ_NAMESPACE_OP_REMOVE:
+		mdsio_replay_remove();
+		break;
+	}
 }
 
 /*
