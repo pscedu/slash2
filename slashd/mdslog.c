@@ -199,6 +199,9 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	return (0);
 }
 
+/*
+ * mds_namespace_update_lwm - Find the lowest water mark of all peer MDSes.
+ */
 __static uint64_t
 mds_namespace_update_lwm(void)
 {

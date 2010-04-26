@@ -34,6 +34,13 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
+#include "sljournal.h"
+
+void
+slm_rmm_apply_log_entry(__unusedx struct slmds_jent_namespace *jnamespace)
+{
+
+}
 
 /*
  * slm_rmm_handle_connect - handle a CONNECT request from another MDS.
@@ -56,20 +63,37 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
 int
 slm_rmm_handle_send_namespace(__unusedx struct pscrpc_request *rq)
 {
+	int i;
+	int count;
+	uint64_t seqno;
 	struct iovec iov;
 	struct srm_generic_rep *mp;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_send_namespace_req *mq;
+	struct slmds_jent_namespace *jnamespace;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	
+	count = mq->count;
+	seqno = mq->seqno;
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
 	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL, &iov, 1);
+	if (mp->rc)
+		goto out;
 	if (desc)
 		pscrpc_free_bulk(desc);
 
+	/* iterate through the buffer and apply updates */
+	jnamespace = (struct slmds_jent_namespace *) iov.iov_base;
+	for (i = 0; i < count; i++) {
+		slm_rmm_apply_log_entry(jnamespace);
+		jnamespace = (struct slmds_jent_namespace *)
+			((char *)jnamespace + jnamespace->sjnm_reclen); 
+	}
+
+out:
 	PSCFREE(iov.iov_base);
 	return (mp->rc);
 }
