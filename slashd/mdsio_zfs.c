@@ -345,11 +345,20 @@ mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type, int mo
 	int rc;
 	switch (type) {
 	    case SJ_NAMESPACE_TYPE_DIR:
-		rc = zfsslash2_replay_mkdir(parent_s2id, target_s2id, type, mode, name);
+		rc = zfsslash2_replay_mkdir(parent_s2id, target_s2id, mode, name);
 		break;
 	    case SJ_NAMESPACE_TYPE_FILE:
-		rc = zfsslash2_replay_creat(parent_s2id, target_s2id, type, mode, name);
+		rc = zfsslash2_replay_creat(parent_s2id, target_s2id, mode, name);
 		break;
+	    case SJ_NAMESPACE_TYPE_LINK:
+		rc = zfsslash2_replay_link(parent_s2id, target_s2id, mode, name);
+		break;
+	    case SJ_NAMESPACE_TYPE_SYMLINK:
+		rc = zfsslash2_replay_symlink(parent_s2id, target_s2id, mode, name);
+		break;
+	    default:
+		psc_errorx("mdsio_relay_create(): invalid type %d\n", type);
+		rc = EINVAL;
 	}
 	return (rc);
 }
