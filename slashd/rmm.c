@@ -38,25 +38,28 @@
 #include "sljournal.h"
 
 int
-slm_rmm_apply_log_entry(__unusedx struct slmds_jent_namespace *jnamespace)
+slm_rmm_apply_update(__unusedx struct slmds_jent_namespace *jnamespace)
 {
 	int rc;
-	struct fidc_membh *p;
-	struct slash_fidgen pfg;
 
-	pfg.fg_fid = jnamespace->sjnm_parent_s2id;
-	pfg.fg_gen = FIDGEN_ANY;			/* XXX */
-
-	rc = slm_fcmh_get(&pfg, &p);
-	
 	switch (jnamespace->sjnm_op) {
 	    case SJ_NAMESPACE_OP_CREATE:
-		mdsio_replay_create();
+		rc = mdsio_replay_create(
+			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_mode, jnamespace->sjnm_type, 
+			jnamespace->sjnm_name);
 		break;
 	    case SJ_NAMESPACE_OP_REMOVE:
-		mdsio_replay_remove();
+		rc = mdsio_replay_remove();
 		break;
+	    case SJ_NAMESPACE_OP_ATTRIB:
+		rc = mdsio_replay_attrib();
+		break;
+	    default:
+		psc_errorx("Unexpected opcode %d", jnamespace->sjnm_op);
+		rc = -EINVAL;
 	}
+	return rc;
 }
 
 /*
@@ -101,12 +104,15 @@ slm_rmm_handle_send_namespace(__unusedx struct pscrpc_request *rq)
 		goto out;
 	if (desc)
 		pscrpc_free_bulk(desc);
+	/*
+	 * Add code: If the sequence number is too old, reject right away.
+	 */
 
 	/* iterate through the buffer and apply updates */
 	rc = 0;
 	jnamespace = (struct slmds_jent_namespace *) iov.iov_base;
 	for (i = 0; i < count; i++) {
-		rc = slm_rmm_apply_log_entry(jnamespace);
+		rc = slm_rmm_apply_update(jnamespace);
 		if (rc)
 			break;
 		jnamespace = (struct slmds_jent_namespace *)

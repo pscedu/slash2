@@ -91,6 +91,7 @@ struct slmds_jent_bmapseq {
 
 #define	SJ_NAMESPACE_OP_CREATE		1
 #define	SJ_NAMESPACE_OP_REMOVE		2
+#define	SJ_NAMESPACE_OP_ATTRIB		3			/* change attributes */
 
 #define	SJ_NAMESPACE_TYPE_DIR		1
 #define	SJ_NAMESPACE_TYPE_FILE		2

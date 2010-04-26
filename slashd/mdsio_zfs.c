@@ -337,14 +337,20 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
 }
 
 
-void
+int
 mdsio_replay_create(void)
 {
-
+	return (0);
 }
-void
 
+int
 mdsio_replay_remove(void)
 {
+	return (0);
+}
 
+int
+mdsio_replay_attrib(void)
+{
+	return (0);
 }
