@@ -32,14 +32,22 @@
 
 #include "fid.h"
 #include "rpc_mds.h"
+#include "fidc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
 #include "sljournal.h"
 
-void
+int
 slm_rmm_apply_log_entry(__unusedx struct slmds_jent_namespace *jnamespace)
 {
+	int rc;
+	struct fidc_membh *p;
+	struct slash_fidgen pfg;
 
+	pfg.fg_fid = jnamespace->sjnm_parent_s2id;
+	pfg.fg_gen = FIDGEN_ANY;			/* XXX */
+
+	rc = slm_fcmh_get(&pfg, &p);
 }
 
 /*
@@ -63,7 +71,7 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
 int
 slm_rmm_handle_send_namespace(__unusedx struct pscrpc_request *rq)
 {
-	int i;
+	int i, rc;
 	int count;
 	uint64_t seqno;
 	struct iovec iov;
@@ -86,12 +94,16 @@ slm_rmm_handle_send_namespace(__unusedx struct pscrpc_request *rq)
 		pscrpc_free_bulk(desc);
 
 	/* iterate through the buffer and apply updates */
+	rc = 0;
 	jnamespace = (struct slmds_jent_namespace *) iov.iov_base;
 	for (i = 0; i < count; i++) {
-		slm_rmm_apply_log_entry(jnamespace);
+		rc = slm_rmm_apply_log_entry(jnamespace);
+		if (rc)
+			break;
 		jnamespace = (struct slmds_jent_namespace *)
 			((char *)jnamespace + jnamespace->sjnm_reclen); 
 	}
+	mp->rc = rc;
 
 out:
 	PSCFREE(iov.iov_base);
