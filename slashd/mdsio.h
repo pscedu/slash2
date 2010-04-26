@@ -76,7 +76,8 @@ int mdsio_setattr(mdsio_fid_t, struct srt_stat *, int, const struct slash_creds 
 int mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb);
 int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *);
 
-int mdsio_replay_create(void);
+int mdsio_replay_create(uint64_t, uint64_t, int, int, char *);
+
 int mdsio_replay_remove(void);
 int mdsio_replay_attrib(void);
 

@@ -46,7 +46,7 @@ slm_rmm_apply_update(__unusedx struct slmds_jent_namespace *jnamespace)
 	    case SJ_NAMESPACE_OP_CREATE:
 		rc = mdsio_replay_create(
 			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
-			jnamespace->sjnm_mode, jnamespace->sjnm_type, 
+			jnamespace->sjnm_type, jnamespace->sjnm_mode, 
 			jnamespace->sjnm_name);
 		break;
 	    case SJ_NAMESPACE_OP_REMOVE:

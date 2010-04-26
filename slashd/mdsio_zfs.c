@@ -336,9 +336,11 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
 	return (zfsslash2_rmdir(pino, cpn, cr));
 }
 
-
+/*
+ * Replay the namespace update operation performed on the remote MDS.
+ */
 int
-mdsio_replay_create(void)
+mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type, int mode, char *name)
 {
 	return (0);
 }
