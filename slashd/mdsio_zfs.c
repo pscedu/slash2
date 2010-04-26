@@ -343,7 +343,14 @@ int
 mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type, int mode, char *name)
 {
 	int rc;
-	rc = zfsslash2_replay_create(parent_s2id, target_s2id, type, mode, name);
+	switch (type) {
+	    case SJ_NAMESPACE_TYPE_DIR:
+		rc = zfsslash2_replay_mkdir(parent_s2id, target_s2id, type, mode, name);
+		break;
+	    case SJ_NAMESPACE_TYPE_FILE:
+		rc = zfsslash2_replay_creat(parent_s2id, target_s2id, type, mode, name);
+		break;
+	}
 	return (rc);
 }
 
