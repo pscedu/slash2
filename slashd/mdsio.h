@@ -26,9 +26,14 @@
 #include "sltypes.h"
 
 /* journal log callback operations */
-#define	MDS_NAMESPACE_CREATE	1
-#define	MDS_NAMESPACE_UNLINK	2
-#define	MDS_NAMESPACE_RENAME	3
+#define	MDS_NAMESPACE_OP_CREATE		1
+#define	MDS_NAMESPACE_OP_REMOVE		2
+#define	MDS_NAMESPACE_OP_ATTRIB		3
+
+#define	MDS_NAMESPACE_TYPE_DIR		1
+#define	MDS_NAMESPACE_TYPE_FILE		2
+#define	MDS_NAMESPACE_TYPE_LINK		3
+#define	MDS_NAMESPACE_TYPE_SYMLINK	4
 
 /* predefined mdsio layer "fids" */
 #define MDSIO_FID_ROOT	3

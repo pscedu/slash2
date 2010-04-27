@@ -158,8 +158,35 @@ mds_namespace_log(int op, int type, int perm, uint64_t parent,
 	struct slmds_jent_namespace *jnamespace;
 
 	jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
-	jnamespace->sjnm_op = op;
-	jnamespace->sjnm_type = type;
+	switch (op) {
+	    case MDS_NAMESPACE_OP_CREATE:
+		jnamespace->sjnm_op = SJ_NAMESPACE_OP_CREATE;
+		break;
+	    case MDS_NAMESPACE_OP_REMOVE:
+		jnamespace->sjnm_op = SJ_NAMESPACE_OP_REMOVE;
+		break;
+	    case MDS_NAMESPACE_OP_ATTRIB:
+		jnamespace->sjnm_op = SJ_NAMESPACE_OP_ATTRIB;
+		break;
+	    default: 
+		psc_fatalx("invalid operation: %d.\n", op);
+	}
+	switch (type) {
+	    case MDS_NAMESPACE_TYPE_DIR:
+		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_DIR;
+		break;
+	    case MDS_NAMESPACE_TYPE_FILE:
+		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_FILE;
+		break;
+	    case MDS_NAMESPACE_TYPE_LINK:
+		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_LINK;
+		break;
+	    case MDS_NAMESPACE_TYPE_SYMLINK:
+		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_SYMLINK;
+		break;
+	    default: 
+		psc_fatalx("invalid type: %d.\n", type);
+	}
 	jnamespace->sjnm_perm = perm;
 	jnamespace->sjnm_parent_s2id = parent;
 	jnamespace->sjnm_target_s2id = target;
