@@ -284,10 +284,11 @@ mdsio_opendir(mdsio_fid_t ino, const struct slash_creds *cr,
 int
 mdsio_mkdir(mdsio_fid_t pino, const char *cpn, mode_t mode,
     const struct slash_creds *cr, struct srt_stat *sstb,
-    struct slash_fidgen *fgp, mdsio_fid_t *mfp, sl_getslfid_cb getslfid)
+    struct slash_fidgen *fgp, mdsio_fid_t *mfp, 
+    sl_jlog_cb logfunc, sl_getslfid_cb getslfid)
 {
 	return (zfsslash2_mkdir(pino, cpn, mode, cr, sstb,
-	    fgp, mfp, getslfid));
+	    fgp, mfp, logfunc, getslfid));
 }
 
 int

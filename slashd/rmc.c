@@ -324,7 +324,7 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(fcmh), mq->name,
 	    mq->mode, &mq->creds, &mp->attr, &mp->fg, NULL,
-	    slm_get_next_slashid);
+	    mds_namespace_log, slm_get_next_slashid);
  out:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
