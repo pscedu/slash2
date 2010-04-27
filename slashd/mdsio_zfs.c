@@ -348,7 +348,7 @@ mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type, int mo
 		rc = zfsslash2_replay_mkdir(parent_s2id, target_s2id, mode, name);
 		break;
 	    case SJ_NAMESPACE_TYPE_FILE:
-		rc = zfsslash2_replay_creat(parent_s2id, target_s2id, mode, name);
+		rc = zfsslash2_replay_create(parent_s2id, target_s2id, mode, name);
 		break;
 	    case SJ_NAMESPACE_TYPE_LINK:
 		rc = zfsslash2_replay_link(parent_s2id, target_s2id, mode, name);
