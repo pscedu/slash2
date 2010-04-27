@@ -147,8 +147,7 @@ enum {
 	SRMT_PING,
 
 	/* namespace operations */
-	SRMT_SEND_NAMESPACE,		/* send a batch of namespace operation logs */
-	SRMT_RECV_NAMESPACE,		/* acknowledge the receipt/application of namespace operation logs */
+	SRMT_NAMESPACE_UPDATE,		/* send a batch of namespace operation logs */
 
 	/* bmap operations */
 	SRMT_BMAPCHMODE,

@@ -374,7 +374,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		if (csvc == NULL)
 			continue;
 		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
-		    SRMT_SEND_NAMESPACE, req, mq, mp);
+		    SRMT_NAMESPACE_UPDATE, req, mq, mp);
 		if (rc) {
 			sl_csvc_decref(csvc);
 			continue;

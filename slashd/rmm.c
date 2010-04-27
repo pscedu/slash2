@@ -83,7 +83,7 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
  * slm_rmm_handle_send_namespace - handle a CONNECT request from another MDS.
  */
 int
-slm_rmm_handle_send_namespace(__unusedx struct pscrpc_request *rq)
+slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 {
 	int i, rc;
 	int count;
@@ -128,15 +128,6 @@ out:
 }
 
 /*
- * slm_rmm_handle_recv_namespace - handle a CONNECT request from another MDS.
- */
-int
-slm_rmm_handle_recv_namespace(__unusedx struct pscrpc_request *rq)
-{
-	return (0);
-}
-
-/*
  * slm_rmm_handler - handle a request from another MDS.
  */
 int
@@ -148,11 +139,9 @@ slm_rmm_handler(struct pscrpc_request *rq)
 	case SRMT_CONNECT:
 		rc = slm_rmm_handle_connect(rq);
 		break;
-	case SRMT_RECV_NAMESPACE:
-		rc = slm_rmm_handle_recv_namespace(rq);
 		break;
-	case SRMT_SEND_NAMESPACE:
-		rc = slm_rmm_handle_send_namespace(rq);
+	case SRMT_NAMESPACE_UPDATE:
+		rc = slm_rmm_handle_namespace_update(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
