@@ -364,7 +364,7 @@ mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type, int mo
 }
 
 int
-mdsio_replay_remove(void)
+mdsio_replay_remove(__unusedx uint64_t parent_s2id, __unusedx uint64_t target_s2id, __unusedx char *name)
 {
 	return (0);
 }

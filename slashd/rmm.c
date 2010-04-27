@@ -50,7 +50,9 @@ slm_rmm_apply_update(__unusedx struct slmds_jent_namespace *jnamespace)
 			jnamespace->sjnm_name);
 		break;
 	    case SJ_NAMESPACE_OP_REMOVE:
-		rc = mdsio_replay_remove();
+		rc = mdsio_replay_remove(
+			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_name);
 		break;
 	    case SJ_NAMESPACE_OP_ATTRIB:
 		rc = mdsio_replay_attrib();

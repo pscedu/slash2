@@ -77,7 +77,7 @@ int mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_cr
 int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *);
 
 int mdsio_replay_create(uint64_t, uint64_t, int, int, char *);
-int mdsio_replay_remove(void);
+int mdsio_replay_remove(uint64_t, uint64_t, char *);
 int mdsio_replay_attrib(void);
 
 #endif
