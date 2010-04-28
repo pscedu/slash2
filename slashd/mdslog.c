@@ -133,6 +133,9 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 	if (sz != size)
 		psc_fatal("Fail to write change log file %s", fn);
 
+	psc_assert(seqno + 1 == propagate_seqno_hwm);
+	propagate_seqno_hwm = seqno;
+
 	/* see if we need to close the current change log file */
 	if (((seqno + 1) % SLM_NAMESPACE_BATCH) == 0) {
 		close(current_logfile);
