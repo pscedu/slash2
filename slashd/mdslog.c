@@ -311,6 +311,8 @@ restart:
 	 * wait until an RPC returns or times out.
 	 */
 	if (!victim) {
+		spinlock(&mds_namespace_waitqlock);
+		psc_waitq_wait(&mds_namespace_waitq, &mds_namespace_waitqlock);
 		goto restart;
 	}
 	buf = victim;
