@@ -128,6 +128,13 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 	} else
 		psc_assert(current_logfile != -1);
 
+	/*
+	 * Write to the disk now so that we can reclaim the log space in the
+	 * system log. In other words, we can't accumulate one batch worth
+	 * of namespace updates and move them into the buffer directly. We
+	 * also can't compete with the update propagator for limited number
+	 * of buffers either.
+	 */
 	sz = write(current_logfile, pje, size);
 	if (sz != size)
 		psc_fatal("Fail to write change log file %s", fn);
