@@ -56,7 +56,6 @@ static int			  logentrysize;
  */
 uint64_t			  next_update_seqno;
  
-uint64_t			  next_propagate_seqno;
 
 /*
  * Low and high water marks of update sequence numbers that need to be propagated.
@@ -757,4 +756,9 @@ mds_journal_init(void)
 			psclist_xadd_tail(&loginfo->sml_link, &mds_namespace_loglist);
 		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
+
+	/*
+	 * Eventually we have to read this from a on-disk log.
+	 */
+	next_update_seqno = 0;
 }
