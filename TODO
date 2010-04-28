@@ -327,6 +327,7 @@ tracks endpoint connections
   aid this
 - sprinkle some iostats on zfs, namespace changelog
 - move fsroot option to a 'set option'
+- add journal I/O test mode to slashd
 
 zfs
 - rename the zfs_init() alias, it is already a routine in ZFS
