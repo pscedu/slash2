@@ -396,8 +396,6 @@ alarm $intvtimeout;
 sleep 1 until scalar @{[ glob "$base/ctl/msl.*.sock" ]} == @cli;
 alarm 0;
 
-exit;
-
 # Spawn monitors/gatherers of control stats
 foreach $i (@mds) {
 	debug_msg "spawning slashd stats tracker: $i->{rname} : $i->{host}";
@@ -434,7 +432,7 @@ foreach $i (@cli) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		screen -d -m -S MSCTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
-		    $slbase/msctl/msctl ctl/msl.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
+		    $slbase/msctl/msctl -S ctl/msl.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
 		while screen -ls | grep -q MSCTL.$tsid; do
 			[ \$SECONDS -lt $runtimeout ]
 			sleep 1
@@ -443,6 +441,8 @@ EOF
 }
 
 waitjobs $runtimeout;
+
+exit;
 
 # Run the client applications
 foreach $i (@cli) {
