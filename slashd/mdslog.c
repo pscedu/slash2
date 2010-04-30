@@ -139,7 +139,6 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 	if (sz != size)
 		psc_fatal("Fail to write change log file %s", fn);
 
-	psc_assert(seqno + 1 == propagate_seqno_hwm);
 	propagate_seqno_hwm = seqno;
 
 	/* see if we need to close the current change log file */
@@ -454,7 +453,7 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	 */
 	seqno = mds_namespace_update_lwm();
 	while (pscthr_run()) {
-		if (seqno < propagate_seqno_hwm) {
+		if (seqno <= propagate_seqno_hwm) {
 			buf = mds_namespace_read_batch(seqno);
 			mds_namespace_propagate_batch(buf);
 			seqno += SLM_NAMESPACE_BATCH;
@@ -771,5 +770,5 @@ mds_journal_init(void)
 	/*
 	 * Eventually we have to read this from a on-disk log.
 	 */
-	next_update_seqno = 0;
+	next_update_seqno = 1;
 }
