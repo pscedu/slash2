@@ -122,9 +122,9 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 	if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
 		psc_assert(current_logfile == -1);
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
-		current_logfile = open(fn, O_CREAT | O_EXCL | O_RDWR | O_SYNC | O_DIRECT | O_APPEND);
+		current_logfile = open(fn, O_CREAT | O_RDWR | O_SYNC | O_DIRECT | O_APPEND, 0600);
 		if (current_logfile == -1)
-			psc_fatal("Fail to open change log file %s", fn);
+			psc_fatal("Fail to create change log file %s", fn);
 	} else
 		psc_assert(current_logfile != -1);
 
@@ -337,6 +337,8 @@ readit:
 	 */
 	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
 	logfile = open(fn, O_RDONLY);
+	if (logfile == -1)
+		psc_fatal("Fail to open change log file %s", fn);
 	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
 	size = read(logfile, stagebuf, 
 		   (SLM_NAMESPACE_BATCH - buf->slb_count) * logentrysize);
