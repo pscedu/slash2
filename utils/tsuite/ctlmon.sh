@@ -7,19 +7,23 @@ usage()
 	exit 1
 }
 
+if [ $# -lt 3 ]; then
+	usage
+fi
+
 set -e
 
 host=$1
 shift
 
-prog=$2
+prog=$1
 name=${prog##*/}
 shift
 
 flags="$@"
 
 dir=ctl/log.$name.$host
-mkdir $dir
+mkdir -p $dir
 
 cnt=0
 while $prog $flags | tee $dir/$(printf "%06d" $cnt); do
