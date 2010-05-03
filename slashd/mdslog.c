@@ -202,6 +202,7 @@ mds_namespace_log(int op, int type, int perm, uint64_t parent,
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
 	jnamespace->sjnm_reclen += strlen(name) + 1;
 	strcpy(jnamespace->sjnm_name, name);
+	psc_assert(logentrysize >= jnamespace->sjnm_reclen);
 
 	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
 		sizeof(struct slmds_jent_namespace));
@@ -353,7 +354,7 @@ readit:
 	psc_assert(nitems + buf->slb_count <= SLM_NAMESPACE_BATCH);
 
 	ptr = buf->slb_buf + buf->slb_size;
-	jnamespace = (struct slmds_jent_namespace *)stagebuf + buf->slb_count * logentrysize;
+	jnamespace = (struct slmds_jent_namespace *)(stagebuf + buf->slb_count * logentrysize);
 	for (i = 0; i < nitems; i++) {
 		memcpy((void *)ptr, (void *)jnamespace, jnamespace->sjnm_reclen);
 		ptr += jnamespace->sjnm_reclen;
