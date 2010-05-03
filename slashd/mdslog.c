@@ -287,6 +287,7 @@ restart:
 	 * Currently, there is only one thread manipulating the list.
 	 */
 	i = 0;
+	buf = 0;
 	victim = NULL;
 	psclist_for_each(tmp, &mds_namespace_buflist) {
 		buf = psclist_entry(tmp, struct sl_mds_logbuf, slb_link);
