@@ -362,6 +362,7 @@ readit:
 		/* sizeof(struct slmds_jent_namespace) is less than logentrysize */
 		jnamespace = (struct slmds_jent_namespace *)((char *)jnamespace + logentrysize);
 	}
+	buf->slb_count += nitems;
 
 	if (newbuf)
 		psclist_xadd_tail(&buf->slb_link, &mds_namespace_buflist);
