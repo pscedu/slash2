@@ -205,7 +205,7 @@ mds_namespace_log(int op, int type, int perm, uint64_t parent,
 	psc_assert(logentrysize >= jnamespace->sjnm_reclen);
 
 	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
-		sizeof(struct slmds_jent_namespace));
+		jnamespace->sjnm_reclen);
 	if (rc)
 		psc_fatalx("jlog fid=%"PRIx64", name=%s, rc=%d", target, name, rc);
 
