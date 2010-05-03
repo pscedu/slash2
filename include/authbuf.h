@@ -28,6 +28,8 @@
 
 #include <gcrypt.h>
 
+#include "psc_util/atomic.h"
+
 #include "slconfig.h"
 
 struct stat;
@@ -43,6 +45,7 @@ void	authbuf_checkkeyfile(void);
 void	authbuf_createkeyfile(void);
 void	authbuf_readkeyfile(void);
 
+extern psc_atomic64_t	authbuf_nonce;
 extern unsigned char	authbuf_key[AUTHBUF_KEYSIZE];
 extern gcry_md_hd_t	authbuf_hd;
 extern int		authbuf_alglen;

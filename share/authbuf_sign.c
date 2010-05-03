@@ -42,7 +42,6 @@
 void
 authbuf_sign(struct pscrpc_request *rq, int msgtype)
 {
-	static psc_atomic64_t nonce = PSC_ATOMIC64_INIT(0); /* random */
 	struct srt_authbuf_footer *saf;
 	struct pscrpc_msg *m;
 	gcry_error_t gerr;
@@ -55,7 +54,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 
 	saf = pscrpc_msg_buf(m, 1, sizeof(*saf));
 	saf->saf_secret.sas_magic = AUTHBUF_MAGIC;
-	saf->saf_secret.sas_nonce = psc_atomic64_inc_getnew(&nonce);
+	saf->saf_secret.sas_nonce = psc_atomic64_inc_getnew(&authbuf_nonce);
 	saf->saf_secret.sas_src_nid = rq->rq_self;
 	saf->saf_secret.sas_src_pid = PSCRPC_SVR_PID;
 	saf->saf_secret.sas_dst_nid = rq->rq_peer.nid;

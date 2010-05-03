@@ -41,6 +41,7 @@
 #include "slashrpc.h"
 #include "slerr.h"
 
+psc_atomic64_t	authbuf_nonce = PSC_ATOMIC64_INIT(0);
 unsigned char	authbuf_key[AUTHBUF_KEYSIZE];
 gcry_md_hd_t	authbuf_hd;
 int		authbuf_alglen;
@@ -80,6 +81,8 @@ authbuf_readkeyfile(void)
 		psc_fatal("bad alg/base64 size: alg=%d need=%d want=%d",
 		    authbuf_alglen, authbuf_alglen * 4 / 3 + 2,
 		    AUTHBUF_REPRLEN);
+
+	psc_atomic64_set(&authbuf_nonce, psc_random64());
 }
 
 /*
