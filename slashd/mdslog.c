@@ -355,7 +355,7 @@ readit:
 	psc_assert(nitems + buf->slb_count <= SLM_NAMESPACE_BATCH);
 
 	ptr = buf->slb_buf + buf->slb_size;
-	logptr = stagebuf + buf->slb_count * logentrysize;
+	logptr = stagebuf;
 	for (i = 0; i < nitems; i++) {
 		jnamespace = (struct slmds_jent_namespace *)
 			(logptr + offsetof(struct psc_journal_enthdr, pje_data));
