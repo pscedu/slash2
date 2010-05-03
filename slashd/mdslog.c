@@ -459,7 +459,10 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	 */
 	seqno = mds_namespace_update_lwm();
 	while (pscthr_run()) {
-		if (seqno <= propagate_seqno_hwm) {
+		/*
+		 * If propagate_seqno_hwm is zero, then no local updates.
+		 */
+		if (propagate_seqno_hwm && seqno <= propagate_seqno_hwm) {
 			buf = mds_namespace_read_batch(seqno);
 			mds_namespace_propagate_batch(buf);
 			seqno += SLM_NAMESPACE_BATCH;
