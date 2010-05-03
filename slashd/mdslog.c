@@ -273,6 +273,7 @@ mds_namespace_read_batch(uint64_t seqno)
 {
 	int i;
 	char *ptr;
+	int newbuf;
 	int nitems;
 	int logfile;
 	ssize_t size;
@@ -288,6 +289,7 @@ restart:
 	 */
 	i = 0;
 	buf = 0;
+	newbuf = 0;
 	victim = NULL;
 	psclist_for_each(tmp, &mds_namespace_buflist) {
 		buf = psclist_entry(tmp, struct sl_mds_logbuf, slb_link);
@@ -304,6 +306,7 @@ restart:
 		goto readit;
 	}
 	if (i < MDS_NAMESPACE_MAX_BUF) {
+		newbuf = 1;
 		buf = PSCALLOC(sizeof(struct sl_mds_logbuf) + SLM_NAMESPACE_BATCH * logentrysize);
 		buf->slb_size = 0;
 		buf->slb_count = 0;
@@ -322,6 +325,7 @@ restart:
 		psc_waitq_wait(&mds_namespace_waitq, &mds_namespace_waitqlock);
 		goto restart;
 	}
+	newbuf = 1;
 	buf = victim;
 	buf->slb_size = 0;
 	buf->slb_count = 0;
@@ -358,7 +362,8 @@ readit:
 		jnamespace = (struct slmds_jent_namespace *)((char *)jnamespace + logentrysize);
 	}
 
-	psclist_xadd_tail(&buf->slb_link, &mds_namespace_buflist);
+	if (newbuf)
+		psclist_xadd_tail(&buf->slb_link, &mds_namespace_buflist);
 	/*
 	 * Return the loaded buffer without taking a reference.  This is
 	 * only possible because we are the only thread involved.
