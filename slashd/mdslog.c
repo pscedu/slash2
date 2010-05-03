@@ -135,8 +135,8 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
 	 * also can't compete with the update propagator for limited number
 	 * of buffers either.
 	 */
-	sz = write(current_logfile, pje, size);
-	if (sz != size)
+	sz = write(current_logfile, pje, logentrysize);
+	if (sz != logentrysize)
 		psc_fatal("Fail to write change log file %s", fn);
 
 	propagate_seqno_hwm = seqno + 1;
@@ -274,6 +274,7 @@ mds_namespace_read_batch(uint64_t seqno)
 {
 	int i;
 	char *ptr;
+	char *logptr;
 	int newbuf;
 	int nitems;
 	int logfile;
@@ -354,13 +355,14 @@ readit:
 	psc_assert(nitems + buf->slb_count <= SLM_NAMESPACE_BATCH);
 
 	ptr = buf->slb_buf + buf->slb_size;
-	jnamespace = (struct slmds_jent_namespace *)(stagebuf + buf->slb_count * logentrysize);
+	logptr = stagebuf + buf->slb_count * logentrysize;
 	for (i = 0; i < nitems; i++) {
+		jnamespace = (struct slmds_jent_namespace *)
+			(logptr + offsetof(struct psc_journal_enthdr, pje_data));
 		memcpy((void *)ptr, (void *)jnamespace, jnamespace->sjnm_reclen);
 		ptr += jnamespace->sjnm_reclen;
 		buf->slb_size += jnamespace->sjnm_reclen;
-		/* sizeof(struct slmds_jent_namespace) is less than logentrysize */
-		jnamespace = (struct slmds_jent_namespace *)((char *)jnamespace + logentrysize);
+		logptr += logentrysize;
 	}
 	buf->slb_count += nitems;
 
