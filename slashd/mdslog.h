@@ -71,7 +71,7 @@ void mds_bmap_jfiprep(void *);
 void mds_bmap_repl_log(struct bmapc_memb *);
 void mds_bmap_sync(void *);
 void mds_inode_addrepl_log(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
-void mds_namespace_log(int, int, int, uint64_t, uint64_t, const char *);
+void mds_namespace_log(int, int, int32_t, int32_t, int, uint64_t, uint64_t, const char *);
 
 void mds_inode_sync(void *);
 void mds_journal_init(void);
