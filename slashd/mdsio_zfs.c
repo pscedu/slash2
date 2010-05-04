@@ -341,7 +341,8 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
  * Replay the namespace update operation performed on the remote MDS.
  */
 int
-mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type, int mode, char *name)
+mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type, 
+	int32_t uid, int32_t gid, int mode, char *name)
 {
 	int rc;
 	switch (type) {
@@ -349,7 +350,7 @@ mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type, int mo
 		rc = zfsslash2_replay_mkdir(parent_s2id, target_s2id, mode, name);
 		break;
 	    case SJ_NAMESPACE_TYPE_FILE:
-		rc = zfsslash2_replay_create(parent_s2id, target_s2id, mode, name);
+		rc = zfsslash2_replay_create(parent_s2id, target_s2id, uid, gid, mode, name);
 		break;
 	    case SJ_NAMESPACE_TYPE_LINK:
 		rc = zfsslash2_replay_link(parent_s2id, target_s2id, mode, name);
