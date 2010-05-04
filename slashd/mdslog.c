@@ -433,10 +433,11 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		mq->count = i;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
+		atomic_inc(&logbuf->slb_refcnt);
+
 		(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, 
 			SRMM_BULK_PORTAL, &iov, 1);
 
-		atomic_inc(&logbuf->slb_refcnt);
 		/* 
 		 * Until I send out the request, no callback will touch
 		 * these fields.
