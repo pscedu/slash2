@@ -102,7 +102,7 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL, &iov, 1);
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMM_BULK_PORTAL, &iov, 1);
 	if (mp->rc)
 		goto out;
 	if (desc)

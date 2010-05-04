@@ -108,7 +108,7 @@ mds_replay_handler(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
  *	write into change log files.
  */
 void
-mds_shadow_handler(struct psc_journal_enthdr *pje, int size)
+mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 {
 	int sz;
 	uint64_t seqno;
