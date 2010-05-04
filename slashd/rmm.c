@@ -93,6 +93,7 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	struct pscrpc_bulk_desc *desc;
 	struct srm_send_namespace_req *mq;
 	struct slmds_jent_namespace *jnamespace;
+	psc_crc64_t crc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	
@@ -109,6 +110,11 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	/*
 	 * Add code: If the sequence number is too old, reject right away.
 	 */
+	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
+	if (crc != mq->crc) {
+		mp->rc = EINVAL;
+		goto out;
+	}
 
 	/* iterate through the buffer and apply updates */
 	rc = 0;

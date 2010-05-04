@@ -428,6 +428,10 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			sl_csvc_decref(csvc);
 			continue;
 		}
+		mq->seqno = loginfo->sml_next_seqno;
+		mq->size = iov.iov_len;
+		mq->count = i;
+		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
 		(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, 
 			SRMM_BULK_PORTAL, &iov, 1);
