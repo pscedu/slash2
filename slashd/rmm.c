@@ -57,6 +57,9 @@ slm_rmm_apply_update(__unusedx struct slmds_jent_namespace *jnamespace)
 			jnamespace->sjnm_name);
 		break;
 	    case SJ_NAMESPACE_OP_ATTRIB:
+		stat.st_uid = jnamespace->sjnm_uid;
+		stat.st_gid = jnamespace->sjnm_gid;
+		stat.st_mode = jnamespace->sjnm_mode;
 		rc = mdsio_replay_attrib(jnamespace->sjnm_target_s2id, &stat);
 		break;
 	    default:
