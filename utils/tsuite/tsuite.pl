@@ -425,22 +425,22 @@ foreach $i (@mds) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		runscreen SLMCTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
-		    $slbase/slmctl/slmctl ctl/slashd.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
+		    $slbase/slmctl/slmctl -S ctl/slashd.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
 EOF
 }
 
-waitjobs $runtimeout;
+waitjobs $intvtimeout;
 
 foreach $i (@ion) {
 	debug_msg "spawning sliod stats tracker: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		runscreen SLICTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
-		    $slbase/slictl/slictl ctl/sliod.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
+		    $slbase/slictl/slictl -S ctl/sliod.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
 EOF
 }
 
-waitjobs $runtimeout;
+waitjobs $intvtimeout;
 
 foreach $i (@cli) {
 	debug_msg "spawning mount_slash stats tracker: $i->{host}";
@@ -451,7 +451,7 @@ foreach $i (@cli) {
 EOF
 }
 
-waitjobs $runtimeout;
+waitjobs $intvtimeout;
 
 # Run the client applications
 foreach $i (@cli) {
@@ -464,8 +464,6 @@ EOF
 }
 
 waitjobs $runtimeout;
-
-exit;
 
 # Unmount mountpoints
 foreach $i (@cli) {
