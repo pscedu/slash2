@@ -485,6 +485,7 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	 */
 	seqno = mds_namespace_update_lwm();
 	while (pscthr_run()) {
+		pscrpc_nbreqset_reap(logPndgReqs);
 		/*
 		 * If propagate_seqno_hwm is zero, then there are no local updates.
 		 */
@@ -771,11 +772,11 @@ mds_journal_init(void)
 
 	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
 
+	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
+
 	/* start a thread to propagate local namespace changes */
 	thr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
 	    NULL, 0, "slmjsendthr");
-
-	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 			
 	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 
