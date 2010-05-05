@@ -125,7 +125,11 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 	if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
 		psc_assert(current_logfile == -1);
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
-		current_logfile = open(fn, O_CREAT | O_RDWR | O_SYNC | O_DIRECT | O_APPEND, 0600);
+		/*
+		 * Truncate the file if it already exists. Otherwise, it can lead to an insidious
+		 * bug especially when the on-disk format of the log file changes.
+		 */
+		current_logfile = open(fn, O_CREAT | O_TRUNC | O_RDWR | O_SYNC | O_DIRECT | O_APPEND, 0600);
 		if (current_logfile == -1)
 			psc_fatal("Fail to create change log file %s", fn);
 	} else
