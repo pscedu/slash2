@@ -173,7 +173,28 @@ my $slkeymgt = "$slbase/slkeymgt/slkeymgt";
 my $odtable = "$src/psc_fsutil_libs/utils/odtable/odtable";
 my $slimmns_format = "$slbase/slimmns/slimmns_format";
 
-my $ssh_init = "set -e; set -x; cd $base";
+my $ssh_init = <<EOF;
+	set -ex
+
+	runscreen()
+	{
+		scrname=\$1
+		shift
+		screen -S \$scrname -X quit
+		screen -d -m -S \$scrname.$tsid "\$\@"
+	}
+
+	waitforscreen()
+	{
+		scrname=\$1
+		while screen -ls | grep -q \$scrname.$tsid; do
+			[ \$SECONDS -lt $runtimeout ]
+			sleep 1
+		done
+	}
+
+	cd $base;
+EOF
 
 # Setup configuration
 my $conf = slash_conf(base => $base);
@@ -323,7 +344,7 @@ foreach $i (@mds) {
 		$ssh_init
 		@{[init_env(%$global_env)]}
 		cp -p $base/descbuf.key $datadir
-		screen -d -m -S SLMDS.$tsid \\
+		runscreen SLMDS \\
 		    gdb -f -x $base/slashd.$i->{id}.gdbcmd $slbase/slashd/slashd
 EOF
 }
@@ -366,7 +387,7 @@ foreach $i (@ion) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env, SLASH_MDS_NID => $i->{prefmds})]}
-		screen -d -m -S SLIOD.$tsid \\
+		runscreen SLIOD \\
 		    gdb -f -x $base/sliod.$i->{id}.gdbcmd $slbase/sliod/sliod
 EOF
 }
@@ -384,7 +405,7 @@ foreach $i (@cli) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env, %{$i->{env}})]}
-		screen -d -m -S MSL.$tsid sh -c "gdb -f -x $tsbase/msl.gdbcmd \\
+		runscreen MSL sh -c "gdb -f -x $tsbase/msl.gdbcmd \\
 		    $slbase/mount_slash/mount_slash; umount $mp"
 EOF
 }
@@ -401,12 +422,9 @@ foreach $i (@mds) {
 	debug_msg "spawning slashd stats tracker: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		screen -d -m -S SLMCTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
+		runscreen SLMCTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
 		    $slbase/slmctl/slmctl ctl/slashd.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
-		while screen -ls | grep -q SLMCTL.$tsid; do
-			[ \$SECONDS -lt $runtimeout ]
-			sleep 1
-		done
+		waitforscreen SLMCTL
 EOF
 }
 
@@ -416,12 +434,9 @@ foreach $i (@ion) {
 	debug_msg "spawning sliod stats tracker: $i->{rname} : $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		screen -d -m -S SLICTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
+		runscreen SLICTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
 		    $slbase/slictl/slictl ctl/sliod.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
-		while screen -ls | grep -q SLICTL.$tsid; do
-			[ \$SECONDS -lt $runtimeout ]
-			sleep 1
-		done
+		waitforscreen SLICTL
 EOF
 }
 
@@ -431,33 +446,27 @@ foreach $i (@cli) {
 	debug_msg "spawning mount_slash stats tracker: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		screen -d -m -S MSCTL.$tsid sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
+		runscreen MSCTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
 		    $slbase/msctl/msctl -S ctl/msl.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
-		while screen -ls | grep -q MSCTL.$tsid; do
-			[ \$SECONDS -lt $runtimeout ]
-			sleep 1
-		done
+		waitforscreen MSCTL
 EOF
 }
 
 waitjobs $runtimeout;
-
-exit;
 
 # Run the client applications
 foreach $i (@cli) {
 	debug_msg "client: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		screen -d -m -S MSL.$tsid sh -c "sh $base/cli_cmd $i->{host} || \$SHELL"
-		while screen -ls | grep -q SLCLI.$tsid; do
-			[ \$SECONDS -lt $runtimeout ]
-			sleep 1
-		done
+		runscreen SLCLI sh -c "sh $base/cli_cmd $i->{host} || \$SHELL"
+		waitforscreen SLCLI
 EOF
 }
 
 waitjobs $runtimeout;
+
+exit;
 
 # Unmount mountpoints
 foreach $i (@cli) {
