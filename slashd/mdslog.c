@@ -118,6 +118,9 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 	jnamespace = (struct slmds_jent_namespace *)&pje->pje_data[0];
 	seqno = jnamespace->sjnm_seqno;
 
+	psc_assert(pje->pje_magic == PJE_MAGIC);
+	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
+
 	/* see if we can open a new change log file */
 	if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
 		psc_assert(current_logfile == -1);
