@@ -204,7 +204,7 @@ mds_namespace_log(int op, int type, uint64_t parent, uint64_t target, struct sta
 	}
 	jnamespace->sjnm_uid = stat->st_uid;
 	jnamespace->sjnm_gid = stat->st_gid;
-	jnamespace->sjnm_perm = stat->st_mode;
+	jnamespace->sjnm_mode = stat->st_mode;
 	jnamespace->sjnm_parent_s2id = parent;
 	jnamespace->sjnm_target_s2id = target;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
