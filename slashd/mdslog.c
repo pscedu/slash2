@@ -166,6 +166,7 @@ mds_namespace_log(int op, int type, int32_t uid, int32_t gid, int perm, uint64_t
 	struct slmds_jent_namespace *jnamespace;
 
 	jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
+	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	switch (op) {
 	    case MDS_NAMESPACE_OP_CREATE:
 		jnamespace->sjnm_op = SJ_NAMESPACE_OP_CREATE;
@@ -361,6 +362,8 @@ readit:
 	for (i = 0; i < nitems; i++) {
 		jnamespace = (struct slmds_jent_namespace *)
 			(logptr + offsetof(struct psc_journal_enthdr, pje_data));
+		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
+		psc_assert(jnamespace->sjnm_reclen <= logentrysize);
 		memcpy((void *)ptr, (void *)jnamespace, jnamespace->sjnm_reclen);
 		ptr += jnamespace->sjnm_reclen;
 		buf->slb_size += jnamespace->sjnm_reclen;
