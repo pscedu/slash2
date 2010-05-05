@@ -180,7 +180,7 @@ my $ssh_init = <<EOF;
 	{
 		scrname=\$1
 		shift
-		screen -S \$scrname -X quit
+		screen -S \$scrname -X quit || true
 		screen -d -m -S \$scrname.$tsid "\$\@"
 	}
 
@@ -294,7 +294,7 @@ close CLICMD;
 parse_conf();
 
 my ($i);
-my $need_descbuf_key = 1;
+my $need_authbuf_key = 1;
 
 # Create the MDS file systems
 foreach $i (@mds) {
@@ -316,13 +316,12 @@ foreach $i (@mds) {
 		$slmkjrnl -D $datadir -f
 		$odtable -C -N $datadir/ion_bmaps.odt
 
-		@{[$need_descbuf_key ? <<EOS : "" ]}
-		@{[init_env(%$global_env)]}
+		@{[$need_authbuf_key ? <<EOS : "" ]}
 		$slkeymgt -c -D $datadir
-		cp -p $datadir/descbuf.key $base
+		cp -p $datadir/authbuf.key $base
 EOS
 EOF
-	$need_descbuf_key = 0;
+	$need_authbuf_key = 0;
 }
 
 waitjobs $intvtimeout;
@@ -343,7 +342,7 @@ foreach $i (@mds) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env)]}
-		cp -p $base/descbuf.key $datadir
+		cp -p $base/authbuf.key $datadir
 		runscreen SLMDS \\
 		    gdb -f -x $base/slashd.$i->{id}.gdbcmd $slbase/slashd/slashd
 EOF
@@ -365,7 +364,7 @@ foreach $i (@ion) {
 		mkdir -p $datadir
 		mkdir -p $i->{fsroot}
 		$slimmns_format -i $i->{fsroot}
-		cp -p $base/descbuf.key $datadir
+		cp -p $base/authbuf.key $datadir
 EOF
 }
 
