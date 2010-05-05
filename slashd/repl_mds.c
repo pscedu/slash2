@@ -1046,28 +1046,30 @@ mds_repl_scandir(void)
  * communication status between arbitrary IONs.  Each resm has a unique
  * busyid:
  *
- *	 busyid +---+---+---+---+---+---+	n | off, sz=6	| diff
- *	      0	| 1 | 2 | 3 | 4 | 5 | 6 |	--+-------------------
- *		+---+---+---+---+---+---+	0 |  0		|
- *	      1	| 2 | 3 | 4 | 5 | 6 |		1 |  6		| 6
- *		+---+---+---+---+---+		2 | 11		| 5
- *	      2	| 3 | 4 | 5 | 6 |		3 | 15		| 4
- *		+---+---+---+---+		4 | 18		| 3
- *	      3	| 4 | 5 | 6 |			5 | 20		| 2
- *		+---+---+---+			--+-------------------
- *	      4	| 5 | 6 |			n | n * (sz - (n-1)/2)
- *		+---+---+
- *	      5	| 6 |
- *		+---+
+ *	     A    B    C    D    E    F    G		n | off (sz=6)
+ *	  +----+----+----+----+----+----+----+		--+-------------
+ *	A |    |  0 |  1 |  3 |  6 | 10 | 15 |		0 |  0
+ *	  +----+----+----+----+----+----+----+		1 |  6
+ *	B |    |    |  2 |  4 |  7 | 11 | 16 |		2 | 11
+ *	  +----+----+----+----+----+----+----+		3 | 15
+ *	C |    |    |    |  5 |  8 | 12 | 17 |		4 | 18
+ *	  +----+----+----+----+----+----+----+		5 | 20
+ *	D |    |    |    |    |  9 | 13 | 18 |		--+-------------
+ *	  +----+----+----+----+----+----+----+		n | n * (sz - (n-1)/2)
+ *	E |    |    |    |    |    | 14 | 19 |
+ *	  +----+----+----+----+----+----+----+
+ *	F |    |    |    |    |    |    | 20 |
+ *	  +----+----+----+----+----+----+----+
+ *	G |    |    |    |    |    |    |    | n(n+1)/2
+ *	  +----+----+----+----+----+----+----+
  *
- * For checking if communication exists between resources with busyid 1
- * and 2, we test the bit:
+ * For checking if communication exists between resources with busyid
+ * `min' and `max', we test the bit:
  *
- *	1 * (sz - (1-1)/2) + (2 - 1 - 1)
- *	n * (sz - (n-1)/2) + (m - n - 1)
+ *	(max - 1) * (max) / 2 + min
  */
-#define MDS_REPL_BUSYNODES(nnodes, min, max)				\
-	(((min) * ((nnodes) - ((min) - 1) / 2)) + ((max) - (min) - 1))
+#define MDS_REPL_BUSYNODES(min, max)					\
+	(((max) - 1) * (max) / 2 + (min))
 
 int
 _mds_repl_nodes_setbusy(struct resm_mds_info *ma,
@@ -1089,12 +1091,10 @@ _mds_repl_nodes_setbusy(struct resm_mds_info *ma,
 	locked = reqlock(&repl_busytable_lock);
 	if (set)
 		rc = psc_vbitmap_xsetval(repl_busytable,
-		    MDS_REPL_BUSYNODES(repl_busytable_nents,
-		    min->rmmi_busyid, max->rmmi_busyid), busy);
+		    MDS_REPL_BUSYNODES(min->rmmi_busyid, max->rmmi_busyid), busy);
 	else
 		rc = psc_vbitmap_get(repl_busytable,
-		    MDS_REPL_BUSYNODES(repl_busytable_nents,
-		    min->rmmi_busyid, max->rmmi_busyid));
+		    MDS_REPL_BUSYNODES(min->rmmi_busyid, max->rmmi_busyid));
 	ureqlock(&repl_busytable_lock, locked);
 
 	/*
@@ -1159,7 +1159,7 @@ mds_repl_buildbusytable(void)
 	if (repl_busytable)
 		psc_vbitmap_free(repl_busytable);
 	repl_busytable = psc_vbitmap_new(repl_busytable_nents *
-	    (repl_busytable_nents - 1) / 2);
+	    (repl_busytable_nents + 1) / 2);
 	freelock(&repl_busytable_lock);
 }
 
