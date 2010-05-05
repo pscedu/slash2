@@ -302,6 +302,9 @@ foreach $i (@mds) {
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
 		@{[init_env(%$global_env)]}
+
+		screen -S SLMDS -X quit || true
+
 		$zfs_fuse &
 		sleep 2
 		$zpool destroy $i->{zpoolname} || true
@@ -423,7 +426,6 @@ foreach $i (@mds) {
 		$ssh_init
 		runscreen SLMCTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
 		    $slbase/slmctl/slmctl ctl/slashd.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
-		waitforscreen SLMCTL
 EOF
 }
 
@@ -435,7 +437,6 @@ foreach $i (@ion) {
 		$ssh_init
 		runscreen SLICTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
 		    $slbase/slictl/slictl ctl/sliod.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
-		waitforscreen SLICTL
 EOF
 }
 
@@ -447,7 +448,6 @@ foreach $i (@cli) {
 		$ssh_init
 		runscreen MSCTL sh -c "sh $tsbase/ctlmon.sh $i->{host} \\
 		    $slbase/msctl/msctl -S ctl/msl.$i->{host}.sock -Pall -Lall -iall || \$SHELL"
-		waitforscreen MSCTL
 EOF
 }
 
