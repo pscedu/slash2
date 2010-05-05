@@ -47,7 +47,7 @@ sub cli_cmd {
 	return <<ENDCMD;
 set -x
 
-cp -R $h{src} $h{fspath}/srctest
+cp -RL $h{src} $h{fspath}/srctest || true
 diff -ru $h{fspath}/srctest $h{src}
 
 
