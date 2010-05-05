@@ -70,7 +70,7 @@ mdsio_apply_fcmh_size(struct fidc_membh *f, size_t size)
 
 	return (zfsslash2_setattr(fcmh_2_fid(f), &f->fcmh_sstb,
 	    SRM_SETATTRF_FSIZE, &rootcreds, NULL,
-	    fcmh_2_fmi(f)->fmi_mdsio_data));
+	    fcmh_2_fmi(f)->fmi_mdsio_data, (sl_jlog_cb)NULL));
 }
 
 int
@@ -310,10 +310,10 @@ mdsio_rename(mdsio_fid_t opino, const char *ocpn, mdsio_fid_t npino,
 int
 mdsio_setattr(mdsio_fid_t ino, struct srt_stat *sstb_in, int to_set,
     const struct slash_creds *cr, struct srt_stat *sstb_out,
-    void *mdsio_data)
+    void *mdsio_data, sl_jlog_cb logfunc)
 {
 	return (zfsslash2_setattr(ino, sstb_in, to_set, cr,
-	    sstb_out, mdsio_data));
+	    sstb_out, mdsio_data, logfunc));
 }
 
 int

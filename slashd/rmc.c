@@ -614,7 +614,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	 * Otherwise, it will be NULL, and we'll use the mdsio_fid.
 	 */
 	mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &mq->attr, to_set,
-	    &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh));
+	    &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh), mds_namespace_log);
 
  out:
 	if (fcmh)
