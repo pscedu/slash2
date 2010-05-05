@@ -360,6 +360,11 @@ readit:
 	ptr = buf->slb_buf + buf->slb_size;
 	logptr = stagebuf;
 	for (i = 0; i < nitems; i++) {
+
+		struct psc_journal_enthdr *pje;
+		pje = (struct psc_journal_enthdr *) logptr;
+		psc_assert(pje->pje_magic == PJE_MAGIC);
+
 		jnamespace = (struct slmds_jent_namespace *)
 			(logptr + offsetof(struct psc_journal_enthdr, pje_data));
 		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
