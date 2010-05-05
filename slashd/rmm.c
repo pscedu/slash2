@@ -41,6 +41,7 @@ int
 slm_rmm_apply_update(__unusedx struct slmds_jent_namespace *jnamespace)
 {
 	int rc;
+	struct stat stat;
 
 	switch (jnamespace->sjnm_op) {
 	    case SJ_NAMESPACE_OP_CREATE:
@@ -56,7 +57,7 @@ slm_rmm_apply_update(__unusedx struct slmds_jent_namespace *jnamespace)
 			jnamespace->sjnm_name);
 		break;
 	    case SJ_NAMESPACE_OP_ATTRIB:
-		rc = mdsio_replay_attrib();
+		rc = mdsio_replay_attrib(jnamespace->sjnm_target_s2id, &stat);
 		break;
 	    default:
 		psc_errorx("Unexpected opcode %d", jnamespace->sjnm_op);

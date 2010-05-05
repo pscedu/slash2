@@ -372,7 +372,7 @@ mdsio_replay_remove(__unusedx uint64_t parent_s2id, __unusedx uint64_t target_s2
 }
 
 int
-mdsio_replay_attrib(void)
+mdsio_replay_attrib(__unusedx uint64_t target_s2id, __unusedx struct stat *stat)
 {
 	return (0);
 }
