@@ -49,7 +49,7 @@ struct srt_stat;
 
 typedef uint64_t mdsio_fid_t;
 typedef slfid_t (*sl_getslfid_cb)(void);
-typedef void (*sl_jlog_cb)(int, int, uint64_t, uint64_t, struct srt_stat *, const char *);
+typedef void (*sl_jlog_cb)(int, int, uint64_t, uint64_t, struct srt_stat *, int, const char *);
 
 int mdsio_apply_fcmh_size(struct fidc_membh *, size_t);
 int mdsio_bmap_read(struct bmapc_memb *);
