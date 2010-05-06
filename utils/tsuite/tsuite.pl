@@ -165,6 +165,7 @@ if (defined($src)) {
 
 my $slbase = "$src/slash_nara";
 my $tsbase = "$slbase/utils/tsuite";
+my $clicmd = "$base/cli_cmd.sh";
 
 my $zpool = "$slbase/utils/zpool.sh";
 my $zfs_fuse = "$slbase/utils/zfs-fuse.sh";
@@ -278,7 +279,7 @@ sub parse_conf {
 }
 
 # Setup client commands
-open CLICMD, ">", "$base/cli_cmd" or fatal "open $base/cli_cmd";
+open CLICMD, ">", $clicmd or fatal "open $clicmd";
 print CLICMD "set -e;\n";
 print CLICMD cli_cmd(
 	fspath	=> $mp,
@@ -380,6 +381,7 @@ foreach $i (@ion) {
 
 	my $dat = $sligdb;
 	$dat =~ s/%datadir%/$datadir/g;
+	$dat =~ s/%prefmds%/$i->{prefmds}/g;
 
 	open G, ">", "$base/sliod.$i->{id}.gdbcmd"
 	    or fatal "write sliod.gdbcmd";
@@ -388,7 +390,7 @@ foreach $i (@ion) {
 
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		@{[init_env(%$global_env, SLASH_MDS_NID => $i->{prefmds})]}
+		@{[init_env(%$global_env)]}
 		runscreen SLIOD \\
 		    gdb -f -x $base/sliod.$i->{id}.gdbcmd $slbase/sliod/sliod
 EOF
@@ -458,7 +460,7 @@ foreach $i (@cli) {
 	debug_msg "client: $i->{host}";
 	runcmd "ssh $i->{host} sh", <<EOF;
 		$ssh_init
-		runscreen SLCLI sh -c "sh $base/cli_cmd $i->{host} || \$SHELL"
+		runscreen SLCLI sh -c "sh $clicmd $i->{host} || \$SHELL"
 		waitforscreen SLCLI
 EOF
 }
