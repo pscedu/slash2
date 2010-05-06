@@ -212,7 +212,7 @@ mds_namespace_log(int op, int type, uint64_t parent, uint64_t target, struct srt
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
 	if (name) {
 		jnamespace->sjnm_reclen += strlen(name) + 1;
-		strcpy(jnamespace->sjnm_name, name);
+		strncpy(jnamespace->sjnm_name, name, NAME_MAX + 1);
 	}
 	psc_assert(logentrysize >= jnamespace->sjnm_reclen);
 
@@ -773,6 +773,7 @@ mds_journal_init(void)
 		psc_fatal("Fail to load/replay log file %s", fn);
 
 	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
+	psc_assert(logentrysize >= sizeof(struct slmds_jent_namespace));
 
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 

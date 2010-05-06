@@ -117,17 +117,17 @@ struct slmds_jent_namespace {
 	time_t			sjnm_ctime;			/* time of last status change */
 	uint64_t		sjnm_size;			/* total size, in bytes */
 
-	uint64_t		sjnm_parent_s2id;		/* 52 */
-	uint64_t		sjnm_target_s2id;		/* 60 */
-	uint64_t		sjnm_seqno;			/* 68 */
+	uint64_t		sjnm_parent_s2id;
+	uint64_t		sjnm_target_s2id;
+	uint64_t		sjnm_seqno;
 	/*
 	 * For easy seek within a change log file, each entry
 	 * has a fixed length of 512 bytes.  But when we send
 	 * log entries over the network, we condense them to
 	 * save network bandwidth.
 	 */
-	uint16_t		sjnm_reclen;			/* 76 */
-	char			sjnm_name[256];			/* 78 */
+	uint16_t		sjnm_reclen;
+	char			sjnm_name[NAME_MAX+1];
 } __packed;
 
 /* List all of the journaling structures here so that the maximum
