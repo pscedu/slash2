@@ -106,7 +106,7 @@ struct slmds_jent_namespace {
 	uint32_t		sjnm_op;			/* operation type */
 	uint32_t		sjnm_type;			/* object type */
 
-	uint32_t		sjnm_mask;			/* attribute mask */
+	uint			sjnm_mask;			/* attribute mask */
 	uint32_t		sjnm_mode;			/* file permission */
 
 	int32_t			sjnm_uid;			/* user ID of owner */
