@@ -372,9 +372,9 @@ mdsio_replay_remove(__unusedx uint64_t parent_s2id, __unusedx uint64_t target_s2
 }
 
 int
-mdsio_replay_attrib(__unusedx uint64_t target_s2id, struct srt_stat *stat, int flags)
+mdsio_replay_attrib(__unusedx uint64_t target_s2id, struct srt_stat *stat, uint mask)
 {
 	int rc;
-	rc = zfsslash2_replay_setattr(target_s2id, stat, flags);
+	rc = zfsslash2_replay_setattr(target_s2id, stat, mask);
 	return (rc);
 }
