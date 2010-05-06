@@ -210,9 +210,10 @@ mds_namespace_log(int op, int type, uint64_t parent, uint64_t target, struct srt
 	jnamespace->sjnm_target_s2id = target;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
-	jnamespace->sjnm_reclen += strlen(name) + 1;
-	/* XXX what if I copy a NULL */
-	strcpy(jnamespace->sjnm_name, name);
+	if (name) {
+		jnamespace->sjnm_reclen += strlen(name) + 1;
+		strcpy(jnamespace->sjnm_name, name);
+	}
 	psc_assert(logentrysize >= jnamespace->sjnm_reclen);
 
 	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
