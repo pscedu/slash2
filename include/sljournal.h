@@ -102,30 +102,32 @@ struct slmds_jent_bmapseq {
 
 struct slmds_jent_namespace {
 
-	uint64_t		sjnm_magic;			/*  0 */
-	uint8_t			sjnm_op;			/*  8 */
-	uint8_t			sjnm_type;			/*  9 */
-	uint16_t		sjnm__pad;			/* 10 */
-	int32_t			sjnm_mode;			/* 12 */
+	uint64_t		sjnm_magic;			/* debugging */
+	uint32_t		sjnm_op;			/* operation type */
+	uint32_t		sjnm_type;			/* object type */
 
-	int32_t			sjnm_uid;			/* 16 */
-	int32_t			sjnm_gid;			/* 20 */
+	uint32_t		sjnm_mask;			/* attribute mask */
+	uint32_t		sjnm_mode;			/* file permission */
 
-	time_t			sjnm_atime;			/* 24 */
-	time_t			sjnm_mtime;			/* 32 */
-	time_t			sjnm_ctime;			/* 40 */
+	int32_t			sjnm_uid;			/* user ID of owner */
+	int32_t			sjnm_gid;			/* group ID of owner */
 
-	uint64_t		sjnm_parent_s2id;		/* 48 */
-	uint64_t		sjnm_target_s2id;		/* 56 */
-	uint64_t		sjnm_seqno;			/* 64 */
+	time_t			sjnm_atime;			/* time of last access */
+	time_t			sjnm_mtime;			/* time of last modification */
+	time_t			sjnm_ctime;			/* time of last status change */
+	uint64_t		sjnm_size;			/* total size, in bytes */
+
+	uint64_t		sjnm_parent_s2id;		/* 52 */
+	uint64_t		sjnm_target_s2id;		/* 60 */
+	uint64_t		sjnm_seqno;			/* 68 */
 	/*
 	 * For easy seek within a change log file, each entry
 	 * has a fixed length of 512 bytes.  But when we send
 	 * log entries over the network, we condense them to
 	 * save network bandwidth.
 	 */
-	uint16_t		sjnm_reclen;			/* 72 */
-	char			sjnm_name[256];			/* 74 */
+	uint16_t		sjnm_reclen;			/* 76 */
+	char			sjnm_name[256];			/* 78 */
 } __packed;
 
 /* List all of the journaling structures here so that the maximum

@@ -166,7 +166,7 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
  * we reply to the client.
  */
 void
-mds_namespace_log(int op, int type, uint64_t parent, uint64_t target, struct stat *stat, const char *name)
+mds_namespace_log(int op, int type, uint64_t parent, uint64_t target, struct srt_stat *stat, const char *name)
 {
 	int rc;
 	struct slmds_jent_namespace *jnamespace;
@@ -202,9 +202,9 @@ mds_namespace_log(int op, int type, uint64_t parent, uint64_t target, struct sta
 	    default: 
 		psc_fatalx("invalid type: %d.\n", type);
 	}
-	jnamespace->sjnm_uid = stat->st_uid;
-	jnamespace->sjnm_gid = stat->st_gid;
-	jnamespace->sjnm_mode = stat->st_mode;
+	jnamespace->sjnm_uid = stat->sst_uid;
+	jnamespace->sjnm_gid = stat->sst_gid;
+	jnamespace->sjnm_mode = stat->sst_mode;
 	jnamespace->sjnm_parent_s2id = parent;
 	jnamespace->sjnm_target_s2id = target;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
