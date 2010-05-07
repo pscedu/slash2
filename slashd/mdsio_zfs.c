@@ -338,7 +338,7 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
 }
 
 /*
- * Replay the namespace update operation performed on the remote MDS.
+ * Replay the namespace create operation performed on the remote MDS.
  */
 int
 mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type, 
@@ -365,14 +365,20 @@ mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type,
 	return (rc);
 }
 
+/*
+ * Replay the namespace remove operation performed on the remote MDS.
+ */
 int
 mdsio_replay_remove(__unusedx uint64_t parent_s2id, __unusedx uint64_t target_s2id, __unusedx char *name)
 {
 	return (0);
 }
 
+/*
+ * Replay the namespace attribute update operation performed on the remote MDS.
+ */
 int
-mdsio_replay_attrib(__unusedx uint64_t target_s2id, struct srt_stat *stat, uint mask)
+mdsio_replay_attrib(uint64_t target_s2id, struct srt_stat *stat, uint mask)
 {
 	int rc;
 	rc = zfsslash2_replay_setattr(target_s2id, stat, mask);
