@@ -369,9 +369,19 @@ mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type,
  * Replay the namespace remove operation performed on the remote MDS.
  */
 int
-mdsio_replay_remove(__unusedx uint64_t parent_s2id, __unusedx uint64_t target_s2id, __unusedx char *name)
+mdsio_replay_remove(__unusedx uint64_t parent_s2id, __unusedx uint64_t target_s2id, 
+	int type, __unusedx char *name)
 {
-	return (0);
+	int rc;
+	switch (type) {
+	    case SJ_NAMESPACE_TYPE_DIR:
+		rc = zfsslash2_replay_rmdir(parent_s2id, target_s2id, name);
+		break;
+	    case SJ_NAMESPACE_TYPE_FILE:
+		rc = zfsslash2_replay_unlink(parent_s2id, target_s2id, name);
+		break;
+	}
+	return (rc);
 }
 
 /*

@@ -49,7 +49,7 @@ struct srt_stat;
 
 typedef uint64_t mdsio_fid_t;
 typedef slfid_t (*sl_getslfid_cb)(void);
-typedef void (*sl_jlog_cb)(int, int, uint64_t, uint64_t, struct srt_stat *, uint, const char *);
+typedef void (*sl_jlog_cb)(int, int, uint64_t, uint64_t, const struct srt_stat *, uint, const char *);
 
 int mdsio_apply_fcmh_size(struct fidc_membh *, size_t);
 int mdsio_bmap_read(struct bmapc_memb *);
@@ -85,7 +85,7 @@ int mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_cr
 int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *);
 
 int mdsio_replay_create(uint64_t, uint64_t, int, int32_t, int32_t, int, char *);
-int mdsio_replay_remove(uint64_t, uint64_t, char *);
+int mdsio_replay_remove(uint64_t, uint64_t, int, char *);
 int mdsio_replay_attrib(uint64_t, struct srt_stat *, uint);
 
 #endif
