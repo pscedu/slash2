@@ -112,9 +112,9 @@ struct slmds_jent_namespace {
 	int32_t			sjnm_uid;			/* user ID of owner */
 	int32_t			sjnm_gid;			/* group ID of owner */
 
-	time_t			sjnm_atime;			/* time of last access */
-	time_t			sjnm_mtime;			/* time of last modification */
-	time_t			sjnm_ctime;			/* time of last status change */
+	int64_t			sjnm_atime;			/* time of last access */
+	int64_t			sjnm_mtime;			/* time of last modification */
+	int64_t			sjnm_ctime;			/* time of last status change */
 	uint64_t		sjnm_size;			/* total size, in bytes */
 
 	uint64_t		sjnm_parent_s2id;

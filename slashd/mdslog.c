@@ -206,6 +206,11 @@ mds_namespace_log(int op, int type, uint64_t parent, uint64_t target, struct srt
 	jnamespace->sjnm_uid = stat->sst_uid;
 	jnamespace->sjnm_gid = stat->sst_gid;
 	jnamespace->sjnm_mode = stat->sst_mode;
+
+	jnamespace->sjnm_atime = stat->sst_atime;
+	jnamespace->sjnm_mtime = stat->sst_mtime;
+	jnamespace->sjnm_ctime = stat->sst_ctime;
+
 	jnamespace->sjnm_parent_s2id = parent;
 	jnamespace->sjnm_target_s2id = target;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
