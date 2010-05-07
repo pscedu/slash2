@@ -773,7 +773,7 @@ mds_journal_init(void)
 		psc_fatal("Fail to load/replay log file %s", fn);
 
 	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
-	psc_assert(logentrysize >= sizeof(struct slmds_jent_namespace));
+	psc_assert(logentrysize >= (int)sizeof(struct slmds_jent_namespace));
 
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 
@@ -803,6 +803,7 @@ mds_journal_init(void)
 			loginfo = ((struct resprof_mds_info *)r->res_pri)->rpmi_loginfo;
 			loginfo->sml_resm = resm;
 			psclist_xadd_tail(&loginfo->sml_link, &mds_namespace_loglist);
+			psc_info("Added peer MDS: addr = %s, ID = %lx\n", resm->resm_addrbuf, resm->resm_nid);
 		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
