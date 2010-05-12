@@ -313,16 +313,17 @@ int	bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
 	} while (0)
 
 enum bmap_opcnt_types {
-	BMAP_OPCNT_LOOKUP,
-	BMAP_OPCNT_IONASSIGN,
-	BMAP_OPCNT_LEASE,
-	BMAP_OPCNT_MDSLOG,
-	BMAP_OPCNT_BIORQ,
-	BMAP_OPCNT_REPLWK,			/* ION */
-	BMAP_OPCNT_REAPER,			/* Client bmap timeout */
-	BMAP_OPCNT_COHCB,			/* MDS coh callback */
-	BMAP_OPCNT_SLVR,
-	BMAP_OPCNT_CRCSCHED
+	/* 0 */	BMAP_OPCNT_LOOKUP,
+	/* 1 */ BMAP_OPCNT_IONASSIGN,
+	/* 2 */ BMAP_OPCNT_LEASE,
+	/* 3 */ BMAP_OPCNT_MDSLOG,
+	/* 4 */ BMAP_OPCNT_BIORQ,
+	/* 5 */ BMAP_OPCNT_REPLWK,		/* ION */
+	/* 6 */ BMAP_OPCNT_REAPER,		/* Client bmap timeout */
+	/* 7 */ BMAP_OPCNT_COHCB,		/* MDS coh callback */
+	/* 8 */ BMAP_OPCNT_SLVR,
+	/* 9 */ BMAP_OPCNT_CRCSCHED,
+	/* 10*/ BMAP_OPCNT_RLSSCHED
 };
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
