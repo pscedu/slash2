@@ -49,7 +49,10 @@ mds_bmap_timeotbl_init(void)
 	struct bmap_timeo_entry *e;
 
 	LOCK_INIT(&mdsBmapTimeoTbl.btt_lock);
-
+	/* XXX hack for now.. this value should come from the system log
+	 *    at startup
+	 */	
+	mdsBmapTimeoTbl.btt_minseq = mdsBmapTimeoTbl.btt_maxseq = 0;
 	mdsBmapTimeoTbl.btt_nentries = BMAP_TIMEO_TBL_SZ;
 	mdsBmapTimeoTbl.btt_entries =
 		PSCALLOC(sizeof(struct bmap_timeo_entry) * BMAP_TIMEO_TBL_SZ);
