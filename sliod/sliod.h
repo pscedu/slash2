@@ -40,6 +40,8 @@
 #define SLITHRT_REPLFIN		9	/* process finished replication work */
 #define SLITHRT_REPLREAP	10	/* reap in-flight replication work */
 #define SLITHRT_REPLPND		11	/* process enqueued replication work */
+#define SLITHRT_BMAPRLS		12	/* notify mds of completed write bmaps */
+
 
 #define NSLVRCRC_THRS		4	/* perhaps ncores? */
 
