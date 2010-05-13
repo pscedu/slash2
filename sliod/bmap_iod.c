@@ -234,7 +234,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 			b = biod->biod_bmap;
 			/* Account for both the rls and reap refs.
 			 */
-			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 1);
+			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			DEBUG_BMAP(PLL_INFO, b, "ndrty=%u rlsseq=%"PRId64
 				   " rlskey=%"PRId64" xid=%"PRIu64
