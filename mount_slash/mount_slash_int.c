@@ -192,8 +192,11 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	 * XXX changeme.. this is causing unnecessary RBW rpc's!
 	 *    key off the BMPCE flags
 	 */
-	if ((fcmh_getsize(b->bcm_fcmh) > off) && op == BIORQ_WRITE && rbw)
+	if ((fcmh_getsize(b->bcm_fcmh) > off) && op == BIORQ_WRITE && rbw) {
+		DEBUG_FCMH(PLL_NOTIFY, b->bcm_fcmh, 
+			   "setting RBW for biorq=%p", r);		   
 		r->biorq_flags |= rbw;
+	}
 
 	/* Pass1: Retrieve memory pages from the cache on behalf of our pages
 	 *   stuck in GETBUF.
