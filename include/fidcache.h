@@ -146,14 +146,15 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 #define FIDFMT			"%"PRId64":%"PRId64
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
 
-#define DEBUG_FCMH(level, fcmh, fmt, ...)					\
-	do {									\
-		psc_logs((level), PSS_GEN,					\
-		    "fcmh@%p fg:"FIDFMT" "REQ_FCMH_FLAGS_FMT" "			\
-		    "ref:%d :: "fmt,					\
-		    (fcmh), FIDFMTARGS(&fcmh->fcmh_fg), DEBUG_FCMH_FLAGS(fcmh),	\
-		    (fcmh)->fcmh_refcnt,					\
-		    ## __VA_ARGS__);						\
+#define DEBUG_FCMH(level, fcmh, fmt, ...)				\
+	do {								\
+		psc_logs((level), PSS_GEN,				\
+			 "fcmh@%p fg:"FIDFMT" "REQ_FCMH_FLAGS_FMT" "	\
+			 "ref:%d sz=%zd :: "fmt,			\
+			 (fcmh), FIDFMTARGS(&fcmh->fcmh_fg),		\
+			 DEBUG_FCMH_FLAGS(fcmh),			\
+			 (fcmh)->fcmh_refcnt, fcmh_2_fsz((fcmh)),	\
+			 ## __VA_ARGS__);				\
 	} while (0)
 
 /* debugging aid: spit out the reason for the reference count taking/dropping */
