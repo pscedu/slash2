@@ -246,11 +246,8 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 				   biod->biod_bcr_xid_last);
 
 			spinlock(&biod->biod_lock);
-
 			psc_assert(biod->biod_rlsseq);
-			psc_assert(biod->biod_rls_seqkey[0] <= 
-				   biod->biod_cur_seqkey[0]);
-			
+
 			if (biod->biod_crcdrty_slvrs ||
 			    biod->biod_bcr_xid > (biod->biod_bcr_xid_last+1)) {
 				lc_addtail(&bmapRlsQ, biod);
