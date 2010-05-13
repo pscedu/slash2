@@ -269,6 +269,12 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	return (0);
 }
 
+int
+slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
+{
+	return (mds_handle_rls_bmap(rq));
+}
+
 /*
  * slm_rmi_handle_connect - handle a CONNECT request from ION.
  * @rq: request.
@@ -309,14 +315,17 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	case SRMT_BMAPCRCWRT:
 		rc = slm_rmi_handle_bmap_crcwrt(rq);
 		break;
+	case SRMT_CONNECT:
+		rc = slm_rmi_handle_connect(rq);
+		break;
 	case SRMT_GETBMAPCRCS:
 		rc = slm_rmi_handle_bmap_getcrcs(rq);
 		break;
 	case SRMT_REPL_SCHEDWK:
 		rc = slm_rmi_handle_repl_schedwk(rq);
 		break;
-	case SRMT_CONNECT:
-		rc = slm_rmi_handle_connect(rq);
+	case SRMT_RELEASEBMAP:
+		rc = slm_rmi_handle_rls_bmap(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);

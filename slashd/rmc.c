@@ -488,35 +488,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 int
 slm_rmc_handle_rls_bmap(struct pscrpc_request *rq)
 {
-	struct srm_bmap_release_req *mq;
-	struct srm_bmap_release_rep *mp;
-	struct fidc_membh *f;
-	struct bmapc_memb *b;
-	struct srm_bmap_id *bid;
-	uint32_t i;
-
-	SL_RSX_ALLOCREP(rq, mq, mp);
-
-	for (i=0; i < mq->nbmaps; i++) {
-		bid = &mq->bmaps[i];
-
-		mp->bidrc[i] = slm_fcmh_get(&bid->fg, &f);
-		if (mp->bidrc[i])
-			continue;
-
-		DEBUG_FCMH(PLL_INFO, f, "rls bmap=%u", bid->bmapno);
-
-		mp->bidrc[i] = bmap_lookup(f, bid->bmapno, &b);
-		if (mp->bidrc[i])
-			continue;
-
-		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64, bid->seq);
-
-		mp->bidrc[i] = mds_bmap_bml_release(b, bid->seq, bid->key);
-		if (mp->bidrc[i])
-			continue;
-	}
-	return (0);
+	return (mds_handle_rls_bmap(rq));
 }
 
 int

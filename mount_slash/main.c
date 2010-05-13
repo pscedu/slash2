@@ -383,6 +383,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	if (rc)
 		goto out;
 
+	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+
 	msbd = bcm->bcm_pri;
 	msbd->msbd_sbd = mp->sbd;
 	clock_gettime(CLOCK_REALTIME, &msbd->msbd_xtime);

@@ -24,6 +24,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
+#include "psc_rpc/rsx.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -38,6 +39,7 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slerr.h"
+#include "slashrpc.h"
 
 struct odtable				*mdsBmapAssignTable;
 uint64_t				 mdsBmapSequenceNo;
@@ -632,6 +634,41 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	return (rc);
 }
 
+int
+mds_handle_rls_bmap(struct pscrpc_request *rq)
+{
+	struct srm_bmap_release_req *mq;
+	struct srm_bmap_release_rep *mp;
+	struct fidc_membh *f;
+	struct bmapc_memb *b;
+	struct srm_bmap_id *bid;
+	uint32_t i;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	for (i=0; i < mq->nbmaps; i++) {
+		bid = &mq->bmaps[i];
+
+		mp->bidrc[i] = slm_fcmh_get(&bid->fg, &f);
+		if (mp->bidrc[i])
+			continue;
+
+		DEBUG_FCMH(PLL_INFO, f, "rls bmap=%u", bid->bmapno);
+
+		mp->bidrc[i] = bmap_lookup(f, bid->bmapno, &b);
+		if (mp->bidrc[i])
+			continue;
+
+		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64, bid->seq);
+
+		mp->bidrc[i] = mds_bmap_bml_release(b, bid->seq, bid->key);
+		if (mp->bidrc[i])
+			continue;
+	}
+	return (0);
+}
+
+
 /**
  * mds_bmap_crc_write - process a CRC update request from an ION.
  * @c: the RPC request containing the FID, bmapno, and chunk ID (cid).
@@ -724,11 +761,6 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	/* Call the journal and update the in-memory crc's.
 	 */
 	mds_bmap_crc_log(bmap, c);
-
-	if (c->rls)
-		/* Sliod may be finished with this bmap.
-		 */
-		(int)mds_bmap_bml_release(bmap, c->seq, c->key);
  out:
 	/* Mark that mds_bmap_crc_write() is done with this bmap
 	 *  - it was incref'd in fcmh_bmap_lookup().
