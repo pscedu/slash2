@@ -164,3 +164,27 @@ znode_phys.
 
 For now, we can settle down with using the timestamp fields.  They are originating from the 
 same site that owns a file.
+
+05/13/2010
+----------
+
+Stuck on how to tie our journaling with ZFS transaction.  Anyway, the following is a way
+to find out the currently open transaction group in ZFS:
+
+int
+zfs_txg_info(zfsvfs_t *zfsvfs, uint64_t *txg)
+{
+        tx_state_t *tx; 
+        tx_cpu_t *tc; 
+        dsl_pool_t *dp; 
+
+        dp = dmu_objset_pool(zfsvfs->z_os);
+        tx = &dp->dp_tx;
+        tc = &tx->tx_cpu[CPU_SEQID];
+
+        mutex_enter(&tc->tc_lock);
+        *txg = tx->tx_open_txg;
+        mutex_exit(&tc->tc_lock);
+}
+
+
