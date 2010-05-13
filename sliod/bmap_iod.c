@@ -216,6 +216,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 	struct srm_bmap_release_rep *mp;
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
+	struct psc_dynarray a = DYNARRAY_INIT;
 	int i, rc;
 	
 	brr = PSCALLOC(sizeof(struct srm_bmap_release_req));
@@ -250,7 +251,9 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			if (biod->biod_crcdrty_slvrs ||
 			    biod->biod_bcr_xid > (biod->biod_bcr_xid_last+1)) {
-				lc_addtail(&bmapRlsQ, biod);
+				/* Temporarily remove unreapable biod's
+				 */
+				psc_dynarray_add(&a, biod);
 				freelock(&biod->biod_lock);
 				continue;
 			}
@@ -280,6 +283,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 				   SRMT_RELEASEBMAP, rq, mq, mp);	
 		if (rc) {
 			psc_errorx("Failed to generate new RPC req");
+			sl_csvc_decref(csvc);
 			continue;
 		}
 		
@@ -287,6 +291,14 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 		rc = SL_RSX_WAITREP(rq, mp);
 		if (rc)
 			psc_errorx("RELEASEBMAP req failed");
+
+		pscrpc_req_finished(rq);
+		sl_csvc_decref(csvc);
+
+		DYNARRAY_FOREACH(biod, i, &a)
+			lc_addtail(&bmapRlsQ, biod);
+
+		psc_dynarray_reset(&a);
 
 	} while (pscthr_run());
 }
