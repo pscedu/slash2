@@ -187,4 +187,20 @@ zfs_txg_info(zfsvfs_t *zfsvfs, uint64_t *txg)
         mutex_exit(&tc->tc_lock);
 }
 
+The above method has a problem because the open transaction group can change afterwards.
 
+I am going to push the logging code further down into the VOP_XXX() functions. There are 
+two benefits for this:
+
+	(1) I only log after I am sure that the operation was a success.  As a result,
+	    I only propapage namespace update when I am sure the operation was a success.
+
+	(2) I also record the current tx group number into the log record. That
+	    tell me positively if I need to replay a log entry in our journal or not.
+
+I am sure that until I call dmu_tx_commit(), the transaction group of which the tranaction is 
+a part of won't commit.  I can do our own logging before that.   In other words, our logging
+happens before the corresponding ZFS transaction commits, so I won't miss any update. 
+
+The ZFS intent log (ZIL) won't commit unless you call zil_commit() explicitly. Most often,
+they just die in memory.
