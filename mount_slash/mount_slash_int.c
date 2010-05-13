@@ -70,6 +70,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	struct bmap_pagecache_entry *bmpce, *bmpce_tmp;
 	int i, npages=0, rbw=0;
 	uint64_t bmpce_pagemap=0;
+	off_t origoff=off;
 
 	DEBUG_BMAP(PLL_TRACE, b, "adding req for (off=%u) (size=%u)",
 		   off, len);
@@ -192,7 +193,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	 * XXX changeme.. this is causing unnecessary RBW rpc's!
 	 *    key off the BMPCE flags
 	 */
-	if ((fcmh_getsize(b->bcm_fcmh) > off) && op == BIORQ_WRITE && rbw) {
+	if ((fcmh_getsize(b->bcm_fcmh) > origoff) && 
+	    op == BIORQ_WRITE && rbw) {
 		DEBUG_FCMH(PLL_NOTIFY, b->bcm_fcmh, 
 			   "setting RBW for biorq=%p", r);		   
 		r->biorq_flags |= rbw;
