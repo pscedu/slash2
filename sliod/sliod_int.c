@@ -57,6 +57,13 @@ iod_bmap_init(struct bmapc_memb *b)
 	INIT_PSCLIST_ENTRY(&biod->biod_lentry);
 	LOCK_INIT(&biod->biod_lock);
 	SPLAY_INIT(&biod->biod_slvrs);
+
+	clock_gettime(CLOCK_REALTIME, &biod->biod_age);
+	/* XXX At some point we'll want to let bmaps hang around in the
+	 *   cache to prevent extra reads and crc table fetches.
+	 */
+	//bmap_op_start_type(b, BMAP_OPCNT_REAPER);
+	//lc_addtail(b, &bmapReapQ);
 }
 
 void
