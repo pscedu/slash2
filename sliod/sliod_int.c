@@ -128,8 +128,11 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	struct iovec iov;
 	int rc;
 
-	psc_assert(!bmap_2_biodi_wire(b));
+	if (rw != SL_READ)
+		return (0);
 
+	psc_assert(!bmap_2_biodi_wire(b));
+       
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
 		goto out;
