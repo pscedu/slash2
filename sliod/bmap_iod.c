@@ -266,7 +266,10 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 			
 		} while ((biod = lc_getnb(&bmapRlsQ)) && 
 			 (i < MAX_BMAP_RELEASE));
-		
+
+		psc_assert(i);
+		brr->nbmaps = i;
+
 		/* The system can tolerate the loss of these messages so
 		 *   errors here should not be considered fatal.
 		 */
