@@ -23,9 +23,11 @@
 #include "psc_rpc/rsx.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_ds/listcache.h"
 
 #include "bmap_iod.h"
 #include "rpc_iod.h"
+#include "sliod.h"
 
 struct bmap_iod_minseq bimSeq;
 static struct timespec bim_timeo = {BIM_MINAGE, 0};
@@ -194,3 +196,106 @@ bcr_cmp(const void *x, const void *y)
 	return (CMP(a->bcr_xid, b->bcr_xid));
 }
 #endif
+
+static __inline void
+bmap_2_bid_sliod(const struct bmapc_memb *b, struct srm_bmap_id *bid)
+{
+	bid->fg.fg_fid = fcmh_2_fid(b->bcm_fcmh);
+        bid->fg.fg_gen = fcmh_2_gen(b->bcm_fcmh);
+        bid->bmapno = b->bcm_bmapno;
+        bid->seq = bmap_2_biodi(b)->biod_rls_seqkey[0];
+        bid->key = bmap_2_biodi(b)->biod_rls_seqkey[1];
+}
+
+void
+sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
+{
+	struct bmap_iod_info *biod;
+	struct bmapc_memb *b;
+	struct srm_bmap_release_req *brr, *mq;
+	struct srm_bmap_release_rep *mp;
+	struct pscrpc_request *rq = NULL;
+	struct slashrpc_cservice *csvc;
+	int i, rc;
+	
+	brr = PSCALLOC(sizeof(struct srm_bmap_release_req));
+
+	do {
+		i = 0;
+
+		biod = lc_getwait(&bmapRlsQ);
+		if (lc_sz(&bmapRlsQ) < MAX_BMAP_RELEASE)
+			/* Try to coalesce, wait for others.
+			 *   yes, this is a bit ugly.
+			 */
+			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
+		  
+		do {
+			b = biod->biod_bmap;
+			/* Account for both the rls and reap refs.
+			 */
+			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 1);
+
+			DEBUG_BMAP(PLL_INFO, b, "ndrty=%u rlsseq=%"PRId64
+				   " rlskey=%"PRId64" xid=%"PRIu64
+				   " xid_last=%"PRIu64,
+				   biod->biod_crcdrty_slvrs,
+				   biod->biod_rls_seqkey[0], 
+				   biod->biod_rls_seqkey[1], 
+				   biod->biod_bcr_xid, 
+				   biod->biod_bcr_xid_last);
+
+			spinlock(&biod->biod_lock);
+
+			psc_assert(biod->biod_rlsseq);
+			psc_assert(biod->biod_rls_seqkey[0] <= 
+				   biod->biod_cur_seqkey[0]);
+			
+			if (biod->biod_crcdrty_slvrs ||
+			    biod->biod_bcr_xid > (biod->biod_bcr_xid_last+1)) {
+				lc_addtail(&bmapRlsQ, biod);
+				freelock(&biod->biod_lock);
+				continue;
+			}
+
+			biod->biod_rlsseq = 0;
+			bmap_2_bid_sliod(b, &brr->bmaps[i++]);
+			freelock(&biod->biod_lock);
+
+			bmap_op_done_type(b, BMAP_OPCNT_RLSSCHED);
+			
+		} while ((biod = lc_getnb(&bmapRlsQ)) && 
+			 (i < MAX_BMAP_RELEASE));
+		
+		/* The system can tolerate the loss of these messages so
+		 *   errors here should not be considered fatal.
+		 */
+		rc = sli_rmi_getimp(&csvc);
+		if (rc) {
+			psc_errorx("Failed to get MDS import");
+			continue;
+		}
+
+		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+				   SRMT_RELEASEBMAP, rq, mq, mp);	
+		if (rc) {
+			psc_errorx("Failed to generate new RPC req");
+			continue;
+		}
+		
+		memcpy(mq, brr, sizeof(*mq));
+		rc = SL_RSX_WAITREP(rq, mp);
+		if (rc)
+			psc_errorx("RELEASEBMAP req failed");
+
+	} while (pscthr_run());
+}
+
+void
+sliod_bmaprlsthr_spawn(void) {
+	lc_reginit(&bmapRlsQ, struct bmap_iod_info,
+		   biod_lentry, "bmapRlsQ");
+
+	pscthr_init(SLITHRT_BMAPRLS, 0, sliod_bmaprlsthr_main,
+		    NULL, 0, "slibmaprlsthr");
+}

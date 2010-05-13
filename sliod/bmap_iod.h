@@ -35,6 +35,9 @@
 struct bmap_iod_info;
 struct slvr_ref;
 
+extern struct psc_listcache bmapRlsQ;
+extern struct psc_listcache bmapReapQ;
+
 /* For now only one of these structures is needed.  In the future
  *   we'll need one per MDS.
  */
@@ -71,14 +74,17 @@ struct bmap_iod_minseq {
 #define	BCR_NONE		0x00
 #define BCR_SCHEDULED		0x01
 
+#define SLIOD_BMAP_RLS_WAIT_SECS 2 /* Number of seconds to wait for more
+				    *  bmap releases from the client
+				    */
+
 #define DEBUG_BCR(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 	    "bcr@%p fid="FIDFMT" xid=%"PRIu64" nups=%d fl=%d age=%lu"	\
-	    " rls=%u seq=%"PRId64" key=%"PRId64" bmap@%p:%u :: "fmt,	\
+	    " bmap@%p:%u :: "fmt,					\
 	    (b), FIDFMTARGS(&(b)->bcr_crcup.fg), (b)->bcr_xid,		\
 	    (b)->bcr_crcup.nups, (b)->bcr_flags, (b)->bcr_age.tv_sec,	\
-	    (b)->bcr_crcup.rls, (b)->bcr_crcup.seq,			\
-	    (b)->bcr_crcup.key, (b)->bcr_biodi->biod_bmap,		\
+	    (b)->bcr_biodi->biod_bmap,				\
 	    (b)->bcr_biodi->biod_bmap->bcm_blkno,			\
 	    ## __VA_ARGS__)
 
@@ -114,10 +120,25 @@ struct bmap_iod_info {
 
 #define BIOD_CRCUP_MAX_AGE	 2		/* in seconds */
 
+static inline int
+bmap_iod_timeo_cmp(const void *x, const void *y)
+{
+        const struct bmap_iod_info * const *pa = x, *a = *pa;
+        const struct bmap_iod_info * const *pb = y, *b = *pb;
+
+        if (timespeccmp(&a->biod_age, &b->biod_age, <))
+                return (-1);
+
+        if (timespeccmp(&a->biod_age, &b->biod_age, >))
+		return (1);
+
+        return (0);
+}
+
+
 uint64_t	bim_getcurseq(void);
 void		bim_init(void);
 void		bim_updateseq(uint64_t);
-
 
 void bcr_hold_2_ready(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
@@ -125,6 +146,8 @@ void bcr_hold_requeue(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_xid_check(struct biod_crcup_ref *);
 void bcr_xid_last_bump(struct biod_crcup_ref *);
 void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
+
+void sliod_bmaprlsthr_spawn(void);
 
 extern struct psc_listcache iodBmapLru;
 

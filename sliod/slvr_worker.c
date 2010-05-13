@@ -92,42 +92,6 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		 */
 		psc_assert(!rc);
 
-		bcr->bcr_crcup.rls = 0;
-
-		spinlock(&bcr->bcr_biodi->biod_lock);
-		if (bcr->bcr_biodi->biod_rlsseq) {
-			psc_assert(bcr->bcr_biodi->biod_rls_seqkey[0] <=
-				   bcr->bcr_biodi->biod_cur_seqkey[0]);
-
-			if (bcr->bcr_biodi->biod_rls_seqkey[0] ==
-			    bcr->bcr_biodi->biod_cur_seqkey[0]) {
-				/* Don't instruct the MDS to drop our
-				 *   odtable ref unless we're done with it.
-				 */
-				if (!bcr->bcr_biodi->biod_crcdrty_slvrs &&
-				    (bcr->bcr_biodi->biod_bcr_xid ==
-				     bcr->bcr_xid + 1)) {
-					bcr_xid_check(bcr);
-					bcr->bcr_crcup.rls = 1;
-				}
-			} else
-				bcr->bcr_crcup.rls = 1;
-
-			if (bcr->bcr_crcup.rls) {
-				bcr->bcr_crcup.seq =
-					bcr->bcr_biodi->biod_rls_seqkey[0];
-				bcr->bcr_crcup.key =
-					bcr->bcr_biodi->biod_rls_seqkey[1];
-				bcr->bcr_biodi->biod_rlsseq = 0;
-			}
-		}
-		DEBUG_BCR(PLL_INFO, bcr, "ndirty=%u cseq=%"PRId64" rseq=%"PRId64,
-			  bcr->bcr_biodi->biod_crcdrty_slvrs,
-			  bcr->bcr_biodi->biod_cur_seqkey[0],
-			  bcr->bcr_biodi->biod_rls_seqkey[0]);
-
-		freelock(&bcr->bcr_biodi->biod_lock);
-
 		mq->ncrcs_per_update[i] = bcr->bcr_crcup.nups;
 
 		iovs[i].iov_base = &bcr->bcr_crcup;
@@ -274,8 +238,10 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
 	if (rq->rq_status || mp->rc)
 		err = 1;
-
-	bim_updateseq(mp->data);
+	/* Beware, a failed RPC can result in a NULL mp buf.
+	 */
+	if (!err && mp)
+		bim_updateseq(mp->data);
 
 	for (i=0; i < psc_dynarray_len(a); i++) {
 		bcr = psc_dynarray_getpos(a, i);

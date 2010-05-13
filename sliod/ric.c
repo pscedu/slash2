@@ -143,7 +143,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	biodi = bmap_2_biodi(bmap);
 
 	DEBUG_FCMH(PLL_INFO, fcmh, "bmapno=%u size=%u off=%u rw=%d "
-		   " sbd_seq=%"PRId64" biod_key=%"PRId64,
+		   " sbd_seq=%"PRId64" biod_cur_seqkey[0]=%"PRId64,
 		   bmap->bcm_blkno, mq->size, mq->offset, rw,
 		   mq->sbd.sbd_seq, biodi->biod_cur_seqkey[0]);
 
@@ -286,12 +286,19 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			   b->bcm_blkno, bid->seq, bid->key,
 			   biodi->biod_cur_seqkey[0],
 			   biodi->biod_cur_seqkey[1]);
-		/* Note:  this technique is flawed because it does not
-		 *   track all released seq#'s, only the last one recv'd.
+		
+		/* For the time being, old keys are overwritten and forgotten.
 		 */
 		biodi->biod_rls_seqkey[0] = bid->seq;
 		biodi->biod_rls_seqkey[1] = bid->key;
-		biodi->biod_rlsseq = 1;
+
+		/* Do not to add ourselves to the bmapRlsQ twice.
+		 */		
+		if (!biodi->biod_rlsseq) {
+			bmap_op_start_type(b, BMAP_OPCNT_RLSSCHED);
+			biodi->biod_rlsseq = 1;
+			lc_addtail(&bmapRlsQ, biodi);
+		}		
 
 		freelock(&biodi->biod_lock);
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);

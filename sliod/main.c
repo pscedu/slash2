@@ -26,6 +26,7 @@
 
 #include "pfl/pfl.h"
 #include "pfl/str.h"
+#include "psc_ds/listcache.h"
 #include "psc_util/alloc.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/thread.h"
@@ -47,6 +48,9 @@
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 const char *progname;
+
+struct psc_listcache bmapReapQ;
+struct psc_listcache bmapRlsQ;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -141,11 +145,15 @@ main(int argc, char *argv[])
 	sli_repl_init();
 	sli_rpc_initsvc();
 	slitimerthr_spawn();
-
+	sliod_bmaprlsthr_spawn();
+	
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
 		psc_fatalx("MDS server unavailable: %s", slstrerror(rc));
 	sl_csvc_decref(csvc);
+
+	lc_reginit(&bmapReapQ, struct bmapc_memb,
+		   bcm_lentry, "bmapReapQ");
 
 	slictlthr_main(sfn);
 	/* NOTREACHED */
