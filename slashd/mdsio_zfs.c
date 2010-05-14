@@ -304,7 +304,7 @@ int
 mdsio_rename(mdsio_fid_t opino, const char *ocpn, mdsio_fid_t npino,
     const char *ncpn, const struct slash_creds *cr)
 {
-	return (zfsslash2_rename(opino, ocpn, npino, ncpn, cr));
+	return (zfsslash2_rename(opino, ocpn, npino, ncpn, cr, NULL));
 }
 
 int
