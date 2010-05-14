@@ -85,6 +85,9 @@ struct resm_cli_info {
 
 struct pscrpc_import *
 	 msl_bmap_to_import(struct bmapc_memb *, int);
+void     
+         msl_bmap_reap_init(struct bmapc_memb *, 
+			    const struct srt_bmapdesc *);
 void	 msl_bmap_fhcache_clear(struct msl_fhent *);
 int	 msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);

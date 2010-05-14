@@ -336,6 +336,9 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	mq->prefios = prefIOS;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
+	if (rq->rq_reqmsg->opc == 0)
+		abort();
+
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc)
 		goto out;
@@ -383,18 +386,13 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t pino, const char *name,
 	if (rc)
 		goto out;
 
-	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
+	msl_bmap_reap_init(bcm, &mp->sbd);
 
 	msbd = bcm->bcm_pri;
-	msbd->msbd_sbd = mp->sbd;
-	clock_gettime(CLOCK_REALTIME, &msbd->msbd_xtime);
-	timespecadd(&msbd->msbd_xtime, &msl_bmap_max_lease,
-	    &msbd->msbd_xtime);
-	memcpy(&msbd->msbd_etime, &msbd->msbd_xtime,
-	    sizeof(struct timespec));
 	SL_REPL_SET_BMAP_IOS_STAT(msbd->msbd_msbcr.msbcr_repls,
 	    0, SL_REPLST_ACTIVE);
 
+	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
  out:
 	if (m)
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
@@ -543,6 +541,9 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		goto out;
 
 	mq->fg = fcmh->fcmh_fg;
+
+	if (rq->rq_reqmsg->opc == 0)
+		abort();
 
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
@@ -739,6 +740,9 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	mq->mode = mode;
 	strlcpy(mq->name, name, sizeof(mq->name));
 
+	if (rq->rq_reqmsg->opc == 0)
+		abort();
+
 	rc = SL_RSX_WAITREP(rq, mp);
 
 	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
@@ -809,6 +813,9 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	mq->pfg = p->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
+
+	if (rq->rq_reqmsg->opc == 0)
+		abort();
 
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
@@ -913,6 +920,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	}
 
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
+
+	if (rq->rq_reqmsg->opc == 0)
+		abort();
+
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
@@ -991,6 +1002,9 @@ slash_lookuprpc(const struct slash_creds *crp, struct fidc_membh *p,
 
 	mq->pfg = p->fcmh_fg;
 	strlcpy(mq->name, name, sizeof(mq->name));
+
+	if (rq->rq_reqmsg->opc == 0)
+		abort();
 
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
@@ -1134,6 +1148,9 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	iov.iov_len = sizeof(buf);
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
 	    SRMC_BULK_PORTAL, &iov, 1);
+
+	if (rq->rq_reqmsg->opc == 0)
+		abort();
 
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
@@ -1502,6 +1519,9 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	mq->to_set = slash2fuse_translate_setattr_flags(to_set);
 	sl_externalize_stat(stb, &mq->attr);
 	mq->attr.sst_ptruncgen = fcmh_2_ptruncgen(c);
+
+	if (rq->rq_reqmsg->opc == 0)
+		abort();
 
 	/*
 	 * Even though we know our fid, we expect the server to fill it

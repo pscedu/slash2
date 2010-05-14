@@ -462,9 +462,6 @@ msl_bmap_init(struct bmapc_memb *b)
 	msbd = b->bcm_pri;
 	msbd->msbd_bmap = b;
 	bmpc_init(&msbd->msbd_bmpc);
-	/* Take the reaper ref cnt early.
-	 */
-	bmap_op_start_type(b, BMAP_OPCNT_REAPER);
 }
 
 __static void
@@ -531,6 +528,40 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	BMPC_LOCK(bmpc);
 	bmpc_freeall_locked(bmpc);
 	BMPC_ULOCK(bmpc);
+}
+
+
+void
+msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd) 
+{
+	struct bmap_cli_info *msbd=bmap->bcm_pri;
+	int locked;
+
+	locked = BMAP_RLOCK(bmap);
+
+	msbd->msbd_sbd = *sbd;
+	/* Record the start time,
+	 *  XXX the directio status of the bmap needs to be returned by the
+	 *     mds so we can set the proper expiration time.
+	 */
+	clock_gettime(CLOCK_REALTIME, &msbd->msbd_xtime);
+	timespecadd(&msbd->msbd_xtime, &msl_bmap_max_lease,
+	    &msbd->msbd_xtime);
+
+	memcpy(&msbd->msbd_etime, &msbd->msbd_xtime,
+	    sizeof(struct timespec));
+
+	/* Take the reaper ref cnt early and place the bmap
+	 *    onto the reap list
+	 */
+	bmap->bcm_mode |= BMAP_REAPABLE;
+	bmap_op_start_type(bmap, BMAP_OPCNT_REAPER);
+
+	BMAP_URLOCK(bmap, locked);
+	/* Add ourselves here, otherwise zero length files
+	 *   will not be removed.
+	 */
+	lc_addtail(&bmapTimeoutQ, msbd);
 }
 
 /**
@@ -608,9 +639,9 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	if (rc)
 		goto out;
 
-	msbd->msbd_sbd = mp->sbd;
-
 	FCMH_LOCK(f);
+
+	msl_bmap_reap_init(bmap, &mp->sbd);
 
 	if (getreptbl) {
 		/* XXX don't forget that on write we need to invalidate
@@ -620,17 +651,6 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 		f->fcmh_state |= FCMH_CLI_HAVEREPLTBL;
 		psc_waitq_wakeall(&f->fcmh_waitq);
 	}
-
-	/* Record the start time,
-	 *  XXX the directio status of the bmap needs to be returned by the
-	 *     mds so we can set the proper expiration time.
-	 */
-	clock_gettime(CLOCK_REALTIME, &bmap_2_msbd(bmap)->msbd_xtime);
-	timespecadd(&bmap_2_msbd(bmap)->msbd_xtime, &msl_bmap_max_lease,
-		    &bmap_2_msbd(bmap)->msbd_xtime);
-
-	memcpy(&bmap_2_msbd(bmap)->msbd_etime, &bmap_2_msbd(bmap)->msbd_xtime,
-	       sizeof(struct timespec));
 
  out:
 	FCMH_RLOCK(f);
