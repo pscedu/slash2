@@ -141,6 +141,7 @@ struct statvfs;
 
 /* Slash RPC message types. */
 enum {
+	SRMT_NULL,
 	/* control operations */
 	SRMT_CONNECT,
 	SRMT_DESTROY,
