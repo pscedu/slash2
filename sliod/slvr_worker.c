@@ -229,6 +229,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	struct srm_generic_rep	*mp;
 	struct biod_crcup_ref	*bcr;
 	struct slashrpc_cservice *csvc;
+	struct bmap_iod_info    *biod;
 
 	err = 0;
 	a = args->pointer_arg[0];
@@ -245,6 +246,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 
 	for (i=0; i < psc_dynarray_len(a); i++) {
 		bcr = psc_dynarray_getpos(a, i);
+		biod = bcr->bcr_biodi;
 
 		DEBUG_BCR(PLL_INFO, bcr, "err=%d", err);
 		if (err) {
@@ -255,12 +257,20 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			 */
 			spinlock(&bcr->bcr_biodi->biod_lock);
 			bcr_xid_check(bcr);
-			bcr->bcr_biodi->biod_inflight = 0;
-			freelock(&bcr->bcr_biodi->biod_lock);
+			biod->biod_inflight = 0;
+			freelock(&biod->biod_lock);
 
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
-		} else
+		} else {
+			if (biod->biod_rlsseq && 
+			    !biod->biod_crcdrty_slvrs &&
+			    (biod->biod_bcr_xid == biod->biod_bcr_xid_last)) {
+				bmap_op_start_type(biod->biod_bmap, 
+						   BMAP_OPCNT_RLSSCHED);
+				lc_addtail(&bmapRlsQ, bcr->bcr_biodi);
+			}
 			bcr_ready_remove(&binflCrcs, bcr);
+		}
 	}
 	psc_dynarray_free(a);
 	PSCFREE(a);

@@ -24,6 +24,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
 #include "psc_ds/listcache.h"
+#include "psc_ds/dynarray.h"
 
 #include "bmap_iod.h"
 #include "rpc_iod.h"
@@ -250,7 +251,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 			psc_assert(biod->biod_rlsseq);
 
 			if (biod->biod_crcdrty_slvrs ||
-			    biod->biod_bcr_xid > (biod->biod_bcr_xid_last+1)) {
+			    (biod->biod_bcr_xid != biod->biod_bcr_xid_last)) {
 				/* Temporarily remove unreapable biod's
 				 */
 				psc_dynarray_add(&a, biod);
@@ -267,7 +268,9 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 		} while ((biod = lc_getnb(&bmapRlsQ)) && 
 			 (i < MAX_BMAP_RELEASE));
 
-		psc_assert(i);
+		if (!i)
+			goto end;
+
 		brr->nbmaps = i;
 
 		/* The system can tolerate the loss of these messages so
@@ -294,9 +297,12 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
-
+	end:
 		DYNARRAY_FOREACH(biod, i, &a)
 			lc_addtail(&bmapRlsQ, biod);
+
+		if (psc_dynarray_len(&a))
+			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
 
 		psc_dynarray_reset(&a);
 

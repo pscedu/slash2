@@ -252,7 +252,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct srm_bmap_id *bid;
-	struct bmap_iod_info *biodi;
+	struct bmap_iod_info *biod;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
 	uint32_t i;
@@ -266,7 +266,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		rc = sli_fcmh_get(&bid->fg, &f);
 		psc_assert(rc == 0);
 
-		rc = bmap_get(f, bid->bmapno, SL_READ, &b);
+		rc = bmap_get_noretr(f, bid->bmapno, SL_READ, &b);
 		if (rc) {
 			mp->bidrc[i] = rc;
 			psc_errorx("failed to load bmap %u", bid->bmapno);
@@ -276,31 +276,34 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		 */
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
-		biodi = bmap_2_biodi(b);
-		spinlock(&biodi->biod_lock);
+		biod = bmap_2_biodi(b);
+		spinlock(&biod->biod_lock);
 
-		DEBUG_FCMH((biodi->biod_cur_seqkey[0] < bid->seq) ?
+		DEBUG_FCMH((biod->biod_cur_seqkey[0] < bid->seq) ?
 			   PLL_WARN : PLL_INFO,
 			   f, "bmapno=%d seq=%"PRId64" key=%"PRId64
 			   " biod_seq=%"PRId64" biod_key=%"PRId64,
 			   b->bcm_blkno, bid->seq, bid->key,
-			   biodi->biod_cur_seqkey[0],
-			   biodi->biod_cur_seqkey[1]);
-		
+			   biod->biod_cur_seqkey[0],
+			   biod->biod_cur_seqkey[1]);
+
 		/* For the time being, old keys are overwritten and forgotten.
 		 */
-		biodi->biod_rls_seqkey[0] = bid->seq;
-		biodi->biod_rls_seqkey[1] = bid->key;
+		biod->biod_rls_seqkey[0] = bid->seq;
+		biod->biod_rls_seqkey[1] = bid->key;
 
 		/* Do not to add ourselves to the bmapRlsQ twice.
 		 */		
-		if (!biodi->biod_rlsseq) {
-			bmap_op_start_type(b, BMAP_OPCNT_RLSSCHED);
-			biodi->biod_rlsseq = 1;
-			lc_addtail(&bmapRlsQ, biodi);
+		if (!biod->biod_rlsseq) {
+			biod->biod_rlsseq = 1;			
+			if (!biod->biod_crcdrty_slvrs &&
+			    (biod->biod_bcr_xid == biod->biod_bcr_xid_last)) {
+				bmap_op_start_type(b, BMAP_OPCNT_RLSSCHED);
+				lc_addtail(&bmapRlsQ, biod);
+			}
 		}		
 
-		freelock(&biodi->biod_lock);
+		freelock(&biod->biod_lock);
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	}
 	return (0);
