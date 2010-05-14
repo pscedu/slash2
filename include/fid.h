@@ -28,6 +28,7 @@
 #include <sys/types.h>
 
 #include <inttypes.h>
+#include "sltypes.h"
 
 #define FID_MAX_PATH		96
 #define IMNS_NAME_MAX		17
@@ -56,8 +57,6 @@ struct slash_fidgen;
  */
 #define SLFIDF_DIR_DENTRY	(UINT64_C(1) << 2)	/* a directory link */
 
-typedef uint64_t slfid_t;
-typedef uint64_t slfgen_t;
 
 struct slash_fidgen {
 	slfid_t			fg_fid;

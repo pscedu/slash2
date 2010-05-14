@@ -106,4 +106,11 @@ struct srt_statfs {
 	uint64_t		sf_namemax;	/* maximum filename length */
 } __packed;
 
+typedef uint64_t slfid_t;
+typedef uint64_t slfgen_t;
+typedef uint64_t mdsio_fid_t;
+
+typedef slfid_t (*sl_getslfid_cb)(void);
+typedef void (*sl_jlog_cb)(int, int, uint64_t, uint64_t, const struct srt_stat *, uint, const char *);
+
 #endif /* _SL_TYPES_H_ */
