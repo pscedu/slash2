@@ -106,11 +106,21 @@ struct srt_statfs {
 	uint64_t		sf_namemax;	/* maximum filename length */
 } __packed;
 
+/* journal log callback operations */
+#define	SL_NAMESPACE_OP_CREATE		1
+#define	SL_NAMESPACE_OP_REMOVE		2
+#define	SL_NAMESPACE_OP_ATTRIB		3
+
+#define	SL_NAMESPACE_TYPE_DIR		1
+#define	SL_NAMESPACE_TYPE_FILE		2
+#define	SL_NAMESPACE_TYPE_LINK		3
+#define	SL_NAMESPACE_TYPE_SYMLINK	4
+
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
 typedef uint64_t mdsio_fid_t;
 
 typedef slfid_t (*sl_getslfid_cb)(void);
-typedef void (*sl_jlog_cb)(int, int, uint64_t, uint64_t, const struct srt_stat *, uint, const char *);
+typedef void (*sl_jlog_cb)(int, int, uint64_t, uint64_t, uint64_t, const struct srt_stat *, uint, const char *);
 
 #endif /* _SL_TYPES_H_ */

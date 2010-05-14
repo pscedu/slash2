@@ -70,10 +70,10 @@ struct psc_waitq		  mds_namespace_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			  mds_namespace_waitqlock = LOCK_INITIALIZER;
 
 /* max # of buffers used to decrease I/O */
-#define	MDS_NAMESPACE_MAX_BUF	  8
+#define	SL_NAMESPACE_MAX_BUF	  8
 
 /* max # of seconds before an update is propagated */
-#define MDS_NAMESPACE_MAX_AGE	 30
+#define SL_NAMESPACE_MAX_AGE	 30
 
 /* a buffer used to read on-disk log file */
 static char			*stagebuf;
@@ -166,7 +166,8 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
  * we reply to the client.
  */
 void
-mds_namespace_log(int op, int type, uint64_t parent, uint64_t target, 
+mds_namespace_log(int op, int type, __unusedx uint64_t txg, 
+	uint64_t parent, uint64_t target, 
 	const struct srt_stat *stat, uint mask, const char *name)
 {
 	int rc;
@@ -175,29 +176,29 @@ mds_namespace_log(int op, int type, uint64_t parent, uint64_t target,
 	jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	switch (op) {
-	    case MDS_NAMESPACE_OP_CREATE:
+	    case SL_NAMESPACE_OP_CREATE:
 		jnamespace->sjnm_op = SJ_NAMESPACE_OP_CREATE;
 		break;
-	    case MDS_NAMESPACE_OP_REMOVE:
+	    case SL_NAMESPACE_OP_REMOVE:
 		jnamespace->sjnm_op = SJ_NAMESPACE_OP_REMOVE;
 		break;
-	    case MDS_NAMESPACE_OP_ATTRIB:
+	    case SL_NAMESPACE_OP_ATTRIB:
 		jnamespace->sjnm_op = SJ_NAMESPACE_OP_ATTRIB;
 		break;
 	    default: 
 		psc_fatalx("invalid operation: %d.\n", op);
 	}
 	switch (type) {
-	    case MDS_NAMESPACE_TYPE_DIR:
+	    case SL_NAMESPACE_TYPE_DIR:
 		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_DIR;
 		break;
-	    case MDS_NAMESPACE_TYPE_FILE:
+	    case SL_NAMESPACE_TYPE_FILE:
 		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_FILE;
 		break;
-	    case MDS_NAMESPACE_TYPE_LINK:
+	    case SL_NAMESPACE_TYPE_LINK:
 		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_LINK;
 		break;
-	    case MDS_NAMESPACE_TYPE_SYMLINK:
+	    case SL_NAMESPACE_TYPE_SYMLINK:
 		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_SYMLINK;
 		break;
 	    default: 
@@ -325,7 +326,7 @@ restart:
 			return buf;
 		goto readit;
 	}
-	if (i < MDS_NAMESPACE_MAX_BUF) {
+	if (i < SL_NAMESPACE_MAX_BUF) {
 		newbuf = 1;
 		buf = PSCALLOC(sizeof(struct sl_mds_logbuf) + SLM_NAMESPACE_BATCH * logentrysize);
 		buf->slb_size = 0;
@@ -505,7 +506,7 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		}
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
-		    &mds_namespace_waitqlock, MDS_NAMESPACE_MAX_AGE);
+		    &mds_namespace_waitqlock, SL_NAMESPACE_MAX_AGE);
 		seqno = mds_namespace_update_lwm();
 	}
 }
