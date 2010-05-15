@@ -74,7 +74,7 @@ fidc_child_reap_cb(struct fidc_membh *f)
 	if (fcmh_isdir(f) && !psclist_empty(&fci->fci_children))
 		return (0);
 
-	DEBUG_FCMH(PLL_WARN, f, "reaping: %s (%s)", fci->fci_name,
+	DEBUG_FCMH(PLL_INFO, f, "reaping: %s (%s)", fci->fci_name,
 	    fcmh_isdir(f) ? "dir": "file");
 
 	return (1);
