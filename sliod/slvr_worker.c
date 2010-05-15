@@ -394,6 +394,8 @@ slvr_worker_int(void)
 			bcr_hold_requeue(&binflCrcs, bcr);
 
 	} else {
+		bmap_op_start_type(slvr_2_bmap(s), BMAP_OPCNT_BCRSCHED);
+
 		/* XXX not freed? */
 		slvr_2_biod(s)->biod_bcr = bcr =
 			PSCALLOC(sizeof(struct biod_crcup_ref) +
@@ -415,6 +417,7 @@ slvr_worker_int(void)
 		DEBUG_BCR(PLL_NOTIFY, bcr, "newly added");
 		bcr_hold_add(&binflCrcs, bcr);
 	}
+	bmap_op_done_type(slvr_2_bmap(s), BMAP_OPCNT_CRCSCHED);
 	/*
 	 * Either set the initial age of a new sliver or extend the age
 	 *   of an existing one. Note that if it gets full, it will be
