@@ -787,7 +787,10 @@ ms_bmap_release(struct sl_resm *resm)
 	csvc = (resm == slc_rmc_resm) ?
 		slc_geticsvc(resm) : slc_getmcsvc(resm);
 	if (csvc == NULL) {
-		rc = resm->resm_csvc->csvc_lasterrno;
+		if (resm->resm_csvc)
+			rc = resm->resm_csvc->csvc_lasterrno;
+		else
+			rc = -ENOTCONN;
 		goto out;
 	}
 
