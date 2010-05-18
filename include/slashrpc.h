@@ -141,9 +141,8 @@ struct statvfs;
 
 /* Slash RPC message types. */
 enum {
-	SRMT_NULL,
 	/* control operations */
-	SRMT_CONNECT,
+	SRMT_CONNECT = 1,
 	SRMT_DESTROY,
 	SRMT_PING,
 
@@ -346,7 +345,7 @@ struct srm_bmap_crcup {
 	struct slash_fidgen	fg;
 	uint64_t		fsize;		/* largest known size */
 	uint32_t		blkno;		/* bmap block number */
-	uint32_t		nups;	        /* number of CRC updates */
+	uint32_t		nups;		/* number of CRC updates */
 	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
 } __packed;
 
@@ -366,7 +365,7 @@ struct srm_bmap_iod_get {
 } __packed;
 
 struct srm_bmap_id {
-	struct slash_fidgen     fg;
+	struct slash_fidgen	fg;
 	uint64_t		key;
 	uint64_t		seq;
 	sl_bmapno_t		bmapno;
