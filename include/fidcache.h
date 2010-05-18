@@ -132,30 +132,24 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 #define fcmh_isdir(f)		S_ISDIR((f)->fcmh_sstb.sst_mode)
 
 #define DEBUG_FCMH_FLAGS(fcmh)						\
-(((fcmh)->fcmh_state & FCMH_CAC_FREE) ? "F" : ""),			\
-	(((fcmh)->fcmh_state & FCMH_CAC_CLEAN)		? "C" : ""),	\
-	(((fcmh)->fcmh_state & FCMH_CAC_DIRTY)		? "D" : ""),	\
-	(((fcmh)->fcmh_state & FCMH_CAC_FREEING)	? "R" : ""),	\
-	(((fcmh)->fcmh_state & FCMH_HAVE_ATTRS)		? "A" : ""),	\
-	(((fcmh)->fcmh_state & FCMH_GETTING_ATTRS)	? "G" : ""),	\
-	(fcmh_isdir((fcmh)) ? "d" : "")
+	(fcmh)->fcmh_state & FCMH_CAC_FREE		? "F" : "",	\
+	(fcmh)->fcmh_state & FCMH_CAC_CLEAN		? "C" : "",	\
+	(fcmh)->fcmh_state & FCMH_CAC_DIRTY		? "D" : "",	\
+	(fcmh)->fcmh_state & FCMH_CAC_FREEING		? "R" : "",	\
+	(fcmh)->fcmh_state & FCMH_HAVE_ATTRS		? "A" : "",	\
+	(fcmh)->fcmh_state & FCMH_GETTING_ATTRS		? "G" : "",	\
+	fcmh_isdir(fcmh) ? "d" : ""
 
-
-#define REQ_FCMH_FLAGS_FMT "%s%s%s%s%s%s%s"
-
-#define FIDFMT			"%"PRId64":%"PRId64
-#define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
+#define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s"
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)				\
-	do {								\
-		psc_logs((level), PSS_GEN,				\
-			 "fcmh@%p fg:"FIDFMT" "REQ_FCMH_FLAGS_FMT" "	\
-			 "ref:%d sz=%zd :: "fmt,			\
-			 (fcmh), FIDFMTARGS(&fcmh->fcmh_fg),		\
-			 DEBUG_FCMH_FLAGS(fcmh),			\
-			 (fcmh)->fcmh_refcnt, fcmh_2_fsz((fcmh)),	\
-			 ## __VA_ARGS__);				\
-	} while (0)
+	psc_logs((level), PSS_GEN,					\
+	   "fcmh@%p fg:"FIDFMT" "REQ_FCMH_FLAGS_FMT" "			\
+	   "ref:%d sz=%"PRId64" :: "fmt,				\
+	   (fcmh), FIDFMTARGS(&(fcmh)->fcmh_fg),			\
+	   DEBUG_FCMH_FLAGS(fcmh),					\
+	   (fcmh)->fcmh_refcnt, fcmh_2_fsz(fcmh),			\
+	   ## __VA_ARGS__)
 
 /* debugging aid: spit out the reason for the reference count taking/dropping */
 enum fcmh_opcnt_types {
@@ -180,7 +174,6 @@ enum fcmh_opcnt_types {
 
 void	fidc_init(int, int, int, int (*)(struct fidc_membh *), int);
 void	fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
-
 
 /* fidc_lookup() flags */
 enum {
