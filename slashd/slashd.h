@@ -120,6 +120,7 @@ struct resm_mds_info {
 };
 
 #define resm2rmmi(resm)		((struct resm_mds_info *)(resm)->resm_pri)
+#define res2rpmi(res)		((struct resprof_mds_info *)(res)->res_pri)
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
  */
