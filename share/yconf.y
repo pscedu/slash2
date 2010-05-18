@@ -237,10 +237,12 @@ site_resource	: resource_start resource_def SUBSECT_END {
 			currentRes->res_id = sl_global_id_build(
 			    currentSite->site_id, currentRes->res_id);
 
-			if (libsl_id2res(currentRes->res_id))
-				yyerror("resource %s ID %d already assigned to %s",
-				    currentRes->res_name, currentRes->res_id,
-				    libsl_id2res(currentRes->res_id)->res_name);
+			/* resource ID must be unique within one site */
+			DYNARRAY_FOREACH(r, j, &currentSite->site_resources) 
+				if (currentRes->res_id == r->res_id)
+					yyerror("resource %s ID %d already assigned to %s",
+							currentRes->res_name, currentRes->res_id,
+							r->res_name);
 
 			psc_dynarray_add(&currentSite->site_resources, currentRes);
 
