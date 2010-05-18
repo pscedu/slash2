@@ -219,8 +219,12 @@ mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t targ
 	jnamespace->sjnm_target_s2id = target;
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
 	if (name) {
-		jnamespace->sjnm_reclen += strlen(name) + 1;
-		strncpy(jnamespace->sjnm_name, name, NAME_MAX + 1);
+		strncpy(jnamespace->sjnm_name, name, NAME_MAX);
+		if (strlen(name) > NAME_MAX) {
+			jnamespace->sjnm_name[NAME_MAX] = '\0';
+			jnamespace->sjnm_reclen += NAME_MAX + 1;
+		} else
+			jnamespace->sjnm_reclen += strlen(name) + 1;
 	}
 	psc_assert(logentrysize >= jnamespace->sjnm_reclen);
 
