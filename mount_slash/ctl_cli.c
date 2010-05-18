@@ -148,12 +148,12 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct msctl_replst_slave_cont *mrsc;
+	struct msctl_replstq *mrsq = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replrq *mrq = m;
 	struct msctl_replst_cont *mrc;
-	struct msctl_replstq *mrsq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
@@ -248,14 +248,16 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 
  out:
-	pll_remove(&msctl_replsts, mrsq);
-	while ((mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
-		psc_completion_wait(&mrc->mrc_compl);
-		while ((mrsc = pll_get(&mrc->mrc_bdata)) != NULL)
-			psc_pool_return(msctl_replstsc_pool, mrsc);
-		psc_pool_return(msctl_replstmc_pool, mrc);
+	if (mrsq) {
+		pll_remove(&msctl_replsts, mrsq);
+		while ((mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
+			psc_completion_wait(&mrc->mrc_compl);
+			while ((mrsc = pll_get(&mrc->mrc_bdata)) != NULL)
+				psc_pool_return(msctl_replstsc_pool, mrsc);
+			psc_pool_return(msctl_replstmc_pool, mrc);
+		}
+		free(mrsq);
 	}
-	free(mrsq);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
