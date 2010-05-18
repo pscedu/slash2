@@ -284,7 +284,7 @@ mdsio_opendir(mdsio_fid_t ino, const struct slash_creds *cr,
 int
 mdsio_mkdir(mdsio_fid_t pino, const char *cpn, mode_t mode,
     const struct slash_creds *cr, struct srt_stat *sstb,
-    struct slash_fidgen *fgp, mdsio_fid_t *mfp, 
+    struct slash_fidgen *fgp, mdsio_fid_t *mfp,
     sl_jlog_cb logfunc, sl_getslfid_cb getslfid)
 {
 	return (zfsslash2_mkdir(pino, cpn, mode, cr, sstb,
@@ -341,26 +341,32 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
  * Replay the namespace create operation performed on the remote MDS.
  */
 int
-mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type, 
+mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type,
 	int32_t uid, int32_t gid, int mode, char *name)
 {
 	int rc;
+
 	switch (type) {
 	    case SJ_NAMESPACE_TYPE_DIR:
-		rc = zfsslash2_replay_mkdir(parent_s2id, target_s2id, mode, name);
+		rc = zfsslash2_replay_mkdir(parent_s2id, target_s2id,
+		    mode, name);
 		break;
 	    case SJ_NAMESPACE_TYPE_FILE:
-		rc = zfsslash2_replay_create(parent_s2id, target_s2id, uid, gid, mode, name);
+		rc = zfsslash2_replay_create(parent_s2id, target_s2id,
+		    uid, gid, mode, name);
 		break;
 	    case SJ_NAMESPACE_TYPE_LINK:
-		rc = zfsslash2_replay_link(parent_s2id, target_s2id, mode, name);
+		rc = zfsslash2_replay_link(parent_s2id, target_s2id,
+		    mode, name);
 		break;
 	    case SJ_NAMESPACE_TYPE_SYMLINK:
-		rc = zfsslash2_replay_symlink(parent_s2id, target_s2id, mode, name);
+		rc = zfsslash2_replay_symlink(parent_s2id, target_s2id,
+		    mode, name);
 		break;
 	    default:
-		psc_errorx("mdsio_relay_create(): invalid type %d\n", type);
+		psc_errorx("invalid type %d", type);
 		rc = EINVAL;
+		break;
 	}
 	return (rc);
 }
@@ -369,16 +375,21 @@ mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type,
  * Replay the namespace remove operation performed on the remote MDS.
  */
 int
-mdsio_replay_remove(__unusedx uint64_t parent_s2id, __unusedx uint64_t target_s2id, 
-	int type, __unusedx char *name)
+mdsio_replay_remove(uint64_t parent_s2id, uint64_t target_s2id,
+    int type, char *name)
 {
 	int rc;
+
 	switch (type) {
 	    case SJ_NAMESPACE_TYPE_DIR:
 		rc = zfsslash2_replay_rmdir(parent_s2id, target_s2id, name);
 		break;
 	    case SJ_NAMESPACE_TYPE_FILE:
 		rc = zfsslash2_replay_unlink(parent_s2id, target_s2id, name);
+		break;
+	    default:
+		psc_errorx("invalid type %d", type);
+		rc = EINVAL;
 		break;
 	}
 	return (rc);
@@ -391,6 +402,7 @@ int
 mdsio_replay_attrib(uint64_t target_s2id, struct srt_stat *stat, uint mask)
 {
 	int rc;
+
 	rc = zfsslash2_replay_setattr(target_s2id, stat, mask);
 	return (rc);
 }
