@@ -251,6 +251,9 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	mp->flags = mq->flags;
 	mp->rc = slm_rmc_getbmap_common(fcmh, mq->prefios, mq->bmapno,
 	    mq->rw, &mp->flags, &mp->nrepls, &mp->sbd, rq, 1);
+
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+
 	return (mp->rc);
 }
 
@@ -352,10 +355,14 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
+
+	//	DEBUG_FCMH(PLL_WARN, p, "create op start for %s", mq->name);
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
 	    NULL, &mp->attr, &mdsio_data, mds_namespace_log,
 	    slm_get_next_slashid);
+
+	//	DEBUG_FCMH(PLL_WARN, p, "create op done for %s", mq->name);
 	/* XXX enter this into the fcmh cache instead of doing it again */
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);
@@ -363,11 +370,14 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->rc2 = slm_fcmh_get(&mp->fg, &fcmh);
 	if (mp->rc2)
 		goto out;
+	//	DEBUG_FCMH(PLL_WARN, p, "release op done for %s", mq->name);
 
 	mp->flags = mq->flags;
 	mp->rc2 = slm_rmc_getbmap_common(fcmh, mq->prefios, 0,
 	    SL_WRITE, &mp->flags, NULL, &mp->sbd, rq, 0);
+	//	DEBUG_FCMH(PLL_WARN, p, "getbmap op done for %s", mq->name);
 
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);

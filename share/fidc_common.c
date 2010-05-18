@@ -408,6 +408,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		fcmh->fcmh_state &= ~FCMH_CAC_WAITING;
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);
 	}
+	
 	if (rc) {
 		fcmh->fcmh_state |= FCMH_CAC_FAILED;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
@@ -416,8 +417,11 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		*fcmhp = fcmh;
 		fcmh->fcmh_state |= FCMH_CAC_CLEAN;
 		lc_add(&fidcCleanList, fcmh);
-		FCMH_ULOCK(fcmh);
-	}
+
+		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
+		FCMH_ULOCK(fcmh);		
+	}	
 	return (rc);
 }
 

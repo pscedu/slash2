@@ -650,20 +650,23 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 		bid = &mq->bmaps[i];
 
 		mp->bidrc[i] = slm_fcmh_get(&bid->fg, &f);
-		if (mp->bidrc[i])
+		if (mp->bidrc[i]) {
+			//XXX
 			continue;
+		}
 
 		DEBUG_FCMH(PLL_INFO, f, "rls bmap=%u", bid->bmapno);
 
 		mp->bidrc[i] = bmap_lookup(f, bid->bmapno, &b);
 		if (mp->bidrc[i])
-			continue;
+			goto next;
 
 		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64, bid->seq);
 
 		mp->bidrc[i] = mds_bmap_bml_release(b, bid->seq, bid->key);
-		if (mp->bidrc[i])
-			continue;
+	next:
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);		
 	}
 	return (0);
 }
