@@ -25,11 +25,11 @@
 #include "pfl/fcntl.h"
 #include "psc_ds/dynarray.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/rsx.h"
 #include "psc_util/crc.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
-#include "psc_rpc/rsx.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -55,7 +55,7 @@ static int			  logentrysize;
  * from the system journal.
  */
 uint64_t			  next_update_seqno;
- 
+
 
 /*
  * Low and high water marks of update sequence numbers that need to be propagated.
@@ -79,9 +79,9 @@ psc_spinlock_t			  mds_namespace_waitqlock = LOCK_INITIALIZER;
 static char			*stagebuf;
 
 /* we only have a few buffers, so a list is fine */
-static struct psclist_head	 mds_namespace_buflist = PSCLIST_HEAD_INIT(mds_namespace_buflist);
+__static PSCLIST_HEAD(mds_namespace_buflist);
 /* list of peer MDSes */
-static struct psclist_head	 mds_namespace_loglist = PSCLIST_HEAD_INIT(mds_namespace_loglist);
+__static PSCLIST_HEAD(mds_namespace_loglist);
 
 uint64_t
 mds_get_next_seqno(void)
@@ -124,12 +124,14 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 	/* see if we can open a new change log file */
 	if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
 		psc_assert(current_logfile == -1);
-		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
+		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR,
+		    SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
 		/*
 		 * Truncate the file if it already exists. Otherwise, it can lead to an insidious
 		 * bug especially when the on-disk format of the log file changes.
 		 */
-		current_logfile = open(fn, O_CREAT | O_TRUNC | O_RDWR | O_SYNC | O_DIRECT | O_APPEND, 0600);
+		current_logfile = open(fn, O_CREAT | O_TRUNC | O_RDWR |
+		    O_SYNC | O_DIRECT | O_APPEND, 0600);
 		if (current_logfile == -1)
 			psc_fatal("Fail to create change log file %s", fn);
 	} else
@@ -166,7 +168,7 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
  * we reply to the client.
  */
 void
-mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t target, 
+mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t target,
 	const struct srt_stat *stat, uint mask, const char *name)
 {
 	int rc;
@@ -184,8 +186,8 @@ mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t targ
 	    case SL_NAMESPACE_OP_ATTRIB:
 		jnamespace->sjnm_op = SJ_NAMESPACE_OP_ATTRIB;
 		break;
-	    default: 
-		psc_fatalx("invalid operation: %d.\n", op);
+	    default:
+		psc_fatalx("invalid operation: %d", op);
 	}
 	switch (type) {
 	    case SL_NAMESPACE_TYPE_DIR:
@@ -200,8 +202,8 @@ mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t targ
 	    case SL_NAMESPACE_TYPE_SYMLINK:
 		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_SYMLINK;
 		break;
-	    default: 
-		psc_fatalx("invalid type: %d.\n", type);
+	    default:
+		psc_fatalx("invalid type: %d", type);
 	}
 	jnamespace->sjnm_txg = txg;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
@@ -249,13 +251,13 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 
 	buf = loginfo->sml_logbuf;
 	atomic_dec(&buf->slb_refcnt);
-	loginfo->sml_next_seqno += loginfo->sml_next_batch; 
+	loginfo->sml_next_seqno += loginfo->sml_next_batch;
 	loginfo->sml_flags &= ~SML_FLAG_INFLIGHT;
 
 	freelock(&loginfo->sml_lock);
 
 	/* drop the reference taken by slm_getmcsvc() */
-	sl_csvc_decref((loginfo->sml_resm)->resm_csvc);
+	sl_csvc_decref(loginfo->sml_resm->resm_csvc);
 	return (0);
 }
 
@@ -267,11 +269,9 @@ mds_namespace_update_lwm(void)
 {
 	int first = 1;
 	uint64_t seqno;
-	struct psclist_head *tmp;
 	struct sl_mds_loginfo *loginfo;
 
-	psclist_for_each(tmp, &mds_namespace_loglist) {
-		loginfo = psclist_entry(tmp, struct sl_mds_loginfo, sml_link);
+	psclist_for_each_entry(loginfo, &mds_namespace_loglist, sml_link) {
 		spinlock(&loginfo->sml_lock);
 		if (first) {
 			first = 0;
@@ -296,20 +296,13 @@ mds_namespace_update_lwm(void)
 struct sl_mds_logbuf *
 mds_namespace_read_batch(uint64_t seqno)
 {
-	int i;
-	char *ptr;
-	char *logptr;
-	int newbuf;
-	int nitems;
-	int logfile;
-	ssize_t size;
-	char fn[PATH_MAX];
-	struct psclist_head *tmp;
-	struct sl_mds_logbuf *buf;
-	struct sl_mds_logbuf *victim;
 	struct slmds_jent_namespace *jnamespace;
+	struct sl_mds_logbuf *buf, *victim;
+	char fn[PATH_MAX], *ptr, *logptr;
+	int i, newbuf, nitems, logfile;
+	ssize_t size;
 
-restart:
+ restart:
 	/*
 	 * Currently, there is only one thread manipulating the list.
 	 */
@@ -317,8 +310,7 @@ restart:
 	buf = 0;
 	newbuf = 0;
 	victim = NULL;
-	psclist_for_each(tmp, &mds_namespace_buflist) {
-		buf = psclist_entry(tmp, struct sl_mds_logbuf, slb_link);
+	psclist_for_each_entry(buf, &mds_namespace_buflist, slb_link) {
 		i++;
 		if (buf->slb_seqno == seqno)
 			break;
@@ -342,7 +334,7 @@ restart:
 		buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
 		goto readit;
 	}
-	/* 
+	/*
 	 * If we are over the limit and we don't have a victim,
 	 * wait until an RPC returns or times out.
 	 */
@@ -359,18 +351,19 @@ restart:
 	atomic_set(&buf->slb_refcnt, 0);
 	psclist_del(&buf->slb_link);
 
-readit:
+ readit:
 
 	/*
-	 * A short read is allowed, but the returned size must be a 
+	 * A short read is allowed, but the returned size must be a
 	 * multiple of the log entry size (should be 512 bytes).
 	 */
-	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
+	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG,
+	    seqno / SLM_NAMESPACE_BATCH);
 	logfile = open(fn, O_RDONLY);
 	if (logfile == -1)
 		psc_fatal("Fail to open change log file %s", fn);
 	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
-	size = read(logfile, stagebuf, 
+	size = read(logfile, stagebuf,
 		   (SLM_NAMESPACE_BATCH - buf->slb_count) * logentrysize);
 	close(logfile);
 
@@ -390,7 +383,7 @@ readit:
 			(logptr + offsetof(struct psc_journal_enthdr, pje_data));
 		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 		psc_assert(jnamespace->sjnm_reclen <= logentrysize);
-		memcpy((void *)ptr, (void *)jnamespace, jnamespace->sjnm_reclen);
+		memcpy(ptr, jnamespace, jnamespace->sjnm_reclen);
 		ptr += jnamespace->sjnm_reclen;
 		buf->slb_size += jnamespace->sjnm_reclen;
 		logptr += logentrysize;
@@ -412,20 +405,18 @@ readit:
 void
 mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 {
+	struct slmds_jent_namespace *jnamespace;
 	struct srm_send_namespace_req *mq;
-	struct srm_generic_rep *mp;
 	struct slashrpc_cservice *csvc;
-	struct pscrpc_request *req;
 	struct pscrpc_bulk_desc *desc;
+	struct sl_mds_loginfo *loginfo;
+	struct srm_generic_rep *mp;
+	struct pscrpc_request *req;
 	struct iovec iov;
 	int rc, i;
-	struct sl_mds_loginfo *loginfo;
-	struct slmds_jent_namespace *jnamespace;
 	char *buf;
-	struct psclist_head *tmp;
 
-	psclist_for_each(tmp, &mds_namespace_loglist) {
-		loginfo = psclist_entry(tmp, struct sl_mds_loginfo, sml_link);
+	psclist_for_each_entry(loginfo, &mds_namespace_loglist, sml_link) {
 		/*
 		 * Skip if the MDS is busy or the current batch is out of
 		 * its windows.  Note for each MDS, we send updates in order.
@@ -466,10 +457,10 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 
 		atomic_inc(&logbuf->slb_refcnt);
 
-		(void)rsx_bulkclient(req, &desc, BULK_GET_SOURCE, 
-			SRMM_BULK_PORTAL, &iov, 1);
+		rsx_bulkclient(req, &desc, BULK_GET_SOURCE,
+		    SRMM_BULK_PORTAL, &iov, 1);
 
-		/* 
+		/*
 		 * Until I send out the request, no callback will touch
 		 * these fields.
 		 */
@@ -724,7 +715,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		i = MIN(SLJ_MDS_NCRCS, n);
 
 		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
-		       (i * sizeof(struct srm_bmap_crcwire)));
+		       i * sizeof(struct srm_bmap_crcwire));
 
 		rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_CRC,
 				   jcrc, sizeof(struct slmds_jent_crc));
@@ -766,7 +757,6 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	PSCFREE(jcrc);
 }
 
-
 void
 mds_journal_init(void)
 {
@@ -792,7 +782,7 @@ mds_journal_init(void)
 	/* start a thread to propagate local namespace changes */
 	thr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
 	    NULL, 0, "slmjsendthr");
-			
+
 	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 
 	/*
@@ -812,10 +802,11 @@ mds_journal_init(void)
 			if (resm == nodeResm)
 				continue;
 
-			loginfo = ((struct resprof_mds_info *)r->res_pri)->rpmi_loginfo;
+			loginfo = res2rpmi(r)->rpmi_loginfo;
 			loginfo->sml_resm = resm;
 			psclist_xadd_tail(&loginfo->sml_link, &mds_namespace_loglist);
-			psc_info("Added peer MDS: addr = %s, ID = %lx\n", resm->resm_addrbuf, resm->resm_nid);
+			psc_info("Added peer MDS: addr = %s, ID = %lx\n",
+			    resm->resm_addrbuf, resm->resm_nid);
 		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
