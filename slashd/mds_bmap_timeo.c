@@ -127,7 +127,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 		return (BMAPSEQ_ANY);
 	}
 
-	psc_trace("timeoslot=%d", mds_bmap_timeotbl_curslot);
+	psc_trace("timeoslot=%"PSCPRIuTIMET, mds_bmap_timeotbl_curslot);
 
 	e = &mdsBmapTimeoTbl.btt_entries[mds_bmap_timeotbl_curslot];
 	seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
@@ -181,7 +181,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		}
 		psc_dynarray_reset(&a);
  sleep:
-		psc_trace("timeoslot=%d sleeptime=%d", 
+		psc_trace("timeoslot=%d sleeptime=%"PSCPRIuTIMET,
 			  timeoslot, mds_bmap_timeotbl_nextwakeup);
 
 		sleep(mds_bmap_timeotbl_nextwakeup);
