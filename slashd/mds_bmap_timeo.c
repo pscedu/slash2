@@ -36,7 +36,7 @@ struct psc_poolmaster	 bmapMdsLeasePoolMaster;
 struct psc_poolmgr	*bmapMdsLeasePool;
 
 #define mds_bmap_timeotbl_curslot				\
-	((time(NULL) % BMAP_TIMEO_MAX) / BMAP_TIMEO_TBL_SZ)
+	((time(NULL) / BMAP_TIMEO_TBL_SZ) % BMAP_TIMEO_TBL_SZ)
 
 #define mds_bmap_timeotbl_nextwakeup				\
 	(BMAP_TIMEO_TBL_SZ - ((time(NULL) % BMAP_TIMEO_MAX) %	\
@@ -127,10 +127,12 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 		return (BMAPSEQ_ANY);
 	}
 
+	psc_trace("timeoslot=%d", mds_bmap_timeotbl_curslot);
+
 	e = &mdsBmapTimeoTbl.btt_entries[mds_bmap_timeotbl_curslot];
 	seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
 	psclist_xadd_tail(&bml->bml_timeo_lentry, &e->bte_bmaps);
-
+       
 	freelock(&mdsBmapTimeoTbl.btt_lock);
 	return (seq);
 }
@@ -177,8 +179,11 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 				 bml->bml_key))
 				abort();
 		}
-		psc_dynarray_free(&a);
+		psc_dynarray_reset(&a);
  sleep:
+		psc_trace("timeoslot=%d sleeptime=%d", 
+			  timeoslot, mds_bmap_timeotbl_nextwakeup);
+
 		sleep(mds_bmap_timeotbl_nextwakeup);
 	}
 }
