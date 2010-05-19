@@ -221,7 +221,6 @@ mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t targ
 		jnamespace->sjnm_atime = stat->sst_atime;
 		jnamespace->sjnm_mtime = stat->sst_mtime;
 		jnamespace->sjnm_ctime = stat->sst_ctime;
-
 	}
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
 	if (name) {
@@ -241,7 +240,6 @@ mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t targ
 
 	PSCFREE(jnamespace);
 }
-
 
 __static int
 mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
