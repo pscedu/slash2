@@ -90,24 +90,54 @@ struct site_mds_info {
 
 #define SMIF_DIRTYQ		  (1 << 0)		/* queue has changed */
 
+enum {
+	SNLS_ACT_PROPAGATE,
+	SNLS_ACT_REPLAY,
+	SNLS_NACTS
+};
+
+enum {
+	SNLS_OP_CREATE,
+	SNLS_OP_LINK,
+	SNLS_OP_MKDIR,
+	SNLS_OP_RENAME
+	SNLS_OP_RMDIR,
+	SNLS_OP_SYMLINK,
+	SNLS_OP_UNLINK,
+	SNLS_NOPS
+};
+
+enum {
+	SNLS_FIELD_FAILURES,
+	SNLS_FIELD_PENDING,
+	SNLS_FIELD_SUCCESSES,
+	SNLS_NFIELDS
+};
+
+struct slm_nslogstats {
+	psc_atomic32_t		  snls_stats[SNLS_NACTS][SNLS_NOPS + 1][SNLS_NFIELDS];
+};
+
 /*
  * This structure tracks the progress of namespace log application on a MDS.
  * We allow one pending request per MDS until it responds or timeouts.
  */
-#define	SML_FLAG_NONE		   0
-#define	SML_FLAG_INFLIGHT	  (1 << 0)
-
 struct sl_mds_loginfo {
 	psc_spinlock_t		  sml_lock;
-	struct psclist_head	  sml_link;
+	struct psclist_head	  sml_lentry;
 	struct sl_resm		 *sml_resm;
-	int			  sml_flags;
+	int			  sml_flags;		/* see SML_FLAG_* below */
 	struct sl_mds_logbuf	 *sml_logbuf;		/* the log buffer being used */
 	uint64_t		  sml_next_seqno;	/* next log sequence */
 	int			  sml_next_batch;	/* # of updates */
 	time_t			  sml_last_send;	/* last contact and response */
 	time_t			  sml_last_recv;
+	struct slm_nslogstats	  sml_stats;
 };
+
+/* sml_flags values */
+#define	SML_FLAG_NONE		   0
+#define	SML_FLAG_INFLIGHT	  (1 << 0)
 
 /* allocated by slcfg_init_resm(), which is tied into the lex/yacc code */
 struct resm_mds_info {
@@ -144,9 +174,9 @@ void		 slmreplqthr_spawnall(void);
 void		 slmtimerthr_spawn(void);
 
 extern struct slash_creds			 rootcreds;
-
 extern struct psc_listcache			 dirtyMdsData;
 extern struct odtable				*mdsBmapAssignTable;
 extern const struct slash_inode_extras_od	 null_inox_od;
+extern struct slm_nslogstats			 slm_nslogstats_aggr;	/* aggregate stats */
 
 #endif /* _SLASHD_H_ */
