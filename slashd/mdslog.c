@@ -273,7 +273,7 @@ mds_namespace_update_lwm(void)
 	uint64_t seqno;
 	struct sl_mds_loginfo *loginfo;
 
-	psclist_for_each_entry(loginfo, &mds_namespace_loglist, sml_link) {
+	psclist_for_each_entry(loginfo, &mds_namespace_loglist, sml_lentry) {
 		spinlock(&loginfo->sml_lock);
 		if (first) {
 			first = 0;
@@ -418,7 +418,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	int rc, i;
 	char *buf;
 
-	psclist_for_each_entry(loginfo, &mds_namespace_loglist, sml_link) {
+	psclist_for_each_entry(loginfo, &mds_namespace_loglist, sml_lentry) {
 		/*
 		 * Skip if the MDS is busy or the current batch is out of
 		 * its windows.  Note for each MDS, we send updates in order.
@@ -806,7 +806,7 @@ mds_journal_init(void)
 
 			loginfo = res2rpmi(r)->rpmi_loginfo;
 			loginfo->sml_resm = resm;
-			psclist_xadd_tail(&loginfo->sml_link, &mds_namespace_loglist);
+			psclist_xadd_tail(&loginfo->sml_lentry, &mds_namespace_loglist);
 			psc_info("Added peer MDS: addr = %s, ID = %lx\n",
 			    resm->resm_addrbuf, resm->resm_nid);
 		}
