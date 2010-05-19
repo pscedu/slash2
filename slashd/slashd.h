@@ -22,8 +22,8 @@
 
 #include "psc_ds/dynarray.h"
 #include "psc_ds/vbitmap.h"
-#include "psc_rpc/service.h"
 #include "psc_rpc/rpc.h"
+#include "psc_rpc/service.h"
 #include "psc_util/multiwait.h"
 
 #include "inode.h"
@@ -50,7 +50,6 @@ struct slash_inode_handle;
 #define SLMTHRT_FSSYNC		10	/* file system syncer */
 #define SLMTHRT_REPLQ		11	/* per-site replication queuer */
 #define SLMTHRT_BMAPTIMEO	12	/* bmap timeout thread */
-
 #define SLMTHRT_JRNL_SHDW	13	/* journal shadow tiling thread */
 #define SLMTHRT_JRNL_SEND	14	/* journal log propagating thread */
 
@@ -133,7 +132,7 @@ struct resprof_mds_info {
 int		 mds_inode_read(struct slash_inode_handle *);
 int		 mds_inox_load_locked(struct slash_inode_handle *);
 int		 mds_inox_ensure_loaded(struct slash_inode_handle *);
-int              mds_handle_rls_bmap(struct pscrpc_request *);
+int		 mds_handle_rls_bmap(struct pscrpc_request *);
 
 void		 mds_bmi_cb(void *, struct odtable_receipt *);
 

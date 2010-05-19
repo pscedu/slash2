@@ -43,7 +43,7 @@ __static struct timespec	 bmapFlushDefMaxAge = { 0, 1000000L };
 __static struct timespec	 bmapFlushDefSleep = { 0, 100000000L };
 
 struct psc_listcache		 bmapFlushQ;
-struct psc_listcache             bmapTimeoutQ;
+struct psc_listcache		 bmapTimeoutQ;
 
 __static struct pscrpc_nbreqset	*pndgReqs;
 __static struct psc_dynarray	 pndgReqSets = DYNARRAY_INIT;
@@ -53,8 +53,8 @@ __static atomic_t		 completedRpcCnt;
 __static int			 shutdown;
 __static struct psc_waitq	 rpcCompletion;
 
-#define MAX_OUTSTANDING_RPCS 128
-#define MIN_COALESCE_RPC_SZ  LNET_MTU /* Try for big RPC's */
+#define MAX_OUTSTANDING_RPCS	128
+#define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
 
 __static psc_spinlock_t pndgReqLock = LOCK_INITIALIZER;
 
@@ -859,14 +859,14 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		clock_gettime(CLOCK_REALTIME, &ctime);
 
 		wtime.tv_sec = BMAP_CLI_TIMEO_INC;
-		
+
 		while ((msbd = lc_getnb(&bmapTimeoutQ))) {
 			b = msbd->msbd_bmap;
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			BMAP_LOCK(b);
-			DEBUG_BMAP(PLL_INFO, b, 
-			   "timeoq try reap (nbmaps=%zd) etime(%ld:%ld)", 
+			DEBUG_BMAP(PLL_INFO, b,
+			   "timeoq try reap (nbmaps=%zd) etime(%ld:%ld)",
 			   lc_sz(&bmapTimeoutQ), msbd->msbd_etime.tv_sec,
 			   msbd->msbd_etime.tv_nsec);
 
@@ -874,7 +874,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				psc_assert(b->bcm_mode & BMAP_REAPABLE);
 
 				b->bcm_mode &= ~BMAP_REAPABLE;
-				DEBUG_BMAP(PLL_INFO, b, 
+				DEBUG_BMAP(PLL_INFO, b,
 					   "descheduling from timeoq");
 				BMAP_ULOCK(b);
 				continue;
@@ -899,7 +899,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				BMAP_ULOCK(b);
 
 			} else {
-				psc_assert(psc_atomic32_read(&b->bcm_opcnt) 
+				psc_assert(psc_atomic32_read(&b->bcm_opcnt)
 					   == 1);
 				/* Note that only this thread calls
 				 *   ms_bmap_release() so no reentrancy
@@ -911,7 +911,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				if (b->bcm_mode & BMAP_WR) {
 					/* Setup a msg to an ION.
 					 */
-					psc_assert(bmap_2_ion(b) != 
+					psc_assert(bmap_2_ion(b) !=
 						   LNET_NID_ANY);
 
 					resm = libsl_nid2resm(bmap_2_ion(b));
@@ -923,12 +923,12 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[rmci->rmci_bmaprls.nbmaps]);
 				rmci->rmci_bmaprls.nbmaps++;
 
-				/* The bmap should be going away now, this 
+				/* The bmap should be going away now, this
 				 *    will call BMAP_URLOCK().
 				 */
 				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 
-				if (rmci->rmci_bmaprls.nbmaps == 
+				if (rmci->rmci_bmaprls.nbmaps ==
 				    MAX_BMAP_RELEASE) {
 					ms_bmap_release(resm);
 					if (psc_dynarray_exists(&a, resm))
@@ -950,7 +950,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (!wtime.tv_sec && !wtime.tv_nsec)
 				wtime.tv_sec = 1;
 			psc_waitq_waitrel(&waitq, NULL, &wtime);
-		}		
+		}
 
 		wtime.tv_sec = wtime.tv_nsec = 0;
 

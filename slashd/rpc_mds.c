@@ -25,8 +25,8 @@
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 
-#include "rpc_mds.h"
 #include "bmap_mds.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
 

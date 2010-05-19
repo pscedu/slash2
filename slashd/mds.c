@@ -20,11 +20,11 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/treeutil.h"
+#include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/log.h"
 #include "psc_util/odtable.h"
-#include "psc_rpc/rsx.h"
 
 #include "bmap.h"
 #include "bmap_mds.h"
@@ -38,8 +38,8 @@
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
-#include "slerr.h"
 #include "slashrpc.h"
+#include "slerr.h"
 
 struct odtable				*mdsBmapAssignTable;
 uint64_t				 mdsBmapSequenceNo;

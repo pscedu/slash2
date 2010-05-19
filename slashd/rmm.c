@@ -31,8 +31,8 @@
 #include "psc_util/lock.h"
 
 #include "fid.h"
-#include "rpc_mds.h"
 #include "fidc_mds.h"
+#include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
 #include "sljournal.h"

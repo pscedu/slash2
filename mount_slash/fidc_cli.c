@@ -47,8 +47,7 @@
 #define FCMH_FOREACH_CHILD_SAFE(c0, cn, p)					\
 	psclist_for_each_entry2_safe((c0), (cn),				\
 	    &fcmh_2_fci(p)->fci_children, sizeof(struct fidc_membh) +		\
-	    offsetof(struct fcmh_cli_info, fci_sibling))			\
-
+	    offsetof(struct fcmh_cli_info, fci_sibling))
 
 /**
  * fidc_child_reap_cb - the callback handler for fidc_reap() is

@@ -24,6 +24,11 @@
 
 #include "inode.h"
 
+struct bmapc_memb;
+struct fidc_membh;
+struct slash_inode_handle;
+struct srm_bmap_crcup;
+
 enum {
 	MDS_LOG_BMAP_REPL	= _PJE_FLSHFT << 0,
 	MDS_LOG_BMAP_CRC	= _PJE_FLSHFT << 1,
@@ -40,10 +45,10 @@ enum {
  */
 #define	MDS_LOG_MAX_LOG_BATCH	8
 struct sl_mds_logbuf {
-	atomic_t	 	 slb_refcnt;
-	int		 	 slb_count;			/* total # of entries */
+	atomic_t		 slb_refcnt;
+	int			 slb_count;			/* total # of entries */
 	int			 slb_size;			/* total size in bytes */
-	uint64_t	 	 slb_seqno;			/* starting sequence number */
+	uint64_t		 slb_seqno;			/* starting sequence number */
 	struct psclist_head	 slb_link;
 	/*
 	 * A buffer that is ready for RPC (i.e., packed). In order to deal
@@ -57,14 +62,9 @@ struct sl_mds_logbuf {
  * A structure used to describe the log application progress on each site.
  */
 struct site_progress {
-	int		sp_siteid;
-	uint64_t	sp_seqno;
+	int			sp_siteid;
+	uint64_t		sp_seqno;
 };
-
-struct bmapc_memb;
-struct fidc_membh;
-struct slash_inode_handle;
-struct srm_bmap_crcup;
 
 /* if something is wrong with logging, we take a crash.
  * Our MDS should be able to recover after being restarted */
