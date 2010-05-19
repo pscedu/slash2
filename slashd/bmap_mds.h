@@ -89,7 +89,6 @@ struct bmap_mds_lease {
 	uint64_t		  bml_seq;
 	uint64_t		  bml_key;
 	uint32_t		  bml_flags;
-	uint32_t		  bml__pad;
 	psc_spinlock_t		  bml_lock;
 	struct bmap_mds_info	 *bml_bmdsi;
 	struct pscrpc_export	 *bml_exp;
