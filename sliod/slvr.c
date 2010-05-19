@@ -572,8 +572,6 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 
 	s->slvr_flags &= ~SLVR_LRU;
 
-	bmap_op_start_type(slvr_2_bmap(s), BMAP_OPCNT_CRCSCHED);
-
 	lc_remove(&lruSlvrs, s);
 	lc_addqueue(&crcqSlvrs, s);
 }
