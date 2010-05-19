@@ -78,8 +78,8 @@ struct srt_stat {
 	uint64_t		sst_ino;	/* inode number */
 	uint32_t		sst_gen;	/* full truncate generation */
 	uint32_t		sst_ptruncgen;	/* partial truncate generation */
+	uint32_t		sst_mask;	/* bit-mask of attributes */
 	uint32_t		sst_mode;	/* file permissions */
-	uint32_t		sst__pad;
 	uint64_t		sst_nlink;	/* number of hard links */
 	uint32_t		sst_uid;	/* user ID of owner */
 	uint32_t		sst_gid;	/* group ID of owner */
