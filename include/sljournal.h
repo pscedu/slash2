@@ -106,8 +106,11 @@ struct slmds_jent_namespace {
 	uint32_t		sjnm_op;			/* operation type */
 	uint32_t		sjnm_type;			/* object type */
 
-	uint64_t		sjnm_seqno;			/* namespace update identifier */
 	uint64_t		sjnm_txg;			/* enclosing ZFS transaction */
+	uint64_t		sjnm_seqno;			/* namespace update identifier */
+
+	uint64_t		sjnm_parent_s2id;
+	uint64_t		sjnm_target_s2id;
 
 	uint			sjnm_mask;			/* attribute mask */
 	uint32_t		sjnm_mode;			/* file permission */
@@ -119,9 +122,6 @@ struct slmds_jent_namespace {
 	int64_t			sjnm_mtime;			/* time of last modification */
 	int64_t			sjnm_ctime;			/* time of last status change */
 	uint64_t		sjnm_size;			/* total size, in bytes */
-
-	uint64_t		sjnm_parent_s2id;
-	uint64_t		sjnm_target_s2id;
 	/*
 	 * For easy seek within a change log file, each entry
 	 * has a fixed length of 512 bytes.  But when we send

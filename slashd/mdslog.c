@@ -209,18 +209,20 @@ mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t targ
 	}
 	jnamespace->sjnm_txg = txg;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
-
-	jnamespace->sjnm_mask = stat->sst_mask;
-	jnamespace->sjnm_uid = stat->sst_uid;
-	jnamespace->sjnm_gid = stat->sst_gid;
-	jnamespace->sjnm_mode = stat->sst_mode;
-
-	jnamespace->sjnm_atime = stat->sst_atime;
-	jnamespace->sjnm_mtime = stat->sst_mtime;
-	jnamespace->sjnm_ctime = stat->sst_ctime;
-
 	jnamespace->sjnm_parent_s2id = parent;
 	jnamespace->sjnm_target_s2id = target;
+
+	if (stat) {
+		jnamespace->sjnm_mask = stat->sst_mask;
+		jnamespace->sjnm_uid = stat->sst_uid;
+		jnamespace->sjnm_gid = stat->sst_gid;
+		jnamespace->sjnm_mode = stat->sst_mode;
+
+		jnamespace->sjnm_atime = stat->sst_atime;
+		jnamespace->sjnm_mtime = stat->sst_mtime;
+		jnamespace->sjnm_ctime = stat->sst_ctime;
+
+	}
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
 	if (name) {
 		strncpy(jnamespace->sjnm_name, name, NAME_MAX);
