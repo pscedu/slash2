@@ -47,10 +47,8 @@ sub cli_cmd {
 	return <<ENDCMD;
 set -x
 
-for i in \$(seq 10); do
-	cp -RL $h{src} $h{fspath}/srctest || true
-done
-diff -rqu $h{fspath}/srctest $h{src}
+cp -RL $h{src} $h{fspath}/srctest || true
+diff -ru $h{fspath}/srctest $h{src}
 
 
 exit 0
@@ -84,6 +82,12 @@ sub runfio {
 	system "perl $h{gdbtry} ./fio.pthreads -i \$conf";
 	exit \$? if \$?;
 	my \$diff = time - \$start;
+
+	print STDERR "sleeping to wait for syncing before next test\\n";
+
+	# XXX: add sync wait step
+	# XXX: add verify step
+	sleep \$to; # XXX: until zsyncmgt wait manually for syncing
 
 	return "\$name \$diff\\n";
 }
