@@ -171,7 +171,7 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
  */
 void
 mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t target,
-	const struct srt_stat *stat, uint mask, const char *name)
+	const struct srt_stat *stat, const char *name)
 {
 	int rc;
 	struct slmds_jent_namespace *jnamespace;
@@ -210,7 +210,7 @@ mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t targ
 	jnamespace->sjnm_txg = txg;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
 
-	jnamespace->sjnm_mask = mask;
+	jnamespace->sjnm_mask = stat->sst_mask;
 	jnamespace->sjnm_uid = stat->sst_uid;
 	jnamespace->sjnm_gid = stat->sst_gid;
 	jnamespace->sjnm_mode = stat->sst_mode;
