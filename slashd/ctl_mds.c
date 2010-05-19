@@ -28,8 +28,12 @@
 #include "creds.h"
 #include "ctl_mds.h"
 #include "mdsio.h"
+#include "slashd.h"
+#include "slconfig.h"
 
 struct psc_lockedlist psc_mlists;
+
+struct slm_nslogstats	 slm_nslogstats_aggr;	/* aggregate stats */
 
 const char *slm_nslogst_acts[] = {
 	"propagate",
@@ -66,12 +70,11 @@ lookup(const char **p, int n, const char *key)
 
 int
 slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels,
-    struct slm_nslogstats *st, int a_val, int o_val, int f_val, int val)
+    struct psc_ctlmsg_param *pcp, char **levels, struct slm_nslogstats *st,
+    int a_val, int o_val, int f_val, int val)
 {
-	int a_start, o_start, f_start;
-	int set, i_a, i_o, i_f;
-	int rc;
+	int a_start, o_start, f_start, rc, set, i_a, i_o, i_f;
+	char nbuf[15];
 
 	set = (mh->mh_type == PCMT_SETPARAM);
 
@@ -80,23 +83,26 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
 	f_start = f_val == -1 ? 0 : f_val;
 
 	rc = 1;
-	for (i_a = a_start; i_a < SML_ST_NACTS &&
+	for (i_a = a_start; i_a < SNLS_NACTS &&
 	    (i_a == a_val || a_val == -1); i_a++) {
-		levels[3] = slm_nslogst_acts[i_a];
-		for (i_o = o_start; i_o < SML_ST_NOPS &&
+		levels[3] = (char *)slm_nslogst_acts[i_a];
+		for (i_o = o_start; i_o < SNLS_NOPS &&
 		    (i_o == o_val || a_val == -1); i_o++) {
-			levels[4] = slm_nslogst_ops[i_o];
-			for (i_f = f_start; i_f < SML_ST_NFIELDS + 1 &&
+			levels[4] = (char *)slm_nslogst_ops[i_o];
+			for (i_f = f_start; i_f < SNLS_NFIELDS + 1 &&
 			    (i_f == f_val || f_val == -1); i_f++) {
 				if (set)
-					st->snls_stats[i_a][i_o][i_f] = 0;
+					psc_atomic32_set(
+					    &st->snls_stats[i_a][i_o][i_f],
+					    val);
 				else {
-					levels[5] = slm_nslogst_fields[i_f];
+					levels[5] = (char *)
+					    slm_nslogst_fields[i_f];
 					snprintf(nbuf, sizeof(nbuf), "%d",
 					    psc_atomic32_read(
 					    &st->snls_stats[i_a][i_o][i_f]));
 					rc = psc_ctlmsg_param_send(fd, mh, pcp,
-					    PCTHRNAME_EVERYONE, levels, 2, nbuf);
+					    PCTHRNAME_EVERYONE, levels, 6, nbuf);
 					if (!rc)
 						goto out;
 				}
@@ -111,11 +117,11 @@ int
 slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
-	int i_r, rc, set, val;
-	const char *p_site;
+	const char *p_site, *p_act, *p_op, *p_field;
+	int i_r, rc, a_val, o_val, f_val, val;
+	struct sl_resource *r;
 	struct sl_site *s;
-	struct sl_res *r;
-	char *s;
+	char *str;
 	long l;
 
 	if (nlevels > 6)
@@ -127,10 +133,10 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	levels[0] = "namespace";
 	levels[1] = "stats";
 
-	p_site	= nlevels > 2 : levels[2] : "*";
-	p_act	= nlevels > 3 : levels[3] : "*";
-	p_op	= nlevels > 4 : levels[4] : "*";
-	p_field	= nlevels > 5 : levels[5] : "*";
+	p_site	= nlevels > 2 ? levels[2] : "*";
+	p_act	= nlevels > 3 ? levels[3] : "*";
+	p_op	= nlevels > 4 ? levels[4] : "*";
+	p_field	= nlevels > 5 ? levels[5] : "*";
 
 	a_val = lookup(slm_nslogst_acts, nitems(slm_nslogst_acts), p_act);
 	o_val = lookup(slm_nslogst_ops, nitems(slm_nslogst_ops), p_op);
@@ -142,7 +148,7 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	if (o_val == -1 && strcmp(p_op, "*"))
 		return (psc_ctlsenderr(fd, mh,
 		    "invalid namespace.stats operation: %s", p_op));
-	if (f_val == -1 && strcmp(f_act, "*"))
+	if (f_val == -1 && strcmp(p_act, "*"))
 		return (psc_ctlsenderr(fd, mh,
 		    "invalid namespace.stats field: %s", p_field));
 
@@ -152,10 +158,10 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 		if (nlevels != 6)
 			return (psc_ctlsenderr(fd, mh, "invalid field"));
 
-		s = NULL;
-		l = strtol(pcp->pcp_value, &s, 10);
-		if (l == LONG_MAX || l == LONG_MIN || *s != '\0' ||
-		    s == pcp->pcp_value || l > 1 || l < 0)
+		str = NULL;
+		l = strtol(pcp->pcp_value, &str, 10);
+		if (l == LONG_MAX || l == LONG_MIN || *str != '\0' ||
+		    str == pcp->pcp_value || l > 1 || l < 0)
 			return (psc_ctlsenderr(fd, mh,
 			    "invalid namespace.stats value: %s",
 			    pcp->pcp_field));
@@ -166,8 +172,7 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(p_site, "*") == 0) {
 		levels[2] = "#aggr";
 		rc = slmctlparam_namespace_stats_process(fd, mh, pcp,
-		    levels, nlevels, &slm_nslogstats_aggr, a_val, o_val,
-		    f_val, val);
+		    levels, &slm_nslogstats_aggr, a_val, o_val, f_val, val);
 		if (!rc || strcmp(p_site, "#aggr"))
 			return (rc);
 	}
@@ -175,14 +180,14 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	rc = 1;
 	CONF_LOCK();
 	CONF_FOREACH_SITE(s)
-		DYNARRAY_FOREACH(r, i_r, s)
+		SITE_FOREACH_RES(s, r, i_r)
 			if (r->res_type == SLREST_MDS &&
 			    res2rpmi(r)->rpmi_loginfo &&
-			    r->strcmp(p_site, "*") == 0 ||
-			    strcasecmp(p_site, s->site_name) == 0) {
+			    (strcmp(p_site, "*") == 0 ||
+			     strcasecmp(p_site, s->site_name)) == 0) {
 				levels[2] = s->site_name;
 				rc = slmctlparam_namespace_stats_process(
-				    fd, mh, pcp, levels, nlevels,
+				    fd, mh, pcp, levels,
 				    &res2rpmi(r)->rpmi_loginfo->sml_stats,
 				    a_val, o_val, f_val, val);
 				if (!rc || strcmp(p_site, s->site_name) == 0)
