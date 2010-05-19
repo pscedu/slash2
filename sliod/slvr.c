@@ -687,6 +687,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 		INIT_PSCLIST_ENTRY(&s->slvr_lentry);
 
 		SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, s);
+		bmap_op_start_type(b->biod_bmap, BMAP_OPCNT_SLVR);
 	}
 
 	s->slvr_flags |= SLVR_PINNED;
