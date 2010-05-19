@@ -19,12 +19,12 @@
 
 #include <sys/time.h>
 
+#include "psc_ds/dynarray.h"
+#include "psc_ds/listcache.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
-#include "psc_ds/listcache.h"
-#include "psc_ds/dynarray.h"
 
 #include "bmap_iod.h"
 #include "rpc_iod.h"
