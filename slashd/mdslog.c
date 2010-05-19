@@ -112,16 +112,18 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 {
 	int sz;
 	uint64_t seqno;
-	char fn[PATH_MAX];
+	char fn[PATH_MAX+1];
 	struct slmds_jent_namespace *jnamespace;
 
-	jnamespace = (struct slmds_jent_namespace *)&pje->pje_data[0];
-	seqno = jnamespace->sjnm_seqno;
-
 	psc_assert(pje->pje_magic == PJE_MAGIC);
+	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
+		return;
+
+	jnamespace = (struct slmds_jent_namespace *)&pje->pje_data[0];
 	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 
 	/* see if we can open a new change log file */
+	seqno = jnamespace->sjnm_seqno;
 	if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
 		psc_assert(current_logfile == -1);
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR,
