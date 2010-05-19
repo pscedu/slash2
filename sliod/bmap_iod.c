@@ -265,8 +265,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			bmap_op_done_type(b, BMAP_OPCNT_RLSSCHED);
 			
-		} while ((biod = lc_getnb(&bmapRlsQ)) && 
-			 (i < MAX_BMAP_RELEASE));
+		} while ((i < MAX_BMAP_RELEASE) && (biod = lc_getnb(&bmapRlsQ)));
 
 		if (!i)
 			goto end;
