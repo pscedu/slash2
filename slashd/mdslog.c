@@ -56,7 +56,6 @@ static int			  logentrysize;
  */
 uint64_t			  next_update_seqno;
 
-
 /*
  * Low and high water marks of update sequence numbers that need to be propagated.
  * Note that the pace of each MDS is different.
@@ -77,6 +76,8 @@ psc_spinlock_t			  mds_namespace_waitqlock = LOCK_INITIALIZER;
 
 /* a buffer used to read on-disk log file */
 static char			*stagebuf;
+
+static struct psc_thread	*namespaceThr;
 
 /* we only have a few buffers, so a list is fine */
 __static PSCLIST_HEAD(mds_namespace_buflist);
@@ -305,11 +306,17 @@ mds_namespace_read_batch(uint64_t seqno)
 	char fn[PATH_MAX], *ptr, *logptr;
 	int i, newbuf, nitems, logfile;
 	ssize_t size;
+	struct psc_thread *thr;
 
- restart:
 	/*
 	 * Currently, there is only one thread manipulating the list.
+	 * Make sure this is the case.
 	 */
+	thr = pscthr_get();
+	psc_assert(thr == namespaceThr);
+
+ restart:
+
 	i = 0;
 	buf = 0;
 	newbuf = 0;
@@ -772,7 +779,6 @@ mds_journal_init(void)
 	struct sl_site *s;
 	char fn[PATH_MAX];
 	struct sl_mds_peerinfo *peerinfo;
-	struct psc_thread *thr;
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
 	mdsJournal = pjournal_init(fn, SLMTHRT_JRNL_SHDW, "slmjshdwthr",
@@ -786,7 +792,7 @@ mds_journal_init(void)
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 
 	/* start a thread to propagate local namespace changes */
-	thr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
+	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
 	    NULL, 0, "slmjsendthr");
 
 	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
