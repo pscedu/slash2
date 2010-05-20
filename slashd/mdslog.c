@@ -79,6 +79,8 @@ static char			*stagebuf;
 
 static struct psc_thread	*namespaceThr;
 
+static struct sl_mds_peerinfo	*localinfo = NULL;
+
 /* we only have a few buffers, so a list is fine */
 __static PSCLIST_HEAD(mds_namespace_buflist);
 /* list of peer MDSes */
@@ -815,11 +817,14 @@ mds_journal_init(void)
 			peerinfo->sp_resm = resm;
 			peerinfo->sp_siteid = s->site_id; 
 			psclist_xadd_tail(&peerinfo->sp_lentry, &mds_namespace_peerlist);
+			if (resm == nodeResm)
+				localinfo = peerinfo;
 			psc_info("Added peer MDS: addr = %s, site ID = %d, resource ID = %lx\n",
 			    resm->resm_addrbuf, s->site_id, resm->resm_nid);
 		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
-
+	if (localinfo == NULL)
+		psc_fatal("mds_journal_init(): missing local MDS information");
 	/*
 	 * Eventually we have to read this from a on-disk log.
 	 */

@@ -114,8 +114,9 @@ enum {
 	SNLS_NFIELDS
 };
 
-struct slm_nslogstats {
-	psc_atomic32_t		  snls_stats[SNLS_NACTS][SNLS_NOPS + 1][SNLS_NFIELDS];
+/* per MDS eventually consistent namespace consistency stats */
+struct sl_mds_nsstats {
+	psc_atomic32_t		  ns_stats[SNLS_NACTS][SNLS_NOPS + 1][SNLS_NFIELDS];
 };
 
 /*
@@ -133,7 +134,7 @@ struct sl_mds_peerinfo {
 	int			  sp_next_batch;	/* # of updates */
 	time_t			  sp_last_send;		/* last contact and response */
 	time_t			  sp_last_recv;
-	struct slm_nslogstats	  sp_stats;
+	struct sl_mds_nsstats	  sp_stats;
 };
 
 /* sml_flags values */

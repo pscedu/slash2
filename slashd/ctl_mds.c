@@ -33,7 +33,7 @@
 
 struct psc_lockedlist psc_mlists;
 
-struct slm_nslogstats	 slm_nslogstats_aggr;	/* aggregate stats */
+struct sl_mds_nsstats	 sl_mds_nsstats_aggr;	/* aggregate stats */
 
 const char *slm_nslogst_acts[] = {
 	"propagate",
@@ -70,7 +70,7 @@ lookup(const char **p, int n, const char *key)
 
 int
 slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, struct slm_nslogstats *st,
+    struct psc_ctlmsg_param *pcp, char **levels, struct sl_mds_nsstats *st,
     int a_val, int o_val, int f_val, int val)
 {
 	int a_start, o_start, f_start, rc, set, i_a, i_o, i_f;
@@ -93,14 +93,14 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
 			    (i_f == f_val || f_val == -1); i_f++) {
 				if (set)
 					psc_atomic32_set(
-					    &st->snls_stats[i_a][i_o][i_f],
+					    &st->ns_stats[i_a][i_o][i_f],
 					    val);
 				else {
 					levels[5] = (char *)
 					    slm_nslogst_fields[i_f];
 					snprintf(nbuf, sizeof(nbuf), "%d",
 					    psc_atomic32_read(
-					    &st->snls_stats[i_a][i_o][i_f]));
+					    &st->ns_stats[i_a][i_o][i_f]));
 					rc = psc_ctlmsg_param_send(fd, mh, pcp,
 					    PCTHRNAME_EVERYONE, levels, 6, nbuf);
 					if (!rc)
@@ -172,7 +172,7 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(p_site, "*") == 0) {
 		levels[2] = "#aggr";
 		rc = slmctlparam_namespace_stats_process(fd, mh, pcp,
-		    levels, &slm_nslogstats_aggr, a_val, o_val, f_val, val);
+		    levels, &sl_mds_nsstats_aggr, a_val, o_val, f_val, val);
 		if (!rc || strcmp(p_site, "#aggr"))
 			return (rc);
 	}
