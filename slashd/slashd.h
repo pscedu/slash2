@@ -90,33 +90,33 @@ struct site_mds_info {
 
 #define SMIF_DIRTYQ		  (1 << 0)		/* queue has changed */
 
-enum {
-	SNLS_ACT_PROPAGATE,
-	SNLS_ACT_REPLAY,
-	SNLS_NACTS
+enum namespace_direction_t {
+	NS_DIR_SEND,
+	NS_DIR_RECV,
+	NS_NDIRS
 };
 
-enum {
-	SNLS_OP_CREATE,
-	SNLS_OP_LINK,
-	SNLS_OP_MKDIR,
-	SNLS_OP_RENAME,
-	SNLS_OP_RMDIR,
-	SNLS_OP_SYMLINK,
-	SNLS_OP_UNLINK,
-	SNLS_NOPS
+enum namespace_operation_t {
+	NS_OP_CREATE,
+	NS_OP_LINK,
+	NS_OP_MKDIR,
+	NS_OP_RENAME,
+	NS_OP_RMDIR,
+	NS_OP_SYMLINK,
+	NS_OP_UNLINK,
+	NS_NOPS
 };
 
-enum {
-	SNLS_FIELD_FAILURES,
-	SNLS_FIELD_PENDING,
-	SNLS_FIELD_SUCCESSES,
-	SNLS_NFIELDS
+enum namspace_summary_t {
+	NS_SUM_FAIL,		/* total pending */
+	NS_SUM_SUCC,		/* total success */
+	NS_SUM_PEND,		/* total pending */
+	NS_NSUMS
 };
 
 /* per MDS eventually consistent namespace consistency stats */
 struct sl_mds_nsstats {
-	psc_atomic32_t		  ns_stats[SNLS_NACTS][SNLS_NOPS + 1][SNLS_NFIELDS];
+	psc_atomic32_t		  ns_stats[NS_NDIRS][NS_NOPS + 1][NS_NSUMS];
 };
 
 /*
