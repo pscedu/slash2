@@ -182,13 +182,13 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	CONF_FOREACH_SITE(s)
 		SITE_FOREACH_RES(s, r, i_r)
 			if (r->res_type == SLREST_MDS &&
-			    res2rpmi(r)->rpmi_loginfo &&
+			    res2rpmi(r)->rpmi_peerinfo &&
 			    (strcmp(p_site, "*") == 0 ||
 			     strcasecmp(p_site, s->site_name)) == 0) {
 				levels[2] = s->site_name;
 				rc = slmctlparam_namespace_stats_process(
 				    fd, mh, pcp, levels,
-				    &res2rpmi(r)->rpmi_loginfo->sml_stats,
+				    &res2rpmi(r)->rpmi_peerinfo->sp_stats,
 				    a_val, o_val, f_val, val);
 				if (!rc || strcmp(p_site, s->site_name) == 0)
 					goto out;

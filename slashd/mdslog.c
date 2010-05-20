@@ -245,21 +245,21 @@ __static int
 mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 		  struct pscrpc_async_args *args)
 {
-	struct sl_mds_loginfo *loginfo;
+	struct sl_mds_peerinfo *peerinfo;
 	struct sl_mds_logbuf *buf;
 
-	loginfo = args->pointer_arg[0];
-	spinlock(&loginfo->sml_lock);
+	peerinfo = args->pointer_arg[0];
+	spinlock(&peerinfo->sp_lock);
 
-	buf = loginfo->sml_logbuf;
+	buf = peerinfo->sp_logbuf;
 	atomic_dec(&buf->slb_refcnt);
-	loginfo->sml_next_seqno += loginfo->sml_next_batch;
-	loginfo->sml_flags &= ~SML_FLAG_INFLIGHT;
+	peerinfo->sp_next_seqno += peerinfo->sp_next_batch;
+	peerinfo->sp_flags &= ~SP_FLAG_INFLIGHT;
 
-	freelock(&loginfo->sml_lock);
+	freelock(&peerinfo->sp_lock);
 
 	/* drop the reference taken by slm_getmcsvc() */
-	sl_csvc_decref(loginfo->sml_resm->resm_csvc);
+	sl_csvc_decref(peerinfo->sp_resm->resm_csvc);
 	return (0);
 }
 
@@ -271,21 +271,21 @@ mds_namespace_update_lwm(void)
 {
 	int first = 1;
 	uint64_t seqno;
-	struct sl_mds_loginfo *loginfo;
+	struct sl_mds_peerinfo *peerinfo;
 
-	psclist_for_each_entry(loginfo, &mds_namespace_peerlist, sml_lentry) {
-		if (loginfo->sml_resm == nodeResm)
+	psclist_for_each_entry(peerinfo, &mds_namespace_peerlist, sp_lentry) {
+		if (peerinfo->sp_resm == nodeResm)
 			continue;
-		spinlock(&loginfo->sml_lock);
+		spinlock(&peerinfo->sp_lock);
 		if (first) {
 			first = 0;
-			seqno = loginfo->sml_next_seqno;
-			freelock(&loginfo->sml_lock);
+			seqno = peerinfo->sp_next_seqno;
+			freelock(&peerinfo->sp_lock);
 			continue;
 		}
-		if (seqno > loginfo->sml_next_seqno)
-			seqno = loginfo->sml_next_seqno;
-		freelock(&loginfo->sml_lock);
+		if (seqno > peerinfo->sp_next_seqno)
+			seqno = peerinfo->sp_next_seqno;
+		freelock(&peerinfo->sp_lock);
 	}
 	/* XXX purge old log files here before bumping lwm */
 	propagate_seqno_lwm = seqno;
@@ -413,24 +413,24 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	struct srm_send_namespace_req *mq;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_bulk_desc *desc;
-	struct sl_mds_loginfo *loginfo;
+	struct sl_mds_peerinfo *peerinfo;
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *req;
 	struct iovec iov;
 	int rc, i;
 	char *buf;
 
-	psclist_for_each_entry(loginfo, &mds_namespace_peerlist, sml_lentry) {
-		if (loginfo->sml_resm == nodeResm)
+	psclist_for_each_entry(peerinfo, &mds_namespace_peerlist, sp_lentry) {
+		if (peerinfo->sp_resm == nodeResm)
 			continue;
 		/*
 		 * Skip if the MDS is busy or the current batch is out of
 		 * its windows.  Note for each MDS, we send updates in order.
 		 */
-		if (loginfo->sml_flags & SML_FLAG_INFLIGHT)
+		if (peerinfo->sp_flags & SP_FLAG_INFLIGHT)
 			continue;
-		if (loginfo->sml_next_seqno < logbuf->slb_seqno ||
-		    loginfo->sml_next_seqno >= logbuf->slb_seqno + logbuf->slb_count)
+		if (peerinfo->sp_next_seqno < logbuf->slb_seqno ||
+		    peerinfo->sp_next_seqno >= logbuf->slb_seqno + logbuf->slb_count)
 			continue;
 
 		/* Find out which part of the buffer should be send out */
@@ -438,7 +438,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		buf = logbuf->slb_buf;
 		do {
 			jnamespace = (struct slmds_jent_namespace *)buf;
-			if (jnamespace->sjnm_seqno == loginfo->sml_next_seqno)
+			if (jnamespace->sjnm_seqno == peerinfo->sp_next_seqno)
 				break;
 			buf = buf + jnamespace->sjnm_reclen;
 			i--;
@@ -447,7 +447,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		iov.iov_base = buf;
 		iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
 
-		csvc = slm_getmcsvc(loginfo->sml_resm);
+		csvc = slm_getmcsvc(peerinfo->sp_resm);
 		if (csvc == NULL)
 			continue;
 		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
@@ -456,7 +456,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			sl_csvc_decref(csvc);
 			continue;
 		}
-		mq->seqno = loginfo->sml_next_seqno;
+		mq->seqno = peerinfo->sp_next_seqno;
 		mq->size = iov.iov_len;
 		mq->count = i;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
@@ -470,11 +470,11 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		 * Until I send out the request, no callback will touch
 		 * these fields.
 		 */
-		loginfo->sml_next_batch = i;
-		loginfo->sml_logbuf = logbuf;
-		loginfo->sml_flags |= SML_FLAG_INFLIGHT;
+		peerinfo->sp_next_batch = i;
+		peerinfo->sp_logbuf = logbuf;
+		peerinfo->sp_flags |= SP_FLAG_INFLIGHT;
 
-		req->rq_async_args.pointer_arg[0] = loginfo;
+		req->rq_async_args.pointer_arg[0] = peerinfo;
 		pscrpc_nbreqset_add(logPndgReqs, req);
 	}
 }
@@ -771,7 +771,7 @@ mds_journal_init(void)
 	struct sl_resm *resm;
 	struct sl_site *s;
 	char fn[PATH_MAX];
-	struct sl_mds_loginfo *loginfo;
+	struct sl_mds_peerinfo *peerinfo;
 	struct psc_thread *thr;
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
@@ -805,10 +805,10 @@ mds_journal_init(void)
 			/* MDS cannot have more than one member */
 			resm = psc_dynarray_getpos(&r->res_members, 0);
 
-			loginfo = res2rpmi(r)->rpmi_loginfo;
-			loginfo->sml_resm = resm;
-			loginfo->sml_siteid = s->site_id; 
-			psclist_xadd_tail(&loginfo->sml_lentry, &mds_namespace_peerlist);
+			peerinfo = res2rpmi(r)->rpmi_peerinfo;
+			peerinfo->sp_resm = resm;
+			peerinfo->sp_siteid = s->site_id; 
+			psclist_xadd_tail(&peerinfo->sp_lentry, &mds_namespace_peerlist);
 			psc_info("Added peer MDS: addr = %s, site ID = %d, resource ID = %lx\n",
 			    resm->resm_addrbuf, s->site_id, resm->resm_nid);
 		}

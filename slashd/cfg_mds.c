@@ -35,9 +35,9 @@ slcfg_init_res(struct sl_resource *res)
 	LOCK_INIT(&rpmi->rpmi_lock);
 
 	if (res->res_type == SLREST_MDS) {
-		rpmi->rpmi_loginfo = PSCALLOC(sizeof(*rpmi->rpmi_loginfo));
-		LOCK_INIT(&rpmi->rpmi_loginfo->sml_lock);
-		INIT_PSCLIST_ENTRY(&rpmi->rpmi_loginfo->sml_lentry);
+		rpmi->rpmi_peerinfo = PSCALLOC(sizeof(*rpmi->rpmi_peerinfo));
+		LOCK_INIT(&rpmi->rpmi_peerinfo->sp_lock);
+		INIT_PSCLIST_ENTRY(&rpmi->rpmi_peerinfo->sp_lentry);
 	}
 }
 

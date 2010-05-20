@@ -122,23 +122,23 @@ struct slm_nslogstats {
  * This structure tracks the progress of namespace log application on a MDS.
  * We allow one pending request per MDS until it responds or timeouts.
  */
-struct sl_mds_loginfo {
-	psc_spinlock_t		  sml_lock;
-	sl_siteid_t		  sml_siteid;
-	struct psclist_head	  sml_lentry;
-	struct sl_resm		 *sml_resm;
-	int			  sml_flags;		/* see SML_FLAG_* below */
-	struct sl_mds_logbuf	 *sml_logbuf;		/* the log buffer being used */
-	uint64_t		  sml_next_seqno;	/* next log sequence */
-	int			  sml_next_batch;	/* # of updates */
-	time_t			  sml_last_send;	/* last contact and response */
-	time_t			  sml_last_recv;
-	struct slm_nslogstats	  sml_stats;
+struct sl_mds_peerinfo {
+	psc_spinlock_t		  sp_lock;
+	sl_siteid_t		  sp_siteid;
+	struct psclist_head	  sp_lentry;
+	struct sl_resm		 *sp_resm;
+	int			  sp_flags;		/* see SP_FLAG_* below */
+	struct sl_mds_logbuf	 *sp_logbuf;		/* the log buffer being used */
+	uint64_t		  sp_next_seqno;	/* next log sequence */
+	int			  sp_next_batch;	/* # of updates */
+	time_t			  sp_last_send;		/* last contact and response */
+	time_t			  sp_last_recv;
+	struct slm_nslogstats	  sp_stats;
 };
 
 /* sml_flags values */
-#define	SML_FLAG_NONE		   0
-#define	SML_FLAG_INFLIGHT	  (1 << 0)
+#define	SP_FLAG_NONE		   0
+#define	SP_FLAG_INFLIGHT	  (1 << 0)
 
 /* allocated by slcfg_init_resm(), which is tied into the lex/yacc code */
 struct resm_mds_info {
@@ -157,7 +157,7 @@ struct resm_mds_info {
 struct resprof_mds_info {
 	int			  rpmi_cnt;
 	psc_spinlock_t		  rpmi_lock;
-	struct sl_mds_loginfo	 *rpmi_loginfo;
+	struct sl_mds_peerinfo	 *rpmi_peerinfo;
 };
 
 int		 mds_inode_read(struct slash_inode_handle *);
