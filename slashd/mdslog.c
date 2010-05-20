@@ -815,11 +815,12 @@ mds_journal_init(void)
 
 			peerinfo = res2rpmi(r)->rpmi_peerinfo;
 			peerinfo->sp_resm = resm;
-			peerinfo->sp_siteid = s->site_id; 
+			peerinfo->sp_siteid = s->site_id;
 			psclist_xadd_tail(&peerinfo->sp_lentry, &mds_namespace_peerlist);
 			if (resm == nodeResm)
 				localinfo = peerinfo;
-			psc_info("Added peer MDS: addr = %s, site ID = %d, resource ID = %lx\n",
+			psc_info("Added peer MDS: addr = %s, site ID = %d, "
+			    "resource ID = %"PSCPRIxLNID,
 			    resm->resm_addrbuf, s->site_id, resm->resm_nid);
 		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
