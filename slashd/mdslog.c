@@ -81,7 +81,7 @@ static char			*stagebuf;
 /* we only have a few buffers, so a list is fine */
 __static PSCLIST_HEAD(mds_namespace_buflist);
 /* list of peer MDSes */
-__static PSCLIST_HEAD(mds_namespace_loglist);
+__static PSCLIST_HEAD(mds_namespace_peerlist);
 
 uint64_t
 mds_get_next_seqno(void)
@@ -273,7 +273,7 @@ mds_namespace_update_lwm(void)
 	uint64_t seqno;
 	struct sl_mds_loginfo *loginfo;
 
-	psclist_for_each_entry(loginfo, &mds_namespace_loglist, sml_lentry) {
+	psclist_for_each_entry(loginfo, &mds_namespace_peerlist, sml_lentry) {
 		if (loginfo->sml_resm == nodeResm)
 			continue;
 		spinlock(&loginfo->sml_lock);
@@ -420,7 +420,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	int rc, i;
 	char *buf;
 
-	psclist_for_each_entry(loginfo, &mds_namespace_loglist, sml_lentry) {
+	psclist_for_each_entry(loginfo, &mds_namespace_peerlist, sml_lentry) {
 		if (loginfo->sml_resm == nodeResm)
 			continue;
 		/*
@@ -808,7 +808,7 @@ mds_journal_init(void)
 			loginfo = res2rpmi(r)->rpmi_loginfo;
 			loginfo->sml_resm = resm;
 			loginfo->sml_siteid = s->site_id; 
-			psclist_xadd_tail(&loginfo->sml_lentry, &mds_namespace_loglist);
+			psclist_xadd_tail(&loginfo->sml_lentry, &mds_namespace_peerlist);
 			psc_info("Added peer MDS: addr = %s, site ID = %d, resource ID = %lx\n",
 			    resm->resm_addrbuf, s->site_id, resm->resm_nid);
 		}
