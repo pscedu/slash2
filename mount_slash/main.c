@@ -567,7 +567,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	if (!rc) {
 		rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
 		if (rc)
-			psc_info("fcmh=%p, mode=%x, checkcreds rc=%d\n",
+			psc_info("fcmh=%p, mode=%x, checkcreds rc=%d",
 			    fcmh, fcmh->fcmh_sstb.sst_mode, rc);
 	}
 	if (csvc)
