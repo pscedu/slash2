@@ -60,6 +60,9 @@ slm_rmm_apply_update(__unusedx struct slmds_jent_namespace *jnamespace)
 		stat.sst_uid = jnamespace->sjnm_uid;
 		stat.sst_gid = jnamespace->sjnm_gid;
 		stat.sst_mode = jnamespace->sjnm_mode;
+		stat.sst_atime = jnamespace->sjnm_atime;
+		stat.sst_mtime = jnamespace->sjnm_mtime;
+		stat.sst_ctime = jnamespace->sjnm_ctime;
 		rc = mdsio_replay_attrib(jnamespace->sjnm_target_s2id, &stat, jnamespace->sjnm_mask);
 		break;
 	    default:
