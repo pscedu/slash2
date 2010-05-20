@@ -90,13 +90,13 @@ struct site_mds_info {
 
 #define SMIF_DIRTYQ		  (1 << 0)		/* queue has changed */
 
-enum namespace_direction_t {
+enum namespace_direction {
 	NS_DIR_SEND,
 	NS_DIR_RECV,
 	NS_NDIRS
 };
 
-enum namespace_operation_t {
+enum namespace_operation {
 	NS_OP_CREATE,
 	NS_OP_LINK,
 	NS_OP_MKDIR,
@@ -107,7 +107,7 @@ enum namespace_operation_t {
 	NS_NOPS
 };
 
-enum namespace_summary_t {
+enum namespace_summary {
 	NS_SUM_FAIL,		/* total pending */
 	NS_SUM_SUCC,		/* total success */
 	NS_SUM_PEND,		/* total pending */
