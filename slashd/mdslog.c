@@ -808,8 +808,8 @@ mds_journal_init(void)
 			loginfo->sml_resm = resm;
 			loginfo->sml_siteid = s->site_id; 
 			psclist_xadd_tail(&loginfo->sml_lentry, &mds_namespace_loglist);
-			psc_info("Added peer MDS: addr = %s, ID = %lx\n",
-			    resm->resm_addrbuf, resm->resm_nid);
+			psc_info("Added peer MDS: addr = %s, site ID = %d, resource ID = %lx\n",
+			    resm->resm_addrbuf, s->site_id, resm->resm_nid);
 		}
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
