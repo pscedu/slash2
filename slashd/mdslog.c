@@ -274,6 +274,8 @@ mds_namespace_update_lwm(void)
 	struct sl_mds_loginfo *loginfo;
 
 	psclist_for_each_entry(loginfo, &mds_namespace_loglist, sml_lentry) {
+		if (loginfo->sml_resm == nodeResm)
+			continue;
 		spinlock(&loginfo->sml_lock);
 		if (first) {
 			first = 0;
@@ -419,6 +421,8 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	char *buf;
 
 	psclist_for_each_entry(loginfo, &mds_namespace_loglist, sml_lentry) {
+		if (loginfo->sml_resm == nodeResm)
+			continue;
 		/*
 		 * Skip if the MDS is busy or the current batch is out of
 		 * its windows.  Note for each MDS, we send updates in order.
@@ -800,9 +804,6 @@ mds_journal_init(void)
 
 			/* MDS cannot have more than one member */
 			resm = psc_dynarray_getpos(&r->res_members, 0);
-			/* skip myself */
-			if (resm == nodeResm)
-				continue;
 
 			loginfo = res2rpmi(r)->rpmi_loginfo;
 			loginfo->sml_resm = resm;
