@@ -806,6 +806,7 @@ mds_journal_init(void)
 
 			loginfo = res2rpmi(r)->rpmi_loginfo;
 			loginfo->sml_resm = resm;
+			loginfo->sml_siteid = s->site_id; 
 			psclist_xadd_tail(&loginfo->sml_lentry, &mds_namespace_loglist);
 			psc_info("Added peer MDS: addr = %s, ID = %lx\n",
 			    resm->resm_addrbuf, resm->resm_nid);

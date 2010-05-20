@@ -124,6 +124,7 @@ struct slm_nslogstats {
  */
 struct sl_mds_loginfo {
 	psc_spinlock_t		  sml_lock;
+	sl_siteid_t		  sml_siteid;
 	struct psclist_head	  sml_lentry;
 	struct sl_resm		 *sml_resm;
 	int			  sml_flags;		/* see SML_FLAG_* below */
