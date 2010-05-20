@@ -107,7 +107,7 @@ enum namespace_operation_t {
 	NS_NOPS
 };
 
-enum namspace_summary_t {
+enum namespace_summary_t {
 	NS_SUM_FAIL,		/* total pending */
 	NS_SUM_SUCC,		/* total success */
 	NS_SUM_PEND,		/* total pending */
@@ -116,7 +116,7 @@ enum namspace_summary_t {
 
 /* per MDS eventually consistent namespace consistency stats */
 struct sl_mds_nsstats {
-	psc_atomic32_t		  ns_stats[NS_NDIRS][NS_NOPS + 1][NS_NSUMS];
+	psc_atomic_t		  ns_stats[NS_NDIRS][NS_NOPS + 1][NS_NSUMS];
 };
 
 /*
