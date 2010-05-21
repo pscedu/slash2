@@ -48,7 +48,7 @@ struct pscrpc_request;
 #define MSTHRT_FUSE			8	/* fuse internal manager */
 #define MSTHRT_BMAPFLSH			9	/* async buffer thread */
 #define MSTHRT_BMAPFLSHRPC		10	/* async buffer thread for rpc reaping */
-#define MSTHRT_BMAPFLSHRLS              11
+#define MSTHRT_BMAPFLSHRLS		11
 
 /* async RPC pointers */
 #define MSL_IO_CB_POINTER_SLOT		1
@@ -66,7 +66,7 @@ struct msfs_thread {
 struct msl_fhent {			 /* XXX rename */
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
-	struct psc_lockedlist            mfh_biorqs; /* track biorqs (flush) */
+	struct psc_lockedlist		 mfh_biorqs; /* track biorqs (flush) */
 };
 
 /*
@@ -75,7 +75,7 @@ struct msl_fhent {			 /* XXX rename */
 struct resm_cli_info {
 	psc_spinlock_t			 rmci_lock;
 	struct psc_waitq		 rmci_waitq;
-	struct srm_bmap_release_req      rmci_bmaprls;
+	struct srm_bmap_release_req	 rmci_bmaprls;
 };
 
 #define resm2rmci(resm)			((struct resm_cli_info *)(resm)->resm_pri)
@@ -85,10 +85,7 @@ struct resm_cli_info {
 
 struct pscrpc_import *
 	 msl_bmap_to_import(struct bmapc_memb *, int);
-void     
-         msl_bmap_reap_init(struct bmapc_memb *, 
-			    const struct srt_bmapdesc *);
-void	 msl_bmap_fhcache_clear(struct msl_fhent *);
+void	 msl_bmap_reap_init(struct bmapc_memb *, const struct srt_bmapdesc *);
 int	 msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
