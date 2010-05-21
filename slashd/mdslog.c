@@ -79,10 +79,12 @@ static char			*stagebuf;
 
 static struct psc_thread	*namespaceThr;
 
-static struct sl_mds_peerinfo	*localinfo = NULL;
 
 /* we only have a few buffers, so a list is fine */
 __static PSCLIST_HEAD(mds_namespace_buflist);
+
+struct sl_mds_peerinfo		*localinfo = NULL;
+
 /* list of peer MDSes */
 __static PSCLIST_HEAD(mds_namespace_peerlist);
 
