@@ -86,10 +86,10 @@ slmctlparam_namespace_stats_process(int fd, struct psc_ctlmsghdr *mh,
 	for (i_d = d_start; i_d < NS_NDIRS &&
 	    (i_d == d_val || d_val == -1); i_d++) {
 		levels[3] = (char *)slm_nslogst_acts[i_d];
-		for (i_o = o_start; i_o < NS_NOPS &&
+		for (i_o = o_start; i_o < NS_NOPS + 1 &&
 		    (i_o == o_val || d_val == -1); i_o++) {
 			levels[4] = (char *)slm_nslogst_ops[i_o];
-			for (i_s = s_start; i_s < NS_NSUMS + 1 &&
+			for (i_s = s_start; i_s < NS_NSUMS &&
 			    (i_s == s_val || s_val == -1); i_s++) {
 				if (set)
 					psc_atomic32_set(
