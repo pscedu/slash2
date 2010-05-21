@@ -233,7 +233,7 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 
 	logbuf = peerinfo->sp_logbuf;
 	/*
-	 * Scan the buffer for the entries we have attempted to send to update 
+	 * Scan the buffer for the entries we have attempted to send to update
 	 * our statistics before dropping our reference to the buffer.
 	 */
 	i = logbuf->slb_count;
@@ -242,7 +242,8 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 		jnamespace = (struct slmds_jent_namespace *)buf;
 		if (jnamespace->sjnm_seqno == peerinfo->sp_next_seqno)
 			break;
-		psc_atomic32_dec(&peerinfo->sp_stats.ns_stats[NS_DIR_SEND][jnamespace->sjnm_op][NS_SUM_PEND]);
+		SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
+		    jnamespace->sjnm_op, NS_SUM_PEND);
 		buf = buf + jnamespace->sjnm_reclen;
 		i--;
 	} while (i);
@@ -442,7 +443,8 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			jnamespace = (struct slmds_jent_namespace *)buf;
 			if (jnamespace->sjnm_seqno == peerinfo->sp_next_seqno)
 				break;
-			psc_atomic32_inc(&peerinfo->sp_stats.ns_stats[NS_DIR_SEND][jnamespace->sjnm_op][NS_SUM_PEND]);
+			SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
+			    jnamespace->sjnm_op, NS_SUM_PEND);
 			buf = buf + jnamespace->sjnm_reclen;
 			i--;
 		} while (i);

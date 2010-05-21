@@ -97,6 +97,24 @@ struct sl_mds_nsstats {
 	psc_atomic32_t		  ns_stats[NS_NDIRS][NS_NOPS + 1][NS_NSUMS];
 };
 
+#define _SLM_NSSTATS_ADJ(op, peerinfo, dir, op, sum)			\
+	do {								\
+		psc_atomic32_#op(&(peerinfo)->sp_stats.			\
+		    ns_stats[dir][op][sum]);				\
+		psc_atomic32_#op(&(peerinfo)->sp_stats.			\
+		    ns_stats[dir][NS_NOPS][sum]);			\
+									\
+		psc_atomic32_#op(&slm_nsstats_aggr.			\
+		    ns_stats[dir][op][sum]);				\
+		psc_atomic32_#op(&slm_nsstats_aggr.			\
+		    ns_stats[dir][NS_NOPS][sum]);			\
+	} while (0)
+
+#define SLM_NSSTATS_INCR(peerinfo, dir, op, sum)			\
+	_SLM_NSSTATS_ADJ(inc, (peerinfo), (dir), (op), (sum))		\
+#define SLM_NSSTATS_DECR(peerinfo, dir, op, sum)			\
+	_SLM_NSSTATS_ADJ(dec, (peerinfo), (dir), (op), (sum))		\
+
 /*
  * This structure tracks the progress of namespace log application on a MDS.
  * We allow one pending request per MDS until it responds or timeouts.
@@ -155,6 +173,6 @@ extern struct slash_creds			 rootcreds;
 extern struct psc_listcache			 dirtyMdsData;
 extern struct odtable				*mdsBmapAssignTable;
 extern const struct slash_inode_extras_od	 null_inox_od;
-extern struct slm_nslogstats			 slm_nslogstats_aggr;	/* aggregate stats */
+extern struct sl_mds_nsstats			 slm_nsstats_aggr;	/* aggregate stats */
 
 #endif /* _SLASHD_H_ */
