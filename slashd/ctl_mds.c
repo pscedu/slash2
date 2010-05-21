@@ -172,7 +172,7 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	    strcmp(p_site, "*") == 0) {
 		levels[2] = "#aggr";
 		rc = slmctlparam_namespace_stats_process(fd, mh, pcp,
-		    levels, &sl_mds_nsstats_aggr, d_val, o_val, s_val, val);
+		    levels, &slm_nsstats_aggr, d_val, o_val, s_val, val);
 		if (!rc || strcmp(p_site, "#aggr"))
 			return (rc);
 	}
