@@ -94,7 +94,6 @@ int	 msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
 struct msl_fhent *
 	 msl_fhent_new(struct fidc_membh *);
 
-void	 mseqpollthr_spawn(void);
 void	 msctlthr_spawn(void);
 void	 mstimerthr_spawn(void);
 void	 msbmapflushthr_spawn(void);

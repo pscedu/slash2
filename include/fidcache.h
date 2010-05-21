@@ -39,7 +39,6 @@
 #define DEMOTED_INUM_WIDTHS
 #endif
 
-struct bmap_refresh;
 struct bmapc_memb;
 struct fidc_membh;
 

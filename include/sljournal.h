@@ -35,7 +35,7 @@
 #define SLJ_MDS_PJET_INODE	3
 
 /*
- * slmds_jent_crc - is used to log crc updates which come from the ION's.
+ * slmds_jent_crc - used to log CRC updates which come from the ION's.
  * @sjc_ion: the ion who sent the request.
  * @sjc_fid: what file.
  * @sjc_bmapno: which bmap region.

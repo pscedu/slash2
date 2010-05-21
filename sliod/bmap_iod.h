@@ -84,7 +84,7 @@ struct bmap_iod_minseq {
 	    " bmap@%p:%u :: "fmt,					\
 	    (b), FIDFMTARGS(&(b)->bcr_crcup.fg), (b)->bcr_xid,		\
 	    (b)->bcr_crcup.nups, (b)->bcr_flags, (b)->bcr_age.tv_sec,	\
-	    (b)->bcr_biodi->biod_bmap,				\
+	    (b)->bcr_biodi->biod_bmap,					\
 	    (b)->bcr_biodi->biod_bmap->bcm_blkno,			\
 	    ## __VA_ARGS__)
 
@@ -123,18 +123,17 @@ struct bmap_iod_info {
 static inline int
 bmap_iod_timeo_cmp(const void *x, const void *y)
 {
-        const struct bmap_iod_info * const *pa = x, *a = *pa;
-        const struct bmap_iod_info * const *pb = y, *b = *pb;
+	const struct bmap_iod_info * const *pa = x, *a = *pa;
+	const struct bmap_iod_info * const *pb = y, *b = *pb;
 
-        if (timespeccmp(&a->biod_age, &b->biod_age, <))
-                return (-1);
+	if (timespeccmp(&a->biod_age, &b->biod_age, <))
+		return (-1);
 
-        if (timespeccmp(&a->biod_age, &b->biod_age, >))
+	if (timespeccmp(&a->biod_age, &b->biod_age, >))
 		return (1);
 
-        return (0);
+	return (0);
 }
-
 
 uint64_t	bim_getcurseq(void);
 void		bim_init(void);
@@ -148,7 +147,5 @@ void bcr_xid_last_bump(struct biod_crcup_ref *);
 void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
 
 void sliod_bmaprlsthr_spawn(void);
-
-extern struct psc_listcache iodBmapLru;
 
 #endif /* _SLIOD_BMAP_H_ */

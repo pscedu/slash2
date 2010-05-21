@@ -47,7 +47,6 @@ extern struct psc_listcache	 bmpcLru;
 #define BMPC_DEFSLBS		8
 #define BMPC_MAXSLBS		32
 #define BMPC_BUFMASK		(BMPC_BLKSZ - 1)
-#define BMPC_SLBBUFMASK		((BMPC_BLKSZ * BMPC_SLB_NBLKS) - 1)
 #define BMPC_IOMAXBLKS		64
 #define BMPC_MAXBUFSRPC		(1048576 / BMPC_BUFSZ)
 
@@ -80,8 +79,8 @@ struct bmap_pagecache_entry {
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_tentry;
 };
 
-#define BMPCE_LOCK(b)  spinlock(&(b)->bmpce_lock)
-#define BMPCE_ULOCK(b) freelock(&(b)->bmpce_lock)
+#define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
+#define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
 
 enum {
 	BMPCE_NEW       = (1 << 0),
@@ -181,14 +180,14 @@ SPLAY_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
 		bmpce_cmp);
 
 struct bmap_pagecache {
-	struct bmap_pagecachetree bmpc_tree;   /* tree of cbuf_handle        */
-	struct timespec           bmpc_oldest; /* LRU's oldest item          */
-	struct psc_lockedlist     bmpc_lru;    /* cleancnt can be kept here  */
-	struct psc_lockedlist     bmpc_new_biorqs;
-	struct psc_lockedlist     bmpc_pndg_biorqs; /* chain pending I/O requests */
-	atomic_t                  bmpc_pndgwr; /* # pending wr req           */
-	psc_spinlock_t            bmpc_lock;   /* serialize tree and pll     */
-	struct psclist_head       bmpc_lentry; /* chain to global LRU lc     */
+	struct bmap_pagecachetree	 bmpc_tree;	/* tree of cbuf_handle        */
+	struct timespec			 bmpc_oldest;	/* LRU's oldest item          */
+	struct psc_lockedlist		 bmpc_lru;	/* cleancnt can be kept here  */
+	struct psc_lockedlist		 bmpc_new_biorqs;
+	struct psc_lockedlist		 bmpc_pndg_biorqs; /* chain pending I/O requests */
+	atomic_t			 bmpc_pndgwr;	/* # pending wr req           */
+	psc_spinlock_t			 bmpc_lock;	/* serialize tree and pll     */
+	struct psclist_head		 bmpc_lentry;	/* chain to global LRU lc     */
 };
 
 #define BMPC_LOCK(b)	spinlock(&(b)->bmpc_lock)
@@ -209,38 +208,39 @@ bmpc_queued_writes(struct bmap_pagecache *bmpc)
 }
 
 static __inline int
-bmpc_queued_ios(struct bmap_pagecache *bmpc) {
-	return (pll_nitems(&bmpc->bmpc_pndg_biorqs) + 
+bmpc_queued_ios(struct bmap_pagecache *bmpc)
+{
+	return (pll_nitems(&bmpc->bmpc_pndg_biorqs) +
 		pll_nitems(&bmpc->bmpc_new_biorqs));
 }
 
 struct bmpc_ioreq {
-	uint32_t                   biorq_off;   /* filewise, bmap relative   */
-	uint32_t                   biorq_len;   /* non-aligned, real length  */
-	uint32_t                   biorq_flags; /* state and op type bits    */
-	psc_spinlock_t             biorq_lock;
-	struct timespec            biorq_start; /* issue time                */
-	struct psc_dynarray        biorq_pages; /* array of bmpce            */
-	struct psclist_head        biorq_lentry;/* chain on bmpc_pndg_biorqs */
-	struct psclist_head        biorq_mfh_lentry; /* chain on file handle */
-	struct bmapc_memb         *biorq_bmap;  /* backpointer to our bmap   */
-	struct pscrpc_request_set *biorq_rqset;
-	struct psc_waitq           biorq_waitq;
-	void                      *biorq_fhent; /* back pointer to msl_fhent */
+	uint32_t			 biorq_off;	/* filewise, bmap relative   */
+	uint32_t			 biorq_len;	/* non-aligned, real length  */
+	uint32_t			 biorq_flags;	/* state and op type bits    */
+	psc_spinlock_t			 biorq_lock;
+	struct timespec			 biorq_start;	/* issue time                */
+	struct psc_dynarray		 biorq_pages;	/* array of bmpce            */
+	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs */
+	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle */
+	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap   */
+	struct pscrpc_request_set	*biorq_rqset;
+	struct psc_waitq		 biorq_waitq;
+	void				 *biorq_fhent;	/* back pointer to msl_fhent */
 };
 
 enum {
-	BIORQ_READ         = (1<<0),
-	BIORQ_WRITE        = (1<<1),
-	BIORQ_RBWFP        = (1<<2),
-	BIORQ_RBWLP        = (1<<3),
-	BIORQ_SCHED        = (1<<4),
-	BIORQ_INFL         = (1<<5),
-	BIORQ_DIO          = (1<<6),
-	BIORQ_FORCE_EXPIRE = (1<<7),
-	BIORQ_DESTROY      = (1<<8),
-	BIORQ_FLUSHRDY     = (1<<9),
-	BIORQ_NOFHENT      = (1<<10)
+	BIORQ_READ			= (1 << 0),
+	BIORQ_WRITE			= (1 << 1),
+	BIORQ_RBWFP			= (1 << 2),
+	BIORQ_RBWLP			= (1 << 3),
+	BIORQ_SCHED			= (1 << 4),
+	BIORQ_INFL			= (1 << 5),
+	BIORQ_DIO			= (1 << 6),
+	BIORQ_FORCE_EXPIRE		= (1 << 7),
+	BIORQ_DESTROY			= (1 << 8),
+	BIORQ_FLUSHRDY			= (1 << 9),
+	BIORQ_NOFHENT			= (1 << 10)
 };
 
 #define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
@@ -264,7 +264,6 @@ enum {
 		 psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
 		 (b)->biorq_start.tv_sec, (b)->biorq_start.tv_nsec,	\
 		 DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
-
 
 static __inline void
 bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
@@ -328,8 +327,8 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 static __inline void
 bmpce_inflight_dec_locked(struct bmap_pagecache_entry *bmpce)
 {
-       if (!(bmpce->bmpce_flags & BMPCE_IOSCHED))
-		   return;
+	if (!(bmpce->bmpce_flags & BMPCE_IOSCHED))
+		return;
 
 	psc_atomic16_dec(&bmpce->bmpce_infref);
 	psc_assert(psc_atomic16_read(&bmpce->bmpce_infref) >= 0);
@@ -464,4 +463,5 @@ void  bmpc_free(void *);
 void  bmpc_freeall_locked(struct bmap_pagecache *);
 void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
 			      struct bmap_pagecache *, int, int);
+
 #endif /* _SL_BMPC_H_ */

@@ -146,12 +146,12 @@ struct sl_buffer {
 	} while (0)
 
 struct sl_buffer_iovref {
-	void  *slbir_base;                /* base pointer val (within slb) */
-	size_t slbir_nblks;               /* allocation size               */
-	void  *slbir_pri;                 /* backpointer to oftmemb        */
-	void  *slbir_pri_bmap;
-	int    slbir_flags;
-	struct psclist_head slbir_lentry; /* chain to slb                  */
+	void			*slbir_base;		/* base pointer val (within slb) */
+	size_t			 slbir_nblks;		/* allocation size               */
+	void			*slbir_pri;		/* backpointer to oftmemb        */
+	void			*slbir_pri_bmap;
+	int			 slbir_flags;
+	struct psclist_head	 slbir_lentry;		/* chain to slb                  */
 };
 
 enum {
@@ -169,20 +169,20 @@ enum {
 	} while (0)
 
 #define slb_lru_2_pinned(slb) do {					\
-		sl_buffer_lru_assertions((slb));			\
+		sl_buffer_lru_assertions(slb);				\
 		ATTR_UNSET((slb)->slb_flags, SLB_LRU);			\
 		ATTR_SET((slb)->slb_flags, SLB_PINNED);			\
 	} while (0)
 
 #define slb_pinned_2_lru(slb) do {					\
-		sl_buffer_pin_2_lru_assertions((slb));			\
+		sl_buffer_pin_2_lru_assertions(slb);			\
 		ATTR_UNSET((slb)->slb_flags, SLB_PINNED);		\
 		ATTR_SET((slb)->slb_flags, SLB_LRU);			\
 		(slb)->slb_lc_owner = NULL;				\
 	} while (0)
 
-#define SLB_TIMEOUT_SECS  5
-#define SLB_TIMEOUT_NSECS 0
+#define SLB_TIMEOUT_SECS	5
+#define SLB_TIMEOUT_NSECS	0
 
 #define slb_set_alloctimer(t) do {					\
 		clock_gettime(CLOCK_REALTIME, (t));			\
@@ -190,29 +190,17 @@ enum {
 		(t)->tv_nsec += SLB_TIMEOUT_NSECS;			\
 	} while (0)
 
-#define SLB_RP_TIMEOUT_SECS  0
-#define SLB_RP_TIMEOUT_NSECS 200000
-
-#define slb_set_readpndg_timer(t) do {					\
-		clock_gettime(CLOCK_REALTIME, (t));			\
-		(t)->tv_sec  += SLB_RP_TIMEOUT_SECS;			\
-		(t)->tv_nsec += SLB_RP_TIMEOUT_NSECS;			\
-	} while (0)
+#define SLB_RP_TIMEOUT_SECS	0
+#define SLB_RP_TIMEOUT_NSECS	200000
 
 #define slb_inflight_cb(iov, op)					\
 	do {								\
 		if (slInflightCb)					\
-			(*slInflightCb)(iov, op);			\
+			(*slInflightCb)((iov), (op));			\
 	} while (0)
 
-#define slb_pin_cb(iov, op)						\
-	do {								\
-		if (bufSlPinCb)						\
-			(*bufSlPinCb)(iov, op);				\
-	} while (0)
-
-#define SL_INFLIGHT_INC 0
-#define SL_INFLIGHT_DEC 1
+#define SL_INFLIGHT_INC		0
+#define SL_INFLIGHT_DEC		1
 
 int  sl_buffer_init(struct psc_poolmgr *, void *);
 void sl_buffer_destroy(void *);
