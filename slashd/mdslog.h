@@ -22,6 +22,8 @@
 
 #include <sys/stat.h>
 
+#include "psc_util/journal.h"
+
 #include "inode.h"
 
 struct bmapc_memb;
