@@ -28,6 +28,7 @@
 
 #include "inode.h"
 #include "slconfig.h"
+#include "sltypes.h"
 
 struct odtable;
 struct odtable_receipt;
@@ -90,6 +91,8 @@ struct site_mds_info {
 
 #define SMIF_DIRTYQ		  (1 << 0)		/* queue has changed */
 
+#if 0
+
 enum namespace_direction {
 	NS_DIR_SEND,
 	NS_DIR_RECV,
@@ -98,12 +101,13 @@ enum namespace_direction {
 
 enum namespace_operation {
 	NS_OP_CREATE,
-	NS_OP_LINK,
 	NS_OP_MKDIR,
+	NS_OP_LINK,
+	NS_OP_SYMLINK,
 	NS_OP_RENAME,
 	NS_OP_RMDIR,
-	NS_OP_SYMLINK,
 	NS_OP_UNLINK,
+	NS_OP_SETATTR,
 	NS_NOPS
 };
 
@@ -113,6 +117,8 @@ enum namespace_summary {
 	NS_SUM_PEND,		/* total pending */
 	NS_NSUMS
 };
+
+#endif
 
 /* per MDS eventually consistent namespace consistency stats */
 struct sl_mds_nsstats {

@@ -89,22 +89,12 @@ struct slmds_jent_bmapseq {
 	uint64_t sjbsq_low_wm;
 } __packed;
 
-#define	SJ_NAMESPACE_OP_CREATE		1
-#define	SJ_NAMESPACE_OP_REMOVE		2
-#define	SJ_NAMESPACE_OP_ATTRIB		3			/* change attributes */
-
-#define	SJ_NAMESPACE_TYPE_DIR		1
-#define	SJ_NAMESPACE_TYPE_FILE		2
-#define	SJ_NAMESPACE_TYPE_LINK		3
-#define	SJ_NAMESPACE_TYPE_SYMLINK	4
-
 #define SJ_NAMESPACE_MAGIC		UINT64_C(0xaa5a5aaa43211234)
 
 struct slmds_jent_namespace {
 
 	uint64_t		sjnm_magic;			/* debugging */
 	uint32_t		sjnm_op;			/* operation type */
-	uint32_t		sjnm_type;			/* object type */
 
 	uint64_t		sjnm_txg;			/* enclosing ZFS transaction */
 	uint64_t		sjnm_seqno;			/* namespace update identifier */

@@ -106,21 +106,36 @@ struct srt_statfs {
 	uint64_t		sf_namemax;	/* maximum filename length */
 } __packed;
 
-/* journal log callback operations */
-#define	SL_NAMESPACE_OP_CREATE		1
-#define	SL_NAMESPACE_OP_REMOVE		2
-#define	SL_NAMESPACE_OP_ATTRIB		3
+enum namespace_direction {
+	NS_DIR_SEND,
+	NS_DIR_RECV,
+	NS_NDIRS
+};
 
-#define	SL_NAMESPACE_TYPE_DIR		1
-#define	SL_NAMESPACE_TYPE_FILE		2
-#define	SL_NAMESPACE_TYPE_LINK		3
-#define	SL_NAMESPACE_TYPE_SYMLINK	4
+enum namespace_operation {
+	NS_OP_CREATE,
+	NS_OP_LINK,
+	NS_OP_MKDIR,
+	NS_OP_RENAME,
+	NS_OP_RMDIR,
+	NS_OP_SYMLINK,
+	NS_OP_UNLINK,
+	NS_OP_SETATTR,
+	NS_NOPS
+};
+
+enum namespace_summary {
+	NS_SUM_FAIL,		/* total pending */
+	NS_SUM_SUCC,		/* total success */
+	NS_SUM_PEND,		/* total pending */
+	NS_NSUMS
+};
 
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
 typedef uint64_t mdsio_fid_t;
 
 typedef slfid_t (*sl_getslfid_cb)(void);
-typedef void (*sl_jlog_cb)(int, int, uint64_t, uint64_t, uint64_t, const struct srt_stat *, const char *);
+typedef void (*sl_jlog_cb)(int, uint64_t, uint64_t, uint64_t, const struct srt_stat *, const char *);
 
 #endif /* _SL_TYPES_H_ */

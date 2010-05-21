@@ -338,71 +338,55 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
 }
 
 /*
- * Replay the namespace create operation performed on the remote MDS.
+ * Wrappers to replay the namespace operations performed on the remote MDS.
  */
 int
-mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id, int type,
-	int32_t uid, int32_t gid, int mode, char *name)
+mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id,
+    int32_t uid, int32_t gid, int mode, char *name)
 {
-	int rc;
-
-	switch (type) {
-	    case SJ_NAMESPACE_TYPE_DIR:
-		rc = zfsslash2_replay_mkdir(parent_s2id, target_s2id,
-		    mode, name);
-		break;
-	    case SJ_NAMESPACE_TYPE_FILE:
-		rc = zfsslash2_replay_create(parent_s2id, target_s2id,
-		    uid, gid, mode, name);
-		break;
-	    case SJ_NAMESPACE_TYPE_LINK:
-		rc = zfsslash2_replay_link(parent_s2id, target_s2id,
-		    mode, name);
-		break;
-	    case SJ_NAMESPACE_TYPE_SYMLINK:
-		rc = zfsslash2_replay_symlink(parent_s2id, target_s2id,
-		    mode, name);
-		break;
-	    default:
-		psc_errorx("invalid type %d", type);
-		rc = EINVAL;
-		break;
-	}
-	return (rc);
+	return (zfsslash2_replay_create(parent_s2id, target_s2id, uid, gid, mode, name));
+}
+ 
+int
+mdsio_replay_mkdir(uint64_t parent_s2id, uint64_t target_s2id,
+    int32_t uid, int32_t gid, int mode, char *name)
+{
+	return (zfsslash2_replay_mkdir(parent_s2id, target_s2id, uid, gid, mode, name));
 }
 
-/*
- * Replay the namespace remove operation performed on the remote MDS.
- */
 int
-mdsio_replay_remove(uint64_t parent_s2id, uint64_t target_s2id,
-    int type, char *name)
+mdsio_replay_link(uint64_t parent_s2id, uint64_t target_s2id,
+    __unusedx int32_t uid, __unusedx int32_t gid, int mode, char *name)
 {
-	int rc;
-
-	switch (type) {
-	    case SJ_NAMESPACE_TYPE_DIR:
-		rc = zfsslash2_replay_rmdir(parent_s2id, target_s2id, name);
-		break;
-	    case SJ_NAMESPACE_TYPE_FILE:
-		rc = zfsslash2_replay_unlink(parent_s2id, target_s2id, name);
-		break;
-	    default:
-		psc_errorx("invalid type %d", type);
-		rc = EINVAL;
-		break;
-	}
-	return (rc);
+	return (zfsslash2_replay_link(parent_s2id, target_s2id, mode, name));
 }
 
-/*
- * Replay the namespace attribute update operation performed on the remote MDS.
- */
 int
-mdsio_replay_attrib(uint64_t target_s2id, struct srt_stat *stat, uint mask)
+mdsio_replay_symlink(uint64_t parent_s2id, uint64_t target_s2id, int mode, char *name)
 {
-	int rc;
+	return (zfsslash2_replay_symlink(parent_s2id, target_s2id, mode, name));
+}
 
-	rc = zfsslash2_replay_setattr(target_s2id, stat, mask);
-	return (rc);
+int
+mdsio_replay_rmdir(uint64_t parent_s2id, uint64_t target_s2id, char *name)
+{
+	return (zfsslash2_replay_rmdir(parent_s2id, target_s2id, name));
+}
+
+int
+mdsio_replay_unlink(uint64_t parent_s2id, uint64_t target_s2id, char *name)
+{
+	return (zfsslash2_replay_unlink(parent_s2id, target_s2id, name));
+}
+
+int
+mdsio_replay_setattr(uint64_t parent_s2id, struct srt_stat * stat, uint mask)
+{
+	return (zfsslash2_replay_setattr(parent_s2id, stat, mask));
+}
+
+int
+mdsio_replay_rename(uint64_t parent_s2id, uint64_t target_s2id, char *name1, char *name2)
+{
+	return (zfsslash2_replay_rename(parent_s2id, target_s2id, name1, name2));
 }

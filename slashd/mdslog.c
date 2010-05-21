@@ -173,7 +173,7 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
  * we reply to the client.
  */
 void
-mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t target,
+mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t target,
 	const struct srt_stat *stat, const char *name)
 {
 	int rc;
@@ -181,35 +181,7 @@ mds_namespace_log(int op, int type, uint64_t txg, uint64_t parent, uint64_t targ
 
 	jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
-	switch (op) {
-	    case SL_NAMESPACE_OP_CREATE:
-		jnamespace->sjnm_op = SJ_NAMESPACE_OP_CREATE;
-		break;
-	    case SL_NAMESPACE_OP_REMOVE:
-		jnamespace->sjnm_op = SJ_NAMESPACE_OP_REMOVE;
-		break;
-	    case SL_NAMESPACE_OP_ATTRIB:
-		jnamespace->sjnm_op = SJ_NAMESPACE_OP_ATTRIB;
-		break;
-	    default:
-		psc_fatalx("invalid operation: %d", op);
-	}
-	switch (type) {
-	    case SL_NAMESPACE_TYPE_DIR:
-		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_DIR;
-		break;
-	    case SL_NAMESPACE_TYPE_FILE:
-		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_FILE;
-		break;
-	    case SL_NAMESPACE_TYPE_LINK:
-		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_LINK;
-		break;
-	    case SL_NAMESPACE_TYPE_SYMLINK:
-		jnamespace->sjnm_type = SJ_NAMESPACE_TYPE_SYMLINK;
-		break;
-	    default:
-		psc_fatalx("invalid type: %d", type);
-	}
+	jnamespace->sjnm_op = op;
 	jnamespace->sjnm_txg = txg;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
 	jnamespace->sjnm_parent_s2id = parent;
@@ -449,6 +421,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			jnamespace = (struct slmds_jent_namespace *)buf;
 			if (jnamespace->sjnm_seqno == peerinfo->sp_next_seqno)
 				break;
+			psc_atomic16_inc(&peerinfo->sp_stats.ns_stats[NS_DIR_SEND][0][NS_SUM_PEND]);
 			buf = buf + jnamespace->sjnm_reclen;
 			i--;
 		} while (i);
