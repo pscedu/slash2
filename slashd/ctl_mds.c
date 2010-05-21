@@ -33,7 +33,7 @@
 
 struct psc_lockedlist psc_mlists;
 
-struct sl_mds_nsstats	 sl_mds_nsstats_aggr;	/* aggregate stats */
+struct sl_mds_nsstats		 slm_nsstats_aggr;	/* aggregate stats */
 
 const char *slm_nslogst_acts[] = {
 	"propagate",
