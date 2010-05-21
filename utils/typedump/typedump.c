@@ -62,6 +62,7 @@
 #include "slashd/mdscoh.h"
 #include "slashd/mdsio.h"
 #include "slashd/mdslog.h"
+#include "slashd/namespace.h"
 #include "slashd/repl_mds.h"
 #include "slashd/rpc_mds.h"
 #include "slashd/slashd.h"
@@ -140,7 +141,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmap_ops);
 	PRTYPE(struct bmap_pagecache);
 	PRTYPE(struct bmap_pagecache_entry);
-	PRTYPE(struct bmap_refresh);
 	PRTYPE(struct bmap_timeo_entry);
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmapc_memb);
@@ -176,7 +176,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_fcmh_ops);
 	PRTYPE(struct sl_gconf);
 	PRTYPE(struct sl_mds_logbuf);
-	PRTYPE(struct sl_mds_loginfo);
+	PRTYPE(struct sl_mds_nsstats);
+	PRTYPE(struct sl_mds_peerinfo);
 	PRTYPE(struct sl_replrq);
 	PRTYPE(struct sl_resm);
 	PRTYPE(struct sl_resource);
