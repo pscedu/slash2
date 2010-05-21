@@ -172,14 +172,6 @@ slvr_cmp(const void *x, const void *y)
 
 SPLAY_PROTOTYPE(biod_slvrtree, slvr_ref, slvr_tentry, slvr_cmp);
 
-static __inline void
-slvr_lru_pin_check(struct slvr_ref *s)
-{
-	SLVR_LOCK_ENSURE(s);
-	psc_assert(s->slvr_slab && psclist_conjoint(&s->slvr_lentry));
-	psc_assert(s->slvr_flags == (SLVR_LRU|SLVR_PINNED));
-}
-
 static __inline int
 slvr_lru_tryunpin_locked(struct slvr_ref *s)
 {
