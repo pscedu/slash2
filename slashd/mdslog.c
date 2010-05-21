@@ -232,7 +232,7 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	logbuf = peerinfo->sp_logbuf;
 	/*
 	 * Scan the buffer for the entries we have attempted to send to update 
-	 * our statistics before droping our reference to the buffer.
+	 * our statistics before dropping our reference to the buffer.
 	 */
 	i = logbuf->slb_count;
 	buf = logbuf->slb_buf;

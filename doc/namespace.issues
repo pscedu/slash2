@@ -208,29 +208,30 @@ they just die in memory.
 05/20/2010
 ----------
 
-Currently, we assume that each namespace update needs 512 bytes to log.  But for an operation such
-as a rename, we might need two log entries (max name length is 256 and we need two names plus some
-extra fields).  
+Currently, the code assumes that each namespace update needs one 512 byte log entry to log.  But 
+for an operation such as a rename, we might need two log entries (max name length is 256 and we 
+need two names plus some extra fields).  
 
-The problem is that it is hard to make two log entries atomic.  For example, we need to propagate 
-them at the same time to that the rename will be atomic on the receiving MDS.  We also need to
-change journaling and namespace logging code to allow chaining two log entries together.
+The problem is that it is hard to make two log entries atomic (they might not even be next to 
+each other).  For example, we need to propagate them at the same time to that the rename will 
+be atomic on the receiving MDS.  We also need to change the underlying journaling and namespace 
+logging code to allow chaining two log entries together.
 
 To make things easier, we can separate a rename into at most three log operations even if they
-could have been done atomically.  By the way, we have to do that if the old and new parents
+could have been done atomically.  By the way, we have to do that anyway if the old and new parents
 are managed by different sites.
 
-Here is the relevant code is ZFS:
+Here is the relevant code in ZFS:
 
 3347         if (tzp)        /* Attempt to remove the existing target */
-3348                 error = zfs_link_destroy(tdl, tzp, tx, zflg, NULL);
+3348                 error = zfs_link_destroy(tdl, tzp, tx, zflg, NULL);		<-- one log
 3349 
 3350         if (error == 0) {
-3351                 error = zfs_link_create(tdl, szp, tx, ZRENAMING);
+3351                 error = zfs_link_create(tdl, szp, tx, ZRENAMING);			<-- one log
 3352                 if (error == 0) {
 3353                         szp->z_phys->zp_flags |= ZFS_AV_MODIFIED;
 3354 
-3355                         error = zfs_link_destroy(sdl, szp, tx, ZRENAMING, NULL);
+3355                         error = zfs_link_destroy(sdl, szp, tx, ZRENAMING, NULL);	<-- one log
 3356                         ASSERT(error == 0);
 3357 
 3358                         zfs_log_rename(zilog, tx,
@@ -244,7 +245,8 @@ Here is the relevant code is ZFS:
 3366 
 3367         dmu_tx_commit(tx);
 
-It is interesting to note that they commit even if there might be an error (atomic no more?).
+It is interesting to note that they commit even if there might be an error (perhaps they should
+asser that error == 0).
 
-We can somehow justify this decision because eventually all log entries of a rename
-should be applied and the end result is the same.
+We can somehow justify this decision because eventually all log entries of a rename should be 
+applied and the end result is the same.
