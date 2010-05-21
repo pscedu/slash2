@@ -94,7 +94,7 @@ struct site_mds_info {
 
 /* per-MDS eventually consistent namespace stats */
 struct sl_mds_nsstats {
-	psc_atomic_t		  ns_stats[NS_NDIRS][NS_NOPS + 1][NS_NSUMS];
+	psc_atomic32_t		  ns_stats[NS_NDIRS][NS_NOPS + 1][NS_NSUMS];
 };
 
 /*

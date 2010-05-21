@@ -421,7 +421,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			jnamespace = (struct slmds_jent_namespace *)buf;
 			if (jnamespace->sjnm_seqno == peerinfo->sp_next_seqno)
 				break;
-			psc_atomic16_inc(&peerinfo->sp_stats.ns_stats[NS_DIR_SEND][0][NS_SUM_PEND]);
+			psc_atomic32_inc(&peerinfo->sp_stats.ns_stats[NS_DIR_SEND][jnamespace->sjnm_op][NS_SUM_PEND]);
 			buf = buf + jnamespace->sjnm_reclen;
 			i--;
 		} while (i);
