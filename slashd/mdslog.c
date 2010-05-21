@@ -220,14 +220,33 @@ __static int
 mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 		  struct pscrpc_async_args *args)
 {
+	int i;
 	struct sl_mds_peerinfo *peerinfo;
-	struct sl_mds_logbuf *buf;
+	struct sl_mds_logbuf *logbuf;
+	char *buf;
+	struct slmds_jent_namespace *jnamespace;
 
 	peerinfo = args->pointer_arg[0];
 	spinlock(&peerinfo->sp_lock);
 
-	buf = peerinfo->sp_logbuf;
-	atomic_dec(&buf->slb_refcnt);
+	logbuf = peerinfo->sp_logbuf;
+	/*
+	 * Scan the buffer for the entries we have attempted to send to update 
+	 * our statistics before droping our reference to the buffer.
+	 */
+	i = logbuf->slb_count;
+	buf = logbuf->slb_buf;
+	do {
+		jnamespace = (struct slmds_jent_namespace *)buf;
+		if (jnamespace->sjnm_seqno == peerinfo->sp_next_seqno)
+			break;
+		psc_atomic32_dec(&peerinfo->sp_stats.ns_stats[NS_DIR_SEND][jnamespace->sjnm_op][NS_SUM_PEND]);
+		buf = buf + jnamespace->sjnm_reclen;
+		i--;
+	} while (i);
+
+	atomic_dec(&logbuf->slb_refcnt);
+
 	peerinfo->sp_next_seqno += peerinfo->sp_next_batch;
 	peerinfo->sp_flags &= ~SP_FLAG_INFLIGHT;
 
