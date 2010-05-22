@@ -614,7 +614,6 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 		odtr = bmdsi->bmdsi_assign;
 		bmdsi->bmdsi_assign = NULL;
 		bmdsi->bmdsi_wr_ion = NULL;
-		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
 	}
 	/* bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN) may have released the lock.
 	 */
@@ -627,6 +626,7 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 		rc = odtable_freeitem(mdsBmapAssignTable, odtr);
 		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%"
 		   PRId64, seq, key);
+		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
 	}
 
 	psc_pool_return(bmapMdsLeasePool, bml);
@@ -664,8 +664,8 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64, bid->seq);
 
 		mp->bidrc[i] = mds_bmap_bml_release(b, bid->seq, bid->key);
-	next:
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	next:
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);		
 	}
 	return (0);
