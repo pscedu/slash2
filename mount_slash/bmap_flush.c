@@ -807,9 +807,8 @@ ms_bmap_release(struct sl_resm *resm)
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-	if (rc)
-		goto out;
 
+ out:
 	for (i = 0; i < rmci->rmci_bmaprls.nbmaps; i++)
 		psc_notify("fid "FIDFMT" bmap=%u key=%"PRId64
 		    " seq=%"PRId64" rc=%d",
@@ -820,7 +819,6 @@ ms_bmap_release(struct sl_resm *resm)
 		    mp->bidrc[i]);
 	rmci->rmci_bmaprls.nbmaps = 0;
 
- out:
 	if (rc) {
 		/* At this point the bmaps have already been purged from
 		 *   our cache.  If the mds rls request fails then the
@@ -828,7 +826,7 @@ ms_bmap_release(struct sl_resm *resm)
 		 *   the client must reacquire leases to perform further
 		 *   I/O on any bmap in this set.
 		 */
-		psc_errorx("bmap release RPC failed");
+		psc_errorx("bmap release RPC failed rc=%d", rc);
 	}
 	if (rq)
 		pscrpc_req_finished(rq);

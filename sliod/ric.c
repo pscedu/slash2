@@ -276,9 +276,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		biod = bmap_2_biodi(b);
 		spinlock(&biod->biod_lock);
 
-		DEBUG_FCMH((biod->biod_cur_seqkey[0] < bid->seq) ?
-			   PLL_WARN : PLL_INFO,
-			   f, "bmapno=%d seq=%"PRId64" key=%"PRId64
+		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64
 			   " biod_seq=%"PRId64" biod_key=%"PRId64,
 			   b->bcm_blkno, bid->seq, bid->key,
 			   biod->biod_cur_seqkey[0],

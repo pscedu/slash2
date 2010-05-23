@@ -224,32 +224,32 @@ int
 slvr_nbreqset_cb(struct pscrpc_request *rq,
 		 struct pscrpc_async_args *args)
 {
-	int			 i, err;
+	int			 i;
 	struct psc_dynarray	*a;
 	struct srm_generic_rep	*mp;
 	struct biod_crcup_ref	*bcr;
 	struct slashrpc_cservice *csvc;
 	struct bmap_iod_info    *biod;
 
-	err = 0;
 	a = args->pointer_arg[0];
 	csvc = args->pointer_arg[1];
 	psc_assert(a);
 
 	mp = pscrpc_msg_buf(rq->rq_repmsg, 0, sizeof(*mp));
-	if (rq->rq_status || mp->rc)
-		err = 1;
+
 	/* Beware, a failed RPC can result in a NULL mp buf.
 	 */
-	if (!err && mp)
+	if (!rq->rq_status && !mp->rc && mp)
 		bim_updateseq(mp->data);
 
 	for (i=0; i < psc_dynarray_len(a); i++) {
 		bcr = psc_dynarray_getpos(a, i);
 		biod = bcr->bcr_biodi;
 
-		DEBUG_BCR(PLL_INFO, bcr, "err=%d", err);
-		if (err) {
+		DEBUG_BCR(((rq->rq_status || mp->rc) ? PLL_ERROR : PLL_INFO), 
+			  bcr, "rq_status=%d rc=%d", rq->rq_status, mp->rc);
+
+		if (rq->rq_status) {
 			spinlock(&binflCrcs.binfcrcs_lock);
 			bcr->bcr_flags &= ~BCR_SCHEDULED;
 			freelock(&binflCrcs.binfcrcs_lock);
