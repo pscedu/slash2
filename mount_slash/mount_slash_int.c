@@ -535,11 +535,11 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	 *     mds so we can set the proper expiration time.
 	 */
 	clock_gettime(CLOCK_REALTIME, &msbd->msbd_xtime);
+
+	timespecadd(&msbd->msbd_xtime, &msl_bmap_timeo_inc,
+	    &msbd->msbd_etime);	
 	timespecadd(&msbd->msbd_xtime, &msl_bmap_max_lease,
 	    &msbd->msbd_xtime);
-
-	memcpy(&msbd->msbd_etime, &msbd->msbd_xtime,
-	    sizeof(struct timespec));
 
 	/* Take the reaper ref cnt early and place the bmap
 	 *    onto the reap list
