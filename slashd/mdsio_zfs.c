@@ -105,10 +105,6 @@ mdsio_bmap_write(struct bmapc_memb *bmap)
 	} else if (nb != BMAP_OD_SZ) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
 		rc = SLERR_SHORTIO;
-	} else {
-		rc = zfsslash2_fsync(&rootcreds, 1, bmap_2_zfs_fh(bmap));
-		if (rc == -1)
-			psc_fatal("zfsslash2_fsync");
 	}
 	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)",rc);
 
