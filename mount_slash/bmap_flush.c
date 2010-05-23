@@ -935,6 +935,9 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					psc_dynarray_add_ifdne(&a, resm);
 			}
 		}
+		psc_info("msbmaprlsthr_main() out of loop (arraysz=%d)", 
+			 psc_dynarray_len(&a));
+
 		/* Send out partially filled release request.
 		 */
 		DYNARRAY_FOREACH(resm, i, &a)
