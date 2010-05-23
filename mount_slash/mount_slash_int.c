@@ -280,16 +280,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		pll_add(bmap_2_bmpc(b).bmpc_pndg_biorqs, r);
 	else
 		pll_add(bmap_2_bmpc(b).bmpc_new_biorqs, r);
-
-	/* Inform the bmap reaper to skip this bmap.
-	 */
-	BMAP_LOCK(b);
-	if (b->bcm_mode & BMAP_REAPABLE) {
-		b->bcm_mode &= ~BMAP_REAPABLE;
-		psc_assert(!(b->bcm_mode & BMAP_DIRTY));
-		lc_remove(&bmapTimeoutQ, bmap_2_msbd(b));
-	}
-	BMAP_ULOCK(b);
 }
 
 __static void
