@@ -89,6 +89,15 @@ struct sl_mds_peerinfo		*localinfo = NULL;
 struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
 psc_spinlock_t			 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
 
+int
+mds_peerinfo_cmp(const void *a, const void *b)
+{
+	const struct sl_mds_peerinfo *x = a;
+	const struct sl_mds_peerinfo *y = b;
+
+	return (CMP(x->sp_siteid, y->sp_siteid));
+}
+
 uint64_t
 mds_get_next_seqno(void)
 {
@@ -839,6 +848,7 @@ mds_journal_init(void)
 	PLL_ULOCK(&globalConfig.gconf_sites);
 	if (localinfo == NULL)
 		psc_fatal("mds_journal_init(): missing local MDS information");
+	psc_dynarray_sort(&mds_namespace_peerlist, qsort, mds_peerinfo_cmp);
 
 	/* 
 	 * Start a thread to propagate local namespace updates to peers 

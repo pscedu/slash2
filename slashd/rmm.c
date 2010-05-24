@@ -37,8 +37,9 @@
 #include "slashrpc.h"
 #include "sljournal.h"
 
-/* info of myself */
-extern struct sl_mds_peerinfo	*localinfo;
+/* list of peer MDSes and its lock */
+extern struct psc_dynarray	 mds_namespace_peerlist;
+extern psc_spinlock_t		 mds_namespace_peerlist_lock;
 
 int
 slm_rmm_apply_update(__unusedx struct slmds_jent_namespace *jnamespace)
@@ -52,12 +53,15 @@ slm_rmm_apply_update(__unusedx struct slmds_jent_namespace *jnamespace)
 			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
 			jnamespace->sjnm_uid, jnamespace->sjnm_gid, 
 			jnamespace->sjnm_mode, jnamespace->sjnm_name);
+#if 0
+		/* rework */
 		if (rc) 
 			psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
 					  [jnamespace->sjnm_op][NS_SUM_FAIL]);
 		else
 			psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
 					  [jnamespace->sjnm_op][NS_SUM_SUCC]);
+#endif
 		break;
 	    case NS_OP_MKDIR:
 		rc = mdsio_replay_mkdir(
