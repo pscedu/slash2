@@ -360,8 +360,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assignment");
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
-	    "rmmi(%p)", res->res_name, resm->resm_addrbuf,
-	    bmdsi->bmdsi_wr_ion);
+		   "rmmi(%p) bmi(%p)", res->res_name, resm->resm_addrbuf,
+		   bmdsi->bmdsi_wr_ion, bmdsi->bmdsi_assign);
 
 	return (0);
 }
@@ -386,11 +386,10 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	bmi->bmi_seq = bmdsi->bmdsi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	bmdsi->bmdsi_assign = odtable_replaceitem(mdsBmapAssignTable,
 					  bmdsi->bmdsi_assign, bmi);
-
+	psc_assert(bmdsi->bmdsi_assign);
 	bml->bml_seq = bmi->bmi_seq;
 	bml->bml_key = bmdsi->bmdsi_assign->odtr_key;
 
-	psc_assert(bmdsi->bmdsi_assign);
 	return (0);
 }
 
@@ -605,7 +604,7 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 		struct bmi_assign *bmi;
 
 		bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
-		psc_assert(bmi->bmi_seq == seq);
+		psc_assert(bmi && bmi->bmi_seq == seq);
 		psc_assert(bmi->bmi_bmapno == b->bcm_bmapno);
 		/* End Sanity Checks.
 		 */
