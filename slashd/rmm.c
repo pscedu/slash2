@@ -41,6 +41,8 @@
 extern struct psc_dynarray	 mds_namespace_peerlist;
 extern psc_spinlock_t		 mds_namespace_peerlist_lock;
 
+extern struct sl_mds_peerinfo	*localinfo;
+
 struct sl_mds_peerinfo *
 slm_rmm_search_peerinfo(int siteid)
 {
@@ -65,10 +67,10 @@ slm_rmm_search_peerinfo(int siteid)
 }           
 
 int
-slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace, 
-	__unusedx struct sl_mds_peerinfo *p)
+slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 {
 	int rc;
+	int valid = 1;
 	struct srt_stat stat;
 
 	switch (jnamespace->sjnm_op) {
@@ -77,15 +79,6 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace,
 			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
 			jnamespace->sjnm_uid, jnamespace->sjnm_gid, 
 			jnamespace->sjnm_mode, jnamespace->sjnm_name);
-#if 0
-		/* rework */
-		if (rc) 
-			psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
-					  [jnamespace->sjnm_op][NS_SUM_FAIL]);
-		else
-			psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
-					  [jnamespace->sjnm_op][NS_SUM_SUCC]);
-#endif
 		break;
 	    case NS_OP_MKDIR:
 		rc = mdsio_replay_mkdir(
@@ -131,7 +124,16 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace,
 		break;
 	    default:
 		psc_errorx("Unexpected opcode %d", jnamespace->sjnm_op);
+		valid = 0;
 		rc = -EINVAL;
+	}
+	if (valid) {
+		if (rc) 
+			psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
+			    [jnamespace->sjnm_op][NS_SUM_FAIL]);
+		else
+			psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
+			    [jnamespace->sjnm_op][NS_SUM_SUCC]);
 	}
 	return rc;
 }
@@ -190,11 +192,11 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	 */
 	p = slm_rmm_search_peerinfo(mq->siteid);
 
-	/* iterate through the buffer and apply updates */
+	/* iterate through the namespace update buffer and apply updates */
 	rc = 0;
 	jnamespace = (struct slmds_jent_namespace *) iov.iov_base;
 	for (i = 0; i < count; i++) {
-		rc = slm_rmm_apply_update(jnamespace, p);
+		rc = slm_rmm_apply_update(jnamespace);
 		if (rc)
 			break;
 		jnamespace = (struct slmds_jent_namespace *)
