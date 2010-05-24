@@ -173,16 +173,25 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 		goto out;
 	}
 	/*
-	 * If the sequence number is too old, reject right away.
+	 * Search for the peer information by the given site ID.
 	 */
 	spinlock(&mds_namespace_peerlist_lock);
-	p = psc_dynarray_bsearch(&mds_namespace_peerlist, &mq->siteid, slm_rmm_cmp_peerinfo);
+	i = psc_dynarray_bsearch(&mds_namespace_peerlist, &mq->siteid, slm_rmm_cmp_peerinfo);
+	p = psc_dynarray_getpos(&mds_namespace_peerlist, i);
 	freelock(&mds_namespace_peerlist_lock);
-
-	if (p->sp_recv_seqno > seqno) {
+	if (p->sp_siteid != mq->siteid) {
+		psc_info("slm_rmm_handle_namespace_update(): fail to find site ID %d",
+			  mq->siteid);
 		mp->rc = EINVAL;
+		goto out;
+	}
+	/*
+	 * If the sequence number is too old, reject right away.
+	 */
+	if (p->sp_recv_seqno > seqno) {
 		psc_info("slm_rmm_handle_namespace_update(): seq number %"PRIx64" is less than %"PRIx64,
 			  seqno, p->sp_recv_seqno);
+		mp->rc = EINVAL;
 		goto out;
 	}
 
