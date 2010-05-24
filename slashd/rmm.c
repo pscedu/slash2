@@ -43,27 +43,12 @@ extern psc_spinlock_t		 mds_namespace_peerlist_lock;
 
 extern struct sl_mds_peerinfo	*localinfo;
 
-struct sl_mds_peerinfo *
-slm_rmm_search_peerinfo(int siteid)
+int
+slm_rmm_cmp_peerinfo(const void *a, const void *b)
 {
-	int min, max, mid;
-	struct sl_mds_peerinfo *p;
-
-	min = mid = 0;
-	max = psc_dynarray_len(&mds_namespace_peerlist) - 1;
-	while (min <= max) {
-		mid = min + (max - min) / 2;
-		p = psc_dynarray_getpos(&mds_namespace_peerlist, mid);
-		if (p->sp_siteid < siteid) {
-			max = mid - 1;
-			mid++;
-		} else if (p->sp_siteid > siteid)
-			min = mid + 1;
-		else
-			break;
-	}
-	p = psc_dynarray_getpos(&mds_namespace_peerlist, mid);
-	return (p);
+	struct sl_mds_peerinfo *p = (struct sl_mds_peerinfo *)a;
+	int siteid = *(int *)b;
+	return (CMP(p->sp_siteid, siteid));
 }           
 
 int
@@ -190,7 +175,10 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	/*
 	 * If the sequence number is too old, reject right away.
 	 */
-	p = slm_rmm_search_peerinfo(mq->siteid);
+	spinlock(&mds_namespace_peerlist_lock);
+	p = psc_dynarray_bsearch(&mds_namespace_peerlist, &mq->siteid, slm_rmm_cmp_peerinfo);
+	freelock(&mds_namespace_peerlist_lock);
+
 	if (p->sp_recv_seqno > seqno) {
 		mp->rc = EINVAL;
 		psc_info("slm_rmm_handle_namespace_update(): seq number %"PRIx64" is less than %"PRIx64,
