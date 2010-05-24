@@ -809,10 +809,6 @@ mds_journal_init(void)
 
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 
-	/* start a thread to propagate local namespace changes */
-	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
-	    NULL, 0, "slmjsendthr");
-
 	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 
 	/*
@@ -844,6 +840,14 @@ mds_journal_init(void)
 	PLL_ULOCK(&globalConfig.gconf_sites);
 	if (localinfo == NULL)
 		psc_fatal("mds_journal_init(): missing local MDS information");
+
+	/* 
+	 * Start a thread to propagate local namespace updates to peers 
+	 * after our MDS peer list has been all setup.
+	 */
+	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
+	    NULL, 0, "slmjsendthr");
+
 	/*
 	 * Eventually we have to read this from a on-disk log.
 	 */
