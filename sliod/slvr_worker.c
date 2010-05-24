@@ -246,8 +246,10 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		bcr = psc_dynarray_getpos(a, i);
 		biod = bcr->bcr_biodi;
 
-		DEBUG_BCR(((rq->rq_status || mp->rc) ? PLL_ERROR : PLL_INFO), 
-			  bcr, "rq_status=%d rc=%d", rq->rq_status, mp->rc);
+		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ? 
+			   PLL_ERROR : PLL_INFO), 
+			  bcr, "rq_status=%d rc=%d", rq->rq_status, 
+			  mp ? mp->rc : -4096);
 
 		if (rq->rq_status) {
 			spinlock(&binflCrcs.binfcrcs_lock);
