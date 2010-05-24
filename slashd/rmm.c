@@ -41,8 +41,32 @@
 extern struct psc_dynarray	 mds_namespace_peerlist;
 extern psc_spinlock_t		 mds_namespace_peerlist_lock;
 
+struct sl_mds_peerinfo *
+slm_rmm_search_peerinfo(int siteid)
+{
+	int min, max, mid;
+	struct sl_mds_peerinfo *p;
+
+	min = mid = 0;
+	max = psc_dynarray_len(&mds_namespace_peerlist) - 1;
+	while (min <= max) {
+		mid = min + (max - min) / 2;
+		p = psc_dynarray_getpos(&mds_namespace_peerlist, mid);
+		if (p->sp_siteid < siteid) {
+			max = mid - 1;
+			mid++;
+		} else if (p->sp_siteid > siteid)
+			min = mid + 1;
+		else
+			break;
+	}
+	p = psc_dynarray_getpos(&mds_namespace_peerlist, mid);
+	return (p);
+}           
+
 int
-slm_rmm_apply_update(__unusedx struct slmds_jent_namespace *jnamespace)
+slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace, 
+	__unusedx struct sl_mds_peerinfo *p)
 {
 	int rc;
 	struct srt_stat stat;
@@ -142,6 +166,7 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	struct srm_send_namespace_req *mq;
 	struct slmds_jent_namespace *jnamespace;
 	psc_crc64_t crc;
+	struct sl_mds_peerinfo *p;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	
@@ -163,12 +188,13 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	/*
 	 * Add code: If the sequence number is too old, reject right away.
 	 */
+	p = slm_rmm_search_peerinfo(mq->siteid);
 
 	/* iterate through the buffer and apply updates */
 	rc = 0;
 	jnamespace = (struct slmds_jent_namespace *) iov.iov_base;
 	for (i = 0; i < count; i++) {
-		rc = slm_rmm_apply_update(jnamespace);
+		rc = slm_rmm_apply_update(jnamespace, p);
 		if (rc)
 			break;
 		jnamespace = (struct slmds_jent_namespace *)
