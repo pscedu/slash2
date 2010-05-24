@@ -319,7 +319,7 @@ enum bmap_opcnt_types {
 	/* 6 */ BMAP_OPCNT_REAPER,		/* Client bmap timeout */
 	/* 7 */ BMAP_OPCNT_COHCB,		/* MDS coh callback */
 	/* 8 */ BMAP_OPCNT_SLVR,
-	/* 9*/ BMAP_OPCNT_BCRSCHED,
+	/* 9 */ BMAP_OPCNT_BCRSCHED,
 	/* 10*/ BMAP_OPCNT_RLSSCHED
 };
 
