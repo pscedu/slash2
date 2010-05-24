@@ -45,31 +45,31 @@
 #include "slashrpc.h"
 #include "sljournal.h"
 
-struct psc_journal		 *mdsJournal;
-static struct pscrpc_nbreqset	 *logPndgReqs;
+struct psc_journal		*mdsJournal;
+static struct pscrpc_nbreqset	*logPndgReqs;
 
-static int			  logentrysize;
+static int			 logentrysize;
 
 /*
  * Eventually, we are going to retrieve the namespace update sequence number
  * from the system journal.
  */
-uint64_t			  next_update_seqno;
+uint64_t			 next_update_seqno;
 
 /*
  * Low and high water marks of update sequence numbers that need to be propagated.
  * Note that the pace of each MDS is different.
  */
-static uint64_t			  propagate_seqno_lwm;
-static uint64_t			  propagate_seqno_hwm;
+static uint64_t			 propagate_seqno_lwm;
+static uint64_t			 propagate_seqno_hwm;
 
-static int			  current_logfile = -1;
+static int			 current_logfile = -1;
 
-struct psc_waitq		  mds_namespace_waitq = PSC_WAITQ_INIT;
-psc_spinlock_t			  mds_namespace_waitqlock = LOCK_INITIALIZER;
+struct psc_waitq		 mds_namespace_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t			 mds_namespace_waitqlock = LOCK_INITIALIZER;
 
 /* max # of buffers used to decrease I/O */
-#define	SL_NAMESPACE_MAX_BUF	  8
+#define	SL_NAMESPACE_MAX_BUF	 8
 
 /* max # of seconds before an update is propagated */
 #define SL_NAMESPACE_MAX_AGE	 30
@@ -85,8 +85,9 @@ __static PSCLIST_HEAD(mds_namespace_buflist);
 
 struct sl_mds_peerinfo		*localinfo = NULL;
 
-/* list of peer MDSes */
+/* list of peer MDSes and its lock */
 struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
+psc_spinlock_t			 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
 
 uint64_t
 mds_get_next_seqno(void)
@@ -282,6 +283,7 @@ mds_namespace_update_lwm(void)
 	uint64_t seqno;
 	struct sl_mds_peerinfo *peerinfo;
 
+	spinlock(&mds_namespace_peerlist_lock);
 	for (i = 0; i < psc_dynarray_len(&mds_namespace_peerlist); i++) {
 		peerinfo = psc_dynarray_getpos(&mds_namespace_peerlist, i);
 		if (peerinfo->sp_resm == nodeResm)
@@ -297,6 +299,7 @@ mds_namespace_update_lwm(void)
 			seqno = peerinfo->sp_send_seqno;
 		freelock(&peerinfo->sp_lock);
 	}
+	freelock(&mds_namespace_peerlist_lock);
 	/* XXX purge old log files here before bumping lwm */
 	propagate_seqno_lwm = seqno;
 	return (seqno);
@@ -436,6 +439,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	int rc, i;
 	char *buf;
 
+	spinlock(&mds_namespace_peerlist_lock);
 	for (i = 0; i < psc_dynarray_len(&mds_namespace_peerlist); i++) {
 		peerinfo = psc_dynarray_getpos(&mds_namespace_peerlist, i);
 		if (peerinfo->sp_resm == nodeResm)
@@ -497,6 +501,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		req->rq_async_args.pointer_arg[0] = peerinfo;
 		pscrpc_nbreqset_add(logPndgReqs, req);
 	}
+	freelock(&mds_namespace_peerlist_lock);
 }
 
 /*
