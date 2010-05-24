@@ -188,9 +188,15 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 		goto out;
 	}
 	/*
-	 * Add code: If the sequence number is too old, reject right away.
+	 * If the sequence number is too old, reject right away.
 	 */
 	p = slm_rmm_search_peerinfo(mq->siteid);
+	if (p->sp_recv_seqno > seqno) {
+		mp->rc = EINVAL;
+		psc_info("slm_rmm_handle_namespace_update(): seq number %"PRIx64" is less than %"PRIx64,
+			  seqno, p->sp_recv_seqno);
+		goto out;
+	}
 
 	/* iterate through the namespace update buffer and apply updates */
 	rc = 0;
@@ -203,6 +209,7 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 			((char *)jnamespace + jnamespace->sjnm_reclen); 
 	}
 	mp->rc = rc;
+	p->sp_recv_seqno = seqno + count - 1;
 
 out:
 	PSCFREE(iov.iov_base);
