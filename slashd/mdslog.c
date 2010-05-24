@@ -222,7 +222,7 @@ __static int
 mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 		  struct pscrpc_async_args *args)
 {
-	int i;
+	int i, j;
 	struct sl_mds_peerinfo *peerinfo;
 	struct sl_mds_logbuf *logbuf;
 	char *buf;
@@ -240,17 +240,28 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	buf = logbuf->slb_buf;
 	do {
 		jnamespace = (struct slmds_jent_namespace *)buf;
-		if (jnamespace->sjnm_seqno == peerinfo->sp_next_seqno)
+		if (jnamespace->sjnm_seqno == peerinfo->sp_send_seqno)
+			break;
+		buf = buf + jnamespace->sjnm_reclen;
+		i--;
+	} while (i);
+	psc_assert(i > 0);
+	j = i;
+	do {
+		jnamespace = (struct slmds_jent_namespace *)buf;
+		if (jnamespace->sjnm_seqno >= peerinfo->sp_send_seqno + peerinfo->sp_send_count)
 			break;
 		SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
 		    jnamespace->sjnm_op, NS_SUM_PEND);
 		buf = buf + jnamespace->sjnm_reclen;
-		i--;
-	} while (i);
+		j--;
+	} while (j);
+	psc_assert(i - j == peerinfo->sp_send_count);
 
 	atomic_dec(&logbuf->slb_refcnt);
 
-	peerinfo->sp_next_seqno += peerinfo->sp_next_batch;
+	peerinfo->sp_send_seqno += peerinfo->sp_send_count;
+	peerinfo->sp_send_count = 0;				/* defensive */
 	peerinfo->sp_flags &= ~SP_FLAG_INFLIGHT;
 
 	freelock(&peerinfo->sp_lock);
@@ -276,12 +287,12 @@ mds_namespace_update_lwm(void)
 		spinlock(&peerinfo->sp_lock);
 		if (first) {
 			first = 0;
-			seqno = peerinfo->sp_next_seqno;
+			seqno = peerinfo->sp_send_seqno;
 			freelock(&peerinfo->sp_lock);
 			continue;
 		}
-		if (seqno > peerinfo->sp_next_seqno)
-			seqno = peerinfo->sp_next_seqno;
+		if (seqno > peerinfo->sp_send_seqno)
+			seqno = peerinfo->sp_send_seqno;
 		freelock(&peerinfo->sp_lock);
 	}
 	/* XXX purge old log files here before bumping lwm */
@@ -432,8 +443,8 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		 */
 		if (peerinfo->sp_flags & SP_FLAG_INFLIGHT)
 			continue;
-		if (peerinfo->sp_next_seqno < logbuf->slb_seqno ||
-		    peerinfo->sp_next_seqno >= logbuf->slb_seqno + logbuf->slb_count)
+		if (peerinfo->sp_send_seqno < logbuf->slb_seqno ||
+		    peerinfo->sp_send_seqno >= logbuf->slb_seqno + logbuf->slb_count)
 			continue;
 
 		/* Find out which part of the buffer should be send out */
@@ -441,7 +452,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		buf = logbuf->slb_buf;
 		do {
 			jnamespace = (struct slmds_jent_namespace *)buf;
-			if (jnamespace->sjnm_seqno == peerinfo->sp_next_seqno)
+			if (jnamespace->sjnm_seqno == peerinfo->sp_send_seqno)
 				break;
 			SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
 			    jnamespace->sjnm_op, NS_SUM_PEND);
@@ -461,7 +472,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			sl_csvc_decref(csvc);
 			continue;
 		}
-		mq->seqno = peerinfo->sp_next_seqno;
+		mq->seqno = peerinfo->sp_send_seqno;
 		mq->size = iov.iov_len;
 		mq->count = i;
 		mq->siteid = peerinfo->sp_siteid;
@@ -476,7 +487,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		 * Until I send out the request, no callback will touch
 		 * these fields.
 		 */
-		peerinfo->sp_next_batch = i;
+		peerinfo->sp_send_count = i;
 		peerinfo->sp_logbuf = logbuf;
 		peerinfo->sp_flags |= SP_FLAG_INFLIGHT;
 

@@ -126,10 +126,12 @@ struct sl_mds_peerinfo {
 	struct sl_resm		 *sp_resm;
 	int			  sp_flags;		/* see SP_FLAG_* below */
 	struct sl_mds_logbuf	 *sp_logbuf;		/* the log buffer being used */
-	uint64_t		  sp_next_seqno;	/* next log sequence */
-	int			  sp_next_batch;	/* # of updates */
-	time_t			  sp_last_send;		/* last contact and response */
-	time_t			  sp_last_recv;
+
+	uint64_t		  sp_send_seqno;	/* next log sequence number to send */
+	int			  sp_send_count;	/* # of updates in the batch */
+
+	uint64_t		  sp_recv_seqno;	/* last received log sequence number */
+
 	struct sl_mds_nsstats	  sp_stats;
 };
 
