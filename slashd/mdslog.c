@@ -515,13 +515,13 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	struct sl_mds_logbuf *buf;
 
 	/*
-	 * The thread scans the batches of changes between the low and high
+	 * This thread scans the batches of changes between the low and high
 	 * water marks and sends them to peer MDSes.  Although different MDSes
 	 * have different paces, we send updates in order within one MDS.
 	 */
-	seqno = mds_namespace_update_lwm();
 	while (pscthr_run()) {
 		pscrpc_nbreqset_reap(logPndgReqs);
+		seqno = mds_namespace_update_lwm();
 		/*
 		 * If propagate_seqno_hwm is zero, then there are no local updates.
 		 */
@@ -534,7 +534,6 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
 		    &mds_namespace_waitqlock, SL_NAMESPACE_MAX_AGE);
-		seqno = mds_namespace_update_lwm();
 	}
 }
 
