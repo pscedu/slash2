@@ -821,11 +821,10 @@ mds_bmap_read(struct bmapc_memb *bcm,  __unusedx enum rw rw)
 	/* Try to pread() the bmap from the mds file.
 	 */
 	rc = mdsio_bmap_read(bcm);
-
 	/*
-	 * Check for a NULL CRC if we had a good read.  NULL CRC can happen when
-	 * bmaps are gaps that have not been written yet.   Note that a short
-	 * read is tolerated as long as the bmap is zeroed.
+	 * Check for a NULL CRC if we had a good read.  NULL CRC can happen 
+	 *    when bmaps are gaps that have not been written yet.   Note 
+	 *    that a short read is tolerated as long as the bmap is zeroed.
 	 */
 	if (!rc || rc == SLERR_SHORTIO) {
 		if (bod->bh_bhcrc == 0 &&
@@ -838,7 +837,9 @@ mds_bmap_read(struct bmapc_memb *bcm,  __unusedx enum rw rw)
 		}
 	}
 
-	/* At this point, the short I/O is an error since the bmap isn't zeros. */
+	/* At this point, the short I/O is an error since the bmap isn't 
+	 *    zeros. 
+	 */
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "mdsio_bmap_read: "
 		    "bmapno=%u, rc=%d", bcm->bcm_bmapno, rc);
@@ -853,8 +854,9 @@ mds_bmap_read(struct bmapc_memb *bcm,  __unusedx enum rw rw)
 	if (crc == bod->bh_bhcrc)
 		return (0);
 
-	DEBUG_FCMH(PLL_ERROR, f, "CRC failed; bmapno=%u, want=%"PRIx64", got=%"PRIx64,
-	    bcm->bcm_bmapno, bod->bh_bhcrc, crc);
+	DEBUG_FCMH(PLL_ERROR, f, "CRC failed; bmapno=%u, want=%"PRIx64
+	   ", got=%"PRIx64, bcm->bcm_bmapno, bod->bh_bhcrc, crc);
+
 	rc = -EIO;
  out:
 	PSCFREE(bcm->bcm_od);
