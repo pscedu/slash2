@@ -151,14 +151,14 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 		goto out;
 	if (desc)
 		pscrpc_free_bulk(desc);
-	/*
-	 * Add code: If the sequence number is too old, reject right away.
-	 */
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc) {
 		mp->rc = EINVAL;
 		goto out;
 	}
+	/*
+	 * Add code: If the sequence number is too old, reject right away.
+	 */
 
 	/* iterate through the buffer and apply updates */
 	rc = 0;

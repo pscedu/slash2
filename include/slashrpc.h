@@ -248,7 +248,8 @@ struct srm_send_namespace_req {
 	uint64_t		seqno;
 	uint64_t		crc;		/* CRC of the bulk data */
 	int32_t			size;		/* size of the bulk data to follow */
-	int32_t			count;		/* # of entries to follow */
+	int16_t			count;		/* # of entries to follow */
+	int16_t			siteid;		/* Site ID for tracking purpose */
 } __packed;
 
 struct srm_send_namespace_rep {

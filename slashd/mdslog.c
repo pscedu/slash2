@@ -464,6 +464,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		mq->seqno = peerinfo->sp_next_seqno;
 		mq->size = iov.iov_len;
 		mq->count = i;
+		mq->siteid = peerinfo->sp_siteid;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
 		atomic_inc(&logbuf->slb_refcnt);
