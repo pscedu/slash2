@@ -86,7 +86,7 @@ __static PSCLIST_HEAD(mds_namespace_buflist);
 struct sl_mds_peerinfo		*localinfo = NULL;
 
 /* list of peer MDSes */
-__static PSCLIST_HEAD(mds_namespace_peerlist);
+struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
 
 uint64_t
 mds_get_next_seqno(void)
@@ -277,11 +277,13 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 __static uint64_t
 mds_namespace_update_lwm(void)
 {
+	int i;
 	int first = 1;
 	uint64_t seqno;
 	struct sl_mds_peerinfo *peerinfo;
 
-	psclist_for_each_entry(peerinfo, &mds_namespace_peerlist, sp_lentry) {
+	for (i = 0; i < psc_dynarray_len(&mds_namespace_peerlist); i++) {
+		peerinfo = psc_dynarray_getpos(&mds_namespace_peerlist, i);
 		if (peerinfo->sp_resm == nodeResm)
 			continue;
 		spinlock(&peerinfo->sp_lock);
@@ -434,7 +436,8 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	int rc, i;
 	char *buf;
 
-	psclist_for_each_entry(peerinfo, &mds_namespace_peerlist, sp_lentry) {
+	for (i = 0; i < psc_dynarray_len(&mds_namespace_peerlist); i++) {
+		peerinfo = psc_dynarray_getpos(&mds_namespace_peerlist, i);
 		if (peerinfo->sp_resm == nodeResm)
 			continue;
 		/*
@@ -824,13 +827,15 @@ mds_journal_init(void)
 			peerinfo = res2rpmi(r)->rpmi_peerinfo;
 			peerinfo->sp_resm = resm;
 			peerinfo->sp_siteid = s->site_id;
-			psclist_xadd_tail(&peerinfo->sp_lentry, &mds_namespace_peerlist);
+
+			psc_dynarray_add(&mds_namespace_peerlist, peerinfo);
 			if (resm == nodeResm)
 				localinfo = peerinfo;
 			psc_info("Added peer MDS: addr = %s, site ID = %d, "
 			    "resource ID = %"PSCPRIxLNID,
 			    resm->resm_addrbuf, s->site_id, resm->resm_nid);
 		}
+
 	PLL_ULOCK(&globalConfig.gconf_sites);
 	if (localinfo == NULL)
 		psc_fatal("mds_journal_init(): missing local MDS information");
