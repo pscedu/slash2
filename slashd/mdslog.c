@@ -240,8 +240,9 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 
 	peerinfo = args->pointer_arg[0];
 	spinlock(&peerinfo->sp_lock);
-
 	logbuf = peerinfo->sp_logbuf;
+	if (req->rq_status)
+		goto rpc_error;
 	/*
 	 * Scan the buffer for the entries we have attempted to send to update
 	 * our statistics before dropping our reference to the buffer.
@@ -268,12 +269,14 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	} while (j);
 	psc_assert(i - j == peerinfo->sp_send_count);
 
-	atomic_dec(&logbuf->slb_refcnt);
-
 	peerinfo->sp_send_seqno += peerinfo->sp_send_count;
+
+rpc_error:
+
 	peerinfo->sp_send_count = 0;				/* defensive */
 	peerinfo->sp_flags &= ~SP_FLAG_INFLIGHT;
 
+	atomic_dec(&logbuf->slb_refcnt);
 	freelock(&peerinfo->sp_lock);
 
 	/* drop the reference taken by slm_getmcsvc() */
