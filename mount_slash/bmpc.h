@@ -37,10 +37,6 @@
 #include "bmap.h"
 #include "buffer.h"
 
-extern struct psc_poolmgr	*bmpcePoolMgr;
-extern struct bmpc_mem_slbs	 bmpcSlabs;
-extern struct psc_listcache	 bmpcLru;
-
 #define BMPC_BUFSZ		SLASH_BMAP_BLKSZ
 #define BMPC_BLKSZ		BMPC_BUFSZ
 #define BMPC_SLB_NBLKS		256  /* 8MB slab */
@@ -226,7 +222,7 @@ struct bmpc_ioreq {
 	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap   */
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;
-	void				 *biorq_fhent;	/* back pointer to msl_fhent */
+	void				*biorq_fhent;	/* back pointer to msl_fhent */
 };
 
 enum {
@@ -365,6 +361,20 @@ bmpce_inflight_inc_locked(struct bmap_pagecache_entry *bmpce)
 	  (((pos) == (psc_dynarray_len(&(r)->biorq_pages)-1) &&		\
 	    ((r)->biorq_flags & BIORQ_RBWLP)))))
 
+int   bmpce_init(struct psc_poolmgr *, void *);
+void  bmpc_init(struct bmap_pagecache *);
+void  bmpc_global_init(void);
+int   bmpc_grow(int);
+void *bmpc_alloc(void);
+void  bmpc_free(void *);
+void  bmpc_freeall_locked(struct bmap_pagecache *);
+void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
+			      struct bmap_pagecache *, int, int);
+
+extern struct psc_poolmgr	*bmpcePoolMgr;
+extern struct bmpc_mem_slbs	 bmpcSlabs;
+extern struct psc_listcache	 bmpcLru;
+
 static __inline void
 bmpc_lru_del(struct bmap_pagecache *bmpc)
 {
@@ -453,15 +463,5 @@ bmpc_increase_minage(void)
 
 	ulockBmpcSlabs();
 }
-
-int   bmpce_init(struct psc_poolmgr *, void *);
-void  bmpc_init(struct bmap_pagecache *);
-void  bmpc_global_init(void);
-int   bmpc_grow(int);
-void *bmpc_alloc(void);
-void  bmpc_free(void *);
-void  bmpc_freeall_locked(struct bmap_pagecache *);
-void  bmpce_handle_lru_locked(struct bmap_pagecache_entry *,
-			      struct bmap_pagecache *, int, int);
 
 #endif /* _SL_BMPC_H_ */

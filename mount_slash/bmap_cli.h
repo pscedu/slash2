@@ -27,9 +27,6 @@
 #include "bmpc.h"
 #include "inode.h"
 
-extern struct timespec msl_bmap_max_lease;
-extern struct timespec msl_bmap_timeo_inc;
-
 /*
  * msbmap_crcrepl_states - must be the same as bh_crcstates and bh_repls
  *  in slash_bmap_od.
@@ -81,9 +78,9 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 		clock_gettime(CLOCK_REALTIME, &_ctime);			\
 		BMAP_LOCK(b);						\
 		timespecadd(&_ctime, &msl_bmap_timeo_inc,		\
-		    &(bmap_2_msbd(b))->msbd_etime);			\
-		if (timespeccmp(&(bmap_2_msbd(b))->msbd_etime,		\
-		    &(bmap_2_msbd(b))->msbd_xtime, >))			\
+		    &bmap_2_msbd(b)->msbd_etime);			\
+		if (timespeccmp(&bmap_2_msbd(b)->msbd_etime,		\
+		    &bmap_2_msbd(b)->msbd_xtime, >))			\
 			memcpy(&bmap_2_msbd(b)->msbd_etime,		\
 			    &bmap_2_msbd(b)->msbd_xtime,		\
 			    sizeof(struct timespec));			\
@@ -94,5 +91,8 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 #define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)	/* mode change in progress */
 #define	BMAP_CLI_MCC			(_BMAP_FLSHFT << 1)	/* mode change compete */
 #define BMAP_CLI_FLUSHPROC		(_BMAP_FLSHFT << 2)	/* proc'd by flush thr */
+
+extern struct timespec msl_bmap_max_lease;
+extern struct timespec msl_bmap_timeo_inc;
 
 #endif /* _SLASH_CLI_BMAP_H_ */
