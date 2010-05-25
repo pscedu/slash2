@@ -39,22 +39,18 @@ int				file_per_directory = FILE_PER_DIRECTORY;
 char random_chars[] = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 struct dir_item {
-	TAILQ_ENTRY(dir_item) list;
-	long count;		/* How many entries in this directory */
-	/*
-	 * Inside gdb, use command "print &currentdir->name[0]" to
-	 * show its entirety.
-	 */
-	char name[1];		/* This is the complete path */
+	TAILQ_ENTRY(dir_item)	list;
+	long			count;		/* How many entries in this directory */
+	char			name[0];	/* This is the complete path */
 };
 
 /*
  * A directory entry.
  */
 struct dir_entry {
-	struct dir_entry * next;
-	unsigned char type;
-	char name[1];
+	struct dir_entry	*next;
+	unsigned char		type;
+	char			name[0];
 };
 
 TAILQ_HEAD(, dir_item) dirlist;
