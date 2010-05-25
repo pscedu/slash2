@@ -197,7 +197,6 @@ in release but I don't see good performance for 'ls -al'.
 	ref on lookup so that proceeding operations are guarenteed to have
 	their inodes cached.
 
-- rename buffer.c -> slab.c
 - ensure fidc doesn't look up beyond SYM_NLOOPS #loops
 - drop privs to user _slash for mount_slash/slashd/sliod
 - add some high-level aliases to the replication interface for users:
@@ -240,28 +239,8 @@ in release but I don't see good performance for 'ls -al'.
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
 -----------------------------------------------------
-- get tsuite working
 - merge set_bmapreplpol and friends into a single slfattr interface
 - push O_APPEND writes always to EOF
------------------------------------------------------
-- make slmctl and slictl knobs for showing listen addresses/options
-- add ctl for connections
-
-msctl/slictl/slmctl -n -s conn
-
-connections
- resource	host		type	 #refs	status
-===================================================================
- @PSC
-   mds		adamantium	MDS	 1	online
-   io0		stryker		parallel 1	offline
-		wolverine	parallel 0	connecting
-   io1		grapefruit	archiver 0	inactive
-
-(not available on msctl)
- clients
-		kaminari	client	 0	online
-
 -----------------------------------------------------
 
 - add ctl knobs for changing preferred IOS
@@ -323,10 +302,9 @@ tracks endpoint connections
 
 - always cache / on mount_slash, that will save RPCs
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
-- authbuf RPC bulk data, use wrappers of rsx_bulk routines to
-  aid this
+- authbuf RPC bulk data, use wrappers of rsx_bulk routines to aid this
 - sprinkle some iostats on zfs, namespace changelog
-- move fsroot option to a 'set option'
+- move slash.conf fsroot option to a local 'set option'
 - add journal I/O test mode to slashd
 
 zfs
