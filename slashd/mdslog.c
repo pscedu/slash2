@@ -473,6 +473,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			jnamespace = (struct slmds_jent_namespace *)buf;
 			if (jnamespace->sjnm_seqno == peerinfo->sp_send_seqno)
 				break;
+			buf = buf + jnamespace->sjnm_reclen;
 			i--;
 		} while (i);
 		psc_assert(i);
