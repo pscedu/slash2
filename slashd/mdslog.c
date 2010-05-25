@@ -470,12 +470,10 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			jnamespace = (struct slmds_jent_namespace *)buf;
 			if (jnamespace->sjnm_seqno == peerinfo->sp_send_seqno)
 				break;
-			SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
-			    jnamespace->sjnm_op, NS_SUM_PEND);
-			buf = buf + jnamespace->sjnm_reclen;
 			i--;
 		} while (i);
 		psc_assert(i);
+		
 		iov.iov_base = buf;
 		iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
 
@@ -493,6 +491,17 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		mq->count = i;
 		mq->siteid = peerinfo->sp_siteid;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
+		/*
+		 * Be careful, we use the value of i and buf from the 
+		 * previous while loop.
+		 */
+		while (i) {
+			i--;
+			jnamespace = (struct slmds_jent_namespace *)buf;
+			SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
+			    jnamespace->sjnm_op, NS_SUM_PEND);
+			buf = buf + jnamespace->sjnm_reclen;
+		}
 
 		atomic_inc(&logbuf->slb_refcnt);
 
