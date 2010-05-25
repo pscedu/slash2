@@ -494,6 +494,12 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		mq->count = i;
 		mq->siteid = localinfo->sp_siteid;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
+
+		peerinfo->sp_send_count = i;
+		peerinfo->sp_logbuf = logbuf;
+		peerinfo->sp_flags |= SP_FLAG_INFLIGHT;
+		atomic_inc(&logbuf->slb_refcnt);
+
 		/*
 		 * Be careful, we use the value of i and buf from the 
 		 * previous while loop.
@@ -505,19 +511,8 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			    jnamespace->sjnm_op, NS_SUM_PEND);
 			buf = buf + jnamespace->sjnm_reclen;
 		}
-
-		atomic_inc(&logbuf->slb_refcnt);
-
 		rsx_bulkclient(req, &desc, BULK_GET_SOURCE,
 		    SRMM_BULK_PORTAL, &iov, 1);
-
-		/*
-		 * Until I send out the request, no callback will touch
-		 * these fields.
-		 */
-		peerinfo->sp_send_count = i;
-		peerinfo->sp_logbuf = logbuf;
-		peerinfo->sp_flags |= SP_FLAG_INFLIGHT;
 
 		req->rq_async_args.pointer_arg[0] = peerinfo;
 		pscrpc_nbreqset_add(logPndgReqs, req);
