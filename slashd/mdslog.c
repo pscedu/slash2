@@ -847,11 +847,15 @@ mds_journal_init(void)
 			peerinfo->sp_siteid = s->site_id;
 
 			psc_dynarray_add(&mds_namespace_peerlist, peerinfo);
-			if (resm == nodeResm)
+			if (resm == nodeResm) {
 				localinfo = peerinfo;
-			psc_info("Added peer MDS: addr = %s, site ID = %d, "
-			    "resource ID = %"PSCPRIxLNID,
-			    resm->resm_addrbuf, s->site_id, resm->resm_nid);
+				psc_info("Added  local MDS: addr = %s, site ID = %d, "
+				    "resource ID = %"PSCPRIxLNID,
+				    resm->resm_addrbuf, s->site_id, resm->resm_nid);
+			} else
+				psc_info("Added remote MDS: addr = %s, site ID = %d, "
+				    "resource ID = %"PSCPRIxLNID,
+				    resm->resm_addrbuf, s->site_id, resm->resm_nid);
 		}
 
 	PLL_ULOCK(&globalConfig.gconf_sites);
