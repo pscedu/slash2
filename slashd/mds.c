@@ -877,6 +877,15 @@ mds_bmap_init(struct bmapc_memb *bcm)
 }
 
 void
+mds_bmap_reap(struct bmapc_memb *bcm)
+{
+	//struct bmap_mds_info *bmdsi;
+	//bmdsi = bcm->bcm_pri;
+	if (bcm->bcm_od)
+		PSCFREE(bcm->bcm_od);
+}
+
+void
 mds_bmap_sync_if_changed(struct bmapc_memb *bcm)
 {
 	struct bmap_mds_info *bmdsi;
@@ -1029,5 +1038,5 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 struct bmap_ops bmap_ops = {
 	mds_bmap_init,
 	mds_bmap_read,
-	NULL
+	mds_bmap_reap
 };
