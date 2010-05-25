@@ -489,7 +489,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		mq->seqno = peerinfo->sp_send_seqno;
 		mq->size = iov.iov_len;
 		mq->count = i;
-		mq->siteid = peerinfo->sp_siteid;
+		mq->siteid = localinfo->sp_siteid;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 		/*
 		 * Be careful, we use the value of i and buf from the 
