@@ -950,6 +950,8 @@ mds_bmap_load_ion(const struct slash_fidgen *fg, sl_bmapno_t bmapno,
 	rc = mds_bmap_load(f, bmapno, &b);
 	if (rc == 0)
 		*bp = b;
+
+	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
 }
 
