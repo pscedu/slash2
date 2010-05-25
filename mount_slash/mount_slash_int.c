@@ -1159,9 +1159,13 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 
 	} else {
 		if (b->bcm_mode & BMAP_REAPABLE) {
+			LIST_CACHE_LOCK(&bmapTimeoutQ);
 			b->bcm_mode &= ~BMAP_REAPABLE;
 			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
-			lc_remove(&bmapTimeoutQ, bmap_2_msbd(b));
+
+			if (psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry)) 
+				lc_remove(&bmapTimeoutQ, bmap_2_msbd(b));
+			LIST_CACHE_ULOCK(&bmapTimeoutQ);
 		}
 
 		b->bcm_mode |= BMAP_DIRTY;

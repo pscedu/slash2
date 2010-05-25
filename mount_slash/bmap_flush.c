@@ -352,7 +352,8 @@ bmap_flush_biorq_cmp(const void *x, const void *y)
 }
 
 __static int
-bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, struct iovec **iovset)
+bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, 
+			struct iovec **iovset)
 {
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache_entry *bmpce;
@@ -869,8 +870,6 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			   msbd->msbd_etime.tv_nsec);
 
 			if (bmpc_queued_ios(&msbd->msbd_bmpc)) {
-				psc_assert(b->bcm_mode & BMAP_REAPABLE);
-
 				b->bcm_mode &= ~BMAP_REAPABLE;
 				DEBUG_BMAP(PLL_INFO, b,
 					   "descheduling from timeoq");
