@@ -55,7 +55,7 @@ int
 slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 {
 	int rc;
-	int valid = 1;
+	int validop = 1;
 	struct srt_stat stat;
 
 	switch (jnamespace->sjnm_op) {
@@ -109,10 +109,10 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 		break;
 	    default:
 		psc_errorx("Unexpected opcode %d", jnamespace->sjnm_op);
-		valid = 0;
+		validop = 0;
 		rc = -EINVAL;
 	}
-	if (valid) {
+	if (validop) {
 		if (rc) 
 			psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
 			    [jnamespace->sjnm_op][NS_SUM_FAIL]);
