@@ -843,7 +843,7 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	else if (rc >= (int)sizeof(fn))
 		rc = ENAMETOOLONG;
 	else
-		rc = mdsio_unlink(mds_repldir_inum, fn, &rootcreds);
+		rc = mdsio_unlink(mds_repldir_inum, fn, &rootcreds, NULL);
 	PSC_SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
 	freelock(&replrq_tree_lock);
 

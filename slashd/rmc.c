@@ -558,7 +558,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	/* if we get here, op and np must be owned by the current MDS */
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
-	    fcmh_2_mdsio_fid(np), to, &mq->creds);
+	    fcmh_2_mdsio_fid(np), to, &mq->creds, mds_namespace_log);
  out:
 	if (np)
 		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
@@ -757,10 +757,10 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	if (isfile)
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(fcmh),
-		    mq->name, &rootcreds);
+		    mq->name, &rootcreds, mds_namespace_log);
 	else
 		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(fcmh),
-		    mq->name, &rootcreds);
+		    mq->name, &rootcreds, mds_namespace_log);
 
 	psc_info("mdsio_unlink: name = %s, rc=%d, data=%p", mq->name, mp->rc,
 	    fcmh_2_mdsio_data(fcmh));

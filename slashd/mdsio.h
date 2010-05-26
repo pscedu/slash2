@@ -66,12 +66,12 @@ int mdsio_opencreate(mdsio_fid_t, const struct slash_creds *, int, mode_t, const
 	struct slash_fidgen *, mdsio_fid_t *, struct srt_stat *, void *, sl_jlog_cb, sl_getslfid_cb);
 int mdsio_opendir(mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, struct srt_stat *, void *);
 int mdsio_readdir(const struct slash_creds *, size_t, off_t, void *, size_t *, void *, int, void *);
-int mdsio_rename(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *);
-int mdsio_rmdir(mdsio_fid_t, const char *, const struct slash_creds *);
+int mdsio_rename(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *, sl_jlog_cb);
+int mdsio_rmdir(mdsio_fid_t, const char *, const struct slash_creds *, sl_jlog_cb);
 int mdsio_setattr(mdsio_fid_t, struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *, sl_jlog_cb);
 int mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *,
 	struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb);
-int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *);
+int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *, sl_jlog_cb);
 
 int mdsio_replay_create(uint64_t, uint64_t, int32_t, int32_t, int, char *);
 int mdsio_replay_mkdir(uint64_t, uint64_t, int32_t, int32_t, int, char *);

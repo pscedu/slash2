@@ -298,7 +298,7 @@ mdsio_readdir(const struct slash_creds *cr, size_t siz,
 
 int
 mdsio_rename(mdsio_fid_t opino, const char *ocpn, mdsio_fid_t npino,
-    const char *ncpn, const struct slash_creds *cr)
+    const char *ncpn, const struct slash_creds *cr, sl_jlog_cb logfunc)
 {
 	return (zfsslash2_rename(opino, ocpn, npino, ncpn, cr, NULL));
 }
@@ -322,15 +322,17 @@ mdsio_symlink(const char *target, mdsio_fid_t pino, const char *cpn,
 }
 
 int
-mdsio_unlink(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
+mdsio_unlink(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr,
+    sl_jlog_cb logfunc)
 {
-	return (zfsslash2_unlink(pino, cpn, cr));
+	return (zfsslash2_unlink(pino, cpn, cr, logfunc));
 }
 
 int
-mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr)
+mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr, 
+    sl_jlog_cb logfunc)
 {
-	return (zfsslash2_rmdir(pino, cpn, cr));
+	return (zfsslash2_rmdir(pino, cpn, cr, logfunc));
 }
 
 /*
