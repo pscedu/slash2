@@ -352,7 +352,7 @@ bmap_flush_biorq_cmp(const void *x, const void *y)
 }
 
 __static int
-bmap_flush_coalesce_map(const struct psc_dynarray *biorqs, 
+bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			struct iovec **iovset)
 {
 	struct bmpc_ioreq *r;
@@ -575,7 +575,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 	}
 
 	if (expired) {
-	make_coalesce:
+ make_coalesce:
 		a = PSCALLOC(sizeof(*a));
 		for (i=0; i < psc_dynarray_len(&b); i++) {
 			t = psc_dynarray_getpos(&b, i);
@@ -934,7 +934,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					psc_dynarray_add_ifdne(&a, resm);
 			}
 		}
-		psc_info("msbmaprlsthr_main() out of loop (arraysz=%d)", 
+		psc_info("msbmaprlsthr_main() out of loop (arraysz=%d)",
 			 psc_dynarray_len(&a));
 
 		/* Send out partially filled release request.
@@ -944,23 +944,23 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		psc_dynarray_reset(&a);
 
-		if (!pscthr_run() || shutdown)
+		if (!pscthr_run())
 			break;
-		else {
-			if (!wtime.tv_sec && !wtime.tv_nsec)
-				wtime.tv_sec = 1;
-			psc_waitq_waitrel(&waitq, NULL, &wtime);
-		}
+
+		if (!wtime.tv_sec && !wtime.tv_nsec)
+			wtime.tv_sec = 1;
+		psc_waitq_waitrel(&waitq, NULL, &wtime);
 
 		wtime.tv_sec = wtime.tv_nsec = 0;
 
 	} while (1);
+	psc_dynarray_free(&a);
 }
 
 void
 msbmapflushthr_main(__unusedx struct psc_thread *thr)
 {
-	while (pscthr_run() && !shutdown) {
+	while (pscthr_run()) {
 		if (atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS)
 			bmap_flush();
 		usleep(2048);
@@ -973,7 +973,7 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 	struct timespec ts = {0, 100000};
 	int rc;
 
-	while (pscthr_run() && !shutdown) {
+	while (pscthr_run()) {
 		rc = psc_waitq_waitrel(&rpcCompletion, NULL, &ts);
 		psc_trace("rc=%d", rc);
 		bmap_flush_reap_rpcs();
