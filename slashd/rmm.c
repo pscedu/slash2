@@ -213,7 +213,8 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 			((char *)jnamespace + jnamespace->sjnm_reclen); 
 	}
 	mp->rc = rc;
-	p->sp_recv_seqno = seqno + count - 1;
+	/* Should I ask for a resend if I have trouble applying updates? */
+	p->sp_recv_seqno = seqno + count;
 
 out:
 	PSCFREE(iov.iov_base);
