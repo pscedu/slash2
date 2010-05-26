@@ -186,11 +186,18 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 		goto out;
 	}
 	/*
-	 * If the sequence number is too old, reject right away.
+	 * Make sure that the seqno number matches what we expect (strictly in-order delivery). 
+	 * If not, reject right away.
 	 */
 	if (p->sp_recv_seqno > seqno) {
-		psc_info("slm_rmm_handle_namespace_update(): seq number %"PRIx64" is less than %"PRIx64,
-			  seqno, p->sp_recv_seqno);
+		psc_notify("slm_rmm_handle_namespace_update(): seq number %"PRIx64" is less than %"PRIx64,
+			    seqno, p->sp_recv_seqno);
+		mp->rc = EINVAL;
+		goto out;
+	}
+	if (p->sp_recv_seqno < seqno) {
+		psc_notify("slm_rmm_handle_namespace_update(): seq number %"PRIx64" is greater than %"PRIx64,
+			    seqno, p->sp_recv_seqno);
 		mp->rc = EINVAL;
 		goto out;
 	}
