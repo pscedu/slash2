@@ -101,6 +101,7 @@ struct sl_site {
 
 struct sl_gconf {
 	char			 gconf_net[LNET_NAME_MAX];
+	char			 gconf_fsroot[PATH_MAX];
 	uint32_t		 gconf_netid;
 	int			 gconf_port;
 	struct psc_lockedlist	 gconf_sites;

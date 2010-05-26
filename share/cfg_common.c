@@ -329,6 +329,11 @@ libsl_init(int pscnet_mode, int ismds)
 		nodeResm = libsl_resm_lookup(ismds);
 		if (nodeResm == NULL)
 			psc_fatalx("No resource member for this node");
+
+		if (globalConfig.gconf_fsroot[0] != '\0')
+			strlcpy(globalConfig.gconf_fsroot, nodeResm->resm_res->res_fsroot,
+			    sizeof(globalConfig.gconf_fsroot));
+
 		psc_info("Resource %s", nodeResm->resm_res->res_name);
 		libsl_profile_dump();
 	}

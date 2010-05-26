@@ -47,6 +47,10 @@ On which Lustre network site access resides.
 On which
 .Tn TCP
 port to establish connections.
+.It Ic fs_root
+For
+.Tn I/O
+servers, the file system mount point where backend data is stored.
 .El
 .El
 .Pp
@@ -100,12 +104,6 @@ following variables:
 .Bl -tag -offset indent -width Ds -compact
 .It Ic desc
 A string name for this resource
-.It Ic fsroot
-File system mount point,
-exclusive to
-.Ic archival_fs
-resource types
-.Pq see Ic type
 .It Ic id
 Numerical identifier for resource, required to be unique for all
 resources

@@ -95,6 +95,7 @@ int		 yyparse(void);
 struct symtable sym_table[] = {
 	TABENT_GLBL("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
 	TABENT_GLBL("net",		SL_TYPE_INT,	0,		gconf_netid,	slcfg_str2lnet),
+	TABENT_GLBL("fs_root",		SL_TYPE_STR,	PATH_MAX,	gconf_fsroot,	NULL),
 	TABENT_SITE("site_id",		SL_TYPE_INT,	SITE_MAXID,	site_id,	NULL),
 	TABENT_SITE("site_desc",	SL_TYPE_STRP,	0,		site_desc,	NULL),
 	TABENT_RES ("desc",		SL_TYPE_STRP,	0,		res_desc,	NULL),
@@ -238,11 +239,11 @@ site_resource	: resource_start resource_def SUBSECT_END {
 			    currentSite->site_id, currentRes->res_id);
 
 			/* resource ID must be unique within one site */
-			DYNARRAY_FOREACH(r, j, &currentSite->site_resources) 
+			DYNARRAY_FOREACH(r, j, &currentSite->site_resources)
 				if (currentRes->res_id == r->res_id)
 					yyerror("resource %s ID %d already assigned to %s",
-							currentRes->res_name, currentRes->res_id,
-							r->res_name);
+					    currentRes->res_name, currentRes->res_id,
+					    r->res_name);
 
 			psc_dynarray_add(&currentSite->site_resources, currentRes);
 

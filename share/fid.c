@@ -43,23 +43,23 @@ _fg_makepath(const struct slash_fidgen *fg, char *fid_path, int usegen)
 	char a[FID_PATH_DEPTH];
 	int i;
 
-	a[0] = (uint8_t)((fg->fg_fid & UINT64_C(0x0000000000f00000)) >> (BPHXC * 5));
-	a[1] = (uint8_t)((fg->fg_fid & UINT64_C(0x00000000000f0000)) >> (BPHXC * 4));
-	a[2] = (uint8_t)((fg->fg_fid & UINT64_C(0x000000000000f000)) >> (BPHXC * 3));
+	a[0] = (fg->fg_fid & UINT64_C(0x0000000000f00000)) >> (BPHXC * 5);
+	a[1] = (fg->fg_fid & UINT64_C(0x00000000000f0000)) >> (BPHXC * 4);
+	a[2] = (fg->fg_fid & UINT64_C(0x000000000000f000)) >> (BPHXC * 3);
 
 	for (i=0; i < FID_PATH_DEPTH; i++)
 		a[i] += a[i] < 10 ? 0x30 : 0x57;
 
 	if (usegen)
 		xmkfn(fid_path, "%s/%s/%c/%c/%c/%016"PRIx64"_%"PRIx64,
-		    nodeResm->resm_res->res_fsroot, FID_PATH_NAME,
+		    globalConfig.gconf_fsroot, FID_PATH_NAME,
 		    a[0], a[1], a[2], fg->fg_fid, fg->fg_gen);
 	else
 		xmkfn(fid_path, "%s/%s/%c/%c/%c/%016"PRIx64,
-		    nodeResm->resm_res->res_fsroot, FID_PATH_NAME,
+		    globalConfig.gconf_fsroot, FID_PATH_NAME,
 		    a[0], a[1], a[2], fg->fg_fid);
 
-	psc_trace("fid=%"PRIx64" fidpath=%s", fg->fg_fid, fid_path);
+	psc_dbg("fid=%"PRIx64" fidpath=%s", fg->fg_fid, fid_path);
 }
 
 /**
