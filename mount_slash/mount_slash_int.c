@@ -193,10 +193,10 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	 * XXX changeme.. this is causing unnecessary RBW rpc's!
 	 *    key off the BMPCE flags
 	 */
-	if ((fcmh_getsize(b->bcm_fcmh) > origoff) && 
+	if ((fcmh_getsize(b->bcm_fcmh) > origoff) &&
 	    op == BIORQ_WRITE && rbw) {
-		DEBUG_FCMH(PLL_NOTIFY, b->bcm_fcmh, 
-			   "setting RBW for biorq=%p", r);		   
+		DEBUG_FCMH(PLL_NOTIFY, b->bcm_fcmh,
+			   "setting RBW for biorq=%p", r);
 		r->biorq_flags |= rbw;
 	}
 
@@ -277,9 +277,9 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
  out:
 	DEBUG_BIORQ(PLL_NOTIFY, r, "new req");
 	if (op == BIORQ_READ)
-		pll_add(bmap_2_bmpc(b).bmpc_pndg_biorqs, r);
+		pll_add(&bmap_2_bmpc(b)->bmpc_pndg_biorqs, r);
 	else
-		pll_add(bmap_2_bmpc(b).bmpc_new_biorqs, r);
+		pll_add(&bmap_2_bmpc(b)->bmpc_new_biorqs, r);
 }
 
 __static void
@@ -460,14 +460,14 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	struct bmpc_ioreq *biorq;
 
 	BMPC_LOCK(bmap_2_bmpc(b));
-	PLL_FOREACH(biorq, bmap_2_bmpc(b).bmpc_new_biorqs) {
+	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_new_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
 		freelock(&biorq->biorq_lock);
 	}
 
-	PLL_FOREACH(biorq, bmap_2_bmpc(b).bmpc_pndg_biorqs) {
+	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_pndg_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
@@ -480,12 +480,12 @@ __static void
 bmap_biorq_waitempty(struct bmapc_memb *b)
 {
 	BMAP_LOCK(b);
-	bcm_wait_locked(b, (!pll_empty(bmap_2_bmpc(b).bmpc_pndg_biorqs) ||
-			    !pll_empty(bmap_2_bmpc(b).bmpc_new_biorqs)  ||
+	bcm_wait_locked(b, (!pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs) ||
+			    !pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs)  ||
 			    (b->bcm_mode & BMAP_CLI_FLUSHPROC)));
 
-	psc_assert(pll_empty(bmap_2_bmpc(b).bmpc_pndg_biorqs));
-	psc_assert(pll_empty(bmap_2_bmpc(b).bmpc_new_biorqs));
+	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs));
+	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs));
 	BMAP_ULOCK(b);
 }
 
@@ -522,7 +522,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 
 
 void
-msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd) 
+msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 {
 	struct bmap_cli_info *msbd=bmap->bcm_pri;
 	int locked;
@@ -537,7 +537,7 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	clock_gettime(CLOCK_REALTIME, &msbd->msbd_xtime);
 
 	timespecadd(&msbd->msbd_xtime, &msl_bmap_timeo_inc,
-	    &msbd->msbd_etime);	
+	    &msbd->msbd_etime);
 	timespecadd(&msbd->msbd_xtime, &msl_bmap_max_lease,
 	    &msbd->msbd_xtime);
 
@@ -656,8 +656,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 /**
  * msl_bmap_modeset - Set READ or WRITE as access mode on an open file
  *	block map.
- * @f: file.
- * @b: bmap index number.
+ * @b: bmap.
  * @rw: access mode to set the bmap to.
  *
  * XXX have this take a bmapc_memb.
@@ -669,7 +668,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
  *    the mds.
  */
 __static int
-msl_bmap_modeset(struct fidc_membh *f, sl_bmapno_t b, enum rw rw)
+msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -687,8 +686,7 @@ msl_bmap_modeset(struct fidc_membh *f, sl_bmapno_t b, enum rw rw)
 	if (rc)
 		goto out;
 
-	mq->fg = f->fcmh_fg;
-	mq->blkno = b;
+	mq->sbd = *bmap_2_sbd(b);
 	mq->rw = rw;
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
@@ -757,7 +755,7 @@ msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw)
 		 * Correction.. this is not true, since if there was another
 		 *  writer then we would already be in directio mode.
 		 */
-		rc = msl_bmap_modeset(f, b->bcm_blkno, SL_WRITE);
+		rc = msl_bmap_modeset(b, SL_WRITE);
 		psc_assert(!rc); /*  XXX for now.. */
 		/* We're the only thread allowed here, these
 		 *  bits could not have been set by another thread.
@@ -1163,7 +1161,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			b->bcm_mode &= ~BMAP_REAPABLE;
 			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
 
-			if (psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry)) 
+			if (psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry))
 				lc_remove(&bmapTimeoutQ, bmap_2_msbd(b));
 			LIST_CACHE_ULOCK(&bmapTimeoutQ);
 		}

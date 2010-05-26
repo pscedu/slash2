@@ -297,13 +297,12 @@ tracks endpoint connections
 
 ------------------------------
 
-- sstb shouldn't have an ino field; fill it out each time from fg_fid
+- sstb shouldn't have an ino field; fill st_ino out each time from fg_fid
 
 - always cache / on mount_slash, that will save RPCs
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
 - authbuf RPC bulk data, use wrappers of rsx_bulk routines to aid this
 - sprinkle some iostats on zfs, namespace changelog
-- move slash.conf fsroot option to a local 'set option'
 - add journal I/O test mode to slashd
 
 zfs

@@ -53,8 +53,9 @@ struct bmap_cli_info {
 #define BMAP_CLI_TIMEO_INC		5
 
 #define bmap_2_msbd(b)			((struct bmap_cli_info *)(b)->bcm_pri)
-#define bmap_2_bmpc(b)			&(bmap_2_msbd(b)->msbd_bmpc)
-#define bmap_2_ion(b)			bmap_2_msbd(b)->msbd_sbd.sbd_ion_nid
+#define bmap_2_bmpc(b)			(&bmap_2_msbd(b)->msbd_bmpc)
+#define bmap_2_sbd(b)			(&bmap_2_msbd(b)->msbd_sbd)
+#define bmap_2_ion(b)			bmap_2_sbd(b)->sbd_ion_nid
 
 static __inline int
 bmap_cli_timeo_cmp(const void *x, const void *y)

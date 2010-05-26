@@ -782,8 +782,7 @@ ms_bmap_release(struct sl_resm *resm)
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
 	struct resm_cli_info *rmci;
-	uint32_t i;
-	int rc;
+	int i, rc;
 
 	csvc = (resm == slc_rmc_resm) ?
 		slc_getmcsvc(resm) : slc_geticsvc(resm);

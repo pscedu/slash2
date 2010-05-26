@@ -641,11 +641,15 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
 	struct srm_bmap_id *bid;
-	uint32_t i;
+	int i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->nbmaps < 0 || mq->nbmaps > MAX_BMAP_RELEASE) {
+		mp->rc = EINVAL;
+		return (0);
+	}
 
-	for (i=0; i < mq->nbmaps; i++) {
+	for (i = 0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
 
 		mp->bidrc[i] = slm_fcmh_get(&bid->fg, &f);
@@ -664,12 +668,11 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 
 		mp->bidrc[i] = mds_bmap_bml_release(b, bid->seq, bid->key);
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-	next:
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);		
+ next:
+		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	}
 	return (0);
 }
-
 
 /**
  * mds_bmap_crc_write - process a CRC update request from an ION.
@@ -822,8 +825,8 @@ mds_bmap_read(struct bmapc_memb *bcm,  __unusedx enum rw rw)
 	 */
 	rc = mdsio_bmap_read(bcm);
 	/*
-	 * Check for a NULL CRC if we had a good read.  NULL CRC can happen 
-	 *    when bmaps are gaps that have not been written yet.   Note 
+	 * Check for a NULL CRC if we had a good read.  NULL CRC can happen
+	 *    when bmaps are gaps that have not been written yet.   Note
 	 *    that a short read is tolerated as long as the bmap is zeroed.
 	 */
 	if (!rc || rc == SLERR_SHORTIO) {
@@ -837,8 +840,8 @@ mds_bmap_read(struct bmapc_memb *bcm,  __unusedx enum rw rw)
 		}
 	}
 
-	/* At this point, the short I/O is an error since the bmap isn't 
-	 *    zeros. 
+	/* At this point, the short I/O is an error since the bmap isn't
+	 *    zeros.
 	 */
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "mdsio_bmap_read: "

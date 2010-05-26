@@ -238,6 +238,30 @@ slm_rmc_getbmap_common(struct fidc_membh *fcmh, sl_ios_id_t prefios,
 }
 
 int
+slm_rmc_handle_bmap_chrwmode(struct pscrpc_request *rq)
+{
+	const struct srm_bmap_chmode_req *mq;
+	struct srm_bmap_chmode_rep *mp;
+	struct fidc_membh *f = NULL;
+	struct bmapc_memb *b = NULL;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = slm_fcmh_get(&mq->sbd.sbd_fg, &f);
+	if (mp->rc)
+		goto out;
+	mp->rc = bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
+	if (mp->rc)
+		goto out;
+
+ out:
+	if (b)
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	if (f)
+		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+	return (0);
+}
+
+int
 slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
 	const struct srm_getbmap_req *mq;
@@ -819,6 +843,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
+	case SRMT_BMAPCHMODE:
+		rc = slm_rmc_handle_bmap_chrwmode(rq);
+		break;
 	case SRMT_GETBMAP:
 		rc = slm_rmc_handle_getbmap(rq);
 		break;

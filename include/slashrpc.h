@@ -314,8 +314,7 @@ struct srm_bmap_wire_rep {
 } __packed;
 
 struct srm_bmap_chmode_req {
-	struct slash_fidgen	fg;
-	uint32_t		blkno;
+	struct srt_bmapdesc	sbd;
 	int32_t			rw;
 } __packed;
 
@@ -376,7 +375,7 @@ struct srm_bmap_id {
 #define MAX_BMAP_RELEASE 8
 struct srm_bmap_release_req {
 	struct srm_bmap_id	bmaps[MAX_BMAP_RELEASE];
-	uint32_t		nbmaps;
+	int32_t			nbmaps;
 	int32_t			_pad;
 } __packed;
 

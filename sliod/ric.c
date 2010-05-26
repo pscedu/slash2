@@ -252,12 +252,11 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct bmap_iod_info *biod;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
-	uint32_t i;
-	int rc;
+	int i, rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	for (i=0; i < mq->nbmaps; i++) {
+	for (i = 0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
 
 		rc = sli_fcmh_get(&bid->fg, &f);
@@ -288,15 +287,15 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		biod->biod_rls_seqkey[1] = bid->key;
 
 		/* Do not to add ourselves to the bmapRlsQ twice.
-		 */		
+		 */
 		if (!biod->biod_rlsseq) {
-			biod->biod_rlsseq = 1;			
+			biod->biod_rlsseq = 1;
 			if (!biod->biod_crcdrty_slvrs &&
 			    (biod->biod_bcr_xid == biod->biod_bcr_xid_last)) {
 				bmap_op_start_type(b, BMAP_OPCNT_RLSSCHED);
 				lc_addtail(&bmapRlsQ, biod);
 			}
-		}		
+		}
 
 		freelock(&biod->biod_lock);
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
