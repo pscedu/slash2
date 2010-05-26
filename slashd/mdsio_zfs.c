@@ -376,9 +376,9 @@ mdsio_replay_unlink(uint64_t parent_s2id, uint64_t target_s2id, char *name)
 }
 
 int
-mdsio_replay_setattr(uint64_t parent_s2id, struct srt_stat * stat, uint mask)
+mdsio_replay_setattr(uint64_t target_s2id, struct srt_stat * stat, uint mask)
 {
-	return (zfsslash2_replay_setattr(parent_s2id, stat, mask));
+	return (zfsslash2_replay_setattr(target_s2id, stat, mask));
 }
 
 int
