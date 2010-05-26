@@ -362,7 +362,6 @@ bmpce_inflight_inc_locked(struct bmap_pagecache_entry *bmpce)
 	    ((r)->biorq_flags & BIORQ_RBWLP)))))
 
 int   bmpce_init(struct psc_poolmgr *, void *);
-void  bmpc_init(struct bmap_pagecache *);
 void  bmpc_global_init(void);
 int   bmpc_grow(int);
 void *bmpc_alloc(void);
