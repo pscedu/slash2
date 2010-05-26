@@ -190,6 +190,7 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	 * If not, reject right away.
 	 */
 	if (p->sp_recv_seqno > seqno) {
+		/* This is Okay, our peer may have just lost patience with us and decide to resend */
 		psc_notify("slm_rmm_handle_namespace_update(): seq number %"PRIx64" is less than %"PRIx64,
 			    seqno, p->sp_recv_seqno);
 		mp->rc = EINVAL;
