@@ -10,14 +10,18 @@
 #include "psc_util/log.h"
 
 #include "creds.h"
+#include "slerr.h"
 
 void
 sl_drop_privs(int allow_root_uid)
 {
 	struct passwd *pw;
 
+	errno = 0;
 	pw = getpwnam(SLASH_UID);
 	if (pw == NULL) {
+		if (errno == 0)
+			errno = SLERR_USER_NOTFOUND;
 		if (allow_root_uid)
 			psc_error("unable to setuid %s", SLASH_UID);
 		else
