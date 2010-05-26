@@ -47,10 +47,8 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-const char *progname;
-
-struct psc_listcache bmapReapQ;
-struct psc_listcache bmapRlsQ;
+int			 allow_root_uid = 1;
+const char		*progname;
 
 int
 psc_usklndthr_get_type(const char *namefmt)
@@ -75,7 +73,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-D datadir] [-f cfgfile] [-S socket] mds-resource\n",
+	    "usage: %s [-X] [-D datadir] [-f cfgfile] [-S socket] mds-resource\n",
 	    progname);
 	exit(1);
 }
@@ -96,7 +94,7 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = SL_PATH_CONF;
 	sfn = SL_PATH_SLICTLSOCK;
-	while ((c = getopt(argc, argv, "D:f:S:")) != -1)
+	while ((c = getopt(argc, argv, "D:f:S:X")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -106,6 +104,9 @@ main(int argc, char *argv[])
 			break;
 		case 'S':
 			sfn = optarg;
+			break;
+		case 'X':
+			allow_root_uid = 1;
 			break;
 		default:
 			usage();
@@ -125,6 +126,8 @@ main(int argc, char *argv[])
 	authbuf_readkeyfile();
 
 	libsl_init(PSCNET_SERVER, 0);
+
+	sl_drop_privs(allow_root_uid);
 
 	if (mds == NULL) {
 		mds = getenv("SLASH_MDS_NID");
@@ -146,14 +149,13 @@ main(int argc, char *argv[])
 	sli_rpc_initsvc();
 	slitimerthr_spawn();
 	sliod_bmaprlsthr_spawn();
-	
+
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
 		psc_fatalx("MDS server unavailable: %s", slstrerror(rc));
 	sl_csvc_decref(csvc);
 
-	lc_reginit(&bmapReapQ, struct bmapc_memb,
-		   bcm_lentry, "bmapReapQ");
+	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry, "bmapReapQ");
 
 	slictlthr_main(sfn);
 	/* NOTREACHED */

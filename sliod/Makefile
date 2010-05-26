@@ -31,6 +31,7 @@ SRCS+=		${SLASH_BASE}/share/fid.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c
 SRCS+=		${SLASH_BASE}/share/lconf.l
 SRCS+=		${SLASH_BASE}/share/mkfn.c
+SRCS+=		${SLASH_BASE}/share/priv.c
 SRCS+=		${SLASH_BASE}/share/rpc_common.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${SLASH_BASE}/share/slutil.c

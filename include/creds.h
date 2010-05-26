@@ -22,10 +22,14 @@
 
 #include <stdint.h>
 
+#define SLASH_UID	"_slash"
+
 /* fields must aligned and length must be multiple of wordsize */
 struct slash_creds {
 	uint32_t	uid;
 	uint32_t	gid;
 };
+
+void sl_drop_privs(int);
 
 #endif /* _SLASH_CREDS_H_ */

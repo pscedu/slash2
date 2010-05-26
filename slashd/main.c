@@ -48,6 +48,7 @@
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
+int			 allow_root_uid = 1;
 const char		*progname;
 
 struct psc_poolmaster	 replrq_poolmaster;
@@ -165,7 +166,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket] zpoolname\n",
+	    "usage: %s [-X] [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket] zpoolname\n",
 	    progname);
 	exit(1);
 }
@@ -174,7 +175,7 @@ int
 main(int argc, char *argv[])
 {
 	const char *cfn, *sfn;
-	char *zfspoolcf=NULL;
+	char *zfspoolcf = NULL;
 	int c;
 
 	/* gcrypt must be initialized very early on */
@@ -191,7 +192,7 @@ main(int argc, char *argv[])
 	progname = argv[0];
 	cfn = SL_PATH_CONF;
 	sfn = SL_PATH_SLMCTLSOCK;
-	while ((c = getopt(argc, argv, "D:f:p:S:")) != -1)
+	while ((c = getopt(argc, argv, "D:f:p:S:X")) != -1)
 		switch (c) {
 		case 'D':
 			sl_datadir = optarg;
@@ -204,6 +205,9 @@ main(int argc, char *argv[])
 			break;
 		case 'S':
 			sfn = optarg;
+			break;
+		case 'X':
+			allow_root_uid = 1;
 			break;
 		default:
 			usage();
@@ -224,6 +228,9 @@ main(int argc, char *argv[])
 
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
+
+	sl_drop_privs(allow_root_uid);
+
 	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ,
 	    FIDC_MDS_MAXSZ, NULL, FIDC_MDS);
 	libsl_init(PSCNET_SERVER, 1);

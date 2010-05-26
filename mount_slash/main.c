@@ -68,6 +68,7 @@ sl_ios_id_t			 prefIOS = IOS_ID_ANY;
 const char			*progname;
 char				 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
+int				 allow_root_uid = 1;
 
 struct sl_resm			*slc_rmc_resm;
 
@@ -1822,7 +1823,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-dU] [-f conf] [-o fuseopt] [-S socket] node\n",
+	    "usage: %s [-dUX] [-f conf] [-o fuseopt] [-S socket] node\n",
 	    progname);
 	exit(1);
 }
@@ -1846,7 +1847,7 @@ main(int argc, char *argv[])
 	msl_fuse_addarg(&args, FUSE_OPTIONS);
 
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "df:o:S:U")) != -1)
+	while ((c = getopt(argc, argv, "df:o:S:UX")) != -1)
 		switch (c) {
 		case 'd':
 			msl_fuse_addarg(&args, "-odebug");
@@ -1866,6 +1867,9 @@ main(int argc, char *argv[])
 		case 'U':
 			unmount_first = 1;
 			break;
+		case 'X':
+			allow_root_uid = 1;
+			break;
 		default:
 			usage();
 		}
@@ -1878,9 +1882,6 @@ main(int argc, char *argv[])
 
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
-	slcfg_parse(cfg);
-	msl_init(NULL);
-
 	if (unmount_first)
 		unmount(noncanon_mp);
 
@@ -1890,6 +1891,12 @@ main(int argc, char *argv[])
 
 	msl_fuse_mount(mountpoint, &args);
 	fuse_opt_free_args(&args);
+
+	sl_drop_privs(allow_root_uid);
+
+	slcfg_parse(cfg);
+	msl_init(NULL);
+
 
 	exit(slash2fuse_listener_start());
 }

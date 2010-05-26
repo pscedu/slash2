@@ -198,7 +198,6 @@ in release but I don't see good performance for 'ls -al'.
 	their inodes cached.
 
 - ensure fidc doesn't look up beyond SYM_NLOOPS #loops
-- drop privs to user _slash for mount_slash/slashd/sliod
 - add some high-level aliases to the replication interface for users:
 
   mid-level persistence control aliases:
