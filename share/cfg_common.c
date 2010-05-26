@@ -330,7 +330,7 @@ libsl_init(int pscnet_mode, int ismds)
 		if (nodeResm == NULL)
 			psc_fatalx("No resource member for this node");
 
-		if (globalConfig.gconf_fsroot[0] != '\0')
+		if (nodeResm->resm_res->res_fsroot[0] != '\0')
 			strlcpy(globalConfig.gconf_fsroot, nodeResm->resm_res->res_fsroot,
 			    sizeof(globalConfig.gconf_fsroot));
 
