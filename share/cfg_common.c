@@ -173,21 +173,20 @@ libsl_profile_dump(void)
 	struct sl_resm *resm;
 	int n;
 
-	fprintf(stderr,
-	    "Node info: resource %s ID %#x\n"
+	PSCLOG_LOCK();
+	psc_info("Node info: resource %s ID %#x\n"
 	    "\tdesc: %s\n"
-	    "\ttype %d, npeers %u, nnids %u\n"
-	    "\tfsroot %s\n",
+	    "\ttype %d, npeers %u, nnids %u",
 	    r->res_name, r->res_id,
 	    r->res_desc,
-	    r->res_type, r->res_npeers, psc_dynarray_len(&r->res_members),
-	    r->res_fsroot);
+	    r->res_type, r->res_npeers, psc_dynarray_len(&r->res_members));
 
 	DYNARRAY_FOREACH(p, n, &r->res_peers)
-		fprintf(stderr, "\tpeer %d: %s\t%s\n",
+		psc_info("\tpeer %d: %s\t%s\n",
 		    n, p->res_name, p->res_desc);
 	DYNARRAY_FOREACH(resm, n, &r->res_members)
-		fprintf(stderr, "\tnid %d: %s\n", n, resm->resm_addrbuf);
+		psc_info("\tnid %d: %s\n", n, resm->resm_addrbuf);
+	PSCLOG_UNLOCK();
 }
 
 int
@@ -330,7 +329,7 @@ libsl_init(int pscnet_mode, int ismds)
 		nodeResm = libsl_resm_lookup(ismds);
 		if (nodeResm == NULL)
 			psc_fatalx("No resource member for this node");
-		psc_errorx("Resource %s", nodeResm->resm_res->res_name);
+		psc_info("Resource %s", nodeResm->resm_res->res_name);
 		libsl_profile_dump();
 	}
 }
