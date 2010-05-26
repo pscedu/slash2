@@ -448,7 +448,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *req;
 	struct iovec iov;
-	int rc, i;
+	int rc, i, j;
 	char *buf;
 
 	spinlock(&mds_namespace_peerlist_lock);
@@ -467,16 +467,16 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			continue;
 
 		/* Find out which part of the buffer should be send out */
-		i = logbuf->slb_count;
+		j = logbuf->slb_count;
 		buf = logbuf->slb_buf;
 		do {
 			jnamespace = (struct slmds_jent_namespace *)buf;
 			if (jnamespace->sjnm_seqno == peerinfo->sp_send_seqno)
 				break;
 			buf = buf + jnamespace->sjnm_reclen;
-			i--;
-		} while (i);
-		psc_assert(i);
+			j--;
+		} while (j);
+		psc_assert(j);
 		
 		iov.iov_base = buf;
 		iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
@@ -492,11 +492,11 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		}
 		mq->seqno = peerinfo->sp_send_seqno;
 		mq->size = iov.iov_len;
-		mq->count = i;
+		mq->count = j;
 		mq->siteid = localinfo->sp_siteid;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
-		peerinfo->sp_send_count = i;
+		peerinfo->sp_send_count = j;
 		peerinfo->sp_logbuf = logbuf;
 		peerinfo->sp_flags |= SP_FLAG_INFLIGHT;
 		atomic_inc(&logbuf->slb_refcnt);
@@ -505,8 +505,8 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		 * Be careful, we use the value of i and buf from the 
 		 * previous while loop.
 		 */
-		while (i) {
-			i--;
+		while (j) {
+			j--;
 			jnamespace = (struct slmds_jent_namespace *)buf;
 			SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
 			    jnamespace->sjnm_op, NS_SUM_PEND);
