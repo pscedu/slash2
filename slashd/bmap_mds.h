@@ -142,13 +142,17 @@ int	 mds_bmap_load_ion(const struct slash_fidgen *, sl_bmapno_t,
 	    struct bmapc_memb **);
 int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
 	    struct bmapc_memb **);
+int	 mds_bmap_bml_chrwmode(struct bmap_mds_lease *, enum rw, sl_ios_id_t);
 int	 mds_bmap_bml_release(struct bmapc_memb *, uint64_t, uint64_t);
 void	 mds_bmap_sync_if_changed(struct bmapc_memb *);
-void	 mds_bmi_odtable_startup_cb(void *, struct odtable_receipt *);
+struct bmap_mds_lease *
+	 mds_bmap_getbml(struct bmapc_memb *, uint64_t);
 
 void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
 uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
+
+void	 mds_bmi_odtable_startup_cb(void *, struct odtable_receipt *);
 
 extern struct psc_poolmaster	 bmapMdsLeasePoolMaster;
 extern struct psc_poolmgr	*bmapMdsLeasePool;

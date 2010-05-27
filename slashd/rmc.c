@@ -244,14 +244,44 @@ slm_rmc_handle_bmap_chrwmode(struct pscrpc_request *rq)
 	struct srm_bmap_chmode_rep *mp;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
+	struct bmap_mds_info *bmdsi;
+	struct bmap_mds_lease *bml;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->rw != SL_READ && mq->rw != SL_WRITE) {
+		mp->rc = EINVAL;
+		goto out;
+	}
 	mp->rc = slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
 		goto out;
 	mp->rc = bmap_lookup(f, mq->sbd.sbd_bmapno, &b);
 	if (mp->rc)
 		goto out;
+
+	bmdsi = b->bcm_pri;
+	bml = mds_bmap_getbml(b, mq->sbd.sbd_seq);
+	if (bml == NULL) {
+		mp->rc = EINVAL;
+		goto out;
+	}
+
+	mp->rc = mds_bmap_bml_chrwmode(bml, mq->rw, mq->prefios);
+	if (mp->rc)
+		goto out;
+
+	mp->sbd = mq->sbd;
+	mp->sbd.sbd_key = (mq->rw == SL_WRITE) ?
+	    bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
+
+	if (mq->rw == SL_WRITE) {
+		psc_assert(bmdsi->bmdsi_wr_ion);
+		mp->sbd.sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
+		mp->sbd.sbd_ios_id = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
+	} else {
+		mp->sbd.sbd_ion_nid = LNET_NID_ANY;
+		mp->sbd.sbd_ios_id = IOS_ID_ANY;
+	}
 
  out:
 	if (b)

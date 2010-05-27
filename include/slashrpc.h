@@ -315,6 +315,7 @@ struct srm_bmap_wire_rep {
 
 struct srm_bmap_chmode_req {
 	struct srt_bmapdesc	sbd;
+	sl_ios_id_t		prefios;	/* preferred I/O system ID (if WRITE) */
 	int32_t			rw;
 } __packed;
 
