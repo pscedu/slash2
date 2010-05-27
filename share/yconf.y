@@ -721,9 +721,9 @@ slcfg_parse(const char *config_file)
 			/* Resolve peer names. */
 			for (i = 0; i < r->res_npeers; i++) {
 				peer = libsl_str2res(r->res_peertmp[i]);
+				if (!peer)
+					errx(1, "Peer resource %s not specified", r->res_peertmp[i]);
 				free(r->res_peertmp[i]);
-
-				psc_assert(peer);
 				psc_dynarray_add(&r->res_peers, peer);
 			}
 		}
