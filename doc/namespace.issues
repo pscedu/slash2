@@ -250,3 +250,23 @@ asser that error == 0).
 
 We can somehow justify this decision because eventually all log entries of a rename should be 
 applied and the end result is the same.
+
+
+05/27/2010
+----------
+
+Suppose I do the following:
+
+	mkdir zhihui1
+	mv zhihui1 zhihui2
+
+Whey replaying the first operation, the fidlink is created for zhihui1 based on its slash ID.
+To replay the second operation, I am doing two things (assuming that zhihui2 does not already
+exist yet) based on the idea outlined on 05/20/2010:
+
+	(1) mkdir zhihui2
+	(2) rmdir zhihui1
+
+(1) will fail because it can't create a fidlink again for zhihui2, the same slash ID is already
+used by zhihui1.  So perhaps I need to reverse the order of (1) and (2).
+
