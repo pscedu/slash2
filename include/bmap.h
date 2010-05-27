@@ -273,7 +273,7 @@ int	bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
 					    BMAPGETF_LOAD, (bp))
 
 #define bmap_get_noretr(f, n, rw, bp)   bmap_getf((f), (n), (rw),	\
-				  BMAPGETF_LOAD|BMAPGETF_NORETRIEVE, (bp))
+					  BMAPGETF_LOAD | BMAPGETF_NORETRIEVE, (bp))
 
 #define bmap_op_start_type(b, type)					\
 	do {								\
