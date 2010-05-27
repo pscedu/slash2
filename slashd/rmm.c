@@ -162,14 +162,15 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMM_BULK_PORTAL, &iov, 1);
-	if (mp->rc)
+	rc = mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMM_BULK_PORTAL, &iov, 1);
+	if (rc)
 		goto out;
+
 	if (desc)
 		pscrpc_free_bulk(desc);
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc) {
-		mp->rc = EINVAL;
+		rc = mp->rc = EINVAL;
 		goto out;
 	}
 	/*
@@ -182,7 +183,7 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	if (p->sp_siteid != mq->siteid) {
 		psc_info("slm_rmm_handle_namespace_update(): fail to find site ID %d",
 			  mq->siteid);
-		mp->rc = EINVAL;
+		rc = mp->rc = EINVAL;
 		goto out;
 	}
 	/*
@@ -204,22 +205,23 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	}
 
 	/* iterate through the namespace update buffer and apply updates */
-	rc = 0;
 	jnamespace = (struct slmds_jent_namespace *) iov.iov_base;
 	for (i = 0; i < count; i++) {
-		rc = slm_rmm_apply_update(jnamespace);
-		if (rc)
+		mp->rc = slm_rmm_apply_update(jnamespace);
+		if (mp->rc)
 			break;
 		jnamespace = (struct slmds_jent_namespace *)
 			((char *)jnamespace + jnamespace->sjnm_reclen); 
 	}
-	mp->rc = rc;
 	/* Should I ask for a resend if I have trouble applying updates? */
 	p->sp_recv_seqno = seqno + count;
 
 out:
 	PSCFREE(iov.iov_base);
-	return (mp->rc);
+	/*
+	 * Retrievable by req->rq_status on the receiving side.
+	 */
+	return (rc);
 }
 
 /*
@@ -233,7 +235,6 @@ slm_rmm_handler(struct pscrpc_request *rq)
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
 		rc = slm_rmm_handle_connect(rq);
-		break;
 		break;
 	case SRMT_NAMESPACE_UPDATE:
 		rc = slm_rmm_handle_namespace_update(rq);
