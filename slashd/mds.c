@@ -545,7 +545,7 @@ mds_bmap_getbml(struct bmapc_memb *b, uint64_t seq)
 	struct bmap_mds_info *bmdsi;
 	struct bmap_mds_lease *bml;
 
-	BML_LOCK_ENSURE(bml);
+	BMAP_LOCK_ENSURE(b);
 
 	bmdsi = b->bcm_pri;
 	PLL_FOREACH(bml, &bmdsi->bmdsi_leases)
