@@ -496,10 +496,8 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 
 	bcm_wait_locked(b, b->bcm_mode & BMAP_IONASSIGN);
 
-	if (bml->bml_flags & BML_WRITE) {
-		rc = EALREADY;
-		goto out;
-	}
+	if (bml->bml_flags & BML_WRITE)
+		return (EALREADY);
 
 	bmdsi->bmdsi_writers++;
 	b->bcm_mode |= BMAP_IONASSIGN;
@@ -519,17 +517,13 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	if (rc) {
 		BMAP_LOCK(b);
 		bmdsi->bmdsi_writers--;
-		b->bcm_mode &= ~BMAP_IONASSIGN;
 		b->bcm_mode |= BMAP_MDS_NOION;
-		goto out;
+	} else {
+		mds_bmap_directio(b, SL_WRITE);
+		BMAP_LOCK(b);
 	}
-	rc = mds_bmap_directio(b, SL_WRITE);
-	BMAP_LOCK(b);
 	b->bcm_mode &= ~BMAP_IONASSIGN;
-
- out:
 	bcm_wake_locked(b);
-	BMAP_ULOCK(b);
 	return (rc);
 }
 

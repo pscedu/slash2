@@ -261,6 +261,8 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 		goto out;
 
 	bmdsi = b->bcm_pri;
+
+	BMAP_LOCK(b);
 	bml = mds_bmap_getbml(b, mq->sbd.sbd_seq);
 	if (bml == NULL) {
 		mp->rc = EINVAL;
