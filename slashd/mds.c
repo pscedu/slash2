@@ -478,9 +478,14 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	return (rc);
 }
 
+/**
+ * mds_bmap_bml_chwrmode - Attempt to upgrade a client-granted bmap
+ *	lease from READ-only to READ+WRITE.
+ * @bml: bmap lease.
+ * @prefios: client's preferred I/O system ID.
+ */
 int
-mds_bmap_bml_chrwmode(struct bmap_mds_lease *bml, enum rw rw,
-    sl_ios_id_t prefios)
+mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 {
 	struct bmap_mds_info *bmdsi;
 	struct bmapc_memb *b;
@@ -491,66 +496,36 @@ mds_bmap_bml_chrwmode(struct bmap_mds_lease *bml, enum rw rw,
 
 	bcm_wait_locked(b, b->bcm_mode & BMAP_IONASSIGN);
 
-	if (rw == SL_WRITE) {
-		if (bml->bml_flags & BML_WRITE) {
-			rc = EALREADY;
-			goto out;
-		}
-
-		bmdsi->bmdsi_writers++;
-		b->bcm_mode |= BMAP_IONASSIGN;
-		bml->bml_flags &= ~BML_READ;
-		bml->bml_flags |= BML_TIMEOQ | BML_WRITE;
-
-		if (bmdsi->bmdsi_writers == 1) {
-			psc_assert(!bmdsi->bmdsi_wr_ion);
-			BMAP_ULOCK(b);
-			rc = mds_bmap_ion_assign(bml, prefios);
-		} else {
-			psc_assert(bmdsi->bmdsi_wr_ion);
-			BMAP_ULOCK(b);
-			rc = mds_bmap_ion_update(bml);
-		}
-
-		if (rc) {
-			BMAP_LOCK(b);
-			bmdsi->bmdsi_writers--;
-			b->bcm_mode &= ~BMAP_IONASSIGN;
-			b->bcm_mode |= BMAP_MDS_NOION;
-			goto out;
-		}
-		rc = mds_bmap_directio(b, SL_WRITE);
-		BMAP_LOCK(b);
-		b->bcm_mode &= ~BMAP_IONASSIGN;
-	} else {
-		if (bml->bml_flags & BML_READ) {
-			rc = EALREADY;
-			goto out;
-		}
-
-		/* Read leases aren't required to be present in the
-		 *   timeout table though their sequence number must
-		 *   be accounted for.
-		 */
-		psc_assert(bmdsi->bmdsi_writers >= 1);
-		bmdsi->bmdsi_writers--;
-		bml->bml_flags &= ~BML_WRITE;
-		bml->bml_flags |= BML_READ;
-		bml->bml_seq = mds_bmap_timeotbl_getnextseq();
-		bml->bml_key = BMAPSEQ_ANY;
-
-		if (bmdsi->bmdsi_writers) {
-			b->bcm_mode |= BMAP_IONASSIGN;
-			BMAP_ULOCK(b);
-			/* Don't hold the lock when calling
-			 *   mds_bmap_directio_handle_locked(), it will likely
-			 *   send an RPC.
-			 */
-			rc = mds_bmap_directio(b, SL_READ);
-			BMAP_LOCK(b);
-			b->bcm_mode &= ~BMAP_IONASSIGN;
-		}
+	if (bml->bml_flags & BML_WRITE) {
+		rc = EALREADY;
+		goto out;
 	}
+
+	bmdsi->bmdsi_writers++;
+	b->bcm_mode |= BMAP_IONASSIGN;
+	bml->bml_flags &= ~BML_READ;
+	bml->bml_flags |= BML_TIMEOQ | BML_WRITE;
+
+	if (bmdsi->bmdsi_writers == 1) {
+		psc_assert(!bmdsi->bmdsi_wr_ion);
+		BMAP_ULOCK(b);
+		rc = mds_bmap_ion_assign(bml, prefios);
+	} else {
+		psc_assert(bmdsi->bmdsi_wr_ion);
+		BMAP_ULOCK(b);
+		rc = mds_bmap_ion_update(bml);
+	}
+
+	if (rc) {
+		BMAP_LOCK(b);
+		bmdsi->bmdsi_writers--;
+		b->bcm_mode &= ~BMAP_IONASSIGN;
+		b->bcm_mode |= BMAP_MDS_NOION;
+		goto out;
+	}
+	rc = mds_bmap_directio(b, SL_WRITE);
+	BMAP_LOCK(b);
+	b->bcm_mode &= ~BMAP_IONASSIGN;
 
  out:
 	bcm_wake_locked(b);
@@ -558,11 +533,19 @@ mds_bmap_bml_chrwmode(struct bmap_mds_lease *bml, enum rw rw,
 	return (rc);
 }
 
+/**
+ * mds_bmap_getbml - Obtain the lease handle for a bmap denoted by the
+ *	specified issued sequence number.
+ * @b: locked bmap.
+ * @seq: lease sequence.
+ */
 struct bmap_mds_lease *
 mds_bmap_getbml(struct bmapc_memb *b, uint64_t seq)
 {
 	struct bmap_mds_info *bmdsi;
 	struct bmap_mds_lease *bml;
+
+	BML_LOCK_ENSURE(bml);
 
 	bmdsi = b->bcm_pri;
 	PLL_FOREACH(bml, &bmdsi->bmdsi_leases)
@@ -584,7 +567,7 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	struct bmap_mds_info *bmdsi;
 	struct bmap_mds_lease *bml;
 	struct odtable_receipt *odtr=NULL;
-	int found=0, rc = 0;
+	int rc = 0;
 
 	bmdsi = b->bcm_pri;
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
@@ -602,13 +585,8 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));
 	b->bcm_mode |= BMAP_IONASSIGN;
 
-	PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
-		if (bml->bml_seq == seq) {
-			found = 1;
-			break;
-		}
-	}
-	if (!found) {
+	bml = mds_bmap_getbml(b, seq);
+	if (bml == NULL) {
 		b->bcm_mode &= ~BMAP_IONASSIGN;
 		bcm_wake_locked(b);
 		BMAP_ULOCK(b);

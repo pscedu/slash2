@@ -100,6 +100,7 @@ struct bmap_mds_lease {
 
 #define bml_2_bmap(b)		(b)->bml_bmdsi->bmdsi_bmap
 
+#define BML_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bml_lock)
 #define BML_LOCK(b)		spinlock(&(b)->bml_lock)
 #define BML_ULOCK(b)		freelock(&(b)->bml_lock)
 
@@ -142,7 +143,7 @@ int	 mds_bmap_load_ion(const struct slash_fidgen *, sl_bmapno_t,
 	    struct bmapc_memb **);
 int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
 	    struct bmapc_memb **);
-int	 mds_bmap_bml_chrwmode(struct bmap_mds_lease *, enum rw, sl_ios_id_t);
+int	 mds_bmap_bml_chwrmode(struct bmap_mds_lease *, sl_ios_id_t);
 int	 mds_bmap_bml_release(struct bmapc_memb *, uint64_t, uint64_t);
 void	 mds_bmap_sync_if_changed(struct bmapc_memb *);
 struct bmap_mds_lease *

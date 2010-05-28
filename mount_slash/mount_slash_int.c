@@ -672,7 +672,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct srm_bmap_chmode_req *mq;
+	struct srm_bmap_chwrmode_req *mq;
 	struct srm_generic_rep *mp;
 	int rc;
 
@@ -682,12 +682,11 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	if (rc)
 		goto out;
 	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_BMAPCHMODE, rq, mq, mp);
+	    SRMT_BMAPCHWRMODE, rq, mq, mp);
 	if (rc)
 		goto out;
 
 	mq->sbd = *bmap_2_sbd(b);
-	mq->rw = rw;
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;

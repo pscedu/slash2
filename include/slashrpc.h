@@ -150,7 +150,7 @@ enum {
 	SRMT_NAMESPACE_UPDATE,		/* send a batch of namespace operation logs */
 
 	/* bmap operations */
-	SRMT_BMAPCHMODE,
+	SRMT_BMAPCHWRMODE,
 	SRMT_BMAPCRCWRT,
 	SRMT_BMAPDIO,
 	SRMT_GETBMAP,
@@ -313,13 +313,13 @@ struct srm_bmap_wire_rep {
  */
 } __packed;
 
-struct srm_bmap_chmode_req {
+struct srm_bmap_chwrmode_req {
 	struct srt_bmapdesc	sbd;
 	sl_ios_id_t		prefios;	/* preferred I/O system ID (if WRITE) */
-	int32_t			rw;
+	int32_t			_pad;
 } __packed;
 
-struct srm_bmap_chmode_rep {
+struct srm_bmap_chwrmode_rep {
 	struct srt_bmapdesc	sbd;
 	int32_t			rc;
 	int32_t			_pad;

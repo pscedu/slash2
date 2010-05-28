@@ -237,21 +237,22 @@ slm_rmc_getbmap_common(struct fidc_membh *fcmh, sl_ios_id_t prefios,
 	return (rc);
 }
 
+/**
+ * slm_rmc_handle_bmap_chwrmode - Handle a BMAPCHWRMODE request to
+ *	upgrade a client bmap lease from READ-only to READ+WRITE.
+ * @rq: RPC request.
+ */
 int
-slm_rmc_handle_bmap_chrwmode(struct pscrpc_request *rq)
+slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 {
-	const struct srm_bmap_chmode_req *mq;
-	struct srm_bmap_chmode_rep *mp;
+	const struct srm_bmap_chwrmode_req *mq;
+	struct srm_bmap_chwrmode_rep *mp;
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_info *bmdsi;
 	struct bmap_mds_lease *bml;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->rw != SL_READ && mq->rw != SL_WRITE) {
-		mp->rc = EINVAL;
-		goto out;
-	}
 	mp->rc = slm_fcmh_get(&mq->sbd.sbd_fg, &f);
 	if (mp->rc)
 		goto out;
@@ -266,22 +267,16 @@ slm_rmc_handle_bmap_chrwmode(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	mp->rc = mds_bmap_bml_chrwmode(bml, mq->rw, mq->prefios);
+	mp->rc = mds_bmap_bml_chwrmode(bml, mq->prefios);
 	if (mp->rc)
 		goto out;
 
 	mp->sbd = mq->sbd;
-	mp->sbd.sbd_key = (mq->rw == SL_WRITE) ?
-	    bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
+	mp->sbd.sbd_key = bml->bml_bmdsi->bmdsi_assign->odtr_key;
 
-	if (mq->rw == SL_WRITE) {
-		psc_assert(bmdsi->bmdsi_wr_ion);
-		mp->sbd.sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
-		mp->sbd.sbd_ios_id = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
-	} else {
-		mp->sbd.sbd_ion_nid = LNET_NID_ANY;
-		mp->sbd.sbd_ios_id = IOS_ID_ANY;
-	}
+	psc_assert(bmdsi->bmdsi_wr_ion);
+	mp->sbd.sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
+	mp->sbd.sbd_ios_id = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
 
  out:
 	if (b)
@@ -873,8 +868,8 @@ slm_rmc_handler(struct pscrpc_request *rq)
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
-	case SRMT_BMAPCHMODE:
-		rc = slm_rmc_handle_bmap_chrwmode(rq);
+	case SRMT_BMAPCHWRMODE:
+		rc = slm_rmc_handle_bmap_chwrmode(rq);
 		break;
 	case SRMT_GETBMAP:
 		rc = slm_rmc_handle_getbmap(rq);
