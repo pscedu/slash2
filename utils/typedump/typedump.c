@@ -214,8 +214,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmrmi_thread);
 	PRTYPE(struct slmrmm_thread);
 	PRTYPE(struct slvr_ref);
-	PRTYPE(struct srm_bmap_chmode_rep);
-	PRTYPE(struct srm_bmap_chmode_req);
+	PRTYPE(struct srm_bmap_chwrmode_rep);
+	PRTYPE(struct srm_bmap_chwrmode_req);
 	PRTYPE(struct srm_bmap_crcup);
 	PRTYPE(struct srm_bmap_crcwire);
 	PRTYPE(struct srm_bmap_crcwrt_req);
@@ -282,7 +282,7 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_GETREPLST_SLAVE);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
 	PRVAL(MSCMT_SET_NEWREPLPOL);
-	PRVAL(SRMT_BMAPCHMODE);
+	PRVAL(SRMT_BMAPCHWRMODE);
 	PRVAL(SRMT_BMAPCRCWRT);
 	PRVAL(SRMT_BMAPDIO);
 	PRVAL(SRMT_CHMOD);
