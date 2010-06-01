@@ -95,6 +95,7 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 		if (!fcmh_isdir(fcmh)) {
 			psc_assert(!S_ISDIR(sstb->sst_mode));
 		}
+		psc_assert(sstb->sst_ino);
 	}
 
 	fcmh->fcmh_sstb = *sstb;
