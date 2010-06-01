@@ -408,25 +408,26 @@ void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {
 };
 int psc_ctl_ngetstats = nitems(psc_ctl_getstats);
 
-void
+int
 slcctlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
-	return;
+	return (0);
 }
 
-void
+int
 slcctlcmd_fidcache(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
 	dump_fidcache();
+	return (0);
 }
 
-void
+int
 slcctlcmd_reconfig(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
-	return;
+	return (0);
 }
 
 int (*psc_ctl_cmds[])(int, struct psc_ctlmsghdr *, void *) = {
