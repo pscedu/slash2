@@ -514,7 +514,17 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 void
 dump_fidcache(void)
 {
+	struct fidc_membh *tmp;
+	struct psc_hashbkt *bkt;
+
 	psc_notify("Calling dump_fidcache\n");
+	PSC_HASHTBL_FOREACH_BUCKET(bkt, &fidcHtable) {
+		psc_hashbkt_lock(bkt);
+		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, bkt) {
+			dump_fcmh(tmp);
+		}
+		psc_hashbkt_unlock(bkt);
+	}
 }
 
 void
