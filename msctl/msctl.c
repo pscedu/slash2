@@ -525,6 +525,9 @@ struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
 int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
+	{ "exit",	MSCC_EXIT },
+	{ "fidcache",	MSCC_FIDCACHE },
+	{ "reconfig",	MSCC_RECONFIG }
 };
 int psc_ctlcmd_nreqs = nitems(psc_ctlcmd_reqs);
 

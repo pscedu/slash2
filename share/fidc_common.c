@@ -512,6 +512,12 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 }
 
 void
+dump_fidcache(void)
+{
+	psc_notify("Calling dump_fidcache\n");
+}
+
+void
 dump_fcmh(struct fidc_membh *f)
 {
 	DEBUG_FCMH(PLL_MAX, f, "");

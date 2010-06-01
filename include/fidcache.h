@@ -194,6 +194,7 @@ void			 fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
 
 void			 fcmh_op_done_type(struct fidc_membh *, enum fcmh_opcnt_types);
 
+void			 dump_fidcache(void);
 void			 dump_fcmh(struct fidc_membh *);
 void			 dump_fcmh_flags(int);
 

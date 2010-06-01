@@ -77,6 +77,7 @@ struct msctlmsg_fncmd_bmapreplpol {
 
 /* mount_slash control commands */
 #define MSCC_EXIT	0
-#define MSCC_RECONFIG	1
+#define MSCC_FIDCACHE	1
+#define MSCC_RECONFIG	2
 
 #endif /* _SL_CTL_CLI_H_ */
