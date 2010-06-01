@@ -77,6 +77,9 @@ psc_spinlock_t			 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
 
 struct slash_creds		 rootcreds = { 0, 0 };
 
+/* number of attribute prefetch in readdir() */
+int32_t				nstbpref = DEF_ATTR_PREFETCH;
+
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 static int  msl_lookup_fidcache(const struct slash_creds *, fuse_ino_t,
@@ -913,7 +916,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	iov[niov].iov_len = size;
 	niov++;
 
-	mq->nstbpref = 100;
+	mq->nstbpref = nstbpref;
 	if (mq->nstbpref) {
 		iov[niov].iov_len = mq->nstbpref * sizeof(struct srm_getattr_rep);
 		iov[niov].iov_base = PSCALLOC(iov[1].iov_len);
@@ -1823,7 +1826,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-dUX] [-f conf] [-o fuseopt] [-S socket] node\n",
+	    "usage: %s [-dUX] [-f conf] [-o fuseopt] [-S socket] [-p prefetch] node\n",
 	    progname);
 	exit(1);
 }
@@ -1847,7 +1850,7 @@ main(int argc, char *argv[])
 	msl_fuse_addarg(&args, FUSE_OPTIONS);
 
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "df:o:S:UX")) != -1)
+	while ((c = getopt(argc, argv, "df:o:p:S:UX")) != -1)
 		switch (c) {
 		case 'd':
 			msl_fuse_addarg(&args, "-odebug");
@@ -1858,6 +1861,9 @@ main(int argc, char *argv[])
 		case 'o':
 			msl_fuse_addarg(&args, "-o");
 			msl_fuse_addarg(&args, optarg);
+			break;
+		case 'p':
+			nstbpref = atoi(optarg);
 			break;
 		case 'S':
 			if (strlcpy(ctlsockfn, optarg,

@@ -590,6 +590,7 @@ struct srm_mknod_req {
 
 #define MAX_READDIR_NENTS	1000
 #define MAX_READDIR_BUFSIZ	(sizeof(struct srt_stat) * MAX_READDIR_NENTS)
+#define DEF_ATTR_PREFETCH	100
 
 struct srm_readdir_req {
 	struct slash_fidgen	fg;
