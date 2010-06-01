@@ -160,14 +160,12 @@ bmpc_slb_free(struct sl_buffer *slb)
 {
 	DEBUG_SLB(PLL_NOTIFY, slb, "freeing slb");
 	psc_assert(psc_vbitmap_nfree(slb->slb_inuse) == BMPC_SLB_NBLKS);
-	psc_assert(slb->slb_base == NULL);
 //	psc_assert(psclist_disjoint(&slb->slb_mgmt_lentry));
 //	psc_assert(psclist_disjoint(&slb->slb_fcmh_lentry));
 //	psc_assert(psclist_empty(&slb->slb_iov_list));
 	psc_assert(!atomic_read(&slb->slb_ref));
-
 	psc_vbitmap_free(slb->slb_inuse);
-
+	PSCFREE(slb->slb_base);
 	PSCFREE(slb);
 }
 
@@ -450,7 +448,6 @@ bmpc_free(void *base)
 		 *   remove it from the cache and free the memory.
 		 */
 		pll_remove(&bmpcSlabs.bmms_slbs, slb);
-		slb->slb_base = NULL;
 		freeslb = 1;
 	}
 	freelock(&slb->slb_lock);
