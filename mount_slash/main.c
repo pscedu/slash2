@@ -78,7 +78,7 @@ psc_spinlock_t			 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
 struct slash_creds		 rootcreds = { 0, 0 };
 
 /* number of attribute prefetch in readdir() */
-int32_t				nstbpref = DEF_ATTR_PREFETCH;
+int				nstbpref = DEF_ATTR_PREFETCH;
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -916,7 +916,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	iov[niov].iov_len = size;
 	niov++;
 
-	mq->nstbpref = nstbpref;
+	mq->nstbpref = MIN(nstbpref, (int)howmany(LNET_MTU - size,
+	    sizeof(struct srm_getattr_rep)));
 	if (mq->nstbpref) {
 		iov[niov].iov_len = mq->nstbpref * sizeof(struct srm_getattr_rep);
 		iov[niov].iov_base = PSCALLOC(iov[1].iov_len);
@@ -1834,9 +1835,10 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char c, *noncanon_mp = NULL, *cfg = SL_PATH_CONF;
+	char c, *p, *noncanon_mp = NULL, *cfg = SL_PATH_CONF;
 	struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
 	int unmount_first = 0;
+	long l;
 
 	/* gcrypt must be initialized very early on */
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -1863,7 +1865,13 @@ main(int argc, char *argv[])
 			msl_fuse_addarg(&args, optarg);
 			break;
 		case 'p':
-			nstbpref = atoi(optarg);
+			l = strtol(optarg, &p, 10);
+			if (p == optarg || *p != '\0' ||
+			    l < 0 || l > MAX_ATTR_PREFETCH)
+				errx(1, "invalid readdir stat "
+				    "prefetch (max %d): %s",
+				    MAX_ATTR_PREFETCH, optarg);
+			nstbpref = (int)l;
 			break;
 		case 'S':
 			if (strlcpy(ctlsockfn, optarg,
