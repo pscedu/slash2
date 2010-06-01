@@ -78,7 +78,7 @@ psc_spinlock_t			 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
 struct slash_creds		 rootcreds = { 0, 0 };
 
 /* number of attribute prefetch in readdir() */
-int				nstbpref = DEF_ATTR_PREFETCH;
+int				nstbpref = DEF_READDIR_NENTS;
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -1867,10 +1867,10 @@ main(int argc, char *argv[])
 		case 'p':
 			l = strtol(optarg, &p, 10);
 			if (p == optarg || *p != '\0' ||
-			    l < 0 || l > MAX_ATTR_PREFETCH)
+			    l < 0 || l > MAX_READDIR_NENTS)
 				errx(1, "invalid readdir stat "
 				    "prefetch (max %d): %s",
-				    MAX_ATTR_PREFETCH, optarg);
+				    MAX_READDIR_NENTS, optarg);
 			nstbpref = (int)l;
 			break;
 		case 'S':
