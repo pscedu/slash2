@@ -252,7 +252,7 @@ _slc_fcmh_get(const struct slash_fidgen *fgp, const struct srt_stat *sstb,
 {
 	int rc;
 
-	rc = _fidc_lookup(fgp, FIDC_LOOKUP_CREATE, sstb,
+	rc = _fidc_lookup(fgp, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_EXCL, sstb,
 	    setattrflags, creds, fcmhp, file, func, line);
 	if (rc)
 		return (rc);
