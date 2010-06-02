@@ -27,7 +27,9 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 
+#include "ctl.h"
 #include "ctl_iod.h"
+#include "ctlsvr.h"
 #include "repl_iod.h"
 
 struct psc_lockedlist psc_mlists;
@@ -72,7 +74,9 @@ slictlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 
 struct psc_ctlop slictlops[] = {
 	PSC_CTLDEFOPS,
-	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) }
+	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
+	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
+	{ slctlrep_getfiles,		sizeof(struct slctlmsg_file ) }
 };
 
 void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {

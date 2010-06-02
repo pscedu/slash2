@@ -107,7 +107,7 @@ slctlmsg_file_send(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-slctlrep_getfile(int fd, struct psc_ctlmsghdr *mh, void *m)
+slctlrep_getfiles(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slctlmsg_file *scf = m;
 	struct fidc_membh *fcmh;

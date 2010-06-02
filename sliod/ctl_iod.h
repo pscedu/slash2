@@ -40,8 +40,9 @@ struct slictlmsg_replwkst {
 #define pcst_nwrite		pcst_u32_1
 
 /* sliod message types */
-#define SLICMT_GET_REPLWKST	(NPCMT + 0)
+#define SLICMT_GET_REPLWKST	NPCMT
 #define SLICMT_GETCONNS		(NPCMT + 1)
+#define SLICMT_GETFILES		(NPCMT + 2)
 
 /* sliod control commands */
 #define SICC_EXIT		0

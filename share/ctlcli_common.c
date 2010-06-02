@@ -110,5 +110,4 @@ sl_file_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_flags & FCMH_HAVE_ATTRS	? 'A' : '-',
 	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-',
 	    scf->scf_flags & FCMH_WAITING_ATTRS	? 'N' : '-');
-
 }

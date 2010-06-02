@@ -23,4 +23,7 @@
 void sl_conn_prhdr(struct psc_ctlmsghdr *, const void *);
 void sl_conn_prdat(const struct psc_ctlmsghdr *, const void *);
 
+void sl_file_prhdr(struct psc_ctlmsghdr *, const void *);
+void sl_file_prdat(const struct psc_ctlmsghdr *, const void *);
+
 #endif /* _SL_CTLCLI_H_ */

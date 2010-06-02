@@ -26,7 +26,9 @@
 #include "psc_util/ctlsvr.h"
 
 #include "creds.h"
+#include "ctl.h"
 #include "ctl_mds.h"
+#include "ctlsvr.h"
 #include "mdsio.h"
 #include "slashd.h"
 #include "slconfig.h"
@@ -212,7 +214,9 @@ slmctlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 }
 
 struct psc_ctlop slmctlops[] = {
-	PSC_CTLDEFOPS
+	PSC_CTLDEFOPS,
+	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
+	{ slctlrep_getfiles,		sizeof(struct slctlmsg_file ) }
 };
 
 void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {

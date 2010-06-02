@@ -27,7 +27,8 @@
 #define pcst_nclose		pcst_u32_3
 
 /* sliod message types */
-#define SLMCMT_GETCONNS		(NPCMT + 0)
+#define SLMCMT_GETCONNS		NPCMT
+#define SLMCMT_GETFILES		(NPCMT + 1)
 
 /* slashd control commands */
 #define SMCC_EXIT		0
