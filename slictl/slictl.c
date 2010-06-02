@@ -29,7 +29,8 @@
 #include "psc_util/log.h"
 
 #include "sliod/ctl_iod.h"
-#include "control.h"
+#include "ctl.h"
+#include "ctlcli.h"
 #include "pathnames.h"
 
 void

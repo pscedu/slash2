@@ -24,7 +24,9 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
 
-#include "control.h"
+#include "ctl.h"
+#include "ctlcli.h"
+#include "fidcache.h"
 #include "slconfig.h"
 #include "slconn.h"
 
@@ -81,4 +83,32 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	    slconn_restypes[scc->scc_type],
 	    scc->scc_flags & CSVCF_USE_MULTIWAIT ? 'M' : '-',
 	    scc->scc_refcnt, status);
+}
+
+void
+sl_file_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("files\n"
+	    " %-16s %5s %33s %7s %7s %6s\n",
+	    "resource", "host", "type", "flags", "#refs", "status");
+}
+
+void
+sl_file_prdat(const struct psc_ctlmsghdr *mh, const void *m)
+{
+	const struct slctlmsg_file *scf = m;
+
+	printf("   %12s %c%c%c%c%c%c%c%c%c%c\n",
+	    "",
+	    scf->scf_flags & FCMH_CAC_FREE	? 'F' : '-',
+	    scf->scf_flags & FCMH_CAC_CLEAN	? 'C' : '-',
+	    scf->scf_flags & FCMH_CAC_DIRTY	? 'D' : '-',
+	    scf->scf_flags & FCMH_CAC_FAILED	? 'X' : '-',
+	    scf->scf_flags & FCMH_CAC_FREEING	? 'R' : '-',
+	    scf->scf_flags & FCMH_CAC_INITING	? 'I' : '-',
+	    scf->scf_flags & FCMH_CAC_WAITING	? 'W' : '-',
+	    scf->scf_flags & FCMH_HAVE_ATTRS	? 'A' : '-',
+	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-',
+	    scf->scf_flags & FCMH_WAITING_ATTRS	? 'N' : '-');
+
 }

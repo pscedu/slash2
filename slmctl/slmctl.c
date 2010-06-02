@@ -27,7 +27,8 @@
 #include "psc_util/ctlcli.h"
 #include "psc_util/log.h"
 
-#include "control.h"
+#include "ctl.h"
+#include "ctlcli.h"
 #include "pathnames.h"
 
 #include "slashd/ctl_mds.h"

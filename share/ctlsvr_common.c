@@ -24,7 +24,8 @@
 #include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
 
-#include "control.h"
+#include "ctl.h"
+#include "ctlsvr.h"
 #include "fidcache.h"
 #include "slconfig.h"
 
@@ -91,7 +92,7 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-int
+__static int
 slctlmsg_file_send(int fd, struct psc_ctlmsghdr *mh,
     struct slctlmsg_file *scf, struct fidc_membh *fcmh)
 {

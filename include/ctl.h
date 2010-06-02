@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _SL_CONTROL_H_
-#define _SL_CONTROL_H_
+#ifndef _SL_CTL_H_
+#define _SL_CTL_H_
 
 #include "slconfig.h"
 
@@ -43,7 +43,4 @@ struct slctlmsg_file {
 	int32_t			scf_refcnt;
 };
 
-void sl_conn_prhdr(struct psc_ctlmsghdr *, const void *);
-void sl_conn_prdat(const struct psc_ctlmsghdr *, const void *);
-
-#endif /* _SL_CONTROL_H_ */
+#endif /* _SL_CTL_H_ */

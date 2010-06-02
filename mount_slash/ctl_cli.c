@@ -32,7 +32,9 @@
 #include "psc_util/ctlsvr.h"
 #include "psc_util/net.h"
 
+#include "ctl.h"
 #include "ctl_cli.h"
+#include "ctlsvr.h"
 #include "ctlsvr_cli.h"
 #include "fuse_listener.h"
 #include "mount_slash.h"
@@ -401,7 +403,7 @@ struct psc_ctlop msctlops[] = {
 	{ msctlrep_getreplst,		sizeof(struct msctlmsg_replst) },
 	{ msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_fncmd_newreplpol) },
 	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_fncmd_bmapreplpol) },
-	{ slctlrep_getfile,		sizeof(struct msctlmsg_file) }
+	{ slctlrep_getfile,		sizeof(struct slctlmsg_file) }
 };
 
 void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {

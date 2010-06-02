@@ -35,7 +35,8 @@
 
 #include "mount_slash/ctl_cli.h"
 #include "bmap.h"
-#include "control.h"
+#include "ctl.h"
+#include "ctlcli.h"
 #include "msctl.h"
 #include "pathnames.h"
 #include "slashrpc.h"
@@ -526,7 +527,6 @@ int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
 	{ "exit",	MSCC_EXIT },
-	{ "fidcache",	MSCC_FIDCACHE },
 	{ "reconfig",	MSCC_RECONFIG }
 };
 int psc_ctlcmd_nreqs = nitems(psc_ctlcmd_reqs);
