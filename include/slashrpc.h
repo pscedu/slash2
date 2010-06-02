@@ -35,18 +35,31 @@ struct stat;
 struct statvfs;
 
 #ifdef AUTHBUF
-#define _SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
+#define _SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens,	\
+	    mq0)							\
 	{								\
-		int _qlens, _plens;					\
-									\
-		_qlens[0] = sizeof(*(mq));				\
-		_qlens[1] = sizeof(struct srt_authbuf_footer);		\
-									\
-		_plens[0] = sizeof(*(mp));				\
-		_plens[1] = sizeof(struct srt_authbuf_footer);		\
+		psc_assert((nq) > 1);					\
+		psc_assert((np) > 1);					\
+		psc_assert((qlens)[(nq) - 1] == 0);			\
+		psc_assert((plens)[(np) - 1] == 0);			\
+		(qlens)[(nq) - 1] = sizeof(struct srt_authbuf_footer);	\
+		(plens)[(np) - 1] = sizeof(struct srt_authbuf_footer);	\
 									\
 		RSX_NEWREQN((imp), (version), (op), (rq),		\
-		    2, qlens, 2, plens, mq);				\
+		    (nq), (qlens), (np), (plens), (mq0));		\
+	}
+
+#define SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens, mq0)	\
+	(_SL_RSX_NEWREQN((imp), (version), (op), (rq), (nq), (qlens),	\
+	    (np), (plens), (mq0)))
+
+#define _SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
+	{								\
+		int _qlens[2] = { sizeof(*(mq)), 0 };			\
+		int _plens[2] = { sizeof(*(mp)), 0 };			\
+									\
+		_SL_RSX_NEWREQN((imp), (version), (op), (rq), 2,	\
+		    _qlens, 2, _plens, (mq));				\
 	}
 
 #define SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
@@ -73,6 +86,10 @@ struct statvfs;
 			return ((mp)->rc);				\
 	 } while (0)
 #else
+#define SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens, mq0)	\
+	RSX_NEWREQN((imp), (version), (op), (rq), (nq), (qlens), (np),	\
+	    (plens), (mq0))
+
 #define SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
 	RSX_NEWREQ((imp), (version), (op), (rq), (mq), (mp))
 
