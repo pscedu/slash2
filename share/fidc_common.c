@@ -517,7 +517,7 @@ dump_fidcache(void)
 	struct fidc_membh *tmp;
 	struct psc_hashbkt *bkt;
 
-	psc_notify("Calling dump_fidcache\n");
+	psc_warn("Start dumping fidcache\n");
 	PSC_HASHTBL_FOREACH_BUCKET(bkt, &fidcHtable) {
 		psc_hashbkt_lock(bkt);
 		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, bkt) {
@@ -525,13 +525,14 @@ dump_fidcache(void)
 		}
 		psc_hashbkt_unlock(bkt);
 	}
+	psc_warn("Done dumping fidcache\n");
 }
 
 void
 dump_fcmh(struct fidc_membh *f)
 {
-	psc_notify("fidc_membh (%p): fid = %"PRIx64", gen = %"PRIx64", refcnt = %d, sstb = %p\n",
-		    f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt, &f->fcmh_sstb);
+	psc_warn("fidc_membh (%p): fid = %"PRIx64", gen = %"PRIx64", refcnt = %d, sstb = %p\n",
+	    	  f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt, &f->fcmh_sstb);
 }
 
 void
