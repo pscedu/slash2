@@ -531,7 +531,7 @@ dump_fidcache(void)
 void
 dump_fcmh(struct fidc_membh *f)
 {
-	psc_warn("fidc_membh (%p): fid = %"PRIx64", gen = %"PRIx64", refcnt = %d, sstb = %p\n",
+	psc_warn("fidc_membh (%p): fid = %"PRId64", gen = %"PRId64", refcnt = %d, sstb = %p\n",
 	    	  f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt, &f->fcmh_sstb);
 }
 
