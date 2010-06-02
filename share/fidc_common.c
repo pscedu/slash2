@@ -245,7 +245,8 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		}
 		if (sstb)
 			psc_assert((flags & FIDC_LOOKUP_LOAD) == 0);
-	}
+	} else
+		psc_assert(!(flags & FIDC_LOOKUP_EXCL));
 
 	/* first, check if its already in the cache */
 	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
@@ -298,10 +299,11 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			fcmh_new = NULL;			/* defensive */
 		}
 		if (flags & FIDC_LOOKUP_EXCL) {
+			fcmh->fcmh_state |= FCMH_CAC_TOFREE;
 			FCMH_ULOCK(fcmh);
 			psc_warnx("FID "FIDFMT" already in cache",
 			    FIDFMTARGS(fgp));
-			return (EEXIST);
+			goto restart;
 		}
 
 #ifdef DEMOTED_INUM_WIDTHS
