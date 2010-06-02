@@ -564,9 +564,7 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 {
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
-
-	if (!(s->slvr_flags & SLVR_LRU))
-		return;
+	psc_assert(s->slvr_flags & SLVR_LRU);
 
 	slvr_2_biod(s)->biod_crcdrty_slvrs++;
 
@@ -650,7 +648,7 @@ slvr_wio_done(struct slvr_ref *s)
 	 * If there are no more pending writes, schedule a CRC op.
 	 */
 	s->slvr_pndgwrts--;	
-	if (!s->slvr_pndgwrts)
+	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU))
 		slvr_schedule_crc_locked(s);
 
 	SLVR_ULOCK(s);
