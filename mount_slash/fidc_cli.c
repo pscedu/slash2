@@ -105,7 +105,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 	 */
 	FCMH_FOREACH_CHILD(c, p) {
 		spinlock(&c->fcmh_lock);
-		if (c->fcmh_state & FCMH_CAC_FREEING) {
+		if (c->fcmh_state & FCMH_CAC_TOFREE) {
 			freelock(&c->fcmh_lock);
 			continue;
 		}
@@ -176,7 +176,7 @@ fidc_child_unlink(struct fidc_membh *p, const char *name)
 	if (fcmh_isdir(c)) {
 		FCMH_FOREACH_CHILD_SAFE(tmp1, tmp2, c) {
 			FCMH_LOCK(tmp1);
-			if (tmp1->fcmh_state & FCMH_CAC_FREEING) {
+			if (tmp1->fcmh_state & FCMH_CAC_TOFREE) {
 				FCMH_ULOCK(tmp1);
 				continue;
 			}

@@ -146,15 +146,15 @@ fidc_reap(struct psc_poolmgr *m)
 		psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
 
 		/* already victimized */
-		if (f->fcmh_state & FCMH_CAC_FREEING)
+		if (f->fcmh_state & FCMH_CAC_REAPED)
 			goto end;
 
-		/* Call into the system specific 'reap' code.
-		 *  On the client this means taking the fcmh from the
-		 *  parent directory fcmh.
+		/* 
+		 * fidcReapCb() is only used on the client to keep
+		 * parent-child relationship intact.
 		 */
 		if (!fidcReapCb || fidcReapCb(f)) {
-			f->fcmh_state |= FCMH_CAC_FREEING;
+			f->fcmh_state |= FCMH_CAC_REAPED|FCMH_CAC_TOFREE;
 			lc_remove(&fidcCleanList, f);
 			psc_dynarray_add(&da, f);
 		}
@@ -261,8 +261,8 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		FCMH_LOCK(tmp);
 
 		/* if the item is being freed, ingore it */
-		if (tmp->fcmh_state & FCMH_CAC_FREEING) {
-			DEBUG_FCMH(PLL_WARN, tmp, "tmp fcmh is FREEING");
+		if (tmp->fcmh_state & FCMH_CAC_TOFREE) {
+			DEBUG_FCMH(PLL_WARN, tmp, "tmp fcmh is deprecated");
 			FCMH_ULOCK(tmp);
 			sched_yield();
 			continue;
@@ -375,8 +375,9 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 	/*
 	 * Add the new item to the hash list, but mark it as INITING.
-	 * If we fail to initialize it, we should mark it as FREEING.
-	 * Also note that the item is not on any other list yet.
+	 * If we fail to initialize it, we should mark it as TOFREE
+	 * and leave it around for the reaper to free it.  Note that 
+	 * the item is not on any list yet.
 	 */
 	fcmh->fcmh_state |= FCMH_CAC_INITING;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
@@ -410,15 +411,15 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);
 	}
 
+	fcmh->fcmh_state |= FCMH_CAC_CLEAN;
+	lc_add(&fidcCleanList, fcmh);
+
 	if (rc) {
-		fcmh->fcmh_state |= FCMH_CAC_FAILED;
+		fcmh->fcmh_state |= FCMH_CAC_TOFREE;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 		/* fcmh could be gone at this point */
 	} else {
 		*fcmhp = fcmh;
-		fcmh->fcmh_state |= FCMH_CAC_CLEAN;
-		lc_add(&fidcCleanList, fcmh);
-
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 		FCMH_ULOCK(fcmh);
@@ -494,12 +495,6 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
-		/* check if we fail to initialize a new fcmh */
-		if (f->fcmh_state & FCMH_CAC_FAILED) {
-			psc_hashent_remove(&fidcHtable, f);
-			fcmh_put(f);
-			return;
-		}
 		if (f->fcmh_state & FCMH_CAC_DIRTY) {
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			f->fcmh_state &= ~FCMH_CAC_DIRTY;
@@ -546,8 +541,8 @@ dump_fcmh_flags(int flags)
 		print_flag("FCMH_CAC_CLEAN", &seq);
 	if (flags & FCMH_CAC_DIRTY)
 		print_flag("FCMH_CAC_DIRTY", &seq);
-	if (flags & FCMH_CAC_FREEING)
-		print_flag("FCMH_CAC_FREEING", &seq);
+	if (flags & FCMH_CAC_TOFREE)
+		print_flag("FCMH_CAC_TOFREE", &seq);
 	if (flags & FCMH_HAVE_ATTRS)
 		print_flag("FCMH_HAVE_ATTRS", &seq);
 	if (flags & FCMH_GETTING_ATTRS)
