@@ -31,8 +31,10 @@
 #include "bmap.h"
 #include "buffer.h"
 #include "cache_params.h"
-#include "control.h"
 #include "creds.h"
+#include "ctl.h"
+#include "ctlcli.h"
+#include "ctlsvr.h"
 #include "fid.h"
 #include "fidcache.h"
 #include "inode.h"
@@ -195,6 +197,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slashrpc_export);
 	PRTYPE(struct slctlmsg_conn);
+	PRTYPE(struct slctlmsg_file);
 	PRTYPE(struct sli_repl_workrq);
 	PRTYPE(struct slictlmsg_replwkst);
 	PRTYPE(struct sliric_thread);
@@ -278,6 +281,7 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_ADDREPLRQ);
 	PRVAL(MSCMT_DELREPLRQ);
 	PRVAL(MSCMT_GETCONNS);
+	PRVAL(MSCMT_GETFILES);
 	PRVAL(MSCMT_GETREPLST);
 	PRVAL(MSCMT_GETREPLST_SLAVE);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
