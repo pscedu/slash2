@@ -101,7 +101,7 @@ slctlmsg_file_send(int fd, struct psc_ctlmsghdr *mh,
 	scf->scf_gen = fcmh->fcmh_sstb.sst_gen;
 	scf->scf_ptruncgen = fcmh->fcmh_sstb.sst_ptruncgen;
 	scf->scf_st_mode = fcmh->fcmh_sstb.sst_mode;
-	scf->scf_state = fcmh->fcmh_state;
+	scf->scf_flags = fcmh->fcmh_state;
 	scf->scf_refcnt = fcmh->fcmh_refcnt;
 	return (psc_ctlmsg_sendv(fd, mh, scf));
 }

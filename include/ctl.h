@@ -39,7 +39,7 @@ struct slctlmsg_file {
 	int64_t			scf_gen;
 	int32_t			scf_ptruncgen;
 	int32_t			scf_st_mode;
-	int32_t			scf_state;
+	int32_t			scf_flags;
 	int32_t			scf_refcnt;
 };
 

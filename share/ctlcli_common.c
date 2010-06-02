@@ -94,7 +94,7 @@ sl_file_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 }
 
 void
-sl_file_prdat(const struct psc_ctlmsghdr *mh, const void *m)
+sl_file_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slctlmsg_file *scf = m;
 
