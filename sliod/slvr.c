@@ -61,15 +61,16 @@ slvr_lru_requeue(struct slvr_ref *s, int tail)
 int
 slvr_do_crc(struct slvr_ref *s)
 {
-	psc_assert(s->slvr_flags & SLVR_PINNED);
-	//psc_assert(s->slvr_flags & SLVR_CRCING);
 	/* SLVR_FAULTING implies that we're bringing this data buffer
 	 *   in from the filesystem.
+	 *
 	 * SLVR_CRCDIRTY means that DATARDY has been set and that
 	 *   a write dirtied the buffer and invalidated the crc.
 	 */
 	psc_assert(s->slvr_flags & SLVR_FAULTING ||
 		   s->slvr_flags & SLVR_CRCDIRTY);
+	
+	psc_assert(s->slvr_flags & SLVR_PINNED);
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		if (!s->slvr_pndgreads) {
@@ -84,10 +85,11 @@ slvr_do_crc(struct slvr_ref *s)
 		/* This thread holds faulting status so all others are
 		 *  waiting on us which means that exclusive access to
 		 *  slvr contents is ours until we set SLVR_DATARDY.
+		 *  
+		 * XXX For now we assume that all blocks are being 
+		 *  processed, otherwise there's no guarantee that the
+		 *  entire slvr was read.
 		 */
-		// XXX for now assert that all blocks are being processed,
-		//  otherwise there's no guarantee that the entire slvr
-		//  was read.
 		psc_assert(!psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 		psc_assert(slvr_2_biodi_wire(s));
 
@@ -557,18 +559,19 @@ slvr_rio_done(struct slvr_ref *s)
 	SLVR_ULOCK(s);
 }
 
-void
+__static void
 slvr_schedule_crc_locked(struct slvr_ref *s)
 {
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
+
+	if (!(s->slvr_flags & SLVR_LRU))
+		return;
+
 	slvr_2_biod(s)->biod_crcdrty_slvrs++;
 
 	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc (ndirty=%u)", 
 		   slvr_2_biod(s)->biod_crcdrty_slvrs);
-
-	if (!(s->slvr_flags & SLVR_LRU))
-		return;
 
 	s->slvr_flags &= ~SLVR_LRU;
 
