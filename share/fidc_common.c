@@ -409,7 +409,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		fcmh->fcmh_state &= ~FCMH_CAC_WAITING;
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);
 	}
-	
+
 	if (rc) {
 		fcmh->fcmh_state |= FCMH_CAC_FAILED;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
@@ -421,8 +421,8 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
-		FCMH_ULOCK(fcmh);		
-	}	
+		FCMH_ULOCK(fcmh);
+	}
 	return (rc);
 }
 
@@ -517,7 +517,7 @@ dump_fidcache(void)
 	struct fidc_membh *tmp;
 	struct psc_hashbkt *bkt;
 
-	psc_warn("Start dumping fidcache\n");
+	psc_max("Start dumping fidcache");
 	PSC_HASHTBL_FOREACH_BUCKET(bkt, &fidcHtable) {
 		psc_hashbkt_lock(bkt);
 		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, bkt) {
@@ -525,14 +525,14 @@ dump_fidcache(void)
 		}
 		psc_hashbkt_unlock(bkt);
 	}
-	psc_warn("Done dumping fidcache\n");
+	psc_max("Done dumping fidcache");
 }
 
 void
 dump_fcmh(struct fidc_membh *f)
 {
-	psc_warn("fidc_membh (%p): fid = %"PRId64", gen = %"PRId64", refcnt = %d, sstb = %p\n",
-	    	  f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt, &f->fcmh_sstb);
+	psc_max("fidc_membh (%p): fid = %"PRId64", gen = %"PRId64", refcnt = %d, sstb = %p\n",
+		  f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt, &f->fcmh_sstb);
 }
 
 void
