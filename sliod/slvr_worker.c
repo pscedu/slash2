@@ -335,7 +335,7 @@ slvr_worker_int(void)
 	 */
 	SLVR_ULOCK(s);
 	//XXX perhaps when we go to a lighter checksum we can hold the
-	// the lock for the duration
+	// the lock for the duration?
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(slvr_do_crc(s));
 	/* Note that this lock covers the slvr lock too.
