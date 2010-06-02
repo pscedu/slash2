@@ -25,6 +25,7 @@
 #include "psc_util/lock.h"
 
 #include "control.h"
+#include "fidcache.h"
 #include "slconfig.h"
 
 /**
@@ -87,5 +88,53 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	unlock
 #endif
 
+	return (rc);
+}
+
+int
+slctlmsg_file_send(int fd, struct psc_ctlmsghdr *mh,
+    struct slctlmsg_file *scf, struct fidc_membh *fcmh)
+{
+	scf->scf_fg = fcmh->fcmh_fg;
+	scf->scf_age = fcmh->fcmh_age.tv_sec;
+	scf->scf_gen = fcmh->fcmh_sstb.sst_gen;
+	scf->scf_ptruncgen = fcmh->fcmh_sstb.sst_ptruncgen;
+	scf->scf_st_mode = fcmh->fcmh_sstb.sst_mode;
+	scf->scf_state = fcmh->fcmh_state;
+	scf->scf_refcnt = fcmh->fcmh_refcnt;
+	return (psc_ctlmsg_sendv(fd, mh, scf));
+}
+
+int
+slctlrep_getfile(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct slctlmsg_file *scf = m;
+	struct fidc_membh *fcmh;
+	struct psc_hashbkt *b;
+	int rc;
+
+	rc = 1;
+	if (scf->scf_fg.fg_fid == FID_ANY) {
+		PSC_HASHTBL_FOREACH_BUCKET(b, &fidcHtable) {
+			psc_hashbkt_lock(b);
+			PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, fcmh, b) {
+				rc = slctlmsg_file_send(fd, mh, scf, fcmh);
+				if (!rc)
+					break;
+			}
+			psc_hashbkt_unlock(b);
+			if (!rc)
+				break;
+		}
+	} else {
+		fcmh = fidc_lookup_fid(scf->scf_fg.fg_fid);
+		if (fcmh) {
+			rc = slctlmsg_file_send(fd, mh, scf, fcmh);
+			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		} else
+			rc = psc_ctlsenderr(fd, mh,
+			    "FID "FID_FMT" not in cache",
+			    FID_FMTARG(scf->scf_fg.fg_fid));
+	}
 	return (rc);
 }

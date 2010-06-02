@@ -183,7 +183,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		return (psc_ctlsenderr(fd, mh, "%s: %s",
 		    mrq->mrq_fn, slstrerror(ENOTSUP)));
 
-	rc = -checkcreds(&sstb, &cr, W_OK);
+	rc = checkcreds(&sstb, &cr, W_OK);
 	if (rc)
 		return (psc_ctlsenderr(fd, mh,
 		    "%s: %s", mrq->mrq_fn, slstrerror(rc)));
@@ -400,7 +400,8 @@ struct psc_ctlop msctlops[] = {
 	{ msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
 	{ msctlrep_getreplst,		sizeof(struct msctlmsg_replst) },
 	{ msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_fncmd_newreplpol) },
-	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_fncmd_bmapreplpol) }
+	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_fncmd_bmapreplpol) },
+	{ slctlrep_getfile,		sizeof(struct msctlmsg_file) }
 };
 
 void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {
@@ -412,28 +413,20 @@ int
 slcctlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
-	return (0);
-}
-
-int
-slcctlcmd_fidcache(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
-    __unusedx void *m)
-{
-	dump_fidcache();
-	return (0);
+	exit(0);
 }
 
 int
 slcctlcmd_reconfig(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
     __unusedx void *m)
 {
+	psc_fatalx("not implemented");
 	return (0);
 }
 
 int (*psc_ctl_cmds[])(int, struct psc_ctlmsghdr *, void *) = {
 	slcctlcmd_exit,
-	slcctlcmd_fidcache,
-	slcctlcmd_reconfig,
+	slcctlcmd_reconfig
 };
 int psc_ctl_ncmds = nitems(psc_ctl_cmds);
 

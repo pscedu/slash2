@@ -78,6 +78,12 @@ struct slash_fidgen {
 /* bits per hex char e.g. 0xffff=16 */
 #define BPHXC			4
 
+#define FG_FMT			"%"PRId64":%"PRId64
+#define FG_FMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
+
+#define FID_FMT			"%"PRId64
+#define FID_FMTARG(fid)		(fid)
+
 #define FIDFMT			"%"PRId64":%"PRId64
 #define FIDFMTARGS(fg)		(fg)->fg_fid, (fg)->fg_gen
 

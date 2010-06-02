@@ -23,15 +23,25 @@
 #include "slconfig.h"
 
 struct slctlmsg_conn {
-	char		scc_addrbuf[PSC_ALIGN(RESM_ADDRBUF_SZ, 4)];
-	int32_t		scc_type;	/* client is 0 */
-	int32_t		scc_refcnt;
-	int32_t		scc_cflags;	/* CSVCF_* */
-	int32_t		scc_flags;
+	char			scc_addrbuf[PSC_ALIGN(RESM_ADDRBUF_SZ, 4)];
+	int32_t			scc_type;	/* client is 0 */
+	int32_t			scc_refcnt;
+	int32_t			scc_cflags;	/* CSVCF_* */
+	int32_t			scc_flags;
 };
 
 /* scc_flags */
-#define SCCF_ONLINE	(1 << 0)
+#define SCCF_ONLINE		(1 << 0)
+
+struct slctlmsg_file {
+	struct slash_fidgen	scf_fg;		/* identity of the file */
+	int64_t			scf_age;
+	int64_t			scf_gen;
+	int32_t			scf_ptruncgen;
+	int32_t			scf_st_mode;
+	int32_t			scf_state;
+	int32_t			scf_refcnt;
+};
 
 void sl_conn_prhdr(struct psc_ctlmsghdr *, const void *);
 void sl_conn_prdat(const struct psc_ctlmsghdr *, const void *);
