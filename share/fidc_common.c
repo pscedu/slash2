@@ -530,7 +530,8 @@ dump_fidcache(void)
 void
 dump_fcmh(struct fidc_membh *f)
 {
-	DEBUG_FCMH(PLL_MAX, f, "");
+	psc_notify("fidc_membh (%p): fid = %"PRIx64", gen = %"PRIx64", refcnt = %d, sstb = %p\n",
+		    f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt, &f->fcmh_sstb);
 }
 
 void
