@@ -265,7 +265,6 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		if (tmp->fcmh_state & FCMH_CAC_TOFREE) {
 			DEBUG_FCMH(PLL_WARN, tmp, "tmp fcmh is deprecated");
 			FCMH_ULOCK(tmp);
-			sched_yield();
 			continue;
 		}
 		/* if the item is being inited, take a reference and wait */
