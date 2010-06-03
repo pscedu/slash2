@@ -126,6 +126,7 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		freelock(&c->fcmh_lock);
 		DEBUG_FCMH(PLL_INFO, c, "name=%s, dir: %s", name, fcmh_isdir(c)? "yes" : "no");
 	} else {
+		c->fcmh_state |= FCMH_CAC_TOFREE;
 		freelock(&c->fcmh_lock);
 		c = NULL;
 	}
