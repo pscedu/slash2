@@ -122,7 +122,8 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 # define FCMH_HASH_FIELD	fcmh_fg
 #endif
 
-#define FCMH_ATTR_TIMEO		8 /* number of seconds in which attribute times out */
+/* number of seconds in which attribute times out */
+#define FCMH_ATTR_TIMEO		30	
 
 #define FCMH_LOCK(f)		spinlock(&(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock(&(f)->fcmh_lock)
