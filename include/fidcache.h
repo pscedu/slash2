@@ -68,7 +68,15 @@ struct fidc_membh {
 #ifdef DEMOTED_INUM_WIDTHS
 	struct slash_fidgen	 fcmh_smallfg;		/* integer-demoted fg_fid for hashing */
 #endif
-	struct timeval		 fcmh_age;		/* age of this entry */
+	/*
+	 * When an item times out, we can refresh
+	 * it.  But to do that properly, we need to 
+	 * send an RPC to the MDS to not only verify
+	 * the existence of the file, but also its
+	 * parental relationship.  It might as well
+	 * create a new one once it times out.
+	 */
+	struct timeval		 fcmh_age;		/* age of this entry - client only */
 	struct srt_stat		 fcmh_sstb;
 	int			 fcmh_state;
 	psc_spinlock_t		 fcmh_lock;
