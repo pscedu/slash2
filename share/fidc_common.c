@@ -35,7 +35,6 @@
 #include "fidcache.h"
 #include "slutil.h"
 
-int			  fidcUser;
 int			(*fidcReapCb)(struct fidc_membh *);
 struct psc_poolmaster	  fidcPoolMaster;
 struct psc_poolmgr	 *fidcPool;
@@ -67,6 +66,13 @@ fcmh_destroy(struct fidc_membh *f)
 	fcmh_put(f);
 }
 
+/**
+ * fcmh_setattr - Update the stat(2) attribute buffer for a FID cache
+ *	member.
+ * @fcmh: FID cache member to update.
+ * @sstb: incoming stat attributes.
+ * @flags: behavioral flags.
+ */
 void
 fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
     int flags)
@@ -76,7 +82,8 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	if (!(flags & FCMH_SETATTRF_HAVELOCK))
 		FCMH_LOCK(fcmh);
 #if 0
-	/* right now, we allow item with FIGGEN_ANY into cache, and
+	/*
+	 * Right now, we allow item with FIDGEN_ANY into cache, and
 	 * cache lookup will trigger a getattr on the client, which
 	 * lead to us.  So we can't assert here.
 	 */
@@ -89,23 +96,28 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 		size = fcmh_2_fsz(fcmh);
 
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
-		if (fcmh_isdir(fcmh)) {
+		/*
+		 * XXX is this right?  what if someone deletes a dir and
+		 * creates a new file?
+		 */
+		if (fcmh_isdir(fcmh))
 			psc_assert(S_ISDIR(sstb->sst_mode));
-		}
-		if (!fcmh_isdir(fcmh)) {
+		if (!fcmh_isdir(fcmh))
 			psc_assert(!S_ISDIR(sstb->sst_mode));
-		}
+
 		psc_assert(sstb->sst_ino);
 	}
 
 	fcmh->fcmh_sstb = *sstb;
 	fcmh_2_gen(fcmh) = sstb->sst_gen;
-	fcmh_refresh_age(fcmh);
 
 	if (size)
 		fcmh_2_fsz(fcmh) = size;
 
 	fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
+
+	if (sl_fcmh_ops.sfop_postsetattr)
+		sl_fcmh_ops.sfop_postsetattr(fcmh);
 
 	if (!(flags & FCMH_SETATTRF_HAVELOCK))
 		FCMH_ULOCK(fcmh);
@@ -114,7 +126,7 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 }
 
 /**
- * fidc_reap - reap some inodes from the clean list.
+ * fidc_reap - Reap some inodes from the clean list.
  */
 int
 fidc_reap(struct psc_poolmgr *m)
@@ -149,7 +161,7 @@ fidc_reap(struct psc_poolmgr *m)
 		if (f->fcmh_state & FCMH_CAC_REAPED)
 			goto end;
 
-		/* 
+		/*
 		 * fidcReapCb() is only used on the client to keep
 		 * parent-child relationship intact.
 		 */
@@ -225,30 +237,31 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	psclog(file, func, line, PSC_SUBSYS, PLL_INFO, 0,
 	    "fidc_lookup called for fid %#"PRIx64, searchfg.fg_fid);
 
+	rc = 0;
+	*fcmhp = NULL;
+	fcmh_new = NULL; /* gcc */
+
 #ifdef DEMOTED_INUM_WIDTHS
 	searchfg.fg_fid = (fuse_ino_t)searchfg.fg_fid;
 #endif
 
-	rc = 0;
-	*fcmhp = NULL;
-
-	fcmh_new = NULL; /* gcc */
-
 	/* sanity checks */
-	if (fidcUser == FIDC_CLIENT) {
-		if (flags & FIDC_LOOKUP_CREATE)
-			psc_assert(sstb || (flags & FIDC_LOOKUP_LOAD));
+#ifdef SLASH_CLIENT
+	if (flags & FIDC_LOOKUP_CREATE)
+		psc_assert(sstb || (flags & FIDC_LOOKUP_LOAD));
 
-		if (flags & FIDC_LOOKUP_LOAD) {
-			psc_assert(creds);
-			psc_assert(sstb == NULL);
-		}
-		if (sstb)
-			psc_assert((flags & FIDC_LOOKUP_LOAD) == 0);
-	} else
-		psc_assert(!(flags & FIDC_LOOKUP_EXCL));
+	if (flags & FIDC_LOOKUP_LOAD)
+		psc_assert(creds);
+#else
+	psc_assert(!(flags & FIDC_LOOKUP_EXCL));
+#endif
 
-	/* first, check if its already in the cache */
+	if (sstb)
+		psc_assert((flags & FIDC_LOOKUP_LOAD) == 0);
+	if (flags & FIDC_LOOKUP_LOAD)
+		psc_assert(sstb == NULL);
+
+	/* OK.  now check if it is already in the cache */
 	b = psc_hashbkt_get(&fidcHtable, &searchfg.fg_fid);
  restart:
 	fcmh = NULL;
@@ -377,7 +390,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	/*
 	 * Add the new item to the hash list, but mark it as INITING.
 	 * If we fail to initialize it, we should mark it as TOFREE
-	 * and leave it around for the reaper to free it.  Note that 
+	 * and leave it around for the reaper to free it.  Note that
 	 * the item is not on any list yet.
 	 */
 	fcmh->fcmh_state |= FCMH_CAC_INITING;
@@ -433,7 +446,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
  */
 void
 fidc_init(int privsiz, int nobj, int max,
-    int (*fcmh_reap_cb)(struct fidc_membh *), int subsys)
+    int (*fcmh_reap_cb)(struct fidc_membh *))
 {
 	_psc_poolmaster_init(&fidcPoolMaster,
 	    sizeof(struct fidc_membh) + privsiz,
@@ -450,7 +463,6 @@ fidc_init(int privsiz, int nobj, int max,
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
 	    FCMH_HASH_FIELD, fcmh_hentry, nobj * 2, NULL, "fidc");
 	fidcReapCb = fcmh_reap_cb;
-	fidcUser = subsys;
 }
 
 /*

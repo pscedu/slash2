@@ -121,10 +121,11 @@ fidc_child_lookup_int_locked(struct fidc_membh *p, const char *name)
 		return NULL;
 
 	PFL_GETTIME(&now);
-	if (timercmp(&now, &c->fcmh_age, <)) {
+	if (timercmp(&now, &fci->fci_age, <)) {
 		fcmh_op_start_type(c, FCMH_OPCNT_LOOKUP_PARENT);
 		freelock(&c->fcmh_lock);
-		DEBUG_FCMH(PLL_INFO, c, "name=%s, dir: %s", name, fcmh_isdir(c)? "yes" : "no");
+		DEBUG_FCMH(PLL_INFO, c, "name=%s, dir: %s", name,
+		    fcmh_isdir(c)? "yes" : "no");
 	} else {
 		c->fcmh_state |= FCMH_CAC_TOFREE;
 		freelock(&c->fcmh_lock);
@@ -310,6 +311,17 @@ fcmh_getsize(struct fidc_membh *h)
 	return (size);
 }
 
+void
+slc_fcmh_refresh_age(struct fidc_membh *fcmh)
+{
+	struct timeval tmp = { FCMH_ATTR_TIMEO, 0 };
+	struct fcmh_cli_info *fci;
+
+	fci = fcmh_2_fci(fcmh);
+	PFL_GETTIME(&fci->fci_age);
+	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
+}
+
 int
 slc_fcmh_ctor(struct fidc_membh *fcmh)
 {
@@ -321,10 +333,10 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 	INIT_PSCLIST_HEAD(&fci->fci_children);
 	if (fcmh->fcmh_fg.fg_fid == 1) {
 		fci->fci_parent = NULL;
-		fci->fci_name = "/";
+		fci->fci_name = strdup("/");
 		fci->fci_hash = psc_str_hashify(fci->fci_name);
 	}
-	fcmh_refresh_age(fcmh);
+	slc_fcmh_refresh_age(fcmh);
 	return (0);
 }
 
@@ -358,7 +370,8 @@ slc_fcmh_getattr(struct fidc_membh *fcmh)
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
-/* ctor */	slc_fcmh_ctor,
-/* dtor */	slc_fcmh_dtor,
-/* getattr */	slc_fcmh_getattr
+/* ctor */		slc_fcmh_ctor,
+/* dtor */		slc_fcmh_dtor,
+/* getattr */		slc_fcmh_getattr,
+/* postsetattr */	slc_fcmh_refresh_age
 };

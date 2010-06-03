@@ -45,7 +45,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
 	if (fcmh_2_fd(fcmh) == -1)
 		rc = errno;
-		
+
 	/* oops, an error; if we increased the rlim, decrease it */
 	if (rc && incr)
 		psc_rlim_adj(RLIMIT_NOFILE, -1);
@@ -61,7 +61,8 @@ sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
-/* ctor */	sli_fcmh_ctor,
-/* dtor */	sli_fcmh_dtor,
-/* getattr */	NULL
+/* ctor */		sli_fcmh_ctor,
+/* dtor */		sli_fcmh_dtor,
+/* getattr */		NULL,
+/* postsetattr */	NULL
 };

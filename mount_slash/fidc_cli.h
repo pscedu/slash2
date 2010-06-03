@@ -29,17 +29,28 @@
 struct fidc_membh;
 
 /*
- * Currently, we don't use reference count to protect the child-parent relationship.
- * This gives the reaper the maximum flexibility to reclaim fcmh.  However, we do
- * have to follow some rules: (1) the reaper does not choose a non-empty directory
- * as a victim.  This makes sure that the parent pointer of a child is always valid.
- * (2) we should lock a parent when adding or removing a child from its children list.
+ * Currently, we don't use reference count to protect the child-parent
+ * relationship.  This gives the reaper the maximum flexibility to
+ * reclaim fcmh.  However, we do have to follow some rules:
+ *
+ *  (1) the reaper does not choose a non-empty directory as a victim.
+ *	This makes sure that the parent pointer of a child is always
+ *	valid.
+ *
+ * (2) we should lock a parent when adding or removing a child from its
+ *	children list.
+ *
+ * Also, when an item times out, it will be refreshed subsequently
+ * whenever future access is attempted.  Ancestor integrity is preserved
+ * because during a lookup, each hierarchical ancestor is scanned in
+ * the cache, being refreshed as needed.
  */
 struct fcmh_cli_info {
 	struct fidc_membh	*fci_parent;
 	struct psclist_head	 fci_children;
 	struct psclist_head	 fci_sibling;
 	sl_replica_t		 fci_reptbl[SL_MAX_REPLICAS];
+	struct timeval		 fci_age;	/* age of this entry */
 	int			 fci_nrepls;
 	int			 fci_hash;
 	char			*fci_name;	/* freed in dtor(). what's the name for root? */
@@ -77,7 +88,7 @@ _fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *crp,
 {
 	struct slash_fidgen fg = { fid, FIDGEN_ANY };
 
-	return (_fidc_lookup(&fg, FIDC_LOOKUP_CREATE|FIDC_LOOKUP_LOAD,
+	return (_fidc_lookup(&fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
 	    NULL, 0, crp, fcmhp, file, func, line));
 }
 

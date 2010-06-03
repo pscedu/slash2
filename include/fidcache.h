@@ -49,6 +49,7 @@ struct sl_fcmh_ops {
 	int	(*sfop_ctor)(struct fidc_membh *);
 	void	(*sfop_dtor)(struct fidc_membh *);
 	int	(*sfop_getattr)(struct fidc_membh *);
+	void	(*sfop_postsetattr)(struct fidc_membh *);
 };
 
 /*
@@ -68,15 +69,6 @@ struct fidc_membh {
 #ifdef DEMOTED_INUM_WIDTHS
 	struct slash_fidgen	 fcmh_smallfg;		/* integer-demoted fg_fid for hashing */
 #endif
-	/*
-	 * When an item times out, we can refresh
-	 * it.  But to do that properly, we need to 
-	 * send an RPC to the MDS to not only verify
-	 * the existence of the file, but also its
-	 * parental relationship.  It might as well
-	 * create a new one once it times out.
-	 */
-	struct timeval		 fcmh_age;		/* age of this entry - client only */
 	struct srt_stat		 fcmh_sstb;
 	int			 fcmh_state;
 	psc_spinlock_t		 fcmh_lock;
@@ -123,7 +115,7 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 #endif
 
 /* number of seconds in which attribute times out */
-#define FCMH_ATTR_TIMEO		30	
+#define FCMH_ATTR_TIMEO		30
 
 #define FCMH_LOCK(f)		spinlock(&(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock(&(f)->fcmh_lock)
@@ -176,21 +168,14 @@ enum fcmh_opcnt_types {
 #define FCMH_SETATTRF_SAVESIZE		(1 << 0)
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)
 
-/* users of FIDC cache */
-#define	FIDC_MDS			1
-#define FIDC_IOD			2
-#define	FIDC_CLIENT			3
-
-void	fidc_init(int, int, int, int (*)(struct fidc_membh *), int);
+void	fidc_init(int, int, int, int (*)(struct fidc_membh *));
 void	fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 
 /* fidc_lookup() flags */
-enum {
-	FIDC_LOOKUP_NONE	= 0,			/* no flag */
-	FIDC_LOOKUP_CREATE	= (1 << 0),		/* Create if not present         */
-	FIDC_LOOKUP_EXCL	= (1 << 1),		/* Fail if fcmh is present       */
-	FIDC_LOOKUP_LOAD	= (1 << 2)		/* Use external fetching mechanism */
-};
+#define FIDC_LOOKUP_NONE		0
+#define FIDC_LOOKUP_CREATE		(1 << 0)	/* Create if not present         */
+#define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present       */
+#define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism */
 
 int			 _fidc_lookup(const struct slash_fidgen *, int,
 			    const struct srt_stat *, int, const struct slash_creds *,
@@ -201,7 +186,6 @@ struct fidc_membh	*_fidc_lookup_fid(slfid_t, const char *, const char *, int);
 struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, const char *, const char *, int);
 
 void			 fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
-
 void			 fcmh_op_done_type(struct fidc_membh *, enum fcmh_opcnt_types);
 
 void			 dump_fidcache(void);
@@ -215,15 +199,6 @@ extern struct psc_listcache	 fidcCleanList;
 extern struct psc_hashtbl	 fidcHtable;
 
 #define fidcFreeList		fidcPool->ppm_lc
-
-static __inline void
-fcmh_refresh_age(struct fidc_membh *fcmh)
-{
-	struct timeval tmp = { FCMH_ATTR_TIMEO, 0 };
-
-	PFL_GETTIME(&fcmh->fcmh_age);
-	timeradd(&fcmh->fcmh_age, &tmp, &fcmh->fcmh_age);
-}
 
 #define fidc_lookup(fgp, lkfl, sstb, safl, crp, fcmhp)			\
 	_fidc_lookup((fgp), (lkfl), (sstb), (safl), (crp), (fcmhp),	\

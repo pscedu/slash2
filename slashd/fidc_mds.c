@@ -127,7 +127,8 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
-/* ctor */	slm_fcmh_ctor,
-/* dtor */	slm_fcmh_dtor,
-/* getattr */	NULL
+/* ctor */		slm_fcmh_ctor,
+/* dtor */		slm_fcmh_dtor,
+/* getattr */		NULL,
+/* postsetattr */	NULL
 };
