@@ -323,6 +323,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 		fci->fci_name = "/";
 		fci->fci_hash = psc_str_hashify(fci->fci_name);
 	}
+	fcmh_refresh_age(fcmh);
 	return (0);
 }
 
