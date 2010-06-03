@@ -58,6 +58,7 @@ SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
+DEFINES+=	-DSLASH_CLIENT
 
 MODULES+=	fuse lnet pthread gcrypt
 
