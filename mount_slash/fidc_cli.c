@@ -318,7 +318,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 	memset(fci, 0, sizeof(struct fcmh_cli_info));
 	INIT_PSCLIST_ENTRY(&fci->fci_sibling);
 	INIT_PSCLIST_HEAD(&fci->fci_children);
-	if (fcmh->fcmh_fg == 1) {
+	if (fcmh->fcmh_fg.fg_fid == 1) {
 		fci->fci_parent = NULL;
 		fci->fci_name = "/";
 	}
