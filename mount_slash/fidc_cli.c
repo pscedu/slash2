@@ -321,6 +321,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 	if (fcmh->fcmh_fg.fg_fid == 1) {
 		fci->fci_parent = NULL;
 		fci->fci_name = "/";
+		fci->fci_hash = psc_str_hashify(fci->fci_name);
 	}
 	return (0);
 }
