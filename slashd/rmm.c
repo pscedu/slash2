@@ -58,18 +58,24 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 	int validop = 1;
 	struct srt_stat stat;
 
+	stat.sst_uid = jnamespace->sjnm_uid;
+	stat.sst_gid = jnamespace->sjnm_gid;
+	stat.sst_mode = jnamespace->sjnm_mode;
+	stat.sst_mask = jnamespace->sjnm_mask;
+	stat.sst_atime = jnamespace->sjnm_atime;
+	stat.sst_mtime = jnamespace->sjnm_mtime;
+	stat.sst_ctime = jnamespace->sjnm_ctime;
+
 	switch (jnamespace->sjnm_op) {
 	    case NS_OP_CREATE:
 		rc = mdsio_replay_create(
 			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
-			jnamespace->sjnm_uid, jnamespace->sjnm_gid, 
-			jnamespace->sjnm_mode, jnamespace->sjnm_name);
+			&stat, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_MKDIR:
 		rc = mdsio_replay_mkdir(
 			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
-			jnamespace->sjnm_uid, jnamespace->sjnm_gid, 
-			jnamespace->sjnm_mode, jnamespace->sjnm_name);
+			&stat, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_LINK:
 		rc = mdsio_replay_link(
@@ -98,12 +104,6 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 			jnamespace->sjnm_name);
 		break;
 	    case NS_OP_SETATTR:
-		stat.sst_uid = jnamespace->sjnm_uid;
-		stat.sst_gid = jnamespace->sjnm_gid;
-		stat.sst_mode = jnamespace->sjnm_mode;
-		stat.sst_atime = jnamespace->sjnm_atime;
-		stat.sst_mtime = jnamespace->sjnm_mtime;
-		stat.sst_ctime = jnamespace->sjnm_ctime;
 		rc = mdsio_replay_setattr(
 			jnamespace->sjnm_target_s2id, &stat, jnamespace->sjnm_mask);
 		break;

@@ -340,16 +340,16 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr,
  */
 int
 mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id,
-    int32_t uid, int32_t gid, int mode, char *name)
+    struct srt_stat *stat, char *name)
 {
-	return (zfsslash2_replay_create(parent_s2id, target_s2id, uid, gid, mode, name));
+	return (zfsslash2_replay_create(parent_s2id, target_s2id, stat, name));
 }
  
 int
 mdsio_replay_mkdir(uint64_t parent_s2id, uint64_t target_s2id,
-    int32_t uid, int32_t gid, int mode, char *name)
+    struct srt_stat *stat, char *name)
 {
-	return (zfsslash2_replay_mkdir(parent_s2id, target_s2id, uid, gid, mode, name));
+	return (zfsslash2_replay_mkdir(parent_s2id, target_s2id, stat, name));
 }
 
 int
