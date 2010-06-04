@@ -270,3 +270,68 @@ exist yet) based on the idea outlined on 05/20/2010:
 (1) will fail because it can't create a fidlink again for zhihui2, the same slash ID is already
 used by zhihui1.  So perhaps I need to reverse the order of (1) and (2).
 
+06/04/2010
+----------
+
+After I implemented the above method.  I did the following:
+
+	(1) mkdir dir1 on client A connected to MDS A
+	(2) stat dir1 on client B connected to MDS B.  You have to wait for a while before
+	    it shows up.
+	(3) watch -n 1 "stat dir2" on client B.  It returns "No such file or directory'.
+	(4) mv dir1 dir2 on client A
+	(5) Step (3) returns EIO now.
+
+Paul can reproduce this problem with only one MDS.  After some study, Paul found out that the 
+following code is probably the suspect:
+
+ 179 static struct dentry *fuse_lookup(struct inode *dir, struct dentry *entry,
+ 180                                   struct nameidata *nd)
+ 181 {
+ 182         int err;
+ 183         struct fuse_entry_out outarg;
+ 184         struct inode *inode = NULL;
+ 185         struct fuse_conn *fc = get_fuse_conn(dir);
+ 186         struct fuse_req *req;
+ 187 
+ 188         if (entry->d_name.len > FUSE_NAME_MAX)
+ 189                 return ERR_PTR(-ENAMETOOLONG);
+ 190 
+ 191         req = fuse_get_request(fc);
+ 192         if (!req)
+ 193                 return ERR_PTR(-EINTR);
+ 194 
+ 195         fuse_lookup_init(req, dir, entry, &outarg);
+ 196         request_send(fc, req);
+ 197         err = req->out.h.error;
+ 198         /* Zero nodeid is same as -ENOENT, but with valid timeout */
+ 199         if (!err && outarg.nodeid &&
+ 200             (invalid_nodeid(outarg.nodeid) || !valid_mode(outarg.attr.mode)))
+ 201                 err = -EIO;
+ 202         if (!err && outarg.nodeid) {
+ 203                 inode = fuse_iget(dir->i_sb, outarg.nodeid, outarg.generation,
+ 204                                   &outarg.attr);
+ 205                 if (!inode) {
+ 206                         fuse_send_forget(fc, req, outarg.nodeid, 1);
+ 207                         return ERR_PTR(-ENOMEM);
+ 208                 }
+ 209         }
+ 210         fuse_put_request(fc, req);
+ 211         if (err && err != -ENOENT)
+ 212                 return ERR_PTR(err);
+ 213 
+ 214         if (inode && dir_alias(inode)) {
+ 215                 iput(inode);
+ 216                 return ERR_PTR(-EIO);		<-- H E R E
+ 217         }
+
+The test is done on tangerine. But the procedure works fine on wolverine.  Why?
+
+zhihui@tangerine: ~$ uname -a
+Linux tangerine 2.6.16-27-0.9_lustre-1.4.11customZestion_Oprofile #4 SMP Wed Sep 10 12:23:20 EDT 2008 x86_64 x86_64 x86_64 GNU/Linux
+
+-bash-3.2$ uname -a
+Linux wolverine.psc.edu 2.6.18-194.3.1.el5xen #1 SMP Thu May 13 13:49:53 EDT 2010 x86_64 x86_64 x86_64 GNU/Linux
+
+Looks like in the newer kernel version, if an alias of a directory is found, the FUSE kernel module just invalidates it
+instead of returning EIO.
