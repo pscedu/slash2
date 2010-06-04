@@ -35,6 +35,9 @@ struct stat;
 struct statvfs;
 
 #ifdef AUTHBUF
+
+#include "authbuf.h"
+
 #define _SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens,	\
 	    mq0)							\
 	{								\
@@ -58,7 +61,7 @@ struct statvfs;
 		int _qlens[2] = { sizeof(*(mq)), 0 };			\
 		int _plens[2] = { sizeof(*(mp)), 0 };			\
 									\
-		_SL_RSX_NEWREQN((imp), (version), (op), (rq), 2,	\
+		SL_RSX_NEWREQN((imp), (version), (op), (rq), 2,		\
 		    _qlens, 2, _plens, (mq));				\
 	}
 
@@ -73,10 +76,11 @@ struct statvfs;
 		_rc = RSX_WAITREP((rq), (mp));				\
 		if (_rc == 0)						\
 			_rc = authbuf_check((rq), PSCRPC_MSG_REPLY);	\
+		_rc;							\
 	}
 
 #define SL_RSX_WAITREP(rq, mp)						\
-	(_SL_RSX_WAITREP((rq), (mp))
+	(_SL_RSX_WAITREP((rq), (mp)))
 
 #define SL_RSX_ALLOCREP(rq, mq, mp)					\
 	 do {								\
