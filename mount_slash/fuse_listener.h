@@ -22,7 +22,8 @@
 
 #include <fuse_lowlevel.h>
 
-#define FUSE_OPTIONS "allow_other,max_write=134217728,big_writes"
+/* The following options are explained in FUSE README file */
+#define FUSE_OPTIONS "use_ino,allow_other,max_write=134217728,big_writes"
 
 void	slash2fuse_listener_exit(void);
 int	slash2fuse_listener_init(void);
