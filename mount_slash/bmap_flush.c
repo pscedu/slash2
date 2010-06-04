@@ -50,7 +50,7 @@ __static struct psc_dynarray	 pndgReqSets = DYNARRAY_INIT;
 
 __static atomic_t		 outstandingRpcCnt;
 __static atomic_t		 completedRpcCnt;
-__static int			 shutdown;
+__static int			 shutdownRpc;
 __static struct psc_waitq	 rpcCompletion;
 
 #define MAX_OUTSTANDING_RPCS	128
@@ -83,14 +83,14 @@ bmap_flush_reap_rpcs(void)
 		/* XXX handle the return code from pscrpc_set_finalize
 		 *   properly.
 		 */
-		if (!pscrpc_set_finalize(set, shutdown, 0)) {
+		if (!pscrpc_set_finalize(set, shutdownRpc, 0)) {
 			pndgReqsLock();
 			psc_dynarray_remove(&pndgReqSets, set);
 			pndgReqsUlock();
 			i--;
 		}
 	}
-	if (shutdown)
+	if (shutdownRpc)
 		pscrpc_nbreqset_flush(pndgReqs);
 	else
 		pscrpc_nbreqset_reap(pndgReqs);
@@ -98,7 +98,7 @@ bmap_flush_reap_rpcs(void)
 	psc_trace("outstandingRpcCnt=%d (after)",
 		 atomic_read(&outstandingRpcCnt));
 
-	if (shutdown) {
+	if (shutdownRpc) {
 		psc_assert(!psc_dynarray_len(&pndgReqSets));
 		psc_assert(!atomic_read(&pndgReqs->nb_outstanding));
 		psc_assert(!atomic_read(&outstandingRpcCnt));
