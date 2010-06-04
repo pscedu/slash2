@@ -197,7 +197,7 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, const char *file,
 	int rc;
 	struct fidc_membh *fcmhp;
 
-	rc = _fidc_lookup(fg, 0, NULL, 0, NULL, &fcmhp, file, func, line);
+	rc = _fidc_lookup(fg, 0, NULL, 0, &fcmhp, file, func, line);
 	return (rc == 0 ? fcmhp : NULL);
 }
 
@@ -212,7 +212,7 @@ _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
 	struct fidc_membh *fcmhp;
 	struct slash_fidgen t = { f, FIDGEN_ANY };
 
-	rc = _fidc_lookup(&t, 0, NULL, 0, NULL, &fcmhp, file, func, line);
+	rc = _fidc_lookup(&t, 0, NULL, 0, &fcmhp, file, func, line);
 	return (rc == 0 ? fcmhp : NULL);
 
 }
@@ -226,8 +226,8 @@ _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
 int
 _fidc_lookup(const struct slash_fidgen *fgp, int flags,
     const struct srt_stat *sstb, int setattrflags,
-    const struct slash_creds *creds, struct fidc_membh **fcmhp,
-    const char *file, const char *func, int line)
+    struct fidc_membh **fcmhp, const char *file, const char *func,
+    int line)
 {
 	int rc, try_create=0;
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
@@ -249,9 +249,6 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 #ifdef SLASH_CLIENT
 	if (flags & FIDC_LOOKUP_CREATE)
 		psc_assert(sstb || (flags & FIDC_LOOKUP_LOAD));
-
-	if (flags & FIDC_LOOKUP_LOAD)
-		psc_assert(creds);
 #else
 	psc_assert(!(flags & FIDC_LOOKUP_EXCL));
 #endif

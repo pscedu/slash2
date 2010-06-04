@@ -178,8 +178,8 @@ void	fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism */
 
 int			 _fidc_lookup(const struct slash_fidgen *, int,
-			    const struct srt_stat *, int, const struct slash_creds *,
-			    struct fidc_membh **, const char *, const char *, int);
+			    const struct srt_stat *, int, struct fidc_membh **,
+			    const char *, const char *, int);
 
 /* these fidc_lookup() wrappers are used for simple lookups no flags */
 struct fidc_membh	*_fidc_lookup_fid(slfid_t, const char *, const char *, int);
@@ -200,8 +200,8 @@ extern struct psc_hashtbl	 fidcHtable;
 
 #define fidcFreeList		fidcPool->ppm_lc
 
-#define fidc_lookup(fgp, lkfl, sstb, safl, crp, fcmhp)			\
-	_fidc_lookup((fgp), (lkfl), (sstb), (safl), (crp), (fcmhp),	\
+#define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
+	_fidc_lookup((fgp), (lkfl), (sstb), (safl), (fcmhp),		\
 	    __FILE__, __func__, __LINE__)
 
 #define fidc_lookup_fid(fid)						\

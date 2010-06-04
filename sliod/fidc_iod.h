@@ -34,6 +34,6 @@ struct fcmh_iod_info {
 #define fcmh_2_fii(fcmh)	((struct fcmh_iod_info *)fcmh_get_pri(fcmh))
 #define fcmh_2_fd(fcmh)		fcmh_2_fii(fcmh)->fii_fd
 
-#define sli_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, &rootcreds, (fp))
+#define sli_fcmh_get(fgp, fp)	fidc_lookup((fgp), FIDC_LOOKUP_CREATE, NULL, 0, (fp))
 
 #endif /* _FIDC_IOD_H_ */

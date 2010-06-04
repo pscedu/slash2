@@ -74,8 +74,8 @@ void	fidc_child_unlink(struct fidc_membh *, const char *);
 ssize_t	fcmh_getsize(struct fidc_membh *);
 void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 
-#define fidc_lookup_load_inode(fid, crp, fcmhp)				\
-	_fidc_lookup_load_inode((fid), (crp), (fcmhp),			\
+#define fidc_lookup_load_inode(fid, fcmhp)				\
+	_fidc_lookup_load_inode((fid), (fcmhp),				\
 	    __FILE__, __func__, __LINE__)
 
 /**
@@ -83,13 +83,13 @@ void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
  *	its attributes from the network.
  */
 static __inline int
-_fidc_lookup_load_inode(slfid_t fid, const struct slash_creds *crp,
-    struct fidc_membh **fcmhp, const char *file, const char *func, int line)
+_fidc_lookup_load_inode(slfid_t fid, struct fidc_membh **fcmhp,
+    const char *file, const char *func, int line)
 {
 	struct slash_fidgen fg = { fid, FIDGEN_ANY };
 
 	return (_fidc_lookup(&fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
-	    NULL, 0, crp, fcmhp, file, func, line));
+	    NULL, 0, fcmhp, file, func, line));
 }
 
 #endif /* _FIDC_CLI_H_ */

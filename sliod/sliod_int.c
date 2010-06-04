@@ -102,8 +102,7 @@ iod_inode_lookup(const struct slash_fidgen *fg)
 	struct fidc_membh *f;
 	int rc;
 
-	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE,
-	    NULL, 0, &rootcreds, &f);
+	rc = fidc_lookup(fg, FIDC_LOOKUP_CREATE, NULL, 0, &f);
 	psc_assert(rc == 0);
 	return (f);
 }
@@ -132,7 +131,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 		return (0);
 
 	psc_assert(!bmap_2_biodi_wire(b));
-       
+
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
 		goto out;
@@ -179,7 +178,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 		    if (!(s->slvr_flags & SLVR_CRCDIRTY) &&
 			s->slvr_flags & SLVR_DATARDY) {
 			    slvr_2_crc(s) = s->slvr_crc;
-			    slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
+			    slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 		    }
 	}
 	freelock(&bmap_2_biodi(b)->biod_lock);
