@@ -270,7 +270,6 @@ exist yet) based on the idea outlined on 05/20/2010:
 (1) will fail because it can't create a fidlink again for zhihui2, the same slash ID is already
 used by zhihui1.  So perhaps I need to reverse the order of (1) and (2).
 
-This same issue also applies to symlink, where we need to log two file names.
 
 06/04/2010
 ----------
@@ -337,3 +336,11 @@ Linux wolverine.psc.edu 2.6.18-194.3.1.el5xen #1 SMP Thu May 13 13:49:53 EDT 201
 
 Looks like in the newer kernel version, if an alias of a directory is found, the FUSE kernel module just invalidates it
 instead of returning EIO.
+
+06/07/2010
+----------
+
+Looks like I need to solve the logging issue for symlink as well, which like rename, also needs two names.  In the case
+of rename, I can break it into 2 or 3 logical operations.   But in the case of symlink, it is not possible to do so.
+
+Guess I have to extend the current journaling/tiling code to deal with a multi-log entry transaction.
