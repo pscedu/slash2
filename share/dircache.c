@@ -71,7 +71,7 @@ dircache_cmpf(const void *a, const void *b)
 }
 
 slfid_t
-dircache_lookup(struct dircache_info *i, const char *name) {
+dircache_lookup(struct dircache_info *i, const char *name, int flag) {
 	struct dircache_ents *e;
 	struct dircache_desc desc, *d;
 	struct srt_dirent *dirent;
@@ -110,6 +110,9 @@ dircache_lookup(struct dircache_info *i, const char *name) {
 					e->de_remlookup--;
 					d->dd_flags |= DC_LOOKUP;
 				}
+
+				if (flag & DC_STALE)
+					d->dd_flags |= DC_STALE;
 				break;
 			}
 		}
