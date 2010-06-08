@@ -186,7 +186,7 @@ mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
  */
 void
 mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t target,
-	const struct srt_stat *stat, const char *name)
+	const struct srt_stat *stat, const char *name, const char *newname)
 {
 	int rc;
 	struct slmds_jent_namespace *jnamespace;

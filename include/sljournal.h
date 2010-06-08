@@ -90,6 +90,7 @@ struct slmds_jent_bmapseq {
 } __packed;
 
 #define SJ_NAMESPACE_MAGIC		UINT64_C(0xaa5a5aaa43211234)
+#define SJ_MAX_NAMEBUF			377
 
 struct slmds_jent_namespace {
 
@@ -101,6 +102,7 @@ struct slmds_jent_namespace {
 
 	uint64_t		sjnm_parent_s2id;
 	uint64_t		sjnm_target_s2id;
+	uint64_t		sjnm_new_parent_s2id;		/* rename only */
 
 	uint			sjnm_mask;			/* attribute mask */
 	uint32_t		sjnm_mode;			/* file permission */
@@ -119,7 +121,7 @@ struct slmds_jent_namespace {
 	 * save network bandwidth.
 	 */
 	uint16_t		sjnm_reclen;
-	char			sjnm_name[NAME_MAX+1];
+	char			sjnm_name[SJ_MAX_NAMEBUF+1];
 } __packed;
 
 /* List all of the journaling structures here so that the maximum

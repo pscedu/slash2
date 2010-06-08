@@ -275,6 +275,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_bmapdesc);
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
+	PRTYPE(struct psc_journal_enthdr);
 	/* end structs */
 
 	/* start constants */
