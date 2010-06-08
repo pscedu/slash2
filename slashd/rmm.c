@@ -56,6 +56,7 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 {
 	int rc;
 	int validop = 1;
+	char *newname;
 	struct srt_stat stat;
 
 	stat.sst_uid = jnamespace->sjnm_uid;
@@ -84,14 +85,22 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 			jnamespace->sjnm_mode, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_SYMLINK:
+		newname = jnamespace->sjnm_name;
+		while (*newname != NULL)
+			newname++;
+		newname++;
 		rc = mdsio_replay_symlink(
 			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
 			jnamespace->sjnm_mode, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_RENAME:
+		newname = jnamespace->sjnm_name;
+		while (*newname != NULL)
+			newname++;
+		newname++;
 		rc = mdsio_replay_rename(
 			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_new_parent_s2id, 
-			jnamespace->sjnm_target_s2id, NULL, jnamespace->sjnm_name);
+			jnamespace->sjnm_target_s2id, jnamespace->sjnm_name, newname);
 		break;
 	    case NS_OP_UNLINK:
 		rc = mdsio_replay_unlink(

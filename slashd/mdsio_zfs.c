@@ -384,8 +384,8 @@ mdsio_replay_setattr(uint64_t target_s2id, struct srt_stat * stat, uint mask)
 }
 
 int
-mdsio_replay_rename(uint64_t parent_s2id, unit64_t new_parent_s2id, 
-	uint64_t target_s2id, char *name1, char *name2)
+mdsio_replay_rename(uint64_t parent_s2id, uint64_t new_parent_s2id, 
+	__unusedx uint64_t target_s2id, char *name1, char *name2)
 {
-	return (zfsslash2_replay_rename(parent_s2id, newparent_s2id, target_s2id, name1, name2));
+	return (zfsslash2_replay_rename(parent_s2id, name1, new_parent_s2id, name2));
 }
