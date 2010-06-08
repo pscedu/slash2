@@ -109,4 +109,6 @@ struct srt_statfs {
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
 
+#define	MAX_NAME_BUF_SIZE	377		
+
 #endif /* _SL_TYPES_H_ */

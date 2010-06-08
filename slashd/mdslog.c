@@ -221,7 +221,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t target,
 		strncpy(ptr, name, NAME_MAX);
 		jnamespace->sjnm_reclen += strlen(newname) + 1;
 	}
-	psc_assert(logentrysize >= jnamespace->sjnm_reclen + sizeof(struct psc_journal_enthdr));
+	psc_assert(logentrysize >= jnamespace->sjnm_reclen + sizeof(struct psc_journal_enthdr) - 1);
 
 	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
 		jnamespace->sjnm_reclen);
