@@ -344,3 +344,11 @@ Looks like I need to solve the logging issue for symlink as well, which like ren
 of rename, I can break it into 2 or 3 logical operations.   But in the case of symlink, it is not possible to do so.
 
 Guess I have to extend the current journaling/tiling code to deal with a multi-log entry transaction.
+
+If we support multi-sector log entries, we have to overcome the tile boundary. We must make sure that a multi-sector log 
+entry be sent in ONE RPC.
+
+To get rid of tile boundaries, we could use a linked list of log entries.  That can lead to better use of memory.
+
+An easy way is to limit the size of the two names in a rename or a symlink operation so that the whole operation
+can be fit into a 512 byte log entry.
