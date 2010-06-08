@@ -119,7 +119,7 @@ struct slmds_jent_namespace {
 	 * log entries over the network, we condense them to
 	 * save network bandwidth.
 	 */
-	uint16_t		sjnm_reclen;
+	int16_t			sjnm_reclen;
 	char			sjnm_name[MAX_NAME_BUF_SIZE+1];
 } __packed;
 

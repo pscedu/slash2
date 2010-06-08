@@ -199,6 +199,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uin
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
 	jnamespace->sjnm_parent_s2id = parent;
 	jnamespace->sjnm_target_s2id = target;
+	jnamespace->sjnm_new_parent_s2id = newparent;
 
 	if (stat) {
 		jnamespace->sjnm_mask = stat->sst_mask;
