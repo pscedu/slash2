@@ -90,7 +90,6 @@ struct slmds_jent_bmapseq {
 } __packed;
 
 #define SJ_NAMESPACE_MAGIC		UINT64_C(0xaa5a5aaa43211234)
-#define SJ_MAX_NAMEBUF			377
 
 struct slmds_jent_namespace {
 
@@ -121,7 +120,7 @@ struct slmds_jent_namespace {
 	 * save network bandwidth.
 	 */
 	uint16_t		sjnm_reclen;
-	char			sjnm_name[SJ_MAX_NAMEBUF+1];
+	char			sjnm_name[MAX_NAME_BUF_SIZE+1];
 } __packed;
 
 /* List all of the journaling structures here so that the maximum
