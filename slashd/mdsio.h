@@ -35,7 +35,7 @@ struct slash_inode_handle;
 typedef uint64_t mdsio_fid_t;
 
 typedef slfid_t (*sl_getslfid_cb)(void);
-typedef void (*sl_jlog_cb)(int, uint64_t, uint64_t, uint64_t, const struct srt_stat *, const char *, const char *);
+typedef void (*sl_jlog_cb)(int, uint64_t, uint64_t, uint64_t, uint64_t, const struct srt_stat *, const char *, const char *);
 
 /* predefined mdsio layer "fids" */
 #define MDSIO_FID_ROOT	3
