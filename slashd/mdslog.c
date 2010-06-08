@@ -189,6 +189,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t target,
 	const struct srt_stat *stat, const char *name, const char *newname)
 {
 	int rc;
+	char *ptr;
 	struct slmds_jent_namespace *jnamespace;
 
 	jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
@@ -210,15 +211,17 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t target,
 		jnamespace->sjnm_ctime = stat->sst_ctime;
 	}
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
+	ptr = &jnamespace->sjnm_name[0];
 	if (name) {
-		strncpy(jnamespace->sjnm_name, name, NAME_MAX);
-		if (strlen(name) > NAME_MAX) {
-			jnamespace->sjnm_name[NAME_MAX] = '\0';
-			jnamespace->sjnm_reclen += NAME_MAX + 1;
-		} else
-			jnamespace->sjnm_reclen += strlen(name) + 1;
+		strncpy(ptr, name, NAME_MAX);
+		jnamespace->sjnm_reclen += strlen(name) + 1;
+		ptr += strlen(name) + 1;
 	}
-	psc_assert(logentrysize >= jnamespace->sjnm_reclen);
+	if (newname) {
+		strncpy(ptr, name, NAME_MAX);
+		jnamespace->sjnm_reclen += strlen(newname) + 1;
+	}
+	psc_assert(logentrysize >= jnamespace->sjnm_reclen + sizeof(struct psc_journal_enthdr));
 
 	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
 		jnamespace->sjnm_reclen);
