@@ -81,6 +81,6 @@ int mdsio_replay_symlink(uint64_t, uint64_t, int, char *);
 int mdsio_replay_unlink(uint64_t, uint64_t, char *);
 int mdsio_replay_rmdir(uint64_t, uint64_t, char *);
 int mdsio_replay_setattr(uint64_t, struct srt_stat *, uint);
-int mdsio_replay_rename(uint64_t, uint64_t, char *, char *);
+int mdsio_replay_rename(uint64_t, uint64_t, uint64_t, char *, char *);
 
 #endif

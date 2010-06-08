@@ -90,8 +90,8 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 		break;
 	    case NS_OP_RENAME:
 		rc = mdsio_replay_rename(
-			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
-			NULL, jnamespace->sjnm_name);
+			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_new_parent_s2id, 
+			jnamespace->sjnm_target_s2id, NULL, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_UNLINK:
 		rc = mdsio_replay_unlink(
