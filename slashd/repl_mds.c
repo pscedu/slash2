@@ -951,7 +951,7 @@ mds_repl_scandir(void)
 	uint32_t j;
 	void *data;
 
-	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, NULL, NULL, &data);
+	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, NULL, &data);
 	if (rc)
 		psc_fatalx("mdsio_opendir %s: %s", SL_PATH_REPLS,
 		    slstrerror(rc));
