@@ -93,7 +93,7 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 
 	if (fcmh_isdir(fcmh))
 		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh),
-		    &rootcreds, NULL, NULL, &fmi->fmi_mdsio_data);
+		    &rootcreds, NULL, &fmi->fmi_mdsio_data);
 	else {
 		rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh),
 		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL, NULL,

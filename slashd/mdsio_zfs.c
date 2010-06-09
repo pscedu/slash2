@@ -272,9 +272,9 @@ mdsio_lookup_slfid(slfid_t fid, const struct slash_creds *crp,
 
 int
 mdsio_opendir(mdsio_fid_t ino, const struct slash_creds *cr,
-    struct slash_fidgen *fgp, struct srt_stat *sstb, void *mdsio_datap)
+    struct slash_fidgen *fgp, void *mdsio_datap)
 {
-	return (zfsslash2_opendir(ino, cr, fgp, sstb, mdsio_datap));
+	return (zfsslash2_opendir(ino, cr, fgp, mdsio_datap));
 }
 
 int
