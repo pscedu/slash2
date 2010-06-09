@@ -433,5 +433,8 @@ Sometimes these are unavoidable, and not necessarily a fault of the filesystem. 
 
     * the same node ID value was used for two different directories (i.e. hard-linked directories are not allowed). 
 
-    * In the GETATTR function, st_mode needs to have a valid filetype bit set, like S_IFREG or S_IFDIR, see the stat manual for more. 
+    * In the GETATTR function, st_mode needs to have a valid filetype bit set, like S_IFREG or S_IFDIR, see the stat 
+      manual for more. 
+
+    * Make sure that the fid passed back is valid (for example, not zero).
 
