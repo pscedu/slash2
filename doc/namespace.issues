@@ -410,3 +410,28 @@ To get rid of tile boundaries, we could use a linked list of log entries.  That 
 
 An easy way is to limit the size of the two names in a rename or a symlink operation so that the whole operation
 can be fit into a 512 byte log entry.
+
+06/09/2010
+----------
+
+Rename now works as an atomic operation - I now pack two filenames in the same 512-byte log entry.  But creating 
+symlink gives EIO. 
+
+Just come across the following at http://sourceforge.net/apps/mediawiki/fuse/index.php?title=FAQ:
+
+What is the reason for IO errors?
+
+The kernel part of FUSE returns the EIO error value, whenever the userspace filesystem sends a "bad" reply. 
+Sometimes these are unavoidable, and not necessarily a fault of the filesystem. Possible causes of this are 
+(non-exhaustive)
+
+    * the filesystem returned a short count on write(). 
+
+    * the type of the file has changed (e.g. a directory suddenly became a symlink). 
+
+    * a directory entry contained a filename that was too long (no, ENAMETOOLONG is not the right error here). 
+
+    * the same node ID value was used for two different directories (i.e. hard-linked directories are not allowed). 
+
+    * In the GETATTR function, st_mode needs to have a valid filetype bit set, like S_IFREG or S_IFDIR, see the stat manual for more. 
+
