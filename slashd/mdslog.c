@@ -219,7 +219,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uin
 		ptr += strlen(name) + 1;
 	}
 	if (newname) {
-		strncpy(ptr, name, NAME_MAX);
+		strncpy(ptr, newname, NAME_MAX);
 		jnamespace->sjnm_reclen += strlen(newname) + 1;
 	}
 	psc_assert(logentrysize >= jnamespace->sjnm_reclen + sizeof(struct psc_journal_enthdr) - 1);
