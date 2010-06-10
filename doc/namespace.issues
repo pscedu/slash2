@@ -438,3 +438,33 @@ Sometimes these are unavoidable, and not necessarily a fault of the filesystem. 
 
     * Make sure that the fid passed back is valid (for example, not zero).
 
+06/10/2010
+----------
+
+Try to make readlink() works on slash2, hit the following bug:
+
+(gdb) down
+#0  fs_nosys () at lib/libsolkerncompat/fs_subr.c:48
+48              return (ENOSYS);
+(gdb) bt
+#0  fs_nosys () at lib/libsolkerncompat/fs_subr.c:48
+#1  0x000000000059a9c1 in fop_open (vpp=0x2aaac0fff660, mode=3, cr=0x2aaac0fff670, ct=0x0) at lib/libsolkerncompat/vnode.c:821
+#2  0x00000000004e491c in zfsslash2_opencreate (ino=4479, slcrp=0x86eac0, fflags=2, createmode=0, name=0x0, fg=0x0, mfp=0x0, sstb=0x0, finfo=0x8a48f0, 
+    logfunc=0, getslfid=0) at zfs-fuse/zfs_operations_slash.c:842
+#3  0x00000000004ad79c in mdsio_opencreate (pino=4479, cr=0x86eac0, flags=2, mode=0, fn=0x0, fgp=0x0, mfp=0x0, sstb=0x0, mdsio_datap=0x8a48f0, logfunc=0, 
+    getslfid=0) at /home/zhihui/projects/slash_nara/slashd/mdsio_zfs.c:247
+#4  0x0000000000497fa9 in slm_fcmh_ctor (fcmh=0x8a4710) at /home/zhihui/projects/slash_nara/slashd/fidc_mds.c:98
+#5  0x0000000000492057 in _fidc_lookup (fgp=0x1a42ce8, flags=1, sstb=0x0, setattrflags=0, fcmhp=0x2aaac1000a28, 
+    file=0x5bc338 "/home/zhihui/projects/slash_nara/slashd/rmc.c", func=0x5bc670 "slm_rmc_handle_readlink", line=527)
+    at /home/zhihui/projects/slash_nara/share/fidc_common.c:402
+#6  0x00000000004c09f7 in slm_rmc_handle_readlink (rq=0x1a42a80) at /home/zhihui/projects/slash_nara/slashd/rmc.c:527
+#7  0x00000000004c34ab in slm_rmc_handler (rq=0x1a42a80) at /home/zhihui/projects/slash_nara/slashd/rmc.c:925
+#8  0x000000000045af71 in pscrpc_server_handle_request (svc=0x1a41130, thread=0x1b632d0) at /home/zhihui/projects/psc_fsutil_libs/psc_rpc/service.c:369
+#9  0x000000000045e456 in pscrpcthr_main (thr=0x1b632d0) at /home/zhihui/projects/psc_fsutil_libs/psc_rpc/service.c:729
+#10 0x0000000000484bbc in _pscthr_begin (arg=0x7fff36b1eaa0) at /home/zhihui/projects/psc_fsutil_libs/psc_util/thread.c:270
+#11 0x00002af874c08305 in start_thread () from /lib64/libpthread.so.0
+#12 0x00002af874eea50d in clone () from /lib64/libc.so.6
+#13 0x0000000000000000 in ?? ()
+
+Basically, we can't call VOP_OPEN() on a symlink.  However, we are doing just that when we try to construct
+a fid cache for the vnode.
