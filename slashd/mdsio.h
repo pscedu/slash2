@@ -76,7 +76,7 @@ int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *, sl_jlog_
 int mdsio_replay_create(uint64_t, uint64_t, struct srt_stat *, char *);
 int mdsio_replay_mkdir(uint64_t, uint64_t, struct srt_stat *, char *);
 
-int mdsio_replay_link(uint64_t, uint64_t, int32_t, int32_t, int, char *);
+int mdsio_replay_link(uint64_t, uint64_t, char *);
 int mdsio_replay_symlink(uint64_t, uint64_t, int, char *, char *);
 int mdsio_replay_unlink(uint64_t, uint64_t, char *);
 int mdsio_replay_rmdir(uint64_t, uint64_t, char *);

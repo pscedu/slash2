@@ -354,8 +354,7 @@ mdsio_replay_mkdir(uint64_t parent_s2id, uint64_t target_s2id,
 }
 
 int
-mdsio_replay_link(uint64_t parent_s2id, uint64_t target_s2id,
-    __unusedx int32_t uid, __unusedx int32_t gid, int mode, char *name)
+mdsio_replay_link(uint64_t parent_s2id, uint64_t target_s2id, char *name)
 {
 	return (zfsslash2_replay_link(parent_s2id, target_s2id, name));
 }

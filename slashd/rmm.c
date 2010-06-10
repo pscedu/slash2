@@ -81,8 +81,7 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 	    case NS_OP_LINK:
 		rc = mdsio_replay_link(
 			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
-			jnamespace->sjnm_uid, jnamespace->sjnm_gid, 
-			jnamespace->sjnm_mode, jnamespace->sjnm_name);
+			jnamespace->sjnm_name);
 		break;
 	    case NS_OP_SYMLINK:
 		newname = jnamespace->sjnm_name;
