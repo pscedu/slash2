@@ -1445,6 +1445,9 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	sl_externalize_stat(stb, &mq->attr);
 	mq->attr.sst_ptruncgen = fcmh_2_ptruncgen(c);
 
+	if (mq->to_set && SRM_SETATTRF_SIZE)
+		DEBUG_FCMH(PLL_WARN, c, "truncate!");
+
 	/*
 	 * Even though we know our fid, we expect the server to fill it
 	 * along with the rest of the new attributes (mp->attr).
@@ -1455,7 +1458,8 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
-	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_NONE);
+	fcmh_setattr(c, &mp->attr, (mq->to_set & SRM_SETATTRF_SIZE) ?
+		     FCMH_SETATTRF_NONE : FCMH_SETATTRF_SAVESIZE);
 	sl_internalize_stat(&mp->attr, stb);
 	fuse_reply_attr(req, stb, 0.0);
 
