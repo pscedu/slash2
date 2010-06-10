@@ -254,7 +254,7 @@ enum {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 "biorq@%p fl=%x o=%x l=%d np=%d b=%p ts=%ld:%ld "	\
+		 "biorq@%p fl=%d o=%u l=%u np=%d b=%p ts=%ld:%ld "	\
 		 BIORQ_FLAGS_FORMAT" "fmt,				\
 		 (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
 		 psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
