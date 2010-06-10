@@ -23,53 +23,40 @@
 #include "psc_ds/list.h"
 #include "psc_util/lock.h"
 
-#include "fidcache.h"
 #include "sltypes.h"
+#include "fidcache.h"
+#include "dircache.h"
+
+#define MSL_FUSE_ENTRY_TIMEO 8.0
+#define MSL_FUSE_ATTR_TIMEO  8.0
 
 struct fidc_membh;
 
-/*
- * Currently, we don't use reference count to protect the child-parent
- * relationship.  This gives the reaper the maximum flexibility to
- * reclaim fcmh.  However, we do have to follow some rules:
- *
- *  (1) the reaper does not choose a non-empty directory as a victim.
- *	This makes sure that the parent pointer of a child is always
- *	valid.
- *
- * (2) we should lock a parent when adding or removing a child from its
- *	children list.
- *
- * Also, when an item times out, it will be refreshed subsequently
- * whenever future access is attempted.  Ancestor integrity is preserved
- * because during a lookup, each hierarchical ancestor is scanned in
- * the cache, being refreshed as needed.
- */
+extern struct dircache_mgr dircacheMgr;
+
+struct cli_finfo {
+	int			 nrepls;
+	sl_replica_t	         reptbl[SL_DEF_REPLICAS];
+};
+
 struct fcmh_cli_info {
-	struct fidc_membh	*fci_parent;
-	struct psclist_head	 fci_children;
-	struct psclist_head	 fci_sibling;
-	sl_replica_t		 fci_reptbl[SL_MAX_REPLICAS];
-	struct timeval		 fci_age;	/* age of this entry */
-	int			 fci_nrepls;
-	int			 fci_hash;
-	char			*fci_name;	/* freed in dtor(). what's the name for root? */
+	struct timeval           fci_age;
+	union {
+		struct cli_finfo     f;
+		struct dircache_info d;
+	} ford;
+#define fci_nrepls ford.f.nrepls
+#define fci_reptbl ford.f.reptbl
+#define fci_dci    ford.d
 };
 
 #define fcmh_2_fci(f)		((struct fcmh_cli_info *)fcmh_get_pri(f))
 
-/* client-specific fcmh_state flags */
+/* Client-specific fcmh_state flags 
+ */
 #define FCMH_CLI_HAVEREPLTBL	(_FCMH_FLGSHFT << 0)	/* file replica table present */
 #define FCMH_CLI_FETCHREPLTBL	(_FCMH_FLGSHFT << 1)	/* file replica table loading */
-#define FCMH_CLI_APPENDWR	(_FCMH_FLGSHFT << 2)	/* file opened with O_APPEND */
-
-struct fidc_membh *
-	fidc_child_lookup(struct fidc_membh *, const char *);
-void	fidc_child_add(struct fidc_membh *, struct fidc_membh *, const char *);
-int	fidc_child_reap_cb(struct fidc_membh *);
-void	fidc_child_rename(struct fidc_membh *, const char *,
-	    struct fidc_membh *, const char *);
-void	fidc_child_unlink(struct fidc_membh *, const char *);
+#define FCMH_CLI_APPENDWR       (_FCMH_FLGSHFT << 2)    /* file opened with O_APPEND */
 
 ssize_t	fcmh_getsize(struct fidc_membh *);
 void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);

@@ -210,7 +210,7 @@ _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
 {
 	int rc;
 	struct fidc_membh *fcmhp;
-	struct slash_fidgen t = { f, FIDGEN_ANY };
+	struct slash_fidgen t = {f, FIDGEN_ANY};
 
 	rc = _fidc_lookup(&t, 0, NULL, 0, &fcmhp, file, func, line);
 	return (rc == 0 ? fcmhp : NULL);
@@ -225,9 +225,9 @@ _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
  */
 int
 _fidc_lookup(const struct slash_fidgen *fgp, int flags,
-    const struct srt_stat *sstb, int setattrflags,
-    struct fidc_membh **fcmhp, const char *file, const char *func,
-    int line)
+     const struct srt_stat *sstb, int setattrflags,
+     struct fidc_membh **fcmhp, const char *file, const char *func,
+     int line)
 {
 	int rc, try_create=0;
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
@@ -265,7 +265,8 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	psc_hashbkt_lock(b);
 	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
 		/*
-		 * Note that generation number is only used to track truncations.
+		 * Note that generation number is only used to track 
+		 *   truncations.
 		 */
 		if (searchfg.fg_fid != fcmh_2_fid(tmp))
 			continue;
@@ -306,13 +307,6 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		if (try_create) {
 			fcmh_put(fcmh_new);
 			fcmh_new = NULL;			/* defensive */
-		}
-		if (flags & FIDC_LOOKUP_EXCL) {
-			fcmh->fcmh_state |= FCMH_CAC_TOFREE;
-			FCMH_ULOCK(fcmh);
-			psc_warnx("FID "FIDFMT" already in cache",
-			    FIDFMTARGS(fgp));
-			goto restart;
 		}
 
 #ifdef DEMOTED_INUM_WIDTHS
@@ -393,24 +387,28 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	fcmh->fcmh_state |= FCMH_CAC_INITING;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
-	/*
-	 * Call service specific constructor slc_fcmh_ctor(), slm_fcmh_ctor(),
-	 * and sli_fcmh_ctor() to initialize their private fields that follow
-	 * the main fcmh structure. It is safe to not lock because we don't
-	 * touch the state, and other thread should be waiting for us.
-	 */
-	rc = sl_fcmh_ops.sfop_ctor(fcmh);
-	if (rc)
-		goto out1;
-
+	 
 	if (sstb) {
 		FCMH_LOCK(fcmh);
 		fcmh_setattr(fcmh, sstb, setattrflags|FCMH_SETATTRF_HAVELOCK);
+		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		goto out2;
+	} else {
+		/*
+		 * Call service specific constructor slc_fcmh_ctor(), 
+		 * slm_fcmh_ctor(), and sli_fcmh_ctor() to initialize their 
+		 * private fields that follow the main fcmh structure. It is 
+		 * safe to not lock because we don't touch the state, and 
+		 * other thread should be waiting for us.
+		 */		
+		rc = sl_fcmh_ops.sfop_ctor(fcmh);
+		if (rc)
+			goto out1;
 	}
+
 	if (flags & FIDC_LOOKUP_LOAD) {
 		psc_assert(sl_fcmh_ops.sfop_getattr);
-		rc = sl_fcmh_ops.sfop_getattr(fcmh);	/* slc_fcmh_getattr() */
+		rc = sl_fcmh_ops.sfop_getattr(fcmh);   /* slc_fcmh_getattr() */
 	}
 
  out1:
@@ -426,9 +424,9 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	lc_add(&fidcCleanList, fcmh);
 
 	if (rc) {
+		FCMH_ULOCK(fcmh);			
 		fcmh->fcmh_state |= FCMH_CAC_TOFREE;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
-		/* fcmh could be gone at this point */
 	} else {
 		*fcmhp = fcmh;
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
@@ -459,6 +457,7 @@ fidc_init(int privsiz, int nobj, int max,
 
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
 	    FCMH_HASH_FIELD, fcmh_hentry, nobj * 2, NULL, "fidc");
+
 	fidcReapCb = fcmh_reap_cb;
 }
 
@@ -536,8 +535,10 @@ dump_fidcache(void)
 void
 dump_fcmh(struct fidc_membh *f)
 {
-	psc_max("fidc_membh (%p): fid = %"PRId64", gen = %"PRId64", refcnt = %d, sstb = %p\n",
-		  f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt, &f->fcmh_sstb);
+	psc_max("fidc_membh (%p): fid = %"PRId64", gen = %"PRId64
+		", refcnt = %d, sstb = %p\n",
+		f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt, 
+		&f->fcmh_sstb);
 }
 
 void
