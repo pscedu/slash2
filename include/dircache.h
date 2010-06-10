@@ -21,14 +21,18 @@
 #define _DIRCACHE_H_
 
 #include <time.h>
+#include <sys/types.h>
 
+#include "psc_ds/dynarray.h"
 #include "psc_ds/list.h"
+#include "psc_ds/listcache.h"
 #include "psc_util/lock.h"
 
 #include "sltypes.h"
-#include "fidcache.h"
 
-#define dirent_timeo 8
+#define dirent_timeo 4
+
+struct fidc_membh;
 
 struct dircache_mgr {
 	size_t                   dcm_maxsz;
@@ -41,27 +45,28 @@ struct dircache_info {
 	struct dircache_mgr     *di_dcm;
 	struct fidc_membh       *di_fcmh;
 	struct psclist_head      di_list;
-	struct psclist_head      di_lentry;
 	psc_spinlock_t           di_lock;
 };
 
 struct dircache_ents {
-	int                      de_remlookup:31;
-	int                      de_freeable:1;
+	int                      de_remlookup;
+	int                      de_freeable;
+	int                      de_idx;
 	size_t                   de_sz;
 	struct timeval           de_age;
 	struct psclist_head      de_lentry1;   /* Chain on info  */
 	struct psclist_head      de_lentry2;   /* Chain onto mgr */
 	struct psc_dynarray      de_dents;	
+	struct dircache_desc    *de_desc;
 	struct dircache_info    *de_info;
-	unsigned char           *de_base;
+	unsigned char            de_base[0];
 };
 
 struct dircache_desc {
 	int                      dd_hash;
 	int                      dd_len;
-	int                      dd_offset:30;
-	int                      dd_flags:2;
+	int                      dd_offset;
+	int                      dd_flags;
 };
 
 enum dircache_flags {
@@ -75,28 +80,41 @@ dircache_setfreeable_ents(struct dircache_ents *e)
         e->de_freeable = 1;
 }
 
-/* Note:  These macros must match the ones used by the server in 
- *  zfs_operations_slash.c
- */
-#define SRT_NAME_OFFSET ((unsigned long) ((struct str_dirent *) 0)->name)
-#define SRT_DIRENT_ALIGN(x) (((x) + sizeof(uint64_t) - 1) &	\
-			     ~(sizeof(uint64_t) - 1))
-#define SRT_DIRENT_SIZE(d)					\
-	SRT_DIRENT_ALIGN(SRT_NAME_OFFSET + (d)->namelen)
-
-static __inline size_t 
-srt_dirent_size(size_t namelen)
-{
-	return SRT_DIRENT_ALIGN(SRT_NAME_OFFSET + namelen);
-}
-
 static __inline int
 dirent_desc_sort_cmp(const void *x, const void *y)
 {
 	const struct dircache_desc * const *pa = x, *a = *pa;
 	const struct dircache_desc * const *pb = y, *b = *pb;
 
-	return (CMP(a->bmpce_hash, b->bmpce_hash));
+	return (CMP(a->dd_hash, b->dd_hash));
 }
+
+#define DIRCACHE_INIT(fcmh, mgr)					\
+	if (!fcmh_2_fci((fcmh))->fci_dci.di_fcmh) {			\
+		dircache_init_info(&(fcmh_2_fci((fcmh))->fci_dci),	\
+				   (fcmh), (mgr));			\
+	}								\
+
+#define DIRCACHE_INITIALIZED(fcmh)		\
+	(fcmh_2_fci((fcmh))->fci_dci.di_fcmh ? 1 : 0)
+	
+void
+dircache_init(struct dircache_mgr *, const char *, size_t);
+
+void
+dircache_init_info(struct dircache_info *, struct fidc_membh *, 
+	   struct dircache_mgr *);
+
+slfid_t
+dircache_lookup(struct dircache_info *, const char *, int);
+
+struct dircache_ents *
+dircache_new_ents(struct dircache_info *, size_t);
+
+void
+dircache_reg_ents(struct dircache_ents *, size_t);
+
+void
+dircache_earlyrls_ents(struct dircache_ents *);
 
 #endif
