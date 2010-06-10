@@ -289,11 +289,11 @@ mdsio_mkdir(mdsio_fid_t pino, const char *cpn, mode_t mode,
 
 int
 mdsio_readdir(const struct slash_creds *cr, size_t siz,
-    off_t off, void *buf, size_t *outlen, void *attrs, int nprefetch,
-    void *mdsio_data)
+      off_t off, void *buf, size_t *outlen, size_t *nents, void *attrs, 
+      int nprefetch, void *mdsio_data)
 {
 	return (zfsslash2_readdir(cr, siz, off, buf,
-	    outlen, attrs, nprefetch, mdsio_data));
+		  outlen, nents, attrs, nprefetch, mdsio_data));
 }
 
 int

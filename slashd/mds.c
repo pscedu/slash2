@@ -1106,5 +1106,6 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 struct bmap_ops bmap_ops = {
 	mds_bmap_init,
 	mds_bmap_read,
+	NULL,
 	mds_bmap_reap
 };

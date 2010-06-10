@@ -400,7 +400,10 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 		goto out;
 	}
-
+	/* Lookup the parent directory in the cache so that the 
+	 *   slash2 ino can be translated into the inode for the
+	 *   underlying fs.
+	 */
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
@@ -413,8 +416,14 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	    NULL, &mp->attr, &mdsio_data, mds_namespace_log,
 	    slm_get_next_slashid);
 
+	if (mp->rc)
+		goto out;
+
 	//	DEBUG_FCMH(PLL_WARN, p, "create op done for %s", mq->name);
-	/* XXX enter this into the fcmh cache instead of doing it again */
+	/* XXX enter this into the fcmh cache instead of doing it again 
+	 *   This release may be the sanest thing actually, unless EXCL is 
+	 *   used.
+	 */
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);
 
@@ -443,7 +452,7 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	struct srm_readdir_rep *mp;
 	struct fidc_membh *fcmh;
 	struct iovec iov[2];
-	size_t outsize;
+	size_t outsize, nents;
 	int niov;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -472,9 +481,10 @@ slm_rmc_handle_readdir(struct pscrpc_request *rq)
 	}
 
 	mp->rc = mdsio_readdir(&rootcreds, mq->size, mq->offset,
-	    iov[0].iov_base, &outsize, iov[1].iov_base, mq->nstbpref,
-	    fcmh_2_mdsio_data(fcmh));
+	       iov[0].iov_base, &outsize, &nents, iov[1].iov_base,
+	       mq->nstbpref, fcmh_2_mdsio_data(fcmh));
 	mp->size = outsize;
+	mp->num = nents;
 
 	psc_info("mdsio_readdir: rc=%d, data=%p", mp->rc,
 	    fcmh_2_mdsio_data(fcmh));

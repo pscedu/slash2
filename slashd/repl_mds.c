@@ -962,7 +962,7 @@ mds_repl_scandir(void)
 
 	for (;;) {
 		rc = mdsio_readdir(&rootcreds, siz,
-		    off, buf, &tsiz, NULL, 0, data);
+			   off, buf, &tsiz, NULL, NULL, 0, data);
 		if (rc)
 			psc_fatalx("mdsio_readdir %s: %s", SL_PATH_REPLS,
 			    slstrerror(rc));
