@@ -131,6 +131,7 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 #define fcmh_2_ptruncgen(f)	(f)->fcmh_sstb.sst_ptruncgen
 
 #define fcmh_isdir(f)		S_ISDIR((f)->fcmh_sstb.sst_mode)
+#define fcmh_isreg(f)		S_ISREG((f)->fcmh_sstb.sst_mode)
 
 #define DEBUG_FCMH_FLAGS(fcmh)						\
 	(fcmh)->fcmh_state & FCMH_CAC_FREE		? "F" : "",	\
