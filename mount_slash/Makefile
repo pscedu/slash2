@@ -19,6 +19,7 @@ SRCS+=		timer_cli.c
 SRCS+=		${SLASH_BASE}/share/authbuf_mgt.c
 SRCS+=		${SLASH_BASE}/share/authbuf_sign.c
 SRCS+=		${SLASH_BASE}/share/bmap.c
+SRCS+=		${SLASH_BASE}/share/dircache.c
 SRCS+=		${SLASH_BASE}/share/cfg_common.c
 SRCS+=		${SLASH_BASE}/share/ctlsvr_common.c
 SRCS+=		${SLASH_BASE}/share/fidc_common.c
@@ -58,7 +59,7 @@ SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
-DEFINES+=	-DSLASH_CLIENT
+DEFINES+=	-DSLASH_CLIENT -DBSEARCH
 
 MODULES+=	fuse lnet pthread gcrypt
 
