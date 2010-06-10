@@ -587,8 +587,10 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		 */
 		for (i=0; i < psc_dynarray_len(&b); i++) {
 			t = psc_dynarray_getpos(&b, i);
+			spinlock(&t->biorq_lock);
 			DEBUG_BIORQ(PLL_INFO, t, "descheduling");
 			t->biorq_flags &= ~BIORQ_SCHED;
+			freelock(&t->biorq_lock);
 		}
 
 	*offset += off;
@@ -851,7 +853,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	//   assume an ion unless resm == slc_rmc_resm
 
 	do {
-		psc_info("msbmaprlsthr_main() top of loop");
+		psc_trace("msbmaprlsthr_main() top of loop");
 
 		lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
 		clock_gettime(CLOCK_REALTIME, &ctime);
@@ -919,6 +921,9 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[rmci->rmci_bmaprls.nbmaps]);
 				rmci->rmci_bmaprls.nbmaps++;
 
+				psc_assert(rmci->rmci_bmaprls.nbmaps <=
+					   MAX_BMAP_RELEASE);
+
 				/* The bmap should be going away now, this
 				 *    will call BMAP_URLOCK().
 				 */
@@ -933,7 +938,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					psc_dynarray_add_ifdne(&a, resm);
 			}
 		}
-		psc_info("msbmaprlsthr_main() out of loop (arraysz=%d)",
+		psc_trace("msbmaprlsthr_main() out of loop (arraysz=%d)",
 			 psc_dynarray_len(&a));
 
 		/* Send out partially filled release request.
