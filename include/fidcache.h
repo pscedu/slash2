@@ -115,7 +115,7 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 #endif
 
 /* number of seconds in which attribute times out */
-#define FCMH_ATTR_TIMEO		30
+#define FCMH_ATTR_TIMEO		8
 
 #define FCMH_LOCK(f)		spinlock(&(f)->fcmh_lock)
 #define FCMH_ULOCK(f)		freelock(&(f)->fcmh_lock)
@@ -159,7 +159,7 @@ enum fcmh_opcnt_types {
 	FCMH_OPCNT_LOOKUP_PARENT,	//1
 	FCMH_OPCNT_OPEN,		//2
 	FCMH_OPCNT_BMAP,		//3
-	FCMH_OPCNT_CHILD,		//4
+	FCMH_OPCNT_DIRENTBUF,		//4
 	FCMH_OPCNT_NEW,			//5
 	FCMH_OPCNT_WAIT			//6
 };
