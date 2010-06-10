@@ -59,7 +59,7 @@ typedef struct slash_snapshot {
 	time_t			sn_date;
 } sl_snap_t;
 
-#define INO_DEF_NREPLS		4
+#define INO_DEF_NREPLS		SL_DEF_REPLICAS
 
 /*
  * The inode structure lives at the beginning of the metafile and holds
