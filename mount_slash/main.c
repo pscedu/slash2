@@ -1219,7 +1219,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 
 	mq->opfg.fg_fid = parent;
 	mq->npfg.fg_fid = newparent;
-	mq->opfg.fg_gen = mq->npfg.fg_fid = 0;
+	mq->opfg.fg_gen = mq->npfg.fg_gen = 0;
 	mq->fromlen = strlen(name) + 1;
 	mq->tolen = strlen(newname) + 1;
 
