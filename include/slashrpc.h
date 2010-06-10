@@ -231,8 +231,8 @@ struct srm_generic_rep {
 /* ---------------------- BEGIN ENCAPSULATED MESSAGES ----------------------- */
 
 /*
- * Note: these messages are contained within other messages and thus must end on
- * 64-bit boundaries.
+ * Note: these messages are contained within other messages and thus must 
+ * end on 64-bit boundaries.
  */
 
 #define AUTHBUF_REPRLEN		45		/* strlen(base64(SHA256(secret)) + NUL */
@@ -617,13 +617,14 @@ struct srm_readdir_req {
 	struct slash_fidgen	fg;
 	uint64_t		offset;
 	uint64_t		size;
-	uint32_t		nstbpref;	/* number of prefetched attributes */
+	uint32_t		nstbpref;	/* max prefetched attributes */
 	int32_t			_pad;
 } __packed;
 
 struct srm_readdir_rep {
 	uint64_t		size;
-	uint32_t		num;		/* how many dirents were returned */
+	uint32_t		num;		/* dirents returned */
+	//	uint32_t                nstbpref;       /* attrs prefetched */
 	int32_t			rc;
 /*
  * XXX accompanied by bulk data is but should not be in fuse dirent format
@@ -673,7 +674,6 @@ struct srm_setattr_req {
 #define SRM_SETATTRF_MTIME	(1 << 5)	/* utimes */
 #define SRM_SETATTRF_FSIZE	(1 << 6)	/* file content size update */
 #define SRM_SETATTRF_PTRUNCGEN	(1 << 7)	/* file content non-zero trunc */
-
 #define srm_setattr_rep srm_getattr_rep
 
 struct srm_statfs_req {
