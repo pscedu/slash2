@@ -70,7 +70,7 @@ int mdsio_rename(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const str
 int mdsio_rmdir(mdsio_fid_t, const char *, const struct slash_creds *, sl_jlog_cb);
 int mdsio_setattr(mdsio_fid_t, struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *, sl_jlog_cb);
 int mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *,
-	struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb);
+	struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb, sl_jlog_cb);
 int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *, sl_jlog_cb);
 
 int mdsio_replay_create(uint64_t, uint64_t, struct srt_stat *, char *);

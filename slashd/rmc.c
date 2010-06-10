@@ -786,7 +786,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 
 	linkname[sizeof(linkname) - 1] = '\0';
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
-	    &mq->creds, &mp->attr, &mp->fg, NULL, slm_get_next_slashid);
+	    &mq->creds, &mp->attr, &mp->fg, NULL, slm_get_next_slashid, mds_namespace_log);
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);

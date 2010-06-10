@@ -315,10 +315,11 @@ mdsio_setattr(mdsio_fid_t ino, struct srt_stat *sstb_in, int to_set,
 int
 mdsio_symlink(const char *target, mdsio_fid_t pino, const char *cpn,
     const struct slash_creds *cr, struct srt_stat *sstb,
-    struct slash_fidgen *fgp, mdsio_fid_t *mfp, sl_getslfid_cb getslfid)
+    struct slash_fidgen *fgp, mdsio_fid_t *mfp, sl_getslfid_cb getslfid,
+    sl_jlog_cb logfunc)
 {
 	return (zfsslash2_symlink(target, pino, cpn, cr, sstb,
-	    fgp, mfp, getslfid));
+	    fgp, mfp, getslfid, logfunc));
 }
 
 int
