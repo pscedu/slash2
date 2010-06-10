@@ -78,7 +78,8 @@ struct bmapc_memb {
 #define BMAP_DIRTY2LRU		(1 << 7)
 #define BMAP_REAPABLE		(1 << 8)
 #define BMAP_IONASSIGN		(1 << 9)
-#define _BMAP_FLSHFT		(1 << 10)
+#define BMAP_MDCHNG             (1 << 10)
+#define _BMAP_FLSHFT		(1 << 11)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
@@ -328,7 +329,8 @@ SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 struct bmap_ops {
 	void	(*bmo_init_privatef)(struct bmapc_memb *);
 	int	(*bmo_retrievef)(struct bmapc_memb *, enum rw);
-	void	(*bmo_final_cleanupf)(struct bmapc_memb *);
+	int     (*bmo_mode_chngf)(struct bmapc_memb *, enum rw);
+	void	(*bmo_final_cleanupf)(struct bmapc_memb *);	
 };
 
 extern struct bmap_ops bmap_ops;
