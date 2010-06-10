@@ -71,6 +71,7 @@ typedef struct slash_replica {
 } __packed sl_replica_t;
 
 #define SL_MAX_REPLICAS		64
+#define SL_DEF_REPLICAS         4
 
 /* Slash RPC transportably safe structures. */
 struct srt_stat {
@@ -108,6 +109,15 @@ struct srt_statfs {
 
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
+
+struct srt_dirent {
+        uint64_t        ino;
+        uint64_t        off;
+        uint32_t        namelen;
+        uint32_t        type;
+        char name[0];
+};
+#define fuse_dirent srt_dirent
 
 #define	MAX_NAME_BUF_SIZE	377		
 
