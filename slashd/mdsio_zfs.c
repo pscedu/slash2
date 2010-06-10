@@ -251,9 +251,9 @@ mdsio_opencreate(mdsio_fid_t pino, const struct slash_creds *cr,
 int
 mdsio_link(mdsio_fid_t ino, mdsio_fid_t pino, const char *fn,
     struct slash_fidgen *fgp, const struct slash_creds *cr,
-    struct srt_stat *sstb)
+    struct srt_stat *sstb, sl_jlog_cb logfunc)
 {
-	return (zfsslash2_link(ino, pino, fn, fgp, cr, sstb));
+	return (zfsslash2_link(ino, pino, fn, fgp, cr, sstb, logfunc));
 }
 
 int

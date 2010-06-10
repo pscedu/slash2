@@ -326,7 +326,7 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
-	    mq->name, &mp->fg, &mq->creds, &mp->attr);
+	    mq->name, &mp->fg, &mq->creds, &mp->attr, mds_namespace_log);
  out:
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);

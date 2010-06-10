@@ -57,7 +57,7 @@ int mdsio_getattr(mdsio_fid_t, const struct slash_creds *, struct srt_stat *);
 int mdsio_readlink(mdsio_fid_t, void *, const struct slash_creds *);
 int mdsio_statfs(struct statvfs *);
 
-int mdsio_link(mdsio_fid_t, mdsio_fid_t, const char *, struct slash_fidgen *, const struct slash_creds *, struct srt_stat *);
+int mdsio_link(mdsio_fid_t, mdsio_fid_t, const char *, struct slash_fidgen *, const struct slash_creds *, struct srt_stat *, sl_jlog_cb);
 int mdsio_lookup(mdsio_fid_t, const char *, struct slash_fidgen *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
 int mdsio_lookup_slfid(slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
 int mdsio_mkdir(mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *,
