@@ -361,9 +361,9 @@ mdsio_replay_link(uint64_t parent_s2id, uint64_t target_s2id,
 }
 
 int
-mdsio_replay_symlink(uint64_t parent_s2id, uint64_t target_s2id, int mode, char *name)
+mdsio_replay_symlink(uint64_t parent_s2id, uint64_t target_s2id, int mode, char *name, char *link)
 {
-	return (zfsslash2_replay_symlink(parent_s2id, target_s2id, mode, name));
+	return (zfsslash2_replay_symlink(parent_s2id, target_s2id, mode, name, link));
 }
 
 int
