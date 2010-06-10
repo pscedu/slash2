@@ -202,5 +202,6 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 struct bmap_ops bmap_ops = {
 	iod_bmap_init,
 	iod_bmap_retrieve,
+	iod_bmap_retrieve,
 	iod_bmap_finalcleanup
 };

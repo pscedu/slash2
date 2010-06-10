@@ -677,10 +677,22 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	int rc;
 
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
+	psc_assert(b->bcm_mode & BMAP_MDCHNG);
+	
+	if (b->bcm_mode & BMAP_WR)
+		/* Write enabled bmaps are allowed to read with no
+		 *   further action being taken.
+		 */
+		return (0);
 
+	/* Add write mode to this bmap.
+	 */
+	psc_assert(rw == SL_WRITE && (b->bcm_mode & BMAP_RD));
+	
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
+
 	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_BMAPCHWRMODE, rq, mq, mp);
 	if (rc)
@@ -691,7 +703,6 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -703,74 +714,11 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 struct bmapc_memb *
 msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw)
 {
-	struct fidc_membh *f = mfh->mfh_fcmh;
 	struct bmapc_memb *b;
-	int rc;
 
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
-	rc = bmap_get(f, n, rw, &b);
-	if (rc)
-		return (NULL);
-
-	/* If our bmap is cached then we need to consider the current
-	 *   caching policy and possibly notify the mds.  I.e. if our
-	 *   bmap is read-only (but we'd like to write) then the mds
-	 *   must be notified so that coherency amongst clients can
-	 *   be maintained.
-	 *  msl_io() has already verified that this file is writable.
-	 *  XXX has it?
-	 */
-	BMAP_LOCK(b);
-	if (rw == SL_READ || (b->bcm_mode & BMAP_WR)) {
-		/* Either we're in read-mode here or the bmap
-		 *  has already been marked for writing therefore
-		 *  the mds already knows we're writing.
-		 */
-		BMAP_ULOCK(b);
-		return (b);
-	}
-
-	/* Need to upgrade the bmap to write mode.
-	 */
-	psc_assert((b->bcm_mode & BMAP_RD) && (rw == SL_WRITE));
-
-	if (b->bcm_mode & BMAP_CLI_MCIP) {
-		bcm_wait_locked(b, (b->bcm_mode & BMAP_CLI_MCIP));
-		psc_assert(atomic_read(&b->bcm_opcnt) > 0);
-		psc_assert((b->bcm_mode & BMAP_WR));
-
-	} else {
-		/* !BMAP_CLI_MCIP not set, we will set it and
-		 *    proceed with the modechange operation.
-		 */
-		psc_assert(!(b->bcm_mode & BMAP_WR)   &&
-			   !(b->bcm_mode & BMAP_CLI_MCIP) &&
-			   !(b->bcm_mode & BMAP_CLI_MCC));
-
-		b->bcm_mode |= BMAP_CLI_MCIP;
-		BMAP_ULOCK(b);
-		/* An interesting fallout here is that the mds may callback
-		 *  to us causing our pagecache to be purged :)
-		 * Correction.. this is not true, since if there was another
-		 *  writer then we would already be in directio mode.
-		 */
-		rc = msl_bmap_modeset(b, SL_WRITE);
-		psc_assert(!rc); /*  XXX for now.. */
-		/* We're the only thread allowed here, these
-		 *  bits could not have been set by another thread.
-		 */
-		BMAP_LOCK(b);
-		psc_assert(b->bcm_mode & BMAP_CLI_MCIP);
-		psc_assert(!(b->bcm_mode & BMAP_CLI_MCC) &&
-			   !(b->bcm_mode & BMAP_WR));
-		b->bcm_mode &= ~BMAP_CLI_MCIP;
-		b->bcm_mode |= (BMAP_WR | BMAP_CLI_MCC);
-		bcm_wake_locked(b);
-		BMAP_ULOCK(b);
-	}
-
-	return (b);
+	return (bmap_get(mfh->mfh_fcmh, n, rw, &b) ? NULL : b);
 }
 
 /**
@@ -1695,5 +1643,6 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 struct bmap_ops bmap_ops = {
 	msl_bmap_init,
 	msl_bmap_retrieve,
+	msl_bmap_modeset,
 	msl_bmap_final_cleanup
 };

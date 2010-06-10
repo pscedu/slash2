@@ -88,10 +88,7 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 		BMAP_ULOCK(b);						\
 	} while (0)
 
-/* bmap client modes */
-#define BMAP_CLI_MCIP			(_BMAP_FLSHFT << 0)	/* mode change in progress */
-#define	BMAP_CLI_MCC			(_BMAP_FLSHFT << 1)	/* mode change compete */
-#define BMAP_CLI_FLUSHPROC		(_BMAP_FLSHFT << 2)	/* proc'd by flush thr */
+#define BMAP_CLI_FLUSHPROC (_BMAP_FLSHFT << 0)	/* proc'd by flush thr */
 
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;

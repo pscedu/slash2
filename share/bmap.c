@@ -132,6 +132,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
     struct bmapc_memb **bp)
 {
 	int rc = 0, do_load = 0, locked;
+	int bmaprw = (rw == SL_WRITE ? BMAP_WR : BMAP_RD);
 	struct bmapc_memb *b;
 
 	*bp = NULL;
@@ -156,8 +157,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		 * Signify that the bmap is newly initialized and therefore
 		 *  may not contain certain structures.
 		 */
-		b->bcm_mode = BMAP_INIT |
-		    (rw == SL_WRITE ? BMAP_WR : BMAP_RD);
+		b->bcm_mode = BMAP_INIT | bmaprw;
 
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 		/* Perform app-specific substructure initialization. */
@@ -177,20 +177,53 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		BMAP_LOCK(b);
 		b->bcm_mode &= ~BMAP_INIT;
 		bcm_wake_locked(b);
-		if (rc) {
-			bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-			return (rc);
-		}
+		if (rc)
+			goto out;
+
 	} else {
 		/* Wait while BMAP_INIT is set.
 		 */
 		bcm_wait_locked(b, (b->bcm_mode & BMAP_INIT));
-	}
 
-	if (b) {
-		BMAP_ULOCK(b);
-		*bp = b;
+	retry:
+		if (!(bmaprw & b->bcm_mode) && bmap_ops.bmo_mode_chngf) {
+			/* Others wishing to access this bmap in the
+			 *   same mode must wait until MDCHNG ops have
+			 *   completed.  If the desired mode is present
+			 *   then a thread may proceed without blocking
+			 *   here so long as it only accesses structures
+			 *   which pertain to its mode.
+			 */
+			if (b->bcm_mode & BMAP_MDCHNG) {
+				bcm_wait_locked(b, 
+					(b->bcm_mode & BMAP_MDCHNG));
+				goto retry;
+
+			} else {				
+				b->bcm_mode |= BMAP_MDCHNG;
+				BMAP_ULOCK(b);
+
+				DEBUG_BMAP(PLL_WARN, b, 
+					   "about to mode change (rw=%d)", rw);
+
+				rc = bmap_ops.bmo_mode_chngf(b, rw);
+				BMAP_LOCK(b);
+				b->bcm_mode &= ~BMAP_MDCHNG;
+				if (!rc)
+					b->bcm_mode |= bmaprw;
+				bcm_wake_locked(b);
+				if (rc)
+					goto out;
+			}
+		}
 	}
+ out:
+	BMAP_ULOCK(b);
+	if (rc)
+		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
+	else 
+		*bp = b;
+
 	return (rc);
 }
 
