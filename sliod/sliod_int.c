@@ -75,6 +75,9 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 	psc_assert(biod->biod_bmap == b);
 	psc_assert(SPLAY_EMPTY(&biod->biod_slvrs));
 	psc_assert(psclist_disjoint(&biod->biod_lentry));
+
+	if (bmap_2_biodi_wire(b))
+		PSCFREE(bmap_2_biodi_wire(b));
 }
 
 
@@ -135,6 +138,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
 		goto out;
+
 	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_GETBMAPCRCS, rq, mq, mp);
 	if (rc) {
