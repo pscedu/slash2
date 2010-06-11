@@ -85,23 +85,20 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 	return (fcmh + 1);
 }
 
-/* fcmh_state flags */
-#define	FCMH_CAC_FREE		0x0001		/* (1 << 0) totally free item */
-#define	FCMH_CAC_CLEAN		0x0002		/* (1 << 1) in clean cache */
-#define	FCMH_CAC_DIRTY		0x0004		/* (1 << 2) in dirty cache, "dirty" means not reapable */
-
-#define	FCMH_CAC_INITING	0x0008		/* (1 << 3) this item is being initialized */
-#define	FCMH_CAC_WAITING	0x0010		/* (1 << 4) this item is being waited on */
-
-#define	FCMH_CAC_TOFREE		0x0020		/* (1 << 5) this item has been deprecated */
-#define	FCMH_CAC_REAPED		0x0040		/* (1 << 6) this item has been reaped */
-
-#define	FCMH_HAVE_ATTRS		0x0080		/* (1 << 7) has valid stat info */
-#define	FCMH_GETTING_ATTRS	0x0100		/* (1 << 8) fetching stat info */
-#define	FCMH_WAITING_ATTRS	0x0200		/* (1 << 9) someone is waiting */
-
-#define	_FCMH_FLGSHFT		0x0400		/* (1 << 10) */
-
+enum fcmh_cache_states {
+	FCMH_CAC_FREE = (1<<0),         /* totally free item */	
+	FCMH_CAC_CLEAN = (1<<1),	/* in clean cache */
+	FCMH_CAC_DIRTY = (1<<2),	/* dirty, not reapable */
+	FCMH_CAC_INITING = (1<<3),	/* initializing */
+	FCMH_CAC_WAITING = (1<<4),      /* being waited on */
+	FCMH_CAC_TOFREE	= (1<<5),	/* been deprecated */
+	FCMH_CAC_REAPED = (1<<6),	/* has been reaped */	
+	FCMH_HAVE_ATTRS = (1<<7),	/* has valid stat info */
+	FCMH_GETTING_ATTRS = (1<<8),	/* fetching stat info */
+	FCMH_WAITING_ATTRS = (1<<9),    /* someone is waiting on attrs */	
+	FCMH_CTOR_FAILED = (1<<10),     /* constructor fn failed */
+	_FCMH_FLGSHFT = (1<<11)         /* */
+};
 /*
  * If fuse_ino_t, declared 'unsigned long', is 4 bytes, inums will get
  * integer demoted, so we must store two: the original inum, used when
@@ -140,9 +137,12 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 	(fcmh)->fcmh_state & FCMH_CAC_TOFREE		? "T" : "",	\
 	(fcmh)->fcmh_state & FCMH_HAVE_ATTRS		? "A" : "",	\
 	(fcmh)->fcmh_state & FCMH_GETTING_ATTRS		? "G" : "",	\
+	(fcmh)->fcmh_state & FCMH_CAC_INITING		? "I" : "",	\
+	(fcmh)->fcmh_state & FCMH_CAC_WAITING		? "W" : "",	\
+	(fcmh)->fcmh_state & FCMH_CTOR_FAILED		? "f" : "",	\
 	fcmh_isdir(fcmh) ? "d" : ""
 
-#define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s"
+#define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)				\
 	psc_logs((level), PSS_GEN,					\
