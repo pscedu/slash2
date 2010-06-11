@@ -1310,6 +1310,8 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	    strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
 
+	slash2fuse_getcred(req, &creds);
+
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
