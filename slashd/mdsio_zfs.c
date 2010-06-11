@@ -360,9 +360,10 @@ mdsio_replay_link(uint64_t parent_s2id, uint64_t target_s2id, char *name)
 }
 
 int
-mdsio_replay_symlink(uint64_t parent_s2id, uint64_t target_s2id, int mode, char *name, char *link)
+mdsio_replay_symlink(uint64_t parent_s2id, uint64_t target_s2id, 
+    struct srt_stat *stat, char *name, char *link)
 {
-	return (zfsslash2_replay_symlink(parent_s2id, target_s2id, mode, name, link));
+	return (zfsslash2_replay_symlink(parent_s2id, target_s2id, stat, name, link));
 }
 
 int

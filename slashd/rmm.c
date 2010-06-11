@@ -85,16 +85,16 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 		break;
 	    case NS_OP_SYMLINK:
 		newname = jnamespace->sjnm_name;
-		while (*newname != NULL)
+		while (*newname != '\0')
 			newname++;
 		newname++;
 		rc = mdsio_replay_symlink(
 			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
-			jnamespace->sjnm_mode, jnamespace->sjnm_name, newname);
+			&stat, jnamespace->sjnm_name, newname);
 		break;
 	    case NS_OP_RENAME:
 		newname = jnamespace->sjnm_name;
-		while (*newname != NULL)
+		while (*newname != '\0')
 			newname++;
 		newname++;
 		rc = mdsio_replay_rename(
