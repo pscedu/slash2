@@ -468,3 +468,9 @@ Try to make readlink() works on slash2, hit the following bug:
 
 Basically, we can't call VOP_OPEN() on a symlink.  However, we are doing just that when we try to construct
 a fid cache for the vnode.
+
+06/11/2010
+----------
+
+At this point, rename and symlink are working - they can be propagated to other MDS.  Link is not working - we need
+a way to distinguish between internal and external links.
