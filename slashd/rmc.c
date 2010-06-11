@@ -767,7 +767,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	struct srm_symlink_rep *mp;
 	struct fidc_membh *p;
 	struct iovec iov;
-	char linkname[PATH_MAX];
+	char linkname[PATH_MAX+1];
 
 	p = NULL;
 
