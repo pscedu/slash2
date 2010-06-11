@@ -70,17 +70,20 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 	switch (jnamespace->sjnm_op) {
 	    case NS_OP_CREATE:
 		rc = mdsio_replay_create(
-			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
 			&stat, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_MKDIR:
 		rc = mdsio_replay_mkdir(
-			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
 			&stat, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_LINK:
 		rc = mdsio_replay_link(
-			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
 			jnamespace->sjnm_name);
 		break;
 	    case NS_OP_SYMLINK:
@@ -89,7 +92,8 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 			newname++;
 		newname++;
 		rc = mdsio_replay_symlink(
-			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
 			&stat, jnamespace->sjnm_name, newname);
 		break;
 	    case NS_OP_RENAME:
@@ -98,22 +102,27 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 			newname++;
 		newname++;
 		rc = mdsio_replay_rename(
-			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_new_parent_s2id, 
-			jnamespace->sjnm_target_s2id, jnamespace->sjnm_name, newname);
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_new_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_name, newname);
 		break;
 	    case NS_OP_UNLINK:
 		rc = mdsio_replay_unlink(
-			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
 			jnamespace->sjnm_name);
 		break;
 	    case NS_OP_RMDIR:
 		rc = mdsio_replay_rmdir(
-			jnamespace->sjnm_parent_s2id, jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
 			jnamespace->sjnm_name);
 		break;
 	    case NS_OP_SETATTR:
 		rc = mdsio_replay_setattr(
-			jnamespace->sjnm_target_s2id, &stat, jnamespace->sjnm_mask);
+			jnamespace->sjnm_target_s2id, 
+			&stat, jnamespace->sjnm_mask);
 		break;
 	    default:
 		psc_errorx("Unexpected opcode %d", jnamespace->sjnm_op);
