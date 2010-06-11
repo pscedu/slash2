@@ -85,8 +85,13 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 
 	rc = mdsio_lookup_slfid(fcmh->fcmh_fg.fg_fid, &rootcreds,
 	    &fcmh->fcmh_sstb, &fcmh_2_mdsio_fid(fcmh));
-	if (rc)
+	if (rc) {
+		fcmh->fcmh_state |= FCMH_CTOR_FAILED;
+		fmi->fmi_ctor_rc = rc;
+		DEBUG_FCMH(PLL_WARN, fcmh, "mdsio_lookup_slfid failed (rc=%d)", 
+			   rc);
 		return (rc);
+	}
 	fcmh->fcmh_fg.fg_gen = fcmh->fcmh_sstb.sst_gen;
 
 	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
@@ -116,7 +121,8 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 	int rc;
 
 	fmi = fcmh_2_fmi(fcmh);
-	rc = mdsio_release(&rootcreds, fmi->fmi_mdsio_data);
+	if (!fmi->fmi_ctor_rc)
+		rc = mdsio_release(&rootcreds, fmi->fmi_mdsio_data);
 	psc_assert(rc == 0);
 
 	jfi_ensure_empty(&fmi->fmi_inodeh.inoh_jfi);
