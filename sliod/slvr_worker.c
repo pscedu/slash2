@@ -315,7 +315,6 @@ slvr_worker_int(void)
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
 	
-	s->slvr_flags |= SLVR_CRCING;
 	/* Try our best to determine whether or we should hold off
 	 *   the crc operation, strive to only crc slivers which have
 	 *   no pending writes.  This section directly below may race
@@ -334,6 +333,7 @@ slvr_worker_int(void)
 	 *   From this point until we set to inflight, the slvr_lentry
 	 *   should be disjointed.
 	 */
+	s->slvr_flags |= SLVR_CRCING;
 	SLVR_ULOCK(s);
 	//XXX perhaps when we go to a lighter checksum we can hold the
 	// the lock for the duration?

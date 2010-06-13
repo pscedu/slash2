@@ -138,7 +138,12 @@ slvr_do_crc(struct slvr_ref *s)
 		/* loff is only set here.
 		 */
 		s->slvr_crc_loff = s->slvr_crc_eoff;
-		s->slvr_crc_eoff = s->slvr_crc_soff = 0;
+		
+		if (!s->slvr_pndgwrts)
+			/* Safe to clear, no other writes have arrived
+			 */
+			s->slvr_crc_eoff = s->slvr_crc_soff = 0;
+		
 		s->slvr_flags &= ~SLVR_CRCDIRTY;
 		if (slvr_2_biodi_wire(s)) {
 			slvr_2_crc(s) = crc;
