@@ -58,7 +58,6 @@ struct fcmh_cli_info {
 #define FCMH_CLI_FETCHREPLTBL	(_FCMH_FLGSHFT << 1)	/* file replica table loading */
 #define FCMH_CLI_APPENDWR       (_FCMH_FLGSHFT << 2)    /* file opened with O_APPEND */
 
-ssize_t	fcmh_getsize(struct fidc_membh *);
 void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 
 #define fidc_lookup_load_inode(fid, fcmhp)				\

@@ -24,6 +24,7 @@
 #include "psc_util/lock.h"
 #include "psc_util/pthrutil.h"
 
+#include "sltypes.h"
 #include "bmap_iod.h"
 #include "buffer.h"
 #include "fidc_iod.h"
@@ -97,24 +98,43 @@ slvr_do_crc(struct slvr_ref *s)
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
+			int rc;
+			ssize_t len;
+
+			/* Faulting from disk which means this is for a 
+			 *   read.  Therefore the ondisk filesize should
+			 *   be the same as the that on the mds.  Adjust 
+			 *   the crc len accordingly.  NOTE:  the below
+			 *   code will not work in RMW situations.
+			 */ 
+			psc_assert(!s->slvr_crc_soff && !s->slvr_crc_loff &&
+				   !s->slvr_pndgwrts);
 
 			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
-			    SL_BMAP_CRCSIZE);
-
+				       s->slvr_crc_len); 
+		      
 			if (crc != slvr_2_crc(s)) {
 				DEBUG_SLVR(PLL_ERROR, s, "crc failed want=%"
-				   PRIx64" got=%"PRIx64, slvr_2_crc(s), crc);
+				   PRIx64" got=%"PRIx64 " len=%u",
+				   slvr_2_crc(s), crc, s->slvr_crc_len);
 
 				DEBUG_BMAP(PLL_ERROR, slvr_2_bmap(s), 
 				   "slvrnum=%hu", s->slvr_num);
-				return (-EINVAL);			
+
+				/* Shouln't need a lock, !SLVR_DATADY
+				 */
+				s->slvr_crc_len = 0;
+
+				return (-EINVAL);
 			}
+			s->slvr_crc_len = 0;
 		} else
 			return (0);
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
-		psc_assert(s->slvr_crc_eoff && 
-			   s->slvr_crc_eoff < SL_BMAP_CRCSIZE);
+		psc_assert(s->slvr_crc_len && 
+			   (s->slvr_crc_soff + s->slvr_crc_len) <= 
+			   SL_BMAP_CRCSIZE);
 		
 		if (!s->slvr_crc_loff || 
 		    (s->slvr_crc_soff - 1) != s->slvr_crc_loff) {
@@ -122,27 +142,28 @@ slvr_do_crc(struct slvr_ref *s)
 			s->slvr_crc_soff = 0;
 		}
 
-		psc_crc64_calc(&s->slvr_crc, 
+		psc_crc64_add(&s->slvr_crc, 
 		       (unsigned char *)(slvr_2_buf(s, 0) + s->slvr_crc_soff),
-		       (int)(s->slvr_crc_eoff - s->slvr_crc_soff));
+		       (int)(s->slvr_crc_len));
 
 		//s->slvr_crc = adler32(0, slvr_2_buf(s, 0), SL_BMAP_CRCSIZE);
 		crc = s->slvr_crc;
 		PSC_CRC32_FIN(&crc);
 
-		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PRIx64, crc);
+		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PRIx64 " len=%u off=%u", 
+			   crc, s->slvr_crc_len, s->slvr_crc_soff);
 		DEBUG_BMAP(PLL_NOTIFY, slvr_2_bmap(s), 
 			   "slvrnum=%hu", s->slvr_num);
 
 		SLVR_LOCK(s);
 		/* loff is only set here.
 		 */
-		s->slvr_crc_loff = s->slvr_crc_eoff;
+		s->slvr_crc_loff = s->slvr_crc_len - 1;
 		
 		if (!s->slvr_pndgwrts)
 			/* Safe to clear, no other writes have arrived
 			 */
-			s->slvr_crc_eoff = s->slvr_crc_soff = 0;
+			s->slvr_crc_len = s->slvr_crc_soff = 0;
 		
 		s->slvr_flags &= ~SLVR_CRCDIRTY;
 		if (slvr_2_biodi_wire(s)) {
@@ -201,6 +222,9 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 		if (rc > 0 && nblks == SLASH_BLKS_PER_SLVR) {
 			int crc_rc;
 
+			s->slvr_crc_soff = 0;
+			s->slvr_crc_len = rc;
+						
 			crc_rc = slvr_do_crc(s);
 			if (crc_rc == -EINVAL)
 				DEBUG_SLVR(PLL_ERROR, s,
@@ -473,8 +497,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 			if (offset < s->slvr_crc_soff)
 				s->slvr_crc_soff = offset;
 
-			if ((offset + size) > s->slvr_crc_eoff)
-				s->slvr_crc_eoff = offset + size;
+			if ((offset + size) > s->slvr_crc_len)
+				s->slvr_crc_len = offset + size;
 
 			if (s->slvr_flags & SLVR_DATARDY)
 				/* Either read or write ops can just proceed
@@ -865,7 +889,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		}
 	}
 	psc_dynarray_free(&a);
-
+	
 	return (n);
 }
 

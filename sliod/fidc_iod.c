@@ -25,8 +25,27 @@
 #include "psc_util/log.h"
 #include "psc_util/rlimit.h"
 
+#include "sltypes.h"
+#include "slutil.h"
 #include "fidc_iod.h"
 #include "fidcache.h"
+
+int
+sli_fcmh_getattr(struct fidc_membh *fcmh) {
+	struct stat stb;
+
+	if (fstat(fcmh_2_fd(fcmh), &stb))
+		return (-errno);
+
+	sl_externalize_stat(&stb, &fcmh->fcmh_sstb);
+
+	FCMH_LOCK(fcmh);
+	fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
+	FCMH_ULOCK(fcmh);
+
+	return (0);
+}
+
 
 int
 sli_fcmh_ctor(struct fidc_membh *fcmh)
@@ -45,10 +64,12 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
 	if (fcmh_2_fd(fcmh) == -1)
 		rc = errno;
-
+       	
 	/* oops, an error; if we increased the rlim, decrease it */
-	if (rc && incr)
+	if (rc && incr)		
 		psc_rlim_adj(RLIMIT_NOFILE, -1);
+	else
+		rc = sli_fcmh_getattr(fcmh);
 
 	return (rc);
 }

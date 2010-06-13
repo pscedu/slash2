@@ -461,6 +461,18 @@ fidc_init(int privsiz, int nobj, int max,
 	fidcReapCb = fcmh_reap_cb;
 }
 
+ssize_t
+fcmh_getsize(struct fidc_membh *h)
+{
+	ssize_t size;
+	int locked;
+
+	locked = reqlock(&h->fcmh_lock);
+	size = fcmh_2_fsz(h);
+	ureqlock(&h->fcmh_lock, locked);
+	return (size);
+}
+
 /*
  * fcmh_op_start/done_type(): we only move a cache item to the dirty list if we
  * know that the reference being taken is a long one. For short-lived references,

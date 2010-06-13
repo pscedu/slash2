@@ -47,7 +47,7 @@ struct slvr_ref {
 	uint16_t		 slvr_pndgwrts;	/* # of writes in progess */
 	uint16_t		 slvr_pndgreads;/* # of reads in progress */
 	uint32_t                 slvr_crc_soff; /* crc start region */
-	uint32_t                 slvr_crc_eoff; /* crc end region */
+	uint32_t                 slvr_crc_len;  /* crc region length */
 	uint32_t                 slvr_crc_loff; /* last crc end */
 	uint32_t                 slvr__pad;     /* align */
 	psc_crc64_t		 slvr_crc;	/* accumulator  */
