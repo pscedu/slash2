@@ -42,36 +42,41 @@ extern struct psc_listcache crcqSlvrs;
  * Note: slivers are locked through their bmap_iod_info lock.
  */
 struct slvr_ref {
-	uint16_t		 slvr_num;		/* sliver index in the block map */
+	uint16_t		 slvr_num;	/* bmap slvr offset */
 	uint16_t		 slvr_flags;
-	uint16_t		 slvr_pndgwrts;		/* # of writes in progess */
-	uint16_t		 slvr_pndgreads;	/* # of reads in progress */
-	psc_crc64_t		 slvr_crc;		/* used if there's no bmap_wire present, only is valid if !SLVR_CRCDIRTY */
-	void			*slvr_pri;		/* private pointer used for backpointer to bmap_iod_info */
+	uint16_t		 slvr_pndgwrts;	/* # of writes in progess */
+	uint16_t		 slvr_pndgreads;/* # of reads in progress */
+	uint32_t                 slvr_crc_soff; /* crc start region */
+	uint32_t                 slvr_crc_eoff; /* crc end region */
+	uint32_t                 slvr_crc_loff; /* last crc end */
+	uint32_t                 slvr__pad;     /* align */
+	psc_crc64_t		 slvr_crc;	/* accumulator  */
+	void			*slvr_pri;	/* backptr (bmap_iod_info) */
 	struct sl_buffer	*slvr_slab;
-	struct psclist_head	 slvr_lentry;		/* dirty queue */
-	SPLAY_ENTRY(slvr_ref)	 slvr_tentry;		/* bmap tree entry */
+	struct psclist_head	 slvr_lentry;	/* dirty queue */
+	SPLAY_ENTRY(slvr_ref)	 slvr_tentry;	/* bmap tree entry */
 };
 
 enum {
 	SLVR_NEW	= (1 <<  0),	/* newly initialized */
 	SLVR_SPLAYTREE	= (1 <<  1),	/* registered in the splay tree */
-	SLVR_UNUSED1	= (1 <<  2),	/* unused1 */
-	SLVR_FAULTING	= (1 <<  3),	/* contents loading from disk or net */
-	SLVR_GETSLAB	= (1 <<  4),	/* assigning memory buffer to slvr */
-	SLVR_PINNED	= (1 <<  5),	/* slab cannot be removed from the cache */
-	SLVR_DATARDY	= (1 <<  6),	/* ready for read / write activity */
-	SLVR_DATAERR	= (1 <<  7),
-	SLVR_LRU	= (1 <<  8),	/* cached but not dirty */
-	SLVR_CRCDIRTY	= (1 <<  9),	/* crc does not match cached buffer */
-	SLVR_CRCING	= (1 << 10),
+	SLVR_FAULTING	= (1 <<  2),	/* contents loading from disk or net */
+	SLVR_GETSLAB	= (1 <<  3),	/* assigning memory buffer to slvr */
+	SLVR_PINNED	= (1 <<  4),	/* slab cannot be removed from cache */
+	SLVR_DATARDY	= (1 <<  5),	/* ready for read / write activity */
+	SLVR_DATAERR	= (1 <<  6),
+	SLVR_LRU	= (1 <<  7),	/* cached but not dirty */
+	SLVR_CRCDIRTY	= (1 <<  8),	/* crc does not match cached buffer */
+	SLVR_CRCING	= (1 <<  9),
+	SLVR_CRCOPEN	= (1 << 10),    /* unfinalized crc accumulator */
 	SLVR_FREEING	= (1 << 11),	/* sliver is being reaped */
-	SLVR_SLBFREEING	= (1 << 12),	/* slab of the sliver is being reaped */
+	SLVR_SLBFREEING	= (1 << 12),	/* slvr's slab is being reaped */
 	SLVR_REPLSRC	= (1 << 13),	/* slvr is replication source */
 	SLVR_REPLDST	= (1 << 14)	/* slvr is replication destination */
 };
 
-#define SLVR_2_BLK(s)		((s)->slvr_num * (SLASH_BMAP_SIZE / SLASH_BMAP_BLKSZ))
+#define SLVR_2_BLK(s)		((s)->slvr_num *			\
+				 (SLASH_BMAP_SIZE / SLASH_BMAP_BLKSZ))
 
 #define SLVR_GETLOCK(s)		(&slvr_2_biod(s)->biod_lock)
 #define SLVR_LOCK(s)		spinlock(SLVR_GETLOCK(s))

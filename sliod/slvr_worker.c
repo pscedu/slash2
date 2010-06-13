@@ -288,7 +288,7 @@ slvr_worker_int(void)
 	struct slvr_ref		*s;
 	struct timespec		 now;
 	struct biod_crcup_ref	*bcr=NULL;
-
+	psc_crc64_t              crc;
  start:
 	clock_gettime(CLOCK_REALTIME, &now);
 	now.tv_sec += BIOD_CRCUP_MAX_AGE;
@@ -301,20 +301,21 @@ slvr_worker_int(void)
 	}
 
 	SLVR_LOCK(s);
-	s->slvr_flags |= SLVR_CRCING;
-
 	DEBUG_SLVR(PLL_INFO, s, "slvr_worker");
 	/* Sliver assertions:
+	 *  CRCING - only one slvr_worker thread may handle a sliver.
 	 *  !LRU - ensure that slvr is in the right state.
 	 *  CRCDIRTY - must have work to do.
 	 *  PINNED - slab must not move from beneath us because the
 	 *           contents must be crc'd.
 	 */
+	psc_assert(!(s->slvr_flags & SLVR_CRCING));
 	psc_assert(!(s->slvr_flags & SLVR_LRU));
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
-
+	
+	s->slvr_flags |= SLVR_CRCING;
 	/* Try our best to determine whether or we should hold off
 	 *   the crc operation, strive to only crc slivers which have
 	 *   no pending writes.  This section directly below may race
@@ -338,9 +339,14 @@ slvr_worker_int(void)
 	// the lock for the duration?
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(slvr_do_crc(s));
-	/* Note that this lock covers the slvr lock too.
+	
+	/* NOTE: this lock covers the slvr lock too!
 	 */
 	spinlock(&slvr_2_biod(s)->biod_lock);
+	/* Copy the accumulator to the tmp variable.
+	 */
+	crc = s->slvr_crc; 
+	PSC_CRC64_FIN(&crc);
 	/* biodi_wire() will only be present if this bmap is in read
 	 *   mode.
 	 */
@@ -374,23 +380,34 @@ slvr_worker_int(void)
 	 */
 	bcr = slvr_2_biod(s)->biod_bcr;
 	if (bcr) {
+		uint32_t i;
+
 		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_blkno);
-
 		psc_assert(SAMEFG(&bcr->bcr_crcup.fg,
-		    &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg));
-
+			  &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg));
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_NCRC_UPDATES);
+		/* If we already have a slot for our slvr_num then 
+		 *   reuse it.
+		 */
+		for (i=0; i < bcr->bcr_crcup.nups; i++) {
+			if (bcr->bcr_crcup.crcs[i].slot != s->slvr_num)
+				continue;
 
-		bcr->bcr_crcup.crcs[bcr->bcr_crcup.nups].crc = s->slvr_crc;
+			bcr->bcr_crcup.crcs[i].crc = crc;
+			goto requeue;
+		}
+
+		bcr->bcr_crcup.crcs[bcr->bcr_crcup.nups].crc = crc;
 		bcr->bcr_crcup.crcs[bcr->bcr_crcup.nups].slot = s->slvr_num;
 		bcr->bcr_crcup.nups++;
-
+		
 		DEBUG_BCR(PLL_NOTIFY, bcr, "add to existing bcr nups=%d",
 			  bcr->bcr_crcup.nups);
 
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
 			bcr_hold_2_ready(&binflCrcs, bcr);
 		else
+		requeue:
 			/* Put this guy at the end of the list.
 			 */
 			bcr_hold_requeue(&binflCrcs, bcr);
@@ -412,15 +429,14 @@ slvr_worker_int(void)
 		    &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg);
 
 		bcr->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_blkno;
-		bcr->bcr_crcup.crcs[0].crc = s->slvr_crc;
+		bcr->bcr_crcup.crcs[0].crc = crc;
 		bcr->bcr_crcup.crcs[0].slot = s->slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
 		DEBUG_BCR(PLL_NOTIFY, bcr, "newly added");
 		bcr_hold_add(&binflCrcs, bcr);
 	}
-	/*
-	 * Either set the initial age of a new sliver or extend the age
+	/* Either set the initial age of a new sliver or extend the age
 	 *   of an existing one. Note that if it gets full, it will be
 	 *   sent out immediately regardless of its age.
 	 */

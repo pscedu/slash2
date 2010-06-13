@@ -61,20 +61,22 @@ slvr_lru_requeue(struct slvr_ref *s, int tail)
 int
 slvr_do_crc(struct slvr_ref *s)
 {
+	psc_crc64_t crc;
 	/* SLVR_FAULTING implies that we're bringing this data buffer
 	 *   in from the filesystem.
 	 *
 	 * SLVR_CRCDIRTY means that DATARDY has been set and that
 	 *   a write dirtied the buffer and invalidated the crc.
 	 */
-	psc_assert(s->slvr_flags & SLVR_FAULTING ||
-		   s->slvr_flags & SLVR_CRCDIRTY);
-	
-	psc_assert(s->slvr_flags & SLVR_PINNED);
+	psc_assert(s->slvr_flags & SLVR_PINNED && 
+		   (s->slvr_flags & SLVR_FAULTING ||
+		    s->slvr_flags & SLVR_CRCDIRTY));
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		if (!s->slvr_pndgreads) {
-			/* Small RMW workaround
+			/* Small RMW workaround.
+			 *  XXX needs to be rectified, the crc should
+			 *    be taken here.
 			 */
 			psc_assert(s->slvr_pndgwrts);
 			return (1);
@@ -96,12 +98,12 @@ slvr_do_crc(struct slvr_ref *s)
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
 
-			psc_crc64_calc(&s->slvr_crc, slvr_2_buf(s, 0),
+			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
 			    SL_BMAP_CRCSIZE);
-			if (s->slvr_crc != slvr_2_crc(s)) {
+
+			if (crc != slvr_2_crc(s)) {
 				DEBUG_SLVR(PLL_ERROR, s, "crc failed want=%"
-				   PRIx64" got=%"PRIx64, 
-				   slvr_2_crc(s), s->slvr_crc);
+				   PRIx64" got=%"PRIx64, slvr_2_crc(s), crc);
 
 				DEBUG_BMAP(PLL_ERROR, slvr_2_bmap(s), 
 				   "slvrnum=%hu", s->slvr_num);
@@ -111,23 +113,41 @@ slvr_do_crc(struct slvr_ref *s)
 			return (0);
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
+		psc_assert(s->slvr_crc_eoff && 
+			   s->slvr_crc_eoff < SL_BMAP_CRCSIZE);
+		
+		if (!s->slvr_crc_loff || 
+		    (s->slvr_crc_soff - 1) != s->slvr_crc_loff) {
+			PSC_CRC64_INIT(&s->slvr_crc);
+			s->slvr_crc_soff = 0;
+		}
 
-		psc_crc64_calc(&s->slvr_crc, slvr_2_buf(s, 0), 
-			       SL_BMAP_CRCSIZE);
+		psc_crc64_calc(&s->slvr_crc, 
+		       (unsigned char *)(slvr_2_buf(s, 0) + s->slvr_crc_soff),
+		       (int)(s->slvr_crc_eoff - s->slvr_crc_soff));
+
 		//s->slvr_crc = adler32(0, slvr_2_buf(s, 0), SL_BMAP_CRCSIZE);
+		crc = s->slvr_crc;
+		PSC_CRC32_FIN(&crc);
 
-		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PRIx64, s->slvr_crc);
+		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PRIx64, crc);
 		DEBUG_BMAP(PLL_NOTIFY, slvr_2_bmap(s), 
 			   "slvrnum=%hu", s->slvr_num);
 
 		SLVR_LOCK(s);
+		/* loff is only set here.
+		 */
+		s->slvr_crc_loff = s->slvr_crc_eoff;
+		s->slvr_crc_eoff = s->slvr_crc_soff = 0;
 		s->slvr_flags &= ~SLVR_CRCDIRTY;
 		if (slvr_2_biodi_wire(s)) {
-			slvr_2_crc(s) = s->slvr_crc;
+			slvr_2_crc(s) = crc;
 			slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
 		}
 		SLVR_ULOCK(s);
-	}
+	} else 
+		abort();
+
 	return (1);
 }
 
@@ -391,6 +411,14 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 		psc_pool_return(slBufsPool, tmp);
 }
 
+/**
+ * slvr_io_prep - prepare a sliver for an incoming io.  This may entail 
+ *   faulting 32k aligned regions in from the underlying fs.
+ * @s: the sliver
+ * @offset: offset into the slvr (not bmap or file object)
+ * @size: size relative to the slvr
+ * @rw:  read or write op
+ */
 int
 slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 {
@@ -416,7 +444,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 	}
 
 	DEBUG_SLVR(((s->slvr_flags & SLVR_DATAERR) ? PLL_ERROR : PLL_INFO), s,
-		   "slvrno=%hu off=%u size=%u rw=%o",
+		   "slvrno=%hu off=%u size=%u rw=%d",
 		   s->slvr_num, offset, size, rw);
 
 	if (s->slvr_flags & SLVR_DATAERR) {
@@ -435,6 +463,13 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 	if (rw == SL_WRITE) {
 		if (!(s->slvr_flags & SLVR_REPLDST)) {
 			s->slvr_flags |= SLVR_CRCDIRTY;
+			/* Manage the description of the dirty crc area.
+			 */
+			if (offset < s->slvr_crc_soff)
+				s->slvr_crc_soff = offset;
+
+			if ((offset + size) > s->slvr_crc_eoff)
+				s->slvr_crc_eoff = offset + size;
 
 			if (s->slvr_flags & SLVR_DATARDY)
 				/* Either read or write ops can just proceed
@@ -491,7 +526,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 	}
 
 	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
-	psc_info("psc_vbitmap_nfree()=%d", psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
+	psc_info("psc_vbitmap_nfree()=%d", 
+		 psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 	/* We must have found some work to do.
 	 */
 	psc_assert(psc_vbitmap_nfree(s->slvr_slab->slb_inuse) <
