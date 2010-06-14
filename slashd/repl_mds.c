@@ -141,7 +141,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 
 	for (j=0, k=0, repl=i->inoh_ino.ino_repls; j < i->inoh_ino.ino_nrepls;
 	     j++, k++) {
-		if (j >= INO_DEF_NREPLS) {
+		if (j >= SL_DEF_REPLICAS) {
 			/* The first few replicas are in the inode itself,
 			 *   the rest are in the extras block.
 			 */
@@ -173,14 +173,14 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 			goto out;
 		}
 
-		if (j > INO_DEF_NREPLS) {
+		if (j > SL_DEF_REPLICAS) {
 			/* Note that both the inode structure and replication
 			 *  table must be synced.
 			 */
 			psc_assert(i->inoh_extras);
 			i->inoh_flags |= (INOH_EXTRAS_DIRTY | INOH_INO_DIRTY);
 			repl = i->inoh_extras->inox_repls;
-			k = j - INO_DEF_NREPLS;
+			k = j - SL_DEF_REPLICAS;
 		} else {
 			i->inoh_flags |= INOH_INO_DIRTY;
 			repl = i->inoh_ino.ino_repls;

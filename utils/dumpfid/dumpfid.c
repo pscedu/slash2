@@ -80,11 +80,11 @@ dumpfid(const char *fn)
 	psc_crc64_calc(&crc, &inox, INOX_OD_CRCSZ);
 	printf("\tcrc: %s xrepls:", crc == inox.inox_crc ? "OK" : "BAD");
 	nr = ino.ino_nrepls;
-	if (nr < INO_DEF_NREPLS)
+	if (nr < SL_DEF_REPLICAS)
 		nr = 0;
 	else if (nr > SL_MAX_REPLICAS)
 		nr = SL_MAX_REPLICAS;
-	for (j = 0; j + INO_DEF_NREPLS < nr; j++)
+	for (j = 0; j + SL_DEF_REPLICAS < nr; j++)
 		printf("%s%u", j ? "," : "", inox.inox_repls[j].bs_id);
 	printf(" nbp:%d\n", inox.inox_newbmap_policy);
  out:

@@ -162,11 +162,11 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 		mq->nrepls = REPLRQ_NREPLS(rrq);
 		mq->newreplpol = REPLRQ_INOX(rrq)->inox_newbmap_policy;
 		memcpy(mq->repls, REPLRQ_INO(rrq)->ino_repls,
-		    MIN(mq->nrepls, INO_DEF_NREPLS) * sizeof(*mq->repls));
-		if (mq->nrepls > INO_DEF_NREPLS)
-			memcpy(mq->repls + INO_DEF_NREPLS,
+		    MIN(mq->nrepls, SL_DEF_REPLICAS) * sizeof(*mq->repls));
+		if (mq->nrepls > SL_DEF_REPLICAS)
+			memcpy(mq->repls + SL_DEF_REPLICAS,
 			    rrq->rrq_inoh->inoh_extras->inox_repls,
-			    (REPLRQ_NREPLS(rrq) - INO_DEF_NREPLS) *
+			    (REPLRQ_NREPLS(rrq) - SL_DEF_REPLICAS) *
 			    sizeof(*mq->repls));
 	}
 	if (is_eof)

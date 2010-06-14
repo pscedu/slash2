@@ -225,9 +225,9 @@ _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
  */
 int
 _fidc_lookup(const struct slash_fidgen *fgp, int flags,
-     const struct srt_stat *sstb, int setattrflags,
-     struct fidc_membh **fcmhp, const char *file, const char *func,
-     int line)
+    const struct srt_stat *sstb, int setattrflags,
+    struct fidc_membh **fcmhp, const char *file, const char *func,
+    int line)
 {
 	int rc, try_create=0;
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
@@ -265,7 +265,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	psc_hashbkt_lock(b);
 	PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, b) {
 		/*
-		 * Note that generation number is only used to track 
+		 * Note that generation number is only used to track
 		 *   truncations.
 		 */
 		if (searchfg.fg_fid != fcmh_2_fid(tmp))
@@ -387,7 +387,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	fcmh->fcmh_state |= FCMH_CAC_INITING;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
-	 
+
 	if (sstb) {
 		FCMH_LOCK(fcmh);
 		fcmh_setattr(fcmh, sstb, setattrflags|FCMH_SETATTRF_HAVELOCK);
@@ -395,12 +395,12 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		goto out2;
 	} else {
 		/*
-		 * Call service specific constructor slc_fcmh_ctor(), 
-		 * slm_fcmh_ctor(), and sli_fcmh_ctor() to initialize their 
-		 * private fields that follow the main fcmh structure. It is 
-		 * safe to not lock because we don't touch the state, and 
+		 * Call service specific constructor slc_fcmh_ctor(),
+		 * slm_fcmh_ctor(), and sli_fcmh_ctor() to initialize their
+		 * private fields that follow the main fcmh structure. It is
+		 * safe to not lock because we don't touch the state, and
 		 * other thread should be waiting for us.
-		 */		
+		 */
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		if (rc)
 			goto out1;
@@ -424,7 +424,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	lc_add(&fidcCleanList, fcmh);
 
 	if (rc) {
-		FCMH_ULOCK(fcmh);			
+		FCMH_ULOCK(fcmh);
 		fcmh->fcmh_state |= FCMH_CAC_TOFREE;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	} else {
@@ -549,7 +549,7 @@ dump_fcmh(struct fidc_membh *f)
 {
 	psc_max("fidc_membh (%p): fid = %"PRId64", gen = %"PRId64
 		", refcnt = %d, sstb = %p\n",
-		f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt, 
+		f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt,
 		&f->fcmh_sstb);
 }
 

@@ -77,8 +77,8 @@ _debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 	nr = ino->ino_nrepls;
 	if (nr < 0)
 		nr = 1;
-	else if (nr > INO_DEF_NREPLS)
-		nr = INO_DEF_NREPLS;
+	else if (nr > SL_DEF_REPLICAS)
+		nr = SL_DEF_REPLICAS;
 
 	rbuf[0] = '\0';
 	for (j = 0; j < nr; j++) {

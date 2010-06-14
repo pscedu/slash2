@@ -59,8 +59,6 @@ typedef struct slash_snapshot {
 	time_t			sn_date;
 } sl_snap_t;
 
-#define INO_DEF_NREPLS		SL_DEF_REPLICAS
-
 /*
  * The inode structure lives at the beginning of the metafile and holds
  * the block store array along with snapshot pointers.
@@ -72,7 +70,7 @@ struct slash_inode_od {
 	uint32_t		ino_bsz;			/* bmap size		*/
 	uint32_t		ino_nrepls;			/* if 0, use ino_prepl	*/
 	uint32_t		ino_csnap;			/* current snapshot	*/
-	sl_replica_t		ino_repls[INO_DEF_NREPLS];	/* embed a few replicas	*/
+	sl_replica_t		ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
 
 	/* must be last */
 	psc_crc64_t		ino_crc;			/* crc of the inode	*/
@@ -84,7 +82,7 @@ struct slash_inode_od {
 
 struct slash_inode_extras_od {
 	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers      */
-	sl_replica_t		inox_repls[SL_MAX_REPLICAS - INO_DEF_NREPLS]; /* replicas */
+	sl_replica_t		inox_repls[SL_MAX_REPLICAS - SL_DEF_REPLICAS]; /* replicas */
 	uint32_t		inox_newbmap_policy;		/* see BRP_* values */
 
 	/* must be last */

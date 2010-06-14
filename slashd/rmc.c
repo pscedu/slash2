@@ -205,10 +205,10 @@ slm_rmc_getbmap_common(struct fidc_membh *fcmh, sl_ios_id_t prefios,
 		*nrepls = ih->inoh_ino.ino_nrepls;
 
 		iov[niov].iov_base = ih->inoh_ino.ino_repls;
-		iov[niov].iov_len = sizeof(sl_replica_t) * INO_DEF_NREPLS;
+		iov[niov].iov_len = sizeof(sl_replica_t) * SL_DEF_REPLICAS;
 		niov++;
 
-		if (*nrepls > INO_DEF_NREPLS) {
+		if (*nrepls > SL_DEF_REPLICAS) {
 			mds_inox_ensure_loaded(ih);
 			iov[niov].iov_base = ih->inoh_extras->inox_repls;
 			iov[niov].iov_len = sizeof(ih->inoh_extras->inox_repls);
