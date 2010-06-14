@@ -85,20 +85,21 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 	return (fcmh + 1);
 }
 
-enum fcmh_cache_states {
-	FCMH_CAC_FREE = (1<<0),         /* totally free item */	
-	FCMH_CAC_CLEAN = (1<<1),	/* in clean cache */
-	FCMH_CAC_DIRTY = (1<<2),	/* dirty, not reapable */
-	FCMH_CAC_INITING = (1<<3),	/* initializing */
-	FCMH_CAC_WAITING = (1<<4),      /* being waited on */
-	FCMH_CAC_TOFREE	= (1<<5),	/* been deprecated */
-	FCMH_CAC_REAPED = (1<<6),	/* has been reaped */	
-	FCMH_HAVE_ATTRS = (1<<7),	/* has valid stat info */
-	FCMH_GETTING_ATTRS = (1<<8),	/* fetching stat info */
-	FCMH_WAITING_ATTRS = (1<<9),    /* someone is waiting on attrs */	
-	FCMH_CTOR_FAILED = (1<<10),     /* constructor fn failed */
-	_FCMH_FLGSHFT = (1<<11)         /* */
+enum {
+	FCMH_CAC_FREE		= (1 << 0),	/* totally free item */
+	FCMH_CAC_CLEAN		= (1 << 1),	/* in clean cache */
+	FCMH_CAC_DIRTY		= (1 << 2),	/* dirty, not reapable */
+	FCMH_CAC_INITING	= (1 << 3),	/* initializing */
+	FCMH_CAC_WAITING	= (1 << 4),	/* being waited on */
+	FCMH_CAC_TOFREE		= (1 << 5),	/* been deprecated */
+	FCMH_CAC_REAPED		= (1 << 6),	/* has been reaped */
+	FCMH_HAVE_ATTRS		= (1 << 7),	/* has valid stat info */
+	FCMH_GETTING_ATTRS	= (1 << 8),	/* fetching stat info */
+	FCMH_WAITING_ATTRS	= (1 << 9),	/* someone is waiting on attrs */
+	FCMH_CTOR_FAILED	= (1 << 10),	/* constructor fn failed */
+	_FCMH_FLGSHFT		= (1 << 11)	/* */
 };
+
 /*
  * If fuse_ino_t, declared 'unsigned long', is 4 bytes, inums will get
  * integer demoted, so we must store two: the original inum, used when
@@ -185,7 +186,7 @@ int			 _fidc_lookup(const struct slash_fidgen *, int,
 /* these fidc_lookup() wrappers are used for simple lookups no flags */
 struct fidc_membh	*_fidc_lookup_fid(slfid_t, const char *, const char *, int);
 struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, const char *, const char *, int);
-ssize_t	                 fcmh_getsize(struct fidc_membh *);
+ssize_t			 fcmh_getsize(struct fidc_membh *);
 
 void			 fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
 void			 fcmh_op_done_type(struct fidc_membh *, enum fcmh_opcnt_types);
