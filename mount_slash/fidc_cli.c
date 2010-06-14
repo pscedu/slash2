@@ -63,10 +63,10 @@ slc_fcmh_refresh_age(struct fidc_membh *fcmh)
 {
 	struct timeval tmp = {FCMH_ATTR_TIMEO, 0};
 	struct fcmh_cli_info *fci;
-	
+
 	fci = fcmh_2_fci(fcmh);
-        PFL_GETTIME(&fci->fci_age);
-        timeradd(&fci->fci_age, &tmp, &fci->fci_age);
+	PFL_GETTIME(&fci->fci_age);
+	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
 }
 
 int
@@ -89,7 +89,7 @@ slc_fcmh_dtor(struct fidc_membh *fcmh)
 {
 	if (fcmh_isdir(fcmh)) {
 		struct fcmh_cli_info *fci;
-		
+
 		fci = fcmh_get_pri(fcmh);
 		psc_assert(psclist_empty(&fci->fci_dci.di_list));
 	}
