@@ -20,8 +20,9 @@
 #ifndef _DIRCACHE_H_
 #define _DIRCACHE_H_
 
-#include <time.h>
 #include <sys/types.h>
+
+#include <time.h>
 
 #include "psc_ds/dynarray.h"
 #include "psc_ds/list.h"
@@ -90,13 +91,14 @@ dirent_desc_sort_cmp(const void *x, const void *y)
 }
 
 #define DIRCACHE_INIT(fcmh, mgr)					\
-	if (!fcmh_2_fci((fcmh))->fci_dci.di_fcmh) {			\
-		dircache_init_info(&(fcmh_2_fci((fcmh))->fci_dci),	\
-				   (fcmh), (mgr));			\
-	}								\
+    do {								\
+	    if (!fcmh_2_fci(fcmh)->fci_dci.di_fcmh)			\
+		    dircache_init_info(&(fcmh_2_fci(fcmh)->fci_dci),	\
+			(fcmh), (mgr));					\
+    } while (0)
 
-#define DIRCACHE_INITIALIZED(fcmh)		\
-	(fcmh_2_fci((fcmh))->fci_dci.di_fcmh ? 1 : 0)
+#define DIRCACHE_INITIALIZED(fcmh)					\
+	(fcmh_2_fci(fcmh)->fci_dci.di_fcmh ? 1 : 0)
 	
 void
 dircache_init(struct dircache_mgr *, const char *, size_t);
