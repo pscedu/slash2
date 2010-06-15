@@ -1,4 +1,4 @@
-/* $Id: dircache.c $*/
+/* $Id$ */
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
@@ -21,7 +21,7 @@
 #include "fidcache.h"
 #include "dircache.h"
 
-/* Note:  These macros must match the ones used by the server in 
+/* Note:  These macros must match the ones used by the server in
  *  zfs_operations_slash.c
  */
 #define SRT_NAME_OFFSET ((unsigned long)((struct srt_dirent *) 0)->name)
@@ -36,7 +36,7 @@ srt_dirent_size(size_t namelen)
 	return SRT_DIRENT_ALIGN(SRT_NAME_OFFSET + namelen);
 }
 
-void 
+void
 dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
 {
 	m->dcm_maxsz = maxsz;
@@ -53,7 +53,7 @@ dircache_init_info(struct dircache_info *i, struct fidc_membh *f,
 	i->di_dcm = m;
 	i->di_fcmh = f;
 	INIT_PSCLIST_HEAD(&i->di_list);
-	LOCK_INIT(&i->di_lock);	
+	LOCK_INIT(&i->di_lock);
 }
 
 static void
@@ -62,8 +62,8 @@ dircache_rls_ents(struct dircache_ents *e)
 	struct dircache_info *i = e->de_info;
 	struct dircache_mgr *m = i->di_dcm;
 	int locked;
-	
-	DEBUG_FCMH(PLL_WARN, i->di_fcmh, 
+
+	DEBUG_FCMH(PLL_WARN, i->di_fcmh,
 		   "rls dircache_ents %p cachesz=%"PRId64, e, m->dcm_alloc);
 
 	locked = reqlock(&m->dcm_lock);
@@ -86,7 +86,7 @@ dircache_cmpf(const void *a, const void *b)
 {
 	struct dircache_desc *x = (struct dircache_desc *)a;
 	struct dircache_desc *y = (struct dircache_desc *)b;
-	
+
 	return (CMP(x->dd_hash, y->dd_hash));
 }
 
@@ -99,15 +99,15 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag) {
 	int found=0, pos;
 
 	desc.dd_hash = psc_str_hashify(name);
-	desc.dd_len  = strnlen(name, NAME_MAX);	
+	desc.dd_len  = strnlen(name, NAME_MAX);
 
 	spinlock(&i->di_lock);
 	psclist_for_each_entry(e, &i->di_list, de_lentry1) {
 #ifdef BSEARCH
 		/* The return code for psc_dynarray_bsearch() isn't quite
-		 *    right for our purposes but either way the strings 
-		 *    must still be compared.  
-		 */		
+		 *    right for our purposes but either way the strings
+		 *    must still be compared.
+		 */
 		pos = psc_dynarray_bsearch(&e->de_dents, &desc, dircache_cmpf);
 		if (pos >= psc_dynarray_len(&e->de_dents))
 			break;
@@ -117,18 +117,18 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag) {
 #endif
 			dirent = (struct srt_dirent *)
 				((unsigned char *)(e->de_base + d->dd_offset));
-				
+
 			psc_warnx("ino=%"PRIx64" off=%"PRId64" nlen=%u "
 				  "type=%o name=%s lkname=%s off=%d d=%p",
-				  dirent->ino, dirent->off, dirent->namelen, 
-				  dirent->type, dirent->name, name, 
+				  dirent->ino, dirent->off, dirent->namelen,
+				  dirent->type, dirent->name, name,
 				  d->dd_offset, d);
-			
+
 			if (d->dd_hash == desc.dd_hash &&
 			    d->dd_len  == desc.dd_len) {
 				/* Map the dirent from the desc's offset.
 				 */
-				if (!strncmp(name, dirent->name, 
+				if (!strncmp(name, dirent->name,
 					     desc.dd_len)) {
 					found = 1;
 
@@ -139,7 +139,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag) {
 
 					if (!(d->dd_flags & DC_STALE))
 						ino = dirent->ino;
-					
+
 					if (flag & DC_STALE)
 						d->dd_flags |= DC_STALE;
 
@@ -154,13 +154,13 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag) {
 #endif
 	}
 	freelock(&i->di_lock);
-	/* If all of the items have been accessed via lookup then 
+	/* If all of the items have been accessed via lookup then
 	 *   assume that fuse has an entry cached for each and free
 	 *   the buffer.
 	 */
 	if (found && !e->de_remlookup) {
 		/* de_freeable should only be set prior to the completion
-		 *   of the readdir.  The ents are fair game for freeing 
+		 *   of the readdir.  The ents are fair game for freeing
 		 *   any time after that.
 		 */
 		psc_assert(e->de_freeable);
@@ -176,7 +176,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 	struct dircache_mgr *m = i->di_dcm;
 	struct dircache_ents *e, *tmp;
 	struct timeval now;
-	
+
 	PFL_GETTIME(&now);
 
 	spinlock(&m->dcm_lock);
@@ -192,7 +192,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 	}
 	/* Clear more space if needed.
 	 */
-	while ((m->dcm_alloc + size) > m->dcm_maxsz && 
+	while ((m->dcm_alloc + size) > m->dcm_maxsz &&
 	       !lc_empty(&m->dcm_lc)) {
 		e = lc_peekhead(&m->dcm_lc);
 		if (!e)
@@ -220,26 +220,26 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	struct srt_dirent *d;
 	unsigned char *b;
 	off_t off;
-	uint32_t j;
+	int j;
 
 	psc_assert(e->de_sz);
 	psc_assert(e->de_info);
 	psc_assert(!e->de_desc);
-	
-	PFL_GETTIME(&e->de_age);	
+
+	PFL_GETTIME(&e->de_age);
 	e->de_age.tv_sec += dirent_timeo;
 	e->de_remlookup = nents - 2; /* subtract "." and ".." */
 	e->de_freeable = 0; /* remain '0' until readdir req has completed */
- 
+
 	c = e->de_desc = PSCALLOC(sizeof(struct dircache_desc) * nents);
 	psc_dynarray_ensurelen(&e->de_dents, nents);
 
-	for (j=0, b=e->de_base, off=0; j < nents; j++, c++) {
+	for (j=0, b=e->de_base, off=0; j < (int)nents; j++, c++) {
 		d = (struct srt_dirent *)((unsigned char *)(b + off));
 
 		psc_warnx("ino=%"PRIx64" off=%"PRId64
-			  " nlen=%u type=%o name=%s d=%p off=%"PRId64, 
-			  d->ino, d->off, d->namelen, d->type, d->name, 
+			  " nlen=%u type=%o name=%s d=%p off=%"PRId64,
+			  d->ino, d->off, d->namelen, d->type, d->name,
 			  d, off);
 
 		c->dd_len    = d->namelen;
@@ -255,7 +255,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 #ifdef BSEARCH
 		psc_dynarray_sort(&e->de_dents, qsort, dirent_desc_sort_cmp);
 		DYNARRAY_FOREACH(c, j, &e->de_dents) {
-			psc_warnx("c=%p hash=%d len=%u", 
+			psc_warnx("c=%p hash=%d len=%u",
 				  c, c->dd_hash, c->dd_len);
 		}
 #endif
@@ -278,7 +278,7 @@ dircache_earlyrls_ents(struct dircache_ents *e)
 {
 	psc_assert(psclist_disjoint(&e->de_lentry1));
 	psc_assert(psclist_disjoint(&e->de_lentry2));
-	
+
 	spinlock(&e->de_info->di_dcm->dcm_lock);
 	e->de_info->di_dcm->dcm_alloc -= e->de_sz;
 	freelock(&e->de_info->di_dcm->dcm_lock);

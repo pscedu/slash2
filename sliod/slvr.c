@@ -98,8 +98,6 @@ slvr_do_crc(struct slvr_ref *s)
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
-			int rc;
-			ssize_t len;
 
 			/* Faulting from disk which means this is for a 
 			 *   read.  Therefore the ondisk filesize should

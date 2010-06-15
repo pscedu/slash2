@@ -1,4 +1,4 @@
-/* $Id: dircache.h $*/
+/* $Id$ */
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
@@ -37,8 +37,8 @@ struct fidc_membh;
 
 struct dircache_mgr {
 	size_t                   dcm_maxsz;
-        size_t                   dcm_alloc;
-        psc_spinlock_t           dcm_lock;
+	size_t                   dcm_alloc;
+	psc_spinlock_t           dcm_lock;
 	struct psc_listcache     dcm_lc;
 };
 
@@ -57,7 +57,7 @@ struct dircache_ents {
 	struct timeval           de_age;
 	struct psclist_head      de_lentry1;   /* Chain on info  */
 	struct psclist_head      de_lentry2;   /* Chain onto mgr */
-	struct psc_dynarray      de_dents;	
+	struct psc_dynarray      de_dents;
 	struct dircache_desc    *de_desc;
 	struct dircache_info    *de_info;
 	unsigned char            de_base[0];
@@ -78,7 +78,7 @@ enum dircache_flags {
 static inline void
 dircache_setfreeable_ents(struct dircache_ents *e)
 {
-        e->de_freeable = 1;
+	e->de_freeable = 1;
 }
 
 static __inline int
@@ -99,12 +99,12 @@ dirent_desc_sort_cmp(const void *x, const void *y)
 
 #define DIRCACHE_INITIALIZED(fcmh)					\
 	(fcmh_2_fci(fcmh)->fci_dci.di_fcmh ? 1 : 0)
-	
+
 void
 dircache_init(struct dircache_mgr *, const char *, size_t);
 
 void
-dircache_init_info(struct dircache_info *, struct fidc_membh *, 
+dircache_init_info(struct dircache_info *, struct fidc_membh *,
 	   struct dircache_mgr *);
 
 slfid_t
