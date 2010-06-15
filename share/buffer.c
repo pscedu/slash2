@@ -103,9 +103,9 @@ sl_buffer_fresh_assertions(struct sl_buffer *b)
 }
 
 void
-sl_buffer_clear(struct sl_buffer *b)
+sl_buffer_clear(struct sl_buffer *b, size_t size)
 {
-	memset(b->slb_base, 0, (size_t)(s->slb_blksz * s->slb_nblks));
+	memset(b->slb_base, 0, size);
 }
 
 __static void
