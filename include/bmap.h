@@ -104,7 +104,7 @@ struct bmapc_memb {
 
 #define _DEBUG_BMAP(file, func, line, level, b, fmt, ...)		\
 	psclog((file), (func), (line), PSS_GEN, (level), 0,		\
-	       "bmap@%p b:%x m:%u i:%"PRIx64" opcnt=%u "fmt,		\
+	       "bmap@%p b:%x m:%u i:%"PRId64" opcnt=%u "fmt,		\
 	    (b), (b)->bcm_blkno, (b)->bcm_mode,				\
 	    (b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,		\
 	    atomic_read(&(b)->bcm_opcnt),				\
