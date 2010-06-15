@@ -39,11 +39,14 @@
 #define SL_DEF_SNAPSHOTS	1
 #define SL_MAX_GENS_PER_BLK	4
 
-/* Define metafile offsets
+/*
+ * Define metafile offsets.  At the beginning of the metafile is the SLASH2 inode, which is
+ * always loaded.  Start from byte offset 1024 (0x400) are extra inode attributes. Block
+ * CRCs begin at offset 4096 (0x1000). 
  */
 #define SL_INODE_START_OFF	UINT64_C(0x0000)
-#define SL_BMAP_START_OFF	UINT64_C(0x1000)
 #define SL_EXTRAS_START_OFF	UINT64_C(0x0400)
+#define SL_BMAP_START_OFF	UINT64_C(0x1000)
 
 #define SL_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
 

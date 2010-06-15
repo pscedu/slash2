@@ -120,7 +120,7 @@ struct slmds_jent_namespace {
 	 * save network bandwidth.
 	 */
 	int16_t			sjnm_reclen;
-	char			sjnm_name[MAX_NAME_BUF_SIZE+1];
+	char			sjnm_name[MAX_NAME_BUF_SIZE+1];	/* one or two names */
 } __packed;
 
 /* List all of the journaling structures here so that the maximum

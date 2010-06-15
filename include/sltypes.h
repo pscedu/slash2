@@ -70,8 +70,8 @@ typedef struct slash_replica {
 	sl_ios_id_t		bs_id;     /* id of this block store    */
 } __packed sl_replica_t;
 
-#define SL_MAX_REPLICAS		64
 #define SL_DEF_REPLICAS         4
+#define SL_MAX_REPLICAS		64
 
 /* Slash RPC transportably safe structures. */
 struct srt_stat {
