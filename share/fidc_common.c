@@ -235,7 +235,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	struct slash_fidgen searchfg = *fgp;
 
 	psclog(file, func, line, PSC_SUBSYS, PLL_INFO, 0,
-	    "fidc_lookup called for fid %#"PRId64, searchfg.fg_fid);
+	    "fidc_lookup called for fid %"PRId64, searchfg.fg_fid);
 
 	rc = 0;
 	*fcmhp = NULL;
