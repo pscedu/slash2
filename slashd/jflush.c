@@ -25,32 +25,25 @@
 #include "jflush.h"
 
 /**
- * jfi_prep - Prepare a journal flush item and make sure it has an
- *	associated transaction handle.
+ * jfi_prep - Associate a journal flush item with a transaction handle if it does not
+ *     have one yet.
  */
 void
 jfi_prep(struct jflush_item *jfi, struct psc_journal *pj)
 {
 	spinlock(&jfi->jfi_lock);
-	if (jfi->jfi_state & JFI_HAVE_XH) {
-		psc_assert(jfi->jfi_xh);
-		/* XXX The following check will fail when the
-		 *   mdsfssync thread pulls us from the
-		 *   dirtyMdsData list.
-		 */
-		//if (jfi->jfi_state & JFI_QUEUED)
-		//       psc_assert(psclist_conjoint(&jfi->jfi_lentry));
-	} else {
+	if (!(jfi->jfi_state & JFI_HAVE_XH)) {
+
 		psc_assert(jfi->jfi_xh == NULL);
 		psc_assert(!(jfi->jfi_state & JFI_QUEUED));
 		psc_assert(psclist_disjoint(&jfi->jfi_lentry));
+
 		jfi->jfi_xh = pjournal_xnew(pj);
 		jfi->jfi_state |= JFI_HAVE_XH;
 		if (jfi->jfi_prepcb)
 			(jfi->jfi_prepcb)(jfi->jfi_data);
 	}
 	jfi->jfi_state |= JFI_BUSY;
-
 	freelock(&jfi->jfi_lock);
 }
 
