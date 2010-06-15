@@ -1,0 +1,17 @@
+06/15/2010
+----------
+
+I want to start as simple as possible.  As we gain experience, we can be more sophisticated
+as need be.  
+
+(1) Write each unlink operation into the system log before replying the unlink RPC.
+
+(2) Distill the log entry from the tile and write into the one of the unlink log files.
+
+    Each unlink entry consists of the following information:
+ 
+	* The identity of the file: slash ID and generation number
+	* The identities of the I/O servers that have a copy of the file at the moment.
+
+(3) Read the unlink log files and send RPCs to I/O servers.  An unlink log file will be removed when
+    all relevant I/O servers have responded. 
