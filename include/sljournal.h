@@ -60,7 +60,7 @@ struct slmds_jent_crc {
  * @sjp_fid: what file.
  * @sjp_bmapno: which bmap region.
  * @sjp_bgen: the new bmap generation.
- * @sjp_reptbl: the replica table.
+ * @sjp_reptbl: the entire replica table.
  */
 struct slmds_jent_repgen {
 	slfid_t			sjp_fid;
