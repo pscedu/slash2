@@ -35,6 +35,7 @@
 #include "ctl.h"
 #include "ctlcli.h"
 #include "ctlsvr.h"
+#include "dircache.h"
 #include "fid.h"
 #include "fidcache.h"
 #include "inode.h"
@@ -149,6 +150,11 @@ main(int argc, char *argv[])
 	PRTYPE(struct bmi_assign);
 	PRTYPE(struct bmpc_ioreq);
 	PRTYPE(struct bmpc_mem_slbs);
+	PRTYPE(struct cli_finfo);
+	PRTYPE(struct dircache_desc);
+	PRTYPE(struct dircache_ents);
+	PRTYPE(struct dircache_info);
+	PRTYPE(struct dircache_mgr);
 	PRTYPE(struct fcmh_cli_info);
 	PRTYPE(struct fcmh_iod_info);
 	PRTYPE(struct fcmh_mds_info);
@@ -273,9 +279,9 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_authbuf_footer);
 	PRTYPE(struct srt_authbuf_secret);
 	PRTYPE(struct srt_bmapdesc);
+	PRTYPE(struct srt_dirent);
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
-	PRTYPE(struct psc_journal_enthdr);
 	/* end structs */
 
 	/* start constants */
