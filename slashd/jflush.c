@@ -54,6 +54,10 @@ jfi_prep(struct jflush_item *jfi, struct psc_journal *pj)
 	freelock(&jfi->jfi_lock);
 }
 
+/**
+ * jfs_schedule - Clear the busy flag of a journal flush item and link
+ *     it to the given list if it is not already on the list.
+ */    
 void
 jfi_schedule(struct jflush_item *jfi, struct psc_listcache *lc)
 {
