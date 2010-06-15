@@ -206,6 +206,7 @@ int  sl_buffer_init(struct psc_poolmgr *, void *);
 void sl_buffer_destroy(void *);
 void sl_buffer_cache_init(void);
 void sl_buffer_fresh_assertions(struct sl_buffer *);
+void sl_buffer_clear(struct sl_buffer *);
 
 typedef int (*sl_iov_try_memrls)(void *);
 typedef void (*sl_iov_memrls_ulock)(void *);

@@ -102,6 +102,12 @@ sl_buffer_fresh_assertions(struct sl_buffer *b)
 		   (!atomic_read(&b->slb_inflpndg)));
 }
 
+void
+sl_buffer_clear(struct sl_buffer *b)
+{
+	memset(b->slb_base, 0, (size_t)(s->slb_blksz * s->slb_nblks));
+}
+
 __static void
 sl_buffer_pin_assertions(struct sl_buffer *b)
 {
