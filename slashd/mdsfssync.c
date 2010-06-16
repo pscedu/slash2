@@ -37,7 +37,6 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 {
 	struct jflush_item *jfi;
 	struct psc_journal_xidhndl *xh;
-	void *data;
 
 	while (pscthr_run()) {
 		jfi = lc_getwait(&dirtyMdsData);
@@ -59,11 +58,7 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 			continue;
 		}
 
-		/* Copy the data items so that the lock may be released
-		 *  prior to the sync function being run.
-		 */
 		xh = jfi->jfi_xh;
-		data = jfi->jfi_data;
 
 		psc_assert(xh->pjx_pj == mdsJournal);
 
@@ -80,13 +75,14 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 		jfi->jfi_state &= ~JFI_QUEUED;
 
 		freelock(&jfi->jfi_lock);
-		/* Now run the app-specific data flush code.
-		 */
 		psc_info("fssync jfi(%p) xh(%p) xid(%"PRIu64") data(%p)",
-			  jfi, xh, xh->pjx_xid, data);
-		(jfi->jfi_handler)(data);
-
-		psc_assert(xh->pjx_pj == mdsJournal);
+			  jfi, xh, xh->pjx_xid, jfi->jfi_data);
+		/* 
+		 * Now run the journal flush item specific flush handler.
+		 * Note that the item could contain newer data since the
+		 * log was written.
+		 */
+		(jfi->jfi_handler)(jfi->jfi_data);
 
 		if (pjournal_xend(xh))
 			psc_fatal("pjournal_xend() failed");
