@@ -18,9 +18,9 @@
  */
 
 /*
- * This interface describes the mechanisms and objects for  writing log
- * entries into the activity journal for recovering state when failure
- * occurs.
+ * This interface describes the mechanisms and objects for writing log
+ * entries into the SLASH2 system journal for recovery purpose after a
+ * system crash.
  */
 
 #ifndef _SL_JFLUSH_
@@ -37,8 +37,8 @@ struct jflush_item {
 	psc_spinlock_t			 jfi_lock;
 	struct psc_journal_xidhndl	*jfi_xh;
 	struct psclist_head		 jfi_lentry;
-	jflush_handler			 jfi_handler;
-	jflush_prepcb			 jfi_prepcb;
+	jflush_handler			 jfi_handler;		/* handler to flush the item */
+	jflush_prepcb			 jfi_prepcb;		/* action on the item before flushing */
 	void				*jfi_item;		/* pointer to the item to be flushed */
 	int				 jfi_state;
 };
