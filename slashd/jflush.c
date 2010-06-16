@@ -25,7 +25,7 @@
 #include "jflush.h"
 
 /**
- * jfi_prep - Associate a journal flush item with a transaction handle if it does not
+ * jfi_prepare - Associate a journal flush item with a transaction handle if it does not
  *     have one yet.
  */
 void

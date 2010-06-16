@@ -667,13 +667,13 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
 	INOH_LOCK_ENSURE(inoh);
 	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
 		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
+	psc_assert(inoh->inoh_jfi.jfi_handler == mds_inode_sync);
+	psc_assert(inoh->inoh_jfi.jfi_data == inoh);
 
 	psc_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
 		  jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos);
 
 	jfi_prepare(&inoh->inoh_jfi, mdsJournal);
-	psc_assert(inoh->inoh_jfi.jfi_handler == mds_inode_sync);
-	psc_assert(inoh->inoh_jfi.jfi_data == inoh);
 
 	rc = pjournal_xadd(inoh->inoh_jfi.jfi_xh, MDS_LOG_INO_ADDREPL, &jrir,
 			   sizeof(struct slmds_jent_ino_addrepl));
@@ -698,6 +698,9 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
 	int rc;
 
+	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
+	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
+
 	BMAP_LOCK_ENSURE(bmap);
 
 	DEBUG_BMAPOD(PLL_INFO, bmap, "");
@@ -712,9 +715,6 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_bgen);
 
 	jfi_prepare(&bmdsi->bmdsi_jfi, mdsJournal);
-
-	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
-	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
 
 	rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_REPL, &jrpg,
 			   sizeof(struct slmds_jent_repgen));
@@ -802,8 +802,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	BMAP_LOCK(bmap);
 	bmap->bcm_mode &= ~BMAP_MDS_CRC_UP;
 	BMAP_ULOCK(bmap);
-	/* Tell the 'syncer' thread to flush this bmap.
-	 */
+
 	jfi_schedule(&bmdsi->bmdsi_jfi, &dirtyMdsData);
 
 	PSCFREE(jcrc);
