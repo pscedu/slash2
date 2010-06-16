@@ -668,7 +668,7 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
 	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
 		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
 	psc_assert(inoh->inoh_jfi.jfi_handler == mds_inode_sync);
-	psc_assert(inoh->inoh_jfi.jfi_data == inoh);
+	psc_assert(inoh->inoh_jfi.jfi_item == inoh);
 
 	psc_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
 		  jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos);
@@ -699,7 +699,7 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	int rc;
 
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
-	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
+	psc_assert(bmdsi->bmdsi_jfi.jfi_item == bmap);
 
 	BMAP_LOCK_ENSURE(bmap);
 
@@ -752,7 +752,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	jfi_prepare(&bmdsi->bmdsi_jfi, mdsJournal);
 
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
-	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
+	psc_assert(bmdsi->bmdsi_jfi.jfi_item == bmap);
 	/* No I shouldn't need the lock.  Only this instance of this
 	 *  call may remove the BMAP_MDS_CRC_UP bit.
 	 */

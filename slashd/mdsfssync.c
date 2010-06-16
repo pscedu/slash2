@@ -42,7 +42,7 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 		jfi = lc_getwait(&dirtyMdsData);
 		spinlock(&jfi->jfi_lock);
 
-		psc_assert(jfi->jfi_data);
+		psc_assert(jfi->jfi_item);
 		psc_assert(jfi->jfi_handler);
 		psc_assert(jfi->jfi_xh);
 		psc_assert(jfi->jfi_state & JFI_HAVE_XH);
@@ -76,13 +76,13 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 
 		freelock(&jfi->jfi_lock);
 		psc_info("fssync jfi(%p) xh(%p) xid(%"PRIu64") data(%p)",
-			  jfi, xh, xh->pjx_xid, jfi->jfi_data);
+			  jfi, xh, xh->pjx_xid, jfi->jfi_item);
 		/* 
 		 * Now run the journal flush item specific flush handler.
 		 * Note that the item could contain newer data since the
 		 * log was written.
 		 */
-		(jfi->jfi_handler)(jfi->jfi_data);
+		(jfi->jfi_handler)(jfi->jfi_item);
 
 		if (pjournal_xend(xh))
 			psc_fatal("pjournal_xend() failed");

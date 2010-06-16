@@ -39,7 +39,7 @@ struct jflush_item {
 	struct psclist_head		 jfi_lentry;
 	jflush_handler			 jfi_handler;
 	jflush_prepcb			 jfi_prepcb;
-	void				*jfi_data;
+	void				*jfi_item;		/* pointer to the item to be flushed */
 	int				 jfi_state;
 };
 
@@ -51,13 +51,13 @@ enum {
 
 static __inline void
 jfi_init(struct jflush_item *j, jflush_handler handler,
-    jflush_prepcb prepcb, void *data)
+    jflush_prepcb prepcb, void *item)
 {
 	LOCK_INIT(&j->jfi_lock);
 	INIT_PSCLIST_ENTRY(&j->jfi_lentry);
 	j->jfi_handler = handler;
 	j->jfi_prepcb = prepcb;
-	j->jfi_data = data;
+	j->jfi_item = item;
 	j->jfi_state = 0;
 }
 

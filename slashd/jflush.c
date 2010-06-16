@@ -41,7 +41,7 @@ jfi_prepare(struct jflush_item *jfi, struct psc_journal *pj)
 		jfi->jfi_xh = pjournal_xnew(pj);
 		jfi->jfi_state |= JFI_HAVE_XH;
 		if (jfi->jfi_prepcb)
-			(jfi->jfi_prepcb)(jfi->jfi_data);
+			(jfi->jfi_prepcb)(jfi->jfi_item);
 	}
 	jfi->jfi_state |= JFI_BUSY;
 	freelock(&jfi->jfi_lock);
