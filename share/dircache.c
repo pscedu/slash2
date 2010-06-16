@@ -30,7 +30,7 @@
 #define SRT_DIRENT_SIZE(d)					\
 	SRT_DIRENT_ALIGN(SRT_NAME_OFFSET + (d)->namelen)
 
-static inline size_t
+static __inline size_t
 srt_dirent_size(size_t namelen)
 {
 	return SRT_DIRENT_ALIGN(SRT_NAME_OFFSET + namelen);
@@ -81,17 +81,9 @@ dircache_rls_ents(struct dircache_ents *e)
 	fcmh_op_done_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
 }
 
-static inline int
-dircache_cmpf(const void *a, const void *b)
-{
-	struct dircache_desc *x = (struct dircache_desc *)a;
-	struct dircache_desc *y = (struct dircache_desc *)b;
-
-	return (CMP(x->dd_hash, y->dd_hash));
-}
-
 slfid_t
-dircache_lookup(struct dircache_info *i, const char *name, int flag) {
+dircache_lookup(struct dircache_info *i, const char *name, int flag)
+{
 	struct dircache_ents *e;
 	struct dircache_desc desc, *d;
 	struct srt_dirent *dirent;
@@ -100,6 +92,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag) {
 
 	desc.dd_hash = psc_str_hashify(name);
 	desc.dd_len  = strnlen(name, NAME_MAX);
+	desc.dd_name = name;
 
 	spinlock(&i->di_lock);
 	psclist_for_each_entry(e, &i->di_list, de_lentry1) {
@@ -108,7 +101,8 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag) {
 		 *    right for our purposes but either way the strings
 		 *    must still be compared.
 		 */
-		pos = psc_dynarray_bsearch(&e->de_dents, &desc, dircache_cmpf);
+		pos = psc_dynarray_bsearch(&e->de_dents,
+		    &desc, dirent_cmp);
 		if (pos >= psc_dynarray_len(&e->de_dents))
 			break;
 		d = psc_dynarray_getpos(&e->de_dents, pos);
@@ -246,6 +240,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 		c->dd_hash   = psc_str_hashify(d->name);
 		c->dd_flags  = 0;
 		c->dd_offset = off;
+		c->dd_name   = d->name;
 
 		psc_dynarray_add(&e->de_dents, c);
 		off += srt_dirent_size((size_t)d->namelen);
@@ -253,7 +248,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	/* Sort the desc items by their hash.
 	 */
 #ifdef BSEARCH
-		psc_dynarray_sort(&e->de_dents, qsort, dirent_desc_sort_cmp);
+		psc_dynarray_sort(&e->de_dents, qsort, dirent_sort_cmp);
 		DYNARRAY_FOREACH(c, j, &e->de_dents) {
 			psc_warnx("c=%p hash=%d len=%u",
 				  c, c->dd_hash, c->dd_len);
