@@ -37,7 +37,6 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 {
 	struct jflush_item *jfi;
 	struct psc_journal_xidhndl *xh;
-	jflush_handler jfih;
 	void *data;
 
 	while (pscthr_run()) {
@@ -65,7 +64,6 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 		 */
 		xh = jfi->jfi_xh;
 		data = jfi->jfi_data;
-		jfih = jfi->jfi_handler;
 
 		psc_assert(xh->pjx_pj == mdsJournal);
 
@@ -83,7 +81,7 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 		 */
 		psc_info("fssync jfi(%p) xh(%p) xid(%"PRIu64") data(%p)",
 			  jfi, xh, xh->pjx_xid, data);
-		(jfih)(data);
+		(jfi->jfi_handler)(data);
 
 		psc_assert(xh->pjx_pj == mdsJournal);
 
