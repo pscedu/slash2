@@ -671,7 +671,7 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
 	psc_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
 		  jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos);
 
-	jfi_prep(&inoh->inoh_jfi, mdsJournal);
+	jfi_prepare(&inoh->inoh_jfi, mdsJournal);
 	psc_assert(inoh->inoh_jfi.jfi_handler == mds_inode_sync);
 	psc_assert(inoh->inoh_jfi.jfi_data == inoh);
 
@@ -711,7 +711,7 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
 	psc_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
 		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_bgen);
 
-	jfi_prep(&bmdsi->bmdsi_jfi, mdsJournal);
+	jfi_prepare(&bmdsi->bmdsi_jfi, mdsJournal);
 
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
 	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);
@@ -749,7 +749,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 
 	mdsio_apply_fcmh_size(bmap->bcm_fcmh, crcup->fsize);
 
-	jfi_prep(&bmdsi->bmdsi_jfi, mdsJournal);
+	jfi_prepare(&bmdsi->bmdsi_jfi, mdsJournal);
 
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
 	psc_assert(bmdsi->bmdsi_jfi.jfi_data == bmap);

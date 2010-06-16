@@ -68,7 +68,7 @@ jfi_ensure_empty(struct jflush_item *jfi)
 	psc_assert(psclist_disjoint(&jfi->jfi_lentry));
 }
 
-void jfi_prep(struct jflush_item *, struct psc_journal *);
+void jfi_prepare(struct jflush_item *, struct psc_journal *);
 void jfi_schedule(struct jflush_item *, struct psc_listcache *);
 
 #endif /* _SL_JFLUSH_ */

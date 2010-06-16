@@ -29,7 +29,7 @@
  *     have one yet.
  */
 void
-jfi_prep(struct jflush_item *jfi, struct psc_journal *pj)
+jfi_prepare(struct jflush_item *jfi, struct psc_journal *pj)
 {
 	spinlock(&jfi->jfi_lock);
 	if (!(jfi->jfi_state & JFI_HAVE_XH)) {
