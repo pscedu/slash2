@@ -73,8 +73,11 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 		 * current one is being closed.
 		 */
 		jfi->jfi_xh = NULL;
-		jfi->jfi_state &= ~JFI_QUEUED;
 		jfi->jfi_state &= ~JFI_HAVE_XH;
+
+		/* Shorten the queue to be scanned by myself */
+		lc_remove(&dirtyMdsData, jfi);
+		jfi->jfi_state &= ~JFI_QUEUED;
 
 		freelock(&jfi->jfi_lock);
 		/* Now run the app-specific data flush code.
