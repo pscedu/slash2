@@ -36,7 +36,7 @@ extern struct dircache_mgr dircacheMgr;
 
 struct cli_finfo {
 	int			 nrepls;
-	sl_replica_t	         reptbl[SL_DEF_REPLICAS];
+	sl_replica_t	         reptbl[SL_MAX_REPLICAS];
 };
 
 struct fcmh_cli_info {
