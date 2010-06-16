@@ -71,6 +71,11 @@ struct bmap_timeo_entry {
 
 struct bmap_timeo_table {
 	psc_spinlock_t		 btt_lock;
+	/*
+	 * High and low water marks of the bmap sequence number. The MDS communicates
+	 * the low water mark to an I/O server so that the latter can reject timed
+	 * out bmaps.
+	 */
 	uint64_t		 btt_maxseq;
 	uint64_t		 btt_minseq;
 	struct bmap_timeo_entry	*btt_entries;
