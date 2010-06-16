@@ -63,8 +63,8 @@ jfi_schedule(struct jflush_item *jfi, struct psc_listcache *lc)
 
 	if (!(jfi->jfi_state & JFI_QUEUED)) {
 		psc_assert(psclist_disjoint(&jfi->jfi_lentry));
-		jfi->jfi_state |= JFI_QUEUED;
 		lc_addqueue(lc, jfi);
+		jfi->jfi_state |= JFI_QUEUED;
 	}
 	freelock(&jfi->jfi_lock);
 }
