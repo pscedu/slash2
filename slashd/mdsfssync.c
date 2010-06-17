@@ -49,8 +49,8 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 		psc_assert(jfi->jfi_state & JFI_QUEUED);
 
 		if (jfi->jfi_state & JFI_BUSY) {
-			freelock(&jfi->jfi_lock);
 			lc_addtail(&dirtyMdsData, jfi);
+			freelock(&jfi->jfi_lock);
 			psc_info("fssync jfi(%p) xh(%p) BUSY",
 				 jfi, jfi->jfi_xh);
 			if (lc_sz(&dirtyMdsData) == 1)
@@ -70,8 +70,7 @@ mdsfssyncthr_begin(__unusedx struct psc_thread *thr)
 		jfi->jfi_xh = NULL;
 		jfi->jfi_state &= ~JFI_HAVE_XH;
 
-		/* Shorten the queue to be scanned by myself */
-		lc_remove(&dirtyMdsData, jfi);
+		/* lc_getwait() above removed it from the queue */
 		jfi->jfi_state &= ~JFI_QUEUED;
 
 		freelock(&jfi->jfi_lock);
