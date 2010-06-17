@@ -192,6 +192,8 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uin
 	char *ptr;
 	struct slmds_jent_namespace *jnamespace;
 
+	psc_assert(target);
+
 	jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	jnamespace->sjnm_op = op;
