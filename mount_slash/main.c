@@ -323,22 +323,10 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
 	if (rc)
 		goto out;
-	if (mp->rc == EEXIST) {
-		psc_info("fid %"PRId64" already existed on MDS",
-		    mp->fg.fg_fid);
-		/*  Handle the network side of O_EXCL.
-		 */
-		if (fi->flags & O_EXCL) {
-			rc = EEXIST;
-			goto out;
-		}
-
-	} else if (mp->rc) {
-		rc = mp->rc;
-		goto out;
-	}
 
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE, &m);
 	if (rc)
