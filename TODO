@@ -313,7 +313,6 @@ zfs
 
 TODO
 - truncate
-- fix bsearch()
 - reconnect/graceful RPC failure
 
 Partial Truncate (Jared):
