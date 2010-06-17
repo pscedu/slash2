@@ -298,6 +298,7 @@ tracks endpoint connections
 ------------------------------
 
 - sstb shouldn't have an ino field; fill st_ino out each time from fg_fid
+	- can't: needed for READDIR
 
 - always cache / on mount_slash, that will save RPCs
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
