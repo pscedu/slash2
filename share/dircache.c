@@ -63,7 +63,7 @@ dircache_rls_ents(struct dircache_ents *e)
 	struct dircache_mgr *m = i->di_dcm;
 	int locked;
 
-	DEBUG_FCMH(PLL_WARN, i->di_fcmh,
+	DEBUG_FCMH(PLL_DEBUG, i->di_fcmh,
 		   "rls dircache_ents %p cachesz=%"PRId64, e, m->dcm_alloc);
 
 	locked = reqlock(&m->dcm_lock);
@@ -96,59 +96,46 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 
 	spinlock(&i->di_lock);
 	psclist_for_each_entry(e, &i->di_list, de_lentry1) {
-#ifdef BSEARCH
 		/* The return code for psc_dynarray_bsearch() isn't quite
 		 *    right for our purposes but either way the strings
 		 *    must still be compared.
 		 */
 		pos = psc_dynarray_bsearch(&e->de_dents,
 		    &desc, dirent_cmp);
-d = psc_dynarray_getpos(&e->de_dents, pos);
-printf("pos=%d key=%s found=%s\n", pos, name, d->dd_name);
 		if (pos >= psc_dynarray_len(&e->de_dents))
 			break;
 		d = psc_dynarray_getpos(&e->de_dents, pos);
-#else
-		DYNARRAY_FOREACH(d, pos, &e->de_dents) {
-#endif
-			dirent = (void *)(e->de_base + d->dd_offset);
+		dirent = (void *)(e->de_base + d->dd_offset);
 
-			psc_warnx("ino=%"PRIx64" off=%"PRId64" nlen=%u "
-				  "type=%o name=%s lkname=%s off=%d d=%p",
-				  dirent->ino, dirent->off, dirent->namelen,
-				  dirent->type, dirent->name, name,
-				  d->dd_offset, d);
+		psc_dbg("ino=%"PRIx64" off=%"PRId64" nlen=%u "
+		    "type=%o name=%s lkname=%s off=%d d=%p",
+		    dirent->ino, dirent->off, dirent->namelen,
+		    dirent->type, dirent->name, name,
+		    d->dd_offset, d);
 
-			if (d->dd_hash == desc.dd_hash &&
-			    d->dd_len  == desc.dd_len) {
-				/* Map the dirent from the desc's offset.
-				 */
-				if (!strncmp(name, dirent->name,
-					     desc.dd_len)) {
-					found = 1;
+		if (d->dd_hash == desc.dd_hash &&
+		    d->dd_len  == desc.dd_len &&
+		    strcmp(name, dirent->name) == 0) {
+			/* Map the dirent from the desc's offset.
+			 */
+			found = 1;
 
-					if (!(d->dd_flags & DC_LOOKUP)) {
-						e->de_remlookup--;
-						d->dd_flags |= DC_LOOKUP;
-					}
-
-					if (!(d->dd_flags & DC_STALE))
-						ino = dirent->ino;
-
-					if (flag & DC_STALE)
-						d->dd_flags |= DC_STALE;
-
-					break;
-				}
+			if (!(d->dd_flags & DC_LOOKUP)) {
+				e->de_remlookup--;
+				d->dd_flags |= DC_LOOKUP;
 			}
-#ifndef BSEARCH
-		}
 
-		if (found)
+			if (!(d->dd_flags & DC_STALE))
+				ino = dirent->ino;
+
+			if (flag & DC_STALE)
+				d->dd_flags |= DC_STALE;
+
 			break;
-#endif
+		}
 	}
 	freelock(&i->di_lock);
+
 	/* If all of the items have been accessed via lookup then
 	 *   assume that fuse has an entry cached for each and free
 	 *   the buffer.
@@ -185,6 +172,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 		else
 			break;
 	}
+
 	/* Clear more space if needed.
 	 */
 	while ((m->dcm_alloc + size) > m->dcm_maxsz &&
@@ -230,9 +218,9 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	psc_dynarray_ensurelen(&e->de_dents, nents);
 
 	for (j=0, b=e->de_base, off=0; j < (int)nents; j++, c++) {
-		d = (struct srt_dirent *)((unsigned char *)(b + off));
+		d = (void *)(b + off);
 
-		psc_warnx("ino=%"PRIx64" off=%"PRId64
+		psc_dbg("ino=%"PRIx64" off=%"PRId64
 			  " nlen=%u type=%o name=%s d=%p off=%"PRId64,
 			  d->ino, d->off, d->namelen, d->type, d->name,
 			  d, off);
@@ -246,15 +234,14 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 		psc_dynarray_add(&e->de_dents, c);
 		off += srt_dirent_size((size_t)d->namelen);
 	}
+
 	/* Sort the desc items by their hash.
 	 */
-#ifdef BSEARCH
-		psc_dynarray_sort(&e->de_dents, qsort, dirent_sort_cmp);
-		DYNARRAY_FOREACH(c, j, &e->de_dents) {
-			psc_warnx("c=%p hash=%d len=%u",
-				  c, c->dd_hash, c->dd_len);
-		}
-#endif
+	psc_dynarray_sort(&e->de_dents, qsort, dirent_sort_cmp);
+	DYNARRAY_FOREACH(c, j, &e->de_dents)
+		psc_dbg("c=%p hash=%d len=%u name=%s",
+		    c, c->dd_hash, c->dd_len, c->dd_name);
+
 	lc_addtail(&m->dcm_lc, e);
 
 	spinlock(&i->di_lock);
