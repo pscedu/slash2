@@ -17,9 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include "sltypes.h"
-#include "fidcache.h"
 #include "dircache.h"
+#include "fidcache.h"
+#include "sltypes.h"
 
 /* Note:  These macros must match the ones used by the server in
  *  zfs_operations_slash.c
@@ -103,14 +103,15 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 		 */
 		pos = psc_dynarray_bsearch(&e->de_dents,
 		    &desc, dirent_cmp);
+d = psc_dynarray_getpos(&e->de_dents, pos);
+printf("pos=%d key=%s found=%s\n", pos, name, d->dd_name);
 		if (pos >= psc_dynarray_len(&e->de_dents))
 			break;
 		d = psc_dynarray_getpos(&e->de_dents, pos);
 #else
 		DYNARRAY_FOREACH(d, pos, &e->de_dents) {
 #endif
-			dirent = (struct srt_dirent *)
-				((unsigned char *)(e->de_base + d->dd_offset));
+			dirent = (void *)(e->de_base + d->dd_offset);
 
 			psc_warnx("ino=%"PRIx64" off=%"PRId64" nlen=%u "
 				  "type=%o name=%s lkname=%s off=%d d=%p",
