@@ -312,19 +312,28 @@ zfs
 ---------------
 
 TODO
-- truncate
-- reconnect/graceful RPC failure
 
 Partial Truncate (Jared):
-   A synchronous RPC must be sent to the sliod which had been
-designated as the primary.  BMAP replicas of the truncated regions
-should be managed asynchronously though this may be quite complicated.
-Sliod objects which have pending truncate operations cannot be used
-for writing.  This async approach may become prohibitive in a
-multi-MDS environment.  Sliod truncate operations should be processed
-via the slash2 journal and distilled into the garbage collection
-changelog.  Upon processing an async partial truncate, the sliod
-should inform the MDS that the object is once again writable.
+	- journal
+	- mark fcmh as frozen for writing
+	- mark inactive all bmaps extended past truncated region
+	- distill into garbage collection changelog to inform all IOS to reclaim data in these regions
+	- until success:
+		- select a primary IOS
+		- synchronously await response that the IOS has recalculated CRC
+	- invalidate/inactivate this bmap on all other IOS
+	- RPC replies should close the journal entry
+	- unfreeze fcmh
+	- reply to client
+
+unlink/Full truncate/O_TRUNC:
+	- journal
+	- mark fcmh as frozen for writing
+	- delete bmap metadata
+	- distill into garbage collection changelog to inform all IOS to reclaim data in these regions
+	- RPC replies should close the journal entry
+	- unfreeze fcmh
+	- reply to client
 
 Graceful Service Failure (Jared):
    In the case of an MDS failure, SLIOD and MS should not abort.
@@ -338,3 +347,5 @@ required.  Perhaps the MDS should store some state for SLIOD
 reconnect, this state could be used for SLIOD garbage collection
 management also.  An odtable entry could be used for every SLIOD
 connect.
+
+- fix cscope: remove the curdir when the parent includes it
