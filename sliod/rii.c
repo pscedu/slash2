@@ -106,7 +106,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 	if (desc)
 		pscrpc_free_bulk(desc);
 
-	slvr_io_done(slvr_ref, SL_READ);
+	slvr_io_done(slvr_ref, 0, mq->len, SL_READ);
 
  out:
 	if (bcm)
@@ -154,7 +154,7 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 		rc = slvr_fsbytes_wio(s, slvrsiz, 0);
 	if (rc)
 		slvr_clear_inuse(s, 0, slvrsiz);
-	slvr_io_done(s, SL_WRITE);
+	slvr_io_done(s, 0, w->srw_len, SL_WRITE);
 	w->srw_slvr_refs[slvridx] = NULL;
 	return (rc);
 }

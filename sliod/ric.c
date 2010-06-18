@@ -53,19 +53,22 @@ sli_ric_handle_connect(struct pscrpc_request *rq)
 	return (0);
 }
 
+#define RIC_MAX_SLVRS_PER_IO 2
+
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
-	uint32_t csize, tsize, roff, sblk;
+	uint32_t tsize, sblk;
 	struct pscrpc_bulk_desc *desc;
-	struct slvr_ref *slvr_ref[2];
+	struct slvr_ref *slvr_ref[RIC_MAX_SLVRS_PER_IO];
 	struct bmap_iod_info *biodi;
 	struct slash_fidgen *fgp;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	struct iovec iovs[2];
+	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
+	uint32_t roff[RIC_MAX_SLVRS_PER_IO], len[RIC_MAX_SLVRS_PER_IO];
 	sl_bmapno_t bmapno, slvrno;
 	int rc=0, nslvrs, i;
 	lnet_nid_t *np;
@@ -164,22 +167,23 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	/* This loop assumes that nslvrs is always <= 2.  Note that
 	 *   once i > 0, roff is always 0.
 	 */
-	for (i=0, roff=(mq->offset - (slvrno*SLASH_SLVR_SIZE)), tsize=mq->size;
-	     i < nslvrs; i++, roff=0) {
+	for (i=0, roff[i]=(mq->offset - (slvrno * SLASH_SLVR_SIZE)), 
+		     tsize=mq->size;
+	     i < nslvrs; i++, roff[i]=0) {
 
 		slvr_ref[i] = slvr_lookup(slvrno + i, bmap_2_biodi(bmap), rw);
 		slvr_slab_prep(slvr_ref[i], rw);
 		/* Fault in pages either for read or RBW.
 		 */
-		csize = MIN(tsize, SLASH_SLVR_SIZE - roff);
-		slvr_io_prep(slvr_ref[i], roff, csize, rw);
+		len[i] = MIN(tsize, SLASH_SLVR_SIZE - roff[i]);
+		slvr_io_prep(slvr_ref[i], roff[i], len[i], rw);
 
 		DEBUG_SLVR(PLL_INFO, slvr_ref[i], "post io_prep rw=%d", rw);
 		/* mq->offset is the offset into the bmap, here we must
 		 *  translate it into the offset of the sliver.
 		 */
-		iovs[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + roff;
-		tsize -= iovs[i].iov_len = csize;
+		iovs[i].iov_base = slvr_ref[i]->slvr_slab->slb_base + roff[i];
+		tsize -= iovs[i].iov_len = len[i];
 		/* Avoid more complicated errors within lnet by ensuring
 		 *   that len is non-zero.
 		 */
@@ -205,13 +209,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 *   buffer offsets since we're block aligned now
 	 */
 	if (rw == SL_WRITE) {
-		roff = mq->offset - (slvrno * SLASH_SLVR_SIZE);
+		roff[0] = mq->offset - (slvrno * SLASH_SLVR_SIZE);
 
 		tsize = mq->size;
-		sblk  = roff / SLASH_SLVR_BLKSZ;
+		sblk  = roff[0] / SLASH_SLVR_BLKSZ;
 
-		if (roff & SLASH_SLVR_BLKMASK)
-			tsize += roff & SLASH_SLVR_BLKMASK;
+		if (roff[0] & SLASH_SLVR_BLKMASK)
+			tsize += roff[0] & SLASH_SLVR_BLKMASK;
 	}
 
 	for (i=0; i < nslvrs; i++) {
@@ -225,7 +229,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			 */
 			sblk = 0;
 		}
-		slvr_io_done(slvr_ref[i], rw);
+		slvr_io_done(slvr_ref[i], roff[i], len[i], rw);
 	}
 
 	if (rw == SL_WRITE)

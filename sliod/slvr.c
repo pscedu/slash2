@@ -98,72 +98,89 @@ slvr_do_crc(struct slvr_ref *s)
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
-
 			/* Faulting from disk which means this is for a 
 			 *   read.  Therefore the ondisk filesize should
 			 *   be the same as the that on the mds.  Adjust 
 			 *   the crc len accordingly.  NOTE:  the below
 			 *   code will not work in RMW situations.
 			 */ 
-			psc_assert(!s->slvr_crc_soff && !s->slvr_crc_loff &&
+			psc_assert(!s->slvr_crc_soff && 
+				   !s->slvr_crc_loff &&
 				   !s->slvr_pndgwrts);
 
 			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
-				       s->slvr_crc_len); 
+			       SLVR_CRCLEN(s)); 
+
+			/* Shouln't need a lock, !SLVR_DATADY
+			 */
+			s->slvr_crc_eoff = 0;
 		      
 			if (crc != slvr_2_crc(s)) {
 				DEBUG_SLVR(PLL_ERROR, s, "crc failed want=%"
 				   PRIx64" got=%"PRIx64 " len=%u",
-				   slvr_2_crc(s), crc, s->slvr_crc_len);
+				   slvr_2_crc(s), crc, SLVR_CRCLEN(s));
 
 				DEBUG_BMAP(PLL_ERROR, slvr_2_bmap(s), 
 				   "slvrnum=%hu", s->slvr_num);
 
-				/* Shouln't need a lock, !SLVR_DATADY
-				 */
-				s->slvr_crc_len = 0;
-
 				return (-EINVAL);
 			}
-			s->slvr_crc_len = 0;
 		} else
 			return (0);
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
-		psc_assert(s->slvr_crc_len && 
-			   (s->slvr_crc_soff + s->slvr_crc_len) <= 
-			   SL_BMAP_CRCSIZE);
+		uint32_t soff, eoff;
+
+		SLVR_LOCK(s);		
+		DEBUG_SLVR(PLL_NOTIFY, s, "len=%u soff=%u loff=%u", 
+		   SLVR_CRCLEN(s), s->slvr_crc_soff, s->slvr_crc_loff);
+		
+		psc_assert(s->slvr_crc_eoff && 
+			   (s->slvr_crc_eoff <= SL_BMAP_CRCSIZE));
 		
 		if (!s->slvr_crc_loff || 
-		    (s->slvr_crc_soff - 1) != s->slvr_crc_loff) {
+		    s->slvr_crc_soff != s->slvr_crc_loff) {
+			/* Detect non-sequential write pattern into the 
+			 *   slvr.
+			 */
 			PSC_CRC64_INIT(&s->slvr_crc);
 			s->slvr_crc_soff = 0;
-		}
+			s->slvr_crc_loff = 0;				
+		}		
+		/* Copy values in preparation for lock release.
+		 */
+		soff = s->slvr_crc_soff;
+		eoff = s->slvr_crc_eoff;
+		
+		SLVR_ULOCK(s);
 
-		psc_crc64_add(&s->slvr_crc, 
-		       (unsigned char *)(slvr_2_buf(s, 0) + s->slvr_crc_soff),
-		       (int)(s->slvr_crc_len));
-
-		//s->slvr_crc = adler32(0, slvr_2_buf(s, 0), SL_BMAP_CRCSIZE);
+#ifdef ADLERCRC32
+		//XXX not a running crc?  double check for correctness
+		s->slvr_crc = adler32(s->slvr_crc, slvr_2_buf(s, 0) + soff, 
+			      (int)(eoff - soff));		
+		crc = s->slvr_crc;
+#else		
+		psc_crc64_add(&s->slvr_crc,
+			      (unsigned char *)(slvr_2_buf(s, 0) + soff), 
+			      (int)(eoff - soff));
 		crc = s->slvr_crc;
 		PSC_CRC32_FIN(&crc);
+#endif
 
-		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PRIx64 " len=%u off=%u", 
-			   crc, s->slvr_crc_len, s->slvr_crc_soff);
+		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PRIx64 " len=%u soff=%u",
+			   crc, SLVR_CRCLEN(s), s->slvr_crc_soff);
+
 		DEBUG_BMAP(PLL_NOTIFY, slvr_2_bmap(s), 
 			   "slvrnum=%hu", s->slvr_num);
 
 		SLVR_LOCK(s);
 		/* loff is only set here.
 		 */
-		s->slvr_crc_loff = s->slvr_crc_len - 1;
+		s->slvr_crc_loff = eoff;
 		
-		if (!s->slvr_pndgwrts)
-			/* Safe to clear, no other writes have arrived
-			 */
-			s->slvr_crc_len = s->slvr_crc_soff = 0;
-		
-		s->slvr_flags &= ~SLVR_CRCDIRTY;
+		if (!s->slvr_pndgwrts && !s->slvr_compwrts)
+			s->slvr_flags &= ~SLVR_CRCDIRTY;
+
 		if (slvr_2_biodi_wire(s)) {
 			slvr_2_crc(s) = crc;
 			slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
@@ -221,8 +238,8 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 			int crc_rc;
 
 			s->slvr_crc_soff = 0;
-			s->slvr_crc_len = rc;
-						
+			s->slvr_crc_eoff = rc;
+
 			crc_rc = slvr_do_crc(s);
 			if (crc_rc == -EINVAL)
 				DEBUG_SLVR(PLL_ERROR, s,
@@ -397,7 +414,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 
 			tmp = psc_pool_get(slBufsPool);
 			sl_buffer_fresh_assertions(tmp);
-
+			sl_buffer_clear(tmp, tmp->slb_blksz * tmp->slb_nblks);
 			SLVR_LOCK(s);
 			goto newbuf;
 
@@ -442,12 +459,12 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
  * slvr_io_prep - prepare a sliver for an incoming io.  This may entail 
  *   faulting 32k aligned regions in from the underlying fs.
  * @s: the sliver
- * @offset: offset into the slvr (not bmap or file object)
- * @size: size relative to the slvr
+ * @off: offset into the slvr (not bmap or file object)
+ * @len: len relative to the slvr
  * @rw:  read or write op
  */
 int
-slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
+slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 {
 	int		i;
 	int		rc;
@@ -471,59 +488,35 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 	}
 
 	DEBUG_SLVR(((s->slvr_flags & SLVR_DATAERR) ? PLL_ERROR : PLL_INFO), s,
-		   "slvrno=%hu off=%u size=%u rw=%d",
-		   s->slvr_num, offset, size, rw);
+		   "slvrno=%hu off=%u len=%u rw=%d",
+		   s->slvr_num, off, len, rw);
 
 	if (s->slvr_flags & SLVR_DATAERR) {
 		rc = -1;
 		goto out;
-	}
 
-	/* Don't bother marking the bit in the slash_bmap_wire structure,
-	 *  in fact slash_bmap_wire may not even be present for this
-	 *  sliver.  Just mark the bit in the sliver itself in
-	 *  anticipation of the pending write.  The pndgwrts counter
-	 *  cannot be used because it's decremented once the write
-	 *  completes but prior the re-calculation of the slvr's crc
-	 *  which is done asynchronously.
-	 */
-	if (rw == SL_WRITE) {
-		if (!(s->slvr_flags & SLVR_REPLDST)) {
-			s->slvr_flags |= SLVR_CRCDIRTY;
-			/* Manage the description of the dirty crc area.
-			 */
-			if (offset < s->slvr_crc_soff)
-				s->slvr_crc_soff = offset;
-
-			if ((offset + size) > s->slvr_crc_len)
-				s->slvr_crc_len = offset + size;
-
-			if (s->slvr_flags & SLVR_DATARDY)
-				/* Either read or write ops can just proceed
-				 *   if SLVR_DATARDY is set, the sliver is
-				 *   prepared.
-				 */
-				goto set_write_dirty;
-		}
-
-	} else if (rw == SL_READ)
-		if (s->slvr_flags & SLVR_DATARDY)
+	} else if (s->slvr_flags & SLVR_DATARDY) {
+		if (rw == SL_READ)
 			goto out;
-
-	/* Importing data into the sliver is now our responsibility,
-	 *  other IO into this region will block until SLVR_FAULTING
-	 *  is released.
-	 */
-	s->slvr_flags |= SLVR_FAULTING;
-	if (rw == SL_READ) {
-		psc_vbitmap_setall(s->slvr_slab->slb_inuse);
-		goto do_read;
+	} else {
+		/* Importing data into the sliver is now our responsibility,
+		 *  other IO into this region will block until SLVR_FAULTING
+		 *  is released.
+		 */
+		s->slvr_flags |= SLVR_FAULTING;
+		if (rw == SL_READ) {
+			psc_vbitmap_setall(s->slvr_slab->slb_inuse);
+			goto do_read;
+		}
 	}
 
- set_write_dirty:
 	psc_assert(rw != SL_READ);
+	/* Setting of this flag here is mainly for informative purposes.
+	 *   It may be unset in do_crc so we set it again in wio_done.
+	 */
+	s->slvr_flags |= SLVR_CRCDIRTY;
 
-	if (!offset && size == SLASH_SLVR_SIZE) {
+	if (!off && len == SLASH_SLVR_SIZE) {
 		/* Full sliver write, no need to read blocks from disk.
 		 *  All blocks will be dirtied by the incoming network IO.
 		 */
@@ -535,17 +528,17 @@ slvr_io_prep(struct slvr_ref *s, uint32_t offset, uint32_t size, enum rw rw)
 	 * that need to be read as 1 so that they can be faulted in by
 	 * slvr_fsbytes_io().  We can have at most two unaligned writes.
 	 */
-	if (offset) {
-		blks = (offset / SLASH_SLVR_BLKSZ);
-		if (offset & SLASH_SLVR_BLKMASK)
+	if (off) {
+		blks = (off / SLASH_SLVR_BLKSZ);
+		if (off & SLASH_SLVR_BLKMASK)
 			unaligned[0] = blks;
 
 		for (i=0; i <= blks; i++)
 			psc_vbitmap_set(s->slvr_slab->slb_inuse, i);
 	}
-	if ((offset + size) < SLASH_SLVR_SIZE) {
-		blks = (offset + size) / SLASH_SLVR_BLKSZ;
-		if ((offset + size) & SLASH_SLVR_BLKMASK)
+	if ((off + len) < SLASH_SLVR_SIZE) {
+		blks = (off + len) / SLASH_SLVR_BLKSZ;
+		if ((off + len) & SLASH_SLVR_BLKMASK)
 			unaligned[1] = blks;
 
 		for (i = blks; i < SLASH_BLKS_PER_SLVR; i++)
@@ -654,7 +647,7 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
  *    the sliver lock prior to performing list operations.
  */
 void
-slvr_wio_done(struct slvr_ref *s)
+slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 {
 	SLVR_LOCK(s);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
@@ -679,10 +672,22 @@ slvr_wio_done(struct slvr_ref *s)
 		slvr_lru_requeue(s, 0);
 		return;
 	}
-	/* XXX SLVR_CRCDIRTY had already been applied so this may not
-	 *   be necessary.
-	 */
+	
 	s->slvr_flags |= SLVR_CRCDIRTY;
+	/* Manage the description of the dirty crc area. If the slvr's checksum
+	 *   is not being processed then soff and len may be adjusted.
+	 * If soff doesn't align with loff then the slvr will be
+	 *   crc'd from offset 0.
+	 */
+	s->slvr_crc_soff = off;
+	
+	if ((off + len) > s->slvr_crc_eoff)
+		s->slvr_crc_eoff =  off + len;
+
+	if (off != s->slvr_crc_loff)
+		s->slvr_crc_loff = 0;
+	
+	psc_assert(s->slvr_crc_eoff <= SL_BMAP_CRCSIZE);
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		/* This sliver was being paged-in over the network.
@@ -707,16 +712,19 @@ slvr_wio_done(struct slvr_ref *s)
 
 		DEBUG_SLVR(PLL_INFO, s, "%s", "datardy");
 
-		if ((s->slvr_flags & SLVR_LRU) &&
-		    s->slvr_pndgwrts > 1)
+		if ((s->slvr_flags & SLVR_LRU) && s->slvr_pndgwrts > 1)
 			slvr_lru_requeue(s, 1);
 	} else
 		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
 
-	/*
-	 * If there are no more pending writes, schedule a CRC op.
+	/* If there are no more pending writes, schedule a CRC op. 
+	 *   Increment slvr_compwrts to prevent a crc op from being skipped
+	 *   which can happen due to the release of the slvr lock being
+	 *   released prior to the crc of the buffer.
 	 */
 	s->slvr_pndgwrts--;	
+	s->slvr_compwrts++;
+
 	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU))
 		slvr_schedule_crc_locked(s);
 
@@ -740,9 +748,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 	/* Note, slvr lock and biod lock are the same.
 	 */
 	if (s && (s->slvr_flags & SLVR_FREEING)) {
-
 		freelock(&b->biod_lock);
-		sched_yield();
 		goto retry;
 
 	} else if (!s) {

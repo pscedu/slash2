@@ -44,18 +44,20 @@ extern struct psc_listcache crcqSlvrs;
 struct slvr_ref {
 	uint16_t		 slvr_num;	/* bmap slvr offset */
 	uint16_t		 slvr_flags;
-	uint16_t		 slvr_pndgwrts;	/* # of writes in progess */
-	uint16_t		 slvr_pndgreads;/* # of reads in progress */
+	uint16_t		 slvr_pndgwrts;	/* # writes in progess */
+	uint16_t		 slvr_pndgreads;/* # reads in progress */
+	uint16_t                 slvr_compwrts; /* # compltd wrts when !LRU */
 	uint32_t                 slvr_crc_soff; /* crc start region */
-	uint32_t                 slvr_crc_len;  /* crc region length */
+	uint32_t                 slvr_crc_eoff; /* crc region length */
 	uint32_t                 slvr_crc_loff; /* last crc end */
-	uint32_t                 slvr__pad;     /* align */
 	psc_crc64_t		 slvr_crc;	/* accumulator  */
 	void			*slvr_pri;	/* backptr (bmap_iod_info) */
 	struct sl_buffer	*slvr_slab;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */
 	SPLAY_ENTRY(slvr_ref)	 slvr_tentry;	/* bmap tree entry */
 };
+
+#define SLVR_CRCLEN(s) ((s)->slvr_crc_eoff - (s)->slvr_crc_soff)
 
 enum {
 	SLVR_NEW	= (1 <<  0),	/* newly initialized */
@@ -67,12 +69,11 @@ enum {
 	SLVR_DATAERR	= (1 <<  6),
 	SLVR_LRU	= (1 <<  7),	/* cached but not dirty */
 	SLVR_CRCDIRTY	= (1 <<  8),	/* crc does not match cached buffer */
-	SLVR_CRCING	= (1 <<  9),
-	SLVR_CRCOPEN	= (1 << 10),    /* unfinalized crc accumulator */
-	SLVR_FREEING	= (1 << 11),	/* sliver is being reaped */
-	SLVR_SLBFREEING	= (1 << 12),	/* slvr's slab is being reaped */
-	SLVR_REPLSRC	= (1 << 13),	/* slvr is replication source */
-	SLVR_REPLDST	= (1 << 14)	/* slvr is replication destination */
+	SLVR_CRCING	= (1 <<  9),    /* unfinalized crc accumulator */
+	SLVR_FREEING	= (1 << 10),	/* sliver is being reaped */
+	SLVR_SLBFREEING	= (1 << 11),	/* slvr's slab is being reaped */
+	SLVR_REPLSRC	= (1 << 12),	/* slvr is replication source */
+	SLVR_REPLDST	= (1 << 13)	/* slvr is replication destination */
 };
 
 #define SLVR_2_BLK(s)		((s)->slvr_num *			\
@@ -125,8 +126,8 @@ enum {
 #define slvr_2_crc(s)							\
 	slvr_2_biodi_wire((s))->bh_crcs[(s)->slvr_num].gc_crc
 
-#define slvr_io_done(s, rw)						\
-	((rw) == SL_WRITE ? slvr_wio_done(s) : slvr_rio_done(s))
+#define slvr_io_done(s, off, len, rw)					\
+	((rw) == SL_WRITE ? slvr_wio_done(s, off, len) : slvr_rio_done(s))
 
 #define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_SLVR_FLAGS(s)						\
@@ -145,11 +146,12 @@ enum {
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 "slvr@%p num=%hu pw=%hu pr=%hu pri@%p slab@%p flgs:"	\
+		 "slvr@%p num=%hu pw=%hu pr=%hu cw=%hu soff=%u "	\
+		 "crclen=%u loff=%u pri@%p slab@%p flgs:"		\
 		 SLVR_FLAGS_FMT" :: "fmt,				\
 		 (s), (s)->slvr_num,					\
-		 (s)->slvr_pndgwrts,					\
-		 (s)->slvr_pndgreads,					\
+		 (s)->slvr_pndgwrts, (s)->slvr_pndgreads, (s)->slvr_compwrts, \
+		 (s)->slvr_crc_soff, (s)->slvr_crc_eoff, (s)->slvr_crc_loff, \
 		 (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),	\
 		 ## __VA_ARGS__)
 
@@ -164,7 +166,7 @@ void	slvr_repl_prep(struct slvr_ref *, int);
 void	slvr_rio_done(struct slvr_ref *);
 void	slvr_schedule_crc(struct slvr_ref *);
 void	slvr_slab_prep(struct slvr_ref *, enum rw);
-void	slvr_wio_done(struct slvr_ref *);
+void	slvr_wio_done(struct slvr_ref *, uint32_t, uint32_t);
 void	slvr_worker_init(void);
 
 static __inline int

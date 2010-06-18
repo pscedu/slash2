@@ -334,6 +334,10 @@ slvr_worker_int(void)
 	 *   should be disjointed.
 	 */
 	s->slvr_flags |= SLVR_CRCING;
+	/* 'completed writes' signifier can be reset, the upcoming
+	 *    instantiation of slvr_do_crc() will cover those writes.
+	 */
+	s->slvr_compwrts = 0;
 	SLVR_ULOCK(s);
 	//XXX perhaps when we go to a lighter checksum we can hold the
 	// the lock for the duration?
@@ -360,7 +364,8 @@ slvr_worker_int(void)
 	psc_assert(s->slvr_flags & SLVR_CRCING);
 	s->slvr_flags &= ~SLVR_CRCING;
 
-	if (s->slvr_flags & SLVR_CRCDIRTY) {
+	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) && 
+	    !s->slvr_pndgwrts) {
 		DEBUG_SLVR(PLL_INFO, s, "replace onto crcSlvrs");
 		lc_addqueue(&crcqSlvrs, s);
 
