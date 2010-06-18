@@ -74,24 +74,32 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 {
 	struct fcmh_cli_info *fci;
 
-	fci = fcmh_get_pri(fcmh);
+	fci = fcmh_get_pri(fcmh);	
 	memset(fci, 0, sizeof(*fci));
 	slc_fcmh_refresh_age(fcmh);
 
-	if (fcmh_isdir(fcmh) || fcmh_2_fid(fcmh) == 1) {
+	fci->fci_mode = fcmh->fcmh_sstb.sst_mode;
+	
+	if (fci->fci_mode && (fcmh_isdir(fcmh) || fcmh_2_fid(fcmh) == 1)) {
 		DIRCACHE_INIT(fcmh, &dircacheMgr);
-	}
+		fci->fci_init = 1;
+	} 
 	return (0);
 }
 
 void
 slc_fcmh_dtor(struct fidc_membh *fcmh)
 {
+
 	if (fcmh_isdir(fcmh)) {
 		struct fcmh_cli_info *fci;
-
+		
 		fci = fcmh_get_pri(fcmh);
-		psc_assert(psclist_empty(&fci->fci_dci.di_list));
+
+		if (!fci->fci_init)
+			psc_assert(psclist_disjoint(&fci->fci_dci.di_list));
+		else
+			psc_assert(psclist_empty(&fci->fci_dci.di_list));
 	}
 }
 

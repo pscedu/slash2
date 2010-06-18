@@ -41,6 +41,8 @@ struct cli_finfo {
 
 struct fcmh_cli_info {
 	struct timeval           fci_age;
+	int                      fci_mode;
+	int                      fci_init;
 	union {
 		struct cli_finfo     f;
 		struct dircache_info d;

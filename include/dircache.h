@@ -106,13 +106,15 @@ dirent_sort_cmp(const void *x, const void *y)
 
 #define DIRCACHE_INIT(fcmh, mgr)					\
 	do {								\
-		if (!fcmh_2_fci(fcmh)->fci_dci.di_fcmh)			\
+		if (!fcmh_2_fci(fcmh)->fci_init) {			\
 			dircache_init_info(&fcmh_2_fci(fcmh)->fci_dci,	\
-			    (fcmh), (mgr));				\
+					   (fcmh), (mgr));		\
+			fcmh_2_fci(fcmh)->fci_init = 1;			\
+		}							\
 	} while (0)
 
 #define DIRCACHE_INITIALIZED(fcmh)					\
-	(fcmh_2_fci(fcmh)->fci_dci.di_fcmh ? 1 : 0)
+	(fcmh_2_fci(fcmh)->fci_init)
 
 void
 dircache_init(struct dircache_mgr *, const char *, size_t);

@@ -850,8 +850,12 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	mq->fg = d->fcmh_fg;
 	mq->size = size;
 	mq->offset = off;
-
-	psc_assert(DIRCACHE_INITIALIZED(d));
+	
+	if (!DIRCACHE_INITIALIZED(d)) {
+		FCMH_LOCK(d);
+		DIRCACHE_INIT(d, &dircacheMgr);
+		FCMH_ULOCK(d);
+	}
 	e = dircache_new_ents(&fcmh_2_fci(d)->fci_dci, size);
 
 	iov[niov].iov_base = e->de_base;
@@ -1409,13 +1413,13 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
-	c = fidc_lookup_fid(ino);
-	if (!c) {
-		rc = EINVAL;
-		goto out;
-	}
-
 	slash2fuse_getcred(req, &cr);
+
+	rc = fidc_lookup_load_inode(ino, &c);
+	if (rc)	
+		goto out;
+
+
 	rc = checkcreds(&c->fcmh_sstb, &cr, W_OK);
 	if (rc)
 		goto out;
@@ -1455,7 +1459,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	fcmh_setattr(c, &mp->attr, (mq->to_set & SRM_SETATTRF_SIZE) ?
 		     FCMH_SETATTRF_NONE : FCMH_SETATTRF_SAVESIZE);
 	sl_internalize_stat(&mp->attr, stb);
-	fuse_reply_attr(req, stb, 0.0);
+	fuse_reply_attr(req, stb, MSL_FUSE_ATTR_TIMEO);
 
  out:
 	if (rc) {
