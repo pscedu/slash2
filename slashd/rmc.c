@@ -256,8 +256,8 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, mq->rw);
 
 	memcpy(&mp->bcw, 
-	       (struct srm_bmap_cli_wire *)bmap->bcm_od->bh_crcstates,
-	       sizeof(struct srm_bmap_cli_wire *));
+	       (struct srt_bmap_cli_wire *)bmap->bcm_od->bh_crcstates,
+	       sizeof(struct srt_bmap_cli_wire));
 
 	if (mp->flags & SRM_GETBMAPF_GETREPLTBL) {
 		struct slash_inode_handle *ih;
