@@ -882,7 +882,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		struct fidc_membh *fcmh;
 		struct srm_getattr_rep *attr = iov[1].iov_base;
 
-		for (i = 0; i < mp->num; i++, attr++) {
+		if (mp->num < mq->nstbpref)
+			mq->nstbpref = mp->num;
+
+		for (i = 0; i < mq->nstbpref; i++, attr++) {
 			if (attr->rc || !attr->attr.sst_ino)
 				continue;
 
