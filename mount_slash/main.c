@@ -352,8 +352,8 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	m->fcmh_state |= FCMH_CLI_HAVEREPLTBL;
 	FCMH_ULOCK(m);
 
-	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD |
-	    BMAPGETF_NORETRIEVE, &bcm);
+	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD | BMAPGETF_NORETRIEVE, 
+	       &bcm);
 	if (rc)
 		goto out;
 
@@ -896,7 +896,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			    &attr->attr, FCMH_SETATTRF_SAVESIZE, &fcmh);
 
 			if (fcmh)
-				fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+				fcmh_op_done_type(fcmh, 
+					  FCMH_OPCNT_LOOKUP_FIDC);
 		}
 	}
 	/* Establish these dirents in our cache.  Do this before replying

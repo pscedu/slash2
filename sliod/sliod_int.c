@@ -124,10 +124,8 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 {
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
-	struct pscrpc_bulk_desc *desc;
 	struct srm_bmap_wire_req *mq;
 	struct srm_bmap_wire_rep *mp;
-	struct iovec iov;
 	int rc;
 
 	if (rw != SL_READ)
@@ -151,19 +149,15 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	memcpy(&mq->fg, &b->bcm_fcmh->fcmh_fg, sizeof(mq->fg));
 	//memcpy(&mq->sbdb, sbdb, sizeof(*sbdb));
 
-	iov.iov_len = sizeof(struct slash_bmap_wire);
-	iov.iov_base = bmap_2_biodi_wire(b) =
-		PSCALLOC(sizeof(struct slash_bmap_wire));
-
-	rc = rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMI_BULK_PORTAL, &iov, 1);
-	if (rc) {
-		psc_error("rsx_bulkclient() failed rc=%d ", rc);
-		goto out;
-	}
 	rc = SL_RSX_WAITREP(rq, mp);
-	if (rc == 0)
+	if (rc == 0) {
 		rc = mp->rc;
-	if (rc) {
+		bmap_2_biodi_wire(b) = 
+			PSCALLOC(sizeof(struct srt_bmap_wire));
+
+		memcpy(bmap_2_biodi_wire(b), &mp->wire, 
+		       sizeof(struct srt_bmap_wire));
+	} else {
 		DEBUG_BMAP(PLL_ERROR, b, "req failed (%d)", rc);
 		goto out;
 	}

@@ -630,7 +630,7 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 
 	slvr_2_biod(s)->biod_crcdrty_slvrs++;
 
-	DEBUG_SLVR(PLL_INFO, s, "try to queue for rpc (ndirty=%u)", 
+	DEBUG_SLVR(PLL_INFO, s, "crc sched (ndirty slvrs=%u)", 
 		   slvr_2_biod(s)->biod_crcdrty_slvrs);
 
 	s->slvr_flags &= ~SLVR_LRU;

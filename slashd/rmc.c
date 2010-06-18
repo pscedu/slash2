@@ -156,70 +156,17 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	return (0);
 }
 
-/**
- * slm_rmc_getbmap_common - Handle common GETBMAP code.  This routine
- *	is used by GETBMAP and CREATE for granting an ION/CLI a bmap
- *	lease.
- * @fcmh: file.
- * @prefios: preferred IOS input, actual IOS assigned output.
- * @bmapno: bmap index number.
- * @rw: read/write mode for bmap access.
- * @flags: SRM_GETBMAPF_* flags for input/output.
- * @nrepls: number of entries in inode replica table.
- * @sbd: value-result bmap descriptor.
- */
-__static int
-slm_rmc_getbmap_common(struct fidc_membh *fcmh, sl_ios_id_t prefios,
-    sl_bmapno_t bmapno, enum rw rw, uint32_t *flags, uint32_t *nrepls,
-    struct srt_bmapdesc *sbd, struct pscrpc_request *rq, int bulk)
+static void
+slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap, struct srt_bmapdesc *sbd, 
+	       enum rw rw)
 {
-	struct slash_bmap_cli_wire *cw;
-	struct pscrpc_bulk_desc *desc;
-	struct bmap_mds_info *bmdsi;
-	struct bmapc_memb *bmap;
-	struct iovec iov[3];
-	int niov = 0, rc;
-
-	if (rw != SL_READ && rw != SL_WRITE)
-		return (EINVAL);
-
-	bmap = NULL;
-	rc = mds_bmap_load_cli(fcmh, bmapno, *flags, rw, prefios,
-	    sbd, rq->rq_export, &bmap);
-	if (rc)
-		return (rc);
-
-	bmdsi = bmap->bcm_pri;
-	cw = (struct slash_bmap_cli_wire *)bmap->bcm_od->bh_crcstates;
-
-	if (bulk) {
-		iov[niov].iov_base = cw;
-		iov[niov].iov_len = sizeof(*cw);
-		niov++;
-	}
-
-	if (*flags & SRM_GETBMAPF_GETREPLTBL) {
-		struct slash_inode_handle *ih;
-
-		ih = fcmh_2_inoh(bmap->bcm_fcmh);
-		*nrepls = ih->inoh_ino.ino_nrepls;
-
-		iov[niov].iov_base = ih->inoh_ino.ino_repls;
-		iov[niov].iov_len = sizeof(sl_replica_t) * SL_DEF_REPLICAS;
-		niov++;
-
-		if (*nrepls > SL_DEF_REPLICAS) {
-			mds_inox_ensure_loaded(ih);
-			iov[niov].iov_base = ih->inoh_extras->inox_repls;
-			iov[niov].iov_len = sizeof(ih->inoh_extras->inox_repls);
-			niov++;
-		}
-	}
-
+	
 	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = bmap->bcm_bmapno;
 
 	if (rw == SL_WRITE) {
+		struct bmap_mds_info *bmdsi=bmap->bcm_pri;
+
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		sbd->sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
 		sbd->sbd_ios_id = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_res->res_id;
@@ -227,14 +174,6 @@ slm_rmc_getbmap_common(struct fidc_membh *fcmh, sl_ios_id_t prefios,
 		sbd->sbd_ion_nid = LNET_NID_ANY;
 		sbd->sbd_ios_id = IOS_ID_ANY;
 	}
-
-	if (niov) {
-		rc = rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE,
-		    SRMC_BULK_PORTAL, iov, niov);
-		if (desc)
-			pscrpc_free_bulk(desc);
-	}
-	return (rc);
 }
 
 /**
@@ -294,18 +233,51 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	const struct srm_getbmap_req *mq;
 	struct srm_getbmap_rep *mp;
 	struct fidc_membh *fcmh;
+	struct bmapc_memb *bmap=NULL;
+	struct bmap_mds_info *bmdsi;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		return (mp->rc);
 	mp->flags = mq->flags;
-	mp->rc = slm_rmc_getbmap_common(fcmh, mq->prefios, mq->bmapno,
-	    mq->rw, &mp->flags, &mp->nrepls, &mp->sbd, rq, 1);
 
+	if (mq->rw != SL_READ && mq->rw != SL_WRITE)
+		return ((mp->rc = EINVAL));
+
+	bmap = NULL;
+	mp->rc = mds_bmap_load_cli(fcmh, mq->bmapno, mq->rw, mq->flags, 
+	   mq->prefios, &mp->sbd, rq->rq_export, &bmap);
+	if (mp->rc)
+		return (mp->rc);
+
+	bmdsi = bmap->bcm_pri;
+
+	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, mq->rw);
+
+	memcpy(&mp->bcw, 
+	       (struct srm_bmap_cli_wire *)bmap->bcm_od->bh_crcstates,
+	       sizeof(struct srm_bmap_cli_wire *));
+
+	if (mp->flags & SRM_GETBMAPF_GETREPLTBL) {
+		struct slash_inode_handle *ih;
+
+		ih = fcmh_2_inoh(fcmh);
+		mp->nrepls = ih->inoh_ino.ino_nrepls;
+		memcpy(&mp->reptbl[0], &ih->inoh_ino.ino_repls, 
+		       sizeof(ih->inoh_ino.ino_repls));
+
+		if (mp->nrepls > SL_DEF_REPLICAS) {
+			mds_inox_ensure_loaded(ih);
+			memcpy(&mp->reptbl[SL_DEF_REPLICAS], 
+			       &ih->inoh_extras->inox_repls, 
+			       sizeof(ih->inoh_extras->inox_repls));
+		}
+	}
+	
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
-	return (mp->rc);
+	return (0);
 }
 
 int
@@ -389,6 +361,7 @@ int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
 	struct fidc_membh *p, *fcmh;
+	struct bmapc_memb *bmap;
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
 	void *mdsio_data;
@@ -433,9 +406,14 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	//	DEBUG_FCMH(PLL_WARN, p, "release op done for %s", mq->name);
 
 	mp->flags = mq->flags;
-	mp->rc2 = slm_rmc_getbmap_common(fcmh, mq->prefios, 0,
-	    SL_WRITE, &mp->flags, NULL, &mp->sbd, rq, 0);
-	//	DEBUG_FCMH(PLL_WARN, p, "getbmap op done for %s", mq->name);
+
+	bmap = NULL;
+	mp->rc2 = mds_bmap_load_cli(fcmh, 0, SL_WRITE, mp->flags, 
+			    mq->prefios, &mp->sbd, rq->rq_export, &bmap);
+	if (mp->rc)
+		goto out;
+
+	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, SL_WRITE);
 
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
  out:

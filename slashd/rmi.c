@@ -50,9 +50,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 {
 	struct srm_bmap_wire_req *mq;
 	struct srm_bmap_wire_rep *mp;
-	struct pscrpc_bulk_desc *desc;
 	struct bmapc_memb *b=NULL;
-	struct iovec iov;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 #if 0
@@ -77,13 +75,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 
 	DEBUG_BMAP(PLL_INFO, b, "sending to sliod");
 
-	iov.iov_len = sizeof(struct slash_bmap_wire);
-	iov.iov_base = b->bcm_od;
-
-	rsx_bulkserver(rq, &desc, BULK_PUT_SOURCE, SRMI_BULK_PORTAL, &iov, 1);
-	if (desc)
-		pscrpc_free_bulk(desc);
-
+	memcpy(&mp->wire, b->bcm_od, sizeof(struct srt_bmap_wire));
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 
 	return (0);

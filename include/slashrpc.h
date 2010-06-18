@@ -30,6 +30,7 @@
 #include "creds.h"
 #include "fid.h"
 #include "sltypes.h"
+#include "cache_params.h"
 
 struct stat;
 struct statvfs;
@@ -293,20 +294,12 @@ struct srm_getbmap_req {
 
 struct srm_getbmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
-	uint32_t		flags;		/* see SRM_BMAPF_* flags */
-	uint32_t		nrepls;		/* if SRM_GETBMAPF_GETREPLTBL */
+	struct srt_bmap_cli_wire bcw;
 	uint32_t		rc;		/* 0 for success or slerrno */
-	int32_t			_pad;
-/*
- * Bulk data contents:
- *
- *	+-----------------------+-----------------------------------------------+
- *	| data type		| description					|
- *	+-----------------------+-----------------------------------------------+
- *	| struct slash_bmap_od	| bmap contents					|
- *	| sl_replica_t		| inode replica index list (if GETREPLTBL)	|
- *	+-----------------------+-----------------------------------------------+
- */
+	int32_t                 _pad;
+	uint32_t		flags;		/* see SRM_BMAPF_* flags */
+	uint32_t		nrepls;		/* if SRM_GETBMAPF_GETREPLTBL*/
+	sl_replica_t            reptbl[SL_MAX_REPLICAS];
 } __packed;
 
 /*
@@ -320,18 +313,10 @@ struct srm_bmap_wire_req {
 } __packed;
 
 struct srm_bmap_wire_rep {
+	struct srt_bmap_wire    wire;
 	uint64_t		minseq;
 	int32_t			rc;
 	int32_t			_pad;
-/*
- * Bulk data contains a number of the following structures:
- *
- *      +-------------------------+---------------+
- *      | data type               | description   |
- *      +-------------------------+---------------+
- *      | struct slash_bmap_od    | bmap contents |
- *      +-------------------------+---------------+
- */
 } __packed;
 
 struct srm_bmap_chwrmode_req {

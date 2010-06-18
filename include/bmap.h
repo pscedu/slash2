@@ -41,6 +41,8 @@
 #include "psc_util/lock.h"
 #include "psc_util/waitq.h"
 
+#include "cache_params.h"
+#include "slashrpc.h"
 #include "fid.h"
 #include "fidcache.h"
 
@@ -62,7 +64,7 @@ struct bmapc_memb {
 	psc_spinlock_t		 bcm_lock;
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry    */
 	struct psclist_head	 bcm_lentry;	/* free pool */
-	struct slash_bmap_od	*bcm_od;	/* on-disk representation */
+	struct srt_bmap_wire	*bcm_od;	/* on-disk representation */
 	void			*bcm_pri;	/* bmap_mds_info, bmap_cli_info, or bmap_iod_info */
 #define bcm_blkno bcm_bmapno
 };
@@ -114,19 +116,6 @@ struct bmapc_memb {
 	_DEBUG_BMAP(__FILE__, __func__, __LINE__, (level), (b), fmt,	\
 	    ## __VA_ARGS__)
 
-/*
- *   Each bmapod uses a char array as a bitmap to track which
- *   stores the bmap is replicated to.
- */
-#define SL_BITS_PER_REPLICA	3
-#define SL_REPLICA_MASK		((uint8_t)((1 << SL_BITS_PER_REPLICA) - 1))
-
-/* must be 64-bit aligned */
-#define SL_REPLICA_NBYTES	((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) / NBBY)
-
-#define SL_BMAP_SIZE		SLASH_BMAP_SIZE
-#define SL_BMAP_CRCSIZE		(1024 * 1024)
-#define SL_CRCS_PER_BMAP	(SL_BMAP_SIZE / SL_BMAP_CRCSIZE)	/* must be 64-bit aligned in bytes */
 
 /* per-replica states */
 #define SL_REPLST_INACTIVE	0
@@ -136,39 +125,8 @@ struct bmapc_memb {
 #define SL_REPLST_TRUNCPNDG	4
 #define SL_NREPLST		5
 
-/*
- * Associate a CRC with a generation ID for a block.
- */
-typedef struct slash_gencrc {
-	psc_crc64_t		gc_crc;
-} sl_gcrc_t;
 
-struct slash_bmap_cli_wire {
-	uint8_t			bw_crcstates[SL_CRCS_PER_BMAP];
-	uint8_t			bw_repls[SL_REPLICA_NBYTES];
-} __packed;
-
-/**
- * slash_bmap_od - slash bmap over-wire/on-disk structure.  This
- *	structure maps the persistent state of the bmap within the
- *	inode's metafile.
- * @bh_gen: current generation number.
- * @bh_crcs: the crc table, one 8 byte crc per sliver.
- * @bh_crcstates: some bits for describing the state of a sliver.
- * @bh_repls: bitmap used for tracking the replication status of this bmap.
- * @bh_bhcrc: on-disk checksum.
- */
-#define slash_bmap_wire slash_bmap_od
-struct slash_bmap_od {
-	sl_gcrc_t		bh_crcs[SL_CRCS_PER_BMAP];
-	uint8_t			bh_crcstates[SL_CRCS_PER_BMAP];
-	uint8_t			bh_repls[SL_REPLICA_NBYTES];
-	sl_bmapgen_t		bh_gen;
-	uint32_t		bh_repl_policy;
-
-	/* the CRC must be at the end */
-	psc_crc64_t		bh_bhcrc;
-};
+#define slash_bmap_od srt_bmap_wire
 
 #define	BMAP_OD_SZ		(sizeof(struct slash_bmap_od))
 #define	BMAP_OD_CRCSZ		(BMAP_OD_SZ - (sizeof(psc_crc64_t)))

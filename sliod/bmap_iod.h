@@ -95,7 +95,7 @@ struct bmap_iod_info {
 	struct bmapc_memb	*biod_bmap;
 	struct biod_crcup_ref	*biod_bcr;
 	struct biod_slvrtree	 biod_slvrs;
-	struct slash_bmap_wire	*biod_bmap_wire;
+	struct srt_bmap_wire	*biod_bmap_wire;
 	struct psclist_head	 biod_lentry;
 	struct timespec		 biod_age;
 	uint64_t		 biod_bcr_xid;

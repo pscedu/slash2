@@ -25,7 +25,9 @@
 
 #include <stdint.h>
 
+#include "psc_util/crc.h"
 #include "pfl/cdefs.h"
+#include "cache_params.h"
 
 typedef uint32_t sl_bmapno_t;		/* file block map index */
 typedef uint32_t sl_bmapgen_t;		/* file block map generation */
@@ -72,6 +74,41 @@ typedef struct slash_replica {
 
 #define SL_DEF_REPLICAS         4
 #define SL_MAX_REPLICAS		64
+
+/*
+ * Associate a CRC with a generation ID for a block.
+ */
+typedef struct slash_gencrc {
+	psc_crc64_t		gc_crc;
+} sl_gcrc_t;
+
+/**       
+ * srt_bmap_wire - slash bmap over-wire/on-disk structure.  This 
+ *      structure maps the persistent state of the bmap within the 
+ *      inode's metafile.                     
+ * @bh_gen: current generation number.       
+ * @bh_crcs: the crc table, one 8 byte crc per sliver.  
+ * @bh_crcstates: some bits for describing the state of a sliver.
+ * @bh_repls: bitmap used for tracking the replication status of this bmap.
+ * @bh_bhcrc: on-disk checksum.     
+*/
+struct srt_bmap_wire {
+	sl_gcrc_t               bh_crcs[SL_CRCS_PER_BMAP];
+        uint8_t                 bh_crcstates[SL_CRCS_PER_BMAP];
+        uint8_t                 bh_repls[SL_REPLICA_NBYTES];
+        sl_bmapgen_t            bh_gen;
+        uint32_t                bh_repl_policy;
+	/* the CRC must be at the end */
+        psc_crc64_t             bh_bhcrc;
+};
+
+/* Must match struct slash_bmap_od!
+ */
+struct srt_bmap_cli_wire {
+	uint8_t                 crcstates[SL_CRCS_PER_BMAP];
+        uint8_t                 repls[SL_REPLICA_NBYTES];
+} __packed;
+
 
 /* Slash RPC transportably safe structures. */
 struct srt_stat {

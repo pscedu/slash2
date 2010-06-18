@@ -564,16 +564,14 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 int
 msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 {
-	int rc, getreptbl = 0, niov = 0;
+	int rc, getreptbl = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct pscrpc_bulk_desc *desc;
 	struct bmap_cli_info *msbd;
 	struct srm_getbmap_req *mq;
 	struct srm_getbmap_rep *mp;
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
-	struct iovec iovs[2];
 
 	psc_assert(bmap->bcm_mode & BMAP_INIT);
 	psc_assert(bmap->bcm_pri);
@@ -607,26 +605,15 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 
 	msbd = bmap->bcm_pri;
 
-	iovs[niov].iov_base = &msbd->msbd_msbcr;
-	iovs[niov].iov_len  = sizeof(msbd->msbd_msbcr);
-	niov++;
-
-	if (getreptbl) {
-		iovs[niov].iov_base = &fci->fci_reptbl;
-		iovs[niov].iov_len  = sizeof(fci->fci_reptbl);
-		niov++;
-	}
-
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (bmapno=%u) (rw=%d)",
 	    bmap->bcm_bmapno, rw);
 
-	rsx_bulkclient(rq, &desc, BULK_PUT_SINK,
-	    SRMC_BULK_PORTAL, iovs, niov);
-
 	rc = SL_RSX_WAITREP(rq, mp);
-	if (rc == 0)
+	if (rc == 0) {
 		rc = mp->rc;
-	if (rc)
+		memcpy(&msbd->msbd_msbcr, &mp->bcw.crcstates, 
+		       sizeof(struct msbmap_crcrepl_states));
+	} else
 		goto out;
 
 	FCMH_LOCK(f);
@@ -638,7 +625,9 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 		 *   the local replication table..
 		 */
 		fci->fci_nrepls = mp->nrepls;
-		f->fcmh_state |= FCMH_CLI_HAVEREPLTBL;
+		memcpy(&fci->fci_reptbl, &mp->reptbl, 
+		       sizeof(sl_replica_t) * SL_MAX_REPLICAS);
+		f->fcmh_state |= FCMH_CLI_HAVEREPLTBL;		
 		psc_waitq_wakeall(&f->fcmh_waitq);
 	}
 
