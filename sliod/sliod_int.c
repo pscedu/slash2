@@ -184,8 +184,10 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	/* Unblock threads no matter what.
 	 *  XXX need some way to denote that a crcget rpc failed?
 	 */
-	if (rc)
+	if (rc) {
 		PSCFREE(bmap_2_biodi_wire(b));
+		DEBUG_BMAP(PLL_ERROR, b, "rc=%d, freed bmap_2_biodi_wire", rc);
+	}
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)

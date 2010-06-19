@@ -266,7 +266,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		rc = sli_fcmh_get(&bid->fg, &f);
 		psc_assert(rc == 0);
 
-		rc = bmap_get_noretr(f, bid->bmapno, SL_READ, &b);
+		rc = bmap_get(f, bid->bmapno, SL_WRITE, &b);
 		if (rc) {
 			mp->bidrc[i] = rc;
 			psc_errorx("failed to load bmap %u", bid->bmapno);
