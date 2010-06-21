@@ -81,6 +81,15 @@ dircache_rls_ents(struct dircache_ents *e)
 	fcmh_op_done_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
 }
 
+void
+dircache_setfreeable_ents(struct dircache_ents *e)
+{
+	e->de_freeable = 1;
+	if (!e->de_remlookup) 
+		dircache_rls_ents(e);	
+}
+
+
 slfid_t
 dircache_lookup(struct dircache_info *i, const char *name, int flag)
 {
@@ -140,12 +149,11 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	 *   assume that fuse has an entry cached for each and free
 	 *   the buffer.
 	 */
-	if (found && !e->de_remlookup) {
+	if (found && !e->de_remlookup && e->de_freeable) {
 		/* de_freeable should only be set prior to the completion
 		 *   of the readdir.  The ents are fair game for freeing
 		 *   any time after that.
 		 */
-		psc_assert(e->de_freeable);
 		dircache_rls_ents(e);
 	}
 

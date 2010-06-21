@@ -76,11 +76,6 @@ enum dircache_flags {
 	DC_LOOKUP = (1 << 1)	/* Item was accessed via lookup */
 };
 
-static __inline void
-dircache_setfreeable_ents(struct dircache_ents *e)
-{
-	e->de_freeable = 1;
-}
 
 static __inline int
 dirent_cmp(const void *a, const void *b)
@@ -135,4 +130,6 @@ dircache_reg_ents(struct dircache_ents *, size_t);
 void
 dircache_earlyrls_ents(struct dircache_ents *);
 
+void
+dircache_setfreeable_ents(struct dircache_ents *);
 #endif
