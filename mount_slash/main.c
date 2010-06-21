@@ -193,12 +193,13 @@ __static void
 slash2fuse_fill_entry(struct fuse_entry_param *e,
       const struct slash_fidgen *fgp, const struct stat *stb)
 {
-	memset(e, 0, sizeof(*e));
-	e->attr_timeout = MSL_FUSE_ATTR_TIMEO;
 	e->entry_timeout = MSL_FUSE_ENTRY_TIMEO;
 	e->ino = fgp->fg_fid;
-	e->generation = fgp->fg_gen;
-	memcpy(&e->attr, stb, sizeof(e->attr));
+	if (e->ino) {
+		e->attr_timeout = MSL_FUSE_ATTR_TIMEO;
+		memcpy(&e->attr, stb, sizeof(e->attr));
+		e->generation = fgp->fg_gen;
+	}
 
 	psc_trace("inode:%lu generation:%lu", e->ino, e->generation);
 	dump_statbuf(PLL_TRACE, &e->attr);
@@ -1064,10 +1065,14 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 
 	slash2fuse_getcred(req, &cr);
 	rc = msl_lookup_fidcache(&cr, parent, name, &fg, &sstb);
-	if (rc)
+	if (rc && rc != ENOENT)
 		fuse_reply_err(req, rc);
-	else
+	else {
+		if (rc == ENOENT)
+			fg.fg_fid = 0;
+
 		slash2fuse_reply_entry(req, &fg, &sstb);
+	}
 }
 
 __static void
