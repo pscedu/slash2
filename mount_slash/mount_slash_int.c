@@ -662,7 +662,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chwrmode_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_bmap_chwrmode_rep *mp;
 	int rc;
 
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
@@ -687,11 +687,14 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	if (rc)
 		goto out;
 
+	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
 	mq->sbd = *bmap_2_sbd(b);
 	mq->prefios = prefIOS;
 	rc = SL_RSX_WAITREP(rq, mp);
-	if (rc == 0)
+	if (rc == 0) 
 		rc = mp->rc;
+
+	memcpy(bmap_2_sbd(b), &mp->sbd, sizeof(struct srt_bmapdesc));
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
