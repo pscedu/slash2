@@ -814,14 +814,16 @@ void
 mds_journal_init(void)
 {
 	int n;
+	uint64_t txg;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
 	char fn[PATH_MAX];
 	struct sl_mds_peerinfo *peerinfo;
 
+	txg = mdsio_first_txg();
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
-	mdsJournal = pjournal_init(fn, SLMTHRT_JRNL_DISTILL, "slmjdistthr",
+	mdsJournal = pjournal_init(fn, txg, SLMTHRT_JRNL_DISTILL, "slmjdistthr",
 	    mds_replay_handler, mds_distill_handler);
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", fn);

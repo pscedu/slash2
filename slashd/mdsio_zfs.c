@@ -336,6 +336,12 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr,
 	return (zfsslash2_rmdir(pino, cpn, cr, logfunc));
 }
 
+uint64_t
+mdsio_first_txg(void)
+{
+	return(zfsslash2_first_txg());
+}
+
 /*
  * Wrappers to replay the namespace operations performed on the remote MDS.
  */
