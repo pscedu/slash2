@@ -222,7 +222,10 @@ main(int argc, char *argv[])
 
 	slcfg_parse(cfn);
 
-	/* Initialize the mdsio layer. */
+	/* 
+	 * Initialize the mdsio layer. There is where ZFS threads
+	 * are started and ZFS pool is imported.
+	 */
 	mdsio_init();
 	import_zpool(argv[0], zfspoolcf);
 
