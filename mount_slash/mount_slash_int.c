@@ -688,7 +688,6 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 		goto out;
 
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
-	mq->sbd = *bmap_2_sbd(b);
 	mq->prefios = prefIOS;
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0) 
