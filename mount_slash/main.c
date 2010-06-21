@@ -421,7 +421,11 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		 *   means that dir fcmh's can't be initialized fully until
 		 *   here.
 		 */
-		DIRCACHE_INIT(c, &dircacheMgr);
+		if (!DIRCACHE_INITIALIZED(c)) {
+			FCMH_LOCK(c);
+			DIRCACHE_INIT(c, &dircacheMgr);
+			FCMH_ULOCK(c);
+		}
 	} else {
 		if (fi->flags & O_DIRECTORY) {
 			rc = ENOTDIR;
@@ -1019,6 +1023,12 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	if (!p)
 		goto out;
 
+	if (!DIRCACHE_INITIALIZED(p)) {
+		FCMH_LOCK(p);
+		DIRCACHE_INIT(p, &dircacheMgr);
+		FCMH_ULOCK(p);
+	}
+
 	child = dircache_lookup(&fcmh_2_fci(p)->fci_dci, name, DC_LOOKUP);
 	/* It's ok to unref the parent now.
 	 */
@@ -1444,7 +1454,8 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	mq->attr.sst_ptruncgen = fcmh_2_ptruncgen(c);
 
 	if (mq->to_set && SRM_SETATTRF_SIZE)
-		DEBUG_FCMH(PLL_WARN, c, "truncate!");
+		DEBUG_FCMH(PLL_WARN, c, "truncate (sz=%"PRId64")", 
+			   stb->st_size);
 
 	/*
 	 * Even though we know our fid, we expect the server to fill it
