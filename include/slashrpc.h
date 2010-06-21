@@ -262,6 +262,8 @@ struct srt_bmapdesc {
 	uint64_t			sbd_ion_nid;	/* owning I/O node if write */
 	sl_ios_id_t			sbd_ios_id;
 	sl_bmapno_t			sbd_bmapno;
+	uint32_t                        sbd_flags;
+	uint32_t                        sbd__pad;
 };
 
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
@@ -297,7 +299,7 @@ struct srm_getbmap_rep {
 	struct srt_bmap_cli_wire bcw;
 	uint32_t		rc;		/* 0 for success or slerrno */
 	int32_t                 _pad;
-	uint32_t		flags;		/* see SRM_BMAPF_* flags */
+	uint32_t		flags;		/* see SRM_GETBMAPF_* flags */
 	uint32_t		nrepls;		/* if SRM_GETBMAPF_GETREPLTBL*/
 	sl_replica_t            reptbl[SL_MAX_REPLICAS];
 } __packed;

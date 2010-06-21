@@ -163,6 +163,8 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap, struct srt_bmapdesc *sbd,
 	
 	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = bmap->bcm_bmapno;
+	if (bmap->bcm_mode & BMAP_DIO)
+		sbd->sbd_flags |= SRM_GETBMAPF_DIRECTIO;
 
 	if (rw == SL_WRITE) {
 		struct bmap_mds_info *bmdsi=bmap->bcm_pri;
@@ -252,6 +254,9 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		return (mp->rc);
 
 	bmdsi = bmap->bcm_pri;
+
+	if (mq->flags & SRM_GETBMAPF_DIRECTIO)
+		mp->sbd.sbd_flags |= SRM_GETBMAPF_DIRECTIO;
 
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, mq->rw);
 
