@@ -52,6 +52,7 @@ struct bmap_mds_info {
 	uint64_t			 bmdsi_seq;     /* Largest write bml seq # */
 	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
 	uint32_t			 bmdsi_writers;
+	uint32_t			 bmdsi_readers;
 	int				 bmdsi_flags;
 };
 
