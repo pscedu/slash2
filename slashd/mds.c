@@ -202,7 +202,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 		 *   valid one.
 		 */
 	issue_sync_cb:
-		bml = pll_gethdtail(&bmdsi->bmdsi_leases);
+		bml = pll_gettlpeek(&bmdsi->bmdsi_leases);
 		psc_assert(bml->bml_flags & BML_WRITE);
 		BMAP_ULOCK(b);
 		/* A failure here could be handled through the bmap timeout
