@@ -119,11 +119,11 @@ mds_replay_handler(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
 }
 
 /**
- * mds_shadow_handler - Distill information from the system journal and
+ * mds_distill_handler - Distill information from the system journal and
  *	write into change log files.
  */
 void
-mds_shadow_handler(struct psc_journal_enthdr *pje, __unusedx int size)
+mds_distill_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 {
 	int sz;
 	uint64_t seqno;
@@ -821,8 +821,8 @@ mds_journal_init(void)
 	struct sl_mds_peerinfo *peerinfo;
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
-	mdsJournal = pjournal_init(fn, SLMTHRT_JRNL_SHDW, "slmjshdwthr",
-	    mds_replay_handler, mds_shadow_handler);
+	mdsJournal = pjournal_init(fn, SLMTHRT_JRNL_DISTILL, "slmjdistthr",
+	    mds_replay_handler, mds_distill_handler);
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", fn);
 

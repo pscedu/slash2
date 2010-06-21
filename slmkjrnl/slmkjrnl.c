@@ -54,7 +54,7 @@ main(int argc, char *argv[])
 	pfl_init();
 	options = PJH_OPT_NONE;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "D:fqsv")) != -1)
+	while ((c = getopt(argc, argv, "D:fqv")) != -1)
 		switch (c) {
 		case 'D':
 			datadir = optarg;
@@ -64,9 +64,6 @@ main(int argc, char *argv[])
 			break;
 		case 'q':
 			query = 1;
-			break;
-		case 's':
-			options |= PJH_OPT_SHADOW;
 			break;
 		case 'v':
 			verbose = 1;
@@ -90,7 +87,7 @@ main(int argc, char *argv[])
 
 	if (format) {
 		rc = pjournal_format(fn, SLJ_MDS_JNENTS,
-		    SLJ_MDS_ENTSIZE, SLJ_MDS_RA, options);
+		    SLJ_MDS_ENTSIZE, SLJ_MDS_RA);
 		if (rc)
 			psc_fatalx("failing formatting journal %s: %s",
 			    fn, slstrerror(rc));
