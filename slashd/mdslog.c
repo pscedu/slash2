@@ -116,9 +116,17 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 	return (0);
 }
 
+/*
+ * mds_redo_bmap_crc - replay a CRC update.  Because we only log
+ *     CRCs that have been changed in the bmap, this has to be a
+ *     read-modify-write process.
+ */
 static int
 mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 {
+	struct slmds_jent_crc *jcrc;
+	jcrc = (struct slmds_jent_crc *)pje->pje_data;
+
 	return (0);
 }
 
