@@ -114,7 +114,7 @@ mds_get_next_seqno(void)
  * mds_replay_handle - Handle journal replay events.
  */
 void
-mds_replay_handler(__unusedx struct psc_dynarray *logentrys, __unusedx int *rc)
+mds_replay_handler(struct psc_journal_enthdr *pje, __unusedx int *rc)
 {
 }
 
