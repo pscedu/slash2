@@ -315,15 +315,19 @@ TODO
 
 Partial Truncate (Jared):
 	- journal
-	- mark fcmh as frozen for writing
-	- mark inactive all bmaps extended past truncated region
-	- distill into garbage collection changelog to inform all IOS to reclaim data in these regions
-	- until success:
-		- select a primary IOS
-		- synchronously await response that the IOS has recalculated CRC
-	- invalidate/inactivate this bmap on all other IOS
-	- RPC replies should close the journal entry
-	- unfreeze fcmh
+	- wait until FMIF_TRUNCPNDG is gone
+	- create $ROOT/.sltruncs/<fid>-<truncpos>
+	- mark FMIF_TRUNCPNDG:
+		- truncations past this point completion_wait on this activity then succeeds
+		- bmaps write leases may not be granted for this bmap or any bmap beyond
+	- set fmi_ptruncpos
+	- mark SL_REPLST_GARBAGE all bmaps extended past truncated region, queue to garbage collector
+	- mark split bmap SL_REPLST_TRUNCPNDG on all replicas
+	- synchronously contact an IOS requesting CRC recalculation for sliver and
+	  mark SL_REPLST_ACTIVE on success
+	- mark SL_REPLST_GARBAGE for TRUNCPNDG replicas and notify garbage queuer
+	- if BMAP_PERSIST, notify replication queuer
+	- unmark FMIF_TRUNCPNDG
 	- reply to client
 
 unlink/Full truncate/O_TRUNC:
