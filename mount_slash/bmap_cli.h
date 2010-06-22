@@ -93,4 +93,6 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;
 
+void     msl_bmap_cache_rls(struct bmapc_memb *);
+
 #endif /* _SLASH_CLI_BMAP_H_ */

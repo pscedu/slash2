@@ -423,7 +423,6 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	PSCFREE(r);
 }
 
-
 struct msl_fhent *
 msl_fhent_new(struct fidc_membh *f)
 {
@@ -454,7 +453,7 @@ msl_bmap_init(struct bmapc_memb *b)
 	bmpc_init(&msbd->msbd_bmpc);
 }
 
-__static void
+void
 bmap_biorq_expire(struct bmapc_memb *b)
 {
 	struct bmpc_ioreq *biorq;
@@ -487,6 +486,27 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs));
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs));
 	BMAP_ULOCK(b);
+}
+
+/**
+ * msl_bmap_cache_rls - called from rcm.c (SRMT_BMAPDIO).
+ * @b:  the bmap whose cached pages should be released.
+ */
+void
+msl_bmap_cache_rls(struct bmapc_memb *b)
+{
+	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
+
+	psc_assert(b->bcm_mode & BMAP_DIO);
+
+	bmap_biorq_expire(b);
+	bmap_biorq_waitempty(b);
+
+	bmpc_lru_del(bmpc);
+	
+	BMPC_LOCK(bmpc);
+	bmpc_freeall_locked(bmpc);
+	BMPC_ULOCK(bmpc);
 }
 
 void
@@ -922,7 +942,8 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 int
-msl_io_rpcset_cb_old(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
+msl_io_rpcset_cb_old(__unusedx struct pscrpc_request_set *set, void *arg,
+		     int rc)
 {
 	struct bmpc_ioreq *r=arg;
 
@@ -1215,10 +1236,11 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	struct bmapc_memb *bcm;
 	struct bmap_cli_info *msbd;
 	struct bmap_pagecache_entry *bmpce;
-
+	
 	if (!((r->biorq_flags & BIORQ_READ)  ||
 	      (r->biorq_flags & BIORQ_RBWFP) ||
-	      (r->biorq_flags & BIORQ_RBWLP)))
+	      (r->biorq_flags & BIORQ_RBWLP)) ||
+	    (r->biorq_flags & BIORQ_DIO))
 		return;
 
 	bcm    = r->biorq_bmap;
