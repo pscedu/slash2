@@ -110,12 +110,65 @@ mds_get_next_seqno(void)
 	return (seqno);
 }
 
+static int
+mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
+{
+	return (0);
+}
+
+static int
+mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
+{
+	return (0);
+}
+
+static int
+mds_redo_bmap_seq(__unusedx struct psc_journal_enthdr *pje)
+{
+	return (0);
+}
+
+static int
+mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
+{
+}
+
+static int
+mds_redo_namespace(__unusedx struct psc_journal_enthdr *pje)
+{
+	return (0);
+}
+
 /**
  * mds_replay_handle - Handle journal replay events.
  */
 void
-mds_replay_handler(struct psc_journal_enthdr *pje, __unusedx int *rc)
+mds_replay_handler(struct psc_journal_enthdr *pje, int *rcp)
 {
+	int rc = 0;
+	uint16_t type;
+
+	type = pje->pje_type >> _PJE_FLSHFT;
+	switch (type) {
+	    case MDS_LOG_BMAP_REPL:
+		rc = mds_redo_bmap_repl(pje);
+		break;
+	    case MDS_LOG_BMAP_CRC:
+		rc = mds_redo_bmap_crc(pje);
+		break;
+	    case MDS_LOG_BMAP_SEQ:
+		rc = mds_redo_bmap_seq(pje);
+		break;
+	    case MDS_LOG_INO_ADDREPL:
+		rc = mds_redo_ino_addrepl(pje);
+		break;
+	    case MDS_LOG_NAMESPACE:
+		rc = mds_redo_namespace(pje);
+		break;
+	    default:
+		psc_fatal("mds_replay_handler(): invalid log entry type %d", type);
+	}
+	*rcp = rc;
 }
 
 /**

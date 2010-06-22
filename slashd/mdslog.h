@@ -32,11 +32,11 @@ struct slash_inode_handle;
 struct srm_bmap_crcup;
 
 enum {
-	MDS_LOG_BMAP_REPL	= _PJE_FLSHFT << 0,
-	MDS_LOG_BMAP_CRC	= _PJE_FLSHFT << 1,
-	MDS_LOG_BMAP_SEQ	= _PJE_FLSHFT << 2,
-	MDS_LOG_INO_ADDREPL	= _PJE_FLSHFT << 3,
-	MDS_LOG_NAMESPACE	= _PJE_FLSHFT << 4
+	MDS_LOG_BMAP_REPL	= (1 << (_PJE_FLSHFT + 0)),
+	MDS_LOG_BMAP_CRC	= (1 << (_PJE_FLSHFT + 1)),
+	MDS_LOG_BMAP_SEQ	= (1 << (_PJE_FLSHFT + 2)),
+	MDS_LOG_INO_ADDREPL	= (1 << (_PJE_FLSHFT + 3)),
+	MDS_LOG_NAMESPACE	= (1 << (_PJE_FLSHFT + 4))
 };
 
 /*
