@@ -44,9 +44,9 @@
  *    journal.
  */
 struct slmds_jent_crc {
-	slfid_t			sjc_fid;
+	uint64_t		sjc_fid;		/* FID of underlying file system (i.e., ZFS) */
 	sl_bmapno_t		sjc_bmapno;
-	sl_ios_id_t		sjc_ion; /* Track the ion which did the I/O */
+	sl_ios_id_t		sjc_ion;		/* Track the ion which did the I/O */
 	uint32_t		sjc_ncrcs;
 	uint64_t		sjc_fsize;
 	struct srm_bmap_crcwire	sjc_crc[SLJ_MDS_NCRCS];
