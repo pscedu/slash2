@@ -311,9 +311,7 @@ zfs
 
 ---------------
 
-TODO
-
-Partial Truncate (Jared):
+unlink, O_TRUNC, full & partial truncate:
 	- journal
 	- wait until FMIF_TRUNCPNDG is gone
 	- create $ROOT/.sltruncs/<fid>-<truncpos>
@@ -329,15 +327,7 @@ Partial Truncate (Jared):
 	- if BMAP_PERSIST, notify replication queuer
 	- unmark FMIF_TRUNCPNDG
 	- reply to client
-
-unlink/Full truncate/O_TRUNC:
-	- journal
-	- mark fcmh as frozen for writing
-	- delete bmap metadata
-	- distill into garbage collection changelog to inform all IOS to reclaim data in these regions
-	- RPC replies should close the journal entry
-	- unfreeze fcmh
-	- reply to client
+	- when SL_REPLST_GARBAGE all get fully reclaimed, delete metadata
 
 Graceful Service Failure (Jared):
    In the case of an MDS failure, SLIOD and MS should not abort.
