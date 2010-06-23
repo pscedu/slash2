@@ -343,3 +343,11 @@ management also.  An odtable entry could be used for every SLIOD
 connect.
 
 - fix cscope: remove the curdir when the parent includes it
+
+utime
+   (o) actually set fcmh_sstb in mount_slash on WRITEs
+   (o) track how long sliod has held the I/O and send the difference to the MDS
+       so the MDS can more accurately estimate when the I/O took place
+   (o) cache utimes like we save the file size
+
+
