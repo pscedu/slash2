@@ -52,6 +52,8 @@ static struct pscrpc_nbreqset	*logPndgReqs;
 
 static int			 logentrysize;
 
+extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
+
 /*
  * Eventually, we are going to retrieve the namespace update sequence number
  * from the system journal.
@@ -175,6 +177,21 @@ static int
 mds_redo_namespace(__unusedx struct psc_journal_enthdr *pje)
 {
 	return (0);
+}
+
+void
+mds_embed_handler(void)
+{
+	int locked;
+	struct slmds_jent_bmapseq sjbsq;
+
+	locked = reqlock(&mdsBmapTimeoTbl.btt_lock); 
+	sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
+	sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq;
+	ureqlock(&mdsBmapTimeoTbl.btt_lock, locked);
+
+	pjournal_xadd_sngl(mdsJournal, MDS_LOG_BMAP_SEQ, 
+	    &sjbsq, sizeof(struct slmds_jent_bmapseq));
 }
 
 /**
@@ -914,8 +931,9 @@ mds_journal_init(void)
 
 	txg = mdsio_first_txg();
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
+
 	mdsJournal = pjournal_init(fn, txg, SLMTHRT_JRNL_DISTILL, "slmjdistthr",
-	    mds_replay_handler, mds_distill_handler);
+	    mds_embed_handler, mds_replay_handler, mds_distill_handler);
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", fn);
 
