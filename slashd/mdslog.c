@@ -45,6 +45,8 @@
 #include "slashrpc.h"
 #include "sljournal.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
 struct psc_journal		*mdsJournal;
 static struct pscrpc_nbreqset	*logPndgReqs;
 
@@ -124,10 +126,37 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 static int
 mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 {
+	int i, rc;
+	size_t nb;
+	void *mdsio_data;
 	struct slmds_jent_crc *jcrc;
+	struct srt_bmap_wire bmap_disk;
+	struct srm_bmap_crcwire *bmap_wire;
 	jcrc = (struct slmds_jent_crc *)pje->pje_data;
 
-	return (0);
+	zfsslash2_opencreate(jcrc->sjc_fid, &rootcreds, O_RDWR, 0, NULL,
+	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
+
+	rc = zfsslash2_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
+		(off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
+		mdsio_data);
+	if (rc || nb != BMAP_OD_SZ)
+		goto out;
+
+	for (i = 0 ; i < jcrc->sjc_ncrcs; i++) {
+		bmap_wire = &jcrc->sjc_crc[i];
+		bmap_disk.bh_crcs[bmap_wire->slot].gc_crc = bmap_wire->crc;
+	}
+
+	rc = zfsslash2_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
+		(off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
+		mdsio_data);
+	if (rc || nb != BMAP_OD_SZ)
+		goto out;
+
+out:
+	zfsslash2_release(&rootcreds, &mdsio_data);
+	return (rc);
 }
 
 static int
@@ -139,6 +168,7 @@ mds_redo_bmap_seq(__unusedx struct psc_journal_enthdr *pje)
 static int
 mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 {
+	return (0);
 }
 
 static int
