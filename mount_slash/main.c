@@ -1472,9 +1472,9 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
+	sl_internalize_stat(&mp->attr, stb);
 	fcmh_setattr(c, &mp->attr, (mq->to_set & SRM_SETATTRF_SIZE) ?
 		     FCMH_SETATTRF_NONE : FCMH_SETATTRF_SAVESIZE);
-	sl_internalize_stat(&mp->attr, stb);
 	fuse_reply_attr(req, stb, MSL_FUSE_ATTR_TIMEO);
 
  out:
