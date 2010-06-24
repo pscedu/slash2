@@ -1,0 +1,49 @@
+06/24/2010
+----------
+
+Recently, I have removed the tiling code and instead use the pending transaction
+list to hold data for log entires that need to be distilled.
+
+Today, I have uncovered two issues with our journaling code.
+
+(1) Right now MDS accepts updates to inode replication info and bmap CRCs
+    to its private cache described as journal flush items (JFI).  They are
+    flushed by the mdsfssyncthr. After flush, we close the trasaction.
+
+    The problem is that when we close the transaction, the bmap updates
+    probably have not reached the disk yet. That is controlled by ZFS.  
+    mdsfssyncthr only tells ZFS that they are dirty.  The risk here is 
+    that we could reclaim log space prematurely.
+
+    We could make mdsfssyncthr do synchronous writes, but that's not good 
+    for performance.
+
+(2) Right now, we don't enforce a transaction with lower XID to be
+    written earlier.  It could happen that a slot reserved by a
+    trasaction is never written.   When we replay, we can find a stale
+    entry in the slot.  But if we order transactions before replaying
+    them.  This should be fine, assuming updates are idempotent.
+
+    Well, life is more complicated than that. If you decide to replay XID 
+    X on an item.  Then you must replay ALL transactions affecting the
+    item starting from X, some of them may or may not have been overwritten.
+    In other words, the history must be complete.
+
+    The solution is easy.  Don't reserve any specific slot (remember
+    traditional journal file systems reserve space amount, not specific
+    location within the log area).  The idea is to consume journal space
+    sequentially.  No need to reserve, just write at the current log
+    tail.
+
+(1) and (2) prompt me into thinking more on our journal code.  We already
+put transaction group numbers (txn) of ZFS into our namespace log entries.  
+Perhaps we should include txn into all our log entries.
+
+If so, we can use txg to do the following:
+
+(i) Decide whether we can reclaim log space at run time.
+
+(ii) Decide whether we need to replay a log entry at replay time.
+
+The possibility of unifying the way to handle both is attractive
+to me.
