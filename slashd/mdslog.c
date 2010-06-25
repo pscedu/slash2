@@ -179,8 +179,8 @@ mds_redo_namespace(__unusedx struct psc_journal_enthdr *pje)
 	return (0);
 }
 
-void
-mds_embed_handler(void)
+int
+mds_embed_handler(__unusedx int arg)
 {
 	int locked;
 	struct slmds_jent_bmapseq sjbsq;
@@ -192,6 +192,8 @@ mds_embed_handler(void)
 
 	pjournal_xadd_sngl(mdsJournal, MDS_LOG_BMAP_SEQ,
 	    &sjbsq, sizeof(struct slmds_jent_bmapseq));
+
+	return (0);
 }
 
 /**
