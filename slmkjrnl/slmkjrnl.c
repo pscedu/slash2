@@ -74,7 +74,7 @@ main(int argc, char *argv[])
 			endp = NULL;
 			l = strtol(optarg, &endp, 10);
 			if (l <= 0 || l > INT_MAX ||
-			    endp == optarg || *end != '\0')
+			    endp == optarg || *endp != '\0')
 				errx(1, "invalid -n nentries: %s", optarg);
 			nents = (ssize_t)l;
 			break;
