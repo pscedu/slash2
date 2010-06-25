@@ -31,13 +31,11 @@ struct fidc_membh;
 struct slash_inode_handle;
 struct srm_bmap_crcup;
 
-enum {
-	MDS_LOG_BMAP_REPL	= (1 << (_PJE_FLSHFT + 0)),
-	MDS_LOG_BMAP_CRC	= (1 << (_PJE_FLSHFT + 1)),
-	MDS_LOG_BMAP_SEQ	= (1 << (_PJE_FLSHFT + 2)),
-	MDS_LOG_INO_ADDREPL	= (1 << (_PJE_FLSHFT + 3)),
-	MDS_LOG_NAMESPACE	= (1 << (_PJE_FLSHFT + 4))
-};
+#define MDS_LOG_BMAP_REPL	(_PJE_FLSHFT << 0)
+#define MDS_LOG_BMAP_CRC	(_PJE_FLSHFT << 1)
+#define MDS_LOG_BMAP_SEQ	(_PJE_FLSHFT << 2)
+#define MDS_LOG_INO_ADDREPL	(_PJE_FLSHFT << 3)
+#define MDS_LOG_NAMESPACE	(_PJE_FLSHFT << 4)
 
 /*
  * If all MDSes are perfectly in sync, then we can use one buffer to read

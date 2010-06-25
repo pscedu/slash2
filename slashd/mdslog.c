@@ -185,12 +185,12 @@ mds_embed_handler(void)
 	int locked;
 	struct slmds_jent_bmapseq sjbsq;
 
-	locked = reqlock(&mdsBmapTimeoTbl.btt_lock); 
+	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
 	sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 	sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq;
 	ureqlock(&mdsBmapTimeoTbl.btt_lock, locked);
 
-	pjournal_xadd_sngl(mdsJournal, MDS_LOG_BMAP_SEQ, 
+	pjournal_xadd_sngl(mdsJournal, MDS_LOG_BMAP_SEQ,
 	    &sjbsq, sizeof(struct slmds_jent_bmapseq));
 }
 
@@ -201,10 +201,8 @@ void
 mds_replay_handler(struct psc_journal_enthdr *pje, int *rcp)
 {
 	int rc = 0;
-	uint16_t type;
 
-	type = pje->pje_type >> _PJE_FLSHFT;
-	switch (type) {
+	switch (pje->pje_type & ~(_PJE_FLSHFT - 1)) {
 	    case MDS_LOG_BMAP_REPL:
 		rc = mds_redo_bmap_repl(pje);
 		break;
@@ -221,7 +219,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje, int *rcp)
 		rc = mds_redo_namespace(pje);
 		break;
 	    default:
-		psc_fatal("mds_replay_handler(): invalid log entry type %d", type);
+		psc_fatal("invalid log entry type %d", pje->pje_type);
 	}
 	*rcp = rc;
 }
@@ -252,8 +250,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR,
 		    SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
 		/*
-		 * Truncate the file if it already exists. Otherwise, it can lead to an insidious
-		 * bug especially when the on-disk format of the log file changes.
+		 * Truncate the file if it already exists. Otherwise, it
+		 * can lead to an insidious * bug especially when the
+		 * on-disk format of the log file changes.
 		 */
 		current_logfile = open(fn, O_CREAT | O_TRUNC | O_RDWR |
 		    O_SYNC | O_DIRECT | O_APPEND, 0600);
@@ -375,7 +374,8 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	j = i;
 	do {
 		jnamespace = (struct slmds_jent_namespace *)buf;
-		if (jnamespace->sjnm_seqno >= peerinfo->sp_send_seqno + peerinfo->sp_send_count)
+		if (jnamespace->sjnm_seqno >=
+		    peerinfo->sp_send_seqno + peerinfo->sp_send_count)
 			break;
 		SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
 		    jnamespace->sjnm_op, NS_SUM_PEND);
@@ -592,7 +592,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			j--;
 		} while (j);
 		psc_assert(j);
-		
+
 		iov.iov_base = buf;
 		iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
 
@@ -617,7 +617,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		atomic_inc(&logbuf->slb_refcnt);
 
 		/*
-		 * Be careful, we use the value of i and buf from the 
+		 * Be careful, we use the value of i and buf from the
 		 * previous while loop.
 		 */
 		while (j) {
@@ -921,13 +921,13 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 void
 mds_journal_init(void)
 {
-	int n;
-	uint64_t txg;
+	struct sl_mds_peerinfo *peerinfo;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
 	char fn[PATH_MAX];
-	struct sl_mds_peerinfo *peerinfo;
+	uint64_t txg;
+	int n;
 
 	txg = mdsio_first_txg();
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
@@ -976,11 +976,11 @@ mds_journal_init(void)
 
 	PLL_ULOCK(&globalConfig.gconf_sites);
 	if (localinfo == NULL)
-		psc_fatal("mds_journal_init(): missing local MDS information");
+		psc_fatal("missing local MDS information");
 	psc_dynarray_sort(&mds_namespace_peerlist, qsort, mds_peerinfo_cmp);
 
-	/* 
-	 * Start a thread to propagate local namespace updates to peers 
+	/*
+	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
 	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
