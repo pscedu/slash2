@@ -261,7 +261,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, mq->rw);
 
 	memcpy(&mp->bcw, 
-	       (struct srt_bmap_cli_wire *)bmap->bcm_od->bh_crcstates,
+	       bmap->bcm_od->bh_crcstates,
 	       sizeof(struct srt_bmap_cli_wire));
 
 	if (mp->flags & SRM_GETBMAPF_GETREPLTBL) {
