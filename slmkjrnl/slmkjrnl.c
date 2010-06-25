@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include "pfl/pfl.h"
+#include "pfl/str.h"
 #include "psc_util/journal.h"
 #include "psc_util/log.h"
 
@@ -40,41 +41,48 @@ const char *progname;
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-fqsv] [-D dir] [-b dev] [-n entries]\n", progname);
+	fprintf(stderr, "usage: %s [-fqsv] [-b block-device] [-D dir] [-n nentries]\n", progname);
 	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
+	ssize_t nents = SLJ_MDS_JNENTS;
 	char c, fn[PATH_MAX];
-	int rc, fname=0;
 	unsigned int options;
-	ssize_t nents=SLJ_MDS_JNENTS;
+	char *endp;
+	int rc;
+	long l;
 
 	pfl_init();
+	fn[0] = '\0';
 	options = PJH_OPT_NONE;
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "D:n:b:fqv")) != -1)
+	while ((c = getopt(argc, argv, "b:D:fn:qv")) != -1)
 		switch (c) {
+		case 'b':
+			strlcpy(fn, optarg, sizeof(fn));
+			break;
 		case 'D':
 			datadir = optarg;
 			break;
-		case 'b':
-			fname = 1;
-			strncpy(fn, optarg, PATH_MAX);
-			break;
 		case 'f':
 			format = 1;
+			break;
+		case 'n':
+			endp = NULL;
+			l = strtol(optarg, &endp, 10);
+			if (l <= 0 || l > INT_MAX ||
+			    endp == optarg || *end != '\0')
+				errx(1, "invalid -n nentries: %s", optarg);
+			nents = (ssize_t)l;
 			break;
 		case 'q':
 			query = 1;
 			break;
 		case 'v':
 			verbose = 1;
-			break;
-		case 'n':
-			nents = strtol(optarg, NULL, 10);
 			break;
 		default:
 			usage();
@@ -87,11 +95,11 @@ main(int argc, char *argv[])
 	if (!format && !query)
 		usage();
 
-	if (!fname) {
+	if (fn[0] == '\0') {
 		if (mkdir(datadir, 0700) == -1)
 			if (errno != EEXIST)
 				err(1, "mkdir: %s", datadir);
-		
+
 		xmkfn(fn, "%s/%s", datadir, SL_FN_OPJOURNAL);
 	}
 
