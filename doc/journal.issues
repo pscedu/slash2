@@ -47,3 +47,18 @@ If so, we can use txg to do the following:
 
 The possibility of unifying the way to handle both is attractive
 to me.
+
+06/25/2010
+----------
+
+Also, there will be no need to write a close log entry to mark the
+closure of a transaction.  That should save us some log bandwidth.
+
+One potential problem is that we rely on ZFS to flush its transactions
+to reclaim log space.
+
+I am thinking about invoking the log function from within ZFS, which
+I can get the txg easily (like I did with the namespace).  However,
+I probably have to pass in both func and data pointers so that I can
+log only the changes I have made, not the entire block.
+
