@@ -39,6 +39,12 @@ to the journal is done on in-memory regions called tiles.
 The tiles are scheduled and processed so that log entries written within
 a tile can have additional processing performed as seen fit if deemed
 necessary by the application.
+.It Fl b Ar block-device
+Specify a raw device as the journal target instead of a regular file.
+This option supersedes 
+.Ar datadir .
+.It Fl n Ar nentries
+Override the default number of journal entries (131072).
 .It Fl v
 Display verbose information about activity performed.
 .El
