@@ -69,6 +69,7 @@
 #include "slashd/repl_mds.h"
 #include "slashd/rpc_mds.h"
 #include "slashd/slashd.h"
+#include "slashd/up_sched_res.h"
 #include "sliod/bmap_iod.h"
 #include "sliod/ctl_iod.h"
 #include "sliod/fidc_iod.h"
@@ -186,7 +187,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_mds_logbuf);
 	PRTYPE(struct sl_mds_nsstats);
 	PRTYPE(struct sl_mds_peerinfo);
-	PRTYPE(struct sl_replrq);
 	PRTYPE(struct sl_resm);
 	PRTYPE(struct sl_resource);
 	PRTYPE(struct sl_site);
@@ -216,10 +216,10 @@ main(int argc, char *argv[])
 	PRTYPE(struct slmds_jent_repgen);
 	PRTYPE(struct slmds_jents);
 	PRTYPE(struct slmrcm_thread);
-	PRTYPE(struct slmreplq_thread);
 	PRTYPE(struct slmrmc_thread);
 	PRTYPE(struct slmrmi_thread);
 	PRTYPE(struct slmrmm_thread);
+	PRTYPE(struct slmupsched_thread);
 	PRTYPE(struct slvr_ref);
 	PRTYPE(struct srm_bmap_chwrmode_rep);
 	PRTYPE(struct srm_bmap_chwrmode_req);
@@ -282,6 +282,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_dirent);
 	PRTYPE(struct srt_stat);
 	PRTYPE(struct srt_statfs);
+	PRTYPE(struct up_sched_work_item);
 	/* end structs */
 
 	/* start constants */
