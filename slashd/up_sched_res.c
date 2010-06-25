@@ -17,6 +17,13 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * up_sched_res (update scheduler for site resources): this interface
+ * provides the mechanism for managing updates such as
+ * truncation/deletion garbage collection and replication activity to
+ * peer resources.
+ */
+
 #include <stdio.h>
 
 #include "pfl/cdefs.h"
@@ -34,40 +41,42 @@
 #include "slashd.h"
 #include "slconfig.h"
 #include "slerr.h"
+#include "up_sched_res.h"
 
 void
-slmreplqthr_removeq(struct sl_replrq *rrq)
+slmupschedthr_removeq(struct up_sched_work_item *wk)
 {
-	struct slmreplq_thread *smrt;
+	struct slmupsched_thread *smut;
 	struct site_mds_info *smi;
 	struct psc_thread *thr;
 	struct sl_site *site;
 	int locked;
 
 	thr = pscthr_get();
-	smrt = slmreplqthr(thr);
-	site = smrt->smrt_site;
+	smut = slmupschedthr(thr);
+	site = smut->smut_site;
 	smi = site->site_pri;
 
 	locked = reqlock(&smi->smi_lock);
 	smi->smi_flags |= SMIF_DIRTYQ;
-	psc_dynarray_remove(&smi->smi_replq, rrq);
+	psc_dynarray_remove(&smi->smi_upq, wk);
 	ureqlock(&smi->smi_lock, locked);
 
-	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
-	psc_atomic32_dec(&rrq->rrq_refcnt);
-	mds_repl_tryrmqfile(rrq);
+	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	psc_atomic32_dec(&wk->uswi_refcnt);
+	mds_repl_tryrmqfile(wk);
 }
 
 int
-slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
-    struct sl_resm *src_resm, struct sl_resource *dst_res, int j)
+slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
+    struct bmapc_memb *bcm, int off, struct sl_resm *src_resm,
+    struct sl_resource *dst_res, int j)
 {
 	int tract[SL_NREPLST], retifset[SL_NREPLST], we_set_busy, rc;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
-	struct slmreplq_thread *smrt;
+	struct slmupsched_thread *smut;
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *rq;
 	struct site_mds_info *smi;
@@ -77,8 +86,8 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 
 	we_set_busy = 0;
 	thr = pscthr_get();
-	smrt = slmreplqthr(thr);
-	site = smrt->smrt_site;
+	smut = slmupschedthr(thr);
+	site = smut->smut_site;
 	smi = site->site_pri;
 
 	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
@@ -120,9 +129,9 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 		goto fail;
 	mq->nid = src_resm->resm_nid;
 	mq->len = SLASH_BMAP_SIZE;
-	if (bcm->bcm_blkno == REPLRQ_NBMAPS(rrq) - 1)
-		mq->len = fcmh_2_fsz(REPLRQ_FCMH(rrq)) % SLASH_BMAP_SIZE;
-	mq->fg = *REPLRQ_FG(rrq);
+	if (bcm->bcm_blkno == USWI_NBMAPS(wk) - 1)
+		mq->len = fcmh_2_fsz(wk->uswi_fcmh) % SLASH_BMAP_SIZE;
+	mq->fg = *USWI_FG(wk);
 	mq->bmapno = bcm->bcm_blkno;
 	mq->bgen = bmap_2_bgen(bcm);
 
@@ -155,7 +164,7 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 	pscrpc_req_finished(rq);
 	if (rc == 0) {
 		mds_repl_bmap_rel(bcm);
-		mds_repl_unrefrq(rrq);
+		mds_repl_unrefrq(wk);
 		return (1);
 	}
 
@@ -178,23 +187,23 @@ slmreplqthr_trydst(struct sl_replrq *rrq, struct bmapc_memb *bcm, int off,
 }
 
 void
-slmreplqthr_main(struct psc_thread *thr)
+slmupschedthr_main(struct psc_thread *thr)
 {
 	int iosidx, nios, nrq, off, j, rc, has_repl_work;
-	int rrq_gen, ris, is, rir, ir, rin, in, val, nmemb;
+	int uswi_gen, ris, is, rir, ir, rin, in, val, nmemb;
 	struct sl_resource *src_res, *dst_res;
-	struct slmreplq_thread *smrt;
+	struct slmupsched_thread *smut;
+	struct up_sched_work_item *wk;
 	struct slash_bmap_od *bmapod;
 	struct site_mds_info *smi;
 	struct sl_resm *src_resm;
 	struct bmapc_memb *bcm;
-	struct sl_replrq *rrq;
 	struct sl_site *site;
 	sl_bmapno_t bmapno, nb, ib;
 	void *dummy;
 
-	smrt = slmreplqthr(thr);
-	site = smrt->smrt_site;
+	smut = slmupschedthr(thr);
+	site = smut->smut_site;
 	smi = site->site_pri;
 	while (pscthr_run()) {
 		if (0)
@@ -209,7 +218,7 @@ slmreplqthr_main(struct psc_thread *thr)
 			psc_fatal("psc_multiwait_addcond");
 		psc_multiwait_entercritsect(&smi->smi_mw);
 
-		if (psc_dynarray_len(&smi->smi_replq) == 0) {
+		if (psc_dynarray_len(&smi->smi_upq) == 0) {
 			freelock(&smi->smi_lock);
 			psc_multiwait(&smi->smi_mw, &dummy);
 			continue;
@@ -217,7 +226,7 @@ slmreplqthr_main(struct psc_thread *thr)
 
 		smi->smi_flags &= ~SMIF_DIRTYQ;
 
-		nrq = psc_dynarray_len(&smi->smi_replq);
+		nrq = psc_dynarray_len(&smi->smi_upq);
 		rir = psc_random32u(nrq);
 		for (ir = 0; ir < nrq; rir = (rir + 1) % nrq, ir++) {
 			reqlock(&smi->smi_lock);
@@ -226,51 +235,50 @@ slmreplqthr_main(struct psc_thread *thr)
 				goto restart;
 			}
 
-			rrq = psc_dynarray_getpos(&smi->smi_replq, rir);
-			psc_atomic32_inc(&rrq->rrq_refcnt);
+			wk = psc_dynarray_getpos(&smi->smi_upq, rir);
+			psc_atomic32_inc(&wk->uswi_refcnt);
 			freelock(&smi->smi_lock);
 
-			rc = mds_repl_accessrq(rrq);
+			rc = mds_repl_accessrq(wk);
 
 			if (rc == 0) {
 				/* repl must be going away, drop it */
-				slmreplqthr_removeq(rrq);
+				slmupschedthr_removeq(wk);
 				goto restart;
 			}
 
-			rc = mds_inox_ensure_loaded(rrq->rrq_inoh);
+			rc = mds_inox_ensure_loaded(USWI_INOH(wk));
 			if (rc) {
 				psc_warnx("couldn't load inoh repl table: %s",
 				    slstrerror(rc));
-				slmreplqthr_removeq(rrq);
+				slmupschedthr_removeq(wk);
 				goto restart;
 			}
 
 			has_repl_work = 0;
 
-			psc_pthread_mutex_lock(&rrq->rrq_mutex);
-			rrq_gen = rrq->rrq_gen;
-			rrq->rrq_flags &= ~REPLRQF_BUSY;
-			psc_pthread_mutex_unlock(&rrq->rrq_mutex);
+			psc_pthread_mutex_lock(&wk->uswi_mutex);
+			uswi_gen = wk->uswi_gen;
+			wk->uswi_flags &= ~USWIF_BUSY;
+			psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
 			/* find a resource in our site this replrq is destined for */
 			iosidx = -1;
 			DYNARRAY_FOREACH(dst_res, j, &site->site_resources) {
-				iosidx = mds_repl_ios_lookup(rrq->rrq_inoh,
+				iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
 				    dst_res->res_id);
 				if (iosidx < 0)
 					continue;
 				off = SL_BITS_PER_REPLICA * iosidx;
 
 				/* got a replication request; find a bmap this ios needs */
-				nb = REPLRQ_NBMAPS(rrq);
+				nb = USWI_NBMAPS(wk);
 				bmapno = psc_random32u(nb);
 				for (ib = 0; ib < nb; ib++,
 				    bmapno = (bmapno + 1) % nb) {
-					if (rrq_gen != rrq->rrq_gen)
-						goto skiprrq;
-					rc = mds_bmap_load(REPLRQ_FCMH(rrq),
-					    bmapno, &bcm);
+					if (uswi_gen != wk->uswi_gen)
+						goto skiprepl;
+					rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 					if (rc)
 						continue;
 
@@ -288,15 +296,15 @@ slmreplqthr_main(struct psc_thread *thr)
 					BMAP_ULOCK(bcm);
 
 					/* Got a bmap; now look for a source. */
-					nios = REPLRQ_NREPLS(rrq);
+					nios = USWI_NREPLS(wk);
 					ris = psc_random32u(nios);
 					for (is = 0; is < nios; is++,
 					    ris = (ris + 1) % nios) {
-						if (rrq_gen != rrq->rrq_gen) {
+						if (uswi_gen != wk->uswi_gen) {
 							mds_repl_bmap_rel(bcm);
-							goto skiprrq;
+							goto skiprepl;
 						}
-						src_res = libsl_id2res(REPLRQ_GETREPL(rrq, ris).bs_id);
+						src_res = libsl_id2res(USWI_GETREPL(wk, ris).bs_id);
 
 						/* skip ourself and old/inactive replicas */
 						if (ris == iosidx ||
@@ -326,7 +334,7 @@ slmreplqthr_main(struct psc_thread *thr)
 
 							/* look for a destination resm */
 							for (k = 0; k < psc_dynarray_len(&dst_res->res_members); k++)
-								if (slmreplqthr_trydst(rrq, bcm,
+								if (slmupschedthr_tryrepldst(wk, bcm,
 								    off, src_resm, dst_res, k))
 									goto restart;
 						}
@@ -335,25 +343,25 @@ slmreplqthr_main(struct psc_thread *thr)
 					mds_repl_bmap_rel(bcm);
 				}
 			}
- skiprrq:
+ skiprepl:
 			/*
 			 * At this point, we did not find a block/src/dst
 			 * resource involving our site needed by this replrq.
 			 */
-			psc_pthread_mutex_lock(&rrq->rrq_mutex);
-			if (has_repl_work || rrq->rrq_gen != rrq_gen) {
+			psc_pthread_mutex_lock(&wk->uswi_mutex);
+			if (has_repl_work || wk->uswi_gen != uswi_gen) {
 				psc_multiwait_addcond_masked(&smi->smi_mw,
-				    &rrq->rrq_mwcond, 0);
-				mds_repl_unrefrq(rrq);
+				    &wk->uswi_mwcond, 0);
+				mds_repl_unrefrq(wk);
 
 				/*
-				 * This should be safe since the rrq
+				 * This should be safe since the wk
 				 * is refcounted in our dynarray.
 				 */
 				psc_multiwait_setcondwakeable(&smi->smi_mw,
-				    &rrq->rrq_mwcond, 1);
+				    &wk->uswi_mwcond, 1);
 			} else {
-				slmreplqthr_removeq(rrq);
+				slmupschedthr_removeq(wk);
 				goto restart;
 			}
 		}
@@ -365,48 +373,21 @@ slmreplqthr_main(struct psc_thread *thr)
 	}
 }
 
-#if 0
 void
-slmtruncthr_main(struct psc_thread *thr)
+slmupschedthr_spawnall(void)
 {
-
-	smtrt = slmtruncthr(thr);
-	site = smrt->smrt_site;
-	smi = site->site_pri;
-	for (;;) {
-//		trq = lc_get(smi->smi_truncq);
-
-		for (j = 0; j < site->site_nres; j++) {
-			res = site->site_resv[j];
-			rin = psc_random32u(res->res_nnids);
-			for (in = 0; in < (int)res->res_nnids; in++,
-			    rin = (rin + 1) % res->res_nnids) {
-				resm = libsl_nid2resm(res->res_nids[rin]);
-				csvc = slm_geticsvc(resm);
-				if (csvc == NULL)
-					continue;
-				sl_csvc_decref(csvc);
-		}
-
-	}
-}
-#endif
-
-void
-slmreplqthr_spawnall(void)
-{
-	struct slmreplq_thread *smrt;
+	struct slmupsched_thread *smut;
 	struct psc_thread *thr;
 	struct sl_site *site;
 	int locked;
 
 	locked = PLL_RLOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(site, &globalConfig.gconf_sites) {
-		thr = pscthr_init(SLMTHRT_REPLQ, 0, slmreplqthr_main,
-		    NULL, sizeof(*smrt), "slmreplqthr-%s",
+		thr = pscthr_init(SLMTHRT_UPSCHED, 0, slmupschedthr_main,
+		    NULL, sizeof(*smut), "slmupschedthr-%s",
 		    site->site_name + strspn(site->site_name, "@"));
-		smrt = slmreplqthr(thr);
-		smrt->smrt_site = site;
+		smut = slmupschedthr(thr);
+		smut->smut_site = site;
 		pscthr_setready(thr);
 	}
 	PLL_URLOCK(&globalConfig.gconf_sites, locked);

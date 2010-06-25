@@ -45,13 +45,14 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
+#include "up_sched_res.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 int			 allow_root_uid = 1;
 const char		*progname;
 
-struct psc_poolmaster	 replrq_poolmaster;
+struct psc_poolmaster	 upsched_poolmaster;
 
 struct slash_creds	 rootcreds = { 0, 0 };
 
@@ -134,10 +135,10 @@ slm_init(void)
 {
 	char fn[PATH_MAX];
 
-	psc_poolmaster_init(&replrq_poolmaster, struct sl_replrq,
-	    rrq_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
-	    "replrq");
-	replrq_pool = psc_poolmaster_getmgr(&replrq_poolmaster);
+	psc_poolmaster_init(&upsched_poolmaster, struct up_sched_work_item,
+	    uswi_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
+	    "upschwk");
+	upsched_pool = psc_poolmaster_getmgr(&upsched_poolmaster);
 
 	psc_poolmaster_init(&bmapMdsLeasePoolMaster, struct bmap_mds_lease,
 	    bml_bmdsi_lentry, PPMF_AUTO, 256, 256, 0, NULL, NULL, NULL,
@@ -222,7 +223,7 @@ main(int argc, char *argv[])
 
 	slcfg_parse(cfn);
 
-	/* 
+	/*
 	 * Initialize the mdsio layer. There is where ZFS threads
 	 * are started and the given ZFS pool is imported.
 	 */
@@ -244,7 +245,7 @@ main(int argc, char *argv[])
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
 	slm_rpc_initsvc();
-	slmreplqthr_spawnall();
+	slmupschedthr_spawnall();
 	mds_repl_init();
 	slmtimerthr_spawn();
 	slmctlthr_main(sfn);

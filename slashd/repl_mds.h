@@ -26,25 +26,6 @@
 
 struct resm_mds_info;
 
-struct sl_replrq {
-	struct slash_inode_handle	*rrq_inoh;
-	pthread_mutex_t			 rrq_mutex;
-	struct psc_multiwaitcond	 rrq_mwcond;
-	int				 rrq_flags;
-	psc_atomic32_t			 rrq_refcnt;
-	int				 rrq_gen;
-	union {
-		struct psclist_head	 rrqu_lentry;
-		SPLAY_ENTRY(sl_replrq)	 rrqu_tentry;
-	} rrq_u;
-#define rrq_tentry rrq_u.rrqu_tentry
-#define rrq_lentry rrq_u.rrqu_lentry
-};
-
-/* replication request flags */
-#define REPLRQF_BUSY	(1 << 0)
-#define REPLRQF_DIE	(1 << 1)
-
 struct slm_replst_workreq {
 	struct slashrpc_cservice	*rsw_csvc;
 	struct slash_fidgen		 rsw_fg;
@@ -52,26 +33,9 @@ struct slm_replst_workreq {
 	struct psclist_head		 rsw_lentry;
 };
 
-#define REPLRQ_INO(rrq)		(&(rrq)->rrq_inoh->inoh_ino)
-#define REPLRQ_INOX(rrq)	(rrq)->rrq_inoh->inoh_extras
-#define REPLRQ_NREPLS(rrq)	REPLRQ_INO(rrq)->ino_nrepls
-#define REPLRQ_FG(rrq)		(&REPLRQ_INO(rrq)->ino_fg)
-#define REPLRQ_FID(rrq)		REPLRQ_FG(rrq)->fg_fid
-#define REPLRQ_FCMH(rrq)	(rrq)->rrq_inoh->inoh_fcmh
-#define REPLRQ_NBMAPS(rrq)	fcmh_2_nbmaps(REPLRQ_FCMH(rrq))
-
-#define REPLRQ_GETREPL(rrq, n)	((n) < SL_DEF_REPLICAS ?		\
-				    REPLRQ_INO(rrq)->ino_repls[n] :	\
-				    REPLRQ_INOX(rrq)->inox_repls[(n) - 1])
-
-int replrq_cmp(const void *, const void *);
-
-SPLAY_HEAD(replrqtree, sl_replrq);
-SPLAY_PROTOTYPE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
-
-struct sl_replrq *
+struct up_sched_work_item *
 	 mds_repl_findrq(const struct slash_fidgen *, int *);
-int	 mds_repl_accessrq(struct sl_replrq *);
+int	 mds_repl_accessrq(struct up_sched_work_item *);
 int	 mds_repl_addrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
 int	_mds_repl_bmap_apply(struct bmapc_memb *, const int [], const int [], int, int, int *);
 void	 mds_repl_bmap_rel(struct bmapc_memb *);
@@ -84,8 +48,8 @@ int	 mds_repl_loadino(const struct slash_fidgen *, struct fidc_membh **);
 void	 mds_repl_node_clearallbusy(struct resm_mds_info *);
 int	_mds_repl_nodes_setbusy(struct resm_mds_info *, struct resm_mds_info *, int, int);
 void	 mds_repl_reset_scheduled(sl_ios_id_t);
-void	 mds_repl_tryrmqfile(struct sl_replrq *);
-void	 mds_repl_unrefrq(struct sl_replrq *);
+void	 mds_repl_tryrmqfile(struct up_sched_work_item *);
+void	 mds_repl_unrefrq(struct up_sched_work_item *);
 
 #define mds_repl_bmap_apply(bcm, tract, retifset, off)			\
 	_mds_repl_bmap_apply((bcm), (tract), (retifset), 0, (off), NULL)
@@ -94,11 +58,6 @@ void	 mds_repl_unrefrq(struct sl_replrq *);
 
 #define mds_repl_ios_lookup_add(ih, ios)	_mds_repl_ios_lookup((ih), (ios), 1)
 #define mds_repl_ios_lookup(ih, ios)		_mds_repl_ios_lookup((ih), (ios), 0)
-
-extern struct psc_poolmgr	*replrq_pool;
-
-extern struct replrqtree	 replrq_tree;
-extern psc_spinlock_t		 replrq_tree_lock;
 
 extern struct psc_listcache	slm_replst_workq;
 

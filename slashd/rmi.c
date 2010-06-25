@@ -38,6 +38,7 @@
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
+#include "up_sched_res.h"
 
 /*
  * slm_rmi_handle_bmap_getcrcs - handle a BMAPGETCRCS request from ION,
@@ -192,26 +193,26 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 	struct site_mds_info *smi;
 	struct bmapc_memb *bcm;
-	struct sl_replrq *rrq;
+	struct up_sched_work_item *wk;
 
 	dst_resm = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	rrq = mds_repl_findrq(&mq->fg, NULL);
-	if (rrq == NULL)
+	wk = mds_repl_findrq(&mq->fg, NULL);
+	if (wk == NULL)
 		goto out;
 
 	dst_resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
 
-	iosidx = mds_repl_ios_lookup(rrq->rrq_inoh,
+	iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
 	    dst_resm->resm_res->res_id);
 	if (iosidx < 0)
 		goto out;
 
-	if (!mds_bmap_exists(REPLRQ_FCMH(rrq), mq->bmapno))
+	if (!mds_bmap_exists(wk->uswi_fcmh, mq->bmapno))
 		goto out;
 
-	if (mds_bmap_load(REPLRQ_FCMH(rrq), mq->bmapno, &bcm))
+	if (mds_bmap_load(wk->uswi_fcmh, mq->bmapno, &bcm))
 		goto out;
 
 	BMAP_LOCK(bcm);
@@ -253,8 +254,8 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 		mds_repl_nodes_setbusy(src_resm->resm_pri,
 		    dst_resm->resm_pri, 0);
 	}
-	if (rrq)
-		mds_repl_unrefrq(rrq);
+	if (wk)
+		mds_repl_unrefrq(wk);
 
 	mds_bmap_getcurseq(NULL, &mp->data);
 

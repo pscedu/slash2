@@ -40,6 +40,7 @@
 #include "slashd.h"
 #include "slashrpc.h"
 #include "slerr.h"
+#include "up_sched_res.h"
 
 int
 slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw)
@@ -63,7 +64,7 @@ slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw)
 }
 
 int
-slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct sl_replrq *rrq)
+slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct up_sched_work_item *wk)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
@@ -82,7 +83,7 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct sl_replrq *rrq)
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	mq->len = iov.iov_len;
 	mq->nbmaps = srcm->srcm_page_bitpos / (SL_BITS_PER_REPLICA *
-	    rrq->rrq_inoh->inoh_ino.ino_nrepls + SL_NBITS_REPLST_BHDR);
+	    USWI_INOH(wk)->inoh_ino.ino_nrepls + SL_NBITS_REPLST_BHDR);
 	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 	    SRCM_BULK_PORTAL, &iov, 1);
 	if (rc == 0)
@@ -92,7 +93,7 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct sl_replrq *rrq)
 }
 
 int
-slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw, struct sl_replrq *rrq,
+slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw, struct up_sched_work_item *wk,
     struct bmapc_memb *bcm, sl_bmapno_t n, struct pscrpc_request **rqp)
 {
 	struct srm_replst_slave_req *mq;
@@ -107,12 +108,12 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw, struct sl_replrq *rrq,
 	srcm = slmrcmthr(thr);
 	bmdsi = bmap_2_bmdsi(bcm);
 
-	nbits = rrq->rrq_inoh->inoh_ino.ino_nrepls *
+	nbits = USWI_INOH(wk)->inoh_ino.ino_nrepls *
 	    SL_BITS_PER_REPLICA + SL_NBITS_REPLST_BHDR;
 	if (howmany(srcm->srcm_page_bitpos + nbits,
 	    NBBY) > SRM_REPLST_PAGESIZ || *rqp == NULL) {
 		if (*rqp) {
-			rc = slmrmcthr_replst_slave_waitrep(*rqp, rrq);
+			rc = slmrmcthr_replst_slave_waitrep(*rqp, wk);
 			*rqp = NULL;
 			if (rc)
 				return (rc);
@@ -124,7 +125,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw, struct sl_replrq *rrq,
 			return (rc);
 		mq->id = rsw->rsw_cid;
 		mq->boff = n;
-		mq->fg = *REPLRQ_FG(rrq);
+		mq->fg = *USWI_FG(wk);
 
 		srcm->srcm_page_bitpos = 0;
 	}
@@ -134,7 +135,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw, struct sl_replrq *rrq,
 	    &bhdr, 0, SL_NBITS_REPLST_BHDR);
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos +
 	    SL_NBITS_REPLST_BHDR, bcm->bcm_od->bh_repls, 0,
-	    rrq->rrq_inoh->inoh_ino.ino_nrepls * SL_BITS_PER_REPLICA);
+	    USWI_INOH(wk)->inoh_ino.ino_nrepls * SL_BITS_PER_REPLICA);
 	srcm->srcm_page_bitpos += nbits;
 	return (0);
 }
@@ -144,7 +145,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw, struct sl_replrq *rrq,
  */
 int
 slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
-    struct sl_replrq *rrq, int is_eof)
+    struct up_sched_work_item *wk, int is_eof)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
@@ -156,17 +157,17 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 	if (rc)
 		return (rc);
 	mq->id = rsw->rsw_cid;
-	if (rrq) {
-		mq->fg = *REPLRQ_FG(rrq);
-		mq->nbmaps = REPLRQ_NBMAPS(rrq);
-		mq->nrepls = REPLRQ_NREPLS(rrq);
-		mq->newreplpol = REPLRQ_INOX(rrq)->inox_newbmap_policy;
-		memcpy(mq->repls, REPLRQ_INO(rrq)->ino_repls,
+	if (wk) {
+		mq->fg = *USWI_FG(wk);
+		mq->nbmaps = USWI_NBMAPS(wk);
+		mq->nrepls = USWI_NREPLS(wk);
+		mq->newreplpol = USWI_INOX(wk)->inox_newbmap_policy;
+		memcpy(mq->repls, USWI_INO(wk)->ino_repls,
 		    MIN(mq->nrepls, SL_DEF_REPLICAS) * sizeof(*mq->repls));
 		if (mq->nrepls > SL_DEF_REPLICAS)
 			memcpy(mq->repls + SL_DEF_REPLICAS,
-			    rrq->rrq_inoh->inoh_extras->inox_repls,
-			    (REPLRQ_NREPLS(rrq) - SL_DEF_REPLICAS) *
+			    USWI_INOH(wk)->inoh_extras->inox_repls,
+			    (USWI_NREPLS(wk) - SL_DEF_REPLICAS) *
 			    sizeof(*mq->repls));
 	}
 	if (is_eof)
@@ -184,7 +185,7 @@ slmrcmthr_main(struct psc_thread *thr)
 	struct pscrpc_request *rq;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
-	struct sl_replrq *rrq;
+	struct up_sched_work_item *wk;
 	sl_bmapno_t n;
 	int rc;
 
@@ -197,69 +198,69 @@ slmrcmthr_main(struct psc_thread *thr)
 		rc = 0;
 		rq = NULL;
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
-			spinlock(&replrq_tree_lock);
-			SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
-				slm_rcm_issue_getreplst(rsw, rrq, 0);
-				for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-					if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+			spinlock(&upsched_tree_lock);
+			SPLAY_FOREACH(wk, upschedtree, &upsched_tree) {
+				slm_rcm_issue_getreplst(rsw, wk, 0);
+				for (n = 0; n < USWI_NBMAPS(wk); n++) {
+					if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 						continue;
 					BMAP_LOCK(bcm);
-					rc = slmrcmthr_walk_brepls(rsw, rrq, bcm, n, &rq);
+					rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n, &rq);
 					bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 					if (rc)
 						break;
 				}
 				if (rq) {
-					slmrmcthr_replst_slave_waitrep(rq, rrq);
+					slmrmcthr_replst_slave_waitrep(rq, wk);
 					rq = NULL;
 				}
 				slmrmcthr_replst_slave_eof(rsw);
 				if (rc)
 					break;
 			}
-			freelock(&replrq_tree_lock);
-		} else if ((rrq = mds_repl_findrq(&rsw->rsw_fg, NULL)) != NULL) {
-			slm_rcm_issue_getreplst(rsw, rrq, 0);
-			for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-				if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+			freelock(&upsched_tree_lock);
+		} else if ((wk = mds_repl_findrq(&rsw->rsw_fg, NULL)) != NULL) {
+			slm_rcm_issue_getreplst(rsw, wk, 0);
+			for (n = 0; n < USWI_NBMAPS(wk); n++) {
+				if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 					continue;
 				BMAP_LOCK(bcm);
-				rc = slmrcmthr_walk_brepls(rsw, rrq, bcm, n, &rq);
+				rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n, &rq);
 				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 				if (rc)
 					break;
 			}
 			if (rq)
-				slmrmcthr_replst_slave_waitrep(rq, rrq);
+				slmrmcthr_replst_slave_waitrep(rq, wk);
 			slmrmcthr_replst_slave_eof(rsw);
-			mds_repl_unrefrq(rrq);
+			mds_repl_unrefrq(wk);
 		} else if (mds_repl_loadino(&rsw->rsw_fg, &fcmh) == 0) {
 			/*
 			 * file is not in cache, load it up
 			 * to report replication status
 			 *
-			 * grab a dummy replrq struct to pass around.
+			 * grab a dummy uswi struct to pass around.
 			 */
-			rrq = psc_pool_get(replrq_pool);
-			memset(rrq, 0, sizeof(*rrq));
-			rrq->rrq_inoh = fcmh_2_inoh(fcmh);
+			wk = psc_pool_get(upsched_pool);
+			memset(wk, 0, sizeof(*wk));
+			wk->uswi_fcmh = fcmh;
 
-			slm_rcm_issue_getreplst(rsw, rrq, 0);
-			for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-				if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+			slm_rcm_issue_getreplst(rsw, wk, 0);
+			for (n = 0; n < USWI_NBMAPS(wk); n++) {
+				if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 					continue;
 				BMAP_LOCK(bcm);
-				rc = slmrcmthr_walk_brepls(rsw, rrq, bcm, n, &rq);
+				rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n, &rq);
 				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 				if (rc)
 					break;
 			}
 			if (rq)
-				slmrmcthr_replst_slave_waitrep(rq, rrq);
+				slmrmcthr_replst_slave_waitrep(rq, wk);
 			slmrmcthr_replst_slave_eof(rsw);
 			/* XXX where does this ref come from? */
 			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-			psc_pool_return(replrq_pool, rrq);
+			psc_pool_return(upsched_pool, wk);
 		}
 
 		/* signal EOF */

@@ -12,7 +12,7 @@ struct up_sched_work_item {
 	struct psc_multiwaitcond	 uswi_mwcond;
 	union {
 		struct psclist_head	 uswiu_lentry;
-		SPLAY_ENTRY(sl_replrq)	 uswiu_tentry;
+		SPLAY_ENTRY(up_sched_work_item)	 uswiu_tentry;
 	} uswi_u;
 #define uswi_tentry uswi_u.uswiu_tentry
 #define uswi_lentry uswi_u.uswiu_lentry
@@ -24,8 +24,9 @@ struct up_sched_work_item {
 #define USWIF_REPLRQ		(1 << 2)	/* replication work needs done */
 #define USWIF_GARBAGE		(1 << 3)	/* garbage relinquishment needs done */
 
-#define USWI_INO(wk)		(&fcmh_2_inoh((wk)->uswi_fcmh)->inoh_ino)
-#define USWI_INOX(wk)		fcmh_2_inoh((wk)->uswi_fcmh)->inoh_extras
+#define USWI_INOH(wk)		fcmh_2_inoh((wk)->uswi_fcmh)
+#define USWI_INO(wk)		(&USWI_INOH(wk)->inoh_ino)
+#define USWI_INOX(wk)		USWI_INOH(wk)->inoh_extras
 #define USWI_NREPLS(wk)		USWI_INO(wk)->ino_nrepls
 #define USWI_FG(wk)		(&USWI_INO(wk)->ino_fg)
 #define USWI_FID(wk)		USWI_FG(wk)->fg_fid
@@ -34,5 +35,15 @@ struct up_sched_work_item {
 #define USWI_GETREPL(wk, n)	((n) < SL_DEF_REPLICAS ?		\
 				    USWI_INO(wk)->ino_repls[n] :	\
 				    USWI_INOX(wk)->inox_repls[(n) - 1])
+
+int uswi_cmp(const void *, const void *);
+
+SPLAY_HEAD(upschedtree, up_sched_work_item);
+SPLAY_PROTOTYPE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
+
+extern struct psc_poolmgr	*upsched_pool;
+
+extern struct upschedtree	 upsched_tree;
+extern psc_spinlock_t		 upsched_tree_lock;
 
 #endif /* _UP_SCHED_RES_H_ */

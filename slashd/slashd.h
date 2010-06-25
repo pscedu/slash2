@@ -50,7 +50,7 @@ struct slash_inode_handle;
 #define SLMTHRT_TIOS		8	/* I/O stats updater */
 #define SLMTHRT_COH		9	/* coherency thread */
 #define SLMTHRT_FSSYNC		10	/* file system syncer */
-#define SLMTHRT_REPLQ		11	/* per-site replication queuer */
+#define SLMTHRT_UPSCHED		11	/* update scheduler for site resources */
 #define SLMTHRT_BMAPTIMEO	12	/* bmap timeout thread */
 #define SLMTHRT_JRNL_DISTILL	13	/* journal distilling thread */
 #define SLMTHRT_JRNL_SEND	14	/* journal log propagating thread */
@@ -72,18 +72,18 @@ struct slmrmm_thread {
 	struct pscrpc_thread	  smrmt_prt;
 };
 
-struct slmreplq_thread {
-	struct sl_site		 *smrt_site;
+struct slmupsched_thread {
+	struct sl_site		 *smut_site;
 };
 
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
 PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
-PSCTHR_MKCAST(slmreplqthr, slmreplq_thread, SLMTHRT_REPLQ)
+PSCTHR_MKCAST(slmupschedthr, slmupsched_thread, SLMTHRT_UPSCHED)
 
 struct site_mds_info {
-	struct psc_dynarray	  smi_replq;
+	struct psc_dynarray	  smi_upq;
 	psc_spinlock_t		  smi_lock;
 	struct psc_multiwait	  smi_mw;
 	struct psc_multiwaitcond  smi_mwcond;
@@ -168,7 +168,7 @@ __dead void	 slmctlthr_main(const char *);
 void		 slmbmaptimeothr_spawn(void);
 void		 slmfssyncthr_spawn(void);
 void		 slmrcmthr_main(struct psc_thread *);
-void		 slmreplqthr_spawnall(void);
+void		 slmupschedthr_spawnall(void);
 void		 slmtimerthr_spawn(void);
 
 extern struct slash_creds			 rootcreds;

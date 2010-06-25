@@ -56,10 +56,11 @@
 #include "repl_mds.h"
 #include "slashd.h"
 #include "slerr.h"
+#include "up_sched_res.h"
 
-struct replrqtree	 replrq_tree = SPLAY_INITIALIZER(&replrq_tree);
-struct psc_poolmgr	*replrq_pool;
-psc_spinlock_t		 replrq_tree_lock = LOCK_INITIALIZER;
+struct upschedtree	 upsched_tree = SPLAY_INITIALIZER(&upsched_tree);
+struct psc_poolmgr	*upsched_pool;
+psc_spinlock_t		 upsched_tree_lock = LOCK_INITIALIZER;
 
 struct psc_listcache	 slm_replst_workq;
 
@@ -86,42 +87,39 @@ iosidx_in(int idx, const int *iosidx, int nios)
 }
 
 int
-replrq_cmp(const void *a, const void *b)
+uswi_cmp(const void *a, const void *b)
 {
-	const struct sl_replrq *x = a, *y = b;
+	const struct up_sched_work_item *x = a, *y = b;
 
-	if (REPLRQ_FID(x) < REPLRQ_FID(y))
-		return (-1);
-	else if (REPLRQ_FID(x) > REPLRQ_FID(y))
-		return (1);
-	return (0);
+	return (CMP(USWI_FID(x), USWI_FID(y)));
 }
 
-SPLAY_GENERATE(replrqtree, sl_replrq, rrq_tentry, replrq_cmp);
+SPLAY_GENERATE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
 
 void
-mds_repl_enqueue_sites(struct sl_replrq *rrq, const sl_replica_t *iosv, int nios)
+mds_repl_enqueue_sites(struct up_sched_work_item *wk,
+    const sl_replica_t *iosv, int nios)
 {
 	struct site_mds_info *smi;
 	struct sl_site *site;
 	int locked, n;
 
-	locked = psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
-	rrq->rrq_gen++;
+	locked = psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	wk->uswi_gen++;
 	for (n = 0; n < nios; n++) {
 		site = libsl_resid2site(iosv[n].bs_id);
 		smi = site->site_pri;
 
 		spinlock(&smi->smi_lock);
-		if (!psc_dynarray_exists(&smi->smi_replq, rrq)) {
-			psc_dynarray_add(&smi->smi_replq, rrq);
+		if (!psc_dynarray_exists(&smi->smi_upq, wk)) {
+			psc_dynarray_add(&smi->smi_upq, wk);
 			smi->smi_flags |= SMIF_DIRTYQ;
-			psc_atomic32_inc(&rrq->rrq_refcnt);
+			psc_atomic32_inc(&wk->uswi_refcnt);
 		}
 		psc_multiwaitcond_wakeup(&smi->smi_mwcond);
 		freelock(&smi->smi_lock);
 	}
-	psc_pthread_mutex_ureqlock(&rrq->rrq_mutex, locked);
+	psc_pthread_mutex_ureqlock(&wk->uswi_mutex, locked);
 }
 
 int
@@ -139,8 +137,8 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 			goto add_repl;
 	}
 
-	for (j=0, k=0, repl=i->inoh_ino.ino_repls; j < i->inoh_ino.ino_nrepls;
-	     j++, k++) {
+	for (j = 0, k = 0, repl = i->inoh_ino.ino_repls;
+	    j < i->inoh_ino.ino_nrepls; j++, k++) {
 		if (j >= SL_DEF_REPLICAS) {
 			/* The first few replicas are in the inode itself,
 			 *   the rest are in the extras block.
@@ -392,10 +390,9 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 int
 mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 {
-	int rc, iosidx, tract[SL_NREPLST], retifset[SL_NREPLST];
-	int locked;
+	int locked, rc, iosidx, tract[SL_NREPLST], retifset[SL_NREPLST];
+	struct up_sched_work_item *wk;
 	struct slash_bmap_od *bmapod;
-	struct sl_replrq *rrq;
 	sl_replica_t repl;
 
 	locked = BMAP_RLOCK(bcm);
@@ -415,10 +412,10 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	 * have more to do.
 	 */
 	if (bmapod->bh_repl_policy == BRP_PERSIST) {
-		rrq = mds_repl_findrq(&bcm->bcm_fcmh->fcmh_fg, NULL);
+		wk = mds_repl_findrq(&bcm->bcm_fcmh->fcmh_fg, NULL);
 		repl.bs_id = ios;
-		mds_repl_enqueue_sites(rrq, &repl, 1);
-		mds_repl_unrefrq(rrq);
+		mds_repl_enqueue_sites(wk, &repl, 1);
+		mds_repl_unrefrq(wk);
 	}
 
 	/* ensure this replica is marked active */
@@ -480,72 +477,72 @@ mds_repl_bmap_rel(struct bmapc_memb *bcm)
 /**
  * mds_repl_accessrq - Obtain processing access to a replication request.
  *	This routine assumes the refcnt has already been bumped.
- * @rrq: replication request to access, locked on return.
+ * @wk: replication request to access, locked on return.
  * Returns Boolean true on success or false if the request is going away.
  */
 int
-mds_repl_accessrq(struct sl_replrq *rrq)
+mds_repl_accessrq(struct up_sched_work_item *wk)
 {
 	int rc = 1;
 
-	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
+	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
 
 	/* Wait for someone else to finish processing. */
-	while (rrq->rrq_flags & REPLRQF_BUSY) {
-		psc_multiwaitcond_wait(&rrq->rrq_mwcond, &rrq->rrq_mutex);
-		psc_pthread_mutex_lock(&rrq->rrq_mutex);
+	while (wk->uswi_flags & USWIF_BUSY) {
+		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
+		psc_pthread_mutex_lock(&wk->uswi_mutex);
 	}
 
-	if (rrq->rrq_flags & REPLRQF_DIE) {
+	if (wk->uswi_flags & USWIF_DIE) {
 		/* Release if going away. */
-		psc_atomic32_dec(&rrq->rrq_refcnt);
-		psc_multiwaitcond_wakeup(&rrq->rrq_mwcond);
+		psc_atomic32_dec(&wk->uswi_refcnt);
+		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 		rc = 0;
 	} else {
-		rrq->rrq_flags |= REPLRQF_BUSY;
-		psc_pthread_mutex_unlock(&rrq->rrq_mutex);
+		wk->uswi_flags |= USWIF_BUSY;
+		psc_pthread_mutex_unlock(&wk->uswi_mutex);
 	}
 	return (rc);
 }
 
 void
-mds_repl_unrefrq(struct sl_replrq *rrq)
+mds_repl_unrefrq(struct up_sched_work_item *wk)
 {
-	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
-	psc_assert(psc_atomic32_read(&rrq->rrq_refcnt) > 0);
-	psc_atomic32_dec(&rrq->rrq_refcnt);
-	rrq->rrq_flags &= ~REPLRQF_BUSY;
-	psc_multiwaitcond_wakeup(&rrq->rrq_mwcond);
-	psc_pthread_mutex_unlock(&rrq->rrq_mutex);
+	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	psc_assert(psc_atomic32_read(&wk->uswi_refcnt) > 0);
+	psc_atomic32_dec(&wk->uswi_refcnt);
+	wk->uswi_flags &= ~USWIF_BUSY;
+	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
+	psc_pthread_mutex_unlock(&wk->uswi_mutex);
 }
 
-struct sl_replrq *
+struct up_sched_work_item *
 mds_repl_findrq(const struct slash_fidgen *fgp, int *locked)
 {
-	struct slash_inode_handle inoh;
-	struct sl_replrq q, *rrq;
+	struct up_sched_work_item q, *wk;
+	struct fidc_membh fcmh;
 	int dummy;
 
 	if (locked == NULL)
 		locked = &dummy;
 
-	inoh.inoh_ino.ino_fg = *fgp;
-	q.rrq_inoh = &inoh;
+	fcmh.fcmh_fg = *fgp;
+	q.uswi_fcmh = &fcmh;
 
-	*locked = reqlock(&replrq_tree_lock);
-	rrq = SPLAY_FIND(replrqtree, &replrq_tree, &q);
-	if (rrq == NULL) {
-		ureqlock(&replrq_tree_lock, *locked);
+	*locked = reqlock(&upsched_tree_lock);
+	wk = SPLAY_FIND(upschedtree, &upsched_tree, &q);
+	if (wk == NULL) {
+		ureqlock(&upsched_tree_lock, *locked);
 		return (NULL);
 	}
-	psc_pthread_mutex_lock(&rrq->rrq_mutex);
-	psc_atomic32_inc(&rrq->rrq_refcnt);
-	freelock(&replrq_tree_lock);
+	psc_pthread_mutex_lock(&wk->uswi_mutex);
+	psc_atomic32_inc(&wk->uswi_refcnt);
+	freelock(&upsched_tree_lock);
 	*locked = 0;
 
 	/* accessrq() drops the refcnt on failure */
-	if (mds_repl_accessrq(rrq))
-		return (rrq);
+	if (mds_repl_accessrq(wk))
+		return (wk);
 	return (NULL);
 }
 
@@ -575,16 +572,16 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 }
 
 void
-mds_repl_initrq(struct sl_replrq *rrq, struct fidc_membh *fcmh)
+mds_repl_initrq(struct up_sched_work_item *wk, struct fidc_membh *fcmh)
 {
-	memset(rrq, 0, sizeof(*rrq));
-	rrq->rrq_flags |= REPLRQF_BUSY;
-	psc_pthread_mutex_init(&rrq->rrq_mutex);
-	psc_multiwaitcond_init(&rrq->rrq_mwcond,
-	    NULL, 0, "replrq-%lx", fcmh_2_fid(fcmh));
-	psc_atomic32_set(&rrq->rrq_refcnt, 1);
-	rrq->rrq_inoh = fcmh_2_inoh(fcmh);
-	SPLAY_INSERT(replrqtree, &replrq_tree, rrq);
+	memset(wk, 0, sizeof(*wk));
+	wk->uswi_flags |= USWIF_BUSY;
+	psc_pthread_mutex_init(&wk->uswi_mutex);
+	psc_multiwaitcond_init(&wk->uswi_mwcond,
+	    NULL, 0, "upsched-%lx", fcmh_2_fid(fcmh));
+	psc_atomic32_set(&wk->uswi_refcnt, 1);
+	wk->uswi_fcmh = fcmh; /* XXX take fcmh_refcnt! */
+	SPLAY_INSERT(upschedtree, &upsched_tree, wk);
 }
 
 slfid_t
@@ -599,7 +596,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 {
 	int tract[SL_NREPLST], retifset[SL_NREPLST], retifzero[SL_NREPLST];
 	int iosidx[SL_MAX_REPLICAS], rc, locked;
-	struct sl_replrq *newrq, *rrq;
+	struct up_sched_work_item *newrq, *wk;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
 	char fn[FID_MAX_PATH];
@@ -608,13 +605,13 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
 
-	newrq = psc_pool_get(replrq_pool);
+	newrq = psc_pool_get(upsched_pool);
 
 	rc = 0;
  restart:
-	spinlock(&replrq_tree_lock);
-	rrq = mds_repl_findrq(fgp, &locked);
-	if (rrq == NULL) {
+	spinlock(&upsched_tree_lock);
+	wk = mds_repl_findrq(fgp, &locked);
+	if (wk == NULL) {
 		/*
 		 * If the tree stayed locked, the request
 		 * exists but we can't use it e.g. because it
@@ -648,32 +645,32 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			if (rc == 0) {
 				mdsio_release(&rootcreds, &mdsio_data);
 
-				rrq = newrq;
+				wk = newrq;
 				newrq = NULL;
 
-				mds_repl_initrq(rrq, fcmh);
+				mds_repl_initrq(wk, fcmh);
 				/*
 				 * Refcnt is 1 for tree on return here; bump again
 				 * though because we will unrefrq() when we're done.
 				 */
-				psc_atomic32_inc(&rrq->rrq_refcnt);
+				psc_atomic32_inc(&wk->uswi_refcnt);
 			}
 		}
 	} else {
 		/* Find/add our replica's IOS ID */
-		rc = mds_repl_iosv_lookup_add(rrq->rrq_inoh,
+		rc = mds_repl_iosv_lookup_add(USWI_INOH(wk),
 		    iosv, iosidx, nios);
 	}
  bail:
 	if (locked)
-		freelock(&replrq_tree_lock);
+		freelock(&upsched_tree_lock);
 
 	if (newrq)
-		psc_pool_return(replrq_pool, newrq);
+		psc_pool_return(upsched_pool, newrq);
 
 	if (rc) {
-		if (rrq)
-			mds_repl_unrefrq(rrq);
+		if (wk)
+			mds_repl_unrefrq(wk);
 		return (rc);
 	}
 
@@ -711,9 +708,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		ret_if_inact[SL_REPLST_ACTIVE] = 0;
 		ret_if_inact[SL_REPLST_TRUNCPNDG] = 1;
 
-		for (bmapno = 0; bmapno < REPLRQ_NBMAPS(rrq); bmapno++) {
-			if (mds_bmap_load(REPLRQ_FCMH(rrq),
-			    bmapno, &bcm))
+		for (bmapno = 0; bmapno < USWI_NBMAPS(wk); bmapno++) {
+			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm))
 				continue;
 
 			BMAP_LOCK(bcm);
@@ -739,7 +735,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			rc = EALREADY;
 		else if (repl_all_act)
 			rc = SLERR_REPL_ALREADY_ACT;
-	} else if (mds_bmap_exists(REPLRQ_FCMH(rrq), bmapno)) {
+	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
 		/*
 		 * If this bmap is already being
 		 * replicated, return EALREADY.
@@ -750,7 +746,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[SL_REPLST_ACTIVE] = 0;
 		retifset[SL_REPLST_TRUNCPNDG] = SLERR_REPL_NOT_ACT;
 
-		rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm);
+		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
 
@@ -772,37 +768,37 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		rc = SLERR_BMAP_INVALID;
 
 	if (rc == 0)
-		mds_repl_enqueue_sites(rrq, iosv, nios);
+		mds_repl_enqueue_sites(wk, iosv, nios);
 	else if (rc == SLERR_BMAP_ZERO)
 		rc = 0;
 
-	mds_repl_unrefrq(rrq);
+	mds_repl_unrefrq(wk);
 	return (rc);
 }
 
 /* XXX this should also remove any ios' that are empty in all bmaps from the inode */
 void
-mds_repl_tryrmqfile(struct sl_replrq *rrq)
+mds_repl_tryrmqfile(struct up_sched_work_item *wk)
 {
-	int rrq_gen, rc, retifset[SL_NREPLST];
+	int uswi_gen, rc, retifset[SL_NREPLST];
 	struct bmapc_memb *bcm;
 	char fn[IMNS_NAME_MAX];
 	sl_bmapno_t n;
 
-	psc_pthread_mutex_reqlock(&rrq->rrq_mutex);
-	if (rrq->rrq_flags & REPLRQF_DIE) {
+	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	if (wk->uswi_flags & USWIF_DIE) {
 		/* someone is already waiting for this to go away */
-		mds_repl_unrefrq(rrq);
+		mds_repl_unrefrq(wk);
 		return;
 	}
 
 	/*
 	 * If someone bumps the generation while we're processing, we'll
-	 * know there is work to do and that the replrq shouldn't go away.
+	 * know there is work to do and that the upsched shouldn't go away.
 	 */
-	rrq_gen = rrq->rrq_gen;
-	rrq->rrq_flags |= REPLRQF_BUSY;
-	psc_pthread_mutex_unlock(&rrq->rrq_mutex);
+	uswi_gen = wk->uswi_gen;
+	wk->uswi_flags |= USWIF_BUSY;
+	psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
 	/* Scan for any OLD states. */
 	retifset[SL_REPLST_INACTIVE] = 0;
@@ -812,8 +808,8 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	retifset[SL_REPLST_TRUNCPNDG] = 0;
 
 	/* Scan bmaps to see if the inode should disappear. */
-	for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-		if (mds_bmap_load(REPLRQ_FCMH(rrq), n, &bcm))
+	for (n = 0; n < USWI_NBMAPS(wk); n++) {
+		if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 			continue;
 
 		BMAP_LOCK(bcm);
@@ -824,12 +820,12 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 			goto keep;
 	}
 
-	spinlock(&replrq_tree_lock);
-	psc_pthread_mutex_lock(&rrq->rrq_mutex);
-	if (rrq->rrq_gen != rrq_gen) {
-		freelock(&replrq_tree_lock);
+	spinlock(&upsched_tree_lock);
+	psc_pthread_mutex_lock(&wk->uswi_mutex);
+	if (wk->uswi_gen != uswi_gen) {
+		freelock(&upsched_tree_lock);
  keep:
-		mds_repl_unrefrq(rrq);
+		mds_repl_unrefrq(wk);
 		return;
 	}
 	/*
@@ -837,55 +833,54 @@ mds_repl_tryrmqfile(struct sl_replrq *rrq)
 	 * remove it and its persistent link.
 	 */
 	rc = snprintf(fn, sizeof(fn),
-	    "%016"PRIx64, REPLRQ_FID(rrq));
+	    "%016"PRIx64, USWI_FID(wk));
 	if (rc == -1)
 		rc = errno;
 	else if (rc >= (int)sizeof(fn))
 		rc = ENAMETOOLONG;
 	else
 		rc = mdsio_unlink(mds_repldir_inum, fn, &rootcreds, NULL);
-	PSC_SPLAY_XREMOVE(replrqtree, &replrq_tree, rrq);
-	freelock(&replrq_tree_lock);
+	PSC_SPLAY_XREMOVE(upschedtree, &upsched_tree, wk);
+	freelock(&upsched_tree_lock);
 
-	psc_atomic32_dec(&rrq->rrq_refcnt);	/* removed from tree */
-	rrq->rrq_flags |= REPLRQF_DIE;
-	rrq->rrq_flags &= ~REPLRQF_BUSY;
+	psc_atomic32_dec(&wk->uswi_refcnt);	/* removed from tree */
+	wk->uswi_flags |= USWIF_DIE;
+	wk->uswi_flags &= ~USWIF_BUSY;
 
-	while (psc_atomic32_read(&rrq->rrq_refcnt) > 1) {
-		psc_multiwaitcond_wakeup(&rrq->rrq_mwcond);
-		psc_multiwaitcond_wait(&rrq->rrq_mwcond, &rrq->rrq_mutex);
-		psc_pthread_mutex_lock(&rrq->rrq_mutex);
+	while (psc_atomic32_read(&wk->uswi_refcnt) > 1) {
+		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
+		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
+		psc_pthread_mutex_lock(&wk->uswi_mutex);
 	}
 
 	/* XXX where does this ref come from? */
-	fcmh_op_done_type(REPLRQ_FCMH(rrq), FCMH_OPCNT_LOOKUP_FIDC);
+	fcmh_op_done_type(wk->uswi_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
 	/* SPLAY_REMOVE() does not NULL out the field */
-	INIT_PSCLIST_ENTRY(&rrq->rrq_lentry);
-	psc_pool_return(replrq_pool, rrq);
+	INIT_PSCLIST_ENTRY(&wk->uswi_lentry);
+	psc_pool_return(upsched_pool, wk);
 }
 
 int
 mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     const sl_replica_t *iosv, int nios)
 {
-	int tract[SL_NREPLST], retifset[SL_NREPLST];
-	int iosidx[SL_MAX_REPLICAS], rc;
+	int rc, tract[SL_NREPLST], retifset[SL_NREPLST], iosidx[SL_MAX_REPLICAS];
+	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm;
-	struct sl_replrq *rrq;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
 
-	rrq = mds_repl_findrq(fgp, NULL);
-	if (rrq == NULL)
+	wk = mds_repl_findrq(fgp, NULL);
+	if (wk == NULL)
 		return (SLERR_REPL_NOT_ACT);
 
 	/* Find replica IOS indexes */
-	rc = mds_repl_iosv_lookup_add(rrq->rrq_inoh,
+	rc = mds_repl_iosv_lookup_add(USWI_INOH(wk),
 	    iosv, iosidx, nios);
 	if (rc) {
-		mds_repl_unrefrq(rrq);
+		mds_repl_unrefrq(wk);
 		return (rc);
 	}
 
@@ -903,9 +898,8 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[SL_REPLST_TRUNCPNDG] = 0;
 
 		rc = SLERR_REPLS_ALL_INACT;
-		for (bmapno = 0; bmapno < REPLRQ_NBMAPS(rrq); bmapno++) {
-			if (mds_bmap_load(REPLRQ_FCMH(rrq),
-			    bmapno, &bcm))
+		for (bmapno = 0; bmapno < USWI_NBMAPS(wk); bmapno++) {
+			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm))
 				continue;
 
 			BMAP_LOCK(bcm);
@@ -914,14 +908,14 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 				rc = 0;
 			mds_repl_bmap_rel(bcm);
 		}
-	} else if (mds_bmap_exists(REPLRQ_FCMH(rrq), bmapno)) {
+	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
 		retifset[SL_REPLST_INACTIVE] = SLERR_REPL_ALREADY_INACT;
 		retifset[SL_REPLST_ACTIVE] = 0;
 		retifset[SL_REPLST_OLD] = 0;
 		retifset[SL_REPLST_SCHED] = 0;
 		retifset[SL_REPLST_TRUNCPNDG] = 0;
 
-		rc = mds_bmap_load(REPLRQ_FCMH(rrq), bmapno, &bcm);
+		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
 			rc = mds_repl_bmap_walk(bcm,
@@ -931,7 +925,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	} else
 		rc = SLERR_BMAP_INVALID;
 
-	mds_repl_tryrmqfile(rrq);
+	mds_repl_tryrmqfile(wk);
 	return (rc);
 }
 
@@ -939,13 +933,13 @@ void
 mds_repl_scandir(void)
 {
 	sl_replica_t iosv[SL_MAX_REPLICAS];
+	struct up_sched_work_item *wk;
 	int rc, tract[SL_NREPLST];
 	char *buf, fn[NAME_MAX];
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
 	struct slash_fidgen fg;
 	struct fuse_dirent *d;
-	struct sl_replrq *rrq;
 	off64_t off, toff;
 	size_t siz, tsiz;
 	uint32_t j;
@@ -994,12 +988,12 @@ mds_repl_scandir(void)
 				psc_fatal("mds_repl_loadino: %s",
 				    slstrerror(rc));
 
-			rrq = psc_pool_get(replrq_pool);
-			mds_repl_initrq(rrq, fcmh);
+			wk = psc_pool_get(upsched_pool);
+			mds_repl_initrq(wk, fcmh);
 
-			psc_pthread_mutex_lock(&rrq->rrq_mutex);
-			rrq->rrq_flags &= ~REPLRQF_BUSY;
-			psc_pthread_mutex_unlock(&rrq->rrq_mutex);
+			psc_pthread_mutex_lock(&wk->uswi_mutex);
+			wk->uswi_flags &= ~USWIF_BUSY;
+			psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
 			tract[SL_REPLST_INACTIVE] = -1;
 			tract[SL_REPLST_ACTIVE] = -1;
@@ -1011,9 +1005,8 @@ mds_repl_scandir(void)
 			 * If we crashed, revert all inflight SCHED'ed
 			 * bmaps to OLD.
 			 */
-			for (j = 0; j < REPLRQ_NBMAPS(rrq); j++) {
-				if (mds_bmap_load(REPLRQ_FCMH(rrq),
-				    j, &bcm))
+			for (j = 0; j < USWI_NBMAPS(wk); j++) {
+				if (mds_bmap_load(wk->uswi_fcmh, j, &bcm))
 					continue;
 
 				BMAP_LOCK(bcm);
@@ -1025,11 +1018,11 @@ mds_repl_scandir(void)
 			/*
 			 * Requeue pending replications on all sites.
 			 * If there is no work to do, it will be promptly
-			 * removed by the replqthr.
+			 * removed by the slmupschedthr.
 			 */
-			for (j = 0; j < REPLRQ_NREPLS(rrq); j++)
-				iosv[j].bs_id = REPLRQ_GETREPL(rrq, j).bs_id;
-			mds_repl_enqueue_sites(rrq, iosv, REPLRQ_NREPLS(rrq));
+			for (j = 0; j < USWI_NREPLS(wk); j++)
+				iosv[j].bs_id = USWI_GETREPL(wk, j).bs_id;
+			mds_repl_enqueue_sites(wk, iosv, USWI_NREPLS(wk));
 		}
 		off += tsiz;
 	}
@@ -1167,27 +1160,27 @@ void
 mds_repl_reset_scheduled(sl_ios_id_t resid)
 {
 	int tract[SL_NREPLST], rc, iosidx;
+	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm;
-	struct sl_replrq *rrq;
 	sl_replica_t repl;
 	sl_bmapno_t n;
 
 	repl.bs_id = resid;
 
-	spinlock(&replrq_tree_lock);
-	SPLAY_FOREACH(rrq, replrqtree, &replrq_tree) {
-		psc_atomic32_inc(&rrq->rrq_refcnt);
-		if (!mds_repl_accessrq(rrq))
+	spinlock(&upsched_tree_lock);
+	SPLAY_FOREACH(wk, upschedtree, &upsched_tree) {
+		psc_atomic32_inc(&wk->uswi_refcnt);
+		if (!mds_repl_accessrq(wk))
 			continue;
 
-		rc = mds_inox_ensure_loaded(rrq->rrq_inoh);
+		rc = mds_inox_ensure_loaded(USWI_INOH(wk));
 		if (rc) {
 			psc_warnx("couldn't load inoh repl table: %s",
 			    slstrerror(rc));
 			goto end;
 		}
 
-		iosidx = mds_repl_ios_lookup(rrq->rrq_inoh, resid);
+		iosidx = mds_repl_ios_lookup(USWI_INOH(wk), resid);
 		if (iosidx < 0)
 			goto end;
 
@@ -1197,9 +1190,8 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		tract[SL_REPLST_ACTIVE] = -1;
 		tract[SL_REPLST_TRUNCPNDG] = -1;
 
-		for (n = 0; n < REPLRQ_NBMAPS(rrq); n++) {
-			if (mds_bmap_load(REPLRQ_FCMH(rrq),
-			    n, &bcm))
+		for (n = 0; n < USWI_NBMAPS(wk); n++) {
+			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 				continue;
 
 			BMAP_LOCK(bcm);
@@ -1208,10 +1200,10 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 			mds_repl_bmap_rel(bcm);
 		}
  end:
-		mds_repl_enqueue_sites(rrq, &repl, 1);
-		mds_repl_unrefrq(rrq);
+		mds_repl_enqueue_sites(wk, &repl, 1);
+		mds_repl_unrefrq(wk);
 	}
-	freelock(&replrq_tree_lock);
+	freelock(&upsched_tree_lock);
 }
 
 void

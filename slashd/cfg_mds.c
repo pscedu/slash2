@@ -60,7 +60,7 @@ slcfg_init_site(struct sl_site *site)
 	struct site_mds_info *smi;
 
 	smi = site->site_pri = PSCALLOC(sizeof(*smi));
-	psc_dynarray_init(&smi->smi_replq);
+	psc_dynarray_init(&smi->smi_upq);
 	LOCK_INIT(&smi->smi_lock);
 	psc_multiwait_init(&smi->smi_mw, "smi-%s",
 	    site->site_name + strspn(site->site_name, "@"));
