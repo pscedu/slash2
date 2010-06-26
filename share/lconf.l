@@ -129,6 +129,12 @@ parallel_fs {
 	return RESOURCE_TYPE;
 }
 
+standalone_fs {
+	psc_trace("Resource type string %s", yytext);
+	yylval = strdup(yytext);
+	return RESOURCE_TYPE;
+}
+
 archival_fs {
 	psc_trace("Resource type string %s", yytext);
 	yylval = strdup(yytext);

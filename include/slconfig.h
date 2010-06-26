@@ -49,6 +49,7 @@ struct slashrpc_cservice;
 
 enum sl_res_type {
 	SLREST_NONE = 0,		/* must be zero */
+	SLREST_STANDALONE_FS,
 	SLREST_ARCHIVAL_FS,
 	SLREST_CLUSTER_NOSHARE_FS,
 	SLREST_COMPUTE,
@@ -67,6 +68,7 @@ struct sl_resource {
 	struct psc_dynarray	 res_peers;
 	struct psc_dynarray	 res_members;
 	char			 res_fsroot[PATH_MAX];
+	char			 res_jrnldev[PATH_MAX];
 	void			*res_pri;
 	struct sl_site		*res_site;
 };

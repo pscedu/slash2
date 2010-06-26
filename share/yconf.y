@@ -102,6 +102,7 @@ struct symtable sym_table[] = {
 	TABENT_RES ("type",		SL_TYPE_INT,	0,		res_type,	slcfg_str2restype),
 	TABENT_RES ("id",		SL_TYPE_INT,	RES_MAXID,	res_id,		NULL),
 	TABENT_RES ("fsroot",		SL_TYPE_STR,	PATH_MAX,	res_fsroot,	NULL),
+	TABENT_RES ("jrnldev",	        SL_TYPE_STR,	PATH_MAX,	res_jrnldev,	NULL),	
 	{ NULL, 0, 0, 0, 0, NULL }
 };
 
@@ -480,6 +481,8 @@ slcfg_str2restype(const char *res_type)
 {
 	if (!strcmp(res_type, "parallel_fs"))
 		return (SLREST_PARALLEL_FS);
+	if (!strcmp(res_type, "standalone_fs"))
+		return (SLREST_STANDALONE_FS);
 	if (!strcmp(res_type, "archival_fs"))
 		return (SLREST_ARCHIVAL_FS);
 	if (!strcmp(res_type, "cluster_noshare_fs"))
