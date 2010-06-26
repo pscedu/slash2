@@ -105,7 +105,6 @@ slvr_do_crc(struct slvr_ref *s)
 			 *   code will not work in RMW situations.
 			 */ 
 			psc_assert(!s->slvr_crc_soff && 
-				   !s->slvr_crc_loff &&
 				   !s->slvr_pndgwrts);
 
 			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
