@@ -927,17 +927,22 @@ mds_journal_init(void)
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
-	char fn[PATH_MAX];
 	uint64_t txg;
 	int n;
 
 	txg = mdsio_first_txg();
-	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
 
-	mdsJournal = pjournal_init(fn, txg, SLMTHRT_JRNL_DISTILL, "slmjdistthr",
-	    mds_embed_handler, mds_replay_handler, mds_distill_handler);
+	r = nodeResm->resm_res;
+
+	if (r->res_jrnldev[0] == '0')	
+		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
+              
+	mdsJournal = pjournal_init(r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL, 
+	   "slmjdistthr", NULL, mds_replay_handler, 
+	   mds_distill_handler);
+
 	if (mdsJournal == NULL)
-		psc_fatal("Fail to load/replay log file %s", fn);
+		psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
 
 	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
 	psc_assert(logentrysize >= (int)sizeof(struct slmds_jent_namespace));
