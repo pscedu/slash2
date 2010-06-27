@@ -712,14 +712,14 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(rq, mp);
-
-	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
-		 mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
-
 	if (rc == 0)
 		rc = mp->rc;
 	if (rc)
 		goto out;
+
+	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
+		 mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
+
 	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_NONE, &m);
 	if (rc)
 		goto out;
