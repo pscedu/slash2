@@ -934,12 +934,11 @@ mds_journal_init(void)
 
 	r = nodeResm->resm_res;
 
-	if (r->res_jrnldev[0] == '0')	
+	if (r->res_jrnldev[0] == '\0')	
 		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
               
 	mdsJournal = pjournal_init(r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL, 
-	   "slmjdistthr", NULL, mds_replay_handler, 
-	   mds_distill_handler);
+			   "slmjdistthr", NULL, mds_replay_handler, mds_distill_handler);
 
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
