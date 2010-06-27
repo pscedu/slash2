@@ -175,8 +175,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		for (i=0; i < psc_dynarray_len(&a); i++) {
 			bml = psc_dynarray_getpos(&a, i);
 			psc_assert(bml->bml_seq <= e->bte_maxseq);
-			if (mds_bmap_bml_release(bml_2_bmap(bml), bml->bml_seq,
-				 bml->bml_key))
+			if (mds_bmap_bml_release(bml))
 				abort();
 		}
 		psc_dynarray_reset(&a);

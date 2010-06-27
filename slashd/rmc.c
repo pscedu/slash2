@@ -204,7 +204,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	bmdsi = b->bcm_pri;
 
 	BMAP_LOCK(b);
-	bml = mds_bmap_getbml(b, mq->sbd.sbd_seq);
+	bml = mds_bmap_getbml(b, rq->rq_export, mq->sbd.sbd_seq);
 	if (bml == NULL) {
 		mp->rc = EINVAL;
 		goto out;
@@ -415,9 +415,10 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	bmap = NULL;
 	mp->rc2 = mds_bmap_load_cli(fcmh, 0, mp->flags, SL_WRITE,
 			    mq->prefios, &mp->sbd, rq->rq_export, &bmap);
-	if (mp->rc)
+	if (mp->rc2) {
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		goto out;
-
+	}
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, SL_WRITE);
 
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);

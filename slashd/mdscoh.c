@@ -73,8 +73,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 		rls = 1;
 	BML_ULOCK(bml);
 	if (rls)
-		mds_bmap_bml_release(bml_2_bmap(bml), bml->bml_seq,
-		     bml->bml_key);
+		mds_bmap_bml_release(bml);
 	/* bmap_op_done_type() will wake any waiters.
 	 */
 	bmap_op_done_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);

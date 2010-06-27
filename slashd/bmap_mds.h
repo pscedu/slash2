@@ -22,6 +22,7 @@
 
 #include <sys/time.h>
 
+#include "psc_rpc/rpc.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_util/odtable.h"
 
@@ -102,6 +103,7 @@ struct bmap_mds_lease {
 	struct psclist_head	  bml_timeo_lentry;
 	struct psclist_head	  bml_exp_lentry;
 	struct psclist_head	  bml_coh_lentry;
+	struct bmap_mds_lease    *bml_chain;
 };
 
 #define bml_2_bmap(b)		(b)->bml_bmdsi->bmdsi_bmap
@@ -117,7 +119,10 @@ enum {
 	BML_COHRLS = (1 << 3),
 	BML_EXP    = (1 << 4),
 	BML_TIMEOQ = (1 << 5),
-	BML_COH    = (1 << 6)
+	BML_COH    = (1 << 6),
+	BML_RDMASK = (1 << 7), /* BML_WRITE masking a read from same client */
+	BML_WRMASK = (1 << 8), /* BML_WRITE masking a write from same client */
+	BML_CHAIN  = (1 << 9)  /* chained onto another bml from same client*/
 };
 
 /*
@@ -150,10 +155,10 @@ int	 mds_bmap_load_ion(const struct slash_fidgen *, sl_bmapno_t,
 int	 mds_bmap_loadvalid(struct fidc_membh *, sl_bmapno_t,
 	    struct bmapc_memb **);
 int	 mds_bmap_bml_chwrmode(struct bmap_mds_lease *, sl_ios_id_t);
-int	 mds_bmap_bml_release(struct bmapc_memb *, uint64_t, uint64_t);
+int	 mds_bmap_bml_release(struct bmap_mds_lease *);
 void	 mds_bmap_sync_if_changed(struct bmapc_memb *);
 struct bmap_mds_lease *
-	 mds_bmap_getbml(struct bmapc_memb *, uint64_t);
+mds_bmap_getbml(struct bmapc_memb *, struct pscrpc_export *, uint64_t);
 
 void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
 uint64_t mds_bmap_timeotbl_getnextseq(void);

@@ -192,14 +192,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 	if (bmdsi->bmdsi_writers > 1 && !(b->bcm_mode & BMAP_DIO)) {
 		psc_assert(rw == SL_WRITE);
 		psc_assert(bmdsi->bmdsi_writers == 2);
-		/* A second writer has been added.
-		 * 
-		 * Oldest lease is at the front of the queue but pull
-		 *   from the tail anyway.  This is because the client 
-		 *   may issued 2 two lease requests in short succession.
-		 *   The first lease revocation is still in the network, 
-		 *   probably with the sliod.  The last lease seq # is 
-		 *   valid one.
+		/* A second writer had been added.
 		 */
 	issue_sync_cb:
 		bml = pll_gettlpeek(&bmdsi->bmdsi_leases);
@@ -220,12 +213,21 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw)
 		psc_assert(bmdsi->bmdsi_writers == 1);
 		
 		if (rw == SL_WRITE) {
-			/* Inform our readers to use directio mode.
+			struct bmap_mds_lease *tmp;
+
+			/* Inform our readers to use directio mode.  There
+			 *   should be only 1 rdr per client, but interate
+			 *   over the entiore list just in case.
 			 */
 			PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
-				if ((bml->bml_flags & BML_READ) &&
-				    !(bml->bml_flags & BML_CDIO))
-					(int)mdscoh_req(bml, MDSCOH_NONBLOCK);
+				tmp = bml;
+				do {		
+					if ((bml->bml_flags & BML_READ) &&
+					    !(bml->bml_flags & BML_CDIO))
+						(int)mdscoh_req(bml, 
+							MDSCOH_NONBLOCK);
+					tmp = tmp->bml_chain;
+				} while (tmp != bml);
 			}
 		} else
 			/* Adding a reader so tell the writer to use DIO.
@@ -396,107 +398,6 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	return (0);
 }
 
-/**
- * mds_bmap_ref_add - add a read or write reference to the bmap's tree
- *	and refcnts.  This also calls into the directio_[check|set]
- *	calls depending on the number of read and/or write clients of
- *	this bmap.
- * @bref: the bref to be added, it must have a bmapc_memb already attached.
- * @mq: the RPC request for examining the bmap access mode (read/write).
- */
-__static int
-mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
-    sl_ios_id_t prefios)
-{
-	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
-	struct bmapc_memb *b=bmdsi->bmdsi_bmap;
-	struct bmap_mds_lease *tmp;
-	int rc=0;
-
-	BMAP_LOCK(b);
-	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
-	/* Wait for BMAP_IONASSIGN to be removed before proceeding.
-	 */
-	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));
-
-	if (rw == SL_WRITE) {
-		int duplease=0;
-
-		/* Drop the lock prior to doing disk and possibly network
-		 *    I/O.
-		 */
-		PLL_FOREACH(tmp, &bmdsi->bmdsi_leases) {
-			if ((tmp->bml_flags & BML_WRITE) &&
-			    (tmp->bml_exp == bml->bml_exp)) {
-				duplease = 1;				
-				DEBUG_BMAP(PLL_WARN, b, "duplease");
-				break;
-			}
-		}
-				
-		b->bcm_mode |= BMAP_IONASSIGN;
-		bml->bml_flags |= BML_TIMEOQ;
-		if (!duplease)
-			bmdsi->bmdsi_writers++;
-
-		if (!duplease && bmdsi->bmdsi_writers == 1) {
-			psc_assert(!bmdsi->bmdsi_wr_ion);
-			BMAP_ULOCK(b);
-			rc = mds_bmap_ion_assign(bml, prefios);
-		} else {
-			psc_assert(bmdsi->bmdsi_wr_ion);
-			BMAP_ULOCK(b);
-			rc = mds_bmap_ion_update(bml);
-		}
-
-		if (rc) {
-			BMAP_LOCK(b);
-			if (!duplease) {
-				bmdsi->bmdsi_writers--;
-				b->bcm_mode &= ~BMAP_IONASSIGN;
-				b->bcm_mode |= BMAP_MDS_NOION;
-			}
-			goto out;
-		}
-		rc = mds_bmap_directio(b, SL_WRITE);
-		BMAP_LOCK(b);
-		b->bcm_mode &= ~BMAP_IONASSIGN;
-
-	} else {
-		/* Read leases aren't required to be present in the
-		 *   timeout table though their sequence number must
-		 *   be accounted for.
-		 */
-		bml->bml_seq = mds_bmap_timeotbl_getnextseq();
-		bml->bml_key = BMAPSEQ_ANY;
-
-		bmdsi->bmdsi_readers++;
-
-		if (bmdsi->bmdsi_writers) {
-			b->bcm_mode |= BMAP_IONASSIGN;
-			BMAP_ULOCK(b);
-			/* Don't hold the lock when calling
-			 *   mds_bmap_directio_handle_locked(), it will likely
-			 *   send an RPC.
-			 */
-			rc = mds_bmap_directio(b, SL_READ);
-			BMAP_LOCK(b);
-			b->bcm_mode &= ~BMAP_IONASSIGN;
-		}
-	}
-	pll_addtail(&bmdsi->bmdsi_leases, bml);
-
- out:
-	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "bml_add (mion=%p) (rc=%d)",
-	   bmdsi->bmdsi_wr_ion, rc);
-
-	bcm_wake_locked(b);
-	BMAP_ULOCK(b);
-	if (rc)
-		bmap_op_done_type(b, BMAP_OPCNT_LEASE);
-
-	return (rc);
-}
 
 /**
  * mds_bmap_bml_chwrmode - Attempt to upgrade a client-granted bmap
@@ -554,7 +455,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
  * @seq: lease sequence.
  */
 struct bmap_mds_lease *
-mds_bmap_getbml(struct bmapc_memb *b, uint64_t seq)
+mds_bmap_getbml(struct bmapc_memb *b, struct pscrpc_export *exp, uint64_t seq)
 {
 	struct bmap_mds_info *bmdsi;
 	struct bmap_mds_lease *bml;
@@ -562,10 +463,191 @@ mds_bmap_getbml(struct bmapc_memb *b, uint64_t seq)
 	BMAP_LOCK_ENSURE(b);
 
 	bmdsi = b->bcm_pri;
-	PLL_FOREACH(bml, &bmdsi->bmdsi_leases)
-		if (bml->bml_seq == seq)
-			return (bml);
+	PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
+		if (exp == bml->bml_exp) {
+			struct bmap_mds_lease *tmp=bml;
+			
+			do {
+				if (tmp->bml_seq == seq)
+					return (bml);
+
+				tmp = tmp->bml_chain;
+			} while (tmp != bml);
+		}
+	}
 	return (NULL);
+}
+
+static inline struct bmap_mds_lease *
+mds_bmap_dupls_find(struct bmap_mds_info *bmdsi, 
+	    const struct pscrpc_export *exp, int *wlease, int *rlease)
+{
+	struct bmap_mds_lease *tmp, *bml=NULL;
+
+	*rlease=0;
+	*wlease=0;
+
+	PLL_FOREACH(tmp, &bmdsi->bmdsi_leases) {
+		if (tmp->bml_exp != exp)
+			continue;
+		/* Only one lease per client is allowed on the list.
+		 */
+		psc_assert(!bml);
+		bml = tmp;
+	}		
+
+	if (!bml)
+		return (NULL);
+
+	tmp = bml;
+	do {
+		/* All dup leases should be chained off the first bml.
+		 */
+		if (tmp->bml_flags & BML_READ)
+			(*rlease)++;
+		else
+			(*wlease)++;
+		tmp = tmp->bml_chain;
+	} while (tmp != bml);
+	
+	return (bml);
+}
+
+
+/**
+ * mds_bmap_ref_add - add a read or write reference to the bmap's tree
+ *	and refcnts.  This also calls into the directio_[check|set]
+ *	calls depending on the number of read and/or write clients of
+ *	this bmap.
+ * @bref: the bref to be added, it must have a bmapc_memb already attached.
+ * @mq: the RPC request for examining the bmap access mode (read/write).
+ */
+__static int
+mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
+    sl_ios_id_t prefios)
+{
+	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
+	struct bmapc_memb *b=bmdsi->bmdsi_bmap;
+	struct bmap_mds_lease *obml;
+	int rlease, wlease, rc=0;
+
+	BMAP_LOCK(b);
+	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
+	/* Wait for BMAP_IONASSIGN to be removed before proceeding.
+	 */
+	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));
+	
+	obml = mds_bmap_dupls_find(bmdsi, bml->bml_exp, &wlease, &rlease);
+	if (obml) {
+		struct bmap_mds_lease *tmp=obml;
+
+		bml->bml_flags |= BML_CHAIN;
+		/* Add ourselves to the end.
+		 */
+		while (tmp->bml_chain != obml) 
+			tmp = tmp->bml_chain;
+
+		tmp->bml_chain = bml;
+		bml->bml_chain = obml;
+	} else
+		/* First on the list.
+		 */
+		bml->bml_chain = bml;
+
+	if (rw == SL_WRITE) {
+		/* Drop the lock prior to doing disk and possibly network
+		 *    I/O.
+		 */				
+		b->bcm_mode |= BMAP_IONASSIGN;
+		bml->bml_flags |= BML_TIMEOQ;		
+		/* For any given chain of leases, the bmdsi_[readers|writers]
+		 *    value may only be 1rd or 1wr.  In the case where 2 
+		 *    wtrs are present, the value is 1wr.  Mixed readers and 
+		 *    wtrs == 1wtr.  1-N rdrs, 1rd.
+		 * Only increment writers if this is the first 
+		 *    write lease from the respective client.
+		 */
+		if (!wlease) {
+			/* This is the first write from the client.
+			 */
+			bmdsi->bmdsi_writers++;
+			
+			if (bmdsi->bmdsi_writers > 1) {
+				psc_enter_debugger("bmdsi->bmdsi_writers");
+			}
+
+			if (rlease)
+				/* Remove the read cnt, it has been 
+				 *   superseded by the write.
+				 */
+				bmdsi->bmdsi_readers--;
+		}
+
+		if (!wlease && bmdsi->bmdsi_writers == 1) {
+			psc_assert(!bmdsi->bmdsi_wr_ion);
+			BMAP_ULOCK(b);
+			rc = mds_bmap_ion_assign(bml, prefios);
+
+		} else {
+			psc_assert(wlease && bmdsi->bmdsi_wr_ion);
+			BMAP_ULOCK(b);
+			rc = mds_bmap_ion_update(bml);
+		}
+
+		if (rc) {
+			BMAP_LOCK(b);
+			if (!wlease) {
+				bmdsi->bmdsi_writers--;
+				b->bcm_mode &= ~BMAP_IONASSIGN;
+				b->bcm_mode |= BMAP_MDS_NOION;
+			}
+			goto out;
+		}
+		rc = mds_bmap_directio(b, SL_WRITE);
+		BMAP_LOCK(b);
+		b->bcm_mode &= ~BMAP_IONASSIGN;
+
+	} else {
+		/* Read leases aren't required to be present in the
+		 *   timeout table though their sequence number must
+		 *   be accounted for.
+		 */
+		bml->bml_seq = mds_bmap_timeotbl_getnextseq();
+		bml->bml_key = BMAPSEQ_ANY;
+
+		if (!wlease && !rlease)
+			bmdsi->bmdsi_readers++;
+
+		if (bmdsi->bmdsi_writers) {
+			b->bcm_mode |= BMAP_IONASSIGN;
+			BMAP_ULOCK(b);
+			/* Don't hold the lock when calling
+			 *   mds_bmap_directio_handle_locked(), it will likely
+			 *   send an RPC.
+			 */
+			rc = mds_bmap_directio(b, SL_READ);
+			BMAP_LOCK(b);
+			b->bcm_mode &= ~BMAP_IONASSIGN;
+		}
+	}
+
+	if (!obml) {
+		/* Only add the lease to the bmdsi list if it's not chained.
+		 */
+		pll_addtail(&bmdsi->bmdsi_leases, bml);
+	} else
+		psc_assert(psclist_disjoint(&bml->bml_bmdsi_lentry));
+
+ out:
+	DEBUG_BMAP(rc ? PLL_ERROR : PLL_INFO, b, "bml_add (mion=%p) (rc=%d)",
+	   bmdsi->bmdsi_wr_ion, rc);
+
+	bcm_wake_locked(b);
+	BMAP_ULOCK(b);
+	if (rc)
+		bmap_op_done_type(b, BMAP_OPCNT_LEASE);
+
+	return (rc);
 }
 
 /**
@@ -576,18 +658,19 @@ mds_bmap_getbml(struct bmapc_memb *b, uint64_t seq)
  *    otherwise we determine list removals on a case by case basis.
  */
 int
-mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
+mds_bmap_bml_release(struct bmap_mds_lease *bml)
 {
-	struct bmap_mds_info *bmdsi;
-	struct bmap_mds_lease *bml;
+	struct bmapc_memb *b=bml_2_bmap(bml);
+	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
+	struct bmap_mds_lease *obml;
 	struct odtable_receipt *odtr=NULL;
-	int rc = 0;
+	int rlease=0, wlease=0, rc=0, locked;
 
-	bmdsi = b->bcm_pri;
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
-	DEBUG_BMAP(PLL_INFO, b, "seq=%"PRId64" key=%"PRId64, seq, key);
-	BMAP_LOCK(b);
+	DEBUG_BMAP(PLL_INFO, b, "seq=%"PRId64" key=%"PRId64, 
+		   bml->bml_seq, bml->bml_key);
+	locked = BMAP_RLOCK(b);
 	/* BMAP_IONASSIGN acts as a barrier for operations which
 	 *   may modify bmdsi_wr_ion.  Since ops associated with
 	 *   BMAP_IONASSIGN do disk and net i/o, the spinlock is
@@ -598,14 +681,6 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	 */
 	bcm_wait_locked(b, (b->bcm_mode & BMAP_IONASSIGN));
 	b->bcm_mode |= BMAP_IONASSIGN;
-
-	bml = mds_bmap_getbml(b, seq);
-	if (bml == NULL) {
-		b->bcm_mode &= ~BMAP_IONASSIGN;
-		bcm_wake_locked(b);
-		BMAP_ULOCK(b);
-		return (-ENOENT);
-	}
 
 	BML_LOCK(bml);
 
@@ -661,19 +736,62 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 		return (-EAGAIN);
 	}
 
-	pll_remove(&bmdsi->bmdsi_leases, bml);
-	if (bmdsi->bmdsi_writers)
-		psc_assert(bmdsi->bmdsi_wr_ion);
+	obml = mds_bmap_dupls_find(bmdsi, bml->bml_exp, &wlease, &rlease);
+	if (wlease || rlease) {
+		struct bmap_mds_lease *tmp=obml;
 
-	if (bml->bml_flags & BML_WRITE)
-		bmdsi->bmdsi_writers--;
+		/* Other entries must be present.
+		 */
+		if ((wlease + rlease) > 1)
+			psc_assert(obml->bml_chain != obml);
+		/* obml should be the head of the chain not an entry.
+		 */
+		psc_assert(!(obml->bml_flags & BML_CHAIN));
+		psc_assert(psclist_conjoint(&obml->bml_bmdsi_lentry));
+		/* Find the bml's preceeding entry.
+		 */
+		while (tmp->bml_chain != bml) 
+			tmp = tmp->bml_chain;
+		psc_assert(tmp->bml_chain == bml);
 
+		if (bml->bml_flags & BML_CHAIN) {
+			psc_assert(psclist_disjoint(&bml->bml_bmdsi_lentry));
+			tmp->bml_chain = bml->bml_chain;
+		} else {
+			psc_assert(obml == bml);
+			psc_assert(!(obml->bml_flags & BML_CHAIN));
+			pll_remove(&bmdsi->bmdsi_leases, bml);
+		}
+
+		if (wlease == 1) {
+			bmdsi->bmdsi_writers--;
+			if (rlease)
+				bmdsi->bmdsi_readers++;
+		}
+
+	} else {
+		/* Only lease from this client, read or write.
+		 */
+		psc_assert(!wlease && !rlease);
+		psc_assert(obml == bml);
+		psc_assert(!(obml->bml_flags & BML_CHAIN));
+		pll_remove(&bmdsi->bmdsi_leases, bml);
+		if (bml->bml_flags & BML_WRITE) {
+			psc_assert(bmdsi->bmdsi_writers);
+			psc_assert(bmdsi->bmdsi_wr_ion);
+			bmdsi->bmdsi_writers--;
+		} else {
+			psc_assert(bml->bml_flags & BML_READ);
+			psc_assert(bmdsi->bmdsi_readers);
+			bmdsi->bmdsi_readers--;
+		}
+		
+	}
 	BML_ULOCK(bml);
 
-	if ((((!bmdsi->bmdsi_writers) ||
-	      ((bmdsi->bmdsi_writers == 1))) &&
-	     (pll_nitems(&bmdsi->bmdsi_leases) == 1)) &&
-	    (b->bcm_mode & BMAP_DIO))
+	if ((b->bcm_mode & BMAP_DIO) && 
+	    (!bmdsi->bmdsi_writers || 
+	     (bmdsi->bmdsi_writers == 1 && !bmdsi->bmdsi_readers)))
 		/* Remove the directio flag if possible.
 		 */
 		b->bcm_mode &= ~BMAP_DIO;
@@ -683,23 +801,24 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	 */
 	if ((bml->bml_flags & BML_WRITE) &&
 	    !bmdsi->bmdsi_writers        &&
-	    (key == bmdsi->bmdsi_assign->odtr_key)) {
+	    (bml->bml_key == bmdsi->bmdsi_assign->odtr_key)) {
 		/* odtable sanity checks:
 		 */
 		struct bmi_assign *bmi;
 
 		bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
-		psc_assert(bmi && bmi->bmi_seq == seq);
+		psc_assert(bmi && bmi->bmi_seq == bml->bml_seq);
 		psc_assert(bmi->bmi_bmapno == b->bcm_bmapno);
 		/* End Sanity Checks.
 		 */
-		psc_assert(seq == bmdsi->bmdsi_seq);
+		psc_assert(bml->bml_seq == bmdsi->bmdsi_seq);
 		atomic_dec(&bmdsi->bmdsi_wr_ion->rmmi_refcnt);
 		odtr = bmdsi->bmdsi_assign;
 		bmdsi->bmdsi_assign = NULL;
 		bmdsi->bmdsi_wr_ion = NULL;
 	}
-	/* bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN) may have released the lock.
+	/* bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN) may have released 
+	 *    the lock.
 	 */
 	(int)BMAP_RLOCK(b);
 	b->bcm_mode &= ~BMAP_IONASSIGN;
@@ -709,7 +828,7 @@ mds_bmap_bml_release(struct bmapc_memb *b, uint64_t seq, uint64_t key)
 	if (odtr) {
 		rc = odtable_freeitem(mdsBmapAssignTable, odtr);
 		DEBUG_BMAP(PLL_NOTIFY, b, "odtable remove seq=%"PRId64" key=%"
-		   PRId64, seq, key);
+		   PRId64, bml->bml_seq, bml->bml_key);
 		bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN);
 	}
 
@@ -726,6 +845,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
 	struct srm_bmap_id *bid;
+	struct bmap_mds_lease *bml;
 	int i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -749,9 +869,14 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 		if (mp->bidrc[i])
 			goto next;
 
+		BMAP_LOCK(b);
 		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64, bid->seq);
 
-		mp->bidrc[i] = mds_bmap_bml_release(b, bid->seq, bid->key);
+		bml = mds_bmap_getbml(b, rq->rq_export, bid->seq);
+		if (bml)
+			mp->bidrc[i] = mds_bmap_bml_release(bml);
+		/* bmap_op_done_type will drop the lock.
+		 */
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
  next:
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
