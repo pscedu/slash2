@@ -27,6 +27,9 @@
 #include "psc_util/log.h"
 #include "psc_util/pool.h"
 
+#include "fidcache.h"
+#include "bmap.h"
+#include "bmap_cli.h"
 #include "ctl_cli.h"
 #include "ctlsvr_cli.h"
 #include "slashrpc.h"
@@ -166,6 +169,58 @@ msrcm_handle_releasebmap(struct pscrpc_request *rq)
 	return (0);
 }
 
+int
+msrcm_handle_bmapdio(struct pscrpc_request *rq)
+{
+	struct srm_bmap_dio_req *mq;
+        struct srm_generic_rep *mp;
+	struct fidc_membh *f;
+	struct bmapc_memb *b;
+	struct bmap_cli_info *msbd;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+
+	psc_warnx("fid=%"PRId64" bmapno=%u seq=%"PRId64, 
+		  mq->fid, mq->blkno, mq->seq);
+	
+	f = fidc_lookup_fid(mq->fid);
+	if (!f) {
+		mp->rc = ENOENT;
+		goto out;
+	}
+
+	DEBUG_FCMH(PLL_WARN, f, "bmapno=%u seq=%"PRId64, mq->blkno, mq->seq);
+
+	mp->rc = bmap_lookup(f, mq->blkno, &b);
+	if (mp->rc)
+		goto out;
+
+	DEBUG_BMAP(PLL_WARN, b, "seq=%"PRId64, mq->seq);
+	
+	BMAP_LOCK(b);		
+	if (b->bcm_mode & BMAP_DIO) {
+		BMAP_ULOCK(b);
+		goto out;
+	}
+	/* Verify that the sequence number matches.
+	 */
+	msbd = b->bcm_pri;       
+	if (msbd->msbd_sbd.sbd_seq != mq->seq) {
+		BMAP_ULOCK(b);
+		mp->rc = ESTALE;
+		goto out;
+	}
+	/* All new read and write IO's will get BIORQ_DIO.
+	 */
+	b->bcm_mode |= BMAP_DIO;
+	BMAP_ULOCK(b);
+
+	DEBUG_BMAP(PLL_WARN, b, "trying to dump the cache");
+	msl_bmap_cache_rls(b);	
+ out:
+	return (0);
+}
+
 /**
  * msrcm_handle_connect - handle a CONNECT request for client from MDS.
  * @rq: request.
@@ -203,6 +258,9 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_RELEASEBMAP:
 		rc = msrcm_handle_releasebmap(rq);
+		break;
+	case SRMT_BMAPDIO:
+		rc = msrcm_handle_bmapdio(rq);
 		break;
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
