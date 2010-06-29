@@ -10,9 +10,7 @@ ifneq ($(realpath ${SLASH_BASE}),${CURDIR})
 SRC_PATH+=		${SLASH_BASE}
 endif
 
-SLASH_MODULES+=		cli
-SLASH_MODULES+=		ion
-SLASH_MODULES+=		mds
+SLASH_MODULES+=		cli ion mds
 
 -include ${SLASH_BASE}/mk/local.mk
 
