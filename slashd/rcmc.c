@@ -243,6 +243,7 @@ slmrcmthr_main(struct psc_thread *thr)
 			 */
 			wk = psc_pool_get(upsched_pool);
 			memset(wk, 0, sizeof(*wk));
+			wk->uswi_flags |= USWIF_REPLRQ;
 			wk->uswi_fcmh = fcmh;
 
 			slm_rcm_issue_getreplst(rsw, wk, 0);

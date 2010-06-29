@@ -575,7 +575,7 @@ void
 mds_repl_initrq(struct up_sched_work_item *wk, struct fidc_membh *fcmh)
 {
 	memset(wk, 0, sizeof(*wk));
-	wk->uswi_flags |= USWIF_BUSY;
+	wk->uswi_flags |= USWIF_BUSY | USWIF_REPLRQ;
 	psc_pthread_mutex_init(&wk->uswi_mutex);
 	psc_multiwaitcond_init(&wk->uswi_mwcond,
 	    NULL, 0, "upsched-%lx", fcmh_2_fid(fcmh));
