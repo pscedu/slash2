@@ -140,12 +140,14 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	tract[SL_REPLST_OLD] = SL_REPLST_SCHED;
 	tract[SL_REPLST_SCHED] = -1;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
+	tract[SL_REPLST_GARBAGE] = -1;
 
 	retifset[SL_REPLST_ACTIVE] = SL_REPLST_ACTIVE;
 	retifset[SL_REPLST_INACTIVE] = SL_REPLST_INACTIVE;
 	retifset[SL_REPLST_OLD] = SL_REPLST_OLD;
 	retifset[SL_REPLST_SCHED] = SL_REPLST_SCHED;
 	retifset[SL_REPLST_TRUNCPNDG] = SL_REPLST_TRUNCPNDG;
+	retifset[SL_REPLST_GARBAGE] = SL_REPLST_GARBAGE;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	BMAP_LOCK(bcm);
@@ -262,89 +264,87 @@ slmupschedthr_main(struct psc_thread *thr)
 			wk->uswi_flags &= ~USWIF_BUSY;
 			psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
-			if (wk->uswi_flags & USWIF_REPLRQ) {
-				/* find a resource in our site this replrq is destined for */
-				iosidx = -1;
-				DYNARRAY_FOREACH(dst_res, j, &site->site_resources) {
-					iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
-					    dst_res->res_id);
-					if (iosidx < 0)
-						continue;
-					off = SL_BITS_PER_REPLICA * iosidx;
+			/* find a resource in our site this replrq is destined for */
+			iosidx = -1;
+			DYNARRAY_FOREACH(dst_res, j, &site->site_resources) {
+				iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
+				    dst_res->res_id);
+				if (iosidx < 0)
+					continue;
+				off = SL_BITS_PER_REPLICA * iosidx;
 
-					/* got a replication request; find a bmap this ios needs */
-					nb = USWI_NBMAPS(wk);
-					bmapno = psc_random32u(nb);
-					for (ib = 0; ib < nb; ib++,
-					    bmapno = (bmapno + 1) % nb) {
-						if (uswi_gen != wk->uswi_gen)
+				/* got a replication request; find a bmap this ios needs */
+				nb = USWI_NBMAPS(wk);
+				bmapno = psc_random32u(nb);
+				for (ib = 0; ib < nb; ib++,
+				    bmapno = (bmapno + 1) % nb) {
+					if (uswi_gen != wk->uswi_gen)
+						goto skiprepl;
+					rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
+					if (rc)
+						continue;
+
+					BMAP_LOCK(bcm);
+					bmapod = bcm->bcm_od;
+					val = SL_REPL_GET_BMAP_IOS_STAT(
+					    bmapod->bh_repls, off);
+					if (val == SL_REPLST_OLD ||
+					    val == SL_REPLST_SCHED ||
+					    val == SL_REPLST_GARBAGE)
+						has_work = 1;
+					if (val != SL_REPLST_OLD)
+						goto skipbmap;
+//					if (bmap is leased to an ION)
+//						goto skipbmap;
+					BMAP_ULOCK(bcm);
+
+					/* Got a bmap; now look for a source. */
+					nios = USWI_NREPLS(wk);
+					ris = psc_random32u(nios);
+					for (is = 0; is < nios; is++,
+					    ris = (ris + 1) % nios) {
+						if (uswi_gen != wk->uswi_gen) {
+							mds_repl_bmap_rel(bcm);
 							goto skiprepl;
-						rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
-						if (rc)
+						}
+						src_res = libsl_id2res(USWI_GETREPL(wk, ris).bs_id);
+
+						/* skip ourself and old/inactive replicas */
+						if (ris == iosidx ||
+						    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
+						    SL_BITS_PER_REPLICA * ris) != SL_REPLST_ACTIVE)
 							continue;
 
-						BMAP_LOCK(bcm);
-						bmapod = bcm->bcm_od;
-						val = SL_REPL_GET_BMAP_IOS_STAT(
-						    bmapod->bh_repls, off);
-						if (val == SL_REPLST_OLD ||
-						    val == SL_REPLST_SCHED)
-							has_work = 1;
-						if (val != SL_REPLST_OLD)
-							goto skipbmap;
-//						if (bmap is leased to an ION)
-//							goto skipbmap;
-						BMAP_ULOCK(bcm);
+						/* search source nids for an idle, online connection */
+						nmemb = psc_dynarray_len(&src_res->res_members);
+						rin = psc_random32u(nmemb);
+						for (in = 0; in < nmemb; in++,
+						    rin = (rin + 1) % nmemb) {
+							struct slashrpc_cservice *csvc;
+							int k;
 
-						/* Got a bmap; now look for a source. */
-						nios = USWI_NREPLS(wk);
-						ris = psc_random32u(nios);
-						for (is = 0; is < nios; is++,
-						    ris = (ris + 1) % nios) {
-							if (uswi_gen != wk->uswi_gen) {
-								mds_repl_bmap_rel(bcm);
-								goto skiprepl;
-							}
-							src_res = libsl_id2res(USWI_GETREPL(wk, ris).bs_id);
-
-							/* skip ourself and old/inactive replicas */
-							if (ris == iosidx ||
-							    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
-							    SL_BITS_PER_REPLICA * ris) != SL_REPLST_ACTIVE)
-								continue;
-
-							/* search source nids for an idle, online connection */
-							nmemb = psc_dynarray_len(&src_res->res_members);
-							rin = psc_random32u(nmemb);
-							for (in = 0; in < nmemb; in++,
-							    rin = (rin + 1) % nmemb) {
-								struct slashrpc_cservice *csvc;
-								int k;
-
-								src_resm = psc_dynarray_getpos(&src_res->res_members, rin);
-								csvc = slm_geticsvc(src_resm);
-								if (csvc == NULL) {
-									if (!psc_multiwait_hascond(&smi->smi_mw,
+							src_resm = psc_dynarray_getpos(&src_res->res_members, rin);
+							csvc = slm_geticsvc(src_resm);
+							if (csvc == NULL) {
+								if (!psc_multiwait_hascond(&smi->smi_mw,
+								    &resm2rmmi(src_resm)->rmmi_mwcond))
+									if (psc_multiwait_addcond(&smi->smi_mw,
 									    &resm2rmmi(src_resm)->rmmi_mwcond))
-										if (psc_multiwait_addcond(&smi->smi_mw,
-										    &resm2rmmi(src_resm)->rmmi_mwcond))
-											psc_fatal("multiwait_addcond");
-									continue;
-								}
-								sl_csvc_decref(csvc);
-
-								/* look for a destination resm */
-								for (k = 0; k < psc_dynarray_len(&dst_res->res_members); k++)
-									if (slmupschedthr_tryrepldst(wk, bcm,
-									    off, src_resm, dst_res, k))
-										goto restart;
+										psc_fatal("multiwait_addcond");
+								continue;
 							}
+							sl_csvc_decref(csvc);
+
+							/* look for a destination resm */
+							for (k = 0; k < psc_dynarray_len(&dst_res->res_members); k++)
+								if (slmupschedthr_tryrepldst(wk, bcm,
+								    off, src_resm, dst_res, k))
+									goto restart;
 						}
-skipbmap:
-						mds_repl_bmap_rel(bcm);
 					}
+ skipbmap:
+					mds_repl_bmap_rel(bcm);
 				}
-			} else if (wk->uswi_flags & USWIF_GARBAGE) {
 			}
  skiprepl:
 			/*

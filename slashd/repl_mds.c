@@ -424,12 +424,14 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	tract[SL_REPLST_SCHED] = -1;
 	tract[SL_REPLST_ACTIVE] = -1;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
+	tract[SL_REPLST_GARBAGE] = -1;
 
 	retifset[SL_REPLST_INACTIVE] = 0;
 	retifset[SL_REPLST_OLD] = EINVAL;
 	retifset[SL_REPLST_SCHED] = EINVAL;
 	retifset[SL_REPLST_ACTIVE] = 0;
 	retifset[SL_REPLST_TRUNCPNDG] = EINVAL;
+	retifset[SL_REPLST_GARBAGE] = EINVAL;
 
 	rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	if (rc)
@@ -683,12 +685,14 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	tract[SL_REPLST_OLD] = -1;
 	tract[SL_REPLST_ACTIVE] = -1;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
+	tract[SL_REPLST_GARBAGE] = -1;
 
 	retifzero[SL_REPLST_INACTIVE] = 0;
 	retifzero[SL_REPLST_ACTIVE] = 1;
 	retifzero[SL_REPLST_OLD] = 0;
 	retifzero[SL_REPLST_SCHED] = 0;
 	retifzero[SL_REPLST_TRUNCPNDG] = 0;
+	retifzero[SL_REPLST_GARBAGE] = 0;
 
 	if (bmapno == (sl_bmapno_t)-1) {
 		int repl_some_act = 0, repl_all_act = 1;
@@ -700,6 +704,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[SL_REPLST_OLD] = 0;
 		retifset[SL_REPLST_ACTIVE] = 1;
 		retifset[SL_REPLST_TRUNCPNDG] = 0;
+		retifset[SL_REPLST_GARBAGE] = 0;
 
 		/* check if all bmaps are already active */
 		ret_if_inact[SL_REPLST_INACTIVE] = 1;
@@ -707,6 +712,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		ret_if_inact[SL_REPLST_OLD] = 1;
 		ret_if_inact[SL_REPLST_ACTIVE] = 0;
 		ret_if_inact[SL_REPLST_TRUNCPNDG] = 1;
+		ret_if_inact[SL_REPLST_GARBAGE] = 1;
 
 		for (bmapno = 0; bmapno < USWI_NBMAPS(wk); bmapno++) {
 			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm))
@@ -745,6 +751,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[SL_REPLST_OLD] = EALREADY;
 		retifset[SL_REPLST_ACTIVE] = 0;
 		retifset[SL_REPLST_TRUNCPNDG] = SLERR_REPL_NOT_ACT;
+		retifset[SL_REPLST_GARBAGE] = SLERR_REPL_NOT_ACT;
 
 		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 		if (rc == 0) {
@@ -794,7 +801,7 @@ mds_repl_tryrmqfile(struct up_sched_work_item *wk)
 
 	/*
 	 * If someone bumps the generation while we're processing, we'll
-	 * know there is work to do and that the upsched shouldn't go away.
+	 * know there is work to do and that the upschedrq shouldn't go away.
 	 */
 	uswi_gen = wk->uswi_gen;
 	wk->uswi_flags |= USWIF_BUSY;
@@ -806,6 +813,7 @@ mds_repl_tryrmqfile(struct up_sched_work_item *wk)
 	retifset[SL_REPLST_OLD] = 1;
 	retifset[SL_REPLST_SCHED] = 1;
 	retifset[SL_REPLST_TRUNCPNDG] = 0;
+	retifset[SL_REPLST_GARBAGE] = 1;
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < USWI_NBMAPS(wk); n++) {
@@ -889,6 +897,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	tract[SL_REPLST_OLD] = SL_REPLST_INACTIVE;
 	tract[SL_REPLST_SCHED] = SL_REPLST_INACTIVE;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
+	tract[SL_REPLST_GARBAGE] = -1;
 
 	if (bmapno == (sl_bmapno_t)-1) {
 		retifset[SL_REPLST_INACTIVE] = 0;
@@ -896,6 +905,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[SL_REPLST_OLD] = 1;
 		retifset[SL_REPLST_SCHED] = 1;
 		retifset[SL_REPLST_TRUNCPNDG] = 0;
+		retifset[SL_REPLST_GARBAGE] = 0;
 
 		rc = SLERR_REPLS_ALL_INACT;
 		for (bmapno = 0; bmapno < USWI_NBMAPS(wk); bmapno++) {
@@ -913,7 +923,8 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[SL_REPLST_ACTIVE] = 0;
 		retifset[SL_REPLST_OLD] = 0;
 		retifset[SL_REPLST_SCHED] = 0;
-		retifset[SL_REPLST_TRUNCPNDG] = 0;
+		retifset[SL_REPLST_TRUNCPNDG] = 0; /* XXX EINVAL? */
+		retifset[SL_REPLST_GARBAGE] = EINVAL;
 
 		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 		if (rc == 0) {
@@ -1000,6 +1011,7 @@ mds_repl_scandir(void)
 			tract[SL_REPLST_OLD] = -1;
 			tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
 			tract[SL_REPLST_TRUNCPNDG] = -1;
+			tract[SL_REPLST_GARBAGE] = -1;
 
 			/*
 			 * If we crashed, revert all inflight SCHED'ed
@@ -1189,6 +1201,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		tract[SL_REPLST_OLD] = -1;
 		tract[SL_REPLST_ACTIVE] = -1;
 		tract[SL_REPLST_TRUNCPNDG] = -1;
+		tract[SL_REPLST_GARBAGE] = -1;
 
 		for (n = 0; n < USWI_NBMAPS(wk); n++) {
 			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))

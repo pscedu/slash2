@@ -123,10 +123,10 @@ struct bmapc_memb {
 #define SL_REPLST_OLD		2
 #define SL_REPLST_ACTIVE	3
 #define SL_REPLST_TRUNCPNDG	4
-#define SL_NREPLST		5
+#define SL_REPLST_GARBAGE	5
+#define SL_NREPLST		6
 
-
-#define slash_bmap_od srt_bmap_wire
+#define slash_bmap_od		srt_bmap_wire
 
 #define	BMAP_OD_SZ		(sizeof(struct slash_bmap_od))
 #define	BMAP_OD_CRCSZ		(BMAP_OD_SZ - (sizeof(psc_crc64_t)))
@@ -185,6 +185,7 @@ _log_debug_bmapodv(const char *file, const char *func, int lineno,
 	ch[SL_REPLST_OLD] = 'o';
 	ch[SL_REPLST_ACTIVE] = '+';
 	ch[SL_REPLST_TRUNCPNDG] = 't';
+	ch[SL_REPLST_GARBAGE] = 'g';
 
 	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
 	    k++, off += SL_BITS_PER_REPLICA)
@@ -224,14 +225,14 @@ void	_bmap_op_done(struct bmapc_memb *);
 int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
 	    struct bmapc_memb **);
 
-int	bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
+int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
 	    sl_ios_id_t, lnet_nid_t);
 
 #define bmap_lookup(f, n, bp)		bmap_getf((f), (n), 0, 0, (bp))
 #define bmap_get(f, n, rw, bp)		bmap_getf((f), (n), (rw),	\
 					    BMAPGETF_LOAD, (bp))
 
-#define bmap_get_noretr(f, n, rw, bp)   bmap_getf((f), (n), (rw),	\
+#define bmap_get_noretr(f, n, rw, bp)	bmap_getf((f), (n), (rw),	\
 					  BMAPGETF_LOAD | BMAPGETF_NORETRIEVE, (bp))
 
 #define bmap_op_start_type(b, type)					\
@@ -269,14 +270,14 @@ int	bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
 	} while (0)
 
 enum bmap_opcnt_types {
-	/* 0 */	BMAP_OPCNT_LOOKUP,
+	/* 0 */ BMAP_OPCNT_LOOKUP,
 	/* 1 */ BMAP_OPCNT_IONASSIGN,
 	/* 2 */ BMAP_OPCNT_LEASE,
 	/* 3 */ BMAP_OPCNT_MDSLOG,
 	/* 4 */ BMAP_OPCNT_BIORQ,
 	/* 5 */ BMAP_OPCNT_REPLWK,		/* ION */
 	/* 6 */ BMAP_OPCNT_REAPER,		/* Client bmap timeout */
-	/* 7 */ BMAP_OPCNT_COHCB,		/* MDS coh callback */
+	/* 7 */ BMAP_OPCNT_COHCB,		/* MDS coherency callback */
 	/* 8 */ BMAP_OPCNT_SLVR,
 	/* 9 */ BMAP_OPCNT_BCRSCHED,
 	/* 10*/ BMAP_OPCNT_RLSSCHED
@@ -287,8 +288,8 @@ SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 struct bmap_ops {
 	void	(*bmo_init_privatef)(struct bmapc_memb *);
 	int	(*bmo_retrievef)(struct bmapc_memb *, enum rw);
-	int     (*bmo_mode_chngf)(struct bmapc_memb *, enum rw);
-	void	(*bmo_final_cleanupf)(struct bmapc_memb *);	
+	int	(*bmo_mode_chngf)(struct bmapc_memb *, enum rw);
+	void	(*bmo_final_cleanupf)(struct bmapc_memb *);
 };
 
 extern struct bmap_ops bmap_ops;

@@ -414,12 +414,14 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	map[SL_REPLST_ACTIVE] = '+';
 	map[SL_REPLST_INACTIVE] = '-';
 	map[SL_REPLST_TRUNCPNDG] = 't';
+	map[SL_REPLST_GARBAGE] = 'g';
 
 	pmap[SL_REPLST_SCHED] = 'S';
 	pmap[SL_REPLST_OLD] = 'O';
 	pmap[SL_REPLST_ACTIVE] = '*';
 	pmap[SL_REPLST_INACTIVE] = '-';
-	map[SL_REPLST_TRUNCPNDG] = 'T';
+	pmap[SL_REPLST_TRUNCPNDG] = 'T';
+	pmap[SL_REPLST_GARBAGE] = 'G';
 
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen("repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);

@@ -220,6 +220,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	tract[SL_REPLST_INACTIVE] = -1;
 	tract[SL_REPLST_ACTIVE] = -1;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
+	tract[SL_REPLST_GARBAGE] = -1;
 
 	if (mq->rc || mq->bgen != bmap_2_bgen(bcm)) {
 		tract[SL_REPLST_OLD] = -1;
@@ -239,6 +240,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	retifset[SL_REPLST_OLD] = EINVAL;
 	retifset[SL_REPLST_ACTIVE] = EINVAL;
 	retifset[SL_REPLST_TRUNCPNDG] = 0;
+	retifset[SL_REPLST_GARBAGE] = EINVAL;
 
 	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_repl_bmap_rel(bcm);
