@@ -124,7 +124,8 @@ struct bmapc_memb {
 #define SL_REPLST_ACTIVE	3
 #define SL_REPLST_TRUNCPNDG	4
 #define SL_REPLST_GARBAGE	5
-#define SL_NREPLST		6
+#define SL_REPLST_GARBAGE_SCHED	6
+#define SL_NREPLST		7
 
 #define slash_bmap_od		srt_bmap_wire
 

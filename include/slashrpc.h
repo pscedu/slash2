@@ -180,6 +180,9 @@ enum {
 	SRMT_GETBMAPCRCS,
 	SRMT_RELEASEBMAP,
 
+	/* garbage operations */
+	SRMT_GARBAGE,
+
 	/* replication operations */
 	SRMT_REPL_ADDRQ,
 	SRMT_REPL_DELRQ,
@@ -232,7 +235,7 @@ struct srm_generic_rep {
 /* ---------------------- BEGIN ENCAPSULATED MESSAGES ----------------------- */
 
 /*
- * Note: these messages are contained within other messages and thus must 
+ * Note: these messages are contained within other messages and thus must
  * end on 64-bit boundaries.
  */
 
@@ -399,6 +402,14 @@ struct srm_bmap_minseq_get {
 	int32_t			_pad;
 } __packed;
 
+/* ------------------------- BEGIN GARBAGE MESSAGES ------------------------- */
+
+struct srm_garbage_req {
+	struct slash_fidgen	fg;
+	sl_bmapno_t		bmapno;
+	sl_bmapgen_t		bgen;
+};
+
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */
 
 struct srm_connect_req {
@@ -455,7 +466,7 @@ struct srsm_replst_bhdr {
 #define srm_replst_slave_rep srm_replst_slave_req
 
 struct srm_repl_schedwk_req {
-	uint64_t		nid;
+	uint64_t		nid;		/* XXX gross */
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
