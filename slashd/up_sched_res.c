@@ -167,14 +167,17 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	if (rc == 0) {
 		mds_repl_bmap_rel(bcm);
 		mds_repl_unrefrq(wk);
+		sl_csvc_decref(csvc);
 		return (1);
 	}
 
+	/* handle error return failure */
 	tract[SL_REPLST_ACTIVE] = -1;
 	tract[SL_REPLST_INACTIVE] = -1;
 	tract[SL_REPLST_OLD] = -1;
 	tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
+	tract[SL_REPLST_GARBAGE] = -1;
 
 	BMAP_LOCK(bcm);
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
@@ -188,11 +191,117 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	return (0);
 }
 
+int
+slmupschedthr_trygarbage(struct up_sched_work_item *wk,
+    struct bmapc_memb *bcm, int off, struct sl_resource *dst_res, int j)
+{
+	int tract[SL_NREPLST], retifset[SL_NREPLST], rc;
+	struct slashrpc_cservice *csvc;
+	struct slmupsched_thread *smut;
+	struct resm_mds_info *dst_rmmi;
+	struct srm_garbage_req *mq;
+	struct srm_generic_rep *mp;
+	struct pscrpc_request *rq;
+	struct site_mds_info *smi;
+	struct sl_resm *dst_resm;
+	struct psc_thread *thr;
+	struct sl_site *site;
+
+	thr = pscthr_get();
+	smut = slmupschedthr(thr);
+	site = smut->smut_site;
+	smi = site->site_pri;
+
+	dst_resm = psc_dynarray_getpos(&dst_res->res_members, j);
+	dst_rmmi = dst_resm->resm_pri;
+
+	/*
+	 * At this point, add this connection to our multiwait.
+	 * If a wakeup event comes while we are timing our own
+	 * establishment attempt below, we will wake up immediately
+	 * when we multiwait; otherwise, we the connection will
+	 * wake us when it becomes available.
+	 */
+	if (!psc_multiwait_hascond(&smi->smi_mw,
+	    &dst_rmmi->rmmi_mwcond))
+		psc_multiwait_addcond(&smi->smi_mw,
+		    &dst_rmmi->rmmi_mwcond);
+
+	csvc = slm_geticsvc(dst_resm);
+	if (csvc == NULL)
+		goto fail;
+
+	/* Issue garbage reclaim request */
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION,
+	    SRMT_GARBAGE, rq, mq, mp);
+	if (rc)
+		goto fail;
+	mq->fg = *USWI_FG(wk);
+	mq->bmapno = bcm->bcm_blkno;
+	mq->bgen = bmap_2_bgen(bcm);
+
+	tract[SL_REPLST_ACTIVE] = -1;
+	tract[SL_REPLST_INACTIVE] = -1;
+	tract[SL_REPLST_OLD] = SL_REPLST_SCHED;
+	tract[SL_REPLST_SCHED] = -1;
+	tract[SL_REPLST_TRUNCPNDG] = -1;
+	tract[SL_REPLST_GARBAGE] = SL_REPLST_GARBAGE_SCHED;
+	tract[SL_REPLST_GARBAGE_SCHED] = -1;
+
+	retifset[SL_REPLST_ACTIVE] = SL_REPLST_ACTIVE;
+	retifset[SL_REPLST_INACTIVE] = SL_REPLST_INACTIVE;
+	retifset[SL_REPLST_OLD] = SL_REPLST_OLD;
+	retifset[SL_REPLST_SCHED] = SL_REPLST_SCHED;
+	retifset[SL_REPLST_TRUNCPNDG] = SL_REPLST_TRUNCPNDG;
+	retifset[SL_REPLST_GARBAGE] = SL_REPLST_GARBAGE;
+	retifset[SL_REPLST_GARBAGE_SCHED] = SL_REPLST_GARBAGE_SCHED;
+
+	/* mark it as SCHED here in case the RPC finishes really quickly... */
+	BMAP_LOCK(bcm);
+	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
+	BMAP_ULOCK(bcm);
+
+	if (rc == SL_REPLST_ACTIVE ||
+	    rc == SL_REPLST_SCHED)
+		psc_fatalx("invalid bmap replica state: %d", rc);
+
+	if (rc == SL_REPLST_OLD) {
+		rc = SL_RSX_WAITREP(rq, mp);
+		if (rc == 0)
+			rc = mp->rc;
+	}
+	pscrpc_req_finished(rq);
+	if (rc == 0) {
+		mds_repl_bmap_rel(bcm);
+		mds_repl_unrefrq(wk);
+		sl_csvc_decref(csvc);
+		return (1);
+	}
+
+	/* handle error return failure */
+	tract[SL_REPLST_ACTIVE] = -1;
+	tract[SL_REPLST_INACTIVE] = -1;
+	tract[SL_REPLST_OLD] = -1;
+	tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
+	tract[SL_REPLST_TRUNCPNDG] = -1;
+	tract[SL_REPLST_GARBAGE] = -1;
+	tract[SL_REPLST_GARBAGE_SCHED] = SL_REPLST_GARBAGE;
+
+	BMAP_LOCK(bcm);
+	mds_repl_bmap_apply(bcm, tract, NULL, off);
+	BMAP_ULOCK(bcm);
+
+ fail:
+	if (csvc)
+		sl_csvc_decref(csvc);
+	return (0);
+}
+
 void
 slmupschedthr_main(struct psc_thread *thr)
 {
-	int iosidx, nios, nrq, off, j, rc, has_work;
-	int uswi_gen, ris, is, rir, ir, rin, in, val, nmemb;
+	int ris, is, rir, ir, rin, rid, in, val, nmemb, ndst;
+	int uswi_gen, iosidx, nios, nrq, off, j, k, rc, has_work;
 	struct sl_resource *src_res, *dst_res;
 	struct slmupsched_thread *smut;
 	struct up_sched_work_item *wk;
@@ -318,7 +427,6 @@ slmupschedthr_main(struct psc_thread *thr)
 							for (in = 0; in < nmemb; in++,
 							    rin = (rin + 1) % nmemb) {
 								struct slashrpc_cservice *csvc;
-								int k;
 
 								src_resm = psc_dynarray_getpos(&src_res->res_members, rin);
 								csvc = slm_geticsvc(src_resm);
@@ -333,6 +441,7 @@ slmupschedthr_main(struct psc_thread *thr)
 								sl_csvc_decref(csvc);
 
 								/* look for a destination resm */
+								/* XXX random? */
 								for (k = 0; k < psc_dynarray_len(&dst_res->res_members); k++)
 									if (slmupschedthr_tryrepldst(wk, bcm,
 									    off, src_resm, dst_res, k))
@@ -342,6 +451,16 @@ slmupschedthr_main(struct psc_thread *thr)
 						break;
 					case SL_REPLST_GARBAGE:
 						has_work = 1;
+						BMAP_ULOCK(bcm);
+
+						/* look for a destination resm */
+						ndst = psc_dynarray_len(&dst_res->res_members);
+						rid = psc_random32u(ndst);
+						for (k = 0; k < psc_dynarray_len(&dst_res->res_members);
+						    k++, rid = (rid + 1) % ndst)
+							if (slmupschedthr_trygarbage(wk,
+							    bcm, off, dst_res, rid))
+								goto restart;
 						break;
 					case SL_REPLST_SCHED:
 						has_work = 1;
