@@ -28,7 +28,7 @@ struct up_sched_work_item {
 #define USWI_INO(wk)		(&USWI_INOH(wk)->inoh_ino)
 #define USWI_INOX(wk)		USWI_INOH(wk)->inoh_extras
 #define USWI_NREPLS(wk)		USWI_INO(wk)->ino_nrepls
-#define USWI_FG(wk)		(&USWI_INO(wk)->ino_fg)
+#define USWI_FG(wk)		(&(wk)->uswi_fcmh->fcmh_fg)
 #define USWI_FID(wk)		USWI_FG(wk)->fg_fid
 #define USWI_NBMAPS(wk)		fcmh_2_nbmaps((wk)->uswi_fcmh)
 

@@ -194,6 +194,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	struct site_mds_info *smi;
 	struct bmapc_memb *bcm;
 	struct up_sched_work_item *wk;
+	sl_bmapgen_t gen;
 
 	dst_resm = NULL;
 
@@ -205,7 +206,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	dst_resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
 
 	iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
-	    dst_resm->resm_res->res_id);
+		     dst_resm->resm_res->res_id);
 	if (iosidx < 0)
 		goto out;
 
@@ -215,14 +216,13 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (mds_bmap_load(wk->uswi_fcmh, mq->bmapno, &bcm))
 		goto out;
 
-	BMAP_LOCK(bcm);
-
 	tract[SL_REPLST_INACTIVE] = -1;
 	tract[SL_REPLST_ACTIVE] = -1;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
 	tract[SL_REPLST_GARBAGE] = -1;
-
-	if (mq->rc || mq->bgen != bmap_2_bgen(bcm)) {
+	
+	BHGEN_GET(bcm, gen);
+	if (mq->rc || mq->bgen != gen) {
 		tract[SL_REPLST_OLD] = -1;
 		tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
 	} else {

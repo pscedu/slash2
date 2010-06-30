@@ -674,27 +674,23 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 void
 mds_inode_sync(void *data)
 {
-	int locked, rc, tmpx = 0;
+	int rc, tmpx = 0;
 	struct slash_inode_handle *inoh = data;
 
-	locked = reqlock(&inoh->inoh_lock);
+	INOH_LOCK(inoh);
+	
+	if (inoh->inoh_flags & INOH_INO_DIRTY) {		
+		psc_crc64_calc(&inoh->inoh_ino.ino_crc, &inoh->inoh_ino, 
+		       INO_OD_CRCSZ);
 
-	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
-		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
-
-	if (inoh->inoh_flags & INOH_INO_DIRTY) {
-		psc_crc64_calc(&inoh->inoh_ino.ino_crc,
-			     &inoh->inoh_ino, INO_OD_CRCSZ);
 		rc = mdsio_inode_write(inoh);
-
 		if (rc)
-			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
+			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d", rc);
 
-		inoh->inoh_flags &= ~INOH_INO_DIRTY;
 		if (inoh->inoh_flags & INOH_INO_NEW) {
 			inoh->inoh_flags &= ~INOH_INO_NEW;
-			inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
-
+                        inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
+			
 			if (inoh->inoh_extras == NULL) {
 				inoh->inoh_extras = (void *)&null_inox_od;
 				tmpx = 1;
@@ -719,7 +715,7 @@ mds_inode_sync(void *data)
 	if (tmpx)
 		inoh->inoh_extras = NULL;
 
-	ureqlock(&inoh->inoh_lock, locked);
+	INOH_ULOCK(inoh);
 }
 
 
@@ -751,10 +747,7 @@ mds_bmap_sync(void *data)
 	struct slash_bmap_od *bmapod = bmap->bcm_od;
 	int rc;
 
-	/* XXX At some point this lock should really be changed to
-	 *  a pthread_rwlock.
-	 */
-	BMAP_LOCK(bmap);
+	BMAPOD_RDLOCK(bmap_2_bmdsi(bmap));
 	psc_crc64_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
 	rc = mdsio_bmap_write(bmap);
 	if (rc)
@@ -763,7 +756,11 @@ mds_bmap_sync(void *data)
 	else
 		DEBUG_BMAP(PLL_INFO, bmap, "sync ok");
 
-	BMAP_ULOCK(bmap);
+	BMAPOD_ULOCK(bmap_2_bmdsi(bmap));
+
+	if (fcmh_2_inoh(bmap->bcm_fcmh)->inoh_flags & INOH_INO_DIRTY ||
+	    fcmh_2_inoh(bmap->bcm_fcmh)->inoh_flags & INOH_EXTRAS_DIRTY)
+		mds_inode_sync(fcmh_2_inoh(bmap->bcm_fcmh));
 
 	bmap_op_done_type(bmap, BMAP_OPCNT_MDSLOG);
 }
@@ -800,28 +797,53 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
  * mds_bmap_repl_log - Write a modified replication table to the journal.
  * Note:  bmap must be locked to prevent further changes from sneaking in
  *	before the repl table is committed to the journal.
- * XXX Another case for a rwlock, currently this code holds the lock while
- *     doing I/O to the journal.
  */
 void
 mds_bmap_repl_log(struct bmapc_memb *bmap)
 {
 	struct slmds_jent_repgen jrpg;
 	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
-	int rc;
+	struct slash_inode_handle *ih=fcmh_2_inoh(bmap->bcm_fcmh);
+	int rc, logchg=0;
 
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
 	psc_assert(bmdsi->bmdsi_jfi.jfi_item == bmap);
 
-	BMAP_LOCK_ENSURE(bmap);
+	BMAPOD_READ_START(bmap);
+	BMDSI_LOGCHG_CHECK(bmap, logchg);
+	if (!logchg) {
+		BMAPOD_READ_DONE(bmap);
+		return;
+	}
 
 	DEBUG_BMAPOD(PLL_INFO, bmap, "");
 
+	jrpg.sjp_bgen = bmap_2_bgen(bmap);
 	jrpg.sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jrpg.sjp_bmapno = bmap->bcm_blkno;
-	jrpg.sjp_bgen = bmap_2_bgen(bmap);
+	jrpg.sjp_flags = 0;
+
 	memcpy(jrpg.sjp_reptbl, bmap->bcm_od->bh_repls,
 	       SL_REPLICA_NBYTES);
+
+	BMDSI_LOGCHG_CLEAR(bmap);
+	BMAPOD_READ_DONE(bmap);
+	
+	INOH_LOCK(ih);
+	/* Journal dirty inode structures here.
+	 */
+	if (ih->inoh_flags & INOH_INO_DIRTY) {
+		jrpg.sjp_flags |= INOH_INO_DIRTY;
+		memcpy(&jrpg.sjp_ino, &ih->inoh_ino, 
+		       sizeof(struct slash_inode_od *));
+	}
+
+	if (ih->inoh_flags & INOH_EXTRAS_DIRTY) {
+		jrpg.sjp_flags |= INOH_EXTRAS_DIRTY;
+		memcpy(&jrpg.sjp_inox, ih->inoh_extras, 
+		       sizeof(struct slash_inode_extras_od *));
+	}
+	INOH_ULOCK(ih);
 
 	psc_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
 		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_bgen);
@@ -865,7 +887,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 
 	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
 	psc_assert(bmdsi->bmdsi_jfi.jfi_item == bmap);
-	/* No I shouldn't need the lock.  Only this instance of this
+	/* No, I shouldn't need the lock.  Only this instance of this
 	 *  call may remove the BMAP_MDS_CRC_UP bit.
 	 */
 	psc_assert(bmap->bcm_mode & BMAP_MDS_CRC_UP);
@@ -893,7 +915,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		 *  on the ION updating us has the real story on this bmap's
 		 *  CRCs and all I/O for this bmap is being directed to it.
 		 */
-		BMAP_LOCK(bmap);
+		BMAPOD_WRLOCK(bmdsi);
 		for (t+=i; j < t; j++) {
 			bmapod->bh_crcs[(crcup->crcs[j].slot)].gc_crc =
 				crcup->crcs[j].crc;
@@ -901,10 +923,10 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 			bmapod->bh_crcstates[(crcup->crcs[j].slot)] =
 				(BMAP_SLVR_DATA | BMAP_SLVR_CRC);
 
-			DEBUG_BMAP(PLL_INFO, bmap, "slot(%d) crc(%"PRIx64")",
+			DEBUG_BMAP(PLL_DEBUG, bmap, "slot(%d) crc(%"PRIx64")",
 				   crcup->crcs[j].slot, crcup->crcs[j].crc);
 		}
-		BMAP_ULOCK(bmap);
+		BMAPOD_ULOCK(bmdsi);
 		n -= i;
 		psc_assert(n >= 0);
 	}
@@ -989,9 +1011,8 @@ mds_journal_init(void)
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
-	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0, mds_namespace_propagate,
-	    NULL, 0, "slmjsendthr");
-
+	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0, 
+			   mds_namespace_propagate, NULL, 0, "slmjsendthr");
 	/*
 	 * Eventually we have to read this from a on-disk log.
 	 */

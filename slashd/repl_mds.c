@@ -123,7 +123,8 @@ mds_repl_enqueue_sites(struct up_sched_work_item *wk,
 }
 
 int
-_mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
+_mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add, 
+	     int journal)
 {
 	uint32_t j=0, k;
 	int rc = -ENOENT;
@@ -191,7 +192,8 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add)
 		DEBUG_INOH(PLL_INFO, i, "add IOS(%u) to repls, replica %d",
 			   ios, i->inoh_ino.ino_nrepls-1);
 
-		mds_inode_addrepl_log(i, ios, j);
+		if (journal)
+			mds_inode_addrepl_log(i, ios, j);
 
 		rc = j;
 	}
@@ -210,7 +212,7 @@ _mds_repl_iosv_lookup(struct slash_inode_handle *ih,
 	int k, last;
 
 	for (k = 0; k < nios; k++)
-		if ((iosidx[k] = _mds_repl_ios_lookup(ih, iosv[k].bs_id, add)) < 0)
+		if ((iosidx[k] = _mds_repl_ios_lookup(ih, iosv[k].bs_id, add, add)) < 0)
 			return (-iosidx[k]);
 
 	qsort(iosidx, nios, sizeof(iosidx[0]), iosidx_cmp);
@@ -269,34 +271,34 @@ int
 _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
     const int *retifset, int flags, int off, int *scircuit)
 {
-	struct slash_bmap_od *bmapod;
-	struct bmap_mds_info *bmdsi;
+	struct slash_bmap_od *bmapod=bcm->bcm_od;
+	struct bmap_mds_info *bmdsi=bmap_2_bmdsi(bcm);
 	int val, rc = 0;
 
-	BMAP_LOCK_ENSURE(bcm);
+	/* Take a write lock on the bmapod.
+	 */
+	BMAPOD_WRLOCK(bmdsi);
 
 	if (scircuit)
 		*scircuit = 0;
 	else
 		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 
-	bmdsi = bmap_2_bmdsi(bcm);
-	bmapod = bcm->bcm_od;
 	val = SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls, off);
 
 	if (val >= SL_NREPLST)
 		psc_fatalx("corrupt bmap");
 
-	/* Check for return values */
+	/* Check for return values 
+	 */
 	if (retifset && retifset[val]) {
-		/*
-		 * Assign here instead of above to prevent
-		 * overwriting a zero return value.
+		/* Assign here instead of above to prevent
+		 *   overwriting a zero return value.
 		 */
 		rc = retifset[val];
 		if (flags & REPL_WALKF_SCIRCUIT) {
 			*scircuit = 1;
-			return (rc);
+			goto out;
 		}
 	}
 
@@ -304,8 +306,13 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 	if (tract && tract[val] != -1) {
 		SL_REPL_SET_BMAP_IOS_STAT(bmapod->bh_repls,
 		    off, tract[val]);
+		BMAP_LOCK(bcm);
 		bmdsi->bmdsi_flags |= BMIM_LOGCHG;
+		BMAP_ULOCK(bcm);
 	}
+
+ out:
+	BMAPOD_ULOCK(bmdsi);
 	return (rc);
 }
 
@@ -331,9 +338,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
     const int *retifset, int flags, const int *iosidx, int nios)
 {
 	int scircuit, nr, off, k, rc, trc;
-	struct slash_bmap_od *bmapod;
-
-	BMAP_LOCK_ENSURE(bcm);
+	struct slash_bmap_od *bmapod=bcm->bcm_od;
 
 	scircuit = rc = 0;
 	nr = fcmh_2_inoh(bcm->bcm_fcmh)->inoh_ino.ino_nrepls;
@@ -373,6 +378,7 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 			if (scircuit)
 				break;
 		}
+
 	return (rc);
 }
 
@@ -390,35 +396,36 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 int
 mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 {
-	int locked, rc, iosidx, tract[SL_NREPLST], retifset[SL_NREPLST];
+	int rc, iosidx, tract[SL_NREPLST], retifset[SL_NREPLST];
+	uint32_t policy;
 	struct up_sched_work_item *wk;
-	struct slash_bmap_od *bmapod;
 	sl_replica_t repl;
 
-	locked = BMAP_RLOCK(bcm);
-
-	/* Find/add our replica's IOS ID */
-	iosidx = mds_repl_ios_lookup_add(fcmh_2_inoh(bcm->bcm_fcmh), ios);
+	/* Find/add our replica's IOS ID but instruct mds_repl_ios_lookup_add()
+	 *   not to journal this operation because the inode's repl table
+	 *   will be journaled with this bmap's updated repl bitmap.
+	 * This saves a journal I/O.
+	 */
+	iosidx = mds_repl_ios_lookup_add(fcmh_2_inoh(bcm->bcm_fcmh), ios, 0);
 	if (iosidx < 0)
 		psc_fatalx("lookup ios %d: %s", ios, slstrerror(iosidx));
 
-	bmapod = bcm->bcm_od;
-
-	/*
-	 * If this bmap is marked for persistent replication,
+	/* If this bmap is marked for persistent replication,
 	 * the repl request must exist and should be marked such
 	 * that the replication monitors do not release it in the
 	 * midst of processing it as this activity now means they
 	 * have more to do.
 	 */
-	if (bmapod->bh_repl_policy == BRP_PERSIST) {
+	BHREPL_POLICY_GET(bcm, policy);
+	if (policy == BRP_PERSIST) {
 		wk = mds_repl_findrq(&bcm->bcm_fcmh->fcmh_fg, NULL);
 		repl.bs_id = ios;
 		mds_repl_enqueue_sites(wk, &repl, 1);
 		mds_repl_unrefrq(wk);
 	}
 
-	/* ensure this replica is marked active */
+	/* Ensure this replica is marked active 
+	 */
 	tract[SL_REPLST_INACTIVE] = SL_REPLST_ACTIVE;
 	tract[SL_REPLST_OLD] = -1;
 	tract[SL_REPLST_SCHED] = -1;
@@ -458,12 +465,13 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	retifset[SL_REPLST_TRUNCPNDG] = 0;
 
 	if (mds_repl_bmap_walk(bcm, tract, retifset,
-	    REPL_WALKF_MODOTH, &iosidx, 1))
-		bmapod->bh_gen++;
-	/* write changes to disk */
-	mds_bmap_sync_if_changed(bcm);
+		       REPL_WALKF_MODOTH, &iosidx, 1)) {
+		BHGEN_INCREMENT(bcm);
+	}
 
-	BMAP_URLOCK(bcm, locked);
+	/* Write changes to disk 
+	 */
+	mds_bmap_repl_log(bcm);
 
 	return (0);
 }
@@ -471,8 +479,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 void
 mds_repl_bmap_rel(struct bmapc_memb *bcm)
 {
-	BMAP_RLOCK(bcm);
-	mds_bmap_sync_if_changed(bcm);
+	mds_bmap_repl_log(bcm);
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 }
 

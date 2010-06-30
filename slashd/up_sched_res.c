@@ -150,7 +150,6 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	retifset[SL_REPLST_GARBAGE] = SL_REPLST_GARBAGE;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
-	BMAP_LOCK(bcm);
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
 	BMAP_ULOCK(bcm);
 
@@ -179,9 +178,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	tract[SL_REPLST_TRUNCPNDG] = -1;
 	tract[SL_REPLST_GARBAGE] = -1;
 
-	BMAP_LOCK(bcm);
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
-	BMAP_ULOCK(bcm);
 
  fail:
 	if (we_set_busy)
