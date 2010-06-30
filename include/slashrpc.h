@@ -26,6 +26,7 @@
 #define _SLASHRPC_H_
 
 #include "pfl/cdefs.h"
+#include "psc_rpc/rpc.h"
 
 #include "creds.h"
 #include "fid.h"
@@ -377,11 +378,11 @@ struct srm_bmap_iod_get {
 } __packed;
 
 struct srm_bmap_id {
-	struct slash_fidgen	fg;
+	slfid_t                 fid;
 	uint64_t		key;
 	uint64_t		seq;
-	sl_bmapno_t		bmapno;
-	int32_t			_pad;
+	lnet_process_id_t       cnp;
+	sl_bmapno_t		bmapno;	
 } __packed;
 
 #define MAX_BMAP_RELEASE 8
