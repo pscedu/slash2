@@ -283,8 +283,9 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			psc_hashbkt_unlock(b);
 			tmp->fcmh_state |= FCMH_CAC_WAITING;
 			fcmh_op_start_type(tmp, FCMH_OPCNT_WAIT);
-			psc_waitq_wait(&tmp->fcmh_waitq, &tmp->fcmh_lock);
+			fcmh_wait_nocond_locked(tmp);
 			fcmh_op_done_type(tmp, FCMH_OPCNT_WAIT);
+			FCMH_ULOCK(tmp);
 			goto restart;
 		}
 		fcmh = tmp;
