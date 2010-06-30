@@ -98,6 +98,7 @@ struct bmap_iod_info {
 	struct srt_bmap_wire	*biod_bmap_wire;
 	struct psclist_head	 biod_lentry;
 	struct timespec		 biod_age;
+	lnet_process_id_t        biod_rls_cnp;
 	uint64_t		 biod_bcr_xid;
 	uint64_t		 biod_bcr_xid_last;
 	uint64_t		 biod_cur_seqkey[2];
