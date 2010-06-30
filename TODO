@@ -299,12 +299,19 @@ tracks endpoint connections
 
 - sstb shouldn't have an ino field; fill st_ino out each time from fg_fid
 	- can't: needed for READDIR
+	- add a superstructure:
+
+		struct blah {
+			struct srt_stat sstb;
+			sl_ino_t	ino;
+		}
 
 - always cache / on mount_slash, that will save RPCs
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
 - authbuf RPC bulk data, use wrappers of rsx_bulk routines to aid this
 - sprinkle some iostats on zfs, namespace changelog
 - add journal I/O test mode to slashd
+- zfslog -> psclog
 
 zfs
 - rename the zfs_init() alias, it is already a routine in ZFS
