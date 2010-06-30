@@ -67,7 +67,6 @@ typedef struct slash_snapshot {
  * the block store array along with snapshot pointers.
  */
 struct slash_inode_od {
-	struct slash_fidgen	ino_fg;
 	uint16_t		ino_version;
 	uint16_t		ino_flags;
 	uint32_t		ino_bsz;			/* bmap size		*/
