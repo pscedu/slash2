@@ -93,8 +93,9 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct up_sched_work_i
 }
 
 int
-slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw, struct up_sched_work_item *wk,
-    struct bmapc_memb *bcm, sl_bmapno_t n, struct pscrpc_request **rqp)
+slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
+      struct up_sched_work_item *wk, struct bmapc_memb *bcm, 
+      sl_bmapno_t n, struct pscrpc_request **rqp)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
