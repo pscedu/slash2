@@ -76,7 +76,7 @@ int
 slm_fcmh_ctor(struct fidc_membh *fcmh)
 {
 	struct fcmh_mds_info *fmi;
-	int rc, incr;
+	int rc;
 
 	fmi = fcmh_2_fmi(fcmh);
 	memset(fmi, 0, sizeof(*fmi));
@@ -86,13 +86,11 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 	if (rc) {
 		fcmh->fcmh_state |= FCMH_CTOR_FAILED;
 		fmi->fmi_ctor_rc = rc;
-		DEBUG_FCMH(PLL_WARN, fcmh, "mdsio_lookup_slfid failed (rc=%d)", 
+		DEBUG_FCMH(PLL_WARN, fcmh, "mdsio_lookup_slfid failed (rc=%d)",
 			   rc);
 		return (rc);
 	}
 	fcmh->fcmh_fg.fg_gen = fcmh->fcmh_sstb.sst_gen;
-
-	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 
 	if (fcmh_isdir(fcmh))
 		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh),
@@ -109,8 +107,6 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 				psc_fatalx("could not load inode; rc=%d", rc);
 		}
 	}
-	if (rc && incr)
-		psc_rlim_adj(RLIMIT_NOFILE, -1);
 	return (rc);
 }
 
