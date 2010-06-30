@@ -256,6 +256,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct bmap_iod_info *biod;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
+	struct slash_fidgen fg;
 	int i, rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -263,7 +264,10 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	for (i = 0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
 
-		rc = sli_fcmh_get(&bid->fg, &f);
+		fg.fg_fid = bid->fid;
+		fg.fg_gen = 0;
+
+		rc = sli_fcmh_get(&fg, &f);
 		psc_assert(rc == 0);
 
 		rc = bmap_get(f, bid->bmapno, SL_WRITE, &b);
@@ -286,9 +290,11 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			   biod->biod_cur_seqkey[1]);
 
 		/* For the time being, old keys are overwritten and forgotten.
+		 * XXX this should really be fixed.
 		 */
 		biod->biod_rls_seqkey[0] = bid->seq;
 		biod->biod_rls_seqkey[1] = bid->key;
+		biod->biod_rls_cnp = rq->rq_conn->c_peer;
 
 		/* Do not to add ourselves to the bmapRlsQ twice.
 		 */
