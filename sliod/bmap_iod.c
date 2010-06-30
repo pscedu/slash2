@@ -204,11 +204,11 @@ bcr_cmp(const void *x, const void *y)
 static __inline void
 bmap_2_bid_sliod(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 {
-	bid->fg.fg_fid = fcmh_2_fid(b->bcm_fcmh);
-	bid->fg.fg_gen = fcmh_2_gen(b->bcm_fcmh);
+	bid->fid = fcmh_2_fid(b->bcm_fcmh);
 	bid->bmapno = b->bcm_bmapno;
 	bid->seq = bmap_2_biodi(b)->biod_rls_seqkey[0];
 	bid->key = bmap_2_biodi(b)->biod_rls_seqkey[1];
+	bid->cnp = bmap_2_biodi(b)->biod_rls_cnp;
 }
 
 void
