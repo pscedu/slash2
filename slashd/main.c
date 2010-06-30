@@ -159,7 +159,7 @@ slm_init(void)
 	mds_journal_init();
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_IONBMAPS_ODT);
-	psc_assert(!odtable_load(fn, &mdsBmapAssignTable));
+	psc_assert(!odtable_load(&mdsBmapAssignTable, fn, "bmapassign"));
 	odtable_scan(mdsBmapAssignTable, mds_bmi_odtable_startup_cb);
 }
 
