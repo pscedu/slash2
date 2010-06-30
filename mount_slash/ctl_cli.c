@@ -43,6 +43,7 @@
 #include "slerr.h"
 
 struct psc_lockedlist	 psc_mlists;
+struct psc_lockedlist	 psc_odtables;
 
 struct psc_poolmaster	 msctl_replstmc_poolmaster;
 struct psc_poolmaster	 msctl_replstsc_poolmaster;

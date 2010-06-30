@@ -33,6 +33,7 @@
 #include "repl_iod.h"
 
 struct psc_lockedlist psc_mlists;
+struct psc_lockedlist psc_odtables;
 
 int
 slictlrep_getreplwkst(int fd, struct psc_ctlmsghdr *mh, void *m)

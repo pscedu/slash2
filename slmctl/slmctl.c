@@ -55,6 +55,7 @@ packshow_conns(__unusedx const char *thr)
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "connections",	packshow_conns },
 	{ "loglevels",		psc_ctl_packshow_loglevel },
+	{ "odtables",		psc_ctl_packshow_odtables },
 	{ "stats",		psc_ctl_packshow_stats }
 };
 int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
