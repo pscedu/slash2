@@ -81,7 +81,8 @@ struct bmapc_memb {
 #define BMAP_REAPABLE		(1 << 8)
 #define BMAP_IONASSIGN		(1 << 9)
 #define BMAP_MDCHNG             (1 << 10)
-#define _BMAP_FLSHFT		(1 << 11)
+#define BMAP_WAITERS            (1 << 11)
+#define _BMAP_FLSHFT		(1 << 12)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
@@ -93,15 +94,20 @@ struct bmapc_memb {
 	do {								\
 		BMAP_LOCK_ENSURE(b);					\
 		while (cond) {						\
+			(b)->bcm_mode |= BMAP_WAITERS;			\
 			psc_waitq_wait(&(b)->bcm_fcmh->fcmh_waitq,	\
 				       &(b)->bcm_lock);			\
 			BMAP_LOCK(b);					\
 		}							\
 	} while (0)
 
-#define bcm_wake_locked(b) do {						\
+#define bcm_wake_locked(b)						\
+	do {								\
 		BMAP_LOCK_ENSURE(b);					\
-		psc_waitq_wakeall(&(b)->bcm_fcmh->fcmh_waitq);		\
+		if ((b)->bcm_mode & BMAP_WAITERS) {			\
+			psc_waitq_wakeall(&(b)->bcm_fcmh->fcmh_waitq);	\
+			(b)->bcm_mode &= ~BMAP_WAITERS;			\
+		}							\
 	} while (0)
 
 #define _DEBUG_BMAP(file, func, line, level, b, fmt, ...)		\
