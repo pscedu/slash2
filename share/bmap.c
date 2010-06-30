@@ -64,7 +64,7 @@ bmap_remove(struct bmapc_memb *b)
 	locked = FCMH_RLOCK(f);
 	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
-	psc_waitq_wakeall(&f->fcmh_waitq);
+	fcmh_wake_locked(f);
 	FCMH_URLOCK(f, locked);
 
 	psc_pool_return(bmap_pool, b);
@@ -109,8 +109,7 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n)
 			 * it so we can reload it back.
 			 */
 			BMAP_ULOCK(b);
-			psc_waitq_wait(&f->fcmh_waitq, &f->fcmh_lock);
-			FCMH_LOCK(f);
+			fcmh_wait_nocond_locked(f);
 			goto restart;
 		}
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
