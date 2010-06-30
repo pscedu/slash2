@@ -769,8 +769,7 @@ bmap_flush(void)
 static __inline void
 bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 {
-	bid->fg.fg_fid = fcmh_2_fid(b->bcm_fcmh);
-	bid->fg.fg_gen = fcmh_2_gen(b->bcm_fcmh);
+	bid->fid = fcmh_2_fid(b->bcm_fcmh);
 	bid->seq = bmap_2_msbd(b)->msbd_sbd.sbd_seq;
 	bid->key = bmap_2_msbd(b)->msbd_sbd.sbd_key;
 	bid->bmapno = b->bcm_bmapno;
@@ -812,9 +811,9 @@ ms_bmap_release(struct sl_resm *resm)
 
  out:
 	for (i = 0; i < rmci->rmci_bmaprls.nbmaps; i++)
-		psc_notify("fid "FIDFMT" bmap=%u key=%"PRId64
+		psc_notify("fid=%"PRId64" bmap=%u key=%"PRId64
 		    " seq=%"PRId64" rc=%d",
-		    FIDFMTARGS(&rmci->rmci_bmaprls.bmaps[i].fg),
+		    rmci->rmci_bmaprls.bmaps[i].fid,
 		    rmci->rmci_bmaprls.bmaps[i].bmapno,
 		    rmci->rmci_bmaprls.bmaps[i].key,
 		    rmci->rmci_bmaprls.bmaps[i].seq,
