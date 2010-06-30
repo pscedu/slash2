@@ -98,7 +98,7 @@ sl_file_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slctlmsg_file *scf = m;
 
-	printf("   %12s %c%c%c%c%c%c%c%c%c%c\n",
+	printf("   %12s %c%c%c%c%c%c%c%c%c\n",
 	    "",
 	    scf->scf_flags & FCMH_CAC_FREE	? 'F' : '-',
 	    scf->scf_flags & FCMH_CAC_CLEAN	? 'C' : '-',
@@ -108,6 +108,5 @@ sl_file_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_flags & FCMH_CAC_INITING	? 'I' : '-',
 	    scf->scf_flags & FCMH_CAC_WAITING	? 'W' : '-',
 	    scf->scf_flags & FCMH_HAVE_ATTRS	? 'A' : '-',
-	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-',
-	    scf->scf_flags & FCMH_WAITING_ATTRS	? 'N' : '-');
+            scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-');
 }
