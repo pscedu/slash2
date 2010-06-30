@@ -94,9 +94,8 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 #define	FCMH_CAC_REAPED		(1 <<  6)	/* has been reaped */
 #define	FCMH_HAVE_ATTRS		(1 <<  7)	/* has valid stat info */
 #define	FCMH_GETTING_ATTRS	(1 <<  8)	/* fetching stat info */
-#define	FCMH_WAITING_ATTRS	(1 <<  9)	/* someone is waiting on attrs */
-#define	FCMH_CTOR_FAILED	(1 << 10)	/* constructor fn failed */
-#define	_FCMH_FLGSHFT		(1 << 11)
+#define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor fn failed */
+#define	_FCMH_FLGSHFT		(1 << 10)
 
 /*
  * If fuse_ino_t, declared 'unsigned long', is 4 bytes, inums will get
@@ -123,11 +122,37 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 #define fcmh_2_fid(f)		(f)->fcmh_fg.fg_fid
 #define fcmh_2_gen(f)		(f)->fcmh_fg.fg_gen
 #define fcmh_2_fsz(f)		(f)->fcmh_sstb.sst_size
+#define fcmh_2_fg(f)            (f)->fcmh_fg
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE))
 #define fcmh_2_ptruncgen(f)	(f)->fcmh_sstb.sst_ptruncgen
 
 #define fcmh_isdir(f)		S_ISDIR((f)->fcmh_sstb.sst_mode)
 #define fcmh_isreg(f)		S_ISREG((f)->fcmh_sstb.sst_mode)
+
+#define fcmh_wait_locked(f, cond)					\
+	do {								\
+		FCMH_LOCK_ENSURE(f);					\
+		while (cond) {						\
+			psc_waitq_wait(&(f)->fcmh_waitq,		\
+				       &(f)->fcmh_lock);		\
+			FCMH_LOCK(f);					\
+		}							\
+	} while (0)
+
+#define fcmh_wait_nocond_locked(f)					\
+	do {								\
+		FCMH_LOCK_ENSURE(f);					\
+		psc_waitq_wait(&(f)->fcmh_waitq,			\
+			       &(f)->fcmh_lock);			\
+		FCMH_LOCK(f);						\
+	} while (0)
+
+#define fcmh_wake_locked(f)						\
+	do {								\
+		FCMH_LOCK_ENSURE(f);					\
+		if (psc_waitq_nwaiters(&(f)->fcmh_waitq))		\
+			psc_waitq_wakeall(&(f)->fcmh_waitq);		\
+	} while (0)
 
 #define DEBUG_FCMH_FLAGS(fcmh)						\
 	(fcmh)->fcmh_state & FCMH_CAC_FREE		? "F" : "",	\
