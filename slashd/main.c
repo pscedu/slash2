@@ -160,6 +160,9 @@ slm_init(void)
 
 	xmkfn(fn, "%s/%s", sl_datadir, SL_FN_IONBMAPS_ODT);
 	psc_assert(!odtable_load(&mdsBmapAssignTable, fn, "bmapassign"));
+
+	mds_bmap_timeotbl_init();
+
 	odtable_scan(mdsBmapAssignTable, mds_bmi_odtable_startup_cb);
 }
 

@@ -204,7 +204,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	bmdsi = b->bcm_pri;
 
 	BMAP_LOCK(b);
-	bml = mds_bmap_getbml(b, rq->rq_export, mq->sbd.sbd_seq);
+	bml = mds_bmap_getbml(b, &rq->rq_conn->c_peer, mq->sbd.sbd_seq);
 	if (bml == NULL) {
 		mp->rc = EINVAL;
 		goto out;
@@ -672,8 +672,10 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	ih = fcmh_2_inoh(fcmh);
 	mp->rc = mds_inox_ensure_loaded(ih);
 	if (mp->rc == 0) {
+		INOH_LOCK(ih);
 		ih->inoh_extras->inox_newbmap_policy = mq->pol;
 		ih->inoh_flags |= INOH_EXTRAS_DIRTY;
+		INOH_ULOCK(ih);
 		mds_inode_sync(ih);
 	}
 
@@ -717,10 +719,10 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	BMAP_LOCK(bcm);
 	bmdsi = bmap_2_bmdsi(bcm);
-	bcm->bcm_od->bh_repl_policy = mq->pol;
-	bmdsi->bmdsi_flags |= BMIM_LOGCHG;
+
+	BHREPL_POLICY_SET(bcm, mq->pol);
+	
 	mds_repl_bmap_rel(bcm);
 
  out:

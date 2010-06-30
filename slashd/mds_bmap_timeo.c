@@ -113,7 +113,7 @@ mds_bmap_timeotbl_getnextseq(void)
 uint64_t
 mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 {
-	uint64_t seq;
+	uint64_t seq=0;
 	struct bmap_timeo_entry *e;
 
 	psc_assert(bml->bml_flags & BML_TIMEOQ);
@@ -130,7 +130,16 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	psc_trace("timeoslot=%"PSCPRIuTIMET, mds_bmap_timeotbl_curslot);
 
 	e = &mdsBmapTimeoTbl.btt_entries[mds_bmap_timeotbl_curslot];
-	seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
+
+	if (flags & BTE_REATTACH) {
+		if (bml->bml_seq > e->bte_maxseq || 
+		    e->bte_maxseq == BMAPSEQ_ANY)
+			seq = e->bte_maxseq = bml->bml_seq;
+		else
+			seq = e->bte_maxseq;
+	} else
+		seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
+
 	psclist_xadd_tail(&bml->bml_timeo_lentry, &e->bte_bmaps);
        
 	freelock(&mdsBmapTimeoTbl.btt_lock);
@@ -191,7 +200,6 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 void
 slmbmaptimeothr_spawn(void)
 {
-	mds_bmap_timeotbl_init();
 	pscthr_init(SLMTHRT_BMAPTIMEO, 0, slmbmaptimeothr_begin,
 	    NULL, 0, "slmbmaptimeothr");
 }
