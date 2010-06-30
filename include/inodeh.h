@@ -54,7 +54,8 @@ enum {
 	INOH_EXTRAS_DIRTY  = (1 << 1),	/* Replication structures need written */
 	INOH_HAVE_EXTRAS   = (1 << 2),	/* inoh_extras are loaded in mem */
 	INOH_INO_NEW       = (1 << 3),	/* Inode has never been written to disk */
-	INOH_INO_NOTLOADED = (1 << 4)
+	INOH_INO_NOTLOADED = (1 << 4),
+	INOH_INO_SYNCING   = (1 << 5)
 };
 
 static __inline void
@@ -90,8 +91,8 @@ _debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 	}
 
 	snprintf(buf, siz,
-	    "f:"FIDFMT" v:%x bsz:%u nr:%u cs:%u repl:%s crc:%"PRIx64,
-	    FIDFMTARGS(&ino->ino_fg), ino->ino_version,
+	    "v:%x bsz:%u nr:%u cs:%u repl:%s crc:%"PRIx64,
+	    ino->ino_version,
 	    ino->ino_bsz, ino->ino_nrepls,
 	    ino->ino_csnap, rbuf, ino->ino_crc);
 	return (buf);
