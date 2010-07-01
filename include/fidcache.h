@@ -69,22 +69,18 @@ struct fidc_membh {
 #ifdef DEMOTED_INUM_WIDTHS
 	struct slash_fidgen	 fcmh_smallfg;		/* integer-demoted fg_fid for hashing */
 #endif
-	struct srt_stat		 fcmh_sstb;
-	int			 fcmh_state;
+	struct srt_stat		 fcmh_sstb;		/* higher-level stat(2) buffer */
+	int			 fcmh_flags;		/* see FCMH_* below */
 	psc_spinlock_t		 fcmh_lock;
 	int			 fcmh_refcnt;
 	struct psc_hashent	 fcmh_hentry;
 	struct psclist_head	 fcmh_lentry;
 	struct psc_waitq	 fcmh_waitq;
 	struct bmap_cache	 fcmh_bmaptree;		/* bmap cache splay */
+#define fcmh_state fcmh_flags
 };
 
-static __inline void *
-fcmh_get_pri(struct fidc_membh *fcmh)
-{
-	return (fcmh + 1);
-}
-
+/* fcmh_flags */
 #define	FCMH_CAC_FREE		(1 <<  0)	/* totally free item */
 #define	FCMH_CAC_CLEAN		(1 <<  1)	/* in clean cache */
 #define	FCMH_CAC_DIRTY		(1 <<  2)	/* dirty, not reapable */
@@ -202,11 +198,21 @@ void	fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 #define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present       */
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism */
 
+#define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
+	_fidc_lookup((fgp), (lkfl), (sstb), (safl), (fcmhp),		\
+	    __FILE__, __func__, __LINE__)
+
+#define fidc_lookup_fid(fid)						\
+	_fidc_lookup_fid((fid), __FILE__, __func__, __LINE__)
+
+#define fidc_lookup_fg(fgp)						\
+	_fidc_lookup_fg((fgp), __FILE__, __func__, __LINE__)
+
 int			 _fidc_lookup(const struct slash_fidgen *, int,
 			    const struct srt_stat *, int, struct fidc_membh **,
 			    const char *, const char *, int);
 
-/* these fidc_lookup() wrappers are used for simple lookups no flags */
+/* these fidc_lookup() wrappers are used for simple lookups (no flags) */
 struct fidc_membh	*_fidc_lookup_fid(slfid_t, const char *, const char *, int);
 struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, const char *, const char *, int);
 ssize_t			 fcmh_getsize(struct fidc_membh *);
@@ -226,14 +232,10 @@ extern struct psc_hashtbl	 fidcHtable;
 
 #define fidcFreeList		fidcPool->ppm_lc
 
-#define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
-	_fidc_lookup((fgp), (lkfl), (sstb), (safl), (fcmhp),		\
-	    __FILE__, __func__, __LINE__)
-
-#define fidc_lookup_fid(fid)						\
-	_fidc_lookup_fid((fid), __FILE__, __func__, __LINE__)
-
-#define fidc_lookup_fg(fgp)						\
-	_fidc_lookup_fg((fgp), __FILE__, __func__, __LINE__)
+static __inline void *
+fcmh_get_pri(struct fidc_membh *fcmh)
+{
+	return (fcmh + 1);
+}
 
 #endif /* _SL_FIDCACHE_H_ */
