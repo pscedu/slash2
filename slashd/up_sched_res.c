@@ -468,6 +468,11 @@ slmupschedthr_main(struct psc_thread *thr)
 			}
  skiprepl:
 			/*
+			 * XXX - when SL_REPLST_GARBAGE/SCHED all get fully
+			 * reclaimed, delete metadata.
+			 */
+
+			/*
 			 * At this point, we did not find a block/src/dst
 			 * resource involving our site needed by this replrq.
 			 */
