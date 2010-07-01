@@ -77,7 +77,8 @@ void
 fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
     int flags)
 {
-	uint64_t size = 0;
+	uint64_t size;
+	int64_t mtime;
 
 	if (!(flags & FCMH_SETATTRF_HAVELOCK))
 		FCMH_LOCK(fcmh);
@@ -91,9 +92,14 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 #endif
 	psc_assert(sstb->sst_ino == (ino_t)fcmh->fcmh_fg.fg_fid);
 
-	if ((flags & FCMH_SETATTRF_SAVESIZE) &&
-	    fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen)
-		size = fcmh_2_fsz(fcmh);
+	size = fcmh->fcmh_sstb.sst_mtime;
+
+	if (flags & FCMH_SETATTRF_SAVELOCAL) {
+		if (fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen)
+			size = fcmh_2_fsz(fcmh);
+		if (sstb->sst_mtime > mtime)
+			mtime = fcmh->fcmh_sstb.sst_mtime;
+	}
 
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
 		/*
@@ -110,10 +116,8 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 
 	fcmh->fcmh_sstb = *sstb;
 	fcmh_2_gen(fcmh) = sstb->sst_gen;
-
-	if (size)
-		fcmh_2_fsz(fcmh) = size;
-
+	fcmh_2_fsz(fcmh) = size;
+	fcmh->fcmh_sstb.sst_mtime = mtime;
 	fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
 
 	if (sl_fcmh_ops.sfop_postsetattr)

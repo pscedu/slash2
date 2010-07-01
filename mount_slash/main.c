@@ -353,7 +353,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	m->fcmh_state |= FCMH_CLI_HAVEREPLTBL;
 	FCMH_ULOCK(m);
 
-	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD | BMAPGETF_NORETRIEVE, 
+	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD | BMAPGETF_NORETRIEVE,
 	       &bcm);
 	if (rc)
 		goto out;
@@ -531,7 +531,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	FCMH_LOCK(fcmh);
 	if (!rc)
 		fcmh_setattr(fcmh, &mp->attr,
-		    FCMH_SETATTRF_SAVESIZE | FCMH_SETATTRF_HAVELOCK);
+		    FCMH_SETATTRF_SAVELOCAL | FCMH_SETATTRF_HAVELOCK);
 
 	fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
 	psc_waitq_wakeall(&fcmh->fcmh_waitq);
@@ -855,7 +855,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	mq->fg = d->fcmh_fg;
 	mq->size = size;
 	mq->offset = off;
-	
+
 	if (!DIRCACHE_INITIALIZED(d)) {
 		FCMH_LOCK(d);
 		DIRCACHE_INIT(d, &dircacheMgr);
@@ -905,10 +905,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			    fg.fg_fid, fg.fg_gen, attr->rc);
 
 			attr->rc = fidc_lookup(&fg, FIDC_LOOKUP_CREATE,
-			    &attr->attr, FCMH_SETATTRF_SAVESIZE, &fcmh);
+			    &attr->attr, FCMH_SETATTRF_SAVELOCAL, &fcmh);
 
 			if (fcmh)
-				fcmh_op_done_type(fcmh, 
+				fcmh_op_done_type(fcmh,
 					  FCMH_OPCNT_LOOKUP_FIDC);
 		}
 	}
@@ -986,7 +986,7 @@ slash_lookuprpc(const struct slash_creds *crp, fuse_ino_t parent,
 	 *  come to us with another request for the inode since it won't
 	 *  yet be visible in the cache.
 	 */
-	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_SAVESIZE, &m);
+	rc = slc_fcmh_get(&mp->fg, &mp->attr, FCMH_SETATTRF_SAVELOCAL, &m);
 	if (rc)
 		goto out;
 
@@ -1431,7 +1431,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	slash2fuse_getcred(req, &cr);
 
 	rc = fidc_lookup_load_inode(ino, &c);
-	if (rc)	
+	if (rc)
 		goto out;
 
 
@@ -1459,7 +1459,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	mq->attr.sst_ptruncgen = fcmh_2_ptruncgen(c);
 
 	if (mq->to_set && SRM_SETATTRF_SIZE)
-		DEBUG_FCMH(PLL_WARN, c, "truncate (sz=%"PRId64")", 
+		DEBUG_FCMH(PLL_WARN, c, "truncate (sz=%"PRId64")",
 			   stb->st_size);
 
 	/*
@@ -1474,7 +1474,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 
 	sl_internalize_stat(&mp->attr, stb);
 	fcmh_setattr(c, &mp->attr, (mq->to_set & SRM_SETATTRF_SIZE) ?
-		     FCMH_SETATTRF_NONE : FCMH_SETATTRF_SAVESIZE);
+		     FCMH_SETATTRF_NONE : FCMH_SETATTRF_SAVELOCAL);
 	fuse_reply_attr(req, stb, MSL_FUSE_ATTR_TIMEO);
 
  out:
@@ -1546,6 +1546,8 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	DEBUG_FCMH(PLL_NOTIFY, mfh->mfh_fcmh,
 		   "buf=%p rc=%d sz=%zu off=%"PSCPRIdOFF, buf, rc, size, off);
 
+	FCMH_LOCK(fcmh);
+	fcmh->fcmh_sstb.sst_mtime = time();
 	fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rc < 0)
 		rc = -rc;
