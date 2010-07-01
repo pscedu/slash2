@@ -56,8 +56,8 @@ void	 mds_repl_unrefrq(struct up_sched_work_item *);
 
 #define mds_repl_nodes_setbusy(a, b, v)		_mds_repl_nodes_setbusy((a), (b), 1, (v))
 
-#define mds_repl_ios_lookup_add(ih, ios, jrnl)	_mds_repl_ios_lookup((ih), (ios), 1, jrnl)
-#define mds_repl_ios_lookup(ih, ios)	        _mds_repl_ios_lookup((ih), (ios), 0, 0)
+#define mds_repl_ios_lookup_add(ih, ios, jrnl)	_mds_repl_ios_lookup((ih), (ios), 1, (jrnl))
+#define mds_repl_ios_lookup(ih, ios)		_mds_repl_ios_lookup((ih), (ios), 0, 0)
 
 extern struct psc_listcache	slm_replst_workq;
 
