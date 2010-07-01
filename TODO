@@ -318,7 +318,7 @@ zfs
 
 ---------------
 
-unlink, O_TRUNC, full & partial truncate:
+partial truncate:
 	- journal
 	- wait until FMIF_TRUNCPNDG is gone
 	- create $ROOT/.sltruncs/<fid>-<truncpos>
@@ -356,5 +356,3 @@ utime
    (o) track how long sliod has held the I/O and send the difference to the MDS
        so the MDS can more accurately estimate when the I/O took place
    (o) cache utimes like we save the file size
-
-- add control display for odtables
