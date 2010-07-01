@@ -50,13 +50,13 @@ struct bmap_mds_info {
 	struct jflush_item		 bmdsi_jfi;	/* journal handle          */
 	struct resm_mds_info		*bmdsi_wr_ion;	/* pointer to write ION    */
 	struct psc_lockedlist		 bmdsi_leases;  /* tracked bmap leases     */
-	struct odtable_receipt	        *bmdsi_assign;
+	struct odtable_receipt		*bmdsi_assign;
 	uint64_t			 bmdsi_seq;     /* Largest write bml seq # */
 	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
 	uint32_t			 bmdsi_writers;
 	uint32_t			 bmdsi_readers;
 	int				 bmdsi_flags;
-	pthread_rwlock_t                 bmdsi_rwlock;
+	pthread_rwlock_t		 bmdsi_rwlock;
 };
 
 #define BMAPOD_RDLOCK(bmdsi)						\
@@ -71,60 +71,63 @@ struct bmap_mds_info {
 #define BMDSI_LOGCHG_SET(b)						\
 	do {								\
 		int _bmdsi_set_locked;					\
+									\
 		_bmdsi_set_locked = BMAP_RLOCK(b);			\
 		bmap_2_bmdsi(b)->bmdsi_flags |= BMIM_LOGCHG;		\
-		BMAP_URLOCK(b, _bmdsi_set_locked);			\
+		BMAP_URLOCK((b), _bmdsi_set_locked);			\
 	} while (0)
 
 #define BMDSI_LOGCHG_CLEAR(b)						\
 	do {								\
 		int _bmdsi_clear_locked;				\
+									\
 		_bmdsi_clear_locked = BMAP_RLOCK(b);			\
 		bmap_2_bmdsi(b)->bmdsi_flags |= BMIM_LOGCHG;		\
-		BMAP_URLOCK(b, _bmdsi_clear_locked);			\
+		BMAP_URLOCK((b), _bmdsi_clear_locked);			\
 	} while (0)
 
 #define BMDSI_LOGCHG_CHECK(b, set)					\
 	do {								\
 		int _bmdsi_logchg_locked;				\
+									\
 		_bmdsi_logchg_locked = BMAP_RLOCK(b);			\
 		set = (bmap_2_bmdsi(b)->bmdsi_flags & BMIM_LOGCHG);	\
-		BMAP_URLOCK(b, _bmdsi_logchg_locked);			\
+		BMAP_URLOCK((b), _bmdsi_logchg_locked);			\
 	} while (0)
 
-#define BMAPOD_MODIFY_START(b) BMAPOD_WRLOCK(bmap_2_bmdsi(b))
-#define BMAPOD_MODIFY_DONE(b)  BMAPOD_ULOCK(bmap_2_bmdsi(b))
-#define BMAPOD_READ_START(b)   BMAPOD_RDLOCK(bmap_2_bmdsi(b))
-#define BMAPOD_READ_DONE(b)    BMAPOD_ULOCK(bmap_2_bmdsi(b))
+#define BMAPOD_MODIFY_START(b)	BMAPOD_WRLOCK(bmap_2_bmdsi(b))
+#define BMAPOD_MODIFY_DONE(b)	BMAPOD_ULOCK(bmap_2_bmdsi(b))
+#define BMAPOD_READ_START(b)	BMAPOD_RDLOCK(bmap_2_bmdsi(b))
+#define BMAPOD_READ_DONE(b)	BMAPOD_ULOCK(bmap_2_bmdsi(b))
 
-#define BHREPL_POLICY_SET(b, p)				\
-	do {						\
-		BMAPOD_MODIFY_START(b);			\
-		(b)->bcm_od->bh_repl_policy = p;	\
-		BMDSI_LOGCHG_SET(b);			\
-		BMAPOD_MODIFY_DONE(b);			\
+#define BHREPL_POLICY_SET(b, p)						\
+	do {								\
+		BMAPOD_MODIFY_START(b);					\
+		(b)->bcm_od->bh_repl_policy = (p);			\
+		BMDSI_LOGCHG_SET(b);					\
+		BMAPOD_MODIFY_DONE(b);					\
 	} while (0)
 
-#define BHREPL_POLICY_GET(b, p)				\
-	do {						\
-		BMAPOD_READ_START(b);			\
-		p = (b)->bcm_od->bh_repl_policy;	\
-		BMAPOD_READ_DONE(b);			\
+#define BHREPL_POLICY_GET(b, p)						\
+	do {								\
+		BMAPOD_READ_START(b);					\
+		(p) = (b)->bcm_od->bh_repl_policy;			\
+		BMAPOD_READ_DONE(b);					\
 	} while (0)
 
-#define BHGEN_INCREMENT(b)			\
-	do {					\
-		BMAPOD_MODIFY_START(b);		\
-		(b)->bcm_od->bh_gen++;		\
-		BMDSI_LOGCHG_SET(b);		\
-		BMAPOD_MODIFY_DONE(b);		\
+#define BHGEN_INCREMENT(b)						\
+	do {								\
+		BMAPOD_MODIFY_START(b);					\
+		(b)->bcm_od->bh_gen++;					\
+		BMDSI_LOGCHG_SET(b);					\
+		BMAPOD_MODIFY_DONE(b);					\
 	} while (0)
 
-#define BHGEN_GET(b, gen)			\
-	do {					\
-		BMAPOD_READ_START(b);		\
-		gen = (b)->bcm_od->bh_gen;	\
-		BMAPOD_READ_DONE(b);		\
+#define BHGEN_GET(b, gen)						\
+	do {								\
+		BMAPOD_READ_START(b);					\
+		(gen) = (b)->bcm_od->bh_gen;				\
+		BMAPOD_READ_DONE(b);					\
 	} while (0)
 
 
@@ -156,9 +159,9 @@ struct bmap_timeo_table {
 	int			 btt_nentries;
 };
 
-#define BTE_ADD			(1<<0)
-#define BTE_DEL			(1<<1)
-#define BTE_REATTACH            (1<<2)
+#define BTE_ADD			(1 << 0)
+#define BTE_DEL			(1 << 1)
+#define BTE_REATTACH		(1 << 2)
 
 #define BMAP_TIMEO_TBL_SZ	20
 #define BMAP_TIMEO_MAX		120 //Seconds
@@ -167,8 +170,8 @@ struct bmap_timeo_table {
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;
 	uint64_t		  bml_key;
-	lnet_nid_t                bml_ion_nid;
-	lnet_process_id_t         bml_cli_nidpid;
+	lnet_nid_t		  bml_ion_nid;
+	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
 	psc_spinlock_t		  bml_lock;
 	struct bmap_mds_info	 *bml_bmdsi;
@@ -177,7 +180,7 @@ struct bmap_mds_lease {
 	struct psclist_head	  bml_timeo_lentry;
 	struct psclist_head	  bml_exp_lentry;
 	struct psclist_head	  bml_coh_lentry;
-	struct bmap_mds_lease    *bml_chain;
+	struct bmap_mds_lease	 *bml_chain;
 };
 
 #define bml_2_bmap(b)		(b)->bml_bmdsi->bmdsi_bmap
@@ -194,7 +197,7 @@ enum {
 	BML_EXP     = (1 << 4),
 	BML_TIMEOQ  = (1 << 5),
 	BML_COH     = (1 << 6),
-	BML_RECOVER = (1 << 7), 
+	BML_RECOVER = (1 << 7),
 	BML_CHAIN   = (1 << 8)
 };
 
@@ -204,7 +207,7 @@ enum {
  */
 struct bmi_assign {
 	lnet_nid_t		bmi_ion_nid;
-	lnet_process_id_t       bmi_lastcli;
+	lnet_process_id_t	bmi_lastcli;
 	sl_ios_id_t		bmi_ios;
 	slfid_t			bmi_fid;
 	uint64_t		bmi_seq;
@@ -218,6 +221,8 @@ struct bmi_assign {
 #define bmap_2_bgen(b)		(b)->bcm_od->bh_gen
 
 #define mds_bmap_load(f, n, bp)	bmap_get((f), (n), 0, (bp))
+
+#define mds_bml_free(bml)	psc_pool_return(bmapMdsLeasePool, (bml))
 
 int	 mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
 int	 mds_bmap_exists(struct fidc_membh *, sl_bmapno_t);
@@ -234,7 +239,7 @@ struct bmap_mds_lease *
 mds_bmap_getbml(struct bmapc_memb *, lnet_process_id_t *, uint64_t);
 
 void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
-void     mds_bmap_timeotbl_init(void);
+void	 mds_bmap_timeotbl_init(void);
 uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
 
