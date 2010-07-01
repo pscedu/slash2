@@ -1546,8 +1546,8 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	DEBUG_FCMH(PLL_NOTIFY, mfh->mfh_fcmh,
 		   "buf=%p rc=%d sz=%zu off=%"PSCPRIdOFF, buf, rc, size, off);
 
-	FCMH_LOCK(fcmh);
-	fcmh->fcmh_sstb.sst_mtime = time();
+	FCMH_LOCK(mfh->mfh_fcmh);
+	mfh->mfh_fcmh->fcmh_sstb.sst_mtime = time(NULL);
 	fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rc < 0)
 		rc = -rc;
