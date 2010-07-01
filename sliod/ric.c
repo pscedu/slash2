@@ -261,6 +261,9 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
+	if (mq->nbmaps > MAX_BMAP_RELEASE)
+		return (-E2BIG);
+
 	for (i = 0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
 
