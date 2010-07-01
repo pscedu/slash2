@@ -233,18 +233,14 @@ in release but I don't see good performance for 'ls -al'.
   be more intuitively named for formatting MDS file systems, such as
   slmkfs, slfmtfs, or slnewfs
 - libsl_init() is getting an ENOMEM somewhere in slashd, maybe LNET
-- rename BMAPCHMODE -> BMAP_CHRWMODE
 ----------------------------------------------------
 - removing the persistence policy on a bmap should mds_repl_delrq()
   for that bmap
------------------------------------------------------
 - merge set_bmapreplpol and friends into a single slfattr interface
 - push O_APPEND writes always to EOF
------------------------------------------------------
 
 - add ctl knobs for changing preferred IOS
 - allow multiple preferred IOS servers
-- add flag to wait/return error/crash ms when slashd goes down
 
 - think about routing blips where MDS<->ION is not quite what a ION<->ION
   can see each, causing unnecessary replication work processing
@@ -255,7 +251,9 @@ in release but I don't see good performance for 'ls -al'.
 - implement mknod, link, symlink
 - keep replication queue in .slrepls and keep around a small pool of sl_replrq
   at any time, enough to attempt to keep all IONs involved in replication saturated
-- add ctlapi for bcmp
+    - we can't do this because they are shared with PTRUNC now as well as not
+      being able to saturate inter-ION links
+- add ctlapi for bmpc
 
 ---------------------------------------------------------
 
@@ -349,10 +347,10 @@ reconnect, this state could be used for SLIOD garbage collection
 management also.  An odtable entry could be used for every SLIOD
 connect.
 
+- add flag to wait/return error/crash ms when slashd goes down
+
 - fix cscope: remove the curdir when the parent includes it
 
 utime
-   (o) actually set fcmh_sstb in mount_slash on WRITEs
    (o) track how long sliod has held the I/O and send the difference to the MDS
        so the MDS can more accurately estimate when the I/O took place
-   (o) cache utimes like we save the file size
