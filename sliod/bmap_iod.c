@@ -208,7 +208,8 @@ bmap_2_bid_sliod(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 	bid->bmapno = b->bcm_bmapno;
 	bid->seq = bmap_2_biodi(b)->biod_rls_seqkey[0];
 	bid->key = bmap_2_biodi(b)->biod_rls_seqkey[1];
-	bid->cnp = bmap_2_biodi(b)->biod_rls_cnp;
+	bid->cli_nid = bmap_2_biodi(b)->biod_rls_cnp.nid;
+	bid->cli_pid = bmap_2_biodi(b)->biod_rls_cnp.pid;
 }
 
 void
@@ -265,7 +266,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			bmap_op_done_type(b, BMAP_OPCNT_RLSSCHED);
 
-		} while ((i < MAX_BMAP_RELEASE) && 
+		} while ((i < MAX_BMAP_RELEASE) &&
 			 (biod = lc_getnb(&bmapRlsQ)));
 
 		if (!i)

@@ -157,10 +157,10 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 }
 
 static void
-slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap, struct srt_bmapdesc *sbd, 
+slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap, struct srt_bmapdesc *sbd,
 	       enum rw rw)
 {
-	
+
 	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = bmap->bcm_bmapno;
 	if (bmap->bcm_mode & BMAP_DIO)
@@ -204,7 +204,8 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	bmdsi = b->bcm_pri;
 
 	BMAP_LOCK(b);
-	bml = mds_bmap_getbml(b, &rq->rq_conn->c_peer, mq->sbd.sbd_seq);
+	bml = mds_bmap_getbml(b, rq->rq_conn->c_peer.nid,
+	    rq->rq_conn->c_peer.pid, mq->sbd.sbd_seq);
 	if (bml == NULL) {
 		mp->rc = EINVAL;
 		goto out;
@@ -260,7 +261,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, mq->rw);
 
-	memcpy(&mp->bcw, 
+	memcpy(&mp->bcw,
 	       bmap->bcm_od->bh_crcstates,
 	       sizeof(struct srt_bmap_cli_wire));
 
@@ -269,17 +270,17 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 		ih = fcmh_2_inoh(fcmh);
 		mp->nrepls = ih->inoh_ino.ino_nrepls;
-		memcpy(&mp->reptbl[0], &ih->inoh_ino.ino_repls, 
+		memcpy(&mp->reptbl[0], &ih->inoh_ino.ino_repls,
 		       sizeof(ih->inoh_ino.ino_repls));
 
 		if (mp->nrepls > SL_DEF_REPLICAS) {
 			mds_inox_ensure_loaded(ih);
-			memcpy(&mp->reptbl[SL_DEF_REPLICAS], 
-			       &ih->inoh_extras->inox_repls, 
+			memcpy(&mp->reptbl[SL_DEF_REPLICAS],
+			       &ih->inoh_extras->inox_repls,
 			       sizeof(ih->inoh_extras->inox_repls));
 		}
 	}
-	
+
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
 	return (0);
@@ -378,7 +379,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		mp->rc = EINVAL;
 		goto out;
 	}
-	/* Lookup the parent directory in the cache so that the 
+	/* Lookup the parent directory in the cache so that the
 	 *   slash2 ino can be translated into the inode for the
 	 *   underlying fs.
 	 */
@@ -398,8 +399,8 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		goto out;
 
 	//	DEBUG_FCMH(PLL_WARN, p, "create op done for %s", mq->name);
-	/* XXX enter this into the fcmh cache instead of doing it again 
-	 *   This release may be the sanest thing actually, unless EXCL is 
+	/* XXX enter this into the fcmh cache instead of doing it again
+	 *   This release may be the sanest thing actually, unless EXCL is
 	 *   used.
 	 */
 	if (mp->rc == 0)
@@ -722,7 +723,7 @@ slm_rmc_handle_set_bmapreplpol(struct pscrpc_request *rq)
 	bmdsi = bmap_2_bmdsi(bcm);
 
 	BHREPL_POLICY_SET(bcm, mq->pol);
-	
+
 	mds_repl_bmap_rel(bcm);
 
  out:

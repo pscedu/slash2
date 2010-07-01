@@ -460,7 +460,8 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
  * @seq: lease sequence.
  */
 struct bmap_mds_lease *
-mds_bmap_getbml(struct bmapc_memb *b, lnet_process_id_t *cnp, uint64_t seq)
+mds_bmap_getbml(struct bmapc_memb *b, lnet_nid_t cli_nid,
+    lnet_pid_t cli_pid, uint64_t seq)
 {
 	struct bmap_mds_info *bmdsi;
 	struct bmap_mds_lease *bml;
@@ -469,8 +470,8 @@ mds_bmap_getbml(struct bmapc_memb *b, lnet_process_id_t *cnp, uint64_t seq)
 
 	bmdsi = b->bcm_pri;
 	PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
-		if (bml->bml_cli_nidpid.nid == cnp->nid &&
-		    bml->bml_cli_nidpid.pid == cnp->pid) {
+		if (bml->bml_cli_nidpid.nid == cli_nid &&
+		    bml->bml_cli_nidpid.pid == cli_pid) {
 			struct bmap_mds_lease *tmp=bml;
 
 			do {
@@ -898,7 +899,8 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 		BMAP_LOCK(b);
 		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64, bid->seq);
 
-		bml = mds_bmap_getbml(b, &bid->cnp, bid->seq);
+		bml = mds_bmap_getbml(b, bid->cli_nid, bid->cli_pid,
+		    bid->seq);
 		if (bml)
 			mp->bidrc[i] = mds_bmap_bml_release(bml);
 		/* bmap_op_done_type will drop the lock.
