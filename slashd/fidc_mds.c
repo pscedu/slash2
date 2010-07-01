@@ -124,8 +124,6 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 	jfi_ensure_empty(&fmi->fmi_inodeh.inoh_jfi);
 	if (fmi->fmi_inodeh.inoh_extras)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
-
-	psc_rlim_adj(RLIMIT_NOFILE, -1);
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
