@@ -123,7 +123,7 @@ mds_repl_enqueue_sites(struct up_sched_work_item *wk,
 }
 
 int
-_mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add, 
+_mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add,
 	     int journal)
 {
 	uint32_t j=0, k;
@@ -289,7 +289,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 	if (val >= SL_NREPLST)
 		psc_fatalx("corrupt bmap");
 
-	/* Check for return values 
+	/* Check for return values
 	 */
 	if (retifset && retifset[val]) {
 		/* Assign here instead of above to prevent
@@ -418,13 +418,13 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	 */
 	BHREPL_POLICY_GET(bcm, policy);
 	if (policy == BRP_PERSIST) {
-		wk = mds_repl_findrq(&bcm->bcm_fcmh->fcmh_fg, NULL);
+		wk = uswi_find(&bcm->bcm_fcmh->fcmh_fg, NULL);
 		repl.bs_id = ios;
 		mds_repl_enqueue_sites(wk, &repl, 1);
-		mds_repl_unrefrq(wk);
+		uswi_unref(wk);
 	}
 
-	/* Ensure this replica is marked active 
+	/* Ensure this replica is marked active
 	 */
 	tract[SL_REPLST_INACTIVE] = SL_REPLST_ACTIVE;
 	tract[SL_REPLST_OLD] = -1;
@@ -469,7 +469,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 		BHGEN_INCREMENT(bcm);
 	}
 
-	/* Write changes to disk 
+	/* Write changes to disk
 	 */
 	mds_bmap_repl_log(bcm);
 
@@ -481,78 +481,6 @@ mds_repl_bmap_rel(struct bmapc_memb *bcm)
 {
 	mds_bmap_repl_log(bcm);
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
-}
-
-/**
- * mds_repl_accessrq - Obtain processing access to a replication request.
- *	This routine assumes the refcnt has already been bumped.
- * @wk: replication request to access, locked on return.
- * Returns Boolean true on success or false if the request is going away.
- */
-int
-mds_repl_accessrq(struct up_sched_work_item *wk)
-{
-	int rc = 1;
-
-	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
-
-	/* Wait for someone else to finish processing. */
-	while (wk->uswi_flags & USWIF_BUSY) {
-		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
-		psc_pthread_mutex_lock(&wk->uswi_mutex);
-	}
-
-	if (wk->uswi_flags & USWIF_DIE) {
-		/* Release if going away. */
-		psc_atomic32_dec(&wk->uswi_refcnt);
-		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-		rc = 0;
-	} else {
-		wk->uswi_flags |= USWIF_BUSY;
-		psc_pthread_mutex_unlock(&wk->uswi_mutex);
-	}
-	return (rc);
-}
-
-void
-mds_repl_unrefrq(struct up_sched_work_item *wk)
-{
-	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
-	psc_assert(psc_atomic32_read(&wk->uswi_refcnt) > 0);
-	psc_atomic32_dec(&wk->uswi_refcnt);
-	wk->uswi_flags &= ~USWIF_BUSY;
-	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-	psc_pthread_mutex_unlock(&wk->uswi_mutex);
-}
-
-struct up_sched_work_item *
-mds_repl_findrq(const struct slash_fidgen *fgp, int *locked)
-{
-	struct up_sched_work_item q, *wk;
-	struct fidc_membh fcmh;
-	int dummy;
-
-	if (locked == NULL)
-		locked = &dummy;
-
-	fcmh.fcmh_fg = *fgp;
-	q.uswi_fcmh = &fcmh;
-
-	*locked = reqlock(&upsched_tree_lock);
-	wk = SPLAY_FIND(upschedtree, &upsched_tree, &q);
-	if (wk == NULL) {
-		ureqlock(&upsched_tree_lock, *locked);
-		return (NULL);
-	}
-	psc_pthread_mutex_lock(&wk->uswi_mutex);
-	psc_atomic32_inc(&wk->uswi_refcnt);
-	freelock(&upsched_tree_lock);
-	*locked = 0;
-
-	/* accessrq() drops the refcnt on failure */
-	if (mds_repl_accessrq(wk))
-		return (wk);
-	return (NULL);
 }
 
 int
@@ -578,19 +506,6 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
 	return (rc);
-}
-
-void
-mds_repl_initrq(struct up_sched_work_item *wk, struct fidc_membh *fcmh)
-{
-	memset(wk, 0, sizeof(*wk));
-	wk->uswi_flags |= USWIF_BUSY | USWIF_REPLRQ;
-	psc_pthread_mutex_init(&wk->uswi_mutex);
-	psc_multiwaitcond_init(&wk->uswi_mwcond,
-	    NULL, 0, "upsched-%lx", fcmh_2_fid(fcmh));
-	psc_atomic32_set(&wk->uswi_refcnt, 1);
-	wk->uswi_fcmh = fcmh; /* XXX take fcmh_refcnt! */
-	SPLAY_INSERT(upschedtree, &upsched_tree, wk);
 }
 
 slfid_t
@@ -619,7 +534,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	rc = 0;
  restart:
 	spinlock(&upsched_tree_lock);
-	wk = mds_repl_findrq(fgp, &locked);
+	wk = uswi_find(fgp, &locked);
 	if (wk == NULL) {
 		/*
 		 * If the tree stayed locked, the request
@@ -657,7 +572,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 				wk = newrq;
 				newrq = NULL;
 
-				mds_repl_initrq(wk, fcmh);
+				uswi_init(wk, fcmh);
 				/*
 				 * Refcnt is 1 for tree on return here; bump again
 				 * though because we will unrefrq() when we're done.
@@ -679,7 +594,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 	if (rc) {
 		if (wk)
-			mds_repl_unrefrq(wk);
+			uswi_unref(wk);
 		return (rc);
 	}
 
@@ -786,7 +701,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	else if (rc == SLERR_BMAP_ZERO)
 		rc = 0;
 
-	mds_repl_unrefrq(wk);
+	uswi_unref(wk);
 	return (rc);
 }
 
@@ -802,13 +717,13 @@ mds_repl_tryrmqfile(struct up_sched_work_item *wk)
 	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
 	if (wk->uswi_flags & USWIF_DIE) {
 		/* someone is already waiting for this to go away */
-		mds_repl_unrefrq(wk);
+		uswi_unref(wk);
 		return;
 	}
 
 	/*
 	 * If someone bumps the generation while we're processing, we'll
-	 * know there is work to do and that the upschedrq shouldn't go away.
+	 * know there is work to do and that the uswi shouldn't go away.
 	 */
 	uswi_gen = wk->uswi_gen;
 	wk->uswi_flags |= USWIF_BUSY;
@@ -840,7 +755,7 @@ mds_repl_tryrmqfile(struct up_sched_work_item *wk)
 	if (wk->uswi_gen != uswi_gen) {
 		freelock(&upsched_tree_lock);
  keep:
-		mds_repl_unrefrq(wk);
+		uswi_unref(wk);
 		return;
 	}
 	/*
@@ -887,7 +802,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
 
-	wk = mds_repl_findrq(fgp, NULL);
+	wk = uswi_find(fgp, NULL);
 	if (wk == NULL)
 		return (SLERR_REPL_NOT_ACT);
 
@@ -895,7 +810,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	rc = mds_repl_iosv_lookup_add(USWI_INOH(wk),
 	    iosv, iosidx, nios);
 	if (rc) {
-		mds_repl_unrefrq(wk);
+		uswi_unref(wk);
 		return (rc);
 	}
 
@@ -1007,7 +922,7 @@ mds_repl_scandir(void)
 				    slstrerror(rc));
 
 			wk = psc_pool_get(upsched_pool);
-			mds_repl_initrq(wk, fcmh);
+			uswi_init(wk, fcmh);
 
 			psc_pthread_mutex_lock(&wk->uswi_mutex);
 			wk->uswi_flags &= ~USWIF_BUSY;
@@ -1189,7 +1104,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 	spinlock(&upsched_tree_lock);
 	SPLAY_FOREACH(wk, upschedtree, &upsched_tree) {
 		psc_atomic32_inc(&wk->uswi_refcnt);
-		if (!mds_repl_accessrq(wk))
+		if (!uswi_access(wk))
 			continue;
 
 		rc = mds_inox_ensure_loaded(USWI_INOH(wk));
@@ -1221,7 +1136,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		}
  end:
 		mds_repl_enqueue_sites(wk, &repl, 1);
-		mds_repl_unrefrq(wk);
+		uswi_unref(wk);
 	}
 	freelock(&upsched_tree_lock);
 }

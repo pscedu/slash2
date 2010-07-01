@@ -94,7 +94,7 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct up_sched_work_i
 
 int
 slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
-      struct up_sched_work_item *wk, struct bmapc_memb *bcm, 
+      struct up_sched_work_item *wk, struct bmapc_memb *bcm,
       sl_bmapno_t n, struct pscrpc_request **rqp)
 {
 	struct srm_replst_slave_req *mq;
@@ -220,7 +220,7 @@ slmrcmthr_main(struct psc_thread *thr)
 					break;
 			}
 			freelock(&upsched_tree_lock);
-		} else if ((wk = mds_repl_findrq(&rsw->rsw_fg, NULL)) != NULL) {
+		} else if ((wk = uswi_find(&rsw->rsw_fg, NULL)) != NULL) {
 			slm_rcm_issue_getreplst(rsw, wk, 0);
 			for (n = 0; n < USWI_NBMAPS(wk); n++) {
 				if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
@@ -234,7 +234,7 @@ slmrcmthr_main(struct psc_thread *thr)
 			if (rq)
 				slmrmcthr_replst_slave_waitrep(rq, wk);
 			slmrmcthr_replst_slave_eof(rsw);
-			mds_repl_unrefrq(wk);
+			uswi_unref(wk);
 		} else if (mds_repl_loadino(&rsw->rsw_fg, &fcmh) == 0) {
 			/*
 			 * file is not in cache, load it up
@@ -243,9 +243,7 @@ slmrcmthr_main(struct psc_thread *thr)
 			 * grab a dummy uswi struct to pass around.
 			 */
 			wk = psc_pool_get(upsched_pool);
-			memset(wk, 0, sizeof(*wk));
-			wk->uswi_flags |= USWIF_REPLRQ;
-			wk->uswi_fcmh = fcmh;
+			uswi_init(wk, fcmh);
 
 			slm_rcm_issue_getreplst(rsw, wk, 0);
 			for (n = 0; n < USWI_NBMAPS(wk); n++) {

@@ -21,8 +21,6 @@ struct up_sched_work_item {
 /* work item flags */
 #define USWIF_BUSY		(1 << 0)	/* work item is being modified */
 #define USWIF_DIE		(1 << 1)	/* work item is going away */
-#define USWIF_REPLRQ		(1 << 2)	/* replication work needs done */
-#define USWIF_GARBAGE		(1 << 3)	/* garbage relinquishment needs done */
 
 #define USWI_INOH(wk)		fcmh_2_inoh((wk)->uswi_fcmh)
 #define USWI_INO(wk)		(&USWI_INOH(wk)->inoh_ino)
@@ -36,7 +34,12 @@ struct up_sched_work_item {
 				    USWI_INO(wk)->ino_repls[n] :	\
 				    USWI_INOX(wk)->inox_repls[(n) - 1])
 
-int uswi_cmp(const void *, const void *);
+struct up_sched_work_item *
+	 uswi_find(const struct slash_fidgen *, int *);
+int	 uswi_access(struct up_sched_work_item *);
+int	 uswi_cmp(const void *, const void *);
+void	 uswi_init(struct up_sched_work_item *, struct fidc_membh *);
+void	 uswi_unref(struct up_sched_work_item *);
 
 SPLAY_HEAD(upschedtree, up_sched_work_item);
 SPLAY_PROTOTYPE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);

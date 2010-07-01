@@ -165,7 +165,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	pscrpc_req_finished(rq);
 	if (rc == 0) {
 		mds_repl_bmap_rel(bcm);
-		mds_repl_unrefrq(wk);
+		uswi_unref(wk);
 		sl_csvc_decref(csvc);
 		return (1);
 	}
@@ -270,7 +270,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	pscrpc_req_finished(rq);
 	if (rc == 0) {
 		mds_repl_bmap_rel(bcm);
-		mds_repl_unrefrq(wk);
+		uswi_unref(wk);
 		sl_csvc_decref(csvc);
 		return (1);
 	}
@@ -347,7 +347,7 @@ slmupschedthr_main(struct psc_thread *thr)
 			psc_atomic32_inc(&wk->uswi_refcnt);
 			freelock(&smi->smi_lock);
 
-			rc = mds_repl_accessrq(wk);
+			rc = uswi_access(wk);
 
 			if (rc == 0) {
 				/* repl must be going away, drop it */
@@ -370,7 +370,7 @@ slmupschedthr_main(struct psc_thread *thr)
 			wk->uswi_flags &= ~USWIF_BUSY;
 			psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
-			/* find a resource in our site this replrq is destined for */
+			/* find a resource in our site this uswi is destined for */
 			iosidx = -1;
 			DYNARRAY_FOREACH(dst_res, j, &site->site_resources) {
 				iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
@@ -474,13 +474,13 @@ slmupschedthr_main(struct psc_thread *thr)
 
 			/*
 			 * At this point, we did not find a block/src/dst
-			 * resource involving our site needed by this replrq.
+			 * resource involving our site needed by this uswi.
 			 */
 			psc_pthread_mutex_lock(&wk->uswi_mutex);
 			if (has_work || wk->uswi_gen != uswi_gen) {
 				psc_multiwait_addcond_masked(&smi->smi_mw,
 				    &wk->uswi_mwcond, 0);
-				mds_repl_unrefrq(wk);
+				uswi_unref(wk);
 
 				/*
 				 * This should be safe since the wk
@@ -519,4 +519,90 @@ slmupschedthr_spawnall(void)
 		pscthr_setready(thr);
 	}
 	PLL_URLOCK(&globalConfig.gconf_sites, locked);
+}
+
+/**
+ * uswi_access - Obtain processing access to a update_scheduler request.
+ *	This routine assumes the refcnt has already been bumped.
+ * @wk: update_scheduler request to access, locked on return.
+ * Returns Boolean true on success or false if the request is going away.
+ */
+int
+uswi_access(struct up_sched_work_item *wk)
+{
+	int rc = 1;
+
+	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+
+	/* Wait for someone else to finish processing. */
+	while (wk->uswi_flags & USWIF_BUSY) {
+		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
+		psc_pthread_mutex_lock(&wk->uswi_mutex);
+	}
+
+	if (wk->uswi_flags & USWIF_DIE) {
+		/* Release if going away. */
+		psc_atomic32_dec(&wk->uswi_refcnt);
+		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
+		rc = 0;
+	} else {
+		wk->uswi_flags |= USWIF_BUSY;
+		psc_pthread_mutex_unlock(&wk->uswi_mutex);
+	}
+	return (rc);
+}
+
+void
+uswi_unref(struct up_sched_work_item *wk)
+{
+	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	psc_assert(psc_atomic32_read(&wk->uswi_refcnt) > 0);
+	psc_atomic32_dec(&wk->uswi_refcnt);
+	wk->uswi_flags &= ~USWIF_BUSY;
+	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
+	psc_pthread_mutex_unlock(&wk->uswi_mutex);
+}
+
+struct up_sched_work_item *
+uswi_find(const struct slash_fidgen *fgp, int *locked)
+{
+	struct up_sched_work_item q, *wk;
+	struct fidc_membh fcmh;
+	int dummy;
+
+	if (locked == NULL)
+		locked = &dummy;
+
+	fcmh.fcmh_fg = *fgp;
+	q.uswi_fcmh = &fcmh;
+
+	*locked = reqlock(&upsched_tree_lock);
+	wk = SPLAY_FIND(upschedtree, &upsched_tree, &q);
+	if (wk == NULL) {
+		ureqlock(&upsched_tree_lock, *locked);
+		return (NULL);
+	}
+	psc_pthread_mutex_lock(&wk->uswi_mutex);
+	psc_atomic32_inc(&wk->uswi_refcnt);
+	freelock(&upsched_tree_lock);
+	*locked = 0;
+
+	/* uswi_access() drops the refcnt on failure */
+	if (uswi_access(wk))
+		return (wk);
+	return (NULL);
+}
+
+void
+uswi_init(struct up_sched_work_item *wk, struct fidc_membh *fcmh)
+{
+	memset(wk, 0, sizeof(*wk));
+	wk->uswi_flags |= USWIF_BUSY;
+	psc_pthread_mutex_init(&wk->uswi_mutex);
+	psc_multiwaitcond_init(&wk->uswi_mwcond,
+	    NULL, 0, "upsched-%lx", fcmh_2_fid(fcmh));
+	psc_atomic32_set(&wk->uswi_refcnt, 1);
+	wk->uswi_fcmh = fcmh; /* XXX take fcmh_refcnt! */
+	psc_pthread_mutex_lock(&wk->uswi_mutex);
+	SPLAY_INSERT(upschedtree, &upsched_tree, wk);
 }

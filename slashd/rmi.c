@@ -199,7 +199,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	dst_resm = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	wk = mds_repl_findrq(&mq->fg, NULL);
+	wk = uswi_find(&mq->fg, NULL);
 	if (wk == NULL)
 		goto out;
 
@@ -220,7 +220,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	tract[SL_REPLST_ACTIVE] = -1;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
 	tract[SL_REPLST_GARBAGE] = -1;
-	
+
 	BHGEN_GET(bcm, gen);
 	if (mq->rc || mq->bgen != gen) {
 		tract[SL_REPLST_OLD] = -1;
@@ -257,7 +257,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 		    dst_resm->resm_pri, 0);
 	}
 	if (wk)
-		mds_repl_unrefrq(wk);
+		uswi_unref(wk);
 
 	mds_bmap_getcurseq(NULL, &mp->data);
 

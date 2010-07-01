@@ -25,6 +25,7 @@
 #include "fidc_mds.h"
 
 struct resm_mds_info;
+struct up_sched_work_item;
 
 struct slm_replst_workreq {
 	struct slashrpc_cservice	*rsw_csvc;
@@ -33,9 +34,6 @@ struct slm_replst_workreq {
 	struct psclist_head		 rsw_lentry;
 };
 
-struct up_sched_work_item *
-	 mds_repl_findrq(const struct slash_fidgen *, int *);
-int	 mds_repl_accessrq(struct up_sched_work_item *);
 int	 mds_repl_addrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
 int	_mds_repl_bmap_apply(struct bmapc_memb *, const int [], const int [], int, int, int *);
 void	 mds_repl_bmap_rel(struct bmapc_memb *);
@@ -49,7 +47,6 @@ void	 mds_repl_node_clearallbusy(struct resm_mds_info *);
 int	_mds_repl_nodes_setbusy(struct resm_mds_info *, struct resm_mds_info *, int, int);
 void	 mds_repl_reset_scheduled(sl_ios_id_t);
 void	 mds_repl_tryrmqfile(struct up_sched_work_item *);
-void	 mds_repl_unrefrq(struct up_sched_work_item *);
 
 #define mds_repl_bmap_apply(bcm, tract, retifset, off)			\
 	_mds_repl_bmap_apply((bcm), (tract), (retifset), 0, (off), NULL)

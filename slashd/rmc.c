@@ -633,12 +633,39 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		if (mq->attr.sst_size == 0) {
 			/* full truncate */
 		} else {
-			to_set |= SRM_SETATTRF_PTRUNCGEN;
 			/* partial truncate */
+			to_set |= SRM_SETATTRF_PTRUNCGEN;
+
+			/* XXX journal */
+
+			FCMH_LOCK(fcmh);
+			fcmh_wait_locked(fcmh,
+			    fcmh->fcmh_flags & FMIF_BLOCK_PTRUNC);
+			fcmh->fcmh_flags |= FMIF_BLOCK_PTRUNC;
+
 			fcmh_2_ptruncgen(fcmh)++;
+
+			fcmh->fcmh_flags &= ~FMIF_BLOCK_PTRUNC;
+			fcmh_wake_locked(fcmh);
+			FCMH_ULOCK(fcmh);
+
+#if 0
+	- create $ROOT/.sltruncs/<fid>-<truncpos>
+	- mark FMIF_TRUNCPNDG:
+		- truncations past this point completion_wait on this activity then succeeds
+		- bmaps write leases may not be granted for this bmap or any bmap beyond
+	- set fmi_ptruncpos
+	- mark SL_REPLST_GARBAGE all bmaps extended past truncated region, queue to garbage collector
+	- mark split bmap SL_REPLST_TRUNCPNDG on all replicas
+	- synchronously contact an IOS requesting CRC recalculation for sliver and
+	  mark SL_REPLST_ACTIVE on success
+	- mark SL_REPLST_GARBAGE for TRUNCPNDG replicas and notify garbage queuer
+	- if BMAP_PERSIST, notify replication queuer
+#endif
 		}
 	}
-	/* If the file is open, mdsio_data will be valid and used.
+	/*
+	 * If the file is open, mdsio_data will be valid and used.
 	 * Otherwise, it will be NULL, and we'll use the mdsio_fid.
 	 */
 	mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &mq->attr, to_set,
