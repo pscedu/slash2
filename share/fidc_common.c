@@ -290,7 +290,6 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			fcmh_op_start_type(tmp, FCMH_OPCNT_WAIT);
 			fcmh_wait_nocond_locked(tmp);
 			fcmh_op_done_type(tmp, FCMH_OPCNT_WAIT);
-			FCMH_ULOCK(tmp);
 			goto restart;
 		}
 		fcmh = tmp;
@@ -437,7 +436,6 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		*fcmhp = fcmh;
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
-		FCMH_ULOCK(fcmh);
 	}
 	return (rc);
 }
@@ -514,7 +512,7 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 void
 fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
-	int locked=FCMH_RLOCK(f);
+	FCMH_RLOCK(f);
 
 	psc_assert(f->fcmh_refcnt > 0);
 
@@ -529,8 +527,9 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 			lc_remove(&fidcDirtyList, f);
 			lc_add(&fidcCleanList, f);
 		}
-	}
-	FCMH_URLOCK(f, locked);
+	} else
+		fcmh_wake_locked(f);
+	FCMH_ULOCK(f);
 }
 
 void
@@ -542,9 +541,8 @@ dump_fidcache(void)
 	psc_max("Start dumping fidcache");
 	PSC_HASHTBL_FOREACH_BUCKET(bkt, &fidcHtable) {
 		psc_hashbkt_lock(bkt);
-		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, bkt) {
+		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, bkt)
 			dump_fcmh(tmp);
-		}
 		psc_hashbkt_unlock(bkt);
 	}
 	psc_max("Done dumping fidcache");
@@ -554,7 +552,7 @@ void
 dump_fcmh(struct fidc_membh *f)
 {
 	psc_max("fidc_membh (%p): fid = %"PRId64", gen = %"PRId64
-		", refcnt = %d, sstb = %p\n",
+		", refcnt = %d, sstb = %p",
 		f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt,
 		&f->fcmh_sstb);
 }

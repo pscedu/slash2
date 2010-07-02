@@ -64,8 +64,6 @@ bmap_remove(struct bmapc_memb *b)
 	locked = FCMH_RLOCK(f);
 	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
-	fcmh_wake_locked(f);
-	FCMH_URLOCK(f, locked);
 
 	psc_pool_return(bmap_pool, b);
 }
@@ -194,15 +192,15 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 			 *   which pertain to its mode.
 			 */
 			if (b->bcm_mode & BMAP_MDCHNG) {
-				bcm_wait_locked(b, 
+				bcm_wait_locked(b,
 					(b->bcm_mode & BMAP_MDCHNG));
 				goto retry;
 
-			} else {				
+			} else {
 				b->bcm_mode |= BMAP_MDCHNG;
 				BMAP_ULOCK(b);
 
-				DEBUG_BMAP(PLL_WARN, b, 
+				DEBUG_BMAP(PLL_WARN, b,
 					   "about to mode change (rw=%d)", rw);
 
 				rc = bmap_ops.bmo_mode_chngf(b, rw);
@@ -220,7 +218,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 	BMAP_ULOCK(b);
 	if (rc)
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
-	else 
+	else
 		*bp = b;
 
 	return (rc);
