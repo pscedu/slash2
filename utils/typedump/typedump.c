@@ -182,6 +182,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_buffer_iovref);
 	PRTYPE(struct sl_fcmh_ops);
 	PRTYPE(struct sl_gconf);
+	PRTYPE(struct sl_mds_crc_log);
 	PRTYPE(struct sl_mds_logbuf);
 	PRTYPE(struct sl_mds_nsstats);
 	PRTYPE(struct sl_mds_peerinfo);
