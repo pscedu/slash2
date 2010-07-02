@@ -316,24 +316,6 @@ zfs
 
 ---------------
 
-partial truncate:
-	- journal
-	- wait until FMIF_TRUNCPNDG is gone
-	- create $ROOT/.sltruncs/<fid>-<truncpos>
-	- mark FMIF_TRUNCPNDG:
-		- truncations past this point completion_wait on this activity then succeeds
-		- bmaps write leases may not be granted for this bmap or any bmap beyond
-	- set fmi_ptruncpos
-	- mark SL_REPLST_GARBAGE all bmaps extended past truncated region, queue to garbage collector
-	- mark split bmap SL_REPLST_TRUNCPNDG on all replicas
-	- synchronously contact an IOS requesting CRC recalculation for sliver and
-	  mark SL_REPLST_ACTIVE on success
-	- mark SL_REPLST_GARBAGE for TRUNCPNDG replicas and notify garbage queuer
-	- if BMAP_PERSIST, notify replication queuer
-	- unmark FMIF_TRUNCPNDG
-	- reply to client
-	- when SL_REPLST_GARBAGE all get fully reclaimed, delete metadata
-
 Graceful Service Failure (Jared):
    In the case of an MDS failure, SLIOD and MS should not abort.
 Further, MS should not abort in the instance of a SLIOD failure.  For
