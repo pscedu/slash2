@@ -82,7 +82,7 @@ struct bmap_mds_info {
 		int _bmdsi_clear_locked;				\
 									\
 		_bmdsi_clear_locked = BMAP_RLOCK(b);			\
-		bmap_2_bmdsi(b)->bmdsi_flags |= BMIM_LOGCHG;		\
+		bmap_2_bmdsi(b)->bmdsi_flags &= ~BMIM_LOGCHG;		\
 		BMAP_URLOCK((b), _bmdsi_clear_locked);			\
 	} while (0)
 
