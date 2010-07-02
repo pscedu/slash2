@@ -282,18 +282,19 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			psc_errorx("failed to load bmap %u", bid->bmapno);
 			continue;
 		}
-		/* Bmap is attached, safe to unref.
-		 */
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
-
-		biod = bmap_2_biodi(b);
-		spinlock(&biod->biod_lock);
 
 		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64
 			   " biod_seq=%"PRId64" biod_key=%"PRId64,
 			   b->bcm_blkno, bid->seq, bid->key,
 			   biod->biod_cur_seqkey[0],
 			   biod->biod_cur_seqkey[1]);
+
+		/* Bmap is attached, safe to unref.
+		 */
+		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+
+		biod = bmap_2_biodi(b);
+		spinlock(&biod->biod_lock);
 
 		/* For the time being, old keys are overwritten and forgotten.
 		 * XXX this should really be fixed.
