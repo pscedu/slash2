@@ -51,7 +51,7 @@ mds_bmap_timeotbl_init(void)
 	LOCK_INIT(&mdsBmapTimeoTbl.btt_lock);
 	/* XXX hack for now.. this value should come from the system log
 	 *    at startup
-	 */	
+	 */
 	mdsBmapTimeoTbl.btt_minseq = mdsBmapTimeoTbl.btt_maxseq = 0;
 	mdsBmapTimeoTbl.btt_nentries = BMAP_TIMEO_TBL_SZ;
 	mdsBmapTimeoTbl.btt_entries =
@@ -70,14 +70,13 @@ mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 {
 	struct slmds_jent_bmapseq *sjbsqlog;
 
-	sjbsqlog = (struct slmds_jent_bmapseq *)
-	    pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_bmapseq *));
-	
+	sjbsqlog = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_bmapseq));
+
 	*sjbsqlog = *sjbsq;
 	pjournal_add_entry_distill(mdsJournal, 0, MDS_LOG_BMAP_SEQ,
-	    (void *)sjbsqlog, sizeof(struct slmds_jent_bmapseq));
+	    sjbsqlog, sizeof(struct slmds_jent_bmapseq));
 
-	pjournal_put_buf(mdsJournal, (void *)sjbsqlog);
+	pjournal_put_buf(mdsJournal, sjbsqlog);
 }
 
 void
@@ -140,7 +139,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	e = &mdsBmapTimeoTbl.btt_entries[mds_bmap_timeotbl_curslot];
 
 	if (flags & BTE_REATTACH) {
-		if (bml->bml_seq > e->bte_maxseq || 
+		if (bml->bml_seq > e->bte_maxseq ||
 		    e->bte_maxseq == BMAPSEQ_ANY)
 			seq = e->bte_maxseq = bml->bml_seq;
 		else
@@ -149,7 +148,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 		seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
 
 	psclist_xadd_tail(&bml->bml_timeo_lentry, &e->bte_bmaps);
-       
+
 	freelock(&mdsBmapTimeoTbl.btt_lock);
 	return (seq);
 }

@@ -35,13 +35,13 @@ struct slash_inode_handle;
 typedef uint64_t mdsio_fid_t;
 
 /* callback to get a SLASH2 ID */
-typedef slfid_t (*sl_getslfid_cb)(void);
+typedef slfid_t (*sl_getslfid_cb_t)(void);
 
 /* callback to log writes to bmap */
-typedef void (*sl_log_write)(void *, uint64_t);
+typedef void (*sl_log_write_t)(void *, uint64_t);
 
 /* callback to log updates to namespace */
-typedef void (*sl_log_update)(int, uint64_t, uint64_t, uint64_t, uint64_t, const struct srt_stat *, const char *, const char *);
+typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t, uint64_t, const struct srt_stat *, const char *, const char *);
 
 /* predefined mdsio layer "fids" */
 #define MDSIO_FID_ROOT	3
@@ -63,21 +63,21 @@ int mdsio_getattr(mdsio_fid_t, const struct slash_creds *, struct srt_stat *);
 int mdsio_readlink(mdsio_fid_t, void *, const struct slash_creds *);
 int mdsio_statfs(struct statvfs *);
 
-int mdsio_link(mdsio_fid_t, mdsio_fid_t, const char *, struct slash_fidgen *, const struct slash_creds *, struct srt_stat *, sl_log_update);
+int mdsio_link(mdsio_fid_t, mdsio_fid_t, const char *, struct slash_fidgen *, const struct slash_creds *, struct srt_stat *, sl_log_update_t);
 int mdsio_lookup(mdsio_fid_t, const char *, struct slash_fidgen *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
 int mdsio_lookup_slfid(slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
 int mdsio_mkdir(mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *,
-	struct slash_fidgen *, mdsio_fid_t *, sl_log_update, sl_getslfid_cb);
+	struct slash_fidgen *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t);
 int mdsio_opencreate(mdsio_fid_t, const struct slash_creds *, int, mode_t, const char *,
-	struct slash_fidgen *, mdsio_fid_t *, struct srt_stat *, void *, sl_log_update, sl_getslfid_cb);
+	struct slash_fidgen *, mdsio_fid_t *, struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t);
 int mdsio_opendir(mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, void *);
 int mdsio_readdir(const struct slash_creds *, size_t, off_t, void *, size_t *, size_t *, void *, int, void *);
-int mdsio_rename(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update);
-int mdsio_rmdir(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update);
-int mdsio_setattr(mdsio_fid_t, struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *, sl_log_update);
+int mdsio_rename(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
+int mdsio_rmdir(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
+int mdsio_setattr(mdsio_fid_t, struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *, sl_log_update_t);
 int mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *,
-	struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb, sl_log_update);
-int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update);
+	struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb_t, sl_log_update_t);
+int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
 
 uint64_t mdsio_first_txg(void);
 

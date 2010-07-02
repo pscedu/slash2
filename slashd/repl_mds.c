@@ -53,11 +53,11 @@
 #include "inodeh.h"
 #include "mdsio.h"
 #include "mdslog.h"
+#include "pathnames.h"
 #include "repl_mds.h"
 #include "slashd.h"
 #include "slerr.h"
 #include "up_sched_res.h"
-#include "pathnames.h"
 
 struct upschedtree	 upsched_tree = SPLAY_INITIALIZER(&upsched_tree);
 struct psc_poolmgr	*upsched_pool;

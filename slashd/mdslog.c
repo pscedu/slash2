@@ -95,8 +95,7 @@ psc_spinlock_t			 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
 int
 mds_peerinfo_cmp(const void *a, const void *b)
 {
-	const struct sl_mds_peerinfo *x = a;
-	const struct sl_mds_peerinfo *y = b;
+	const struct sl_mds_peerinfo *x = a, *y = b;
 
 	return (CMP(x->sp_siteid, y->sp_siteid));
 }
@@ -133,6 +132,7 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	struct slmds_jent_crc *jcrc;
 	struct srt_bmap_wire bmap_disk;
 	struct srm_bmap_crcwire *bmap_wire;
+
 	jcrc = (struct slmds_jent_crc *)pje->pje_data;
 
 	zfsslash2_opencreate(jcrc->sjc_fid, &rootcreds, O_RDWR, 0, NULL,
@@ -224,7 +224,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
 		return;
 
-	jnamespace = (struct slmds_jent_namespace *)&pje->pje_data[0];
+	jnamespace = (struct slmds_jent_namespace *)pje->pje_data;
 	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 
 	/* see if we can open a new change log file */
@@ -284,8 +284,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uin
 
 	psc_assert(target);
 
-	jnamespace = (struct slmds_jent_namespace *) 
-	    pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_namespace));
+	jnamespace = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	jnamespace->sjnm_op = op;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
@@ -320,7 +319,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uin
 	pjournal_add_entry_distill(mdsJournal, txg, MDS_LOG_NAMESPACE,
 	    jnamespace, jnamespace->sjnm_reclen);
 
-	pjournal_put_buf(mdsJournal, (void *)jnamespace);
+	pjournal_put_buf(mdsJournal, jnamespace);
 }
 
 __static int
@@ -505,8 +504,8 @@ mds_namespace_read_batch(uint64_t seqno)
 	ptr = buf->slb_buf + buf->slb_size;
 	logptr = stagebuf;
 	for (i = 0; i < nitems; i++) {
-
 		struct psc_journal_enthdr *pje;
+
 		pje = (struct psc_journal_enthdr *) logptr;
 		psc_assert(pje->pje_magic == PJE_MAGIC);
 
@@ -657,9 +656,9 @@ mds_inode_sync(void *data)
 	struct slash_inode_handle *inoh = data;
 
 	INOH_LOCK(inoh);
-	
-	if (inoh->inoh_flags & INOH_INO_DIRTY) {		
-		psc_crc64_calc(&inoh->inoh_ino.ino_crc, &inoh->inoh_ino, 
+
+	if (inoh->inoh_flags & INOH_INO_DIRTY) {
+		psc_crc64_calc(&inoh->inoh_ino.ino_crc, &inoh->inoh_ino,
 		       INO_OD_CRCSZ);
 
 		rc = mdsio_inode_write(inoh);
@@ -668,8 +667,8 @@ mds_inode_sync(void *data)
 
 		if (inoh->inoh_flags & INOH_INO_NEW) {
 			inoh->inoh_flags &= ~INOH_INO_NEW;
-                        inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
-			
+			inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
+
 			if (inoh->inoh_extras == NULL) {
 				inoh->inoh_extras = (void *)&null_inox_od;
 				tmpx = 1;
@@ -747,14 +746,14 @@ mds_bmap_sync(void *data)
 void
 mds_inode_addrepl_log(void *datap, uint64_t txg)
 {
-	struct slmds_jent_ino_addrepl *jrir;
+	struct slmds_jent_ino_addrepl *jrir, *r;
 
-	jrir = (struct slmds_jent_ino_addrepl *) 
-	    pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_ino_addrepl));
+	jrir = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_ino_addrepl));
 
-	jrir->sjir_fid = ((struct slmds_jent_ino_addrepl *)datap)->sjir_fid; 
-	jrir->sjir_ios = ((struct slmds_jent_ino_addrepl *)datap)->sjir_ios; 
-	jrir->sjir_pos = ((struct slmds_jent_ino_addrepl *)datap)->sjir_pos; 
+	r = datap;
+	jrir->sjir_fid = r->sjir_fid;
+	jrir->sjir_ios = r->sjir_ios;
+	jrir->sjir_pos = r->sjir_pos;
 
 	psc_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
 		  jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
@@ -762,7 +761,7 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL,
 	    jrir, sizeof(struct slmds_jent_ino_addrepl));
 
-	pjournal_put_buf(mdsJournal, (char *)jrir);
+	pjournal_put_buf(mdsJournal, jrir);
 }
 
 /**
@@ -773,11 +772,10 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 void
 mds_bmap_repl_log(void *datap, uint64_t txg)
 {
-	struct bmapc_memb *bmap = (struct bmapc_memb *)datap;
+	struct bmapc_memb *bmap = datap;
 	struct slmds_jent_repgen *jrpg;
 
-	jrpg = (struct slmds_jent_repgen *) 
-	    pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_repgen));
+	jrpg = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_repgen));
 
 	jrpg->sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jrpg->sjp_bmapno = bmap->bcm_blkno;
@@ -790,9 +788,9 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 		  jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL,
-	    (char *)jrpg, sizeof(struct slmds_jent_repgen));
+	    jrpg, sizeof(struct slmds_jent_repgen));
 
-	pjournal_put_buf(mdsJournal, (void *)jrpg);
+	pjournal_put_buf(mdsJournal, jrpg);
 }
 
 /**
@@ -810,7 +808,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 void
 mds_bmap_crc_log(void *datap, uint64_t txg)
 {
-	struct sl_mds_crc_log *crclog = (struct sl_mds_crc_log *)datap;
+	struct sl_mds_crc_log *crclog = datap;
 	struct bmapc_memb *bmap = crclog->scl_bmap;
 	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
 	struct slmds_jent_crc *jcrc;
@@ -824,8 +822,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	 */
 	psc_assert(bmap->bcm_mode & BMAP_MDS_CRC_UP);
 
-	jcrc = (struct slmds_jent_crc *) 
-	    pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_crc));
+	jcrc = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_crc));
 	jcrc->sjc_fid = fcmh_2_mdsio_fid(bmap->bcm_fcmh);
 	jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
 	jcrc->sjc_bmapno = bmap->bcm_blkno;
@@ -870,7 +867,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	bmap->bcm_mode &= ~BMAP_MDS_CRC_UP;
 	BMAP_ULOCK(bmap);
 
-	pjournal_put_buf(mdsJournal, (void *)jcrc);
+	pjournal_put_buf(mdsJournal, jcrc);
 }
 
 void
@@ -887,10 +884,10 @@ mds_journal_init(void)
 
 	r = nodeResm->resm_res;
 
-	if (r->res_jrnldev[0] == '\0')	
+	if (r->res_jrnldev[0] == '\0')
 		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
-              
-	mdsJournal = pjournal_init(r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL, 
+
+	mdsJournal = pjournal_init(r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL,
 			   "slmjdistthr", mds_replay_handler, mds_distill_handler);
 
 	if (mdsJournal == NULL)
@@ -942,8 +939,8 @@ mds_journal_init(void)
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
-	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0, 
-			   mds_namespace_propagate, NULL, 0, "slmjsendthr");
+	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0,
+	    mds_namespace_propagate, NULL, 0, "slmjsendthr");
 	/*
 	 * Eventually we have to read this from a on-disk log.
 	 */

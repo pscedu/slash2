@@ -10,7 +10,7 @@
 metadata server operations journal
 .Sh SYNOPSIS
 .Nm slmkjrnl
-.Op Fl fqsv
+.Op Fl fqv
 .Op Fl D Ar datadir
 .Sh DESCRIPTION
 The
@@ -37,15 +37,6 @@ Defaults to 131072.
 .It Fl q
 Query and display current journal information.
 No formatting is performed.
-.It Fl s
-Indicates that the journal being written should be marked to use
-shadowing.
-When shadowing is enabled for a journal, all
-.Tn I/O
-to the journal is done on in-memory regions called tiles.
-The tiles are scheduled and processed so that log entries written within
-a tile can have additional processing performed as seen fit if deemed
-necessary by the application.
 .It Fl v
 Display verbose information about activity performed.
 .El

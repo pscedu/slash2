@@ -72,7 +72,7 @@ mdsio_apply_fcmh_size(struct fidc_membh *f, size_t size)
 
 	return (zfsslash2_setattr(fcmh_2_fid(f), &f->fcmh_sstb,
 	    SRM_SETATTRF_FSIZE, &rootcreds, NULL,
-	    fcmh_2_fmi(f)->fmi_mdsio_data, (sl_log_update)NULL));
+	    fcmh_2_fmi(f)->fmi_mdsio_data, NULL));
 }
 
 int
@@ -128,7 +128,7 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 {
 	int rc;
 	size_t nb;
-	int logchg=0; 
+	int logchg=0;
 
 	BMAPOD_READ_START(bmap);
 	BMDSI_LOGCHG_CHECK(bmap, logchg);
@@ -171,7 +171,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 		psc_crc64_calc(&inoh->inoh_ino.ino_crc,
 			     &inoh->inoh_ino, INO_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_ino, INO_OD_SZ, &nb,
-			SL_INODE_START_OFF, inoh_2_mdsio_data(inoh), 
+			SL_INODE_START_OFF, inoh_2_mdsio_data(inoh),
 			mds_inode_addrepl_log, (void *)&jrir);
 
 		if (!rc && nb != INO_OD_SZ)
@@ -190,10 +190,10 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 		psc_crc64_calc(&inoh->inoh_extras->inox_crc, inoh->inoh_extras,
 			     INOX_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_extras, INOX_OD_SZ, &nb,
-			SL_EXTRAS_START_OFF, inoh_2_mdsio_data(inoh), 
+			SL_EXTRAS_START_OFF, inoh_2_mdsio_data(inoh),
 			mds_inode_addrepl_log, (void *)&jrir);
 
-		if (!rc && nb != INO_OD_SZ) 
+		if (!rc && nb != INO_OD_SZ)
 			rc = SLERR_SHORTIO;
 		if (rc)
 			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
@@ -358,7 +358,7 @@ int
 mdsio_opencreate(mdsio_fid_t pino, const struct slash_creds *cr,
     int flags, mode_t mode, const char *fn, struct slash_fidgen *fgp,
     mdsio_fid_t *mfp, struct srt_stat *sstb, void *mdsio_datap,
-    sl_log_update logfunc, sl_getslfid_cb getslfid)
+    sl_log_update_t logfunc, sl_getslfid_cb_t getslfid)
 {
 	return (zfsslash2_opencreate(pino, cr, flags, mode,
 	    fn, fgp, mfp, sstb, mdsio_datap, logfunc, getslfid));
@@ -367,7 +367,7 @@ mdsio_opencreate(mdsio_fid_t pino, const struct slash_creds *cr,
 int
 mdsio_link(mdsio_fid_t ino, mdsio_fid_t pino, const char *fn,
     struct slash_fidgen *fgp, const struct slash_creds *cr,
-    struct srt_stat *sstb, sl_log_update logfunc)
+    struct srt_stat *sstb, sl_log_update_t logfunc)
 {
 	return (zfsslash2_link(ino, pino, fn, fgp, cr, sstb, logfunc));
 }
@@ -397,7 +397,7 @@ int
 mdsio_mkdir(mdsio_fid_t pino, const char *cpn, mode_t mode,
     const struct slash_creds *cr, struct srt_stat *sstb,
     struct slash_fidgen *fgp, mdsio_fid_t *mfp,
-    sl_log_update logfunc, sl_getslfid_cb getslfid)
+    sl_log_update_t logfunc, sl_getslfid_cb_t getslfid)
 {
 	return (zfsslash2_mkdir(pino, cpn, mode, cr, sstb,
 	    fgp, mfp, logfunc, getslfid));
@@ -405,7 +405,7 @@ mdsio_mkdir(mdsio_fid_t pino, const char *cpn, mode_t mode,
 
 int
 mdsio_readdir(const struct slash_creds *cr, size_t siz,
-      off_t off, void *buf, size_t *outlen, size_t *nents, void *attrs, 
+      off_t off, void *buf, size_t *outlen, size_t *nents, void *attrs,
       int nprefetch, void *mdsio_data)
 {
 	return (zfsslash2_readdir(cr, siz, off, buf,
@@ -414,7 +414,7 @@ mdsio_readdir(const struct slash_creds *cr, size_t siz,
 
 int
 mdsio_rename(mdsio_fid_t opino, const char *ocpn, mdsio_fid_t npino,
-    const char *ncpn, const struct slash_creds *cr, sl_log_update logfunc)
+    const char *ncpn, const struct slash_creds *cr, sl_log_update_t logfunc)
 {
 	return (zfsslash2_rename(opino, ocpn, npino, ncpn, cr, logfunc));
 }
@@ -422,7 +422,7 @@ mdsio_rename(mdsio_fid_t opino, const char *ocpn, mdsio_fid_t npino,
 int
 mdsio_setattr(mdsio_fid_t ino, struct srt_stat *sstb_in, int to_set,
     const struct slash_creds *cr, struct srt_stat *sstb_out,
-    void *mdsio_data, sl_log_update logfunc)
+    void *mdsio_data, sl_log_update_t logfunc)
 {
 	return (zfsslash2_setattr(ino, sstb_in, to_set, cr,
 	    sstb_out, mdsio_data, logfunc));
@@ -431,8 +431,8 @@ mdsio_setattr(mdsio_fid_t ino, struct srt_stat *sstb_in, int to_set,
 int
 mdsio_symlink(const char *target, mdsio_fid_t pino, const char *cpn,
     const struct slash_creds *cr, struct srt_stat *sstb,
-    struct slash_fidgen *fgp, mdsio_fid_t *mfp, sl_getslfid_cb getslfid,
-    sl_log_update logfunc)
+    struct slash_fidgen *fgp, mdsio_fid_t *mfp, sl_getslfid_cb_t getslfid,
+    sl_log_update_t logfunc)
 {
 	return (zfsslash2_symlink(target, pino, cpn, cr, sstb,
 	    fgp, mfp, getslfid, logfunc));
@@ -440,14 +440,14 @@ mdsio_symlink(const char *target, mdsio_fid_t pino, const char *cpn,
 
 int
 mdsio_unlink(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr,
-    sl_log_update logfunc)
+    sl_log_update_t logfunc)
 {
 	return (zfsslash2_unlink(pino, cpn, cr, logfunc));
 }
 
 int
-mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr, 
-    sl_log_update logfunc)
+mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr,
+    sl_log_update_t logfunc)
 {
 	return (zfsslash2_rmdir(pino, cpn, cr, logfunc));
 }
@@ -467,7 +467,7 @@ mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id,
 {
 	return (zfsslash2_replay_create(parent_s2id, target_s2id, stat, name));
 }
- 
+
 int
 mdsio_replay_mkdir(uint64_t parent_s2id, uint64_t target_s2id,
     struct srt_stat *stat, char *name)
@@ -482,7 +482,7 @@ mdsio_replay_link(uint64_t parent_s2id, uint64_t target_s2id, char *name)
 }
 
 int
-mdsio_replay_symlink(uint64_t parent_s2id, uint64_t target_s2id, 
+mdsio_replay_symlink(uint64_t parent_s2id, uint64_t target_s2id,
     struct srt_stat *stat, char *name, char *link)
 {
 	return (zfsslash2_replay_symlink(parent_s2id, target_s2id, stat, name, link));
@@ -507,7 +507,7 @@ mdsio_replay_setattr(uint64_t target_s2id, struct srt_stat * stat, uint mask)
 }
 
 int
-mdsio_replay_rename(uint64_t parent_s2id, uint64_t new_parent_s2id, 
+mdsio_replay_rename(uint64_t parent_s2id, uint64_t new_parent_s2id,
 	__unusedx uint64_t target_s2id, char *name1, char *name2)
 {
 	return (zfsslash2_replay_rename(parent_s2id, name1, new_parent_s2id, name2));

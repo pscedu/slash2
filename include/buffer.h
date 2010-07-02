@@ -208,11 +208,11 @@ void sl_buffer_cache_init(void);
 void sl_buffer_fresh_assertions(struct sl_buffer *);
 void sl_buffer_clear(struct sl_buffer *, size_t);
 
-typedef int (*sl_iov_try_memrls)(void *);
-typedef void (*sl_iov_memrls_ulock)(void *);
+typedef int (*sl_iov_try_memrls_t)(void *);
+typedef void (*sl_iov_memrls_ulock_t)(void *);
 
-extern sl_iov_try_memrls	 slMemRlsTrylock;
-extern sl_iov_memrls_ulock	 slMemRlsUlock;
+extern sl_iov_try_memrls_t	 slMemRlsTrylock;
+extern sl_iov_memrls_ulock_t	 slMemRlsUlock;
 
 extern struct psc_poolmgr	*slBufsPool;
 

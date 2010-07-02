@@ -39,8 +39,8 @@
 struct psc_poolmaster	 slBufsPoolMaster;
 struct psc_poolmgr	*slBufsPool;
 
-sl_iov_try_memrls	 slMemRlsTrylock;
-sl_iov_memrls_ulock	 slMemRlsUlock;
+sl_iov_try_memrls_t	 slMemRlsTrylock;
+sl_iov_memrls_ulock_t	 slMemRlsUlock;
 
 #if 0
 __static void
