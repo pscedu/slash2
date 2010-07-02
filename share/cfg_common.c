@@ -182,10 +182,10 @@ libsl_profile_dump(void)
 	    r->res_type, r->res_npeers, psc_dynarray_len(&r->res_members));
 
 	DYNARRAY_FOREACH(p, n, &r->res_peers)
-		psc_info("\tpeer %d: %s\t%s\n",
+		psc_info("\tpeer %d: %s\t%s",
 		    n, p->res_name, p->res_desc);
 	DYNARRAY_FOREACH(resm, n, &r->res_members)
-		psc_info("\tnid %d: %s\n", n, resm->resm_addrbuf);
+		psc_info("\tnid %d: %s", n, resm->resm_addrbuf);
 	PSCLOG_UNLOCK();
 }
 
