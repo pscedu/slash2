@@ -126,7 +126,8 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 int
 mds_bmap_repl_update(struct bmapc_memb *bmap)
 {
-	int rc, nb;
+	int rc;
+	size_t nb;
 	int logchg=0; 
 
 	BMAPOD_READ_START(bmap);
@@ -136,11 +137,9 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 		return (0);
 	}
 
-
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
 		(off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
 		bmap_2_zfs_fh(bmap), (void *)mds_bmap_repl_log, (void *)bmap);
-
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
 			   rc);
