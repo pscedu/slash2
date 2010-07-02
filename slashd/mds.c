@@ -1312,7 +1312,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	bml = mds_bml_get();
 	bml->bml_exp = exp;
-	bml->bml_bmdsi = b->bcm_pri;
+	bml->bml_bmdsi = bmap_2_bmdsi(b);
 	bml->bml_flags = (rw == SL_WRITE ? BML_WRITE : BML_READ);
 	bml->bml_cli_nidpid = exp->exp_connection->c_peer;
 
@@ -1339,7 +1339,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	sbd->sbd_seq = bml->bml_seq;
 	sbd->sbd_key = (rw == SL_WRITE) ?
-		   bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
+		bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
  out:
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	return (rc);
