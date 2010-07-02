@@ -40,7 +40,6 @@
 #include "fidcache.h"
 #include "inode.h"
 #include "inodeh.h"
-#include "jflush.h"
 #include "mkfn.h"
 #include "pathnames.h"
 #include "slashrpc.h"
@@ -160,7 +159,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_iod_info);
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
-	PRTYPE(struct jflush_item);
 	PRTYPE(struct mexp_cli);
 	PRTYPE(struct msbmap_crcrepl_states);
 	PRTYPE(struct msctl_replst_cont);

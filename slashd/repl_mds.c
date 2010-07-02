@@ -57,6 +57,7 @@
 #include "slashd.h"
 #include "slerr.h"
 #include "up_sched_res.h"
+#include "pathnames.h"
 
 struct upschedtree	 upsched_tree = SPLAY_INITIALIZER(&upsched_tree);
 struct psc_poolmgr	*upsched_pool;
@@ -193,7 +194,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add,
 			   ios, i->inoh_ino.ino_nrepls-1);
 
 		if (journal)
-			mds_inode_addrepl_log(i, ios, j);
+			mds_inode_addrepl_update(i, ios, j);
 
 		rc = j;
 	}
@@ -476,7 +477,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 
 	/* Write changes to disk
 	 */
-	mds_bmap_repl_log(bcm);
+	mds_bmap_repl_update(bcm);
 
 	return (0);
 }
@@ -484,7 +485,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 void
 mds_repl_bmap_rel(struct bmapc_memb *bcm)
 {
-	mds_bmap_repl_log(bcm);
+	mds_bmap_repl_update(bcm);
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 }
 

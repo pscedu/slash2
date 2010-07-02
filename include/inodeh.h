@@ -31,7 +31,6 @@
 #include "psc_util/lock.h"
 
 #include "inode.h"
-#include "jflush.h"
 #include "fidcache.h"
 
 struct slash_inode_handle {
@@ -39,7 +38,6 @@ struct slash_inode_handle {
 	struct slash_inode_extras_od	*inoh_extras;
 	struct fidc_membh		*inoh_fcmh;
 	psc_spinlock_t			 inoh_lock;
-	struct jflush_item		 inoh_jfi;
 	int				 inoh_flags;
 };
 
@@ -60,12 +58,11 @@ enum {
 
 static __inline void
 slash_inode_handle_init(struct slash_inode_handle *i,
-    struct fidc_membh *f, jflush_handler handler)
+    struct fidc_membh *f)
 {
 	i->inoh_fcmh = f;
 	i->inoh_extras = NULL;
 	LOCK_INIT(&i->inoh_lock);
-	jfi_init(&i->inoh_jfi, handler, NULL, i);
 	i->inoh_flags = INOH_INO_NOTLOADED;
 }
 

@@ -244,7 +244,6 @@ main(int argc, char *argv[])
 
 	slm_init();
 
-	slmfssyncthr_spawn();
 	slmcohthr_spawn();
 	slmbmaptimeothr_spawn();
 	slm_rpc_initsvc();

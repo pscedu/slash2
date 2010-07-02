@@ -27,7 +27,6 @@
 #include "psc_util/odtable.h"
 
 #include "bmap.h"
-#include "jflush.h"
 #include "mdslog.h"
 #include "slashd.h"
 #include "inode.h"
@@ -47,7 +46,6 @@
  */
 struct bmap_mds_info {
 	struct bmapc_memb		*bmdsi_bmap;    /* back pointer            */
-	struct jflush_item		 bmdsi_jfi;	/* journal handle          */
 	struct resm_mds_info		*bmdsi_wr_ion;	/* pointer to write ION    */
 	struct psc_lockedlist		 bmdsi_leases;  /* tracked bmap leases     */
 	struct odtable_receipt		*bmdsi_assign;
@@ -155,7 +153,6 @@ struct bmap_timeo_table {
 	uint64_t		 btt_maxseq;
 	uint64_t		 btt_minseq;
 	struct bmap_timeo_entry	*btt_entries;
-	struct jflush_item	 btt_jfi;
 	int			 btt_nentries;
 };
 

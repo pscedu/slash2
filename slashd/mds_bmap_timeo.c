@@ -65,11 +65,19 @@ mds_bmap_timeotbl_init(void)
 	}
 }
 
-static int
+static void
 mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 {
-	return (pjournal_xadd_sngl(mdsJournal, MDS_LOG_BMAP_SEQ, sjbsq,
-				   sizeof(struct slmds_jent_bmapseq)));
+	struct slmds_jent_bmapseq *sjbsqlog;
+
+	sjbsqlog = (struct slmds_jent_bmapseq *)
+	    pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_bmapseq *));
+	
+	*sjbsqlog = *sjbsq;
+	pjournal_add_entry_distill(mdsJournal, 0, MDS_LOG_BMAP_SEQ,
+	    (void *)sjbsqlog, sizeof(struct slmds_jent_bmapseq));
+
+	pjournal_put_buf(mdsJournal, (void *)sjbsqlog);
 }
 
 void

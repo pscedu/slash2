@@ -62,3 +62,24 @@ I can get the txg easily (like I did with the namespace).  However,
 I probably have to pass in both func and data pointers so that I can
 log only the changes I have made, not the entire block.
 
+
+06/30/2010
+----------
+
+Here is a bit of estimate of log space consumption.  The ZFS
+times out a transaction group every 30 seconds (see txg.c). Assuming
+that we perform 10000 operations / second, we would need:
+
+	30 * 10000 * 2 * 512 = 307,200,000
+
+of log space (times 2 because each operation such as create also
+needs to log bmap etc).  So this should not be a problem if we use
+big enough log space.
+
+Also, I need to call log function after dmu_tx_commit() to avoid
+potential deadlock when log space is very small.  To do so, I need
+to make a copy of the txg.
+
+There used to be only one sync thread (see file mdsfssync.c) 
+that commits all logs into ZFS.  Now any threads can write into ZFS 
+directly.

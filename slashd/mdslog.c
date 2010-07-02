@@ -36,7 +36,6 @@
 #include "fidc_mds.h"
 #include "fidcache.h"
 #include "inode.h"
-#include "jflush.h"
 #include "mdsio.h"
 #include "mdslog.h"
 #include "mkfn.h"
@@ -152,7 +151,7 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 
 	rc = zfsslash2_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		(off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
-		mdsio_data);
+		mdsio_data, NULL, NULL);
 	if (rc || nb != BMAP_OD_SZ)
 		goto out;
 
@@ -176,23 +175,6 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 static int
 mds_redo_namespace(__unusedx struct psc_journal_enthdr *pje)
 {
-	return (0);
-}
-
-int
-mds_embed_handler(__unusedx int arg)
-{
-	int locked;
-	struct slmds_jent_bmapseq sjbsq;
-
-	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
-	sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
-	sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq;
-	ureqlock(&mdsBmapTimeoTbl.btt_lock, locked);
-
-	pjournal_xadd_sngl(mdsJournal, MDS_LOG_BMAP_SEQ,
-	    &sjbsq, sizeof(struct slmds_jent_bmapseq));
-
 	return (0);
 }
 
@@ -297,16 +279,15 @@ void
 mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uint64_t target,
 	const struct srt_stat *stat, const char *name, const char *newname)
 {
-	int rc;
 	char *ptr;
 	struct slmds_jent_namespace *jnamespace;
 
 	psc_assert(target);
 
-	jnamespace = PSCALLOC(sizeof(struct slmds_jent_namespace));
+	jnamespace = (struct slmds_jent_namespace *) 
+	    pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	jnamespace->sjnm_op = op;
-	jnamespace->sjnm_txg = txg;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
 	jnamespace->sjnm_parent_s2id = parent;
 	jnamespace->sjnm_target_s2id = target;
@@ -336,12 +317,10 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uin
 	psc_assert(logentrysize >= jnamespace->sjnm_reclen +
 	    (int)sizeof(struct psc_journal_enthdr) - 1);
 
-	rc = pjournal_xadd_sngl(mdsJournal, MDS_LOG_NAMESPACE, jnamespace,
-		jnamespace->sjnm_reclen);
-	if (rc)
-		psc_fatalx("jlog fid=%"PRIx64", name=%s, rc=%d", target, name, rc);
+	pjournal_add_entry_distill(mdsJournal, txg, MDS_LOG_NAMESPACE,
+	    jnamespace, jnamespace->sjnm_reclen);
 
-	PSCFREE(jnamespace);
+	pjournal_put_buf(mdsJournal, (void *)jnamespace);
 }
 
 __static int
@@ -766,31 +745,24 @@ mds_bmap_sync(void *data)
 }
 
 void
-mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
-		      uint32_t pos)
+mds_inode_addrepl_log(void *datap, uint64_t txg)
 {
-	int rc;
-	struct slmds_jent_ino_addrepl jrir = { fcmh_2_fid(inoh->inoh_fcmh),
-					       ios, pos };
+	struct slmds_jent_ino_addrepl *jrir;
 
-	INOH_LOCK_ENSURE(inoh);
-	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
-		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
-	psc_assert(inoh->inoh_jfi.jfi_handler == mds_inode_sync);
-	psc_assert(inoh->inoh_jfi.jfi_item == inoh);
+	jrir = (struct slmds_jent_ino_addrepl *) 
+	    pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_ino_addrepl));
+
+	jrir->sjir_fid = ((struct slmds_jent_ino_addrepl *)datap)->sjir_fid; 
+	jrir->sjir_ios = ((struct slmds_jent_ino_addrepl *)datap)->sjir_ios; 
+	jrir->sjir_pos = ((struct slmds_jent_ino_addrepl *)datap)->sjir_pos; 
 
 	psc_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
-		  jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos);
+		  jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
 
-	jfi_prepare(&inoh->inoh_jfi, mdsJournal);
+	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL,
+	    jrir, sizeof(struct slmds_jent_ino_addrepl));
 
-	rc = pjournal_xadd(inoh->inoh_jfi.jfi_xh, MDS_LOG_INO_ADDREPL, &jrir,
-			   sizeof(struct slmds_jent_ino_addrepl));
-	if (rc)
-		psc_trace("jlog fid=%"PRIx64" ios=%x pos=%u rc=%d",
-			  jrir.sjir_fid, jrir.sjir_ios, jrir.sjir_pos, rc);
-
-	jfi_schedule(&inoh->inoh_jfi, &dirtyMdsData);
+	pjournal_put_buf(mdsJournal, (char *)jrir);
 }
 
 /**
@@ -799,64 +771,28 @@ mds_inode_addrepl_log(struct slash_inode_handle *inoh, sl_ios_id_t ios,
  *	before the repl table is committed to the journal.
  */
 void
-mds_bmap_repl_log(struct bmapc_memb *bmap)
+mds_bmap_repl_log(void *datap, uint64_t txg)
 {
-	struct slmds_jent_repgen jrpg;
-	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
-	struct slash_inode_handle *ih=fcmh_2_inoh(bmap->bcm_fcmh);
-	int rc, logchg=0;
+	struct bmapc_memb *bmap = (struct bmapc_memb *)datap;
+	struct slmds_jent_repgen *jrpg;
 
-	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
-	psc_assert(bmdsi->bmdsi_jfi.jfi_item == bmap);
+	jrpg = (struct slmds_jent_repgen *) 
+	    pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_repgen));
 
-	BMAPOD_READ_START(bmap);
-	BMDSI_LOGCHG_CHECK(bmap, logchg);
-	if (!logchg) {
-		BMAPOD_READ_DONE(bmap);
-		return;
-	}
+	jrpg->sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
+	jrpg->sjp_bmapno = bmap->bcm_blkno;
+	jrpg->sjp_bgen = bmap_2_bgen(bmap);
 
-	DEBUG_BMAPOD(PLL_INFO, bmap, "");
-
-	jrpg.sjp_bgen = bmap_2_bgen(bmap);
-	jrpg.sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	jrpg.sjp_bmapno = bmap->bcm_blkno;
-	jrpg.sjp_flags = 0;
-
-	memcpy(jrpg.sjp_reptbl, bmap->bcm_od->bh_repls,
+	memcpy(jrpg->sjp_reptbl, bmap->bcm_od->bh_repls,
 	       SL_REPLICA_NBYTES);
 
-	BMDSI_LOGCHG_CLEAR(bmap);
-	BMAPOD_READ_DONE(bmap);
-	
-	INOH_LOCK(ih);
-	/* Journal dirty inode structures here.
-	 */
-	if (ih->inoh_flags & INOH_INO_DIRTY) {
-		jrpg.sjp_flags |= INOH_INO_DIRTY;
-		memcpy(&jrpg.sjp_ino, &ih->inoh_ino, 
-		       sizeof(struct slash_inode_od *));
-	}
-
-	if (ih->inoh_flags & INOH_EXTRAS_DIRTY) {
-		jrpg.sjp_flags |= INOH_EXTRAS_DIRTY;
-		memcpy(&jrpg.sjp_inox, ih->inoh_extras, 
-		       sizeof(struct slash_inode_extras_od *));
-	}
-	INOH_ULOCK(ih);
-
 	psc_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
-		  jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_bgen);
+		  jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
 
-	jfi_prepare(&bmdsi->bmdsi_jfi, mdsJournal);
+	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL,
+	    (char *)jrpg, sizeof(struct slmds_jent_repgen));
 
-	rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_REPL, &jrpg,
-			   sizeof(struct slmds_jent_repgen));
-	if (rc)
-		psc_fatalx("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u rc=%d",
-			   jrpg.sjp_fid, jrpg.sjp_bmapno, jrpg.sjp_bgen,
-			   rc);
-	jfi_schedule(&bmdsi->bmdsi_jfi, &dirtyMdsData);
+	pjournal_put_buf(mdsJournal, (void *)jrpg);
 }
 
 /**
@@ -872,30 +808,29 @@ mds_bmap_repl_log(struct bmapc_memb *bmap)
  *    me may then process out of order.
  */
 void
-mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
+mds_bmap_crc_log(void *datap, uint64_t txg)
 {
-	struct slmds_jent_crc *jcrc = PSCALLOC(sizeof(struct slmds_jent_crc));
+	struct sl_mds_crc_log *crclog = (struct sl_mds_crc_log *)datap;
+	struct bmapc_memb *bmap = crclog->scl_bmap;
+	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
+	struct slmds_jent_crc *jcrc;
 	struct bmap_mds_info *bmdsi = bmap->bcm_pri;
 	struct slash_bmap_od *bmapod = bmap->bcm_od;
-	int i, rc=0;
-	int n=crcup->nups;
+	int i, n=crcup->nups;
 	uint32_t t=0, j=0;
 
-	mdsio_apply_fcmh_size(bmap->bcm_fcmh, crcup->fsize);
-
-	jfi_prepare(&bmdsi->bmdsi_jfi, mdsJournal);
-
-	psc_assert(bmdsi->bmdsi_jfi.jfi_handler == mds_bmap_sync);
-	psc_assert(bmdsi->bmdsi_jfi.jfi_item == bmap);
 	/* No, I shouldn't need the lock.  Only this instance of this
 	 *  call may remove the BMAP_MDS_CRC_UP bit.
 	 */
 	psc_assert(bmap->bcm_mode & BMAP_MDS_CRC_UP);
 
+	jcrc = (struct slmds_jent_crc *) 
+	    pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_crc));
 	jcrc->sjc_fid = fcmh_2_mdsio_fid(bmap->bcm_fcmh);
 	jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
 	jcrc->sjc_bmapno = bmap->bcm_blkno;
 	jcrc->sjc_ncrcs = n;
+	jcrc->sjc_fsize = crcup->fsize;		/* largest known size */
 
 	while (n) {
 		i = MIN(SLJ_MDS_NCRCS, n);
@@ -903,11 +838,9 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
 		       i * sizeof(struct srm_bmap_crcwire));
 
-		rc = pjournal_xadd(bmdsi->bmdsi_jfi.jfi_xh, MDS_LOG_BMAP_CRC,
-				   jcrc, sizeof(struct slmds_jent_crc));
-		if (rc)
-			psc_fatalx("jlog fid=%"PRIx64" bmapno=%u rc=%d",
-				   jcrc->sjc_fid, jcrc->sjc_bmapno, rc);
+		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
+		    jcrc, sizeof(struct slmds_jent_crc));
+
 		/* Apply the CRC update into memory AFTER recording them
 		 *  in the journal. The lock should not be needed since the
 		 *  BMAP_MDS_CRC_UP is protecting the crc table from other
@@ -937,9 +870,7 @@ mds_bmap_crc_log(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	bmap->bcm_mode &= ~BMAP_MDS_CRC_UP;
 	BMAP_ULOCK(bmap);
 
-	jfi_schedule(&bmdsi->bmdsi_jfi, &dirtyMdsData);
-
-	PSCFREE(jcrc);
+	pjournal_put_buf(mdsJournal, (void *)jcrc);
 }
 
 void
@@ -960,7 +891,7 @@ mds_journal_init(void)
 		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
               
 	mdsJournal = pjournal_init(r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL, 
-			   "slmjdistthr", NULL, mds_replay_handler, mds_distill_handler);
+			   "slmjdistthr", mds_replay_handler, mds_distill_handler);
 
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);

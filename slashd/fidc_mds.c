@@ -96,8 +96,11 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh),
 		    &rootcreds, NULL, &fmi->fmi_mdsio_data);
 	else if (fcmh_isreg(fcmh)) {
-
-		slash_inode_handle_init(&fmi->fmi_inodeh, fcmh, mds_inode_sync);
+		/*
+		 * XXX odtable also goes through this code path.
+		 * I thought fidc cache is only used for slash2 files.
+		 */
+		slash_inode_handle_init(&fmi->fmi_inodeh, fcmh);
 		rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh),
 		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL, NULL,
 		    &fcmh_2_mdsio_data(fcmh), NULL, NULL);
@@ -121,7 +124,6 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 		rc = mdsio_release(&rootcreds, fmi->fmi_mdsio_data);
 	psc_assert(rc == 0);
 
-	jfi_ensure_empty(&fmi->fmi_inodeh.inoh_jfi);
 	if (fmi->fmi_inodeh.inoh_extras)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
 }

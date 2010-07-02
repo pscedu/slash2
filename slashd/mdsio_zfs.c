@@ -34,7 +34,9 @@
 #include "mdsio.h"
 #include "slashd.h"
 #include "slerr.h"
+#include "bmap_mds.h"
 
+#include "sljournal.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
 void
@@ -70,7 +72,7 @@ mdsio_apply_fcmh_size(struct fidc_membh *f, size_t size)
 
 	return (zfsslash2_setattr(fcmh_2_fid(f), &f->fcmh_sstb,
 	    SRM_SETATTRF_FSIZE, &rootcreds, NULL,
-	    fcmh_2_fmi(f)->fmi_mdsio_data, (sl_jlog_cb)NULL));
+	    fcmh_2_fmi(f)->fmi_mdsio_data, (sl_log_update)NULL));
 }
 
 int
@@ -89,6 +91,121 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 	return (rc);
 }
 
+/*
+ * mdsio_bmap_crc_update - handle CRC updates for one bmap by pushing the updates
+ *     to ZFS and then log it.
+ */
+int
+mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
+{
+	size_t nb;
+	int rc;
+	struct sl_mds_crc_log crclog;
+
+	crclog.scl_bmap = bmap;
+	crclog.scl_crcup = crcup;
+
+	mdsio_apply_fcmh_size(bmap->bcm_fcmh, crcup->fsize);
+
+	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
+	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
+	    bmap_2_zfs_fh(bmap), mds_bmap_crc_log, (void *)&crclog);
+
+	if (rc) {
+		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
+			   rc);
+	} else if (nb != BMAP_OD_SZ) {
+		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
+		rc = SLERR_SHORTIO;
+	}
+	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)",rc);
+
+	return (rc);
+}
+
+int
+mds_bmap_repl_update(struct bmapc_memb *bmap)
+{
+	int rc, nb;
+	struct slash_inode_handle *ih=fcmh_2_inoh(bmap->bcm_fcmh);
+	int logchg=0; 
+
+	BMAPOD_READ_START(bmap);
+	BMDSI_LOGCHG_CHECK(bmap, logchg);
+	if (!logchg) {
+		BMAPOD_READ_DONE(bmap);
+		return (0);
+	}
+
+
+	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
+		(off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
+		bmap_2_zfs_fh(bmap), (void *)mds_bmap_repl_log, (void *)bmap);
+
+	if (rc) {
+		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
+			   rc);
+	} else if (nb != BMAP_OD_SZ) {
+		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: short I/O");
+		rc = SLERR_SHORTIO;
+	}
+	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)",rc);
+	return (rc);
+}
+
+int
+mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint32_t pos)
+{
+	size_t nb;
+	int locked, rc;
+	struct slmds_jent_ino_addrepl jrir;
+
+	jrir.sjir_fid =fcmh_2_fid(inoh->inoh_fcmh);
+	jrir.sjir_ios = ios;
+	jrir.sjir_pos = pos;
+
+	locked = reqlock(&inoh->inoh_lock);
+
+	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
+		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
+
+	if (inoh->inoh_flags & INOH_INO_DIRTY) {
+		psc_crc64_calc(&inoh->inoh_ino.ino_crc,
+			     &inoh->inoh_ino, INO_OD_CRCSZ);
+		rc = zfsslash2_write(&rootcreds, &inoh->inoh_ino, INO_OD_SZ, &nb,
+			SL_INODE_START_OFF, inoh_2_mdsio_data(inoh), 
+			mds_inode_addrepl_log, (void *)&jrir);
+
+		if (!rc && nb != INO_OD_SZ)
+			rc = SLERR_SHORTIO;
+		if (rc)
+			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
+
+		inoh->inoh_flags &= ~INOH_INO_DIRTY;
+		if (inoh->inoh_flags & INOH_INO_NEW) {
+			inoh->inoh_flags &= ~INOH_INO_NEW;
+			inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
+		}
+	}
+
+	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
+		psc_crc64_calc(&inoh->inoh_extras->inox_crc, inoh->inoh_extras,
+			     INOX_OD_CRCSZ);
+		rc = zfsslash2_write(&rootcreds, &inoh->inoh_extras, INOX_OD_SZ, &nb,
+			SL_EXTRAS_START_OFF, inoh_2_mdsio_data(inoh), 
+			mds_inode_addrepl_log, (void *)&jrir);
+
+		if (!rc && nb != INO_OD_SZ) 
+			rc = SLERR_SHORTIO;
+		if (rc)
+			DEBUG_INOH(PLL_FATAL, inoh, "rc=%d sync fail", rc);
+
+		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
+	}
+
+	ureqlock(&inoh->inoh_lock, locked);
+}
+
 int
 mdsio_bmap_write(struct bmapc_memb *bmap)
 {
@@ -97,7 +214,7 @@ mdsio_bmap_write(struct bmapc_memb *bmap)
 
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
-	    bmap_2_zfs_fh(bmap));
+	    bmap_2_zfs_fh(bmap), NULL, NULL);
 
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
@@ -143,7 +260,7 @@ mdsio_inode_write(struct slash_inode_handle *i)
 	int rc;
 
 	rc = zfsslash2_write(&rootcreds, &i->inoh_ino, INO_OD_SZ, &nb,
-	    SL_INODE_START_OFF, inoh_2_mdsio_data(i));
+	    SL_INODE_START_OFF, inoh_2_mdsio_data(i), NULL, NULL);
 
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: error (rc=%d)",
@@ -189,7 +306,7 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 
 	psc_assert(i->inoh_extras);
 	rc = zfsslash2_write(&rootcreds, i->inoh_extras, INOX_OD_SZ, &nb,
-	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(i));
+	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(i), NULL, NULL);
 
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: error (rc=%d)",
@@ -242,7 +359,7 @@ int
 mdsio_opencreate(mdsio_fid_t pino, const struct slash_creds *cr,
     int flags, mode_t mode, const char *fn, struct slash_fidgen *fgp,
     mdsio_fid_t *mfp, struct srt_stat *sstb, void *mdsio_datap,
-    sl_jlog_cb logfunc, sl_getslfid_cb getslfid)
+    sl_log_update logfunc, sl_getslfid_cb getslfid)
 {
 	return (zfsslash2_opencreate(pino, cr, flags, mode,
 	    fn, fgp, mfp, sstb, mdsio_datap, logfunc, getslfid));
@@ -251,7 +368,7 @@ mdsio_opencreate(mdsio_fid_t pino, const struct slash_creds *cr,
 int
 mdsio_link(mdsio_fid_t ino, mdsio_fid_t pino, const char *fn,
     struct slash_fidgen *fgp, const struct slash_creds *cr,
-    struct srt_stat *sstb, sl_jlog_cb logfunc)
+    struct srt_stat *sstb, sl_log_update logfunc)
 {
 	return (zfsslash2_link(ino, pino, fn, fgp, cr, sstb, logfunc));
 }
@@ -281,7 +398,7 @@ int
 mdsio_mkdir(mdsio_fid_t pino, const char *cpn, mode_t mode,
     const struct slash_creds *cr, struct srt_stat *sstb,
     struct slash_fidgen *fgp, mdsio_fid_t *mfp,
-    sl_jlog_cb logfunc, sl_getslfid_cb getslfid)
+    sl_log_update logfunc, sl_getslfid_cb getslfid)
 {
 	return (zfsslash2_mkdir(pino, cpn, mode, cr, sstb,
 	    fgp, mfp, logfunc, getslfid));
@@ -298,7 +415,7 @@ mdsio_readdir(const struct slash_creds *cr, size_t siz,
 
 int
 mdsio_rename(mdsio_fid_t opino, const char *ocpn, mdsio_fid_t npino,
-    const char *ncpn, const struct slash_creds *cr, sl_jlog_cb logfunc)
+    const char *ncpn, const struct slash_creds *cr, sl_log_update logfunc)
 {
 	return (zfsslash2_rename(opino, ocpn, npino, ncpn, cr, logfunc));
 }
@@ -306,7 +423,7 @@ mdsio_rename(mdsio_fid_t opino, const char *ocpn, mdsio_fid_t npino,
 int
 mdsio_setattr(mdsio_fid_t ino, struct srt_stat *sstb_in, int to_set,
     const struct slash_creds *cr, struct srt_stat *sstb_out,
-    void *mdsio_data, sl_jlog_cb logfunc)
+    void *mdsio_data, sl_log_update logfunc)
 {
 	return (zfsslash2_setattr(ino, sstb_in, to_set, cr,
 	    sstb_out, mdsio_data, logfunc));
@@ -316,7 +433,7 @@ int
 mdsio_symlink(const char *target, mdsio_fid_t pino, const char *cpn,
     const struct slash_creds *cr, struct srt_stat *sstb,
     struct slash_fidgen *fgp, mdsio_fid_t *mfp, sl_getslfid_cb getslfid,
-    sl_jlog_cb logfunc)
+    sl_log_update logfunc)
 {
 	return (zfsslash2_symlink(target, pino, cpn, cr, sstb,
 	    fgp, mfp, getslfid, logfunc));
@@ -324,14 +441,14 @@ mdsio_symlink(const char *target, mdsio_fid_t pino, const char *cpn,
 
 int
 mdsio_unlink(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr,
-    sl_jlog_cb logfunc)
+    sl_log_update logfunc)
 {
 	return (zfsslash2_unlink(pino, cpn, cr, logfunc));
 }
 
 int
 mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr, 
-    sl_jlog_cb logfunc)
+    sl_log_update logfunc)
 {
 	return (zfsslash2_rmdir(pino, cpn, cr, logfunc));
 }

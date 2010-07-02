@@ -1087,7 +1087,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	BMAP_ULOCK(bmap);
 	/* Call the journal and update the in-memory crc's.
 	 */
-	mds_bmap_crc_log(bmap, c);
+	mds_bmap_crc_update(bmap, c);
  out:
 	/* Mark that mds_bmap_crc_write() is done with this bmap
 	 *  - it was incref'd in fcmh_bmap_lookup().
@@ -1197,7 +1197,6 @@ mds_bmap_init(struct bmapc_memb *bcm)
 	bmdsi->bmdsi_bmap = bcm;
 	pll_init(&bmdsi->bmdsi_leases, struct bmap_mds_lease,
 		 bml_bmdsi_lentry, NULL);
-	jfi_init(&bmdsi->bmdsi_jfi, mds_bmap_sync, mds_bmap_jfiprep, bcm);
 	bmdsi->bmdsi_xid = 0;
 	pthread_rwlock_init(&bmdsi->bmdsi_rwlock, NULL);
 }

@@ -100,7 +100,6 @@ struct slmds_jent_namespace {
 	uint64_t		sjnm_magic;			/* debugging */
 	uint32_t		sjnm_op;			/* operation type */
 
-	uint64_t		sjnm_txg;			/* enclosing ZFS transaction */
 	uint64_t		sjnm_seqno;			/* namespace update identifier */
 
 	uint64_t		sjnm_parent_s2id;
