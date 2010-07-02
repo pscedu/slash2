@@ -407,7 +407,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	 *   will be journaled with this bmap's updated repl bitmap.
 	 * This saves a journal I/O.
 	 */
-	iosidx = mds_repl_ios_lookup_add(fcmh_2_inoh(bcm->bcm_fcmh), ios, 0);
+	iosidx = mds_repl_ios_lookup_add(fcmh_2_inoh(bcm->bcm_fcmh), ios, 1);
 	if (iosidx < 0)
 		psc_fatalx("lookup ios %d: %s", ios, slstrerror(iosidx));
 
@@ -517,6 +517,7 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 slfid_t
 mds_repl_getslfid(void)
 {
+	//XXX should I be FID_ANY?
 	return (0);
 }
 
