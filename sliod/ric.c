@@ -167,7 +167,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	/* This loop assumes that nslvrs is always <= 2.  Note that
 	 *   once i > 0, roff is always 0.
 	 */
-	for (i=0, roff[i]=(mq->offset - (slvrno * SLASH_SLVR_SIZE)), 
+	for (i=0, roff[i]=(mq->offset - (slvrno * SLASH_SLVR_SIZE)),
 		     tsize=mq->size;
 	     i < nslvrs; i++, roff[i]=0) {
 
@@ -257,12 +257,15 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
 	struct slash_fidgen fg;
-	int i, rc;
+	uint32_t i;
+	int rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->nbmaps > MAX_BMAP_RELEASE)
-		return (-E2BIG);
+	if (mq->nbmaps > MAX_BMAP_RELEASE) {
+		mp->rc = E2BIG;
+		goto out;
+	}
 
 	for (i = 0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
@@ -313,9 +316,9 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		freelock(&biod->biod_lock);
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	}
+ out:
 	return (0);
 }
-
 
 int
 sli_ric_handler(struct pscrpc_request *rq)

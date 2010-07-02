@@ -871,10 +871,10 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 	struct srm_bmap_id *bid;
 	struct bmap_mds_lease *bml;
 	struct slash_fidgen fg;
-	int i;
+	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->nbmaps < 0 || mq->nbmaps > MAX_BMAP_RELEASE) {
+	if (mq->nbmaps > MAX_BMAP_RELEASE) {
 		mp->rc = EINVAL;
 		return (0);
 	}
