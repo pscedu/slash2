@@ -85,10 +85,9 @@ void
 dircache_setfreeable_ents(struct dircache_ents *e)
 {
 	e->de_freeable = 1;
-	if (!e->de_remlookup) 
-		dircache_rls_ents(e);	
+	if (!e->de_remlookup)
+		dircache_rls_ents(e);
 }
-
 
 slfid_t
 dircache_lookup(struct dircache_info *i, const char *name, int flag)
