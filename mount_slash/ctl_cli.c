@@ -447,14 +447,14 @@ msctlthr_spawn(void)
 
 	psc_poolmaster_init(&msctl_replstmc_poolmaster,
 	    struct msctl_replst_cont, mrc_lentry, PPMF_AUTO,
-	    32, 32, 64, NULL, NULL, NULL, "replstmc");
+	    1, 1, 32, NULL, NULL, NULL, "replstmc");
 	msctl_replstmc_pool = psc_poolmaster_getmgr(
 	    &msctl_replstmc_poolmaster);
 
 	_psc_poolmaster_init(&msctl_replstsc_poolmaster,
 	    sizeof(struct msctl_replst_slave_cont) + SRM_REPLST_PAGESIZ,
 	    offsetof(struct msctl_replst_slave_cont, mrsc_lentry),
-	    PPMF_AUTO, 32, 32, 64, NULL, NULL, NULL, NULL, "replstsc");
+	    PPMF_AUTO, 1, 1, 32, NULL, NULL, NULL, NULL, "replstsc");
 	msctl_replstsc_pool = psc_poolmaster_getmgr(
 	    &msctl_replstsc_poolmaster);
 
