@@ -127,7 +127,6 @@ int
 mds_bmap_repl_update(struct bmapc_memb *bmap)
 {
 	int rc, nb;
-	struct slash_inode_handle *ih=fcmh_2_inoh(bmap->bcm_fcmh);
 	int logchg=0; 
 
 	BMAPOD_READ_START(bmap);
@@ -204,6 +203,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 	}
 
 	ureqlock(&inoh->inoh_lock, locked);
+	return (rc);
 }
 
 int
