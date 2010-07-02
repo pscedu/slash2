@@ -51,6 +51,7 @@
 #include "slashrpc.h"
 #include "slerr.h"
 #include "slutil.h"
+#include "up_sched_res.h"
 
 /*
  * The following SLASHIDs are automatically assigned:
@@ -616,10 +617,13 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
+	int tract[SL_NREPLST], to_set;
+	struct up_sched_work_item *wk;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct fidc_membh *fcmh;
-	int to_set;
+	struct bmapc_memb *bcm;
+	size_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
@@ -636,12 +640,53 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			/* partial truncate */
 			to_set |= SRM_SETATTRF_PTRUNCGEN;
 
-			/* XXX journal */
+			wk = psc_pool_get(upsched_pool);
+
+			/* XXX what do we do with bmap leases that are
+			 * concurrently granted?
+			 */
 
 			FCMH_LOCK(fcmh);
 			fcmh_wait_locked(fcmh,
 			    fcmh->fcmh_flags & FMIF_BLOCK_PTRUNC);
 			fcmh->fcmh_flags |= FMIF_BLOCK_PTRUNC;
+			// bmaps write leases may not be granted
+			// for this bmap or any bmap beyond
+
+			tract[SL_REPLST_INACTIVE] = -1;
+			tract[SL_REPLST_SCHED] = -1;
+			tract[SL_REPLST_OLD] = -1;
+			tract[SL_REPLST_ACTIVE] = SL_REPLST_TRUNCPNDG;
+			tract[SL_REPLST_TRUNCPNDG] = -1;
+			tract[SL_REPLST_GARBAGE] = -1;
+			tract[SL_REPLST_GARBAGE_SCHED] = -1;
+
+			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
+			if (mds_bmap_load(fcmh, i, &bcm) == 0) {
+				BMAP_LOCK(bcm);
+				mds_repl_bmap_walk_all(bcm, tract, NULL, 0);
+				mds_repl_bmap_rel(bcm);
+			}
+
+			tract[SL_REPLST_INACTIVE] = -1;
+			tract[SL_REPLST_SCHED] = SL_REPLST_GARBAGE;
+			tract[SL_REPLST_OLD] = SL_REPLST_GARBAGE;
+			tract[SL_REPLST_ACTIVE] = SL_REPLST_GARBAGE;
+			tract[SL_REPLST_TRUNCPNDG] = -1;
+			tract[SL_REPLST_GARBAGE] = -1;
+			tract[SL_REPLST_GARBAGE_SCHED] = -1;
+
+			for (i++; i < fcmh_2_nbmaps(fcmh); i++) {
+				if (mds_bmap_load(fcmh, i, &bcm))
+					continue;
+				BMAP_LOCK(bcm);
+				mds_repl_bmap_walk_all(bcm, tract, NULL, 0);
+				mds_repl_bmap_rel(bcm);
+				// queue to garbage collector
+			}
+
+			uswi_init(wk, fcmh);
+			// create $ROOT/.sltruncs/<fid>
 
 			fcmh_2_ptruncgen(fcmh)++;
 
@@ -650,16 +695,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			FCMH_ULOCK(fcmh);
 
 #if 0
-	- create $ROOT/.sltruncs/<fid>-<truncpos>
-	- mark FMIF_TRUNCPNDG:
-		- truncations past this point completion_wait on this activity then succeeds
-		- bmaps write leases may not be granted for this bmap or any bmap beyond
-	- set fmi_ptruncpos
-	- mark SL_REPLST_GARBAGE all bmaps extended past truncated region, queue to garbage collector
-	- mark split bmap SL_REPLST_TRUNCPNDG on all replicas
 	- synchronously contact an IOS requesting CRC recalculation for sliver and
 	  mark SL_REPLST_ACTIVE on success
-	- mark SL_REPLST_GARBAGE for TRUNCPNDG replicas and notify garbage queuer
 	- if BMAP_PERSIST, notify replication queuer
 #endif
 		}

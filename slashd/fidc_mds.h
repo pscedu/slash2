@@ -32,6 +32,7 @@ struct fcmh_mds_info {
 	mdsio_fid_t		  fmi_mdsio_fid;	/* underlying mdsio file ID */
 	void			 *fmi_mdsio_data;	/* mdsio descriptor */
 	int                       fmi_ctor_rc;		/* constructor return code */
+	sl_bmapno_t		  fmi_ptruncbmap;	/* bmap where partial trunc is go */
 };
 
 #define FMIF_BLOCK_PTRUNC	(_FCMH_FLGSHFT << 0)	/* awaiting partial truncation resolution */

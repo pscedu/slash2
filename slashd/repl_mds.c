@@ -432,6 +432,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	tract[SL_REPLST_ACTIVE] = -1;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
 	tract[SL_REPLST_GARBAGE] = -1;
+	tract[SL_REPLST_GARBAGE_SCHED] = -1;
 
 	retifset[SL_REPLST_INACTIVE] = 0;
 	retifset[SL_REPLST_OLD] = EINVAL;
@@ -439,6 +440,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	retifset[SL_REPLST_ACTIVE] = 0;
 	retifset[SL_REPLST_TRUNCPNDG] = EINVAL;
 	retifset[SL_REPLST_GARBAGE] = EINVAL;
+	retifset[SL_REPLST_GARBAGE_SCHED] = EINVAL;
 
 	rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	if (rc)
@@ -457,17 +459,20 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	tract[SL_REPLST_SCHED] = -1;
 	tract[SL_REPLST_ACTIVE] = SL_REPLST_OLD;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
+	tract[SL_REPLST_GARBAGE] = -1;
+	tract[SL_REPLST_GARBAGE_SCHED] = -1;
 
 	retifset[SL_REPLST_INACTIVE] = 0;
 	retifset[SL_REPLST_OLD] = 0;
 	retifset[SL_REPLST_SCHED] = 0;
 	retifset[SL_REPLST_ACTIVE] = 1;
 	retifset[SL_REPLST_TRUNCPNDG] = 0;
+	retifset[SL_REPLST_GARBAGE] = 0;
+	retifset[SL_REPLST_GARBAGE_SCHED] = 0;
 
 	if (mds_repl_bmap_walk(bcm, tract, retifset,
-		       REPL_WALKF_MODOTH, &iosidx, 1)) {
+	    REPL_WALKF_MODOTH, &iosidx, 1))
 		BHGEN_INCREMENT(bcm);
-	}
 
 	/* Write changes to disk
 	 */
@@ -615,6 +620,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	retifzero[SL_REPLST_SCHED] = 0;
 	retifzero[SL_REPLST_TRUNCPNDG] = 0;
 	retifzero[SL_REPLST_GARBAGE] = 0;
+	retifzero[SL_REPLST_GARBAGE_SCHED] = 0;
 
 	if (bmapno == (sl_bmapno_t)-1) {
 		int repl_some_act = 0, repl_all_act = 1;
@@ -627,6 +633,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[SL_REPLST_ACTIVE] = 1;
 		retifset[SL_REPLST_TRUNCPNDG] = 0;
 		retifset[SL_REPLST_GARBAGE] = 0;
+		retifset[SL_REPLST_GARBAGE_SCHED] = 0;
 
 		/* check if all bmaps are already active */
 		ret_if_inact[SL_REPLST_INACTIVE] = 1;
@@ -635,6 +642,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		ret_if_inact[SL_REPLST_ACTIVE] = 0;
 		ret_if_inact[SL_REPLST_TRUNCPNDG] = 1;
 		ret_if_inact[SL_REPLST_GARBAGE] = 1;
+		ret_if_inact[SL_REPLST_GARBAGE_SCHED] = 1;
 
 		for (bmapno = 0; bmapno < USWI_NBMAPS(wk); bmapno++) {
 			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm))
@@ -646,16 +654,16 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			 * If no ACTIVE replicas exist, the bmap must be
 			 * uninitialized/all zeroes.  Skip it.
 			 */
-			if (mds_repl_bmap_walk(bcm, NULL, retifzero,
-			    REPL_WALKF_SCIRCUIT, NULL, 0) == 0) {
+			if (mds_repl_bmap_walk_all(bcm, NULL, retifzero,
+			    REPL_WALKF_SCIRCUIT) == 0) {
 				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 				continue;
 			}
 
 			repl_some_act |= mds_repl_bmap_walk(bcm,
 			    tract, retifset, 0, iosidx, nios);
-			if (repl_all_act && mds_repl_bmap_walk(bcm, NULL,
-			    ret_if_inact, REPL_WALKF_SCIRCUIT, NULL, 0))
+			if (repl_all_act && mds_repl_bmap_walk_all(bcm, NULL,
+			    ret_if_inact, REPL_WALKF_SCIRCUIT))
 				repl_all_act = 0;
 			mds_repl_bmap_rel(bcm);
 		}
@@ -683,8 +691,8 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			 * If no ACTIVE replicas exist, the bmap must be
 			 * uninitialized/all zeroes.  Skip it.
 			 */
-			if (mds_repl_bmap_walk(bcm, NULL, retifzero,
-			    REPL_WALKF_SCIRCUIT, NULL, 0) == 0) {
+			if (mds_repl_bmap_walk_all(bcm, NULL, retifzero,
+			    REPL_WALKF_SCIRCUIT) == 0) {
 				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 				rc = SLERR_BMAP_ZERO;
 			} else {
@@ -734,8 +742,9 @@ mds_repl_tryrmqfile(struct up_sched_work_item *wk)
 	retifset[SL_REPLST_ACTIVE] = 0;
 	retifset[SL_REPLST_OLD] = 1;
 	retifset[SL_REPLST_SCHED] = 1;
-	retifset[SL_REPLST_TRUNCPNDG] = 0;
+	retifset[SL_REPLST_TRUNCPNDG] = 1;
 	retifset[SL_REPLST_GARBAGE] = 1;
+	retifset[SL_REPLST_GARBAGE_SCHED] = 1;
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < USWI_NBMAPS(wk); n++) {
@@ -743,8 +752,8 @@ mds_repl_tryrmqfile(struct up_sched_work_item *wk)
 			continue;
 
 		BMAP_LOCK(bcm);
-		rc = mds_repl_bmap_walk(bcm, NULL,
-		    retifset, REPL_WALKF_SCIRCUIT, NULL, 0);
+		rc = mds_repl_bmap_walk_all(bcm, NULL,
+		    retifset, REPL_WALKF_SCIRCUIT);
 		mds_repl_bmap_rel(bcm);
 		if (rc)
 			goto keep;
@@ -820,6 +829,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	tract[SL_REPLST_SCHED] = SL_REPLST_INACTIVE;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
 	tract[SL_REPLST_GARBAGE] = -1;
+	tract[SL_REPLST_GARBAGE_SCHED] = -1;
 
 	if (bmapno == (sl_bmapno_t)-1) {
 		retifset[SL_REPLST_INACTIVE] = 0;
@@ -828,6 +838,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[SL_REPLST_SCHED] = 1;
 		retifset[SL_REPLST_TRUNCPNDG] = 0;
 		retifset[SL_REPLST_GARBAGE] = 0;
+		retifset[SL_REPLST_GARBAGE_SCHED] = 0;
 
 		rc = SLERR_REPLS_ALL_INACT;
 		for (bmapno = 0; bmapno < USWI_NBMAPS(wk); bmapno++) {
@@ -847,6 +858,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[SL_REPLST_SCHED] = 0;
 		retifset[SL_REPLST_TRUNCPNDG] = 0; /* XXX EINVAL? */
 		retifset[SL_REPLST_GARBAGE] = EINVAL;
+		retifset[SL_REPLST_GARBAGE_SCHED] = EINVAL;
 
 		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 		if (rc == 0) {
@@ -934,6 +946,7 @@ mds_repl_scandir(void)
 			tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
 			tract[SL_REPLST_TRUNCPNDG] = -1;
 			tract[SL_REPLST_GARBAGE] = -1;
+			tract[SL_REPLST_GARBAGE_SCHED] = -1;
 
 			/*
 			 * If we crashed, revert all inflight SCHED'ed
@@ -1124,6 +1137,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		tract[SL_REPLST_ACTIVE] = -1;
 		tract[SL_REPLST_TRUNCPNDG] = -1;
 		tract[SL_REPLST_GARBAGE] = -1;
+		tract[SL_REPLST_GARBAGE_SCHED] = -1;
 
 		for (n = 0; n < USWI_NBMAPS(wk); n++) {
 			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))

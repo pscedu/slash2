@@ -48,6 +48,8 @@ int	_mds_repl_nodes_setbusy(struct resm_mds_info *, struct resm_mds_info *, int,
 void	 mds_repl_reset_scheduled(sl_ios_id_t);
 void	 mds_repl_tryrmqfile(struct up_sched_work_item *);
 
+#define mds_repl_bmap_walk_all(b, t, r, fl)	mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0)
+
 #define mds_repl_bmap_apply(bcm, tract, retifset, off)			\
 	_mds_repl_bmap_apply((bcm), (tract), (retifset), 0, (off), NULL)
 
