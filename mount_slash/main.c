@@ -1549,6 +1549,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	FCMH_LOCK(mfh->mfh_fcmh);
 	mfh->mfh_fcmh->fcmh_sstb.sst_mtime = time(NULL);
 	fcmh_op_done_type(mfh->mfh_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	FCMH_ULOCK(mfh->mfh_fcmh);
 	if (rc < 0)
 		rc = -rc;
 	else {
