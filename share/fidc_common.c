@@ -92,7 +92,8 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 #endif
 	psc_assert(sstb->sst_ino == (ino_t)fcmh->fcmh_fg.fg_fid);
 
-	size = fcmh->fcmh_sstb.sst_mtime;
+	size = fcmh->fcmh_sstb.sst_size;
+	mtime = fcmh->fcmh_sstb.sst_mtime;
 
 	if (flags & FCMH_SETATTRF_SAVELOCAL) {
 		if (fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen)
