@@ -19,6 +19,7 @@ endif
 ifneq ($(filter mds,${SLASH_MODULES}),)
 SUBDIRS+=	slashd
 SUBDIRS+=	slmctl
+SUBDIRS+=	slmkjrnl
 endif
 
 ifneq ($(filter ion,${SLASH_MODULES}),)
@@ -29,7 +30,6 @@ endif
 ifneq ($(filter ion,${SLASH_MODULES})$(filter mds,${SLASH_MODULES}),)
 SUBDIRS+=	slimmns
 SUBDIRS+=	slkeymgt
-SUBDIRS+=	slmkjrnl
 endif
 
 zbuild:
