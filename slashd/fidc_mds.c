@@ -120,9 +120,10 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 	int rc;
 
 	fmi = fcmh_2_fmi(fcmh);
-	if (!fmi->fmi_ctor_rc)
+	if (!fmi->fmi_ctor_rc) {
 		rc = mdsio_release(&rootcreds, fmi->fmi_mdsio_data);
-	psc_assert(rc == 0);
+		psc_assert(rc == 0);
+	}
 
 	if (fmi->fmi_inodeh.inoh_extras)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
