@@ -932,6 +932,8 @@ mds_journal_init(void)
 			"slmjdistthr", mds_replay_handler, NULL);
 		if (mdsJournal == NULL)
 			psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
+
+		logentrysize = mdsJournal->pj_hdr->pjh_entsz;
 		return;
 	}
 	/*
@@ -946,8 +948,6 @@ mds_journal_init(void)
 		psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
 
 	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
-	psc_assert(logentrysize >= (int)sizeof(struct slmds_jent_namespace));
-
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 
 	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
