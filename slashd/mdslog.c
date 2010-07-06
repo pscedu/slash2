@@ -881,6 +881,10 @@ mds_journal_init(void)
 	int i, n;
 
 	/*
+	 * To be read from a log file after we replay the system journal.
+	 */
+	next_update_seqno = 0;
+	/*
 	 * Construct a list of MDSes from the global configuration file
 	 * to save some run time.  It also allows us to dynamically add
 	 * or remove MDSes to/from our private list in the future.
@@ -958,8 +962,4 @@ mds_journal_init(void)
 	 */
 	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0,
 	    mds_namespace_propagate, NULL, 0, "slmjsendthr");
-	/*
-	 * Eventually we have to read this from a on-disk log.
-	 */
-	next_update_seqno = 0;
 }
