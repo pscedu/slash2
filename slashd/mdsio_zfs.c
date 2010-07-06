@@ -182,7 +182,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 		inoh->inoh_flags &= ~INOH_INO_DIRTY;
 		if (inoh->inoh_flags & INOH_INO_NEW) {
 			inoh->inoh_flags &= ~INOH_INO_NEW;
-			inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
+			//inoh->inoh_flags |= INOH_EXTRAS_DIRTY;
 		}
 	}
 
