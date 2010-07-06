@@ -878,39 +878,21 @@ mds_journal_init(void)
 	struct sl_resm *resm;
 	struct sl_site *s;
 	uint64_t txg;
-	int n;
-
-	txg = mdsio_first_txg();
-
-	r = nodeResm->resm_res;
-
-	if (r->res_jrnldev[0] == '\0')
-		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
-
-	mdsJournal = pjournal_init(r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL,
-			   "slmjdistthr", mds_replay_handler, mds_distill_handler);
-
-	if (mdsJournal == NULL)
-		psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
-
-	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
-	psc_assert(logentrysize >= (int)sizeof(struct slmds_jent_namespace));
-
-	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
-
-	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
+	int i, n;
 
 	/*
 	 * Construct a list of MDSes from the global configuration file
 	 * to save some run time.  It also allows us to dynamically add
 	 * or remove MDSes to/from our private list in the future.
 	 */
+	i = 0;
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources) {
 			if (r->res_type != SLREST_MDS)
 				continue;
 
+			i++;
 			/* MDS cannot have more than one member */
 			resm = psc_dynarray_getpos(&r->res_members, 0);
 
@@ -934,6 +916,41 @@ mds_journal_init(void)
 	if (localinfo == NULL)
 		psc_fatal("missing local MDS information");
 	psc_dynarray_sort(&mds_namespace_peerlist, qsort, mds_peerinfo_cmp);
+
+	r = nodeResm->resm_res;
+	if (r->res_jrnldev[0] == '\0')
+		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
+
+	/*
+	 * If we are a standalone MDS, there is no need to start the distill
+	 * operation.
+	 */
+	txg = mdsio_first_txg();
+	if (i == 1) {
+		mdsJournal = pjournal_init(
+			r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL,
+			"slmjdistthr", mds_replay_handler, NULL);
+		if (mdsJournal == NULL)
+			psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
+		return;
+	}
+	/*
+	 * We have peer MDSes, let us start the distill operation.
+	 */
+	mdsJournal = pjournal_init(
+		r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL,
+		"slmjdistthr", mds_replay_handler, 
+		mds_distill_handler);
+
+	if (mdsJournal == NULL)
+		psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
+
+	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
+	psc_assert(logentrysize >= (int)sizeof(struct slmds_jent_namespace));
+
+	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
+
+	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 
 	/*
 	 * Start a thread to propagate local namespace updates to peers
