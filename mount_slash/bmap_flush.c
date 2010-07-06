@@ -810,7 +810,6 @@ ms_bmap_release(struct sl_resm *resm)
 	if (rc == 0)
 		rc = mp->rc;
 
- out:
 	for (i = 0; i < rmci->rmci_bmaprls.nbmaps; i++)
 		psc_notify("fid=%"PRId64" bmap=%u key=%"PRId64
 		    " seq=%"PRId64" rc=%d",
@@ -820,6 +819,7 @@ ms_bmap_release(struct sl_resm *resm)
 		    rmci->rmci_bmaprls.bmaps[i].seq,
 		    mp->bidrc[i]);
 	rmci->rmci_bmaprls.nbmaps = 0;
+ out:
 
 	if (rc) {
 		/* At this point the bmaps have already been purged from
