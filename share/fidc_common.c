@@ -98,8 +98,7 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	if (flags & FCMH_SETATTRF_SAVELOCAL) {
 		if (fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen)
 			size = fcmh_2_fsz(fcmh);
-		if (sstb->sst_mtime > mtime)
-			mtime = fcmh->fcmh_sstb.sst_mtime;
+		mtime = fcmh->fcmh_sstb.sst_mtime;
 	}
 
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
@@ -145,7 +144,7 @@ fidc_reap(struct psc_poolmgr *m)
 	LIST_CACHE_LOCK(&fidcCleanList);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcCleanList) {
 		if (nreap == FCMH_MAX_REAP ||
-		    psclg_size(&m->ppm_lg) + nreap >= 
+		    psclg_size(&m->ppm_lg) + nreap >=
 		    atomic_read(&m->ppm_nwaiters) + 1)
 			break;
 
