@@ -136,16 +136,16 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 int
 fidc_reap(struct psc_poolmgr *m)
 {
-	struct fidc_membh *f, *tmp;
-	struct psc_dynarray da = DYNARRAY_INIT;
-	int i;
+#define FCMH_MAX_REAP 8
+	struct fidc_membh *f, *tmp, *reap[FCMH_MAX_REAP];
+	int i, nreap=0;
 
 	psc_assert(m == fidcPool);
 
 	LIST_CACHE_LOCK(&fidcCleanList);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcCleanList) {
-
-		if (psclg_size(&m->ppm_lg) + psc_dynarray_len(&da) >=
+		if (nreap == FCMH_MAX_REAP ||
+		    psclg_size(&m->ppm_lg) + nreap >= 
 		    atomic_read(&m->ppm_nwaiters) + 1)
 			break;
 
@@ -173,21 +173,19 @@ fidc_reap(struct psc_poolmgr *m)
 		if (!fidcReapCb || fidcReapCb(f)) {
 			f->fcmh_state |= FCMH_CAC_REAPED|FCMH_CAC_TOFREE;
 			lc_remove(&fidcCleanList, f);
-			psc_dynarray_add(&da, f);
+			reap[nreap] = f;
+			nreap++;
 		}
  end:
 		FCMH_ULOCK(f);
 	}
 	LIST_CACHE_ULOCK(&fidcCleanList);
 
-	for (i = 0; i < psc_dynarray_len(&da); i++) {
-		f = psc_dynarray_getpos(&da, i);
-		DEBUG_FCMH(PLL_DEBUG, f, "moving to free list");
-		psc_hashent_remove(&fidcHtable, f);
-		fcmh_destroy(f);
+	for (i = 0; i < nreap; i++) {
+		DEBUG_FCMH(PLL_DEBUG, reap[nreap], "moving to free list");
+		psc_hashent_remove(&fidcHtable, reap[i]);
+		fcmh_destroy(reap[i]);
 	}
-
-	psc_dynarray_free(&da);
 	return (i);
 }
 
