@@ -64,7 +64,7 @@ dircache_rls_ents(struct dircache_ents *e)
 	int locked;
 
 	DEBUG_FCMH(PLL_DEBUG, i->di_fcmh,
-		   "rls dircache_ents %p cachesz=%"PRId64, e, m->dcm_alloc);
+	    "rls dircache_ents %p cachesz=%zu", e, m->dcm_alloc);
 
 	locked = reqlock(&m->dcm_lock);
 	m->dcm_alloc -= e->de_sz;
