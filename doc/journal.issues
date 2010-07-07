@@ -83,3 +83,11 @@ to make a copy of the txg.
 There used to be only one sync thread (see file mdsfssync.c) 
 that commits all logs into ZFS.  Now any threads can write into ZFS 
 directly.
+
+07/07/2010
+----------
+
+Revert myself: I should do a log upcall after dmu_tx_commit() because
+I want any operation to appear in our system journal first.  To
+avoid deadlock with a small log file, I am going to use a reservation
+system.

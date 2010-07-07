@@ -93,4 +93,7 @@ int mds_inode_addrepl_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t)
 
 extern struct psc_journal *mdsJournal;
 
+void mds_reserve_slot(void);
+void mds_unreserve_slot(void);
+
 #endif /* _SLASHD_MDSLOG_H_ */

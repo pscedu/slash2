@@ -963,3 +963,15 @@ mds_journal_init(void)
 	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0,
 	    mds_namespace_propagate, NULL, 0, "slmjsendthr");
 }
+
+void
+mds_reserve_slot(void)
+{
+	pjournal_reserve_slot(mdsJournal);
+}
+
+void
+mds_unreserve_slot(void)
+{
+	pjournal_unreserve_slot(mdsJournal);
+}

@@ -369,7 +369,14 @@ mdsio_link(mdsio_fid_t ino, mdsio_fid_t pino, const char *fn,
     struct slash_fidgen *fgp, const struct slash_creds *cr,
     struct srt_stat *sstb, sl_log_update_t logfunc)
 {
-	return (zfsslash2_link(ino, pino, fn, fgp, cr, sstb, logfunc));
+	int rc;
+
+	if (logfunc)
+		mds_reserve_slot();
+	rc = zfsslash2_link(ino, pino, fn, fgp, cr, sstb, logfunc);
+	if (logfunc)
+		mds_unreserve_slot();
+	return rc;
 }
 
 int
