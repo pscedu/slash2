@@ -585,6 +585,7 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 	sl_internalize_stat(&f->fcmh_sstb, &stb);
 	dump_statbuf(PLL_INFO, &stb);
 	fuse_reply_attr(req, &stb, MSL_FUSE_ATTR_TIMEO);
+
  out:
 	if (f)
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
@@ -909,7 +910,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 
 			if (fcmh)
 				fcmh_op_done_type(fcmh,
-					  FCMH_OPCNT_LOOKUP_FIDC);
+				    FCMH_OPCNT_LOOKUP_FIDC);
 		}
 	}
 	/* Establish these dirents in our cache.  Do this before replying
@@ -1457,13 +1458,15 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	mq->to_set = slash2fuse_translate_setattr_flags(to_set);
 	sl_externalize_stat(stb, &mq->attr);
 	mq->attr.sst_ptruncgen = fcmh_2_ptruncgen(c);
+	mq->attr.sst_gen = fcmh_2_gen(c);
+//	mq->attr.sst_mask = ;
 
 	if (mq->to_set && SRM_SETATTRF_SIZE)
 		DEBUG_FCMH(PLL_WARN, c, "truncate (sz=%"PRId64")",
 			   stb->st_size);
 
 	/*
-	 * Even though we know our fid, we expect the server to fill it
+	 * Even though we know our FID, we expect the server to fill it
 	 * along with the rest of the new attributes (mp->attr).
 	 */
 	rc = SL_RSX_WAITREP(rq, mp);
@@ -1472,9 +1475,8 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
-	sl_internalize_stat(&mp->attr, stb);
-	fcmh_setattr(c, &mp->attr, (mq->to_set & SRM_SETATTRF_SIZE) ?
-		     FCMH_SETATTRF_NONE : FCMH_SETATTRF_SAVELOCAL);
+	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL);
+	sl_internalize_stat(&c->fcmh_sstb, stb);
 	fuse_reply_attr(req, stb, MSL_FUSE_ATTR_TIMEO);
 
  out:
@@ -1493,19 +1495,19 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		pscrpc_req_finished(rq);
 }
 
-__static void 
-slash2fuse_fsync_helper(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino, 
+__static void
+slash2fuse_fsync_helper(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino,
 	__unusedx int datasync, struct fuse_file_info *fi)
 {
 	struct msl_fhent *mfh;
 
-        mfh = ffi_getmfh(fi);
+	mfh = ffi_getmfh(fi);
 
-        DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "fsyncing via flush");
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "fsyncing via flush");
 
-        spinlock(&mfh->mfh_lock);
-        slash2fuse_flush_int_locked(mfh);
-        freelock(&mfh->mfh_lock);
+	spinlock(&mfh->mfh_lock);
+	slash2fuse_flush_int_locked(mfh);
+	freelock(&mfh->mfh_lock);
 
 	fuse_reply_err(req, 0);
 }
