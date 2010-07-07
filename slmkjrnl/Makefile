@@ -20,6 +20,6 @@ SRCS+=		${PFL_BASE}/psc_util/subsys.c
 SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
-MODULES+=	lnet-hdrs rt pthread 
+MODULES+=	lnet-hdrs rt pthread zfs aio
 
 include ${SLASHMK}
