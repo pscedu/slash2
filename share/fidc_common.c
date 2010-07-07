@@ -67,8 +67,8 @@ fcmh_destroy(struct fidc_membh *f)
 }
 
 /**
- * fcmh_setattr - Update the stat(2) attribute buffer for a FID cache
- *	member.
+ * fcmh_setattr - Update the high-level app stat(2)-like attribute buffer
+ *	for a FID cache member.
  * @fcmh: FID cache member to update.
  * @sstb: incoming stat attributes.
  * @flags: behavioral flags.
@@ -82,6 +82,14 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 
 	if (!(flags & FCMH_SETATTRF_HAVELOCK))
 		FCMH_LOCK(fcmh);
+
+	/*
+	 * If we don't have stat attributes, how can we save
+	 * our local updates?
+	 */
+	if ((fcmh->fcmh_flags & FCMH_HAVE_ATTRS) == 0)
+		flags &= ~FCMH_SETATTRF_SAVELOCAL;
+
 #if 0
 	/*
 	 * Right now, we allow item with FIDGEN_ANY into cache, and
@@ -220,7 +228,7 @@ _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
 }
 
 /**
- * fidc_lookup - Search the FID cache for a member by its FID,
+ * _fidc_lookup - Search the FID cache for a member by its FID,
  *	optionally creating it.
  * Notes:  Newly acquired fcmh's are ref'd with FCMH_OPCNT_NEW, reused ones
  *	are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
@@ -329,7 +337,8 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 #endif
 		/* apply provided attributes to the cache */
 		if (sstb)
-			fcmh_setattr(fcmh, sstb, setattrflags|FCMH_SETATTRF_HAVELOCK);
+			fcmh_setattr(fcmh, sstb, setattrflags |
+			    FCMH_SETATTRF_HAVELOCK);
 
 		/* keep me around after unlocking later */
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
@@ -392,7 +401,8 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 
 	if (sstb) {
 		FCMH_LOCK(fcmh);
-		fcmh_setattr(fcmh, sstb, setattrflags|FCMH_SETATTRF_HAVELOCK);
+		fcmh_setattr(fcmh, sstb, setattrflags |
+		    FCMH_SETATTRF_HAVELOCK);
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		goto out2;
 	} else {
