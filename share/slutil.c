@@ -105,6 +105,18 @@ fflags_2_rw(int fflags)
 	return (SL_READ);
 }
 
+/**
+ * sl_externalize_stat - Prepare a 'struct stat' buffer for high-level
+ *	representation, suitable for transmission between systems.
+ * @stb: system stat buffer.
+ * @sstb: higher-level app stat buffer.
+ *
+ * Note: the following fields will NOT be filled in as there is no
+ * equivalent in the system stat:
+ *
+ *	- sst_gen
+ *	- sst_ptruncgen
+ */
 void
 sl_externalize_stat(const struct stat *stb, struct srt_stat *sstb)
 {
