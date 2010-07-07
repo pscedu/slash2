@@ -1141,7 +1141,6 @@ mds_bmap_read(struct bmapc_memb *bcm,  __unusedx enum rw rw)
 {
 	struct fidc_membh *f = bcm->bcm_fcmh;
 	struct slash_bmap_od *bod;
-	psc_crc64_t crc;
 	int rc;
 
 	psc_assert(bcm->bcm_od == NULL);
@@ -1177,16 +1176,7 @@ mds_bmap_read(struct bmapc_memb *bcm,  __unusedx enum rw rw)
 	}
 
 	DEBUG_BMAPOD(PLL_INFO, bcm, "");
-
-	/* Calculate and check the CRC now */
-	psc_crc64_calc(&crc, bod, BMAP_OD_CRCSZ);
-	if (crc == bod->bh_bhcrc)
-		return (0);
-
-	DEBUG_FCMH(PLL_ERROR, f, "CRC failed; bmapno=%u, want=%"PRIx64
-	   ", got=%"PRIx64, bcm->bcm_bmapno, bod->bh_bhcrc, crc);
-
-	rc = -EIO;
+	return (0);
  out:
 	PSCFREE(bcm->bcm_od);
 	return (rc);
