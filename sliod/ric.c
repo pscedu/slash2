@@ -236,13 +236,14 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psc_assert(!tsize);
 
  out:
-	bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
+	if (bmap)
+		bmap_op_done_type(bmap, BMAP_OPCNT_LOOKUP);
 
 	/* XXX In situations where errors occur (such as an ENOSPC from
 	 *   iod_inode_open()) then we must have a way to notify other
 	 *   threads blocked on DATARDY.
 	 */
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC); /* reaper will return it to the pool */
+	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
 	return (rc);
 }
