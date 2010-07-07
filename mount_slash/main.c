@@ -1493,24 +1493,21 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		pscrpc_req_finished(rq);
 }
 
-//XXX convert me
-__static int
-slash2fuse_fsync(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino,
-		 __unusedx int datasync, __unusedx struct fuse_file_info *fi)
+__static void 
+slash2fuse_fsync_helper(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino, 
+	__unusedx int datasync, struct fuse_file_info *fi)
 {
-	msfsthr_ensure();
+	struct msl_fhent *mfh;
 
-	return (ENOTSUP);
-}
+        mfh = ffi_getmfh(fi);
 
-__static void
-slash2fuse_fsync_helper(fuse_req_t req, fuse_ino_t ino, int datasync,
-		     struct fuse_file_info *fi)
-{
-	int error = slash2fuse_fsync(req, ino, datasync, fi);
+        DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "fsyncing via flush");
 
-	/* fsync events always reply_err */
-	fuse_reply_err(req, error);
+        spinlock(&mfh->mfh_lock);
+        slash2fuse_flush_int_locked(mfh);
+        freelock(&mfh->mfh_lock);
+
+	fuse_reply_err(req, 0);
 }
 
 __static void
