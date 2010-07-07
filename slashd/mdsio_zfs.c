@@ -148,6 +148,7 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 		rc = SLERR_SHORTIO;
 	}
 	DEBUG_BMAP(PLL_TRACE, bmap, "wrote bmap (rc=%d)",rc);
+	BMAPOD_READ_DONE(bmap);
 	return (rc);
 }
 
