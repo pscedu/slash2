@@ -897,10 +897,14 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 			goto next;
 
 		BMAP_LOCK(b);
-		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64, bid->seq);
 
 		bml = mds_bmap_getbml(b, bid->cli_nid, bid->cli_pid,
 		    bid->seq);
+
+		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64" nid=%"PRId64
+			   " pid=%u bml=%p", 
+			   bid->seq, bid->cli_nid, bid->cli_pid, bml);
+
 		if (bml)
 			mp->bidrc[i] = mds_bmap_bml_release(bml);
 		/* bmap_op_done_type will drop the lock.
@@ -1030,9 +1034,9 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	psc_assert(bmap->bcm_fcmh == fcmh);
 	psc_assert(bmdsi);
 	psc_assert(bmapod);
-	psc_assert(bmdsi->bmdsi_wr_ion);
 
-	if (ion_nid != bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid) {
+	if (!bmdsi->bmdsi_wr_ion ||
+	    ion_nid != bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid) {
 		/* Whoops, we recv'd a request from an unexpected nid.
 		 */
 		rc = -EINVAL;
