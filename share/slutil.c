@@ -24,9 +24,11 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "pfl/fcntl.h"
+#include "pfl/stat.h"
 #include "pfl/types.h"
 #include "psc_util/log.h"
 
@@ -130,14 +132,15 @@ sl_externalize_stat(const struct stat *stb, struct srt_stat *sstb)
 	sstb->sst_size		= stb->st_size;
 	sstb->sst_blksize	= stb->st_blksize;
 	sstb->sst_blocks	= stb->st_blocks;
-	sstb->sst_atime		= stb->st_atime;
-	sstb->sst_mtime		= stb->st_mtime;
-	sstb->sst_ctime		= stb->st_ctime;
+	PFL_STB_ATIME_GET(stb, &sstb->sst_atime, &sstb->sst_atime_ns);
+	PFL_STB_MTIME_GET(stb, &sstb->sst_mtime, &sstb->sst_mtime_ns);
+	PFL_STB_CTIME_GET(stb, &sstb->sst_ctime, &sstb->sst_ctime_ns);
 }
 
 void
 sl_internalize_stat(const struct srt_stat *sstb, struct stat *stb)
 {
+	memset(stb, 0, sizeof(*stb));
 	stb->st_dev		= sstb->sst_dev;
 	stb->st_ino		= sstb->sst_ino;
 	stb->st_mode		= sstb->sst_mode;
@@ -148,9 +151,9 @@ sl_internalize_stat(const struct srt_stat *sstb, struct stat *stb)
 	stb->st_size		= sstb->sst_size;
 	stb->st_blksize		= sstb->sst_blksize;
 	stb->st_blocks		= sstb->sst_blocks;
-	stb->st_atime		= sstb->sst_atime;
-	stb->st_mtime		= sstb->sst_mtime;
-	stb->st_ctime		= sstb->sst_ctime;
+	PFL_STB_ATIME_SET(sstb->sst_atime, sstb->sst_atime_ns, stb);
+	PFL_STB_MTIME_SET(sstb->sst_mtime, sstb->sst_mtime_ns, stb);
+	PFL_STB_CTIME_SET(sstb->sst_ctime, sstb->sst_ctime_ns, stb);
 }
 
 void

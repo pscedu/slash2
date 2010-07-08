@@ -103,8 +103,11 @@ struct srt_stat {
 	int64_t			sst_blksize;	/* blocksize for file system I/O */
 	int64_t			sst_blocks;	/* number of 512B blocks allocated */
 	int64_t			sst_atime;	/* time of last access */
+	int64_t			sst_atime_ns;
 	int64_t			sst_mtime;	/* time of last modification */
+	int64_t			sst_mtime_ns;
 	int64_t			sst_ctime;	/* time of last status change */
+	int64_t			sst_ctime_ns;
 } __packed;
 
 struct srt_statfs {
