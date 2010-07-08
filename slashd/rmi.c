@@ -267,7 +267,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 int
 slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 {
-	return (mds_handle_rls_bmap(rq));
+	return (mds_handle_rls_bmap(rq, 1));
 }
 
 /*

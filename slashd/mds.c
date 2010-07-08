@@ -865,7 +865,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 }
 
 int
-mds_handle_rls_bmap(struct pscrpc_request *rq)
+mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 {
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
@@ -884,8 +884,10 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 
 	for (i = 0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
-		bid->cli_nid = rq->rq_conn->c_peer.nid;
-		bid->cli_pid = rq->rq_conn->c_peer.pid;
+		if (!sliod) {
+			bid->cli_nid = rq->rq_conn->c_peer.nid;
+			bid->cli_pid = rq->rq_conn->c_peer.pid;
+		}
 		
 		fg.fg_fid = bid->fid;
 		fg.fg_gen = 0;

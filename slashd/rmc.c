@@ -545,7 +545,7 @@ slm_rmc_handle_readlink(struct pscrpc_request *rq)
 int
 slm_rmc_handle_rls_bmap(struct pscrpc_request *rq)
 {
-	return (mds_handle_rls_bmap(rq));
+	return (mds_handle_rls_bmap(rq, 0));
 }
 
 int

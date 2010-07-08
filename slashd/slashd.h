@@ -162,7 +162,7 @@ struct resprof_mds_info {
 int		 mds_inode_read(struct slash_inode_handle *);
 int		 mds_inox_load_locked(struct slash_inode_handle *);
 int		 mds_inox_ensure_loaded(struct slash_inode_handle *);
-int		 mds_handle_rls_bmap(struct pscrpc_request *);
+int		 mds_handle_rls_bmap(struct pscrpc_request *, int);
 
 __dead void	 slmctlthr_main(const char *);
 void		 slmbmaptimeothr_spawn(void);
