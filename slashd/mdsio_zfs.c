@@ -477,52 +477,52 @@ mdsio_first_txg(void)
  * Wrappers to replay the namespace operations performed on the remote MDS.
  */
 int
-mdsio_replay_create(uint64_t parent_s2id, uint64_t target_s2id,
+mdsio_redo_create(uint64_t parent_s2id, uint64_t target_s2id,
     struct srt_stat *stat, char *name)
 {
 	return (zfsslash2_replay_create(parent_s2id, target_s2id, stat, name));
 }
 
 int
-mdsio_replay_mkdir(uint64_t parent_s2id, uint64_t target_s2id,
+mdsio_redo_mkdir(uint64_t parent_s2id, uint64_t target_s2id,
     struct srt_stat *stat, char *name)
 {
 	return (zfsslash2_replay_mkdir(parent_s2id, target_s2id, stat, name));
 }
 
 int
-mdsio_replay_link(uint64_t parent_s2id, uint64_t target_s2id, char *name)
+mdsio_redo_link(uint64_t parent_s2id, uint64_t target_s2id, char *name)
 {
 	return (zfsslash2_replay_link(parent_s2id, target_s2id, name));
 }
 
 int
-mdsio_replay_symlink(uint64_t parent_s2id, uint64_t target_s2id,
+mdsio_redo_symlink(uint64_t parent_s2id, uint64_t target_s2id,
     struct srt_stat *stat, char *name, char *link)
 {
 	return (zfsslash2_replay_symlink(parent_s2id, target_s2id, stat, name, link));
 }
 
 int
-mdsio_replay_rmdir(uint64_t parent_s2id, uint64_t target_s2id, char *name)
+mdsio_redo_rmdir(uint64_t parent_s2id, uint64_t target_s2id, char *name)
 {
 	return (zfsslash2_replay_rmdir(parent_s2id, target_s2id, name));
 }
 
 int
-mdsio_replay_unlink(uint64_t parent_s2id, uint64_t target_s2id, char *name)
+mdsio_redo_unlink(uint64_t parent_s2id, uint64_t target_s2id, char *name)
 {
 	return (zfsslash2_replay_unlink(parent_s2id, target_s2id, name));
 }
 
 int
-mdsio_replay_setattr(uint64_t target_s2id, struct srt_stat * stat, uint mask)
+mdsio_redo_setattr(uint64_t target_s2id, struct srt_stat * stat, uint mask)
 {
 	return (zfsslash2_replay_setattr(target_s2id, stat, mask));
 }
 
 int
-mdsio_replay_rename(uint64_t parent_s2id, uint64_t new_parent_s2id,
+mdsio_redo_rename(uint64_t parent_s2id, uint64_t new_parent_s2id,
 	__unusedx uint64_t target_s2id, char *name1, char *name2)
 {
 	return (zfsslash2_replay_rename(parent_s2id, name1, new_parent_s2id, name2));

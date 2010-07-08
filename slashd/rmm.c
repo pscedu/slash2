@@ -69,19 +69,19 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 
 	switch (jnamespace->sjnm_op) {
 	    case NS_OP_CREATE:
-		rc = mdsio_replay_create(
+		rc = mdsio_redo_create(
 			jnamespace->sjnm_parent_s2id, 
 			jnamespace->sjnm_target_s2id, 
 			&stat, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_MKDIR:
-		rc = mdsio_replay_mkdir(
+		rc = mdsio_redo_mkdir(
 			jnamespace->sjnm_parent_s2id, 
 			jnamespace->sjnm_target_s2id, 
 			&stat, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_LINK:
-		rc = mdsio_replay_link(
+		rc = mdsio_redo_link(
 			jnamespace->sjnm_parent_s2id, 
 			jnamespace->sjnm_target_s2id, 
 			jnamespace->sjnm_name);
@@ -91,7 +91,7 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 		while (*newname != '\0')
 			newname++;
 		newname++;
-		rc = mdsio_replay_symlink(
+		rc = mdsio_redo_symlink(
 			jnamespace->sjnm_parent_s2id, 
 			jnamespace->sjnm_target_s2id, 
 			&stat, jnamespace->sjnm_name, newname);
@@ -101,26 +101,26 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 		while (*newname != '\0')
 			newname++;
 		newname++;
-		rc = mdsio_replay_rename(
+		rc = mdsio_redo_rename(
 			jnamespace->sjnm_parent_s2id, 
 			jnamespace->sjnm_new_parent_s2id, 
 			jnamespace->sjnm_target_s2id, 
 			jnamespace->sjnm_name, newname);
 		break;
 	    case NS_OP_UNLINK:
-		rc = mdsio_replay_unlink(
+		rc = mdsio_redo_unlink(
 			jnamespace->sjnm_parent_s2id, 
 			jnamespace->sjnm_target_s2id, 
 			jnamespace->sjnm_name);
 		break;
 	    case NS_OP_RMDIR:
-		rc = mdsio_replay_rmdir(
+		rc = mdsio_redo_rmdir(
 			jnamespace->sjnm_parent_s2id, 
 			jnamespace->sjnm_target_s2id, 
 			jnamespace->sjnm_name);
 		break;
 	    case NS_OP_SETATTR:
-		rc = mdsio_replay_setattr(
+		rc = mdsio_redo_setattr(
 			jnamespace->sjnm_target_s2id, 
 			&stat, jnamespace->sjnm_mask);
 		break;

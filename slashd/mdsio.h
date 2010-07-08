@@ -81,14 +81,14 @@ int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_u
 
 uint64_t mdsio_first_txg(void);
 
-int mdsio_replay_create(uint64_t, uint64_t, struct srt_stat *, char *);
-int mdsio_replay_mkdir(uint64_t, uint64_t, struct srt_stat *, char *);
+int mdsio_redo_create(uint64_t, uint64_t, struct srt_stat *, char *);
+int mdsio_redo_mkdir(uint64_t, uint64_t, struct srt_stat *, char *);
 
-int mdsio_replay_link(uint64_t, uint64_t, char *);
-int mdsio_replay_symlink(uint64_t, uint64_t, struct srt_stat *, char *, char *);
-int mdsio_replay_unlink(uint64_t, uint64_t, char *);
-int mdsio_replay_rmdir(uint64_t, uint64_t, char *);
-int mdsio_replay_setattr(uint64_t, struct srt_stat *, uint);
-int mdsio_replay_rename(uint64_t, uint64_t, uint64_t, char *, char *);
+int mdsio_redo_link(uint64_t, uint64_t, char *);
+int mdsio_redo_symlink(uint64_t, uint64_t, struct srt_stat *, char *, char *);
+int mdsio_redo_unlink(uint64_t, uint64_t, char *);
+int mdsio_redo_rmdir(uint64_t, uint64_t, char *);
+int mdsio_redo_setattr(uint64_t, struct srt_stat *, uint);
+int mdsio_redo_rename(uint64_t, uint64_t, uint64_t, char *, char *);
 
 #endif

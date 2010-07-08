@@ -192,7 +192,7 @@ mds_redo_namespace(__unusedx struct psc_journal_enthdr *pje)
 
 	switch (jnamespace->sjnm_op) {
 	    case NS_OP_CREATE:
-		rc = mdsio_replay_create(
+		rc = mdsio_redo_create(
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_target_s2id,
 			&stat, jnamespace->sjnm_name);
