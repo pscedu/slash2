@@ -198,8 +198,12 @@ mds_redo_namespace(__unusedx struct psc_journal_enthdr *pje)
 			&stat, jnamespace->sjnm_name);
 		break;
 	    default:
+		rc = EINVAL;
 		break;
 	}
+	psc_notify("Redo namespace log: op = %d, name = %s, id = %"PRIx64 "rc = %d", 
+		jnamespace->sjnm_op, jnamespace->sjnm_name, 
+		jnamespace->sjnm_target_s2id, rc);
 	return rc;
 }
 
