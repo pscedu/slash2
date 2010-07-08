@@ -631,10 +631,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		b->bcm_mode &= ~BMAP_IONASSIGN;
 
 	} else {
-		/* Read leases aren't required to be present in the
-		 *   timeout table though their sequence number must
-		 *   be accounted for.
-		 */
+		bml->bml_flags |= BML_TIMEOQ;
 		bml->bml_seq = mds_bmap_timeotbl_getnextseq();
 		bml->bml_key = BMAPSEQ_ANY;
 
@@ -652,6 +649,8 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			BMAP_LOCK(b);
 			b->bcm_mode &= ~BMAP_IONASSIGN;
 		}
+
+		mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	}
 
 	if (!obml) {
@@ -785,6 +784,10 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			psc_assert(obml == bml);
 			psc_assert(!(obml->bml_flags & BML_CHAIN));
 			pll_remove(&bmdsi->bmdsi_leases, bml);
+			if ((wlease + rlease) > 1) {
+				psc_assert(tmp != bml);
+				tmp->bml_chain = obml->bml_chain;
+			}
 		}
 
 		if (wlease == 1) {
@@ -881,6 +884,9 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 
 	for (i = 0; i < mq->nbmaps; i++) {
 		bid = &mq->bmaps[i];
+		bid->cli_nid = rq->rq_conn->c_peer.nid;
+		bid->cli_pid = rq->rq_conn->c_peer.pid;
+		
 		fg.fg_fid = bid->fid;
 		fg.fg_gen = 0;
 
@@ -901,8 +907,8 @@ mds_handle_rls_bmap(struct pscrpc_request *rq)
 		bml = mds_bmap_getbml(b, bid->cli_nid, bid->cli_pid,
 		    bid->seq);
 
-		DEBUG_BMAP(PLL_INFO, b, "release %"PRId64" nid=%"PRId64
-			   " pid=%u bml=%p", 
+		DEBUG_BMAP((bml ? PLL_INFO : PLL_WARN), b, 
+			   "release %"PRId64" nid=%"PRId64" pid=%u bml=%p", 
 			   bid->seq, bid->cli_nid, bid->cli_pid, bml);
 
 		if (bml)
