@@ -179,6 +179,9 @@ mds_redo_namespace(__unusedx struct psc_journal_enthdr *pje)
 	struct srt_stat stat;
 	struct slmds_jent_namespace *jnamespace;
 
+	jnamespace = (struct slmds_jent_namespace *)pje->pje_data;
+	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
+
 	stat.sst_uid = jnamespace->sjnm_uid;
 	stat.sst_gid = jnamespace->sjnm_gid;
 	stat.sst_mode = jnamespace->sjnm_mode;
@@ -187,8 +190,6 @@ mds_redo_namespace(__unusedx struct psc_journal_enthdr *pje)
 	stat.sst_mtime = jnamespace->sjnm_mtime;
 	stat.sst_ctime = jnamespace->sjnm_ctime;
 
-	jnamespace = (struct slmds_jent_namespace *)pje->pje_data;
-	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 	switch (jnamespace->sjnm_op) {
 	    case NS_OP_CREATE:
 		rc = mdsio_replay_create(
