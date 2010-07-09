@@ -468,9 +468,9 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr,
 }
 
 uint64_t
-mdsio_first_txg(void)
+mdsio_last_synced_txg(void)
 {
-	return(zfsslash2_first_txg());
+	return(zfsslash2_last_synced_txg());
 }
 
 /*

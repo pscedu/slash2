@@ -928,7 +928,7 @@ mds_journal_init(void)
 	 * If we are a standalone MDS, there is no need to start the distill
 	 * operation.
 	 */
-	txg = mdsio_first_txg();
+	txg = mdsio_last_synced_txg();
 	if (i == 1) {
 		mdsJournal = pjournal_init(
 			r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL,

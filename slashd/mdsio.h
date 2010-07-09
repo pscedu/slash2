@@ -79,7 +79,7 @@ int mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_cr
 	struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb_t, sl_log_update_t);
 int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
 
-uint64_t mdsio_first_txg(void);
+uint64_t mdsio_last_synced_txg(void);
 
 int mdsio_redo_create(uint64_t, uint64_t, struct srt_stat *, char *);
 int mdsio_redo_mkdir(uint64_t, uint64_t, struct srt_stat *, char *);
