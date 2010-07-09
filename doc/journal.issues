@@ -114,3 +114,5 @@ Breakpoint 1, uberblock_update (ub=0x7ffff7b9d410, rvd=0x7ffff7b9a800, txg=796) 
 
 I need to find a way to work around this.  In addition, I need to find out
 the effect of replaying ZIL on the txg (transaction group number).
+
+Looks like ZFS loads our pool more than once, so I can't rely on spa->spa_first_txg.
