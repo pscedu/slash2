@@ -91,3 +91,26 @@ Revert myself: I should do a log upcall after dmu_tx_commit() because
 I want any operation to appear in our system journal first.  To
 avoid deadlock with a small log file, I am going to use a reservation
 system.
+
+07/09/2010
+----------
+
+With gdb, I found out that last synced txg is not the one I recorded 
+before I kill slashd on the MDS minus one.  It turns out on startup, 
+ZFS does the following, which further increases txg:
+
+(gdb) c
+[Thread 0x7fffad864710 (LWP 9125) exited]
+
+Breakpoint 1, uberblock_update (ub=0x7ffff7b9d410, rvd=0x7ffff7b9a800, txg=796) at lib/libzpool/uberblock.c:51
+51              ASSERT(ub->ub_txg < txg);
+(gdb) bt
+#0  uberblock_update (ub=0x7ffff7b9d410, rvd=0x7ffff7b9a800, txg=796) at lib/libzpool/uberblock.c:51
+#1  0x0000000000554456 in vdev_config_sync (svd=0x7fffae264dc0, svdcount=1, txg=796, tryhard=B_FALSE) at lib/libzpool/vdev_label.c:1045
+#2  0x000000000054285c in spa_sync (spa=0x7ffff7b9d000, txg=796) at lib/libzpool/spa.c:4257
+#3  0x00000000005490a9 in txg_sync_thread (dp=0x7fffb15e4940) at lib/libzpool/txg.c:345
+#4  0x0000003be0e07761 in start_thread () from /lib64/libpthread.so.0
+#5  0x0000003be0ae14dd in clone () from /lib64/libc.so.6
+
+I need to find a way to work around this.  In addition, I need to find out
+the effect of replaying ZIL on the txg (transaction group number).
