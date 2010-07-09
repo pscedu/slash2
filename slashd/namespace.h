@@ -27,7 +27,7 @@ enum namespace_direction {
 };
 
 enum namespace_operation {
-	NS_OP_CREATE,
+	NS_OP_CREATE,			/* 0 */
 	NS_OP_LINK,
 	NS_OP_MKDIR,
 	NS_OP_RENAME,

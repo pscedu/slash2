@@ -55,88 +55,13 @@ int
 slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 {
 	int rc;
-	int validop = 1;
-	char *newname;
-	struct srt_stat stat;
-
-	stat.sst_uid = jnamespace->sjnm_uid;
-	stat.sst_gid = jnamespace->sjnm_gid;
-	stat.sst_mode = jnamespace->sjnm_mode;
-	stat.sst_mask = jnamespace->sjnm_mask;
-	stat.sst_atime = jnamespace->sjnm_atime;
-	stat.sst_mtime = jnamespace->sjnm_mtime;
-	stat.sst_ctime = jnamespace->sjnm_ctime;
-
-	switch (jnamespace->sjnm_op) {
-	    case NS_OP_CREATE:
-		rc = mdsio_redo_create(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
-			&stat, jnamespace->sjnm_name);
-		break;
-	    case NS_OP_MKDIR:
-		rc = mdsio_redo_mkdir(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
-			&stat, jnamespace->sjnm_name);
-		break;
-	    case NS_OP_LINK:
-		rc = mdsio_redo_link(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
-			jnamespace->sjnm_name);
-		break;
-	    case NS_OP_SYMLINK:
-		newname = jnamespace->sjnm_name;
-		while (*newname != '\0')
-			newname++;
-		newname++;
-		rc = mdsio_redo_symlink(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
-			&stat, jnamespace->sjnm_name, newname);
-		break;
-	    case NS_OP_RENAME:
-		newname = jnamespace->sjnm_name;
-		while (*newname != '\0')
-			newname++;
-		newname++;
-		rc = mdsio_redo_rename(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_new_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
-			jnamespace->sjnm_name, newname);
-		break;
-	    case NS_OP_UNLINK:
-		rc = mdsio_redo_unlink(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
-			jnamespace->sjnm_name);
-		break;
-	    case NS_OP_RMDIR:
-		rc = mdsio_redo_rmdir(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
-			jnamespace->sjnm_name);
-		break;
-	    case NS_OP_SETATTR:
-		rc = mdsio_redo_setattr(
-			jnamespace->sjnm_target_s2id, 
-			&stat, jnamespace->sjnm_mask);
-		break;
-	    default:
-		psc_errorx("Unexpected opcode %d", jnamespace->sjnm_op);
-		validop = 0;
-		rc = -EINVAL;
-	}
-	if (validop) {
-		if (rc) 
-			psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
-			    [jnamespace->sjnm_op][NS_SUM_FAIL]);
-		else
-			psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
-			    [jnamespace->sjnm_op][NS_SUM_SUCC]);
-	}
+	rc = mds_redo_namespace(jnamespace);
+	if (rc) 
+		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
+		    [jnamespace->sjnm_op][NS_SUM_FAIL]);
+	else
+		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
+		    [jnamespace->sjnm_op][NS_SUM_SUCC]);
 	return rc;
 }
 

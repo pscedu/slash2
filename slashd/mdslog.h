@@ -30,6 +30,7 @@ struct bmapc_memb;
 struct fidc_membh;
 struct slash_inode_handle;
 struct srm_bmap_crcup;
+struct slmds_jent_namespace;
 
 /* 
  * Keep track of the bmap associated with a CRC update
@@ -95,5 +96,7 @@ extern struct psc_journal *mdsJournal;
 
 void mds_reserve_slot(void);
 void mds_unreserve_slot(void);
+
+int mds_redo_namespace(struct slmds_jent_namespace *);
 
 #endif /* _SLASHD_MDSLOG_H_ */

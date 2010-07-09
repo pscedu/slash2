@@ -172,41 +172,6 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 	return (0);
 }
 
-static int
-mds_redo_namespace(__unusedx struct psc_journal_enthdr *pje)
-{
-	int rc;
-	struct srt_stat stat;
-	struct slmds_jent_namespace *jnamespace;
-
-	jnamespace = (struct slmds_jent_namespace *)pje->pje_data;
-	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
-
-	stat.sst_uid = jnamespace->sjnm_uid;
-	stat.sst_gid = jnamespace->sjnm_gid;
-	stat.sst_mode = jnamespace->sjnm_mode;
-	stat.sst_mask = jnamespace->sjnm_mask;
-	stat.sst_atime = jnamespace->sjnm_atime;
-	stat.sst_mtime = jnamespace->sjnm_mtime;
-	stat.sst_ctime = jnamespace->sjnm_ctime;
-
-	switch (jnamespace->sjnm_op) {
-	    case NS_OP_CREATE:
-		rc = mdsio_redo_create(
-			jnamespace->sjnm_parent_s2id,
-			jnamespace->sjnm_target_s2id,
-			&stat, jnamespace->sjnm_name);
-		break;
-	    default:
-		rc = EINVAL;
-		break;
-	}
-	psc_notify("Redo namespace log: op = %d, name = %s, id = %"PRIx64 "rc = %d", 
-		jnamespace->sjnm_op, jnamespace->sjnm_name, 
-		jnamespace->sjnm_target_s2id, rc);
-	return rc;
-}
-
 /**
  * mds_replay_handle - Handle journal replay events.
  */
@@ -214,6 +179,7 @@ void
 mds_replay_handler(struct psc_journal_enthdr *pje, int *rcp)
 {
 	int rc = 0;
+	struct slmds_jent_namespace *jnamespace;
 
 	switch (pje->pje_type & ~(_PJE_FLSHFT - 1)) {
 	    case MDS_LOG_BMAP_REPL:
@@ -229,7 +195,11 @@ mds_replay_handler(struct psc_journal_enthdr *pje, int *rcp)
 		rc = mds_redo_ino_addrepl(pje);
 		break;
 	    case MDS_LOG_NAMESPACE:
-		rc = mds_redo_namespace(pje);
+
+		jnamespace = (struct slmds_jent_namespace *)pje->pje_data;
+		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
+		rc = mds_redo_namespace(jnamespace);
+
 		break;
 	    default:
 		psc_fatal("invalid log entry type %d", pje->pje_type);
@@ -1003,4 +973,89 @@ void
 mds_unreserve_slot(void)
 {
 	pjournal_unreserve_slot(mdsJournal);
+}
+
+int
+mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
+{
+	int rc;
+	int validop = 1;
+	char *newname;
+	struct srt_stat stat;
+
+	stat.sst_uid = jnamespace->sjnm_uid;
+	stat.sst_gid = jnamespace->sjnm_gid;
+	stat.sst_mode = jnamespace->sjnm_mode;
+	stat.sst_mask = jnamespace->sjnm_mask;
+	stat.sst_atime = jnamespace->sjnm_atime;
+	stat.sst_mtime = jnamespace->sjnm_mtime;
+	stat.sst_ctime = jnamespace->sjnm_ctime;
+
+	switch (jnamespace->sjnm_op) {
+	    case NS_OP_CREATE:
+		rc = mdsio_redo_create(
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
+			&stat, jnamespace->sjnm_name);
+		break;
+	    case NS_OP_MKDIR:
+		rc = mdsio_redo_mkdir(
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
+			&stat, jnamespace->sjnm_name);
+		break;
+	    case NS_OP_LINK:
+		rc = mdsio_redo_link(
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_name);
+		break;
+	    case NS_OP_SYMLINK:
+		newname = jnamespace->sjnm_name;
+		while (*newname != '\0')
+			newname++;
+		newname++;
+		rc = mdsio_redo_symlink(
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
+			&stat, jnamespace->sjnm_name, newname);
+		break;
+	    case NS_OP_RENAME:
+		newname = jnamespace->sjnm_name;
+		while (*newname != '\0')
+			newname++;
+		newname++;
+		rc = mdsio_redo_rename(
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_new_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_name, newname);
+		break;
+	    case NS_OP_UNLINK:
+		rc = mdsio_redo_unlink(
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_name);
+		break;
+	    case NS_OP_RMDIR:
+		rc = mdsio_redo_rmdir(
+			jnamespace->sjnm_parent_s2id, 
+			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_name);
+		break;
+	    case NS_OP_SETATTR:
+		rc = mdsio_redo_setattr(
+			jnamespace->sjnm_target_s2id, 
+			&stat, jnamespace->sjnm_mask);
+		break;
+	    default:
+		psc_errorx("Unexpected opcode %d", jnamespace->sjnm_op);
+		validop = 0;
+		rc = -EINVAL;
+	}
+	psc_notify("Redo namespace log: op = %d, name = %s, id = %"PRIx64 "rc = %d",
+		jnamespace->sjnm_op, jnamespace->sjnm_name,
+		jnamespace->sjnm_target_s2id, rc);
+
+	return (rc);
 }
