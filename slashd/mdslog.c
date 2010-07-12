@@ -878,6 +878,7 @@ mds_journal_init(void)
 	struct sl_site *s;
 	uint64_t txg;
 	int i, n;
+	char txgfn[PATH_MAX];
 
 	/*
 	 * To be read from a log file after we replay the system journal.
@@ -924,6 +925,7 @@ mds_journal_init(void)
 	if (r->res_jrnldev[0] == '\0')
 		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
 
+	xmkfn(txgfn, "%s/%s", globalConfig.gconf_fsroot, SL_PATH_TXG);
 	/*
 	 * If we are a standalone MDS, there is no need to start the distill
 	 * operation.
@@ -931,7 +933,7 @@ mds_journal_init(void)
 	txg = mdsio_last_synced_txg();
 	if (i == 1) {
 		mdsJournal = pjournal_init(
-			r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL,
+			r->res_jrnldev, txgfn, txg, SLMTHRT_JRNL_DISTILL,
 			"slmjdistthr", mds_replay_handler, NULL);
 		if (mdsJournal == NULL)
 			psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
@@ -943,7 +945,7 @@ mds_journal_init(void)
 	 * We have peer MDSes, let us start the distill operation.
 	 */
 	mdsJournal = pjournal_init(
-		r->res_jrnldev, txg, SLMTHRT_JRNL_DISTILL,
+		r->res_jrnldev, txgfn, txg, SLMTHRT_JRNL_DISTILL,
 		"slmjdistthr", mds_replay_handler, 
 		mds_distill_handler);
 
