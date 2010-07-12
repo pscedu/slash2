@@ -162,7 +162,7 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 		mq->fg = *USWI_FG(wk);
 		mq->nbmaps = USWI_NBMAPS(wk);
 		mq->nrepls = USWI_NREPLS(wk);
-		mq->newreplpol = USWI_INOX(wk)->inox_newbmap_policy;
+		mq->newreplpol = USWI_INO(wk)->ino_newbmap_policy;
 		memcpy(mq->repls, USWI_INO(wk)->ino_repls,
 		    MIN(mq->nrepls, SL_DEF_REPLICAS) * sizeof(*mq->repls));
 		if (mq->nrepls > SL_DEF_REPLICAS)

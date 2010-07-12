@@ -88,10 +88,10 @@ _debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 	}
 
 	snprintf(buf, siz,
-	    "v:%x bsz:%u nr:%u cs:%u repl:%s crc:%"PRIx64,
+	    "v:%x bsz:%u nr:%u nbpol:%u repl:%s crc:%"PRIx64,
 	    ino->ino_version,
 	    ino->ino_bsz, ino->ino_nrepls,
-	    ino->ino_csnap, rbuf, ino->ino_crc);
+	    ino->ino_newbmap_policy, rbuf, ino->ino_crc);
 	return (buf);
 }
 

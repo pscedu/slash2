@@ -737,7 +737,7 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	mp->rc = mds_inox_ensure_loaded(ih);
 	if (mp->rc == 0) {
 		INOH_LOCK(ih);
-		ih->inoh_extras->inox_newbmap_policy = mq->pol;
+		ih->inoh_ino.ino_newbmap_policy = mq->pol;
 		ih->inoh_flags |= INOH_EXTRAS_DIRTY;
 		INOH_ULOCK(ih);
 		mds_inode_sync(ih);
