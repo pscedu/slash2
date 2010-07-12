@@ -19,11 +19,13 @@
 
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "pfl/pfl.h"
 #include "pfl/cdefs.h"
@@ -62,7 +64,8 @@ void
 slimmns_create(const char *root, uint32_t depth)
 {
 	char fn[PATH_MAX];
-	int rc;
+	int fd, rc;
+	uint64_t txg = 0;
 
 	if (!depth)
 		depth = FID_PATH_DEPTH;
@@ -84,6 +87,14 @@ slimmns_create(const char *root, uint32_t depth)
 	rc = mkdir(fn, 0700);
 	if (rc == -1 && errno != EEXIST)
 		psc_fatal("mkdir %s", fn);
+
+	xmkfn(fn, "%s/%s", root, SL_PATH_TXG);
+	fd = open(fn, O_CREAT|O_TRUNC|O_WRONLY, 0600);
+	if (fd < 0) 
+		psc_fatal("open %s", fn);
+	if (pwrite(fd, &txg, sizeof(txg), 0) != sizeof(txg))
+		psc_fatal("write %s", fn);
+	close(fd);
 }
 
 __dead void

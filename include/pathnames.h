@@ -20,8 +20,13 @@
 #ifndef _SLASH_PATHNAMES_H_
 #define _SLASH_PATHNAMES_H_
 
-/* immutable namespace paths */
+/* 
+ * SLASH2 internal files and directories that enable us to (1) find out the 
+ * last ZFS commit transaction group number; (2) register the replication 
+ * work that needs to be done; (3) access SLASH2 files by SLASH2 IDs.
+ */
 #define SL_PATH_PREFIX		".sl"
+#define SL_PATH_TXG		".sltxg"
 #define SL_PATH_REPLS		".slrepls"
 #define SL_PATH_FIDNS		".slfidns"
 
