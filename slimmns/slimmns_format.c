@@ -22,10 +22,10 @@
 #include <sys/types.h>
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #include "pfl/pfl.h"
 #include "pfl/cdefs.h"
@@ -90,7 +90,7 @@ slimmns_create(const char *root, uint32_t depth)
 
 	xmkfn(fn, "%s/%s", root, SL_PATH_TXG);
 	fd = open(fn, O_CREAT|O_TRUNC|O_WRONLY, 0600);
-	if (fd < 0) 
+	if (fd < 0)
 		psc_fatal("open %s", fn);
 	if (pwrite(fd, &txg, sizeof(txg), 0) != sizeof(txg))
 		psc_fatal("write %s", fn);
