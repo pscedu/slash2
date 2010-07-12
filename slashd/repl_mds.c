@@ -272,8 +272,8 @@ int
 _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
     const int *retifset, int flags, int off, int *scircuit)
 {
-	struct slash_bmap_od *bmapod=bcm->bcm_od;
-	struct bmap_mds_info *bmdsi=bmap_2_bmdsi(bcm);
+	struct slash_bmap_od *bmapod = bcm->bcm_od;
+	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bcm);
 	int val, rc = 0;
 
 	/* Take a write lock on the bmapod.
@@ -615,6 +615,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	tract[SL_REPLST_ACTIVE] = -1;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
 	tract[SL_REPLST_GARBAGE] = -1;
+	tract[SL_REPLST_GARBAGE_SCHED] = -1;
 
 	retifzero[SL_REPLST_INACTIVE] = 0;
 	retifzero[SL_REPLST_ACTIVE] = 1;
@@ -684,6 +685,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		retifset[SL_REPLST_ACTIVE] = 0;
 		retifset[SL_REPLST_TRUNCPNDG] = SLERR_REPL_NOT_ACT;
 		retifset[SL_REPLST_GARBAGE] = SLERR_REPL_NOT_ACT;
+		retifset[SL_REPLST_GARBAGE_SCHED] = SLERR_REPL_NOT_ACT;
 
 		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 		if (rc == 0) {

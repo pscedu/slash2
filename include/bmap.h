@@ -193,6 +193,7 @@ _log_debug_bmapodv(const char *file, const char *func, int lineno,
 	ch[SL_REPLST_ACTIVE] = '+';
 	ch[SL_REPLST_TRUNCPNDG] = 't';
 	ch[SL_REPLST_GARBAGE] = 'g';
+	ch[SL_REPLST_GARBAGE_SCHED] = 'd';
 
 	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
 	    k++, off += SL_BITS_PER_REPLICA)

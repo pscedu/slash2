@@ -141,6 +141,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	tract[SL_REPLST_SCHED] = -1;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
 	tract[SL_REPLST_GARBAGE] = -1;
+	tract[SL_REPLST_GARBAGE_SCHED] = -1;
 
 	retifset[SL_REPLST_ACTIVE] = SL_REPLST_ACTIVE;
 	retifset[SL_REPLST_INACTIVE] = SL_REPLST_INACTIVE;
@@ -148,6 +149,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	retifset[SL_REPLST_SCHED] = SL_REPLST_SCHED;
 	retifset[SL_REPLST_TRUNCPNDG] = SL_REPLST_TRUNCPNDG;
 	retifset[SL_REPLST_GARBAGE] = SL_REPLST_GARBAGE;
+	retifset[SL_REPLST_GARBAGE_SCHED] = SL_REPLST_GARBAGE_SCHED;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
@@ -177,6 +179,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
 	tract[SL_REPLST_TRUNCPNDG] = -1;
 	tract[SL_REPLST_GARBAGE] = -1;
+	tract[SL_REPLST_GARBAGE_SCHED] = -1;
 
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
 
