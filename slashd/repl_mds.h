@@ -46,7 +46,10 @@ int	 mds_repl_loadino(const struct slash_fidgen *, struct fidc_membh **);
 void	 mds_repl_node_clearallbusy(struct resm_mds_info *);
 int	_mds_repl_nodes_setbusy(struct resm_mds_info *, struct resm_mds_info *, int, int);
 void	 mds_repl_reset_scheduled(sl_ios_id_t);
-void	 mds_repl_tryrmqfile(struct up_sched_work_item *);
+
+/* replication state walking flags */
+#define REPL_WALKF_SCIRCUIT	(1 << 0)	/* short circuit on return value set */
+#define REPL_WALKF_MODOTH	(1 << 1)	/* modify everyone except specified IOS */
 
 #define mds_repl_bmap_walk_all(b, t, r, fl)	mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0)
 
@@ -58,9 +61,11 @@ void	 mds_repl_tryrmqfile(struct up_sched_work_item *);
 #define mds_repl_ios_lookup_add(ih, ios, jrnl)	_mds_repl_ios_lookup((ih), (ios), 1, (jrnl))
 #define mds_repl_ios_lookup(ih, ios)		_mds_repl_ios_lookup((ih), (ios), 0, 0)
 
-extern struct psc_listcache	slm_replst_workq;
+extern struct psc_listcache	 slm_replst_workq;
 
 extern struct psc_vbitmap	*repl_busytable;
 extern psc_spinlock_t		 repl_busytable_lock;
+
+extern sl_ino_t			 mds_repldir_inum;
 
 #endif /* _SL_MDS_REPL_H_ */

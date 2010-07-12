@@ -264,10 +264,6 @@ mds_repl_xattr_load_locked(struct slash_inode_handle *i)
 }
 #endif
 
-/* replication state walking flags */
-#define REPL_WALKF_SCIRCUIT	(1 << 0)	/* short circuit on return value set */
-#define REPL_WALKF_MODOTH	(1 << 1)	/* modify everyone except specified ios */
-
 int
 _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
     const int *retifset, int flags, int off, int *scircuit)
@@ -514,13 +510,6 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	return (rc);
 }
 
-slfid_t
-mds_repl_getslfid(void)
-{
-	//XXX should I be FID_ANY?
-	return (0);
-}
-
 int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     const sl_replica_t *iosv, int nios)
@@ -531,7 +520,6 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
 	char fn[FID_MAX_PATH];
-	void *mdsio_data;
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
@@ -568,21 +556,15 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			if (rc)
 				goto bail;
 
-			/* Create persistent marker */
-			rc = mdsio_opencreate(mds_repldir_inum,
-			    &rootcreds, O_CREAT | O_EXCL | O_RDWR, 0600,
-			    fn, NULL, NULL, NULL, &mdsio_data, NULL,
-			    mds_repl_getslfid);
+			rc = uswi_init(newrq, fcmh);
 			if (rc == 0) {
-				mdsio_release(&rootcreds, &mdsio_data);
-
 				wk = newrq;
 				newrq = NULL;
 
-				uswi_init(wk, fcmh);
 				/*
-				 * Refcnt is 1 for tree on return here; bump again
-				 * though because we will unrefrq() when we're done.
+				 * Refcnt is 1 for the tree's ref after
+				 * return here; bump again though because
+				 * we will unrefrq() when we're done.
 				 */
 				psc_atomic32_inc(&wk->uswi_refcnt);
 			}
@@ -717,93 +699,6 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	return (rc);
 }
 
-/* XXX this should also remove any ios' that are empty in all bmaps from the inode */
-void
-mds_repl_tryrmqfile(struct up_sched_work_item *wk)
-{
-	int uswi_gen, rc, retifset[SL_NREPLST];
-	struct bmapc_memb *bcm;
-	char fn[IMNS_NAME_MAX];
-	sl_bmapno_t n;
-
-	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
-	if (wk->uswi_flags & USWIF_DIE) {
-		/* someone is already waiting for this to go away */
-		uswi_unref(wk);
-		return;
-	}
-
-	/*
-	 * If someone bumps the generation while we're processing, we'll
-	 * know there is work to do and that the uswi shouldn't go away.
-	 */
-	uswi_gen = wk->uswi_gen;
-	wk->uswi_flags |= USWIF_BUSY;
-	psc_pthread_mutex_unlock(&wk->uswi_mutex);
-
-	/* Scan for any OLD states. */
-	retifset[SL_REPLST_INACTIVE] = 0;
-	retifset[SL_REPLST_ACTIVE] = 0;
-	retifset[SL_REPLST_OLD] = 1;
-	retifset[SL_REPLST_SCHED] = 1;
-	retifset[SL_REPLST_TRUNCPNDG] = 1;
-	retifset[SL_REPLST_GARBAGE] = 1;
-	retifset[SL_REPLST_GARBAGE_SCHED] = 1;
-
-	/* Scan bmaps to see if the inode should disappear. */
-	for (n = 0; n < USWI_NBMAPS(wk); n++) {
-		if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
-			continue;
-
-		BMAP_LOCK(bcm);
-		rc = mds_repl_bmap_walk_all(bcm, NULL,
-		    retifset, REPL_WALKF_SCIRCUIT);
-		mds_repl_bmap_rel(bcm);
-		if (rc)
-			goto keep;
-	}
-
-	spinlock(&upsched_tree_lock);
-	psc_pthread_mutex_lock(&wk->uswi_mutex);
-	if (wk->uswi_gen != uswi_gen) {
-		freelock(&upsched_tree_lock);
- keep:
-		uswi_unref(wk);
-		return;
-	}
-	/*
-	 * All states are INACTIVE/ACTIVE;
-	 * remove it and its persistent link.
-	 */
-	rc = snprintf(fn, sizeof(fn),
-	    "%016"PRIx64, USWI_FID(wk));
-	if (rc == -1)
-		rc = errno;
-	else if (rc >= (int)sizeof(fn))
-		rc = ENAMETOOLONG;
-	else
-		rc = mdsio_unlink(mds_repldir_inum, fn, &rootcreds, NULL);
-	PSC_SPLAY_XREMOVE(upschedtree, &upsched_tree, wk);
-	freelock(&upsched_tree_lock);
-
-	psc_atomic32_dec(&wk->uswi_refcnt);	/* removed from tree */
-	wk->uswi_flags |= USWIF_DIE;
-	wk->uswi_flags &= ~USWIF_BUSY;
-
-	while (psc_atomic32_read(&wk->uswi_refcnt) > 1) {
-		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
-		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
-		psc_pthread_mutex_lock(&wk->uswi_mutex);
-	}
-
-	/* XXX where does this ref come from? */
-	fcmh_op_done_type(wk->uswi_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
-	/* SPLAY_REMOVE() does not NULL out the field */
-	INIT_PSCLIST_ENTRY(&wk->uswi_lentry);
-	psc_pool_return(upsched_pool, wk);
-}
-
 int
 mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     const sl_replica_t *iosv, int nios)
@@ -874,7 +769,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	} else
 		rc = SLERR_BMAP_INVALID;
 
-	mds_repl_tryrmqfile(wk);
+	uswi_unref(wk);
 	return (rc);
 }
 
@@ -938,7 +833,10 @@ mds_repl_scandir(void)
 				    slstrerror(rc));
 
 			wk = psc_pool_get(upsched_pool);
-			uswi_init(wk, fcmh);
+			rc = uswi_initf(wk, fcmh, USWI_INITF_NOPERSIST);
+			if (rc)
+				psc_fatal("uswi_initf: %s",
+				    slstrerror(rc));
 
 			psc_pthread_mutex_lock(&wk->uswi_mutex);
 			wk->uswi_flags &= ~USWIF_BUSY;

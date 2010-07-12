@@ -237,13 +237,12 @@ slmrcmthr_main(struct psc_thread *thr)
 			uswi_unref(wk);
 		} else if (mds_repl_loadino(&rsw->rsw_fg, &fcmh) == 0) {
 			/*
-			 * file is not in cache, load it up
-			 * to report replication status
-			 *
-			 * grab a dummy uswi struct to pass around.
+			 * File is not in cache: load it up to report
+			 * replication status, grabbing a dummy uswi to
+			 * pass around.
 			 */
 			wk = psc_pool_get(upsched_pool);
-			uswi_init(wk, fcmh);
+			uswi_initf(wk, fcmh, USWI_INITF_NOPERSIST);
 
 			slm_rcm_issue_getreplst(rsw, wk, 0);
 			for (n = 0; n < USWI_NBMAPS(wk); n++) {

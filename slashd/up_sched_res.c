@@ -29,6 +29,7 @@
 #include "pfl/cdefs.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/list.h"
+#include "psc_ds/treeutil.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/multiwait.h"
 #include "psc_util/pthrutil.h"
@@ -46,11 +47,14 @@
 void
 slmupschedthr_removeq(struct up_sched_work_item *wk)
 {
+	int locked, pol, uswi_gen, rc, retifset[SL_NREPLST], retifset2[SL_NREPLST];
 	struct slmupsched_thread *smut;
 	struct site_mds_info *smi;
+	struct bmapc_memb *bcm;
 	struct psc_thread *thr;
 	struct sl_site *site;
-	int locked;
+	char fn[IMNS_NAME_MAX];
+	sl_bmapno_t n;
 
 	thr = pscthr_get();
 	smut = slmupschedthr(thr);
@@ -64,7 +68,103 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 
 	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
 	psc_atomic32_dec(&wk->uswi_refcnt);
-	mds_repl_tryrmqfile(wk);
+
+
+/*
+ * XXX
+ * this should also remove any ios' that are empty in all bmaps from the inode.
+ */
+
+	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	if (wk->uswi_flags & USWIF_DIE) {
+		/* someone is already waiting for this to go away */
+		uswi_unref(wk);
+		return;
+	}
+
+	/*
+	 * If someone bumps the generation while we're processing, we'll
+	 * know there is work to do and that the uswi shouldn't go away.
+	 */
+	uswi_gen = wk->uswi_gen;
+	wk->uswi_flags |= USWIF_BUSY;
+	psc_pthread_mutex_unlock(&wk->uswi_mutex);
+
+	/* Scan for any OLD states. */
+	retifset[SL_REPLST_INACTIVE] = 0;
+	retifset[SL_REPLST_ACTIVE] = 0;
+	retifset[SL_REPLST_OLD] = 0;
+	retifset[SL_REPLST_SCHED] = 1;
+	retifset[SL_REPLST_TRUNCPNDG] = 1;
+	retifset[SL_REPLST_GARBAGE] = 1;
+	retifset[SL_REPLST_GARBAGE_SCHED] = 1;
+
+	retifset2[SL_REPLST_INACTIVE] = 0;
+	retifset2[SL_REPLST_ACTIVE] = 0;
+	retifset2[SL_REPLST_OLD] = 1;
+	retifset2[SL_REPLST_SCHED] = 0;
+	retifset2[SL_REPLST_TRUNCPNDG] = 0;
+	retifset2[SL_REPLST_GARBAGE] = 0;
+	retifset2[SL_REPLST_GARBAGE_SCHED] = 0;
+
+	/* Scan bmaps to see if the inode should disappear. */
+	for (n = 0; n < USWI_NBMAPS(wk); n++) {
+		if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
+			continue;
+
+		BMAP_LOCK(bcm);
+		rc = mds_repl_bmap_walk_all(bcm, NULL,
+		    retifset, REPL_WALKF_SCIRCUIT);
+		BHREPL_POLICY_GET(bcm, pol);
+		if (rc == 0 && pol == BRP_PERSIST)
+			rc = mds_repl_bmap_walk_all(bcm, NULL,
+			    retifset2, REPL_WALKF_SCIRCUIT);
+		mds_repl_bmap_rel(bcm);
+		if (rc)
+			goto keep;
+	}
+
+	spinlock(&upsched_tree_lock);
+	psc_pthread_mutex_lock(&wk->uswi_mutex);
+	if (wk->uswi_gen != uswi_gen) {
+		freelock(&upsched_tree_lock);
+ keep:
+		uswi_unref(wk);
+		return;
+	}
+
+	/*
+	 * All states are INACTIVE/ACTIVE;
+	 * remove it and its persistent link.
+	 */
+	rc = snprintf(fn, sizeof(fn), "%016"PRIx64, USWI_FID(wk));
+	if (rc == -1)
+		rc = errno;
+	else if (rc >= (int)sizeof(fn))
+		rc = ENAMETOOLONG;
+	else
+		rc = mdsio_unlink(mds_repldir_inum, fn, &rootcreds, NULL);
+	PSC_SPLAY_XREMOVE(upschedtree, &upsched_tree, wk);
+	freelock(&upsched_tree_lock);
+
+	psc_atomic32_dec(&wk->uswi_refcnt);	/* removed from tree */
+	wk->uswi_flags |= USWIF_DIE;
+	wk->uswi_flags &= ~USWIF_BUSY;
+
+	while (psc_atomic32_read(&wk->uswi_refcnt) > 1) {
+		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
+		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
+		psc_pthread_mutex_lock(&wk->uswi_mutex);
+	}
+
+	/* XXX where does this ref come from? */
+	fcmh_op_done_type(wk->uswi_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+
+	/* SPLAY_REMOVE() does not NULL out the field */
+	INIT_PSCLIST_ENTRY(&wk->uswi_lentry);
+	psc_pool_return(upsched_pool, wk);
+
+
 }
 
 int
@@ -596,9 +696,38 @@ uswi_find(const struct slash_fidgen *fgp, int *locked)
 	return (NULL);
 }
 
-void
-uswi_init(struct up_sched_work_item *wk, struct fidc_membh *fcmh)
+slfid_t
+uswi_getslfid(void)
 {
+	/* XXX should I be FID_ANY? */
+	return (0);
+}
+
+int
+uswi_initf(struct up_sched_work_item *wk, struct fidc_membh *fcmh, int flags)
+{
+	char fn[PATH_MAX];
+	void *mdsio_data;
+	int rc;
+
+	if ((flags & USWI_INITF_NOPERSIST) == 0) {
+		rc = snprintf(fn, sizeof(fn), "%016"PRIx64,
+		    fcmh->fcmh_fg.fg_fid);
+		if (rc == -1)
+			return (errno);
+		if (rc >= (int)sizeof(fn))
+			return (ENAMETOOLONG);
+
+		rc = mdsio_opencreate(mds_repldir_inum, &rootcreds,
+		    O_CREAT | O_WRONLY, 0600, fn, NULL, NULL, NULL,
+		    &mdsio_data, NULL, uswi_getslfid);
+		if (rc)
+			return (rc);
+		mdsio_release(&rootcreds, &mdsio_data);
+	}
+
+	/* wow, that worked, actually do something now */
+
 	memset(wk, 0, sizeof(*wk));
 	wk->uswi_flags |= USWIF_BUSY;
 	psc_pthread_mutex_init(&wk->uswi_mutex);
@@ -608,4 +737,5 @@ uswi_init(struct up_sched_work_item *wk, struct fidc_membh *fcmh)
 	wk->uswi_fcmh = fcmh; /* XXX take fcmh_refcnt! */
 	psc_pthread_mutex_lock(&wk->uswi_mutex);
 	SPLAY_INSERT(upschedtree, &upsched_tree, wk);
+	return (0);
 }

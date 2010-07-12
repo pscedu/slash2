@@ -686,7 +686,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			}
 
 			uswi_init(wk, fcmh);
-			// create $ROOT/.sltruncs/<fid>
 
 			fcmh_2_ptruncgen(fcmh)++;
 

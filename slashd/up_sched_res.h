@@ -34,11 +34,16 @@ struct up_sched_work_item {
 				    USWI_INO(wk)->ino_repls[n] :	\
 				    USWI_INOX(wk)->inox_repls[(n) - 1])
 
+/* uswi_init() flags */
+#define USWI_INITF_NOPERSIST	(1 << 0)	/* do not link in .slussr */
+
+#define uswi_init(wk, fcmh)	uswi_initf((wk), (fcmh), 0)
+
 struct up_sched_work_item *
 	 uswi_find(const struct slash_fidgen *, int *);
 int	 uswi_access(struct up_sched_work_item *);
 int	 uswi_cmp(const void *, const void *);
-void	 uswi_init(struct up_sched_work_item *, struct fidc_membh *);
+int	 uswi_initf(struct up_sched_work_item *, struct fidc_membh *, int);
 void	 uswi_unref(struct up_sched_work_item *);
 
 SPLAY_HEAD(upschedtree, up_sched_work_item);
