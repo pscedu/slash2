@@ -40,9 +40,10 @@
 #define SL_MAX_GENS_PER_BLK	4
 
 /*
- * Define metafile offsets.  At the beginning of the metafile is the SLASH2 inode, which is
- * always loaded.  Start from byte offset 1024 (0x400) are extra inode attributes. Block
- * CRCs begin at offset 4096 (0x1000). 
+ * Define metafile offsets.  At the beginning of the metafile is the
+ * SLASH2 inode, which is always loaded.  Start from byte offset 1024
+ * (0x400) are extra inode attributes. Block CRCs begin at offset 4096
+ * (0x1000).
  */
 #define SL_INODE_START_OFF	UINT64_C(0x0000)
 #define SL_EXTRAS_START_OFF	UINT64_C(0x0400)
@@ -71,7 +72,8 @@ struct slash_inode_od {
 	uint16_t		ino_flags;
 	uint32_t		ino_bsz;			/* bmap size		*/
 	uint32_t		ino_nrepls;			/* if 0, use ino_prepl	*/
-	uint32_t		ino_csnap;			/* current snapshot	*/
+//	uint32_t		ino_csnap;			/* current snapshot	*/
+	uint32_t		ino_newbmap_policy;		/* see BRP_* values */
 	sl_replica_t		ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
 
 	/* must be last */
@@ -85,7 +87,6 @@ struct slash_inode_od {
 struct slash_inode_extras_od {
 	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers      */
 	sl_replica_t		inox_repls[SL_MAX_REPLICAS - SL_DEF_REPLICAS]; /* replicas */
-	uint32_t		inox_newbmap_policy;		/* see BRP_* values */
 
 	/* must be last */
 	psc_crc64_t		inox_crc;
