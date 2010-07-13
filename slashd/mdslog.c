@@ -42,6 +42,7 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
+#include "slerr.h"
 #include "sljournal.h"
 
 #include "zfs-fuse/zfs_slashlib.h"
@@ -133,10 +134,12 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	struct srt_bmap_wire bmap_disk;
 	struct srm_bmap_crcwire *bmap_wire;
 
-	jcrc = (struct slmds_jent_crc *)pje->pje_data;
+	jcrc = PJE_DATA(pje);
 
-	zfsslash2_opencreate(jcrc->sjc_fid, &rootcreds, O_RDWR, 0, NULL,
+	rc = zfsslash2_opencreate(jcrc->sjc_fid, &rootcreds, O_RDWR, 0, NULL,
 	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
+	if (rc)
+		psc_fatalx("zfsslash2_opencreate: %s", slstrerror(rc));
 
 	rc = zfsslash2_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		(off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
@@ -155,8 +158,8 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	if (rc || nb != BMAP_OD_SZ)
 		goto out;
 
-out:
-	zfsslash2_release(&rootcreds, &mdsio_data);
+ out:
+	zfsslash2_release(&rootcreds, mdsio_data);
 	return (rc);
 }
 
@@ -188,18 +191,19 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 	spinlock(&lock);
 
 	if (!txgFinfo) {
-    		mdsio_fid_t mfp;
-		rc = zfsslash2_lookup(MDSIO_FID_ROOT, SL_PATH_TXG, NULL, 
+		mdsio_fid_t mfp;
+
+		rc = zfsslash2_lookup(MDSIO_FID_ROOT, SL_PATH_TXG, NULL,
 			&mfp, &rootcreds, NULL);
 		psc_assert(rc == 0);
-		rc = zfsslash2_opencreate(mfp, &rootcreds, O_RDWR, 0, 
+		rc = zfsslash2_opencreate(mfp, &rootcreds, O_RDWR, 0,
 			NULL, NULL, NULL, NULL, &txgFinfo, NULL, NULL);
 		psc_assert(!rc && txgFinfo);
 	}
-	
+
 	if (op == PJRNL_TXG_GET) {
 
-		rc = zfsslash2_read(&rootcreds, &cur_txg, sizeof(uint64_t), 
+		rc = zfsslash2_read(&rootcreds, &cur_txg, sizeof(uint64_t),
 			    &nb, 0, txgFinfo);
 		psc_assert(!rc && nb == sizeof(uint64_t));
 		*txgp = cur_txg;
@@ -207,8 +211,8 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 	} else {
 		if (*txgp > cur_txg) {
 			cur_txg = *txgp;
-			rc = zfsslash2_write(&rootcreds, &cur_txg, 
-				     sizeof(uint64_t), &nb, 0, txgFinfo, 
+			rc = zfsslash2_write(&rootcreds, &cur_txg,
+				     sizeof(uint64_t), &nb, 0, txgFinfo,
 				     NULL, NULL);
 			psc_assert(!rc && nb == sizeof(uint64_t));
 		}
@@ -242,7 +246,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje, int *rcp)
 		break;
 	    case MDS_LOG_NAMESPACE:
 
-		jnamespace = (struct slmds_jent_namespace *)pje->pje_data;
+		jnamespace = PJE_DATA(pje);
 		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 		rc = mds_redo_namespace(jnamespace);
 
@@ -269,7 +273,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
 		return;
 
-	jnamespace = (struct slmds_jent_namespace *)pje->pje_data;
+	jnamespace = PJE_DATA(pje);
 	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 
 	/* see if we can open a new change log file */
@@ -321,11 +325,12 @@ mds_distill_handler(struct psc_journal_enthdr *pje, __unusedx int size)
  * we reply to the client.
  */
 void
-mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uint64_t target,
-	const struct srt_stat *stat, const char *name, const char *newname)
+mds_namespace_log(int op, uint64_t txg, uint64_t parent,
+    uint64_t newparent, uint64_t target, const struct srt_stat *stat,
+    const char *name, const char *newname)
 {
 	char *ptr;
-	int distilled;
+	int len, distilled;
 	struct slmds_jent_namespace *jnamespace;
 
 	psc_assert(target);
@@ -349,15 +354,20 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uin
 		jnamespace->sjnm_ctime = stat->sst_ctime;
 	}
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
-	ptr = &jnamespace->sjnm_name[0];
+	ptr = jnamespace->sjnm_name;
+	*ptr = '\0';
 	if (name) {
+		psc_assert(sizeof(jnamespace->sjnm_name) > NAME_MAX);
 		strncpy(ptr, name, NAME_MAX);
+		ptr[NAME_MAX] = '\0';
 		jnamespace->sjnm_reclen += strlen(name) + 1;
 		ptr += strlen(name) + 1;
 	}
 	if (newname) {
-		strncpy(ptr, newname, NAME_MAX);
-		jnamespace->sjnm_reclen += strlen(newname) + 1;
+		len = sizeof(jnamespace->sjnm_name) - strlen(ptr) - 1;
+		strncpy(ptr, newname, len - 1);
+		ptr[len - 1] = '\0';
+		jnamespace->sjnm_reclen += strlen(ptr) + 1;
 	}
 	psc_assert(logentrysize >= jnamespace->sjnm_reclen +
 	    (int)sizeof(struct psc_journal_enthdr) - 1);
@@ -981,11 +991,11 @@ mds_journal_init(void)
 	txg = mdsio_last_synced_txg();
 	if (i == 1) {
 		mdsJournal = pjournal_init(
-				r->res_jrnldev, 
+				r->res_jrnldev,
 				SLMTHRT_JRNL,
-				"slmjthr", 
-				mds_txg_handler, 
-				mds_replay_handler, 
+				"slmjthr",
+				mds_txg_handler,
+				mds_replay_handler,
 				NULL);
 		if (mdsJournal == NULL)
 			psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
@@ -997,11 +1007,11 @@ mds_journal_init(void)
 	 * We have peer MDSes, let us start the distill operation.
 	 */
 	mdsJournal = pjournal_init(
-		r->res_jrnldev, 
+		r->res_jrnldev,
 		SLMTHRT_JRNL,
-		"slmjthr", 
+		"slmjthr",
 		mds_txg_handler,
-		mds_replay_handler, 
+		mds_replay_handler,
 		mds_distill_handler);
 
 	if (mdsJournal == NULL)
@@ -1051,20 +1061,20 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	switch (jnamespace->sjnm_op) {
 	    case NS_OP_CREATE:
 		rc = mdsio_redo_create(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id,
+			jnamespace->sjnm_target_s2id,
 			&stat, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_MKDIR:
 		rc = mdsio_redo_mkdir(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id,
+			jnamespace->sjnm_target_s2id,
 			&stat, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_LINK:
 		rc = mdsio_redo_link(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id,
+			jnamespace->sjnm_target_s2id,
 			jnamespace->sjnm_name);
 		break;
 	    case NS_OP_SYMLINK:
@@ -1073,8 +1083,8 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 			newname++;
 		newname++;
 		rc = mdsio_redo_symlink(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id,
+			jnamespace->sjnm_target_s2id,
 			&stat, jnamespace->sjnm_name, newname);
 		break;
 	    case NS_OP_RENAME:
@@ -1083,26 +1093,26 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 			newname++;
 		newname++;
 		rc = mdsio_redo_rename(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_new_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id,
+			jnamespace->sjnm_new_parent_s2id,
+			jnamespace->sjnm_target_s2id,
 			jnamespace->sjnm_name, newname);
 		break;
 	    case NS_OP_UNLINK:
 		rc = mdsio_redo_unlink(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id,
+			jnamespace->sjnm_target_s2id,
 			jnamespace->sjnm_name);
 		break;
 	    case NS_OP_RMDIR:
 		rc = mdsio_redo_rmdir(
-			jnamespace->sjnm_parent_s2id, 
-			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_parent_s2id,
+			jnamespace->sjnm_target_s2id,
 			jnamespace->sjnm_name);
 		break;
 	    case NS_OP_SETATTR:
 		rc = mdsio_redo_setattr(
-			jnamespace->sjnm_target_s2id, 
+			jnamespace->sjnm_target_s2id,
 			&stat, jnamespace->sjnm_mask);
 		break;
 	    default:
