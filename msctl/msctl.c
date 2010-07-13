@@ -373,7 +373,8 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 	if (nb > current_mrs.mrs_nbmaps)
 		errx(1, "invalid value in replication status slave message");
 
-	rc = psc_vbitmap_setrange(&current_mrs_bmask, mrsl->mrsl_boff, mrsl->mrsl_nbmaps);
+	rc = psc_vbitmap_setrange(&current_mrs_bmask, mrsl->mrsl_boff,
+	    mrsl->mrsl_nbmaps);
 	if (rc)
 		psc_fatalx("replication status bmap data: %s", slstrerror(rc));
 
@@ -394,8 +395,8 @@ replst_slave_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	/* XXX add #repls, #bmaps */
 	printf("replication status\n"
-	    " %-62s %4s %4s %6s\n",
-	    "file", "#blk", "#old", "%prog");
+	    " %-58s %6s %6s %6s\n",
+	    "file", "#activ", "#blks", "%prog");
 }
 
 void
@@ -445,9 +446,9 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 			rsb_accul_replica_stats(rsb, iosidx, &bact, &bold);
 
 		psc_fmt_ratio(rbuf, bact, bact + bold);
-		printf("     %-58s %4d %4d %6s",
+		printf("     %-54s %6d %6d %6s",
 		    current_mrs.mrs_iosv[iosidx],
-		    bact + bold, bold, rbuf);
+		    bact, bact + bold, rbuf);
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
 			pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data,
 			    SL_BITS_PER_REPLICA * iosidx, SL_NBITS_REPLST_BHDR);
