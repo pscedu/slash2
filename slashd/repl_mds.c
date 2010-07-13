@@ -744,7 +744,6 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm))
 				continue;
 
-			BMAP_LOCK(bcm);
 			if (mds_repl_bmap_walk(bcm, tract,
 			    retifset, 0, iosidx, nios))
 				rc = 0;
@@ -761,7 +760,6 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 		if (rc == 0) {
-			BMAP_LOCK(bcm);
 			rc = mds_repl_bmap_walk(bcm,
 			    tract, retifset, 0, iosidx, nios);
 			mds_repl_bmap_rel(bcm);
@@ -858,7 +856,6 @@ mds_repl_scandir(void)
 				if (mds_bmap_load(wk->uswi_fcmh, j, &bcm))
 					continue;
 
-				BMAP_LOCK(bcm);
 				mds_repl_bmap_walk(bcm, tract,
 				    NULL, 0, NULL, 0);
 				mds_repl_bmap_rel(bcm);
@@ -1045,7 +1042,6 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 				continue;
 
-			BMAP_LOCK(bcm);
 			mds_repl_bmap_walk(bcm, tract,
 			    NULL, 0, &iosidx, 1);
 			mds_repl_bmap_rel(bcm);

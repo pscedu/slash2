@@ -663,7 +663,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
 			if (mds_bmap_load(fcmh, i, &bcm) == 0) {
-				BMAP_LOCK(bcm);
 				mds_repl_bmap_walk_all(bcm, tract, NULL, 0);
 				mds_repl_bmap_rel(bcm);
 			}
@@ -679,7 +678,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			for (i++; i < fcmh_2_nbmaps(fcmh); i++) {
 				if (mds_bmap_load(fcmh, i, &bcm))
 					continue;
-				BMAP_LOCK(bcm);
 				mds_repl_bmap_walk_all(bcm, tract, NULL, 0);
 				mds_repl_bmap_rel(bcm);
 				// queue to garbage collector
