@@ -131,6 +131,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	if (flags & BTE_DEL) {
 		psc_assert(psclist_conjoint(&bml->bml_timeo_lentry));
 		psclist_del(&bml->bml_timeo_lentry);
+		bml->bml_flags &= ~BML_TIMEOQ;
 		freelock(&mdsBmapTimeoTbl.btt_lock);
 		return (BMAPSEQ_ANY);
 	}
@@ -140,6 +141,15 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	e = &mdsBmapTimeoTbl.btt_entries[mds_bmap_timeotbl_curslot];
 
 	if (flags & BTE_REATTACH) {
+		/* BTE_REATTACH is only called from startup context.
+		 */
+		psc_assert(mdsBmapTimeoTbl.btt_minseq == 
+			   mdsBmapTimeoTbl.btt_maxseq);
+
+		if (mdsBmapTimeoTbl.btt_maxseq < bml->bml_seq)
+			mdsBmapTimeoTbl.btt_minseq =
+				mdsBmapTimeoTbl.btt_maxseq = bml->bml_seq;
+
 		if (bml->bml_seq > e->bte_maxseq ||
 		    e->bte_maxseq == BMAPSEQ_ANY)
 			seq = e->bte_maxseq = bml->bml_seq;
