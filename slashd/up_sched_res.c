@@ -75,7 +75,6 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
  * this should also remove any ios' that are empty in all bmaps from the inode.
  */
 
-	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
 	if (wk->uswi_flags & USWIF_DIE) {
 		/* someone is already waiting for this to go away */
 		uswi_unref(wk);
@@ -163,8 +162,6 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	/* SPLAY_REMOVE() does not NULL out the field */
 	INIT_PSCLIST_ENTRY(&wk->uswi_lentry);
 	psc_pool_return(upsched_pool, wk);
-
-
 }
 
 int
@@ -723,7 +720,7 @@ uswi_initf(struct up_sched_work_item *wk, struct fidc_membh *fcmh, int flags)
 		    &mdsio_data, NULL, uswi_getslfid);
 		if (rc)
 			return (rc);
-		mdsio_release(&rootcreds, &mdsio_data);
+		mdsio_release(&rootcreds, mdsio_data);
 	}
 
 	/* wow, that worked, actually do something now */
@@ -735,7 +732,6 @@ uswi_initf(struct up_sched_work_item *wk, struct fidc_membh *fcmh, int flags)
 	    NULL, 0, "upsched-%lx", fcmh_2_fid(fcmh));
 	psc_atomic32_set(&wk->uswi_refcnt, 1);
 	wk->uswi_fcmh = fcmh; /* XXX take fcmh_refcnt! */
-	psc_pthread_mutex_lock(&wk->uswi_mutex);
 	SPLAY_INSERT(upschedtree, &upsched_tree, wk);
 	return (0);
 }
