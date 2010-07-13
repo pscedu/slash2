@@ -336,3 +336,5 @@ connect.
 utime
    (o) track how long sliod has held the I/O and send the difference to the MDS
        so the MDS can more accurately estimate when the I/O took place
+
+- differentiate between OLD, INACTIVE, and QUEUED/REQUESTED, SCHEDULED
