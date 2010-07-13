@@ -210,7 +210,7 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 	}
 	psc_assert(!rc && nb == sizeof(uint64_t));
 
-//	psc_notify("Current txg = 0x%"PRIx64", cur_txg);
+	psc_notify("Current ZFS txg: %"PRIx64, cur_txg);
 	freelock(&lock);
 }
 
