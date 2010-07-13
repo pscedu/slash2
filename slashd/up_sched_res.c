@@ -111,7 +111,6 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 			continue;
 
-		BMAP_LOCK(bcm);
 		rc = mds_repl_bmap_walk_all(bcm, NULL,
 		    retifset, REPL_WALKF_SCIRCUIT);
 		BHREPL_POLICY_GET(bcm, pol);
@@ -250,7 +249,6 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
-	BMAP_ULOCK(bcm);
 
 	if (rc == SL_REPLST_ACTIVE ||
 	    rc == SL_REPLST_SCHED)
@@ -354,9 +352,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	retifset[SL_REPLST_GARBAGE_SCHED] = SL_REPLST_GARBAGE_SCHED;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
-	BMAP_LOCK(bcm);
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
-	BMAP_ULOCK(bcm);
 
 	if (rc == SL_REPLST_ACTIVE ||
 	    rc == SL_REPLST_SCHED)
@@ -384,9 +380,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	tract[SL_REPLST_GARBAGE] = -1;
 	tract[SL_REPLST_GARBAGE_SCHED] = SL_REPLST_GARBAGE;
 
-	BMAP_LOCK(bcm);
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
-	BMAP_ULOCK(bcm);
 
  fail:
 	if (csvc)
