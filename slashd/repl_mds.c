@@ -270,7 +270,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 {
 	struct slash_bmap_od *bmapod = bcm->bcm_od;
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bcm);
-	int val, rc = 0;
+	int locked, val, rc = 0;
 
 	/* Take a write lock on the bmapod.
 	 */
@@ -303,9 +303,9 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 	if (tract && tract[val] != -1) {
 		SL_REPL_SET_BMAP_IOS_STAT(bmapod->bh_repls,
 		    off, tract[val]);
-		BMAP_LOCK(bcm);
+		locked = BMAP_RLOCK(bcm);
 		bmdsi->bmdsi_flags |= BMIM_LOGCHG;
-		BMAP_ULOCK(bcm);
+		BMAP_URLOCK(bcm, locked);
 	}
 
  out:
@@ -334,8 +334,8 @@ int
 mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
     const int *retifset, int flags, const int *iosidx, int nios)
 {
+	struct slash_bmap_od *bmapod = bcm->bcm_od;
 	int scircuit, nr, off, k, rc, trc;
-	struct slash_bmap_od *bmapod=bcm->bcm_od;
 
 	scircuit = rc = 0;
 	nr = fcmh_2_inoh(bcm->bcm_fcmh)->inoh_ino.ino_nrepls;
@@ -488,7 +488,7 @@ mds_repl_bmap_rel(struct bmapc_memb *bcm)
 int
 mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 {
-	struct slash_inode_handle *ih;
+//	struct slash_inode_handle *ih;
 	struct fidc_membh *fcmh;
 	int rc;
 
@@ -498,10 +498,10 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	if (rc)
 		return (rc);
 
-	ih = fcmh_2_inoh(fcmh);
-	rc = mds_inox_ensure_loaded(ih);
-	if (rc)
-		psc_fatalx("mds_inox_ensure_loaded: %s", slstrerror(rc));
+//	ih = fcmh_2_inoh(fcmh);
+//	rc = mds_inox_ensure_loaded(ih);
+//	if (rc)
+//		psc_fatalx("mds_inox_ensure_loaded: %s", slstrerror(rc));
 	*fp = fcmh;
 
 	if (rc)
