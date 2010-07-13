@@ -68,15 +68,16 @@ mds_bmap_timeotbl_init(void)
 static void
 mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 {
+	int distilled;
 	struct slmds_jent_bmapseq *sjbsqlog;
 
 	sjbsqlog = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_bmapseq));
 
 	*sjbsqlog = *sjbsq;
-	pjournal_add_entry_distill(mdsJournal, 0, MDS_LOG_BMAP_SEQ,
-	    sjbsqlog, sizeof(struct slmds_jent_bmapseq));
-
-	pjournal_put_buf(mdsJournal, sjbsqlog);
+	distilled = pjournal_add_entry_distill(mdsJournal, 0, MDS_LOG_BMAP_SEQ,
+			sjbsqlog, sizeof(struct slmds_jent_bmapseq));
+	if (!distilled)
+		pjournal_put_buf(mdsJournal, sjbsqlog);
 }
 
 void

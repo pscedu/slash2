@@ -279,6 +279,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uin
 	const struct srt_stat *stat, const char *name, const char *newname)
 {
 	char *ptr;
+	int distilled;
 	struct slmds_jent_namespace *jnamespace;
 
 	psc_assert(target);
@@ -315,10 +316,11 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent, uint64_t newparent, uin
 	psc_assert(logentrysize >= jnamespace->sjnm_reclen +
 	    (int)sizeof(struct psc_journal_enthdr) - 1);
 
-	pjournal_add_entry_distill(mdsJournal, txg, MDS_LOG_NAMESPACE,
-	    jnamespace, jnamespace->sjnm_reclen);
+	distilled = pjournal_add_entry_distill(mdsJournal, txg, MDS_LOG_NAMESPACE,
+			jnamespace, jnamespace->sjnm_reclen);
 
-	pjournal_put_buf(mdsJournal, jnamespace);
+	if (!distilled)
+		pjournal_put_buf(mdsJournal, jnamespace);
 }
 
 __static int
