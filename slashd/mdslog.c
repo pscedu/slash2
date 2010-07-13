@@ -198,6 +198,7 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 
 		rc = zfsslash2_read(&rootcreds, &cur_txg, sizeof(uint64_t), 
 			    &nb, 0, txgFinfo);
+		psc_assert(!rc && nb == sizeof(uint64_t));
 		*txgp = cur_txg;
 
 	} else {
@@ -206,9 +207,9 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 			rc = zfsslash2_write(&rootcreds, &cur_txg, 
 				     sizeof(uint64_t), &nb, 0, txgFinfo, 
 				     NULL, NULL);
+			psc_assert(!rc && nb == sizeof(uint64_t));
 		}
 	}
-	psc_assert(!rc && nb == sizeof(uint64_t));
 
 	psc_notify("Current ZFS txg: %"PRIx64, cur_txg);
 	freelock(&lock);
