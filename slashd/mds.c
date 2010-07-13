@@ -394,6 +394,8 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	bmi->bmi_start = time(NULL);
 	bmi->bmi_seq = bmdsi->bmdsi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	bmi->bmi_lastcli = bml->bml_cli_nidpid;
+	bml->bml_ion_nid = bmi->bmi_ion_nid;
+
 	bmdsi->bmdsi_assign = odtable_replaceitem(mdsBmapAssignTable,
 					  bmdsi->bmdsi_assign, bmi);
 	psc_assert(bmdsi->bmdsi_assign);
@@ -684,7 +686,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 {
 	struct bmapc_memb *b=bml_2_bmap(bml);
 	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
-	struct bmap_mds_lease *obml;
+	struct bmap_mds_lease *obml, *tail;
 	struct odtable_receipt *odtr=NULL;
 	int rlease=0, wlease=0, rc=0, locked;
 
@@ -760,6 +762,50 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 	obml = mds_bmap_dupls_find(bmdsi, &bml->bml_cli_nidpid, &wlease,
 		   &rlease);
+	/* In this context, obml must be found and therefore lease cnt
+	 *   must be positive.
+	 */
+	psc_assert(obml);
+	psc_assert((wlease + rlease) > 0);
+	psc_assert(!(obml->bml_flags & BML_CHAIN));
+	psc_assert(psclist_conjoint(&obml->bml_bmdsi_lentry));
+
+	tail = obml;
+	/* Find the bml's preceeding entry.
+	 */
+	while (tail->bml_chain != bml)
+		tail = tail->bml_chain;
+	psc_assert(tail->bml_chain == bml);
+
+	if (bml->bml_flags & BML_CHAIN) {
+		psc_assert(psclist_disjoint(&bml->bml_bmdsi_lentry));
+		psc_assert((wlease + rlease) > 1);
+		tail->bml_chain = bml->bml_chain;
+
+	} else {
+		psc_assert(obml == bml);
+		psc_assert(!(bml->bml_flags & BML_CHAIN));
+		pll_remove(&bmdsi->bmdsi_leases, bml);
+
+		if ((wlease + rlease) > 1) {
+			psc_assert(bml->bml_chain->bml_flags & BML_CHAIN);
+			psc_assert(psclist_disjoint(&bml->bml_chain->bml_bmdsi_lentry));			
+
+			bml->bml_chain->bml_flags &= ~BML_CHAIN;
+			pll_addtail(&bmdsi->bmdsi_leases, bml->bml_chain);
+			
+			tail->bml_chain = bml->bml_chain;
+		} else
+			psc_assert(bml == bml->bml_chain);
+	}
+	
+	if (wlease == 1) {
+		bmdsi->bmdsi_writers--;
+		if (rlease)
+			bmdsi->bmdsi_readers++;
+	}
+	
+#if 0
 	if (wlease || rlease) {
 		struct bmap_mds_lease *tmp=obml;
 
@@ -814,6 +860,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		}
 
 	}
+#endif
+
 	BML_ULOCK(bml);
 
 	if ((b->bcm_mode & BMAP_DIO) &&
