@@ -173,6 +173,48 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 }
 
 /**
+ * mds_txg_handle - Tie system journal with ZFS transaction groups.
+ */
+void
+mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
+{
+	static void *txgFinfo = NULL;
+	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	static uint64_t cur_txg = 0;
+	size_t nb;
+	int rc;
+
+	psc_assert(op == PJRNL_TXG_GET || op == PJRNL_TXG_PUT);
+	spinlock(&lock);
+
+	if (!txgFinfo) {
+		rc = zfsslash2_opencreate(MDSIO_FID_ROOT, &rootcreds, 
+			  O_RDWR, 0, SL_PATH_TXG, NULL, NULL, NULL, &txgFinfo, 
+			  NULL, NULL);
+		psc_assert(!rc && txgFinfo);
+	}
+	
+	if (op == PJRNL_TXG_GET) {
+
+		rc = zfsslash2_read(&rootcreds, &cur_txg, sizeof(uint64_t), 
+			    &nb, 0, txgFinfo);
+		*txgp = cur_txg;
+
+	} else {
+		if (*txgp > cur_txg) {
+			cur_txg = *txgp;
+			rc = zfsslash2_write(&rootcreds, &cur_txg, 
+				     sizeof(uint64_t), &nb, 0, txgFinfo, 
+				     NULL, NULL);
+		}
+	}
+	psc_assert(!rc && nb == sizeof(uint64_t));
+
+//	psc_notify("Current txg = 0x%"PRIx64", cur_txg);
+	freelock(&lock);
+}
+
+/**
  * mds_replay_handle - Handle journal replay events.
  */
 void
@@ -935,8 +977,12 @@ mds_journal_init(void)
 	txg = mdsio_last_synced_txg();
 	if (i == 1) {
 		mdsJournal = pjournal_init(
-			r->res_jrnldev, txgfn, txg, SLMTHRT_JRNL,
-			"slmjthr", mds_replay_handler, NULL);
+				r->res_jrnldev, 
+				SLMTHRT_JRNL,
+				"slmjthr", 
+				mds_txg_handler, 
+				mds_replay_handler, 
+				NULL);
 		if (mdsJournal == NULL)
 			psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
 
@@ -947,8 +993,11 @@ mds_journal_init(void)
 	 * We have peer MDSes, let us start the distill operation.
 	 */
 	mdsJournal = pjournal_init(
-		r->res_jrnldev, txgfn, txg, SLMTHRT_JRNL,
-		"slmjthr", mds_replay_handler, 
+		r->res_jrnldev, 
+		SLMTHRT_JRNL,
+		"slmjthr", 
+		mds_txg_handler,
+		mds_replay_handler, 
 		mds_distill_handler);
 
 	if (mdsJournal == NULL)
