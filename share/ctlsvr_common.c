@@ -20,6 +20,7 @@
 #include <stdio.h>
 
 #include "pfl/str.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/lock.h"
@@ -28,6 +29,7 @@
 #include "ctlsvr.h"
 #include "fidcache.h"
 #include "slconfig.h"
+#include "slconn.h"
 
 /**
  * slctlrep_getconns - send a response to a "GETCONNS" inquiry.
@@ -39,6 +41,7 @@ int
 slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slctlmsg_conn *scc = m;
+	struct pscrpc_import *imp;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
@@ -50,24 +53,25 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	CONF_FOREACH_SITE(s)
 		SITE_FOREACH_RES(s, r, i)
 			RES_FOREACH_MEMB(r, resm, j) {
-				/* XXX strip off ad@PSC:1.1.1.1@tcp9 */
 				strlcpy(scc->scc_addrbuf,
 				    resm->resm_addrbuf,
 				    sizeof(scc->scc_addrbuf));
 				scc->scc_type = r->res_type;
 
-#if 0
-				if (zexp->zexp_exp->exp_connection)
-					psc_id2str(zexp->zexp_exp->exp_connection->c_peer,
-					    zcc->zcc_nidstr);
+				if (resm->resm_csvc) {
+					imp = resm->resm_csvc->csvc_import;
+					if (imp && imp->imp_connection)
+						psc_id2str(imp->imp_connection->c_peer,
+						    scc->scc_addrbuf);
 
-				scc->scc_flags = resm->resm_csvc->csvc_flags;
-				scc->scc_refcnt = resm->resm_csvc->csvc_refcnt;
-				scc->scc_xflags = 0;
-				if (imp->imp_failed == 0 &&
-				    imp->imp_invalid == 0)
-					scc->scc_xflags |= SCCF_ONLINE;
-#endif
+					scc->scc_cflags = resm->resm_csvc->csvc_flags;
+					scc->scc_refcnt = psc_atomic32_read(
+					    &resm->resm_csvc->csvc_refcnt);
+					scc->scc_flags = 0;
+					if (imp->imp_failed == 0 &&
+					    imp->imp_invalid == 0)
+						scc->scc_flags |= SCCF_ONLINE;
+				}
 
 				rc = psc_ctlmsg_sendv(fd, mh, scc);
 				if (!rc)
