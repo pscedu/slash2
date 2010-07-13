@@ -455,6 +455,7 @@ slmupschedthr_main(struct psc_thread *thr)
 				goto restart;
 			}
 
+#if 0
 			rc = mds_inox_ensure_loaded(USWI_INOH(wk));
 			if (rc) {
 				psc_warnx("couldn't load inoh repl table: %s",
@@ -462,6 +463,7 @@ slmupschedthr_main(struct psc_thread *thr)
 				slmupschedthr_removeq(wk);
 				goto restart;
 			}
+#endif
 
 			has_work = 0;
 
@@ -732,6 +734,7 @@ uswi_initf(struct up_sched_work_item *wk, struct fidc_membh *fcmh, int flags)
 	    NULL, 0, "upsched-%lx", fcmh_2_fid(fcmh));
 	psc_atomic32_set(&wk->uswi_refcnt, 1);
 	wk->uswi_fcmh = fcmh; /* XXX take fcmh_refcnt! */
-	SPLAY_INSERT(upschedtree, &upsched_tree, wk);
+	if ((flags & USWI_INITF_NOPERSIST) == 0)
+		SPLAY_INSERT(upschedtree, &upsched_tree, wk);
 	return (0);
 }
