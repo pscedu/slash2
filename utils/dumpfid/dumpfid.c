@@ -86,7 +86,7 @@ dumpfid(const char *fn)
 		nr = SL_MAX_REPLICAS;
 	for (j = 0; j + SL_DEF_REPLICAS < nr; j++)
 		printf("%s%u", j ? "," : "", inox.inox_repls[j].bs_id);
-	printf(" nbp:%d\n", inox.inox_newbmap_policy);
+	printf(" nbp:%d\n", ino.ino_newbmap_policy);
  out:
 	close(fd);
 }
