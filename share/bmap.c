@@ -128,11 +128,13 @@ int
 bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
     struct bmapc_memb **bp)
 {
-	int rc = 0, do_load = 0, locked;
-	int bmaprw = (rw == SL_WRITE ? BMAP_WR : BMAP_RD);
+	int rc = 0, do_load = 0, locked, bmaprw = 0;
 	struct bmapc_memb *b;
 
 	*bp = NULL;
+
+	if (rw)
+		bmaprw = ((rw == SL_WRITE) ? BMAP_WR : BMAP_RD);
 
 	locked = FCMH_RLOCK(f);
 	b = bmap_lookup_cache_locked(f, n);
@@ -183,7 +185,12 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		bcm_wait_locked(b, (b->bcm_mode & BMAP_INIT));
 
 	retry:
-		if (!(bmaprw & b->bcm_mode) && bmap_ops.bmo_mode_chngf) {
+		/* Not all lookups are done with the intent of 
+		 *   changing the bmap mode.  bmap_lookup() does not
+		 *   specify a rw value.
+		 */
+		if (bmaprw && !(bmaprw & b->bcm_mode) && 
+		    bmap_ops.bmo_mode_chngf) {
 			/* Others wishing to access this bmap in the
 			 *   same mode must wait until MDCHNG ops have
 			 *   completed.  If the desired mode is present
