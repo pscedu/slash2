@@ -1127,7 +1127,7 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 		validop = 0;
 		rc = -EINVAL;
 	}
-	psc_notify("Redo namespace log: op = %d, name = %s, id = %"PRIx64 "rc = %d",
+	psc_notify("Redo namespace log: op = %d, name = %s, id = %"PRIx64" rc = %d",
 		jnamespace->sjnm_op, jnamespace->sjnm_name,
 		jnamespace->sjnm_target_s2id, rc);
 
