@@ -123,15 +123,15 @@ struct bmapc_memb {
 	    ## __VA_ARGS__)
 
 
-/* per-replica states */
-#define SL_REPLST_INACTIVE	0
-#define SL_REPLST_SCHED		1
-#define SL_REPLST_OLD		2
-#define SL_REPLST_ACTIVE	3
-#define SL_REPLST_TRUNCPNDG	4
-#define SL_REPLST_GARBAGE	5
-#define SL_REPLST_GARBAGE_SCHED	6
-#define SL_NREPLST		7
+/* bmap per-replica states */
+#define BMAPST_INVALID		0	/* no/stale data present */
+#define BMAPST_REPL_SCHED	1	/* replica is being made */
+#define BMAPST_REPL_QUEUED	2	/* replica needs to be made */
+#define BMAPST_VALID		3	/* replica is active */
+#define BMAPST_TRUNCPNDG	4	/* partial truncation in bmap */
+#define BMAPST_GARBAGE		5	/* marked for deletion */
+#define BMAPST_GARBAGE_SCHED	6	/* being deleted */
+#define NBMAPST			7
 
 #define slash_bmap_od		srt_bmap_wire
 
@@ -147,7 +147,7 @@ enum {
 
 /*
  * Routines to get and fetch a bmap replica's status.
- * This code assumes SL_NREPLST is < 256 !
+ * This code assumes NBMAPST is < 256 !
  */
 #define SL_REPL_GET_BMAP_IOS_STAT(data, off)				\
 	(SL_REPLICA_MASK &						\
@@ -183,17 +183,17 @@ _log_debug_bmapodv(const char *file, const char *func, int lineno,
 {
 	unsigned char *b = bmap->bcm_od->bh_repls;
 	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1];
-	int off, k, ch[SL_NREPLST];
+	int off, k, ch[NBMAPST];
 
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 
-	ch[SL_REPLST_INACTIVE] = '-';
-	ch[SL_REPLST_SCHED] = 's';
-	ch[SL_REPLST_OLD] = 'o';
-	ch[SL_REPLST_ACTIVE] = '+';
-	ch[SL_REPLST_TRUNCPNDG] = 't';
-	ch[SL_REPLST_GARBAGE] = 'g';
-	ch[SL_REPLST_GARBAGE_SCHED] = 'd';
+	ch[BMAPST_INVALID] = '-';
+	ch[BMAPST_REPL_SCHED] = 's';
+	ch[BMAPST_REPL_QUEUED] = 'q';
+	ch[BMAPST_VALID] = '+';
+	ch[BMAPST_TRUNCPNDG] = 't';
+	ch[BMAPST_GARBAGE] = 'g';
+	ch[BMAPST_GARBAGE_SCHED] = 'x';
 
 	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
 	    k++, off += SL_BITS_PER_REPLICA)

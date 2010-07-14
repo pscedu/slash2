@@ -617,7 +617,7 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
-	int tract[SL_NREPLST], to_set;
+	int tract[NBMAPST], to_set;
 	struct up_sched_work_item *wk;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
@@ -653,13 +653,13 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			// bmaps write leases may not be granted
 			// for this bmap or any bmap beyond
 
-			tract[SL_REPLST_INACTIVE] = -1;
-			tract[SL_REPLST_SCHED] = -1;
-			tract[SL_REPLST_OLD] = -1;
-			tract[SL_REPLST_ACTIVE] = SL_REPLST_TRUNCPNDG;
-			tract[SL_REPLST_TRUNCPNDG] = -1;
-			tract[SL_REPLST_GARBAGE] = -1;
-			tract[SL_REPLST_GARBAGE_SCHED] = -1;
+			tract[BMAPST_INVALID] = -1;
+			tract[BMAPST_REPL_SCHED] = -1;
+			tract[BMAPST_REPL_QUEUED] = -1;
+			tract[BMAPST_VALID] = BMAPST_TRUNCPNDG;
+			tract[BMAPST_TRUNCPNDG] = -1;
+			tract[BMAPST_GARBAGE] = -1;
+			tract[BMAPST_GARBAGE_SCHED] = -1;
 
 			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
 			if (mds_bmap_load(fcmh, i, &bcm) == 0) {
@@ -667,13 +667,13 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				mds_repl_bmap_rel(bcm);
 			}
 
-			tract[SL_REPLST_INACTIVE] = -1;
-			tract[SL_REPLST_SCHED] = SL_REPLST_GARBAGE;
-			tract[SL_REPLST_OLD] = SL_REPLST_GARBAGE;
-			tract[SL_REPLST_ACTIVE] = SL_REPLST_GARBAGE;
-			tract[SL_REPLST_TRUNCPNDG] = -1;
-			tract[SL_REPLST_GARBAGE] = -1;
-			tract[SL_REPLST_GARBAGE_SCHED] = -1;
+			tract[BMAPST_INVALID] = -1;
+			tract[BMAPST_REPL_SCHED] = BMAPST_GARBAGE;
+			tract[BMAPST_REPL_QUEUED] = BMAPST_GARBAGE;
+			tract[BMAPST_VALID] = BMAPST_GARBAGE;
+			tract[BMAPST_TRUNCPNDG] = -1;
+			tract[BMAPST_GARBAGE] = -1;
+			tract[BMAPST_GARBAGE_SCHED] = -1;
 
 			for (i++; i < fcmh_2_nbmaps(fcmh); i++) {
 				if (mds_bmap_load(fcmh, i, &bcm))
@@ -693,7 +693,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 #if 0
 	- synchronously contact an IOS requesting CRC recalculation for sliver and
-	  mark SL_REPLST_ACTIVE on success
+	  mark BMAPST_VALID on success
 	- if BMAP_PERSIST, notify replication queuer
 #endif
 		}

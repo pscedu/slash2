@@ -362,7 +362,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	msbd = bcm->bcm_pri;
 	SL_REPL_SET_BMAP_IOS_STAT(msbd->msbd_msbcr.msbcr_repls,
-	    0, SL_REPLST_ACTIVE);
+	    0, BMAPST_VALID);
 
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
  out:

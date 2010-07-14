@@ -283,7 +283,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 
 	val = SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls, off);
 
-	if (val >= SL_NREPLST)
+	if (val >= NBMAPST)
 		psc_fatalx("corrupt bmap");
 
 	/* Check for return values
@@ -320,9 +320,9 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
  * @tract: translation actions; for each array slot, set states of the type
  *	corresponding to the array index to the array value.  For example:
  *
- *		tract[SL_REPLST_INACTIVE] = SL_REPLST_ACTIVE
+ *		tract[BMAPST_INVALID] = BMAPST_VALID
  *
- *	This changes any SL_REPLST_INACTIVE states into SL_REPLST_ACTIVE.
+ *	This changes any BMAPST_INVALID states into BMAPST_VALID.
  * @retifset: return the value of the slot in this array corresponding to
  *	the state value as the slot index, if the array value is nonzero;
  *	the last replica always gets priority unless SCIRCUIT is specified.
@@ -381,24 +381,24 @@ mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 
 /*
  * mds_repl_inv_except - For the given bmap, change the status of
- *	all its replicas marked "active" to "old" except for the replica
- *	specified.
+ *	all its replicas marked "valid" to "invalid" except for the
+ *	replica specified.
  *
  *	This is a high-level convenience call provided to easily update
  *	status after an ION has received some new I/O, which would make
  *	all other existing copies of the bmap on any other replicas old.
  * @bcm: the bmap.
- * @ios: the ION resource that should stay marked "active".
+ * @ios: the ION resource that should stay marked "valid".
  */
 int
 mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 {
-	int rc, iosidx, tract[SL_NREPLST], retifset[SL_NREPLST];
-	uint32_t policy;
+	int rc, iosidx, tract[NBMAPST], retifset[NBMAPST];
 	struct up_sched_work_item *wk;
-	sl_replica_t repl;
+	uint32_t policy;
 
-	/* Find/add our replica's IOS ID but instruct mds_repl_ios_lookup_add()
+	/*
+	 * Find/add our replica's IOS ID but instruct mds_repl_ios_lookup_add()
 	 *   not to journal this operation because the inode's repl table
 	 *   will be journaled with this bmap's updated repl bitmap.
 	 * This saves a journal I/O.
@@ -407,37 +407,24 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	if (iosidx < 0)
 		psc_fatalx("lookup ios %d: %s", ios, slstrerror(iosidx));
 
-	/* If this bmap is marked for persistent replication,
-	 * the repl request must exist and should be marked such
-	 * that the replication monitors do not release it in the
-	 * midst of processing it as this activity now means they
-	 * have more to do.
-	 */
 	BHREPL_POLICY_GET(bcm, policy);
-	if (policy == BRP_PERSIST) {
-		wk = uswi_find(&bcm->bcm_fcmh->fcmh_fg, NULL);
-		repl.bs_id = ios;
-		mds_repl_enqueue_sites(wk, &repl, 1);
-		uswi_unref(wk);
-	}
 
-	/* Ensure this replica is marked active
-	 */
-	tract[SL_REPLST_INACTIVE] = SL_REPLST_ACTIVE;
-	tract[SL_REPLST_OLD] = -1;
-	tract[SL_REPLST_SCHED] = -1;
-	tract[SL_REPLST_ACTIVE] = -1;
-	tract[SL_REPLST_TRUNCPNDG] = -1;
-	tract[SL_REPLST_GARBAGE] = -1;
-	tract[SL_REPLST_GARBAGE_SCHED] = -1;
+	/* Ensure replica on active IOS is marked valid. */
+	tract[BMAPST_INVALID] = BMAPST_VALID;
+	tract[BMAPST_REPL_QUEUED] = -1;
+	tract[BMAPST_REPL_SCHED] = -1;
+	tract[BMAPST_VALID] = -1;
+	tract[BMAPST_TRUNCPNDG] = -1;
+	tract[BMAPST_GARBAGE] = -1;
+	tract[BMAPST_GARBAGE_SCHED] = -1;
 
-	retifset[SL_REPLST_INACTIVE] = 0;
-	retifset[SL_REPLST_OLD] = EINVAL;
-	retifset[SL_REPLST_SCHED] = EINVAL;
-	retifset[SL_REPLST_ACTIVE] = 0;
-	retifset[SL_REPLST_TRUNCPNDG] = EINVAL;
-	retifset[SL_REPLST_GARBAGE] = EINVAL;
-	retifset[SL_REPLST_GARBAGE_SCHED] = EINVAL;
+	retifset[BMAPST_INVALID] = 0;
+	retifset[BMAPST_REPL_QUEUED] = EINVAL;
+	retifset[BMAPST_REPL_SCHED] = EINVAL;
+	retifset[BMAPST_VALID] = 0;
+	retifset[BMAPST_TRUNCPNDG] = EINVAL;
+	retifset[BMAPST_GARBAGE] = EINVAL;
+	retifset[BMAPST_GARBAGE_SCHED] = EINVAL;
 
 	rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	if (rc)
@@ -451,29 +438,45 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	 * the replication status update comes from the ION, we will know
 	 * he copied an old bmap and mark it OLD then.
 	 */
-	tract[SL_REPLST_INACTIVE] = -1;
-	tract[SL_REPLST_OLD] = -1;
-	tract[SL_REPLST_SCHED] = -1;
-	tract[SL_REPLST_ACTIVE] = SL_REPLST_OLD;
-	tract[SL_REPLST_TRUNCPNDG] = -1;
-	tract[SL_REPLST_GARBAGE] = -1;
-	tract[SL_REPLST_GARBAGE_SCHED] = -1;
+	tract[BMAPST_INVALID] = -1;
+	tract[BMAPST_REPL_QUEUED] = -1;
+	tract[BMAPST_REPL_SCHED] = -1;
+	tract[BMAPST_VALID] = policy == BRP_PERSIST ?
+	    BMAPST_REPL_QUEUED : BMAPST_REPL_INVALID;
+	tract[BMAPST_TRUNCPNDG] = -1;
+	tract[BMAPST_GARBAGE] = -1;
+	tract[BMAPST_GARBAGE_SCHED] = -1;
 
-	retifset[SL_REPLST_INACTIVE] = 0;
-	retifset[SL_REPLST_OLD] = 0;
-	retifset[SL_REPLST_SCHED] = 0;
-	retifset[SL_REPLST_ACTIVE] = 1;
-	retifset[SL_REPLST_TRUNCPNDG] = 0;
-	retifset[SL_REPLST_GARBAGE] = 0;
-	retifset[SL_REPLST_GARBAGE_SCHED] = 0;
+	retifset[BMAPST_INVALID] = 0;
+	retifset[BMAPST_REPL_QUEUED] = 0;
+	retifset[BMAPST_REPL_SCHED] = 0;
+	retifset[BMAPST_VALID] = 1;
+	retifset[BMAPST_TRUNCPNDG] = 0;
+	retifset[BMAPST_GARBAGE] = 0;
+	retifset[BMAPST_GARBAGE_SCHED] = 0;
 
 	if (mds_repl_bmap_walk(bcm, tract, retifset,
 	    REPL_WALKF_MODOTH, &iosidx, 1))
 		BHGEN_INCREMENT(bcm);
 
-	/* Write changes to disk
-	 */
+	/* Write changes to disk. */
 	mds_bmap_repl_update(bcm);
+
+	/*
+	 * If this bmap is marked for persistent replication,
+	 * the repl request must exist and should be marked such
+	 * that the replication monitors do not release it in the
+	 * midst of processing it as this activity now means they
+	 * have more to do.
+	 */
+	if (policy == BRP_PERSIST) {
+		sl_replica_t repl;
+
+		wk = uswi_find(&bcm->bcm_fcmh->fcmh_fg, NULL);
+		repl.bs_id = ios;
+		mds_repl_enqueue_sites(wk, &repl, 1);
+		uswi_unref(wk);
+	}
 
 	return (0);
 }
@@ -514,7 +517,7 @@ int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     const sl_replica_t *iosv, int nios)
 {
-	int tract[SL_NREPLST], retifset[SL_NREPLST], retifzero[SL_NREPLST];
+	int tract[NBMAPST], retifset[NBMAPST], retifzero[NBMAPST];
 	int iosidx[SL_MAX_REPLICAS], rc, locked;
 	struct up_sched_work_item *newrq, *wk;
 	struct fidc_membh *fcmh;
@@ -588,46 +591,46 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	}
 
 	/*
-	 * Check inode's bmap state.  INACTIVE and ACTIVE states
+	 * Check inode's bmap state.  INVALID and VALID states
 	 * become OLD, signifying that replication needs to happen.
 	 */
-	tract[SL_REPLST_INACTIVE] = SL_REPLST_OLD;
-	tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
-	tract[SL_REPLST_OLD] = -1;
-	tract[SL_REPLST_ACTIVE] = -1;
-	tract[SL_REPLST_TRUNCPNDG] = -1;
-	tract[SL_REPLST_GARBAGE] = -1;
-	tract[SL_REPLST_GARBAGE_SCHED] = -1;
+	tract[BMAPST_INVALID] = BMAPST_REPL_QUEUED;
+	tract[BMAPST_REPL_SCHED] = BMAPST_REPL_QUEUED;
+	tract[BMAPST_REPL_QUEUED] = -1;
+	tract[BMAPST_VALID] = -1;
+	tract[BMAPST_TRUNCPNDG] = -1;
+	tract[BMAPST_GARBAGE] = -1;
+	tract[BMAPST_GARBAGE_SCHED] = -1;
 
-	retifzero[SL_REPLST_INACTIVE] = 0;
-	retifzero[SL_REPLST_ACTIVE] = 1;
-	retifzero[SL_REPLST_OLD] = 0;
-	retifzero[SL_REPLST_SCHED] = 0;
-	retifzero[SL_REPLST_TRUNCPNDG] = 0;
-	retifzero[SL_REPLST_GARBAGE] = 0;
-	retifzero[SL_REPLST_GARBAGE_SCHED] = 0;
+	retifzero[BMAPST_INVALID] = 0;
+	retifzero[BMAPST_VALID] = 1;
+	retifzero[BMAPST_REPL_QUEUED] = 0;
+	retifzero[BMAPST_REPL_SCHED] = 0;
+	retifzero[BMAPST_TRUNCPNDG] = 0;
+	retifzero[BMAPST_GARBAGE] = 0;
+	retifzero[BMAPST_GARBAGE_SCHED] = 0;
 
 	if (bmapno == (sl_bmapno_t)-1) {
 		int repl_some_act = 0, repl_all_act = 1;
-		int ret_if_inact[SL_NREPLST];
+		int ret_if_inact[NBMAPST];
 
 		/* check if all bmaps are already old/queued */
-		retifset[SL_REPLST_INACTIVE] = 1;
-		retifset[SL_REPLST_SCHED] = 0;
-		retifset[SL_REPLST_OLD] = 0;
-		retifset[SL_REPLST_ACTIVE] = 1;
-		retifset[SL_REPLST_TRUNCPNDG] = 0;
-		retifset[SL_REPLST_GARBAGE] = 0;
-		retifset[SL_REPLST_GARBAGE_SCHED] = 0;
+		retifset[BMAPST_INVALID] = 1;
+		retifset[BMAPST_REPL_SCHED] = 0;
+		retifset[BMAPST_REPL_QUEUED] = 0;
+		retifset[BMAPST_VALID] = 1;
+		retifset[BMAPST_TRUNCPNDG] = 0;
+		retifset[BMAPST_GARBAGE] = 0;
+		retifset[BMAPST_GARBAGE_SCHED] = 0;
 
-		/* check if all bmaps are already active */
-		ret_if_inact[SL_REPLST_INACTIVE] = 1;
-		ret_if_inact[SL_REPLST_SCHED] = 1;
-		ret_if_inact[SL_REPLST_OLD] = 1;
-		ret_if_inact[SL_REPLST_ACTIVE] = 0;
-		ret_if_inact[SL_REPLST_TRUNCPNDG] = 1;
-		ret_if_inact[SL_REPLST_GARBAGE] = 1;
-		ret_if_inact[SL_REPLST_GARBAGE_SCHED] = 1;
+		/* check if all bmaps are already valid */
+		ret_if_inact[BMAPST_INVALID] = 1;
+		ret_if_inact[BMAPST_REPL_SCHED] = 1;
+		ret_if_inact[BMAPST_REPL_QUEUED] = 1;
+		ret_if_inact[BMAPST_VALID] = 0;
+		ret_if_inact[BMAPST_TRUNCPNDG] = 1;
+		ret_if_inact[BMAPST_GARBAGE] = 1;
+		ret_if_inact[BMAPST_GARBAGE_SCHED] = 1;
 
 		for (bmapno = 0; bmapno < USWI_NBMAPS(wk); bmapno++) {
 			if (mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm))
@@ -636,7 +639,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			BMAP_LOCK(bcm);
 
 			/*
-			 * If no ACTIVE replicas exist, the bmap must be
+			 * If no VALID replicas exist, the bmap must be
 			 * uninitialized/all zeroes.  Skip it.
 			 */
 			if (mds_repl_bmap_walk_all(bcm, NULL, retifzero,
@@ -661,20 +664,20 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		 * If this bmap is already being
 		 * replicated, return EALREADY.
 		 */
-		retifset[SL_REPLST_INACTIVE] = 0;
-		retifset[SL_REPLST_SCHED] = EALREADY;
-		retifset[SL_REPLST_OLD] = EALREADY;
-		retifset[SL_REPLST_ACTIVE] = 0;
-		retifset[SL_REPLST_TRUNCPNDG] = SLERR_REPL_NOT_ACT;
-		retifset[SL_REPLST_GARBAGE] = SLERR_REPL_NOT_ACT;
-		retifset[SL_REPLST_GARBAGE_SCHED] = SLERR_REPL_NOT_ACT;
+		retifset[BMAPST_INVALID] = 0;
+		retifset[BMAPST_REPL_SCHED] = EALREADY;
+		retifset[BMAPST_REPL_QUEUED] = EALREADY;
+		retifset[BMAPST_VALID] = 0;
+		retifset[BMAPST_TRUNCPNDG] = SLERR_REPL_NOT_ACT;
+		retifset[BMAPST_GARBAGE] = SLERR_REPL_NOT_ACT;
+		retifset[BMAPST_GARBAGE_SCHED] = SLERR_REPL_NOT_ACT;
 
 		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 		if (rc == 0) {
 			BMAP_LOCK(bcm);
 
 			/*
-			 * If no ACTIVE replicas exist, the bmap must be
+			 * If no VALID replicas exist, the bmap must be
 			 * uninitialized/all zeroes.  Skip it.
 			 */
 			if (mds_repl_bmap_walk_all(bcm, NULL, retifzero,
@@ -703,7 +706,7 @@ int
 mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     const sl_replica_t *iosv, int nios)
 {
-	int rc, tract[SL_NREPLST], retifset[SL_NREPLST], iosidx[SL_MAX_REPLICAS];
+	int rc, tract[NBMAPST], retifset[NBMAPST], iosidx[SL_MAX_REPLICAS];
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm;
 
@@ -722,22 +725,22 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		return (rc);
 	}
 
-	tract[SL_REPLST_INACTIVE] = -1;
-	tract[SL_REPLST_ACTIVE] = -1;
-	tract[SL_REPLST_OLD] = SL_REPLST_INACTIVE;
-	tract[SL_REPLST_SCHED] = SL_REPLST_INACTIVE;
-	tract[SL_REPLST_TRUNCPNDG] = -1;
-	tract[SL_REPLST_GARBAGE] = -1;
-	tract[SL_REPLST_GARBAGE_SCHED] = -1;
+	tract[BMAPST_INVALID] = -1;
+	tract[BMAPST_VALID] = -1;
+	tract[BMAPST_REPL_QUEUED] = BMAPST_INVALID;
+	tract[BMAPST_REPL_SCHED] = BMAPST_INVALID;
+	tract[BMAPST_TRUNCPNDG] = -1;
+	tract[BMAPST_GARBAGE] = -1;
+	tract[BMAPST_GARBAGE_SCHED] = -1;
 
 	if (bmapno == (sl_bmapno_t)-1) {
-		retifset[SL_REPLST_INACTIVE] = 0;
-		retifset[SL_REPLST_ACTIVE] = 1;
-		retifset[SL_REPLST_OLD] = 1;
-		retifset[SL_REPLST_SCHED] = 1;
-		retifset[SL_REPLST_TRUNCPNDG] = 0;
-		retifset[SL_REPLST_GARBAGE] = 0;
-		retifset[SL_REPLST_GARBAGE_SCHED] = 0;
+		retifset[BMAPST_INVALID] = 0;
+		retifset[BMAPST_VALID] = 1;
+		retifset[BMAPST_REPL_QUEUED] = 1;
+		retifset[BMAPST_REPL_SCHED] = 1;
+		retifset[BMAPST_TRUNCPNDG] = 0;
+		retifset[BMAPST_GARBAGE] = 0;
+		retifset[BMAPST_GARBAGE_SCHED] = 0;
 
 		rc = SLERR_REPLS_ALL_INACT;
 		for (bmapno = 0; bmapno < USWI_NBMAPS(wk); bmapno++) {
@@ -750,13 +753,13 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 			mds_repl_bmap_rel(bcm);
 		}
 	} else if (mds_bmap_exists(wk->uswi_fcmh, bmapno)) {
-		retifset[SL_REPLST_INACTIVE] = SLERR_REPL_ALREADY_INACT;
-		retifset[SL_REPLST_ACTIVE] = 0;
-		retifset[SL_REPLST_OLD] = 0;
-		retifset[SL_REPLST_SCHED] = 0;
-		retifset[SL_REPLST_TRUNCPNDG] = 0; /* XXX EINVAL? */
-		retifset[SL_REPLST_GARBAGE] = EINVAL;
-		retifset[SL_REPLST_GARBAGE_SCHED] = EINVAL;
+		retifset[BMAPST_INVALID] = SLERR_REPL_ALREADY_INACT;
+		retifset[BMAPST_VALID] = 0;
+		retifset[BMAPST_REPL_QUEUED] = 0;
+		retifset[BMAPST_REPL_SCHED] = 0;
+		retifset[BMAPST_TRUNCPNDG] = 0; /* XXX EINVAL? */
+		retifset[BMAPST_GARBAGE] = EINVAL;
+		retifset[BMAPST_GARBAGE_SCHED] = EINVAL;
 
 		rc = mds_bmap_load(wk->uswi_fcmh, bmapno, &bcm);
 		if (rc == 0) {
@@ -776,7 +779,7 @@ mds_repl_scandir(void)
 {
 	sl_replica_t iosv[SL_MAX_REPLICAS];
 	struct up_sched_work_item *wk;
-	int rc, tract[SL_NREPLST];
+	int rc, tract[NBMAPST];
 	char *buf, fn[NAME_MAX];
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
@@ -840,13 +843,13 @@ mds_repl_scandir(void)
 			wk->uswi_flags &= ~USWIF_BUSY;
 			psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
-			tract[SL_REPLST_INACTIVE] = -1;
-			tract[SL_REPLST_ACTIVE] = -1;
-			tract[SL_REPLST_OLD] = -1;
-			tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
-			tract[SL_REPLST_TRUNCPNDG] = -1;
-			tract[SL_REPLST_GARBAGE] = -1;
-			tract[SL_REPLST_GARBAGE_SCHED] = -1;
+			tract[BMAPST_INVALID] = -1;
+			tract[BMAPST_VALID] = -1;
+			tract[BMAPST_REPL_QUEUED] = -1;
+			tract[BMAPST_REPL_SCHED] = BMAPST_REPL_QUEUED;
+			tract[BMAPST_TRUNCPNDG] = -1;
+			tract[BMAPST_GARBAGE] = -1;
+			tract[BMAPST_GARBAGE_SCHED] = -1;
 
 			/*
 			 * If we crashed, revert all inflight SCHED'ed
@@ -1005,7 +1008,7 @@ mds_repl_buildbusytable(void)
 void
 mds_repl_reset_scheduled(sl_ios_id_t resid)
 {
-	int tract[SL_NREPLST], rc, iosidx;
+	int tract[NBMAPST], rc, iosidx;
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm;
 	sl_replica_t repl;
@@ -1030,13 +1033,13 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		if (iosidx < 0)
 			goto end;
 
-		tract[SL_REPLST_INACTIVE] = -1;
-		tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
-		tract[SL_REPLST_OLD] = -1;
-		tract[SL_REPLST_ACTIVE] = -1;
-		tract[SL_REPLST_TRUNCPNDG] = -1;
-		tract[SL_REPLST_GARBAGE] = -1;
-		tract[SL_REPLST_GARBAGE_SCHED] = -1;
+		tract[BMAPST_INVALID] = -1;
+		tract[BMAPST_REPL_SCHED] = BMAPST_REPL_QUEUED;
+		tract[BMAPST_REPL_QUEUED] = -1;
+		tract[BMAPST_VALID] = -1;
+		tract[BMAPST_TRUNCPNDG] = -1;
+		tract[BMAPST_GARBAGE] = -1;
+		tract[BMAPST_GARBAGE_SCHED] = -1;
 
 		for (n = 0; n < USWI_NBMAPS(wk); n++) {
 			if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))

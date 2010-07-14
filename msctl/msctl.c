@@ -108,11 +108,11 @@ rsb_accul_replica_stats(struct replst_slave_bdata *rsb, int iosidx,
 	    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios +
 	    SL_NBITS_REPLST_BHDR) {
 		switch (SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)) {
-		case SL_REPLST_SCHED:
-		case SL_REPLST_OLD:
+		case BMAPST_REPL_SCHED:
+		case BMAPST_REPL_QUEUED:
 			++*bold;
 			break;
-		case SL_REPLST_ACTIVE:
+		case BMAPST_VALID:
 			++*bact;
 			break;
 		}
@@ -403,28 +403,20 @@ void
 replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	char map[SL_NREPLST], pmap[SL_NREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
+	char map[NBMAPST], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
 	sl_bmapno_t bact, bold, nb;
 	int n, nbw, off, dlen;
 	uint32_t iosidx;
 
-	map[SL_REPLST_SCHED] = 's';
-	map[SL_REPLST_OLD] = 'o';
-	map[SL_REPLST_ACTIVE] = '+';
-	map[SL_REPLST_INACTIVE] = '-';
-	map[SL_REPLST_TRUNCPNDG] = 't';
-	map[SL_REPLST_GARBAGE] = 'g';
-	map[SL_REPLST_GARBAGE_SCHED] = 'd';
-
-	pmap[SL_REPLST_SCHED] = 'S';
-	pmap[SL_REPLST_OLD] = 'O';
-	pmap[SL_REPLST_ACTIVE] = '*';
-	pmap[SL_REPLST_INACTIVE] = '-';
-	pmap[SL_REPLST_TRUNCPNDG] = 'T';
-	pmap[SL_REPLST_GARBAGE] = 'G';
-	pmap[SL_REPLST_GARBAGE_SCHED] = 'D';
+	map[BMAPST_REPL_SCHED] = 's';
+	map[BMAPST_REPL_QUEUED] = 'q';
+	map[BMAPST_VALID] = '+';
+	map[BMAPST_INVALID] = '-';
+	map[BMAPST_TRUNCPNDG] = 't';
+	map[BMAPST_GARBAGE] = 'g';
+	map[BMAPST_GARBAGE_SCHED] = 'x';
 
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen("repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);
@@ -460,8 +452,8 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 					nbw = 0;
 				if (nbw == 0)
 					printf("\n\t");
-				putchar((bhdr.srsb_repl_policy == BRP_PERSIST ? pmap : map)
-				    [SL_REPL_GET_BMAP_IOS_STAT(rsb->rsb_data, off)]);
+				putchar(map[SL_REPL_GET_BMAP_IOS_STAT(
+				    rsb->rsb_data, off)]);
 			}
 		}
 		putchar('\n');

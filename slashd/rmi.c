@@ -187,7 +187,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 int
 slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 {
-	int tract[SL_NREPLST], retifset[SL_NREPLST], iosidx;
+	int tract[NBMAPST], retifset[NBMAPST], iosidx;
 	struct sl_resm *dst_resm, *src_resm;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_generic_rep *mp;
@@ -216,33 +216,33 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (mds_bmap_load(wk->uswi_fcmh, mq->bmapno, &bcm))
 		goto out;
 
-	tract[SL_REPLST_INACTIVE] = -1;
-	tract[SL_REPLST_ACTIVE] = -1;
-	tract[SL_REPLST_TRUNCPNDG] = -1;
-	tract[SL_REPLST_GARBAGE] = -1;
-	tract[SL_REPLST_GARBAGE_SCHED] = -1;
+	tract[BMAPST_INVALID] = -1;
+	tract[BMAPST_VALID] = -1;
+	tract[BMAPST_TRUNCPNDG] = -1;
+	tract[BMAPST_GARBAGE] = -1;
+	tract[BMAPST_GARBAGE_SCHED] = -1;
 
 	BHGEN_GET(bcm, gen);
 	if (mq->rc || mq->bgen != gen) {
-		tract[SL_REPLST_OLD] = -1;
-		tract[SL_REPLST_SCHED] = SL_REPLST_OLD;
+		tract[BMAPST_REPL_QUEUED] = -1;
+		tract[BMAPST_REPL_SCHED] = BMAPST_REPL_QUEUED;
 	} else {
 		/*
 		 * If the MDS crashed and came back up, the state
 		 * will have changed from SCHED->OLD, so change
 		 * OLD->ACTIVE here for that case as well.
 		 */
-		tract[SL_REPLST_OLD] = SL_REPLST_ACTIVE;
-		tract[SL_REPLST_SCHED] = SL_REPLST_ACTIVE;
+		tract[BMAPST_REPL_QUEUED] = BMAPST_VALID;
+		tract[BMAPST_REPL_SCHED] = BMAPST_VALID;
 	}
 
-	retifset[SL_REPLST_INACTIVE] = EINVAL;
-	retifset[SL_REPLST_SCHED] = 0;
-	retifset[SL_REPLST_OLD] = EINVAL;
-	retifset[SL_REPLST_ACTIVE] = EINVAL;
-	retifset[SL_REPLST_TRUNCPNDG] = 0;
-	retifset[SL_REPLST_GARBAGE] = EINVAL;
-	retifset[SL_REPLST_GARBAGE_SCHED] = EINVAL;
+	retifset[BMAPST_INVALID] = EINVAL;
+	retifset[BMAPST_REPL_SCHED] = 0;
+	retifset[BMAPST_REPL_QUEUED] = EINVAL;
+	retifset[BMAPST_VALID] = EINVAL;
+	retifset[BMAPST_TRUNCPNDG] = 0;
+	retifset[BMAPST_GARBAGE] = EINVAL;
+	retifset[BMAPST_GARBAGE_SCHED] = EINVAL;
 
 	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_repl_bmap_rel(bcm);
