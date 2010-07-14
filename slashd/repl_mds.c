@@ -442,7 +442,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	tract[BMAPST_REPL_QUEUED] = -1;
 	tract[BMAPST_REPL_SCHED] = -1;
 	tract[BMAPST_VALID] = policy == BRP_PERSIST ?
-	    BMAPST_REPL_QUEUED : BMAPST_REPL_INVALID;
+	    BMAPST_REPL_QUEUED : BMAPST_INVALID;
 	tract[BMAPST_TRUNCPNDG] = -1;
 	tract[BMAPST_GARBAGE] = -1;
 	tract[BMAPST_GARBAGE_SCHED] = -1;
