@@ -215,10 +215,11 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 				     sizeof(uint64_t), &nb, 0, txgFinfo,
 				     NULL, NULL);
 			psc_assert(!rc && nb == sizeof(uint64_t));
+			psc_notify("Last synced ZFS transaction group"
+				   " number is now %"PRId64, cur_txg);
 		}
 	}
 
-	psc_notify("Current ZFS txg: %"PRIx64, cur_txg);
 	freelock(&lock);
 }
 
