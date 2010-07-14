@@ -188,7 +188,7 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 {
 	static void *txgFinfo = NULL;
 	static psc_spinlock_t lock = LOCK_INITIALIZER;
-	static uint64_t cur_txg = 0;
+	static struct psc_journal_cursor cursor = { 0, 0, 0, 0 };
 	size_t nb;
 	int rc;
 
@@ -198,7 +198,7 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 	if (!txgFinfo) {
 		mdsio_fid_t fid;
 
-		rc = zfsslash2_lookup(MDSIO_FID_ROOT, SL_PATH_TXG, NULL,
+		rc = zfsslash2_lookup(MDSIO_FID_ROOT, SL_PATH_CURSOR, NULL,
 			&fid, &rootcreds, NULL);
 		psc_assert(rc == 0);
 
@@ -209,20 +209,20 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 
 	if (op == PJRNL_TXG_GET) {
 
-		rc = zfsslash2_read(&rootcreds, &cur_txg, sizeof(uint64_t),
+		rc = zfsslash2_read(&rootcreds, &cursor, sizeof(struct psc_journal_cursor),
 			    &nb, 0, txgFinfo);
-		psc_assert(!rc && nb == sizeof(uint64_t));
-		*txgp = cur_txg;
+		psc_assert(!rc && nb == sizeof(struct psc_journal_cursor));
+		*txgp = cursor.pjc_txg;
 
 	} else {
-		if (*txgp > cur_txg) {
-			cur_txg = *txgp;
-			rc = zfsslash2_write(&rootcreds, &cur_txg,
-				     sizeof(uint64_t), &nb, 0, txgFinfo,
+		if (*txgp > cursor.pjc_txg) {
+			cursor.pjc_txg = *txgp;
+			rc = zfsslash2_write(&rootcreds, &cursor.pjc_txg,
+				     sizeof(struct psc_journal_cursor), &nb, 0, txgFinfo,
 				     NULL, NULL);
-			psc_assert(!rc && nb == sizeof(uint64_t));
+			psc_assert(!rc && nb == sizeof(struct psc_journal_cursor));
 			psc_notify("Last synced ZFS transaction group"
-				   " number is now %"PRId64, cur_txg);
+				   " number is now %"PRId64, cursor.pjc_txg);
 		}
 	}
 
@@ -943,7 +943,6 @@ mds_journal_init(void)
 	struct sl_site *s;
 	uint64_t txg;
 	int i, n;
-	char txgfn[PATH_MAX];
 
 	/*
 	 * To be read from a log file after we replay the system journal.
@@ -990,7 +989,6 @@ mds_journal_init(void)
 	if (r->res_jrnldev[0] == '\0')
 		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
 
-	xmkfn(txgfn, "%s/%s", globalConfig.gconf_fsroot, SL_PATH_TXG);
 	/*
 	 * If we are a standalone MDS, there is no need to start the distill
 	 * operation.

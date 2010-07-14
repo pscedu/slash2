@@ -26,9 +26,9 @@
  * work that needs to be done; (3) access SLASH2 files by SLASH2 IDs.
  */
 #define SL_PATH_PREFIX		".sl"
-#define SL_PATH_TXG		".sltxg"
 #define SL_PATH_REPLS		".slrepls"
 #define SL_PATH_FIDNS		".slfidns"
+#define SL_PATH_CURSOR		".slcursor"
 
 /* configuration/control socket paths */
 #if 0

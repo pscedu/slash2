@@ -30,6 +30,7 @@
 #include "pfl/pfl.h"
 #include "pfl/cdefs.h"
 #include "psc_util/log.h"
+#include "psc_util/journal.h"
 
 #include "fid.h"
 #include "mkfn.h"
@@ -65,7 +66,7 @@ slimmns_create(const char *root, uint32_t depth)
 {
 	char fn[PATH_MAX];
 	int fd, rc;
-	uint64_t txg = 0;
+	struct psc_journal_cursor cursor = { 0, 0, 0, 0 };
 
 	if (!depth)
 		depth = FID_PATH_DEPTH;
@@ -88,11 +89,11 @@ slimmns_create(const char *root, uint32_t depth)
 	if (rc == -1 && errno != EEXIST)
 		psc_fatal("mkdir %s", fn);
 
-	xmkfn(fn, "%s/%s", root, SL_PATH_TXG);
+	xmkfn(fn, "%s/%s", root, SL_PATH_CURSOR);
 	fd = open(fn, O_CREAT|O_TRUNC|O_WRONLY, 0600);
 	if (fd < 0)
 		psc_fatal("open %s", fn);
-	if (pwrite(fd, &txg, sizeof(txg), 0) != sizeof(txg))
+	if (pwrite(fd, &cursor, sizeof(cursor), 0) != sizeof(cursor))
 		psc_fatal("write %s", fn);
 	close(fd);
 }
