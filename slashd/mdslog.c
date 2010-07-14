@@ -196,12 +196,13 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 	spinlock(&lock);
 
 	if (!txgFinfo) {
-		mdsio_fid_t mfp;
+		mdsio_fid_t fid;
 
 		rc = zfsslash2_lookup(MDSIO_FID_ROOT, SL_PATH_TXG, NULL,
-			&mfp, &rootcreds, NULL);
+			&fid, &rootcreds, NULL);
 		psc_assert(rc == 0);
-		rc = zfsslash2_opencreate(mfp, &rootcreds, O_RDWR, 0,
+
+		rc = zfsslash2_opencreate(fid, &rootcreds, O_RDWR, 0,
 			NULL, NULL, NULL, NULL, &txgFinfo, NULL, NULL);
 		psc_assert(!rc && txgFinfo);
 	}
