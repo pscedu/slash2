@@ -37,14 +37,19 @@
 /*
  * slmds_jent_crc - used to log CRC updates which come from the ION's.
  * @sjc_ion: the ion who sent the request.
- * @sjc_fid: what file.
+ * @sjc_s2id: what file.
  * @sjc_bmapno: which bmap region.
  * @sjc_crc: array of slots and crcs.
  * Notes: I presume that this will be the most common operation into the
  *    journal.
  */
 struct slmds_jent_crc {
-	uint64_t		sjc_fid;		/* FID of underlying file system (i.e., ZFS) */
+	/*
+	 * We can't use ZFS ID here because the create operation may not
+	 * make it to the disk.  When we redo the creation, we will get
+	 * a different ZFS ID.
+	 */
+	uint64_t		sjc_s2id;
 	sl_bmapno_t		sjc_bmapno;
 	sl_ios_id_t		sjc_ion;		/* Track the ion which did the I/O */
 	int32_t			sjc_ncrcs;

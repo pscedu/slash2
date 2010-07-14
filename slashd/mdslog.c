@@ -136,7 +136,7 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 
 	jcrc = PJE_DATA(pje);
 
-	rc = zfsslash2_opencreate(jcrc->sjc_fid, &rootcreds, O_RDWR, 0, NULL,
+	rc = zfsslash2_opencreate(jcrc->sjc_s2id, &rootcreds, O_RDWR, 0, NULL,
 	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
 	if (rc)
 		psc_fatalx("zfsslash2_opencreate: %s", slstrerror(rc));
@@ -881,7 +881,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	psc_assert(bmap->bcm_mode & BMAP_MDS_CRC_UP);
 
 	jcrc = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_crc));
-	jcrc->sjc_fid = fcmh_2_mdsio_fid(bmap->bcm_fcmh);
+	jcrc->sjc_s2id = fcmh_2_fid(bmap->bcm_fcmh);
 	jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
 	jcrc->sjc_bmapno = bmap->bcm_blkno;
 	jcrc->sjc_ncrcs = n;
