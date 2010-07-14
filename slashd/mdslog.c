@@ -133,10 +133,15 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	struct slmds_jent_crc *jcrc;
 	struct srt_bmap_wire bmap_disk;
 	struct srm_bmap_crcwire *bmap_wire;
+	mdsio_fid_t fid;
 
 	jcrc = PJE_DATA(pje);
 
-	rc = zfsslash2_opencreate(jcrc->sjc_s2id, &rootcreds, O_RDWR, 0, NULL,
+	rc = zfsslash2_lookup_slfid(jcrc->sjc_s2id, &rootcreds, NULL, &fid);
+	if (rc)
+		psc_fatalx("zfsslash2_lookup_slfid: %s", slstrerror(rc));
+
+	rc = zfsslash2_opencreate(fid, &rootcreds, O_RDWR, 0, NULL,
 	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
 	if (rc)
 		psc_fatalx("zfsslash2_opencreate: %s", slstrerror(rc));
