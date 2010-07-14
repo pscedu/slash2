@@ -189,7 +189,7 @@ fidc_reap(struct psc_poolmgr *m)
 	LIST_CACHE_ULOCK(&fidcCleanList);
 
 	for (i = 0; i < nreap; i++) {
-		DEBUG_FCMH(PLL_DEBUG, reap[nreap], "moving to free list");
+		DEBUG_FCMH(PLL_DEBUG, reap[i], "moving to free list");
 		psc_hashent_remove(&fidcHtable, reap[i]);
 		fcmh_destroy(reap[i]);
 	}
