@@ -81,6 +81,7 @@ psc_spinlock_t			 mds_namespace_waitqlock = LOCK_INITIALIZER;
 /* a buffer used to read on-disk log file */
 static char			*stagebuf;
 
+static struct psc_thread	*cursorThr;
 static struct psc_thread	*namespaceThr;
 
 
@@ -681,6 +682,15 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 }
 
 /*
+ * mds_cursor_update - update cursor file.
+ */
+void
+mds_cursor_update(__unusedx struct psc_thread *thr)
+{
+
+}
+
+/*
  * mds_namespace_propagate - Send local namespace updates to peer MDSes.
  */
 void
@@ -1031,8 +1041,12 @@ mds_journal_init(void)
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
-	namespaceThr = pscthr_init(SLMTHRT_JRNL_SEND, 0,
-	    mds_namespace_propagate, NULL, 0, "slmjsendthr");
+	namespaceThr = pscthr_init(SLMTHRT_NAMESPACE, 0,
+	    mds_namespace_propagate, NULL, 0, "slmjnmspcthr");
+
+	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
+	    mds_cursor_update, NULL, 0, "slmjcursorhr");
+}
 }
 
 void

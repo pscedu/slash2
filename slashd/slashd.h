@@ -52,8 +52,9 @@ struct slash_inode_handle;
 #define SLMTHRT_FSSYNC		10	/* file system syncer */
 #define SLMTHRT_UPSCHED		11	/* update scheduler for site resources */
 #define SLMTHRT_BMAPTIMEO	12	/* bmap timeout thread */
-#define SLMTHRT_JRNL		13	/* journal thread */
-#define SLMTHRT_JRNL_SEND	14	/* journal log propagating thread */
+#define SLMTHRT_JRNL		13	/* journal distill thread */
+#define SLMTHRT_CURSOR		14	/* cursor update thread */
+#define SLMTHRT_NAMESPACE	15	/* namespace propagating thread */
 
 struct slmrmc_thread {
 	struct pscrpc_thread	  smrct_prt;
