@@ -26,7 +26,7 @@
 #ifndef _SL_FIDCACHE_H_
 #define _SL_FIDCACHE_H_
 
-#include "psc_ds/hash2.h"
+#include "pfl/hashtbl.h"
 #include "psc_ds/tree.h"
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"

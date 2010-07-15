@@ -38,7 +38,7 @@ SRCS+=		${SLASH_BASE}/share/slutil.c
 SRCS+=		${SLASH_BASE}/share/yconf.y
 
 SRCS+=		${PFL_BASE}/psc_ds/dynarray.c
-SRCS+=		${PFL_BASE}/psc_ds/hash2.c
+SRCS+=		${PFL_BASE}/psc_ds/hashtbl.c
 SRCS+=		${PFL_BASE}/psc_ds/stree.c
 SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c

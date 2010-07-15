@@ -27,7 +27,7 @@
 
 #include "pfl/str.h"
 #include "psc_ds/dynarray.h"
-#include "psc_ds/hash2.h"
+#include "pfl/hashtbl.h"
 #include "psc_ds/list.h"
 #include "psc_util/log.h"
 #include "psc_util/net.h"
