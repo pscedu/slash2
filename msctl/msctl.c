@@ -403,7 +403,7 @@ void
 replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	char map[NBMAPST], rbuf[PSCFMT_RATIO_BUFSIZ];
+	char map[NBMAPST], pmap[NBMAPST], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
 	sl_bmapno_t bact, bold, nb;
@@ -417,6 +417,14 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	map[BMAPST_TRUNCPNDG] = 't';
 	map[BMAPST_GARBAGE] = 'g';
 	map[BMAPST_GARBAGE_SCHED] = 'x';
+
+	pmap[BMAPST_REPL_SCHED] = 'S';
+	pmap[BMAPST_REPL_QUEUED] = 'Q';
+	pmap[BMAPST_VALID] = '*';
+	pmap[BMAPST_INVALID] = '/';
+	pmap[BMAPST_TRUNCPNDG] = 'T';
+	pmap[BMAPST_GARBAGE] = 'G';
+	pmap[BMAPST_GARBAGE_SCHED] = 'X';
 
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen("repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);
@@ -452,7 +460,8 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 					nbw = 0;
 				if (nbw == 0)
 					printf("\n\t");
-				putchar(map[SL_REPL_GET_BMAP_IOS_STAT(
+				putchar((bhdr.srsb_repl_policy == BRP_PERSIST ?
+				    pmap : map)[SL_REPL_GET_BMAP_IOS_STAT(
 				    rsb->rsb_data, off)]);
 			}
 		}
