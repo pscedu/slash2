@@ -57,6 +57,8 @@ SRCS+=		${PFL_BASE}/psc_util/timerthr.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
+SRCS+=		${SETRESUID_SRC}
+
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 DEFINES+=	-DSLASH_CLIENT
