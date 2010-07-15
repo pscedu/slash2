@@ -1031,7 +1031,6 @@ mds_journal_init(void)
 	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
 	    mds_cursor_update, NULL, 0, "slmjcursorhr");
 }
-}
 
 void
 mds_reserve_slot(void)
