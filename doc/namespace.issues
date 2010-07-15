@@ -479,3 +479,23 @@ a way to distinguish between internal and external links.
 ----------
 
 I have removed tiling code recently. The rename and symlink still work - they can still be propagated.
+
+07/15/2010
+----------
+
+While chatting with Paul today, it occurred to me that we can really open a ZFS file
+by its ZFS ID. Right now, we create a fid namespace to allow a client to open a file
+by its ID.  But this by-id namespace is only used internally by the MDS (slash daemon).  
+The slash daemon code is linked with the ZFS user level library.  So it should be able 
+to open a file by its ZFS ID.  My experiment with gdb seems to prove it.
+
+Furthermore, we may not need to remember the mapping between a SLASH ID and a ZFS ID. 
+A client should do it (we can return both IDs for a file). Otherwise, it can lookup by 
+names again.
+
+If we take this route, the metadata performance of SLASH2 can be increased substantially.
+Right now, each time we create a file, we need to add a link by its SLASH2 ID.  Each time
+we remove a file, we need to remove its link.  We also need to add a link to a directory,
+which is normally not allowed.
+
+By the way, how does NFS/ext2 convert a file handle to an inode?  See ext2_nfs_get_inode().
