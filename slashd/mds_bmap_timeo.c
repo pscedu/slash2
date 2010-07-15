@@ -155,8 +155,13 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 			seq = e->bte_maxseq = bml->bml_seq;
 		else
 			seq = e->bte_maxseq;
-	} else
+	} else		
 		seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
+
+	if (bml->bml_flags & BML_UPGRADE) {
+		psc_assert(psclist_conjoint(&bml->bml_timeo_lentry));
+		psclist_del(&bml->bml_timeo_lentry);
+	}
 
 	psclist_xadd_tail(&bml->bml_timeo_lentry, &e->bte_bmaps);
 

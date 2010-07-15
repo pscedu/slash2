@@ -195,7 +195,8 @@ enum {
 	BML_TIMEOQ  = (1 << 5),
 	BML_COH     = (1 << 6),
 	BML_RECOVER = (1 << 7),
-	BML_CHAIN   = (1 << 8)
+	BML_CHAIN   = (1 << 8),
+	BML_UPGRADE = (1 << 9)
 };
 
 /*

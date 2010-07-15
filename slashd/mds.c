@@ -430,7 +430,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	bmdsi->bmdsi_writers++;
 	b->bcm_mode |= BMAP_IONASSIGN;
 	bml->bml_flags &= ~BML_READ;
-	bml->bml_flags |= BML_TIMEOQ | BML_WRITE;
+	bml->bml_flags |= BML_UPGRADE | BML_WRITE;
 
 	if (bmdsi->bmdsi_writers == 1) {
 		psc_assert(!bmdsi->bmdsi_wr_ion);
