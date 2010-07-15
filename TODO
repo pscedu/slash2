@@ -338,3 +338,5 @@ utime
        so the MDS can more accurately estimate when the I/O took place
 
 - differentiate between OLD, INACTIVE, and QUEUED/REQUESTED, SCHEDULED
+
+- fix the "static" variables in communal/general functions

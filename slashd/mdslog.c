@@ -188,7 +188,7 @@ mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
 {
 	static void *txgFinfo = NULL;
 	static psc_spinlock_t lock = LOCK_INITIALIZER;
-	static struct psc_journal_cursor cursor = { 0, 0, 0, 0 };
+	static struct psc_journal_cursor cursor = { 0, 0, 0, 0, 0, 0 };
 	size_t nb;
 	int rc;
 

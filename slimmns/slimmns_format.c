@@ -66,7 +66,7 @@ slimmns_create(const char *root, uint32_t depth)
 {
 	char fn[PATH_MAX];
 	int fd, rc;
-	struct psc_journal_cursor cursor = { 0, 0, 0, 0 };
+	struct psc_journal_cursor cursor = { 0, 0, 0, 0, 0, 0 };
 
 	if (!depth)
 		depth = FID_PATH_DEPTH;
@@ -84,7 +84,7 @@ slimmns_create(const char *root, uint32_t depth)
 		return;
 
 	/* create replication queue directory */
-	xmkfn(fn, "%s/%s", root, SL_PATH_REPLS);
+	xmkfn(fn, "%s/%s", root, SL_PATH_UPSCH);
 	rc = mkdir(fn, 0700);
 	if (rc == -1 && errno != EEXIST)
 		psc_fatal("mkdir %s", fn);

@@ -95,7 +95,7 @@ wipefs(const char *dir)
 		return;
 
 	/* remove the slash replication queue */
-	xmkfn(fn, "%s/%s", dir, SL_PATH_REPLS);
+	xmkfn(fn, "%s/%s", dir, SL_PATH_UPSCH);
 	pathv[0] = fn;
 
 	/* XXX security implications of FTS_NOCHDIR? */

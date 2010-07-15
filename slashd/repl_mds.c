@@ -792,7 +792,7 @@ mds_repl_scandir(void)
 
 	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, NULL, &data);
 	if (rc)
-		psc_fatalx("mdsio_opendir %s: %s", SL_PATH_REPLS,
+		psc_fatalx("mdsio_opendir %s: %s", SL_PATH_UPSCH,
 		    slstrerror(rc));
 
 	off = 0;
@@ -803,7 +803,7 @@ mds_repl_scandir(void)
 		rc = mdsio_readdir(&rootcreds, siz,
 			   off, buf, &tsiz, NULL, NULL, 0, data);
 		if (rc)
-			psc_fatalx("mdsio_readdir %s: %s", SL_PATH_REPLS,
+			psc_fatalx("mdsio_readdir %s: %s", SL_PATH_UPSCH,
 			    slstrerror(rc));
 		if (tsiz == 0)
 			break;
@@ -825,7 +825,7 @@ mds_repl_scandir(void)
 			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
 				psc_fatalx("mdsio_lookup %s/%s: %s",
-				    SL_PATH_REPLS, fn, slstrerror(rc));
+				    SL_PATH_UPSCH, fn, slstrerror(rc));
 
 			rc = mds_repl_loadino(&fg, &fcmh);
 			if (rc)
@@ -877,7 +877,7 @@ mds_repl_scandir(void)
 	}
 	rc = mdsio_release(&rootcreds, data);
 	if (rc)
-		psc_fatalx("mdsio_release %s: %s", SL_PATH_REPLS,
+		psc_fatalx("mdsio_release %s: %s", SL_PATH_UPSCH,
 		    slstrerror(rc));
 
 	free(buf);
@@ -1061,7 +1061,7 @@ mds_repl_init(void)
 {
 	int rc;
 
-	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_REPLS, NULL,
+	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_UPSCH, NULL,
 	    &mds_repldir_inum, &rootcreds, NULL);
 	if (rc)
 		psc_fatalx("lookup repldir: %s", slstrerror(rc));
