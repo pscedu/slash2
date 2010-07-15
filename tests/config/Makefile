@@ -3,7 +3,7 @@
 ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		slconfig_test
+TEST=		slconfig_test
 SRCS+=		slconfig_test.c
 SRCS+=		${SLASH_BASE}/share/cfg_common.c
 SRCS+=		${SLASH_BASE}/share/lconf.l

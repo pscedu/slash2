@@ -3,7 +3,7 @@
 ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		namespace
+TEST=		namespace
 SRCS+=		namespace.c
 
 MODULES+=	pfl

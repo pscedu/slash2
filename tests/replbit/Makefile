@@ -3,7 +3,7 @@
 ROOTDIR=../../..
 include ${ROOTDIR}/Makefile.path
 
-PROG=		replbit_test
+TEST=		replbit_test
 SRCS+=		replbit_test.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
