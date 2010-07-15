@@ -94,6 +94,9 @@ struct sl_mds_peerinfo		*localinfo = NULL;
 struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
 psc_spinlock_t			 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
 
+static void				*mds_txgFinfo = NULL;
+static struct psc_journal_cursor	 mds_cursor = { 0, 0, 0, 0, 0, 0 };
+
 int
 mds_peerinfo_cmp(const void *a, const void *b)
 {
@@ -185,49 +188,9 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
  * mds_txg_handle - Tie system journal with ZFS transaction groups.
  */
 void
-mds_txg_handler(uint64_t *txgp, __unusedx void *data, int op)
+mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
 {
-	static void *txgFinfo = NULL;
-	static psc_spinlock_t lock = LOCK_INITIALIZER;
-	static struct psc_journal_cursor cursor = { 0, 0, 0, 0, 0, 0 };
-	size_t nb;
-	int rc;
-
 	psc_assert(op == PJRNL_TXG_GET || op == PJRNL_TXG_PUT);
-	spinlock(&lock);
-
-	if (!txgFinfo) {
-		mdsio_fid_t fid;
-
-		rc = zfsslash2_lookup(MDSIO_FID_ROOT, SL_PATH_CURSOR, NULL,
-			&fid, &rootcreds, NULL);
-		psc_assert(rc == 0);
-
-		rc = zfsslash2_opencreate(fid, &rootcreds, O_RDWR, 0,
-			NULL, NULL, NULL, NULL, &txgFinfo, NULL, NULL);
-		psc_assert(!rc && txgFinfo);
-	}
-
-	if (op == PJRNL_TXG_GET) {
-
-		rc = zfsslash2_read(&rootcreds, &cursor, sizeof(struct psc_journal_cursor),
-			    &nb, 0, txgFinfo);
-		psc_assert(!rc && nb == sizeof(struct psc_journal_cursor));
-		*txgp = cursor.pjc_txg;
-
-	} else {
-		if (*txgp > cursor.pjc_txg) {
-			cursor.pjc_txg = *txgp;
-			rc = zfsslash2_write(&rootcreds, &cursor.pjc_txg,
-				     sizeof(struct psc_journal_cursor), &nb, 0, txgFinfo,
-				     NULL, NULL);
-			psc_assert(!rc && nb == sizeof(struct psc_journal_cursor));
-			psc_notify("Last synced ZFS transaction group"
-				   " number is now %"PRId64, cursor.pjc_txg);
-		}
-	}
-
-	freelock(&lock);
 }
 
 /**
@@ -688,6 +651,26 @@ void
 mds_cursor_update(__unusedx struct psc_thread *thr)
 {
 
+}
+
+void
+mds_open_cursor(void)
+{
+	int rc;
+	size_t nb;
+	mdsio_fid_t fid;
+
+	rc = zfsslash2_lookup(MDSIO_FID_ROOT, SL_PATH_CURSOR, NULL,
+		&fid, &rootcreds, NULL);
+	psc_assert(rc == 0);
+
+	rc = zfsslash2_opencreate(fid, &rootcreds, O_RDWR, 0,
+		NULL, NULL, NULL, NULL, &mds_txgFinfo, NULL, NULL);
+	psc_assert(!rc && mds_txgFinfo);
+
+	rc = zfsslash2_read(&rootcreds, &mds_cursor, 
+		sizeof(struct psc_journal_cursor), &nb, 0, mds_txgFinfo);
+	psc_assert(rc == 0 && nb == sizeof(struct psc_journal_cursor));
 }
 
 /*
