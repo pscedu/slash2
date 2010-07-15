@@ -987,12 +987,14 @@ mds_journal_init(void)
 	 * operation.
 	 */
 	txg = mdsio_last_synced_txg();
+	mds_open_cursor();
 	if (i == 1) {
 		mdsJournal = pjournal_init(
 				r->res_jrnldev,
 				SLMTHRT_JRNL,
 				"slmjthr",
 				mds_txg_handler,
+				& mds_cursor;
 				mds_replay_handler,
 				NULL);
 		if (mdsJournal == NULL)
@@ -1008,7 +1010,7 @@ mds_journal_init(void)
 		r->res_jrnldev,
 		SLMTHRT_JRNL,
 		"slmjthr",
-		mds_txg_handler,
+		& mds_cursor;
 		mds_replay_handler,
 		mds_distill_handler);
 
