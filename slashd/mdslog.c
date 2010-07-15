@@ -993,7 +993,6 @@ mds_journal_init(void)
 				r->res_jrnldev,
 				SLMTHRT_JRNL,
 				"slmjthr",
-				mds_txg_handler,
 				&mds_cursor,
 				mds_replay_handler,
 				NULL);
