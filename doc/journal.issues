@@ -124,3 +124,11 @@ I decided to use a ZFS special file (.sltxg) to remember the current transaction
 number.  This file is updated if we detect a txg change.  If this file is being synced
 out as part of an old transaction group, new value written into the file will only appear 
 in the new trasaction group.
+
+07/15/2010
+----------
+
+ZFS does not like nested transactions - it is deadlock-prone.  So we are going to make
+a thread whose job is to update the ZFS special file (now named .slcursor and contains
+more fields).  We make sure that the first transaction of every group is the one created
+by this thread.
