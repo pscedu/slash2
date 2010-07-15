@@ -994,7 +994,7 @@ mds_journal_init(void)
 				SLMTHRT_JRNL,
 				"slmjthr",
 				mds_txg_handler,
-				& mds_cursor;
+				&mds_cursor,
 				mds_replay_handler,
 				NULL);
 		if (mdsJournal == NULL)
@@ -1010,7 +1010,7 @@ mds_journal_init(void)
 		r->res_jrnldev,
 		SLMTHRT_JRNL,
 		"slmjthr",
-		& mds_cursor;
+		&mds_cursor,
 		mds_replay_handler,
 		mds_distill_handler);
 
