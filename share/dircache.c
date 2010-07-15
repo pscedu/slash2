@@ -17,6 +17,19 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/time.h>
+
+#include <stdint.h>
+#include <string.h>
+
+#include "pfl/hashtbl.h"
+#include "pfl/str.h"
+#include "psc_ds/dynarray.h"
+#include "psc_ds/listcache.h"
+#include "psc_util/alloc.h"
+#include "psc_util/lock.h"
+
 #include "dircache.h"
 #include "fidcache.h"
 #include "sltypes.h"
