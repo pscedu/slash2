@@ -995,8 +995,7 @@ mds_journal_init(void)
 				"slmjthr",
 				&mds_cursor,
 				mds_replay_handler,
-				NULL,
-				mds_txg_handler);
+				NULL);
 		if (mdsJournal == NULL)
 			psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
 
@@ -1012,8 +1011,7 @@ mds_journal_init(void)
 		"slmjthr",
 		&mds_cursor,
 		mds_replay_handler,
-		mds_distill_handler,
-		mds_txg_handler);
+		mds_distill_handler);
 
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
