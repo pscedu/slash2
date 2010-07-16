@@ -672,7 +672,7 @@ mds_open_cursor(void)
 		NULL, NULL, NULL, NULL, &mds_txgFinfo, NULL, NULL);
 	psc_assert(!rc && mds_txgFinfo);
 
-	rc = zfsslash2_read(&rootcreds, &mds_cursor, 
+	rc = zfsslash2_read(&rootcreds, &mds_cursor,
 		sizeof(struct psc_journal_cursor), &nb, 0, mds_txgFinfo);
 	psc_assert(rc == 0 && nb == sizeof(struct psc_journal_cursor));
 }
@@ -993,13 +993,8 @@ mds_journal_init(void)
 	txg = mdsio_last_synced_txg();
 	mds_open_cursor();
 	if (i == 1) {
-		mdsJournal = pjournal_init(
-				r->res_jrnldev,
-				SLMTHRT_JRNL,
-				"slmjthr",
-				&mds_cursor,
-				mds_replay_handler,
-				NULL);
+		mdsJournal = pjournal_init(r->res_jrnldev, SLMTHRT_JRNL,
+		    "slmjthr", &mds_cursor, mds_replay_handler, NULL);
 		if (mdsJournal == NULL)
 			psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
 
@@ -1009,13 +1004,8 @@ mds_journal_init(void)
 	/*
 	 * We have peer MDSes, let us start the distill operation.
 	 */
-	mdsJournal = pjournal_init(
-		r->res_jrnldev,
-		SLMTHRT_JRNL,
-		"slmjthr",
-		&mds_cursor,
-		mds_replay_handler,
-		mds_distill_handler);
+	mdsJournal = pjournal_init(r->res_jrnldev, SLMTHRT_JRNL,
+	    "slmjthr", &mds_cursor, mds_replay_handler, mds_distill_handler);
 
 	if (mdsJournal == NULL)
 		psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
