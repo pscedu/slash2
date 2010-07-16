@@ -40,18 +40,6 @@
 #include "sljournal.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
-void
-mdsio_init(void)
-{
-	zfs_init();
-}
-
-void
-mdsio_exit(void)
-{
-	zfs_exit();
-}
-
 static inline void *
 bmap_2_zfs_fh(struct bmapc_memb *bmap)
 {
@@ -325,227 +313,47 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 	return (rc);
 }
 
-int
-mdsio_release(const struct slash_creds *cr, void *mdsio_data)
-{
-	return (zfsslash2_release(cr, mdsio_data));
-}
+struct mdsio_ops mdsio_ops = {
+	zfs_init,
+	zfs_exit,
 
-int
-mdsio_access(mdsio_fid_t ino, int mask, const struct slash_creds *cr)
-{
-	return (zfsslash2_access(ino, mask, cr));
-}
+	zfsslash2_access,
+	zfsslash2_getattr,
+	zfsslash2_link,
+	zfsslash2_lookup,
+	zfsslash2_lookup_slfid,
+	zfsslash2_mkdir,
+	zfsslash2_opencreate,
+	zfsslash2_opendir,
+	zfsslash2_read,
+	zfsslash2_readdir,
+	zfsslash2_readlink,
+	zfsslash2_release,
+	zfsslash2_rename,
+	zfsslash2_rmdir,
+	zfsslash2_setattr,
+	zfsslash2_statfs,
+	zfsslash2_symlink,
+	zfsslash2_unlink,
+	zfsslash2_write,
 
-int
-mdsio_getattr(mdsio_fid_t ino, const struct slash_creds *cr,
-    struct srt_stat *sstb)
-{
-	return (zfsslash2_getattr(ino, cr, sstb));
-}
+	zfsslash2_replay_create,
+	zfsslash2_replay_link,
+	zfsslash2_replay_mkdir,
+	zfsslash2_replay_rename,
+	zfsslash2_replay_rmdir,
+	zfsslash2_replay_setattr,
+	zfsslash2_replay_symlink,
+	zfsslash2_replay_unlink,
 
-int
-mdsio_readlink(mdsio_fid_t ino, void *buf, const struct slash_creds *cr)
-{
-	return (zfsslash2_readlink(ino, buf, cr));
-}
-
-int
-mdsio_statfs(struct statvfs *stbv)
-{
-	return (zfsslash2_statfs(stbv));
-}
-
-int
-mdsio_opencreatef(mdsio_fid_t pino, const struct slash_creds *cr,
-    int fflags, int opflags, mode_t mode, const char *fn,
-    struct slash_fidgen *fgp, mdsio_fid_t *mfp, struct srt_stat *sstb,
-    void *mdsio_datap, sl_log_update_t logfunc, sl_getslfid_cb_t getslfid)
-{
-	int rc;
-
-	if (logfunc)
-		mds_reserve_slot();
-	rc = zfsslash2_opencreate(pino, cr, fflags, opflags, mode,
-		fn, fgp, mfp, sstb, mdsio_datap, logfunc, getslfid);
-	if (logfunc)
-		mds_unreserve_slot();
-	return (rc);
-}
-
-int
-mdsio_link(mdsio_fid_t ino, mdsio_fid_t pino, const char *fn,
-    struct slash_fidgen *fgp, const struct slash_creds *cr,
-    struct srt_stat *sstb, sl_log_update_t logfunc)
-{
-	int rc;
-
-	if (logfunc)
-		mds_reserve_slot();
-	rc = zfsslash2_link(ino, pino, fn, fgp, cr, sstb, logfunc);
-	if (logfunc)
-		mds_unreserve_slot();
-	return (rc);
-}
-
-int
-mdsio_lookup(mdsio_fid_t pino, const char *cpn, struct slash_fidgen *fgp,
-    mdsio_fid_t *mfp, const struct slash_creds *cr, struct srt_stat *sstb)
-{
-	return (zfsslash2_lookup(pino, cpn, fgp, mfp, cr, sstb));
-}
-
-int
-mdsio_lookup_slfid(slfid_t fid, const struct slash_creds *crp,
-    struct srt_stat *sstb, mdsio_fid_t *mfp)
-{
-	return (zfsslash2_lookup_slfid(fid, crp, sstb, mfp));
-}
-
-int
-mdsio_opendir(mdsio_fid_t ino, const struct slash_creds *cr,
-    struct slash_fidgen *fgp, void *mdsio_datap)
-{
-	return (zfsslash2_opendir(ino, cr, fgp, mdsio_datap));
-}
-
-int
-mdsio_mkdir(mdsio_fid_t pino, const char *cpn, mode_t mode,
-    const struct slash_creds *cr, struct srt_stat *sstb,
-    struct slash_fidgen *fgp, mdsio_fid_t *mfp,
-    sl_log_update_t logfunc, sl_getslfid_cb_t getslfid)
-{
-	return (zfsslash2_mkdir(pino, cpn, mode, cr, sstb,
-	    fgp, mfp, logfunc, getslfid));
-}
-
-int
-mdsio_readdir(const struct slash_creds *cr, size_t siz,
-      off_t off, void *buf, size_t *outlen, size_t *nents, void *attrs,
-      int nprefetch, void *mdsio_data)
-{
-	return (zfsslash2_readdir(cr, siz, off, buf,
-		  outlen, nents, attrs, nprefetch, mdsio_data));
-}
-
-int
-mdsio_rename(mdsio_fid_t opino, const char *ocpn, mdsio_fid_t npino,
-    const char *ncpn, const struct slash_creds *cr, sl_log_update_t logfunc)
-{
-	return (zfsslash2_rename(opino, ocpn, npino, ncpn, cr, logfunc));
-}
-
-int
-mdsio_setattr(mdsio_fid_t ino, struct srt_stat *sstb_in, int to_set,
-    const struct slash_creds *cr, struct srt_stat *sstb_out,
-    void *mdsio_data, sl_log_update_t logfunc)
-{
-	return (zfsslash2_setattr(ino, sstb_in, to_set, cr,
-	    sstb_out, mdsio_data, logfunc));
-}
-
-int
-mdsio_symlink(const char *target, mdsio_fid_t pino, const char *cpn,
-    const struct slash_creds *cr, struct srt_stat *sstb,
-    struct slash_fidgen *fgp, mdsio_fid_t *mfp, sl_getslfid_cb_t getslfid,
-    sl_log_update_t logfunc)
-{
-	return (zfsslash2_symlink(target, pino, cpn, cr, sstb,
-	    fgp, mfp, getslfid, logfunc));
-}
-
-int
-mdsio_unlink(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr,
-    sl_log_update_t logfunc)
-{
-	return (zfsslash2_unlink(pino, cpn, cr, logfunc));
-}
-
-int
-mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr,
-    sl_log_update_t logfunc)
-{
-	return (zfsslash2_rmdir(pino, cpn, cr, logfunc));
-}
-
-int
-mdsio_read(const struct slash_creds *slcrp, void *buf, size_t size,
-    size_t *nb, off_t off, void *finfo)
-{
-	return (zfsslash2_read(slcrp, buf, size, nb, off, finfo));
-}
-
-int
-mdsio_write(const struct slash_creds *slcrp, const void *buf,
-    size_t size, size_t *nb, off_t off, void *finfo,
-    sl_log_write_t funcp, void *datap)
-{
-	return (zfsslash2_write(slcrp, buf, size, nb, off, finfo, funcp, datap));
-}
-
-/*
- *
- */
+	mds_reserve_slot,
+	mds_unreserve_slot
+};
 
 uint64_t
 mdsio_last_synced_txg(void)
 {
-	return(zfsslash2_last_synced_txg());
-}
-
-/*
- * Wrappers to replay the namespace operations performed on the remote MDS.
- */
-int
-mdsio_redo_create(uint64_t parent_s2id, uint64_t target_s2id,
-    struct srt_stat *stat, char *name)
-{
-	return (zfsslash2_replay_create(parent_s2id, target_s2id, stat, name));
-}
-
-int
-mdsio_redo_mkdir(uint64_t parent_s2id, uint64_t target_s2id,
-    struct srt_stat *stat, char *name)
-{
-	return (zfsslash2_replay_mkdir(parent_s2id, target_s2id, stat, name));
-}
-
-int
-mdsio_redo_link(uint64_t parent_s2id, uint64_t target_s2id, char *name)
-{
-	return (zfsslash2_replay_link(parent_s2id, target_s2id, name));
-}
-
-int
-mdsio_redo_symlink(uint64_t parent_s2id, uint64_t target_s2id,
-    struct srt_stat *stat, char *name, char *link)
-{
-	return (zfsslash2_replay_symlink(parent_s2id, target_s2id, stat, name, link));
-}
-
-int
-mdsio_redo_rmdir(uint64_t parent_s2id, uint64_t target_s2id, char *name)
-{
-	return (zfsslash2_replay_rmdir(parent_s2id, target_s2id, name));
-}
-
-int
-mdsio_redo_unlink(uint64_t parent_s2id, uint64_t target_s2id, char *name)
-{
-	return (zfsslash2_replay_unlink(parent_s2id, target_s2id, name));
-}
-
-int
-mdsio_redo_setattr(uint64_t target_s2id, struct srt_stat * stat, uint mask)
-{
-	return (zfsslash2_replay_setattr(target_s2id, stat, mask));
-}
-
-int
-mdsio_redo_rename(uint64_t parent_s2id, uint64_t new_parent_s2id,
-	__unusedx uint64_t target_s2id, char *name1, char *name2)
-{
-	return (zfsslash2_replay_rename(parent_s2id, name1, new_parent_s2id, name2));
+	return (zfsslash2_last_synced_txg());
 }
 
 int

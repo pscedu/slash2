@@ -1091,9 +1091,9 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 		newname++;
 		rc = mdsio_redo_rename(
 			jnamespace->sjnm_parent_s2id,
+			jnamespace->sjnm_name,
 			jnamespace->sjnm_new_parent_s2id,
-			jnamespace->sjnm_target_s2id,
-			jnamespace->sjnm_name, newname);
+			newname);
 		break;
 	    case NS_OP_UNLINK:
 		rc = mdsio_redo_unlink(

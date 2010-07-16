@@ -32,11 +32,15 @@
 #include "slerr.h"
 #include "sljournal.h"
 
+#include "slashd/mdsio.h"
+
 int format;
 int query;
 int verbose;
 const char *datadir = SL_PATH_DATADIR;
 const char *progname;
+
+struct mdsio_ops mdsio_ops;
 
 __dead void
 usage(void)
