@@ -357,15 +357,15 @@ mdsio_statfs(struct statvfs *stbv)
 }
 
 int
-mdsio_opencreate(mdsio_fid_t pino, const struct slash_creds *cr,
-    int flags, mode_t mode, const char *fn, struct slash_fidgen *fgp,
-    mdsio_fid_t *mfp, struct srt_stat *sstb, void *mdsio_datap,
-    sl_log_update_t logfunc, sl_getslfid_cb_t getslfid)
+mdsio_opencreatef(mdsio_fid_t pino, const struct slash_creds *cr,
+    int fflags, int opflags, mode_t mode, const char *fn,
+    struct slash_fidgen *fgp, mdsio_fid_t *mfp, struct srt_stat *sstb,
+    void *mdsio_datap, sl_log_update_t logfunc, sl_getslfid_cb_t getslfid)
 {
 	int rc;
 	if (logfunc)
 		mds_reserve_slot();
-	rc = zfsslash2_opencreate(pino, cr, flags, mode, 
+	rc = zfsslash2_opencreatef(pino, cr, fflags, opflags, mode,
 		fn, fgp, mfp, sstb, mdsio_datap, logfunc, getslfid);
 	if (logfunc)
 		mds_unreserve_slot();

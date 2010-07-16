@@ -46,49 +46,52 @@ typedef void (*sl_log_update_t)(int, uint64_t, uint64_t, uint64_t, uint64_t, con
 /* predefined mdsio layer "fids" */
 #define MDSIO_FID_ROOT	3
 
-int mdsio_apply_fcmh_size(struct fidc_membh *, size_t);
-int mdsio_bmap_read(struct bmapc_memb *);
-int mdsio_bmap_write(struct bmapc_memb *);
-int mdsio_inode_extras_read(struct slash_inode_handle *);
-int mdsio_inode_extras_write(struct slash_inode_handle *);
-int mdsio_inode_read(struct slash_inode_handle *);
-int mdsio_inode_write(struct slash_inode_handle *);
+/* opencreatef() flags */
+#define MDSIO_OPENCRF_NOLINK	(1 << 0)	/* do not create links in FID namespace */
 
-void mdsio_init(void);
-void mdsio_exit(void);
+#define mdsio_opencreate(pino, crp, fflags, mode, fn, fgp, mfp, sstb,	\
+	    mdsio_datap, logfunc, getslfid)				\
+	mdsio_opencreatef((pino), (crp), (fflags), 0, (mode), (fn),	\
+	    (fgp), (mfp), (sstb), (mdsio_datap), (logfunc), (getslfid))
 
-int mdsio_access(mdsio_fid_t, int, const struct slash_creds *);
-int mdsio_release(const struct slash_creds *, void *);
-int mdsio_getattr(mdsio_fid_t, const struct slash_creds *, struct srt_stat *);
-int mdsio_readlink(mdsio_fid_t, void *, const struct slash_creds *);
-int mdsio_statfs(struct statvfs *);
+int	mdsio_apply_fcmh_size(struct fidc_membh *, size_t);
+int	mdsio_bmap_read(struct bmapc_memb *);
+int	mdsio_bmap_write(struct bmapc_memb *);
+int	mdsio_inode_extras_read(struct slash_inode_handle *);
+int	mdsio_inode_extras_write(struct slash_inode_handle *);
+int	mdsio_inode_read(struct slash_inode_handle *);
+int	mdsio_inode_write(struct slash_inode_handle *);
 
-int mdsio_link(mdsio_fid_t, mdsio_fid_t, const char *, struct slash_fidgen *, const struct slash_creds *, struct srt_stat *, sl_log_update_t);
-int mdsio_lookup(mdsio_fid_t, const char *, struct slash_fidgen *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
-int mdsio_lookup_slfid(slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
-int mdsio_mkdir(mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *,
-	struct slash_fidgen *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t);
-int mdsio_opencreate(mdsio_fid_t, const struct slash_creds *, int, mode_t, const char *,
-	struct slash_fidgen *, mdsio_fid_t *, struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t);
-int mdsio_opendir(mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, void *);
-int mdsio_readdir(const struct slash_creds *, size_t, off_t, void *, size_t *, size_t *, void *, int, void *);
-int mdsio_rename(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
-int mdsio_rmdir(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
-int mdsio_setattr(mdsio_fid_t, struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *, sl_log_update_t);
-int mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *,
-	struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb_t, sl_log_update_t);
-int mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
+void	mdsio_init(void);
+void	mdsio_exit(void);
+
+int	mdsio_access(mdsio_fid_t, int, const struct slash_creds *);
+int	mdsio_getattr(mdsio_fid_t, const struct slash_creds *, struct srt_stat *);
+int	mdsio_link(mdsio_fid_t, mdsio_fid_t, const char *, struct slash_fidgen *, const struct slash_creds *, struct srt_stat *, sl_log_update_t);
+int	mdsio_lookup(mdsio_fid_t, const char *, struct slash_fidgen *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
+int	mdsio_lookup_slfid(slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
+int	mdsio_mkdir(mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *, struct slash_fidgen *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t);
+int	mdsio_opencreatef(mdsio_fid_t, const struct slash_creds *, int, int, mode_t, const char *, struct slash_fidgen *, mdsio_fid_t *, struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t);
+int	mdsio_opendir(mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, void *);
+int	mdsio_readdir(const struct slash_creds *, size_t, off_t, void *, size_t *, size_t *, void *, int, void *);
+int	mdsio_readlink(mdsio_fid_t, void *, const struct slash_creds *);
+int	mdsio_release(const struct slash_creds *, void *);
+int	mdsio_rename(mdsio_fid_t, const char *, mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
+int	mdsio_rmdir(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
+int	mdsio_setattr(mdsio_fid_t, struct srt_stat *, int, const struct slash_creds *, struct srt_stat *, void *, sl_log_update_t);
+int	mdsio_statfs(struct statvfs *);
+int	mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb_t, sl_log_update_t);
+int	mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
 
 uint64_t mdsio_last_synced_txg(void);
 
-int mdsio_redo_create(uint64_t, uint64_t, struct srt_stat *, char *);
-int mdsio_redo_mkdir(uint64_t, uint64_t, struct srt_stat *, char *);
-
-int mdsio_redo_link(uint64_t, uint64_t, char *);
-int mdsio_redo_symlink(uint64_t, uint64_t, struct srt_stat *, char *, char *);
-int mdsio_redo_unlink(uint64_t, uint64_t, char *);
-int mdsio_redo_rmdir(uint64_t, uint64_t, char *);
-int mdsio_redo_setattr(uint64_t, struct srt_stat *, uint);
-int mdsio_redo_rename(uint64_t, uint64_t, uint64_t, char *, char *);
+int	mdsio_redo_create(uint64_t, uint64_t, struct srt_stat *, char *);
+int	mdsio_redo_link(uint64_t, uint64_t, char *);
+int	mdsio_redo_mkdir(uint64_t, uint64_t, struct srt_stat *, char *);
+int	mdsio_redo_rename(uint64_t, uint64_t, uint64_t, char *, char *);
+int	mdsio_redo_rmdir(uint64_t, uint64_t, char *);
+int	mdsio_redo_setattr(uint64_t, struct srt_stat *, uint);
+int	mdsio_redo_symlink(uint64_t, uint64_t, struct srt_stat *, char *, char *);
+int	mdsio_redo_unlink(uint64_t, uint64_t, char *);
 
 #endif
