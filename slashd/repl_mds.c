@@ -535,14 +535,13 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	wk = uswi_find(fgp, &locked);
 	if (wk == NULL) {
 		/*
-		 * If the tree stayed locked, the request
-		 * exists but we can't use it e.g. because it
-		 * is going away.
+		 * If the tree stayed locked, the request exists but we
+		 * can't use it e.g. because it is going away.
 		 */
 		if (!locked)
 			goto restart;
 
-		/* Not found, add it and its persistent link. */
+		/* Not found, add it. */
 		rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fgp->fg_fid);
 		if (rc == -1)
 			rc = errno;
