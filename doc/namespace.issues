@@ -499,3 +499,10 @@ we remove a file, we need to remove its link.  We also need to add a link to a d
 which is normally not allowed.
 
 By the way, how does NFS/ext2 convert a file handle to an inode?  See ext2_nfs_get_inode().
+
+07/16/2010
+----------
+
+Right now, we only log the first operation (such as a create), not the second one that 
+creates a link in the by-id namespace.  If the two operations are in different transaction 
+groups, we can have a problem.
