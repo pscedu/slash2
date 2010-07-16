@@ -650,7 +650,11 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 void
 mds_cursor_update(__unusedx struct psc_thread *thr)
 {
-
+	int rc;
+	while (pscthr_run()) {
+		rc = zfsslash2_write_cursor(&mds_cursor, sizeof(mds_cursor), mds_txgFinfo);
+		psc_warn("Fail to update cursor, rc = %d", rc);
+	}
 }
 
 void
