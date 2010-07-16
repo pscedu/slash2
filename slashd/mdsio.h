@@ -73,6 +73,7 @@ int	mdsio_lookup_slfid(slfid_t, const struct slash_creds *, struct srt_stat *, m
 int	mdsio_mkdir(mdsio_fid_t, const char *, mode_t, const struct slash_creds *, struct srt_stat *, struct slash_fidgen *, mdsio_fid_t *, sl_log_update_t, sl_getslfid_cb_t);
 int	mdsio_opencreatef(mdsio_fid_t, const struct slash_creds *, int, int, mode_t, const char *, struct slash_fidgen *, mdsio_fid_t *, struct srt_stat *, void *, sl_log_update_t, sl_getslfid_cb_t);
 int	mdsio_opendir(mdsio_fid_t, const struct slash_creds *, struct slash_fidgen *, void *);
+int	mdsio_read(const struct slash_creds *, void *, size_t, size_t *, off_t, void *);
 int	mdsio_readdir(const struct slash_creds *, size_t, off_t, void *, size_t *, size_t *, void *, int, void *);
 int	mdsio_readlink(mdsio_fid_t, void *, const struct slash_creds *);
 int	mdsio_release(const struct slash_creds *, void *);
@@ -82,6 +83,7 @@ int	mdsio_setattr(mdsio_fid_t, struct srt_stat *, int, const struct slash_creds 
 int	mdsio_statfs(struct statvfs *);
 int	mdsio_symlink(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb_t, sl_log_update_t);
 int	mdsio_unlink(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
+int	mdsio_write(const struct slash_creds *, const void *, size_t, size_t *, off_t, void *, sl_log_write_t, void *);
 
 uint64_t mdsio_last_synced_txg(void);
 
@@ -93,5 +95,7 @@ int	mdsio_redo_rmdir(uint64_t, uint64_t, char *);
 int	mdsio_redo_setattr(uint64_t, struct srt_stat *, uint);
 int	mdsio_redo_symlink(uint64_t, uint64_t, struct srt_stat *, char *, char *);
 int	mdsio_redo_unlink(uint64_t, uint64_t, char *);
+
+int	mdsio_write_cursor(void *, size_t, void *);
 
 #endif

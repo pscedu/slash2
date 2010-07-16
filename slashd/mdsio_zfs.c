@@ -363,14 +363,14 @@ mdsio_opencreatef(mdsio_fid_t pino, const struct slash_creds *cr,
     void *mdsio_datap, sl_log_update_t logfunc, sl_getslfid_cb_t getslfid)
 {
 	int rc;
+
 	if (logfunc)
 		mds_reserve_slot();
 	rc = zfsslash2_opencreate(pino, cr, fflags, opflags, mode,
 		fn, fgp, mfp, sstb, mdsio_datap, logfunc, getslfid);
 	if (logfunc)
 		mds_unreserve_slot();
-	return rc;
-
+	return (rc);
 }
 
 int
@@ -385,7 +385,7 @@ mdsio_link(mdsio_fid_t ino, mdsio_fid_t pino, const char *fn,
 	rc = zfsslash2_link(ino, pino, fn, fgp, cr, sstb, logfunc);
 	if (logfunc)
 		mds_unreserve_slot();
-	return rc;
+	return (rc);
 }
 
 int
@@ -468,6 +468,25 @@ mdsio_rmdir(mdsio_fid_t pino, const char *cpn, const struct slash_creds *cr,
 	return (zfsslash2_rmdir(pino, cpn, cr, logfunc));
 }
 
+int
+mdsio_read(const struct slash_creds *slcrp, void *buf, size_t size,
+    size_t *nb, off_t off, void *finfo)
+{
+	return (zfsslash2_read(slcrp, buf, size, nb, off, finfo));
+}
+
+int
+mdsio_write(const struct slash_creds *slcrp, const void *buf,
+    size_t size, size_t *nb, off_t off, void *finfo,
+    sl_log_write_t funcp, void *datap)
+{
+	return (zfsslash2_write(slcrp, buf, size, nb, off, finfo, funcp, datap));
+}
+
+/*
+ *
+ */
+
 uint64_t
 mdsio_last_synced_txg(void)
 {
@@ -527,4 +546,10 @@ mdsio_redo_rename(uint64_t parent_s2id, uint64_t new_parent_s2id,
 	__unusedx uint64_t target_s2id, char *name1, char *name2)
 {
 	return (zfsslash2_replay_rename(parent_s2id, name1, new_parent_s2id, name2));
+}
+
+int
+mdsio_write_cursor(void *buf, size_t size, void *finfo)
+{
+	return (zfsslash2_write_cursor(buf, size, finfo));
 }

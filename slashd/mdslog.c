@@ -123,8 +123,8 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 	return (0);
 }
 
-/*
- * mds_redo_bmap_crc - replay a CRC update.  Because we only log
+/**
+ * mds_redo_bmap_crc - Replay a CRC update.  Because we only log
  *     CRCs that have been changed in the bmap, this has to be a
  *     read-modify-write process.
  */
@@ -141,16 +141,16 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 
 	jcrc = PJE_DATA(pje);
 
-	rc = zfsslash2_lookup_slfid(jcrc->sjc_s2id, &rootcreds, NULL, &fid);
+	rc = mdsio_lookup_slfid(jcrc->sjc_s2id, &rootcreds, NULL, &fid);
 	if (rc)
-		psc_fatalx("zfsslash2_lookup_slfid: %s", slstrerror(rc));
+		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 
-	rc = zfsslash2_opencreate(fid, &rootcreds, O_RDWR, 0, NULL,
+	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL,
 	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
 	if (rc)
-		psc_fatalx("zfsslash2_opencreate: %s", slstrerror(rc));
+		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
 
-	rc = zfsslash2_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
+	rc = mdsio_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		(off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
 		mdsio_data);
 	if (rc || nb != BMAP_OD_SZ)
@@ -161,14 +161,14 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 		bmap_disk.bh_crcs[bmap_wire->slot].gc_crc = bmap_wire->crc;
 	}
 
-	rc = zfsslash2_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
+	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		(off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
 		mdsio_data, NULL, NULL);
 	if (rc || nb != BMAP_OD_SZ)
 		goto out;
 
  out:
-	zfsslash2_release(&rootcreds, mdsio_data);
+	mdsio_release(&rootcreds, mdsio_data);
 	return (rc);
 }
 
@@ -291,9 +291,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 }
 
 /*
- * Log namespace operation before we attempt the operation.  This makes sure
- * that it will be propagated towards other MDSes and made permanent before
- * we reply to the client.
+ * mds_namespace_log - Log namespace operation before we attempt an
+ *	operation.  This makes sure that it will be propagated towards
+ *	other MDSes and made permanent before we reply to the client.
  */
 void
 mds_namespace_log(int op, uint64_t txg, uint64_t parent,
@@ -407,7 +407,7 @@ rpc_error:
 	return (0);
 }
 
-/*
+/**
  * mds_namespace_update_lwm - Find the lowest water mark of all peer MDSes.
  */
 __static uint64_t
@@ -440,8 +440,8 @@ mds_namespace_update_lwm(void)
 	return (seqno);
 }
 
-/*
- * mds_namespace_read - read a batch of updates from the corresponding log file
+/**
+ * mds_namespace_read - Read a batch of updates from the corresponding log file
  *	and packed them for RPC later.
  *
  */
@@ -558,7 +558,8 @@ mds_namespace_read_batch(uint64_t seqno)
 }
 
 /**
- * mds_namespace_propagate_batch - Send a batch of updates to peer MDSes that want them.
+ * mds_namespace_propagate_batch - Send a batch of updates to peer MDSes
+ *	that want them.
  */
 void
 mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
@@ -644,15 +645,15 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	freelock(&mds_namespace_peerlist_lock);
 }
 
-/*
- * mds_cursor_update - update cursor file.
+/**
+ * mds_cursor_update - Update cursor file.
  */
 void
 mds_cursor_update(__unusedx struct psc_thread *thr)
 {
 	int rc;
 	while (pscthr_run()) {
-		rc = zfsslash2_write_cursor(&mds_cursor, sizeof(mds_cursor), mds_txgFinfo);
+		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor), mds_txgFinfo);
 		psc_warn("Fail to update cursor, rc = %d", rc);
 	}
 }
@@ -664,20 +665,20 @@ mds_open_cursor(void)
 	size_t nb;
 	mdsio_fid_t fid;
 
-	rc = zfsslash2_lookup(MDSIO_FID_ROOT, SL_PATH_CURSOR, NULL,
+	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_CURSOR, NULL,
 		&fid, &rootcreds, NULL);
 	psc_assert(rc == 0);
 
-	rc = zfsslash2_opencreate(fid, &rootcreds, O_RDWR, 0,
-		NULL, NULL, NULL, NULL, &mds_txgFinfo, NULL, NULL);
+	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
+	    NULL, NULL, &mds_txgFinfo, NULL, NULL);
 	psc_assert(!rc && mds_txgFinfo);
 
-	rc = zfsslash2_read(&rootcreds, &mds_cursor,
-		sizeof(struct psc_journal_cursor), &nb, 0, mds_txgFinfo);
+	rc = mdsio_read(&rootcreds, &mds_cursor,
+	    sizeof(struct psc_journal_cursor), &nb, 0, mds_txgFinfo);
 	psc_assert(rc == 0 && nb == sizeof(struct psc_journal_cursor));
 }
 
-/*
+/**
  * mds_namespace_propagate - Send local namespace updates to peer MDSes.
  */
 void

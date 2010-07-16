@@ -37,6 +37,7 @@
 #include "psc_util/thread.h"
 
 #include "bmap_mds.h"
+#include "mdsio.h"
 #include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
@@ -699,7 +700,7 @@ uswi_initf(struct up_sched_work_item *wk, struct fidc_membh *fcmh, int flags)
 		if (rc >= (int)sizeof(fn))
 			return (ENAMETOOLONG);
 
-		rc = mdsio_opencreate(mds_repldir_inum, &rootcreds,
+		rc = mdsio_opencreatef(mds_repldir_inum, &rootcreds,
 		    O_CREAT | O_WRONLY, MDSIO_OPENCRF_NOLINK, 0600, fn,
 		    NULL, NULL, NULL, &mdsio_data, NULL, uswi_getslfid);
 		if (rc)
