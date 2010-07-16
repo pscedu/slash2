@@ -365,7 +365,7 @@ mdsio_opencreatef(mdsio_fid_t pino, const struct slash_creds *cr,
 	int rc;
 	if (logfunc)
 		mds_reserve_slot();
-	rc = zfsslash2_opencreatef(pino, cr, fflags, opflags, mode,
+	rc = zfsslash2_opencreate(pino, cr, fflags, opflags, mode,
 		fn, fgp, mfp, sstb, mdsio_datap, logfunc, getslfid);
 	if (logfunc)
 		mds_unreserve_slot();
