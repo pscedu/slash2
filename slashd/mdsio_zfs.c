@@ -357,7 +357,7 @@ mdsio_last_synced_txg(void)
 }
 
 int
-mdsio_write_cursor(void *buf, size_t size, void *finfo)
+mdsio_write_cursor(void *buf, size_t size, void *finfo, sl_log_write_t funcp)
 {
-	return (zfsslash2_write_cursor(buf, size, finfo));
+	return (zfsslash2_write_cursor(buf, size, finfo, funcp));
 }

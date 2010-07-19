@@ -645,6 +645,19 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	freelock(&mds_namespace_peerlist_lock);
 }
 
+void
+mds_update_cursor(void *buf, uint64_t txg)
+{
+	struct psc_journal_cursor *cursor = (struct psc_journal_cursor *)buf;
+
+	cursor->pjc_magic = PJRNL_CURSOR_MAGIC;
+	cursor->pjc_version = PJRNL_CURSOR_VERSION;
+	cursor->pjc_txg = txg;
+	cursor->pjc_xid = 0;
+	cursor->pjc_s2id = 0;
+	cursor->pjc_seqno = 0;
+}
+
 /**
  * mds_cursor_update - Update cursor file.
  */
@@ -653,7 +666,7 @@ mds_cursor_update(__unusedx struct psc_thread *thr)
 {
 	int rc;
 	while (pscthr_run()) {
-		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor), mds_txgFinfo);
+		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor), mds_txgFinfo, mds_update_cursor);
 		psc_warn("Fail to update cursor, rc = %d", rc);
 	}
 }
