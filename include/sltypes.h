@@ -138,4 +138,6 @@ struct srt_dirent {
 
 #define	MAX_NAME_BUF_SIZE	377
 
+#define SLASH2_CURSOR_FLAG	0x12345678
+
 #endif /* _SL_TYPES_H_ */
