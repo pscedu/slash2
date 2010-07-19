@@ -81,7 +81,6 @@ psc_spinlock_t			 mds_namespace_waitqlock = LOCK_INITIALIZER;
 /* a buffer used to read on-disk log file */
 static char			*stagebuf;
 
-static struct psc_thread	*cursorThr;
 static struct psc_thread	*namespaceThr;
 
 
@@ -1036,8 +1035,8 @@ mds_journal_init(void)
 	namespaceThr = pscthr_init(SLMTHRT_NAMESPACE, 0,
 	    mds_namespace_propagate, NULL, 0, "slmjnmspcthr");
 
-	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
-	    mds_cursor_thread, NULL, 0, "slmjcursorhr");
+	pscthr_init(SLMTHRT_CURSOR, 0,
+	    mds_cursor_thread, NULL, 0, "slmjcursorthr");
 }
 
 void
