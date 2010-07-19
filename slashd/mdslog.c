@@ -81,8 +81,8 @@ psc_spinlock_t			 mds_namespace_waitqlock = LOCK_INITIALIZER;
 /* a buffer used to read on-disk log file */
 static char			*stagebuf;
 
+static struct psc_thread	*cursorThr;
 static struct psc_thread	*namespaceThr;
-
 
 /* we only have a few buffers, so a list is fine */
 __static PSCLIST_HEAD(mds_namespace_buflist);
@@ -952,7 +952,7 @@ mds_journal_init(void)
 	struct sl_resm *resm;
 	struct sl_site *s;
 	uint64_t txg;
-	int i, n;
+	int npeer, n;
 
 	/*
 	 * To be read from a log file after we replay the system journal.
@@ -963,14 +963,14 @@ mds_journal_init(void)
 	 * to save some run time.  It also allows us to dynamically add
 	 * or remove MDSes to/from our private list in the future.
 	 */
-	i = 0;
+	npeer = 0;
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources) {
 			if (r->res_type != SLREST_MDS)
 				continue;
 
-			i++;
+			npeer++;
 			/* MDS cannot have more than one member */
 			resm = psc_dynarray_getpos(&r->res_members, 0);
 
@@ -1005,38 +1005,40 @@ mds_journal_init(void)
 	 */
 	txg = mdsio_last_synced_txg();
 	mds_open_cursor();
-	if (i == 1) {
-		mdsJournal = pjournal_init(r->res_jrnldev, SLMTHRT_JRNL,
-		    "slmjthr", &mds_cursor, mds_replay_handler, NULL);
-		if (mdsJournal == NULL)
-			psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
 
-		logentrysize = mdsJournal->pj_hdr->pjh_entsz;
-		return;
-	}
-	/*
-	 * We have peer MDSes, let us start the distill operation.
-	 */
-	mdsJournal = pjournal_init(r->res_jrnldev, SLMTHRT_JRNL,
-	    "slmjthr", &mds_cursor, mds_replay_handler, mds_distill_handler);
-
+	mdsJournal = pjournal_open(r->res_jrnldev);
 	if (mdsJournal == NULL)
-		psc_fatal("Fail to load/replay log file %s", r->res_jrnldev);
+		psc_fatal("Fail to open log file %s", r->res_jrnldev);
+
+	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
+
+	mdsJournal->pj_commit_txg = mds_cursor.pjc_txg;
+	mdsJournal->pj_distill_xid = mds_cursor.pjc_xid;
+
+	psc_notify("Journal device %s", r->res_jrnldev);
+	psc_notify("Last synced ZFS transaction group number is %"PRId64, mdsJournal->pj_commit_txg);
+	psc_notify("Last distilled SLASH2 transaction number is %"PRId64, mdsJournal->pj_distill_xid);
+
+	/* we need the cursor thread to join the replay */
+	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
+	    mds_cursor_thread, NULL, 0, "slmjcursorhr");
+
+	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr", 
+			mds_replay_handler,  mds_distill_handler);
+
+	if (!npeer)
+		return;
 
 	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 
 	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
-
 	/*
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
 	namespaceThr = pscthr_init(SLMTHRT_NAMESPACE, 0,
 	    mds_namespace_propagate, NULL, 0, "slmjnmspcthr");
-
-	pscthr_init(SLMTHRT_CURSOR, 0,
-	    mds_cursor_thread, NULL, 0, "slmjcursorthr");
 }
 
 void
