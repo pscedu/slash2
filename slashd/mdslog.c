@@ -970,7 +970,6 @@ mds_journal_init(void)
 			if (r->res_type != SLREST_MDS)
 				continue;
 
-			npeer++;
 			/* MDS cannot have more than one member */
 			resm = psc_dynarray_getpos(&r->res_members, 0);
 
@@ -984,10 +983,12 @@ mds_journal_init(void)
 				psc_info("Added  local MDS: addr = %s, site ID = %d, "
 				    "resource ID = %"PSCPRIxLNID,
 				    resm->resm_addrbuf, s->site_id, resm->resm_nid);
-			} else
+			} else {
+				npeer++;
 				psc_info("Added remote MDS: addr = %s, site ID = %d, "
 				    "resource ID = %"PSCPRIxLNID,
 				    resm->resm_addrbuf, s->site_id, resm->resm_nid);
+			}
 		}
 
 	PLL_ULOCK(&globalConfig.gconf_sites);
