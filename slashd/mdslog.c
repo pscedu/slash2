@@ -1026,14 +1026,12 @@ mds_journal_init(void)
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr", 
 			mds_replay_handler,  mds_distill_handler);
-
 	if (!npeer)
 		return;
 
-	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
+	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 
-	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 	/*
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
