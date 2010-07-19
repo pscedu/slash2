@@ -659,10 +659,10 @@ mds_update_cursor(void *buf, uint64_t txg)
 }
 
 /**
- * mds_cursor_update - Update cursor file.
+ * mds_cursor_thread - Update the cursor file in the ZFS that records log status.
  */
 void
-mds_cursor_update(__unusedx struct psc_thread *thr)
+mds_cursor_thread(__unusedx struct psc_thread *thr)
 {
 	int rc;
 	while (pscthr_run()) {
@@ -1037,7 +1037,7 @@ mds_journal_init(void)
 	    mds_namespace_propagate, NULL, 0, "slmjnmspcthr");
 
 	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
-	    mds_cursor_update, NULL, 0, "slmjcursorhr");
+	    mds_cursor_thread, NULL, 0, "slmjcursorhr");
 }
 
 void
