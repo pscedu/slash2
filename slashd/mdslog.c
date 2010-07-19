@@ -1000,10 +1000,6 @@ mds_journal_init(void)
 	if (r->res_jrnldev[0] == '\0')
 		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
 
-	/*
-	 * If we are a standalone MDS, there is no need to start the distill
-	 * operation.
-	 */
 	txg = mdsio_last_synced_txg();
 	mds_open_cursor();
 
@@ -1026,6 +1022,10 @@ mds_journal_init(void)
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr", 
 			mds_replay_handler,  mds_distill_handler);
+	/*
+	 * If we are a standalone MDS, there is no need to start the namespace
+	 * propagation operation.
+	 */
 	if (!npeer)
 		return;
 
