@@ -304,12 +304,15 @@ tracks endpoint connections
 			sl_ino_t	ino;
 		}
 
-- always cache / on mount_slash, that will save RPCs
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
 - authbuf RPC bulk data, use wrappers of rsx_bulk routines to aid this
 - sprinkle some iostats on zfs, namespace changelog
 - add journal I/O test mode to slashd
 - zfslog -> psclog
+
+- mount_slash
+  - if server is down, it would be nice to return STATFS immediately
+    with some info instead of hang
 
 zfs
 - rename the zfs_init() alias, it is already a routine in ZFS
@@ -330,13 +333,10 @@ management also.  An odtable entry could be used for every SLIOD
 connect.
 
 - add flag to wait/return error/crash ms when slashd goes down
-
-- fix cscope: remove the curdir when the parent includes it
+- add throttling and ping channel control to slash
 
 utime
    (o) track how long sliod has held the I/O and send the difference to the MDS
        so the MDS can more accurately estimate when the I/O took place
-
-- differentiate between OLD, INACTIVE, and QUEUED/REQUESTED, SCHEDULED
 
 - fix the "static" variables in communal/general functions
