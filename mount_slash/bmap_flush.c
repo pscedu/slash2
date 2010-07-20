@@ -568,7 +568,6 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 					freelock(&t->biorq_lock);
 				}
 				psc_dynarray_reset(&b);
-				psc_dynarray_add(&b, r);
 				r = t;
 			}
 		}
