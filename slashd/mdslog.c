@@ -1062,7 +1062,7 @@ int
 mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 {
 	int rc;
-	int validop = 1;
+	int hasname = 1;
 	char *newname;
 	struct srt_stat stat;
 
@@ -1130,15 +1130,21 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 		rc = mdsio_redo_setattr(
 			jnamespace->sjnm_target_s2id,
 			&stat, jnamespace->sjnm_mask);
+		hasname = 0;
 		break;
 	    default:
 		psc_errorx("Unexpected opcode %d", jnamespace->sjnm_op);
-		validop = 0;
+		hasname = 0;
 		rc = -EINVAL;
+		break;
 	}
-	psc_notify("Redo namespace log: op = %d, name = %s, id = %"PRIx64", rc = %d",
-		jnamespace->sjnm_op, jnamespace->sjnm_name,
-		jnamespace->sjnm_target_s2id, rc);
-
+	if (hasname) {
+		psc_notify("Redo namespace log: op = %d, name = %s, id = %"PRIx64", rc = %d",
+			   jnamespace->sjnm_op, jnamespace->sjnm_name,
+			   jnamespace->sjnm_target_s2id, rc);
+	} else {
+		psc_notify("Redo namespace log: op = %d, id = %"PRIx64", rc = %d",
+			   jnamespace->sjnm_op, jnamespace->sjnm_target_s2id, rc);
+	}
 	return (rc);
 }
