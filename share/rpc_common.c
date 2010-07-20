@@ -463,7 +463,7 @@ slexp_destroy(void *data)
 	PSCFREE(slexp);
 }
 
-void *
+void
 slconnthr_main(struct psc_thread *thr)
 {
 	struct slashrpc_cservice *csvc;
@@ -515,7 +515,6 @@ slconnthr_main(struct psc_thread *thr)
 		sl_csvc_lock(resm->resm_csvc);
 	}
 	sl_csvc_decref(csvc);
-	return (NULL);
 }
 
 void
