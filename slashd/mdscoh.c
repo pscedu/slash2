@@ -53,7 +53,7 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	struct srm_bmap_dio_req *mq;
 	struct srm_generic_rep *mp;
 	struct bmap_mds_lease *bml;
-	int rls;
+	int flags;
 
 	mq = pscrpc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
@@ -69,11 +69,22 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	BML_LOCK(bml);
 	psc_assert(bml->bml_flags & BML_COH);
 	bml->bml_flags &= ~BML_COH;
-	if (bml->bml_flags & BML_COHRLS)
-		rls = 1;
+	flags = bml->bml_flags;
 	BML_ULOCK(bml);
-	if (rls)
+	
+	if (flags & BML_COHDIO) {
+		BMAP_LOCK(bml_2_bmap(bml));
+		psc_assert(bml_2_bmap(bml)->bcm_mode & BMAP_DIORQ);
+		bml_2_bmap(bml)->bcm_mode &= ~BMAP_DIORQ;
+		bml_2_bmap(bml)->bcm_mode |= BMAP_DIO;
+		BMAP_ULOCK(bml_2_bmap(bml));
+		
+		DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml), "converted to dio");
+	}
+	
+	if (flags & BML_COHRLS)
 		mds_bmap_bml_release(bml);
+
 	/* bmap_op_done_type() will wake any waiters.
 	 */
 	bmap_op_done_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
@@ -98,11 +109,11 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 
 	if (!(bml->bml_flags & BML_EXP)) {
 		BML_ULOCK(bml);
-		return (-ENOTCONN);
+		return (block ? -ENOTCONN : 0);
 	}
 	bml->bml_flags |= BML_COH;
 	/* XXX How do we deal with a closing export?
-	*/
+	 */
 	csvc = slm_getclcsvc(exp);
 	if (csvc == NULL)
 		bml->bml_flags &= ~BML_COH;
@@ -115,6 +126,8 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	if (rc)
 		goto out;
 
+	rq->rq_async_args.pointer_arg[CB_ARG_SLOT] = bml;
+
 	mq->fid = fcmh_2_fid(bml_2_bmap(bml)->bcm_fcmh);
 	mq->blkno = bml_2_bmap(bml)->bcm_bmapno;
 	mq->dio = 1;
@@ -125,13 +138,14 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 		if (rc == 0)
 			rc = mp->rc;
 	} else {
+		bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
 		pscrpc_nbreqset_add(&bmapCbSet, rq);
+		lc_addtail(&inflBmapCbs, bml);
 		rq = NULL;
 		csvc = NULL;
 	}
 
  out:
-
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -142,33 +156,8 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 void
 slmcohthr_begin(__unusedx struct psc_thread *thr)
 {
-	struct bmap_mds_lease *bml;
-	struct timespec abstime;
-	int rc;
-
 	while (pscthr_run()) {
 		mdscoh_reap();
-
-		clock_gettime(CLOCK_REALTIME, &abstime);
-		abstime.tv_sec += 5;
-
-		bml = lc_peekheadtimed(&pndgBmapCbs, &abstime);
-		if (!bml)
-			continue;
-
-		BML_LOCK(bml);
-		psc_assert(bml->bml_flags & BML_COH);
-		BML_ULOCK(bml);
-
-		lc_remove(&pndgBmapCbs, bml);
-		lc_addtail(&inflBmapCbs, bml);
-		bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
-
-		rc = mdscoh_req(bml, MDSCOH_NONBLOCK);
-		if (rc)
-			DEBUG_BMAP(PLL_ERROR, bml_2_bmap(bml), "bml=%p "
-			   "mdscoh_queue_req_locked() failed with (rc==%d)",
-			   bml, rc);
 	}
 }
 

@@ -160,8 +160,9 @@ struct bmap_timeo_table {
 #define BTE_DEL			(1 << 1)
 #define BTE_REATTACH		(1 << 2)
 
-#define BMAP_TIMEO_TBL_SZ	20
-#define BMAP_TIMEO_MAX		120 //Seconds
+#define BMAP_TIMEO_MAX		120 /* Max bmap lease timeout */
+#define BMAP_TIMEO_TBL_QUANT    5
+#define BMAP_TIMEO_TBL_SZ	(BMAP_TIMEO_MAX / BMAP_TIMEO_TBL_QUANT)
 #define BMAP_SEQLOG_FACTOR	100
 
 struct bmap_mds_lease {
@@ -171,6 +172,7 @@ struct bmap_mds_lease {
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
 	psc_spinlock_t		  bml_lock;
+	time_t                    bml_start;
 	struct bmap_mds_info	 *bml_bmdsi;
 	struct pscrpc_export	 *bml_exp;
 	struct psclist_head	  bml_bmdsi_lentry;
@@ -191,17 +193,20 @@ enum {
 	BML_WRITE   = (1 << 1),
 	BML_CDIO    = (1 << 2),
 	BML_COHRLS  = (1 << 3),
-	BML_EXP     = (1 << 4),
-	BML_TIMEOQ  = (1 << 5),
-	BML_COH     = (1 << 6),
-	BML_RECOVER = (1 << 7),
-	BML_CHAIN   = (1 << 8),
-	BML_UPGRADE = (1 << 9)
+	BML_COHDIO  = (1 << 4),
+	BML_EXP     = (1 << 5),
+	BML_TIMEOQ  = (1 << 6),
+	BML_BMDSI   = (1 << 7),
+	BML_COH     = (1 << 8),
+	BML_RECOVER = (1 << 9),
+	BML_CHAIN   = (1 << 10),
+	BML_UPGRADE = (1 << 11)
 };
 
 /*
  * bmi_assign - the structure used for tracking the mds's bmap/ion
  *   assignments.  These structures are stored in a odtable.
+ * Note: default odtable entry size is 128 bytes.
  */
 struct bmi_assign {
 	lnet_nid_t		bmi_ion_nid;
@@ -211,7 +216,10 @@ struct bmi_assign {
 	uint64_t		bmi_seq;
 	sl_bmapno_t		bmi_bmapno;
 	time_t			bmi_start;
+	int                     bmi_flags;
 };
+
+#define BMI_DIO (1 << 0)
 
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)(b)->bcm_pri)
 #define bmap_2_bmdsjfi(b)	(&bmap_2_bmdsi(b)->bmdsi_jfi)

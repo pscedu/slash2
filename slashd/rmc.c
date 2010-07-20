@@ -217,7 +217,8 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 		goto out;
 
 	mp->sbd = mq->sbd;
-	mp->sbd.sbd_key = bml->bml_bmdsi->bmdsi_assign->odtr_key;
+	mp->sbd.sbd_seq = bml->bml_seq;
+	mp->sbd.sbd_key = bml->bml_key;
 
 	psc_assert(bmdsi->bmdsi_wr_ion);
 	mp->sbd.sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
@@ -253,7 +254,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	mp->rc = mds_bmap_load_cli(fcmh, mq->bmapno, mq->flags, mq->rw,
 	   mq->prefios, &mp->sbd, rq->rq_export, &bmap);
 	if (mp->rc)
-		return (mp->rc);
+		return((mp->rc == SLERR_BMAP_DIOWAIT) ? 0 : mp->rc);
 
 	bmdsi = bmap->bcm_pri;
 
