@@ -94,7 +94,7 @@ struct slashrpc_export {
 struct slashrpc_cservice *
 	sl_csvc_get(struct slashrpc_cservice **, int, struct pscrpc_export *,
 	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
-	    psc_spinlock_t *, void *, enum slconn_type);
+	    void *, void *, enum slconn_type);
 void	sl_csvc_decref(struct slashrpc_cservice *);
 void	sl_csvc_free(struct slashrpc_cservice *);
 void	sl_csvc_incref(struct slashrpc_cservice *);

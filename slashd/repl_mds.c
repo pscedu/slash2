@@ -943,13 +943,13 @@ _mds_repl_nodes_setbusy(struct resm_mds_info *ma,
 	 * waiting to utilize the new connection slots.
 	 */
 	if (set && busy == 0 && rc) {
-		locked = reqlock(&ma->rmmi_lock);
+		locked = RMMI_RLOCK(ma);
 		psc_multiwaitcond_wakeup(&ma->rmmi_mwcond);
-		ureqlock(&ma->rmmi_lock, locked);
+		RMMI_URLOCK(ma, locked);
 
-		locked = reqlock(&mb->rmmi_lock);
+		locked = RMMI_RLOCK(mb);
 		psc_multiwaitcond_wakeup(&mb->rmmi_mwcond);
-		ureqlock(&mb->rmmi_lock, locked);
+		RMMI_URLOCK(mb, locked);
 	}
 	return (rc);
 }
@@ -964,14 +964,14 @@ mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	locked = reqlock(&repl_busytable_lock);
-	locked2 = reqlock(&rmmi->rmmi_lock);
+	locked2 = RMMI_RLOCK(rmmi);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources)
 			DYNARRAY_FOREACH(resm, j, &r->res_members)
 				if (resm->resm_pri != rmmi)
 					mds_repl_nodes_setbusy(rmmi,
 					    resm->resm_pri, 0);
-	ureqlock(&rmmi->rmmi_lock, locked2);
+	RMMI_URLOCK(rmmi, locked2);
 	ureqlock(&repl_busytable_lock, locked);
 	PLL_ULOCK(&globalConfig.gconf_sites);
 }

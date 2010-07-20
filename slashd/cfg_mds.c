@@ -47,7 +47,7 @@ slcfg_init_resm(struct sl_resm *resm)
 	struct resm_mds_info *rmmi;
 
 	rmmi = resm->resm_pri = PSCALLOC(sizeof(*rmmi));
-	LOCK_INIT(&rmmi->rmmi_lock);
+	psc_pthread_mutex_init(&rmmi->rmmi_mutex);
 	psc_multiwaitcond_init(&rmmi->rmmi_mwcond,
 	    NULL, 0, "rmmi-%s", resm->resm_addrbuf);
 	atomic_set(&rmmi->rmmi_refcnt, 0);

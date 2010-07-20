@@ -284,13 +284,16 @@ struct slashrpc_cservice *
 sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, lnet_nid_t peernid, uint32_t rqptl,
     uint32_t rpptl, uint64_t magic, uint32_t version,
-    psc_spinlock_t *lockp, void *waitinfo, enum slconn_type ctype)
+    void *lockp, void *waitinfo, enum slconn_type ctype)
 {
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm;
 	int rc = 0, locked;
 
-	locked = reqlock(lockp);
+	if (flags & CSVCF_USE_MULTIWAIT)
+		locked = psc_pthread_mutex_reqlock(lockp);
+	else
+		locked = reqlock(lockp);
 	if (exp)
 		peernid = exp->exp_connection->c_peer.nid;
 	psc_assert(peernid != LNET_NID_ANY);
@@ -395,7 +398,10 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
  out:
 	if (csvc)
 		sl_csvc_incref(csvc);
-	ureqlock(lockp, locked);
+	if (flags & CSVCF_USE_MULTIWAIT)
+		psc_pthread_mutex_ureqlock(lockp, locked);
+	else
+		ureqlock(lockp, locked);
 	return (csvc);
 }
 

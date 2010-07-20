@@ -79,19 +79,19 @@ struct slm_rmi_expdata *
 #define slm_getmcsvc(resm)							\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, NULL,		\
 	    (resm)->resm_nid, SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC,	\
-	    SRMM_VERSION, &resm2rmmi(resm)->rmmi_lock,				\
+	    SRMM_VERSION, &resm2rmmi(resm)->rmmi_mutex,				\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_MDS)
 
 #define slm_geticsvc(resm)							\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, NULL,		\
 	    (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC,	\
-	    SRIM_VERSION, &resm2rmmi(resm)->rmmi_lock,				\
+	    SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,				\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD)
 
 #define slm_geticsvcx(resm, exp)						\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),		\
 	    0, SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC,			\
-	    SRIM_VERSION, &resm2rmmi(resm)->rmmi_lock,				\
+	    SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,				\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD)
 
 static __inline struct slashrpc_cservice *

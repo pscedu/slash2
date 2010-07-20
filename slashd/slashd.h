@@ -142,7 +142,7 @@ struct sl_mds_peerinfo {
 
 /* allocated by slcfg_init_resm(), which is tied into the lex/yacc code */
 struct resm_mds_info {
-	psc_spinlock_t		  rmmi_lock;
+	pthread_mutex_t		  rmmi_mutex;
 	struct psc_multiwaitcond  rmmi_mwcond;
 	int			  rmmi_busyid;
 	struct sl_resm		 *rmmi_resm;
@@ -151,6 +151,9 @@ struct resm_mds_info {
 
 #define resm2rmmi(resm)		((struct resm_mds_info *)(resm)->resm_pri)
 #define res2rpmi(res)		((struct resprof_mds_info *)(res)->res_pri)
+
+#define RMMI_RLOCK(rmmi)	psc_pthread_mutex_reqlock(&(rmmi)->rmmi_mutex)
+#define RMMI_URLOCK(rmmi, lk)	psc_pthread_mutex_ureqlock(&(rmmi)->rmmi_mutex, (lk))
 
 /* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
  */
