@@ -776,15 +776,6 @@ mds_inode_sync(void *data)
 	INOH_ULOCK(inoh);
 }
 
-
-void
-mds_bmap_jfiprep(void *data)
-{
-	struct bmapc_memb *bmap=data;
-
-	bmap_op_start_type(bmap, BMAP_OPCNT_MDSLOG);
-}
-
 /**
  * mds_bmap_sync - Callback function which is called from
  *   mdsfssyncthr_begin().
