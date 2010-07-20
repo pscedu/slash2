@@ -36,11 +36,11 @@ struct psc_poolmaster	 bmapMdsLeasePoolMaster;
 struct psc_poolmgr	*bmapMdsLeasePool;
 
 #define mds_bmap_timeotbl_curslot				\
-	((time(NULL) / BMAP_TIMEO_TBL_SZ) % BMAP_TIMEO_TBL_SZ)
+	((time(NULL) % BMAP_TIMEO_MAX) / BMAP_TIMEO_TBL_QUANT)
 
-#define mds_bmap_timeotbl_nextwakeup				\
-	(BMAP_TIMEO_TBL_SZ - ((time(NULL) % BMAP_TIMEO_MAX) %	\
-			      BMAP_TIMEO_TBL_SZ))
+#define mds_bmap_timeotbl_nextwakeup					\
+	(BMAP_TIMEO_TBL_QUANT - ((time(NULL) % BMAP_TIMEO_MAX) %	\
+				 BMAP_TIMEO_TBL_QUANT))
 
 void
 mds_bmap_timeotbl_init(void)
@@ -124,8 +124,6 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	uint64_t seq=0;
 	struct bmap_timeo_entry *e;
 
-	psc_assert(bml->bml_flags & BML_TIMEOQ);
-
 	spinlock(&mdsBmapTimeoTbl.btt_lock);
 
 	if (flags & BTE_DEL) {
@@ -136,8 +134,10 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 		return (BMAPSEQ_ANY);
 	}
 
-	psc_trace("timeoslot=%"PSCPRIuTIMET, mds_bmap_timeotbl_curslot);
-
+	/* Currently all leases are placed in the last slot regardless
+	 *   of their start time.  This is the case for BTE_REATTACH.  
+	 */
+	psc_dbg("timeoslot=%"PSCPRIuTIMET, mds_bmap_timeotbl_curslot);
 	e = &mdsBmapTimeoTbl.btt_entries[mds_bmap_timeotbl_curslot];
 
 	if (flags & BTE_REATTACH) {
@@ -155,14 +155,16 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 			seq = e->bte_maxseq = bml->bml_seq;
 		else
 			seq = e->bte_maxseq;
-	} else		
+	} else {
 		seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
+	}
 
 	if (bml->bml_flags & BML_UPGRADE) {
 		psc_assert(psclist_conjoint(&bml->bml_timeo_lentry));
 		psclist_del(&bml->bml_timeo_lentry);
 	}
 
+	bml->bml_flags |= BML_TIMEOQ;
 	psclist_xadd_tail(&bml->bml_timeo_lentry, &e->bte_bmaps);
 
 	freelock(&mdsBmapTimeoTbl.btt_lock);
@@ -212,8 +214,8 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		}
 		psc_dynarray_reset(&a);
  sleep:
-		psc_trace("timeoslot=%d sleeptime=%"PSCPRIuTIMET,
-			  timeoslot, mds_bmap_timeotbl_nextwakeup);
+		psc_dbg("timeoslot=%d sleeptime=%"PSCPRIuTIMET,
+			timeoslot, mds_bmap_timeotbl_nextwakeup);
 
 		sleep(mds_bmap_timeotbl_nextwakeup);
 	}
