@@ -210,7 +210,7 @@ main(int argc, char *argv[])
 		case 'S':
 			sfn = optarg;
 			break;
-		case 'X':
+		case 'X': /* undocumented, developer only */
 			allow_root_uid = 1;
 			break;
 		default:
