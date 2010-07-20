@@ -1652,6 +1652,7 @@ msl_init(__unusedx struct fuse_conn_info *conn)
 	if (rc)
 		psc_fatalx("unable to connect to MDS: %s", slstrerror(rc));
 	sl_csvc_decref(csvc);
+//	slconnthr_spawn(MSTHRT_CONN, slc_rmc_resm, "ms");
 
 	name = getenv("SLASH2_PIOS_ID");
 	if (name) {

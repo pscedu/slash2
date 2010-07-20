@@ -46,9 +46,10 @@ struct pscrpc_request;
 #define MSTHRT_TINTV			6	/* timer interval thread */
 #define MSTHRT_TIOS			7	/* timer iostat updater */
 #define MSTHRT_FUSE			8	/* fuse internal manager */
-#define MSTHRT_BMAPFLSH			9	/* async buffer thread */
-#define MSTHRT_BMAPFLSHRPC		10	/* async buffer thread for rpc reaping */
-#define MSTHRT_BMAPFLSHRLS		11
+#define MSTHRT_BMAPFLSH			9	/* bmap write data flush thread */
+#define MSTHRT_BMAPFLSHRPC		10	/* async buffer thread for RPC reaping */
+#define MSTHRT_BMAPFLSHRLS		11	/* bmap lease releaser */
+#define MSTHRT_CONN			13	/* connection monitor */
 
 /* async RPC pointers */
 #define MSL_IO_CB_POINTER_SLOT		1
