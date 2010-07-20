@@ -73,7 +73,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-X] [-D datadir] [-f cfgfile] [-S socket] mds-resource\n",
+	    "usage: %s [-D datadir] [-f cfgfile] [-S socket] mds-resource\n",
 	    progname);
 	exit(1);
 }
