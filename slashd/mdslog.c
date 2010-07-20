@@ -1018,7 +1018,7 @@ mds_journal_init(void)
 
 	/* we need the cursor thread to join the replay */
 	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
-	    mds_cursor_thread, NULL, 0, "slmjcursorhr");
+	    mds_cursor_thread, NULL, 0, "slmjcursorthr");
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr", 
 			mds_replay_handler,  mds_distill_handler);
