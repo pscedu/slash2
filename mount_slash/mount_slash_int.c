@@ -296,7 +296,7 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 	psc_assert(psclist_conjoint(&r->biorq_lentry));
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
-	if (r->biorq_flags & BIORQ_WRITE) {
+	if (r->biorq_flags & BIORQ_WRITE && !(r->biorq_flags & BIORQ_DIO)) {
 		atomic_dec(&bmpc->bmpc_pndgwr);
 		psc_assert(atomic_read(&bmpc->bmpc_pndgwr) >= 0);
 
@@ -368,13 +368,15 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	 *    cleared in msl_readio_cb to unblock waiting
 	 *    threads at the earliest possible moment.
 	 */
-	if (r->biorq_flags & BIORQ_WRITE) {
-		psc_assert(r->biorq_flags & BIORQ_INFL);
-		psc_assert(r->biorq_flags & BIORQ_SCHED);
-		r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
-	} else {
-		psc_assert(!(r->biorq_flags & BIORQ_INFL));
-		psc_assert(!(r->biorq_flags & BIORQ_SCHED));
+	if (!(r->biorq_flags & BIORQ_DIO)) {
+		if (r->biorq_flags & BIORQ_WRITE) {
+			psc_assert(r->biorq_flags & BIORQ_INFL);
+			psc_assert(r->biorq_flags & BIORQ_SCHED);
+			r->biorq_flags &= ~(BIORQ_INFL|BIORQ_SCHED);
+		} else {
+			psc_assert(!(r->biorq_flags & BIORQ_INFL));
+			psc_assert(!(r->biorq_flags & BIORQ_SCHED));
+		}
 	}
 
 	r->biorq_flags |= BIORQ_DESTROY;
@@ -584,7 +586,7 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 int
 msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 {
-	int rc, getreptbl = 0;
+	int rc, nretries = 0, getreptbl = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct bmap_cli_info *msbd;
@@ -600,6 +602,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	f = bmap->bcm_fcmh;
 	fci = fcmh_2_fci(f);
 
+ retry:
 	FCMH_LOCK(f);
 	if ((f->fcmh_state & (FCMH_CLI_HAVEREPLTBL |
 	    FCMH_CLI_FETCHREPLTBL)) == 0) {
@@ -631,8 +634,16 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0) {
 		rc = mp->rc;
-		memcpy(&msbd->msbd_msbcr, &mp->bcw.crcstates, 
-		       sizeof(struct msbmap_crcrepl_states));
+		if (mp->rc == SLERR_BMAP_DIOWAIT) {
+			/* Retry for bmap to be DIO ready.
+			 */
+			DEBUG_BMAP(PLL_WARN, bmap, "SLERR_BMAP_DIOWAIT (rt=%d)", 
+				   nretries);
+			rc = mp->rc;
+			goto out;
+		} else 			
+			memcpy(&msbd->msbd_msbcr, &mp->bcw.crcstates, 
+			       sizeof(struct msbmap_crcrepl_states));
 	} else
 		goto out;
 
@@ -659,6 +670,14 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	
+	if (rc == SLERR_BMAP_DIOWAIT) {
+		sleep(BMAP_CLI_DIOWAIT_SECS);
+		if (nretries > (BMAP_CLI_MAX_LEASE * 2))
+			return (-ETIMEDOUT);
+		goto retry;
+	}
+
 	return (rc);
 }
 
@@ -683,11 +702,12 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	struct pscrpc_request *rq = NULL;
 	struct srm_bmap_chwrmode_req *mq;
 	struct srm_bmap_chwrmode_rep *mp;
-	int rc;
+	int rc, nretries=0;
 
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
+ retry:	
 	psc_assert(b->bcm_mode & BMAP_MDCHNG);
-	
+
 	if (b->bcm_mode & BMAP_WR)
 		/* Write enabled bmaps are allowed to read with no
 		 *   further action being taken.
@@ -710,15 +730,28 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
 	mq->prefios = prefIOS;
 	rc = SL_RSX_WAITREP(rq, mp);
-	if (rc == 0) 
-		rc = mp->rc;
+	if (!rc) {
+		if (mp->rc)
+			rc = mp->rc;
+		else
+			memcpy(bmap_2_sbd(b), &mp->sbd, 
+			       sizeof(struct srt_bmapdesc));
+	}
 
-	memcpy(bmap_2_sbd(b), &mp->sbd, sizeof(struct srt_bmapdesc));
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+
+	if (rc == SLERR_BMAP_DIOWAIT) {
+		DEBUG_BMAP(PLL_WARN, b, "SLERR_BMAP_DIOWAIT rt=%d", nretries);
+		sleep(BMAP_CLI_DIOWAIT_SECS);
+		if (nretries > (BMAP_CLI_MAX_LEASE * 2))
+			return (-ETIMEDOUT);
+		goto retry;
+	}
+
 	return (rc);
 }
 
@@ -928,10 +961,6 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		bmpce->bmpce_waitq = NULL;
 		BMPCE_ULOCK(bmpce);
 	}
-
-	r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP|BIORQ_INFL|BIORQ_SCHED);
-	DEBUG_BIORQ(PLL_INFO, r, "readio cb complete");
-	psc_waitq_wakeall(&r->biorq_waitq);
 	freelock(&r->biorq_lock);
 
 	/* Free the dynarray which was allocated in msl_readio_rpc_create().
@@ -1213,6 +1242,8 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 
 	DEBUG_BIORQ(PLL_NOTIFY, r, "launching read req");
 
+	/* XXX Using a set for any type of read may be overkill.
+	 */
 	if (!r->biorq_rqset)
 		r->biorq_rqset = pscrpc_prep_set();
 
@@ -1349,10 +1380,23 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		if (rc)
 			// XXX need to cleanup properly
 			psc_fatalx("pscrpc_set_wait rc=%d", rc);
+		/* The set cb is not being used, msl_readio_cb() is 
+		 *   called for every rpc in the set.  This was causing
+		 *   the biorq to have its flags mod'd in an incorrect
+		 *   fashion.  For now, the following lines will be moved
+		 *   here. 
+		 */
+		spinlock(&r->biorq_lock);
+		r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP|
+				    BIORQ_INFL|BIORQ_SCHED);
+		DEBUG_BIORQ(PLL_INFO, r, "readio cb complete");
+		psc_waitq_wakeall(&r->biorq_waitq);
+		freelock(&r->biorq_lock);
 		/* Destroy and cleanup the set now.
 		 */
 		pscrpc_set_destroy(r->biorq_rqset);
 		r->biorq_rqset = NULL;
+		
 	}
 
 	for (i=0; i < npages; i++) {

@@ -51,6 +51,7 @@ struct bmap_cli_info {
 
 #define BMAP_CLI_MAX_LEASE		60 /* seconds */
 #define BMAP_CLI_TIMEO_INC		5
+#define BMAP_CLI_DIOWAIT_SECS           1
 
 #define bmap_2_msbd(b)			((struct bmap_cli_info *)(b)->bcm_pri)
 #define bmap_2_bmpc(b)			(&bmap_2_msbd(b)->msbd_bmpc)

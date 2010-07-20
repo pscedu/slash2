@@ -559,6 +559,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 				 *   deschedule the biorq's which are being
 				 *   held back.
 				 */
+				r = t;
 				for (i=0; i < psc_dynarray_len(&b); i++) {
 					t = psc_dynarray_getpos(&b, i);
 					spinlock(&t->biorq_lock);
@@ -568,7 +569,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 					freelock(&t->biorq_lock);
 				}
 				psc_dynarray_reset(&b);
-				r = t;
+				psc_dynarray_add(&b, r);
 			}
 		}
 	}
