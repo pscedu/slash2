@@ -27,9 +27,9 @@
 
 #include <sys/param.h>
 
+#include "pfl/hashtbl.h"
 #include "pfl/types.h"
 #include "psc_ds/dynarray.h"
-#include "pfl/hashtbl.h"
 #include "psc_ds/list.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/alloc.h"

@@ -25,11 +25,18 @@
 #ifndef _SLCONN_H_
 #define _SLCONN_H_
 
+#include <sys/types.h>
+#include <sys/time.h>
+
 #include "psc_util/lock.h"
 #include "psc_util/atomic.h"
 
+#include <stdint.h>
+
 struct pscrpc_import;
 struct pscrpc_export;
+
+struct sl_resm;
 
 enum slconn_type {
 	SLCONNT_CLI,
@@ -38,11 +45,23 @@ enum slconn_type {
 	SLNCONNT
 };
 
+struct slconn_thread {
+	struct sl_resm		*sct_resm;
+	uint32_t		 sct_rqptl;
+	uint32_t		 sct_rpptl;
+	uint64_t		 sct_magic;
+	uint32_t		 sct_version;
+	void			*sct_lockp;
+	void			*sct_waitinfo;
+	enum slconn_type	 sct_conntype;
+	int			 sct_flags;
+};
+
 struct slashrpc_cservice {
 	struct pscrpc_import	*csvc_import;
-	psc_spinlock_t		*csvc_lockp;
+	void			*csvc_lockp;
 	void			*csvc_waitinfo;
-	int			 csvc_flags;
+	psc_atomic32_t		 csvc_flags;
 	int			 csvc_lasterrno;
 	psc_atomic32_t		 csvc_refcnt;
 	time_t			 csvc_mtime;		/* last connection try */
@@ -50,15 +69,13 @@ struct slashrpc_cservice {
 
 /* csvc_flags */
 #define CSVCF_CONNECTING	(1 << 0)
-#define CSVCF_USE_MULTIWAIT	(1 << 1)
+#define CSVCF_CONNECTED		(1 << 1)
+#define CSVCF_USE_MULTIWAIT	(1 << 2)
+#define CSVCF_ABANDON		(1 << 3)
 
 #define CSVC_RECONNECT_INTV	30			/* seconds */
 
-#define CSVC_LOCK_ENSURE(c)	LOCK_ENSURE((c)->csvc_lockp)
-#define CSVC_LOCK(c)		spinlock((c)->csvc_lockp)
-#define CSVC_ULOCK(c)		freelock((c)->csvc_lockp)
-#define CSVC_RLOCK(c)		reqlock((c)->csvc_lockp)
-#define CSVC_URLOCK(c, lk)	ureqlock((c)->csvc_lockp, (lk))
+#define CSVC_GETSPINLOCK(csvc)	((psc_spinlock_t *)(csvc)->csvc_lockp)
 
 struct slashrpc_export {
 	uint64_t		 slexp_nextcfd;
@@ -66,19 +83,26 @@ struct slashrpc_export {
 	void			*slexp_data;
 	int			 slexp_flags;
 	struct pscrpc_export	*slexp_export;
-	struct psclist_head      slexp_list;
+	struct psclist_head      slexp_bmlhd;		/* bmap leases */
 };
 
 /* slashrpc_export flags */
 #define SLEXPF_CLOSING		(1 << 0)		/* XXX why do we need this? */
+
+#define sl_csvc_waitrel_s(csvc, s)	_sl_csvc_waitrelv((csvc), (s), 0L)
 
 struct slashrpc_cservice *
 	sl_csvc_get(struct slashrpc_cservice **, int, struct pscrpc_export *,
 	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
 	    psc_spinlock_t *, void *, enum slconn_type);
 void	sl_csvc_decref(struct slashrpc_cservice *);
-void	sl_csvc_incref(struct slashrpc_cservice *);
 void	sl_csvc_free(struct slashrpc_cservice *);
+void	sl_csvc_incref(struct slashrpc_cservice *);
+void	sl_csvc_lock_ensure(struct slashrpc_cservice *);
+int	sl_csvc_useable(struct slashrpc_cservice *);
+int	sl_csvc_usemultiwait(struct slashrpc_cservice *);
+void   _sl_csvc_waitrelv(struct slashrpc_cservice *, long, long);
+void	sl_csvc_wake(struct slashrpc_cservice *);
 
 struct slashrpc_export *
 	slexp_get(struct pscrpc_export *, enum slconn_type);

@@ -109,6 +109,7 @@ struct statvfs;
 #define SRMC_REQ_PORTAL		10
 #define SRMC_REP_PORTAL		11
 #define SRMC_BULK_PORTAL	12
+#define SRMC_CTL_PORTAL		13
 
 #define SRMC_VERSION		1
 #define SRMC_MAGIC		UINT64_C(0xaabbccddeeff0022)
@@ -117,6 +118,7 @@ struct statvfs;
 #define SRMM_REQ_PORTAL		15
 #define SRMM_REP_PORTAL		16
 #define SRMM_BULK_PORTAL	17
+#define SRMM_CTL_PORTAL		18
 
 #define SRMM_VERSION		1
 #define SRMM_MAGIC		UINT64_C(0xaabbccddeeff0033)
@@ -125,6 +127,7 @@ struct statvfs;
 #define SRMI_REQ_PORTAL		20
 #define SRMI_REP_PORTAL		21
 #define SRMI_BULK_PORTAL	22
+#define SRMI_CTL_PORTAL		23
 
 #define SRMI_VERSION		1
 #define SRMI_MAGIC		UINT64_C(0xaabbccddeeff0044)
@@ -133,6 +136,7 @@ struct statvfs;
 #define SRCM_REQ_PORTAL		25
 #define SRCM_REP_PORTAL		26
 #define SRCM_BULK_PORTAL	27
+#define SRCM_CTL_PORTAL		28
 
 #define SRCM_VERSION		1
 #define SRCM_MAGIC		UINT64_C(0xaabbccddeeff0055)
@@ -141,6 +145,7 @@ struct statvfs;
 #define SRIC_REQ_PORTAL		30
 #define SRIC_REP_PORTAL		31
 #define SRIC_BULK_PORTAL	32
+#define SRIC_CTL_PORTAL		33
 
 #define SRIC_VERSION		1
 #define SRIC_MAGIC		UINT64_C(0xaabbccddeeff0066)
@@ -149,6 +154,7 @@ struct statvfs;
 #define SRII_REQ_PORTAL		35
 #define SRII_REP_PORTAL		36
 #define SRII_BULK_PORTAL	37
+#define SRII_CTL_PORTAL		38
 
 #define SRII_VERSION		1
 #define SRII_MAGIC		UINT64_C(0xaabbccddeeff0077)
@@ -157,6 +163,7 @@ struct statvfs;
 #define SRIM_REQ_PORTAL		40
 #define SRIM_REP_PORTAL		41
 #define SRIM_BULK_PORTAL	42
+#define SRIM_CTL_PORTAL		43
 
 #define SRIM_VERSION		1
 #define SRIM_MAGIC		UINT64_C(0xaabbccddeeff0088)

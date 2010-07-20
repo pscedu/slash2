@@ -200,6 +200,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slash_snapshot);
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slashrpc_export);
+	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctlmsg_conn);
 	PRTYPE(struct slctlmsg_file);
 	PRTYPE(struct sli_repl_workrq);

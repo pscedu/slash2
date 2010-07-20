@@ -64,7 +64,8 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 						psc_id2str(imp->imp_connection->c_peer,
 						    scc->scc_addrbuf);
 
-					scc->scc_cflags = resm->resm_csvc->csvc_flags;
+					scc->scc_cflags = psc_atomic32_read(
+					    &resm->resm_csvc->csvc_flags);
 					scc->scc_refcnt = psc_atomic32_read(
 					    &resm->resm_csvc->csvc_refcnt);
 					scc->scc_flags = 0;

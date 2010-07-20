@@ -23,8 +23,8 @@
 #include <stdio.h>
 
 #include "psc_ds/list.h"
-#include "psc_rpc/rpc.h"
 #include "psc_rpc/export.h"
+#include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
@@ -34,10 +34,10 @@
 #include "slconfig.h"
 #include "slconn.h"
 
-/*
- * slrpc_issue_connect - attempt connection initiation with a peer.
+/**
+ * slrpc_issue_connect - Attempt connection initiation with a peer.
  * @server: NID of server peer.
- * @ptl: portal ID to initiate over.
+ * @imp: import (connection structure) to peer.
  * @magic: agreed-upon connection message key.
  * @version: communication protocol version.
  */
@@ -76,11 +76,31 @@ slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 	return (rc);
 }
 
+__static int
+slrpc_issue_ping(struct slashrpc_cservice *csvc, uint32_t version)
+{
+	struct pscrpc_request *rq;
+	struct srm_generic_rep *mp;
+	struct srm_ping_req *mq;
+	int rc;
+
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, version,
+	    SRMT_PING, rq, mq, mp);
+	if (rc)
+		return (rc);
+	rc = SL_RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
+	pscrpc_req_finished(rq);
+	return (rc);
+}
+
 void
 sl_csvc_free(struct slashrpc_cservice *csvc)
 {
 //	psc_assert(psc_atomic32_read(&csvc->csvc_refcnt) == 0);
 	pscrpc_import_put(csvc->csvc_import);
+	csvc->csvc_import = NULL;
 	free(csvc);
 }
 
@@ -90,27 +110,131 @@ psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
 	psc_fatalx("unimplemented stub");
 }
 
-__inline void
-sl_csvc_decref(struct slashrpc_cservice *csvc)
+__weak int
+psc_multiwaitcond_waitrel(__unusedx struct psc_multiwaitcond *arg,
+    __unusedx pthread_mutex_t *mutex, __unusedx const struct timespec *ts)
 {
-	CSVC_RLOCK(csvc);
-	psc_atomic32_dec(&csvc->csvc_refcnt);
-	if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT)
+	psc_fatalx("unimplemented stub");
+}
+
+void
+sl_csvc_wake(struct slashrpc_cservice *csvc)
+{
+	sl_csvc_lock_ensure(csvc);
+	if (sl_csvc_usemultiwait(csvc))
 		psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
 	else
 		psc_waitq_wakeall(csvc->csvc_waitinfo);
-	CSVC_ULOCK(csvc);
+}
+
+void
+_sl_csvc_waitrelv(struct slashrpc_cservice *csvc, long s, long ns)
+{
+	struct timespec ts;
+
+	ts.tv_sec = s;
+	ts.tv_nsec = ns;
+
+	sl_csvc_lock_ensure(csvc);
+	if (sl_csvc_usemultiwait(csvc))
+		psc_multiwaitcond_waitrel(csvc->csvc_waitinfo,
+		    csvc->csvc_lockp, &ts);
+	else
+		psc_waitq_waitrel(csvc->csvc_waitinfo,
+		    csvc->csvc_lockp, &ts);
+}
+
+void
+sl_csvc_lock(struct slashrpc_cservice *csvc)
+{
+	if (sl_csvc_usemultiwait(csvc))
+		psc_pthread_mutex_lock(csvc->csvc_lockp);
+	else
+		spinlock(CSVC_GETSPINLOCK(csvc));
+}
+
+void
+sl_csvc_unlock(struct slashrpc_cservice *csvc)
+{
+	if (sl_csvc_usemultiwait(csvc))
+		psc_pthread_mutex_unlock(csvc->csvc_lockp);
+	else
+		freelock(CSVC_GETSPINLOCK(csvc));
+}
+
+int
+sl_csvc_reqlock(struct slashrpc_cservice *csvc)
+{
+	if (sl_csvc_usemultiwait(csvc))
+		return (psc_pthread_mutex_reqlock(csvc->csvc_lockp));
+	return (reqlock(csvc->csvc_lockp));
+}
+
+void
+sl_csvc_ureqlock(struct slashrpc_cservice *csvc, int locked)
+{
+	if (sl_csvc_usemultiwait(csvc))
+		return (psc_pthread_mutex_ureqlock(csvc->csvc_lockp, locked));
+	return (ureqlock(csvc->csvc_lockp, locked));
+}
+
+__inline void
+sl_csvc_lock_ensure(struct slashrpc_cservice *csvc)
+{
+	if (sl_csvc_usemultiwait(csvc))
+		psc_pthread_mutex_ensure_locked(csvc->csvc_lockp);
+	else
+		LOCK_ENSURE(CSVC_GETSPINLOCK(csvc));
+}
+
+int
+sl_csvc_usemultiwait(struct slashrpc_cservice *csvc)
+{
+	return (psc_atomic32_read(&(csvc)->csvc_flags) & CSVCF_USE_MULTIWAIT);
+}
+
+int
+sl_csvc_useable(struct slashrpc_cservice *csvc)
+{
+	sl_csvc_lock_ensure(csvc);
+	if (csvc->csvc_import->imp_failed ||
+	    csvc->csvc_import->imp_invalid)
+		return (0);
+	return ((psc_atomic32_read(&(csvc)->csvc_flags) &
+	  (CSVCF_CONNECTED | CSVCF_ABANDON)) == CSVCF_CONNECTED);
+}
+
+__inline void
+sl_csvc_decref(struct slashrpc_cservice *csvc)
+{
+	sl_csvc_reqlock(csvc);
+	psc_atomic32_dec(&csvc->csvc_refcnt);
+	sl_csvc_wake(csvc);
+	sl_csvc_unlock(csvc);
 }
 
 __inline void
 sl_csvc_incref(struct slashrpc_cservice *csvc)
 {
-	CSVC_LOCK_ENSURE(csvc);
+	sl_csvc_lock_ensure(csvc);
 	psc_atomic32_inc(&csvc->csvc_refcnt);
 }
 
-/*
- * sl_csvc_create - create a new client RPC service.
+void
+sl_csvc_disconnect(struct slashrpc_cservice *csvc)
+{
+	int locked;
+
+	locked = sl_csvc_reqlock(csvc);
+	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED);
+	sl_csvc_wake(csvc);
+	sl_csvc_ureqlock(csvc, locked);
+
+	pscrpc_abort_inflight(csvc->csvc_import);
+}
+
+/**
+ * sl_csvc_create - Create a new client RPC service.
  * @rqptl: request portal ID.
  * @rpptl: reply portal ID.
  */
@@ -129,11 +253,12 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	imp->imp_client->cli_request_portal = rqptl;
 	imp->imp_client->cli_reply_portal = rpptl;
 	imp->imp_max_retries = 2;
+	imp->imp_igntimeout = 1;
 	return (csvc);
 }
 
-/*
- * sl_csvc_get - acquire or create a client RPC service.
+/**
+ * sl_csvc_get - Acquire or create a client RPC service.
  * @csvcp: value-result permanent storage for connection structures.
  * @flags: CSVCF_* flags the connection should take on, only used for
  *	csvc initialization.
@@ -174,33 +299,31 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	if (csvc == NULL) {
 		/* ensure that our peer is of the given resource type (REST) */
 		switch (ctype) {
-		    case SLCONNT_CLI:
+		case SLCONNT_CLI:
 			break;
-		    case SLCONNT_IOD:
+		case SLCONNT_IOD:
 			resm = libsl_nid2resm(peernid);
 			if (resm->resm_res->res_type == SLREST_MDS)
 				goto out;
 			break;
-		    case SLCONNT_MDS:
+		case SLCONNT_MDS:
 			resm = libsl_nid2resm(peernid);
 			if (resm->resm_res->res_type != SLREST_MDS)
 				goto out;
 			break;
-		    default:
+		default:
 			psc_fatalx("%d: bad connection type", ctype);
 		}
 
 		/* initialize service */
 		csvc = *csvcp = sl_csvc_create(rqptl, rpptl);
-		csvc->csvc_flags = flags;
+		psc_atomic32_set(&csvc->csvc_flags, flags);
 		csvc->csvc_lockp = lockp;
 		csvc->csvc_waitinfo = waitinfo;
-		csvc->csvc_import->imp_failed = 1;
 	}
 
  restart:
-	if (csvc->csvc_import->imp_failed == 0 &&
-	    csvc->csvc_import->imp_invalid == 0)
+	if (sl_csvc_useable(csvc))
 		goto out;
 
 	if (exp) {
@@ -225,26 +348,27 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		if (c)
 			pscrpc_put_connection(c);
 
-	} else if (csvc->csvc_flags & CSVCF_CONNECTING) {
-		if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT) {
+	} else if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_CONNECTING) {
+		if (sl_csvc_usemultiwait(csvc)) {
 			psc_fatalx("multiwaits not implemented");
 //			psc_multiwait_addcond(ml, wakearg);
 //			csvc = NULL;
 //			goto out;
 		} else {
 			psc_waitq_wait(csvc->csvc_waitinfo, csvc->csvc_lockp);
-			CSVC_RLOCK(csvc);
+			sl_csvc_reqlock(csvc);
 		}
 		goto restart;
 	} else if (csvc->csvc_mtime + CSVC_RECONNECT_INTV < time(NULL)) {
-		csvc->csvc_flags |= CSVCF_CONNECTING;
-		CSVC_ULOCK(csvc);
+		psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTING);
+		sl_csvc_unlock(csvc);
 
 		rc = slrpc_issue_connect(peernid,
 		    csvc->csvc_import, magic, version);
 
-		CSVC_RLOCK(csvc);
-		csvc->csvc_flags &= ~CSVCF_CONNECTING;
+		sl_csvc_reqlock(csvc);
+		psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTING);
+		psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 		csvc->csvc_mtime = time(NULL);
 		if (rc) {
 			csvc->csvc_import->imp_failed = 1;
@@ -265,10 +389,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	if (rc == 0) {
 		csvc->csvc_import->imp_failed = 0;
 		csvc->csvc_import->imp_invalid = 0;
-		if (csvc->csvc_flags & CSVCF_USE_MULTIWAIT)
-			psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
-		else
-			psc_waitq_wakeall(csvc->csvc_waitinfo);
+		sl_csvc_wake(csvc);
 	}
 
  out:
@@ -278,8 +399,8 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	return (csvc);
 }
 
-/*
- * slexp_get - access private data associated with an LNET peer.
+/**
+ * slexp_get - Access private data associated with an LNET peer.
  * @exp: RPC export of peer.
  * @peertype: peer type of connection.
  */
@@ -297,7 +418,7 @@ slexp_get(struct pscrpc_export *exp, enum slconn_type peertype)
 		slexp = exp->exp_private = PSCALLOC(sizeof(*slexp));
 		slexp->slexp_export = exp;
 		slexp->slexp_peertype = peertype;
-		INIT_PSCLIST_HEAD(&slexp->slexp_list);
+		INIT_PSCLIST_HEAD(&slexp->slexp_bmlhd);
 		exp->exp_hldropf = slexp_destroy;
 	} else {
 		slexp = exp->exp_private;
@@ -321,6 +442,7 @@ slexp_destroy(void *data)
 	struct pscrpc_export *exp = slexp->slexp_export;
 
 	psc_assert(exp);
+
 	/* There's no way to set this from the drop_callback() */
 	if (!(slexp->slexp_flags & SLEXPF_CLOSING))
 		slexp->slexp_flags |= SLEXPF_CLOSING;
@@ -329,8 +451,63 @@ slexp_destroy(void *data)
 		slexp_freef[slexp->slexp_peertype](exp);
 
 	/* OK, no one else should be in here */
-	psc_assert(psclist_empty(&slexp->slexp_list));
+	psc_assert(psclist_empty(&slexp->slexp_bmlhd));
 
 	exp->exp_private = NULL;
 	PSCFREE(slexp);
+}
+
+void
+slconnthr_main(void *arg)
+{
+	struct slashrpc_cservice *csvc;
+	struct psc_thread *thr = arg;
+	struct slconn_thread *sct;
+	struct sl_resm *resm;
+	int woke, rc;
+
+	sct = thr->pscthr_private;
+	resm = sct->sct_resm;
+	sl_csvc_lock(resm->resm_csvc);
+	while (pscthr_run() && (psc_atomic32_read(
+	    &resm->resm_csvc->csvc_flags) & CSVCF_ABANDON) == 0) {
+		sl_csvc_unlock(resm->resm_csvc);
+		woke = 0;
+		for (;;) {
+			/* Now just PING for connection lifetime. */
+			csvc = sl_csvc_get(&resm->resm_csvc, sct->sct_flags,
+			    NULL, resm->resm_nid, sct->sct_rqptl, sct->sct_rpptl,
+			    sct->sct_magic, sct->sct_version, sct->sct_lockp,
+			    sct->sct_waitinfo, sct->sct_conntype);
+
+			if (csvc == NULL)
+				break;
+
+			sl_csvc_lock(csvc);
+			if (!sl_csvc_useable(csvc))
+				break;
+
+			if (!woke) {
+				/*
+				 * Wake once whenever the connection
+				 * reestablishes.
+				 */
+				sl_csvc_wake(csvc);
+				woke = 1;
+			}
+
+			sl_csvc_unlock(csvc);
+			rc = slrpc_issue_ping(csvc, sct->sct_version);
+			sl_csvc_lock(csvc);
+
+			if (rc)
+				break;
+			sl_csvc_waitrel_s(csvc, 60);
+		}
+		sl_csvc_disconnect(csvc);
+		sl_csvc_decref(csvc);
+
+		sl_csvc_lock(resm->resm_csvc);
+	}
+	sl_csvc_decref(csvc);
 }
