@@ -81,8 +81,8 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	const char *cfn, *sfn, *mds = NULL;
 	struct slashrpc_cservice *csvc;
+	const char *cfn, *sfn;
 	int rc, c;
 
 	/* gcrypt must be initialized very early on */
@@ -113,9 +113,7 @@ main(int argc, char *argv[])
 		}
 	argc -= optind;
 	argv += optind;
-	if (argc == 1)
-		mds = argv[0];
-	else if (argc)
+	if (argc != 1)
 		usage();
 
 	pscthr_init(SLITHRT_CTL, 0, NULL, NULL,
@@ -129,17 +127,6 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(allow_root_uid);
 
-	if (mds == NULL) {
-		mds = getenv("SLASH_MDS_NID");
-		if (mds)
-			warnx("SLASH_MDS_NID environment variable "
-			    "deprecated; use command line parameter");
-	}
-	if (mds == NULL)
-		errx(1, "no MDS host specified");
-
-	sli_rmi_setmds(mds);
-
 	bmap_cache_init(sizeof(struct bmap_iod_info));
 	fidc_init(sizeof(struct fcmh_iod_info),
 	    FIDC_ION_DEFSZ, FIDC_ION_MAXSZ, NULL);
@@ -149,13 +136,15 @@ main(int argc, char *argv[])
 	sli_rpc_initsvc();
 	slitimerthr_spawn();
 	sliod_bmaprlsthr_spawn();
+	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry, "bmapReapQ");
 
+	sli_rmi_setmds(argv[0]);
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
-		psc_fatalx("MDS server unavailable: %s", slstrerror(rc));
+		psc_fatalx("MDS server '%s' unavailable: %s",
+		    argv[0], slstrerror(rc));
 	sl_csvc_decref(csvc);
-
-	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry, "bmapReapQ");
+//	slconnthr_spawn(SLITHRT_CONN, rmi_resm, "sli");
 
 	slictlthr_main(sfn);
 	/* NOTREACHED */
