@@ -109,6 +109,8 @@ struct slashrpc_export *
 void    slexp_put(struct pscrpc_export *);
 void	slexp_destroy(void *);
 
+void	slconnthr_spawn(int, struct sl_resm *, const char *);
+
 extern struct psc_dynarray lnet_nids;
 
 extern void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);

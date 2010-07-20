@@ -463,11 +463,10 @@ slexp_destroy(void *data)
 	PSCFREE(slexp);
 }
 
-void
-slconnthr_main(void *arg)
+void *
+slconnthr_main(struct psc_thread *thr)
 {
 	struct slashrpc_cservice *csvc;
-	struct psc_thread *thr = arg;
 	struct slconn_thread *sct;
 	struct sl_resm *resm;
 	int woke, rc;
@@ -516,4 +515,18 @@ slconnthr_main(void *arg)
 		sl_csvc_lock(resm->resm_csvc);
 	}
 	sl_csvc_decref(csvc);
+	return (NULL);
+}
+
+void
+slconnthr_spawn(int thrtype, struct sl_resm *resm, const char *thrnamepre)
+{
+	struct slconn_thread *sct;
+	struct psc_thread *thr;
+
+	thr = pscthr_init(thrtype, 0, slconnthr_main, NULL,
+	    sizeof(*sct), "%sconnthr-%s", thrnamepre, resm->resm_addrbuf);
+	sct = thr->pscthr_private;
+	sct->sct_resm = resm;
+	pscthr_setready(thr);
 }
