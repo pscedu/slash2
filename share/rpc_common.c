@@ -178,7 +178,7 @@ sl_csvc_ureqlock(struct slashrpc_cservice *csvc, int locked)
 	return (ureqlock(csvc->csvc_lockp, locked));
 }
 
-__inline void
+void
 sl_csvc_lock_ensure(struct slashrpc_cservice *csvc)
 {
 	if (sl_csvc_usemultiwait(csvc))
