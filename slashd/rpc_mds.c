@@ -135,7 +135,7 @@ mexpcli_destroy(struct pscrpc_export *exp)
 	struct mexp_cli *mexpc = slexp->slexp_data;
 	struct bmap_mds_lease *bml, *tmp;
 
-	psclist_for_each_entry_safe(bml, tmp, &slexp->slexp_list,
+	psclist_for_each_entry_safe(bml, tmp, &slexp->slexp_bmlhd,
 	    bml_exp_lentry) {
 		BML_LOCK(bml);
 		psc_assert(bml->bml_flags & BML_EXP);

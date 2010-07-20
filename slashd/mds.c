@@ -789,22 +789,22 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 		if ((wlease + rlease) > 1) {
 			psc_assert(bml->bml_chain->bml_flags & BML_CHAIN);
-			psc_assert(psclist_disjoint(&bml->bml_chain->bml_bmdsi_lentry));			
+			psc_assert(psclist_disjoint(&bml->bml_chain->bml_bmdsi_lentry));
 
 			bml->bml_chain->bml_flags &= ~BML_CHAIN;
 			pll_addtail(&bmdsi->bmdsi_leases, bml->bml_chain);
-			
+
 			tail->bml_chain = bml->bml_chain;
 		} else
 			psc_assert(bml == bml->bml_chain);
 	}
-	
+
 	if (wlease == 1) {
 		bmdsi->bmdsi_writers--;
 		if (rlease)
 			bmdsi->bmdsi_readers++;
 	}
-	
+
 #if 0
 	if (wlease || rlease) {
 		struct bmap_mds_lease *tmp=obml;
@@ -936,7 +936,7 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 			bid->cli_nid = rq->rq_conn->c_peer.nid;
 			bid->cli_pid = rq->rq_conn->c_peer.pid;
 		}
-		
+
 		fg.fg_fid = bid->fid;
 		fg.fg_gen = 0;
 
@@ -957,8 +957,8 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 		bml = mds_bmap_getbml(b, bid->cli_nid, bid->cli_pid,
 		    bid->seq);
 
-		DEBUG_BMAP((bml ? PLL_INFO : PLL_WARN), b, 
-			   "release %"PRId64" nid=%"PRId64" pid=%u bml=%p", 
+		DEBUG_BMAP((bml ? PLL_INFO : PLL_WARN), b,
+			   "release %"PRId64" nid=%"PRId64" pid=%u bml=%p",
 			   bid->seq, bid->cli_nid, bid->cli_pid, bml);
 
 		if (bml)
@@ -1380,7 +1380,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	 */
 	slexp = slexp_get(exp, SLCONNT_CLI);
 	spinlock(&exp->exp_lock);
-	psclist_xadd_tail(&bml->bml_exp_lentry, &slexp->slexp_list);
+	psclist_xadd_tail(&bml->bml_exp_lentry, &slexp->slexp_bmlhd);
 	BML_LOCK(bml);
 	bml->bml_flags |= BML_EXP;
 	BML_ULOCK(bml);
