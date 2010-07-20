@@ -170,7 +170,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-X] [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket] zpoolname\n",
+	    "usage: %s [-D datadir] [-f slashconf] [-p zpoolcache] [-S socket] zpoolname\n",
 	    progname);
 	exit(1);
 }
