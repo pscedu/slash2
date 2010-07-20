@@ -50,6 +50,11 @@ may be one of the following:
 .Bl -tag -compact -offset indent -width 12n
 .It Cm threads
 execution threads
+.It Cm resnid
+network resource
+.Po by
+.Tn NID
+.Pc
 .El
 .Pp
 The value
@@ -74,11 +79,23 @@ has the following format:
 .Ar iostat
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
-.It Cm lndrcv- Ns Ar if
-Per LNET networking device data received.
-.It Cm lndsnd- Ns Ar if
-Per LNET networking device data sent.
+.Bl -tag -compact -offset indent -width Ds
+.It Cm lni-rcv- Ns Ar if ,
+.It Cm lni-snd- Ns Ar if
+Data sent/received per
+.Tn LNET
+networking interface.
+.Pp
+.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
+.It Cm lusklnd- Ns Ar mode Ns Cm -snd
+Data sent/received over userland socket networking device.
+.Ar mode
+may be passive or aggregate.
+.Pp
+.It Cm jrnlwr- Ns Ar fn ,
+.It Cm jrnlrd- Ns Ar fn
+Data read/written to journal disk file
+.Ar fn .
 .El
 .Pp
 The value
@@ -100,12 +117,22 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Cm fidcclean
-Used FID cache entries.
-.It Cm fidcdirty
-Dirty FID cache entries.
-.It Cm fidcfree
-Unused FID cache entries.
+.It Cm fcmhclean
+Clean
+.Tn FID
+cache members
+.It Cm fcmhdirty
+Dirty
+.Tn FID
+cache members
+.It Cm inflightbml
+Active
+.Pq inflight
+bmap lease mode updates
+.It Cm pendingbml
+Pending bmap lease mode updates
+.It Cm replstwkq
+Replication status work buffers
 .El
 .Pp
 The value
@@ -289,16 +316,23 @@ parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
 .Bl -tag -compact -offset indent -width 16n
+.It Cm slmbmaptimeothr
+Bmap lease timeout monitor
 .It Cm slmcohthr
-Coherency thread
+Bmap data coherency thread
 .It Cm slmctlthr
-Control thread
-.It Cm slmfssyncthr
-File system synchronization thread
+Daemon control thread
+.It Cm slmjcursorthr
+Journal cursor updater thread
+.It Cm slmjthr
+Master journal thread
 .It Cm slmlnacthr- Ns Ar %s
-Lustre network acceptor thread
-.It Cm slmreplthr- Ns Ar %s
-Per-site replication monitoring thread
+.Tn LNET
+network acceptor thread
+.It Cm slmrcmthr
+Client
+.Tn RPC
+request initiator thread
 .It Cm slmrmcthr Ns Ar %02d
 Client
 .Tn RPC
@@ -317,8 +351,11 @@ Timer interval thread
 Timed
 .Tn I/O
 stats updater thread
+.It Cm slmupschedthr- Ns Ar %s
+Per-site update scheduler thread
 .It Cm slmusklndplthr Ns Ar %d
-Lustre userland socket poll thread
+.Tn LNET
+userland socket poll thread
 .It Cm everyone
 All threads (default, where applicable)
 .El

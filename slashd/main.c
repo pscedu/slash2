@@ -149,10 +149,10 @@ slm_init(void)
 	    rsw_lentry, "replstwkq");
 
 	lc_reginit(&pndgBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
-	    "pendingBmapCbs");
+	    "pendingbml");
 
 	lc_reginit(&inflBmapCbs, struct bmap_mds_lease, bml_coh_lentry,
-	    "inflBmapCbs");
+	    "inflightbml");
 
 	bmap_cache_init(sizeof(struct bmap_mds_info));
 
