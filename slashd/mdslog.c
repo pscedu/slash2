@@ -669,7 +669,10 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 		if (rc)
 			psc_warn("Fail to update cursor, rc = %d", rc);
 		else
-			psc_notify("Cursor updated with txg = %"PRIx64, mds_cursor.pjc_txg);
+			psc_notify("Cursor updated: txg=%"PRId64", xid=%"PRId64
+				    ", s2id=%"PRId64", seqno=%"PRId64, 
+				    mds_cursor.pjc_txg, mds_cursor.pjc_xid, 
+				    mds_cursor.pjc_s2id, mds_cursor.pjc_seqno);
 	}
 }
 
