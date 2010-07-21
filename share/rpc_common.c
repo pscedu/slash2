@@ -535,7 +535,7 @@ slconnthr_spawn(int thrtype, struct sl_resm *resm, const char *thrnamepre)
 	struct psc_thread *thr;
 
 	thr = pscthr_init(thrtype, 0, slconnthr_main, NULL,
-	    sizeof(*sct), "%sconnthr-%s", thrnamepre, resm->resm_addrbuf);
+	    sizeof(*sct), "%sconnthr-%s", thrnamepre, resm->resm_res->res_name);
 	sct = thr->pscthr_private;
 	sct->sct_resm = resm;
 	pscthr_setready(thr);
