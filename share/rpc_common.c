@@ -138,59 +138,60 @@ _sl_csvc_waitrelv(struct slashrpc_cservice *csvc, long s, long ns)
 	sl_csvc_lock_ensure(csvc);
 	if (sl_csvc_usemultiwait(csvc))
 		psc_multiwaitcond_waitrel(csvc->csvc_waitinfo,
-		    csvc->csvc_lockp, &ts);
+		    csvc->csvc_mutex, &ts);
 	else
 		psc_waitq_waitrel(csvc->csvc_waitinfo,
-		    csvc->csvc_lockp, &ts);
+		    csvc->csvc_lock, &ts);
 }
 
 void
 sl_csvc_lock(struct slashrpc_cservice *csvc)
 {
 	if (sl_csvc_usemultiwait(csvc))
-		psc_pthread_mutex_lock(csvc->csvc_lockp);
+		psc_pthread_mutex_lock(csvc->csvc_mutex);
 	else
-		spinlock(CSVC_GETSPINLOCK(csvc));
+		spinlock(csvc->csvc_lock);
 }
 
 void
 sl_csvc_unlock(struct slashrpc_cservice *csvc)
 {
 	if (sl_csvc_usemultiwait(csvc))
-		psc_pthread_mutex_unlock(csvc->csvc_lockp);
+		psc_pthread_mutex_unlock(csvc->csvc_mutex);
 	else
-		freelock(CSVC_GETSPINLOCK(csvc));
+		freelock(csvc->csvc_lock);
 }
 
 int
 sl_csvc_reqlock(struct slashrpc_cservice *csvc)
 {
 	if (sl_csvc_usemultiwait(csvc))
-		return (psc_pthread_mutex_reqlock(csvc->csvc_lockp));
-	return (reqlock(csvc->csvc_lockp));
+		return (psc_pthread_mutex_reqlock(csvc->csvc_mutex));
+	return (reqlock(csvc->csvc_lock));
 }
 
 void
 sl_csvc_ureqlock(struct slashrpc_cservice *csvc, int locked)
 {
 	if (sl_csvc_usemultiwait(csvc))
-		return (psc_pthread_mutex_ureqlock(csvc->csvc_lockp, locked));
-	return (ureqlock(csvc->csvc_lockp, locked));
+		psc_pthread_mutex_ureqlock(csvc->csvc_mutex, locked);
+	else
+		ureqlock(csvc->csvc_lock, locked);
 }
 
 void
 sl_csvc_lock_ensure(struct slashrpc_cservice *csvc)
 {
 	if (sl_csvc_usemultiwait(csvc))
-		psc_pthread_mutex_ensure_locked(csvc->csvc_lockp);
+		psc_pthread_mutex_ensure_locked(csvc->csvc_mutex);
 	else
-		LOCK_ENSURE(CSVC_GETSPINLOCK(csvc));
+		LOCK_ENSURE(csvc->csvc_lock);
 }
 
 int
 sl_csvc_usemultiwait(struct slashrpc_cservice *csvc)
 {
-	return (psc_atomic32_read(&(csvc)->csvc_flags) & CSVCF_USE_MULTIWAIT);
+	return (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_USE_MULTIWAIT);
 }
 
 int
@@ -332,7 +333,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		/* initialize service */
 		csvc = *csvcp = sl_csvc_create(rqptl, rpptl);
 		psc_atomic32_set(&csvc->csvc_flags, flags);
-		csvc->csvc_lockp = lockp;
+		csvc->csvc_lockinfo.lm_ptr = lockp;
 		csvc->csvc_waitinfo = waitinfo;
 	}
 
@@ -369,7 +370,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 //			csvc = NULL;
 //			goto out;
 		} else {
-			psc_waitq_wait(csvc->csvc_waitinfo, csvc->csvc_lockp);
+			psc_waitq_wait(csvc->csvc_waitinfo, csvc->csvc_lock);
 			sl_csvc_reqlock(csvc);
 		}
 		goto restart;
@@ -484,17 +485,25 @@ slconnthr_main(struct psc_thread *thr)
 
 	sct = thr->pscthr_private;
 	resm = sct->sct_resm;
-	sl_csvc_lock(resm->resm_csvc);
+	if (sct->sct_flags & CSVCF_USE_MULTIWAIT)
+		psc_pthread_mutex_lock(sct->sct_lockinfo.lm_mutex);
+	else
+		spinlock(sct->sct_lockinfo.lm_lock);
 	while (pscthr_run() && (psc_atomic32_read(
 	    &resm->resm_csvc->csvc_flags) & CSVCF_ABANDON) == 0) {
-		sl_csvc_unlock(resm->resm_csvc);
+		if (sct->sct_flags & CSVCF_USE_MULTIWAIT)
+			psc_pthread_mutex_unlock(sct->sct_lockinfo.lm_mutex);
+		else
+			freelock(sct->sct_lockinfo.lm_lock);
+
 		woke = 0;
 		for (;;) {
 			/* Now just PING for connection lifetime. */
 			csvc = sl_csvc_get(&resm->resm_csvc, sct->sct_flags,
 			    NULL, resm->resm_nid, sct->sct_rqptl, sct->sct_rpptl,
-			    sct->sct_magic, sct->sct_version, sct->sct_lockp,
-			    sct->sct_waitinfo, sct->sct_conntype);
+			    sct->sct_magic, sct->sct_version,
+			    sct->sct_lockinfo.lm_ptr, sct->sct_waitinfo,
+			    sct->sct_conntype);
 
 			if (csvc == NULL)
 				break;
@@ -529,7 +538,10 @@ slconnthr_main(struct psc_thread *thr)
 }
 
 void
-slconnthr_spawn(int thrtype, struct sl_resm *resm, const char *thrnamepre)
+slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
+    uint64_t magic, uint32_t version, void *lockp, int flags,
+    void *waitinfo, enum slconn_type conntype, int thrtype,
+    const char *thrnamepre)
 {
 	struct slconn_thread *sct;
 	struct psc_thread *thr;
@@ -538,5 +550,13 @@ slconnthr_spawn(int thrtype, struct sl_resm *resm, const char *thrnamepre)
 	    sizeof(*sct), "%sconnthr-%s", thrnamepre, resm->resm_res->res_name);
 	sct = thr->pscthr_private;
 	sct->sct_resm = resm;
+	sct->sct_rqptl = rqptl;
+	sct->sct_rpptl = rpptl;
+	sct->sct_magic = magic;
+	sct->sct_version = version;
+	sct->sct_lockinfo.lm_ptr = lockp;
+	sct->sct_flags = flags;
+	sct->sct_waitinfo = waitinfo;
+	sct->sct_conntype = conntype;
 	pscthr_setready(thr);
 }

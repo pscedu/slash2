@@ -64,7 +64,11 @@ sli_rmi_setmds(const char *name)
 	/* XXX kill any old MDS and purge any bmap updates being held */
 //	sl_csvc_disable(old->resm_csvc);
 
-	slconnthr_spawn(SLITHRT_CONN, rmi_resm, "sli");
+	slconnthr_spawn(rmi_resm, SRMI_REQ_PORTAL, SRMI_REP_PORTAL,
+	    SRMI_MAGIC, SRMI_VERSION, &resm2rmii(rmi_resm)->rmii_lock, 0,
+	    &resm2rmii(rmi_resm)->rmii_waitq, SLCONNT_MDS, SLITHRT_CONN,
+	    "sli");
+
 	return (0);
 }
 

@@ -81,7 +81,6 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	struct slashrpc_cservice *csvc;
 	const char *cfn, *sfn;
 	int rc, c;
 
