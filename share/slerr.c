@@ -30,6 +30,7 @@ char *slash_errstrs[] = {
 	"Replica is already inactive",
 	"All replicas inactive",
 	"Invalid bmap",
+	"Bmap direct I/O must wait",
 	"Uninitialized bmap",
 	"Unknown resource",
 	"Unknown I/O system",
