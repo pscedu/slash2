@@ -94,6 +94,8 @@ slimmns_create(const char *root, uint32_t depth)
 	if (fd < 0)
 		psc_fatal("open %s", fn);
 	memset(&cursor, 0, sizeof(struct psc_journal_cursor));
+	cursor.pjc_magic = PJRNL_CURSOR_MAGIC;
+	cursor.pjc_version = PJRNL_CURSOR_VERSION;
 	if (pwrite(fd, &cursor, sizeof(cursor), 0) != sizeof(cursor))
 		psc_fatal("write %s", fn);
 	close(fd);
