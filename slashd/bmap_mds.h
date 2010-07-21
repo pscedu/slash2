@@ -222,7 +222,6 @@ struct bmi_assign {
 #define BMI_DIO (1 << 0)
 
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)(b)->bcm_pri)
-#define bmap_2_bmdsjfi(b)	(&bmap_2_bmdsi(b)->bmdsi_jfi)
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 #define bmap_2_bgen(b)		(b)->bcm_od->bh_gen
 
