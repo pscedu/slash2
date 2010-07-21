@@ -181,4 +181,7 @@ extern struct odtable				*mdsBmapAssignTable;
 extern const struct slash_inode_extras_od	 null_inox_od;
 extern struct sl_mds_nsstats			 slm_nsstats_aggr;	/* aggregate stats */
 
+uint64_t	slm_get_curr_slashid(void);
+uint64_t	slm_get_next_slashid(void);
+
 #endif /* _SLASHD_H_ */

@@ -65,18 +65,28 @@
  *	continuously across reboots and crashes.
  */
 uint64_t next_slash_id = SLASHID_MIN;
+static psc_spinlock_t slash_id_lock = LOCK_INITIALIZER;
+
+uint64_t
+slm_get_curr_slashid(void)
+{ 
+	uint64_t slid;
+	spinlock(&slash_id_lock);
+	slid = next_slash_id;
+	freelock(&slash_id_lock);
+	return (slid);
+}
 
 uint64_t
 slm_get_next_slashid(void)
 {
-	static psc_spinlock_t lock = LOCK_INITIALIZER;
 	static int init;
 	char fn[PATH_MAX];
 	uint64_t slid;
 	FILE *fp;
 
 	/* XXX XXX disgusting XXX XXX */
-	spinlock(&lock);
+	spinlock(&slash_id_lock);
 	if (!init) {
 		xmkfn(fn, "%s/%s", sl_datadir, SL_FN_HACK_FID);
 
@@ -112,7 +122,7 @@ slm_get_next_slashid(void)
 	}
 
 #endif
-	freelock(&lock);
+	freelock(&slash_id_lock);
 	return (slid | ((uint64_t)nodeResm->resm_site->site_id <<
 	    SLASH_ID_FID_BITS));
 }

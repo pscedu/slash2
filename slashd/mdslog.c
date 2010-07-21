@@ -653,7 +653,7 @@ mds_update_cursor(void *buf, uint64_t txg)
 	cursor->pjc_version = PJRNL_CURSOR_VERSION;
 	cursor->pjc_txg = txg;
 	cursor->pjc_xid = pjournal_next_distill(mdsJournal);
-	cursor->pjc_s2id = 0;
+	cursor->pjc_s2id = slm_get_curr_slashid();
 	cursor->pjc_seqno = 0;
 }
 
