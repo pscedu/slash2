@@ -528,8 +528,8 @@ slconnthr_main(struct psc_thread *thr)
 				break;
 			sl_csvc_waitrel_s(csvc, 60);
 		}
-		sl_csvc_disconnect(csvc);
-		sl_csvc_decref(csvc);
+		sl_csvc_disconnect(resm->resm_csvc);
+		sl_csvc_decref(resm->resm_csvc);
 
 		sl_csvc_lock(resm->resm_csvc);
 	} while (pscthr_run() && (psc_atomic32_read(
