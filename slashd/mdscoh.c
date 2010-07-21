@@ -158,6 +158,7 @@ slmcohthr_begin(__unusedx struct psc_thread *thr)
 {
 	while (pscthr_run()) {
 		mdscoh_reap();
+		sleep(1);
 	}
 }
 
