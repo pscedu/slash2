@@ -414,7 +414,7 @@ mds_namespace_update_lwm(void)
 {
 	int i;
 	int first = 1;
-	uint64_t seqno;
+	uint64_t seqno = 0; /* gcc */
 	struct sl_mds_peerinfo *peerinfo;
 
 	spinlock(&mds_namespace_peerlist_lock);
