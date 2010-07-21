@@ -1623,7 +1623,6 @@ unmount_mp(void)
 void *
 msl_init(__unusedx struct fuse_conn_info *conn)
 {
-	struct slashrpc_cservice *csvc;
 	char *name;
 	int rc;
 
@@ -1647,12 +1646,7 @@ msl_init(__unusedx struct fuse_conn_info *conn)
 
 	rc = slc_rmc_setmds(name);
 	if (rc)
-		psc_fatalx("%s: %s", name, slstrerror(rc));
-	rc = slc_rmc_getimp(&csvc);
-	if (rc)
-		psc_fatalx("unable to connect to MDS: %s", slstrerror(rc));
-	sl_csvc_decref(csvc);
-//	slconnthr_spawn(MSTHRT_CONN, slc_rmc_resm, "ms");
+		psc_fatalx("invalid MDS %s: %s", name, slstrerror(rc));
 
 	name = getenv("SLASH2_PIOS_ID");
 	if (name) {

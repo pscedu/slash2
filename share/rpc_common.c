@@ -220,7 +220,7 @@ sl_csvc_incref(struct slashrpc_cservice *csvc)
 	psc_atomic32_inc(&csvc->csvc_refcnt);
 }
 
-void
+__inline void
 sl_csvc_disconnect(struct slashrpc_cservice *csvc)
 {
 	int locked;
@@ -231,6 +231,17 @@ sl_csvc_disconnect(struct slashrpc_cservice *csvc)
 	sl_csvc_ureqlock(csvc, locked);
 
 	pscrpc_abort_inflight(csvc->csvc_import);
+}
+
+__inline void
+sl_csvc_disable(struct slashrpc_cservice *csvc)
+{
+	int locked;
+
+	locked = sl_csvc_reqlock(csvc);
+	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_ABANDON);
+	sl_csvc_wake(csvc);
+	sl_csvc_ureqlock(csvc, locked);
 }
 
 /**

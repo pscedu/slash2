@@ -59,18 +59,23 @@ int
 slc_rmc_setmds(const char *name)
 {
 	struct sl_resource *res;
+	struct sl_resm *old;
 	lnet_nid_t nid;
 
+	old = slc_rmc_resm;
 	nid = libcfs_str2nid(name);
 	if (nid == LNET_NID_ANY) {
 		res = libsl_str2res(name);
-		if (res == NULL) {
-			psc_fatalx("%s: unknown resource", name);
+		if (res == NULL)
 			return (SLERR_RES_UNKNOWN);
-		}
 		slc_rmc_resm = psc_dynarray_getpos(&res->res_members, 0);
 	} else
 		slc_rmc_resm = libsl_nid2resm(nid);
+
+	/* XXX kill any old MDS and purge any bmap updates being held */
+//	sl_csvc_disable(old->resm_csvc);
+
+	slconnthr_spawn(MSTHRT_CONN, slc_rmc_resm, "ms");
 	return (0);
 }
 

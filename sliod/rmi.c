@@ -27,6 +27,7 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 #include "slconn.h"
+#include "slerr.h"
 #include "sliod.h"
 
 struct sl_resm *rmi_resm;
@@ -47,16 +48,23 @@ int
 sli_rmi_setmds(const char *name)
 {
 	struct sl_resource *res;
+	struct sl_resm *old;
 	lnet_nid_t nid;
 
+	old = rmi_resm;
 	nid = libcfs_str2nid(name);
 	if (nid == LNET_NID_ANY) {
 		res = libsl_str2res(name);
 		if (res == NULL)
-			psc_fatalx("%s: unknown resource", name);
+			return (SLERR_RES_UNKNOWN);
 		rmi_resm = psc_dynarray_getpos(&res->res_members, 0);
 	} else
 		rmi_resm = libsl_nid2resm(nid);
+
+	/* XXX kill any old MDS and purge any bmap updates being held */
+//	sl_csvc_disable(old->resm_csvc);
+
+	slconnthr_spawn(SLITHRT_CONN, rmi_resm, "sli");
 	return (0);
 }
 

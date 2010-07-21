@@ -138,13 +138,9 @@ main(int argc, char *argv[])
 	sliod_bmaprlsthr_spawn();
 	lc_reginit(&bmapReapQ, struct bmapc_memb, bcm_lentry, "bmapReapQ");
 
-	sli_rmi_setmds(argv[0]);
-	rc = sli_rmi_getimp(&csvc);
+	rc = sli_rmi_setmds(argv[0]);
 	if (rc)
-		psc_fatalx("MDS server '%s' unavailable: %s",
-		    argv[0], slstrerror(rc));
-	sl_csvc_decref(csvc);
-//	slconnthr_spawn(SLITHRT_CONN, rmi_resm, "sli");
+		psc_fatalx("invalid MDS %s: %s", argv[0], slstrerror(rc));
 
 	slictlthr_main(sfn);
 	/* NOTREACHED */
