@@ -141,8 +141,13 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	jcrc = PJE_DATA(pje);
 
 	rc = mdsio_lookup_slfid(jcrc->sjc_s2id, &rootcreds, NULL, &fid);
-	if (rc)
-		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
+	if (rc) {
+		if (rc == ENOENT) {
+			psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
+			return (-rc);
+		} else 
+			psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
+	}
 
 	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL,
 	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
@@ -200,6 +205,8 @@ mds_replay_handler(struct psc_journal_enthdr *pje, int *rcp)
 {
 	int rc = 0;
 	struct slmds_jent_namespace *jnamespace;
+
+	psc_notify("pje=%p pje_txg=%"PRId64, pje, pje->pje_txg);
 
 	switch (pje->pje_type & ~(_PJE_FLSHFT - 1)) {
 	    case MDS_LOG_BMAP_REPL:
