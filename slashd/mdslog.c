@@ -1017,6 +1017,7 @@ mds_journal_init(void)
 	mdsJournal->pj_distill_xid = mds_cursor.pjc_xid;
 
 	psc_notify("Journal device %s", r->res_jrnldev);
+	psc_notify("Last SLASH ID is %"PRId64, mds_cursor.pjc_s2id);
 	psc_notify("Last synced ZFS transaction group number is %"PRId64, mdsJournal->pj_commit_txg);
 	psc_notify("Last distilled SLASH2 transaction number is %"PRId64, mdsJournal->pj_distill_xid);
 
