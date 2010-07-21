@@ -140,6 +140,16 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 }
 
 int
+slm_rmc_handle_ping(struct pscrpc_request *rq)
+{
+	struct srm_connect_req *mq;
+	struct srm_generic_rep *mp;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	return (0);
+}
+
+int
 slm_rmc_handle_getattr(struct pscrpc_request *rq)
 {
 	const struct srm_getattr_req *mq;
@@ -959,6 +969,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	/* control messages */
 	case SRMT_CONNECT:
 		rc = slm_rmc_handle_connect(rq);
+		break;
+	case SRMT_PING:
+		rc = slm_rmc_handle_ping(rq);
 		break;
 
 	/* file system messages */

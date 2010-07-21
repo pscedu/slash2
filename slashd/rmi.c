@@ -40,8 +40,8 @@
 #include "slerr.h"
 #include "up_sched_res.h"
 
-/*
- * slm_rmi_handle_bmap_getcrcs - handle a BMAPGETCRCS request from ION,
+/**
+ * slm_rmi_handle_bmap_getcrcs - Handle a BMAPGETCRCS request from ION,
  *	so the ION can load the CRCs for a bmap and verify them against
  *	the data he has for the region of data that bmap represents.
  * @rq: request.
@@ -82,8 +82,8 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 	return (0);
 }
 
-/*
- * slm_rmi_handle_bmap_crcwrt - handle a BMAPCRCWRT request from ION,
+/**
+ * slm_rmi_handle_bmap_crcwrt - Handle a BMAPCRCWRT request from ION,
  *	which receives the CRCs for the data contained in a bmap, checks
  *	their integrity during transmission, and records them in our
  *	metadata file system.
@@ -178,8 +178,8 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	return (rc);
 }
 
-/*
- * slm_rmi_handle_repl_schedwk - handle a REPL_SCHEDWK request from ION,
+/**
+ * slm_rmi_handle_repl_schedwk - Handle a REPL_SCHEDWK request from ION,
  *	which is information pertaining to the status of a replication
  *	request, either succesful finish or failure.
  * @rq: request.
@@ -272,8 +272,8 @@ slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 	return (mds_handle_rls_bmap(rq, 1));
 }
 
-/*
- * slm_rmi_handle_connect - handle a CONNECT request from ION.
+/**
+ * slm_rmi_handle_connect - Handle a CONNECT request from ION.
  * @rq: request.
  */
 int
@@ -299,8 +299,23 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 	return (0);
 }
 
-/*
- * slm_rmi_handler - handle a request from ION.
+/**
+ * slm_rmi_handle_ping - Handle a PING request from ION.
+ * @rq: request.
+ */
+int
+slm_rmi_handle_ping(struct pscrpc_request *rq)
+{
+	struct srm_connect_req *mq;
+	struct srm_generic_rep *mp;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	mds_bmap_getcurseq(NULL, &mp->data);
+	return (0);
+}
+
+/**
+ * slm_rmi_handler - Handle a request from ION.
  * @rq: request.
  */
 int
@@ -309,21 +324,31 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	int rc = 0;
 
 	switch (rq->rq_reqmsg->opc) {
+
+	/* bmap messages */
 	case SRMT_BMAPCRCWRT:
 		rc = slm_rmi_handle_bmap_crcwrt(rq);
-		break;
-	case SRMT_CONNECT:
-		rc = slm_rmi_handle_connect(rq);
-		break;
-	case SRMT_GETBMAPCRCS:
-		rc = slm_rmi_handle_bmap_getcrcs(rq);
-		break;
-	case SRMT_REPL_SCHEDWK:
-		rc = slm_rmi_handle_repl_schedwk(rq);
 		break;
 	case SRMT_RELEASEBMAP:
 		rc = slm_rmi_handle_rls_bmap(rq);
 		break;
+	case SRMT_GETBMAPCRCS:
+		rc = slm_rmi_handle_bmap_getcrcs(rq);
+		break;
+
+	/* control messages */
+	case SRMT_CONNECT:
+		rc = slm_rmi_handle_connect(rq);
+		break;
+	case SRMT_PING:
+		rc = slm_rmi_handle_ping(rq);
+		break;
+
+	/* replication messages */
+	case SRMT_REPL_SCHEDWK:
+		rc = slm_rmi_handle_repl_schedwk(rq);
+		break;
+
 	default:
 		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
