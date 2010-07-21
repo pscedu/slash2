@@ -489,8 +489,7 @@ slconnthr_main(struct psc_thread *thr)
 		psc_pthread_mutex_lock(sct->sct_lockinfo.lm_mutex);
 	else
 		spinlock(sct->sct_lockinfo.lm_lock);
-	while (pscthr_run() && (psc_atomic32_read(
-	    &resm->resm_csvc->csvc_flags) & CSVCF_ABANDON) == 0) {
+	do {
 		if (sct->sct_flags & CSVCF_USE_MULTIWAIT)
 			psc_pthread_mutex_unlock(sct->sct_lockinfo.lm_mutex);
 		else
@@ -533,7 +532,8 @@ slconnthr_main(struct psc_thread *thr)
 		sl_csvc_decref(csvc);
 
 		sl_csvc_lock(resm->resm_csvc);
-	}
+	} while (pscthr_run() && (psc_atomic32_read(
+	    &resm->resm_csvc->csvc_flags) & CSVCF_ABANDON) == 0);
 	sl_csvc_decref(csvc);
 }
 
