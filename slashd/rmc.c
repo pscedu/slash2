@@ -74,7 +74,8 @@ slm_get_curr_slashid(void)
 	spinlock(&slash_id_lock);
 	slid = next_slash_id;
 	freelock(&slash_id_lock);
-	return (slid);
+	return (slid | ((uint64_t)nodeResm->resm_site->site_id <<
+	    SLASH_ID_FID_BITS));
 }
 
 uint64_t
