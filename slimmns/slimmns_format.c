@@ -66,7 +66,7 @@ slimmns_create(const char *root, uint32_t depth)
 {
 	char fn[PATH_MAX];
 	int fd, rc;
-	struct psc_journal_cursor cursor = { 0, 0, 0, 0, 0, 0 };
+	struct psc_journal_cursor cursor;
 
 	if (!depth)
 		depth = FID_PATH_DEPTH;
@@ -93,6 +93,7 @@ slimmns_create(const char *root, uint32_t depth)
 	fd = open(fn, O_CREAT|O_TRUNC|O_WRONLY, 0600);
 	if (fd < 0)
 		psc_fatal("open %s", fn);
+	memset(&cursor, 0, sizeof(struct psc_journal_cursor));
 	if (pwrite(fd, &cursor, sizeof(cursor), 0) != sizeof(cursor))
 		psc_fatal("write %s", fn);
 	close(fd);

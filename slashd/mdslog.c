@@ -94,7 +94,7 @@ struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
 psc_spinlock_t			 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
 
 static void				*mds_txgFinfo = NULL;
-static struct psc_journal_cursor	 mds_cursor = { 0, 0, 0, 0, 0, 0 };
+static struct psc_journal_cursor	 mds_cursor;
 
 int
 mds_peerinfo_cmp(const void *a, const void *b)
@@ -656,8 +656,6 @@ mds_update_cursor(void *buf, uint64_t txg)
 {
 	struct psc_journal_cursor *cursor = (struct psc_journal_cursor *)buf;
 
-	cursor->pjc_magic = PJRNL_CURSOR_MAGIC;
-	cursor->pjc_version = PJRNL_CURSOR_VERSION;
 	cursor->pjc_txg = txg;
 	cursor->pjc_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_s2id = slm_get_curr_slashid();
@@ -701,6 +699,9 @@ mds_open_cursor(void)
 	rc = mdsio_read(&rootcreds, &mds_cursor,
 	    sizeof(struct psc_journal_cursor), &nb, 0, mds_txgFinfo);
 	psc_assert(rc == 0 && nb == sizeof(struct psc_journal_cursor));
+
+	psc_assert(mds_cursor.pjc_magic == PJRNL_CURSOR_MAGIC);
+	psc_assert(mds_cursor.pjc_version == PJRNL_CURSOR_VERSION);
 }
 
 /**
