@@ -142,8 +142,8 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 int
 slm_rmc_handle_ping(struct pscrpc_request *rq)
 {
-	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
+	struct srm_ping_req *mq;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	return (0);
