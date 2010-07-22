@@ -768,26 +768,24 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	slash2fuse_getcred(req, &cr);
 
 	mq->pfg.fg_fid = parent;
-       	mq->pfg.fg_gen = 0;
+	mq->pfg.fg_gen = 0;
 
 	strlcpy(mq->name, name, sizeof(mq->name));
-	
-	if ((p = fidc_lookup_fid(parent))) {
+
+	p = fidc_lookup_fid(parent);
+	if (p) {
 		if (!DIRCACHE_INITIALIZED(p)) {
 			FCMH_LOCK(p);
 			DIRCACHE_INIT(p, &dircacheMgr);
 			FCMH_ULOCK(p);
 		} else
-			(slfid_t)dircache_lookup(&fcmh_2_fci(p)->fci_dci, 
+			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
 				 name, DC_STALE);
 	}
-
-
 
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-
 	if (rc)
 		goto out;
  out:
