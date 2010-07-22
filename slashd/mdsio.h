@@ -107,16 +107,16 @@ struct mdsio_ops {
 	void	(*mio_cb_post_create)(void);
 };
 
-#define mdsio_init		mdsio_ops.mio_init
-#define mdsio_exit		mdsio_ops.mio_exit
+#define mdsio_init		mdsio_ops.mio_init			/* zfs_init() */
+#define mdsio_exit		mdsio_ops.mio_exit			/* zfs_exit() */
 
-#define mdsio_access		mdsio_ops.mio_access
-#define mdsio_getattr		mdsio_ops.mio_getattr
+#define mdsio_access		mdsio_ops.mio_access			/* zfsslash2_access() */
+#define mdsio_getattr		mdsio_ops.mio_getattr			/* zfsslash2_getattr() */
 #define mdsio_link		mdsio_ops.mio_link
 #define mdsio_lookup		mdsio_ops.mio_lookup
 #define mdsio_lookup_slfid	mdsio_ops.mio_lookup_slfid
-#define mdsio_mkdir		mdsio_ops.mio_mkdir
-#define mdsio_opencreatef	mdsio_ops.mio_opencreatef
+#define mdsio_mkdir		mdsio_ops.mio_mkdir			/* zfsslash2_mkdir() */
+#define mdsio_opencreatef	mdsio_ops.mio_opencreatef		/* zfsslash2_opencreate() */
 #define mdsio_opendir		mdsio_ops.mio_opendir
 #define mdsio_read		mdsio_ops.mio_read
 #define mdsio_readdir		mdsio_ops.mio_readdir
@@ -137,11 +137,10 @@ struct mdsio_ops {
 #define mdsio_redo_rmdir	mdsio_ops.mio_redo_rmdir
 #define mdsio_redo_setattr	mdsio_ops.mio_redo_setattr
 #define mdsio_redo_symlink	mdsio_ops.mio_redo_symlink
-#define mdsio_redo_unlink	mdsio_ops.mio_redo_unlink
+#define mdsio_redo_unlink	mdsio_ops.mio_redo_unlink		/* zfsslash2_replay_unlink() */
 
-#define mdsio_cb_pre_create	mdsio_ops.mio_cb_pre_create
-#define mdsio_cb_post_create	mdsio_ops.mio_cb_post_create
-
+#define mdsio_cb_pre_create	mdsio_ops.mio_cb_pre_create		/* mds_reserve_slot() */
+#define mdsio_cb_post_create	mdsio_ops.mio_cb_post_create		/* mds_unreserve_slot() */
 /* misc API */
 uint64_t mdsio_last_synced_txg(void);
 int	 mdsio_write_cursor(void *, size_t, void *, sl_log_write_t);
