@@ -83,7 +83,7 @@ char buf[1024 * 1024];
 const char *progname;
 
 void
-pr(const char *name, uint64_t value)
+pr(const char *name, uint64_t value, int hex)
 {
 	static int i;
 	int n;
@@ -94,9 +94,16 @@ pr(const char *name, uint64_t value)
 			putchar('-');
 		if (n < 53)
 			printf("> ");
-		printf("%"PRIu64"\n", value);
-	} else
-		printf("%-52s %"PRIu64"\n", name, value);
+		if (hex)
+			printf("%"PRIx64"\n", value);
+		else
+			printf("%"PRIu64"\n", value);
+	} else {
+		if (hex)
+			printf("%-52s %"PRIx64"\n", name, value);
+		else
+			printf("%-52s %"PRIu64"\n", name, value);
+	}
 }
 
 __dead void
@@ -122,8 +129,9 @@ main(int argc, char *argv[])
 	if (argc)
 		usage();
 
-#define PRTYPE(type)	pr(#type, sizeof(type))
-#define PRVAL(val)	pr(#val, (unsigned long)(val))
+#define PRTYPE(type)	pr(#type, sizeof(type), 0)
+#define PRVAL(val)	pr(#val, (unsigned long)(val), 0)
+#define PRVALX(val)	pr(#val, (unsigned long)(val), 1)
 
 	/* start structs */
 	PRTYPE(mdsio_fid_t);
@@ -348,6 +356,8 @@ main(int argc, char *argv[])
 
 	PRVAL(SL_CRCS_PER_BMAP);
 	PRVAL(SL_REPLICA_NBYTES);
+
+	PRVALX(FID_ANY);
 
 	PRVAL(sizeof(((struct sl_resm *)NULL)->resm_addrbuf));
 
