@@ -63,8 +63,8 @@ struct slash_fidgen {
 	slfgen_t		fg_gen;
 };
 
-#define FID_ANY			UINT64_C(0xffffffffffff)
-#define FIDGEN_ANY		UINT64_C(0xffffffffffff)
+#define FID_ANY			UINT64_C(0xffffffffffffffff)
+#define FIDGEN_ANY		UINT64_C(0xffffffffffffffff)
 
 #define SLFID_ROOT		1
 
