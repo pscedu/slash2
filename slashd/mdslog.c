@@ -226,7 +226,11 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		jnamespace = PJE_DATA(pje);
 		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 		rc = mds_redo_namespace(jnamespace);
-
+		if (jnamespace->sjnm_op == NS_OP_CREATE ||
+		    jnamespace->sjnm_op == NS_OP_MKDIR ||
+		    jnamespace->sjnm_op == NS_OP_LINK ||
+		    jnamespace->sjnm_op == NS_OP_SYMLINK)
+		    mds_cursor.pjc_s2id++;
 		break;
 	    default:
 		psc_fatal("invalid log entry type %d", pje->pje_type);

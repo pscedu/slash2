@@ -78,6 +78,15 @@ slm_get_curr_slashid(void)
 	    SLASH_ID_FID_BITS));
 }
 
+void
+slm_set_curr_slashid(uint64_t slfid)
+{ 
+	uint64_t slid;
+	spinlock(&slash_id_lock);
+	next_slash_id = slfid;
+	freelock(&slash_id_lock);
+}
+
 uint64_t
 slm_get_next_slashid(void)
 {

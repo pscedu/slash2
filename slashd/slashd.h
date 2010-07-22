@@ -183,5 +183,6 @@ extern struct sl_mds_nsstats			 slm_nsstats_aggr;	/* aggregate stats */
 
 uint64_t	slm_get_curr_slashid(void);
 uint64_t	slm_get_next_slashid(void);
+void		slm_set_curr_slashid(uint64_t);
 
 #endif /* _SLASHD_H_ */
