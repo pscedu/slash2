@@ -225,45 +225,6 @@ _mds_repl_iosv_lookup(struct slash_inode_handle *ih,
 	return (0);
 }
 
-#if 0
-__static int
-mds_repl_xattr_load_locked(struct slash_inode_handle *i)
-{
-	char fidfn[FID_MAX_PATH];
-	size_t sz;
-	int rc;
-
-	DEBUG_INOH(PLL_INFO, i, "trying to load replica table");
-
-	INOH_LOCK_ENSURE(i);
-	psc_assert(i->inoh_ino.ino_nrepls);
-	psc_assert(!i->inoh_replicas);
-	psc_assert(!(i->inoh_flags & INOH_HAVE_REPS));
-
-	fid_makepath(i->inoh_ino.ino_fg.fg_fid, fidfn);
-	sz = (sizeof(sl_replica_t) * i->inoh_ino.ino_nrepls);
-
-	if (fid_getxattr(fidfn, SFX_REPLICAS,  i->inoh_replicas, sz)) {
-		psc_warnx("fid_getxattr failed to get %s", SFX_REPLICAS);
-		rc = -errno;
-		goto fail;
-
-	} else if (mds_repl_crc_check(i)) {
-		rc = -EIO;
-		goto fail;
-
-	} else {
-		i->inoh_flags |= INOH_HAVE_REPS;
-		DEBUG_INOH(PLL_INFO, i, "replica table loaded");
-	}
-	return (0);
-
- fail:
-	DEBUG_INOH(PLL_INFO, i, "replica table load failed");
-	return (rc);
-}
-#endif
-
 int
 _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
     const int *retifset, int flags, int off, int *scircuit)
@@ -819,17 +780,13 @@ mds_repl_scandir(void)
 			if (fn[0] == '.')
 				continue;
 
-			rc = mdsio_lookup(mds_repldir_inum, fn, &fg,
-			    NULL, &rootcreds, NULL);
-			if (rc)
-				/* XXX if ENOENT, remove from repldir and continue */
-				psc_fatalx("mdsio_lookup %s/%s: %s",
-				    SL_PATH_UPSCH, fn, slstrerror(rc));
+			memset(&fg, 0, sizeof(fg));
+			fg.fg_fid = strtoll(fn, NULL, 16);
 
 			rc = mds_repl_loadino(&fg, &fcmh);
 			if (rc)
 				/* XXX if ENOENT, remove from repldir and continue */
-				psc_fatal("mds_repl_loadino: %s",
+				psc_fatalx("mds_repl_loadino: %s",
 				    slstrerror(rc));
 
 			wk = psc_pool_get(upsched_pool);
