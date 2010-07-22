@@ -60,11 +60,7 @@
  */
 #define SLASHID_MIN	2
 
-/*
- * TODO: SLASH ID should be logged on disk, so that it can be advanced
- *	continuously across reboots and crashes.
- */
-uint64_t next_slash_id = SLASHID_MIN;
+uint64_t next_slash_id;
 static psc_spinlock_t slash_id_lock = LOCK_INITIALIZER;
 
 uint64_t
@@ -74,14 +70,12 @@ slm_get_curr_slashid(void)
 	spinlock(&slash_id_lock);
 	slid = next_slash_id;
 	freelock(&slash_id_lock);
-	return (slid | ((uint64_t)nodeResm->resm_site->site_id <<
-	    SLASH_ID_FID_BITS));
+	return (slid);
 }
 
 void
 slm_set_curr_slashid(uint64_t slfid)
 { 
-	uint64_t slid;
 	spinlock(&slash_id_lock);
 	next_slash_id = slfid;
 	freelock(&slash_id_lock);
@@ -90,15 +84,18 @@ slm_set_curr_slashid(uint64_t slfid)
 uint64_t
 slm_get_next_slashid(void)
 {
+#if 0
 	static int init;
 	char fn[PATH_MAX];
-	uint64_t slid;
 	FILE *fp;
+#endif
+	uint64_t slid;
 
 	ENTRY;
 
 	/* XXX XXX disgusting XXX XXX */
 	spinlock(&slash_id_lock);
+#if 0
 	if (!init) {
 		xmkfn(fn, "%s/%s", sl_datadir, SL_FN_HACK_FID);
 
@@ -113,7 +110,7 @@ slm_get_next_slashid(void)
 
 		init = 1;
 	}
-
+#endif
 	if (next_slash_id >= (UINT64_C(1) << SLASH_ID_FID_BITS))
 		next_slash_id = SLASHID_MIN;
 	slid = next_slash_id++;
@@ -121,7 +118,6 @@ slm_get_next_slashid(void)
 #if 0
 	/* XXX XXX disgusting XXX XXX */
 	if ((next_slash_id % 1000) == 0) {
-#endif
 		xmkfn(fn, "%s/%s", sl_datadir, SL_FN_HACK_FID);
 
 		fp = fopen(fn, "r+");
@@ -130,7 +126,6 @@ slm_get_next_slashid(void)
 		fprintf(fp, "%"PRId64, next_slash_id);
 		ftruncate(fileno(fp), ftell(fp));
 		fclose(fp);
-#if 0
 	}
 
 #endif

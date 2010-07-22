@@ -230,7 +230,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		    jnamespace->sjnm_op == NS_OP_MKDIR ||
 		    jnamespace->sjnm_op == NS_OP_LINK ||
 		    jnamespace->sjnm_op == NS_OP_SYMLINK)
-		    mds_cursor.pjc_s2id++;
+ 		    (void)slm_get_next_slashid();
 		break;
 	    default:
 		psc_fatal("invalid log entry type %d", pje->pje_type);
@@ -707,6 +707,9 @@ mds_open_cursor(void)
 
 	psc_assert(mds_cursor.pjc_magic == PJRNL_CURSOR_MAGIC);
 	psc_assert(mds_cursor.pjc_version == PJRNL_CURSOR_VERSION);
+	psc_assert(mds_cursor.pjc_s2id >= PJRNL_CURSOR_INIT_S2ID);
+
+	slm_set_curr_slashid(mds_cursor.pjc_s2id);
 }
 
 /**
