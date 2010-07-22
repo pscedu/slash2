@@ -226,6 +226,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 
 	rc = 1;
+printf("WAIT\n");
 	psc_completion_wait(&mrsq->mrsq_compl);
 	while (rc && (mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
 		if (mrq->mrq_fn[0] != '\0')
@@ -238,6 +239,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 			    "%"PRIx64, mrc->mrc_mrs.mrs_fg.fg_fid);
 		rc = psc_ctlmsg_sendv(fd, mh, &mrc->mrc_mrs);
 
+printf("WAIT2\n");
 		psc_completion_wait(&mrc->mrc_compl);
 		while (rc && (mrsc = pll_get(&mrc->mrc_bdata)) != NULL) {
 			rc = psc_ctlmsg_send(fd, mh->mh_id,
@@ -251,9 +253,11 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 
  out:
+printf("at out...\n");
 	if (mrsq) {
 		pll_remove(&msctl_replsts, mrsq);
 		while ((mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
+printf("WAIT3\n");
 			psc_completion_wait(&mrc->mrc_compl);
 			while ((mrsc = pll_get(&mrc->mrc_bdata)) != NULL)
 				psc_pool_return(msctl_replstsc_pool, mrsc);

@@ -60,6 +60,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 			if (mq->rc) {
 				/* XXX completion all mrcs */
 				psc_completion_done(&mrsq->mrsq_compl, 0);
+printf("DONE B\n");
 				break;
 			}
 			/* fill in data */
@@ -131,7 +132,9 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 				break;
 
 			if (mq->rc)
-				psc_completion_done(&mrc->mrc_compl, 0);
+{				psc_completion_done(&mrc->mrc_compl, 0);
+printf("DONE B\n");
+}
 			else if (mq->len < 1)
 				mp->rc = EINVAL;
 			else {
