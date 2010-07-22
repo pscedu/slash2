@@ -213,7 +213,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 
 		} else if (bml->bml_cli_nidpid.nid == np->nid &&
 			   bml->bml_cli_nidpid.pid == np->pid) {
-			DEBUG_BMAP(PLL_WARN, b, "dup lease");
+			DEBUG_BMAP(PLL_NOTIFY, b, "dup lease");
 			
 		} else {
 			b->bcm_mode |= BMAP_DIORQ;
@@ -258,32 +258,6 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	struct slashrpc_cservice *csvc;
 	struct resm_mds_info *rmmi;
 
-	/* XXX perhaps we shouldn't bother with trying to reestablish
-	 *   contact with the ion.  This call is called during odtable 
-	 *   replay only and could greatly increase startup times should
-	 *   one or more ion's be down.
-	 * The complexity of this situation is compounded by the fact that 
-	 *   bmaps replayed on boot essentially orphan the client.  The 
-	 *   result is that directio callbacks can't be issued to that 
-	 *   client this leads to further delays (post-boot of course).
-	 * The thinking now is to record the timestamp of the bmap lease
-	 *   and place that in the odtable entry.  On replay, the timestamp
-	 *   is used in (BMAP_TIMEO - (ctime() - timestamp)) to calculate the 
-	 *   time remaining time on the lease.  Actually.. this won't work
-	 *   if we expect to collect CRC's from the ion's.  The lease time 
-	 *   should be extended to at least 2x the rpc timeo.
-	 * So there must be a way to delay connecting to the ion here but 
-	 *   keeping the lease intact for the entire BMAP_TIMEO period.
-	 * As for coh cb's when the client is down?  should these be blocking?
-	 *   they should be but what happens when the client can't be reached?
-	 *   Perhaps something like this can work:  We schedule a NB rpc in any
-	 *   case and reply to the new client to delay for 1 or more seconds.
-	 *   The new client reissues an rpc after sleeping for this period.
-	 *   If the original client has replied that his cache has been dumped
-	 *   the new client will be granted a bmap, otherwise the new client
-	 *   keeps trying until either the old client has complied or the lease
-	 *   has been expired by the mds.x
-	 */		
 	csvc = slm_geticsvc(resm);
 	if (csvc == NULL)
 		return (-SLERR_ION_OFFLINE);
