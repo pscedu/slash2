@@ -43,7 +43,8 @@
 #include "up_sched_res.h"
 
 int
-slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw)
+slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw,
+    struct up_sched_work_item *wk)
 {
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
@@ -55,7 +56,7 @@ slmrmcthr_replst_slave_eof(struct slm_replst_workreq *rsw)
 	if (rc)
 		return (rc);
 
-	mq->fg = rsw->rsw_fg;
+	mq->fg = *USWI_FG(wk);
 	mq->id = rsw->rsw_cid;
 	mq->rc = EOF;
 	rc = SL_RSX_WAITREP(rq, mp);
@@ -215,7 +216,7 @@ slmrcmthr_main(struct psc_thread *thr)
 					slmrmcthr_replst_slave_waitrep(rq, wk);
 					rq = NULL;
 				}
-				slmrmcthr_replst_slave_eof(rsw);
+				slmrmcthr_replst_slave_eof(rsw, wk);
 				if (rc)
 					break;
 			}
@@ -233,7 +234,7 @@ slmrcmthr_main(struct psc_thread *thr)
 			}
 			if (rq)
 				slmrmcthr_replst_slave_waitrep(rq, wk);
-			slmrmcthr_replst_slave_eof(rsw);
+			slmrmcthr_replst_slave_eof(rsw, wk);
 			uswi_unref(wk);
 		} else if (mds_repl_loadino(&rsw->rsw_fg, &fcmh) == 0) {
 			/*
@@ -256,7 +257,7 @@ slmrcmthr_main(struct psc_thread *thr)
 			}
 			if (rq)
 				slmrmcthr_replst_slave_waitrep(rq, wk);
-			slmrmcthr_replst_slave_eof(rsw);
+			slmrmcthr_replst_slave_eof(rsw, wk);
 			/* XXX where does this ref come from? */
 			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 			psc_pool_return(upsched_pool, wk);
