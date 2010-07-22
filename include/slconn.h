@@ -81,7 +81,7 @@ struct slashrpc_cservice {
 #define CSVCF_USE_MULTIWAIT	(1 << 2)
 #define CSVCF_ABANDON		(1 << 3)
 
-#define CSVC_RECONNECT_INTV	30			/* seconds */
+#define CSVC_RECONNECT_INTV	10			/* seconds */
 
 struct slashrpc_export {
 	uint64_t		 slexp_nextcfd;
