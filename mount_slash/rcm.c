@@ -59,8 +59,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 		if (mrsq->mrsq_id == mq->id) {
 			if (mq->rc) {
 				/* XXX completion all mrcs */
-				psc_completion_done(&mrsq->mrsq_compl, 0);
-printf("DONE B\n");
+				psc_completion_done(&mrsq->mrsq_compl, mq->rc);
 				break;
 			}
 			/* fill in data */
@@ -132,9 +131,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 				break;
 
 			if (mq->rc)
-{				psc_completion_done(&mrc->mrc_compl, 0);
-printf("DONE B\n");
-}
+				psc_completion_done(&mrc->mrc_compl, mq->rc);
 			else if (mq->len < 1)
 				mp->rc = EINVAL;
 			else {
@@ -176,16 +173,16 @@ int
 msrcm_handle_bmapdio(struct pscrpc_request *rq)
 {
 	struct srm_bmap_dio_req *mq;
-        struct srm_generic_rep *mp;
+	struct srm_generic_rep *mp;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
 	struct bmap_cli_info *msbd;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	psc_warnx("fid=%"PRId64" bmapno=%u seq=%"PRId64, 
+	psc_warnx("fid=%"PRId64" bmapno=%u seq=%"PRId64,
 		  mq->fid, mq->blkno, mq->seq);
-	
+
 	f = fidc_lookup_fid(mq->fid);
 	if (!f) {
 		mp->rc = ENOENT;
@@ -199,15 +196,15 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 		goto out;
 
 	DEBUG_BMAP(PLL_WARN, b, "seq=%"PRId64, mq->seq);
-	
-	BMAP_LOCK(b);		
+
+	BMAP_LOCK(b);
 	if (b->bcm_mode & BMAP_DIO) {
 		BMAP_ULOCK(b);
 		goto out;
 	}
 	/* Verify that the sequence number matches.
 	 */
-	msbd = b->bcm_pri;       
+	msbd = b->bcm_pri;
 	if (msbd->msbd_sbd.sbd_seq != mq->seq) {
 		BMAP_ULOCK(b);
 		mp->rc = ESTALE;
@@ -219,7 +216,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(PLL_WARN, b, "trying to dump the cache");
-	msl_bmap_cache_rls(b);	
+	msl_bmap_cache_rls(b);
  out:
 	return (0);
 }
