@@ -200,8 +200,8 @@ mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
 /**
  * mds_replay_handle - Handle journal replay events.
  */
-void
-mds_replay_handler(struct psc_journal_enthdr *pje, int *rcp)
+int
+mds_replay_handler(struct psc_journal_enthdr *pje)
 {
 	int rc = 0;
 	struct slmds_jent_namespace *jnamespace;
@@ -231,15 +231,15 @@ mds_replay_handler(struct psc_journal_enthdr *pje, int *rcp)
 	    default:
 		psc_fatal("invalid log entry type %d", pje->pje_type);
 	}
-	*rcp = rc;
+	return (rc);
 }
 
 /**
  * mds_distill_handler - Distill information from the system journal and
  *	write into change log files.
  */
-void
-mds_distill_handler(struct psc_journal_enthdr *pje, __unusedx int size)
+int
+mds_distill_handler(struct psc_journal_enthdr *pje)
 {
 	int sz;
 	uint64_t seqno;
@@ -248,7 +248,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
-		return;
+		return (0);
 
 	jnamespace = PJE_DATA(pje);
 	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
@@ -294,6 +294,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, __unusedx int size)
 		psc_waitq_wakeall(&mds_namespace_waitq);
 		freelock(&mds_namespace_waitqlock);
 	}
+	return (0);
 }
 
 /*

@@ -112,8 +112,8 @@ struct mdsio_ops {
 
 #define mdsio_access		mdsio_ops.mio_access			/* zfsslash2_access() */
 #define mdsio_getattr		mdsio_ops.mio_getattr			/* zfsslash2_getattr() */
-#define mdsio_link		mdsio_ops.mio_link
-#define mdsio_lookup		mdsio_ops.mio_lookup
+#define mdsio_link		mdsio_ops.mio_link			/* zfsslash2_link() */
+#define mdsio_lookup		mdsio_ops.mio_lookup			/* zfsslash2_lookup() */
 #define mdsio_lookup_slfid	mdsio_ops.mio_lookup_slfid
 #define mdsio_mkdir		mdsio_ops.mio_mkdir			/* zfsslash2_mkdir() */
 #define mdsio_opencreatef	mdsio_ops.mio_opencreatef		/* zfsslash2_opencreate() */
@@ -128,15 +128,15 @@ struct mdsio_ops {
 #define mdsio_statfs		mdsio_ops.mio_statfs
 #define mdsio_symlink		mdsio_ops.mio_symlink
 #define mdsio_unlink		mdsio_ops.mio_unlink
-#define mdsio_write		mdsio_ops.mio_write
+#define mdsio_write		mdsio_ops.mio_write			/* zfsslash2_write() */
 
-#define mdsio_redo_create	mdsio_ops.mio_redo_create
+#define mdsio_redo_create	mdsio_ops.mio_redo_create		/* zfsslash2_replay_create() */
 #define mdsio_redo_link		mdsio_ops.mio_redo_link
 #define mdsio_redo_mkdir	mdsio_ops.mio_redo_mkdir
 #define mdsio_redo_rename	mdsio_ops.mio_redo_rename
 #define mdsio_redo_rmdir	mdsio_ops.mio_redo_rmdir
 #define mdsio_redo_setattr	mdsio_ops.mio_redo_setattr
-#define mdsio_redo_symlink	mdsio_ops.mio_redo_symlink
+#define mdsio_redo_symlink	mdsio_ops.mio_redo_symlink		/* zfsslash2_replay_symlink() */
 #define mdsio_redo_unlink	mdsio_ops.mio_redo_unlink		/* zfsslash2_replay_unlink() */
 
 #define mdsio_cb_pre_create	mdsio_ops.mio_cb_pre_create		/* mds_reserve_slot() */
