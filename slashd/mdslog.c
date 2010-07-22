@@ -675,7 +675,7 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 			psc_warn("Fail to update cursor, rc = %d", rc);
 		else
 			psc_notify("Cursor updated: txg=%"PRId64", xid=%"PRId64
-				    ", s2id=%"PRId64", seqno=%"PRId64, 
+				    ", s2id=0x%"PRIx64", seqno=%"PRId64, 
 				    mds_cursor.pjc_txg, mds_cursor.pjc_xid, 
 				    mds_cursor.pjc_s2id, mds_cursor.pjc_seqno);
 	}
@@ -1018,7 +1018,7 @@ mds_journal_init(void)
 	mdsJournal->pj_distill_xid = mds_cursor.pjc_xid;
 
 	psc_notify("Journal device %s", r->res_jrnldev);
-	psc_notify("Last SLASH ID is %"PRId64, mds_cursor.pjc_s2id);
+	psc_notify("Last SLASH ID is 0x%"PRIx64, mds_cursor.pjc_s2id);
 	psc_notify("Last synced ZFS transaction group number is %"PRId64, mdsJournal->pj_commit_txg);
 	psc_notify("Last distilled SLASH2 transaction number is %"PRId64, mdsJournal->pj_distill_xid);
 
