@@ -153,8 +153,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 		if (bml->bml_seq > e->bte_maxseq ||
 		    e->bte_maxseq == BMAPSEQ_ANY)
 			seq = e->bte_maxseq = bml->bml_seq;
-		else
-			seq = e->bte_maxseq;
+
 	} else {
 		seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
 	}

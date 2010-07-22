@@ -86,6 +86,8 @@ slm_get_next_slashid(void)
 	uint64_t slid;
 	FILE *fp;
 
+	ENTRY;
+
 	/* XXX XXX disgusting XXX XXX */
 	spinlock(&slash_id_lock);
 	if (!init) {
@@ -124,6 +126,9 @@ slm_get_next_slashid(void)
 
 #endif
 	freelock(&slash_id_lock);
+
+	EXIT;
+
 	return (slid | ((uint64_t)nodeResm->resm_site->site_id <<
 	    SLASH_ID_FID_BITS));
 }

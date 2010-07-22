@@ -296,8 +296,9 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	bml->bml_bmdsi->bmdsi_wr_ion = rmmi;
 	bmap_op_start_type(bml->bml_bmdsi->bmdsi_bmap, BMAP_OPCNT_IONASSIGN);
 
-	bml->bml_bmdsi->bmdsi_seq =
-		mds_bmap_timeotbl_mdsi(bml, BTE_ADD|BTE_REATTACH);
+	(uint64_t)mds_bmap_timeotbl_mdsi(bml, BTE_ADD|BTE_REATTACH);
+
+	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
 	DEBUG_BMAP(PLL_WARN, bml->bml_bmdsi->bmdsi_bmap, "res(%s) ion(%s)",
 		   resm->resm_res->res_name, resm->resm_addrbuf);

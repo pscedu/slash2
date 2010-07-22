@@ -200,7 +200,8 @@ enum {
 	BML_COH     = (1 << 8),
 	BML_RECOVER = (1 << 9),
 	BML_CHAIN   = (1 << 10),
-	BML_UPGRADE = (1 << 11)
+	BML_UPGRADE = (1 << 11),
+	BML_EXPFAIL = (1 << 12)
 };
 
 /*

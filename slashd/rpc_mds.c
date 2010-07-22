@@ -140,10 +140,9 @@ mexpcli_destroy(struct pscrpc_export *exp)
 		BML_LOCK(bml);
 		psc_assert(bml->bml_flags & BML_EXP);
 		bml->bml_flags &= ~BML_EXP;
+		bml->bml_flags |= BML_EXPFAIL;
 		BML_ULOCK(bml);
 		psclist_del(&bml->bml_exp_lentry);
-
-		mds_bmap_bml_release(bml);
 	}
 
 	if (mexpc && mexpc->mc_csvc)
