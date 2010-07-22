@@ -1026,10 +1026,9 @@ mds_journal_init(void)
 	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
 	    mds_cursor_thread, NULL, 0, "slmjcursorthr");
 
-	//pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr", 
-	//		mds_replay_handler,  mds_distill_handler);
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr", 
-			mds_replay_handler,  NULL);
+			mds_replay_handler,  
+			npeer != 0 ? mds_distill_handler : NULL);
 	/*
 	 * If we are a standalone MDS, there is no need to start the namespace
 	 * propagation operation.
