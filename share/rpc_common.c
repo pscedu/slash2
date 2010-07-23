@@ -504,8 +504,14 @@ slconnthr_main(struct psc_thread *thr)
 			    sct->sct_lockinfo.lm_ptr, sct->sct_waitinfo,
 			    sct->sct_conntype);
 
-			if (csvc == NULL)
-				break;
+			if (csvc == NULL) {
+				sl_csvc_lock(resm->resm_csvc);
+				csvc = resm->resm_csvc;
+				if (sl_csvc_useable(csvc))
+					goto online;
+				sl_csvc_waitrel_s(csvc, CSVC_RECONNECT_INTV);
+				continue;
+			}
 
 			sl_csvc_lock(csvc);
 			if (!sl_csvc_useable(csvc))
@@ -519,7 +525,7 @@ slconnthr_main(struct psc_thread *thr)
 				sl_csvc_wake(csvc);
 				woke = 1;
 			}
-
+ online:
 			sl_csvc_unlock(csvc);
 			rc = slrpc_issue_ping(csvc, sct->sct_version);
 			sl_csvc_lock(csvc);
@@ -528,12 +534,12 @@ slconnthr_main(struct psc_thread *thr)
 				break;
 			sl_csvc_waitrel_s(csvc, 60);
 		}
-		sl_csvc_disconnect(resm->resm_csvc);
-		sl_csvc_decref(resm->resm_csvc);
+		sl_csvc_disconnect(csvc);
+		sl_csvc_decref(csvc);
 
-		sl_csvc_lock(resm->resm_csvc);
+		sl_csvc_lock(csvc);
 	} while (pscthr_run() && (psc_atomic32_read(
-	    &resm->resm_csvc->csvc_flags) & CSVCF_ABANDON) == 0);
+	    &csvc->csvc_flags) & CSVCF_ABANDON) == 0);
 	sl_csvc_decref(csvc);
 }
 
