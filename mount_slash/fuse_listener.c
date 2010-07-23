@@ -277,7 +277,7 @@ slash2fuse_listener_loop(__unusedx void *arg)
 				 */
 				spinlock(&lock);
 				busy = 0;
-				psc_waitq_wakeall(&wq);
+				psc_waitq_wakeone(&wq);
 				freelock(&lock);
 
 				fuse_session_process(se, buf, res, ch);
@@ -316,7 +316,7 @@ slash2fuse_listener_loop(__unusedx void *arg)
 
 	spinlock(&lock);
 	busy = 0;
-	psc_waitq_wakeall(&wq);
+	psc_waitq_wakeone(&wq);
 	freelock(&lock);
 
 	return NULL;
