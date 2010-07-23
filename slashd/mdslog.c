@@ -93,7 +93,7 @@ struct sl_mds_peerinfo		*localinfo = NULL;
 struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
 psc_spinlock_t			 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
 
-static void				*mds_txgFinfo = NULL;
+static void				*mds_cursor_handle = NULL;
 static struct psc_journal_cursor	 mds_cursor;
 
 int
@@ -678,14 +678,16 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 {
 	int rc;
 	while (pscthr_run()) {
-		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor), mds_txgFinfo, mds_update_cursor);
-		if (rc)
+		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor), 
+			mds_cursor_handle, mds_update_cursor);
+		if (rc) {
 			psc_warn("Fail to update cursor, rc = %d", rc);
-		else
-			psc_notify("Cursor updated: txg=%"PRId64", xid=%"PRId64
-				    ", s2id=0x%"PRIx64", seqno=%"PRId64, 
-				    mds_cursor.pjc_txg, mds_cursor.pjc_xid, 
-				    mds_cursor.pjc_s2id, mds_cursor.pjc_seqno);
+			continue;
+		}
+		psc_notify("Cursor updated: txg=%"PRId64", xid=%"PRId64
+			    ", s2id=0x%"PRIx64", seqno=%"PRId64, 
+			    mds_cursor.pjc_txg, mds_cursor.pjc_xid, 
+			    mds_cursor.pjc_s2id, mds_cursor.pjc_seqno);
 	}
 }
 
@@ -701,11 +703,11 @@ mds_open_cursor(void)
 	psc_assert(rc == 0);
 
 	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
-	    NULL, NULL, &mds_txgFinfo, NULL, NULL);
-	psc_assert(!rc && mds_txgFinfo);
+	    NULL, NULL, &mds_cursor_handle, NULL, NULL);
+	psc_assert(!rc && mds_cursor_handle);
 
 	rc = mdsio_read(&rootcreds, &mds_cursor,
-	    sizeof(struct psc_journal_cursor), &nb, 0, mds_txgFinfo);
+	    sizeof(struct psc_journal_cursor), &nb, 0, mds_cursor_handle);
 	psc_assert(rc == 0 && nb == sizeof(struct psc_journal_cursor));
 
 	psc_assert(mds_cursor.pjc_magic == PJRNL_CURSOR_MAGIC);
