@@ -1637,6 +1637,9 @@ msl_init(__unusedx struct fuse_conn_info *conn)
 {
 	char *name;
 	int rc;
+	
+	authbuf_checkkeyfile();
+	authbuf_readkeyfile();
 
 	libsl_init(PSCNET_CLIENT, 0);
 	fidc_init(sizeof(struct fcmh_cli_info), FIDC_CLI_DEFSZ,
