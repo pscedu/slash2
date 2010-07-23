@@ -207,8 +207,8 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 				b->bcm_mode |= BMAP_MDCHNG;
 				BMAP_ULOCK(b);
 
-				DEBUG_BMAP(PLL_WARN, b,
-					   "about to mode change (rw=%d)", rw);
+				DEBUG_BMAP(PLL_NOTIFY, b,
+				   "about to mode change (rw=%d)", rw);
 
 				rc = bmap_ops.bmo_mode_chngf(b, rw);
 				BMAP_LOCK(b);
