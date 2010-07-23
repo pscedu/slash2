@@ -58,9 +58,13 @@ fcmh_destroy(struct fidc_membh *f)
 	psc_assert(psc_hashent_disjoint(&fidcHtable, f));
 
 	/* slc_fcmh_dtor(), slm_fcmh_dtor(), sli_fcmh_dtor() */
-	if (sl_fcmh_ops.sfop_dtor)
-		sl_fcmh_ops.sfop_dtor(f);
-
+	if (sl_fcmh_ops.sfop_dtor) {
+		if (f->fcmh_state & FCMH_CTOR_FAILED)
+			DEBUG_FCMH(PLL_WARN, f, "bypassing dtor() call");
+		else
+			sl_fcmh_ops.sfop_dtor(f);
+	}
+	
 	memset(f, 0, fidcPoolMaster.pms_entsize);
 	f->fcmh_state = FCMH_CAC_FREE;
 	fcmh_put(f);
@@ -439,6 +443,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		FCMH_ULOCK(fcmh);
 		fcmh->fcmh_state |= FCMH_CAC_TOFREE;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
+		fcmh_put(fcmh);
 	} else {
 		*fcmhp = fcmh;
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
