@@ -26,9 +26,6 @@
 
 #include <sys/param.h>
 
-#include <linux/fuse.h>
-
-#include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -68,7 +65,7 @@ struct psc_listcache	 slm_replst_workq;
 struct psc_vbitmap	*repl_busytable;
 psc_spinlock_t		 repl_busytable_lock = LOCK_INITIALIZER;
 int			 repl_busytable_nents;
-sl_ino_t		 mds_repldir_inum;
+sl_ino_t		 mds_upschdir_inum;
 
 __static int
 iosidx_cmp(const void *a, const void *b)
@@ -734,111 +731,6 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	return (rc);
 }
 
-void
-mds_repl_scandir(void)
-{
-	sl_replica_t iosv[SL_MAX_REPLICAS];
-	struct up_sched_work_item *wk;
-	int rc, tract[NBMAPST];
-	char *buf, fn[NAME_MAX];
-	struct fidc_membh *fcmh;
-	struct bmapc_memb *bcm;
-	struct slash_fidgen fg;
-	struct fuse_dirent *d;
-	off64_t off, toff;
-	size_t siz, tsiz;
-	uint32_t j;
-	void *data;
-
-	rc = mdsio_opendir(mds_repldir_inum, &rootcreds, NULL, &data);
-	if (rc)
-		psc_fatalx("mdsio_opendir %s: %s", SL_PATH_UPSCH,
-		    slstrerror(rc));
-
-	off = 0;
-	siz = 8 * 1024;
-	buf = PSCALLOC(siz);
-
-	for (;;) {
-		rc = mdsio_readdir(&rootcreds, siz,
-			   off, buf, &tsiz, NULL, NULL, 0, data);
-		if (rc)
-			psc_fatalx("mdsio_readdir %s: %s", SL_PATH_UPSCH,
-			    slstrerror(rc));
-		if (tsiz == 0)
-			break;
-		for (toff = 0; toff < (off64_t)tsiz;
-		    toff += FUSE_DIRENT_SIZE(d)) {
-			d = (void *)(buf + toff);
-			off = d->off;
-
-			if (strlcpy(fn, d->name, sizeof(fn)) > sizeof(fn))
-				psc_assert("impossible");
-			if (d->namelen < sizeof(fn))
-				fn[d->namelen] = '\0';
-
-			if (fn[0] == '.')
-				continue;
-
-			memset(&fg, 0, sizeof(fg));
-			fg.fg_fid = strtoll(fn, NULL, 16);
-
-			rc = mds_repl_loadino(&fg, &fcmh);
-			if (rc)
-				/* XXX if ENOENT, remove from repldir and continue */
-				psc_fatalx("mds_repl_loadino: %s",
-				    slstrerror(rc));
-
-			wk = psc_pool_get(upsched_pool);
-			rc = uswi_initf(wk, fcmh, USWI_INITF_NOPERSIST);
-			if (rc)
-				psc_fatal("uswi_initf: %s",
-				    slstrerror(rc));
-
-			psc_pthread_mutex_lock(&wk->uswi_mutex);
-			wk->uswi_flags &= ~USWIF_BUSY;
-			psc_pthread_mutex_unlock(&wk->uswi_mutex);
-
-			tract[BMAPST_INVALID] = -1;
-			tract[BMAPST_VALID] = -1;
-			tract[BMAPST_REPL_QUEUED] = -1;
-			tract[BMAPST_REPL_SCHED] = BMAPST_REPL_QUEUED;
-			tract[BMAPST_TRUNCPNDG] = -1;
-			tract[BMAPST_GARBAGE] = -1;
-			tract[BMAPST_GARBAGE_SCHED] = -1;
-
-			/*
-			 * If we crashed, revert all inflight SCHED'ed
-			 * bmaps to OLD.
-			 */
-			for (j = 0; j < USWI_NBMAPS(wk); j++) {
-				if (mds_bmap_load(wk->uswi_fcmh, j, &bcm))
-					continue;
-
-				mds_repl_bmap_walk(bcm, tract,
-				    NULL, 0, NULL, 0);
-				mds_repl_bmap_rel(bcm);
-			}
-
-			/*
-			 * Requeue pending replications on all sites.
-			 * If there is no work to do, it will be promptly
-			 * removed by the slmupschedthr.
-			 */
-			for (j = 0; j < USWI_NREPLS(wk); j++)
-				iosv[j].bs_id = USWI_GETREPL(wk, j).bs_id;
-			mds_repl_enqueue_sites(wk, iosv, USWI_NREPLS(wk));
-		}
-		off += tsiz;
-	}
-	rc = mdsio_release(&rootcreds, data);
-	if (rc)
-		psc_fatalx("mdsio_release %s: %s", SL_PATH_UPSCH,
-		    slstrerror(rc));
-
-	free(buf);
-}
-
 /*
  * The replication busy table is a bitmap to allow quick lookups of
  * communication status between arbitrary IONs.  Each resm has a unique
@@ -1018,10 +910,10 @@ mds_repl_init(void)
 	int rc;
 
 	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_UPSCH, NULL,
-	    &mds_repldir_inum, &rootcreds, NULL);
+	    &mds_upschdir_inum, &rootcreds, NULL);
 	if (rc)
 		psc_fatalx("lookup repldir: %s", slstrerror(rc));
 
 	mds_repl_buildbusytable();
-	mds_repl_scandir();
+	upsched_scandir();
 }

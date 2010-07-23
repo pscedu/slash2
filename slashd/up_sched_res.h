@@ -46,6 +46,8 @@ int	 uswi_cmp(const void *, const void *);
 int	 uswi_initf(struct up_sched_work_item *, struct fidc_membh *, int);
 void	 uswi_unref(struct up_sched_work_item *);
 
+void	 upsched_scandir(void);
+
 SPLAY_HEAD(upschedtree, up_sched_work_item);
 SPLAY_PROTOTYPE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
 

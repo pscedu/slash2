@@ -39,6 +39,7 @@ int	_mds_repl_bmap_apply(struct bmapc_memb *, const int [], const int [], int, i
 void	 mds_repl_bmap_rel(struct bmapc_memb *);
 int	 mds_repl_bmap_walk(struct bmapc_memb *, const int [], const int [], int, const int *, int);
 int	 mds_repl_delrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
+void	 mds_repl_enqueue_sites(struct up_sched_work_item *, const sl_replica_t *, int);
 void	 mds_repl_init(void);
 int	 mds_repl_inv_except(struct bmapc_memb *, sl_ios_id_t);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int, int);
@@ -66,6 +67,6 @@ extern struct psc_listcache	 slm_replst_workq;
 extern struct psc_vbitmap	*repl_busytable;
 extern psc_spinlock_t		 repl_busytable_lock;
 
-extern sl_ino_t			 mds_repldir_inum;
+extern sl_ino_t			 mds_upschdir_inum;
 
 #endif /* _SL_MDS_REPL_H_ */
