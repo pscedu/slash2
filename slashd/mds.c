@@ -1052,9 +1052,18 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	struct slash_bmap_od *bmapod;
 	int rc=0;
 
-	fcmh = fidc_lookup_fg(&c->fg);
-	if (!fcmh)
-		return (-EBADF);
+	rc = slm_fcmh_get(&c->fg, &fcmh);
+	if (rc) {
+		if (rc == ENOENT) {
+			psc_warnx("fid=%"PRId64" appears to have been deleted", 
+				  c->fg.fg_fid);
+			return (0);
+		} else {
+			psc_errorx("fid=%"PRId64" slm_fcmh_get() rc=%d", 
+				  c->fg.fg_fid, rc);
+			return (-rc);
+		}
+	}
 
 	/* BMAP_OP #2
 	 */
