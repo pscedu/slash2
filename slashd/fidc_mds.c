@@ -104,6 +104,11 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 			rc = mds_inode_read(&fmi->fmi_inodeh);
 			if (rc)
 				psc_fatalx("could not load inode; rc=%d", rc);
+		} else {
+			fcmh->fcmh_state |= FCMH_CTOR_FAILED;
+			fmi->fmi_ctor_rc = rc;
+			DEBUG_FCMH(PLL_WARN, fcmh, 
+			   "mdsio_opencreate failed (rc=%d)", rc);
 		}
 	}
 	return (rc);
