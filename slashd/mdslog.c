@@ -664,7 +664,7 @@ mds_update_cursor(void *buf, uint64_t txg)
 	cursor->pjc_txg = txg;
 	cursor->pjc_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_s2id = slm_get_curr_slashid();
-	cursor->pjc_seqno = 0;
+	mds_bmap_getcurseq(&cursor->pjc_seqno_hwm, &cursor->pjc_seqno_lwm);
 }
 
 /**
@@ -685,9 +685,12 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 			continue;
 		}
 		psc_notify("Cursor updated: txg=%"PRId64", xid=%"PRId64
-			    ", s2id=0x%"PRIx64", seqno=%"PRId64, 
-			    mds_cursor.pjc_txg, mds_cursor.pjc_xid, 
-			    mds_cursor.pjc_s2id, mds_cursor.pjc_seqno);
+			    ", s2id=0x%"PRIx64", seqno=(%"PRId64", %"PRId64")", 
+			    mds_cursor.pjc_txg, 
+			    mds_cursor.pjc_xid, 
+			    mds_cursor.pjc_s2id, 
+			    mds_cursor.pjc_seqno_lwm,
+			    mds_cursor.pjc_seqno_hwm);
 	}
 }
 
@@ -1034,6 +1037,8 @@ mds_journal_init(void)
 	psc_notify("Last SLASH ID is 0x%"PRIx64, mds_cursor.pjc_s2id);
 	psc_notify("Last synced ZFS transaction group number is %"PRId64, mdsJournal->pj_commit_txg);
 	psc_notify("Last distilled SLASH2 transaction number is %"PRId64, mdsJournal->pj_distill_xid);
+	psc_notify("Last bmap sequence number low water mark is %"PRId64, mds_cursor.pjc_seqno_lwm);
+	psc_notify("Last bmap sequence number high water mark is %"PRId64, mds_cursor.pjc_seqno_hwm);
 
 	/* we need the cursor thread to join the replay */
 	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
