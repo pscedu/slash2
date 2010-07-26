@@ -244,7 +244,9 @@ int	 mds_bmap_bml_release(struct bmap_mds_lease *);
 struct bmap_mds_lease *
 	mds_bmap_getbml(struct bmapc_memb *, lnet_nid_t, lnet_pid_t, uint64_t);
 
+void	 mds_bmap_setcurseq(uint64_t, uint64_t);
 void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
+
 void	 mds_bmap_timeotbl_init(void);
 uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);

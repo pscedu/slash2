@@ -1046,8 +1046,6 @@ mds_journal_init(void)
 	psc_notify("Last SLASH ID is 0x%"PRIx64, mds_cursor.pjc_s2id);
 	psc_notify("Last synced ZFS transaction group number is %"PRId64, mdsJournal->pj_commit_txg);
 	psc_notify("Last distilled SLASH2 transaction number is %"PRId64, mdsJournal->pj_distill_xid);
-	psc_notify("Last bmap sequence number low water mark is %"PRId64, mds_cursor.pjc_seqno_lwm);
-	psc_notify("Last bmap sequence number high water mark is %"PRId64, mds_cursor.pjc_seqno_hwm);
 
 	/* we need the cursor thread to join the replay */
 	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
@@ -1056,6 +1054,11 @@ mds_journal_init(void)
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr", 
 			mds_replay_handler,  
 			npeer != 0 ? mds_distill_handler : NULL);
+
+	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
+	psc_notify("Last bmap sequence number low water mark is %"PRId64, mds_cursor.pjc_seqno_lwm);
+	psc_notify("Last bmap sequence number high water mark is %"PRId64, mds_cursor.pjc_seqno_hwm);
+
 	/*
 	 * If we are a standalone MDS, there is no need to start the namespace
 	 * propagation operation.

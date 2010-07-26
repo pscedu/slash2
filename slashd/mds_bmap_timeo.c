@@ -49,10 +49,7 @@ mds_bmap_timeotbl_init(void)
 	struct bmap_timeo_entry *e;
 
 	LOCK_INIT(&mdsBmapTimeoTbl.btt_lock);
-	/* XXX hack for now.. this value should come from the system log
-	 *    at startup
-	 */
-	mdsBmapTimeoTbl.btt_minseq = mdsBmapTimeoTbl.btt_maxseq = 0;
+
 	mdsBmapTimeoTbl.btt_nentries = BMAP_TIMEO_TBL_SZ;
 	mdsBmapTimeoTbl.btt_entries =
 		PSCALLOC(sizeof(struct bmap_timeo_entry) * BMAP_TIMEO_TBL_SZ);
@@ -78,6 +75,13 @@ mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 		buf, sizeof(struct slmds_jent_bmapseq));
 
 	pjournal_put_buf(mdsJournal, buf);
+}
+
+void
+mds_bmap_setcurseq(uint64_t maxseq, uint64_t minseq)
+{
+	mdsBmapTimeoTbl.btt_maxseq = maxseq;
+	mdsBmapTimeoTbl.btt_minseq = minseq;
 }
 
 void
