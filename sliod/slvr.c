@@ -74,7 +74,7 @@ slvr_do_crc(struct slvr_ref *s)
 		    s->slvr_flags & SLVR_CRCDIRTY));
 
 	if (s->slvr_flags & SLVR_FAULTING) {
-		if (!s->slvr_pndgreads) {
+		if (!s->slvr_pndgreads && !(s->slvr_flags & SLVR_REPLDST)) {
 			/* Small RMW workaround.
 			 *  XXX needs to be rectified, the crc should
 			 *    be taken here.
@@ -98,14 +98,7 @@ slvr_do_crc(struct slvr_ref *s)
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
-			/* Faulting from disk which means this is for a 
-			 *   read.  Therefore the ondisk filesize should
-			 *   be the same as the that on the mds.  Adjust 
-			 *   the crc len accordingly.  NOTE:  the below
-			 *   code will not work in RMW situations.
-			 */ 
-			psc_assert(!s->slvr_crc_soff && 
-				   !s->slvr_pndgwrts);
+			psc_assert(!s->slvr_crc_soff); 
 
 			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
 			       SLVR_CRCLEN(s)); 
@@ -512,8 +505,10 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	psc_assert(rw != SL_READ);
 	/* Setting of this flag here is mainly for informative purposes.
 	 *   It may be unset in do_crc so we set it again in wio_done.
+	 * Replication sink buffers do not need a crc new crc to be taken.
 	 */
-	s->slvr_flags |= SLVR_CRCDIRTY;
+	if (!(s->slvr_flags & SLVR_REPLDST))
+		s->slvr_flags |= SLVR_CRCDIRTY;
 
 	if (!off && len == SLASH_SLVR_SIZE) {
 		/* Full sliver write, no need to read blocks from disk.
