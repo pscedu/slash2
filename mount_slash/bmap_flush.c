@@ -135,6 +135,9 @@ bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
 	struct bmpc_ioreq *r;
 	size_t size;
 
+	if (!psc_dynarray_len(biorqs))
+		return (0);
+
 	r = psc_dynarray_getpos(biorqs, psc_dynarray_len(biorqs) - 1);
 	size = r->biorq_off + r->biorq_len;
 
@@ -508,6 +511,21 @@ bmap_flush_bmpce_check_sched_locked(const struct bmpc_ioreq *r)
 	return (rc);
 }
 
+
+static inline int
+bmap_flushready(const struct psc_dynarray *biorqs) {
+	int ready=0;
+	
+	psc_assert(psc_dynarray_len(biorqs) <= PSCRPC_MAX_BRW_PAGES);
+	
+	if ((bmap_flush_coalesce_size(biorqs) >= MIN_COALESCE_RPC_SZ) ||
+	    psc_dynarray_len(biorqs) == PSCRPC_MAX_BRW_PAGES)
+		ready = 1;
+
+	return (ready);
+}
+
+
 __static struct psc_dynarray *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 {
@@ -517,7 +535,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 
 	psc_assert(psc_dynarray_len(biorqs) > *offset);
 
-	for (off=0; (off + *offset) < psc_dynarray_len(biorqs); off++) {
+	for (off=0; (off + *offset) < psc_dynarray_len(biorqs) && 
+		     !bmap_flushready(&b); off++) {
 		t = psc_dynarray_getpos(biorqs, off + *offset);
 
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
@@ -535,8 +554,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		if (!expired)
 			expired = bmap_flush_biorq_expired(t);
 
-		DEBUG_BIORQ(PLL_NOTIFY, t, "biorq #%d (expired=%d)",
-			      off, expired);
+		DEBUG_BIORQ(PLL_NOTIFY, t, "biorq #%d (expired=%d) nfrags=%d",
+			    off, expired, psc_dynarray_len(&b));
 		/* The next request, 't', can be added to the coalesce
 		 *   group either because 'r' is not yet set (meaning
 		 *   the group is empty) or because 't' overlaps or
@@ -545,14 +564,14 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		if (t->biorq_off <= biorq_voff_get(r)) {
 			psc_dynarray_add(&b, t);
 			if (biorq_voff_get(t) > biorq_voff_get(r))
-				/* If 'r' is not yet set or 't' is a larger
-				 *   extent then set 'r' to 't'.
+				/* If 't' is a larger extent then set 
+				 *   'r' to 't'.
 				 */
 				r = t;
+
 		} else {
-			if ((bmap_flush_coalesce_size(&b) >=
-			     MIN_COALESCE_RPC_SZ) || expired)
-				goto make_coalesce;
+			if (bmap_flushready(&b) || expired)
+				break;
 			else {
 				/* This biorq is not contiguous with
 				 *   the previous. Start over but first
@@ -574,9 +593,9 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		}
 	}
 
-	if (expired) {
- make_coalesce:
+	if (expired || bmap_flushready(&b)) {
 		a = PSCALLOC(sizeof(*a));
+		psc_dynarray_ensurelen(a, psc_dynarray_len(&b));
 		for (i=0; i < psc_dynarray_len(&b); i++) {
 			t = psc_dynarray_getpos(&b, i);
 			psc_dynarray_add(a, psc_dynarray_getpos(&b, i));
