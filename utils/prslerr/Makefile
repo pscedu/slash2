@@ -11,8 +11,5 @@ MODULES+=	pfl
 
 include ${SLASHMK}
 
-regen:
+regen-hook:
 	perl regen.pl prslerr.c ${SLASH_BASE}/include/slerr.h
-
-run: regen all
-	./${PROG}
