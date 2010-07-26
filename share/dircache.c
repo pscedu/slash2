@@ -246,7 +246,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 			  d, off);
 
 		c->dd_len    = d->namelen;
-		c->dd_hash   = psc_str_hashify(d->name);
+		c->dd_hash   = psc_strn_hashify(d->name, d->namelen);
 		c->dd_flags  = 0;
 		c->dd_offset = off;
 		c->dd_name   = d->name;
