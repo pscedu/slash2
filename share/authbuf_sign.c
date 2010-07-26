@@ -32,6 +32,7 @@
 
 #include "authbuf.h"
 #include "slashrpc.h"
+#include "slconn.h"
 #include "slerr.h"
 
 /**
@@ -56,7 +57,13 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	saf->saf_secret.sas_magic = AUTHBUF_MAGIC;
 	saf->saf_secret.sas_nonce = psc_atomic64_inc_getnew(&authbuf_nonce);
 	if (rq->rq_import) {
-		saf->saf_secret.sas_src_nid = rq->rq_import->imp_connection->c_self;
+		saf->saf_secret.sas_src_nid = pscrpc_getnidforpeer(&lnet_nids,
+		    rq->rq_import->imp_connection->c_peer.nid);
+		if (saf->saf_secret.sas_src_nid == LNET_NID_ANY) {
+			errno = ENETUNREACH;
+			psc_fatal("nid %"PSCPRIxLNID,
+			    rq->rq_import->imp_connection->c_peer.nid);
+		}
 		saf->saf_secret.sas_src_pid = PSCRPC_SVR_PID;
 		saf->saf_secret.sas_dst_nid = rq->rq_import->imp_connection->c_peer.nid;
 		saf->saf_secret.sas_dst_pid = rq->rq_import->imp_connection->c_peer.pid;
