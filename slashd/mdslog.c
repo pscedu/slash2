@@ -179,6 +179,15 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 static int
 mds_redo_bmap_seq(__unusedx struct psc_journal_enthdr *pje)
 {
+	struct slmds_jent_bmapseq *sjsq;
+
+	sjsq = PJE_DATA(pje);
+
+	if (mds_cursor.pjc_seqno_hwm < sjsq->sjbsq_high_wm)
+		mds_cursor.pjc_seqno_hwm = sjsq->sjbsq_high_wm;
+	if (mds_cursor.pjc_seqno_lwm < sjsq->sjbsq_low_wm)
+		mds_cursor.pjc_seqno_lwm = sjsq->sjbsq_low_wm;
+
 	return (0);
 }
 
