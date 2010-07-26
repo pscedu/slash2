@@ -295,8 +295,10 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
+	mds_reserve_slot();
 	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
 	    mq->name, &mp->fg, &mq->creds, &mp->attr, mds_namespace_log);
+	mds_unreserve_slot();
  out:
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
@@ -346,9 +348,11 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
+	mds_reserve_slot();
 	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(fcmh), mq->name,
 	    mq->mode, &mq->creds, &mp->attr, &mp->fg, NULL,
 	    mds_namespace_log, slm_get_next_slashid);
+	mds_unreserve_slot();
  out:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
@@ -382,10 +386,13 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
 	//	DEBUG_FCMH(PLL_WARN, p, "create op start for %s", mq->name);
+
+	mds_reserve_slot();
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
 	    NULL, &mp->attr, &mdsio_data, mds_namespace_log,
 	    slm_get_next_slashid);
+	mds_unreserve_slot();
 
 	if (mp->rc)
 		goto out;
@@ -834,8 +841,10 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	pscrpc_free_bulk(desc);
 
 	linkname[sizeof(linkname) - 1] = '\0';
+	mds_reserve_slot();
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
 	    &mq->creds, &mp->attr, &mp->fg, NULL, slm_get_next_slashid, mds_namespace_log);
+	mds_unreserve_slot();
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
@@ -855,12 +864,14 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
+	mds_reserve_slot();
 	if (isfile)
 		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(fcmh),
 		    mq->name, &rootcreds, mds_namespace_log);
 	else
 		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(fcmh),
 		    mq->name, &rootcreds, mds_namespace_log);
+	mds_unreserve_slot();
 
 	psc_info("mdsio_unlink: name = %s, rc=%d, data=%p", mq->name, mp->rc,
 	    fcmh_2_mdsio_data(fcmh));
