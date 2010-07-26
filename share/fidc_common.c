@@ -408,6 +408,8 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		fcmh_setattr(fcmh, sstb, setattrflags |
 		    FCMH_SETATTRF_HAVELOCK);
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
+		if (rc)
+			fcmh->fcmh_state |= FCMH_CTOR_FAILED;
 		goto out2;
 	} else {
 		/*
@@ -418,8 +420,10 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		 * other thread should be waiting for us.
 		 */
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
-		if (rc)
+		if (rc) {
+			fcmh->fcmh_state |= FCMH_CTOR_FAILED;
 			goto out1;
+		}
 	}
 
 	if (flags & FIDC_LOOKUP_LOAD) {
@@ -443,7 +447,6 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		FCMH_ULOCK(fcmh);
 		fcmh->fcmh_state |= FCMH_CAC_TOFREE;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
-		fcmh_put(fcmh);
 	} else {
 		*fcmhp = fcmh;
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
