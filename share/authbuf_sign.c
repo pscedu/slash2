@@ -55,10 +55,17 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	saf = pscrpc_msg_buf(m, 1, sizeof(*saf));
 	saf->saf_secret.sas_magic = AUTHBUF_MAGIC;
 	saf->saf_secret.sas_nonce = psc_atomic64_inc_getnew(&authbuf_nonce);
-	saf->saf_secret.sas_src_nid = rq->rq_import->imp_connection->c_self;
-	saf->saf_secret.sas_src_pid = PSCRPC_SVR_PID;
-	saf->saf_secret.sas_dst_nid = rq->rq_import->imp_connection->c_peer.nid;
-	saf->saf_secret.sas_dst_pid = rq->rq_import->imp_connection->c_peer.pid;
+	if (rq->rq_import) {
+		saf->saf_secret.sas_src_nid = rq->rq_import->imp_connection->c_self;
+		saf->saf_secret.sas_src_pid = PSCRPC_SVR_PID;
+		saf->saf_secret.sas_dst_nid = rq->rq_import->imp_connection->c_peer.nid;
+		saf->saf_secret.sas_dst_pid = rq->rq_import->imp_connection->c_peer.pid;
+	} else {
+		saf->saf_secret.sas_src_nid = rq->rq_self;
+		saf->saf_secret.sas_src_pid = PSCRPC_SVR_PID;
+		saf->saf_secret.sas_dst_nid = rq->rq_peer.nid;
+		saf->saf_secret.sas_dst_pid = rq->rq_peer.pid;
+	}
 
 	gerr = gcry_md_copy(&hd, authbuf_hd);
 	if (gerr)
