@@ -101,10 +101,6 @@ struct mdsio_ops {
 	int	(*mio_redo_setattr)(slfid_t, struct srt_stat *, uint);
 	int	(*mio_redo_symlink)(slfid_t, slfid_t, struct srt_stat *, char *, char *);
 	int	(*mio_redo_unlink)(slfid_t, slfid_t, char *);
-
-	/* callback interface */
-	void	(*mio_cb_pre_create)(void);
-	void	(*mio_cb_post_create)(void);
 };
 
 #define mdsio_init		mdsio_ops.mio_init			/* zfs_init() */

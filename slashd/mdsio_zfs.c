@@ -345,9 +345,6 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_replay_setattr,
 	zfsslash2_replay_symlink,
 	zfsslash2_replay_unlink,
-
-	mds_reserve_slot,
-	mds_unreserve_slot
 };
 
 uint64_t
