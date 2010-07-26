@@ -154,6 +154,7 @@ struct bmap_timeo_table {
 	uint64_t		 btt_minseq;
 	struct bmap_timeo_entry	*btt_entries;
 	int			 btt_nentries;
+	int			 btt_ready;
 };
 
 #define BTE_ADD			(1 << 0)
@@ -245,7 +246,7 @@ struct bmap_mds_lease *
 	mds_bmap_getbml(struct bmapc_memb *, lnet_nid_t, lnet_pid_t, uint64_t);
 
 void	 mds_bmap_setcurseq(uint64_t, uint64_t);
-void	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
+int	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
 
 void	 mds_bmap_timeotbl_init(void);
 uint64_t mds_bmap_timeotbl_getnextseq(void);

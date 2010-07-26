@@ -60,6 +60,7 @@ mds_bmap_timeotbl_init(void)
 		INIT_PSCLIST_HEAD(&e->bte_bmaps);
 		//mdsBmapTimeoTbl[i].bte_maxseq = BMAPSEQ_ANY;
 	}
+	mdsBmapTimeoTbl.btt_ready = 1;
 }
 
 static void
@@ -84,10 +85,13 @@ mds_bmap_setcurseq(uint64_t maxseq, uint64_t minseq)
 	mdsBmapTimeoTbl.btt_minseq = minseq;
 }
 
-void
+int
 mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 {
 	int locked;
+
+	if (!mdsBmapTimeoTbl.btt_ready)
+		return (-EAGAIN);
 
 	locked = reqlock(&mdsBmapTimeoTbl.btt_lock);
 
@@ -97,6 +101,8 @@ mds_bmap_getcurseq(uint64_t *maxseq, uint64_t *minseq)
 		*minseq = mdsBmapTimeoTbl.btt_minseq;
 
 	ureqlock(&mdsBmapTimeoTbl.btt_lock, locked);
+
+	return (0);
 }
 
 uint64_t
