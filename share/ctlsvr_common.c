@@ -61,7 +61,7 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 				if (resm->resm_csvc) {
 					imp = resm->resm_csvc->csvc_import;
 					if (imp && imp->imp_connection)
-						psc_id2str(imp->imp_connection->c_peer,
+						pscrpc_id2str(imp->imp_connection->c_peer,
 						    scc->scc_addrbuf);
 
 					scc->scc_cflags = psc_atomic32_read(
@@ -85,7 +85,7 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	lock
 	foreach (mexpcli) {
 		snprintf(scc->scc_addrbuf, sizeof(scc->scc_addrbuf),
-		    "@clients:%s", psc_nid2str());
+		    "@clients:%s", pscrpc_nid2str());
 		scc->scc_type = 0;
 		rc = psc_ctlmsg_sendv(fd, mh, scc);
 		if (!rc)

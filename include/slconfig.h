@@ -43,7 +43,7 @@ struct slashrpc_cservice;
 #define SITE_NAME_MAX	32
 #define INTRES_NAME_MAX	32
 #define RES_NAME_MAX	(SITE_NAME_MAX + INTRES_NAME_MAX)
-#define RESM_ADDRBUF_SZ	(RES_NAME_MAX + 1 + PSC_NIDSTR_SIZE)	/* foo@BAR:1.1.1.1@tcp0 */
+#define RESM_ADDRBUF_SZ	(RES_NAME_MAX + 1 + PSCRPC_NIDSTR_SIZE)	/* foo@BAR:1.1.1.1@tcp0 */
 #define SL_PEER_MAX	16
 #define LNET_NAME_MAX	32
 

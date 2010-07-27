@@ -432,7 +432,7 @@ lnettcp_stmt	: NAME EQ LNETTCP END {
 void
 slcfg_addif(char *ifname, char *netname)
 {
-	char nidstr[PSC_NIDSTR_SIZE];
+	char nidstr[PSCRPC_NIDSTR_SIZE];
 	struct sl_resm *resm;
 	int rc;
 
