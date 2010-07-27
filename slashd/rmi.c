@@ -354,9 +354,7 @@ slm_rmi_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-#ifdef AUTHBUF
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
-#endif
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

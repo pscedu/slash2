@@ -29,6 +29,7 @@
 #include "psc_rpc/service.h"
 #include "psc_util/pool.h"
 
+#include "authbuf.h"
 #include "bmap.h"
 #include "bmap_iod.h"
 #include "fidc_iod.h"
@@ -132,9 +133,7 @@ sli_rii_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-#ifdef AUTHBUF
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
-#endif
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

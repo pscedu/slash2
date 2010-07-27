@@ -27,11 +27,12 @@
 #include "psc_util/log.h"
 #include "psc_util/pool.h"
 
-#include "fidcache.h"
+#include "authbuf.h"
 #include "bmap.h"
 #include "bmap_cli.h"
 #include "ctl_cli.h"
 #include "ctlsvr_cli.h"
+#include "fidcache.h"
 #include "slashrpc.h"
 
 /**
@@ -267,9 +268,7 @@ slc_rcm_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
-#ifdef AUTHBUF
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
-#endif
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

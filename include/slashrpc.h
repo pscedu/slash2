@@ -27,6 +27,7 @@
 
 #include "pfl/cdefs.h"
 
+#include "authbuf.h"
 #include "creds.h"
 #include "fid.h"
 #include "sltypes.h"
@@ -35,11 +36,7 @@
 struct stat;
 struct statvfs;
 
-#ifdef AUTHBUF
-
-# include "authbuf.h"
-
-# define _SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens,	\
+#define _SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens,	\
 	    mq0)							\
 	{								\
 		psc_assert((nq) > 1);					\
@@ -53,11 +50,11 @@ struct statvfs;
 		    (nq), (qlens), (np), (plens), (mq0));		\
 	}
 
-# define SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens, mq0)\
+#define SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens, mq0)	\
 	(_SL_RSX_NEWREQN((imp), (version), (op), (rq), (nq), (qlens),	\
 	    (np), (plens), (mq0)))
 
-# define _SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
+#define _SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
 	{								\
 		int _qlens[2] = { sizeof(*(mq)), 0 };			\
 		int _plens[2] = { sizeof(*(mp)), 0 };			\
@@ -66,10 +63,10 @@ struct statvfs;
 		    _qlens, 2, _plens, (mq));				\
 	}
 
-# define SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
+#define SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
 	(_SL_RSX_NEWREQ((imp), (version), (op), (rq), (mq), (mp)))
 
-# define _SL_RSX_WAITREP(rq, mp)					\
+#define _SL_RSX_WAITREP(rq, mp)						\
 	{								\
 		int _rc;						\
 									\
@@ -80,10 +77,10 @@ struct statvfs;
 		_rc;							\
 	}
 
-# define SL_RSX_WAITREP(rq, mp)						\
+#define SL_RSX_WAITREP(rq, mp)						\
 	(_SL_RSX_WAITREP((rq), (mp)))
 
-# define SL_RSX_ALLOCREP(rq, mq, mp)					\
+#define SL_RSX_ALLOCREP(rq, mq, mp)					\
 	 do {								\
 		int _plens[2] = { sizeof(*(mp)),			\
 		    sizeof(struct srt_authbuf_footer) };		\
@@ -93,23 +90,6 @@ struct statvfs;
 		if ((mp)->rc)						\
 			return ((mp)->rc);				\
 	 } while (0)
-
-#else
-
-# define SL_RSX_NEWREQN(imp, version, op, rq, nq, qlens, np, plens, mq0)\
-	RSX_NEWREQN((imp), (version), (op), (rq), (nq), (qlens), (np),	\
-	    (plens), (mq0))
-
-# define SL_RSX_NEWREQ(imp, version, op, rq, mq, mp)			\
-	RSX_NEWREQ((imp), (version), (op), (rq), (mq), (mp))
-
-# define SL_RSX_WAITREP(rq, mp)						\
-	RSX_WAITREP((rq), (mp))
-
-# define SL_RSX_ALLOCREP(rq, mq, mp)					\
-	RSX_ALLOCREP((rq), (mq), (mp))
-
-#endif
 
 /* Slash RPC channel to MDS from client. */
 #define SRMC_REQ_PORTAL		10
