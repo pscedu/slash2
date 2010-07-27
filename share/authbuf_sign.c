@@ -39,17 +39,21 @@ void
 pscrpc_req_getprids(struct pscrpc_request *rq,
     lnet_process_id_t *self_prid, lnet_process_id_t *peer_prid)
 {
-	pscrpc_getpridforpeer(self_prid, &lnet_prids,
-	    rq->rq_import->imp_connection->c_peer.nid);
-	if (self_prid->nid == LNET_NID_ANY) {
-		errno = ENETUNREACH;
-		psc_fatal("nid %"PSCPRIxLNID,
-		    rq->rq_import->imp_connection->c_peer.nid);
-	}
-	if (rq->rq_import)
+	if (rq->rq_import) {
 		*peer_prid = rq->rq_import->imp_connection->c_peer;
-	else
+		pscrpc_getpridforpeer(self_prid, &lnet_prids,
+		    rq->rq_import->imp_connection->c_peer.nid);
+		if (self_prid->nid == LNET_NID_ANY) {
+			errno = ENETUNREACH;
+			psc_fatal("nid %"PSCPRIxLNID,
+			    rq->rq_import->imp_connection->c_peer.nid);
+		}
+	} else {
+		/* there is no import, we must be a server padawan! */
 		*peer_prid = rq->rq_peer;
+		self_prid->nid = rq->rq_self;
+		self_prid->pid = PSCRPC_SVR_PID;
+	}
 }
 
 /**
