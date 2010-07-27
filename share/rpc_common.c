@@ -200,7 +200,7 @@ sl_csvc_useable(struct slashrpc_cservice *csvc)
 	if (csvc->csvc_import->imp_failed ||
 	    csvc->csvc_import->imp_invalid)
 		return (0);
-	return ((psc_atomic32_read(&(csvc)->csvc_flags) &
+	return ((psc_atomic32_read(&csvc->csvc_flags) &
 	  (CSVCF_CONNECTED | CSVCF_ABANDON)) == CSVCF_CONNECTED);
 }
 
@@ -370,7 +370,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 //			goto out;
 		} else {
 			psc_waitq_wait(csvc->csvc_waitinfo, csvc->csvc_lock);
-			sl_csvc_reqlock(csvc);
+			sl_csvc_lock(csvc);
 		}
 		goto restart;
 	} else if (csvc->csvc_mtime + CSVC_RECONNECT_INTV < time(NULL)) {
@@ -380,7 +380,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		rc = slrpc_issue_connect(peernid,
 		    csvc->csvc_import, magic, version);
 
-		sl_csvc_reqlock(csvc);
+		sl_csvc_lock(csvc);
 		psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTING);
 		psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 		csvc->csvc_mtime = time(NULL);
@@ -532,6 +532,7 @@ slconnthr_main(struct psc_thread *thr)
 			if (rc)
 				break;
 			sl_csvc_waitrel_s(csvc, 60);
+			sl_csvc_decref(csvc);
 		}
 		sl_csvc_disconnect(csvc);
 		sl_csvc_decref(csvc);
