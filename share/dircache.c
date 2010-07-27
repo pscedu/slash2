@@ -84,6 +84,7 @@ dircache_rls_ents(struct dircache_ents *e)
 	lc_remove(&i->di_dcm->dcm_lc, e);
 
 	spinlock(&i->di_lock);
+	psc_assert(e->de_flags & DIRCE_FREEING);
 	psclist_del(&e->de_lentry1);
 	freelock(&i->di_lock);
 
@@ -97,9 +98,16 @@ dircache_rls_ents(struct dircache_ents *e)
 void
 dircache_setfreeable_ents(struct dircache_ents *e)
 {
-	e->de_freeable = 1;
-	if (!e->de_remlookup)
-		dircache_rls_ents(e);
+	dircache_ent_lock(e);
+	if (!(e->de_flags & DIRCE_FREEABLE))		
+		e->de_flags |= DIRCE_FREEABLE;
+
+	if (!e->de_remlookup && !(e->de_flags & DIRCE_FREEING)) {
+		e->de_flags |= DIRCE_FREEING;
+		dircache_ent_ulock(e);
+		dircache_rls_ents(e);		
+	} else
+		dircache_ent_ulock(e);
 }
 
 slfid_t
@@ -109,12 +117,14 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	struct dircache_desc desc, *d;
 	struct srt_dirent *dirent;
 	slfid_t ino = FID_ANY;
-	int found=0, pos;
+	int found=0, pos, freeit=0;
 
 	desc.dd_hash = psc_str_hashify(name);
 	desc.dd_len  = strnlen(name, NAME_MAX);
 	desc.dd_name = name;
 
+	/* This lock is equiv to dircache_ent_lock()
+	 */
 	spinlock(&i->di_lock);
 	psclist_for_each_entry(e, &i->di_list, de_lentry1) {
 		/* The return code for psc_dynarray_bsearch() isn't quite
@@ -155,19 +165,23 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 			break;
 		}
 	}
-	freelock(&i->di_lock);
 
-	/* If all of the items have been accessed via lookup then
-	 *   assume that fuse has an entry cached for each and free
-	 *   the buffer.
-	 */
-	if (found && !e->de_remlookup && e->de_freeable) {
-		/* de_freeable should only be set prior to the completion
-		 *   of the readdir.  The ents are fair game for freeing
-		 *   any time after that.
+	if (found && !e->de_remlookup && (e->de_flags & DIRCE_FREEABLE) && 
+	    !(e->de_flags & DIRCE_FREEING)) {
+		/* If all of the items have been accessed via lookup then
+		 *   assume that fuse has an entry cached for each and free
+		 *   the buffer.
 		 */
-		dircache_rls_ents(e);
+		e->de_flags |= DIRCE_FREEING;
+		freeit = 1;
 	}
+
+	if (found && (e->de_flags & DIRCE_FREEING)) {
+		freelock(&i->di_lock);
+		if (freeit)
+			dircache_rls_ents(e);
+	} else
+		freelock(&i->di_lock);
 
 	return (ino);
 }
@@ -187,10 +201,18 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 	/* Remove old entries from the top of the list.
 	 */
 	LIST_CACHE_FOREACH_SAFE(e, tmp, &m->dcm_lc) {
-		if (timercmp(&now, &e->de_age, >) && e->de_freeable)
+		dircache_ent_lock(e);
+		if (timercmp(&now, &e->de_age, >) && 
+		    (e->de_flags & DIRCE_FREEABLE) &&
+		    !(e->de_flags & DIRCE_FREEING)) {
+			e->de_flags |= DIRCE_FREEING;
+			dircache_ent_ulock(e);			
 			dircache_rls_ents(e);
-		else
+
+		} else {
+			dircache_ent_ulock(e);
 			break;
+		}
 	}
 
 	/* Clear more space if needed.
@@ -201,8 +223,14 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 		if (!e)
 			break;
 
-		if (e->de_freeable)
+		dircache_ent_lock(e);
+		if ((e->de_flags & DIRCE_FREEABLE) &&
+		    !(e->de_flags & DIRCE_FREEING)) {
+			e->de_flags |= DIRCE_FREEING;
+			dircache_ent_ulock(e);
 			dircache_rls_ents(e);
+		} else
+			dircache_ent_ulock(e);
 	}
 	freelock(&m->dcm_lock);
 
@@ -232,7 +260,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	PFL_GETTIME(&e->de_age);
 	e->de_age.tv_sec += dirent_timeo;
 	e->de_remlookup = nents - 2; /* subtract "." and ".." */
-	e->de_freeable = 0; /* remain '0' until readdir req has completed */
+	e->de_flags = 0; /* remain '0' until readdir req has completed */
 
 	c = e->de_desc = PSCALLOC(sizeof(struct dircache_desc) * nents);
 	psc_dynarray_ensurelen(&e->de_dents, nents);

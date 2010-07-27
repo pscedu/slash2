@@ -51,7 +51,7 @@ struct dircache_info {
 
 struct dircache_ents {
 	int			 de_remlookup;
-	int			 de_freeable;
+	int			 de_flags;
 	int			 de_idx;
 	size_t			 de_sz;
 	struct timeval		 de_age;
@@ -62,6 +62,12 @@ struct dircache_ents {
 	struct dircache_info	*de_info;
 	unsigned char		 de_base[0];
 };
+
+#define DIRCE_FREEABLE (1 << 0)
+#define DIRCE_FREEING  (1 << 1)
+
+#define dircache_ent_lock(e)  spinlock(&(e)->de_info->di_lock)
+#define dircache_ent_ulock(e) freelock(&(e)->de_info->di_lock)
 
 struct dircache_desc {
 	int			 dd_hash;
