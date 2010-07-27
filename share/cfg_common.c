@@ -304,6 +304,7 @@ libsl_init(int pscnet_mode, int ismds)
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
 	PSCFREE(lent);
+	pflnet_freeifaddrs(ifa);
 
 	lnetstr[0] = '\0';
 	psclist_for_each_entry_safe(lent, lnext, &lnets_hd, lentry) {
@@ -325,9 +326,7 @@ libsl_init(int pscnet_mode, int ismds)
 	setenv("LNET_NETWORKS", lnetstr, 0);
 
 	pscrpc_init_portals(pscnet_mode);
-	pscrpc_getlocalnids(ifa, &lnet_nids);
-
-	pflnet_freeifaddrs(ifa);
+	pscrpc_getlocalnids(&lnet_nids);
 
 	if (pscnet_mode == PSCNET_SERVER) {
 		nodeResm = libsl_resm_lookup(ismds);
