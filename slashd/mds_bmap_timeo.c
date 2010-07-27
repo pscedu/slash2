@@ -68,7 +68,7 @@ mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 {
 	struct slmds_jent_bmapseq *buf;
 
-	buf = pjournal_get_buf(mdsJournal, 
+	buf = pjournal_get_buf(mdsJournal,
 		sizeof(struct slmds_jent_bmapseq));
 
 	*buf = *sjbsq;
@@ -145,15 +145,15 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	}
 
 	/* Currently all leases are placed in the last slot regardless
-	 *   of their start time.  This is the case for BTE_REATTACH.  
+	 *   of their start time.  This is the case for BTE_REATTACH.
 	 */
-	psc_dbg("timeoslot=%"PSCPRIuTIMET, mds_bmap_timeotbl_curslot);
+	psc_dbg("timeoslot=%"PSCPRI_TIMET, mds_bmap_timeotbl_curslot);
 	e = &mdsBmapTimeoTbl.btt_entries[mds_bmap_timeotbl_curslot];
 
 	if (flags & BTE_REATTACH) {
 		/* BTE_REATTACH is only called from startup context.
 		 */
-		psc_assert(mdsBmapTimeoTbl.btt_minseq == 
+		psc_assert(mdsBmapTimeoTbl.btt_minseq ==
 			   mdsBmapTimeoTbl.btt_maxseq);
 
 		if (mdsBmapTimeoTbl.btt_maxseq < bml->bml_seq)
@@ -223,7 +223,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		}
 		psc_dynarray_reset(&a);
  sleep:
-		psc_dbg("timeoslot=%d sleeptime=%"PSCPRIuTIMET,
+		psc_dbg("timeoslot=%d sleeptime=%"PSCPRI_TIMET,
 			timeoslot, mds_bmap_timeotbl_nextwakeup);
 
 		sleep(mds_bmap_timeotbl_nextwakeup);
