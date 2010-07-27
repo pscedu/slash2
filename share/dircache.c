@@ -136,7 +136,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 
 		if (d->dd_hash == desc.dd_hash &&
 		    d->dd_len  == desc.dd_len &&
-		    strcmp(name, dirent->name) == 0) {
+		    strncmp(name, dirent->name, d->dd_len) == 0) {
 			/* Map the dirent from the desc's offset.
 			 */
 			found = 1;
