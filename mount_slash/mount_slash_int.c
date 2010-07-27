@@ -105,13 +105,16 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		 */
 		len += off & BMPC_BUFMASK;
 		off &= ~BMPC_BUFMASK;
-		rbw |= BIORQ_RBWFP;
+		rbw = BIORQ_RBWFP;
 	}
 	npages = len / BMPC_BUFSZ;
 
 	if (len % BMPC_BUFSZ) {
-		rbw |= BIORQ_RBWLP;
 		npages++;
+		if (npages == 1 && !rbw)
+			rbw = BIORQ_RBWFP;
+		else if (npages > 1)
+			rbw |= BIORQ_RBWLP;		
 	}
 
 	psc_assert(npages <= BMPC_IOMAXBLKS);
@@ -1635,8 +1638,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 			goto out;
 		}
 
-		msl_biorq_build(&r[nr], b[nr], mfh, roff, tlen,
-				(rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
+		msl_biorq_build(&r[nr], b[nr], mfh, (roff - (nr * SLASH_BMAP_SIZE)), 
+				tlen, (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
 		/* Start prefetching our cached buffers.
 		 */
 		msl_pages_prefetch(r[nr]);
