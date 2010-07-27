@@ -69,7 +69,7 @@ slvr_do_crc(struct slvr_ref *s)
 	 * SLVR_CRCDIRTY means that DATARDY has been set and that
 	 *   a write dirtied the buffer and invalidated the crc.
 	 */
-	psc_assert(s->slvr_flags & SLVR_PINNED && 
+	psc_assert(s->slvr_flags & SLVR_PINNED &&
 		   (s->slvr_flags & SLVR_FAULTING ||
 		    s->slvr_flags & SLVR_CRCDIRTY));
 
@@ -88,8 +88,8 @@ slvr_do_crc(struct slvr_ref *s)
 		/* This thread holds faulting status so all others are
 		 *  waiting on us which means that exclusive access to
 		 *  slvr contents is ours until we set SLVR_DATARDY.
-		 *  
-		 * XXX For now we assume that all blocks are being 
+		 *
+		 * XXX For now we assume that all blocks are being
 		 *  processed, otherwise there's no guarantee that the
 		 *  entire slvr was read.
 		 */
@@ -98,21 +98,21 @@ slvr_do_crc(struct slvr_ref *s)
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
-			psc_assert(!s->slvr_crc_soff); 
+			psc_assert(!s->slvr_crc_soff);
 
 			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
-			       SLVR_CRCLEN(s)); 
+			       SLVR_CRCLEN(s));
 
 			/* Shouln't need a lock, !SLVR_DATADY
 			 */
 			s->slvr_crc_eoff = 0;
-		      
+
 			if (crc != slvr_2_crc(s)) {
 				DEBUG_SLVR(PLL_ERROR, s, "crc failed want=%"
 				   PRIx64" got=%"PRIx64 " len=%u",
 				   slvr_2_crc(s), crc, SLVR_CRCLEN(s));
 
-				DEBUG_BMAP(PLL_ERROR, slvr_2_bmap(s), 
+				DEBUG_BMAP(PLL_ERROR, slvr_2_bmap(s),
 				   "slvrnum=%hu", s->slvr_num);
 
 				return (-EINVAL);
@@ -123,37 +123,37 @@ slvr_do_crc(struct slvr_ref *s)
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
 		uint32_t soff, eoff;
 
-		SLVR_LOCK(s);		
-		DEBUG_SLVR(PLL_NOTIFY, s, "len=%u soff=%u loff=%u", 
+		SLVR_LOCK(s);
+		DEBUG_SLVR(PLL_NOTIFY, s, "len=%u soff=%u loff=%u",
 		   SLVR_CRCLEN(s), s->slvr_crc_soff, s->slvr_crc_loff);
-		
-		psc_assert(s->slvr_crc_eoff && 
+
+		psc_assert(s->slvr_crc_eoff &&
 			   (s->slvr_crc_eoff <= SL_BMAP_CRCSIZE));
-		
-		if (!s->slvr_crc_loff || 
+
+		if (!s->slvr_crc_loff ||
 		    s->slvr_crc_soff != s->slvr_crc_loff) {
-			/* Detect non-sequential write pattern into the 
+			/* Detect non-sequential write pattern into the
 			 *   slvr.
 			 */
 			PSC_CRC64_INIT(&s->slvr_crc);
 			s->slvr_crc_soff = 0;
-			s->slvr_crc_loff = 0;				
-		}		
+			s->slvr_crc_loff = 0;
+		}
 		/* Copy values in preparation for lock release.
 		 */
 		soff = s->slvr_crc_soff;
 		eoff = s->slvr_crc_eoff;
-		
+
 		SLVR_ULOCK(s);
 
 #ifdef ADLERCRC32
 		//XXX not a running crc?  double check for correctness
-		s->slvr_crc = adler32(s->slvr_crc, slvr_2_buf(s, 0) + soff, 
-			      (int)(eoff - soff));		
+		s->slvr_crc = adler32(s->slvr_crc, slvr_2_buf(s, 0) + soff,
+			      (int)(eoff - soff));
 		crc = s->slvr_crc;
-#else		
+#else
 		psc_crc64_add(&s->slvr_crc,
-			      (unsigned char *)(slvr_2_buf(s, 0) + soff), 
+			      (unsigned char *)(slvr_2_buf(s, 0) + soff),
 			      (int)(eoff - soff));
 		crc = s->slvr_crc;
 		PSC_CRC32_FIN(&crc);
@@ -162,14 +162,14 @@ slvr_do_crc(struct slvr_ref *s)
 		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PRIx64 " len=%u soff=%u",
 			   crc, SLVR_CRCLEN(s), s->slvr_crc_soff);
 
-		DEBUG_BMAP(PLL_NOTIFY, slvr_2_bmap(s), 
+		DEBUG_BMAP(PLL_NOTIFY, slvr_2_bmap(s),
 			   "slvrnum=%hu", s->slvr_num);
 
 		SLVR_LOCK(s);
 		/* loff is only set here.
 		 */
 		s->slvr_crc_loff = eoff;
-		
+
 		if (!s->slvr_pndgwrts && !s->slvr_compwrts)
 			s->slvr_flags &= ~SLVR_CRCDIRTY;
 
@@ -178,7 +178,7 @@ slvr_do_crc(struct slvr_ref *s)
 			slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
 		}
 		SLVR_ULOCK(s);
-	} else 
+	} else
 		abort();
 
 	return (1);
@@ -448,7 +448,7 @@ slvr_slab_prep(struct slvr_ref *s, enum rw rw)
 }
 
 /**
- * slvr_io_prep - prepare a sliver for an incoming io.  This may entail 
+ * slvr_io_prep - prepare a sliver for an incoming io.  This may entail
  *   faulting 32k aligned regions in from the underlying fs.
  * @s: the sliver
  * @off: offset into the slvr (not bmap or file object)
@@ -540,7 +540,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	}
 
 	//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
-	psc_info("psc_vbitmap_nfree()=%d", 
+	psc_info("psc_vbitmap_nfree()=%d",
 		 psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 	/* We must have found some work to do.
 	 */
@@ -624,7 +624,7 @@ slvr_schedule_crc_locked(struct slvr_ref *s)
 
 	slvr_2_biod(s)->biod_crcdrty_slvrs++;
 
-	DEBUG_SLVR(PLL_INFO, s, "crc sched (ndirty slvrs=%u)", 
+	DEBUG_SLVR(PLL_INFO, s, "crc sched (ndirty slvrs=%u)",
 		   slvr_2_biod(s)->biod_crcdrty_slvrs);
 
 	s->slvr_flags &= ~SLVR_LRU;
@@ -666,7 +666,7 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 		slvr_lru_requeue(s, 0);
 		return;
 	}
-	
+
 	s->slvr_flags |= SLVR_CRCDIRTY;
 	/* Manage the description of the dirty crc area. If the slvr's checksum
 	 *   is not being processed then soff and len may be adjusted.
@@ -674,13 +674,13 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 	 *   crc'd from offset 0.
 	 */
 	s->slvr_crc_soff = off;
-	
+
 	if ((off + len) > s->slvr_crc_eoff)
 		s->slvr_crc_eoff =  off + len;
 
 	if (off != s->slvr_crc_loff)
 		s->slvr_crc_loff = 0;
-	
+
 	psc_assert(s->slvr_crc_eoff <= SL_BMAP_CRCSIZE);
 
 	if (s->slvr_flags & SLVR_FAULTING) {
@@ -711,12 +711,12 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 	} else
 		DEBUG_SLVR(PLL_FATAL, s, "invalid state");
 
-	/* If there are no more pending writes, schedule a CRC op. 
+	/* If there are no more pending writes, schedule a CRC op.
 	 *   Increment slvr_compwrts to prevent a crc op from being skipped
 	 *   which can happen due to the release of the slvr lock being
 	 *   released prior to the crc of the buffer.
 	 */
-	s->slvr_pndgwrts--;	
+	s->slvr_pndgwrts--;
 	s->slvr_compwrts++;
 
 	if (!s->slvr_pndgwrts && (s->slvr_flags & SLVR_LRU))
@@ -887,7 +887,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		}
 	}
 	psc_dynarray_free(&a);
-	
+
 	return (n);
 }
 
