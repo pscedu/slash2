@@ -126,6 +126,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	struct slashrpc_cservice *csvc;
 	struct srm_bmap_wire_req *mq;
 	struct srm_bmap_wire_rep *mp;
+	struct srt_bmap_wire *tmp;
 	int rc;
 
 	if (rw != SL_READ)
@@ -152,11 +153,8 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0) {
 		rc = mp->rc;
-		bmap_2_biodi_wire(b) = 
-			PSCALLOC(sizeof(struct srt_bmap_wire));
-
-		memcpy(bmap_2_biodi_wire(b), &mp->wire, 
-		       sizeof(struct srt_bmap_wire));
+		tmp = PSCALLOC(sizeof(struct srt_bmap_wire));
+		memcpy(tmp, &mp->wire, sizeof(struct srt_bmap_wire));
 	} else {
 		DEBUG_BMAP(PLL_ERROR, b, "req failed (%d)", rc);
 		goto out;
@@ -164,21 +162,30 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 
 	/* Need to copy any of our slvr CRCs into the table. */
 	spinlock(&bmap_2_biodi(b)->biod_lock);
+	bmap_2_biodi_wire(b) = tmp;
+
 	if (!SPLAY_EMPTY(bmap_2_biodi_slvrs(b))) {
 		struct slvr_ref *s;
 
-		SPLAY_FOREACH(s, biod_slvrtree, bmap_2_biodi_slvrs(b))
-		    /* Only replace the crc if datardy is true (meaning that
-		     *   all init operations have be done) and that the
-		     *   crc is clean (meaning that the crc reflects the slab
-		     *   contents.
-		     */
-		    if (!(s->slvr_flags & SLVR_CRCDIRTY) &&
-			s->slvr_flags & SLVR_DATARDY) {
-			    slvr_2_crc(s) = s->slvr_crc;
-			    slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
-		    }
+		SPLAY_FOREACH(s, biod_slvrtree, bmap_2_biodi_slvrs(b)) {
+			/* Only replace the crc if datardy is true (meaning that
+			 *   all init operations have be done) and that the
+			 *   crc is clean (meaning that the crc reflects the slab
+			 *   contents.
+			 */
+			if (!(s->slvr_flags & SLVR_DATARDY))
+				continue;
+
+			slvr_2_crc(s) = s->slvr_crc;
+			slvr_2_crcbits(s) |= BMAP_SLVR_DATA;
+			
+			if (s->slvr_flags & SLVR_CRCDIRTY)
+				slvr_2_crcbits(s) |= BMAP_SLVR_CRC;
+			else
+				slvr_2_crcbits(s) |= BMAP_SLVR_CRCDIRTY;
+		}
 	}
+	
 	freelock(&bmap_2_biodi(b)->biod_lock);
  out:
 	/* Unblock threads no matter what.

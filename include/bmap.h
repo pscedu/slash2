@@ -143,7 +143,8 @@ struct bmapc_memb {
 enum {
 	BMAP_SLVR_DATA		= (1 << 0),	/* Data present, otherwise slvr is hole */
 	BMAP_SLVR_CRC		= (1 << 1),	/* Valid CRC */
-	BMAP_SLVR_WANTREPL	= (1 << 2)	/* Queued for replication */
+	BMAP_SLVR_CRCDIRTY	= (1 << 2),	/* Valid CRC */
+	BMAP_SLVR_WANTREPL	= (1 << 3)	/* Queued for replication */
 };
 
 /*
