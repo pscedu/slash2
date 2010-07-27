@@ -140,7 +140,10 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
 		goto out;
+
+	FCMH_LOCK(fcmh);
 	mp->attr = fcmh->fcmh_sstb;
+	FCMH_ULOCK(fcmh);
  out:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
@@ -703,6 +706,11 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &mq->attr, to_set,
 	    &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh), mds_namespace_log);
 
+	if (!mp->rc) {
+		FCMH_LOCK(fcmh);
+		fcmh->fcmh_sstb = mp->attr;
+		FCMH_ULOCK(fcmh);
+	}
  out:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
