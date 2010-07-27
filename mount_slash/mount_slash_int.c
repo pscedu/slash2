@@ -137,7 +137,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			else if (i == (npages - 1) &&
 				 (bmpce->bmpce_flags & BMPCE_DATARDY) &&
 				 (rbw & BIORQ_RBWLP))
-				rbw &= ~BIORQ_RBWFP;
+				rbw &= ~BIORQ_RBWLP;
 
 			BMPCE_ULOCK(bmpce);
 			/* Mark this cache block as being already present
