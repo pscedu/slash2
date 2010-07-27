@@ -71,7 +71,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	uint32_t roff[RIC_MAX_SLVRS_PER_IO], len[RIC_MAX_SLVRS_PER_IO];
 	sl_bmapno_t bmapno, slvrno;
 	int rc=0, nslvrs, i;
-	lnet_nid_t *np;
+	lnet_process_id_t *pp;
 
 	sblk = 0; /* gcc */
 
@@ -92,9 +92,9 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 * A RBW (read-before-write) request from the client may have a
 	 *   write enabled bmapdesc which he uses to fault in his page.
 	 */
-	DYNARRAY_FOREACH(np, i, &lnet_nids) {
+	DYNARRAY_FOREACH(pp, i, &lnet_prids) {
 		mp->rc = bmapdesc_access_check(&mq->sbd, rw,
-		    nodeResm->resm_res->res_id, *np);
+		    nodeResm->resm_res->res_id, pp->nid);
 		if (mp->rc == 0)
 			break;
 	}

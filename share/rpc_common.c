@@ -45,20 +45,19 @@ __static int
 slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
     uint64_t magic, uint32_t version)
 {
-	lnet_process_id_t server_id = { server, PSCRPC_SVR_PID };
+	lnet_process_id_t prid, server_id = { server, PSCRPC_SVR_PID };
 	struct pscrpc_request *rq;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
-	lnet_nid_t nid;
 	int rc;
 
-	nid = pscrpc_getnidforpeer(&lnet_nids, server);
-	if (nid == LNET_NID_ANY)
+	pscrpc_getpridforpeer(&prid, &lnet_prids, server);
+	if (prid.nid == LNET_NID_ANY)
 		return (ENETUNREACH);
 
 	if (imp->imp_connection)
 		pscrpc_put_connection(imp->imp_connection);
-	imp->imp_connection = pscrpc_get_connection(server_id, nid, NULL);
+	imp->imp_connection = pscrpc_get_connection(server_id, prid.nid, NULL);
 	imp->imp_connection->c_imp = imp;
 	imp->imp_connection->c_peer.pid = PSCRPC_SVR_PID;
 

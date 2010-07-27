@@ -45,6 +45,7 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 {
 	struct srt_authbuf_footer *saf;
 	struct pscrpc_msg *m;
+	lnet_process_id_t prid;
 	gcry_error_t gerr;
 	gcry_md_hd_t hd;
 
@@ -57,14 +58,15 @@ authbuf_sign(struct pscrpc_request *rq, int msgtype)
 	saf->saf_secret.sas_magic = AUTHBUF_MAGIC;
 	saf->saf_secret.sas_nonce = psc_atomic64_inc_getnew(&authbuf_nonce);
 	if (rq->rq_import) {
-		saf->saf_secret.sas_src_nid = pscrpc_getnidforpeer(&lnet_nids,
+		pscrpc_getpridforpeer(&prid, &lnet_prids,
 		    rq->rq_import->imp_connection->c_peer.nid);
-		if (saf->saf_secret.sas_src_nid == LNET_NID_ANY) {
+		if (prid.nid == LNET_NID_ANY) {
 			errno = ENETUNREACH;
 			psc_fatal("nid %"PSCPRIxLNID,
 			    rq->rq_import->imp_connection->c_peer.nid);
 		}
-		saf->saf_secret.sas_src_pid = PSCRPC_SVR_PID;
+		saf->saf_secret.sas_src_nid = prid.nid;
+		saf->saf_secret.sas_src_pid = prid.pid;
 		saf->saf_secret.sas_dst_nid = rq->rq_import->imp_connection->c_peer.nid;
 		saf->saf_secret.sas_dst_pid = rq->rq_import->imp_connection->c_peer.pid;
 	} else {

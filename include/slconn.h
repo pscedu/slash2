@@ -119,7 +119,7 @@ void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
 		uint32_t, void *, int, void *, enum slconn_type, int,
 		const char *);
 
-extern struct psc_dynarray lnet_nids;
+extern struct psc_dynarray lnet_prids;
 
 extern void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
 

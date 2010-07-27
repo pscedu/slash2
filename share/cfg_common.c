@@ -35,7 +35,7 @@
 #include "slconfig.h"
 #include "slerr.h"
 
-struct psc_dynarray	lnet_nids = DYNARRAY_INIT;
+struct psc_dynarray	lnet_prids = DYNARRAY_INIT;
 
 /*
  * libsl_resm_lookup - Sanity check this node's resource membership.
@@ -47,26 +47,26 @@ libsl_resm_lookup(int ismds)
 	char nidbuf[PSCRPC_NIDSTR_SIZE];
 	struct sl_resource *res = NULL;
 	struct sl_resm *resm = NULL;
-	lnet_nid_t *np;
+	lnet_process_id_t *pp;
 	int i;
 
-	DYNARRAY_FOREACH(np, i, &lnet_nids) {
-		if (LNET_NETTYP(LNET_NIDNET(*np)) == LOLND)
+	DYNARRAY_FOREACH(pp, i, &lnet_prids) {
+		if (LNET_NETTYP(LNET_NIDNET(pp->nid)) == LOLND)
 			continue;
 
 		resm = psc_hashtbl_search(&globalConfig.gconf_nid_hashtbl,
-		    NULL, NULL, np);
+		    NULL, NULL, &pp->nid);
 		/* Every nid found by lnet must be a resource member. */
 		if (resm == NULL)
 			psc_fatalx("nid %s is not a member of any resource",
-			    pscrpc_nid2str(*np, nidbuf));
+			    pscrpc_nid2str(pp->nid, nidbuf));
 
 		if (res == NULL)
 			res = resm->resm_res;
 		/* All nids must belong to the same resource */
 		else if (res != resm->resm_res)
 			psc_fatalx("nids must be members of same resource (%s)",
-			    pscrpc_nid2str(*np, nidbuf));
+			    pscrpc_nid2str(pp->nid, nidbuf));
 	}
 	if (ismds && res->res_type != SLREST_MDS)
 		psc_fatal("%s: not configured as MDS", res->res_name);
@@ -326,7 +326,7 @@ libsl_init(int pscnet_mode, int ismds)
 	setenv("LNET_NETWORKS", lnetstr, 0);
 
 	pscrpc_init_portals(pscnet_mode);
-	pscrpc_getlocalnids(&lnet_nids);
+	pscrpc_getlocalprids(&lnet_prids);
 
 	if (pscnet_mode == PSCNET_SERVER) {
 		nodeResm = libsl_resm_lookup(ismds);
