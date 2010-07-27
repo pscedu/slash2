@@ -268,10 +268,10 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	for (j=0, b=e->de_base, off=0; j < (int)nents; j++, c++) {
 		d = (void *)(b + off);
 
-		psc_dbg("ino=%"PRIx64" off=%"PRId64
-			  " nlen=%u type=%#o name=%.*s d=%p off=%"PRId64,
-			  d->ino, d->off, d->namelen, d->type,
-			  d->namele, d->name, d, off);
+		psc_dbg("ino=%"PRIx64" off=%"PRId64" "
+		    "nlen=%u type=%#o name=%.*s d=%p off=%"PRId64,
+		    d->ino, d->off, d->namelen, d->type,
+		    d->namelen, d->name, d, off);
 
 		c->dd_len    = d->namelen;
 		c->dd_hash   = psc_strn_hashify(d->name, d->namelen);
@@ -288,7 +288,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	psc_dynarray_sort(&e->de_dents, qsort, dirent_sort_cmp);
 	DYNARRAY_FOREACH(c, j, &e->de_dents)
 		psc_dbg("c=%p hash=%d len=%u name=%.*s",
-		    c, c->dd_hash, c->dd_len, c->dd_namelen, c->dd_name);
+		    c, c->dd_hash, c->dd_len, c->dd_len, c->dd_name);
 
 	lc_addtail(&m->dcm_lc, e);
 
