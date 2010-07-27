@@ -313,13 +313,11 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 		}
 	}
 
-	if (!bmpc_queued_ios(bmpc) && !(b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
-		if (!(b->bcm_mode & BMAP_REAPABLE)) {
-			psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
-			b->bcm_mode |= BMAP_REAPABLE;
-			lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
-		} else
-			psc_assert(psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry));
+	if (!bmpc_queued_ios(bmpc) && !(b->bcm_mode & BMAP_CLI_FLUSHPROC) && 
+	    !(b->bcm_mode & BMAP_REAPABLE)) {
+		psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
+		b->bcm_mode |= BMAP_REAPABLE;
+		lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
 	}
 
 	BMPC_ULOCK(bmpc);
@@ -891,7 +889,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct psc_dynarray *a=args->pointer_arg[MSL_IO_CB_POINTER_SLOT];
 	struct bmpc_ioreq *r=args->pointer_arg[MSL_OFTRQ_CB_POINTER_SLOT];
-	struct bmapc_memb *b=r->biorq_bmap;
+	struct bmapc_memb *b;
 	struct bmap_pagecache_entry *bmpce;
 	int op=rq->rq_reqmsg->opc, i;
 	int clearpages=0;
@@ -1481,7 +1479,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 			nbytes = MIN(BMPC_BUFSZ, tsize);
 		}
 
-		DEBUG_BMPCE(PLL_TRACE, bmpce, "tsize=%u nbytes=%u toff=%u",
+		DEBUG_BMPCE(PLL_NOTIFY, bmpce, "tsize=%u nbytes=%u toff=%u",
 			    tsize, nbytes, toff);
 		/* Do the deed.
 		 */
