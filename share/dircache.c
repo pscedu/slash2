@@ -56,7 +56,7 @@ dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
 	m->dcm_alloc = 0;
 
 	LOCK_INIT(&m->dcm_lock);
-	lc_reginit(&m->dcm_lc, struct dircache_ents, de_lentry2, name);
+	lc_reginit(&m->dcm_lc, struct dircache_ents, de_lentry_lc, "%s", name);
 }
 
 void
@@ -85,7 +85,7 @@ dircache_rls_ents(struct dircache_ents *e)
 
 	spinlock(&i->di_lock);
 	psc_assert(e->de_flags & DIRCE_FREEING);
-	psclist_del(&e->de_lentry1);
+	psclist_del(&e->de_lentry);
 	freelock(&i->di_lock);
 
 	ureqlock(&m->dcm_lock, locked);
@@ -99,13 +99,13 @@ void
 dircache_setfreeable_ents(struct dircache_ents *e)
 {
 	dircache_ent_lock(e);
-	if (!(e->de_flags & DIRCE_FREEABLE))		
+	if (!(e->de_flags & DIRCE_FREEABLE))
 		e->de_flags |= DIRCE_FREEABLE;
 
 	if (!e->de_remlookup && !(e->de_flags & DIRCE_FREEING)) {
 		e->de_flags |= DIRCE_FREEING;
 		dircache_ent_ulock(e);
-		dircache_rls_ents(e);		
+		dircache_rls_ents(e);
 	} else
 		dircache_ent_ulock(e);
 }
@@ -126,7 +126,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	/* This lock is equiv to dircache_ent_lock()
 	 */
 	spinlock(&i->di_lock);
-	psclist_for_each_entry(e, &i->di_list, de_lentry1) {
+	psclist_for_each_entry(e, &i->di_list, de_lentry) {
 		/* The return code for psc_dynarray_bsearch() isn't quite
 		 *    right for our purposes but either way the strings
 		 *    must still be compared.
@@ -139,10 +139,10 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 		dirent = (void *)(e->de_base + d->dd_offset);
 
 		psc_dbg("ino=%"PRIx64" off=%"PRId64" nlen=%u "
-		    "type=%o name=%s lkname=%s off=%d d=%p",
+		    "type=%#o name=%.*s lkname=%.*s off=%d d=%p",
 		    dirent->ino, dirent->off, dirent->namelen,
-		    dirent->type, dirent->name, name,
-		    d->dd_offset, d);
+		    dirent->type, dirent->namelen, dirent->name,
+		    NAME_MAX, name, d->dd_offset, d);
 
 		if (d->dd_hash == desc.dd_hash &&
 		    d->dd_len  == desc.dd_len &&
@@ -166,7 +166,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 		}
 	}
 
-	if (found && !e->de_remlookup && (e->de_flags & DIRCE_FREEABLE) && 
+	if (found && !e->de_remlookup && (e->de_flags & DIRCE_FREEABLE) &&
 	    !(e->de_flags & DIRCE_FREEING)) {
 		/* If all of the items have been accessed via lookup then
 		 *   assume that fuse has an entry cached for each and free
@@ -202,11 +202,11 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 	 */
 	LIST_CACHE_FOREACH_SAFE(e, tmp, &m->dcm_lc) {
 		dircache_ent_lock(e);
-		if (timercmp(&now, &e->de_age, >) && 
+		if (timercmp(&now, &e->de_age, >) &&
 		    (e->de_flags & DIRCE_FREEABLE) &&
 		    !(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
-			dircache_ent_ulock(e);			
+			dircache_ent_ulock(e);
 			dircache_rls_ents(e);
 
 		} else {
@@ -269,9 +269,9 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 		d = (void *)(b + off);
 
 		psc_dbg("ino=%"PRIx64" off=%"PRId64
-			  " nlen=%u type=%o name=%s d=%p off=%"PRId64,
-			  d->ino, d->off, d->namelen, d->type, d->name,
-			  d, off);
+			  " nlen=%u type=%#o name=%.*s d=%p off=%"PRId64,
+			  d->ino, d->off, d->namelen, d->type,
+			  d->namele, d->name, d, off);
 
 		c->dd_len    = d->namelen;
 		c->dd_hash   = psc_strn_hashify(d->name, d->namelen);
@@ -287,8 +287,8 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	 */
 	psc_dynarray_sort(&e->de_dents, qsort, dirent_sort_cmp);
 	DYNARRAY_FOREACH(c, j, &e->de_dents)
-		psc_dbg("c=%p hash=%d len=%u name=%s",
-		    c, c->dd_hash, c->dd_len, c->dd_name);
+		psc_dbg("c=%p hash=%d len=%u name=%.*s",
+		    c, c->dd_hash, c->dd_len, c->dd_namelen, c->dd_name);
 
 	lc_addtail(&m->dcm_lc, e);
 
@@ -296,7 +296,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	/* New entries are considered to be more accurate so place them
 	 *   at the beginning of the list.
 	 */
-	psclist_xadd(&e->de_lentry1, &i->di_list);
+	psclist_xadd(&e->de_lentry, &i->di_list);
 	freelock(&i->di_lock);
 
 	fcmh_op_start_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
@@ -307,8 +307,8 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 void
 dircache_earlyrls_ents(struct dircache_ents *e)
 {
-	psc_assert(psclist_disjoint(&e->de_lentry1));
-	psc_assert(psclist_disjoint(&e->de_lentry2));
+	psc_assert(psclist_disjoint(&e->de_lentry));
+	psc_assert(psclist_disjoint(&e->de_lentry_lc));
 
 	spinlock(&e->de_info->di_dcm->dcm_lock);
 	e->de_info->di_dcm->dcm_alloc -= e->de_sz;
