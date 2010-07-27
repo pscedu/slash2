@@ -684,9 +684,9 @@ mds_update_cursor(void *buf, uint64_t txg)
 
 /**
  * mds_cursor_thread - Update the cursor file in the ZFS that records the current
- * 	transaction and system log status.  Note that it moves forward even if 
- * 	there is no activities in the system -- ZFS commits a transaction group
- * 	periodicaly.
+ * 	transaction group number and other system log status.  If there is no 
+ * 	activity in system other that this write to update the cursor, our 
+ * 	customized ZFS will extend the life time of the transaction group.
  */
 void
 mds_cursor_thread(__unusedx struct psc_thread *thr)
