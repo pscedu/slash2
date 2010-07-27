@@ -41,7 +41,6 @@ int
 slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slctlmsg_conn *scc = m;
-	struct pscrpc_import *imp;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
@@ -53,25 +52,18 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	CONF_FOREACH_SITE(s)
 		SITE_FOREACH_RES(s, r, i)
 			RES_FOREACH_MEMB(r, resm, j) {
+				memset(scc, 0, sizeof(*scc));
+
 				strlcpy(scc->scc_addrbuf,
 				    resm->resm_addrbuf,
 				    sizeof(scc->scc_addrbuf));
 				scc->scc_type = r->res_type;
 
 				if (resm->resm_csvc) {
-					imp = resm->resm_csvc->csvc_import;
-					if (imp && imp->imp_connection)
-						pscrpc_id2str(imp->imp_connection->c_peer,
-						    scc->scc_addrbuf);
-
-					scc->scc_cflags = psc_atomic32_read(
+					scc->scc_flags = psc_atomic32_read(
 					    &resm->resm_csvc->csvc_flags);
 					scc->scc_refcnt = psc_atomic32_read(
 					    &resm->resm_csvc->csvc_refcnt);
-					scc->scc_flags = 0;
-					if (imp->imp_failed == 0 &&
-					    imp->imp_invalid == 0)
-						scc->scc_flags |= SCCF_ONLINE;
 				}
 
 				rc = psc_ctlmsg_sendv(fd, mh, scc);
@@ -84,6 +76,11 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 #if 0
 	lock
 	foreach (mexpcli) {
+		imp = resm->resm_csvc->csvc_import;
+		if (imp && imp->imp_connection)
+			pscrpc_id2str(imp->imp_connection->c_peer,
+			    scc->scc_addrbuf);
+
 		snprintf(scc->scc_addrbuf, sizeof(scc->scc_addrbuf),
 		    "@clients:%s", pscrpc_nid2str());
 		scc->scc_type = 0;

@@ -402,6 +402,7 @@ struct psc_ctlop msctlops[] = {
 	{ msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
 	{ msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
 	{ msctlrep_getreplst,		sizeof(struct msctlmsg_replst) },
+	{ NULL,				0 },
 	{ msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_fncmd_newreplpol) },
 	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_fncmd_bmapreplpol) },
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn) },
