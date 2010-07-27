@@ -184,10 +184,10 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
-	if (s->slvr_pndgwrts || s->slvr_pndgreads ||
-	    s->slvr_flags & SLVR_CRCDIRTY)
+	if (s->slvr_pndgwrts || s->slvr_pndgreads || 
+	    s->slvr_flags & SLVR_CRCDIRTY || s->slvr_flags & SLVR_CRCING)
 		return (0);
-
+	
 	psc_assert(s->slvr_flags & SLVR_LRU);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
