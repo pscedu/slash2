@@ -82,5 +82,5 @@ zbuild:
 	    ${SCONS} slashlib=1 debug=4 -c build &&			\
 	    ${SCONS} slashlib=1 debug=4)
 
-build-prereq rezbuild:
+prereq-hook rezbuild:
 	@(cd ${ZFS_BASE} && ${SCONS} slashlib=1 debug=4)
