@@ -113,16 +113,16 @@ enum {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 "bmpce@%p fl=%u o=%x b=%p ts=%ld:%ld wr=%hu rd=%hu "	\
-		 "inf=%hu lru=%d biorq=%p "BMPCE_FLAGS_FORMAT" "fmt,	\
-		 (b), (b)->bmpce_flags, (b)->bmpce_off, (b)->bmpce_base, \
-		 (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec,	\
-		 psc_atomic16_read(&(b)->bmpce_wrref),			\
-		 psc_atomic16_read(&(b)->bmpce_rdref),			\
-		 psc_atomic16_read(&(b)->bmpce_infref),			\
-		 psclist_conjoint(&(b)->bmpce_lentry),			\
-		 BMPCE_2_BIORQ(b),					\
-		 DEBUG_BMPCE_FLAGS(b), ## __VA_ARGS__)
+	    "bmpce@%p fl=%u o=%x b=%p ts=%ld:%ld wr=%hu rd=%hu "	\
+	    "inf=%hu lru=%d biorq=%p "BMPCE_FLAGS_FORMAT" "fmt,		\
+	    (b), (b)->bmpce_flags, (b)->bmpce_off, (b)->bmpce_base,	\
+	    (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec,	\
+	    psc_atomic16_read(&(b)->bmpce_wrref),			\
+	    psc_atomic16_read(&(b)->bmpce_rdref),			\
+	    psc_atomic16_read(&(b)->bmpce_infref),			\
+	    psclist_conjoint(&(b)->bmpce_lentry),			\
+	    BMPCE_2_BIORQ(b),						\
+	    DEBUG_BMPCE_FLAGS(b), ## __VA_ARGS__)
 
 static __inline int
 bmpce_sort_cmp(const void *x, const void *y)
