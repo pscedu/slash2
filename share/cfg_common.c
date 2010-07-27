@@ -44,9 +44,9 @@ struct psc_dynarray	lnet_nids = DYNARRAY_INIT;
 struct sl_resm *
 libsl_resm_lookup(int ismds)
 {
-	char nidbuf[PSC_NIDSTR_SIZE];
-	struct sl_resource *res=NULL;
-	struct sl_resm *resm=NULL;
+	char nidbuf[PSCRPC_NIDSTR_SIZE];
+	struct sl_resource *res = NULL;
+	struct sl_resm *resm = NULL;
 	lnet_nid_t *np;
 	int i;
 
@@ -59,14 +59,14 @@ libsl_resm_lookup(int ismds)
 		/* Every nid found by lnet must be a resource member. */
 		if (resm == NULL)
 			psc_fatalx("nid %s is not a member of any resource",
-			    psc_nid2str(*np, nidbuf));
+			    pscrpc_nid2str(*np, nidbuf));
 
 		if (res == NULL)
 			res = resm->resm_res;
 		/* All nids must belong to the same resource */
 		else if (res != resm->resm_res)
 			psc_fatalx("nids must be members of same resource (%s)",
-			    psc_nid2str(*np, nidbuf));
+			    pscrpc_nid2str(*np, nidbuf));
 	}
 	if (ismds && res->res_type != SLREST_MDS)
 		psc_fatal("%s: not configured as MDS", res->res_name);
@@ -119,7 +119,7 @@ libsl_try_nid2resm(lnet_nid_t nid)
 struct sl_resm *
 libsl_nid2resm(lnet_nid_t nid)
 {
-	char nidbuf[PSC_NIDSTR_SIZE];
+	char nidbuf[PSCRPC_NIDSTR_SIZE];
 	struct sl_resm *resm;
 
 	resm = libsl_try_nid2resm(nid);
@@ -127,7 +127,7 @@ libsl_nid2resm(lnet_nid_t nid)
 		return (resm);
 	psc_fatalx("IOS %s not found in SLASH configuration, "
 	    "verify uniformity across all servers.",
-	    psc_nid2str(nid, nidbuf));
+	    pscrpc_nid2str(nid, nidbuf));
 }
 
 struct sl_resource *
@@ -208,6 +208,8 @@ slcfg_ifcmp(const char *a, const char *b)
 	return (strcmp(ia, ib));
 }
 
+#define LNETWORKS_STR_SIZE 256
+
 void
 libsl_init(int pscnet_mode, int ismds)
 {
@@ -216,7 +218,8 @@ libsl_init(int pscnet_mode, int ismds)
 		char			 ifn[IFNAMSIZ];
 		struct psclist_head	 lentry;
 	} *lent, *lnext;
-	char *p, pbuf[6], ltmp[256], lnetstr[256], addrbuf[HOST_NAME_MAX];
+	char ltmp[LNETWORKS_STR_SIZE], lnetstr[LNETWORKS_STR_SIZE];
+	char pbuf[6], *p, addrbuf[HOST_NAME_MAX];
 	struct addrinfo hints, *res, *res0;
 	int netcmp, error, rc, j, k;
 	PSCLIST_HEAD(lnets_hd);
@@ -301,7 +304,6 @@ libsl_init(int pscnet_mode, int ismds)
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
 	PSCFREE(lent);
-	pflnet_freeifaddrs(ifa);
 
 	lnetstr[0] = '\0';
 	psclist_for_each_entry_safe(lent, lnext, &lnets_hd, lentry) {
@@ -323,7 +325,9 @@ libsl_init(int pscnet_mode, int ismds)
 	setenv("LNET_NETWORKS", lnetstr, 0);
 
 	pscrpc_init_portals(pscnet_mode);
-	pscrpc_getlocalnids(&lnet_nids);
+	pscrpc_getlocalnids(ifa, &lnet_nids);
+
+	pflnet_freeifaddrs(ifa);
 
 	if (pscnet_mode == PSCNET_SERVER) {
 		nodeResm = libsl_resm_lookup(ismds);
