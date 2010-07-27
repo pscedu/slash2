@@ -354,10 +354,9 @@ slvr_worker_int(void)
 	/* biodi_wire() will only be present if this bmap is in read
 	 *   mode.
 	 */
-	if (slvr_2_biodi_wire(s)) {
+	if (slvr_2_biodi_wire(s))
 		psc_assert(slvr_2_crcbits(s) & BMAP_SLVR_DATA);
-		psc_assert(slvr_2_crcbits(s) & BMAP_SLVR_CRC);
-	}
+
 	/* Be paraniod, ensure the sliver is not queued anywhere.
 	 */
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
