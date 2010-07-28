@@ -284,6 +284,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 			continue;
 		}
 
+		biod = bmap_2_biodi(b);
 		DEBUG_FCMH(PLL_INFO, f, "bmapno=%d seq=%"PRId64" key=%"PRId64
 			   " biod_seq=%"PRId64" biod_key=%"PRId64,
 			   b->bcm_blkno, bid->seq, bid->key,
@@ -294,7 +295,6 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		 */
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
-		biod = bmap_2_biodi(b);
 		spinlock(&biod->biod_lock);
 
 		/* For the time being, old keys are overwritten and forgotten.
