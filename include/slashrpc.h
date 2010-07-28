@@ -236,36 +236,36 @@ struct srm_generic_rep {
 #define AUTHBUF_MAGIC		UINT64_C(0x4321432143214321)
 
 struct srt_authbuf_secret {
-	uint64_t			sas_magic;
-	uint64_t			sas_nonce;
-	uint64_t			sas_dst_nid;
-	uint64_t			sas_src_nid;
-	uint32_t			sas_dst_pid;
-	uint32_t			sas_src_pid;
+	uint64_t		sas_magic;
+	uint64_t		sas_nonce;
+	uint64_t		sas_dst_nid;
+	uint64_t		sas_src_nid;
+	uint32_t		sas_dst_pid;
+	uint32_t		sas_src_pid;
 } __packed;
 
 /* this is appended after every RPC message */
 struct srt_authbuf_footer {
-	struct srt_authbuf_secret	saf_secret;
-	char				saf_hash[AUTHBUF_REPRLEN];
-	char				saf__pad[3];
+	struct srt_authbuf_secret saf_secret;
+	char			saf_hash[AUTHBUF_REPRLEN];
+	char			saf__pad[3];
 } __packed;
 
 struct srt_bmapdesc {
-	struct slash_fidgen		sbd_fg;
-	uint64_t			sbd_seq;
-	uint64_t			sbd_key;
-	uint64_t			sbd_ion_nid;	/* owning I/O node if write */
-	sl_ios_id_t			sbd_ios_id;
-	sl_bmapno_t			sbd_bmapno;
-	uint32_t                        sbd_flags;
-	uint32_t                        sbd__pad;
+	struct slash_fidgen	sbd_fg;
+	uint64_t		sbd_seq;
+	uint64_t		sbd_key;
+	uint64_t		sbd_ion_nid;	/* owning I/O node if write */
+	sl_ios_id_t		sbd_ios_id;
+	sl_bmapno_t		sbd_bmapno;
+	uint32_t		sbd_flags;
+	uint32_t		sbd__pad;
 };
 
 /**
  * srt_bmap_wire - slash bmap over-wire/on-disk structure.  This
- *      structure maps the persistent state of the bmap within the
- *      inode's metafile.
+ *	structure maps the persistent state of the bmap within the
+ *	inode's metafile.
  * @bh_gen: current generation number.
  * @bh_crcs: the crc table, one 8 byte crc per sliver.
  * @bh_crcstates: some bits for describing the state of a sliver.
@@ -300,7 +300,7 @@ struct srm_send_namespace_req {
 } __packed;
 
 struct srm_send_namespace_rep {
-	uint32_t		rc;
+	int32_t			rc;
 	int32_t			_pad;
 } __packed;
 
@@ -320,11 +320,11 @@ struct srm_getbmap_req {
 struct srm_getbmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
 	struct srt_bmap_cli_wire bcw;
-	uint32_t		rc;		/* 0 for success or slerrno */
-	int32_t                 _pad;
+	int32_t			rc;		/* 0 for success or slerrno */
+	int32_t			_pad;
 	uint32_t		flags;		/* see SRM_GETBMAPF_* flags */
 	uint32_t		nrepls;		/* if SRM_GETBMAPF_GETREPLTBL*/
-	sl_replica_t            reptbl[SL_MAX_REPLICAS];
+	sl_replica_t		reptbl[SL_MAX_REPLICAS];
 } __packed;
 
 /*
@@ -338,7 +338,7 @@ struct srm_bmap_wire_req {
 } __packed;
 
 struct srm_bmap_wire_rep {
-	struct srt_bmap_wire    wire;
+	struct srt_bmap_wire	wire;
 	uint64_t		minseq;
 	int32_t			rc;
 	int32_t			_pad;
@@ -397,7 +397,7 @@ struct srm_bmap_iod_get {
 } __packed;
 
 struct srm_bmap_id {
-	slfid_t                 fid;
+	slfid_t			fid;
 	uint64_t		key;
 	uint64_t		seq;
 	uint64_t		cli_nid;
@@ -468,7 +468,7 @@ struct srm_replst_slave_req {
 	struct slash_fidgen	fg;
 	int32_t			id;		/* user-provided passback value */
 	int32_t			len;		/* of bulk data */
-	uint32_t		rc;
+	int32_t			rc;
 	uint32_t		nbmaps;		/* # of bmaps in this chunk */
 	sl_bmapno_t		boff;		/* offset into inode of first bmap in bulk */
 	int32_t			_pad;
@@ -492,7 +492,7 @@ struct srm_repl_schedwk_req {
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
 	uint32_t		len;
-	uint32_t		rc;
+	int32_t			rc;
 } __packed;
 
 struct srm_repl_read_req {
@@ -553,7 +553,7 @@ struct srm_getattr_req {
 struct srm_getattr_rep {
 	struct srt_stat		attr;
 	int32_t			rc;
-	uint32_t		_pad;
+	int32_t			_pad;
 } __packed;
 
 struct srm_io_req {
@@ -643,7 +643,7 @@ struct srm_readdir_req {
 struct srm_readdir_rep {
 	uint64_t		size;
 	uint32_t		num;		/* dirents returned */
-	//	uint32_t                nstbpref;       /* attrs prefetched */
+//	uint32_t		nstbpref;	/* attrs prefetched */
 	int32_t			rc;
 /*
  * XXX accompanied by bulk data is but should not be in fuse dirent format
