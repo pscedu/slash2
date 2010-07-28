@@ -42,6 +42,7 @@ char *slash_errstrs[] = {
 	"Authorization buffer has bad magic",
 	"Authorization buffer has a bad src/dst peer",
 	"Authorization buffer has a bad hash",
+	"Authorization buffer not provided",
 	"User account does not exist",
 	NULL
 };

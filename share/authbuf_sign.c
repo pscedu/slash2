@@ -121,6 +121,9 @@ authbuf_check(struct pscrpc_request *rq, int msgtype)
 
 	saf = pscrpc_msg_buf(m, 1, sizeof(*saf));
 
+	if (saf == NULL)
+		return (SLERR_AUTHBUF_BADMAGIC);
+
 	if (saf->saf_secret.sas_magic != AUTHBUF_MAGIC)
 		return (SLERR_AUTHBUF_BADMAGIC);
 
