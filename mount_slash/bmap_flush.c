@@ -151,13 +151,14 @@ bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
 }
 
 __static int
-bmap_flush_rpc_cb(struct pscrpc_request *req,
-		  __unusedx struct pscrpc_async_args *args)
+bmap_flush_rpc_cb(struct pscrpc_request *rq,
+    __unusedx struct pscrpc_async_args *args)
 {
 	atomic_dec(&outstandingRpcCnt);
-	DEBUG_REQ(PLL_INFO, req, "done (outstandingRpcCnt=%d)",
+	DEBUG_REQ(PLL_INFO, rq, "done (outstandingRpcCnt=%d)",
 		  atomic_read(&outstandingRpcCnt));
 
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	return (0);
 }
 

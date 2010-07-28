@@ -894,7 +894,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	struct bmpc_ioreq *r=args->pointer_arg[MSL_OFTRQ_CB_POINTER_SLOT];
 	struct bmapc_memb *b;
 	struct bmap_pagecache_entry *bmpce;
-	int op=rq->rq_reqmsg->opc, i;
+	int op=rq->rq_reqmsg->opc, i, rc;
 	int clearpages=0;
 
 	b = r->biorq_bmap;
@@ -914,7 +914,8 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 				  rq->rq_status);
 			psc_fatalx("Resolve issues surrounding this failure");
 			// XXX Freeing of dynarray, bmpce's, etc
-			return (rq->rq_status);
+			rc = rq->rq_status;
+			goto out;
 		}
 	}
 
@@ -942,8 +943,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			 *   the LRU, this is not the best place but should
 			 *   suffice for now.
 			 */
-			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref)
-				   == 1);
+			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) == 1);
 			psc_atomic16_dec(&bmpce->bmpce_rdref);
 			bmpce_inflight_dec_locked(bmpce);
 			bmpce->bmpce_flags &= ~BMPCE_RBWPAGE;
@@ -968,7 +968,11 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	 */
 	psc_dynarray_free(a);
 	PSCFREE(a);
-	return (0);
+	rc = 0;
+
+ out:
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+	return (rc);
 }
 
 int
@@ -1035,6 +1039,7 @@ msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u s=%u",
 	    op, mq->offset, mq->size);
 
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	return (0);
 }
 

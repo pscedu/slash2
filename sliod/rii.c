@@ -195,6 +195,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 		psc_atomic32_inc(&w->srw_refcnt);
 	}
 	sli_replwkrq_decref(w, rc);
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	return (rc);
 }
 
