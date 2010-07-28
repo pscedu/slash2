@@ -782,6 +782,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
 				 name, DC_STALE);
 	}
+	fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
