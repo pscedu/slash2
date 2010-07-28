@@ -20,6 +20,7 @@
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "pfl/pfl.h"
 #include "psc_util/log.h"
