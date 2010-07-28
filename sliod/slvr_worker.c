@@ -109,6 +109,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 			     iovs, mq->ncrc_updates);
 	PSCFREE(iovs);
 
+	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
 	pscrpc_nbreqset_add(slvrNbReqSet, rq);
 
 	return (rc);

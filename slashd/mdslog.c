@@ -659,6 +659,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		rsx_bulkclient(req, &desc, BULK_GET_SOURCE,
 		    SRMM_BULK_PORTAL, &iov, 1);
 
+		authbuf_sign(req, PSCRPC_MSG_REQUEST);
 		req->rq_async_args.pointer_arg[0] = peerinfo;
 		pscrpc_nbreqset_add(logPndgReqs, req);
 	}
