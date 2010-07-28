@@ -178,8 +178,8 @@ fidc_reap(struct psc_poolmgr *m)
 			goto end;
 
 		/*
-		 * fidcReapCb() is only used on the client to keep
-		 * parent-child relationship intact.
+		 * Consult the context-specific callback handler before
+		 *    freeing.
 		 */
 		if (!fidcReapCb || fidcReapCb(f)) {
 			f->fcmh_state |= FCMH_CAC_REAPED|FCMH_CAC_TOFREE;
