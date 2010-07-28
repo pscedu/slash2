@@ -19,6 +19,7 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #include "pfl/cdefs.h"
 #include "psc_util/atomic.h"
@@ -121,11 +122,14 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 	int rc;
 
 	fmi = fcmh_2_fmi(fcmh);
-	if (!fmi->fmi_ctor_rc) {
-		rc = mdsio_release(&rootcreds, fmi->fmi_mdsio_data);
-		psc_assert(rc == 0);
-	}
 
+	if (!S_ISLNK(fcmh->fcmh_sstb.sst_mode)) {
+		/* XXX Need to worry about other modes here */
+		if (!fmi->fmi_ctor_rc) {
+			rc = mdsio_release(&rootcreds, fmi->fmi_mdsio_data);
+			psc_assert(rc == 0);
+		}
+	}
 	if (fmi->fmi_inodeh.inoh_extras)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
 }
