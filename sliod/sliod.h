@@ -28,22 +28,23 @@
 #include "sltypes.h"
 
 /* sliod thread types */
-#define SLITHRT_CTL		0	/* control */
-#define SLITHRT_LNETAC		1	/* lustre net accept thr */
-#define SLITHRT_USKLNDPL	2	/* userland socket lustre net dev poll thr */
-#define SLITHRT_RIC		3	/* RPC comm */
-#define SLITHRT_RIM		4	/* RPC comm */
-#define SLITHRT_RII		5	/* RPC comm */
-#define SLITHRT_TINTV		6	/* timer interval */
-#define SLITHRT_TIOS		7	/* iostats updater */
-#define SLITHRT_SLVR_CRC	8	/* sliver crc updaters */
-#define SLITHRT_REPLFIN		9	/* process finished replication work */
-#define SLITHRT_REPLREAP	10	/* reap in-flight replication work */
-#define SLITHRT_REPLPND		11	/* process enqueued replication work */
-#define SLITHRT_BMAPRLS		12	/* notify mds of completed write bmaps */
-#define SLITHRT_CONN		13	/* connection monitor */
+#define SLITHRT_CTL		0	/* control processor */
+#define SLITHRT_CTLAC		1	/* control acceptor */
+#define SLITHRT_LNETAC		2	/* lustre net accept thr */
+#define SLITHRT_USKLNDPL	3	/* userland socket lustre net dev poll thr */
+#define SLITHRT_RIC		4	/* service RPC requests from CLIENT */
+#define SLITHRT_RIM		5	/* service RPC requests from MDS */
+#define SLITHRT_RII		6	/* service RPC requests from ION */
+#define SLITHRT_TINTV		7	/* timer interval */
+#define SLITHRT_TIOS		8	/* iostats updater */
+#define SLITHRT_SLVR_CRC	9	/* sliver crc updaters */
+#define SLITHRT_REPLFIN		10	/* process finished replication work */
+#define SLITHRT_REPLREAP	11	/* reap in-flight replication work */
+#define SLITHRT_REPLPND		12	/* process enqueued replication work */
+#define SLITHRT_BMAPRLS		13	/* notify mds of completed write bmaps */
+#define SLITHRT_CONN		14	/* connection monitor */
 
-#define NSLVRCRC_THRS		4	/* perhaps ncores? */
+#define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
 
 struct bmapc_memb;
 struct fidc_membh;

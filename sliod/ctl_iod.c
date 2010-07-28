@@ -31,6 +31,7 @@
 #include "ctl_iod.h"
 #include "ctlsvr.h"
 #include "repl_iod.h"
+#include "sliod.h"
 
 struct psc_lockedlist psc_mlists;
 struct psc_lockedlist psc_odtables;
@@ -81,7 +82,8 @@ struct psc_ctlop slictlops[] = {
 };
 
 void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {
-/* 0 */	psc_ctlthr_stat
+/* 0 */ psc_ctlthr_stat,
+/* 1 */ psc_ctlacthr_stat
 };
 int psc_ctl_ngetstats = nitems(psc_ctl_getstats);
 
@@ -102,5 +104,5 @@ slictlthr_main(const char *fn)
 	psc_ctlparam_register("rlim.nofile", psc_ctlparam_rlim_nofile);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
-	psc_ctlthr_main(fn, slictlops, nitems(slictlops));
+	psc_ctlthr_main(fn, slictlops, nitems(slictlops), SLITHRT_CTLAC);
 }

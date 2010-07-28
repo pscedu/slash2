@@ -38,23 +38,24 @@ struct bmapc_memb;
 struct fidc_membh;
 struct slash_inode_handle;
 
-/* Slash server thread types. */
-#define SLMTHRT_CTL		0	/* control */
-#define SLMTHRT_RMC		1	/* MDS <- CLI msg svc handler */
-#define SLMTHRT_RMI		2	/* MDS <- I/O msg svc handler */
-#define SLMTHRT_RMM		3	/* MDS <- MDS msg svc handler */
-#define SLMTHRT_RCM		4	/* CLI <- MDS msg issuer */
-#define SLMTHRT_LNETAC		5	/* lustre net accept thr */
-#define SLMTHRT_USKLNDPL	6	/* userland socket lustre net dev poll thr */
-#define SLMTHRT_TINTV		7	/* timer interval */
-#define SLMTHRT_TIOS		8	/* I/O stats updater */
-#define SLMTHRT_COH		9	/* coherency thread */
-#define SLMTHRT_FSSYNC		10	/* file system syncer */
-#define SLMTHRT_UPSCHED		11	/* update scheduler for site resources */
-#define SLMTHRT_BMAPTIMEO	12	/* bmap timeout thread */
-#define SLMTHRT_JRNL		13	/* journal distill thread */
-#define SLMTHRT_CURSOR		14	/* cursor update thread */
-#define SLMTHRT_NAMESPACE	15	/* namespace propagating thread */
+/* MDS thread types. */
+#define SLMTHRT_CTL		0	/* control processor */
+#define SLMTHRT_CTLAC		1	/* control acceptor */
+#define SLMTHRT_RMC		2	/* MDS <- CLI msg svc handler */
+#define SLMTHRT_RMI		3	/* MDS <- I/O msg svc handler */
+#define SLMTHRT_RMM		4	/* MDS <- MDS msg svc handler */
+#define SLMTHRT_RCM		5	/* CLI <- MDS msg issuer */
+#define SLMTHRT_LNETAC		6	/* lustre net accept thr */
+#define SLMTHRT_USKLNDPL	7	/* userland socket lustre net dev poll thr */
+#define SLMTHRT_TINTV		8	/* timer interval */
+#define SLMTHRT_TIOS		9	/* I/O stats updater */
+#define SLMTHRT_COH		10	/* coherency thread */
+#define SLMTHRT_FSSYNC		11	/* file system syncer */
+#define SLMTHRT_UPSCHED		12	/* update scheduler for site resources */
+#define SLMTHRT_BMAPTIMEO	13	/* bmap timeout thread */
+#define SLMTHRT_JRNL		14	/* journal distill thread */
+#define SLMTHRT_CURSOR		15	/* cursor update thread */
+#define SLMTHRT_NAMESPACE	16	/* namespace propagating thread */
 
 struct slmrmc_thread {
 	struct pscrpc_thread	  smrct_prt;

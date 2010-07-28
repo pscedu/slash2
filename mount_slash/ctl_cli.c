@@ -410,7 +410,8 @@ struct psc_ctlop msctlops[] = {
 };
 
 void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {
-	psc_ctlthr_stat
+/* 0 */ psc_ctlthr_stat,
+/* 1 */ psc_ctlacthr_stat
 };
 int psc_ctl_ngetstats = nitems(psc_ctl_getstats);
 
@@ -438,7 +439,7 @@ int psc_ctl_ncmds = nitems(psc_ctl_cmds);
 void
 msctlthr_begin(__unusedx struct psc_thread *thr)
 {
-	psc_ctlthr_main(ctlsockfn, msctlops, nitems(msctlops));
+	psc_ctlthr_main(ctlsockfn, msctlops, nitems(msctlops), MSTHRT_CTLAC);
 }
 
 void

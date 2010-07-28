@@ -220,7 +220,8 @@ struct psc_ctlop slmctlops[] = {
 };
 
 void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {
-/* 0 */	psc_ctlthr_stat
+/* 0 */ psc_ctlthr_stat,
+/* 1 */ psc_ctlacthr_stat
 };
 int psc_ctl_ngetstats = nitems(psc_ctl_getstats);
 
@@ -242,5 +243,5 @@ slmctlthr_main(const char *fn)
 	psc_ctlparam_register("namespace.stats", slmctlparam_namespace_stats);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
-	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops));
+	psc_ctlthr_main(fn, slmctlops, nitems(slmctlops), SLMTHRT_CTLAC);
 }
