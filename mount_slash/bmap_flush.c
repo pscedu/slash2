@@ -836,7 +836,7 @@ ms_bmap_release(struct sl_resm *resm)
 		    rmci->rmci_bmaprls.bmaps[i].bmapno,
 		    rmci->rmci_bmaprls.bmaps[i].key,
 		    rmci->rmci_bmaprls.bmaps[i].seq,
-		    mp->bidrc[i]);
+		    mp ? mp->bidrc[i]: rc);		/* mp could be NULL if !rc */
 	rmci->rmci_bmaprls.nbmaps = 0;
  out:
 
