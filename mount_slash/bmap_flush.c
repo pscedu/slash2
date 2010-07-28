@@ -198,6 +198,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 		  mq->size, mq->op);
 
 	memcpy(&mq->sbd, &bmap_2_msbd(b)->msbd_sbd, sizeof(mq->sbd));
+	authbuf_sign(req, PSCRPC_MSG_REQUEST);
 	return (req);
 }
 
@@ -266,24 +267,24 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		pscrpc_nbreqset_add(pndgReqs, req);
 		nrpcs++;
 	} else {
-		/* Deal with a multiple rpc operation
+		/* Deal with a multiple RPC operation
 		 */
 		struct pscrpc_request_set *set;
 		struct iovec *tiov;
 		int n, j;
 
-#define launch_rpc							\
-		{							\
-			req = bmap_flush_create_rpc(b, tiov, size, soff, n); \
-			pscrpc_set_add_new_req(set, req);		\
-			if (pscrpc_push_req(req)) {			\
-				DEBUG_REQ(PLL_ERROR, req,		\
-					  "pscrpc_push_req() failed");	\
-				psc_fatalx("no failover yet");		\
-			}						\
-			soff += size;					\
-			nrpcs++;					\
-		}
+#define LAUNCH_RPC()							\
+	{								\
+		req = bmap_flush_create_rpc(b, tiov, size, soff, n);	\
+		pscrpc_set_add_new_req(set, req);			\
+		if (pscrpc_push_req(req)) {				\
+			DEBUG_REQ(PLL_ERROR, req,			\
+			    "pscrpc_push_req() failed");		\
+			psc_fatalx("no failover yet");			\
+		}							\
+		soff += size;						\
+		nrpcs++;						\
+	}
 
 		size = 0;
 		set = pscrpc_prep_set();
@@ -296,13 +297,13 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 			if ((size + iovs[j].iov_len) == LNET_MTU) {
 				n++;
 				size += iovs[j].iov_len;
-				launch_rpc;
+				LAUNCH_RPC();
 				tiov = NULL;
 				size = n = 0;
 
 			} else if ((size + iovs[j].iov_len) > LNET_MTU) {
 				psc_assert(n > 0);
-				launch_rpc;
+				LAUNCH_RPC();
 				size = iovs[j].iov_len;
 				tiov = &iovs[j];
 				n = 1;
@@ -318,7 +319,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		 */
 		if (tiov) {
 			psc_assert(n);
-			launch_rpc;
+			LAUNCH_RPC();
 		}
 		pndgReqsLock();
 		psc_dynarray_add(&pndgReqSets, set);
@@ -330,29 +331,18 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 __static int
 bmap_flush_biorq_cmp(const void *x, const void *y)
 {
-	const struct bmpc_ioreq *a = *(const struct bmpc_ioreq **)x;
-	const struct bmpc_ioreq *b = *(const struct bmpc_ioreq **)y;
+	const struct bmpc_ioreq * const *pa = x, *a = *pa;
+	const struct bmpc_ioreq * const *pb = y, *b = *pb;
 
 	//DEBUG_BIORQ(PLL_TRACE, a, "compare..");
 	//DEBUG_BIORQ(PLL_TRACE, b, "..compare");
 
-	if (a->biorq_off < b->biorq_off)
-		return (-1);
-
-	else if	(a->biorq_off > b->biorq_off)
-		return (1);
-
-	else {
+	if (a->biorq_off == b->biorq_off)
 		/* Larger requests with the same start offset should have
 		 *   ordering priority.
 		 */
-		if (a->biorq_len > b->biorq_len)
-			return (-1);
-
-		else if (a->biorq_len < b->biorq_len)
-			return (1);
-	}
-	return (0);
+		return (CMP(b->biorq_len, a->biorq_len));
+	return (CMP(a->biorq_off, b->biorq_off));
 }
 
 __static int
@@ -514,7 +504,8 @@ bmap_flush_bmpce_check_sched_locked(const struct bmpc_ioreq *r)
 
 
 static inline int
-bmap_flushready(const struct psc_dynarray *biorqs) {
+bmap_flushready(const struct psc_dynarray *biorqs)
+{
 	int ready=0;
 
 	psc_assert(psc_dynarray_len(biorqs) <= PSCRPC_MAX_BRW_PAGES);
