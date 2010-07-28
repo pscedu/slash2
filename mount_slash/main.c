@@ -1473,7 +1473,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	mq->attr.sst_gen = fcmh_2_gen(c);
 //	mq->attr.sst_mask = ;
 
-	if (mq->to_set && SRM_SETATTRF_SIZE)
+	if (mq->to_set & SRM_SETATTRF_SIZE)
 		DEBUG_FCMH(PLL_NOTIFY, c, "truncate (sz=%"PRId64")",
 			   stb->st_size);
 
