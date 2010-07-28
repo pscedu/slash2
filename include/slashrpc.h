@@ -413,7 +413,7 @@ struct srm_bmap_release_req {
 } __packed;
 
 struct srm_bmap_release_rep {
-	uint32_t		bidrc[MAX_BMAP_RELEASE];
+	int32_t			bidrc[MAX_BMAP_RELEASE];
 	int32_t			rc;
 	int32_t			_pad;
 } __packed;
