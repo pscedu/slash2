@@ -1105,6 +1105,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 		mq->op = (op == SRMT_WRITE ? SRMIOP_WR : SRMIOP_RD);
 		memcpy(&mq->sbd, &msbd->msbd_sbd, sizeof(mq->sbd));
 
+		authbuf_sign(req, PSCRPC_MSG_REQUEST);
 		pscrpc_set_add_new_req(r->biorq_rqset, req);
 		if (pscrpc_push_req(req)) {
 			DEBUG_REQ(PLL_ERROR, req, "pscrpc_push_req() failed");
@@ -1253,6 +1254,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	if (!r->biorq_rqset)
 		r->biorq_rqset = pscrpc_prep_set();
 
+	authbuf_sign(req, PSCRPC_MSG_REQUEST);
 	pscrpc_set_add_new_req(r->biorq_rqset, req);
 	if (pscrpc_push_req(req)) {
 		DEBUG_REQ(PLL_ERROR, req,
