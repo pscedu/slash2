@@ -171,6 +171,10 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
 	slvrno = s->slvr_num;
 
+	rc = authbuf_sign(rq, PSCRPC_MSG_REPLY);
+	if (rc)
+		goto out;
+
 	rc = rq->rq_status;
 	if (rc)
 		goto out;
@@ -195,7 +199,6 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 		psc_atomic32_inc(&w->srw_refcnt);
 	}
 	sli_replwkrq_decref(w, rc);
-	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	return (rc);
 }
 

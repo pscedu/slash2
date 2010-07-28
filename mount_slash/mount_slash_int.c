@@ -897,6 +897,10 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	int op=rq->rq_reqmsg->opc, i, rc;
 	int clearpages=0;
 
+	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+	if (rc)
+		goto out;
+
 	b = r->biorq_bmap;
 	psc_assert(b);
 
@@ -968,10 +972,8 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	 */
 	psc_dynarray_free(a);
 	PSCFREE(a);
-	rc = 0;
 
  out:
-	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	return (rc);
 }
 
@@ -1029,9 +1031,13 @@ int
 msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 {
 	struct srm_io_req *mq;
-	int op=rq->rq_reqmsg->opc;
+	int rc, op=rq->rq_reqmsg->opc;
 
 	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
+
+	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+	if (rc)
+		goto out;
 
 	mq = pscrpc_msg_buf(rq->rq_reqmsg, 0, sizeof(*mq));
 	psc_assert(mq);
@@ -1039,8 +1045,8 @@ msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u s=%u",
 	    op, mq->offset, mq->size);
 
-	authbuf_sign(rq, PSCRPC_MSG_REPLY);
-	return (0);
+ out:
+	return (rc);
 }
 
 __static void

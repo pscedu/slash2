@@ -154,12 +154,17 @@ __static int
 bmap_flush_rpc_cb(struct pscrpc_request *rq,
     __unusedx struct pscrpc_async_args *args)
 {
+	int rc = 0;
+
+	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
+	if (rc)
+		goto out;
+
 	atomic_dec(&outstandingRpcCnt);
 	DEBUG_REQ(PLL_INFO, rq, "done (outstandingRpcCnt=%d)",
 		  atomic_read(&outstandingRpcCnt));
-
-	authbuf_sign(rq, PSCRPC_MSG_REPLY);
-	return (0);
+ out:
+	return (rc);
 }
 
 __static struct pscrpc_request *
