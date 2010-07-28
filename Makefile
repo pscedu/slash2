@@ -32,6 +32,9 @@ SUBDIRS+=	slimmns
 SUBDIRS+=	slkeymgt
 endif
 
+SUBDIRS+=	tests
+SUBDIRS+=	utils
+
 zbuild:
 	@(cd slashd && ${MAKE} zbuild)
 
