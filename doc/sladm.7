@@ -79,15 +79,8 @@ metadata server can access it:
 # umount /mypool
 # pkill zfs-fuse
 .Ed
-.Ss Running Cm slashd Ns Ss ,\& the Metadata Server
-.Xr slashd 8 ,
-the
-.Tn SLASH
-metadata server, is the first daemon that should be started
-when bringing up a
-.Tn SLASH
-file system.
-In order to run,
+.Ss The Metadata Server
+The metadata server
 .Xr slashd 8
 requires an on-disk journal for resuming interrupted operations which
 can be created with the
@@ -103,12 +96,11 @@ ownership of file blocks by
 servers needs to be created with
 .Xr odtable 1 :
 .Bd -literal -offset indent
-# odtable -C /var/lib/slash/ion_bmaps.odt
+# odtable -o -C /var/lib/slash/ion_bmaps.odt
 .Ed
 .Pp
 Next, bring up
-.Xr slashd 8 ,
-the metadata server:
+.Xr slashd 8 :
 .Bd -literal -offset indent
 # slashd -f slash.conf -p mypool.zcf mypool
 .Ed
@@ -117,10 +109,18 @@ the metadata server:
 can be used to control live operation of
 .Xr slashd 8
 once it is running.
-.Ss Running Cm sliod Ns Ss ,\& the Tn Ss I/O Ss Server
-First, ensure the
+.Ss The Tn Ss I/O Ss Server
+The
 .Tn I/O
-server's file system has been initialized by
+server
+.Xr sliod 8
+writes files resident in a
+.Tn SLASH
+network to the root of the directory specified by the
+.Ic fsroot
+.Xr slash.conf 5
+option.
+This directory must be initialized for use with
 .Xr slimmns_format 8 :
 .Bd -literal -offset indent
 # slimmns_format -i fsroot
@@ -139,11 +139,8 @@ or manually with
 # scp mdshost:/var/lib/slash/authbuf.key /var/lib/slash
 .Ed
 .Pp
-Now launch the
-.Tn I/O
-server
-.Xr sliod 8
-which manages this data store:
+Now launch
+.Xr sliod 8 :
 .Bd -literal -offset indent
 # sliod -f slash.conf md@SITE
 .Ed
@@ -152,11 +149,26 @@ which manages this data store:
 can be used to control live operation of the
 .Tn I/O
 server once it is running.
-.Ss Running Cm mount_slash Ns Ss ,\& the Client Mount Server
-.Xr mount_slash 8
-is used to mount a
+.Ss The Client Mount Daemon
+To communicate on a
 .Tn SLASH
-file system to a point on the local system:
+network, the shared network daemon communication key must be installed
+on the machine.
+The file defaults to
+.Pa /var/lib/slash/authbuf.key
+and will be generated automatically by
+.Xr slashd 8
+or manually with
+.Xr slkeymgt 8 :
+.Bd -literal -offset indent
+# scp mdshost:/var/lib/slash/authbuf.key /var/lib/slash
+.Ed
+.Pp
+Now
+.Xr mount_slash 8
+may be used to mount a
+.Tn SLASH
+file system to a directory node on the local system:
 .Bd -literal -offset indent
 # SLASH_MDS_NID="md@SITE" SLASH2_PIOS_ID="io@SITE" \e
   mount_slash -U -f slash.conf /myfs
