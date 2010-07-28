@@ -10,7 +10,7 @@
 file system mount daemon runtime control
 .Sh SYNOPSIS
 .Nm msctl
-.Op Fl HIR
+.Op Fl HIRv
 .\" .Op Fl c Ar cmd
 .Op Fl f Ar cmd
 .Op Fl h Ar table
@@ -423,6 +423,9 @@ for details on the format of
 .Ar replrqspec .
 .Pp
 This option may be specified multiple times.
+.It Fl v
+Verbose mode:
+display additional information about each operation being performed.
 .El
 .Ss Thread Specification
 Options which take

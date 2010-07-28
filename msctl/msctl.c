@@ -43,6 +43,8 @@
 #include "slconfig.h"
 #include "slerr.h"
 
+int				 verbose;
+
 struct msctlmsg_replst		 current_mrs;
 struct psc_vbitmap		 current_mrs_bmask;
 struct psclist_head		 current_mrs_bdata =
@@ -544,7 +546,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HIR] [-c cmd] [-f cmd] [-h table] [-i iostat] [-L listspec] [-m meter]\n"
+	    "usage: %s [-HIRv] [-c cmd] [-f cmd] [-h table] [-i iostat] [-L listspec] [-m meter]\n"
 	    "\t[-P pool] [-p param[=value]] [-Q replrqspec] [-r replrqspec] [-S socket]\n"
 	    "\t[-s value] [-U replrqspec]\n",
 	    progname);
@@ -614,6 +616,9 @@ main(int argc, char *argv[])
 		case 'U':
 			parse_replrq(MSCMT_DELREPLRQ,
 			    optarg, pack_replrq);
+			break;
+		case 'v':
+			verbose = 1;
 			break;
 		default:
 			usage();

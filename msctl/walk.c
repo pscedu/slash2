@@ -60,8 +60,11 @@ walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
 			if (S_ISREG(f->fts_statp->st_mode)) {
 				if (realpath(f->fts_path, buf) == NULL)
 					warn("%s", f->fts_path);
-				else
+				else {
+					if (verbose)
+						warnx("processing %s", buf);
 					cbf(buf, arg);
+				}
 			}
 		}
 		fts_close(fp);
