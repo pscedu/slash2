@@ -30,9 +30,8 @@
 
 #include "psc_util/atomic.h"
 
-#include "slconfig.h"
-
 struct stat;
+struct pscrpc_request;
 struct srt_bmapdesc_buf;
 
 #define AUTHBUF_KEYSIZE	1024

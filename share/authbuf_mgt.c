@@ -27,6 +27,7 @@
 
 #include <fcntl.h>
 #include <gcrypt.h>
+#include <unistd.h>
 
 #include "pfl/cdefs.h"
 #include "psc_util/atomic.h"
