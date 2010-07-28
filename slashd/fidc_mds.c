@@ -17,9 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <fcntl.h>
 #include <stdio.h>
-#include <sys/stat.h>
 
 #include "pfl/cdefs.h"
 #include "psc_util/atomic.h"
@@ -108,7 +110,7 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 		} else {
 			fcmh->fcmh_state |= FCMH_CTOR_FAILED;
 			fmi->fmi_ctor_rc = rc;
-			DEBUG_FCMH(PLL_WARN, fcmh, 
+			DEBUG_FCMH(PLL_WARN, fcmh,
 			   "mdsio_opencreate failed (rc=%d)", rc);
 		}
 	}
