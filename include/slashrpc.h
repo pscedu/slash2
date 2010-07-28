@@ -27,7 +27,6 @@
 
 #include "pfl/cdefs.h"
 
-#include "authbuf.h"
 #include "creds.h"
 #include "fid.h"
 #include "sltypes.h"
