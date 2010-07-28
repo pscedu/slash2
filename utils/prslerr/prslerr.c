@@ -63,6 +63,7 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_AUTHBUF_BADMAGIC]: %s\n", SLERR_AUTHBUF_BADMAGIC, slstrerror(SLERR_AUTHBUF_BADMAGIC));
 	printf("%4d [SLERR_AUTHBUF_BADPEER]: %s\n", SLERR_AUTHBUF_BADPEER, slstrerror(SLERR_AUTHBUF_BADPEER));
 	printf("%4d [SLERR_AUTHBUF_BADHASH]: %s\n", SLERR_AUTHBUF_BADHASH, slstrerror(SLERR_AUTHBUF_BADHASH));
+	printf("%4d [SLERR_AUTHBUF_ABSENT]: %s\n", SLERR_AUTHBUF_ABSENT, slstrerror(SLERR_AUTHBUF_ABSENT));
 	printf("%4d [SLERR_USER_NOTFOUND]: %s\n", SLERR_USER_NOTFOUND, slstrerror(SLERR_USER_NOTFOUND));
 	/* end custom errnos */
 	exit(0);
