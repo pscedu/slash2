@@ -171,7 +171,7 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 	s = args->pointer_arg[SRII_REPLREAD_CBARG_SLVR];
 	slvrno = s->slvr_num;
 
-	rc = authbuf_sign(rq, PSCRPC_MSG_REPLY);
+	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
 	if (rc)
 		goto out;
 
