@@ -33,7 +33,7 @@ The options are as follows:
 .It Fl D Ar datadir
 Specify an alternative directory where operation data is stored.
 Defaults to
-.Pa /var/lib/slashd .
+.Pa /var/lib/slash .
 .It Fl f Ar conf
 Specify an alternative configuration file.
 Defaults to
@@ -65,7 +65,7 @@ character
 .El
 .Pp
 The default is
-.Pa /var/run/slashd. Ns Ic %h Ns Pa .sock .
+.Pa /var/run/slash. Ns Ic %h Ns Pa .sock .
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
@@ -73,18 +73,18 @@ The default is
 default
 .Tn SLASH
 network configuration
-.It Pa /var/lib/slashd/authbuf.key
+.It Pa /var/lib/slash/authbuf.key
 inter-server communication key
-.It Pa /var/lib/slashd/ion_bmaps.odt
+.It Pa /var/lib/slash/ion_bmaps.odt
 map of
 .Tn I/O
 node file block ownership
-.It Pa /var/lib/slashd/op-journal
+.It Pa /var/lib/slash/op-journal
 pending metafile operations journal
-.It Pa /var/lib/slashd/op-namespace
+.It Pa /var/lib/slash/op-namespace
 pending namespace operations journal
 .It Xo
-.Pa /var/run/slashd. Ns Ic %h Ns Pa .sock
+.Pa /var/run/slash. Ns Ic %h Ns Pa .sock
 .Xc
 default
 .Nm

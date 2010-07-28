@@ -103,7 +103,7 @@ ownership of file blocks by
 servers needs to be created with
 .Xr odtable 1 :
 .Bd -literal -offset indent
-# odtable -C /var/lib/slashd/ion_bmaps.odt
+# odtable -C /var/lib/slash/ion_bmaps.odt
 .Ed
 .Pp
 Next, bring up
@@ -124,6 +124,19 @@ server's file system has been initialized by
 .Xr slimmns_format 8 :
 .Bd -literal -offset indent
 # slimmns_format -i fsroot
+.Ed
+.Pp
+Next, ensure that the shared
+.Tn SLASH
+network daemon communication key has been installed on the machine.
+The file defaults to
+.Pa /var/lib/slash/authbuf.key
+and will be generated automatically by
+.Xr slashd 8
+or manually with
+.Xr slkeymgt 8 :
+.Bd -literal -offset indent
+# scp mdshost:/var/lib/slash/authbuf.key /var/lib/slash
 .Ed
 .Pp
 Now launch the

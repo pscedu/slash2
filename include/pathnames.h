@@ -44,7 +44,7 @@
 #define SL_PATH_MSCTLSOCK	"../mount_slash.%h.sock"
 
 /* runtime/data paths */
-#define SL_PATH_DATADIR		"/var/lib/slashd"
+#define SL_PATH_DATADIR		"/var/lib/slash"
 
 #define SL_FN_AUTHBUFKEY	"authbuf.key"
 #define SL_FN_IONBMAPS_ODT	"ion_bmaps.odt"
