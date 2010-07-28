@@ -515,9 +515,9 @@ bmap_flush_bmpce_check_sched_locked(const struct bmpc_ioreq *r)
 static inline int
 bmap_flushready(const struct psc_dynarray *biorqs) {
 	int ready=0;
-	
+
 	psc_assert(psc_dynarray_len(biorqs) <= PSCRPC_MAX_BRW_PAGES);
-	
+
 	if ((bmap_flush_coalesce_size(biorqs) >= MIN_COALESCE_RPC_SZ) ||
 	    psc_dynarray_len(biorqs) == PSCRPC_MAX_BRW_PAGES)
 		ready = 1;
@@ -535,7 +535,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 
 	psc_assert(psc_dynarray_len(biorqs) > *offset);
 
-	for (off=0; (off + *offset) < psc_dynarray_len(biorqs) && 
+	for (off=0; (off + *offset) < psc_dynarray_len(biorqs) &&
 		     !bmap_flushready(&b); off++) {
 		t = psc_dynarray_getpos(biorqs, off + *offset);
 
@@ -564,7 +564,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		if (t->biorq_off <= biorq_voff_get(r)) {
 			psc_dynarray_add(&b, t);
 			if (biorq_voff_get(t) > biorq_voff_get(r))
-				/* If 't' is a larger extent then set 
+				/* If 't' is a larger extent then set
 				 *   'r' to 't'.
 				 */
 				r = t;
