@@ -374,7 +374,7 @@ struct srm_bmap_crcwire {
 
 struct srm_bmap_crcup {
 	struct slash_fidgen	fg;
-	uint64_t		fsize;		/* largest known size */
+	uint64_t		fsize;		/* largest known size - not really used for anyone ATM */
 	uint32_t		blkno;		/* bmap block number */
 	uint32_t		nups;		/* number of CRC updates */
 	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
