@@ -14,4 +14,4 @@ MODULES+=	lnet-hdrs pthread fuse-hdrs gcrypt
 include ${SLASHMK}
 
 regen-hook:
-	@${GENTYPES} -g 'SRMT_\w+|MSCMT_\w+' -h '../../*/*.h' typedump.c
+	${GENTYPES} -g 'SRMT_\w+|MSCMT_\w+' -h '../../*/*.h' typedump.c
