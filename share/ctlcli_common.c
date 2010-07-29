@@ -44,7 +44,7 @@ void
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("network connection status\n"
-	    " %-13s %34s %10s %3s %4s %10s\n",
+	    " %-13s %34s %-10s %3s %4s %-10s\n",
 	    "resource", "host", "type", "flg", "#ref", "status");
 }
 
@@ -80,7 +80,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	else
 		/* XXX differentiate between down and inactive */
 		status = "offline";
-	printf("   %11s %34s %10s   %c %4d %6s\n", res, nid,
+	printf("   %-11s %34s %-10s   %c %4d %6s\n", res, nid,
 	    strcmp(lastres, res) ? "" : slconn_restypes[scc->scc_type],
 	    scc->scc_flags & CSVCF_USE_MULTIWAIT ? 'M' : '-',
 	    scc->scc_refcnt, status);
