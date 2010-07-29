@@ -95,10 +95,12 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	DYNARRAY_FOREACH(pp, i, &lnet_prids) {
 		mp->rc = bmapdesc_access_check(&mq->sbd, rw,
 		    nodeResm->resm_res->res_id, pp->nid);
-		if (mp->rc == 0)
+		if (mp->rc == 0) {
+			psc_notify("bmapdesc check Okay");
 			break;
+		}
 		psc_notify("bmapdesc mismatch - sbd:"
-			"(%"PRId64", %"PRId32"), peer: (%"PRId64", %"PRId32")",
+			"(%"PRIx64", %"PRIx32"), peer: (%"PRIx64", %"PRIx32")",
 			mq->sbd.sbd_ion_nid, mq->sbd.sbd_ios_id,
 			pp->nid, nodeResm->resm_res->res_id);
 
