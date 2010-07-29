@@ -693,6 +693,7 @@ void
 mds_cursor_thread(__unusedx struct psc_thread *thr)
 {
 	int rc;
+	psc_notify("Cursor update thread %d started", thr->pscthr_thrid);
 	while (pscthr_run()) {
 		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor), 
 			mds_cursor_handle, mds_update_cursor);
