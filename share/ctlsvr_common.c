@@ -52,6 +52,9 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 	CONF_FOREACH_SITE(s)
 		SITE_FOREACH_RES(s, r, i)
 			RES_FOREACH_MEMB(r, resm, j) {
+				if (resm == nodeResm)
+					continue;
+
 				memset(scc, 0, sizeof(*scc));
 
 				strlcpy(scc->scc_addrbuf,
