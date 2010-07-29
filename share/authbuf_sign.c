@@ -30,6 +30,8 @@
 #include "psc_util/base64.h"
 #include "psc_util/log.h"
 
+#include "lnet/lib-lnet.h"
+
 #include "authbuf.h"
 #include "slashrpc.h"
 #include "slconn.h"
@@ -52,7 +54,7 @@ pscrpc_req_getprids(struct pscrpc_request *rq,
 		/* there is no import, we must be a server padawan! */
 		*peer_prid = rq->rq_peer;
 		self_prid->nid = rq->rq_self;
-		self_prid->pid = PSCRPC_SVR_PID;
+		self_prid->pid = the_lnet.ln_pid;
 	}
 }
 
