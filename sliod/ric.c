@@ -97,6 +97,10 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		    nodeResm->resm_res->res_id, pp->nid);
 		if (mp->rc == 0)
 			break;
+		psc_notify("sbd: (%"PRId64", %"PRId32"), peer: (%"PRId64", %"PRId32")",
+			mq->sbd.sbd_ion_nid, mq->sbd.sbd_ios_id,
+			pp->nid, nodeResm->resm_res->res_id);
+
 	}
 	if (mp->rc) {
 		psc_warnx("bmapdesc_access_check failed for fid:"FIDFMT,
