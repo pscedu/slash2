@@ -12,24 +12,24 @@ MODULES+=	pfl lnet-hdrs
 include ${SLASHMK}
 
 ifneq ($(filter cli,${SLASH_MODULES}),)
-SUBDIRS+=	mount_slash
-SUBDIRS+=	msctl
+  SUBDIRS+=	mount_slash
+  SUBDIRS+=	msctl
 endif
 
 ifneq ($(filter mds,${SLASH_MODULES}),)
-SUBDIRS+=	slashd
-SUBDIRS+=	slmctl
-SUBDIRS+=	slmkjrnl
+  SUBDIRS+=	slashd
+  SUBDIRS+=	slmctl
+  SUBDIRS+=	slmkjrnl
 endif
 
 ifneq ($(filter ion,${SLASH_MODULES}),)
-SUBDIRS+=	slictl
-SUBDIRS+=	sliod
+  SUBDIRS+=	slictl
+  SUBDIRS+=	sliod
 endif
 
 ifneq ($(filter ion,${SLASH_MODULES})$(filter mds,${SLASH_MODULES}),)
-SUBDIRS+=	slimmns
-SUBDIRS+=	slkeymgt
+  SUBDIRS+=	slimmns
+  SUBDIRS+=	slkeymgt
 endif
 
 SUBDIRS+=	tests
