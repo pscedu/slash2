@@ -51,6 +51,11 @@
 #include "slerr.h"
 #include "up_sched_res.h"
 
+struct upschedtree	 upsched_tree = SPLAY_INITIALIZER(&upsched_tree);
+struct psc_poolmgr	*upsched_pool;
+struct psc_lockedlist	 upsched_listhd =
+    PLL_INITIALIZER(&upsched_listhd, struct up_sched_work_item,
+	uswi_lentry);
 
 /**
  * slmupschedthr_removeq
@@ -88,6 +93,9 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		return;
 	}
 
+	/* XXX */
+	psc_assert((wk->uswi_flags & USWIF_BUSY) == 0);
+
 	/*
 	 * If someone bumps the generation while we're processing, we'll
 	 * know there is work to do and that the uswi shouldn't go away.
@@ -117,10 +125,10 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 			goto keep;
 	}
 
-	spinlock(&upsched_tree_lock);
+	UPSCHED_MGR_LOCK();
 	psc_pthread_mutex_lock(&wk->uswi_mutex);
 	if (wk->uswi_gen != uswi_gen) {
-		freelock(&upsched_tree_lock);
+		UPSCHED_MGR_UNLOCK();
  keep:
 		uswi_unref(wk);
 		return;
@@ -135,11 +143,20 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		rc = errno;
 	else if (rc >= (int)sizeof(fn))
 		rc = ENAMETOOLONG;
-	else {
+	else
 		rc = mdsio_unlink(mds_upschdir_inum, fn, &rootcreds, NULL);
-	}
+	uswi_kill(wk);
+}
+
+void
+uswi_kill(struct up_sched_work_item *wk)
+{
+	UPSCHED_MGR_ENSURE_LOCKED();
+	psc_pthread_mutex_ensure_locked(&wk->uswi_mutex);
+
 	PSC_SPLAY_XREMOVE(upschedtree, &upsched_tree, wk);
-	freelock(&upsched_tree_lock);
+	pll_remove(&upsched_listhd, wk);
+	UPSCHED_MGR_UNLOCK();
 
 	psc_atomic32_dec(&wk->uswi_refcnt);	/* removed from tree */
 	wk->uswi_flags |= USWIF_DIE;
@@ -151,11 +168,9 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		psc_pthread_mutex_lock(&wk->uswi_mutex);
 	}
 
-	/* XXX where does this ref come from? */
-	fcmh_op_done_type(wk->uswi_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	if (wk->uswi_fcmh)
+		fcmh_op_done_type(wk->uswi_fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
-	/* SPLAY_REMOVE() does not NULL out the field */
-	INIT_PSCLIST_ENTRY(&wk->uswi_lentry);
 	psc_pool_return(upsched_pool, wk);
 }
 
@@ -668,15 +683,15 @@ uswi_find(const struct slash_fidgen *fgp, int *locked)
 	fcmh.fcmh_fg = *fgp;
 	q.uswi_fcmh = &fcmh;
 
-	*locked = reqlock(&upsched_tree_lock);
+	*locked = UPSCHED_MGR_RLOCK();
 	wk = SPLAY_FIND(upschedtree, &upsched_tree, &q);
 	if (wk == NULL) {
-		ureqlock(&upsched_tree_lock, *locked);
+		UPSCHED_MGR_URLOCK(*locked);
 		return (NULL);
 	}
 	psc_pthread_mutex_lock(&wk->uswi_mutex);
 	psc_atomic32_inc(&wk->uswi_refcnt);
-	freelock(&upsched_tree_lock);
+	UPSCHED_MGR_UNLOCK();
 	*locked = 0;
 
 	/* uswi_access() drops the refcnt on failure */
@@ -693,15 +708,14 @@ uswi_getslfid(void)
 }
 
 int
-uswi_initf(struct up_sched_work_item *wk, struct fidc_membh *fcmh, int flags)
+uswi_initf(struct up_sched_work_item *wk, slfid_t fid, int flags)
 {
 	char fn[PATH_MAX];
 	void *mdsio_data;
-	int rc;
+	int rc, locked;
 
 	if ((flags & USWI_INITF_NOPERSIST) == 0) {
-		rc = snprintf(fn, sizeof(fn), "%016"PRIx64,
-		    fcmh->fcmh_fg.fg_fid);
+		rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fid);
 		if (rc == -1)
 			return (errno);
 		if (rc >= (int)sizeof(fn))
@@ -721,11 +735,15 @@ uswi_initf(struct up_sched_work_item *wk, struct fidc_membh *fcmh, int flags)
 	wk->uswi_flags |= USWIF_BUSY;
 	psc_pthread_mutex_init(&wk->uswi_mutex);
 	psc_multiwaitcond_init(&wk->uswi_mwcond,
-	    NULL, 0, "upsched-%lx", fcmh_2_fid(fcmh));
+	    NULL, 0, "upsched-%lx", fid);
 	psc_atomic32_set(&wk->uswi_refcnt, 1);
-	wk->uswi_fcmh = fcmh; /* XXX take fcmh_refcnt! */
-	if ((flags & USWI_INITF_NOPERSIST) == 0)
+	if ((flags & USWI_INITF_NOPERSIST) == 0) {
+		locked = UPSCHED_MGR_RLOCK();
 		SPLAY_INSERT(upschedtree, &upsched_tree, wk);
+		pll_addtail(&upsched_listhd, wk);
+		UPSCHED_MGR_URLOCK(locked);
+		psc_atomic32_inc(&wk->uswi_refcnt);
+	}
 	return (0);
 }
 
@@ -785,7 +803,7 @@ upsched_scandir(void)
 				    slstrerror(rc));
 
 			wk = psc_pool_get(upsched_pool);
-			rc = uswi_initf(wk, fcmh, 0);
+			rc = uswi_initf(wk, fg.fg_fid, 0);
 			if (rc)
 				psc_fatal("uswi_initf: %s",
 				    slstrerror(rc));

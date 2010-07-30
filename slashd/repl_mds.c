@@ -56,10 +56,6 @@
 #include "slerr.h"
 #include "up_sched_res.h"
 
-struct upschedtree	 upsched_tree = SPLAY_INITIALIZER(&upsched_tree);
-struct psc_poolmgr	*upsched_pool;
-psc_spinlock_t		 upsched_tree_lock = LOCK_INITIALIZER;
-
 struct psc_listcache	 slm_replst_workq;
 
 struct psc_vbitmap	*repl_busytable;
@@ -478,9 +474,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	int tract[NBMAPST], retifset[NBMAPST], retifzero[NBMAPST];
 	int iosidx[SL_MAX_REPLICAS], rc, locked;
 	struct up_sched_work_item *newrq, *wk;
-	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
-	char fn[FID_MAX_PATH];
 
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
@@ -489,7 +483,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 	rc = 0;
  restart:
-	spinlock(&upsched_tree_lock);
+	UPSCHED_MGR_LOCK();
 	wk = uswi_find(fgp, &locked);
 	if (wk == NULL) {
 		/*
@@ -499,35 +493,34 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 		if (!locked)
 			goto restart;
 
-		/* Not found, add it. */
-		rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fgp->fg_fid);
-		if (rc == -1)
-			rc = errno;
-		else if (rc >= (int)sizeof(fn))
-			rc = ENAMETOOLONG;
-		else if ((rc = mds_repl_loadino(fgp, &fcmh)) != ENOENT) {
-			if (rc)
-				psc_fatalx("mds_repl_loadino: %s",
-				    slstrerror(rc));
+		rc = uswi_init(newrq, fgp->fg_fid);
+		if (rc)
+			goto bail;
+		wk = newrq;
+		newrq = NULL;
 
+		UPSCHED_MGR_UNLOCK();
+		locked = 0;
+
+		rc = mds_repl_loadino(fgp, &wk->uswi_fcmh);
+		if (rc == 0) {
 			/* Find/add our replica's IOS ID */
-			rc = mds_repl_iosv_lookup_add(fcmh_2_inoh(fcmh),
+			rc = mds_repl_iosv_lookup_add(
+			    fcmh_2_inoh(wk->uswi_fcmh),
 			    iosv, iosidx, nios);
 			if (rc)
-				goto bail;
-
-			rc = uswi_init(newrq, fcmh);
-			if (rc == 0) {
-				wk = newrq;
-				newrq = NULL;
-
-				/*
-				 * Refcnt is 1 for the tree's ref after
-				 * return here; bump again though because
-				 * we will unrefrq() when we're done.
-				 */
-				psc_atomic32_inc(&wk->uswi_refcnt);
-			}
+				fcmh_op_done_type(wk->uswi_fcmh,
+				    FCMH_OPCNT_LOOKUP_FIDC);
+		}
+		if (rc) {
+			UPSCHED_MGR_LOCK();
+			psc_pthread_mutex_lock(&wk->uswi_mutex);
+			if (psc_atomic32_read(&wk->uswi_refcnt) > 2) {
+				UPSCHED_MGR_UNLOCK();
+				uswi_unref(wk);
+			} else
+				uswi_kill(wk);
+			wk = NULL;
 		}
 	} else {
 		/* Find/add our replica's IOS ID */
@@ -536,7 +529,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	}
  bail:
 	if (locked)
-		freelock(&upsched_tree_lock);
+		UPSCHED_MGR_UNLOCK();
 
 	if (newrq)
 		psc_pool_return(upsched_pool, newrq);
@@ -856,7 +849,7 @@ mds_repl_buildbusytable(void)
 void
 mds_repl_reset_scheduled(sl_ios_id_t resid)
 {
-	int tract[NBMAPST], rc, iosidx;
+	int tract[NBMAPST], iosidx;
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm;
 	sl_replica_t repl;
@@ -864,18 +857,12 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 
 	repl.bs_id = resid;
 
-	spinlock(&upsched_tree_lock);
-	SPLAY_FOREACH(wk, upschedtree, &upsched_tree) {
+	PLL_LOCK(&upsched_listhd);
+	PLL_FOREACH(wk, &upsched_listhd) {
 		psc_atomic32_inc(&wk->uswi_refcnt);
 		if (!uswi_access(wk))
 			continue;
-
-		rc = mds_inox_ensure_loaded(USWI_INOH(wk));
-		if (rc) {
-			psc_warnx("couldn't load inoh repl table: %s",
-			    slstrerror(rc));
-			goto end;
-		}
+		PLL_ULOCK(&upsched_listhd);
 
 		iosidx = mds_repl_ios_lookup(USWI_INOH(wk), resid);
 		if (iosidx < 0)
@@ -899,9 +886,10 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 		}
  end:
 		mds_repl_enqueue_sites(wk, &repl, 1);
+		PLL_LOCK(&upsched_listhd);
 		uswi_unref(wk);
 	}
-	freelock(&upsched_tree_lock);
+	PLL_ULOCK(&upsched_listhd);
 }
 
 void

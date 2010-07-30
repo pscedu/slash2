@@ -10,12 +10,8 @@ struct up_sched_work_item {
 	int				 uswi_flags;
 	pthread_mutex_t			 uswi_mutex;
 	struct psc_multiwaitcond	 uswi_mwcond;
-	union {
-		struct psclist_head	 uswiu_lentry;
-		SPLAY_ENTRY(up_sched_work_item)	 uswiu_tentry;
-	} uswi_u;
-#define uswi_tentry uswi_u.uswiu_tentry
-#define uswi_lentry uswi_u.uswiu_lentry
+	struct psclist_head		 uswi_lentry;
+	SPLAY_ENTRY(up_sched_work_item)	 uswi_tentry;
 };
 
 /* work item flags */
@@ -37,13 +33,14 @@ struct up_sched_work_item {
 /* uswi_init() flags */
 #define USWI_INITF_NOPERSIST	(1 << 0)	/* do not link in .slussr */
 
-#define uswi_init(wk, fcmh)	uswi_initf((wk), (fcmh), 0)
+#define uswi_init(wk, fid)	uswi_initf((wk), (fid), 0)
 
 struct up_sched_work_item *
 	 uswi_find(const struct slash_fidgen *, int *);
 int	 uswi_access(struct up_sched_work_item *);
 int	 uswi_cmp(const void *, const void *);
-int	 uswi_initf(struct up_sched_work_item *, struct fidc_membh *, int);
+int	 uswi_initf(struct up_sched_work_item *, slfid_t, int);
+void	 uswi_kill(struct up_sched_work_item *);
 void	 uswi_unref(struct up_sched_work_item *);
 
 void	 upsched_scandir(void);
@@ -51,9 +48,14 @@ void	 upsched_scandir(void);
 SPLAY_HEAD(upschedtree, up_sched_work_item);
 SPLAY_PROTOTYPE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
 
-extern struct psc_poolmgr	*upsched_pool;
+#define UPSCHED_MGR_LOCK()		PLL_LOCK(&upsched_listhd)
+#define UPSCHED_MGR_UNLOCK()		PLL_ULOCK(&upsched_listhd)
+#define UPSCHED_MGR_RLOCK()		PLL_RLOCK(&upsched_listhd)
+#define UPSCHED_MGR_URLOCK(lk)		PLL_URLOCK(&upsched_listhd, (lk))
+#define UPSCHED_MGR_ENSURE_LOCKED()	PLL_ENSURE_LOCKED(&upsched_listhd)
 
+extern struct psc_poolmgr	*upsched_pool;
 extern struct upschedtree	 upsched_tree;
-extern psc_spinlock_t		 upsched_tree_lock;
+extern struct psc_lockedlist	 upsched_listhd;
 
 #endif /* _UP_SCHED_RES_H_ */

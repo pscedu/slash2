@@ -684,7 +684,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				// queue to garbage collector
 			}
 
-			uswi_init(wk, fcmh);
+			uswi_init(wk, fcmh->fcmh_fg.fg_fid);
 
 			fcmh_2_ptruncgen(fcmh)++;
 

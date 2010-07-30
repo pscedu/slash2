@@ -200,8 +200,13 @@ slmrcmthr_main(struct psc_thread *thr)
 		rc = 0;
 		rq = NULL;
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
-			spinlock(&upsched_tree_lock);
-			SPLAY_FOREACH(wk, upschedtree, &upsched_tree) {
+			PLL_LOCK(&upsched_listhd);
+			PLL_FOREACH(wk, &upsched_listhd) {
+				psc_atomic32_inc(&wk->uswi_refcnt);
+				if (!uswi_access(wk))
+					continue;
+				PLL_ULOCK(&upsched_listhd);
+
 				slm_rcm_issue_getreplst(rsw, wk, 0);
 				for (n = 0; n < USWI_NBMAPS(wk); n++) {
 					if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
@@ -217,10 +222,12 @@ slmrcmthr_main(struct psc_thread *thr)
 					rq = NULL;
 				}
 				slmrmcthr_replst_slave_eof(rsw, wk);
+				PLL_LOCK(&upsched_listhd);
+				uswi_unref(wk);
 				if (rc)
 					break;
 			}
-			freelock(&upsched_tree_lock);
+			PLL_ULOCK(&upsched_listhd);
 		} else if ((wk = uswi_find(&rsw->rsw_fg, NULL)) != NULL) {
 			slm_rcm_issue_getreplst(rsw, wk, 0);
 			for (n = 0; n < USWI_NBMAPS(wk); n++) {
@@ -243,7 +250,9 @@ slmrcmthr_main(struct psc_thread *thr)
 			 * pass around.
 			 */
 			wk = psc_pool_get(upsched_pool);
-			uswi_initf(wk, fcmh, USWI_INITF_NOPERSIST);
+			uswi_initf(wk, rsw->rsw_fg.fg_fid,
+			    USWI_INITF_NOPERSIST);
+			wk->uswi_fcmh = fcmh;
 
 			slm_rcm_issue_getreplst(rsw, wk, 0);
 			for (n = 0; n < USWI_NBMAPS(wk); n++) {
