@@ -34,12 +34,11 @@ struct msctlmsg_replst {
 	char			mrs_iosv[SL_MAX_REPLICAS][SITE_NAME_MAX];
 	uint32_t		mrs_nios;
 	uint32_t		mrs_nbmaps;	/* accounting for # of slaves */
-	uint32_t		mrs_id;		/* user-provided identifer */
 	uint32_t		mrs_newreplpol;	/* default replication policy */
 };
 
 struct msctlmsg_replst_slave {
-	uint32_t		mrsl_id;	/* user-provided identifer */
+	char			mrsl_fn[PATH_MAX];
 	uint32_t		mrsl_boff;	/* bmap starting offset */
 	uint32_t		mrsl_nbmaps;	/* # of bmaps in this chunk */
 	char			mrsl_data[0];	/* bh_repls data */

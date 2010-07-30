@@ -45,12 +45,6 @@
 struct psc_lockedlist	 psc_mlists;
 struct psc_lockedlist	 psc_odtables;
 
-struct psc_poolmaster	 msctl_replstmc_poolmaster;
-struct psc_poolmaster	 msctl_replstsc_poolmaster;
-struct psc_poolmgr	*msctl_replstmc_pool;
-struct psc_poolmgr	*msctl_replstsc_pool;
-
-psc_atomic32_t		 msctl_replstid = PSC_ATOMIC32_INIT(0);
 struct psc_lockedlist	 msctl_replsts = PLL_INITIALIZER(&msctl_replsts,
     struct msctl_replstq, mrsq_lentry);
 
@@ -150,18 +144,16 @@ int
 msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slashrpc_cservice *csvc = NULL;
-	struct msctl_replst_slave_cont *mrsc;
-	struct msctl_replstq *mrsq = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
 	struct msctlmsg_replrq *mrq = m;
-	struct msctl_replst_cont *mrc;
+	struct msctl_replstq mrsq;
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
+	int added = 0, rc;
 	char *displayfn;
-	int rc;
 
 	displayfn = mrq->mrq_fn;
 	if (strcmp(mrq->mrq_fn, "") == 0) {
@@ -207,14 +199,19 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
 
 	mq->fg = fg;
-	mq->id = psc_atomic32_inc_getnew(&msctl_replstid);
+	mq->id = fd;
 
-	mrsq = PSCALLOC(sizeof(*mrsq));
-	mrsq->mrsq_id = mq->id;
-	pll_init(&mrsq->mrsq_mrcs, struct msctl_replst_cont,
-	    mrc_lentry, NULL);
-	psc_completion_init(&mrsq->mrsq_compl);
-	pll_add(&msctl_replsts, mrsq);
+	memset(&mrsq, 0, sizeof(mrsq));
+	mrsq.mrsq_fd = fd;
+	mrsq.mrsq_fn = mrq->mrq_fn;
+	mrsq.mrsq_ctlrc = 1;
+	mrsq.mrsq_mh = mh;
+	LOCK_INIT(&mrsq.mrsq_lock);
+	psc_waitq_init(&mrsq.mrsq_waitq);
+	spinlock(&mrsq.mrsq_lock);
+
+	pll_add(&msctl_replsts, &mrsq);
+	added = 1;
 
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
@@ -225,42 +222,26 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 		goto out;
 	}
 
-	rc = 1;
-	psc_completion_wait(&mrsq->mrsq_compl);
-	while (rc && (mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
-		if (mrq->mrq_fn[0] != '\0')
-			strlcpy(mrc->mrc_mrs.mrs_fn, mrq->mrq_fn,
-			    sizeof(mrc->mrc_mrs.mrs_fn));
-		else
-			/* XXX try to do a reverse lookup of pathname; check cache maybe? */
-			snprintf(mrc->mrc_mrs.mrs_fn,
-			    sizeof(mrc->mrc_mrs.mrs_fn),
-			    "%"PRIx64, mrc->mrc_mrs.mrs_fg.fg_fid);
-		rc = psc_ctlmsg_sendv(fd, mh, &mrc->mrc_mrs);
-
-		psc_completion_wait(&mrc->mrc_compl);
-		while (rc && (mrsc = pll_get(&mrc->mrc_bdata)) != NULL) {
-			rc = psc_ctlmsg_send(fd, mh->mh_id,
-			    MSCMT_GETREPLST_SLAVE, mrsc->mrsc_len +
-			    sizeof(mrsc->mrsc_mrsl), &mrsc->mrsc_mrsl);
-			psc_pool_return(msctl_replstsc_pool, mrsc);
-		}
-		while ((mrsc = pll_get(&mrc->mrc_bdata)) != NULL)
-			psc_pool_return(msctl_replstsc_pool, mrsc);
-		psc_pool_return(msctl_replstmc_pool, mrc);
+	while (mrsq.mrsq_ctlrc && mrsq.mrsq_eof == 0) {
+		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
+		spinlock(&mrsq.mrsq_lock);
 	}
 
+	freelock(&mrsq.mrsq_lock);
+	PLL_LOCK(&msctl_replsts);
+	spinlock(&mrsq.mrsq_lock);
+	while (mrsq.mrsq_refcnt) {
+		PLL_ULOCK(&msctl_replsts);
+		psc_waitq_wait(&mrsq.mrsq_waitq, &mrsq.mrsq_lock);
+		PLL_LOCK(&msctl_replsts);
+		spinlock(&mrsq.mrsq_lock);
+	}
+	rc = mrsq.mrsq_ctlrc;
+	pll_remove(&msctl_replsts, &mrsq);
+	added = 0;
  out:
-	if (mrsq) {
-		pll_remove(&msctl_replsts, mrsq);
-		while ((mrc = pll_get(&mrsq->mrsq_mrcs)) != NULL) {
-			psc_completion_wait(&mrc->mrc_compl);
-			while ((mrsc = pll_get(&mrc->mrc_bdata)) != NULL)
-				psc_pool_return(msctl_replstsc_pool, mrsc);
-			psc_pool_return(msctl_replstmc_pool, mrc);
-		}
-		free(mrsq);
-	}
+	if (added)
+		pll_remove(&msctl_replsts, &mrsq);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -446,19 +427,6 @@ void
 msctlthr_spawn(void)
 {
 	struct psc_thread *thr;
-
-	psc_poolmaster_init(&msctl_replstmc_poolmaster,
-	    struct msctl_replst_cont, mrc_lentry, PPMF_AUTO,
-	    1, 1, 32, NULL, NULL, NULL, "replstmc");
-	msctl_replstmc_pool = psc_poolmaster_getmgr(
-	    &msctl_replstmc_poolmaster);
-
-	_psc_poolmaster_init(&msctl_replstsc_poolmaster,
-	    sizeof(struct msctl_replst_slave_cont) + SRM_REPLST_PAGESIZ,
-	    offsetof(struct msctl_replst_slave_cont, mrsc_lentry),
-	    PPMF_AUTO, 1, 1, 32, NULL, NULL, NULL, NULL, "replstsc");
-	msctl_replstsc_pool = psc_poolmaster_getmgr(
-	    &msctl_replstsc_poolmaster);
 
 //	psc_ctlparam_register("faults", psc_ctlparam_faults);
 	psc_ctlparam_register("log.file", psc_ctlparam_log_file);

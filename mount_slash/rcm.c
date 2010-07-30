@@ -24,8 +24,9 @@
 #include "pfl/str.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
+#include "psc_util/ctl.h"
+#include "psc_util/ctlsvr.h"
 #include "psc_util/log.h"
-#include "psc_util/pool.h"
 
 #include "authbuf.h"
 #include "bmap.h"
@@ -34,6 +35,34 @@
 #include "ctlsvr_cli.h"
 #include "fidcache.h"
 #include "slashrpc.h"
+#include "slerr.h"
+
+struct msctl_replstq *
+mrsq_lookup(int id)
+{
+	struct msctl_replstq *mrsq;
+
+	PLL_LOCK(&msctl_replsts);
+	PLL_FOREACH(mrsq, &msctl_replsts)
+		if (mrsq->mrsq_fd == id) {
+			spinlock(&mrsq->mrsq_lock);
+			mrsq->mrsq_refcnt++;
+			freelock(&mrsq->mrsq_lock);
+			break;
+		}
+	PLL_ULOCK(&msctl_replsts);
+	return (mrsq);
+}
+
+void
+mrsq_release(struct msctl_replstq *mrsq, int ctlrc)
+{
+	reqlock(&mrsq->mrsq_lock);
+	mrsq->mrsq_ctlrc = ctlrc;
+	if (mrsq->mrsq_refcnt-- == 0)
+		psc_waitq_wakeall(&mrsq->mrsq_waitq);
+	freelock(&mrsq->mrsq_lock);
+}
 
 /**
  * msrcm_handle_getreplst - handle a GETREPLST request for client from MDS,
@@ -45,51 +74,49 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 {
 	struct srm_replst_master_req *mq;
 	struct srm_replst_master_rep *mp;
-	struct msctl_replst_cont *mrc;
+	struct msctlmsg_replst mrs;
 	struct msctl_replstq *mrsq;
 	struct sl_resource *res;
-	int n;
+	struct psc_ctlmsghdr mh;
+	int rc, n;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	mrc = psc_pool_get(msctl_replstmc_pool);
+	mrsq = mrsq_lookup(mq->id);
+	if (mrsq == NULL)
+		return (0);
 
-	/* find corresponding queue */
-	PLL_LOCK(&msctl_replsts);
-	PLL_FOREACH(mrsq, &msctl_replsts)
-		if (mrsq->mrsq_id == mq->id) {
-			if (mq->rc) {
-				/* XXX completion all mrcs */
-				psc_completion_done(&mrsq->mrsq_compl, mq->rc);
-				break;
-			}
-			/* fill in data */
-			memset(mrc, 0, sizeof(*mrc));
-			psc_completion_init(&mrc->mrc_compl);
-			pll_init(&mrc->mrc_bdata,
-			    struct msctl_replst_slave_cont,
-			    mrsc_lentry, NULL);
-			mrc->mrc_mrs.mrs_id = mq->id;
-			mrc->mrc_mrs.mrs_fg = mq->fg;
-			mrc->mrc_mrs.mrs_nbmaps = mq->nbmaps;
-			mrc->mrc_mrs.mrs_newreplpol = mq->newreplpol;
-			mrc->mrc_mrs.mrs_nios = mq->nrepls;
-			for (n = 0; n < (int)mq->nrepls; n++) {
-				res = libsl_id2res(mq->repls[n].bs_id);
-				if (res)
-					strlcpy(mrc->mrc_mrs.mrs_iosv[n],
-					    res->res_name, RES_NAME_MAX);
-				else
-					strlcpy(mrc->mrc_mrs.mrs_iosv[n],
-					    "<unknown IOS>", RES_NAME_MAX);
-			}
-			pll_add(&mrsq->mrsq_mrcs, mrc);
-			mrc = NULL;
-			break;
-		}
-	PLL_ULOCK(&msctl_replsts);
-	if (mrc)
-		psc_pool_return(msctl_replstmc_pool, mrc);
+	mh = *mrsq->mrsq_mh;
+
+	if (mrsq->mrsq_fn[0] != '\0')
+		strlcpy(mrs.mrs_fn, mrsq->mrsq_fn, sizeof(mrs.mrs_fn));
+	else
+		/* XXX try to do a reverse lookup of pathname; check cache maybe? */
+		snprintf(mrs.mrs_fn, sizeof(mrs.mrs_fn),
+		    "%"PRIx64, mq->fg.fg_fid);
+
+	if (mq->rc) {
+		rc = 1;
+		if (mq->rc != EOF)
+			rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
+			    slstrerror(mq->rc));
+		spinlock(&mrsq->mrsq_lock);
+		mrsq->mrsq_eof = 1;
+		mrsq_release(mrsq, rc);
+		return (0);
+	}
+	mrs.mrs_nbmaps = mq->nbmaps;
+	mrs.mrs_newreplpol = mq->newreplpol;
+	mrs.mrs_nios = mq->nrepls;
+	for (n = 0; n < (int)mq->nrepls; n++) {
+		res = libsl_id2res(mq->repls[n].bs_id);
+		if (res)
+			strlcpy(mrs.mrs_iosv[n], res->res_name, RES_NAME_MAX);
+		else
+			strlcpy(mrs.mrs_iosv[n], "<unknown IOS>", RES_NAME_MAX);
+	}
+	rc = psc_ctlmsg_sendv(mrsq->mrsq_fd, &mh, &mrs);
+	mrsq_release(mrsq, rc);
 	return (0);
 }
 
@@ -101,58 +128,73 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 int
 msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 {
-	struct msctl_replst_slave_cont *mrsc;
+	struct msctlmsg_replst_slave mrsl;
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
-	struct msctl_replst_cont *mrc;
 	struct pscrpc_bulk_desc *desc;
 	struct msctl_replstq *mrsq;
+	struct psc_ctlmsghdr mh;
 	struct iovec iov;
+	int rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	if (mq->len < 0 || mq->len > SRM_REPLST_PAGESIZ) {
+	mrsq = mrsq_lookup(mq->id);
+	if (mrsq == NULL)
+		return (-ECANCELED);
+
+	mh = *mrsq->mrsq_mh;
+
+	if (mrsq->mrsq_fn[0] != '\0')
+		strlcpy(mrsl.mrsl_fn, mrsq->mrsq_fn, sizeof(mrsl.mrsl_fn));
+	else
+		/* XXX try to do a reverse lookup of pathname; check cache maybe? */
+		snprintf(mrsl.mrsl_fn, sizeof(mrsl.mrsl_fn), "%"PRIx64,
+		    mq->fg.fg_fid);
+
+	if (mq->len < 1 || mq->len > SRM_REPLST_PAGESIZ) {
 		mp->rc = EINVAL;
-		return (mp->rc);
+
+		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
+		    slstrerror(mq->rc));
+
+		spinlock(&mrsq->mrsq_lock);
+		mrsq->mrsq_eof = 1;
+		mrsq_release(mrsq, rc);
+		return (-mp->rc);
 	}
 
-	mrsc = psc_pool_get(msctl_replstsc_pool);
+	if (mq->rc) {
+		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
+		    slstrerror(mq->rc));
+		spinlock(&mrsq->mrsq_lock);
+		mrsq->mrsq_eof = 1;
+		mrsq_release(mrsq, rc);
+		return (-ECANCELED);
+	}
 
-	/* find corresponding queue */
-	PLL_LOCK(&msctl_replsts);
-	PLL_FOREACH(mrsq, &msctl_replsts)
-		if (mrsq->mrsq_id == mq->id) {
-			PLL_LOCK(&mrsq->mrsq_mrcs);
-			PLL_FOREACH(mrc, &mrsq->mrsq_mrcs)
-				if (SAMEFG(&mrc->mrc_mrs.mrs_fg, &mq->fg))
-					break;
-			PLL_ULOCK(&mrsq->mrsq_mrcs);
+	iov.iov_base = mrsl.mrsl_data;
+	iov.iov_len = mq->len;
 
-			if (mrc == NULL)
-				break;
+	memset(&mrsl, 0, sizeof(mrsl));
+	mrsl.mrsl_boff = mq->boff;
+	mrsl.mrsl_nbmaps = mq->nbmaps;
 
-			if (mq->rc)
-				psc_completion_done(&mrc->mrc_compl, mq->rc);
-			else if (mq->len < 1)
-				mp->rc = EINVAL;
-			else {
-				iov.iov_base = mrsc->mrsc_mrsl.mrsl_data;
-				iov.iov_len = mq->len;
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRCM_BULK_PORTAL, &iov, 1);
 
-				mrsc->mrsc_len = mq->len;
-				mrsc->mrsc_mrsl.mrsl_id = mq->id;
-				mrsc->mrsc_mrsl.mrsl_boff = mq->boff;
-				mrsc->mrsc_mrsl.mrsl_nbmaps = mq->nbmaps;
-				mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
-				    SRCM_BULK_PORTAL, &iov, 1);
-				pll_add(&mrc->mrc_bdata, mrsc);
-				mrsc = NULL;
-			}
-			break;
-		}
-	PLL_ULOCK(&msctl_replsts);
-	if (mrsc)
-		psc_pool_return(msctl_replstsc_pool, mrsc);
+	if (mp->rc == 0) {
+		rc = psc_ctlmsg_send(mrsq->mrsq_fd, mrsq->mrsq_mh->mh_id,
+		    MSCMT_GETREPLST_SLAVE, mq->len +
+		    sizeof(mrsl), &mrsl);
+	} else {
+		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
+		    slstrerror(mq->rc));
+
+		spinlock(&mrsq->mrsq_lock);
+		mrsq->mrsq_eof = 1;
+	}
+	mrsq_release(mrsq, rc);
 	return (mp->rc);
 }
 
