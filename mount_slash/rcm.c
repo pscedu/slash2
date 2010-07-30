@@ -158,7 +158,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		spinlock(&mrsq->mrsq_lock);
 		mrsq->mrsq_eof = 1;
 		mrsq_release(mrsq, rc);
-		return (-rc);
+		return (0);
 	}
 
 	if (mq->len < 1 || mq->len > SRM_REPLST_PAGESIZ) {
