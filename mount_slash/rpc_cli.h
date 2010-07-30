@@ -30,7 +30,7 @@ struct pscrpc_request;
 #define SRCM_NBUFS	64
 #define SRCM_BUFSZ	512
 #define SRCM_REPSZ	512
-#define SRCM_SVCNAME	"msrcmthr"
+#define SRCM_SVCNAME	"msrcm"
 
 #define slc_geticsvc(resm)							\
 	sl_csvc_get(&(resm)->resm_csvc, 0, NULL, (resm)->resm_nid,		\
