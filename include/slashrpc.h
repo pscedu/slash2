@@ -455,7 +455,7 @@ struct srm_replst_master_req {
 	uint32_t		newreplpol;	/* default replication policy */
 	uint32_t		nrepls;		/* # of I/O systems in 'repls' */
 	int32_t			_pad;
-	unsigned char		data[128];	/* slave data here if it fits */
+	unsigned char		data[64];	/* slave data here if it fits */
 } __packed;
 
 #define srm_replst_master_rep srm_replst_master_req
