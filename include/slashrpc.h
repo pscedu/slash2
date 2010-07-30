@@ -445,7 +445,7 @@ struct srm_ping_req {
 
 /* ----------------------- BEGIN REPLICATION MESSAGES ----------------------- */
 
-/* for a GETSTATUS on a replication request */
+/* for a GETSTATUS about a replication request */
 struct srm_replst_master_req {
 	struct slash_fidgen	fg;
 	sl_replica_t		repls[SL_MAX_REPLICAS];
@@ -455,7 +455,7 @@ struct srm_replst_master_req {
 	uint32_t		newreplpol;	/* default replication policy */
 	uint32_t		nrepls;		/* # of I/O systems in 'repls' */
 	int32_t			_pad;
-	unsigned char		data[16];	/* slave data here if fits */
+	unsigned char		data[128];	/* slave data here if it fits */
 } __packed;
 
 #define srm_replst_master_rep srm_replst_master_req
