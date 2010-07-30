@@ -119,3 +119,31 @@ site @PSCB {
 		ifs	= 128.182.99.28;
 	}
 }
+
+07/30/2010  
+----------
+
+BUG - Cannot build grub 1.98 under slash2
+
+zhihui@grapefruit: /slash2/grub-1.98$ ./configure
+checking for a BSD-compatible install... /usr/bin/install -c
+checking whether build environment is sane... yes
+checking for a thread-safe mkdir -p... /bin/mkdir -p
+checking for gawk... gawk
+checking whether make sets $(MAKE)... yes
+checking build system type... x86_64-unknown-linux-gnu
+checking host system type... x86_64-unknown-linux-gnu
+checking target system type... x86_64-unknown-linux-gnu
+checking for cmp... cmp
+checking for bison... bison
+checking for gawk... (cached) gawk
+checking whether make sets $(MAKE)... (cached) yes
+checking for ruby... no
+checking for makeinfo... no
+checking for gcc... gcc
+checking whether the C compiler works... no
+configure: error: in `/slash2/grub-1.98':
+configure: error: C compiler cannot create executables
+See `config.log' for more details.
+
+configure seems to work fine on the local disk on the same machine.
