@@ -170,8 +170,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct mdsio_ops);
 	PRTYPE(struct mexp_cli);
 	PRTYPE(struct msbmap_crcrepl_states);
-	PRTYPE(struct msctl_replst_cont);
-	PRTYPE(struct msctl_replst_slave_cont);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_fncmd_bmapreplpol);
 	PRTYPE(struct msctlmsg_fncmd_newreplpol);
