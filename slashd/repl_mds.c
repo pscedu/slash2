@@ -445,7 +445,7 @@ mds_repl_bmap_rel(struct bmapc_memb *bcm)
 int
 mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 {
-//	struct slash_inode_handle *ih;
+	struct slash_inode_handle *ih;
 	struct fidc_membh *fcmh;
 	int rc;
 
@@ -455,15 +455,16 @@ mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 	if (rc)
 		return (rc);
 
-//	ih = fcmh_2_inoh(fcmh);
-//	rc = mds_inox_ensure_loaded(ih);
-//	if (rc)
-//		psc_fatalx("mds_inox_ensure_loaded: %s", slstrerror(rc));
+	if (fcmh_2_nrepls(fcmh) > SL_DEF_REPLICAS) {
+		ih = fcmh_2_inoh(fcmh);
+		rc = mds_inox_ensure_loaded(ih);
+		if (rc)
+			psc_fatalx("mds_inox_ensure_loaded: %s", slstrerror(rc));
+	}
 	*fp = fcmh;
 
 	if (rc)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
 	return (rc);
 }
 
