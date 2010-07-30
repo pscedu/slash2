@@ -41,10 +41,10 @@ struct pscrpc_nbreqset	bmapCbSet =
 
 #define CB_ARG_SLOT 0
 
-int
+void
 mdscoh_reap(void)
 {
-	return (pscrpc_nbreqset_reap(&bmapCbSet));
+	pscrpc_nbreqset_reap(&bmapCbSet);
 }
 
 int
