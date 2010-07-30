@@ -103,10 +103,6 @@ slvr_do_crc(struct slvr_ref *s)
 			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
 			       SLVR_CRCLEN(s));
 
-			/* Shouln't need a lock, !SLVR_DATADY
-			 */
-			s->slvr_crc_eoff = 0;
-
 			if (crc != slvr_2_crc(s)) {
 				DEBUG_SLVR(PLL_ERROR, s, "crc failed want=%"
 				   PRIx64" got=%"PRIx64 " len=%u",
@@ -115,8 +111,13 @@ slvr_do_crc(struct slvr_ref *s)
 				DEBUG_BMAP(PLL_ERROR, slvr_2_bmap(s),
 				   "slvrnum=%hu", s->slvr_num);
 
+				/* Shouln't need a lock, !SLVR_DATADY
+				 */
+				s->slvr_crc_eoff = 0;
+
 				return (-EINVAL);
-			}
+			} else
+				s->slvr_crc_eoff = 0;
 		} else
 			return (0);
 
