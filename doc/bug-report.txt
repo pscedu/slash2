@@ -147,3 +147,21 @@ configure: error: C compiler cannot create executables
 See `config.log' for more details.
 
 configure seems to work fine on the local disk on the same machine.
+
+It tries to compile the following program:
+
+#define VERSION "1.98"
+RT "bug-grub@gnu.org"
+/* end confdefs.h.  */  
+ 
+int
+main (void)
+{
+ 
+   ;  
+   return 0;
+}
+
+and (of course) fails with the following:
+
+2: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before string constant"
