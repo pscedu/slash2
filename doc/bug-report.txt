@@ -165,3 +165,26 @@ main (void)
 and (of course) fails with the following:
 
 2: error: expected ‘=’, ‘,’, ‘;’, ‘asm’ or ‘__attribute__’ before string constant"
+
+With following patch:
+
+zhihui@grapefruit: ~/grub-1.98$ diff -du configure.old configure
+--- configure.old	2010-07-30 15:40:30.517305359 -0400
++++ configure	2010-07-30 15:40:36.778522924 -0400
+@@ -3738,6 +3738,13 @@
+   return 0;
+ }
+ _ACEOF
++
++echo conftest.$ac_ext
++cat confdefs.h
++echo "--------------"
++cat conftest.$ac_ext
++sleep 30
++
+ ac_clean_files_save=$ac_clean_files
+ ac_clean_files="$ac_clean_files a.out a.out.dSYM a.exe b.out"
+ # Try to create an executable without -o first, disregard a.out.
+
+I find out that confdefs.h on /slash2 is different as from the file generated on
+a local disk.
