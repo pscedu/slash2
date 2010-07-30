@@ -42,13 +42,33 @@
 #include "psc_util/waitq.h"
 
 #include "cache_params.h"
-#include "slashrpc.h"
 #include "fid.h"
 #include "fidcache.h"
 
 struct fidc_membh;
+struct srt_bmapdesc;
 
-/*
+/**
+ * srt_bmap_wire - slash bmap over-wire/on-disk structure.  This
+ *	structure maps the persistent state of the bmap within the
+ *	inode's metafile.
+ * @bh_gen: current generation number.
+ * @bh_crcs: the crc table, one 8 byte crc per sliver.
+ * @bh_crcstates: some bits for describing the state of a sliver.
+ * @bh_repls: bitmap used for tracking the replication status of this bmap.
+ * @bh_bhcrc: on-disk checksum.
+*/
+struct slash_bmap_od {
+	sl_gcrc_t		bh_crcs[SL_CRCS_PER_BMAP];
+	uint8_t			bh_crcstates[SL_CRCS_PER_BMAP];
+	uint8_t			bh_repls[SL_REPLICA_NBYTES];
+	sl_bmapgen_t		bh_gen;
+	uint32_t		bh_repl_policy;
+	/* the CRC must be at the end */
+	psc_crc64_t		bh_bhcrc;
+};
+
+/**
  * bmapc_memb - central structure for block map caching used in
  *    all slash service contexts (mds, ios, client).
  *
@@ -64,14 +84,14 @@ struct bmapc_memb {
 	psc_spinlock_t		 bcm_lock;
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry    */
 	struct psclist_head	 bcm_lentry;	/* free pool */
-	struct srt_bmap_wire	*bcm_od;	/* on-disk representation */
+	struct slash_bmap_od	*bcm_od;	/* on-disk representation */
 	void			*bcm_pri;	/* bmap_mds_info, bmap_cli_info, or bmap_iod_info */
 #define bcm_blkno bcm_bmapno
 };
 
-/* common bmap modes */
-#define BMAP_RD			(1 << 0)	/* XXX rename this to diassociate SL_READ */
-#define BMAP_WR			(1 << 1)	/* XXX rename this to diassociate SL_WRITE */
+/* common bmap_mode flags */
+#define BMAP_RD			(1 << 0)	/* XXX use enum rw */
+#define BMAP_WR			(1 << 1)	/* XXX use enum rw */
 #define BMAP_INIT		(1 << 2)	/* initializing from disk/network */
 #define BMAP_DIO		(1 << 3)
 #define BMAP_DIORQ		(1 << 4)
@@ -133,8 +153,6 @@ struct bmapc_memb {
 #define BMAPST_GARBAGE		5	/* marked for deletion */
 #define BMAPST_GARBAGE_SCHED	6	/* being deleted */
 #define NBMAPST			7
-
-#define slash_bmap_od		srt_bmap_wire
 
 #define	BMAP_OD_SZ		(sizeof(struct slash_bmap_od))
 #define	BMAP_OD_CRCSZ		(BMAP_OD_SZ - (sizeof(psc_crc64_t)))

@@ -25,8 +25,9 @@
 
 #include <stdint.h>
 
-#include "psc_util/crc.h"
 #include "pfl/cdefs.h"
+#include "psc_util/crc.h"
+
 #include "cache_params.h"
 
 typedef uint32_t sl_bmapno_t;			/* file block map index */

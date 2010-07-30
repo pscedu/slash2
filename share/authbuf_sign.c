@@ -23,6 +23,7 @@
  * in a SLASH network.
  */
 
+#include <gcrypt.h>
 #include <string.h>
 
 #include "psc_rpc/rpc.h"
@@ -36,6 +37,8 @@
 #include "slashrpc.h"
 #include "slconn.h"
 #include "slerr.h"
+
+extern gcry_md_hd_t	authbuf_hd;
 
 void
 pscrpc_req_getprids(struct pscrpc_request *rq,

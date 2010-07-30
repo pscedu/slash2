@@ -33,7 +33,7 @@
 #include "psc_util/time.h"
 
 #include "cache_params.h"
-#include "slashrpc.h"
+#include "fid.h"
 
 #ifndef __LP64__
 #define DEMOTED_INUM_WIDTHS

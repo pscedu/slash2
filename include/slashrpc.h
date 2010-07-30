@@ -28,10 +28,11 @@
 #include "pfl/cdefs.h"
 
 #include "authbuf.h"
+#include "bmap.h"
+#include "cache_params.h"
 #include "creds.h"
 #include "fid.h"
 #include "sltypes.h"
-#include "cache_params.h"
 
 struct stat;
 struct statvfs;
@@ -262,25 +263,7 @@ struct srt_bmapdesc {
 	uint32_t		sbd__pad;
 };
 
-/**
- * srt_bmap_wire - slash bmap over-wire/on-disk structure.  This
- *	structure maps the persistent state of the bmap within the
- *	inode's metafile.
- * @bh_gen: current generation number.
- * @bh_crcs: the crc table, one 8 byte crc per sliver.
- * @bh_crcstates: some bits for describing the state of a sliver.
- * @bh_repls: bitmap used for tracking the replication status of this bmap.
- * @bh_bhcrc: on-disk checksum.
-*/
-struct srt_bmap_wire {
-	sl_gcrc_t		bh_crcs[SL_CRCS_PER_BMAP];
-	uint8_t			bh_crcstates[SL_CRCS_PER_BMAP];
-	uint8_t			bh_repls[SL_REPLICA_NBYTES];
-	sl_bmapgen_t		bh_gen;
-	uint32_t		bh_repl_policy;
-	/* the CRC must be at the end */
-	psc_crc64_t		bh_bhcrc;
-};
+#define srt_bmap_wire slash_bmap_od
 
 /* Must match struct slash_bmap_od!
  */
