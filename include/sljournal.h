@@ -23,6 +23,7 @@
 #include "bmap.h"
 #include "inode.h"
 #include "pathnames.h"
+#include "slashrpc.h"
 #include "slconfig.h"
 
 #define SLJ_MDS_JNENTS		(128 * 1024)	/* 131072 */
