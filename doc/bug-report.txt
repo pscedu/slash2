@@ -188,3 +188,19 @@ zhihui@grapefruit: ~/grub-1.98$ diff -du configure.old configure
 
 I find out that confdefs.h on /slash2 is different as from the file generated on
 a local disk.
+
+Mimic the behavior of configure, I found out the problem:
+
+zhihui@grapefruit: /slash2/grub-1.98$ cat myfile.txt
+line2
+zhihui@grapefruit: /slash2/grub-1.98$ cat >> bugfile.txt
+line1
+zhihui@grapefruit: /slash2/grub-1.98$ cat >> bugfile.txt
+line2
+zhihui@grapefruit: /slash2/grub-1.98$ cat bugfile.txt 
+line2
+zhihui@grapefruit: /slash2/grub-1.98$ cat >> bugfile.txt
+line3
+zhihui@grapefruit: /slash2/grub-1.98$ cat bugfile.txt 
+line3
+
