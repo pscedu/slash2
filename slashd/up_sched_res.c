@@ -809,6 +809,7 @@ upsched_scandir(void)
 				    slstrerror(rc));
 
 			psc_pthread_mutex_lock(&wk->uswi_mutex);
+			wk->uswi_fcmh = fcmh;
 			wk->uswi_flags &= ~USWIF_BUSY;
 			psc_pthread_mutex_unlock(&wk->uswi_mutex);
 

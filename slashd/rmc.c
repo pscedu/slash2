@@ -685,6 +685,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			}
 
 			uswi_init(wk, fcmh->fcmh_fg.fg_fid);
+			wk->uswi_fcmh = fcmh;
 
 			fcmh_2_ptruncgen(fcmh)++;
 

@@ -59,7 +59,7 @@ mrsq_release(struct msctl_replstq *mrsq, int ctlrc)
 {
 	reqlock(&mrsq->mrsq_lock);
 	mrsq->mrsq_ctlrc = ctlrc;
-	if (mrsq->mrsq_refcnt-- == 0)
+	if (--mrsq->mrsq_refcnt == 0)
 		psc_waitq_wakeall(&mrsq->mrsq_waitq);
 	freelock(&mrsq->mrsq_lock);
 }
@@ -152,6 +152,15 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		snprintf(mrsl.mrsl_fn, sizeof(mrsl.mrsl_fn), "%"PRIx64,
 		    mq->fg.fg_fid);
 
+	if (mq->rc) {
+		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
+		    slstrerror(mq->rc));
+		spinlock(&mrsq->mrsq_lock);
+		mrsq->mrsq_eof = 1;
+		mrsq_release(mrsq, rc);
+		return (-ECANCELED);
+	}
+
 	if (mq->len < 1 || mq->len > SRM_REPLST_PAGESIZ) {
 		mp->rc = EINVAL;
 
@@ -162,15 +171,6 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		mrsq->mrsq_eof = 1;
 		mrsq_release(mrsq, rc);
 		return (-mp->rc);
-	}
-
-	if (mq->rc) {
-		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
-		    slstrerror(mq->rc));
-		spinlock(&mrsq->mrsq_lock);
-		mrsq->mrsq_eof = 1;
-		mrsq_release(mrsq, rc);
-		return (-ECANCELED);
 	}
 
 	iov.iov_base = mrsl.mrsl_data;
