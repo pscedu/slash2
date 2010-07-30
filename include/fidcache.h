@@ -160,7 +160,7 @@ struct fidc_membh {
 	(fcmh)->fcmh_state & FCMH_CAC_INITING		? "I" : "",	\
 	(fcmh)->fcmh_state & FCMH_CAC_WAITING		? "W" : "",	\
 	(fcmh)->fcmh_state & FCMH_CTOR_FAILED		? "f" : "",	\
-	fcmh_isdir(fcmh) ? "d" : ""
+	fcmh_isdir(fcmh)				? "d" : ""
 
 #define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s%s%s%s"
 
@@ -175,13 +175,13 @@ struct fidc_membh {
 
 /* debugging aid: spit out the reason for the reference count taking/dropping */
 enum fcmh_opcnt_types {
-	FCMH_OPCNT_LOOKUP_FIDC,		//0
-	FCMH_OPCNT_LOOKUP_PARENT,	//1
-	FCMH_OPCNT_OPEN,		//2
-	FCMH_OPCNT_BMAP,		//3
-	FCMH_OPCNT_DIRENTBUF,		//4
-	FCMH_OPCNT_NEW,			//5
-	FCMH_OPCNT_WAIT			//6
+	FCMH_OPCNT_LOOKUP_FIDC,		/* 0 */
+	FCMH_OPCNT_OPEN,		/* 1 */
+	FCMH_OPCNT_BMAP,		/* 2 */
+	FCMH_OPCNT_DIRENTBUF,		/* 3 */
+	FCMH_OPCNT_NEW,			/* 4 */
+	FCMH_OPCNT_WAIT,		/* 5 */
+	FCMH_OPCNT_UPSCHED		/* 6 */
 };
 
 /* fcmh_setattr() flags */
