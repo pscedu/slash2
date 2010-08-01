@@ -28,7 +28,6 @@
 #include "pfl/cdefs.h"
 
 #include "authbuf.h"
-#include "bmap.h"
 #include "cache_params.h"
 #include "creds.h"
 #include "fid.h"
@@ -262,8 +261,6 @@ struct srt_bmapdesc {
 	uint32_t		sbd_flags;
 	uint32_t		sbd__pad;
 };
-
-#define srt_bmap_wire slash_bmap_od
 
 /* Must match struct slash_bmap_od!
  */

@@ -196,7 +196,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_resm);
 	PRTYPE(struct sl_resource);
 	PRTYPE(struct sl_site);
-	PRTYPE(struct slash_bmap_od);
 	PRTYPE(struct slash_creds);
 	PRTYPE(struct slash_fidgen);
 	PRTYPE(struct slash_gencrc);
@@ -286,6 +285,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srt_authbuf_footer);
 	PRTYPE(struct srt_authbuf_secret);
 	PRTYPE(struct srt_bmap_cli_wire);
+	PRTYPE(struct srt_bmap_wire);
 	PRTYPE(struct srt_bmapdesc);
 	PRTYPE(struct srt_dirent);
 	PRTYPE(struct srt_stat);
