@@ -322,9 +322,11 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 		if (nblks) {
 			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,
 				       SL_READ);
-			nblks = 0;
 			if (rc)
 				goto out;
+
+			/* reset nblks so we won't do it again later */
+			nblks = 0;
 		}
 	}
 
