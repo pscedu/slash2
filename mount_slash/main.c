@@ -122,6 +122,14 @@ slash2fuse_getcred(fuse_req_t req, struct slash_creds *cred)
 	cred->gid = ctx->gid;
 }
 
+static mode_t 
+slash2fuse_getumask(fuse_req_t req)
+{
+	const struct fuse_ctx *ctx = fuse_req_ctx(req);
+
+	return (ctx->umask);
+}
+
 /**
  * lookup_pathname_fg - Get the fid+gen pair for a full pathname.  This
  *	routine is only really invoked via the control subsystem as the
@@ -316,7 +324,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		goto out;
 
-	mq->mode = mode;
+	mq->mode = (!(mode & 0777)) ? (0666 & ~(slash2fuse_getumask(req))) : mode;
 	mq->pfg.fg_fid = parent;
 	mq->pfg.fg_gen = 0;
 	mq->prefios = prefIOS;

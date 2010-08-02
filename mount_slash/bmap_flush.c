@@ -132,17 +132,32 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 __static size_t
 bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
 {
-	struct bmpc_ioreq *r;
+	struct bmpc_ioreq *r, *s, *e;
 	size_t size;
+	off_t off=0;
+	int i=0;
 
 	if (!psc_dynarray_len(biorqs))
 		return (0);
 
-	r = psc_dynarray_getpos(biorqs, psc_dynarray_len(biorqs) - 1);
-	size = r->biorq_off + r->biorq_len;
+	DYNARRAY_FOREACH(r, i, biorqs) {
+		if (!i) {
+			s = e = r;
+			off = r->biorq_off;
+		} else {
+			/* Biorq offsets may not decrease.
+			 */
+			psc_assert(r->biorq_off >= off);
+			/* Holes are not allowed.
+			 */
+			psc_assert(r->biorq_off <= biorq_voff_get(e));
 
-	r = psc_dynarray_getpos(biorqs, 0);
-	size -= r->biorq_off;
+			if (biorq_voff_get(r) > biorq_voff_get(e))
+				e = r;
+		}
+	}
+	
+	size = (e->biorq_off - s->biorq_off) + e->biorq_len;
 
 	psc_info("array %p has size=%zu array len=%d",
 		 biorqs, size, psc_dynarray_len(biorqs));
@@ -368,8 +383,9 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 
 	for (i=0; i < psc_dynarray_len(biorqs); i++, first_iov=1) {
 		r = psc_dynarray_getpos(biorqs, i);
-		off = r->biorq_off;
-		reqsz = r->biorq_len;
+
+		if (!i)
+			off = r->biorq_off;
 
 		DEBUG_BIORQ(PLL_INFO, r, "r tot_reqsz=%u off=%"PSCPRIdOFF,
 			    tot_reqsz, off);
@@ -379,21 +395,16 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			/* No need to map this one, its data has been
 			 *   accounted for but first ensure that all of the
 			 *   pages have been scheduled for IO.
-			 * XXX single-threaded, bmap_flush is single threaded
-			 *   which will prevent any bmpce from being scheduled
-			 *   twice.  Therefore, a bmpce skipped in this loop
-			 *   must have BMPCE_IOSCHED set.
 			 */
 			for (j=0; j < psc_dynarray_len(&r->biorq_pages); j++) {
 				bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
-				BMPCE_LOCK(bmpce);
-				psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
-				BMPCE_ULOCK(bmpce);
+				psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
 			}
 			DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (skip)", i);
 			continue;
 		}
 		DEBUG_BIORQ(PLL_INFO, r, "t pos=%d (use)", i);
+		reqsz = r->biorq_len;
 		psc_assert(tot_reqsz);
 		/* Now iterate through the biorq's iov set, where the
 		 *   actual buffers are stored.  Note that this dynarray
@@ -415,18 +426,14 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 				 *   scheduled biorq.
 				 */
 				DEBUG_BMPCE(PLL_INFO, bmpce, "skip");
-				psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
+				psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
 				BMPCE_ULOCK(bmpce);
 
 				reqsz -= BMPC_BUFSZ;
 				continue;
 			}
-#if 0
-			bmpce->bmpce_flags |= BMPCE_IOSCHED;
-#endif
 			DEBUG_BMPCE(PLL_INFO, bmpce,
 				    "scheduling, first_iov=%d", first_iov);
-			bmpce_inflight_inc_locked(bmpce);
 			/* Issue sanity checks on the bmpce.
 			 */
 			bmpce_usecheck(bmpce, BIORQ_WRITE,
@@ -483,30 +490,6 @@ bmap_flush_biorq_rbwdone(const struct bmpc_ioreq *r)
 
 	return (rc);
 }
-
-__static int
-bmap_flush_bmpce_check_sched_locked(const struct bmpc_ioreq *r)
-{
-	struct bmap_pagecache_entry *bmpce;
-	int rc=0, i;
-
-	for (i=0; i < psc_dynarray_len(&r->biorq_pages); i++) {
-		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
-		BMPCE_LOCK(bmpce);
-		if (bmpce->bmpce_flags & BMPCE_IOSCHED) {
-			DEBUG_BMPCE(PLL_ERROR, bmpce, "already sched");
-			rc = 1;
-		} else
-			DEBUG_BMPCE(PLL_INFO, bmpce, "not sched");
-		BMPCE_ULOCK(bmpce);
-
-		if (rc)
-			break;
-	}
-
-	return (rc);
-}
-
 
 static inline int
 bmap_flushready(const struct psc_dynarray *biorqs)
