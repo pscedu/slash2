@@ -123,11 +123,17 @@ slash2fuse_getcred(fuse_req_t req, struct slash_creds *cred)
 }
 
 static mode_t 
-slash2fuse_getumask(fuse_req_t req)
+slash2fuse_getumask(__unusedx fuse_req_t req)
 {
+	mode_t mode;
+#if FUSE_VERSION > FUSE_MAKE_VERSION(2,7)
 	const struct fuse_ctx *ctx = fuse_req_ctx(req);
 
-	return (ctx->umask);
+	mode = ctx->umask;
+#else
+	mode = 0644;
+#endif
+	return (mode);
 }
 
 /**
