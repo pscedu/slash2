@@ -204,6 +204,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 	ssize_t	rc;
 	int	nblks;
 	int	save_errno;
+	uint64_t *v8;
 
 	nblks = (size + SLASH_SLVR_BLKSZ - 1) / SLASH_SLVR_BLKSZ;
 
@@ -275,9 +276,10 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 			   rc, size, (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 			   nblks, slvr_2_fileoff(s, sblk), save_errno);
 	else {
-		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%"PRIu64" rc=%zd nblks=%d",
-			   (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), size,
-			   slvr_2_fileoff(s, sblk), rc, nblks);
+		v8 = slvr_2_buf(s, sblk);
+		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%"PRIu64" rc=%zd nblks=%d "
+			   " v8(%"PRIx64")", (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), 
+			   size, slvr_2_fileoff(s, sblk), rc, nblks, *v8);
 		rc = 0;
 	}
 
@@ -318,9 +320,9 @@ slvr_fsbytes_rio(struct slvr_ref *s)
 			continue;
 		}
 		if (nblks) {
-			nblks = 0;
 			rc = slvr_fsio(s, blk, nblks * SLASH_SLVR_BLKSZ,
 				       SL_READ);
+			nblks = 0;
 			if (rc)
 				goto out;
 		}
