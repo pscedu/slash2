@@ -21,14 +21,15 @@
 #define _CACHEPARAMS_H_
 
 /* Begin hand computed */
-#define FIDC_MDS_DEFSZ                 (32 * 1024)
-#define FIDC_MDS_MAXSZ                 (1024 * 1024)
 
-#define FIDC_CLI_DEFSZ                 (2 * 1024)
-#define FIDC_CLI_MAXSZ                 (2 * 1024)
+#define FIDC_MDS_DEFSZ			(32 * 1024)
+#define FIDC_MDS_MAXSZ			(1024 * 1024)
 
-#define FIDC_ION_DEFSZ                 (32 * 1024)
-#define FIDC_ION_MAXSZ                 (512 * 1024)
+#define FIDC_CLI_DEFSZ			(2 * 1024)
+#define FIDC_CLI_MAXSZ			(2 * 1024)
+
+#define FIDC_ION_DEFSZ			(32 * 1024)
+#define FIDC_ION_MAXSZ			(512 * 1024)
 
 #define SLASH_SLVRS_PER_BMAP		128
 #define SLASH_SLVR_SIZE			(1024 * 1024)
@@ -42,16 +43,14 @@
 #define SLB_MIN				64
 #define SLB_MAX				128
 
-
-#define SL_BITS_PER_REPLICA	3
-#define SL_REPLICA_MASK		((uint8_t)((1 << SL_BITS_PER_REPLICA) - 1))
+#define SL_BITS_PER_REPLICA		3
+#define SL_REPLICA_MASK			((uint8_t)((1 << SL_BITS_PER_REPLICA) - 1))
 
 /* must be 64-bit aligned */
-#define SL_REPLICA_NBYTES	((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) / NBBY)
-#define SL_BMAP_SIZE		SLASH_BMAP_SIZE
-#define SL_BMAP_CRCSIZE		(1024 * 1024)
-#define SL_CRCS_PER_BMAP	(SL_BMAP_SIZE / SL_BMAP_CRCSIZE)	/* must be 64-bit aligned in bytes */
-
+#define SL_REPLICA_NBYTES		((SL_MAX_REPLICAS * SL_BITS_PER_REPLICA) / NBBY)
+#define SL_BMAP_SIZE			SLASH_BMAP_SIZE
+#define SL_BMAP_CRCSIZE			(1024 * 1024)
+#define SL_CRCS_PER_BMAP		(SL_BMAP_SIZE / SL_BMAP_CRCSIZE)	/* must be 64-bit aligned in bytes */
 
 /* End hand computed */
 
