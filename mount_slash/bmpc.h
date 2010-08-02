@@ -88,8 +88,7 @@ enum {
 	BMPCE_FREEING   = (1 << 6),
 	BMPCE_INIT      = (1 << 7),
 	BMPCE_READPNDG  = (1 << 8),
-	BMPCE_IOSCHED   = (1 << 9),
-	BMPCE_RBWPAGE   = (1 << 10)
+	BMPCE_RBWPAGE   = (1 << 9)
 };
 
 #define BMPCE_2_BIORQ(b) ((b)->bmpce_waitq == NULL) ? NULL :		\
@@ -97,7 +96,7 @@ enum {
 	 offsetof(struct bmpc_ioreq, biorq_waitq))
 
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BMPCE_FLAGS(b)						\
 	(b)->bmpce_flags & BMPCE_NEW			? "n" : "",	\
 	(b)->bmpce_flags & BMPCE_GETBUF			? "g" : "",	\
@@ -108,7 +107,6 @@ enum {
 	(b)->bmpce_flags & BMPCE_FREEING		? "F" : "",	\
 	(b)->bmpce_flags & BMPCE_INIT			? "i" : "",	\
 	(b)->bmpce_flags & BMPCE_READPNDG		? "r" : "",	\
-	(b)->bmpce_flags & BMPCE_IOSCHED		? "I" : "",	\
 	(b)->bmpce_flags & BMPCE_RBWPAGE		? "B" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
@@ -319,29 +317,6 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	ureqlock(&bmpce->bmpce_lock, locked);
 }
 
-
-static __inline void
-bmpce_inflight_dec_locked(struct bmap_pagecache_entry *bmpce)
-{
-	if (!(bmpce->bmpce_flags & BMPCE_IOSCHED))
-		return;
-
-	psc_atomic16_dec(&bmpce->bmpce_infref);
-	psc_assert(psc_atomic16_read(&bmpce->bmpce_infref) >= 0);
-	if (!psc_atomic16_read(&bmpce->bmpce_infref))
-		bmpce->bmpce_flags &= ~BMPCE_IOSCHED;
-}
-
-static __inline void
-bmpce_inflight_inc_locked(struct bmap_pagecache_entry *bmpce)
-{
-	psc_atomic16_inc(&bmpce->bmpce_infref);
-	if (psc_atomic16_read(&bmpce->bmpce_infref) == 1) {
-		psc_assert(!(bmpce->bmpce_flags & BMPCE_IOSCHED));
-		bmpce->bmpce_flags |= BMPCE_IOSCHED;
-	}
-	DEBUG_BMPCE(PLL_INFO, bmpce, "set inflight");
-}
 
 /* biorq_is_my_bmpce - informs the caller that biorq, r, owns the
  *    the page cache entry, b.  This state implies that the thread

@@ -345,8 +345,6 @@ msl_biorq_unref(struct bmpc_ioreq *r)
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 		BMPCE_LOCK(bmpce);
 
-		bmpce_inflight_dec_locked(bmpce);
-
 		bmpce_handle_lru_locked(bmpce, bmpc,
 		 (r->biorq_flags & BIORQ_WRITE) ? BIORQ_WRITE : BIORQ_READ, 0);
 
@@ -949,7 +947,6 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			 */
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) == 1);
 			psc_atomic16_dec(&bmpce->bmpce_rdref);
-			bmpce_inflight_dec_locked(bmpce);
 			bmpce->bmpce_flags &= ~BMPCE_RBWPAGE;
 			DEBUG_BMPCE(PLL_INFO, bmpce, "infl dec for RBW");
 		}
@@ -1226,9 +1223,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		bmpce_usecheck(bmpce, BIORQ_READ,
 			       biorq_getaligned_off(r, (i+startpage)));
 
-		psc_assert(bmpce->bmpce_flags & BMPCE_IOSCHED);
-
-		DEBUG_BMPCE(PLL_TRACE, bmpce, "adding to rpc");
+		DEBUG_BMPCE(PLL_DEBUG, bmpce, "adding to rpc");
 
 		BMPCE_ULOCK(bmpce);
 
@@ -1313,11 +1308,10 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 			bmpce_usecheck(bmpce, BIORQ_READ,
 				       biorq_getaligned_off(r, i));
 
-			if (biorq_is_my_bmpce(r, bmpce)) {
+			if (biorq_is_my_bmpce(r, bmpce))
 				psc_assert(!(bmpce->bmpce_flags &
 					     BMPCE_DATARDY));
-				bmpce_inflight_inc_locked(bmpce);
-			}
+
 			BMPCE_ULOCK(bmpce);
 
 			/* Try to set the tail bmpce if it's not yet
@@ -1355,7 +1349,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				psc_assert(!(bmpce->bmpce_flags &
 					     BMPCE_DATARDY));
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-				bmpce_inflight_inc_locked(bmpce);
 				msl_readio_rpc_create(r, 0, 1);
 				sched = 1;
 			}
@@ -1369,7 +1362,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				psc_assert(!(bmpce->bmpce_flags &
 					     BMPCE_DATARDY));
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-				bmpce_inflight_inc_locked(bmpce);
 				msl_readio_rpc_create(r,
 						      psc_dynarray_len(&r->biorq_pages)-1, 1);
 				sched = 1;
@@ -1571,7 +1563,7 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 		} else
 			nbytes = MIN(BMPC_BUFSZ, tsize);
 
-		DEBUG_BMPCE(PLL_TRACE, bmpce, "tsize=%u nbytes=%zu toff=%u",
+		DEBUG_BMPCE(PLL_DEBUG, bmpce, "tsize=%u nbytes=%zu toff=%u",
 			    tsize, nbytes, toff);
 
 		memcpy(sink, src, nbytes);
@@ -1619,6 +1611,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		rc = 0;
 		goto out;
 	}
+
 	/* Are these bytes in the cache?
 	 *  Get the start and end block regions from the input parameters.
 	 */
@@ -1648,6 +1641,9 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		b[nr] = msl_bmap_load(mfh, s, rw);
 		if (!b[nr]) {
 			rc = -EIO;
+			DEBUG_FCMH(PLL_ERROR, mfh->mfh_fcmh,
+				   "sz=%zu tlen=%zu off=%"PSCPRIdOFF" roff=%"PSCPRIdOFF
+				   " rw=%d rc=%d", tsize, tlen, off, roff, rw, rc);
 			goto out;
 		}
 
