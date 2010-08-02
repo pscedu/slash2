@@ -87,6 +87,14 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	if (!(flags & FCMH_SETATTRF_HAVELOCK))
 		FCMH_LOCK(fcmh);
 
+	if (fcmh_2_gen(fcmh) > sstb->sst_gen) {
+		DEBUG_FCMH(PLL_WARN, fcmh, "attempt toset attr from a "
+			   "stale generation number!");
+		if (!(flags & FCMH_SETATTRF_HAVELOCK))
+			FCMH_ULOCK(fcmh);
+		return;
+	}
+
 	/*
 	 * If we don't have stat attributes, how can we save
 	 * our local updates?
@@ -108,7 +116,11 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	mtime = sstb->sst_mtime;
 
 	if (flags & FCMH_SETATTRF_SAVELOCAL) {
-		if (fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen)
+		/* XXX Can sst_gen conflict with ptruncgen?  Should
+		 *   ptruncgen be reset when sst_gen is bumped?
+		 */
+		if (fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen && 
+		    fcmh_2_gen(fcmh) == sstb->sst_gen)
 			size = fcmh_2_fsz(fcmh);
 		mtime = fcmh->fcmh_sstb.sst_mtime;
 	}
@@ -384,14 +396,6 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 #ifdef DEMOTED_INUM_WIDTHS
 	COPYFG(&fcmh->fcmh_smallfg, &searchfg);
 #endif
-	/* Place the fcmh into the cache, note that the fcmh was
-	 *  ref'd so no race condition exists here. We need a way
-	 * to suppress this warning if on client.
-	 */
-	if (fcmh_2_gen(fcmh) == FIDGEN_ANY)
-		DEBUG_FCMH(PLL_NOTICE, fcmh,
-		    "adding FIDGEN_ANY to cache");
-
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 	/*
 	 * Add the new item to the hash list, but mark it as INITING.
