@@ -264,7 +264,7 @@ libsl_init(int pscnet_mode, int ismds)
 				hints.ai_socktype = SOCK_STREAM;
 				error = getaddrinfo(addrbuf, NULL, &hints, &res0);
 				if (error)
-					psc_fatalx("%s", gai_strerror(error));
+					psc_fatalx("%s: %s", addrbuf, gai_strerror(error));
 
 				for (res = res0; res; res = res->ai_next) {
 					/* get destination routing interface */
