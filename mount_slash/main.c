@@ -1478,7 +1478,6 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	if (mq->to_set & SRM_SETATTRF_SIZE)
 		DEBUG_FCMH(PLL_NOTIFY, c, "truncate (sz=%"PRId64")",
 			   stb->st_size);
-
 	/*
 	 * Even though we know our FID, we expect the server to fill it
 	 * along with the rest of the new attributes (mp->attr).
@@ -1489,10 +1488,19 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
-	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL);
+	FCMH_LOCK(c);
+	if (mq->to_set & SRM_SETATTRF_MTIME)
+		c->fcmh_sstb.sst_mtime = stb->st_mtime;
+	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL | 
+		     FCMH_SETATTRF_HAVELOCK);
+	FCMH_ULOCK(c);
+
 	sl_internalize_stat(&c->fcmh_sstb, stb);
 	fuse_reply_attr(req, stb, MSL_FUSE_ATTR_TIMEO);
 
+	if (mq->to_set & SRM_SETATTRF_SIZE)
+		DEBUG_FCMH(PLL_NOTIFY, c, "post truncate (sz=%"PRId64")",
+			   stb->st_size);
  out:
 	if (rc) {
 		fuse_reply_err(req, rc);
