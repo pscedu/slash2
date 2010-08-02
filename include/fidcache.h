@@ -91,7 +91,8 @@ struct fidc_membh {
 #define	FCMH_HAVE_ATTRS		(1 <<  7)	/* has valid stat info */
 #define	FCMH_GETTING_ATTRS	(1 <<  8)	/* fetching stat info */
 #define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor fn failed */
-#define	_FCMH_FLGSHFT		(1 << 10)
+#define	FCMH_CTOR_SUCCESS	(1 << 10)	/* constructor success */
+#define	_FCMH_FLGSHFT		(1 << 11)
 
 /*
  * If fuse_ino_t, declared 'unsigned long', is 4 bytes, inums will get
@@ -116,7 +117,7 @@ struct fidc_membh {
 #define FCMH_LOCK_ENSURE(f)	LOCK_ENSURE(&(f)->fcmh_lock)
 
 #define fcmh_2_fid(f)		(f)->fcmh_fg.fg_fid
-#define fcmh_2_gen(f)		(f)->fcmh_fg.fg_gen
+#define fcmh_2_gen(f)		(f)->fcmh_sstb.sst_gen
 #define fcmh_2_fsz(f)		(f)->fcmh_sstb.sst_size
 #define fcmh_2_fg(f)            (f)->fcmh_fg
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE))
