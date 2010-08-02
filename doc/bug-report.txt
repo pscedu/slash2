@@ -123,7 +123,7 @@ site @PSCB {
 07/30/2010  
 ----------
 
-BUG - Cannot build grub 1.98 under slash2
+BUG - Cannot build grub 1.98 under slash2  - fixed by r12737
 
 zhihui@grapefruit: /slash2/grub-1.98$ ./configure
 checking for a BSD-compatible install... /usr/bin/install -c
