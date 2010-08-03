@@ -852,27 +852,11 @@ uswi_findoradd(const struct slash_fidgen *fgp, struct up_sched_work_item **wkp)
 	locked = 0;
 
 	newrq = psc_pool_get(upsched_pool);
-	memset(newrq, 0, sizeof(*newrq));
+	uswi_init(newrq, fgp->fg_fid);
 
 	rc = mds_repl_loadino(fgp, &newrq->uswi_fcmh);
 	if (rc)
 		goto out;
-
-	UPSCHED_MGR_LOCK();
-	if (gen != upsched_gen) {
-		do {
-			*wkp = uswi_find(fgp, &locked);
-			if (*wkp) {
-				fcmh_op_done_type(newrq->uswi_fcmh,
-				    FCMH_OPCNT_LOOKUP_FIDC);
-				goto out;
-			}
-			if (!locked)
-				UPSCHED_MGR_LOCK();
-		} while (!locked);
-	}
-
-	uswi_init(newrq, fgp->fg_fid);
 
 	rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fgp->fg_fid);
 	if (rc == -1) {
@@ -890,6 +874,20 @@ uswi_findoradd(const struct slash_fidgen *fgp, struct up_sched_work_item **wkp)
 	if (rc)
 		goto out;
 	mdsio_release(&rootcreds, mdsio_data);
+
+	UPSCHED_MGR_LOCK();
+	locked = 1;
+	if (gen != upsched_gen) {
+		do {
+			*wkp = uswi_find(fgp, &locked);
+			if (*wkp) {
+				fcmh_op_done_type(newrq->uswi_fcmh,
+				    FCMH_OPCNT_LOOKUP_FIDC);
+				goto out;
+			}
+			UPSCHED_MGR_RLOCK();
+		} while (!locked);
+	}
 
 	SPLAY_INSERT(upschedtree, &upsched_tree, newrq);
 	pll_addtail(&upsched_listhd, newrq);
