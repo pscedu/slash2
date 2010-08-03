@@ -854,15 +854,25 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			psc_assert(bml == bml->bml_chain);
 	}
 
-	if (wlease == 1) {
-		bmdsi->bmdsi_writers--;
-
-		DEBUG_BMAP(PLL_INFO, b, "bml=%p bmdsi_writers=%d bmdsi_readers=%d", 
+	if (bml->bml_flags & BML_WRITE) {
+		if (wlease == 1) {	
+			psc_assert(bmdsi->bmdsi_writers > 0);
+			bmdsi->bmdsi_writers--;
+		
+			DEBUG_BMAP(PLL_INFO, b, 
+			   "bml=%p bmdsi_writers=%d bmdsi_readers=%d", 
 			   bml, bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
 		
-		psc_assert(bmdsi->bmdsi_writers >= 0);
-		if (rlease)
-			bmdsi->bmdsi_readers++;
+			if (rlease)
+				bmdsi->bmdsi_readers++;
+		}
+
+	} else {
+		psc_assert(bml->bml_flags & BML_READ);
+		if (!wlease && (rlease == 1)) {
+			psc_assert(bmdsi->bmdsi_readers > 0);
+			bmdsi->bmdsi_readers--;
+		}
 	}
 
 	BML_ULOCK(bml);
