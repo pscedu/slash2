@@ -49,8 +49,6 @@
 #define SL_EXTRAS_START_OFF	UINT64_C(0x0400)
 #define SL_BMAP_START_OFF	UINT64_C(0x1000)
 
-#define SL_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
-
 /*
  * Point to an offset within the linear metadata file which holds a
  * snapshot.  Snapshots are read-only and their metadata may not be

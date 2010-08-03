@@ -137,6 +137,8 @@ struct bmapc_memb {
 #define BREPLST_GARBAGE_SCHED	6	/* being deleted */
 #define NBMAPST			7
 
+#define BMAP_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
+
 #define	BMAP_OD_SZ		(sizeof(struct slash_bmap_od))
 #define	BMAP_OD_CRCSZ		(BMAP_OD_SZ - (sizeof(psc_crc64_t)))
 

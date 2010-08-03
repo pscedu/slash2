@@ -181,15 +181,15 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 	struct bmap_mds_info *bmdsi=b->bcm_pri;
 	struct bmap_mds_lease *bml;
 	int rc=0;
-	
+
 	BMAP_LOCK_ENSURE(b);
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
-	
+
 	if (b->bcm_mode & BMAP_DIO) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		rc = 0;
 		goto out;
-	
+
 	} else if (b->bcm_mode & BMAP_DIORQ) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		/* In the process of waiting for an async rpc to complete.
@@ -214,7 +214,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 		} else if (bml->bml_cli_nidpid.nid == np->nid &&
 			   bml->bml_cli_nidpid.pid == np->pid) {
 			DEBUG_BMAP(PLL_NOTIFY, b, "dup lease");
-			
+
 		} else {
 			b->bcm_mode |= BMAP_DIORQ;
 			bml->bml_flags |= BML_COHDIO;
@@ -225,14 +225,14 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 			 */
 			mdscoh_req(bml, MDSCOH_NONBLOCK);
 			rc = SLERR_BMAP_DIOWAIT;
-                        goto out;
+			goto out;
 		}
 
 	} else if (rw == SL_WRITE && bmdsi->bmdsi_readers) {
 		struct bmap_mds_lease *tmp;
 		int set_dio=0;
 
-		/* Writer being added amidst one or more readers.  Issue 
+		/* Writer being added amidst one or more readers.  Issue
 		 *   courtesy callbacks to the readers.
 		 */
 		PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
@@ -244,11 +244,11 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 				if (bml->bml_cli_nidpid.nid != np->nid) {
 					set_dio = 1;
 					if (!(bml->bml_flags & BML_CDIO))
-						(int)mdscoh_req(bml, 
+						(int)mdscoh_req(bml,
 							MDSCOH_NONBLOCK);
 				}
 				tmp = tmp->bml_chain;
-			} while (tmp != bml);			
+			} while (tmp != bml);
 		}
 		if (set_dio)
 			b->bcm_mode |= BMAP_DIO;
@@ -446,7 +446,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 
 	bcm_wait_locked(b, b->bcm_mode & BMAP_IONASSIGN);
 
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p bmdsi_writers=%d bmdsi_readers=%d", 
+	DEBUG_BMAP(PLL_INFO, b, "bml=%p bmdsi_writers=%d bmdsi_readers=%d",
 		   bml, bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
 
 	if (bml->bml_flags & BML_WRITE)
@@ -472,7 +472,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 
 	BMAP_LOCK(b);
 
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p rc=%d bmdsi_writers=%d bmdsi_readers=%d", 
+	DEBUG_BMAP(PLL_INFO, b, "bml=%p rc=%d bmdsi_writers=%d bmdsi_readers=%d",
 		   bml, rc, bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
 
 	if (rc) {
@@ -550,7 +550,7 @@ mds_bmap_dupls_find(struct bmap_mds_info *bmdsi, lnet_process_id_t *cnp,
 
 		DEBUG_BMAP(PLL_INFO, bmdsi->bmdsi_bmap, "bml=%p tmp=%p "
 			   "(wlease=%d rlease=%d) (nwtrs=%d nrdrs=%d)",
-			   bml, tmp, *wlease, *rlease, 
+			   bml, tmp, *wlease, *rlease,
 			   bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
 
 		tmp = tmp->bml_chain;
@@ -589,11 +589,11 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 	if (!(bml->bml_flags & BML_RECOVER) &&
 	    (rc = mds_bmap_directio(b, rw, &bml->bml_cli_nidpid)))
-		/* 'rc != 0' means that we're waiting on an async cb 
+		/* 'rc != 0' means that we're waiting on an async cb
 		 *    completion.
 		 */
 		goto out;
-	
+
 	bmap_op_start_type(b, BMAP_OPCNT_LEASE);
 
 	obml = mds_bmap_dupls_find(bmdsi, &bml->bml_cli_nidpid, &wlease,
@@ -601,7 +601,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 	DEBUG_BMAP(PLL_INFO, b, "bml=%p obml=%p (wlease=%d rlease=%d)"
 		   " (nwtrs=%d nrdrs=%d)",
-		   bml, obml, wlease, rlease, 
+		   bml, obml, wlease, rlease,
 		   bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
 
 	if (obml) {
@@ -671,9 +671,9 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		if (rc) {
 			BMAP_LOCK(b);
 
-			DEBUG_BMAP(PLL_INFO, b, "bml=%p rc=%d bmdsi_writers=%d" 
-			   " bmdsi_readers=%d wlease=%d", 
-			   bml, rc, bmdsi->bmdsi_writers, 
+			DEBUG_BMAP(PLL_INFO, b, "bml=%p rc=%d bmdsi_writers=%d"
+			   " bmdsi_readers=%d wlease=%d",
+			   bml, rc, bmdsi->bmdsi_writers,
 			   bmdsi->bmdsi_readers, wlease);
 
 			if (!wlease) {
@@ -708,14 +708,14 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
  out:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b, "bml_add (mion=%p) bml=%p"
-	   "(seq=%"PRId64" (rw=%d) (nwtrs=%d nrdrs=%d) (rc=%d)", 
-	   bmdsi->bmdsi_wr_ion, bml, bml->bml_seq, rw, bmdsi->bmdsi_writers, 
+	   "(seq=%"PRId64" (rw=%d) (nwtrs=%d nrdrs=%d) (rc=%d)",
+	   bmdsi->bmdsi_wr_ion, bml, bml->bml_seq, rw, bmdsi->bmdsi_writers,
 	   bmdsi->bmdsi_readers, rc);
 
 	bcm_wake_locked(b);
 	BMAP_ULOCK(b);
-	/* On error, the caller will issue mds_bmap_bml_release() which 
-	 *   deals with the gory details of freeing a fullly, or partially, 
+	/* On error, the caller will issue mds_bmap_bml_release() which
+	 *   deals with the gory details of freeing a fullly, or partially,
 	 *   instantiated bml.  Therefore, BMAP_OPCNT_LEASE will not be
 	 *   removed in the case of an error.
 	 */
@@ -855,14 +855,14 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	}
 
 	if (bml->bml_flags & BML_WRITE) {
-		if (wlease == 1) {	
+		if (wlease == 1) {
 			psc_assert(bmdsi->bmdsi_writers > 0);
 			bmdsi->bmdsi_writers--;
-		
-			DEBUG_BMAP(PLL_INFO, b, 
-			   "bml=%p bmdsi_writers=%d bmdsi_readers=%d", 
+
+			DEBUG_BMAP(PLL_INFO, b,
+			   "bml=%p bmdsi_writers=%d bmdsi_readers=%d",
 			   bml, bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
-		
+
 			if (rlease)
 				bmdsi->bmdsi_readers++;
 		}
@@ -1025,7 +1025,7 @@ mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	}
 
 #if 0
-	/* For the time being replay all bmap leases so that any ION's 
+	/* For the time being replay all bmap leases so that any ION's
 	 *   with dirty crc's and size updates may send us those requests
 	 *   while the lease is valid.
 	 */
@@ -1033,7 +1033,7 @@ mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 		/* Don't bother with ancient leases.
 		 */
 		psc_warnx("bmi timed out, ignoring: fid=%"PRId64" seq=%"PRId64
-			  " res=(%s) ion=(%s) bmapno=%u", 
+			  " res=(%s) ion=(%s) bmapno=%u",
 			  bmi->bmi_fid, bmi->bmi_seq, resm->resm_res->res_name,
 			  libcfs_nid2str(bmi->bmi_ion_nid), bmi->bmi_bmapno);
 		rc = -ETIMEDOUT;
@@ -1107,11 +1107,11 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	rc = slm_fcmh_get(&c->fg, &fcmh);
 	if (rc) {
 		if (rc == ENOENT) {
-			psc_warnx("fid=%"PRId64" appears to have been deleted", 
+			psc_warnx("fid=%"PRId64" appears to have been deleted",
 				  c->fg.fg_fid);
 			return (0);
 		} else {
-			psc_errorx("fid=%"PRId64" slm_fcmh_get() rc=%d", 
+			psc_errorx("fid=%"PRId64" slm_fcmh_get() rc=%d",
 				  c->fg.fg_fid, rc);
 			return (-rc);
 		}
@@ -1227,7 +1227,7 @@ mds_bmapod_initnew(struct slash_bmap_od *b)
 	int i;
 
 	for (i=0; i < SL_CRCS_PER_BMAP; i++)
-		b->bh_crcs[i].gc_crc = SL_NULL_CRC;
+		b->bh_crcs[i].gc_crc = BMAP_NULL_CRC;
 
 	psc_crc64_calc(&b->bh_bhcrc, b, BMAP_OD_CRCSZ);
 }
