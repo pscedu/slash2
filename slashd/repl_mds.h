@@ -34,12 +34,13 @@ struct slm_replst_workreq {
 	struct psclist_head		 rsw_lentry;
 };
 
+typedef void (*brepl_walkcb_t)(struct bmapc_memb *, int, int, void *);
+
 int	 mds_repl_addrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
-int	_mds_repl_bmap_apply(struct bmapc_memb *, const int [], const int [], int, int, int *);
+int	_mds_repl_bmap_apply(struct bmapc_memb *, const int *, const int *, int, int, int *, brepl_walkcb_t, void *);
 void	 mds_repl_bmap_rel(struct bmapc_memb *);
-int	 mds_repl_bmap_walk(struct bmapc_memb *, const int [], const int [], int, const int *, int);
+int	_mds_repl_bmap_walk(struct bmapc_memb *, const int *, const int *, int, const int *, int, brepl_walkcb_t, void *);
 int	 mds_repl_delrq(const struct slash_fidgen *, sl_bmapno_t, const sl_replica_t *, int);
-void	 mds_repl_enqueue_sites(struct up_sched_work_item *, const sl_replica_t *, int);
 void	 mds_repl_init(void);
 int	 mds_repl_inv_except(struct bmapc_memb *, sl_ios_id_t);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int, int);
@@ -52,10 +53,17 @@ void	 mds_repl_reset_scheduled(sl_ios_id_t);
 #define REPL_WALKF_SCIRCUIT	(1 << 0)	/* short circuit on return value set */
 #define REPL_WALKF_MODOTH	(1 << 1)	/* modify everyone except specified IOS */
 
-#define mds_repl_bmap_walk_all(b, t, r, fl)	mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0)
+#define mds_repl_bmap_walk_all(b, t, r, fl)				\
+	_mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0, NULL, NULL)
+
+#define mds_repl_bmap_walk(b, t, r, fl, iv, ni)				\
+	_mds_repl_bmap_walk((b), (t), (r), (fl), (iv), (ni), NULL, NULL)
+
+#define mds_repl_bmap_walkcb(b, t, r, fl, cbf, arg)			\
+	_mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0, (cbf), (arg))
 
 #define mds_repl_bmap_apply(bcm, tract, retifset, off)			\
-	_mds_repl_bmap_apply((bcm), (tract), (retifset), 0, (off), NULL)
+	_mds_repl_bmap_apply((bcm), (tract), (retifset), 0, (off), NULL, NULL, NULL)
 
 #define mds_repl_nodes_setbusy(a, b, v)		_mds_repl_nodes_setbusy((a), (b), 1, (v))
 

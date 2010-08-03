@@ -33,13 +33,13 @@ struct up_sched_work_item {
 /* uswi_init() flags */
 #define USWI_INITF_NOPERSIST	(1 << 0)	/* do not link in .slussr */
 
-#define uswi_init(wk, fid)	uswi_initf((wk), (fid), 0)
-
 struct up_sched_work_item *
 	 uswi_find(const struct slash_fidgen *, int *);
 int	 uswi_access(struct up_sched_work_item *);
 int	 uswi_cmp(const void *, const void *);
-int	 uswi_initf(struct up_sched_work_item *, slfid_t, int);
+void	 uswi_enqueue_sites(struct up_sched_work_item *, const sl_replica_t *, int);
+int	 uswi_findoradd(const struct slash_fidgen *, struct up_sched_work_item **);
+void	 uswi_init(struct up_sched_work_item *, slfid_t);
 void	 uswi_kill(struct up_sched_work_item *);
 void	 uswi_unref(struct up_sched_work_item *);
 

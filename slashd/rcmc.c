@@ -250,8 +250,7 @@ slmrcmthr_main(struct psc_thread *thr)
 			 * pass around.
 			 */
 			wk = psc_pool_get(upsched_pool);
-			uswi_initf(wk, rsw->rsw_fg.fg_fid,
-			    USWI_INITF_NOPERSIST);
+			uswi_init(wk, rsw->rsw_fg.fg_fid);
 			wk->uswi_fcmh = fcmh;
 
 			slm_rcm_issue_getreplst(rsw, wk, 0);

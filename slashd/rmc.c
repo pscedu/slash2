@@ -617,10 +617,32 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	return (mp->rc);
 }
 
+__static void
+ptrunc_tally_ios(struct bmapc_memb *bcm, int iosidx, int val, void *arg)
+{
+	struct {
+		sl_replica_t	iosv[SL_MAX_REPLICAS];
+		int		nios;
+	} *ios_list = arg;
+	sl_ios_id_t ios_id;
+	int i;
+
+	if (val != BMAPST_VALID)
+		return;
+
+	ios_id = bmap_2_repl(bcm, iosidx);
+
+	for (i = 0; i < ios_list->nios; i++)
+		if (ios_list->iosv[i].bs_id == ios_id)
+			return;
+
+	ios_list->iosv[ios_list->nios++].bs_id = ios_id;
+}
+
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
-	int tract[NBMAPST], to_set;
+	int tract[NBMAPST], to_set, rc;
 	struct up_sched_work_item *wk;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
@@ -640,6 +662,13 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		if (mq->attr.sst_size == 0) {
 			/* full truncate */
 		} else {
+			struct {
+				sl_replica_t	iosv[SL_MAX_REPLICAS];
+				int		nios;
+			} ios_list;
+
+			ios_list.nios = 0;
+
 			/* partial truncate */
 			to_set |= SRM_SETATTRF_PTRUNCGEN;
 
@@ -653,6 +682,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			fcmh_wait_locked(fcmh,
 			    fcmh->fcmh_flags & FMIF_BLOCK_PTRUNC);
 			fcmh->fcmh_flags |= FMIF_BLOCK_PTRUNC;
+			FCMH_ULOCK(fcmh);
+
 			// bmaps write leases may not be granted
 			// for this bmap or any bmap beyond
 
@@ -666,9 +697,16 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
 			if (mds_bmap_load(fcmh, i, &bcm) == 0) {
-				mds_repl_bmap_walk_all(bcm, tract, NULL, 0);
+				mds_repl_bmap_walk_all(bcm, tract,
+				    NULL, 0);
 				mds_repl_bmap_rel(bcm);
 			}
+
+#if 0
+	- synchronously contact an IOS requesting CRC recalculation for sliver and
+	  mark BMAPST_VALID on success
+	- if BMAP_PERSIST, notify replication queuer
+#endif
 
 			tract[BMAPST_INVALID] = -1;
 			tract[BMAPST_REPL_SCHED] = BMAPST_GARBAGE;
@@ -681,25 +719,21 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			for (i++; i < fcmh_2_nbmaps(fcmh); i++) {
 				if (mds_bmap_load(fcmh, i, &bcm))
 					continue;
-				mds_repl_bmap_walk_all(bcm, tract, NULL, 0);
+				mds_repl_bmap_walkcb(bcm, tract,
+				    NULL, 0, ptrunc_tally_ios,
+				    &ios_list);
 				mds_repl_bmap_rel(bcm);
-				// queue to garbage collector
 			}
 
-			uswi_init(wk, fcmh->fcmh_fg.fg_fid);
-			wk->uswi_fcmh = fcmh;
+			rc = uswi_findoradd(&fcmh->fcmh_fg, &wk);
+			uswi_enqueue_sites(wk, ios_list.iosv, ios_list.nios);
 
+			FCMH_LOCK(fcmh);
 			fcmh_2_ptruncgen(fcmh)++;
-
 			fcmh->fcmh_flags &= ~FMIF_BLOCK_PTRUNC;
 			fcmh_wake_locked(fcmh);
 			FCMH_ULOCK(fcmh);
 
-#if 0
-	- synchronously contact an IOS requesting CRC recalculation for sliver and
-	  mark BMAPST_VALID on success
-	- if BMAP_PERSIST, notify replication queuer
-#endif
 		}
 	}
 	/*

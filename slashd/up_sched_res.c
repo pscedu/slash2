@@ -52,6 +52,7 @@
 #include "up_sched_res.h"
 
 struct upschedtree	 upsched_tree = SPLAY_INITIALIZER(&upsched_tree);
+int			 upsched_gen;
 struct psc_poolmgr	*upsched_pool;
 struct psc_lockedlist	 upsched_listhd =
     PLL_INITIALIZER(&upsched_listhd, struct up_sched_work_item,
@@ -707,44 +708,15 @@ uswi_getslfid(void)
 	return (0);
 }
 
-int
-uswi_initf(struct up_sched_work_item *wk, slfid_t fid, int flags)
+void
+uswi_init(struct up_sched_work_item *wk, slfid_t fid)
 {
-	char fn[PATH_MAX];
-	void *mdsio_data;
-	int rc, locked;
-
-	if ((flags & USWI_INITF_NOPERSIST) == 0) {
-		rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fid);
-		if (rc == -1)
-			return (errno);
-		if (rc >= (int)sizeof(fn))
-			return (ENAMETOOLONG);
-
-		rc = mdsio_opencreatef(mds_upschdir_inum, &rootcreds,
-		    O_CREAT | O_WRONLY, MDSIO_OPENCRF_NOLINK, 0600, fn,
-		    NULL, NULL, NULL, &mdsio_data, NULL, uswi_getslfid);
-		if (rc)
-			return (rc);
-		mdsio_release(&rootcreds, mdsio_data);
-	}
-
-	/* wow, that worked, actually do something now */
-
 	memset(wk, 0, sizeof(*wk));
 	wk->uswi_flags |= USWIF_BUSY;
 	psc_pthread_mutex_init(&wk->uswi_mutex);
 	psc_multiwaitcond_init(&wk->uswi_mwcond,
 	    NULL, 0, "upsched-%lx", fid);
 	psc_atomic32_set(&wk->uswi_refcnt, 1);
-	if ((flags & USWI_INITF_NOPERSIST) == 0) {
-		locked = UPSCHED_MGR_RLOCK();
-		SPLAY_INSERT(upschedtree, &upsched_tree, wk);
-		pll_addtail(&upsched_listhd, wk);
-		UPSCHED_MGR_URLOCK(locked);
-		psc_atomic32_inc(&wk->uswi_refcnt);
-	}
-	return (0);
 }
 
 void
@@ -795,6 +767,7 @@ upsched_scandir(void)
 
 			memset(&fg, 0, sizeof(fg));
 			fg.fg_fid = strtoll(fn, NULL, 16);
+			fg.fg_gen = FIDGEN_ANY;
 
 			rc = mds_repl_loadino(&fg, &fcmh);
 			if (rc)
@@ -803,9 +776,9 @@ upsched_scandir(void)
 				    slstrerror(rc));
 
 			wk = psc_pool_get(upsched_pool);
-			rc = uswi_initf(wk, fg.fg_fid, 0);
+			rc = uswi_findoradd(&fg, &wk);
 			if (rc)
-				psc_fatal("uswi_initf: %s",
+				psc_fatal("uswi_findoradd: %s",
 				    slstrerror(rc));
 
 			psc_pthread_mutex_lock(&wk->uswi_mutex);
@@ -841,7 +814,7 @@ upsched_scandir(void)
 			 */
 			for (j = 0; j < USWI_NREPLS(wk); j++)
 				iosv[j].bs_id = USWI_GETREPL(wk, j).bs_id;
-			mds_repl_enqueue_sites(wk, iosv, USWI_NREPLS(wk));
+			uswi_enqueue_sites(wk, iosv, USWI_NREPLS(wk));
 		}
 		off += tsiz;
 	}
@@ -851,4 +824,117 @@ upsched_scandir(void)
 		    slstrerror(rc));
 
 	free(buf);
+}
+
+int
+uswi_findoradd(const struct slash_fidgen *fgp, struct up_sched_work_item **wkp)
+{
+	struct up_sched_work_item *newrq = NULL;
+	char fn[PATH_MAX];
+	void *mdsio_data;
+	int rc, gen, locked;
+
+	rc = 0;
+	do {
+		UPSCHED_MGR_LOCK();
+		*wkp = uswi_find(fgp, &locked);
+		if (*wkp)
+			goto out;
+
+		/*
+		 * If the tree stayed locked, the request exists but we
+		 * can't use it e.g. because it is going away.
+		 */
+	} while (!locked);
+
+	gen = upsched_gen;
+	UPSCHED_MGR_UNLOCK();
+	locked = 0;
+
+	newrq = psc_pool_get(upsched_pool);
+	memset(newrq, 0, sizeof(*newrq));
+
+	rc = mds_repl_loadino(fgp, &newrq->uswi_fcmh);
+	if (rc)
+		goto out;
+
+	UPSCHED_MGR_LOCK();
+	if (gen != upsched_gen) {
+		do {
+			*wkp = uswi_find(fgp, &locked);
+			if (*wkp) {
+				fcmh_op_done_type(newrq->uswi_fcmh,
+				    FCMH_OPCNT_LOOKUP_FIDC);
+				goto out;
+			}
+			if (!locked)
+				UPSCHED_MGR_LOCK();
+		} while (!locked);
+	}
+
+	uswi_init(newrq, fgp->fg_fid);
+
+	rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fgp->fg_fid);
+	if (rc == -1) {
+		rc = errno;
+		goto out;
+	}
+	if (rc >= (int)sizeof(fn)) {
+		rc = ENAMETOOLONG;
+		goto out;
+	}
+
+	rc = mdsio_opencreatef(mds_upschdir_inum, &rootcreds,
+	    O_CREAT | O_WRONLY, MDSIO_OPENCRF_NOLINK, 0600, fn,
+	    NULL, NULL, NULL, &mdsio_data, NULL, uswi_getslfid);
+	if (rc)
+		goto out;
+	mdsio_release(&rootcreds, mdsio_data);
+
+	SPLAY_INSERT(upschedtree, &upsched_tree, newrq);
+	pll_addtail(&upsched_listhd, newrq);
+	upsched_gen++;
+	psc_atomic32_inc(&newrq->uswi_refcnt);
+
+	*wkp = newrq;
+	newrq = NULL;
+
+ out:
+	if (locked)
+		UPSCHED_MGR_UNLOCK();
+
+	if (rc && newrq && newrq->uswi_fcmh)
+		fcmh_op_done_type(newrq->uswi_fcmh,
+		    FCMH_OPCNT_LOOKUP_FIDC);
+
+	if (newrq)
+		psc_pool_return(upsched_pool, newrq);
+
+	return (rc);
+}
+
+void
+uswi_enqueue_sites(struct up_sched_work_item *wk,
+    const sl_replica_t *iosv, int nios)
+{
+	struct site_mds_info *smi;
+	struct sl_site *site;
+	int locked, n;
+
+	locked = psc_pthread_mutex_reqlock(&wk->uswi_mutex);
+	wk->uswi_gen++;
+	for (n = 0; n < nios; n++) {
+		site = libsl_resid2site(iosv[n].bs_id);
+		smi = site->site_pri;
+
+		spinlock(&smi->smi_lock);
+		if (!psc_dynarray_exists(&smi->smi_upq, wk)) {
+			psc_dynarray_add(&smi->smi_upq, wk);
+			smi->smi_flags |= SMIF_DIRTYQ;
+			psc_atomic32_inc(&wk->uswi_refcnt);
+		}
+		psc_multiwaitcond_wakeup(&smi->smi_mwcond);
+		freelock(&smi->smi_lock);
+	}
+	psc_pthread_mutex_ureqlock(&wk->uswi_mutex, locked);
 }
