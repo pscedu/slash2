@@ -362,6 +362,9 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		if (c)
 			pscrpc_put_connection(c);
 
+		psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTED);
+		csvc->csvc_mtime = time(NULL);
+
 	} else if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_CONNECTING) {
 		if (sl_csvc_usemultiwait(csvc)) {
 			psc_fatalx("multiwaits not implemented");
