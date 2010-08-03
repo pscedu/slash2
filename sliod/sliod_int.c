@@ -57,6 +57,8 @@ iod_bmap_init(struct bmapc_memb *b)
 	INIT_PSCLIST_ENTRY(&biod->biod_lentry);
 	LOCK_INIT(&biod->biod_lock);
 	SPLAY_INIT(&biod->biod_slvrs);
+	pll_init(&biod->biod_bklog_bcrs, struct biod_crcup_ref, bcr_lentry, 
+		 &biod->biod_lock);
 
 	clock_gettime(CLOCK_REALTIME, &biod->biod_age);
 	/* XXX At some point we'll want to let bmaps hang around in the
