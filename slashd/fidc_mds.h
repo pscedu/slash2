@@ -43,6 +43,7 @@ struct fcmh_mds_info {
 #define fcmh_2_mdsio_data(f)	fcmh_2_fmi(f)->fmi_mdsio_data
 #define fcmh_2_mdsio_fid(f)	fcmh_2_fmi(f)->fmi_mdsio_fid
 #define fcmh_2_nrepls(f)	fcmh_2_ino(f)->ino_nrepls
+#define fcmh_2_repl(f, i)	fcmh_2_ino(f)->ino_repls[i].bs_id
 
 #define inoh_2_mdsio_data(ih)	fcmh_2_mdsio_data((ih)->inoh_fcmh)
 #define inoh_2_fsz(ih)		fcmh_2_fsz((ih)->inoh_fcmh)

@@ -22,8 +22,8 @@
 
 #include <sys/time.h>
 
-#include "psc_rpc/rpc.h"
 #include "psc_ds/lockedlist.h"
+#include "psc_rpc/rpc.h"
 #include "psc_util/odtable.h"
 
 #include "bmap.h"
@@ -51,8 +51,8 @@ struct bmap_mds_info {
 	struct odtable_receipt		*bmdsi_assign;
 	uint64_t			 bmdsi_seq;     /* Largest write bml seq # */
 	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
-	int32_t 			 bmdsi_writers;
-	int32_t	       		         bmdsi_readers;
+	int32_t				 bmdsi_writers;
+	int32_t				 bmdsi_readers;
 	int				 bmdsi_flags;
 	pthread_rwlock_t		 bmdsi_rwlock;
 };
@@ -162,7 +162,7 @@ struct bmap_timeo_table {
 #define BTE_REATTACH		(1 << 2)
 
 #define BMAP_TIMEO_MAX		120 /* Max bmap lease timeout */
-#define BMAP_TIMEO_TBL_QUANT    5
+#define BMAP_TIMEO_TBL_QUANT	5
 #define BMAP_TIMEO_TBL_SZ	(BMAP_TIMEO_MAX / BMAP_TIMEO_TBL_QUANT)
 #define BMAP_SEQLOG_FACTOR	100
 
@@ -173,7 +173,7 @@ struct bmap_mds_lease {
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
 	psc_spinlock_t		  bml_lock;
-	time_t                    bml_start;
+	time_t			  bml_start;
 	struct bmap_mds_info	 *bml_bmdsi;
 	struct pscrpc_export	 *bml_exp;
 	struct psclist_head	  bml_bmdsi_lentry;
@@ -218,7 +218,7 @@ struct bmi_assign {
 	uint64_t		bmi_seq;
 	sl_bmapno_t		bmi_bmapno;
 	time_t			bmi_start;
-	int                     bmi_flags;
+	int			bmi_flags;
 };
 
 #define BMI_DIO (1 << 0)
@@ -226,6 +226,7 @@ struct bmi_assign {
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)(b)->bcm_pri)
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 #define bmap_2_bgen(b)		(b)->bcm_od->bh_gen
+#define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
 
 #define mds_bmap_load(f, n, bp)	bmap_get((f), (n), 0, (bp))
 
