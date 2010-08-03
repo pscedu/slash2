@@ -128,13 +128,13 @@ struct bmapc_memb {
 
 
 /* bmap per-replica states */
-#define BMAPST_INVALID		0	/* no/stale data present */
-#define BMAPST_REPL_SCHED	1	/* replica is being made */
-#define BMAPST_REPL_QUEUED	2	/* replica needs to be made */
-#define BMAPST_VALID		3	/* replica is active */
-#define BMAPST_TRUNCPNDG	4	/* partial truncation in bmap */
-#define BMAPST_GARBAGE		5	/* marked for deletion */
-#define BMAPST_GARBAGE_SCHED	6	/* being deleted */
+#define BREPLST_INVALID		0	/* no/stale data present */
+#define BREPLST_REPL_SCHED	1	/* replica is being made */
+#define BREPLST_REPL_QUEUED	2	/* replica needs to be made */
+#define BREPLST_VALID		3	/* replica is active */
+#define BREPLST_TRUNCPNDG	4	/* partial truncation in bmap */
+#define BREPLST_GARBAGE		5	/* marked for deletion */
+#define BREPLST_GARBAGE_SCHED	6	/* being deleted */
 #define NBMAPST			7
 
 #define	BMAP_OD_SZ		(sizeof(struct slash_bmap_od))
@@ -190,13 +190,13 @@ _log_debug_bmapodv(const char *file, const char *func, int lineno,
 
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 
-	ch[BMAPST_INVALID] = '-';
-	ch[BMAPST_REPL_SCHED] = 's';
-	ch[BMAPST_REPL_QUEUED] = 'q';
-	ch[BMAPST_VALID] = '+';
-	ch[BMAPST_TRUNCPNDG] = 't';
-	ch[BMAPST_GARBAGE] = 'g';
-	ch[BMAPST_GARBAGE_SCHED] = 'x';
+	ch[BREPLST_INVALID] = '-';
+	ch[BREPLST_REPL_SCHED] = 's';
+	ch[BREPLST_REPL_QUEUED] = 'q';
+	ch[BREPLST_VALID] = '+';
+	ch[BREPLST_TRUNCPNDG] = 't';
+	ch[BREPLST_GARBAGE] = 'g';
+	ch[BREPLST_GARBAGE_SCHED] = 'x';
 
 	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
 	    k++, off += SL_BITS_PER_REPLICA)

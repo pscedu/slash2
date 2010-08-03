@@ -106,13 +106,13 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
 	/* Scan for any OLD states. */
-	retifset[BMAPST_INVALID] = 0;
-	retifset[BMAPST_VALID] = 0;
-	retifset[BMAPST_REPL_QUEUED] = 1;
-	retifset[BMAPST_REPL_SCHED] = 1;
-	retifset[BMAPST_TRUNCPNDG] = 1;
-	retifset[BMAPST_GARBAGE] = 1;
-	retifset[BMAPST_GARBAGE_SCHED] = 1;
+	retifset[BREPLST_INVALID] = 0;
+	retifset[BREPLST_VALID] = 0;
+	retifset[BREPLST_REPL_QUEUED] = 1;
+	retifset[BREPLST_REPL_SCHED] = 1;
+	retifset[BREPLST_TRUNCPNDG] = 1;
+	retifset[BREPLST_GARBAGE] = 1;
+	retifset[BREPLST_GARBAGE_SCHED] = 1;
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < USWI_NBMAPS(wk); n++) {
@@ -243,30 +243,30 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	mq->bmapno = bcm->bcm_blkno;
 	mq->bgen = bmap_2_bgen(bcm);
 
-	tract[BMAPST_VALID] = -1;
-	tract[BMAPST_INVALID] = -1;
-	tract[BMAPST_REPL_QUEUED] = BMAPST_REPL_SCHED;
-	tract[BMAPST_REPL_SCHED] = -1;
-	tract[BMAPST_TRUNCPNDG] = -1;
-	tract[BMAPST_GARBAGE] = -1;
-	tract[BMAPST_GARBAGE_SCHED] = -1;
+	tract[BREPLST_VALID] = -1;
+	tract[BREPLST_INVALID] = -1;
+	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
+	tract[BREPLST_REPL_SCHED] = -1;
+	tract[BREPLST_TRUNCPNDG] = -1;
+	tract[BREPLST_GARBAGE] = -1;
+	tract[BREPLST_GARBAGE_SCHED] = -1;
 
-	retifset[BMAPST_VALID] = BMAPST_VALID;
-	retifset[BMAPST_INVALID] = BMAPST_INVALID;
-	retifset[BMAPST_REPL_QUEUED] = BMAPST_REPL_QUEUED;
-	retifset[BMAPST_REPL_SCHED] = BMAPST_REPL_SCHED;
-	retifset[BMAPST_TRUNCPNDG] = BMAPST_TRUNCPNDG;
-	retifset[BMAPST_GARBAGE] = BMAPST_GARBAGE;
-	retifset[BMAPST_GARBAGE_SCHED] = BMAPST_GARBAGE_SCHED;
+	retifset[BREPLST_VALID] = BREPLST_VALID;
+	retifset[BREPLST_INVALID] = BREPLST_INVALID;
+	retifset[BREPLST_REPL_QUEUED] = BREPLST_REPL_QUEUED;
+	retifset[BREPLST_REPL_SCHED] = BREPLST_REPL_SCHED;
+	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
+	retifset[BREPLST_GARBAGE] = BREPLST_GARBAGE;
+	retifset[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_SCHED;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
 
-	if (rc == BMAPST_VALID ||
-	    rc == BMAPST_REPL_SCHED)
+	if (rc == BREPLST_VALID ||
+	    rc == BREPLST_REPL_SCHED)
 		psc_fatalx("invalid bmap replica state: %d", rc);
 
-	if (rc == BMAPST_REPL_QUEUED) {
+	if (rc == BREPLST_REPL_QUEUED) {
 		rc = SL_RSX_WAITREP(rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
@@ -280,13 +280,13 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	}
 
 	/* handle error return failure */
-	tract[BMAPST_VALID] = -1;
-	tract[BMAPST_INVALID] = -1;
-	tract[BMAPST_REPL_QUEUED] = -1;
-	tract[BMAPST_REPL_SCHED] = BMAPST_REPL_QUEUED;
-	tract[BMAPST_TRUNCPNDG] = -1;
-	tract[BMAPST_GARBAGE] = -1;
-	tract[BMAPST_GARBAGE_SCHED] = -1;
+	tract[BREPLST_VALID] = -1;
+	tract[BREPLST_INVALID] = -1;
+	tract[BREPLST_REPL_QUEUED] = -1;
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_TRUNCPNDG] = -1;
+	tract[BREPLST_GARBAGE] = -1;
+	tract[BREPLST_GARBAGE_SCHED] = -1;
 
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
 
@@ -347,30 +347,30 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	mq->bmapno = bcm->bcm_blkno;
 	mq->bgen = bmap_2_bgen(bcm);
 
-	tract[BMAPST_VALID] = -1;
-	tract[BMAPST_INVALID] = -1;
-	tract[BMAPST_REPL_QUEUED] = BMAPST_REPL_SCHED;
-	tract[BMAPST_REPL_SCHED] = -1;
-	tract[BMAPST_TRUNCPNDG] = -1;
-	tract[BMAPST_GARBAGE] = BMAPST_GARBAGE_SCHED;
-	tract[BMAPST_GARBAGE_SCHED] = -1;
+	tract[BREPLST_VALID] = -1;
+	tract[BREPLST_INVALID] = -1;
+	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
+	tract[BREPLST_REPL_SCHED] = -1;
+	tract[BREPLST_TRUNCPNDG] = -1;
+	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
+	tract[BREPLST_GARBAGE_SCHED] = -1;
 
-	retifset[BMAPST_VALID] = BMAPST_VALID;
-	retifset[BMAPST_INVALID] = BMAPST_INVALID;
-	retifset[BMAPST_REPL_QUEUED] = BMAPST_REPL_QUEUED;
-	retifset[BMAPST_REPL_SCHED] = BMAPST_REPL_SCHED;
-	retifset[BMAPST_TRUNCPNDG] = BMAPST_TRUNCPNDG;
-	retifset[BMAPST_GARBAGE] = BMAPST_GARBAGE;
-	retifset[BMAPST_GARBAGE_SCHED] = BMAPST_GARBAGE_SCHED;
+	retifset[BREPLST_VALID] = BREPLST_VALID;
+	retifset[BREPLST_INVALID] = BREPLST_INVALID;
+	retifset[BREPLST_REPL_QUEUED] = BREPLST_REPL_QUEUED;
+	retifset[BREPLST_REPL_SCHED] = BREPLST_REPL_SCHED;
+	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
+	retifset[BREPLST_GARBAGE] = BREPLST_GARBAGE;
+	retifset[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_SCHED;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
 
-	if (rc == BMAPST_VALID ||
-	    rc == BMAPST_REPL_SCHED)
+	if (rc == BREPLST_VALID ||
+	    rc == BREPLST_REPL_SCHED)
 		psc_fatalx("invalid bmap replica state: %d", rc);
 
-	if (rc == BMAPST_REPL_QUEUED) {
+	if (rc == BREPLST_REPL_QUEUED) {
 		rc = SL_RSX_WAITREP(rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
@@ -384,13 +384,13 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	}
 
 	/* handle error return failure */
-	tract[BMAPST_VALID] = -1;
-	tract[BMAPST_INVALID] = -1;
-	tract[BMAPST_REPL_QUEUED] = -1;
-	tract[BMAPST_REPL_SCHED] = BMAPST_REPL_QUEUED;
-	tract[BMAPST_TRUNCPNDG] = -1;
-	tract[BMAPST_GARBAGE] = -1;
-	tract[BMAPST_GARBAGE_SCHED] = BMAPST_GARBAGE;
+	tract[BREPLST_VALID] = -1;
+	tract[BREPLST_INVALID] = -1;
+	tract[BREPLST_REPL_QUEUED] = -1;
+	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_TRUNCPNDG] = -1;
+	tract[BREPLST_GARBAGE] = -1;
+	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
 
@@ -503,7 +503,7 @@ slmupschedthr_main(struct psc_thread *thr)
 					val = SL_REPL_GET_BMAP_IOS_STAT(
 					    bmapod->bh_repls, off);
 					switch (val) {
-					case BMAPST_REPL_QUEUED:
+					case BREPLST_REPL_QUEUED:
 						has_work = 1;
 //						if (bmap is leased to an ION)
 //							break;
@@ -523,7 +523,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							/* skip ourself and old/inactive replicas */
 							if (ris == iosidx ||
 							    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
-							    SL_BITS_PER_REPLICA * ris) != BMAPST_VALID)
+							    SL_BITS_PER_REPLICA * ris) != BREPLST_VALID)
 								continue;
 
 							/* search source nids for an idle, online connection */
@@ -554,7 +554,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							}
 						}
 						break;
-					case BMAPST_GARBAGE:
+					case BREPLST_GARBAGE:
 						has_work = 1;
 						BMAP_ULOCK(bcm);
 
@@ -567,7 +567,7 @@ slmupschedthr_main(struct psc_thread *thr)
 							    bcm, off, dst_res, rid))
 								goto restart;
 						break;
-					case BMAPST_REPL_SCHED:
+					case BREPLST_REPL_SCHED:
 						has_work = 1;
 						/* FALLTHROUGH */
 					}
@@ -576,7 +576,7 @@ slmupschedthr_main(struct psc_thread *thr)
 			}
  skiprepl:
 			/*
-			 * XXX - when BMAPST_GARBAGE/SCHED all get fully
+			 * XXX - when BREPLST_GARBAGE/SCHED all get fully
 			 * reclaimed, delete metadata.
 			 */
 
@@ -786,13 +786,13 @@ upsched_scandir(void)
 			wk->uswi_flags &= ~USWIF_BUSY;
 			psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
-			tract[BMAPST_INVALID] = -1;
-			tract[BMAPST_VALID] = -1;
-			tract[BMAPST_REPL_QUEUED] = -1;
-			tract[BMAPST_REPL_SCHED] = BMAPST_REPL_QUEUED;
-			tract[BMAPST_TRUNCPNDG] = -1;
-			tract[BMAPST_GARBAGE] = -1;
-			tract[BMAPST_GARBAGE_SCHED] = -1;
+			tract[BREPLST_INVALID] = -1;
+			tract[BREPLST_VALID] = -1;
+			tract[BREPLST_REPL_QUEUED] = -1;
+			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+			tract[BREPLST_TRUNCPNDG] = -1;
+			tract[BREPLST_GARBAGE] = -1;
+			tract[BREPLST_GARBAGE_SCHED] = -1;
 
 			/*
 			 * If we crashed, revert all inflight SCHED'ed

@@ -216,33 +216,33 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (mds_bmap_load(wk->uswi_fcmh, mq->bmapno, &bcm))
 		goto out;
 
-	tract[BMAPST_INVALID] = -1;
-	tract[BMAPST_VALID] = -1;
-	tract[BMAPST_TRUNCPNDG] = -1;
-	tract[BMAPST_GARBAGE] = -1;
-	tract[BMAPST_GARBAGE_SCHED] = -1;
+	tract[BREPLST_INVALID] = -1;
+	tract[BREPLST_VALID] = -1;
+	tract[BREPLST_TRUNCPNDG] = -1;
+	tract[BREPLST_GARBAGE] = -1;
+	tract[BREPLST_GARBAGE_SCHED] = -1;
 
 	BHGEN_GET(bcm, gen);
 	if (mq->rc || mq->bgen != gen) {
-		tract[BMAPST_REPL_QUEUED] = -1;
-		tract[BMAPST_REPL_SCHED] = BMAPST_REPL_QUEUED;
+		tract[BREPLST_REPL_QUEUED] = -1;
+		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
 	} else {
 		/*
 		 * If the MDS crashed and came back up, the state
 		 * will have changed from SCHED->OLD, so change
 		 * OLD->ACTIVE here for that case as well.
 		 */
-		tract[BMAPST_REPL_QUEUED] = BMAPST_VALID;
-		tract[BMAPST_REPL_SCHED] = BMAPST_VALID;
+		tract[BREPLST_REPL_QUEUED] = BREPLST_VALID;
+		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 	}
 
-	retifset[BMAPST_INVALID] = EINVAL;
-	retifset[BMAPST_REPL_SCHED] = 0;
-	retifset[BMAPST_REPL_QUEUED] = EINVAL;
-	retifset[BMAPST_VALID] = EINVAL;
-	retifset[BMAPST_TRUNCPNDG] = 0;
-	retifset[BMAPST_GARBAGE] = EINVAL;
-	retifset[BMAPST_GARBAGE_SCHED] = EINVAL;
+	retifset[BREPLST_INVALID] = EINVAL;
+	retifset[BREPLST_REPL_SCHED] = 0;
+	retifset[BREPLST_REPL_QUEUED] = EINVAL;
+	retifset[BREPLST_VALID] = EINVAL;
+	retifset[BREPLST_TRUNCPNDG] = 0;
+	retifset[BREPLST_GARBAGE] = EINVAL;
+	retifset[BREPLST_GARBAGE_SCHED] = EINVAL;
 
 	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_repl_bmap_rel(bcm);

@@ -627,8 +627,14 @@ ptrunc_tally_ios(struct bmapc_memb *bcm, int iosidx, int val, void *arg)
 	sl_ios_id_t ios_id;
 	int i;
 
-	if (val != BMAPST_VALID)
+	switch (val) {
+	case BREPLST_VALID:
+	case BREPLST_REPL_SCHED:
+	case BREPLST_REPL_QUEUED:
+		break;
+	default:
 		return;
+	}
 
 	ios_id = bmap_2_repl(bcm, iosidx);
 
@@ -687,13 +693,13 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			// bmaps write leases may not be granted
 			// for this bmap or any bmap beyond
 
-			tract[BMAPST_INVALID] = -1;
-			tract[BMAPST_REPL_SCHED] = -1;
-			tract[BMAPST_REPL_QUEUED] = -1;
-			tract[BMAPST_VALID] = BMAPST_TRUNCPNDG;
-			tract[BMAPST_TRUNCPNDG] = -1;
-			tract[BMAPST_GARBAGE] = -1;
-			tract[BMAPST_GARBAGE_SCHED] = -1;
+			tract[BREPLST_INVALID] = -1;
+			tract[BREPLST_REPL_SCHED] = -1;
+			tract[BREPLST_REPL_QUEUED] = -1;
+			tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
+			tract[BREPLST_TRUNCPNDG] = -1;
+			tract[BREPLST_GARBAGE] = -1;
+			tract[BREPLST_GARBAGE_SCHED] = -1;
 
 			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
 			if (mds_bmap_load(fcmh, i, &bcm) == 0) {
@@ -704,17 +710,17 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 #if 0
 	- synchronously contact an IOS requesting CRC recalculation for sliver and
-	  mark BMAPST_VALID on success
+	  mark BREPLST_VALID on success
 	- if BMAP_PERSIST, notify replication queuer
 #endif
 
-			tract[BMAPST_INVALID] = -1;
-			tract[BMAPST_REPL_SCHED] = BMAPST_GARBAGE;
-			tract[BMAPST_REPL_QUEUED] = BMAPST_GARBAGE;
-			tract[BMAPST_VALID] = BMAPST_GARBAGE;
-			tract[BMAPST_TRUNCPNDG] = -1;
-			tract[BMAPST_GARBAGE] = -1;
-			tract[BMAPST_GARBAGE_SCHED] = -1;
+			tract[BREPLST_INVALID] = -1;
+			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
+			tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
+			tract[BREPLST_VALID] = BREPLST_GARBAGE;
+			tract[BREPLST_TRUNCPNDG] = -1;
+			tract[BREPLST_GARBAGE] = -1;
+			tract[BREPLST_GARBAGE_SCHED] = -1;
 
 			for (i++; i < fcmh_2_nbmaps(fcmh); i++) {
 				if (mds_bmap_load(fcmh, i, &bcm))
