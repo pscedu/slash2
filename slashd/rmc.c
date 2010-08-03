@@ -206,7 +206,9 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	}
 
 	mp->rc = mds_bmap_bml_chwrmode(bml, mq->prefios);
-	if (mp->rc)
+	if (mp->rc == EALREADY)
+		mp->rc = 0;
+	else if (mp->rc)
 		goto out;
 
 	mp->sbd = mq->sbd;

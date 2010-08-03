@@ -51,8 +51,8 @@ struct bmap_mds_info {
 	struct odtable_receipt		*bmdsi_assign;
 	uint64_t			 bmdsi_seq;     /* Largest write bml seq # */
 	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
-	uint32_t			 bmdsi_writers;
-	uint32_t			 bmdsi_readers;
+	int32_t 			 bmdsi_writers;
+	int32_t	       		         bmdsi_readers;
 	int				 bmdsi_flags;
 	pthread_rwlock_t		 bmdsi_rwlock;
 };
