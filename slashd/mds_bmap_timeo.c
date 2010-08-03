@@ -153,8 +153,8 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	if (flags & BTE_REATTACH) {
 		/* BTE_REATTACH is only called from startup context.
 		 */
-		psc_assert(mdsBmapTimeoTbl.btt_minseq ==
-			   mdsBmapTimeoTbl.btt_maxseq);
+		//		psc_assert(mdsBmapTimeoTbl.btt_minseq ==
+		//		   mdsBmapTimeoTbl.btt_maxseq);
 
 		if (mdsBmapTimeoTbl.btt_maxseq < bml->bml_seq)
 			mdsBmapTimeoTbl.btt_minseq =
