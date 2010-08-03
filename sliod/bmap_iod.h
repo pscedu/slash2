@@ -98,14 +98,16 @@ struct bmap_iod_info {
 	struct srt_bmap_wire	*biod_bmap_wire;
 	struct psclist_head	 biod_lentry;
 	struct timespec		 biod_age;
+	struct psc_lockedlist    biod_bklog_bcrs;
 	lnet_process_id_t        biod_rls_cnp;
 	uint64_t		 biod_bcr_xid;
 	uint64_t		 biod_bcr_xid_last;
 	uint64_t		 biod_cur_seqkey[2];
 	uint64_t		 biod_rls_seqkey[2];
-	uint32_t		 biod_crcdrty_slvrs:30;
-	uint32_t		 biod_inflight:1;
-	uint32_t		 biod_rlsseq:1;
+	uint32_t		 biod_crcdrty_slvrs;
+	uint32_t		 biod_inflight;
+	uint32_t		 biod_rlsseq;
+	uint32_t                 biod_bcr_sched;
 };
 
 #define biodi_2_wire(bi)	(bi)->biod_bmap_wire
