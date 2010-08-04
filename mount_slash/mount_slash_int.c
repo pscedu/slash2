@@ -54,6 +54,11 @@
 #include "slconn.h"
 #include "slerr.h"
 
+/* async RPC pointers */
+#define MSL_IO_CB_POINTER_SLOT		0
+#define MSL_OFTRQ_CB_POINTER_SLOT	1
+#define MSL_CSVC_CB_POINTER_SLOT	2
+
 /* Flushing fuse threads wait here for I/O completion.
  */
 struct psc_waitq msl_fhent_flush_waitq = PSC_WAITQ_INIT;
@@ -895,6 +900,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct psc_dynarray *a=args->pointer_arg[MSL_IO_CB_POINTER_SLOT];
 	struct bmpc_ioreq *r=args->pointer_arg[MSL_OFTRQ_CB_POINTER_SLOT];
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CSVC_CB_POINTER_SLOT];
 	struct bmapc_memb *b;
 	struct bmap_pagecache_entry *bmpce;
 	int op=rq->rq_reqmsg->opc, i, rc;
@@ -976,6 +982,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	PSCFREE(a);
 
  out:
+	sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -1048,9 +1055,8 @@ msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u s=%u",
 	    op, mq->offset, mq->size);
 
-	sl_csvc_decref(csvc);
-
  out:
+	sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -1273,16 +1279,17 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 
 	authbuf_sign(req, PSCRPC_MSG_REQUEST);
 	pscrpc_set_add_new_req(r->biorq_rqset, req);
-	if (pscrpc_push_req(req)) {
-		DEBUG_REQ(PLL_ERROR, req,
-			  "pscrpc_push_req() failed");
-		psc_fatalx("pscrpc_push_req, no failover yet");
-	}
 	/* Setup the callback, supplying the dynarray as a argument.
 	 */
 	req->rq_interpret_reply = msl_readio_cb;
 	req->rq_async_args.pointer_arg[MSL_IO_CB_POINTER_SLOT] = a;
 	req->rq_async_args.pointer_arg[MSL_OFTRQ_CB_POINTER_SLOT] = r;
+	req->rq_async_args.pointer_arg[MSL_CSVC_CB_POINTER_SLOT] = csvc;
+	if (pscrpc_push_req(req)) {
+		DEBUG_REQ(PLL_ERROR, req,
+			  "pscrpc_push_req() failed");
+		psc_fatalx("pscrpc_push_req, no failover yet");
+	}
 }
 
 __static void

@@ -52,11 +52,6 @@ struct pscrpc_request;
 #define MSTHRT_BMAPFLSHRLS		12	/* bmap lease releaser */
 #define MSTHRT_CONN			13	/* connection monitor */
 
-/* async RPC pointers */
-#define MSL_IO_CB_POINTER_SLOT		1
-#define MSL_WRITE_CB_POINTER_SLOT	2
-#define MSL_OFTRQ_CB_POINTER_SLOT	3
-
 struct msrcm_thread {
 	struct pscrpc_thread		 mrcm_prt;
 };

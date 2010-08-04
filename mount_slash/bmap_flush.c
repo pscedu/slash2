@@ -180,9 +180,8 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	DEBUG_REQ(PLL_INFO, rq, "done (outstandingRpcCnt=%d)",
 		  atomic_read(&outstandingRpcCnt));
 
-	sl_csvc_decref(csvc);
-
  out:
+	sl_csvc_decref(csvc);
 	return (rc);
 }
 
