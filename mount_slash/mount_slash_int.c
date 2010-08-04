@@ -1021,7 +1021,7 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 	struct bmpc_ioreq *r;
 	int i;
 
-	biorqs = args->pointer_arg[0];
+	biorqs = args->pointer_arg[1];
 
 	DEBUG_REQ(PLL_INFO, req, "biorqs=%p len=%d",
 		  biorqs, psc_dynarray_len(biorqs));
