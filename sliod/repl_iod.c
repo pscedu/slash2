@@ -92,7 +92,7 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 
 	/* get the replication chunk's bmap */
 	rc = bmap_get(w->srw_fcmh, w->srw_bmapno,
-	    SL_WRITE, &w->srw_bcm);
+	    SL_READ, &w->srw_bcm);
 	if (rc)
 		psc_errorx("bmap_get %u: %s",
 		    w->srw_bmapno, slstrerror(rc));
