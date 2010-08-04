@@ -146,8 +146,10 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 	mh = *mrsq->mrsq_mh;
 
 	if (mq->rc) {
-		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
-		    slstrerror(mq->rc));
+		rc = 1;
+		if (mq->rc != EOF)
+			rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
+			    slstrerror(mq->rc));
 		spinlock(&mrsq->mrsq_lock);
 		mrsq->mrsq_eof = 1;
 		mrsq_release(mrsq, rc);
