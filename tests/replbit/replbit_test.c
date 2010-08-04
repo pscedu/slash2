@@ -91,9 +91,9 @@ main(int argc, char *argv[])
 
 	for (i = 0; i < 20; i++)
 		SL_REPL_SET_BMAP_IOS_STAT(buf, i * SL_BITS_PER_REPLICA,
-		    i % NBMAPST);
+		    i % NBREPLST);
 	for (i = 0; i < 20; i++)
-		CHECK(buf, i * SL_BITS_PER_REPLICA, i % NBMAPST);
+		CHECK(buf, i * SL_BITS_PER_REPLICA, i % NBREPLST);
 
 	memset(buf, 0, sizeof(buf));
 
