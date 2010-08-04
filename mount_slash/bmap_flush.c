@@ -156,7 +156,7 @@ bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
 				e = r;
 		}
 	}
-	
+
 	size = (e->biorq_off - s->biorq_off) + e->biorq_len;
 
 	psc_info("array %p has size=%zu array len=%d",
@@ -186,7 +186,7 @@ __static struct pscrpc_request *
 bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 		      size_t size, off_t soff, int niovs)
 {
-	struct pscrpc_import *imp;
+	struct slashrpc_cservice *csvc;
 	struct pscrpc_bulk_desc *desc;
 	struct pscrpc_request *req;
 	struct srm_io_req *mq;
@@ -195,9 +195,10 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 
 	atomic_inc(&outstandingRpcCnt);
 
-	imp = msl_bmap_to_import(b, 1);
+	csvc = msl_bmap_to_csvc(b, 1);
 
-	rc = SL_RSX_NEWREQ(imp, SRIC_VERSION, SRMT_WRITE, req, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIC_VERSION, SRMT_WRITE,
+	    req, mq, mp);
 	if (rc)
 		psc_fatalx("SL_RSX_NEWREQ() bad time to fail :( rc=%d", -rc);
 
@@ -248,8 +249,8 @@ __static int
 bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		     int niovs)
 {
+	struct slashrpc_cservice *csvc;
 	struct pscrpc_request *req;
-	struct pscrpc_import *imp;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
 	off_t soff;
@@ -257,8 +258,8 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 	int i, nrpcs=0;
 
 	r = psc_dynarray_getpos(biorqs, 0);
-	imp = msl_bmap_to_import(r->biorq_bmap, 1);
-	psc_assert(imp);
+	csvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
+	psc_assert(csvc);
 
 	b = r->biorq_bmap;
 	soff = r->biorq_off;
@@ -268,7 +269,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		 *   there is a major problem.
 		 */
 		r = psc_dynarray_getpos(biorqs, i);
-		psc_assert(imp == msl_bmap_to_import(r->biorq_bmap, 1));
+		psc_assert(csvc == msl_bmap_to_csvc(r->biorq_bmap, 1));
 		psc_assert(b == r->biorq_bmap);
 		bmap_flush_inflight_set(r);
 	}

@@ -765,9 +765,9 @@ msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw)
 }
 
 /**
- * msl_bmap_to_import - Given a bmap, perform a series of lookups to
- *	locate the ION import.  The ION was chosen by the mds and
- *	returned in the msl_bmap_retrieve routine. msl_bmap_to_import
+ * msl_bmap_to_csvc - Given a bmap, perform a series of lookups to
+ *	locate the ION csvc.  The ION was chosen by the mds and
+ *	returned in the msl_bmap_retrieve routine. msl_bmap_to_csvc
  *	queries the configuration to find the ION's private info - this
  *	is where the import pointer is kept.  If no import has yet been
  *	allocated a new is made.
@@ -776,10 +776,10 @@ msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw)
  *        the bmap's refcnt must have been incremented so that it is not freed from under us.
  * XXX Dev Needed: If the bmap is a read-only then any replica may be
  *	accessed (so long as it is recent).  Therefore
- *	msl_bmap_to_import() should have logic to accommodate this.
+ *	msl_bmap_to_csvc() should have logic to accommodate this.
  */
-struct pscrpc_import *
-msl_bmap_to_import(struct bmapc_memb *b, int exclusive)
+struct slashrpc_cservice *
+msl_bmap_to_csvc(struct bmapc_memb *b, int exclusive)
 {
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm;
@@ -794,9 +794,12 @@ msl_bmap_to_import(struct bmapc_memb *b, int exclusive)
 	psc_assert(resm->resm_nid == bmap_2_ion(b));
 	ureqlock(&b->bcm_lock, locked);
 
-	if (exclusive)
+	if (exclusive) {
 		csvc = slc_geticsvc(resm);
-	else {
+		if (csvc)
+			psc_assert(csvc->csvc_import->imp_connection->
+			    c_peer.nid == bmap_2_ion(b));
+	} else {
 #if 0
 		/* grab a random resm from any replica */
 		for (n = 0; n < resm->resm_res->res_nnids; n++)
@@ -808,13 +811,10 @@ msl_bmap_to_import(struct bmapc_memb *b, int exclusive)
 #endif
 		csvc = slc_geticsvc(resm);
 	}
-
-	psc_assert(csvc->csvc_import->imp_connection->c_peer.nid == bmap_2_ion(b));
-
-	return (csvc ? csvc->csvc_import : NULL);
+	return (csvc);
 }
 
-struct pscrpc_import *
+struct slashrpc_cservice *
 msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 {
 	struct slashrpc_cservice *csvc;
@@ -841,16 +841,16 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 		resm = psc_dynarray_getpos(&res->res_members, rnd);
 		csvc = slc_geticsvc(resm);
 		if (csvc)
-			return (csvc->csvc_import);
+			return (csvc);
 	}
 	return (NULL);
 }
 
-struct pscrpc_import *
+struct slashrpc_cservice *
 msl_bmap_choose_replica(struct bmapc_memb *b)
 {
+	struct slashrpc_cservice *csvc;
 	struct fcmh_cli_info *fci;
-	struct pscrpc_import *imp;
 	int n, rnd;
 
 	psc_assert(atomic_read(&b->bcm_opcnt) > 0);
@@ -864,9 +864,9 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 			rnd = 0;
 
 		if (fci->fci_reptbl[rnd].bs_id == prefIOS) {
-			imp = msl_try_get_replica_resm(b, rnd);
-			if (imp)
-				return (imp);
+			csvc = msl_try_get_replica_resm(b, rnd);
+			if (csvc)
+				return (csvc);
 		}
 	}
 
@@ -876,9 +876,9 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 		if (rnd >= fci->fci_nrepls)
 			rnd = 0;
 
-		imp = msl_try_get_replica_resm(b, rnd);
-		if (imp)
-			return (imp);
+		csvc = msl_try_get_replica_resm(b, rnd);
+		if (csvc)
+			return (csvc);
 	}
 	return (NULL);
 }
@@ -1030,8 +1030,9 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 }
 
 int
-msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
+msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
+	struct slashrpc_cservice *csvc = args->pointer_arg[0];
 	struct srm_io_req *mq;
 	int rc, op=rq->rq_reqmsg->opc;
 
@@ -1047,6 +1048,8 @@ msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 	DEBUG_REQ(PLL_TRACE, rq, "completed dio req (op=%d) o=%u s=%u",
 	    op, mq->offset, mq->size);
 
+	sl_csvc_decref(csvc);
+
  out:
 	return (rc);
 }
@@ -1054,7 +1057,7 @@ msl_dio_cb(struct pscrpc_request *rq, __unusedx struct pscrpc_async_args *args)
 __static void
 msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 {
-	struct pscrpc_import      *imp;
+	struct slashrpc_cservice  *csvc;
 	struct pscrpc_request     *req;
 	struct pscrpc_bulk_desc   *desc;
 	struct bmapc_memb	  *bcm;
@@ -1078,8 +1081,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	op = r->biorq_flags & BIORQ_WRITE ?
 		SRMT_WRITE : SRMT_READ;
 
-	imp = (op == SRMT_WRITE) ?
-		msl_bmap_to_import(bcm, 1) :
+	csvc = (op == SRMT_WRITE) ?
+		msl_bmap_to_csvc(bcm, 1) :
 		msl_bmap_choose_replica(bcm);
 
 	r->biorq_rqset = pscrpc_prep_set();
@@ -1092,11 +1095,12 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	for (i=0, nbytes=0; i < n; i++, nbytes += len) {
 		len = MIN(LNET_MTU, (size-nbytes));
 
-		rc = SL_RSX_NEWREQ(imp, SRIC_VERSION, op, req, mq, mp);
+		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIC_VERSION, op, req, mq, mp);
 		if (rc)
 			psc_fatalx("SL_RSX_NEWREQ() failed %d", rc);
 
 		req->rq_interpret_reply = msl_dio_cb;
+		req->rq_async_args.pointer_arg[0] = csvc;
 
 		iovs[i].iov_base = b + nbytes;
 		iovs[i].iov_len  = len;
@@ -1192,7 +1196,7 @@ __static void
 msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 {
 	struct bmap_pagecache_entry *bmpce;
-	struct pscrpc_import *imp;
+	struct slashrpc_cservice *csvc;
 	struct pscrpc_request *req;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_io_req *mq;
@@ -1205,14 +1209,15 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	psc_assert(npages <= BMPC_MAXBUFSRPC);
 
 	BMAP_LOCK(r->biorq_bmap);
-	imp = (r->biorq_bmap->bcm_mode & BMAP_WR) ?
-		msl_bmap_to_import(r->biorq_bmap, 1) :
+	csvc = (r->biorq_bmap->bcm_mode & BMAP_WR) ?
+		msl_bmap_to_csvc(r->biorq_bmap, 1) :
 		msl_bmap_choose_replica(r->biorq_bmap);
 	BMAP_ULOCK(r->biorq_bmap);
 
-	psc_assert(imp);
+	psc_assert(csvc);
 
-	rc = SL_RSX_NEWREQ(imp, SRIC_VERSION, SRMT_READ, req, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIC_VERSION, SRMT_READ,
+	    req, mq, mp);
 	if (rc)
 		psc_fatalx("SL_RSX_NEWREQ() failed %d", rc);
 
