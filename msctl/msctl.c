@@ -128,6 +128,12 @@ packshow_conns(__unusedx const char *thr)
 }
 
 void
+packshow_files(__unusedx const char *thr)
+{
+	psc_ctlmsg_push(MSCMT_GETFILES, sizeof(struct slctlmsg_file));
+}
+
+void
 pack_replst(const char *fn, __unusedx void *arg)
 {
 	struct msctlmsg_replst *mrs;
@@ -428,14 +434,14 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	pmap[BREPLST_GARBAGE] = 'G';
 	pmap[BREPLST_GARBAGE_SCHED] = 'X';
 
-	dlen = PSC_CTL_DISPLAY_WIDTH - strlen("repl-policy: ") -
+	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(" repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);
 	n = printf(" %s", current_mrs.mrs_fn);
 	if (n > dlen)
 		printf("\n    ");
 	else
 		printf("%*s", dlen - n, "");
-	printf("repl-policy: ");
+	printf(" repl-policy: ");
 	if (current_mrs.mrs_newreplpol >= NBRP)
 		printf("<unknown: %d>\n", current_mrs.mrs_newreplpol);
 	else
@@ -511,8 +517,9 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "connections",	packshow_conns },
+	{ "files",		packshow_files },
 	{ "loglevels",		psc_ctl_packshow_loglevel },
-	{ "stats",		psc_ctl_packshow_stats },
+	{ "stats",		psc_ctl_packshow_stats }
 };
 int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
 
@@ -524,7 +531,8 @@ struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	{ replst_slave_prhdr,	replst_slave_prdat,	0,				replst_slave_check },
 	{ NULL,			NULL,			0,				NULL },
 	{ NULL,			NULL,			0,				NULL },
-	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),	NULL }
+	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),	NULL },
+	{ sl_file_prhdr,	sl_file_prdat,		sizeof(struct slctlmsg_file),	NULL }
 };
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
