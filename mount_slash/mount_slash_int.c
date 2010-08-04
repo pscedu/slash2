@@ -791,6 +791,7 @@ msl_bmap_to_import(struct bmapc_memb *b, int exclusive)
 
 	locked = reqlock(&b->bcm_lock);
 	resm = libsl_nid2resm(bmap_2_ion(b));
+	psc_assert(resm->resm_nid == bmap_2_ion(b));
 	ureqlock(&b->bcm_lock, locked);
 
 	if (exclusive)
@@ -807,6 +808,9 @@ msl_bmap_to_import(struct bmapc_memb *b, int exclusive)
 #endif
 		csvc = slc_geticsvc(resm);
 	}
+
+	psc_assert(csvc->csvc_import->imp_connection->c_peer.nid == bmap_2_ion(b));
+
 	return (csvc ? csvc->csvc_import : NULL);
 }
 
@@ -1200,7 +1204,13 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	psc_assert(startpage >= 0);
 	psc_assert(npages <= BMPC_MAXBUFSRPC);
 
-	imp = msl_bmap_choose_replica(r->biorq_bmap);
+	BMAP_LOCK(r->biorq_bmap);
+	imp = (r->biorq_bmap->bcm_mode & BMAP_WR) ?
+		msl_bmap_to_import(r->biorq_bmap, 1) :
+		msl_bmap_choose_replica(r->biorq_bmap);
+	BMAP_ULOCK(r->biorq_bmap);
+
+	psc_assert(imp);
 
 	rc = SL_RSX_NEWREQ(imp, SRIC_VERSION, SRMT_READ, req, mq, mp);
 	if (rc)
