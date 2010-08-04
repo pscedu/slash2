@@ -58,8 +58,8 @@
  */
 struct psc_waitq msl_fhent_flush_waitq = PSC_WAITQ_INIT;
 
-struct timespec msl_bmap_max_lease = {BMAP_CLI_MAX_LEASE, 0};
-struct timespec msl_bmap_timeo_inc = {BMAP_CLI_TIMEO_INC, 0};
+struct timespec msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
+struct timespec msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 __static void
 msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
@@ -855,7 +855,7 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 
 	/* first, try preferred IOS */
 	rnd = psc_random32u(fci->fci_nrepls);
-	for (n = 0; n < fci->fci_nrepls; n++, rnd++)
+	for (n = 0; n < fci->fci_nrepls; n++, rnd++) {
 		if (rnd >= fci->fci_nrepls)
 			rnd = 0;
 
@@ -864,6 +864,7 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 			if (imp)
 				return (imp);
 		}
+	}
 
 	/* rats, not available; try anyone available now */
 	rnd = psc_random32u(fci->fci_nrepls);
