@@ -286,7 +286,8 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 	DEBUG_BIORQ(PLL_INFO, r, "biorq array cb arg (%p)", biorqs);
 
-	if ((size = bmap_flush_coalesce_size(biorqs)) <= LNET_MTU) {
+	if (((size = bmap_flush_coalesce_size(biorqs)) <= LNET_MTU) && 
+	    (niovs <= PSCRPC_MAX_BRW_PAGES)) {
 		/* Single rpc case.  Set the appropriate cb handler
 		 *   and attach to the nb request set.
 		 */
@@ -329,7 +330,8 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 				tiov = NULL;
 				size = n = 0;
 
-			} else if ((size + iovs[j].iov_len) > LNET_MTU) {
+			} else if (((size + iovs[j].iov_len) > LNET_MTU) ||
+				   (n == PSCRPC_MAX_BRW_PAGES)) {
 				psc_assert(n > 0);
 				LAUNCH_RPC();
 				size = iovs[j].iov_len;
