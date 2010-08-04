@@ -98,8 +98,8 @@ struct bmap_iod_info {
 	struct srt_bmap_wire	*biod_bmap_wire;
 	struct psclist_head	 biod_lentry;
 	struct timespec		 biod_age;
-	struct psc_lockedlist    biod_bklog_bcrs;
-	lnet_process_id_t        biod_rls_cnp;
+	struct psc_lockedlist	 biod_bklog_bcrs;
+	lnet_process_id_t	 biod_rls_cnp;
 	uint64_t		 biod_bcr_xid;
 	uint64_t		 biod_bcr_xid_last;
 	uint64_t		 biod_cur_seqkey[2];
@@ -107,7 +107,7 @@ struct bmap_iod_info {
 	uint32_t		 biod_crcdrty_slvrs;
 	uint32_t		 biod_inflight;
 	uint32_t		 biod_rlsseq;
-	uint32_t                 biod_bcr_sched;
+	uint32_t		 biod_bcr_sched;
 };
 
 #define biodi_2_wire(bi)	(bi)->biod_bmap_wire
@@ -121,7 +121,7 @@ struct bmap_iod_info {
 
 #define bmap_2_crcbits(b, sl)	biodi_2_crcbits(bmap_2_biodi(b), (sl))
 
-#define BIOD_CRCUP_MAX_AGE	 2		/* in seconds */
+#define BIOD_CRCUP_MAX_AGE	2		/* in seconds */
 
 static inline int
 bmap_iod_timeo_cmp(const void *x, const void *y)
@@ -145,9 +145,10 @@ void		bim_updateseq(uint64_t);
 void bcr_hold_2_ready(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_requeue(struct biod_infl_crcs *, struct biod_crcup_ref *);
+void bcr_ready_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
+void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_xid_check(struct biod_crcup_ref *);
 void bcr_xid_last_bump(struct biod_crcup_ref *);
-void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
 
 void sliod_bmaprlsthr_spawn(void);
 
