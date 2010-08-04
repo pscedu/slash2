@@ -4,6 +4,6 @@ ROOTDIR=../..
 include ${ROOTDIR}/Makefile.path
 
 SUBDIRS+=	config
-SUBDIRS+=	replbit
+#SUBDIRS+=	replbit
 
 include ${SLASHMK}
