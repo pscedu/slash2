@@ -460,15 +460,18 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	bml->bml_flags &= ~BML_READ;
 	bml->bml_flags |= BML_UPGRADE | BML_WRITE;
 
-	if (bmdsi->bmdsi_writers == 1) {
-		psc_assert(!bmdsi->bmdsi_wr_ion);
-		BMAP_ULOCK(b);
-		rc = mds_bmap_ion_assign(bml, prefios);
-	} else {
-		psc_assert(bmdsi->bmdsi_wr_ion);
+	if (bmdsi->bmdsi_wr_ion) {
+		if (bmdsi->bmdsi_writers == 1)
+			// XXX technically this shouldn't happen
+			DEBUG_BMAP(PLL_WARN, b, "bmdsi_wr_ion already present");
+
 		BMAP_ULOCK(b);
 		rc = mds_bmap_ion_update(bml);
+	} else {
+		BMAP_ULOCK(b);
+		rc = mds_bmap_ion_assign(bml, prefios);
 	}
+	psc_assert(bmdsi->bmdsi_wr_ion);
 
 	BMAP_LOCK(b);
 
