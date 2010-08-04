@@ -268,7 +268,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		 *   there is a major problem.
 		 */
 		r = psc_dynarray_getpos(biorqs, i);
-		psc_assert(imp == msl_bmap_to_import(r->biorq_bmap, 0));
+		psc_assert(imp == msl_bmap_to_import(r->biorq_bmap, 1));
 		psc_assert(b == r->biorq_bmap);
 		bmap_flush_inflight_set(r);
 	}
