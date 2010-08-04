@@ -121,58 +121,24 @@ usage(void)
 	exit(1);
 }
 
+struct psc_ctlopt opts[] = {
+	{ 'c', PCOF_FUNC, psc_ctlparse_cmd },
+	{ 'H', PCOF_FLAG, &psc_ctl_noheader },
+	{ 'h', PCOF_FUNC, psc_ctlparse_hashtable },
+	{ 'I', PCOF_FLAG, &psc_ctl_inhuman },
+	{ 'i', PCOF_FUNC, psc_ctlparse_iostats },
+	{ 'L', PCOF_FUNC, psc_ctlparse_lc },
+	{ 'm', PCOF_FUNC, psc_ctlparse_meter },
+	{ 'P', PCOF_FUNC, psc_ctlparse_pool },
+	{ 'p', PCOF_FUNC, psc_ctlparse_param },
+	{ 's', PCOF_FUNC, psc_ctlparse_show }
+};
+int nopts = nitems(opts);
+
 int
 main(int argc, char *argv[])
 {
-	const char *sockfn;
-	int c;
-
-	pfl_init();
 	progname = argv[0];
-	sockfn = SL_PATH_SLICTLSOCK;
-	while ((c = getopt(argc, argv, "c:Hh:Ii:L:m:P:p:S:s:")) != -1)
-		switch (c) {
-		case 'c':
-			psc_ctlparse_cmd(optarg);
-			break;
-		case 'H':
-			psc_ctl_noheader = 1;
-			break;
-		case 'h':
-			psc_ctlparse_hashtable(optarg);
-			break;
-		case 'I':
-			psc_ctl_inhuman = 1;
-			break;
-		case 'i':
-			psc_ctlparse_iostats(optarg);
-			break;
-		case 'L':
-			psc_ctlparse_lc(optarg);
-			break;
-		case 'm':
-			psc_ctlparse_meter(optarg);
-			break;
-		case 'P':
-			psc_ctlparse_pool(optarg);
-			break;
-		case 'p':
-			psc_ctlparse_param(optarg);
-			break;
-		case 'S':
-			sockfn = optarg;
-			break;
-		case 's':
-			psc_ctlparse_show(optarg);
-			break;
-		default:
-			usage();
-		}
-
-	argc -= optind;
-	if (argc)
-		usage();
-
-	psc_ctlcli_main(sockfn);
+	psc_ctlcli_main(SL_PATH_SLICTLSOCK, argc, argv, opts, nopts);
 	exit(0);
 }
