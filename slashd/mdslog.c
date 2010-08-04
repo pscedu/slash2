@@ -166,8 +166,8 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	}
 
 	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
-		(off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
-		mdsio_data, NULL, NULL);
+		 (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
+		 0, mdsio_data, NULL, NULL);
 	if (rc || nb != BMAP_OD_SZ)
 		goto out;
 

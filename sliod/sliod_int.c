@@ -84,7 +84,7 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 
 
 int
-iod_inode_getsize(struct slash_fidgen *fg, uint64_t *size)
+iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size, uint32_t *utimgen)
 {
 	struct fidc_membh *f;
 	struct stat stb;
@@ -97,6 +97,10 @@ iod_inode_getsize(struct slash_fidgen *fg, uint64_t *size)
 
 	*size = stb.st_size;
 
+	FCMH_LOCK(f);
+	*utimgen = f->fcmh_sstb.sst_utimgen;
+	/* fcmh_op_done_type() will drop the lock.
+	 */
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }

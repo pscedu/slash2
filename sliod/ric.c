@@ -138,6 +138,13 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 	 */
 	rc = sli_fcmh_get(fgp, &fcmh);
 	psc_assert(rc == 0);
+	
+	FCMH_LOCK(fcmh);
+	/* Update the utimegen if necessary.
+	 */
+	if (fcmh->fcmh_sstb.sst_utimgen < mq->utimgen)
+		fcmh->fcmh_sstb.sst_utimgen = mq->utimgen;
+	FCMH_ULOCK(fcmh);
 
 	/* ATM, not much to do here for write operations.
 	 */

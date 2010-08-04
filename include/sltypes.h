@@ -89,7 +89,8 @@ struct srt_stat {
 	uint64_t		sst_ino;	/* inode number */
 	uint32_t		sst_gen;	/* full truncate generation */
 	uint32_t		sst_ptruncgen;	/* partial truncate generation */
-
+	uint32_t                sst_utimgen;    /* utimes generation number */
+	uint32_t                sst__pad0;
 	/* XXX remove sst_mask, it has no business here;
 	 * it should be present in a wrapped super structure
 	 */
@@ -139,7 +140,10 @@ struct srt_dirent {
 
 #define	MAX_NAME_BUF_SIZE	377
 
+//XXX shouldn't this be a single bit???
 #define SLASH2_CURSOR_FLAG	0x12345678	/* overload the ioflag of zfs_write() */
+
+#define SLASH_IGNORE_MTIME      0x80000
 
 /**
  * srt_bmap_wire - slash bmap over-wire/on-disk structure.  This

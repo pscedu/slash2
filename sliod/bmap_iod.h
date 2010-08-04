@@ -144,6 +144,7 @@ void		bim_updateseq(uint64_t);
 
 void bcr_hold_2_ready(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
+void bcr_ready_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_requeue(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_ready_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);

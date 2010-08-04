@@ -89,16 +89,25 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 {
 	size_t nb;
 	int rc;
+	uint32_t utimgen;
 	struct sl_mds_crc_log crclog;
 
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
 
 	mdsio_apply_fcmh_size(bmap->bcm_fcmh, crcup->fsize);
+	FCMH_LOCK(bmap->bcm_fcmh);
+	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
+	FCMH_ULOCK(bmap->bcm_fcmh);
+
+	if (utimgen < crcup->utimgen)
+		DEBUG_FCMH(PLL_ERROR, bmap->bcm_fcmh, 
+		   "utimgen %d < crcup->utimgen %d", utimgen, crcup->utimgen);
 
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
-	    bmap_2_zfs_fh(bmap), mds_bmap_crc_log, (void *)&crclog);
+	    (utimgen == crcup->utimgen), bmap_2_zfs_fh(bmap), 
+	    mds_bmap_crc_log, (void *)&crclog);
 
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
@@ -127,7 +136,7 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 	}
 
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
-		(off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
+	        (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF), 0,
 		bmap_2_zfs_fh(bmap), (void *)mds_bmap_repl_log, (void *)bmap);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
@@ -161,7 +170,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 		psc_crc64_calc(&inoh->inoh_ino.ino_crc,
 			     &inoh->inoh_ino, INO_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_ino, INO_OD_SZ, &nb,
-			SL_INODE_START_OFF, inoh_2_mdsio_data(inoh),
+			     SL_INODE_START_OFF, 0, inoh_2_mdsio_data(inoh),
 			mds_inode_addrepl_log, (void *)&jrir);
 
 		if (!rc && nb != INO_OD_SZ)
@@ -180,7 +189,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 		psc_crc64_calc(&inoh->inoh_extras->inox_crc, inoh->inoh_extras,
 			     INOX_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_extras, INOX_OD_SZ, &nb,
-			SL_EXTRAS_START_OFF, inoh_2_mdsio_data(inoh),
+				     SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(inoh),
 			mds_inode_addrepl_log, (void *)&jrir);
 
 		if (!rc && nb != INO_OD_SZ)
@@ -202,7 +211,7 @@ mdsio_bmap_write(struct bmapc_memb *bmap)
 	int rc;
 
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
+	     (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF), 0,
 	    bmap_2_zfs_fh(bmap), NULL, NULL);
 
 	if (rc) {
@@ -249,7 +258,7 @@ mdsio_inode_write(struct slash_inode_handle *i)
 	int rc;
 
 	rc = zfsslash2_write(&rootcreds, &i->inoh_ino, INO_OD_SZ, &nb,
-	    SL_INODE_START_OFF, inoh_2_mdsio_data(i), NULL, NULL);
+	     SL_INODE_START_OFF, 0, inoh_2_mdsio_data(i), NULL, NULL);
 
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: error (rc=%d)",
@@ -295,7 +304,7 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 
 	psc_assert(i->inoh_extras);
 	rc = zfsslash2_write(&rootcreds, i->inoh_extras, INOX_OD_SZ, &nb,
-	    SL_EXTRAS_START_OFF, inoh_2_mdsio_data(i), NULL, NULL);
+	     SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(i), NULL, NULL);
 
 	if (rc) {
 		DEBUG_INOH(PLL_ERROR, i, "zfsslash2_write: error (rc=%d)",

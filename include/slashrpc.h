@@ -351,13 +351,15 @@ struct srm_bmap_crcwire {
 	int32_t			_pad;
 } __packed;
 
-#define MAX_BMAP_INODE_PAIRS	28		/* ~520 bytes (max) per srm_bmap_crcup */
+#define MAX_BMAP_INODE_PAIRS	24		/* ~520 bytes (max) per srm_bmap_crcup */
 
 struct srm_bmap_crcup {
 	struct slash_fidgen	fg;
 	uint64_t		fsize;		/* largest known size - mdsio_apply_fcmh_size() */
 	uint32_t		blkno;		/* bmap block number */
 	uint32_t		nups;		/* number of CRC updates */
+	uint32_t                utimgen;
+	uint32_t                _pad;
 	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
 } __packed;
 
@@ -539,10 +541,12 @@ struct srm_getattr_rep {
 struct srm_io_req {
 	struct srt_bmapdesc	sbd;
 	uint32_t		ptruncgen;
+	uint32_t                utimgen;
 	uint32_t		flags:31;
 	uint32_t		op:1;		/* read/write */
 	uint32_t		size;
 	uint32_t		offset;
+	uint32_t                _pad;
 /* WRITE data is bulk request. */
 } __packed;
 
