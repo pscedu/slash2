@@ -597,6 +597,7 @@ int nopts = nitems(opts);
 int
 main(int argc, char *argv[])
 {
+	pfl_init();
 	progname = argv[0];
 	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts, nopts);
 	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)))

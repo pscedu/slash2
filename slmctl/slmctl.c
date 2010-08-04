@@ -109,6 +109,7 @@ int nopts = nitems(opts);
 int
 main(int argc, char *argv[])
 {
+	pfl_init();
 	progname = argv[0];
 	psc_ctlcli_main(SL_PATH_SLMCTLSOCK, argc, argv, opts, nopts);
 	exit(0);
