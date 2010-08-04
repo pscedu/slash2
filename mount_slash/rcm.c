@@ -128,7 +128,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 int
 msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 {
-	struct msctlmsg_replst_slave mrsl;
+	struct msctlmsg_replst_slave *mrsl;
 	struct srm_replst_slave_req *mq;
 	struct srm_replst_slave_rep *mp;
 	struct pscrpc_bulk_desc *desc;
@@ -144,13 +144,6 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		return (-ECANCELED);
 
 	mh = *mrsq->mrsq_mh;
-
-	if (mrsq->mrsq_fn[0] != '\0')
-		strlcpy(mrsl.mrsl_fn, mrsq->mrsq_fn, sizeof(mrsl.mrsl_fn));
-	else
-		/* XXX try to do a reverse lookup of pathname; check cache maybe? */
-		snprintf(mrsl.mrsl_fn, sizeof(mrsl.mrsl_fn), "%"PRIx64,
-		    mq->fg.fg_fid);
 
 	if (mq->rc) {
 		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
@@ -173,20 +166,27 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		return (-mp->rc);
 	}
 
-	iov.iov_base = mrsl.mrsl_data;
+	mrsl = PSCALLOC(sizeof(*mrsl) + mq->len);
+
+	if (mrsq->mrsq_fn[0] != '\0')
+		strlcpy(mrsl->mrsl_fn, mrsq->mrsq_fn, sizeof(mrsl->mrsl_fn));
+	else
+		/* XXX try to do a reverse lookup of pathname; check cache maybe? */
+		snprintf(mrsl->mrsl_fn, sizeof(mrsl->mrsl_fn), "%"PRIx64,
+		    mq->fg.fg_fid);
+
+	iov.iov_base = mrsl->mrsl_data;
 	iov.iov_len = mq->len;
 
-	memset(&mrsl, 0, sizeof(mrsl));
-	mrsl.mrsl_boff = mq->boff;
-	mrsl.mrsl_nbmaps = mq->nbmaps;
+	mrsl->mrsl_boff = mq->boff;
+	mrsl->mrsl_nbmaps = mq->nbmaps;
 
 	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 	    SRCM_BULK_PORTAL, &iov, 1);
 
 	if (mp->rc == 0) {
 		rc = psc_ctlmsg_send(mrsq->mrsq_fd, mrsq->mrsq_mh->mh_id,
-		    MSCMT_GETREPLST_SLAVE, mq->len +
-		    sizeof(mrsl), &mrsl);
+		    MSCMT_GETREPLST_SLAVE, mq->len + sizeof(*mrsl), mrsl);
 	} else {
 		rc = psc_ctlsenderr(mrsq->mrsq_fd, &mh, "%s",
 		    slstrerror(mq->rc));
@@ -195,11 +195,12 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		mrsq->mrsq_eof = 1;
 	}
 	mrsq_release(mrsq, rc);
+	PSCFREE(mrsl);
 	return (mp->rc);
 }
 
 /**
- * msrcm_handle_releasebmap - handle a RELEASEBMAP request for client from MDS.
+ * msrcm_handle_releasebmap - Handle a RELEASEBMAP request for client from MDS.
  * @rq: request.
  */
 int
