@@ -167,8 +167,9 @@ bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
 
 __static int
 bmap_flush_rpc_cb(struct pscrpc_request *rq,
-    __unusedx struct pscrpc_async_args *args)
+    struct pscrpc_async_args *args)
 {
+	struct slashrpc_cservice *csvc = args->pointer_arg[0];
 	int rc = 0;
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
@@ -178,6 +179,9 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	atomic_dec(&outstandingRpcCnt);
 	DEBUG_REQ(PLL_INFO, rq, "done (outstandingRpcCnt=%d)",
 		  atomic_read(&outstandingRpcCnt));
+
+	sl_csvc_decref(csvc);
+
  out:
 	return (rc);
 }
@@ -208,6 +212,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 		psc_fatalx("rsx_bulkclient() failed with %d", rc);
 
 	req->rq_interpret_reply = bmap_flush_rpc_cb;
+	req->rq_async_args.pointer_arg[0] = csvc;
 	req->rq_compl_cntr = &completedRpcCnt;
 	req->rq_waitq = &rpcCompletion;
 
@@ -249,7 +254,7 @@ __static int
 bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		     int niovs)
 {
-	struct slashrpc_cservice *csvc;
+	struct slashrpc_cservice *csvc, *tcsvc;
 	struct pscrpc_request *req;
 	struct bmpc_ioreq *r;
 	struct bmapc_memb *b;
@@ -269,10 +274,16 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		 *   there is a major problem.
 		 */
 		r = psc_dynarray_getpos(biorqs, i);
-		psc_assert(csvc == msl_bmap_to_csvc(r->biorq_bmap, 1));
+
+		tcsvc = msl_bmap_to_csvc(r->biorq_bmap, 1);
+		psc_assert(csvc == tcsvc);
+		sl_csvc_decref(tcsvc);
+
 		psc_assert(b == r->biorq_bmap);
 		bmap_flush_inflight_set(r);
 	}
+
+	sl_csvc_decref(csvc);
 
 	DEBUG_BIORQ(PLL_INFO, r, "biorq array cb arg (%p)", biorqs);
 
@@ -281,10 +292,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		 *   and attach to the nb request set.
 		 */
 		req = bmap_flush_create_rpc(b, iovs, size, soff, niovs);
-		/* Set the per-req cp arg for the nbreqset cb handler.
-		 *   biorqs MUST be freed by the cb.
-		 */
-		req->rq_async_args.pointer_arg[0] = biorqs;
+		/* biorqs will be freed by the set cb. */
 		pscrpc_nbreqset_add(pndgReqs, req);
 		nrpcs++;
 	} else {
