@@ -90,7 +90,7 @@ struct mdsio_ops {
 	int	(*mio_statfs)(struct statvfs *);
 	int	(*mio_symlink)(const char *, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, struct slash_fidgen *, mdsio_fid_t *, sl_getslfid_cb_t, sl_log_update_t);
 	int	(*mio_unlink)(mdsio_fid_t, const char *, const struct slash_creds *, sl_log_update_t);
-	int	(*mio_write)(const struct slash_creds *, const void *, size_t, size_t *, off_t, void *, sl_log_write_t, void *);
+	int	(*mio_write)(const struct slash_creds *, const void *, size_t, size_t *, off_t, int, void *, sl_log_write_t, void *);
 
 	/* replay interface */
 	int	(*mio_redo_create)(slfid_t, slfid_t, struct srt_stat *, char *);
