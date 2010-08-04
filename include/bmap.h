@@ -135,7 +135,7 @@ struct bmapc_memb {
 #define BREPLST_TRUNCPNDG	4	/* partial truncation in bmap */
 #define BREPLST_GARBAGE		5	/* marked for deletion */
 #define BREPLST_GARBAGE_SCHED	6	/* being deleted */
-#define NBMAPST			7
+#define NBREPLST			7
 
 #define BMAP_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
 
@@ -152,7 +152,7 @@ enum {
 
 /*
  * Routines to get and fetch a bmap replica's status.
- * This code assumes NBMAPST is < 256 !
+ * This code assumes NBREPLST is < 256 !
  */
 #define SL_REPL_GET_BMAP_IOS_STAT(data, off)				\
 	(SL_REPLICA_MASK &						\
@@ -188,7 +188,7 @@ _log_debug_bmapodv(const char *file, const char *func, int lineno,
 {
 	unsigned char *b = bmap->bcm_od->bh_repls;
 	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1];
-	int off, k, ch[NBMAPST];
+	int off, k, ch[NBREPLST];
 
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 

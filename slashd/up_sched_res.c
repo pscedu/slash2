@@ -66,7 +66,7 @@ struct psc_lockedlist	 upsched_listhd =
 void
 slmupschedthr_removeq(struct up_sched_work_item *wk)
 {
-	int locked, uswi_gen, rc, retifset[NBMAPST];
+	int locked, uswi_gen, rc, retifset[NBREPLST];
 	struct slmupsched_thread *smut;
 	struct site_mds_info *smi;
 	struct bmapc_memb *bcm;
@@ -180,7 +180,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
     struct bmapc_memb *bcm, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res, int j)
 {
-	int tract[NBMAPST], retifset[NBMAPST], we_set_busy, rc;
+	int tract[NBREPLST], retifset[NBREPLST], we_set_busy, rc;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
@@ -302,7 +302,7 @@ int
 slmupschedthr_trygarbage(struct up_sched_work_item *wk,
     struct bmapc_memb *bcm, int off, struct sl_resource *dst_res, int j)
 {
-	int tract[NBMAPST], retifset[NBMAPST], rc;
+	int tract[NBREPLST], retifset[NBREPLST], rc;
 	struct slashrpc_cservice *csvc;
 	struct slmupsched_thread *smut;
 	struct resm_mds_info *dst_rmmi;
@@ -724,7 +724,7 @@ upsched_scandir(void)
 {
 	sl_replica_t iosv[SL_MAX_REPLICAS];
 	struct up_sched_work_item *wk;
-	int rc, tract[NBMAPST];
+	int rc, tract[NBREPLST];
 	char *buf, fn[NAME_MAX];
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;

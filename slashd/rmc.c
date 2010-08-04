@@ -648,7 +648,7 @@ ptrunc_tally_ios(struct bmapc_memb *bcm, int iosidx, int val, void *arg)
 int
 slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
-	int tract[NBMAPST], to_set, rc;
+	int tract[NBREPLST], to_set, rc;
 	struct up_sched_work_item *wk;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;

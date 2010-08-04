@@ -215,7 +215,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 
 	val = SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls, off);
 
-	if (val >= NBMAPST)
+	if (val >= NBREPLST)
 		psc_fatalx("corrupt bmap");
 
 	if (cbf)
@@ -330,7 +330,7 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 int
 mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 {
-	int rc, iosidx, tract[NBMAPST], retifset[NBMAPST];
+	int rc, iosidx, tract[NBREPLST], retifset[NBREPLST];
 	struct up_sched_work_item *wk;
 	uint32_t policy;
 
@@ -456,7 +456,7 @@ int
 mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     const sl_replica_t *iosv, int nios)
 {
-	int tract[NBMAPST], retifset[NBMAPST], retifzero[NBMAPST];
+	int tract[NBREPLST], retifset[NBREPLST], retifzero[NBREPLST];
 	int iosidx[SL_MAX_REPLICAS], rc;
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm;
@@ -498,7 +498,7 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 
 	if (bmapno == (sl_bmapno_t)-1) {
 		int repl_some_act = 0, repl_all_act = 1;
-		int ret_if_inact[NBMAPST];
+		int ret_if_inact[NBREPLST];
 
 		/* check if all bmaps are already old/queued */
 		retifset[BREPLST_INVALID] = 1;
@@ -592,7 +592,7 @@ int
 mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
     const sl_replica_t *iosv, int nios)
 {
-	int rc, tract[NBMAPST], retifset[NBMAPST], iosidx[SL_MAX_REPLICAS];
+	int rc, tract[NBREPLST], retifset[NBREPLST], iosidx[SL_MAX_REPLICAS];
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm;
 
@@ -785,7 +785,7 @@ mds_repl_buildbusytable(void)
 void
 mds_repl_reset_scheduled(sl_ios_id_t resid)
 {
-	int tract[NBMAPST], iosidx;
+	int tract[NBREPLST], iosidx;
 	struct up_sched_work_item *wk;
 	struct bmapc_memb *bcm;
 	sl_replica_t repl;

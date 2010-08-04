@@ -187,7 +187,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 int
 slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 {
-	int tract[NBMAPST], retifset[NBMAPST], iosidx;
+	int tract[NBREPLST], retifset[NBREPLST], iosidx;
 	struct sl_resm *dst_resm, *src_resm;
 	struct srm_repl_schedwk_req *mq;
 	struct srm_generic_rep *mp;

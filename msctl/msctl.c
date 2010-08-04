@@ -411,7 +411,7 @@ void
 replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
     __unusedx const void *m)
 {
-	char map[NBMAPST], pmap[NBMAPST], rbuf[PSCFMT_RATIO_BUFSIZ];
+	char map[NBREPLST], pmap[NBREPLST], rbuf[PSCFMT_RATIO_BUFSIZ];
 	struct replst_slave_bdata *rsb, *nrsb;
 	struct srsm_replst_bhdr bhdr;
 	sl_bmapno_t bact, bold, nb;
