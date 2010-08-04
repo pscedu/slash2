@@ -890,12 +890,17 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	/* Only release the odtable entry if the key matches.  If a match
 	 *   is found then verify the sequence number matches.
 	 */
-	if ((bml->bml_flags & BML_WRITE) &&
-	    !bmdsi->bmdsi_writers        &&
-	    (bml->bml_key == bmdsi->bmdsi_assign->odtr_key)) {
+	if ((bml->bml_flags & BML_WRITE) && !bmdsi->bmdsi_writers) {
 		/* odtable sanity checks:
 		 */
 		struct bmi_assign *bmi;
+
+		if (bml->bml_key != bmdsi->bmdsi_assign->odtr_key) {
+			DEBUG_BMAP(PLL_WARN, b, "!bmdsi_writers but bml_key "
+			   "(%"PRId64") != odtr_key(%"PRId64")", bml->bml_key, 
+			   bmdsi->bmdsi_assign->odtr_key);	   
+			goto out;
+		}
 
 		bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
 		psc_assert(bmi && bmi->bmi_seq == bml->bml_seq);
