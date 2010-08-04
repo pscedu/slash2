@@ -1,3 +1,8 @@
+
+07/30/2010 - Client side should handle bmap flush return code in its callback - open
+07/30/2010 - Cannot build grub 1.98 under slash2  - resolved
+08/04/2010 - Fail to re-create the same directory after rename - open
+
 07/30/2010  
 ----------
 
@@ -206,3 +211,23 @@ line3
 
 I tried the same thing on wolerine, and it works fine.  This explains why Paul
 can't reproduce it.
+
+08/04/2010
+----------
+
+BUG: Fail to re-create the same directory after rename
+
+I did the following on lemon:
+
+	mkdir zhihui
+	cd zhihui
+	tar xvf ~/grub-1.98.tar.gz
+	cd grub-1.98
+	./confiure
+	make
+	cd ..
+	mv grub-1.98 grub-1.98-1
+	tar xvf ~/grub-1.98.tar.gz
+	cd grub-1.98			<-- no such file or directory.
+	
+	
