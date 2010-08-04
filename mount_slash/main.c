@@ -82,7 +82,7 @@ int				nstbpref = DEF_READDIR_NENTS;
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-static int  msl_lookup_fidcache(const struct slash_creds *, fuse_ino_t,
+static int msl_lookup_fidcache(const struct slash_creds *, fuse_ino_t,
     const char *, struct slash_fidgen *, struct srt_stat *);
 
 /**
@@ -122,7 +122,7 @@ slash2fuse_getcred(fuse_req_t req, struct slash_creds *cred)
 	cred->gid = ctx->gid;
 }
 
-static mode_t 
+static mode_t
 slash2fuse_getumask(__unusedx fuse_req_t req)
 {
 	mode_t mode;
@@ -162,7 +162,7 @@ lookup_pathname_fg(const char *ofn, struct slash_creds *crp,
 		if ((next = strchr(cpn, '/')) != NULL)
 			*next++ = '\0';
 		rc = msl_lookup_fidcache(crp, fgp->fg_fid,
-				 cpn, fgp, next ? NULL : sstb);
+		    cpn, fgp, next ? NULL : sstb);
 		if (rc)
 			return (rc);
 	}
@@ -245,7 +245,7 @@ slash2fuse_reply_entry(fuse_req_t req, const struct slash_fidgen *fgp,
 
 #define slc_fcmh_get(fgp, sstb, safl, fcmhp)				\
 	_slc_fcmh_get((fgp), (sstb), (safl), (fcmhp),			\
-		      __FILE__, __func__, __LINE__)
+	    __FILE__, __func__, __LINE__)
 
 /**
  * slc_fcmh_get - Create/update a FID cache member handle
@@ -1040,14 +1040,14 @@ slash_lookuprpc(const struct slash_creds *crp, fuse_ino_t parent,
 
 static int
 msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
-	    const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
+    const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
 {
 	struct fidc_membh *p, *c;
 	slfid_t child;
 	int rc;
 
-	psc_infos(PSS_GEN, "looking for file: %s under inode: %lu",
-		  name, parent);
+	psc_info("looking for file: %s under inode: %lu",
+	    name, parent);
 
 	p = fidc_lookup_fid(parent);
 	if (!p)
@@ -1073,8 +1073,9 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 
 	rc = slash2fuse_stat(c, cr);
 	if (!rc) {
-		*fgp  = c->fcmh_fg;
-		*sstb = c->fcmh_sstb;
+		*fgp = c->fcmh_fg;
+		if (sstb)
+			*sstb = c->fcmh_sstb;
 	}
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
@@ -1505,7 +1506,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	FCMH_LOCK(c);
 	if (mq->to_set & SRM_SETATTRF_MTIME)
 		c->fcmh_sstb.sst_mtime = stb->st_mtime;
-	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL | 
+	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 		     FCMH_SETATTRF_HAVELOCK);
 	FCMH_ULOCK(c);
 
@@ -1661,7 +1662,7 @@ msl_init(__unusedx struct fuse_conn_info *conn)
 {
 	char *name;
 	int rc;
-	
+
 	authbuf_checkkeyfile();
 	authbuf_readkeyfile();
 
