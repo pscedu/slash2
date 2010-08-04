@@ -363,8 +363,10 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	FCMH_LOCK(m);
 	fci = fcmh_2_fci(m);
+	
 	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios_id;
-	m->fcmh_state |= FCMH_CLI_HAVEREPLTBL;
+	fci->fci_nrepls = 1;
+	m->fcmh_state |= FCMH_CLI_HAVEREPLTBL;	
 	FCMH_ULOCK(m);
 
 	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD | BMAPGETF_NORETRIEVE,
