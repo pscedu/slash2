@@ -590,7 +590,7 @@ struct psc_ctlopt opts[] = {
 	{ 'r', PCOF_FUNC, parse_replst },
 	{ 's', PCOF_FUNC, psc_ctlparse_show },
 	{ 'U', PCOF_FUNC, parse_dequeue },
-	{ 'R', PCOF_FLAG, &verbose }
+	{ 'v', PCOF_FLAG, &verbose }
 };
 int nopts = nitems(opts);
 
