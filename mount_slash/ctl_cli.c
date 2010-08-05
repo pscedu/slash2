@@ -159,7 +159,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	if (strcmp(mrq->mrq_fn, "") == 0) {
 		displayfn = "<all active replications>";
 		fg.fg_fid = FID_ANY;
-		fg.fg_gen = FIDGEN_ANY;
+		fg.fg_gen = FGEN_ANY;
 		goto issue;
 	}
 

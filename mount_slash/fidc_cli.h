@@ -74,7 +74,7 @@ static __inline int
 _fidc_lookup_load_inode(slfid_t fid, struct fidc_membh **fcmhp,
     const char *file, const char *func, int line)
 {
-	struct slash_fidgen fg = { fid, FIDGEN_ANY };
+	struct slash_fidgen fg = { fid, FGEN_ANY };
 
 	return (_fidc_lookup(&fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
 	    NULL, 0, fcmhp, file, func, line));

@@ -104,11 +104,11 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 
 #if 0
 	/*
-	 * Right now, we allow item with FIDGEN_ANY into cache, and
+	 * Right now, we allow item with FGEN_ANY into cache, and
 	 * cache lookup will trigger a getattr on the client, which
 	 * lead to us.  So we can't assert here.
 	 */
-	psc_assert(fcmh_2_gen(fcmh) != FIDGEN_ANY);
+	psc_assert(fcmh_2_gen(fcmh) != FGEN_ANY);
 #endif
 	psc_assert(sstb->sst_ino == (ino_t)fcmh->fcmh_fg.fg_fid);
 
@@ -236,7 +236,7 @@ _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
 {
 	int rc;
 	struct fidc_membh *fcmhp;
-	struct slash_fidgen t = {f, FIDGEN_ANY};
+	struct slash_fidgen t = {f, FGEN_ANY};
 
 	rc = _fidc_lookup(&t, 0, NULL, 0, &fcmhp, file, func, line);
 	return (rc == 0 ? fcmhp : NULL);

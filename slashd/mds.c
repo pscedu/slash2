@@ -1050,7 +1050,7 @@ mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 #endif
 
 	fg.fg_fid = bmi->bmi_fid;
-	fg.fg_gen = FID_ANY;
+	fg.fg_gen = FGEN_ANY;
 
 	rc = slm_fcmh_get(&fg, &f);
 	if (rc) {

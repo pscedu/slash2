@@ -767,7 +767,7 @@ upsched_scandir(void)
 
 			memset(&fg, 0, sizeof(fg));
 			fg.fg_fid = strtoll(fn, NULL, 16);
-			fg.fg_gen = FIDGEN_ANY;
+			fg.fg_gen = FGEN_ANY;
 
 			rc = mds_repl_loadino(&fg, &fcmh);
 			if (rc)
