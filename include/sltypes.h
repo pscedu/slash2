@@ -102,14 +102,14 @@ struct srt_stat {
 	uint32_t		sst_gid;	/* group ID of owner */
 	uint64_t		sst_rdev;	/* device ID (if special file) */
 	uint64_t		sst_size;	/* total size, in bytes */
-	int64_t			sst_blksize;	/* blocksize for file system I/O */
-	int64_t			sst_blocks;	/* number of 512B blocks allocated */
-	int64_t			sst_atime;	/* time of last access */
-	int64_t			sst_atime_ns;
-	int64_t			sst_mtime;	/* time of last modification */
-	int64_t			sst_mtime_ns;
-	int64_t			sst_ctime;	/* time of last status change */
-	int64_t			sst_ctime_ns;
+	uint64_t		sst_blksize;	/* blocksize for file system I/O */
+	uint64_t		sst_blocks;	/* number of 512B blocks allocated */
+	uint64_t		sst_atime;	/* time of last access */
+	uint64_t		sst_atime_ns;	/* nanoseconds of atime */
+	uint64_t		sst_mtime;	/* time of last modification */
+	uint64_t		sst_mtime_ns;	/* nanoseconds of mtime */
+	uint64_t		sst_ctime;	/* time of last status change */
+	uint64_t		sst_ctime_ns;	/* nanoseconds of ctime */
 } __packed;
 
 struct srt_statfs {
