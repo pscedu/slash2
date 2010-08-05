@@ -662,9 +662,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 		goto out;
 
 	to_set = mq->to_set;
-	if (to_set & SRM_SETATTRF_SIZE) {
-		to_set &= ~SRM_SETATTRF_SIZE;
-		to_set |= SRM_SETATTRF_FSIZE;
+	if (to_set & SETATTR_MASKF_SIZE) {
+		to_set &= ~SETATTR_MASKF_SIZE;
+		to_set |= SETATTR_MASKF_FSIZE;
 		if (mq->attr.sst_size == 0) {
 			/* full truncate */
 		} else {
@@ -676,7 +676,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			ios_list.nios = 0;
 
 			/* partial truncate */
-			to_set |= SRM_SETATTRF_PTRUNCGEN;
+			to_set |= SETATTR_MASKF_PTRUNCGEN;
 
 			wk = psc_pool_get(upsched_pool);
 

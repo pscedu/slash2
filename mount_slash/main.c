@@ -1424,17 +1424,17 @@ slash2fuse_translate_setattr_flags(int in)
 	int out = 0;
 
 	if (in & FUSE_SET_ATTR_MODE)
-		out |= SRM_SETATTRF_MODE;
+		out |= SETATTR_MASKF_MODE;
 	if (in & FUSE_SET_ATTR_UID)
-		out |= SRM_SETATTRF_UID;
+		out |= SETATTR_MASKF_UID;
 	if (in & FUSE_SET_ATTR_GID)
-		out |= SRM_SETATTRF_GID;
+		out |= SETATTR_MASKF_GID;
 	if (in & FUSE_SET_ATTR_SIZE)
-		out |= SRM_SETATTRF_SIZE;
+		out |= SETATTR_MASKF_SIZE;
 	if (in & FUSE_SET_ATTR_ATIME)
-		out |= SRM_SETATTRF_ATIME;
+		out |= SETATTR_MASKF_ATIME;
 	if (in & FUSE_SET_ATTR_MTIME)
-		out |= SRM_SETATTRF_MTIME;
+		out |= SETATTR_MASKF_MTIME;
 	return (out);
 }
 
@@ -1493,7 +1493,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	mq->attr.sst_gen = fcmh_2_gen(c);
 //	mq->attr.sst_mask = ;
 
-	if (mq->to_set & SRM_SETATTRF_SIZE)
+	if (mq->to_set & SETATTR_MASKF_SIZE)
 		DEBUG_FCMH(PLL_NOTIFY, c, "truncate (sz=%"PRId64")",
 			   stb->st_size);
 	/*
@@ -1507,7 +1507,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		goto out;
 
 	FCMH_LOCK(c);
-	if (mq->to_set & SRM_SETATTRF_MTIME)
+	if (mq->to_set & SETATTR_MASKF_MTIME)
 		c->fcmh_sstb.sst_mtime = stb->st_mtime;
 	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 		     FCMH_SETATTRF_HAVELOCK);
@@ -1516,7 +1516,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	sl_internalize_stat(&c->fcmh_sstb, stb);
 	fuse_reply_attr(req, stb, MSL_FUSE_ATTR_TIMEO);
 
-	if (mq->to_set & SRM_SETATTRF_SIZE)
+	if (mq->to_set & SETATTR_MASKF_SIZE)
 		DEBUG_FCMH(PLL_NOTIFY, c, "post truncate (sz=%"PRId64")",
 			   stb->st_size);
  out:

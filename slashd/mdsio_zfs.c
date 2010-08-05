@@ -60,7 +60,7 @@ mdsio_apply_fcmh_size(struct fidc_membh *f, size_t size)
 	ureqlock(&f->fcmh_lock, locked);
 
 	return (zfsslash2_setattr(fcmh_2_fid(f), &f->fcmh_sstb,
-	    SRM_SETATTRF_FSIZE, &rootcreds, NULL,
+	    SETATTR_MASKF_FSIZE, &rootcreds, NULL,
 	    fcmh_2_fmi(f)->fmi_mdsio_data, NULL));
 }
 

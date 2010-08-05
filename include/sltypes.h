@@ -138,7 +138,15 @@ struct srt_dirent {
 };
 #define fuse_dirent srt_dirent
 
-#define	MAX_NAME_BUF_SIZE	377
+/* setattr() to_set mask flags */
+#define SETATTR_MASKF_MODE	(1 << 0)	/* chmod */
+#define SETATTR_MASKF_UID	(1 << 1)	/* chown */
+#define SETATTR_MASKF_GID	(1 << 2)	/* chgrp */
+#define SETATTR_MASKF_SIZE	(1 << 3)	/* metadata truncate */
+#define SETATTR_MASKF_ATIME	(1 << 4)	/* utimes */
+#define SETATTR_MASKF_MTIME	(1 << 5)	/* utimes */
+#define SETATTR_MASKF_FSIZE	(1 << 6)	/* file content size update */
+#define SETATTR_MASKF_PTRUNCGEN	(1 << 7)	/* file content non-zero trunc */
 
 //XXX shouldn't this be a single bit???
 #define SLASH2_CURSOR_FLAG	0x12345678	/* overload the ioflag of zfs_write() */

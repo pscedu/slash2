@@ -668,15 +668,6 @@ struct srm_setattr_req {
 	int32_t			_pad;
 } __packed;
 
-/* to_set flags */
-#define SRM_SETATTRF_MODE	(1 << 0)	/* chmod */
-#define SRM_SETATTRF_UID	(1 << 1)	/* chown */
-#define SRM_SETATTRF_GID	(1 << 2)	/* chgrp */
-#define SRM_SETATTRF_SIZE	(1 << 3)	/* metadata truncate */
-#define SRM_SETATTRF_ATIME	(1 << 4)	/* utimes */
-#define SRM_SETATTRF_MTIME	(1 << 5)	/* utimes */
-#define SRM_SETATTRF_FSIZE	(1 << 6)	/* file content size update */
-#define SRM_SETATTRF_PTRUNCGEN	(1 << 7)	/* file content non-zero trunc */
 #define srm_setattr_rep srm_getattr_rep
 
 struct srm_statfs_req {
