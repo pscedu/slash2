@@ -20,11 +20,8 @@
 #ifndef _SL_JOURNAL_
 #define _SL_JOURNAL_
 
-#include "bmap.h"
 #include "inode.h"
-#include "pathnames.h"
 #include "slashrpc.h"
-#include "slconfig.h"
 
 #define SLJ_MDS_JNENTS		(128 * 1024)	/* 131072 */
 #define SLJ_MDS_RA		1024		/* SLJ_MDS_JNENTS % SLJ_MDS_RA == 0 */
@@ -74,10 +71,10 @@ struct slmds_jent_repgen {
 	slfid_t			sjp_fid;
 	sl_bmapno_t		sjp_bmapno;
 	sl_bmapgen_t		sjp_bgen;
-	uint32_t                sjp_flags;
+	uint32_t		sjp_flags;
 	struct slash_inode_od   sjp_ino;
 	struct slash_inode_extras_od sjp_inox;
-	uint8_t		 	sjp_reptbl[SL_REPLICA_NBYTES];
+	uint8_t			sjp_reptbl[SL_REPLICA_NBYTES];
 } __packed;
 
 /*
@@ -95,44 +92,49 @@ struct slmds_jent_ino_addrepl {
 
 
 struct slmds_jent_bmapseq {
-	uint64_t sjbsq_high_wm;
-	uint64_t sjbsq_low_wm;
+	uint64_t		sjbsq_high_wm;
+	uint64_t		sjbsq_low_wm;
 } __packed;
 
-#define SJ_NAMESPACE_MAGIC		UINT64_C(0xaa5a5aaa43211234)
+#define SJ_NAMESPACE_MAGIC	UINT64_C(0xaa5a5aaa43211234)
 
+#define	SLJ_NAMES_MAX		374
+
+/*
+ * For easy seek within a change log file, each entry has a fixed length
+ * of 512 bytes.  But when we send log entries over the network, we
+ * condense them to save network bandwidth.
+ */
 struct slmds_jent_namespace {
-
 	uint64_t		sjnm_magic;			/* debugging */
 	uint32_t		sjnm_op;			/* operation type */
+	int16_t			sjnm_reclen;
+	int16_t			sjnm__pad;
 
 	uint64_t		sjnm_seqno;			/* namespace update identifier */
 
-	uint64_t		sjnm_parent_s2id;
+	uint64_t		sjnm_parent_s2id;		/* parent dir FID */
 	uint64_t		sjnm_target_s2id;
 	uint64_t		sjnm_new_parent_s2id;		/* rename only */
 
-	uint			sjnm_mask;			/* attribute mask */
+	uint32_t		sjnm_mask;			/* attribute mask */
 	uint32_t		sjnm_mode;			/* file permission */
 
 	int32_t			sjnm_uid;			/* user ID of owner */
 	int32_t			sjnm_gid;			/* group ID of owner */
 
 	int64_t			sjnm_atime;			/* time of last access */
+	int64_t			sjnm_atime_ns;
 	int64_t			sjnm_mtime;			/* time of last modification */
+	int64_t			sjnm_mtime_ns;
 	int64_t			sjnm_ctime;			/* time of last status change */
+	int64_t			sjnm_ctime_ns;
 	uint64_t		sjnm_size;			/* total size, in bytes */
-	/*
-	 * For easy seek within a change log file, each entry
-	 * has a fixed length of 512 bytes.  But when we send
-	 * log entries over the network, we condense them to
-	 * save network bandwidth.
-	 */
-	int16_t			sjnm_reclen;
-	char			sjnm_name[MAX_NAME_BUF_SIZE+1];	/* one or two names */
+	char			sjnm_name[SLJ_NAMES_MAX + 2];	/* one or two names */
 } __packed;
 
-/* List all of the journaling structures here so that the maximum
+/*
+ * List all of the journaling structures here so that the maximum
  *  size can be obtained.
  */
 struct slmds_jents {
@@ -140,14 +142,15 @@ struct slmds_jents {
 		struct slmds_jent_repgen	sjr;
 		struct slmds_jent_crc		sjc;
 		struct slmds_jent_ino_addrepl	sjia;
-		struct slmds_jent_bmapseq       sjsq;
+		struct slmds_jent_bmapseq	sjsq;
 		struct slmds_jent_namespace	sjnm;
 	} slmds_jent_types;
 };
 
 /*
- * The combined size of the standard header of each log entry (i.e., struct psc_journal_enthdr)
- * and its data, if any, should occupy less than this size.
+ * The combined size of the standard header of each log entry
+ * (i.e. struct psc_journal_enthdr) and its data, if any,
+ * must occupy less than this size.
  */
 #define	SLJ_MDS_ENTSIZE		512
 
