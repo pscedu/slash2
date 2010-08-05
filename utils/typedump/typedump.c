@@ -29,6 +29,7 @@
 /* start includes */
 #include "authbuf.h"
 #include "bmap.h"
+#include "bmapdesc.h"
 #include "buffer.h"
 #include "cache_params.h"
 #include "creds.h"

@@ -582,16 +582,16 @@ dump_fcmh_flags(int flags)
 	int seq = 0;
 
 	if (flags & FCMH_CAC_FREE)
-		print_flag("FCMH_CAC_FREE", &seq);
+		pfl_print_flag("FCMH_CAC_FREE", &seq);
 	if (flags & FCMH_CAC_CLEAN)
-		print_flag("FCMH_CAC_CLEAN", &seq);
+		pfl_print_flag("FCMH_CAC_CLEAN", &seq);
 	if (flags & FCMH_CAC_DIRTY)
-		print_flag("FCMH_CAC_DIRTY", &seq);
+		pfl_print_flag("FCMH_CAC_DIRTY", &seq);
 	if (flags & FCMH_CAC_TOFREE)
-		print_flag("FCMH_CAC_TOFREE", &seq);
+		pfl_print_flag("FCMH_CAC_TOFREE", &seq);
 	if (flags & FCMH_HAVE_ATTRS)
-		print_flag("FCMH_HAVE_ATTRS", &seq);
+		pfl_print_flag("FCMH_HAVE_ATTRS", &seq);
 	if (flags & FCMH_GETTING_ATTRS)
-		print_flag("FCMH_GETTING_ATTRS", &seq);
+		pfl_print_flag("FCMH_GETTING_ATTRS", &seq);
 	printf("\n");
 }

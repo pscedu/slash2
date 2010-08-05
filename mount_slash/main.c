@@ -34,6 +34,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/pfl.h"
+#include "pfl/stat.h"
 #include "pfl/str.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
@@ -216,7 +217,7 @@ slash2fuse_fill_entry(struct fuse_entry_param *e,
 	}
 
 	psc_trace("inode:%lu generation:%lu", e->ino, e->generation);
-	dump_statbuf(PLL_TRACE, &e->attr);
+	DEBUG_STATBUF(PLL_DEBUG, &e->attr, "");
 }
 
 __static void
@@ -599,7 +600,7 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 		f->fcmh_sstb.sst_blksize = 32768;
 
 	sl_internalize_stat(&f->fcmh_sstb, &stb);
-	dump_statbuf(PLL_INFO, &stb);
+	DEBUG_STATBUF(PLL_DEBUG, &stb, "getattr");
 	fuse_reply_attr(req, &stb, MSL_FUSE_ATTR_TIMEO);
 
  out:
