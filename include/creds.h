@@ -22,6 +22,8 @@
 
 #include <stdint.h>
 
+struct srt_stat;
+
 #define SLASH_UID	"_slash"
 
 /* fields must aligned and length must be multiple of wordsize */
@@ -30,6 +32,7 @@ struct slash_creds {
 	uint32_t	gid;
 };
 
-void sl_drop_privs(int);
+void	sl_drop_privs(int);
+int	checkcreds(const struct srt_stat *, const struct slash_creds *, int);
 
 #endif /* _SLASH_CREDS_H_ */
