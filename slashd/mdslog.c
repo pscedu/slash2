@@ -39,6 +39,7 @@
 #include "mdsio.h"
 #include "mdslog.h"
 #include "mkfn.h"
+#include "pathnames.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
@@ -256,7 +257,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje)
 {
 	int sz;
 	uint64_t seqno;
-	char fn[PATH_MAX+1];
+	char fn[PATH_MAX];
 	struct slmds_jent_namespace *jnamespace;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
