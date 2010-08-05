@@ -24,6 +24,7 @@
 #include "psc_util/lock.h"
 
 #include "bmap.h"
+#include "bmapdesc.h"
 #include "fidcache.h"
 #include "inode.h"
 #include "slashrpc.h"

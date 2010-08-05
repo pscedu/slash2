@@ -35,16 +35,16 @@
 #include <time.h>
 
 #include "psc_ds/tree.h"
-#include "psc_rpc/rpc.h"
 #include "psc_util/atomic.h"
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"
 #include "psc_util/waitq.h"
 
-#include "sltypes.h"
 #include "cache_params.h"
 #include "fid.h"
 #include "fidcache.h"
+#include "slashrpc.h"
+#include "sltypes.h"
 
 struct fidc_membh;
 struct srt_bmapdesc;
@@ -238,9 +238,6 @@ void	_bmap_op_done(struct bmapc_memb *);
 int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
 	    struct bmapc_memb **);
 
-int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
-	    sl_ios_id_t, lnet_nid_t);
-
 #define bmap_lookup(f, n, bp)		bmap_getf((f), (n), 0, 0, (bp))
 #define bmap_get(f, n, rw, bp)		bmap_getf((f), (n), (rw),	\
 					    BMAPGETF_LOAD, (bp))
@@ -283,17 +280,17 @@ int	 bmapdesc_access_check(struct srt_bmapdesc *, enum rw,
 	} while (0)
 
 enum bmap_opcnt_types {
-	/* 0 */ BMAP_OPCNT_LOOKUP,
-	/* 1 */ BMAP_OPCNT_IONASSIGN,
-	/* 2 */ BMAP_OPCNT_LEASE,
-	/* 3 */ BMAP_OPCNT_MDSLOG,
-	/* 4 */ BMAP_OPCNT_BIORQ,
-	/* 5 */ BMAP_OPCNT_REPLWK,		/* ION */
-	/* 6 */ BMAP_OPCNT_REAPER,		/* Client bmap timeout */
-	/* 7 */ BMAP_OPCNT_COHCB,		/* MDS coherency callback */
-	/* 8 */ BMAP_OPCNT_SLVR,
-	/* 9 */ BMAP_OPCNT_BCRSCHED,
-	/* 10*/ BMAP_OPCNT_RLSSCHED
+/*  0 */ BMAP_OPCNT_LOOKUP,
+/*  1 */ BMAP_OPCNT_IONASSIGN,
+/*  2 */ BMAP_OPCNT_LEASE,
+/*  3 */ BMAP_OPCNT_MDSLOG,
+/*  4 */ BMAP_OPCNT_BIORQ,
+/*  5 */ BMAP_OPCNT_REPLWK,		/* ION */
+/*  6 */ BMAP_OPCNT_REAPER,		/* Client bmap timeout */
+/*  7 */ BMAP_OPCNT_COHCB,		/* MDS coherency callback */
+/*  8 */ BMAP_OPCNT_SLVR,
+/*  9 */ BMAP_OPCNT_BCRSCHED,
+/* 10 */ BMAP_OPCNT_RLSSCHED
 };
 
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
