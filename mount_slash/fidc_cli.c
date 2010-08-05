@@ -65,7 +65,7 @@ slc_fcmh_refresh_age(struct fidc_membh *fcmh)
 	struct fcmh_cli_info *fci;
 
 	fci = fcmh_2_fci(fcmh);
-	PFL_GETTIME(&fci->fci_age);
+	PFL_GETTIMEVAL(&fci->fci_age);
 	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
 }
 

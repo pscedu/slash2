@@ -193,7 +193,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 	struct dircache_ents *e, *tmp;
 	struct timeval now;
 
-	PFL_GETTIME(&now);
+	PFL_GETTIMEVAL(&now);
 
 	spinlock(&m->dcm_lock);
 	m->dcm_alloc += size;
@@ -257,7 +257,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	psc_assert(e->de_info);
 	psc_assert(!e->de_desc);
 
-	PFL_GETTIME(&e->de_age);
+	PFL_GETTIMEVAL(&e->de_age);
 	e->de_age.tv_sec += dirent_timeo;
 	e->de_remlookup = nents - 2; /* subtract "." and ".." */
 	e->de_flags = 0; /* remain '0' until readdir req has completed */

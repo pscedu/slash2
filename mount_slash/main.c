@@ -510,7 +510,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
  restart:
 	FCMH_LOCK(fcmh);
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
-		PFL_GETTIME(&now);
+		PFL_GETTIMEVAL(&now);
 		if (timercmp(&now, &fcmh_2_fci(fcmh)->fci_age, <)) {
 			hit = 1;
 			DEBUG_FCMH(PLL_DEBUG, fcmh,
