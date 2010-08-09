@@ -98,7 +98,7 @@ struct slmds_jent_bmapseq {
 
 #define SJ_NAMESPACE_MAGIC	UINT64_C(0xaa5a5aaa43211234)
 
-#define	SLJ_NAMES_MAX		374
+#define	SLJ_NAMES_MAX		358
 
 /*
  * For easy seek within a change log file, each entry has a fixed length
