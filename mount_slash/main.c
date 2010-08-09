@@ -1074,6 +1074,12 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	if (!c)
 		goto out;
 
+	/*
+	 * We should do a lookup based on name here because a rename
+	 * does not change the file ID and we would get a success
+	 * in a stat RPC.  Note the app is looking based on a name 
+	 * here, not based on ID.
+	 */
 	rc = slash2fuse_stat(c, cr);
 	if (!rc) {
 		*fgp = c->fcmh_fg;
