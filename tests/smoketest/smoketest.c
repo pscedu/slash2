@@ -42,8 +42,8 @@ int
 test_rename(void)
 {
 	int rc;
-	char *tmpname1 = "test-rename.dir";
-	char *tmpname2 = "test-rename.dir";
+	char *tmpname1 = "test-rename1.dir";
+	char *tmpname2 = "test-rename2.dir";
 
 	rc = mkdir(tmpname1, S_IRWXU);
 	if (rc) {
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 	if (rc < 0)
 		err(1, "chdir %s", workdir);
 
-	printf("Seed = %u, workdir = %s\n", seed, workdir);
+	printf("program = %s, seed = %u, workdir = %s\n", progname, seed, workdir);
 	srandom(seed);
 
 	index = 0;
@@ -130,6 +130,7 @@ int main(int argc, char *argv[])
 		rc = (*bug_list[index].funcp)();
 		if (rc)
 			break;
+		index++;
 	}
 	exit(0);
 }
