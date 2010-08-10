@@ -3,7 +3,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <dirent.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -11,7 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
+#include <dirent.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
@@ -41,6 +40,8 @@ int
 test_rename(void)
 {
 	int rc;
+	DIR *dp;
+	struct dirent *dirp;
 	char *tmpname1 = "test-rename1.dir";
 	char *tmpname2 = "test-rename2.dir";
 
@@ -49,11 +50,24 @@ test_rename(void)
 		printf("Fail to create directory %s, errno = %d at line %d!\n", tmpname1, errno, __LINE__);
 		return (1);
 	}
+	/* mimic the tab-completion behavior by reading the current directory */
+	dp = opendir(".");
+	if (dp == NULL) {
+		printf("Fail to open current directory, errno = %d at line %d!\n", errno, __LINE__);
+		return (1);
+	}
+	while ((dirp = readdir(dp)) != NULL);
+	rc = closedir(dp);
+	if (rc < 0) {
+		printf("Fail to close current directory, errno = %d at line %d!\n", errno, __LINE__);
+		return (1);
+	}
 	rc = rename(tmpname1, tmpname2);
 	if (rc) {
 		printf("Fail to rename directory %s, errno = %d at line %d!\n", tmpname1, errno, __LINE__);
 		return (1);
 	}
+	/* the bug causes the following to fail with EEXIST */
 	rc = mkdir(tmpname1, S_IRWXU);
 	if (rc) {
 		printf("Fail to create directory %s, errno = %d at line %d!\n", tmpname1, errno, __LINE__);
@@ -66,7 +80,7 @@ test_rename(void)
 	}
 	rc = rmdir(tmpname2);
 	if (rc) {
-		printf("Fail to remove directory %s, errno = %d at line %d!\n", tmpname1, errno, __LINE__);
+		printf("Fail to remove directory %s, errno = %d at line %d!\n", tmpname2, errno, __LINE__);
 		return (1);
 	}
 	return (0);
