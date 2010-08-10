@@ -80,6 +80,7 @@ struct slashrpc_cservice {
 #define CSVCF_CONNECTED		(1 << 1)
 #define CSVCF_USE_MULTIWAIT	(1 << 2)
 #define CSVCF_ABANDON		(1 << 3)
+#define CSVCF_WANTFREE		(1 << 4)
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
 
@@ -102,9 +103,9 @@ struct slashrpc_cservice *
 	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
 	    void *, void *, enum slconn_type);
 void	 sl_csvc_decref(struct slashrpc_cservice *);
-void	 sl_csvc_free(struct slashrpc_cservice *);
 void	 sl_csvc_incref(struct slashrpc_cservice *);
 void	 sl_csvc_lock_ensure(struct slashrpc_cservice *);
+void	 sl_csvc_markfree(struct slashrpc_cservice *);
 int	 sl_csvc_useable(struct slashrpc_cservice *);
 int	 sl_csvc_usemultiwait(struct slashrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slashrpc_cservice *, long, long);

@@ -145,7 +145,9 @@ mexpcli_destroy(struct pscrpc_export *exp)
 		psclist_del(&bml->bml_exp_lentry);
 	}
 
-	if (mexpc && mexpc->mc_csvc)
-		sl_csvc_free(mexpc->mc_csvc);
+	if (mexpc && mexpc->mc_csvc) {
+		sl_csvc_disable(mexpc->mc_csvc);
+		sl_csvc_decref(mexpc->mc_csvc);
+	}
 	PSCFREE(mexpc);
 }

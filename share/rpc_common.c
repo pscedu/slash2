@@ -94,15 +94,6 @@ slrpc_issue_ping(struct slashrpc_cservice *csvc, uint32_t version)
 	return (rc);
 }
 
-void
-sl_csvc_free(struct slashrpc_cservice *csvc)
-{
-//	psc_assert(psc_atomic32_read(&csvc->csvc_refcnt) == 0);
-	pscrpc_import_put(csvc->csvc_import);
-	csvc->csvc_import = NULL;
-	free(csvc);
-}
-
 __weak void
 psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
 {
@@ -187,12 +178,16 @@ sl_csvc_lock_ensure(struct slashrpc_cservice *csvc)
 		LOCK_ENSURE(csvc->csvc_lock);
 }
 
-int
+__inline int
 sl_csvc_usemultiwait(struct slashrpc_cservice *csvc)
 {
 	return (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_USE_MULTIWAIT);
 }
 
+/**
+ * sl_csvc_useable - Determine service connection useability.
+ * @csvc: client service.
+ */
 int
 sl_csvc_useable(struct slashrpc_cservice *csvc)
 {
@@ -204,23 +199,58 @@ sl_csvc_useable(struct slashrpc_cservice *csvc)
 	  (CSVCF_CONNECTED | CSVCF_ABANDON)) == CSVCF_CONNECTED);
 }
 
-__inline void
+/**
+ * sl_csvc_markfree - Mark that a connection will be freed when the last
+ *	reference goes away.  This should never be performed on service
+ *	connections on resms, only for service connections to clients.
+ * @csvc: client service.
+ */
+void
+sl_csvc_markfree(struct slashrpc_cservice *csvc)
+{
+	int locked;
+
+	locked = sl_csvc_reqlock(csvc);
+	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_ABANDON | CSVCF_WANTFREE);
+	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED | CSVCF_CONNECTING);
+	sl_csvc_ureqlock(csvc, locked);
+}
+
+/**
+ * sl_csvc_incref - Account for releasing the use of a remote service connection.
+ * @csvc: client service.
+ */
+void
 sl_csvc_decref(struct slashrpc_cservice *csvc)
 {
 	sl_csvc_reqlock(csvc);
-	psc_atomic32_dec(&csvc->csvc_refcnt);
-	sl_csvc_wake(csvc);
-	sl_csvc_unlock(csvc);
+	if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_WANTFREE &&
+	    csvc->psc_atomic32_dec_getnew(&csvc->csvc_refcnt) == 0) {
+		pscrpc_import_put(csvc->csvc_import);
+		free(csvc);
+	} else {
+		sl_csvc_wake(csvc);
+		sl_csvc_unlock(csvc);
+	}
 }
 
-__inline void
+/**
+ * sl_csvc_incref - Account for starting to use a remote service connection.
+ * @csvc: client service.
+ */
+void
 sl_csvc_incref(struct slashrpc_cservice *csvc)
 {
 	sl_csvc_lock_ensure(csvc);
 	psc_atomic32_inc(&csvc->csvc_refcnt);
 }
 
-__inline void
+/**
+ * sl_csvc_disconnect - Perform actual network disconnect to a remote
+ *	service.
+ * @csvc: client service.
+ */
+void
 sl_csvc_disconnect(struct slashrpc_cservice *csvc)
 {
 	int locked;
@@ -233,13 +263,18 @@ sl_csvc_disconnect(struct slashrpc_cservice *csvc)
 	pscrpc_abort_inflight(csvc->csvc_import);
 }
 
-__inline void
+/**
+ * sl_csvc_disable - Mark a connection as no longer available.
+ * @csvc: client service.
+ */
+void
 sl_csvc_disable(struct slashrpc_cservice *csvc)
 {
 	int locked;
 
 	locked = sl_csvc_reqlock(csvc);
 	psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_ABANDON);
+	psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTED | CSVCF_CONNECTING);
 	sl_csvc_wake(csvc);
 	sl_csvc_ureqlock(csvc, locked);
 }
