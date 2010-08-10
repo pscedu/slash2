@@ -1,21 +1,20 @@
-/* $Id: namespace.c 11864 2010-05-25 16:47:12Z yanovich $ */
+/* $Id$ */
 
 #include <sys/types.h>
 #include <sys/stat.h>
 
 #include <dirent.h>
 #include <err.h>
-#include <time.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
-#include "psc_ds/queue.h"
 
 #define		 DEFAULT_SEED		123456
 
@@ -86,7 +85,8 @@ struct bug_history bug_list[] = {
 	}
 };
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	int c, rc, pid, index;
 
@@ -96,13 +96,13 @@ int main(int argc, char *argv[])
 	else
 		progname++;
 
-	while ((c = getopt (argc, argv, "s:")) != -1) {
+	while ((c = getopt(argc, argv, "s:")) != -1) {
 		switch (c) {
-			case 's':
-				seed = atoi(optarg);
-				break;
-			default:
-				usage();
+		case 's':
+			seed = atoi(optarg);
+			break;
+		default:
+			usage();
 		}
 	}
 	argc -= optind;
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 		usage();
 
 	pid = getpid();
-	sprintf(workdir, "%s/%d", argv[0], pid);
+	snprintf(workdir, sizeof(workdir), "%s/%d", argv[0], pid);
 	rc = mkdir(workdir, S_IRWXU);
 	if (rc < 0)
 		err(1, "mkdir %s", workdir);
@@ -134,4 +134,3 @@ int main(int argc, char *argv[])
 	}
 	exit(0);
 }
-
