@@ -1246,6 +1246,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
     const char *name, fuse_ino_t newparent, const char *newname)
 {
 	struct slashrpc_cservice *csvc = NULL;
+	struct fidc_membh *p;
 	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
@@ -1279,6 +1280,19 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	iov[1].iov_len = mq->tolen;
 
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL, iov, 2);
+
+	p = fidc_lookup_fid(parent);
+	if (p) {
+		if (!DIRCACHE_INITIALIZED(p)) {
+			FCMH_LOCK(p);
+			DIRCACHE_INIT(p, &dircacheMgr);
+			FCMH_ULOCK(p);
+		} else
+			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
+				 name, DC_STALE);
+
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+	}
 
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
