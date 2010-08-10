@@ -364,10 +364,10 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	FCMH_LOCK(m);
 	fci = fcmh_2_fci(m);
-	
+
 	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios_id;
 	fci->fci_nrepls = 1;
-	m->fcmh_state |= FCMH_CLI_HAVEREPLTBL;	
+	m->fcmh_state |= FCMH_CLI_HAVEREPLTBL;
 	FCMH_ULOCK(m);
 
 	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD | BMAPGETF_NORETRIEVE,
@@ -506,14 +506,13 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	struct srm_getattr_req *mq;
 	struct srm_getattr_rep *mp;
 	struct timeval now;
-	int hit = 0, rc = 0;
+	int rc = 0;
 
  restart:
 	FCMH_LOCK(fcmh);
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
 		PFL_GETTIMEVAL(&now);
 		if (timercmp(&now, &fcmh_2_fci(fcmh)->fci_age, <)) {
-			hit = 1;
 			DEBUG_FCMH(PLL_DEBUG, fcmh,
 			    "attrs retrieved from local cache");
 			goto check;
@@ -1077,7 +1076,7 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	/*
 	 * We should do a lookup based on name here because a rename
 	 * does not change the file ID and we would get a success
-	 * in a stat RPC.  Note the app is looking based on a name 
+	 * in a stat RPC.  Note the app is looking based on a name
 	 * here, not based on ID.
 	 */
 	rc = slash2fuse_stat(c, cr);
