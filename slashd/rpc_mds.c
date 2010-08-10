@@ -146,7 +146,7 @@ mexpcli_destroy(struct pscrpc_export *exp)
 	}
 
 	if (mexpc && mexpc->mc_csvc) {
-		sl_csvc_disable(mexpc->mc_csvc);
+		sl_csvc_markfree(mexpc->mc_csvc);
 		sl_csvc_decref(mexpc->mc_csvc);
 	}
 	PSCFREE(mexpc);

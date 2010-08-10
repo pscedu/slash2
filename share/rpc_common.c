@@ -178,7 +178,7 @@ sl_csvc_lock_ensure(struct slashrpc_cservice *csvc)
 		LOCK_ENSURE(csvc->csvc_lock);
 }
 
-__inline int
+int
 sl_csvc_usemultiwait(struct slashrpc_cservice *csvc)
 {
 	return (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_USE_MULTIWAIT);
