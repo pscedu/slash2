@@ -241,10 +241,68 @@ mds_redo_bmap_seq(__unusedx struct psc_journal_enthdr *pje)
 	return (0);
 }
 
+/**
+ * mds_redo_ino_addrepl - Replay an inode replication table update.
+ */
 static int
 mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 {
-	return (0);
+	size_t nb;
+	int i, j, rc;
+	void *mdsio_data;
+	struct slmds_jent_ino_addrepl *jrir;
+	mdsio_fid_t fid;
+	struct slash_inode_od inoh_ino;
+	struct slash_inode_extras_od inoh_extras;
+
+	jrir = PJE_DATA(pje);
+	rc = mdsio_lookup_slfid(jrir->sjir_fid, &rootcreds, NULL, &fid);
+	if (rc)
+		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
+
+	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL,
+	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
+	if (rc)
+		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
+
+	i = jrir->sjir_pos;
+	if (i < SL_DEF_REPLICAS) {
+
+		rc = mdsio_read(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
+			SL_INODE_START_OFF, mdsio_data);
+
+		if (!rc && nb != INO_OD_SZ)
+			rc = EIO;
+		if (rc)
+			goto out;
+
+		inoh_ino.ino_repls[i].bs_id = jrir->sjir_ios;
+		rc = mdsio_write(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
+			SL_INODE_START_OFF, 0, mdsio_data, NULL, NULL);
+
+		if (!rc && nb != INO_OD_SZ)
+			rc = EIO;
+	} else {
+	
+		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
+			SL_EXTRAS_START_OFF, mdsio_data);
+
+		if (!rc && nb != INO_OD_SZ)
+			rc = EIO;
+		if (rc)
+			goto out;
+
+		j = i - SL_DEF_REPLICAS;
+		inoh_extras.inox_repls[j].bs_id = jrir->sjir_ios;
+		rc = mdsio_write(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
+			SL_EXTRAS_START_OFF, 0, mdsio_data, NULL, NULL);
+
+		if (!rc && nb != INO_OD_SZ)
+			rc = EIO;
+	}
+out:
+	mdsio_release(&rootcreds, mdsio_data);
+	return (rc);
 }
 
 /**
