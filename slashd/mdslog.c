@@ -214,6 +214,7 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 		bmap_wire = &jcrc->sjc_crc[i];
 		bmap_disk.bh_crcs[bmap_wire->slot].gc_crc = bmap_wire->crc;
 	}
+	psc_crc64_calc(&bmap_disk.bh_bhcrc, &bmap_disk, BMAP_OD_CRCSZ);
 
 	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		 (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
