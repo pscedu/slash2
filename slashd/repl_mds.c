@@ -418,6 +418,9 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	return (0);
 }
 
+/*
+ * mds_repl_bmap_rel - Release a bmap after use.
+ */
 void
 mds_repl_bmap_rel(struct bmapc_memb *bcm)
 {
