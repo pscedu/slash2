@@ -47,7 +47,7 @@ Perform a
 file system operation.
 .Pp
 The following actions are available:
-.Bl -tag -offset 3n -width 3n
+.Bl -tag -width 3n
 .It Xo
 .Sm off
 .Ic new-repl-policy
@@ -101,7 +101,7 @@ has the following format:
 .Ed
 .Pp
 The value
-.Li Sq *
+.Sq Li *
 will effect all bmaps currently residing in the file.
 .Pp
 See
@@ -116,12 +116,12 @@ Query bucket usage statistics for the given hash table(s).
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Cm threads
+.It Ic threads
 execution threads
 .El
 .Pp
 The value
-.Cm all
+.Ic all
 may be specified to query all hash table statistics.
 .It Fl I
 Do not use human-readable numbers for large numerical displays,
@@ -144,11 +144,22 @@ may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
 .It foo
+
+lusklnd-aggr-rcv                                   0.0B/s     0.0B/s     267.9K
+lusklnd-aggr-snd                                   0.0B/s     0.0B/s     312.8M
+lusklnd-pasv-rcv                                   0.0B/s     0.0B/s       0.0B
+lusklnd-pasv-snd                                   0.0B/s     0.0B/s       0.0B
+lni-snd-tcp10                                      0.0B/s     0.0B/s     267.9K
+lni-rcv-tcp10                                      0.0B/s     0.0B/s     312.8M
+lni-snd-lo                                         0.0B/s     0.0B/s       0.0B
+lni-rcv-lo
 .El
 .Pp
 The value
-.Cm all
-may be specified to query all I/O statistics.
+.Ic all
+may be specified to query all
+.Tn I/O
+statistics.
 .It Fl L Ar listspec
 Query list cache information for the given list(s).
 .Ar listspec
@@ -165,16 +176,25 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Cm fidcclean
+.It Ic bmapflush
+Bmaps awaiting flush completion
+.It Ic bmaptimeout
+Expired bmaps awaiting release
+.It Ic dircache
+Directory entries
+.It Ic fcmhclean
+Reapable file
 Used FID cache entries.
-.It Cm fidcdirty
-Dirty FID cache entries.
-.It Cm fidcfree
-Unused FID cache entries.
+.It Ic fcmhdirty
+File waiting for
+.Tn I/O
+to complete
+.It Ic bmpcLru
+Reapable bmap structures
 .El
 .Pp
 The value
-.Cm all
+.Ic all
 may be specified to retrieve information about all list caches.
 .It Fl m Ar meterspec
 Report progress information in meters.
@@ -188,7 +208,7 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Cm repl- Ns Ar nid
+.It Ic repl- Ns Ar nid
 Replication of inode
 .Ar fid
 metadata to server
@@ -196,7 +216,7 @@ metadata to server
 .El
 .Pp
 The value
-.Cm all
+.Ic all
 may be specified to retrieve information about all meters.
 .It Fl P Ar poolspec
 Report pool parameters.
@@ -255,19 +275,19 @@ is left unspecified, all subsystems will be affected.
 The logging level value may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Cm none
+.It Ic none
 No logging
-.It Cm error
+.It Ic error
 Recoverable failures
-.It Cm warn
+.It Ic warn
 Something wrong which requires attention
-.It Cm notify
+.It Ic notify
 Something unusual which recommends attention
-.It Cm info
+.It Ic info
 Informational messages
-.It Cm debug
+.It Ic debug
 Debugging messages
-.It Cm trace , all
+.It Ic trace , all
 All messages
 .El
 .El
@@ -339,24 +359,23 @@ is displayed.
 .Pp
 If
 .Ar file
-is the special name
+is the special value
 .Sq \&: ,
 all pending replications will be queried.
 Note that file names are unavailable in this mode.
 .Pp
-The following legend lists the states a block may be in:
-.Bl -column "schedul" "Replication poli" "Indicator" -offset indent
-.It Sy State  Ta Sy Replication Policy Ta Sy Indicator
-.It ========================================
-.It active    Ta one-time              Ta Ic +
-.It scheduled Ta one-time              Ta Ic s
-.It old       Ta one-time              Ta Ic o
-.Pp
-.It active    Ta persistent            Ta Ic *
-.It scheduled Ta persistent            Ta Ic S
-.It old       Ta persistent            Ta Ic O
-.Pp
-.It inactive  Ta either                Ta Ic -
+The following legend lists the states a block map may be in for the
+one-time or persistent replication policies:
+.Bl -column "reclaimi" "one-ti" "Indicator" -offset indent
+.It Sy State   Ta Sy One-time Ta Sy Persistent
+.It ================================
+.It active     Ta Li + Ta Li *
+.It reclaiming Ta Li x Ta Li X
+.It garbage    Ta Li g Ta Li G
+.It inactive   Ta Li - Ta Li /
+.It old        Ta Li q Ta Li Q
+.It scheduled  Ta Li s Ta Li S
+.It truncated  Ta Li t Ta Li T
 .El
 .Pp
 See
@@ -402,11 +421,13 @@ may be specified as any non-ambiguous prefix abbreviation of the
 following:
 .Pp
 .Bl -tag -offset indent -width 12n -compact
-.It Cm connections
+.It Ic connections
 Status of hosts on network.
-.It Cm loglevels
+.It Ic files
+Files in cache.
+.It Ic loglevels
 Query thread logging levels.
-.It Cm stats
+.It Ic stats
 Query thread activity statistics.
 .El
 .Pp
@@ -434,29 +455,39 @@ parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
 .Bl -tag -compact -offset indent -width 15n
-.It Cm msbflushthr
+.It Ic msbflushthr
 Bmap flusher thread
-.It Cm msctlthr
+.It Ic msbflushrpcthr
+Bmap flusher asynchronous
+.Tn RPC
+reply thread
+.It Ic msbrlsthr
+Bmap timed releaser thread
+.It Ic msctlthr
 Control thread
-.It Cm mseqpollthr
-Lustre EQPoll thread
-.It Cm msfsthr Ns Ar %d
+.It Ic msctlacthr
+Control connection acceptor thread
+.It Ic msconnthr- Ns Ar %s
+Connection monitor thread
+.It Ic mseqpollthr
+Lustre
+.Fn LNetEQPoll
+thread
+.It Ic msfsthr Ns Ar %d
 File system service thread
-.It Cm msfusethr
+.It Ic msfusethr
 .Tn FUSE
 master thread
-.It Cm msrcmthr Ns Ar %02d
+.It Ic msrcmthr Ns Ar %02d
 .Tn MDS RPC
 request service
-.It Cm mstintvthr
-Timer interval thread
-.It Cm mstiosthr
+.It Ic mstiosthr
 Timed
 .Tn I/O
 stats updater thread
-.It Cm msusklndplthr Ns Ar %d
+.It Ic msusklndplthr Ns Ar %d
 Lustre userland socket poll thread
-.It Cm everyone
+.It Ic everyone
 All threads (default, where applicable)
 .El
 .Sh FILES
