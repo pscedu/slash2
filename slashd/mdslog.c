@@ -277,6 +277,8 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 			goto out;
 
 		inoh_ino.ino_repls[i].bs_id = jrir->sjir_ios;
+		psc_crc64_calc(&inoh_ino.ino_crc, &inoh_ino, INO_OD_CRCSZ);
+
 		rc = mdsio_write(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
 			SL_INODE_START_OFF, 0, mdsio_data, NULL, NULL);
 
@@ -294,6 +296,8 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 
 		j = i - SL_DEF_REPLICAS;
 		inoh_extras.inox_repls[j].bs_id = jrir->sjir_ios;
+		psc_crc64_calc(&inoh_extras.inox_crc, &inoh_extras, INOX_OD_CRCSZ);
+
 		rc = mdsio_write(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
 			SL_EXTRAS_START_OFF, 0, mdsio_data, NULL, NULL);
 
