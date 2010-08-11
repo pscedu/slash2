@@ -150,7 +150,10 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 	rc = mdsio_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		(off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
 		mdsio_data);
-	if (rc || nb != BMAP_OD_SZ)
+
+	if (!rc && nb != BMAP_OD_SZ)
+		rc = EIO;
+	if (rc)
 		goto out;
 
 	memcpy(bmap_disk.bh_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
@@ -158,11 +161,10 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		 (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
 		 0, mdsio_data, NULL, NULL);
-	if (rc || nb != BMAP_OD_SZ)
-		goto out;
 
+	if (!rc && nb != BMAP_OD_SZ)
+		rc = EIO;
  out:
-
 	mdsio_release(&rootcreds, mdsio_data);
 	return (rc);
 }
@@ -202,7 +204,10 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	rc = mdsio_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		(off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
 		mdsio_data);
-	if (rc || nb != BMAP_OD_SZ)
+
+	if (!rc && nb != BMAP_OD_SZ)
+		rc = EIO;
+	if (rc)
 		goto out;
 
 	for (i = 0 ; i < jcrc->sjc_ncrcs; i++) {
@@ -213,9 +218,9 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		 (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
 		 0, mdsio_data, NULL, NULL);
-	if (rc || nb != BMAP_OD_SZ)
-		goto out;
 
+	if (!rc && nb != BMAP_OD_SZ)
+		rc = EIO;
  out:
 	mdsio_release(&rootcreds, mdsio_data);
 	return (rc);
