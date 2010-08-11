@@ -148,10 +148,10 @@ struct srt_dirent {
 #define SETATTR_MASKF_FSIZE	(1 << 6)	/* file content size update */
 #define SETATTR_MASKF_PTRUNCGEN	(1 << 7)	/* file content non-zero trunc */
 
-//XXX shouldn't this be a single bit???
-#define SLASH2_CURSOR_FLAG	0x12345678	/* overload the ioflag of zfs_write() */
+/* Use a single bit should suffice, but I am panaroid */
+#define	SLASH2_CURSOR_FLAG	0x12345678	/* overload the ioflag of zfs_write() */
 
-#define SLASH_IGNORE_MTIME      0x80000
+#define	SLASH2_IGNORE_MTIME	0x80000
 
 /**
  * srt_bmap_wire - slash bmap over-wire/on-disk structure.  This
