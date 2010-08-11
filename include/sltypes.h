@@ -62,17 +62,21 @@ enum rw {
 enum rw fflags_2_rw(int);
 
 /*
- * Defines a storage system which holds a block or blocks of the
- * respective file.  A number of these structures are statically
- * allocated within the inode and are fixed for the life of the file
- * and apply to snapshots as well as the active file.  This structure
- * saves us from storing the iosystem id within each block at the cost
- * of limiting the number of iosystems which may manage our blocks.
+ * Defines a storage system which can hold a block or blocks of a file.  A number 
+ * of these structures are statically allocated within the inode of the file and 
+ * are fixed for the lifetime of the file.  They apply to snapshots as well as 
+ * the active file.  Such an arrangement saves us from storing the iosystem id 
+ * within each block at the cost of limiting the number of iosystems which may 
+ * manage the blocks of a given file.
  */
 typedef struct slash_replica {
 	sl_ios_id_t		bs_id;		/* ID of this block store    */
 } __packed sl_replica_t;
 
+/*
+ * The default and the maximum number of storage systems that can hold blocks
+ * of any given file.
+ */
 #define SL_DEF_REPLICAS		4
 #define SL_MAX_REPLICAS		64
 
