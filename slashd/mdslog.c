@@ -117,10 +117,54 @@ mds_get_next_seqno(void)
 	return (seqno);
 }
 
+/**
+ * mds_redo_bmap_repl - Replay a replication update on a bmap.  This has to be
+ *   a read-modify-write process because we don't touch the CRC tables.
+ */
 static int
 mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 {
-	return (0);
+	int rc;
+	size_t nb;
+	void *mdsio_data;
+	struct slmds_jent_repgen *jrpg;
+	struct srt_bmap_wire bmap_disk;
+	mdsio_fid_t fid;
+
+	jrpg = PJE_DATA(pje);
+
+	rc = mdsio_lookup_slfid(jrpg->sjp_fid, &rootcreds, NULL, &fid);
+	if (rc) {
+		if (rc == ENOENT) {
+			psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
+			return (-rc);
+		} else 
+			psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
+	}
+
+	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL,
+	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
+	if (rc)
+		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
+
+	rc = mdsio_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
+		(off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
+		mdsio_data);
+	if (rc || nb != BMAP_OD_SZ)
+		goto out;
+
+	memcpy(bmap_disk.bh_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
+
+	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
+		 (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
+		 0, mdsio_data, NULL, NULL);
+	if (rc || nb != BMAP_OD_SZ)
+		goto out;
+
+ out:
+
+	mdsio_release(&rootcreds, mdsio_data);
+	return (rc);
 }
 
 /**
