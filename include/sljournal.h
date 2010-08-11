@@ -71,7 +71,6 @@ struct slmds_jent_repgen {
 	slfid_t				sjp_fid;
 	sl_bmapno_t			sjp_bmapno;
 	sl_bmapgen_t			sjp_bgen;
-	uint32_t			sjp_flags;
 	struct slash_inode_od		sjp_ino;
 	struct slash_inode_extras_od	sjp_inox;
 	uint8_t				sjp_reptbl[SL_REPLICA_NBYTES];
