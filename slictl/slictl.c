@@ -46,6 +46,12 @@ packshow_replwkst(__unusedx const char *arg)
 }
 
 void
+packshow_files(__unusedx const char *thr)
+{
+	psc_ctlmsg_push(SLICMT_GETFILES, sizeof(struct slctlmsg_file));
+}
+
+void
 sliricthr_prdat(const struct psc_ctlmsg_stats *pcst)
 {
 	printf(" #write %8u", pcst->pcst_nwrite);
@@ -83,6 +89,7 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "connections",	packshow_conns },
+	{ "files",		packshow_files },
 	{ "loglevels",		psc_ctl_packshow_loglevel },
 	{ "replwkst",		packshow_replwkst },
 	{ "stats",		psc_ctl_packshow_stats }

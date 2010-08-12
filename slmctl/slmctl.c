@@ -52,8 +52,15 @@ packshow_conns(__unusedx const char *thr)
 	psc_ctlmsg_push(SLMCMT_GETCONNS, sizeof(struct slctlmsg_conn));
 }
 
+void
+packshow_files(__unusedx const char *thr)
+{
+	psc_ctlmsg_push(SLMCMT_GETFILES, sizeof(struct slctlmsg_file));
+}
+
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "connections",	packshow_conns },
+	{ "files",		packshow_files },
 	{ "loglevels",		psc_ctl_packshow_loglevel },
 	{ "odtables",		psc_ctl_packshow_odtables },
 	{ "stats",		psc_ctl_packshow_stats }
