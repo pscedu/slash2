@@ -126,7 +126,10 @@ packshow_conns(__unusedx const char *thr)
 void
 packshow_files(__unusedx const char *thr)
 {
-	psc_ctlmsg_push(MSCMT_GETFILES, sizeof(struct slctlmsg_file));
+	struct slctlmsg_file *scf;
+
+	scf = psc_ctlmsg_push(MSCMT_GETFILES, sizeof(struct slctlmsg_file));
+	scf->scf_fg.fg_fid = FID_ANY;
 }
 
 void

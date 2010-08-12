@@ -33,7 +33,7 @@ struct slctlmsg_file {
 	struct slash_fidgen	scf_fg;		/* identity of the file */
 	int32_t			scf_ptruncgen;
 	int32_t			scf_st_mode;
-	int32_t			scf_flags;
+	int32_t			scf_flags;	/* FCMH_* flags */
 	int32_t			scf_refcnt;
 };
 

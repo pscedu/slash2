@@ -48,7 +48,10 @@ packshow_replwkst(__unusedx const char *arg)
 void
 packshow_files(__unusedx const char *thr)
 {
-	psc_ctlmsg_push(SLICMT_GETFILES, sizeof(struct slctlmsg_file));
+	struct slctlmsg_file *scf;
+
+	scf = psc_ctlmsg_push(SLICMT_GETFILES, sizeof(struct slctlmsg_file));
+	scf->scf_fg.fg_fid = FID_ANY;
 }
 
 void
