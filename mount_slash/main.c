@@ -692,9 +692,9 @@ __static void
 slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	 mode_t mode)
 {
-	struct fidc_membh *m = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct fidc_membh *m = NULL;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
 	struct slash_creds creds;
@@ -713,7 +713,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		goto out;
 	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-		   SRMT_MKDIR, rq, mq, mp);
+	    SRMT_MKDIR, rq, mq, mp);
 	if (rc)
 		goto out;
 	mq->creds = creds;
@@ -729,7 +729,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 
 	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
-		 mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
+	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
 	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_NONE, &m);
 	if (rc)
@@ -737,26 +737,26 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	slash2fuse_reply_entry(req, &mp->attr);
 
  out:
-	if (rc)
-		fuse_reply_err(req, rc);
 	if (m)
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+	if (rc)
+		fuse_reply_err(req, rc);
 }
 
 __static int
 slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
-	  int isfile)
+    int isfile)
 {
 	struct slashrpc_cservice *csvc = NULL;
-	struct fidc_membh *p;
 	struct pscrpc_request *rq = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	struct slash_creds cr;
+	struct fidc_membh *p;
 	int rc;
 
 	msfsthr_ensure();
@@ -798,8 +798,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-	if (rc)
-		goto out;
+
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -897,7 +896,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	    sizeof(struct srm_getattr_rep)));
 	if (mq->nstbpref) {
 		iov[niov].iov_len = mq->nstbpref *
-			sizeof(struct srm_getattr_rep);
+		    sizeof(struct srm_getattr_rep);
 		iov[niov].iov_base = PSCALLOC(iov[1].iov_len);
 		niov++;
 	}
