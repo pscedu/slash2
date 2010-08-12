@@ -86,7 +86,9 @@ struct dircache_desc {
 static __inline int
 dirent_sort_cmp(const void *a, const void *b)
 {
-	const struct dircache_desc *x = a, *y = b;
+	const void * const *pa = a;
+	const void * const *pb = b;
+	const struct dircache_desc *x = *pa, *y = *pb;
 
 	return (pfl_strncmp2(x->dd_name, x->dd_len, y->dd_name, y->dd_len));
 }
