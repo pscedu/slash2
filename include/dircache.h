@@ -84,22 +84,11 @@ struct dircache_desc {
 #define	DC_LOOKUP		(1 << 1)	/* Item was accessed via lookup */
 
 static __inline int
-dirent_cmp(const void *a, const void *b)
+dirent_sort_cmp(const void *a, const void *b)
 {
 	const struct dircache_desc *x = a, *y = b;
 
-	if (x->dd_hash == y->dd_hash && x->dd_len == y->dd_len)
-		return (strncmp(x->dd_name, y->dd_name, x->dd_len));
 	return (pfl_strncmp2(x->dd_name, x->dd_len, y->dd_name, y->dd_len));
-}
-
-static __inline int
-dirent_sort_cmp(const void *x, const void *y)
-{
-	const void * const *pa = x, *a = *pa;
-	const void * const *pb = y, *b = *pb;
-
-	return (dirent_cmp(a, b));
 }
 
 #define DIRCACHE_INIT(fcmh, mgr)					\
