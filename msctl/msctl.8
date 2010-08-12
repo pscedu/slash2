@@ -117,8 +117,10 @@ Query bucket usage statistics for the given hash table(s).
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
+.It Ic resnid
+network resource
 .It Ic threads
-execution threads
+daemon execution threads
 .El
 .Pp
 The value
@@ -144,16 +146,22 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It foo
-
-lusklnd-aggr-rcv                                   0.0B/s     0.0B/s     267.9K
-lusklnd-aggr-snd                                   0.0B/s     0.0B/s     312.8M
-lusklnd-pasv-rcv                                   0.0B/s     0.0B/s       0.0B
-lusklnd-pasv-snd                                   0.0B/s     0.0B/s       0.0B
-lni-snd-tcp10                                      0.0B/s     0.0B/s     267.9K
-lni-rcv-tcp10                                      0.0B/s     0.0B/s     312.8M
-lni-snd-lo                                         0.0B/s     0.0B/s       0.0B
-lni-rcv-lo
+.It Ic lni-rcv- Ns Ar if ,
+.It Ic lni-snd- Ns Ar if
+Data sent/received per
+.Tn LNET
+networking interface.
+.Pp
+.It Ic lusklnd- Ns Ar mode Ns Ic -rcv ,
+.It Ic lusklnd- Ns Ar mode Ns Ic -snd
+Data sent/received over userland socket networking device.
+.Ar mode
+may be
+.Ic pasv
+.Pq passive
+or
+.Ic aggr
+.Pq aggregate .
 .El
 .Pp
 The value

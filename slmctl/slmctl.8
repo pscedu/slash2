@@ -49,10 +49,10 @@ Query bucket usage statistics for the given hash table(s).
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Cm threads
-execution threads
 .It Cm resnid
 network resource
+.It Cm threads
+daemon execution threads
 .Po by
 .Tn NID
 .Pc
@@ -91,7 +91,12 @@ networking interface.
 .It Cm lusklnd- Ns Ar mode Ns Cm -snd
 Data sent/received over userland socket networking device.
 .Ar mode
-may be passive or aggregate.
+may be
+.Ic pasv
+.Pq passive
+or
+.Ic aggr
+.Pq aggregate .
 .Pp
 .It Cm jrnlwr- Ns Ar fn ,
 .It Cm jrnlrd- Ns Ar fn
