@@ -1612,7 +1612,7 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	}
 	rc = 0;
 
-	DEBUG_FCMH(PLL_NOTIFY, f, "buf=%p rc=%d sz=%zu off=%"PSCPRIdOFF,
+	DEBUG_FCMH(PLL_NOTIFY, f, "buf=%p rc=%d sz=%zu off=%"PSCPRIdOFFT,
 	    buf, rc, size, off);
 
 	FCMH_LOCK(f);

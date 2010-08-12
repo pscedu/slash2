@@ -398,8 +398,8 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 		if (!i)
 			off = r->biorq_off;
 
-		DEBUG_BIORQ(PLL_INFO, r, "r tot_reqsz=%u off=%"PSCPRIdOFF,
-			    tot_reqsz, off);
+		DEBUG_BIORQ(PLL_INFO, r, "r tot_reqsz=%u off=%"PSCPRIdOFFT,
+		    tot_reqsz, off);
 		psc_assert(psc_dynarray_len(&r->biorq_pages));
 
 		if (biorq_voff_get(r) <= off) {

@@ -1656,8 +1656,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	 */
 	for (nr=0; s <= e; s++, nr++) {
 		DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh,
-			   "sz=%zu tlen=%zu off=%"PSCPRIdOFF" roff=%"PSCPRIdOFF
-			   " rw=%d", tsize, tlen, off, roff, rw);
+		    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT
+		    " rw=%d", tsize, tlen, off, roff, rw);
 
 		psc_assert(tsize);
 		/* Load up the bmap, if it's not available then we're out of
@@ -1667,13 +1667,13 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		if (!b[nr]) {
 			rc = -EIO;
 			DEBUG_FCMH(PLL_ERROR, mfh->mfh_fcmh,
-				   "sz=%zu tlen=%zu off=%"PSCPRIdOFF" roff=%"PSCPRIdOFF
-				   " rw=%d rc=%d", tsize, tlen, off, roff, rw, rc);
+			    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT
+			    " rw=%d rc=%d", tsize, tlen, off, roff, rw, rc);
 			goto out;
 		}
 
 		msl_biorq_build(&r[nr], b[nr], mfh, (roff - (nr * SLASH_BMAP_SIZE)),
-				tlen, (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
+		    tlen, (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
 		/* Start prefetching our cached buffers.
 		 */
 		msl_pages_prefetch(r[nr]);
