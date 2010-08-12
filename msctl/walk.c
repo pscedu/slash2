@@ -72,7 +72,7 @@ walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
 		if (stat(fn, &stb) == -1)
 			err(1, "%s", fn);
 		else if (!S_ISREG(stb.st_mode))
-			err(1, "%s: not a regular file", fn);
+			errx(1, "%s: not a regular file", fn);
 		else if (realpath(fn, buf) == NULL)
 			err(1, "%s", fn);
 		else
