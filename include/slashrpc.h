@@ -261,7 +261,7 @@ struct srt_bmapdesc {
 	sl_bmapno_t		sbd_bmapno;
 	uint32_t		sbd_flags;
 	uint32_t		sbd__pad;
-};
+} __packed;
 
 /* Must match struct slash_bmap_od!
  */
@@ -300,13 +300,13 @@ struct srt_stat {
 
 #define DEBUG_SSTB(level, sstb, fmt, ...)					\
 	psc_log((level), "sstb (%p) dev:%"PRIu64" mode:%#o nlink:%"PRIu64" "	\
-	    "uid:%u gid:%u rdev:%"PRIu64" sz:%"PRIu64" "			\
-	    "blksz:%"PSCPRI_BLKSIZE_T" blkcnt:%"PRIu64" "			\
+	    "uid:%u gid:%u rdev:%"PRIu64" "					\
+	    "sz:%"PRIu64" blksz:%"PRIu64" blkcnt:%"PRIu64" "			\
 	    "atime:%"PRIu64" mtime:%"PRIu64" ctime:%"PRIu64" " fmt,		\
-	    (stb), (stb)->st_dev, (stb)->st_mode, (stb)->st_nlink,		\
-	    (stb)->st_uid, (stb)->st_gid, (stb)->st_rdev, (stb)->st_size,	\
-	    (stb)->st_blksize, (stb)->st_blocks,				\
-	    (stb)->st_atime, (stb)->st_mtime, (stb)->st_ctime, ## __VA_ARGS__)
+	    (sstb), (sstb)->sst_dev, (sstb)->sst_mode, (sstb)->sst_nlink,	\
+	    (sstb)->sst_uid, (sstb)->sst_gid, (sstb)->sst_rdev,			\
+	    (sstb)->sst_size, (sstb)->sst_blksize, (sstb)->sst_blocks,		\
+	    (sstb)->sst_atime, (sstb)->sst_mtime, (sstb)->sst_ctime, ## __VA_ARGS__)
 
 struct srt_statfs {
 	uint64_t		sf_bsize;	/* file system block size */
@@ -464,7 +464,7 @@ struct srm_garbage_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
-};
+} __packed;
 
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */
 
