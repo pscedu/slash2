@@ -77,11 +77,7 @@ rsb_cmp(const void *a, const void *b)
 {
 	const struct replst_slave_bdata *x = a, *y = b;
 
-	if (x->rsb_boff < y->rsb_boff)
-		return (-1);
-	else if (x->rsb_boff > y->rsb_boff)
-		return (1);
-	return (0);
+	return (CMP(x->rsb_boff, y->rsb_boff));
 }
 
 int
