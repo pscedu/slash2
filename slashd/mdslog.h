@@ -29,10 +29,10 @@
 struct bmapc_memb;
 struct fidc_membh;
 struct slash_inode_handle;
-struct srm_bmap_crcup;
 struct slmds_jent_namespace;
+struct srm_bmap_crcup;
 
-/* 
+/*
  * Keep track of the bmap associated with a CRC update
  * to save fid and bmap lookups.
  */
@@ -76,27 +76,30 @@ struct site_progress {
 	uint64_t		sp_seqno;
 };
 
-/* if something is wrong with logging, we take a crash.
- * Our MDS should be able to recover after being restarted */
+/*
+ * If something is wrong with logging, we take a crash.
+ * Our MDS should be able to recover after being restarted.
+ */
 
-void mds_bmap_crc_log(void *, uint64_t);
-void mds_bmap_repl_log(void *, uint64_t);
-void mds_inode_addrepl_log(void *, uint64_t);
-void mds_namespace_log(int, uint64_t, uint64_t, uint64_t, uint64_t, const struct srt_stat *, const char *, const char *);
+void	mds_bmap_crc_log(void *, uint64_t);
+void	mds_bmap_repl_log(void *, uint64_t);
+void	mds_inode_addrepl_log(void *, uint64_t);
+void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t,
+	    const struct srt_stat *, int, const char *, const char *);
 
-void mds_bmap_sync(void *);
-void mds_inode_sync(void *);
-void mds_journal_init(void);
+void	mds_bmap_sync(void *);
+void	mds_inode_sync(void *);
+void	mds_journal_init(void);
 
-int mds_bmap_repl_update(struct bmapc_memb *);
-int mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
-int mds_inode_addrepl_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
+int	mds_bmap_repl_update(struct bmapc_memb *);
+int	mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
+int	mds_inode_addrepl_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
+
+void	mds_reserve_slot(void);
+void	mds_unreserve_slot(void);
+
+int	mds_redo_namespace(struct slmds_jent_namespace *);
 
 extern struct psc_journal *mdsJournal;
-
-void mds_reserve_slot(void);
-void mds_unreserve_slot(void);
-
-int mds_redo_namespace(struct slmds_jent_namespace *);
 
 #endif /* _SLASHD_MDSLOG_H_ */
