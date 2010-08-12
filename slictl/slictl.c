@@ -101,8 +101,9 @@ int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
-	{ replwkst_prhdr,	replwkst_prdat,	sizeof(struct slictlmsg_replwkst),	NULL },
-	{ sl_conn_prhdr,	sl_conn_prdat,	sizeof(struct slctlmsg_conn),		NULL }
+	{ replwkst_prhdr,	replwkst_prdat,		sizeof(struct slictlmsg_replwkst),	NULL },
+	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
+	{ sl_file_prhdr,	sl_file_prdat,		sizeof(struct slctlmsg_file),		NULL }
 };
 int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
