@@ -440,8 +440,7 @@ msl_fhent_new(struct fidc_membh *f)
 	mfh->mfh_fcmh = f;
 	LOCK_INIT(&mfh->mfh_lock);
 	pll_init(&mfh->mfh_biorqs, struct bmpc_ioreq, biorq_mfh_lentry,
-		 &mfh->mfh_lock);
-
+	    &mfh->mfh_lock);
 	return (mfh);
 }
 

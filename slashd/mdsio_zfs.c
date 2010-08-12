@@ -59,8 +59,8 @@ mdsio_apply_fcmh_size(struct fidc_membh *f, size_t size)
 	fcmh_2_fsz(f) = size;
 	ureqlock(&f->fcmh_lock, locked);
 
-	return (zfsslash2_setattr(fcmh_2_fid(f), &f->fcmh_sstb,
-	    SETATTR_MASKF_FSIZE, &rootcreds, NULL,
+	return (zfsslash2_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
+	    SETATTR_MASKF_DATASIZE, &rootcreds, NULL,
 	    fcmh_2_fmi(f)->fmi_mdsio_data, NULL));
 }
 
@@ -101,12 +101,12 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	FCMH_ULOCK(bmap->bcm_fcmh);
 
 	if (utimgen < crcup->utimgen)
-		DEBUG_FCMH(PLL_ERROR, bmap->bcm_fcmh, 
+		DEBUG_FCMH(PLL_ERROR, bmap->bcm_fcmh,
 		   "utimgen %d < crcup->utimgen %d", utimgen, crcup->utimgen);
 
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
-	    (utimgen == crcup->utimgen), bmap_2_zfs_fh(bmap), 
+	    (utimgen == crcup->utimgen), bmap_2_zfs_fh(bmap),
 	    mds_bmap_crc_log, (void *)&crclog);
 
 	if (rc) {
@@ -136,7 +136,7 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 	}
 
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
-	        (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF), 0,
+		(off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF), 0,
 		bmap_2_zfs_fh(bmap), (void *)mds_bmap_repl_log, (void *)bmap);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",

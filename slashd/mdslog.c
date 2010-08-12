@@ -37,6 +37,7 @@
 #include "fidcache.h"
 #include "inode.h"
 #include "mdsio.h"
+#include "mdsio.h"
 #include "mdslog.h"
 #include "mkfn.h"
 #include "pathnames.h"
@@ -138,12 +139,12 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 		if (rc == ENOENT) {
 			psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
 			return (-rc);
-		} else 
+		} else
 			psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 	}
 
-	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL,
-	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
+	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
+	    NULL, &mdsio_data, NULL, NULL);
 	if (rc)
 		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
 
@@ -177,27 +178,25 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 static int
 mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 {
+	struct srm_bmap_crcwire *bmap_wire;
+	struct srt_bmap_wire bmap_disk;
+	struct slmds_jent_crc *jcrc;
+	void *mdsio_data;
+	mdsio_fid_t mf;
 	int i, rc;
 	size_t nb;
-	void *mdsio_data;
-	struct slmds_jent_crc *jcrc;
-	struct srt_bmap_wire bmap_disk;
-	struct srm_bmap_crcwire *bmap_wire;
-	mdsio_fid_t fid;
 
 	jcrc = PJE_DATA(pje);
 
-	rc = mdsio_lookup_slfid(jcrc->sjc_s2id, &rootcreds, NULL, &fid);
-	if (rc) {
-		if (rc == ENOENT) {
-			psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
-			return (-rc);
-		} else 
-			psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
-	}
+	rc = mdsio_lookup_slfid(jcrc->sjc_s2id, &rootcreds, NULL, &mf);
+	if (rc == ENOENT) {
+		psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
+		return (-rc);
+	} else if (rc)
+		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 
-	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL,
-	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
+	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL,
+	    NULL, NULL, &mdsio_data, NULL, NULL);
 	if (rc)
 		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
 
@@ -261,8 +260,8 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 	if (rc)
 		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 
-	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL,
-	    NULL, NULL, NULL, &mdsio_data, NULL, NULL);
+	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
+	    NULL, &mdsio_data, NULL, NULL);
 	if (rc)
 		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
 
@@ -286,7 +285,7 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 		if (!rc && nb != INO_OD_SZ)
 			rc = EIO;
 	} else {
-	
+
 		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
 			SL_EXTRAS_START_OFF, mdsio_data);
 
@@ -352,7 +351,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		    jnamespace->sjnm_op == NS_OP_MKDIR ||
 		    jnamespace->sjnm_op == NS_OP_LINK ||
 		    jnamespace->sjnm_op == NS_OP_SYMLINK)
- 		    (void)slm_get_next_slashid();
+		    (void)slm_get_next_slashid();
 		break;
 	    default:
 		psc_fatal("invalid log entry type %d", pje->pje_type);
@@ -430,33 +429,34 @@ mds_distill_handler(struct psc_journal_enthdr *pje)
  */
 void
 mds_namespace_log(int op, uint64_t txg, uint64_t parent,
-    uint64_t newparent, uint64_t target, const struct srt_stat *stat,
-    const char *name, const char *newname)
+    uint64_t newparent, const struct srt_stat *stat,
+    int mask, const char *name, const char *newname)
 {
 	char *ptr;
 	int len, distilled;
 	struct slmds_jent_namespace *jnamespace;
-
-	psc_assert(target);
 
 	jnamespace = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	jnamespace->sjnm_op = op;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
 	jnamespace->sjnm_parent_s2id = parent;
-	jnamespace->sjnm_target_s2id = target;
+	jnamespace->sjnm_target_s2id = stat->sst_fid;
 	jnamespace->sjnm_new_parent_s2id = newparent;
 
-	if (stat) {
-		jnamespace->sjnm_mask = stat->sst_mask;
-		jnamespace->sjnm_uid = stat->sst_uid;
-		jnamespace->sjnm_gid = stat->sst_gid;
-		jnamespace->sjnm_mode = stat->sst_mode;
+	jnamespace->sjnm_mask = mask;
 
-		jnamespace->sjnm_atime = stat->sst_atime;
-		jnamespace->sjnm_mtime = stat->sst_mtime;
-		jnamespace->sjnm_ctime = stat->sst_ctime;
-	}
+	jnamespace->sjnm_uid = stat->sst_uid;
+	jnamespace->sjnm_gid = stat->sst_gid;
+	jnamespace->sjnm_mode = stat->sst_mode;
+
+	jnamespace->sjnm_atime = stat->sst_atime;
+	jnamespace->sjnm_atime_ns = stat->sst_atime_ns;
+	jnamespace->sjnm_mtime = stat->sst_mtime;
+	jnamespace->sjnm_mtime_ns = stat->sst_mtime_ns;
+	jnamespace->sjnm_ctime = stat->sst_ctime;
+	jnamespace->sjnm_ctime_ns = stat->sst_ctime_ns;
+
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
 	ptr = jnamespace->sjnm_name;
 	*ptr = '\0';
@@ -476,8 +476,8 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	psc_assert(logentrysize >= jnamespace->sjnm_reclen +
 	    (int)sizeof(struct psc_journal_enthdr) - 1);
 
-	distilled = pjournal_add_entry_distill(mdsJournal, txg, MDS_LOG_NAMESPACE,
-			jnamespace, jnamespace->sjnm_reclen);
+	distilled = pjournal_add_entry_distill(mdsJournal, txg,
+	    MDS_LOG_NAMESPACE, jnamespace, jnamespace->sjnm_reclen);
 
 	if (!distilled)
 		pjournal_put_buf(mdsJournal, jnamespace);
@@ -788,7 +788,7 @@ mds_update_cursor(void *buf, uint64_t txg)
 	cursor->pjc_txg = txg;
 	cursor->pjc_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_s2id = slm_get_curr_slashid();
-		
+
 	rc = mds_bmap_getcurseq(&cursor->pjc_seqno_hwm, &cursor->pjc_seqno_lwm);
 	if (rc) {
 		psc_assert(rc == -EAGAIN);
@@ -798,27 +798,26 @@ mds_update_cursor(void *buf, uint64_t txg)
 
 /**
  * mds_cursor_thread - Update the cursor file in the ZFS that records the current
- * 	transaction group number and other system log status.  If there is no 
- * 	activity in system other that this write to update the cursor, our 
- * 	customized ZFS will extend the life time of the transaction group.
+ *	transaction group number and other system log status.  If there is no
+ *	activity in system other that this write to update the cursor, our
+ *	customized ZFS will extend the life time of the transaction group.
  */
 void
 mds_cursor_thread(__unusedx struct psc_thread *thr)
 {
 	int rc;
-	psc_notify("Cursor update thread has started (LWP %d)", thr->pscthr_thrid);
+
 	while (pscthr_run()) {
-		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor), 
+		rc = mdsio_write_cursor(&mds_cursor, sizeof(mds_cursor),
 			mds_cursor_handle, mds_update_cursor);
-		if (rc) {
-			psc_warn("Fail to update cursor, rc = %d", rc);
-			continue;
-		}
-		psc_notify("Cursor updated: txg=%"PRId64", xid=%"PRId64
-			    ", s2id=0x%"PRIx64", seqno=(%"PRId64", %"PRId64")", 
-			    mds_cursor.pjc_txg, 
-			    mds_cursor.pjc_xid, 
-			    mds_cursor.pjc_s2id, 
+		if (rc)
+			psc_warnx("failed to update cursor, rc = %d", rc);
+		else
+			psc_dbg("Cursor updated: txg=%"PRId64", xid=%"PRId64
+			    ", s2id=0x%"PRIx64", seqno=(%"PRId64", %"PRId64")",
+			    mds_cursor.pjc_txg,
+			    mds_cursor.pjc_xid,
+			    mds_cursor.pjc_s2id,
 			    mds_cursor.pjc_seqno_lwm,
 			    mds_cursor.pjc_seqno_hwm);
 	}
@@ -829,14 +828,14 @@ mds_open_cursor(void)
 {
 	int rc;
 	size_t nb;
-	mdsio_fid_t fid;
+	mdsio_fid_t mf;
 
-	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_CURSOR, NULL,
-		&fid, &rootcreds, NULL);
+	rc = mdsio_lookup(MDSIO_FID_ROOT, SL_PATH_CURSOR, &mf,
+	    &rootcreds, NULL);
 	psc_assert(rc == 0);
 
-	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
-	    NULL, NULL, &mds_cursor_handle, NULL, NULL);
+	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL, NULL,
+	    NULL, &mds_cursor_handle, NULL, NULL);
 	psc_assert(!rc && mds_cursor_handle);
 
 	rc = mdsio_read(&rootcreds, &mds_cursor,
@@ -1172,8 +1171,8 @@ mds_journal_init(void)
 	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
 	    mds_cursor_thread, NULL, 0, "slmjcursorthr");
 
-	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr", 
-			mds_replay_handler,  
+	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
+			mds_replay_handler,
 			npeer != 0 ? mds_distill_handler : NULL);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
@@ -1213,18 +1212,20 @@ mds_unreserve_slot(void)
 int
 mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 {
-	int rc;
-	int hasname = 1;
-	char *newname;
+	int rc, mask, hasname = 1;
 	struct srt_stat stat;
+	char *newname;
 
 	stat.sst_uid = jnamespace->sjnm_uid;
 	stat.sst_gid = jnamespace->sjnm_gid;
 	stat.sst_mode = jnamespace->sjnm_mode;
-	stat.sst_mask = jnamespace->sjnm_mask;
+	mask = jnamespace->sjnm_mask;
 	stat.sst_atime = jnamespace->sjnm_atime;
+	stat.sst_atime_ns = jnamespace->sjnm_atime_ns;
 	stat.sst_mtime = jnamespace->sjnm_mtime;
+	stat.sst_mtime_ns = jnamespace->sjnm_mtime_ns;
 	stat.sst_ctime = jnamespace->sjnm_ctime;
+	stat.sst_ctime_ns = jnamespace->sjnm_ctime_ns;
 
 	switch (jnamespace->sjnm_op) {
 	    case NS_OP_CREATE:

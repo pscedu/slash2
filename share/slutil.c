@@ -33,11 +33,21 @@
 #include "psc_util/log.h"
 
 #include "creds.h"
+#include "fid.h"
 #include "pathnames.h"
+#include "slashrpc.h"
 #include "sltypes.h"
 #include "slutil.h"
 
 const char *sl_datadir = SL_PATH_DATADIR;
+
+enum rw
+fflags_2_rw(int fflags)
+{
+	if (fflags & (O_WRONLY | O_RDWR))
+		return (SL_WRITE);
+	return (SL_READ);
+}
 
 /**
  * sl_externalize_stat - Prepare a 'struct stat' buffer for high-level
@@ -48,14 +58,13 @@ const char *sl_datadir = SL_PATH_DATADIR;
  * Note: the following fields will NOT be filled in as there is no
  * equivalent in the system stat:
  *
- *	- sst_gen
  *	- sst_ptruncgen
+ *	- sst_fg
  */
 void
 sl_externalize_stat(const struct stat *stb, struct srt_stat *sstb)
 {
 	sstb->sst_dev		= stb->st_dev;
-	sstb->sst_ino		= stb->st_ino;
 	sstb->sst_mode		= stb->st_mode;
 	sstb->sst_nlink		= stb->st_nlink;
 	sstb->sst_uid		= stb->st_uid;
@@ -74,7 +83,7 @@ sl_internalize_stat(const struct srt_stat *sstb, struct stat *stb)
 {
 	memset(stb, 0, sizeof(*stb));
 	stb->st_dev		= sstb->sst_dev;
-	stb->st_ino		= sstb->sst_ino;
+	stb->st_ino		= sstb->sst_fg.fg_fid;
 	stb->st_mode		= sstb->sst_mode;
 	stb->st_nlink		= sstb->sst_nlink;
 	stb->st_uid		= sstb->sst_uid;

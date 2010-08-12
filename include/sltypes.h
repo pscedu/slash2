@@ -26,7 +26,6 @@
 #include <stdint.h>
 
 #include "pfl/cdefs.h"
-#include "psc_util/crc.h"
 
 #include "cache_params.h"
 
@@ -57,19 +56,18 @@ typedef uint64_t sl_ino_t;
 enum rw {
 	SL_READ			= 42,
 	SL_WRITE		= 43
+//	SL_RDWR			= 44
 };
 
-enum rw fflags_2_rw(int);
-
 /*
- * Defines a storage system which can hold a block or blocks of a file.  A number 
- * of these structures are statically allocated within the inode of the file and 
- * are fixed for the lifetime of the file.  They apply to snapshots as well as 
- * the active file.  Such an arrangement saves us from storing the iosystem id 
- * within each block at the cost of limiting the number of iosystems which may 
+ * Defines a storage system which can hold a block or blocks of a file.  A number
+ * of these structures are statically allocated within the inode of the file and
+ * are fixed for the lifetime of the file.  They apply to snapshots as well as
+ * the active file.  Such an arrangement saves us from storing the iosystem id
+ * within each block at the cost of limiting the number of iosystems which may
  * manage the blocks of a given file.
  */
-typedef struct slash_replica {
+typedef struct {
 	sl_ios_id_t		bs_id;		/* ID of this block store    */
 } __packed sl_replica_t;
 
@@ -84,51 +82,8 @@ typedef struct slash_replica {
  * Associate a CRC with a generation ID for a block.
  */
 typedef struct slash_gencrc {
-	psc_crc64_t		gc_crc;
+	uint64_t		gc_crc;
 } sl_gcrc_t;
-
-/* Slash RPC transportably safe structures. */
-struct srt_stat {
-	uint64_t		sst_dev;	/* ID of device containing file */
-	uint64_t		sst_ino;	/* inode number */
-	uint32_t		sst_gen;	/* full truncate generation */
-	uint32_t		sst_ptruncgen;	/* partial truncate generation */
-	uint32_t                sst_utimgen;    /* utimes generation number */
-	uint32_t                sst__pad0;
-	/* XXX remove sst_mask, it has no business here;
-	 * it should be present in a wrapped super structure
-	 */
-	uint32_t		sst_mask;	/* bit-mask of attributes */
-
-	uint32_t		sst_mode;	/* file permissions */
-	uint64_t		sst_nlink;	/* number of hard links */
-	uint32_t		sst_uid;	/* user ID of owner */
-	uint32_t		sst_gid;	/* group ID of owner */
-	uint64_t		sst_rdev;	/* device ID (if special file) */
-	uint64_t		sst_size;	/* total size, in bytes */
-	uint64_t		sst_blksize;	/* blocksize for file system I/O */
-	uint64_t		sst_blocks;	/* number of 512B blocks allocated */
-	uint64_t		sst_atime;	/* time of last access */
-	uint64_t		sst_atime_ns;	/* nanoseconds of atime */
-	uint64_t		sst_mtime;	/* time of last modification */
-	uint64_t		sst_mtime_ns;	/* nanoseconds of mtime */
-	uint64_t		sst_ctime;	/* time of last status change */
-	uint64_t		sst_ctime_ns;	/* nanoseconds of ctime */
-} __packed;
-
-struct srt_statfs {
-	uint64_t		sf_bsize;	/* file system block size */
-	uint64_t		sf_frsize;	/* fragment size */
-	uint64_t		sf_blocks;	/* size of fs in f_frsize units */
-	uint64_t		sf_bfree;	/* # free blocks */
-	uint64_t		sf_bavail;	/* # free blocks for non-root */
-	uint64_t		sf_files;	/* # inodes */
-	uint64_t		sf_ffree;	/* # free inodes */
-	uint64_t		sf_favail;	/* # free inodes for non-root */
-	uint64_t		sf_fsid;	/* file system ID */
-	uint64_t		sf_flag;	/* mount flags */
-	uint64_t		sf_namemax;	/* maximum filename length */
-} __packed;
 
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
@@ -146,14 +101,19 @@ struct srt_dirent {
 #define SETATTR_MASKF_MODE	(1 << 0)	/* chmod */
 #define SETATTR_MASKF_UID	(1 << 1)	/* chown */
 #define SETATTR_MASKF_GID	(1 << 2)	/* chgrp */
-#define SETATTR_MASKF_SIZE	(1 << 3)	/* metadata truncate */
-#define SETATTR_MASKF_ATIME	(1 << 4)	/* utimes */
-#define SETATTR_MASKF_MTIME	(1 << 5)	/* utimes */
-#define SETATTR_MASKF_FSIZE	(1 << 6)	/* file content size update */
-#define SETATTR_MASKF_PTRUNCGEN	(1 << 7)	/* file content non-zero trunc */
+#define SETATTR_MASKF_DATASIZE	(1 << 3)	/* file data truncate */
+#define SETATTR_MASKF_METASIZE	(1 << 4)	/* metadata file truncate */
+#define SETATTR_MASKF_ATIME	(1 << 5)	/* utimes */
+#define SETATTR_MASKF_MTIME	(1 << 6)	/* utimes */
+#define SETATTR_MASKF_CTIME	(1 << 7)	/* utimes */
+#define SETATTR_MASKF_PTRUNCGEN	(1 << 8)	/* # non-zero truncates */
+#define SETATTR_MASKF_GEN	(1 << 9)	/* full truncates */
 
-/* Use a single bit should suffice, but I am panaroid */
-#define	SLASH2_CURSOR_FLAG	0x12345678	/* overload the ioflag of zfs_write() */
+#define SETATTR_MASKF_ALL	(~0)
+#define SETATTR_MASKF_CLI_ALL	(SETATTR_MASKF_MODE | SETATTR_MASKF_UID |	\
+				 SETATTR_MASKF_GID | SETATTR_MASKF_DATASIZE |	\
+				 SETATTR_MASKF_ATIME | SETATTR_MASKF_MTIME |	\
+				 SETATTR_MASKF_CTIME)
 
 #define	SLASH2_IGNORE_MTIME	0x80000
 
@@ -174,7 +134,12 @@ struct srt_bmap_wire {
 	sl_bmapgen_t		bh_gen;
 	uint32_t		bh_repl_policy;
 	/* the CRC must be at the end */
-	psc_crc64_t		bh_bhcrc;
+	uint64_t		bh_bhcrc;
+};
+
+struct sl_timespec {
+	uint64_t		tv_sec;
+	uint64_t		tv_nsec;
 };
 
 #endif /* _SL_TYPES_H_ */

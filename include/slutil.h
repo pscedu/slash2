@@ -20,12 +20,17 @@
 #ifndef _SLUTIL_H_
 #define _SLUTIL_H_
 
+#include "sltypes.h"
+
 struct stat;
 struct statvfs;
 
 struct slash_creds;
 struct slash_fidgen;
 struct srt_stat;
+struct srt_statfs;
+
+enum rw	fflags_2_rw(int);
 
 void	sl_externalize_stat(const struct stat *, struct srt_stat *);
 void	sl_internalize_stat(const struct srt_stat *, struct stat *);

@@ -197,13 +197,13 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_resm);
 	PRTYPE(struct sl_resource);
 	PRTYPE(struct sl_site);
+	PRTYPE(struct sl_timespec);
 	PRTYPE(struct slash_creds);
 	PRTYPE(struct slash_fidgen);
 	PRTYPE(struct slash_gencrc);
 	PRTYPE(struct slash_inode_extras_od);
 	PRTYPE(struct slash_inode_handle);
 	PRTYPE(struct slash_inode_od);
-	PRTYPE(struct slash_replica);
 	PRTYPE(struct slash_snapshot);
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slashrpc_export);
@@ -344,13 +344,6 @@ main(int argc, char *argv[])
 	PRVAL(BMPCE_NEW);
 	PRVAL(BMPCE_RBWPAGE);
 	PRVAL(BMPCE_READPNDG);
-	PRVAL(FCMH_OPCNT_BMAP);
-	PRVAL(FCMH_OPCNT_DIRENTBUF);
-	PRVAL(FCMH_OPCNT_LOOKUP_FIDC);
-	PRVAL(FCMH_OPCNT_NEW);
-	PRVAL(FCMH_OPCNT_OPEN);
-	PRVAL(FCMH_OPCNT_UPSCHED);
-	PRVAL(FCMH_OPCNT_WAIT);
 	PRVAL(INOH_EXTRAS_DIRTY);
 	PRVAL(INOH_HAVE_EXTRAS);
 	PRVAL(INOH_INO_DIRTY);

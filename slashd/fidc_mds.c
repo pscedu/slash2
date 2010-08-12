@@ -84,7 +84,7 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 	fmi = fcmh_2_fmi(fcmh);
 	memset(fmi, 0, sizeof(*fmi));
 
-	rc = mdsio_lookup_slfid(fcmh->fcmh_fg.fg_fid, &rootcreds,
+	rc = mdsio_lookup_slfid(fcmh_2_fid(fcmh), &rootcreds,
 	    &fcmh->fcmh_sstb, &fcmh_2_mdsio_fid(fcmh));
 	if (rc) {
 		fcmh->fcmh_state |= FCMH_CTOR_FAILED;
@@ -93,7 +93,6 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 			   rc);
 		return (rc);
 	}
-	fcmh->fcmh_fg.fg_gen = fcmh->fcmh_sstb.sst_gen;
 
 	if (fcmh_isdir(fcmh))
 		rc = mdsio_opendir(fcmh_2_mdsio_fid(fcmh),
@@ -101,7 +100,7 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 	else if (fcmh_isreg(fcmh)) {
 		slash_inode_handle_init(&fmi->fmi_inodeh, fcmh);
 		rc = mdsio_opencreate(fcmh_2_mdsio_fid(fcmh),
-		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL, NULL,
+		    &rootcreds, O_RDWR, 0, NULL, NULL, NULL,
 		    &fcmh_2_mdsio_data(fcmh), NULL, NULL);
 		if (rc == 0) {
 			rc = mds_inode_read(&fmi->fmi_inodeh);

@@ -870,7 +870,7 @@ uswi_findoradd(const struct slash_fidgen *fgp, struct up_sched_work_item **wkp)
 
 	rc = mdsio_opencreatef(mds_upschdir_inum, &rootcreds,
 	    O_CREAT | O_WRONLY, MDSIO_OPENCRF_NOLINK, 0600, fn,
-	    NULL, NULL, NULL, &mdsio_data, NULL, uswi_getslfid);
+	    NULL, NULL, &mdsio_data, NULL, uswi_getslfid);
 	if (rc)
 		goto out;
 	mdsio_release(&rootcreds, mdsio_data);

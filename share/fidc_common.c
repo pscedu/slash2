@@ -76,23 +76,21 @@ fcmh_destroy(struct fidc_membh *f)
  * @fcmh: FID cache member to update.
  * @sstb: incoming stat attributes.
  * @flags: behavioral flags.
+ * Notes: if SAVELOCAL has been specified, save local field values:
+ *	(o) file size
+ *	(o) mtime
  */
 void
-fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
-    int flags)
+fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 {
-	uint64_t size;
-	int64_t mtime;
-
 	if (!(flags & FCMH_SETATTRF_HAVELOCK))
 		FCMH_LOCK(fcmh);
 
-	if (!(fcmh_2_fid(fcmh) == SLFID_ROOT) && fcmh_2_gen(fcmh) > sstb->sst_gen) {
-		DEBUG_FCMH(PLL_WARN, fcmh, "attempt toset attr from a "
-			   "stale generation number!");
-		if (!(flags & FCMH_SETATTRF_HAVELOCK))
-			FCMH_ULOCK(fcmh);
-		return;
+	if (fcmh_2_fid(fcmh) != SLFID_ROOT &&
+	    fcmh_2_gen(fcmh) > sstb->sst_gen) {
+		DEBUG_FCMH(PLL_WARN, fcmh, "attempt to set attr from a "
+		    "stale generation number!");
+		goto out;
 	}
 
 	/*
@@ -102,28 +100,21 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	if ((fcmh->fcmh_flags & FCMH_HAVE_ATTRS) == 0)
 		flags &= ~FCMH_SETATTRF_SAVELOCAL;
 
-#if 0
+	psc_assert(sstb->sst_gen != FGEN_ANY);
+	psc_assert(fcmh->fcmh_fg.fg_fid == sstb->sst_fid);
+
 	/*
-	 * Right now, we allow item with FGEN_ANY into cache, and
-	 * cache lookup will trigger a getattr on the client, which
-	 * lead to us.  So we can't assert here.
+	 * If generation numbers match, take the highest of the values.
+	 * Otherwise, disregard local values and blindly accept what the
+	 * MDS tells us.
 	 */
-	psc_assert(fcmh_2_gen(fcmh) != FGEN_ANY);
-#endif
-	psc_assert(sstb->sst_ino == (ino_t)fcmh->fcmh_fg.fg_fid);
-
-	size = MAX(sstb->sst_size, fcmh_2_fsz(fcmh));
-	mtime = MAX(sstb->sst_mtime, fcmh->fcmh_sstb.sst_mtime);
-
 	if (flags & FCMH_SETATTRF_SAVELOCAL) {
-		/* XXX Can sst_gen conflict with ptruncgen?  Should
-		 *   ptruncgen be reset when sst_gen is bumped?
-		 */
-		if (fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen &&
-		    fcmh_2_gen(fcmh) == sstb->sst_gen)
-			size = fcmh_2_fsz(fcmh);
-		if (fcmh_2_utimgen(fcmh) >= sstb->sst_utimgen)
-			mtime = fcmh->fcmh_sstb.sst_mtime;
+		if (fcmh_2_ptruncgen(fcmh) == sstb->sst_ptruncgen &&
+		    fcmh_2_gen(fcmh) == sstb->sst_gen &&
+		    fcmh_2_fsz(fcmh) > sstb->sst_size)
+			sstb->sst_size = fcmh_2_fsz(fcmh);
+		if (fcmh_2_utimgen(fcmh) == sstb->sst_utimgen)
+			sstb->sst_mtim = fcmh->fcmh_sstb.sst_mtim;
 	}
 
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
@@ -131,23 +122,20 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 			psc_assert(S_ISDIR(sstb->sst_mode));
 		if (!fcmh_isdir(fcmh))
 			psc_assert(!S_ISDIR(sstb->sst_mode));
-
-		psc_assert(sstb->sst_ino);
 	}
 
 	fcmh->fcmh_sstb = *sstb;
-	fcmh_2_gen(fcmh) = sstb->sst_gen;
-	fcmh_2_fsz(fcmh) = size;
-	fcmh->fcmh_sstb.sst_mtime = mtime;
 	fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
+	fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
 
 	if (sl_fcmh_ops.sfop_postsetattr)
 		sl_fcmh_ops.sfop_postsetattr(fcmh);
 
+	DEBUG_FCMH(PLL_DEBUG, fcmh, "attr set");
+
+ out:
 	if (!(flags & FCMH_SETATTRF_HAVELOCK))
 		FCMH_ULOCK(fcmh);
-
-	DEBUG_FCMH(PLL_DEBUG, fcmh, "attr set");
 }
 
 /**
@@ -233,7 +221,7 @@ _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
 {
 	int rc;
 	struct fidc_membh *fcmhp;
-	struct slash_fidgen t = {f, FGEN_ANY};
+	struct slash_fidgen t = { f, FGEN_ANY };
 
 	rc = _fidc_lookup(&t, 0, NULL, 0, &fcmhp, file, func, line);
 	return (rc == 0 ? fcmhp : NULL);
@@ -248,9 +236,8 @@ _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
  */
 int
 _fidc_lookup(const struct slash_fidgen *fgp, int flags,
-    const struct srt_stat *sstb, int setattrflags,
-    struct fidc_membh **fcmhp, const char *file, const char *func,
-    int line)
+    struct srt_stat *sstb, int setattrflags, struct fidc_membh **fcmhp,
+    const char *file, const char *func, int line)
 {
 	int rc, try_create=0;
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;

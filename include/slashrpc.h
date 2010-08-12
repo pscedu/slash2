@@ -26,6 +26,7 @@
 #define _SLASHRPC_H_
 
 #include "pfl/cdefs.h"
+#include "psc_util/crc.h"
 
 #include "authbuf.h"
 #include "cache_params.h"
@@ -267,6 +268,58 @@ struct srt_bmapdesc {
 struct srt_bmap_cli_wire {
 	uint8_t			crcstates[SL_CRCS_PER_BMAP];
 	uint8_t			repls[SL_REPLICA_NBYTES];
+} __packed;
+
+/* Slash RPC transportably safe structures. */
+struct srt_stat {
+	struct slash_fidgen	sst_fg;		/* file ID + truncate generation */
+	uint64_t		sst_dev;	/* ID of device containing file */
+	uint32_t		sst_ptruncgen;	/* partial truncate generation */
+	uint32_t                sst_utimgen;    /* utimes generation number */
+	uint32_t                sst__pad0;
+	uint32_t		sst_mode;	/* file permissions */
+	uint64_t		sst_nlink;	/* number of hard links */
+	uint32_t		sst_uid;	/* user ID of owner */
+	uint32_t		sst_gid;	/* group ID of owner */
+	uint64_t		sst_rdev;	/* device ID (if special file) */
+	uint64_t		sst_size;	/* total size, in bytes */
+	uint64_t		sst_blksize;	/* blocksize for file system I/O */
+	uint64_t		sst_blocks;	/* number of 512B blocks allocated */
+	struct sl_timespec	sst_atim;	/* time of last access */
+	struct sl_timespec	sst_mtim;	/* time of last modification */
+	struct sl_timespec	sst_ctim;	/* time of creation */
+#define sst_fid		sst_fg.fg_fid
+#define sst_gen		sst_fg.fg_gen
+#define sst_atime	sst_atim.tv_sec
+#define sst_atime_ns	sst_atim.tv_nsec
+#define sst_mtime	sst_mtim.tv_sec
+#define sst_mtime_ns	sst_mtim.tv_nsec
+#define sst_ctime	sst_ctim.tv_sec
+#define sst_ctime_ns	sst_ctim.tv_nsec
+} __packed;
+
+#define DEBUG_SSTB(level, sstb, fmt, ...)					\
+	psc_log((level), "sstb (%p) dev:%"PRIu64" mode:%#o nlink:%"PRIu64" "	\
+	    "uid:%u gid:%u rdev:%"PRIu64" sz:%"PRIu64" "			\
+	    "blksz:%"PSCPRI_BLKSIZE_T" blkcnt:%"PRIu64" "			\
+	    "atime:%"PRIu64" mtime:%"PRIu64" ctime:%"PRIu64" " fmt,		\
+	    (stb), (stb)->st_dev, (stb)->st_mode, (stb)->st_nlink,		\
+	    (stb)->st_uid, (stb)->st_gid, (stb)->st_rdev, (stb)->st_size,	\
+	    (stb)->st_blksize, (stb)->st_blocks,				\
+	    (stb)->st_atime, (stb)->st_mtime, (stb)->st_ctime, ## __VA_ARGS__)
+
+struct srt_statfs {
+	uint64_t		sf_bsize;	/* file system block size */
+	uint64_t		sf_frsize;	/* fragment size */
+	uint64_t		sf_blocks;	/* size of fs in f_frsize units */
+	uint64_t		sf_bfree;	/* # free blocks */
+	uint64_t		sf_bavail;	/* # free blocks for non-root */
+	uint64_t		sf_files;	/* # inodes */
+	uint64_t		sf_ffree;	/* # free inodes */
+	uint64_t		sf_favail;	/* # free inodes for non-root */
+	uint64_t		sf_fsid;	/* file system ID */
+	uint64_t		sf_flag;	/* mount flags */
+	uint64_t		sf_namemax;	/* maximum filename length */
 } __packed;
 
 /* ------------------------ BEGIN NAMESPACE MESSAGES ------------------------ */
@@ -513,7 +566,6 @@ struct srm_create_req {
 } __packed;
 
 struct srm_create_rep {
-	struct slash_fidgen	fg;		/* new file's file ID */
 	struct srt_stat		attr;		/* stat(2) buffer of new file attrs */
 	int32_t			rc;		/* 0 for success or slerrno */
 	int32_t			_pad;
@@ -531,7 +583,6 @@ struct srm_getattr_req {
 	struct slash_fidgen	fg;
 } __packed;
 
-/* XXX factor out since this is encapsulated within READDIR */
 struct srm_getattr_rep {
 	struct srt_stat		attr;
 	int32_t			rc;
@@ -571,7 +622,6 @@ struct srm_link_req {
 } __packed;
 
 struct srm_link_rep {
-	struct slash_fidgen	fg;
 	struct srt_stat		attr;
 	int32_t			rc;
 	int32_t			_pad;
@@ -583,7 +633,6 @@ struct srm_lookup_req {
 } __packed;
 
 struct srm_lookup_rep {
-	struct slash_fidgen	fg;
 	struct srt_stat		attr;
 	int32_t			rc;
 	int32_t			_pad;
@@ -598,7 +647,6 @@ struct srm_mkdir_req {
 } __packed;
 
 struct srm_mkdir_rep {
-	struct slash_fidgen	fg;
 	struct srt_stat		attr;
 	int32_t			rc;
 	int32_t			_pad;
@@ -626,11 +674,11 @@ struct srm_readdir_req {
 
 struct srm_readdir_rep {
 	uint64_t		size;
-	uint32_t		num;		/* dirents returned */
-//	uint32_t		nstbpref;	/* attrs prefetched */
+	uint32_t		num;		/* #dirents returned */
+	int32_t			_pad;
 	int32_t			rc;
 /*
- * XXX accompanied by bulk data is but should not be in fuse dirent format
+ * XXX accompanied by bulk data is (but should not be) in fuse dirent format
  *	and must be 64-bit aligned.
  */
 } __packed;
@@ -662,9 +710,8 @@ struct srm_replrq_req {
 } __packed;
 
 struct srm_setattr_req {
-	struct slash_fidgen	fg;
 	struct srt_stat		attr;
-	int32_t			to_set;
+	int32_t			to_set;		/* see SETATTR_MASKF_* */
 	int32_t			_pad;
 } __packed;
 
@@ -689,7 +736,6 @@ struct srm_symlink_req {
 } __packed;
 
 struct srm_symlink_rep {
-	struct slash_fidgen	fg;
 	struct srt_stat		attr;
 	int32_t			rc;
 	int32_t			_pad;

@@ -34,6 +34,7 @@
 
 #include "cache_params.h"
 #include "fid.h"
+#include "slashrpc.h"
 
 #ifndef __LP64__
 #define DEMOTED_INUM_WIDTHS
@@ -65,7 +66,6 @@ struct sl_fcmh_ops {
  * fcmh_get_pri() defined below.
  */
 struct fidc_membh {
-	struct slash_fidgen	 fcmh_fg;		/* identity of the file */
 #ifdef DEMOTED_INUM_WIDTHS
 	struct slash_fidgen	 fcmh_smallfg;		/* integer-demoted fg_fid for hashing */
 #endif
@@ -116,8 +116,9 @@ struct fidc_membh {
 #define FCMH_URLOCK(f, lk)	ureqlock(&(f)->fcmh_lock, (lk))
 #define FCMH_LOCK_ENSURE(f)	LOCK_ENSURE(&(f)->fcmh_lock)
 
+#define fcmh_fg			fcmh_sstb.sst_fg
 #define fcmh_2_fid(f)		(f)->fcmh_fg.fg_fid
-#define fcmh_2_gen(f)		(f)->fcmh_sstb.sst_gen
+#define fcmh_2_gen(f)		(f)->fcmh_fg.fg_gen
 #define fcmh_2_fsz(f)		(f)->fcmh_sstb.sst_size
 #define fcmh_2_fg(f)            (f)->fcmh_fg
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE))
@@ -177,13 +178,13 @@ struct fidc_membh {
 
 /* debugging aid: spit out the reason for the reference count taking/dropping */
 enum fcmh_opcnt_types {
-	FCMH_OPCNT_LOOKUP_FIDC,		/* 0 */
-	FCMH_OPCNT_OPEN,		/* 1 */
-	FCMH_OPCNT_BMAP,		/* 2 */
-	FCMH_OPCNT_DIRENTBUF,		/* 3 */
-	FCMH_OPCNT_NEW,			/* 4 */
-	FCMH_OPCNT_WAIT,		/* 5 */
-	FCMH_OPCNT_UPSCHED		/* 6 */
+/* 0 */	FCMH_OPCNT_LOOKUP_FIDC,		/* fidc_lookup() */
+/* 1 */	FCMH_OPCNT_OPEN,		/* mount_slash FUSE file info */
+/* 2 */	FCMH_OPCNT_BMAP,		/* bcm_fcmh */
+/* 3 */	FCMH_OPCNT_DIRENTBUF,
+/* 4 */	FCMH_OPCNT_NEW,
+/* 5 */	FCMH_OPCNT_WAIT,
+/* 6 */	FCMH_OPCNT_UPSCHED		/* uswi_fcmh */
 };
 
 /* fcmh_setattr() flags */
@@ -192,7 +193,7 @@ enum fcmh_opcnt_types {
 #define FCMH_SETATTRF_HAVELOCK		(1 << 1)
 
 void	fidc_init(int, int, int, int (*)(struct fidc_membh *));
-void	fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
+void	fcmh_setattr(struct fidc_membh *, struct srt_stat *, int);
 
 /* fidc_lookup() flags */
 #define FIDC_LOOKUP_NONE		0
@@ -211,7 +212,7 @@ void	fcmh_setattr(struct fidc_membh *, const struct srt_stat *, int);
 	_fidc_lookup_fg((fgp), __FILE__, __func__, __LINE__)
 
 int			 _fidc_lookup(const struct slash_fidgen *, int,
-			    const struct srt_stat *, int, struct fidc_membh **,
+			    struct srt_stat *, int, struct fidc_membh **,
 			    const char *, const char *, int);
 
 /* these fidc_lookup() wrappers are used for simple lookups (no flags) */

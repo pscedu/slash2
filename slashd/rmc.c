@@ -54,7 +54,7 @@
 #include "up_sched_res.h"
 
 /*
- * The following SLASHIDs are automatically assigned:
+ * The following SLASHIDs are reserved:
  *	0	not used
  *	1	-> /
  */
@@ -109,9 +109,6 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
 		mp->rc = -EINVAL;
-	/* XXX this assert will crash the mds should the client try to
-	 *  reconnect on his own.  Zhihui's namespace tester is causing this.
-	 */
 	psc_assert(e->exp_private == NULL);
 	mexp_cli = mexpcli_get(e);
 	csvc = slm_getclcsvc(e);
@@ -302,7 +299,7 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
 	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
-	    mq->name, &mp->fg, &mq->creds, &mp->attr, mds_namespace_log);
+	    mq->name, &mq->creds, &mp->attr, mds_namespace_log);
 	mds_unreserve_slot();
  out:
 	if (c)
@@ -332,7 +329,7 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 		goto out;
 	}
 	mp->rc = mdsio_lookup(fcmh_2_mdsio_fid(p),
-	    mq->name, &mp->fg, NULL, &rootcreds, &mp->attr);
+	    mq->name, NULL, &rootcreds, &mp->attr);
 
  out:
 	if (p)
@@ -354,9 +351,9 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
-	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(fcmh), mq->name,
-	    mq->mode, &mq->creds, &mp->attr, &mp->fg, NULL,
-	    mds_namespace_log, slm_get_next_slashid);
+	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(fcmh), mq->name, mq->mode,
+	    &mq->creds, &mp->attr, NULL, mds_namespace_log,
+	    slm_get_next_slashid);
 	mds_unreserve_slot();
  out:
 	if (fcmh)
@@ -390,19 +387,19 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
-	//	DEBUG_FCMH(PLL_WARN, p, "create op start for %s", mq->name);
+//	DEBUG_FCMH(PLL_WARN, p, "create op start for %s", mq->name);
 
 	mds_reserve_slot();
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
-	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, &mp->fg,
-	    NULL, &mp->attr, &mdsio_data, mds_namespace_log,
+	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
+	    &mp->attr, &mdsio_data, mds_namespace_log,
 	    slm_get_next_slashid);
 	mds_unreserve_slot();
 
 	if (mp->rc)
 		goto out;
 
-	//	DEBUG_FCMH(PLL_WARN, p, "create op done for %s", mq->name);
+//	DEBUG_FCMH(PLL_WARN, p, "create op done for %s", mq->name);
 	/* XXX enter this into the fcmh cache instead of doing it again
 	 *   This release may be the sanest thing actually, unless EXCL is
 	 *   used.
@@ -410,10 +407,10 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);
 
-	mp->rc2 = slm_fcmh_get(&mp->fg, &fcmh);
+	mp->rc2 = slm_fcmh_get(&mp->attr.sst_fg, &fcmh);
 	if (mp->rc2)
 		goto out;
-	//	DEBUG_FCMH(PLL_WARN, p, "release op done for %s", mq->name);
+//	DEBUG_FCMH(PLL_WARN, p, "release op done for %s", mq->name);
 
 	mp->flags = mq->flags;
 
@@ -657,14 +654,12 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	size_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->attr.sst_fg, &fcmh);
 	if (mp->rc)
 		goto out;
 
-	to_set = mq->to_set;
-	if (to_set & SETATTR_MASKF_SIZE) {
-		to_set &= ~SETATTR_MASKF_SIZE;
-		to_set |= SETATTR_MASKF_FSIZE;
+	to_set = mq->to_set & SETATTR_MASKF_CLI_ALL;
+	if (to_set & SETATTR_MASKF_DATASIZE) {
 		if (mq->attr.sst_size == 0) {
 			/* full truncate */
 		} else {
@@ -746,8 +741,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	 * If the file is open, mdsio_data will be valid and used.
 	 * Otherwise, it will be NULL, and we'll use the mdsio_fid.
 	 */
-	mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &mq->attr, to_set,
-	    &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh), mds_namespace_log);
+	mp->rc = mdsio_setattr(fcmh_2_mdsio_fid(fcmh), &mq->attr,
+	    to_set, &rootcreds, &mp->attr, fcmh_2_mdsio_data(fcmh),
+	    mds_namespace_log);
 
 	if (!mp->rc) {
 		FCMH_LOCK(fcmh);
@@ -757,7 +753,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
  out:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
 	return (0);
 }
 
@@ -864,7 +859,7 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	struct srm_symlink_rep *mp;
 	struct fidc_membh *p;
 	struct iovec iov;
-	char linkname[PATH_MAX+1];
+	char linkname[PATH_MAX];
 
 	p = NULL;
 
@@ -894,7 +889,8 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	linkname[sizeof(linkname) - 1] = '\0';
 	mds_reserve_slot();
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
-	    &mq->creds, &mp->attr, &mp->fg, NULL, slm_get_next_slashid, mds_namespace_log);
+	    &mq->creds, &mp->attr, NULL, slm_get_next_slashid,
+	    mds_namespace_log);
 	mds_unreserve_slot();
  out:
 	if (p)

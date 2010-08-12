@@ -78,7 +78,7 @@ struct resm_cli_info {
 #define resm2rmci(resm)			((struct resm_cli_info *)(resm)->resm_pri)
 
 #define msl_read(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_READ)
-#define msl_write(fh, buf, size, off)	msl_io((fh), (buf), (size), (off), SL_WRITE)
+#define msl_write(fh, buf, size, off)	msl_io((fh), (char *)(buf), (size), (off), SL_WRITE)
 
 struct slashrpc_cservice *
 	 msl_bmap_to_csvc(struct bmapc_memb *, int);
