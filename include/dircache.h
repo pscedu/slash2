@@ -84,14 +84,13 @@ struct dircache_desc {
 #define	DC_LOOKUP		(1 << 1)	/* Item was accessed via lookup */
 
 /*
- * This is also a sort comparison.  We need dirent_cmp() and dirent_sort_cmp() 
+ * This is also a sort comparison.  We need dirent_cmp() and dirent_sort_cmp()
  * for different interfaces.
  */
 static __inline int
 dirent_cmp(const void *a, const void *b)
 {
-	const struct dircache_desc *x = a;
-	const struct dircache_desc *y = b;
+	const struct dircache_desc *x = a, *y = b;
 
 	return (pfl_strncmp2(x->dd_name, x->dd_len, y->dd_name, y->dd_len));
 }
