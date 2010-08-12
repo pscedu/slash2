@@ -37,6 +37,41 @@ struct bug_history {
 };
 
 int
+test_basic(void)
+{
+	int rc, fd;
+	char *tmpdir = "basic-test.dir";
+	char *tmpfile = "basic-test.file";
+
+	rc = mkdir(tmpdir, S_IRWXU);
+	if (rc) {
+		printf("Fail to create directory %s, errno = %d at line %d!\n", tmpdir, errno, __LINE__);
+		return (1);
+	}
+	rc = rmdir(tmpdir);
+	if (rc) {
+		printf("Fail to remove directory %s, errno = %d at line %d!\n", tmpdir, errno, __LINE__);
+		return (1);
+	}
+	fd = open(tmpfile, O_CREAT|O_RDWR, S_IRWXU);
+	if (fd < 0) {
+		printf("Fail to create file %s, errno = %d at line %d!\n", tmpfile, errno, __LINE__);
+		return (1);
+	}
+	rc = close(fd);
+	if (rc < 0) {
+		printf("Fail to close file %s, errno = %d at line %d!\n", tmpfile, errno, __LINE__);
+		return (1);
+	}
+	rc = unlink(tmpfile);
+	if (rc) {
+		printf("Fail to remove file %s, errno = %d at line %d!\n", tmpfile, errno, __LINE__);
+		return (1);
+	}
+	return (0);
+}
+
+int
 test_rename(void)
 {
 	int rc;
@@ -90,6 +125,10 @@ test_rename(void)
 struct bug_history bug_list[] = {
 
 	{
+		"Basic file/directory creations and deletions",
+		test_basic
+	},
+	{
 		"Create a file with the name that has just been renamed",
 		test_rename
 	},
@@ -140,7 +179,7 @@ main(int argc, char *argv[])
 	while (1) {
 		if (bug_list[index].descp == NULL)
 			break;
-		printf("Checking bug: %s\n", bug_list[index].descp);
+		printf("Checking item %d: %s\n",index, bug_list[index].descp);
 		rc = (*bug_list[index].funcp)();
 		if (rc)
 			break;
