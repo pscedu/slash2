@@ -36,9 +36,9 @@ SUBDIRS+=	tests
 SUBDIRS+=	utils
 
 zbuild:
-	@(cd slashd && ${MAKE} zbuild)
+	@(cd ${SLASH_BASE}/slashd && ${MAKE} zbuild)
 
 rezbuild:
-	@(cd slashd && ${MAKE} rezbuild)
+	@(cd ${SLASH_BASE}/slashd && ${MAKE} rezbuild)
 
 fullbuild: zbuild build
