@@ -127,10 +127,6 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 	}
 
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
-		/*
-		 * XXX is this right?  what if someone deletes a dir and
-		 * creates a new file?
-		 */
 		if (fcmh_isdir(fcmh))
 			psc_assert(S_ISDIR(sstb->sst_mode));
 		if (!fcmh_isdir(fcmh))
