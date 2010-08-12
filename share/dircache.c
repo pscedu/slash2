@@ -132,7 +132,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 		 *    must still be compared.
 		 */
 		pos = psc_dynarray_bsearch(&e->de_dents,
-		    &desc, dirent_sort_cmp);
+		    &desc, dirent_cmp);
 		if (pos >= psc_dynarray_len(&e->de_dents))
 			break;
 		d = psc_dynarray_getpos(&e->de_dents, pos);
