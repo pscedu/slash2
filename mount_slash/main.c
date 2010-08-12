@@ -938,7 +938,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		}
 	}
 	/* Establish these dirents in our cache.  Do this before replying
-	 *   to fuse in order to prevent unnecessary lookup rpc's.
+	 *   to fuse in order to prevent unnecessary lookup RPC's.
 	 */
 	if (mp->num)
 		dircache_reg_ents(e, mp->num);
