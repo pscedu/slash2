@@ -263,14 +263,8 @@ _slc_fcmh_get(const struct slash_fidgen *fgp, const struct srt_stat *sstb,
       int setattrflags, struct fidc_membh **fcmhp,
       const char *file, const char *func, int line)
 {
-	int rc;
-
-	rc = _fidc_lookup(fgp, FIDC_LOOKUP_CREATE, sstb,
-		  setattrflags, fcmhp, file, func, line);
-	if (rc)
-		return (rc);
-
-	return (0);
+	return (_fidc_lookup(fgp, FIDC_LOOKUP_CREATE, sstb,
+	    setattrflags, fcmhp, file, func, line));
 }
 
 __static void
@@ -1013,7 +1007,8 @@ slash_lookuprpc(const struct slash_creds *crp, fuse_ino_t parent,
 	if (rc)
 		goto out;
 
-	/* Add the inode to the cache first, otherwise fuse may
+	/*
+	 * Add the inode to the cache first, otherwise fuse may
 	 *  come to us with another request for the inode since it won't
 	 *  yet be visible in the cache.
 	 */
@@ -1526,8 +1521,12 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		goto out;
 
 	FCMH_LOCK(c);
-	if (mq->to_set & SETATTR_MASKF_MTIME)
-		c->fcmh_sstb.sst_mtime = stb->st_mtime;
+	if (mq->to_set & SETATTR_MASKF_MTIME) {
+		c->fcmh_sstb.sst_mtime = mp->attr.sst_mtime;
+		c->fcmh_sstb.sst_mtime_ns = mp->attr.sst_mtime_ns;
+	}
+	if (mq->to_set & SETATTR_MASKF_SIZE)
+		c->fcmh_sstb.sst_size = mp->attr.sst_size;
 	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 		     FCMH_SETATTRF_HAVELOCK);
 	FCMH_ULOCK(c);

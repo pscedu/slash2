@@ -64,7 +64,7 @@ fcmh_destroy(struct fidc_membh *f)
 		else
 			sl_fcmh_ops.sfop_dtor(f);
 	}
-	
+
 	memset(f, 0, fidcPoolMaster.pms_entsize);
 	f->fcmh_state = FCMH_CAC_FREE;
 	fcmh_put(f);
@@ -112,17 +112,18 @@ fcmh_setattr(struct fidc_membh *fcmh, const struct srt_stat *sstb,
 #endif
 	psc_assert(sstb->sst_ino == (ino_t)fcmh->fcmh_fg.fg_fid);
 
-	size = sstb->sst_size;
-	mtime = sstb->sst_mtime;
+	size = MAX(sstb->sst_size, fcmh_2_fsz(fcmh));
+	mtime = MAX(sstb->sst_mtime, fcmh->fcmh_sstb.sst_mtime);
 
 	if (flags & FCMH_SETATTRF_SAVELOCAL) {
 		/* XXX Can sst_gen conflict with ptruncgen?  Should
 		 *   ptruncgen be reset when sst_gen is bumped?
 		 */
-		if (fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen && 
+		if (fcmh_2_ptruncgen(fcmh) >= sstb->sst_ptruncgen &&
 		    fcmh_2_gen(fcmh) == sstb->sst_gen)
 			size = fcmh_2_fsz(fcmh);
-		mtime = fcmh->fcmh_sstb.sst_mtime;
+		if (fcmh_2_utimgen(fcmh) >= sstb->sst_utimgen)
+			mtime = fcmh->fcmh_sstb.sst_mtime;
 	}
 
 	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {

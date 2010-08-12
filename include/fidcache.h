@@ -122,6 +122,7 @@ struct fidc_membh {
 #define fcmh_2_fg(f)            (f)->fcmh_fg
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_2_fsz(f), SLASH_BMAP_SIZE))
 #define fcmh_2_ptruncgen(f)	(f)->fcmh_sstb.sst_ptruncgen
+#define fcmh_2_utimgen(f)	(f)->fcmh_sstb.sst_utimgen
 
 #define fcmh_isdir(f)		S_ISDIR((f)->fcmh_sstb.sst_mode)
 #define fcmh_isreg(f)		S_ISREG((f)->fcmh_sstb.sst_mode)
