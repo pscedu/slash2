@@ -37,19 +37,19 @@ void yyerror(const char *, ...);
 
 %option nounput
 
-num		[0-9]+
-hexnum		0[Xx][0-9A-Fa-f]+
-sitename	@[A-Za-z]+
 char		[A-Za-z]
-ipquad		[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
-name		[A-Za-z][0-9A-Za-z_.-]+
 floatv		[0-9]*\.?[0-9]+
-resname		[A-Za-z][0-9A-Za-z]+@[A-Z]+
-lnettcp		tcp[0-9]+
-sizeval		[0-9]+[KMGTBkmgtb]
-pathname	[/][a-zA-Z0-9/._-]+
 globpath	[/][a-zA-Z0-9|/.,_\[\]+?-]+
+hexnum		0[Xx][0-9A-Fa-f]+
+ipquad		[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}
+lnettcp		tcp[0-9]+
+name		[A-Za-z][0-9A-Za-z_.-]+
+num		[0-9]+
+pathname	[/][a-zA-Z0-9/._-]+
 quotedstr	\"[^"]*\"
+resname		[A-Za-z][0-9A-Za-z]+@[A-Z]+
+sitename	@[A-Za-z]+
+sizeval		[0-9]+[KMGTBkmgtb]
 
 %%
 

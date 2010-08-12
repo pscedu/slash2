@@ -39,7 +39,7 @@
 
 #include "slconfig.h"
 
-enum sym_parameter_types {
+enum slconf_sym_type {
 	SL_TYPE_BOOL,
 	SL_TYPE_FLOAT,
 	SL_TYPE_HEXU64,
@@ -49,21 +49,21 @@ enum sym_parameter_types {
 	SL_TYPE_STRP
 };
 
-enum sym_structure_types {
+enum slconf_sym_struct {
 	SL_STRUCT_GLOBAL,
 	SL_STRUCT_RES,
 	SL_STRUCT_SITE
 };
 
-typedef uint32_t (*sym_handler)(const char *);
+typedef uint32_t (*cfg_sym_handler_t)(const char *);
 
-struct symtable {
-	char			*name;
-	enum sym_structure_types sym_struct_type;
-	enum sym_parameter_types sym_param_type;
-	uint64_t		 max;
-	int			 offset;
-	sym_handler		 handler;
+struct slconf_symbol {
+	char			*c_name;
+	enum slconf_sym_struct	 c_struct;
+	enum slconf_sym_type	 c_type;
+	uint64_t		 c_max;
+	int			 c_offset;
+	cfg_sym_handler_t	 c_handler;
 };
 
 struct cfg_file {
@@ -75,6 +75,7 @@ void		 slcfg_add_include(const char *);
 void		 slcfg_addif(char *, char *);
 uint32_t	 slcfg_str2lnet(const char *);
 uint32_t	 slcfg_str2restype(const char *);
+
 void		 yyerror(const char *, ...);
 int		 yylex(void);
 int		 yyparse(void);
@@ -92,7 +93,7 @@ int		 yyparse(void);
 	{ name, SL_STRUCT_RES, type, max, offsetof(struct sl_resource, field), handler }
 
 /* declare and initialize the global table */
-struct symtable sym_table[] = {
+struct slconf_symbol sym_table[] = {
 	TABENT_GLBL("port",		SL_TYPE_INT,	0,		gconf_port,	NULL),
 	TABENT_GLBL("net",		SL_TYPE_INT,	0,		gconf_netid,	slcfg_str2lnet),
 	TABENT_GLBL("fs_root",		SL_TYPE_STR,	PATH_MAX,	gconf_fsroot,	NULL),
@@ -221,11 +222,11 @@ site_prof_start	: SITE_PROFILE SITE_NAME SUBSECT_START {
 		}
 		;
 
-site_defs	: statements site_resources { }
+site_defs	: statements site_resources
 		;
 
 site_resources	: site_resource
-		| site_resources site_resource { }
+		| site_resources site_resource
 		;
 
 site_resource	: resource_start resource_def SUBSECT_END {
@@ -285,14 +286,14 @@ resource_start	: RESOURCE_PROFILE NAME SUBSECT_START {
 		}
 		;
 
-resource_def	: statements { }
+resource_def	: statements
 		;
 
-peerlist	: PEERTAG EQ peers END { }
+peerlist	: PEERTAG EQ peers END
 		;
 
 peers		: peer
-		| peer NSEP peers { }
+		| peer NSEP peers
 		;
 
 peer		: RESOURCE_NAME {
@@ -304,11 +305,11 @@ peer		: RESOURCE_NAME {
 		}
 		;
 
-interfacelist	: INTERFACETAG EQ interfaces END { }
+interfacelist	: INTERFACETAG EQ interfaces END
 		;
 
 interfaces	: interface
-		| interface NSEP interfaces { }
+		| interface NSEP interfaces
 		;
 
 interface	: IPADDR ATSIGN LNETTCP	{ slcfg_addif($1, $3); free($3); }
@@ -494,87 +495,87 @@ slcfg_str2restype(const char *res_type)
 	psc_fatalx("%s: invalid resource type", res_type);
 }
 
-struct symtable *
+struct slconf_symbol *
 slcfg_get_symbol(const char *name)
 {
-	struct symtable *e;
+	struct slconf_symbol *e;
 
-	psc_notify("symbol lookup '%s'", name);
+	psc_dbg("symbol lookup '%s'", name);
 
-	for (e = sym_table; e != NULL && e->name != NULL; e++)
-		if (e->name && !strcmp(e->name, name))
-			break;
-
-	if (e == NULL || e->name == NULL) {
-		psc_warnx("Symbol '%s' was not found", name);
-		return NULL;
-	}
-	return (e);
+	for (e = sym_table; e->c_name; e++)
+		if (e->c_name && !strcmp(e->c_name, name))
+			return (e);
+	yyerror("symbol '%s' was not found", name);
+	return (NULL);
 }
 
 void
 slcfg_store_tok_val(const char *tok, char *val)
 {
-	struct symtable *e;
+	struct slconf_symbol *e;
+	char *endp;
 	void *ptr;
 
-	psc_notify("val %s tok %s", val, tok);
+	psc_dbg("val %s tok %s", val, tok);
 
 	e = slcfg_get_symbol(tok);
-	if (!e)
-		psc_fatalx("%s: unknown symbol", tok);
-	psc_trace("%p", e);
+	if (e == NULL)
+		return;
 
-	psc_notify("sym entry %p, name %s, param_type %d",
-		   e, e->name, e->sym_param_type);
+	psc_notify("sym entry %p, name %s, type %d",
+	    e, e->c_name, e->c_type);
+
 	/*
 	 * Access the correct structure based on the
 	 *  type stored in the symtab entry. The offset
 	 *  of the symbol was obtained with offsetof().
 	 */
-	switch (e->sym_struct_type) {
+	switch (e->c_struct) {
 	case SL_STRUCT_GLOBAL:
-		ptr = e->offset + (char *)currentConf;
+		ptr = e->c_offset + (char *)currentConf;
 		break;
 	case SL_STRUCT_SITE:
-		ptr = e->offset + (char *)currentSite;
+		ptr = e->c_offset + (char *)currentSite;
 		break;
 	case SL_STRUCT_RES:
-		ptr = e->offset + (char *)currentRes;
+		ptr = e->c_offset + (char *)currentRes;
 		break;
 	default:
-		psc_fatalx("Invalid structure type %d", e->sym_struct_type);
+		psc_fatalx("invalid structure type %d", e->c_struct);
 	}
 
-	psc_trace("Type %d ptr %p", e->sym_struct_type, ptr);
+	psc_dbg("type %d ptr %p", e->c_struct, ptr);
 
-	switch (e->sym_param_type) {
+	switch (e->c_type) {
 	case SL_TYPE_STR:
-		if (strlcpy(ptr, val, e->max) > e->max)
-			yyerror("field %s value too large", e->name);
-		psc_trace("SL_TYPE_STR Tok '%s' set to '%s'",
-		       e->name, (char *)ptr);
+		if (strlcpy(ptr, val, e->c_max) >= e->c_max)
+			yyerror("field %s value too large", e->c_name);
+		psc_dbg("SL_TYPE_STR tok '%s' set to '%s'",
+		    e->c_name, (char *)ptr);
 		break;
 
 	case SL_TYPE_STRP:
 		*(char **)ptr = strdup(val);
-		psc_trace("SL_TYPE_STRP Tok '%s' set to '%s' %p",
-			  e->name, *(char **)ptr, ptr);
+		if (*(char **)ptr == NULL)
+			psc_fatal("strdup");
+		psc_dbg("SL_TYPE_STRP tok '%s' set to '%s' %p",
+		    e->c_name, *(char **)ptr, ptr);
 		break;
 
 	case SL_TYPE_HEXU64:
-		*(uint64_t *)ptr = strtoull(val, NULL, 16);
-		if (e->max && *(uint64_t *)ptr > e->max)
-			yyerror("field %s value too large", e->name);
-		psc_trace("SL_TYPE_HEXU64 Tok '%s' set to '%"PRIx64"'",
-		       e->name, *(uint64_t *)(ptr));
+		*(uint64_t *)ptr = strtoull(val, &endp, 16);
+		if (endp == val || *endp != '\0')
+			yyerror("invalid value");
+		if (e->c_max && *(uint64_t *)ptr > e->c_max)
+			yyerror("field %s value too large", e->c_name);
+		psc_dbg("SL_TYPE_HEXU64 tok '%s' set to '%"PRIx64"'",
+		    e->c_name, *(uint64_t *)ptr);
 		break;
 
 	case SL_TYPE_INT:
-		if (e->handler)
-			*(int *)ptr = (e->handler)(val);
+		if (e->c_handler)
+			*(int *)ptr = e->c_handler(val);
 		else {
-			char *endp;
 			long l;
 
 			l = strtol(val, &endp, 10);
@@ -583,47 +584,30 @@ slcfg_store_tok_val(const char *tok, char *val)
 				yyerror("%s: invalid integer", val);
 			*(int *)ptr = l;
 		}
-		if (e->max && *(int *)ptr > (int)e->max)
-			yyerror("field %s value too large", e->name);
-		psc_trace("SL_TYPE_INT Tok '%s' set to '%d'",
-		       e->name, *(int *)(ptr));
+		if (e->c_max && *(int *)ptr > (int)e->c_max)
+			yyerror("field %s value too large", e->c_name);
+		psc_dbg("SL_TYPE_INT tok '%s' set to '%d'",
+		    e->c_name, *(int *)ptr);
 		break;
 
 	case SL_TYPE_BOOL:
-		*(int *)ptr = 0;
-		if (!strcmp("yes", val) ||
-		    !strcmp("1",   val)) {
+		if (!strcasecmp("yes", val) ||
+		    !strcasecmp("on", val) ||
+		    !strcmp("1", val))
 			*(int *)ptr = 1;
-			psc_trace("SL_TYPE_BOOL Option '%s' enabled", e->name);
-		} else
-			psc_trace("SL_TYPE_BOOL Option '%s' disabled", e->name);
+		else
+			*(int *)ptr = 0;
+		psc_dbg("SL_TYPE_BOOL option '%s' %s", e->c_name,
+		    *(int *)ptr ? "enabled" : "disabled");
 		break;
 
-	case SL_TYPE_FLOAT: {
-		char   *c, floatbuf[17];
-		float   f;
-
-		f = atof(val);
-		c = floatbuf;
-
-		bzero(floatbuf, sizeof(floatbuf));
-		snprintf(floatbuf, sizeof(floatbuf), "%f", f);
-
-		psc_trace("float_val %f '%s'",
-			f, floatbuf);
-
-		while (*(c++) != '\0')
-			if (*c == '.')
-				*c = '\0';
-
-		*(long *)ptr = strtol(floatbuf, NULL, 10);
-
-		if (*c != '\0')
-			*(long *)(ptr + 1) = strtol(c, NULL, 10);
-		psc_trace("SL_TYPE_FLOAT Tok '%s' Secs %ld Usecs %lu",
-			e->name, *(long *)ptr, *(long *)(ptr + 1));
+	case SL_TYPE_FLOAT:
+		*(float *)ptr = strtof(val, &endp);
+		if (endp == val || *endp != '\0')
+			yyerror("invalid value");
+		psc_dbg("SL_TYPE_FLOAT tok '%s' %f",
+		    e->c_name, *(float *)ptr);
 		break;
-	    }
 
 	case SL_TYPE_SIZET: {
 		uint64_t   i;
@@ -631,7 +615,8 @@ slcfg_store_tok_val(const char *tok, char *val)
 		char *c;
 
 		j = strlen(val);
-		psc_assert(j > 0);
+		if (j == 0)
+			yyerror("invalid value");
 		c = &val[j-1];
 
 		switch (tolower(*c)) {
@@ -651,23 +636,26 @@ slcfg_store_tok_val(const char *tok, char *val)
 			i = UINT64_C(1024)*1024*1024*1024;
 			break;
 		default:
-			psc_fatalx("Sizeval '%c' is not valid", *c);
+			yyerror("sizeval '%s' has invalid postfix", val);
 		}
-		psc_trace("szval   = %"PRIu64, i);
+		psc_dbg("szval = %"PRIu64, i);
 
 		*c = '\0';
-		*(uint64_t *)ptr = (i * strtoull(val, NULL, 10));
+		*(uint64_t *)ptr = i * strtoull(val, &endp, 10);
 
-		if (e->max && *(uint64_t *)ptr > e->max)
-			yyerror("field %s value too large", e->name);
+		if (endp == val || *endp != '\0')
+			yyerror("invalid value");
 
-		psc_trace("SL_TYPE_SIZET Tok '%s' set to '%"PRIu64"'",
-			e->name, *(uint64_t *)ptr);
+		if (e->c_max && *(uint64_t *)ptr > e->c_max)
+			yyerror("field %s value too large", e->c_name);
+
+		psc_dbg("SL_TYPE_SIZET tok '%s' set to '%"PRIu64"'",
+			e->c_name, *(uint64_t *)ptr);
 		break;
 	    }
 
 	default:
-		psc_fatalx("invalid token '%s'", e->name);
+		yyerror("invalid token '%s' type %d", e->c_name, e->c_type);
 	}
 }
 
