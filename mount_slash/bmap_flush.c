@@ -286,7 +286,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 	DEBUG_BIORQ(PLL_INFO, r, "biorq array cb arg (%p)", biorqs);
 
-	if (((size = bmap_flush_coalesce_size(biorqs)) <= LNET_MTU) && 
+	if (((size = bmap_flush_coalesce_size(biorqs)) <= LNET_MTU) &&
 	    (niovs <= PSCRPC_MAX_BRW_PAGES)) {
 		/* Single rpc case.  Set the appropriate cb handler
 		 *   and attach to the nb request set.
@@ -1003,16 +1003,16 @@ msbmapflushthr_spawn(void)
 	psc_waitq_init(&rpcCompletion);
 
 	lc_reginit(&bmapFlushQ, struct bmap_cli_info,
-	    msbd_lentry, "bmapFlushQ");
+	    msbd_lentry, "bmapflush");
 
 	lc_reginit(&bmapTimeoutQ, struct bmap_cli_info,
-	    msbd_lentry, "bmapTimeoutQ");
+	    msbd_lentry, "bmaptimeout");
 
 	pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
 	    NULL, 0, "msbflushthr");
 
 	pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushthrrpc_main,
-	    NULL, 0, "msbflushthrrpc");
+	    NULL, 0, "msbflushrpcthr");
 
 	pscthr_init(MSTHRT_BMAPFLSHRLS, 0, msbmaprlsthr_main,
 	    NULL, 0, "msbrlsthr");
