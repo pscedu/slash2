@@ -1082,7 +1082,7 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 }
 
 __static void
-slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
+slash2fuse_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
 	struct slash_fidgen fg;
 	struct slash_creds cr;
@@ -1097,7 +1097,7 @@ slash2fuse_lookup_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
 		fuse_reply_err(req, rc);
 	else {
 		if (rc == ENOENT)
-			fg.fg_fid = 0;
+			sstb.sst_fid = 0;
 
 		slash2fuse_reply_entry(req, &sstb);
 	}
@@ -1739,7 +1739,7 @@ struct fuse_lowlevel_ops zfs_operations = {
 	.fsyncdir	= slash2fuse_fsync_helper,
 	.getattr	= slash2fuse_getattr,
 	.link		= slash2fuse_link,
-	.lookup		= slash2fuse_lookup_helper,
+	.lookup		= slash2fuse_lookup,
 	.mkdir		= slash2fuse_mkdir,
 	.mknod		= slash2fuse_mknod_helper,
 	.open		= slash2fuse_open,
