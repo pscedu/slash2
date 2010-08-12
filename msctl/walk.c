@@ -70,11 +70,11 @@ walk(const char *fn, void (*cbf)(const char *, void *), void *arg)
 		fts_close(fp);
 	} else {
 		if (stat(fn, &stb) == -1)
-			warn("%s", fn);
+			err(1, "%s", fn);
 		else if (!S_ISREG(stb.st_mode))
-			warnx("%s: not a regular file", fn);
+			err(1, "%s: not a regular file", fn);
 		else if (realpath(fn, buf) == NULL)
-			warn("%s", fn);
+			err(1, "%s", fn);
 		else
 			cbf(buf, arg);
 	}
