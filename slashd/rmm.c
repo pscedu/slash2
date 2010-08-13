@@ -120,9 +120,12 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 	 */
 	spinlock(&mds_namespace_peerlist_lock);
 	i = psc_dynarray_bsearch(&mds_namespace_peerlist, &mq->siteid, slm_rmm_cmp_peerinfo);
-	p = psc_dynarray_getpos(&mds_namespace_peerlist, i);
+	if (i >= psc_dynarray_len(&mds_namespace_peerlist))
+		p = NULL;
+	else
+		p = psc_dynarray_getpos(&mds_namespace_peerlist, i);
 	freelock(&mds_namespace_peerlist_lock);
-	if (p->sp_siteid != mq->siteid) {
+	if (!p || p->sp_siteid != mq->siteid) {
 		psc_info("slm_rmm_handle_namespace_update(): fail to find site ID %d",
 			  mq->siteid);
 		rc = mp->rc = EINVAL;
