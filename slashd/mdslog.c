@@ -258,7 +258,8 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 	jrir = PJE_DATA(pje);
 	rc = mdsio_lookup_slfid(jrir->sjir_fid, &rootcreds, NULL, &fid);
 	if (rc)
-		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
+		//psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
+		return rc;
 
 	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
 	    NULL, &mdsio_data, NULL, NULL);
