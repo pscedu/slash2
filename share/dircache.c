@@ -127,9 +127,12 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	 */
 	spinlock(&i->di_lock);
 	psclist_for_each_entry(e, &i->di_list, de_lentry) {
-		/* The return code for psc_dynarray_bsearch() isn't quite
-		 *    right for our purposes but either way the strings
-		 *    must still be compared.
+		/* 
+ 		 * The return code for psc_dynarray_bsearch() tells us
+ 		 * the position where our name should be to keep the
+ 		 * the list sorted.  If it is one after the last item,
+ 		 * then we know for sure the item is not there. Otherwise,
+ 		 * we still need one more comparison to be sure.
 		 */
 		pos = psc_dynarray_bsearch(&e->de_dents,
 		    &desc, dirent_cmp);
