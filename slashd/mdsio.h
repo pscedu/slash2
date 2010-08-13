@@ -119,7 +119,7 @@ struct mdsio_ops {
 #define mdsio_opencreatef	mdsio_ops.mio_opencreatef		/* zfsslash2_opencreate() */
 #define mdsio_opendir		mdsio_ops.mio_opendir
 #define mdsio_read		mdsio_ops.mio_read
-#define mdsio_readdir		mdsio_ops.mio_readdir
+#define mdsio_readdir		mdsio_ops.mio_readdir			/* zfsslash2_readdir() */
 #define mdsio_readlink		mdsio_ops.mio_readlink
 #define mdsio_release		mdsio_ops.mio_release
 #define mdsio_rename		mdsio_ops.mio_rename

@@ -277,7 +277,7 @@ struct srt_stat {
 	uint32_t		sst_ptruncgen;	/* partial truncate generation */
 	uint32_t                sst_utimgen;    /* utimes generation number */
 	uint32_t                sst__pad0;
-	uint32_t		sst_mode;	/* file permissions */
+	uint32_t		sst_mode;	/* file type & permissions (e.g., S_IFREG, S_IRWXU) */
 	uint64_t		sst_nlink;	/* number of hard links */
 	uint32_t		sst_uid;	/* user ID of owner */
 	uint32_t		sst_gid;	/* group ID of owner */
