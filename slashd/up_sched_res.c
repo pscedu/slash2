@@ -498,7 +498,7 @@ slmupschedthr_main(struct psc_thread *thr)
 					if (rc)
 						continue;
 
-					BMAP_LOCK(bcm);
+					BMAPOD_READ_START(bcm);
 					bmapod = bcm->bcm_od;
 					val = SL_REPL_GET_BMAP_IOS_STAT(
 					    bmapod->bh_repls, off);
@@ -507,7 +507,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						has_work = 1;
 //						if (bmap is leased to an ION)
 //							break;
-						BMAP_ULOCK(bcm);
+						BMAPOD_READ_DONE(bcm);
 
 						/* Got a bmap; now look for a source. */
 						nios = USWI_NREPLS(wk);
@@ -556,7 +556,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						break;
 					case BREPLST_GARBAGE:
 						has_work = 1;
-						BMAP_ULOCK(bcm);
+						BMAPOD_READ_DONE(bcm);
 
 						/* look for a destination resm */
 						ndst = psc_dynarray_len(&dst_res->res_members);
