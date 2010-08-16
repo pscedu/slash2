@@ -271,9 +271,10 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 
 		rc = mdsio_read(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
 			SL_INODE_START_OFF, mdsio_data);
-
-		if (!rc && nb != INO_OD_SZ)
-			rc = EIO;
+		/*
+ 		 * We allow a short read here because it is possible
+ 		 * that the file was just created by our own replay.
+ 		 */
 		if (rc)
 			goto out;
 
