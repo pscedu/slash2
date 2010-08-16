@@ -82,6 +82,13 @@ slm_set_curr_slashid(uint64_t slfid)
 	freelock(&slash_id_lock);
 }
 
+/*
+ * slm_get_next_slashid - Return the next SLASH ID to use.  Note that from ZFS 
+ *     point of view, it is perfectly okay that we use the same SLASH ID to 
+ *     refer to different files/directories.  However, doing so can confuse 
+ *     our clients (think identity theft). So we must make sure that we never 
+ *     reuse a SLASH ID, even after a crash.
+ */
 uint64_t
 slm_get_next_slashid(void)
 {
