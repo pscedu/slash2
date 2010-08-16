@@ -146,11 +146,15 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 	int slvrsiz;
 
 	s = w->srw_slvr_refs[slvridx];
+
 	slvrsiz = SLASH_SLVR_SIZE;
 	if (s->slvr_num == w->srw_len / SLASH_SLVR_SIZE)
 		slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
-	if (rc == 0)
-		rc = slvr_fsbytes_wio(s, slvrsiz, 0);
+	if (rc == 0) {
+		rc = slvr_do_crc(s);
+		if (!rc)
+			rc = slvr_fsbytes_wio(s, slvrsiz, 0);
+	}
 	if (rc)
 		slvr_clear_inuse(s, 0, slvrsiz);
 	slvr_io_done(s, 0, w->srw_len, SL_WRITE);

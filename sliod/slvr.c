@@ -93,7 +93,8 @@ slvr_do_crc(struct slvr_ref *s)
 		 *  processed, otherwise there's no guarantee that the
 		 *  entire slvr was read.
 		 */
-		psc_assert(!psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
+		if (!(s->slvr_flags & SLVR_REPLDST))
+			psc_assert(!psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
 		psc_assert(slvr_2_biodi_wire(s));
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
@@ -475,8 +476,8 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	 *   FIRST. Otherwise, we could bail out prematurely when the
 	 *   data is ready without considering the range we want to write.
 	 *
-	 * Note we have taken our read or write references, so the sliver won't
-	 *   be freed from under us.
+	 * Note we have taken our read or write references, so the sliver 
+	 *   won't be freed from under us.
 	 */
 	if (s->slvr_flags & SLVR_FAULTING) {
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
