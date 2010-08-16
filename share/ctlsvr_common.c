@@ -137,8 +137,8 @@ slctlrep_getfiles(int fd, struct psc_ctlmsghdr *mh, void *m)
 			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		} else
 			rc = psc_ctlsenderr(fd, mh,
-			    "FID "FID_FMT" not in cache",
-			    FID_FMTARG(scf->scf_fg.fg_fid));
+			    "FID "SLPRI_FID" not in cache",
+			    scf->scf_fg.fg_fid);
 	}
 	return (rc);
 }

@@ -169,9 +169,9 @@ struct fidc_membh {
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)				\
 	psc_logs((level), PSS_GEN,					\
-	   "fcmh@%p fg:"FIDFMT" "REQ_FCMH_FLAGS_FMT" "			\
+	   "fcmh@%p fg:"SLPRI_FG" "REQ_FCMH_FLAGS_FMT" "		\
 	   "ref:%d sz=%"PRId64" :: "fmt,				\
-	   (fcmh), FIDFMTARGS(&(fcmh)->fcmh_fg),			\
+	   (fcmh), SLPRI_FG_ARGS(&(fcmh)->fcmh_fg),			\
 	   DEBUG_FCMH_FLAGS(fcmh),					\
 	   (fcmh)->fcmh_refcnt, fcmh_2_fsz(fcmh),			\
 	   ## __VA_ARGS__)

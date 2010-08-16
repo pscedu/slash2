@@ -72,7 +72,7 @@ meta_dir_create(const char *meta_root, uint64_t fs_set_uuid,
 	if (!meta_dir_depth)
 		meta_dir_depth = FID_PATH_DEPTH;
 
-	rc = snprintf(meta_fsid_str, FSID_LEN+1, FSID_FMT, fs_set_uuid);
+	rc = snprintf(meta_fsid_str, FSID_LEN+1, SLPRI_FSID, fs_set_uuid);
 	psc_assert(rc == FSID_LEN);
 
 	rc = mkdir(meta_fsid_str, 0700);

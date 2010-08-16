@@ -923,8 +923,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 			    attr->sst_fg.fg_fid == 0)
 				continue;
 
-			psc_dbg("adding i+g:"FIDFMT,
-			    FIDFMTARGS(&attr->sst_fg));
+			psc_dbg("adding i+g:"SLPRI_FG,
+			    SLPRI_FG_ARGS(&attr->sst_fg));
 
 			fidc_lookup(&attr->sst_fg, FIDC_LOOKUP_CREATE,
 			    attr, FCMH_SETATTRF_SAVELOCAL, &fcmh);

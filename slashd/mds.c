@@ -160,8 +160,8 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 
 	lblk = fcmh_2_nbmaps(f);
 
-	psc_trace("fid="FIDFMT" lblk=%u fsz=%"PSCPRIdOFFT,
-	    FIDFMTARGS(&f->fcmh_fg), lblk, fcmh_2_fsz(f));
+	psc_trace("fid="SLPRI_FG" lblk=%u fsz=%"PSCPRIdOFFT,
+	    SLPRI_FG_ARGS(&f->fcmh_fg), lblk, fcmh_2_fsz(f));
 
 	FCMH_URLOCK(f, locked);
 	return (n < lblk);
