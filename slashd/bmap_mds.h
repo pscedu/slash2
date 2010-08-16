@@ -57,6 +57,10 @@ struct bmap_mds_info {
 	pthread_rwlock_t		 bmdsi_rwlock;
 };
 
+/* bmdsi_flags */
+#define BMIM_LOGCHG		(1 << 0)	/* in-mem change made, needs logged */
+#define BMIM_DIO		(1 << 1)	/* directio enabled                 */
+
 #define BMAPOD_RDLOCK(bmdsi)						\
 	psc_assert(!pthread_rwlock_rdlock(&(bmdsi)->bmdsi_rwlock))
 
@@ -129,14 +133,10 @@ struct bmap_mds_info {
 	} while (0)
 
 
-/* bmap MDS modes */
+/* MDS-specific bcm_mode flags */
 #define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 0)	/* CRC update in progress */
 #define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 1)
 #define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)
-
-/* bmap_mds_info modes */
-#define BMIM_LOGCHG		(1 << 0)	/* in-mem change made, needs logged */
-#define BMIM_DIO		(1 << 1)	/* directio enabled                 */
 
 struct bmap_timeo_entry {
 	uint64_t		 bte_maxseq;
@@ -157,6 +157,7 @@ struct bmap_timeo_table {
 	int			 btt_ready;
 };
 
+/* mds_bmap_timeotbl_mdsi (bmap timeout event) ops */
 #define BTE_ADD			(1 << 0)
 #define BTE_DEL			(1 << 1)
 #define BTE_REATTACH		(1 << 2)
@@ -189,6 +190,7 @@ struct bmap_mds_lease {
 #define BML_LOCK(b)		spinlock(&(b)->bml_lock)
 #define BML_ULOCK(b)		freelock(&(b)->bml_lock)
 
+/* bml_flags */
 enum {
 	BML_READ    = (1 << 0),
 	BML_WRITE   = (1 << 1),
@@ -205,8 +207,8 @@ enum {
 	BML_EXPFAIL = (1 << 12)
 };
 
-/*
- * bmi_assign - the structure used for tracking the mds's bmap/ion
+/**
+ * bmi_assign - The structure used for tracking the MDS's bmap/ion
  *   assignments.  These structures are stored in a odtable.
  * Note: default odtable entry size is 128 bytes.
  */
@@ -221,7 +223,8 @@ struct bmi_assign {
 	int			bmi_flags;
 };
 
-#define BMI_DIO (1 << 0)
+/* bmi_flags */
+#define BMI_DIO			(1 << 0)
 
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)(b)->bcm_pri)
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
@@ -254,6 +257,7 @@ uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
 
 void	 mds_bmi_odtable_startup_cb(void *, struct odtable_receipt *);
+
 extern struct psc_poolmaster	 bmapMdsLeasePoolMaster;
 extern struct psc_poolmgr	*bmapMdsLeasePool;
 
