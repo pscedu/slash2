@@ -152,8 +152,10 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 		(off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
 		mdsio_data);
 
-	if (!rc && nb != BMAP_OD_SZ)
-		rc = EIO;
+	/*
+ 	 * We allow a short read here because it is possible
+ 	 * that the file was just created by our own replay.
+ 	 */
 	if (rc)
 		goto out;
 
