@@ -2,6 +2,7 @@
 07/30/2010 - Client side should handle bmap flush return code in its callback - open
 07/30/2010 - Cannot build grub 1.98 under slash2  - resolved
 08/04/2010 - Fail to re-create the same directory after rename - open
+08/17/2010 - Redundant readdir RPC call when ls -al under root
 
 07/30/2010  
 ----------
@@ -231,3 +232,8 @@ I did the following on lemon:
 	cd grub-1.98			<-- no such file or directory.
 	
 	
+08/17/2010
+----------
+
+Do "ls -al" under root (e.g., /slash2), it returns "." and "..", skipping some hidden
+entries. Then the client will call readdir PRC again with offset of 2.
