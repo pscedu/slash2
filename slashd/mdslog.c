@@ -806,9 +806,9 @@ mds_update_cursor(void *buf, uint64_t txg)
 
 /**
  * mds_cursor_thread - Update the cursor file in the ZFS that records the current
- *	transaction group number and other system log status.  If there is no
- *	activity in system other that this write to update the cursor, our
- *	customized ZFS will extend the life time of the transaction group.
+ *     transaction group number and other system log status.  If there is no
+ *     activity in system other that this write to update the cursor, our
+ *     customized ZFS will extend the lifetime of the transaction group.
  */
 void
 mds_cursor_thread(__unusedx struct psc_thread *thr)
@@ -821,7 +821,7 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 		if (rc)
 			psc_warnx("failed to update cursor, rc = %d", rc);
 		else
-			psc_dbg("Cursor updated: txg=%"PRId64", xid=%"PRId64
+			psc_nofity("Cursor updated: txg=%"PRId64", xid=%"PRId64
 			    ", s2id=0x%"PRIx64", seqno=(%"PRId64", %"PRId64")",
 			    mds_cursor.pjc_txg,
 			    mds_cursor.pjc_xid,
