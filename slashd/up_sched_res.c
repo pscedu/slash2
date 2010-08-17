@@ -569,6 +569,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						break;
 					case BREPLST_REPL_SCHED:
 						has_work = 1;
+						BMAPOD_READ_DONE(bcm);
 						/* FALLTHROUGH */
 					}
 					mds_repl_bmap_rel(bcm);
