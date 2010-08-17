@@ -886,7 +886,6 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		DIRCACHE_INIT(d, &dircacheMgr);
 		FCMH_ULOCK(d);
 	}
-	e = dircache_new_ents(&fcmh_2_fci(d)->fci_dci, size);
 
 	iov[niov].iov_base = e->de_base;
 	iov[niov].iov_len = size;
@@ -905,10 +904,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (!rc)
 		rc = mp->rc;
-	else {
-		dircache_earlyrls_ents(e);
+	if (rc)
 		goto out;
-	}
 
 	if (mq->nstbpref) {
 		struct srt_stat *attr = iov[1].iov_base;
@@ -937,8 +934,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	/* Establish these dirents in our cache.  Do this before replying
 	 *   to fuse in order to prevent unnecessary lookup RPC's.
 	 */
-	if (mp->num)
+	if (mp->num) {
+		e = dircache_new_ents(&fcmh_2_fci(d)->fci_dci, size);
 		dircache_reg_ents(e, mp->num);
+	}
 	/* Tell fuse of the good news!
 	 */
 	fuse_reply_buf(req, iov[0].iov_base, (size_t)mp->size);
@@ -946,8 +945,6 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	 */
 	if (mp->num)
 		dircache_setfreeable_ents(e);
-	else
-		dircache_earlyrls_ents(e);
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
