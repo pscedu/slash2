@@ -349,6 +349,10 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		jnamespace = PJE_DATA(pje);
 		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 		rc = mds_redo_namespace(jnamespace);
+		/*
+ 		 * If we fail above, we still skip these SLASH2 IDs here
+ 		 * in case a client gets confused.
+ 		 */
 		if (jnamespace->sjnm_op == NS_OP_CREATE ||
 		    jnamespace->sjnm_op == NS_OP_MKDIR ||
 		    jnamespace->sjnm_op == NS_OP_LINK ||
