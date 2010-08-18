@@ -310,7 +310,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	/*
 	 * Now we've established a local placeholder for this create.
-	 *  any other creates to this pathame will block in
+	 *  any other creates to this pathname will block in
 	 *  fidc_child_wait_locked() until we release the fcmh.
 	 */
 	rc = slc_rmc_getimp(&csvc);
@@ -1550,6 +1550,8 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 }
 
 __static void
