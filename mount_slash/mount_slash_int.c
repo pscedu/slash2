@@ -733,13 +733,12 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	memcpy(&mq->sbd, bmap_2_sbd(b), sizeof(struct srt_bmapdesc));
 	mq->prefios = prefIOS;
 	rc = SL_RSX_WAITREP(rq, mp);
-	if (!rc) {
-		if (mp->rc)
-			rc = mp->rc;
-		else
-			memcpy(bmap_2_sbd(b), &mp->sbd,
-			       sizeof(struct srt_bmapdesc));
-	}
+	if (rc == 0)
+		rc = mp->rc;
+
+	if (rc == 0)
+		memcpy(bmap_2_sbd(b), &mp->sbd,
+		    sizeof(struct srt_bmapdesc));
 
  out:
 	if (rq)
@@ -1041,7 +1040,6 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 int
 msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[0];
 	struct srm_io_req *mq;
 	int rc, op=rq->rq_reqmsg->opc;
 
@@ -1058,7 +1056,6 @@ msl_dio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	    op, mq->offset, mq->size);
 
  out:
-	sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -1108,7 +1105,6 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 			psc_fatalx("SL_RSX_NEWREQ() failed %d", rc);
 
 		req->rq_interpret_reply = msl_dio_cb;
-		req->rq_async_args.pointer_arg[0] = csvc;
 
 		iovs[i].iov_base = b + nbytes;
 		iovs[i].iov_len  = len;
@@ -1142,6 +1138,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	PSCFREE(iovs);
 
 	msl_biorq_destroy(r);
+
+	sl_csvc_decref(csvc);
 }
 
 __static void
