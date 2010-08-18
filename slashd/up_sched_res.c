@@ -260,7 +260,9 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	retifset[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_SCHED;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
+	BMAPOD_MODIFY_START(bcm);
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
+	BMAPOD_MODIFY_DONE(bcm);
 
 	if (rc == BREPLST_VALID ||
 	    rc == BREPLST_REPL_SCHED)
@@ -288,7 +290,9 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	tract[BREPLST_GARBAGE] = -1;
 	tract[BREPLST_GARBAGE_SCHED] = -1;
 
+	BMAPOD_MODIFY_START(bcm);
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
+	BMAPOD_MODIFY_DONE(bcm);
 
  fail:
 	if (we_set_busy)
@@ -364,7 +368,9 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	retifset[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_SCHED;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
+	BMAPOD_MODIFY_START(bcm);
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
+	BMAPOD_MODIFY_DONE(bcm);
 
 	if (rc == BREPLST_VALID ||
 	    rc == BREPLST_REPL_SCHED)
@@ -392,7 +398,9 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	tract[BREPLST_GARBAGE] = -1;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 
+	BMAPOD_MODIFY_START(bcm);
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
+	BMAPOD_MODIFY_DONE(bcm);
 
  fail:
 	if (csvc)
@@ -507,7 +515,6 @@ slmupschedthr_main(struct psc_thread *thr)
 						has_work = 1;
 //						if (bmap is leased to an ION)
 //							break;
-						BMAPOD_READ_DONE(bcm);
 
 						/* Got a bmap; now look for a source. */
 						nios = USWI_NREPLS(wk);
@@ -515,6 +522,7 @@ slmupschedthr_main(struct psc_thread *thr)
 						for (is = 0; is < nios; is++,
 						    ris = (ris + 1) % nios) {
 							if (uswi_gen != wk->uswi_gen) {
+								BMAPOD_READ_DONE(bcm);
 								mds_repl_bmap_rel(bcm);
 								goto skiprepl;
 							}
@@ -525,6 +533,8 @@ slmupschedthr_main(struct psc_thread *thr)
 							    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
 							    SL_BITS_PER_REPLICA * ris) != BREPLST_VALID)
 								continue;
+
+							BMAPOD_READ_DONE(bcm);
 
 							/* search source nids for an idle, online connection */
 							nmemb = psc_dynarray_len(&src_res->res_members);
@@ -552,7 +562,9 @@ slmupschedthr_main(struct psc_thread *thr)
 									    off, src_resm, dst_res, k))
 										goto restart;
 							}
+							BMAPOD_READ_START(bcm);
 						}
+						BMAPOD_READ_DONE(bcm);
 						break;
 					case BREPLST_GARBAGE:
 						has_work = 1;
