@@ -1252,7 +1252,7 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 		rc = mdsio_redo_link(
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_target_s2id,
-			jnamespace->sjnm_name);
+			&stat, jnamespace->sjnm_name);
 		break;
 	    case NS_OP_SYMLINK:
 		newname = jnamespace->sjnm_name;
@@ -1273,19 +1273,19 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_name,
 			jnamespace->sjnm_new_parent_s2id,
-			newname);
+			newname, &stat);
 		break;
 	    case NS_OP_UNLINK:
 		rc = mdsio_redo_unlink(
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_target_s2id,
-			jnamespace->sjnm_name);
+			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_RMDIR:
 		rc = mdsio_redo_rmdir(
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_target_s2id,
-			jnamespace->sjnm_name);
+			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_SETATTR:
 		rc = mdsio_redo_setattr(
