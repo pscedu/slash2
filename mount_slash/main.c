@@ -310,7 +310,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	/*
 	 * Now we've established a local placeholder for this create.
-	 *  any other creates to this pathname will block in
+	 *  any other creates to this pathame will block in
 	 *  fidc_child_wait_locked() until we release the fcmh.
 	 */
 	rc = slc_rmc_getimp(&csvc);
@@ -886,6 +886,7 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 		DIRCACHE_INIT(d, &dircacheMgr);
 		FCMH_ULOCK(d);
 	}
+	e = dircache_new_ents(&fcmh_2_fci(d)->fci_dci, size);
 
 	iov[niov].iov_base = e->de_base;
 	iov[niov].iov_len = size;
@@ -904,8 +905,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (!rc)
 		rc = mp->rc;
-	if (rc)
+	else {
+		dircache_earlyrls_ents(e);
 		goto out;
+	}
 
 	if (mq->nstbpref) {
 		struct srt_stat *attr = iov[1].iov_base;
@@ -934,10 +937,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	/* Establish these dirents in our cache.  Do this before replying
 	 *   to fuse in order to prevent unnecessary lookup RPC's.
 	 */
-	if (mp->num) {
-		e = dircache_new_ents(&fcmh_2_fci(d)->fci_dci, size);
+	if (mp->num)
 		dircache_reg_ents(e, mp->num);
-	}
 	/* Tell fuse of the good news!
 	 */
 	fuse_reply_buf(req, iov[0].iov_base, (size_t)mp->size);
@@ -945,6 +946,8 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	 */
 	if (mp->num)
 		dircache_setfreeable_ents(e);
+	else
+		dircache_earlyrls_ents(e);
  out:
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -1550,8 +1553,6 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
-	if (csvc)
-		sl_csvc_decref(csvc);
 }
 
 __static void

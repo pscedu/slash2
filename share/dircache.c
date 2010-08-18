@@ -304,3 +304,18 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 
 	fcmh_op_start_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
 }
+
+/* dircache_release_early - called when a dircache_ents was not registered.
+ */
+void
+dircache_earlyrls_ents(struct dircache_ents *e)
+{
+	psc_assert(psclist_disjoint(&e->de_lentry));
+	psc_assert(psclist_disjoint(&e->de_lentry_lc));
+
+	spinlock(&e->de_info->di_dcm->dcm_lock);
+	e->de_info->di_dcm->dcm_alloc -= e->de_sz;
+	freelock(&e->de_info->di_dcm->dcm_lock);
+
+	PSCFREE(e);
+}
