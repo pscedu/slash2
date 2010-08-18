@@ -223,9 +223,16 @@ sl_csvc_markfree(struct slashrpc_cservice *csvc)
 void
 sl_csvc_decref(struct slashrpc_cservice *csvc)
 {
+	int rc;
+
 	sl_csvc_reqlock(csvc);
-	if (psc_atomic32_dec_getnew(&csvc->csvc_refcnt) == 0 &&
-	    psc_atomic32_read(&csvc->csvc_flags) & CSVCF_WANTFREE) {
+	rc = psc_atomic32_dec_getnew(&csvc->csvc_refcnt);
+	psc_assert(rc >= 0);
+	if (rc == 0 && psc_atomic32_read(&csvc->csvc_flags) & CSVCF_WANTFREE) {
+		/*
+		 * This should only apply to mount_slash clients the MDS
+		 * stops communication with.
+		 */
 		pscrpc_import_put(csvc->csvc_import);
 		free(csvc);
 	} else {
