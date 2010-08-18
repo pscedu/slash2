@@ -224,8 +224,8 @@ void
 sl_csvc_decref(struct slashrpc_cservice *csvc)
 {
 	sl_csvc_reqlock(csvc);
-	if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_WANTFREE &&
-	    psc_atomic32_dec_getnew(&csvc->csvc_refcnt) == 0) {
+	if (psc_atomic32_dec_getnew(&csvc->csvc_refcnt) == 0 &&
+	    psc_atomic32_read(&csvc->csvc_flags) & CSVCF_WANTFREE) {
 		pscrpc_import_put(csvc->csvc_import);
 		free(csvc);
 	} else {
