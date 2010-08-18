@@ -1553,6 +1553,8 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 }
 
 __static void
