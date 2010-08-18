@@ -260,9 +260,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	retifset[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_SCHED;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
-	BMAPOD_MODIFY_START(bcm);
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
-	BMAPOD_MODIFY_DONE(bcm);
 
 	if (rc == BREPLST_VALID ||
 	    rc == BREPLST_REPL_SCHED)
@@ -290,9 +288,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	tract[BREPLST_GARBAGE] = -1;
 	tract[BREPLST_GARBAGE_SCHED] = -1;
 
-	BMAPOD_MODIFY_START(bcm);
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
-	BMAPOD_MODIFY_DONE(bcm);
 
  fail:
 	if (we_set_busy)
@@ -368,9 +364,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	retifset[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_SCHED;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
-	BMAPOD_MODIFY_START(bcm);
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
-	BMAPOD_MODIFY_DONE(bcm);
 
 	if (rc == BREPLST_VALID ||
 	    rc == BREPLST_REPL_SCHED)
@@ -398,9 +392,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	tract[BREPLST_GARBAGE] = -1;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 
-	BMAPOD_MODIFY_START(bcm);
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
-	BMAPOD_MODIFY_DONE(bcm);
 
  fail:
 	if (csvc)
