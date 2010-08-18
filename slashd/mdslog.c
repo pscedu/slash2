@@ -139,8 +139,8 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 		if (rc == ENOENT) {
 			psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
 			return (-rc);
-		} else
-			psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
+		}
+		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 	}
 
 	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
