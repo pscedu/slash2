@@ -228,17 +228,19 @@ sl_csvc_decref(struct slashrpc_cservice *csvc)
 	sl_csvc_reqlock(csvc);
 	rc = psc_atomic32_dec_getnew(&csvc->csvc_refcnt);
 	psc_assert(rc >= 0);
-	if (rc == 0 && psc_atomic32_read(&csvc->csvc_flags) & CSVCF_WANTFREE) {
-		/*
-		 * This should only apply to mount_slash clients the MDS
-		 * stops communication with.
-		 */
-		pscrpc_import_put(csvc->csvc_import);
-		free(csvc);
-	} else {
+	if (rc == 0) {
 		sl_csvc_wake(csvc);
-		sl_csvc_unlock(csvc);
+		if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_WANTFREE) {
+			/*
+			 * This should only apply to mount_slash clients the MDS
+			 * stops communication with.
+			 */
+			pscrpc_import_put(csvc->csvc_import);
+			free(csvc);
+			return;
+		}
 	}
+	sl_csvc_unlock(csvc);
 }
 
 /**
