@@ -189,7 +189,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	spinlock(&inf->binfcrcs_lock);
 	psc_assert(psclist_conjoint(&bcr->bcr_lentry));
 	psc_assert(bcr->bcr_flags & BCR_SCHEDULED);
-	pll_remove(&inf->binfcrcs_hold, bcr);
+	pll_remove(&inf->binfcrcs_ready, bcr);
 	freelock(&inf->binfcrcs_lock);
 
 	atomic_dec(&inf->binfcrcs_nbcrs);
