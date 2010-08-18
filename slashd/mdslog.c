@@ -331,8 +331,6 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	int rc = 0;
 	struct slmds_jent_namespace *jnamespace;
 
-	psc_notify("pje=%p pje_txg=%"PRId64, pje, pje->pje_txg);
-
 	switch (pje->pje_type & ~(_PJE_FLSHFT - 1)) {
 	    case MDS_LOG_BMAP_REPL:
 		rc = mds_redo_bmap_repl(pje);
@@ -347,7 +345,6 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		rc = mds_redo_ino_addrepl(pje);
 		break;
 	    case MDS_LOG_NAMESPACE:
-
 		jnamespace = PJE_DATA(pje);
 		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 		rc = mds_redo_namespace(jnamespace);
@@ -1170,12 +1167,12 @@ mds_journal_init(void)
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_txg;
 	mdsJournal->pj_distill_xid = mds_cursor.pjc_xid;
 
-	psc_notify("Journal device %s", r->res_jrnldev);
-	psc_notify("Last SLASH ID is 0x%"PRIx64, mds_cursor.pjc_s2id);
+	psc_notify("Journal device is %s", r->res_jrnldev);
+	psc_notify("Last SLASH ID is %"PRId64, mds_cursor.pjc_s2id);
 	psc_notify("Last synced ZFS transaction group number is %"PRId64, mdsJournal->pj_commit_txg);
 	psc_notify("Last distilled SLASH2 transaction number is %"PRId64, mdsJournal->pj_distill_xid);
 
-	/* we need the cursor thread to join the replay */
+	/* we need the cursor thread to start any potential log replay */
 	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
 	    mds_cursor_thread, NULL, 0, "slmjcursorthr");
 
