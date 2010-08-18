@@ -671,8 +671,10 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	FCMH_ULOCK(f);
 	if (rq)
 		pscrpc_req_finished(rq);
-	if (csvc)
+	if (csvc) {
 		sl_csvc_decref(csvc);
+		csvc = NULL;
+	}
 
 	if (rc == SLERR_BMAP_DIOWAIT) {
 		sleep(BMAP_CLI_DIOWAIT_SECS);
