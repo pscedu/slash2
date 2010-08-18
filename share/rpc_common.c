@@ -544,8 +544,10 @@ slconnthr_main(struct psc_thread *thr)
 			if (csvc == NULL) {
 				sl_csvc_lock(resm->resm_csvc);
 				csvc = resm->resm_csvc;
-				if (sl_csvc_useable(csvc))
+				if (sl_csvc_useable(csvc)) {
+					sl_csvc_incref(csvc);
 					goto online;
+				}
 				sl_csvc_waitrel_s(csvc, CSVC_RECONNECT_INTV);
 				continue;
 			}
@@ -569,6 +571,7 @@ slconnthr_main(struct psc_thread *thr)
 
 			if (rc)
 				break;
+
 			sl_csvc_waitrel_s(csvc, 60);
 			sl_csvc_decref(csvc);
 		}
