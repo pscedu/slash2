@@ -139,8 +139,8 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 		if (rc == ENOENT) {
 			psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
 			return (-rc);
-		}
-		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
+		} else
+			psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 	}
 
 	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
@@ -153,9 +153,9 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 		mdsio_data);
 
 	/*
-	 * We allow a short read here because it is possible
-	 * that the file was just created by our own replay.
-	 */
+ 	 * We allow a short read here because it is possible
+ 	 * that the file was just created by our own replay.
+ 	 */
 	if (rc)
 		goto out;
 
@@ -274,9 +274,9 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 		rc = mdsio_read(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
 			SL_INODE_START_OFF, mdsio_data);
 		/*
-		 * We allow a short read here because it is possible
-		 * that the file was just created by our own replay.
-		 */
+ 		 * We allow a short read here because it is possible
+ 		 * that the file was just created by our own replay.
+ 		 */
 		if (rc)
 			goto out;
 
@@ -352,9 +352,9 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 		rc = mds_redo_namespace(jnamespace);
 		/*
-		 * If we fail above, we still skip these SLASH2 IDs here
-		 * in case a client gets confused.
-		 */
+ 		 * If we fail above, we still skip these SLASH2 IDs here
+ 		 * in case a client gets confused.
+ 		 */
 		if (jnamespace->sjnm_op == NS_OP_CREATE ||
 		    jnamespace->sjnm_op == NS_OP_MKDIR ||
 		    jnamespace->sjnm_op == NS_OP_LINK ||
@@ -535,7 +535,7 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 
 	peerinfo->sp_send_seqno += peerinfo->sp_send_count;
 
- rpc_error:
+rpc_error:
 
 	peerinfo->sp_send_count = 0;				/* defensive */
 	peerinfo->sp_flags &= ~SP_FLAG_INFLIGHT;
@@ -1240,19 +1240,19 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 		rc = mdsio_redo_create(
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_target_s2id,
-			&stat, jnamespace->sjnm_name);
+			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_MKDIR:
 		rc = mdsio_redo_mkdir(
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_target_s2id,
-			&stat, jnamespace->sjnm_name);
+			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_LINK:
 		rc = mdsio_redo_link(
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_target_s2id,
-			&stat, jnamespace->sjnm_name);
+			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_SYMLINK:
 		newname = jnamespace->sjnm_name;
@@ -1262,7 +1262,7 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 		rc = mdsio_redo_symlink(
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_target_s2id,
-			&stat, jnamespace->sjnm_name, newname);
+			jnamespace->sjnm_name, newname, &stat);
 		break;
 	    case NS_OP_RENAME:
 		newname = jnamespace->sjnm_name;
@@ -1290,7 +1290,7 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	    case NS_OP_SETATTR:
 		rc = mdsio_redo_setattr(
 			jnamespace->sjnm_target_s2id,
-			&stat, jnamespace->sjnm_mask);
+			jnamespace->sjnm_mask, &stat);
 		hasname = 0;
 		break;
 	    default:
