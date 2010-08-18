@@ -669,8 +669,10 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	FCMH_RLOCK(f);
 	f->fcmh_state &= ~FCMH_CLI_FETCHREPLTBL;
 	FCMH_ULOCK(f);
-	if (rq)
+	if (rq) {
 		pscrpc_req_finished(rq);
+		rq = NULL;
+	}
 	if (csvc) {
 		sl_csvc_decref(csvc);
 		csvc = NULL;
