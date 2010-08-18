@@ -1138,7 +1138,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	}
 	BMAP_LOCK(bmap);
 
-	DEBUG_BMAP(PLL_TRACE, bmap, "blkno=%u sz=%"PRId64" ion=%s",
+	DEBUG_BMAP(PLL_NOTIFY, bmap, "blkno=%u sz=%"PRId64" ion=%s",
 		   c->blkno, c->fsize, libcfs_nid2str(ion_nid));
 
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
