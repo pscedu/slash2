@@ -835,9 +835,9 @@ int
 uswi_findoradd(const struct slash_fidgen *fgp, struct up_sched_work_item **wkp)
 {
 	struct up_sched_work_item *newrq = NULL;
+	int rc, gen, locked;
 	char fn[PATH_MAX];
 	void *mdsio_data;
-	int rc, gen, locked;
 
 	rc = 0;
 	do {
