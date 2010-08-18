@@ -87,6 +87,7 @@ bmap_flush_reap_rpcs(void)
 			pndgReqsLock();
 			psc_dynarray_remove(&pndgReqSets, set);
 			pndgReqsUlock();
+			pscrpc_set_destroy(set);
 			i--;
 		}
 	}
