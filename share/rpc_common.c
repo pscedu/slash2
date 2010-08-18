@@ -420,7 +420,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 
 		sl_csvc_lock(csvc);
 		psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTING);
-		psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 		csvc->csvc_mtime = time(NULL);
 		if (rc) {
 			csvc->csvc_import->imp_failed = 1;
@@ -432,7 +431,8 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 			 */
 			csvc = NULL;
 			goto out;
-		}
+		} else
+			psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTED);
 	} else {
 		rc = csvc->csvc_lasterrno;
 		csvc = NULL;
