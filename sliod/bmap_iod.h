@@ -46,7 +46,6 @@ struct biod_infl_crcs {
 	atomic_t		 binfcrcs_nbcrs;
 	struct psc_lockedlist	 binfcrcs_hold;
 	struct psc_lockedlist	 binfcrcs_ready;
-	struct psc_lockedlist	 binfcrcs_infl;
 };
 
 struct biod_crcup_ref {
