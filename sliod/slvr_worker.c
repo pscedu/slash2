@@ -82,15 +82,16 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	for (i = 0; i < mq->ncrc_updates; i++) {
 		bcr = psc_dynarray_getpos(bcrs, i);
 
-		DEBUG_BCR(PLL_NOTIFY, bcr, "bcrs pos=%d", i);
-
-		bcr_xid_check(bcr);
-
 		rc = iod_inode_getinfo(&bcr->bcr_crcup.fg,
 		       &bcr->bcr_crcup.fsize, &bcr->bcr_crcup.utimgen);
 		/* Bail for now if we can't stat() our file objects.
 		 */
 		psc_assert(!rc);
+
+		DEBUG_BCR(PLL_NOTIFY, bcr, "bcrs pos=%d fsz=%"PRId64, 
+			  i, bcr->bcr_crcup.fsize);
+
+		bcr_xid_check(bcr);
 
 		mq->ncrcs_per_update[i] = bcr->bcr_crcup.nups;
 
@@ -281,7 +282,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 				bmap_op_start_type(biod->biod_bmap, 
 						   BMAP_OPCNT_RLSSCHED);
 				freelock(&biod->biod_lock);
-				lc_addtail(&bmapRlsQ, bcr->bcr_biodi);			
+				lc_addtail(&bmapRlsQ, bcr->bcr_biodi);
 				bcr_ready_remove(&binflCrcs, bcr);
 				
 			} else {
@@ -300,7 +301,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 					bcr_ready_add(&binflCrcs, tmp);
 				}
 				freelock(&biod->biod_lock);
-				bcr_ready_remove(&binflCrcs, bcr);		
+				bcr_ready_remove(&binflCrcs, bcr);
 			}
 		}
 	}
