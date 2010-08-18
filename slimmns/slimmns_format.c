@@ -114,6 +114,13 @@ main(int argc, char *argv[])
 {
 	int c;
 
+	/*
+	 * Make sure that our by-id namespace is owned by the root.
+	 */
+	if (geteuid() != 0) {
+		fprintf(stderr, "Please run %s as root\n", argv[0]);
+		exit (0);
+	}
 	pfl_init();
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "iW")) != -1)
