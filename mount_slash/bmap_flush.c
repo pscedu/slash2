@@ -252,6 +252,19 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 }
 
 
+#define LAUNCH_RPC()							\
+	{								\
+		req = bmap_flush_create_rpc(b, tiov, size, soff, n);	\
+		pscrpc_set_add_new_req(set, req);			\
+		if (pscrpc_push_req(req)) {				\
+			DEBUG_REQ(PLL_ERROR, req,			\
+			    "pscrpc_push_req() failed");		\
+			psc_fatalx("no failover yet");			\
+		}							\
+		soff += size;						\
+		nrpcs++;						\
+	}
+
 __static int
 bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		     int niovs)
@@ -305,19 +318,6 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		struct pscrpc_request_set *set;
 		struct iovec *tiov;
 		int n, j;
-
-#define LAUNCH_RPC()							\
-	{								\
-		req = bmap_flush_create_rpc(b, tiov, size, soff, n);	\
-		pscrpc_set_add_new_req(set, req);			\
-		if (pscrpc_push_req(req)) {				\
-			DEBUG_REQ(PLL_ERROR, req,			\
-			    "pscrpc_push_req() failed");		\
-			psc_fatalx("no failover yet");			\
-		}							\
-		soff += size;						\
-		nrpcs++;						\
-	}
 
 		size = 0;
 		set = pscrpc_prep_set();
