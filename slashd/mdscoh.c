@@ -39,7 +39,8 @@ struct psc_listcache	inflBmapCbs;
 struct pscrpc_nbreqset	bmapCbSet =
     PSCRPC_NBREQSET_INIT(bmapCbSet, NULL, mdscoh_cb);
 
-#define CB_ARG_SLOT 0
+#define SLM_CBARG_SLOT_BML	0
+#define SLM_CBARG_SLOT_CSVC	1
 
 void
 mdscoh_reap(void)
@@ -50,6 +51,7 @@ mdscoh_reap(void)
 int
 mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 {
+	struct slashrpc_cservice *csvc;
 	struct srm_bmap_dio_req *mq;
 	struct srm_generic_rep *mp;
 	struct bmap_mds_lease *bml;
@@ -57,7 +59,8 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 
 	mq = pscrpc_msg_buf(req->rq_reqmsg, 0, sizeof(*mq));
 	mp = pscrpc_msg_buf(req->rq_repmsg, 0, sizeof(*mp));
-	bml = req->rq_async_args.pointer_arg[CB_ARG_SLOT];
+	bml = req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML];
+	csvc = req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC];
 
 	DEBUG_BMAP(mp->rc ? PLL_ERROR : PLL_NOTIFY, bml_2_bmap(bml),
 	   "cli=%s bml=%p seq=%"PRId64" rc=%d",
@@ -71,23 +74,25 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	bml->bml_flags &= ~BML_COH;
 	flags = bml->bml_flags;
 	BML_ULOCK(bml);
-	
+
 	if (flags & BML_COHDIO) {
 		BMAP_LOCK(bml_2_bmap(bml));
 		psc_assert(bml_2_bmap(bml)->bcm_mode & BMAP_DIORQ);
 		bml_2_bmap(bml)->bcm_mode &= ~BMAP_DIORQ;
 		bml_2_bmap(bml)->bcm_mode |= BMAP_DIO;
 		BMAP_ULOCK(bml_2_bmap(bml));
-		
+
 		DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml), "converted to dio");
 	}
-	
+
 	if (flags & BML_COHRLS)
 		mds_bmap_bml_release(bml);
 
 	/* bmap_op_done_type() will wake any waiters.
 	 */
 	bmap_op_done_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
+
+	sl_csvc_decref(csvc);
 
 	return (0);
 }
@@ -126,7 +131,8 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	if (rc)
 		goto out;
 
-	rq->rq_async_args.pointer_arg[CB_ARG_SLOT] = bml;
+	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_BML] = bml;
+	rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = csvc;
 
 	mq->fid = fcmh_2_fid(bml_2_bmap(bml)->bcm_fcmh);
 	mq->blkno = bml_2_bmap(bml)->bcm_bmapno;

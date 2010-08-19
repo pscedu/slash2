@@ -49,6 +49,9 @@
 
 #include "zfs-fuse/zfs_slashlib.h"
 
+#define SLM_CBARG_SLOT_CSVC	0
+#define SLM_CBARG_SLOT_PEERINFO	1
+
 struct psc_journal		*mdsJournal;
 static struct pscrpc_nbreqset	*logPndgReqs;
 
@@ -492,17 +495,19 @@ __static int
 mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 		  struct pscrpc_async_args *args)
 {
-	int i, j;
+	struct slmds_jent_namespace *jnamespace;
 	struct sl_mds_peerinfo *peerinfo;
 	struct sl_mds_logbuf *logbuf;
 	char *buf;
-	struct slmds_jent_namespace *jnamespace;
+	int i, j;
 
-	peerinfo = args->pointer_arg[0];
+	peerinfo = args->pointer_arg[SLM_CBARG_SLOT_PEERINFO];
+	csvc = args->pointer_arg[SLM_CBARG_SLOT_CSVC];
 	spinlock(&peerinfo->sp_lock);
 	logbuf = peerinfo->sp_logbuf;
 	if (req->rq_status)
 		goto rpc_error;
+
 	/*
 	 * Scan the buffer for the entries we have attempted to send to update
 	 * our statistics before dropping our reference to the buffer.
@@ -533,15 +538,13 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	peerinfo->sp_send_seqno += peerinfo->sp_send_count;
 
  rpc_error:
-
 	peerinfo->sp_send_count = 0;				/* defensive */
 	peerinfo->sp_flags &= ~SP_FLAG_INFLIGHT;
 
 	atomic_dec(&logbuf->slb_refcnt);
 	freelock(&peerinfo->sp_lock);
 
-	/* drop the reference taken by slm_getmcsvc() */
-	sl_csvc_decref(peerinfo->sp_resm->resm_csvc);
+	sl_csvc_decref(csvc);
 	return (0);
 }
 
@@ -778,7 +781,8 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		    SRMM_BULK_PORTAL, &iov, 1);
 
 		authbuf_sign(req, PSCRPC_MSG_REQUEST);
-		req->rq_async_args.pointer_arg[0] = peerinfo;
+		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_PEERINFO] = peerinfo;
+		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = peerinfo;
 		pscrpc_nbreqset_add(logPndgReqs, req);
 	}
 	freelock(&mds_namespace_peerlist_lock);
