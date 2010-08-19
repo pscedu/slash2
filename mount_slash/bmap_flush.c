@@ -200,6 +200,8 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 	atomic_inc(&outstandingRpcCnt);
 
 	csvc = msl_bmap_to_csvc(b, 1);
+	if (csvc)
+		psc_fatalx("msl_bmap_to_csvc() fails to return a client service handle");
 
 	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIC_VERSION, SRMT_WRITE,
 	    req, mq, mp);
