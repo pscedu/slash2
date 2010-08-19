@@ -775,10 +775,12 @@ upsched_scandir(void)
 			fg.fg_gen = FGEN_ANY;
 
 			rc = mds_repl_loadino(&fg, &fcmh);
-			if (rc)
+			if (rc) {
 				/* XXX if ENOENT, remove from repldir and continue */
-				psc_fatalx("mds_repl_loadino: %s",
+				psc_errorx("mds_repl_loadino: %s",
 				    slstrerror(rc));
+				continue;
+			}
 
 			wk = psc_pool_get(upsched_pool);
 			rc = uswi_findoradd(&fg, &wk);
