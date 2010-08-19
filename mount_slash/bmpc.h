@@ -17,6 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * block map page cache definitions - for managing the in-memory store
+ * of file regions (bmaps).
+ */
+
 #ifndef _SL_BMPC_H_
 #define _SL_BMPC_H_
 
@@ -79,16 +84,16 @@ struct bmap_pagecache_entry {
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
 
 enum {
-	BMPCE_NEW       = (1 << 0),
-	BMPCE_GETBUF    = (1 << 1),
-	BMPCE_DATARDY   = (1 << 2),
-	BMPCE_DIRTY2LRU = (1 << 3),
-	BMPCE_LRU       = (1 << 4),
-	BMPCE_FREE      = (1 << 5),
-	BMPCE_FREEING   = (1 << 6),
-	BMPCE_INIT      = (1 << 7),
-	BMPCE_READPNDG  = (1 << 8),
-	BMPCE_RBWPAGE   = (1 << 9)
+	BMPCE_NEW	= (1 << 0),
+	BMPCE_GETBUF	= (1 << 1),
+	BMPCE_DATARDY	= (1 << 2),
+	BMPCE_DIRTY2LRU	= (1 << 3),
+	BMPCE_LRU	= (1 << 4),
+	BMPCE_FREE	= (1 << 5),
+	BMPCE_FREEING	= (1 << 6),
+	BMPCE_INIT	= (1 << 7),
+	BMPCE_READPNDG	= (1 << 8),
+	BMPCE_RBWPAGE	= (1 << 9)
 };
 
 #define BMPCE_2_BIORQ(b) ((b)->bmpce_waitq == NULL) ? NULL :		\
@@ -252,12 +257,12 @@ enum {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-		 "biorq@%p fl=%d o=%u l=%u np=%d b=%p ts=%ld:%ld "	\
-		 BIORQ_FLAGS_FORMAT" "fmt,				\
-		 (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
-		 psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
-		 (b)->biorq_start.tv_sec, (b)->biorq_start.tv_nsec,	\
-		 DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
+	    "biorq@%p fl=%d o=%u l=%u np=%d b=%p ts=%ld:%ld "		\
+	    BIORQ_FLAGS_FORMAT" "fmt,					\
+	    (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
+	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
+	    (b)->biorq_start.tv_sec, (b)->biorq_start.tv_nsec,		\
+	    DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
 
 static __inline void
 bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
