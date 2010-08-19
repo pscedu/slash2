@@ -45,6 +45,7 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
+#include "slsubsys.h"
 #include "up_sched_res.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
@@ -188,6 +189,7 @@ main(int argc, char *argv[])
 		errx(1, "libgcrypt version mismatch");
 
 	pfl_init();
+	psc_subsys_register(SLSS_BMAP, "bmap");
 
 #ifdef ZPOOL_PATH
 	append_path(ZPOOL_PATH);

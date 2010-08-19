@@ -43,6 +43,7 @@
 #include "slconfig.h"
 #include "slerr.h"
 #include "sliod.h"
+#include "slsubsys.h"
 #include "slvr.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
@@ -90,6 +91,8 @@ main(int argc, char *argv[])
 		errx(1, "libgcrypt version mismatch");
 
 	pfl_init();
+	psc_subsys_register(SLSS_BMAP, "bmap");
+
 	progname = argv[0];
 	cfn = SL_PATH_CONF;
 	sfn = SL_PATH_SLICTLSOCK;
