@@ -111,7 +111,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 
  out:
 	if (bcm)
-		bmap_op_done(bcm);
+		bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 	return (mp->rc);
 }
