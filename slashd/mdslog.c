@@ -702,7 +702,7 @@ mds_namespace_read_batch(uint64_t seqno)
  * mds_namespace_propagate_batch - Send a batch of updates to peer MDSes
  *	that want them.
  */
-void
+int
 mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 {
 	struct slmds_jent_namespace *jnamespace;
@@ -713,7 +713,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *req;
 	struct iovec iov;
-	int rc, i, j;
+	int rc, i, j, didwork=0;
 	char *buf;
 
 	spinlock(&mds_namespace_peerlist_lock);
@@ -792,8 +792,10 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_PEERINFO] = peerinfo;
 		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = peerinfo;
 		pscrpc_nbreqset_add(logPndgReqs, req);
+		didwork = 1;
 	}
 	freelock(&mds_namespace_peerlist_lock);
+	return (didwork);
 }
 
 void
@@ -872,7 +874,7 @@ mds_open_cursor(void)
 void
 mds_namespace_propagate(__unusedx struct psc_thread *thr)
 {
-	int rv;
+	int rv, didwork;
 	uint64_t seqno;
 	struct sl_mds_logbuf *buf;
 
@@ -889,9 +891,10 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		 */
 		if (propagate_seqno_hwm && seqno < propagate_seqno_hwm) {
 			buf = mds_namespace_read_batch(seqno);
-			mds_namespace_propagate_batch(buf);
+			didwork = mds_namespace_propagate_batch(buf);
 			seqno += SLM_NAMESPACE_BATCH;
-			continue;
+			if (didwork)
+				continue;
 		}
 		spinlock(&mds_namespace_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
