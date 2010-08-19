@@ -901,8 +901,15 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			 *   it anyway.
 			 */
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
-				lc_addqueue(&bmapTimeoutQ, msbd);
+				/* Put me back on the end of the queue.
+				 */
+				lc_addqueue(&bmapTimeoutQ, msbd);				
 				BMAP_ULOCK(b);
+
+				if (lc_sz(&bmapTimeoutQ) < 2)
+					/* Don't spin on a single item.
+					 */
+					break;
 
 			} else {
 				psc_assert(psc_atomic32_read(&b->bcm_opcnt)
