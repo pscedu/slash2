@@ -47,6 +47,7 @@ struct psc_listcache		 bmapTimeoutQ;
 
 __static struct pscrpc_nbreqset	*pndgReqs;
 __static struct psc_dynarray	 pndgReqSets = DYNARRAY_INIT;
+__static psc_spinlock_t		 pndgReqLock = LOCK_INITIALIZER;
 
 __static atomic_t		 outstandingRpcCnt;
 __static atomic_t		 completedRpcCnt;
@@ -55,8 +56,6 @@ __static struct psc_waitq	 rpcCompletion;
 
 #define MAX_OUTSTANDING_RPCS	128
 #define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
-
-__static psc_spinlock_t pndgReqLock = LOCK_INITIALIZER;
 
 #define pndgReqsLock()		spinlock(&pndgReqLock)
 #define pndgReqsUlock()		freelock(&pndgReqLock)
@@ -67,7 +66,7 @@ bmap_flush_reap_rpcs(void)
 	struct pscrpc_request_set *set;
 	int i;
 
-	psc_trace("outstandingRpcCnt=%d (before) completedRpcCnt=%d",
+	psclog_debug("outstandingRpcCnt=%d (before) completedRpcCnt=%d",
 	    atomic_read(&outstandingRpcCnt), atomic_read(&completedRpcCnt));
 
 	/* Only this thread may pull from pndgReqSets dynarray,
@@ -96,7 +95,7 @@ bmap_flush_reap_rpcs(void)
 	else
 		pscrpc_nbreqset_reap(pndgReqs);
 
-	psc_trace("outstandingRpcCnt=%d (after)",
+	psclog_debug("outstandingRpcCnt=%d (after)",
 		 atomic_read(&outstandingRpcCnt));
 
 	if (shutdownRpc) {
@@ -114,7 +113,7 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 	if (a->biorq_flags & BIORQ_FORCE_EXPIRE)
 		return (1);
 
-	clock_gettime(CLOCK_REALTIME, &ts);
+	PFL_GETTIMESPEC(&ts);
 
 	if ((a->biorq_start.tv_sec + bmapFlushDefMaxAge.tv_sec) < ts.tv_sec)
 		return (1);
@@ -170,19 +169,14 @@ __static int
 bmap_flush_rpc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[0];
-	int rc = 0;
+	int rc;
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
-	if (rc)
-		goto out;
 
 	atomic_dec(&outstandingRpcCnt);
 	DEBUG_REQ(PLL_INFO, rq, "done (outstandingRpcCnt=%d)",
 		  atomic_read(&outstandingRpcCnt));
 
- out:
-	sl_csvc_decref(csvc);
 	return (rc);
 }
 
@@ -200,8 +194,8 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 	atomic_inc(&outstandingRpcCnt);
 
 	csvc = msl_bmap_to_csvc(b, 1);
-	if (!csvc)
-		psc_fatalx("msl_bmap_to_csvc() fails to return a client service handle");
+	if (csvc == NULL)
+		psc_fatalx("msl_bmap_to_csvc() failed to return a client service handle");
 
 	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIC_VERSION, SRMT_WRITE,
 	    req, mq, mp);
@@ -251,20 +245,6 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	BMPC_ULOCK(bmpc);
 }
 
-
-#define LAUNCH_RPC()							\
-	{								\
-		req = bmap_flush_create_rpc(b, tiov, size, soff, n);	\
-		pscrpc_set_add_new_req(set, req);			\
-		if (pscrpc_push_req(req)) {				\
-			DEBUG_REQ(PLL_ERROR, req,			\
-			    "pscrpc_push_req() failed");		\
-			psc_fatalx("no failover yet");			\
-		}							\
-		soff += size;						\
-		nrpcs++;						\
-	}
-
 __static int
 bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		     int niovs)
@@ -304,17 +284,16 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 
 	if (((size = bmap_flush_coalesce_size(biorqs)) <= LNET_MTU) &&
 	    (niovs <= PSCRPC_MAX_BRW_PAGES)) {
-		/* Single rpc case.  Set the appropriate cb handler
-		 *   and attach to the nb request set.
+		/* Single RPC case.  Set the appropriate cb handler
+		 *   and attach to the non-blocking request set.
 		 */
 		req = bmap_flush_create_rpc(b, iovs, size, soff, niovs);
 		req->rq_async_args.pointer_arg[1] = biorqs;
-		/* biorqs will be freed by the set cb. */
+		/* biorqs will be freed by the callback. */
 		pscrpc_nbreqset_add(pndgReqs, req);
 		nrpcs++;
 	} else {
-		/* Deal with a multiple RPC operation
-		 */
+		/* Deal with a multiple RPC operation */
 		struct pscrpc_request_set *set;
 		struct iovec *tiov;
 		int n, j;
@@ -322,9 +301,21 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		size = 0;
 		set = pscrpc_prep_set();
 		set->set_interpret = msl_io_rpcset_cb;
-		/* biorqs MUST be freed by the cb.
-		 */
+		/* biorqs must be freed by the cb. */
 		set->set_arg = biorqs;
+
+#define LAUNCH_RPC()							\
+	do {								\
+		req = bmap_flush_create_rpc(b, tiov, size, soff, n);	\
+		pscrpc_set_add_new_req(set, req);			\
+		if (pscrpc_push_req(req)) {				\
+			DEBUG_REQ(PLL_ERROR, req,			\
+			    "pscrpc_push_req() failed");		\
+			psc_fatalx("no failover yet");			\
+		}							\
+		soff += size;						\
+		nrpcs++;						\
+	} while (0)
 
 		for (j=0, n=0, size=0, tiov=iovs; j < niovs; j++) {
 			if ((size + iovs[j].iov_len) == LNET_MTU) {
@@ -992,7 +983,7 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 
 	while (pscthr_run()) {
 		rc = psc_waitq_waitrel(&rpcCompletion, NULL, &ts);
-		psc_trace("rc=%d", rc);
+		psc_trace("rpcCompletion waitq wait rc=%d", rc);
 		bmap_flush_reap_rpcs();
 	}
 }

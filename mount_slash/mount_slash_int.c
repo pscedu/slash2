@@ -55,12 +55,12 @@
 #include "slerr.h"
 
 /* async RPC pointers */
-#define MSL_IO_CB_POINTER_SLOT		0
-#define MSL_OFTRQ_CB_POINTER_SLOT	1
-#define MSL_CSVC_CB_POINTER_SLOT	2
+#define MSL_CB_POINTER_SLOT_BMPCES	0
+#define MSL_CB_POINTER_SLOT_CSVC	1
+#define MSL_CB_POINTER_SLOT_BIORQ	2
+#define MSL_CB_POINTER_SLOT_BIORQS	3
 
-/* Flushing fuse threads wait here for I/O completion.
- */
+/* Flushing fuse threads wait here for I/O completion. */
 struct psc_waitq msl_fhent_flush_waitq = PSC_WAITQ_INIT;
 
 struct timespec msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
@@ -745,10 +745,14 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 		    sizeof(struct srt_bmapdesc));
 
  out:
-	if (rq)
+	if (rq) {
 		pscrpc_req_finished(rq);
-	if (csvc)
+		rq = NULL;
+	}
+	if (csvc) {
 		sl_csvc_decref(csvc);
+		csvc = NULL;
+	}
 
 	if (rc == SLERR_BMAP_DIOWAIT) {
 		DEBUG_BMAP(PLL_WARN, b, "SLERR_BMAP_DIOWAIT rt=%d", nretries);
@@ -900,9 +904,9 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 int
 msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
-	struct psc_dynarray *a=args->pointer_arg[MSL_IO_CB_POINTER_SLOT];
-	struct bmpc_ioreq *r=args->pointer_arg[MSL_OFTRQ_CB_POINTER_SLOT];
-	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CSVC_CB_POINTER_SLOT];
+	struct psc_dynarray *a = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCES];
+	struct bmpc_ioreq *r = args->pointer_arg[MSL_CB_POINTER_SLOT_BIORQ];
+	struct slashrpc_cservice *csvc = args->pointer_arg[MSL_CB_POINTER_SLOT_CSVC];
 	struct bmapc_memb *b;
 	struct bmap_pagecache_entry *bmpce;
 	int op=rq->rq_reqmsg->opc, i, rc;
@@ -1009,19 +1013,15 @@ int
 msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *args)
 {
 	struct slashrpc_cservice *csvc = args->pointer_arg[0];
-	struct psc_dynarray *biorqs;
+	struct psc_dynarray *biorqs = args->pointer_arg[1];
 	struct bmpc_ioreq *r;
 	int i;
-
-	biorqs = args->pointer_arg[1];
 
 	DEBUG_REQ(PLL_INFO, req, "biorqs=%p len=%d",
 		  biorqs, psc_dynarray_len(biorqs));
 
-	for (i=0; i < psc_dynarray_len(biorqs); i++) {
-		r = psc_dynarray_getpos(biorqs, i);
+	DYNARRAY_FOREACH(r, i, biorqs)
 		msl_biorq_destroy(r);
-	}
 	psc_dynarray_free(biorqs);
 	PSCFREE(biorqs);
 
@@ -1275,9 +1275,9 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	/* Setup the callback, supplying the dynarray as a argument.
 	 */
 	req->rq_interpret_reply = msl_readio_cb;
-	req->rq_async_args.pointer_arg[MSL_IO_CB_POINTER_SLOT] = a;
-	req->rq_async_args.pointer_arg[MSL_OFTRQ_CB_POINTER_SLOT] = r;
-	req->rq_async_args.pointer_arg[MSL_CSVC_CB_POINTER_SLOT] = csvc;
+	req->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCES] = a;
+	req->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BIORQ] = r;
+	req->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_CSVC] = csvc;
 	if (pscrpc_push_req(req)) {
 		DEBUG_REQ(PLL_ERROR, req,
 			  "pscrpc_push_req() failed");
