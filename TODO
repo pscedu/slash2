@@ -341,4 +341,5 @@ utime
 
 - fix the "static" variables in communal/general functions
 - register a per-app slexp_destroyf routine as slashd is overriding slexp_destroy
-- in this routine, unset resm_csvc to CONNECTED
+- in this routine, unset resm_csvc from CONNECTED
+- delete bcm_pri and just use bcm+1 to get the pri value
