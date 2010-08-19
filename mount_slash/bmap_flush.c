@@ -169,6 +169,7 @@ __static int
 bmap_flush_rpc_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
 {
+	struct slashrpc_cservice *csvc = args->pointer_arg[0];
 	int rc;
 
 	rc = authbuf_check(rq, PSCRPC_MSG_REPLY);
@@ -176,6 +177,9 @@ bmap_flush_rpc_cb(struct pscrpc_request *rq,
 	atomic_dec(&outstandingRpcCnt);
 	DEBUG_REQ(PLL_INFO, rq, "done (outstandingRpcCnt=%d)",
 		  atomic_read(&outstandingRpcCnt));
+
+	sl_csvc_decref(csvc);
+	args->pointer_arg[0] = NULL;
 
 	return (rc);
 }

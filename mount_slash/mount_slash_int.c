@@ -1012,7 +1012,6 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 int
 msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *args)
 {
-	struct slashrpc_cservice *csvc = args->pointer_arg[0];
 	struct psc_dynarray *biorqs = args->pointer_arg[1];
 	struct bmpc_ioreq *r;
 	int i;
@@ -1024,8 +1023,6 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 		msl_biorq_destroy(r);
 	psc_dynarray_free(biorqs);
 	PSCFREE(biorqs);
-
-	sl_csvc_decref(csvc);
 
 	return (0);
 }
