@@ -25,6 +25,7 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_rpc/rpc.h"
 #include "psc_util/odtable.h"
+#include "psc_util/pthrutil.h"
 
 #include "bmap.h"
 #include "mdslog.h"
@@ -54,21 +55,17 @@ struct bmap_mds_info {
 	int32_t				 bmdsi_writers;
 	int32_t				 bmdsi_readers;
 	int				 bmdsi_flags;
-	pthread_rwlock_t		 bmdsi_rwlock;
+	struct psc_pthread_rwlock	 bmdsi_rwlock;
 };
 
 /* bmdsi_flags */
 #define BMIM_LOGCHG		(1 << 0)	/* in-mem change made, needs logged */
 #define BMIM_DIO		(1 << 1)	/* directio enabled                 */
 
-#define BMAPOD_RDLOCK(bmdsi)						\
-	psc_assert(!pthread_rwlock_rdlock(&(bmdsi)->bmdsi_rwlock))
-
-#define BMAPOD_WRLOCK(bmdsi)						\
-	psc_assert(!pthread_rwlock_wrlock(&(bmdsi)->bmdsi_rwlock))
-
-#define BMAPOD_ULOCK(bmdsi)						\
-	psc_assert(!pthread_rwlock_unlock(&(bmdsi)->bmdsi_rwlock))
+#define BMAPOD_RDLOCK(bmdsi)	psc_pthread_rwlock_rdlock(&(bmdsi)->bmdsi_rwlock)
+#define BMAPOD_RDREQLOCK(bmdsi)	psc_pthread_rwlock_rdreqlock(&(bmdsi)->bmdsi_rwlock)
+#define BMAPOD_WRLOCK(bmdsi)	psc_pthread_rwlock_wrlock(&(bmdsi)->bmdsi_rwlock)
+#define BMAPOD_ULOCK(bmdsi)	psc_pthread_rwlock_unlock(&(bmdsi)->bmdsi_rwlock)
 
 #define BMDSI_LOGCHG_SET(b)						\
 	do {								\

@@ -1305,14 +1305,20 @@ mds_bmap_init(struct bmapc_memb *bcm)
 	pll_init(&bmdsi->bmdsi_leases, struct bmap_mds_lease,
 		 bml_bmdsi_lentry, NULL);
 	bmdsi->bmdsi_xid = 0;
-	pthread_rwlock_init(&bmdsi->bmdsi_rwlock, NULL);
+	psc_pthread_rwlock_init(&bmdsi->bmdsi_rwlock);
 }
 
 void
-mds_bmap_reap(struct bmapc_memb *bcm)
+mds_bmap_destroy(struct bmapc_memb *bcm)
 {
-	//struct bmap_mds_info *bmdsi;
-	//bmdsi = bcm->bcm_pri;
+	struct bmap_mds_info *bmdsi = bcm->bcm_pri;
+
+//	psc_assert(bmdsi->bmdsi_writers == 0);
+//	psc_assert(bmdsi->bmdsi_readers == 0);
+//	psc_assert(bmdsi->bmdsi_assign == NULL);
+//	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
+//	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
+	psc_pthread_rwlock_destroy(&bmdsi->bmdsi_rwlock);
 	if (bcm->bcm_od)
 		PSCFREE(bcm->bcm_od);
 }
@@ -1464,5 +1470,5 @@ struct bmap_ops bmap_ops = {
 	mds_bmap_init,
 	mds_bmap_read,
 	NULL,
-	mds_bmap_reap
+	mds_bmap_destroy
 };

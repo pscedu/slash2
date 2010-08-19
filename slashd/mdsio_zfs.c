@@ -128,7 +128,7 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 	size_t nb;
 	int logchg=0;
 
-	BMAPOD_READ_START(bmap);
+	BMAPOD_RDREQLOCK(bmap_2_bmdsi(bmap));
 	BMDSI_LOGCHG_CHECK(bmap, logchg);
 	if (!logchg) {
 		BMAPOD_READ_DONE(bmap);
