@@ -289,7 +289,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		 */
 		req = bmap_flush_create_rpc(b, iovs, size, soff, niovs);
 		req->rq_async_args.pointer_arg[1] = biorqs;
-		/* biorqs will be freed by the callback. */
+		/* biorqs will be freed by the nbreqset callback. */
 		pscrpc_nbreqset_add(pndgReqs, req);
 		nrpcs++;
 	} else {
