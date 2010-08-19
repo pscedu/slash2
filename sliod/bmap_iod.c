@@ -132,6 +132,7 @@ bcr_hold_2_ready(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	bcr->bcr_biodi->biod_bcr = NULL;
 }
 
+
 void
 bcr_hold_add(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
@@ -168,6 +169,11 @@ bcr_xid_check(struct biod_crcup_ref *bcr)
 	locked = reqlock(&bcr->bcr_biodi->biod_lock);
 	psc_assert(bcr->bcr_xid < bcr->bcr_biodi->biod_bcr_xid);
 	psc_assert(bcr->bcr_xid == bcr->bcr_biodi->biod_bcr_xid_last);
+	/* bcr_xid_check() must be called prior to bumping xid_last.
+	 */
+	psc_assert(bcr->bcr_biodi->biod_bcr_xid > 
+		   bcr->bcr_biodi->biod_bcr_xid_last);
+
 	ureqlock(&bcr->bcr_biodi->biod_lock, locked);
 }
 
@@ -196,6 +202,70 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	bcr_xid_last_bump(bcr);
 	bmap_op_done_type(bcr->bcr_biodi->biod_bmap, BMAP_OPCNT_BCRSCHED);
 	PSCFREE(bcr);
+}
+
+void
+bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
+{
+	struct bmap_iod_info *biod = bcr->bcr_biodi;
+	
+	DEBUG_BCR(PLL_INFO, bcr, "finalize");
+
+	bcr_ready_remove(inf, bcr);
+	/* The 'bcr' pointer is now invalid.
+	 */	
+	spinlock(&biod->biod_lock);
+	psc_assert(biod->biod_bcr_sched);
+
+	if (biod->biod_bcr_xid == biod->biod_bcr_xid_last) {
+		/* No outstanding bcr's.		  
+		 */
+		psc_assert(pll_empty(&biod->biod_bklog_bcrs));
+		psc_assert(!biod->biod_bcr);
+		biod->biod_bcr_sched = 0;
+
+		DEBUG_BCR(PLL_INFO, bcr, "descheduling rlsq=%u drtyslvrs=%u",
+			  biod->biod_rlsseq, biod->biod_crcdrty_slvrs);
+
+		if (biod->biod_rlsseq && !biod->biod_crcdrty_slvrs) {
+			/* The client has issued a release request and
+			 *   no further crc work is pending.
+			 */
+			bmap_op_start_type(biod->biod_bmap, 
+				   BMAP_OPCNT_RLSSCHED);
+
+			freelock(&biod->biod_lock);
+			lc_addtail(&bmapRlsQ, bcr->bcr_biodi);
+		} else
+			freelock(&biod->biod_lock);
+
+	} else {
+		bcr = pll_gethd(&biod->biod_bklog_bcrs);
+		if (bcr) {			
+			DEBUG_BCR(PLL_INFO, bcr, "backlogged bcr, nblklog=%d",
+				  pll_nitems(&biod->biod_bklog_bcrs));
+			
+			if (pll_empty(&biod->biod_bklog_bcrs)) {
+				psc_assert(biod->biod_bcr == bcr);
+				//	   || !biod->biod_bcr);
+
+				if (bcr->bcr_crcup.nups ==
+				    MAX_BMAP_INODE_PAIRS) {
+					biod->biod_bcr = NULL;
+					bcr_ready_add(inf, bcr);
+				} else 
+					bcr_hold_add(inf, bcr);
+
+			} else {
+				/* Only the tail of the bklog may be the 
+				 *    active bcr.
+				 */
+				psc_assert(biod->biod_bcr != bcr);
+				bcr_ready_add(inf, bcr);
+			}
+		}
+		freelock(&biod->biod_lock);
+	}
 }
 
 #if 0

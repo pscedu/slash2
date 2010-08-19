@@ -72,6 +72,7 @@ struct bmap_iod_minseq {
 /* bcr_flags */
 #define	BCR_NONE		0x00
 #define BCR_SCHEDULED		0x01
+#define BCR_BACKLOGGED          0x02
 
 #define SLIOD_BMAP_RLS_WAIT_SECS 2 /* Number of seconds to wait for more
 				    *  bmap releases from the client
@@ -80,11 +81,14 @@ struct bmap_iod_minseq {
 #define DEBUG_BCR(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 	    "bcr@%p fid="SLPRI_FG" xid=%"PRIu64" nups=%d fl=%d age=%lu"	\
-	    " bmap@%p:%u :: "fmt,					\
+	    " bmap@%p:%u biod_bcr_xid=%"PRId64			        \
+	    " biod_bcr_xid_last=%"PRId64" :: "fmt,			\
 	    (b), SLPRI_FG_ARGS(&(b)->bcr_crcup.fg), (b)->bcr_xid,	\
 	    (b)->bcr_crcup.nups, (b)->bcr_flags, (b)->bcr_age.tv_sec,	\
 	    (b)->bcr_biodi->biod_bmap,					\
 	    (b)->bcr_biodi->biod_bmap->bcm_blkno,			\
+	    (b)->bcr_biodi->biod_bcr_xid,				\
+	    (b)->bcr_biodi->biod_bcr_xid_last,			        \
 	    ## __VA_ARGS__)
 
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
@@ -147,6 +151,7 @@ void bcr_ready_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_hold_requeue(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_ready_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
+void bcr_finalize(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_xid_check(struct biod_crcup_ref *);
 void bcr_xid_last_bump(struct biod_crcup_ref *);
 

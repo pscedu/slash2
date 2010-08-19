@@ -147,11 +147,13 @@ slvr_worker_push_crcups(void)
 
 		if (trylock(&bcr->bcr_biodi->biod_lock)) {
 			if (bcr->bcr_biodi->biod_inflight) {
-				DEBUG_BCR(PLL_INFO, bcr,
-					  "waiting for xid=%"PRIu64,
+
+				DEBUG_BCR(PLL_FATAL, bcr, "tried to schedule "
+					  "multiple bcr's xid=%"PRIu64,
 					  bcr->bcr_biodi->biod_bcr_xid_last);
-				freelock(&bcr->bcr_biodi->biod_lock);
-				continue;
+
+				//freelock(&bcr->bcr_biodi->biod_lock);
+				//continue;
 			} else {
 				bcr->bcr_biodi->biod_inflight = 1;
 				freelock(&bcr->bcr_biodi->biod_lock);
@@ -253,57 +255,25 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			  bcr, "rq_status=%d rc=%d", rq->rq_status,
 			  mp ? mp->rc : -4096);
 
+		psc_assert(biod->biod_bcr_sched && biod->biod_inflight);
+
 		if (rq->rq_status) {
 			spinlock(&binflCrcs.binfcrcs_lock);
 			bcr->bcr_flags &= ~BCR_SCHEDULED;
 			freelock(&binflCrcs.binfcrcs_lock);
-			/* Unset the inflight bit on the biodi.
+			/* Unset the inflight bit on the biodi since
+			 *   bcr_xid_last_bump() will not be called.
 			 */
 			spinlock(&biod->biod_lock);
-			bcr_xid_check(bcr);
-			psc_assert(biod->biod_bcr_sched);
 			biod->biod_inflight = 0;
+			bcr_xid_check(bcr);
 			freelock(&biod->biod_lock);
 
 			DEBUG_BCR(PLL_ERROR, bcr, "rescheduling");
 
-		} else {
-			bcr_xid_check(bcr);
+		} else
+			bcr_finalize(&binflCrcs, bcr);
 
-			spinlock(&biod->biod_lock);
-			psc_assert(biod->biod_bcr_sched);
-
-			if (biod->biod_rlsseq &&
-			    !biod->biod_crcdrty_slvrs &&
-			    (biod->biod_bcr_xid == biod->biod_bcr_xid_last)) {
-				psc_assert(pll_empty(&biod->biod_bklog_bcrs));
-				psc_assert(!biod->biod_bcr);
-				biod->biod_inflight = 0;
-				bmap_op_start_type(biod->biod_bmap,
-						   BMAP_OPCNT_RLSSCHED);
-				freelock(&biod->biod_lock);
-				lc_addtail(&bmapRlsQ, bcr->bcr_biodi);
-				bcr_ready_remove(&binflCrcs, bcr);
-
-			} else {
-				struct biod_crcup_ref *tmp;
-
-				tmp = pll_gethd(&biod->biod_bklog_bcrs);
-				if (tmp) {
-					if (pll_empty(&biod->biod_bklog_bcrs)) {
-						psc_assert(biod->biod_bcr == tmp ||
-							   !biod->biod_bcr);
-						if (biod->biod_bcr)
-							biod->biod_bcr = NULL;
-					} else
-						psc_assert(biod->biod_bcr != tmp);
-
-					bcr_ready_add(&binflCrcs, tmp);
-				}
-				freelock(&biod->biod_lock);
-				bcr_ready_remove(&binflCrcs, bcr);
-			}
-		}
 	}
 	psc_dynarray_free(a);
 	PSCFREE(a);
@@ -415,47 +385,40 @@ slvr_worker_int(void)
 	 */
 	bcr = slvr_2_biod(s)->biod_bcr;
 	if (bcr) {
-		uint32_t i;
+		uint32_t i, found;
 
+		psc_assert(slvr_2_biod(s)->biod_bcr_sched);
 		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_blkno);
 		psc_assert(SAMEFG(&bcr->bcr_crcup.fg,
 			  &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg));
-		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
+		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);		
 		/* If we already have a slot for our slvr_num then
 		 *   reuse it.
 		 */
-		for (i=0; i < bcr->bcr_crcup.nups; i++) {
-			if (bcr->bcr_crcup.crcs[i].slot != s->slvr_num)
-				continue;
-
-			bcr->bcr_crcup.crcs[i].crc = crc;
-			goto requeue;
+		for (i=0, found=0; i < bcr->bcr_crcup.nups; i++) {
+			if (bcr->bcr_crcup.crcs[i].slot == s->slvr_num) {
+				found = 1;
+				break;
+			}
 		}
 
-		bcr->bcr_crcup.crcs[bcr->bcr_crcup.nups].crc = crc;
-		bcr->bcr_crcup.crcs[bcr->bcr_crcup.nups].slot = s->slvr_num;
-		bcr->bcr_crcup.nups++;
+		bcr->bcr_crcup.crcs[i].crc = crc;
+		bcr->bcr_crcup.crcs[i].slot = s->slvr_num;
+		if (!found)
+			bcr->bcr_crcup.nups++;
 
-		DEBUG_BCR(PLL_NOTIFY, bcr, "add to existing bcr nups=%d (sched=%d)",
-			  bcr->bcr_crcup.nups, slvr_2_biod(s)->biod_bcr_sched);
+		DEBUG_BCR(PLL_NOTIFY, bcr, "add to existing bcr slot=%d "
+			  "nups=%d", i, bcr->bcr_crcup.nups);
 
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
-			if (slvr_2_biod(s)->biod_bcr_sched) {
-				psc_assert(bcr->bcr_biodi->biod_bcr == bcr);
-				bcr->bcr_biodi->biod_bcr = NULL;
-			} else
-				bcr_hold_2_ready(&binflCrcs, bcr);
-		else
-		requeue:
-			/* Put this guy at the end of the list.
+			/* The bcr is full, push it out now.
 			 */
-			if (!slvr_2_biod(s)->biod_bcr_sched)
-				bcr_hold_requeue(&binflCrcs, bcr);
+			bcr_hold_2_ready(&binflCrcs, bcr);
 
 	} else {
 		bmap_op_start_type(slvr_2_bmap(s), BMAP_OPCNT_BCRSCHED);
 
-		/* XXX not freed? */
+		/* Freed by bcr_ready_remove() */
 		slvr_2_biod(s)->biod_bcr = bcr =
 			PSCALLOC(sizeof(struct biod_crcup_ref) +
 				 (sizeof(struct srm_bmap_crcwire) *
@@ -477,12 +440,15 @@ slvr_worker_int(void)
 			  pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
 			  slvr_2_biod(s)->biod_bcr_sched);
 
-		if (!slvr_2_biod(s)->biod_bcr_sched) {
-			psc_assert(pll_empty(&slvr_2_biod(s)->biod_bklog_bcrs));
+		if (slvr_2_biod(s)->biod_bcr_sched)
+			/* The bklog may be empty but a pending bcr may be present
+			 *    on the ready list.
+			 */
+			pll_addtail(&slvr_2_biod(s)->biod_bklog_bcrs, bcr);
+		else {
 			slvr_2_biod(s)->biod_bcr_sched = 1;
 			bcr_hold_add(&binflCrcs, bcr);
-		} else
-			pll_addtail(&slvr_2_biod(s)->biod_bklog_bcrs, bcr);
+		}
 	}
 	/* Either set the initial age of a new sliver or extend the age
 	 *   of an existing one. Note that if it gets full, it will be
