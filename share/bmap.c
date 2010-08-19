@@ -17,6 +17,9 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS SLSS_BMAP
+#include "slsubsys.h"
+
 #include "pfl/cdefs.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/treeutil.h"
@@ -71,13 +74,18 @@ bmap_remove(struct bmapc_memb *b)
 }
 
 void
-_bmap_op_done(struct bmapc_memb *b)
+_bmap_op_done(struct bmapc_memb *b, const char *fn, const char *func,
+    int line, const char *fmt, ...)
 {
-	BMAP_RLOCK(b);
+	va_list ap;
 
+	BMAP_RLOCK(b);
 	psc_atomic32_dec(&b->bcm_opcnt);
-	DEBUG_BMAP(PLL_INFO, b, "bmap_op_done");
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) >= 0);
+
+	va_start(ap, fmt);
+	psclogv(fn, func, line, SLSS_BMAP, PLL_DEBUG, 0, fmt, ap);
+	va_end(ap);
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
 		b->bcm_mode |= BMAP_CLOSING;
@@ -187,11 +195,11 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		bcm_wait_locked(b, (b->bcm_mode & BMAP_INIT));
 
 	retry:
-		/* Not all lookups are done with the intent of 
+		/* Not all lookups are done with the intent of
 		 *   changing the bmap mode.  bmap_lookup() does not
 		 *   specify a rw value.
 		 */
-		if (bmaprw && !(bmaprw & b->bcm_mode) && 
+		if (bmaprw && !(bmaprw & b->bcm_mode) &&
 		    bmap_ops.bmo_mode_chngf) {
 			/* Others wishing to access this bmap in the
 			 *   same mode must wait until MDCHNG ops have

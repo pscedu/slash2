@@ -44,6 +44,7 @@
 #include "fid.h"
 #include "fidcache.h"
 #include "slashrpc.h"
+#include "slsubsys.h"
 #include "sltypes.h"
 
 struct fidc_membh;
@@ -60,12 +61,12 @@ struct srt_bmapdesc;
  *     area (as part of new structures?) so save space on the mds.
  */
 struct bmapc_memb {
-	sl_bmapno_t		 bcm_bmapno;	/* bmap index number        */
-	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info    */
-	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt           */
+	sl_bmapno_t		 bcm_bmapno;	/* bmap index number */
+	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info */
+	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt */
 	uint32_t		 bcm_mode;	/* see flags below */
 	psc_spinlock_t		 bcm_lock;
-	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry    */
+	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry */
 	struct psclist_head	 bcm_lentry;	/* free pool */
 	struct slash_bmap_od	*bcm_od;	/* on-disk representation */
 	void			*bcm_pri;	/* bmap_mds_info, bmap_cli_info, or bmap_iod_info */
@@ -84,8 +85,8 @@ struct bmapc_memb {
 #define BMAP_DIRTY2LRU		(1 << 8)
 #define BMAP_REAPABLE		(1 << 9)
 #define BMAP_IONASSIGN		(1 << 10)
-#define BMAP_MDCHNG             (1 << 11)
-#define BMAP_WAITERS            (1 << 12)
+#define BMAP_MDCHNG		(1 << 11)
+#define BMAP_WAITERS		(1 << 12)
 #define _BMAP_FLSHFT		(1 << 13)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
@@ -93,6 +94,21 @@ struct bmapc_memb {
 #define BMAP_ULOCK(b)		freelock(&(b)->bcm_lock)
 #define BMAP_RLOCK(b)		reqlock(&(b)->bcm_lock)
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
+
+#define _DEBUG_BMAP_FMT		"bmap@%p b:%x m:%u i:%"PRIx64" opcnt=%u "
+#define _DEBUG_BMAP_FMTARGS(b)	(b), (b)->bcm_blkno, (b)->bcm_mode,	\
+				(b)->bcm_fcmh ?				\
+				    fcmh_2_fid((b)->bcm_fcmh) : 0,	\
+				psc_atomic32_read(&(b)->bcm_opcnt)
+
+#define _DEBUG_BMAP(file, func, line, level, b, fmt, ...)		\
+	psclog((file), (func), (line), SLSS_BMAP, (level), 0,		\
+	    _DEBUG_BMAP_FMT fmt, _DEBUG_BMAP_FMTARGS(b),		\
+	    ## __VA_ARGS__)
+
+#define DEBUG_BMAP(level, b, fmt, ...)					\
+	_DEBUG_BMAP(__FILE__, __func__, __LINE__, (level), (b), fmt,	\
+	    ## __VA_ARGS__)
 
 #define bcm_wait_locked(b, cond)					\
 	do {								\
@@ -114,18 +130,17 @@ struct bmapc_memb {
 		}							\
 	} while (0)
 
-#define _DEBUG_BMAP(file, func, line, level, b, fmt, ...)		\
-	psclog((file), (func), (line), PSS_GEN, (level), 0,		\
-	       "bmap@%p b:%x m:%u i:%"PRIx64" opcnt=%u "fmt,		\
-	    (b), (b)->bcm_blkno, (b)->bcm_mode,				\
-	    (b)->bcm_fcmh ? fcmh_2_fid((b)->bcm_fcmh) : 0,		\
-	    atomic_read(&(b)->bcm_opcnt),				\
-	    ## __VA_ARGS__)
+#define bmap_op_start_type(b, type)					\
+	do {								\
+		psc_atomic32_inc(&(b)->bcm_opcnt);			\
+		DEBUG_BMAP(PLL_NOTIFY, (b),				\
+		    "took reference (type=%d)", (type));		\
+	} while (0)
 
-#define DEBUG_BMAP(level, b, fmt, ...)					\
-	_DEBUG_BMAP(__FILE__, __func__, __LINE__, (level), (b), fmt,	\
-	    ## __VA_ARGS__)
-
+#define bmap_op_done_type(b, type)					\
+	_bmap_op_done((b), __FILE__, __func__, __LINE__,		\
+	    _DEBUG_BMAP_FMT "removing reference (type=%d)",		\
+	    _DEBUG_BMAP_FMTARGS(b), (type))
 
 /* bmap per-replica states */
 #define BREPLST_INVALID		0	/* no/stale data present */
@@ -135,7 +150,7 @@ struct bmapc_memb {
 #define BREPLST_TRUNCPNDG	4	/* partial truncation in bmap */
 #define BREPLST_GARBAGE		5	/* marked for deletion */
 #define BREPLST_GARBAGE_SCHED	6	/* being deleted */
-#define NBREPLST			7
+#define NBREPLST		7
 
 #define BMAP_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
 
@@ -234,7 +249,8 @@ _log_debug_bmapod(const char *file, const char *func, int lineno,
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
-void	_bmap_op_done(struct bmapc_memb *);
+void	_bmap_op_done(struct bmapc_memb *, const char *, const char *,
+	    int, const char *, ...);
 int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
 	    struct bmapc_memb **);
 
@@ -244,40 +260,6 @@ int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
 
 #define bmap_get_noretr(f, n, rw, bp)	bmap_getf((f), (n), (rw),	\
 					  BMAPGETF_LOAD | BMAPGETF_NORETRIEVE, (bp))
-
-#define bmap_op_start_type(b, type)					\
-	do {								\
-		atomic_inc(&(b)->bcm_opcnt);				\
-		DEBUG_BMAP(PLL_NOTIFY, (b),				\
-		    "took reference (type=%d)", (type));		\
-	} while (0)
-
-#define bmap_op_start(b)						\
-	do {								\
-		atomic_inc(&(b)->bcm_opcnt);				\
-		DEBUG_BMAP(PLL_NOTIFY, (b), "took reference");		\
-	} while (0)
-
-#define bmap_op_done(b)							\
-	do {								\
-		DEBUG_BMAP(PLL_NOTIFY, (b), "removing reference");	\
-		_bmap_op_done(b);					\
-	} while (0)
-
-#define bmap_op_done_type(b, type)					\
-	do {								\
-		DEBUG_BMAP(PLL_NOTIFY, (b),				\
-		    "removing reference (type=%d)", (type));		\
-		_bmap_op_done(b);					\
-	} while (0)
-
-#define bmap_op_done_type_simple(b, type)				\
-	do {								\
-		psc_assert(atomic_read(&(b)->bcm_opcnt) > 1);		\
-		atomic_dec(&(b)->bcm_opcnt);				\
-		DEBUG_BMAP(PLL_NOTIFY, (b),				\
-		    "removed reference (type=%d)", (type));		\
-	} while (0)
 
 enum bmap_opcnt_types {
 /*  0 */ BMAP_OPCNT_LOOKUP,
@@ -303,5 +285,11 @@ struct bmap_ops {
 };
 
 extern struct bmap_ops bmap_ops;
+
+static __inline void *
+bmap_get_pri(struct bmapc_memb *bcm)
+{
+	return (bcm + 1);
+}
 
 #endif /* _BMAP_H_ */
