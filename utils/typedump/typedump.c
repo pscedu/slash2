@@ -48,6 +48,7 @@
 #include "slconn.h"
 #include "slerr.h"
 #include "sljournal.h"
+#include "slsubsys.h"
 #include "sltypes.h"
 #include "slutil.h"
 #include "mount_slash/bmap_cli.h"
