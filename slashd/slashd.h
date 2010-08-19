@@ -139,7 +139,8 @@ struct sl_mds_peerinfo {
 
 /* sml_flags values */
 #define	SP_FLAG_NONE		   0
-#define	SP_FLAG_INFLIGHT	  (1 << 0)
+#define	SP_FLAG_MIA		  (1 << 0)
+#define	SP_FLAG_INFLIGHT	  (1 << 1)
 
 /* allocated by slcfg_init_resm(), which is tied into the lex/yacc code */
 struct resm_mds_info {

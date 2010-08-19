@@ -725,6 +725,8 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		 * Skip if the MDS is busy or the current batch is out of
 		 * its windows.  Note for each MDS, we send updates in order.
 		 */
+		if (peerinfo->sp_flags & SP_FLAG_MIA)
+			continue;
 		if (peerinfo->sp_flags & SP_FLAG_INFLIGHT)
 			continue;
 		if (peerinfo->sp_send_seqno < logbuf->slb_seqno ||
@@ -747,8 +749,14 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
 
 		csvc = slm_getmcsvc(peerinfo->sp_resm);
-		if (csvc == NULL)
+		if (csvc == NULL) {
+			/*
+			 * A simplistic way to avoid CPU spinning. A better
+			 * way is to let the ping thread handle this.
+			 */
+			peerinfo->sp_flags |= SP_FLAG_MIA;
 			continue;
+		}
 		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
 		    SRMT_NAMESPACE_UPDATE, req, mq, mp);
 		if (rc) {
