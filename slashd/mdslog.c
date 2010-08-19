@@ -500,6 +500,7 @@ mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
 	struct sl_mds_logbuf *logbuf;
 	char *buf;
 	int i, j;
+	struct slashrpc_cservice *csvc;
 
 	peerinfo = args->pointer_arg[SLM_CBARG_SLOT_PEERINFO];
 	csvc = args->pointer_arg[SLM_CBARG_SLOT_CSVC];
