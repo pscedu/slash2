@@ -989,17 +989,6 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 }
 
 int
-msl_io_rpcset_cb_old(__unusedx struct pscrpc_request_set *set, void *arg,
-		     int rc)
-{
-	struct bmpc_ioreq *r=arg;
-
-	msl_biorq_destroy(r);
-
-	return (rc);
-}
-
-int
 msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 {
 	struct psc_dynarray *biorqs = arg;
