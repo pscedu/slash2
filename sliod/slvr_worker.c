@@ -37,7 +37,7 @@
 #include "slvr.h"
 
 static struct biod_infl_crcs	 binflCrcs;
-struct pscrpc_nbreqset	*slvrNbReqSet;
+struct pscrpc_nbreqset		*slvrNbReqSet;
 
 /*
  * Send an RPC containing CRC updates for slivers to the metadata server.
@@ -88,7 +88,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		 */
 		psc_assert(!rc);
 
-		DEBUG_BCR(PLL_NOTIFY, bcr, "bcrs pos=%d fsz=%"PRId64, 
+		DEBUG_BCR(PLL_NOTIFY, bcr, "bcrs pos=%d fsz=%"PRId64,
 			  i, bcr->bcr_crcup.fsize);
 
 		bcr_xid_check(bcr);
@@ -248,9 +248,9 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 		bcr = psc_dynarray_getpos(a, i);
 		biod = bcr->bcr_biodi;
 
-		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ? 
-			   PLL_ERROR : PLL_INFO), 
-			  bcr, "rq_status=%d rc=%d", rq->rq_status, 
+		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ?
+			   PLL_ERROR : PLL_INFO),
+			  bcr, "rq_status=%d rc=%d", rq->rq_status,
 			  mp ? mp->rc : -4096);
 
 		if (rq->rq_status) {
@@ -273,18 +273,18 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			spinlock(&biod->biod_lock);
 			psc_assert(biod->biod_bcr_sched);
 
-			if (biod->biod_rlsseq && 
+			if (biod->biod_rlsseq &&
 			    !biod->biod_crcdrty_slvrs &&
 			    (biod->biod_bcr_xid == biod->biod_bcr_xid_last)) {
 				psc_assert(pll_empty(&biod->biod_bklog_bcrs));
 				psc_assert(!biod->biod_bcr);
 				biod->biod_inflight = 0;
-				bmap_op_start_type(biod->biod_bmap, 
+				bmap_op_start_type(biod->biod_bmap,
 						   BMAP_OPCNT_RLSSCHED);
 				freelock(&biod->biod_lock);
 				lc_addtail(&bmapRlsQ, bcr->bcr_biodi);
 				bcr_ready_remove(&binflCrcs, bcr);
-				
+
 			} else {
 				struct biod_crcup_ref *tmp;
 
@@ -295,7 +295,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 							   !biod->biod_bcr);
 						if (biod->biod_bcr)
 							biod->biod_bcr = NULL;
-					} else 
+					} else
 						psc_assert(biod->biod_bcr != tmp);
 
 					bcr_ready_add(&binflCrcs, tmp);
@@ -345,7 +345,7 @@ slvr_worker_int(void)
 	psc_assert(s->slvr_flags & SLVR_CRCDIRTY);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
-	
+
 	/* Try our best to determine whether or we should hold off
 	 *   the crc operation, strive to only crc slivers which have
 	 *   no pending writes.  This section directly below may race
@@ -374,13 +374,13 @@ slvr_worker_int(void)
 	// the lock for the duration?
 	psc_assert(psclist_disjoint(&s->slvr_lentry));
 	psc_assert(slvr_do_crc(s));
-	
+
 	/* NOTE: this lock covers the slvr lock too!
 	 */
 	spinlock(&slvr_2_biod(s)->biod_lock);
 	/* Copy the accumulator to the tmp variable.
 	 */
-	crc = s->slvr_crc; 
+	crc = s->slvr_crc;
 	PSC_CRC64_FIN(&crc);
 	/* biodi_wire() will only be present if this bmap is in read
 	 *   mode.
@@ -394,7 +394,7 @@ slvr_worker_int(void)
 	psc_assert(s->slvr_flags & SLVR_CRCING);
 	s->slvr_flags &= ~SLVR_CRCING;
 
-	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) && 
+	if ((s->slvr_flags & SLVR_CRCDIRTY || s->slvr_compwrts) &&
 	    !s->slvr_pndgwrts) {
 		DEBUG_SLVR(PLL_INFO, s, "replace onto crcSlvrs");
 		lc_addqueue(&crcqSlvrs, s);
@@ -421,7 +421,7 @@ slvr_worker_int(void)
 		psc_assert(SAMEFG(&bcr->bcr_crcup.fg,
 			  &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg));
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
-		/* If we already have a slot for our slvr_num then 
+		/* If we already have a slot for our slvr_num then
 		 *   reuse it.
 		 */
 		for (i=0; i < bcr->bcr_crcup.nups; i++) {
@@ -435,7 +435,7 @@ slvr_worker_int(void)
 		bcr->bcr_crcup.crcs[bcr->bcr_crcup.nups].crc = crc;
 		bcr->bcr_crcup.crcs[bcr->bcr_crcup.nups].slot = s->slvr_num;
 		bcr->bcr_crcup.nups++;
-		
+
 		DEBUG_BCR(PLL_NOTIFY, bcr, "add to existing bcr nups=%d (sched=%d)",
 			  bcr->bcr_crcup.nups, slvr_2_biod(s)->biod_bcr_sched);
 
@@ -443,7 +443,7 @@ slvr_worker_int(void)
 			if (slvr_2_biod(s)->biod_bcr_sched) {
 				psc_assert(bcr->bcr_biodi->biod_bcr == bcr);
 				bcr->bcr_biodi->biod_bcr = NULL;
-			} else				
+			} else
 				bcr_hold_2_ready(&binflCrcs, bcr);
 		else
 		requeue:
@@ -473,8 +473,8 @@ slvr_worker_int(void)
 		bcr->bcr_crcup.crcs[0].slot = s->slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
-		DEBUG_BCR(PLL_NOTIFY, bcr, "newly added (bcr_bklog=%d) (sched=%d)", 
-			  pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs), 
+		DEBUG_BCR(PLL_NOTIFY, bcr, "newly added (bcr_bklog=%d) (sched=%d)",
+			  pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
 			  slvr_2_biod(s)->biod_bcr_sched);
 
 		if (!slvr_2_biod(s)->biod_bcr_sched) {
