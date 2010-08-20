@@ -391,7 +391,7 @@ slvr_worker_int(void)
 		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_blkno);
 		psc_assert(SAMEFG(&bcr->bcr_crcup.fg,
 			  &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg));
-		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);		
+		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
 		/* If we already have a slot for our slvr_num then
 		 *   reuse it.
 		 */
@@ -436,7 +436,8 @@ slvr_worker_int(void)
 		bcr->bcr_crcup.crcs[0].slot = s->slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
-		DEBUG_BCR(PLL_NOTIFY, bcr, "newly added (bcr_bklog=%d) (sched=%d)",
+		DEBUG_BCR(PLL_NOTIFY, bcr, 
+			  "newly added (bcr_bklog=%d) (sched=%d)", 
 			  pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
 			  slvr_2_biod(s)->biod_bcr_sched);
 
