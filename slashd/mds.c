@@ -178,7 +178,7 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 __static int
 mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 {
-	struct bmap_mds_info *bmdsi=b->bcm_pri;
+	struct bmap_mds_info *bmdsi = bmap_2_bmi(b);
 	struct bmap_mds_lease *bml;
 	int rc=0;
 
@@ -296,8 +296,8 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 __static int
 mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 {
-	struct bmapc_memb *bmap=bml_2_bmap(bml);
-	struct bmap_mds_info *bmdsi=bmap->bcm_pri;
+	struct bmapc_memb *bmap = bml_2_bmap(bml);
+	struct bmap_mds_info *bmdsi = bmap_2_bmi(bmap);
 	struct slashrpc_cservice *csvc;
 	struct bmi_assign bmi;
 	struct sl_resource *res=libsl_id2res(pios);
@@ -394,8 +394,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 __static int
 mds_bmap_ion_update(struct bmap_mds_lease *bml)
 {
-	struct bmapc_memb *b=bml_2_bmap(bml);
-	struct bmap_mds_info *bmdsi=b->bcm_pri;
+	struct bmapc_memb *b = bml_2_bmap(bml);
+	struct bmap_mds_info *bmdsi = bmap_2_bmi(b);
 	struct bmi_assign *bmi;
 
 	psc_assert(b->bcm_mode & BMAP_IONASSIGN);
@@ -505,7 +505,7 @@ mds_bmap_getbml(struct bmapc_memb *b, lnet_nid_t cli_nid,
 
 	BMAP_LOCK_ENSURE(b);
 
-	bmdsi = b->bcm_pri;
+	bmdsi = bmap_2_bmi(b);
 	PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
 		if (bml->bml_cli_nidpid.nid == cli_nid &&
 		    bml->bml_cli_nidpid.pid == cli_pid) {
@@ -1070,8 +1070,8 @@ mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	}
 
 	bml = mds_bml_get();
-	bml->bml_bmdsi = b->bcm_pri;
-	bml->bml_flags = (BML_WRITE | BML_RECOVER);
+	bml->bml_bmdsi = bmap_2_bmdsi(b);
+	bml->bml_flags = BML_WRITE | BML_RECOVER;
 	bml->bml_seq = bmi->bmi_seq;
 	bml->bml_key = odtr->odtr_key;
 	bml->bml_cli_nidpid = bmi->bmi_lastcli;
@@ -1143,7 +1143,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
 
-	bmdsi = bmap->bcm_pri;
+	bmdsi = bmap_2_bmi(bmap);
 	bmapod = bmap->bcm_od;
 	/* These better check out.
 	 */
@@ -1300,7 +1300,7 @@ mds_bmap_init(struct bmapc_memb *bcm)
 {
 	struct bmap_mds_info *bmdsi;
 
-	bmdsi = bcm->bcm_pri;
+	bmdsi = bmap_2_bmi(bcm);
 	bmdsi->bmdsi_bmap = bcm;
 	pll_init(&bmdsi->bmdsi_leases, struct bmap_mds_lease,
 		 bml_bmdsi_lentry, NULL);
@@ -1311,7 +1311,7 @@ mds_bmap_init(struct bmapc_memb *bcm)
 void
 mds_bmap_destroy(struct bmapc_memb *bcm)
 {
-	struct bmap_mds_info *bmdsi = bcm->bcm_pri;
+	struct bmap_mds_info *bmdsi = bmap_2_bmi(bcm);
 
 //	psc_assert(bmdsi->bmdsi_writers == 0);
 //	psc_assert(bmdsi->bmdsi_readers == 0);
@@ -1430,7 +1430,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	bml = mds_bml_get();
 	bml->bml_exp = exp;
-	bml->bml_bmdsi = bmap_2_bmdsi(b);
+	bml->bml_bmdsi = bmap_2_bmi(b);
 	bml->bml_flags = (rw == SL_WRITE ? BML_WRITE : BML_READ);
 	bml->bml_cli_nidpid = exp->exp_connection->c_peer;
 

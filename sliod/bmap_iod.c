@@ -282,12 +282,14 @@ bcr_cmp(const void *x, const void *y)
 static __inline void
 bmap_2_bid_sliod(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 {
+	const struct bmap_iod_info *bmdsi = (const void *)(b + 1);
+
 	bid->fid = fcmh_2_fid(b->bcm_fcmh);
 	bid->bmapno = b->bcm_bmapno;
-	bid->seq = bmap_2_biodi(b)->biod_rls_seqkey[0];
-	bid->key = bmap_2_biodi(b)->biod_rls_seqkey[1];
-	bid->cli_nid = bmap_2_biodi(b)->biod_rls_cnp.nid;
-	bid->cli_pid = bmap_2_biodi(b)->biod_rls_cnp.pid;
+	bid->seq = bmdsi->biod_rls_seqkey[0];
+	bid->key = bmdsi->biod_rls_seqkey[1];
+	bid->cli_nid = bmdsi->biod_rls_cnp.nid;
+	bid->cli_pid = bmdsi->biod_rls_cnp.pid;
 }
 
 void

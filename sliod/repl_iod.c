@@ -169,7 +169,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 
 		/* find a sliver to transmit */
 		BMAP_LOCK(w->srw_bcm);
-		biodi = w->srw_bcm->bcm_pri;
+		biodi = bmap_2_bii(w->srw_bcm);
 		for (slvrno = 0; slvrno < SLASH_SLVRS_PER_BMAP; slvrno++)
 			if (biodi_2_crcbits(biodi, slvrno) & BMAP_SLVR_WANTREPL)
 				break;

@@ -160,7 +160,6 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		atomic_set(&b->bcm_opcnt, 0);
 		b->bcm_fcmh = f;
 		b->bcm_bmapno = n;
-		b->bcm_pri = b + 1;
 
 		/*
 		 * Signify that the bmap is newly initialized and therefore

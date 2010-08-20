@@ -69,7 +69,6 @@ struct bmapc_memb {
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry */
 	struct psclist_head	 bcm_lentry;	/* free pool */
 	struct slash_bmap_od	*bcm_od;	/* on-disk representation */
-	void			*bcm_pri;	/* bmap_mds_info, bmap_cli_info, or bmap_iod_info */
 #define bcm_blkno bcm_bmapno
 };
 

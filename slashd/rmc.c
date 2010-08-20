@@ -165,7 +165,7 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap, struct srt_bmapdesc *sbd,
 		sbd->sbd_flags |= SRM_GETBMAPF_DIRECTIO;
 
 	if (rw == SL_WRITE) {
-		struct bmap_mds_info *bmdsi=bmap->bcm_pri;
+		struct bmap_mds_info *bmdsi = bmap_2_bmi(bmap);
 
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		sbd->sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
@@ -199,7 +199,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	bmdsi = b->bcm_pri;
+	bmdsi = bmap_2_bmi(b);
 
 	BMAP_LOCK(b);
 	bml = mds_bmap_getbml(b, rq->rq_conn->c_peer.nid,
@@ -253,18 +253,17 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	mp->rc = mds_bmap_load_cli(fcmh, mq->bmapno, mq->flags, mq->rw,
 	   mq->prefios, &mp->sbd, rq->rq_export, &bmap);
 	if (mp->rc)
-		return((mp->rc == SLERR_BMAP_DIOWAIT) ? 0 : mp->rc);
+		return (mp->rc == SLERR_BMAP_DIOWAIT ? 0 : mp->rc);
 
-	bmdsi = bmap->bcm_pri;
+	bmdsi = bmap_2_bmi(bmap);
 
 	if (mq->flags & SRM_GETBMAPF_DIRECTIO)
 		mp->sbd.sbd_flags |= SRM_GETBMAPF_DIRECTIO;
 
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, mq->rw);
 
-	memcpy(&mp->bcw,
-	       bmap->bcm_od->bh_crcstates,
-	       sizeof(struct srt_bmap_cli_wire));
+	memcpy(&mp->bcw, bmap->bcm_od->bh_crcstates,
+	    sizeof(struct srt_bmap_cli_wire));
 
 	if (mp->flags & SRM_GETBMAPF_GETREPLTBL) {
 		struct slash_inode_handle *ih;
@@ -272,13 +271,13 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		ih = fcmh_2_inoh(fcmh);
 		mp->nrepls = ih->inoh_ino.ino_nrepls;
 		memcpy(&mp->reptbl[0], &ih->inoh_ino.ino_repls,
-		       sizeof(ih->inoh_ino.ino_repls));
+		    sizeof(ih->inoh_ino.ino_repls));
 
 		if (mp->nrepls > SL_DEF_REPLICAS) {
 			mds_inox_ensure_loaded(ih);
 			memcpy(&mp->reptbl[SL_DEF_REPLICAS],
-			       &ih->inoh_extras->inox_repls,
-			       sizeof(ih->inoh_extras->inox_repls));
+			    &ih->inoh_extras->inox_repls,
+			    sizeof(ih->inoh_extras->inox_repls));
 		}
 	}
 

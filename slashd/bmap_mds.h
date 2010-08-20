@@ -33,7 +33,7 @@
 #include "inode.h"
 
 /*
- * bmap_mds_info - the bcm_pri data structure for the slash2 mds.
+ * bmap_mds_info - the bmap_get_pri() data structure for the slash2 mds.
  *   bmap_mds_info holds all bmap specific context for the mds which
  *   includes the journal handle, ref counts for client readers and writers
  *   a point to our ION, a tree of our client's exports, a pointer to the
@@ -223,7 +223,8 @@ struct bmi_assign {
 /* bmi_flags */
 #define BMI_DIO			(1 << 0)
 
-#define bmap_2_bmdsi(b)		((struct bmap_mds_info *)(b)->bcm_pri)
+#define bmap_2_bmdsi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
+#define bmap_2_bmi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 #define bmap_2_bgen(b)		(b)->bcm_od->bh_gen
 #define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))

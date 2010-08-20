@@ -51,13 +51,13 @@ iod_bmap_init(struct bmapc_memb *b)
 {
 	struct bmap_iod_info *biod;
 
-	biod = b->bcm_pri;
+	biod = bmap_2_bii(b);
 	biod->biod_bmap = b;
 	biod->biod_bcr_xid = biod->biod_bcr_xid_last = 0;
 	INIT_PSCLIST_ENTRY(&biod->biod_lentry);
 	LOCK_INIT(&biod->biod_lock);
 	SPLAY_INIT(&biod->biod_slvrs);
-	pll_init(&biod->biod_bklog_bcrs, struct biod_crcup_ref, bcr_lentry, 
+	pll_init(&biod->biod_bklog_bcrs, struct biod_crcup_ref, bcr_lentry,
 		 &biod->biod_lock);
 
 	clock_gettime(CLOCK_REALTIME, &biod->biod_age);
@@ -73,7 +73,7 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 {
 	struct bmap_iod_info *biod;
 
-	biod = b->bcm_pri;
+	biod = bmap_2_bii(b);
 	psc_assert(biod->biod_bmap == b);
 	psc_assert(SPLAY_EMPTY(&biod->biod_slvrs));
 	psc_assert(psclist_disjoint(&biod->biod_lentry));
@@ -81,7 +81,6 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 	if (bmap_2_biodi_wire(b))
 		PSCFREE(bmap_2_biodi_wire(b));
 }
-
 
 int
 iod_inode_getinfo(struct slash_fidgen *fg, uint64_t *size, uint32_t *utimgen)
@@ -184,14 +183,14 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 
 			slvr_2_crc(s) = s->slvr_crc;
 			slvr_2_crcbits(s) |= BMAP_SLVR_DATA;
-			
+
 			if (s->slvr_flags & SLVR_CRCDIRTY)
 				slvr_2_crcbits(s) |= BMAP_SLVR_CRC;
 			else
 				slvr_2_crcbits(s) |= BMAP_SLVR_CRCDIRTY;
 		}
 	}
-	
+
 	freelock(&bmap_2_biodi(b)->biod_lock);
  out:
 	/* Unblock threads no matter what.

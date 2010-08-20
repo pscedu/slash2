@@ -38,7 +38,7 @@ struct msbmap_crcrepl_states {
 };
 
 /*
- * bmap_cli_data - assigned to bmap->bcm_pri for mount slash client.
+ * bmap_cli_data - assigned to bmap_get_pri(bmap) for mount slash client.
  */
 struct bmap_cli_info {
 	struct bmap_pagecache		 msbd_bmpc;
@@ -54,7 +54,8 @@ struct bmap_cli_info {
 #define BMAP_CLI_TIMEO_INC		5
 #define BMAP_CLI_DIOWAIT_SECS           1
 
-#define bmap_2_msbd(b)			((struct bmap_cli_info *)(b)->bcm_pri)
+#define bmap_2_msbd(b)			((struct bmap_cli_info *)bmap_get_pri(b))
+#define bmap_2_bci(b)			((struct bmap_cli_info *)bmap_get_pri(b))
 #define bmap_2_bmpc(b)			(&bmap_2_msbd(b)->msbd_bmpc)
 #define bmap_2_sbd(b)			(&bmap_2_msbd(b)->msbd_sbd)
 #define bmap_2_ion(b)			bmap_2_sbd(b)->sbd_ion_nid

@@ -368,7 +368,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	msl_bmap_reap_init(bcm, &mp->sbd);
 
-	msbd = bcm->bcm_pri;
+	msbd = bmap_2_bci(bcm);
 	SL_REPL_SET_BMAP_IOS_STAT(msbd->msbd_msbcr.msbcr_repls,
 	    0, BREPLST_VALID);
 

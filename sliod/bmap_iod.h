@@ -81,14 +81,14 @@ struct bmap_iod_minseq {
 #define DEBUG_BCR(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 	    "bcr@%p fid="SLPRI_FG" xid=%"PRIu64" nups=%d fl=%d age=%lu"	\
-	    " bmap@%p:%u biod_bcr_xid=%"PRId64			        \
+	    " bmap@%p:%u biod_bcr_xid=%"PRId64				\
 	    " biod_bcr_xid_last=%"PRId64" :: "fmt,			\
 	    (b), SLPRI_FG_ARGS(&(b)->bcr_crcup.fg), (b)->bcr_xid,	\
 	    (b)->bcr_crcup.nups, (b)->bcr_flags, (b)->bcr_age.tv_sec,	\
 	    (b)->bcr_biodi->biod_bmap,					\
 	    (b)->bcr_biodi->biod_bmap->bcm_blkno,			\
 	    (b)->bcr_biodi->biod_bcr_xid,				\
-	    (b)->bcr_biodi->biod_bcr_xid_last,			        \
+	    (b)->bcr_biodi->biod_bcr_xid_last,				\
 	    ## __VA_ARGS__)
 
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
@@ -116,7 +116,8 @@ struct bmap_iod_info {
 #define biodi_2_wire(bi)	(bi)->biod_bmap_wire
 #define biodi_2_crcbits(bi, sl)	biodi_2_wire(bi)->bh_crcstates[sl]
 
-#define bmap_2_biodi(b)		((struct bmap_iod_info *)(b)->bcm_pri)
+#define bmap_2_biodi(b)		((struct bmap_iod_info *)bmap_get_pri(b))
+#define bmap_2_bii(b)		((struct bmap_iod_info *)bmap_get_pri(b))
 #define bmap_2_biodi_age(b)	bmap_2_biodi(b)->biod_age
 #define bmap_2_biodi_lentry(b)	bmap_2_biodi(b)->biod_lentry
 #define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)

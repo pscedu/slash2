@@ -251,7 +251,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	}
 	/* Verify that the sequence number matches.
 	 */
-	msbd = b->bcm_pri;
+	msbd = bmap_2_bci(b);
 	if (msbd->msbd_sbd.sbd_seq != mq->seq) {
 		BMAP_ULOCK(b);
 		mp->rc = ESTALE;

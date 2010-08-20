@@ -453,7 +453,7 @@ msl_bmap_init(struct bmapc_memb *b)
 {
 	struct bmap_cli_info *msbd;
 
-	msbd = b->bcm_pri;
+	msbd = bmap_2_bci(b);
 	msbd->msbd_bmap = b;
 	bmpc_init(&msbd->msbd_bmpc);
 }
@@ -549,7 +549,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 void
 msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 {
-	struct bmap_cli_info *msbd=bmap->bcm_pri;
+	struct bmap_cli_info *msbd = bmap_2_bci(bmap);
 	int locked;
 
 	locked = BMAP_RLOCK(bmap);
@@ -599,7 +599,6 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	struct fidc_membh *f;
 
 	psc_assert(bmap->bcm_mode & BMAP_INIT);
-	psc_assert(bmap->bcm_pri);
 	psc_assert(bmap->bcm_fcmh);
 
 	f = bmap->bcm_fcmh;
@@ -629,7 +628,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	if (getreptbl)
 		mq->flags |= SRM_GETBMAPF_GETREPLTBL;
 
-	msbd = bmap->bcm_pri;
+	msbd = bmap_2_bci(bmap);
 
 	DEBUG_FCMH(PLL_DEBUG, f, "retrieving bmap (bmapno=%u) (rw=%d)",
 	    bmap->bcm_bmapno, rw);
@@ -836,7 +835,7 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 	int j, rnd, nios;
 
 	fci = fcmh_2_fci(bcm->bcm_fcmh);
-	msbd = bcm->bcm_pri;
+	msbd = bmap_2_bci(bcm);
 
 	if (SL_REPL_GET_BMAP_IOS_STAT(msbd->msbd_msbcr.msbcr_repls,
 	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
@@ -1069,7 +1068,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	psc_assert(size);
 
 	bcm = r->biorq_bmap;
-	msbd = bcm->bcm_pri;
+	msbd = bmap_2_bci(bcm);
 
 	DEBUG_BIORQ(PLL_TRACE, r, "dio req");
 
@@ -1297,7 +1296,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		return;
 
 	bcm    = r->biorq_bmap;
-	msbd   = bcm->bcm_pri;
+	msbd   = bmap_2_bci(bcm);
 	npages = psc_dynarray_len(&r->biorq_pages);
 
 	r->biorq_flags |= BIORQ_SCHED;
