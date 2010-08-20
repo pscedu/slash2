@@ -410,10 +410,15 @@ slvr_worker_int(void)
 		DEBUG_BCR(PLL_NOTIFY, bcr, "add to existing bcr slot=%d "
 			  "nups=%d", i, bcr->bcr_crcup.nups);
 
-		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS)
-			/* The bcr is full, push it out now.
-			 */
-			bcr_hold_2_ready(&binflCrcs, bcr);
+		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) {
+			if (pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs))
+				/* This is a backlogged bcr.
+				 */
+				bcr->bcr_biodi->biod_bcr = NULL;
+			else
+				/* The bcr is full, push it out now.
+				 */
+				bcr_hold_2_ready(&binflCrcs, bcr);
 
 	} else {
 		bmap_op_start_type(slvr_2_bmap(s), BMAP_OPCNT_BCRSCHED);
