@@ -419,7 +419,7 @@ slvr_worker_int(void)
 				/* The bcr is full, push it out now.
 				 */
 				bcr_hold_2_ready(&binflCrcs, bcr);
-
+		}
 	} else {
 		bmap_op_start_type(slvr_2_bmap(s), BMAP_OPCNT_BCRSCHED);
 
@@ -441,8 +441,8 @@ slvr_worker_int(void)
 		bcr->bcr_crcup.crcs[0].slot = s->slvr_num;
 		bcr->bcr_crcup.nups = 1;
 
-		DEBUG_BCR(PLL_NOTIFY, bcr, 
-			  "newly added (bcr_bklog=%d) (sched=%d)", 
+		DEBUG_BCR(PLL_NOTIFY, bcr,
+			  "newly added (bcr_bklog=%d) (sched=%d)",
 			  pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
 			  slvr_2_biod(s)->biod_bcr_sched);
 
