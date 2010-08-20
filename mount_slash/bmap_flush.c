@@ -777,9 +777,11 @@ bmap_flush(void)
 static __inline void
 bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 {
+	const struct bmap_cli_info *msbd = (const void *)(b + 1);
+
 	bid->fid = fcmh_2_fid(b->bcm_fcmh);
-	bid->seq = bmap_2_msbd(b)->msbd_sbd.sbd_seq;
-	bid->key = bmap_2_msbd(b)->msbd_sbd.sbd_key;
+	bid->seq = msbd->msbd_sbd.sbd_seq;
+	bid->key = msbd->msbd_sbd.sbd_key;
 	bid->bmapno = b->bcm_bmapno;
 }
 
@@ -903,7 +905,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				/* Put me back on the end of the queue.
 				 */
-				lc_addqueue(&bmapTimeoutQ, msbd);				
+				lc_addqueue(&bmapTimeoutQ, msbd);
 				BMAP_ULOCK(b);
 
 				if (lc_sz(&bmapTimeoutQ) < 2)
