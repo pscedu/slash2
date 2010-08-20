@@ -143,14 +143,15 @@ struct bmapc_memb {
 	    _DEBUG_BMAP_FMTARGS(b), (type))
 
 /* bmap per-replica states */
-#define BREPLST_INVALID		0	/* no/stale data present */
+#define BREPLST_INVALID		0	/* no data present */
 #define BREPLST_REPL_SCHED	1	/* replica is being made */
 #define BREPLST_REPL_QUEUED	2	/* replica needs to be made */
 #define BREPLST_VALID		3	/* replica is active */
 #define BREPLST_TRUNCPNDG	4	/* partial truncation in bmap */
 #define BREPLST_GARBAGE		5	/* marked for deletion */
 #define BREPLST_GARBAGE_SCHED	6	/* being deleted */
-#define NBREPLST		7
+#define BREPLST_BADCRC		7	/* checksum error */
+#define NBREPLST		8
 
 #define BMAP_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
 
@@ -160,14 +161,14 @@ struct bmapc_memb {
 /* Currently, 8 bits are available for flags. */
 enum {
 	BMAP_SLVR_DATA		= (1 << 0),	/* Data present, otherwise slvr is hole */
-	BMAP_SLVR_CRC		= (1 << 1),	/* Valid CRC */
-	BMAP_SLVR_CRCDIRTY	= (1 << 2),	/* Valid CRC */
+	BMAP_SLVR_CRC		= (1 << 1),	/* Has valid CRC */
+	BMAP_SLVR_CRCDIRTY	= (1 << 2),
 	BMAP_SLVR_WANTREPL	= (1 << 3)	/* Queued for replication */
 };
 
 /*
  * Routines to get and fetch a bmap replica's status.
- * This code assumes NBREPLST is < 256 !
+ * This code assumes NBREPLST is < 256
  */
 #define SL_REPL_GET_BMAP_IOS_STAT(data, off)				\
 	(SL_REPLICA_MASK &						\
@@ -214,6 +215,7 @@ _log_debug_bmapodv(const char *file, const char *func, int lineno,
 	ch[BREPLST_TRUNCPNDG] = 't';
 	ch[BREPLST_GARBAGE] = 'g';
 	ch[BREPLST_GARBAGE_SCHED] = 'x';
+	ch[BREPLST_BADCRC] = 'c';
 
 	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
 	    k++, off += SL_BITS_PER_REPLICA)
@@ -290,6 +292,15 @@ static __inline void *
 bmap_get_pri(struct bmapc_memb *bcm)
 {
 	return (bcm + 1);
+}
+
+static __inline void
+brepls_init(int *ar, int val)
+{
+	int i;
+
+	for (i = 0; i < NBREPLST; i++)
+		ar[i] = val;
 }
 
 #endif /* _BMAP_H_ */

@@ -216,16 +216,16 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (mds_bmap_load(wk->uswi_fcmh, mq->bmapno, &bcm))
 		goto out;
 
-	tract[BREPLST_INVALID] = -1;
-	tract[BREPLST_VALID] = -1;
-	tract[BREPLST_TRUNCPNDG] = -1;
-	tract[BREPLST_GARBAGE] = -1;
-	tract[BREPLST_GARBAGE_SCHED] = -1;
+	brepls_init(tract, -1);
 
 	BHGEN_GET(bcm, gen);
 	if (mq->rc || mq->bgen != gen) {
-		tract[BREPLST_REPL_QUEUED] = -1;
-		tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+//		if (bad crc)
+//			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+//		else if (connection down)
+//			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+//		else
+			tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
 	} else {
 		/*
 		 * If the MDS crashed and came back up, the state
@@ -236,13 +236,9 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 		tract[BREPLST_REPL_SCHED] = BREPLST_VALID;
 	}
 
-	retifset[BREPLST_INVALID] = EINVAL;
+	brepls_init(retifset, EINVAL);
 	retifset[BREPLST_REPL_SCHED] = 0;
-	retifset[BREPLST_REPL_QUEUED] = EINVAL;
-	retifset[BREPLST_VALID] = EINVAL;
 	retifset[BREPLST_TRUNCPNDG] = 0;
-	retifset[BREPLST_GARBAGE] = EINVAL;
-	retifset[BREPLST_GARBAGE_SCHED] = EINVAL;
 
 	mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	mds_repl_bmap_rel(bcm);

@@ -83,10 +83,10 @@ slm_set_curr_slashid(uint64_t slfid)
 }
 
 /*
- * slm_get_next_slashid - Return the next SLASH ID to use.  Note that from ZFS 
- *     point of view, it is perfectly okay that we use the same SLASH ID to 
- *     refer to different files/directories.  However, doing so can confuse 
- *     our clients (think identity theft). So we must make sure that we never 
+ * slm_get_next_slashid - Return the next SLASH ID to use.  Note that from ZFS
+ *     point of view, it is perfectly okay that we use the same SLASH ID to
+ *     refer to different files/directories.  However, doing so can confuse
+ *     our clients (think identity theft). So we must make sure that we never
  *     reuse a SLASH ID, even after a crash.
  */
 uint64_t
@@ -669,6 +669,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (to_set & SETATTR_MASKF_DATASIZE) {
 		if (mq->attr.sst_size == 0) {
 			/* full truncate */
+			// bump FID generation
+			// queue updates to IOS's
 		} else {
 			struct {
 				sl_replica_t	iosv[SL_MAX_REPLICAS];
@@ -695,13 +697,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			// bmaps write leases may not be granted
 			// for this bmap or any bmap beyond
 
-			tract[BREPLST_INVALID] = -1;
-			tract[BREPLST_REPL_SCHED] = -1;
-			tract[BREPLST_REPL_QUEUED] = -1;
+			brepls_init(tract, -1);
 			tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
-			tract[BREPLST_TRUNCPNDG] = -1;
-			tract[BREPLST_GARBAGE] = -1;
-			tract[BREPLST_GARBAGE_SCHED] = -1;
 
 			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
 			if (mds_bmap_load(fcmh, i, &bcm) == 0) {
@@ -716,13 +713,10 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	- if BMAP_PERSIST, notify replication queuer
 #endif
 
-			tract[BREPLST_INVALID] = -1;
+			brepls_init(tract, -1);
 			tract[BREPLST_REPL_SCHED] = BREPLST_GARBAGE;
 			tract[BREPLST_REPL_QUEUED] = BREPLST_GARBAGE;
 			tract[BREPLST_VALID] = BREPLST_GARBAGE;
-			tract[BREPLST_TRUNCPNDG] = -1;
-			tract[BREPLST_GARBAGE] = -1;
-			tract[BREPLST_GARBAGE_SCHED] = -1;
 
 			for (i++; i < fcmh_2_nbmaps(fcmh); i++) {
 				if (mds_bmap_load(fcmh, i, &bcm))

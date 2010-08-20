@@ -106,13 +106,9 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
 	/* Scan for any OLD states. */
+	brepls_init(retifset, 1);
 	retifset[BREPLST_INVALID] = 0;
 	retifset[BREPLST_VALID] = 0;
-	retifset[BREPLST_REPL_QUEUED] = 1;
-	retifset[BREPLST_REPL_SCHED] = 1;
-	retifset[BREPLST_TRUNCPNDG] = 1;
-	retifset[BREPLST_GARBAGE] = 1;
-	retifset[BREPLST_GARBAGE_SCHED] = 1;
 
 	/* Scan bmaps to see if the inode should disappear. */
 	for (n = 0; n < USWI_NBMAPS(wk); n++) {
@@ -243,14 +239,10 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	mq->bmapno = bcm->bcm_blkno;
 	mq->bgen = bmap_2_bgen(bcm);
 
-	tract[BREPLST_VALID] = -1;
-	tract[BREPLST_INVALID] = -1;
+	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
-	tract[BREPLST_REPL_SCHED] = -1;
-	tract[BREPLST_TRUNCPNDG] = -1;
-	tract[BREPLST_GARBAGE] = -1;
-	tract[BREPLST_GARBAGE_SCHED] = -1;
 
+	brepls_init(retifset, -1);
 	retifset[BREPLST_VALID] = BREPLST_VALID;
 	retifset[BREPLST_INVALID] = BREPLST_INVALID;
 	retifset[BREPLST_REPL_QUEUED] = BREPLST_REPL_QUEUED;
@@ -258,6 +250,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
 	retifset[BREPLST_GARBAGE] = BREPLST_GARBAGE;
 	retifset[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_SCHED;
+	retifset[BREPLST_BADCRC] = BREPLST_BADCRC;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
@@ -280,13 +273,8 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	}
 
 	/* handle error return failure */
-	tract[BREPLST_VALID] = -1;
-	tract[BREPLST_INVALID] = -1;
-	tract[BREPLST_REPL_QUEUED] = -1;
+	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_TRUNCPNDG] = -1;
-	tract[BREPLST_GARBAGE] = -1;
-	tract[BREPLST_GARBAGE_SCHED] = -1;
 
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
 
@@ -347,14 +335,11 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	mq->bmapno = bcm->bcm_blkno;
 	mq->bgen = bmap_2_bgen(bcm);
 
-	tract[BREPLST_VALID] = -1;
-	tract[BREPLST_INVALID] = -1;
+	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
-	tract[BREPLST_REPL_SCHED] = -1;
-	tract[BREPLST_TRUNCPNDG] = -1;
 	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
-	tract[BREPLST_GARBAGE_SCHED] = -1;
 
+	brepls_init(retifset, -1);
 	retifset[BREPLST_VALID] = BREPLST_VALID;
 	retifset[BREPLST_INVALID] = BREPLST_INVALID;
 	retifset[BREPLST_REPL_QUEUED] = BREPLST_REPL_QUEUED;
@@ -362,6 +347,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
 	retifset[BREPLST_GARBAGE] = BREPLST_GARBAGE;
 	retifset[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_SCHED;
+	retifset[BREPLST_BADCRC] = BREPLST_BADCRC;
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
@@ -384,12 +370,8 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	}
 
 	/* handle error return failure */
-	tract[BREPLST_VALID] = -1;
-	tract[BREPLST_INVALID] = -1;
-	tract[BREPLST_REPL_QUEUED] = -1;
+	brepls_init(tract, -1);
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-	tract[BREPLST_TRUNCPNDG] = -1;
-	tract[BREPLST_GARBAGE] = -1;
 	tract[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE;
 
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
@@ -793,13 +775,8 @@ upsched_scandir(void)
 			wk->uswi_flags &= ~USWIF_BUSY;
 			psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
-			tract[BREPLST_INVALID] = -1;
-			tract[BREPLST_VALID] = -1;
-			tract[BREPLST_REPL_QUEUED] = -1;
+			brepls_init(tract, -1);
 			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-			tract[BREPLST_TRUNCPNDG] = -1;
-			tract[BREPLST_GARBAGE] = -1;
-			tract[BREPLST_GARBAGE_SCHED] = -1;
 
 			/*
 			 * If we crashed, revert all inflight SCHED'ed
