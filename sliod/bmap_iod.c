@@ -376,6 +376,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 		pscrpc_req_finished(rq);
 		sl_csvc_decref(csvc);
  end:
+		/* put any unreapable biods back to the list */
 		DYNARRAY_FOREACH(biod, i, &a)
 			lc_addtail(&bmapRlsQ, biod);
 
