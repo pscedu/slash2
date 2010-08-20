@@ -224,7 +224,8 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 		psc_assert(!biod->biod_bcr);
 		biod->biod_bcr_sched = 0;
 
-		DEBUG_BCR(PLL_INFO, bcr, "descheduling rlsq=%u drtyslvrs=%u",
+		DEBUG_BMAP(PLL_INFO, biod->biod_bmap, 
+			   "descheduling rlsq=%u drtyslvrs=%u",
 			  biod->biod_rlsseq, biod->biod_crcdrty_slvrs);
 
 		if (biod->biod_rlsseq && !biod->biod_crcdrty_slvrs) {
@@ -235,7 +236,7 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 				   BMAP_OPCNT_RLSSCHED);
 
 			freelock(&biod->biod_lock);
-			lc_addtail(&bmapRlsQ, bcr->bcr_biodi);
+			lc_addtail(&bmapRlsQ, biod);
 		} else
 			freelock(&biod->biod_lock);
 
