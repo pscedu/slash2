@@ -412,7 +412,8 @@ slvr_worker_int(void)
 
 		if (bcr->bcr_crcup.nups == MAX_BMAP_INODE_PAIRS) {
 			if (pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs))
-				/* This is a backlogged bcr.
+				/* This is a backlogged bcr, cap it and 
+				 *   move on.
 				 */
 				bcr->bcr_biodi->biod_bcr = NULL;
 			else

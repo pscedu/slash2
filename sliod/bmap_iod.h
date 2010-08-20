@@ -154,7 +154,6 @@ void bcr_ready_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_finalize(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_xid_check(struct biod_crcup_ref *);
-void bcr_xid_last_bump(struct biod_crcup_ref *);
 
 void sliod_bmaprlsthr_spawn(void);
 
