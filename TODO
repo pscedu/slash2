@@ -254,6 +254,7 @@ in release but I don't see good performance for 'ls -al'.
     - we can't do this because they are shared with PTRUNC now as well as not
       being able to saturate inter-ION links
 - add ctlapi for bmpc
+- there appears to be a double free that can easily be invoked by replst
 
 ---------------------------------------------------------
 
@@ -295,24 +296,17 @@ tracks endpoint connections
 
 ------------------------------
 
-- sstb shouldn't have an ino field; fill st_ino out each time from fg_fid
-	- can't: needed for READDIR
-	- add a superstructure:
-
-		struct blah {
-			struct srt_stat sstb;
-			sl_ino_t	ino;
-		}
-
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
 - authbuf RPC bulk data, use wrappers of rsx_bulk routines to aid this
 - sprinkle some iostats on zfs, namespace changelog
 - add journal I/O test mode to slashd
-- zfslog -> psclog
+- tie zfslog to psclog
 
 - mount_slash
   - if server is down, it would be nice to return STATFS immediately
     with some info instead of hang
+  - write messages to stderr of the process trying to do I/O when the
+    connections are down
 
 zfs
 - rename the zfs_init() alias, it is already a routine in ZFS
@@ -341,5 +335,5 @@ utime
 
 - fix the "static" variables in communal/general functions
 - register a per-app slexp_destroyf routine as slashd is overriding slexp_destroy
-- in this routine, unset resm_csvc from CONNECTED
+  (o) in this routine, unset resm_csvc from CONNECTED
 - delete bcm_pri and just use bcm+1 to get the pri value
