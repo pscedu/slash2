@@ -106,6 +106,7 @@ void	 sl_csvc_decref(struct slashrpc_cservice *);
 void	 sl_csvc_incref(struct slashrpc_cservice *);
 void	 sl_csvc_lock_ensure(struct slashrpc_cservice *);
 void	 sl_csvc_markfree(struct slashrpc_cservice *);
+int	 sl_csvc_reqlock(struct slashrpc_cservice *);
 int	 sl_csvc_useable(struct slashrpc_cservice *);
 int	 sl_csvc_usemultiwait(struct slashrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slashrpc_cservice *, long, long);
