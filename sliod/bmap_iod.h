@@ -96,6 +96,12 @@ SPLAY_HEAD(biod_slvrtree, slvr_ref);
 struct bmap_iod_info {
 	psc_spinlock_t		 biod_lock;
 	struct bmapc_memb	*biod_bmap;
+	/*
+ 	 * Accumulate CRC updates until its associated biod_crcup_ref 
+ 	 * structure is full, at which point it is set to NULL and a
+ 	 * new biod_crcup_ref structure must be allocated for future
+ 	 * CRC updates.
+ 	 */
 	struct biod_crcup_ref	*biod_bcr;
 	struct biod_slvrtree	 biod_slvrs;
 	struct srt_bmap_wire	*biod_bmap_wire;
