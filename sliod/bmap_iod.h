@@ -114,9 +114,14 @@ struct bmap_iod_info {
 	uint64_t		 biod_cur_seqkey[2];
 	uint64_t		 biod_rls_seqkey[2];
 	uint32_t		 biod_crcdrty_slvrs;
-	uint32_t		 biod_inflight;
-	uint32_t		 biod_rlsseq;
-	uint32_t		 biod_bcr_sched;
+	uint32_t                 biod_state;
+};
+
+enum biod_states {
+	BIOD_INFLIGHT = (1 << 0),
+	BIOD_RLSSEQ   = (1 << 1),
+	BIOD_BCRSCHED = (1 << 2),
+	BIOD_RLSSCHED = (1 << 3)
 };
 
 #define biodi_2_wire(bi)	(bi)->biod_bmap_wire
@@ -160,7 +165,7 @@ void bcr_ready_add(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_ready_remove(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_finalize(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_xid_check(struct biod_crcup_ref *);
-
+void biod_rlssched_locked(struct bmap_iod_info *);
 void sliod_bmaprlsthr_spawn(void);
 
 #endif /* _SLIOD_BMAP_H_ */

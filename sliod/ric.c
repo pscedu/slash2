@@ -319,16 +319,8 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		biod->biod_rls_seqkey[1] = bid->key;
 		biod->biod_rls_cnp = rq->rq_conn->c_peer;
 
-		/* Do not to add ourselves to the bmapRlsQ twice.
-		 */
-		if (!biod->biod_rlsseq) {
-			biod->biod_rlsseq = 1;
-			if (!biod->biod_crcdrty_slvrs &&
-			    (biod->biod_bcr_xid == biod->biod_bcr_xid_last)) {
-				bmap_op_start_type(b, BMAP_OPCNT_RLSSCHED);
-				lc_addtail(&bmapRlsQ, biod);
-			}
-		}
+		biod->biod_state |= BIOD_RLSSEQ;
+		biod_rlssched_locked(biod);
 
 		freelock(&biod->biod_lock);
 		bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);

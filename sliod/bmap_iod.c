@@ -182,7 +182,7 @@ bcr_xid_last_bump(struct biod_crcup_ref *bcr)
 {
 	bcr_xid_check(bcr);
 	bcr->bcr_biodi->biod_bcr_xid_last++;
-	bcr->bcr_biodi->biod_inflight = 0;
+	bcr->bcr_biodi->biod_state &= ~BIOD_INFLIGHT;
 }
 
 void
@@ -204,6 +204,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 }
 
 void
+
 bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
 	struct bmap_iod_info *biod = bcr->bcr_biodi;
@@ -211,7 +212,7 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	DEBUG_BCR(PLL_INFO, bcr, "finalize");
 	
 	spinlock(&biod->biod_lock);
-	psc_assert(biod->biod_bcr_sched);
+	psc_assert(biod->biod_state & BIOD_BCRSCHED);
 	/* biod->biod_bcr_xid_last is bumped in bcr_ready_remove().
 	 *    bcr_ready_remove() may release the bmap so it must be
 	 *    issued at the end of this call.
@@ -221,23 +222,15 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 		 */
 		psc_assert(pll_empty(&biod->biod_bklog_bcrs));
 		psc_assert(!biod->biod_bcr);
-		biod->biod_bcr_sched = 0;
+		biod->biod_state &= ~BIOD_BCRSCHED;
 
 		DEBUG_BMAP(PLL_INFO, biod->biod_bmap, 
 			   "descheduling rlsq=%u drtyslvrs=%u",
-			  biod->biod_rlsseq, biod->biod_crcdrty_slvrs);
+			   (biod->biod_state & BIOD_RLSSEQ), 
+			   biod->biod_crcdrty_slvrs);
 
-		if (biod->biod_rlsseq && !biod->biod_crcdrty_slvrs) {
-			/* The client has issued a release request and
-			 *   no further crc work is pending.
-			 */
-			bmap_op_start_type(biod->biod_bmap, 
-				   BMAP_OPCNT_RLSSCHED);
-
-			freelock(&biod->biod_lock);
-			lc_addtail(&bmapRlsQ, biod);
-		} else
-			freelock(&biod->biod_lock);
+		biod_rlssched_locked(biod);
+		freelock(&biod->biod_lock);
 
 	} else {
 		struct biod_crcup_ref *tmp;
@@ -297,6 +290,29 @@ bmap_2_bid_sliod(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 }
 
 void
+biod_rlssched_locked(struct bmap_iod_info *biod) 
+{	
+	LOCK_ENSURE(&biod->biod_lock);
+	
+	if (biod->biod_state & BIOD_RLSSCHED) {
+		psc_assert(psclist_conjoint(&biod->biod_lentry));
+		psc_assert(biod->biod_state & BIOD_RLSSEQ);
+
+	} else {
+		psc_assert(psclist_disjoint(&biod->biod_lentry));
+
+		if (!biod->biod_crcdrty_slvrs &&
+		    (biod->biod_state & BIOD_RLSSEQ) &&
+		    (biod->biod_bcr_xid == biod->biod_bcr_xid_last)) {
+			bmap_op_start_type(biod->biod_bmap, 
+				   BMAP_OPCNT_RLSSCHED);
+			biod->biod_state |= BIOD_RLSSCHED;
+			lc_addtail(&bmapRlsQ, biod);
+		}
+	}
+}
+
+void
 sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
 	struct bmap_iod_info *biod;
@@ -333,7 +349,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 			   biod->biod_bcr_xid_last);
 
 			spinlock(&biod->biod_lock);
-			psc_assert(biod->biod_rlsseq);
+			psc_assert(biod->biod_state & BIOD_RLSSEQ);
 
 			if (biod->biod_crcdrty_slvrs ||
 			    (biod->biod_bcr_xid != biod->biod_bcr_xid_last)) {
@@ -344,7 +360,8 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 				continue;
 			}
 
-			biod->biod_rlsseq = 0;
+			biod->biod_state &= ~BIOD_RLSSEQ;
+
 			bmap_2_bid_sliod(b, &brr->bmaps[i++]);
 			freelock(&biod->biod_lock);
 

@@ -146,16 +146,12 @@ slvr_worker_push_crcups(void)
 			continue;
 
 		if (trylock(&bcr->bcr_biodi->biod_lock)) {
-			if (bcr->bcr_biodi->biod_inflight) {
-
+			if (bcr->bcr_biodi->biod_state & BIOD_INFLIGHT) {
 				DEBUG_BCR(PLL_FATAL, bcr, "tried to schedule "
 					  "multiple bcr's xid=%"PRIu64,
 					  bcr->bcr_biodi->biod_bcr_xid_last);
-
-				//freelock(&bcr->bcr_biodi->biod_lock);
-				//continue;
 			} else {
-				bcr->bcr_biodi->biod_inflight = 1;
+				bcr->bcr_biodi->biod_state |= BIOD_INFLIGHT;
 				freelock(&bcr->bcr_biodi->biod_lock);
 			}
 		} else
@@ -255,7 +251,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			  bcr, "rq_status=%d rc=%d", rq->rq_status,
 			  mp ? mp->rc : -4096);
 
-		psc_assert(biod->biod_bcr_sched && biod->biod_inflight);
+		psc_assert(biod->biod_state & (BIOD_INFLIGHT|BIOD_BCRSCHED)); 
 
 		if (rq->rq_status) {
 			spinlock(&binflCrcs.binfcrcs_lock);
@@ -265,7 +261,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			 *   bcr_xid_last_bump() will not be called.
 			 */
 			spinlock(&biod->biod_lock);
-			biod->biod_inflight = 0;
+			biod->biod_state &= ~BIOD_INFLIGHT;
 			bcr_xid_check(bcr);
 			freelock(&biod->biod_lock);
 
@@ -387,7 +383,7 @@ slvr_worker_int(void)
 	if (bcr) {
 		uint32_t i, found;
 
-		psc_assert(slvr_2_biod(s)->biod_bcr_sched);
+		psc_assert(slvr_2_biod(s)->biod_state & BIOD_BCRSCHED);
 		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_blkno);
 		psc_assert(SAMEFG(&bcr->bcr_crcup.fg,
 			  &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg));
@@ -445,15 +441,15 @@ slvr_worker_int(void)
 		DEBUG_BCR(PLL_NOTIFY, bcr,
 			  "newly added (bcr_bklog=%d) (sched=%d)",
 			  pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
-			  slvr_2_biod(s)->biod_bcr_sched);
+			  (slvr_2_biod(s)->biod_state & BIOD_BCRSCHED));
 
-		if (slvr_2_biod(s)->biod_bcr_sched)
+		if (slvr_2_biod(s)->biod_state & BIOD_BCRSCHED)
 			/* The bklog may be empty but a pending bcr may be present
 			 *    on the ready list.
 			 */
 			pll_addtail(&slvr_2_biod(s)->biod_bklog_bcrs, bcr);
 		else {
-			slvr_2_biod(s)->biod_bcr_sched = 1;
+			slvr_2_biod(s)->biod_state |= BIOD_BCRSCHED;
 			bcr_hold_add(&binflCrcs, bcr);
 		}
 	}
