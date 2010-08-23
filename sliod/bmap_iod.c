@@ -248,9 +248,11 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 				  pll_nitems(&biod->biod_bklog_bcrs));
 			
 			if (pll_empty(&biod->biod_bklog_bcrs)) {
+				/*
+				 * I am the only one on the backlog list of
+				 * the bmap.
+				 */
 				psc_assert(biod->biod_bcr == tmp);
-				//	   || !biod->biod_bcr);
-
 				if (tmp->bcr_crcup.nups ==
 				    MAX_BMAP_INODE_PAIRS) {
 					biod->biod_bcr = NULL;
