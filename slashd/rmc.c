@@ -668,9 +668,15 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (to_set & SETATTR_MASKF_DATASIZE) {
 		if (mq->attr.sst_size == 0) {
 			/* full truncate */
-			// bump FID generation
-			// queue updates to IOS's
+			FCMH_LOCK(fcmh);
+			fcmh_2_gen(fcmh)++;
+			FCMH_ULOCK(fcmh);
+
+			rc = mdsio_fcmh_setattr(fcmh, SETATTR_MASKF_GEN);
+
+			/* XXX: queue updates to IOS's */
 		} else {
+			/* partial truncate */
 			struct {
 				sl_replica_t	iosv[SL_MAX_REPLICAS];
 				int		nios;
@@ -678,7 +684,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 			ios_list.nios = 0;
 
-			/* partial truncate */
 			to_set |= SETATTR_MASKF_PTRUNCGEN;
 
 			wk = psc_pool_get(upsched_pool);

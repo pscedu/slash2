@@ -51,16 +51,12 @@ bmap_2_zfs_fh(struct bmapc_memb *bmap)
 }
 
 int
-mdsio_apply_fcmh_size(struct fidc_membh *f, size_t size)
+mdsio_fcmh_setattr(struct fidc_membh *f, int setattrflags)
 {
 	int locked;
 
-	locked = reqlock(&f->fcmh_lock);
-	fcmh_2_fsz(f) = size;
-	ureqlock(&f->fcmh_lock, locked);
-
 	return (zfsslash2_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
-	    SETATTR_MASKF_DATASIZE, &rootcreds, NULL,
+	    setattrflags, &rootcreds, NULL,
 	    fcmh_2_fmi(f)->fmi_mdsio_data, NULL));
 }
 
@@ -87,18 +83,20 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 int
 mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 {
+	struct sl_mds_crc_log crclog;
+	uint32_t utimgen;
 	size_t nb;
 	int rc;
-	uint32_t utimgen;
-	struct sl_mds_crc_log crclog;
 
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
 
-	mdsio_apply_fcmh_size(bmap->bcm_fcmh, crcup->fsize);
 	FCMH_LOCK(bmap->bcm_fcmh);
+	fcmh_2_fsz(f) = crcup->fsize;
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
 	FCMH_ULOCK(bmap->bcm_fcmh);
+
+	rc = mdsio_fcmh_setattr(bmap->bcm_fcmh, SETATTR_MASKF_DATASIZE);
 
 	if (utimgen < crcup->utimgen)
 		DEBUG_FCMH(PLL_ERROR, bmap->bcm_fcmh,
