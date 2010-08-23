@@ -537,6 +537,8 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		rc = mp->rc;
  out:
 	FCMH_LOCK(fcmh);
+	if (!rc && fcmh_2_fid(fcmh) != mp->attr.sst_fid)
+		rc = EBADF;
 	if (!rc)
 		fcmh_setattr(fcmh, &mp->attr,
 		    FCMH_SETATTRF_SAVELOCAL | FCMH_SETATTRF_HAVELOCK);

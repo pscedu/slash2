@@ -86,6 +86,9 @@ fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 	if (!(flags & FCMH_SETATTRF_HAVELOCK))
 		FCMH_LOCK(fcmh);
 
+	if (fcmh_2_gen(fcmh) == FGEN_ANY)
+	    fcmh_2_gen(fcmh) = sstb->sst_gen;
+
 	if (fcmh_2_fid(fcmh) != SLFID_ROOT &&
 	    fcmh_2_gen(fcmh) > sstb->sst_gen) {
 		DEBUG_FCMH(PLL_WARN, fcmh, "attempt to set attr from a "

@@ -65,6 +65,8 @@ struct slash_fidgen {
 };
 
 #define FID_ANY			UINT64_C(0xffffffffffffffff)
+
+/* temporary placeholder for the not-yet-known generation number */
 #define FGEN_ANY		UINT64_C(0xffffffffffffffff)
 
 #define SLFID_ROOT		1
