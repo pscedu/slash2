@@ -76,9 +76,12 @@ fcmh_destroy(struct fidc_membh *f)
  * @fcmh: FID cache member to update.
  * @sstb: incoming stat attributes.
  * @flags: behavioral flags.
- * Notes: if SAVELOCAL has been specified, save local field values:
- *	(o) file size
- *	(o) mtime
+ * Notes: 
+ *     (1) if SAVELOCAL has been specified, save local field values:
+ *		(o) file size
+ *		(o) mtime
+ *     (2) This function should only be used by a client. 
+ *	
  */
 void
 fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
