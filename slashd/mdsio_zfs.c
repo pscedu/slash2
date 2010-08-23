@@ -53,8 +53,6 @@ bmap_2_zfs_fh(struct bmapc_memb *bmap)
 int
 mdsio_fcmh_setattr(struct fidc_membh *f, int setattrflags)
 {
-	int locked;
-
 	return (zfsslash2_setattr(fcmh_2_mdsio_fid(f), &f->fcmh_sstb,
 	    setattrflags, &rootcreds, NULL,
 	    fcmh_2_fmi(f)->fmi_mdsio_data, NULL));
@@ -92,7 +90,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	crclog.scl_crcup = crcup;
 
 	FCMH_LOCK(bmap->bcm_fcmh);
-	fcmh_2_fsz(f) = crcup->fsize;
+	fcmh_2_fsz(bmap->bcm_fcmh) = crcup->fsize;
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
 	FCMH_ULOCK(bmap->bcm_fcmh);
 
