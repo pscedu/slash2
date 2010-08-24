@@ -86,9 +86,6 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	size_t nb;
 	int rc;
 
-	crclog.scl_bmap = bmap;
-	crclog.scl_crcup = crcup;
-
 	FCMH_LOCK(bmap->bcm_fcmh);
 	fcmh_2_fsz(bmap->bcm_fcmh) = crcup->fsize;
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
@@ -100,10 +97,13 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 		DEBUG_FCMH(PLL_ERROR, bmap->bcm_fcmh,
 		   "utimgen %d < crcup->utimgen %d", utimgen, crcup->utimgen);
 
+	crclog.scl_bmap = bmap;
+	crclog.scl_crcup = crcup;
+
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
 	    (utimgen == crcup->utimgen), bmap_2_zfs_fh(bmap),
-	    mds_bmap_crc_log, (void *)&crclog);
+	    mds_bmap_crc_log, &crclog);
 
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
@@ -133,7 +133,7 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
 		(off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF), 0,
-		bmap_2_zfs_fh(bmap), (void *)mds_bmap_repl_log, (void *)bmap);
+		bmap_2_zfs_fh(bmap), mds_bmap_repl_log, bmap);
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
 			   rc);
@@ -167,7 +167,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 			     &inoh->inoh_ino, INO_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_ino, INO_OD_SZ, &nb,
 			     SL_INODE_START_OFF, 0, inoh_2_mdsio_data(inoh),
-			mds_inode_addrepl_log, (void *)&jrir);
+			mds_inode_addrepl_log, &jrir);
 
 		if (!rc && nb != INO_OD_SZ)
 			rc = SLERR_SHORTIO;
@@ -186,7 +186,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 			     INOX_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_extras, INOX_OD_SZ, &nb,
 				     SL_EXTRAS_START_OFF, 0, inoh_2_mdsio_data(inoh),
-			mds_inode_addrepl_log, (void *)&jrir);
+			mds_inode_addrepl_log, &jrir);
 
 		if (!rc && nb != INO_OD_SZ)
 			rc = SLERR_SHORTIO;
