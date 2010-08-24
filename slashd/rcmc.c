@@ -131,8 +131,6 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 
 		srcm->srcm_page_bitpos = 0;
 	}
-	memset(srcm->srcm_page + howmany(srcm->srcm_page_bitpos, NBBY),
-	    0, howmany(nbits - srcm->srcm_page_bitpos % NBBY, NBBY));
 	memset(&bhdr, 0, sizeof(bhdr));
 	bhdr.srsb_repl_policy = bcm->bcm_od->bh_repl_policy;
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos,
