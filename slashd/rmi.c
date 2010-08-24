@@ -145,6 +145,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	for (i=0, off=0; i < mq->ncrc_updates; i++) {
 		struct srm_bmap_crcup *c = iovs[i].iov_base;
 		uint32_t j;
+
 		/* Does the bulk payload agree with the original request?
 		 */
 		if (c->nups != mq->ncrcs_per_update[i]) {

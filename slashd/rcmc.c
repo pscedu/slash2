@@ -182,12 +182,12 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 void
 slmrcmthr_main(struct psc_thread *thr)
 {
+	struct up_sched_work_item *wk;
 	struct slm_replst_workreq *rsw;
 	struct slmrcm_thread *srcm;
 	struct pscrpc_request *rq;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
-	struct up_sched_work_item *wk;
 	sl_bmapno_t n;
 	int rc;
 
