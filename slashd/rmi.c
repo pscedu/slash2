@@ -187,13 +187,13 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 int
 slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 {
-	int tract[NBREPLST], retifset[NBREPLST], iosidx;
+	int tract[NBREPLST], retifset[NBREPLST], iosidx, src_iosidx, rc;
 	struct sl_resm *dst_resm, *src_resm;
 	struct srm_repl_schedwk_req *mq;
+	struct up_sched_work_item *wk;
 	struct srm_generic_rep *mp;
 	struct site_mds_info *smi;
 	struct bmapc_memb *bcm;
-	struct up_sched_work_item *wk;
 	sl_bmapgen_t gen;
 
 	dst_resm = NULL;
@@ -203,10 +203,12 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (wk == NULL)
 		goto out;
 
+	/* XXX should we trust them to tell us who the src was? */
+	src_resm = libsl_nid2resm(mq->nid);
 	dst_resm = libsl_nid2resm(rq->rq_export->exp_connection->c_peer.nid);
 
 	iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
-		     dst_resm->resm_res->res_id);
+	    dst_resm->resm_res->res_id);
 	if (iosidx < 0)
 		goto out;
 
@@ -220,11 +222,43 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 
 	BHGEN_GET(bcm, gen);
 	if (mq->rc || mq->bgen != gen) {
-//		if (bad crc)
-//			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-//		else if (connection down)
-//			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
-//		else
+		if (mq->rc == SLERR_BADCRC) {
+			/*
+			 * Bad CRC, media error perhaps.
+			 * Check if other replicas exist.
+			 */
+			src_iosidx = mds_repl_ios_lookup(USWI_INOH(wk),
+			    src_resm->resm_res->res_id);
+			if (src_iosidx < 0)
+				goto out;
+
+			brepls_init(retifset, 0);
+			retifset[BREPLST_VALID] = 1;
+
+			rc = mds_repl_bmap_walk(bcm, NULL, retifset,
+			    REPL_WALKF_MODOTH, &src_iosidx, 1);
+
+			if (rc) {
+				/*
+				 * Other replicas exist.
+				 * Mark this failed source replica as
+				 * garbage.
+				 */
+				tract[BREPLST_VALID] = BREPLST_GARBAGE;
+				mds_repl_bmap_walk(bcm, tract, NULL, 0,
+				    &src_iosidx, 1);
+
+				/* Try from another replica. */
+				brepls_init(tract, -1);
+				tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+			} else {
+				/* No other replicas exist. */
+				tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
+			}
+		} else if (mq->rc == SLERR_ION_OFFLINE)
+			tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+		else
+			/* otherwise, we assume the ION has cleaned up */
 			tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
 	} else {
 		/*
@@ -248,12 +282,9 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	psc_multiwaitcond_wakeup(&smi->smi_mwcond);
 	freelock(&smi->smi_lock);
  out:
-	if (dst_resm) {
-		/* XXX should we trust them to tell us who the src was? */
-		src_resm = libsl_nid2resm(mq->nid);
+	if (dst_resm)
 		mds_repl_nodes_setbusy(src_resm->resm_pri,
 		    dst_resm->resm_pri, 0);
-	}
 	if (wk)
 		uswi_unref(wk);
 
