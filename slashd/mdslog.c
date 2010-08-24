@@ -197,7 +197,7 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	rc = mdsio_lookup_slfid(jcrc->sjc_s2id, &rootcreds, NULL, &mf);
 	if (rc == ENOENT) {
 		psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
-		return (-rc);
+		return (rc);
 	} else if (rc)
 		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 
@@ -209,8 +209,8 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	/* Apply the filesize from the journal entry.
 	 */
 	sstb.sst_size = jcrc->sjc_fsize;
-	rc = mdsio_setattr(mf, &sstb, SETATTR_MASKF_DATASIZE , &rootcreds,
-		   NULL, mdsio_data, NULL);
+	rc = mdsio_setattr(mf, &sstb, SETATTR_MASKF_DATASIZE, &rootcreds,
+	    NULL, mdsio_data, NULL);
 	if (rc)
 		goto out;
 
@@ -235,6 +235,7 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 
 	if (!rc && nb != BMAP_OD_SZ)
 		rc = EIO;
+
  out:
 	mdsio_release(&rootcreds, mdsio_data);
 	return (rc);
@@ -439,19 +440,19 @@ mds_distill_handler(struct psc_journal_enthdr *pje)
 	return (0);
 }
 
-/*
+/**
  * mds_namespace_log - Log namespace operation before we attempt an
  *	operation.  This makes sure that it will be propagated towards
  *	other MDSes and made permanent before we reply to the client.
  */
 void
 mds_namespace_log(int op, uint64_t txg, uint64_t parent,
-    uint64_t newparent, const struct srt_stat *stat,
-    int mask, const char *name, const char *newname)
+    uint64_t newparent, const struct srt_stat *stat, int mask,
+    const char *name, const char *newname)
 {
-	char *ptr;
-	int len, distilled;
 	struct slmds_jent_namespace *jnamespace;
+	int len, distilled;
+	char *ptr;
 
 	jnamespace = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
@@ -460,19 +461,18 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	jnamespace->sjnm_parent_s2id = parent;
 	jnamespace->sjnm_target_s2id = stat->sst_fid;
 	jnamespace->sjnm_new_parent_s2id = newparent;
-
 	jnamespace->sjnm_mask = mask;
 
 	jnamespace->sjnm_uid = stat->sst_uid;
 	jnamespace->sjnm_gid = stat->sst_gid;
 	jnamespace->sjnm_mode = stat->sst_mode;
-
 	jnamespace->sjnm_atime = stat->sst_atime;
 	jnamespace->sjnm_atime_ns = stat->sst_atime_ns;
 	jnamespace->sjnm_mtime = stat->sst_mtime;
 	jnamespace->sjnm_mtime_ns = stat->sst_mtime_ns;
 	jnamespace->sjnm_ctime = stat->sst_ctime;
 	jnamespace->sjnm_ctime_ns = stat->sst_ctime_ns;
+	jnamespace->sjnm_size = stat->sst_size;
 
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
 	ptr = jnamespace->sjnm_name;
@@ -603,8 +603,8 @@ mds_namespace_read_batch(uint64_t seqno)
 	struct sl_mds_logbuf *buf, *victim;
 	char fn[PATH_MAX], *ptr, *logptr;
 	int i, newbuf, nitems, logfile;
-	ssize_t size;
 	struct psc_thread *thr;
+	ssize_t size;
 
 	/*
 	 * Currently, there is only one thread manipulating the list.
@@ -1243,20 +1243,21 @@ mds_unreserve_slot(void)
 int
 mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 {
-	int rc, mask, hasname = 1;
+	int rc, hasname = 1;
 	struct srt_stat stat;
 	char *newname;
 
+	memset(&stat, 0, sizeof(stat));
 	stat.sst_uid = jnamespace->sjnm_uid;
 	stat.sst_gid = jnamespace->sjnm_gid;
 	stat.sst_mode = jnamespace->sjnm_mode;
-	mask = jnamespace->sjnm_mask;
 	stat.sst_atime = jnamespace->sjnm_atime;
 	stat.sst_atime_ns = jnamespace->sjnm_atime_ns;
 	stat.sst_mtime = jnamespace->sjnm_mtime;
 	stat.sst_mtime_ns = jnamespace->sjnm_mtime_ns;
 	stat.sst_ctime = jnamespace->sjnm_ctime;
 	stat.sst_ctime_ns = jnamespace->sjnm_ctime_ns;
+	stat.sst_size = jnamespace->sjnm_size;
 
 	switch (jnamespace->sjnm_op) {
 	    case NS_OP_CREATE:
