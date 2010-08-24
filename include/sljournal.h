@@ -25,7 +25,7 @@
 
 #define SLJ_MDS_JNENTS		(128 * 1024)	/* 131072 */
 #define SLJ_MDS_RA		1024		/* SLJ_MDS_JNENTS % SLJ_MDS_RA == 0 */
-#define SLJ_MDS_NCRCS		28
+#define SLJ_MDS_NCRCS		MAX_BMAP_INODE_PAIRS
 
 #define SLJ_MDS_PJET_VOID	0
 #define SLJ_MDS_PJET_INUM	1
@@ -52,6 +52,7 @@ struct slmds_jent_crc {
 	sl_ios_id_t		sjc_ion;		/* Track the ion which did the I/O */
 	int32_t			sjc_ncrcs;
 	uint64_t		sjc_fsize;
+	uint64_t                sjc_utimgen;
 	struct srm_bmap_crcwire	sjc_crc[SLJ_MDS_NCRCS];
 } __packed;
 

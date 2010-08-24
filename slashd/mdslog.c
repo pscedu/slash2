@@ -185,6 +185,7 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 {
 	struct srm_bmap_crcwire *bmap_wire;
 	struct srt_bmap_wire bmap_disk;
+	struct srt_stat sstb;
 	struct slmds_jent_crc *jcrc;
 	void *mdsio_data;
 	mdsio_fid_t mf;
@@ -204,6 +205,14 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 	    NULL, NULL, &mdsio_data, NULL, NULL);
 	if (rc)
 		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
+
+	/* Apply the filesize from the journal entry.
+	 */
+	sstb.sst_size = crcup->fsize;
+	rc = mdsio_setattr(mf, &sstb, SETATTR_MASKF_DATASIZE , &rootcreds,
+		   NULL, mdsio_data, NULL);
+	if (rc)
+		goto out;
 
 	rc = mdsio_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		(off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
@@ -1073,6 +1082,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	jcrc->sjc_bmapno = bmap->bcm_blkno;
 	jcrc->sjc_ncrcs = n;
 	jcrc->sjc_fsize = crcup->fsize;		/* largest known size */
+	jcrc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
 
 	while (n) {
 		i = MIN(SLJ_MDS_NCRCS, n);
