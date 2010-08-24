@@ -459,8 +459,6 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 		    current_mrs.mrs_iosv[iosidx],
 		    bact, bact + bold, rbuf);
 		psclist_for_each_entry(rsb, &current_mrs_bdata, rsb_lentry) {
-			pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data,
-			    SL_BITS_PER_REPLICA * iosidx, SL_NBITS_REPLST_BHDR);
 			off = SL_BITS_PER_REPLICA * iosidx + SL_NBITS_REPLST_BHDR;
 			for (nb = 0; nb < rsb->rsb_nbmaps; nb++, nbw++,
 			    off += SL_BITS_PER_REPLICA * current_mrs.mrs_nios +
@@ -469,6 +467,11 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 					nbw = 0;
 				if (nbw == 0)
 					printf("\n\t");
+
+				memset(&bhdr, 0, sizeof(bhdr));
+				pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data, nb *
+				    (SL_NBITS_REPLST_BHDR + SL_BITS_PER_REPLICA * current_mrs.mrs_nios),
+				    SL_NBITS_REPLST_BHDR);
 				putchar((bhdr.srsb_repl_policy == BRP_PERSIST ?
 				    pmap : map)[SL_REPL_GET_BMAP_IOS_STAT(
 				    rsb->rsb_data, off)]);
