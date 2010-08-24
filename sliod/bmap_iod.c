@@ -204,7 +204,6 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 }
 
 void
-
 bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
 	struct bmap_iod_info *biod = bcr->bcr_biodi;
@@ -225,9 +224,8 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 		biod->biod_state &= ~BIOD_BCRSCHED;
 
 		DEBUG_BMAP(PLL_INFO, biod->biod_bmap, 
-			   "descheduling rlsq=%u drtyslvrs=%u",
-			   (biod->biod_state & BIOD_RLSSEQ), 
-			   biod->biod_crcdrty_slvrs);
+			   "descheduling biod_state=%u drtyslvrs=%u",
+			   biod->biod_state, biod->biod_crcdrty_slvrs);
 
 		biod_rlssched_locked(biod);
 		freelock(&biod->biod_lock);
@@ -294,11 +292,14 @@ biod_rlssched_locked(struct bmap_iod_info *biod)
 {	
 	LOCK_ENSURE(&biod->biod_lock);
 	
-	if (biod->biod_state & BIOD_RLSSCHED) {
-		psc_assert(psclist_conjoint(&biod->biod_lentry));
+	if (biod->biod_state & BIOD_RLSSCHED)
+		/* Don't test for list membership, the bmaprlsthr may
+		 *   have already removed the biod in preparation for 
+		 *   release.
+		 */
 		psc_assert(biod->biod_state & BIOD_RLSSEQ);
 
-	} else {
+	else {
 		psc_assert(psclist_disjoint(&biod->biod_lentry));
 
 		if (!biod->biod_crcdrty_slvrs &&
