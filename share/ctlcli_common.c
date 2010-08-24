@@ -55,15 +55,21 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	char *site, *nid, *res, *status, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
 
-	/* res@site:1.1.1.1@tcp0 */
-	strlcpy(addrbuf, scc->scc_addrbuf, sizeof(addrbuf));
-	res = addrbuf;
-	site = res + strcspn(res, "@");
-	if (*site != '\0')
-		*site++ = '\0';
-	nid = site + strcspn(site, ":");
-	if (*nid != '\0')
-		*nid++ = '\0';
+	if (scc->scc_type == SLCTL_REST_CLI) {
+		site = "clients";
+		res = lastres;
+	} else {
+		/* res@site:1.1.1.1@tcp0 */
+		strlcpy(addrbuf, scc->scc_addrbuf, sizeof(addrbuf));
+		res = addrbuf;
+		site = res + strcspn(res, "@");
+		if (*site != '\0')
+			*site++ = '\0';
+		nid = site + strcspn(site, ":");
+		if (*nid != '\0')
+			*nid++ = '\0';
+	}
+
 	if (psc_ctl_lastmsgtype != mh->mh_type ||
 	    strcmp(lastsite, site)) {
 		strlcpy(lastsite, site, sizeof(lastsite));
