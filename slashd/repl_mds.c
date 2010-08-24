@@ -463,12 +463,13 @@ mds_repl_addrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	}
 
 	/*
-	 * Check inode's bmap state.  INVALID and VALID states
-	 * become OLD, signifying that replication needs to happen.
+	 * Check inode's bmap state.  INVALID and VALID states become
+	 * OLD, signifying that replication needs to happen.
 	 */
 	brepls_init(tract, -1);
 	tract[BREPLST_INVALID] = BREPLST_REPL_QUEUED;
 	tract[BREPLST_REPL_SCHED] = BREPLST_REPL_QUEUED;
+	tract[BREPLST_GARBAGE] = BREPLST_REPL_QUEUED;
 
 	brepls_init(retifzero, 0);
 	retifzero[BREPLST_VALID] = 1;
