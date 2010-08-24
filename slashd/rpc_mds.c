@@ -30,10 +30,6 @@
 #include "slashd.h"
 #include "slashrpc.h"
 
-void (*slexp_freef[SLNCONNT])(struct pscrpc_export *) = {
-	mexpcli_destroy
-};
-
 int
 slm_rim_issue_ping(struct pscrpc_import *imp)
 {
@@ -104,52 +100,4 @@ slm_rpc_initsvc(void)
 	srcm = thr->pscthr_private;
 	srcm->srcm_page = PSCALLOC(SRM_REPLST_PAGESIZ);
 	pscthr_setready(thr);
-}
-
-struct mexp_cli *
-mexpcli_get(struct pscrpc_export *exp)
-{
-	struct slashrpc_export *slexp;
-	struct mexp_cli *mexp_cli;
-	int locked;
-
-	locked = reqlock(&exp->exp_lock);
-	slexp = slexp_get(exp, SLCONNT_CLI);
-	mexp_cli = slexp->slexp_data;
-	if (mexp_cli == NULL) {
-		mexp_cli = slexp->slexp_data =
-		    PSCALLOC(sizeof(*mexp_cli));
-		LOCK_INIT(&mexp_cli->mc_lock);
-		psc_waitq_init(&mexp_cli->mc_waitq);
-	}
-	ureqlock(&exp->exp_lock, locked);
-	slexp_put(exp);
-
-	return (mexp_cli);
-}
-
-void
-mexpcli_destroy(struct pscrpc_export *exp)
-{
-	struct slashrpc_export *slexp = exp->exp_private;
-	struct mexp_cli *mexpc = slexp->slexp_data;
-	struct bmap_mds_lease *bml, *tmp;
-
-	psclist_for_each_entry_safe(bml, tmp, &slexp->slexp_bmlhd,
-	    bml_exp_lentry) {
-		BML_LOCK(bml);
-		psc_assert(bml->bml_flags & BML_EXP);
-		bml->bml_flags &= ~BML_EXP;
-		bml->bml_flags |= BML_EXPFAIL;
-		BML_ULOCK(bml);
-		psclist_del(&bml->bml_exp_lentry);
-	}
-
-	if (mexpc && mexpc->mc_csvc) {
-		sl_csvc_reqlock(mexpc->mc_csvc);
-		sl_csvc_markfree(mexpc->mc_csvc);
-		sl_csvc_incref(mexpc->mc_csvc);
-		sl_csvc_decref(mexpc->mc_csvc);
-	}
-	PSCFREE(mexpc);
 }

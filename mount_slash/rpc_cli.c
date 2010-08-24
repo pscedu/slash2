@@ -30,8 +30,6 @@
 #include "slconn.h"
 #include "slerr.h"
 
-void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
-
 /*
  * slc_rpc_initsvc: initialize RPC services.
  */

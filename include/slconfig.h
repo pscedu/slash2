@@ -140,20 +140,21 @@ int			 slcfg_site_cmp(const void *, const void *);
 void			 slcfg_parse(const char *);
 void			 slcfg_store_tok_val(const char *, char *);
 
-struct sl_site		*libsl_siteid2site(sl_siteid_t);
-struct sl_site		*libsl_resid2site(sl_ios_id_t);
 struct sl_resource	*libsl_id2res(sl_ios_id_t);
-struct sl_resm		*libsl_nid2resm(lnet_nid_t);
-struct sl_resource	*libsl_str2res(const char *);
-sl_ios_id_t		 libsl_str2id(const char *);
-void			 libsl_profile_dump(void);
 void			 libsl_init(int, int);
+struct sl_resm		*libsl_nid2resm(lnet_nid_t);
+void			 libsl_profile_dump(void);
+struct sl_site		*libsl_resid2site(sl_ios_id_t);
+struct sl_site		*libsl_siteid2site(sl_siteid_t);
+sl_ios_id_t		 libsl_str2id(const char *);
+struct sl_resource	*libsl_str2res(const char *);
+struct sl_resm		*libsl_try_nid2resm(lnet_nid_t);
 
 extern struct sl_resm	*nodeResm;
 extern struct sl_gconf	 globalConfig;
 
-/*
- * sl_global_id_build - produce a global, unique identifier for a resource
+/**
+ * sl_global_id_build - Produce a global, unique identifier for a resource
  *	from its internal identifier.
  * @site_id: site identifier.
  * @intres_id: resource identifier, internal to site.

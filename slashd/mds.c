@@ -20,6 +20,7 @@
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/treeutil.h"
+#include "psc_rpc/export.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
@@ -496,9 +497,9 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	if ((rc = mds_bmap_directio(b, SL_WRITE, &bml->bml_cli_nidpid)))
 		return (rc);
 
-	mds_bmap_dupls_find(bmdsi, &bml->bml_cli_nidpid, 
+	mds_bmap_dupls_find(bmdsi, &bml->bml_cli_nidpid,
 		   &wlease, &rlease);
-	
+
 	/* Account for the read lease which is to be converted.
 	 */
 	psc_assert(rlease);
@@ -542,7 +543,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 		if (wlease < 0) {
 			bmdsi->bmdsi_writers--;
 			psc_assert(bmdsi->bmdsi_writers >= 0);
-		} 
+		}
 
 		if (rlease < 0)
 			/* Restore the reader cnt.
@@ -805,13 +806,10 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		bml->bml_flags |= BML_COHRLS;
 
 	if (bml->bml_flags & BML_EXP) {
-		struct slashrpc_export *slexp;
-
-		/* Take the locks in the correct order.
-		 */
+		/* Take the locks in the correct order. */
 		BML_ULOCK(bml);
-		slexp = slexp_get(bml->bml_exp, SLCONNT_CLI);
-		spinlock(&slexp->slexp_export->exp_lock);
+		EXPORT_LOCK(bml->bml_exp);
+		mexpc_get(bml->bml_exp);
 		BML_LOCK(bml);
 		if (bml->bml_flags & BML_EXP) {
 			psc_assert(psclist_conjoint(&bml->bml_exp_lentry));
@@ -819,9 +817,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			bml->bml_flags &= ~BML_EXP;
 		} else
 			psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
-
-		freelock(&slexp->slexp_export->exp_lock);
-		slexp_put(bml->bml_exp);
+		EXPORT_UNLOCK(bml->bml_exp);
 
 		bml->bml_flags &= ~BML_EXP;
 	}
@@ -1440,8 +1436,8 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
     enum rw rw, sl_ios_id_t prefios, struct srt_bmapdesc *sbd,
     struct pscrpc_export *exp, struct bmapc_memb **bmap)
 {
-	struct slashrpc_export *slexp;
 	struct bmap_mds_lease *bml;
+	struct slm_exp_cli *mexpc;
 	struct bmapc_memb *b;
 	int rc;
 
@@ -1467,19 +1463,17 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		else
 			mds_bmap_bml_release(bml);
 		goto out;
-	} else
-		*bmap = b;
+	}
+	*bmap = b;
 
-	/* Note the lock ordering here.
-	 */
-	slexp = slexp_get(exp, SLCONNT_CLI);
-	spinlock(&exp->exp_lock);
-	psclist_xadd_tail(&bml->bml_exp_lentry, &slexp->slexp_bmlhd);
+	/* Note the lock ordering here. */
+	EXPORT_LOCK(exp);
+	mexpc = mexpc_get(exp);
 	BML_LOCK(bml);
+	psclist_add_tail(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
 	bml->bml_flags |= BML_EXP;
 	BML_ULOCK(bml);
-	freelock(&exp->exp_lock);
-	slexp_put(exp);
+	EXPORT_UNLOCK(exp);
 
 	sbd->sbd_seq = bml->bml_seq;
 	sbd->sbd_key = (rw == SL_WRITE) ?

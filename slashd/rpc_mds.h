@@ -53,18 +53,15 @@ struct pscrpc_export;
  */
 #define SLM_NAMESPACE_BATCH	2048
 
-struct slm_rmi_expdata {
-	struct pscrpc_export		 *smie_exp;
+struct slm_exp_cli {
+	struct slashrpc_cservice	*mexpc_csvc;
+	psc_spinlock_t			 mexpc_lock;
+	struct psc_waitq		 mexpc_waitq;
+	struct psclist_head		 mexpc_bmlhd;		/* bmap leases */
 };
 
-struct mexp_cli {
-	struct slashrpc_cservice	*mc_csvc;
-	psc_spinlock_t			 mc_lock;
-	struct psc_waitq		 mc_waitq;
-};
-
-struct mexp_cli	*mexpcli_get(struct pscrpc_export *);
-void		 mexpcli_destroy(struct pscrpc_export *);
+struct slm_exp_cli *
+	mexpc_get(struct pscrpc_export *);
 
 void	slm_rpc_initsvc(void);
 
@@ -97,12 +94,12 @@ struct slm_rmi_expdata *
 static __inline struct slashrpc_cservice *
 slm_getclcsvc(struct pscrpc_export *exp)
 {
-	struct mexp_cli *mexpc;
+	struct slm_exp_cli *mexpc;
 
-	mexpc = mexpcli_get(exp);
-	return (sl_csvc_get(&mexpc->mc_csvc, 0, exp, LNET_NID_ANY,
+	mexpc = mexpc_get(exp);
+	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, LNET_NID_ANY,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
-	    &mexpc->mc_lock, &mexpc->mc_waitq, SLCONNT_CLI));
+	    &mexpc->mexpc_lock, &mexpc->mexpc_waitq, SLCONNT_CLI));
 }
 
 #endif /* _RPC_MDS_H_ */

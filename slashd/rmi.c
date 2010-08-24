@@ -24,6 +24,7 @@
 #include <stdio.h>
 
 #include "pfl/str.h"
+#include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
@@ -37,8 +38,21 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
+#include "slconn.h"
 #include "slerr.h"
 #include "up_sched_res.h"
+
+void
+slm_rmi_hldrop(struct pscrpc_export *exp)
+{
+	struct sl_resm *resm;
+
+	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
+	mds_repl_reset_scheduled(resm->resm_res->res_id);
+	mds_repl_node_clearallbusy(resm->resm_pri);
+	if (resm->resm_csvc)
+		sl_csvc_disconnect(resm->resm_csvc);
+}
 
 /**
  * slm_rmi_handle_bmap_getcrcs - Handle a BMAPGETCRCS request from ION,
@@ -51,7 +65,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 {
 	struct srm_bmap_wire_req *mq;
 	struct srm_bmap_wire_rep *mp;
-	struct bmapc_memb *b=NULL;
+	struct bmapc_memb *b = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 #if 0
@@ -133,8 +147,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	/* CRC the CRC's!
-	 */
+	/* CRC the CRC's! */
 	psc_crc64_calc(&crc, buf, len);
 	if (crc != mq->crc) {
 		psc_errorx("crc verification of crcwrt payload failed");
@@ -313,8 +326,15 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 	struct sl_resm *resm;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION)
-		mp->rc = -EINVAL;
+	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION) {
+		mp->rc = EINVAL;
+		goto out;
+	}
+
+	if (libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid) == NULL) {
+		mp->rc = SLERR_RES_UNKNOWN;
+		goto out;
+	}
 
 	/* initialize our reverse stream structures */
 	resm = libsl_nid2resm(rq->rq_peer.nid);
@@ -322,8 +342,12 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 //	psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
 	sl_csvc_decref(csvc);
 
-	slm_rmi_getexpdata(rq->rq_export);
+	EXPORT_LOCK(rq->rq_export);
+	rq->rq_export->exp_hldropf = slm_rmi_hldrop;
+	EXPORT_UNLOCK(rq->rq_export);
+
 	mds_bmap_getcurseq(NULL, &mp->data);
+ out:
 	return (0);
 }
 
@@ -385,43 +409,4 @@ slm_rmi_handler(struct pscrpc_request *rq)
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
-}
-
-void
-slm_rmi_hldrop(void *p)
-{
-	struct slm_rmi_expdata *smie = p;
-	struct sl_resm *resm;
-
-	resm = libsl_nid2resm(smie->smie_exp->exp_connection->c_peer.nid);
-	mds_repl_reset_scheduled(resm->resm_res->res_id);
-	mds_repl_node_clearallbusy(resm->resm_pri);
-	free(smie);
-}
-
-struct slm_rmi_expdata *
-slm_rmi_getexpdata(struct pscrpc_export *exp)
-{
-	struct slm_rmi_expdata *smie, *p;
-
-	smie = NULL;
-	spinlock(&exp->exp_lock);
-	if (exp->exp_private)
-		smie = exp->exp_private;
-	freelock(&exp->exp_lock);
-	if (smie)
-		return (smie);
-	p = PSCALLOC(sizeof(*p));
-	p->smie_exp = exp;
-	spinlock(&exp->exp_lock);
-	if (exp->exp_private)
-		smie = exp->exp_private;
-	else {
-		exp->exp_hldropf = slm_rmi_hldrop;
-		exp->exp_private = smie = p;
-		p = NULL;
-	}
-	freelock(&exp->exp_lock);
-	PSCFREE(p);
-	return (smie);
 }

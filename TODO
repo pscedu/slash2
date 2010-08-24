@@ -321,7 +321,6 @@ utime
 	took place
 
 - fix the "static" variables in communal/general functions
-- register a per-app slexp_destroyf routine as slashd is overriding slexp_destroy
-  (o) in this routine, unset resm_csvc from CONNECTED
+- unset csvc from CONNECTED in any hldrop callback from a resm
 
 - ignore repl CRC failure when replicating from src for now

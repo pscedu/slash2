@@ -463,65 +463,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 	return (csvc);
 }
 
-/**
- * slexp_get - Access private data associated with an LNET peer.
- * @exp: RPC export of peer.
- * @peertype: peer type of connection.
- */
-struct slashrpc_export *
-slexp_get(struct pscrpc_export *exp, enum slconn_type peertype)
-{
-	struct slashrpc_export *slexp;
-	int locked;
-
-	locked = reqlock(&exp->exp_lock);
-
-	pscrpc_export_get(exp);
-
-	if (exp->exp_private == NULL) {
-		slexp = exp->exp_private = PSCALLOC(sizeof(*slexp));
-		slexp->slexp_export = exp;
-		slexp->slexp_peertype = peertype;
-		INIT_PSCLIST_HEAD(&slexp->slexp_bmlhd);
-		exp->exp_hldropf = slexp_destroy;
-	} else {
-		slexp = exp->exp_private;
-		psc_assert(slexp->slexp_export == exp);
-		psc_assert(slexp->slexp_peertype == peertype);
-	}
-	ureqlock(&exp->exp_lock, locked);
-	return (slexp);
-}
-
-void
-slexp_put(struct pscrpc_export *exp)
-{
-	pscrpc_export_put(exp);
-}
-
-void
-slexp_destroy(void *data)
-{
-	struct slashrpc_export *slexp = data;
-	struct pscrpc_export *exp = slexp->slexp_export;
-
-	psc_assert(exp);
-
-	/* There's no way to set this from the drop_callback() */
-	if (!(slexp->slexp_flags & SLEXPF_CLOSING))
-		slexp->slexp_flags |= SLEXPF_CLOSING;
-
-	if (slexp_freef[slexp->slexp_peertype])
-		slexp_freef[slexp->slexp_peertype](exp);
-
-	/* OK, no one else should be in here */
-	/* XXX move this to slashd */
-	psc_assert(psclist_empty(&slexp->slexp_bmlhd));
-
-	exp->exp_private = NULL;
-	PSCFREE(slexp);
-}
-
 void
 slconnthr_main(struct psc_thread *thr)
 {

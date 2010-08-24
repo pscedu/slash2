@@ -31,8 +31,6 @@
 #include "slconn.h"
 #include "sliod.h"
 
-void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
-
 /**
  * sli_rpc_initsvc - create and initialize RPC services.
  */

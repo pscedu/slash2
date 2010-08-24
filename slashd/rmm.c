@@ -24,6 +24,7 @@
 #include <stdio.h>
 
 #include "pfl/str.h"
+#include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
@@ -35,6 +36,8 @@
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"
+#include "slconn.h"
+#include "slerr.h"
 #include "sljournal.h"
 
 /* list of peer MDSes and its lock */
@@ -42,6 +45,16 @@ extern struct psc_dynarray	 mds_namespace_peerlist;
 extern psc_spinlock_t		 mds_namespace_peerlist_lock;
 
 extern struct sl_mds_peerinfo	*localinfo;
+
+void
+slm_rmm_hldrop(struct pscrpc_export *exp)
+{
+	struct sl_resm *resm;
+
+	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
+	if (resm->resm_csvc)
+		sl_csvc_disconnect(resm->resm_csvc);
+}
 
 int
 slm_rmm_cmp_peerinfo(const void *a, const void *b)
@@ -67,7 +80,7 @@ slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 }
 
 /**
- * slm_rmm_handle_connect - handle a CONNECT request from another MDS.
+ * slm_rmm_handle_connect - Handle a CONNECT request from another MDS.
  */
 int
 slm_rmm_handle_connect(struct pscrpc_request *rq)
@@ -76,13 +89,25 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRMM_MAGIC || mq->version != SRMM_VERSION)
+	if (mq->magic != SRMM_MAGIC || mq->version != SRMM_VERSION) {
 		mp->rc = EINVAL;
+		goto out;
+	}
+
+	if (libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid) == NULL) {
+		mp->rc = SLERR_RES_UNKNOWN;
+		goto out;
+	}
+
+	EXPORT_LOCK(rq->rq_export);
+	rq->rq_export->exp_hldropf = slm_rmm_hldrop;
+	EXPORT_UNLOCK(rq->rq_export);
+ out:
 	return (0);
 }
 
 /**
- * slm_rmm_handle_send_namespace - handle a SEND_NAMESPACE request from
+ * slm_rmm_handle_send_namespace - Handle a SEND_NAMESPACE request from
  *	another MDS.
  */
 int

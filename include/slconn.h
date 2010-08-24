@@ -84,18 +84,6 @@ struct slashrpc_cservice {
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
 
-struct slashrpc_export {
-	uint64_t		 slexp_nextcfd;
-	enum slconn_type	 slexp_peertype;
-	void			*slexp_data;
-	int			 slexp_flags;
-	struct pscrpc_export	*slexp_export;
-	struct psclist_head      slexp_bmlhd;		/* bmap leases */
-};
-
-/* slashrpc_export flags */
-#define SLEXPF_CLOSING		(1 << 0)		/* XXX why do we need this? */
-
 #define sl_csvc_waitrel_s(csvc, s)	_sl_csvc_waitrelv((csvc), (s), 0L)
 
 struct slashrpc_cservice *
@@ -103,6 +91,7 @@ struct slashrpc_cservice *
 	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
 	    void *, void *, enum slconn_type);
 void	 sl_csvc_decref(struct slashrpc_cservice *);
+void	 sl_csvc_disconnect(struct slashrpc_cservice *);
 void	 sl_csvc_incref(struct slashrpc_cservice *);
 void	 sl_csvc_lock_ensure(struct slashrpc_cservice *);
 void	 sl_csvc_markfree(struct slashrpc_cservice *);
@@ -112,17 +101,10 @@ int	 sl_csvc_usemultiwait(struct slashrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slashrpc_cservice *, long, long);
 void	 sl_csvc_wake(struct slashrpc_cservice *);
 
-struct slashrpc_export *
-	 slexp_get(struct pscrpc_export *, enum slconn_type);
-void	 slexp_put(struct pscrpc_export *);
-void	 slexp_destroy(void *);
-
 void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
 		uint32_t, void *, int, void *, enum slconn_type, int,
 		const char *);
 
 extern struct psc_dynarray lnet_prids;
-
-extern void (*slexp_freef[SLNCONNT])(struct pscrpc_export *);
 
 #endif /* _SLCONN_H_ */

@@ -32,9 +32,10 @@
 #include <unistd.h>
 
 #include "pfl/str.h"
+#include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
-#include "psc_rpc/rsx.h"
 #include "psc_rpc/rpclog.h"
+#include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
 #include "psc_util/lock.h"
 
@@ -108,18 +109,14 @@ int
 slm_rmc_handle_connect(struct pscrpc_request *rq)
 {
 	struct pscrpc_export *e = rq->rq_export;
-	struct slashrpc_cservice *csvc;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
-	struct mexp_cli *mexp_cli;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
-		mp->rc = -EINVAL;
+		mp->rc = EINVAL;
 	psc_assert(e->exp_private == NULL);
-	mexp_cli = mexpcli_get(e);
-	csvc = slm_getclcsvc(e);
-	sl_csvc_decref(csvc);
+	mexpc_get(e);
 	return (0);
 }
 
@@ -1065,4 +1062,56 @@ slm_rmc_handler(struct pscrpc_request *rq)
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
+}
+
+void
+mexpc_destroy(struct pscrpc_export *exp)
+{
+	struct slm_exp_cli *mexpc = exp->exp_private;
+	struct bmap_mds_lease *bml, *tmp;
+
+	if (mexpc == NULL)
+		return;
+
+	psclist_for_each_entry_safe(bml, tmp, &mexpc->mexpc_bmlhd,
+	    bml_exp_lentry) {
+		BML_LOCK(bml);
+		psc_assert(bml->bml_flags & BML_EXP);
+		bml->bml_flags &= ~BML_EXP;
+		bml->bml_flags |= BML_EXPFAIL;
+		BML_ULOCK(bml);
+		psclist_del(&bml->bml_exp_lentry);
+	}
+
+	if (mexpc->mexpc_csvc) {
+		sl_csvc_reqlock(mexpc->mexpc_csvc);
+		sl_csvc_markfree(mexpc->mexpc_csvc);
+		sl_csvc_decref(mexpc->mexpc_csvc);
+	}
+	PSCFREE(exp->exp_private);
+}
+
+/**
+ * mexpc_get - Get pscrpc_export private data specific to CLI.
+ * @exp: RPC export of CLI peer.
+ */
+struct slm_exp_cli *
+mexpc_get(struct pscrpc_export *exp)
+{
+	struct slm_exp_cli *mexpc;
+	int locked;
+
+	locked = EXPORT_RLOCK(exp);
+	if (exp->exp_private)
+		mexpc = exp->exp_private;
+	else {
+		mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
+		INIT_PSCLIST_HEAD(&mexpc->mexpc_bmlhd);
+		LOCK_INIT(&mexpc->mexpc_lock);
+		psc_waitq_init(&mexpc->mexpc_waitq);
+		exp->exp_hldropf = mexpc_destroy;
+		slm_getclcsvc(exp);
+	}
+	EXPORT_URLOCK(exp, locked);
+	return (mexpc);
 }
