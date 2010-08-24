@@ -46,26 +46,27 @@ extern struct sl_mds_peerinfo	*localinfo;
 int
 slm_rmm_cmp_peerinfo(const void *a, const void *b)
 {
-	struct sl_mds_peerinfo *p = (struct sl_mds_peerinfo *)a;
-	int siteid = *(int *)b;
-	return (CMP(p->sp_siteid, siteid));
-}           
+	const struct sl_mds_peerinfo *x = a, *y = b;
+
+	return (CMP(x->sp_siteid, y->sp_siteid));
+}
 
 int
 slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 {
 	int rc;
+
 	rc = mds_redo_namespace(jnamespace);
-	if (rc) 
-		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
-		    [jnamespace->sjnm_op][NS_SUM_FAIL]);
+	if (rc)
+		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV][
+		    jnamespace->sjnm_op][NS_SUM_FAIL]);
 	else
-		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV] \
-		    [jnamespace->sjnm_op][NS_SUM_SUCC]);
-	return rc;
+		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV][
+		    jnamespace->sjnm_op][NS_SUM_SUCC]);
+	return (rc);
 }
 
-/*
+/**
  * slm_rmm_handle_connect - handle a CONNECT request from another MDS.
  */
 int
@@ -76,75 +77,81 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMM_MAGIC || mq->version != SRMM_VERSION)
-		mp->rc = -EINVAL;
+		mp->rc = EINVAL;
 	return (0);
 }
 
-/*
- * slm_rmm_handle_send_namespace - handle a CONNECT request from another MDS.
+/**
+ * slm_rmm_handle_send_namespace - handle a SEND_NAMESPACE request from
+ *	another MDS.
  */
 int
-slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
+slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 {
-	int i, rc;
-	int count;
-	uint64_t seqno;
-	struct iovec iov;
-	struct srm_generic_rep *mp;
-	struct pscrpc_bulk_desc *desc;
-	struct srm_send_namespace_req *mq;
 	struct slmds_jent_namespace *jnamespace;
+	struct srm_send_namespace_req *mq;
+	struct sl_mds_peerinfo *p, pi;
+	struct pscrpc_bulk_desc *desc;
+	struct srm_generic_rep *mp;
+	struct iovec iov;
+	int i, rc, count;
 	psc_crc64_t crc;
-	struct sl_mds_peerinfo *p;
+	uint64_t seqno;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	
+
 	count = mq->count;
 	seqno = mq->seqno;
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	rc = mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMM_BULK_PORTAL, &iov, 1);
+	rc = mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRMM_BULK_PORTAL, &iov, 1);
 	if (rc)
 		goto out;
 
 	if (desc)
 		pscrpc_free_bulk(desc);
+
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc) {
 		rc = mp->rc = EINVAL;
 		goto out;
 	}
-	/*
-	 * Search for the peer information by the given site ID.
-	 */
+
+	/* Search for the peer information by the given site ID. */
+	pi.sp_siteid = mq->siteid;
 	spinlock(&mds_namespace_peerlist_lock);
-	i = psc_dynarray_bsearch(&mds_namespace_peerlist, &mq->siteid, slm_rmm_cmp_peerinfo);
+	i = psc_dynarray_bsearch(&mds_namespace_peerlist, &pi,
+	    slm_rmm_cmp_peerinfo);
 	if (i >= psc_dynarray_len(&mds_namespace_peerlist))
 		p = NULL;
 	else
 		p = psc_dynarray_getpos(&mds_namespace_peerlist, i);
 	freelock(&mds_namespace_peerlist_lock);
 	if (!p || p->sp_siteid != mq->siteid) {
-		psc_info("slm_rmm_handle_namespace_update(): fail to find site ID %d",
-			  mq->siteid);
+		psc_info("fail to find site ID %d", mq->siteid);
 		rc = mp->rc = EINVAL;
 		goto out;
 	}
+
 	/*
-	 * Make sure that the seqno number matches what we expect (strictly in-order delivery). 
-	 * If not, reject right away.
+	 * Make sure that the seqno number matches what we expect
+	 * (strictly in-order delivery).  If not, reject right away.
 	 */
 	if (p->sp_recv_seqno > seqno) {
-		/* This is Okay, our peer may have just lost patience with us and decide to resend */
-		psc_notify("slm_rmm_handle_namespace_update(): seq number %"PRIx64" is less than %"PRIx64,
-			    seqno, p->sp_recv_seqno);
+		/*
+		 * This is okay; our peer may have just lost patience
+		 * with us and decide to resend.
+		 */
+		psc_notify("seq number %"PRIx64" is less than %"PRIx64,
+		    seqno, p->sp_recv_seqno);
 		mp->rc = EINVAL;
 		goto out;
 	}
 	if (p->sp_recv_seqno < seqno) {
-		psc_notify("slm_rmm_handle_namespace_update(): seq number %"PRIx64" is greater than %"PRIx64,
-			    seqno, p->sp_recv_seqno);
+		psc_notify("seq number %"PRIx64" is greater than %"PRIx64,
+		    seqno, p->sp_recv_seqno);
 		mp->rc = EINVAL;
 		goto out;
 	}
@@ -156,21 +163,18 @@ slm_rmm_handle_namespace_update(__unusedx struct pscrpc_request *rq)
 		if (mp->rc)
 			break;
 		jnamespace = (struct slmds_jent_namespace *)
-			((char *)jnamespace + jnamespace->sjnm_reclen); 
+		    ((char *)jnamespace + jnamespace->sjnm_reclen);
 	}
 	/* Should I ask for a resend if I have trouble applying updates? */
 	p->sp_recv_seqno = seqno + count;
 
-out:
+ out:
 	PSCFREE(iov.iov_base);
-	/*
-	 * Retrievable by req->rq_status on the receiving side.
-	 */
 	return (rc);
 }
 
-/*
- * slm_rmm_handler - handle a request from another MDS.
+/**
+ * slm_rmm_handler - Handle a request from another MDS.
  */
 int
 slm_rmm_handler(struct pscrpc_request *rq)
@@ -185,7 +189,7 @@ slm_rmm_handler(struct pscrpc_request *rq)
 		rc = slm_rmm_handle_namespace_update(rq);
 		break;
 	default:
-		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
+		psc_errorx("unexpected opcode %d", rq->rq_reqmsg->opc);
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
