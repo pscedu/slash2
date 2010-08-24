@@ -118,18 +118,18 @@ struct slmds_jent_namespace {
 	uint64_t		sjnm_new_parent_s2id;		/* rename only */
 
 	uint32_t		sjnm_mask;			/* attribute mask */
-	uint32_t		sjnm_mode;			/* file permission */
 
+	uint32_t		sjnm_mode;			/* file permission */
 	int32_t			sjnm_uid;			/* user ID of owner */
 	int32_t			sjnm_gid;			/* group ID of owner */
-
-	int64_t			sjnm_atime;			/* time of last access */
-	int64_t			sjnm_atime_ns;
-	int64_t			sjnm_mtime;			/* time of last modification */
-	int64_t			sjnm_mtime_ns;
-	int64_t			sjnm_ctime;			/* time of last status change */
-	int64_t			sjnm_ctime_ns;
+	uint64_t		sjnm_atime;			/* time of last access */
+	uint64_t		sjnm_atime_ns;
+	uint64_t		sjnm_mtime;			/* time of last modification */
+	uint64_t		sjnm_mtime_ns;
+	uint64_t		sjnm_ctime;			/* time of last status change */
+	uint64_t		sjnm_ctime_ns;
 	uint64_t		sjnm_size;			/* total size, in bytes */
+
 	char			sjnm_name[SLJ_NAMES_MAX + 2];	/* one or two names */
 } __packed;
 
