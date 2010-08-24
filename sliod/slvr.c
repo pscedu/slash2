@@ -28,6 +28,7 @@
 #include "bmap_iod.h"
 #include "buffer.h"
 #include "fidc_iod.h"
+#include "slerr.h"
 #include "slvr.h"
 
 struct psc_listcache lruSlvrs;   /* LRU list of clean slivers which may be reaped */
@@ -54,20 +55,23 @@ slvr_lru_requeue(struct slvr_ref *s, int tail)
 }
 
 /**
- * slvr_do_crc - given a sliver reference, take the crc of the respective
+ * slvr_do_crc - Given a sliver reference, Take the CRC of the respective
  *   data and attach the ref to an srm_bmap_crcup structure.
  * @s: the sliver reference.
- * Notes:  Don't hold the lock while taking the crc.
+ * Notes:  Don't hold the lock while taking the CRC.
+ * Returns: errno on failure, 0 on success, -1 on not applicable.
  */
 int
 slvr_do_crc(struct slvr_ref *s)
 {
 	psc_crc64_t crc;
-	/* SLVR_FAULTING implies that we're bringing this data buffer
+
+	/*
+	 * SLVR_FAULTING implies that we're bringing this data buffer
 	 *   in from the filesystem.
 	 *
 	 * SLVR_CRCDIRTY means that DATARDY has been set and that
-	 *   a write dirtied the buffer and invalidated the crc.
+	 *   a write dirtied the buffer and invalidated the CRC.
 	 */
 	psc_assert(s->slvr_flags & SLVR_PINNED &&
 		   (s->slvr_flags & SLVR_FAULTING ||
@@ -75,17 +79,19 @@ slvr_do_crc(struct slvr_ref *s)
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		if (!s->slvr_pndgreads && !(s->slvr_flags & SLVR_REPLDST)) {
-			/* Small RMW workaround.
-			 *  XXX needs to be rectified, the crc should
+			/*
+			 * Small RMW workaround.
+			 *  XXX needs to be rectified, the CRC should
 			 *    be taken here.
 			 */
 			psc_assert(s->slvr_pndgwrts);
-			return (1);
+			return (-1);
 		}
 
 		psc_assert(!(s->slvr_flags & SLVR_DATARDY));
 
-		/* This thread holds faulting status so all others are
+		/*
+		 * This thread holds faulting status so all others are
 		 *  waiting on us which means that exclusive access to
 		 *  slvr contents is ours until we set SLVR_DATARDY.
 		 *
@@ -116,7 +122,7 @@ slvr_do_crc(struct slvr_ref *s)
 				 */
 				s->slvr_crc_eoff = 0;
 
-				return (-EINVAL);
+				return (SLERR_BADCRC);
 			} else
 				s->slvr_crc_eoff = 0;
 		} else
@@ -181,9 +187,9 @@ slvr_do_crc(struct slvr_ref *s)
 		}
 		SLVR_ULOCK(s);
 	} else
-		abort();
+		psc_fatal("FAULTING or CRCDIRTY is not set");
 
-	return (1);
+	return (-1);
 }
 
 void
@@ -236,7 +242,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 			s->slvr_crc_eoff = rc;
 
 			crc_rc = slvr_do_crc(s);
-			if (crc_rc == -EINVAL)
+			if (crc_rc == SLERR_BADCRC)
 				DEBUG_SLVR(PLL_ERROR, s,
 					   "bad crc blks=%d off=%"PRIx64,
 					   nblks, slvr_2_fileoff(s, sblk));
@@ -279,7 +285,7 @@ slvr_fsio(struct slvr_ref *s, int sblk, uint32_t size, enum rw rw)
 	else {
 		v8 = slvr_2_buf(s, sblk);
 		DEBUG_SLVR(PLL_INFO, s, "ok %s size=%u off=%"PRIu64" rc=%zd nblks=%d "
-			   " v8(%"PRIx64")", (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"), 
+			   " v8(%"PRIx64")", (rw == SL_WRITE ? "SL_WRITE" : "SL_READ"),
 			   size, slvr_2_fileoff(s, sblk), rc, nblks, *v8);
 		rc = 0;
 	}
@@ -476,7 +482,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 	 *   FIRST. Otherwise, we could bail out prematurely when the
 	 *   data is ready without considering the range we want to write.
 	 *
-	 * Note we have taken our read or write references, so the sliver 
+	 * Note we have taken our read or write references, so the sliver
 	 *   won't be freed from under us.
 	 */
 	if (s->slvr_flags & SLVR_FAULTING) {
