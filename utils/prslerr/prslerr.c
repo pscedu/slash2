@@ -65,6 +65,7 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_AUTHBUF_BADHASH]: %s\n", SLERR_AUTHBUF_BADHASH, slstrerror(SLERR_AUTHBUF_BADHASH));
 	printf("%4d [SLERR_AUTHBUF_ABSENT]: %s\n", SLERR_AUTHBUF_ABSENT, slstrerror(SLERR_AUTHBUF_ABSENT));
 	printf("%4d [SLERR_USER_NOTFOUND]: %s\n", SLERR_USER_NOTFOUND, slstrerror(SLERR_USER_NOTFOUND));
+	printf("%4d [SLERR_BADCRC]: %s\n", SLERR_BADCRC, slstrerror(SLERR_BADCRC));
 	/* end custom errnos */
 	exit(0);
 }
