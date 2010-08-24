@@ -96,7 +96,7 @@ append_path(const char *newpath)
 		errx(1, "impossible");
 	if (setenv("PATH", p, 1) == -1)
 		err(1, "setenv");
-	free(p);
+	PSCFREE(p);
 }
 
 void
