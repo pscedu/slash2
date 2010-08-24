@@ -515,6 +515,7 @@ slexp_destroy(void *data)
 		slexp_freef[slexp->slexp_peertype](exp);
 
 	/* OK, no one else should be in here */
+	/* XXX move this to slashd */
 	psc_assert(psclist_empty(&slexp->slexp_bmlhd));
 
 	exp->exp_private = NULL;
