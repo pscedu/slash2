@@ -70,6 +70,7 @@
 #include "slashd/repl_mds.h"
 #include "slashd/rpc_mds.h"
 #include "slashd/slashd.h"
+#include "slashd/subsys_mds.h"
 #include "slashd/up_sched_res.h"
 #include "sliod/bmap_iod.h"
 #include "sliod/ctl_iod.h"
