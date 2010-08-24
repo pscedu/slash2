@@ -40,13 +40,13 @@
 int
 slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
+	struct slashrpc_cservice *csvc;
 	struct slctlmsg_conn *scc = m;
+	struct pscrpc_import *imp;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
 	int i, j, rc = 1;
-
-	memset(scc, 0, sizeof(*scc));
 
 	CONF_LOCK();
 	CONF_FOREACH_SITE(s)
@@ -62,11 +62,12 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 				    sizeof(scc->scc_addrbuf));
 				scc->scc_type = r->res_type;
 
-				if (resm->resm_csvc) {
+				csvc = resm->resm_csvc;
+				if (csvc) {
 					scc->scc_flags = psc_atomic32_read(
-					    &resm->resm_csvc->csvc_flags);
+					    &csvc->csvc_flags);
 					scc->scc_refcnt = psc_atomic32_read(
-					    &resm->resm_csvc->csvc_refcnt);
+					    &csvc->csvc_refcnt);
 				}
 
 				rc = psc_ctlmsg_sendv(fd, mh, scc);
@@ -76,24 +77,26 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
  done:
 	CONF_UNLOCK();
 
-#if 0
-	lock
-	foreach (mexpcli) {
-		imp = resm->resm_csvc->csvc_import;
+	if (!rc)
+		return (rc);
+
+	PLL_LOCK(&client_csvcs);
+	PLL_FOREACH(csvc, &client_csvcs) {
+		memset(scc, 0, sizeof(*scc));
+
+		imp = csvc->csvc_import;
 		if (imp && imp->imp_connection)
 			pscrpc_id2str(imp->imp_connection->c_peer,
 			    scc->scc_addrbuf);
+		scc->scc_type = SLCTL_REST_CLI;
+		scc->scc_flags = psc_atomic32_read(&csvc->csvc_flags);
+		scc->scc_refcnt = psc_atomic32_read(&csvc->csvc_refcnt);
 
-		snprintf(scc->scc_addrbuf, sizeof(scc->scc_addrbuf),
-		    "@clients:%s", pscrpc_nid2str());
-		scc->scc_type = 0;
 		rc = psc_ctlmsg_sendv(fd, mh, scc);
 		if (!rc)
 			break;
 	}
-	unlock
-#endif
-
+	PLL_ULOCK(&client_csvcs);
 	return (rc);
 }
 

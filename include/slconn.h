@@ -45,12 +45,6 @@ enum slconn_type {
 	SLNCONNT
 };
 
-union lockmutex {
-	psc_spinlock_t		*lm_lock;
-	pthread_mutex_t		*lm_mutex;
-	void			*lm_ptr;
-};
-
 struct slconn_thread {
 	struct sl_resm		*sct_resm;
 	uint32_t		 sct_rqptl;
@@ -64,6 +58,7 @@ struct slconn_thread {
 };
 
 struct slashrpc_cservice {
+	enum slconn_type	 csvc_ctype;
 	struct pscrpc_import	*csvc_import;
 	union lockmutex		 csvc_lockinfo;
 	void			*csvc_waitinfo;
@@ -71,6 +66,7 @@ struct slashrpc_cservice {
 	int			 csvc_lasterrno;
 	psc_atomic32_t		 csvc_refcnt;
 	time_t			 csvc_mtime;		/* last connection try */
+	struct psclist_head	 csvc_lentry;
 #define csvc_lock	csvc_lockinfo.lm_lock
 #define csvc_mutex	csvc_lockinfo.lm_mutex
 };
@@ -105,6 +101,7 @@ void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
 		uint32_t, void *, int, void *, enum slconn_type, int,
 		const char *);
 
-extern struct psc_dynarray lnet_prids;
+extern struct psc_dynarray	lnet_prids;
+extern struct psc_lockedlist	client_csvcs;
 
 #endif /* _SLCONN_H_ */

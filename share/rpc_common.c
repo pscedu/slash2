@@ -34,6 +34,9 @@
 #include "slconfig.h"
 #include "slconn.h"
 
+struct psc_lockedlist	client_csvcs = PLL_INITIALIZER(&client_csvcs,
+    struct slashrpc_cservice, csvc_lentry);
+
 /**
  * slrpc_issue_connect - Attempt connection initiation with a peer.
  * @server: NID of server peer.
@@ -236,6 +239,8 @@ sl_csvc_decref(struct slashrpc_cservice *csvc)
 			 * stops communication with.
 			 */
 			pscrpc_import_put(csvc->csvc_import);
+			if (csvc->csvc_ctype == SLCONNT_CLI)
+				pll_remove(&client_csvcs, csvc);
 			free(csvc);
 			return;
 		}
@@ -378,6 +383,10 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		psc_atomic32_set(&csvc->csvc_flags, flags);
 		csvc->csvc_lockinfo.lm_ptr = lockp;
 		csvc->csvc_waitinfo = waitinfo;
+		csvc->csvc_ctype = ctype;
+
+		if (ctype == SLCONNT_CLI)
+			pll_add(&client_csvcs, csvc);
 	}
 
  restart:
