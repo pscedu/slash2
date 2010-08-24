@@ -152,7 +152,8 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 		slvrsiz = w->srw_len % SLASH_SLVR_SIZE;
 	if (rc == 0) {
 		rc = slvr_do_crc(s);
-		if (!rc)
+		/* XXX check this return code */
+//		if (!rc)
 			rc = slvr_fsbytes_wio(s, slvrsiz, 0);
 	}
 	if (rc)
