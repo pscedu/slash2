@@ -171,7 +171,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct mdsio_ops);
-	PRTYPE(struct mexp_cli);
 	PRTYPE(struct msbmap_crcrepl_states);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_fncmd_bmapreplpol);
@@ -208,7 +207,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct slash_inode_od);
 	PRTYPE(struct slash_snapshot);
 	PRTYPE(struct slashrpc_cservice);
-	PRTYPE(struct slashrpc_export);
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctlmsg_conn);
 	PRTYPE(struct slctlmsg_file);
@@ -217,8 +215,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct sliric_thread);
 	PRTYPE(struct slirii_thread);
 	PRTYPE(struct slirim_thread);
+	PRTYPE(struct slm_exp_cli);
 	PRTYPE(struct slm_replst_workreq);
-	PRTYPE(struct slm_rmi_expdata);
 	PRTYPE(struct slmds_jent_bmapseq);
 	PRTYPE(struct slmds_jent_crc);
 	PRTYPE(struct slmds_jent_ino_addrepl);
