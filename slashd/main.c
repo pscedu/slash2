@@ -46,6 +46,7 @@
 #include "slashd.h"
 #include "slconfig.h"
 #include "slsubsys.h"
+#include "subsys_mds.h"
 #include "up_sched_res.h"
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
@@ -190,6 +191,8 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	psc_subsys_register(SLSS_BMAP, "bmap");
+	psc_subsys_register(SLMSS_ZFS, "zfs");
+	psc_subsys_register(SLMSS_JOURNAL, "jrnl");
 
 #ifdef ZPOOL_PATH
 	append_path(ZPOOL_PATH);

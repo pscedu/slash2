@@ -23,3 +23,6 @@ SRCS+=		${PFL_BASE}/psc_util/waitq.c
 MODULES+=	lnet-hdrs rt pthread zfs aio
 
 include ${SLASHMK}
+
+$(call ADD_FILE_CFLAGS,${PFL_BASE}/psc_util/journal.c,			\
+		-DPSC_SUBSYS=SLMSS_JOURNAL -include slashd/subsys_mds.h)

@@ -33,19 +33,22 @@
 #include "sljournal.h"
 
 #include "slashd/mdsio.h"
+#include "slashd/subsys_mds.h"
 
-int format;
-int query;
-int verbose;
-const char *datadir = SL_PATH_DATADIR;
-const char *progname;
+int		 format;
+int		 query;
+int		 verbose;
+const char	*datadir = SL_PATH_DATADIR;
+const char	*progname;
 
 struct mdsio_ops mdsio_ops;
 
 __dead void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-fqv] [-b block-device] [-D dir] [-n nentries]\n", progname);
+	fprintf(stderr,
+	    "usage: %s [-fqv] [-b block-device] [-D dir] [-n nentries]\n",
+	    progname);
 	exit(1);
 }
 
@@ -60,6 +63,10 @@ main(int argc, char *argv[])
 	long l;
 
 	pfl_init();
+	psc_subsys_register(SLSS_BMAP, "bmap");
+	psc_subsys_register(SLMSS_ZFS, "zfs");
+	psc_subsys_register(SLMSS_JOURNAL, "jrnl");
+
 	fn[0] = '\0';
 	options = PJH_OPT_NONE;
 	progname = argv[0];

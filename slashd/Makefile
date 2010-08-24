@@ -74,6 +74,9 @@ SRCS+=		${LNET_SOCKLND_SRCS}
 DEFINES+=	-DZPOOL_PATH=\"$(realpath ${ZFS_BASE}/cmd/zpool)\"
 MODULES+=	lnet pthread zfs z gcrypt fuse-hdrs aio
 
+$(call ADD_FILE_CFLAGS,${PFL_BASE}/psc_util/journal.c,			\
+		-DPSC_SUBSYS=SLMSS_JOURNAL -include subsys_mds.h)
+
 include ${SLASHMK}
 
 zbuild:

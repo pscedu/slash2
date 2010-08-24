@@ -11,5 +11,6 @@
 #include "psc_util/subsys.h"
 
 #define SLSS_BMAP	(_PSS_LAST + 0)
+#define _SLSS_LAST	(_PSS_LAST + 1)
 
 #endif /* _SLSUBSYS_H_ */
