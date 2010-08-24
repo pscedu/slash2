@@ -351,6 +351,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			spinlock(&biod->biod_lock);
 			psc_assert(biod->biod_state & BIOD_RLSSEQ);
+			psc_assert(biod->biod_state & BIOD_RLSSCHED);
 
 			if (biod->biod_crcdrty_slvrs ||
 			    (biod->biod_bcr_xid != biod->biod_bcr_xid_last)) {
@@ -361,7 +362,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 				continue;
 			}
 
-			biod->biod_state &= ~BIOD_RLSSEQ;
+			biod->biod_state &= ~(BIOD_RLSSEQ|BIOD_RLSSCHED);
 
 			bmap_2_bid_sliod(b, &brr->bmaps[i++]);
 			freelock(&biod->biod_lock);
