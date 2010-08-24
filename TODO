@@ -302,41 +302,26 @@ tracks endpoint connections
 - add journal I/O test mode to slashd
 - tie zfslog to psclog
 
-- mount_slash
-  - if server is down, it would be nice to return STATFS immediately
-    with some info instead of hang
-  - write messages to stderr of the process trying to do I/O when the
-    connections are down
-
 zfs
 - rename the zfs_init() alias, it is already a routine in ZFS
 
 ---------------
 
-Graceful Service Failure (Jared):
-   In the case of an MDS failure, SLIOD and MS should not abort.
-Further, MS should not abort in the instance of a SLIOD failure.  For
-now it should be fine for MS to return EIO for failed data and
-metadata operations occurring due to a service failure.  SLIOD should
-hold RPC's if possible, replaying them upon return of the MDS.  This
-will prevent the MDS from needing to issue a crc table recalculation
-request.  Should the SLIOD fail too then the recalc request would be
-required.  Perhaps the MDS should store some state for SLIOD
-reconnect, this state could be used for SLIOD garbage collection
-management also.  An odtable entry could be used for every SLIOD
-connect.
+- failure of connections
+    (o) have mount_slash provide the option of waiting or immediately
+	returning EIO
+    (o) write messages to stderr of the process trying to do I/O when
+	the connections are down
 
-- add flag to wait/return error/crash ms when slashd goes down
 - add throttling and ping channel control to slash
 
 utime
-   (o) track how long sliod has held the I/O and send the difference to the MDS
-       so the MDS can more accurately estimate when the I/O took place
+    (o)	track how long sliod has held the I/O and send the difference to
+	the MDS so the MDS can more accurately estimate when the I/O
+	took place
 
 - fix the "static" variables in communal/general functions
 - register a per-app slexp_destroyf routine as slashd is overriding slexp_destroy
   (o) in this routine, unset resm_csvc from CONNECTED
 
-- repl
-  (o) ignore CRC failure when replicating from src for now
-  (o) pass BADCRC msg back to MDS when there is such a failure
+- ignore repl CRC failure when replicating from src for now
