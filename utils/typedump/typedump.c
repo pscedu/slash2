@@ -307,6 +307,10 @@ main(int argc, char *argv[])
 	/* end constants */
 
 	/* start enums */
+	PRVAL(BIOD_BCRSCHED);
+	PRVAL(BIOD_INFLIGHT);
+	PRVAL(BIOD_RLSSCHED);
+	PRVAL(BIOD_RLSSEQ);
 	PRVAL(BIORQ_DESTROY);
 	PRVAL(BIORQ_DIO);
 	PRVAL(BIORQ_FLUSHRDY);
