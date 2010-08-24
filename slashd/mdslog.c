@@ -208,7 +208,7 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 
 	/* Apply the filesize from the journal entry.
 	 */
-	sstb.sst_size = crcup->fsize;
+	sstb.sst_size = jcrc->sjc_fsize;
 	rc = mdsio_setattr(mf, &sstb, SETATTR_MASKF_DATASIZE , &rootcreds,
 		   NULL, mdsio_data, NULL);
 	if (rc)
