@@ -427,101 +427,6 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	return (0);
 }
 
-
-/**
- * mds_bmap_bml_chwrmode - Attempt to upgrade a client-granted bmap
- *	lease from READ-only to READ+WRITE.
- * @bml: bmap lease.
- * @prefios: client's preferred I/O system ID.
- */
-int
-mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
-{
-	struct bmap_mds_info *bmdsi;
-	struct bmapc_memb *b;
-	int rc = 0;
-
-	bmdsi = bml->bml_bmdsi;
-	b = bmdsi->bmdsi_bmap;
-
-	bcm_wait_locked(b, b->bcm_mode & BMAP_IONASSIGN);
-
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p bmdsi_writers=%d bmdsi_readers=%d",
-		   bml, bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
-
-	if (bml->bml_flags & BML_WRITE)
-		return (EALREADY);
-
-	if ((rc = mds_bmap_directio(b, SL_WRITE, &bml->bml_cli_nidpid)))
-		return (rc);
-
-	bmdsi->bmdsi_writers++;
-	b->bcm_mode |= BMAP_IONASSIGN;
-	bml->bml_flags &= ~BML_READ;
-	bml->bml_flags |= BML_UPGRADE | BML_WRITE;
-
-	if (bmdsi->bmdsi_wr_ion) {
-		if (bmdsi->bmdsi_writers == 1)
-			// XXX technically this shouldn't happen
-			DEBUG_BMAP(PLL_WARN, b, "bmdsi_wr_ion already present");
-
-		BMAP_ULOCK(b);
-		rc = mds_bmap_ion_update(bml);
-	} else {
-		BMAP_ULOCK(b);
-		rc = mds_bmap_ion_assign(bml, prefios);
-	}
-	psc_assert(bmdsi->bmdsi_wr_ion);
-
-	BMAP_LOCK(b);
-
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p rc=%d bmdsi_writers=%d bmdsi_readers=%d",
-		   bml, rc, bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
-
-	if (rc) {
-		bmdsi->bmdsi_writers--;
-		psc_assert(bmdsi->bmdsi_writers >= 0);
-		b->bcm_mode |= BMAP_MDS_NOION;
-	}
-	b->bcm_mode &= ~BMAP_IONASSIGN;
-	bcm_wake_locked(b);
-	return (rc);
-}
-
-/**
- * mds_bmap_getbml - Obtain the lease handle for a bmap denoted by the
- *	specified issued sequence number.
- * @b: locked bmap.
- * @cli_nid: client network ID.
- * @cli_pid: client network process ID.
- * @seq: lease sequence.
- */
-struct bmap_mds_lease *
-mds_bmap_getbml(struct bmapc_memb *b, lnet_nid_t cli_nid,
-    lnet_pid_t cli_pid, uint64_t seq)
-{
-	struct bmap_mds_info *bmdsi;
-	struct bmap_mds_lease *bml;
-
-	BMAP_LOCK_ENSURE(b);
-
-	bmdsi = bmap_2_bmi(b);
-	PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
-		if (bml->bml_cli_nidpid.nid == cli_nid &&
-		    bml->bml_cli_nidpid.pid == cli_pid) {
-			struct bmap_mds_lease *tmp=bml;
-
-			do {
-				if (tmp->bml_seq == seq)
-					return (tmp);
-
-				tmp = tmp->bml_chain;
-			} while (tmp != bml);
-		}
-	}
-	return (NULL);
-}
-
 static inline struct bmap_mds_lease *
 mds_bmap_dupls_find(struct bmap_mds_info *bmdsi, lnet_process_id_t *cnp,
 	    int *wlease, int *rlease)
@@ -564,6 +469,124 @@ mds_bmap_dupls_find(struct bmap_mds_info *bmdsi, lnet_process_id_t *cnp,
 	return (bml);
 }
 
+/**
+ * mds_bmap_bml_chwrmode - Attempt to upgrade a client-granted bmap
+ *	lease from READ-only to READ+WRITE.
+ * @bml: bmap lease.
+ * @prefios: client's preferred I/O system ID.
+ */
+int
+mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
+{
+	struct bmap_mds_info *bmdsi;
+	struct bmapc_memb *b;
+	int rc = 0, wlease, rlease;
+
+	bmdsi = bml->bml_bmdsi;
+	b = bmdsi->bmdsi_bmap;
+
+	bcm_wait_locked(b, b->bcm_mode & BMAP_IONASSIGN);
+
+	DEBUG_BMAP(PLL_INFO, b, "bml=%p bmdsi_writers=%d bmdsi_readers=%d",
+		   bml, bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
+
+	if (bml->bml_flags & BML_WRITE)
+		return (EALREADY);
+
+	if ((rc = mds_bmap_directio(b, SL_WRITE, &bml->bml_cli_nidpid)))
+		return (rc);
+
+	mds_bmap_dupls_find(bmdsi, &bml->bml_cli_nidpid, 
+		   &wlease, &rlease);
+	
+	/* Account for the read lease which is to be converted.
+	 */
+	psc_assert(rlease);
+	if (!wlease) {
+		/* Only bump bmdsi_writers if no other write lease
+		 *   is still leased to this client.
+		 */
+		bmdsi->bmdsi_writers++;
+		wlease = -1;
+
+		if (rlease) {
+			bmdsi->bmdsi_readers--;
+			rlease = -1;
+		}
+	}
+
+	b->bcm_mode |= BMAP_IONASSIGN;
+	bml->bml_flags &= ~BML_READ;
+	bml->bml_flags |= BML_UPGRADE | BML_WRITE;
+
+	if (bmdsi->bmdsi_wr_ion) {
+		BMAP_ULOCK(b);
+		rc = mds_bmap_ion_update(bml);
+
+	} else {
+		BMAP_ULOCK(b);
+		rc = mds_bmap_ion_assign(bml, prefios);
+	}
+	psc_assert(bmdsi->bmdsi_wr_ion);
+
+	BMAP_LOCK(b);
+
+	DEBUG_BMAP(PLL_INFO, b, "bml=%p rc=%d bmdsi_writers=%d bmdsi_readers=%d",
+		   bml, rc, bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
+
+	if (rc) {
+		b->bcm_mode |= BMAP_MDS_NOION;
+		bml->bml_flags |= BML_READ;
+		bml->bml_flags &= ~(BML_UPGRADE | BML_WRITE);
+
+		if (wlease < 0) {
+			bmdsi->bmdsi_writers--;
+			psc_assert(bmdsi->bmdsi_writers >= 0);
+		} 
+
+		if (rlease < 0)
+			/* Restore the reader cnt.
+			 */
+			bmdsi->bmdsi_readers++;
+	}
+	b->bcm_mode &= ~BMAP_IONASSIGN;
+	bcm_wake_locked(b);
+	return (rc);
+}
+
+/**
+ * mds_bmap_getbml - Obtain the lease handle for a bmap denoted by the
+ *	specified issued sequence number.
+ * @b: locked bmap.
+ * @cli_nid: client network ID.
+ * @cli_pid: client network process ID.
+ * @seq: lease sequence.
+ */
+struct bmap_mds_lease *
+mds_bmap_getbml(struct bmapc_memb *b, lnet_nid_t cli_nid,
+    lnet_pid_t cli_pid, uint64_t seq)
+{
+	struct bmap_mds_info *bmdsi;
+	struct bmap_mds_lease *bml;
+
+	BMAP_LOCK_ENSURE(b);
+
+	bmdsi = bmap_2_bmi(b);
+	PLL_FOREACH(bml, &bmdsi->bmdsi_leases) {
+		if (bml->bml_cli_nidpid.nid == cli_nid &&
+		    bml->bml_cli_nidpid.pid == cli_pid) {
+			struct bmap_mds_lease *tmp=bml;
+
+			do {
+				if (tmp->bml_seq == seq)
+					return (tmp);
+
+				tmp = tmp->bml_chain;
+			} while (tmp != bml);
+		}
+	}
+	return (NULL);
+}
 
 /**
  * mds_bmap_ref_add - Add a read or write reference to the bmap's tree
