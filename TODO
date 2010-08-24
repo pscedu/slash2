@@ -336,3 +336,7 @@ utime
 - fix the "static" variables in communal/general functions
 - register a per-app slexp_destroyf routine as slashd is overriding slexp_destroy
   (o) in this routine, unset resm_csvc from CONNECTED
+
+- repl
+  (o) ignore CRC failure when replicating from src for now
+  (o) pass BADCRC msg back to MDS when there is such a failure
