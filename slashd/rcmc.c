@@ -87,8 +87,11 @@ slmrmcthr_replst_slave_waitrep(struct pscrpc_request *rq, struct up_sched_work_i
 	    USWI_INOH(wk)->inoh_ino.ino_nrepls + SL_NBITS_REPLST_BHDR);
 	rc = rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 	    SRCM_BULK_PORTAL, &iov, 1);
-	if (rc == 0)
+	if (rc == 0) {
 		rc = SL_RSX_WAITREP(rq, mp);
+		if (rc == 0)
+			rc = mp->rc;
+	}
 	pscrpc_req_finished(rq);
 	return (rc);
 }
@@ -207,15 +210,13 @@ slmrcmthr_main(struct psc_thread *thr)
 					continue;
 				PLL_ULOCK(&upsched_listhd);
 
-				slm_rcm_issue_getreplst(rsw, wk, 0);
-				for (n = 0; n < USWI_NBMAPS(wk); n++) {
+				rc = slm_rcm_issue_getreplst(rsw, wk, 0);
+				for (n = 0; rc == 0 && n < USWI_NBMAPS(wk); n++) {
 					if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 						continue;
 					BMAP_LOCK(bcm);
 					rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n, &rq);
 					bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
-					if (rc)
-						break;
 				}
 				if (rq) {
 					slmrmcthr_replst_slave_waitrep(rq, wk);
@@ -229,15 +230,13 @@ slmrcmthr_main(struct psc_thread *thr)
 			}
 			PLL_ULOCK(&upsched_listhd);
 		} else if ((wk = uswi_find(&rsw->rsw_fg, NULL)) != NULL) {
-			slm_rcm_issue_getreplst(rsw, wk, 0);
-			for (n = 0; n < USWI_NBMAPS(wk); n++) {
+			rc = slm_rcm_issue_getreplst(rsw, wk, 0);
+			for (n = 0; rc == 0 && n < USWI_NBMAPS(wk); n++) {
 				if (mds_bmap_load(wk->uswi_fcmh, n, &bcm))
 					continue;
 				BMAP_LOCK(bcm);
 				rc = slmrcmthr_walk_brepls(rsw, wk, bcm, n, &rq);
 				bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
-				if (rc)
-					break;
 			}
 			if (rq)
 				slmrmcthr_replst_slave_waitrep(rq, wk);
