@@ -144,13 +144,13 @@ struct psc_ctlopt opts[] = {
 	{ 'p', PCOF_FUNC, psc_ctlparse_param },
 	{ 's', PCOF_FUNC, psc_ctlparse_show }
 };
-int nopts = nitems(opts);
 
 int
 main(int argc, char *argv[])
 {
 	pfl_init();
 	progname = argv[0];
-	psc_ctlcli_main(SL_PATH_SLICTLSOCK, argc, argv, opts, nopts);
+	psc_ctlcli_main(SL_PATH_SLICTLSOCK, argc, argv, opts,
+	    nitems(opts));
 	exit(0);
 }
