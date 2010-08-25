@@ -75,9 +75,13 @@ struct bmap_pagecache_entry {
 	psc_spinlock_t		 bmpce_lock;	/* serialize                */
 	void			*bmpce_base;	/* base pointer from slb    */
 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O */
-	struct psclist_head	 bmpce_lentry;	/* chain on bmap lru        */
 	struct timespec		 bmpce_laccess;	/* last page access         */
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_tentry;
+#ifdef BMPC_RBTREE	
+	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_lru_tentry;
+#else
+	struct psclist_head	 bmpce_lentry;	/* chain on bmap lru        */
+#endif
 };
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
@@ -157,10 +161,10 @@ bmpce_lrusort_cmp1(const void *x, const void *y)
 	const struct bmap_pagecache_entry *a = x;
 	const struct bmap_pagecache_entry *b = y;
 
-	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, <))
+	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, >))
 		return (-1);
 
-	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, >))
+	if (timespeccmp(&a->bmpce_laccess, &b->bmpce_laccess, <))
 		return (1);
 
 	return (0);
@@ -178,10 +182,20 @@ SPLAY_HEAD(bmap_pagecachetree, bmap_pagecache_entry);
 SPLAY_PROTOTYPE(bmap_pagecachetree, bmap_pagecache_entry, bmpce_tentry,
 		bmpce_cmp);
 
+#ifdef BMPC_RBTREE
+SPLAY_HEAD(bmap_lrutree, bmap_pagecache_entry);
+SPLAY_PROTOTYPE(bmap_lrutree, bmap_pagecache_entry, bmpce_lru_tentry,
+		bmpce_lrusort_cmp1);
+#endif
+
 struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;	/* tree of cbuf_handle        */
 	struct timespec			 bmpc_oldest;	/* LRU's oldest item          */
+#ifdef BMPC_RBTREE
+	struct bmap_lrutree              bmpc_lrutree;
+#else
 	struct psc_lockedlist		 bmpc_lru;	/* cleancnt can be kept here  */
+#endif
 	struct psc_lockedlist		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs; /* chain pending I/O requests */
 	atomic_t			 bmpc_pndgwr;	/* # pending wr req           */

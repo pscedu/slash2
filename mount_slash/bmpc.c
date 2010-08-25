@@ -86,9 +86,8 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 		} else {
 			if (bmpce->bmpce_flags & BMPCE_LRU) {
 				pll_remove(&bmpc->bmpc_lru, bmpce);
-				// XXX should I be addtail?
-				pll_addhead(&bmpc->bmpc_lru, bmpce);
-
+				pll_add_sorted(&bmpc->bmpc_lru, bmpce,
+					       bmpce_lrusort_cmp1);
 			} else
 				psc_assert(
 				   psc_atomic16_read(&bmpce->bmpce_wrref)  ||
@@ -121,17 +120,30 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 		      psc_atomic16_read(&bmpce->bmpce_rdref))) {
 			if (!(bmpce->bmpce_flags & BMPCE_LRU)) {
 				bmpce->bmpce_flags |= BMPCE_LRU;
+#ifdef BMPC_PLL_SORT
 				pll_addtail(&bmpc->bmpc_lru, bmpce);
-				//pll_add_sorted(&bmpc->bmpc_lru, bmpce,
-				//	       bmpce_lrusort_cmp1);
+#elif BMPC_RBTREE
+				RB_INSERT(bmap_lrutree, &bmpc->bmpc_lrutree, 
+					  bmpce);
+#else
+				pll_add_sorted(&bmpc->bmpc_lru, bmpce,
+					       bmpce_lrusort_cmp1);
+#endif
 				psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
 			}
 		}
 	}
 
+#ifndef BMPC_RBTREE
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
+  #if BMPC_PLL_SORT
 		pll_sort(&bmpc->bmpc_lru, qsort, bmpce_lrusort_cmp);
+  #endif
 		bmpce = pll_gethdpeek(&bmpc->bmpc_lru);
+#else
+	if (!RB_EMPTY(&bmpc->bmpc_lrutree)) {
+		bmpce = RB_MIN(bmap_lrutree, &bmpc->bmpc_lrutree);
+#endif
 		memcpy(&bmpc->bmpc_oldest, &bmpce->bmpce_laccess,
 		       sizeof(struct timespec));
 	}
@@ -292,6 +304,12 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 		   expire.tv_sec, expire.tv_nsec);
 
 	BMPC_LOCK(bmpc);
+#if 0
+	PLL_FOREACH(bmpce, &bmpc->bmpc_lru) {		
+		DEBUG_BMPCE(PLL_NOTIFY, bmpce, "tryfree");
+	}
+#endif
+
 	PLL_FOREACH_SAFE(bmpce, tmp, &bmpc->bmpc_lru) {
 		spinlock(&bmpce->bmpce_lock);
 
@@ -371,7 +389,14 @@ bmpc_reap_locked(void)
 	clock_gettime(CLOCK_REALTIME, &ts);
 	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 
-	psclist_for_each_entry(bmpc, &bmpcLru.lc_listhd, bmpc_lentry) {
+#if 0
+	psclist_for_each_entry(bmpc, &bmpcLru.lc_listhd, bmpc_lentry)
+		psc_notify("bmpc=%p npages=%d age(%ld:%ld)", 
+			   bmpc, pll_nitems(&bmpc->bmpc_lru),
+			   bmpc->bmpc_oldest.tv_sec, bmpc->bmpc_oldest.tv_nsec);
+#endif
+
+	psclist_for_each_entry(bmpc, &bmpcLru.lc_listhd, bmpc_lentry) {		
 		/* First check for lru items.
 		 */
 		if (!pll_nitems(&bmpc->bmpc_lru)) {
