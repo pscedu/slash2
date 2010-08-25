@@ -1038,7 +1038,7 @@ mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	struct bmap_mds_lease *bml;
 	int rc;
 
-	bmi = (struct bmi_assign *)data;
+	bmi = data;
 
 	resm = libsl_nid2resm(bmi->bmi_ion_nid);
 
