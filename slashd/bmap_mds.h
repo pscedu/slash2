@@ -61,6 +61,7 @@ struct bmap_mds_info {
 /* bmdsi_flags */
 #define BMIM_LOGCHG		(1 << 0)	/* in-mem change made, needs logged */
 #define BMIM_DIO		(1 << 1)	/* directio enabled                 */
+#define BMIM_SEQWRAP		(1 << 2)	/* sequence number wrapped          */
 
 #define BMAPOD_RDLOCK(bmdsi)	psc_pthread_rwlock_rdlock(&(bmdsi)->bmdsi_rwlock)
 #define BMAPOD_RDREQLOCK(bmdsi)	psc_pthread_rwlock_rdreqlock(&(bmdsi)->bmdsi_rwlock)
@@ -166,7 +167,6 @@ struct bmap_timeo_table {
 
 struct bmap_mds_lease {
 	uint64_t		  bml_seq;
-	uint64_t		  bml_key;
 	lnet_nid_t		  bml_ion_nid;
 	lnet_process_id_t	  bml_cli_nidpid;
 	uint32_t		  bml_flags;
@@ -224,7 +224,6 @@ struct bmi_assign {
 #define BMI_DIO			(1 << 0)
 
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
-#define bmap_2_bmi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 #define bmap_2_bgen(b)		(b)->bcm_od->bh_gen
 #define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))

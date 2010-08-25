@@ -162,7 +162,7 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap, struct srt_bmapdesc *sbd,
 		sbd->sbd_flags |= SRM_GETBMAPF_DIRECTIO;
 
 	if (rw == SL_WRITE) {
-		struct bmap_mds_info *bmdsi = bmap_2_bmi(bmap);
+		struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
 
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		sbd->sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
@@ -196,7 +196,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	bmdsi = bmap_2_bmi(b);
+	bmdsi = bmap_2_bmdsi(b);
 
 	BMAP_LOCK(b);
 	bml = mds_bmap_getbml(b, rq->rq_conn->c_peer.nid,
@@ -214,7 +214,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 
 	mp->sbd = mq->sbd;
 	mp->sbd.sbd_seq = bml->bml_seq;
-	mp->sbd.sbd_key = bml->bml_key;
+	mp->sbd.sbd_key = bmdsi->bmdsi_assign->odtr_key;
 
 	psc_assert(bmdsi->bmdsi_wr_ion);
 	mp->sbd.sbd_ion_nid = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
@@ -252,7 +252,7 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 	if (mp->rc)
 		return (mp->rc == SLERR_BMAP_DIOWAIT ? 0 : mp->rc);
 
-	bmdsi = bmap_2_bmi(bmap);
+	bmdsi = bmap_2_bmdsi(bmap);
 
 	if (mq->flags & SRM_GETBMAPF_DIRECTIO)
 		mp->sbd.sbd_flags |= SRM_GETBMAPF_DIRECTIO;
