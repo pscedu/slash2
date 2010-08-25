@@ -442,11 +442,11 @@ msctlparam_general(int fd, struct psc_ctlmsghdr *mh,
 				return (psc_ctlsenderr(fd, mh,
 				    "invalid fuse_debug value: %s",
 				    pcp->pcp_value));
-			fuse_lowlevel_setdebug(fuse_session, val ? 1 : 0);
+			// fuse_lowlevel_setdebug(fuse_session, val ? 1 : 0);	<-- fix me please
 		} else {
 			levels[1] = "fuse_debug";
-			snprintf(nbuf, sizeof(nbuf), "%d",
-			    fuse_lowlevel_getdebug(fuse_session));
+			// snprintf(nbuf, sizeof(nbuf), "%d",			<-- fix me please
+			//    fuse_lowlevel_getdebug(fuse_session));
 			if (!psc_ctlmsg_param_send(fd, mh, pcp,
 			    PCTHRNAME_EVERYONE, levels, 2, nbuf))
 				return (0);
