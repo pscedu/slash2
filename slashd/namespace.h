@@ -17,6 +17,11 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * This file contains definitions for the implementation of the protocol
+ * to exchange namespace updates among metadata servers.
+ */
+
 #ifndef _SLM_NAMESPACE_H_
 #define _SLM_NAMESPACE_H_
 
@@ -27,14 +32,14 @@ enum namespace_direction {
 };
 
 enum namespace_operation {
-	NS_OP_CREATE,			/* 0 */
-	NS_OP_LINK,
-	NS_OP_MKDIR,
-	NS_OP_RENAME,
-	NS_OP_RMDIR,
-	NS_OP_SETATTR,
-	NS_OP_SYMLINK,
-	NS_OP_UNLINK,
+/* 0 */	NS_OP_CREATE,
+/* 1 */	NS_OP_LINK,
+/* 2 */	NS_OP_MKDIR,
+/* 3 */	NS_OP_RENAME,
+/* 4 */	NS_OP_RMDIR,
+/* 5 */	NS_OP_SETATTR,
+/* 6 */	NS_OP_SYMLINK,
+/* 7 */	NS_OP_UNLINK,
 	NS_NOPS
 };
 
