@@ -27,7 +27,6 @@
 #include <pthread.h>
 
 #include "pfl/cdefs.h"
-#include "psc_util/lock.h"
 
 #include "cache_params.h"
 
@@ -142,12 +141,6 @@ struct srt_bmap_wire {
 struct sl_timespec {
 	uint64_t		tv_sec;
 	uint64_t		tv_nsec;
-};
-
-union lockmutex {
-	psc_spinlock_t		*lm_lock;
-	pthread_mutex_t		*lm_mutex;
-	void			*lm_ptr;
 };
 
 #endif /* _SL_TYPES_H_ */

@@ -45,6 +45,12 @@ enum slconn_type {
 	SLNCONNT
 };
 
+union lockmutex {
+	psc_spinlock_t		*lm_lock;
+	pthread_mutex_t		*lm_mutex;
+	void			*lm_ptr;
+};
+
 struct slconn_thread {
 	struct sl_resm		*sct_resm;
 	uint32_t		 sct_rqptl;
