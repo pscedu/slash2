@@ -196,7 +196,6 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 		 */
 		rc = SLERR_BMAP_DIOWAIT;
 		goto out;
-
 	}
 
 	if (bmdsi->bmdsi_writers) {
@@ -1039,7 +1038,7 @@ mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	struct bmap_mds_lease *bml;
 	int rc;
 
-	bmi = data;
+	bmi = (struct bmi_assign *)data;
 
 	resm = libsl_nid2resm(bmi->bmi_ion_nid);
 
