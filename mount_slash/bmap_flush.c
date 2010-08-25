@@ -659,7 +659,8 @@ bmap_flush(void)
 				psc_assert(!(b->bcm_mode & BMAP_REAPABLE));
 				b->bcm_mode |= BMAP_REAPABLE;
 				lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
-				DEBUG_BMAP(PLL_INFO, b, "added to bmapTimeoutQ");
+				DEBUG_BMAP(PLL_INFO, b,
+				   "added to bmapTimeoutQ");
 			}
 			BMAP_ULOCK(b);
 			continue;
@@ -707,10 +708,11 @@ bmap_flush(void)
 			psc_dynarray_add(&a, r);
 		}
 		BMPC_ULOCK(bmpc);
-		/* Didn't find any work on this bmap.
-		 */
 		if (!psc_dynarray_len(&a))
+			/* Didn't find any work on this bmap.
+			 */
 			continue;
+
 		/* Sort the items by their offsets.
 		 */
 		psc_dynarray_sort(&a, qsort, bmap_flush_biorq_cmp);
