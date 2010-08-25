@@ -24,6 +24,8 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 
+#include <fuse.h>
+
 #include "pfl/cdefs.h"
 #include "pfl/str.h"
 #include "psc_rpc/rpc.h"
@@ -31,6 +33,8 @@
 #include "psc_util/ctl.h"
 #include "psc_util/ctlsvr.h"
 #include "psc_util/net.h"
+
+#include "../ulnds/socklnd/usocklnd.h"
 
 #include "ctl.h"
 #include "ctl_cli.h"
@@ -41,6 +45,9 @@
 #include "rpc_cli.h"
 #include "slashrpc.h"
 #include "slerr.h"
+
+int	 lnet_get_usesdp(void);
+char	*lnet_get_networks(void);
 
 struct psc_lockedlist	 psc_mlists;
 struct psc_lockedlist	 psc_odtables;
@@ -379,6 +386,99 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
+/* XXX: add max_fuse_iosz */
+int
+msctlparam_general(int fd, struct psc_ctlmsghdr *mh,
+    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+{
+	char *endp, nbuf[30];
+	int set;
+	long val;
+
+	if (nlevels > 2)
+		return (psc_ctlsenderr(fd, mh, "invalid field"));
+
+	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
+		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
+
+	levels[0] = "general";
+
+	set = (mh->mh_type == PCMT_SETPARAM);
+
+	if (set && nlevels != 2)
+		return (psc_ctlsenderr(fd, mh, "invalid operation"));
+
+	if (nlevels < 2 || strcmp(levels[1], "mountpoint") == 0) {
+		if (set)
+			goto readonly;
+		levels[1] = "mountpoint";
+		if (!psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 2, mountpoint))
+			return (0);
+	}
+	if (nlevels < 2 || strcmp(levels[1], "lnets") == 0) {
+		if (set)
+			goto readonly;
+		levels[1] = "lnets";
+		if (!psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 2, lnet_get_networks()))
+			return (0);
+	}
+	if (nlevels < 2 || strcmp(levels[1], "lport") == 0) {
+		if (set)
+			goto readonly;
+		levels[1] = "lport";
+		snprintf(nbuf, sizeof(nbuf), "%d", usocklnd_get_cport());
+		if (!psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 2, nbuf))
+			return (0);
+	}
+	if (nlevels < 2 || strcmp(levels[1], "fuse_debug") == 0) {
+		if (set) {
+			endp = NULL;
+			val = strtol(pcp->pcp_value, &endp, 10);
+			if (val < 0 || val > 1 ||
+			    endp == pcp->pcp_value || *endp != '\0')
+				return (psc_ctlsenderr(fd, mh,
+				    "invalid fuse_debug value: %s",
+				    pcp->pcp_value));
+			fuse_lowlevel_setdebug(fuse_session, val ? 1 : 0);
+		} else {
+			levels[1] = "fuse_debug";
+			snprintf(nbuf, sizeof(nbuf), "%d",
+			    fuse_lowlevel_getdebug(fuse_session));
+			if (!psc_ctlmsg_param_send(fd, mh, pcp,
+			    PCTHRNAME_EVERYONE, levels, 2, nbuf))
+				return (0);
+		}
+	}
+	if (nlevels < 2 || strcmp(levels[1], "fuse_version") == 0) {
+		if (set)
+			goto readonly;
+		levels[1] = "fuse_version";
+		snprintf(nbuf, sizeof(nbuf), "%d.%d",
+		    FUSE_MAJOR_VERSION, FUSE_MINOR_VERSION);
+		if (!psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 2, nbuf))
+			return (0);
+	}
+	if (nlevels < 2 || strcmp(levels[1], "usesdp") == 0) {
+		if (set)
+			goto readonly;
+		levels[1] = "usesdp";
+		snprintf(nbuf, sizeof(nbuf), "%d", lnet_get_usesdp());
+		if (!psc_ctlmsg_param_send(fd, mh, pcp,
+		    PCTHRNAME_EVERYONE, levels, 2, nbuf))
+			return (0);
+	}
+	if (0) {
+ readonly:
+		return (psc_ctlsenderr(fd, mh,
+		    "field %s is read-only", levels[1]));
+	}
+	return (1);
+}
+
 struct psc_ctlop msctlops[] = {
 	PSC_CTLDEFOPS,
 	{ msctlrep_replrq,		sizeof(struct msctlmsg_replrq) },
@@ -437,6 +537,8 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("pool", psc_ctlparam_pool);
 	psc_ctlparam_register("rlim.nofile", psc_ctlparam_rlim_nofile);
 	psc_ctlparam_register("run", psc_ctlparam_run);
+
+	psc_ctlparam_register("general", msctlparam_general);
 
 	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_begin, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr");

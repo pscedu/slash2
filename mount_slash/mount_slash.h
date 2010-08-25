@@ -108,6 +108,8 @@ extern sl_ios_id_t		 prefIOS;
 extern struct psc_listcache	 bmapFlushQ;
 extern struct sl_resm		*slc_rmc_resm;
 extern struct slash_creds	 rootcreds;
+extern char			 mountpoint[];
+extern struct fuse_session	*fuse_session;
 
 extern struct psc_waitq		 msl_fhent_flush_waitq;
 extern struct timespec		 msl_bmap_max_lease;

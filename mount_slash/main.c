@@ -71,6 +71,7 @@ const char			*progname;
 char				 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
 int				 allow_root_uid = 1;
+struct fuse_session		*fuse_session;
 
 struct sl_resm			*slc_rmc_resm;
 
@@ -80,7 +81,7 @@ psc_spinlock_t			 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
 struct slash_creds		 rootcreds = { 0, 0 };
 
 /* number of attribute prefetch in readdir() */
-int				nstbpref = DEF_READDIR_NENTS;
+int				 nstbpref = DEF_READDIR_NENTS;
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
@@ -1792,7 +1793,6 @@ msl_fuse_addarg(struct fuse_args *av, const char *arg)
 void
 msl_fuse_mount(const char *mp, struct fuse_args *args)
 {
-	struct fuse_session *se;
 	struct fuse_chan *ch;
 	char nameopt[BUFSIZ];
 	int rc;
@@ -1812,18 +1812,18 @@ msl_fuse_mount(const char *mp, struct fuse_args *args)
 	if (ch == NULL)
 		psc_fatal("fuse_mount");
 
-	se = fuse_lowlevel_new(args, &zfs_operations,
+	fuse_session = fuse_lowlevel_new(args, &zfs_operations,
 	    sizeof(zfs_operations), NULL);
 
-	if (se == NULL) {
+	if (fuse_session == NULL) {
 		fuse_unmount(mp, ch);
 		psc_fatal("fuse_lowlevel_new");
 	}
 
-	fuse_session_add_chan(se, ch);
+	fuse_session_add_chan(fuse_session, ch);
 
 	if (slash2fuse_newfs(mp, ch) != 0) {
-		fuse_session_destroy(se);
+		fuse_session_destroy(fuse_session);
 		fuse_unmount(mp, ch);
 		psc_fatal("fuse_session_add_chan");
 	}
