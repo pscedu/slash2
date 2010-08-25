@@ -188,7 +188,6 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 
 	if (b->bcm_mode & BMAP_DIO) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
-		rc = 0;
 		goto out;
 
 	} else if (b->bcm_mode & BMAP_DIORQ) {
@@ -209,7 +208,6 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 		psc_assert(!(b->bcm_mode & BMAP_DIORQ));
 		if (bml->bml_flags & BML_CDIO) {
 			b->bcm_mode |= BMAP_DIO;
-			rc = 0;
 			goto out;
 
 		} else if (bml->bml_cli_nidpid.nid == np->nid &&
