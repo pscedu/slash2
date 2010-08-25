@@ -870,7 +870,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			psc_assert(psclist_disjoint(&bml->bml_chain->bml_bmdsi_lentry));
 
 			bml->bml_chain->bml_flags &= ~BML_CHAIN;
-			pll_addtail(&bmdsi->bmdsi_leases, bml->bml_chain);
+			pll_addtail(&bmdsi->bmdsi_leases, bml);
 
 			tail->bml_chain = bml->bml_chain;
 		} else
