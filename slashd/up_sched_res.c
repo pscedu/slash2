@@ -59,9 +59,13 @@ struct psc_lockedlist	 upsched_listhd =
 	uswi_lentry);
 
 /**
- * slmupschedthr_removeq
+ * slmupschedthr_removeq - A file that required updates to be sent to
+ *	I/O systems for a given site appears to be finished.  Do a quick
+ *	run through the file ensuring there is truely nothing left to do
+ *	and remove it from our processing queue if so.
  *
- * XXX this needs to remove any ios' that are empty in all bmaps from the inode.
+ * XXX this needs to remove any IOS' from ino_repls that are empty in
+ *	all bmaps from the inode.
  */
 void
 slmupschedthr_removeq(struct up_sched_work_item *wk)
@@ -94,8 +98,11 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 		return;
 	}
 
-	/* XXX */
-	psc_assert((wk->uswi_flags & USWIF_BUSY) == 0);
+	while (wk->uswi_flags & USWIF_BUSY) {
+		psc_assert(psc_atomic32_read(&wk->uswi_refcnt) > 1);
+		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
+		psc_pthread_mutex_lock(&wk->uswi_mutex);
+	}
 
 	/*
 	 * If someone bumps the generation while we're processing, we'll
