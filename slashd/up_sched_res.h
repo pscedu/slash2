@@ -1,4 +1,12 @@
 /* $Id$ */
+/* %PSC_COPYRIGHT% */
+
+/*
+ * Update scheduler: this component manages updates to I/O systems such
+ * as file chunks to replicate and garbage reclamation.  One thread is
+ * spawned per site to watch over activity destined for any I/O system
+ * contained therein.
+ */
 
 #ifndef _UP_SCHED_RES_H_
 #define _UP_SCHED_RES_H_
@@ -31,7 +39,7 @@ struct up_sched_work_item {
 				    USWI_INOX(wk)->inox_repls[(n) - 1])
 
 /* uswi_init() flags */
-#define USWI_INITF_NOPERSIST	(1 << 0)	/* do not link in .slussr */
+#define USWI_INITF_NOPERSIST	(1 << 0)	/* do not link in .slupsch */
 
 struct up_sched_work_item *
 	 uswi_find(const struct slash_fidgen *, int *);
