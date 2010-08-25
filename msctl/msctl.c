@@ -604,14 +604,14 @@ struct psc_ctlopt opts[] = {
 	{ 'U', PCOF_FUNC, parse_dequeue },
 	{ 'v', PCOF_FLAG, &verbose }
 };
-int nopts = nitems(opts);
 
 int
 main(int argc, char *argv[])
 {
 	pfl_init();
 	progname = argv[0];
-	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts, nopts);
+	psc_ctlcli_main(SL_PATH_MSCTLSOCK, argc, argv, opts,
+	    nitems(opts));
 	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)))
 		errx(1, "communication error: replication status "
 		    "not completed (%zd/%zd)",
