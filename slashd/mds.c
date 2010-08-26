@@ -189,8 +189,8 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 	if (b->bcm_mode & BMAP_DIO) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		goto out;
-
-	} else if (b->bcm_mode & BMAP_DIORQ) {
+	}
+	if (b->bcm_mode & BMAP_DIORQ) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		/* In the process of waiting for an async rpc to complete.
 		 */
