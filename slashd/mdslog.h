@@ -95,6 +95,8 @@ int	mds_bmap_repl_update(struct bmapc_memb *);
 int	mds_bmap_crc_update(struct bmapc_memb *, struct srm_bmap_crcup *);
 int	mds_inode_addrepl_update(struct slash_inode_handle *, sl_ios_id_t, uint32_t);
 
+void	mds_current_txg(uint64_t *);
+
 void	mds_reserve_slot(void);
 void	mds_unreserve_slot(void);
 

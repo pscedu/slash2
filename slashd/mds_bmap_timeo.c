@@ -66,6 +66,7 @@ mds_bmap_timeotbl_init(void)
 static void
 mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 {
+	uint64_t txg;
 	struct slmds_jent_bmapseq *buf;
 
 	buf = pjournal_get_buf(mdsJournal,
@@ -74,7 +75,8 @@ mds_bmap_journal_bmapseq(struct slmds_jent_bmapseq *sjbsq)
 	*buf = *sjbsq;
 
 	mds_reserve_slot();
-	pjournal_add_entry(mdsJournal, 0, MDS_LOG_BMAP_SEQ,
+	mds_current_txg(&txg);
+	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_SEQ,
 		buf, sizeof(struct slmds_jent_bmapseq));
 	mds_unreserve_slot();
 

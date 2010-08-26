@@ -825,6 +825,12 @@ mds_update_cursor(void *buf, uint64_t txg)
 	}
 }
 
+void
+mds_current_txg(uint64_t *txg)
+{
+	*txg = mds_cursor.pjc_txg;
+}
+
 /**
  * mds_cursor_thread - Update the cursor file in the ZFS that records the current
  *     transaction group number and other system log status.  If there is no
