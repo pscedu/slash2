@@ -324,3 +324,5 @@ utime
 - unset csvc from CONNECTED in any hldrop callback from a resm
 
 - ignore repl CRC failure when replicating from src for now
+- upsch items are not getting removed on completion
+- replicas are disappearing, not stored on disk?
