@@ -726,7 +726,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		b->bcm_mode &= ~BMAP_IONASSIGN;
 
 	} else {
-		bml->bml_flags |= BML_TIMEOQ;
 		bml->bml_seq = mds_bmap_timeotbl_getnextseq();
 
 		if (!wlease && !rlease)
