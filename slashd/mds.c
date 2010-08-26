@@ -760,8 +760,11 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 
 	obml = mds_bmap_dupls_find(bmdsi, &bml->bml_cli_nidpid, &wlease,
 		   &rlease);
-	/* In this context, obml must be found and therefore lease cnt
-	 *   must be positive.
+	/* 
+	 * obml must be not NULL because at least the lease being freed 
+	 * must be present in the list.  Therefore lease cnt must be 
+	 * positive.   Also note that the find() function returns the
+	 * head of the chain of duplicate leases.
 	 */
 	psc_assert(obml);
 	psc_assert((wlease + rlease) > 0);
