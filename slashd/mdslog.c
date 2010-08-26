@@ -1012,10 +1012,8 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 	psc_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
 		  jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
 
-	mds_reserve_slot();
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL,
 	    jrir, sizeof(struct slmds_jent_ino_addrepl));
-	mds_unreserve_slot();
 
 	pjournal_put_buf(mdsJournal, jrir);
 }
@@ -1043,10 +1041,8 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 	psc_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
 		  jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
 
-	mds_reserve_slot();
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL,
 	    jrpg, sizeof(struct slmds_jent_repgen));
-	mds_unreserve_slot();
 
 	pjournal_put_buf(mdsJournal, jrpg);
 }
@@ -1094,10 +1090,8 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
 		       i * sizeof(struct srm_bmap_crcwire));
 
-		mds_reserve_slot();
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
 		    jcrc, sizeof(struct slmds_jent_crc));
-		mds_unreserve_slot();
 
 		/* Apply the CRC update into memory AFTER recording them
 		 *  in the journal. The lock should not be needed since the
