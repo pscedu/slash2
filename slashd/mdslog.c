@@ -813,8 +813,16 @@ mds_update_cursor(void *buf, uint64_t txg)
 {
 	struct psc_journal_cursor *cursor = (struct psc_journal_cursor *)buf;
 	int rc;
+	static int txgonly = 1;
 
-	cursor->pjc_txg = txg;
+	if (txgonly) {
+		psc_assert(txg > cursor->pjc_txg);
+		cursor->pjc_txg = txg;
+		txgonly = 0;
+		return;
+	}
+	txgonly = 1;
+	psc_assert(cursor->pjc_txg == txg);
 	cursor->pjc_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_s2id = slm_get_curr_slashid();
 
