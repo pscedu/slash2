@@ -100,10 +100,12 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
 
+	mds_reserve_slot();
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
 	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
 	    (utimgen == crcup->utimgen), bmap_2_zfs_fh(bmap),
 	    mds_bmap_crc_log, &crclog);
+	mds_unreserve_slot();
 
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
@@ -131,9 +133,12 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 		return (0);
 	}
 
+	mds_reserve_slot();
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
 		(off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF), 0,
 		bmap_2_zfs_fh(bmap), mds_bmap_repl_log, bmap);
+	mds_unreserve_slot();
+
 	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "zfsslash2_write: error (rc=%d)",
 			   rc);
@@ -162,6 +167,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
 		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
 
+	mds_reserve_slot();
 	if (inoh->inoh_flags & INOH_INO_DIRTY) {
 		psc_crc64_calc(&inoh->inoh_ino.ino_crc,
 			     &inoh->inoh_ino, INO_OD_CRCSZ);
@@ -195,6 +201,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 
 		inoh->inoh_flags &= ~INOH_EXTRAS_DIRTY;
 	}
+	mds_unreserve_slot();
 
 	ureqlock(&inoh->inoh_lock, locked);
 	return (rc);
