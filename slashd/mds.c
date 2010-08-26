@@ -649,10 +649,14 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 
 		tmp->bml_chain = bml;
 		bml->bml_chain = obml;
-	} else
+		psc_assert(psclist_disjoint(&bml->bml_bmdsi_lentry));
+	} else {
 		/* First on the list.
 		 */
 		bml->bml_chain = bml;
+		pll_addtail(&bmdsi->bmdsi_leases, bml);
+	}
+	bml->bml_flags |= BML_BMDSI;
 
 	if (rw == SL_WRITE) {
 		/* Drop the lock prior to doing disk and possibly network
@@ -730,14 +734,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		bml->bml_flags |= BML_TIMEOQ;
 		mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 	}
-
-	bml->bml_flags |= BML_BMDSI;
-	if (!obml) {
-		/* Only add the lease to the bmdsi list if it's not chained.
-		 */
-		pll_addtail(&bmdsi->bmdsi_leases, bml);
-	} else
-		psc_assert(psclist_disjoint(&bml->bml_bmdsi_lentry));
 
  out:
 	DEBUG_BMAP(rc ? PLL_WARN : PLL_INFO, b, "bml_add (mion=%p) bml=%p"
