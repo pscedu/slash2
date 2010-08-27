@@ -50,7 +50,7 @@ Instruct
 to perform one of the following actions:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Ic exit
+.It Cm exit
 Completely terminate
 .Xr slashd 8
 execution.
@@ -63,13 +63,15 @@ Query bucket usage statistics for the given hash table(s).
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Cm resnid
-network resource
-.It Cm threads
-daemon execution threads
-.Po by
-.Tn NID
+.It Cm fidc
+files
+.Po file
+.Tn ID
+cache
 .Pc
+.It Cm resnid
+network resources
+.Pq network Tn ID
 .El
 .Pp
 The value
@@ -106,10 +108,10 @@ networking interface.
 Data sent/received over userland socket networking device.
 .Ar mode
 may be
-.Ic pasv
+.Cm pasv
 .Pq passive
 or
-.Ic aggr
+.Cm aggr
 .Pq aggregate .
 .Pp
 .It Cm jrnlwr- Ns Ar fn ,
@@ -139,12 +141,11 @@ may be one of the following:
 .Bl -tag -compact -offset indent -width 12n
 .It Cm fcmhclean
 Clean
-.Tn FID
-cache members
+.Pq reapable
+files
 .It Cm fcmhdirty
-Dirty
-.Tn FID
-cache members
+File with pending action e.g.\&
+.Tn I/O
 .It Cm inflightbml
 Active
 .Pq inflight
@@ -189,7 +190,7 @@ has the following format:
 .Ed
 .Pp
 The value
-.Ic all
+.Cm all
 may be specified to retrieve information about all pools.
 .It Fl p Ar paramspec
 Query/manipulate operational control parameters.
@@ -211,24 +212,24 @@ for details on specifying
 .Ar param
 may be one of the following:
 .Bl -tag -offset ind -width Ds
-.It Ic log.level Ns Op . Ns Ar subsystem
+.It Cm log.level Ns Op . Ns Ar subsystem
 The logging level of debug message output.
 .Pp
 .Ar subsystem
 may be one of the following:
 .Pp
 .Bl -tag -offset indent -width 12n -compact
-.It Ic bmap
+.It Cm bmap
 Block map structures
-.It Ic gen
+.It Cm gen
 General/catch all
-.It Ic jrnl
+.It Cm jrnl
 Journaling operations
-.It Ic lnet
+.It Cm lnet
 Lustre networking stack
-.It Ic mem
+.It Cm mem
 Memory allocations and releases
-.It Ic rpc
+.It Cm rpc
 Network remote procedure calls
 .El
 .Pp
@@ -254,18 +255,18 @@ Debugging messages
 .It Cm trace , all
 All messages
 .El
-.It Ic lc. Ns Ar name
-Access the list cache specified by
+.It Cm pool. Ns Ar name
+Access the memory pool specified by
 .Ar name .
 The following sub-fields are available:
 .Pp
 .Bl -tag -compact -offset 2n -width 5n
-.It Ic min
-Lower bound for number of entries to which list can shrink.
-.It Ic max
-Upper bound for number of entries to which list can grow.
-.It Ic size
-Current number of entries contained in list.
+.It Cm min
+Lower bound for number of entries to which pool can shrink.
+.It Cm max
+Upper bound for number of entries to which pool can grow.
+.It Cm size
+Current number of entries contained in pool.
 .El
 .El
 .Pp
@@ -283,9 +284,9 @@ Specify an alternative socket file.
 The following tokens are replaced in the file name specified:
 .Pp
 .Bl -tag -offset indent -width Ds -compact
-.It Ic %h
+.It Cm %h
 the machine hostname
-.It Ic %%
+.It Cm %%
 a literal
 .Sq %
 character
@@ -306,11 +307,6 @@ has the following format:
 .Sm on
 .Ed
 .Pp
-See
-.Sx Thread Specification
-for details on specifying
-.Ar thread-name .
-.Pp
 .Ar param
 may be specified as any non-ambiguous prefix abbreviation of the
 following:
@@ -329,6 +325,12 @@ Query thread activity statistics.
 The special value
 .Sq \&?
 may be specified to display a list of recognized values.
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread-name .
+.Pp
 This option may be specified multiple times.
 .El
 .Ss Thread Specification
@@ -343,7 +345,11 @@ Bmap lease timeout monitor
 .It Cm slmcohthr
 Bmap data coherency thread
 .It Cm slmctlthr
-Daemon control thread
+.Nm
+connection processor
+.It Cm slmctlacthr
+.Nm
+connection acceptor
 .It Cm slmjcursorthr
 Journal cursor updater thread
 .It Cm slmjthr

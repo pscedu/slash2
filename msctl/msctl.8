@@ -54,7 +54,7 @@ The options are as follows:
 .\" to perform one of the following actions:
 .\" .Pp
 .\" .Bl -tag -compact -offset indent -width 12n
-.\" .It Ic reconfig
+.\" .It Cm reconfig
 .\" .El
 .It Fl f Ar cmd
 Perform a
@@ -65,9 +65,9 @@ The following actions are available:
 .Bl -tag -width 3n
 .It Xo
 .Sm off
-.Ic new-repl-policy
-.Ic = Ar repl-policy
-.Ic : Ar fn
+.Cm new-repl-policy
+.Cm = Ar repl-policy
+.Cm : Ar fn
 .Sm on
 .Xc
 Set the default replication policy for new bmaps
@@ -77,7 +77,7 @@ for the specified file
 .Pp
 The following replication policies are recognized:
 .Bl -tag -width one-time
-.It Ic one-time
+.It Cm one-time
 Replication requests are completed once then removed from the system.
 Data replicated will continue to exist at replicas even after new
 .Tn I/O
@@ -89,15 +89,15 @@ for checking the replication status of bmaps and retrieving the current
 default replication policy of files.
 .Pp
 This is the default mode.
-.It Ic persist
+.It Cm persist
 Perpetually propagate any new
 .Tn I/O
 done to a bmap to other replicas where the bmap is registered for replication.
 .El
 .It Xo
 .Sm off
-.Ic bmap-repl-policy= Ar repl-policy
-.Ic : Ar bmapspec Ic : Ar fn
+.Cm bmap-repl-policy= Ar repl-policy
+.Cm : Ar bmapspec Cm : Ar fn
 .Sm on
 .Xc
 Set the replication policy for all bmaps specified in
@@ -131,14 +131,19 @@ Query bucket usage statistics for the given hash table(s).
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Ic resnid
-network resource
-.It Ic threads
-daemon execution threads
+.It Cm fidc
+files
+.Po file
+.Tn ID
+cache
+.Pc
+.It Cm resnid
+network resources
+.Pq network Tn ID
 .El
 .Pp
 The value
-.Ic all
+.Cm all
 may be specified to query all hash table statistics.
 .It Fl I
 Do not use human-readable numbers for large numerical displays,
@@ -160,26 +165,26 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Ic lni-rcv- Ns Ar if ,
-.It Ic lni-snd- Ns Ar if
+.It Cm lni-rcv- Ns Ar if ,
+.It Cm lni-snd- Ns Ar if
 Data sent/received per
 .Tn LNET
 networking interface.
 .Pp
-.It Ic lusklnd- Ns Ar mode Ns Ic -rcv ,
-.It Ic lusklnd- Ns Ar mode Ns Ic -snd
+.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
+.It Cm lusklnd- Ns Ar mode Ns Cm -snd
 Data sent/received over userland socket networking device.
 .Ar mode
 may be
-.Ic pasv
+.Cm pasv
 .Pq passive
 or
-.Ic aggr
+.Cm aggr
 .Pq aggregate .
 .El
 .Pp
 The value
-.Ic all
+.Cm all
 may be specified to query all
 .Tn I/O
 statistics.
@@ -199,25 +204,25 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Ic bmapflush
+.It Cm bmapflush
 Bmaps awaiting flush completion
-.It Ic bmaptimeout
+.It Cm bmaptimeout
 Expired bmaps awaiting release
-.It Ic dircache
+.It Cm dircache
 Directory entries
-.It Ic fcmhclean
-Reapable file
-Used FID cache entries.
-.It Ic fcmhdirty
-File waiting for
+.It Cm fcmhclean
+Clean
+.Pq reapable
+files
+.It Cm fcmhdirty
+File with pending action e.g.\&
 .Tn I/O
-to complete
-.It Ic bmpcLru
+.It Cm bmpcLru
 Reapable bmap structures
 .El
 .Pp
 The value
-.Ic all
+.Cm all
 may be specified to retrieve information about all list caches.
 .It Fl m Ar meterspec
 Report progress information in meters.
@@ -231,7 +236,7 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Ic repl- Ns Ar nid
+.It Cm repl- Ns Ar nid
 Replication of inode
 .Ar fid
 metadata to server
@@ -239,7 +244,7 @@ metadata to server
 .El
 .Pp
 The value
-.Ic all
+.Cm all
 may be specified to retrieve information about all meters.
 .It Fl P Ar poolspec
 Report pool parameters.
@@ -250,7 +255,7 @@ has the following format:
 .Ed
 .Pp
 The value
-.Ic all
+.Cm all
 may be specified to retrieve information about all pools.
 .It Fl p Ar paramspec
 Query/manipulate operational control parameters.
@@ -272,22 +277,22 @@ for details on specifying
 .Ar param
 may be one of the following:
 .Bl -tag -offset ind -width Ds
-.It Ic log.level Ns Op . Ns Ar subsystem
+.It Cm log.level Ns Op . Ns Ar subsystem
 The logging level of debug message output.
 .Pp
 .Ar subsystem
 may be one of the following:
 .Pp
 .Bl -tag -offset indent -width 12n -compact
-.It Ic bmap
+.It Cm bmap
 Block map structures
-.It Ic gen
+.It Cm gen
 General/catch all
-.It Ic lnet
+.It Cm lnet
 Lustre networking stack
-.It Ic mem
+.It Cm mem
 Memory allocations and releases
-.It Ic rpc
+.It Cm rpc
 Network remote procedure calls
 .El
 .Pp
@@ -298,20 +303,33 @@ is left unspecified, all subsystems will be affected.
 The logging level value may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
-.It Ic none
+.It Cm none
 No logging
-.It Ic error
+.It Cm error
 Recoverable failures
-.It Ic warn
+.It Cm warn
 Something wrong which requires attention
-.It Ic notify
+.It Cm notify
 Something unusual which recommends attention
-.It Ic info
+.It Cm info
 Informational messages
-.It Ic debug
+.It Cm debug
 Debugging messages
-.It Ic trace , all
+.It Cm trace , all
 All messages
+.El
+.It Cm pool. Ns Ar name
+Access the memory pool specified by
+.Ar name .
+The following sub-fields are available:
+.Pp
+.Bl -tag -compact -offset 2n -width 5n
+.It Cm min
+Lower bound for number of entries to which pool can shrink.
+.It Cm max
+Upper bound for number of entries to which pool can grow.
+.It Cm size
+Current number of entries contained in pool.
 .El
 .El
 .Pp
@@ -338,11 +356,11 @@ systems specified.
 has the following format:
 .Bd -unfilled -offset indent
 .Sm off
-.Ar ios Op Ic ,\& Ar ...
-.Ic :\& Ar bmapno-min
-.Op Ic -\& Ar bmapno-max
-.Op Ic ,\& Ar ...
-.Ic :\& Ar filename
+.Ar ios Op Cm ,\& Ar ...
+.Cm :\& Ar bmapno-min
+.Op Cm -\& Ar bmapno-max
+.Op Cm ,\& Ar ...
+.Cm :\& Ar filename
 .Sm on
 .Ed
 .Pp
@@ -411,9 +429,9 @@ Specify an alternative socket file.
 The following tokens are replaced in the file name specified:
 .Pp
 .Bl -tag -offset indent -width Ds -compact
-.It Ic %h
+.It Cm %h
 the machine hostname
-.It Ic %%
+.It Cm %%
 a literal
 .Sq %
 character
@@ -434,29 +452,30 @@ has the following format:
 .Sm on
 .Ed
 .Pp
-See
-.Sx Thread Specification
-for details on specifying
-.Ar thread-name .
-.Pp
 .Ar param
 may be specified as any non-ambiguous prefix abbreviation of the
 following:
 .Pp
 .Bl -tag -offset indent -width 12n -compact
-.It Ic connections
+.It Cm connections
 Status of hosts on network.
-.It Ic files
+.It Cm files
 Files in cache.
-.It Ic loglevels
+.It Cm loglevels
 Query thread logging levels.
-.It Ic stats
+.It Cm stats
 Query thread activity statistics.
 .El
 .Pp
 The special value
 .Sq \&?
 may be specified to display a list of recognized values.
+.Pp
+See
+.Sx Thread Specification
+for details on specifying
+.Ar thread-name .
+.Pp
 This option may be specified multiple times.
 .It Fl U Ar replrqspec
 Cancel ongoing file replication requests as specified by
@@ -478,39 +497,41 @@ parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
 .Bl -tag -compact -offset indent -width 15n
-.It Ic msbflushthr
+.It Cm msbflushthr
 Bmap flusher thread
-.It Ic msbflushrpcthr
+.It Cm msbflushrpcthr
 Bmap flusher asynchronous
 .Tn RPC
 reply thread
-.It Ic msbrlsthr
+.It Cm msbrlsthr
 Bmap timed releaser thread
-.It Ic msctlthr
-Control thread
-.It Ic msctlacthr
-Control connection acceptor thread
-.It Ic msconnthr- Ns Ar %s
-Connection monitor thread
-.It Ic mseqpollthr
+.It Cm msctlthr
+.Nm
+connection processor
+.It Cm msctlacthr
+.Nm
+connection acceptor
+.It Cm msconnthr- Ns Ar %s
+Remote server connection monitor
+.It Cm mseqpollthr
 Lustre
 .Fn LNetEQPoll
 thread
-.It Ic msfsthr Ns Ar %d
+.It Cm msfsthr Ns Ar %d
 File system service thread
-.It Ic msfusethr
+.It Cm msfusethr
 .Tn FUSE
 master thread
-.It Ic msrcmthr Ns Ar %02d
+.It Cm msrcmthr Ns Ar %02d
 .Tn MDS RPC
 request service
-.It Ic mstiosthr
+.It Cm mstiosthr
 Timed
 .Tn I/O
 stats updater thread
-.It Ic msusklndplthr Ns Ar %d
+.It Cm msusklndplthr Ns Ar %d
 Lustre userland socket poll thread
-.It Ic everyone
+.It Cm everyone
 All threads (default, where applicable)
 .El
 .Sh FILES
