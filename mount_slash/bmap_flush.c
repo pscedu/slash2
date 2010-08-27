@@ -47,7 +47,7 @@ struct psc_listcache		 bmapTimeoutQ;
 
 __static struct pscrpc_nbreqset	*pndgReqs;
 __static struct psc_dynarray	 pndgReqSets = DYNARRAY_INIT;
-__static psc_spinlock_t		 pndgReqLock = LOCK_INITIALIZER;
+__static psc_spinlock_t		 pndgReqLock = SPINLOCK_INIT;
 
 __static atomic_t		 outstandingRpcCnt;
 __static atomic_t		 completedRpcCnt;
@@ -136,6 +136,8 @@ bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
 	size_t size;
 	off_t off=0;
 	int i=0;
+
+	e = s = NULL; /* gcc */
 
 	if (!psc_dynarray_len(biorqs))
 		return (0);
