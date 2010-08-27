@@ -181,6 +181,7 @@ extern struct slash_creds			 rootcreds;
 extern struct psc_listcache			 dirtyMdsData;
 extern struct odtable				*mdsBmapAssignTable;
 extern const struct slash_inode_extras_od	 null_inox_od;
+extern const struct slash_inode_od		 null_inode_od;
 extern struct sl_mds_nsstats			 slm_nsstats_aggr;	/* aggregate stats */
 
 uint64_t	slm_get_curr_slashid(void);

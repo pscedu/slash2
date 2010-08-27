@@ -37,7 +37,6 @@
 #include "fidcache.h"
 #include "inode.h"
 #include "mdsio.h"
-#include "mdsio.h"
 #include "mdslog.h"
 #include "mkfn.h"
 #include "pathnames.h"
@@ -262,13 +261,13 @@ mds_redo_bmap_seq(__unusedx struct psc_journal_enthdr *pje)
 static int
 mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 {
-	size_t nb;
-	int i, j, rc;
-	void *mdsio_data;
-	struct slmds_jent_ino_addrepl *jrir;
-	mdsio_fid_t fid;
-	struct slash_inode_od inoh_ino;
 	struct slash_inode_extras_od inoh_extras;
+	struct slmds_jent_ino_addrepl *jrir;
+	struct slash_inode_od inoh_ino;
+	void *mdsio_data;
+	mdsio_fid_t fid;
+	int i, j, rc;
+	size_t nb;
 
 	jrir = PJE_DATA(pje);
 	rc = mdsio_lookup_slfid(jrir->sjir_fid, &rootcreds, NULL, &fid);
@@ -283,7 +282,6 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 
 	i = jrir->sjir_pos;
 	if (i < SL_DEF_REPLICAS) {
-
 		rc = mdsio_read(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
 			SL_INODE_START_OFF, mdsio_data);
 		/*
@@ -293,16 +291,25 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 		if (rc)
 			goto out;
 
+		if (!nb && inoh_ino.ino_crc == 0 &&
+		    memcmp(&inoh_ino, &null_inode_od, INO_OD_CRCSZ) == 0) {
+			/* initialize newly replay-created inode */
+			inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
+			inoh_ino.ino_version = INO_VERSION;
+			inoh_ino.ino_flags = 0;
+			inoh_ino.ino_nrepls = 1;
+		} else if ((int)inoh_ino.ino_nrepls < i)
+			inoh_ino.ino_nrepls = i;
+
 		inoh_ino.ino_repls[i].bs_id = jrir->sjir_ios;
 		psc_crc64_calc(&inoh_ino.ino_crc, &inoh_ino, INO_OD_CRCSZ);
 
 		rc = mdsio_write(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
-			SL_INODE_START_OFF, 0, mdsio_data, NULL, NULL);
+		    SL_INODE_START_OFF, 0, mdsio_data, NULL, NULL);
 
 		if (!rc && nb != INO_OD_SZ)
 			rc = EIO;
 	} else {
-
 		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
 			SL_EXTRAS_START_OFF, mdsio_data);
 
