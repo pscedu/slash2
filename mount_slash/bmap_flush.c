@@ -47,7 +47,7 @@ struct psc_listcache		 bmapTimeoutQ;
 
 __static struct pscrpc_nbreqset	*pndgReqs;
 __static struct psc_dynarray	 pndgReqSets = DYNARRAY_INIT;
-__static psc_spinlock_t		 pndgReqLock = SPINLOCK_INIT;
+__static psc_spinlock_t		 pndgReqLock = LOCK_INITIALIZER;
 
 __static atomic_t		 outstandingRpcCnt;
 __static atomic_t		 completedRpcCnt;
