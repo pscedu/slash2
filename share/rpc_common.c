@@ -492,9 +492,9 @@ slconnthr_main(struct psc_thread *thr)
 		else
 			freelock(sct->sct_lockinfo.lm_lock);
 
+		/* Now just PING for connection lifetime. */
 		woke = 0;
 		for (;;) {
-			/* Now just PING for connection lifetime. */
 			csvc = sl_csvc_get(&resm->resm_csvc, sct->sct_flags,
 			    NULL, resm->resm_nid, sct->sct_rqptl, sct->sct_rpptl,
 			    sct->sct_magic, sct->sct_version,
@@ -502,19 +502,37 @@ slconnthr_main(struct psc_thread *thr)
 			    sct->sct_conntype);
 
 			if (csvc == NULL) {
+				time_t mtime;
+
 				sl_csvc_lock(resm->resm_csvc);
 				csvc = resm->resm_csvc;
 				if (sl_csvc_useable(csvc)) {
 					sl_csvc_incref(csvc);
 					goto online;
 				}
-				sl_csvc_waitrel_s(csvc, CSVC_RECONNECT_INTV);
+				mtime = csvc->csvc_mtime;
+				/*
+				 * Allow manual activity to try to
+				 * reconnect while we wait.
+				 */
+				csvc->csvc_mtime = 0;
+				/*
+				 * Subtract the amount of time someone
+				 * manually retried (and failed) instead of
+				 * waiting an entire interval after we woke
+				 * after our last failed attempt.
+				 */
+				sl_csvc_waitrel_s(csvc,
+				    CSVC_RECONNECT_INTV - (time(NULL) -
+				    mtime));
 				continue;
 			}
 
 			sl_csvc_lock(csvc);
-			if (!sl_csvc_useable(csvc))
+			if (!sl_csvc_useable(csvc)) {
+				sl_csvc_decref(csvc);
 				break;
+			}
 
 			if (!woke) {
 				/*
@@ -527,16 +545,18 @@ slconnthr_main(struct psc_thread *thr)
  online:
 			sl_csvc_unlock(csvc);
 			rc = slrpc_issue_ping(csvc, sct->sct_version);
-			sl_csvc_lock(csvc);
+			/* XXX race */
+			if (rc) {
+				sl_csvc_lock(csvc);
+				sl_csvc_disconnect(csvc);
+			}
+			sl_csvc_decref(csvc);
 
 			if (rc)
 				break;
 
 			sl_csvc_waitrel_s(csvc, 60);
-			sl_csvc_decref(csvc);
 		}
-		sl_csvc_disconnect(csvc);
-		sl_csvc_decref(csvc);
 
 		sl_csvc_lock(csvc);
 	} while (pscthr_run() && (psc_atomic32_read(
@@ -554,7 +574,8 @@ slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
 	struct psc_thread *thr;
 
 	thr = pscthr_init(thrtype, 0, slconnthr_main, NULL,
-	    sizeof(*sct), "%sconnthr-%s", thrnamepre, resm->resm_res->res_name);
+	    sizeof(*sct), "%sconnthr-%s", thrnamepre,
+	    resm->resm_res->res_name);
 	sct = thr->pscthr_private;
 	sct->sct_resm = resm;
 	sct->sct_rqptl = rqptl;
