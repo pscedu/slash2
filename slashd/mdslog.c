@@ -849,6 +849,12 @@ mds_update_cursor(void *buf, uint64_t txg)
 void
 mds_current_txg(uint64_t *txg)
 {
+	/*
+ 	 * Take a snapshot of the transaction group number stored in the
+ 	 * cursor.  It maybe the current one being used, or the one that
+ 	 * has already been synced.  And it can change afterwards. This 
+ 	 * is okay, we only need to take a little care at replay time.
+ 	 */
 	spinlock(&mds_txg_lock);
 	*txg = mds_cursor.pjc_txg;
 	freelock(&mds_txg_lock);
