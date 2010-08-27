@@ -610,9 +610,9 @@ slcfg_store_tok_val(const char *tok, char *val)
 		break;
 
 	case SL_TYPE_SIZET: {
-		uint64_t   i;
-		int   j;
+		uint64_t i = 1;
 		char *c;
+		int j;
 
 		j = strlen(val);
 		if (j == 0)
