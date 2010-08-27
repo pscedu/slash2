@@ -359,12 +359,6 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_replay_unlink,
 };
 
-uint64_t
-mdsio_last_synced_txg(void)
-{
-	return (zfsslash2_last_synced_txg());
-}
-
 int
 mdsio_write_cursor(void *buf, size_t size, void *finfo, sl_log_write_t funcp)
 {

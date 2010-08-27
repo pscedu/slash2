@@ -140,7 +140,6 @@ struct mdsio_ops {
 #define mdsio_redo_unlink	mdsio_ops.mio_redo_unlink		/* zfsslash2_replay_unlink() */
 
 /* misc API */
-uint64_t mdsio_last_synced_txg(void);
 int	 mdsio_write_cursor(void *, size_t, void *, sl_log_write_t);
 
 extern struct mdsio_ops mdsio_ops;

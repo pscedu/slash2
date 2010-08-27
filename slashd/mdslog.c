@@ -824,7 +824,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 
 /**
  * mds_update_cursor - write some system information into our cursor file.  Note
- *     that every field is protected by a spinlock.
+ *     that every field must be protected by a spinlock.
  */
 void
 mds_update_cursor(void *buf, uint64_t txg)
@@ -1167,7 +1167,6 @@ mds_journal_init(void)
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
-	uint64_t txg;
 	int npeer, n;
 
 	/*
@@ -1216,7 +1215,6 @@ mds_journal_init(void)
 	if (r->res_jrnldev[0] == '\0')
 		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
 
-	txg = mdsio_last_synced_txg();
 	mds_open_cursor();
 
 	mdsJournal = pjournal_open(r->res_jrnldev);
