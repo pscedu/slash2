@@ -259,8 +259,8 @@ utime
 	took place
 
 - fix the "static" variables in communal/general functions
-- unset csvc from CONNECTED in any hldrop callback from a resm
+- do sl_csvc_disconnect() in all to-server hldrop callbacks and
+  sl_csvc_markfree() in all to-client hldrop callbacks
 
-- ignore repl CRC failure when replicating from src for now
 - upsch items are not getting removed on completion
 - replicas are disappearing, not stored on disk?
