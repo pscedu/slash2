@@ -291,16 +291,18 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 		if (rc)
 			goto out;
 
+		/* initialize newly replay-created inode */
 		if (!nb && inoh_ino.ino_crc == 0 &&
 		    memcmp(&inoh_ino, &null_inode_od, INO_OD_CRCSZ) == 0) {
-			/* initialize newly replay-created inode */
 			inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
 			inoh_ino.ino_version = INO_VERSION;
-			inoh_ino.ino_flags = 0;
-			inoh_ino.ino_nrepls = 1;
-		} else if ((int)inoh_ino.ino_nrepls < i)
-			inoh_ino.ino_nrepls = i;
+			if (i != 1)
+				psclog_errorx("ino_nrepls (%d) in "
+				    "addrepl replay should be 1 for "
+				    "newly created inode", i);
+		}
 
+		inoh_ino.ino_nrepls = i;
 		inoh_ino.ino_repls[i].bs_id = jrir->sjir_ios;
 		psc_crc64_calc(&inoh_ino.ino_crc, &inoh_ino, INO_OD_CRCSZ);
 
@@ -309,7 +311,7 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 
 		if (!rc && nb != INO_OD_SZ)
 			rc = EIO;
-	} else {
+	} else if (i < SL_MAX_REPLICAS) {
 		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
 			SL_EXTRAS_START_OFF, mdsio_data);
 
@@ -327,8 +329,11 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 
 		if (!rc && nb != INO_OD_SZ)
 			rc = EIO;
+	} else {
+		psclog_errorx("ino_nrepls (%d) in addrepl replay out of "
+		    "range", i);
 	}
-out:
+ out:
 	mdsio_release(&rootcreds, mdsio_data);
 	return (rc);
 }
