@@ -94,11 +94,13 @@ __static PSCLIST_HEAD(mds_namespace_buflist);
 struct sl_mds_peerinfo		*localinfo = NULL;
 
 /* list of peer MDSes and its lock */
-struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
-psc_spinlock_t			 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
+struct psc_dynarray		 	 mds_namespace_peerlist = DYNARRAY_INIT;
+psc_spinlock_t			 	 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
 
 static void				*mds_cursor_handle = NULL;
 static struct psc_journal_cursor	 mds_cursor;
+
+psc_spinlock_t			 	 mds_txg_lock = LOCK_INITIALIZER;
 
 int
 mds_peerinfo_cmp(const void *a, const void *b)
@@ -820,21 +822,20 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	return (didwork);
 }
 
+/**
+ * mds_update_cursor - write some system information into our cursor file.  Note
+ *     that every field is protected by a spinlock.
+ */
 void
 mds_update_cursor(void *buf, uint64_t txg)
 {
 	struct psc_journal_cursor *cursor = (struct psc_journal_cursor *)buf;
 	int rc;
-	static int txgonly = 1;
 
-	if (txgonly) {
-		psc_assert(txg > cursor->pjc_txg);
-		cursor->pjc_txg = txg;
-		txgonly = 0;
-		return;
-	}
-	txgonly = 1;
-	psc_assert(cursor->pjc_txg == txg);
+	spinlock(&mds_txg_lock);
+	cursor->pjc_txg = txg;
+	freelock(&mds_txg_lock);
+
 	cursor->pjc_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_s2id = slm_get_curr_slashid();
 
@@ -848,7 +849,9 @@ mds_update_cursor(void *buf, uint64_t txg)
 void
 mds_current_txg(uint64_t *txg)
 {
+	spinlock(&mds_txg_lock);
 	*txg = mds_cursor.pjc_txg;
+	freelock(&mds_txg_lock);
 }
 
 /**
