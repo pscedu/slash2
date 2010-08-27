@@ -764,14 +764,14 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 	return (rc);
 }
 
-struct bmapc_memb *
-msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw)
+int
+msl_bmap_load(struct msl_fhent *mfh, sl_bmapno_t n, enum rw rw, struct bmapc_memb **bp)
 {
-	struct bmapc_memb *b;
-
+	int rc;
 	psc_assert(rw == SL_READ || rw == SL_WRITE);
 
-	return (bmap_get(mfh->mfh_fcmh, n, rw, &b) ? NULL : b);
+	rc = bmap_get(mfh->mfh_fcmh, n, rw, bp);
+	return (rc);
 }
 
 /**
@@ -1650,9 +1650,8 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 		/* Load up the bmap, if it's not available then we're out of
 		 *  luck because we have no idea where the data is!
 		 */
-		b[nr] = msl_bmap_load(mfh, s, rw);
-		if (!b[nr]) {
-			rc = -EIO;
+		rc = msl_bmap_load(mfh, s, rw, &b[nr]);
+		if (rc) {
 			DEBUG_FCMH(PLL_ERROR, mfh->mfh_fcmh,
 			    "sz=%zu tlen=%zu off=%"PSCPRIdOFFT" roff=%"PSCPRIdOFFT
 			    " rw=%d rc=%d", tsize, tlen, off, roff, rw, rc);
