@@ -172,8 +172,8 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 		psc_crc64_calc(&inoh->inoh_ino.ino_crc,
 			     &inoh->inoh_ino, INO_OD_CRCSZ);
 		rc = zfsslash2_write(&rootcreds, &inoh->inoh_ino, INO_OD_SZ, &nb,
-			     SL_INODE_START_OFF, 0, inoh_2_mdsio_data(inoh),
-			mds_inode_addrepl_log, &jrir);
+				     SL_INODE_START_OFF, 0, inoh_2_mdsio_data(inoh),
+				     mds_inode_addrepl_log, &jrir);
 
 		if (!rc && nb != INO_OD_SZ)
 			rc = SLERR_SHORTIO;
