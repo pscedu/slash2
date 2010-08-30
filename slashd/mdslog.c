@@ -127,7 +127,7 @@ mds_get_next_seqno(void)
  *   a read-modify-write process because we don't touch the CRC tables.
  */
 static int
-mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
+mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 {
 	int rc;
 	size_t nb;
@@ -142,7 +142,7 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
 	if (rc) {
 		if (rc == ENOENT) {
 			psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
-			return (-rc);
+			return (rc);
 		}
 		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 	}
@@ -182,7 +182,7 @@ mds_redo_bmap_repl(__unusedx struct psc_journal_enthdr *pje)
  *     read-modify-write process.
  */
 static int
-mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
+mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 {
 	struct srm_bmap_crcwire *bmap_wire;
 	struct srt_bmap_wire bmap_disk;
@@ -243,7 +243,7 @@ mds_redo_bmap_crc(__unusedx struct psc_journal_enthdr *pje)
 }
 
 static int
-mds_redo_bmap_seq(__unusedx struct psc_journal_enthdr *pje)
+mds_redo_bmap_seq(struct psc_journal_enthdr *pje)
 {
 	struct slmds_jent_bmapseq *sjsq;
 
@@ -261,7 +261,7 @@ mds_redo_bmap_seq(__unusedx struct psc_journal_enthdr *pje)
  * mds_redo_ino_addrepl - Replay an inode replication table update.
  */
 static int
-mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
+mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 {
 	struct slash_inode_extras_od inoh_extras;
 	struct slmds_jent_ino_addrepl *jrir;
@@ -364,8 +364,8 @@ mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
 int
 mds_replay_handler(struct psc_journal_enthdr *pje)
 {
-	int rc = 0;
 	struct slmds_jent_namespace *jnamespace;
+	int rc = 0;
 
 	switch (pje->pje_type & ~(_PJE_FLSHFT - 1)) {
 	    case MDS_LOG_BMAP_REPL:
@@ -407,10 +407,10 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 int
 mds_distill_handler(struct psc_journal_enthdr *pje)
 {
-	int sz;
-	uint64_t seqno;
-	char fn[PATH_MAX];
 	struct slmds_jent_namespace *jnamespace;
+	char fn[PATH_MAX];
+	uint64_t seqno;
+	int sz;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
@@ -524,8 +524,8 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 }
 
 __static int
-mds_namespace_rpc_cb(__unusedx struct pscrpc_request *req,
-		  struct pscrpc_async_args *args)
+mds_namespace_rpc_cb(struct pscrpc_request *req,
+    struct pscrpc_async_args *args)
 {
 	struct slmds_jent_namespace *jnamespace;
 	struct sl_mds_peerinfo *peerinfo;
@@ -928,9 +928,9 @@ mds_open_cursor(void)
 void
 mds_namespace_propagate(__unusedx struct psc_thread *thr)
 {
+	struct sl_mds_logbuf *buf;
 	int rv, didwork;
 	uint64_t seqno;
-	struct sl_mds_logbuf *buf;
 
 	/*
 	 * This thread scans the batches of changes between the low and high
@@ -959,8 +959,8 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 void
 mds_inode_sync(void *data)
 {
-	int rc, tmpx = 0;
 	struct slash_inode_handle *inoh = data;
+	int rc, tmpx = 0;
 
 	INOH_LOCK(inoh);
 
@@ -1019,8 +1019,8 @@ mds_inode_sync(void *data)
 void
 mds_bmap_sync(void *data)
 {
-	struct bmapc_memb *bmap = data;
 	struct slash_bmap_od *bmapod = bmap->bcm_od;
+	struct bmapc_memb *bmap = data;
 	int rc;
 
 	BMAPOD_RDLOCK(bmap_2_bmdsi(bmap));
@@ -1046,7 +1046,8 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 {
 	struct slmds_jent_ino_addrepl *jrir, *r;
 
-	jrir = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_ino_addrepl));
+	jrir = pjournal_get_buf(mdsJournal,
+	    sizeof(struct slmds_jent_ino_addrepl));
 
 	r = datap;
 	jrir->sjir_fid = r->sjir_fid;
@@ -1054,7 +1055,7 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 	jrir->sjir_pos = r->sjir_pos;
 
 	psc_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
-		  jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
+	    jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_INO_ADDREPL,
 	    jrir, sizeof(struct slmds_jent_ino_addrepl));
@@ -1109,11 +1110,11 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	struct sl_mds_crc_log *crclog = datap;
 	struct bmapc_memb *bmap = crclog->scl_bmap;
 	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
-	struct slmds_jent_crc *jcrc;
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
 	struct slash_bmap_od *bmapod = bmap->bcm_od;
-	int i, n=crcup->nups;
-	uint32_t t=0, j=0;
+	struct slmds_jent_crc *jcrc;
+	int i, n = crcup->nups;
+	uint32_t t = 0, j = 0;
 
 	/* No, I shouldn't need the lock.  Only this instance of this
 	 *  call may remove the BMAP_MDS_CRC_UP bit.
@@ -1237,8 +1238,10 @@ mds_journal_init(void)
 
 	psc_notify("Journal device is %s", r->res_jrnldev);
 	psc_notify("Last SLASH ID is %"PRId64, mds_cursor.pjc_s2id);
-	psc_notify("Last synced ZFS transaction group number is %"PRId64, mdsJournal->pj_commit_txg);
-	psc_notify("Last distilled SLASH2 transaction number is %"PRId64, mdsJournal->pj_distill_xid);
+	psc_notify("Last synced ZFS transaction group number is %"PRId64,
+	    mdsJournal->pj_commit_txg);
+	psc_notify("Last distilled SLASH2 transaction number is %"PRId64,
+	    mdsJournal->pj_distill_xid);
 
 	/* we need the cursor thread to start any potential log replay */
 	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
@@ -1249,8 +1252,10 @@ mds_journal_init(void)
 			npeer != 0 ? mds_distill_handler : NULL);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
-	psc_notify("Last bmap sequence number low water mark is %"PRId64, mds_cursor.pjc_seqno_lwm);
-	psc_notify("Last bmap sequence number high water mark is %"PRId64, mds_cursor.pjc_seqno_hwm);
+	psc_notify("Last bmap sequence number low water mark is %"PRId64,
+	    mds_cursor.pjc_seqno_lwm);
+	psc_notify("Last bmap sequence number high water mark is %"PRId64,
+	    mds_cursor.pjc_seqno_hwm);
 
 	/*
 	 * If we are a standalone MDS, there is no need to start the namespace
@@ -1301,6 +1306,14 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	stat.sst_ctime_ns = jnamespace->sjnm_ctime_ns;
 	stat.sst_size = jnamespace->sjnm_size;
 
+	jnamespace->sjnm_name[sizeof(jnamespace->sjnm_name) - 1] = '\0';
+	newname = jnamespace->sjnm_name +
+	    strlen(jnamespace->sjnm_name) + 1;
+	if (newname > jnamespace->sjnm_name +
+	    sizeof(jnamespace->sjnm_name) - 1)
+		newname = jnamespace->sjnm_name +
+		    sizeof(jnamespace->sjnm_name) - 1;
+
 	switch (jnamespace->sjnm_op) {
 	    case NS_OP_CREATE:
 		rc = mdsio_redo_create(
@@ -1321,20 +1334,12 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_SYMLINK:
-		newname = jnamespace->sjnm_name;
-		while (*newname != '\0')
-			newname++;
-		newname++;
 		rc = mdsio_redo_symlink(
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_target_s2id,
 			jnamespace->sjnm_name, newname, &stat);
 		break;
 	    case NS_OP_RENAME:
-		newname = jnamespace->sjnm_name;
-		while (*newname != '\0')
-			newname++;
-		newname++;
 		rc = mdsio_redo_rename(
 			jnamespace->sjnm_parent_s2id,
 			jnamespace->sjnm_name,
@@ -1362,7 +1367,7 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	    default:
 		psc_errorx("Unexpected opcode %d", jnamespace->sjnm_op);
 		hasname = 0;
-		rc = -EINVAL;
+		rc = EINVAL;
 		break;
 	}
 	if (hasname) {
