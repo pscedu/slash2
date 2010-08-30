@@ -152,18 +152,20 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 }
 
 int
-mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint32_t pos)
+mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t
+    ios, uint32_t pos)
 {
 	size_t nb;
 	int locked, rc = 0;
 	struct slmds_jent_ino_addrepl jrir;
 
-	jrir.sjir_fid =fcmh_2_fid(inoh->inoh_fcmh);
+	jrir.sjir_fid = fcmh_2_fid(inoh->inoh_fcmh);
 	jrir.sjir_ios = ios;
 	jrir.sjir_pos = pos;
-	jrir.sjir_nrepls = inoh->inoh_ino.ino_nrepls;
 
 	locked = reqlock(&inoh->inoh_lock);
+
+	jrir.sjir_nrepls = inoh->inoh_ino.ino_nrepls;
 
 	psc_assert((inoh->inoh_flags & INOH_INO_DIRTY) ||
 		   (inoh->inoh_flags & INOH_EXTRAS_DIRTY));
