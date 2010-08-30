@@ -129,6 +129,11 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 	return (0);
 }
 
+/**
+ * bmap_flush_coalesce_size - This function determines the size of the region covered by 
+ *     an array of requests.  Note that these requests can overlap in various ways. But
+ *     they have already been ordered based on their offsets.
+ */
 __static size_t
 bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
 {
