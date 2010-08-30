@@ -77,8 +77,9 @@ typedef struct {
  * of any given file.
  */
 #define SL_DEF_REPLICAS		4
-#define SL_INOX_NREPLICAS	60
 #define SL_MAX_REPLICAS		64
+
+#define SL_INOX_NREPLICAS	(SL_MAX_REPLICAS - SL_DEF_REPLICAS)
 
 /*
  * Associate a CRC with a generation ID for a block.
