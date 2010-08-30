@@ -161,6 +161,7 @@ mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t ios, uint3
 	jrir.sjir_fid =fcmh_2_fid(inoh->inoh_fcmh);
 	jrir.sjir_ios = ios;
 	jrir.sjir_pos = pos;
+	jrir.sjir_nrepls = inoh->inoh_ino.ino_nrepls;
 
 	locked = reqlock(&inoh->inoh_lock);
 

@@ -83,11 +83,13 @@ struct slmds_jent_repgen {
  * @sjir_fid: what file.
  * @sjir_ios: the IOS being added.
  * @sjir_pos: the slot or position the replica IOS is to be added to.
+ * @sjir_nrepls: the number of replicas after this update.
  */
 struct slmds_jent_ino_addrepl {
 	slfid_t			sjir_fid;
 	sl_ios_id_t		sjir_ios;
 	uint32_t		sjir_pos;
+	uint32_t		sjir_nrepls;
 } __packed;
 
 
