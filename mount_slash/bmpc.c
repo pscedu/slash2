@@ -33,6 +33,9 @@ struct psc_listcache	 bmpcLru;
 __static SPLAY_GENERATE(bmap_pagecachetree, bmap_pagecache_entry,
 			bmpce_tentry, bmpce_cmp);
 
+/**
+ * bmpce_init - Initialize a bmap page cache entry.
+ */
 int
 bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *a)
 {
