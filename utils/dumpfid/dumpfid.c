@@ -82,8 +82,10 @@ dumpfid(const char *fn)
 	nr = ino.ino_nrepls;
 	if (nr < SL_DEF_REPLICAS)
 		nr = 0;
-	else if (nr > SL_MAX_REPLICAS)
+	else if (nr > SL_MAX_REPLICAS) {
+		psc_errorx("inox nrepls out of range");
 		nr = SL_MAX_REPLICAS;
+	}
 	for (j = 0; j + SL_DEF_REPLICAS < nr; j++)
 		printf("%s%u", j ? "," : "", inox.inox_repls[j].bs_id);
 	printf(" nbp:%d\n", ino.ino_newbmap_policy);
