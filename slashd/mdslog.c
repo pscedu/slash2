@@ -94,13 +94,13 @@ __static PSCLIST_HEAD(mds_namespace_buflist);
 struct sl_mds_peerinfo		*localinfo = NULL;
 
 /* list of peer MDSes and its lock */
-struct psc_dynarray		 	 mds_namespace_peerlist = DYNARRAY_INIT;
-psc_spinlock_t			 	 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
+struct psc_dynarray			 mds_namespace_peerlist = DYNARRAY_INIT;
+psc_spinlock_t				 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
 
 static void				*mds_cursor_handle = NULL;
 static struct psc_journal_cursor	 mds_cursor;
 
-psc_spinlock_t			 	 mds_txg_lock = LOCK_INITIALIZER;
+psc_spinlock_t				 mds_txg_lock = LOCK_INITIALIZER;
 
 int
 mds_peerinfo_cmp(const void *a, const void *b)
@@ -273,7 +273,7 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 
 	jrir = PJE_DATA(pje);
 	i = jrir->sjir_pos;
-	if (i > SL_MAX_REPLICAS || i < 0) {
+	if (i >= SL_MAX_REPLICAS || i < 0) {
 		psclog_errorx("ino_nrepls (%d) in addrepl replay out of "
 		    "range", i);
 		return EINVAL;
@@ -293,7 +293,7 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 	 * We allow a short read of the inode here because it is possible
 	 * that the file was just created by our own replay process.
 	 */
-	if (i > SL_DEF_REPLICAS) {
+	if (i >= SL_DEF_REPLICAS) {
 		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
 			SL_EXTRAS_START_OFF, mdsio_data);
 		if (rc)
@@ -312,9 +312,9 @@ mds_redo_ino_addrepl(__unusedx struct psc_journal_enthdr *pje)
 			goto out;
 	}
 	/*
- 	 * We always update the inode itself because the number of replicas
- 	 * is stored there.
- 	 */
+	 * We always update the inode itself because the number of replicas
+	 * is stored there.
+	 */
 	rc = mdsio_read(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
 		SL_INODE_START_OFF, mdsio_data);
 	if (rc)
@@ -859,11 +859,11 @@ void
 mds_current_txg(uint64_t *txg)
 {
 	/*
- 	 * Take a snapshot of the transaction group number stored in the
- 	 * cursor.  It maybe the current one being used, or the one that
- 	 * has already been synced.  And it can change afterwards. This 
- 	 * is okay, we only need to take a little care at replay time.
- 	 */
+	 * Take a snapshot of the transaction group number stored in the
+	 * cursor.  It maybe the current one being used, or the one that
+	 * has already been synced.  And it can change afterwards. This
+	 * is okay, we only need to take a little care at replay time.
+	 */
 	spinlock(&mds_txg_lock);
 	*txg = mds_cursor.pjc_txg;
 	freelock(&mds_txg_lock);
