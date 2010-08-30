@@ -77,6 +77,7 @@ typedef struct {
  * of any given file.
  */
 #define SL_DEF_REPLICAS		4
+#define SL_INOX_NREPLICAS	60
 #define SL_MAX_REPLICAS		64
 
 /*
