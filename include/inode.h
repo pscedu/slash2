@@ -81,7 +81,7 @@ struct slash_inode_od {
 
 struct slash_inode_extras_od {
 	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers      */
-	sl_replica_t		inox_repls[SL_MAX_REPLICAS - SL_DEF_REPLICAS]; /* replicas */
+	sl_replica_t		inox_repls[SL_INOX_NREPLICAS];
 
 	/* must be last */
 	psc_crc64_t		inox_crc;
