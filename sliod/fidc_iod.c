@@ -41,7 +41,7 @@ sli_fcmh_getattr(struct fidc_membh *fcmh)
 	FCMH_LOCK(fcmh);
 	sl_externalize_stat(&stb, &fcmh->fcmh_sstb);
 	// XXX get ptruncgen and gen
-	fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
+	fcmh->fcmh_flags |= FCMH_HAVE_ATTRS;
 	FCMH_ULOCK(fcmh);
 
 	return (0);

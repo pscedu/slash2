@@ -77,7 +77,6 @@ struct fidc_membh {
 	struct psclist_head	 fcmh_lentry;
 	struct psc_waitq	 fcmh_waitq;
 	struct bmap_cache	 fcmh_bmaptree;		/* bmap cache splay */
-#define fcmh_state fcmh_flags
 };
 
 /* fcmh_flags */
@@ -154,15 +153,15 @@ struct fidc_membh {
 	} while (0)
 
 #define DEBUG_FCMH_FLAGS(fcmh)						\
-	(fcmh)->fcmh_state & FCMH_CAC_FREE		? "F" : "",	\
-	(fcmh)->fcmh_state & FCMH_CAC_CLEAN		? "C" : "",	\
-	(fcmh)->fcmh_state & FCMH_CAC_DIRTY		? "D" : "",	\
-	(fcmh)->fcmh_state & FCMH_CAC_TOFREE		? "T" : "",	\
-	(fcmh)->fcmh_state & FCMH_HAVE_ATTRS		? "A" : "",	\
-	(fcmh)->fcmh_state & FCMH_GETTING_ATTRS		? "G" : "",	\
-	(fcmh)->fcmh_state & FCMH_CAC_INITING		? "I" : "",	\
-	(fcmh)->fcmh_state & FCMH_CAC_WAITING		? "W" : "",	\
-	(fcmh)->fcmh_state & FCMH_CTOR_FAILED		? "f" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_FREE		? "F" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_CLEAN		? "C" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_DIRTY		? "D" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\
+	(fcmh)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
+	(fcmh)->fcmh_flags & FCMH_GETTING_ATTRS		? "G" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_INITING		? "I" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_WAITING		? "W" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\
 	fcmh_isdir(fcmh)				? "d" : ""
 
 #define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s%s%s%s"

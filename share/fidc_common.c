@@ -59,14 +59,14 @@ fcmh_destroy(struct fidc_membh *f)
 
 	/* slc_fcmh_dtor(), slm_fcmh_dtor(), sli_fcmh_dtor() */
 	if (sl_fcmh_ops.sfop_dtor) {
-		if (f->fcmh_state & FCMH_CTOR_FAILED)
+		if (f->fcmh_flags & FCMH_CTOR_FAILED)
 			DEBUG_FCMH(PLL_WARN, f, "bypassing dtor() call");
 		else
 			sl_fcmh_ops.sfop_dtor(f);
 	}
 
 	memset(f, 0, fidcPoolMaster.pms_entsize);
-	f->fcmh_state = FCMH_CAC_FREE;
+	f->fcmh_flags = FCMH_CAC_FREE;
 	fcmh_put(f);
 }
 
@@ -127,7 +127,7 @@ fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
  	 * The following asserts can be tripped if the MDS somehow reuses 
  	 * the same SLASH2 ID for different files/directories.
  	 */
-	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
+	if (fcmh->fcmh_flags & FCMH_HAVE_ATTRS) {
 		if (fcmh_isdir(fcmh))
 			psc_assert(S_ISDIR(sstb->sst_mode));
 		if (!fcmh_isdir(fcmh))
@@ -135,8 +135,8 @@ fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 	}
 
 	fcmh->fcmh_sstb = *sstb;
-	fcmh->fcmh_state |= FCMH_HAVE_ATTRS;
-	fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
+	fcmh->fcmh_flags |= FCMH_HAVE_ATTRS;
+	fcmh->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 
 	if (sl_fcmh_ops.sfop_postsetattr)
 		sl_fcmh_ops.sfop_postsetattr(fcmh);
@@ -178,10 +178,10 @@ fidc_reap(struct psc_poolmgr *m)
 		if (f->fcmh_refcnt)
 			goto end;
 
-		psc_assert(f->fcmh_state & FCMH_CAC_CLEAN);
+		psc_assert(f->fcmh_flags & FCMH_CAC_CLEAN);
 
 		/* already victimized */
-		if (f->fcmh_state & FCMH_CAC_REAPED)
+		if (f->fcmh_flags & FCMH_CAC_REAPED)
 			goto end;
 
 		/*
@@ -189,7 +189,7 @@ fidc_reap(struct psc_poolmgr *m)
 		 *    freeing.
 		 */
 		if (!fidcReapCb || fidcReapCb(f)) {
-			f->fcmh_state |= FCMH_CAC_REAPED|FCMH_CAC_TOFREE;
+			f->fcmh_flags |= FCMH_CAC_REAPED|FCMH_CAC_TOFREE;
 			lc_remove(&fidcCleanList, f);
 			reap[nreap] = f;
 			nreap++;
@@ -293,15 +293,15 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		FCMH_LOCK(tmp);
 
 		/* if the item is being freed, ingore it */
-		if (tmp->fcmh_state & FCMH_CAC_TOFREE) {
+		if (tmp->fcmh_flags & FCMH_CAC_TOFREE) {
 			DEBUG_FCMH(PLL_WARN, tmp, "tmp fcmh is deprecated");
 			FCMH_ULOCK(tmp);
 			continue;
 		}
 		/* if the item is being inited, take a reference and wait */
-		if (tmp->fcmh_state & FCMH_CAC_INITING) {
+		if (tmp->fcmh_flags & FCMH_CAC_INITING) {
 			psc_hashbkt_unlock(b);
-			tmp->fcmh_state |= FCMH_CAC_WAITING;
+			tmp->fcmh_flags |= FCMH_CAC_WAITING;
 			fcmh_op_start_type(tmp, FCMH_OPCNT_WAIT);
 			fcmh_wait_nocond_locked(tmp);
 			fcmh_op_done_type(tmp, FCMH_OPCNT_WAIT);
@@ -397,7 +397,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	 * and leave it around for the reaper to free it.  Note that
 	 * the item is not on any list yet.
 	 */
-	fcmh->fcmh_state |= FCMH_CAC_INITING;
+	fcmh->fcmh_flags |= FCMH_CAC_INITING;
 	psc_hashbkt_add_item(&fidcHtable, b, fcmh);
 	psc_hashbkt_unlock(b);
 
@@ -407,7 +407,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		    FCMH_SETATTRF_HAVELOCK);
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		if (rc)
-			fcmh->fcmh_state |= FCMH_CTOR_FAILED;
+			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 		goto out2;
 	} else {
 		/*
@@ -419,7 +419,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		 */
 		rc = sl_fcmh_ops.sfop_ctor(fcmh);
 		if (rc) {
-			fcmh->fcmh_state |= FCMH_CTOR_FAILED;
+			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
 			goto out1;
 		}
 	}
@@ -432,18 +432,18 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
  out1:
 	FCMH_LOCK(fcmh);
  out2:
-	fcmh->fcmh_state &= ~FCMH_CAC_INITING;
-	if (fcmh->fcmh_state & FCMH_CAC_WAITING) {
-		fcmh->fcmh_state &= ~FCMH_CAC_WAITING;
+	fcmh->fcmh_flags &= ~FCMH_CAC_INITING;
+	if (fcmh->fcmh_flags & FCMH_CAC_WAITING) {
+		fcmh->fcmh_flags &= ~FCMH_CAC_WAITING;
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);
 	}
 
-	fcmh->fcmh_state |= FCMH_CAC_CLEAN;
+	fcmh->fcmh_flags |= FCMH_CAC_CLEAN;
 	lc_add(&fidcCleanList, fcmh);
 
 	if (rc) {
 		FCMH_ULOCK(fcmh);
-		fcmh->fcmh_state |= FCMH_CAC_TOFREE;
+		fcmh->fcmh_flags |= FCMH_CAC_TOFREE;
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_NEW);
 	} else {
 		*fcmhp = fcmh;
@@ -511,10 +511,10 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	 *   to the dirty list.
 	 */
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
-		if (f->fcmh_state & FCMH_CAC_CLEAN) {
+		if (f->fcmh_flags & FCMH_CAC_CLEAN) {
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
-			f->fcmh_state &= ~FCMH_CAC_CLEAN;
-			f->fcmh_state |= FCMH_CAC_DIRTY;
+			f->fcmh_flags &= ~FCMH_CAC_CLEAN;
+			f->fcmh_flags |= FCMH_CAC_DIRTY;
 			lc_remove(&fidcCleanList, f);
 			lc_add(&fidcDirtyList, f);
 		}
@@ -533,10 +533,10 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
-		if (f->fcmh_state & FCMH_CAC_DIRTY) {
+		if (f->fcmh_flags & FCMH_CAC_DIRTY) {
 			psc_assert(psclist_conjoint(&f->fcmh_lentry));
-			f->fcmh_state &= ~FCMH_CAC_DIRTY;
-			f->fcmh_state |= FCMH_CAC_CLEAN;
+			f->fcmh_flags &= ~FCMH_CAC_DIRTY;
+			f->fcmh_flags |= FCMH_CAC_CLEAN;
 			lc_remove(&fidcDirtyList, f);
 			lc_add(&fidcCleanList, f);
 		}

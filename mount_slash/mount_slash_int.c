@@ -606,9 +606,9 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 
  retry:
 	FCMH_LOCK(f);
-	if ((f->fcmh_state & (FCMH_CLI_HAVEREPLTBL |
+	if ((f->fcmh_flags & (FCMH_CLI_HAVEREPLTBL |
 	    FCMH_CLI_FETCHREPLTBL)) == 0) {
-		f->fcmh_state |= FCMH_CLI_FETCHREPLTBL;
+		f->fcmh_flags |= FCMH_CLI_FETCHREPLTBL;
 		getreptbl = 1;
 	}
 	FCMH_ULOCK(f);
@@ -660,13 +660,13 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 		fci->fci_nrepls = mp->nrepls;
 		memcpy(&fci->fci_reptbl, &mp->reptbl,
 		       sizeof(sl_replica_t) * SL_MAX_REPLICAS);
-		f->fcmh_state |= FCMH_CLI_HAVEREPLTBL;
+		f->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 		psc_waitq_wakeall(&f->fcmh_waitq);
 	}
 
  out:
 	FCMH_RLOCK(f);
-	f->fcmh_state &= ~FCMH_CLI_FETCHREPLTBL;
+	f->fcmh_flags &= ~FCMH_CLI_FETCHREPLTBL;
 	FCMH_ULOCK(f);
 	if (rq) {
 		pscrpc_req_finished(rq);

@@ -347,7 +347,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	if (fi->flags & O_APPEND) {
 		FCMH_LOCK(m);
-		m->fcmh_state |= FCMH_CLI_APPENDWR;
+		m->fcmh_flags |= FCMH_CLI_APPENDWR;
 		FCMH_ULOCK(m);
 	}
 	if (fi->flags & O_SYNC) {
@@ -359,7 +359,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios_id;
 	fci->fci_nrepls = 1;
-	m->fcmh_state |= FCMH_CLI_HAVEREPLTBL;
+	m->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
 	FCMH_ULOCK(m);
 
 	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD | BMAPGETF_NORETRIEVE,
@@ -465,7 +465,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	if (fi->flags & O_APPEND) {
 		FCMH_LOCK(c);
-		c->fcmh_state |= FCMH_CLI_APPENDWR;
+		c->fcmh_flags |= FCMH_CLI_APPENDWR;
 		FCMH_ULOCK(c);
 	}
 	if (fi->flags & O_TRUNC) {
@@ -503,24 +503,24 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 
  restart:
 	FCMH_LOCK(fcmh);
-	if (fcmh->fcmh_state & FCMH_HAVE_ATTRS) {
+	if (fcmh->fcmh_flags & FCMH_HAVE_ATTRS) {
 		PFL_GETTIMEVAL(&now);
 		if (timercmp(&now, &fcmh_2_fci(fcmh)->fci_age, <)) {
 			DEBUG_FCMH(PLL_DEBUG, fcmh,
 			    "attrs retrieved from local cache");
 			goto check;
 		}
-		fcmh->fcmh_state &= ~FCMH_HAVE_ATTRS;
+		fcmh->fcmh_flags &= ~FCMH_HAVE_ATTRS;
 	}
 
 	/* If someone is already fetching attributes, wait for it to
 	 *   complete
 	 */
-	if (fcmh->fcmh_state & FCMH_GETTING_ATTRS) {
+	if (fcmh->fcmh_flags & FCMH_GETTING_ATTRS) {
 		psc_waitq_wait(&fcmh->fcmh_waitq, &fcmh->fcmh_lock);
 		goto restart;
 	}
-	fcmh->fcmh_state |= FCMH_GETTING_ATTRS;
+	fcmh->fcmh_flags |= FCMH_GETTING_ATTRS;
 	FCMH_ULOCK(fcmh);
 
 	rc = slc_rmc_getimp(&csvc);
@@ -544,7 +544,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 		fcmh_setattr(fcmh, &mp->attr,
 		    FCMH_SETATTRF_SAVELOCAL | FCMH_SETATTRF_HAVELOCK);
 
-	fcmh->fcmh_state &= ~FCMH_GETTING_ATTRS;
+	fcmh->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 	fcmh_wake_locked(fcmh);
 
 	if (rq)
@@ -1488,9 +1488,9 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 
 	FCMH_LOCK(c);
 	/* We're obtaining the attributes now. */
-	if ((c->fcmh_state & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
+	if ((c->fcmh_flags & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
 		getting = 1;
-		c->fcmh_state |= FCMH_GETTING_ATTRS;
+		c->fcmh_flags |= FCMH_GETTING_ATTRS;
 	}
 	FCMH_ULOCK(c);
 
@@ -1548,7 +1548,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		fuse_reply_err(req, rc);
 		if (getting) {
 			FCMH_LOCK(c);
-			c->fcmh_state &= ~FCMH_GETTING_ATTRS;
+			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
 			fcmh_wake_locked(c);
 			FCMH_ULOCK(c);
 		}
