@@ -253,7 +253,7 @@ enum {
 	BIORQ_FORCE_EXPIRE		= (1 << 7),
 	BIORQ_DESTROY			= (1 << 8),
 	BIORQ_FLUSHRDY			= (1 << 9),
-	BIORQ_NOFHENT			= (1 << 10)
+	BIORQ_NOFHENT			= (1 << 10)	/* release a file handle before flush is complete */
 };
 
 #define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
