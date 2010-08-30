@@ -63,9 +63,8 @@ sliricthr_prdat(const struct psc_ctlmsg_stats *pcst)
 void
 replwkst_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("replication work status\n"
-	    " %-16s %5s %33s %7s %7s %6s\n",
-	    "fid", "bmap#", "peer", "total", "xfer", "%prog");
+	printf("%-17s %5s %34s %7s %7s %6s\n",
+	    "fid", "replwk-stat:", "bmap#", "peer", "total", "xfer", "%prog");
 }
 
 void
@@ -76,7 +75,7 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	const struct slictlmsg_replwkst *srws = m;
 
 	psc_fmt_ratio(rbuf, srws->srws_data_cur, srws->srws_data_tot);
-	printf(" %016"PRIx64" %5d %33s ",
+	printf("%"SLPRI_FID" %5d %34s ",
 	    srws->srws_fg.fg_fid, srws->srws_bmapno,
 	    srws->srws_peer_addr);
 	if (psc_ctl_inhuman)

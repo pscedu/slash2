@@ -43,8 +43,7 @@ __static const char *slconn_restypes[] = {
 void
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("network connection status\n"
-	    " %-13s %34s %-10s %3s %4s %-10s\n",
+	printf("%-14s %34s %-10s %3s %4s %-10s\n",
 	    "resource", "host", "type", "flg", "#ref", "status");
 }
 
@@ -74,7 +73,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	if (psc_ctl_lastmsgtype != mh->mh_type ||
 	    strcmp(lastsite, site)) {
 		strlcpy(lastsite, site, sizeof(lastsite));
-		printf(" %s\n", site);
+		printf("%s\n", site);
 	}
 	if (strcmp(lastres, res))
 		strlcpy(lastres, res, sizeof(lastres));
@@ -87,7 +86,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 	else
 		/* XXX differentiate between down and inactive */
 		status = "offline";
-	printf("   %-11s %34s %-10s   %c %4d %6s\n", res, nid,
+	printf("  %-12s %34s %-10s   %c %4d %6s\n", res, nid,
 	    strcmp(lastres, res) ? "" : slconn_restypes[scc->scc_type],
 	    scc->scc_flags & CSVCF_USE_MULTIWAIT ? 'M' : '-',
 	    scc->scc_refcnt, status);
@@ -97,8 +96,8 @@ void
 sl_file_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("files\n"
-	    " %-16s %5s %33s %7s %7s %6s\n",
-	    "resource", "host", "type", "flags", "#refs", "status");
+	    "%-16s %5s %34s %7s %7s %6s\n",
+	    "fid", "host", "type", "flags", "#refs", "status");
 }
 
 void
@@ -106,7 +105,7 @@ sl_file_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slctlmsg_file *scf = m;
 
-	printf("   %12s %c%c%c%c%c%c%c%c%c\n",
+	printf("  %12s %c%c%c%c%c%c%c%c%c\n",
 	    "",
 	    scf->scf_flags & FCMH_CAC_FREE	? 'F' : '-',
 	    scf->scf_flags & FCMH_CAC_CLEAN	? 'C' : '-',

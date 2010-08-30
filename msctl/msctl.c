@@ -401,9 +401,8 @@ void
 replst_slave_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	/* XXX add #repls, #bmaps */
-	printf("replication status\n"
-	    " %-58s %6s %6s %6s\n",
-	    "file", "#activ", "#blks", "%prog");
+	printf("%4s %54s %6s %6s %6s\n",
+	    "file", "bmap-replication-status:", "#activ", "#blks", "%prog");
 }
 
 void
@@ -437,7 +436,7 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(" repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);
-	n = printf(" %s", current_mrs.mrs_fn);
+	n = printf("%s", current_mrs.mrs_fn);
 	if (n > dlen)
 		printf("\n    ");
 	else
