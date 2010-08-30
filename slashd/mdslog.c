@@ -1019,8 +1019,8 @@ mds_inode_sync(void *data)
 void
 mds_bmap_sync(void *data)
 {
-	struct slash_bmap_od *bmapod = bmap->bcm_od;
 	struct bmapc_memb *bmap = data;
+	struct slash_bmap_od *bmapod = bmap->bcm_od;
 	int rc;
 
 	BMAPOD_RDLOCK(bmap_2_bmdsi(bmap));
