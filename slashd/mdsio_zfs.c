@@ -152,8 +152,8 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 }
 
 int
-mds_inode_addrepl_update(struct slash_inode_handle *inoh, sl_ios_id_t
-    ios, uint32_t pos)
+mds_inode_addrepl_update(struct slash_inode_handle *inoh,
+    sl_ios_id_t ios, uint32_t pos)
 {
 	size_t nb;
 	int locked, rc = 0;
