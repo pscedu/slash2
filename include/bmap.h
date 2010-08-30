@@ -201,8 +201,8 @@ static __inline void
 _log_debug_bmapodv(const char *file, const char *func, int lineno,
     int level, struct bmapc_memb *bmap, const char *fmt, va_list ap)
 {
-	unsigned char *b = bmap->bcm_od->bh_repls;
 	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1];
+	unsigned char *b = bmap->bcm_od->bh_repls;
 	int off, k, ch[NBREPLST];
 
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
