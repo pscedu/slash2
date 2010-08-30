@@ -555,6 +555,7 @@ slconnthr_main(struct psc_thread *thr)
 			if (rc)
 				break;
 
+			sl_csvc_lock(csvc);
 			sl_csvc_waitrel_s(csvc, 60);
 		}
 
