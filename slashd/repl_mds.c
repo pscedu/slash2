@@ -127,7 +127,8 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add,
 			goto out;
 		}
 	}
-	/* It does not exist, add the replica to the inode if 'add' was
+	/*
+	 * It does not exist, add the replica to the inode if 'add' was
 	 *   specified, else return.
 	 */
 	if (rc == -ENOENT && add) {
@@ -140,12 +141,13 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add,
 			goto out;
 		}
 
-		if (j > SL_DEF_REPLICAS) {
-			/* Note that both the inode structure and replication
+		if (j >= SL_DEF_REPLICAS) {
+			/*
+			 * Note that both the inode structure and replication
 			 *  table must be synced.
 			 */
 			psc_assert(i->inoh_extras);
-			i->inoh_flags |= (INOH_EXTRAS_DIRTY | INOH_INO_DIRTY);
+			i->inoh_flags |= INOH_EXTRAS_DIRTY | INOH_INO_DIRTY;
 			repl = i->inoh_extras->inox_repls;
 			k = j - SL_DEF_REPLICAS;
 		} else {
@@ -411,6 +413,7 @@ mds_repl_bmap_rel(struct bmapc_memb *bcm)
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 }
 
+/* XXX remove this routine */
 int
 mds_repl_loadino(const struct slash_fidgen *fgp, struct fidc_membh **fp)
 {
