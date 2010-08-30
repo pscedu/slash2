@@ -298,13 +298,13 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 {
 	struct bmapc_memb *bmap = bml_2_bmap(bml);
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
+	struct sl_resource *res = libsl_id2res(pios);
 	struct slashrpc_cservice *csvc;
-	struct bmi_assign bmi;
-	struct sl_resource *res=libsl_id2res(pios);
-	struct sl_resm *resm;
-	struct resm_mds_info *rmmi;
 	struct resprof_mds_info *rpmi;
-	int j, n, len;
+	struct resm_mds_info *rmmi;
+	struct bmi_assign bmi;
+	struct sl_resm *resm;
+	int nb, j, len;
 
 	psc_assert(bmap->bcm_mode & BMAP_IONASSIGN);
 	psc_assert(!bmdsi->bmdsi_wr_ion);
@@ -315,42 +315,41 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		return (-SLERR_ION_UNKNOWN);
 	}
 	rpmi = res->res_pri;
-	psc_assert(rpmi);
 	len = psc_dynarray_len(&res->res_members);
 
-	for (j = 0; j < len; j++) {
-		spinlock(&rpmi->rpmi_lock);
-		if (rpmi->rpmi_cnt >= len)
-			rpmi->rpmi_cnt = 0;
-		n = rpmi->rpmi_cnt++;
-		resm = psc_dynarray_getpos(&res->res_members, n);
+	/*
+	 * Try a connection to each member in the resource.  If none
+	 * are immediately available, try again in a block manner before
+	 * returning offline status.
+	 */
+	for (nb = 1; nb > 0; nb--)
+		for (j = 0; j < len; j++) {
+			spinlock(&rpmi->rpmi_lock);
+			resm = psc_dynarray_getpos(&res->res_members,
+			    slm_get_rpmi_idx(res));
+			freelock(&rpmi->rpmi_lock);
 
-		psc_trace("trying res(%s) ion(%s)",
-		    res->res_name, resm->resm_addrbuf);
+			psc_trace("trying res(%s) ion(%s)",
+			    res->res_name, resm->resm_addrbuf);
 
-		freelock(&rpmi->rpmi_lock);
+			if (nb)
+				csvc = slm_geticsvc_nb(resm);
+			else
+				csvc = slm_geticsvc(resm);
 
-		rmmi = resm->resm_pri;
+			if (csvc)
+				goto online;
+		}
 
-		/*
-		 * If we fail to establish a connection, try next node.
-		 * The loop guarantees that we always bail out.
-		 */
-		csvc = slm_geticsvc_nb(resm);
-		if (csvc == NULL)
-			continue;
-		atomic_inc(&rmmi->rmmi_refcnt);
-		sl_csvc_decref(csvc);
+	return (-SLERR_ION_OFFLINE);
 
-		DEBUG_BMAP(PLL_TRACE, bmap, "res(%s) ion(%s)",
-		    res->res_name, resm->resm_addrbuf);
+ online:
+	bmdsi->bmdsi_wr_ion = rmmi = resm->resm_pri;
+	atomic_inc(&rmmi->rmmi_refcnt);
+	sl_csvc_decref(csvc); /* XXX this is really dumb */
 
-		bmdsi->bmdsi_wr_ion = rmmi;
-		break;
-	}
-
-	if (!bmdsi->bmdsi_wr_ion)
-		return (-SLERR_ION_OFFLINE);
+	DEBUG_BMAP(PLL_TRACE, bmap, "online res(%s) ion(%s)",
+	    res->res_name, resm->resm_addrbuf);
 
 	/*
 	 * An ION has been assigned to the bmap, mark it in the odtable

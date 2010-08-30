@@ -157,8 +157,7 @@ struct resm_mds_info {
 #define RMMI_RLOCK(rmmi)	psc_pthread_mutex_reqlock(&(rmmi)->rmmi_mutex)
 #define RMMI_URLOCK(rmmi, lk)	psc_pthread_mutex_ureqlock(&(rmmi)->rmmi_mutex, (lk))
 
-/* IOS round-robin counter for assigning IONs.  Attaches at res_pri.
- */
+/* IOS round-robin counter for assigning IONs.  Attaches at res_pri.  */
 struct resprof_mds_info {
 	int			  rpmi_cnt;
 	psc_spinlock_t		  rpmi_lock;
@@ -177,15 +176,30 @@ void		 slmrcmthr_main(struct psc_thread *);
 void		 slmupschedthr_spawnall(void);
 void		 slmtimerthr_spawn(void);
 
+uint64_t	slm_get_curr_slashid(void);
+uint64_t	slm_get_next_slashid(void);
+void		slm_set_curr_slashid(uint64_t);
+
 extern struct slash_creds			 rootcreds;
 extern struct psc_listcache			 dirtyMdsData;
 extern struct odtable				*mdsBmapAssignTable;
 extern const struct slash_inode_extras_od	 null_inox_od;
 extern const struct slash_inode_od		 null_inode_od;
-extern struct sl_mds_nsstats			 slm_nsstats_aggr;	/* aggregate stats */
+extern struct sl_mds_nsstats			 slm_nsstats_aggr;	/* aggregate namespace stats */
 
-uint64_t	slm_get_curr_slashid(void);
-uint64_t	slm_get_next_slashid(void);
-void		slm_set_curr_slashid(uint64_t);
+static __inline int
+slm_get_rpmi_idx(struct sl_resource *res)
+{
+	struct resprof_mds_info *rpmi;
+	int locked, n;
+
+	rpmi = res->res_pri;
+	locked = reqlock(&rpmi->rpmi_lock);
+	if (rpmi->rpmi_cnt >= psc_dynarray_len(&res->res_members))
+		rpmi->rpmi_cnt = 0;
+	n = rpmi->rpmi_cnt++;
+	ureqlock(&rpmi->rpmi_lock, locked);
+	return (n);
+}
 
 #endif /* _SLASHD_H_ */
