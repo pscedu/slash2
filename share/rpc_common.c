@@ -46,7 +46,7 @@ struct psc_lockedlist	client_csvcs = PLL_INITIALIZER(&client_csvcs,
  */
 __static int
 slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
-    uint64_t magic, uint32_t version)
+    uint64_t magic, uint32_t version, int flags)
 {
 	lnet_process_id_t prid, server_id = { server, PSCRPC_SVR_PID };
 	struct pscrpc_request *rq;
@@ -69,6 +69,14 @@ slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 		return (rc);
 	mq->magic = magic;
 	mq->version = version;
+
+	/*
+	 * XXX in this case, we should do an async deal and return NULL
+	 * for temporary failure.
+	 */
+	if (flags & CSVCF_NONBLOCK)
+		rq->rq_timeout = 3;
+
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
@@ -434,7 +442,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		sl_csvc_unlock(csvc);
 
 		rc = slrpc_issue_connect(peernid,
-		    csvc->csvc_import, magic, version);
+		    csvc->csvc_import, magic, version, flags);
 
 		sl_csvc_lock(csvc);
 		psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTING);
@@ -522,6 +530,7 @@ slconnthr_main(struct psc_thread *thr)
 				 * waiting an entire interval after we woke
 				 * after our last failed attempt.
 				 */
+printf("waiting %lu sec\n", CSVC_RECONNECT_INTV - (time(NULL) - mtime));
 				sl_csvc_waitrel_s(csvc,
 				    CSVC_RECONNECT_INTV - (time(NULL) -
 				    mtime));

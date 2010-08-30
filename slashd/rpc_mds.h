@@ -79,6 +79,12 @@ struct slm_rmi_expdata *
 	    SRMM_VERSION, &resm2rmmi(resm)->rmmi_mutex,				\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_MDS)
 
+#define slm_geticsvc_nb(resm)							\
+	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | CSVCF_NONBLOCK,	\
+	    NULL, (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,		\
+	    SRIM_MAGIC,	SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,		\
+	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD)
+
 #define slm_geticsvc(resm)							\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, NULL,		\
 	    (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC,	\

@@ -336,7 +336,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		 * If we fail to establish a connection, try next node.
 		 * The loop guarantees that we always bail out.
 		 */
-		csvc = slm_geticsvc(resm);
+		csvc = slm_geticsvc_nb(resm);
 		if (csvc == NULL)
 			continue;
 		atomic_inc(&rmmi->rmmi_refcnt);
@@ -352,7 +352,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	if (!bmdsi->bmdsi_wr_ion)
 		return (-SLERR_ION_OFFLINE);
 
-	/* An ION has been assigned to the bmap, mark it in the odtable
+	/*
+	 * An ION has been assigned to the bmap, mark it in the odtable
 	 *   so that the assignment may be restored on reboot.
 	 */
 	bmi.bmi_ion_nid = bml->bml_ion_nid = rmmi->rmmi_resm->resm_nid;
@@ -426,10 +427,10 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 }
 
 /**
- * mds_bmap_dupls_find - Find the first lease of a given client based on its 
+ * mds_bmap_dupls_find - Find the first lease of a given client based on its
  *     {nid, pid} pair.  Also walk the chain of duplicate leases to count the
- *     number of read and write leases. Note that only the first lease of a 
- *     client is linked on the bmdsi->bmdsi_leases list, the rest is linked 
+ *     number of read and write leases. Note that only the first lease of a
+ *     client is linked on the bmdsi->bmdsi_leases list, the rest is linked
  *     on a private chain and tagged with BML_CHAIN flag.
  */
 static inline struct bmap_mds_lease *
@@ -751,7 +752,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 }
 
 void
-mds_bmap_bml_del_locked(struct bmap_mds_lease *bml) 
+mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 {
 	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
 	struct bmap_mds_lease *obml, *tail;
@@ -762,9 +763,9 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 
 	obml = mds_bmap_dupls_find(bmdsi, &bml->bml_cli_nidpid, &wlease,
 		   &rlease);
-	/* 
-	 * obml must be not NULL because at least the lease being freed 
-	 * must be present in the list.  Therefore lease cnt must be 
+	/*
+	 * obml must be not NULL because at least the lease being freed
+	 * must be present in the list.  Therefore lease cnt must be
 	 * positive.   Also note that the find() function returns the
 	 * head of the chain of duplicate leases.
 	 */
