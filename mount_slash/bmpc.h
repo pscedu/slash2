@@ -245,8 +245,8 @@ struct bmpc_ioreq {
 enum {
 	BIORQ_READ			= (1 << 0),
 	BIORQ_WRITE			= (1 << 1),
-	BIORQ_RBWFP			= (1 << 2),
-	BIORQ_RBWLP			= (1 << 3),
+	BIORQ_RBWFP			= (1 << 2),	/* read before write - first page */
+	BIORQ_RBWLP			= (1 << 3),	/* read before write - last page */
 	BIORQ_SCHED			= (1 << 4),
 	BIORQ_INFL			= (1 << 5),
 	BIORQ_DIO			= (1 << 6),
