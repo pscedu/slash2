@@ -521,7 +521,11 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 	return (ready);
 }
 
-
+/**
+ * bmap_flush_trycoalesce - scan the given array of i/o requests for candidates 
+ *    to flush.  We *only* flush when (1) a request has aged out or (2) we can 
+ *    construct a large enough I/O.
+ */
 __static struct psc_dynarray *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 {
