@@ -500,8 +500,9 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 	if (memcmp(&current_mrs, &zero_mrs, sizeof(current_mrs)))
 		psc_fatalx("communication error: replication status not completed");
 
-	if (mrs->mrs_nios >= SL_MAX_REPLICAS)
-		psc_fatalx("communication error: replication status has too many replicas");
+	if (mrs->mrs_nios > SL_MAX_REPLICAS)
+		psc_fatalx("communication error: replication status # "
+		    "replicas out of range (%u)", mrs->mrs_nios);
 
 	memcpy(&current_mrs, mrs, sizeof(current_mrs));
 	psc_vbitmap_resize(&current_mrs_bmask, current_mrs.mrs_nbmaps);
