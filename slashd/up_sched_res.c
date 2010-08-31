@@ -392,8 +392,8 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 void
 slmupschedthr_main(struct psc_thread *thr)
 {
-	int ris, is, rir, ir, rin, rid, in, val, nmemb, ndst;
 	int uswi_gen, iosidx, nios, nrq, off, j, k, rc, has_work;
+	int ris, is, rir, ir, rin, rid, in, val, nmemb, ndst;
 	struct sl_resource *src_res, *dst_res;
 	struct slmupsched_thread *smut;
 	struct up_sched_work_item *wk;
@@ -814,7 +814,7 @@ upsched_scandir(void)
 		psc_fatalx("mdsio_release %s: %s", SL_PATH_UPSCH,
 		    slstrerror(rc));
 
-	free(buf);
+	PSCFREE(buf);
 }
 
 int
