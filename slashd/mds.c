@@ -1275,7 +1275,7 @@ mds_bmapod_initnew(struct slash_bmap_od *b)
  * Returns zero on success, negative errno code on failure.
  */
 int
-mds_bmap_read(struct bmapc_memb *bcm,  __unusedx enum rw rw)
+mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 {
 	struct fidc_membh *f = bcm->bcm_fcmh;
 	struct slash_bmap_od *bod;
@@ -1284,7 +1284,7 @@ mds_bmap_read(struct bmapc_memb *bcm,  __unusedx enum rw rw)
 	psc_assert(bcm->bcm_od == NULL);
 	bod = bcm->bcm_od = PSCALLOC(BMAP_OD_SZ);
 
-	/* Try to pread() the bmap from the mds file.
+	/* pread() the bmap from the meta file.
 	 */
 	rc = mdsio_bmap_read(bcm);
 	/*
@@ -1344,8 +1344,7 @@ mds_bmap_destroy(struct bmapc_memb *bcm)
 //	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
 //	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
 	psc_pthread_rwlock_destroy(&bmdsi->bmdsi_rwlock);
-	if (bcm->bcm_od)
-		PSCFREE(bcm->bcm_od);
+	PSCFREE(bcm->bcm_od);
 }
 
 /**
