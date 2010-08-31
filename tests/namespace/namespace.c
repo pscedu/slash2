@@ -18,25 +18,15 @@
 #include "psc_ds/queue.h"
 
 /*
- * I know that the max filename length is something like 1024.
- * But, hey, most filenames are short.  This makes "ls" easier to read.
+ * This tester does not extensively test boundary conditions on maximum
+ * basename sizes (255), which makes debugging with ls(1) easier to read.
  */
 
-#define MaxNameLen		32
+#define FILENAME_LEN		32
 
 #define	INITIAL_SEED		123
 #define	FILE_PER_DIRECTORY	150
 #define	TOTAL_OPERATIONS	1000
-
-unsigned int			seed = INITIAL_SEED;
-long				total_operations = TOTAL_OPERATIONS;
-int				file_per_directory = FILE_PER_DIRECTORY;
-
-/*
- * If you include '-' in the following list, you can have a little
- * trouble deleting a file whose name begins with '-'.
- */
-char random_chars[] = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 struct dir_item {
 	TAILQ_ENTRY(dir_item)	list;
@@ -53,18 +43,7 @@ struct dir_entry {
 	char			name[0];
 };
 
-TAILQ_HEAD(, dir_item) dirlist;
-struct dir_item * currentdir;
-
-long totaldirs;
-long totalfiles;
-long delete_dir_count;
-long delete_file_count;
-long create_dir_count;
-long create_file_count;
-long operation_count;
-
-char * make_name(int);
+char *make_name(int);
 void delete_create_file(void);
 void delete_random_file(void);
 void create_random_file(void);
@@ -74,11 +53,31 @@ void sigcatch(int);
 
 void print_statistics(void);
 
-time_t time1, time2;
+unsigned int		seed = INITIAL_SEED;
+long			total_operations = TOTAL_OPERATIONS;
+int			file_per_directory = FILE_PER_DIRECTORY;
 
-long file_count_16384 = 0;
+/*
+ * Avoid `-' in this list to ease shell commands (`--' to mark end of args).
+ */
+char random_chars[] = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-const char *progname;
+TAILQ_HEAD(, dir_item)	 dirlist;
+struct dir_item		*currentdir;
+
+long			 totaldirs;
+long			 totalfiles;
+long			 delete_dir_count;
+long			 delete_file_count;
+long			 create_dir_count;
+long			 create_file_count;
+long			 operation_count;
+
+time_t			 time1;
+time_t			 time2;
+
+volatile sig_atomic_t	 caughtint;
+const char		*progname;
 
 __dead void
 usage(void)
@@ -89,29 +88,28 @@ usage(void)
 	exit(1);
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
-	int c;
-	int size;
-	int ret, print;
-	struct dir_item * thisdir;
+	int c, size, rc, print;
+	struct dir_item *thisdir;
 	char *buf;
 	char *ptr;
 
 	progname = argv[0];
 	while ((c = getopt (argc, argv, "f:o:s:")) != -1) {
 		switch (c) {
-			case 's':
-				seed = atoi(optarg);
-				break;
-			case 'o':
-				total_operations = atol(optarg);
-				break;
-			case 'f':
-				file_per_directory = atoi(optarg);
-				break;
-			default:
-				usage();
+		case 's':
+			seed = atoi(optarg);
+			break;
+		case 'o':
+			total_operations = atol(optarg);
+			break;
+		case 'f':
+			file_per_directory = atoi(optarg);
+			break;
+		default:
+			usage();
 		}
 	}
 	argc -= optind;
@@ -119,8 +117,7 @@ int main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	ret = chdir(argv[0]);
-	if (ret < 0)
+	if (chdir(argv[0]) == -1)
 		err(1, "chdir %s", argv[0]);
 	size = pathconf(".", _PC_PATH_MAX);
 	buf = malloc((size_t)size);
@@ -156,12 +153,13 @@ int main(int argc, char *argv[])
 	print = 0;
 
 	while (operation_count < total_operations) {
+		if (caughtint)
+			break;
 		choose_working_directory();
 		delete_create_file();
-		if ((print ++ % 5) == 0) {
+		if ((print++ % 5) == 0)
 			printf("Files = %08ld, dirs = %06ld, ops = %08ld\n",
 				totalfiles, totaldirs, operation_count);
-		}
 	}
 	print_statistics();
 
@@ -174,10 +172,11 @@ int main(int argc, char *argv[])
  * distribution.  All the directories are maintained in a linked list
  * structure.
  */
-void choose_working_directory(void)
+void
+choose_working_directory(void)
 {
-	int i, ret;
 	long whichdir;
+	int i, rc;
 
 	/*
 	 * This function returns a number between 0 and totaldirs - 1
@@ -186,15 +185,11 @@ void choose_working_directory(void)
 	whichdir = totaldirs  * (1.0 * random() / RAND_MAX);
 
 	currentdir = TAILQ_FIRST(&dirlist);
-	for (i = 0; i < whichdir; i++) {
+	for (i = 0; i < whichdir; i++)
 		currentdir = TAILQ_NEXT(currentdir, list);
-	}
-	ret = chdir(currentdir->name);
-	if (ret != 0) {
-		printf("Cannot change directory to %s, errno = %d.\n",
-				currentdir->name, errno);
-		exit(1);
-	}
+	if (chdir(currentdir->name) == -1)
+		err(1, "Cannot change directory to %s",
+		    currentdir->name);
 
 } /* end of choose_working_directory() */
 
@@ -203,41 +198,38 @@ void choose_working_directory(void)
  * If we are going to create one, we then decide if we are going to
  * create a directory.  If not, we are going to create a regular file.
  */
-void delete_create_file(void)
+void
+delete_create_file(void)
 {
 	double x;
 
-	x = (1.0 * random()) / RAND_MAX ;
-	if (x >= 0.7) {
+	x = (1.0 * random()) / RAND_MAX;
+	if (x >= 0.7)
 		delete_random_file();
-	} else {
+	else
 		create_random_file();
-	}
-
 }
 
 /*
  * Randomly select a regular file from the current directory and delete it.
  * A directory can only be deleted if it is empty.
  */
-void delete_random_file(void)
+void
+delete_random_file(void)
 {
-	DIR * dp;
-	struct dirent * dirp;
-	struct dir_item * tmpdir;
-	char * olddirname, * tmpdirname;
-	int ret, len, whichfile, totalentry;
-	struct dir_entry * listhead, * entry, * preventry, * tempentry;
+	struct dir_entry *listhead, *entry, *preventry, *tempentry;
+	int rc, len, whichfile, totalentry;
+	char *olddirname, *tmpdirname;
+	struct dir_item *tmpdir;
+	struct dirent *dirp;
+	DIR *dp;
 
 	if (currentdir->count == 0)
 		return;
 
 	dp = opendir(currentdir->name);
-	if (dp == NULL) {
-		printf("Fail to open directory %s, errno = %d!\n",
-				currentdir->name, errno);
-		exit(1);
-	}
+	if (dp == NULL)
+		err(1, "Fail to open directory %s", currentdir->name);
 
 	totalentry = 0;
 	listhead = NULL;
@@ -270,7 +262,7 @@ void delete_random_file(void)
 			entry->next = listhead;
 			listhead = entry;
 		}
-		totalentry ++;
+		totalentry++;
 	}
 	if (currentdir->count != totalentry) {
 		/*
@@ -287,7 +279,7 @@ void delete_random_file(void)
 	entry = listhead;
 	while (whichfile) {
 		entry = entry->next;
-		whichfile --;
+		whichfile--;
 	}
 	/*
 	 * Looks like d_type is not supported by FUSE/slash2.  Instead of
@@ -297,29 +289,24 @@ void delete_random_file(void)
 	switch (entry->name[0]) {
 	    case 'd':
 		/* Hmm, looks like directory almost will never be removed */
-		ret = rmdir(entry->name);
-		if (ret < 0) {
+		if (rmdir(entry->name) == -1) {
 			if (errno == ENOTEMPTY)
 				goto out;
 
-			printf("Fail to delete directory %s, errno = %d\n",
-				entry->name, errno);
-			exit(1);
+			err(1, "Failed to delete directory %s", entry->name);
 		}
 
 		len = strlen(currentdir->name) + 1 + strlen(entry->name);
 		tmpdirname = olddirname = malloc(len + 1);
-		if (olddirname == NULL) {
-			printf("Out of memory!\n");
-			exit(1);
-		}
+		if (olddirname == NULL)
+			err(1, NULL);
 
 		memcpy(olddirname, currentdir->name, strlen(currentdir->name));
 		olddirname += strlen(currentdir->name);
-		* olddirname ++ = '/';
+		*olddirname++ = '/';
 		memcpy(olddirname, entry->name, strlen(entry->name));
 		olddirname += strlen(entry->name);
-		* olddirname = '\0';
+		*olddirname = '\0';
 
 		olddirname = tmpdirname;
 		tmpdir = TAILQ_FIRST(&dirlist);
@@ -328,32 +315,24 @@ void delete_random_file(void)
 				break;
 			tmpdir = TAILQ_NEXT(tmpdir, list);
 		}
-		if (tmpdir == NULL) {
-			printf("Directory list is broken!\n");
-			exit(1);
-		}
+		if (tmpdir == NULL)
+			errx(1, "Directory list is broken!");
 		TAILQ_REMOVE(&dirlist, tmpdir, list);
 		free(tmpdir);
-		totaldirs --;
-		delete_dir_count ++;
+		totaldirs--;
+		delete_dir_count++;
 		break;
 	    case 'f':
-		ret = unlink(entry->name);
-		if (ret < 0) {
-			printf("Fail to delete file %s, errno = %d\n",
-				entry->name, errno);
-			exit(1);
-		}
-		totalfiles --;
-		delete_file_count ++;
+		if (unlink(entry->name) == -1)
+			err(1, "Failed to delete file %s", entry->name);
+		totalfiles--;
+		delete_file_count++;
 		break;
 	    default:
-		printf("Unexpected directory entry type %c\n", entry->name[0]);
-		exit(1);
-		break;
+		errx(1, "Unexpected directory entry type %c", entry->name[0]);
 	}
-	operation_count ++;
-	currentdir->count --;
+	operation_count++;
+	currentdir->count--;
 out:
 	entry = listhead;
 	while (entry) {
@@ -365,16 +344,16 @@ out:
 
 } /* end of delete_random_file() */
 
-void create_random_file(void)
+void
+create_random_file(void)
 {
-	int fd, ret, len;
-	struct dir_item * tmpdir;
-	char * filename, * newdirname;
+	struct dir_item *tmpdir;
+	char *filename, *newdirname;
 	double x, dirprob;
+	int fd, rc, len;
 
 	dirprob = 1.0 / file_per_directory;
 	x = (1.0 * random()) / RAND_MAX;
-
 
 	if (x < dirprob) {
 		filename = make_name(1);
@@ -391,38 +370,31 @@ void create_random_file(void)
 		newdirname = tmpdir->name;
 		memcpy(newdirname, currentdir->name, strlen(currentdir->name));
 		newdirname += strlen(currentdir->name);
-		* newdirname ++ = '/';
+		*newdirname++ = '/';
 		memcpy(newdirname, filename, strlen(filename));
 		newdirname += strlen(filename);
-		* newdirname = '\0';
+		*newdirname = '\0';
 
 		newdirname = tmpdir->name;
-		ret = mkdir(newdirname, S_IRWXU);
-		if (ret < 0) {
-			printf("Fail to create directory %s, errno = %d!\n",
-					newdirname, errno);
-			exit(1);
-		}
+		if (mkdir(newdirname, S_IRWXU) == -1)
+			err(1, "Fail to create directory %s", newdirname);
 		TAILQ_INSERT_HEAD(&dirlist, tmpdir, list);
 
-		totaldirs ++;
-		create_dir_count ++;
+		totaldirs++;
+		create_dir_count++;
 	} else {
 		filename = make_name(0);
 		fd = creat(filename, S_IRWXU);
 		if (fd < 0) {
-			printf("Fail to create file %s, errno = %d!\n",
-					filename, errno);
-			exit(1);
-		}
+			err("Failed to create file %s", filename);
 		close(fd);
-		totalfiles ++;
-		create_file_count ++;
+		totalfiles++;
+		create_file_count++;
 	}
 
 	free(filename);
-	operation_count ++;
-	currentdir->count ++;
+	operation_count++;
+	currentdir->count++;
 
 } /* end of create_random_file() */
 
@@ -430,20 +402,19 @@ void create_random_file(void)
  * Create a random file name of random length.  If this name is for
  * a regular file, it will be freed up immediately after use.
  */
-char * make_name(int dir)
+char *
+make_name(int dir)
 {
-	char * namebuf;
+	int i, len, rc;
 	struct stat sb;
-	int i, len, ret;
+	char *namebuf;
 
-again:
-
-	len = random() % MaxNameLen + 2;	/* make sure len >= 2, because we now reserve the first character */
+ again:
+	len = random() % FILENAME_LEN + 2;	/* make sure len >= 2, because we now reserve the first character */
 	namebuf = malloc(len + 1);
 
-	for (i = 1; i < len; i++) {
+	for (i = 1; i < len; i++)
 		namebuf[i] = random_chars[random() % strlen(random_chars)];
-	}
 	namebuf[i] = '\0';
 	if (dir)
 		namebuf[0] = 'd';
@@ -451,28 +422,25 @@ again:
 		namebuf[0] = 'f';
 
 	/* this slows things down for each operation */
-	ret = stat(namebuf, &sb);
-	if (ret == 0) {
+	if (stat(namebuf, &sb) == 0) {
 		printf("Filename %s was used before, try again...\n", namebuf);
 		free(namebuf);
 		goto again;
 	}
 	if (errno == ENOENT)
 		return (namebuf);
-	printf("Can't detect filename %s, errno = %d.\n", namebuf, errno);
-	exit(1);
+	err(1, "Can't detect filename %s", namebuf);
 
 } /* end of make_name() */
 
-void sigcatch(__unusedx int sig)
+void
+sigcatch(__unusedx int sig)
 {
-	printf("Operation interrupted by signal %d.\n", sig);
-	print_statistics();
-	exit(1);
-
+	caughtint = 1;
 } /* end of sigcatch() */
 
-void print_statistics(void)
+void
+print_statistics(void)
 {
 	double elapsetime;
 
