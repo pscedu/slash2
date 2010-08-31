@@ -264,3 +264,4 @@ utime
 
 - upsch items are not getting removed on completion
 - replicas are disappearing, not stored on disk?
+- move bcm_od into mds only
