@@ -4,6 +4,7 @@ INCLUDES+=		-I${SLASH_BASE}/include
 INCLUDES+=		-I${SLASH_BASE}
 
 DEFINES+=		-DAPP_STRERROR=slstrerror
+SRCS+=			${SLASH_BASE}/share/slerr.c
 
 SRC_PATH+=		${ZFS_BASE}
 ifneq ($(realpath ${SLASH_BASE}),${CURDIR})
