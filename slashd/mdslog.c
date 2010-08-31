@@ -1116,7 +1116,8 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	int i, n = crcup->nups;
 	uint32_t t = 0, j = 0;
 
-	/* No, I shouldn't need the lock.  Only this instance of this
+	/*
+	 * No, I shouldn't need the lock.  Only this instance of this
 	 *  call may remove the BMAP_MDS_CRC_UP bit.
 	 */
 	psc_assert(bmap->bcm_mode & BMAP_MDS_CRC_UP);
@@ -1138,20 +1139,21 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
 		    jcrc, sizeof(struct slmds_jent_crc));
 
-		/* Apply the CRC update into memory AFTER recording them
-		 *  in the journal. The lock should not be needed since the
-		 *  BMAP_MDS_CRC_UP is protecting the crc table from other
+		/*
+		 * Apply the CRC update into memory AFTER recording them
+		 *  in the journal.  The lock should not be needed since the
+		 *  BMAP_MDS_CRC_UP is protecting the CRC table from other
 		 *  threads who may like to update.  Besides at this moment,
 		 *  on the ION updating us has the real story on this bmap's
 		 *  CRCs and all I/O for this bmap is being directed to it.
 		 */
 		BMAPOD_WRLOCK(bmdsi);
-		for (t+=i; j < t; j++) {
-			bmapod->bh_crcs[(crcup->crcs[j].slot)].gc_crc =
-				crcup->crcs[j].crc;
+		for (t += i; j < t; j++) {
+			bmapod->bh_crcs[crcup->crcs[j].slot].gc_crc =
+			    crcup->crcs[j].crc;
 
-			bmapod->bh_crcstates[(crcup->crcs[j].slot)] =
-				(BMAP_SLVR_DATA | BMAP_SLVR_CRC);
+			bmapod->bh_crcstates[crcup->crcs[j].slot] =
+			    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 
 			DEBUG_BMAP(PLL_DEBUG, bmap, "slot(%d) crc(%"PRIx64")",
 				   crcup->crcs[j].slot, crcup->crcs[j].crc);
