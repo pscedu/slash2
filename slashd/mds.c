@@ -1026,13 +1026,13 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 	return (0);
 }
 
-static inline struct bmap_mds_lease *
+static __inline struct bmap_mds_lease *
 mds_bml_get(void)
 {
 	struct bmap_mds_lease *bml;
 
 	bml = psc_pool_get(bmapMdsLeasePool);
-	memset(bml, 0, bmapMdsLeasePool->ppm_master->pms_entsize);
+	memset(bml, 0, sizeof(*bml));
 	LOCK_INIT(&bml->bml_lock);
 	return (bml);
 }
@@ -1040,12 +1040,12 @@ mds_bml_get(void)
 void
 mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 {
+	struct fidc_membh *f = NULL;
+	struct bmapc_memb *b = NULL;
+	struct bmap_mds_lease *bml;
+	struct slash_fidgen fg;
 	struct bmi_assign *bmi;
 	struct sl_resm *resm;
-	struct slash_fidgen fg;
-	struct fidc_membh *f=NULL;
-	struct bmapc_memb *b=NULL;
-	struct bmap_mds_lease *bml;
 	int rc;
 
 	bmi = data;
@@ -1328,7 +1328,7 @@ mds_bmap_init(struct bmapc_memb *bcm)
 	bmdsi = bmap_2_bmdsi(bcm);
 	bmdsi->bmdsi_bmap = bcm;
 	pll_init(&bmdsi->bmdsi_leases, struct bmap_mds_lease,
-		 bml_bmdsi_lentry, NULL);
+	    bml_bmdsi_lentry, &bcm->bcm_lock);
 	bmdsi->bmdsi_xid = 0;
 	psc_pthread_rwlock_init(&bmdsi->bmdsi_rwlock);
 }
@@ -1338,11 +1338,10 @@ mds_bmap_destroy(struct bmapc_memb *bcm)
 {
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bcm);
 
-//	psc_assert(bmdsi->bmdsi_writers == 0);
-//	psc_assert(bmdsi->bmdsi_readers == 0);
-//	psc_assert(bmdsi->bmdsi_assign == NULL);
-//	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
-//	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
+	psc_assert(bmdsi->bmdsi_writers == 0);
+	psc_assert(bmdsi->bmdsi_readers == 0);
+	psc_assert(bmdsi->bmdsi_assign == NULL);
+	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
 	psc_pthread_rwlock_destroy(&bmdsi->bmdsi_rwlock);
 	PSCFREE(bcm->bcm_od);
 }
@@ -1482,7 +1481,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	sbd->sbd_seq = bml->bml_seq;
 	sbd->sbd_key = (rw == SL_WRITE) ?
-		bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
+	    bml->bml_bmdsi->bmdsi_assign->odtr_key : BMAPSEQ_ANY;
  out:
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 	return (rc);
