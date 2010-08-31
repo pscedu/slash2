@@ -185,7 +185,7 @@ include		: INCLUDE QUOTEDS {
 					slcfg_add_include($2);
 				globfree(&gl);
 			}
-			free($2);
+			PSCFREE($2);
 		}
 		;
 
@@ -413,7 +413,7 @@ quoteds_stmt	: NAME EQ QUOTEDS END {
 				   $1, $3);
 			slcfg_store_tok_val($1, $3);
 			free($1);
-			free($3);
+			PSCFREE($3);
 			/* XXX: don't free, just copy the pointer */
 		}
 		;
@@ -697,7 +697,7 @@ slcfg_parse(const char *config_file)
 		yyparse();
 		fclose(yyin);
 
-		free(cf);
+		PSCFREE(cf);
 	}
 	if (cfg_errors)
 		errx(1, "%d error(s) encountered", cfg_errors);
