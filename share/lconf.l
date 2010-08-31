@@ -56,8 +56,8 @@ sizeval		[0-9]+[KMGTBkmgtb]
 ;		{ return END; }
 ,		{ return NSEP; }
 =		{ return EQ; }
-{		{ return SUBSECT_START; }
-}		{ return SUBSECT_END; }
+"{"		{ return SUBSECT_START; }
+"}"		{ return SUBSECT_END; }
 
 include		{ return INCLUDE; }
 global		{ return GLOBAL; }
