@@ -53,57 +53,18 @@ sizeval		[0-9]+[KMGTBkmgtb]
 
 %%
 
-";" {
-	return END;
-}
+;		{ return END; }
+,		{ return NSEP; }
+=		{ return EQ; }
+{		{ return SUBSECT_START; }
+}		{ return SUBSECT_END; }
 
-"," {
-	psc_trace("Sep ','");
-	return NSEP;
-}
-
-"=" {
-	return EQ;
-}
-
-include {
-	return INCLUDE;
-}
-
-global {
-	psc_trace("GLOBAL %s", yytext);
-	return GLOBAL;
-}
-
-site {
-	psc_trace("SITETAG %s", yytext);
-	return SITE_PROFILE;
-}
-
-resource {
-	psc_trace("RESOURCE_PROFILE %s", yytext);
-	return RESOURCE_PROFILE;
-}
-
-peers {
-	psc_trace("PEERTAG %s", yytext);
-	return PEERTAG;
-}
-
-ifs {
-	psc_trace("INTERFACETAG %s", yytext);
-	return INTERFACETAG;
-}
-
-"{" {
-	psc_trace("SUBSECT_START TAG %s", yytext);
-	return SUBSECT_START;
-}
-
-"}" {
-	psc_trace("SUBSECT_END TAG %s", yytext);
-	return SUBSECT_END;
-}
+include		{ return INCLUDE; }
+global		{ return GLOBAL; }
+site		{ return SITE_PROFILE; }
+resource	{ return RESOURCE_PROFILE; }
+peers		{ return PEERTAG; }
+ifs		{ return INTERFACETAG; }
 
 yes {
 	psc_trace("BOOL %s", yytext);
