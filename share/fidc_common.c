@@ -76,12 +76,12 @@ fcmh_destroy(struct fidc_membh *f)
  * @fcmh: FID cache member to update.
  * @sstb: incoming stat attributes.
  * @flags: behavioral flags.
- * Notes: 
+ * Notes:
  *     (1) if SAVELOCAL has been specified, save local field values:
  *		(o) file size
  *		(o) mtime
- *     (2) This function should only be used by a client. 
- *	
+ *     (2) This function should only be used by a client.
+ *
  */
 void
 fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
@@ -124,9 +124,9 @@ fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 	}
 
 	/*
- 	 * The following asserts can be tripped if the MDS somehow reuses 
- 	 * the same SLASH2 FID for different files/directories.
- 	 */
+	 * The following asserts can be tripped if the MDS somehow reuses
+	 * the same SLASH2 FID for different files/directories.
+	 */
 	if (fcmh->fcmh_flags & FCMH_HAVE_ATTRS) {
 		if (fcmh_isdir(fcmh))
 			psc_assert(S_ISDIR(sstb->sst_mode));
@@ -215,8 +215,8 @@ struct fidc_membh *
 _fidc_lookup_fg(const struct slash_fidgen *fg, const char *file,
     const char *func, int line)
 {
-	int rc;
 	struct fidc_membh *fcmhp;
+	int rc;
 
 	rc = _fidc_lookup(fg, 0, NULL, 0, &fcmhp, file, func, line);
 	return (rc == 0 ? fcmhp : NULL);
@@ -229,9 +229,9 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, const char *file,
 struct fidc_membh *
 _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
 {
-	int rc;
-	struct fidc_membh *fcmhp;
 	struct slash_fidgen t = { f, FGEN_ANY };
+	struct fidc_membh *fcmhp;
+	int rc;
 
 	rc = _fidc_lookup(&t, 0, NULL, 0, &fcmhp, file, func, line);
 	return (rc == 0 ? fcmhp : NULL);
@@ -249,10 +249,10 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
     struct srt_stat *sstb, int setattrflags, struct fidc_membh **fcmhp,
     const char *file, const char *func, int line)
 {
-	int rc, try_create=0;
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
-	struct psc_hashbkt *b;
 	struct slash_fidgen searchfg = *fgp;
+	struct psc_hashbkt *b;
+	int rc, try_create = 0;
 
 	psclog(file, func, line, PSC_SUBSYS, PLL_INFO, 0,
 	    "fidc_lookup called for fid %"PRId64, searchfg.fg_fid);
@@ -499,7 +499,7 @@ fcmh_getsize(struct fidc_membh *h)
 void
 fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
-	int locked=FCMH_RLOCK(f);
+	int locked = FCMH_RLOCK(f);
 
 	psc_assert(f->fcmh_refcnt >= 0);
 	f->fcmh_refcnt++;
@@ -546,28 +546,28 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 }
 
 void
+dump_fcmh(struct fidc_membh *f)
+{
+	int locked;
+
+	locked = FCMH_RLOCK(f);
+	psclog_max("fcmh@%p f+g:"SLPRI_FG" ref:%d", f,
+	    SLPRI_FG_ARGS(&f->fcmh_fg), f->fcmh_refcnt);
+	FCMH_URLOCK(f, locked);
+}
+
+void
 dump_fidcache(void)
 {
-	struct fidc_membh *tmp;
 	struct psc_hashbkt *bkt;
+	struct fidc_membh *tmp;
 
-	psc_max("Start dumping fidcache");
 	PSC_HASHTBL_FOREACH_BUCKET(bkt, &fidcHtable) {
 		psc_hashbkt_lock(bkt);
 		PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, tmp, bkt)
 			dump_fcmh(tmp);
 		psc_hashbkt_unlock(bkt);
 	}
-	psc_max("Done dumping fidcache");
-}
-
-void
-dump_fcmh(struct fidc_membh *f)
-{
-	psc_max("fidc_membh (%p): fid = %"PRId64", gen = %"PRId64
-		", refcnt = %d, sstb = %p",
-		f, f->fcmh_fg.fg_fid, f->fcmh_fg.fg_gen, f->fcmh_refcnt,
-		&f->fcmh_sstb);
 }
 
 void
