@@ -756,7 +756,7 @@ mds_repl_reset_scheduled(sl_ios_id_t resid)
 
 	PLL_LOCK(&upsched_listhd);
 	PLL_FOREACH(wk, &upsched_listhd) {
-		USWI_INCREF(wk, USWI_REF_RESETPROC);
+		USWI_INCREF(wk, USWI_REFT_LOOKUP);
 		if (!uswi_access(wk))
 			continue;
 		PLL_ULOCK(&upsched_listhd);

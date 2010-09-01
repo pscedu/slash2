@@ -90,7 +90,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	ureqlock(&smi->smi_lock, locked);
 
 	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
-	USWI_DECREF(wk, USWI_REF_SITEUPQ);
+	USWI_DECREF(wk, USWI_REFT_SITEUPQ);
 
 	if (wk->uswi_flags & USWIF_DIE) {
 		/* someone is already waiting for this to go away */
@@ -163,7 +163,7 @@ uswi_kill(struct up_sched_work_item *wk)
 	pll_remove(&upsched_listhd, wk);
 	UPSCHED_MGR_UNLOCK();
 
-	USWI_DECREF(wk, USWI_REF_TREE);
+	USWI_DECREF(wk, USWI_REFT_TREE);
 
 	wk->uswi_flags |= USWIF_DIE;
 	wk->uswi_flags &= ~USWIF_BUSY;
@@ -441,7 +441,7 @@ slmupschedthr_main(struct psc_thread *thr)
 			}
 
 			wk = psc_dynarray_getpos(&smi->smi_upq, rir);
-			USWI_INCREF(wk, USWI_REF_LOOKUP);
+			USWI_INCREF(wk, USWI_REFT_LOOKUP);
 			freelock(&smi->smi_lock);
 
 			rc = uswi_access(wk);
@@ -632,7 +632,7 @@ slmupschedthr_spawnall(void)
  * Returns Boolean true on success or false if the request is going away.
  */
 int
-uswi_access(struct up_sched_work_item *wk, enum uswi_reftype reftype)
+uswi_access(struct up_sched_work_item *wk)
 {
 	int rc = 1;
 
@@ -646,7 +646,7 @@ uswi_access(struct up_sched_work_item *wk, enum uswi_reftype reftype)
 
 	if (wk->uswi_flags & USWIF_DIE) {
 		/* Release if going away. */
-		USWI_DECREF(wk, reftype);
+		USWI_DECREF(wk, USWI_REFT_LOOKUP);
 		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 		rc = 0;
 	} else {
@@ -657,12 +657,11 @@ uswi_access(struct up_sched_work_item *wk, enum uswi_reftype reftype)
 }
 
 void
-uswi_unref(struct up_sched_work_item *wk, enum uswi_reftype reftype)
+uswi_unref(struct up_sched_work_item *wk)
 {
 	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
-	psc_assert(psc_atomic32_read(&wk->uswi_refcnt) > 0);
 	wk->uswi_flags &= ~USWIF_BUSY;
-	USWI_DECREF(wk, reftype);
+	USWI_DECREF(wk, USWI_REFT_LOOKUP);
 	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 	psc_pthread_mutex_unlock(&wk->uswi_mutex);
 }
@@ -931,4 +930,10 @@ uswi_enqueue_sites(struct up_sched_work_item *wk,
 		freelock(&smi->smi_lock);
 	}
 	psc_pthread_mutex_ureqlock(&wk->uswi_mutex, locked);
+}
+
+void
+dump_uswi(struct up_sched_work_item *wk)
+{
+	USWI_DEBUG(PLL_MAX, wk, "");
 }

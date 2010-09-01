@@ -205,7 +205,7 @@ slmrcmthr_main(struct psc_thread *thr)
 		if (rsw->rsw_fg.fg_fid == FID_ANY) {
 			PLL_LOCK(&upsched_listhd);
 			PLL_FOREACH(wk, &upsched_listhd) {
-				psc_atomic32_inc(&wk->uswi_refcnt);
+				USWI_INCREF(wk, USWI_REFT_LOOKUP);
 				if (!uswi_access(wk))
 					continue;
 				PLL_ULOCK(&upsched_listhd);

@@ -35,6 +35,7 @@
 #include "cache_params.h"
 #include "fid.h"
 #include "slashrpc.h"
+#include "slsubsys.h"
 
 #ifndef __LP64__
 #define DEMOTED_INUM_WIDTHS
@@ -167,7 +168,7 @@ struct fidc_membh {
 #define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)				\
-	psc_logs((level), PSS_FCMH,					\
+	psc_logs((level), SLSS_FCMH,					\
 	   "fcmh@%p fg:"SLPRI_FG" "REQ_FCMH_FLAGS_FMT" "		\
 	   "ref:%d sz=%"PRId64" :: "fmt,				\
 	   (fcmh), SLPRI_FG_ARGS(&(fcmh)->fcmh_fg),			\
