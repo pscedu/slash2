@@ -457,7 +457,10 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 				BMPCE_ULOCK(bmpce);
 				psc_assert(first_iov == 1);
 
-			  	reqsz -=  BMPC_BUFSZ;
+				if (j == 0)
+					reqsz -= BMPC_BUFSZ - (r->biorq_off - bmpce->bmpce_off);
+				else
+					reqsz -= BMPC_BUFSZ;
 				continue;
 			}
 			DEBUG_BMPCE(PLL_INFO, bmpce,
