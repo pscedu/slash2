@@ -383,7 +383,7 @@ bmap_flush_biorq_cmp(const void *x, const void *y)
 
 /**
  * bmap_flush_coalesce_map - scan the given list of bio request and construct
- *     I/O vectors out of them.
+ *     I/O vectors out of them.  One I/O vector is limited to one page.
  */
 __static int
 bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
@@ -443,6 +443,10 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			if ((bmpce->bmpce_off <= r->biorq_off) && j)
 				abort();
 
+			/*
+ 			 * We might straddle the end offset of the previous
+ 			 * I/O request.
+ 			 */
 			if ((bmpce->bmpce_off < off) && !first_iov) {
 				/* Similar case to the 'continue' stmt above,
 				 *   this bmpce overlaps a previously
