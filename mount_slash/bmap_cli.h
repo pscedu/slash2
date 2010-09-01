@@ -32,24 +32,24 @@
  * bmap_cli_data - assigned to bmap_get_pri() for mount_slash client.
  */
 struct bmap_cli_info {
-	struct bmap_pagecache		 bci_bmpc;
-	struct srt_bmapdesc		 bci_sbd;	/* open bmap descriptor */
-	struct timespec			 bci_xtime;	/* max time */
-	struct timespec			 bci_etime;	/* current expire time */
+	struct bmap_pagecache	 bci_bmpc;
+	struct srt_bmapdesc	 bci_sbd;		/* open bmap descriptor */
+	struct timespec		 bci_xtime;		/* max time */
+	struct timespec		 bci_etime;		/* current expire time */
 };
 
 /* mount_slash specific bcm_flags */
-#define BMAP_CLI_FLUSHPROC (_BMAP_FLSHFT << 0)	/* proc'd by flush thr */
+#define BMAP_CLI_FLUSHPROC	(_BMAP_FLSHFT << 0)	/* proc'd by flush thr */
 
-#define BMAP_CLI_MAX_LEASE		60 /* seconds */
-#define BMAP_CLI_TIMEO_INC		5
-#define BMAP_CLI_DIOWAIT_SECS		1
+#define BMAP_CLI_MAX_LEASE	60 /* seconds */
+#define BMAP_CLI_TIMEO_INC	5
+#define BMAP_CLI_DIOWAIT_SECS	1
 
-#define bmap_2_bci(b)			((struct bmap_cli_info *)bmap_get_pri(b))
-#define bmap_2_bci_const(b)		((const struct bmap_cli_info *)bmap_get_pri_const(b))
-#define bmap_2_bmpc(b)			(&bmap_2_bci(b)->bci_bmpc)
-#define bmap_2_sbd(b)			(&bmap_2_bci(b)->bci_sbd)
-#define bmap_2_ion(b)			bmap_2_sbd(b)->sbd_ion_nid
+#define bmap_2_bci(b)		((struct bmap_cli_info *)bmap_get_pri(b))
+#define bmap_2_bci_const(b)	((const struct bmap_cli_info *)bmap_get_pri_const(b))
+#define bmap_2_bmpc(b)		(&bmap_2_bci(b)->bci_bmpc)
+#define bmap_2_sbd(b)		(&bmap_2_bci(b)->bci_sbd)
+#define bmap_2_ion(b)		bmap_2_sbd(b)->sbd_ion_nid
 
 #define BMAP_CLI_BUMP_TIMEO(b)						\
 	do {								\
