@@ -90,7 +90,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	ureqlock(&smi->smi_lock, locked);
 
 	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
-	psc_atomic32_dec(&wk->uswi_refcnt);
+	USWI_DECREF(wk, USWI_REF_SITEUPQ);
 
 	if (wk->uswi_flags & USWIF_DIE) {
 		/* someone is already waiting for this to go away */
@@ -152,17 +152,19 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	uswi_kill(wk);
 }
 
-void
+__static void
 uswi_kill(struct up_sched_work_item *wk)
 {
-	UPSCHED_MGR_ENSURE_LOCKED();
+
 	psc_pthread_mutex_ensure_locked(&wk->uswi_mutex);
 
+	UPSCHED_MGR_ENSURE_LOCKED();
 	PSC_SPLAY_XREMOVE(upschedtree, &upsched_tree, wk);
 	pll_remove(&upsched_listhd, wk);
 	UPSCHED_MGR_UNLOCK();
 
-	psc_atomic32_dec(&wk->uswi_refcnt);	/* removed from tree */
+	USWI_DECREF(wk, USWI_REF_TREE);
+
 	wk->uswi_flags |= USWIF_DIE;
 	wk->uswi_flags &= ~USWIF_BUSY;
 
@@ -439,7 +441,7 @@ slmupschedthr_main(struct psc_thread *thr)
 			}
 
 			wk = psc_dynarray_getpos(&smi->smi_upq, rir);
-			psc_atomic32_inc(&wk->uswi_refcnt);
+			USWI_INCREF(wk, USWI_REF_LOOKUP);
 			freelock(&smi->smi_lock);
 
 			rc = uswi_access(wk);
@@ -630,7 +632,7 @@ slmupschedthr_spawnall(void)
  * Returns Boolean true on success or false if the request is going away.
  */
 int
-uswi_access(struct up_sched_work_item *wk)
+uswi_access(struct up_sched_work_item *wk, enum uswi_reftype reftype)
 {
 	int rc = 1;
 
@@ -644,7 +646,7 @@ uswi_access(struct up_sched_work_item *wk)
 
 	if (wk->uswi_flags & USWIF_DIE) {
 		/* Release if going away. */
-		psc_atomic32_dec(&wk->uswi_refcnt);
+		USWI_DECREF(wk, reftype);
 		psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 		rc = 0;
 	} else {
@@ -655,12 +657,12 @@ uswi_access(struct up_sched_work_item *wk)
 }
 
 void
-uswi_unref(struct up_sched_work_item *wk)
+uswi_unref(struct up_sched_work_item *wk, enum uswi_reftype reftype)
 {
 	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
 	psc_assert(psc_atomic32_read(&wk->uswi_refcnt) > 0);
-	psc_atomic32_dec(&wk->uswi_refcnt);
 	wk->uswi_flags &= ~USWIF_BUSY;
+	USWI_DECREF(wk, reftype);
 	psc_multiwaitcond_wakeup(&wk->uswi_mwcond);
 	psc_pthread_mutex_unlock(&wk->uswi_mutex);
 }
@@ -685,7 +687,7 @@ uswi_find(const struct slash_fidgen *fgp, int *locked)
 		return (NULL);
 	}
 	psc_pthread_mutex_lock(&wk->uswi_mutex);
-	psc_atomic32_inc(&wk->uswi_refcnt);
+	USWI_INCREF(wk, USWI_REFT_LOOKUP);
 	UPSCHED_MGR_UNLOCK();
 	*locked = 0;
 
@@ -710,7 +712,7 @@ uswi_init(struct up_sched_work_item *wk, slfid_t fid)
 	psc_pthread_mutex_init(&wk->uswi_mutex);
 	psc_multiwaitcond_init(&wk->uswi_mwcond,
 	    NULL, 0, "upsched-%lx", fid);
-	psc_atomic32_set(&wk->uswi_refcnt, 1);
+	psc_atomic32_set(&wk->uswi_refcnt, 0);
 }
 
 void
@@ -818,7 +820,8 @@ upsched_scandir(void)
 }
 
 int
-uswi_findoradd(const struct slash_fidgen *fgp, struct up_sched_work_item **wkp)
+uswi_findoradd(const struct slash_fidgen *fgp,
+    struct up_sched_work_item **wkp)
 {
 	struct up_sched_work_item *newrq = NULL;
 	int rc, gen, locked;
@@ -880,10 +883,12 @@ uswi_findoradd(const struct slash_fidgen *fgp, struct up_sched_work_item **wkp)
 		} while (!locked);
 	}
 
+	USWI_INCREF(newrq, USWI_REFT_TREE);
+	USWI_INCREF(newrq, USWI_REFT_LOOKUP);
+
 	SPLAY_INSERT(upschedtree, &upsched_tree, newrq);
 	pll_addtail(&upsched_listhd, newrq);
 	upsched_gen++;
-	psc_atomic32_inc(&newrq->uswi_refcnt);
 
 	*wkp = newrq;
 	newrq = NULL;
@@ -920,7 +925,7 @@ uswi_enqueue_sites(struct up_sched_work_item *wk,
 		if (!psc_dynarray_exists(&smi->smi_upq, wk)) {
 			psc_dynarray_add(&smi->smi_upq, wk);
 			smi->smi_flags |= SMIF_DIRTYQ;
-			psc_atomic32_inc(&wk->uswi_refcnt);
+			USWI_INCREF(wk, USWI_REFT_SITEUPQ);
 		}
 		psc_multiwaitcond_wakeup(&smi->smi_mwcond);
 		freelock(&smi->smi_lock);

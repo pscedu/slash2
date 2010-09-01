@@ -54,8 +54,40 @@ struct up_sched_work_item {
 				    USWI_INO(wk)->ino_repls[n] :	\
 				    USWI_INOX(wk)->inox_repls[(n) - 1])
 
-/* uswi_init() flags */
-#define USWI_INITF_NOPERSIST	(1 << 0)	/* do not link in .slupsch */
+enum uswi_reftype {
+/* 0 */	USWI_REFT_TREE,		/* in tree/list in memory */
+/* 1 */	USWI_REFT_SITEUPQ,	/* in scheduler queue for a site */
+/* 2 */	USWI_REFT_LOOKUP	/* uswi_find() temporary */
+};
+
+#define USWI_DEBUG(wk, fmt, ...)					\
+	do {								\
+		psc_pthread_mutex_ensure_locked(&(wk)->uswi_mutex);	\
+		psc_debug("uswi@%p f+g:"SLPRI_FG" fl:%s%s ref:%d "	\
+		    "gen:%d" fmt,					\
+		    (wk), SLPRI_FG_ARGS(USWI_FG(wk)),			\
+		    (wk)->uswi_flags & USWIF_BUSY ? "b" : "",		\
+		    (wk)->uswi_flags & USWIF_DIE ? "d" : "",		\
+		    psc_atomic32_read(&(wk)->uswi_refcnt),		\
+		    &(wk)->uswi_gen, ## __VA_ARGS__);			\
+	} while (0)
+
+#define USWI_INCREF(wk, reftype)					\
+	do {								\
+		psc_atomic32_inc(&(wk)->uswi_refcnt);			\
+		USWI_DEBUG(wk, "grabbed reference [type=%d]",		\
+		    uswi_reftypenames[reftype]);			\
+	} while (0)
+
+#define USWI_DECREF(wk, reftype)					\
+	do {								\
+		int _refcnt;						\
+									\
+		_refcnt = psc_atomic32_read(&(wk)->uswi_refcnt);	\
+		psc_assert(_refcnt > 0);				\
+		psc_atomic32_dec(&(wk)->uswi_refcnt);			\
+		USWI_DEBUG(wk, "dropped reference [type=%d]");		\
+	} while (0)
 
 struct up_sched_work_item *
 	 uswi_find(const struct slash_fidgen *, int *);
