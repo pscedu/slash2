@@ -24,6 +24,7 @@
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
+#include "psc_util/pool.h"
 #include "psc_util/waitq.h"
 
 #include "bmap.h"

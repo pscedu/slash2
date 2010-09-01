@@ -203,9 +203,8 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
     const int *retifset, int flags, int off, int *scircuit,
     brepl_walkcb_t cbf, void *cbarg)
 {
-	struct slash_bmap_od *bmapod = bcm->bcm_od;
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bcm);
-	int locked, val, rc = 0;
+	int val, rc = 0;
 
 	/* Take a write lock on the bmapod. */
 	BMAPOD_WRLOCK(bmdsi);
@@ -215,7 +214,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 	else
 		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 
-	val = SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls, off);
+	val = SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls, off);
 
 	if (val >= NBREPLST)
 		psc_fatalx("corrupt bmap");
@@ -237,11 +236,9 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 
 	/* Apply any translations */
 	if (tract && tract[val] != -1) {
-		SL_REPL_SET_BMAP_IOS_STAT(bmapod->bh_repls,
+		SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls,
 		    off, tract[val]);
-		locked = BMAP_RLOCK(bcm);
-		bmdsi->bmdsi_flags |= BMIM_LOGCHG;
-		BMAP_URLOCK(bcm, locked);
+		BMDSI_LOGCHG_SET(bcm);
 	}
 
  out:
@@ -271,12 +268,10 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
     const int *retifset, int flags, const int *iosidx, int nios,
     brepl_walkcb_t cbf, void *cbarg)
 {
-	struct slash_bmap_od *bmapod = bcm->bcm_od;
 	int scircuit, nr, off, k, rc, trc;
 
 	scircuit = rc = 0;
 	nr = fcmh_2_inoh(bcm->bcm_fcmh)->inoh_ino.ino_nrepls;
-	bmapod = bcm->bcm_od;
 
 	if (nios == 0)
 		/* no one specified; apply to all */
@@ -360,7 +355,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 
 	rc = mds_repl_bmap_walk(bcm, tract, retifset, 0, &iosidx, 1);
 	if (rc)
-		psc_error("bh_repls is marked OLD or SCHED for fid %"PRIx64" "
+		psc_error("bcs_repls is marked OLD or SCHED for fid %"PRIx64" "
 		    "bmap %d iosidx %d", fcmh_2_fid(bcm->bcm_fcmh),
 		    bcm->bcm_bmapno, iosidx);
 

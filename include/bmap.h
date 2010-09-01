@@ -35,22 +35,58 @@
 #include <time.h>
 
 #include "psc_ds/tree.h"
+#include "psc_ds/list.h"
 #include "psc_util/atomic.h"
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"
-#include "psc_util/waitq.h"
 
 #include "cache_params.h"
 #include "fid.h"
-#include "fidcache.h"
-#include "slashrpc.h"
 #include "slsubsys.h"
 #include "sltypes.h"
 
 struct fidc_membh;
-struct srt_bmapdesc;
 
-#define slash_bmap_od srt_bmap_wire
+/**
+ * bmap_core_state
+ * @bcs_crcstates: bits describing the state of each sliver.
+ * @bcs_repls: bitmap used for tracking the replication status of this bmap.
+ *
+ * This structure must be 64-bit aligned and padded.
+ */
+struct bmap_core_state {
+	uint8_t			bcs_crcstates[SLASH_CRCS_PER_BMAP];
+	uint8_t			bcs_repls[SL_REPLICA_NBYTES];
+};
+
+/**
+ * bmap_extra_state
+ * @bes_crcs: the CRC table, one 8-byte CRC per sliver.
+ * @bes_gen: current generation number.
+ * @bes_repl_policy: replication policy.
+ *
+ * This structure must be 64-bit aligned and padded.
+ */
+struct bmap_extra_state {
+	uint64_t		bes_crcs[SLASH_CRCS_PER_BMAP];
+	sl_bmapgen_t		bes_gen;
+	uint32_t		bes_repl_policy;
+};
+
+/**
+ * bmap_ondisk - slash bmap over-wire/on-disk structure.  This
+ *	structure maps the persistent state of the bmap within the
+ *	inode's metafile.
+ * @bod_bhcrc: on-disk checksum.
+*/
+struct bmap_ondisk {
+	struct bmap_core_state	bod_corestate;
+	struct bmap_extra_state	bod_extrastate;
+	uint64_t		bod_crc;
+#define bod_repls	bod_corestate.bcs_repls
+#define bod_crcstates	bod_corestate.bcs_crcstates
+#define bod_crcs	bod_extrastate.bes_crcs
+};
 
 /**
  * bmapc_memb - central structure for block map caching used in
@@ -67,8 +103,17 @@ struct bmapc_memb {
 	uint32_t		 bcm_flags;	/* see BMAP_* below */
 	psc_spinlock_t		 bcm_lock;
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry */
-	struct psclist_head	 bcm_lentry;	/* free pool */
-	struct slash_bmap_od	*bcm_od;	/* on-disk representation */
+	struct psclist_lentry	 bcm_lentry;	/* free pool */
+
+	/*
+	 * This must start on a 64-bit boundary, and must lay at the end
+	 * of this structure as the bmap_{mds,iod}_info begin with the
+	 * next segment of the bmap_ondisk, which must lay contiguous in
+	 * memory for I/O over the network and with ZFS.
+	 */
+	struct bmap_core_state	 bcm_corestate;
+#define bcm_crcstates	bcm_corestate.bcs_crcstates
+#define bcm_repls	bcm_corestate.bcs_repls
 };
 
 /* shared bmap_flags */
@@ -84,7 +129,7 @@ struct bmapc_memb {
 #define BMAP_REAPABLE		(1 << 9)
 #define BMAP_IONASSIGN		(1 << 10)
 #define BMAP_MDCHNG		(1 << 11)
-#define BMAP_WAITERS		(1 << 12)
+#define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
 #define _BMAP_FLSHFT		(1 << 13)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
@@ -124,7 +169,7 @@ struct bmapc_memb {
 		BMAP_LOCK_ENSURE(b);					\
 		if ((b)->bcm_flags & BMAP_WAITERS) {			\
 			psc_waitq_wakeall(&(b)->bcm_fcmh->fcmh_waitq);	\
-			(b)->bcm_flags &= ~BMAP_WAITERS;			\
+			(b)->bcm_flags &= ~BMAP_WAITERS;		\
 		}							\
 	} while (0)
 
@@ -153,16 +198,14 @@ struct bmapc_memb {
 
 #define BMAP_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
 
-#define	BMAP_OD_SZ		(sizeof(struct slash_bmap_od))
+#define	BMAP_OD_SZ		(sizeof(struct bmap_ondisk))
 #define	BMAP_OD_CRCSZ		(BMAP_OD_SZ - (sizeof(psc_crc64_t)))
 
-/* Currently, 8 bits are available for flags. */
-enum {
-	BMAP_SLVR_DATA		= (1 << 0),	/* Data present, otherwise slvr is hole */
-	BMAP_SLVR_CRC		= (1 << 1),	/* Has valid CRC */
-	BMAP_SLVR_CRCDIRTY	= (1 << 2),
-	BMAP_SLVR_WANTREPL	= (1 << 3)	/* Queued for replication */
-};
+/* bcs_crcstates flags */
+#define BMAP_SLVR_DATA		(1 << 0)	/* Data present, otherwise slvr is hole */
+#define BMAP_SLVR_CRC		(1 << 1)	/* Has valid CRC */
+#define BMAP_SLVR_CRCDIRTY	(1 << 2)
+#define BMAP_SLVR_WANTREPL	(1 << 3)	/* Queued for replication */
 
 /*
  * Routines to get and fetch a bmap replica's status.
@@ -196,45 +239,6 @@ enum {
 #define BRP_PERSIST		1
 #define NBRP			2
 
-static __inline void
-_log_debug_bmapodv(const char *file, const char *func, int lineno,
-    int level, struct bmapc_memb *bmap, const char *fmt, va_list ap)
-{
-	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1];
-	unsigned char *b = bmap->bcm_od->bh_repls;
-	int off, k, ch[NBREPLST];
-
-	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
-
-	ch[BREPLST_INVALID] = '-';
-	ch[BREPLST_REPL_SCHED] = 's';
-	ch[BREPLST_REPL_QUEUED] = 'q';
-	ch[BREPLST_VALID] = '+';
-	ch[BREPLST_TRUNCPNDG] = 't';
-	ch[BREPLST_GARBAGE] = 'g';
-	ch[BREPLST_GARBAGE_SCHED] = 'x';
-	ch[BREPLST_BADCRC] = 'c';
-
-	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
-	    k++, off += SL_BITS_PER_REPLICA)
-		rbuf[k] = ch[SL_REPL_GET_BMAP_IOS_STAT(b, off)];
-	rbuf[k] = '\0';
-
-	_DEBUG_BMAP(file, func, lineno, level, bmap, "pol %d repls=[%s] %s",
-	    bmap->bcm_od->bh_repl_policy, rbuf, mbuf);
-}
-
-static __inline void
-_log_debug_bmapod(const char *file, const char *func, int lineno,
-    int level, struct bmapc_memb *bmap, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	_log_debug_bmapodv(file, func, lineno, level, bmap, fmt, ap);
-	va_end(ap);
-}
-
 #define DEBUG_BMAPOD(level, bmap, fmt, ...)				\
 	_log_debug_bmapod(__FILE__, __func__, __LINE__, (level),	\
 	    (bmap), (fmt), ## __VA_ARGS__)
@@ -253,6 +257,11 @@ void	_bmap_op_done(struct bmapc_memb *, const char *, const char *,
 	    int, const char *, ...);
 int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
 	    struct bmapc_memb **);
+
+void	_log_debug_bmapodv(const char *, const char *, int, int,
+	    struct bmapc_memb *, const char *, va_list);
+void	_log_debug_bmapod(const char *, const char *, int, int,
+	    struct bmapc_memb *, const char *, ...);
 
 #define bmap_lookup(f, n, bp)		bmap_getf((f), (n), 0, 0, (bp))
 #define bmap_get(f, n, rw, bp)		bmap_getf((f), (n), (rw),	\
@@ -275,6 +284,7 @@ enum bmap_opcnt_types {
 /* 10 */ BMAP_OPCNT_RLSSCHED
 };
 
+SPLAY_HEAD(bmap_cache, bmapc_memb);
 SPLAY_PROTOTYPE(bmap_cache, bmapc_memb, bcm_tentry, bmap_cmp);
 
 struct bmap_ops {
@@ -288,6 +298,12 @@ extern struct bmap_ops bmap_ops;
 
 static __inline void *
 bmap_get_pri(struct bmapc_memb *bcm)
+{
+	return (bcm + 1);
+}
+
+static __inline const void *
+bmap_get_pri_const(const struct bmapc_memb *bcm)
 {
 	return (bcm + 1);
 }

@@ -44,7 +44,7 @@
 
 struct odtable				*mdsBmapAssignTable;
 uint64_t				 mdsBmapSequenceNo;
-const struct slash_bmap_od		 null_bmap_od;
+const struct bmap_ondisk		 null_bmap_od;
 const struct slash_inode_od		 null_inode_od;
 const struct slash_inode_extras_od	 null_inox_od;
 
@@ -274,14 +274,14 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	sl_csvc_decref(csvc);
 
 	bml->bml_bmdsi->bmdsi_wr_ion = rmmi;
-	bmap_op_start_type(bml->bml_bmdsi->bmdsi_bmap, BMAP_OPCNT_IONASSIGN);
+	bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_IONASSIGN);
 
-	(uint64_t)mds_bmap_timeotbl_mdsi(bml, BTE_ADD|BTE_REATTACH);
+	mds_bmap_timeotbl_mdsi(bml, BTE_ADD|BTE_REATTACH);
 
 	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
-	DEBUG_BMAP(PLL_WARN, bml->bml_bmdsi->bmdsi_bmap, "res(%s) ion(%s)",
-		   resm->resm_res->res_name, resm->resm_addrbuf);
+	DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml), "res(%s) ion(%s)",
+	    resm->resm_res->res_name, resm->resm_addrbuf);
 
 	return (0);
 }
@@ -416,7 +416,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 	bia->bia_flags = BIAF_DIO;
 
 	bmdsi->bmdsi_assign = odtable_replaceitem(mdsBmapAssignTable,
-					  bmdsi->bmdsi_assign, bia);
+	    bmdsi->bmdsi_assign, bia);
 	psc_assert(bmdsi->bmdsi_assign);
 
 	bml->bml_ion_nid = bia->bia_ion_nid;
@@ -463,7 +463,7 @@ mds_bmap_dupls_find(struct bmap_mds_info *bmdsi, lnet_process_id_t *cnp,
 		else
 			(*wlease)++;
 
-		DEBUG_BMAP(PLL_INFO, bmdsi->bmdsi_bmap, "bml=%p tmp=%p "
+		DEBUG_BMAP(PLL_INFO, bmi_2_bmap(bmdsi), "bml=%p tmp=%p "
 			   "(wlease=%d rlease=%d) (nwtrs=%d nrdrs=%d)",
 			   bml, tmp, *wlease, *rlease,
 			   bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
@@ -488,7 +488,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 	int rc = 0, wlease, rlease;
 
 	bmdsi = bml->bml_bmdsi;
-	b = bmdsi->bmdsi_bmap;
+	b = bmi_2_bmap(bmdsi);
 
 	bcm_wait_locked(b, b->bcm_flags & BMAP_IONASSIGN);
 
@@ -606,10 +606,10 @@ __static int
 mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 	 sl_ios_id_t prefios)
 {
-	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
-	struct bmapc_memb *b=bmdsi->bmdsi_bmap;
+	struct bmap_mds_info *bmdsi = bml->bml_bmdsi;
+	struct bmapc_memb *b = bmi_2_bmap(bmdsi);
 	struct bmap_mds_lease *obml;
-	int rlease, wlease, rc=0;
+	int rlease, wlease, rc = 0;
 
 	psc_assert(bml->bml_cli_nidpid.nid &&
 		   bml->bml_cli_nidpid.pid &&
@@ -755,9 +755,9 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 {
 	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
 	struct bmap_mds_lease *obml, *tail;
-	int rlease=0, wlease=0;
+	int rlease = 0, wlease = 0;
 
-	BMAP_LOCK_ENSURE(bmdsi->bmdsi_bmap);
+	BMAP_LOCK_ENSURE(bmi_2_bmap(bmdsi));
 	BML_LOCK_ENSURE(bml);
 
 	obml = mds_bmap_dupls_find(bmdsi, &bml->bml_cli_nidpid, &wlease,
@@ -809,7 +809,7 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 			psc_assert(bmdsi->bmdsi_writers > 0);
 			bmdsi->bmdsi_writers--;
 
-			DEBUG_BMAP(PLL_INFO, bmdsi->bmdsi_bmap,
+			DEBUG_BMAP(PLL_INFO, bmi_2_bmap(bmdsi),
 			   "bml=%p bmdsi_writers=%d bmdsi_readers=%d",
 			   bml, bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
 
@@ -1053,8 +1053,8 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	resm = libsl_nid2resm(bia->bia_ion_nid);
 
 	psc_warnx("fid=%"PRId64" seq=%"PRId64" res=(%s) ion=(%s) bmapno=%u",
-		  bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
-		  libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
+	    bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
+	    libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
 
 	if (!bia->bia_fid) {
 		psc_warnx("found fid #0 in odtable");
@@ -1135,11 +1135,10 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 int
 mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 {
+	struct bmap_mds_info *bmdsi;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap;
-	struct bmap_mds_info *bmdsi;
-	struct slash_bmap_od *bmapod;
-	int rc=0;
+	int rc;
 
 	rc = slm_fcmh_get(&c->fg, &fcmh);
 	if (rc) {
@@ -1147,11 +1146,10 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 			psc_warnx("fid=%"PRId64" appears to have been deleted",
 				  c->fg.fg_fid);
 			return (0);
-		} else {
-			psc_errorx("fid=%"PRId64" slm_fcmh_get() rc=%d",
-				  c->fg.fg_fid, rc);
-			return (-rc);
 		}
+		psc_errorx("fid=%"PRId64" slm_fcmh_get() rc=%d",
+			  c->fg.fg_fid, rc);
+		return (-rc);
 	}
 
 	/* BMAP_OP #2
@@ -1169,12 +1167,10 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
 
 	bmdsi = bmap_2_bmdsi(bmap);
-	bmapod = bmap->bcm_od;
 	/* These better check out.
 	 */
 	psc_assert(bmap->bcm_fcmh == fcmh);
 	psc_assert(bmdsi);
-	psc_assert(bmapod);
 
 	if (!bmdsi->bmdsi_wr_ion ||
 	    ion_nid != bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid) {
@@ -1259,14 +1255,14 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
  *	writes something to it.
  */
 __static void
-mds_bmapod_initnew(struct slash_bmap_od *b)
+mds_bmapod_initnew(struct bmap_ondisk *bod)
 {
 	int i;
 
-	for (i = 0; i < SL_CRCS_PER_BMAP; i++)
-		b->bh_crcs[i].gc_crc = BMAP_NULL_CRC;
+	for (i = 0; i < SLASH_CRCS_PER_BMAP; i++)
+		bod->bod_crcs[i] = BMAP_NULL_CRC;
 
-	psc_crc64_calc(&b->bh_bhcrc, b, BMAP_OD_CRCSZ);
+	psc_crc64_calc(&bod->bod_crc, bod, BMAP_OD_CRCSZ);
 }
 
 /**
@@ -1278,26 +1274,23 @@ int
 mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 {
 	struct fidc_membh *f = bcm->bcm_fcmh;
-	struct slash_bmap_od *bod;
 	int rc;
-
-	psc_assert(bcm->bcm_od == NULL);
-	bod = bcm->bcm_od = PSCALLOC(BMAP_OD_SZ);
 
 	/* pread() the bmap from the meta file.
 	 */
 	rc = mdsio_bmap_read(bcm);
+
 	/*
 	 * Check for a NULL CRC if we had a good read.  NULL CRC can happen
 	 *    when bmaps are gaps that have not been written yet.   Note
 	 *    that a short read is tolerated as long as the bmap is zeroed.
 	 */
 	if (!rc || rc == SLERR_SHORTIO) {
-		if (bod->bh_bhcrc == 0 &&
-		    memcmp(bod, &null_bmap_od,
+		if (bmap_2_ondiskcrc(bcm) == 0 &&
+		    memcmp(bmap_2_ondisk(bcm), &null_bmap_od,
 		    sizeof(null_bmap_od)) == 0) {
 			DEBUG_BMAPOD(PLL_INFO, bcm, "");
-			mds_bmapod_initnew(bod);
+			mds_bmapod_initnew(bmap_2_ondisk(bcm));
 			DEBUG_BMAPOD(PLL_INFO, bcm, "");
 			return (0);
 		}
@@ -1316,7 +1309,6 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 	DEBUG_BMAPOD(PLL_INFO, bcm, "");
 	return (0);
  out:
-	PSCFREE(bcm->bcm_od);
 	return (rc);
 }
 
@@ -1326,7 +1318,6 @@ mds_bmap_init(struct bmapc_memb *bcm)
 	struct bmap_mds_info *bmdsi;
 
 	bmdsi = bmap_2_bmdsi(bcm);
-	bmdsi->bmdsi_bmap = bcm;
 	pll_init(&bmdsi->bmdsi_leases, struct bmap_mds_lease,
 	    bml_bmdsi_lentry, &bcm->bcm_lock);
 	bmdsi->bmdsi_xid = 0;
@@ -1343,7 +1334,6 @@ mds_bmap_destroy(struct bmapc_memb *bcm)
 	psc_assert(bmdsi->bmdsi_assign == NULL);
 	psc_assert(pll_empty(&bmdsi->bmdsi_leases));
 	psc_pthread_rwlock_destroy(&bmdsi->bmdsi_rwlock);
-	PSCFREE(bcm->bcm_od);
 }
 
 /**
@@ -1371,13 +1361,13 @@ mds_bmap_loadvalid(struct fidc_membh *f, sl_bmapno_t bmapno,
 		return (rc);
 
 	BMAP_LOCK(b);
-	for (n = 0; n < SL_CRCS_PER_BMAP; n++)
+	for (n = 0; n < SLASH_CRCS_PER_BMAP; n++)
 		/*
 		 * XXX need a bitmap to see which CRCs are
 		 * actually uninitialized and not just happen
 		 * to be zero.
 		 */
-		if (b->bcm_od->bh_crcstates[n]) {
+		if (b->bcm_crcstates[n]) {
 			BMAP_ULOCK(b);
 			*bp = b;
 			return (0);
@@ -1457,7 +1447,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	bml->bml_flags = (rw == SL_WRITE ? BML_WRITE : BML_READ);
 	bml->bml_cli_nidpid = exp->exp_connection->c_peer;
 
-	if (flags & SRM_GETBMAPF_DIRECTIO)
+	if (flags & SRM_LEASEBMAPF_DIRECTIO)
 		bml->bml_flags |= BML_CDIO;
 
 	rc = mds_bmap_bml_add(bml, rw, prefios);

@@ -22,6 +22,7 @@
 
 #include <sys/time.h>
 
+#include "psc_util/time.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_rpc/rpc.h"
@@ -35,10 +36,8 @@
 struct bmap_iod_info;
 struct slvr_ref;
 
-extern struct psc_listcache bmapRlsQ;
-extern struct psc_listcache bmapReapQ;
-
-/* For now only one of these structures is needed.  In the future
+/*
+ * For now only one of these structures is needed.  In the future
  *   we'll need one per MDS.
  */
 struct biod_infl_crcs {
@@ -93,18 +92,29 @@ struct bmap_iod_minseq {
 
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
 
+/*
+ * bmap_iod_info - the bmap_get_pri() data structure for the I/O server.
+ */
 struct bmap_iod_info {
+	/*
+	 * This structure must start with the continuation of
+	 * bmap_ondisk from where bmapc_memb left off so an entire
+	 * bmap_ondisk will be laid contiguously in memory for I/O over
+	 * the network and with ZFS.
+	 */
+	struct bmap_extra_state	 biod_extrastate;
+	uint64_t		 biod_ondiskcrc;
+
 	psc_spinlock_t		 biod_lock;
 	struct bmapc_memb	*biod_bmap;
 	/*
- 	 * Accumulate CRC updates until its associated biod_crcup_ref 
- 	 * structure is full, at which point it is set to NULL and a
- 	 * new biod_crcup_ref structure must be allocated for future
- 	 * CRC updates.
- 	 */
+	 * Accumulate CRC updates until its associated biod_crcup_ref
+	 * structure is full, at which point it is set to NULL and a
+	 * new biod_crcup_ref structure must be allocated for future
+	 * CRC updates.
+	 */
 	struct biod_crcup_ref	*biod_bcr;
 	struct biod_slvrtree	 biod_slvrs;
-	struct srt_bmap_wire	*biod_bmap_wire;
 	struct psclist_head	 biod_lentry;
 	struct timespec		 biod_age;
 	struct psc_lockedlist	 biod_bklog_bcrs;
@@ -117,41 +127,25 @@ struct bmap_iod_info {
 	uint32_t                 biod_state;
 };
 
-enum biod_states {
-	BIOD_INFLIGHT = (1 << 0),
-	BIOD_RLSSEQ   = (1 << 1),
-	BIOD_BCRSCHED = (1 << 2),
-	BIOD_RLSSCHED = (1 << 3)
-};
+/* biod_state flags */
+#define	BIOD_INFLIGHT		(1 << 0)
+#define	BIOD_RLSSEQ		(1 << 1)
+#define	BIOD_BCRSCHED		(1 << 2)
+#define	BIOD_RLSSCHED		(1 << 3)
 
-#define biodi_2_wire(bi)	(bi)->biod_bmap_wire
-#define biodi_2_crcbits(bi, sl)	biodi_2_wire(bi)->bh_crcstates[sl]
+#define biodi_2_wire(bi)	bmap_2_wire(bii_2_bmap(bi))
+#define biodi_2_crcbits(bi, sl)	biodi_2_wire(bi)->bod_crcstates[sl]
 
 #define bmap_2_biodi(b)		((struct bmap_iod_info *)bmap_get_pri(b))
 #define bmap_2_bii(b)		((struct bmap_iod_info *)bmap_get_pri(b))
 #define bmap_2_biodi_age(b)	bmap_2_biodi(b)->biod_age
 #define bmap_2_biodi_lentry(b)	bmap_2_biodi(b)->biod_lentry
 #define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)
-#define bmap_2_biodi_wire(b)	bmap_2_biodi(b)->biod_bmap_wire
+#define bmap_2_wire(b)		((struct bmap_ondisk *)(&(b)->bcm_corestate))
 
 #define bmap_2_crcbits(b, sl)	biodi_2_crcbits(bmap_2_biodi(b), (sl))
 
 #define BIOD_CRCUP_MAX_AGE	2		/* in seconds */
-
-static inline int
-bmap_iod_timeo_cmp(const void *x, const void *y)
-{
-	const struct bmap_iod_info * const *pa = x, *a = *pa;
-	const struct bmap_iod_info * const *pb = y, *b = *pb;
-
-	if (timespeccmp(&a->biod_age, &b->biod_age, <))
-		return (-1);
-
-	if (timespeccmp(&a->biod_age, &b->biod_age, >))
-		return (1);
-
-	return (0);
-}
 
 uint64_t	bim_getcurseq(void);
 void		bim_init(void);
@@ -167,5 +161,33 @@ void bcr_finalize(struct biod_infl_crcs *, struct biod_crcup_ref *);
 void bcr_xid_check(struct biod_crcup_ref *);
 void biod_rlssched_locked(struct bmap_iod_info *);
 void sliod_bmaprlsthr_spawn(void);
+
+extern struct psc_listcache bmapRlsQ;
+extern struct psc_listcache bmapReapQ;
+
+static __inline struct bmapc_memb *
+bii_2_bmap(struct bmap_iod_info *bii)
+{
+	struct bmapc_memb *bcm;
+
+	psc_assert(bii);
+	bcm = (void *)bii;
+	return (bcm - 1);
+}
+
+static inline int
+bmap_iod_timeo_cmp(const void *x, const void *y)
+{
+	const struct bmap_iod_info * const *pa = x, *a = *pa;
+	const struct bmap_iod_info * const *pb = y, *b = *pb;
+
+	if (timespeccmp(&a->biod_age, &b->biod_age, <))
+		return (-1);
+
+	if (timespeccmp(&a->biod_age, &b->biod_age, >))
+		return (1);
+
+	return (0);
+}
 
 #endif /* _SLIOD_BMAP_H_ */

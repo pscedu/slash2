@@ -33,9 +33,12 @@
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"
 
+#include "cache_params.h"
+
 struct psc_vbitmap;
 
-#define SLB_SIZE (SLB_BLKSZ * SLB_NBLK)
+#define SLB_BLKSZ	SLASH_SLVR_BLKSZ
+#define SLB_SIZE	(SLB_BLKSZ * SLB_NBLK)
 
 enum {
 	SLB_DIRTY    = 0x01, /* have dirty data          */

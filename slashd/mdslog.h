@@ -31,6 +31,7 @@ struct fidc_membh;
 struct slash_inode_handle;
 struct slmds_jent_namespace;
 struct srm_bmap_crcup;
+struct srt_stat;
 
 /*
  * Keep track of the bmap associated with a CRC update

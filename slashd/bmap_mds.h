@@ -32,6 +32,8 @@
 #include "slashd.h"
 #include "inode.h"
 
+struct srt_bmapdesc;
+
 /*
  * bmap_mds_info - the bmap_get_pri() data structure for the slash2 mds.
  *   bmap_mds_info holds all bmap specific context for the mds which
@@ -46,7 +48,15 @@
  *   directed to this ion once a client has invoked write mode on the bmap.
  */
 struct bmap_mds_info {
-	struct bmapc_memb		*bmdsi_bmap;    /* back pointer            */
+	/*
+	 * This structure must start with the continuation of
+	 * bmap_ondisk from where bmapc_memb left off so an entire
+	 * bmap_ondisk will be laid contiguously in memory for I/O over
+	 * the network and with ZFS.
+	 */
+	struct bmap_extra_state		 bmdsi_extrastate;
+	uint64_t			 bmdsi_ondiskcrc;
+
 	struct resm_mds_info		*bmdsi_wr_ion;	/* pointer to write ION    */
 	struct psc_lockedlist		 bmdsi_leases;  /* tracked bmap leases     */
 	struct odtable_receipt		*bmdsi_assign;
@@ -54,14 +64,24 @@ struct bmap_mds_info {
 	uint32_t			 bmdsi_xid;	/* last op recv'd from ION */
 	int32_t				 bmdsi_writers;
 	int32_t				 bmdsi_readers;
-	int				 bmdsi_flags;
 	struct psc_pthread_rwlock	 bmdsi_rwlock;
 };
 
-/* bmdsi_flags */
-#define BMIM_LOGCHG		(1 << 0)	/* in-mem change made, needs logged */
-#define BMIM_DIO		(1 << 1)	/* directio enabled                 */
-#define BMIM_SEQWRAP		(1 << 2)	/* sequence number wrapped          */
+/* MDS-specific bmap_flags */
+#define BMIM_LOGCHG		(_BMAP_FLSHFT << 0)	/* in-mem change made, needs logged */
+#define BMIM_DIO		(_BMAP_FLSHFT << 1)	/* directio enabled                 */
+#define BMIM_SEQWRAP		(_BMAP_FLSHFT << 2)	/* sequence number wrapped          */
+
+#define bmap_2_bmdsi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
+#define bmap_2_bmi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
+#define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
+#define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmdsi_extrastate)
+#define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen
+#define bmap_2_replpol(b)	bmap_2_xstate(b)->bes_repl_policy
+#define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
+#define bmap_2_ondisk(b)	((struct bmap_ondisk *)(&(b)->bcm_corestate))
+#define bmap_2_ondiskcrc(b)	(&bmap_2_bmi(b)->bmdsi_ondiskcrc)
+#define bmap_2_crcs(b, n)	bmap_2_xstate(b)->bes_crcs[n]
 
 #define BMAPOD_RDLOCK(bmdsi)	psc_pthread_rwlock_rdlock(&(bmdsi)->bmdsi_rwlock)
 #define BMAPOD_RDREQLOCK(bmdsi)	psc_pthread_rwlock_rdreqlock(&(bmdsi)->bmdsi_rwlock)
@@ -73,7 +93,7 @@ struct bmap_mds_info {
 		int _bmdsi_set_locked;					\
 									\
 		_bmdsi_set_locked = BMAP_RLOCK(b);			\
-		bmap_2_bmdsi(b)->bmdsi_flags |= BMIM_LOGCHG;		\
+		(b)->bcm_flags |= BMIM_LOGCHG;				\
 		BMAP_URLOCK((b), _bmdsi_set_locked);			\
 	} while (0)
 
@@ -82,7 +102,7 @@ struct bmap_mds_info {
 		int _bmdsi_clear_locked;				\
 									\
 		_bmdsi_clear_locked = BMAP_RLOCK(b);			\
-		bmap_2_bmdsi(b)->bmdsi_flags &= ~BMIM_LOGCHG;		\
+		(b)->bcm_flags &= ~BMIM_LOGCHG;				\
 		BMAP_URLOCK((b), _bmdsi_clear_locked);			\
 	} while (0)
 
@@ -91,7 +111,7 @@ struct bmap_mds_info {
 		int _bmdsi_logchg_locked;				\
 									\
 		_bmdsi_logchg_locked = BMAP_RLOCK(b);			\
-		set = (bmap_2_bmdsi(b)->bmdsi_flags & BMIM_LOGCHG);	\
+		set = (b)->bcm_flags & BMIM_LOGCHG;			\
 		BMAP_URLOCK((b), _bmdsi_logchg_locked);			\
 	} while (0)
 
@@ -100,25 +120,25 @@ struct bmap_mds_info {
 #define BMAPOD_READ_START(b)	BMAPOD_RDLOCK(bmap_2_bmdsi(b))
 #define BMAPOD_READ_DONE(b)	BMAPOD_ULOCK(bmap_2_bmdsi(b))
 
-#define BHREPL_POLICY_SET(b, p)						\
+#define BHREPL_POLICY_SET(b, pol)					\
 	do {								\
 		BMAPOD_MODIFY_START(b);					\
-		(b)->bcm_od->bh_repl_policy = (p);			\
+		bmap_2_bgen(b) = (pol);					\
 		BMDSI_LOGCHG_SET(b);					\
 		BMAPOD_MODIFY_DONE(b);					\
 	} while (0)
 
-#define BHREPL_POLICY_GET(b, p)						\
+#define BHREPL_POLICY_GET(b, pol)					\
 	do {								\
 		BMAPOD_READ_START(b);					\
-		(p) = (b)->bcm_od->bh_repl_policy;			\
+		(pol) = bmap_2_bgen(b);					\
 		BMAPOD_READ_DONE(b);					\
 	} while (0)
 
 #define BHGEN_INCREMENT(b)						\
 	do {								\
 		BMAPOD_MODIFY_START(b);					\
-		(b)->bcm_od->bh_gen++;					\
+		bmap_2_bgen(b)++;					\
 		BMDSI_LOGCHG_SET(b);					\
 		BMAPOD_MODIFY_DONE(b);					\
 	} while (0)
@@ -126,12 +146,12 @@ struct bmap_mds_info {
 #define BHGEN_GET(b, gen)						\
 	do {								\
 		BMAPOD_READ_START(b);					\
-		(gen) = (b)->bcm_od->bh_gen;				\
+		(gen) = bmap_2_bgen(b);					\
 		BMAPOD_READ_DONE(b);					\
 	} while (0)
 
 /* MDS-specific bcm_flags flags */
-#define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT)		/* CRC update in progress */
+#define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 0)	/* CRC update in progress */
 #define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 1)
 #define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)
 
@@ -159,7 +179,7 @@ struct bmap_timeo_table {
 #define BTE_DEL			(1 << 1)
 #define BTE_REATTACH		(1 << 2)
 
-#define BMAP_TIMEO_MAX		120 /* Max bmap lease timeout */
+#define BMAP_TIMEO_MAX		120	/* Max bmap lease timeout */
 #define BMAP_TIMEO_TBL_QUANT	5
 #define BMAP_TIMEO_TBL_SZ	(BMAP_TIMEO_MAX / BMAP_TIMEO_TBL_QUANT)
 #define BMAP_SEQLOG_FACTOR	100
@@ -180,28 +200,26 @@ struct bmap_mds_lease {
 	struct bmap_mds_lease	 *bml_chain;		/* chain of duplicate leases */
 };
 
-#define bml_2_bmap(b)		(b)->bml_bmdsi->bmdsi_bmap
-
-#define BML_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bml_lock)
-#define BML_LOCK(b)		spinlock(&(b)->bml_lock)
-#define BML_ULOCK(b)		freelock(&(b)->bml_lock)
-
 /* bml_flags */
-enum {
-	BML_READ    = (1 << 0),
-	BML_WRITE   = (1 << 1),
-	BML_CDIO    = (1 << 2),
-	BML_COHRLS  = (1 << 3),
-	BML_COHDIO  = (1 << 4),
-	BML_EXP     = (1 << 5),
-	BML_TIMEOQ  = (1 << 6),
-	BML_BMDSI   = (1 << 7),
-	BML_COH     = (1 << 8),
-	BML_RECOVER = (1 << 9),
-	BML_CHAIN   = (1 << 10),
-	BML_UPGRADE = (1 << 11),
-	BML_EXPFAIL = (1 << 12)
-};
+#define	BML_READ	(1 <<  0)
+#define	BML_WRITE	(1 <<  1)
+#define	BML_CDIO	(1 <<  2)
+#define	BML_COHRLS	(1 <<  3)
+#define	BML_COHDIO	(1 <<  4)
+#define	BML_EXP		(1 <<  5)
+#define	BML_TIMEOQ	(1 <<  6)
+#define	BML_BMDSI	(1 <<  7)
+#define	BML_COH		(1 <<  8)
+#define	BML_RECOVER	(1 <<  9)
+#define	BML_CHAIN	(1 << 10)
+#define	BML_UPGRADE	(1 << 11)
+#define	BML_EXPFAIL	(1 << 12)
+
+#define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmdsi)
+
+#define BML_LOCK_ENSURE(bml)	LOCK_ENSURE(&(bml)->bml_lock)
+#define BML_LOCK(bml)		spinlock(&(bml)->bml_lock)
+#define BML_ULOCK(bml)		freelock(&(bml)->bml_lock)
 
 /**
  * bmap_ion_assign - The structure used for tracking the MDS's bmap/ion
@@ -221,11 +239,6 @@ struct bmap_ion_assign {
 
 /* bia_flags */
 #define BIAF_DIO		(1 << 0)
-
-#define bmap_2_bmdsi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
-#define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
-#define bmap_2_bgen(b)		(b)->bcm_od->bh_gen
-#define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
 
 #define mds_bmap_load(f, n, bp)	bmap_get((f), (n), 0, (bp))
 
@@ -256,5 +269,15 @@ void	 mds_bia_odtable_startup_cb(void *, struct odtable_receipt *);
 
 extern struct psc_poolmaster	 bmapMdsLeasePoolMaster;
 extern struct psc_poolmgr	*bmapMdsLeasePool;
+
+static __inline struct bmapc_memb *
+bmi_2_bmap(struct bmap_mds_info *bmi)
+{
+	struct bmapc_memb *bcm;
+
+	psc_assert(bmi);
+	bcm = (void *)bmi;
+	return (bcm - 1);
+}
 
 #endif /* _SLASHD_MDS_BMAP_H_ */

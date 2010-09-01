@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _SLASH_SLVR_H_
-#define _SLASH_SLVR_H_
+#ifndef _SLIOD_SLVR_H_
+#define _SLIOD_SLVR_H_
 
 #include "psc_ds/dynarray.h"
 #include "psc_ds/listcache.h"
@@ -77,7 +77,7 @@ enum {
 };
 
 #define SLVR_2_BLK(s)		((s)->slvr_num *			\
-				 (SLASH_BMAP_SIZE / SLASH_BMAP_BLKSZ))
+				 (SLASH_BMAP_SIZE / SLASH_SLVR_BLKSZ))
 
 #define SLVR_GETLOCK(s)		(&slvr_2_biod(s)->biod_lock)
 #define SLVR_LOCK(s)		spinlock(SLVR_GETLOCK(s))
@@ -110,7 +110,7 @@ enum {
 #define slvr_2_fcmh(s)		slvr_2_biod(s)->biod_bmap->bcm_fcmh
 #define slvr_2_fii(s)		fcmh_2_fii(slvr_2_fcmh(s))
 #define slvr_2_fd(s)		slvr_2_fii(s)->fii_fd
-#define slvr_2_biodi_wire(s)	slvr_2_biod(s)->biod_bmap_wire
+#define slvr_2_biodi_wire(s)	biodi_2_wire(slvr_2_biod(s))
 
 #define slvr_2_buf(s, blk)						\
 	((void *)(((s)->slvr_slab->slb_base) + ((blk) * SLASH_SLVR_BLKSZ)))
@@ -121,10 +121,10 @@ enum {
 		((blk) * SLASH_SLVR_BLKSZ)))
 
 #define slvr_2_crcbits(s)						\
-	slvr_2_biodi_wire((s))->bh_crcstates[(s)->slvr_num]
+	slvr_2_biodi_wire((s))->bod_crcstates[(s)->slvr_num]
 
 #define slvr_2_crc(s)							\
-	slvr_2_biodi_wire((s))->bh_crcs[(s)->slvr_num].gc_crc
+	slvr_2_biodi_wire((s))->bod_crcs[(s)->slvr_num]
 
 #define slvr_io_done(s, off, len, rw)					\
 	((rw) == SL_WRITE ? slvr_wio_done(s, off, len) : slvr_rio_done(s))
@@ -184,10 +184,10 @@ slvr_lru_tryunpin_locked(struct slvr_ref *s)
 {
 	SLVR_LOCK_ENSURE(s);
 	psc_assert(s->slvr_slab);
-	if (s->slvr_pndgwrts || s->slvr_pndgreads || 
+	if (s->slvr_pndgwrts || s->slvr_pndgreads ||
 	    s->slvr_flags & SLVR_CRCDIRTY || s->slvr_flags & SLVR_CRCING)
 		return (0);
-	
+
 	psc_assert(s->slvr_flags & SLVR_LRU);
 	psc_assert(s->slvr_flags & SLVR_PINNED);
 	psc_assert(s->slvr_flags & SLVR_DATARDY);
@@ -228,7 +228,7 @@ slvr_lru_slab_freeable(struct slvr_ref *s)
 static __inline int
 slvr_lru_freeable(struct slvr_ref *s)
 {
-	int freeable=0;
+	int freeable = 0;
 
 	if (s->slvr_slab ||
 	    s->slvr_flags & SLVR_PINNED   ||
@@ -242,4 +242,4 @@ slvr_lru_freeable(struct slvr_ref *s)
 	return (freeable);
 }
 
-#endif
+#endif /* _SLIOD_SLVR_H_ */

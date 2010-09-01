@@ -26,9 +26,9 @@
 #define _SLASHRPC_H_
 
 #include "pfl/cdefs.h"
-#include "psc_util/crc.h"
 
 #include "authbuf.h"
+#include "bmap.h"
 #include "cache_params.h"
 #include "creds.h"
 #include "fid.h"
@@ -263,13 +263,6 @@ struct srt_bmapdesc {
 	uint32_t		sbd__pad;
 } __packed;
 
-/* Must match struct slash_bmap_od!
- */
-struct srt_bmap_cli_wire {
-	uint8_t			crcstates[SL_CRCS_PER_BMAP];
-	uint8_t			repls[SL_REPLICA_NBYTES];
-} __packed;
-
 /* Slash RPC transportably safe structures. */
 struct srt_stat {
 	struct slash_fidgen	sst_fg;		/* file ID + truncate generation */
@@ -339,39 +332,41 @@ struct srm_send_namespace_rep {
 
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
 
-struct srm_getbmap_req {
+struct srm_leasebmap_req {
 	struct slash_fidgen	fg;
 	sl_ios_id_t		prefios;	/* client's preferred IOS ID */
 	sl_bmapno_t		bmapno;		/* Starting bmap index number */
 	int32_t			rw;		/* 'enum rw' value for access */
-	uint32_t		flags;		/* see SRM_BMAPF_* flags below */
+	uint32_t		flags;		/* see SRM_LEASEBMAPF_* below */
 } __packed;
 
-#define SRM_GETBMAPF_DIRECTIO	(1 << 0)	/* client wants direct I/O */
-#define SRM_GETBMAPF_GETREPLTBL	(1 << 1)	/* fetch inode replica table */
+#define SRM_LEASEBMAPF_DIRECTIO	  (1 << 0)	/* client wants direct I/O */
+#define SRM_LEASEBMAPF_GETREPLTBL (1 << 1)	/* fetch inode replica table */
 
-struct srm_getbmap_rep {
+struct srm_leasebmap_rep {
 	struct srt_bmapdesc	sbd;		/* descriptor for bmap */
-	struct srt_bmap_cli_wire bcw;
+	struct bmap_core_state	bcs;
 	int32_t			rc;		/* 0 for success or slerrno */
 	int32_t			_pad;
-	uint32_t		flags;		/* see SRM_GETBMAPF_* flags */
-	uint32_t		nrepls;		/* if SRM_GETBMAPF_GETREPLTBL*/
+	uint32_t		flags;		/* return SRM_LEASEBMAPF_* success */
+
+	/* fetch fcmh repl table if SRM_LEASEBMAPF_GETREPLTBL */
+	uint32_t		nrepls;
 	sl_replica_t		reptbl[SL_MAX_REPLICAS];
+
 } __packed;
 
 /*
  * ION requesting CRC table from the MDS.
  */
-struct srm_bmap_wire_req {
+struct srm_getbmap_full_req {
 	struct slash_fidgen	fg;
 	sl_bmapno_t		bmapno;
 	int32_t			rw;
-	int32_t			_pad;
 } __packed;
 
-struct srm_bmap_wire_rep {
-	struct srt_bmap_wire	wire;
+struct srm_getbmap_full_rep {
+	struct bmap_ondisk	bod;
 	uint64_t		minseq;
 	int32_t			rc;
 	int32_t			_pad;
@@ -507,10 +502,10 @@ struct srm_replst_slave_req {
 	uint32_t		nbmaps;		/* # of bmaps in this chunk */
 	sl_bmapno_t		boff;		/* offset into inode of first bmap in bulk */
 	int32_t			_pad;
-/* bulk data is sections of bh_repls data */
+/* bulk data is sections of bcs_repls data */
 } __packed;
 
-/* per-bmap header submessage, prepended before each bh_repls content */
+/* per-bmap header submessage, prepended before each bcs_repls content */
 struct srsm_replst_bhdr {
 	uint8_t			srsb_repl_policy;
 } __packed;
@@ -571,7 +566,7 @@ struct srm_create_rep {
 	int32_t			_pad;
 
 	/* parameters for fetching first bmap */
-	uint32_t		rc2;		/* (for GETBMAP) 0 or slerrno */
+	uint32_t		rc2;		/* (for LEASEBMAP) 0 or slerrno */
 	uint32_t		flags;		/* see SRM_BMAPF_* flags */
 	struct srt_bmapdesc	sbd;
 } __packed;

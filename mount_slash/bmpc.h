@@ -42,7 +42,7 @@
 #include "bmap.h"
 #include "buffer.h"
 
-#define BMPC_BUFSZ		SLASH_BMAP_BLKSZ
+#define BMPC_BUFSZ		SLASH_SLVR_BLKSZ
 #define BMPC_BLKSZ		BMPC_BUFSZ
 #define BMPC_SLB_NBLKS		256  /* 8MB slab */
 #define BMPC_DEFSLBS		8

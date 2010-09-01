@@ -81,7 +81,7 @@
 #include "sliod/slvr.h"
 /* end includes */
 
-struct slash_bmap_od bmapod;
+struct bmap_ondisk bmapod;
 char buf[1024 * 1024];
 const char *progname;
 
@@ -148,17 +148,20 @@ main(int argc, char *argv[])
 	PRTYPE(struct biod_crcup_ref);
 	PRTYPE(struct biod_infl_crcs);
 	PRTYPE(struct bmap_cli_info);
+	PRTYPE(struct bmap_core_state);
+	PRTYPE(struct bmap_extra_state);
 	PRTYPE(struct bmap_iod_info);
 	PRTYPE(struct bmap_iod_minseq);
+	PRTYPE(struct bmap_ion_assign);
 	PRTYPE(struct bmap_mds_info);
 	PRTYPE(struct bmap_mds_lease);
+	PRTYPE(struct bmap_ondisk);
 	PRTYPE(struct bmap_ops);
 	PRTYPE(struct bmap_pagecache);
 	PRTYPE(struct bmap_pagecache_entry);
 	PRTYPE(struct bmap_timeo_entry);
 	PRTYPE(struct bmap_timeo_table);
 	PRTYPE(struct bmapc_memb);
-	PRTYPE(struct bmi_assign);
 	PRTYPE(struct bmpc_ioreq);
 	PRTYPE(struct bmpc_mem_slbs);
 	PRTYPE(struct cli_finfo);
@@ -171,7 +174,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct fcmh_mds_info);
 	PRTYPE(struct fidc_membh);
 	PRTYPE(struct mdsio_ops);
-	PRTYPE(struct msbmap_crcrepl_states);
 	PRTYPE(struct msctl_replstq);
 	PRTYPE(struct msctlmsg_fncmd_bmapreplpol);
 	PRTYPE(struct msctlmsg_fncmd_newreplpol);
@@ -201,7 +203,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct sl_timespec);
 	PRTYPE(struct slash_creds);
 	PRTYPE(struct slash_fidgen);
-	PRTYPE(struct slash_gencrc);
 	PRTYPE(struct slash_inode_extras_od);
 	PRTYPE(struct slash_inode_handle);
 	PRTYPE(struct slash_inode_od);
@@ -240,8 +241,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_bmap_minseq_get);
 	PRTYPE(struct srm_bmap_release_rep);
 	PRTYPE(struct srm_bmap_release_req);
-	PRTYPE(struct srm_bmap_wire_rep);
-	PRTYPE(struct srm_bmap_wire_req);
 	PRTYPE(struct srm_connect_req);
 	PRTYPE(struct srm_create_rep);
 	PRTYPE(struct srm_create_req);
@@ -250,10 +249,12 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_generic_rep);
 	PRTYPE(struct srm_getattr_rep);
 	PRTYPE(struct srm_getattr_req);
-	PRTYPE(struct srm_getbmap_rep);
-	PRTYPE(struct srm_getbmap_req);
+	PRTYPE(struct srm_getbmap_full_rep);
+	PRTYPE(struct srm_getbmap_full_req);
 	PRTYPE(struct srm_io_rep);
 	PRTYPE(struct srm_io_req);
+	PRTYPE(struct srm_leasebmap_rep);
+	PRTYPE(struct srm_leasebmap_req);
 	PRTYPE(struct srm_link_rep);
 	PRTYPE(struct srm_link_req);
 	PRTYPE(struct srm_lookup_rep);
@@ -285,8 +286,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srsm_replst_bhdr);
 	PRTYPE(struct srt_authbuf_footer);
 	PRTYPE(struct srt_authbuf_secret);
-	PRTYPE(struct srt_bmap_cli_wire);
-	PRTYPE(struct srt_bmap_wire);
 	PRTYPE(struct srt_bmapdesc);
 	PRTYPE(struct srt_dirent);
 	PRTYPE(struct srt_stat);
@@ -306,10 +305,6 @@ main(int argc, char *argv[])
 	/* end constants */
 
 	/* start enums */
-	PRVAL(BIOD_BCRSCHED);
-	PRVAL(BIOD_INFLIGHT);
-	PRVAL(BIOD_RLSSCHED);
-	PRVAL(BIOD_RLSSEQ);
 	PRVAL(BIORQ_DESTROY);
 	PRVAL(BIORQ_DIO);
 	PRVAL(BIORQ_FLUSHRDY);
@@ -332,23 +327,6 @@ main(int argc, char *argv[])
 	PRVAL(BMAP_OPCNT_REPLWK);
 	PRVAL(BMAP_OPCNT_RLSSCHED);
 	PRVAL(BMAP_OPCNT_SLVR);
-	PRVAL(BMAP_SLVR_CRC);
-	PRVAL(BMAP_SLVR_CRCDIRTY);
-	PRVAL(BMAP_SLVR_DATA);
-	PRVAL(BMAP_SLVR_WANTREPL);
-	PRVAL(BML_BMDSI);
-	PRVAL(BML_CDIO);
-	PRVAL(BML_CHAIN);
-	PRVAL(BML_COH);
-	PRVAL(BML_COHDIO);
-	PRVAL(BML_COHRLS);
-	PRVAL(BML_EXP);
-	PRVAL(BML_EXPFAIL);
-	PRVAL(BML_READ);
-	PRVAL(BML_RECOVER);
-	PRVAL(BML_TIMEOQ);
-	PRVAL(BML_UPGRADE);
-	PRVAL(BML_WRITE);
 	PRVAL(BMPCE_DATARDY);
 	PRVAL(BMPCE_DIRTY2LRU);
 	PRVAL(BMPCE_FREE);
@@ -468,12 +446,15 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_UNLINK);
 	PRVAL(SRMT_UTIMES);
 	PRVAL(SRMT_WRITE);
+	PRVAL(USWI_REFT_LOOKUP);
+	PRVAL(USWI_REFT_SITEUPQ);
+	PRVAL(USWI_REFT_TREE);
 	/* end enums */
 
 	PRVAL(INOX_OD_SZ);
 	PRVAL(INOX_OD_CRCSZ);
 
-	PRVAL(SLASH_BMAP_SIZE);
+	PRVAL(SL_BMAP_SIZE);
 
 	PRVAL(SL_CRCS_PER_BMAP);
 	PRVAL(SL_REPLICA_NBYTES);

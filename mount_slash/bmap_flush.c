@@ -130,7 +130,7 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 }
 
 /**
- * bmap_flush_coalesce_size - This function determines the size of the region covered by 
+ * bmap_flush_coalesce_size - This function determines the size of the region covered by
  *     an array of requests.  Note that these requests can overlap in various ways. But
  *     they have already been ordered based on their offsets.
  */
@@ -436,17 +436,17 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 
 			bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
 			BMPCE_LOCK(bmpce);
-			/* 
- 			 * We might round down the offset of an I/O request
- 			 * to the start offset of the previous page.
- 			 */
+			/*
+			 * We might round down the offset of an I/O request
+			 * to the start offset of the previous page.
+			 */
 			if ((bmpce->bmpce_off <= r->biorq_off) && j)
 				abort();
 
 			/*
- 			 * We might straddle the end offset of the previously
- 			 * scheduled I/O request.
- 			 */
+			 * We might straddle the end offset of the previously
+			 * scheduled I/O request.
+			 */
 			if (off - bmpce->bmpce_off >= BMPC_BUFSZ) {
 				/* Similar case to the 'continue' stmt above,
 				 *   this bmpce overlaps a previously
@@ -537,8 +537,8 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 }
 
 /**
- * bmap_flush_trycoalesce - scan the given array of i/o requests for candidates 
- *    to flush.  We *only* flush when (1) a request has aged out or (2) we can 
+ * bmap_flush_trycoalesce - scan the given array of i/o requests for candidates
+ *    to flush.  We *only* flush when (1) a request has aged out or (2) we can
  *    construct a large enough I/O.
  */
 __static struct psc_dynarray *
@@ -586,11 +586,11 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 			continue;
 		}
 		/*
- 		 * Okay, we fail to coalesce more requests.  If any request
- 		 * has already expired, we push the current set anyway
- 		 * regardless of its size.  Otherwise, we reset everything
- 		 * and attempt to coalesce the remaining requests.
- 		 */
+		 * Okay, we fail to coalesce more requests.  If any request
+		 * has already expired, we push the current set anyway
+		 * regardless of its size.  Otherwise, we reset everything
+		 * and attempt to coalesce the remaining requests.
+		 */
 		if (anyexpired)
 			break;
 
@@ -635,13 +635,13 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 void
 bmap_flush(void)
 {
-	struct bmapc_memb *b;
-	struct bmap_cli_info *bci;
+	struct psc_dynarray a = DYNARRAY_INIT, bmaps = DYNARRAY_INIT, *biorqs;
 	struct bmap_pagecache *bmpc;
-	struct psc_dynarray a=DYNARRAY_INIT, bmaps=DYNARRAY_INIT, *biorqs;
 	struct bmpc_ioreq *r, *tmp;
-	struct iovec *iovs=NULL;
-	int i=0, niovs, nrpcs;
+	struct iovec *iovs = NULL;
+	struct bmap_cli_info *bci;
+	struct bmapc_memb *b;
+	int i = 0, niovs, nrpcs;
 
 	nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
 
@@ -651,11 +651,11 @@ bmap_flush(void)
 	}
 
 	while (nrpcs > 0) {
-		bci = lc_getnb(&bmapFlushQ);
-		if (!bci)
+		b = lc_getnb(&bmapFlushQ);
+		if (!b)
 			break;
 
-		b = bci->bci_bmap;
+		bci = bmap_2_bci(b);
 		bmpc = bmap_2_bmpc(b);
 		/* Bmap lock only needed to test the dirty bit.
 		 */
@@ -670,8 +670,7 @@ bmap_flush(void)
 		BMPC_LOCK(bmpc);
 		if (b->bcm_flags & BMAP_DIRTY) {
 			psc_assert(bmpc_queued_writes(bmpc));
-			psc_dynarray_add(&bmaps, bci);
-
+			psc_dynarray_add(&bmaps, b);
 		} else {
 			psc_assert(!bmpc_queued_writes(bmpc));
 			b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
@@ -683,7 +682,7 @@ bmap_flush(void)
 				 */
 				psc_assert(!(b->bcm_flags & BMAP_REAPABLE));
 				b->bcm_flags |= BMAP_REAPABLE;
-				lc_addtail(&bmapTimeoutQ, bmap_2_bci(b));
+				lc_addtail(&bmapTimeoutQ, b);
 				DEBUG_BMAP(PLL_INFO, b,
 				   "added to bmapTimeoutQ");
 			}
@@ -747,9 +746,9 @@ bmap_flush(void)
 			DEBUG_BIORQ(PLL_NOTIFY, r, "sorted?");
 		}
 #endif
-		i=0;
+		i = 0;
 		while (i < psc_dynarray_len(&a) &&
-		       (biorqs = bmap_flush_trycoalesce(&a, &i))) {
+		    (biorqs = bmap_flush_trycoalesce(&a, &i))) {
 			/* Note: 'biorqs' must be freed!!
 			 */
 			niovs = bmap_flush_coalesce_map(biorqs, &iovs);
@@ -762,9 +761,9 @@ bmap_flush(void)
 		}
 	}
 
-	for (i=0; i < psc_dynarray_len(&bmaps); i++) {
-		bci = psc_dynarray_getpos(&bmaps, i);
-		b = bci->bci_bmap;
+	for (i = 0; i < psc_dynarray_len(&bmaps); i++) {
+		b = psc_dynarray_getpos(&bmaps, i);
+		bci = bmap_2_bci(b);
 		bmpc = bmap_2_bmpc(b);
 
 		BMAP_LOCK(b);
@@ -779,8 +778,7 @@ bmap_flush(void)
 		if (bmpc_queued_writes(bmpc)) {
 			psc_assert(b->bcm_flags & BMAP_DIRTY);
 			DEBUG_BMAP(PLL_INFO, b, "restore to dirty list");
-			lc_addtail(&bmapFlushQ, bci);
-
+			lc_addtail(&bmapFlushQ, b);
 		} else {
 			psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 			b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
@@ -788,7 +786,7 @@ bmap_flush(void)
 			if (!bmpc_queued_ios(bmpc)) {
 				psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
 				b->bcm_flags |= BMAP_REAPABLE;
-				lc_addtail(&bmapTimeoutQ, bmap_2_bci(b));
+				lc_addtail(&bmapTimeoutQ, b);
 			}
 
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
@@ -804,7 +802,7 @@ bmap_flush(void)
 static __inline void
 bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 {
-	const struct bmap_cli_info *bci = (const void *)(b + 1);
+	const struct bmap_cli_info *bci = bmap_2_bci_const(b);
 
 	bid->fid = fcmh_2_fid(b->bcm_fcmh);
 	bid->seq = bci->bci_sbd.sbd_seq;
@@ -876,14 +874,13 @@ ms_bmap_release(struct sl_resm *resm)
 void
 msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
-	struct bmapc_memb *b;
-	struct bmap_cli_info *bci;
 	struct timespec ctime, wtime = {0, 0};
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct psc_dynarray a = DYNARRAY_INIT;
-	struct sl_resm *resm;
 	struct resm_cli_info *rmci;
-
+	struct bmap_cli_info *bci;
+	struct bmapc_memb *b;
+	struct sl_resm *resm;
 	int i;
 
 	// just put the resm's in the dynarray. when pushing out the bid's
@@ -897,15 +894,15 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		wtime.tv_sec = BMAP_CLI_TIMEO_INC;
 
-		while ((bci = lc_getnb(&bmapTimeoutQ))) {
-			b = bci->bci_bmap;
+		while ((b = lc_getnb(&bmapTimeoutQ))) {
+			bci = bmap_2_bci(b);
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			BMAP_LOCK(b);
-			DEBUG_BMAP(PLL_INFO, b,
-			   "timeoq try reap (nbmaps=%zd) etime(%ld:%ld)",
-			   lc_sz(&bmapTimeoutQ), bci->bci_etime.tv_sec,
-			   bci->bci_etime.tv_nsec);
+			DEBUG_BMAP(PLL_INFO, b, "timeoq try reap "
+			    "(nbmaps=%zd) etime("PSCPRI_TIMESPEC")",
+			    lc_sz(&bmapTimeoutQ),
+			    PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
 
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
 				b->bcm_flags &= ~BMAP_REAPABLE;
@@ -918,7 +915,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (timespeccmp(&ctime, &bci->bci_etime, <)) {
 				/* Nothing past this point has expired.
 				 */
-				lc_addstack(&bmapTimeoutQ, bci);
+				lc_addstack(&bmapTimeoutQ, b);
 				BMAP_ULOCK(b);
 				/* Set the wait time to etime - ctime.
 				 */
@@ -932,14 +929,13 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				/* Put me back on the end of the queue.
 				 */
-				lc_addqueue(&bmapTimeoutQ, bci);
+				lc_addqueue(&bmapTimeoutQ, b);
 				BMAP_ULOCK(b);
 
 				if (lc_sz(&bmapTimeoutQ) < 2)
 					/* Don't spin on a single item.
 					 */
 					break;
-
 			} else {
 				psc_assert(psc_atomic32_read(&b->bcm_opcnt)
 					   == 1);
@@ -1018,7 +1014,7 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 void
 msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 {
-	struct timespec ts = {0, 100000};
+	struct timespec ts = { 0, 100000 };
 	int rc;
 
 	while (pscthr_run()) {
@@ -1036,11 +1032,11 @@ msbmapflushthr_spawn(void)
 	atomic_set(&completedRpcCnt, 0);
 	psc_waitq_init(&rpcCompletion);
 
-	lc_reginit(&bmapFlushQ, struct bmap_cli_info,
-	    bci_lentry, "bmapflush");
+	lc_reginit(&bmapFlushQ, struct bmapc_memb,
+	    bcm_lentry, "bmapflush");
 
-	lc_reginit(&bmapTimeoutQ, struct bmap_cli_info,
-	    bci_lentry, "bmaptimeout");
+	lc_reginit(&bmapTimeoutQ, struct bmapc_memb,
+	    bcm_lentry, "bmaptimeout");
 
 	pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
 	    NULL, 0, "msbflushthr");

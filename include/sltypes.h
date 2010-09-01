@@ -81,13 +81,6 @@ typedef struct {
 
 #define SL_INOX_NREPLICAS	(SL_MAX_REPLICAS - SL_DEF_REPLICAS)
 
-/*
- * Associate a CRC with a generation ID for a block.
- */
-typedef struct slash_gencrc {
-	uint64_t		gc_crc;
-} sl_gcrc_t;
-
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
 
@@ -119,26 +112,6 @@ struct srt_dirent {
 				 SETATTR_MASKF_CTIME)
 
 #define	SLASH2_IGNORE_MTIME	0x80000
-
-/**
- * srt_bmap_wire - slash bmap over-wire/on-disk structure.  This
- *	structure maps the persistent state of the bmap within the
- *	inode's metafile.
- * @bh_gen: current generation number.
- * @bh_crcs: the crc table, one 8 byte crc per sliver.
- * @bh_crcstates: some bits for describing the state of a sliver.
- * @bh_repls: bitmap used for tracking the replication status of this bmap.
- * @bh_bhcrc: on-disk checksum.
-*/
-struct srt_bmap_wire {
-	sl_gcrc_t		bh_crcs[SL_CRCS_PER_BMAP];
-	uint8_t			bh_crcstates[SL_CRCS_PER_BMAP];
-	uint8_t			bh_repls[SL_REPLICA_NBYTES];
-	sl_bmapgen_t		bh_gen;
-	uint32_t		bh_repl_policy;
-	/* the CRC must be at the end */
-	uint64_t		bh_bhcrc;
-};
 
 struct sl_timespec {
 	uint64_t		tv_sec;

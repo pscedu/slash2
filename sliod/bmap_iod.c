@@ -27,6 +27,7 @@
 #include "psc_util/log.h"
 
 #include "bmap_iod.h"
+#include "fidcache.h"
 #include "rpc_iod.h"
 #include "sliod.h"
 

@@ -32,6 +32,7 @@
 #include "psc_util/pool.h"
 #include "psc_util/time.h"
 
+#include "bmap.h"
 #include "cache_params.h"
 #include "fid.h"
 #include "slashrpc.h"
@@ -41,11 +42,7 @@
 #define DEMOTED_INUM_WIDTHS
 #endif
 
-struct bmapc_memb;
 struct fidc_membh;
-
-/* XXX move to bmap.h */
-SPLAY_HEAD(bmap_cache, bmapc_memb);
 
 struct sl_fcmh_ops {
 	int	(*sfop_ctor)(struct fidc_membh *);
@@ -55,15 +52,15 @@ struct sl_fcmh_ops {
 };
 
 /*
- * fidc_membh - the primary inode cache structure, all
- * updates and lookups into the inode are done through here.
+ * fidc_membh - the primary inode cache structure, all updates and
+ * lookups into the inode are done through here.
  *
- * fidc_membh tracks cached bmaps (bmap_cache) and clients
- * (via their exports) which hold cached bmaps.
+ * fidc_membh tracks cached bmaps (bmap_cache) and clients (via their
+ * exports) which hold cached bmaps.
  *
  * Service specific private structures (i.e., fcmh_mds_info,
- * fcmh_cli_info, and fcmh_iod_info) are allocated along with
- * the fidc_membh structure.  They can be accessed by calling
+ * fcmh_cli_info, and fcmh_iod_info) are allocated along with the
+ * fidc_membh structure.  They can be accessed by calling
  * fcmh_get_pri() defined below.
  */
 struct fidc_membh {
@@ -141,8 +138,7 @@ struct fidc_membh {
 #define fcmh_wait_nocond_locked(f)					\
 	do {								\
 		FCMH_LOCK_ENSURE(f);					\
-		psc_waitq_wait(&(f)->fcmh_waitq,			\
-			       &(f)->fcmh_lock);			\
+		psc_waitq_wait(&(f)->fcmh_waitq, &(f)->fcmh_lock);	\
 		FCMH_LOCK(f);						\
 	} while (0)
 

@@ -41,7 +41,7 @@ struct msctlmsg_replst_slave {
 	char			mrsl_fn[PATH_MAX];
 	uint32_t		mrsl_boff;	/* bmap starting offset */
 	uint32_t		mrsl_nbmaps;	/* # of bmaps in this chunk */
-	char			mrsl_data[0];	/* bh_repls data */
+	char			mrsl_data[0];	/* bcs_repls data */
 };
 
 /* for issuing/controlling replication requests */

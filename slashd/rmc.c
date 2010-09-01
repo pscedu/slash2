@@ -145,14 +145,14 @@ slm_rmc_handle_getattr(struct pscrpc_request *rq)
 }
 
 static void
-slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap, struct srt_bmapdesc *sbd,
-	       enum rw rw)
+slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
+    struct srt_bmapdesc *sbd, enum rw rw)
 {
 
 	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = bmap->bcm_bmapno;
 	if (bmap->bcm_flags & BMAP_DIO)
-		sbd->sbd_flags |= SRM_GETBMAPF_DIRECTIO;
+		sbd->sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
 
 	if (rw == SL_WRITE) {
 		struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
@@ -224,8 +224,8 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 int
 slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
-	const struct srm_getbmap_req *mq;
-	struct srm_getbmap_rep *mp;
+	const struct srm_leasebmap_req *mq;
+	struct srm_leasebmap_rep *mp;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap=NULL;
 	struct bmap_mds_info *bmdsi;
@@ -247,15 +247,14 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 
 	bmdsi = bmap_2_bmdsi(bmap);
 
-	if (mq->flags & SRM_GETBMAPF_DIRECTIO)
-		mp->sbd.sbd_flags |= SRM_GETBMAPF_DIRECTIO;
+	if (mq->flags & SRM_LEASEBMAPF_DIRECTIO)
+		mp->sbd.sbd_flags |= SRM_LEASEBMAPF_DIRECTIO;
 
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, mq->rw);
 
-	memcpy(&mp->bcw, bmap->bcm_od->bh_crcstates,
-	    sizeof(struct srt_bmap_cli_wire));
+	memcpy(&mp->bcs, &bmap->bcm_corestate, sizeof(mp->bcs));
 
-	if (mp->flags & SRM_GETBMAPF_GETREPLTBL) {
+	if (mp->flags & SRM_LEASEBMAPF_GETREPLTBL) {
 		struct slash_inode_handle *ih;
 
 		ih = fcmh_2_inoh(fcmh);
@@ -361,18 +360,19 @@ int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
 	struct fidc_membh *p, *fcmh;
-	struct bmapc_memb *bmap;
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
+	struct bmapc_memb *bmap;
 	void *mdsio_data;
 
 	p = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->flags & SRM_GETBMAPF_GETREPLTBL) {
+	if (mq->flags & SRM_LEASEBMAPF_GETREPLTBL) {
 		mp->rc = EINVAL;
 		goto out;
 	}
+
 	/* Lookup the parent directory in the cache so that the
 	 *   slash2 ino can be translated into the inode for the
 	 *   underlying fs.

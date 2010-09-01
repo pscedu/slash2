@@ -77,9 +77,6 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 	psc_assert(biod->biod_bmap == b);
 	psc_assert(SPLAY_EMPTY(&biod->biod_slvrs));
 	psc_assert(psclist_disjoint(&biod->biod_lentry));
-
-	if (bmap_2_biodi_wire(b))
-		PSCFREE(bmap_2_biodi_wire(b));
 }
 
 int
@@ -129,15 +126,14 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 {
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
-	struct srm_bmap_wire_req *mq;
-	struct srm_bmap_wire_rep *mp;
-	struct srt_bmap_wire *tmp;
+	struct srm_getbmap_full_req *mq;
+	struct srm_getbmap_full_rep *mp;
 	int rc;
 
 	if (rw != SL_READ)
 		return (0);
 
-	psc_assert(!bmap_2_biodi_wire(b));
+	psc_assert(!bmap_2_wire(b));
 
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
@@ -156,18 +152,17 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	//memcpy(&mq->sbdb, sbdb, sizeof(*sbdb));
 
 	rc = SL_RSX_WAITREP(rq, mp);
-	if (rc == 0) {
+	if (rc == 0)
 		rc = mp->rc;
-		tmp = PSCALLOC(sizeof(struct srt_bmap_wire));
-		memcpy(tmp, &mp->wire, sizeof(struct srt_bmap_wire));
-	} else {
+	if (rc) {
 		DEBUG_BMAP(PLL_ERROR, b, "req failed (%d)", rc);
 		goto out;
 	}
 
+	memcpy(bmap_2_wire(b), &mp->bod, sizeof(mp->bod));
+
 	/* Need to copy any of our slvr CRCs into the table. */
 	spinlock(&bmap_2_biodi(b)->biod_lock);
-	bmap_2_biodi_wire(b) = tmp;
 
 	if (!SPLAY_EMPTY(bmap_2_biodi_slvrs(b))) {
 		struct slvr_ref *s;
@@ -196,10 +191,8 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	/* Unblock threads no matter what.
 	 *  XXX need some way to denote that a crcget rpc failed?
 	 */
-	if (rc) {
-		PSCFREE(bmap_2_biodi_wire(b));
-		DEBUG_BMAP(PLL_ERROR, b, "rc=%d, freed bmap_2_biodi_wire", rc);
-	}
+	if (rc)
+		DEBUG_BMAP(PLL_ERROR, b, "rc=%d", rc);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)

@@ -136,7 +136,7 @@ slvr_do_crc(struct slvr_ref *s)
 		   SLVR_CRCLEN(s), s->slvr_crc_soff, s->slvr_crc_loff);
 
 		psc_assert(s->slvr_crc_eoff &&
-			   (s->slvr_crc_eoff <= SL_BMAP_CRCSIZE));
+			   (s->slvr_crc_eoff <= SLASH_BMAP_CRCSIZE));
 
 		if (!s->slvr_crc_loff ||
 		    s->slvr_crc_soff != s->slvr_crc_loff) {
@@ -693,7 +693,7 @@ slvr_wio_done(struct slvr_ref *s, uint32_t off, uint32_t len)
 	if (off != s->slvr_crc_loff)
 		s->slvr_crc_loff = 0;
 
-	psc_assert(s->slvr_crc_eoff <= SL_BMAP_CRCSIZE);
+	psc_assert(s->slvr_crc_eoff <= SLASH_BMAP_CRCSIZE);
 
 	if (s->slvr_flags & SLVR_FAULTING) {
 		/* This sliver was being paged-in over the network.

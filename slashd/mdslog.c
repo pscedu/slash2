@@ -129,12 +129,12 @@ mds_get_next_seqno(void)
 static int
 mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 {
-	int rc;
-	size_t nb;
-	void *mdsio_data;
 	struct slmds_jent_repgen *jrpg;
-	struct srt_bmap_wire bmap_disk;
+	struct bmap_ondisk bmap_disk;
+	void *mdsio_data;
 	mdsio_fid_t fid;
+	size_t nb;
+	int rc;
 
 	jrpg = PJE_DATA(pje);
 
@@ -163,7 +163,9 @@ mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 	if (rc)
 		goto out;
 
-	memcpy(bmap_disk.bh_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
+	memcpy(bmap_disk.bod_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
+
+	/* XXX recalculate CRC!! */
 
 	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
 		 (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
@@ -185,9 +187,9 @@ static int
 mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 {
 	struct srm_bmap_crcwire *bmap_wire;
-	struct srt_bmap_wire bmap_disk;
-	struct srt_stat sstb;
+	struct bmap_ondisk bmap_disk;
 	struct slmds_jent_crc *jcrc;
+	struct srt_stat sstb;
 	void *mdsio_data;
 	mdsio_fid_t mf;
 	int i, rc;
@@ -199,7 +201,8 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 	if (rc == ENOENT) {
 		psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
 		return (rc);
-	} else if (rc)
+	}
+	if (rc)
 		psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
 
 	rc = mdsio_opencreate(mf, &rootcreds, O_RDWR, 0, NULL,
@@ -216,8 +219,8 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 		goto out;
 
 	rc = mdsio_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
-		(off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
-		mdsio_data);
+	    (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) +
+	    SL_BMAP_START_OFF), mdsio_data);
 
 	if (!rc && nb != BMAP_OD_SZ)
 		rc = EIO;
@@ -226,13 +229,13 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 
 	for (i = 0 ; i < jcrc->sjc_ncrcs; i++) {
 		bmap_wire = &jcrc->sjc_crc[i];
-		bmap_disk.bh_crcs[bmap_wire->slot].gc_crc = bmap_wire->crc;
+		bmap_disk.bod_crcs[bmap_wire->slot] = bmap_wire->crc;
 	}
-	psc_crc64_calc(&bmap_disk.bh_bhcrc, &bmap_disk, BMAP_OD_CRCSZ);
+	psc_crc64_calc(&bmap_disk.bod_crc, &bmap_disk, BMAP_OD_CRCSZ);
 
 	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
-		 (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) + SL_BMAP_START_OFF),
-		 0, mdsio_data, NULL, NULL);
+	    (off_t)((BMAP_OD_SZ * jcrc->sjc_bmapno) +
+	    SL_BMAP_START_OFF), 0, mdsio_data, NULL, NULL);
 
 	if (!rc && nb != BMAP_OD_SZ)
 		rc = EIO;
@@ -1020,11 +1023,11 @@ void
 mds_bmap_sync(void *data)
 {
 	struct bmapc_memb *bmap = data;
-	struct slash_bmap_od *bmapod = bmap->bcm_od;
 	int rc;
 
 	BMAPOD_RDLOCK(bmap_2_bmdsi(bmap));
-	psc_crc64_calc(&bmapod->bh_bhcrc, bmapod, BMAP_OD_CRCSZ);
+	psc_crc64_calc(bmap_2_ondiskcrc(bmap), bmap_2_ondisk(bmap),
+	    BMAP_OD_CRCSZ);
 	rc = mdsio_bmap_write(bmap);
 	if (rc)
 		DEBUG_BMAP(PLL_FATAL, bmap, "rc=%d errno=%d sync fail",
@@ -1080,8 +1083,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 	jrpg->sjp_bmapno = bmap->bcm_bmapno;
 	jrpg->sjp_bgen = bmap_2_bgen(bmap);
 
-	memcpy(jrpg->sjp_reptbl, bmap->bcm_od->bh_repls,
-	       SL_REPLICA_NBYTES);
+	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
 
 	psc_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
 		  jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
@@ -1111,7 +1113,6 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	struct bmapc_memb *bmap = crclog->scl_bmap;
 	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
-	struct slash_bmap_od *bmapod = bmap->bcm_od;
 	struct slmds_jent_crc *jcrc;
 	int i, n = crcup->nups;
 	uint32_t t = 0, j = 0;
@@ -1134,7 +1135,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 		i = MIN(SLJ_MDS_NCRCS, n);
 
 		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
-		       i * sizeof(struct srm_bmap_crcwire));
+		    i * sizeof(struct srm_bmap_crcwire));
 
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
 		    jcrc, sizeof(struct slmds_jent_crc));
@@ -1149,10 +1150,10 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 		 */
 		BMAPOD_WRLOCK(bmdsi);
 		for (t += i; j < t; j++) {
-			bmapod->bh_crcs[crcup->crcs[j].slot].gc_crc =
+			bmap_2_crcs(bmap, crcup->crcs[j].slot) =
 			    crcup->crcs[j].crc;
 
-			bmapod->bh_crcstates[crcup->crcs[j].slot] =
+			bmap->bcm_crcstates[crcup->crcs[j].slot] =
 			    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 
 			DEBUG_BMAP(PLL_DEBUG, bmap, "slot(%d) crc(%"PRIx64")",

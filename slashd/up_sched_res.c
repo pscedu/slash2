@@ -399,7 +399,6 @@ slmupschedthr_main(struct psc_thread *thr)
 	struct sl_resource *src_res, *dst_res;
 	struct slmupsched_thread *smut;
 	struct up_sched_work_item *wk;
-	struct slash_bmap_od *bmapod;
 	struct site_mds_info *smi;
 	struct sl_resm *src_resm;
 	struct bmapc_memb *bcm;
@@ -490,9 +489,8 @@ slmupschedthr_main(struct psc_thread *thr)
 						continue;
 
 					BMAPOD_READ_START(bcm);
-					bmapod = bcm->bcm_od;
 					val = SL_REPL_GET_BMAP_IOS_STAT(
-					    bmapod->bh_repls, off);
+					    bcm->bcm_repls, off);
 					switch (val) {
 					case BREPLST_REPL_QUEUED:
 						has_work = 1;
@@ -513,7 +511,7 @@ slmupschedthr_main(struct psc_thread *thr)
 
 							/* skip ourself and old/inactive replicas */
 							if (ris == iosidx ||
-							    SL_REPL_GET_BMAP_IOS_STAT(bmapod->bh_repls,
+							    SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls,
 							    SL_BITS_PER_REPLICA * ris) != BREPLST_VALID)
 								continue;
 

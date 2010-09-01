@@ -293,7 +293,6 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	struct fidc_membh *m = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct bmap_cli_info *bci;
 	struct fcmh_cli_info *fci;
 	struct srm_create_req *mq;
 	struct srm_create_rep *mp;
@@ -369,9 +368,7 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	msl_bmap_reap_init(bcm, &mp->sbd);
 
-	bci = bmap_2_bci(bcm);
-	SL_REPL_SET_BMAP_IOS_STAT(bci->bci_msbcr.msbcr_repls,
-	    0, BREPLST_VALID);
+	SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls, 0, BREPLST_VALID);
 
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 

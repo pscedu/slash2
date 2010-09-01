@@ -32,17 +32,15 @@
 
 struct fidc_membh;
 
-extern struct dircache_mgr dircacheMgr;
-
 struct cli_finfo {
 	int			 nrepls;
-	sl_replica_t	         reptbl[SL_MAX_REPLICAS];
+	sl_replica_t		 reptbl[SL_MAX_REPLICAS];
 };
 
 struct fcmh_cli_info {
-	struct timeval           fci_age;
-	int                      fci_mode;
-	int                      fci_init;
+	struct timeval		 fci_age;
+	int			 fci_mode;
+	int			 fci_init;
 	union {
 		struct cli_finfo     f;
 		struct dircache_info d;
@@ -54,11 +52,10 @@ struct fcmh_cli_info {
 
 #define fcmh_2_fci(f)		((struct fcmh_cli_info *)fcmh_get_pri(f))
 
-/* Client-specific fcmh_state flags 
- */
+/* Client-specific fcmh_flags */
 #define FCMH_CLI_HAVEREPLTBL	(_FCMH_FLGSHFT << 0)	/* file replica table present */
 #define FCMH_CLI_FETCHREPLTBL	(_FCMH_FLGSHFT << 1)	/* file replica table loading */
-#define FCMH_CLI_APPENDWR       (_FCMH_FLGSHFT << 2)    /* file opened with O_APPEND */
+#define FCMH_CLI_APPENDWR	(_FCMH_FLGSHFT << 2)	/* file opened with O_APPEND */
 
 void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 
@@ -66,9 +63,11 @@ void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 	_fidc_lookup_load_inode((fid), (fcmhp),				\
 	    __FILE__, __func__, __LINE__)
 
+extern struct dircache_mgr dircacheMgr;
+
 /**
- * fidc_lookup_load_inode - Create the inode if it doesn't exist loading
- *	its attributes from the network.
+ * fidc_lookup_load_inode - Create the inode if it doesn't exist, loading
+ *	its attributes from the MDS.
  */
 static __inline int
 _fidc_lookup_load_inode(slfid_t fid, struct fidc_membh **fcmhp,

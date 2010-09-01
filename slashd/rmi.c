@@ -63,8 +63,8 @@ slm_rmi_hldrop(struct pscrpc_export *exp)
 int
 slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 {
-	struct srm_bmap_wire_req *mq;
-	struct srm_bmap_wire_rep *mp;
+	struct srm_getbmap_full_req *mq;
+	struct srm_getbmap_full_rep *mp;
 	struct bmapc_memb *b = NULL;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -90,7 +90,7 @@ slm_rmi_handle_bmap_getcrcs(struct pscrpc_request *rq)
 
 	DEBUG_BMAP(PLL_INFO, b, "sending to sliod");
 
-	memcpy(&mp->wire, b->bcm_od, sizeof(struct srt_bmap_wire));
+	memcpy(&mp->bod, bmap_2_ondisk(b), sizeof(mp->bod));
 	bmap_op_done_type(b, BMAP_OPCNT_LOOKUP);
 
 	return (0);
@@ -170,7 +170,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		/* Verify slot number validity.
 		 */
 		for (j=0; j < c->nups; j++) {
-			if (c->crcs[j].slot >= SL_CRCS_PER_BMAP) {
+			if (c->crcs[j].slot >= SLASH_CRCS_PER_BMAP) {
 				rc = -ERANGE;
 				goto out;
 			}

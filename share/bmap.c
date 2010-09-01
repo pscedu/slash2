@@ -282,3 +282,41 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 	}
 	return (0);
 }
+
+void
+_log_debug_bmapodv(const char *file, const char *func, int lineno,
+    int level, struct bmapc_memb *bmap, const char *fmt, va_list ap)
+{
+	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1];
+	unsigned char *b = bmap->bcm_repls;
+	int off, k, ch[NBREPLST];
+
+	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
+
+	ch[BREPLST_INVALID] = '-';
+	ch[BREPLST_REPL_SCHED] = 's';
+	ch[BREPLST_REPL_QUEUED] = 'q';
+	ch[BREPLST_VALID] = '+';
+	ch[BREPLST_TRUNCPNDG] = 't';
+	ch[BREPLST_GARBAGE] = 'g';
+	ch[BREPLST_GARBAGE_SCHED] = 'x';
+	ch[BREPLST_BADCRC] = 'c';
+
+	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
+	    k++, off += SL_BITS_PER_REPLICA)
+		rbuf[k] = ch[SL_REPL_GET_BMAP_IOS_STAT(b, off)];
+	rbuf[k] = '\0';
+
+	_DEBUG_BMAP(file, func, lineno, level, bmap, "repls=[%s] %s", rbuf, mbuf);
+}
+
+void
+_log_debug_bmapod(const char *file, const char *func, int lineno,
+    int level, struct bmapc_memb *bmap, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	_log_debug_bmapodv(file, func, lineno, level, bmap, fmt, ap);
+	va_end(ap);
+}

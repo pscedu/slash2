@@ -29,35 +29,58 @@
 #include "slashrpc.h"
 
 /*
- * msbmap_crcrepl_states - must be the same as bh_crcstates and bh_repls
- *  in slash_bmap_od.
- */
-struct msbmap_crcrepl_states {
-	uint8_t	msbcr_crcstates[SL_CRCS_PER_BMAP];	/* crc descriptor bits */
-	uint8_t	msbcr_repls[SL_REPLICA_NBYTES];		/* replica bit map */
-};
-
-/*
- * bmap_cli_data - assigned to bmap_get_pri(bmap) for mount slash client.
+ * bmap_cli_data - assigned to bmap_get_pri() for mount_slash client.
  */
 struct bmap_cli_info {
 	struct bmap_pagecache		 bci_bmpc;
-	struct bmapc_memb		*bci_bmap;
-	struct msbmap_crcrepl_states	 bci_msbcr;
 	struct srt_bmapdesc		 bci_sbd;	/* open bmap descriptor */
-	struct psclist_head		 bci_lentry;
 	struct timespec			 bci_xtime;	/* max time */
 	struct timespec			 bci_etime;	/* current expire time */
 };
+
+/* mount_slash specific bcm_flags */
+#define BMAP_CLI_FLUSHPROC (_BMAP_FLSHFT << 0)	/* proc'd by flush thr */
 
 #define BMAP_CLI_MAX_LEASE		60 /* seconds */
 #define BMAP_CLI_TIMEO_INC		5
 #define BMAP_CLI_DIOWAIT_SECS		1
 
 #define bmap_2_bci(b)			((struct bmap_cli_info *)bmap_get_pri(b))
+#define bmap_2_bci_const(b)		((const struct bmap_cli_info *)bmap_get_pri_const(b))
 #define bmap_2_bmpc(b)			(&bmap_2_bci(b)->bci_bmpc)
 #define bmap_2_sbd(b)			(&bmap_2_bci(b)->bci_sbd)
 #define bmap_2_ion(b)			bmap_2_sbd(b)->sbd_ion_nid
+
+#define BMAP_CLI_BUMP_TIMEO(b)						\
+	do {								\
+		struct timespec _ctime;					\
+									\
+		PFL_GETTIMESPEC(&_ctime);				\
+		BMAP_LOCK(b);						\
+		timespecadd(&_ctime, &msl_bmap_timeo_inc,		\
+		    &bmap_2_bci(b)->bci_etime);				\
+		if (timespeccmp(&bmap_2_bci(b)->bci_etime,		\
+		    &bmap_2_bci(b)->bci_xtime, >))			\
+			memcpy(&bmap_2_bci(b)->bci_etime,		\
+			    &bmap_2_bci(b)->bci_xtime,			\
+			    sizeof(struct timespec));			\
+		BMAP_ULOCK(b);						\
+	} while (0)
+
+void     msl_bmap_cache_rls(struct bmapc_memb *);
+
+extern struct timespec msl_bmap_max_lease;
+extern struct timespec msl_bmap_timeo_inc;
+
+static __inline struct bmapc_memb *
+bci_2_bmap(struct bmap_cli_info *bci)
+{
+	struct bmapc_memb *bcm;
+
+	psc_assert(bci);
+	bcm = (void *)bci;
+	return (bcm - 1);
+}
 
 static __inline int
 bmap_cli_timeo_cmp(const void *x, const void *y)
@@ -73,28 +96,5 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 
 	return (0);
 }
-
-#define BMAP_CLI_BUMP_TIMEO(b)						\
-	do {								\
-		struct timespec _ctime;					\
-									\
-		clock_gettime(CLOCK_REALTIME, &_ctime);			\
-		BMAP_LOCK(b);						\
-		timespecadd(&_ctime, &msl_bmap_timeo_inc,		\
-		    &bmap_2_bci(b)->bci_etime);			\
-		if (timespeccmp(&bmap_2_bci(b)->bci_etime,		\
-		    &bmap_2_bci(b)->bci_xtime, >))			\
-			memcpy(&bmap_2_bci(b)->bci_etime,		\
-			    &bmap_2_bci(b)->bci_xtime,		\
-			    sizeof(struct timespec));			\
-		BMAP_ULOCK(b);						\
-	} while (0)
-
-#define BMAP_CLI_FLUSHPROC (_BMAP_FLSHFT << 0)	/* proc'd by flush thr */
-
-extern struct timespec msl_bmap_max_lease;
-extern struct timespec msl_bmap_timeo_inc;
-
-void     msl_bmap_cache_rls(struct bmapc_memb *);
 
 #endif /* _SLASH_CLI_BMAP_H_ */

@@ -325,7 +325,7 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 	    !(b->bcm_flags & BMAP_REAPABLE)) {
 		psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
 		b->bcm_flags |= BMAP_REAPABLE;
-		lc_addtail(&bmapTimeoutQ, bmap_2_bci(b));
+		lc_addtail(&bmapTimeoutQ, b);
 	}
 
 	BMPC_ULOCK(bmpc);
@@ -454,7 +454,6 @@ msl_bmap_init(struct bmapc_memb *b)
 	struct bmap_cli_info *bci;
 
 	bci = bmap_2_bci(b);
-	bci->bci_bmap = b;
 	bmpc_init(&bci->bci_bmpc);
 }
 
@@ -531,7 +530,7 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	/* Assert that this bmap can no longer be scheduled by the
 	 *   write back cache thread.
 	 */
-	psc_assert(psclist_disjoint(&bmap_2_bci(b)->bci_lentry));
+	psc_assert(psclist_disjoint(&b->bcm_lentry));
 	/* Assert that this thread cannot be seen by the page cache
 	 *   reaper (it was lc_remove'd above by bmpc_lru_del()).
 	 */
@@ -544,7 +543,6 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	bmpc_freeall_locked(bmpc);
 	BMPC_ULOCK(bmpc);
 }
-
 
 void
 msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
@@ -576,11 +574,11 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	/* Add ourselves here, otherwise zero length files
 	 *   will not be removed.
 	 */
-	lc_addtail(&bmapTimeoutQ, bci);
+	lc_addtail(&bmapTimeoutQ, bmap);
 }
 
 /**
- * msl_bmap_retrieve - perform a blocking 'get' operation to retrieve
+ * msl_bmap_retrieve - perform a blocking 'LEASEBMAP' operation to retrieve
  *    one or more bmaps from the MDS.
  * @f: pointer to the fid cache structure to which this bmap belongs.
  * @b: the block id to retrieve (block size == SLASH_BMAP_SIZE).
@@ -592,10 +590,10 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	int rc, nretries = 0, getreptbl = 0;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct bmap_cli_info *bci;
-	struct srm_getbmap_req *mq;
-	struct srm_getbmap_rep *mp;
+	struct srm_leasebmap_req *mq;
+	struct srm_leasebmap_rep *mp;
 	struct fcmh_cli_info *fci;
+	struct bmap_cli_info *bci;
 	struct fidc_membh *f;
 
 	psc_assert(bmap->bcm_flags & BMAP_INIT);
@@ -626,7 +624,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	mq->bmapno = bmap->bcm_bmapno;
 	mq->rw = rw;
 	if (getreptbl)
-		mq->flags |= SRM_GETBMAPF_GETREPLTBL;
+		mq->flags |= SRM_LEASEBMAPF_GETREPLTBL;
 
 	bci = bmap_2_bci(bmap);
 
@@ -644,8 +642,8 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 			rc = mp->rc;
 			goto out;
 		} else
-			memcpy(&bci->bci_msbcr, &mp->bcw.crcstates,
-			       sizeof(struct msbmap_crcrepl_states));
+			memcpy(&bmap->bcm_corestate, &mp->bcs,
+			    sizeof(mp->bcs));
 	} else
 		goto out;
 
@@ -837,7 +835,7 @@ msl_try_get_replica_resm(struct bmapc_memb *bcm, int iosidx)
 	fci = fcmh_2_fci(bcm->bcm_fcmh);
 	bci = bmap_2_bci(bcm);
 
-	if (SL_REPL_GET_BMAP_IOS_STAT(bci->bci_msbcr.msbcr_repls,
+	if (SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls,
 	    iosidx * SL_BITS_PER_REPLICA) != BREPLST_VALID)
 		return (NULL);
 
@@ -1164,8 +1162,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			b->bcm_flags &= ~BMAP_REAPABLE;
 			psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 
-			if (psclist_conjoint(&bmap_2_bci(b)->bci_lentry))
-				lc_remove(&bmapTimeoutQ, bmap_2_bci(b));
+			if (psclist_conjoint(&b->bcm_lentry))
+				lc_remove(&bmapTimeoutQ, b);
 			LIST_CACHE_ULOCK(&bmapTimeoutQ);
 		}
 
@@ -1176,8 +1174,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			 *   thread.
 			 */
 			b->bcm_flags |= BMAP_CLI_FLUSHPROC;
-			psc_assert(psclist_disjoint(&bmap_2_bci(b)->bci_lentry));
-			lc_addtail(&bmapFlushQ, bmap_2_bci(b));
+			psc_assert(psclist_disjoint(&b->bcm_lentry));
+			lc_addtail(&bmapFlushQ, b);
 		}
 	}
 
@@ -1254,8 +1252,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 
 	mq->size = npages * BMPC_BUFSZ;
 	mq->op = SRMIOP_RD;
-	memcpy(&mq->sbd, &bmap_2_bci(r->biorq_bmap)->bci_sbd,
-	    sizeof(mq->sbd));
+	memcpy(&mq->sbd, bmap_2_sbd(r->biorq_bmap), sizeof(mq->sbd));
 
 	r->biorq_flags |= BIORQ_INFL;
 
@@ -1284,10 +1281,9 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 __static void
 msl_pages_prefetch(struct bmpc_ioreq *r)
 {
-	int i, npages, sched=0;
-	struct bmapc_memb *bcm;
-	struct bmap_cli_info *bci;
 	struct bmap_pagecache_entry *bmpce;
+	struct bmapc_memb *bcm;
+	int i, npages, sched = 0;
 
 	if (!((r->biorq_flags & BIORQ_READ)  ||
 	      (r->biorq_flags & BIORQ_RBWFP) ||
@@ -1296,7 +1292,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		return;
 
 	bcm    = r->biorq_bmap;
-	bci   = bmap_2_bci(bcm);
 	npages = psc_dynarray_len(&r->biorq_pages);
 
 	r->biorq_flags |= BIORQ_SCHED;
@@ -1311,9 +1306,9 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	 *   by biorq_is_my_bmpce().
 	 */
 	if (r->biorq_flags & BIORQ_READ) {
-		int j=-1;
+		int j = -1;
 
-		for (i=0; i < npages; i++) {
+		for (i = 0; i < npages; i++) {
 			bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
 			BMPCE_LOCK(bmpce);
 
@@ -1393,8 +1388,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 __static int
 msl_pages_blocking_load(struct bmpc_ioreq *r)
 {
+	int rc = 0, i, npages = psc_dynarray_len(&r->biorq_pages);
 	struct bmap_pagecache_entry *bmpce;
-	int rc=0, i, npages=psc_dynarray_len(&r->biorq_pages);
 
 	if (r->biorq_rqset) {
 		rc = pscrpc_set_wait(r->biorq_rqset);
