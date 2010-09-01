@@ -1077,7 +1077,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 	jrpg = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_repgen));
 
 	jrpg->sjp_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	jrpg->sjp_bmapno = bmap->bcm_blkno;
+	jrpg->sjp_bmapno = bmap->bcm_bmapno;
 	jrpg->sjp_bgen = bmap_2_bgen(bmap);
 
 	memcpy(jrpg->sjp_reptbl, bmap->bcm_od->bh_repls,
@@ -1125,7 +1125,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	jcrc = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_crc));
 	jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
-	jcrc->sjc_bmapno = bmap->bcm_blkno;
+	jcrc->sjc_bmapno = bmap->bcm_bmapno;
 	jcrc->sjc_ncrcs = n;
 	jcrc->sjc_fsize = crcup->fsize;		/* largest known size */
 	jcrc->sjc_utimgen = crcup->utimgen;     /* utime generation number */

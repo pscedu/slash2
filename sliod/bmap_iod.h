@@ -86,7 +86,7 @@ struct bmap_iod_minseq {
 	    (b), SLPRI_FG_ARGS(&(b)->bcr_crcup.fg), (b)->bcr_xid,	\
 	    (b)->bcr_crcup.nups, (b)->bcr_flags, (b)->bcr_age.tv_sec,	\
 	    (b)->bcr_biodi->biod_bmap,					\
-	    (b)->bcr_biodi->biod_bmap->bcm_blkno,			\
+	    (b)->bcr_biodi->biod_bmap->bcm_bmapno,			\
 	    (b)->bcr_biodi->biod_bcr_xid,				\
 	    (b)->bcr_biodi->biod_bcr_xid_last,				\
 	    ## __VA_ARGS__)

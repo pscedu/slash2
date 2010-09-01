@@ -384,7 +384,7 @@ slvr_worker_int(void)
 		uint32_t i, found;
 
 		psc_assert(slvr_2_biod(s)->biod_state & BIOD_BCRSCHED);
-		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_blkno);
+		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_bmapno);
 		psc_assert(SAMEFG(&bcr->bcr_crcup.fg,
 			  &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg));
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
@@ -433,7 +433,7 @@ slvr_worker_int(void)
 		COPYFG(&bcr->bcr_crcup.fg,
 		    &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg);
 
-		bcr->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_blkno;
+		bcr->bcr_crcup.blkno = slvr_2_bmap(s)->bcm_bmapno;
 		bcr->bcr_crcup.crcs[0].crc = crc;
 		bcr->bcr_crcup.crcs[0].slot = s->slvr_num;
 		bcr->bcr_crcup.nups = 1;

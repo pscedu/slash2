@@ -69,7 +69,6 @@ struct bmapc_memb {
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry */
 	struct psclist_head	 bcm_lentry;	/* free pool */
 	struct slash_bmap_od	*bcm_od;	/* on-disk representation */
-#define bcm_blkno bcm_bmapno
 };
 
 /* shared bmap_flags */
@@ -95,7 +94,7 @@ struct bmapc_memb {
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
 
 #define _DEBUG_BMAP_FMT		"bmap@%p b:%x m:%u i:%"PRIx64" opcnt=%u "
-#define _DEBUG_BMAP_FMTARGS(b)	(b), (b)->bcm_blkno, (b)->bcm_flags,	\
+#define _DEBUG_BMAP_FMTARGS(b)	(b), (b)->bcm_bmapno, (b)->bcm_flags,	\
 				(b)->bcm_fcmh ?				\
 				    fcmh_2_fid((b)->bcm_fcmh) : 0,	\
 				psc_atomic32_read(&(b)->bcm_opcnt)

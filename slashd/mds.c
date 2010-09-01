@@ -360,7 +360,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 
 	bmi.bmi_ios = rmmi->rmmi_resm->resm_res->res_id;
 	bmi.bmi_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	bmi.bmi_bmapno = bmap->bcm_blkno;
+	bmi.bmi_bmapno = bmap->bcm_bmapno;
 	bmi.bmi_start = time(NULL);
 	bmi.bmi_flags = (bmap->bcm_flags & BMAP_DIO) ? BMI_DIO : 0;
 	bmdsi->bmdsi_seq = bmi.bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);

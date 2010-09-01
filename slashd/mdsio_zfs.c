@@ -65,7 +65,7 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 	int rc;
 
 	rc = zfsslash2_read(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
+	    (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) + SL_BMAP_START_OFF),
 	    bmap_2_zfs_fh(bmap));
 	if (rc == 0 && nb != BMAP_OD_SZ)
 		rc = SLERR_SHORTIO;
@@ -102,7 +102,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 
 	mds_reserve_slot();
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
-	    (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF),
+	    (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) + SL_BMAP_START_OFF),
 	    (utimgen == crcup->utimgen), bmap_2_zfs_fh(bmap),
 	    mds_bmap_crc_log, &crclog);
 	mds_unreserve_slot();
@@ -135,7 +135,7 @@ mds_bmap_repl_update(struct bmapc_memb *bmap)
 
 	mds_reserve_slot();
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
-		(off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF), 0,
+		(off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) + SL_BMAP_START_OFF), 0,
 		bmap_2_zfs_fh(bmap), mds_bmap_repl_log, bmap);
 	mds_unreserve_slot();
 
@@ -217,7 +217,7 @@ mdsio_bmap_write(struct bmapc_memb *bmap)
 	int rc;
 
 	rc = zfsslash2_write(&rootcreds, bmap->bcm_od, BMAP_OD_SZ, &nb,
-	     (off_t)((BMAP_OD_SZ * bmap->bcm_blkno) + SL_BMAP_START_OFF), 0,
+	     (off_t)((BMAP_OD_SZ * bmap->bcm_bmapno) + SL_BMAP_START_OFF), 0,
 	    bmap_2_zfs_fh(bmap), NULL, NULL);
 
 	if (rc) {

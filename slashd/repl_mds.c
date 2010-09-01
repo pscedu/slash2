@@ -362,7 +362,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	if (rc)
 		psc_error("bh_repls is marked OLD or SCHED for fid %"PRIx64" "
 		    "bmap %d iosidx %d", fcmh_2_fid(bcm->bcm_fcmh),
-		    bcm->bcm_blkno, iosidx);
+		    bcm->bcm_bmapno, iosidx);
 
 	/*
 	 * Invalidate all other replicas.

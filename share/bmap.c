@@ -47,7 +47,7 @@ bmap_cmp(const void *x, const void *y)
 {
 	const struct bmapc_memb *a = x, *b = y;
 
-	return (CMP(a->bcm_blkno, b->bcm_blkno));
+	return (CMP(a->bcm_bmapno, b->bcm_bmapno));
 }
 
 void
@@ -107,7 +107,7 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n)
 	struct bmapc_memb lb, *b;
 
  restart:
-	lb.bcm_blkno = n;
+	lb.bcm_bmapno = n;
 	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		BMAP_LOCK(b);

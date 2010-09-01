@@ -151,7 +151,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	}
 
 	mq->rw = rw;
-	mq->bmapno = b->bcm_blkno;
+	mq->bmapno = b->bcm_bmapno;
 	memcpy(&mq->fg, &b->bcm_fcmh->fcmh_fg, sizeof(mq->fg));
 	//memcpy(&mq->sbdb, sbdb, sizeof(*sbdb));
 

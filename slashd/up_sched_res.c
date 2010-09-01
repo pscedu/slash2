@@ -242,10 +242,10 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		goto fail;
 	mq->nid = src_resm->resm_nid;
 	mq->len = SLASH_BMAP_SIZE;
-	if (bcm->bcm_blkno == USWI_NBMAPS(wk) - 1)
+	if (bcm->bcm_bmapno == USWI_NBMAPS(wk) - 1)
 		mq->len = fcmh_2_fsz(wk->uswi_fcmh) % SLASH_BMAP_SIZE;
 	mq->fg = *USWI_FG(wk);
-	mq->bmapno = bcm->bcm_blkno;
+	mq->bmapno = bcm->bcm_bmapno;
 	mq->bgen = bmap_2_bgen(bcm);
 
 	brepls_init(tract, -1);
@@ -341,7 +341,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	if (rc)
 		goto fail;
 	mq->fg = *USWI_FG(wk);
-	mq->bmapno = bcm->bcm_blkno;
+	mq->bmapno = bcm->bcm_bmapno;
 	mq->bgen = bmap_2_bgen(bcm);
 
 	brepls_init(tract, -1);
