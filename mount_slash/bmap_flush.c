@@ -230,7 +230,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 	DEBUG_REQ(PLL_INFO, req, "off=%u sz=%u op=%u", mq->offset,
 		  mq->size, mq->op);
 
-	memcpy(&mq->sbd, &bmap_2_msbd(b)->msbd_sbd, sizeof(mq->sbd));
+	memcpy(&mq->sbd, &bmap_2_bci(b)->bci_sbd, sizeof(mq->sbd));
 	authbuf_sign(req, PSCRPC_MSG_REQUEST);
 	return (req);
 }
@@ -636,7 +636,7 @@ void
 bmap_flush(void)
 {
 	struct bmapc_memb *b;
-	struct bmap_cli_info *msbd;
+	struct bmap_cli_info *bci;
 	struct bmap_pagecache *bmpc;
 	struct psc_dynarray a=DYNARRAY_INIT, bmaps=DYNARRAY_INIT, *biorqs;
 	struct bmpc_ioreq *r, *tmp;
@@ -651,11 +651,11 @@ bmap_flush(void)
 	}
 
 	while (nrpcs > 0) {
-		msbd = lc_getnb(&bmapFlushQ);
-		if (!msbd)
+		bci = lc_getnb(&bmapFlushQ);
+		if (!bci)
 			break;
 
-		b = msbd->msbd_bmap;
+		b = bci->bci_bmap;
 		bmpc = bmap_2_bmpc(b);
 		/* Bmap lock only needed to test the dirty bit.
 		 */
@@ -670,7 +670,7 @@ bmap_flush(void)
 		BMPC_LOCK(bmpc);
 		if (b->bcm_flags & BMAP_DIRTY) {
 			psc_assert(bmpc_queued_writes(bmpc));
-			psc_dynarray_add(&bmaps, msbd);
+			psc_dynarray_add(&bmaps, bci);
 
 		} else {
 			psc_assert(!bmpc_queued_writes(bmpc));
@@ -683,7 +683,7 @@ bmap_flush(void)
 				 */
 				psc_assert(!(b->bcm_flags & BMAP_REAPABLE));
 				b->bcm_flags |= BMAP_REAPABLE;
-				lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
+				lc_addtail(&bmapTimeoutQ, bmap_2_bci(b));
 				DEBUG_BMAP(PLL_INFO, b,
 				   "added to bmapTimeoutQ");
 			}
@@ -763,8 +763,8 @@ bmap_flush(void)
 	}
 
 	for (i=0; i < psc_dynarray_len(&bmaps); i++) {
-		msbd = psc_dynarray_getpos(&bmaps, i);
-		b = msbd->msbd_bmap;
+		bci = psc_dynarray_getpos(&bmaps, i);
+		b = bci->bci_bmap;
 		bmpc = bmap_2_bmpc(b);
 
 		BMAP_LOCK(b);
@@ -779,7 +779,7 @@ bmap_flush(void)
 		if (bmpc_queued_writes(bmpc)) {
 			psc_assert(b->bcm_flags & BMAP_DIRTY);
 			DEBUG_BMAP(PLL_INFO, b, "restore to dirty list");
-			lc_addtail(&bmapFlushQ, msbd);
+			lc_addtail(&bmapFlushQ, bci);
 
 		} else {
 			psc_assert(!(b->bcm_flags & BMAP_DIRTY));
@@ -788,7 +788,7 @@ bmap_flush(void)
 			if (!bmpc_queued_ios(bmpc)) {
 				psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
 				b->bcm_flags |= BMAP_REAPABLE;
-				lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
+				lc_addtail(&bmapTimeoutQ, bmap_2_bci(b));
 			}
 
 			DEBUG_BMAP(PLL_INFO, b, "is clean, descheduling..");
@@ -804,11 +804,11 @@ bmap_flush(void)
 static __inline void
 bmap_2_bid(const struct bmapc_memb *b, struct srm_bmap_id *bid)
 {
-	const struct bmap_cli_info *msbd = (const void *)(b + 1);
+	const struct bmap_cli_info *bci = (const void *)(b + 1);
 
 	bid->fid = fcmh_2_fid(b->bcm_fcmh);
-	bid->seq = msbd->msbd_sbd.sbd_seq;
-	bid->key = msbd->msbd_sbd.sbd_key;
+	bid->seq = bci->bci_sbd.sbd_seq;
+	bid->key = bci->bci_sbd.sbd_key;
 	bid->bmapno = b->bcm_bmapno;
 }
 
@@ -877,7 +877,7 @@ void
 msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
 	struct bmapc_memb *b;
-	struct bmap_cli_info *msbd;
+	struct bmap_cli_info *bci;
 	struct timespec ctime, wtime = {0, 0};
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct psc_dynarray a = DYNARRAY_INIT;
@@ -897,17 +897,17 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		wtime.tv_sec = BMAP_CLI_TIMEO_INC;
 
-		while ((msbd = lc_getnb(&bmapTimeoutQ))) {
-			b = msbd->msbd_bmap;
+		while ((bci = lc_getnb(&bmapTimeoutQ))) {
+			b = bci->bci_bmap;
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
 			BMAP_LOCK(b);
 			DEBUG_BMAP(PLL_INFO, b,
 			   "timeoq try reap (nbmaps=%zd) etime(%ld:%ld)",
-			   lc_sz(&bmapTimeoutQ), msbd->msbd_etime.tv_sec,
-			   msbd->msbd_etime.tv_nsec);
+			   lc_sz(&bmapTimeoutQ), bci->bci_etime.tv_sec,
+			   bci->bci_etime.tv_nsec);
 
-			if (bmpc_queued_ios(&msbd->msbd_bmpc)) {
+			if (bmpc_queued_ios(&bci->bci_bmpc)) {
 				b->bcm_flags &= ~BMAP_REAPABLE;
 				DEBUG_BMAP(PLL_INFO, b,
 					   "descheduling from timeoq");
@@ -915,14 +915,14 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				continue;
 			}
 
-			if (timespeccmp(&ctime, &msbd->msbd_etime, <)) {
+			if (timespeccmp(&ctime, &bci->bci_etime, <)) {
 				/* Nothing past this point has expired.
 				 */
-				lc_addstack(&bmapTimeoutQ, msbd);
+				lc_addstack(&bmapTimeoutQ, bci);
 				BMAP_ULOCK(b);
 				/* Set the wait time to etime - ctime.
 				 */
-				timespecsub(&msbd->msbd_etime, &ctime, &wtime);
+				timespecsub(&bci->bci_etime, &ctime, &wtime);
 				break;
 			}
 
@@ -932,7 +932,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				/* Put me back on the end of the queue.
 				 */
-				lc_addqueue(&bmapTimeoutQ, msbd);
+				lc_addqueue(&bmapTimeoutQ, bci);
 				BMAP_ULOCK(b);
 
 				if (lc_sz(&bmapTimeoutQ) < 2)
@@ -948,7 +948,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				 *   exist unless another rls thr is
 				 *   introduced.
 				 */
-				psc_assert(!bmpc_queued_ios(&msbd->msbd_bmpc));
+				psc_assert(!bmpc_queued_ios(&bci->bci_bmpc));
 
 				if (b->bcm_flags & BMAP_WR) {
 					/* Setup a msg to an ION.
@@ -1037,10 +1037,10 @@ msbmapflushthr_spawn(void)
 	psc_waitq_init(&rpcCompletion);
 
 	lc_reginit(&bmapFlushQ, struct bmap_cli_info,
-	    msbd_lentry, "bmapflush");
+	    bci_lentry, "bmapflush");
 
 	lc_reginit(&bmapTimeoutQ, struct bmap_cli_info,
-	    msbd_lentry, "bmaptimeout");
+	    bci_lentry, "bmaptimeout");
 
 	pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
 	    NULL, 0, "msbflushthr");

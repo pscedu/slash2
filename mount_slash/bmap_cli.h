@@ -41,23 +41,22 @@ struct msbmap_crcrepl_states {
  * bmap_cli_data - assigned to bmap_get_pri(bmap) for mount slash client.
  */
 struct bmap_cli_info {
-	struct bmap_pagecache		 msbd_bmpc;
-	struct bmapc_memb		*msbd_bmap;
-	struct msbmap_crcrepl_states	 msbd_msbcr;
-	struct srt_bmapdesc		 msbd_sbd;	/* open bmap descriptor */
-	struct psclist_head		 msbd_lentry;
-	struct timespec			 msbd_xtime;	/* max time */
-	struct timespec			 msbd_etime;	/* current expire time */
+	struct bmap_pagecache		 bci_bmpc;
+	struct bmapc_memb		*bci_bmap;
+	struct msbmap_crcrepl_states	 bci_msbcr;
+	struct srt_bmapdesc		 bci_sbd;	/* open bmap descriptor */
+	struct psclist_head		 bci_lentry;
+	struct timespec			 bci_xtime;	/* max time */
+	struct timespec			 bci_etime;	/* current expire time */
 };
 
 #define BMAP_CLI_MAX_LEASE		60 /* seconds */
 #define BMAP_CLI_TIMEO_INC		5
 #define BMAP_CLI_DIOWAIT_SECS		1
 
-#define bmap_2_msbd(b)			((struct bmap_cli_info *)bmap_get_pri(b))
 #define bmap_2_bci(b)			((struct bmap_cli_info *)bmap_get_pri(b))
-#define bmap_2_bmpc(b)			(&bmap_2_msbd(b)->msbd_bmpc)
-#define bmap_2_sbd(b)			(&bmap_2_msbd(b)->msbd_sbd)
+#define bmap_2_bmpc(b)			(&bmap_2_bci(b)->bci_bmpc)
+#define bmap_2_sbd(b)			(&bmap_2_bci(b)->bci_sbd)
 #define bmap_2_ion(b)			bmap_2_sbd(b)->sbd_ion_nid
 
 static __inline int
@@ -66,10 +65,10 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 	const struct bmap_cli_info * const *pa = x, *a = *pa;
 	const struct bmap_cli_info * const *pb = y, *b = *pb;
 
-	if (timespeccmp(&a->msbd_etime, &b->msbd_etime, <))
+	if (timespeccmp(&a->bci_etime, &b->bci_etime, <))
 		return (-1);
 
-	if (timespeccmp(&a->msbd_etime, &b->msbd_etime, >))
+	if (timespeccmp(&a->bci_etime, &b->bci_etime, >))
 		return (1);
 
 	return (0);
@@ -82,11 +81,11 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 		clock_gettime(CLOCK_REALTIME, &_ctime);			\
 		BMAP_LOCK(b);						\
 		timespecadd(&_ctime, &msl_bmap_timeo_inc,		\
-		    &bmap_2_msbd(b)->msbd_etime);			\
-		if (timespeccmp(&bmap_2_msbd(b)->msbd_etime,		\
-		    &bmap_2_msbd(b)->msbd_xtime, >))			\
-			memcpy(&bmap_2_msbd(b)->msbd_etime,		\
-			    &bmap_2_msbd(b)->msbd_xtime,		\
+		    &bmap_2_bci(b)->bci_etime);			\
+		if (timespeccmp(&bmap_2_bci(b)->bci_etime,		\
+		    &bmap_2_bci(b)->bci_xtime, >))			\
+			memcpy(&bmap_2_bci(b)->bci_etime,		\
+			    &bmap_2_bci(b)->bci_xtime,		\
 			    sizeof(struct timespec));			\
 		BMAP_ULOCK(b);						\
 	} while (0)

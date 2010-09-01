@@ -223,7 +223,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
-	struct bmap_cli_info *msbd;
+	struct bmap_cli_info *bci;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -251,8 +251,8 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	}
 	/* Verify that the sequence number matches.
 	 */
-	msbd = bmap_2_bci(b);
-	if (msbd->msbd_sbd.sbd_seq != mq->seq) {
+	bci = bmap_2_bci(b);
+	if (bci->bci_sbd.sbd_seq != mq->seq) {
 		BMAP_ULOCK(b);
 		mp->rc = ESTALE;
 		goto out;
