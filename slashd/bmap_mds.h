@@ -204,23 +204,23 @@ enum {
 };
 
 /**
- * bmi_assign - The structure used for tracking the MDS's bmap/ion
+ * bmap_ion_assign - The structure used for tracking the MDS's bmap/ion
  *   assignments.  These structures are stored in a odtable.
  * Note: default odtable entry size is 128 bytes.
  */
-struct bmi_assign {
-	lnet_nid_t		bmi_ion_nid;
-	lnet_process_id_t	bmi_lastcli;
-	sl_ios_id_t		bmi_ios;
-	slfid_t			bmi_fid;
-	uint64_t		bmi_seq;
-	sl_bmapno_t		bmi_bmapno;
-	time_t			bmi_start;
-	int			bmi_flags;
+struct bmap_ion_assign {
+	lnet_nid_t		bia_ion_nid;
+	lnet_process_id_t	bia_lastcli;
+	sl_ios_id_t		bia_ios;
+	slfid_t			bia_fid;
+	uint64_t		bia_seq;
+	sl_bmapno_t		bia_bmapno;
+	time_t			bia_start;
+	int			bia_flags;
 };
 
-/* bmi_flags */
-#define BMI_DIO			(1 << 0)
+/* bia_flags */
+#define BIAF_DIO		(1 << 0)
 
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
@@ -252,7 +252,7 @@ void	 mds_bmap_timeotbl_init(void);
 uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
 
-void	 mds_bmi_odtable_startup_cb(void *, struct odtable_receipt *);
+void	 mds_bia_odtable_startup_cb(void *, struct odtable_receipt *);
 
 extern struct psc_poolmaster	 bmapMdsLeasePoolMaster;
 extern struct psc_poolmgr	*bmapMdsLeasePool;

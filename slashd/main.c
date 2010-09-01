@@ -165,7 +165,7 @@ slm_init(void)
 
 	mds_bmap_timeotbl_init();
 
-	odtable_scan(mdsBmapAssignTable, mds_bmi_odtable_startup_cb);
+	odtable_scan(mdsBmapAssignTable, mds_bia_odtable_startup_cb);
 }
 
 __dead void

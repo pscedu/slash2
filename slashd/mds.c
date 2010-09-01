@@ -302,7 +302,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct slashrpc_cservice *csvc;
 	struct resprof_mds_info *rpmi;
 	struct resm_mds_info *rmmi;
-	struct bmi_assign bmi;
+	struct bmap_ion_assign bia;
 	struct sl_resm *resm;
 	int nb, j, len;
 
@@ -355,18 +355,18 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 * An ION has been assigned to the bmap, mark it in the odtable
 	 *   so that the assignment may be restored on reboot.
 	 */
-	bmi.bmi_ion_nid = bml->bml_ion_nid = rmmi->rmmi_resm->resm_nid;
-	bmi.bmi_lastcli = bml->bml_cli_nidpid;
+	bia.bia_ion_nid = bml->bml_ion_nid = rmmi->rmmi_resm->resm_nid;
+	bia.bia_lastcli = bml->bml_cli_nidpid;
 
-	bmi.bmi_ios = rmmi->rmmi_resm->resm_res->res_id;
-	bmi.bmi_fid = fcmh_2_fid(bmap->bcm_fcmh);
-	bmi.bmi_bmapno = bmap->bcm_bmapno;
-	bmi.bmi_start = time(NULL);
-	bmi.bmi_flags = (bmap->bcm_flags & BMAP_DIO) ? BMI_DIO : 0;
-	bmdsi->bmdsi_seq = bmi.bmi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
+	bia.bia_ios = rmmi->rmmi_resm->resm_res->res_id;
+	bia.bia_fid = fcmh_2_fid(bmap->bcm_fcmh);
+	bia.bia_bmapno = bmap->bcm_bmapno;
+	bia.bia_start = time(NULL);
+	bia.bia_flags = (bmap->bcm_flags & BMAP_DIO) ? BIAF_DIO : 0;
+	bmdsi->bmdsi_seq = bia.bia_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 
 	psc_assert(!bmdsi->bmdsi_assign);
-	bmdsi->bmdsi_assign = odtable_putitem(mdsBmapAssignTable, &bmi);
+	bmdsi->bmdsi_assign = odtable_putitem(mdsBmapAssignTable, &bia);
 	if (!bmdsi->bmdsi_assign) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
 		return (-SLERR_XACT_FAIL);
@@ -378,13 +378,13 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 */
 	bmap_op_start_type(bmap, BMAP_OPCNT_IONASSIGN);
 
-	mds_repl_inv_except(bmap, bmi.bmi_ios);
+	mds_repl_inv_except(bmap, bia.bia_ios);
 
-	bml->bml_seq = bmi.bmi_seq;
+	bml->bml_seq = bia.bia_seq;
 
 	DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "bmap assignment");
 	DEBUG_BMAP(PLL_INFO, bmap, "using res(%s) ion(%s) "
-		   "rmmi(%p) bmi(%p)", res->res_name, resm->resm_addrbuf,
+		   "rmmi(%p) bia(%p)", res->res_name, resm->resm_addrbuf,
 		   bmdsi->bmdsi_wr_ion, bmdsi->bmdsi_assign);
 
 	return (0);
@@ -395,32 +395,32 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 {
 	struct bmapc_memb *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(b);
-	struct bmi_assign *bmi;
+	struct bmap_ion_assign *bia;
 
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
 
-	bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
-	if (!bmi) {
+	bia = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
+	if (!bia) {
 		DEBUG_BMAP(PLL_WARN, b, "odtable_getitem() failed");
 		return (-1);
 	}
 
-	if (bml->bml_cli_nidpid.nid != bmi->bmi_lastcli.nid ||
-	    bml->bml_cli_nidpid.pid != bmi->bmi_lastcli.pid)
+	if (bml->bml_cli_nidpid.nid != bia->bia_lastcli.nid ||
+	    bml->bml_cli_nidpid.pid != bia->bia_lastcli.pid)
 	    psc_assert(b->bcm_flags & BMAP_DIO);
 
-	psc_assert(bmi->bmi_seq == bmdsi->bmdsi_seq);
-	bmi->bmi_start = time(NULL);
-	bmi->bmi_seq = bmdsi->bmdsi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
-	bmi->bmi_lastcli = bml->bml_cli_nidpid;
-	bmi->bmi_flags = BMI_DIO;
+	psc_assert(bia->bia_seq == bmdsi->bmdsi_seq);
+	bia->bia_start = time(NULL);
+	bia->bia_seq = bmdsi->bmdsi_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
+	bia->bia_lastcli = bml->bml_cli_nidpid;
+	bia->bia_flags = BIAF_DIO;
 
 	bmdsi->bmdsi_assign = odtable_replaceitem(mdsBmapAssignTable,
-					  bmdsi->bmdsi_assign, bmi);
+					  bmdsi->bmdsi_assign, bia);
 	psc_assert(bmdsi->bmdsi_assign);
 
-	bml->bml_ion_nid = bmi->bmi_ion_nid;
-	bml->bml_seq = bmi->bmi_seq;
+	bml->bml_ion_nid = bia->bia_ion_nid;
+	bml->bml_seq = bia->bia_seq;
 
 	return (0);
 }
@@ -931,11 +931,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	if ((bml->bml_flags & BML_WRITE) && !bmdsi->bmdsi_writers) {
 		/* odtable sanity checks:
 		 */
-		struct bmi_assign *bmi;
+		struct bmap_ion_assign *bia;
 
-		bmi = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
-		psc_assert(bmi && bmi->bmi_seq == bmdsi->bmdsi_seq);
-		psc_assert(bmi->bmi_bmapno == b->bcm_bmapno);
+		bia = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
+		psc_assert(bia && bia->bia_seq == bmdsi->bmdsi_seq);
+		psc_assert(bia->bia_bmapno == b->bcm_bmapno);
 		/* End Sanity Checks.
 		 */
 		atomic_dec(&bmdsi->bmdsi_wr_ion->rmmi_refcnt);
@@ -1038,25 +1038,25 @@ mds_bml_get(void)
 }
 
 void
-mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
+mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 {
 	struct fidc_membh *f = NULL;
 	struct bmapc_memb *b = NULL;
 	struct bmap_mds_lease *bml;
 	struct slash_fidgen fg;
-	struct bmi_assign *bmi;
+	struct bmap_ion_assign *bia;
 	struct sl_resm *resm;
 	int rc;
 
-	bmi = data;
+	bia = data;
 
-	resm = libsl_nid2resm(bmi->bmi_ion_nid);
+	resm = libsl_nid2resm(bia->bia_ion_nid);
 
 	psc_warnx("fid=%"PRId64" seq=%"PRId64" res=(%s) ion=(%s) bmapno=%u",
-		  bmi->bmi_fid, bmi->bmi_seq, resm->resm_res->res_name,
-		  libcfs_nid2str(bmi->bmi_ion_nid), bmi->bmi_bmapno);
+		  bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
+		  libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
 
-	if (!bmi->bmi_fid) {
+	if (!bia->bia_fid) {
 		psc_warnx("found fid #0 in odtable");
 		rc = -EINVAL;
 		goto out;
@@ -1067,19 +1067,19 @@ mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	 *   with dirty crc's and size updates may send us those requests
 	 *   while the lease is valid.
 	 */
-	if ((time() - bmi->bmi_start) >= BMAP_TIMEO_MAX) {
+	if ((time() - bia->bia_start) >= BMAP_TIMEO_MAX) {
 		/* Don't bother with ancient leases.
 		 */
-		psc_warnx("bmi timed out, ignoring: fid=%"PRId64" seq=%"PRId64
+		psc_warnx("bia timed out, ignoring: fid=%"PRId64" seq=%"PRId64
 			  " res=(%s) ion=(%s) bmapno=%u",
-			  bmi->bmi_fid, bmi->bmi_seq, resm->resm_res->res_name,
-			  libcfs_nid2str(bmi->bmi_ion_nid), bmi->bmi_bmapno);
+			  bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
+			  libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
 		rc = -ETIMEDOUT;
 		goto out;
 	}
 #endif
 
-	fg.fg_fid = bmi->bmi_fid;
+	fg.fg_fid = bia->bia_fid;
 	fg.fg_gen = FGEN_ANY;
 
 	rc = slm_fcmh_get(&fg, &f);
@@ -1088,22 +1088,22 @@ mds_bmi_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 		goto out;
 	}
 
-	rc = mds_bmap_load(f, bmi->bmi_bmapno, &b);
+	rc = mds_bmap_load(f, bia->bia_bmapno, &b);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u (rc=%d)",
-			   bmi->bmi_bmapno, rc);
+			   bia->bia_bmapno, rc);
 		goto out;
 	}
 
 	bml = mds_bml_get();
 	bml->bml_bmdsi = bmap_2_bmdsi(b);
 	bml->bml_flags = BML_WRITE | BML_RECOVER;
-	bml->bml_seq = bmi->bmi_seq;
-	bml->bml_cli_nidpid = bmi->bmi_lastcli;
-	bml->bml_ion_nid = bmi->bmi_ion_nid;
-	bml->bml_start = bmi->bmi_start;
+	bml->bml_seq = bia->bia_seq;
+	bml->bml_cli_nidpid = bia->bia_lastcli;
+	bml->bml_ion_nid = bia->bia_ion_nid;
+	bml->bml_start = bia->bia_start;
 
-	if (bmi->bmi_flags & BMI_DIO) {
+	if (bia->bia_flags & BIAF_DIO) {
 		bml->bml_flags |= BML_CDIO;
 		b->bcm_flags |= BMAP_DIO;
 	}
