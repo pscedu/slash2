@@ -56,8 +56,8 @@ struct dircache_ents {
 	int			 de_idx;
 	size_t			 de_sz;
 	struct timeval		 de_age;
-	struct psclist_head	 de_lentry;	/* Chain on info  */
-	struct psclist_head	 de_lentry_lc;	/* Chain in mgr */
+	struct psclist_lentry	 de_lentry;	/* chain on info  */
+	struct psclist_lentry	 de_lentry_lc;	/* chain in mgr */
 	struct psc_dynarray	 de_dents;
 	struct dircache_desc	*de_desc;
 	struct dircache_info	*de_info;
