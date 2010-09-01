@@ -444,10 +444,10 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 				abort();
 
 			/*
- 			 * We might straddle the end offset of the previous
- 			 * I/O request.
+ 			 * We might straddle the end offset of the previously
+ 			 * scheduled I/O request.
  			 */
-			if ((bmpce->bmpce_off < off) && !first_iov) {
+			if (bmpce->bmpce_off < off) {
 				/* Similar case to the 'continue' stmt above,
 				 *   this bmpce overlaps a previously
 				 *   scheduled biorq.
@@ -455,8 +455,9 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 				DEBUG_BMPCE(PLL_INFO, bmpce, "skip");
 				psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
 				BMPCE_ULOCK(bmpce);
+				psc_assert(first_iov == 1);
 
-				reqsz -= BMPC_BUFSZ;
+			  	reqsz -=  BMPC_BUFSZ - (off - bmpce->bmpce_off);
 				continue;
 			}
 			DEBUG_BMPCE(PLL_INFO, bmpce,
