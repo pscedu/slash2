@@ -146,7 +146,7 @@ this idea is that we can have lots of small files.
 The other problem concerns the receiving MDS.  If it crashes in the middle of applying a log,
 how can we maintain atomicity?  Should be because
 
-	(1) We never re-use SLASH ID - used to detect if a file is already created/deleted.
+	(1) We never re-use SLASH FID - used to detect if a file is already created/deleted.
 	(2) ZFS guarantees internal consistency
 
 We do have to make sure that the a file or a directory exist in both namespace (by-name
@@ -155,7 +155,7 @@ and by-id).  ZFS can only make sure one link exists or not.
 We may have to stored an update sequence number in the disk inode (like zp_gen in znode_phys,
 but that's used by ZFS transaction internally I guess).
 
-Another idea is to use a different SLASH ID for each rename (possibly keep the original ZFS 
+Another idea is to use a different SLASH FID for each rename (possibly keep the original ZFS 
 inode number).  But this does not cover the case of chmod etc.
 
 A generation number is the best way to cope with this.  Note that within the same batch of 
@@ -260,7 +260,7 @@ Here is the code that implements this idea:
 
 			txg = dmu_tx_get_txg(tx);
 			logfunc(ZTOV(tzp)->v_type != VDIR ? NS_OP_UNLINK : NS_OP_RMDIR, 
-				txg, tdzp->z_phys->zp_s2id, 0, tzp->z_phys->zp_s2id, NULL, tnm, NULL);
+				txg, tdzp->z_phys->zp_s2fid, 0, tzp->z_phys->zp_s2fid, NULL, tnm, NULL);
 		}
 	}
 
@@ -293,12 +293,12 @@ Here is the code that implements this idea:
 				 * A receiving MDS replays log entries in order.  We must remove
 				 * the old target first so that the same fidlink can be removed
 				 * and added back to point to the new target.  Note that the 
-				 * slash ID remains the same during a rename.
+				 * SLASH FID remains the same during a rename.
 				 */
 				logfunc(ZTOV(szp)->v_type != VDIR ? NS_OP_UNLINK : NS_OP_RMDIR, 
-					txg, sdzp->z_phys->zp_s2id, 0, szp->z_phys->zp_s2id, NULL, snm, NULL); 
+					txg, sdzp->z_phys->zp_s2fid, 0, szp->z_phys->zp_s2fid, NULL, snm, NULL); 
 				logfunc(ZTOV(szp)->v_type != VDIR ? NS_OP_CREATE : NS_OP_MKDIR, 
-					txg, tdzp->z_phys->zp_s2id, 0, szp->z_phys->zp_s2id, &stat, tnm, NULL);
+					txg, tdzp->z_phys->zp_s2fid, 0, szp->z_phys->zp_s2fid, &stat, tnm, NULL);
 			}
 
 			zfs_log_rename(zilog, tx,
@@ -318,14 +318,14 @@ Suppose I do the following:
 	mkdir zhihui1
 	mv zhihui1 zhihui2
 
-Whey replaying the first operation, the fidlink is created for zhihui1 based on its slash ID.
+Whey replaying the first operation, the fidlink is created for zhihui1 based on its SLASH FID.
 To replay the second operation, I am doing two things (assuming that zhihui2 does not already
 exist yet) based on the idea outlined on 05/20/2010:
 
 	(1) mkdir zhihui2
 	(2) rmdir zhihui1
 
-(1) will fail because it can't create a fidlink again for zhihui2, the same slash ID is already
+(1) will fail because it can't create a fidlink again for zhihui2, the same SLASH FID is already
 used by zhihui1.  So perhaps I need to reverse the order of (1) and (2).
 
 
@@ -489,12 +489,12 @@ by its ID.  But this by-id namespace is only used internally by the MDS (slash d
 The slash daemon code is linked with the ZFS user level library.  So it should be able 
 to open a file by its ZFS ID.  My experiment with gdb seems to prove it.
 
-Furthermore, we may not need to remember the mapping between a SLASH ID and a ZFS ID. 
+Furthermore, we may not need to remember the mapping between a SLASH FID and a ZFS ID. 
 A client should do it (we can return both IDs for a file). Otherwise, it can lookup by 
 names again.
 
 If we take this route, the metadata performance of SLASH2 can be increased substantially.
-Right now, each time we create a file, we need to add a link by its SLASH2 ID.  Each time
+Right now, each time we create a file, we need to add a link by its SLASH2 FID.  Each time
 we remove a file, we need to remove its link.  We also need to add a link to a directory,
 which is normally not allowed.
 

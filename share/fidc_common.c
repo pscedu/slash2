@@ -125,7 +125,7 @@ fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 
 	/*
  	 * The following asserts can be tripped if the MDS somehow reuses 
- 	 * the same SLASH2 ID for different files/directories.
+ 	 * the same SLASH2 FID for different files/directories.
  	 */
 	if (fcmh->fcmh_flags & FCMH_HAVE_ATTRS) {
 		if (fcmh_isdir(fcmh))

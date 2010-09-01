@@ -35,7 +35,7 @@
 /*
  * slmds_jent_crc - used to log CRC updates which come from the ION's.
  * @sjc_ion: the ion who sent the request.
- * @sjc_s2id: what file.
+ * @sjc_fid: file ID.
  * @sjc_bmapno: which bmap region.
  * @sjc_crc: array of slots and crcs.
  * Notes: I presume that this will be the most common operation into the
@@ -47,7 +47,7 @@ struct slmds_jent_crc {
 	 * make it to the disk.  When we redo the creation, we will get
 	 * a different ZFS ID.
 	 */
-	uint64_t		sjc_s2id;
+	uint64_t		sjc_fid;
 	sl_bmapno_t		sjc_bmapno;
 	sl_ios_id_t		sjc_ion;		/* Track the ion which did the I/O */
 	int32_t			sjc_ncrcs;
@@ -115,9 +115,9 @@ struct slmds_jent_namespace {
 
 	uint64_t		sjnm_seqno;			/* namespace update identifier */
 
-	uint64_t		sjnm_parent_s2id;		/* parent dir FID */
-	uint64_t		sjnm_target_s2id;
-	uint64_t		sjnm_new_parent_s2id;		/* rename only */
+	uint64_t		sjnm_parent_fid;		/* parent dir FID */
+	uint64_t		sjnm_target_fid;
+	uint64_t		sjnm_new_parent_fid;		/* rename only */
 
 	uint32_t		sjnm_mask;			/* attribute mask */
 

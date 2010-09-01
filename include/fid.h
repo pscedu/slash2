@@ -69,7 +69,13 @@ struct slash_fidgen {
 /* temporary placeholder for the not-yet-known generation number */
 #define FGEN_ANY		UINT64_C(0xffffffffffffffff)
 
+/*
+ * The following SLASHIDs are reserved:
+ *	0	not used
+ *	1	-> /
+ */
 #define SLFID_ROOT		1
+#define SLFID_MIN		2
 
 #define SLPRI_FSID		"%#016"PRIx64
 #define FSID_LEN		16

@@ -54,13 +54,6 @@
 #include "slutil.h"
 #include "up_sched_res.h"
 
-/*
- * The following SLASHIDs are reserved:
- *	0	not used
- *	1	-> /
- */
-#define SLASHID_MIN	2
-
 uint64_t next_slash_id;
 static psc_spinlock_t slash_id_lock = LOCK_INITIALIZER;
 
@@ -84,11 +77,11 @@ slm_set_curr_slashid(uint64_t slfid)
 }
 
 /*
- * slm_get_next_slashid - Return the next SLASH ID to use.  Note that from ZFS
- *     point of view, it is perfectly okay that we use the same SLASH ID to
+ * slm_get_next_slashid - Return the next SLASH FID to use.  Note that from ZFS
+ *     point of view, it is perfectly okay that we use the same SLASH FID to
  *     refer to different files/directories.  However, doing so can confuse
- *     our clients (think identity theft). So we must make sure that we never
- *     reuse a SLASH ID, even after a crash.
+ *     our clients (think identity theft).  So we must make sure that we never
+ *     reuse a SLASH FID, even after a crash.
  */
 uint64_t
 slm_get_next_slashid(void)
@@ -96,9 +89,9 @@ slm_get_next_slashid(void)
 	uint64_t slid;
 
 	spinlock(&slash_id_lock);
-	if (next_slash_id >= (UINT64_C(1) << SLASH_ID_FID_BITS))
-		next_slash_id = SLASHID_MIN;
 	slid = next_slash_id++;
+	if (next_slash_id >= (UINT64_C(1) << SLASH_ID_FID_BITS))
+		next_slash_id = SLFID_MIN;
 	freelock(&slash_id_lock);
 
 	return (slid | ((uint64_t)nodeResm->resm_site->site_id <<

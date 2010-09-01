@@ -23,7 +23,7 @@
 /*
  * SLASH2 internal files and directories that enable us to (1) find out the
  * last ZFS commit transaction group number; (2) register the replication
- * work that needs to be done; (3) access SLASH2 files by SLASH2 IDs.
+ * work that needs to be done; (3) access SLASH2 files by SLASH2 FIDs.
  */
 #define SL_PATH_PREFIX		".sl"
 #define SL_PATH_UPSCH		".slupsch"

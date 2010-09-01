@@ -10,7 +10,7 @@ as need be.
 
     Each unlink entry consists of the following information:
  
-	* The identity of the file: slash ID and generation number
+	* The identity of the file: SLASH FID and generation number
 	* The identities of the I/O servers that have a copy of the file at the moment.
 
 (3) Read the unlink log files and send RPCs to I/O servers.  An unlink log file will be removed when
@@ -35,7 +35,7 @@ Because we determine the current log tail by looking at the head of the list,
 we can also prevent a log entry from being reused before it is distilled. 
 Not all entries need to be distilled.
 
-We also need to log some counters (bmap sequence number and slash ID), we
+We also need to log some counters (bmap sequence number and SLASH FID), we
 can insert them periodically in the log, so we are never worried that they
 will be overwritten or do not exist at all.
 

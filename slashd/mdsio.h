@@ -37,7 +37,7 @@ struct srt_stat;
 
 typedef uint64_t mdsio_fid_t;
 
-/* callback to get a SLASH2 ID */
+/* callback to get a SLASH2 FID */
 typedef slfid_t (*sl_getslfid_cb_t)(void);
 
 /* callback to log writes to bmap */

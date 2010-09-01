@@ -195,7 +195,7 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 
 	jcrc = PJE_DATA(pje);
 
-	rc = mdsio_lookup_slfid(jcrc->sjc_s2id, &rootcreds, NULL, &mf);
+	rc = mdsio_lookup_slfid(jcrc->sjc_fid, &rootcreds, NULL, &mf);
 	if (rc == ENOENT) {
 		psc_warnx("mdsio_lookup_slfid: %s", slstrerror(rc));
 		return (rc);
@@ -385,7 +385,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 		rc = mds_redo_namespace(jnamespace);
 		/*
-		 * If we fail above, we still skip these SLASH2 IDs here
+		 * If we fail above, we still skip these SLASH2 FIDs here
 		 * in case a client gets confused.
 		 */
 		if (jnamespace->sjnm_op == NS_OP_CREATE ||
@@ -481,9 +481,9 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	jnamespace->sjnm_op = op;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
-	jnamespace->sjnm_parent_s2id = parent;
-	jnamespace->sjnm_target_s2id = stat->sst_fid;
-	jnamespace->sjnm_new_parent_s2id = newparent;
+	jnamespace->sjnm_parent_fid = parent;
+	jnamespace->sjnm_target_fid = stat->sst_fid;
+	jnamespace->sjnm_new_parent_fid = newparent;
 	jnamespace->sjnm_mask = mask;
 
 	jnamespace->sjnm_uid = stat->sst_uid;
@@ -846,7 +846,7 @@ mds_update_cursor(void *buf, uint64_t txg)
 	freelock(&mds_txg_lock);
 
 	cursor->pjc_xid = pjournal_next_distill(mdsJournal);
-	cursor->pjc_s2id = slm_get_curr_slashid();
+	cursor->pjc_fid = slm_get_curr_slashid();
 
 	rc = mds_bmap_getcurseq(&cursor->pjc_seqno_hwm, &cursor->pjc_seqno_lwm);
 	if (rc) {
@@ -887,10 +887,10 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 			psc_warnx("failed to update cursor, rc = %d", rc);
 		else
 			psc_notify("Cursor updated: txg=%"PRId64", xid=%"PRId64
-			    ", s2id=0x%"PRIx64", seqno=(%"PRId64", %"PRId64")",
+			    ", fid=0x%"PRIx64", seqno=(%"PRId64", %"PRId64")",
 			    mds_cursor.pjc_txg,
 			    mds_cursor.pjc_xid,
-			    mds_cursor.pjc_s2id,
+			    mds_cursor.pjc_fid,
 			    mds_cursor.pjc_seqno_lwm,
 			    mds_cursor.pjc_seqno_hwm);
 	}
@@ -917,9 +917,9 @@ mds_open_cursor(void)
 
 	psc_assert(mds_cursor.pjc_magic == PJRNL_CURSOR_MAGIC);
 	psc_assert(mds_cursor.pjc_version == PJRNL_CURSOR_VERSION);
-	psc_assert(mds_cursor.pjc_s2id >= PJRNL_CURSOR_INIT_S2ID);
+	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
-	slm_set_curr_slashid(mds_cursor.pjc_s2id);
+	slm_set_curr_slashid(mds_cursor.pjc_fid);
 }
 
 /**
@@ -1123,7 +1123,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	psc_assert(bmap->bcm_mode & BMAP_MDS_CRC_UP);
 
 	jcrc = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_crc));
-	jcrc->sjc_s2id = fcmh_2_fid(bmap->bcm_fcmh);
+	jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
 	jcrc->sjc_bmapno = bmap->bcm_blkno;
 	jcrc->sjc_ncrcs = n;
@@ -1239,7 +1239,7 @@ mds_journal_init(void)
 	mdsJournal->pj_distill_xid = mds_cursor.pjc_xid;
 
 	psc_notify("Journal device is %s", r->res_jrnldev);
-	psc_notify("Last SLASH ID is %"PRId64, mds_cursor.pjc_s2id);
+	psc_notify("Last SLASH FID is %"PRId64, mds_cursor.pjc_fid);
 	psc_notify("Last synced ZFS transaction group number is %"PRId64,
 	    mdsJournal->pj_commit_txg);
 	psc_notify("Last distilled SLASH2 transaction number is %"PRId64,
@@ -1319,50 +1319,50 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	switch (jnamespace->sjnm_op) {
 	    case NS_OP_CREATE:
 		rc = mdsio_redo_create(
-			jnamespace->sjnm_parent_s2id,
-			jnamespace->sjnm_target_s2id,
+			jnamespace->sjnm_parent_fid,
+			jnamespace->sjnm_target_fid,
 			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_MKDIR:
 		rc = mdsio_redo_mkdir(
-			jnamespace->sjnm_parent_s2id,
-			jnamespace->sjnm_target_s2id,
+			jnamespace->sjnm_parent_fid,
+			jnamespace->sjnm_target_fid,
 			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_LINK:
 		rc = mdsio_redo_link(
-			jnamespace->sjnm_parent_s2id,
-			jnamespace->sjnm_target_s2id,
+			jnamespace->sjnm_parent_fid,
+			jnamespace->sjnm_target_fid,
 			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_SYMLINK:
 		rc = mdsio_redo_symlink(
-			jnamespace->sjnm_parent_s2id,
-			jnamespace->sjnm_target_s2id,
+			jnamespace->sjnm_parent_fid,
+			jnamespace->sjnm_target_fid,
 			jnamespace->sjnm_name, newname, &stat);
 		break;
 	    case NS_OP_RENAME:
 		rc = mdsio_redo_rename(
-			jnamespace->sjnm_parent_s2id,
+			jnamespace->sjnm_parent_fid,
 			jnamespace->sjnm_name,
-			jnamespace->sjnm_new_parent_s2id,
+			jnamespace->sjnm_new_parent_fid,
 			newname, &stat);
 		break;
 	    case NS_OP_UNLINK:
 		rc = mdsio_redo_unlink(
-			jnamespace->sjnm_parent_s2id,
-			jnamespace->sjnm_target_s2id,
+			jnamespace->sjnm_parent_fid,
+			jnamespace->sjnm_target_fid,
 			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_RMDIR:
 		rc = mdsio_redo_rmdir(
-			jnamespace->sjnm_parent_s2id,
-			jnamespace->sjnm_target_s2id,
+			jnamespace->sjnm_parent_fid,
+			jnamespace->sjnm_target_fid,
 			jnamespace->sjnm_name, &stat);
 		break;
 	    case NS_OP_SETATTR:
 		rc = mdsio_redo_setattr(
-			jnamespace->sjnm_target_s2id,
+			jnamespace->sjnm_target_fid,
 			jnamespace->sjnm_mask, &stat);
 		hasname = 0;
 		break;
@@ -1375,10 +1375,10 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	if (hasname) {
 		psc_notify("Redo namespace log: op = %d, name = %s, id = %"PRIx64", rc = %d",
 			   jnamespace->sjnm_op, jnamespace->sjnm_name,
-			   jnamespace->sjnm_target_s2id, rc);
+			   jnamespace->sjnm_target_fid, rc);
 	} else {
 		psc_notify("Redo namespace log: op = %d, id = %"PRIx64", rc = %d",
-			   jnamespace->sjnm_op, jnamespace->sjnm_target_s2id, rc);
+			   jnamespace->sjnm_op, jnamespace->sjnm_target_fid, rc);
 	}
 	return (rc);
 }
