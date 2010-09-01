@@ -447,7 +447,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
  			 * We might straddle the end offset of the previously
  			 * scheduled I/O request.
  			 */
-			if (bmpce->bmpce_off < off) {
+			if (off - bmpce->bmpce_off >= BMPC_BUFSZ) {
 				/* Similar case to the 'continue' stmt above,
 				 *   this bmpce overlaps a previously
 				 *   scheduled biorq.
@@ -457,7 +457,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 				BMPCE_ULOCK(bmpce);
 				psc_assert(first_iov == 1);
 
-			  	reqsz -=  BMPC_BUFSZ - (r->biorq_off - bmpce->bmpce_off);
+			  	reqsz -=  BMPC_BUFSZ;
 				continue;
 			}
 			DEBUG_BMPCE(PLL_INFO, bmpce,
@@ -476,10 +476,10 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			 *   area if this is the first mapping.
 			 */
 			iovs[niovs].iov_base = bmpce->bmpce_base +
-				(first_iov ? (r->biorq_off - bmpce->bmpce_off) : 0);
+				(first_iov ? (off - bmpce->bmpce_off) : 0);
 
 			iovs[niovs].iov_len = MIN(reqsz,
-			  (first_iov ? BMPC_BUFSZ - (r->biorq_off - bmpce->bmpce_off) :
+			  (first_iov ? BMPC_BUFSZ - (off - bmpce->bmpce_off) :
 			   BMPC_BUFSZ));
 
 			off += iovs[niovs].iov_len;
