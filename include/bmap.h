@@ -317,4 +317,22 @@ brepls_init(int *ar, int val)
 		ar[i] = val;
 }
 
+static __inline void
+dump_bmap_flags_common(uint32_t *flags, int *seq)
+{
+	PFL_PRFLAG(BMAP_RD, *flags, seq);
+	PFL_PRFLAG(BMAP_WR, *flags, seq);
+	PFL_PRFLAG(BMAP_INIT, *flags, seq);
+	PFL_PRFLAG(BMAP_DIO, *flags, seq);
+	PFL_PRFLAG(BMAP_DIORQ, *flags, seq);
+	PFL_PRFLAG(BMAP_CLOSING, *flags, seq);
+	PFL_PRFLAG(BMAP_DIRTY, *flags, seq);
+	PFL_PRFLAG(BMAP_MEMRLS, *flags, seq);
+	PFL_PRFLAG(BMAP_DIRTY2LRU, *flags, seq);
+	PFL_PRFLAG(BMAP_REAPABLE, *flags, seq);
+	PFL_PRFLAG(BMAP_IONASSIGN, *flags, seq);
+	PFL_PRFLAG(BMAP_MDCHNG, *flags, seq);
+	PFL_PRFLAG(BMAP_WAITERS, *flags, seq);
+}
+
 #endif /* _BMAP_H_ */
