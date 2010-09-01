@@ -882,12 +882,15 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 		} while (!locked);
 	}
 
+	psc_pthread_mutex_lock(&newrq->uswi_mutex);
 	USWI_INCREF(newrq, USWI_REFT_TREE);
 	USWI_INCREF(newrq, USWI_REFT_LOOKUP);
 
 	SPLAY_INSERT(upschedtree, &upsched_tree, newrq);
 	pll_addtail(&upsched_listhd, newrq);
 	upsched_gen++;
+
+	psc_pthread_mutex_unlock(&newrq->uswi_mutex);
 
 	*wkp = newrq;
 	newrq = NULL;

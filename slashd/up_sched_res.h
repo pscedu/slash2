@@ -54,6 +54,9 @@ struct up_sched_work_item {
 				    USWI_INO(wk)->ino_repls[n] :	\
 				    USWI_INOX(wk)->inox_repls[(n) - 1])
 
+#define USWI_RLOCK(wk)		psc_pthread_mutex_reqlock(&(wk)->uswi_mutex)
+#define USWI_URLOCK(wk, lk)	psc_pthread_mutex_ureqlock(&(wk)->uswi_mutex, (lk))
+
 enum uswi_reftype {
 /* 0 */	USWI_REFT_TREE,		/* in tree/list in memory */
 /* 1 */	USWI_REFT_SITEUPQ,	/* in scheduler queue for a site */
@@ -62,7 +65,9 @@ enum uswi_reftype {
 
 #define USWI_DEBUG(lvl, wk, fmt, ...)					\
 	do {								\
-		psc_pthread_mutex_ensure_locked(&(wk)->uswi_mutex);	\
+		int _lk;						\
+									\
+		_lk = USWI_RLOCK(wk);					\
 		psc_log((lvl), "uswi@%p f+g:"SLPRI_FG" fl:%s%s ref:%d "	\
 		    "gen:%d " fmt,					\
 		    (wk), SLPRI_FG_ARGS(USWI_FG(wk)),			\
@@ -70,6 +75,7 @@ enum uswi_reftype {
 		    (wk)->uswi_flags & USWIF_DIE	? "d" : "",	\
 		    psc_atomic32_read(&(wk)->uswi_refcnt),		\
 		    (wk)->uswi_gen, ## __VA_ARGS__);			\
+		USWI_URLOCK((wk), _lk);					\
 	} while (0)
 
 #define USWI_INCREF(wk, reftype)					\
