@@ -190,7 +190,7 @@ main(int argc, char *argv[])
 		errx(1, "libgcrypt version mismatch");
 
 	pfl_init();
-	psc_subsys_register(SLSS_BMAP, "bmap");
+	sl_subsys_register();
 	psc_subsys_register(SLMSS_ZFS, "zfs");
 	psc_subsys_register(SLMSS_JOURNAL, "jrnl");
 

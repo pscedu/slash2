@@ -56,14 +56,13 @@ int
 main(int argc, char *argv[])
 {
 	ssize_t nents = SLJ_MDS_JNENTS;
-	char c, fn[PATH_MAX];
+	char *endp, c, fn[PATH_MAX];
 	unsigned int options;
-	char *endp;
 	int rc;
 	long l;
 
 	pfl_init();
-	psc_subsys_register(SLSS_BMAP, "bmap");
+	sl_subsys_register();
 	psc_subsys_register(SLMSS_ZFS, "zfs");
 	psc_subsys_register(SLMSS_JOURNAL, "jrnl");
 

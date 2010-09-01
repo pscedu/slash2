@@ -27,6 +27,14 @@
 #include "psc_util/subsys.h"
 
 #define SLSS_BMAP	(_PSS_LAST + 0)
-#define _SLSS_LAST	(_PSS_LAST + 1)
+#define SLSS_FCMH	(_PSS_LAST + 1)
+#define _SLSS_LAST	(_PSS_LAST + 2)
+
+static __inline void
+sl_subsys_register(void)
+{
+	psc_subsys_register(SLSS_BMAP, "bmap");
+	psc_subsys_register(SLSS_FCMH, "fcmh");
+}
 
 #endif /* _SLSUBSYS_H_ */

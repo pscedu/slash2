@@ -1855,7 +1855,7 @@ main(int argc, char *argv[])
 		errx(1, "libgcrypt version mismatch");
 
 	pfl_init();
-	psc_subsys_register(SLSS_BMAP, "bmap");
+	sl_subsys_register();
 
 	msl_fuse_addarg(&args, "");		/* progname/argv[0] */
 	msl_fuse_addarg(&args, "-o");
