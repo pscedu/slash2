@@ -78,6 +78,7 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 	struct msctl_replstq *mrsq;
 	struct sl_resource *res;
 	struct psc_ctlmsghdr mh;
+	struct fidc_membh *fcmh;
 	int rc, n;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -90,10 +91,18 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 
 	if (mrsq->mrsq_fn[0] != '\0')
 		strlcpy(mrs.mrs_fn, mrsq->mrsq_fn, sizeof(mrs.mrs_fn));
-	else
-		/* XXX try to do a reverse lookup of pathname; check cache maybe? */
-		snprintf(mrs.mrs_fn, sizeof(mrs.mrs_fn),
-		    "%"PRIx64, mq->fg.fg_fid);
+	else {
+		fcmh = fidc_lookup_fg(&mq->fg);
+		if (fcmh) {
+			/* file is in cache, try to recover filename */
+			snprintf(mrs.mrs_fn, sizeof(mrs.mrs_fn),
+			    "%"PRIx64, mq->fg.fg_fid);
+			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+		} else {
+			snprintf(mrs.mrs_fn, sizeof(mrs.mrs_fn),
+			    "%"PRIx64, mq->fg.fg_fid);
+		}
+	}
 
 	if (mq->rc) {
 		rc = 1;
@@ -221,9 +230,9 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 {
 	struct srm_bmap_dio_req *mq;
 	struct srm_generic_rep *mp;
+	struct bmap_cli_info *bci;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
-	struct bmap_cli_info *bci;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
