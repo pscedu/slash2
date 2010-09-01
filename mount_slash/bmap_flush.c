@@ -663,26 +663,26 @@ bmap_flush(void)
 		DEBUG_BMAP(PLL_INFO, b, "try flush (outstandingRpcCnt=%d)",
 			   atomic_read(&outstandingRpcCnt));
 
-		psc_assert(b->bcm_mode & BMAP_CLI_FLUSHPROC);
+		psc_assert(b->bcm_flags & BMAP_CLI_FLUSHPROC);
 		/* Take the page cache lock too so that the bmap's
 		 *   dirty state may be sanity checked.
 		 */
 		BMPC_LOCK(bmpc);
-		if (b->bcm_mode & BMAP_DIRTY) {
+		if (b->bcm_flags & BMAP_DIRTY) {
 			psc_assert(bmpc_queued_writes(bmpc));
 			psc_dynarray_add(&bmaps, msbd);
 
 		} else {
 			psc_assert(!bmpc_queued_writes(bmpc));
-			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
+			b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
 			bcm_wake_locked(b);
 			BMPC_ULOCK(bmpc);
 
 			if (!bmpc_queued_ios(bmpc)) {
 				/* No remaining reads or writes.
 				 */
-				psc_assert(!(b->bcm_mode & BMAP_REAPABLE));
-				b->bcm_mode |= BMAP_REAPABLE;
+				psc_assert(!(b->bcm_flags & BMAP_REAPABLE));
+				b->bcm_flags |= BMAP_REAPABLE;
 				lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
 				DEBUG_BMAP(PLL_INFO, b,
 				   "added to bmapTimeoutQ");
@@ -773,21 +773,21 @@ bmap_flush(void)
 		 *   below may remove it.  BMAP_CLI_FLUSHPROC and
 		 *   BMAP_REAPABLE are mutually exclusive.
 		 */
-		psc_assert(b->bcm_mode & BMAP_CLI_FLUSHPROC);
-		psc_assert(!(b->bcm_mode & BMAP_REAPABLE));
+		psc_assert(b->bcm_flags & BMAP_CLI_FLUSHPROC);
+		psc_assert(!(b->bcm_flags & BMAP_REAPABLE));
 
 		if (bmpc_queued_writes(bmpc)) {
-			psc_assert(b->bcm_mode & BMAP_DIRTY);
+			psc_assert(b->bcm_flags & BMAP_DIRTY);
 			DEBUG_BMAP(PLL_INFO, b, "restore to dirty list");
 			lc_addtail(&bmapFlushQ, msbd);
 
 		} else {
-			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
-			b->bcm_mode &= ~BMAP_CLI_FLUSHPROC;
+			psc_assert(!(b->bcm_flags & BMAP_DIRTY));
+			b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
 
 			if (!bmpc_queued_ios(bmpc)) {
 				psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
-				b->bcm_mode |= BMAP_REAPABLE;
+				b->bcm_flags |= BMAP_REAPABLE;
 				lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
 			}
 
@@ -908,7 +908,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			   msbd->msbd_etime.tv_nsec);
 
 			if (bmpc_queued_ios(&msbd->msbd_bmpc)) {
-				b->bcm_mode &= ~BMAP_REAPABLE;
+				b->bcm_flags &= ~BMAP_REAPABLE;
 				DEBUG_BMAP(PLL_INFO, b,
 					   "descheduling from timeoq");
 				BMAP_ULOCK(b);
@@ -950,7 +950,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				 */
 				psc_assert(!bmpc_queued_ios(&msbd->msbd_bmpc));
 
-				if (b->bcm_mode & BMAP_WR) {
+				if (b->bcm_flags & BMAP_WR) {
 					/* Setup a msg to an ION.
 					 */
 					psc_assert(bmap_2_ion(b) !=

@@ -91,7 +91,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	 */
 	bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 
-	if (b->bcm_mode & BMAP_DIO) {
+	if (b->bcm_flags & BMAP_DIO) {
 		/* The bmap is set to use directio, we may then skip
 		 *   cache preparation.
 		 */
@@ -309,10 +309,10 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 		psc_assert(atomic_read(&bmpc->bmpc_pndgwr) >= 0);
 
 		if (atomic_read(&bmpc->bmpc_pndgwr))
-			psc_assert(b->bcm_mode & BMAP_DIRTY);
+			psc_assert(b->bcm_flags & BMAP_DIRTY);
 
 		else {
-			b->bcm_mode &= ~BMAP_DIRTY;
+			b->bcm_flags &= ~BMAP_DIRTY;
 			/* Don't assert pll_empty(&bmpc->bmpc_pndg)
 			 *   since read requests may be present.
 			 */
@@ -321,10 +321,10 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 		}
 	}
 
-	if (!bmpc_queued_ios(bmpc) && !(b->bcm_mode & BMAP_CLI_FLUSHPROC) &&
-	    !(b->bcm_mode & BMAP_REAPABLE)) {
+	if (!bmpc_queued_ios(bmpc) && !(b->bcm_flags & BMAP_CLI_FLUSHPROC) &&
+	    !(b->bcm_flags & BMAP_REAPABLE)) {
 		psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
-		b->bcm_mode |= BMAP_REAPABLE;
+		b->bcm_flags |= BMAP_REAPABLE;
 		lc_addtail(&bmapTimeoutQ, bmap_2_msbd(b));
 	}
 
@@ -486,7 +486,7 @@ bmap_biorq_waitempty(struct bmapc_memb *b)
 	BMAP_LOCK(b);
 	bcm_wait_locked(b, (!pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs) ||
 			    !pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs)  ||
-			    (b->bcm_mode & BMAP_CLI_FLUSHPROC)));
+			    (b->bcm_flags & BMAP_CLI_FLUSHPROC)));
 
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_pndg_biorqs));
 	psc_assert(pll_empty(&bmap_2_bmpc(b)->bmpc_new_biorqs));
@@ -502,7 +502,7 @@ msl_bmap_cache_rls(struct bmapc_memb *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
-	psc_assert(b->bcm_mode & BMAP_DIO);
+	psc_assert(b->bcm_flags & BMAP_DIO);
 
 	bmap_biorq_expire(b);
 	bmap_biorq_waitempty(b);
@@ -526,8 +526,8 @@ msl_bmap_final_cleanup(struct bmapc_memb *b)
 	bmpc_lru_del(bmpc);
 
 	BMAP_LOCK(b);
-	psc_assert(b->bcm_mode & BMAP_CLOSING);
-	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
+	psc_assert(b->bcm_flags & BMAP_CLOSING);
+	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 	/* Assert that this bmap can no longer be scheduled by the
 	 *   write back cache thread.
 	 */
@@ -569,7 +569,7 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	/* Take the reaper ref cnt early and place the bmap
 	 *    onto the reap list
 	 */
-	bmap->bcm_mode |= BMAP_REAPABLE;
+	bmap->bcm_flags |= BMAP_REAPABLE;
 	bmap_op_start_type(bmap, BMAP_OPCNT_REAPER);
 
 	BMAP_URLOCK(bmap, locked);
@@ -598,7 +598,7 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 	struct fcmh_cli_info *fci;
 	struct fidc_membh *f;
 
-	psc_assert(bmap->bcm_mode & BMAP_INIT);
+	psc_assert(bmap->bcm_flags & BMAP_INIT);
 	psc_assert(bmap->bcm_fcmh);
 
 	f = bmap->bcm_fcmh;
@@ -712,9 +712,9 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
  retry:
-	psc_assert(b->bcm_mode & BMAP_MDCHNG);
+	psc_assert(b->bcm_flags & BMAP_MDCHNG);
 
-	if (b->bcm_mode & BMAP_WR)
+	if (b->bcm_flags & BMAP_WR)
 		/* Write enabled bmaps are allowed to read with no
 		 *   further action being taken.
 		 */
@@ -722,7 +722,7 @@ msl_bmap_modeset(struct bmapc_memb *b, enum rw rw)
 
 	/* Add write mode to this bmap.
 	 */
-	psc_assert(rw == SL_WRITE && (b->bcm_mode & BMAP_RD));
+	psc_assert(rw == SL_WRITE && (b->bcm_flags & BMAP_RD));
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -1150,7 +1150,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	atomic_inc(&bmpc->bmpc_pndgwr);
 	freelock(&r->biorq_lock);
 
-	if (b->bcm_mode & BMAP_DIRTY) {
+	if (b->bcm_flags & BMAP_DIRTY) {
 		/* If the bmap is already dirty then at least
 		 *   one other writer must be present.
 		 */
@@ -1159,23 +1159,23 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			    pll_nitems(&bmpc->bmpc_new_biorqs)) > 1);
 
 	} else {
-		if (b->bcm_mode & BMAP_REAPABLE) {
+		if (b->bcm_flags & BMAP_REAPABLE) {
 			LIST_CACHE_LOCK(&bmapTimeoutQ);
-			b->bcm_mode &= ~BMAP_REAPABLE;
-			psc_assert(!(b->bcm_mode & BMAP_DIRTY));
+			b->bcm_flags &= ~BMAP_REAPABLE;
+			psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 
 			if (psclist_conjoint(&bmap_2_msbd(b)->msbd_lentry))
 				lc_remove(&bmapTimeoutQ, bmap_2_msbd(b));
 			LIST_CACHE_ULOCK(&bmapTimeoutQ);
 		}
 
-		b->bcm_mode |= BMAP_DIRTY;
+		b->bcm_flags |= BMAP_DIRTY;
 
-		if (!(b->bcm_mode & BMAP_CLI_FLUSHPROC)) {
+		if (!(b->bcm_flags & BMAP_CLI_FLUSHPROC)) {
 			/* Give control of the msdb_lentry to the bmap_flush
 			 *   thread.
 			 */
-			b->bcm_mode |= BMAP_CLI_FLUSHPROC;
+			b->bcm_flags |= BMAP_CLI_FLUSHPROC;
 			psc_assert(psclist_disjoint(&bmap_2_msbd(b)->msbd_lentry));
 			lc_addtail(&bmapFlushQ, bmap_2_msbd(b));
 		}
@@ -1204,7 +1204,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	psc_assert(npages <= BMPC_MAXBUFSRPC);
 
 	BMAP_LOCK(r->biorq_bmap);
-	csvc = (r->biorq_bmap->bcm_mode & BMAP_WR) ?
+	csvc = (r->biorq_bmap->bcm_flags & BMAP_WR) ?
 		msl_bmap_to_csvc(r->biorq_bmap, 1) :
 		msl_bmap_choose_replica(r->biorq_bmap);
 	BMAP_ULOCK(r->biorq_bmap);

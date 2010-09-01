@@ -60,8 +60,8 @@ bmap_remove(struct bmapc_memb *b)
 
 	DEBUG_BMAP(PLL_INFO, b, "removing");
 
-	psc_assert(b->bcm_mode & BMAP_CLOSING);
-	psc_assert(!(b->bcm_mode & BMAP_DIRTY));
+	psc_assert(b->bcm_flags & BMAP_CLOSING);
+	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 	psc_assert(!atomic_read(&b->bcm_opcnt));
 
 	BMAP_ULOCK(b);
@@ -88,7 +88,7 @@ _bmap_op_done(struct bmapc_memb *b, const char *fn, const char *func,
 	va_end(ap);
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
-		b->bcm_mode |= BMAP_CLOSING;
+		b->bcm_flags |= BMAP_CLOSING;
 		BMAP_ULOCK(b);
 
 		if (bmap_ops.bmo_final_cleanupf)
@@ -111,7 +111,7 @@ bmap_lookup_cache_locked(struct fidc_membh *f, sl_bmapno_t n)
 	b = SPLAY_FIND(bmap_cache, &f->fcmh_bmaptree, &lb);
 	if (b) {
 		BMAP_LOCK(b);
-		if (b->bcm_mode & BMAP_CLOSING) {
+		if (b->bcm_flags & BMAP_CLOSING) {
 			/*
 			 * This bmap is going away; wait for
 			 * it so we can reload it back.
@@ -165,7 +165,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		 * Signify that the bmap is newly initialized and therefore
 		 *  may not contain certain structures.
 		 */
-		b->bcm_mode = BMAP_INIT | bmaprw;
+		b->bcm_flags = BMAP_INIT | bmaprw;
 
 		bmap_op_start_type(b, BMAP_OPCNT_LOOKUP);
 		/* Perform app-specific substructure initialization. */
@@ -183,7 +183,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 			rc = bmap_ops.bmo_retrievef(b, rw);
 
 		BMAP_LOCK(b);
-		b->bcm_mode &= ~BMAP_INIT;
+		b->bcm_flags &= ~BMAP_INIT;
 		bcm_wake_locked(b);
 		if (rc)
 			goto out;
@@ -191,14 +191,14 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 	} else {
 		/* Wait while BMAP_INIT is set.
 		 */
-		bcm_wait_locked(b, (b->bcm_mode & BMAP_INIT));
+		bcm_wait_locked(b, (b->bcm_flags & BMAP_INIT));
 
 	retry:
 		/* Not all lookups are done with the intent of
 		 *   changing the bmap mode.  bmap_lookup() does not
 		 *   specify a rw value.
 		 */
-		if (bmaprw && !(bmaprw & b->bcm_mode) &&
+		if (bmaprw && !(bmaprw & b->bcm_flags) &&
 		    bmap_ops.bmo_mode_chngf) {
 			/* Others wishing to access this bmap in the
 			 *   same mode must wait until MDCHNG ops have
@@ -207,13 +207,13 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 			 *   here so long as it only accesses structures
 			 *   which pertain to its mode.
 			 */
-			if (b->bcm_mode & BMAP_MDCHNG) {
+			if (b->bcm_flags & BMAP_MDCHNG) {
 				bcm_wait_locked(b,
-					(b->bcm_mode & BMAP_MDCHNG));
+					(b->bcm_flags & BMAP_MDCHNG));
 				goto retry;
 
 			} else {
-				b->bcm_mode |= BMAP_MDCHNG;
+				b->bcm_flags |= BMAP_MDCHNG;
 				BMAP_ULOCK(b);
 
 				DEBUG_BMAP(PLL_NOTIFY, b,
@@ -221,9 +221,9 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 
 				rc = bmap_ops.bmo_mode_chngf(b, rw);
 				BMAP_LOCK(b);
-				b->bcm_mode &= ~BMAP_MDCHNG;
+				b->bcm_flags &= ~BMAP_MDCHNG;
 				if (!rc)
-					b->bcm_mode |= bmaprw;
+					b->bcm_flags |= bmaprw;
 				bcm_wake_locked(b);
 				if (rc)
 					goto out;

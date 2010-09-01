@@ -1120,7 +1120,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	 * No, I shouldn't need the lock.  Only this instance of this
 	 *  call may remove the BMAP_MDS_CRC_UP bit.
 	 */
-	psc_assert(bmap->bcm_mode & BMAP_MDS_CRC_UP);
+	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
 	jcrc = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_crc));
 	jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
@@ -1166,7 +1166,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	/* Signify that the update has occurred.
 	 */
 	BMAP_LOCK(bmap);
-	bmap->bcm_mode &= ~BMAP_MDS_CRC_UP;
+	bmap->bcm_flags &= ~BMAP_MDS_CRC_UP;
 	BMAP_ULOCK(bmap);
 
 	pjournal_put_buf(mdsJournal, jcrc);

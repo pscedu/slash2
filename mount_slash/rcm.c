@@ -245,7 +245,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	DEBUG_BMAP(PLL_WARN, b, "seq=%"PRId64, mq->seq);
 
 	BMAP_LOCK(b);
-	if (b->bcm_mode & BMAP_DIO) {
+	if (b->bcm_flags & BMAP_DIO) {
 		BMAP_ULOCK(b);
 		goto out;
 	}
@@ -259,7 +259,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	}
 	/* All new read and write IO's will get BIORQ_DIO.
 	 */
-	b->bcm_mode |= BMAP_DIO;
+	b->bcm_flags |= BMAP_DIO;
 	BMAP_ULOCK(b);
 
 	DEBUG_BMAP(PLL_WARN, b, "trying to dump the cache");

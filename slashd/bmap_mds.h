@@ -130,7 +130,7 @@ struct bmap_mds_info {
 		BMAPOD_READ_DONE(b);					\
 	} while (0)
 
-/* MDS-specific bcm_mode flags */
+/* MDS-specific bcm_flags flags */
 #define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT)		/* CRC update in progress */
 #define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 1)
 #define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)

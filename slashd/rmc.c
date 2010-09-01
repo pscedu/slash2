@@ -151,7 +151,7 @@ slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap, struct srt_bmapdesc *sbd,
 
 	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = bmap->bcm_bmapno;
-	if (bmap->bcm_mode & BMAP_DIO)
+	if (bmap->bcm_flags & BMAP_DIO)
 		sbd->sbd_flags |= SRM_GETBMAPF_DIRECTIO;
 
 	if (rw == SL_WRITE) {

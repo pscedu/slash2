@@ -64,7 +64,7 @@ struct bmapc_memb {
 	sl_bmapno_t		 bcm_bmapno;	/* bmap index number */
 	struct fidc_membh	*bcm_fcmh;	/* pointer to fid info */
 	psc_atomic32_t		 bcm_opcnt;	/* pending opcnt */
-	uint32_t		 bcm_mode;	/* see flags below */
+	uint32_t		 bcm_flags;	/* see BMAP_* below */
 	psc_spinlock_t		 bcm_lock;
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry */
 	struct psclist_head	 bcm_lentry;	/* free pool */
@@ -72,7 +72,7 @@ struct bmapc_memb {
 #define bcm_blkno bcm_bmapno
 };
 
-/* common bmap_mode flags */
+/* shared bmap_flags */
 #define BMAP_RD			(1 << 0)	/* XXX use enum rw */
 #define BMAP_WR			(1 << 1)	/* XXX use enum rw */
 #define BMAP_INIT		(1 << 2)	/* initializing from disk/network */
@@ -95,7 +95,7 @@ struct bmapc_memb {
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
 
 #define _DEBUG_BMAP_FMT		"bmap@%p b:%x m:%u i:%"PRIx64" opcnt=%u "
-#define _DEBUG_BMAP_FMTARGS(b)	(b), (b)->bcm_blkno, (b)->bcm_mode,	\
+#define _DEBUG_BMAP_FMTARGS(b)	(b), (b)->bcm_blkno, (b)->bcm_flags,	\
 				(b)->bcm_fcmh ?				\
 				    fcmh_2_fid((b)->bcm_fcmh) : 0,	\
 				psc_atomic32_read(&(b)->bcm_opcnt)
@@ -113,7 +113,7 @@ struct bmapc_memb {
 	do {								\
 		BMAP_LOCK_ENSURE(b);					\
 		while (cond) {						\
-			(b)->bcm_mode |= BMAP_WAITERS;			\
+			(b)->bcm_flags |= BMAP_WAITERS;			\
 			psc_waitq_wait(&(b)->bcm_fcmh->fcmh_waitq,	\
 				       &(b)->bcm_lock);			\
 			BMAP_LOCK(b);					\
@@ -123,9 +123,9 @@ struct bmapc_memb {
 #define bcm_wake_locked(b)						\
 	do {								\
 		BMAP_LOCK_ENSURE(b);					\
-		if ((b)->bcm_mode & BMAP_WAITERS) {			\
+		if ((b)->bcm_flags & BMAP_WAITERS) {			\
 			psc_waitq_wakeall(&(b)->bcm_fcmh->fcmh_waitq);	\
-			(b)->bcm_mode &= ~BMAP_WAITERS;			\
+			(b)->bcm_flags &= ~BMAP_WAITERS;			\
 		}							\
 	} while (0)
 

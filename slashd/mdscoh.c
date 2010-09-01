@@ -77,9 +77,9 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 
 	if (flags & BML_COHDIO) {
 		BMAP_LOCK(bml_2_bmap(bml));
-		psc_assert(bml_2_bmap(bml)->bcm_mode & BMAP_DIORQ);
-		bml_2_bmap(bml)->bcm_mode &= ~BMAP_DIORQ;
-		bml_2_bmap(bml)->bcm_mode |= BMAP_DIO;
+		psc_assert(bml_2_bmap(bml)->bcm_flags & BMAP_DIORQ);
+		bml_2_bmap(bml)->bcm_flags &= ~BMAP_DIORQ;
+		bml_2_bmap(bml)->bcm_flags |= BMAP_DIO;
 		BMAP_ULOCK(bml_2_bmap(bml));
 
 		DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml), "converted to dio");
