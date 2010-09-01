@@ -56,6 +56,13 @@ struct biod_crcup_ref {
 	struct srm_bmap_crcup	 bcr_crcup;
 };
 
+/* bcr_flags */
+#define	BCR_NONE		0x00
+#define BCR_SCHEDULED		0x01
+#define BCR_BACKLOGGED		0x02
+
+#define bcr_2_bmap(bcr)		bii_2_bmap((bcr)->bcr_biodi)
+
 struct bmap_iod_minseq {
 	psc_spinlock_t		 bim_lock;
 	struct timespec		 bim_age;
@@ -67,11 +74,6 @@ struct bmap_iod_minseq {
 #define BIM_RETRIEVE_SEQ	1
 
 #define BIM_MINAGE		10	/* Seconds */
-
-/* bcr_flags */
-#define	BCR_NONE		0x00
-#define BCR_SCHEDULED		0x01
-#define BCR_BACKLOGGED          0x02
 
 #define SLIOD_BMAP_RLS_WAIT_SECS 2 /* Number of seconds to wait for more
 				    *  bmap releases from the client
@@ -124,17 +126,17 @@ struct bmap_iod_info {
 	uint64_t		 biod_cur_seqkey[2];
 	uint64_t		 biod_rls_seqkey[2];
 	uint32_t		 biod_crcdrty_slvrs;
-	uint32_t                 biod_state;
 };
 
-/* biod_state flags */
-#define	BIOD_INFLIGHT		(1 << 0)
-#define	BIOD_RLSSEQ		(1 << 1)
-#define	BIOD_BCRSCHED		(1 << 2)
-#define	BIOD_RLSSCHED		(1 << 3)
+/* sliod-specific bcm_flags */
+#define	BIOD_INFLIGHT		(_BMAP_FLSHFT << 0)
+#define	BIOD_RLSSEQ		(_BMAP_FLSHFT << 1)
+#define	BIOD_BCRSCHED		(_BMAP_FLSHFT << 2)
+#define	BIOD_RLSSCHED		(_BMAP_FLSHFT << 3)
 
 #define biodi_2_wire(bi)	bmap_2_wire(bii_2_bmap(bi))
 #define biodi_2_crcbits(bi, sl)	biodi_2_wire(bi)->bod_crcstates[sl]
+#define bii_2_flags(b)		bii_2_bmap(b)->bcm_flags
 
 #define bmap_2_biodi(b)		((struct bmap_iod_info *)bmap_get_pri(b))
 #define bmap_2_bii(b)		((struct bmap_iod_info *)bmap_get_pri(b))
