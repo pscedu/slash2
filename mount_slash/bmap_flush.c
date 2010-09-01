@@ -529,7 +529,7 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 __static struct psc_dynarray *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 {
-	int i, off, expired=0;
+	int i, off, anyexpired=0;
 	struct bmpc_ioreq *r=NULL, *t;
 	struct psc_dynarray b=DYNARRAY_INIT, *a=NULL;
 
@@ -551,11 +551,11 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 
 		/* If any member is expired then we'll push everything out.
 		 */
-		if (!expired)
-			expired = bmap_flush_biorq_expired(t);
+		if (!anyexpired)
+			anyexpired = bmap_flush_biorq_expired(t);
 
 		DEBUG_BIORQ(PLL_NOTIFY, t, "biorq #%d (expired=%d) nfrags=%d",
-			    off, expired, psc_dynarray_len(&b));
+			    off, anyexpired, psc_dynarray_len(&b));
 		/* The next request, 't', can be added to the coalesce
 		 *   group either because 'r' is not yet set (meaning
 		 *   the group is empty) or because 't' overlaps or
@@ -570,7 +570,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 				r = t;
 
 		} else {
-			if (bmap_flushready(&b) || expired)
+			if (bmap_flushready(&b) || anyexpired)
 				break;
 			else {
 				/* This biorq is not contiguous with
@@ -593,7 +593,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		}
 	}
 
-	if (expired || bmap_flushready(&b)) {
+	if (anyexpired || bmap_flushready(&b)) {
 		a = PSCALLOC(sizeof(*a));
 		psc_dynarray_ensurelen(a, psc_dynarray_len(&b));
 		for (i=0; i < psc_dynarray_len(&b); i++) {
