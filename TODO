@@ -263,5 +263,7 @@ utime
   sl_csvc_markfree() in all to-client hldrop callbacks
 
 - upsch items are not getting removed on completion
-- replicas are disappearing, not stored on disk?
-- move bcm_od into mds only
+- dircache should be moved into mount_slash
+- slb should be moved into sliod
+- figure out why daemons aren't reconnecting
+  - possible reason: csvc_flags aren't being set correctly on teardown (export hldrop)
