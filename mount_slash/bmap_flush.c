@@ -401,7 +401,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 	psc_assert(!*iovset);
 	psc_assert(psc_dynarray_len(biorqs) > 0);
 
-	for (i=0; i < psc_dynarray_len(biorqs); i++, first_iov=1) {
+	for (i=0; i < psc_dynarray_len(biorqs); i++) {
 		r = psc_dynarray_getpos(biorqs, i);
 
 		if (!i)
