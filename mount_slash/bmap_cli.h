@@ -33,8 +33,8 @@
  *  in slash_bmap_od.
  */
 struct msbmap_crcrepl_states {
-	uint8_t	msbcr_crcstates[SL_CRCS_PER_BMAP];	/* crc descriptor bits  */
-	uint8_t	msbcr_repls[SL_REPLICA_NBYTES];		/* replica bit map        */
+	uint8_t	msbcr_crcstates[SL_CRCS_PER_BMAP];	/* crc descriptor bits */
+	uint8_t	msbcr_repls[SL_REPLICA_NBYTES];		/* replica bit map */
 };
 
 /*
@@ -44,15 +44,15 @@ struct bmap_cli_info {
 	struct bmap_pagecache		 msbd_bmpc;
 	struct bmapc_memb		*msbd_bmap;
 	struct msbmap_crcrepl_states	 msbd_msbcr;
-	struct srt_bmapdesc		 msbd_sbd;   /* open bmap descriptor */
+	struct srt_bmapdesc		 msbd_sbd;	/* open bmap descriptor */
 	struct psclist_head		 msbd_lentry;
-	struct timespec			 msbd_xtime; /* max time */
-	struct timespec			 msbd_etime; /* current expire time */
+	struct timespec			 msbd_xtime;	/* max time */
+	struct timespec			 msbd_etime;	/* current expire time */
 };
 
 #define BMAP_CLI_MAX_LEASE		60 /* seconds */
 #define BMAP_CLI_TIMEO_INC		5
-#define BMAP_CLI_DIOWAIT_SECS           1
+#define BMAP_CLI_DIOWAIT_SECS		1
 
 #define bmap_2_msbd(b)			((struct bmap_cli_info *)bmap_get_pri(b))
 #define bmap_2_bci(b)			((struct bmap_cli_info *)bmap_get_pri(b))

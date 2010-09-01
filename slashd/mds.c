@@ -1263,7 +1263,7 @@ mds_bmapod_initnew(struct slash_bmap_od *b)
 {
 	int i;
 
-	for (i=0; i < SL_CRCS_PER_BMAP; i++)
+	for (i = 0; i < SL_CRCS_PER_BMAP; i++)
 		b->bh_crcs[i].gc_crc = BMAP_NULL_CRC;
 
 	psc_crc64_calc(&b->bh_bhcrc, b, BMAP_OD_CRCSZ);
