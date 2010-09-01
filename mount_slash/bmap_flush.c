@@ -381,6 +381,10 @@ bmap_flush_biorq_cmp(const void *x, const void *y)
 	return (CMP(a->biorq_off, b->biorq_off));
 }
 
+/**
+ * bmap_flush_coalesce_map - scan the given list of bio request and construct
+ *     I/O vectors out of them.
+ */
 __static int
 bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 			struct iovec **iovset)
