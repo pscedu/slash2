@@ -436,7 +436,10 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 
 			bmpce = psc_dynarray_getpos(&r->biorq_pages, j);
 			BMPCE_LOCK(bmpce);
-
+			/* 
+ 			 * We might round down the offset of an I/O request
+ 			 * to the start offset of the previous page.
+ 			 */
 			if ((bmpce->bmpce_off <= r->biorq_off) && j)
 				abort();
 
