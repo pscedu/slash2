@@ -18,7 +18,6 @@
  */
 
 #include <sys/param.h>
-#include <sys/xattr.h>
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -90,26 +89,3 @@ fid_link(slfid_t fid, const char *fn)
 	}
 	return (0);
 }
-
-#if SLASH_XATTR
-int
-fid_getxattr(const char *fidfn, const char *name, void *buf, ssize_t len)
-{
-	psc_crc64_t crc;
-	ssize_t szrc;
-
-	szrc = lgetxattr(fidfn, name, buf, len);
-
-	if (szrc < 0) {
-		psc_warn("lu fid(%s:%s) failed", fidfn, name);
-		return (-1);
-
-	} else if (szrc != len) {
-		psc_warn("lu fid(%s:%s) failed bad sz (%zd)",
-			 fidfn, name, szrc);
-		errno = EIO;
-		return (-1);
-	}
-	return (0);
-}
-#endif

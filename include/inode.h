@@ -27,8 +27,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "psc_util/crc.h"
-
 #include "cache_params.h"
 #include "fid.h"
 #include "sltypes.h"
@@ -65,32 +63,28 @@ typedef struct slash_snapshot {
 struct slash_inode_od {
 	uint16_t		ino_version;
 	uint16_t		ino_flags;
-	uint32_t		ino_bsz;			/* bmap size		*/
-	uint32_t		ino_nrepls;			/* if 0, use ino_prepl	*/
-//	uint32_t		ino_csnap;			/* current snapshot	*/
+	uint32_t		ino_bsz;			/* bmap size */
+	uint32_t		ino_nrepls;			/* if 0, use ino_prepl */
+//	uint32_t		ino_csnap;			/* current snapshot */
 	uint32_t		ino_newbmap_policy;		/* see BRP_* values */
 	sl_replica_t		ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
 
 	/* must be last */
-	psc_crc64_t		ino_crc;			/* crc of the inode	*/
+	uint64_t		ino_crc;			/* CRC of the inode */
 };
 #define INO_OD_SZ		sizeof(struct slash_inode_od)
-#define INO_OD_CRCSZ		(INO_OD_SZ - (sizeof(psc_crc64_t)))
+#define INO_OD_CRCSZ		offsetof(struct slash_inode_od, ino_crc)
 
 #define INO_VERSION		0x0007
 
 struct slash_inode_extras_od {
-	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers      */
+	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
 	sl_replica_t		inox_repls[SL_INOX_NREPLICAS];
 
 	/* must be last */
-	psc_crc64_t		inox_crc;
+	uint64_t		inox_crc;
 };
 #define INOX_OD_SZ		sizeof(struct slash_inode_extras_od)
-#define INOX_OD_CRCSZ		(INOX_OD_SZ - (sizeof(psc_crc64_t)))
-
-/* File extended attribute names. */
-#define SFX_INODE		"sl-inode"
-#define SFX_REPLICAS		"sl-replicas"
+#define INOX_OD_CRCSZ		offsetof(struct slash_inode_extras_od, inox_crc)
 
 #endif /* _SLASH_INODE_H_ */

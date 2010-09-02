@@ -36,45 +36,6 @@
 #include "mdsio.h"
 #include "slashd.h"
 
-#if 0
-__static int
-fidc_xattr_load(slfid_t fid, sl_inodeh_t *inoh)
-{
-	char fidfn[FID_MAX_PATH];
-	ssize_t sz=sizeof(struct slash_inode_od);
-	psc_crc64_t crc;
-	int rc;
-
-	fid_makepath(fid, fidfn);
-
-	rc = fid_getxattr(fidfn, SFX_INODE,  &inoh->inoh_ino, sz);
-	if (rc)
-		return (rc);
-
-	PSC_CRC_CALC(crc, &inoh->inoh_ino, sz);
-	if (crc != inoh->inoh_ino.ino_crc) {
-		psc_warnx("Crc failure on inode");
-		errno = EIO;
-		return -1;
-	}
-	/* XXX move me
-	if (inoh->inoh_ino.ino_nrepls) {
-		sz = sizeof(sl_replica_t) * inoh->inoh_ino.ino_nrepls;
-		inoh->inoh_replicas = PSCALLOC(sz);
-		rc = fid_getxattr(fidfn, SFX_INODE,  inoh->inoh_replicas, sz);
-
-		PSC_CRC_CALC(&crc, inoh->inoh_replicas, sz);
-		if (crc != inoh->inoh_ino.ino_rs_crc) {
-			psc_warnx("Crc failure on replicas");
-			errno = EIO;
-			return -1;
-		}
-	}
-	*/
-	return (0);
-}
-#endif
-
 int
 slm_fcmh_ctor(struct fidc_membh *fcmh)
 {
