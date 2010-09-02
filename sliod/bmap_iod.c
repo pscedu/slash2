@@ -200,7 +200,7 @@ bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	bcr_xid_last_bump(bcr);
 	freelock(&bcr->bcr_biodi->biod_lock);
 
-	bmap_op_done_type(bcr->bcr_biodi->biod_bmap, BMAP_OPCNT_BCRSCHED);
+	bmap_op_done_type(bcr_2_bmap(bcr), BMAP_OPCNT_BCRSCHED);
 	PSCFREE(bcr);
 }
 
@@ -224,7 +224,7 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 		psc_assert(!biod->biod_bcr);
 		bii_2_bmap(biod)->bcm_flags &= ~BIOD_BCRSCHED;
 
-		DEBUG_BMAP(PLL_INFO, biod->biod_bmap,
+		DEBUG_BMAP(PLL_INFO, bii_2_bmap(biod),
 		    "descheduling drtyslvrs=%u",
 		    biod->biod_crcdrty_slvrs);
 
@@ -307,8 +307,8 @@ biod_rlssched_locked(struct bmap_iod_info *biod)
 		if (!biod->biod_crcdrty_slvrs &&
 		    (bii_2_flags(biod) & BIOD_RLSSEQ) &&
 		    (biod->biod_bcr_xid == biod->biod_bcr_xid_last)) {
-			bmap_op_start_type(biod->biod_bmap,
-				   BMAP_OPCNT_RLSSCHED);
+			bmap_op_start_type(bii_2_bmap(biod),
+			    BMAP_OPCNT_RLSSCHED);
 			bii_2_flags(biod) |= BIOD_RLSSCHED;
 			lc_addtail(&bmapRlsQ, biod);
 		}
@@ -318,13 +318,13 @@ biod_rlssched_locked(struct bmap_iod_info *biod)
 void
 sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
-	struct bmap_iod_info *biod;
-	struct bmapc_memb *b;
+	struct psc_dynarray a = DYNARRAY_INIT;
 	struct srm_bmap_release_req *brr, *mq;
 	struct srm_bmap_release_rep *mp;
 	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
-	struct psc_dynarray a = DYNARRAY_INIT;
+	struct bmap_iod_info *biod;
+	struct bmapc_memb *b;
 	int i, rc;
 
 	brr = PSCALLOC(sizeof(struct srm_bmap_release_req));
@@ -340,7 +340,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
 
 		do {
-			b = biod->biod_bmap;
+			b = bii_2_bmap(biod);
 			/* Account for the rls ref.
 			 */
 			psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);

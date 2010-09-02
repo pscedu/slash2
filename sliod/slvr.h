@@ -33,9 +33,6 @@
 
 struct bmap_iod_info;
 
-extern struct psc_listcache lruSlvrs;
-extern struct psc_listcache crcqSlvrs;
-
 /**
  * slvr_ref - sliver reference used for scheduling dirty slivers to be
  *	CRC'd and sent to the mds.
@@ -86,7 +83,7 @@ enum {
 #define SLVR_URLOCK(s, lk)	ureqlock(SLVR_GETLOCK(s), (lk))
 #define SLVR_LOCK_ENSURE(s)	LOCK_ENSURE(SLVR_GETLOCK(s))
 #define SLVR_TRYLOCK(s)		trylock(SLVR_GETLOCK(s))
-#define SLVR_TRYREQLOCK(s, lk)	tryreqlock(SLVR_GETLOCK(s), lk)
+#define SLVR_TRYREQLOCK(s, lk)	tryreqlock(SLVR_GETLOCK(s), (lk))
 
 #define SLVR_WAKEUP(b)							\
 	do {								\
@@ -106,8 +103,8 @@ enum {
 	} while (0)
 
 #define slvr_2_biod(s)		((struct bmap_iod_info *)(s)->slvr_pri)
-#define slvr_2_bmap(s)		slvr_2_biod(s)->biod_bmap
-#define slvr_2_fcmh(s)		slvr_2_biod(s)->biod_bmap->bcm_fcmh
+#define slvr_2_bmap(s)		bii_2_bmap(slvr_2_biod(s))
+#define slvr_2_fcmh(s)		slvr_2_bmap(s)->bcm_fcmh
 #define slvr_2_fii(s)		fcmh_2_fii(slvr_2_fcmh(s))
 #define slvr_2_fd(s)		slvr_2_fii(s)->fii_fd
 #define slvr_2_biodi_wire(s)	biodi_2_wire(slvr_2_biod(s))
@@ -121,13 +118,13 @@ enum {
 		((blk) * SLASH_SLVR_BLKSZ)))
 
 #define slvr_2_crcbits(s)						\
-	slvr_2_biodi_wire((s))->bod_crcstates[(s)->slvr_num]
+	slvr_2_biodi_wire(s)->bod_crcstates[(s)->slvr_num]
 
 #define slvr_2_crc(s)							\
-	slvr_2_biodi_wire((s))->bod_crcs[(s)->slvr_num]
+	slvr_2_biodi_wire(s)->bod_crcs[(s)->slvr_num]
 
 #define slvr_io_done(s, off, len, rw)					\
-	((rw) == SL_WRITE ? slvr_wio_done(s, off, len) : slvr_rio_done(s))
+	((rw) == SL_WRITE ? slvr_wio_done((s), (off), (len)) : slvr_rio_done(s))
 
 #define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_SLVR_FLAGS(s)						\
@@ -142,18 +139,19 @@ enum {
 	(s)->slvr_flags & SLVR_FREEING		? "F" : "-",		\
 	(s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
 	(s)->slvr_flags & SLVR_REPLSRC		? "S" : "-",		\
-	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-"		\
+	(s)->slvr_flags & SLVR_REPLDST		? "T" : "-"
 
 #define DEBUG_SLVR(level, s, fmt, ...)					\
-	psc_logs((level), PSS_GEN,					\
-		 "slvr@%p num=%hu pw=%hu pr=%hu cw=%hu soff=%u "	\
-		 "crclen=%u loff=%u pri@%p slab@%p flgs:"		\
-		 SLVR_FLAGS_FMT" :: "fmt,				\
-		 (s), (s)->slvr_num,					\
-		 (s)->slvr_pndgwrts, (s)->slvr_pndgreads, (s)->slvr_compwrts, \
-		 (s)->slvr_crc_soff, (s)->slvr_crc_eoff, (s)->slvr_crc_loff, \
-		 (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),	\
-		 ## __VA_ARGS__)
+	psc_logs((level), PSS_GEN, "slvr@%p num=%hu pw=%hu "		\
+	    "pr=%hu cw=%hu "						\
+	    "soff=%u eoff=%u loff=%u "					\
+	    "pri@%p slab@%p flgs:"					\
+	    SLVR_FLAGS_FMT" :: "fmt,					\
+	    (s), (s)->slvr_num, (s)->slvr_pndgwrts,			\
+	    (s)->slvr_pndgreads, (s)->slvr_compwrts,			\
+	    (s)->slvr_crc_soff, (s)->slvr_crc_eoff, (s)->slvr_crc_loff, \
+	    (s)->slvr_pri, (s)->slvr_slab, DEBUG_SLVR_FLAGS(s),		\
+	    ## __VA_ARGS__)
 
 struct slvr_ref *
 	slvr_lookup(uint32_t, struct bmap_iod_info *, enum rw);
@@ -168,6 +166,9 @@ void	slvr_schedule_crc(struct slvr_ref *);
 void	slvr_slab_prep(struct slvr_ref *, enum rw);
 void	slvr_wio_done(struct slvr_ref *, uint32_t, uint32_t);
 void	slvr_worker_init(void);
+
+extern struct psc_listcache lruSlvrs;
+extern struct psc_listcache crcqSlvrs;
 
 static __inline int
 slvr_cmp(const void *x, const void *y)

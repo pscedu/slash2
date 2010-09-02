@@ -52,7 +52,6 @@ iod_bmap_init(struct bmapc_memb *b)
 	struct bmap_iod_info *biod;
 
 	biod = bmap_2_bii(b);
-	biod->biod_bmap = b;
 	biod->biod_bcr_xid = biod->biod_bcr_xid_last = 0;
 	INIT_PSCLIST_ENTRY(&biod->biod_lentry);
 	LOCK_INIT(&biod->biod_lock);
@@ -74,7 +73,6 @@ iod_bmap_finalcleanup(struct bmapc_memb *b)
 	struct bmap_iod_info *biod;
 
 	biod = bmap_2_bii(b);
-	psc_assert(biod->biod_bmap == b);
 	psc_assert(SPLAY_EMPTY(&biod->biod_slvrs));
 	psc_assert(psclist_disjoint(&biod->biod_lentry));
 }

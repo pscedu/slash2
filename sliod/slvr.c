@@ -745,7 +745,6 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 {
 	struct slvr_ref *s, ts;
 
-	psc_assert(b->biod_bmap);
 	ts.slvr_num = num;
  retry:
 	spinlock(&b->biod_lock);
@@ -767,7 +766,7 @@ slvr_lookup(uint32_t num, struct bmap_iod_info *b, enum rw rw)
 		INIT_PSCLIST_ENTRY(&s->slvr_lentry);
 
 		SPLAY_INSERT(biod_slvrtree, &b->biod_slvrs, s);
-		bmap_op_start_type(b->biod_bmap, BMAP_OPCNT_SLVR);
+		bmap_op_start_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
 	}
 
 	s->slvr_flags |= SLVR_PINNED;
@@ -800,7 +799,7 @@ slvr_remove(struct slvr_ref *s)
 	SPLAY_REMOVE(biod_slvrtree, &b->biod_slvrs, s);
 	ureqlock(&b->biod_lock, locked);
 
-	bmap_op_done_type(b->biod_bmap, BMAP_OPCNT_SLVR);
+	bmap_op_done_type(bii_2_bmap(b), BMAP_OPCNT_SLVR);
 
 	PSCFREE(s);
 }

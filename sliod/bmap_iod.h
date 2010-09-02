@@ -79,18 +79,17 @@ struct bmap_iod_minseq {
 				    *  bmap releases from the client
 				    */
 
-#define DEBUG_BCR(level, b, fmt, ...)					\
+#define DEBUG_BCR(level, bcr, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 	    "bcr@%p fid="SLPRI_FG" xid=%"PRIu64" nups=%d fl=%d age=%lu"	\
 	    " bmap@%p:%u biod_bcr_xid=%"PRId64				\
 	    " biod_bcr_xid_last=%"PRId64" :: "fmt,			\
-	    (b), SLPRI_FG_ARGS(&(b)->bcr_crcup.fg), (b)->bcr_xid,	\
-	    (b)->bcr_crcup.nups, (b)->bcr_flags, (b)->bcr_age.tv_sec,	\
-	    (b)->bcr_biodi->biod_bmap,					\
-	    (b)->bcr_biodi->biod_bmap->bcm_bmapno,			\
-	    (b)->bcr_biodi->biod_bcr_xid,				\
-	    (b)->bcr_biodi->biod_bcr_xid_last,				\
-	    ## __VA_ARGS__)
+	    (bcr), SLPRI_FG_ARGS(&(bcr)->bcr_crcup.fg), (bcr)->bcr_xid,	\
+	    (bcr)->bcr_crcup.nups, (bcr)->bcr_flags,			\
+	    (bcr)->bcr_age.tv_sec,					\
+	    bcr_2_bmap(bcr), bcr_2_bmap(bcr)->bcm_bmapno,		\
+	    (bcr)->bcr_biodi->biod_bcr_xid,				\
+	    (bcr)->bcr_biodi->biod_bcr_xid_last, ## __VA_ARGS__)
 
 SPLAY_HEAD(biod_slvrtree, slvr_ref);
 
@@ -108,7 +107,6 @@ struct bmap_iod_info {
 	uint64_t		 biod_ondiskcrc;
 
 	psc_spinlock_t		 biod_lock;
-	struct bmapc_memb	*biod_bmap;
 	/*
 	 * Accumulate CRC updates until its associated biod_crcup_ref
 	 * structure is full, at which point it is set to NULL and a
@@ -117,7 +115,7 @@ struct bmap_iod_info {
 	 */
 	struct biod_crcup_ref	*biod_bcr;
 	struct biod_slvrtree	 biod_slvrs;
-	struct psclist_head	 biod_lentry;
+	struct psclist_head	 biod_lentry;	/* XXX use bcm_lentry */
 	struct timespec		 biod_age;
 	struct psc_lockedlist	 biod_bklog_bcrs;
 	lnet_process_id_t	 biod_rls_cnp;
@@ -177,7 +175,7 @@ bii_2_bmap(struct bmap_iod_info *bii)
 	return (bcm - 1);
 }
 
-static inline int
+static __inline int
 bmap_iod_timeo_cmp(const void *x, const void *y)
 {
 	const struct bmap_iod_info * const *pa = x, *a = *pa;
