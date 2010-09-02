@@ -190,19 +190,4 @@ bmap_iod_timeo_cmp(const void *x, const void *y)
 	return (0);
 }
 
-static __inline void
-dump_bmap_flags_iod(uint32_t flags)
-{
-	int seq = 0;
-
-	dump_bmap_flags_common(&flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_INFLIGHT, flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_RLSSEQ, flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_BCRSCHED, flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_RLSSCHED, flags, &seq);
-	if (flags)
-		printf(" unknown: %#x\n", flags);
-	printf("\n");
-}
-
 #endif /* _SLIOD_BMAP_H_ */
