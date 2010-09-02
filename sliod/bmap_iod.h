@@ -127,10 +127,10 @@ struct bmap_iod_info {
 };
 
 /* sliod-specific bcm_flags */
-#define	BIOD_INFLIGHT		(_BMAP_FLSHFT << 0)
-#define	BIOD_RLSSEQ		(_BMAP_FLSHFT << 1)
-#define	BIOD_BCRSCHED		(_BMAP_FLSHFT << 2)
-#define	BIOD_RLSSCHED		(_BMAP_FLSHFT << 3)
+#define	BMAP_IOD_INFLIGHT	(_BMAP_FLSHFT << 0)
+#define	BMAP_IOD_RLSSEQ		(_BMAP_FLSHFT << 1)
+#define	BMAP_IOD_BCRSCHED	(_BMAP_FLSHFT << 2)
+#define	BMAP_IOD_RLSSCHED	(_BMAP_FLSHFT << 3)
 
 #define biodi_2_wire(bi)	bmap_2_wire(bii_2_bmap(bi))
 #define biodi_2_crcbits(bi, sl)	biodi_2_wire(bi)->bod_crcstates[sl]
@@ -196,10 +196,10 @@ dump_bmap_flags_iod(uint32_t flags)
 	int seq = 0;
 
 	dump_bmap_flags_common(&flags, &seq);
-	PFL_PRFLAG(BIOD_INFLIGHT, flags, &seq);
-	PFL_PRFLAG(BIOD_RLSSEQ, flags, &seq);
-	PFL_PRFLAG(BIOD_BCRSCHED, flags, &seq);
-	PFL_PRFLAG(BIOD_RLSSCHED, flags, &seq);
+	PFL_PRFLAG(BMAP_IOD_INFLIGHT, flags, &seq);
+	PFL_PRFLAG(BMAP_IOD_RLSSEQ, flags, &seq);
+	PFL_PRFLAG(BMAP_IOD_BCRSCHED, flags, &seq);
+	PFL_PRFLAG(BMAP_IOD_RLSSCHED, flags, &seq);
 	if (flags)
 		printf(" unknown: %#x\n", flags);
 	printf("\n");

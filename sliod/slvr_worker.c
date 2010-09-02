@@ -146,12 +146,12 @@ slvr_worker_push_crcups(void)
 			continue;
 
 		if (trylock(&bcr->bcr_biodi->biod_lock)) {
-			if (bcr_2_bmap(bcr)->bcm_flags & BIOD_INFLIGHT) {
+			if (bcr_2_bmap(bcr)->bcm_flags & BMAP_IOD_INFLIGHT) {
 				DEBUG_BCR(PLL_FATAL, bcr, "tried to schedule "
 					  "multiple bcr's xid=%"PRIu64,
 					  bcr->bcr_biodi->biod_bcr_xid_last);
 			} else {
-				bcr_2_bmap(bcr)->bcm_flags |= BIOD_INFLIGHT;
+				bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
 				freelock(&bcr->bcr_biodi->biod_lock);
 			}
 		} else
@@ -251,7 +251,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			  bcr, "rq_status=%d rc=%d", rq->rq_status,
 			  mp ? mp->rc : -4096);
 
-		psc_assert(bii_2_bmap(biod)->bcm_flags & (BIOD_INFLIGHT|BIOD_BCRSCHED));
+		psc_assert(bii_2_bmap(biod)->bcm_flags & (BMAP_IOD_INFLIGHT|BMAP_IOD_BCRSCHED));
 
 		if (rq->rq_status) {
 			spinlock(&binflCrcs.binfcrcs_lock);
@@ -261,7 +261,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			 *   bcr_xid_last_bump() will not be called.
 			 */
 			spinlock(&biod->biod_lock);
-			bii_2_bmap(biod)->bcm_flags &= ~BIOD_INFLIGHT;
+			bii_2_bmap(biod)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 			bcr_xid_check(bcr);
 			freelock(&biod->biod_lock);
 
@@ -383,7 +383,7 @@ slvr_worker_int(void)
 	if (bcr) {
 		uint32_t i, found;
 
-		psc_assert(slvr_2_bmap(s)->bcm_flags & BIOD_BCRSCHED);
+		psc_assert(slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED);
 		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_bmapno);
 		psc_assert(SAMEFG(&bcr->bcr_crcup.fg,
 			  &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg));
@@ -441,15 +441,15 @@ slvr_worker_int(void)
 		DEBUG_BCR(PLL_NOTIFY, bcr,
 			  "newly added (bcr_bklog=%d) (sched=%d)",
 			  pll_nitems(&slvr_2_biod(s)->biod_bklog_bcrs),
-			  (slvr_2_bmap(s)->bcm_flags & BIOD_BCRSCHED));
+			  (slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED));
 
-		if (slvr_2_bmap(s)->bcm_flags & BIOD_BCRSCHED)
+		if (slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED)
 			/* The bklog may be empty but a pending bcr may be present
 			 *    on the ready list.
 			 */
 			pll_addtail(&slvr_2_biod(s)->biod_bklog_bcrs, bcr);
 		else {
-			slvr_2_bmap(s)->bcm_flags |= BIOD_BCRSCHED;
+			slvr_2_bmap(s)->bcm_flags |= BMAP_IOD_BCRSCHED;
 			bcr_hold_add(&binflCrcs, bcr);
 		}
 	}

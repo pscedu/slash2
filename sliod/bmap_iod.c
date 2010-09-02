@@ -183,7 +183,7 @@ bcr_xid_last_bump(struct biod_crcup_ref *bcr)
 {
 	bcr_xid_check(bcr);
 	bcr->bcr_biodi->biod_bcr_xid_last++;
-	bcr_2_bmap(bcr)->bcm_flags &= ~BIOD_INFLIGHT;
+	bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
 }
 
 void
@@ -212,7 +212,7 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	DEBUG_BCR(PLL_INFO, bcr, "finalize");
 
 	spinlock(&biod->biod_lock);
-	psc_assert(bii_2_bmap(biod)->bcm_flags & BIOD_BCRSCHED);
+	psc_assert(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_BCRSCHED);
 	/* biod->biod_bcr_xid_last is bumped in bcr_ready_remove().
 	 *    bcr_ready_remove() may release the bmap so it must be
 	 *    issued at the end of this call.
@@ -222,7 +222,7 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 		 */
 		psc_assert(pll_empty(&biod->biod_bklog_bcrs));
 		psc_assert(!biod->biod_bcr);
-		bii_2_bmap(biod)->bcm_flags &= ~BIOD_BCRSCHED;
+		bii_2_bmap(biod)->bcm_flags &= ~BMAP_IOD_BCRSCHED;
 
 		DEBUG_BMAP(PLL_INFO, bii_2_bmap(biod),
 		    "descheduling drtyslvrs=%u",
@@ -294,22 +294,22 @@ biod_rlssched_locked(struct bmap_iod_info *biod)
 {
 	LOCK_ENSURE(&biod->biod_lock);
 
-	if (bii_2_bmap(biod)->bcm_flags & BIOD_RLSSCHED)
+	if (bii_2_bmap(biod)->bcm_flags & BMAP_IOD_RLSSCHED)
 		/* Don't test for list membership, the bmaprlsthr may
 		 *   have already removed the biod in preparation for
 		 *   release.
 		 */
-		psc_assert(bii_2_bmap(biod)->bcm_flags & BIOD_RLSSEQ);
+		psc_assert(bii_2_bmap(biod)->bcm_flags & BMAP_IOD_RLSSEQ);
 
 	else {
 		psc_assert(psclist_disjoint(&biod->biod_lentry));
 
 		if (!biod->biod_crcdrty_slvrs &&
-		    (bii_2_flags(biod) & BIOD_RLSSEQ) &&
+		    (bii_2_flags(biod) & BMAP_IOD_RLSSEQ) &&
 		    (biod->biod_bcr_xid == biod->biod_bcr_xid_last)) {
 			bmap_op_start_type(bii_2_bmap(biod),
 			    BMAP_OPCNT_RLSSCHED);
-			bii_2_flags(biod) |= BIOD_RLSSCHED;
+			bii_2_flags(biod) |= BMAP_IOD_RLSSCHED;
 			lc_addtail(&bmapRlsQ, biod);
 		}
 	}
@@ -352,8 +352,8 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 			    biod->biod_bcr_xid_last);
 
 			spinlock(&biod->biod_lock);
-			psc_assert(bii_2_flags(biod) & BIOD_RLSSEQ);
-			psc_assert(bii_2_flags(biod) & BIOD_RLSSCHED);
+			psc_assert(bii_2_flags(biod) & BMAP_IOD_RLSSEQ);
+			psc_assert(bii_2_flags(biod) & BMAP_IOD_RLSSCHED);
 
 			if (biod->biod_crcdrty_slvrs ||
 			    (biod->biod_bcr_xid != biod->biod_bcr_xid_last)) {
@@ -364,7 +364,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 				continue;
 			}
 
-			bii_2_flags(biod) &= ~(BIOD_RLSSEQ | BIOD_RLSSCHED);
+			bii_2_flags(biod) &= ~(BMAP_IOD_RLSSEQ | BMAP_IOD_RLSSCHED);
 
 			bmap_2_bid_sliod(b, &brr->bmaps[i++]);
 			freelock(&biod->biod_lock);

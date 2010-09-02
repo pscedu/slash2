@@ -319,7 +319,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		biod->biod_rls_seqkey[1] = bid->key;
 		biod->biod_rls_cnp = rq->rq_conn->c_peer;
 
-		b->bcm_flags |= BIOD_RLSSEQ;
+		b->bcm_flags |= BMAP_IOD_RLSSEQ;
 		biod_rlssched_locked(biod);
 
 		freelock(&biod->biod_lock);
