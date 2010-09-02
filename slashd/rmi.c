@@ -175,11 +175,11 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 				goto out;
 			}
 		}
-		/* Look up the bmap in the cache and write the crc's.
+		/* Look up the bmap in the cache and write the CRCs.
 		 */
 		rc = mds_bmap_crc_write(c, rq->rq_conn->c_peer.nid);
 		if (rc) {
-			psc_errorx("rc(%d) mds_bmap_crc_write() failed", rc);
+			psc_errorx("mds_bmap_crc_write() failed; rc=%d", rc);
 			goto out;
 		}
 	}
