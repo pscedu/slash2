@@ -137,6 +137,7 @@ main(int argc, char *argv[])
 #define PRVALX(val)	pr(#val, (unsigned long)(val), 1)
 
 	/* start structs */
+	printf("structures:\n");
 	PRTYPE(mdsio_fid_t);
 	PRTYPE(sl_bmapgen_t);
 	PRTYPE(sl_bmapno_t);
@@ -294,6 +295,7 @@ main(int argc, char *argv[])
 	/* end structs */
 
 	/* start constants */
+	printf("\nvalues:\n");
 	PRVAL(MSCMT_ADDREPLRQ);
 	PRVAL(MSCMT_DELREPLRQ);
 	PRVAL(MSCMT_GETCONNS);
@@ -305,6 +307,7 @@ main(int argc, char *argv[])
 	/* end constants */
 
 	/* start enums */
+	printf("\nenums:\n");
 	PRVAL(BIORQ_DESTROY);
 	PRVAL(BIORQ_DIO);
 	PRVAL(BIORQ_FLUSHRDY);
