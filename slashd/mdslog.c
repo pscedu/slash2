@@ -1026,7 +1026,7 @@ mds_bmap_sync(void *data)
 	int rc;
 
 	BMAPOD_RDLOCK(bmap_2_bmdsi(bmap));
-	psc_crc64_calc(bmap_2_ondiskcrc(bmap), bmap_2_ondisk(bmap),
+	psc_crc64_calc(&bmap_2_ondiskcrc(bmap), bmap_2_ondisk(bmap),
 	    BMAP_OD_CRCSZ);
 	rc = mdsio_bmap_write(bmap);
 	if (rc)

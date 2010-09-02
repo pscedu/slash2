@@ -148,7 +148,6 @@ static void
 slm_rmc_bmapdesc_setup(struct bmapc_memb *bmap,
     struct srt_bmapdesc *sbd, enum rw rw)
 {
-
 	sbd->sbd_fg = bmap->bcm_fcmh->fcmh_fg;
 	sbd->sbd_bmapno = bmap->bcm_bmapno;
 	if (bmap->bcm_flags & BMAP_DIO)

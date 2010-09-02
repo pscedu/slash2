@@ -80,7 +80,7 @@ struct bmap_mds_info {
 #define bmap_2_replpol(b)	bmap_2_xstate(b)->bes_repl_policy
 #define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)(&(b)->bcm_corestate))
-#define bmap_2_ondiskcrc(b)	(&bmap_2_bmi(b)->bmdsi_ondiskcrc)
+#define bmap_2_ondiskcrc(b)	bmap_2_bmi(b)->bmdsi_ondiskcrc
 #define bmap_2_crcs(b, n)	bmap_2_xstate(b)->bes_crcs[n]
 
 #define BMAPOD_RDLOCK(bmdsi)	psc_pthread_rwlock_rdlock(&(bmdsi)->bmdsi_rwlock)
