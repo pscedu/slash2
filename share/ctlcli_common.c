@@ -43,15 +43,15 @@ __static const char *slconn_restypes[] = {
 void
 sl_conn_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-14s %34s %-10s %3s %4s %-10s\n",
-	    "resource", "host", "type", "flg", "#ref", "status");
+	printf("%-16s %41s %-10s %5s %4s\n",
+	    "network-resource", "host", "type", "flags", "#ref");
 }
 
 void
 sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 {
 	static char lastsite[SITE_NAME_MAX], lastres[RES_NAME_MAX];
-	char *site, *nid, *res, *status, addrbuf[RESM_ADDRBUF_SZ];
+	char *site, *nid, *res, addrbuf[RESM_ADDRBUF_SZ];
 	const struct slctlmsg_conn *scc = m;
 
 	strlcpy(addrbuf, scc->scc_addrbuf, sizeof(addrbuf));
@@ -79,17 +79,14 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 		strlcpy(lastres, res, sizeof(lastres));
 	else
 		res = "";
-	if (scc->scc_flags & CSVCF_CONNECTED)
-		status = "online";
-	else if (scc->scc_flags & CSVCF_CONNECTING)
-		status = "connecting";
-	else
-		/* XXX differentiate between down and inactive */
-		status = "offline";
-	printf("  %-12s %34s %-10s   %c %4d %6s\n", res, nid,
+	printf("  %-14s %41s %-10s %c%c%c%c%c %4d\n", res, nid,
 	    strcmp(lastres, res) ? "" : slconn_restypes[scc->scc_type],
-	    scc->scc_flags & CSVCF_USE_MULTIWAIT ? 'M' : '-',
-	    scc->scc_refcnt, status);
+	    scc->scc_flags & CSVCF_CONNECTING		? 'C' : '-',
+	    scc->scc_flags & CSVCF_CONNECTED		? 'O' : '-',
+	    scc->scc_flags & CSVCF_USE_MULTIWAIT	? 'M' : '-',
+	    scc->scc_flags & CSVCF_ABANDON		? 'A' : '-',
+	    scc->scc_flags & CSVCF_WANTFREE		? 'F' : '-',
+	    scc->scc_refcnt);
 }
 
 void
