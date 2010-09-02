@@ -17,8 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#ifndef _SLASHD_MDS_BMAP_H_
-#define _SLASHD_MDS_BMAP_H_
+#ifndef _SLASHD_BMAP_MDS_H_
+#define _SLASHD_BMAP_MDS_H_
 
 #include <sys/time.h>
 
@@ -57,8 +57,8 @@ struct bmap_mds_info {
 	struct bmap_extra_state	 bmdsi_extrastate;
 	uint64_t		 bmdsi_ondiskcrc;
 
-	struct resm_mds_info	*bmdsi_wr_ion;		/* pointer to write ION    */
-	struct psc_lockedlist	 bmdsi_leases;		/* tracked bmap leases     */
+	struct resm_mds_info	*bmdsi_wr_ion;		/* pointer to write ION */
+	struct psc_lockedlist	 bmdsi_leases;		/* tracked bmap leases */
 	struct odtable_receipt	*bmdsi_assign;
 	uint64_t		 bmdsi_seq;		/* Largest write bml seq # */
 	uint32_t		 bmdsi_xid;		/* last op recv'd from ION */
@@ -67,10 +67,13 @@ struct bmap_mds_info {
 	struct psc_pthread_rwlock bmdsi_rwlock;
 };
 
-/* MDS-specific bmap_flags */
-#define BMIM_LOGCHG		(_BMAP_FLSHFT << 0)	/* in-mem change made, needs logged */
-#define BMIM_DIO		(_BMAP_FLSHFT << 1)	/* directio enabled                 */
-#define BMIM_SEQWRAP		(_BMAP_FLSHFT << 2)	/* sequence number wrapped          */
+/* MDS-specific bcm_flags */
+#define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 0)	/* CRC update in progress */
+#define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 1)
+#define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)
+#define BMAP_MDS_LOGCHG		(_BMAP_FLSHFT << 3)	/* in-mem change made, needs logged */
+#define BMAP_MDS_DIO		(_BMAP_FLSHFT << 4)	/* direct I/O enabled */
+#define BMAP_MDS_SEQWRAP	(_BMAP_FLSHFT << 5)	/* sequence number wrapped */
 
 #define bmap_2_bmdsi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
 #define bmap_2_bmi(b)		((struct bmap_mds_info *)bmap_get_pri(b))
@@ -90,29 +93,29 @@ struct bmap_mds_info {
 
 #define BMDSI_LOGCHG_SET(b)						\
 	do {								\
-		int _bmdsi_set_locked;					\
+		int _locked;						\
 									\
-		_bmdsi_set_locked = BMAP_RLOCK(b);			\
-		(b)->bcm_flags |= BMIM_LOGCHG;				\
-		BMAP_URLOCK((b), _bmdsi_set_locked);			\
+		_locked = BMAP_RLOCK(b);				\
+		(b)->bcm_flags |= BMAP_MDS_LOGCHG;			\
+		BMAP_URLOCK((b), _locked);				\
 	} while (0)
 
 #define BMDSI_LOGCHG_CLEAR(b)						\
 	do {								\
-		int _bmdsi_clear_locked;				\
+		int _locked;						\
 									\
-		_bmdsi_clear_locked = BMAP_RLOCK(b);			\
-		(b)->bcm_flags &= ~BMIM_LOGCHG;				\
-		BMAP_URLOCK((b), _bmdsi_clear_locked);			\
+		_locked = BMAP_RLOCK(b);				\
+		(b)->bcm_flags &= ~BMAP_MDS_LOGCHG;			\
+		BMAP_URLOCK((b), _locked);				\
 	} while (0)
 
 #define BMDSI_LOGCHG_CHECK(b, set)					\
 	do {								\
-		int _bmdsi_logchg_locked;				\
+		int _locked;						\
 									\
-		_bmdsi_logchg_locked = BMAP_RLOCK(b);			\
-		set = (b)->bcm_flags & BMIM_LOGCHG;			\
-		BMAP_URLOCK((b), _bmdsi_logchg_locked);			\
+		_locked = BMAP_RLOCK(b);				\
+		(set) = (b)->bcm_flags & BMAP_MDS_LOGCHG;		\
+		BMAP_URLOCK((b), _locked);				\
 	} while (0)
 
 #define BMAPOD_MODIFY_START(b)	BMAPOD_WRLOCK(bmap_2_bmdsi(b))
@@ -149,11 +152,6 @@ struct bmap_mds_info {
 		(gen) = bmap_2_bgen(b);					\
 		BMAPOD_READ_DONE(b);					\
 	} while (0)
-
-/* MDS-specific bcm_flags flags */
-#define BMAP_MDS_CRC_UP		(_BMAP_FLSHFT << 0)	/* CRC update in progress */
-#define BMAP_MDS_CRCWRT		(_BMAP_FLSHFT << 1)
-#define BMAP_MDS_NOION		(_BMAP_FLSHFT << 2)
 
 struct bmap_timeo_entry {
 	uint64_t		 bte_maxseq;
@@ -286,12 +284,15 @@ dump_bmap_flags_mds(uint32_t flags)
 	int seq = 0;
 
 	dump_bmap_flags_common(&flags, &seq);
-	PFL_PRFLAG(BMIM_LOGCHG, flags, &seq);
-	PFL_PRFLAG(BMIM_DIO, flags, &seq);
-	PFL_PRFLAG(BMIM_SEQWRAP, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_CRC_UP, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_CRCWRT, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_NOION, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_LOGCHG, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_DIO, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_SEQWRAP, flags, &seq);
 	if (flags)
 		printf(" unknown: %#x\n", flags);
 	printf("\n");
 }
 
-#endif /* _SLASHD_MDS_BMAP_H_ */
+#endif /* _SLASHD_BMAP_MDS_H_ */
