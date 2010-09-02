@@ -133,8 +133,6 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	if (rw != SL_READ)
 		return (0);
 
-	psc_assert(!bmap_2_wire(b));
-
 	rc = sli_rmi_getimp(&csvc);
 	if (rc)
 		goto out;
