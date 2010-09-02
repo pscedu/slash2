@@ -115,7 +115,7 @@ struct bmap_iod_info {
 	 */
 	struct biod_crcup_ref	*biod_bcr;
 	struct biod_slvrtree	 biod_slvrs;
-	struct psclist_head	 biod_lentry;	/* XXX use bcm_lentry */
+	struct psclist_head	 biod_lentry;
 	struct timespec		 biod_age;
 	struct psc_lockedlist	 biod_bklog_bcrs;
 	lnet_process_id_t	 biod_rls_cnp;
