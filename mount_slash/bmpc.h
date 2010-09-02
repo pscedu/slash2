@@ -77,7 +77,7 @@ struct bmap_pagecache_entry {
 	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O */
 	struct timespec		 bmpce_laccess;	/* last page access         */
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_tentry;
-#ifdef BMPC_RBTREE	
+#ifdef BMPC_RBTREE
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_lru_tentry;
 #else
 	struct psclist_head	 bmpce_lentry;	/* chain on bmap lru        */
@@ -402,7 +402,7 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 	memset(ioreq, 0, sizeof(*ioreq));
 	psc_waitq_init(&ioreq->biorq_waitq);
 	LOCK_INIT(&ioreq->biorq_lock);
-	clock_gettime(CLOCK_REALTIME, &ioreq->biorq_start);
+	PFL_GETTIMESPEC(&ioreq->biorq_start);
 
 	ioreq->biorq_off  = off;
 	ioreq->biorq_len  = len;

@@ -77,7 +77,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 	}
 
 	if (incref) {
-		clock_gettime(CLOCK_REALTIME, &bmpce->bmpce_laccess);
+		PFL_GETTIMESPEC(&bmpce->bmpce_laccess);
 
 		if (op == BIORQ_WRITE) {
 			if (bmpce->bmpce_flags & BMPCE_LRU) {
@@ -297,9 +297,9 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 {
 	struct bmap_pagecache_entry *bmpce, *tmp;
 	struct timespec ts, expire;
-	int freed=0;
+	int freed = 0;
 
-	clock_gettime(CLOCK_REALTIME, &ts);
+	PFL_GETTIMESPEC(&ts);
 	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 
 	timespecsub(&bmpc->bmpc_oldest, &ts, &expire);
@@ -389,7 +389,7 @@ bmpc_reap_locked(void)
 	 *   bmpc_oldest time is too recent.
 	 */
  retry:
-	clock_gettime(CLOCK_REALTIME, &ts);
+	PFL_GETTIMESPEC(&ts);
 	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 
 #if 0

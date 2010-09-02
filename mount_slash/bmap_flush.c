@@ -874,7 +874,7 @@ ms_bmap_release(struct sl_resm *resm)
 void
 msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
-	struct timespec ctime, wtime = {0, 0};
+	struct timespec ctime, wtime = { 0, 0 };
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct resm_cli_info *rmci;
@@ -890,7 +890,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		psc_trace("msbmaprlsthr_main() top of loop");
 
 		lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
-		clock_gettime(CLOCK_REALTIME, &ctime);
+		PFL_GETTIMESPEC(&ctime);
 
 		wtime.tv_sec = BMAP_CLI_TIMEO_INC;
 

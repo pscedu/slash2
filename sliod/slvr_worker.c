@@ -170,7 +170,7 @@ slvr_worker_push_crcups(void)
 			break;
 	}
 
-	clock_gettime(CLOCK_REALTIME, &now);
+	PFL_GETTIMESPEC(&now);
 	/* Now scan for old bcr's hanging about.
 	 */
 	PLL_FOREACH_SAFE(bcr, tmp, &binflCrcs.binfcrcs_hold) {
@@ -286,8 +286,9 @@ slvr_worker_int(void)
 	struct timespec		 now;
 	struct biod_crcup_ref	*bcr=NULL;
 	psc_crc64_t              crc;
+
  start:
-	clock_gettime(CLOCK_REALTIME, &now);
+	PFL_GETTIMESPEC(&now);
 	now.tv_sec += BIOD_CRCUP_MAX_AGE;
 	if (!(s = lc_gettimed(&crcqSlvrs, &now))) {
 		/* Nothing available, try to push any existing

@@ -557,7 +557,7 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	 *  XXX the directio status of the bmap needs to be returned by the
 	 *     mds so we can set the proper expiration time.
 	 */
-	clock_gettime(CLOCK_REALTIME, &bci->bci_xtime);
+	PFL_GETTIMESPEC(&bci->bci_xtime);
 
 	timespecadd(&bci->bci_xtime, &msl_bmap_timeo_inc,
 	    &bci->bci_etime);
