@@ -249,7 +249,7 @@ sl_csvc_decref(struct slashrpc_cservice *csvc)
 			pscrpc_import_put(csvc->csvc_import);
 			if (csvc->csvc_ctype == SLCONNT_CLI)
 				pll_remove(&client_csvcs, csvc);
-			free(csvc);
+			PSCFREE(csvc);
 			return;
 		}
 	}
