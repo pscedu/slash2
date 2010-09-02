@@ -138,7 +138,7 @@ struct bmapc_memb {
 #define BMAP_RLOCK(b)		reqlock(&(b)->bcm_lock)
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
 
-#define _DEBUG_BMAP_FMT		"bmap@%p b:%x m:%u i:%"PRIx64" opcnt=%u "
+#define _DEBUG_BMAP_FMT		"bmap@%p b:%x flg:%u fid:"SLPRI_FID" opcnt=%u "
 #define _DEBUG_BMAP_FMTARGS(b)	(b), (b)->bcm_bmapno, (b)->bcm_flags,	\
 				(b)->bcm_fcmh ?				\
 				    fcmh_2_fid((b)->bcm_fcmh) : 0,	\
