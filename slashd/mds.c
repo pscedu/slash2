@@ -1129,7 +1129,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 /**
  * mds_bmap_crc_write - Process a CRC update request from an ION.
  * @c: the RPC request containing the FID, bmapno, and chunk ID (cid).
- * @ion_nid:  the id of the io node which sent the request.  It is
+ * @ion_nid:  the network ID of the I/O node which sent the request.  It is
  *	compared against the ID stored in the bmdsi.
  */
 int
@@ -1143,12 +1143,12 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	rc = slm_fcmh_get(&c->fg, &fcmh);
 	if (rc) {
 		if (rc == ENOENT) {
-			psc_warnx("fid=%"PRId64" appears to have been deleted",
-				  c->fg.fg_fid);
+			psc_warnx("fid="SLPRI_FID" appears to have been deleted",
+			    c->fg.fg_fid);
 			return (0);
 		}
-		psc_errorx("fid=%"PRId64" slm_fcmh_get() rc=%d",
-			  c->fg.fg_fid, rc);
+		psc_errorx("fid="SLPRI_FID" slm_fcmh_get() rc=%d",
+		    c->fg.fg_fid, rc);
 		return (-rc);
 	}
 
@@ -1161,8 +1161,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	}
 	BMAP_LOCK(bmap);
 
-	DEBUG_BMAP(PLL_NOTIFY, bmap, "blkno=%u sz=%"PRId64" ion=%s",
-		   c->blkno, c->fsize, libcfs_nid2str(ion_nid));
+	DEBUG_BMAP(PLL_DEBUG, bmap, "blkno=%u sz=%"PRId64" ion=%s",
+	    c->blkno, c->fsize, libcfs_nid2str(ion_nid));
 
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 1);
 
@@ -1188,7 +1188,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		BMAP_ULOCK(bmap);
 
 		DEBUG_BMAP(PLL_ERROR, bmap, "EALREADY blkno=%u sz=%"PRId64
-			   "ion=%s", c->blkno, c->fsize,
+			   " ion=%s", c->blkno, c->fsize,
 			   libcfs_nid2str(ion_nid));
 
 		DEBUG_FCMH(PLL_ERROR, fcmh, "EALREADY blkno=%u sz=%"PRId64
