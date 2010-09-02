@@ -97,16 +97,4 @@ bmap_cli_timeo_cmp(const void *x, const void *y)
 	return (0);
 }
 
-static __inline void
-dump_bmap_flags_cli(uint32_t flags)
-{
-	int seq = 0;
-
-	dump_bmap_flags_common(&flags, &seq);
-	PFL_PRFLAG(BMAP_CLI_FLUSHPROC, flags, &seq);
-	if (flags)
-		printf(" unknown: %#x\n", flags);
-	printf("\n");
-}
-
 #endif /* _SLASH_CLI_BMAP_H_ */

@@ -1716,6 +1716,18 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	return (rc);
 }
 
+void
+dump_bmap_flags_cli(uint32_t flags)
+{
+	int seq = 0;
+
+	dump_bmap_flags_common(&flags, &seq);
+	PFL_PRFLAG(BMAP_CLI_FLUSHPROC, flags, &seq);
+	if (flags)
+		printf(" unknown: %#x\n", flags);
+	printf("\n");
+}
+
 struct bmap_ops bmap_ops = {
 	msl_bmap_init,
 	msl_bmap_retrieve,

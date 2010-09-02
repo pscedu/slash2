@@ -1477,6 +1477,23 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	return (rc);
 }
 
+void
+dump_bmap_flags_mds(uint32_t flags)
+{
+	int seq = 0;
+
+	dump_bmap_flags_common(&flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_CRC_UP, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_CRCWRT, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_NOION, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_LOGCHG, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_DIO, flags, &seq);
+	PFL_PRFLAG(BMAP_MDS_SEQWRAP, flags, &seq);
+	if (flags)
+		printf(" unknown: %#x\n", flags);
+	printf("\n");
+}
+
 struct bmap_ops bmap_ops = {
 	mds_bmap_init,
 	mds_bmap_read,
