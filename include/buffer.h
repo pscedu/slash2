@@ -41,14 +41,14 @@ struct psc_vbitmap;
 #define SLB_SIZE	(SLB_BLKSZ * SLB_NBLK)
 
 enum {
-	SLB_DIRTY    = 0x01, /* have dirty data          */
-	SLB_INFLIGHT = 0x02, /* data faulting in or out  */
-	SLB_FREEING  = 0x04,
-	SLB_PINNED   = 0x08, /* not freeable             */
-	SLB_LRU      = 0x10, /* on the lru, nothing pinned or dirty */
-	SLB_FREE     = 0x20,
-	SLB_INIT     = 0x40,
-	SLB_FRESH    = 0x80,
+	SLB_DIRTY	= 0x01, /* have dirty data          */
+	SLB_INFLIGHT	= 0x02, /* data faulting in or out  */
+	SLB_FREEING	= 0x04,
+	SLB_PINNED	= 0x08, /* not freeable             */
+	SLB_LRU		= 0x10, /* on the lru, nothing pinned or dirty */
+	SLB_FREE	= 0x20,
+	SLB_INIT	= 0x40,
+	SLB_FRESH	= 0x80,
 };
 
 #define SLB_FULL(slb) (!psc_vbitmap_nfree((slb)->slb_inuse))
@@ -62,19 +62,17 @@ enum {
 #define SLB_SLB2EBASE(slb)						\
 	(((slb)->slb_base + ((slb)->slb_nblks * (slb)->slb_blksz)) - 1)
 
-/* sl_buffer - slash_buffer, is used for both read caching and write
+/*
+ * sl_buffer - used for both read caching and write
  *   aggregation.  The buffer is split into N subsections where N is
  *   the size of the vbitmap structure.
- *  Slb_ref is maintained for every offtree entry which accesses this
+ * @slb_ref is maintained for every offtree entry which accesses this
  *     buffer.
- *  Slb_iov_list is used to hold a sorted list of offtree_memb pointers
+ * @slb_iov_list is used to hold a sorted list of offtree_memb pointers
  *    (sorted by floff).  This is used when the LRU tells us to free
  *    our segments.
- *  Slb_mgmt_lentry is used for the global free list, global lru, and
+ * @slb_mgmt_lentry is used for the global free list, global LRU, and
  *    the dirty list.
- *
- *  The slb_bmap list entry attaches to the bmap so that it may be freed
- *    with the bmap or have its regions allocated from within the bmap.
  */
 struct sl_buffer {
 	struct psc_vbitmap	*slb_inuse;		/* track which segments are busy   */
@@ -188,7 +186,7 @@ enum {
 #define SLB_TIMEOUT_NSECS	0
 
 #define slb_set_alloctimer(t) do {					\
-		clock_gettime(CLOCK_REALTIME, (t));			\
+		PFL_GETTIMESPEC(t);					\
 		(t)->tv_sec  += SLB_TIMEOUT_SECS;			\
 		(t)->tv_nsec += SLB_TIMEOUT_NSECS;			\
 	} while (0)
