@@ -264,6 +264,8 @@ utime
 
 - upsch items are not getting removed on completion
 - dircache should be moved into mount_slash
-- slb should be moved into sliod
 - figure out why daemons aren't reconnecting
   - possible reason: csvc_flags aren't being set correctly on teardown (export hldrop)
+- rename include/buffer.h and share/buffer.c as sliod/slab.h sliod/slab.c
+- make a pool for sliver structures
+- 
