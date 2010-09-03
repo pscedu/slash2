@@ -35,7 +35,7 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"
-#include "psc_util/time.h"
+#include "pfl/time.h"
 #include "psc_util/waitq.h"
 
 #include "cache_params.h"
