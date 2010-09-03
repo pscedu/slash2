@@ -50,7 +50,7 @@ usage(void)
 	exit(1);
 }
 
-struct bug_history {
+struct test_suite {
 	char		 *descp;
 	int		(*funcp)(void);
 };
@@ -121,7 +121,7 @@ test_rename(void)
 		printf("Fail to rename directory %s, errno = %d at line %d!\n", tmpname1, errno, __LINE__);
 		return (1);
 	}
-	/* the bug causes the following to fail with EEXIST */
+	/* A bug can cause the following to fail with EEXIST */
 	rc = mkdir(tmpname1, S_IRWXU);
 	if (rc) {
 		printf("Fail to create directory %s, errno = %d at line %d!\n", tmpname1, errno, __LINE__);
@@ -247,7 +247,7 @@ test_random(void)
 	return (0);
 }
 
-struct bug_history bug_list[] = {
+struct test_suite test_list[] = {
 
 	{
 		"Basic file/directory creations and deletions",
@@ -303,9 +303,9 @@ main(int argc, char *argv[])
 	if (listonly)  {
 		index = 0;
 		while (1) {
-			if (bug_list[index].descp == NULL)
+			if (test_list[index].descp == NULL)
 				break;
-			printf("Test item %d: %s\n",index+1, bug_list[index].descp);
+			printf("Test item %d: %s\n",index+1, test_list[index].descp);
 			index++;
 		}
 		exit(0);
@@ -325,14 +325,14 @@ main(int argc, char *argv[])
 
 	index = 0;
 	while (1) {
-		if (bug_list[index].descp == NULL)
+		if (test_list[index].descp == NULL)
 			break;
 		if (testindex && index + 1 != testindex) {
 			index++;
 			continue;
 		}
-		printf("Checking item %d: %s\n",index+1, bug_list[index].descp);
-		rc = (*bug_list[index].funcp)();
+		printf("Checking item %d: %s\n",index+1, test_list[index].descp);
+		rc = (*test_list[index].funcp)();
 		if (rc)
 			break;
 		index++;
