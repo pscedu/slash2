@@ -44,7 +44,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-s seed] directory\n",
+	    "usage: %s [-s seed] [-l] [directory]\n",
 	    progname);
 	exit(1);
 }
@@ -159,27 +159,42 @@ struct bug_history bug_list[] = {
 int
 main(int argc, char *argv[])
 {
-	int c, rc, pid, index;
+	int c, rc, pid, index, listonly;
 
+	listonly = 0;
 	progname = strrchr(argv[0], '/');
 	if (progname == NULL)
 		progname = argv[0];
 	else
 		progname++;
 
-	while ((c = getopt(argc, argv, "s:")) != -1) {
+	while ((c = getopt(argc, argv, "s:l")) != -1) {
 		switch (c) {
-		case 's':
+		    case 's':
 			seed = atoi(optarg);
 			break;
-		default:
+		    case 'l':
+			listonly = 1;
+			break;
+		    default:
 			usage();
 		}
 	}
 	argc -= optind;
 	argv += optind;
-	if (argc != 1)
+	if (argc != 1 && !listonly)
 		usage();
+
+	if (listonly)  {
+		index = 0;
+		while (1) {
+			if (bug_list[index].descp == NULL)
+				break;
+			printf("Test item %d: %s\n",index, bug_list[index].descp);
+			index++;
+		}
+		exit(0);
+	}
 
 	pid = getpid();
 	snprintf(workdir, sizeof(workdir), "%s/%d", argv[0], pid);
