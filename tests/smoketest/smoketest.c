@@ -147,16 +147,28 @@ test_rename(void)
 int
 test_random(void)
 {
-	int i, fd, rc, ret;
 	unsigned long value;
+	int fd, rc, ret;
+	int i, j, k, idx, diff;
 	char *tmpname = "test-random.dat";
 
 	struct writes {
-		off_t		offset;
-		unsigned long	value;
+		off_t			offset;
+		union {
+			unsigned long	value;
+			unsigned char   bytes[8];
+		};
 	} * ptr;
 
 	ptr = malloc(TOTAL_WRITES * sizeof(struct writes)); 
+
+	ptr[0].value = 0x1234;
+	/* make sure we run on a 64-bit little endian machine */
+	if (sizeof(unsigned long) != 8 || ptr[0].bytes[0] != 0x34) {
+		free(ptr);
+		return (2);
+	}
+
 	for (i = 0; i < TOTAL_WRITES; i++) {
 		ptr[i].offset = (off_t)random();
 		ptr[i].value = (unsigned long)random();
@@ -180,6 +192,29 @@ test_random(void)
 		printf("Fail to close file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
 		return (1);
 	}
+	/* handle overwrites */
+	for (i = 0; i < TOTAL_WRITES; i++) {
+		for (j = i + 1; j < TOTAL_WRITES; j++) {
+
+			if (ptr[j].offset >= ptr[i].offset + 8)
+				continue;
+			if (ptr[j].offset + 8 <= ptr[i].offset)
+				continue;
+
+			if (ptr[i].offset > ptr[j].offset) {
+				idx = 0;
+				diff = ptr[i].offset - ptr[j].offset;
+				for (k = diff ; k < 8; k++, idx++)
+					ptr[i].bytes[idx] = ptr[j].bytes[k];
+			} else {
+				idx = 0;
+				diff = ptr[j].offset - ptr[i].offset;
+				for (k = diff; k < 8; k++, idx++)
+					ptr[i].bytes[k] = ptr[j].bytes[idx];
+			}
+		}
+	}
+
 	fd = open(tmpname, O_RDONLY, S_IRWXU);
 	if (fd < 0) {
 		printf("Fail to open file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
