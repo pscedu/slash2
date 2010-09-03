@@ -34,6 +34,7 @@
 #include "pfl/cdefs.h"
 
 #define		 DEFAULT_SEED		123456
+#define 	 TOTAL_WRITES		65537
 
 unsigned int	 seed = DEFAULT_SEED;
 char		*progname;
@@ -140,6 +141,77 @@ test_rename(void)
 
 }
 
+/*
+ * See if we coalesce I/O requests properly.
+ */
+int
+test_random(void)
+{
+	int i, fd, rc, ret;
+	unsigned long value;
+	char *tmpname = "test-random.dat";
+
+	struct writes {
+		off_t		offset;
+		unsigned long	value;
+	} * ptr;
+
+	ptr = malloc(TOTAL_WRITES * sizeof(struct writes)); 
+	for (i = 0; i < TOTAL_WRITES; i++) {
+		ptr[i].offset = (off_t)random();
+		ptr[i].value = (unsigned long)random();
+	}
+
+	fd = open(tmpname, O_CREAT|O_RDWR, S_IRWXU);
+	if (fd < 0) {
+		printf("Fail to create file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	for (i = 0; i < TOTAL_WRITES; i++) {
+		ret = pwrite(fd, &ptr[i].value, sizeof(ptr[i].value), ptr[i].offset);
+		if (ret != sizeof(ptr[i].value)) {
+			printf("Fail to write (%lu: %lu), errno = %d at line %d!\n", 
+				ptr[i].value, ptr[i].offset, errno, __LINE__);
+			return (1);
+		}
+	}
+	rc = close(fd);
+	if (rc < 0) {
+		printf("Fail to close file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	fd = open(tmpname, O_RDONLY, S_IRWXU);
+	if (fd < 0) {
+		printf("Fail to open file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	for (i = 0; i < TOTAL_WRITES; i++) {
+		ret = pread(fd, &value, sizeof(ptr[i].value), ptr[i].offset);
+		if (ret != sizeof(ptr[i].value)) {
+			printf("Fail to read at %lu, errno = %d at line %d!\n", 
+				ptr[i].offset, errno, __LINE__);
+			return (1);
+		}
+		if (value != ptr[i].value) {
+			printf("Fail to read at %lu (%lu versus %lu) at line %d!\n", 
+				ptr[i].offset, value, ptr[i].value, __LINE__);
+			return (1);
+		}
+	}
+	rc = close(fd);
+	if (rc < 0) {
+		printf("Fail to close file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = unlink(tmpname);
+	if (rc) {
+		printf("Fail to remove file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	free(ptr);
+	return (0);
+}
+
 struct bug_history bug_list[] = {
 
 	{
@@ -149,6 +221,10 @@ struct bug_history bug_list[] = {
 	{
 		"Create a file with the name that has just been renamed",
 		test_rename
+	},
+	{
+		"Random writes and random offset to simulate FUSE I/O",
+		test_random
 	},
 	{
 		NULL,
