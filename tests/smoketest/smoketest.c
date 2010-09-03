@@ -258,7 +258,7 @@ struct bug_history bug_list[] = {
 		test_rename
 	},
 	{
-		"Random writes and random offset to simulate FUSE I/O",
+		"Random 8-byte writes at random offsets to simulate FUSE I/O",
 		test_random
 	},
 	{
@@ -301,7 +301,7 @@ main(int argc, char *argv[])
 		while (1) {
 			if (bug_list[index].descp == NULL)
 				break;
-			printf("Test item %d: %s\n",index, bug_list[index].descp);
+			printf("Test item %d: %s\n",index+1, bug_list[index].descp);
 			index++;
 		}
 		exit(0);
@@ -323,7 +323,7 @@ main(int argc, char *argv[])
 	while (1) {
 		if (bug_list[index].descp == NULL)
 			break;
-		printf("Checking item %d: %s\n",index, bug_list[index].descp);
+		printf("Checking item %d: %s\n",index+1, bug_list[index].descp);
 		rc = (*bug_list[index].funcp)();
 		if (rc)
 			break;
