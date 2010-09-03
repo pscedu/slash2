@@ -45,7 +45,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-s seed] [-l] [directory]\n",
+	    "usage: %s [-s seed] [-r test] [-l] [directory]\n",
 	    progname);
 	exit(1);
 }
@@ -270,22 +270,26 @@ struct bug_history bug_list[] = {
 int
 main(int argc, char *argv[])
 {
-	int c, rc, pid, index, listonly;
+	int c, rc, pid, index, testindex, listonly;
 
 	listonly = 0;
+	testindex = 0;
 	progname = strrchr(argv[0], '/');
 	if (progname == NULL)
 		progname = argv[0];
 	else
 		progname++;
 
-	while ((c = getopt(argc, argv, "s:l")) != -1) {
+	while ((c = getopt(argc, argv, "s:r:l")) != -1) {
 		switch (c) {
 		    case 's':
 			seed = atoi(optarg);
 			break;
 		    case 'l':
 			listonly = 1;
+			break;
+		    case 'r':
+			testindex = atoi(optarg);
 			break;
 		    default:
 			usage();
@@ -323,6 +327,10 @@ main(int argc, char *argv[])
 	while (1) {
 		if (bug_list[index].descp == NULL)
 			break;
+		if (testindex && index + 1 != testindex) {
+			index++;
+			continue;
+		}
 		printf("Checking item %d: %s\n",index+1, bug_list[index].descp);
 		rc = (*bug_list[index].funcp)();
 		if (rc)
