@@ -50,7 +50,7 @@ usage(void)
 	exit(1);
 }
 
-struct test_suite {
+struct test_desc {
 	char		 *descp;
 	int		(*funcp)(void);
 };
@@ -247,7 +247,7 @@ test_random(void)
 	return (0);
 }
 
-struct test_suite test_list[] = {
+struct test_desc test_list[] = {
 
 	{
 		"Basic file/directory creations and deletions",
