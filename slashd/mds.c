@@ -771,7 +771,8 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 	psc_assert(obml);
 	psc_assert((wlease + rlease) > 0);
 	psc_assert(!(obml->bml_flags & BML_CHAIN));
-	psc_assert(psclist_conjoint(&obml->bml_bmdsi_lentry));
+	psc_assert(psclist_conjoint(&obml->bml_bmdsi_lentry,
+	    psc_lentry_hd(&obml->bml_bmdsi_lentry)));
 
 	/* Find the bml's preceeding entry.
 	 */
@@ -886,8 +887,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		mexpc_get(bml->bml_exp);
 		BML_LOCK(bml);
 		if (bml->bml_flags & BML_EXP) {
-			psc_assert(psclist_conjoint(&bml->bml_exp_lentry));
-			psclist_del(&bml->bml_exp_lentry);
+			psclist_del(&bml->bml_exp_lentry,
+			    psc_lentry_hd(&bml->bml_exp_lentry));
 			bml->bml_flags &= ~BML_EXP;
 		} else
 			psc_assert(psclist_disjoint(&bml->bml_exp_lentry));

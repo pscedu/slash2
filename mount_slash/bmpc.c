@@ -126,7 +126,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
 #ifdef BMPC_PLL_SORT
 				pll_addtail(&bmpc->bmpc_lru, bmpce);
 #elif BMPC_RBTREE
-				RB_INSERT(bmap_lrutree, &bmpc->bmpc_lrutree, 
+				RB_INSERT(bmap_lrutree, &bmpc->bmpc_lrutree,
 					  bmpce);
 #else
 				pll_add_sorted(&bmpc->bmpc_lru, bmpce,
@@ -249,7 +249,6 @@ bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
 	psc_assert(bmpce->bmpce_flags == BMPCE_FREEING);
 
 	psc_assert(SPLAY_REMOVE(bmap_pagecachetree, &bmpc->bmpc_tree, bmpce));
-	psc_assert(psclist_conjoint(&bmpce->bmpce_lentry));
 	pll_remove(&bmpc->bmpc_lru, bmpce);
 	/* Replace the bmpc memory.
 	 */
@@ -308,7 +307,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 
 	BMPC_LOCK(bmpc);
 #if 0
-	PLL_FOREACH(bmpce, &bmpc->bmpc_lru) {		
+	PLL_FOREACH(bmpce, &bmpc->bmpc_lru) {
 		DEBUG_BMPCE(PLL_NOTIFY, bmpce, "tryfree");
 	}
 #endif
@@ -392,14 +391,13 @@ bmpc_reap_locked(void)
 	PFL_GETTIMESPEC(&ts);
 	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 
+	LIST_CACHE_FOREACH(bmpc, &bmpcLru) {
 #if 0
-	psclist_for_each_entry(bmpc, &bmpcLru.lc_listhd, bmpc_lentry)
-		psc_notify("bmpc=%p npages=%d age(%ld:%ld)", 
+		psc_notify("bmpc=%p npages=%d age(%ld:%ld)",
 			   bmpc, pll_nitems(&bmpc->bmpc_lru),
 			   bmpc->bmpc_oldest.tv_sec, bmpc->bmpc_oldest.tv_nsec);
 #endif
 
-	psclist_for_each_entry(bmpc, &bmpcLru.lc_listhd, bmpc_lentry) {		
 		/* First check for lru items.
 		 */
 		if (!pll_nitems(&bmpc->bmpc_lru)) {

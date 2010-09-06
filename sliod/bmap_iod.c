@@ -126,7 +126,6 @@ bcr_hold_2_ready(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	LOCK_ENSURE(&bcr->bcr_biodi->biod_lock);
 
 	locked = reqlock(&inf->binfcrcs_lock);
-	psc_assert(psclist_conjoint(&bcr->bcr_lentry));
 	pll_remove(&inf->binfcrcs_hold, bcr);
 	pll_addtail(&inf->binfcrcs_ready, bcr);
 	ureqlock(&inf->binfcrcs_lock, locked);
@@ -157,7 +156,6 @@ bcr_hold_requeue(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	int locked;
 
 	locked = reqlock(&inf->binfcrcs_lock);
-	psc_assert(psclist_conjoint(&bcr->bcr_lentry));
 	pll_remove(&inf->binfcrcs_hold, bcr);
 	pll_addtail(&inf->binfcrcs_hold, bcr);
 	ureqlock(&inf->binfcrcs_lock, locked);
@@ -191,7 +189,6 @@ void
 bcr_ready_remove(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 {
 	spinlock(&inf->binfcrcs_lock);
-	psc_assert(psclist_conjoint(&bcr->bcr_lentry));
 	pll_remove(&inf->binfcrcs_ready, bcr);
 	atomic_dec(&inf->binfcrcs_nbcrs);
 	freelock(&inf->binfcrcs_lock);

@@ -163,7 +163,7 @@ fidc_reap(struct psc_poolmgr *m)
 	LIST_CACHE_LOCK(&fidcCleanList);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcCleanList) {
 		if (nreap == FCMH_MAX_REAP ||
-		    psclg_size(&m->ppm_lg) + nreap >=
+		    m->_ppm_nfree + nreap >=
 		    atomic_read(&m->ppm_nwaiters) + 1)
 			break;
 
@@ -512,7 +512,6 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	 */
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
 		if (f->fcmh_flags & FCMH_CAC_CLEAN) {
-			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			f->fcmh_flags &= ~FCMH_CAC_CLEAN;
 			f->fcmh_flags |= FCMH_CAC_DIRTY;
 			lc_remove(&fidcCleanList, f);
@@ -534,7 +533,6 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
 		if (f->fcmh_flags & FCMH_CAC_DIRTY) {
-			psc_assert(psclist_conjoint(&f->fcmh_lentry));
 			f->fcmh_flags &= ~FCMH_CAC_DIRTY;
 			f->fcmh_flags |= FCMH_CAC_CLEAN;
 			lc_remove(&fidcDirtyList, f);
