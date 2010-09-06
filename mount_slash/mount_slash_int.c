@@ -301,7 +301,6 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 
 	/* The request must be attached to the bmpc.
 	 */
-	psc_assert(psclist_conjoint(&r->biorq_lentry));
 	pll_remove(&bmpc->bmpc_pndg_biorqs, r);
 
 	if (r->biorq_flags & BIORQ_WRITE && !(r->biorq_flags & BIORQ_DIO)) {
@@ -1144,7 +1143,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	spinlock(&r->biorq_lock);
 	r->biorq_flags |= BIORQ_FLUSHRDY;
 	DEBUG_BIORQ(PLL_DEBUG, r, "BIORQ_FLUSHRDY");
-	psc_assert(psclist_conjoint(&r->biorq_lentry));
+	psc_assert(psclist_conjoint(&r->biorq_lentry, 
+	    psc_lentry_hd(&r->biorq_lentry)));
 	atomic_inc(&bmpc->bmpc_pndgwr);
 	freelock(&r->biorq_lock);
 
@@ -1162,7 +1162,8 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			b->bcm_flags &= ~BMAP_REAPABLE;
 			psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 
-			if (psclist_conjoint(&b->bcm_lentry))
+			if (psclist_conjoint(&b->bcm_lentry,
+			    &bmapTimeoutQ.plc_listhd))
 				lc_remove(&bmapTimeoutQ, b);
 			LIST_CACHE_ULOCK(&bmapTimeoutQ);
 		}

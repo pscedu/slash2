@@ -1072,7 +1072,7 @@ mexpc_destroy(struct pscrpc_export *exp)
 		bml->bml_flags &= ~BML_EXP;
 		bml->bml_flags |= BML_EXPFAIL;
 		BML_ULOCK(bml);
-		psclist_del(&bml->bml_exp_lentry);
+		psclist_del(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
 	}
 
 	if (mexpc->mexpc_csvc) {

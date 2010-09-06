@@ -319,7 +319,7 @@ libsl_init(int pscnet_mode, int ismds)
 		    sizeof(lnetstr)) >= sizeof(lnetstr))
 			psc_fatalx("too many lustre networks");
 
-		psclist_del(&lent->lentry);
+		psclist_del(&lent->lentry, &lnets_hd);
 		PSCFREE(lent);
 	}
 

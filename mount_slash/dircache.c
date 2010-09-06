@@ -85,7 +85,7 @@ dircache_rls_ents(struct dircache_ents *e)
 
 	spinlock(&i->di_lock);
 	psc_assert(e->de_flags & DIRCE_FREEING);
-	psclist_del(&e->de_lentry);
+	psclist_del(&e->de_lentry, &i->di_list);
 	freelock(&i->di_lock);
 
 	ureqlock(&m->dcm_lock, locked);

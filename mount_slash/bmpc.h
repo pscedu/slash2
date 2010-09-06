@@ -127,7 +127,7 @@ enum {
 	    psc_atomic16_read(&(b)->bmpce_wrref),			\
 	    psc_atomic16_read(&(b)->bmpce_rdref),			\
 	    psc_atomic16_read(&(b)->bmpce_infref),			\
-	    psclist_conjoint(&(b)->bmpce_lentry),			\
+	    psclist_conjoint(&(b)->bmpce_lentry, NULL),			\
 	    BMPCE_2_BIORQ(b),						\
 	    DEBUG_BMPCE_FLAGS(b), ## __VA_ARGS__)
 

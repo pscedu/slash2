@@ -684,7 +684,7 @@ mds_namespace_read_batch(uint64_t seqno)
 	buf->slb_count = 0;
 	buf->slb_seqno = seqno;
 	atomic_set(&buf->slb_refcnt, 0);
-	psclist_del(&buf->slb_link);
+	psclist_del(&buf->slb_link, psc_lentry_hd(&buf->slb_link));
 
  readit:
 

@@ -143,8 +143,8 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	spinlock(&mdsBmapTimeoTbl.btt_lock);
 
 	if (flags & BTE_DEL) {
-		psc_assert(psclist_conjoint(&bml->bml_timeo_lentry));
-		psclist_del(&bml->bml_timeo_lentry);
+		psclist_del(&bml->bml_timeo_lentry,
+		    psc_lentry_hd(&bml->bml_timeo_lentry));
 		bml->bml_flags &= ~BML_TIMEOQ;
 		freelock(&mdsBmapTimeoTbl.btt_lock);
 		return (BMAPSEQ_ANY);
@@ -174,10 +174,9 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 		seq = e->bte_maxseq = mds_bmap_timeotbl_getnextseq();
 	}
 
-	if (bml->bml_flags & BML_UPGRADE) {
-		psc_assert(psclist_conjoint(&bml->bml_timeo_lentry));
-		psclist_del(&bml->bml_timeo_lentry);
-	}
+	if (bml->bml_flags & BML_UPGRADE)
+		psclist_del(&bml->bml_timeo_lentry,
+		    psc_lentry_hd(&bml->bml_timeo_lentry));
 
 	bml->bml_flags |= BML_TIMEOQ;
 	psclist_add_tail(&bml->bml_timeo_lentry, &e->bte_bmaps);

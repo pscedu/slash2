@@ -481,7 +481,7 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 
 	/* reset current_mrs for next replst */
 	psclist_for_each_entry_safe(rsb, nrsb, &current_mrs_bdata, rsb_lentry) {
-		psclist_del(&rsb->rsb_lentry);
+		psclist_del(&rsb->rsb_lentry, &current_mrs_bdata);
 		PSCFREE(rsb);
 	}
 	memcpy(&current_mrs, &zero_mrs, sizeof(current_mrs));
