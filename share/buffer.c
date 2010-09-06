@@ -168,7 +168,7 @@ sl_buffer_put(struct sl_buffer *slb, struct psc_listcache *lc)
 	int locked = reqlock(&slb->slb_lock);
 
 
-	DEBUG_SLB(PLL_INFO, slb, "adding to %s", lc->lc_name);
+	DEBUG_SLB(PLL_INFO, slb, "adding to %s", lc->plc_name);
 
 	/* Must have been removed already
 	 */
@@ -216,7 +216,7 @@ sl_buffer_get(struct psc_listcache *lc, int block)
 
 	psc_assert(lc != &slBufsPool->ppm_lc);
 
-	psc_trace("slb from %s", lc->lc_name);
+	psc_trace("slb from %s", lc->plc_name);
 
 	slb = (block ? lc_getwait(lc) : lc_getnb(lc));
 	return (slb);
