@@ -670,7 +670,7 @@ slcfg_add_include(const char *fn)
 		errno = ENAMETOOLONG;
 		psc_fatal("%s", fn);
 	}
-	psclist_xadd_tail(&cf->cf_lentry, &cfg_files);
+	psclist_add_tail(&cf->cf_lentry, &cfg_files);
 }
 
 void

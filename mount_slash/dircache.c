@@ -299,7 +299,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	/* New entries are considered to be more accurate so place them
 	 *   at the beginning of the list.
 	 */
-	psclist_xadd(&e->de_lentry, &i->di_list);
+	psclist_add(&e->de_lentry, &i->di_list);
 	freelock(&i->di_lock);
 
 	fcmh_op_start_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);

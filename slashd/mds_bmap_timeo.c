@@ -180,7 +180,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	}
 
 	bml->bml_flags |= BML_TIMEOQ;
-	psclist_xadd_tail(&bml->bml_timeo_lentry, &e->bte_bmaps);
+	psclist_add_tail(&bml->bml_timeo_lentry, &e->bte_bmaps);
 
 	freelock(&mdsBmapTimeoTbl.btt_lock);
 	return (seq);

@@ -295,7 +295,7 @@ libsl_init(int pscnet_mode, int ismds)
 					}
 
 					if (netcmp) {
-						psclist_xadd(&lent->lentry, &lnets_hd);
+						psclist_add(&lent->lentry, &lnets_hd);
 						lent = PSCALLOC(sizeof(*lent));
 					}
 				}

@@ -726,7 +726,7 @@ mds_namespace_read_batch(uint64_t seqno)
 	buf->slb_count += nitems;
 
 	if (newbuf)
-		psclist_xadd_tail(&buf->slb_link, &mds_namespace_buflist);
+		psclist_add_tail(&buf->slb_link, &mds_namespace_buflist);
 	/*
 	 * Return the loaded buffer without taking a reference.  This is
 	 * only possible because we are the only thread involved.
