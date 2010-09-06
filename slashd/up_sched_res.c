@@ -132,7 +132,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	UPSCHED_MGR_LOCK();
 	psc_pthread_mutex_lock(&wk->uswi_mutex);
 	if (wk->uswi_gen != uswi_gen) {
-		UPSCHED_MGR_UNLOCK();
+		UPSCHED_MGR_ULOCK();
  keep:
 		uswi_unref(wk);
 		return;
@@ -161,7 +161,7 @@ uswi_kill(struct up_sched_work_item *wk)
 	UPSCHED_MGR_ENSURE_LOCKED();
 	PSC_SPLAY_XREMOVE(upschedtree, &upsched_tree, wk);
 	pll_remove(&upsched_listhd, wk);
-	UPSCHED_MGR_UNLOCK();
+	UPSCHED_MGR_ULOCK();
 
 	USWI_DECREF(wk, USWI_REFT_TREE);
 
@@ -685,7 +685,7 @@ uswi_find(const struct slash_fidgen *fgp, int *locked)
 	}
 	psc_pthread_mutex_lock(&wk->uswi_mutex);
 	USWI_INCREF(wk, USWI_REFT_LOOKUP);
-	UPSCHED_MGR_UNLOCK();
+	UPSCHED_MGR_ULOCK();
 	*locked = 0;
 
 	/* uswi_access() drops the refcnt on failure */
@@ -839,7 +839,7 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 	} while (!locked);
 
 	gen = upsched_gen;
-	UPSCHED_MGR_UNLOCK();
+	UPSCHED_MGR_ULOCK();
 	locked = 0;
 
 	newrq = psc_pool_get(upsched_pool);
@@ -895,7 +895,7 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 
  out:
 	if (locked)
-		UPSCHED_MGR_UNLOCK();
+		UPSCHED_MGR_ULOCK();
 
 	if (rc && newrq && newrq->uswi_fcmh)
 		fcmh_op_done_type(newrq->uswi_fcmh,
