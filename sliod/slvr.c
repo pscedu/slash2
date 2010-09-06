@@ -821,8 +821,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 	n = 0;
 	psc_dynarray_init(&a);
 	LIST_CACHE_LOCK(&lruSlvrs);
-	psclist_for_each_entry_safe(s, dummy, &lruSlvrs.lc_listhd,
-				    slvr_lentry) {
+	LIST_CACHE_FOREACH_SAFE(s, dummy, &lruSlvrs) {
 		DEBUG_SLVR(PLL_INFO, s, "considering for reap, nwaiters=%d",
 			   atomic_read(&m->ppm_nwaiters));
 
@@ -842,8 +841,7 @@ slvr_buffer_reap(struct psc_poolmgr *m)
 		if (slvr_lru_freeable(s)) {
 			psc_dynarray_add(&a, s);
 			s->slvr_flags |= SLVR_FREEING;
-			psclist_del(&s->slvr_lentry);
-			lruSlvrs.lc_size--;
+			lc_remove(&lruSlvrs, s);
 			goto next;
 		}
 
