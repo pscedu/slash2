@@ -55,7 +55,7 @@ struct upschedtree	 upsched_tree = SPLAY_INITIALIZER(&upsched_tree);
 int			 upsched_gen;
 struct psc_poolmgr	*upsched_pool;
 struct psc_lockedlist	 upsched_listhd =
-    PLL_INITIALIZER(&upsched_listhd, struct up_sched_work_item,
+    PLL_INIT(&upsched_listhd, struct up_sched_work_item,
 	uswi_lentry);
 
 /**

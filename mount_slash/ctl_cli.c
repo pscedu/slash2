@@ -52,7 +52,7 @@ char	*lnet_get_networks(void);
 struct psc_lockedlist	 psc_mlists;
 struct psc_lockedlist	 psc_odtables;
 
-struct psc_lockedlist	 msctl_replsts = PLL_INITIALIZER(&msctl_replsts,
+struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
     struct msctl_replstq, mrsq_lentry);
 
 #define REPLRQ_BMAPNO_ALL (-1)

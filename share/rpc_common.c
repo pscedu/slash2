@@ -34,7 +34,7 @@
 #include "slconfig.h"
 #include "slconn.h"
 
-struct psc_lockedlist	client_csvcs = PLL_INITIALIZER(&client_csvcs,
+struct psc_lockedlist	client_csvcs = PLL_INIT(&client_csvcs,
     struct slashrpc_cservice, csvc_lentry);
 
 /**

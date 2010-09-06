@@ -49,7 +49,7 @@ struct psc_listcache	 sli_replwkq_pending;
 
 /* and all registered replication requests are listed here */
 struct psc_lockedlist	 sli_replwkq_active =
-    PLL_INITIALIZER(&sli_replwkq_active, struct sli_repl_workrq,
+    PLL_INIT(&sli_replwkq_active, struct sli_repl_workrq,
 	    srw_active_lentry);
 
 int
