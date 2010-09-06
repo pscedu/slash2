@@ -234,7 +234,7 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 	} else {
 		struct biod_crcup_ref *tmp;
 
-		tmp = pll_gethd(&biod->biod_bklog_bcrs);
+		tmp = pll_gethead(&biod->biod_bklog_bcrs);
 		if (tmp) {
 			DEBUG_BCR(PLL_INFO, tmp, "backlogged bcr, nblklog=%d",
 				  pll_nitems(&biod->biod_bklog_bcrs));
