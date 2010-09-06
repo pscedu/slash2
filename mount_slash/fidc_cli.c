@@ -99,7 +99,7 @@ slc_fcmh_dtor(struct fidc_membh *fcmh)
 		if (!fci->fci_init)
 			psc_assert(psclist_disjoint(&fci->fci_dci.di_list));
 		else
-			psc_assert(psclist_empty(&fci->fci_dci.di_list));
+			psc_assert(psc_listhd_empty(&fci->fci_dci.di_list));
 	}
 }
 
