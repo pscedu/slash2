@@ -142,7 +142,7 @@ bmpce_handle_lru_locked(struct bmap_pagecache_entry *bmpce,
   #if BMPC_PLL_SORT
 		pll_sort(&bmpc->bmpc_lru, qsort, bmpce_lrusort_cmp);
   #endif
-		bmpce = pll_gethdpeek(&bmpc->bmpc_lru);
+		bmpce = pll_peekhead(&bmpc->bmpc_lru);
 #else
 	if (!RB_EMPTY(&bmpc->bmpc_lrutree)) {
 		bmpce = RB_MIN(bmap_lrutree, &bmpc->bmpc_lrutree);
@@ -347,7 +347,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	/* Save CPU, assume that the head of the list is the oldest entry.
 	 */
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
-		bmpce = pll_gethdpeek(&bmpc->bmpc_lru);
+		bmpce = pll_peekhead(&bmpc->bmpc_lru);
 		memcpy(&bmpc->bmpc_oldest, &bmpce->bmpce_laccess,
 		       sizeof(struct timespec));
 	}

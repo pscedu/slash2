@@ -202,7 +202,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 		/* A second writer or a reader wants access.  Ensure only
 		 *    one lease is present.
 		 */
-		bml = pll_gettlpeek(&bmdsi->bmdsi_leases);
+		bml = pll_peektail(&bmdsi->bmdsi_leases);
 		psc_assert(bml->bml_flags & BML_WRITE);
 		psc_assert(!(b->bcm_flags & BMAP_DIORQ));
 		if (bml->bml_flags & BML_CDIO) {
