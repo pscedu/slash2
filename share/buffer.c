@@ -79,7 +79,8 @@ sl_buffer_lru_assertions(struct sl_buffer *b)
 	psc_assert(b->slb_flags == SLB_LRU);
 	psc_assert(psc_vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
 	psc_assert(!psc_listhd_empty(&b->slb_iov_list));
-	psc_assert(psclist_conjoint(&b->slb_fcmh_lentry));
+	psc_assert(psclist_conjoint(&b->slb_fcmh_lentry,
+	    psc_lentry_hd(&b->slb_fcmh_lentry)));
 	psc_assert(atomic_read(&b->slb_ref));
 	//	psc_assert(!atomic_read(&b->slb_unmapd_ref));
 	psc_assert((!atomic_read(&b->slb_inflight)) &&
@@ -146,7 +147,8 @@ sl_buffer_pin_2_lru_assertions(struct sl_buffer *b)
 		   !(atomic_read(&b->slb_inflpndg)));
 	psc_assert(psc_vbitmap_nfree(b->slb_inuse) < b->slb_nblks);
 	psc_assert(!psc_listhd_empty(&b->slb_iov_list));
-	psc_assert(psclist_conjoint(&b->slb_fcmh_lentry));
+	psc_assert(psclist_conjoint(&b->slb_fcmh_lentry,
+	    psc_lentry_hd(&b->slb_fcmh_lentry)));
 	psc_assert(atomic_read(&b->slb_ref));
 	psc_assert(!atomic_read(&b->slb_unmapd_ref));
 	psc_assert((!atomic_read(&b->slb_inflight)) &&
