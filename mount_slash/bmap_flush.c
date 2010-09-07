@@ -622,6 +622,10 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 	return (a);
 }
 
+/**
+ * bmap_flush - send out SRMT_WRITE RPCs to the I/O server. We might end up send more
+ *     than nrpcs of them because one request can have many pages.
+ */
 void
 bmap_flush(int nrpcs)
 {
