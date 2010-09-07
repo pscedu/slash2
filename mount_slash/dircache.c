@@ -34,12 +34,13 @@
 #include "fidcache.h"
 #include "sltypes.h"
 
-/* Note:  These macros must match the ones used by the server in
+/*
+ * Note:  These macros must match the ones used by the server in
  *  zfs_operations_slash.c
  */
-#define SRT_NAME_OFFSET ((unsigned long)((struct srt_dirent *) 0)->name)
-#define SRT_DIRENT_ALIGN(x) (((x) + sizeof(uint64_t) - 1) &	\
-			     ~(sizeof(uint64_t) - 1))
+#define SRT_NAME_OFFSET		offsetof(struct srt_dirent, name)
+#define SRT_DIRENT_ALIGN(x)	(((x) + sizeof(uint64_t) - 1) &	\
+				    ~(sizeof(uint64_t) - 1))
 #define SRT_DIRENT_SIZE(d)					\
 	SRT_DIRENT_ALIGN(SRT_NAME_OFFSET + (d)->namelen)
 
@@ -56,7 +57,8 @@ dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
 	m->dcm_alloc = 0;
 
 	INIT_SPINLOCK(&m->dcm_lock);
-	lc_reginit(&m->dcm_lc, struct dircache_ents, de_lentry_lc, "%s", name);
+	lc_reginit(&m->dcm_lc, struct dircache_ents, de_lentry_lc, "%s",
+	    name);
 }
 
 void
@@ -127,12 +129,12 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	 */
 	spinlock(&i->di_lock);
 	psclist_for_each_entry(e, &i->di_list, de_lentry) {
-		/* 
- 		 * The return code for psc_dynarray_bsearch() tells us
- 		 * the position where our name should be to keep the
- 		 * the list sorted.  If it is one after the last item,
- 		 * then we know for sure the item is not there. Otherwise,
- 		 * we still need one more comparison to be sure.
+		/*
+		 * The return code for psc_dynarray_bsearch() tells us
+		 * the position where our name should be to keep the
+		 * the list sorted.  If it is one after the last item,
+		 * then we know for sure the item is not there. Otherwise,
+		 * we still need one more comparison to be sure.
 		 */
 		pos = psc_dynarray_bsearch(&e->de_dents,
 		    &desc, dirent_cmp);
@@ -238,12 +240,15 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 	freelock(&m->dcm_lock);
 
 	e = PSCALLOC(sizeof(*e) + size);
+	INIT_PSC_LISTENTRY(&e->de_lentry);
+	INIT_PSC_LISTENTRY(&e->de_lentry_lc);
 	e->de_sz = size;
 	e->de_info = i;
 	return (e);
 }
 
-/* dircache_reg_ents
+/**
+ * dircache_reg_ents
  */
 void
 dircache_reg_ents(struct dircache_ents *e, size_t nents)
@@ -268,7 +273,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	c = e->de_desc = PSCALLOC(sizeof(struct dircache_desc) * nents);
 	psc_dynarray_ensurelen(&e->de_dents, nents);
 
-	for (j=0, b=e->de_base, off=0; j < (int)nents; j++, c++) {
+	for (j = 0, b = e->de_base, off = 0; j < (int)nents; j++, c++) {
 		d = (void *)(b + off);
 
 		psc_dbg("ino=%"PRIx64" off=%"PRId64" "
@@ -305,7 +310,8 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	fcmh_op_start_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
 }
 
-/* dircache_release_early - called when a dircache_ents was not registered.
+/**
+ * dircache_release_early - called when a dircache_ents was not registered.
  */
 void
 dircache_earlyrls_ents(struct dircache_ents *e)

@@ -313,6 +313,7 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
 	struct pscrpc_import *imp;
 
 	csvc = PSCALLOC(sizeof(*csvc));
+	INIT_PSC_LISTENTRY(&csvc->csvc_lentry);
 
 	if ((imp = pscrpc_new_import()) == NULL)
 		psc_fatalx("pscrpc_new_import");
