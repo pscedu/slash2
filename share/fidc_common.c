@@ -163,7 +163,7 @@ fidc_reap(struct psc_poolmgr *m)
 	LIST_CACHE_LOCK(&fidcCleanList);
 	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcCleanList) {
 		if (nreap == FCMH_MAX_REAP ||
-		    m->_ppm_nfree + nreap >=
+		    m->ppm_nfree + nreap >=
 		    atomic_read(&m->ppm_nwaiters) + 1)
 			break;
 
