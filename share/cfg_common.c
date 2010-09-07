@@ -246,6 +246,7 @@ libsl_init(int pscnet_mode, int ismds)
 	pflnet_getifaddrs(&ifa);
 
 	lent = PSCALLOC(sizeof(*lent));
+	INIT_PSC_LISTENTRY(&lent->lentry);
 
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
@@ -297,6 +298,7 @@ libsl_init(int pscnet_mode, int ismds)
 					if (netcmp) {
 						psclist_add(&lent->lentry, &lnets_hd);
 						lent = PSCALLOC(sizeof(*lent));
+						INIT_PSC_LISTENTRY(&lent->lentry);
 					}
 				}
 				freeaddrinfo(res0);
