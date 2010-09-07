@@ -103,7 +103,7 @@ struct bmapc_memb {
 	uint32_t		 bcm_flags;	/* see BMAP_* below */
 	psc_spinlock_t		 bcm_lock;
 	SPLAY_ENTRY(bmapc_memb)	 bcm_tentry;	/* bmap_cache splay tree entry */
-	struct psclist_lentry	 bcm_lentry;	/* free pool */
+	struct psc_listentry	 bcm_lentry;	/* free pool */
 
 	/*
 	 * This must start on a 64-bit boundary, and must lay at the end
