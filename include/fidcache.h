@@ -27,10 +27,10 @@
 #define _SL_FIDCACHE_H_
 
 #include "pfl/hashtbl.h"
+#include "pfl/time.h"
 #include "psc_ds/tree.h"
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"
-#include "pfl/time.h"
 
 #include "bmap.h"
 #include "cache_params.h"
@@ -65,16 +65,16 @@ struct sl_fcmh_ops {
  */
 struct fidc_membh {
 #ifdef DEMOTED_INUM_WIDTHS
-	struct slash_fidgen	 fcmh_smallfg;		/* integer-demoted fg_fid for hashing */
+	struct slash_fidgen	 fcmh_smallfg;	/* integer-demoted fg_fid for hashing */
 #endif
-	struct srt_stat		 fcmh_sstb;		/* higher-level stat(2) buffer */
-	int			 fcmh_flags;		/* see FCMH_* below */
+	struct srt_stat		 fcmh_sstb;	/* higher-level stat(2) buffer */
+	int			 fcmh_flags;	/* see FCMH_* below */
 	psc_spinlock_t		 fcmh_lock;
 	int			 fcmh_refcnt;
 	struct psc_hashent	 fcmh_hentry;
 	struct psclist_head	 fcmh_lentry;
 	struct psc_waitq	 fcmh_waitq;
-	struct bmap_cache	 fcmh_bmaptree;		/* bmap cache splay */
+	struct bmap_cache	 fcmh_bmaptree;	/* bmap cache splay */
 };
 
 /* fcmh_flags */
