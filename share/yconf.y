@@ -212,7 +212,7 @@ site_prof_start	: SITE_PROFILE SITE_NAME SUBSECT_START {
 
 			currentSite = PSCALLOC(sizeof(*currentSite));
 			psc_dynarray_init(&currentSite->site_resources);
-			INIT_PSCLIST_ENTRY(&currentSite->site_lentry);
+			INIT_PSC_LISTENTRY(&currentSite->site_lentry);
 			if (strlcpy(currentSite->site_name, $2,
 			    sizeof(currentSite->site_name)) >=
 			    sizeof(currentSite->site_name))

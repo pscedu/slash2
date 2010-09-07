@@ -430,7 +430,7 @@ iod_bmap_init(struct bmapc_memb *b)
 
 	biod = bmap_2_bii(b);
 	biod->biod_bcr_xid = biod->biod_bcr_xid_last = 0;
-	INIT_PSCLIST_ENTRY(&biod->biod_lentry);
+	INIT_PSC_LISTENTRY(&biod->biod_lentry);
 	LOCK_INIT(&biod->biod_lock);
 	SPLAY_INIT(&biod->biod_slvrs);
 	pll_init(&biod->biod_bklog_bcrs, struct biod_crcup_ref,

@@ -665,7 +665,7 @@ mds_namespace_read_batch(uint64_t seqno)
 		buf->slb_count = 0;
 		buf->slb_seqno = seqno;
 		atomic_set(&buf->slb_refcnt, 0);
-		INIT_PSCLIST_ENTRY(&buf->slb_link);
+		INIT_PSC_LISTENTRY(&buf->slb_link);
 		buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
 		goto readit;
 	}

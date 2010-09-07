@@ -166,8 +166,8 @@ bmpc_slb_init(struct sl_buffer *slb)
 	LOCK_INIT(&slb->slb_lock);
 	slb->slb_flags = SLB_FRESH;
 	INIT_PSCLIST_HEAD(&slb->slb_iov_list);
-	INIT_PSCLIST_ENTRY(&slb->slb_fcmh_lentry);
-	INIT_PSCLIST_ENTRY(&slb->slb_mgmt_lentry);
+	INIT_PSC_LISTENTRY(&slb->slb_fcmh_lentry);
+	INIT_PSC_LISTENTRY(&slb->slb_mgmt_lentry);
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
 }
 

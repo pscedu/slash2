@@ -274,7 +274,7 @@ sl_slab_tryfree(struct sl_buffer *b)
 	pll_remove(b->slb_lc_fcmh, b);
 	b->slb_lc_owner = NULL;
 	b->slb_lc_fcmh = NULL;
-	INIT_PSCLIST_ENTRY(&b->slb_fcmh_lentry);
+	INIT_PSC_LISTENTRY(&b->slb_fcmh_lentry);
 	sl_buffer_put(b, &slBufsPool->ppm_lc);
 }
 
@@ -325,7 +325,7 @@ sl_slab_reap(__unusedx struct psc_poolmgr *pool)
 	 */
 	pll_remove(b->slb_lc_fcmh, b);
 	b->slb_lc_fcmh = NULL;
-	INIT_PSCLIST_ENTRY(&b->slb_fcmh_lentry);
+	INIT_PSC_LISTENTRY(&b->slb_fcmh_lentry);
 	psc_assert(psc_vbitmap_nfree(b->slb_inuse) == b->slb_nblks);
 	/* Tally em up
 	 */
@@ -405,7 +405,7 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 	//ATTR_SET  (slb->slb_flags, SLB_FREEING);
 	slb->slb_flags = SLB_FRESH;
 	INIT_PSCLIST_HEAD(&slb->slb_iov_list);
-	INIT_PSCLIST_ENTRY(&slb->slb_fcmh_lentry);
+	INIT_PSC_LISTENTRY(&slb->slb_fcmh_lentry);
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
 	return (0);
