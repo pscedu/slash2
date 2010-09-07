@@ -99,12 +99,12 @@ slash2fuse_newfs(const char *mntpoint, struct fuse_chan *ch)
 	info.se = fuse_chan_session(ch);
 	info.mntlen = strlen(mntpoint);
 
-	if(write(newfs_fd[1], &info, sizeof(info)) != sizeof(info)) {
+	if (write(newfs_fd[1], &info, sizeof(info)) != sizeof(info)) {
 		perror("Warning (while writing fsinfo to newfs_fd)");
 		return -1;
 	}
 
-	if(write(newfs_fd[1], mntpoint, info.mntlen) != info.mntlen) {
+	if (write(newfs_fd[1], mntpoint, info.mntlen) != info.mntlen) {
 		perror("Warning (while writing mntpoint to newfs_fd)");
 		return -1;
 	}
@@ -121,13 +121,13 @@ fd_read_loop(int fd, void *buf, int bytes)
 	int read_bytes = 0;
 	int left_bytes = bytes;
 
-	while(left_bytes > 0) {
+	while (left_bytes > 0) {
 		int ret = read(fd, ((char *) buf) + read_bytes, left_bytes);
-		if(ret == 0)
+		if (ret == 0)
 			return -1;
 
-		if(ret == -1) {
-			if(errno == EINTR)
+		if (ret == -1) {
+			if (errno == EINTR)
 				continue;
 			perror("read");
 			return -1;
@@ -154,7 +154,7 @@ new_fs(void)
 	psc_assert(fd_read_loop(fds[0].fd, &fs, sizeof(fuse_fs_info_t)) == 0);
 
 	char *mntpoint = PSCALLOC(fs.mntlen + 1);
-	if(mntpoint == NULL) {
+	if (mntpoint == NULL) {
 		fprintf(stderr, "Warning: out of memory!\n");
 		return;
 	}
@@ -163,16 +163,14 @@ new_fs(void)
 
 	mntpoint[fs.mntlen] = '\0';
 
-	if(nfds == MAX_FDS) {
+	if (nfds == MAX_FDS) {
 		fprintf(stderr, "Warning: filesystem limit (%i) reached, unmounting..\n", MAX_FILESYSTEMS);
 		fuse_unmount(mntpoint, fs.ch);
 		free(mntpoint);
 		return;
 	}
 
-#ifdef DEBUG
-	fprintf(stderr, "Adding filesystem %i at mntpoint %s\n", nfds, mntpoint);
-#endif
+	psc_info("adding filesystem %i at mntpoint %s", nfds, mntpoint);
 
 	fsinfo[nfds] = fs;
 	mountpoints[nfds] = mntpoint;
@@ -218,13 +216,13 @@ slash2fuse_listener_loop(__unusedx void *arg)
 	busy = 1;
 	freelock(&lock);
 
-	while(!exit_fuse_listener) {
+	while (!exit_fuse_listener) {
 		int i;
 		int ret = poll(fds, nfds, 1000);
-		if(ret == 0 || (ret == -1 && errno == EINTR))
+		if (ret == 0 || (ret == -1 && errno == EINTR))
 			continue;
 
-		if(ret == -1) {
+		if (ret == -1) {
 			perror("poll");
 			continue;
 		}
@@ -234,24 +232,24 @@ slash2fuse_listener_loop(__unusedx void *arg)
 		for(i = 0; i < oldfds; i++) {
 			short rev = fds[i].revents;
 
-			if(rev == 0)
+			if (rev == 0)
 				continue;
 
 			fds[i].revents = 0;
 
 			psc_assert((rev & POLLNVAL) == 0);
 
-			if(!(rev & POLLIN) && !(rev & POLLERR) && !(rev & POLLHUP))
+			if (!(rev & POLLIN) && !(rev & POLLERR) && !(rev & POLLHUP))
 				continue;
 
-			if(i == 0) {
+			if (i == 0) {
 				new_fs();
 			} else {
 				/* Handle request */
 
-				if(fsinfo[i].bufsize > bufsize) {
+				if (fsinfo[i].bufsize > bufsize) {
 					char *new_buf = realloc(buf, fsinfo[i].bufsize);
-					if(new_buf == NULL) {
+					if (new_buf == NULL) {
 						fprintf(stderr, "Warning: out of memory!\n");
 						continue;
 					}
@@ -260,12 +258,12 @@ slash2fuse_listener_loop(__unusedx void *arg)
 				}
 
 				int res = fuse_chan_recv(&fsinfo[i].ch, buf, fsinfo[i].bufsize);
-				if(res == -1 || fuse_session_exited(fsinfo[i].se)) {
+				if (res == -1 || fuse_session_exited(fsinfo[i].se)) {
 					destroy_fs(i);
 					continue;
 				}
 
-				if(res == 0)
+				if (res == 0)
 					continue;
 
 				struct fuse_session *se = fsinfo[i].se;
@@ -302,9 +300,9 @@ slash2fuse_listener_loop(__unusedx void *arg)
 		/* Free the closed file descriptors entries */
 		int read_ptr, write_ptr = 0;
 		for(read_ptr = 0; read_ptr < nfds; read_ptr++) {
-			if(fds[read_ptr].fd == -1)
+			if (fds[read_ptr].fd == -1)
 				continue;
-			if(read_ptr != write_ptr) {
+			if (read_ptr != write_ptr) {
 				fds[write_ptr] = fds[read_ptr];
 				fsinfo[write_ptr] = fsinfo[read_ptr];
 				mountpoints[write_ptr] = mountpoints[read_ptr];
@@ -333,7 +331,7 @@ slash2fuse_listener_start(void)
 
 	for(i = 0; i < NUM_THREADS; i++) {
 		int ret = pthread_join(fuse_threads[i], NULL);
-		if(ret != 0)
+		if (ret != 0)
 			fprintf(stderr, "Warning: pthread_join() on thread %i returned %i\n", i, ret);
 	}
 
@@ -342,7 +340,7 @@ slash2fuse_listener_start(void)
 #endif
 
 	for(i = 1; i < nfds; i++) {
-		if(fds[i].fd == -1)
+		if (fds[i].fd == -1)
 			continue;
 
 		fuse_session_exit(fsinfo[i].se);
