@@ -49,7 +49,7 @@
 #define BMPC_MAXSLBS		32
 #define BMPC_BUFMASK		(BMPC_BLKSZ - 1)
 #define BMPC_IOMAXBLKS		64
-#define BMPC_MAXBUFSRPC		(1048576 / BMPC_BUFSZ)
+#define BMPC_MAXBUFSRPC		(1024 * 1024 / BMPC_BUFSZ)
 
 #define BMPC_DEF_MINAGE		{ 0, 600000000 } /* seconds, nanoseconds */
 #define BMPC_INTERVAL		{ 0, 200000000 }
@@ -63,14 +63,14 @@ struct bmpc_mem_slbs {
 	struct psc_waitq	bmms_waitq;
 };
 
-#define lockBmpcSlabs()		spinlock(&bmpcSlabs.bmms_lock)
-#define ulockBmpcSlabs()	freelock(&bmpcSlabs.bmms_lock)
+#define BMPCSLABS_LOCK()	spinlock(&bmpcSlabs.bmms_lock)
+#define BMPCSLABS_ULOCK()	freelock(&bmpcSlabs.bmms_lock)
 
 struct bmap_pagecache_entry {
 	psc_atomic16_t		 bmpce_wrref;	/* pending write ops        */
 	psc_atomic16_t		 bmpce_rdref;	/* pending read ops         */
 	psc_atomic16_t		 bmpce_infref;	/* inflight ref             */
-	uint32_t		 bmpce_flags;	/* state bits               */
+	uint32_t		 bmpce_flags;	/* BMPCE_* state bits       */
 	uint32_t		 bmpce_off;	/* filewise, bmap relative  */
 	psc_spinlock_t		 bmpce_lock;	/* serialize                */
 	void			*bmpce_base;	/* base pointer from slb    */
@@ -80,30 +80,27 @@ struct bmap_pagecache_entry {
 #ifdef BMPC_RBTREE
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_lru_tentry;
 #else
-	struct psclist_head	 bmpce_lentry;	/* chain on bmap lru        */
+	struct psc_listentry	 bmpce_lentry;	/* chain on bmap lru        */
 #endif
 };
 
 #define BMPCE_LOCK(b)		spinlock(&(b)->bmpce_lock)
 #define BMPCE_ULOCK(b)		freelock(&(b)->bmpce_lock)
 
-enum {
-	BMPCE_NEW	= (1 << 0),
-	BMPCE_GETBUF	= (1 << 1),
-	BMPCE_DATARDY	= (1 << 2),
-	BMPCE_DIRTY2LRU	= (1 << 3),
-	BMPCE_LRU	= (1 << 4),
-	BMPCE_FREE	= (1 << 5),
-	BMPCE_FREEING	= (1 << 6),
-	BMPCE_INIT	= (1 << 7),
-	BMPCE_READPNDG	= (1 << 8),
-	BMPCE_RBWPAGE	= (1 << 9)
-};
+#define	BMPCE_NEW		(1 << 0)
+#define	BMPCE_GETBUF		(1 << 1)
+#define	BMPCE_DATARDY		(1 << 2)
+#define	BMPCE_DIRTY2LRU		(1 << 3)
+#define	BMPCE_LRU		(1 << 4)
+#define	BMPCE_FREE		(1 << 5)
+#define	BMPCE_FREEING		(1 << 6)
+#define	BMPCE_INIT		(1 << 7)
+#define	BMPCE_READPNDG		(1 << 8)
+#define	BMPCE_RBWPAGE		(1 << 9)
 
-#define BMPCE_2_BIORQ(b) ((b)->bmpce_waitq == NULL) ? NULL :		\
-	(((char *)((b)->bmpce_waitq)) -					\
-	 offsetof(struct bmpc_ioreq, biorq_waitq))
-
+#define BMPCE_2_BIORQ(b)						\
+	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
+	 offsetof(struct bmpc_ioreq, biorq_waitq) : NULL)
 
 #define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BMPCE_FLAGS(b)						\
@@ -203,8 +200,10 @@ struct bmap_pagecache {
 	struct psclist_head		 bmpc_lentry;	/* chain to global LRU lc     */
 };
 
-#define BMPC_LOCK(b)	spinlock(&(b)->bmpc_lock)
-#define BMPC_ULOCK(b)	freelock(&(b)->bmpc_lock)
+#define BMPC_LOCK(b)		spinlock(&(b)->bmpc_lock)
+#define BMPC_ULOCK(b)		freelock(&(b)->bmpc_lock)
+#define BMPC_RLOCK(b)		reqlock(&(b)->bmpc_lock)
+#define BMPC_URLOCK(b, lk)	ureqlock(&(b)->bmpc_lock, (lk))
 
 static __inline int
 bmpc_queued_writes(struct bmap_pagecache *bmpc)
@@ -336,7 +335,6 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	ureqlock(&bmpce->bmpce_lock, locked);
 }
 
-
 /* biorq_is_my_bmpce - informs the caller that biorq, r, owns the
  *    the page cache entry, b.  This state implies that the thread
  *    processing 'r' is responsible for allocating a memory page
@@ -433,7 +431,7 @@ bmpc_decrease_minage(void)
 {
 	struct timespec ts = BMPC_INTERVAL;
 
-	lockBmpcSlabs();
+	BMPCSLABS_LOCK();
 
 	timespecsub(&bmpcSlabs.bmms_minage, &ts,
 		    &bmpcSlabs.bmms_minage);
@@ -441,7 +439,7 @@ bmpc_decrease_minage(void)
 	if (bmpcSlabs.bmms_minage.tv_sec < 0)
 		timespecclear(&bmpcSlabs.bmms_minage);
 
-	ulockBmpcSlabs();
+	BMPCSLABS_ULOCK();
 }
 
 static __inline void
@@ -449,12 +447,12 @@ bmpc_increase_minage(void)
 {
 	struct timespec ts = BMPC_INTERVAL;
 
-	lockBmpcSlabs();
+	BMPCSLABS_LOCK();
 
 	timespecadd(&bmpcSlabs.bmms_minage, &ts,
 		    &bmpcSlabs.bmms_minage);
 
-	ulockBmpcSlabs();
+	BMPCSLABS_ULOCK();
 }
 
 #endif /* _SL_BMPC_H_ */
