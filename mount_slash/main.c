@@ -197,7 +197,7 @@ msfsthr_ensure(void)
 			psc_fatal("psc_vbitmap_next");
 		freelock(&msfsthr_uniqidmap_lock);
 
-		thr = pscthr_init(MSTHRT_FS, PTF_FREE, NULL,
+		thr = pscthr_init(MSTHRT_FS, 0, NULL,
 		    msfsthr_teardown, sizeof(*mft), "msfsthr%02zu", id);
 		mft = thr->pscthr_private;
 		mft->mft_uniqid = id;
