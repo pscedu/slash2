@@ -450,6 +450,7 @@ slcfg_addif(char *ifname, char *netname)
 	free(ifname);
 
 	resm = PSCALLOC(sizeof(*resm));
+	psc_hashent_init(&globalConfig.gconf_nid_hashtbl, resm);
 	rc = snprintf(resm->resm_addrbuf, sizeof(resm->resm_addrbuf),
 	    "%s:%s", currentRes->res_name, nidstr);
 	if (rc == -1)
@@ -665,6 +666,7 @@ slcfg_add_include(const char *fn)
 	struct cfg_file *cf;
 
 	cf = PSCALLOC(sizeof(*cf));
+	INIT_PSC_LISTENTRY(&cf->cf_lentry);
 	if (strlcpy(cf->cf_fn, fn,
 	    sizeof(cf->cf_fn)) >= sizeof(cf->cf_fn)) {
 		errno = ENAMETOOLONG;
