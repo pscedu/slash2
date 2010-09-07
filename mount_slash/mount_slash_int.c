@@ -437,7 +437,7 @@ msl_fhent_new(struct fidc_membh *f)
 
 	mfh = PSCALLOC(sizeof(*mfh));
 	mfh->mfh_fcmh = f;
-	LOCK_INIT(&mfh->mfh_lock);
+	INIT_SPINLOCK(&mfh->mfh_lock);
 	pll_init(&mfh->mfh_biorqs, struct bmpc_ioreq, biorq_mfh_lentry,
 	    &mfh->mfh_lock);
 	return (mfh);

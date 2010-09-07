@@ -62,7 +62,7 @@ slash_inode_handle_init(struct slash_inode_handle *i,
 {
 	i->inoh_fcmh = f;
 	i->inoh_extras = NULL;
-	LOCK_INIT(&i->inoh_lock);
+	INIT_SPINLOCK(&i->inoh_lock);
 	i->inoh_flags = INOH_INO_NOTLOADED;
 }
 

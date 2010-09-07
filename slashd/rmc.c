@@ -1099,7 +1099,7 @@ mexpc_get(struct pscrpc_export *exp)
 	else {
 		mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
 		INIT_PSCLIST_HEAD(&mexpc->mexpc_bmlhd);
-		LOCK_INIT(&mexpc->mexpc_lock);
+		INIT_SPINLOCK(&mexpc->mexpc_lock);
 		psc_waitq_init(&mexpc->mexpc_waitq);
 		exp->exp_hldropf = mexpc_destroy;
 		slm_getclcsvc(exp);

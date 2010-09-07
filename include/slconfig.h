@@ -115,7 +115,7 @@ struct sl_gconf {
 #define INIT_GCONF(g)								\
 	do {									\
 		memset((g), 0, sizeof(*(g)));					\
-		LOCK_INIT(&(g)->gconf_lock);					\
+		INIT_SPINLOCK(&(g)->gconf_lock);					\
 		pll_init(&(g)->gconf_sites, struct sl_site,			\
 		    site_lentry, &(g)->gconf_lock);				\
 		psc_hashtbl_init(&(g)->gconf_nid_hashtbl, 0, struct sl_resm,	\

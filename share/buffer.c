@@ -401,7 +401,7 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 	atomic_set(&slb->slb_ref, 0);
 	atomic_set(&slb->slb_unmapd_ref, 0);
 	atomic_set(&slb->slb_inflight, 0);
-	LOCK_INIT (&slb->slb_lock);
+	INIT_SPINLOCK (&slb->slb_lock);
 	//ATTR_SET  (slb->slb_flags, SLB_FREEING);
 	slb->slb_flags = SLB_FRESH;
 	INIT_PSCLIST_HEAD(&slb->slb_iov_list);

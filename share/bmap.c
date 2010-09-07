@@ -155,7 +155,7 @@ bmap_getf(struct fidc_membh *f, sl_bmapno_t n, enum rw rw, int flags,
 		}
 		b = psc_pool_get(bmap_pool);
 		memset(b, 0, bmap_pool->ppm_master->pms_entsize);
-		LOCK_INIT(&b->bcm_lock);
+		INIT_SPINLOCK(&b->bcm_lock);
 
 		atomic_set(&b->bcm_opcnt, 0);
 		b->bcm_fcmh = f;

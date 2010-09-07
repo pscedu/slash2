@@ -477,7 +477,7 @@ slvr_worker_init(void)
 {
 	int i;
 
-	LOCK_INIT(&binflCrcs.binfcrcs_lock);
+	INIT_SPINLOCK(&binflCrcs.binfcrcs_lock);
 	pll_init(&binflCrcs.binfcrcs_ready, struct biod_crcup_ref,
 		 bcr_lentry, &binflCrcs.binfcrcs_lock);
 	pll_init(&binflCrcs.binfcrcs_hold, struct biod_crcup_ref,

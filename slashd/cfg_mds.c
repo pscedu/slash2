@@ -32,11 +32,11 @@ slcfg_init_res(struct sl_resource *res)
 	struct resprof_mds_info *rpmi;
 
 	rpmi = res->res_pri = PSCALLOC(sizeof(*rpmi));
-	LOCK_INIT(&rpmi->rpmi_lock);
+	INIT_SPINLOCK(&rpmi->rpmi_lock);
 
 	if (res->res_type == SLREST_MDS) {
 		rpmi->rpmi_peerinfo = PSCALLOC(sizeof(*rpmi->rpmi_peerinfo));
-		LOCK_INIT(&rpmi->rpmi_peerinfo->sp_lock);
+		INIT_SPINLOCK(&rpmi->rpmi_peerinfo->sp_lock);
 		INIT_PSC_LISTENTRY(&rpmi->rpmi_peerinfo->sp_lentry);
 	}
 }
@@ -61,7 +61,7 @@ slcfg_init_site(struct sl_site *site)
 
 	smi = site->site_pri = PSCALLOC(sizeof(*smi));
 	psc_dynarray_init(&smi->smi_upq);
-	LOCK_INIT(&smi->smi_lock);
+	INIT_SPINLOCK(&smi->smi_lock);
 	psc_multiwait_init(&smi->smi_mw, "smi-%s",
 	    site->site_name + strspn(site->site_name, "@"));
 	psc_multiwaitcond_init(&smi->smi_mwcond, NULL, 0, "smi-%s",

@@ -382,7 +382,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	memset(fcmh, 0, fidcPoolMaster.pms_entsize);
 	INIT_PSC_LISTENTRY(&fcmh->fcmh_lentry);
 	SPLAY_INIT(&fcmh->fcmh_bmaptree);
-	LOCK_INIT(&fcmh->fcmh_lock);
+	INIT_SPINLOCK(&fcmh->fcmh_lock);
 	psc_hashent_init(&fidcHtable, fcmh);
 	psc_waitq_init(&fcmh->fcmh_waitq);
 

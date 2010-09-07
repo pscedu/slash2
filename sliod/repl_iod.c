@@ -74,7 +74,7 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 
 	w = psc_pool_get(sli_replwkrq_pool);
 	memset(w, 0, sizeof(*w));
-	LOCK_INIT(&w->srw_lock);
+	INIT_SPINLOCK(&w->srw_lock);
 	psc_atomic32_set(&w->srw_refcnt, 1);
 	w->srw_nid = nid;
 	w->srw_fg = *fgp;

@@ -42,7 +42,7 @@ bmpce_init(__unusedx struct psc_poolmgr *poolmgr, void *a)
 	struct bmap_pagecache_entry *bmpce=a;
 
 	memset(bmpce, 0, sizeof(*bmpce));
-	LOCK_INIT(&bmpce->bmpce_lock);
+	INIT_SPINLOCK(&bmpce->bmpce_lock);
 	bmpce->bmpce_flags = BMPCE_NEW;
 
 	return (0);
@@ -163,7 +163,7 @@ bmpc_slb_init(struct sl_buffer *slb)
 	atomic_set(&slb->slb_ref, 0);
 	atomic_set(&slb->slb_unmapd_ref, 0);
 	atomic_set(&slb->slb_inflight, 0);
-	LOCK_INIT(&slb->slb_lock);
+	INIT_SPINLOCK(&slb->slb_lock);
 	slb->slb_flags = SLB_FRESH;
 	INIT_PSCLIST_HEAD(&slb->slb_iov_list);
 	INIT_PSC_LISTENTRY(&slb->slb_fcmh_lentry);
@@ -534,7 +534,7 @@ bmpc_global_init(void)
 	timespecclear(&bmpcSlabs.bmms_minage);
 	timespecadd(&bmpcSlabs.bmms_minage, &ts, &bmpcSlabs.bmms_minage);
 
-	LOCK_INIT(&bmpcSlabs.bmms_lock);
+	INIT_SPINLOCK(&bmpcSlabs.bmms_lock);
 	psc_waitq_init(&bmpcSlabs.bmms_waitq);
 
 	pll_init(&bmpcSlabs.bmms_slbs, struct sl_buffer,

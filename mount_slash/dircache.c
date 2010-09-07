@@ -55,7 +55,7 @@ dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
 	m->dcm_maxsz = maxsz;
 	m->dcm_alloc = 0;
 
-	LOCK_INIT(&m->dcm_lock);
+	INIT_SPINLOCK(&m->dcm_lock);
 	lc_reginit(&m->dcm_lc, struct dircache_ents, de_lentry_lc, "%s", name);
 }
 
@@ -66,7 +66,7 @@ dircache_init_info(struct dircache_info *i, struct fidc_membh *f,
 	i->di_dcm = m;
 	i->di_fcmh = f;
 	INIT_PSCLIST_HEAD(&i->di_list);
-	LOCK_INIT(&i->di_lock);
+	INIT_SPINLOCK(&i->di_lock);
 }
 
 static void

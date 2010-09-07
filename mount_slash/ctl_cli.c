@@ -213,7 +213,7 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	mrsq.mrsq_fn = mrq->mrq_fn;
 	mrsq.mrsq_ctlrc = 1;
 	mrsq.mrsq_mh = mh;
-	LOCK_INIT(&mrsq.mrsq_lock);
+	INIT_SPINLOCK(&mrsq.mrsq_lock);
 	psc_waitq_init(&mrsq.mrsq_waitq);
 	spinlock(&mrsq.mrsq_lock);
 

@@ -379,7 +379,7 @@ bmpc_init(struct bmap_pagecache *bmpc)
 {
 	memset(bmpc, 0, sizeof(*bmpc));
 
-	LOCK_INIT(&bmpc->bmpc_lock);
+	INIT_SPINLOCK(&bmpc->bmpc_lock);
 
 	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
 		 bmpce_lentry, &bmpc->bmpc_lock);
@@ -401,7 +401,7 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 {
 	memset(ioreq, 0, sizeof(*ioreq));
 	psc_waitq_init(&ioreq->biorq_waitq);
-	LOCK_INIT(&ioreq->biorq_lock);
+	INIT_SPINLOCK(&ioreq->biorq_lock);
 	PFL_GETTIMESPEC(&ioreq->biorq_start);
 
 	ioreq->biorq_off  = off;

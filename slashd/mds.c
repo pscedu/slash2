@@ -1034,7 +1034,7 @@ mds_bml_get(void)
 
 	bml = psc_pool_get(bmapMdsLeasePool);
 	memset(bml, 0, sizeof(*bml));
-	LOCK_INIT(&bml->bml_lock);
+	INIT_SPINLOCK(&bml->bml_lock);
 	return (bml);
 }
 

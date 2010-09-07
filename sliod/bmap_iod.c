@@ -41,7 +41,7 @@ struct psc_listcache	 bmapRlsQ;
 void
 bim_init(void)
 {
-	LOCK_INIT(&bimSeq.bim_lock);
+	INIT_SPINLOCK(&bimSeq.bim_lock);
 	psc_waitq_init(&bimSeq.bim_waitq);
 	bimSeq.bim_minseq = 0;
 }
@@ -431,7 +431,7 @@ iod_bmap_init(struct bmapc_memb *b)
 	biod = bmap_2_bii(b);
 	biod->biod_bcr_xid = biod->biod_bcr_xid_last = 0;
 	INIT_PSC_LISTENTRY(&biod->biod_lentry);
-	LOCK_INIT(&biod->biod_lock);
+	INIT_SPINLOCK(&biod->biod_lock);
 	SPLAY_INIT(&biod->biod_slvrs);
 	pll_init(&biod->biod_bklog_bcrs, struct biod_crcup_ref,
 	    bcr_lentry, &biod->biod_lock);

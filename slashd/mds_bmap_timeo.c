@@ -49,7 +49,7 @@ mds_bmap_timeotbl_init(void)
 	int i;
 	struct bmap_timeo_entry *e;
 
-	LOCK_INIT(&mdsBmapTimeoTbl.btt_lock);
+	INIT_SPINLOCK(&mdsBmapTimeoTbl.btt_lock);
 
 	mdsBmapTimeoTbl.btt_nentries = BMAP_TIMEO_TBL_SZ;
 	mdsBmapTimeoTbl.btt_entries =
