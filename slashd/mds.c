@@ -917,6 +917,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	}
 
 	mds_bmap_bml_del_locked(bml);
+	bml->bml_flags &= ~BML_BMDSI;
+
 	BML_ULOCK(bml);
 
 	if ((b->bcm_flags & BMAP_DIO) &&
