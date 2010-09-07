@@ -55,7 +55,7 @@
 #include "up_sched_res.h"
 
 uint64_t next_slash_id;
-static psc_spinlock_t slash_id_lock = LOCK_INITIALIZER;
+static psc_spinlock_t slash_id_lock = SPINLOCK_INIT;
 
 uint64_t
 slm_get_curr_slashid(void)

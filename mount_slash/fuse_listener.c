@@ -203,7 +203,7 @@ destroy_fs(int i)
 static void *
 slash2fuse_listener_loop(__unusedx void *arg)
 {
-	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	static psc_spinlock_t lock = SPINLOCK_INIT;
 	static struct psc_waitq wq = PSC_WAITQ_INIT;
 	static int busy;
 

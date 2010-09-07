@@ -74,7 +74,7 @@ static uint64_t			 propagate_seqno_hwm;
 static int			 current_logfile = -1;
 
 struct psc_waitq		 mds_namespace_waitq = PSC_WAITQ_INIT;
-psc_spinlock_t			 mds_namespace_waitqlock = LOCK_INITIALIZER;
+psc_spinlock_t			 mds_namespace_waitqlock = SPINLOCK_INIT;
 
 /* max # of buffers used to decrease I/O */
 #define	SL_NAMESPACE_MAX_BUF	 8
@@ -95,12 +95,12 @@ struct sl_mds_peerinfo		*localinfo = NULL;
 
 /* list of peer MDSes and its lock */
 struct psc_dynarray			 mds_namespace_peerlist = DYNARRAY_INIT;
-psc_spinlock_t				 mds_namespace_peerlist_lock = LOCK_INITIALIZER;
+psc_spinlock_t				 mds_namespace_peerlist_lock = SPINLOCK_INIT;
 
 static void				*mds_cursor_handle = NULL;
 static struct psc_journal_cursor	 mds_cursor;
 
-psc_spinlock_t				 mds_txg_lock = LOCK_INITIALIZER;
+psc_spinlock_t				 mds_txg_lock = SPINLOCK_INIT;
 
 int
 mds_peerinfo_cmp(const void *a, const void *b)
@@ -113,7 +113,7 @@ mds_peerinfo_cmp(const void *a, const void *b)
 uint64_t
 mds_get_next_seqno(void)
 {
-	static psc_spinlock_t lock = LOCK_INITIALIZER;
+	static psc_spinlock_t lock = SPINLOCK_INIT;
 	uint64_t seqno;
 
 	spinlock(&lock);

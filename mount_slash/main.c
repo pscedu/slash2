@@ -76,7 +76,7 @@ struct fuse_session		*fuse_session;
 struct sl_resm			*slc_rmc_resm;
 
 struct psc_vbitmap		 msfsthr_uniqidmap = VBITMAP_INIT_AUTO;
-psc_spinlock_t			 msfsthr_uniqidmap_lock = LOCK_INITIALIZER;
+psc_spinlock_t			 msfsthr_uniqidmap_lock = SPINLOCK_INIT;
 
 struct slash_creds		 rootcreds = { 0, 0 };
 

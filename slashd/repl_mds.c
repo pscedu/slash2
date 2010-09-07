@@ -59,7 +59,7 @@
 struct psc_listcache	 slm_replst_workq;
 
 struct psc_vbitmap	*repl_busytable;
-psc_spinlock_t		 repl_busytable_lock = LOCK_INITIALIZER;
+psc_spinlock_t		 repl_busytable_lock = SPINLOCK_INIT;
 int			 repl_busytable_nents;
 sl_ino_t		 mds_upschdir_inum;
 
