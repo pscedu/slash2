@@ -623,7 +623,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 }
 
 void
-bmap_flush(void)
+bmap_flush(int nrpcs)
 {
 	struct psc_dynarray a = DYNARRAY_INIT, bmaps = DYNARRAY_INIT, *biorqs;
 	struct bmap_pagecache *bmpc;
@@ -631,14 +631,7 @@ bmap_flush(void)
 	struct iovec *iovs = NULL;
 	struct bmap_cli_info *bci;
 	struct bmapc_memb *b;
-	int i = 0, niovs, nrpcs;
-
-	nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
-
-	if (nrpcs <= 0) {
-		psc_trace("nrpcs=%d", nrpcs);
-		return;
-	}
+	int i = 0, niovs;
 
 	while (nrpcs > 0) {
 		b = lc_getnb(&bmapFlushQ);
@@ -994,9 +987,11 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 void
 msbmapflushthr_main(__unusedx struct psc_thread *thr)
 {
+	int nrpcs;
 	while (pscthr_run()) {
-		if (atomic_read(&outstandingRpcCnt) < MAX_OUTSTANDING_RPCS)
-			bmap_flush();
+		nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
+		if (nrpcs > 0)
+			bmap_flush(nrpcs);
 		usleep(2048);
 	}
 }
