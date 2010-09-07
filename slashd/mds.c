@@ -893,8 +893,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		} else
 			psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
 		EXPORT_UNLOCK(bml->bml_exp);
-
-		bml->bml_flags &= ~BML_EXP;
 	}
 
 	if (bml->bml_flags & BML_TIMEOQ)
