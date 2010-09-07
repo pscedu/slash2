@@ -97,6 +97,10 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 	return (0);
 }
 
+/**
+ * mdscoh_req - request a lease holder to do direct I/O as the result of a conflicting
+ *     access request.
+ */
 int
 mdscoh_req(struct bmap_mds_lease *bml, int block)
 {
