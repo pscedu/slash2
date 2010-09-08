@@ -65,7 +65,6 @@ fcmh_destroy(struct fidc_membh *f)
 			sl_fcmh_ops.sfop_dtor(f);
 	}
 
-	memset(f, 0, fidcPoolMaster.pms_entsize);
 	f->fcmh_flags = FCMH_CAC_FREE;
 	fcmh_put(f);
 }
@@ -81,7 +80,6 @@ fcmh_destroy(struct fidc_membh *f)
  *		(o) file size
  *		(o) mtime
  *     (2) This function should only be used by a client.
- *
  */
 void
 fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
