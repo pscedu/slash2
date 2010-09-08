@@ -368,7 +368,7 @@ msl_biorq_destroy(struct bmpc_ioreq *r)
 	spinlock(&r->biorq_lock);
 
 	/* Reads req's have their BIORQ_SCHED and BIORQ_INFL flags
-	 *    cleared in msl_readio_cb to unblock waiting
+	 *    cleared in msl_read_cb to unblock waiting
 	 *    threads at the earliest possible moment.
 	 */
 	if (!(r->biorq_flags & BIORQ_DIO)) {
@@ -891,14 +891,14 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 }
 
 /**
- * msl_readio_cb - rpc callback used only for read or RBW operations.
+ * msl_read_cb - rpc callback used only for read or RBW operations.
  *    The primary purpose is to set the bmpce's to DATARDY so that other
  *    threads waiting for DATARDY may be unblocked.
  *  Note: Unref of the biorq will happen after the pages have been
  *     copied out to the applicaton buffers.
  */
 int
-msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
+msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 {
 	struct psc_dynarray *a = args->pointer_arg[MSL_CB_POINTER_SLOT_BMPCES];
 	struct bmpc_ioreq *r = args->pointer_arg[MSL_CB_POINTER_SLOT_BIORQ];
@@ -969,7 +969,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			memset(bmpce->bmpce_base, 0, BMPC_BUFSZ);
 		}
 
-		DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via readio_cb");
+		DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via read_cb");
 
 		/* Disown the bmpce by null'ing the waitq pointer.
 		 */
@@ -978,7 +978,7 @@ msl_readio_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	}
 	freelock(&r->biorq_lock);
 
-	/* Free the dynarray which was allocated in msl_readio_rpc_create().
+	/* Free the dynarray which was allocated in msl_read_rpc_create().
 	 */
 	psc_dynarray_free(a);
 	PSCFREE(a);
@@ -1187,7 +1187,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 }
 
 __static void
-msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
+msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 {
 	struct bmap_pagecache_entry *bmpce;
 	struct slashrpc_cservice *csvc;
@@ -1268,7 +1268,7 @@ msl_readio_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	pscrpc_set_add_new_req(r->biorq_rqset, req);
 	/* Setup the callback, supplying the dynarray as a argument.
 	 */
-	req->rq_interpret_reply = msl_readio_cb;
+	req->rq_interpret_reply = msl_read_cb;
 	req->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BMPCES] = a;
 	req->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_BIORQ] = r;
 	req->rq_async_args.pointer_arg[MSL_CB_POINTER_SLOT_CSVC] = csvc;
@@ -1330,12 +1330,12 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 					j = i;
 			} else {
 				if (!biorq_is_my_bmpce(r, bmpce)) {
-					msl_readio_rpc_create(r, j, i-j);
+					msl_read_rpc_create(r, j, i-j);
 					j = -1;
 					sched = 1;
 
 				} else if ((i-j) == BMPC_MAXBUFSRPC) {
-					msl_readio_rpc_create(r, j, i-j);
+					msl_read_rpc_create(r, j, i-j);
 					j = i;
 					sched = 1;
 				}
@@ -1345,7 +1345,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		if (j >= 0) {
 			/* Catch any unsent frags at the end of the array.
 			 */
-			msl_readio_rpc_create(r, j, i-j);
+			msl_read_rpc_create(r, j, i-j);
 			sched = 1;
 		}
 
@@ -1357,7 +1357,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				psc_assert(!(bmpce->bmpce_flags &
 					     BMPCE_DATARDY));
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-				msl_readio_rpc_create(r, 0, 1);
+				msl_read_rpc_create(r, 0, 1);
 				sched = 1;
 			}
 		}
@@ -1370,7 +1370,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				psc_assert(!(bmpce->bmpce_flags &
 					     BMPCE_DATARDY));
 				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-				msl_readio_rpc_create(r,
+				msl_read_rpc_create(r,
 						      psc_dynarray_len(&r->biorq_pages)-1, 1);
 				sched = 1;
 			}
@@ -1397,7 +1397,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		if (rc)
 			// XXX need to cleanup properly
 			psc_fatalx("pscrpc_set_wait rc=%d", rc);
-		/* The set cb is not being used, msl_readio_cb() is
+		/* The set cb is not being used, msl_read_cb() is
 		 *   called for every rpc in the set.  This was causing
 		 *   the biorq to have its flags mod'd in an incorrect
 		 *   fashion.  For now, the following lines will be moved
@@ -1406,7 +1406,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 		spinlock(&r->biorq_lock);
 		r->biorq_flags &= ~(BIORQ_RBWLP|BIORQ_RBWFP|
 				    BIORQ_INFL|BIORQ_SCHED);
-		DEBUG_BIORQ(PLL_INFO, r, "readio cb complete");
+		DEBUG_BIORQ(PLL_INFO, r, "read cb complete");
 		psc_waitq_wakeall(&r->biorq_waitq);
 		freelock(&r->biorq_lock);
 		/* Destroy and cleanup the set now.
