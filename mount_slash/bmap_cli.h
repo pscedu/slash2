@@ -29,7 +29,7 @@
 #include "slashrpc.h"
 
 /*
- * bmap_cli_data - assigned to bmap_get_pri() for mount_slash client.
+ * bmap_cli_data - private data associated with a bmap used by a SLASH2 client
  */
 struct bmap_cli_info {
 	struct bmap_pagecache	 bci_bmpc;
