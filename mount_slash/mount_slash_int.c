@@ -72,9 +72,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 {
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
-	struct bmap_pagecache_entry *bmpce, *bmpce_tmp;
+	struct bmap_pagecache_entry *bmpce, *bmpce_tmp, *bmpce_new;
 	int i, npages=0, rbw=0;
-	uint64_t bmpce_pagemap=0;
 	off_t origoff=off;
 
 	DEBUG_BMAP(PLL_TRACE, b, "adding req for (off=%u) (size=%u)",
@@ -128,67 +127,53 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	/* Lock the bmap's page cache and try to locate cached pages
 	 *   which correspond to this request.
 	 */
+	i = 0;
+	bmpce_new = NULL;
 	BMPC_LOCK(bmpc);
-	for (i=0; i < npages; i++) {
+	while (i < npages) {
 		bmpce_tmp->bmpce_off = off + (i * BMPC_BUFSZ);
 		bmpce = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
 				   bmpce_tmp);
-		if (bmpce) {
-			BMPCE_LOCK(bmpce);
-			/* Increment the ref cnt via the lru mgmt
-			 *   function.
-			 */
-			bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
-			if (!i && (bmpce->bmpce_flags & BMPCE_DATARDY) &&
-			    (rbw & BIORQ_RBWFP))
-				rbw &= ~BIORQ_RBWFP;
-			else if (i == (npages - 1) &&
-				 (bmpce->bmpce_flags & BMPCE_DATARDY) &&
-				 (rbw & BIORQ_RBWLP))
-				rbw &= ~BIORQ_RBWLP;
-
-			BMPCE_ULOCK(bmpce);
-			/* Mark this cache block as being already present
-			 *   in the cache.
-			 */
-			bmpce_pagemap |= (1 << i);
-			psc_dynarray_add(&r->biorq_pages, bmpce);
-		}
-	}
-	BMPC_ULOCK(bmpc);
-	/* Drop the lock and now try to allocate any needed bmpce's from
-	 *    the pool.  Free the bmpce_tmp, it's no longer needed.
-	 */
-	PSCFREE(bmpce_tmp);
-	/* Obtain any bmpce's which were not already present in the cache.
-	 */
-	for (i=0; i < npages; i++) {
-		if (bmpce_pagemap & (1 << i))
-			continue;
-
-		bmpce = psc_pool_get(bmpcePoolMgr);
-		bmpce_useprep(bmpce, r);
-		bmpce->bmpce_off = off + (i * BMPC_BUFSZ);
-		/* Atomically lookup and add the bmpce to the tree
-		 *   if one of the same offset isn't already there.
-		 */
-		BMPC_LOCK(bmpc);
-		bmpce_tmp = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
-				       bmpce);
-		if (!bmpce_tmp)
+		if (!bmpce) {
+			if (bmpce_new == NULL) {
+				BMPC_ULOCK(bmpc);
+				bmpce_new = psc_pool_get(bmpcePoolMgr);
+				BMPC_LOCK(bmpc);
+				continue;
+			}
+			bmpce = bmpce_new;
+			bmpce_new = NULL;
+			bmpce_useprep(bmpce, r);
+			bmpce->bmpce_off = off + (i * BMPC_BUFSZ);
 			SPLAY_INSERT(bmap_pagecachetree, &bmpc->bmpc_tree,
 				     bmpce);
-		else {
-			bmpce_init(bmpcePoolMgr, bmpce);
-			psc_pool_return(bmpcePoolMgr, bmpce);
-			bmpce = bmpce_tmp;
 		}
 		BMPCE_LOCK(bmpce);
+		/* Increment the ref cnt via the lru mgmt
+		 *   function.
+		 */
 		bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
+		/*
+ 		 * See if we can remove RBW flags.   Note that a new page
+ 		 * won't have BMPCE_DATARDY flag set.
+ 		 */
+		if (!i && (bmpce->bmpce_flags & BMPCE_DATARDY) &&
+		    (rbw & BIORQ_RBWFP))
+			rbw &= ~BIORQ_RBWFP;
+		else if (i == (npages - 1) &&
+			 (bmpce->bmpce_flags & BMPCE_DATARDY) &&
+			 (rbw & BIORQ_RBWLP))
+			rbw &= ~BIORQ_RBWLP;
+
 		BMPCE_ULOCK(bmpce);
-		BMPC_ULOCK(bmpc);
 		psc_dynarray_add(&r->biorq_pages, bmpce);
+		i++;
 	}
+	BMPC_ULOCK(bmpc);
+	PSCFREE(bmpce_tmp);
+	if (unlikely(bmpce_new))
+		psc_pool_return(bmpcePoolMgr, bmpce_new);
+
 	psc_assert(psc_dynarray_len(&r->biorq_pages) == npages);
 	/* Sort the list by offset.
 	 */
