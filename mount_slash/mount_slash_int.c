@@ -101,8 +101,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 
 	bmpc = bmap_2_bmpc(b);
 	/* How many pages are needed to accommodate the request?
-	 *   Determine and record whether RBW operations are needed on
-	 *   the first or last pages.
+	 *   Determine and record whether RBW (read-before-write) 
+	 *   operations are needed on the first or last pages.
 	 */
 	if (off & BMPC_BUFMASK) {
 		/* Align the offset to the beginning of the first
