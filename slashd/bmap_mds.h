@@ -199,19 +199,19 @@ struct bmap_mds_lease {
 };
 
 /* bml_flags */
-#define	BML_READ	(1 <<  0)
-#define	BML_WRITE	(1 <<  1)
-#define	BML_CDIO	(1 <<  2)
-#define	BML_COHRLS	(1 <<  3)
-#define	BML_COHDIO	(1 <<  4)
-#define	BML_EXP		(1 <<  5)
-#define	BML_TIMEOQ	(1 <<  6)
-#define	BML_BMDSI	(1 <<  7)
-#define	BML_COH		(1 <<  8)
-#define	BML_RECOVER	(1 <<  9)
-#define	BML_CHAIN	(1 << 10)
-#define	BML_UPGRADE	(1 << 11)
-#define	BML_EXPFAIL	(1 << 12)
+#define	BML_READ		(1 <<  0)
+#define	BML_WRITE		(1 <<  1)
+#define	BML_CDIO		(1 <<  2)
+#define	BML_COHRLS		(1 <<  3)
+#define	BML_COHDIO		(1 <<  4)
+#define	BML_EXP			(1 <<  5)
+#define	BML_TIMEOQ		(1 <<  6)
+#define	BML_BMDSI		(1 <<  7)
+#define	BML_COH			(1 <<  8)
+#define	BML_RECOVER		(1 <<  9)
+#define	BML_CHAIN		(1 << 10)
+#define	BML_UPGRADE		(1 << 11)
+#define	BML_EXPFAIL		(1 << 12)
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmdsi)
 

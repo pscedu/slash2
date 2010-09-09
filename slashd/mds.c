@@ -639,7 +639,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		   bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
 
 	if (obml) {
-		struct bmap_mds_lease *tmp=obml;
+		struct bmap_mds_lease *tmp = obml;
 
 		bml->bml_flags |= BML_CHAIN;
 		/* Add ourselves to the end.
@@ -837,10 +837,10 @@ mds_bmap_bml_del_locked(struct bmap_mds_lease *bml)
 int
 mds_bmap_bml_release(struct bmap_mds_lease *bml)
 {
-	struct bmapc_memb *b=bml_2_bmap(bml);
-	struct bmap_mds_info *bmdsi=bml->bml_bmdsi;
-	struct odtable_receipt *odtr=NULL;
-	int rc=0, locked;
+	struct bmapc_memb *b = bml_2_bmap(bml);
+	struct bmap_mds_info *bmdsi = bml->bml_bmdsi;
+	struct odtable_receipt *odtr = NULL;
+	int rc = 0, locked;
 
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 
@@ -937,7 +937,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		bia = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
 		psc_assert(bia && bia->bia_seq == bmdsi->bmdsi_seq);
 		psc_assert(bia->bia_bmapno == b->bcm_bmapno);
-		/* End Sanity Checks.
+		/* End sanity checks.
 		 */
 		atomic_dec(&bmdsi->bmdsi_wr_ion->rmmi_refcnt);
 		odtr = bmdsi->bmdsi_assign;
@@ -948,7 +948,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 *    the lock.
 	 */
  out:
-	(int)BMAP_RLOCK(b);
+	BMAP_RLOCK(b);
 	b->bcm_flags &= ~BMAP_IONASSIGN;
 	bcm_wake_locked(b);
 	bmap_op_done_type(b, BMAP_OPCNT_LEASE);
@@ -1034,6 +1034,10 @@ mds_bml_get(void)
 
 	bml = psc_pool_get(bmapMdsLeasePool);
 	memset(bml, 0, sizeof(*bml));
+	INIT_PSC_LISTENTRY(&bml->bml_bmdsi_lentry);
+	INIT_PSC_LISTENTRY(&bml->bml_timeo_lentry);
+	INIT_PSC_LISTENTRY(&bml->bml_exp_lentry);
+	INIT_PSC_LISTENTRY(&bml->bml_coh_lentry);
 	INIT_SPINLOCK(&bml->bml_lock);
 	return (bml);
 }

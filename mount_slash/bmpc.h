@@ -27,6 +27,7 @@
 
 #include <time.h>
 
+#include "pfl/time.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_ds/lockedlist.h"
@@ -35,7 +36,6 @@
 #include "psc_util/atomic.h"
 #include "psc_util/lock.h"
 #include "psc_util/pool.h"
-#include "pfl/time.h"
 #include "psc_util/waitq.h"
 
 #include "cache_params.h"
@@ -189,7 +189,7 @@ struct bmap_pagecache {
 	struct bmap_pagecachetree	 bmpc_tree;	/* tree of cbuf_handle        */
 	struct timespec			 bmpc_oldest;	/* LRU's oldest item          */
 #ifdef BMPC_RBTREE
-	struct bmap_lrutree              bmpc_lrutree;
+	struct bmap_lrutree		 bmpc_lrutree;
 #else
 	struct psc_lockedlist		 bmpc_lru;	/* cleancnt can be kept here  */
 #endif
@@ -241,19 +241,17 @@ struct bmpc_ioreq {
 	void				*biorq_fhent;	/* back pointer to msl_fhent */
 };
 
-enum {
-	BIORQ_READ			= (1 << 0),
-	BIORQ_WRITE			= (1 << 1),
-	BIORQ_RBWFP			= (1 << 2),	/* read before write - first page */
-	BIORQ_RBWLP			= (1 << 3),	/* read before write - last page */
-	BIORQ_SCHED			= (1 << 4),
-	BIORQ_INFL			= (1 << 5),
-	BIORQ_DIO			= (1 << 6),
-	BIORQ_FORCE_EXPIRE		= (1 << 7),
-	BIORQ_DESTROY			= (1 << 8),
-	BIORQ_FLUSHRDY			= (1 << 9),
-	BIORQ_NOFHENT			= (1 << 10)	/* release a file handle before flush is complete */
-};
+#define	BIORQ_READ			(1 <<  0)
+#define	BIORQ_WRITE			(1 <<  1)
+#define	BIORQ_RBWFP			(1 <<  2)	/* read before write - first page */
+#define	BIORQ_RBWLP			(1 <<  3)	/* read before write - last page */
+#define	BIORQ_SCHED			(1 <<  4)
+#define	BIORQ_INFL			(1 <<  5)
+#define	BIORQ_DIO			(1 <<  6)
+#define	BIORQ_FORCE_EXPIRE		(1 <<  7)
+#define	BIORQ_DESTROY			(1 <<  8)
+#define	BIORQ_FLUSHRDY			(1 <<  9)
+#define	BIORQ_NOFHENT			(1 << 10)	/* release a file handle before flush is complete */
 
 #define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BIORQ_FLAGS(b)						\
@@ -376,7 +374,7 @@ static __inline void
 bmpc_init(struct bmap_pagecache *bmpc)
 {
 	memset(bmpc, 0, sizeof(*bmpc));
-
+	INIT_PSC_LISTENTRY(&bmpc->bmpc_lentry);
 	INIT_SPINLOCK(&bmpc->bmpc_lock);
 
 	pll_init(&bmpc->bmpc_lru, struct bmap_pagecache_entry,
@@ -399,6 +397,8 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 {
 	memset(ioreq, 0, sizeof(*ioreq));
 	psc_waitq_init(&ioreq->biorq_waitq);
+	INIT_PSC_LISTENTRY(&ioreq->biorq_lentry);
+	INIT_PSC_LISTENTRY(&ioreq->biorq_mfh_lentry);
 	INIT_SPINLOCK(&ioreq->biorq_lock);
 	PFL_GETTIMESPEC(&ioreq->biorq_start);
 

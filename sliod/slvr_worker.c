@@ -427,6 +427,8 @@ slvr_worker_int(void)
 				 (sizeof(struct srm_bmap_crcwire) *
 				  MAX_BMAP_INODE_PAIRS));
 
+		INIT_PSC_LISTENTRY(&bcr->bcr_lentry);
+
 		bcr->bcr_biodi = slvr_2_biod(s);
 		bcr->bcr_xid = slvr_2_biod(s)->biod_bcr_xid;
 		slvr_2_biod(s)->biod_bcr_xid++;
