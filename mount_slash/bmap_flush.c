@@ -384,7 +384,7 @@ bmap_flush_coalesce_map(const struct psc_dynarray *biorqs,
 	struct iovec *iovs=NULL;
 	int i, j, niovs=0, first_iov;
 	uint32_t tot_reqsz=bmap_flush_coalesce_size(biorqs), reqsz;
-	off_t off;
+	off_t off = 0; /* gcc */
 
 	psc_trace("ENTRY: biorqs=%p tot_reqsz=%u", biorqs, tot_reqsz);
 
