@@ -266,6 +266,10 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 
 	csvc = slm_geticsvc(resm);
 	if (csvc == NULL)
+		/*
+ 		 * This can happen if the MDS finds bmap leases in
+ 		 * the odtable and we didn't start the I/O server.
+ 		 */
 		return (-SLERR_ION_OFFLINE);
 
 	rmmi = resm->resm_pri;
