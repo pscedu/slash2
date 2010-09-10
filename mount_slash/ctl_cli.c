@@ -34,7 +34,7 @@
 #include "psc_util/ctlsvr.h"
 #include "psc_util/net.h"
 
-#include "../ulnds/socklnd/usocklnd.h"
+#include "ulnds/socklnd/usocklnd.h"
 
 #include "ctl.h"
 #include "ctl_cli.h"
@@ -209,13 +209,14 @@ msctlrep_getreplst(int fd, struct psc_ctlmsghdr *mh, void *m)
 	mq->id = fd;
 
 	memset(&mrsq, 0, sizeof(mrsq));
+	INIT_PSC_LISTENTRY(&mrsq.mrsq_lentry);
+	INIT_SPINLOCK(&mrsq.mrsq_lock);
+	psc_waitq_init(&mrsq.mrsq_waitq);
+	spinlock(&mrsq.mrsq_lock);
 	mrsq.mrsq_fd = fd;
 	mrsq.mrsq_fn = mrq->mrq_fn;
 	mrsq.mrsq_ctlrc = 1;
 	mrsq.mrsq_mh = mh;
-	INIT_SPINLOCK(&mrsq.mrsq_lock);
-	psc_waitq_init(&mrsq.mrsq_waitq);
-	spinlock(&mrsq.mrsq_lock);
 
 	pll_add(&msctl_replsts, &mrsq);
 	added = 1;
