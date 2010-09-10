@@ -718,6 +718,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
  			 * it expires.
  			 */
 			if ((bml->bml_flags & BML_RECOVER) && (rc == -SLERR_ION_OFFLINE)) {
+				rc = 0;
 				b->bcm_flags |= BMAP_MDS_NOION;
 				goto out;
 			}
