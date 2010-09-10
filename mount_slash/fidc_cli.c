@@ -106,7 +106,7 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 void
 slc_fcmh_dtor(struct fidc_membh *fcmh)
 {
-	if (fcmh_isdir(fcmh)) {
+	if (fcmh_isdir(fcmh) && DIRCACHE_INITIALIZED(fcmh)) {
 		struct fcmh_cli_info *fci;
 
 		fci = fcmh_get_pri(fcmh);
