@@ -1201,7 +1201,7 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 		psc_fatalx("SL_RSX_NEWREQ() failed %d", rc);
 
 	iovs = PSCALLOC(sizeof(*iovs) * npages);
-	a = PSCALLOC(sizeof(a));
+	a = PSCALLOC(sizeof(*a));
 	psc_dynarray_init(a);
 
 	for (i=0; i < npages; i++) {
