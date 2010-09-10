@@ -705,6 +705,7 @@ void
 uswi_init(struct up_sched_work_item *wk, slfid_t fid)
 {
 	memset(wk, 0, sizeof(*wk));
+	INIT_PSC_LISTENTRY(&wk->uswi_lentry);
 	wk->uswi_flags |= USWIF_BUSY;
 	psc_pthread_mutex_init(&wk->uswi_mutex);
 	psc_multiwaitcond_init(&wk->uswi_mwcond,
