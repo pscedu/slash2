@@ -675,8 +675,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 			to_set |= SETATTR_MASKF_PTRUNCGEN;
 
-			wk = psc_pool_get(upsched_pool);
-
 			/* XXX what do we do with bmap leases that are
 			 * concurrently granted?
 			 */
