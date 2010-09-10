@@ -24,14 +24,14 @@
 #include <string.h>
 
 #include "pfl/cdefs.h"
-#include "pfl/str.h"
 #include "pfl/hashtbl.h"
+#include "pfl/str.h"
+#include "pfl/time.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/alloc.h"
 #include "psc_util/atomic.h"
-#include "pfl/time.h"
 
 #include "cache_params.h"
 #include "fid.h"
@@ -61,7 +61,7 @@ fcmh_setlocalsize(struct fidc_membh *h, uint64_t size)
 void
 slc_fcmh_refresh_age(struct fidc_membh *fcmh)
 {
-	struct timeval tmp = {FCMH_ATTR_TIMEO, 0};
+	struct timeval tmp = { FCMH_ATTR_TIMEO, 0 };
 	struct fcmh_cli_info *fci;
 
 	fci = fcmh_2_fci(fcmh);
@@ -69,37 +69,49 @@ slc_fcmh_refresh_age(struct fidc_membh *fcmh)
 	timeradd(&fci->fci_age, &tmp, &fci->fci_age);
 }
 
+void
+slc_fcmh_initdci(struct fidc_membh *fcmh)
+{
+	struct fcmh_cli_info *fci;
+	int locked;
+
+	fci = fcmh_get_pri(fcmh);
+
+	locked = FCMH_RLOCK(fcmh);
+	psc_assert(fcmh_isdir(fcmh));
+
+	INIT_PSCLIST_HEAD(&fci->fci_dci.di_list);
+	INIT_SPINLOCK(&fci->fci_dci.di_lock);
+	fci->fci_dci.di_dcm = &dircacheMgr;
+	fci->fci_dci.di_fcmh = fcmh;
+	fcmh->fcmh_flags |= FCMH_CLI_INITDCI;
+
+	FCMH_URLOCK(fcmh, locked);
+}
+
 int
 slc_fcmh_ctor(struct fidc_membh *fcmh)
 {
 	struct fcmh_cli_info *fci;
 
-	fci = fcmh_get_pri(fcmh);	
+	fci = fcmh_get_pri(fcmh);
 	memset(fci, 0, sizeof(*fci));
 	slc_fcmh_refresh_age(fcmh);
 
-	fci->fci_mode = fcmh->fcmh_sstb.sst_mode;
-	
-	if (fci->fci_mode && (fcmh_isdir(fcmh) || fcmh_2_fid(fcmh) == 1)) {
-		DIRCACHE_INIT(fcmh, &dircacheMgr);
-		fci->fci_init = 1;
-	} 
+	if (fcmh_isdir(fcmh))
+		slc_fcmh_initdci(fcmh);
 	return (0);
 }
 
 void
 slc_fcmh_dtor(struct fidc_membh *fcmh)
 {
-
 	if (fcmh_isdir(fcmh)) {
 		struct fcmh_cli_info *fci;
-		
+
 		fci = fcmh_get_pri(fcmh);
 
-		if (!fci->fci_init)
-			psc_assert(psclist_disjoint(&fci->fci_dci.di_list));
-		else
-			psc_assert(psc_listhd_empty(&fci->fci_dci.di_list));
+		psc_assert(psc_listhd_empty(&fci->fci_dci.di_list));
 	}
 }
 

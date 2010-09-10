@@ -429,11 +429,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		 *   means that dir fcmh's can't be initialized fully until
 		 *   here.
 		 */
-		if (!DIRCACHE_INITIALIZED(c)) {
-			FCMH_LOCK(c);
-			DIRCACHE_INIT(c, &dircacheMgr);
-			FCMH_ULOCK(c);
-		}
+		slc_fcmh_initdci(c);
 	} else {
 		if (fi->flags & O_DIRECTORY) {
 			rc = ENOTDIR;
@@ -785,13 +781,11 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	p = fidc_lookup_fid(parent);
 	if (p) {
-		if (!DIRCACHE_INITIALIZED(p)) {
-			FCMH_LOCK(p);
-			DIRCACHE_INIT(p, &dircacheMgr);
-			FCMH_ULOCK(p);
-		} else
+		if (DIRCACHE_INITIALIZED(p))
 			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
 				 name, DC_STALE);
+		else
+			slc_fcmh_initdci(p);
 
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	}
@@ -882,11 +876,9 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	mq->size = size;
 	mq->offset = off;
 
-	if (!DIRCACHE_INITIALIZED(d)) {
-		FCMH_LOCK(d);
-		DIRCACHE_INIT(d, &dircacheMgr);
-		FCMH_ULOCK(d);
-	}
+	if (!DIRCACHE_INITIALIZED(d))
+		slc_fcmh_initdci(d);
+
 	e = dircache_new_ents(&fcmh_2_fci(d)->fci_dci, size);
 
 	iov[niov].iov_base = e->de_base;
@@ -1046,11 +1038,8 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	if (!p)
 		goto out;
 
-	if (!DIRCACHE_INITIALIZED(p)) {
-		FCMH_LOCK(p);
-		DIRCACHE_INIT(p, &dircacheMgr);
-		FCMH_ULOCK(p);
-	}
+	if (!DIRCACHE_INITIALIZED(p))
+		slc_fcmh_initdci(p);
 
 	child = dircache_lookup(&fcmh_2_fci(p)->fci_dci, name, DC_LOOKUP);
 	/* It's ok to unref the parent now.
@@ -1273,13 +1262,11 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 
 	p = fidc_lookup_fid(parent);
 	if (p) {
-		if (!DIRCACHE_INITIALIZED(p)) {
-			FCMH_LOCK(p);
-			DIRCACHE_INIT(p, &dircacheMgr);
-			FCMH_ULOCK(p);
-		} else
+		if (DIRCACHE_INITIALIZED(p))
 			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
 				 name, DC_STALE);
+		else
+			slc_fcmh_initdci(p);
 
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	}

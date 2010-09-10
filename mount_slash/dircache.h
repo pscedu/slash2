@@ -104,23 +104,12 @@ dirent_sort_cmp(const void *x, const void *y)
 	return (dirent_cmp(a, b));
 }
 
-#define DIRCACHE_INIT(fcmh, mgr)					\
-	do {								\
-		if (!fcmh_2_fci(fcmh)->fci_init) {			\
-			dircache_init_info(&fcmh_2_fci(fcmh)->fci_dci,	\
-			    (fcmh), (mgr));				\
-			fcmh_2_fci(fcmh)->fci_init = 1;			\
-		}							\
-	} while (0)
-
-#define DIRCACHE_INITIALIZED(fcmh)					\
-	fcmh_2_fci(fcmh)->fci_init
+#define DIRCACHE_INITIALIZED(fcmh)	((fcmh)->fcmh_flags & FCMH_CLI_INITDCI)
 
 struct dircache_ents *
 	dircache_new_ents(struct dircache_info *, size_t);
 void	dircache_earlyrls_ents(struct dircache_ents *);
 void	dircache_init(struct dircache_mgr *, const char *, size_t);
-void	dircache_init_info(struct dircache_info *, struct fidc_membh *, struct dircache_mgr *);
 slfid_t	dircache_lookup(struct dircache_info *, const char *, int);
 void	dircache_reg_ents(struct dircache_ents *, size_t);
 void	dircache_setfreeable_ents(struct dircache_ents *);

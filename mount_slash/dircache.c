@@ -61,16 +61,6 @@ dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
 	    name);
 }
 
-void
-dircache_init_info(struct dircache_info *i, struct fidc_membh *f,
-	   struct dircache_mgr *m)
-{
-	i->di_dcm = m;
-	i->di_fcmh = f;
-	INIT_PSCLIST_HEAD(&i->di_list);
-	INIT_SPINLOCK(&i->di_lock);
-}
-
 static void
 dircache_rls_ents(struct dircache_ents *e)
 {
