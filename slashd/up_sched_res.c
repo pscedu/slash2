@@ -805,6 +805,7 @@ upsched_scandir(void)
 			for (j = 0; j < USWI_NREPLS(wk); j++)
 				iosv[j].bs_id = USWI_GETREPL(wk, j).bs_id;
 			uswi_enqueue_sites(wk, iosv, USWI_NREPLS(wk));
+			uswi_unref(wk);
 		}
 		off += tsiz;
 	}
