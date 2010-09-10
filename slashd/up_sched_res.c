@@ -770,7 +770,6 @@ upsched_scandir(void)
 				continue;
 			}
 
-			wk = psc_pool_get(upsched_pool);
 			rc = uswi_findoradd(&fg, &wk);
 			if (rc)
 				psc_fatal("uswi_findoradd: %s",
