@@ -386,6 +386,7 @@ replst_slave_check(struct psc_ctlmsghdr *mh, const void *m)
 		psc_fatalx("replication status bmap data: %s", slstrerror(rc));
 
 	rsb = PSCALLOC(sizeof(*rsb) + nbytes);
+	INIT_PSC_LISTENTRY(&rsb->rsb_lentry);
 	rsb->rsb_nbmaps = mrsl->mrsl_nbmaps;
 	rsb->rsb_boff = mrsl->mrsl_boff;
 	memcpy(rsb->rsb_data, mrsl->mrsl_data, nbytes);
