@@ -53,7 +53,7 @@ bmap_cmp(const void *x, const void *y)
 void
 bmap_remove(struct bmapc_memb *b)
 {
-	struct fidc_membh *f=b->bcm_fcmh;
+	struct fidc_membh *f = b->bcm_fcmh;
 	int locked;
 
 	BMAP_RLOCK(b);
