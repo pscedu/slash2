@@ -223,6 +223,7 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 int
 slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
+	int rc = 0;
 	const struct srm_leasebmap_req *mq;
 	struct srm_leasebmap_rep *mp;
 	struct fidc_membh *fcmh;
@@ -262,16 +263,17 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		    sizeof(ih->inoh_ino.ino_repls));
 
 		if (mp->nrepls > SL_DEF_REPLICAS) {
-			mds_inox_ensure_loaded(ih);
-			memcpy(&mp->reptbl[SL_DEF_REPLICAS],
-			    &ih->inoh_extras->inox_repls,
-			    sizeof(ih->inoh_extras->inox_repls));
+			rc = mds_inox_ensure_loaded(ih);
+			if (!rc)
+				memcpy(&mp->reptbl[SL_DEF_REPLICAS],
+				    &ih->inoh_extras->inox_repls,
+				    sizeof(ih->inoh_extras->inox_repls));
 		}
 	}
 
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
-	return (0);
+	return (rc);
 }
 
 int
