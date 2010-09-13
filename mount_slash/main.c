@@ -36,6 +36,7 @@
 #include "pfl/pfl.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
+#include "pfl/time.h"
 #include "psc_ds/vbitmap.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
@@ -44,7 +45,6 @@
 #include "psc_util/log.h"
 #include "psc_util/pool.h"
 #include "psc_util/thread.h"
-#include "pfl/time.h"
 #include "psc_util/usklndthr.h"
 
 #include "bmap_cli.h"
@@ -1820,7 +1820,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-dUX] [-f conf] [-o fuseopt] [-S socket] [-p prefetch] node\n",
+	    "usage: %s [-dUX] [-f conf] [-I iosystem] [-M mds] [-o fuseopt]\n"
+	    "\t[-p #prefetch] [-S socket] node\n",
 	    progname);
 	exit(1);
 }
@@ -1828,8 +1829,8 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	char c, *p, *noncanon_mp = NULL, *cfg = SL_PATH_CONF;
 	struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
+	char c, *p, *noncanon_mp, *cfg = SL_PATH_CONF;
 	int unmount_first = 0;
 	long l;
 
@@ -1846,13 +1847,19 @@ main(int argc, char *argv[])
 	msl_fuse_addarg(&args, FUSE_OPTIONS);
 
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "df:o:p:S:UXI:M:")) != -1)
+	while ((c = getopt(argc, argv, "df:I:M:o:p:S:UX")) != -1)
 		switch (c) {
 		case 'd':
 			msl_fuse_addarg(&args, "-odebug");
 			break;
 		case 'f':
 			cfg = optarg;
+			break;
+		case 'I':
+			setenv("SLASH2_PIOS_ID", optarg, 1);
+			break;
+		case 'M':
+			setenv("SLASH_MDS_NID", optarg, 1);
 			break;
 		case 'o':
 			msl_fuse_addarg(&args, "-o");
@@ -1862,8 +1869,8 @@ main(int argc, char *argv[])
 			l = strtol(optarg, &p, 10);
 			if (p == optarg || *p != '\0' ||
 			    l < 0 || l > MAX_READDIR_NENTS)
-				errx(1, "invalid readdir stat "
-				    "prefetch (max %d): %s",
+				errx(1, "invalid readdir statbuf "
+				    "#prefetch (max %d): %s",
 				    MAX_READDIR_NENTS, optarg);
 			nstbpref = (int)l;
 			break;
@@ -1878,24 +1885,17 @@ main(int argc, char *argv[])
 		case 'X':
 			allow_root_uid = 1;
 			break;
-		case 'M':
-			setenv("SLASH_MDS_NID", optarg, 1);
-			break;
-		case 'I':
-			setenv("SLASH2_PIOS_ID", optarg, 1);
-			break;
 		default:
 			usage();
 		}
 	argc -= optind;
 	argv += optind;
-	if (argc == 1)
-		noncanon_mp = argv[0];
-	else if (argc || noncanon_mp == NULL)
+	if (argc != 1)
 		usage();
 
 	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
 
+	noncanon_mp = argv[0];
 	if (unmount_first)
 		unmount(noncanon_mp);
 

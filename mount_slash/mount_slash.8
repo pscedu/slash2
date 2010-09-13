@@ -27,7 +27,10 @@ file system
 .Nm mount_slash
 .Op Fl dU
 .Op Fl f Ar conf
+.Op Fl I Ar iosystem
+.Op Fl M Ar mds
 .Op Fl o Ar fuseopt
+.Op Fl p Ar #prefetch
 .Op Fl S Ar socket
 .Ar mountpoint
 .Sh DESCRIPTION
@@ -48,6 +51,18 @@ debug messages.
 Specify an alternative configuration file.
 Defaults to
 .Pa /etc/slash.conf .
+.It Fl I Ar iosystem
+Specify the preferred
+.Tn I/O
+system resource name.
+.It Fl M Ar mds
+Specify the primary metadata server resource name.
+.It Fl p Ar #prefetch
+Specify the maximum number of file
+.Xr stat 2
+buffers to fetch when performing
+.Tn READDIR RPC Ns s .
+The default is as many as can fit.
 .It Fl o Ar fuseopt
 Pass an additional option to
 .Tn FUSE .
@@ -79,13 +94,17 @@ before attempting to bring up the file system.
 .Sh ENVIRONMENT
 .Bl -tag -width SLASH_MDS_SERVER_NIDx
 .It Ev SLASH_MDS_NID
-Metadata server address or resource name.
+Metadata server resource name.
+See also
+.Fl M .
 .It Ev SLASH2_PIOS_ID
 Preferred
 .Tn I/O
 server
 .Xr slash.conf 5
 resource name.
+See also
+.Fl I .
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
