@@ -30,6 +30,7 @@
 #include "bmap_iod.h"
 #include "buffer.h"
 #include "slashrpc.h"
+#include "subsys_iod.h"
 
 struct bmap_iod_info;
 
