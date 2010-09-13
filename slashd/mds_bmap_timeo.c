@@ -194,9 +194,6 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 	struct psc_dynarray a = DYNARRAY_INIT;
 	struct slmds_jent_bmapseq sjbsq;
 
-	psc_dynarray_ensurelen(&a, 2);
-	psc_dynarray_reset(&a);
-
 	while (pscthr_run()) {
 		spinlock(&mdsBmapTimeoTbl.btt_lock);
 		/* The oldest slot is always curslot + 1.
