@@ -92,6 +92,7 @@ main(int argc, char *argv[])
 
 	pfl_init();
 	sl_subsys_register();
+	psc_subsys_register(SLISS_SLVR, "slvr");
 
 	progname = argv[0];
 	cfn = SL_PATH_CONF;
