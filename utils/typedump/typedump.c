@@ -79,6 +79,7 @@
 #include "sliod/rpc_iod.h"
 #include "sliod/sliod.h"
 #include "sliod/slvr.h"
+#include "sliod/subsys_iod.h"
 /* end includes */
 
 struct bmap_ondisk bmapod;
@@ -522,20 +523,6 @@ main(int argc, char *argv[])
 	PRVAL(SLREST_NONE);
 	PRVAL(SLREST_PARALLEL_FS);
 	PRVAL(SLREST_STANDALONE_FS);
-	PRVAL(SLVR_CRCDIRTY);
-	PRVAL(SLVR_CRCING);
-	PRVAL(SLVR_DATAERR);
-	PRVAL(SLVR_DATARDY);
-	PRVAL(SLVR_FAULTING);
-	PRVAL(SLVR_FREEING);
-	PRVAL(SLVR_GETSLAB);
-	PRVAL(SLVR_LRU);
-	PRVAL(SLVR_NEW);
-	PRVAL(SLVR_PINNED);
-	PRVAL(SLVR_REPLDST);
-	PRVAL(SLVR_REPLSRC);
-	PRVAL(SLVR_SLBFREEING);
-	PRVAL(SLVR_SPLAYTREE);
 	PRVAL(SL_READ);
 	PRVAL(SL_WRITE);
 	PRVAL(SRMT_BMAPCHWRMODE);
