@@ -88,7 +88,7 @@ main(int argc, char *argv[])
 	snprintf(fn, sizeof(fn), "%s/example.conf", dirname(cp));
 	free(cp);
 
-	setenv("LNET_NETWORKS", "tcp10(lo)", 1);
+	setenv("LNET_NETWORKS", "tcp10(" CFS_LOOPBACK_IFNAME ")", 1);
 
 	while (((c = getopt(argc, argv, "c:")) != -1))
 		switch (c) {
