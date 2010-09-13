@@ -324,7 +324,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		 */
 		if (try_create) {
 			fcmh_put(fcmh_new);
-			fcmh_new = NULL;			/* defensive */
+			fcmh_new = NULL;
 		}
 
 #ifdef DEMOTED_INUM_WIDTHS
