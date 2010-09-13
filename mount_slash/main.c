@@ -1846,7 +1846,7 @@ main(int argc, char *argv[])
 	msl_fuse_addarg(&args, FUSE_OPTIONS);
 
 	progname = argv[0];
-	while ((c = getopt(argc, argv, "df:o:p:S:UX")) != -1)
+	while ((c = getopt(argc, argv, "df:o:p:S:UXI:M:")) != -1)
 		switch (c) {
 		case 'd':
 			msl_fuse_addarg(&args, "-odebug");
@@ -1877,6 +1877,12 @@ main(int argc, char *argv[])
 			break;
 		case 'X':
 			allow_root_uid = 1;
+			break;
+		case 'M':
+			setenv("SLASH_MDS_NID", optarg, 1);
+			break;
+		case 'I':
+			setenv("SLASH2_PIOS_ID", optarg, 1);
 			break;
 		default:
 			usage();
