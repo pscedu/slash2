@@ -781,6 +781,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	p = fidc_lookup_fid(parent);
 	if (p) {
+		FCMH_LOCK(p);
 		if (DIRCACHE_INITIALIZED(p))
 			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
 				 name, DC_STALE);
@@ -788,6 +789,7 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 			slc_fcmh_initdci(p);
 
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		FCMH_ULOCK(p);
 	}
 
 	rc = SL_RSX_WAITREP(rq, mp);
@@ -876,8 +878,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 	mq->size = size;
 	mq->offset = off;
 
+	FCMH_LOCK(d);
 	if (!DIRCACHE_INITIALIZED(d))
 		slc_fcmh_initdci(d);
+	FCMH_ULOCK(d);
 
 	e = dircache_new_ents(&fcmh_2_fci(d)->fci_dci, size);
 
@@ -1037,9 +1041,11 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	p = fidc_lookup_fid(parent);
 	if (!p)
 		goto out;
-
+	
+	FCMH_LOCK(p);
 	if (!DIRCACHE_INITIALIZED(p))
 		slc_fcmh_initdci(p);
+	FCMH_ULOCK(p);
 
 	child = dircache_lookup(&fcmh_2_fci(p)->fci_dci, name, DC_LOOKUP);
 	/* It's ok to unref the parent now.
@@ -1262,6 +1268,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 
 	p = fidc_lookup_fid(parent);
 	if (p) {
+		FCMH_LOCK(p);
 		if (DIRCACHE_INITIALIZED(p))
 			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
 				 name, DC_STALE);
@@ -1269,6 +1276,7 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 			slc_fcmh_initdci(p);
 
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+		FCMH_LOCK(p);
 	}
 
 	rc = SL_RSX_WAITREP(rq, mp);
