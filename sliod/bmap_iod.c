@@ -409,7 +409,7 @@ sliod_bmaprlsthr_main(__unusedx struct psc_thread *thr)
 		if (psc_dynarray_len(&a))
 			sleep(SLIOD_BMAP_RLS_WAIT_SECS);
 
-		psc_dynarray_reset(&a);
+		psc_dynarray_free(&a);
 	}
 }
 
