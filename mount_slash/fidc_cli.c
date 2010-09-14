@@ -100,8 +100,6 @@ slc_fcmh_ctor(struct fidc_membh *fcmh)
 	memset(fci, 0, sizeof(*fci));
 	slc_fcmh_refresh_age(fcmh);
 
-	if (fcmh_isdir(fcmh))
-		slc_fcmh_initdci(fcmh);
 	return (0);
 }
 
