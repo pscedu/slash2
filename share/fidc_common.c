@@ -121,17 +121,6 @@ fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 			sstb->sst_mtim = fcmh->fcmh_sstb.sst_mtim;
 	}
 
-	/*
-	 * The following asserts can be tripped if the MDS somehow reuses
-	 * the same SLASH2 FID for different files/directories.
-	 */
-	if (fcmh->fcmh_flags & FCMH_HAVE_ATTRS) {
-		if (fcmh_isdir(fcmh))
-			psc_assert(S_ISDIR(sstb->sst_mode));
-		if (!fcmh_isdir(fcmh))
-			psc_assert(!S_ISDIR(sstb->sst_mode));
-	}
-
 	fcmh->fcmh_sstb = *sstb;
 	fcmh->fcmh_flags |= FCMH_HAVE_ATTRS;
 	fcmh->fcmh_flags &= ~FCMH_GETTING_ATTRS;
