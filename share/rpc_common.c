@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -536,7 +536,6 @@ slconnthr_main(struct psc_thread *thr)
 				 * waiting an entire interval after we woke
 				 * after our last failed attempt.
 				 */
-printf("waiting %lu sec\n", CSVC_RECONNECT_INTV - (time(NULL) - mtime));
 				sl_csvc_waitrel_s(csvc,
 				    CSVC_RECONNECT_INTV - (time(NULL) -
 				    mtime));
