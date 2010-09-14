@@ -787,9 +787,9 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 				 name, DC_STALE);
 		else
 			slc_fcmh_initdci(p);
-
+		/* fcmh_op_done_type() will unlock for us.
+		 */
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-		FCMH_ULOCK(p);
 	}
 
 	rc = SL_RSX_WAITREP(rq, mp);
@@ -1274,9 +1274,9 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 				 name, DC_STALE);
 		else
 			slc_fcmh_initdci(p);
-
+		/* fcmh_op_done_type() does unlock for us.
+		 */
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-		FCMH_LOCK(p);
 	}
 
 	rc = SL_RSX_WAITREP(rq, mp);
