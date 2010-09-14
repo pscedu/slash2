@@ -79,13 +79,14 @@ slc_fcmh_initdci(struct fidc_membh *fcmh)
 
 	locked = FCMH_RLOCK(fcmh);
 	psc_assert(fcmh_isdir(fcmh));
-	psc_assert(!(fcmh->fcmh_flags & FCMH_CLI_INITDCI));
 
-	INIT_PSCLIST_HEAD(&fci->fci_dci.di_list);
-	INIT_SPINLOCK(&fci->fci_dci.di_lock);
-	fci->fci_dci.di_dcm = &dircacheMgr;
-	fci->fci_dci.di_fcmh = fcmh;
-	fcmh->fcmh_flags |= FCMH_CLI_INITDCI;
+	if (!(fcmh->fcmh_flags & FCMH_CLI_INITDCI)) {
+		INIT_PSCLIST_HEAD(&fci->fci_dci.di_list);
+		INIT_SPINLOCK(&fci->fci_dci.di_lock);
+		fci->fci_dci.di_dcm = &dircacheMgr;
+		fci->fci_dci.di_fcmh = fcmh;
+		fcmh->fcmh_flags |= FCMH_CLI_INITDCI;
+	}
 
 	FCMH_URLOCK(fcmh, locked);
 }
