@@ -67,7 +67,7 @@ slvr_lru_requeue(struct slvr_ref *s, int tail)
 int
 slvr_do_crc(struct slvr_ref *s)
 {
-	psc_crc64_t crc;
+	uint64_t crc;
 
 	/*
 	 * SLVR_FAULTING implies that we're bringing this data buffer

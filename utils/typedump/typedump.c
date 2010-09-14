@@ -120,7 +120,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	psc_crc64_t crc;
+	uint64_t crc;
 	int c;
 
 	progname = argv[0];

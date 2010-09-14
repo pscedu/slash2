@@ -285,7 +285,7 @@ slvr_worker_int(void)
 	struct slvr_ref		*s;
 	struct timespec		 now;
 	struct biod_crcup_ref	*bcr=NULL;
-	psc_crc64_t              crc;
+	uint64_t              crc;
 
  start:
 	PFL_GETTIMESPEC(&now);

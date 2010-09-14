@@ -199,7 +199,7 @@ struct bmapc_memb {
 #define BMAP_NULL_CRC		UINT64_C(0x436f5d7c450ed606)
 
 #define	BMAP_OD_SZ		(sizeof(struct bmap_ondisk))
-#define	BMAP_OD_CRCSZ		(BMAP_OD_SZ - (sizeof(psc_crc64_t)))
+#define	BMAP_OD_CRCSZ		(BMAP_OD_SZ - (sizeof(uint64_t)))
 
 /* bcs_crcstates flags */
 #define BMAP_SLVR_DATA		(1 << 0)	/* Data present, otherwise slvr is hole */

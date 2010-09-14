@@ -120,7 +120,7 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 	struct iovec iov;
 	int i, rc, count;
-	psc_crc64_t crc;
+	uint64_t crc;
 	uint64_t seqno;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);

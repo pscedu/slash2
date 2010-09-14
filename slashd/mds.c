@@ -63,7 +63,7 @@ mds_inode_od_initnew(struct slash_inode_handle *i)
 int
 mds_inode_read(struct slash_inode_handle *i)
 {
-	psc_crc64_t crc;
+	uint64_t crc;
 	int rc=0, locked;
 
 	locked = reqlock(&i->inoh_lock);
@@ -99,7 +99,7 @@ mds_inode_read(struct slash_inode_handle *i)
 int
 mds_inox_load_locked(struct slash_inode_handle *ih)
 {
-	psc_crc64_t crc;
+	uint64_t crc;
 	int rc;
 
 	INOH_LOCK_ENSURE(ih);

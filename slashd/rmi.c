@@ -114,7 +114,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	size_t len=0;
 	off_t  off;
 	int rc;
-	psc_crc64_t crc;
+	uint64_t crc;
 	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);

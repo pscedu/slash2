@@ -48,7 +48,7 @@ struct slvr_ref {
 	uint32_t		 slvr_crc_soff;	/* crc start region */
 	uint32_t		 slvr_crc_eoff;	/* crc region length */
 	uint32_t		 slvr_crc_loff;	/* last crc end */
-	psc_crc64_t		 slvr_crc;	/* accumulator  */
+	uint64_t		 slvr_crc;	/* accumulator  */
 	void			*slvr_pri;	/* backptr (bmap_iod_info) */
 	struct sl_buffer	*slvr_slab;
 	struct psclist_head	 slvr_lentry;	/* dirty queue */

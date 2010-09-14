@@ -44,7 +44,7 @@ dumpfid(const char *fn)
 	struct slash_inode_extras_od inox;
 	struct slash_inode_od ino;
 	char buf[BUFSIZ];
-	psc_crc64_t crc;
+	uint64_t crc;
 	int fd, j, nr;
 	ssize_t rc;
 
