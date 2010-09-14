@@ -101,7 +101,7 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
 
 	EXPORT_LOCK(rq->rq_export);
 	rq->rq_export->exp_hldropf = slm_rmm_hldrop;
-	EXPORT_UNLOCK(rq->rq_export);
+	EXPORT_ULOCK(rq->rq_export);
  out:
 	return (0);
 }

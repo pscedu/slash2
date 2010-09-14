@@ -905,7 +905,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			bml->bml_flags &= ~BML_EXP;
 		} else
 			psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
-		EXPORT_UNLOCK(bml->bml_exp);
+		EXPORT_ULOCK(bml->bml_exp);
 	}
 
 	if (bml->bml_flags & BML_TIMEOQ)
@@ -1485,7 +1485,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	psclist_add_tail(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
 	bml->bml_flags |= BML_EXP;
 	BML_ULOCK(bml);
-	EXPORT_UNLOCK(exp);
+	EXPORT_ULOCK(exp);
 
 	sbd->sbd_seq = bml->bml_seq;
 	sbd->sbd_key = (rw == SL_WRITE) ?
