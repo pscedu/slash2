@@ -32,6 +32,14 @@
 
 #include "sltypes.h"
 
+/*
+ * When you do a file listing under a directory, FUSE sends out a readdir RPC
+ * on the directory to get a listing of the names, then it looks up each name
+ * for its inode, and requests attributes on each inode.  Our code brings in 
+ * all the name to inode translations and attributes in one go.  This file 
+ * implements a simple, non-coherent cache to avoid lookup and getattr RPCs on 
+ * each individual files.
+ */
 #define dirent_timeo 4
 
 struct fidc_membh;
