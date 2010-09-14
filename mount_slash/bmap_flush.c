@@ -138,10 +138,11 @@ bmap_flush_coalesce_size(const struct psc_dynarray *biorqs)
 		return (0);
 
 	DYNARRAY_FOREACH(r, i, biorqs) {
-		if (!i) {
+		off = r->biorq_off;
+
+		if (!i)
 			s = e = r;
-			off = r->biorq_off;
-		} else {
+		else {
 			/* Biorq offsets may not decrease.
 			 */
 			psc_assert(r->biorq_off >= off);
@@ -593,7 +594,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 			t->biorq_flags &= ~BIORQ_SCHED;
 			freelock(&t->biorq_lock);
 		}
-		psc_dynarray_reset(&b);
+		psc_dynarray_free(&b);
 		psc_dynarray_add(&b, r);
 	}
 
@@ -678,7 +679,7 @@ bmap_flush(int nrpcs)
 		}
 		BMAP_ULOCK(b);
 
-		psc_dynarray_reset(&a);
+		psc_dynarray_free(&a);
 
 		PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
 			spinlock(&r->biorq_lock);
@@ -973,7 +974,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		DYNARRAY_FOREACH(resm, i, &a)
 			ms_bmap_release(resm);
 
-		psc_dynarray_reset(&a);
+		psc_dynarray_free(&a);
 
 		if (!pscthr_run())
 			break;
