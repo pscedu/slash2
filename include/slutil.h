@@ -25,8 +25,6 @@
 struct stat;
 struct statvfs;
 
-struct slash_creds;
-struct slash_fidgen;
 struct srt_stat;
 struct srt_statfs;
 

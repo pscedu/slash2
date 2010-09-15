@@ -19,10 +19,10 @@
 
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 
 #include <errno.h>
 #include <fcntl.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +33,7 @@
 #include "psc_util/log.h"
 #include "psc_util/journal.h"
 
+#include "creds.h"
 #include "fid.h"
 #include "mkfn.h"
 #include "pathnames.h"
@@ -42,41 +43,49 @@ void wipefs(const char *);
 const char	*progname;
 int		 wipe;
 int		 ion;
+struct passwd	*pw;
 
 void
-slimmns_create_int(const char *fn, uint32_t curdepth, uint32_t maxdepth)
+slnewfs_mkdir(const char *fn)
 {
-	char d[PATH_MAX];
+	if (mkdir(fn, 0700) == -1 && errno != EEXIST)
+		psc_fatal("mkdir %s", fn);
+	if (pw)
+		chown(fn, pw->pw_uid, pw->pw_gid);
+}
+
+void
+slimmns_create_int(const char *pdirnam, uint32_t curdepth,
+    uint32_t maxdepth)
+{
+	char subdirnam[PATH_MAX];
 	int i;
 
 	for (i = 0; i < 16; i++) {
-		xmkfn(d, "%s/%x", fn, i);
-		if (mkdir(d, 0711) == -1 && errno != EEXIST)
-			psc_fatal("mkdir %s", d);
-
+		xmkfn(subdirnam, "%s/%x", pdirnam, i);
+		slnewfs_mkdir(subdirnam);
 		if (curdepth < maxdepth)
-			slimmns_create_int(d, curdepth + 1, maxdepth);
+			slimmns_create_int(subdirnam, curdepth + 1,
+			    maxdepth);
 	}
 }
 
-/*
+/**
  * slimmns_create - Create an immutable namespace directory structure.
  */
 void
 slimmns_create(const char *root, uint32_t depth)
 {
-	char fn[PATH_MAX];
-	int fd, rc;
 	struct psc_journal_cursor cursor;
+	char fn[PATH_MAX];
+	int fd;
 
 	if (!depth)
 		depth = FID_PATH_DEPTH;
 
 	/* create immutable namespace root directory */
 	xmkfn(fn, "%s/%s", root, FID_PATH_NAME);
-	rc = mkdir(fn, 0711);
-	if (rc == -1 && errno != EEXIST)
-		psc_fatal("mkdir %s", fn);
+	slnewfs_mkdir(fn);
 
 	/* create immutable namespace subdirectories */
 	slimmns_create_int(fn, 1, depth);
@@ -86,14 +95,15 @@ slimmns_create(const char *root, uint32_t depth)
 
 	/* create replication queue directory */
 	xmkfn(fn, "%s/%s", root, SL_PATH_UPSCH);
-	rc = mkdir(fn, 0700);
-	if (rc == -1 && errno != EEXIST)
-		psc_fatal("mkdir %s", fn);
+	slnewfs_mkdir(fn);
 
 	xmkfn(fn, "%s/%s", root, SL_PATH_CURSOR);
-	fd = open(fn, O_CREAT|O_TRUNC|O_WRONLY, 0600);
-	if (fd < 0)
+	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+	if (fd == -1)
 		psc_fatal("open %s", fn);
+	if (pw)
+		fchown(fd, pw->pw_uid, pw->pw_gid);
+
 	memset(&cursor, 0, sizeof(struct psc_journal_cursor));
 	cursor.pjc_magic = PJRNL_CURSOR_MAGIC;
 	cursor.pjc_version = PJRNL_CURSOR_VERSION;
@@ -115,13 +125,6 @@ main(int argc, char *argv[])
 {
 	int c;
 
-	/*
-	 * Make sure that our by-id namespace is owned by the root.
-	 */
-	if (geteuid() != 0) {
-		fprintf(stderr, "Please run %s as root\n", argv[0]);
-		exit (0);
-	}
 	pfl_init();
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "iW")) != -1)
@@ -139,6 +142,10 @@ main(int argc, char *argv[])
 	argv += optind;
 	if (argc != 1)
 		usage();
+
+	sl_getuserpwent(&pw);
+	if (pw == NULL)
+		psc_error("user account %s", SLASH_UID);
 
 	if (wipe)
 		wipefs(argv[0]);

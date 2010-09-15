@@ -8,6 +8,7 @@ MAN+=		slimmns.8
 SRCS+=		slimmns_format.c
 SRCS+=		wipedir.c
 SRCS+=		${SLASH_BASE}/share/mkfn.c
+SRCS+=		${SLASH_BASE}/share/priv.c
 SRCS+=		${SLASH_BASE}/share/slerr.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/init.c

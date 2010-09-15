@@ -22,6 +22,8 @@
 
 #include <stdint.h>
 
+struct passwd;
+
 struct srt_stat;
 
 #define SLASH_UID	"_slash"
@@ -33,6 +35,7 @@ struct slash_creds {
 };
 
 void	sl_drop_privs(int);
+void	sl_getuserpwent(struct passwd **);
 int	checkcreds(const struct srt_stat *, const struct slash_creds *, int);
 
 #endif /* _SLASH_CREDS_H_ */
