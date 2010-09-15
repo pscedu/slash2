@@ -203,7 +203,8 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			timeoslot = 0;
 
 		e = &mdsBmapTimeoTbl.btt_entries[timeoslot];
-		if (e->bte_maxseq == BMAPSEQ_ANY) {
+		/* Skip empty slot to avoid journaling for nothing */
+		if (e->bte_maxseq == BMAPSEQ_ANY || psc_listhd_empty(&e->bte_bmaps)) {
 			freelock(&mdsBmapTimeoTbl.btt_lock);
 			goto sleep;
 		}
