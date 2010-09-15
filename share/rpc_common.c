@@ -357,12 +357,15 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 {
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm;
+	union lockmutex lm;
 	int rc = 0, locked;
 
+	lm.lm_ptr = lockp;
+
 	if (flags & CSVCF_USE_MULTIWAIT)
-		locked = psc_pthread_mutex_reqlock(lockp);
+		locked = psc_pthread_mutex_reqlock(lm.lm_mutex);
 	else
-		locked = reqlock(lockp);
+		locked = reqlock(lm.lm_lock);
 	if (exp)
 		peernid = exp->exp_connection->c_peer.nid;
 	psc_assert(peernid != LNET_NID_ANY);
@@ -487,10 +490,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
  out:
 	if (csvc)
 		sl_csvc_incref(csvc);
-	if (flags & CSVCF_USE_MULTIWAIT)
-		psc_pthread_mutex_ureqlock(lockp, locked);
-	else
-		ureqlock(lockp, locked);
+	sl_csvc_ureqlock(*csvcp, locked);
 	return (csvc);
 }
 
