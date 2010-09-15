@@ -73,23 +73,22 @@ struct slm_rmi_expdata *
 	slm_rmi_getexpdata(struct pscrpc_export *);
 
 /* aliases for connection management */
-#define slm_getmcsvc(resm, exp)							\
+#define slm_getmcsvcx(resm, exp)						\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),		\
 	    (resm)->resm_nid, SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC,	\
 	    SRMM_VERSION, &resm2rmmi(resm)->rmmi_mutex,				\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_MDS)
 
-#define slm_geticsvc_nb(resm)							\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | CSVCF_NONBLOCK,	\
-	    NULL, (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,		\
+#define slm_geticsvcxf(resm, exp, fl)						\
+	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl), (exp),	\
+	    (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,			\
 	    SRIM_MAGIC,	SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,		\
 	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD)
 
-#define slm_geticsvc(resm, exp)							\
-	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),		\
-	    (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL, SRIM_MAGIC,	\
-	    SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,				\
-	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD)
+#define slm_getmcsvc(resm)		slm_getmcsvcx((resm), NULL)
+#define slm_geticsvcx(resm, exp)	slm_geticsvcxf((resm), (exp), 0)
+#define slm_geticsvc_nb(resm)		slm_geticsvcxf((resm), NULL, CSVCF_NONBLOCK)
+#define slm_geticsvc(resm)		slm_geticsvcxf((resm), NULL, 0)
 
 static __inline struct slashrpc_cservice *
 slm_getclcsvc(struct pscrpc_export *exp)

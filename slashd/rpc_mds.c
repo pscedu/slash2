@@ -26,6 +26,7 @@
 #include "psc_rpc/service.h"
 
 #include "bmap_mds.h"
+#include "repl_mds.h"
 #include "rpc_mds.h"
 #include "slashd.h"
 #include "slashrpc.h"

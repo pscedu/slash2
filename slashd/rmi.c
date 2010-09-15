@@ -308,10 +308,8 @@ slm_rmi_handle_rls_bmap(struct pscrpc_request *rq)
 int
 slm_rmi_handle_connect(struct pscrpc_request *rq)
 {
-	struct slashrpc_cservice *csvc;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
-	struct sl_resm *resm;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRMI_MAGIC || mq->version != SRMI_VERSION) {
@@ -346,10 +344,10 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 int
 slm_rmi_handler(struct pscrpc_request *rq)
 {
-	int locked, rc;
+	int rc;
 
 	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
-	    slc_geticsvc(_resm, rq->rq_export));
+	    slm_geticsvcx(_resm, rq->rq_export));
 	if (rq->rq_status)
 		return (pscrpc_error(rq));
 

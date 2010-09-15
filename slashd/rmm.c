@@ -182,10 +182,10 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 int
 slm_rmm_handler(struct pscrpc_request *rq)
 {
-	int rc = 0;
+	int rc;
 
 	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
-	    slc_getmcsvc(_resm, rq->rq_export));
+	    slm_getmcsvcx(_resm, rq->rq_export));
 	if (rq->rq_status)
 		return (pscrpc_error(rq));
 

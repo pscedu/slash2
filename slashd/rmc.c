@@ -968,7 +968,11 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 int
 slm_rmc_handler(struct pscrpc_request *rq)
 {
-	int rc = 0;
+	int rc;
+
+	// XXX move
+	//mexpc_get(e);
+	// here in case the client violates protocol and doesn't CONNECT
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
