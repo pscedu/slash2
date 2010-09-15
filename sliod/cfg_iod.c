@@ -34,7 +34,7 @@ slcfg_init_resm(struct sl_resm *resm)
 	struct resm_iod_info *rmii;
 
 	rmii = resm->resm_pri = PSCALLOC(sizeof(*rmii));
-	INIT_SPINLOCK(&rmii->rmii_lock);
+	INIT_SPINLOCK_LOG(&rmii->rmii_lock);
 	psc_waitq_init(&rmii->rmii_waitq);
 }
 
