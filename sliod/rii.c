@@ -117,28 +117,6 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 }
 
 int
-sli_rii_handler(struct pscrpc_request *rq)
-{
-	int rc = 0;
-
-	switch (rq->rq_reqmsg->opc) {
-	case SRMT_CONNECT:
-		rc = sli_rii_handle_connect(rq);
-		break;
-	case SRMT_REPL_READ:
-		rc = sli_rii_handle_replread(rq);
-		break;
-	default:
-		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
-		rq->rq_status = -ENOSYS;
-		return (pscrpc_error(rq));
-	}
-	authbuf_sign(rq, PSCRPC_MSG_REPLY);
-	pscrpc_target_send_reply_msg(rq, rc, 0);
-	return (rc);
-}
-
-int
 sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
     int slvridx, int rc)
 {
@@ -260,5 +238,32 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, int slvrno,
  out:
 	if (rc)
 		sli_rii_replread_release_sliver(w, slvridx, rc);
+	return (rc);
+}
+
+int
+sli_rii_handler(struct pscrpc_request *rq)
+{
+	int rc;
+
+	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
+	    sli_geticsvc(_resm, rq->rq_export));
+	if (rq->rq_status)
+		return (pscrpc_error(rq));
+
+	switch (rq->rq_reqmsg->opc) {
+	case SRMT_CONNECT:
+		rc = sli_rii_handle_connect(rq);
+		break;
+	case SRMT_REPL_READ:
+		rc = sli_rii_handle_replread(rq);
+		break;
+	default:
+		psc_errorx("Unexpected opcode %d", rq->rq_reqmsg->opc);
+		rq->rq_status = -ENOSYS;
+		return (pscrpc_error(rq));
+	}
+	authbuf_sign(rq, PSCRPC_MSG_REPLY);
+	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }

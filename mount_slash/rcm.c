@@ -22,6 +22,7 @@
  */
 
 #include "pfl/str.h"
+#include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/ctl.h"
@@ -34,7 +35,10 @@
 #include "ctl_cli.h"
 #include "ctlsvr_cli.h"
 #include "fidcache.h"
+#include "mount_slash.h"
+#include "rpc_cli.h"
 #include "slashrpc.h"
+#include "slconn.h"
 #include "slerr.h"
 
 struct msctl_replstq *
@@ -300,7 +304,12 @@ msrcm_handle_connect(struct pscrpc_request *rq)
 int
 slc_rcm_handler(struct pscrpc_request *rq)
 {
-	int rc = 0;
+	int rc;
+
+	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
+	    slc_getmcsvc(_resm));
+	if (rq->rq_status)
+		return (pscrpc_error(rq));
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:

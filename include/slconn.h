@@ -89,6 +89,34 @@ struct slashrpc_cservice {
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
 
+#define _SL_EXP_REGISTER_RESM(exp, getcsvc)				\
+	{								\
+		struct slashrpc_cservice *_csvc;			\
+		struct sl_resm *_resm;					\
+		int _rc = 0;						\
+									\
+		_resm = libsl_try_nid2resm(				\
+		    (exp)->exp_connection->c_peer.nid);			\
+		if (_resm) {						\
+			if (_resm->resm_csvc == NULL ||			\
+			    !sl_csvc_useable(_resm->resm_csvc)) {	\
+				_csvc = getcsvc;			\
+				sl_csvc_decref(_csvc);			\
+			}						\
+									\
+			if ((exp)->exp_hldropf == NULL) {		\
+				EXPORT_LOCK(exp);			\
+				exp->exp_hldropf = sl_exp_hldrop;	\
+				EXPORT_ULOCK(exp);			\
+			}						\
+		} else							\
+			_rc = SLERR_RES_UNKNOWN;			\
+		(_rc);							\
+	}
+
+#define SL_EXP_REGISTER_RESM(exp, getcsvc)				\
+	(_SL_EXP_REGISTER_RESM((exp), getcsvc))
+
 #define sl_csvc_waitrel_s(csvc, s)	_sl_csvc_waitrelv((csvc), (s), 0L)
 
 struct slashrpc_cservice *
@@ -105,6 +133,9 @@ int	 sl_csvc_useable(struct slashrpc_cservice *);
 int	 sl_csvc_usemultiwait(struct slashrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slashrpc_cservice *, long, long);
 void	 sl_csvc_wake(struct slashrpc_cservice *);
+
+void	 sl_exp_hldrop(struct pscrpc_export *);
+void	 sl_resm_hldrop(struct sl_resm *);
 
 void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
 		uint32_t, void *, int, void *, enum slconn_type, int,

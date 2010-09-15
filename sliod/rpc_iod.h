@@ -46,13 +46,13 @@ struct sli_repl_workrq;
 #define SLI_RII_SVCNAME		"slirii"
 
 /* aliases for connection management */
-#define sli_geticsvc(resm)							\
-	sl_csvc_get(&(resm)->resm_csvc, 0, NULL, (resm)->resm_nid,		\
+#define sli_geticsvc(resm, exp)							\
+	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,		\
 	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,		\
 	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq, SLCONNT_IOD)
 
-#define sli_getmcsvc(resm)							\
-	sl_csvc_get(&(resm)->resm_csvc, 0, NULL, (resm)->resm_nid,		\
+#define sli_getmcsvc(resm, exp)							\
+	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,		\
 	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,		\
 	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq, SLCONNT_MDS)
 

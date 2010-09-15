@@ -18,7 +18,7 @@
  */
 
 /*
- * Routines for issuing RPC requests for CLIENT from MDS.
+ * Routines for issuing RPC requests to CLIENT from MDS.
  */
 
 #include <sys/param.h>

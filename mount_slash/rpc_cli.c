@@ -31,7 +31,7 @@
 #include "slerr.h"
 
 /*
- * slc_rpc_initsvc: initialize RPC services.
+ * slc_rpc_initsvc: Initialize CLIENT RPC services.
  */
 void
 slc_rpc_initsvc(void)
@@ -92,4 +92,9 @@ slc_rmc_getimp(struct slashrpc_cservice **csvcp)
 			psc_fatalx("unable to establish MDS connection");
 	} while (*csvcp == NULL);
 	return (0);
+}
+
+void
+sl_resm_hldrop(__unusedx struct sl_resm *resm)
+{
 }

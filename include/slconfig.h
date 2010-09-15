@@ -82,6 +82,8 @@ struct sl_resm {
 	struct slashrpc_cservice*resm_csvc;
 	void			*resm_pri;
 #define resm_site		 resm_res->res_site
+#define resm_type		 resm_res->res_type
+#define resm_iosid		 resm_res->res_id
 };
 
 #define resm_2_resid(r)		(r)->resm_res->res_id

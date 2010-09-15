@@ -32,17 +32,20 @@ struct pscrpc_request;
 #define SRCM_REPSZ	512
 #define SRCM_SVCNAME	"msrcm"
 
-#define slc_geticsvc(resm)							\
-	sl_csvc_get(&(resm)->resm_csvc, 0, NULL, (resm)->resm_nid,		\
+#define slc_geticsvcx(resm, exp)						\
+	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,		\
 	    SRIC_REQ_PORTAL, SRIC_REP_PORTAL, SRIC_MAGIC, SRIC_VERSION,		\
 	    &resm2rmci(resm)->rmci_lock, &resm2rmci(resm)->rmci_waitq,		\
 	    SLCONNT_IOD)
 
-#define slc_getmcsvc(resm)							\
-	sl_csvc_get(&(resm)->resm_csvc, 0, NULL, (resm)->resm_nid,		\
+#define slc_getmcsvcx(resm, exp)						\
+	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,		\
 	    SRMC_REQ_PORTAL, SRMC_REP_PORTAL, SRMC_MAGIC, SRMC_VERSION,		\
 	    &resm2rmci(resm)->rmci_lock, &resm2rmci(resm)->rmci_waitq,		\
 	    SLCONNT_MDS)
+
+#define slc_geticsvc(resm)		slc_geticsvcx((resm), NULL)
+#define slc_getmcsvc(resm)		slc_getmcsvcx((resm), NULL)
 
 void	slc_rpc_initsvc(void);
 

@@ -46,16 +46,6 @@ extern psc_spinlock_t		 mds_namespace_peerlist_lock;
 
 extern struct sl_mds_peerinfo	*localinfo;
 
-void
-slm_rmm_hldrop(struct pscrpc_export *exp)
-{
-	struct sl_resm *resm;
-
-	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
-	if (resm->resm_csvc)
-		sl_csvc_disconnect(resm->resm_csvc);
-}
-
 int
 slm_rmm_cmp_peerinfo(const void *a, const void *b)
 {
@@ -89,20 +79,8 @@ slm_rmm_handle_connect(struct pscrpc_request *rq)
 	struct srm_generic_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRMM_MAGIC || mq->version != SRMM_VERSION) {
+	if (mq->magic != SRMM_MAGIC || mq->version != SRMM_VERSION)
 		mp->rc = EINVAL;
-		goto out;
-	}
-
-	if (libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid) == NULL) {
-		mp->rc = SLERR_RES_UNKNOWN;
-		goto out;
-	}
-
-	EXPORT_LOCK(rq->rq_export);
-	rq->rq_export->exp_hldropf = slm_rmm_hldrop;
-	EXPORT_ULOCK(rq->rq_export);
- out:
 	return (0);
 }
 
@@ -199,12 +177,17 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 }
 
 /**
- * slm_rmm_handler - Handle a request from another MDS.
+ * slm_rmm_handler - Handle a request for MDS from another MDS.
  */
 int
 slm_rmm_handler(struct pscrpc_request *rq)
 {
 	int rc = 0;
+
+	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
+	    slc_getmcsvc(_resm, rq->rq_export));
+	if (rq->rq_status)
+		return (pscrpc_error(rq));
 
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:

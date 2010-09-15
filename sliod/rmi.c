@@ -17,6 +17,10 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * Routines for issuing RPC requests to MDS from ION.
+ */
+
 #include <stdint.h>
 
 #include "psc_rpc/rpc.h"

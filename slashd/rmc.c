@@ -1103,6 +1103,11 @@ mexpc_get(struct pscrpc_export *exp)
 		INIT_SPINLOCK(&mexpc->mexpc_lock);
 		psc_waitq_init(&mexpc->mexpc_waitq);
 		exp->exp_hldropf = mexpc_destroy;
+
+		/*
+		 * This will assign mexpc_csvc and mexpc_destroy() will
+		 * drop this reference.
+		 */
 		slm_getclcsvc(exp);
 	}
 	EXPORT_URLOCK(exp, locked);

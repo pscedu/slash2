@@ -42,18 +42,6 @@
 #include "slerr.h"
 #include "up_sched_res.h"
 
-void
-slm_rmi_hldrop(struct pscrpc_export *exp)
-{
-	struct sl_resm *resm;
-
-	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
-	mds_repl_reset_scheduled(resm->resm_res->res_id);
-	mds_repl_node_clearallbusy(resm->resm_pri);
-	if (resm->resm_csvc)
-		sl_csvc_disconnect(resm->resm_csvc);
-}
-
 /**
  * slm_rmi_handle_bmap_getcrcs - Handle a BMAPGETCRCS request from ION,
  *	so the ION can load the CRCs for a bmap and verify them against
@@ -331,21 +319,6 @@ slm_rmi_handle_connect(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	if (libsl_try_nid2resm(rq->rq_export->exp_connection->c_peer.nid) == NULL) {
-		mp->rc = SLERR_RES_UNKNOWN;
-		goto out;
-	}
-
-	/* initialize our reverse stream structures */
-	resm = libsl_nid2resm(rq->rq_peer.nid);
-	csvc = slm_geticsvcx(resm, rq->rq_export);
-//	psc_multiwaitcond_wakeup(csvc->csvc_waitinfo);
-	sl_csvc_decref(csvc);
-
-	EXPORT_LOCK(rq->rq_export);
-	rq->rq_export->exp_hldropf = slm_rmi_hldrop;
-	EXPORT_ULOCK(rq->rq_export);
-
 	mds_bmap_getcurseq(NULL, &mp->data);
  out:
 	return (0);
@@ -367,13 +340,18 @@ slm_rmi_handle_ping(struct pscrpc_request *rq)
 }
 
 /**
- * slm_rmi_handler - Handle a request from ION.
+ * slm_rmi_handler - Handle a request for MDS from ION.
  * @rq: request.
  */
 int
 slm_rmi_handler(struct pscrpc_request *rq)
 {
-	int rc = 0;
+	int locked, rc;
+
+	rq->rq_status = SL_EXP_REGISTER_RESM(rq->rq_export,
+	    slc_geticsvc(_resm, rq->rq_export));
+	if (rq->rq_status)
+		return (pscrpc_error(rq));
 
 	switch (rq->rq_reqmsg->opc) {
 

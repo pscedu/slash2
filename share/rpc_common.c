@@ -243,8 +243,8 @@ sl_csvc_decref(struct slashrpc_cservice *csvc)
 		sl_csvc_wake(csvc);
 		if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_WANTFREE) {
 			/*
-			 * This should only apply to mount_slash clients the MDS
-			 * stops communication with.
+			 * This should only apply to mount_slash clients
+			 * the MDS stops communication with.
 			 */
 			pscrpc_import_put(csvc->csvc_import);
 			if (csvc->csvc_ctype == SLCONNT_CLI)
@@ -369,7 +369,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 
 	csvc = *csvcp;
 	if (csvc == NULL) {
-		/* ensure that our peer is of the given resource type (REST) */
+		/* ensure that our peer is of the given resource type */
 		switch (ctype) {
 		case SLCONNT_CLI:
 			break;
@@ -404,6 +404,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 
 	if (exp) {
 		struct pscrpc_connection *c;
+
 		/*
 		 * If an export was specified, the peer has already
 		 * established a connection to our service, so just
@@ -439,7 +440,8 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 //			csvc = NULL;
 //			goto out;
 		} else {
-			psc_waitq_wait(csvc->csvc_waitinfo, csvc->csvc_lock);
+			psc_waitq_wait(csvc->csvc_waitinfo,
+			    csvc->csvc_lock);
 			sl_csvc_lock(csvc);
 		}
 		goto restart;
@@ -451,26 +453,32 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		    csvc->csvc_import, magic, version, flags);
 
 		sl_csvc_lock(csvc);
-		psc_atomic32_clearmask(&csvc->csvc_flags, CSVCF_CONNECTING);
+		psc_atomic32_clearmask(&csvc->csvc_flags,
+		    CSVCF_CONNECTING);
 		csvc->csvc_mtime = time(NULL);
 		if (rc) {
 			csvc->csvc_import->imp_failed = 1;
 			csvc->csvc_lasterrno = rc;
 			/*
-			 * Leave the slashrpc_cservice structure in csvcp intact,
-			 * while return NULL to signal that we fail to establish
-			 * a connection.
+			 * Leave the slashrpc_cservice structure in
+			 * csvcp intact, while return NULL to signal
+			 * that we fail to establish a connection.
 			 */
 			csvc = NULL;
 			goto out;
 		} else
-			psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTED);
+			psc_atomic32_setmask(&csvc->csvc_flags,
+			    CSVCF_CONNECTED);
 	} else {
 		rc = csvc->csvc_lasterrno;
 		csvc = NULL;
 		goto out;
 	}
 	if (rc == 0) {
+		/*
+		 * Success: alert anyone waiting on establishment of
+		 * this connection.
+		 */
 		csvc->csvc_import->imp_failed = 0;
 		csvc->csvc_import->imp_invalid = 0;
 		sl_csvc_wake(csvc);
@@ -602,4 +610,14 @@ slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
 	sct->sct_waitinfo = waitinfo;
 	sct->sct_conntype = conntype;
 	pscthr_setready(thr);
+}
+
+void
+sl_exp_hldrop(struct pscrpc_export *exp)
+{
+	struct sl_resm *resm;
+
+	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
+	sl_csvc_disconnect(resm->resm_csvc);
+	sl_resm_hldrop(resm);
 }

@@ -41,15 +41,14 @@
 #include "sliod.h"
 #include "slvr.h"
 
-static int
+__static int
 sli_ric_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	if (mq->magic != SRIC_MAGIC ||
-	    mq->version != SRIC_VERSION)
+	if (mq->magic != SRIC_MAGIC || mq->version != SRIC_VERSION)
 		mp->rc = -EINVAL;
 	return (0);
 }
@@ -59,19 +58,18 @@ sli_ric_handle_connect(struct pscrpc_request *rq)
 __static int
 sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 {
-	uint32_t tsize, sblk;
-	struct pscrpc_bulk_desc *desc;
+	uint32_t tsize, sblk, roff[RIC_MAX_SLVRS_PER_IO], len[RIC_MAX_SLVRS_PER_IO];
 	struct slvr_ref *slvr_ref[RIC_MAX_SLVRS_PER_IO];
+	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
+	struct pscrpc_bulk_desc *desc;
 	struct bmap_iod_info *biodi;
 	struct slash_fidgen *fgp;
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bmap;
 	struct srm_io_req *mq;
 	struct srm_io_rep *mp;
-	struct iovec iovs[RIC_MAX_SLVRS_PER_IO];
-	uint32_t roff[RIC_MAX_SLVRS_PER_IO], len[RIC_MAX_SLVRS_PER_IO];
 	sl_bmapno_t bmapno, slvrno;
-	int rc=0, nslvrs, i;
+	int rc = 0, nslvrs, i;
 	lnet_process_id_t *pp;
 
 	sblk = 0; /* gcc */
@@ -334,7 +332,6 @@ sli_ric_handler(struct pscrpc_request *rq)
 {
 	int rc;
 
-	rc = 0; /* gcc */
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
 		rc = sli_ric_handle_connect(rq);
