@@ -28,8 +28,9 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
-#include "psc_util/lock.h"
+#include "psc_rpc/export.h"
 #include "psc_util/atomic.h"
+#include "psc_util/lock.h"
 
 #include <stdint.h>
 

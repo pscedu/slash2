@@ -24,7 +24,6 @@
 #include <stdio.h>
 
 #include "pfl/str.h"
-#include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
