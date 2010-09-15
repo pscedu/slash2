@@ -92,15 +92,22 @@ struct slashrpc_cservice {
 
 #define _SL_EXP_REGISTER_RESM(exp, getcsvc)				\
 	{								\
-		struct slashrpc_cservice *_csvc;			\
+		struct slashrpc_cservice *_csvc = NULL;			\
 		struct sl_resm *_resm;					\
 		int _rc = 0;						\
 									\
 		_resm = libsl_try_nid2resm(				\
 		    (exp)->exp_connection->c_peer.nid);			\
 		if (_resm) {						\
-			if (_resm->resm_csvc == NULL ||			\
-			    !sl_csvc_useable(_resm->resm_csvc)) {	\
+			_csvc = _resm->resm_csvc;			\
+			if (_csvc) {					\
+				sl_csvc_lock(_csvc);			\
+				if (sl_csvc_useable(_csvc)) {		\
+					sl_csvc_unlock(_csvc);		\
+					_csvc = NULL;			\
+				}					\
+			}						\
+			if (_csvc == NULL) {				\
 				_csvc = getcsvc;			\
 				sl_csvc_decref(_csvc);			\
 			}						\
@@ -127,9 +134,11 @@ struct slashrpc_cservice *
 void	 sl_csvc_decref(struct slashrpc_cservice *);
 void	 sl_csvc_disconnect(struct slashrpc_cservice *);
 void	 sl_csvc_incref(struct slashrpc_cservice *);
+void	 sl_csvc_lock(struct slashrpc_cservice *);
 void	 sl_csvc_lock_ensure(struct slashrpc_cservice *);
 void	 sl_csvc_markfree(struct slashrpc_cservice *);
 int	 sl_csvc_reqlock(struct slashrpc_cservice *);
+void	 sl_csvc_unlock(struct slashrpc_cservice *);
 int	 sl_csvc_useable(struct slashrpc_cservice *);
 int	 sl_csvc_usemultiwait(struct slashrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slashrpc_cservice *, long, long);
