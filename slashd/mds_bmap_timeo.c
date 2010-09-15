@@ -208,8 +208,19 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			goto sleep;
 		}
 
-		psclist_for_each_entry(bml, &e->bte_bmaps, bml_timeo_lentry)
-			psc_dynarray_add(&a, bml);
+		psclist_for_each_entry(bml, &e->bte_bmaps, bml_timeo_lentry) {
+			/* Don't race with slrmi threads who may be freeing
+			 * the lease from an rpc context.
+			 * mdsBmapTimeoTbl.btt_lock must be acquired before
+			 * pulling the bml from this list.
+			 */
+			spinlock(&bml->bml_lock);
+			if (!(bml->bml_flags & BML_FREEING)) {
+				bml->bml_flags |= BML_FREEING;
+				psc_dynarray_add(&a, bml);
+			}
+			freelock(&bml->bml_lock);
+		}
 
 		sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 		sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq =
@@ -226,7 +237,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			if (mds_bmap_bml_release(bml))
 				abort();
 		}
-		psc_dynarray_reset(&a);
+		psc_dynarray_free(&a);
  sleep:
 		psc_dbg("timeoslot=%d sleeptime=%"PSCPRI_TIMET,
 			timeoslot, mds_bmap_timeotbl_nextwakeup);

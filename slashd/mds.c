@@ -856,8 +856,10 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	int rc = 0, locked;
 
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
+	psc_assert(bml->bml_flags & BML_FREEING);
 
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p seq=%"PRId64, bml, bml->bml_seq);
+	DEBUG_BMAP(PLL_INFO, b, "bml=%p fl=%d seq=%"PRId64, bml, bml->bml_flags,
+		   bml->bml_seq);
 	locked = BMAP_RLOCK(b);
 	/* BMAP_IONASSIGN acts as a barrier for operations which
 	 *   may modify bmdsi_wr_ion.  Since ops associated with
@@ -872,7 +874,6 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 
 	/* Remove dups here?
 	 */
-
 	BML_LOCK(bml);
 
 	if (bml->bml_flags & BML_COHRLS) {
@@ -915,6 +916,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 *    bmdsi so that directio can be managed properly.
 	 */
 	if (bml->bml_flags & BML_COHRLS) {
+		bml->bml_flags &= ~BML_FREEING;
 		BML_ULOCK(bml);
 		b->bcm_flags &= ~BMAP_IONASSIGN;
 		bcm_wake_locked(b);
@@ -978,6 +980,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	return (rc);
 }
 
+/**
+ * mds_handle_rls_bmap - handle SRMT_RELEASEBMAP RPC from a client or an I/O server.
+ */
 int
 mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 {
@@ -1029,7 +1034,15 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 
 		if (bml) {
 			psc_assert(bid->seq == bml->bml_seq);
-			mp->bidrc[i] = mds_bmap_bml_release(bml);
+			BML_LOCK(bml);
+			if (!(bml->bml_flags & BML_FREEING)) {
+				bml->bml_flags |= BML_FREEING;
+				BML_ULOCK(bml);
+				mp->bidrc[i] = mds_bmap_bml_release(bml);
+			} else {
+				BML_ULOCK(bml);
+				mp->bidrc[i] = 0;
+			}
 		}
 		/* bmap_op_done_type will drop the lock.
 		 */
@@ -1131,6 +1144,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	rc = mds_bmap_bml_add(bml, SL_WRITE, IOS_ID_ANY);
 	if (rc) {
 		bmap_2_bmdsi(b)->bmdsi_assign = NULL;
+		bml->bml_flags |= BML_FREEING;
 		mds_bmap_bml_release(bml);
 		goto out;
 	}
@@ -1174,6 +1188,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	 */
 	rc = bmap_lookup(fcmh, c->blkno, &bmap);
 	if (rc) {
+		DEBUG_FCMH(PLL_ERROR, fcmh, "failed lookup bmap(%u) rc=%d",
+		    c->blkno, rc);
 		rc = -EBADF;
 		goto out;
 	}
@@ -1472,8 +1488,10 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	if (rc) {
 		if (rc == SLERR_BMAP_DIOWAIT)
 			mds_bml_free(bml);
-		else
+		else {
+			bml->bml_flags |= BML_FREEING;	
 			mds_bmap_bml_release(bml);
+		}
 		goto out;
 	}
 	*bmap = b;

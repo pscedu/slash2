@@ -85,8 +85,15 @@ mdscoh_cb(struct pscrpc_request *req, __unusedx struct pscrpc_async_args *a)
 		DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml), "converted to dio");
 	}
 
-	if (flags & BML_COHRLS)
+	/* Lock again and try to free
+ 	 */
+	BML_LOCK(bml);
+	if (!(bml->bml_flags & BML_FREEING) && (bml->bml_flags & BML_COHRLS)) {
+		bml->bml_flags |= BML_FREEING;
+		BML_ULOCK(bml);
 		mds_bmap_bml_release(bml);
+	} else
+		BML_ULOCK(bml);
 
 	/* bmap_op_done_type() will wake any waiters.
 	 */
