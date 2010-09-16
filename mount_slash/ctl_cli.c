@@ -434,6 +434,7 @@ msctlparam_general(int fd, struct psc_ctlmsghdr *mh,
 		    PCTHRNAME_EVERYONE, levels, 2, nbuf))
 			return (0);
 	}
+#ifdef HAVE_FUSE_DEBUGLEVEL
 	if (nlevels < 2 || strcmp(levels[1], "fuse_debug") == 0) {
 		if (set) {
 			endp = NULL;
@@ -453,6 +454,7 @@ msctlparam_general(int fd, struct psc_ctlmsghdr *mh,
 				return (0);
 		}
 	}
+#endif
 	if (nlevels < 2 || strcmp(levels[1], "fuse_version") == 0) {
 		if (set)
 			goto readonly;
