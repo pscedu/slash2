@@ -244,7 +244,9 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	 */
 	for (i=0; i < npages; i++) {
 		bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
+
 		BMPCE_LOCK(bmpce);
+		psc_assert(bmpce->bmpce_off == off + (i * BMPC_BUFSZ));
 
 		if (op == BIORQ_WRITE)
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_wrref) > 0);
