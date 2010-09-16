@@ -25,9 +25,9 @@
 #include <err.h>
 #include <netdb.h>
 
+#include "pfl/hashtbl.h"
 #include "pfl/str.h"
 #include "psc_ds/dynarray.h"
-#include "pfl/hashtbl.h"
 #include "psc_ds/list.h"
 #include "psc_util/log.h"
 #include "psc_util/net.h"
