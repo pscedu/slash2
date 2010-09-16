@@ -102,10 +102,10 @@ struct slashrpc_cservice {
 			_csvc = _resm->resm_csvc;			\
 			if (_csvc) {					\
 				sl_csvc_lock(_csvc);			\
-				if (sl_csvc_useable(_csvc)) {		\
+				if (sl_csvc_useable(_csvc))		\
 					sl_csvc_unlock(_csvc);		\
+				else					\
 					_csvc = NULL;			\
-				}					\
 			}						\
 			if (_csvc == NULL) {				\
 				_csvc = getcsvc;			\
