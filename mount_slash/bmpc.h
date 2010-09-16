@@ -302,6 +302,11 @@ bmpce_useprep(struct bmap_pagecache_entry *bmpce, struct bmpc_ioreq *biorq)
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
 
 	bmpce->bmpce_flags = (BMPCE_GETBUF | BMPCE_INIT);
+	/*
+ 	 * We put the entry back to the splay tree before it
+ 	 * is fully allocated, so we need this field to remember
+ 	 * who owns it.  Alternatively, we could use locking.
+ 	 */
 	bmpce->bmpce_waitq = &biorq->biorq_waitq;
 }
 
