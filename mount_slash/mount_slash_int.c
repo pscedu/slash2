@@ -213,7 +213,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			}
 
 			psc_assert(!bmpce->bmpce_base);
-			psc_assert(bmpce->bmpce_flags & BMPCE_GETBUF);
 			BMPCE_ULOCK(bmpce);
 
 			tmp = bmpc_alloc();
