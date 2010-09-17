@@ -1276,8 +1276,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	bcm    = r->biorq_bmap;
 	npages = psc_dynarray_len(&r->biorq_pages);
 
-	r->biorq_flags |= BIORQ_SCHED;
-
 	DEBUG_BIORQ(PLL_NOTIFY, r, "check prefetch");
 
 	psc_assert(!r->biorq_rqset);
@@ -1351,8 +1349,8 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		}
 	}
 
-	if (!sched)
-		r->biorq_flags &= ~BIORQ_SCHED;
+	if (sched)
+		r->biorq_flags |= BIORQ_SCHED;
 }
 
 /**
