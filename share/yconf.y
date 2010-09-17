@@ -218,7 +218,7 @@ site_prof_start	: SITE_PROFILE SITE_NAME SUBSECT_START {
 			    sizeof(currentSite->site_name))
 				psc_fatalx("site %s: name too long", $2);
 			slcfg_init_site(currentSite);
-			free($2);
+			PSCFREE($2);
 		}
 		;
 
@@ -282,7 +282,7 @@ resource_start	: RESOURCE_PROFILE NAME SUBSECT_START {
 					yyerror("duplicate resource name: %s",
 					    r->res_name);
 
-			free($2);
+			PSCFREE($2);
 		}
 		;
 
@@ -312,9 +312,9 @@ interfaces	: interface
 		| interface NSEP interfaces
 		;
 
-interface	: IPADDR ATSIGN LNETTCP	{ slcfg_addif($1, $3); free($3); }
+interface	: IPADDR ATSIGN LNETTCP	{ slcfg_addif($1, $3); PSCFREE($3); }
 		| IPADDR		{ slcfg_addif($1, currentConf->gconf_net); }
-		| NAME ATSIGN LNETTCP	{ slcfg_addif($1, $3); free($3); }
+		| NAME ATSIGN LNETTCP	{ slcfg_addif($1, $3); PSCFREE($3); }
 		| NAME			{ slcfg_addif($1, currentConf->gconf_net); }
 		;
 
@@ -340,8 +340,8 @@ restype_stmt	: NAME EQ RESOURCE_TYPE END {
 			psc_notify("Found Fstype Statement: Tok '%s' Val '%s'",
 			   $1, $3);
 			slcfg_store_tok_val($1, $3);
-			free($1);
-			free($3);
+			PSCFREE($1);
+			PSCFREE($3);
 		}
 		;
 
@@ -349,8 +349,8 @@ path_stmt	: NAME EQ PATHNAME END {
 			psc_notify("Found Path Statement: Tok '%s' Val '%s'",
 			       $1, $3);
 			slcfg_store_tok_val($1, $3);
-			free($1);
-			free($3);
+			PSCFREE($1);
+			PSCFREE($3);
 		}
 		;
 
@@ -358,8 +358,8 @@ glob_stmt	: NAME EQ GLOBPATH END {
 			psc_notify("Found Glob Statement: Tok '%s' Val '%s'",
 			       $1, $3);
 			slcfg_store_tok_val($1, $3);
-			free($1);
-			free($3);
+			PSCFREE($1);
+			PSCFREE($3);
 		}
 		;
 
@@ -367,8 +367,8 @@ bool_stmt	: NAME EQ BOOL END {
 			psc_notify("Found Bool Statement: Tok '%s' Val '%s'",
 			       $1, $3);
 			slcfg_store_tok_val($1, $3);
-			free($1);
-			free($3);
+			PSCFREE($1);
+			PSCFREE($3);
 		}
 		;
 
@@ -376,8 +376,8 @@ size_stmt	: NAME EQ SIZEVAL END {
 			psc_notify("Found Sizeval Statement: Tok '%s' Val '%s'",
 			       $1, $3);
 			slcfg_store_tok_val($1, $3);
-			free($1);
-			free($3);
+			PSCFREE($1);
+			PSCFREE($3);
 		}
 		;
 
@@ -385,8 +385,8 @@ num_stmt	: NAME EQ NUM END {
 			psc_notify("Found Num Statement: Tok '%s' Val '%s'",
 				$1, $3);
 			slcfg_store_tok_val($1, $3);
-			free($1);
-			free($3);
+			PSCFREE($1);
+			PSCFREE($3);
 		}
 		;
 
@@ -394,8 +394,8 @@ float_stmt	: NAME EQ FLOATVAL END {
 			psc_notify("Found Float Statement: Tok '%s' Val '%s'",
 			       $1, $3);
 			slcfg_store_tok_val($1, $3);
-			free($1);
-			free($3);
+			PSCFREE($1);
+			PSCFREE($3);
 		}
 		;
 
@@ -403,8 +403,8 @@ hexnum_stmt	: NAME EQ HEXNUM END {
 			psc_notify("Found Hexnum Statement: Tok '%s' Val '%s'",
 			       $1, $3);
 			slcfg_store_tok_val($1, $3);
-			free($1);
-			free($3);
+			PSCFREE($1);
+			PSCFREE($3);
 		}
 		;
 
@@ -412,7 +412,7 @@ quoteds_stmt	: NAME EQ QUOTEDS END {
 			psc_notify("Found Quoted String Statement: Tok '%s' Val '%s'",
 				   $1, $3);
 			slcfg_store_tok_val($1, $3);
-			free($1);
+			PSCFREE($1);
 			PSCFREE($3);
 			/* XXX: don't free, just copy the pointer */
 		}
@@ -423,8 +423,8 @@ lnettcp_stmt	: NAME EQ LNETTCP END {
 				   $1, $3);
 
 			slcfg_store_tok_val($1, $3);
-			free($1);
-			free($3);
+			PSCFREE($1);
+			PSCFREE($3);
 		}
 		;
 
@@ -447,7 +447,7 @@ slcfg_addif(char *ifname, char *netname)
 		psc_fatal("snprintf");
 	if (rc >= (int)sizeof(nidstr))
 		psc_fatalx("interface name too long: %s", ifname);
-	free(ifname);
+	PSCFREE(ifname);
 
 	resm = PSCALLOC(sizeof(*resm));
 	psc_hashent_init(&globalConfig.gconf_nid_hashtbl, resm);
@@ -714,7 +714,7 @@ slcfg_parse(const char *config_file)
 				peer = libsl_str2res(r->res_peertmp[i]);
 				if (!peer)
 					errx(1, "Peer resource %s not specified", r->res_peertmp[i]);
-				free(r->res_peertmp[i]);
+				PSCFREE(r->res_peertmp[i]);
 				psc_dynarray_add(&r->res_peers, peer);
 			}
 		}
