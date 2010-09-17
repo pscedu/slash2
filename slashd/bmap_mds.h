@@ -61,8 +61,8 @@ struct bmap_mds_info {
 	struct psc_lockedlist		 bmdsi_leases;		/* tracked bmap leases */
 	struct odtable_receipt		*bmdsi_assign;
 	uint64_t			 bmdsi_seq;		/* Largest write bml seq # */
-	uint32_t		 	 bmdsi_xid;		/* last op recv'd from ION */
-	int32_t			 	 bmdsi_writers;
+	uint32_t			 bmdsi_xid;		/* last op recv'd from ION */
+	int32_t				 bmdsi_writers;
 	int32_t				 bmdsi_readers;
 	struct psc_pthread_rwlock	 bmdsi_rwlock;
 };
@@ -91,23 +91,8 @@ struct bmap_mds_info {
 #define BMAPOD_WRLOCK(bmdsi)	psc_pthread_rwlock_wrlock(&(bmdsi)->bmdsi_rwlock)
 #define BMAPOD_ULOCK(bmdsi)	psc_pthread_rwlock_unlock(&(bmdsi)->bmdsi_rwlock)
 
-#define BMDSI_LOGCHG_SET(b)						\
-	do {								\
-		int _locked;						\
-									\
-		_locked = BMAP_RLOCK(b);				\
-		(b)->bcm_flags |= BMAP_MDS_LOGCHG;			\
-		BMAP_URLOCK((b), _locked);				\
-	} while (0)
-
-#define BMDSI_LOGCHG_CLEAR(b)						\
-	do {								\
-		int _locked;						\
-									\
-		_locked = BMAP_RLOCK(b);				\
-		(b)->bcm_flags &= ~BMAP_MDS_LOGCHG;			\
-		BMAP_URLOCK((b), _locked);				\
-	} while (0)
+#define BMDSI_LOGCHG_SET(b)	BMAP_SETATTR(b, BMAP_MDS_LOGCHG)
+#define BMDSI_LOGCHG_CLEAR(b)	BMAP_CLEARATTR(b, BMAP_MDS_LOGCHG);
 
 #define BMDSI_LOGCHG_CHECK(b, set)					\
 	do {								\
