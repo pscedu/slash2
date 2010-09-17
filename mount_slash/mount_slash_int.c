@@ -897,7 +897,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 	b = r->biorq_bmap;
 	psc_assert(b);
 
-	psc_assert(op == SRMT_READ || op == SRMT_WRITE);
+	psc_assert(op == SRMT_READ);
 	psc_assert(a);
 
 	DEBUG_BMAP(PLL_INFO, b, "callback");
