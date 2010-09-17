@@ -556,9 +556,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 		break;
 
 	case SL_TYPE_STRP:
-		*(char **)ptr = strdup(val);
-		if (*(char **)ptr == NULL)
-			psc_fatal("strdup");
+		*(char **)ptr = psc_strdup(val);
 		psc_dbg("SL_TYPE_STRP tok '%s' set to '%s' %p",
 		    e->c_name, *(char **)ptr, ptr);
 		break;
