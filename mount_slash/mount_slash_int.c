@@ -1273,12 +1273,6 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 	struct bmapc_memb *bcm;
 	int i, npages, sched = 0;
 
-	if (!((r->biorq_flags & BIORQ_READ)  ||
-	      (r->biorq_flags & BIORQ_RBWFP) ||
-	      (r->biorq_flags & BIORQ_RBWLP)) ||
-	    (r->biorq_flags & BIORQ_DIO))
-		return;
-
 	bcm    = r->biorq_bmap;
 	npages = psc_dynarray_len(&r->biorq_pages);
 
@@ -1637,9 +1631,13 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 
 		msl_biorq_build(&r[nr], b[nr], mfh, (roff - (nr * SLASH_BMAP_SIZE)),
 		    tlen, (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
-		/* Start prefetching our cached buffers.
+ 		/*
+ 		 * If we are not doing direct I/O, launch read for read requests and pre-read
+ 		 * for unaligned write requests.
 		 */
-		msl_pages_prefetch(r[nr]);
+		if (!(r[nr]->biorq_flags & BIORQ_DIO) && ((r[nr]->biorq_flags & BIORQ_READ) || 
+		     (r[nr]->biorq_flags & BIORQ_RBWFP) || (r[nr]->biorq_flags & BIORQ_RBWLP)))
+			msl_pages_prefetch(r[nr]);
 
 		roff += tlen;
 		tsize -= tlen;
