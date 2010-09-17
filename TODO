@@ -183,16 +183,12 @@ in release but I don't see good performance for 'ls -al'.
 - think about routing blips where MDS<->ION is not quite what a ION<->ION
   can see each, causing unnecessary replication work processing
 
-- the BUS errors look like they are being caused in some error scenario
-  in PSCRPC
-
 - implement mknod, link, symlink
 - keep replication queue in .slrepls and keep around a small pool of sl_replrq
   at any time, enough to attempt to keep all IONs involved in replication saturated
     - we can't do this because they are shared with PTRUNC now as well as not
       being able to saturate inter-ION links
 - add ctlapi for bmpc
-- there appears to be a double free that can easily be invoked by replst
 
 ---------------------------------------------------------
 
