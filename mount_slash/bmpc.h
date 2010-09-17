@@ -69,7 +69,6 @@ struct bmpc_mem_slbs {
 struct bmap_pagecache_entry {
 	psc_atomic16_t		 bmpce_wrref;	/* pending write ops        */
 	psc_atomic16_t		 bmpce_rdref;	/* pending read ops         */
-	psc_atomic16_t		 bmpce_infref;	/* inflight ref             */
 	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits        */
 	uint32_t		 bmpce_off;	/* filewise, bmap relative  */
 	psc_spinlock_t		 bmpce_lock;	/* serialize                */
@@ -125,12 +124,11 @@ struct bmap_pagecache_entry {
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
 	    "bmpce@%p fl=%u o=%x b=%p ts=%ld:%ld wr=%hu rd=%hu "	\
-	    "inf=%hu lru=%d biorq=%p "BMPCE_FLAGS_FORMAT" "fmt,		\
+	    "lru=%d biorq=%p "BMPCE_FLAGS_FORMAT" "fmt,			\
 	    (b), (b)->bmpce_flags, (b)->bmpce_off, (b)->bmpce_base,	\
 	    (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec,	\
 	    psc_atomic16_read(&(b)->bmpce_wrref),			\
 	    psc_atomic16_read(&(b)->bmpce_rdref),			\
-	    psc_atomic16_read(&(b)->bmpce_infref),			\
 	    psclist_conjoint(&(b)->bmpce_lentry, NULL),			\
 	    BMPCE_2_BIORQ(b),						\
 	    DEBUG_BMPCE_FLAGS(b), ## __VA_ARGS__)
@@ -293,7 +291,6 @@ bmpce_freeprep(struct bmap_pagecache_entry *bmpce)
 
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
-	psc_assert(!psc_atomic16_read(&bmpce->bmpce_infref));
 
 	bmpce->bmpce_flags = BMPCE_FREEING;
 }
