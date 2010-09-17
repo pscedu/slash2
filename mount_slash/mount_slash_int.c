@@ -1335,27 +1335,21 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		if (r->biorq_flags & BIORQ_RBWFP) {
 			bmpce = psc_dynarray_getpos(&r->biorq_pages, 0);
 
-			if (biorq_is_my_bmpce(r, bmpce)) {
-				psc_assert(!(bmpce->bmpce_flags &
-					     BMPCE_DATARDY));
-				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-				msl_read_rpc_create(r, 0, 1);
-				sched = 1;
-			}
+			psc_assert(biorq_is_my_bmpce(r, bmpce));
+			psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
+			psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
+			msl_read_rpc_create(r, 0, 1);
+			sched = 1;
 		}
-
 		if (r->biorq_flags & BIORQ_RBWLP) {
 			bmpce = psc_dynarray_getpos(&r->biorq_pages,
-						    psc_dynarray_len(&r->biorq_pages)-1);
+				    psc_dynarray_len(&r->biorq_pages)-1);
 
-			if (biorq_is_my_bmpce(r, bmpce)) {
-				psc_assert(!(bmpce->bmpce_flags &
-					     BMPCE_DATARDY));
-				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-				msl_read_rpc_create(r,
-						      psc_dynarray_len(&r->biorq_pages)-1, 1);
-				sched = 1;
-			}
+			psc_assert(biorq_is_my_bmpce(r, bmpce));
+			psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
+			psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
+			msl_read_rpc_create(r, psc_dynarray_len(&r->biorq_pages)-1, 1);
+			sched = 1;
 		}
 	}
 
