@@ -70,7 +70,7 @@ struct bmap_pagecache_entry {
 	psc_atomic16_t		 bmpce_wrref;	/* pending write ops        */
 	psc_atomic16_t		 bmpce_rdref;	/* pending read ops         */
 	psc_atomic16_t		 bmpce_infref;	/* inflight ref             */
-	uint32_t		 bmpce_flags;	/* BMPCE_* state bits       */
+	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits        */
 	uint32_t		 bmpce_off;	/* filewise, bmap relative  */
 	psc_spinlock_t		 bmpce_lock;	/* serialize                */
 	void			*bmpce_base;	/* base pointer from slb    */
@@ -97,6 +97,13 @@ struct bmap_pagecache_entry {
 #define	BMPCE_INIT		(1 << 7)
 #define	BMPCE_READPNDG		(1 << 8)
 #define	BMPCE_RBWPAGE		(1 << 9)
+
+/*
+ * Do not blindly wait until data is ready or assume that data
+ * is ready when the RPC is complete.
+ */
+#define	BMPCE_INFLIGHT		(1 << 10)	/* I/O in progress */
+#define	BMPCE_EIO		(1 << 11)	/* I/O error */
 
 #define BMPCE_2_BIORQ(b)						\
 	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
