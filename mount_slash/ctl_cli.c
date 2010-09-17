@@ -392,9 +392,8 @@ int
 msctlparam_general(int fd, struct psc_ctlmsghdr *mh,
     struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
 {
-	char *endp, nbuf[30];
+	char nbuf[30];
 	int set;
-	long val;
 
 	if (nlevels > 2)
 		return (psc_ctlsenderr(fd, mh, "invalid field"));
@@ -437,6 +436,9 @@ msctlparam_general(int fd, struct psc_ctlmsghdr *mh,
 #ifdef HAVE_FUSE_DEBUGLEVEL
 	if (nlevels < 2 || strcmp(levels[1], "fuse_debug") == 0) {
 		if (set) {
+			char *endp;
+			long val;
+
 			endp = NULL;
 			val = strtol(pcp->pcp_value, &endp, 10);
 			if (val < 0 || val > 1 ||
