@@ -1304,7 +1304,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 
 			BMPCE_ULOCK(bmpce);
 
-			/* Try to set the tail bmpce if it's not yet
+			/* Try to set the start bmpce if it's not yet
 			 *   assigned.
 			 */
 			if (j < 0) {
