@@ -27,6 +27,7 @@
 #include "psc_util/journal.h"
 
 #include "bmap.h"
+#include "bmap_mds.h"
 #include "fid.h"
 #include "fidc_mds.h"
 #include "fidcache.h"
@@ -35,7 +36,6 @@
 #include "mdsio.h"
 #include "slashd.h"
 #include "slerr.h"
-#include "bmap_mds.h"
 
 #include "sljournal.h"
 #include "zfs-fuse/zfs_slashlib.h"
