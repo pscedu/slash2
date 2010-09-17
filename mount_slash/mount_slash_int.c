@@ -1261,6 +1261,11 @@ msl_read_rpc_create(struct bmpc_ioreq *r, int startpage, int npages)
 	}
 }
 
+/**
+ * msl_pages_prefetch - Launch read RPCs for pages that are owned by the given
+ *     I/O request.  This function is called to perform a pure read request or
+ *     a read-before-write for a write request.
+ */
 __static void
 msl_pages_prefetch(struct bmpc_ioreq *r)
 {
