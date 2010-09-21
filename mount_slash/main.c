@@ -129,12 +129,15 @@ static mode_t
 slash2fuse_getumask(__unusedx fuse_req_t req)
 {
 	mode_t mode;
-#if FUSE_VERSION > FUSE_MAKE_VERSION(2,7)
+#ifdef FUSE_VERSION
+#  if FUSE_VERSION > FUSE_MAKE_VERSION(2,7)
 	const struct fuse_ctx *ctx = fuse_req_ctx(req);
 
 	mode = ctx->umask;
-#else
+#  else
 	mode = 0644;
+	/* XXX read from /proc ? */
+#  endif
 #endif
 	return (mode);
 }
@@ -1041,14 +1044,14 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	p = fidc_lookup_fid(parent);
 	if (!p)
 		goto out;
-	
+
 	FCMH_LOCK(p);
 	if (!DIRCACHE_INITIALIZED(p))
 		slc_fcmh_initdci(p);
 	FCMH_ULOCK(p);
 
 	child = dircache_lookup(&fcmh_2_fci(p)->fci_dci, name, DC_LOOKUP);
-	/* It's ok to unref the parent now.
+	/* It's OK to unref the parent now.
 	 */
 	fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
