@@ -874,7 +874,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	// just put the resm's in the dynarray. when pushing out the bid's
 	//   assume an ion unless resm == slc_rmc_resm
 
-	do {
+	for (;;) {
 		psc_trace("msbmaprlsthr_main() top of loop");
 
 		lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
@@ -984,8 +984,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		psc_waitq_waitrel(&waitq, NULL, &wtime);
 
 		wtime.tv_sec = wtime.tv_nsec = 0;
-
-	} while (1);
+	}
 	psc_dynarray_free(&a);
 }
 

@@ -123,10 +123,11 @@ struct bmap_pagecache_entry {
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-	    "bmpce@%p fl=%u o=%x b=%p ts=%ld:%ld wr=%hu rd=%hu "	\
+	    "bmpce@%p fl=%u o=%x b=%p ts="PSCPRI_TIMESPEC" "		\
+	    "wr=%hu rd=%hu "						\
 	    "lru=%d biorq=%p "BMPCE_FLAGS_FORMAT" "fmt,			\
 	    (b), (b)->bmpce_flags, (b)->bmpce_off, (b)->bmpce_base,	\
-	    (b)->bmpce_laccess.tv_sec, (b)->bmpce_laccess.tv_nsec,	\
+	    PSCPRI_TIMESPEC_ARGS(&(b)->bmpce_laccess),			\
 	    psc_atomic16_read(&(b)->bmpce_wrref),			\
 	    psc_atomic16_read(&(b)->bmpce_rdref),			\
 	    psclist_conjoint(&(b)->bmpce_lentry, NULL),			\
@@ -273,11 +274,11 @@ struct bmpc_ioreq {
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-	    "biorq@%p fl=%d o=%u l=%u np=%d b=%p ts=%ld:%ld "		\
+	    "biorq@%p fl=%d o=%u l=%u np=%d b=%p ts="PSCPRI_TIMESPEC" "	\
 	    BIORQ_FLAGS_FORMAT" "fmt,					\
 	    (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
-	    (b)->biorq_start.tv_sec, (b)->biorq_start.tv_nsec,		\
+	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_start),			\
 	    DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
 
 static __inline void
@@ -307,10 +308,10 @@ bmpce_useprep(struct bmap_pagecache_entry *bmpce, struct bmpc_ioreq *biorq)
 
 	bmpce->bmpce_flags = (BMPCE_GETBUF | BMPCE_INIT);
 	/*
- 	 * We put the entry back to the splay tree before it
- 	 * is fully allocated, so we need this field to remember
- 	 * who owns it.  Alternatively, we could use locking.
- 	 */
+	 * We put the entry back to the splay tree before it
+	 * is fully allocated, so we need this field to remember
+	 * who owns it.  Alternatively, we could use locking.
+	 */
 	bmpce->bmpce_waitq = &biorq->biorq_waitq;
 }
 

@@ -273,7 +273,7 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 		b = SPLAY_NEXT(bmap_pagecachetree, &bmpc->bmpc_tree, a);
 
 		spinlock(&a->bmpce_lock);
-		DEBUG_BMPCE(PLL_TRACE, a, "freeing..");
+		DEBUG_BMPCE(PLL_TRACE, a, "freeing");
 		bmpce_freeprep(a);
 		freelock(&a->bmpce_lock);
 
@@ -300,8 +300,8 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 
 	timespecsub(&bmpc->bmpc_oldest, &ts, &expire);
-	psc_notify("bmpc oldest (%ld:%ld)",
-		   expire.tv_sec, expire.tv_nsec);
+	psc_notice("bmpc oldest ("PSCPRI_TIMESPEC")",
+	    PSCPRI_TIMESPEC_ARGS(&expire));
 
 	BMPC_LOCK(bmpc);
 #if 0
@@ -324,16 +324,17 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 		timespecsub(&bmpce->bmpce_laccess, &ts, &expire);
 
 		if (timespeccmp(&ts, &bmpce->bmpce_laccess, <)) {
-			DEBUG_BMPCE(PLL_NOTIFY, bmpce,
-				    "expire=(%ld:%ld) too recent, skip",
-				    expire.tv_sec, expire.tv_nsec);
+			DEBUG_BMPCE(PLL_NOTICE, bmpce,
+			    "expire=("PSCPRI_TIMESPEC") too recent, skip",
+			    PSCPRI_TIMESPEC_ARGS(&expire));
 
 			freelock(&bmpce->bmpce_lock);
 			break;
 
 		} else {
-			DEBUG_BMPCE(PLL_NOTIFY, bmpce, "freeing expire=(%ld:%ld)",
-				    expire.tv_sec, expire.tv_nsec);
+			DEBUG_BMPCE(PLL_NOTICE, bmpce,
+			    "freeing expire=("PSCPRI_TIMESPEC")",
+			    PSCPRI_TIMESPEC_ARGS(&expire));
 
 			bmpce_freeprep(bmpce);
 			bmpce_release_locked(bmpce, bmpc);
@@ -396,7 +397,7 @@ bmpc_reap_locked(void)
 			   bmpc->bmpc_oldest.tv_sec, bmpc->bmpc_oldest.tv_nsec);
 #endif
 
-		/* First check for lru items.
+		/* First check for LRU items.
 		 */
 		if (!pll_nitems(&bmpc->bmpc_lru)) {
 			psc_trace("skip bmpc=%p, nothing on lru", bmpc);
