@@ -145,7 +145,7 @@ main(int argc, char *argv[])
 
 	sl_getuserpwent(&pw);
 	if (pw == NULL)
-		psc_error("user account %s", SLASH_UID);
+		psc_error("getpwent %s", SLASH_UID);
 
 	if (wipe)
 		wipefs(argv[0]);
