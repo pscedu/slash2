@@ -202,13 +202,13 @@ struct bmap_pagecache {
 	struct psc_lockedlist		 bmpc_new_biorqs;
 	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
 	atomic_t			 bmpc_pndgwr;		/* # pending wr req */
-	psc_spinlock_t			 bmpc_lock;		/* serialize splay tree and three biorq lists  */
+	psc_spinlock_t			 bmpc_lock;		/* serialize access to splay tree and locked lists  */
 	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
 };
 
 /*
  * The following four macros are equivalent to PLL_xxx counterparts 
- * because the way we initialize the locked lists in bmap_pagecache.
+ * because of the way we initialize the locked lists in bmap_pagecache.
  */
 #define BMPC_LOCK(b)		spinlock(&(b)->bmpc_lock)
 #define BMPC_ULOCK(b)		freelock(&(b)->bmpc_lock)
