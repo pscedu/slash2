@@ -28,6 +28,9 @@
 #include "inode.h"
 #include "slashrpc.h"
 
+/* number of bmap flush threads */
+#define NUM_BMAP_FLUSH_THREADS		1
+
 /*
  * bmap_cli_data - private data associated with a bmap used by a SLASH2 client
  */

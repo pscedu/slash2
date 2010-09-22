@@ -1016,6 +1016,8 @@ msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 void
 msbmapflushthr_spawn(void)
 {
+	int i;
+
 	pndgReqs = pscrpc_nbreqset_init(NULL, msl_io_rpc_cb);
 	atomic_set(&outstandingRpcCnt, 0);
 	atomic_set(&completedRpcCnt, 0);
@@ -1027,8 +1029,10 @@ msbmapflushthr_spawn(void)
 	lc_reginit(&bmapTimeoutQ, struct bmapc_memb,
 	    bcm_lentry, "bmaptimeout");
 
-	pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
-	    NULL, 0, "msbflushthr");
+	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
+		pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main, 
+			NULL, 0, "msbflushthr%d", i);
+	}
 
 	pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushthrrpc_main,
 	    NULL, 0, "msbflushrpcthr");
