@@ -240,8 +240,6 @@ __static void
 bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
 		     struct bmap_pagecache *bmpc)
 {
-	LOCK_ENSURE(&bmpc->bmpc_lock);
-
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_rdref));
 	psc_assert(!psc_atomic16_read(&bmpce->bmpce_wrref));
 	psc_assert(bmpce->bmpce_flags == BMPCE_FREEING);

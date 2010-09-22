@@ -192,20 +192,24 @@ SPLAY_PROTOTYPE(bmap_lrutree, bmap_pagecache_entry, bmpce_lru_tentry,
 #endif
 
 struct bmap_pagecache {
-	struct bmap_pagecachetree	 bmpc_tree;	/* tree of cbuf_handle        */
-	struct timespec			 bmpc_oldest;	/* LRU's oldest item          */
+	struct bmap_pagecachetree	 bmpc_tree;		/* tree of cbuf_handle */
+	struct timespec			 bmpc_oldest;		/* LRU's oldest item */
 #ifdef BMPC_RBTREE
 	struct bmap_lrutree		 bmpc_lrutree;
 #else
-	struct psc_lockedlist		 bmpc_lru;	/* cleancnt can be kept here  */
+	struct psc_lockedlist		 bmpc_lru;		/* cleancnt can be kept here  */
 #endif
 	struct psc_lockedlist		 bmpc_new_biorqs;
-	struct psc_lockedlist		 bmpc_pndg_biorqs; /* chain pending I/O requests */
-	atomic_t			 bmpc_pndgwr;	/* # pending wr req           */
-	psc_spinlock_t			 bmpc_lock;	/* serialize tree and pll     */
-	struct psclist_head		 bmpc_lentry;	/* chain to global LRU lc     */
+	struct psc_lockedlist		 bmpc_pndg_biorqs;	/* chain pending I/O requests */
+	atomic_t			 bmpc_pndgwr;		/* # pending wr req */
+	psc_spinlock_t			 bmpc_lock;		/* serialize splay tree and three biorq lists  */
+	struct psclist_head		 bmpc_lentry;		/* chain to global LRU lc */
 };
 
+/*
+ * The following four macros are equivalent to PLL_xxx counterparts 
+ * because the way we initialize the locked lists in bmap_pagecache.
+ */
 #define BMPC_LOCK(b)		spinlock(&(b)->bmpc_lock)
 #define BMPC_ULOCK(b)		freelock(&(b)->bmpc_lock)
 #define BMPC_RLOCK(b)		reqlock(&(b)->bmpc_lock)
