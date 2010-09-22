@@ -442,22 +442,27 @@ void
 bmap_biorq_expire(struct bmapc_memb *b)
 {
 	struct bmpc_ioreq *biorq;
+	struct bmap_pagecache *bmpc;
 
-	BMPC_LOCK(bmap_2_bmpc(b));
+	bmpc = bmap_2_bmpc(b);
+
+	PLL_LOCK(&bmpc->bmpc_new_biorqs);
 	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_new_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
 		freelock(&biorq->biorq_lock);
 	}
+	PLL_ULOCK(&bmpc->bmpc_new_biorqs);
 
+	PLL_LOCK(&bmpc->bmpc_pndg_biorqs);
 	PLL_FOREACH(biorq, &bmap_2_bmpc(b)->bmpc_pndg_biorqs) {
 		spinlock(&biorq->biorq_lock);
 		biorq->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_DEBUG, biorq, "FORCE_EXPIRE");
 		freelock(&biorq->biorq_lock);
 	}
-	BMPC_ULOCK(bmap_2_bmpc(b));
+	PLL_ULOCK(&bmpc->bmpc_pndg_biorqs);
 }
 
 __static void
