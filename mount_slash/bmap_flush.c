@@ -683,6 +683,7 @@ bmap_flush(int nrpcs)
 
 		psc_dynarray_free(&a);
 
+		PLL_LOCK(&bmpc->bmpc_new_biorqs);
 		PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
 			spinlock(&r->biorq_lock);
 
@@ -721,6 +722,8 @@ bmap_flush(int nrpcs)
 			DEBUG_BIORQ(PLL_NOTIFY, r, "try flush");
 			psc_dynarray_add(&a, r);
 		}
+		PLL_ULOCK(&bmpc->bmpc_new_biorqs);
+
 		BMPC_ULOCK(bmpc);
 		if (!psc_dynarray_len(&a))
 			/* Didn't find any work on this bmap.
