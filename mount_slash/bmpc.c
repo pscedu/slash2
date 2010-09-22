@@ -303,13 +303,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	psc_notice("bmpc oldest ("PSCPRI_TIMESPEC")",
 	    PSCPRI_TIMESPEC_ARGS(&expire));
 
-	BMPC_LOCK(bmpc);
-#if 0
-	PLL_FOREACH(bmpce, &bmpc->bmpc_lru) {
-		DEBUG_BMPCE(PLL_NOTIFY, bmpce, "tryfree");
-	}
-#endif
-
+	PLL_LOCK(&bmpc->bmpc_lru);
 	PLL_FOREACH_SAFE(bmpce, tmp, &bmpc->bmpc_lru) {
 		spinlock(&bmpce->bmpce_lock);
 
@@ -342,6 +336,8 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 				break;
 		}
 	}
+	PLL_ULOCK(&bmpc->bmpc_lru);
+
 	/* Save CPU, assume that the head of the list is the oldest entry.
 	 */
 	if (pll_nitems(&bmpc->bmpc_lru) > 0) {
@@ -350,7 +346,6 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 		       sizeof(struct timespec));
 	}
 
-	BMPC_ULOCK(bmpc);
 	return (freed);
 }
 
