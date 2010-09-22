@@ -59,6 +59,8 @@ __static struct psc_waitq	 rpcCompletion;
 #define pndgReqsLock()		spinlock(&pndgReqLock)
 #define pndgReqsUlock()		freelock(&pndgReqLock)
 
+struct psc_waitq		bmapflushwaitq = PSC_WAITQ_INIT;
+
 __static void
 bmap_flush_reap_rpcs(void)
 {
@@ -992,11 +994,13 @@ void
 msbmapflushthr_main(__unusedx struct psc_thread *thr)
 {
 	int nrpcs;
+	struct timespec ts = { 0, 2048000 };
+
 	while (pscthr_run()) {
 		nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
 		if (nrpcs > 0)
 			bmap_flush(nrpcs);
-		usleep(2048);
+		psc_waitq_waitrel(&bmapflushwaitq, NULL, &ts);
 	}
 }
 
@@ -1022,6 +1026,7 @@ msbmapflushthr_spawn(void)
 	atomic_set(&outstandingRpcCnt, 0);
 	atomic_set(&completedRpcCnt, 0);
 	psc_waitq_init(&rpcCompletion);
+	psc_waitq_init(&bmapflushwaitq);
 
 	lc_reginit(&bmapFlushQ, struct bmapc_memb,
 	    bcm_lentry, "bmapflush");
