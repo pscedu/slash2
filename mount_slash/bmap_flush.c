@@ -240,13 +240,11 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	freelock(&r->biorq_lock);
 
 	bmpc = bmap_2_bmpc(r->biorq_bmap);
-	BMPC_LOCK(bmpc);
 	/* Limit the amount of scanning done by this
 	 *   thread.  Move pending biorqs out of the way.
 	 */
 	pll_remove(&bmpc->bmpc_new_biorqs, r);
 	pll_addtail(&bmpc->bmpc_pndg_biorqs, r);
-	BMPC_ULOCK(bmpc);
 }
 
 __static int
