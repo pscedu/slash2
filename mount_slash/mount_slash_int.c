@@ -1432,7 +1432,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 	struct bmap_pagecache_entry *bmpce;
 	uint32_t toff, tsize, nbytes;
 	int i, npages;
-	char *sink, *src;
+	char *dest, *src;
 
 	src    = buf;
 	tsize  = r->biorq_len;
@@ -1454,7 +1454,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 		/* Set the starting buffer pointer into
 		 *  our cache vector.
 		 */
-		sink = (char *)bmpce->bmpce_base;
+		dest = (char *)bmpce->bmpce_base;
 		if (!i && (toff > bmpce->bmpce_off)) {
 			/* The first cache buffer pointer may need
 			 *    a bump if the request offset is unaligned.
@@ -1462,7 +1462,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 			bmpce_usecheck(bmpce, BIORQ_WRITE,
 				       (toff & ~BMPC_BUFMASK));
 			psc_assert((toff - bmpce->bmpce_off) < BMPC_BUFSZ);
-			sink += toff - bmpce->bmpce_off;
+			dest += toff - bmpce->bmpce_off;
 			nbytes = MIN(BMPC_BUFSZ - (toff - bmpce->bmpce_off),
 				     tsize);
 		} else {
@@ -1474,7 +1474,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 			    tsize, nbytes, toff);
 		/* Do the deed.
 		 */
-		memcpy(sink, src, nbytes);
+		memcpy(dest, src, nbytes);
 		/* If the bmpce belongs to this request and is not yet
 		 *   DATARDY (ie wasn't an RBW block) then set DATARDY
 		 *   and wakeup anyone who was blocked.  Note the waitq
@@ -1514,9 +1514,9 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 	uint32_t toff, tsize;
 	size_t nbytes;
 	int i, npages;
-	char *sink, *src;
+	char *dest, *src;
 
-	sink   = buf;
+	dest   = buf;
 	tsize  = r->biorq_len;
 	toff   = r->biorq_off;
 	npages = psc_dynarray_len(&r->biorq_pages);
@@ -1546,11 +1546,11 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 		DEBUG_BMPCE(PLL_DEBUG, bmpce, "tsize=%u nbytes=%zu toff=%u",
 			    tsize, nbytes, toff);
 
-		memcpy(sink, src, nbytes);
+		memcpy(dest, src, nbytes);
 		BMPCE_ULOCK(bmpce);
 
 		toff  += nbytes;
-		sink  += nbytes;
+		dest  += nbytes;
 		tsize -= nbytes;
 	}
 	psc_assert(!tsize);
