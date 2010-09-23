@@ -659,12 +659,14 @@ bmap_flush(int nrpcs)
 		if (b->bcm_flags & BMAP_DIRTY) {
 			psc_assert(bmpc_queued_writes(bmpc));
 			BMPC_ULOCK(bmpc);
+
 			psc_dynarray_add(&bmaps, b);
 		} else {
 			psc_assert(!bmpc_queued_writes(bmpc));
+			BMPC_ULOCK(bmpc);
+
 			b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
 			bcm_wake_locked(b);
-			BMPC_ULOCK(bmpc);
 
 			if (!bmpc_queued_ios(bmpc)) {
 				/* No remaining reads or writes.
