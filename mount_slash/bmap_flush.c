@@ -39,7 +39,7 @@
 #include "slashrpc.h"
 #include "slconfig.h"
 
-__static struct timespec	 bmapFlushDefMaxAge = { 0, 1000000L };
+struct timespec			 bmapFlushDefMaxAge = { 0, 1000000L };
 
 struct psc_listcache		 bmapFlushQ;
 struct psc_listcache		 bmapTimeoutQ;
