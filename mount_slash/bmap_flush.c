@@ -535,18 +535,17 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 __static struct psc_dynarray *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 {
-	int i, off, anyexpired=0;
+	int i, off, flush=0, anyexpired=0;
 	struct bmpc_ioreq *r=NULL, *t;
 	struct psc_dynarray b=DYNARRAY_INIT, *a=NULL;
 
 	psc_assert(psc_dynarray_len(biorqs) > *offset);
 
 	for (off=0; (off + *offset) < psc_dynarray_len(biorqs); off++) {
-		t = psc_dynarray_getpos(biorqs, off + *offset);
 
+		t = psc_dynarray_getpos(biorqs, off + *offset);
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
 			   !(t->biorq_flags & BIORQ_INFL));
-
 		if (r)
 			/* Assert 'lowest to highest' ordering.
 			 */
@@ -581,8 +580,10 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		 * regardless of its size.  Otherwise, we reset everything
 		 * and attempt to coalesce the remaining requests.
 		 */
-		if (anyexpired || bmap_flushready(&b))
+		if (anyexpired || bmap_flushready(&b)) {
+			flush = 1;
 			break;
+		}
 
 		r = t;
 		for (i=0; i < psc_dynarray_len(&b); i++) {
@@ -597,7 +598,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		psc_dynarray_add(&b, r);
 	}
 
-	if (anyexpired || bmap_flushready(&b)) {
+	if (flush) {
 		a = PSCALLOC(sizeof(*a));
 		psc_dynarray_ensurelen(a, psc_dynarray_len(&b));
 		for (i=0; i < psc_dynarray_len(&b); i++) {
