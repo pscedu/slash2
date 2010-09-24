@@ -166,7 +166,7 @@ new_fs(void)
 	if (nfds == MAX_FDS) {
 		fprintf(stderr, "Warning: filesystem limit (%i) reached, unmounting..\n", MAX_FILESYSTEMS);
 		fuse_unmount(mntpoint, fs.ch);
-		free(mntpoint);
+		PSCFREE(mntpoint);
 		return;
 	}
 
@@ -348,7 +348,7 @@ slash2fuse_listener_start(void)
 		fuse_unmount(mountpoints[i], fsinfo[i].ch);
 		fuse_session_destroy(fsinfo[i].se);
 
-		free(mountpoints[i]);
+		PSCFREE(mountpoints[i]);
 	}
 
 	return 1;
