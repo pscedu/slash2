@@ -990,7 +990,10 @@ void
 msbmapflushthr_main(__unusedx struct psc_thread *thr)
 {
 	int nrpcs;
-	struct timespec ts = { 0, 2048000 };
+	struct timespec ts;
+
+	ts.tv_sec = bmapFlushDefMaxAge.tv_sec / 2; 
+	ts.tv_nsec = bmapFlushDefMaxAge.tv_nsec / 2; 
 
 	while (pscthr_run()) {
 		nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
