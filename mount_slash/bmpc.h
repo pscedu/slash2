@@ -54,6 +54,8 @@
 #define BMPC_DEF_MINAGE		{ 0, 600000000 } /* seconds, nanoseconds */
 #define BMPC_INTERVAL		{ 0, 200000000 }
 
+struct timespec			bmapFlushDefMaxAge; 
+
 struct bmpc_mem_slbs {
 	atomic_t		bmms_waiters;
 	uint16_t		bmms_reap;
@@ -414,7 +416,9 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 	INIT_PSC_LISTENTRY(&ioreq->biorq_lentry);
 	INIT_PSC_LISTENTRY(&ioreq->biorq_mfh_lentry);
 	INIT_SPINLOCK(&ioreq->biorq_lock);
+
 	PFL_GETTIMESPEC(&ioreq->biorq_start);
+	timespecadd(&ioreq->biorq_start, &bmapFlushDefMaxAge, &ioreq->biorq_start);
 
 	ioreq->biorq_off  = off;
 	ioreq->biorq_len  = len;
