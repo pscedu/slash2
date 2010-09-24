@@ -634,7 +634,6 @@ bmap_flush(int nrpcs)
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *tmp;
 	struct iovec *iovs = NULL;
-	struct bmap_cli_info *bci;
 	struct bmapc_memb *b;
 	int i = 0, niovs;
 
@@ -643,7 +642,6 @@ bmap_flush(int nrpcs)
 		if (!b)
 			break;
 
-		bci = bmap_2_bci(b);
 		bmpc = bmap_2_bmpc(b);
 		/* Bmap lock only needed to test the dirty bit.
 		 */
@@ -756,7 +754,6 @@ bmap_flush(int nrpcs)
 
 	for (i = 0; i < psc_dynarray_len(&bmaps); i++) {
 		b = psc_dynarray_getpos(&bmaps, i);
-		bci = bmap_2_bci(b);
 		bmpc = bmap_2_bmpc(b);
 
 		BMAP_LOCK(b);
