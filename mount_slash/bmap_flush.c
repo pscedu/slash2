@@ -573,8 +573,8 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 		}
 		/*
 		 * Okay, we fail to coalesce more requests.  If any request
-		 * has already expired, we push the current set anyway
-		 * regardless of its size.  Otherwise, we reset everything
+		 * has already expired or the current set is already large
+		 * enough, we push the set.  Otherwise, we reset everything
 		 * and attempt to coalesce the remaining requests.
 		 */
 		if (anyexpired || bmap_flushready(&b)) {
