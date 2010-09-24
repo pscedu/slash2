@@ -291,7 +291,7 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 
 __static void
 slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
-	  mode_t mode, struct fuse_file_info *fi)
+    mode_t mode, struct fuse_file_info *fi)
 {
 	struct fidc_membh *m = NULL;
 	struct slashrpc_cservice *csvc = NULL;
@@ -827,8 +827,8 @@ slash2fuse_mknod_helper(fuse_req_t req, __unusedx fuse_ino_t parent,
 }
 
 __static int
-slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
-	   off_t off, struct fuse_file_info *fi)
+slash2fuse_readdir(fuse_req_t req, size_t size, off_t off,
+    struct fuse_file_info *fi)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -960,10 +960,10 @@ slash2fuse_readdir(fuse_req_t req, __unusedx fuse_ino_t ino, size_t size,
 }
 
 __static void
-slash2fuse_readdir_helper(fuse_req_t req, fuse_ino_t ino, size_t size,
-	  off_t off, struct fuse_file_info *fi)
+slash2fuse_readdir_helper(fuse_req_t req, __unusedx fuse_ino_t ino,
+    size_t size, off_t off, struct fuse_file_info *fi)
 {
-	int error = slash2fuse_readdir(req, ino, size, off, fi);
+	int error = slash2fuse_readdir(req, size, off, fi);
 
 	if (error)
 		fuse_reply_err(req, error);
@@ -971,7 +971,7 @@ slash2fuse_readdir_helper(fuse_req_t req, fuse_ino_t ino, size_t size,
 
 __static int
 slash_lookuprpc(const struct slash_creds *crp, fuse_ino_t parent,
-	const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
+    const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -1576,7 +1576,7 @@ slash2fuse_fsync_helper(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino,
 __static void
 slash2fuse_destroy(__unusedx void *userdata)
 {
-	//fuse_reply_err(req, ENOTSUP);
+	//umount
 }
 
 void
