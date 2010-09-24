@@ -179,7 +179,7 @@ include		: INCLUDE QUOTEDS {
 			rc = glob($2, GLOB_BRACE, NULL, &gl);
 			if (rc)
 				warnx("%s:%d: %s: could not glob",
-				cfg_filename, cfg_lineno, $2);
+				    cfg_filename, cfg_lineno, $2);
 			else {
 				for (i = 0; i < gl.gl_pathc; i++)
 					slcfg_add_include($2);
