@@ -541,8 +541,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 
 	psc_assert(psc_dynarray_len(biorqs) > *offset);
 
-	for (off=0; (off + *offset) < psc_dynarray_len(biorqs) &&
-		     !bmap_flushready(&b); off++) {
+	for (off=0; (off + *offset) < psc_dynarray_len(biorqs); off++) {
 		t = psc_dynarray_getpos(biorqs, off + *offset);
 
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
@@ -582,7 +581,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 		 * regardless of its size.  Otherwise, we reset everything
 		 * and attempt to coalesce the remaining requests.
 		 */
-		if (anyexpired)
+		if (anyexpired || bmap_flushready(&b))
 			break;
 
 		r = t;
