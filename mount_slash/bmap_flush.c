@@ -660,9 +660,6 @@ bmap_flush(int nrpcs)
 			psc_assert(!bmpc_queued_writes(bmpc));
 			BMPC_ULOCK(bmpc);
 
-			b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
-			bcm_wake_locked(b);
-
 			if (!bmpc_queued_ios(bmpc)) {
 				/* No remaining reads or writes.
 				 */
@@ -672,6 +669,8 @@ bmap_flush(int nrpcs)
 				DEBUG_BMAP(PLL_INFO, b,
 				   "added to bmapTimeoutQ");
 			}
+			b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
+			bcm_wake_locked(b);
 			BMAP_ULOCK(b);
 			continue;
 		}
