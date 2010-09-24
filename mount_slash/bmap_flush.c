@@ -40,7 +40,6 @@
 #include "slconfig.h"
 
 __static struct timespec	 bmapFlushDefMaxAge = { 0, 1000000L };
-__static struct timespec	 bmapFlushDefSleep = { 0, 100000000L };
 
 struct psc_listcache		 bmapFlushQ;
 struct psc_listcache		 bmapTimeoutQ;
