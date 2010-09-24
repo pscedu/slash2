@@ -243,7 +243,7 @@ struct bmpc_ioreq {
 	uint32_t			 biorq_len;	/* non-aligned, real length  */
 	uint32_t			 biorq_flags;	/* state and op type bits    */
 	psc_spinlock_t			 biorq_lock;
-	struct timespec			 biorq_start;	/* issue time                */
+	struct timespec			 biorq_issue;	/* time to initiate I/O      */
 	struct psc_dynarray		 biorq_pages;	/* array of bmpce            */
 	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs */
 	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle */
@@ -284,7 +284,7 @@ struct bmpc_ioreq {
 	    BIORQ_FLAGS_FORMAT" "fmt,					\
 	    (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
 	    psc_dynarray_len(&(b)->biorq_pages), (b)->biorq_bmap,	\
-	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_start),			\
+	    PSCPRI_TIMESPEC_ARGS(&(b)->biorq_issue),			\
 	    DEBUG_BIORQ_FLAGS(b), ## __VA_ARGS__)
 
 static __inline void
@@ -417,8 +417,8 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 	INIT_PSC_LISTENTRY(&ioreq->biorq_mfh_lentry);
 	INIT_SPINLOCK(&ioreq->biorq_lock);
 
-	PFL_GETTIMESPEC(&ioreq->biorq_start);
-	timespecadd(&ioreq->biorq_start, &bmapFlushDefMaxAge, &ioreq->biorq_start);
+	PFL_GETTIMESPEC(&ioreq->biorq_issue);
+	timespecadd(&ioreq->biorq_issue, &bmapFlushDefMaxAge, &ioreq->biorq_issue);
 
 	ioreq->biorq_off  = off;
 	ioreq->biorq_len  = len;
