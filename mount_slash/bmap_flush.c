@@ -106,13 +106,13 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 
 	PFL_GETTIMESPEC(&ts);
 
-	if (a->biorq_issue.tv_sec < ts.tv_sec)
+	if (a->biorq_issue.tv_sec > ts.tv_sec)
 		return (1);
 
-	else if (a->biorq_issue.tv_sec > ts.tv_sec)
+	else if (a->biorq_issue.tv_sec < ts.tv_sec)
 		return (0);
 
-	if (a->biorq_issue.tv_nsec <= ts.tv_nsec)
+	if (a->biorq_issue.tv_nsec >= ts.tv_nsec)
 		return (1);
 
 	return (0);
