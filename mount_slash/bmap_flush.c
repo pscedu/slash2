@@ -533,17 +533,17 @@ bmap_flushready(const struct psc_dynarray *biorqs)
  *    construct a large enough I/O.
  */
 __static struct psc_dynarray *
-bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
+bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 {
-	int i, off, flush=0, anyexpired=0;
+	int i, idx, flush=0, anyexpired=0;
 	struct bmpc_ioreq *r=NULL, *t;
 	struct psc_dynarray b=DYNARRAY_INIT, *a=NULL;
 
-	psc_assert(psc_dynarray_len(biorqs) > *offset);
+	psc_assert(psc_dynarray_len(biorqs) > *index);
 
-	for (off=0; (off + *offset) < psc_dynarray_len(biorqs); off++) {
+	for (idx=0; (idx + *index) < psc_dynarray_len(biorqs); idx++) {
 
-		t = psc_dynarray_getpos(biorqs, off + *offset);
+		t = psc_dynarray_getpos(biorqs, idx + *index);
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
 			   !(t->biorq_flags & BIORQ_INFL));
 		if (r)
@@ -559,7 +559,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 			anyexpired = bmap_flush_biorq_expired(t);
 
 		DEBUG_BIORQ(PLL_NOTIFY, t, "biorq #%d (expired=%d) nfrags=%d",
-			    off, anyexpired, psc_dynarray_len(&b));
+			    idx, anyexpired, psc_dynarray_len(&b));
 		/* The next request, 't', can be added to the coalesce
 		 *   group either because 'r' is not yet set (meaning
 		 *   the group is empty) or because 't' overlaps or
@@ -617,7 +617,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *offset)
 			freelock(&t->biorq_lock);
 		}
 
-	*offset += off;
+	*index += idx;
 	psc_dynarray_free(&b);
 
 	return (a);
