@@ -29,6 +29,9 @@
 #include "slashrpc.h"
 
 /* number of bmap flush threads */
+/* XXX I don't think bmap_flush is thread safe, so keep this at '1'
+ * - Paul
+ */
 #define NUM_BMAP_FLUSH_THREADS		1
 
 /*
@@ -71,6 +74,7 @@ struct bmap_cli_info {
 	} while (0)
 
 void     msl_bmap_cache_rls(struct bmapc_memb *);
+void     bmap_biorq_expire(struct bmapc_memb *);
 
 extern struct timespec msl_bmap_max_lease;
 extern struct timespec msl_bmap_timeo_inc;
