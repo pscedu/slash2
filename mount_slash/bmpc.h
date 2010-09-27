@@ -264,6 +264,7 @@ struct bmpc_ioreq {
 #define	BIORQ_DESTROY			(1 <<  8)
 #define	BIORQ_FLUSHRDY			(1 <<  9)
 #define	BIORQ_NOFHENT			(1 << 10)	/* release a file handle before flush is complete */
+#define BIORQ_APPEND                    (1 << 11)
 
 #define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BIORQ_FLAGS(b)						\
@@ -426,7 +427,7 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 	ioreq->biorq_flags = op;
 	ioreq->biorq_fhent = fhent;
 	if (bmap->bcm_flags & BMAP_DIO)
-		ioreq->biorq_flags |= BIORQ_DIO;
+		ioreq->biorq_flags |= BIORQ_DIO;	
 }
 
 static __inline int

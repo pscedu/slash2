@@ -106,13 +106,13 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 
 	PFL_GETTIMESPEC(&ts);
 
-	if (a->biorq_issue.tv_sec > ts.tv_sec)
+	if (a->biorq_issue.tv_sec < ts.tv_sec)
 		return (1);
 
-	else if (a->biorq_issue.tv_sec < ts.tv_sec)
+	else if (a->biorq_issue.tv_sec > ts.tv_sec)
 		return (0);
 
-	if (a->biorq_issue.tv_nsec >= ts.tv_nsec)
+	if (a->biorq_issue.tv_nsec <= ts.tv_nsec)
 		return (1);
 
 	return (0);
@@ -240,8 +240,10 @@ bmap_flush_inflight_set(struct bmpc_ioreq *r)
 	/* Limit the amount of scanning done by this
 	 *   thread.  Move pending biorqs out of the way.
 	 */
+	BMPC_LOCK(bmpc);
 	pll_remove(&bmpc->bmpc_new_biorqs, r);
 	pll_addtail(&bmpc->bmpc_pndg_biorqs, r);
+	BMPC_ULOCK(bmpc);
 }
 
 __static int
@@ -532,15 +534,16 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 __static struct psc_dynarray *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 {
-	int i, idx, flush=0, anyexpired=0;
+	int i, idx, anyexpired=0;
 	struct bmpc_ioreq *r=NULL, *t;
 	struct psc_dynarray b=DYNARRAY_INIT, *a=NULL;
 
 	psc_assert(psc_dynarray_len(biorqs) > *index);
 
-	for (idx=0; (idx + *index) < psc_dynarray_len(biorqs); idx++) {
-
+	for (idx=0; (idx + *index) < psc_dynarray_len(biorqs) && 
+		     !bmap_flushready(&b); idx++) {
 		t = psc_dynarray_getpos(biorqs, idx + *index);
+
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
 			   !(t->biorq_flags & BIORQ_INFL));
 		if (r)
@@ -557,6 +560,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 
 		DEBUG_BIORQ(PLL_NOTIFY, t, "biorq #%d (expired=%d) nfrags=%d",
 			    idx, anyexpired, psc_dynarray_len(&b));
+
 		/* The next request, 't', can be added to the coalesce
 		 *   group either because 'r' is not yet set (meaning
 		 *   the group is empty) or because 't' overlaps or
@@ -569,41 +573,39 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 				 *   'r' to 't'.
 				 */
 				r = t;
-			continue;
-		}
-		/*
-		 * Okay, we fail to coalesce more requests.  If any request
-		 * has already expired or the current set is already large
-		 * enough, we push the set.  Otherwise, we reset everything
-		 * and attempt to coalesce the remaining requests.
-		 */
-		if (anyexpired || bmap_flushready(&b)) {
-			flush = 1;
-			break;
-		}
+		} else {
+			/* This biorq is not contiguous with the previous.
+			 *    If the current set is expired send it out now.
+			 *    Otherwise, deschedule the current set and 
+			 *    resume activity with 't' as the base.
+			 */
+			if (bmap_flushready(&b) || anyexpired)
+				break;
+			else {
+				r = t;
 
-		r = t;
-		for (i=0; i < psc_dynarray_len(&b); i++) {
-			t = psc_dynarray_getpos(&b, i);
-			spinlock(&t->biorq_lock);
-			DEBUG_BIORQ(PLL_INFO, t,
-				    "descheduling");
-			t->biorq_flags &= ~BIORQ_SCHED;
-			freelock(&t->biorq_lock);
+				DYNARRAY_FOREACH(t, i, &b) {
+					spinlock(&t->biorq_lock);
+					DEBUG_BIORQ(PLL_INFO, t,
+						    "descheduling");
+					t->biorq_flags &= ~BIORQ_SCHED;
+					freelock(&t->biorq_lock);
+				}
+				psc_dynarray_free(&b);
+				psc_dynarray_add(&b, r);
+			}
 		}
-		psc_dynarray_free(&b);
-		psc_dynarray_add(&b, r);
 	}
 
-	if (flush) {
-		a = PSCALLOC(sizeof(*a));
+	if (bmap_flushready(&b) || anyexpired) {
+		a = psc_alloc(sizeof(*a), PAF_NOGUARD);
 		psc_dynarray_ensurelen(a, psc_dynarray_len(&b));
 		for (i=0; i < psc_dynarray_len(&b); i++) {
 			t = psc_dynarray_getpos(&b, i);
 			psc_dynarray_add(a, psc_dynarray_getpos(&b, i));
 		}
 
-	} else
+	} else {
 		/* Clean up any lingering biorq's.
 		 */
 		for (i=0; i < psc_dynarray_len(&b); i++) {
@@ -613,6 +615,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 			t->biorq_flags &= ~BIORQ_SCHED;
 			freelock(&t->biorq_lock);
 		}
+	}
 
 	*index += idx;
 	psc_dynarray_free(&b);

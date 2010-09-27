@@ -41,6 +41,10 @@
 #include "rpc_cli.h"
 #include "dircache.h"
 
+/* XXX check client attributes when generation number changes
+ *
+ */
+
 struct dircache_mgr dircacheMgr;
 
 /**
@@ -125,5 +129,6 @@ struct sl_fcmh_ops sl_fcmh_ops = {
 /* ctor */		slc_fcmh_ctor,
 /* dtor */		slc_fcmh_dtor,
 /* getattr */		slc_fcmh_getattr,
-/* postsetattr */	slc_fcmh_refresh_age
+/* postsetattr */	slc_fcmh_refresh_age,
+/* modify */            NULL
 };

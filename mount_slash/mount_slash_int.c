@@ -66,6 +66,8 @@ struct psc_waitq msl_fhent_flush_waitq = PSC_WAITQ_INIT;
 struct timespec msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
 struct timespec msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
+extern struct psc_waitq bmapflushwaitq;
+
 __static void
 msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		struct msl_fhent *mfh, uint32_t off, uint32_t len, int op)
@@ -85,6 +87,12 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	*newreq = r = PSCALLOC(sizeof(struct bmpc_ioreq));
 
 	bmpc_ioreq_init(r, off, len, op, b, mfh);
+
+	/* O_APPEND must be sent be sent via directio
+	 */
+	if (mfh->mfh_oflags & O_APPEND)
+		r->biorq_flags |= BIORQ_APPEND | BIORQ_DIO;
+
 	/* Take a ref on the bmap now so that it won't go away before
 	 *   pndg IO's complete.
 	 */
@@ -97,7 +105,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		psc_assert(r->biorq_flags & BIORQ_DIO);
 		goto out;
 	}
-
+       
 	bmpc = bmap_2_bmpc(b);
 	/* How many pages are needed to accommodate the request?
 	 *   Determine and record whether RBW (read-before-write) 
@@ -147,7 +155,8 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			bmpce->bmpce_off = off + (i * BMPC_BUFSZ);
 			SPLAY_INSERT(bmap_pagecachetree, &bmpc->bmpc_tree,
 				     bmpce);
-		}
+		} 
+
 		BMPCE_LOCK(bmpce);
 		/* Increment the ref cnt via the lru mgmt
 		 *   function.
@@ -461,9 +470,11 @@ bmap_biorq_expire(struct bmapc_memb *b)
 		freelock(&biorq->biorq_lock);
 	}
 	BMPC_ULOCK(bmap_2_bmpc(b));
+
+	psc_waitq_wakeall(&bmapflushwaitq);
 }
 
-__static void
+void
 bmap_biorq_waitempty(struct bmapc_memb *b)
 {
 	BMAP_LOCK(b);
@@ -485,7 +496,7 @@ msl_bmap_cache_rls(struct bmapc_memb *b)
 {
 	struct bmap_pagecache *bmpc = bmap_2_bmpc(b);
 
-	psc_assert(b->bcm_flags & BMAP_DIO);
+	//psc_assert(b->bcm_flags & BMAP_DIO);
 
 	bmap_biorq_expire(b);
 	bmap_biorq_waitempty(b);
@@ -985,7 +996,7 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 		msl_biorq_destroy(r);
 	}
 	psc_dynarray_free(biorqs);
-	PSCFREE(biorqs);
+	psc_free(biorqs, PAF_NOGUARD);
 
 	return (rc);
 }
@@ -1003,7 +1014,7 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 	DYNARRAY_FOREACH(r, i, biorqs)
 		msl_biorq_destroy(r);
 	psc_dynarray_free(biorqs);
-	PSCFREE(biorqs);
+	psc_free(biorqs, PAF_NOGUARD);
 
 	return (0);
 }
@@ -1090,6 +1101,8 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 		mq->offset = r->biorq_off + nbytes;
 		mq->size = len;
 		mq->op = (op == SRMT_WRITE ? SRMIOP_WR : SRMIOP_RD);
+		mq->flags |= SRM_IOF_DIO | 
+			(r->biorq_flags & BIORQ_APPEND ? SRM_IOF_APPEND : 0);
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
 		authbuf_sign(req, PSCRPC_MSG_REQUEST);
@@ -1589,11 +1602,19 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 
+	FCMH_LOCK(mfh->mfh_fcmh);
+
 	if (!size || (rw == SL_READ &&
 	    (uint64_t)off >= fcmh_2_fsz(mfh->mfh_fcmh))) {
 		rc = 0;
 		goto out;
 	}
+
+	/* All I/O's block here for pending truncate requests.
+	 */
+	fcmh_wait_locked(mfh->mfh_fcmh, 
+		 mfh->mfh_fcmh->fcmh_flags & FCMH_CLI_TRUNC);
+	FCMH_ULOCK(mfh->mfh_fcmh);
 
 	/* Are these bytes in the cache?
 	 *  Get the start and end block regions from the input parameters.

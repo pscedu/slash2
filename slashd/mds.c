@@ -728,7 +728,7 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			   bmdsi->bmdsi_readers, wlease);
 
 			if (!wlease) {
-				bmdsi->bmdsi_writers--;
+				//bmdsi->bmdsi_writers--;
 				psc_assert(bmdsi->bmdsi_writers >= 0);
 				b->bcm_flags &= ~BMAP_IONASSIGN;
 				b->bcm_flags |= BMAP_MDS_NOION;
@@ -858,8 +858,9 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 	psc_assert(bml->bml_flags & BML_FREEING);
 
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p fl=%d seq=%"PRId64, bml, bml->bml_flags,
-		   bml->bml_seq);
+	DEBUG_BMAP(PLL_INFO, b, "bml=%p fl=%d seq=%"PRId64, bml, 
+		   bml->bml_flags, bml->bml_seq);
+
 	locked = BMAP_RLOCK(b);
 	/* BMAP_IONASSIGN acts as a barrier for operations which
 	 *   may modify bmdsi_wr_ion.  Since ops associated with
@@ -871,7 +872,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 */
 	bcm_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	b->bcm_flags |= BMAP_IONASSIGN;
-
+	
 	/* Remove dups here?
 	 */
 	BML_LOCK(bml);
@@ -909,8 +910,11 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		EXPORT_ULOCK(bml->bml_exp);
 	}
 
-	if (bml->bml_flags & BML_TIMEOQ)
+	if (bml->bml_flags & BML_TIMEOQ) {
+		BML_ULOCK(bml);
 		(uint64_t)mds_bmap_timeotbl_mdsi(bml, BTE_DEL);
+		BML_LOCK(bml);
+	}
 
 	/* If BML_COHRLS was set above then the lease must remain on the
 	 *    bmdsi so that directio can be managed properly.
@@ -945,19 +949,26 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 *   is found then verify the sequence number matches.
 	 */
 	if ((bml->bml_flags & BML_WRITE) && !bmdsi->bmdsi_writers) {
-		/* odtable sanity checks:
-		 */
-		struct bmap_ion_assign *bia;
+		if (bml->bml_flags & BML_ASSFAIL) {
+			psc_assert(!bmdsi->bmdsi_assign);
+			psc_assert(!bmdsi->bmdsi_wr_ion);
 
-		bia = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
-		psc_assert(bia && bia->bia_seq == bmdsi->bmdsi_seq);
-		psc_assert(bia->bia_bmapno == b->bcm_bmapno);
-		/* End sanity checks.
-		 */
-		atomic_dec(&bmdsi->bmdsi_wr_ion->rmmi_refcnt);
-		odtr = bmdsi->bmdsi_assign;
-		bmdsi->bmdsi_assign = NULL;
-		bmdsi->bmdsi_wr_ion = NULL;
+		} else {
+			/* odtable sanity checks:
+			 */
+			struct bmap_ion_assign *bia;
+
+			bia = odtable_getitem(mdsBmapAssignTable, 
+				      bmdsi->bmdsi_assign);
+			psc_assert(bia && bia->bia_seq == bmdsi->bmdsi_seq);
+			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
+			/* End sanity checks.
+			 */
+			atomic_dec(&bmdsi->bmdsi_wr_ion->rmmi_refcnt);
+			odtr = bmdsi->bmdsi_assign;
+			bmdsi->bmdsi_assign = NULL;
+			bmdsi->bmdsi_wr_ion = NULL;
+		}
 	}
 	/* bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN) may have released
 	 *    the lock.
@@ -1182,6 +1193,19 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		psc_errorx("fid="SLPRI_FID" slm_fcmh_get() rc=%d",
 		    c->fg.fg_fid, rc);
 		return (-rc);
+	}
+
+	/* Ignore updates from old or invalid generation numbers.
+	 */
+	if (fcmh_2_gen(fcmh) != c->fg.fg_gen) {
+		int x = (fcmh_2_gen(fcmh) > c->fg.fg_gen) ? 1 : 0;
+
+		DEBUG_FCMH(x ? PLL_WARN : PLL_ERROR, fcmh, 
+		   "gen (%"PRId64") %s than mds gen", 
+		   c->fg.fg_gen, x ? ">" : "<");
+
+		rc = -(x ? SLERR_GEN_OLD : SLERR_GEN_INVALID);
+		goto out;
 	}
 
 	/* BMAP_OP #2
@@ -1489,7 +1513,9 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		if (rc == SLERR_BMAP_DIOWAIT)
 			mds_bml_free(bml);
 		else {
-			bml->bml_flags |= BML_FREEING;	
+			if (rc == SLERR_ION_OFFLINE)
+				bml->bml_flags |= BML_ASSFAIL;
+			bml->bml_flags |= BML_FREEING;
 			mds_bmap_bml_release(bml);
 		}
 		goto out;

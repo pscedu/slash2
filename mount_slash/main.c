@@ -47,6 +47,7 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
+#include "cache_params.h"
 #include "bmap_cli.h"
 #include "buffer.h"
 #include "ctl_cli.h"
@@ -441,6 +442,7 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 	}
 
 	mfh = msl_fhent_new(c);
+	mfh->mfh_oflags = fi->flags;
 
 	DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p dir=%s", mfh,
 		   (fi->flags & O_DIRECTORY) ? "yes" : "no");
@@ -1167,7 +1169,7 @@ __static void
 slash2fuse_flush_int_locked(struct msl_fhent *mfh)
 {
 	struct bmpc_ioreq *r;
-
+	
 	PLL_FOREACH(r, &mfh->mfh_biorqs) {
 		spinlock(&r->biorq_lock);
 		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
@@ -1487,16 +1489,69 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		getting = 1;
 		c->fcmh_flags |= FCMH_GETTING_ATTRS;
 	}
-	FCMH_ULOCK(c);
+
+	mq->attr.sst_fg = c->fcmh_fg;
+	mq->to_set = slash2fuse_translate_setattr_flags(fuse_to_set);
+	sl_externalize_stat(stb, &mq->attr);
+
+	if (mq->to_set & SETATTR_MASKF_DATASIZE) {
+		struct bmapc_memb *b;
+		struct psc_dynarray a = DYNARRAY_INIT;
+		int j;
+
+		/* Make all new I/O's, read and write, wait until this 
+		 *   setattr RPC has completed.
+		 */
+		c->fcmh_flags |= FCMH_CLI_TRUNC;
+
+		if (!stb->st_size) {
+			DEBUG_FCMH(PLL_WARN, c, "full truncate, orphan bmaps");
+
+			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree)
+				psc_dynarray_add(&a, b);
+
+			FCMH_ULOCK(c);
+			
+			DYNARRAY_FOREACH(b, j, &a)
+				bmap_orphan(b);
+
+		} else {
+			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
+
+ 			/* Partial truncate.  Block and flush.
+			 */
+			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree) {
+				if (b->bcm_bmapno < x)
+					continue;
+				/* Take a reference to ensure the bmap
+				 *   is still valid.  bmap_biorq_waitempty()
+				 *   shoudn't be called while holding the 
+				 *   fcmh lock.
+				 */
+				bmap_op_start_type(b, BMAP_OPCNT_TRUNCWAIT);
+				psc_dynarray_add(&a, b);
+			}
+			FCMH_ULOCK(c);			
+
+			/* XXX some writes can be cancelled, but no api exists yet.
+			 */
+			DYNARRAY_FOREACH(b, j, &a)
+				bmap_biorq_expire(b);
+
+			DYNARRAY_FOREACH(b, j, &a) {
+				bmap_biorq_waitempty(b);
+				bmap_op_done_type(b, BMAP_OPCNT_TRUNCWAIT);
+			}
+		}
+		psc_dynarray_free(&a);
+
+	} else
+		FCMH_ULOCK(c);
 
 	if (fi && fi->fh) {
 		mfh = ffi_getmfh(fi);
 		psc_assert(c == mfh->mfh_fcmh);
 	}
-
-	mq->attr.sst_fg = c->fcmh_fg;
-	mq->to_set = slash2fuse_translate_setattr_flags(fuse_to_set);
-	sl_externalize_stat(stb, &mq->attr);
 
 	DEBUG_FCMH(PLL_DEBUG, c, "pre setattr");
 	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p pre setattr", c);
@@ -1516,6 +1571,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
+	FCMH_LOCK(c);
 	/*
 	 * If we are setting mtime or size, tell MDS what we want it
 	 * to be then blindly accept what he returns us; otherwise, we
@@ -1525,13 +1581,23 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		c->fcmh_sstb.sst_mtime = mp->attr.sst_mtime;
 		c->fcmh_sstb.sst_mtime_ns = mp->attr.sst_mtime_ns;
 	}
+
 	if (mq->to_set & SETATTR_MASKF_DATASIZE)
 		c->fcmh_sstb.sst_size = mp->attr.sst_size;
 
-	FCMH_LOCK(c);
 	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
 	sl_internalize_stat(&c->fcmh_sstb, stb);
+	
+	/* Issue wakeup after calling fcmh_setattr() to avoid needless
+	 *   spinlock contention.
+	 */
+	if (mq->to_set & SETATTR_MASKF_DATASIZE) {		
+		DEBUG_FCMH(PLL_WARN, c, "truncate complete");
+		psc_assert(c->fcmh_flags & FCMH_CLI_TRUNC);
+		c->fcmh_flags &= ~FCMH_CLI_TRUNC;
+		fcmh_wake_locked(c);
+	}
 	FCMH_ULOCK(c);
 
 	fuse_reply_attr(req, stb, MSL_FUSE_ATTR_TIMEO);

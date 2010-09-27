@@ -602,6 +602,7 @@ struct srm_io_req {
 
 /* I/O flags */
 #define SRM_IOF_APPEND		(1 << 0)
+#define SRM_IOF_DIO             (1 << 1)
 
 struct srm_io_rep {
 	int32_t			rc;

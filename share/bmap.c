@@ -51,10 +51,28 @@ bmap_cmp(const void *x, const void *y)
 }
 
 void
-bmap_remove(struct bmapc_memb *b)
+bmap_orphan(struct bmapc_memb *b)
 {
 	struct fidc_membh *f = b->bcm_fcmh;
 	int locked;
+
+	locked = BMAP_RLOCK(b);
+
+	DEBUG_BMAP(PLL_INFO, b, "orphan");
+	psc_assert(!(b->bcm_flags & BMAP_ORPHAN));
+	b->bcm_flags |= BMAP_ORPHAN;
+
+	FCMH_RLOCK(f);
+	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
+	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);	
+
+	BMAP_URLOCK(b, locked);
+}
+
+void
+bmap_remove(struct bmapc_memb *b)
+{
+	struct fidc_membh *f = b->bcm_fcmh;
 
 	BMAP_RLOCK(b);
 
@@ -64,13 +82,17 @@ bmap_remove(struct bmapc_memb *b)
 	psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 	psc_assert(!atomic_read(&b->bcm_opcnt));
 
-	BMAP_ULOCK(b);
+	if (!(b->bcm_flags & BMAP_ORPHAN)) {
+		BMAP_ULOCK(b);
+		
+		FCMH_RLOCK(f);
+		PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
+		fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
+		
+		psc_pool_return(bmap_pool, b);
+	} else 
+		BMAP_ULOCK(b);
 
-	locked = FCMH_RLOCK(f);
-	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
-	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
-
-	psc_pool_return(bmap_pool, b);
 }
 
 void

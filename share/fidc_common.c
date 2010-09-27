@@ -342,6 +342,9 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		/* keep me around after unlocking later */
 		fcmh_op_start_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 
+		if (sl_fcmh_ops.sfop_modify)
+			sl_fcmh_ops.sfop_modify(fcmh, (void *)fgp);
+
 		FCMH_ULOCK(fcmh);
 		*fcmhp = fcmh;
 		return (0);

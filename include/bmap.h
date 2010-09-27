@@ -133,7 +133,8 @@ struct bmapc_memb {
 #define BMAP_IONASSIGN		(1 << 10)
 #define BMAP_MDCHNG		(1 << 11)
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
-#define _BMAP_FLSHFT		(1 << 13)
+#define BMAP_ORPHAN             (1 << 13)       /* removed from fcmh_bmaptree */
+#define _BMAP_FLSHFT		(1 << 14)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)
@@ -259,6 +260,8 @@ struct bmapc_memb {
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
+void     bmap_orphan(struct bmapc_memb *);
+void     bmap_biorq_waitempty(struct bmapc_memb *);
 void	_bmap_op_done(struct bmapc_memb *, const char *, const char *,
 	    int, const char *, ...);
 int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
@@ -287,7 +290,8 @@ enum bmap_opcnt_types {
 /*  7 */ BMAP_OPCNT_COHCB,		/* MDS coherency callback */
 /*  8 */ BMAP_OPCNT_SLVR,
 /*  9 */ BMAP_OPCNT_BCRSCHED,
-/* 10 */ BMAP_OPCNT_RLSSCHED
+/* 10 */ BMAP_OPCNT_RLSSCHED,
+/* 11 */ BMAP_OPCNT_TRUNCWAIT
 };
 
 SPLAY_HEAD(bmap_cache, bmapc_memb);
@@ -339,6 +343,7 @@ dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_IONASSIGN, *flags, seq);
 	PFL_PRFLAG(BMAP_MDCHNG, *flags, seq);
 	PFL_PRFLAG(BMAP_WAITERS, *flags, seq);
+	PFL_PRFLAG(BMAP_ORPHAN, *flags, seq);
 }
 
 #endif /* _BMAP_H_ */

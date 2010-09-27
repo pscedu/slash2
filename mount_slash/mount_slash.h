@@ -61,6 +61,7 @@ struct msfs_thread {
 };
 
 struct msl_fhent {			 /* XXX rename */
+	int                              mfh_oflags;
 	psc_spinlock_t			 mfh_lock;
 	struct fidc_membh		*mfh_fcmh;
 	struct psc_lockedlist		 mfh_biorqs; /* track biorqs (flush) */
