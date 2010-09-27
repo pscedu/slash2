@@ -47,9 +47,9 @@
 #include "psc_util/thread.h"
 #include "psc_util/usklndthr.h"
 
-#include "cache_params.h"
 #include "bmap_cli.h"
 #include "buffer.h"
+#include "cache_params.h"
 #include "ctl_cli.h"
 #include "fidc_cli.h"
 #include "fidcache.h"
