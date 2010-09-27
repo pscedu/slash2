@@ -45,6 +45,8 @@ char *slash_errstrs[] = {
 /* 17 */ "Authorization buffer not provided",
 /* 18 */ "User account does not exist",
 /* 19 */ "Bad checksum",
+/* 20 */ "File generation old",
+/* 21 */ "File generation invalid",
 	NULL
 };
 
