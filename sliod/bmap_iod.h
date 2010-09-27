@@ -81,9 +81,10 @@ struct bmap_iod_minseq {
 
 #define DEBUG_BCR(level, bcr, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\
-	    "bcr@%p fid="SLPRI_FG" xid=%"PRIu64" nups=%d fl=%d age=%lu"	\
-	    " bmap@%p:%u biod_bcr_xid=%"PRId64				\
-	    " biod_bcr_xid_last=%"PRId64" :: "fmt,			\
+	    "bcr@%p fid="SLPRI_FG" xid=%"PRIu64" nups=%d fl=%d "	\
+	    "age=%"PSCPRI_TIMET" "					\
+	    "bmap@%p:%u biod_bcr_xid=%"PRId64" "			\
+	    "biod_bcr_xid_last=%"PRId64" :: " fmt,			\
 	    (bcr), SLPRI_FG_ARGS(&(bcr)->bcr_crcup.fg), (bcr)->bcr_xid,	\
 	    (bcr)->bcr_crcup.nups, (bcr)->bcr_flags,			\
 	    (bcr)->bcr_age.tv_sec,					\
