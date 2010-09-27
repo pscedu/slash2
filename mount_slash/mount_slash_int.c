@@ -105,10 +105,10 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		psc_assert(r->biorq_flags & BIORQ_DIO);
 		goto out;
 	}
-       
+
 	bmpc = bmap_2_bmpc(b);
 	/* How many pages are needed to accommodate the request?
-	 *   Determine and record whether RBW (read-before-write) 
+	 *   Determine and record whether RBW (read-before-write)
 	 *   operations are needed on the first or last pages.
 	 */
 	if (off & BMPC_BUFMASK) {
@@ -155,7 +155,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			bmpce->bmpce_off = off + (i * BMPC_BUFSZ);
 			SPLAY_INSERT(bmap_pagecachetree, &bmpc->bmpc_tree,
 				     bmpce);
-		} 
+		}
 
 		BMPCE_LOCK(bmpce);
 		/* Increment the ref cnt via the lru mgmt
@@ -163,9 +163,9 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		 */
 		bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
 		/*
- 		 * See if we can remove RBW flags.   Note that a new page
- 		 * won't have BMPCE_DATARDY flag set.
- 		 */
+		 * See if we can remove RBW flags.   Note that a new page
+		 * won't have BMPCE_DATARDY flag set.
+		 */
 		if (!i && (bmpce->bmpce_flags & BMPCE_DATARDY) &&
 		    (rbw & BIORQ_RBWFP))
 			rbw &= ~BIORQ_RBWFP;
@@ -452,8 +452,8 @@ bmap_biorq_expire(struct bmapc_memb *b)
 {
 	struct bmpc_ioreq *biorq;
 
-	/* 
-	 * Note that the following two lists and the bmapc_memb 
+	/*
+	 * Note that the following two lists and the bmapc_memb
 	 * structure itself all share the same lock.
 	 */
 	BMPC_LOCK(bmap_2_bmpc(b));
@@ -1101,7 +1101,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 		mq->offset = r->biorq_off + nbytes;
 		mq->size = len;
 		mq->op = (op == SRMT_WRITE ? SRMIOP_WR : SRMIOP_RD);
-		mq->flags |= SRM_IOF_DIO | 
+		mq->flags |= SRM_IOF_DIO |
 			(r->biorq_flags & BIORQ_APPEND ? SRM_IOF_APPEND : 0);
 		memcpy(&mq->sbd, &bci->bci_sbd, sizeof(mq->sbd));
 
@@ -1141,7 +1141,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 	spinlock(&r->biorq_lock);
 	r->biorq_flags |= BIORQ_FLUSHRDY;
 	DEBUG_BIORQ(PLL_DEBUG, r, "BIORQ_FLUSHRDY");
-	psc_assert(psclist_conjoint(&r->biorq_lentry, 
+	psc_assert(psclist_conjoint(&r->biorq_lentry,
 	    psc_lentry_hd(&r->biorq_lentry)));
 	atomic_inc(&bmpc->bmpc_pndgwr);
 	freelock(&r->biorq_lock);
@@ -1612,7 +1612,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 
 	/* All I/O's block here for pending truncate requests.
 	 */
-	fcmh_wait_locked(mfh->mfh_fcmh, 
+	fcmh_wait_locked(mfh->mfh_fcmh,
 		 mfh->mfh_fcmh->fcmh_flags & FCMH_CLI_TRUNC);
 	FCMH_ULOCK(mfh->mfh_fcmh);
 
@@ -1652,11 +1652,11 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 
 		msl_biorq_build(&r[nr], b[nr], mfh, (roff - (nr * SLASH_BMAP_SIZE)),
 		    tlen, (rw == SL_READ) ? BIORQ_READ : BIORQ_WRITE);
- 		/*
- 		 * If we are not doing direct I/O, launch read for read requests and pre-read
- 		 * for unaligned write requests.
+		/*
+		 * If we are not doing direct I/O, launch read for read requests and pre-read
+		 * for unaligned write requests.
 		 */
-		if (!(r[nr]->biorq_flags & BIORQ_DIO) && ((r[nr]->biorq_flags & BIORQ_READ) || 
+		if (!(r[nr]->biorq_flags & BIORQ_DIO) && ((r[nr]->biorq_flags & BIORQ_READ) ||
 		     (r[nr]->biorq_flags & BIORQ_RBWFP) || (r[nr]->biorq_flags & BIORQ_RBWLP)))
 			msl_pages_prefetch(r[nr]);
 

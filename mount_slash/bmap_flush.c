@@ -540,7 +540,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 
 	psc_assert(psc_dynarray_len(biorqs) > *index);
 
-	for (idx=0; (idx + *index) < psc_dynarray_len(biorqs) && 
+	for (idx=0; (idx + *index) < psc_dynarray_len(biorqs) &&
 		     !bmap_flushready(&b); idx++) {
 		t = psc_dynarray_getpos(biorqs, idx + *index);
 
@@ -576,7 +576,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 		} else {
 			/* This biorq is not contiguous with the previous.
 			 *    If the current set is expired send it out now.
-			 *    Otherwise, deschedule the current set and 
+			 *    Otherwise, deschedule the current set and
 			 *    resume activity with 't' as the base.
 			 */
 			if (bmap_flushready(&b) || anyexpired)
@@ -995,8 +995,8 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 	int nrpcs;
 	struct timespec ts;
 
-	ts.tv_sec = bmapFlushDefMaxAge.tv_sec / 2; 
-	ts.tv_nsec = bmapFlushDefMaxAge.tv_nsec / 2; 
+	ts.tv_sec = bmapFlushDefMaxAge.tv_sec / 2;
+	ts.tv_nsec = bmapFlushDefMaxAge.tv_nsec / 2;
 
 	while (pscthr_run()) {
 		nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
@@ -1037,7 +1037,7 @@ msbmapflushthr_spawn(void)
 	    bcm_lentry, "bmaptimeout");
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++) {
-		pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main, 
+		pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
 			NULL, 0, "msbflushthr%d", i);
 	}
 

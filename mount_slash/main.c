@@ -1169,7 +1169,7 @@ __static void
 slash2fuse_flush_int_locked(struct msl_fhent *mfh)
 {
 	struct bmpc_ioreq *r;
-	
+
 	PLL_FOREACH(r, &mfh->mfh_biorqs) {
 		spinlock(&r->biorq_lock);
 		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
@@ -1499,7 +1499,7 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 		struct psc_dynarray a = DYNARRAY_INIT;
 		int j;
 
-		/* Make all new I/O's, read and write, wait until this 
+		/* Make all new I/O's, read and write, wait until this
 		 *   setattr RPC has completed.
 		 */
 		c->fcmh_flags |= FCMH_CLI_TRUNC;
@@ -1511,27 +1511,27 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 				psc_dynarray_add(&a, b);
 
 			FCMH_ULOCK(c);
-			
+
 			DYNARRAY_FOREACH(b, j, &a)
 				bmap_orphan(b);
 
 		} else {
 			uint32_t x = stb->st_size / SLASH_BMAP_SIZE;
 
- 			/* Partial truncate.  Block and flush.
+			/* Partial truncate.  Block and flush.
 			 */
 			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree) {
 				if (b->bcm_bmapno < x)
 					continue;
 				/* Take a reference to ensure the bmap
 				 *   is still valid.  bmap_biorq_waitempty()
-				 *   shoudn't be called while holding the 
+				 *   shoudn't be called while holding the
 				 *   fcmh lock.
 				 */
 				bmap_op_start_type(b, BMAP_OPCNT_TRUNCWAIT);
 				psc_dynarray_add(&a, b);
 			}
-			FCMH_ULOCK(c);			
+			FCMH_ULOCK(c);
 
 			/* XXX some writes can be cancelled, but no api exists yet.
 			 */
@@ -1588,11 +1588,11 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
 	sl_internalize_stat(&c->fcmh_sstb, stb);
-	
+
 	/* Issue wakeup after calling fcmh_setattr() to avoid needless
 	 *   spinlock contention.
 	 */
-	if (mq->to_set & SETATTR_MASKF_DATASIZE) {		
+	if (mq->to_set & SETATTR_MASKF_DATASIZE) {
 		DEBUG_FCMH(PLL_WARN, c, "truncate complete");
 		psc_assert(c->fcmh_flags & FCMH_CLI_TRUNC);
 		c->fcmh_flags &= ~FCMH_CLI_TRUNC;
