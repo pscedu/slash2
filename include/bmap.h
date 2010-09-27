@@ -90,7 +90,9 @@ struct bmap_ondisk {
 
 /**
  * bmapc_memb - central structure for block map caching used in
- *    all slash service contexts (mds, ios, client).
+ *    all slash service contexts (mds, ios, client).  The pool
+ *    for this structure and its private area for each service 
+ *    is initialized in bmap_cache_init().
  *
  * bmapc_memb sits in the middle of the GFC stratum.
  * XXX some of these elements may need to be moved into the bcm_info_pri
