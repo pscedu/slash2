@@ -64,7 +64,7 @@ bmap_orphan(struct bmapc_memb *b)
 
 	FCMH_RLOCK(f);
 	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
-	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);	
+	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
 
 	BMAP_URLOCK(b, locked);
 }
@@ -84,13 +84,13 @@ bmap_remove(struct bmapc_memb *b)
 
 	if (!(b->bcm_flags & BMAP_ORPHAN)) {
 		BMAP_ULOCK(b);
-		
+
 		FCMH_RLOCK(f);
 		PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
 		fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
-		
+
 		psc_pool_return(bmap_pool, b);
-	} else 
+	} else
 		BMAP_ULOCK(b);
 
 }

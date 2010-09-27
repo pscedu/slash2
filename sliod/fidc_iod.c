@@ -65,19 +65,19 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, void *data)
 		 *   remove the old one.
 		 */
 		if (close(fcmh_2_fd(fcmh)))
-			DEBUG_FCMH(PLL_ERROR, fcmh, "close() failed errno=%d", 
+			DEBUG_FCMH(PLL_ERROR, fcmh, "close() failed errno=%d",
 			   errno);
-		
+
 		oldfg.fg_fid = fcmh_2_fid(fcmh);
 		oldfg.fg_gen = fcmh_2_gen(fcmh);
-		
+
 		fcmh_2_gen(fcmh) = fg->fg_gen;
 
 		fg_makepath(fg, fidfn);
 		fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
 		if (fcmh_2_fd(fcmh) == -1) {
 			rc = errno;
-			DEBUG_FCMH(PLL_ERROR, fcmh, "open() failed errno=%d", 
+			DEBUG_FCMH(PLL_ERROR, fcmh, "open() failed errno=%d",
 			   errno);
 		}
 		/* Do some upfront garbage collection.
@@ -90,7 +90,7 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, void *data)
 	} else if (fg->fg_gen < fcmh_2_gen(fcmh)) {
 		/* For now, requests from old generations (i.e. old bdbufs)
 		 *   will be honored.  Clients which issue full truncates will
-		 *   release their bmaps, and associated cache pages, prior to 
+		 *   release their bmaps, and associated cache pages, prior to
 		 *   issuing a truncate request to the MDS.
 		 */
 		DEBUG_FCMH(PLL_WARN, fcmh, "request from old gen (%"PRId64
