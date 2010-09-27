@@ -17,9 +17,6 @@
  * %PSC_END_COPYRIGHT%
  */
 
-#include <sys/types.h>
-#include <sys/resource.h>
-
 #include <fcntl.h>
 #include <stddef.h>
 
