@@ -598,7 +598,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 	}
 
 	if (bmap_flushready(&b) || anyexpired) {
-		a = psc_alloc(sizeof(*a), PAF_NOGUARD);
+		a = psc_alloc(sizeof(*a), 0);
 		psc_dynarray_ensurelen(a, psc_dynarray_len(&b));
 		for (i=0; i < psc_dynarray_len(&b); i++) {
 			t = psc_dynarray_getpos(&b, i);

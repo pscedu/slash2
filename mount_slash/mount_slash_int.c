@@ -996,7 +996,7 @@ msl_io_rpcset_cb(__unusedx struct pscrpc_request_set *set, void *arg, int rc)
 		msl_biorq_destroy(r);
 	}
 	psc_dynarray_free(biorqs);
-	psc_free(biorqs, PAF_NOGUARD);
+	psc_free(biorqs, 0);
 
 	return (rc);
 }
@@ -1014,7 +1014,7 @@ msl_io_rpc_cb(__unusedx struct pscrpc_request *req, struct pscrpc_async_args *ar
 	DYNARRAY_FOREACH(r, i, biorqs)
 		msl_biorq_destroy(r);
 	psc_dynarray_free(biorqs);
-	psc_free(biorqs, PAF_NOGUARD);
+	psc_free(biorqs, 0);
 
 	return (0);
 }
@@ -1606,6 +1606,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 
 	if (!size || (rw == SL_READ &&
 	    (uint64_t)off >= fcmh_2_fsz(mfh->mfh_fcmh))) {
+		FCMH_ULOCK(mfh->mfh_fcmh);
 		rc = 0;
 		goto out;
 	}
