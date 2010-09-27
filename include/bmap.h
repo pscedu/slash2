@@ -91,7 +91,7 @@ struct bmap_ondisk {
 /**
  * bmapc_memb - central structure for block map caching used in
  *    all slash service contexts (mds, ios, client).  The pool
- *    for this structure and its private area for each service 
+ *    for this structure and its private area for each service
  *    is initialized in bmap_cache_init().
  *
  * bmapc_memb sits in the middle of the GFC stratum.
@@ -113,7 +113,7 @@ struct bmapc_memb {
 	 * next segment of the bmap_ondisk, which must lay contiguous in
 	 * memory for I/O over the network and with ZFS.
 	 */
-	struct bmap_core_state	 bcm_corestate __attribute__ ((aligned (8)));
+	struct bmap_core_state	 bcm_corestate;
 
 #define bcm_crcstates	bcm_corestate.bcs_crcstates
 #define bcm_repls	bcm_corestate.bcs_repls
@@ -133,7 +133,7 @@ struct bmapc_memb {
 #define BMAP_IONASSIGN		(1 << 10)
 #define BMAP_MDCHNG		(1 << 11)
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
-#define BMAP_ORPHAN             (1 << 13)       /* removed from fcmh_bmaptree */
+#define BMAP_ORPHAN		(1 << 13)	/* removed from fcmh_bmaptree */
 #define _BMAP_FLSHFT		(1 << 14)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
@@ -260,8 +260,8 @@ struct bmapc_memb {
 
 int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
-void     bmap_orphan(struct bmapc_memb *);
-void     bmap_biorq_waitempty(struct bmapc_memb *);
+void	 bmap_orphan(struct bmapc_memb *);
+void	 bmap_biorq_waitempty(struct bmapc_memb *);
 void	_bmap_op_done(struct bmapc_memb *, const char *, const char *,
 	    int, const char *, ...);
 int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
