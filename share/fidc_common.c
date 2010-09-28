@@ -458,7 +458,7 @@ fidc_init(int privsiz, int nobj, int max,
 	_psc_poolmaster_init(&fidcPoolMaster,
 	    sizeof(struct fidc_membh) + privsiz,
 	    offsetof(struct fidc_membh, fcmh_lentry),
-	    PPMF_NONE, nobj, nobj, max, NULL,
+	    PPMF_AUTO, nobj, nobj, 0, NULL,
 	    NULL, fidc_reap, NULL, "fcmh");
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
