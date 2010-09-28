@@ -488,6 +488,12 @@ bmap_biorq_expire(struct bmapc_memb *b)
 	}
 	BMPC_ULOCK(bmap_2_bmpc(b));
 
+	BMAP_LOCK(b);
+	/* Minimize biorq scanning via this hint.
+	 */
+	b->bcm_flags |= BMAP_CLI_BIORQEXPIRE;
+	BMAP_ULOCK(b);
+
 	psc_waitq_wakeall(&bmapflushwaitq);
 }
 
@@ -1191,6 +1197,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			 */
 			b->bcm_flags |= BMAP_CLI_FLUSHPROC;
 			psc_assert(psclist_disjoint(&b->bcm_lentry));
+			DEBUG_BMAP(PLL_WARN, b, "add to bmapFlushQ");
 			lc_addtail(&bmapFlushQ, b);
 		}
 	}

@@ -46,9 +46,10 @@ struct bmap_cli_info {
 
 /* mount_slash specific bcm_flags */
 #define BMAP_CLI_FLUSHPROC	(_BMAP_FLSHFT << 0)	/* proc'd by flush thr */
+#define BMAP_CLI_BIORQEXPIRE    (_BMAP_FLSHFT << 1)
 
 #define BMAP_CLI_MAX_LEASE	60 /* seconds */
-#define BMAP_CLI_TIMEO_INC	5
+#define BMAP_CLI_TIMEO_INC	1
 #define BMAP_CLI_DIOWAIT_SECS	1
 
 #define bmap_2_bci(b)		((struct bmap_cli_info *)bmap_get_pri(b))
