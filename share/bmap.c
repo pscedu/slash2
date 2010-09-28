@@ -72,8 +72,6 @@ bmap_orphan(struct bmapc_memb *b)
 void
 bmap_remove(struct bmapc_memb *b)
 {
-	struct fidc_membh *f = b->bcm_fcmh;
-
 	BMAP_RLOCK(b);
 
 	DEBUG_BMAP(PLL_INFO, b, "removing");
@@ -83,6 +81,8 @@ bmap_remove(struct bmapc_memb *b)
 	psc_assert(!atomic_read(&b->bcm_opcnt));
 
 	if (!(b->bcm_flags & BMAP_ORPHAN)) {
+		struct fidc_membh *f = b->bcm_fcmh;
+
 		BMAP_ULOCK(b);
 
 		FCMH_RLOCK(f);
