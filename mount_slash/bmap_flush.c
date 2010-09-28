@@ -912,12 +912,15 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
 	struct timespec ctime, wtime = { 0, 0 };
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
-	struct psc_dynarray a = DYNARRAY_INIT;
+	struct psc_dynarray a = DYNARRAY_INIT, skip = DYNARRAY_INIT;
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int i;
+	int i, sortbypass, sawnew=0;
+
+#define SORT_BYPASS_ITERS 32
+#define ITEMS_TRY_AFTER_UNEXPIRED MAX_BMAP_RELEASE	
 
 	// just put the resm's in the dynarray. when pushing out the bid's
 	//   assume an ion unless resm == slc_rmc_resm
@@ -925,7 +928,12 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	for (;;) {
 		psc_trace("msbmaprlsthr_main() top of loop");
 
-		lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
+		if (!sortbypass) {
+			lc_sort(&bmapTimeoutQ, qsort, bmap_cli_timeo_cmp);
+			sortbypass = SORT_BYPASS_ITERS;
+		} else
+			sortbypass--;
+		
 		PFL_GETTIMESPEC(&ctime);
 
 		wtime.tv_sec = BMAP_CLI_TIMEO_INC;
@@ -942,21 +950,29 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
 				b->bcm_flags &= ~BMAP_REAPABLE;
-				DEBUG_BMAP(PLL_INFO, b,
+				DEBUG_BMAP(PLL_NOTIFY, b,
 					   "descheduling from timeoq");
 				BMAP_ULOCK(b);
 				continue;
 			}
 
 			if (timespeccmp(&ctime, &bci->bci_etime, <)) {
-				/* Nothing past this point has expired.
-				 */
-				lc_addstack(&bmapTimeoutQ, b);
+				if (!sawnew)
+					/* Set the wait time to (etime 
+					 *  - ctime)
+					 */	
+					timespecsub(&bci->bci_etime, 
+						    &ctime, &wtime);
+				
+				DEBUG_BMAP(PLL_DEBUG, b, "sawnew=%d", sawnew);
+				psc_dynarray_add(&skip, b);
 				BMAP_ULOCK(b);
-				/* Set the wait time to etime - ctime.
-				 */
-				timespecsub(&bci->bci_etime, &ctime, &wtime);
-				break;
+				
+				sawnew++;
+				if (sawnew == ITEMS_TRY_AFTER_UNEXPIRED)
+					break;
+				else
+					continue;
 			}
 
 			/* Maintain the lock, bmap_op_done_type() will take
@@ -965,13 +981,10 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			if (psc_atomic32_read(&b->bcm_opcnt) > 1) {
 				/* Put me back on the end of the queue.
 				 */
-				lc_addqueue(&bmapTimeoutQ, b);
+				DEBUG_BMAP(PLL_NOTIFY, b, "skip due to ref");
+				psc_dynarray_add(&skip, b);
 				BMAP_ULOCK(b);
 
-				if (lc_sz(&bmapTimeoutQ) < 2)
-					/* Don't spin on a single item.
-					 */
-					break;
 			} else {
 				psc_assert(psc_atomic32_read(&b->bcm_opcnt)
 					   == 1);
@@ -1003,6 +1016,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				/* The bmap should be going away now, this
 				 *    will call BMAP_URLOCK().
 				 */
+				DEBUG_BMAP(PLL_NOTIFY, b, "release");
+
 				bmap_op_done_type(b, BMAP_OPCNT_REAPER);
 
 				if (rmci->rmci_bmaprls.nbmaps ==
@@ -1014,24 +1029,37 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					psc_dynarray_add_ifdne(&a, resm);
 			}
 		}
-		psc_trace("msbmaprlsthr_main() out of loop (arraysz=%d)",
-			 psc_dynarray_len(&a));
+		psc_trace("msbmaprlsthr_main() out of loop (arraysz=%d) wtime=%lu:%lu",
+			 psc_dynarray_len(&a), wtime.tv_sec, wtime.tv_nsec);
+
 
 		/* Send out partially filled release request.
 		 */
 		DYNARRAY_FOREACH(resm, i, &a)
 			ms_bmap_release(resm);
-
 		psc_dynarray_free(&a);
+
+		DYNARRAY_FOREACH_REVERSE(b, i, &skip) {
+			BMAP_LOCK(b);
+			if (!(b->bcm_flags & BMAP_DIRTY))
+				lc_addstack(&bmapTimeoutQ, b);
+			BMAP_ULOCK(b);						
+		}
+		psc_dynarray_free(&skip);
 
 		if (!pscthr_run())
 			break;
 
 		if (!wtime.tv_sec && !wtime.tv_nsec)
 			wtime.tv_sec = 1;
+
+		if (!wtime.tv_sec)
+			wtime.tv_nsec = MAX(wtime.tv_nsec, 100000000);
+			
 		psc_waitq_waitrel(&waitq, NULL, &wtime);
 
 		wtime.tv_sec = wtime.tv_nsec = 0;
+		sawnew = 0;
 	}
 	psc_dynarray_free(&a);
 }
