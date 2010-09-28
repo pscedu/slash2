@@ -68,6 +68,23 @@ struct timespec msl_bmap_timeo_inc = { BMAP_CLI_TIMEO_INC, 0 };
 
 extern struct psc_waitq bmapflushwaitq;
 
+__static int
+msl_biorq_cmp(const void *x, const void *y)
+{
+	const struct bmpc_ioreq * a = x;
+	const struct bmpc_ioreq * b = y;
+
+	//DEBUG_BIORQ(PLL_TRACE, a, "compare..");
+	//DEBUG_BIORQ(PLL_TRACE, b, "..compare");
+
+	if (a->biorq_off == b->biorq_off)
+		/* Larger requests with the same start offset should have
+		 *   ordering priority.
+		 */
+		return (CMP(b->biorq_len, a->biorq_len));
+	return (CMP(a->biorq_off, b->biorq_off));
+}
+
 __static void
 msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		struct msl_fhent *mfh, uint32_t off, uint32_t len, int op)
@@ -278,7 +295,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	if (op == BIORQ_READ)
 		pll_add(&bmap_2_bmpc(b)->bmpc_pndg_biorqs, r);
 	else
-		pll_add(&bmap_2_bmpc(b)->bmpc_new_biorqs, r);
+		pll_add_sorted(&bmap_2_bmpc(b)->bmpc_new_biorqs, r, msl_biorq_cmp);
 }
 
 __static void
