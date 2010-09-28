@@ -526,6 +526,53 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 	return (ready);
 }
 
+/*
+ * bmap_flushable - check if we can flush the biorqs.  This must be non-blocking.
+ */
+__static int
+bmap_flushable(const struct psc_dynarray *biorqs)
+{
+	uint32_t off;
+	int idx, count, extend, flush = 0;
+	struct bmpc_ioreq *start, *end, *tmp;
+
+	start = NULL;
+	for (idx=0; idx < psc_dynarray_len(biorqs); idx++) {
+		tmp = psc_dynarray_getpos(biorqs, idx);
+		if (bmap_flush_biorq_expired(tmp)) {
+			flush = 1;
+			break;
+		}
+		if (start == NULL) {
+			count = 1;
+			extend = 1;
+			start = end = tmp;
+		} else {
+			extend = 0;
+			if (tmp->biorq_off <= biorq_voff_get(end) && 
+			    biorq_voff_get(tmp) > biorq_voff_get(end)) {
+				extend = 1;
+				end = tmp;
+				count++;
+			} 
+		}
+		if (count == PSCRPC_MAX_BRW_PAGES) {
+			flush = 1;
+			break;
+		}
+		if (end->biorq_off - start->biorq_off + end->biorq_len >= 
+		    MIN_COALESCE_RPC_SZ) {
+			flush = 1;
+			break;
+		}
+		if (!extend) {
+			count = 1;
+			start = end = tmp;
+		}
+	}
+	return (flush);
+}
+
 /**
  * bmap_flush_trycoalesce - scan the given array of i/o requests for candidates
  *    to flush.  We *only* flush when (1) a request has aged out or (2) we can
