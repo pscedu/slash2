@@ -92,7 +92,6 @@ bmap_remove(struct bmapc_memb *b)
 		psc_pool_return(bmap_pool, b);
 	} else
 		BMAP_ULOCK(b);
-
 }
 
 void
