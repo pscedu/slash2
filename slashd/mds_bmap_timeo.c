@@ -36,7 +36,7 @@ struct bmap_timeo_table	 mdsBmapTimeoTbl;
 struct psc_poolmaster	 bmapMdsLeasePoolMaster;
 struct psc_poolmgr	*bmapMdsLeasePool;
 
-#define mds_bmap_timeotbl_curslot				\
+#define mds_bmap_timeotbl_curslot					\
 	((time(NULL) % BMAP_TIMEO_MAX) / BMAP_TIMEO_TBL_QUANT)
 
 #define mds_bmap_timeotbl_nextwakeup					\
@@ -153,7 +153,7 @@ mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 	/* Currently all leases are placed in the last slot regardless
 	 *   of their start time.  This is the case for BTE_REATTACH.
 	 */
-	psc_dbg("timeoslot=%"PSCPRI_TIMET, mds_bmap_timeotbl_curslot);
+	psclog_dbg("timeoslot=%"PSCPRI_TIMET, mds_bmap_timeotbl_curslot);
 	e = &mdsBmapTimeoTbl.btt_entries[mds_bmap_timeotbl_curslot];
 
 	if (flags & BTE_REATTACH) {
@@ -238,15 +238,15 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			if (mds_bmap_bml_release(bml))
 				abort();
 		}
-		psc_dynarray_free(&a);
+		psc_dynarray_reset(&a);
  sleep:
-		psc_dbg("timeoslot=%d sleeptime=%"PSCPRI_TIMET,
+		psclog_dbg("timeoslot=%d sleeptime=%"PSCPRI_TIMET,
 			timeoslot, mds_bmap_timeotbl_nextwakeup);
 
 		sleep(mds_bmap_timeotbl_nextwakeup);
 	}
+	psc_dynarray_free(&a);
 }
-
 
 void
 slmbmaptimeothr_spawn(void)
