@@ -532,7 +532,6 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 __static int
 bmap_flushable(const struct psc_dynarray *biorqs)
 {
-	uint32_t off;
 	int idx, count, extend, flush = 0;
 	struct bmpc_ioreq *start, *end, *tmp;
 
