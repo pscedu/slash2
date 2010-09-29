@@ -8,6 +8,6 @@ SRCS+=		dumpfid.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
 SRCS+=		${PFL_BASE}/psc_util/log.c
 
-MODULES+=	lnet-hdrs pfl
+MODULES+=	lnet-hdrs pfl fuse-hdrs
 
 include ${SLASHMK}
