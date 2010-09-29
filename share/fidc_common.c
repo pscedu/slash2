@@ -448,7 +448,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
  * fidc_init - Initialize the FID cache.
  */
 void
-fidc_init(int privsiz, int nobj, int max,
+fidc_init(int privsiz, int nobj,
     int (*fcmh_reap_cb)(struct fidc_membh *))
 {
 	_psc_poolmaster_init(&fidcPoolMaster,

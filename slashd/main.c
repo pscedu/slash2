@@ -243,8 +243,7 @@ main(int argc, char *argv[])
 
 	sl_drop_privs(allow_root_uid);
 
-	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ,
-	    FIDC_MDS_MAXSZ, NULL);
+	fidc_init(sizeof(struct fcmh_mds_info), FIDC_MDS_DEFSZ, NULL);
 	libsl_init(PSCNET_SERVER, 1);
 
 	slm_init();
