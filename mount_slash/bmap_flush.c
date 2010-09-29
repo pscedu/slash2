@@ -535,6 +535,8 @@ bmap_flushable(const struct psc_dynarray *biorqs)
 	int idx, count, extend, flush = 0;
 	struct bmpc_ioreq *start, *end, *tmp;
 
+	count = 0; /* gcc */
+	end = NULL; /* gcc */
 	start = NULL;
 	for (idx=0; idx < psc_dynarray_len(biorqs); idx++) {
 		tmp = psc_dynarray_getpos(biorqs, idx);
@@ -916,7 +918,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	struct bmap_cli_info *bci;
 	struct bmapc_memb *b;
 	struct sl_resm *resm;
-	int i, sortbypass, sawnew=0;
+	int i, sortbypass = 0, sawnew=0;
 
 #define SORT_BYPASS_ITERS 32
 #define ITEMS_TRY_AFTER_UNEXPIRED MAX_BMAP_RELEASE
