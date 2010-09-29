@@ -145,50 +145,6 @@ _sl_csvc_waitrelv(struct slashrpc_cservice *csvc, long s, long ns)
 		    csvc->csvc_lock, &ts);
 }
 
-void
-sl_csvc_lock(struct slashrpc_cservice *csvc)
-{
-	if (sl_csvc_usemultiwait(csvc))
-		psc_pthread_mutex_lock(csvc->csvc_mutex);
-	else
-		spinlock(csvc->csvc_lock);
-}
-
-void
-sl_csvc_unlock(struct slashrpc_cservice *csvc)
-{
-	if (sl_csvc_usemultiwait(csvc))
-		psc_pthread_mutex_unlock(csvc->csvc_mutex);
-	else
-		freelock(csvc->csvc_lock);
-}
-
-int
-sl_csvc_reqlock(struct slashrpc_cservice *csvc)
-{
-	if (sl_csvc_usemultiwait(csvc))
-		return (psc_pthread_mutex_reqlock(csvc->csvc_mutex));
-	return (reqlock(csvc->csvc_lock));
-}
-
-void
-sl_csvc_ureqlock(struct slashrpc_cservice *csvc, int locked)
-{
-	if (sl_csvc_usemultiwait(csvc))
-		psc_pthread_mutex_ureqlock(csvc->csvc_mutex, locked);
-	else
-		ureqlock(csvc->csvc_lock, locked);
-}
-
-void
-sl_csvc_lock_ensure(struct slashrpc_cservice *csvc)
-{
-	if (sl_csvc_usemultiwait(csvc))
-		psc_pthread_mutex_ensure_locked(csvc->csvc_mutex);
-	else
-		LOCK_ENSURE(csvc->csvc_lock);
-}
-
 int
 sl_csvc_usemultiwait(struct slashrpc_cservice *csvc)
 {

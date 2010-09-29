@@ -127,6 +127,45 @@ struct slashrpc_cservice {
 
 #define sl_csvc_waitrel_s(csvc, s)	_sl_csvc_waitrelv((csvc), (s), 0L)
 
+#define sl_csvc_lock(csvc)						\
+	do {								\
+		if (sl_csvc_usemultiwait(csvc))				\
+			psc_pthread_mutex_lock((csvc)->csvc_mutex);	\
+		else							\
+			spinlock((csvc)->csvc_lock);			\
+	} while (0)
+
+#define sl_csvc_unlock(csvc)						\
+	do {								\
+		if (sl_csvc_usemultiwait(csvc))				\
+			psc_pthread_mutex_unlock((csvc)->csvc_mutex);	\
+		else							\
+			freelock((csvc)->csvc_lock);			\
+	} while (0)
+
+#define sl_csvc_reqlock(csvc)						\
+	(sl_csvc_usemultiwait(csvc) ?					\
+	    psc_pthread_mutex_reqlock(csvc->csvc_mutex) :		\
+	    reqlock(csvc->csvc_lock))
+
+#define sl_csvc_ureqlock(csvc, waslocked)				\
+	do {								\
+		if (sl_csvc_usemultiwait(csvc))				\
+			psc_pthread_mutex_ureqlock((csvc)->csvc_mutex,	\
+			    (waslocked));				\
+		else							\
+			ureqlock((csvc)->csvc_lock, (waslocked));	\
+	} while (0)
+
+#define sl_csvc_lock_ensure(csvc)					\
+	do {								\
+		if (sl_csvc_usemultiwait(csvc))				\
+			psc_pthread_mutex_ensure_locked(		\
+			    (csvc)->csvc_mutex);			\
+		else							\
+			LOCK_ENSURE((csvc)->csvc_lock);			\
+	} while (0)
+
 struct slashrpc_cservice *
 	 sl_csvc_get(struct slashrpc_cservice **, int, struct pscrpc_export *,
 	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
@@ -134,11 +173,7 @@ struct slashrpc_cservice *
 void	 sl_csvc_decref(struct slashrpc_cservice *);
 void	 sl_csvc_disconnect(struct slashrpc_cservice *);
 void	 sl_csvc_incref(struct slashrpc_cservice *);
-void	 sl_csvc_lock(struct slashrpc_cservice *);
-void	 sl_csvc_lock_ensure(struct slashrpc_cservice *);
 void	 sl_csvc_markfree(struct slashrpc_cservice *);
-int	 sl_csvc_reqlock(struct slashrpc_cservice *);
-void	 sl_csvc_unlock(struct slashrpc_cservice *);
 int	 sl_csvc_useable(struct slashrpc_cservice *);
 int	 sl_csvc_usemultiwait(struct slashrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slashrpc_cservice *, long, long);
