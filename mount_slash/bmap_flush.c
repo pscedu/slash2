@@ -548,18 +548,18 @@ bmap_flushable(const struct psc_dynarray *biorqs)
 			start = end = tmp;
 		} else {
 			extend = 0;
-			if (tmp->biorq_off <= biorq_voff_get(end) && 
+			if (tmp->biorq_off <= biorq_voff_get(end) &&
 			    biorq_voff_get(tmp) > biorq_voff_get(end)) {
 				extend = 1;
 				end = tmp;
 				count++;
-			} 
+			}
 		}
 		if (count == PSCRPC_MAX_BRW_PAGES) {
 			flush = 1;
 			break;
 		}
-		if (end->biorq_off - start->biorq_off + end->biorq_len >= 
+		if (end->biorq_off - start->biorq_off + end->biorq_len >=
 		    MIN_COALESCE_RPC_SZ) {
 			flush = 1;
 			break;
@@ -919,7 +919,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	int i, sortbypass, sawnew=0;
 
 #define SORT_BYPASS_ITERS 32
-#define ITEMS_TRY_AFTER_UNEXPIRED MAX_BMAP_RELEASE	
+#define ITEMS_TRY_AFTER_UNEXPIRED MAX_BMAP_RELEASE
 
 	// just put the resm's in the dynarray. when pushing out the bid's
 	//   assume an ion unless resm == slc_rmc_resm
@@ -932,7 +932,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			sortbypass = SORT_BYPASS_ITERS;
 		} else
 			sortbypass--;
-		
+
 		PFL_GETTIMESPEC(&ctime);
 
 		wtime.tv_sec = BMAP_CLI_TIMEO_INC;
@@ -957,16 +957,16 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			if (timespeccmp(&ctime, &bci->bci_etime, <)) {
 				if (!sawnew)
-					/* Set the wait time to (etime 
+					/* Set the wait time to (etime
 					 *  - ctime)
-					 */	
-					timespecsub(&bci->bci_etime, 
+					 */
+					timespecsub(&bci->bci_etime,
 						    &ctime, &wtime);
-				
+
 				DEBUG_BMAP(PLL_DEBUG, b, "sawnew=%d", sawnew);
 				psc_dynarray_add(&skip, b);
 				BMAP_ULOCK(b);
-				
+
 				sawnew++;
 				if (sawnew == ITEMS_TRY_AFTER_UNEXPIRED)
 					break;
@@ -1042,7 +1042,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			BMAP_LOCK(b);
 			if (!(b->bcm_flags & BMAP_DIRTY))
 				lc_addstack(&bmapTimeoutQ, b);
-			BMAP_ULOCK(b);						
+			BMAP_ULOCK(b);
 		}
 		psc_dynarray_free(&skip);
 
@@ -1054,7 +1054,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		if (!wtime.tv_sec)
 			wtime.tv_nsec = MAX(wtime.tv_nsec, 100000000);
-			
+
 		psc_waitq_waitrel(&waitq, NULL, &wtime);
 
 		wtime.tv_sec = wtime.tv_nsec = 0;
