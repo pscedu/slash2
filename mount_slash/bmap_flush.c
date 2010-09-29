@@ -372,7 +372,7 @@ bmap_flush_biorq_cmp(const void *x, const void *y)
 }
 
 /**
- * bmap_flush_coalesce_map - scan the given list of bio request and construct
+ * bmap_flush_coalesce_map - Scan the given list of bio request and construct
  *     I/O vectors out of them.  One I/O vector is limited to one page.
  */
 __static int
@@ -526,8 +526,8 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 	return (ready);
 }
 
-/*
- * bmap_flushable - check if we can flush the biorqs.  This must be non-blocking.
+/**
+ * bmap_flushable - Check if we can flush the biorqs.  This must be non-blocking.
  */
 __static int
 bmap_flushable(const struct psc_dynarray *biorqs)
@@ -573,7 +573,7 @@ bmap_flushable(const struct psc_dynarray *biorqs)
 }
 
 /**
- * bmap_flush_trycoalesce - scan the given array of i/o requests for candidates
+ * bmap_flush_trycoalesce - Scan the given array of i/o requests for candidates
  *    to flush.  We *only* flush when (1) a request has aged out or (2) we can
  *    construct a large enough I/O.
  */
@@ -670,7 +670,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 }
 
 /**
- * bmap_flush - send out SRMT_WRITE RPCs to the I/O server. We might end up send more
+ * bmap_flush - Send out SRMT_WRITE RPCs to the I/O server.  We might end up send more
  *     than nrpcs of them because one request can have many pages.
  */
 void
