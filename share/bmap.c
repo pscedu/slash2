@@ -66,6 +66,7 @@ bmap_orphan(struct bmapc_memb *b)
 	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
 
+	b->bcm_fcmh = NULL;
 	BMAP_URLOCK(b, locked);
 }
 
