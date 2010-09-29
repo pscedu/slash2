@@ -20,10 +20,6 @@
 #include <pthread.h>
 #include <stdio.h>
 
-#ifdef DEMOTED_INUM_WIDTHS
-#include <fuse_lowlevel.h>
-#endif
-
 #include "pfl/cdefs.h"
 #include "psc_ds/list.h"
 #include "psc_ds/listcache.h"
