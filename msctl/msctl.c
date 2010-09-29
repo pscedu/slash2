@@ -439,7 +439,7 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	    strlen(repl_policies[BRP_ONETIME]);
 	n = printf("%s", current_mrs.mrs_fn);
 	if (n > dlen)
-		printf("\n    ");
+		printf("\n%*s", dlen, "");
 	else
 		printf("%*s", dlen - n, "");
 	printf(" repl-policy: ");
