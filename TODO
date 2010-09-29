@@ -5,6 +5,8 @@ reminders:
 	(o) ion - an I/O node (resm)
 	(o) ios - an I/O system (res)
 	(o) iod - the sliod daemon
+- do sl_csvc_wantfree() in all to-CLI csvcs
+- fix the "static" variables in communal/general functions
 
 -----------------------------------------------------------------------
 TRUNCATE
@@ -231,7 +233,9 @@ tracks endpoint connections
 ------------------------------
 
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
-- authbuf RPC bulk data, use wrappers of rsx_bulk routines to aid this
+- if the transport is unreliable, use SSL
+- convert authbuf to pki, put hash back inside bdbuf fdbuf
+- kill authbuf
 - sprinkle some iostats on zfs, namespace changelog
 - add journal I/O test mode to slashd
 - tie zfslog to psclog
@@ -254,8 +258,6 @@ utime
 	the MDS so the MDS can more accurately estimate when the I/O
 	took place
 
-- fix the "static" variables in communal/general functions
-- do sl_csvc_wantfree() in all to-CLI csvcs
 - upsch items are not getting removed on completion
 - figure out why daemons aren't reconnecting
 - rename include/buffer.h and share/buffer.c as sliod/slab.h sliod/slab.c
