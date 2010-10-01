@@ -776,9 +776,8 @@ upsched_scandir(void)
 				/* XXX if ENOENT, remove from repldir and continue */
 				psc_errorx("mds_repl_loadino: %s",
 				    slstrerror(rc));
-
-//				mdsio_unlink(mds_upschdir_inum, fn,
-//				    &rootcreds, NULL);
+				mdsio_unlink(mds_upschdir_inum, fn,
+				    &rootcreds, NULL);
 				continue;
 			}
 
