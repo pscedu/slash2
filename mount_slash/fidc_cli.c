@@ -122,7 +122,7 @@ slc_fcmh_dtor(struct fidc_membh *fcmh)
 int
 slc_fcmh_getattr(struct fidc_membh *fcmh)
 {
-	return (slash2fuse_stat(fcmh, &rootcreds));
+	return (msl_stat(fcmh, &rootcreds));
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {

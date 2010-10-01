@@ -246,10 +246,6 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	*fcmhp = NULL;
 	fcmh_new = NULL; /* gcc */
 
-#ifdef DEMOTED_INUM_WIDTHS
-	searchfg.fg_fid = (fuse_ino_t)searchfg.fg_fid;
-#endif
-
 	/* sanity checks */
 #ifdef SLASH_CLIENT
 	if (flags & FIDC_LOOKUP_CREATE)
@@ -314,22 +310,7 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 			fcmh_new = NULL;
 		}
 
-#ifdef DEMOTED_INUM_WIDTHS
-		/*
-		 * Since fuse_ino_t is 'unsigned long', it will be 4
-		 * bytes on some architectures.  On these machines,
-		 * allow collisions since '(unsigned long)uint64_t var'
-		 * will frequently be unequal to 'uint64_t var' uncasted.
-		 */
-		psc_assert(searchfg.fg_fid ==
-		    (uint64_t)(fuse_ino_t)fcmh_2_fid(fcmh));
-		if (fgp->fg_fid != fcmh_2_fid(fcmh)) {
-			FCMH_ULOCK(fcmh);
-			return (ENFILE);
-		}
-#else
 		psc_assert(fgp->fg_fid == fcmh_2_fid(fcmh));
-#endif
 		/* apply provided attributes to the cache */
 		if (sstb)
 			fcmh_setattr(fcmh, sstb, setattrflags |
@@ -377,9 +358,6 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 	fcmh_op_start_type(fcmh, FCMH_OPCNT_NEW);
 
 	COPYFG(&fcmh->fcmh_fg, fgp);
-#ifdef DEMOTED_INUM_WIDTHS
-	COPYFG(&fcmh->fcmh_smallfg, &searchfg);
-#endif
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "new fcmh");
 
 	/*
@@ -464,7 +442,7 @@ fidc_init(int privsiz, int nobj,
 	    fcmh_lentry, "fcmhclean");
 
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
-	    FCMH_HASH_FIELD, fcmh_hentry, nobj * 2, NULL, "fidc");
+	    fcmh_fg, fcmh_hentry, nobj * 2, NULL, "fidc");
 
 	fidcReapCb = fcmh_reap_cb;
 }

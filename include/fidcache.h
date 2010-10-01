@@ -38,11 +38,6 @@
 #include "slashrpc.h"
 #include "slsubsys.h"
 
-#ifndef __LP64__
-#  define DEMOTED_INUM_WIDTHS
-#  include <fuse_lowlevel.h>
-#endif
-
 struct fidc_membh;
 
 struct sl_fcmh_ops {
@@ -53,7 +48,7 @@ struct sl_fcmh_ops {
 	int     (*sfop_modify)(struct fidc_membh *, void *);
 };
 
-/*
+/**
  * fidc_membh - the primary inode cache structure, all updates and
  * lookups into the inode are done through here.
  *
@@ -66,9 +61,6 @@ struct sl_fcmh_ops {
  * fcmh_get_pri() defined below.
  */
 struct fidc_membh {
-#ifdef DEMOTED_INUM_WIDTHS
-	struct slash_fidgen	 fcmh_smallfg;	/* integer-demoted fg_fid for hashing */
-#endif
 	struct srt_stat		 fcmh_sstb;	/* higher-level stat(2) buffer */
 	int			 fcmh_flags;	/* see FCMH_* below */
 	psc_spinlock_t		 fcmh_lock;
@@ -93,18 +85,6 @@ struct fidc_membh {
 #define	FCMH_CTOR_SUCCESS	(1 << 10)	/* constructor success */
 #define	_FCMH_FLGSHFT		(1 << 11)
 
-/*
- * If fuse_ino_t, declared 'unsigned long', is 4 bytes, inums will get
- * integer demoted, so we must store two: the original inum, used when
- * communicating information about the actual fcmh, as well as the
- * demoted value, used in hash table lookups from FUSE syscall handlers.
- */
-#ifdef DEMOTED_INUM_WIDTHS
-# define FCMH_HASH_FIELD	fcmh_smallfg
-#else
-# define FCMH_HASH_FIELD	fcmh_fg
-#endif
-
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
 
@@ -119,7 +99,7 @@ struct fidc_membh {
 #define fcmh_2_fid(f)		(f)->fcmh_fg.fg_fid
 #define fcmh_2_gen(f)		(f)->fcmh_fg.fg_gen
 #define fcmh_2_fsz(f)		(f)->fcmh_sstb.sst_size
-#define fcmh_2_fg(f)            (f)->fcmh_fg
+#define fcmh_2_fg(f)		(f)->fcmh_fg
 #define fcmh_2_nbmaps(f)	((sl_bmapno_t)howmany(fcmh_getsize(f), SLASH_BMAP_SIZE))
 #define fcmh_2_ptruncgen(f)	(f)->fcmh_sstb.sst_ptruncgen
 #define fcmh_2_utimgen(f)	(f)->fcmh_sstb.sst_utimgen
@@ -177,7 +157,7 @@ struct fidc_membh {
 /* debugging aid: spit out the reason for the reference count taking/dropping */
 enum fcmh_opcnt_types {
 /* 0 */	FCMH_OPCNT_LOOKUP_FIDC,		/* fidc_lookup() */
-/* 1 */	FCMH_OPCNT_OPEN,		/* mount_slash FUSE file info */
+/* 1 */	FCMH_OPCNT_OPEN,		/* mount_slash pscfs file info */
 /* 2 */	FCMH_OPCNT_BMAP,		/* bcm_fcmh */
 /* 3 */	FCMH_OPCNT_DIRENTBUF,
 /* 4 */	FCMH_OPCNT_NEW,

@@ -29,7 +29,6 @@
 
 #include "bmap.h"
 #include "fidcache.h"
-#include "fuse_listener.h"
 #include "inode.h"
 #include "slashrpc.h"
 #include "slconfig.h"
@@ -39,14 +38,14 @@ struct pscrpc_request;
 /* mount_slash thread types */
 #define MSTHRT_CTL			0	/* control processor */
 #define MSTHRT_CTLAC			1	/* control acceptor */
-#define MSTHRT_FS			2	/* fuse filesystem syscall handlers */
+#define MSTHRT_FS			2	/* file system syscall handler workers */
 #define MSTHRT_RCM			3	/* service RPC reqs for client from MDS */
 #define MSTHRT_LNETAC			4	/* lustre net accept thr */
 #define MSTHRT_USKLNDPL			5	/* userland socket lustre net dev poll thr */
 #define MSTHRT_EQPOLL			6	/* LNET event queue polling */
 #define MSTHRT_TINTV			7	/* timer interval thread */
 #define MSTHRT_TIOS			8	/* timer iostat updater */
-#define MSTHRT_FUSE			9	/* fuse internal manager */
+#define MSTHRT_FSMGR			9	/* pscfs manager */
 #define MSTHRT_BMAPFLSH			10	/* bmap write data flush thread */
 #define MSTHRT_BMAPFLSHRPC		11	/* async buffer thread for RPC reaping */
 #define MSTHRT_BMAPFLSHRLS		12	/* bmap lease releaser */
@@ -88,6 +87,7 @@ int	 msl_dio_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io(struct msl_fhent *, char *, size_t, off_t, enum rw);
 int	 msl_io_rpc_cb(struct pscrpc_request *, struct pscrpc_async_args *);
 int	 msl_io_rpcset_cb(struct pscrpc_request_set *, void *, int);
+int	 msl_stat(struct fidc_membh *, const struct slash_creds *);
 
 struct msl_fhent *
 	 msl_fhent_new(struct fidc_membh *);
@@ -102,15 +102,12 @@ int	 translate_pathname(const char *, char []);
 int	 lookup_pathname_fg(const char *, struct slash_creds *,
 	    struct slash_fidgen *, struct srt_stat *);
 
-int	 slash2fuse_stat(struct fidc_membh *, const struct slash_creds *);
-
 extern char			 ctlsockfn[];
 extern sl_ios_id_t		 prefIOS;
 extern struct psc_listcache	 bmapFlushQ;
 extern struct sl_resm		*slc_rmc_resm;
 extern struct slash_creds	 rootcreds;
 extern char			 mountpoint[];
-extern struct fuse_session	*fuse_session;
 
 extern struct psc_waitq		 msl_fhent_flush_waitq;
 extern struct timespec		 msl_bmap_max_lease;

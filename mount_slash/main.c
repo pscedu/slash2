@@ -33,6 +33,7 @@
 #include <gcrypt.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/fs.h"
 #include "pfl/pfl.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
@@ -53,7 +54,6 @@
 #include "ctl_cli.h"
 #include "fidc_cli.h"
 #include "fidcache.h"
-#include "fuse_listener.h"
 #include "mount_slash.h"
 #include "pathnames.h"
 #include "rpc_cli.h"
@@ -62,8 +62,8 @@
 #include "slsubsys.h"
 #include "slutil.h"
 
-#define ffi_setmfh(fi, mfh)	((fi)->fh = (uint64_t)(unsigned long)(mfh))
-#define ffi_getmfh(fi)		((void *)(unsigned long)(fi)->fh)
+#define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
+
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
 #define mfh_getfg(mfh)		(mfh)->mfh_fcmh->fcmh_fg
 
@@ -72,7 +72,6 @@ const char			*progname;
 char				 ctlsockfn[PATH_MAX] = SL_PATH_MSCTLSOCK;
 char				 mountpoint[PATH_MAX];
 int				 allow_root_uid = 1;
-struct fuse_session		*fuse_session;
 
 struct sl_resm			*slc_rmc_resm;
 
@@ -86,7 +85,7 @@ int				 nstbpref = DEF_READDIR_NENTS;
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-static int msl_lookup_fidcache(const struct slash_creds *, fuse_ino_t,
+static int msl_lookup_fidcache(const struct slash_creds *, pscfs_inum_t,
     const char *, struct slash_fidgen *, struct srt_stat *);
 
 /**
@@ -115,32 +114,6 @@ translate_pathname(const char *fn, char buf[PATH_MAX])
 	memmove(buf, buf + len, strlen(buf) - len);
 	buf[strlen(buf) - len] = '\0';
 	return (0);
-}
-
-__static void
-slash2fuse_getcred(fuse_req_t req, struct slash_creds *cred)
-{
-	const struct fuse_ctx *ctx = fuse_req_ctx(req);
-
-	cred->uid = ctx->uid;
-	cred->gid = ctx->gid;
-}
-
-static mode_t
-slash2fuse_getumask(__unusedx fuse_req_t req)
-{
-	mode_t mode;
-#ifdef FUSE_VERSION
-#  if FUSE_VERSION > FUSE_MAKE_VERSION(2,7)
-	const struct fuse_ctx *ctx = fuse_req_ctx(req);
-
-	mode = ctx->umask;
-#  else
-	mode = 0644;
-	/* XXX read from /proc ? */
-#  endif
-#endif
-	return (mode);
 }
 
 /**
@@ -202,7 +175,8 @@ msfsthr_ensure(void)
 		freelock(&msfsthr_uniqidmap_lock);
 
 		thr = pscthr_init(MSTHRT_FS, 0, NULL,
-		    msfsthr_teardown, sizeof(*mft), "msfsthr%02zu", id);
+		    msfsthr_teardown, sizeof(*mft), "msfsthr%02zu",
+		    id);
 		mft = thr->pscthr_private;
 		mft->mft_uniqid = id;
 		pscthr_setready(thr);
@@ -210,51 +184,12 @@ msfsthr_ensure(void)
 	psc_assert(thr->pscthr_type == MSTHRT_FS);
 }
 
-__static void
-slash2fuse_fill_entry(struct fuse_entry_param *e,
-      const struct slash_fidgen *fgp, const struct stat *stb)
-{
-	e->entry_timeout = MSL_FUSE_ENTRY_TIMEO;
-	e->ino = fgp->fg_fid;
-	if (e->ino) {
-		e->attr_timeout = MSL_FUSE_ATTR_TIMEO;
-		memcpy(&e->attr, stb, sizeof(e->attr));
-		e->generation = fgp->fg_gen;
-	}
-
-	psc_trace("inode:%lu generation:%lu", e->ino, e->generation);
-	DEBUG_STATBUF(PLL_DEBUG, &e->attr, "");
-}
-
-__static void
-slash2fuse_reply_create(fuse_req_t req, const struct srt_stat *sstb,
-    const struct fuse_file_info *fi)
-{
-	struct fuse_entry_param e;
-	struct stat stb;
-
-	sl_internalize_stat(sstb, &stb);
-	slash2fuse_fill_entry(&e, &sstb->sst_fg, &stb);
-	fuse_reply_create(req, &e, fi);
-}
-
-__static void
-slash2fuse_reply_entry(fuse_req_t req, const struct srt_stat *sstb)
-{
-	struct fuse_entry_param e;
-	struct stat stb;
-
-	sl_internalize_stat(sstb, &stb);
-	slash2fuse_fill_entry(&e, &sstb->sst_fg, &stb);
-	fuse_reply_entry(req, &e);
-}
-
 #define slc_fcmh_get(sstb, safl, fcmhp)					\
 	_slc_fcmh_get((sstb), (safl), (fcmhp), __FILE__, __func__, __LINE__)
 
 /**
- * slc_fcmh_get - Create/update a FID cache member handle
- *	based on the statbuf provided.
+ * slc_fcmh_get - Create/update a FID cache member handle based on the
+ *	statbuf provided.
  * @sstb: file stat info.
  * @setattrflags: flags to fcmh_setattr().
  * @name: base name of file.
@@ -269,8 +204,18 @@ _slc_fcmh_get(struct srt_stat *sstb, int setattrflags,
 	    setattrflags, fcmhp, file, func, line));
 }
 
+void
+mslfs_getcreds(struct pscfs_req *pfr, struct slash_creds *cr)
+{
+	struct pscfs_cred pfc;
+
+	pscfs_getcreds(pfr, &pfc);
+	cr->uid = pfc.pfc_uid;
+	cr->gid = pfc.pfc_gid;
+}
+
 __static void
-slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
+mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int mask)
 {
 	struct slash_creds creds;
 	struct fidc_membh *c;
@@ -278,35 +223,36 @@ slash2fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
 
 	msfsthr_ensure();
 
-	slash2fuse_getcred(req, &creds);
-	rc = fidc_lookup_load_inode(ino, &c);
+	mslfs_getcreds(pfr, &creds);
+	rc = fidc_lookup_load_inode(inum, &c);
 	if (rc)
 		goto out;
 
 	rc = checkcreds(&c->fcmh_sstb, &creds, mask);
  out:
-	fuse_reply_err(req, rc);
+	pscfs_reply_access(pfr, rc);
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 }
 
 __static void
-slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
-    mode_t mode, struct fuse_file_info *fi)
+mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
+    const char *name, int oflags, mode_t mode)
 {
-	struct fidc_membh *m = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct fidc_membh *m = NULL;
 	struct fcmh_cli_info *fci;
 	struct srm_create_req *mq;
 	struct srm_create_rep *mp;
 	struct bmapc_memb *bcm;
 	struct msl_fhent *mfh;
+	struct stat stb;
 	int rc = 0;
 
 	msfsthr_ensure();
 
-	psc_assert(fi->flags & O_CREAT);
+	psc_assert(oflags & O_CREAT);
 
 	if (strlen(name) > NAME_MAX) {
 		rc = ENAMETOOLONG;
@@ -326,11 +272,11 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		goto out;
 
-	mq->mode = (!(mode & 0777)) ? (0666 & ~(slash2fuse_getumask(req))) : mode;
-	mq->pfg.fg_fid = parent;
+	mq->mode = (!(mode & 0777)) ? (0666 & ~(pscfs_getumask(pfr))) : mode;
+	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
 	mq->prefios = prefIOS;
-	slash2fuse_getcred(req, &mq->creds);
+	mslfs_getcreds(pfr, &mq->creds);
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	rc = SL_RSX_WAITREP(rq, mp);
@@ -343,17 +289,12 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		goto out;
 
-	mfh = msl_fhent_new(m);
-	ffi_setmfh(fi, mfh);
-	fi->keep_cache = 0;
-	fi->direct_io = 1;
-
-	if (fi->flags & O_APPEND) {
+	if (oflags & O_APPEND) {
 		FCMH_LOCK(m);
 		m->fcmh_flags |= FCMH_CLI_APPENDWR;
 		FCMH_ULOCK(m);
 	}
-	if (fi->flags & O_SYNC) {
+	if (oflags & O_SYNC) {
 		/* XXX write me */
 	}
 
@@ -363,10 +304,11 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios_id;
 	fci->fci_nrepls = 1;
 	m->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
+	sl_internalize_stat(&m->fcmh_sstb, &stb);
 	FCMH_ULOCK(m);
 
-	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD | BMAPGETF_NORETRIEVE,
-	    &bcm);
+	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD |
+	    BMAPGETF_NORETRIEVE, &bcm);
 	if (rc)
 		goto out;
 
@@ -376,14 +318,15 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 
+	mfh = msl_fhent_new(m);
+
  out:
 	if (m)
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 
-	if (rc)
-		fuse_reply_err(req, rc);
-	else
-		slash2fuse_reply_create(req, &mp->attr, fi);
+	pscfs_reply_create(pfr, mp->attr.sst_fid,
+	    mp->attr.sst_fg.fg_gen, MSLFS_ENTRY_TIMEO, &stb,
+	    MSLFS_ATTR_TIMEO, mfh, PSCFS_CREATEF_DIO, rc);
 
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -391,31 +334,28 @@ slash2fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
 		sl_csvc_decref(csvc);
 }
 
-__static void
-slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
+__static int
+msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
+    struct msl_fhent **mfhp, int *rflags)
 {
 	struct slash_creds creds;
-	struct msl_fhent *mfh;
 	struct fidc_membh *c;
-	int rc=0;
+	int rc = 0;
 
 	msfsthr_ensure();
 
-	slash2fuse_getcred(req, &creds);
+	mslfs_getcreds(pfr, &creds);
 
-	psc_trace("inum %lu dir=%s", ino, (fi->flags & O_DIRECTORY) ?
-		  "yes" : "no");
-
-	rc = fidc_lookup_load_inode(ino, &c);
+	rc = fidc_lookup_load_inode(inum, &c);
 	if (rc)
 		goto out;
 
-	if ((fi->flags & O_ACCMODE) != O_WRONLY) {
+	if ((oflags & O_ACCMODE) != O_WRONLY) {
 		rc = checkcreds(&c->fcmh_sstb, &creds, R_OK);
 		if (rc)
 			goto out;
 	}
-	if (fi->flags & (O_WRONLY | O_RDWR)) {
+	if (oflags & (O_WRONLY | O_RDWR)) {
 		rc = checkcreds(&c->fcmh_sstb, &creds, W_OK);
 		if (rc)
 			goto out;
@@ -423,9 +363,9 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 
 	/* Directory sanity. */
 	if (fcmh_isdir(c)) {
-		/* fuse shouldn't ever pass us WR with a dir */
-		psc_assert((fi->flags & (O_WRONLY | O_RDWR)) == 0);
-		if (!(fi->flags & O_DIRECTORY)) {
+		/* pscfs shouldn't ever pass us WR with a dir */
+		psc_assert((oflags & (O_WRONLY | O_RDWR)) == 0);
+		if (!(oflags & O_DIRECTORY)) {
 			rc = EISDIR;
 			goto out;
 		}
@@ -435,62 +375,72 @@ slash2fuse_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 		 */
 		slc_fcmh_initdci(c);
 	} else {
-		if (fi->flags & O_DIRECTORY) {
+		if (oflags & O_DIRECTORY) {
 			rc = ENOTDIR;
 			goto out;
 		}
 	}
 
-	mfh = msl_fhent_new(c);
-	mfh->mfh_oflags = fi->flags;
+	*mfhp = msl_fhent_new(c);
+	(*mfhp)->mfh_oflags = oflags;
 
-	DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p dir=%s", mfh,
-		   (fi->flags & O_DIRECTORY) ? "yes" : "no");
+	DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p dir=%s", *mfhp,
+	    (oflags & O_DIRECTORY) ? "yes" : "no");
 
-	ffi_setmfh(fi, mfh);
+	if (oflags & O_DIRECTORY)
+		*rflags |= PSCFS_OPENF_KEEPCACHE;
 
-	fi->keep_cache = (fi->flags & O_DIRECTORY) ? 1 : 0;
 	/*
-	 * FUSE direct_io does not work with mmap(), which is what the
+	 * PSCFS direct_io does not work with mmap(), which is what the
 	 * kernel uses under the hood when running executables, so
 	 * disable it for this case.
 	 */
 	if ((c->fcmh_sstb.sst_mode &
 	    (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
-		fi->direct_io = 1;
+		*rflags |= PSCFS_OPENF_DIO;
 
-	fuse_reply_open(req, fi);
-
-	if (fi->flags & O_APPEND) {
+	if (oflags & O_APPEND) {
 		FCMH_LOCK(c);
 		c->fcmh_flags |= FCMH_CLI_APPENDWR;
 		FCMH_ULOCK(c);
 	}
-	if (fi->flags & O_TRUNC) {
+	if (oflags & O_TRUNC) {
 		/* XXX write me */
 	}
-	if (fi->flags & O_SYNC) {
+	if (oflags & O_SYNC) {
 		/* XXX write me */
 	}
 
  out:
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
-
-	if (rc)
-		fuse_reply_err(req, rc);
+	return (rc);
 }
 
 __static void
-slash2fuse_opendir(fuse_req_t req, fuse_ino_t ino,
-    struct fuse_file_info *fi)
+mslfsop_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
 {
-	fi->flags |= O_DIRECTORY;
-	slash2fuse_open(req, ino, fi);
+	struct msl_fhent *mfh;
+	int rflags, rc;
+
+	rflags = 0;
+	rc = msl_open(pfr, inum, oflags, &mfh, &rflags);
+	pscfs_reply_open(pfr, mfh, rflags, rc);
+}
+
+__static void
+mslfsop_opendir(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags)
+{
+	struct msl_fhent *mfh;
+	int rflags, rc;
+
+	rflags = 0;
+	rc = msl_open(pfr, inum, oflags | O_DIRECTORY, &mfh, &rflags);
+	pscfs_reply_opendir(pfr, mfh, rflags, rc);
 }
 
 int
-slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
+msl_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -564,8 +514,7 @@ slash2fuse_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 }
 
 __static void
-slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
-    __unusedx struct fuse_file_info *fi)
+mslfsop_getattr(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
 	struct slash_creds creds;
 	struct fidc_membh *f;
@@ -574,17 +523,18 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 
 	msfsthr_ensure();
 
-	slash2fuse_getcred(req, &creds);
-	/* Lookup and possibly create a new fidcache handle for ino.
+	mslfs_getcreds(pfr, &creds);
+	/*
+	 * Lookup and possibly create a new fidcache handle for inum.
 	 *  If the fid does not exist in the cache then a placeholder will
-	 *  be allocated.  slash2fuse_stat() will detect incomplete attrs via
+	 *  be allocated.  msl_stat() will detect incomplete attrs via
 	 *  FCMH_GETTING_ATTRS flag and RPC for them.
 	 */
-	rc = fidc_lookup_load_inode(ino, &f);
+	rc = fidc_lookup_load_inode(inum, &f);
 	if (rc)
 		goto out;
 
-	rc = slash2fuse_stat(f, &creds);
+	rc = msl_stat(f, &creds);
 	if (rc)
 		goto out;
 
@@ -596,26 +546,25 @@ slash2fuse_getattr(fuse_req_t req, fuse_ino_t ino,
 	FCMH_ULOCK(f);
 
 	DEBUG_STATBUF(PLL_DEBUG, &stb, "getattr");
-	fuse_reply_attr(req, &stb, MSL_FUSE_ATTR_TIMEO);
 
  out:
 	if (f)
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
-	if (rc)
-		fuse_reply_err(req, rc);
+	pscfs_reply_getattr(pfr, &stb, MSLFS_ATTR_TIMEO, rc);
 }
 
 __static void
-slash2fuse_link(fuse_req_t req, fuse_ino_t c_inum,
-    fuse_ino_t p_inum, const char *newname)
+mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
+    pscfs_inum_t p_inum, const char *newname)
 {
 	struct fidc_membh *p = NULL, *c = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct srm_link_rep *mp = NULL;
 	struct slash_creds creds;
 	struct srm_link_req *mq;
-	struct srm_link_rep *mp;
-	int rc=0;
+	struct stat stb;
+	int rc = 0;
 
 	msfsthr_ensure();
 
@@ -627,9 +576,9 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t c_inum,
 		goto out;
 	}
 
-	slash2fuse_getcred(req, &creds);
+	mslfs_getcreds(pfr, &creds);
 
-	/* Check the newparent inode. */
+	/* Check the parent inode. */
 	rc = fidc_lookup_load_inode(p_inum, &p);
 	if (rc)
 		goto out;
@@ -672,17 +621,19 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t c_inum,
 		rc = mp->rc;
 	if (rc)
 		goto out;
-	slash2fuse_reply_entry(req, &mp->attr);
 
 	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_NONE);
+	sl_internalize_stat(&mp->attr, &stb);
 
  out:
-	if (rc)
-		fuse_reply_err(req, rc);
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+
+	pscfs_reply_link(pfr, mp ? mp->attr.sst_fid : 0,
+	    mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
+	    MSLFS_ATTR_TIMEO, rc);
 
 	if (rq)
 		pscrpc_req_finished(rq);
@@ -691,15 +642,16 @@ slash2fuse_link(fuse_req_t req, fuse_ino_t c_inum,
 }
 
 __static void
-slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
-	 mode_t mode)
+mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
+    const char *name, mode_t mode)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct srm_mkdir_rep *mp = NULL;
 	struct fidc_membh *m = NULL;
 	struct srm_mkdir_req *mq;
-	struct srm_mkdir_rep *mp;
 	struct slash_creds creds;
+	struct stat stb;
 	int rc;
 
 	msfsthr_ensure();
@@ -709,7 +661,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		goto out;
 	}
 
-	slash2fuse_getcred(req, &creds);
+	mslfs_getcreds(pfr, &creds);
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -719,7 +671,7 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		goto out;
 	mq->creds = creds;
-	mq->pfg.fg_fid = parent;
+	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
 	mq->mode = mode;
 	strlcpy(mq->name, name, sizeof(mq->name));
@@ -734,24 +686,26 @@ slash2fuse_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
 	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_NONE, &m);
-	if (rc)
-		goto out;
-	slash2fuse_reply_entry(req, &mp->attr);
+
+	sl_internalize_stat(&mp->attr, &stb);
 
  out:
 	if (m)
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
+
+	pscfs_reply_mkdir(pfr, mp ? mp->attr.sst_fid : 0,
+	    mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
+	    MSLFS_ATTR_TIMEO, rc);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	if (rc)
-		fuse_reply_err(req, rc);
 }
 
 __static int
-slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
-    int isfile)
+msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
+    const char *name, int isfile)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -777,14 +731,14 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 	if (rc)
 		goto out;
 
-	slash2fuse_getcred(req, &cr);
+	mslfs_getcreds(pfr, &cr);
 
-	mq->pfg.fg_fid = parent;
+	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
 
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	p = fidc_lookup_fid(parent);
+	p = fidc_lookup_fid(pinum);
 	if (p) {
 		FCMH_LOCK(p);
 		if (DIRCACHE_INITIALIZED(p))
@@ -810,36 +764,40 @@ slash2fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name,
 }
 
 __static void
-slash2fuse_rmdir_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
+mslfsop_unlink(struct pscfs_req *pfr, pscfs_inum_t pinum,
+    const char *name)
 {
-	int error = slash2fuse_unlink(req, parent, name, 0);
-
-	/* rmdir events always reply_err
-	 */
-	fuse_reply_err(req, error);
+	pscfs_reply_unlink(pfr, msl_delete(pfr, pinum, name, 1));
 }
 
 __static void
-slash2fuse_mknod_helper(fuse_req_t req, __unusedx fuse_ino_t parent,
-    __unusedx const char *name, __unusedx mode_t mode, __unusedx dev_t rdev)
+mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
+    const char *name)
+{
+	pscfs_reply_unlink(pfr, msl_delete(pfr, pinum, name, 0));
+}
+
+__static void
+mslfsop_mknod(struct pscfs_req *pfr,
+    __unusedx pscfs_inum_t pinum, __unusedx const char *name,
+    __unusedx mode_t mode, __unusedx dev_t rdev)
 {
 	msfsthr_ensure();
 
-	fuse_reply_err(req, ENOTSUP);
+	pscfs_reply_mknod(pfr, 0, 0, 0, NULL, 0, ENOTSUP);
 }
 
-__static int
-slash2fuse_readdir(fuse_req_t req, size_t size, off_t off,
-    struct fuse_file_info *fi)
+__static void
+mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct dircache_ents *e = NULL;
 	struct pscrpc_bulk_desc *desc;
+	struct msl_fhent *mfh = data;
 	struct fidc_membh *d = NULL;
 	struct srm_readdir_req *mq;
 	struct srm_readdir_rep *mp;
-	struct dircache_ents *e;
-	struct msl_fhent *mfh;
 	struct iovec iov[2];
 	int rc, niov = 0;
 
@@ -848,22 +806,19 @@ slash2fuse_readdir(fuse_req_t req, size_t size, off_t off,
 
 	msfsthr_ensure();
 
-	/* Don't allow writes on directory inodes.
-	 */
-	if (fi->flags & (O_WRONLY | O_RDWR))
-		return (EINVAL);
-
-	mfh = ffi_getmfh(fi);
 	d = mfh->mfh_fcmh;
 	psc_assert(d);
 
-	/* Ensure that the fcmh is still valid, we can't rely
+	/*
+	 * Ensure that the fcmh is still valid, we can't rely
 	 *  only on the inode number, the generation # number
 	 *  must be taken into account.
 	 * NOTE: 'd' must be decref'd.
 	 */
-	if (fidc_lookup_fg(&d->fcmh_fg) != d)
-		return (EBADF);
+	if (fidc_lookup_fg(&d->fcmh_fg) != d) {
+		rc = EBADF;
+		goto out;
+	}
 	fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
 
 	if (!fcmh_isdir(d)) {
@@ -905,12 +860,10 @@ slash2fuse_readdir(fuse_req_t req, size_t size, off_t off,
 
 	rsx_bulkclient(rq, &desc, BULK_PUT_SINK, SRMC_BULK_PORTAL, iov, niov);
 	rc = SL_RSX_WAITREP(rq, mp);
-	if (!rc)
+	if (rc == 0)
 		rc = mp->rc;
-	else {
-		dircache_earlyrls_ents(e);
+	if (rc)
 		goto out;
-	}
 
 	if (mq->nstbpref) {
 		struct srt_stat *attr = iov[1].iov_base;
@@ -921,8 +874,8 @@ slash2fuse_readdir(fuse_req_t req, size_t size, off_t off,
 			mq->nstbpref = mp->num;
 
 		for (i = 0; i < mq->nstbpref; i++, attr++) {
-			if (attr->sst_fg.fg_fid == FID_ANY ||
-			    attr->sst_fg.fg_fid == 0)
+			if (attr->sst_fid == FID_ANY ||
+			    attr->sst_fid == 0)
 				continue;
 
 			psc_dbg("adding i+g:"SLPRI_FG,
@@ -936,43 +889,34 @@ slash2fuse_readdir(fuse_req_t req, size_t size, off_t off,
 				    FCMH_OPCNT_LOOKUP_FIDC);
 		}
 	}
+
 	/* Establish these dirents in our cache.  Do this before replying
-	 *   to fuse in order to prevent unnecessary lookup RPC's.
+	 *   to pscfs in order to prevent unnecessary lookup RPC's.
 	 */
 	if (mp->num)
 		dircache_reg_ents(e, mp->num);
-	/* Tell fuse of the good news!
-	 */
-	fuse_reply_buf(req, iov[0].iov_base, (size_t)mp->size);
+
+ out:
+	if (niov == 2)
+		PSCFREE(iov[1].iov_base);
+
+	pscfs_reply_readdir(pfr, iov[0].iov_base, mp->size, rc);
+
 	/* At this point the dirent cache is technically freeable.
 	 */
 	if (mp->num)
 		dircache_setfreeable_ents(e);
-	else
+	else if (e)
 		dircache_earlyrls_ents(e);
- out:
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-
-	if (niov == 2)
-		PSCFREE(iov[1].iov_base);
-	return (rc);
-}
-
-__static void
-slash2fuse_readdir_helper(fuse_req_t req, __unusedx fuse_ino_t ino,
-    size_t size, off_t off, struct fuse_file_info *fi)
-{
-	int error = slash2fuse_readdir(req, size, off, fi);
-
-	if (error)
-		fuse_reply_err(req, error);
 }
 
 __static int
-slash_lookuprpc(const struct slash_creds *crp, fuse_ino_t parent,
+slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
     const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
 {
 	struct slashrpc_cservice *csvc = NULL;
@@ -993,7 +937,7 @@ slash_lookuprpc(const struct slash_creds *crp, fuse_ino_t parent,
 	if (rc)
 		goto out;
 
-	mq->pfg.fg_fid = parent;
+	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
 
 	strlcpy(mq->name, name, sizeof(mq->name));
@@ -1005,7 +949,7 @@ slash_lookuprpc(const struct slash_creds *crp, fuse_ino_t parent,
 		goto out;
 
 	/*
-	 * Add the inode to the cache first, otherwise fuse may
+	 * Add the inode to the cache first, otherwise pscfs may
 	 *  come to us with another request for the inode since it won't
 	 *  yet be visible in the cache.
 	 */
@@ -1033,17 +977,17 @@ slash_lookuprpc(const struct slash_creds *crp, fuse_ino_t parent,
 }
 
 static int
-msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
+msl_lookup_fidcache(const struct slash_creds *cr, pscfs_inum_t pinum,
     const char *name, struct slash_fidgen *fgp, struct srt_stat *sstb)
 {
 	struct fidc_membh *p, *c;
 	slfid_t child;
 	int rc;
 
-	psc_info("looking for file: %s under inode: %lu",
-	    name, parent);
+	psc_info("looking for file: %s under inode: "SLPRI_FID,
+	    name, pinum);
 
-	p = fidc_lookup_fid(parent);
+	p = fidc_lookup_fid(pinum);
 	if (!p)
 		goto out;
 
@@ -1070,42 +1014,44 @@ msl_lookup_fidcache(const struct slash_creds *cr, fuse_ino_t parent,
 	 * in a stat RPC.  Note the app is looking based on a name
 	 * here, not based on ID.
 	 */
-	rc = slash2fuse_stat(c, cr);
+	rc = msl_stat(c, cr);
 	if (!rc) {
 		*fgp = c->fcmh_fg;
-		if (sstb)
+		if (sstb) {
+			FCMH_LOCK(c);
 			*sstb = c->fcmh_sstb;
+			FCMH_ULOCK(c);
+		}
 	}
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
  out:
-	return (slash_lookuprpc(cr, parent, name, fgp, sstb));
+	return (slash_lookuprpc(cr, pinum, name, fgp, sstb));
 }
 
 __static void
-slash2fuse_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
+mslfsop_lookup(struct pscfs_req *pfr, pscfs_inum_t pinum,
+    const char *name)
 {
 	struct slash_fidgen fg;
 	struct slash_creds cr;
 	struct srt_stat sstb;
+	struct stat stb;
 	int rc;
 
 	msfsthr_ensure();
 
-	slash2fuse_getcred(req, &cr);
-	rc = msl_lookup_fidcache(&cr, parent, name, &fg, &sstb);
-	if (rc && rc != ENOENT)
-		fuse_reply_err(req, rc);
-	else {
-		if (rc == ENOENT)
-			sstb.sst_fid = 0;
-
-		slash2fuse_reply_entry(req, &sstb);
-	}
+	mslfs_getcreds(pfr, &cr);
+	rc = msl_lookup_fidcache(&cr, pinum, name, &fg, &sstb);
+	if (rc == ENOENT)
+		sstb.sst_fid = 0;
+	sl_internalize_stat(&sstb, &stb);
+	pscfs_reply_lookup(pfr, sstb.sst_fid, sstb.sst_gen,
+	    MSLFS_ENTRY_TIMEO, &stb, MSLFS_ATTR_TIMEO, rc);
 }
 
 __static void
-slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
+mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -1128,9 +1074,9 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	if (rc)
 		goto out;
 
-	slash2fuse_getcred(req, &creds);
+	mslfs_getcreds(pfr, &creds);
 
-	rc = fidc_lookup_load_inode(ino, &c);
+	rc = fidc_lookup_load_inode(inum, &c);
 	if (rc)
 		goto out;
 
@@ -1149,15 +1095,14 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 	if (rc == 0)
 		rc = mp->rc;
 
+	buf[sizeof(buf) - 1] = '\0';
+
  out:
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
-	if (rc)
-		fuse_reply_err(req, rc);
-	else {
-		buf[sizeof(buf) - 1] = '\0';
-		fuse_reply_readlink(req, buf);
-	}
+
+	pscfs_reply_readlink(pfr, buf, rc);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
@@ -1166,7 +1111,7 @@ slash2fuse_readlink(fuse_req_t req, fuse_ino_t ino)
 
 /* Note that this function is called once for each open */
 __static void
-slash2fuse_flush_int_locked(struct msl_fhent *mfh)
+msl_flush_int_locked(struct msl_fhent *mfh)
 {
 	struct bmpc_ioreq *r;
 
@@ -1184,32 +1129,27 @@ slash2fuse_flush_int_locked(struct msl_fhent *mfh)
 }
 
 __static void
-slash2fuse_flush(fuse_req_t req, __unusedx fuse_ino_t ino,
-		 struct fuse_file_info *fi)
+mslfsop_flush(struct pscfs_req *pfr, void *data)
 {
-	struct msl_fhent *mfh;
-
-	mfh = ffi_getmfh(fi);
+	struct msl_fhent *mfh = data;
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "flushing");
 
 	spinlock(&mfh->mfh_lock);
-	slash2fuse_flush_int_locked(mfh);
+	msl_flush_int_locked(mfh);
 	freelock(&mfh->mfh_lock);
 
-	fuse_reply_err(req, 0);
+	pscfs_reply_flush(pfr, 0);
 }
 
 __static void
-slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
-    struct fuse_file_info *fi)
+mslfsop_close(struct pscfs_req *pfr, void *data)
 {
-	struct msl_fhent *mfh;
+	struct msl_fhent *mfh = data;
 	struct fidc_membh *c;
 
 	msfsthr_ensure();
 
-	mfh = ffi_getmfh(fi);
 	c = mfh->mfh_fcmh;
 
 	spinlock(&mfh->mfh_lock);
@@ -1220,7 +1160,7 @@ slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
 		freelock(&r->biorq_lock);
 	}
 #else
-	slash2fuse_flush_int_locked(mfh);
+	msl_flush_int_locked(mfh);
 	psc_assert(pll_empty(&mfh->mfh_biorqs));
 #endif
 	freelock(&mfh->mfh_lock);
@@ -1228,55 +1168,60 @@ slash2fuse_release(fuse_req_t req, __unusedx fuse_ino_t ino,
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
 
 	PSCFREE(mfh);
-	fuse_reply_err(req, 0);
+//	if (process wants I/O guarentees)
+//		rc = flush;
+	pscfs_reply_close(pfr, 0);
 }
 
-__static int
-slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
-    const char *name, fuse_ino_t newparent, const char *newname)
+__static void
+mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
+    const char *oldname, pscfs_inum_t npinum, const char *newname)
 {
 	struct slashrpc_cservice *csvc = NULL;
-	struct fidc_membh *p;
 	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
 	struct srm_rename_req *mq;
+	struct fidc_membh *p;
 	struct iovec iov[2];
 	int rc;
 
 	msfsthr_ensure();
 
-	if (strlen(name) > NAME_MAX ||
-	    strlen(newname) > NAME_MAX)
-		return (ENAMETOOLONG);
+	if (strlen(oldname) > NAME_MAX || strlen(newname) > NAME_MAX) {
+		rc = ENAMETOOLONG;
+		goto out;
+	}
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
-	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
-	    SRMT_RENAME, rq, mq, mp);
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION, SRMT_RENAME,
+	    rq, mq, mp);
 	if (rc)
 		goto out;
 
-	mq->opfg.fg_fid = parent;
-	mq->npfg.fg_fid = newparent;
+	mq->opfg.fg_fid = opinum;
+	mq->npfg.fg_fid = npinum;
 	mq->opfg.fg_gen = mq->npfg.fg_gen = 0;
-	mq->fromlen = strlen(name) + 1;
+	mq->fromlen = strlen(oldname) + 1;
 	mq->tolen = strlen(newname) + 1;
 
-	iov[0].iov_base = (char *)name;
+	iov[0].iov_base = (char *)oldname;
 	iov[0].iov_len = mq->fromlen;
 	iov[1].iov_base = (char *)newname;
 	iov[1].iov_len = mq->tolen;
 
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL, iov, 2);
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
+	    iov, 2);
 
-	p = fidc_lookup_fid(parent);
+	p = fidc_lookup_fid(opinum);
 	if (p) {
 		FCMH_LOCK(p);
 		if (DIRCACHE_INITIALIZED(p))
 			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
-				 name, DC_STALE);
+			    oldname, DC_STALE);
+			/* XXX XXX put in npinum */
 		else
 			slc_fcmh_initdci(p);
 		/* fcmh_op_done_type() does unlock for us.
@@ -1287,28 +1232,17 @@ slash2fuse_rename(__unusedx fuse_req_t req, fuse_ino_t parent,
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
-	if (rc)
-		goto out;
+
  out:
+	pscfs_reply_rename(pfr, rc);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	return (rc);
 }
 
 __static void
-slash2fuse_rename_helper(fuse_req_t req, fuse_ino_t parent,
-    const char *name, fuse_ino_t newparent, const char *newname)
-{
-	int error = slash2fuse_rename(req, parent, name, newparent, newname);
-
-	/* rename events always reply_err */
-	fuse_reply_err(req, error);
-}
-
-__static void
-slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
+mslfsop_statfs(struct pscfs_req *pfr)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
@@ -1333,38 +1267,39 @@ slash2fuse_statfs(fuse_req_t req, __unusedx fuse_ino_t ino)
 		goto out;
 
 	sl_internalize_statfs(&mp->ssfb, &sfb);
-	fuse_reply_statfs(req, &sfb);
 
  out:
-	if (rc)
-		fuse_reply_err(req, rc);
+	pscfs_reply_statfs(pfr, &sfb, rc);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
 }
 
-__static int
-slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
-    const char *name)
+__static void
+mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
+    pscfs_inum_t pinum, const char *name)
 {
-	struct fidc_membh *m = NULL;
 	struct slashrpc_cservice *csvc = NULL;
+	struct srm_symlink_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
+	struct fidc_membh *m = NULL;
 	struct srm_symlink_req *mq;
-	struct srm_symlink_rep *mp;
 	struct slash_creds creds;
 	struct iovec iov;
+	struct stat stb;
 	int rc;
 
 	msfsthr_ensure();
 
-	if (strlen(buf) >= PATH_MAX ||
-	    strlen(name) > NAME_MAX)
-		return (ENAMETOOLONG);
+	if (strlen(buf) >= PATH_MAX || strlen(name) > NAME_MAX) {
+		rc = ENAMETOOLONG;
+		goto out;
+	}
 
-	slash2fuse_getcred(req, &creds);
+	mslfs_getcreds(pfr, &creds);
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -1376,7 +1311,7 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 		goto out;
 
 	mq->creds = creds;
-	mq->pfg.fg_fid = parent;
+	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
 
 	mq->linklen = strlen(buf) + 1;
@@ -1385,8 +1320,8 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 	iov.iov_base = (char *)buf;
 	iov.iov_len = mq->linklen;
 
-	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
-	    SRMC_BULK_PORTAL, &iov, 1);
+	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
+	    &iov, 1);
 
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
@@ -1395,72 +1330,34 @@ slash2fuse_symlink(fuse_req_t req, const char *buf, fuse_ino_t parent,
 		goto out;
 
 	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_NONE, &m);
-	if (rc)
-		goto out;
-	slash2fuse_reply_entry(req, &mp->attr);
+
+	sl_internalize_stat(&mp->attr, &stb);
 
  out:
 	if (m)
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
+
+	pscfs_reply_symlink(pfr, mp ? mp->attr.sst_fid : 0,
+	    mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
+	    MSLFS_ATTR_TIMEO, rc);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
-	return (rc);
 }
 
 __static void
-slash2fuse_symlink_helper(fuse_req_t req, const char *buf,
-    fuse_ino_t parent, const char *name)
-{
-	int error = slash2fuse_symlink(req, buf, parent, name);
-
-	if (error)
-		fuse_reply_err(req, error);
-}
-
-__static void
-slash2fuse_unlink_helper(fuse_req_t req, fuse_ino_t parent, const char *name)
-{
-	int error = slash2fuse_unlink(req, parent, name, 1);
-
-	/* unlink events always reply_err */
-	fuse_reply_err(req, error);
-}
-
-int
-slash2fuse_translate_setattr_flags(int in)
-{
-	int out = 0;
-
-	if (in & FUSE_SET_ATTR_MODE)
-		out |= SETATTR_MASKF_MODE;
-	if (in & FUSE_SET_ATTR_UID)
-		out |= SETATTR_MASKF_UID;
-	if (in & FUSE_SET_ATTR_GID)
-		out |= SETATTR_MASKF_GID;
-	if (in & FUSE_SET_ATTR_SIZE)
-		out |= SETATTR_MASKF_DATASIZE;
-	if (in & FUSE_SET_ATTR_ATIME)
-		out |= SETATTR_MASKF_ATIME;
-	if (in & FUSE_SET_ATTR_MTIME)
-		out |= SETATTR_MASKF_MTIME;
-//	if (in & FUSE_SET_ATTR_CTIME)
-//		out |= SETATTR_MASKF_CTIME;
-	return (out);
-}
-
-__static void
-slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
-    struct stat *stb, int fuse_to_set, struct fuse_file_info *fi)
+mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
+    struct stat *stb, int to_set, void *data)
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct msl_fhent *mfh = data;
 	struct fidc_membh *c = NULL;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct slash_creds cr;
-	struct msl_fhent *mfh;
 	int rc, getting = 0;
 
 	msfsthr_ensure();
@@ -1473,9 +1370,9 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	if (rc)
 		goto out;
 
-	slash2fuse_getcred(req, &cr);
+	mslfs_getcreds(pfr, &cr);
 
-	rc = fidc_lookup_load_inode(ino, &c);
+	rc = fidc_lookup_load_inode(inum, &c);
 	if (rc)
 		goto out;
 
@@ -1491,10 +1388,10 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	}
 
 	mq->attr.sst_fg = c->fcmh_fg;
-	mq->to_set = slash2fuse_translate_setattr_flags(fuse_to_set);
+	mq->to_set = to_set;
 	sl_externalize_stat(stb, &mq->attr);
 
-	if (mq->to_set & SETATTR_MASKF_DATASIZE) {
+	if (mq->to_set & PSCFS_SETATTRF_DATASIZE) {
 		struct bmapc_memb *b;
 		struct psc_dynarray a = DYNARRAY_INIT;
 		int j;
@@ -1548,22 +1445,20 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	} else
 		FCMH_ULOCK(c);
 
-	if (fi && fi->fh) {
-		mfh = ffi_getmfh(fi);
+	if (mfh)
 		psc_assert(c == mfh->mfh_fcmh);
-	}
 
 	DEBUG_FCMH(PLL_DEBUG, c, "pre setattr");
 	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p pre setattr", c);
 
 	psc_dbg("fcmh %p setattr%s%s%s%s%s%s%s", c,
-	    mq->to_set & SETATTR_MASKF_MODE ? " mode" : "",
-	    mq->to_set & SETATTR_MASKF_UID ? " uid" : "",
-	    mq->to_set & SETATTR_MASKF_GID ? " gid" : "",
-	    mq->to_set & SETATTR_MASKF_ATIME ? " atime" : "",
-	    mq->to_set & SETATTR_MASKF_MTIME ? " mtime" : "",
-	    mq->to_set & SETATTR_MASKF_CTIME ? " ctime" : "",
-	    mq->to_set & SETATTR_MASKF_DATASIZE ? " datasize" : "");
+	    mq->to_set & PSCFS_SETATTRF_MODE ? " mode" : "",
+	    mq->to_set & PSCFS_SETATTRF_UID ? " uid" : "",
+	    mq->to_set & PSCFS_SETATTRF_GID ? " gid" : "",
+	    mq->to_set & PSCFS_SETATTRF_ATIME ? " atime" : "",
+	    mq->to_set & PSCFS_SETATTRF_MTIME ? " mtime" : "",
+	    mq->to_set & PSCFS_SETATTRF_CTIME ? " ctime" : "",
+	    mq->to_set & PSCFS_SETATTRF_DATASIZE ? " datasize" : "");
 
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
@@ -1577,12 +1472,12 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	 * to be then blindly accept what he returns us; otherwise, we
 	  * SAVELOCAL any updates we have.
 	 */
-	if (mq->to_set & SETATTR_MASKF_MTIME) {
+	if (mq->to_set & PSCFS_SETATTRF_MTIME) {
 		c->fcmh_sstb.sst_mtime = mp->attr.sst_mtime;
 		c->fcmh_sstb.sst_mtime_ns = mp->attr.sst_mtime_ns;
 	}
 
-	if (mq->to_set & SETATTR_MASKF_DATASIZE)
+	if (mq->to_set & PSCFS_SETATTRF_DATASIZE)
 		c->fcmh_sstb.sst_size = mp->attr.sst_size;
 
 	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
@@ -1592,27 +1487,23 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 	/* Issue wakeup after calling fcmh_setattr() to avoid needless
 	 *   spinlock contention.
 	 */
-	if (mq->to_set & SETATTR_MASKF_DATASIZE) {
+	if (mq->to_set & PSCFS_SETATTRF_DATASIZE) {
 		DEBUG_FCMH(PLL_WARN, c, "truncate complete");
 		psc_assert(c->fcmh_flags & FCMH_CLI_TRUNC);
 		c->fcmh_flags &= ~FCMH_CLI_TRUNC;
 		fcmh_wake_locked(c);
 	}
+	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p post setattr", c);
 	FCMH_ULOCK(c);
 
-	fuse_reply_attr(req, stb, MSL_FUSE_ATTR_TIMEO);
-
-	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p post setattr", c);
-
  out:
-	if (rc) {
-		fuse_reply_err(req, rc);
-		if (getting) {
-			FCMH_LOCK(c);
-			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
-			fcmh_wake_locked(c);
-			FCMH_ULOCK(c);
-		}
+	pscfs_reply_setattr(pfr, stb, MSLFS_ATTR_TIMEO, rc);
+
+	if (rc && getting) {
+		FCMH_LOCK(c);
+		c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
+		fcmh_wake_locked(c);
+		FCMH_ULOCK(c);
 	}
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
@@ -1623,41 +1514,49 @@ slash2fuse_setattr(fuse_req_t req, fuse_ino_t ino,
 }
 
 __static void
-slash2fuse_fsync_helper(__unusedx fuse_req_t req, __unusedx fuse_ino_t ino,
-	__unusedx int datasync, struct fuse_file_info *fi)
+mslfsop_fsync(struct pscfs_req *pfr, __unusedx int datasync, void *data)
 {
 	struct msl_fhent *mfh;
 
-	mfh = ffi_getmfh(fi);
+	mfh = data;
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "fsyncing via flush");
 
 	spinlock(&mfh->mfh_lock);
-	slash2fuse_flush_int_locked(mfh);
+	msl_flush_int_locked(mfh);
 	freelock(&mfh->mfh_lock);
 
-	fuse_reply_err(req, 0);
+	pscfs_reply_fsync(pfr, 0);
 }
 
 __static void
-slash2fuse_destroy(__unusedx void *userdata)
+mslfsop_umount(void)
 {
-	//umount
+//	unmount_mp();
 }
 
+#if PFL_DEBUG > 0
+#  define CHECK_FCMH(f)
+#else
+#  define CHECK_FCMH(f)							\
+	do {								\
+		if (fidc_lookup_fg(&(f)->fcmh_fg) != (f))		\
+			psc_assert("shouldn't happen");			\
+		fcmh_op_done_type((f), FCMH_OPCNT_LOOKUP_FIDC);		\
+	} while (0)
+#endif
+
 void
-slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
-    const char *buf, size_t size, off_t off,
-    struct fuse_file_info *fi)
+mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
+    off_t off, void *data)
 {
-	struct msl_fhent *mfh;
+	struct msl_fhent *mfh = data;
 	struct fidc_membh *f;
 	struct timespec ts;
 	int rc;
 
 	msfsthr_ensure();
 
-	mfh = ffi_getmfh(fi);
 	f = mfh->mfh_fcmh;
 	if (fidc_lookup_fg(&f->fcmh_fg) != f) {
 		rc = EBADF;
@@ -1687,25 +1586,21 @@ slash2fuse_write(fuse_req_t req, __unusedx fuse_ino_t ino,
 	f->fcmh_sstb.sst_mtime_ns = ts.tv_nsec;
 	FCMH_ULOCK(f);
 
-	fuse_reply_write(req, size);
-
  out:
-	if (rc)
-		fuse_reply_err(req, rc);
+	pscfs_reply_write(pfr, size, rc);
 }
 
 void
-slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
-    size_t size, off_t off, struct fuse_file_info *fi)
+mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
-	struct msl_fhent *mfh;
+	struct msl_fhent *mfh = data;
 	struct fidc_membh *f;
-	void *buf;
+	void *buf = NULL;
+	ssize_t len = 0;
 	int rc;
 
 	msfsthr_ensure();
 
-	mfh = ffi_getmfh(fi);
 	f = mfh->mfh_fcmh;
 	if (fidc_lookup_fg(&f->fcmh_fg) != f) {
 		rc = EBADF;
@@ -1714,24 +1609,22 @@ slash2fuse_read(fuse_req_t req, __unusedx fuse_ino_t ino,
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
 	if (fcmh_isdir(f)) {
-		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+//		psc_assert("pscfs gave us directory");
 		rc = EISDIR;
 		goto out;
 	}
 
 	buf = PSCALLOC(size);
 	rc = msl_read(mfh, buf, size, off);
-
 	if (rc < 0)
 		rc = -rc;
 	else {
-		fuse_reply_buf(req, buf, rc);
+		len = rc;
 		rc = 0;
 	}
-	PSCFREE(buf);
  out:
-	if (rc)
-		fuse_reply_err(req, rc);
+	pscfs_reply_read(pfr, buf, len, rc);
+	PSCFREE(buf);
 }
 
 void
@@ -1755,8 +1648,8 @@ unmount_mp(void)
 	unmount(mountpoint);
 }
 
-void *
-msl_init(__unusedx struct fuse_conn_info *conn)
+void
+msl_init(void)
 {
 	char *name;
 	int rc;
@@ -1794,35 +1687,35 @@ msl_init(__unusedx struct fuse_conn_info *conn)
 			    "a valid IOS, defaulting to IOS_ID_ANY", name);
 	}
 	atexit(unmount_mp);
-	return (NULL);
 }
 
-struct fuse_lowlevel_ops zfs_operations = {
-	.access		= slash2fuse_access,
-	.create		= slash2fuse_create,
-	.destroy	= slash2fuse_destroy,
-	.flush          = slash2fuse_flush,
-	.fsync		= slash2fuse_fsync_helper,
-	.fsyncdir	= slash2fuse_fsync_helper,
-	.getattr	= slash2fuse_getattr,
-	.link		= slash2fuse_link,
-	.lookup		= slash2fuse_lookup,
-	.mkdir		= slash2fuse_mkdir,
-	.mknod		= slash2fuse_mknod_helper,
-	.open		= slash2fuse_open,
-	.opendir	= slash2fuse_opendir,
-	.read		= slash2fuse_read,
-	.readdir	= slash2fuse_readdir_helper,
-	.readlink	= slash2fuse_readlink,
-	.release	= slash2fuse_release,
-	.releasedir	= slash2fuse_release,
-	.rename		= slash2fuse_rename_helper,
-	.rmdir		= slash2fuse_rmdir_helper,
-	.setattr	= slash2fuse_setattr,
-	.statfs		= slash2fuse_statfs,
-	.symlink	= slash2fuse_symlink_helper,
-	.unlink		= slash2fuse_unlink_helper,
-	.write		= slash2fuse_write
+struct pscfs pscfs = {
+		mslfsop_access,
+		mslfsop_close,
+		mslfsop_close,
+		mslfsop_create,
+		mslfsop_flush,
+		mslfsop_fsync,
+		mslfsop_fsync,
+		mslfsop_getattr,
+/* ioctl */	NULL,
+		mslfsop_link,
+		mslfsop_lookup,
+		mslfsop_mkdir,
+		mslfsop_mknod,
+		mslfsop_open,
+		mslfsop_opendir,
+		mslfsop_read,
+		mslfsop_readdir,
+		mslfsop_readlink,
+		mslfsop_rename,
+		mslfsop_rmdir,
+		mslfsop_setattr,
+		mslfsop_statfs,
+		mslfsop_symlink,
+		mslfsop_unlink,
+		mslfsop_umount,
+		mslfsop_write
 };
 
 int
@@ -1844,60 +1737,11 @@ psc_usklndthr_get_namev(char buf[PSC_THRNAME_MAX], const char *namefmt,
 		vsnprintf(buf + n, PSC_THRNAME_MAX - n, namefmt, ap);
 }
 
-void
-msl_fuse_addarg(struct fuse_args *av, const char *arg)
-{
-	if (fuse_opt_add_arg(av, arg) == -1)
-		psc_fatal("fuse_opt_add_arg");
-}
-
-void
-msl_fuse_mount(const char *mp, struct fuse_args *args)
-{
-	struct fuse_chan *ch;
-	char nameopt[BUFSIZ];
-	int rc;
-
-	slash2fuse_listener_init();
-
-	rc = snprintf(nameopt, sizeof(nameopt), "fsname=%s", mp);
-	if (rc == -1)
-		psc_fatal("snprintf: fsname=%s", mp);
-	if (rc >= (int)sizeof(nameopt))
-		psc_fatalx("snprintf: fsname=%s: too long", mp);
-
-	msl_fuse_addarg(args, "-o");
-	msl_fuse_addarg(args, nameopt);
-
-	ch = fuse_mount(mp, args);
-	if (ch == NULL)
-		psc_fatal("fuse_mount");
-
-	fuse_session = fuse_lowlevel_new(args, &zfs_operations,
-	    sizeof(zfs_operations), NULL);
-
-	if (fuse_session == NULL) {
-		fuse_unmount(mp, ch);
-		psc_fatal("fuse_lowlevel_new");
-	}
-
-	fuse_session_add_chan(fuse_session, ch);
-
-	if (slash2fuse_newfs(mp, ch) != 0) {
-		fuse_session_destroy(fuse_session);
-		fuse_unmount(mp, ch);
-		psc_fatal("fuse_session_add_chan");
-	}
-
-	psc_info("FUSE version %d.%d", FUSE_MAJOR_VERSION,
-	    FUSE_MINOR_VERSION);
-}
-
 __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-dUX] [-f conf] [-I iosystem] [-M mds] [-o fuseopt]\n"
+	    "usage: %s [-dUX] [-f conf] [-I iosystem] [-M mds] [-o mountopt]\n"
 	    "\t[-p #prefetch] [-S socket] node\n",
 	    progname);
 	exit(1);
@@ -1906,7 +1750,7 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
+	struct pscfs_args args = PSCFS_ARGS_INIT(0, NULL);
 	char c, *p, *noncanon_mp, *cfg = SL_PATH_CONF;
 	int unmount_first = 0;
 	long l;
@@ -1919,15 +1763,15 @@ main(int argc, char *argv[])
 	pfl_init();
 	sl_subsys_register();
 
-	msl_fuse_addarg(&args, "");		/* progname/argv[0] */
-	msl_fuse_addarg(&args, "-o");
-	msl_fuse_addarg(&args, FUSE_OPTIONS);
+	pscfs_addarg(&args, "");		/* progname/argv[0] */
+	pscfs_addarg(&args, "-o");
+	pscfs_addarg(&args, STD_MOUNT_OPTIONS);
 
 	progname = argv[0];
 	while ((c = getopt(argc, argv, "df:I:M:o:p:S:UX")) != -1)
 		switch (c) {
 		case 'd':
-			msl_fuse_addarg(&args, "-odebug");
+			pscfs_addarg(&args, "-odebug");
 			break;
 		case 'f':
 			cfg = optarg;
@@ -1939,8 +1783,8 @@ main(int argc, char *argv[])
 			setenv("SLASH_MDS_NID", optarg, 1);
 			break;
 		case 'o':
-			msl_fuse_addarg(&args, "-o");
-			msl_fuse_addarg(&args, optarg);
+			pscfs_addarg(&args, "-o");
+			pscfs_addarg(&args, optarg);
 			break;
 		case 'p':
 			l = strtol(optarg, &p, 10);
@@ -1970,7 +1814,7 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-	pscthr_init(MSTHRT_FUSE, 0, NULL, NULL, 0, "msfusethr");
+	pscthr_init(MSTHRT_FSMGR, 0, NULL, NULL, 0, "msfsmgrthr");
 
 	noncanon_mp = argv[0];
 	if (unmount_first)
@@ -1980,13 +1824,13 @@ main(int argc, char *argv[])
 	if (realpath(noncanon_mp, mountpoint) == NULL)
 		psc_fatal("realpath %s", noncanon_mp);
 
-	msl_fuse_mount(mountpoint, &args);
-	fuse_opt_free_args(&args);
+	pscfs_mount(mountpoint, &args);
+	pscfs_freeargs(&args);
 
 	sl_drop_privs(allow_root_uid);
 
 	slcfg_parse(cfg);
-	msl_init(NULL);
+	msl_init();
 
-	exit(slash2fuse_listener_start());
+	exit(pscfs_main());
 }

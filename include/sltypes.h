@@ -93,20 +93,11 @@ struct srt_dirent {
 };
 #define fuse_dirent srt_dirent
 
-/* setattr() to_set mask flags */
-#define SETATTR_MASKF_MODE	(1 << 0)	/* chmod */
-#define SETATTR_MASKF_UID	(1 << 1)	/* chown */
-#define SETATTR_MASKF_GID	(1 << 2)	/* chgrp */
-#define SETATTR_MASKF_DATASIZE	(1 << 3)	/* file data truncate */
-#define SETATTR_MASKF_METASIZE	(1 << 4)	/* metadata file truncate */
-#define SETATTR_MASKF_ATIME	(1 << 5)	/* utimes */
-#define SETATTR_MASKF_MTIME	(1 << 6)	/* utimes */
-#define SETATTR_MASKF_CTIME	(1 << 7)	/* utimes */
-#define SETATTR_MASKF_PTRUNCGEN	(1 << 8)	/* # non-zero truncates */
-#define SETATTR_MASKF_GEN	(1 << 9)	/* full truncates */
+#define	SL_SETATTRF_METASIZE	(_PSCFS_SETATTRF_LAST << 0)	/* metadata file */
+#define SL_SETATTRF_PTRUNCGEN	(_PSCFS_SETATTRF_LAST << 1)	/* partial truncates */
+#define SL_SETATTRF_GEN		(_PSCFS_SETATTRF_LAST << 2)	/* full truncate */
 
-#define SETATTR_MASKF_ALL	(~0)
-#define SETATTR_MASKF_CLI_ALL	(SETATTR_MASKF_MODE | SETATTR_MASKF_UID |	\
+#define SL_SETATTRF_CLI_ALL	(SETATTR_MASKF_MODE | SETATTR_MASKF_UID |	\
 				 SETATTR_MASKF_GID | SETATTR_MASKF_DATASIZE |	\
 				 SETATTR_MASKF_ATIME | SETATTR_MASKF_MTIME |	\
 				 SETATTR_MASKF_CTIME)

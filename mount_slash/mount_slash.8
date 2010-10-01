@@ -29,7 +29,7 @@ file system
 .Op Fl f Ar conf
 .Op Fl I Ar iosystem
 .Op Fl M Ar mds
-.Op Fl o Ar fuseopt
+.Op Fl o Ar mountopt
 .Op Fl p Ar #prefetch
 .Op Fl S Ar socket
 .Ar mountpoint
@@ -44,9 +44,7 @@ file system under the specified
 The options are as follows:
 .Bl -tag -width Ds
 .It Fl d
-Enable
-.Tn FUSE
-debug messages.
+Enable low-level file system debug messages.
 .It Fl f Ar conf
 Specify an alternative configuration file.
 Defaults to
@@ -63,9 +61,8 @@ Specify the maximum number of file
 buffers to fetch when performing
 .Tn READDIR RPC Ns s .
 The default is as many as can fit.
-.It Fl o Ar fuseopt
-Pass an additional option to
-.Tn FUSE .
+.It Fl o Ar mountopt
+Pass additional options to the low-level file system mounter.
 .It Fl S Ar socket
 Specify an alternative path for the named socket through which
 .Nm

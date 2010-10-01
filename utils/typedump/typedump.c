@@ -56,7 +56,6 @@
 #include "mount_slash/ctlsvr_cli.h"
 #include "mount_slash/dircache.h"
 #include "mount_slash/fidc_cli.h"
-#include "mount_slash/fuse_listener.h"
 #include "mount_slash/mount_slash.h"
 #include "mount_slash/rpc_cli.h"
 #include "msctl/msctl.h"

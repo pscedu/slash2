@@ -60,7 +60,7 @@
 #define MSL_CB_POINTER_SLOT_BIORQ	2
 #define MSL_CB_POINTER_SLOT_BIORQS	3
 
-/* Flushing fuse threads wait here for I/O completion. */
+/* Flushing fs threads wait here for I/O completion. */
 struct psc_waitq msl_fhent_flush_waitq = PSC_WAITQ_INIT;
 
 struct timespec msl_bmap_max_lease = { BMAP_CLI_MAX_LEASE, 0 };
@@ -1598,14 +1598,14 @@ msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
 }
 
 /**
- * msl_io - I/O gateway routine which bridges FUSE and the slash2 client
+ * msl_io - I/O gateway routine which bridges pscfs and the SLASH2 client
  *	cache and backend.  msl_io() handles the creation of biorq's
  *	and the loading of bmaps (which are attached to the file's
  *	fcache_memb_handle and is ultimately responsible for data being
  *	prefetched (as needed), copied into or from the cache, and (on
- *	write) being pushed to the correct io server.
- * @fh: file handle structure passed to us by FUSE which contains the
- *	pointer to our fcache_memb_handle *.
+ *	write) being pushed to the correct I/O server.
+ * @mfh: file handle structure passed to us by pscfs which contains the
+ *	pointer to our fcmh.
  * @buf: the application source/dest buffer.
  * @size: size of buffer.
  * @off: file logical offset similar to pwrite().

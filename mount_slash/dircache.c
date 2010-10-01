@@ -164,7 +164,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	if (found && !e->de_remlookup && (e->de_flags & DIRCE_FREEABLE) &&
 	    !(e->de_flags & DIRCE_FREEING)) {
 		/* If all of the items have been accessed via lookup then
-		 *   assume that fuse has an entry cached for each and free
+		 *   assume that pscfs has an entry cached for each and free
 		 *   the buffer.
 		 */
 		e->de_flags |= DIRCE_FREEING;

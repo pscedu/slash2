@@ -11,7 +11,6 @@ SRCS+=		cfg_cli.c
 SRCS+=		ctl_cli.c
 SRCS+=		dircache.c
 SRCS+=		fidc_cli.c
-SRCS+=		fuse_listener.c
 SRCS+=		main.c
 SRCS+=		mount_slash_int.c
 SRCS+=		rcm.c
@@ -65,6 +64,6 @@ SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 DEFINES+=	-DSLASH_CLIENT
 
-MODULES+=	fuse lnet pthread gcrypt
+MODULES+=	lnet pthread gcrypt pscfs
 
 include ${SLASHMK}
