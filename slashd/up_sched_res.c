@@ -632,13 +632,18 @@ slmupschedthr_spawnall(void)
 int
 uswi_access(struct up_sched_work_item *wk)
 {
-	int rc = 1;
+	int locked, rc = 1;
 
 	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
 
 	/* Wait for someone else to finish processing. */
+	locked = spin_ismine(&upsched_listhd.pll_lock);
 	while (wk->uswi_flags & USWIF_BUSY) {
+		if (locked)
+			UPSCHED_MGR_ULOCK();
 		psc_multiwaitcond_wait(&wk->uswi_mwcond, &wk->uswi_mutex);
+		if (locked)
+			UPSCHED_MGR_LOCK();
 		psc_pthread_mutex_lock(&wk->uswi_mutex);
 	}
 
