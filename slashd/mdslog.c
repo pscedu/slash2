@@ -334,6 +334,8 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 			    "newly created inode", i);
 	}
 
+	if (jrir->sjir_nrepls > SL_MAX_REPLICAS)
+		abort();
 	inoh_ino.ino_nrepls = jrir->sjir_nrepls;
 
 	if (i < SL_DEF_REPLICAS)
@@ -1056,6 +1058,7 @@ mds_inode_addrepl_log(void *datap, uint64_t txg)
 	jrir->sjir_fid = r->sjir_fid;
 	jrir->sjir_ios = r->sjir_ios;
 	jrir->sjir_pos = r->sjir_pos;
+	jrir->sjir_nrepls = r->sjir_nrepls;
 
 	psc_trace("jlog fid=%"PRIx64" ios=%u pos=%u",
 	    jrir->sjir_fid, jrir->sjir_ios, jrir->sjir_pos);
