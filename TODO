@@ -259,6 +259,6 @@ utime
 	took place
 
 - upsch items are not getting removed on completion
-- figure out why daemons aren't reconnecting
 - rename include/buffer.h and share/buffer.c as sliod/slab.h sliod/slab.c
 - investigate MooseFS, CloudStore, Sector, GlusterFS
+- display FID_ANY/FGEN_ANY as such in logs
