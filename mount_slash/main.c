@@ -19,6 +19,7 @@
 
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <sys/time.h>
 
 #include <dirent.h>
@@ -34,6 +35,7 @@
 
 #include "pfl/cdefs.h"
 #include "pfl/fs.h"
+#include "pfl/fsmod.h"
 #include "pfl/pfl.h"
 #include "pfl/stat.h"
 #include "pfl/str.h"
