@@ -23,6 +23,7 @@
  * SLASH file's metadata.
  */
 
+#include "pfl/fs.h"
 #include "psc_util/lock.h"
 #include "psc_util/journal.h"
 
@@ -91,7 +92,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
 	FCMH_ULOCK(bmap->bcm_fcmh);
 
-	rc = mdsio_fcmh_setattr(bmap->bcm_fcmh, SETATTR_MASKF_DATASIZE);
+	rc = mdsio_fcmh_setattr(bmap->bcm_fcmh, PSCFS_SETATTRF_DATASIZE);
 
 	if (utimgen < crcup->utimgen)
 		DEBUG_FCMH(PLL_ERROR, bmap->bcm_fcmh,

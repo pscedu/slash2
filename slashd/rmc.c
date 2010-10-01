@@ -31,6 +31,7 @@
 #include <inttypes.h>
 #include <unistd.h>
 
+#include "pfl/fs.h"
 #include "pfl/str.h"
 #include "psc_rpc/export.h"
 #include "psc_rpc/rpc.h"
@@ -655,15 +656,15 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	to_set = mq->to_set & SETATTR_MASKF_CLI_ALL;
-	if (to_set & SETATTR_MASKF_DATASIZE) {
+	to_set = mq->to_set & SL_SETATTRF_CLI_ALL;
+	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		if (mq->attr.sst_size == 0) {
 			/* full truncate */
 			FCMH_LOCK(fcmh);
 			fcmh_2_gen(fcmh)++;
 			FCMH_ULOCK(fcmh);
 
-			rc = mdsio_fcmh_setattr(fcmh, SETATTR_MASKF_GEN);
+			rc = mdsio_fcmh_setattr(fcmh, SL_SETATTRF_GEN);
 
 			/* XXX: queue updates to IOS's */
 		} else {
@@ -675,7 +676,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 			ios_list.nios = 0;
 
-			to_set |= SETATTR_MASKF_PTRUNCGEN;
+			to_set |= SL_SETATTRF_PTRUNCGEN;
 
 			/* XXX what do we do with bmap leases that are
 			 * concurrently granted?

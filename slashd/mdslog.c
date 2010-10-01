@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "pfl/fcntl.h"
+#include "pfl/fs.h"
 #include "psc_ds/dynarray.h"
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
@@ -213,7 +214,7 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 	/* Apply the filesize from the journal entry.
 	 */
 	sstb.sst_size = jcrc->sjc_fsize;
-	rc = mdsio_setattr(mf, &sstb, SETATTR_MASKF_DATASIZE, &rootcreds,
+	rc = mdsio_setattr(mf, &sstb, PSCFS_SETATTRF_DATASIZE, &rootcreds,
 	    NULL, mdsio_data, NULL);
 	if (rc)
 		goto out;
