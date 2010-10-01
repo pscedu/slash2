@@ -67,6 +67,7 @@ slrpc_issue_connect(lnet_nid_t server, struct pscrpc_import *imp,
 	rc = SL_RSX_NEWREQ(imp, version, SRMT_CONNECT, rq, mq, mp);
 	if (rc)
 		return (rc);
+	rq->rq_timeoutable = 1;
 	mq->magic = magic;
 	mq->version = version;
 
@@ -98,6 +99,7 @@ slrpc_issue_ping(struct slashrpc_cservice *csvc, uint32_t version)
 	    SRMT_PING, rq, mq, mp);
 	if (rc)
 		return (rc);
+	rq->rq_timeoutable = 1;
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
