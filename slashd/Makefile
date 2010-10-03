@@ -73,7 +73,7 @@ SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 
 DEFINES+=	-DZPOOL_PATH=\"$(realpath ${ZFS_BASE}/cmd/zpool)\"
-MODULES+=	lnet pthread zfs z gcrypt fuse-hdrs aio
+MODULES+=	lnet pthread zfs z gcrypt fuse-hdrs aio pscfs
 
 include ${SLASHMK}
 

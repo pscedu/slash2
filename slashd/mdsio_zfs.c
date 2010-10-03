@@ -330,9 +330,22 @@ mdsio_inode_extras_write(struct slash_inode_handle *i)
 	return (rc);
 }
 
+int
+zfsslash2_init(void)
+{
+	extern char *fuse_mount_options;
+	int rc;
+
+	fuse_mount_options = "";
+	rc = libzfs_init_fusesocket();
+	if (rc == 0)
+		rc = libzfs_init();
+	return (rc);
+}
+
 struct mdsio_ops mdsio_ops = {
-	zfs_init,
-	zfs_exit,
+	zfsslash2_init,
+	libzfs_exit,
 
 	zfsslash2_access,
 	zfsslash2_getattr,

@@ -24,6 +24,7 @@
 
 #include <gcrypt.h>
 
+#include "pfl/fs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 #include "psc_util/alloc.h"
@@ -57,6 +58,7 @@ const char		*progname;
 struct psc_poolmaster	 upsched_poolmaster;
 
 struct slash_creds	 rootcreds = { 0, 0 };
+struct pscfs		 pscfs;
 
 int
 psc_usklndthr_get_type(const char *namefmt)

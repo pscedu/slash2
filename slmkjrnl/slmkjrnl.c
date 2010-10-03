@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pfl/fs.h"
 #include "pfl/pfl.h"
 #include "pfl/str.h"
 #include "psc_util/journal.h"
@@ -40,7 +41,7 @@ int		 query;
 int		 verbose;
 const char	*datadir = SL_PATH_DATADIR;
 const char	*progname;
-
+struct pscfs	 pscfs;
 struct mdsio_ops mdsio_ops;
 
 __dead void
