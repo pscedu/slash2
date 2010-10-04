@@ -243,10 +243,10 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct srm_create_rep *mp = NULL;
 	struct fidc_membh *m = NULL;
 	struct fcmh_cli_info *fci;
 	struct srm_create_req *mq;
-	struct srm_create_rep *mp;
 	struct bmapc_memb *bcm;
 	struct msl_fhent *mfh;
 	struct stat stb;
@@ -326,8 +326,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (m)
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 
-	pscfs_reply_create(pfr, mp->attr.sst_fid,
-	    mp->attr.sst_fg.fg_gen, MSLFS_ENTRY_TIMEO, &stb,
+	pscfs_reply_create(pfr, mp ? mp->attr.sst_fid : 0,
+	    mp ? mp->attr.sst_fg.fg_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
 	    MSLFS_ATTR_TIMEO, mfh, PSCFS_CREATEF_DIO, rc);
 
 	if (rq)
