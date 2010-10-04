@@ -1197,7 +1197,7 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			 */
 			b->bcm_flags |= BMAP_CLI_FLUSHPROC;
 			psc_assert(psclist_disjoint(&b->bcm_lentry));
-			DEBUG_BMAP(PLL_WARN, b, "add to bmapFlushQ");
+			DEBUG_BMAP(PLL_DEBUG, b, "add to bmapFlushQ");
 			lc_addtail(&bmapFlushQ, b);
 		}
 	}
