@@ -284,7 +284,7 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 
 	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
-	DEBUG_BMAP(PLL_WARN, bml_2_bmap(bml), "res(%s) ion(%s)",
+	DEBUG_BMAP(PLL_DEBUG, bml_2_bmap(bml), "res(%s) ion(%s)",
 	    resm->resm_res->res_name, resm->resm_addrbuf);
 
 	return (0);
@@ -1094,7 +1094,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 
 	resm = libsl_nid2resm(bia->bia_ion_nid);
 
-	psc_warnx("fid=%"PRId64" seq=%"PRId64" res=(%s) ion=(%s) bmapno=%u",
+	psclog_debug("fid=%"PRId64" seq=%"PRId64" res=(%s) ion=(%s) bmapno=%u",
 	    bia->bia_fid, bia->bia_seq, resm->resm_res->res_name,
 	    libcfs_nid2str(bia->bia_ion_nid), bia->bia_bmapno);
 
