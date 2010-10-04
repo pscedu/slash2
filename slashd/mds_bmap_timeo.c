@@ -134,6 +134,10 @@ mds_bmap_timeotbl_getnextseq(void)
 	return (sjbsq.sjbsq_high_wm);
 }
 
+/**
+ * mds_bmap_timeotbl_mdsi
+ * Returns bmapseqno.
+ */
 uint64_t
 mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *bml, int flags)
 {
