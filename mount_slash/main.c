@@ -85,6 +85,8 @@ struct slash_creds		 rootcreds = { 0, 0 };
 /* number of attribute prefetch in readdir() */
 int				 nstbpref = DEF_READDIR_NENTS;
 
+extern struct psc_waitq		 bmapflushwaitq;
+
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 static int msl_lookup_fidcache(const struct slash_creds *, pscfs_inum_t,
@@ -1122,6 +1124,7 @@ msl_flush_int_locked(struct msl_fhent *mfh)
 		r->biorq_flags |= BIORQ_FORCE_EXPIRE;
 		DEBUG_BIORQ(PLL_INFO, r, "force expire");
 		freelock(&r->biorq_lock);
+		psc_waitq_wakeall(&bmapflushwaitq);
 	}
 
 	while (!pll_empty(&mfh->mfh_biorqs)) {

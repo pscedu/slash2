@@ -347,7 +347,11 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	return (freed);
 }
 
-__static void
+/*
+ * bmpc_reap_locked - reap bmapce from the LRU list.  Sometimes we free bmapce directly
+ *    into the pool, so we can't wait here forever.
+ */
+__static int
 bmpc_reap_locked(void)
 {
 	struct bmap_pagecache *bmpc;
@@ -366,20 +370,19 @@ bmpc_reap_locked(void)
 		 */
 		atomic_inc(&bmpcSlabs.bmms_waiters);
 		psc_waitq_wait(&bmpcSlabs.bmms_waitq, &bmpcSlabs.bmms_lock);
-		return;
-	} else
-		/* This thread now holds the reap lock.
-		 */
-		bmpcSlabs.bmms_reap = 1;
+		return 1;
+	}
+	/* This thread now holds the reap lock.
+	 */
+	bmpcSlabs.bmms_reap = 1;
+	BMPCSLABS_ULOCK();
 
 	LIST_CACHE_LOCK(&bmpcLru);
-	BMPCSLABS_ULOCK();
 
 	lc_sort(&bmpcLru, qsort, bmpc_lru_cmp);
 	/* Should be sorted from oldest bmpc to newest.  Skip bmpc whose
 	 *   bmpc_oldest time is too recent.
 	 */
- retry:
 	PFL_GETTIMESPEC(&ts);
 	timespecsub(&ts, &bmpcSlabs.bmms_minage, &ts);
 
@@ -410,14 +413,11 @@ bmpc_reap_locked(void)
 	}
 	LIST_CACHE_ULOCK(&bmpcLru);
 
+	/* XXX we probably wants the waiter to decrement its owner counter */
 	if (nfreed) {
 		atomic_sub(nfreed, &bmpcSlabs.bmms_waiters);
 		if (atomic_read(&bmpcSlabs.bmms_waiters) < 0)
 			atomic_set(&bmpcSlabs.bmms_waiters, 0);
-	} else {
-		psc_waitq_waitrel_us(&bmpcSlabs.bmms_waitq, NULL, 100);
-		LIST_CACHE_LOCK(&bmpcLru);
-		goto retry;
 	}
 
 	psc_notify("nfreed=%d, waiters=%d", nfreed, waiters);
@@ -436,6 +436,8 @@ bmpc_reap_locked(void)
 	bmpcSlabs.bmms_reap = 0;
 	psc_waitq_wakeall(&bmpcSlabs.bmms_waitq);
 	BMPCSLABS_ULOCK();
+
+	return (nfreed);
 }
 
 void
@@ -488,7 +490,8 @@ bmpc_alloc(void)
 	struct sl_buffer *slb;
 	void *base=NULL;
 	size_t elem;
-	int found=0;
+	int nfree, found=0;
+	struct timespec ts = { 0, 1000000 };
 
  retry:
 	BMPCSLABS_LOCK();
@@ -504,7 +507,9 @@ bmpc_alloc(void)
 	if (!found) {
 		/* bmpc_reap_locked() will drop the lock.
 		 */
-		bmpc_reap_locked();
+		nfree = bmpc_reap_locked();
+		if (!nfree)	
+			psc_waitq_waitrel(&bmpcSlabs.bmms_waitq, NULL, &ts);
 		goto retry;
 
 	} else {
