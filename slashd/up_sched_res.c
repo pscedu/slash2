@@ -49,6 +49,7 @@
 #include "slashd.h"
 #include "slconfig.h"
 #include "slerr.h"
+#include "slutil.h"
 #include "up_sched_res.h"
 
 struct upschedtree	 upsched_tree = SPLAY_INITIALIZER(&upsched_tree);
@@ -731,7 +732,7 @@ upsched_scandir(void)
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
 	struct slash_fidgen fg;
-	struct fuse_dirent *d;
+	struct srt_dirent *d;
 	off64_t off, toff;
 	size_t siz, tsiz;
 	uint32_t j;
@@ -755,14 +756,14 @@ upsched_scandir(void)
 		if (tsiz == 0)
 			break;
 		for (toff = 0; toff < (off64_t)tsiz;
-		    toff += FUSE_DIRENT_SIZE(d)) {
+		    toff += SRT_DIRENT_SIZE(d)) {
 			d = (void *)(buf + toff);
-			off = d->off;
+			off = d->ssd_off;
 
-			if (strlcpy(fn, d->name, sizeof(fn)) > sizeof(fn))
+			if (strlcpy(fn, d->ssd_name, sizeof(fn)) > sizeof(fn))
 				psc_assert("impossible");
-			if (d->namelen < sizeof(fn))
-				fn[d->namelen] = '\0';
+			if (d->ssd_namelen < sizeof(fn))
+				fn[d->ssd_namelen] = '\0';
 
 			if (fn[0] == '.')
 				continue;

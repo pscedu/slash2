@@ -85,11 +85,11 @@ typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
 
 struct srt_dirent {
-	uint64_t		ino;
-	uint64_t		off;
-	uint32_t		namelen;
-	uint32_t		type;
-	char			name[0];
+	uint64_t		ssd_ino;
+	uint64_t		ssd_off;
+	uint32_t		ssd_namelen;
+	uint32_t		ssd_type;
+	char			ssd_name[0];
 };
 #define fuse_dirent srt_dirent
 

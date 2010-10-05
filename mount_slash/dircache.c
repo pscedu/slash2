@@ -33,22 +33,7 @@
 #include "dircache.h"
 #include "fidcache.h"
 #include "sltypes.h"
-
-/*
- * Note:  These macros must match the ones used by the server in
- *  zfs_operations_slash.c
- */
-#define SRT_NAME_OFFSET		offsetof(struct srt_dirent, name)
-#define SRT_DIRENT_ALIGN(x)	(((x) + sizeof(uint64_t) - 1) &	\
-				    ~(sizeof(uint64_t) - 1))
-#define SRT_DIRENT_SIZE(d)					\
-	SRT_DIRENT_ALIGN(SRT_NAME_OFFSET + (d)->namelen)
-
-static __inline size_t
-srt_dirent_size(size_t namelen)
-{
-	return SRT_DIRENT_ALIGN(SRT_NAME_OFFSET + namelen);
-}
+#include "slutil.h"
 
 void
 dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
@@ -135,13 +120,13 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 
 		psc_dbg("ino=%"PRIx64" off=%"PRId64" nlen=%u "
 		    "type=%#o name=%.*s lkname=%.*s off=%d d=%p",
-		    dirent->ino, dirent->off, dirent->namelen,
-		    dirent->type, dirent->namelen, dirent->name,
+		    dirent->ssd_ino, dirent->ssd_off, dirent->ssd_namelen,
+		    dirent->ssd_type, dirent->ssd_namelen, dirent->ssd_name,
 		    NAME_MAX, name, d->dd_offset, d);
 
 		if (d->dd_hash == desc.dd_hash &&
 		    d->dd_len  == desc.dd_len &&
-		    strncmp(name, dirent->name, d->dd_len) == 0) {
+		    strncmp(name, dirent->ssd_name, d->dd_len) == 0) {
 			/* Map the dirent from the desc's offset.
 			 */
 			found = 1;
@@ -152,7 +137,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 			}
 
 			if (!(d->dd_flags & DC_STALE))
-				ino = dirent->ino;
+				ino = dirent->ssd_ino;
 
 			if (flag & DC_STALE)
 				d->dd_flags |= DC_STALE;
@@ -268,17 +253,17 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 
 		psc_dbg("ino=%"PRIx64" off=%"PRId64" "
 		    "nlen=%u type=%#o name=%.*s d=%p off=%"PRId64,
-		    d->ino, d->off, d->namelen, d->type,
-		    d->namelen, d->name, d, off);
+		    d->ssd_ino, d->ssd_off, d->ssd_namelen, d->ssd_type,
+		    d->ssd_namelen, d->ssd_name, d, off);
 
-		c->dd_len    = d->namelen;
-		c->dd_hash   = psc_strn_hashify(d->name, d->namelen);
+		c->dd_len    = d->ssd_namelen;
+		c->dd_hash   = psc_strn_hashify(d->ssd_name, d->ssd_namelen);
 		c->dd_flags  = 0;
 		c->dd_offset = off;
-		c->dd_name   = d->name;
+		c->dd_name   = d->ssd_name;
 
 		psc_dynarray_add(&e->de_dents, c);
-		off += srt_dirent_size((size_t)d->namelen);
+		off += srt_dirent_size((size_t)d->ssd_namelen);
 	}
 
 	/* Sort the desc items by their hash.
