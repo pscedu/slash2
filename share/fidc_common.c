@@ -501,6 +501,10 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
+		/*
+		 * XXX Should we free it if FCMH_CAC_TOFREE?
+		 * Consider rename dirty -> active.
+		 */
 		if (f->fcmh_flags & FCMH_CAC_DIRTY) {
 			f->fcmh_flags &= ~FCMH_CAC_DIRTY;
 			f->fcmh_flags |= FCMH_CAC_CLEAN;
