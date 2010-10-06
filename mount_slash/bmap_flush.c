@@ -932,7 +932,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
 	struct timespec ctime, wtime = { 0, 0 };
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
-	struct psc_dynarray a = DYNARRAY_INIT, skip = DYNARRAY_INIT;
+	struct psc_dynarray a = DYNARRAY_INIT, skips = DYNARRAY_INIT;
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
 	struct bmapc_memb *b;
@@ -985,7 +985,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 						    &ctime, &wtime);
 
 				DEBUG_BMAP(PLL_DEBUG, b, "sawnew=%d", sawnew);
-				psc_dynarray_add(&skip, b);
+				psc_dynarray_add(&skips, b);
 				BMAP_ULOCK(b);
 
 				sawnew++;
@@ -1002,7 +1002,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				/* Put me back on the end of the queue.
 				 */
 				DEBUG_BMAP(PLL_NOTIFY, b, "skip due to ref");
-				psc_dynarray_add(&skip, b);
+				psc_dynarray_add(&skips, b);
 				BMAP_ULOCK(b);
 
 			} else {
@@ -1059,13 +1059,13 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			ms_bmap_release(resm);
 		psc_dynarray_free(&a);
 
-		DYNARRAY_FOREACH_REVERSE(b, i, &skip) {
+		DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
 			BMAP_LOCK(b);
 			if (!(b->bcm_flags & BMAP_DIRTY))
 				lc_addstack(&bmapTimeoutQ, b);
 			BMAP_ULOCK(b);
 		}
-		psc_dynarray_free(&skip);
+		psc_dynarray_free(&skips);
 
 		if (!pscthr_run())
 			break;
