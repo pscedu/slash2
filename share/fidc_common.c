@@ -134,7 +134,7 @@ fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 }
 
 /**
- * fidc_reap - Reap some inodes from the clean list.
+ * fidc_reap - Reap some inodes from the idle list.
  */
 int
 fidc_reap(struct psc_poolmgr *m)
@@ -463,7 +463,7 @@ fcmh_getsize(struct fidc_membh *h)
  * fcmh_op_start/done_type(): we only move a cache item to the busy list if we
  * know that the reference being taken is a long one. For short-lived references,
  * we avoid moving the cache item around.  Also, we only move a cache item back
- * to the clean list when the _last_ reference is dropped.
+ * to the idle list when the _last_ reference is dropped.
  */
 void
 fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
@@ -477,7 +477,7 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 
 	/* Only 2 types of references may be long standing, FCMH_OPCNT_OPEN
 	 *   and FCMH_OPCNT_BMAP.  Other ref types should not move the fcmh
-	 *   to the dirty list.
+	 *   to the busy list.
 	 */
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
 		if (f->fcmh_flags & FCMH_CAC_IDLE) {
@@ -502,8 +502,7 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
 		/*
-		 * XXX Should we free it if FCMH_CAC_TOFREE?
-		 * Consider rename dirty -> active.
+		 * XXX Should we also free it if FCMH_CAC_TOFREE?
 		 */
 		if (f->fcmh_flags & FCMH_CAC_BUSY) {
 			f->fcmh_flags &= ~FCMH_CAC_BUSY;
