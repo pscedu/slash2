@@ -795,13 +795,13 @@ __static void
 mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
 	struct slashrpc_cservice *csvc = NULL;
+	struct srm_readdir_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct dircache_ents *e = NULL;
 	struct pscrpc_bulk_desc *desc;
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *d = NULL;
 	struct srm_readdir_req *mq;
-	struct srm_readdir_rep *mp;
 	struct iovec iov[2];
 	int rc, niov = 0;
 
@@ -904,7 +904,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	if (niov == 2)
 		PSCFREE(iov[1].iov_base);
 
-	pscfs_reply_readdir(pfr, iov[0].iov_base, mp->size, rc);
+	pscfs_reply_readdir(pfr, iov[0].iov_base, mp ? mp->size : 0, rc);
 
 	/* At this point the dirent cache is technically freeable.
 	 */
