@@ -73,8 +73,8 @@ struct fidc_membh {
 
 /* fcmh_flags */
 #define	FCMH_CAC_FREE		(1 <<  0)	/* totally free item */
-#define	FCMH_CAC_CLEAN		(1 <<  1)	/* in clean cache */
-#define	FCMH_CAC_DIRTY		(1 <<  2)	/* dirty, not reapable */
+#define	FCMH_CAC_IDLE		(1 <<  1)	/* not being used, in clean cache */
+#define	FCMH_CAC_BUSY		(1 <<  2)	/* being used, not reapable */
 #define	FCMH_CAC_INITING	(1 <<  3)	/* initializing */
 #define	FCMH_CAC_WAITING	(1 <<  4)	/* being waited on */
 #define	FCMH_CAC_TOFREE		(1 <<  5)	/* been deprecated */
@@ -133,8 +133,8 @@ struct fidc_membh {
 
 #define DEBUG_FCMH_FLAGS(fcmh)						\
 	(fcmh)->fcmh_flags & FCMH_CAC_FREE		? "F" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CAC_CLEAN		? "C" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CAC_DIRTY		? "D" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_IDLE		? "I" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_BUSY		? "B" : "",	\
 	(fcmh)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\
 	(fcmh)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
 	(fcmh)->fcmh_flags & FCMH_GETTING_ATTRS		? "G" : "",	\

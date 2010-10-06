@@ -36,8 +36,8 @@
 int			(*fidcReapCb)(struct fidc_membh *);
 struct psc_poolmaster	  fidcPoolMaster;
 struct psc_poolmgr	 *fidcPool;
-struct psc_listcache	  fidcDirtyList;
-struct psc_listcache	  fidcCleanList;
+struct psc_listcache	  fidcBusyList;		/* active in use */
+struct psc_listcache	  fidcIdleList;			/* identity untouched, but reapable */
 struct psc_hashtbl	  fidcHtable;
 
 #define	fcmh_get()	psc_pool_get(fidcPool)
@@ -145,8 +145,8 @@ fidc_reap(struct psc_poolmgr *m)
 
 	psc_assert(m == fidcPool);
 
-	LIST_CACHE_LOCK(&fidcCleanList);
-	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcCleanList) {
+	LIST_CACHE_LOCK(&fidcIdleList);
+	LIST_CACHE_FOREACH_SAFE(f, tmp, &fidcIdleList) {
 		if (nreap == FCMH_MAX_REAP ||
 		    m->ppm_nfree + nreap >=
 		    atomic_read(&m->ppm_nwaiters) + 1)
@@ -163,7 +163,7 @@ fidc_reap(struct psc_poolmgr *m)
 		if (f->fcmh_refcnt)
 			goto end;
 
-		psc_assert(f->fcmh_flags & FCMH_CAC_CLEAN);
+		psc_assert(f->fcmh_flags & FCMH_CAC_IDLE);
 
 		/* already victimized */
 		if (f->fcmh_flags & FCMH_CAC_REAPED)
@@ -175,14 +175,14 @@ fidc_reap(struct psc_poolmgr *m)
 		 */
 		if (!fidcReapCb || fidcReapCb(f)) {
 			f->fcmh_flags |= FCMH_CAC_REAPED|FCMH_CAC_TOFREE;
-			lc_remove(&fidcCleanList, f);
+			lc_remove(&fidcIdleList, f);
 			reap[nreap] = f;
 			nreap++;
 		}
  end:
 		FCMH_ULOCK(f);
 	}
-	LIST_CACHE_ULOCK(&fidcCleanList);
+	LIST_CACHE_ULOCK(&fidcIdleList);
 
 	for (i = 0; i < nreap; i++) {
 		DEBUG_FCMH(PLL_DEBUG, reap[i], "moving to free list");
@@ -407,8 +407,8 @@ _fidc_lookup(const struct slash_fidgen *fgp, int flags,
 		psc_waitq_wakeall(&fcmh->fcmh_waitq);
 	}
 
-	fcmh->fcmh_flags |= FCMH_CAC_CLEAN;
-	lc_add(&fidcCleanList, fcmh);
+	fcmh->fcmh_flags |= FCMH_CAC_IDLE;
+	lc_add(&fidcIdleList, fcmh);
 
 	if (rc) {
 		FCMH_ULOCK(fcmh);
@@ -436,10 +436,10 @@ fidc_init(int privsiz, int nobj,
 	    NULL, fidc_reap, NULL, "fcmh");
 	fidcPool = psc_poolmaster_getmgr(&fidcPoolMaster);
 
-	lc_reginit(&fidcDirtyList, struct fidc_membh,
-	    fcmh_lentry, "fcmhdirty");
-	lc_reginit(&fidcCleanList, struct fidc_membh,
-	    fcmh_lentry, "fcmhclean");
+	lc_reginit(&fidcBusyList, struct fidc_membh,
+	    fcmh_lentry, "fcmhbusy");
+	lc_reginit(&fidcIdleList, struct fidc_membh,
+	    fcmh_lentry, "fcmhidle");
 
 	psc_hashtbl_init(&fidcHtable, 0, struct fidc_membh,
 	    fcmh_fg, fcmh_hentry, nobj * 2, NULL, "fidc");
@@ -460,7 +460,7 @@ fcmh_getsize(struct fidc_membh *h)
 }
 
 /*
- * fcmh_op_start/done_type(): we only move a cache item to the dirty list if we
+ * fcmh_op_start/done_type(): we only move a cache item to the busy list if we
  * know that the reference being taken is a long one. For short-lived references,
  * we avoid moving the cache item around.  Also, we only move a cache item back
  * to the clean list when the _last_ reference is dropped.
@@ -480,11 +480,11 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 	 *   to the dirty list.
 	 */
 	if (type == FCMH_OPCNT_OPEN || type == FCMH_OPCNT_BMAP) {
-		if (f->fcmh_flags & FCMH_CAC_CLEAN) {
-			f->fcmh_flags &= ~FCMH_CAC_CLEAN;
-			f->fcmh_flags |= FCMH_CAC_DIRTY;
-			lc_remove(&fidcCleanList, f);
-			lc_add(&fidcDirtyList, f);
+		if (f->fcmh_flags & FCMH_CAC_IDLE) {
+			f->fcmh_flags &= ~FCMH_CAC_IDLE;
+			f->fcmh_flags |= FCMH_CAC_BUSY;
+			lc_remove(&fidcIdleList, f);
+			lc_add(&fidcBusyList, f);
 		}
 	}
 	FCMH_URLOCK(f, locked);
@@ -505,11 +505,11 @@ fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 		 * XXX Should we free it if FCMH_CAC_TOFREE?
 		 * Consider rename dirty -> active.
 		 */
-		if (f->fcmh_flags & FCMH_CAC_DIRTY) {
-			f->fcmh_flags &= ~FCMH_CAC_DIRTY;
-			f->fcmh_flags |= FCMH_CAC_CLEAN;
-			lc_remove(&fidcDirtyList, f);
-			lc_add(&fidcCleanList, f);
+		if (f->fcmh_flags & FCMH_CAC_BUSY) {
+			f->fcmh_flags &= ~FCMH_CAC_BUSY;
+			f->fcmh_flags |= FCMH_CAC_IDLE;
+			lc_remove(&fidcBusyList, f);
+			lc_add(&fidcIdleList, f);
 		}
 	} else
 		fcmh_wake_locked(f);
@@ -548,9 +548,9 @@ dump_fcmh_flags(int flags)
 
 	if (flags & FCMH_CAC_FREE)
 		pfl_print_flag("FCMH_CAC_FREE", &seq);
-	if (flags & FCMH_CAC_CLEAN)
-		pfl_print_flag("FCMH_CAC_CLEAN", &seq);
-	if (flags & FCMH_CAC_DIRTY)
+	if (flags & FCMH_CAC_IDLE)
+		pfl_print_flag("FCMH_CAC_IDLE", &seq);
+	if (flags & FCMH_CAC_BUSY)
 		pfl_print_flag("FCMH_CAC_DIRTY", &seq);
 	if (flags & FCMH_CAC_TOFREE)
 		pfl_print_flag("FCMH_CAC_TOFREE", &seq);
