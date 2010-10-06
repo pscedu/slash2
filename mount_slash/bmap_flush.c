@@ -60,7 +60,7 @@ __static struct psc_waitq	 rpcCompletion;
 #define pndgReqsUlock()		freelock(&pndgReqLock)
 
 struct psc_waitq		bmapflushwaitq = PSC_WAITQ_INIT;
-psc_spinlock_t		 	bmapflushwaitqlock = SPINLOCK_INIT;
+psc_spinlock_t			bmapflushwaitqlock = SPINLOCK_INIT;
 
 __static void
 bmap_flush_reap_rpcs(void)
@@ -533,7 +533,7 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 
 /**
  * bmap_flushable - Check if we can flush the given bmpc (either an I/O request
- *     has expired or we have accumulate a big enough I/O).  This function must 
+ *     has expired or we have accumulate a big enough I/O).  This function must
  *     be non-blocking.
  */
 __static int
@@ -545,8 +545,9 @@ bmap_flushable(struct bmapc_memb *b)
 	struct bmpc_ioreq *r, *start, *end, *tmp;
 
 	off = 0;
+	count = 0; /* gcc */
 	flush = 0;
-	start = NULL;
+	start = end = NULL;
 	bmpc = bmap_2_bmpc(b);
 	PLL_LOCK(&bmpc->bmpc_new_biorqs);
 	PLL_FOREACH_SAFE(r, tmp, &bmpc->bmpc_new_biorqs) {
@@ -597,15 +598,15 @@ bmap_flushable(struct bmapc_memb *b)
 			if (r->biorq_off <= biorq_voff_get(end)) {
 				contig = 1;
 				count++;
-				if (biorq_voff_get(r) > biorq_voff_get(end)) 
+				if (biorq_voff_get(r) > biorq_voff_get(end))
 					end = r;
 			}
 		}
 		/*
- 		 * XXX if the current request is contained completely
- 		 * within a previous request, should we count them
- 		 * separately?
- 		 */
+		 * XXX if the current request is contained completely
+		 * within a previous request, should we count them
+		 * separately?
+		 */
 		if (count == PSCRPC_MAX_BRW_PAGES) {
 			flush = 1;
 			break;
@@ -616,8 +617,8 @@ bmap_flushable(struct bmapc_memb *b)
 			break;
 		}
 		/*
- 		 * Not contiguous, start a new region.
- 		 */
+		 * Not contiguous, start a new region.
+		 */
 		if (!contig) {
 			count = 1;
 			start = end = r;
@@ -750,7 +751,7 @@ bmap_flush(void)
 		if (!(b->bcm_flags & BMAP_DIRTY)) {
 			psc_assert(!bmpc_queued_writes(bmpc));
 
- 			if (!bmpc_queued_ios(bmpc)) {
+			if (!bmpc_queued_ios(bmpc)) {
 				/* No remaining reads or writes.
 				 */
 				psc_assert(!(b->bcm_flags & BMAP_REAPABLE));
@@ -764,7 +765,7 @@ bmap_flush(void)
 			bcm_wake_locked(b);
 			BMAP_ULOCK(b);
 			continue;
-		} 
+		}
 		BMPC_ULOCK(bmpc);
 		if (bmap_flushable(b)) {
 			i++;
@@ -779,8 +780,8 @@ bmap_flush(void)
 	LIST_CACHE_ULOCK(&bmapFlushQ);
 
 	/*
- 	 * Note that new requests can sneak in between the two loops.
- 	 */
+	 * Note that new requests can sneak in between the two loops.
+	 */
 	for (i = 0; i < psc_dynarray_len(&bmaps); i++) {
 
 		b = psc_dynarray_getpos(&bmaps, i);

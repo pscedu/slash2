@@ -246,11 +246,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_create_rep *mp = NULL;
+	struct msl_fhent *mfh = NULL;
 	struct fidc_membh *m = NULL;
 	struct fcmh_cli_info *fci;
 	struct srm_create_req *mq;
 	struct bmapc_memb *bcm;
-	struct msl_fhent *mfh;
 	struct stat stb;
 	int rc = 0;
 
