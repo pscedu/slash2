@@ -1407,7 +1407,7 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 	if (r->biorq_rqset) {
 		rc = pscrpc_set_wait(r->biorq_rqset);
 		if (rc)
-			// XXX need to cleanup properly
+			// XXX need to cleanup properly, you can hit this when mds is down
 			psc_fatalx("pscrpc_set_wait rc=%d", rc);
 		/* The set cb is not being used, msl_read_cb() is
 		 *   called for every rpc in the set.  This was causing
