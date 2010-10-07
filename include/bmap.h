@@ -129,7 +129,7 @@ struct bmapc_memb {
 #define BMAP_DIRTY		(1 << 6)
 #define BMAP_MEMRLS		(1 << 7)
 #define BMAP_DIRTY2LRU		(1 << 8)
-#define BMAP_REAPABLE		(1 << 9)
+#define BMAP_TIMEOQ		(1 << 9)
 #define BMAP_IONASSIGN		(1 << 10)
 #define BMAP_MDCHNG		(1 << 11)
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
@@ -141,6 +141,7 @@ struct bmapc_memb {
 #define BMAP_ULOCK(b)		freelock(&(b)->bcm_lock)
 #define BMAP_RLOCK(b)		reqlock(&(b)->bcm_lock)
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
+#define BMAP_TRYLOCK(b)         trylock(&(b)->bcm_lock)
 
 #define BMAP_SETATTR(b, fl)	SETATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 #define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
@@ -339,7 +340,7 @@ dump_bmap_flags_common(uint32_t *flags, int *seq)
 	PFL_PRFLAG(BMAP_DIRTY, *flags, seq);
 	PFL_PRFLAG(BMAP_MEMRLS, *flags, seq);
 	PFL_PRFLAG(BMAP_DIRTY2LRU, *flags, seq);
-	PFL_PRFLAG(BMAP_REAPABLE, *flags, seq);
+	PFL_PRFLAG(BMAP_TIMEOQ, *flags, seq);
 	PFL_PRFLAG(BMAP_IONASSIGN, *flags, seq);
 	PFL_PRFLAG(BMAP_MDCHNG, *flags, seq);
 	PFL_PRFLAG(BMAP_WAITERS, *flags, seq);

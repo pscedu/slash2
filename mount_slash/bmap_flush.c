@@ -48,10 +48,8 @@ struct psc_listcache		 bmapTimeoutQ;
 __static struct pscrpc_nbreqset	*pndgReqs;
 __static struct psc_dynarray	 pndgReqSets = DYNARRAY_INIT;
 __static psc_spinlock_t		 pndgReqLock = SPINLOCK_INIT;
-
+__static struct pscrpc_completion rpcComp;
 __static atomic_t		 outstandingRpcCnt;
-__static atomic_t		 completedRpcCnt;
-__static struct psc_waitq	 rpcCompletion;
 
 #define MAX_OUTSTANDING_RPCS	128
 #define MIN_COALESCE_RPC_SZ	LNET_MTU /* Try for big RPC's */
@@ -68,8 +66,8 @@ bmap_flush_reap_rpcs(void)
 	struct pscrpc_request_set *set;
 	int i;
 
-	psclog_debug("outstandingRpcCnt=%d (before) completedRpcCnt=%d",
-	    atomic_read(&outstandingRpcCnt), atomic_read(&completedRpcCnt));
+	psclog_debug("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d", 
+		     atomic_read(&outstandingRpcCnt), atomic_read(&rpcComp.rqcomp_compcnt));
 
 	/* Only this thread may pull from pndgReqSets dynarray,
 	 *   therefore it can never shrink except by way of this
@@ -103,7 +101,7 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 {
 	struct timespec ts;
 
-	if (a->biorq_flags & BIORQ_FORCE_EXPIRE)
+	if (a->biorq_flags & BIORQ_FORCE_EXPIRE) 
 		return (1);
 
 	PFL_GETTIMESPEC(&ts);
@@ -215,8 +213,7 @@ bmap_flush_create_rpc(struct bmapc_memb *b, struct iovec *iovs,
 
 	req->rq_interpret_reply = bmap_flush_rpc_cb;
 	req->rq_async_args.pointer_arg[0] = csvc;
-	req->rq_compl_cntr = &completedRpcCnt;
-	req->rq_waitq = &rpcCompletion;			/* psc_eqpollthr_main() */
+	req->rq_comp = &rpcComp;
 
 	mq->offset = soff;
 	mq->size = size;
@@ -754,12 +751,13 @@ bmap_flush(void)
 			if (!bmpc_queued_ios(bmpc)) {
 				/* No remaining reads or writes.
 				 */
-				psc_assert(!(b->bcm_flags & BMAP_REAPABLE));
-				b->bcm_flags |= BMAP_REAPABLE;
+				psc_assert(!(b->bcm_flags & BMAP_TIMEOQ));
+				b->bcm_flags |= BMAP_TIMEOQ;
 				b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
 				lc_remove(&bmapFlushQ, b);
 				lc_addtail(&bmapTimeoutQ, b);
-				DEBUG_BMAP(PLL_INFO, b, "added to bmapTimeoutQ");
+				DEBUG_BMAP(PLL_INFO, b, 
+       				   "added to bmapTimeoutQ");
 			}
 			BMPC_ULOCK(bmpc);
 			bcm_wake_locked(b);
@@ -969,8 +967,15 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			    lc_sz(&bmapTimeoutQ),
 			    PSCPRI_TIMESPEC_ARGS(&bci->bci_etime));
 
+			if (!(b->bcm_flags & BMAP_TIMEOQ)) {
+				DEBUG_BMAP(PLL_WARN, b,
+                                           "race detect, skip");
+				BMAP_ULOCK(b);
+				continue;
+			} else
+				b->bcm_flags &= ~BMAP_TIMEOQ;
+
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
-				b->bcm_flags &= ~BMAP_REAPABLE;
 				DEBUG_BMAP(PLL_NOTIFY, b,
 					   "descheduling from timeoq");
 				BMAP_ULOCK(b);
@@ -1062,8 +1067,10 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
 			BMAP_LOCK(b);
-			if (!(b->bcm_flags & BMAP_DIRTY))
+			if (!(b->bcm_flags & (BMAP_DIRTY | BMAP_TIMEOQ))) {
+				b->bcm_flags |= BMAP_TIMEOQ;
 				lc_addstack(&bmapTimeoutQ, b);
+			}
 			BMAP_ULOCK(b);
 		}
 		psc_dynarray_free(&skips);
@@ -1097,12 +1104,8 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 void
 msbmapflushthrrpc_main(__unusedx struct psc_thread *thr)
 {
-	struct timespec ts = { 0, 100000 };
-	int rc;
-
 	while (pscthr_run()) {
-		rc = psc_waitq_waitrel(&rpcCompletion, NULL, &ts);
-		psc_trace("rpcCompletion waitq wait rc=%d", rc);
+		pscrpc_completion_wait(&rpcComp);
 		bmap_flush_reap_rpcs();
 	}
 }
@@ -1113,11 +1116,11 @@ msbmapflushthr_spawn(void)
 	int i;
 
 	pndgReqs = pscrpc_nbreqset_init(NULL, msl_io_rpc_cb);
+	pscrpc_completion_init(&rpcComp);
 	atomic_set(&outstandingRpcCnt, 0);
-	atomic_set(&completedRpcCnt, 0);
-	psc_waitq_init(&rpcCompletion);
+	//psc_atomic32_set(&bmapflushforceexpired, 0);
 	psc_waitq_init(&bmapflushwaitq);
-
+	
 	lc_reginit(&bmapFlushQ, struct bmapc_memb,
 	    bcm_lentry, "bmapflush");
 

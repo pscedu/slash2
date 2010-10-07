@@ -59,23 +59,21 @@ bmap_orphan(struct bmapc_memb *b)
 	locked = BMAP_RLOCK(b);
 
 	DEBUG_BMAP(PLL_INFO, b, "orphan");
-	psc_assert(!(b->bcm_flags & BMAP_ORPHAN));
+	psc_assert(!(b->bcm_flags & (BMAP_ORPHAN|BMAP_CLOSING)));
 	b->bcm_flags |= BMAP_ORPHAN;
+	BMAP_URLOCK(b, locked);
 
 	FCMH_LOCK(f);
 	psc_assert(f->fcmh_refcnt > 0);
 	PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
-	FCMH_ULOCK(f);
 
-	BMAP_URLOCK(b, locked);
+	FCMH_ULOCK(f);
 }
 
 void
 bmap_remove(struct bmapc_memb *b)
 {
 	struct fidc_membh *f = b->bcm_fcmh;
-
-	BMAP_RLOCK(b);
 
 	DEBUG_BMAP(PLL_INFO, b, "removing");
 
@@ -85,15 +83,10 @@ bmap_remove(struct bmapc_memb *b)
 	
 	FCMH_RLOCK(f);
 
-	if (!(b->bcm_flags & BMAP_ORPHAN)) {
-		BMAP_ULOCK(b);
+	if (!(b->bcm_flags & BMAP_ORPHAN))
 		PSC_SPLAY_XREMOVE(bmap_cache, &f->fcmh_bmaptree, b);
 
-	} else 
-		BMAP_ULOCK(b);
-
 	psc_pool_return(bmap_pool, b);
-
 	fcmh_op_done_type(f, FCMH_OPCNT_BMAP);
 }
 

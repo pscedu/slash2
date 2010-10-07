@@ -329,9 +329,9 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 	}
 
 	if (!bmpc_queued_ios(bmpc) && !(b->bcm_flags & BMAP_CLI_FLUSHPROC) &&
-	    !(b->bcm_flags & BMAP_REAPABLE)) {
+	    !(b->bcm_flags & BMAP_TIMEOQ)) {
 		psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
-		b->bcm_flags |= BMAP_REAPABLE;
+		b->bcm_flags |= BMAP_TIMEOQ;
 		lc_addtail(&bmapTimeoutQ, b);
 	}
 
@@ -585,7 +585,7 @@ msl_bmap_reap_init(struct bmapc_memb *bmap, const struct srt_bmapdesc *sbd)
 	/* Take the reaper ref cnt early and place the bmap
 	 *    onto the reap list
 	 */
-	bmap->bcm_flags |= BMAP_REAPABLE;
+	bmap->bcm_flags |= BMAP_TIMEOQ;
 	bmap_op_start_type(bmap, BMAP_OPCNT_REAPER);
 
 	BMAP_URLOCK(bmap, locked);
@@ -1178,9 +1178,9 @@ msl_pages_schedflush(struct bmpc_ioreq *r)
 			    pll_nitems(&bmpc->bmpc_new_biorqs)) > 1);
 
 	} else {
-		if (b->bcm_flags & BMAP_REAPABLE) {
+		if (b->bcm_flags & BMAP_TIMEOQ) {
 			LIST_CACHE_LOCK(&bmapTimeoutQ);
-			b->bcm_flags &= ~BMAP_REAPABLE;
+			b->bcm_flags &= ~BMAP_TIMEOQ;
 			psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 
 			if (psclist_conjoint(&b->bcm_lentry,
