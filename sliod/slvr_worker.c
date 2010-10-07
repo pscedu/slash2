@@ -52,7 +52,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_bmap_crcwrt_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_bmap_crcwrt_rep *mp;
 	struct biod_crcup_ref *bcr;
 	struct pscrpc_request *rq;
 	struct iovec *iovs;
@@ -96,9 +96,10 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 		mq->ncrcs_per_update[i] = bcr->bcr_crcup.nups;
 
 		iovs[i].iov_base = &bcr->bcr_crcup;
-		len += iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
-					   sizeof(struct srm_bmap_crcwire)) +
-					  sizeof(struct srm_bmap_crcup));
+		len += iovs[i].iov_len = sizeof(struct srm_bmap_crcup) +
+			(mq->ncrcs_per_update[i] * 
+			 sizeof(struct srm_bmap_crcwire));
+			
 
 		psc_crc64_add(&mq->crc, iovs[i].iov_base, iovs[i].iov_len);
 	}
@@ -226,7 +227,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 {
 	int			 i;
 	struct psc_dynarray	*a;
-	struct srm_generic_rep	*mp;
+	struct srm_bmap_crcwrt_rep *mp;
 	struct biod_crcup_ref	*bcr;
 	struct slashrpc_cservice *csvc;
 	struct bmap_iod_info    *biod;
@@ -240,7 +241,7 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 	/* Beware, a failed RPC can result in a NULL mp buf.
 	 */
 	if (!rq->rq_status && !mp->rc && mp)
-		bim_updateseq(mp->data);
+		bim_updateseq(mp->seq);
 
 	for (i = 0; i < psc_dynarray_len(a); i++) {
 		bcr = psc_dynarray_getpos(a, i);

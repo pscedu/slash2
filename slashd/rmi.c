@@ -94,13 +94,13 @@ int
 slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 {
 	struct srm_bmap_crcwrt_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_bmap_crcwrt_rep *mp;
 	struct pscrpc_bulk_desc *desc;
 	struct iovec *iovs;
 	void *buf;
 	size_t len=0;
 	off_t  off;
-	int rc;
+	int rc=0;
 	uint64_t crc;
 	uint32_t i;
 
@@ -119,12 +119,12 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
 				    sizeof(struct srm_bmap_crcwire)) +
 				   sizeof(struct srm_bmap_crcup));
-
+		
 		off += iovs[i].iov_len;
 	}
-
+	
 	rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL,
-		       iovs, mq->ncrc_updates);
+			    iovs, mq->ncrc_updates);
 	if (desc)
 		pscrpc_free_bulk(desc);
 	else {
@@ -133,7 +133,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		 */
 		goto out;
 	}
-
+	
 	/* CRC the CRC's! */
 	psc_crc64_calc(&crc, buf, len);
 	if (crc != mq->crc) {
@@ -141,40 +141,35 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		rc = -1;
 		goto out;
 	}
-
+	
 	for (i=0, off=0; i < mq->ncrc_updates; i++) {
 		struct srm_bmap_crcup *c = iovs[i].iov_base;
 		uint32_t j;
-
+		
 		/* Does the bulk payload agree with the original request?
 		 */
 		if (c->nups != mq->ncrcs_per_update[i]) {
 			psc_errorx("nups(%u) != ncrcs_per_update(%u)",
 				   c->nups, mq->ncrcs_per_update[i]);
-			rc = -EINVAL;
-			goto out;
+			mp->crcup_rc[i] = -EINVAL;
 		}
 		/* Verify slot number validity.
 		 */
 		for (j=0; j < c->nups; j++) {
-			if (c->crcs[j].slot >= SLASH_CRCS_PER_BMAP) {
-				rc = -ERANGE;
-				goto out;
-			}
+			if (c->crcs[j].slot >= SLASH_CRCS_PER_BMAP)
+				mp->crcup_rc[i] = -ERANGE;
 		}
 		/* Look up the bmap in the cache and write the CRCs.
 		 */
-		rc = mds_bmap_crc_write(c, rq->rq_conn->c_peer.nid);
-		if (rc) {
+		mp->crcup_rc[i] = mds_bmap_crc_write(c, rq->rq_conn->c_peer.nid);
+		if (mp->crcup_rc[i])
 			psc_errorx("mds_bmap_crc_write() failed; rc=%d", rc);
-			goto out;
-		}
 	}
  out:
 	PSCFREE(buf);
 	PSCFREE(iovs);
 
-	mds_bmap_getcurseq(NULL, &mp->data);
+	mds_bmap_getcurseq(NULL, &mp->seq);
 
 	return (rc);
 }
