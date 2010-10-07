@@ -119,10 +119,10 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
 				    sizeof(struct srm_bmap_crcwire)) +
 				   sizeof(struct srm_bmap_crcup));
-		
+
 		off += iovs[i].iov_len;
 	}
-	
+
 	rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL,
 			    iovs, mq->ncrc_updates);
 	if (desc)
@@ -133,7 +133,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		 */
 		goto out;
 	}
-	
+
 	/* CRC the CRC's! */
 	psc_crc64_calc(&crc, buf, len);
 	if (crc != mq->crc) {
@@ -141,11 +141,11 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		rc = -1;
 		goto out;
 	}
-	
+
 	for (i=0, off=0; i < mq->ncrc_updates; i++) {
 		struct srm_bmap_crcup *c = iovs[i].iov_base;
 		uint32_t j;
-		
+
 		/* Does the bulk payload agree with the original request?
 		 */
 		if (c->nups != mq->ncrcs_per_update[i]) {
@@ -161,9 +161,11 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		}
 		/* Look up the bmap in the cache and write the CRCs.
 		 */
-		mp->crcup_rc[i] = mds_bmap_crc_write(c, rq->rq_conn->c_peer.nid);
+		mp->crcup_rc[i] = mds_bmap_crc_write(c,
+		    rq->rq_conn->c_peer.nid);
 		if (mp->crcup_rc[i])
-			psc_errorx("mds_bmap_crc_write() failed; rc=%d", rc);
+			psc_errorx("mds_bmap_crc_write() failed; rc=%d",
+			    mp->crcup_rc[i]);
 	}
  out:
 	PSCFREE(buf);
