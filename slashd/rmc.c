@@ -603,7 +603,8 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 
 	/* if we get here, op and np must be owned by the current MDS */
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
-	    fcmh_2_mdsio_fid(np), to, &mq->creds, mds_namespace_log);
+	    fcmh_2_mdsio_fid(np), to, &rootcreds, mds_namespace_log);
+
  out:
 	if (np)
 		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
