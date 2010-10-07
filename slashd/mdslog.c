@@ -272,16 +272,16 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 	struct slash_inode_od inoh_ino;
 	void *mdsio_data;
 	mdsio_fid_t fid;
-	int i, j, rc;
+	int pos, j, rc;
 	size_t nb;
 
 	memset(&inoh_ino, 0, sizeof(inoh_ino));
 
 	jrir = PJE_DATA(pje);
-	i = jrir->sjir_pos;
-	if (i >= SL_MAX_REPLICAS || i < 0) {
-		psclog_errorx("ino_nrepls (%d) in addrepl replay out of "
-		    "range", i);
+	pos = jrir->sjir_pos;
+	if (pos >= SL_MAX_REPLICAS || pos < 0) {
+		psclog_errorx("ino_nrepls index (%d) is out of range",
+		    pos);
 		return EINVAL;
 	}
 
@@ -299,13 +299,13 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 	 * We allow a short read of the inode here because it is possible
 	 * that the file was just created by our own replay process.
 	 */
-	if (i >= SL_DEF_REPLICAS) {
+	if (pos >= SL_DEF_REPLICAS) {
 		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
 			SL_EXTRAS_START_OFF, mdsio_data);
 		if (rc)
 			goto out;
 
-		j = i - SL_DEF_REPLICAS;
+		j = pos - SL_DEF_REPLICAS;
 		inoh_extras.inox_repls[j].bs_id = jrir->sjir_ios;
 		psc_crc64_calc(&inoh_extras.inox_crc, &inoh_extras, INOX_OD_CRCSZ);
 
@@ -331,18 +331,17 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 	    memcmp(&inoh_ino, &null_inode_od, INO_OD_CRCSZ) == 0) {
 		inoh_ino.ino_bsz = SLASH_BMAP_SIZE;
 		inoh_ino.ino_version = INO_VERSION;
-		if (i != 1)
-			psclog_errorx("ino_nrepls (%d) in "
-			    "addrepl replay should be 1 for "
-			    "newly created inode", i);
+		if (pos != 0)
+			psclog_errorx("ino_nrepls index (%d) in "
+			    "should be 0 for newly created inode", pos);
 	}
 
 	if (jrir->sjir_nrepls > SL_MAX_REPLICAS)
 		abort();
 	inoh_ino.ino_nrepls = jrir->sjir_nrepls;
 
-	if (i < SL_DEF_REPLICAS)
-		inoh_ino.ino_repls[i].bs_id = jrir->sjir_ios;
+	if (pos < SL_DEF_REPLICAS)
+		inoh_ino.ino_repls[pos].bs_id = jrir->sjir_ios;
 
 	psc_crc64_calc(&inoh_ino.ino_crc, &inoh_ino, INO_OD_CRCSZ);
 
