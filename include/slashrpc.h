@@ -556,7 +556,7 @@ struct srm_set_bmapreplpol_req {
 
 struct srm_create_req {
 	struct slash_fidgen	pfg;		/* parent dir's file ID + generation */
-	struct slash_creds	creds;		/* credentials of user */
+	struct slash_creds	creds;		/* st_uid owner for new file */
 	char			name[NAME_MAX + 1];
 	uint32_t		mode;		/* mode_t permission for new file */
 
@@ -617,7 +617,7 @@ struct srm_io_rep {
 } __packed;
 
 struct srm_link_req {
-	struct slash_creds	creds;
+	struct slash_creds	creds;		/* st_uid owner for new file */
 	struct slash_fidgen	pfg;		/* parent dir */
 	struct slash_fidgen	fg;
 	char			name[NAME_MAX + 1];
@@ -641,7 +641,7 @@ struct srm_lookup_rep {
 } __packed;
 
 struct srm_mkdir_req {
-	struct slash_creds	creds;
+	struct slash_creds	creds;		/* st_uid owner for new file */
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[NAME_MAX + 1];
 	uint32_t		mode;
@@ -655,7 +655,7 @@ struct srm_mkdir_rep {
 } __packed;
 
 struct srm_mknod_req {
-	struct slash_creds	creds;
+	struct slash_creds	creds;		/* st_uid owner for new file */
 	char			name[NAME_MAX + 1];
 	struct slash_fidgen	pfg;		/* parent dir */
 	uint32_t		mode;
@@ -696,7 +696,6 @@ struct srm_readlink_rep {
 } __packed;
 
 struct srm_rename_req {
-	struct slash_creds	creds;
 	struct slash_fidgen	npfg;		/* new parent dir */
 	struct slash_fidgen	opfg;		/* old parent dir */
 	uint32_t		fromlen;
@@ -729,7 +728,7 @@ struct srm_statfs_rep {
 } __packed;
 
 struct srm_symlink_req {
-	struct slash_creds	creds;
+	struct slash_creds	creds;		/* st_uid owner for new file */
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[NAME_MAX + 1];
 	uint32_t		linklen;
