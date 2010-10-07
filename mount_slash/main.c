@@ -64,6 +64,8 @@
 #include "slsubsys.h"
 #include "slutil.h"
 
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
+
 #define STD_MOUNT_OPTIONS	"allow_other,max_write=134217728,big_writes"
 
 #define mfh_getfid(mfh)		fcmh_2_fid((mfh)->mfh_fcmh)
@@ -86,8 +88,6 @@ struct slash_creds		 rootcreds = { 0, 0 };
 int				 nstbpref = DEF_READDIR_NENTS;
 
 extern struct psc_waitq		 bmapflushwaitq;
-
-GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 static int msl_lookup_fidcache(const struct slash_creds *, pscfs_inum_t,
     const char *, struct slash_fidgen *, struct srt_stat *);
@@ -325,6 +325,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mfh = msl_fhent_new(m);
 
  out:
+	DEBUG_FCMH(PLL_INFO, m, "new mfh=%p rc=%d", mfh, rc);		 
+
 	if (m)
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
 
@@ -349,6 +351,8 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	msfsthr_ensure();
 
 	mslfs_getcreds(pfr, &creds);
+
+	*mfhp = NULL;
 
 	rc = fidc_lookup_load_inode(inum, &c);
 	if (rc)
@@ -388,9 +392,6 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	*mfhp = msl_fhent_new(c);
 	(*mfhp)->mfh_oflags = oflags;
 
-	DEBUG_FCMH(PLL_DEBUG, c, "new mfh=%p dir=%s", *mfhp,
-	    (oflags & O_DIRECTORY) ? "yes" : "no");
-
 	if (oflags & O_DIRECTORY)
 		*rflags |= PSCFS_OPENF_KEEPCACHE;
 
@@ -416,6 +417,9 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 	}
 
  out:
+	DEBUG_FCMH(PLL_INFO, c, "new mfh=%p dir=%s rc=%d", *mfhp,
+		   (oflags & O_DIRECTORY) ? "yes" : "no", rc);
+
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	return (rc);
@@ -1127,6 +1131,9 @@ msl_flush_int_locked(struct msl_fhent *mfh)
 		psc_waitq_wakeall(&bmapflushwaitq);
 	}
 
+	//psc_atomic32_inc(&bmapflushforceexpired);
+	psc_waitq_wakeone(&bmapflushwaitq);
+
 	while (!pll_empty(&mfh->mfh_biorqs)) {
 		psc_waitq_wait(&msl_fhent_flush_waitq, &mfh->mfh_lock);
 		spinlock(&mfh->mfh_lock);
@@ -1145,6 +1152,8 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 	freelock(&mfh->mfh_lock);
 
 	pscfs_reply_flush(pfr, 0);
+
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "done flushing");
 }
 
 __static void
@@ -1171,7 +1180,8 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	freelock(&mfh->mfh_lock);
 
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
-
+	
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "freeing mfh(%p)", mfh);
 	PSCFREE(mfh);
 //	if (process wants I/O guarentees)
 //		rc = flush;
