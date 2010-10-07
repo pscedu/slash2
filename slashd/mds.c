@@ -267,9 +267,9 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	csvc = slm_geticsvc(resm);
 	if (csvc == NULL)
 		/*
- 		 * This can happen if the MDS finds bmap leases in
- 		 * the odtable and we didn't start the I/O server.
- 		 */
+		 * This can happen if the MDS finds bmap leases in
+		 * the odtable and we didn't start the I/O server.
+		 */
 		return (-SLERR_ION_OFFLINE);
 
 	rmmi = resm->resm_pri;
@@ -359,6 +359,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	 * An ION has been assigned to the bmap, mark it in the odtable
 	 *   so that the assignment may be restored on reboot.
 	 */
+	memset(&bia, 0, sizeof(bia));
 	bia.bia_ion_nid = bml->bml_ion_nid = rmmi->rmmi_resm->resm_nid;
 	bia.bia_lastcli = bml->bml_cli_nidpid;
 
@@ -713,9 +714,9 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		BMAP_LOCK(b);
 		if (rc) {
 			/*
- 			 * Keep the lease around if we can't contact the I/O node until
- 			 * it expires.
- 			 */
+			 * Keep the lease around if we can't contact the I/O node until
+			 * it expires.
+			 */
 			if ((bml->bml_flags & BML_RECOVER) && (rc == -SLERR_ION_OFFLINE)) {
 				rc = 0;
 				b->bcm_flags |= BMAP_MDS_NOION;
@@ -856,7 +857,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 	psc_assert(bml->bml_flags & BML_FREEING);
 
-	DEBUG_BMAP(PLL_INFO, b, "bml=%p fl=%d seq=%"PRId64, bml, 
+	DEBUG_BMAP(PLL_INFO, b, "bml=%p fl=%d seq=%"PRId64, bml,
 		   bml->bml_flags, bml->bml_seq);
 
 	locked = BMAP_RLOCK(b);
@@ -870,7 +871,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 */
 	bcm_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	b->bcm_flags |= BMAP_IONASSIGN;
-	
+
 	/* Remove dups here?
 	 */
 	BML_LOCK(bml);
@@ -956,7 +957,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			 */
 			struct bmap_ion_assign *bia;
 
-			bia = odtable_getitem(mdsBmapAssignTable, 
+			bia = odtable_getitem(mdsBmapAssignTable,
 				      bmdsi->bmdsi_assign);
 			psc_assert(bia && bia->bia_seq == bmdsi->bmdsi_seq);
 			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
@@ -1198,8 +1199,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	if (fcmh_2_gen(fcmh) != c->fg.fg_gen) {
 		int x = (fcmh_2_gen(fcmh) > c->fg.fg_gen) ? 1 : 0;
 
-		DEBUG_FCMH(x ? PLL_WARN : PLL_ERROR, fcmh, 
-		   "gen (%"PRId64") %s than mds gen", 
+		DEBUG_FCMH(x ? PLL_WARN : PLL_ERROR, fcmh,
+		   "gen (%"PRId64") %s than mds gen",
 		   c->fg.fg_gen, x ? ">" : "<");
 
 		rc = -(x ? SLERR_GEN_OLD : SLERR_GEN_INVALID);
