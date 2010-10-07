@@ -297,7 +297,7 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 	 * that the file was just created by our own replay process.
 	 */
 	if (pos >= SL_DEF_REPLICAS) {
-		memset(&inoh_extras, 0, sizeof(inoh_ino));
+		memset(&inoh_extras, 0, sizeof(inoh_extras));
 
 		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
 			SL_EXTRAS_START_OFF, mdsio_data);
@@ -476,7 +476,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje)
  */
 void
 mds_namespace_log(int op, uint64_t txg, uint64_t parent,
-    uint64_t newparent, const struct srt_stat *stat, int mask,
+    uint64_t newparent, const struct srt_stat *sstb, int mask,
     const char *name, const char *newname)
 {
 	struct slmds_jent_namespace *jnamespace;
@@ -490,20 +490,20 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	jnamespace->sjnm_op = op;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
 	jnamespace->sjnm_parent_fid = parent;
-	jnamespace->sjnm_target_fid = stat->sst_fid;
+	jnamespace->sjnm_target_fid = sstb->sst_fid;
 	jnamespace->sjnm_new_parent_fid = newparent;
 	jnamespace->sjnm_mask = mask;
 
-	jnamespace->sjnm_uid = stat->sst_uid;
-	jnamespace->sjnm_gid = stat->sst_gid;
-	jnamespace->sjnm_mode = stat->sst_mode;
-	jnamespace->sjnm_atime = stat->sst_atime;
-	jnamespace->sjnm_atime_ns = stat->sst_atime_ns;
-	jnamespace->sjnm_mtime = stat->sst_mtime;
-	jnamespace->sjnm_mtime_ns = stat->sst_mtime_ns;
-	jnamespace->sjnm_ctime = stat->sst_ctime;
-	jnamespace->sjnm_ctime_ns = stat->sst_ctime_ns;
-	jnamespace->sjnm_size = stat->sst_size;
+	jnamespace->sjnm_uid = sstb->sst_uid;
+	jnamespace->sjnm_gid = sstb->sst_gid;
+	jnamespace->sjnm_mode = sstb->sst_mode;
+	jnamespace->sjnm_atime = sstb->sst_atime;
+	jnamespace->sjnm_atime_ns = sstb->sst_atime_ns;
+	jnamespace->sjnm_mtime = sstb->sst_mtime;
+	jnamespace->sjnm_mtime_ns = sstb->sst_mtime_ns;
+	jnamespace->sjnm_ctime = sstb->sst_ctime;
+	jnamespace->sjnm_ctime_ns = sstb->sst_ctime_ns;
+	jnamespace->sjnm_size = sstb->sst_size;
 
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
 	    sjnm_name);
@@ -1305,20 +1305,20 @@ int
 mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 {
 	int rc, hasname = 1;
-	struct srt_stat stat;
+	struct srt_stat sstb;
 	char *newname;
 
-	memset(&stat, 0, sizeof(stat));
-	stat.sst_uid = jnamespace->sjnm_uid;
-	stat.sst_gid = jnamespace->sjnm_gid;
-	stat.sst_mode = jnamespace->sjnm_mode;
-	stat.sst_atime = jnamespace->sjnm_atime;
-	stat.sst_atime_ns = jnamespace->sjnm_atime_ns;
-	stat.sst_mtime = jnamespace->sjnm_mtime;
-	stat.sst_mtime_ns = jnamespace->sjnm_mtime_ns;
-	stat.sst_ctime = jnamespace->sjnm_ctime;
-	stat.sst_ctime_ns = jnamespace->sjnm_ctime_ns;
-	stat.sst_size = jnamespace->sjnm_size;
+	memset(&sstb, 0, sizeof(sstb));
+	sstb.sst_uid = jnamespace->sjnm_uid;
+	sstb.sst_gid = jnamespace->sjnm_gid;
+	sstb.sst_mode = jnamespace->sjnm_mode;
+	sstb.sst_atime = jnamespace->sjnm_atime;
+	sstb.sst_atime_ns = jnamespace->sjnm_atime_ns;
+	sstb.sst_mtime = jnamespace->sjnm_mtime;
+	sstb.sst_mtime_ns = jnamespace->sjnm_mtime_ns;
+	sstb.sst_ctime = jnamespace->sjnm_ctime;
+	sstb.sst_ctime_ns = jnamespace->sjnm_ctime_ns;
+	sstb.sst_size = jnamespace->sjnm_size;
 
 	jnamespace->sjnm_name[sizeof(jnamespace->sjnm_name) - 1] = '\0';
 	newname = jnamespace->sjnm_name +
@@ -1333,49 +1333,49 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 		rc = mdsio_redo_create(
 			jnamespace->sjnm_parent_fid,
 			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_name, &stat);
+			jnamespace->sjnm_name, &sstb);
 		break;
 	    case NS_OP_MKDIR:
 		rc = mdsio_redo_mkdir(
 			jnamespace->sjnm_parent_fid,
 			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_name, &stat);
+			jnamespace->sjnm_name, &sstb);
 		break;
 	    case NS_OP_LINK:
 		rc = mdsio_redo_link(
 			jnamespace->sjnm_parent_fid,
 			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_name, &stat);
+			jnamespace->sjnm_name, &sstb);
 		break;
 	    case NS_OP_SYMLINK:
 		rc = mdsio_redo_symlink(
 			jnamespace->sjnm_parent_fid,
 			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_name, newname, &stat);
+			jnamespace->sjnm_name, newname, &sstb);
 		break;
 	    case NS_OP_RENAME:
 		rc = mdsio_redo_rename(
 			jnamespace->sjnm_parent_fid,
 			jnamespace->sjnm_name,
 			jnamespace->sjnm_new_parent_fid,
-			newname, &stat);
+			newname, &sstb);
 		break;
 	    case NS_OP_UNLINK:
 		rc = mdsio_redo_unlink(
 			jnamespace->sjnm_parent_fid,
 			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_name, &stat);
+			jnamespace->sjnm_name, &sstb);
 		break;
 	    case NS_OP_RMDIR:
 		rc = mdsio_redo_rmdir(
 			jnamespace->sjnm_parent_fid,
 			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_name, &stat);
+			jnamespace->sjnm_name, &sstb);
 		break;
 	    case NS_OP_SETATTR:
 		rc = mdsio_redo_setattr(
 			jnamespace->sjnm_target_fid,
-			jnamespace->sjnm_mask, &stat);
+			jnamespace->sjnm_mask, &sstb);
 		hasname = 0;
 		break;
 	    default:
