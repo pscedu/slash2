@@ -633,14 +633,13 @@ bmap_flushable(struct bmapc_memb *b)
 __static struct psc_dynarray *
 bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 {
-	int i, idx, anyexpired=0;
+	int i, idx, large=0, expired=0;
 	struct bmpc_ioreq *r=NULL, *t;
 	struct psc_dynarray b=DYNARRAY_INIT, *a=NULL;
 
 	psc_assert(psc_dynarray_len(biorqs) > *index);
 
-	for (idx=0; (idx + *index) < psc_dynarray_len(biorqs) &&
-		     !bmap_flushready(&b); idx++) {
+	for (idx=0; (idx + *index) < psc_dynarray_len(biorqs); idx++) {
 		t = psc_dynarray_getpos(biorqs, idx + *index);
 
 		psc_assert((t->biorq_flags & BIORQ_SCHED) &&
@@ -654,11 +653,11 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 
 		/* If any member is expired then we'll push everything out.
 		 */
-		if (!anyexpired)
-			anyexpired = bmap_flush_biorq_expired(t);
+		if (!expired)
+			expired = bmap_flush_biorq_expired(t);
 
 		DEBUG_BIORQ(PLL_NOTIFY, t, "biorq #%d (expired=%d) nfrags=%d",
-			    idx, anyexpired, psc_dynarray_len(&b));
+			    idx, expired, psc_dynarray_len(&b));
 
 		/* The next request, 't', can be added to the coalesce
 		 *   group either because 'r' is not yet set (meaning
@@ -678,7 +677,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 			 *    Otherwise, deschedule the current set and
 			 *    resume activity with 't' as the base.
 			 */
-			if (bmap_flushready(&b) || anyexpired)
+			if (expired) 
 				break;
 			else {
 				r = t;
@@ -694,9 +693,14 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 				psc_dynarray_add(&b, r);
 			}
 		}
+		if (bmap_flushready(&b)) {
+			idx++;
+			large = 1;
+			break;
+		}
 	}
 
-	if (bmap_flushready(&b) || anyexpired) {
+	if (large || expired) {
 		a = psc_alloc(sizeof(*a), 0);
 		psc_dynarray_ensurelen(a, psc_dynarray_len(&b));
 		for (i=0; i < psc_dynarray_len(&b); i++) {
