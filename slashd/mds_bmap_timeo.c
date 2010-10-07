@@ -227,6 +227,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 			freelock(&bml->bml_lock);
 		}
 
+		memset(&sjbsq, 0, sizeof(sjbsq));
 		sjbsq.sjbsq_high_wm = mdsBmapTimeoTbl.btt_maxseq;
 		sjbsq.sjbsq_low_wm = mdsBmapTimeoTbl.btt_minseq =
 			e->bte_maxseq;
@@ -236,7 +237,7 @@ slmbmaptimeothr_begin(__unusedx struct psc_thread *thr)
 		 */
 		mds_bmap_journal_bmapseq(&sjbsq);
 
-		for (i=0; i < psc_dynarray_len(&a); i++) {
+		for (i = 0; i < psc_dynarray_len(&a); i++) {
 			bml = psc_dynarray_getpos(&a, i);
 			psc_assert(bml->bml_seq <= e->bte_maxseq);
 			if (mds_bmap_bml_release(bml))
