@@ -703,7 +703,6 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			psc_assert(!bmdsi->bmdsi_wr_ion);
 			BMAP_ULOCK(b);
 			rc = mds_bmap_ion_assign(bml, prefios);
-			b->bcm_flags |= BMAP_MDS_NOION;
 
 		} else {
 			psc_assert(wlease && bmdsi->bmdsi_wr_ion);
@@ -711,8 +710,8 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 			rc = mds_bmap_ion_update(bml);
 		}
 
+		BMAP_LOCK(b);
 		if (rc) {
-			BMAP_LOCK(b);
 			/*
  			 * Keep the lease around if we can't contact the I/O node until
  			 * it expires.
@@ -733,9 +732,8 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 				b->bcm_flags &= ~BMAP_IONASSIGN;
 				b->bcm_flags |= BMAP_MDS_NOION;
 			}
-			goto out;
 		}
-		BMAP_LOCK(b);
+
 		b->bcm_flags &= ~BMAP_IONASSIGN;
 
 	} else {
