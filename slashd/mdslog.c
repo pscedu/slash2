@@ -86,9 +86,6 @@ psc_spinlock_t			 mds_namespace_waitqlock = SPINLOCK_INIT;
 /* a buffer used to read on-disk log file */
 static char			*stagebuf;
 
-static struct psc_thread	*cursorThr;
-static struct psc_thread	*namespaceThr;
-
 /* we only have a few buffers, so a list is fine */
 __static PSCLIST_HEAD(mds_namespace_buflist);
 
@@ -282,13 +279,13 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 	if (pos >= SL_MAX_REPLICAS || pos < 0) {
 		psclog_errorx("ino_nrepls index (%d) is out of range",
 		    pos);
-		return EINVAL;
+		return (EINVAL);
 	}
 
 	rc = mdsio_lookup_slfid(jrir->sjir_fid, &rootcreds, NULL, &fid);
 	if (rc)
 		//psc_fatalx("mdsio_lookup_slfid: %s", slstrerror(rc));
-		return rc;
+		return (rc);
 
 	rc = mdsio_opencreate(fid, &rootcreds, O_RDWR, 0, NULL, NULL,
 	    NULL, &mdsio_data, NULL, NULL);
@@ -300,6 +297,8 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 	 * that the file was just created by our own replay process.
 	 */
 	if (pos >= SL_DEF_REPLICAS) {
+		memset(&inoh_extras, 0, sizeof(inoh_ino));
+
 		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
 			SL_EXTRAS_START_OFF, mdsio_data);
 		if (rc)
@@ -357,7 +356,7 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 }
 
 /**
- * mds_txg_handle - Tie system journal with ZFS transaction groups.
+ * mds_txg_handler - Tie system journal with ZFS transaction groups.
  */
 void
 mds_txg_handler(__unusedx uint64_t *txgp, __unusedx void *data, int op)
@@ -399,7 +398,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 		    jnamespace->sjnm_op == NS_OP_MKDIR ||
 		    jnamespace->sjnm_op == NS_OP_LINK ||
 		    jnamespace->sjnm_op == NS_OP_SYMLINK)
-		    (void)slm_get_next_slashid();
+			slm_get_next_slashid();
 		break;
 	    default:
 		psc_fatal("invalid log entry type %d", pje->pje_type);
@@ -648,7 +647,7 @@ mds_namespace_read_batch(uint64_t seqno)
 	 * Make sure this is the case.
 	 */
 	thr = pscthr_get();
-	psc_assert(thr == namespaceThr);
+	slmjnsthr(thr);
 
  restart:
 
@@ -1259,8 +1258,8 @@ mds_journal_init(void)
 	    mdsJournal->pj_distill_xid);
 
 	/* we need the cursor thread to start any potential log replay */
-	cursorThr = pscthr_init(SLMTHRT_CURSOR, 0,
-	    mds_cursor_thread, NULL, 0, "slmjcursorthr");
+	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
+	    "slmjcursorthr");
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 			mds_replay_handler,
@@ -1286,8 +1285,8 @@ mds_journal_init(void)
 	 * Start a thread to propagate local namespace updates to peers
 	 * after our MDS peer list has been all setup.
 	 */
-	namespaceThr = pscthr_init(SLMTHRT_NAMESPACE, 0,
-	    mds_namespace_propagate, NULL, 0, "slmjnmspcthr");
+	pscthr_init(SLMTHRT_JNAMESPACE, 0, mds_namespace_propagate, NULL,
+	    0, "slmjnsthr");
 }
 
 void
