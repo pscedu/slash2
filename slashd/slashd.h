@@ -46,7 +46,7 @@ enum {
 	SLMTHRT_CTLAC,		/* control acceptor */
 	SLMTHRT_CURSOR,		/* cursor update thread */
 	SLMTHRT_FSSYNC,		/* file system syncer */
-	SLMTHRT_JNAMESPACE	/* namespace propagating thread */
+	SLMTHRT_JNAMESPACE,	/* namespace propagating thread */
 	SLMTHRT_JRNL,		/* journal distill thread */
 	SLMTHRT_LNETAC,		/* lustre net accept thr */
 	SLMTHRT_RCM,		/* CLI <- MDS msg issuer */
@@ -56,8 +56,8 @@ enum {
 	SLMTHRT_TINTV,		/* timer interval */
 	SLMTHRT_TIOS,		/* I/O stats updater */
 	SLMTHRT_UPSCHED,	/* update scheduler for site resources */
-	SLMTHRT_USKLNDPL,	/* userland socket lustre net dev poll thr */
-}
+	SLMTHRT_USKLNDPL	/* userland socket lustre net dev poll thr */
+};
 
 struct slmrmc_thread {
 	struct pscrpc_thread	  smrct_prt;
