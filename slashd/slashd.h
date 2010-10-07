@@ -39,23 +39,25 @@ struct fidc_membh;
 struct slash_inode_handle;
 
 /* MDS thread types. */
-#define SLMTHRT_CTL		0	/* control processor */
-#define SLMTHRT_CTLAC		1	/* control acceptor */
-#define SLMTHRT_RMC		2	/* MDS <- CLI msg svc handler */
-#define SLMTHRT_RMI		3	/* MDS <- I/O msg svc handler */
-#define SLMTHRT_RMM		4	/* MDS <- MDS msg svc handler */
-#define SLMTHRT_RCM		5	/* CLI <- MDS msg issuer */
-#define SLMTHRT_LNETAC		6	/* lustre net accept thr */
-#define SLMTHRT_USKLNDPL	7	/* userland socket lustre net dev poll thr */
-#define SLMTHRT_TINTV		8	/* timer interval */
-#define SLMTHRT_TIOS		9	/* I/O stats updater */
-#define SLMTHRT_COH		10	/* coherency thread */
-#define SLMTHRT_FSSYNC		11	/* file system syncer */
-#define SLMTHRT_UPSCHED		12	/* update scheduler for site resources */
-#define SLMTHRT_BMAPTIMEO	13	/* bmap timeout thread */
-#define SLMTHRT_JRNL		14	/* journal distill thread */
-#define SLMTHRT_CURSOR		15	/* cursor update thread */
-#define SLMTHRT_NAMESPACE	16	/* namespace propagating thread */
+enum {
+	SLMTHRT_BMAPTIMEO,	/* bmap timeout thread */
+	SLMTHRT_COH,		/* coherency thread */
+	SLMTHRT_CTL,		/* control processor */
+	SLMTHRT_CTLAC,		/* control acceptor */
+	SLMTHRT_CURSOR,		/* cursor update thread */
+	SLMTHRT_FSSYNC,		/* file system syncer */
+	SLMTHRT_JNAMESPACE	/* namespace propagating thread */
+	SLMTHRT_JRNL,		/* journal distill thread */
+	SLMTHRT_LNETAC,		/* lustre net accept thr */
+	SLMTHRT_RCM,		/* CLI <- MDS msg issuer */
+	SLMTHRT_RMC,		/* MDS <- CLI msg svc handler */
+	SLMTHRT_RMI,		/* MDS <- I/O msg svc handler */
+	SLMTHRT_RMM,		/* MDS <- MDS msg svc handler */
+	SLMTHRT_TINTV,		/* timer interval */
+	SLMTHRT_TIOS,		/* I/O stats updater */
+	SLMTHRT_UPSCHED,	/* update scheduler for site resources */
+	SLMTHRT_USKLNDPL,	/* userland socket lustre net dev poll thr */
+}
 
 struct slmrmc_thread {
 	struct pscrpc_thread	  smrct_prt;
@@ -78,6 +80,10 @@ struct slmupsched_thread {
 	struct sl_site		 *smut_site;
 };
 
+struct slmjns_thread {
+};
+
+PSCTHR_MKCAST(slmjnsthr, slmjns_thread, SLMTHRT_JNAMESPACE)
 PSCTHR_MKCAST(slmrcmthr, slmrcm_thread, SLMTHRT_RCM)
 PSCTHR_MKCAST(slmrmcthr, slmrmc_thread, SLMTHRT_RMC)
 PSCTHR_MKCAST(slmrmithr, slmrmi_thread, SLMTHRT_RMI)
