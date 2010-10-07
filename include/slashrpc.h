@@ -420,12 +420,10 @@ struct srm_bmap_crcwrt_req {
 	int32_t			_pad;
 } __packed;
 
-
 struct srm_bmap_crcwrt_rep {
 	uint64_t		seq;
-	int32_t                 crcup_rc[MAX_BMAP_NCRC_UPDATES];
-	int32_t                 rc;
-	int32_t                 _pad;
+	int32_t			crcup_rc[MAX_BMAP_NCRC_UPDATES];
+	int32_t			rc;
 } __packed;
 
 struct srm_bmap_iod_get {
