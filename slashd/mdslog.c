@@ -481,10 +481,12 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
     const char *name, const char *newname)
 {
 	struct slmds_jent_namespace *jnamespace;
-	int len, distilled;
+	size_t rem, len;
+	int distilled;
 	char *ptr;
 
-	jnamespace = pjournal_get_buf(mdsJournal, sizeof(struct slmds_jent_namespace));
+	jnamespace = pjournal_get_buf(mdsJournal,
+	    sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	jnamespace->sjnm_op = op;
 	jnamespace->sjnm_seqno = mds_get_next_seqno();
@@ -504,22 +506,27 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	jnamespace->sjnm_ctime_ns = stat->sst_ctime_ns;
 	jnamespace->sjnm_size = stat->sst_size;
 
-	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace, sjnm_name);
+	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
+	    sjnm_name);
 	ptr = jnamespace->sjnm_name;
 	*ptr = '\0';
+	rem = sizeof(jnamespace->sjnm_name);
 	if (name) {
 		psc_assert(sizeof(jnamespace->sjnm_name) > NAME_MAX);
-		strncpy(ptr, name, NAME_MAX);
-		ptr[NAME_MAX] = '\0';
-		jnamespace->sjnm_reclen += strlen(name) + 1;
-		ptr += strlen(name) + 1;
+		strlcpy(ptr, name, NAME_MAX + 1);
+		len = strlen(ptr) + 1;
+		jnamespace->sjnm_reclen += len;
+		ptr += len;
+		rem -= len;
 	}
 	if (newname) {
-		len = sizeof(jnamespace->sjnm_name) - strlen(ptr) - 1;
-		strncpy(ptr, newname, len - 1);
-		ptr[len - 1] = '\0';
-		jnamespace->sjnm_reclen += strlen(ptr) + 1;
+		strlcpy(ptr, newname, MIN(rem, NAME_MAX + 1));
+		len = strlen(ptr) + 1;
+		jnamespace->sjnm_reclen += len;
+		ptr += len;
+		rem -= len;
 	}
+	ptr[rem - 1] = '\0';
 	psc_assert(logentrysize >= jnamespace->sjnm_reclen +
 	    (int)sizeof(struct psc_journal_enthdr) - 1);
 
@@ -536,10 +543,10 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 {
 	struct slmds_jent_namespace *jnamespace;
 	struct sl_mds_peerinfo *peerinfo;
+	struct slashrpc_cservice *csvc;
 	struct sl_mds_logbuf *logbuf;
 	char *buf;
 	int i, j;
-	struct slashrpc_cservice *csvc;
 
 	peerinfo = args->pointer_arg[SLM_CBARG_SLOT_PEERINFO];
 	csvc = args->pointer_arg[SLM_CBARG_SLOT_CSVC];
