@@ -275,6 +275,8 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 	int i, j, rc;
 	size_t nb;
 
+	memset(&inoh_ino, 0, sizeof(inoh_ino));
+
 	jrir = PJE_DATA(pje);
 	i = jrir->sjir_pos;
 	if (i >= SL_MAX_REPLICAS || i < 0) {
@@ -316,8 +318,8 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 			goto out;
 	}
 	/*
-	 * We always update the inode itself because the number of replicas
-	 * is stored there.
+	 * We always update the inode itself because the number of
+	 * replicas is stored there.
 	 */
 	rc = mdsio_read(&rootcreds, &inoh_ino, INO_OD_SZ, &nb,
 		SL_INODE_START_OFF, mdsio_data);
