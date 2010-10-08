@@ -51,7 +51,7 @@ void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t,
 	    const struct srt_stat *, int, const char *, const char *);
 
 /* predefined mdsio layer "fids" */
-#define MDSIO_FID_ROOT	3
+#define MDSIO_FID_ROOT	3	/* XXX FUSE_ROOT_ID? */
 
 /* opencreatef() flags */
 #define MDSIO_OPENCRF_NOLINK	(1 << 0)	/* do not create links in FID namespace */
