@@ -377,7 +377,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 		return (-SLERR_XACT_FAIL);
 	}
 
-	/* Signify that a ION has been assigned to this bmap.  This
+	/*
+	 * Signify that a ION has been assigned to this bmap.  This
 	 *   opcnt ref will stay in place until the bmap has been released
 	 *   by the last client or has been timed out.
 	 */
