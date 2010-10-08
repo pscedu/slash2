@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -333,9 +333,14 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 		if (pos != 0)
 			psclog_errorx("ino_nrepls index (%d) in "
 			    "should be 0 for newly created inode", pos);
+		if (jrir->sjir_nrepls != 1)
+			psclog_errorx("ino_nrepls (%d) in "
+			    "should be 1 for newly created inode",
+			    jrir->sjir_nrepls);
 	}
 
-	if (jrir->sjir_nrepls > SL_MAX_REPLICAS)
+	if (jrir->sjir_nrepls > SL_MAX_REPLICAS ||
+	    jrir->sjir_nrepls <= jrir->sjir_pos)
 		abort();
 	inoh_ino.ino_nrepls = jrir->sjir_nrepls;
 
