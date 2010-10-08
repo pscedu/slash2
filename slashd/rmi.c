@@ -21,6 +21,8 @@
  * Routines for handling RPC requests for MDS from ION.
  */
 
+#define PSC_SUBSYS PSS_RPC
+
 #include <stdio.h>
 
 #include "pfl/str.h"

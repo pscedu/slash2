@@ -17,6 +17,8 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#define PSC_SUBSYS PSS_RPC
+
 #include <stdio.h>
 
 #include "pfl/str.h"

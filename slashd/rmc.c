@@ -21,6 +21,8 @@
  * Routines for handling RPC requests for MDS from CLIENT.
  */
 
+#define PSC_SUBSYS PSS_RPC
+
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
