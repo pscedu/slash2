@@ -84,7 +84,7 @@ typedef struct {
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
 
-#define	SL_SETATTRF_METASIZE	(_PSCFS_SETATTRF_LAST << 0)	/* metadata file */
+#define SL_SETATTRF_METASIZE	(_PSCFS_SETATTRF_LAST << 0)	/* metadata file */
 #define SL_SETATTRF_PTRUNCGEN	(_PSCFS_SETATTRF_LAST << 1)	/* partial truncates */
 #define SL_SETATTRF_GEN		(_PSCFS_SETATTRF_LAST << 2)	/* full truncate */
 
