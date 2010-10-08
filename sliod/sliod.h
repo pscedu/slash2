@@ -28,21 +28,23 @@
 #include "sltypes.h"
 
 /* sliod thread types */
-#define SLITHRT_CTL		0	/* control processor */
-#define SLITHRT_CTLAC		1	/* control acceptor */
-#define SLITHRT_LNETAC		2	/* lustre net accept thr */
-#define SLITHRT_USKLNDPL	3	/* userland socket lustre net dev poll thr */
-#define SLITHRT_RIC		4	/* service RPC requests from CLIENT */
-#define SLITHRT_RIM		5	/* service RPC requests from MDS */
-#define SLITHRT_RII		6	/* service RPC requests from ION */
-#define SLITHRT_TINTV		7	/* timer interval */
-#define SLITHRT_TIOS		8	/* iostats updater */
-#define SLITHRT_SLVR_CRC	9	/* sliver crc updaters */
-#define SLITHRT_REPLFIN		10	/* process finished replication work */
-#define SLITHRT_REPLREAP	11	/* reap in-flight replication work */
-#define SLITHRT_REPLPND		12	/* process enqueued replication work */
-#define SLITHRT_BMAPRLS		13	/* notify mds of completed write bmaps */
-#define SLITHRT_CONN		14	/* connection monitor */
+enum {
+	SLITHRT_BMAPRLS,	/* notify mds of completed write bmaps */
+	SLITHRT_CONN,		/* connection monitor */
+	SLITHRT_CTL,		/* control processor */
+	SLITHRT_CTLAC,		/* control acceptor */
+	SLITHRT_LNETAC,		/* lustre net accept thr */
+	SLITHRT_REPLFIN,	/* process finished replication work */
+	SLITHRT_REPLPND,	/* process enqueued replication work */
+	SLITHRT_REPLREAP,	/* reap in-flight replication work */
+	SLITHRT_RIC,		/* service RPC requests from CLIENT */
+	SLITHRT_RII,		/* service RPC requests from ION */
+	SLITHRT_RIM,		/* service RPC requests from MDS */
+	SLITHRT_SLVR_CRC,	/* sliver crc updaters */
+	SLITHRT_TINTV,		/* timer interval */
+	SLITHRT_TIOS,		/* iostats updater */
+	SLITHRT_USKLNDPL	/* userland socket lustre net dev poll thr */
+};
 
 #define NSLVRCRC_THRS		4	/* perhaps default to ncores + configurable? */
 

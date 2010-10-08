@@ -152,7 +152,10 @@ slvr_worker_push_crcups(void)
 					  "multiple bcr's xid=%"PRIu64,
 					  bcr->bcr_biodi->biod_bcr_xid_last);
 			} else {
+				BMAP_LOCK(bcr_2_bmap(bcr));
 				bcr_2_bmap(bcr)->bcm_flags |= BMAP_IOD_INFLIGHT;
+				BMAP_ULOCK(bcr_2_bmap(bcr));
+
 				freelock(&bcr->bcr_biodi->biod_lock);
 			}
 		} else
@@ -249,8 +252,8 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 
 		DEBUG_BCR(((rq->rq_status || !mp || mp->rc) ?
 			   PLL_ERROR : PLL_INFO),
-			  bcr, "rq_status=%d rc=%d", rq->rq_status,
-			  mp ? mp->rc : -4096);
+			  bcr, "rq_status=%d rc=%d%s", rq->rq_status,
+			  mp ? mp->rc : 0, mp ? "" : " (unknown, no buf)");
 
 		psc_assert(bii_2_bmap(biod)->bcm_flags & (BMAP_IOD_INFLIGHT|BMAP_IOD_BCRSCHED));
 
@@ -262,7 +265,11 @@ slvr_nbreqset_cb(struct pscrpc_request *rq,
 			 *   bcr_xid_last_bump() will not be called.
 			 */
 			spinlock(&biod->biod_lock);
+
+			BMAP_LOCK(bcr_2_bmap(bcr));
 			bii_2_bmap(biod)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
+			BMAP_ULOCK(bcr_2_bmap(bcr));
+
 			bcr_xid_check(bcr);
 			freelock(&biod->biod_lock);
 
@@ -448,7 +455,10 @@ slvr_worker_int(void)
 			 */
 			pll_addtail(&slvr_2_biod(s)->biod_bklog_bcrs, bcr);
 		else {
+			BMAP_LOCK(bcr_2_bmap(bcr));
 			slvr_2_bmap(s)->bcm_flags |= BMAP_IOD_BCRSCHED;
+			BMAP_ULOCK(bcr_2_bmap(bcr));
+
 			bcr_hold_add(&binflCrcs, bcr);
 		}
 	}

@@ -182,7 +182,10 @@ bcr_xid_last_bump(struct biod_crcup_ref *bcr)
 {
 	bcr_xid_check(bcr);
 	bcr->bcr_biodi->biod_bcr_xid_last++;
+
+	BMAP_LOCK(bcr_2_bmap(bcr));
 	bcr_2_bmap(bcr)->bcm_flags &= ~BMAP_IOD_INFLIGHT;
+	BMAP_ULOCK(bcr_2_bmap(bcr));
 }
 
 void
@@ -220,7 +223,10 @@ bcr_finalize(struct biod_infl_crcs *inf, struct biod_crcup_ref *bcr)
 		 */
 		psc_assert(pll_empty(&biod->biod_bklog_bcrs));
 		psc_assert(!biod->biod_bcr);
+
+		BMAP_LOCK(bii_2_bmap(biod));
 		bii_2_bmap(biod)->bcm_flags &= ~BMAP_IOD_BCRSCHED;
+		BMAP_ULOCK(bii_2_bmap(biod));
 
 		DEBUG_BMAP(PLL_INFO, bii_2_bmap(biod),
 		    "descheduling drtyslvrs=%u",
