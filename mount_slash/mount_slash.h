@@ -36,20 +36,22 @@
 struct pscrpc_request;
 
 /* mount_slash thread types */
-#define MSTHRT_CTL			0	/* control processor */
-#define MSTHRT_CTLAC			1	/* control acceptor */
-#define MSTHRT_FS			2	/* file system syscall handler workers */
-#define MSTHRT_RCM			3	/* service RPC reqs for client from MDS */
-#define MSTHRT_LNETAC			4	/* lustre net accept thr */
-#define MSTHRT_USKLNDPL			5	/* userland socket lustre net dev poll thr */
-#define MSTHRT_EQPOLL			6	/* LNET event queue polling */
-#define MSTHRT_TINTV			7	/* timer interval thread */
-#define MSTHRT_TIOS			8	/* timer iostat updater */
-#define MSTHRT_FSMGR			9	/* pscfs manager */
-#define MSTHRT_BMAPFLSH			10	/* bmap write data flush thread */
-#define MSTHRT_BMAPFLSHRPC		11	/* async buffer thread for RPC reaping */
-#define MSTHRT_BMAPFLSHRLS		12	/* bmap lease releaser */
-#define MSTHRT_CONN			13	/* connection monitor */
+enum {
+	MSTHRT_BMAPFLSH,		/* bmap write data flush thread */
+	MSTHRT_BMAPFLSHRLS,		/* bmap lease releaser */
+	MSTHRT_BMAPFLSHRPC,		/* async buffer thread for RPC reaping */
+	MSTHRT_CONN,			/* connection monitor */
+	MSTHRT_CTL,			/* control processor */
+	MSTHRT_CTLAC,			/* control acceptor */
+	MSTHRT_EQPOLL,			/* LNET event queue polling */
+	MSTHRT_FS,			/* file system syscall handler workers */
+	MSTHRT_FSMGR,			/* pscfs manager */
+	MSTHRT_LNETAC,			/* lustre net accept thr */
+	MSTHRT_RCM,			/* service RPC reqs for client from MDS */
+	MSTHRT_TINTV,			/* timer interval thread */
+	MSTHRT_TIOS,			/* timer iostat updater */
+	MSTHRT_USKLNDPL			/* userland socket lustre net dev poll thr */
+};
 
 struct msrcm_thread {
 	struct pscrpc_thread		 mrcm_prt;
