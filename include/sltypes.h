@@ -84,15 +84,6 @@ typedef struct {
 typedef uint64_t slfid_t;
 typedef uint64_t slfgen_t;
 
-struct srt_dirent {
-	uint64_t		ssd_ino;
-	uint64_t		ssd_off;
-	uint32_t		ssd_namelen;
-	uint32_t		ssd_type;
-	char			ssd_name[0];
-};
-#define fuse_dirent srt_dirent
-
 #define	SL_SETATTRF_METASIZE	(_PSCFS_SETATTRF_LAST << 0)	/* metadata file */
 #define SL_SETATTRF_PTRUNCGEN	(_PSCFS_SETATTRF_LAST << 1)	/* partial truncates */
 #define SL_SETATTRF_GEN		(_PSCFS_SETATTRF_LAST << 2)	/* full truncate */

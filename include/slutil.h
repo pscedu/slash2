@@ -35,16 +35,4 @@ void	sl_internalize_stat(const struct srt_stat *, struct stat *);
 void	sl_externalize_statfs(const struct statvfs *, struct srt_statfs *);
 void	sl_internalize_statfs(const struct srt_statfs *, struct statvfs *);
 
-#define SRT_NAME_OFFSET		offsetof(struct srt_dirent, ssd_name)
-#define SRT_DIRENT_ALIGN(x)	(((x) + sizeof(uint64_t) - 1) &	\
-				    ~(sizeof(uint64_t) - 1))
-#define SRT_DIRENT_SIZE(d)					\
-	SRT_DIRENT_ALIGN(SRT_NAME_OFFSET + (d)->ssd_namelen)
-
-static __inline size_t
-srt_dirent_size(size_t namelen)
-{
-	return SRT_DIRENT_ALIGN(SRT_NAME_OFFSET + namelen);
-}
-
 #endif /* _SLUTIL_H_ */

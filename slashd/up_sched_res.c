@@ -26,12 +26,11 @@
 
 #include <sys/param.h>
 
-#include <linux/fuse.h>
-
 #include <dirent.h>
 #include <stdio.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/fs.h"
 #include "psc_ds/dynarray.h"
 #include "psc_ds/list.h"
 #include "psc_ds/treeutil.h"
@@ -732,7 +731,7 @@ upsched_scandir(void)
 	struct fidc_membh *fcmh;
 	struct bmapc_memb *bcm;
 	struct slash_fidgen fg;
-	struct srt_dirent *d;
+	struct pscfs_dirent *d;
 	off64_t off, toff;
 	size_t siz, tsiz;
 	uint32_t j;
@@ -756,14 +755,14 @@ upsched_scandir(void)
 		if (tsiz == 0)
 			break;
 		for (toff = 0; toff < (off64_t)tsiz;
-		    toff += SRT_DIRENT_SIZE(d)) {
+		    toff += PFL_DIRENT_SIZE(d->pfd_namelen)) {
 			d = (void *)(buf + toff);
-			off = d->ssd_off;
+			off = d->pfd_off;
 
-			if (strlcpy(fn, d->ssd_name, sizeof(fn)) > sizeof(fn))
+			if (strlcpy(fn, d->pfd_name, sizeof(fn)) > sizeof(fn))
 				psc_assert("impossible");
-			if (d->ssd_namelen < sizeof(fn))
-				fn[d->ssd_namelen] = '\0';
+			if (d->pfd_namelen < sizeof(fn))
+				fn[d->pfd_namelen] = '\0';
 
 			if (fn[0] == '.')
 				continue;

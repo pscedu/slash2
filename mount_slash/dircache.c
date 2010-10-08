@@ -90,11 +90,11 @@ dircache_setfreeable_ents(struct dircache_ents *e)
 slfid_t
 dircache_lookup(struct dircache_info *i, const char *name, int flag)
 {
-	struct dircache_ents *e;
+	int found = 0, pos, freeit = 0;
 	struct dircache_desc desc, *d;
-	struct srt_dirent *dirent;
+	struct pscfs_dirent *dirent;
+	struct dircache_ents *e;
 	slfid_t ino = FID_ANY;
-	int found=0, pos, freeit=0;
 
 	desc.dd_hash = psc_str_hashify(name);
 	desc.dd_len  = strnlen(name, NAME_MAX);
@@ -120,13 +120,13 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 
 		psc_dbg("ino=%"PRIx64" off=%"PRId64" nlen=%u "
 		    "type=%#o name=%.*s lkname=%.*s off=%d d=%p",
-		    dirent->ssd_ino, dirent->ssd_off, dirent->ssd_namelen,
-		    dirent->ssd_type, dirent->ssd_namelen, dirent->ssd_name,
+		    dirent->pfd_ino, dirent->pfd_off, dirent->pfd_namelen,
+		    dirent->pfd_type, dirent->pfd_namelen, dirent->pfd_name,
 		    NAME_MAX, name, d->dd_offset, d);
 
 		if (d->dd_hash == desc.dd_hash &&
 		    d->dd_len  == desc.dd_len &&
-		    strncmp(name, dirent->ssd_name, d->dd_len) == 0) {
+		    strncmp(name, dirent->pfd_name, d->dd_len) == 0) {
 			/* Map the dirent from the desc's offset.
 			 */
 			found = 1;
@@ -137,7 +137,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 			}
 
 			if (!(d->dd_flags & DC_STALE))
-				ino = dirent->ssd_ino;
+				ino = dirent->pfd_ino;
 
 			if (flag & DC_STALE)
 				d->dd_flags |= DC_STALE;
@@ -231,7 +231,7 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	struct dircache_info *i = e->de_info;
 	struct dircache_mgr  *m = i->di_dcm;
 	struct dircache_desc *c;
-	struct srt_dirent *d;
+	struct pscfs_dirent *d;
 	unsigned char *b;
 	off_t off;
 	int j;
@@ -253,17 +253,17 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 
 		psc_dbg("ino=%"PRIx64" off=%"PRId64" "
 		    "nlen=%u type=%#o name=%.*s d=%p off=%"PRId64,
-		    d->ssd_ino, d->ssd_off, d->ssd_namelen, d->ssd_type,
-		    d->ssd_namelen, d->ssd_name, d, off);
+		    d->pfd_ino, d->pfd_off, d->pfd_namelen, d->pfd_type,
+		    d->pfd_namelen, d->pfd_name, d, off);
 
-		c->dd_len    = d->ssd_namelen;
-		c->dd_hash   = psc_strn_hashify(d->ssd_name, d->ssd_namelen);
+		c->dd_len    = d->pfd_namelen;
+		c->dd_hash   = psc_strn_hashify(d->pfd_name, d->pfd_namelen);
 		c->dd_flags  = 0;
 		c->dd_offset = off;
-		c->dd_name   = d->ssd_name;
+		c->dd_name   = d->pfd_name;
 
 		psc_dynarray_add(&e->de_dents, c);
-		off += srt_dirent_size((size_t)d->ssd_namelen);
+		off += PFL_DIRENT_SIZE(d->pfd_namelen);
 	}
 
 	/* Sort the desc items by their hash.
