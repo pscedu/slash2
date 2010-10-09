@@ -1180,7 +1180,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 {
 	struct bmap_mds_info *bmdsi;
 	struct fidc_membh *fcmh;
-	struct bmapc_memb *bmap;
+	struct bmapc_memb *bmap = NULL;
 	int rc;
 
 	rc = slm_fcmh_get(&c->fg, &fcmh);
