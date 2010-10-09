@@ -382,8 +382,8 @@ slvr_worker_int(void)
 
 		psc_assert(slvr_2_bmap(s)->bcm_flags & BMAP_IOD_BCRSCHED);
 		psc_assert(bcr->bcr_crcup.blkno == slvr_2_bmap(s)->bcm_bmapno);
-		psc_assert(SAMEFG(&bcr->bcr_crcup.fg,
-			  &slvr_2_bmap(s)->bcm_fcmh->fcmh_fg));
+		psc_assert(bcr->bcr_crcup.fg.fg_fid == 
+			   slvr_2_bmap(s)->bcm_fcmh->fcmh_fg.fg_fid);
 		psc_assert(bcr->bcr_crcup.nups < MAX_BMAP_INODE_PAIRS);
 		/* If we already have a slot for our slvr_num then
 		 *   reuse it.
