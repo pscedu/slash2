@@ -912,7 +912,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 
 	/* At this point the dirent cache is technically freeable.
 	 */
-	if (mp->num)
+	if (mp && mp->num)
 		dircache_setfreeable_ents(e);
 	else if (e)
 		dircache_earlyrls_ents(e);
