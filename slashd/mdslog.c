@@ -92,13 +92,13 @@ __static PSCLIST_HEAD(mds_namespace_buflist);
 struct sl_mds_peerinfo		*localinfo = NULL;
 
 /* list of peer MDSes and its lock */
-struct psc_dynarray			 mds_namespace_peerlist = DYNARRAY_INIT;
-psc_spinlock_t				 mds_namespace_peerlist_lock = SPINLOCK_INIT;
+struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
+psc_spinlock_t			 mds_namespace_peerlist_lock = SPINLOCK_INIT;
 
-static void				*mds_cursor_handle = NULL;
-static struct psc_journal_cursor	 mds_cursor;
+static void			*mds_cursor_handle = NULL;
+static struct psc_journal_cursor mds_cursor;
 
-psc_spinlock_t				 mds_txg_lock = SPINLOCK_INIT;
+psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
 int
 mds_peerinfo_cmp(const void *a, const void *b)
@@ -121,8 +121,9 @@ mds_get_next_seqno(void)
 }
 
 /**
- * mds_redo_bmap_repl - Replay a replication update on a bmap.  This has to be
- *   a read-modify-write process because we don't touch the CRC tables.
+ * mds_redo_bmap_repl - Replay a replication update on a bmap.  This has
+ *	to be a read-modify-write process because we don't touch the CRC
+ *	tables.
  */
 static int
 mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
@@ -675,7 +676,8 @@ mds_namespace_read_batch(uint64_t seqno)
 	}
 	if (i < SL_NAMESPACE_MAX_BUF) {
 		newbuf = 1;
-		buf = PSCALLOC(sizeof(struct sl_mds_logbuf) + SLM_NAMESPACE_BATCH * logentrysize);
+		buf = PSCALLOC(sizeof(struct sl_mds_logbuf) +
+		    SLM_NAMESPACE_BATCH * logentrysize);
 		buf->slb_size = 0;
 		buf->slb_count = 0;
 		buf->slb_seqno = seqno;
@@ -842,7 +844,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		authbuf_sign(req, PSCRPC_MSG_REQUEST);
 		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_PEERINFO] = peerinfo;
 		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = peerinfo;
-		pscrpc_nbreqset_add(logPndgReqs, req);
+		psc_assert(pscrpc_nbreqset_add(logPndgReqs, req) == 0);
 		didwork = 1;
 	}
 	freelock(&mds_namespace_peerlist_lock);
@@ -856,7 +858,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 void
 mds_update_cursor(void *buf, uint64_t txg)
 {
-	struct psc_journal_cursor *cursor = (struct psc_journal_cursor *)buf;
+	struct psc_journal_cursor *cursor = buf;
 	int rc;
 
 	spinlock(&mds_txg_lock);
@@ -951,15 +953,17 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 	uint64_t seqno;
 
 	/*
-	 * This thread scans the batches of changes between the low and high
-	 * water marks and sends them to peer MDSes.  Although different MDSes
-	 * have different paces, we send updates in order within one MDS.
+	 * This thread scans the batches of changes between the low and
+	 * high water marks and sends them to peer MDSes.  Although
+	 * different MDSes have different paces, we send updates in
+	 * order within one MDS.
 	 */
 	while (pscthr_run()) {
 		pscrpc_nbreqset_reap(logPndgReqs);
 		seqno = mds_namespace_update_lwm();
 		/*
-		 * If propagate_seqno_hwm is zero, then there are no local updates.
+		 * If propagate_seqno_hwm is zero, then there are no
+		 * local updates.
 		 */
 		if (propagate_seqno_hwm && seqno < propagate_seqno_hwm) {
 			buf = mds_namespace_read_batch(seqno);
@@ -1002,8 +1006,8 @@ mds_inode_sync(void *data)
 	}
 
 	if (inoh->inoh_flags & INOH_EXTRAS_DIRTY) {
-		psc_crc64_calc(&inoh->inoh_extras->inox_crc, inoh->inoh_extras,
-			     INOX_OD_CRCSZ);
+		psc_crc64_calc(&inoh->inoh_extras->inox_crc,
+		    inoh->inoh_extras, INOX_OD_CRCSZ);
 		rc = mdsio_inode_extras_write(inoh);
 
 		if (rc)

@@ -112,7 +112,7 @@ slvr_worker_crcup_genrq(const struct psc_dynarray *bcrs)
 	PSCFREE(iovs);
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-	pscrpc_nbreqset_add(slvrNbReqSet, rq);
+	psc_assert(pscrpc_nbreqset_add(slvrNbReqSet, rq) == 0);
 
 	return (rc);
 }

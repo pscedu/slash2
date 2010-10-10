@@ -66,7 +66,7 @@ bmap_flush_reap_rpcs(void)
 	struct pscrpc_request_set *set;
 	int i;
 
-	psclog_debug("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d", 
+	psclog_debug("outstandingRpcCnt=%d (before) rpcComp.rqcomp_compcnt=%d",
 		     atomic_read(&outstandingRpcCnt), atomic_read(&rpcComp.rqcomp_compcnt));
 
 	/* Only this thread may pull from pndgReqSets dynarray,
@@ -101,7 +101,7 @@ bmap_flush_biorq_expired(const struct bmpc_ioreq *a)
 {
 	struct timespec ts;
 
-	if (a->biorq_flags & BIORQ_FORCE_EXPIRE) 
+	if (a->biorq_flags & BIORQ_FORCE_EXPIRE)
 		return (1);
 
 	PFL_GETTIMESPEC(&ts);
@@ -293,7 +293,7 @@ bmap_flush_send_rpcs(struct psc_dynarray *biorqs, struct iovec *iovs,
 		req = bmap_flush_create_rpc(b, iovs, size, soff, niovs);
 		req->rq_async_args.pointer_arg[1] = biorqs;
 		/* biorqs will be freed by the nbreqset callback. */
-		pscrpc_nbreqset_add(pndgReqs, req);
+		psc_assert(pscrpc_nbreqset_add(pndgReqs, req) == 0);
 		nrpcs++;
 	} else {
 		/* Deal with a multiple RPC operation */
@@ -677,7 +677,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 			 *    Otherwise, deschedule the current set and
 			 *    resume activity with 't' as the base.
 			 */
-			if (expired) 
+			if (expired)
 				break;
 			else {
 				r = t;
@@ -760,8 +760,8 @@ bmap_flush(void)
 				b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
 				lc_remove(&bmapFlushQ, b);
 				lc_addtail(&bmapTimeoutQ, b);
-				DEBUG_BMAP(PLL_INFO, b, 
-       				   "added to bmapTimeoutQ");
+				DEBUG_BMAP(PLL_INFO, b,
+				   "added to bmapTimeoutQ");
 			}
 			BMPC_ULOCK(bmpc);
 			bcm_wake_locked(b);
@@ -973,7 +973,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			if (!(b->bcm_flags & BMAP_TIMEOQ)) {
 				DEBUG_BMAP(PLL_WARN, b,
-                                           "race detect, skip");
+					   "race detect, skip");
 				BMAP_ULOCK(b);
 				continue;
 			} else
@@ -1124,7 +1124,7 @@ msbmapflushthr_spawn(void)
 	atomic_set(&outstandingRpcCnt, 0);
 	//psc_atomic32_set(&bmapflushforceexpired, 0);
 	psc_waitq_init(&bmapflushwaitq);
-	
+
 	lc_reginit(&bmapFlushQ, struct bmapc_memb,
 	    bcm_lentry, "bmapflush");
 

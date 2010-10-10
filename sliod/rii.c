@@ -233,7 +233,7 @@ sli_rii_issue_repl_read(struct pscrpc_import *imp, int slvrno,
 	psc_atomic32_inc(&w->srw_refcnt);
 
 	authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-	pscrpc_nbreqset_add(&sli_replwk_nbset, rq);
+	psc_assert(pscrpc_nbreqset_add(&sli_replwk_nbset, rq) == 0);
 
  out:
 	if (rc)

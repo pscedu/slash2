@@ -157,7 +157,7 @@ mdscoh_req(struct bmap_mds_lease *bml, int block)
 	} else {
 		bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_COHCB);
 		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
-		pscrpc_nbreqset_add(&bmapCbSet, rq);
+		psc_assert(pscrpc_nbreqset_add(&bmapCbSet, rq) == 0);
 		lc_addtail(&inflBmapCbs, bml);
 		rq = NULL;
 		csvc = NULL;
