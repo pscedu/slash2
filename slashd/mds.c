@@ -371,7 +371,8 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	bmdsi->bmdsi_seq = bia.bia_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 
 	psc_assert(!bmdsi->bmdsi_assign);
-	bmdsi->bmdsi_assign = odtable_putitem(mdsBmapAssignTable, &bia);
+	bmdsi->bmdsi_assign = odtable_putitem(mdsBmapAssignTable, &bia,
+	    sizeof(bia));
 	if (!bmdsi->bmdsi_assign) {
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
 		return (-SLERR_XACT_FAIL);
@@ -405,7 +406,8 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 
 	psc_assert(b->bcm_flags & BMAP_IONASSIGN);
 
-	bia = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
+	bia = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign,
+	    sizeof(*bia));
 	if (!bia) {
 		DEBUG_BMAP(PLL_WARN, b, "odtable_getitem() failed");
 		return (-1);
@@ -959,7 +961,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			struct bmap_ion_assign *bia;
 
 			bia = odtable_getitem(mdsBmapAssignTable,
-				      bmdsi->bmdsi_assign);
+			    bmdsi->bmdsi_assign, sizeof(*bia));
 			psc_assert(bia && bia->bia_seq == bmdsi->bmdsi_seq);
 			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
 			/* End sanity checks.
