@@ -263,3 +263,4 @@ utime
 - investigate MooseFS, CloudStore, Sector, GlusterFS
 - display FID_ANY/FGEN_ANY as such in logs
 - "make" in slashd does not relink if libzfs-fuse changed
+- clients aren't showing up under slictl -sc
