@@ -7,9 +7,7 @@ DEFINES+=		-DAPP_STRERROR=slstrerror
 SRCS+=			${SLASH_BASE}/share/slerr.c
 
 SRC_PATH+=		${ZFS_BASE}
-ifneq ($(realpath ${SLASH_BASE}),${CURDIR})
-SRC_PATH+=		${SLASH_BASE}
-endif
+SRC_PATH+=		$(filter-out %/tests/,$(shell ls -d ${SLASH_BASE}/*/))
 
 SLASH_MODULES+=		cli ion mds
 
