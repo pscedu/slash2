@@ -59,8 +59,7 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, void *data)
 		char fidfn[PATH_MAX];
 		struct slash_fidgen oldfg;
 
-		DEBUG_FCMH(PLL_INFO, fcmh, "opening new backing file (gen=%"
-		   PRId64")", fg->fg_gen);
+		DEBUG_FCMH(PLL_INFO, fcmh, "reopening new backing file");
 		/* Need to reopen the backing file and possibly
 		 *   remove the old one.
 		 */
@@ -113,6 +112,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	memset(fii, 0, sizeof(struct fcmh_iod_info));
 
 	fg_makepath(&fcmh->fcmh_fg, fidfn);
+	DEBUG_FCMH(PLL_INFO, fcmh, "opening new backing file");
 	fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
 	if (fcmh_2_fd(fcmh) == -1)
 		rc = errno;
