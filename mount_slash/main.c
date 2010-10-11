@@ -325,7 +325,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mfh = msl_fhent_new(m);
 
  out:
-	DEBUG_FCMH(PLL_INFO, m, "new mfh=%p rc=%d", mfh, rc);		 
+	DEBUG_FCMH(PLL_INFO, m, "new mfh=%p rc=%d name=(%s)", mfh, rc, name);
 
 	if (m)
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
@@ -1145,15 +1145,15 @@ mslfsop_flush(struct pscfs_req *pfr, void *data)
 {
 	struct msl_fhent *mfh = data;
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "flushing");
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "flushing (mfh=%p)", mfh);
 
 	spinlock(&mfh->mfh_lock);
 	msl_flush_int_locked(mfh);
 	freelock(&mfh->mfh_lock);
 
-	pscfs_reply_flush(pfr, 0);
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "done flushing (mfh=%p)", mfh);
 
-	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "done flushing");
+	pscfs_reply_flush(pfr, 0);
 }
 
 __static void
