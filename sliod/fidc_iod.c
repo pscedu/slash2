@@ -112,7 +112,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	memset(fii, 0, sizeof(struct fcmh_iod_info));
 
 	fg_makepath(&fcmh->fcmh_fg, fidfn);
-	DEBUG_FCMH(PLL_INFO, fcmh, "opening new backing file");
+	DEBUG_FCMH(PLL_INFO, fcmh, "before opening new backing file");
 	fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
 	if (fcmh_2_fd(fcmh) == -1)
 		rc = errno;
@@ -122,6 +122,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 		psc_rlim_adj(RLIMIT_NOFILE, -1);
 	else
 		rc = sli_fcmh_getattr(fcmh);
+	DEBUG_FCMH(PLL_INFO, fcmh, "after opening new backing file, rc = %d", rc);
 
 	return (rc);
 }
