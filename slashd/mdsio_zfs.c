@@ -88,7 +88,10 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	int rc;
 
 	FCMH_LOCK(bmap->bcm_fcmh);
-	fcmh_2_fsz(bmap->bcm_fcmh) = crcup->fsize;
+	if (fcmh_2_fsz(bmap->bcm_fcmh) != crcup->fsize) {
+		DEBUG_FCMH(PLL_INFO, bmap->bcm_fcmh, "new fsize %"PRId64, crcup->fsize);
+		fcmh_2_fsz(bmap->bcm_fcmh) = crcup->fsize;
+	}
 	utimgen = bmap->bcm_fcmh->fcmh_sstb.sst_utimgen;
 	FCMH_ULOCK(bmap->bcm_fcmh);
 
