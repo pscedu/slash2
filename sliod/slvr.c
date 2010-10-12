@@ -500,6 +500,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 
 	if (s->slvr_flags & SLVR_DATAERR) {
 		rc = -1;
+		psclog_warnx("error not handled");
 		goto out;
 
 	} else if (s->slvr_flags & SLVR_DATARDY) {
@@ -595,7 +596,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 		 *  the rpc.
 		 */
 		SLVR_LOCK(s);
-	invert:
+ invert:
 		psc_vbitmap_invert(s->slvr_slab->slb_inuse);
 		if (unaligned[0] >= 0)
 			psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[0]);
@@ -603,7 +604,7 @@ slvr_io_prep(struct slvr_ref *s, uint32_t off, uint32_t len, enum rw rw)
 		if (unaligned[1] >= 0)
 			psc_vbitmap_set(s->slvr_slab->slb_inuse, unaligned[1]);
 		//psc_vbitmap_printbin1(s->slvr_slab->slb_inuse);
-	out:
+ out:
 		SLVR_ULOCK(s);
 	}
 
