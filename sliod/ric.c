@@ -84,7 +84,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psc_errorx("invalid size %u, fid:"SLPRI_FG,
 		    mq->size, SLPRI_FG_ARGS(fgp));
 		mp->rc = EINVAL;
-		return (-1);
+		return (mp->rc);
 	}
 
 	/*
@@ -119,16 +119,16 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 		psc_errorx("req offset / size outside of the bmap's "
 		   "address range off=%u len=%u",
 			   mq->offset, mq->size);
-		mp->rc = -ERANGE;
-		return (-1);
+		mp->rc = ERANGE;
+		return (mp->rc);
 	}
 
 #if 0
 	if (mq->sbd.sbd_seq < bim_getcurseq()) {
 		/* Reject old bmapdesc. */
 		psc_warnx("seq %"PRId64" is too old", mq->sbd.sbd_seq);
-		mp->rc = -EINVAL;
-		return (-1);
+		mp->rc = EINVAL;
+		return (mp->rc);
 	}
 #endif
 
@@ -210,7 +210,7 @@ sli_ric_handle_io(struct pscrpc_request *rq, enum rw rw)
 			SRIC_BULK_PORTAL, iovs, nslvrs);
 
 	if (mp->rc) {
-		rc = -1;
+		rc = mp->rc;
 		goto out;
 	}
 
