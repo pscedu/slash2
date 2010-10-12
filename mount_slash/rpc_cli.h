@@ -25,7 +25,7 @@
 struct pscrpc_import;
 struct pscrpc_request;
 
-/* Slash RPC channel for client from MDS. */
+/* SLASH RPC channel for client from MDS. */
 #define SRCM_NTHREADS	8
 #define SRCM_NBUFS	64
 #define SRCM_BUFSZ	512

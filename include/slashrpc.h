@@ -92,7 +92,7 @@ struct statvfs;
 			return ((mp)->rc);				\
 	 } while (0)
 
-/* Slash RPC channel to MDS from client. */
+/* SLASH RPC channel to MDS from client. */
 #define SRMC_REQ_PORTAL		10
 #define SRMC_REP_PORTAL		11
 #define SRMC_BULK_PORTAL	12
@@ -101,7 +101,7 @@ struct statvfs;
 #define SRMC_VERSION		1
 #define SRMC_MAGIC		UINT64_C(0xaabbccddeeff0022)
 
-/* Slash RPC channel to MDS from MDS. */
+/* SLASH RPC channel to MDS from MDS. */
 #define SRMM_REQ_PORTAL		15
 #define SRMM_REP_PORTAL		16
 #define SRMM_BULK_PORTAL	17
@@ -110,7 +110,7 @@ struct statvfs;
 #define SRMM_VERSION		1
 #define SRMM_MAGIC		UINT64_C(0xaabbccddeeff0033)
 
-/* Slash RPC channel to MDS from ION. */
+/* SLASH RPC channel to MDS from ION. */
 #define SRMI_REQ_PORTAL		20
 #define SRMI_REP_PORTAL		21
 #define SRMI_BULK_PORTAL	22
@@ -119,7 +119,7 @@ struct statvfs;
 #define SRMI_VERSION		1
 #define SRMI_MAGIC		UINT64_C(0xaabbccddeeff0044)
 
-/* Slash RPC channel to client from MDS. */
+/* SLASH RPC channel to client from MDS. */
 #define SRCM_REQ_PORTAL		25
 #define SRCM_REP_PORTAL		26
 #define SRCM_BULK_PORTAL	27
@@ -128,7 +128,7 @@ struct statvfs;
 #define SRCM_VERSION		1
 #define SRCM_MAGIC		UINT64_C(0xaabbccddeeff0055)
 
-/* Slash RPC channel to ION from client. */
+/* SLASH RPC channel to ION from client. */
 #define SRIC_REQ_PORTAL		30
 #define SRIC_REP_PORTAL		31
 #define SRIC_BULK_PORTAL	32
@@ -137,7 +137,7 @@ struct statvfs;
 #define SRIC_VERSION		1
 #define SRIC_MAGIC		UINT64_C(0xaabbccddeeff0066)
 
-/* Slash RPC channel to ION from ION. */
+/* SLASH RPC channel to ION from ION. */
 #define SRII_REQ_PORTAL		35
 #define SRII_REP_PORTAL		36
 #define SRII_BULK_PORTAL	37
@@ -146,7 +146,7 @@ struct statvfs;
 #define SRII_VERSION		1
 #define SRII_MAGIC		UINT64_C(0xaabbccddeeff0077)
 
-/* Slash RPC channel to ION from MDS. */
+/* SLASH RPC channel to ION from MDS. */
 #define SRIM_REQ_PORTAL		40
 #define SRIM_REP_PORTAL		41
 #define SRIM_BULK_PORTAL	42
@@ -155,7 +155,7 @@ struct statvfs;
 #define SRIM_VERSION		1
 #define SRIM_MAGIC		UINT64_C(0xaabbccddeeff0088)
 
-/* Slash RPC message types. */
+/* SLASH RPC message types. */
 enum {
 	/* control operations */
 	SRMT_CONNECT = 1,
@@ -263,7 +263,7 @@ struct srt_bmapdesc {
 	uint32_t		sbd__pad;
 } __packed;
 
-/* Slash RPC transportably safe structures. */
+/* SLASH RPC transportably safe structures. */
 struct srt_stat {
 	struct slash_fidgen	sst_fg;		/* file ID + truncate generation */
 	uint64_t		sst_dev;	/* ID of device containing file */
