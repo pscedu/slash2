@@ -239,7 +239,6 @@ main(int argc, char *argv[])
 	 */
 	mdsio_init();
 	import_zpool(argv[0], zfspoolcf);
-	zfsslash2_build_immns_cache();
 
 	authbuf_createkeyfile();
 	authbuf_readkeyfile();
