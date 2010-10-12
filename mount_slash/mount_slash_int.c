@@ -91,7 +91,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 {
 	struct bmpc_ioreq *r;
 	struct bmap_pagecache *bmpc;
-	struct bmap_pagecache_entry *bmpce, *bmpce_tmp, *bmpce_new;
+	struct bmap_pagecache_entry *bmpce, bmpce_search, *bmpce_new;
 	int i, npages=0, rbw=0;
 	off_t origoff=off;
 
@@ -149,7 +149,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 
 	psc_assert(npages <= BMPC_IOMAXBLKS);
 
-	bmpce_tmp = PSCALLOC(sizeof(*bmpce_tmp));
 	/* Lock the bmap's page cache and try to locate cached pages
 	 *   which correspond to this request.
 	 */
@@ -157,9 +156,9 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	bmpce_new = NULL;
 	BMPC_LOCK(bmpc);
 	while (i < npages) {
-		bmpce_tmp->bmpce_off = off + (i * BMPC_BUFSZ);
+		bmpce_search.bmpce_off = off + (i * BMPC_BUFSZ);
 		bmpce = SPLAY_FIND(bmap_pagecachetree, &bmpc->bmpc_tree,
-				   bmpce_tmp);
+		    &bmpce_search);
 		if (!bmpce) {
 			if (bmpce_new == NULL) {
 				BMPC_ULOCK(bmpc);
@@ -197,7 +196,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		i++;
 	}
 	BMPC_ULOCK(bmpc);
-	PSCFREE(bmpce_tmp);
 	if (unlikely(bmpce_new))
 		psc_pool_return(bmpcePoolMgr, bmpce_new);
 
