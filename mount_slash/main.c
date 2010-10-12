@@ -1417,7 +1417,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		c->fcmh_flags |= FCMH_CLI_TRUNC;
 
 		if (!stb->st_size) {
-			DEBUG_FCMH(PLL_WARN, c, "full truncate, orphan bmaps");
+			DEBUG_FCMH(PLL_NOTIFY, c, 
+	       		   "full truncate, orphan bmaps");
 
 			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree)
 				psc_dynarray_add(&a, b);
@@ -1503,7 +1504,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	 *   spinlock contention.
 	 */
 	if (mq->to_set & PSCFS_SETATTRF_DATASIZE) {
-		DEBUG_FCMH(PLL_WARN, c, "truncate complete");
+		DEBUG_FCMH(PLL_NOTIFY, c, "truncate complete");
 		psc_assert(c->fcmh_flags & FCMH_CLI_TRUNC);
 		c->fcmh_flags &= ~FCMH_CLI_TRUNC;
 		fcmh_wake_locked(c);
