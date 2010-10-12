@@ -1202,8 +1202,8 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 		int x = (fcmh_2_gen(fcmh) > c->fg.fg_gen) ? 1 : 0;
 
 		DEBUG_FCMH(x ? PLL_WARN : PLL_ERROR, fcmh,
-		   "gen (%"PRId64") %s than mds gen",
-		   c->fg.fg_gen, x ? ">" : "<");
+		   "gen (%"PRIu64") %s than mds gen (%"PRIu64")",
+		   c->fg.fg_gen, x ? ">" : "<", fcmh_2_gen(fcmh));
 
 		rc = -(x ? SLERR_GEN_OLD : SLERR_GEN_INVALID);
 		goto out;
