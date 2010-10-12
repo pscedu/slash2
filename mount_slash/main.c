@@ -1180,7 +1180,7 @@ mslfsop_close(struct pscfs_req *pfr, void *data)
 	freelock(&mfh->mfh_lock);
 
 	fcmh_op_done_type(c, FCMH_OPCNT_OPEN);
-	
+
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "freeing mfh(%p)", mfh);
 	PSCFREE(mfh);
 //	if (process wants I/O guarentees)
@@ -1417,8 +1417,8 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		c->fcmh_flags |= FCMH_CLI_TRUNC;
 
 		if (!stb->st_size) {
-			DEBUG_FCMH(PLL_NOTIFY, c, 
-	       		   "full truncate, orphan bmaps");
+			DEBUG_FCMH(PLL_NOTIFY, c,
+			   "full truncate, orphan bmaps");
 
 			SPLAY_FOREACH(b, bmap_cache, &c->fcmh_bmaptree)
 				psc_dynarray_add(&a, b);
@@ -1708,7 +1708,7 @@ msl_init(void)
 struct pscfs pscfs = {
 		mslfsop_access,
 		mslfsop_close,
-		mslfsop_close,
+/* closedir */	mslfsop_close,
 		mslfsop_create,
 		mslfsop_flush,
 		mslfsop_fsync,
