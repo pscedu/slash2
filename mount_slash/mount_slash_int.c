@@ -107,21 +107,22 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 
 	/* O_APPEND must be sent be sent via directio
 	 */
-	if (mfh->mfh_oflags & O_APPEND)
-		r->biorq_flags |= BIORQ_APPEND | BIORQ_DIO;
+	//if (mfh->mfh_oflags & O_APPEND)
+	//	r->biorq_flags |= BIORQ_APPEND | BIORQ_DIO;
+
+	if (b->bcm_flags & BMAP_DIO)
+		psc_assert(r->biorq_flags & BIORQ_DIO);
 
 	/* Take a ref on the bmap now so that it won't go away before
 	 *   pndg IO's complete.
 	 */
 	bmap_op_start_type(b, BMAP_OPCNT_BIORQ);
 
-	if (b->bcm_flags & BMAP_DIO) {
+	if (r->biorq_flags & BIORQ_DIO)
 		/* The bmap is set to use directio, we may then skip
 		 *   cache preparation.
 		 */
-		psc_assert(r->biorq_flags & BIORQ_DIO);
 		goto out;
-	}
 
 	bmpc = bmap_2_bmpc(b);
 	/* How many pages are needed to accommodate the request?
@@ -292,7 +293,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	}
  out:
 	DEBUG_BIORQ(PLL_NOTIFY, r, "new req");
-	if (op == BIORQ_READ)
+	if (op == BIORQ_READ || (r->biorq_flags & BIORQ_DIO))
 		pll_add(&bmap_2_bmpc(b)->bmpc_pndg_biorqs, r);
 	else
 		pll_add_sorted(&bmap_2_bmpc(b)->bmpc_new_biorqs, r, msl_biorq_cmp);
@@ -1086,7 +1087,7 @@ msl_pages_dio_getput(struct bmpc_ioreq *r, char *b)
 	bcm = r->biorq_bmap;
 	bci = bmap_2_bci(bcm);
 
-	DEBUG_BIORQ(PLL_TRACE, r, "dio req");
+	DEBUG_BIORQ(PLL_INFO, r, "dio req");
 
 	op = r->biorq_flags & BIORQ_WRITE ?
 		SRMT_WRITE : SRMT_READ;
