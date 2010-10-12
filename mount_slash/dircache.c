@@ -67,7 +67,8 @@ dircache_rls_ents(struct dircache_ents *e)
 	freelock(&i->di_lock);
 
 	ureqlock(&m->dcm_lock, locked);
-
+	
+	PSCFREE(e->de_desc);
 	PSCFREE(e);
 
 	fcmh_op_done_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
@@ -299,5 +300,6 @@ dircache_earlyrls_ents(struct dircache_ents *e)
 	e->de_info->di_dcm->dcm_alloc -= e->de_sz;
 	freelock(&e->de_info->di_dcm->dcm_lock);
 
+	PSCFREE(e->de_desc);
 	PSCFREE(e);
 }
