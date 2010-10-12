@@ -1509,11 +1509,18 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	if (flags & SRM_LEASEBMAPF_DIRECTIO)
 		bml->bml_flags |= BML_CDIO;
 
+	EXPORT_LOCK(exp);
+	mexpc = mexpc_get(exp);
+	bml->bml_flags |= BML_EXP;
+	psclist_add_tail(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
+	EXPORT_ULOCK(exp);
+
 	rc = mds_bmap_bml_add(bml, rw, prefios);
 	if (rc) {
-		if (rc == SLERR_BMAP_DIOWAIT)
+		if (rc == SLERR_BMAP_DIOWAIT) {
+			psclist_del(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
 			mds_bml_free(bml);
-		else {
+		} else {
 			if (rc == SLERR_ION_OFFLINE)
 				bml->bml_flags |= BML_ASSFAIL;
 			bml->bml_flags |= BML_FREEING;
@@ -1522,15 +1529,6 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		goto out;
 	}
 	*bmap = b;
-
-	/* Note the lock ordering here. */
-	EXPORT_LOCK(exp);
-	mexpc = mexpc_get(exp);
-	BML_LOCK(bml);
-	psclist_add_tail(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
-	bml->bml_flags |= BML_EXP;
-	BML_ULOCK(bml);
-	EXPORT_ULOCK(exp);
 
 	sbd->sbd_seq = bml->bml_seq;
 	sbd->sbd_key = (rw == SL_WRITE) ?
