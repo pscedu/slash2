@@ -797,7 +797,7 @@ bmap_flush(void)
 			spinlock(&r->biorq_lock);
 
 			if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
-				DEBUG_BIORQ(PLL_WARN, r, "data not ready");
+				DEBUG_BIORQ(PLL_INFO, r, "data not ready");
 				freelock(&r->biorq_lock);
 				continue;
 
