@@ -72,7 +72,7 @@ SRCS+=		${SETRESUID_SRC}
 SRCS+=		${PSCRPC_SRCS}
 SRCS+=		${LNET_SOCKLND_SRCS}
 
-DEFINES+=	-DZPOOL_PATH=\"$(realpath ${ZFS_BASE}/cmd/zpool)\"
+DEFINES+=	-DZPOOL_PATH=\"$(realpath ${ZFS_BASE}/src/cmd/zpool)\"
 MODULES+=	lnet pthread zfs z gcrypt fuse-hdrs aio pscfs
 
 include ${SLASHMK}
