@@ -753,12 +753,14 @@ bmap_flush(void)
 			psc_assert(!bmpc_queued_writes(bmpc));
 
 			if (!bmpc_queued_ios(bmpc)) {
-				/* No remaining reads or writes.
+				/* No remaining reads or writes.  BMAP_TIMEOQ
+				 *   and BMAP_CLI_FLUSHPROC are mutually 
+				 *   exclusive.
 				 */
 				psc_assert(!(b->bcm_flags & BMAP_TIMEOQ));
+				lc_remove(&bmapFlushQ, b);
 				b->bcm_flags |= BMAP_TIMEOQ;
 				b->bcm_flags &= ~BMAP_CLI_FLUSHPROC;
-				lc_remove(&bmapFlushQ, b);
 				lc_addtail(&bmapTimeoutQ, b);
 				DEBUG_BMAP(PLL_INFO, b,
 				   "added to bmapTimeoutQ");
@@ -1071,7 +1073,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
 			BMAP_LOCK(b);
-			if (!(b->bcm_flags & (BMAP_DIRTY | BMAP_TIMEOQ))) {
+			if (!(b->bcm_flags & (BMAP_CLI_FLUSHPROC|BMAP_TIMEOQ))) {
+				psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 				b->bcm_flags |= BMAP_TIMEOQ;
 				lc_addstack(&bmapTimeoutQ, b);
 			}
