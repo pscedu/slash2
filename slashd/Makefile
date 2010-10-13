@@ -79,14 +79,3 @@ include ${SLASHMK}
 
 $(call ADD_FILE_CFLAGS,${PFL_BASE}/psc_util/journal.c,			\
 		-DPSC_SUBSYS=SLMSS_JOURNAL -include subsys_mds.h)
-
-zbuild:
-	@(cd ${ZFS_BASE} &&						\
-	    ${SCONS} ROOTDIR=${ROOTDIR} -c build &&			\
-	    ${SCONS} ROOTDIR=${ROOTDIR})
-	@(cd ${ZFS_BASE} &&						\
-	    ${SCONS} ROOTDIR=${ROOTDIR} slashlib=1 debug=4 -c build &&	\
-	    ${SCONS} ROOTDIR=${ROOTDIR} slashlib=1 debug=4)
-
-prereq-hook rezbuild:
-	@(cd ${ZFS_BASE} && ${SCONS} ROOTDIR=${ROOTDIR} slashlib=1 debug=4)
