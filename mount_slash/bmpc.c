@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -254,7 +254,7 @@ bmpce_release_locked(struct bmap_pagecache_entry *bmpce,
 }
 
 /**
- * bmpc_freeall_locked - called when a bmap is being released.  Iterate
+ * bmpc_freeall_locked - Called when a bmap is being released.  Iterate
  *    across the tree freeing each bmpce.  Prior to being invoked, all
  *    bmpce's must be idle (ie have zero refcnts) and be present on bmpc_lru.
  */
@@ -282,7 +282,7 @@ bmpc_freeall_locked(struct bmap_pagecache *bmpc)
 }
 
 /**
- * bmpc_lru_tryfree - attempt to free 'nfree' blocks from the provided
+ * bmpc_lru_tryfree - Attempt to free 'nfree' blocks from the provided
  *    bmap_pagecache structure.
  * @bmpc:   bmap_pagecache
  * @nfree:  number of blocks to free.
@@ -347,9 +347,9 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 	return (freed);
 }
 
-/*
- * bmpc_reap_locked - reap bmapce from the LRU list.  Sometimes we free bmapce directly
- *    into the pool, so we can't wait here forever.
+/**
+ * bmpc_reap_locked - Reap bmapce from the LRU list.  Sometimes we free
+ *	bmapce directly into the pool, so we can't wait here forever.
  */
 __static int
 bmpc_reap_locked(void)
@@ -482,7 +482,7 @@ bmpc_free(void *base)
 }
 
 /**
- * bmpc_mem_alloc - return a pointer to a single block of cache memory.
+ * bmpc_mem_alloc - Return a pointer to a single block of cache memory.
  */
 void *
 bmpc_alloc(void)
@@ -508,7 +508,7 @@ bmpc_alloc(void)
 		/* bmpc_reap_locked() will drop the lock.
 		 */
 		nfree = bmpc_reap_locked();
-		if (!nfree)	
+		if (!nfree)
 			psc_waitq_waitrel(&bmpcSlabs.bmms_waitq, NULL, &ts);
 		goto retry;
 
