@@ -91,6 +91,7 @@ struct slash_fidgen {
 #define SLPRI_FG_ARGS(fg)	(fg)->fg_fid, (fg)->fg_gen
 
 #define SLPRI_FID		"%#016"PRIx64
+#define SLPRI_FGEN		PRId64
 
 #define FID_GET_FLAGS(fid)	((fid) >> (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS))
 #define FID_GET_SITEID(fid)	(((fid) >> SLASH_ID_FID_BITS) &			\
