@@ -888,6 +888,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	BML_ULOCK(bml);
 	EXPORT_ULOCK(bml->bml_exp);
 
+	BML_LOCK(bml);
 	if (bml->bml_flags & BML_COHRLS) {
 		/* Called from the mdscoh callback.  Nothing should be left
 		 *   except for removing the bml from the bmdsi.
