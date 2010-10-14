@@ -93,7 +93,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 void
 sl_file_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("%-16s %10s %5s %8s %4s %6s\n",
+	printf("%-18s %10s %6s %8s %4s %6s\n",
 	    "file-ID", "flags", "mode", "size", "#ref", "gen");
 }
 
@@ -104,8 +104,7 @@ sl_file_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	char buf[PSCFMT_HUMAN_BUFSIZ];
 
 	psc_fmt_human(buf, scf->scf_size);
-	printf("%8s/s ", buf);
-	printf(SLPRI_FID" %c%c%c%c%c%c%c%c%c%c %#5o %8s %4d %6"SLPRI_FGEN"\n",
+	printf(SLPRI_FID" %c%c%c%c%c%c%c%c%c%c %6o %8s %4d %6"SLPRI_FGEN"\n",
 	    scf->scf_fg.fg_fid,
 	    scf->scf_flags & FCMH_CAC_FREE	? 'F' : '-',
 	    scf->scf_flags & FCMH_CAC_IDLE	? 'i' : '-',
