@@ -732,7 +732,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 void
 bmap_flush(void)
 {
-	struct psc_dynarray a = DYNARRAY_INIT, bmaps = DYNARRAY_INIT, *biorqs;
+	struct psc_dynarray a = DYNARRAY_INIT_NOLOG, bmaps = DYNARRAY_INIT_NOLOG, *biorqs;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *tmp;
 	struct iovec *iovs = NULL;
@@ -1069,7 +1069,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		 */
 		DYNARRAY_FOREACH(resm, i, &rels)
 			ms_bmap_release(resm);
-		psc_dynarray_free(&rels);
+
+		psc_dynarray_reset(&rels);
 
 		DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
 			BMAP_LOCK(b);
@@ -1080,7 +1081,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 			}
 			BMAP_ULOCK(b);
 		}
-		psc_dynarray_free(&skips);
+		psc_dynarray_reset(&skips);
 
 		if (!pscthr_run())
 			break;
@@ -1097,6 +1098,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		sawnew = 0;
 	}
 	psc_dynarray_free(&rels);
+	psc_dynarray_free(&skips);
 }
 
 void
