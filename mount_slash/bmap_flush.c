@@ -732,7 +732,7 @@ bmap_flush_trycoalesce(const struct psc_dynarray *biorqs, int *index)
 void
 bmap_flush(void)
 {
-	struct psc_dynarray a = DYNARRAY_INIT_NOLOG, bmaps = DYNARRAY_INIT_NOLOG, *biorqs;
+	struct psc_dynarray reqs = DYNARRAY_INIT_NOLOG, bmaps = DYNARRAY_INIT_NOLOG, *biorqs;
 	struct bmap_pagecache *bmpc;
 	struct bmpc_ioreq *r, *tmp;
 	struct iovec *iovs = NULL;
@@ -828,13 +828,13 @@ bmap_flush(void)
 			freelock(&r->biorq_lock);
 
 			DEBUG_BIORQ(PLL_NOTIFY, r, "try flush");
-			psc_dynarray_add(&a, r);
+			psc_dynarray_add(&reqs, r);
 		}
 		PLL_ULOCK(&bmpc->bmpc_new_biorqs);
 
 		j = 0;
-		while (j < psc_dynarray_len(&a) &&
-		    (biorqs = bmap_flush_trycoalesce(&a, &j))) {
+		while (j < psc_dynarray_len(&reqs) &&
+		    (biorqs = bmap_flush_trycoalesce(&reqs, &j))) {
 			/* Note: 'biorqs' must be freed!!
 			 */
 			niovs = bmap_flush_coalesce_map(biorqs, &iovs);
@@ -845,7 +845,7 @@ bmap_flush(void)
 			bmap_flush_send_rpcs(biorqs, iovs, niovs);
 			PSCFREE(iovs);
 		}
-		psc_dynarray_reset(&a);
+		psc_dynarray_reset(&reqs);
 
 		nrpcs = MAX_OUTSTANDING_RPCS - atomic_read(&outstandingRpcCnt);
 		if (nrpcs < 0) {
@@ -856,8 +856,8 @@ bmap_flush(void)
 		}
 	}
 
+	psc_dynarray_free(&reqs);
 	psc_dynarray_free(&bmaps);
-	psc_dynarray_free(&a);
 }
 
 static __inline void
