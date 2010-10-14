@@ -77,7 +77,7 @@ struct slash_fidgen {
 #define SLFID_ROOT		1
 #define SLFID_MIN		2
 
-#define SLPRI_FSID		"%#016"PRIx64
+#define SLPRI_FSID		"%#018"PRIx64
 #define FSID_LEN		16
 
 #define FID_PATH_DEPTH		3
@@ -87,11 +87,12 @@ struct slash_fidgen {
 /* bits per hex char e.g. 0xffff=16 */
 #define BPHXC			4
 
-#define SLPRI_FG		"%#016"PRIx64":%"PRIu64
+#define SLPRI_FID		"%#018"PRIx64
+#define SLPRI_FGEN		PRId64
+
+#define SLPRI_FG		SLPRIFID":%"SLPRI_FGEN
 #define SLPRI_FG_ARGS(fg)	(fg)->fg_fid, (fg)->fg_gen
 
-#define SLPRI_FID		"%#016"PRIx64
-#define SLPRI_FGEN		PRId64
 
 #define FID_GET_FLAGS(fid)	((fid) >> (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS))
 #define FID_GET_SITEID(fid)	(((fid) >> SLASH_ID_FID_BITS) &			\
