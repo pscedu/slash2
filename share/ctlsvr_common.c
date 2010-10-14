@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -32,7 +32,7 @@
 #include "slconn.h"
 
 /**
- * slctlrep_getconns - send a response to a "GETCONNS" inquiry.
+ * slctlrep_getconns - Send a response to a "GETCONNS" inquiry.
  * @fd: client socket descriptor.
  * @mh: already filled-in control message header.
  * @m: control message to examine and reuse.
@@ -109,6 +109,7 @@ slctlmsg_file_send(int fd, struct psc_ctlmsghdr *mh,
 	scf->scf_st_mode = fcmh->fcmh_sstb.sst_mode;
 	scf->scf_flags = fcmh->fcmh_flags;
 	scf->scf_refcnt = fcmh->fcmh_refcnt;
+	scf->scf_size = fcmh_2_fsz(fcmh);
 	return (psc_ctlmsg_sendv(fd, mh, scf));
 }
 

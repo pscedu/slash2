@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -23,6 +23,7 @@
 #include "pfl/str.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
+#include "psc_util/fmt.h"
 
 #include "ctl.h"
 #include "ctlcli.h"
@@ -92,25 +93,29 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 void
 sl_file_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
-	printf("files\n"
-	    "%-16s %5s %34s %7s %7s %6s\n",
-	    "fid", "host", "type", "flags", "#refs", "status");
+	printf("%-16s %10s %5s %8s %4s %6s\n",
+	    "file-ID", "flags", "mode", "size", "#ref", "gen");
 }
 
 void
 sl_file_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
 	const struct slctlmsg_file *scf = m;
+	char buf[PSCFMT_HUMAN_BUFSIZ];
 
-	printf("  %12s %c%c%c%c%c%c%c%c%c\n",
-	    "",
+	psc_fmt_human(buf, scf->scf_size);
+	printf("%8s/s ", buf);
+	printf(SLPRI_FID" %c%c%c%c%c%c%c%c%c%c %#5o %8s %4d %6"SLPRI_FGEN"\n",
+	    scf->scf_fg.fg_fid,
 	    scf->scf_flags & FCMH_CAC_FREE	? 'F' : '-',
-	    scf->scf_flags & FCMH_CAC_IDLE	? 'I' : '-',
+	    scf->scf_flags & FCMH_CAC_IDLE	? 'i' : '-',
 	    scf->scf_flags & FCMH_CAC_BUSY	? 'B' : '-',
-	    scf->scf_flags & FCMH_CAC_TOFREE	? 'T' : '-',
-	    scf->scf_flags & FCMH_CAC_REAPED	? 'R' : '-',
 	    scf->scf_flags & FCMH_CAC_INITING	? 'I' : '-',
 	    scf->scf_flags & FCMH_CAC_WAITING	? 'W' : '-',
+	    scf->scf_flags & FCMH_CAC_TOFREE	? 'T' : '-',
+	    scf->scf_flags & FCMH_CAC_REAPED	? 'R' : '-',
 	    scf->scf_flags & FCMH_HAVE_ATTRS	? 'A' : '-',
-	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-');
+	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-',
+	    scf->scf_flags & FCMH_CTOR_FAILED	? 'f' : '-',
+	    scf->scf_st_mode, buf, scf->scf_refcnt, scf->scf_fg.fg_gen);
 }
