@@ -1203,7 +1203,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 
 		DEBUG_FCMH(x ? PLL_WARN : PLL_ERROR, fcmh,
 		   "mds gen (%"PRIu64") %s than crcup gen (%"PRIu64")",
-		   fcmh_2_gen(fcmh) x ? ">" : "<", c->fg.fg_gen);
+		   fcmh_2_gen(fcmh), x ? ">" : "<", c->fg.fg_gen);
 
 		rc = -(x ? SLERR_GEN_OLD : SLERR_GEN_INVALID);
 		goto out;
