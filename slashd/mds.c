@@ -854,7 +854,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	struct bmapc_memb *b = bml_2_bmap(bml);
 	struct bmap_mds_info *bmdsi = bml->bml_bmdsi;
 	struct odtable_receipt *odtr = NULL;
-	int rc = 0, exp = 0, locked;
+	int rc = 0, locked;
 
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) > 0);
 	psc_assert(bml->bml_flags & BML_FREEING);
@@ -873,22 +873,21 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 */
 	bcm_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	b->bcm_flags |= BMAP_IONASSIGN;
-	if (bml->bml_flags & BML_EXP) {
-		exp = 1;
-		bml->bml_flags &= ~BML_EXP;
-	} else
-		psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
-	BML_ULOCK(bml);
 
-	if (exp) {
-		EXPORT_LOCK(bml->bml_exp);
+	EXPORT_LOCK(bml->bml_exp);
+	BML_LOCK(bml);
+
+	if (bml->bml_flags & BML_EXP) {
 		mexpc_get(bml->bml_exp);
 		psclist_del(&bml->bml_exp_lentry,
 		    psc_lentry_hd(&bml->bml_exp_lentry));
-		EXPORT_ULOCK(bml->bml_exp);
-	}
+		bml->bml_flags &= ~BML_EXP;
+	} else
+		psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
 
-	BML_LOCK(bml);
+	BML_ULOCK(bml);
+	EXPORT_ULOCK(bml->bml_exp);
+
 	if (bml->bml_flags & BML_COHRLS) {
 		/* Called from the mdscoh callback.  Nothing should be left
 		 *   except for removing the bml from the bmdsi.
