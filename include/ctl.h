@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -33,6 +33,7 @@ struct slctlmsg_conn {
 
 struct slctlmsg_file {
 	struct slash_fidgen	scf_fg;		/* identity of the file */
+	uint64_t		scf_size;
 	int32_t			scf_ptruncgen;
 	int32_t			scf_st_mode;
 	int32_t			scf_flags;	/* FCMH_* flags */
