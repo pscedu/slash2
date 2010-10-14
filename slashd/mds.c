@@ -874,21 +874,8 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	bcm_wait_locked(b, (b->bcm_flags & BMAP_IONASSIGN));
 	b->bcm_flags |= BMAP_IONASSIGN;
 
-	EXPORT_LOCK(bml->bml_exp);
 	BML_LOCK(bml);
 
-	if (bml->bml_flags & BML_EXP) {
-		mexpc_get(bml->bml_exp);
-		psclist_del(&bml->bml_exp_lentry,
-		    psc_lentry_hd(&bml->bml_exp_lentry));
-		bml->bml_flags &= ~BML_EXP;
-	} else
-		psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
-
-	BML_ULOCK(bml);
-	EXPORT_ULOCK(bml->bml_exp);
-
-	BML_LOCK(bml);
 	if (bml->bml_flags & BML_COHRLS) {
 		/* Called from the mdscoh callback.  Nothing should be left
 		 *   except for removing the bml from the bmdsi.
@@ -906,6 +893,21 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		 *   will call this function upon rpc completion.
 		 */
 		bml->bml_flags |= BML_COHRLS;
+
+	if (bml->bml_flags & BML_EXP) {
+		/* Take the locks in the correct order. */
+		BML_ULOCK(bml);
+		EXPORT_LOCK(bml->bml_exp);
+		mexpc_get(bml->bml_exp);
+		BML_LOCK(bml);
+		if (bml->bml_flags & BML_EXP) {
+			psclist_del(&bml->bml_exp_lentry,
+			    psc_lentry_hd(&bml->bml_exp_lentry));
+			bml->bml_flags &= ~BML_EXP;
+		} else
+			psc_assert(psclist_disjoint(&bml->bml_exp_lentry));
+		EXPORT_ULOCK(bml->bml_exp);
+	}
 
 	if (bml->bml_flags & BML_TIMEOQ) {
 		BML_ULOCK(bml);
