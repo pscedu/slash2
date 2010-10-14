@@ -541,21 +541,19 @@ dump_fidcache(void)
 }
 
 void
-dump_fcmh_flags(int flags)
+dump_fcmh_flags_common(int flags)
 {
 	int seq = 0;
 
-	if (flags & FCMH_CAC_FREE)
-		pfl_print_flag("FCMH_CAC_FREE", &seq);
-	if (flags & FCMH_CAC_IDLE)
-		pfl_print_flag("FCMH_CAC_IDLE", &seq);
-	if (flags & FCMH_CAC_BUSY)
-		pfl_print_flag("FCMH_CAC_DIRTY", &seq);
-	if (flags & FCMH_CAC_TOFREE)
-		pfl_print_flag("FCMH_CAC_TOFREE", &seq);
-	if (flags & FCMH_HAVE_ATTRS)
-		pfl_print_flag("FCMH_HAVE_ATTRS", &seq);
-	if (flags & FCMH_GETTING_ATTRS)
-		pfl_print_flag("FCMH_GETTING_ATTRS", &seq);
+	PFL_PRFLAG(FCMH_CAC_FREE, flags, &seq);
+	PFL_PRFLAG(FCMH_CAC_IDLE, flags, &seq);
+	PFL_PRFLAG(FCMH_CAC_BUSY, flags, &seq);
+	PFL_PRFLAG(FCMH_CAC_INITING, flags, &seq);
+	PFL_PRFLAG(FCMH_CAC_WAITING, flags, &seq);
+	PFL_PRFLAG(FCMH_CAC_TOFREE, flags, &seq);
+	PFL_PRFLAG(FCMH_CAC_REAPED, flags, &seq);
+	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, &seq);
+	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, &seq);
+	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, &seq);
 	printf("\n");
 }

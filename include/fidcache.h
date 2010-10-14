@@ -81,9 +81,8 @@ struct fidc_membh {
 #define	FCMH_CAC_REAPED		(1 <<  6)	/* has been reaped */
 #define	FCMH_HAVE_ATTRS		(1 <<  7)	/* has valid stat info */
 #define	FCMH_GETTING_ATTRS	(1 <<  8)	/* fetching stat info */
-#define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor fn failed */
-#define	FCMH_CTOR_SUCCESS	(1 << 10)	/* constructor success */
-#define	_FCMH_FLGSHFT		(1 << 11)
+#define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
+#define	_FCMH_FLGSHFT		(1 << 10)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
@@ -133,17 +132,18 @@ struct fidc_membh {
 
 #define DEBUG_FCMH_FLAGS(fcmh)						\
 	(fcmh)->fcmh_flags & FCMH_CAC_FREE		? "F" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CAC_IDLE		? "I" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_IDLE		? "i" : "",	\
 	(fcmh)->fcmh_flags & FCMH_CAC_BUSY		? "B" : "",	\
-	(fcmh)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\
-	(fcmh)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
-	(fcmh)->fcmh_flags & FCMH_GETTING_ATTRS		? "G" : "",	\
 	(fcmh)->fcmh_flags & FCMH_CAC_INITING		? "I" : "",	\
 	(fcmh)->fcmh_flags & FCMH_CAC_WAITING		? "W" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_TOFREE		? "T" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CAC_REAPED		? "R" : "",	\
+	(fcmh)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
+	(fcmh)->fcmh_flags & FCMH_GETTING_ATTRS		? "G" : "",	\
 	(fcmh)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\
 	fcmh_isdir(fcmh)				? "d" : ""
 
-#define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s%s%s%s"
+#define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)				\
 	psc_logs((level), SLSS_FCMH,					\
@@ -162,7 +162,7 @@ enum fcmh_opcnt_types {
 /* 3 */	FCMH_OPCNT_DIRENTBUF,
 /* 4 */	FCMH_OPCNT_NEW,
 /* 5 */	FCMH_OPCNT_WAIT,
-/* 6 */	FCMH_OPCNT_UPSCHED		/* uswi_fcmh */
+/* 6 */	FCMH_OPCNT_UPSCHED		/* MDS uswi_fcmh */
 };
 
 /* fcmh_setattr() flags */
@@ -203,7 +203,7 @@ void			 fcmh_op_done_type(struct fidc_membh *, enum fcmh_opcnt_types);
 
 void			 dump_fidcache(void);
 void			 dump_fcmh(struct fidc_membh *);
-void			 dump_fcmh_flags(int);
+void			 dump_fcmh_flags_common(int);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_poolmgr	*fidcPool;
