@@ -88,11 +88,11 @@ struct slash_fidgen {
 #define BPHXC			4
 
 #define SLPRI_FID		"%#018"PRIx64
-#define SLPRI_FGEN		PRId64
+#define SLPRIxFID		PRIx64
+#define SLPRI_FGEN		PRIu64
 
 #define SLPRI_FG		SLPRI_FID":%"SLPRI_FGEN
 #define SLPRI_FG_ARGS(fg)	(fg)->fg_fid, (fg)->fg_gen
-
 
 #define FID_GET_FLAGS(fid)	((fid) >> (SLASH_ID_SITE_BITS + SLASH_ID_FID_BITS))
 #define FID_GET_SITEID(fid)	(((fid) >> SLASH_ID_FID_BITS) &			\
