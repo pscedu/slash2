@@ -90,7 +90,7 @@ struct slash_fidgen {
 #define SLPRI_FID		"%#018"PRIx64
 #define SLPRI_FGEN		PRId64
 
-#define SLPRI_FG		SLPRIFID":%"SLPRI_FGEN
+#define SLPRI_FG		SLPRI_FID":%"SLPRI_FGEN
 #define SLPRI_FG_ARGS(fg)	(fg)->fg_fid, (fg)->fg_gen
 
 
