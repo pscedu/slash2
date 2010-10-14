@@ -50,6 +50,8 @@
 #include "subsys_mds.h"
 #include "up_sched_res.h"
 
+#include "zfs-fuse/zfs_slashlib.h"
+
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 int			 allow_root_uid = 1;
