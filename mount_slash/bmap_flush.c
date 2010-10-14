@@ -937,7 +937,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 {
 	struct timespec ctime, wtime = { 0, 0 };
 	struct psc_waitq waitq = PSC_WAITQ_INIT;
-	struct psc_dynarray a = DYNARRAY_INIT, skips = DYNARRAY_INIT;
+	struct psc_dynarray rels = DYNARRAY_INIT, skips = DYNARRAY_INIT;
 	struct resm_cli_info *rmci;
 	struct bmap_cli_info *bci;
 	struct bmapc_memb *b;
@@ -1055,21 +1055,21 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				if (rmci->rmci_bmaprls.nbmaps ==
 				    MAX_BMAP_RELEASE) {
 					ms_bmap_release(resm);
-					if (psc_dynarray_exists(&a, resm))
-						psc_dynarray_remove(&a, resm);
+					if (psc_dynarray_exists(&rels, resm))
+						psc_dynarray_remove(&rels, resm);
 				} else
-					psc_dynarray_add_ifdne(&a, resm);
+					psc_dynarray_add_ifdne(&rels, resm);
 			}
 		}
 		psc_trace("msbmaprlsthr_main() out of loop (arraysz=%d) wtime=%lu:%lu",
-			 psc_dynarray_len(&a), wtime.tv_sec, wtime.tv_nsec);
+			 psc_dynarray_len(&rels), wtime.tv_sec, wtime.tv_nsec);
 
 
 		/* Send out partially filled release request.
 		 */
-		DYNARRAY_FOREACH(resm, i, &a)
+		DYNARRAY_FOREACH(resm, i, &rels)
 			ms_bmap_release(resm);
-		psc_dynarray_free(&a);
+		psc_dynarray_free(&rels);
 
 		DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
 			BMAP_LOCK(b);
@@ -1096,7 +1096,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 		wtime.tv_sec = wtime.tv_nsec = 0;
 		sawnew = 0;
 	}
-	psc_dynarray_free(&a);
+	psc_dynarray_free(&rels);
 }
 
 void
