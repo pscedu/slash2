@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -91,6 +91,7 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "connections",	packshow_conns },
+	{ "fidcache",		packshow_files },
 	{ "files",		packshow_files },
 	{ "loglevels",		psc_ctl_packshow_loglevel },
 	{ "replwkst",		packshow_replwkst },
