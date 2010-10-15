@@ -28,13 +28,13 @@
 #include <sys/types.h>
 
 #include <inttypes.h>
+#include <stdio.h>
 
 #include "sltypes.h"
 
 #define FID_MAX_PATH		96
 #define IMNS_NAME_MAX		17
 
-struct slash_creds;
 struct slash_fidgen;
 
 /*
@@ -116,5 +116,39 @@ struct slash_fidgen {
 
 int	fid_link(slfid_t, const char *);
 void	_fg_makepath(const struct slash_fidgen *, char *, int);
+
+static __inline const char *
+sprintfid(slfid_t fid)
+{
+	static __thread char buf[18 + 1];
+
+	if (fid == FID_ANY)
+		snprintf(buf, sizeof(buf), "<FID_ANY>");
+	else
+		snprintf(buf, sizeof(buf), SLPRI_FID, fid);
+	return (buf);
+}
+
+static __inline const char *
+sprintfgen(slfgen_t gen)
+{
+	static __thread char buf[20 + 1];
+
+	if (gen == FGEN_ANY)
+		snprintf(buf, sizeof(buf), "<FGEN_ANY>");
+	else
+		snprintf(buf, sizeof(buf), "%"SLPRI_FGEN, gen);
+	return (buf);
+}
+
+static __inline const char *
+sprintfg(struct slash_fidgen fg)
+{
+	static __thread char buf[18 + 1 + 20 + 1];
+
+	snprintf(buf, sizeof(buf), "%s:%s",
+	    sprintfid(fg.fg_fid), sprintfgen(fg.fg_gen));
+	return (buf);
+}
 
 #endif /* _SLASH_FID_H_ */

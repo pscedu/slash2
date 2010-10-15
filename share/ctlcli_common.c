@@ -106,7 +106,8 @@ sl_file_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	char buf[PSCFMT_HUMAN_BUFSIZ];
 
 	psc_fmt_human(buf, scf->scf_size);
-	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c %6o %5u %5u %8s %4d %9"SLPRI_FGEN" %4u %4u\n",
+	printf("%016"SLPRIxFID" %c%c%c%c%c%c%c%c%c%c "
+	    "%6o %5u %5u %8s %4d %9s %4u %4u\n",
 	    scf->scf_fg.fg_fid,
 	    scf->scf_flags & FCMH_CAC_FREE	? 'F' : '-',
 	    scf->scf_flags & FCMH_CAC_IDLE	? 'i' : '-',
@@ -119,6 +120,6 @@ sl_file_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 	    scf->scf_flags & FCMH_GETTING_ATTRS	? 'G' : '-',
 	    scf->scf_flags & FCMH_CTOR_FAILED	? 'f' : '-',
 	    scf->scf_st_mode, scf->scf_uid, scf->scf_gid, buf,
-	    scf->scf_refcnt, scf->scf_fg.fg_gen, scf->scf_ptruncgen,
-	    scf->scf_utimgen);
+	    scf->scf_refcnt, sprintfgen(scf->scf_fg.fg_gen),
+	    scf->scf_ptruncgen, scf->scf_utimgen);
 }
