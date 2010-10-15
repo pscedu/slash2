@@ -401,11 +401,12 @@ sl_buffer_init(__unusedx struct psc_poolmgr *m, void *pri)
 	atomic_set(&slb->slb_ref, 0);
 	atomic_set(&slb->slb_unmapd_ref, 0);
 	atomic_set(&slb->slb_inflight, 0);
-	INIT_SPINLOCK (&slb->slb_lock);
+	INIT_SPINLOCK(&slb->slb_lock);
 	//ATTR_SET  (slb->slb_flags, SLB_FREEING);
 	slb->slb_flags = SLB_FRESH;
-	INIT_PSCLIST_HEAD(&slb->slb_iov_list);
-	INIT_PSC_LISTENTRY(&slb->slb_fcmh_lentry);
+	INIT_LISTHEAD(&slb->slb_iov_list);
+	INIT_LISTENTRY(&slb->slb_mgmt_lentry);
+	INIT_LISTENTRY(&slb->slb_fcmh_lentry);
 
 	DEBUG_SLB(PLL_TRACE, slb, "new slb");
 	return (0);
@@ -417,6 +418,7 @@ sl_buffer_destroy(void *pri)
 	struct sl_buffer *slb = pri;
 
 //	psc_assert(psc_listhd_empty(&slb->slb_iov_list));
+//	psc_assert(psclist_disjoint(&slb->slb_fcmh_lentry));
 
 	PSCFREE(slb->slb_base);
 	psc_vbitmap_free(slb->slb_inuse);
