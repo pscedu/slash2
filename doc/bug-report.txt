@@ -237,3 +237,11 @@ I did the following on lemon:
 
 Do "ls -al" under root (e.g., /slash2), it returns "." and "..", skipping some hidden
 entries. Then the client will call readdir PRC again with offset of 2.
+
+10/21/2010
+----------
+
+There seems to be a race between read and write : build slash2 under slash2, read 
+mk/gen-localdefs-lemon-pickle.mk returns NULL bytes at the first line. Later when
+I check the file, it seems fine.  After I tweak logs (-r14248), the bug disappears.
+
