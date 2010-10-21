@@ -1593,9 +1593,6 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	}
 	rc = 0;
 
-	DEBUG_FCMH(PLL_NOTIFY, f, "buf=%p rc=%d sz=%zu off=%"PSCPRIdOFFT,
-	    buf, rc, size, off);
-
 	FCMH_LOCK(f);
 	PFL_GETTIMESPEC(&ts);
 	f->fcmh_sstb.sst_mtime = ts.tv_sec;
@@ -1603,6 +1600,8 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	FCMH_ULOCK(f);
 
  out:
+	DEBUG_FCMH(PLL_NOTIFY, f, "write: buf=%p rc=%d sz=%zu off=%"PSCPRIdOFFT,
+	    buf, rc, size, off);
 	pscfs_reply_write(pfr, size, rc);
 }
 
@@ -1639,6 +1638,8 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 		rc = 0;
 	}
  out:
+	DEBUG_FCMH(PLL_NOTIFY, f, "read: buf=%p rc=%d sz=%zu off=%"PSCPRIdOFFT,
+	    buf, rc, size, off);
 	pscfs_reply_read(pfr, buf, len, rc);
 	PSCFREE(buf);
 }
