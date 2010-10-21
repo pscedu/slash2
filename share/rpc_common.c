@@ -458,7 +458,8 @@ slconnthr_main(struct psc_thread *thr)
 	struct slashrpc_cservice *csvc;
 	struct slconn_thread *sct;
 	struct sl_resm *resm;
-	int woke, rc;
+	time_t now, dst;
+	int rc;
 
 	sct = thr->pscthr_private;
 	resm = sct->sct_resm;
@@ -473,7 +474,6 @@ slconnthr_main(struct psc_thread *thr)
 			freelock(sct->sct_lockinfo.lm_lock);
 
 		/* Now just PING for connection lifetime. */
-		woke = 0;
 		for (;;) {
 			csvc = sl_csvc_get(&resm->resm_csvc, sct->sct_flags,
 			    NULL, resm->resm_nid, sct->sct_rqptl, sct->sct_rpptl,
@@ -514,14 +514,6 @@ slconnthr_main(struct psc_thread *thr)
 				break;
 			}
 
-			if (!woke) {
-				/*
-				 * Wake once whenever the connection
-				 * reestablishes.
-				 */
-				sl_csvc_wake(csvc);
-				woke = 1;
-			}
  online:
 			sl_csvc_unlock(csvc);
 			rc = slrpc_issue_ping(csvc, sct->sct_version);
@@ -535,8 +527,15 @@ slconnthr_main(struct psc_thread *thr)
 			if (rc)
 				break;
 
-			sl_csvc_lock(csvc);
-			sl_csvc_waitrel_s(csvc, 60);
+			now = time(NULL);
+			dst = now + 60;
+			do {
+				sl_csvc_lock(csvc);
+				if (!sl_csvc_useable(csvc))
+					dst = now;
+				sl_csvc_waitrel_s(csvc, dst - now);
+				now = time(NULL);
+			} while (dst > now);
 		}
 
 		sl_csvc_lock(csvc);
