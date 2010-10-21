@@ -907,7 +907,7 @@ ms_bmap_release(struct sl_resm *resm)
 		rc = mp->rc;
 
 	for (i = 0; i < rmci->rmci_bmaprls.nbmaps; i++)
-		psc_notify("fid=%"PRId64" bmap=%u key=%"PRId64
+		psc_notify("fid="SLPRI_FID" bmap=%u key=%"PRId64
 		    " seq=%"PRId64" rc=%d",
 		    rmci->rmci_bmaprls.bmaps[i].fid,
 		    rmci->rmci_bmaprls.bmaps[i].bmapno,
