@@ -110,9 +110,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	//if (mfh->mfh_oflags & O_APPEND)
 	//	r->biorq_flags |= BIORQ_APPEND | BIORQ_DIO;
 
-	if (b->bcm_flags & BMAP_DIO)
-		psc_assert(r->biorq_flags & BIORQ_DIO);
-
 	/* Take a ref on the bmap now so that it won't go away before
 	 *   pndg IO's complete.
 	 */
