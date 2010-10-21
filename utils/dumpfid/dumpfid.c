@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 
 #include "inodeh.h"
 
@@ -96,6 +97,7 @@ dumpfid(const char *fn)
 int
 main(int argc, char *argv[])
 {
+	pfl_init();
 	progname = argv[0];
 	if (getopt(argc, argv, "") != -1)
 		usage();
