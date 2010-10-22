@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd October 6, 2010
+.Dd October 22, 2010
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -344,12 +344,12 @@ separated by commas:
 Bmap lease timeout monitor
 .It Cm slmcohthr
 Bmap data coherency thread
-.It Cm slmctlthr
-.Nm
-connection processor
 .It Cm slmctlacthr
-.Nm
+.Xr slashd 8
 connection acceptor
+.It Cm slmctlthr
+.Xr slashd 8
+connection processor
 .It Cm slmjcursorthr
 Journal cursor updater thread
 .It Cm slmjthr
@@ -373,8 +373,6 @@ request service thread
 .It Cm slmrmmthr Ns Ar %02d
 .No Inter- Ns Tn MDS RPC
 request service thread
-.It Cm slmtintvthr
-Timer interval thread
 .It Cm slmtiosthr
 Timed
 .Tn I/O
