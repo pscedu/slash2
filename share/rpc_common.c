@@ -438,7 +438,7 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		csvc->csvc_import->imp_failed = 0;
 		csvc->csvc_import->imp_invalid = 0;
 	}
-	sl_csvc_wake(csvc);
+	sl_csvc_wake(*csvcp);
 
  out:
 	if (csvc)
