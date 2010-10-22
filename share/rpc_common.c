@@ -436,14 +436,10 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		goto out;
 	}
 	if (rc == 0) {
-		/*
-		 * Success: alert anyone waiting on establishment of
-		 * this connection.
-		 */
 		csvc->csvc_import->imp_failed = 0;
 		csvc->csvc_import->imp_invalid = 0;
-		sl_csvc_wake(csvc);
 	}
+	sl_csvc_wake(csvc);
 
  out:
 	if (csvc)
