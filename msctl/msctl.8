@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd October 6, 2010
+.Dd October 22, 2010
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -497,7 +497,7 @@ parameters may be specified by one or more of the following tokens,
 separated by commas:
 .Pp
 .Bl -tag -compact -offset indent -width 15n
-.It Cm msbflushthr
+.It Cm msbflushthr Ns Ar %d
 Bmap flusher thread
 .It Cm msbflushrpcthr
 Bmap flusher asynchronous
@@ -505,23 +505,23 @@ Bmap flusher asynchronous
 reply thread
 .It Cm msbrlsthr
 Bmap timed releaser thread
-.It Cm msctlthr
-.Nm
-connection processor
-.It Cm msctlacthr
-.Nm
-connection acceptor
 .It Cm msconnthr- Ns Ar %s
 Remote server connection monitor
+.It Cm msctlacthr
+.Xr mount_slash 8
+connection acceptor
+.It Cm msctlthr
+.Xr mount_slash 8
+connection processor
 .It Cm mseqpollthr
 Lustre
 .Fn LNetEQPoll
 thread
+.It Cm msfsmgrthr
+Userland file system manager thread
+.Pq e.g. FUSE
 .It Cm msfsthr Ns Ar %d
-File system service thread
-.It Cm msfusethr
-.Tn FUSE
-master thread
+File system system caller service thread
 .It Cm msrcmthr Ns Ar %02d
 .Tn MDS RPC
 request service
