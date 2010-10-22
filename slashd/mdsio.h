@@ -97,9 +97,9 @@ struct mdsio_ops {
 	int	(*mio_write)(const struct slash_creds *, const void *, size_t, size_t *, off_t, int, void *, sl_log_write_t, void *);
 
 	/* replay interface */
-	int	(*mio_redo_create)(slfid_t, slfid_t, char *, struct srt_stat *);
+	int	(*mio_redo_create)(slfid_t, char *, struct srt_stat *);
 	int	(*mio_redo_link)(slfid_t, slfid_t, char *, struct srt_stat *);
-	int	(*mio_redo_mkdir)(slfid_t, slfid_t, char *, struct srt_stat *);
+	int	(*mio_redo_mkdir)(slfid_t, char *, struct srt_stat *);
 	int	(*mio_redo_rename)(slfid_t, const char *, slfid_t, const char *, struct srt_stat *);
 	int	(*mio_redo_rmdir)(slfid_t, slfid_t, char *, struct srt_stat *);
 	int	(*mio_redo_setattr)(slfid_t, uint, struct srt_stat *);

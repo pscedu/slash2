@@ -1318,6 +1318,7 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	char *newname;
 
 	memset(&sstb, 0, sizeof(sstb));
+	sstb.sst_fid = jnamespace->sjnm_target_fid,
 	sstb.sst_uid = jnamespace->sjnm_uid;
 	sstb.sst_gid = jnamespace->sjnm_gid;
 	sstb.sst_mode = jnamespace->sjnm_mode;
@@ -1328,6 +1329,11 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	sstb.sst_ctime = jnamespace->sjnm_ctime;
 	sstb.sst_ctime_ns = jnamespace->sjnm_ctime_ns;
 	sstb.sst_size = jnamespace->sjnm_size;
+
+	if (!sstb.sst_fid) {
+		psc_errorx("Unexpected zero slash2 ID.\n");
+		return (EINVAL);
+	}
 
 	jnamespace->sjnm_name[sizeof(jnamespace->sjnm_name) - 1] = '\0';
 	newname = jnamespace->sjnm_name +
@@ -1341,13 +1347,11 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	    case NS_OP_CREATE:
 		rc = mdsio_redo_create(
 			jnamespace->sjnm_parent_fid,
-			jnamespace->sjnm_target_fid,
 			jnamespace->sjnm_name, &sstb);
 		break;
 	    case NS_OP_MKDIR:
 		rc = mdsio_redo_mkdir(
 			jnamespace->sjnm_parent_fid,
-			jnamespace->sjnm_target_fid,
 			jnamespace->sjnm_name, &sstb);
 		break;
 	    case NS_OP_LINK:
