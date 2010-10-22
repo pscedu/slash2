@@ -34,12 +34,12 @@
 #include "psc_util/atomic.h"
 
 #include "cache_params.h"
+#include "dircache.h"
 #include "fid.h"
 #include "fidc_cli.h"
 #include "fidcache.h"
 #include "mount_slash.h"
 #include "rpc_cli.h"
-#include "dircache.h"
 
 /* XXX check client attributes when generation number changes
  *
@@ -85,8 +85,9 @@ slc_fcmh_initdci(struct fidc_membh *fcmh)
 	psc_assert(fcmh_isdir(fcmh));
 
 	if (!(fcmh->fcmh_flags & FCMH_CLI_INITDCI)) {
-		INIT_PSCLIST_HEAD(&fci->fci_dci.di_list);
 		INIT_SPINLOCK(&fci->fci_dci.di_lock);
+		pll_init(&fci->fci_dci.di_list, struct dircache_ents,
+		    de_lentry, &fci->fci_dci.di_lock);
 		fci->fci_dci.di_dcm = &dircacheMgr;
 		fci->fci_dci.di_fcmh = fcmh;
 		fcmh->fcmh_flags |= FCMH_CLI_INITDCI;
@@ -115,7 +116,7 @@ slc_fcmh_dtor(struct fidc_membh *fcmh)
 
 		fci = fcmh_get_pri(fcmh);
 
-		psc_assert(psc_listhd_empty(&fci->fci_dci.di_list));
+		psc_assert(pll_empty(&fci->fci_dci.di_list));
 	}
 }
 
