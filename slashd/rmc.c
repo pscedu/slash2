@@ -918,8 +918,8 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		    mq->name, &rootcreds, mds_namespace_log);
 	mds_unreserve_slot();
 
-	psc_info("mdsio_unlink: name = %s, rc=%d, data=%p", mq->name, mp->rc,
-	    fcmh_2_mdsio_data(fcmh));
+	psc_info("mdsio_unlink: parent = "SLPRI_FID", name = %s, rc=%d", 
+		  mq->pfg.fg_fid, mq->name, mp->rc);
  out:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
