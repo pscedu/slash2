@@ -426,7 +426,6 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 			 * that we fail to establish a connection.
 			 */
 			csvc = NULL;
-			goto out;
 		} else
 			psc_atomic32_setmask(&csvc->csvc_flags,
 			    CSVCF_CONNECTED);
