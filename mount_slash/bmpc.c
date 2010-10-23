@@ -334,7 +334,6 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 				break;
 		}
 	}
-	PLL_ULOCK(&bmpc->bmpc_lru);
 
 	/* Save CPU, assume that the head of the list is the oldest entry.
 	 */
@@ -343,6 +342,7 @@ bmpc_lru_tryfree(struct bmap_pagecache *bmpc, int nfree)
 		memcpy(&bmpc->bmpc_oldest, &bmpce->bmpce_laccess,
 		       sizeof(struct timespec));
 	}
+	PLL_ULOCK(&bmpc->bmpc_lru);
 
 	return (freed);
 }
