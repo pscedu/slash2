@@ -85,12 +85,16 @@ slc_rmc_setmds(const char *name)
 int
 slc_rmc_getimp(struct slashrpc_cservice **csvcp)
 {
+	int wait = 1;
+
 	do {
 		*csvcp = slc_getmcsvc(slc_rmc_resm);
-		if (*csvcp == NULL)
-			/* XXX try to connect to another MDS */
-			psc_fatalx("unable to establish MDS connection");
-	} while (*csvcp == NULL);
+#if 0
+		ctx = fuse_get_context(rq);
+		if process doesn't want to wait
+			wait = 0
+#endif
+	} while (*csvcp == NULL && wait);
 	return (0);
 }
 
