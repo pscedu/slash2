@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd October 6, 2010
+.Dd October 25, 2010
 .Dt SLICTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -346,12 +346,12 @@ separated by commas:
 Bmap releaser
 .It Cm sliconnthr- Ns Ar %s
 Remote server connection monitor
-.It Cm slictlthr
-.Nm
-connection processor
 .It Cm slictlacthr
-.Nm
+.Xr sliod 8
 connection acceptor
+.It Cm slictlthr
+.Xr sliod 8
+connection processor
 .It Cm slilnacthr- Ns Ar %s
 Lustre network acceptor thread
 .It Cm slireplpndthr
@@ -363,8 +363,7 @@ Client
 .Tn RPC
 request service thread
 .It Cm sliriithr Ns Ar %02d
-.No Inter-
-.Tn I/O RPC
+.No Inter- Ns Tn I/O RPC
 request service thread
 .It Cm slirimthr Ns Ar %02d
 .Tn MDS RPC
