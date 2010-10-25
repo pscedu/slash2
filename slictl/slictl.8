@@ -168,17 +168,17 @@ has the following format:
 .Bd -unfilled -offset indent
 .Ar meter Ns Op , Ns Ar ...
 .Ed
-.Pp
-.Ar meter
-may be one of the following:
-.Pp
-.Bl -tag -compact -offset indent -width 12n
-.It Cm repl- Ns Ar nid
-Replication of inode
-.Ar fid
-metadata to server
-.Ar nid .
-.El
+.\" .Pp
+.\" .Ar meter
+.\" may be one of the following:
+.\" .Pp
+.\" .Bl -tag -compact -offset indent -width 12n
+.\" .It Cm repl- Ns Ar nid
+.\" Replication of inode
+.\" .Ar fid
+.\" metadata to server
+.\" .Ar nid .
+.\" .El
 .Pp
 The value
 .Cm all
@@ -214,6 +214,11 @@ for details on specifying
 .Ar param
 may be one of the following:
 .Bl -tag -offset ind -width Ds
+.It Cm log.format
+The header prepended to server log messages.
+See
+.Xr pflenv 7
+for details on this format.
 .It Cm log.level Ns Op . Ns Ar subsystem
 The logging level of debug message output.
 .Pp
@@ -222,15 +227,22 @@ may be one of the following:
 .Pp
 .Bl -tag -offset indent -width 12n -compact
 .It Cm bmap
-Block map structures
+File region (block map) structures
+.It Cm fcmh
+.Tn FID
+cache members
 .It Cm gen
 General/catch all
 .It Cm lnet
 Lustre networking stack
 .It Cm mem
-Memory allocations and releases
+Memory allocations
 .It Cm rpc
 Network remote procedure calls
+.It Cm slvr
+Sliver
+.Pq I/O slab
+handling
 .El
 .Pp
 If
@@ -267,6 +279,17 @@ Lower bound for number of entries to which pool can shrink.
 Upper bound for number of entries to which pool can grow.
 .It Cm size
 Current number of entries contained in pool.
+.El
+.It Cm rlim
+Process resource limits.
+See
+.Xr getrlimit 2
+for more information.
+.Pp
+.Bl -tag -compact -offset 2n -width 8n
+.It Cm nofiles
+Corresponds to
+.Dv RLIMIT_NOFILE .
 .El
 .El
 .Pp
