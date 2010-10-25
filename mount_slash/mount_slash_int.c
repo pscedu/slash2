@@ -1616,7 +1616,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	sl_bmapno_t s, e;
 	size_t tlen, tsize=size;
 	off_t roff;
-	int nr, j, rc;
+	int nr, i, rc;
 	char *p;
 
 	psc_assert(mfh);
@@ -1691,34 +1691,34 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	/* Note that the offsets used here are file-wise offsets not
 	 *   offsets into the buffer.
 	 */
-	for (j=0, p=buf; j < nr; j++, p+=tlen) {
+	for (i=0, p=buf; i < nr; i++, p+=tlen) {
 		/* Associate the biorq's with the mfh.
 		 */
-		pll_addtail(&mfh->mfh_biorqs, r[j]);
+		pll_addtail(&mfh->mfh_biorqs, r[i]);
 
-		if (r[j]->biorq_flags & BIORQ_DIO)
-			msl_pages_dio_getput(r[j], p);
+		if (r[i]->biorq_flags & BIORQ_DIO)
+			msl_pages_dio_getput(r[i], p);
 
 		else {
 			/* Wait here for any pages to be faulted in from
 			 *    the ION.
 			 */
 			if (rw == SL_READ ||
-			    ((r[j]->biorq_flags & BIORQ_RBWFP) ||
-			     (r[j]->biorq_flags & BIORQ_RBWLP)))
-				if ((rc = msl_pages_blocking_load(r[j]))) {
-					DEBUG_BIORQ(PLL_ERROR, r[j],
+			    ((r[i]->biorq_flags & BIORQ_RBWFP) ||
+			     (r[i]->biorq_flags & BIORQ_RBWLP)))
+				if ((rc = msl_pages_blocking_load(r[i]))) {
+					DEBUG_BIORQ(PLL_ERROR, r[i],
 						    "msl_pages_blocking_load()"
 						    " error=%d", rc);
 					goto out;
 				}
 
-			(rw == SL_READ) ? msl_pages_copyout(r[j], p) :
-					  msl_pages_copyin(r[j], p);
+			(rw == SL_READ) ? msl_pages_copyout(r[i], p) :
+					  msl_pages_copyin(r[i], p);
 		}
 		/* Unwind our reference from bmap_get().
 		 */
-		bmap_op_done_type(b[j], BMAP_OPCNT_LOOKUP);
+		bmap_op_done_type(b[i], BMAP_OPCNT_LOOKUP);
 	}
 
 	if (rw == SL_WRITE) {
