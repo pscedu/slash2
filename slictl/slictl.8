@@ -272,12 +272,14 @@ Access the memory pool specified by
 .Ar name .
 The following sub-fields are available:
 .Pp
-.Bl -tag -compact -offset 2n -width 5n
-.It Cm min
-Lower bound for number of entries to which pool can shrink.
+.Bl -tag -compact -offset Ds -width 12n
 .It Cm max
-Upper bound for number of entries to which pool can grow.
-.It Cm size
+Upper bound for number of entries to which auto-sized pools can grow.
+.It Cm min
+Lower bound for number of entries to which auto-sized pools can shrink.
+.It Cm thres
+Threshold for unused items for auto-sized pools before items are freed.
+.It Cm total
 Current number of entries contained in pool.
 .El
 .It Cm rlim
@@ -286,7 +288,7 @@ See
 .Xr getrlimit 2
 for more information.
 .Pp
-.Bl -tag -compact -offset 2n -width 8n
+.Bl -tag -compact -offset Ds -width 12n
 .It Cm nofiles
 Corresponds to
 .Dv RLIMIT_NOFILE .
