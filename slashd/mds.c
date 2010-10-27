@@ -194,7 +194,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 		psc_assert(bmdsi->bmdsi_wr_ion);
 		/* In the process of waiting for an async rpc to complete.
 		 */
-		rc = SLERR_BMAP_DIOWAIT;
+		rc = (-SLERR_BMAP_DIOWAIT);
 		goto out;
 	}
 
@@ -224,7 +224,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 			 *   reached DIO state or been timed out.
 			 */
 			mdscoh_req(bml, MDSCOH_NONBLOCK);
-			rc = SLERR_BMAP_DIOWAIT;
+			rc = (-SLERR_BMAP_DIOWAIT);
 			goto out;
 		}
 
@@ -265,18 +265,22 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	struct resm_mds_info *rmmi;
 
 	csvc = slm_geticsvc(resm);
-	if (csvc == NULL)
+	if (csvc == NULL) {
 		/*
 		 * This can happen if the MDS finds bmap leases in
 		 * the odtable and we didn't start the I/O server.
 		 */
+		bml->bml_flags |= BML_ASSFAIL;
+		bml_2_bmap(bml)->bcm_flags |= BMAP_MDS_NOION;
 		return (-SLERR_ION_OFFLINE);
+	}
 
 	rmmi = resm->resm_pri;
 
 	atomic_inc(&rmmi->rmmi_refcnt);
 	sl_csvc_decref(csvc);
 
+	psc_assert(bml->bml_bmdsi->bmdsi_assign);
 	bml->bml_bmdsi->bmdsi_wr_ion = rmmi;
 	bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_IONASSIGN);
 
@@ -310,14 +314,22 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	struct sl_resm *resm;
 	int nb, j, len;
 
-	psc_assert(bmap->bcm_flags & BMAP_IONASSIGN);
 	psc_assert(!bmdsi->bmdsi_wr_ion);
+	psc_assert(!bmdsi->bmdsi_assign);
 	psc_assert(psc_atomic32_read(&bmap->bcm_opcnt) > 0);
 
+	BMAP_LOCK(bmap);
+	psc_assert(bmap->bcm_flags & BMAP_IONASSIGN);
+
 	if (!res) {
+		bmap->bcm_flags |= BMAP_MDS_NOION;
+		BMAP_ULOCK(bmap);
+		
 		psc_warnx("Failed to find pios %d", pios);
 		return (-SLERR_ION_UNKNOWN);
-	}
+	} else
+		BMAP_ULOCK(bmap);
+	
 	rpmi = res->res_pri;
 	len = psc_dynarray_len(&res->res_members);
 
@@ -345,6 +357,12 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 				goto online;
 		}
 
+	BMAP_LOCK(bmap);
+	bmap->bcm_flags |= BMAP_MDS_NOION;
+	BMAP_ULOCK(bmap);
+
+	bml->bml_flags |= BML_ASSFAIL;
+
 	return (-SLERR_ION_OFFLINE);
 
  online:
@@ -352,7 +370,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	atomic_inc(&rmmi->rmmi_refcnt);
 	sl_csvc_decref(csvc); /* XXX this is really dumb */
 
-	DEBUG_BMAP(PLL_TRACE, bmap, "online res(%s) ion(%s)",
+	DEBUG_BMAP(PLL_INFO, bmap, "online res(%s) ion(%s)",
 	    res->res_name, resm->resm_addrbuf);
 
 	/*
@@ -362,7 +380,6 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	memset(&bia, 0, sizeof(bia));
 	bia.bia_ion_nid = bml->bml_ion_nid = rmmi->rmmi_resm->resm_nid;
 	bia.bia_lastcli = bml->bml_cli_nidpid;
-
 	bia.bia_ios = rmmi->rmmi_resm->resm_res->res_id;
 	bia.bia_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	bia.bia_bmapno = bmap->bcm_bmapno;
@@ -370,14 +387,22 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	bia.bia_flags = (bmap->bcm_flags & BMAP_DIO) ? BIAF_DIO : 0;
 	bmdsi->bmdsi_seq = bia.bia_seq = mds_bmap_timeotbl_mdsi(bml, BTE_ADD);
 
-	psc_assert(!bmdsi->bmdsi_assign);
 	bmdsi->bmdsi_assign = odtable_putitem(mdsBmapAssignTable, &bia,
 	    sizeof(bia));
 	if (!bmdsi->bmdsi_assign) {
+		BMAP_LOCK(bmap);
+		bmap->bcm_flags |= BMAP_MDS_NOION;
+		BMAP_ULOCK(bmap);
+		bml->bml_flags |= BML_ASSFAIL;
+
 		DEBUG_BMAP(PLL_ERROR, bmap, "failed odtable_putitem()");
 		return (-SLERR_XACT_FAIL);
-	}
 
+	} else {
+		BMAP_LOCK(bmap);
+		bmap->bcm_flags &= ~BMAP_MDS_NOION;
+		BMAP_ULOCK(bmap);
+	}
 	/*
 	 * Signify that a ION has been assigned to this bmap.  This
 	 *   opcnt ref will stay in place until the bmap has been released
@@ -408,7 +433,7 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
 
 	bia = odtable_getitem(mdsBmapAssignTable, bmdsi->bmdsi_assign);
 	if (!bia) {
-		DEBUG_BMAP(PLL_WARN, b, "odtable_getitem() failed");
+		DEBUG_BMAP(PLL_ERROR, b, "odtable_getitem() failed");
 		return (-1);
 	}
 
@@ -547,8 +572,7 @@ mds_bmap_bml_chwrmode(struct bmap_mds_lease *bml, sl_ios_id_t prefios)
 		   bml, rc, bmdsi->bmdsi_writers, bmdsi->bmdsi_readers);
 
 	if (rc) {
-		b->bcm_flags |= BMAP_MDS_NOION;
-		bml->bml_flags |= BML_READ;
+		bml->bml_flags |= (BML_READ|BML_ASSFAIL);
 		bml->bml_flags &= ~(BML_UPGRADE | BML_WRITE);
 
 		if (wlease < 0) {
@@ -714,32 +738,9 @@ mds_bmap_bml_add(struct bmap_mds_lease *bml, enum rw rw,
 		}
 
 		BMAP_LOCK(b);
-		if (rc) {
-			/*
-			 * Keep the lease around if we can't contact the I/O node until
-			 * it expires.
-			 */
-			if ((bml->bml_flags & BML_RECOVER) && (rc == -SLERR_ION_OFFLINE)) {
-				rc = 0;
-				b->bcm_flags |= BMAP_MDS_NOION;
-				goto out;
-			}
-			DEBUG_BMAP(PLL_INFO, b, "bml=%p rc=%d bmdsi_writers=%d"
-			   " bmdsi_readers=%d wlease=%d",
-			   bml, rc, bmdsi->bmdsi_writers,
-			   bmdsi->bmdsi_readers, wlease);
-
-			if (!wlease) {
-				//bmdsi->bmdsi_writers--;
-				psc_assert(bmdsi->bmdsi_writers >= 0);
-				b->bcm_flags &= ~BMAP_IONASSIGN;
-				b->bcm_flags |= BMAP_MDS_NOION;
-			}
-		}
-
 		b->bcm_flags &= ~BMAP_IONASSIGN;
 
-	} else {
+	} else { //rw == SL_READ
 		bml->bml_seq = mds_bmap_timeotbl_getnextseq();
 
 		if (!wlease && !rlease)
@@ -948,25 +949,31 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 	 *   is found then verify the sequence number matches.
 	 */
 	if ((bml->bml_flags & BML_WRITE) && !bmdsi->bmdsi_writers) {
-		if (bml->bml_flags & BML_ASSFAIL) {
+		if (b->bcm_flags & BMAP_MDS_NOION) {
 			psc_assert(!bmdsi->bmdsi_assign);
 			psc_assert(!bmdsi->bmdsi_wr_ion);
 
 		} else {
-			/* odtable sanity checks:
+			/* Bml's which have failed ion assignment shouldn't 
+			 *   be relevant to any odtable entry.
 			 */
-			struct bmap_ion_assign *bia;
-
-			bia = odtable_getitem(mdsBmapAssignTable,
-			    bmdsi->bmdsi_assign);
-			psc_assert(bia && bia->bia_seq == bmdsi->bmdsi_seq);
-			psc_assert(bia->bia_bmapno == b->bcm_bmapno);
-			/* End sanity checks.
-			 */
-			atomic_dec(&bmdsi->bmdsi_wr_ion->rmmi_refcnt);
-			odtr = bmdsi->bmdsi_assign;
-			bmdsi->bmdsi_assign = NULL;
-			bmdsi->bmdsi_wr_ion = NULL;
+			if (!(bml->bml_flags & BML_ASSFAIL)) {
+				/* odtable sanity checks:
+				 */
+				struct bmap_ion_assign *bia;
+				
+				bia = odtable_getitem(mdsBmapAssignTable,
+						      bmdsi->bmdsi_assign);
+				psc_assert(bia && 
+				   bia->bia_seq == bmdsi->bmdsi_seq);
+				psc_assert(bia->bia_bmapno == b->bcm_bmapno);
+				/* End sanity checks.
+				 */
+				atomic_dec(&bmdsi->bmdsi_wr_ion->rmmi_refcnt);
+				odtr = bmdsi->bmdsi_assign;
+				bmdsi->bmdsi_assign = NULL;
+				bmdsi->bmdsi_wr_ion = NULL;
+			}
 		}
 	}
 	/* bmap_op_done_type(b, BMAP_OPCNT_IONASSIGN) may have released
@@ -1158,7 +1165,6 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 		mds_bmap_bml_release(bml);
 		goto out;
 	}
-
  out:
 	if (rc)
 		odtable_freeitem(mdsBmapAssignTable, odtr);
@@ -1515,11 +1521,11 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 
 	rc = mds_bmap_bml_add(bml, rw, prefios);
 	if (rc) {
-		if (rc == SLERR_BMAP_DIOWAIT) {
+		if (rc == -SLERR_BMAP_DIOWAIT) {
 			psclist_del(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
 			mds_bml_free(bml);
 		} else {
-			if (rc == SLERR_ION_OFFLINE)
+			if (rc == -SLERR_ION_OFFLINE)
 				bml->bml_flags |= BML_ASSFAIL;
 			bml->bml_flags |= BML_FREEING;
 			mds_bmap_bml_release(bml);
