@@ -14,7 +14,7 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd October 22, 2010
+.Dd October 25, 2010
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -217,7 +217,7 @@ Clean
 .Pq reapable
 files
 .It Cm fcmhbusy
-File with pending action e.g.\&
+File with pending action e.g. dirty
 .Tn I/O
 .El
 .Pp
@@ -231,17 +231,17 @@ has the following format:
 .Bd -unfilled -offset indent
 .Ar meter Ns Op , Ns Ar ...
 .Ed
-.Pp
-.Ar meter
-may be one of the following:
-.Pp
-.Bl -tag -compact -offset indent -width 12n
-.It Cm repl- Ns Ar nid
-Replication of inode
-.Ar fid
-metadata to server
-.Ar nid .
-.El
+.\" .Pp
+.\" .Ar meter
+.\" may be one of the following:
+.\" .Pp
+.\" .Bl -tag -compact -offset indent -width 12n
+.\" .It Cm repl- Ns Ar nid
+.\" Replication of inode
+.\" .Ar fid
+.\" metadata to server
+.\" .Ar nid .
+.\" .El
 .Pp
 The value
 .Cm all
@@ -277,6 +277,11 @@ for details on specifying
 .Ar param
 may be one of the following:
 .Bl -tag -offset ind -width Ds
+.It Cm log.format
+The header prepended to server log messages.
+See
+.Xr pflenv 7
+for details on this format.
 .It Cm log.level Ns Op . Ns Ar subsystem
 The logging level of debug message output.
 .Pp
@@ -286,6 +291,9 @@ may be one of the following:
 .Bl -tag -offset indent -width 12n -compact
 .It Cm bmap
 Block map structures
+.It Cm fcmh
+.Tn FID
+cache members
 .It Cm gen
 General/catch all
 .It Cm lnet
@@ -323,12 +331,14 @@ Access the memory pool specified by
 .Ar name .
 The following sub-fields are available:
 .Pp
-.Bl -tag -compact -offset 2n -width 5n
-.It Cm min
-Lower bound for number of entries to which pool can shrink.
+.Bl -tag -compact -offset Ds -width 12n
 .It Cm max
-Upper bound for number of entries to which pool can grow.
-.It Cm size
+Upper bound for number of entries to which auto-sized pools can grow.
+.It Cm min
+Lower bound for number of entries to which auto-sized pools can shrink.
+.It Cm thres
+Threshold for unused items for auto-sized pools before items are freed.
+.It Cm total
 Current number of entries contained in pool.
 .El
 .El
