@@ -91,7 +91,7 @@ slc_rmc_getimp(struct slashrpc_cservice **csvcp)
 		*csvcp = slc_getmcsvc(slc_rmc_resm);
 #if 0
 		ctx = fuse_get_context(rq);
-		if process doesn't want to wait
+		// if process doesn't want to wait
 			wait = 0
 #endif
 	} while (*csvcp == NULL && wait);
