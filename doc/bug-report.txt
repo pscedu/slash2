@@ -245,3 +245,8 @@ There seems to be a race between read and write : build slash2 under slash2, rea
 mk/gen-localdefs-lemon-pickle.mk returns NULL bytes at the first line. Later when
 I check the file, it seems fine.  After I tweak logs (-r14248), the bug disappears.
 
+10/28/2010
+----------
+
+Put a request onto its bmap's list after it is marked as flush ready to avoid "not
+ready" warnings.
