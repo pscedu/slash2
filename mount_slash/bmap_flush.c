@@ -374,7 +374,7 @@ bmap_flush_biorq_cmp(const void *x, const void *y)
 }
 
 /**
- * bmap_flush_coalesce_map - Scan the given list of bio request and construct
+ * bmap_flush_coalesce_map - Scan the given list of bio requests and construct
  *     I/O vectors out of them.  One I/O vector is limited to one page.
  */
 __static int
@@ -530,7 +530,7 @@ bmap_flushready(const struct psc_dynarray *biorqs)
 
 /**
  * bmap_flushable - Check if we can flush the given bmpc (either an I/O request
- *     has expired or we have accumulate a big enough I/O).  This function must
+ *     has expired or we have accumulated a big enough I/O).  This function must
  *     be non-blocking.
  */
 __static int
