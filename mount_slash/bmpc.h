@@ -98,6 +98,7 @@ struct bmap_pagecache_entry {
 #define	BMPCE_INIT		(1 << 7)
 #define	BMPCE_READPNDG		(1 << 8)
 #define	BMPCE_RBWPAGE		(1 << 9)
+#define	BMPCE_RBWRDY	        (1 << 10)
 
 /*
  * Do not blindly wait until data is ready or assume that data
@@ -110,7 +111,7 @@ struct bmap_pagecache_entry {
 	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
 	 offsetof(struct bmpc_ioreq, biorq_waitq) : NULL)
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BMPCE_FLAGS(b)						\
 	(b)->bmpce_flags & BMPCE_NEW			? "n" : "",	\
 	(b)->bmpce_flags & BMPCE_GETBUF			? "g" : "",	\
@@ -121,7 +122,8 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_FREEING		? "F" : "",	\
 	(b)->bmpce_flags & BMPCE_INIT			? "i" : "",	\
 	(b)->bmpce_flags & BMPCE_READPNDG		? "r" : "",	\
-	(b)->bmpce_flags & BMPCE_RBWPAGE		? "B" : ""
+	(b)->bmpce_flags & BMPCE_RBWPAGE		? "B" : "",     \
+	(b)->bmpce_flags & BMPCE_RBWRDY 		? "R" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_GEN,					\

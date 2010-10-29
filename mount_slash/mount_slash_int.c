@@ -93,7 +93,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 	struct bmap_pagecache *bmpc;
 	struct bmap_pagecache_entry *bmpce, bmpce_search, *bmpce_new;
 	int i, npages=0, rbw=0;
-	off_t origoff=off;
 
 	DEBUG_BMAP(PLL_TRACE, b, "adding req for (off=%u) (size=%u)",
 		   off, len);
@@ -132,16 +131,19 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		 */
 		len += off & BMPC_BUFMASK;
 		off &= ~BMPC_BUFMASK;
-		rbw = BIORQ_RBWFP;
+		if (op == BIORQ_WRITE)
+			rbw = BIORQ_RBWFP;
 	}
 	npages = len / BMPC_BUFSZ;
 
 	if (len % BMPC_BUFSZ) {
 		npages++;
-		if (npages == 1 && !rbw)
-			rbw = BIORQ_RBWFP;
-		else if (npages > 1)
-			rbw |= BIORQ_RBWLP;
+		if (op == BIORQ_WRITE) { 
+			if (npages == 1 && !rbw)
+				rbw = BIORQ_RBWFP;
+			else if (npages > 1)
+				rbw |= BIORQ_RBWLP;
+		}
 	}
 
 	psc_assert(npages <= BMPC_IOMAXBLKS);
@@ -176,17 +178,6 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 		 *   function.
 		 */
 		bmpce_handle_lru_locked(bmpce, bmpc, op, 1);
-		/*
-		 * See if we can remove RBW flags.   Note that a new page
-		 * won't have BMPCE_DATARDY flag set.
-		 */
-		if (!i && (bmpce->bmpce_flags & BMPCE_DATARDY) &&
-		    (rbw & BIORQ_RBWFP))
-			rbw &= ~BIORQ_RBWFP;
-		else if (i == (npages - 1) &&
-			 (bmpce->bmpce_flags & BMPCE_DATARDY) &&
-			 (rbw & BIORQ_RBWLP))
-			rbw &= ~BIORQ_RBWLP;
 
 		BMPCE_ULOCK(bmpce);
 		psc_dynarray_add(&r->biorq_pages, bmpce);
@@ -198,18 +189,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 
 	psc_assert(psc_dynarray_len(&r->biorq_pages) == npages);
 
-	/* XXX Note if we moved to RD_DATARDY / WR_DATARDY then
-	 *   we wouldn't have to fault in pages like this unless the
-	 *   bmap was open in RW mode.
-	 * XXX changeme.. this is causing unnecessary RBW rpc's!
-	 *    key off the BMPCE flags
-	 */
-	if ((fcmh_getsize(b->bcm_fcmh) > origoff) &&
-	    op == BIORQ_WRITE && rbw) {
-		DEBUG_FCMH(PLL_NOTIFY, b->bcm_fcmh,
-			   "setting RBW for biorq=%p", r);
-		r->biorq_flags |= rbw;
-	}
+	//		r->biorq_flags |= rbw;
 
 	/* Pass1: Retrieve memory pages from the cache on behalf of our pages
 	 *   stuck in GETBUF.
@@ -227,40 +207,32 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 			 *   RBW ops but only on new pages owned by this
 			 *   page cache entry.  For now bypass
 			 *   bmpce_handle_lru_locked() for this op.
-			 *  XXX how is this ref affected by the cb's?
 			 */
-			if (bmpce_is_rbw_page(r, bmpce, i)) {
+			if (!i && (rbw & BIORQ_RBWFP)) {
 				bmpce->bmpce_flags |= BMPCE_RBWPAGE;
 				psc_atomic16_inc(&bmpce->bmpce_rdref);
+				r->biorq_flags |= BIORQ_RBWFP;
+
+			} else if ((i == (npages - 1) && 
+				    (rbw & BIORQ_RBWLP))) {
+				bmpce->bmpce_flags |= BMPCE_RBWPAGE;
+				psc_atomic16_inc(&bmpce->bmpce_rdref);
+				r->biorq_flags |= BIORQ_RBWLP;
 			}
 
 			psc_assert(!bmpce->bmpce_base);
 			BMPCE_ULOCK(bmpce);
-
+			
 			tmp = bmpc_alloc();
-
+			
 			BMPCE_LOCK(bmpce);
 			bmpce->bmpce_base = tmp;
 			bmpce->bmpce_flags &= ~BMPCE_GETBUF;
-			psc_waitq_wakeall(bmpce->bmpce_waitq);
-			BMPCE_ULOCK(bmpce);
-
-		} else {
-			/* Don't bother prefetching blocks for unaligned
-			 *   requests if another request is already
-			 *   responsible for that block.
-			 */
-			if (!i && (r->biorq_flags & BIORQ_RBWFP))
-				r->biorq_flags &= ~BIORQ_RBWFP;
-
-			else if (i == (npages-1) &&
-				 (r->biorq_flags & BIORQ_RBWLP))
-				r->biorq_flags &= ~BIORQ_RBWLP;
-
-			BMPCE_ULOCK(bmpce);
+			psc_waitq_wakeall(bmpce->bmpce_waitq);		
 		}
+		BMPCE_ULOCK(bmpce);
 	}
-
+	
 	/* Pass2: Sanity Check
 	 */
 	for (i=0; i < npages; i++) {
@@ -324,8 +296,8 @@ bmap_biorq_del(struct bmpc_ioreq *r)
 		}
 	}
 
-	if (!bmpc_queued_ios(bmpc) && !(b->bcm_flags & BMAP_CLI_FLUSHPROC) &&
-	    !(b->bcm_flags & BMAP_TIMEOQ)) {
+	if (!(b->bcm_flags & (BMAP_CLI_FLUSHPROC|BMAP_TIMEOQ)) &&
+	    (!bmpc_queued_ios(bmpc))) {
 		psc_assert(!atomic_read(&bmpc->bmpc_pndgwr));
 		b->bcm_flags |= BMAP_TIMEOQ;
 		lc_addtail(&bmapTimeoutQ, b);
@@ -961,13 +933,9 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 		bmpce = psc_dynarray_getpos(a, i);
 		BMPCE_LOCK(bmpce);
 
-		DEBUG_BMPCE(PLL_INFO, bmpce, "DATARDY! i=%d len=%d",
-			    i, psc_dynarray_len(a));
-
 		psc_assert(bmpce->bmpce_waitq);
 		psc_assert(biorq_is_my_bmpce(r, bmpce));
 
-		bmpce->bmpce_flags |= BMPCE_DATARDY;
 		if (bmpce->bmpce_flags & BMPCE_RBWPAGE) {
 			/* The RBW stuff needs to be managed outside of
 			 *   the LRU, this is not the best place but should
@@ -975,20 +943,20 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			 */
 			psc_assert(psc_atomic16_read(&bmpce->bmpce_rdref) == 1);
 			psc_atomic16_dec(&bmpce->bmpce_rdref);
-			bmpce->bmpce_flags &= ~BMPCE_RBWPAGE;
-			DEBUG_BMPCE(PLL_INFO, bmpce, "infl dec for RBW");
+			bmpce->bmpce_flags |= BMPCE_RBWRDY;
+			DEBUG_BMPCE(PLL_INFO, bmpce, "infl dec for RBW, DATARDY not set");
+		} else {
+			bmpce->bmpce_flags |= BMPCE_DATARDY;
+			DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via read_cb");			
+			/* Disown bmpce by null'ing the waitq pointer.
+			 */
+			bmpce->bmpce_waitq = NULL;
 		}
 
 		if (clearpages) {
 			DEBUG_BMPCE(PLL_WARN, bmpce, "clearing page");
 			memset(bmpce->bmpce_base, 0, BMPC_BUFSZ);
 		}
-
-		DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via read_cb");
-
-		/* Disown the bmpce by null'ing the waitq pointer.
-		 */
-		bmpce->bmpce_waitq = NULL;
 		BMPCE_ULOCK(bmpce);
 	}
 	freelock(&r->biorq_lock);
@@ -1365,23 +1333,36 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 		}
 
 	} else {
-		if (r->biorq_flags & BIORQ_RBWFP) {
-			bmpce = psc_dynarray_getpos(&r->biorq_pages, 0);
-
-			psc_assert(biorq_is_my_bmpce(r, bmpce));
-			psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
-			psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-			msl_read_rpc_create(r, 0, 1);
+		if ((r->biorq_flags & (BIORQ_RBWFP|BIORQ_RBWLP)) ==
+		    (BIORQ_RBWFP|BIORQ_RBWLP) && 
+		    psc_dynarray_len(&r->biorq_pages) == 2) {
+			for (i=0; i < 2; i++) {
+				bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
+				psc_assert(biorq_is_my_bmpce(r, bmpce));
+				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
+				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
+			}
+			msl_read_rpc_create(r, 0, 2);
 			sched = 1;
-		}
-		if (r->biorq_flags & BIORQ_RBWLP) {
-			bmpce = psc_dynarray_getpos(&r->biorq_pages, npages - 1);
 
-			psc_assert(biorq_is_my_bmpce(r, bmpce));
-			psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
-			psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
-			msl_read_rpc_create(r, npages - 1, 1);
-			sched = 1;
+		} else {
+			if (r->biorq_flags & BIORQ_RBWFP) {
+				bmpce = psc_dynarray_getpos(&r->biorq_pages, 0);
+				psc_assert(biorq_is_my_bmpce(r, bmpce));
+				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
+				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
+				msl_read_rpc_create(r, 0, 1);
+				sched = 1;
+			}
+			if (r->biorq_flags & BIORQ_RBWLP) {
+				bmpce = psc_dynarray_getpos(&r->biorq_pages, 
+							    npages - 1);
+				psc_assert(biorq_is_my_bmpce(r, bmpce));
+				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
+				psc_assert(bmpce->bmpce_flags & BMPCE_RBWPAGE);
+				msl_read_rpc_create(r, npages - 1, 1);
+				sched = 1;
+			}
 		}
 	}
 
@@ -1441,13 +1422,11 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 			}
 
 		if ((r->biorq_flags & BIORQ_READ) ||
-		    !biorq_is_my_bmpce(r, bmpce)  ||
-		    bmpce_is_rbw_page(r, bmpce, i))
+		    !biorq_is_my_bmpce(r, bmpce))
 			/* Read requests must have had their bmpce's
 			 *   put into DATARDY by now (i.e. all RPCs
 			 *   must have already been completed).
-			 *   Unaligned writes must have been faulted in,
-			 *   same as any page owned by another request.
+			 *   Same goes for pages owned by another request.
 			 */
 			psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
 
@@ -1484,8 +1463,11 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 		/* Re-check RBW sanity.  The waitq pointer within the bmpce
 		 *   must still be valid in order for this check to work.
 		 */
-		if (bmpce_is_rbw_page(r, bmpce, i))
-			psc_assert(bmpce->bmpce_flags & BMPCE_DATARDY);
+		BMPCE_LOCK(bmpce);
+		if (bmpce->bmpce_flags & BMPCE_RBWPAGE) {
+			psc_assert(bmpce->bmpce_flags & BMPCE_RBWRDY);
+			psc_assert(biorq_is_my_bmpce(r, bmpce));
+		}
 
 		/* Set the starting buffer pointer into
 		 *  our cache vector.
@@ -1508,6 +1490,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 
 		DEBUG_BMPCE(PLL_NOTIFY, bmpce, "tsize=%u nbytes=%u toff=%u",
 			    tsize, nbytes, toff);
+		BMPCE_ULOCK(bmpce);
 		/* Do the deed.
 		 */
 		memcpy(dest, src, nbytes);
@@ -1520,11 +1503,8 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 		BMPCE_LOCK(bmpce);
 		if (biorq_is_my_bmpce(r, bmpce) &&
 		    !(bmpce->bmpce_flags & BMPCE_DATARDY)) {
-			/* This should never happen as RBW pages should
-			 *   have BMPCE_DATARDY already set.
-			 */
-			psc_assert(!bmpce_is_rbw_page(r, bmpce, i));
 			bmpce->bmpce_flags |= BMPCE_DATARDY;
+			bmpce->bmpce_flags &= ~(BMPCE_RBWPAGE|BMPCE_RBWRDY);
 			psc_waitq_wakeall(bmpce->bmpce_waitq);
 			bmpce->bmpce_waitq = NULL;
 		}
@@ -1622,6 +1602,9 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	psc_assert(mfh);
 	psc_assert(mfh->mfh_fcmh);
 
+	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "buf=%p size=%zu off=%"PRId64
+		   " rw=%d", buf, size, off, rw);
+	
 	FCMH_LOCK(mfh->mfh_fcmh);
 
 	if (!size || (rw == SL_READ &&
