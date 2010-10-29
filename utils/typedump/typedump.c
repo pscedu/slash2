@@ -211,7 +211,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slashrpc_cservice);
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctlmsg_conn);
-	PRTYPE(struct slctlmsg_file);
+	PRTYPE(struct slctlmsg_fcmh);
 	PRTYPE(struct sli_repl_workrq);
 	PRTYPE(struct slictlmsg_replwkst);
 	PRTYPE(struct sliric_thread);
@@ -349,7 +349,7 @@ main(int argc, char *argv[])
 	PRVAL(MSCMT_ADDREPLRQ);
 	PRVAL(MSCMT_DELREPLRQ);
 	PRVAL(MSCMT_GETCONNS);
-	PRVAL(MSCMT_GETFILES);
+	PRVAL(MSCMT_GETFCMH);
 	PRVAL(MSCMT_GETREPLST);
 	PRVAL(MSCMT_GETREPLST_SLAVE);
 	PRVAL(MSCMT_SET_BMAPREPLPOL);
