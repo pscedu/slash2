@@ -91,7 +91,7 @@ sl_conn_prdat(const struct psc_ctlmsghdr *mh, const void *m)
 }
 
 void
-sl_file_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+sl_fcmh_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 {
 	printf("%-16s %10s %6s %5s %5s "
 	    "%8s %4s %9s %4s %4s\n",
@@ -100,9 +100,9 @@ sl_file_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
 }
 
 void
-sl_file_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+sl_fcmh_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 {
-	const struct slctlmsg_file *scf = m;
+	const struct slctlmsg_fcmh *scf = m;
 	char buf[PSCFMT_HUMAN_BUFSIZ];
 
 	psc_fmt_human(buf, scf->scf_size);

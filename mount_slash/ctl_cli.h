@@ -73,7 +73,7 @@ struct msctlmsg_fncmd_bmapreplpol {
 #define MSCMT_SET_BMAPREPLPOL	(NPCMT + 4)
 #define MSCMT_SET_NEWREPLPOL	(NPCMT + 5)
 #define MSCMT_GETCONNS		(NPCMT + 6)
-#define MSCMT_GETFILES		(NPCMT + 7)
+#define MSCMT_GETFCMH		(NPCMT + 7)
 
 /* mount_slash control commands */
 #define MSCC_EXIT		0

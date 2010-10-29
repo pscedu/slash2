@@ -78,19 +78,32 @@ struct psc_ctlop slictlops[] = {
 	PSC_CTLDEFOPS,
 	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
-	{ slctlrep_getfiles,		sizeof(struct slctlmsg_file ) }
+	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh ) }
 };
 
-void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {
-/* 0 */ psc_ctlthr_stat,
-/* 1 */ psc_ctlacthr_stat
+psc_ctl_thrget_t psc_ctl_thrgets[] = {
+/* BMAPRLS	*/ NULL,
+/* CONN		*/ NULL,
+/* CTL		*/ psc_ctlthr_get,
+/* CTLAC	*/ psc_ctlacthr_get,
+/* LNETAC	*/ NULL,
+/* REPLFIN	*/ NULL,
+/* REPLPND	*/ NULL,
+/* REPLREAP	*/ NULL,
+/* RIC		*/ NULL,
+/* RII		*/ NULL,
+/* RIM		*/ NULL,
+/* SLVR_CRC	*/ NULL,
+/* TINTV	*/ NULL,
+/* TIOS		*/ NULL,
+/* USKLNDPL	*/ NULL
 };
-int psc_ctl_ngetstats = nitems(psc_ctl_getstats);
 
-int (*psc_ctl_cmds[])(int, struct psc_ctlmsghdr *, void *) = {
-	slictlcmd_exit,
+psc_ctl_cmd_t psc_ctl_cmds[] = {
+	slictlcmd_exit
 };
-int psc_ctl_ncmds = nitems(psc_ctl_cmds);
+
+PFLCTL_SVR_DEFS;
 
 void
 slictlthr_main(const char *fn)

@@ -468,13 +468,20 @@ following:
 .Pp
 .Bl -tag -offset indent -width 12n -compact
 .It Cm connections
-Status of hosts on network.
-.It Cm files
-Files in cache.
+Status of
+.Tn SLASH
+peers on network.
+.It Cm fcmhs
+.Tn FID
+.Pq file- Ns Tn ID
+cache members.
 .It Cm loglevels
-Query thread logging levels.
-.It Cm stats
-Query thread activity statistics.
+Thread logging levels.
+.It Cm rpcsvcs
+.Tn RPC
+services.
+.It Cm threads
+Thread activity statistics.
 .El
 .Pp
 The special value
@@ -554,6 +561,7 @@ default
 control socket
 .El
 .Sh SEE ALSO
+.Xr pflctl 7 ,
 .Xr sladm 7 ,
 .Xr mount_slash 8 ,
 .Xr slashd 8

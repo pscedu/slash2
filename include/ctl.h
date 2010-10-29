@@ -31,7 +31,7 @@ struct slctlmsg_conn {
 
 #define SLCTL_REST_CLI		0
 
-struct slctlmsg_file {
+struct slctlmsg_fcmh {
 	struct slash_fidgen	scf_fg;		/* identity of the file */
 	uint64_t		scf_size;
 	int32_t			scf_ptruncgen;

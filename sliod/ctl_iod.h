@@ -42,7 +42,7 @@ struct slictlmsg_replwkst {
 /* sliod message types */
 #define SLICMT_GET_REPLWKST	NPCMT
 #define SLICMT_GETCONNS		(NPCMT + 1)
-#define SLICMT_GETFILES		(NPCMT + 2)
+#define SLICMT_GETFCMH		(NPCMT + 2)
 
 /* sliod control commands */
 #define SICC_EXIT		0

@@ -33,7 +33,7 @@
 #include "slashd.h"
 #include "slconfig.h"
 
-struct psc_lockedlist psc_mlists;
+struct psc_lockedlist		 psc_mlists;
 
 struct sl_mds_nsstats		 slm_nsstats_aggr;	/* aggregate stats */
 
@@ -202,8 +202,8 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 	return (rc);
 }
 
-/*
- * slmctlcmd_exit - handle an EXIT command to terminate execution.
+/**
+ * slmctlcmd_exit - Handle an EXIT command to terminate execution.
  */
 __dead int
 slmctlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
@@ -216,19 +216,34 @@ slmctlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 struct psc_ctlop slmctlops[] = {
 	PSC_CTLDEFOPS,
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
-	{ slctlrep_getfiles,		sizeof(struct slctlmsg_file ) }
+	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh ) }
 };
 
-void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {
-/* 0 */ psc_ctlthr_stat,
-/* 1 */ psc_ctlacthr_stat
+psc_ctl_thrget_t psc_ctl_thrgets[] = {
+/* BMAPTIMEO	*/ NULL,
+/* COH		*/ NULL,
+/* CTL		*/ psc_ctlthr_get,
+/* CTLAC	*/ psc_ctlacthr_get,
+/* CURSOR	*/ NULL,
+/* FSSYNC	*/ NULL,
+/* JNAMESPACE	*/ NULL,
+/* JRNL		*/ NULL,
+/* LNETAC	*/ NULL,
+/* RCM		*/ NULL,
+/* RMC		*/ NULL,
+/* RMI		*/ NULL,
+/* RMM		*/ NULL,
+/* TINTV	*/ NULL,
+/* TIOS		*/ NULL,
+/* UPSCHED	*/ NULL,
+/* USKLNDPL	*/ NULL
 };
-int psc_ctl_ngetstats = nitems(psc_ctl_getstats);
 
-int (*psc_ctl_cmds[])(int, struct psc_ctlmsghdr *, void *) = {
-	slmctlcmd_exit,
+psc_ctl_cmd_t psc_ctl_cmds[] = {
+	slmctlcmd_exit
 };
-int psc_ctl_ncmds = nitems(psc_ctl_cmds);
+
+PFLCTL_SVR_DEFS;
 
 void
 slmctlthr_main(const char *fn)

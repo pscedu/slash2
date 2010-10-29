@@ -34,14 +34,14 @@
 #include "slashd/ctl_mds.h"
 
 void
-slmrmcthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
+slmrmcthr_pr(const struct psc_ctlmsg_thread *pcst)
 {
 	printf(" #open %8d #close %8d #stat %8d",
 	    pcst->pcst_nopen, pcst->pcst_nclose, pcst->pcst_nstat);
 }
 
 void
-slmrmmthr_st_prdat(const struct psc_ctlmsg_stats *pcst)
+slmrmmthr_pr(const struct psc_ctlmsg_thread *pcst)
 {
 	printf(" #open %8d", pcst->pcst_nopen);
 }
@@ -53,44 +53,62 @@ packshow_conns(__unusedx const char *thr)
 }
 
 void
-packshow_files(__unusedx const char *thr)
+packshow_fcmhs(__unusedx const char *thr)
 {
-	struct slctlmsg_file *scf;
+	struct slctlmsg_fcmh *scf;
 
-	scf = psc_ctlmsg_push(SLMCMT_GETFILES, sizeof(struct slctlmsg_file));
+	scf = psc_ctlmsg_push(SLMCMT_GETFCMH, sizeof(struct slctlmsg_fcmh));
 	scf->scf_fg.fg_fid = FID_ANY;
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	{ "connections",	packshow_conns },
-	{ "fidcache",		packshow_files },
-	{ "files",		packshow_files },
-	{ "loglevels",		psc_ctl_packshow_loglevel },
+	{ "fcmhs",		packshow_fcmhs },
+	{ "loglevels",		psc_ctl_packshow_loglevels },
 	{ "odtables",		psc_ctl_packshow_odtables },
-	{ "stats",		psc_ctl_packshow_stats }
+	{ "rpcsvcs",		psc_ctl_packshow_rpcsvcs },
+	{ "threads",		psc_ctl_packshow_threads },
+
+	/* aliases */
+	{ "conns",		packshow_conns },
+	{ "fidcache",		packshow_fcmhs },
+	{ "files",		packshow_fcmhs },
+	{ "stats",		psc_ctl_packshow_threads },
+	{ "thrstats",		psc_ctl_packshow_threads }
 };
-int psc_ctlshow_ntabents = nitems(psc_ctlshow_tab);
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
 	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
-	{ sl_file_prhdr,	sl_file_prdat,		sizeof(struct slctlmsg_file),		NULL }
+	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL }
 };
-int psc_ctlmsg_nprfmts = nitems(psc_ctlmsg_prfmts);
 
-struct psc_ctl_thrstatfmt psc_ctl_thrstatfmts[] = {
-/* CTL		*/ { psc_ctlthr_prdat },
-/* ACSVC	*/ { NULL },
-/* RMC		*/ { slmrmcthr_st_prdat },
-/* RMI		*/ { NULL },
-/* RMM		*/ { slmrmmthr_st_prdat }
+psc_ctl_prthr_t psc_ctl_prthrs[] = {
+/* BMAPTIMEO	*/ NULL,
+/* COH		*/ NULL,
+/* CTL		*/ psc_ctlthr_pr,
+/* CTLAC	*/ psc_ctlacthr_pr,
+/* CURSOR	*/ NULL,
+/* FSSYNC	*/ NULL,
+/* JNAMESPACE	*/ NULL,
+/* JRNL		*/ NULL,
+/* LNETAC	*/ NULL,
+/* RCM		*/ NULL,
+/* RMC		*/ slmrmcthr_pr,
+/* RMI		*/ NULL,
+/* RMM		*/ slmrmmthr_pr,
+/* TINTV	*/ NULL,
+/* TIOS		*/ NULL,
+/* UPSCHED	*/ NULL,
+/* USKLNDPL	*/ NULL
 };
-int psc_ctl_nthrstatfmts = nitems(psc_ctl_thrstatfmts);
 
 struct psc_ctlcmd_req psc_ctlcmd_reqs[] = {
-	{ "exit",	SMCC_EXIT }
+	{ "exit",	SMCC_EXIT },
+	{ "reconfig",	SMCC_RECONFIG }
 };
-int psc_ctlcmd_nreqs = nitems(psc_ctlcmd_reqs);
+
+PFLCTL_CLI_DEFS;
 
 const char *progname;
 

@@ -101,8 +101,8 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 }
 
 __static int
-slctlmsg_file_send(int fd, struct psc_ctlmsghdr *mh,
-    struct slctlmsg_file *scf, struct fidc_membh *fcmh)
+slctlmsg_fcmh_send(int fd, struct psc_ctlmsghdr *mh,
+    struct slctlmsg_fcmh *scf, struct fidc_membh *fcmh)
 {
 	scf->scf_fg = fcmh->fcmh_fg;
 	scf->scf_ptruncgen = fcmh->fcmh_sstb.sst_ptruncgen;
@@ -117,9 +117,9 @@ slctlmsg_file_send(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-slctlrep_getfiles(int fd, struct psc_ctlmsghdr *mh, void *m)
+slctlrep_getfcmh(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
-	struct slctlmsg_file *scf = m;
+	struct slctlmsg_fcmh *scf = m;
 	struct fidc_membh *fcmh;
 	struct psc_hashbkt *b;
 	int rc;
@@ -129,7 +129,7 @@ slctlrep_getfiles(int fd, struct psc_ctlmsghdr *mh, void *m)
 		PSC_HASHTBL_FOREACH_BUCKET(b, &fidcHtable) {
 			psc_hashbkt_lock(b);
 			PSC_HASHBKT_FOREACH_ENTRY(&fidcHtable, fcmh, b) {
-				rc = slctlmsg_file_send(fd, mh, scf, fcmh);
+				rc = slctlmsg_fcmh_send(fd, mh, scf, fcmh);
 				if (!rc)
 					break;
 			}
@@ -140,7 +140,7 @@ slctlrep_getfiles(int fd, struct psc_ctlmsghdr *mh, void *m)
 	} else {
 		fcmh = fidc_lookup_fid(scf->scf_fg.fg_fid);
 		if (fcmh) {
-			rc = slctlmsg_file_send(fd, mh, scf, fcmh);
+			rc = slctlmsg_fcmh_send(fd, mh, scf, fcmh);
 			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		} else
 			rc = psc_ctlsenderr(fd, mh,

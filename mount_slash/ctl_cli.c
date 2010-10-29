@@ -456,14 +456,25 @@ struct psc_ctlop msctlops[] = {
 	{ msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_fncmd_newreplpol) },
 	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_fncmd_bmapreplpol) },
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn) },
-	{ slctlrep_getfiles,		sizeof(struct slctlmsg_file) }
+	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) }
 };
 
-void (*psc_ctl_getstats[])(struct psc_thread *, struct psc_ctlmsg_stats *) = {
-/* 0 */ psc_ctlthr_stat,
-/* 1 */ psc_ctlacthr_stat
+psc_ctl_thrget_t psc_ctl_thrgets[] = {
+/* BMAPFLSH	*/ NULL,
+/* BMAPFLSHRLS	*/ NULL,
+/* BMAPFLSHRPC	*/ NULL,
+/* CONN		*/ NULL,
+/* CTL		*/ psc_ctlthr_get,
+/* CTLAC	*/ psc_ctlacthr_get,
+/* EQPOLL	*/ NULL,
+/* FS		*/ NULL,
+/* FSMGR	*/ NULL,
+/* LNETAC	*/ NULL,
+/* RCM		*/ NULL,
+/* TINTV	*/ NULL,
+/* TIOS		*/ NULL,
+/* USKLNDPL	*/ NULL
 };
-int psc_ctl_ngetstats = nitems(psc_ctl_getstats);
 
 int
 slcctlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
@@ -480,11 +491,12 @@ slcctlcmd_reconfig(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	return (0);
 }
 
-int (*psc_ctl_cmds[])(int, struct psc_ctlmsghdr *, void *) = {
+psc_ctl_cmd_t psc_ctl_cmds[] = {
 	slcctlcmd_exit,
 	slcctlcmd_reconfig
 };
-int psc_ctl_ncmds = nitems(psc_ctl_cmds);
+
+PFLCTL_SVR_DEFS;
 
 void
 msctlthr_begin(__unusedx struct psc_thread *thr)

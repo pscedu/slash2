@@ -28,7 +28,7 @@
 
 /* sliod message types */
 #define SLMCMT_GETCONNS		NPCMT
-#define SLMCMT_GETFILES		(NPCMT + 1)
+#define SLMCMT_GETFCMH		(NPCMT + 1)
 
 /* slashd control commands */
 #define SMCC_EXIT		0

@@ -293,7 +293,7 @@ character
 .El
 .Pp
 The default is
-.Pa /var/run/slashd. Ns Ic %h Ns Pa sock .
+.Pa /var/run/slashd. Ns Ic %h Ns Pa .sock .
 .It Fl s Ar showspec
 Query and show
 .Xr slashd 8
@@ -313,13 +313,22 @@ following:
 .Pp
 .Bl -tag -offset indent -width 12n -compact
 .It Cm connections
-Status of hosts on network.
+Status of
+.Tn SLASH
+peers on network.
+.It Cm fcmhs
+.Tn FID
+.Pq file- Ns Tn ID
+cache members.
 .It Cm loglevels
-Query thread logging levels.
+Thread logging levels.
 .It Cm odtables
-Query disk-backed data files.
-.It Cm stats
-Query thread activity statistics.
+Disk-backed data files.
+.It Cm rpcsvcs
+.Tn RPC
+services.
+.It Cm threads
+Thread activity statistics.
 .El
 .Pp
 The special value
@@ -395,6 +404,7 @@ default
 control socket
 .El
 .Sh SEE ALSO
+.Xr pflctl 7 ,
 .Xr sladm 7 ,
 .Xr slashd 8 ,
 .Xr slictl 8
