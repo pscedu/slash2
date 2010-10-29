@@ -34,11 +34,3 @@ endif
 
 SUBDIRS+=	tests
 SUBDIRS+=	utils
-
-zbuild:
-	@(cd ${SLASH_BASE}/slashd && ${MAKE} zbuild)
-
-rezbuild:
-	@(cd ${SLASH_BASE}/slashd && ${MAKE} rezbuild)
-
-fullbuild: zbuild build
