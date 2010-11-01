@@ -648,6 +648,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
 	int tract[NBREPLST], to_set, rc;
 	struct up_sched_work_item *wk;
+	struct bmap_mds_info *bmdsi;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct fidc_membh *fcmh;
@@ -669,7 +670,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 			rc = mdsio_fcmh_setattr(fcmh, SL_SETATTRF_GEN);
 
-			/* XXX: queue updates to IOS's */
+			/* XXX: queue changelog updates to every IOS replica */
+			/* XXX: if file size is already 0, don't bump */
 		} else {
 			/* partial truncate */
 			struct {
@@ -697,6 +699,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			brepls_init(tract, -1);
 			tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
+			bmdsi = bmap_2_bmdsi(bcm);
+			BMAPOD_WRLOCK(bmdsi);
+
 			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
 			if (mds_bmap_load(fcmh, i, &bcm) == 0) {
 				mds_repl_bmap_walk_all(bcm, tract,
@@ -723,16 +728,17 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				    &ios_list);
 				mds_repl_bmap_rel(bcm);
 			}
+			BMAPOD_ULOCK(bmdsi);
 
 			rc = uswi_findoradd(&fcmh->fcmh_fg, &wk);
 			uswi_enqueue_sites(wk, ios_list.iosv, ios_list.nios);
+			uswi_unref(wk);
 
 			FCMH_LOCK(fcmh);
 			fcmh_2_ptruncgen(fcmh)++;
 			fcmh->fcmh_flags &= ~FMIF_BLOCK_PTRUNC;
 			fcmh_wake_locked(fcmh);
 			FCMH_ULOCK(fcmh);
-
 		}
 	}
 	/*
@@ -918,7 +924,7 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		    mq->name, &rootcreds, mds_namespace_log);
 	mds_unreserve_slot();
 
-	psc_info("mdsio_unlink: parent = "SLPRI_FID", name = %s, rc=%d", 
+	psc_info("mdsio_unlink: parent = "SLPRI_FID", name = %s, rc=%d",
 		  mq->pfg.fg_fid, mq->name, mp->rc);
  out:
 	if (fcmh)
