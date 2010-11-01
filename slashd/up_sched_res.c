@@ -142,7 +142,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	 * All states are INACTIVE/ACTIVE;
 	 * remove it and its persistent link.
 	 */
-	rc = snprintf(fn, sizeof(fn), "%016"PRIx64, USWI_FID(wk));
+	rc = snprintf(fn, sizeof(fn), SLPRI_FID, USWI_FID(wk));
 	if (rc == -1)
 		rc = errno;
 	else if (rc >= (int)sizeof(fn))
@@ -717,7 +717,7 @@ uswi_init(struct up_sched_work_item *wk, slfid_t fid)
 	wk->uswi_flags |= USWIF_BUSY;
 	psc_pthread_mutex_init(&wk->uswi_mutex);
 	psc_multiwaitcond_init(&wk->uswi_mwcond,
-	    NULL, 0, "upsched-%lx", fid);
+	    NULL, 0, "upsched-"SLPRI_FID, fid);
 	psc_atomic32_set(&wk->uswi_refcnt, 0);
 }
 
@@ -860,7 +860,7 @@ uswi_findoradd(const struct slash_fidgen *fgp,
 	if (rc)
 		goto out;
 
-	rc = snprintf(fn, sizeof(fn), "%016"PRIx64, fgp->fg_fid);
+	rc = snprintf(fn, sizeof(fn), SLPRI_FID, fgp->fg_fid);
 	if (rc == -1) {
 		rc = errno;
 		goto out;
