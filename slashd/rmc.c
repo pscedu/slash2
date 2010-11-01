@@ -648,7 +648,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 {
 	int tract[NBREPLST], to_set, rc;
 	struct up_sched_work_item *wk;
-	struct bmap_mds_info *bmdsi;
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct fidc_membh *fcmh;
@@ -699,9 +698,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			brepls_init(tract, -1);
 			tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
-			bmdsi = bmap_2_bmdsi(bcm);
-			BMAPOD_WRLOCK(bmdsi);
-
 			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
 			if (mds_bmap_load(fcmh, i, &bcm) == 0) {
 				mds_repl_bmap_walk_all(bcm, tract,
@@ -728,7 +724,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 				    &ios_list);
 				mds_repl_bmap_rel(bcm);
 			}
-			BMAPOD_ULOCK(bmdsi);
 
 			rc = uswi_findoradd(&fcmh->fcmh_fg, &wk);
 			uswi_enqueue_sites(wk, ios_list.iosv, ios_list.nios);
