@@ -78,6 +78,16 @@ character
 The default is
 .Pa /var/run/sliod. Ns Ic %h Ns Pa .sock .
 .El
+.Sh ENVIRONMENT
+.Bl -tag -width LNET_NETWORKSx
+.It Ev LNET_NETWORKS
+Override the default Lustre networks determined from
+.Pa slash.conf
+and the machine's networking configuration.
+See
+.Xr pflenv 7
+for more details.
+.El
 .Sh FILES
 .Bl -tag -width Pa -compact
 .It Pa /etc/slash.conf

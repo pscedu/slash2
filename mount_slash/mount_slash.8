@@ -89,19 +89,14 @@ at the location specified by
 before attempting to bring up the file system.
 .El
 .Sh ENVIRONMENT
-.Bl -tag -width SLASH_MDS_SERVER_NIDx
-.It Ev SLASH_MDS_NID
-Metadata server resource name.
-See also
-.Fl M .
-.It Ev SLASH2_PIOS_ID
-Preferred
-.Tn I/O
-server
-.Xr slash.conf 5
-resource name.
-See also
-.Fl I .
+.Bl -tag -width LNET_NETWORKSx
+.It Ev LNET_NETWORKS
+Override the default Lustre networks determined from
+.Pa slash.conf
+and the machine's networking configuration.
+See
+.Xr pflenv 7
+for more details.
 .El
 .Sh FILES
 .Bl -tag -width Pa -compact
