@@ -325,10 +325,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mfh = msl_fhent_new(m);
 
  out:
-	DEBUG_FCMH(PLL_INFO, m, "new mfh=%p rc=%d name=(%s)", mfh, rc, name);
 
-	if (m)
+	if (m) {
+		DEBUG_FCMH(PLL_INFO, m, "new mfh=%p rc=%d name=(%s)", mfh, rc, name);
 		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
+	}
 
 	pscfs_reply_create(pfr, mp ? mp->attr.sst_fid : 0,
 	    mp ? mp->attr.sst_fg.fg_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
