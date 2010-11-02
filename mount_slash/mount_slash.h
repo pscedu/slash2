@@ -24,7 +24,6 @@
 
 #include <stdarg.h>
 
-#include "psc_ds/tree.h"
 #include "psc_rpc/service.h"
 
 #include "bmap.h"
@@ -48,7 +47,6 @@ enum {
 	MSTHRT_FSMGR,			/* pscfs manager */
 	MSTHRT_LNETAC,			/* lustre net accept thr */
 	MSTHRT_RCM,			/* service RPC reqs for client from MDS */
-	MSTHRT_TINTV,			/* timer interval thread */
 	MSTHRT_TIOS,			/* timer iostat updater */
 	MSTHRT_USKLNDPL			/* userland socket lustre net dev poll thr */
 };
