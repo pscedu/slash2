@@ -41,7 +41,6 @@ enum {
 	SLITHRT_RII,		/* service RPC requests from ION */
 	SLITHRT_RIM,		/* service RPC requests from MDS */
 	SLITHRT_SLVR_CRC,	/* sliver crc updaters */
-	SLITHRT_TINTV,		/* timer interval */
 	SLITHRT_TIOS,		/* iostats updater */
 	SLITHRT_USKLNDPL	/* userland socket lustre net dev poll thr */
 };

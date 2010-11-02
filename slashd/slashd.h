@@ -53,7 +53,6 @@ enum {
 	SLMTHRT_RMC,		/* MDS <- CLI msg svc handler */
 	SLMTHRT_RMI,		/* MDS <- I/O msg svc handler */
 	SLMTHRT_RMM,		/* MDS <- MDS msg svc handler */
-	SLMTHRT_TINTV,		/* timer interval */
 	SLMTHRT_TIOS,		/* I/O stats updater */
 	SLMTHRT_UPSCHED,	/* update scheduler for site resources */
 	SLMTHRT_USKLNDPL	/* userland socket lustre net dev poll thr */
