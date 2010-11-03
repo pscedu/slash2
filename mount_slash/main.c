@@ -788,12 +788,61 @@ mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 __static void
 mslfsop_mknod(struct pscfs_req *pfr,
-    __unusedx pscfs_inum_t pinum, __unusedx const char *name,
-    __unusedx mode_t mode, __unusedx dev_t rdev)
+    pscfs_inum_t pinum, const char *name,
+    mode_t mode, __unusedx dev_t rdev)
 {
+	struct slashrpc_cservice *csvc = NULL;
+	struct pscrpc_request *rq = NULL;
+	struct srm_mknod_rep *mp = NULL;
+	struct fidc_membh *m = NULL;
+	struct srm_mknod_req *mq = NULL;
+	struct slash_creds creds;
+	struct stat stb;
+	int rc;
+
 	msfsthr_ensure();
 
-	pscfs_reply_mknod(pfr, 0, 0, 0, NULL, 0, ENOTSUP);
+	if (!S_ISFIFO(mode)) {
+		rc = EOPNOTSUPP;
+		goto out;
+	}
+	if (strlen(name) > NAME_MAX) {
+		rc = ENAMETOOLONG;
+		goto out;
+	}
+	mslfs_getcreds(pfr, &creds);
+
+	rc = slc_rmc_getimp(&csvc);
+	if (rc)
+		goto out;
+	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
+	    SRMT_MKNOD, rq, mq, mp);
+	if (rc)
+		goto out;
+
+	mq->creds = creds;
+	mq->pfg.fg_fid = pinum;
+	mq->pfg.fg_gen = 0;
+	mq->mode = mode;
+	strlcpy(mq->name, name, sizeof(mq->name));
+
+	rc = SL_RSX_WAITREP(rq, mp);
+	if (rc == 0)
+		rc = mp->rc;
+	if (rc)
+		goto out;
+
+	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
+	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
+
+	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_NONE, &m);
+
+	sl_internalize_stat(&mp->attr, &stb);
+
+out:
+	pscfs_reply_mknod(pfr, mp ? mp->attr.sst_fid : 0, 
+		mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO, 
+		&stb, MSLFS_ATTR_TIMEO, rc);
 }
 
 __static void

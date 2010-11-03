@@ -361,6 +361,30 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 }
 
 int
+slm_rmc_handle_mknod(struct pscrpc_request *rq)
+{
+	struct srm_mknod_req *mq;
+	struct srm_mknod_rep *mp;
+	struct fidc_membh *fcmh;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	mp->rc = slm_fcmh_get(&mq->pfg, &fcmh);
+	if (mp->rc)
+		goto out;
+
+	mq->name[sizeof(mq->name) - 1] = '\0';
+	mds_reserve_slot();
+	mp->rc = mdsio_mknod(fcmh_2_mdsio_fid(fcmh), mq->name, mq->mode,
+	    &mq->creds, &mp->attr, NULL, mds_namespace_log,
+	    slm_get_next_slashid);
+	mds_unreserve_slot();
+ out:
+	if (fcmh)
+		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	return (0);
+}
+
+int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
 	struct fidc_membh *p, *fcmh;
@@ -1028,6 +1052,9 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		break;
 	case SRMT_MKDIR:
 		rc = slm_rmc_handle_mkdir(rq);
+		break;
+	case SRMT_MKNOD:
+		rc = slm_rmc_handle_mknod(rq);
 		break;
 	case SRMT_LOOKUP:
 		rc = slm_rmc_handle_lookup(rq);

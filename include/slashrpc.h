@@ -662,6 +662,12 @@ struct srm_mknod_req {
 	uint32_t		rdev;
 } __packed;
 
+struct srm_mknod_rep {
+	struct srt_stat		attr;
+	int32_t			rc;
+	int32_t			_pad;
+} __packed;
+
 #define DEF_READDIR_NENTS	100
 #define MAX_READDIR_NENTS	1000
 #define MAX_READDIR_BUFSIZ	(sizeof(struct srt_stat) * MAX_READDIR_NENTS)

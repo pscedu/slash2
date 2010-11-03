@@ -356,6 +356,7 @@ struct mdsio_ops mdsio_ops = {
 	zfsslash2_lookup,
 	zfsslash2_lookup_slfid,
 	zfsslash2_mkdir,
+	zfsslash2_mknod,
 	zfsslash2_opencreate,
 	zfsslash2_opendir,
 	zfsslash2_read,
