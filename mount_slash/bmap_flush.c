@@ -754,7 +754,7 @@ bmap_flush(void)
 
 			if (!bmpc_queued_ios(bmpc)) {
 				/* No remaining reads or writes.  BMAP_TIMEOQ
-				 *   and BMAP_CLI_FLUSHPROC are mutually 
+				 *   and BMAP_CLI_FLUSHPROC are mutually
 				 *   exclusive.
 				 */
 				psc_assert(!(b->bcm_flags & BMAP_TIMEOQ));
