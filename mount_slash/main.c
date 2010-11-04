@@ -840,8 +840,8 @@ mslfsop_mknod(struct pscfs_req *pfr,
 	sl_internalize_stat(&mp->attr, &stb);
 
 out:
-	pscfs_reply_mknod(pfr, mp ? mp->attr.sst_fid : 0, 
-		mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO, 
+	pscfs_reply_mknod(pfr, mp ? mp->attr.sst_fid : 0,
+		mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO,
 		&stb, MSLFS_ATTR_TIMEO, rc);
 }
 
@@ -934,7 +934,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 		for (i = 0; i < mq->nstbpref; i++, attr++) {
 			if (attr->sst_fid == FID_ANY ||
 			    attr->sst_fid == 0) {
-				psc_warnx("invalid i+g:"SLPRI_FG", parent: "SLPRI_FID, 
+				psc_warnx("invalid i+g:"SLPRI_FG", parent: "SLPRI_FID,
 					   SLPRI_FG_ARGS(&attr->sst_fg), fcmh_2_fid(d));
 				continue;
 			}
