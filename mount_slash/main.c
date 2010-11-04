@@ -232,7 +232,10 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int mask)
 	if (rc)
 		goto out;
 
+	FCMH_LOCK(c);
 	rc = checkcreds(&c->fcmh_sstb, &creds, mask);
+	FCMH_ULOCK(c);
+
  out:
 	pscfs_reply_access(pfr, rc);
 	if (c)
@@ -360,12 +363,16 @@ msl_open(struct pscfs_req *pfr, pscfs_inum_t inum, int oflags,
 		goto out;
 
 	if ((oflags & O_ACCMODE) != O_WRONLY) {
+		FCMH_LOCK(c);
 		rc = checkcreds(&c->fcmh_sstb, &creds, R_OK);
+		FCMH_ULOCK(c);
 		if (rc)
 			goto out;
 	}
 	if (oflags & (O_WRONLY | O_RDWR)) {
+		FCMH_LOCK(c);
 		rc = checkcreds(&c->fcmh_sstb, &creds, W_OK);
+		FCMH_ULOCK(c);
 		if (rc)
 			goto out;
 	}
@@ -510,13 +517,13 @@ msl_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved via rpc rc=%d", rc);
 
  check:
-	FCMH_ULOCK(fcmh);
 	if (!rc) {
 		rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
 		if (rc)
 			psc_info("fcmh=%p, mode=%x, checkcreds rc=%d",
 			    fcmh, fcmh->fcmh_sstb.sst_mode, rc);
 	}
+	FCMH_ULOCK(fcmh);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (rc);
@@ -597,7 +604,9 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		goto out;
 	}
 
+	FCMH_LOCK(p);
 	rc = checkcreds(&p->fcmh_sstb, &creds, W_OK);
+	FCMH_ULOCK(p);
 	if (rc)
 		goto out;
 
@@ -1141,7 +1150,9 @@ mslfsop_readlink(struct pscfs_req *pfr, pscfs_inum_t inum)
 	if (rc)
 		goto out;
 
+	FCMH_LOCK(c);
 	rc = checkcreds(&c->fcmh_sstb, &creds, R_OK);
+	FCMH_ULOCK(c);
 	if (rc)
 		goto out;
 
@@ -1444,7 +1455,9 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (rc)
 		goto out;
 
+	FCMH_LOCK(c);
 	rc = checkcreds(&c->fcmh_sstb, &cr, W_OK);
+	FCMH_ULOCK(c);
 	if (rc)
 		goto out;
 
