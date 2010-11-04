@@ -491,6 +491,21 @@ fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 }
 
 void
+fcmh_decref(struct fidc_membh *f, enum fcmh_opcnt_types type)
+{
+	int locked;
+
+	locked = FCMH_RLOCK(f);
+
+	DEBUG_FCMH(PLL_NOTIFY, (f), "release ref (type=%d)", type);
+
+	psc_assert(f->fcmh_refcnt > 1);
+	f->fcmh_refcnt--;
+	fcmh_wake_locked(f);
+	FCMH_URLOCK(f, locked);
+}
+
+void
 fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	FCMH_RLOCK(f);

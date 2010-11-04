@@ -52,8 +52,11 @@ dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
 	    name);
 }
 
+#define FCMH_TRYFREE 1
+#define FCMH_NOFREE 0
+
 static void
-dircache_rls_ents(struct dircache_ents *e)
+dircache_rls_ents(struct dircache_ents *e, int fcmh_tryfree)
 {
 	struct dircache_info *i = e->de_info;
 	struct dircache_mgr *m = i->di_dcm;
@@ -75,8 +78,11 @@ dircache_rls_ents(struct dircache_ents *e)
 	psc_dynarray_free(&e->de_dents);
 	PSCFREE(e->de_desc);
 	PSCFREE(e);
-
-	fcmh_op_done_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
+	
+	if (fcmh_tryfree)
+		fcmh_op_done_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
+	else
+		fcmh_decref(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
 }
 
 void
@@ -88,7 +94,7 @@ dircache_setfreeable_ents(struct dircache_ents *e)
 	if (!e->de_remlookup && !(e->de_flags & DIRCE_FREEING)) {
 		e->de_flags |= DIRCE_FREEING;
 		dircache_ent_ulock(e);
-		dircache_rls_ents(e);
+		dircache_rls_ents(e, FCMH_TRYFREE);
 	} else
 		dircache_ent_ulock(e);
 }
@@ -183,7 +189,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	PLL_ULOCK(&i->di_list);
 
 	DYNARRAY_FOREACH(e, pos, &da)
-	    dircache_rls_ents(e);
+		dircache_rls_ents(e, FCMH_NOFREE);
 	psc_dynarray_free(&da);
 
 	return (ino);
@@ -210,7 +216,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 		    !(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
-			dircache_rls_ents(e);
+			dircache_rls_ents(e, FCMH_NOFREE);
 
 		} else {
 			dircache_ent_ulock(e);
@@ -231,7 +237,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 		    !(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
-			dircache_rls_ents(e);
+			dircache_rls_ents(e, FCMH_NOFREE);
 		} else
 			dircache_ent_ulock(e);
 	}
