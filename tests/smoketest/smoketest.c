@@ -283,6 +283,11 @@ test_chown(void)
 		printf("Fail to set effective groups, errno = %d at line %d!\n", errno, __LINE__);
 		return (1);
 	}
+	rc = setuid(65532);
+	if (rc < 0) {
+		printf("Fail to set user ID, errno = %d at line %d!\n", errno, __LINE__);
+		return (1);
+	}
 	rc = chown(tmpname, 65535, 65535);
 	if (rc < 0) {
 		printf("Fail to chown file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
