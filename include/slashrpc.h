@@ -166,26 +166,26 @@ enum {
 	SRMT_NAMESPACE_UPDATE,		/* send a batch of namespace operation logs */
 
 	/* bmap operations */
-	SRMT_BMAPCHWRMODE,
-	SRMT_BMAPCRCWRT,
-	SRMT_BMAPDIO,
-	SRMT_GETBMAP,
+	SRMT_BMAPCHWRMODE,		/* change read/write access mode */
+	SRMT_BMAPCRCWRT,		/* update bmap data checksums */
+	SRMT_BMAPDIO,			/* request client direct I/O on a bmap */
+	SRMT_GETBMAP,			/* get client lease for bmap access */
 	SRMT_GETBMAPMINSEQ,
-	SRMT_GETBMAPCRCS,
-	SRMT_RELEASEBMAP,
+	SRMT_GETBMAPCRCS,		/* get bmap data checksums */
+	SRMT_RELEASEBMAP,		/* relinquish a client's bmap access lease */
 
 	/* garbage operations */
-	SRMT_GARBAGE,
+	SRMT_GARBAGE,			/* trash storage space for a given FID+GEN */
 
 	/* replication operations */
 	SRMT_REPL_ADDRQ,
 	SRMT_REPL_DELRQ,
-	SRMT_REPL_GETST,
-	SRMT_REPL_GETST_SLAVE,
-	SRMT_REPL_READ,
-	SRMT_REPL_SCHEDWK,
-	SRMT_SET_BMAPREPLPOL,
-	SRMT_SET_NEWREPLPOL,
+	SRMT_REPL_GETST,		/* get replication request status */
+	SRMT_REPL_GETST_SLAVE,		/* all bmap repl info for a file */
+	SRMT_REPL_READ,			/* ION to ION replicate */
+	SRMT_REPL_SCHEDWK,		/* MDS to ION replication staging */
+	SRMT_SET_BMAPREPLPOL,		/* bmap replication policy */
+	SRMT_SET_NEWREPLPOL,		/* file new bmap repl policy */
 
 	/* file system operations */
 	SRMT_CREATE,
@@ -474,7 +474,7 @@ struct srm_ping_req {
 
 /* ----------------------- BEGIN REPLICATION MESSAGES ----------------------- */
 
-/* for a GETSTATUS about a replication request */
+/* for a REPL_GETST about a replication request */
 struct srm_replst_master_req {
 	struct slash_fidgen	fg;
 	sl_replica_t		repls[SL_MAX_REPLICAS];
@@ -490,7 +490,7 @@ struct srm_replst_master_req {
 #define srm_replst_master_rep srm_replst_master_req
 
 /*
- * bmap data carrier for a replrq GETSTATUS when data is larger than can
+ * bmap data carrier for a REPL_GETST when data is larger than can
  * fit in srm_replst_master_req.data
  */
 struct srm_replst_slave_req {
