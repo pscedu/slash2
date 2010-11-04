@@ -26,6 +26,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -1488,6 +1489,32 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 
 	FCMH_LOCK(c);
 	rc = checkcreds(&c->fcmh_sstb, &cr, W_OK);
+	if (rc == 0 && (mq->to_set & PSCFS_SETATTRF_UID) &&
+	    cr.uid && stb->st_uid != cr.uid)
+		rc = EPERM;
+	if (rc == 0 && (mq->to_set & PSCFS_SETATTRF_GID) && cr.uid) {
+		char username[LOGIN_NAME_MAX];
+		gid_t *grpv = NULL;
+		int ngrp;
+
+		rc = getgrouplist(username, cr.gid, NULL, &ngrp);
+		if (rc)
+			goto groupfail;
+
+		grpv = psc_calloc(ngrp, sizeof(*grpv), 0);
+		rc = getgrouplist(username, cr.gid, grpv, &ngrp);
+		if (rc)
+			goto groupfail;
+
+		rc = EPERM;
+		for (; ngrp >= 0; ngrp--)
+			if (stb->st_gid == grpv[ngrp - 1]) {
+				rc = 0;
+				break;
+			}
+ groupfail:
+		PSCFREE(grpv);
+	}
 	FCMH_ULOCK(c);
 	if (rc)
 		goto out;
