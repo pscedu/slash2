@@ -866,7 +866,7 @@ msl_bmap_choose_replica(struct bmapc_memb *b)
 
 	/* rats, not available; try anyone available now */
 	rnd = psc_random32u(fci->fci_nrepls);
-	for (n = 0; n < fci->fci_nrepls; n++) {
+	for (n = 0; n < fci->fci_nrepls; rnd++) {
 		if (rnd >= fci->fci_nrepls)
 			rnd = 0;
 
