@@ -138,7 +138,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 
 	if (len % BMPC_BUFSZ) {
 		npages++;
-		if (op == BIORQ_WRITE) { 
+		if (op == BIORQ_WRITE) {
 			if (npages == 1 && !rbw)
 				rbw = BIORQ_RBWFP;
 			else if (npages > 1)
@@ -213,7 +213,7 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 				psc_atomic16_inc(&bmpce->bmpce_rdref);
 				r->biorq_flags |= BIORQ_RBWFP;
 
-			} else if ((i == (npages - 1) && 
+			} else if ((i == (npages - 1) &&
 				    (rbw & BIORQ_RBWLP))) {
 				bmpce->bmpce_flags |= BMPCE_RBWPAGE;
 				psc_atomic16_inc(&bmpce->bmpce_rdref);
@@ -222,17 +222,17 @@ msl_biorq_build(struct bmpc_ioreq **newreq, struct bmapc_memb *b,
 
 			psc_assert(!bmpce->bmpce_base);
 			BMPCE_ULOCK(bmpce);
-			
+
 			tmp = bmpc_alloc();
-			
+
 			BMPCE_LOCK(bmpce);
 			bmpce->bmpce_base = tmp;
 			bmpce->bmpce_flags &= ~BMPCE_GETBUF;
-			psc_waitq_wakeall(bmpce->bmpce_waitq);		
+			psc_waitq_wakeall(bmpce->bmpce_waitq);
 		}
 		BMPCE_ULOCK(bmpce);
 	}
-	
+
 	/* Pass2: Sanity Check
 	 */
 	for (i=0; i < npages; i++) {
@@ -947,7 +947,7 @@ msl_read_cb(struct pscrpc_request *rq, struct pscrpc_async_args *args)
 			DEBUG_BMPCE(PLL_INFO, bmpce, "infl dec for RBW, DATARDY not set");
 		} else {
 			bmpce->bmpce_flags |= BMPCE_DATARDY;
-			DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via read_cb");			
+			DEBUG_BMPCE(PLL_INFO, bmpce, "datardy via read_cb");
 			/* Disown bmpce by null'ing the waitq pointer.
 			 */
 			bmpce->bmpce_waitq = NULL;
@@ -1334,7 +1334,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 
 	} else {
 		if ((r->biorq_flags & (BIORQ_RBWFP|BIORQ_RBWLP)) ==
-		    (BIORQ_RBWFP|BIORQ_RBWLP) && 
+		    (BIORQ_RBWFP|BIORQ_RBWLP) &&
 		    psc_dynarray_len(&r->biorq_pages) == 2) {
 			for (i=0; i < 2; i++) {
 				bmpce = psc_dynarray_getpos(&r->biorq_pages, i);
@@ -1355,7 +1355,7 @@ msl_pages_prefetch(struct bmpc_ioreq *r)
 				sched = 1;
 			}
 			if (r->biorq_flags & BIORQ_RBWLP) {
-				bmpce = psc_dynarray_getpos(&r->biorq_pages, 
+				bmpce = psc_dynarray_getpos(&r->biorq_pages,
 							    npages - 1);
 				psc_assert(biorq_is_my_bmpce(r, bmpce));
 				psc_assert(!(bmpce->bmpce_flags & BMPCE_DATARDY));
@@ -1436,8 +1436,8 @@ msl_pages_blocking_load(struct bmpc_ioreq *r)
 }
 
 /**
- * msl_pages_copyin - copy user pages into buffer cache and schedule the
- *    slabs to be sent to the IOS backend.
+ * msl_pages_copyin - Copy user pages into buffer cache and schedule the
+ *    slabs to be sent to the ION backend.
  * @r: array of request structs.
  * @buf: the source (application) buffer.
  */
@@ -1521,7 +1521,7 @@ msl_pages_copyin(struct bmpc_ioreq *r, char *buf)
 }
 
 /**
- * msl_pages_copyout - copy pages to the user application buffer.
+ * msl_pages_copyout - Copy pages to the user application buffer.
  */
 __static void
 msl_pages_copyout(struct bmpc_ioreq *r, char *buf)
@@ -1604,7 +1604,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 
 	DEBUG_FCMH(PLL_INFO, mfh->mfh_fcmh, "buf=%p size=%zu off=%"PRId64
 		   " rw=%d", buf, size, off, rw);
-	
+
 	FCMH_LOCK(mfh->mfh_fcmh);
 
 	if (!size || (rw == SL_READ &&
