@@ -172,6 +172,7 @@ enum fcmh_opcnt_types {
 
 void	fidc_init(int, int, int (*)(struct fidc_membh *));
 void	fcmh_setattr(struct fidc_membh *, struct srt_stat *, int);
+void	fcmh_decref(struct fidc_membh *, enum fcmh_opcnt_types);
 
 /* fidc_lookup() flags */
 #define FIDC_LOOKUP_NONE		0
