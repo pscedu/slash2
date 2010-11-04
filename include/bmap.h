@@ -141,7 +141,7 @@ struct bmapc_memb {
 #define BMAP_ULOCK(b)		freelock(&(b)->bcm_lock)
 #define BMAP_RLOCK(b)		reqlock(&(b)->bcm_lock)
 #define BMAP_URLOCK(b, lk)	ureqlock(&(b)->bcm_lock, (lk))
-#define BMAP_TRYLOCK(b)         trylock(&(b)->bcm_lock)
+#define BMAP_TRYLOCK(b)		trylock(&(b)->bcm_lock)
 
 #define BMAP_SETATTR(b, fl)	SETATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
 #define BMAP_CLEARATTR(b, fl)	CLEARATTR_LOCKED(&(b)->bcm_lock, &(b)->bcm_flags, (fl))
