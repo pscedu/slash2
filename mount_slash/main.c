@@ -1256,12 +1256,13 @@ __static void
 mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
     const char *oldname, pscfs_inum_t npinum, const char *newname)
 {
+	struct fidc_membh *np = NULL, *op = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
 	struct srm_rename_req *mq;
-	struct fidc_membh *p;
+	struct slash_creds cr;
 	struct iovec iov[2];
 	int rc;
 
@@ -1271,6 +1272,28 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		rc = ENAMETOOLONG;
 		goto out;
 	}
+
+	rc = fidc_lookup_load_inode(opinum, &op);
+	if (rc)
+		goto out;
+
+	rc = fidc_lookup_load_inode(npinum, &np);
+	if (rc)
+		goto out;
+
+	mslfs_getcreds(pfr, &cr);
+
+	FCMH_LOCK(op);
+	rc = checkcreds(&op->fcmh_sstb, &cr, W_OK);
+	FCMH_ULOCK(op);
+	if (rc)
+		goto out;
+
+	FCMH_LOCK(np);
+	rc = checkcreds(&np->fcmh_sstb, &cr, W_OK);
+	FCMH_ULOCK(np);
+	if (rc)
+		goto out;
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -1294,26 +1317,26 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	rsx_bulkclient(rq, &desc, BULK_GET_SOURCE, SRMC_BULK_PORTAL,
 	    iov, 2);
 
-	p = fidc_lookup_fid(opinum);
-	if (p) {
-		FCMH_LOCK(p);
-		if (DIRCACHE_INITIALIZED(p))
-			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
-			    oldname, DC_STALE);
-			/* XXX XXX put in npinum */
-		else
-			slc_fcmh_initdci(p);
-		/* fcmh_op_done_type() does unlock for us.
-		 */
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-	}
-
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 
+	FCMH_LOCK(op);
+	if (DIRCACHE_INITIALIZED(op))
+		/* we could move the dircache_ent to newparent here */
+		dircache_lookup(&fcmh_2_fci(op)->fci_dci,
+		    oldname, DC_STALE);
+	else
+		slc_fcmh_initdci(op);
+
  out:
+	if (np)
+		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
+	if (op)
+		fcmh_op_done_type(op, FCMH_OPCNT_LOOKUP_FIDC);
+
 	pscfs_reply_rename(pfr, rc);
+
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
