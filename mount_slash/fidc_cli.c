@@ -126,6 +126,22 @@ slc_fcmh_getattr(struct fidc_membh *fcmh)
 	return (msl_stat(fcmh, &rootcreds));
 }
 
+void
+dump_fcmh_flags(int flags)
+{
+	int seq = 0;
+
+	_dump_fcmh_flags(&flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_HAVEREPLTBL, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_FETCHREPLTBL, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_APPENDWR, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_INITDCI, &flags, &seq);
+	PFL_PRFLAG(FCMH_CLI_TRUNC, &flags, &seq);
+	if (flags)
+		printf(" unknown: %x", flags);
+	printf("\n");
+}
+
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* ctor */		slc_fcmh_ctor,
 /* dtor */		slc_fcmh_dtor,

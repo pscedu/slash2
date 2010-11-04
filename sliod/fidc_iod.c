@@ -45,7 +45,6 @@ sli_fcmh_getattr(struct fidc_membh *fcmh)
 	return (0);
 }
 
-
 int
 sli_fcmh_reopen(struct fidc_membh *fcmh, void *data)
 {

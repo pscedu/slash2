@@ -541,17 +541,17 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 }
 
 void
-dump_bmap_flags_iod(uint32_t flags)
+dump_bmap_flags(uint32_t flags)
 {
 	int seq = 0;
 
-	dump_bmap_flags_common(&flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_INFLIGHT, flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_RLSSEQ, flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_BCRSCHED, flags, &seq);
-	PFL_PRFLAG(BMAP_IOD_RLSSCHED, flags, &seq);
+	_dump_bmap_flags(&flags, &seq);
+	PFL_PRFLAG(BMAP_IOD_INFLIGHT, &flags, &seq);
+	PFL_PRFLAG(BMAP_IOD_RLSSEQ, &flags, &seq);
+	PFL_PRFLAG(BMAP_IOD_BCRSCHED, &flags, &seq);
+	PFL_PRFLAG(BMAP_IOD_RLSSCHED, &flags, &seq);
 	if (flags)
-		printf(" unknown: %#x\n", flags);
+		printf(" unknown: %#x", flags);
 	printf("\n");
 }
 

@@ -219,4 +219,19 @@ fcmh_get_pri(struct fidc_membh *fcmh)
 	return (fcmh + 1);
 }
 
+static __inline void
+_dump_fcmh_flags(int *flags, int *seq)
+{
+	PFL_PRFLAG(FCMH_CAC_FREE, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_IDLE, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_BUSY, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_INITING, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_WAITING, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_TOFREE, flags, seq);
+	PFL_PRFLAG(FCMH_CAC_REAPED, flags, seq);
+	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, seq);
+	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, seq);
+	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, seq);
+}
+
 #endif /* _SL_FIDCACHE_H_ */

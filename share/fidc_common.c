@@ -555,20 +555,13 @@ dump_fidcache(void)
 	}
 }
 
-void
-dump_fcmh_flags_common(int flags)
+__weak void
+dump_fcmh_flags(int flags)
 {
 	int seq = 0;
 
-	PFL_PRFLAG(FCMH_CAC_FREE, flags, &seq);
-	PFL_PRFLAG(FCMH_CAC_IDLE, flags, &seq);
-	PFL_PRFLAG(FCMH_CAC_BUSY, flags, &seq);
-	PFL_PRFLAG(FCMH_CAC_INITING, flags, &seq);
-	PFL_PRFLAG(FCMH_CAC_WAITING, flags, &seq);
-	PFL_PRFLAG(FCMH_CAC_TOFREE, flags, &seq);
-	PFL_PRFLAG(FCMH_CAC_REAPED, flags, &seq);
-	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, &seq);
-	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, &seq);
-	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, &seq);
+	_dump_fcmh_flags(&flags, &seq);
+	if (flags)
+		printf(" unknown: %x", flags);
 	printf("\n");
 }

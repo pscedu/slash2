@@ -338,3 +338,14 @@ _log_debug_bmapod(const char *file, const char *func, int lineno,
 	_log_debug_bmapodv(file, func, lineno, level, bmap, fmt, ap);
 	va_end(ap);
 }
+
+__weak void
+dump_bmap_flags(uint32_t flags)
+{
+	int seq = 0;
+
+	_dump_bmap_flags(&flags, &seq);
+	if (flags)
+		printf(" unknown: %x", flags);
+	printf("\n");
+}
