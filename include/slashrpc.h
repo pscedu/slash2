@@ -623,22 +623,14 @@ struct srm_link_req {
 	char			name[NAME_MAX + 1];
 } __packed;
 
-struct srm_link_rep {
-	struct srt_stat		attr;
-	int32_t			rc;
-	int32_t			_pad;
-} __packed;
+#define srm_link_rep srm_getattr_rep
 
 struct srm_lookup_req {
 	struct slash_fidgen	pfg;		/* parent dir */
 	char			name[NAME_MAX + 1];
 } __packed;
 
-struct srm_lookup_rep {
-	struct srt_stat		attr;
-	int32_t			rc;
-	int32_t			_pad;
-} __packed;
+#define srm_lookup_rep srm_getattr_rep
 
 struct srm_mkdir_req {
 	struct slash_creds	creds;		/* st_uid owner for new file */
@@ -648,11 +640,7 @@ struct srm_mkdir_req {
 	int32_t			_pad;
 } __packed;
 
-struct srm_mkdir_rep {
-	struct srt_stat		attr;
-	int32_t			rc;
-	int32_t			_pad;
-} __packed;
+#define srm_mkdir_rep srm_getattr_rep
 
 struct srm_mknod_req {
 	struct slash_creds	creds;		/* st_uid owner for new file */
@@ -662,11 +650,7 @@ struct srm_mknod_req {
 	uint32_t		rdev;
 } __packed;
 
-struct srm_mknod_rep {
-	struct srt_stat		attr;
-	int32_t			rc;
-	int32_t			_pad;
-} __packed;
+#define srm_mknod_rep srm_getattr_rep
 
 #define DEF_READDIR_NENTS	100
 #define MAX_READDIR_NENTS	1000
@@ -742,11 +726,7 @@ struct srm_symlink_req {
 /* link path name is in bulk */
 } __packed;
 
-struct srm_symlink_rep {
-	struct srt_stat		attr;
-	int32_t			rc;
-	int32_t			_pad;
-} __packed;
+#define srm_symlink_rep srm_getattr_rep
 
 struct srm_unlink_req {
 	struct slash_fidgen	pfg;		/* parent dir */
