@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 
 #include <err.h>
+#include <grp.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -246,6 +247,54 @@ test_random(void)
 	free(ptr);
 	return (0);
 }
+/*
+ * See if we handle chown() properly.
+ */
+int
+test_chown(void)
+{
+	int fd, rc;
+	gid_t gidset[1];
+	char *tmpname = "test-chmod.dat";
+
+	fd = open(tmpname, O_CREAT|O_RDWR, S_IRWXU);
+	if (fd < 0) {
+		printf("Fail to create file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = close(fd);
+	if (rc < 0) {
+		printf("Fail to close file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = chown(tmpname, 65534, 65533);
+	if (rc < 0) {
+		printf("Fail to chown file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	gidset[0] = 65531;
+	rc = setgroups(1, gidset);
+	if (rc < 0) {
+		printf("Fail to set groups, errno = %d at line %d!\n", errno, __LINE__);
+		return (1);
+	}
+	rc = setegid(gidset[0]);
+	if (rc < 0) {
+		printf("Fail to set effective groups, errno = %d at line %d!\n", errno, __LINE__);
+		return (1);
+	}
+	rc = chown(tmpname, 65535, 65535);
+	if (rc < 0) {
+		printf("Fail to chown file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = unlink(tmpname);
+	if (rc) {
+		printf("Fail to remove file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	return (0);
+}
 
 struct test_desc test_list[] = {
 
@@ -260,6 +309,10 @@ struct test_desc test_list[] = {
 	{
 		"Random 8-byte writes at random offsets to simulate FUSE I/O",
 		test_random
+	},
+	{
+		"A non-owner changes the owner/group of a file to 65535:65535",
+		test_chown
 	},
 	{
 		NULL,
@@ -280,6 +333,11 @@ main(int argc, char *argv[])
 	else
 		progname++;
 
+	if (geteuid() != 0) {
+		printf("Please run this program as root.\n");
+		exit(0);
+	}
+		
 	while ((c = getopt(argc, argv, "s:r:l")) != -1) {
 		switch (c) {
 		    case 's':
