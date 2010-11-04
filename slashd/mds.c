@@ -324,12 +324,12 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 	if (!res) {
 		bmap->bcm_flags |= BMAP_MDS_NOION;
 		BMAP_ULOCK(bmap);
-		
+
 		psc_warnx("Failed to find pios %d", pios);
 		return (-SLERR_ION_UNKNOWN);
 	} else
 		BMAP_ULOCK(bmap);
-	
+
 	rpmi = res->res_pri;
 	len = psc_dynarray_len(&res->res_members);
 
@@ -954,17 +954,17 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 			psc_assert(!bmdsi->bmdsi_wr_ion);
 
 		} else {
-			/* Bml's which have failed ion assignment shouldn't 
+			/* Bml's which have failed ion assignment shouldn't
 			 *   be relevant to any odtable entry.
 			 */
 			if (!(bml->bml_flags & BML_ASSFAIL)) {
 				/* odtable sanity checks:
 				 */
 				struct bmap_ion_assign *bia;
-				
+
 				bia = odtable_getitem(mdsBmapAssignTable,
 						      bmdsi->bmdsi_assign);
-				psc_assert(bia && 
+				psc_assert(bia &&
 				   bia->bia_seq == bmdsi->bmdsi_seq);
 				psc_assert(bia->bia_bmapno == b->bcm_bmapno);
 				/* End sanity checks.
