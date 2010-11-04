@@ -258,11 +258,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_io_req);
 	PRTYPE(struct srm_leasebmap_rep);
 	PRTYPE(struct srm_leasebmap_req);
-	PRTYPE(struct srm_link_rep);
 	PRTYPE(struct srm_link_req);
-	PRTYPE(struct srm_lookup_rep);
 	PRTYPE(struct srm_lookup_req);
-	PRTYPE(struct srm_mkdir_rep);
 	PRTYPE(struct srm_mkdir_req);
 	PRTYPE(struct srm_mknod_req);
 	PRTYPE(struct srm_ping_req);
@@ -283,7 +280,6 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_setattr_req);
 	PRTYPE(struct srm_statfs_rep);
 	PRTYPE(struct srm_statfs_req);
-	PRTYPE(struct srm_symlink_rep);
 	PRTYPE(struct srm_symlink_req);
 	PRTYPE(struct srm_unlink_req);
 	PRTYPE(struct srsm_replst_bhdr);
