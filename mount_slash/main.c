@@ -727,10 +727,10 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct fidc_membh *p = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	struct slash_creds cr;
-	struct fidc_membh *p;
 	int rc;
 
 	msfsthr_ensure();
@@ -739,6 +739,18 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		rc = ENAMETOOLONG;
 		goto out;
 	}
+
+	rc = fidc_lookup_load_inode(pinum, &p);
+	if (rc)
+		goto out;
+
+	mslfs_getcreds(pfr, &cr);
+
+	FCMH_LOCK(p);
+	rc = checkcreds(&p->fcmh_sstb, &cr, W_OK);
+	FCMH_ULOCK(p);
+	if (rc)
+		goto out;
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -749,31 +761,27 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	mslfs_getcreds(pfr, &cr);
-
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
 
 	strlcpy(mq->name, name, sizeof(mq->name));
 
-	p = fidc_lookup_fid(pinum);
-	if (p) {
-		FCMH_LOCK(p);
-		if (DIRCACHE_INITIALIZED(p))
-			dircache_lookup(&fcmh_2_fci(p)->fci_dci,
-				 name, DC_STALE);
-		else
-			slc_fcmh_initdci(p);
-		/* fcmh_op_done_type() will unlock for us.
-		 */
-		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
-	}
-
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
 
+	FCMH_LOCK(p);
+	if (DIRCACHE_INITIALIZED(p))
+		dircache_lookup(&fcmh_2_fci(p)->fci_dci,
+		    name, DC_STALE);
+	else
+		slc_fcmh_initdci(p);
+
+	/* XXX if fcmh being unlinked has refcnt 0, purge it from fidcache */
+
  out:
+	if (p)
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
