@@ -518,12 +518,6 @@ msl_stat(struct fidc_membh *fcmh, const struct slash_creds *creds)
 	DEBUG_FCMH(PLL_DEBUG, fcmh, "attrs retrieved via rpc rc=%d", rc);
 
  check:
-	if (!rc) {
-		rc = checkcreds(&fcmh->fcmh_sstb, creds, R_OK);
-		if (rc)
-			psc_info("fcmh=%p, mode=%x, checkcreds rc=%d",
-			    fcmh, fcmh->fcmh_sstb.sst_mode, rc);
-	}
 	FCMH_ULOCK(fcmh);
 	if (csvc)
 		sl_csvc_decref(csvc);
@@ -1000,13 +994,24 @@ slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct fidc_membh *m = NULL, *p;
 	struct srm_lookup_req *mq;
 	struct srm_lookup_rep *mp;
-	struct fidc_membh *m = NULL;
 	int rc;
 
 	if (strlen(name) > NAME_MAX)
 		return (ENAMETOOLONG);
+
+	rc = fidc_lookup_load_inode(pinum, &p);
+	if (rc)
+		goto out;
+
+	FCMH_LOCK(p);
+	rc = checkcreds(&p->fcmh_sstb, crp, X_OK);
+	FCMH_ULOCK(p);
+	fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+	if (rc)
+		goto out;
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -1033,10 +1038,6 @@ slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
 	 *  yet be visible in the cache.
 	 */
 	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_SAVELOCAL, &m);
-	if (rc)
-		goto out;
-
-	rc = checkcreds(&mp->attr, crp, R_OK);
 	if (rc)
 		goto out;
 
