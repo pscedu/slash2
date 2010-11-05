@@ -152,14 +152,13 @@ struct bmapc_memb {
 				    fcmh_2_fid((b)->bcm_fcmh) : 0,	\
 				psc_atomic32_read(&(b)->bcm_opcnt)
 
-#define _DEBUG_BMAP(file, func, line, level, b, fmt, ...)		\
-	psclog((file), (func), (line), SLSS_BMAP, (level), 0,		\
-	    _DEBUG_BMAP_FMT fmt, _DEBUG_BMAP_FMTARGS(b),		\
-	    ## __VA_ARGS__)
-
 #define DEBUG_BMAP(level, b, fmt, ...)					\
-	_DEBUG_BMAP(__FILE__, __func__, __LINE__, (level), (b), fmt,	\
-	    ## __VA_ARGS__)
+	psclogs((level), SLSS_BMAP, _DEBUG_BMAP_FMT fmt,		\
+	    _DEBUG_BMAP_FMTARGS(b), ## __VA_ARGS__)
+
+#define _DEBUG_BMAP(pci, level, b, fmt, ...)				\
+	_psclog_pci((pci), (level), 0, _DEBUG_BMAP_FMT fmt,		\
+	    _DEBUG_BMAP_FMTARGS(b), ## __VA_ARGS__)
 
 #define bcm_wait_locked(b, cond)					\
 	do {								\
@@ -184,12 +183,12 @@ struct bmapc_memb {
 #define bmap_op_start_type(b, type)					\
 	do {								\
 		psc_atomic32_inc(&(b)->bcm_opcnt);			\
-		DEBUG_BMAP(PLL_NOTIFY, (b),				\
+		DEBUG_BMAP(PLL_DEBUG, (b),				\
 		    "took reference (type=%d)", (type));		\
 	} while (0)
 
 #define bmap_op_done_type(b, type)					\
-	_bmap_op_done((b), __FILE__, __func__, __LINE__,		\
+	_bmap_op_done(PFL_CALLERINFOSS(SLSS_BMAP), (b),			\
 	    _DEBUG_BMAP_FMT "removing reference (type=%d)",		\
 	    _DEBUG_BMAP_FMTARGS(b), (type))
 
@@ -248,11 +247,11 @@ struct bmapc_memb {
 #define NBRP			2
 
 #define DEBUG_BMAPOD(level, bmap, fmt, ...)				\
-	_log_debug_bmapod(__FILE__, __func__, __LINE__, (level),	\
-	    (bmap), (fmt), ## __VA_ARGS__)
+	_log_debug_bmapod(PFL_CALLERINFOSS(SLSS_BMAP), (level), (bmap),	\
+	    (fmt), ## __VA_ARGS__)
 
 #define DEBUG_BMAPODV(level, bmap, fmt, ap)				\
-	_log_debug_bmapodv(__FILE__, __func__, __LINE__, (level),	\
+	_log_debug_bmapodv(PFL_CALLERINFOSS(SLSS_BMAP), (level),	\
 	    (bmap), (fmt), (ap))
 
 /* bmap_get flags */
@@ -263,14 +262,14 @@ int	 bmap_cmp(const void *, const void *);
 void	 bmap_cache_init(size_t);
 void	 bmap_orphan(struct bmapc_memb *);
 void	 bmap_biorq_waitempty(struct bmapc_memb *);
-void	_bmap_op_done(struct bmapc_memb *, const char *, const char *,
-	    int, const char *, ...);
+void	_bmap_op_done(const struct pfl_callerinfo *,
+	    struct bmapc_memb *, const char *, ...);
 int	 bmap_getf(struct fidc_membh *, sl_bmapno_t, enum rw, int,
 	    struct bmapc_memb **);
 
-void	_log_debug_bmapodv(const char *, const char *, int, int,
+void	_log_debug_bmapodv(const struct pfl_callerinfo *, int,
 	    struct bmapc_memb *, const char *, va_list);
-void	_log_debug_bmapod(const char *, const char *, int, int,
+void	_log_debug_bmapod(const struct pfl_callerinfo *, int,
 	    struct bmapc_memb *, const char *, ...);
 
 #define bmap_lookup(f, n, bp)		bmap_getf((f), (n), 0, 0, (bp))

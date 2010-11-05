@@ -91,8 +91,8 @@ bmap_remove(struct bmapc_memb *b)
 }
 
 void
-_bmap_op_done(struct bmapc_memb *b, const char *fn, const char *func,
-    int line, const char *fmt, ...)
+_bmap_op_done(const struct pfl_callerinfo *pci, struct bmapc_memb *b,
+    const char *fmt, ...)
 {
 	va_list ap;
 
@@ -101,7 +101,7 @@ _bmap_op_done(struct bmapc_memb *b, const char *fn, const char *func,
 	psc_assert(psc_atomic32_read(&b->bcm_opcnt) >= 0);
 
 	va_start(ap, fmt);
-	psclogv(fn, func, line, SLSS_BMAP, PLL_DEBUG, 0, fmt, ap);
+	_psclog_pci(pci, PLL_DEBUG, 0, fmt, ap);
 	va_end(ap);
 
 	if (!psc_atomic32_read(&b->bcm_opcnt)) {
@@ -302,8 +302,8 @@ bmapdesc_access_check(struct srt_bmapdesc *sbd, enum rw rw,
 }
 
 void
-_log_debug_bmapodv(const char *file, const char *func, int lineno,
-    int level, struct bmapc_memb *bmap, const char *fmt, va_list ap)
+_log_debug_bmapodv(const struct pfl_callerinfo *pci, int level,
+    struct bmapc_memb *bmap, const char *fmt, va_list ap)
 {
 	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1];
 	unsigned char *b = bmap->bcm_repls;
@@ -325,17 +325,17 @@ _log_debug_bmapodv(const char *file, const char *func, int lineno,
 		rbuf[k] = ch[SL_REPL_GET_BMAP_IOS_STAT(b, off)];
 	rbuf[k] = '\0';
 
-	_DEBUG_BMAP(file, func, lineno, level, bmap, "repls=[%s] %s", rbuf, mbuf);
+	_DEBUG_BMAP(pci, level, bmap, "repls=[%s] %s", rbuf, mbuf);
 }
 
 void
-_log_debug_bmapod(const char *file, const char *func, int lineno,
-    int level, struct bmapc_memb *bmap, const char *fmt, ...)
+_log_debug_bmapod(const struct pfl_callerinfo *pci, int level,
+    struct bmapc_memb *bmap, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	_log_debug_bmapodv(file, func, lineno, level, bmap, fmt, ap);
+	_log_debug_bmapodv(pci, level, bmap, fmt, ap);
 	va_end(ap);
 }
 
