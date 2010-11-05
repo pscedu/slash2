@@ -717,6 +717,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			fcmh_2_ino(fcmh)->ino_flags |= INOF_IN_PTRUNC;
 			fcmh_2_ino(fcmh)->ino_ptruncoff =
 			    mq->attr.sst_size;
+			fcmh_2_ptruncgen(fcmh)++;
 			FCMH_ULOCK(fcmh);
 
 			to_set |= SL_SETATTRF_PTRUNCGEN;
@@ -758,12 +759,6 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			rc = uswi_findoradd(&fcmh->fcmh_fg, &wk);
 			uswi_enqueue_sites(wk, ios_list.iosv, ios_list.nios);
 			uswi_unref(wk);
-
-			FCMH_LOCK(fcmh);
-			fcmh_2_ptruncgen(fcmh)++;
-			fcmh->fcmh_flags &= ~FMIF_BLOCK_PTRUNC;
-			fcmh_wake_locked(fcmh);
-			FCMH_ULOCK(fcmh);
 		}
 	}
 	/*
