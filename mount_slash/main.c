@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <grp.h>
 #include <inttypes.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -1470,9 +1471,69 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	struct srm_setattr_req *mq;
 	struct srm_setattr_rep *mp;
 	struct slash_creds cr;
-	int rc, getting = 0;
+	int rc = 0, getting = 0;
 
 	msfsthr_ensure();
+
+	mslfs_getcreds(pfr, &cr);
+
+	rc = fidc_lookup_load_inode(inum, &c);
+	if (rc)
+		goto out;
+
+	if (to_set == 0)
+		goto out;
+
+	FCMH_LOCK(c);
+	if ((to_set & PSCFS_SETATTRF_MODE) && cr.uid &&
+	    cr.uid != c->fcmh_sstb.sst_uid) {
+		rc = EPERM;
+		goto out;
+	}
+	if (to_set & PSCFS_SETATTRF_DATASIZE) {
+		rc = checkcreds(&c->fcmh_sstb, &cr, W_OK);
+		if (rc)
+			goto out;
+	}
+	if ((to_set & (PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME)) &&
+	    cr.uid && cr.uid != c->fcmh_sstb.sst_uid) {
+		rc = EPERM;
+		goto out;
+	}
+	if (rc == 0 && (to_set & PSCFS_SETATTRF_UID) && cr.uid) {
+		rc = EPERM;
+		goto out;
+	}
+	if (rc == 0 && (to_set & PSCFS_SETATTRF_GID) && cr.uid) {
+		struct passwd pw, *pwp;
+		gid_t *grpv = NULL;
+		char buf[LINE_MAX];
+		int ngrp = 0;
+
+		rc = getpwuid_r(cr.uid, &pw, buf, sizeof(buf), &pwp);
+		if (rc)
+			goto out;
+
+		getgrouplist(pw.pw_name, cr.gid, NULL, &ngrp);
+		grpv = psc_calloc(ngrp, sizeof(*grpv), 0);
+		rc = getgrouplist(pw.pw_name, cr.gid, grpv, &ngrp);
+		if (rc < 1) {
+			PSCFREE(grpv);
+			rc = EIO;
+			goto out;
+		}
+
+		rc = EPERM;
+		for (; ngrp >= 0; ngrp--)
+			if (stb->st_gid == grpv[ngrp - 1]) {
+				rc = 0;
+				break;
+			}
+
+		PSCFREE(grpv);
+		if (rc)
+			goto out;
+	}
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -1482,45 +1543,6 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	if (rc)
 		goto out;
 
-	mslfs_getcreds(pfr, &cr);
-
-	rc = fidc_lookup_load_inode(inum, &c);
-	if (rc)
-		goto out;
-
-	FCMH_LOCK(c);
-	rc = checkcreds(&c->fcmh_sstb, &cr, W_OK);
-	if (rc == 0 && (mq->to_set & PSCFS_SETATTRF_UID) &&
-	    cr.uid && stb->st_uid != cr.uid)
-		rc = EPERM;
-	if (rc == 0 && (mq->to_set & PSCFS_SETATTRF_GID) && cr.uid) {
-		char username[LOGIN_NAME_MAX];
-		gid_t *grpv = NULL;
-		int ngrp;
-
-		rc = getgrouplist(username, cr.gid, NULL, &ngrp);
-		if (rc)
-			goto groupfail;
-
-		grpv = psc_calloc(ngrp, sizeof(*grpv), 0);
-		rc = getgrouplist(username, cr.gid, grpv, &ngrp);
-		if (rc)
-			goto groupfail;
-
-		rc = EPERM;
-		for (; ngrp >= 0; ngrp--)
-			if (stb->st_gid == grpv[ngrp - 1]) {
-				rc = 0;
-				break;
-			}
- groupfail:
-		PSCFREE(grpv);
-	}
-	FCMH_ULOCK(c);
-	if (rc)
-		goto out;
-
-	FCMH_LOCK(c);
 	/* We're obtaining the attributes now. */
 	if ((c->fcmh_flags & (FCMH_GETTING_ATTRS | FCMH_HAVE_ATTRS)) == 0) {
 		getting = 1;
@@ -1635,23 +1657,23 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		fcmh_wake_locked(c);
 	}
 	DEBUG_SSTB(PLL_DEBUG, &c->fcmh_sstb, "fcmh %p post setattr", c);
-	FCMH_ULOCK(c);
 
  out:
-	pscfs_reply_setattr(pfr, stb, MSLFS_ATTR_TIMEO, rc);
-
-	if (rc && getting) {
-		FCMH_LOCK(c);
-		c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
-		fcmh_wake_locked(c);
-		FCMH_ULOCK(c);
-	}
-	if (c)
+	if (c) {
+		FCMH_RLOCK(c);
+		if (rc && getting) {
+			c->fcmh_flags &= ~FCMH_GETTING_ATTRS;
+			fcmh_wake_locked(c);
+		}
+		sl_internalize_stat(&c->fcmh_sstb, stb);
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+	}
 	if (rq)
 		pscrpc_req_finished(rq);
 	if (csvc)
 		sl_csvc_decref(csvc);
+
+	pscfs_reply_setattr(pfr, stb, MSLFS_ATTR_TIMEO, rc);
 }
 
 __static void
