@@ -216,7 +216,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 		    !(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
-			dircache_rls_ents(e, FCMH_NOFREE);
+			dircache_rls_ents(e, FCMH_TRYFREE);
 
 		} else {
 			dircache_ent_ulock(e);
@@ -237,7 +237,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 		    !(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
-			dircache_rls_ents(e, FCMH_NOFREE);
+			dircache_rls_ents(e, FCMH_TRYFREE);
 		} else
 			dircache_ent_ulock(e);
 	}
