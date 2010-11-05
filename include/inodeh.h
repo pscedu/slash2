@@ -103,8 +103,8 @@ _debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 	(i)->inoh_flags & INOH_INO_NEW		? "N" : ""
 
 static __inline void
-_log_debug_inoh(const char *file, const char *func, int lineno,
-    int level, const struct slash_inode_handle *ih, const char *fmt, ...)
+_log_debug_inoh(const struct pfl_callerinfo *pci, int level,
+    const struct slash_inode_handle *ih, const char *fmt, ...)
 {
 	char buf[LINE_MAX], mbuf[LINE_MAX];
 	va_list ap;
@@ -113,14 +113,13 @@ _log_debug_inoh(const char *file, const char *func, int lineno,
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 	va_end(ap);
 
-	psclog(file, func, lineno, PSS_GEN, level, 0,
+	_psclog_pci(pci, level, 0,
 	    "inoh@%p fl:"INOH_FLAGS_FMT" %s :: %s",
 	    ih, DEBUG_INOH_FLAGS(ih), _debug_ino(buf, sizeof(buf),
 	    &ih->inoh_ino), mbuf);
 }
 
 #define DEBUG_INOH(level, ih, fmt, ...)					\
-	_log_debug_inoh(__FILE__, __func__, __LINE__, (level), (ih),	\
-	    (fmt), ## __VA_ARGS__)
+	_log_debug_inoh(PFL_CALLERINFO(), (level), (ih), (fmt), ## __VA_ARGS__)
 
 #endif
