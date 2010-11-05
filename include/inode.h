@@ -68,6 +68,7 @@ struct slash_inode_od {
 //	uint32_t		ino_csnap;			/* current snapshot */
 	uint32_t		ino_newbmap_policy;		/* see BRP_* values */
 	sl_replica_t		ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
+	uint64_t		ino_ptruncoff;			/* partial truncate offset */
 
 	/* must be last */
 	uint64_t		ino_crc;			/* CRC of the inode */
@@ -75,7 +76,7 @@ struct slash_inode_od {
 #define INO_OD_SZ		sizeof(struct slash_inode_od)
 #define INO_OD_CRCSZ		offsetof(struct slash_inode_od, ino_crc)
 
-#define INO_VERSION		0x0007
+#define INO_VERSION		0x0008
 
 struct slash_inode_extras_od {
 	sl_snap_t		inox_snaps[SL_DEF_SNAPSHOTS];	/* snapshot pointers */
