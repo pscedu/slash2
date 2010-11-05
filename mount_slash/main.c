@@ -723,7 +723,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *p = NULL;
+	struct fidc_membh *c, *p = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	struct slash_creds cr;
@@ -743,8 +743,21 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mslfs_getcreds(pfr, &cr);
 
 	FCMH_LOCK(p);
-	rc = checkcreds(&p->fcmh_sstb, &cr, W_OK);
-	FCMH_ULOCK(p);
+	if ((p->fcmh_sstb.sst_mode & S_ISVTX) && cr.uid) {
+		if (p->fcmh_sstb.sst_uid != cr.uid) {
+			FCMH_ULOCK(p);
+
+			rc = fidc_lookup_load_inode(pinum, &c);
+			if (rc)
+				goto out;
+			if (c->fcmh_sstb.sst_uid != cr.uid)
+				rc = EPERM;
+			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+		}
+	} else {
+		rc = checkcreds(&p->fcmh_sstb, &cr, W_OK);
+		FCMH_ULOCK(p);
+	}
 	if (rc)
 		goto out;
 
