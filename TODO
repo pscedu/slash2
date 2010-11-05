@@ -273,5 +273,62 @@ utime
   ensurelen and notify user to possible optimization
 - per-site network upscheduling is not enough; it has to be per
   link to maintain network link saturation effectively
+- pass parent dir sstb back in mkdir/link/unlink/creat reply for mtime
 - clear S_ISUID and S_ISGID on chown(2)
 - rename slash_creds.uid -> cr_uid
+
+truncate:
+ - set INOF_BLOCK_PTRUNC on the inode (we do this incorrectly as an fcmh
+   flag right now).  this flag means:
+
+    (o) any other concurrent ptruncs to the same fcmh must block until
+	INOF_BLOCK_PTRUNC is cleared (we do this now)
+
+    (o) new bmap lease acquisitions past EOF must block until
+	INOF_BLOCK_PTRUNC has gone away (i don't know if we do this).
+
+ - if the target offset falls within a bmap set BMAPF_BLOCK_PTRUNC on
+   this bmap (from here on called the `tbmap'), preventing leases for it
+   until BMAPF_BLOCK_PTRUNC is unset on the tbmap (i don't think we do
+   this)
+
+ - mark all VALID bmaps after the target offset as REPLST_GARBAGE (we do
+   this now) and bump their generations (we don't do this).
+
+   now, if old CRC updates come in for data written beyond this ptrunc
+   offset prior to the ptrunc request, the MDS should ignore these CRC
+   updates as the bmap generations will be out of date (Paul, is this
+   correct?).
+
+ - next, if the target ptrunc offset falls inside a bmap, do more stuff:
+    (o) mark the bh_repls state TRUNCPNDG (we do this)
+    (o) mark the CRC for this bmap as unknown (we don't do this)
+
+ - currently, we now unset FCMH_BLOCK_PTRUNC here (remember this should
+   instead be INOF_BLOCK_PTRUNC).  we should not be doing it here
+   anyway, though; we should wait until after we receive a CRC update
+   reply from an ION (see below).
+
+   Paul can chime in here about whether the "CRC unknown" part obviates
+   this requirement though.
+
+- reply to the client
+
+- evict bmap leases for bmap being truncated and all bmaps past the
+  truncation offset.  at this point, the USSR can issue the request to
+  have an ION recompute the CRC after applying the truncation to the
+  bmap being truncate
+
+- now, in the background (asynchronously), we can wait for the USSR to
+  hear back from an ION with the new CRC for the ptrunc'd bmap after he
+  has recalculated it with the new bmap len resulting from the ptrunc.
+  when that happens, we can finally unset BMAPF_BLOCK_PTRUNC and
+  INOF_BLOCK_PTRUNC.
+
+  this means that if we never hear back from an ION, we never clear
+  INOF/BMAPF_BLOCK_PTRUNC (once again, unless Paul thinks the "CRC
+  unknown" business is enough to clear BLOCK_PTRUNC).
+
+  but, if no IONs are replying, they probably won't be inclined to
+  accept new bmap leases either...
+
