@@ -76,6 +76,8 @@ struct slash_inode_od {
 #define INO_OD_SZ		sizeof(struct slash_inode_od)
 #define INO_OD_CRCSZ		offsetof(struct slash_inode_od, ino_crc)
 
+#define INOF_IN_PTRUNC		(1 << 0)			/* awaiting partial truncation resolution */
+
 #define INO_VERSION		0x0008
 
 struct slash_inode_extras_od {

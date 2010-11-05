@@ -704,17 +704,23 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 			ios_list.nios = 0;
 
-			to_set |= SL_SETATTRF_PTRUNCGEN;
-
 			/* XXX what do we do with bmap leases that are
 			 * concurrently granted?
 			 */
 
 			FCMH_LOCK(fcmh);
-			fcmh_wait_locked(fcmh,
-			    fcmh->fcmh_flags & FMIF_BLOCK_PTRUNC);
-			fcmh->fcmh_flags |= FMIF_BLOCK_PTRUNC;
+			if (fcmh_2_ino(fcmh)->ino_flags &
+			    INOF_IN_PTRUNC) {
+				mp->rc = EAGAIN;
+				goto out;
+			}
+			fcmh_2_ino(fcmh)->ino_flags |= INOF_IN_PTRUNC;
+			fcmh_2_ino(fcmh)->ino_ptruncoff =
+			    mq->attr.sst_size;
 			FCMH_ULOCK(fcmh);
+
+			to_set |= SL_SETATTRF_PTRUNCGEN;
+
 
 			// bmaps write leases may not be granted
 			// for this bmap or any bmap beyond

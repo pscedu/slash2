@@ -35,8 +35,6 @@ struct fcmh_mds_info {
 	sl_bmapno_t		  fmi_ptruncbmap;	/* bmap where partial trunc is go */
 };
 
-#define FMIF_BLOCK_PTRUNC	(_FCMH_FLGSHFT << 0)	/* awaiting partial truncation resolution */
-
 #define fcmh_2_fmi(f)		((struct fcmh_mds_info *)fcmh_get_pri(f))
 #define fcmh_2_inoh(f)		(&fcmh_2_fmi(f)->fmi_inodeh)
 #define fcmh_2_ino(f)		(&fcmh_2_inoh(f)->inoh_ino)
