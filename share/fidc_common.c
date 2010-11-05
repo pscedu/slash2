@@ -197,13 +197,13 @@ fidc_reap(struct psc_poolmgr *m)
  *	generation number is known.
  */
 struct fidc_membh *
-_fidc_lookup_fg(const struct slash_fidgen *fg, const char *file,
-    const char *func, int line)
+_fidc_lookup_fg(const struct pfl_callerinfo *pci,
+    const struct slash_fidgen *fg)
 {
 	struct fidc_membh *fcmhp;
 	int rc;
 
-	rc = _fidc_lookup(fg, 0, NULL, 0, &fcmhp, file, func, line);
+	rc = _fidc_lookup(pci, fg, 0, NULL, 0, &fcmhp);
 	return (rc == 0 ? fcmhp : NULL);
 }
 
@@ -212,13 +212,13 @@ _fidc_lookup_fg(const struct slash_fidgen *fg, const char *file,
  *	generation number is not known.
  */
 struct fidc_membh *
-_fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
+_fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
 {
 	struct slash_fidgen t = { f, FGEN_ANY };
 	struct fidc_membh *fcmhp;
 	int rc;
 
-	rc = _fidc_lookup(&t, 0, NULL, 0, &fcmhp, file, func, line);
+	rc = _fidc_lookup(pci, &t, 0, NULL, 0, &fcmhp);
 	return (rc == 0 ? fcmhp : NULL);
 
 }
@@ -230,16 +230,16 @@ _fidc_lookup_fid(slfid_t f, const char *file, const char *func, int line)
  *	are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
  */
 int
-_fidc_lookup(const struct slash_fidgen *fgp, int flags,
-    struct srt_stat *sstb, int setattrflags, struct fidc_membh **fcmhp,
-    const char *file, const char *func, int line)
+_fidc_lookup(const struct pfl_callerinfo *pci,
+    const struct slash_fidgen *fgp, int flags, struct srt_stat *sstb,
+    int setattrflags, struct fidc_membh **fcmhp)
 {
 	struct fidc_membh *tmp, *fcmh, *fcmh_new;
 	struct slash_fidgen searchfg = *fgp;
 	struct psc_hashbkt *b;
 	int rc, try_create = 0;
 
-	psclog(file, func, line, PSC_SUBSYS, PLL_INFO, 0,
+	_psclog_pci(pci, PLL_INFO, 0,
 	    "fidc_lookup called for fid %"PRIx64, searchfg.fg_fid);
 
 	rc = 0;

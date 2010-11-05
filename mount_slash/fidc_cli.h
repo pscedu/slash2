@@ -61,23 +61,21 @@ void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 void	slc_fcmh_initdci(struct fidc_membh *);
 
 #define fidc_lookup_load_inode(fid, fcmhp)				\
-	_fidc_lookup_load_inode((fid), (fcmhp),				\
-	    __FILE__, __func__, __LINE__)
-
-extern struct dircache_mgr dircacheMgr;
+	_fidc_lookup_load_inode(PFL_CALLERINFOSS(SLSS_FCMH), (fid),	\
+	    (fcmhp))
 
 /**
  * fidc_lookup_load_inode - Create the inode if it doesn't exist, loading
  *	its attributes from the MDS.
  */
 static __inline int
-_fidc_lookup_load_inode(slfid_t fid, struct fidc_membh **fcmhp,
-    const char *file, const char *func, int line)
+_fidc_lookup_load_inode(const struct pfl_callerinfo *pci, slfid_t fid,
+    struct fidc_membh **fcmhp)
 {
 	struct slash_fidgen fg = { fid, FGEN_ANY };
 
-	return (_fidc_lookup(&fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
-	    NULL, 0, fcmhp, file, func, line));
+	return (_fidc_lookup(pci, &fg, FIDC_LOOKUP_CREATE | FIDC_LOOKUP_LOAD,
+	    NULL, 0, fcmhp));
 }
 
 #endif /* _FIDC_CLI_H_ */

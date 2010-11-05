@@ -191,7 +191,7 @@ msfsthr_ensure(void)
 }
 
 #define slc_fcmh_get(sstb, safl, fcmhp)					\
-	_slc_fcmh_get((sstb), (safl), (fcmhp), __FILE__, __func__, __LINE__)
+	_slc_fcmh_get(PFL_CALLERINFOSS(SLSS_FCMH), (sstb), (safl), (fcmhp))
 
 /**
  * slc_fcmh_get - Create/update a FID cache member handle based on the
@@ -203,11 +203,11 @@ msfsthr_ensure(void)
  * @fchmp: value-result fcmh.
  */
 __static int
-_slc_fcmh_get(struct srt_stat *sstb, int setattrflags,
-    struct fidc_membh **fcmhp, const char *file, const char *func, int line)
+_slc_fcmh_get(const struct pfl_callerinfo *pci, struct srt_stat *sstb,
+    int setattrflags, struct fidc_membh **fcmhp)
 {
-	return (_fidc_lookup(&sstb->sst_fg, FIDC_LOOKUP_CREATE, sstb,
-	    setattrflags, fcmhp, file, func, line));
+	return (_fidc_lookup(pci, &sstb->sst_fg, FIDC_LOOKUP_CREATE, sstb,
+	    setattrflags, fcmhp));
 }
 
 void

@@ -181,22 +181,19 @@ void	fcmh_decref(struct fidc_membh *, enum fcmh_opcnt_types);
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism */
 
 #define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
-	_fidc_lookup((fgp), (lkfl), (sstb), (safl), (fcmhp),		\
-	    __FILE__, __func__, __LINE__)
+	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl), (sstb),\
+	    (safl), (fcmhp))
 
-#define fidc_lookup_fid(fid)						\
-	_fidc_lookup_fid((fid), __FILE__, __func__, __LINE__)
+#define fidc_lookup_fid(fid)		_fidc_lookup_fid(PFL_CALLERINFOSS(SLSS_FCMH), (fid))
+#define fidc_lookup_fg(fgp)		_fidc_lookup_fg(PFL_CALLERINFOSS(SLSS_FCMH), (fgp))
 
-#define fidc_lookup_fg(fgp)						\
-	_fidc_lookup_fg((fgp), __FILE__, __func__, __LINE__)
-
-int			 _fidc_lookup(const struct slash_fidgen *, int,
-			    struct srt_stat *, int, struct fidc_membh **,
-			    const char *, const char *, int);
+int			 _fidc_lookup(const struct pfl_callerinfo *,
+			    const struct slash_fidgen *, int,
+			    struct srt_stat *, int, struct fidc_membh **);
 
 /* these fidc_lookup() wrappers are used for simple lookups (no flags) */
-struct fidc_membh	*_fidc_lookup_fid(slfid_t, const char *, const char *, int);
-struct fidc_membh	*_fidc_lookup_fg(const struct slash_fidgen *, const char *, const char *, int);
+struct fidc_membh	*_fidc_lookup_fid(const struct pfl_callerinfo *, slfid_t);
+struct fidc_membh	*_fidc_lookup_fg(const struct pfl_callerinfo *, const struct slash_fidgen *);
 ssize_t			 fcmh_getsize(struct fidc_membh *);
 
 void			 fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
