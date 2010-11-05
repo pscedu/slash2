@@ -722,7 +722,7 @@ struct srm_symlink_req {
 #define srm_symlink_rep srm_getattr_rep
 
 struct srm_unlink_req {
-	struct slash_fidgen	pfg;		/* parent dir */
+	slfid_t			pfid;		/* parent dir */
 	char			name[NAME_MAX + 1];
 } __packed;
 

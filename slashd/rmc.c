@@ -927,9 +927,12 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	struct fidc_membh *fcmh;
+	struct slash_fidgen fg;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->pfg, &fcmh);
+	fg.fg_fid = mq->pfid;
+	fg.fg_gen = mq->pfid;
+	mp->rc = slm_fcmh_get(&fg, &fcmh);
 	if (mp->rc)
 		goto out;
 
@@ -943,12 +946,12 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 		    mq->name, &rootcreds, mds_namespace_log);
 	mds_unreserve_slot();
 
-	psc_info("mdsio_unlink: parent = "SLPRI_FID", name = %s, rc=%d",
-		  mq->pfg.fg_fid, mq->name, mp->rc);
+	psc_info("mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
+	    mq->pfid, mq->name, mp->rc);
+
  out:
 	if (fcmh)
 		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
 	return (0);
 }
 

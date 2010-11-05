@@ -770,8 +770,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	mq->pfg.fg_fid = pinum;
-	mq->pfg.fg_gen = 0;
+	mq->pfid = pinum;
 
 	strlcpy(mq->name, name, sizeof(mq->name));
 
@@ -813,14 +812,13 @@ mslfsop_rmdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 }
 
 __static void
-mslfsop_mknod(struct pscfs_req *pfr,
-    pscfs_inum_t pinum, const char *name,
-    mode_t mode, __unusedx dev_t rdev)
+mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
+    const char *name, mode_t mode, dev_t rdev)
 {
+	struct fidc_membh *p = NULL, *c = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_mknod_rep *mp = NULL;
-	struct fidc_membh *m = NULL;
 	struct srm_mknod_req *mq = NULL;
 	struct slash_creds creds;
 	struct stat stb;
@@ -836,7 +834,18 @@ mslfsop_mknod(struct pscfs_req *pfr,
 		rc = ENAMETOOLONG;
 		goto out;
 	}
+
+	rc = fidc_lookup_load_inode(pinum, &p);
+	if (rc)
+		goto out;
+
 	mslfs_getcreds(pfr, &creds);
+
+	FCMH_LOCK(p);
+	rc = checkcreds(&p->fcmh_sstb, &creds, W_OK);
+	FCMH_ULOCK(p);
+	if (rc)
+		goto out;
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -861,14 +870,22 @@ mslfsop_mknod(struct pscfs_req *pfr,
 	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
-	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_NONE, &m);
-
+	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_NONE, &c);
 	sl_internalize_stat(&mp->attr, &stb);
 
-out:
+ out:
 	pscfs_reply_mknod(pfr, mp ? mp->attr.sst_fid : 0,
 		mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO,
 		&stb, MSLFS_ATTR_TIMEO, rc);
+
+	if (c)
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+	if (p)
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+	if (rq)
+		pscrpc_req_finished(rq);
+	if (csvc)
+		sl_csvc_decref(csvc);
 }
 
 __static void
