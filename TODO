@@ -332,3 +332,5 @@ truncate:
   but, if no IONs are replying, they probably won't be inclined to
   accept new bmap leases either...
 
+- move inode.h into slashd
+- use pfl_memchk instead of null inode structures for memcmp
