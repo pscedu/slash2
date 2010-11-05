@@ -277,6 +277,8 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 	DEBUG_BMAP(PLL_WARN, b, "trying to dump the cache");
 	msl_bmap_cache_rls(b);
  out:
+	if (f)
+		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
