@@ -273,3 +273,5 @@ utime
   ensurelen and notify user to possible optimization
 - per-site network upscheduling is not enough; it has to be per
   link to maintain network link saturation effectively
+- clear S_ISUID and S_ISGID on chown(2)
+- rename slash_creds.uid -> cr_uid
