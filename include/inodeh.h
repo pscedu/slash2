@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -95,30 +95,12 @@ _debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 	return (buf);
 }
 
-static __inline void
-debug_ino(const struct slash_inode_od *ino)
-{
-	char buf[BUFSIZ];
-
-	_debug_ino(buf, sizeof(buf), ino);
-	printf("%s\n", buf);
-}
-
 #define INOH_FLAGS_FMT "%s%s%s%s"
 #define DEBUG_INOH_FLAGS(i)						\
 	(i)->inoh_flags & INOH_INO_DIRTY	? "D" : "",		\
 	(i)->inoh_flags & INOH_EXTRAS_DIRTY	? "d" : "",		\
 	(i)->inoh_flags & INOH_HAVE_EXTRAS	? "X" : "",		\
 	(i)->inoh_flags & INOH_INO_NEW		? "N" : ""
-
-static __inline void
-debug_inoh(const struct slash_inode_handle *ih)
-{
-	char buf[BUFSIZ];
-
-	_debug_ino(buf, sizeof(buf), &ih->inoh_ino);
-	printf("fl:"INOH_FLAGS_FMT" %s\n", DEBUG_INOH_FLAGS(ih), buf);
-}
 
 static __inline void
 _log_debug_inoh(const char *file, const char *func, int lineno,

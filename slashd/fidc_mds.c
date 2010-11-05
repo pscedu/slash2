@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -94,6 +94,24 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 	}
 	if (fmi->fmi_inodeh.inoh_extras)
 		PSCFREE(fmi->fmi_inodeh.inoh_extras);
+}
+
+void
+dump_ino(const struct slash_inode_od *ino)
+{
+	char buf[BUFSIZ];
+
+	_debug_ino(buf, sizeof(buf), ino);
+	printf("%s\n", buf);
+}
+
+static __inline void
+dump_inoh(const struct slash_inode_handle *ih)
+{
+	char buf[BUFSIZ];
+
+	_debug_ino(buf, sizeof(buf), &ih->inoh_ino);
+	printf("fl:"INOH_FLAGS_FMT" %s\n", DEBUG_INOH_FLAGS(ih), buf);
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
