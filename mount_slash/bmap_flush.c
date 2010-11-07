@@ -559,7 +559,7 @@ bmap_flushable(struct bmapc_memb *b)
 		psc_assert(!(r->biorq_flags & BIORQ_DESTROY));
 
 		if (!(r->biorq_flags & BIORQ_FLUSHRDY)) {
-			DEBUG_BIORQ(PLL_WARN, r, "data not ready");
+			DEBUG_BIORQ(PLL_INFO, r, "data not ready");
 			freelock(&r->biorq_lock);
 			continue;
 
