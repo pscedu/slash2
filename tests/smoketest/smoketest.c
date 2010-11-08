@@ -247,6 +247,7 @@ test_random(void)
 	free(ptr);
 	return (0);
 }
+
 /*
  * See if we handle chown() properly. 
  * Reference: pjd-fstest-20080816.tgz at http://www.tuxera.com/community/posix-test-suite/.
@@ -302,6 +303,54 @@ test_chown(void)
 	return (0);
 }
 
+/*
+ * See if we handle link() properly. 
+ * Reference: pjd-fstest-20080816.tgz at http://www.tuxera.com/community/posix-test-suite/.
+ */
+int
+test_link(void)
+{
+	int fd, rc;
+	struct stat buf;
+	char *tmpname = "test-link.dat";
+	char *linkname = "test-link.link";
+
+	fd = open(tmpname, O_CREAT|O_RDWR, S_IRWXU);
+	if (fd < 0) {
+		printf("Fail to create file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = close(fd);
+	if (rc < 0) {
+		printf("Fail to close file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = link(tmpname, linkname);
+	if (rc < 0) {
+		printf("Fail to add a link %s to file %s, errno = %d at line %d!\n", linkname, tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = stat(tmpname, &buf);
+	if (rc < 0) {
+		printf("Fail to add a link %s to file %s, errno = %d at line %d!\n", linkname, tmpname, errno, __LINE__);
+		return (1);
+	}
+	if (buf.st_nlink != 2) {
+		printf("Unexpected link count %d, errno = %d at line %d!\n", (int)buf.st_nlink, errno, __LINE__);
+		return (1);
+	}
+	rc = unlink(tmpname);
+	if (rc < 0) {
+		printf("Fail to unlink %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = unlink(linkname);
+	if (rc < 0) {
+		printf("Fail to unlink %s, errno = %d at line %d!\n", linkname, errno, __LINE__);
+		return (1);
+	}
+}
+
 struct test_desc test_list[] = {
 
 	{
@@ -319,6 +368,10 @@ struct test_desc test_list[] = {
 	{
 		"A non-owner changes the owner/group of a file to 65535:65535",
 		test_chown
+	},
+	{
+		"Test basic link support",
+		test_link
 	},
 	{
 		NULL,
