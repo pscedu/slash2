@@ -60,6 +60,25 @@ mdsio_fcmh_setattr(struct fidc_membh *f, int setattrflags)
 }
 
 int
+mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
+{
+	int locked, rc=0;
+
+	locked = FCMH_RLOCK(f);
+        rc = mdsio_getattr(fcmh_2_mdsio_fid(f), fcmh_2_mdsio_data(f), 
+	   &rootcreds, &f->fcmh_sstb);
+	
+	if (rc)
+		abort();
+
+	if (out_sstb)
+		*out_sstb = f->fcmh_sstb;
+        FCMH_URLOCK(f, locked);
+	
+	return (rc);
+}
+
+int
 mdsio_bmap_read(struct bmapc_memb *bmap)
 {
 	size_t nb;

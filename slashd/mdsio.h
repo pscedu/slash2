@@ -63,6 +63,7 @@ void	mds_namespace_log(int, uint64_t, uint64_t, uint64_t,
 
 /* high-level interface */
 int	mdsio_fcmh_setattr(struct fidc_membh *, int);
+int     mdsio_fcmh_refreshattr(struct fidc_membh *, struct srt_stat *);
 int	mdsio_bmap_read(struct bmapc_memb *);
 int	mdsio_bmap_write(struct bmapc_memb *);
 int	mdsio_inode_extras_read(struct slash_inode_handle *);
@@ -77,7 +78,7 @@ struct mdsio_ops {
 
 	/* low-level file system interface */
 	int	(*mio_access)(mdsio_fid_t, int, const struct slash_creds *);
-	int	(*mio_getattr)(mdsio_fid_t, const struct slash_creds *, struct srt_stat *);
+	int	(*mio_getattr)(mdsio_fid_t, void *, const struct slash_creds *, struct srt_stat *);
 	int	(*mio_link)(mdsio_fid_t, mdsio_fid_t, const char *, const struct slash_creds *, struct srt_stat *, sl_log_update_t);
 	int	(*mio_lookup)(mdsio_fid_t, const char *, mdsio_fid_t *, const struct slash_creds *, struct srt_stat *);
 	int	(*mio_lookup_slfid)(slfid_t, const struct slash_creds *, struct srt_stat *, mdsio_fid_t *);
