@@ -129,7 +129,7 @@ struct bmapc_memb {
 #define BMAP_DIRTY		(1 << 6)
 #define BMAP_MEMRLS		(1 << 7)
 #define BMAP_DIRTY2LRU		(1 << 8)
-#define BMAP_TIMEOQ		(1 << 9)
+#define BMAP_TIMEOQ		(1 << 9)	/* 0x200 */
 #define BMAP_IONASSIGN		(1 << 10)
 #define BMAP_MDCHNG		(1 << 11)
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
