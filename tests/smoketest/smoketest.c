@@ -248,7 +248,8 @@ test_random(void)
 	return (0);
 }
 /*
- * See if we handle chown() properly.
+ * See if we handle chown() properly. 
+ * Reference: pjd-fstest-20080816.tgz at http://www.tuxera.com/community/posix-test-suite/.
  */
 int
 test_chown(void)
