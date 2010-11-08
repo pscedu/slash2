@@ -298,8 +298,10 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
 	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
-	    mq->name, &mq->creds, &mp->attr, mds_namespace_log);
+	    mq->name, &mq->creds, &mp->cattr, mds_namespace_log);
 	mds_unreserve_slot();
+
+	mdsio_fcmh_refreshattr(p, &mp->pattr);
  out:
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
@@ -341,22 +343,24 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 {
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *p;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->pfg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
-	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(fcmh), mq->name, mq->mode,
-	    &mq->creds, &mp->attr, NULL, mds_namespace_log,
+	mp->rc = mdsio_mkdir(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
+	    &mq->creds, &mp->cattr, NULL, mds_namespace_log,
 	    slm_get_next_slashid);
 	mds_unreserve_slot();
+
+	mdsio_fcmh_refreshattr(p, &mp->pattr);
  out:
-	if (fcmh)
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	if (p)
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
@@ -365,29 +369,31 @@ slm_rmc_handle_mknod(struct pscrpc_request *rq)
 {
 	struct srm_mknod_req *mq;
 	struct srm_mknod_rep *mp;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *p;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	mp->rc = slm_fcmh_get(&mq->pfg, &fcmh);
+	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
-	mp->rc = mdsio_mknod(fcmh_2_mdsio_fid(fcmh), mq->name, mq->mode,
-	    &mq->creds, &mp->attr, NULL, mds_namespace_log,
+	mp->rc = mdsio_mknod(fcmh_2_mdsio_fid(p), mq->name, mq->mode,
+	    &mq->creds, &mp->cattr, NULL, mds_namespace_log,
 	    slm_get_next_slashid);
 	mds_unreserve_slot();
+
+	mdsio_fcmh_refreshattr(p, &mp->pattr);
  out:
-	if (fcmh)
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	if (p)
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
 int
 slm_rmc_handle_create(struct pscrpc_request *rq)
 {
-	struct fidc_membh *p, *fcmh;
+	struct fidc_membh *p, *c;
 	struct srm_create_rep *mp;
 	struct srm_create_req *mq;
 	struct bmapc_memb *bmap;
@@ -411,19 +417,19 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 
-//	DEBUG_FCMH(PLL_WARN, p, "create op start for %s", mq->name);
+	DEBUG_FCMH(PLL_DEBUG, p, "create op start for %s", mq->name);
 
 	mds_reserve_slot();
 	mp->rc = mdsio_opencreate(fcmh_2_mdsio_fid(p), &mq->creds,
 	    O_CREAT | O_EXCL | O_RDWR, mq->mode, mq->name, NULL,
-	    &mp->attr, &mdsio_data, mds_namespace_log,
+	    &mp->cattr, &mdsio_data, mds_namespace_log,
 	    slm_get_next_slashid);
 	mds_unreserve_slot();
 
 	if (mp->rc)
 		goto out;
 
-//	DEBUG_FCMH(PLL_WARN, p, "create op done for %s", mq->name);
+	DEBUG_FCMH(PLL_DEBUG, p, "create op done for %s", mq->name);
 	/* XXX enter this into the fcmh cache instead of doing it again
 	 *   This release may be the sanest thing actually, unless EXCL is
 	 *   used.
@@ -431,23 +437,29 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc == 0)
 		mdsio_release(&rootcreds, mdsio_data);
 
-	mp->rc2 = slm_fcmh_get(&mp->attr.sst_fg, &fcmh);
+	mp->rc2 = slm_fcmh_get(&mp->cattr.sst_fg, &c);
 	if (mp->rc2)
 		goto out;
-//	DEBUG_FCMH(PLL_WARN, p, "release op done for %s", mq->name);
+
+	DEBUG_FCMH(PLL_DEBUG, p, "release op done for %s", mq->name);
 
 	mp->flags = mq->flags;
 
 	bmap = NULL;
-	mp->rc2 = mds_bmap_load_cli(fcmh, 0, mp->flags, SL_WRITE,
-			    mq->prefios, &mp->sbd, rq->rq_export, &bmap);
-	if (mp->rc2) {
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE, mq->prefios, 
+		    &mp->sbd, rq->rq_export, &bmap);
+
+	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+
+	if (mp->rc2) 
 		goto out;
-	}
+
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, SL_WRITE);
 
-	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	/* Refresh the cached attributes of our parent and pack them 
+	 *   in the reply.
+	 */
+	mdsio_fcmh_refreshattr(p, &mp->pattr);
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
@@ -578,8 +590,8 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	char from[NAME_MAX+1], to[NAME_MAX+1];
 	struct pscrpc_bulk_desc *desc;
 	struct fidc_membh *op, *np;
-	struct srm_generic_rep *mp;
 	struct srm_rename_req *mq;
+	struct srm_rename_rep *mp;
 	struct iovec iov[2];
 
 	op = np = NULL;
@@ -631,6 +643,8 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &rootcreds, mds_namespace_log);
 
+	mdsio_fcmh_refreshattr(op, &mp->sdattr);
+	mdsio_fcmh_refreshattr(np, &mp->ddattr);
  out:
 	if (np)
 		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);
@@ -913,9 +927,11 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 	linkname[sizeof(linkname) - 1] = '\0';
 	mds_reserve_slot();
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
-	    &mq->creds, &mp->attr, NULL, slm_get_next_slashid,
+	    &mq->creds, &mp->cattr, NULL, slm_get_next_slashid,
 	    mds_namespace_log);
 	mds_unreserve_slot();
+
+	mdsio_fcmh_refreshattr(p, &mp->pattr);
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
@@ -927,32 +943,33 @@ slm_rmc_handle_unlink(struct pscrpc_request *rq, int isfile)
 {
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
-	struct fidc_membh *fcmh;
+	struct fidc_membh *p;
 	struct slash_fidgen fg;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	fg.fg_fid = mq->pfid;
 	fg.fg_gen = FGEN_ANY;
-	mp->rc = slm_fcmh_get(&fg, &fcmh);
+	mp->rc = slm_fcmh_get(&fg, &p);
 	if (mp->rc)
 		goto out;
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
 	if (isfile)
-		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(fcmh),
+		mp->rc = mdsio_unlink(fcmh_2_mdsio_fid(p),
 		    mq->name, &rootcreds, mds_namespace_log);
 	else
-		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(fcmh),
+		mp->rc = mdsio_rmdir(fcmh_2_mdsio_fid(p),
 		    mq->name, &rootcreds, mds_namespace_log);
 	mds_unreserve_slot();
 
 	psclog_info("mdsio_unlink: parent="SLPRI_FID", name=%s, rc=%d",
 	    mq->pfid, mq->name, mp->rc);
 
+	mdsio_fcmh_refreshattr(p, &mp->attr);
  out:
-	if (fcmh)
-		fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
+	if (p)
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 

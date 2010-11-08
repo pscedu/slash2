@@ -250,11 +250,11 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
+	struct srm_create_req *mq;
 	struct srm_create_rep *mp = NULL;
 	struct msl_fhent *mfh = NULL;
-	struct fidc_membh *m = NULL;
+	struct fidc_membh *c = NULL, *p = NULL;
 	struct fcmh_cli_info *fci;
-	struct srm_create_req *mq;
 	struct bmapc_memb *bcm;
 	struct stat stb;
 	int rc = 0;
@@ -268,6 +268,15 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		goto out;
 	}
 
+	rc = fidc_lookup_load_inode(pinum, &p);
+	if (rc)
+		goto out;
+
+	if (!fcmh_isdir(p)) {
+		rc = ENOTDIR;
+		goto out;
+	}
+		
 	/*
 	 * Now we've established a local placeholder for this create.
 	 *  any other creates to this pathame will block in
@@ -294,29 +303,31 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_NONE, &m);
+	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
+
+	rc = slc_fcmh_get(&mp->cattr, FCMH_SETATTRF_NONE, &c);
 	if (rc)
 		goto out;
 
 	if (oflags & O_APPEND) {
-		FCMH_LOCK(m);
-		m->fcmh_flags |= FCMH_CLI_APPENDWR;
-		FCMH_ULOCK(m);
+		FCMH_LOCK(c);
+		c->fcmh_flags |= FCMH_CLI_APPENDWR;
+		FCMH_ULOCK(c);
 	}
 	if (oflags & O_SYNC) {
 		/* XXX write me */
 	}
 
-	FCMH_LOCK(m);
-	fci = fcmh_2_fci(m);
+	FCMH_LOCK(c);
+	fci = fcmh_2_fci(c);
 
 	fci->fci_reptbl[0].bs_id = mp->sbd.sbd_ios_id;
 	fci->fci_nrepls = 1;
-	m->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
-	sl_internalize_stat(&m->fcmh_sstb, &stb);
-	FCMH_ULOCK(m);
+	c->fcmh_flags |= FCMH_CLI_HAVEREPLTBL;
+	sl_internalize_stat(&c->fcmh_sstb, &stb);
+	FCMH_ULOCK(c);
 
-	rc = bmap_getf(m, 0, SL_WRITE, BMAPGETF_LOAD |
+	rc = bmap_getf(c, 0, SL_WRITE, BMAPGETF_LOAD |
 	    BMAPGETF_NORETRIEVE, &bcm);
 	if (rc)
 		goto out;
@@ -327,17 +338,20 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
 
-	mfh = msl_fhent_new(m);
+	mfh = msl_fhent_new(c);
 
  out:
 
-	if (m) {
-		DEBUG_FCMH(PLL_INFO, m, "new mfh=%p rc=%d name=(%s)", mfh, rc, name);
-		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
+	if (c) {
+		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p rc=%d name=(%s)", mfh, rc, name);
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	}
+	
+	if (p)
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
-	pscfs_reply_create(pfr, mp ? mp->attr.sst_fid : 0,
-	    mp ? mp->attr.sst_fg.fg_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
+	pscfs_reply_create(pfr, mp ? mp->cattr.sst_fid : 0,
+	    mp ? mp->cattr.sst_fg.fg_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
 	    MSLFS_ATTR_TIMEO, mfh, PSCFS_CREATEF_DIO, rc);
 
 	if (rq)
@@ -636,17 +650,17 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (rc)
 		goto out;
 
-	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_NONE);
-	sl_internalize_stat(&mp->attr, &stb);
-
+	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
+	fcmh_setattr(c, &mp->cattr, FCMH_SETATTRF_NONE);
+	sl_internalize_stat(&mp->cattr, &stb);
  out:
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
-	pscfs_reply_link(pfr, mp ? mp->attr.sst_fid : 0,
-	    mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
+	pscfs_reply_link(pfr, mp ? mp->cattr.sst_fid : 0,
+	    mp ? mp->cattr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
 	    MSLFS_ATTR_TIMEO, rc);
 
 	if (rq)
@@ -662,8 +676,8 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct srm_mkdir_rep *mp = NULL;
-	struct fidc_membh *m = NULL;
 	struct srm_mkdir_req *mq;
+	struct fidc_membh *c = NULL, *p = NULL;
 	struct slash_creds creds;
 	struct stat stb;
 	int rc;
@@ -675,8 +689,17 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		goto out;
 	}
 
-	mslfs_getcreds(pfr, &creds);
+	rc = fidc_lookup_load_inode(pinum, &p);
+        if (rc)
+                goto out;
 
+        if (!fcmh_isdir(p)) {
+		rc = ENOTDIR;
+                goto out;
+	}
+
+	mslfs_getcreds(pfr, &creds);
+       
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
@@ -684,6 +707,7 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    SRMT_MKDIR, rq, mq, mp);
 	if (rc)
 		goto out;
+
 	mq->creds = creds;
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
@@ -696,19 +720,22 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
+	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
+
 	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
-	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_NONE, &m);
-
-	sl_internalize_stat(&mp->attr, &stb);
+	rc = slc_fcmh_get(&mp->cattr, FCMH_SETATTRF_NONE, &c);
+	sl_internalize_stat(&mp->cattr, &stb);
 
  out:
-	if (m)
-		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
+	if (c)
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+	if (p)
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
-	pscfs_reply_mkdir(pfr, mp ? mp->attr.sst_fid : 0,
-	    mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
+	pscfs_reply_mkdir(pfr, mp ? mp->cattr.sst_fid : 0,
+	    mp ? mp->cattr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
 	    MSLFS_ATTR_TIMEO, rc);
 
 	if (rq)
@@ -753,7 +780,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 			if (c->fcmh_sstb.sst_uid != cr.uid)
 				rc = EPERM;
 			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
-		}
+		} else
+			FCMH_ULOCK(p);
 	} else {
 		rc = checkcreds(&p->fcmh_sstb, &cr, W_OK);
 		FCMH_ULOCK(p);
@@ -778,7 +806,11 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc == 0)
 		rc = mp->rc;
 
-	FCMH_LOCK(p);
+	/* Lock to be released in fcmh_op_done_type()
+	 */
+	FCMH_LOCK(p);       
+	if (!rc)
+		fcmh_setattr(p, &mp->attr, FCMH_SETATTRF_HAVELOCK);
 	if (DIRCACHE_INITIALIZED(p))
 		dircache_lookup(&fcmh_2_fci(p)->fci_dci,
 		    name, DC_STALE);
@@ -836,9 +868,13 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
 	rc = fidc_lookup_load_inode(pinum, &p);
-	if (rc)
-		goto out;
+        if (rc)
+                goto out;
 
+        if (!fcmh_isdir(p)) {
+                rc = ENOTDIR;
+		goto out;
+	}
 	mslfs_getcreds(pfr, &creds);
 
 	FCMH_LOCK(p);
@@ -854,7 +890,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    SRMT_MKNOD, rq, mq, mp);
 	if (rc)
 		goto out;
-
+	
 	mq->creds = creds;
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
@@ -867,17 +903,19 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
+	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
+
 	psc_info("pfid=%"PRIx64" mode=0%o name='%s' rc=%d mp->rc=%d",
 	    mq->pfg.fg_fid, mq->mode, mq->name, rc, mp->rc);
 
-	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_NONE, &c);
-	sl_internalize_stat(&mp->attr, &stb);
+	rc = slc_fcmh_get(&mp->cattr, FCMH_SETATTRF_NONE, &c);
+
+	sl_internalize_stat(&mp->cattr, &stb);
 
  out:
-	pscfs_reply_mknod(pfr, mp ? mp->attr.sst_fid : 0,
-		mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO,
+	pscfs_reply_mknod(pfr, mp ? mp->cattr.sst_fid : 0,
+		mp ? mp->cattr.sst_gen : 0, MSLFS_ENTRY_TIMEO,
 		&stb, MSLFS_ATTR_TIMEO, rc);
-
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	if (p)
@@ -1301,8 +1339,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
-	struct srm_generic_rep *mp;
 	struct srm_rename_req *mq;
+	struct srm_rename_rep *mp;
 	struct slash_creds cr;
 	struct iovec iov[2];
 	int rc;
@@ -1428,7 +1466,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	struct srm_symlink_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
-	struct fidc_membh *m = NULL;
+	struct fidc_membh *c = NULL, *p = NULL;
 	struct srm_symlink_req *mq;
 	struct slash_creds creds;
 	struct iovec iov;
@@ -1443,6 +1481,15 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	}
 
 	mslfs_getcreds(pfr, &creds);
+
+	rc = fidc_lookup_load_inode(pinum, &p);
+        if (rc)
+		goto out;
+
+        if (!fcmh_isdir(p)) {
+                rc = ENOTDIR;
+		goto out;
+	}
 
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
@@ -1472,16 +1519,20 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	if (rc)
 		goto out;
 
-	rc = slc_fcmh_get(&mp->attr, FCMH_SETATTRF_NONE, &m);
+	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
 
-	sl_internalize_stat(&mp->attr, &stb);
+	rc = slc_fcmh_get(&mp->cattr, FCMH_SETATTRF_NONE, &c);
+
+	sl_internalize_stat(&mp->cattr, &stb);
 
  out:
-	if (m)
-		fcmh_op_done_type(m, FCMH_OPCNT_LOOKUP_FIDC);
+	if (c)
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
+	if (p)
+		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
-	pscfs_reply_symlink(pfr, mp ? mp->attr.sst_fid : 0,
-	    mp ? mp->attr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
+	pscfs_reply_symlink(pfr, mp ? mp->cattr.sst_fid : 0,
+	    mp ? mp->cattr.sst_gen : 0, MSLFS_ENTRY_TIMEO, &stb,
 	    MSLFS_ATTR_TIMEO, rc);
 
 	if (rq)
@@ -1568,6 +1619,7 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
+
 	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMC_VERSION,
 	    SRMT_SETATTR, rq, mq, mp);
 	if (rc)
