@@ -73,7 +73,9 @@ slm_fcmh_ctor(struct fidc_membh *fcmh)
 			DEBUG_FCMH(PLL_WARN, fcmh,
 			   "mdsio_opencreate failed (rc=%d)", rc);
 		}
-	}
+	} else
+		DEBUG_FCMH(PLL_WARN, fcmh, "special file, no zfs obj");
+
 	return (rc);
 }
 
@@ -85,7 +87,8 @@ slm_fcmh_dtor(struct fidc_membh *fcmh)
 
 	fmi = fcmh_2_fmi(fcmh);
 
-	if (!S_ISLNK(fcmh->fcmh_sstb.sst_mode)) {
+	if (S_ISREG(fcmh->fcmh_sstb.sst_mode) ||
+	    S_ISDIR(fcmh->fcmh_sstb.sst_mode)) {
 		/* XXX Need to worry about other modes here */
 		if (!fmi->fmi_ctor_rc) {
 			rc = mdsio_release(&rootcreds, fmi->fmi_mdsio_data);
