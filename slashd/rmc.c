@@ -429,13 +429,17 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
+	/* Refresh the cached attributes of our parent and pack them 
+	 *   in the reply.
+	 */
+	mdsio_fcmh_refreshattr(p, &mp->pattr);
+
 	DEBUG_FCMH(PLL_DEBUG, p, "create op done for %s", mq->name);
 	/* XXX enter this into the fcmh cache instead of doing it again
 	 *   This release may be the sanest thing actually, unless EXCL is
 	 *   used.
 	 */
-	if (mp->rc == 0)
-		mdsio_release(&rootcreds, mdsio_data);
+	mdsio_release(&rootcreds, mdsio_data);
 
 	mp->rc2 = slm_fcmh_get(&mp->cattr.sst_fg, &c);
 	if (mp->rc2)
@@ -455,11 +459,6 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 		goto out;
 
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, SL_WRITE);
-
-	/* Refresh the cached attributes of our parent and pack them 
-	 *   in the reply.
-	 */
-	mdsio_fcmh_refreshattr(p, &mp->pattr);
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
