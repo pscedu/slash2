@@ -722,6 +722,9 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			 */
 
 			FCMH_LOCK(fcmh);
+			/*
+			 * XXX this will fail a second truncate immedately.
+			 */
 			if (fcmh_2_ino(fcmh)->ino_flags &
 			    INOF_IN_PTRUNC) {
 				mp->rc = EAGAIN;
