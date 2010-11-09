@@ -403,6 +403,76 @@ test_truncate(void)
 	return (0);
 }
 
+/*
+ * See if we handle truncate() properly. 
+ * Reference: pjd-fstest-20080816.tgz at http://www.tuxera.com/community/posix-test-suite/.
+ */
+int
+test_open(void)
+{
+	int fd, rc;
+	ssize_t len;
+	struct stat buf;
+	time_t ctime1, ctime2;
+	time_t mtime1, mtime2;
+	char *tmpname = "test-open.dat";
+
+	fd = open(tmpname, O_CREAT|O_RDWR, S_IRWXU);
+	if (fd < 0) {
+		printf("Fail to create file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	len = write(fd, "hello!\n", 6);
+	if (len != 6) {
+		printf("Fail to write file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = close(fd);
+	if (rc < 0) {
+		printf("Fail to close file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = stat(tmpname, &buf);
+	if (rc < 0) {
+		printf("Fail to stat file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	ctime1 = buf.st_ctime;
+	mtime1 = buf.st_mtime;
+	sleep(1);
+	fd = open(tmpname, O_WRONLY|O_TRUNC);
+	if (fd < 0) {
+		printf("Fail to create file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = close(fd);
+	if (rc < 0) {
+		printf("Fail to close file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = stat(tmpname, &buf);
+	if (rc < 0) {
+		printf("Fail to stat file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	ctime2 = buf.st_ctime;
+	mtime2 = buf.st_mtime;
+	if (ctime2 - ctime1 < 1) {
+		printf("Invalid ctime %ld - %ld at line %d!\n", (long)ctime1, (long)ctime2, __LINE__);
+		return (1);
+	}
+	if (mtime2 - mtime1 < 1) {
+		printf("Invalid mtime %ld - %ld at line %d!\n", (long)mtime1, (long)mtime2, __LINE__);
+		return (1);
+	}
+	rc = unlink(tmpname);
+	if (rc < 0) {
+		printf("Fail to unlink %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	return (0);
+}
+
 struct test_desc test_list[] = {
 
 	{
@@ -428,6 +498,10 @@ struct test_desc test_list[] = {
 	{
 		"Test basic truncate support",
 		test_truncate
+	},
+	{
+		"Test basic open support",
+		test_open
 	},
 	{
 		NULL,
