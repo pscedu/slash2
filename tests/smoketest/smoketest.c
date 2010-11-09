@@ -378,6 +378,9 @@ test_truncate(void)
 		printf("Fail to lengthen file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
 		return (1);
 	}
+	/*
+	 * This following can return 11.  According to /usr/include/asm-generic/errno-base.h, it EAGAIN.
+	 */
 	rc = truncate(tmpname, 567);
 	if (rc < 0) {
 		printf("Fail to shorten file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
