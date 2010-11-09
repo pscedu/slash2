@@ -332,7 +332,7 @@ test_link(void)
 	}
 	rc = stat(tmpname, &buf);
 	if (rc < 0) {
-		printf("Fail to add a link %s to file %s, errno = %d at line %d!\n", linkname, tmpname, errno, __LINE__);
+		printf("Fail to stat file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
 		return (1);
 	}
 	if (buf.st_nlink != 2) {
@@ -349,6 +349,55 @@ test_link(void)
 		printf("Fail to unlink %s, errno = %d at line %d!\n", linkname, errno, __LINE__);
 		return (1);
 	}
+	return (0);
+}
+
+/*
+ * See if we handle truncate() properly. 
+ * Reference: pjd-fstest-20080816.tgz at http://www.tuxera.com/community/posix-test-suite/.
+ */
+int
+test_truncate(void)
+{
+	int fd, rc;
+	struct stat buf;
+	char *tmpname = "test-truncate.dat";
+
+	fd = open(tmpname, O_CREAT|O_RDWR, S_IRWXU);
+	if (fd < 0) {
+		printf("Fail to create file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = close(fd);
+	if (rc < 0) {
+		printf("Fail to close file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = truncate(tmpname, 1234567);
+	if (rc < 0) {
+		printf("Fail to lengthen file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = truncate(tmpname, 567);
+	if (rc < 0) {
+		printf("Fail to shorten file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	rc = stat(tmpname, &buf);
+	if (rc < 0) {
+		printf("Fail to stat file %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	if (buf.st_size != 567) {
+		printf("Unexpected size %d, errno = %d at line %d!\n", (int)buf.st_nlink, errno, __LINE__);
+		return (1);
+	}
+	rc = unlink(tmpname);
+	if (rc < 0) {
+		printf("Fail to unlink %s, errno = %d at line %d!\n", tmpname, errno, __LINE__);
+		return (1);
+	}
+	return (0);
 }
 
 struct test_desc test_list[] = {
@@ -372,6 +421,10 @@ struct test_desc test_list[] = {
 	{
 		"Test basic link support",
 		test_link
+	},
+	{
+		"Test basic truncate support",
+		test_truncate
 	},
 	{
 		NULL,
