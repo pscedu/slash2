@@ -404,7 +404,7 @@ test_truncate(void)
 }
 
 /*
- * See if we handle truncate() properly. 
+ * See if we handle open() properly. 
  * Reference: pjd-fstest-20080816.tgz at http://www.tuxera.com/community/posix-test-suite/.
  */
 int
