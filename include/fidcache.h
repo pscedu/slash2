@@ -197,14 +197,14 @@ struct fidc_membh	*_fidc_lookup_fg(const struct pfl_callerinfo *, const struct s
 
 ssize_t	 fcmh_getsize(struct fidc_membh *);
 
-void	_fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types, const struct pfl_callerinfo *);
-void	_fcmh_op_done_type(struct fidc_membh *, enum fcmh_opcnt_types, const struct pfl_callerinfo *);
+void	_fcmh_op_start_type(const struct pfl_callerinfo *, struct fidc_membh *, enum fcmh_opcnt_types);
+void	_fcmh_op_done_type(const struct pfl_callerinfo *, struct fidc_membh *, enum fcmh_opcnt_types);
 
 #define fcmh_op_start_type(fcmh, type)					\
-    _fcmh_op_start_type((fcmh), (type), PFL_CALLERINFOSS(SLSS_FCMH))
+	_fcmh_op_start_type(PFL_CALLERINFOSS(SLSS_FCMH), (fcmh), (type))
 
 #define fcmh_op_done_type(fcmh, type)					\
-    _fcmh_op_done_type((fcmh), (type), PFL_CALLERINFOSS(SLSS_FCMH))
+	_fcmh_op_done_type(PFL_CALLERINFOSS(SLSS_FCMH), (fcmh), (type))
 
 void	 dump_fidcache(void);
 void	 dump_fcmh(struct fidc_membh *);

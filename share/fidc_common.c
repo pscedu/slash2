@@ -197,13 +197,13 @@ fidc_reap(struct psc_poolmgr *m)
  *	generation number is known.
  */
 struct fidc_membh *
-_fidc_lookup_fg(const struct pfl_callerinfo *pci,
+_fidc_lookup_fg(const struct pfl_callerinfo *pfl_callerinfo,
     const struct slash_fidgen *fg)
 {
 	struct fidc_membh *fcmhp;
 	int rc;
 
-	rc = _fidc_lookup(pci, fg, 0, NULL, 0, &fcmhp);
+	rc = _fidc_lookup(pfl_callerinfo, fg, 0, NULL, 0, &fcmhp);
 	return (rc == 0 ? fcmhp : NULL);
 }
 
@@ -212,13 +212,13 @@ _fidc_lookup_fg(const struct pfl_callerinfo *pci,
  *	generation number is not known.
  */
 struct fidc_membh *
-_fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
+_fidc_lookup_fid(const struct pfl_callerinfo *pfl_callerinfo, slfid_t f)
 {
 	struct slash_fidgen t = { f, FGEN_ANY };
 	struct fidc_membh *fcmhp;
 	int rc;
 
-	rc = _fidc_lookup(pci, &t, 0, NULL, 0, &fcmhp);
+	rc = _fidc_lookup(pfl_callerinfo, &t, 0, NULL, 0, &fcmhp);
 	return (rc == 0 ? fcmhp : NULL);
 
 }
@@ -230,7 +230,7 @@ _fidc_lookup_fid(const struct pfl_callerinfo *pci, slfid_t f)
  *	are ref'd with FCMH_OPCNT_LOOKUP_FIDC.
  */
 int
-_fidc_lookup(const struct pfl_callerinfo *pci,
+_fidc_lookup(const struct pfl_callerinfo *pfl_callerinfo,
     const struct slash_fidgen *fgp, int flags, struct srt_stat *sstb,
     int setattrflags, struct fidc_membh **fcmhp)
 {
@@ -239,7 +239,7 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	struct psc_hashbkt *b;
 	int rc, try_create = 0;
 
-	_psclog_pci(pci, PLL_DEBUG, 0,
+	_psclog_pci(pfl_callerinfo, PLL_DEBUG, 0,
 	    "fidc_lookup called for fid "SLPRI_FID, searchfg.fg_fid);
 
 	rc = 0;
@@ -466,7 +466,7 @@ fcmh_getsize(struct fidc_membh *h)
  * to the idle list when the _last_ reference is dropped.
  */
 void
-_fcmh_op_start_type(const struct pfl_callerinfo *pfl_callerinfo
+_fcmh_op_start_type(const struct pfl_callerinfo *pfl_callerinfo,
     struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	int locked = FCMH_RLOCK(f);
@@ -507,7 +507,7 @@ fcmh_decref(struct fidc_membh *f, enum fcmh_opcnt_types type)
 }
 
 void
-fcmh_op_done_type(const struct pfl_callerinfo *pfl_callerinfo *,
+_fcmh_op_done_type(const struct pfl_callerinfo *pfl_callerinfo,
     struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	FCMH_RLOCK(f);
