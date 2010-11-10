@@ -930,12 +930,12 @@ __static void
 mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
 	struct slashrpc_cservice *csvc = NULL;
+	struct fidc_membh *dtmp, *d = NULL;
 	struct srm_readdir_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct dircache_ents *e = NULL;
 	struct pscrpc_bulk_desc *desc;
 	struct msl_fhent *mfh = data;
-	struct fidc_membh *d = NULL;
 	struct srm_readdir_req *mq;
 	struct iovec iov[2];
 	int rc, niov = 0;
@@ -954,11 +954,13 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	 *  must be taken into account.
 	 * NOTE: 'd' must be decref'd.
 	 */
-	if (fidc_lookup_fg(&d->fcmh_fg) != d) {
+	dtmp = fidc_lookup_fg(&d->fcmh_fg);
+	if (dtmp != d)
 		rc = EBADF;
+	if (dtmp)
+		fcmh_op_done_type(dtmp, FCMH_OPCNT_LOOKUP_FIDC);
+	if (rc)
 		goto out;
-	}
-	fcmh_op_done_type(d, FCMH_OPCNT_LOOKUP_FIDC);
 
 	if (!fcmh_isdir(d)) {
 		rc = ENOTDIR;
