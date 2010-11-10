@@ -1796,18 +1796,19 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
     off_t off, void *data)
 {
 	struct msl_fhent *mfh = data;
-	struct fidc_membh *f;
+	struct fidc_membh *f, *ftmp;
 	struct timespec ts;
 	int rc;
 
 	msfsthr_ensure();
 
 	f = mfh->mfh_fcmh;
-	if (fidc_lookup_fg(&f->fcmh_fg) != f) {
+	ftmp = fidc_lookup_fg(&f->fcmh_fg);
+	if (ftmp != f)
 		rc = EBADF;
-		goto out;
-	}
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+	if (rc)
+		goto out;
 
 	/* XXX EBADF if fd is not open for writing */
 	if (fcmh_isdir(f)) {
