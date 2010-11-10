@@ -276,7 +276,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		rc = ENOTDIR;
 		goto out;
 	}
-		
+
 	/*
 	 * Now we've established a local placeholder for this create.
 	 *  any other creates to this pathame will block in
@@ -346,7 +346,7 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		DEBUG_FCMH(PLL_INFO, c, "new mfh=%p rc=%d name=(%s)", mfh, rc, name);
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	}
-	
+
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
 
@@ -690,16 +690,16 @@ mslfsop_mkdir(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
 	rc = fidc_lookup_load_inode(pinum, &p);
-        if (rc)
-                goto out;
+	if (rc)
+		goto out;
 
-        if (!fcmh_isdir(p)) {
+	if (!fcmh_isdir(p)) {
 		rc = ENOTDIR;
-                goto out;
+		goto out;
 	}
 
 	mslfs_getcreds(pfr, &creds);
-       
+
 	rc = slc_rmc_getimp(&csvc);
 	if (rc)
 		goto out;
@@ -808,7 +808,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	/* Lock to be released in fcmh_op_done_type()
 	 */
-	FCMH_LOCK(p);       
+	FCMH_LOCK(p);
 	if (!rc)
 		fcmh_setattr(p, &mp->attr, FCMH_SETATTRF_HAVELOCK);
 	if (DIRCACHE_INITIALIZED(p))
@@ -868,11 +868,11 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	}
 
 	rc = fidc_lookup_load_inode(pinum, &p);
-        if (rc)
-                goto out;
+	if (rc)
+		goto out;
 
-        if (!fcmh_isdir(p)) {
-                rc = ENOTDIR;
+	if (!fcmh_isdir(p)) {
+		rc = ENOTDIR;
 		goto out;
 	}
 	mslfs_getcreds(pfr, &creds);
@@ -890,7 +890,7 @@ mslfsop_mknod(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	    SRMT_MKNOD, rq, mq, mp);
 	if (rc)
 		goto out;
-	
+
 	mq->creds = creds;
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
@@ -1483,11 +1483,11 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	mslfs_getcreds(pfr, &creds);
 
 	rc = fidc_lookup_load_inode(pinum, &p);
-        if (rc)
+	if (rc)
 		goto out;
 
-        if (!fcmh_isdir(p)) {
-                rc = ENOTDIR;
+	if (!fcmh_isdir(p)) {
+		rc = ENOTDIR;
 		goto out;
 	}
 
@@ -1853,7 +1853,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
 	if (fcmh_isdir(f)) {
-//		psc_assert("pscfs gave us directory");
+//		psc_fatalx("pscfs gave us a directory");
 		rc = EISDIR;
 		goto out;
 	}
