@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -61,8 +61,7 @@ void	fcmh_setlocalsize(struct fidc_membh *, uint64_t);
 void	slc_fcmh_initdci(struct fidc_membh *);
 
 #define fidc_lookup_load_inode(fid, fcmhp)				\
-	_fidc_lookup_load_inode(PFL_CALLERINFOSS(SLSS_FCMH), (fid),	\
-	    (fcmhp))
+	_fidc_lookup_load_inode(PFL_CALLERINFOSS(SLSS_FCMH), (fid), (fcmhp))
 
 /**
  * fidc_lookup_load_inode - Create the inode if it doesn't exist, loading
