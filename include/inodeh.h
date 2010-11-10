@@ -95,15 +95,17 @@ _debug_ino(char *buf, size_t siz, const struct slash_inode_od *ino)
 	return (buf);
 }
 
-#define INOH_FLAGS_FMT "%s%s%s%s"
+#define INOH_FLAGS_FMT "%s%s%s%s%s%s"
 #define DEBUG_INOH_FLAGS(i)						\
 	(i)->inoh_flags & INOH_INO_DIRTY	? "D" : "",		\
 	(i)->inoh_flags & INOH_EXTRAS_DIRTY	? "d" : "",		\
 	(i)->inoh_flags & INOH_HAVE_EXTRAS	? "X" : "",		\
-	(i)->inoh_flags & INOH_INO_NEW		? "N" : ""
+	(i)->inoh_flags & INOH_INO_NEW		? "N" : "",		\
+	(i)->inoh_flags & INOH_INO_NOTLOADED	? "L" : "",		\
+	(i)->inoh_flags & INOH_INO_SYNCING	? "S" : ""
 
 static __inline void
-_log_debug_inoh(const struct pfl_callerinfo *pci, int level,
+_log_debug_inoh(const struct pfl_callerinfo *pfl_callerinfo, int level,
     const struct slash_inode_handle *ih, const char *fmt, ...)
 {
 	char buf[LINE_MAX], mbuf[LINE_MAX];
@@ -113,8 +115,7 @@ _log_debug_inoh(const struct pfl_callerinfo *pci, int level,
 	vsnprintf(mbuf, sizeof(mbuf), fmt, ap);
 	va_end(ap);
 
-	_psclog_pci(pci, level, 0,
-	    "inoh@%p fl:"INOH_FLAGS_FMT" %s :: %s",
+	_psclog_pci(pfl_callerinfo, level, 0, "inoh@%p fl:"INOH_FLAGS_FMT" %s :: %s",
 	    ih, DEBUG_INOH_FLAGS(ih), _debug_ino(buf, sizeof(buf),
 	    &ih->inoh_ino), mbuf);
 }
