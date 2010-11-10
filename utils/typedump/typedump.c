@@ -250,6 +250,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_destroy_req);
 	PRTYPE(struct srm_garbage_req);
 	PRTYPE(struct srm_generic_rep);
+	PRTYPE(struct srm_getattr2_rep);
 	PRTYPE(struct srm_getattr_rep);
 	PRTYPE(struct srm_getattr_req);
 	PRTYPE(struct srm_getbmap_full_rep);
