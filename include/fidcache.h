@@ -87,11 +87,11 @@ struct fidc_membh {
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
 
-#define FCMH_LOCK(f)		spinlock(&(f)->fcmh_lock)
-#define FCMH_ULOCK(f)		freelock(&(f)->fcmh_lock)
-#define FCMH_TRYLOCK(f)		trylock(&(f)->fcmh_lock)
-#define FCMH_RLOCK(f)		reqlock(&(f)->fcmh_lock)
-#define FCMH_URLOCK(f, lk)	ureqlock(&(f)->fcmh_lock, (lk))
+#define FCMH_LOCK(f)		spinlock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
+#define FCMH_ULOCK(f)		freelock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
+#define FCMH_TRYLOCK(f)		trylock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
+#define FCMH_RLOCK(f)		reqlock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock)
+#define FCMH_URLOCK(f, lk)	ureqlock_pci(PFL_CALLERINFOSS(SLSS_FCMH), &(f)->fcmh_lock, (lk))
 #define FCMH_LOCK_ENSURE(f)	LOCK_ENSURE(&(f)->fcmh_lock)
 
 #define fcmh_fg			fcmh_sstb.sst_fg
@@ -146,7 +146,7 @@ struct fidc_membh {
 #define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)				\
-	psc_logs((level), SLSS_FCMH,					\
+	psclogs((level), SLSS_FCMH,					\
 	   "fcmh@%p f+g:"SLPRI_FG" flg:"REQ_FCMH_FLAGS_FMT" "		\
 	   "ref:%d sz=%"PRId64" :: "fmt,				\
 	   (fcmh), SLPRI_FG_ARGS(&(fcmh)->fcmh_fg),			\
@@ -181,27 +181,34 @@ void	fcmh_decref(struct fidc_membh *, enum fcmh_opcnt_types);
 #define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism */
 
 #define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
-	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl), (sstb),\
-	    (safl), (fcmhp))
+	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\
+	    (sstb), (safl), (fcmhp))
 
 #define fidc_lookup_fid(fid)		_fidc_lookup_fid(PFL_CALLERINFOSS(SLSS_FCMH), (fid))
 #define fidc_lookup_fg(fgp)		_fidc_lookup_fg(PFL_CALLERINFOSS(SLSS_FCMH), (fgp))
 
-int			 _fidc_lookup(const struct pfl_callerinfo *,
-			    const struct slash_fidgen *, int,
-			    struct srt_stat *, int, struct fidc_membh **);
+int	 _fidc_lookup(const struct pfl_callerinfo *,
+	    const struct slash_fidgen *, int, struct srt_stat *, int,
+	    struct fidc_membh **);
 
 /* these fidc_lookup() wrappers are used for simple lookups (no flags) */
 struct fidc_membh	*_fidc_lookup_fid(const struct pfl_callerinfo *, slfid_t);
 struct fidc_membh	*_fidc_lookup_fg(const struct pfl_callerinfo *, const struct slash_fidgen *);
-ssize_t			 fcmh_getsize(struct fidc_membh *);
 
-void			 fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types);
-void			 fcmh_op_done_type(struct fidc_membh *, enum fcmh_opcnt_types);
+ssize_t	 fcmh_getsize(struct fidc_membh *);
 
-void			 dump_fidcache(void);
-void			 dump_fcmh(struct fidc_membh *);
-void			 dump_fcmh_flags_common(int);
+void	_fcmh_op_start_type(struct fidc_membh *, enum fcmh_opcnt_types, const struct pfl_callerinfo *);
+void	_fcmh_op_done_type(struct fidc_membh *, enum fcmh_opcnt_types, const struct pfl_callerinfo *);
+
+#define fcmh_op_start_type(fcmh, type)					\
+    _fcmh_op_start_type((fcmh), (type), PFL_CALLERINFOSS(SLSS_FCMH))
+
+#define fcmh_op_done_type(fcmh, type)					\
+    _fcmh_op_done_type((fcmh), (type), PFL_CALLERINFOSS(SLSS_FCMH))
+
+void	 dump_fidcache(void);
+void	 dump_fcmh(struct fidc_membh *);
+void	 dump_fcmh_flags_common(int);
 
 extern struct sl_fcmh_ops	 sl_fcmh_ops;
 extern struct psc_poolmgr	*fidcPool;

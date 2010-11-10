@@ -459,21 +459,22 @@ fcmh_getsize(struct fidc_membh *h)
 	return (size);
 }
 
-/*
- * fcmh_op_start/done_type(): we only move a cache item to the busy list if we
+/**
+ * fcmh_op_start_type: We only move a cache item to the busy list if we
  * know that the reference being taken is a long one. For short-lived references,
  * we avoid moving the cache item around.  Also, we only move a cache item back
  * to the idle list when the _last_ reference is dropped.
  */
 void
-fcmh_op_start_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
+_fcmh_op_start_type(const struct pfl_callerinfo *pfl_callerinfo
+    struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	int locked = FCMH_RLOCK(f);
 
 	psc_assert(f->fcmh_refcnt >= 0);
 	f->fcmh_refcnt++;
 
-	DEBUG_FCMH(PLL_NOTIFY, f, "took ref (type=%d)", type);
+	DEBUG_FCMH(PLL_DEBUG, f, "took ref (type=%d)", type);
 
 	/* Only 2 types of references may be long standing, FCMH_OPCNT_OPEN
 	 *   and FCMH_OPCNT_BMAP.  Other ref types should not move the fcmh
@@ -497,7 +498,7 @@ fcmh_decref(struct fidc_membh *f, enum fcmh_opcnt_types type)
 
 	locked = FCMH_RLOCK(f);
 
-	DEBUG_FCMH(PLL_NOTIFY, (f), "release ref (type=%d)", type);
+	DEBUG_FCMH(PLL_DEBUG, (f), "release ref (type=%d)", type);
 
 	psc_assert(f->fcmh_refcnt > 1);
 	f->fcmh_refcnt--;
@@ -506,13 +507,14 @@ fcmh_decref(struct fidc_membh *f, enum fcmh_opcnt_types type)
 }
 
 void
-fcmh_op_done_type(struct fidc_membh *f, enum fcmh_opcnt_types type)
+fcmh_op_done_type(const struct pfl_callerinfo *pfl_callerinfo *,
+    struct fidc_membh *f, enum fcmh_opcnt_types type)
 {
 	FCMH_RLOCK(f);
 
 	psc_assert(f->fcmh_refcnt > 0);
 
-	DEBUG_FCMH(PLL_NOTIFY, (f), "release ref (type=%d)", type);
+	DEBUG_FCMH(PLL_DEBUG, (f), "release ref (type=%d)", type);
 
 	f->fcmh_refcnt--;
 	if (f->fcmh_refcnt == 0) {
