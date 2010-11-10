@@ -271,6 +271,8 @@ utime
 - remove FCMH_CTOR_FAILED with fmi_ctor_rc
 - add provisions to dynarray to detect multiple adds without an
   ensurelen and notify user to possible optimization
+- slimmns should rename the top-level dir with -W and remove
+  junk in the background
 - per-site network upscheduling is not enough; it has to be per
   link to maintain network link saturation effectively
 - pass parent dir sstb back in mkdir/link/unlink/creat reply for mtime
