@@ -1800,7 +1800,7 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	struct msl_fhent *mfh = data;
 	struct fidc_membh *f, *ftmp;
 	struct timespec ts;
-	int rc;
+	int rc = 0;
 
 	msfsthr_ensure();
 
