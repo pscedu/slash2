@@ -239,8 +239,8 @@ _fidc_lookup(const struct pfl_callerinfo *pci,
 	struct psc_hashbkt *b;
 	int rc, try_create = 0;
 
-	_psclog_pci(pci, PLL_INFO, 0,
-	    "fidc_lookup called for fid %"PRIx64, searchfg.fg_fid);
+	_psclog_pci(pci, PLL_DEBUG, 0,
+	    "fidc_lookup called for fid "SLPRI_FID, searchfg.fg_fid);
 
 	rc = 0;
 	*fcmhp = NULL;
