@@ -1806,7 +1806,8 @@ mslfsop_write(struct pscfs_req *pfr, const void *buf, size_t size,
 	ftmp = fidc_lookup_fg(&f->fcmh_fg);
 	if (ftmp != f)
 		rc = EBADF;
-	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
+	if (ftmp)
+		fcmh_op_done_type(ftmp, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rc)
 		goto out;
 
@@ -1850,7 +1851,8 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	ftmp = fidc_lookup_fg(&f->fcmh_fg);
 	if (ftmp != f)
 		rc = EBADF;
-	fcmh_op_done_type(ftmp, FCMH_OPCNT_LOOKUP_FIDC);
+	if (ftmp)
+		fcmh_op_done_type(ftmp, FCMH_OPCNT_LOOKUP_FIDC);
 	if (rc)
 		goto out;
 
