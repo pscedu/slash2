@@ -1838,7 +1838,7 @@ void
 mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 {
 	struct msl_fhent *mfh = data;
-	struct fidc_membh *f;
+	struct fidc_membh *f, *ftmp;
 	void *buf = NULL;
 	ssize_t len = 0;
 	int rc;
@@ -1846,11 +1846,12 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	msfsthr_ensure();
 
 	f = mfh->mfh_fcmh;
-	if (fidc_lookup_fg(&f->fcmh_fg) != f) {
+	ftmp = fidc_lookup_fg(&f->fcmh_fg);
+	if (ftmp != f)
 		rc = EBADF;
+	fcmh_op_done_type(ftmp, FCMH_OPCNT_LOOKUP_FIDC);
+	if (rc)
 		goto out;
-	}
-	fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
 
 	if (fcmh_isdir(f)) {
 //		psc_fatalx("pscfs gave us a directory");
