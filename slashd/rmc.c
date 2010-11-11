@@ -298,10 +298,11 @@ slm_rmc_handle_link(struct pscrpc_request *rq)
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
 	mp->rc = mdsio_link(fcmh_2_mdsio_fid(c), fcmh_2_mdsio_fid(p),
-	    mq->name, &mq->creds, &mp->cattr, mds_namespace_log);
+	    mq->name, &rootcreds, &mp->cattr, mds_namespace_log);
 	mds_unreserve_slot();
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
+
  out:
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
@@ -429,7 +430,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	if (mp->rc)
 		goto out;
 
-	/* Refresh the cached attributes of our parent and pack them 
+	/* Refresh the cached attributes of our parent and pack them
 	 *   in the reply.
 	 */
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
@@ -450,12 +451,12 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	mp->flags = mq->flags;
 
 	bmap = NULL;
-	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE, mq->prefios, 
-		    &mp->sbd, rq->rq_export, &bmap);
+	mp->rc2 = mds_bmap_load_cli(c, 0, mp->flags, SL_WRITE, mq->prefios,
+	    &mp->sbd, rq->rq_export, &bmap);
 
 	fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 
-	if (mp->rc2) 
+	if (mp->rc2)
 		goto out;
 
 	slm_rmc_bmapdesc_setup(bmap, &mp->sbd, SL_WRITE);
@@ -642,8 +643,8 @@ slm_rmc_handle_rename(struct pscrpc_request *rq)
 	mp->rc = mdsio_rename(fcmh_2_mdsio_fid(op), from,
 	    fcmh_2_mdsio_fid(np), to, &rootcreds, mds_namespace_log);
 
-	mdsio_fcmh_refreshattr(op, &mp->sdattr);
-	mdsio_fcmh_refreshattr(np, &mp->ddattr);
+	mdsio_fcmh_refreshattr(op, &mp->opattr);
+	mdsio_fcmh_refreshattr(np, &mp->npattr);
  out:
 	if (np)
 		fcmh_op_done_type(np, FCMH_OPCNT_LOOKUP_FIDC);

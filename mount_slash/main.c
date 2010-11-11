@@ -594,9 +594,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 
 	msfsthr_ensure();
 
-	rc = ENOTSUP;
-	goto out;
-
 	if (strlen(newname) > NAME_MAX) {
 		rc = ENAMETOOLONG;
 		goto out;
@@ -639,7 +636,6 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	if (rc)
 		goto out;
 
-	mq->creds = creds;
 	mq->pfg = p->fcmh_fg;
 	mq->fg = c->fcmh_fg;
 	strlcpy(mq->name, newname, sizeof(mq->name));
@@ -653,6 +649,7 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
 	fcmh_setattr(c, &mp->cattr, FCMH_SETATTRF_NONE);
 	sl_internalize_stat(&mp->cattr, &stb);
+
  out:
 	if (c)
 		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
@@ -1364,6 +1361,10 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 
 	mslfs_getcreds(pfr, &cr);
 
+	/*
+	 * XXX permissions checks here are wrong;
+	 * they should match CREATE and UNLINK.
+	 */
 	FCMH_LOCK(op);
 	rc = checkcreds(&op->fcmh_sstb, &cr, W_OK);
 	FCMH_ULOCK(op);
@@ -1401,6 +1402,8 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	rc = SL_RSX_WAITREP(rq, mp);
 	if (rc == 0)
 		rc = mp->rc;
+	if (rc)
+		goto out;
 
 	FCMH_LOCK(op);
 	if (DIRCACHE_INITIALIZED(op))
@@ -1409,6 +1412,9 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 		    oldname, DC_STALE);
 	else
 		slc_fcmh_initdci(op);
+
+	fcmh_setattr(op, &mp->opattr, FCMH_SETATTRF_NONE);
+	fcmh_setattr(np, &mp->npattr, FCMH_SETATTRF_NONE);
 
  out:
 	if (np)
@@ -1464,11 +1470,11 @@ __static void
 mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
     pscfs_inum_t pinum, const char *name)
 {
+	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct srm_symlink_rep *mp = NULL;
 	struct pscrpc_request *rq = NULL;
 	struct pscrpc_bulk_desc *desc;
-	struct fidc_membh *c = NULL, *p = NULL;
 	struct srm_symlink_req *mq;
 	struct slash_creds creds;
 	struct iovec iov;
@@ -1506,7 +1512,7 @@ mslfsop_symlink(struct pscfs_req *pfr, const char *buf,
 	mq->pfg.fg_fid = pinum;
 	mq->pfg.fg_gen = 0;
 
-	mq->linklen = strlen(buf) + 1;
+	mq->linklen = strlen(buf);
 	strlcpy(mq->name, name, sizeof(mq->name));
 
 	iov.iov_base = (char *)buf;

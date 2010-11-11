@@ -589,8 +589,6 @@ struct srm_getattr2_rep {
 	struct srt_stat		pattr;
 	int32_t			rc;
 	int32_t			_pad;
-#define sdattr pattr
-#define ddattr cattr
 } __packed;
 
 struct srm_io_req {
@@ -620,7 +618,6 @@ struct srm_io_rep {
 } __packed;
 
 struct srm_link_req {
-	struct slash_creds	creds;		/* st_uid owner for new file */
 	struct slash_fidgen	pfg;		/* parent dir */
 	struct slash_fidgen	fg;
 	char			name[NAME_MAX + 1];
@@ -697,6 +694,8 @@ struct srm_rename_req {
 } __packed;
 
 #define srm_rename_rep srm_getattr2_rep
+#define opattr pattr
+#define npattr cattr
 
 struct srm_replrq_req {
 	struct slash_fidgen	fg;
