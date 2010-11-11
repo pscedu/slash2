@@ -1542,8 +1542,9 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 	return (rc);
 }
 
+#if PFL_DEBUG > 0
 void
-dump_bmap_flags_mds(uint32_t flags)
+dump_bmap_flags(uint32_t flags)
 {
 	int seq = 0;
 
@@ -1558,6 +1559,7 @@ dump_bmap_flags_mds(uint32_t flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
 }
+#endif
 
 struct bmap_ops bmap_ops = {
 	mds_bmap_init,

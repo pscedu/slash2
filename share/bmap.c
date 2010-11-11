@@ -339,6 +339,7 @@ _log_debug_bmapod(const struct pfl_callerinfo *pci, int level,
 	va_end(ap);
 }
 
+#if PFL_DEBUG > 0
 __weak void
 dump_bmap_flags(uint32_t flags)
 {
@@ -349,3 +350,4 @@ dump_bmap_flags(uint32_t flags)
 		printf(" unknown: %x", flags);
 	printf("\n");
 }
+#endif

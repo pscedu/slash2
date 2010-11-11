@@ -126,6 +126,7 @@ slc_fcmh_getattr(struct fidc_membh *fcmh)
 	return (msl_stat(fcmh, &rootcreds));
 }
 
+#if PFL_DEBUG > 0
 void
 dump_fcmh_flags(int flags)
 {
@@ -141,6 +142,7 @@ dump_fcmh_flags(int flags)
 		printf(" unknown: %x", flags);
 	printf("\n");
 }
+#endif
 
 struct sl_fcmh_ops sl_fcmh_ops = {
 /* ctor */		slc_fcmh_ctor,

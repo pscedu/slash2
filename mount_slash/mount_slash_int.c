@@ -1721,6 +1721,7 @@ msl_io(struct msl_fhent *mfh, char *buf, size_t size, off_t off, enum rw rw)
 	return (rc);
 }
 
+#if PFL_DEBUG > 0
 void
 dump_bmap_flags(uint32_t flags)
 {
@@ -1732,6 +1733,7 @@ dump_bmap_flags(uint32_t flags)
 		printf(" unknown: %#x\n", flags);
 	printf("\n");
 }
+#endif
 
 struct bmap_ops bmap_ops = {
 	msl_bmap_init,

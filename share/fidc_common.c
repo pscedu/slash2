@@ -532,6 +532,7 @@ _fcmh_op_done_type(const struct pfl_callerinfo *pfl_callerinfo,
 	FCMH_ULOCK(f);
 }
 
+#if PFL_DEBUG > 0
 void
 dump_fcmh(struct fidc_membh *f)
 {
@@ -567,3 +568,4 @@ dump_fcmh_flags(int flags)
 		printf(" unknown: %x", flags);
 	printf("\n");
 }
+#endif

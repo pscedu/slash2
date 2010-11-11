@@ -540,6 +540,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 	return (rc);
 }
 
+#if PFL_DEBUG > 0
 void
 dump_bmap_flags(uint32_t flags)
 {
@@ -554,6 +555,7 @@ dump_bmap_flags(uint32_t flags)
 		printf(" unknown: %#x", flags);
 	printf("\n");
 }
+#endif
 
 struct bmap_ops bmap_ops = {
 	iod_bmap_init,
