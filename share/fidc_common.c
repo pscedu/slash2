@@ -107,8 +107,8 @@ fcmh_setattr(struct fidc_membh *fcmh, struct srt_stat *sstb, int flags)
 
 	/*
 	 * If generation numbers match, take the highest of the values.
-	 * Otherwise, disregard local values and blindly accept what the
-	 * MDS tells us.
+	 * Otherwise, disregard local values and blindly accept whatever
+	 * the MDS tells us.
 	 */
 	if (flags & FCMH_SETATTRF_SAVELOCAL) {
 		if (fcmh_2_ptruncgen(fcmh) == sstb->sst_ptruncgen &&

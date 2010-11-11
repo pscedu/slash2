@@ -1717,15 +1717,19 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 	/*
 	 * If we are setting mtime or size, tell MDS what we want it
 	 * to be then blindly accept what he returns us; otherwise, we
-	  * SAVELOCAL any updates we have.
+	 * SAVELOCAL any updates we have.
 	 */
-	if (mq->to_set & PSCFS_SETATTRF_MTIME) {
+	if (mq->to_set & PSCFS_SETATTRF_MTIME ||
+	    mq->to_set & PSCFS_SETATTRF_DATASIZE) {
 		c->fcmh_sstb.sst_mtime = mp->attr.sst_mtime;
 		c->fcmh_sstb.sst_mtime_ns = mp->attr.sst_mtime_ns;
 	}
 
-	if (mq->to_set & PSCFS_SETATTRF_DATASIZE)
+	if (mq->to_set & PSCFS_SETATTRF_DATASIZE) {
 		c->fcmh_sstb.sst_size = mp->attr.sst_size;
+		c->fcmh_sstb.sst_ctime = mp->attr.sst_ctime;
+		c->fcmh_sstb.sst_ctime_ns = mp->attr.sst_ctime_ns;
+	}
 
 	fcmh_setattr(c, &mp->attr, FCMH_SETATTRF_SAVELOCAL |
 	    FCMH_SETATTRF_HAVELOCK);
