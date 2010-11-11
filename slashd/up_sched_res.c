@@ -76,7 +76,7 @@ slmupschedthr_removeq(struct up_sched_work_item *wk)
 	struct bmapc_memb *bcm;
 	struct psc_thread *thr;
 	struct sl_site *site;
-	char fn[IMNS_NAME_MAX];
+	char fn[FID_MAX_PATH];
 	sl_bmapno_t n;
 
 	thr = pscthr_get();
