@@ -33,7 +33,6 @@
 #include "sltypes.h"
 
 #define FID_MAX_PATH		96
-#define IMNS_NAME_MAX		17
 
 struct slash_fidgen;
 
