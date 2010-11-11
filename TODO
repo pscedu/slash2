@@ -8,6 +8,30 @@ reminders:
 - do sl_csvc_wantfree() in all to-CLI csvcs
 - fix the "static" variables in communal/general functions
 
+
+-----------------------------------------------------------------------
+* Support for st_nblocks for applications such as 'du -h'.
+Initial thoughts are that this value should be stored in the zfs inode. 
+Currently we have a 4 byte pad which could be employed if we were to use
+a 1MB block.  A 1MB is the simplest unit for us to use but will result 
+in entirely bogus results for trees with lots of small files. I'm not 
+sure if there is a way around this problem - people will just have to 
+use big files :) 
+
+Using the slash2 inode here is not totally out of the question but lookups
+of the nblocks value will be much slower.
+
+The MDS will need to note whether or not the CRC has ever been written, if
+not then the nblocks count will be incremented by 1.  Also journaling
+implications will need to be considered since this value will need to be 
+kept relatively accurate.  Further, for MDS replication, this value will need
+to be recorded in the changelog.
+
+Zhihui asks "should we include replicas in the block count?".  I'm on the 
+fence about this.
+
+pauln (11/10/2010)
+
 -----------------------------------------------------------------------
 TRUNCATE
 * More about truncate, unlink GC.
