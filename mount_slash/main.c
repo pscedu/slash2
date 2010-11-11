@@ -769,7 +769,6 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	FCMH_LOCK(p);
 	if ((p->fcmh_sstb.sst_mode & S_ISVTX) && cr.uid) {
 		if (p->fcmh_sstb.sst_uid != cr.uid) {
-			struct slash_fidgen cfg;
 			struct srt_stat sstb;
 
 			FCMH_ULOCK(p);
@@ -1117,7 +1116,7 @@ slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
 		*fgp = mp->attr.sst_fg;
 
 	if (sstb) {
-		FCMH_LOCK(m)
+		FCMH_LOCK(m);
 		*sstb = m->fcmh_sstb;
 	}
 
