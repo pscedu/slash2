@@ -938,7 +938,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	struct msl_fhent *mfh = data;
 	struct srm_readdir_req *mq;
 	struct iovec iov[2];
-	int rc, niov = 0;
+	int rc = 0, niov = 0;
 
 	iov[0].iov_base = NULL;
 	iov[1].iov_base = NULL;
