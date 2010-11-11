@@ -1849,7 +1849,7 @@ mslfsop_read(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	struct fidc_membh *f, *ftmp;
 	void *buf = NULL;
 	ssize_t len = 0;
-	int rc;
+	int rc = 0;
 
 	msfsthr_ensure();
 
