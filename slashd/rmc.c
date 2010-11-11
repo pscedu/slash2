@@ -704,7 +704,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			fcmh_2_gen(fcmh)++;
 			FCMH_ULOCK(fcmh);
 
-			rc = mdsio_fcmh_setattr(fcmh, SL_SETATTRF_GEN);
+			to_set |= SL_SETATTRF_GEN;
 
 			/* XXX: queue changelog updates to every IOS replica */
 			/* XXX: if file size is already 0, don't bump */
