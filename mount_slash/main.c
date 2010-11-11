@@ -747,7 +747,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 {
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct fidc_membh *c, *p = NULL;
+	struct fidc_membh *p = NULL;
 	struct srm_unlink_req *mq;
 	struct srm_unlink_rep *mp;
 	struct slash_creds cr;
@@ -769,14 +769,18 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	FCMH_LOCK(p);
 	if ((p->fcmh_sstb.sst_mode & S_ISVTX) && cr.uid) {
 		if (p->fcmh_sstb.sst_uid != cr.uid) {
+			struct slash_fidgen cfg;
+			struct srt_stat sstb;
+
 			FCMH_ULOCK(p);
 
-			rc = fidc_lookup_load_inode(inum, &c);
+			rc = msl_lookup_fidcache(&cr,
+			    pinum, name, NULL, &sstb);
 			if (rc)
 				goto out;
-			if (c->fcmh_sstb.sst_uid != cr.uid)
+
+			if (sstb.sst_uid != cr.uid)
 				rc = EPERM;
-			fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 		} else
 			FCMH_ULOCK(p);
 	} else {
@@ -1109,10 +1113,13 @@ slash_lookuprpc(const struct slash_creds *crp, pscfs_inum_t pinum,
 	if (rc)
 		goto out;
 
-	if (sstb)
-		*sstb = mp->attr;
+	if (fgp)
+		*fgp = mp->attr.sst_fg;
 
-	*fgp = mp->attr.sst_fg;
+	if (sstb) {
+		FCMH_LOCK(m)
+		*sstb = m->fcmh_sstb;
+	}
 
  out:
 	if (m)
@@ -1164,7 +1171,8 @@ msl_lookup_fidcache(const struct slash_creds *cr, pscfs_inum_t pinum,
 	 */
 	rc = msl_stat(c, cr);
 	if (!rc) {
-		*fgp = c->fcmh_fg;
+		if (fgp)
+			*fgp = c->fcmh_fg;
 		if (sstb) {
 			FCMH_LOCK(c);
 			*sstb = c->fcmh_sstb;
