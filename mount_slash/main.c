@@ -771,7 +771,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 		if (p->fcmh_sstb.sst_uid != cr.uid) {
 			FCMH_ULOCK(p);
 
-			rc = fidc_lookup_load_inode(pinum, &c);
+			rc = fidc_lookup_load_inode(inum, &c);
 			if (rc)
 				goto out;
 			if (c->fcmh_sstb.sst_uid != cr.uid)
