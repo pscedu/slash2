@@ -927,7 +927,8 @@ slm_rmc_handle_symlink(struct pscrpc_request *rq)
 		goto out;
 	pscrpc_free_bulk(desc);
 
-	linkname[sizeof(linkname) - 1] = '\0';
+	linkname[mq->linklen] = '\0';
+
 	mds_reserve_slot();
 	mp->rc = mdsio_symlink(linkname, fcmh_2_mdsio_fid(p), mq->name,
 	    &mq->creds, &mp->cattr, NULL, slm_get_next_slashid,
