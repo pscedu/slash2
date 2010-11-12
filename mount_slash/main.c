@@ -1420,7 +1420,7 @@ mslfsop_rename(struct pscfs_req *pfr, pscfs_inum_t opinum,
 	else
 		slc_fcmh_initdci(op);
 
-	fcmh_setattr(op, &mp->opattr, FCMH_SETATTRF_NONE);
+	fcmh_setattr(op, &mp->opattr, FCMH_SETATTRF_NONE | FCMH_SETATTRF_HAVELOCK);
 	fcmh_setattr(np, &mp->npattr, FCMH_SETATTRF_NONE);
 
  out:
