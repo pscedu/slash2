@@ -27,6 +27,7 @@
 #include <pthread.h>
 
 #include "pfl/cdefs.h"
+#include "pfl/pfl.h"
 
 #include "cache_params.h"
 
@@ -52,6 +53,9 @@ typedef uint64_t sl_ino_t;
 
 #define SL_SITE_MASK		0xffff0000
 #define SL_RES_MASK		0x0000ffff	/* resource ID mask */
+
+/* thread local storage */
+#define SL_TLSIDX_FIDBUF	(PFL_TLSIDX_LASTRESERVED)
 
 /* I/O flags */
 enum rw {

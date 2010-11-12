@@ -32,6 +32,7 @@
 
 #include "sltypes.h"
 
+#define	SL_FIDBUF_LEN		(18 + 1 + 20 + 1)
 #define FID_MAX_PATH		96
 
 struct slash_fidgen;
@@ -113,40 +114,63 @@ struct slash_fidgen {
 #define fid_makepath(fg, fn)	_fg_makepath((fg), (fn), 0)
 #define fg_makepath(fg, fn)	_fg_makepath((fg), (fn), 1)
 
-int	fid_link(slfid_t, const char *);
-void	_fg_makepath(const struct slash_fidgen *, char *, int);
+int	 fid_link(slfid_t, const char *);
+void	 _fg_makepath(const struct slash_fidgen *, char *, int);
 
-static __inline const char *
-sprintfid(slfid_t fid)
+static __inline int
+sl_sprintf_fid(slfid_t fid, char *buf, size_t len)
 {
-	static __thread char buf[18 + 1];
+	int rc;
 
 	if (fid == FID_ANY)
-		snprintf(buf, sizeof(buf), "<FID_ANY>");
+		rc = snprintf(buf, len, "<FID_ANY>");
 	else
-		snprintf(buf, sizeof(buf), SLPRI_FID, fid);
+		rc = snprintf(buf, len, SLPRI_FID, fid);
+	return (rc);
+}
+
+static __inline int
+sl_sprintf_fgen(slfgen_t fgen, char *buf, size_t len)
+{
+	int rc;
+
+	if (fgen == FGEN_ANY)
+		rc = snprintf(buf, len, "<FGEN_ANY>");
+	else
+		rc = snprintf(buf, len, "%"SLPRI_FGEN, fgen);
+	return (rc);
+}
+
+static __inline const char *
+sl_sprinta_fid(slfid_t fid)
+{
+	char *buf;
+
+	pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN, &buf);
+	sl_sprintf_fid(fid, buf, SL_FIDBUF_LEN);
 	return (buf);
 }
 
 static __inline const char *
-sprintfgen(slfgen_t gen)
+sl_sprinta_fgen(slfgen_t fgen)
 {
-	static __thread char buf[20 + 1];
+	char *buf;
 
-	if (gen == FGEN_ANY)
-		snprintf(buf, sizeof(buf), "<FGEN_ANY>");
-	else
-		snprintf(buf, sizeof(buf), "%"SLPRI_FGEN, gen);
+	pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN, &buf);
+	sl_sprintf_fgen(fgen, buf, SL_FIDBUF_LEN);
 	return (buf);
 }
 
 static __inline const char *
-sprintfg(struct slash_fidgen fg)
+sl_sprintfa_fg(struct slash_fidgen *fg)
 {
-	static __thread char buf[18 + 1 + 20 + 1];
+	char *buf;
+	int rc;
 
-	snprintf(buf, sizeof(buf), "%s:%s",
-	    sprintfid(fg.fg_fid), sprintfgen(fg.fg_gen));
+	pfl_tls_get(SL_TLSIDX_FIDBUF, SL_FIDBUF_LEN, &buf);
+	rc = sl_sprintf_fid(fg->fg_fid, buf, SL_FIDBUF_LEN);
+	buf[rc] = ':';
+	rc = sl_sprintf_fgen(fg->fg_gen, buf + rc, SL_FIDBUF_LEN - rc);
 	return (buf);
 }
 
