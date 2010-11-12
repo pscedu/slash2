@@ -168,12 +168,12 @@ root@lemon: /zzh-s1/zhihui/pjd-fstest-20080816/test3$ prove -r ..
 ../tests/rmdir/15.t ..... ok   
 ../tests/symlink/00.t ... ok     
 ../tests/symlink/01.t ... ok   
-../tests/symlink/02.t ... Failed 2/7 subtests 
+../tests/symlink/02.t ... Failed 2/7 subtests 		<- Fixed by 14461
 ../tests/symlink/03.t ... Failed 2/14 subtests 
 ../tests/symlink/04.t ... ok   
 ../tests/symlink/05.t ... ok     
 ../tests/symlink/06.t ... Failed 1/12 subtests 
-../tests/symlink/07.t ... Failed 2/6 subtests 
+../tests/symlink/07.t ... Failed 2/6 subtests 		<-- Fixed by 14461
 ../tests/symlink/08.t ... ok   
 ../tests/symlink/09.t ... ok   
 ../tests/symlink/10.t ... ok   
