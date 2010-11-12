@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -33,7 +33,7 @@
 #include "slconfig.h"
 
 /**
- * fid_makepath - build the pathname in the FID object root that corresponds
+ * fid_makepath - Build the pathname in the FID object root that corresponds
  *	to a FID, allowing easily lookup of file metadata via FIDs.
  */
 void
@@ -58,11 +58,11 @@ _fg_makepath(const struct slash_fidgen *fg, char *fid_path, int usegen)
 		    globalConfig.gconf_fsroot, FID_PATH_NAME,
 		    a[0], a[1], a[2], fg->fg_fid);
 
-	psc_dbg("fid=%"PRIx64" fidpath=%s", fg->fg_fid, fid_path);
+	psclog_dbg("fid="SLPRI_FID" fidpath=%s", fg->fg_fid, fid_path);
 }
 
 /**
- * fid_link - create an entry in the FID object root corresponding to a
+ * fid_link - Create an entry in the FID object root corresponding to a
  *	pathname in the file system.
  * @fid: file ID.
  * @fn: filename for which to create FID object entry.
