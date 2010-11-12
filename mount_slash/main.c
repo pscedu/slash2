@@ -647,8 +647,10 @@ mslfsop_link(struct pscfs_req *pfr, pscfs_inum_t c_inum,
 		goto out;
 
 	fcmh_setattr(p, &mp->pattr, FCMH_SETATTRF_NONE);
-	fcmh_setattr(c, &mp->cattr, FCMH_SETATTRF_NONE);
-	sl_internalize_stat(&mp->cattr, &stb);
+	FCMH_LOCK(c);
+	fcmh_setattr(c, &mp->cattr, FCMH_SETATTRF_SAVELOCAL |
+	    FCMH_SETATTRF_HAVELOCK);
+	sl_internalize_stat(&c->fcmh_sstb, &stb);
 
  out:
 	if (c)
