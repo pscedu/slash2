@@ -282,3 +282,10 @@ Test Summary Report
 Files=184, Tests=1957, 134 wallclock secs ( 0.76 usr  0.32 sys +  4.23 cusr  2.38 csys =  7.69 CPU)
 Result: FAIL
 
+Known problem:
+
+The following code in zfsslash2_symlink() prevents us from creating long symbolic names:
+
+1757            if (strlen(name) + strlen(link) > SLJ_NAMES_MAX)
+1758                    return ENAMETOOLONG;
+
