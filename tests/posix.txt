@@ -1,0 +1,284 @@
+11/12/2010
+----------
+
+The posix test suite pjd-fstest-20080816.tgz is downloaded from
+the NTFS-3G project at
+
+http://www.tuxera.com/community/posix-test-suite/
+
+Simply untar the archive inside slash2 and do a make.
+
+The following result is obtained at this revision number (for MDS, IOS
+and client):
+
+zhihui@lemon: ~/projects-lemon$ svn info
+Path: .
+URL: svn+ssh://frodo/cluster/svn/projects
+Repository Root: svn+ssh://frodo/cluster/svn
+Repository UUID: 3eda493b-6a19-0410-b2e0-ec8ea4dd8fda
+Revision: 14451
+Node Kind: directory
+Schedule: normal
+Last Changed Author: zhihui
+Last Changed Rev: 14451
+Last Changed Date: 2010-11-12 10:43:18 -0500 (Fri, 12 Nov 2010)
+
+root@lemon: /zzh-s1/zhihui/pjd-fstest-20080816/test3$ prove -r ..
+../tests/chflags/00.t ... ok   
+../tests/chflags/01.t ... ok   
+../tests/chflags/02.t ... ok   
+../tests/chflags/03.t ... ok   
+../tests/chflags/04.t ... ok   
+../tests/chflags/05.t ... ok   
+../tests/chflags/06.t ... ok   
+../tests/chflags/07.t ... ok   
+../tests/chflags/08.t ... ok   
+../tests/chflags/09.t ... ok   
+../tests/chflags/10.t ... ok   
+../tests/chflags/11.t ... ok   
+../tests/chflags/12.t ... ok   
+../tests/chflags/13.t ... ok   
+../tests/chmod/00.t ..... Failed 5/58 subtests 
+../tests/chmod/01.t ..... ok   
+../tests/chmod/02.t ..... ok   
+../tests/chmod/03.t ..... ok     
+../tests/chmod/04.t ..... ok   
+../tests/chmod/05.t ..... Failed 1/14 subtests 
+../tests/chmod/06.t ..... Failed 2/6 subtests 
+../tests/chmod/07.t ..... ok     
+../tests/chmod/08.t ..... ok   
+../tests/chmod/09.t ..... ok   
+../tests/chmod/10.t ..... ok   
+../tests/chmod/11.t ..... ok     
+../tests/chown/00.t ..... Failed 29/171 subtests 
+../tests/chown/01.t ..... ok   
+../tests/chown/02.t ..... ok   
+../tests/chown/03.t ..... ok     
+../tests/chown/04.t ..... ok   
+../tests/chown/05.t ..... Failed 3/15 subtests 
+../tests/chown/06.t ..... Failed 2/6 subtests 
+../tests/chown/07.t ..... ok     
+../tests/chown/08.t ..... ok   
+../tests/chown/09.t ..... ok   
+../tests/chown/10.t ..... ok   
+../tests/link/00.t ...... Failed 6/82 subtests 
+../tests/link/01.t ...... ok   
+../tests/link/02.t ...... ok     
+../tests/link/03.t ...... ok     
+../tests/link/04.t ...... ok   
+../tests/link/05.t ...... ok   
+../tests/link/06.t ...... Failed 4/18 subtests 
+../tests/link/07.t ...... ok     
+../tests/link/08.t ...... Failed 4/10 subtests 
+../tests/link/09.t ...... ok   
+../tests/link/10.t ...... ok     
+../tests/link/11.t ...... ok   
+../tests/link/12.t ...... ok   
+../tests/link/13.t ...... ok   
+../tests/link/14.t ...... ok   
+../tests/link/15.t ...... ok   
+../tests/link/16.t ...... ok   
+../tests/link/17.t ...... ok   
+../tests/mkdir/00.t ..... ok     
+../tests/mkdir/01.t ..... ok   
+../tests/mkdir/02.t ..... ok   
+../tests/mkdir/03.t ..... ok     
+../tests/mkdir/04.t ..... ok   
+../tests/mkdir/05.t ..... ok     
+../tests/mkdir/06.t ..... ok     
+../tests/mkdir/07.t ..... Failed 2/6 subtests 
+../tests/mkdir/08.t ..... ok   
+../tests/mkdir/09.t ..... ok   
+../tests/mkdir/10.t ..... ok     
+../tests/mkdir/11.t ..... ok   
+../tests/mkdir/12.t ..... ok   
+../tests/mkfifo/00.t .... ok     
+../tests/mkfifo/01.t .... ok   
+../tests/mkfifo/02.t .... ok   
+../tests/mkfifo/03.t .... ok     
+../tests/mkfifo/04.t .... ok   
+../tests/mkfifo/05.t .... ok     
+../tests/mkfifo/06.t .... ok     
+../tests/mkfifo/07.t .... Failed 2/6 subtests 
+../tests/mkfifo/08.t .... ok   
+../tests/mkfifo/09.t .... ok     
+../tests/mkfifo/10.t .... ok   
+../tests/mkfifo/11.t .... ok   
+../tests/mkfifo/12.t .... ok   
+../tests/open/00.t ...... ok     
+../tests/open/01.t ...... ok   
+../tests/open/02.t ...... ok   
+../tests/open/03.t ...... ok     
+../tests/open/04.t ...... ok   
+../tests/open/05.t ...... Failed 1/12 subtests 
+../tests/open/06.t ...... Failed 1/72 subtests 
+../tests/open/07.t ...... ok     
+../tests/open/08.t ...... ok   
+../tests/open/09.t ...... ok   
+../tests/open/10.t ...... ok   
+../tests/open/11.t ...... ok   
+../tests/open/12.t ...... Failed 2/6 subtests 
+../tests/open/13.t ...... ok   
+../tests/open/14.t ...... ok   
+../tests/open/15.t ...... ok   
+../tests/open/16.t ...... ok   
+../tests/open/17.t ...... ok   
+../tests/open/18.t ...... ok   
+../tests/open/19.t ...... ok   
+../tests/open/20.t ...... ok   
+../tests/open/21.t ...... ok   
+../tests/open/22.t ...... ok     
+../tests/open/23.t ...... ok   
+../tests/rename/00.t .... Failed 5/79 subtests 
+../tests/rename/01.t .... Failed 2/8 subtests 
+../tests/rename/02.t .... ok     
+../tests/rename/03.t .... ok   
+../tests/rename/04.t .... Failed 5/18 subtests 
+../tests/rename/05.t .... ok     
+../tests/rename/06.t .... ok   
+../tests/rename/07.t .... ok   
+../tests/rename/08.t .... ok   
+../tests/rename/09.t .... Failed 8/56 subtests 
+../tests/rename/10.t .... Failed 11/188 subtests 
+../tests/rename/11.t .... Failed 4/10 subtests 
+../tests/rename/12.t .... ok   
+../tests/rename/13.t .... ok     
+../tests/rename/14.t .... ok     
+../tests/rename/15.t .... ok   
+../tests/rename/16.t .... ok   
+../tests/rename/17.t .... ok   
+../tests/rename/18.t .... ok   
+../tests/rename/19.t .... ok   
+../tests/rename/20.t .... Failed 4/16 subtests 
+../tests/rmdir/00.t ..... ok     
+../tests/rmdir/01.t ..... ok     
+../tests/rmdir/02.t ..... ok   
+../tests/rmdir/03.t ..... ok     
+../tests/rmdir/04.t ..... ok   
+../tests/rmdir/05.t ..... Failed 2/6 subtests 
+../tests/rmdir/06.t ..... ok     
+../tests/rmdir/07.t ..... Failed 2/10 subtests 
+../tests/rmdir/08.t ..... ok     
+../tests/rmdir/09.t ..... ok   
+../tests/rmdir/10.t ..... ok   
+../tests/rmdir/11.t ..... ok     
+../tests/rmdir/12.t ..... ok   
+../tests/rmdir/13.t ..... ok   
+../tests/rmdir/14.t ..... ok   
+../tests/rmdir/15.t ..... ok   
+../tests/symlink/00.t ... ok     
+../tests/symlink/01.t ... ok   
+../tests/symlink/02.t ... Failed 2/7 subtests 
+../tests/symlink/03.t ... Failed 2/14 subtests 
+../tests/symlink/04.t ... ok   
+../tests/symlink/05.t ... ok     
+../tests/symlink/06.t ... Failed 1/12 subtests 
+../tests/symlink/07.t ... Failed 2/6 subtests 
+../tests/symlink/08.t ... ok   
+../tests/symlink/09.t ... ok   
+../tests/symlink/10.t ... ok   
+../tests/symlink/11.t ... ok   
+../tests/symlink/12.t ... ok   
+../tests/truncate/00.t .. Failed 4/21 subtests 
+../tests/truncate/01.t .. ok   
+../tests/truncate/02.t .. ok   
+../tests/truncate/03.t .. ok     
+../tests/truncate/04.t .. ok   
+../tests/truncate/05.t .. Failed 3/15 subtests 
+../tests/truncate/06.t .. ok   
+../tests/truncate/07.t .. Failed 2/6 subtests 
+../tests/truncate/08.t .. ok   
+../tests/truncate/09.t .. ok   
+../tests/truncate/10.t .. ok   
+../tests/truncate/11.t .. ok   
+../tests/truncate/12.t .. ok   
+../tests/truncate/13.t .. ok   
+../tests/truncate/14.t .. ok   
+../tests/unlink/00.t .... Failed 3/55 subtests 
+../tests/unlink/01.t .... ok   
+../tests/unlink/02.t .... ok   
+../tests/unlink/03.t .... ok     
+../tests/unlink/04.t .... ok   
+../tests/unlink/05.t .... Failed 2/10 subtests 
+../tests/unlink/06.t .... ok     
+../tests/unlink/07.t .... Failed 2/6 subtests 
+../tests/unlink/08.t .... ok   
+../tests/unlink/09.t .... ok   
+../tests/unlink/10.t .... ok   
+../tests/unlink/11.t .... ok     
+../tests/unlink/12.t .... ok   
+../tests/unlink/13.t .... ok   
+
+Test Summary Report
+-------------------
+../tests/chmod/00.t   (Wstat: 0 Tests: 58 Failed: 5)
+  Failed tests:  19-22, 56
+../tests/chmod/05.t   (Wstat: 0 Tests: 14 Failed: 1)
+  Failed test:  8
+../tests/chmod/06.t   (Wstat: 0 Tests: 6 Failed: 2)
+  Failed tests:  3-4
+../tests/chown/00.t   (Wstat: 0 Tests: 171 Failed: 29)
+  Failed tests:  22-24, 27-28, 36-37, 68-69, 83-84, 88, 116-118
+                122-124, 129-130, 135-137, 141, 145, 149
+                153, 160-161
+../tests/chown/05.t   (Wstat: 0 Tests: 15 Failed: 3)
+  Failed tests:  8, 11-12
+../tests/chown/06.t   (Wstat: 0 Tests: 6 Failed: 2)
+  Failed tests:  3-4
+../tests/link/00.t    (Wstat: 0 Tests: 82 Failed: 6)
+  Failed tests:  18-19, 22, 44-45, 48
+../tests/link/06.t    (Wstat: 0 Tests: 18 Failed: 4)
+  Failed tests:  11, 14, 17-18
+../tests/link/08.t    (Wstat: 0 Tests: 10 Failed: 4)
+  Failed tests:  3-4, 6-7
+../tests/mkdir/07.t   (Wstat: 0 Tests: 6 Failed: 2)
+  Failed tests:  3-4
+../tests/mkfifo/07.t  (Wstat: 0 Tests: 6 Failed: 2)
+  Failed tests:  3-4
+../tests/open/05.t    (Wstat: 0 Tests: 12 Failed: 1)
+  Failed test:  7
+../tests/open/06.t    (Wstat: 0 Tests: 72 Failed: 1)
+  Failed test:  69
+../tests/open/12.t    (Wstat: 0 Tests: 6 Failed: 2)
+  Failed tests:  3-4
+../tests/rename/00.t  (Wstat: 0 Tests: 79 Failed: 5)
+  Failed tests:  39, 49, 53, 57, 61
+../tests/rename/01.t  (Wstat: 0 Tests: 8 Failed: 2)
+  Failed tests:  2-3
+../tests/rename/04.t  (Wstat: 0 Tests: 18 Failed: 5)
+  Failed tests:  11, 14-15, 17-18
+../tests/rename/09.t  (Wstat: 0 Tests: 56 Failed: 8)
+  Failed tests:  20-21, 36-37, 52-54, 56
+../tests/rename/10.t  (Wstat: 0 Tests: 188 Failed: 11)
+  Failed tests:  54-56, 79-80, 130-132, 182-184
+../tests/rename/11.t  (Wstat: 0 Tests: 10 Failed: 4)
+  Failed tests:  3-4, 6-7
+../tests/rename/20.t  (Wstat: 0 Tests: 16 Failed: 4)
+  Failed tests:  4, 7, 10, 13
+../tests/rmdir/05.t   (Wstat: 0 Tests: 6 Failed: 2)
+  Failed tests:  3-4
+../tests/rmdir/07.t   (Wstat: 0 Tests: 10 Failed: 2)
+  Failed tests:  6, 8
+../tests/symlink/02.t (Wstat: 0 Tests: 7 Failed: 2)
+  Failed tests:  3-4
+../tests/symlink/03.t (Wstat: 0 Tests: 14 Failed: 2)
+  Failed tests:  1-2
+../tests/symlink/06.t (Wstat: 0 Tests: 12 Failed: 1)
+  Failed test:  7
+../tests/symlink/07.t (Wstat: 0 Tests: 6 Failed: 2)
+  Failed tests:  3-4
+../tests/truncate/00.t (Wstat: 0 Tests: 21 Failed: 4)
+  Failed tests:  5-6, 10-11
+../tests/truncate/05.t (Wstat: 0 Tests: 15 Failed: 3)
+  Failed tests:  8, 11-12
+../tests/truncate/07.t (Wstat: 0 Tests: 6 Failed: 2)
+  Failed tests:  3-4
+../tests/unlink/00.t  (Wstat: 0 Tests: 55 Failed: 3)
+  Failed tests:  17, 22, 53
+../tests/unlink/05.t  (Wstat: 0 Tests: 10 Failed: 2)
+  Failed tests:  6, 8
+../tests/unlink/07.t  (Wstat: 0 Tests: 6 Failed: 2)
+  Failed tests:  3-4
+Files=184, Tests=1957, 134 wallclock secs ( 0.76 usr  0.32 sys +  4.23 cusr  2.38 csys =  7.69 CPU)
+Result: FAIL
+
