@@ -289,3 +289,55 @@ The following code in zfsslash2_symlink() prevents us from creating long symboli
 1757            if (strlen(name) + strlen(link) > SLJ_NAMES_MAX)
 1758                    return ENAMETOOLONG;
 
+11/16/2010
+----------
+
+Here is how chmod fails at change 14470:
+
+root@lemon: /zzh-s1/zhihui/pjd-fstest-20080816/test7$ prove -v ../tests/chmod/00.t :: -r ..
+../tests/chmod/00.t .. 
+1..58
+ok mkdir fstest_034d3750297920e1c7567acde84240e1 0755
+ok 1
+ok create fstest_cdf66c644a1fdd9b80e3c12fc0450394 0644
+ok 2
+ok stat fstest_cdf66c644a1fdd9b80e3c12fc0450394 mode
+ok 3
+ok chmod fstest_cdf66c644a1fdd9b80e3c12fc0450394 0111
+
+......
+
+ok create fstest_cdf66c644a1fdd9b80e3c12fc0450394 0755
+ok 49
+ok chown fstest_cdf66c644a1fdd9b80e3c12fc0450394 65535 65535
+ok 50
+ok -u 65535 -g 65535 chmod fstest_cdf66c644a1fdd9b80e3c12fc0450394 02755
+ok 51
+ok stat fstest_cdf66c644a1fdd9b80e3c12fc0450394 mode
+ok 52
+ok -u 65535 -g 65535 chmod fstest_cdf66c644a1fdd9b80e3c12fc0450394 0755
+ok 53
+ok stat fstest_cdf66c644a1fdd9b80e3c12fc0450394 mode
+ok 54
+ok -u 65535 -g 65534 chmod fstest_cdf66c644a1fdd9b80e3c12fc0450394 02755
+ok 55
+not ok stat fstest_cdf66c644a1fdd9b80e3c12fc0450394 mode			<-- H E R E
+not ok 56
+
+Here is my patch to get more verbose output:
+
+root@lemon: /zzh-s1/zhihui/pjd-fstest-20080816/tests$ diff -du misc.sh misc.sh.orig 
+--- misc.sh	2010-11-16 15:43:25.728113217 -0500
++++ misc.sh.orig	2010-11-16 15:43:25.699830976 -0500
+@@ -72,10 +72,8 @@
+ 	r=`${fstest} $* 2>/dev/null | tail -1`
+ 	echo "${r}" | egrep '^'${e}'$' >/dev/null 2>&1
+ 	if [ $? -eq 0 ]; then
+-		echo "ok $*"
+ 		echo "ok ${ntest}"
+ 	else
+-		echo "not ok $*"
+ 		echo "not ok ${ntest}"
+ 	fi
+ 	ntest=`expr $ntest + 1`
+
