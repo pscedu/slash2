@@ -211,6 +211,7 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 	else
 		psc_assert((flags & REPL_WALKF_SCIRCUIT) == 0);
 
+	/* retrieve IOS status given a bit offset into the map */
 	val = SL_REPL_GET_BMAP_IOS_STAT(bcm->bcm_repls, off);
 
 	if (val >= NBREPLST)
