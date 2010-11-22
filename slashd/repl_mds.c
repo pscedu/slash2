@@ -99,13 +99,11 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add,
 	sl_replica_t *repl;
 
 	INOH_LOCK(i);
-	if (!i->inoh_ino.ino_nrepls) {
-		if (!add)
-			goto out;
-		else
-			goto add_repl;
-	}
 
+	/* 
+	 * Search the existing replicas to make sure the given ios is not
+	 *   already there.
+	 */
 	for (j = 0, k = 0, repl = i->inoh_ino.ino_repls;
 	    j < i->inoh_ino.ino_nrepls; j++, k++) {
 		if (j >= SL_DEF_REPLICAS) {
@@ -132,7 +130,6 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add,
 	 *   specified, else return.
 	 */
 	if (rc == -ENOENT && add) {
- add_repl:
 		psc_assert(i->inoh_ino.ino_nrepls == j);
 
 		if (i->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS) {
@@ -167,7 +164,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add,
 
 		rc = j;
 	}
- out:
+out:
 	INOH_ULOCK(i);
 	return (rc);
 }
