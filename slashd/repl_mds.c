@@ -91,34 +91,34 @@ uswi_cmp(const void *a, const void *b)
 SPLAY_GENERATE(upschedtree, up_sched_work_item, uswi_tentry, uswi_cmp);
 
 int
-_mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add,
+_mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios, int add,
 	     int journal)
 {
 	uint32_t j=0, k;
 	int rc = -ENOENT;
 	sl_replica_t *repl;
 
-	INOH_LOCK(i);
+	INOH_LOCK(ih);
 
 	/* 
 	 * Search the existing replicas to make sure the given ios is not
 	 *   already there.
 	 */
-	for (j = 0, k = 0, repl = i->inoh_ino.ino_repls;
-	    j < i->inoh_ino.ino_nrepls; j++, k++) {
+	for (j = 0, k = 0, repl = ih->inoh_ino.ino_repls;
+	    j < ih->inoh_ino.ino_nrepls; j++, k++) {
 		if (j >= SL_DEF_REPLICAS) {
 			/* The first few replicas are in the inode itself,
 			 *   the rest are in the extras block.
 			 */
-			if (!(i->inoh_flags & INOH_HAVE_EXTRAS))
-				if (!(rc = mds_inox_load_locked(i)))
+			if (!(ih->inoh_flags & INOH_HAVE_EXTRAS))
+				if (!(rc = mds_inox_load_locked(ih)))
 					goto out;
 
-			repl = i->inoh_extras->inox_repls;
+			repl = ih->inoh_extras->inox_repls;
 			k = 0;
 		}
 
-		DEBUG_INOH(PLL_INFO, i, "rep%u[%u] == %u",
+		DEBUG_INOH(PLL_INFO, ih, "rep%u[%u] == %u",
 			   k, repl[k].bs_id, ios);
 		if (repl[k].bs_id == ios) {
 			rc = j;
@@ -130,10 +130,10 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add,
 	 *   specified, else return.
 	 */
 	if (rc == -ENOENT && add) {
-		psc_assert(i->inoh_ino.ino_nrepls == j);
+		psc_assert(ih->inoh_ino.ino_nrepls == j);
 
-		if (i->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS) {
-			DEBUG_INOH(PLL_WARN, i, "too many replicas");
+		if (ih->inoh_ino.ino_nrepls >= SL_MAX_REPLICAS) {
+			DEBUG_INOH(PLL_WARN, ih, "too many replicas");
 			rc = -ENOSPC;
 			goto out;
 		}
@@ -143,29 +143,29 @@ _mds_repl_ios_lookup(struct slash_inode_handle *i, sl_ios_id_t ios, int add,
 			 * Note that both the inode structure and replication
 			 *  table must be synced.
 			 */
-			psc_assert(i->inoh_extras);
-			i->inoh_flags |= INOH_EXTRAS_DIRTY | INOH_INO_DIRTY;
-			repl = i->inoh_extras->inox_repls;
+			psc_assert(ih->inoh_extras);
+			ih->inoh_flags |= INOH_EXTRAS_DIRTY | INOH_INO_DIRTY;
+			repl = ih->inoh_extras->inox_repls;
 			k = j - SL_DEF_REPLICAS;
 		} else {
-			i->inoh_flags |= INOH_INO_DIRTY;
-			repl = i->inoh_ino.ino_repls;
+			ih->inoh_flags |= INOH_INO_DIRTY;
+			repl = ih->inoh_ino.ino_repls;
 			k = j;
 		}
 
 		repl[k].bs_id = ios;
-		i->inoh_ino.ino_nrepls++;
+		ih->inoh_ino.ino_nrepls++;
 
-		DEBUG_INOH(PLL_INFO, i, "add IOS(%u) to repls, replica %d",
-			   ios, i->inoh_ino.ino_nrepls-1);
+		DEBUG_INOH(PLL_INFO, ih, "add IOS(%u) to repls, replica %d",
+			   ios, ih->inoh_ino.ino_nrepls-1);
 
 		if (journal)
-			mds_inode_addrepl_update(i, ios, j);
+			mds_inode_addrepl_update(ih, ios, j);
 
 		rc = j;
 	}
-out:
-	INOH_ULOCK(i);
+ out:
+	INOH_ULOCK(ih);
 	return (rc);
 }
 
