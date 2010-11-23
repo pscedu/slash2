@@ -559,6 +559,10 @@ slmupschedthr_main(struct psc_thread *thr)
 						rid = psc_random32u(ndst);
 						for (k = 0; k < psc_dynarray_len(&dst_res->res_members);
 						    k++, rid = (rid + 1) % ndst)
+							/*
+							 * We succeed as long as one member can do the work
+							 * because all members share the same backend.
+							 */
 							if (slmupschedthr_trygarbage(wk,
 							    bcm, off, dst_res, rid))
 								goto restart;
