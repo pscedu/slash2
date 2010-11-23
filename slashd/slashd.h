@@ -90,7 +90,7 @@ PSCTHR_MKCAST(slmrmmthr, slmrmm_thread, SLMTHRT_RMM)
 PSCTHR_MKCAST(slmupschedthr, slmupsched_thread, SLMTHRT_UPSCHED)
 
 struct site_mds_info {
-	struct psc_dynarray	  smi_upq;
+	struct psc_dynarray	  smi_upq;		/* update queue */
 	psc_spinlock_t		  smi_lock;
 	struct psc_multiwait	  smi_mw;
 	struct psc_multiwaitcond  smi_mwcond;
