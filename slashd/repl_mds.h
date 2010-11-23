@@ -56,6 +56,7 @@ void	 mds_repl_reset_scheduled(sl_ios_id_t);
 #define mds_repl_bmap_walk_all(b, t, r, fl)				\
 	_mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0, NULL, NULL)
 
+/* walk the bmap replica bitmap, iv and ni specify the IOS index array and its size */
 #define mds_repl_bmap_walk(b, t, r, fl, iv, ni)				\
 	_mds_repl_bmap_walk((b), (t), (r), (fl), (iv), (ni), NULL, NULL)
 
