@@ -28,7 +28,7 @@
 #define _UP_SCHED_RES_H_
 
 struct up_sched_work_item {
-	struct fidc_membh		*uswi_fcmh;
+	struct fidc_membh		*uswi_fcmh;		/* key is fg_fid. See uswi_cmp() */
 	psc_atomic32_t			 uswi_refcnt;
 	int				 uswi_gen;
 	int				 uswi_flags;
