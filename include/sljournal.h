@@ -102,6 +102,8 @@ struct slmds_jent_bmapseq {
 
 #define	SLJ_NAMES_MAX		358
 
+#define SJ_NAMESPACE_RECLAIM	0x01
+
 /*
  * For easy seek within a change log file, each entry has a fixed length
  * of 512 bytes.  But when we send log entries over the network, we
@@ -111,7 +113,7 @@ struct slmds_jent_namespace {
 	uint64_t		sjnm_magic;			/* debugging */
 	uint32_t		sjnm_op;			/* operation type (i.e., enum namespace_operation) */
 	int16_t			sjnm_reclen;
-	int16_t			sjnm__pad;
+	int16_t			sjnm_flag;			/* need garbage collection */
 
 	uint64_t		sjnm_seqno;			/* namespace update identifier */
 

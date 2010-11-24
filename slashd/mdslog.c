@@ -474,14 +474,17 @@ mds_distill_handler(struct psc_journal_enthdr *pje)
 		freelock(&mds_namespace_waitqlock);
 	}
 
-	if (jnamespace->sjnm_op != NS_OP_SETATTR ||
-	    jnamespace->sjnm_op != NS_OP_UNLINK) 
-		return (0);
-
 	/*
 	 * If the namespace operation needs to reclaim disk space on I/O
 	 * servers, write the information into the reclaim log.
 	 */
+	if (jnamespace->sjnm_op != NS_OP_SETATTR ||
+	    jnamespace->sjnm_op != NS_OP_UNLINK) 
+		return (0);
+
+	if (!(jnamespace->sjnm_flag & SJ_NAMESPACE_RECLAIM)) 
+		return (0);
+
 	if ((seqno % SLM_RECLAIM_BATCH) == 0) {
 		psc_assert(current_reclaim_logfile == -1);
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR,
