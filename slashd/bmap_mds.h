@@ -32,6 +32,7 @@
 #include "slashd.h"
 #include "inode.h"
 
+struct srm_bmap_crcwrt_req;
 struct srt_bmapdesc;
 
 /*
@@ -229,7 +230,8 @@ struct bmap_ion_assign {
 
 #define mds_bml_free(bml)	psc_pool_return(bmapMdsLeasePool, (bml))
 
-int	 mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t);
+int	 mds_bmap_crc_write(struct srm_bmap_crcup *, lnet_nid_t,
+	    const struct srm_bmap_crcwrt_req *);
 int	 mds_bmap_exists(struct fidc_membh *, sl_bmapno_t);
 int	 mds_bmap_load_cli(struct fidc_membh *, sl_bmapno_t, int, enum rw,
 	    sl_ios_id_t, struct srt_bmapdesc *, struct pscrpc_export *,

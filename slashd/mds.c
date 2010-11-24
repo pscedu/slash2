@@ -1181,7 +1181,8 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
  *	compared against the ID stored in the bmdsi.
  */
 int
-mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
+mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
+    const struct srm_bmap_crcwrt_req *mq)
 {
 	struct bmap_mds_info *bmdsi;
 	struct fidc_membh *fcmh;
