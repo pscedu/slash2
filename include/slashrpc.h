@@ -411,8 +411,10 @@ struct srm_bmap_crcwrt_req {
 	uint64_t		crc;		/* yes, a CRC of the CRC's */
 	uint8_t			ncrcs_per_update[MAX_BMAP_NCRC_UPDATES];
 	uint32_t		ncrc_updates;
-	int32_t			_pad;
+	uint32_t		flags;
 } __packed;
+
+#define SRM_BMAPCRCWRT_PTRUNC	(1 << 0)	/* in response to partial trunc CRC recalc */
 
 struct srm_bmap_crcwrt_rep {
 	uint64_t		seq;
