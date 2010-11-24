@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -41,7 +41,7 @@
 #include "sljournal.h"
 #include "zfs-fuse/zfs_slashlib.h"
 
-static inline void *
+static __inline void *
 bmap_2_zfs_fh(struct bmapc_memb *bmap)
 {
 	struct fcmh_mds_info *fmi;
@@ -65,16 +65,16 @@ mdsio_fcmh_refreshattr(struct fidc_membh *f, struct srt_stat *out_sstb)
 	int locked, rc=0;
 
 	locked = FCMH_RLOCK(f);
-        rc = mdsio_getattr(fcmh_2_mdsio_fid(f), fcmh_2_mdsio_data(f), 
+	rc = mdsio_getattr(fcmh_2_mdsio_fid(f), fcmh_2_mdsio_data(f),
 	   &rootcreds, &f->fcmh_sstb);
-	
+
 	if (rc)
 		abort();
 
 	if (out_sstb)
 		*out_sstb = f->fcmh_sstb;
-        FCMH_URLOCK(f, locked);
-	
+	FCMH_URLOCK(f, locked);
+
 	return (rc);
 }
 
@@ -94,8 +94,8 @@ mdsio_bmap_read(struct bmapc_memb *bmap)
 	return (rc);
 }
 
-/*
- * mdsio_bmap_crc_update - handle CRC updates for one bmap by pushing the updates
+/**
+ * mdsio_bmap_crc_update - Handle CRC updates for one bmap by pushing the updates
  *     to ZFS and then log it.
  */
 int
