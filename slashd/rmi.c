@@ -99,48 +99,51 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 	struct srm_bmap_crcwrt_rep *mp;
 	struct pscrpc_bulk_desc *desc;
 	struct iovec *iovs;
-	void *buf;
-	size_t len=0;
-	off_t  off;
-	int rc=0;
+	size_t len = 0;
 	uint64_t crc;
 	uint32_t i;
+	off_t off;
+	void *buf;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->ncrc_updates > MAX_BMAP_NCRC_UPDATES) {
+		mp->rc = EINVAL;
+		return (mp->rc);
+	}
 
 	len = (mq->ncrc_updates * sizeof(struct srm_bmap_crcup));
 	for (i=0; i < mq->ncrc_updates; i++)
 		len += (mq->ncrcs_per_update[i] *
-			sizeof(struct srm_bmap_crcwire));
+		    sizeof(struct srm_bmap_crcwire));
 
 	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 	buf = PSCALLOC(len);
 
 	for (i=0, off=0; i < mq->ncrc_updates; i++) {
 		iovs[i].iov_base = buf + off;
-		iovs[i].iov_len = ((mq->ncrcs_per_update[i] *
-				    sizeof(struct srm_bmap_crcwire)) +
-				   sizeof(struct srm_bmap_crcup));
+		iovs[i].iov_len = (mq->ncrcs_per_update[i] *
+		    sizeof(struct srm_bmap_crcwire)) +
+		    sizeof(struct srm_bmap_crcup);
 
 		off += iovs[i].iov_len;
 	}
 
-	rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL,
-			    iovs, mq->ncrc_updates);
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK, SRMI_BULK_PORTAL,
+	    iovs, mq->ncrc_updates);
 	if (desc)
 		pscrpc_free_bulk(desc);
 	else {
-		psc_errorx("rsx_bulkserver() rc=%d", rc);
+		psc_errorx("rsx_bulkserver() rc=%d", mp->rc);
 		/* rsx_bulkserver() frees the desc on error.
 		 */
 		goto out;
 	}
 
-	/* CRC the CRC's! */
+	/* Check the CRC the CRC's! */
 	psc_crc64_calc(&crc, buf, len);
 	if (crc != mq->crc) {
 		psc_errorx("crc verification of crcwrt payload failed");
-		rc = -1;
+		mp->rc = SLERR_BADCRC;
 		goto out;
 	}
 
@@ -152,7 +155,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		 */
 		if (c->nups != mq->ncrcs_per_update[i]) {
 			psc_errorx("nups(%u) != ncrcs_per_update(%u)",
-				   c->nups, mq->ncrcs_per_update[i]);
+			    c->nups, mq->ncrcs_per_update[i]);
 			mp->crcup_rc[i] = -EINVAL;
 		}
 		/* Verify slot number validity.
@@ -164,18 +167,19 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		/* Look up the bmap in the cache and write the CRCs.
 		 */
 		mp->crcup_rc[i] = mds_bmap_crc_write(c,
-		    rq->rq_conn->c_peer.nid);
+		    rq->rq_conn->c_peer.nid, mq);
 		if (mp->crcup_rc[i])
 			psc_errorx("mds_bmap_crc_write() failed; rc=%d",
 			    mp->crcup_rc[i]);
 	}
+
  out:
 	PSCFREE(buf);
 	PSCFREE(iovs);
 
 	mds_bmap_getcurseq(NULL, &mp->seq);
 
-	return (rc);
+	return (mp->rc);
 }
 
 /**
