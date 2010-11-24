@@ -828,7 +828,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		atomic_inc(&logbuf->slb_refcnt);
 
 		/*
-		 * Be careful, we use the value of i and buf from the
+		 * Be careful, we use the value of j and buf from the
 		 * previous while loop.
 		 */
 		while (j) {
