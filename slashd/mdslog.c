@@ -64,6 +64,7 @@ extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
  * from the system journal.
  */
 uint64_t			 next_update_seqno;
+uint64_t			 next_garbage_seqno;
 
 /*
  * Low and high water marks of update sequence numbers that need to be propagated.
@@ -73,6 +74,7 @@ static uint64_t			 propagate_seqno_lwm;
 static uint64_t			 propagate_seqno_hwm;
 
 static int			 current_logfile = -1;
+static int			 current_reclaim_logfile = -1;
 
 struct psc_waitq		 mds_namespace_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			 mds_namespace_waitqlock = SPINLOCK_INIT;
@@ -415,6 +417,12 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 /**
  * mds_distill_handler - Distill information from the system journal and
  *	write into namespace change and garbage collection logs.
+ *
+ * 	Write the information to the disk so that we can reclaim the log 
+ * 	space in the system log. In other words, we can't accumulate one 
+ * 	batch worth of namespace updates and move them into the buffer 
+ * 	directly. We also can't compete with the update propagator for 
+ * 	limited number of buffers either.
  */
 int
 mds_distill_handler(struct psc_journal_enthdr *pje)
@@ -449,13 +457,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje)
 	} else
 		psc_assert(current_logfile != -1);
 
-	/*
-	 * Write to the disk now so that we can reclaim the log space in the
-	 * system log. In other words, we can't accumulate one batch worth
-	 * of namespace updates and move them into the buffer directly. We
-	 * also can't compete with the update propagator for limited number
-	 * of buffers either.
-	 */
 	sz = write(current_logfile, pje, logentrysize);
 	if (sz != logentrysize)
 		psc_fatal("Fail to write change log file %s", fn);
@@ -471,6 +472,24 @@ mds_distill_handler(struct psc_journal_enthdr *pje)
 		spinlock(&mds_namespace_waitqlock);
 		psc_waitq_wakeall(&mds_namespace_waitq);
 		freelock(&mds_namespace_waitqlock);
+	}
+	/*
+	 * If the namespace operation needs to reclaim disk space on I/O
+	 * servers, write the information into the reclaim log.
+	 */
+	if ((seqno % SLM_RECLAIM_BATCH) == 0) {
+		psc_assert(current_reclaim_logfile == -1);
+		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR,
+		    SL_FN_RECLAIMLOG, seqno/SLM_RECLAIM_BATCH);
+		/*
+		 * Truncate the file if it already exists. Otherwise, it
+		 * can lead to an insidious bug especially when the
+		 * on-disk format of the log file changes.
+		 */
+		current_reclaim_logfile = open(fn, O_CREAT | O_TRUNC | O_RDWR |
+		    O_SYNC | O_DIRECT | O_APPEND, 0600);
+		if (current_reclaim_logfile == -1)
+			psc_fatal("Fail to create reclaim log file %s", fn);
 	}
 	return (0);
 }
@@ -1205,6 +1224,11 @@ mds_journal_init(void)
 	 * To be read from a log file after we replay the system journal.
 	 */
 	next_update_seqno = 0;
+
+	/*
+ 	 * Next sequence number for garbage collection record.
+ 	 */
+	next_garbage_seqno = 0;
 	/*
 	 * Construct a list of MDSes from the global configuration file
 	 * to save some run time.  It also allows us to dynamically add
