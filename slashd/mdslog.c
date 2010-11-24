@@ -979,16 +979,15 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 }
 
 void
-mds_inode_sync(void *data)
+mds_inode_sync(struct slash_inode_handle *inoh)
 {
-	struct slash_inode_handle *inoh = data;
 	int rc, tmpx = 0;
 
 	INOH_LOCK(inoh);
 
 	if (inoh->inoh_flags & INOH_INO_DIRTY) {
 		psc_crc64_calc(&inoh->inoh_ino.ino_crc, &inoh->inoh_ino,
-		       INO_OD_CRCSZ);
+		    INO_OD_CRCSZ);
 
 		rc = mdsio_inode_write(inoh);
 		if (rc)
@@ -1012,7 +1011,7 @@ mds_inode_sync(void *data)
 
 		if (rc)
 			DEBUG_INOH(PLL_FATAL, inoh, "xtras rc=%d sync fail",
-				   rc);
+			    rc);
 		else
 			DEBUG_INOH(PLL_TRACE, inoh, "xtras sync ok");
 
