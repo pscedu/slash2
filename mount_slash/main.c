@@ -1584,10 +1584,13 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		goto out;
 
 	FCMH_LOCK(c);
-	if ((to_set & PSCFS_SETATTRF_MODE) && cr.uid &&
-	    cr.uid != c->fcmh_sstb.sst_uid) {
-		rc = EPERM;
-		goto out;
+	if ((to_set & PSCFS_SETATTRF_MODE) && cr.uid) {
+		if (cr.uid != c->fcmh_sstb.sst_uid) {
+			rc = EPERM;
+			goto out;
+		}
+		if (cr.uid)
+			stb->st_mode &= ~(S_ISUID | S_ISGID);
 	}
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
 		rc = checkcreds(&c->fcmh_sstb, &cr, W_OK);
