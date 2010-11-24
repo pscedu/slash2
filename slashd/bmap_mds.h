@@ -111,7 +111,7 @@ struct bmap_mds_info {
 #define BHREPL_POLICY_SET(b, pol)					\
 	do {								\
 		BMAPOD_MODIFY_START(b);					\
-		bmap_2_replpol(b) = (pol);					\
+		bmap_2_replpol(b) = (pol);				\
 		BMDSI_LOGCHG_SET(b);					\
 		BMAPOD_MODIFY_DONE(b);					\
 	} while (0)
@@ -119,7 +119,7 @@ struct bmap_mds_info {
 #define BHREPL_POLICY_GET(b, pol)					\
 	do {								\
 		BMAPOD_READ_START(b);					\
-		(pol) = bmap_2_replpol(b);					\
+		(pol) = bmap_2_replpol(b);				\
 		BMAPOD_READ_DONE(b);					\
 	} while (0)
 
