@@ -414,7 +414,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 
 /**
  * mds_distill_handler - Distill information from the system journal and
- *	write into change log files.
+ *	write into namespace change and garbage collection logs.
  */
 int
 mds_distill_handler(struct psc_journal_enthdr *pje)
@@ -1270,8 +1270,7 @@ mds_journal_init(void)
 	    "slmjcursorthr");
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
-			mds_replay_handler,
-			npeer != 0 ? mds_distill_handler : NULL);
+			mds_replay_handler, mds_distill_handler);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 	psc_notify("Last bmap sequence number low water mark is %"PRId64,
