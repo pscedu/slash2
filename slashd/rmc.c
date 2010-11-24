@@ -226,27 +226,28 @@ slm_rmc_handle_bmap_chwrmode(struct pscrpc_request *rq)
 int
 slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 {
-	int rc = 0;
 	const struct srm_leasebmap_req *mq;
+	struct bmapc_memb *bmap = NULL;
 	struct srm_leasebmap_rep *mp;
-	struct fidc_membh *fcmh;
-	struct bmapc_memb *bmap=NULL;
 	struct bmap_mds_info *bmdsi;
+	struct fidc_membh *fcmh;
+	int rc = 0;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
+	if (mq->rw != SL_READ && mq->rw != SL_WRITE) {
+		mp->rc = EINVAL;
+		return (0);
+	}
+
 	mp->rc = slm_fcmh_get(&mq->fg, &fcmh);
 	if (mp->rc)
-		return (mp->rc);
+		return (0);
 	mp->flags = mq->flags;
 
-	if (mq->rw != SL_READ && mq->rw != SL_WRITE)
-		return ((mp->rc = EINVAL));
-
-	bmap = NULL;
 	mp->rc = mds_bmap_load_cli(fcmh, mq->bmapno, mq->flags, mq->rw,
 	   mq->prefios, &mp->sbd, rq->rq_export, &bmap);
 	if (mp->rc)
-		return (mp->rc == SLERR_BMAP_DIOWAIT ? 0 : mp->rc);
+		goto out;
 
 	bmdsi = bmap_2_bmdsi(bmap);
 
@@ -274,19 +275,18 @@ slm_rmc_handle_getbmap(struct pscrpc_request *rq)
 		}
 	}
 
+ out:
 	fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
-
-	return (rc);
+	return (rc ? rc : mp->rc);
 }
 
 int
 slm_rmc_handle_link(struct pscrpc_request *rq)
 {
-	struct fidc_membh *p, *c;
+	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_link_req *mq;
 	struct srm_link_rep *mp;
 
-	p = c = NULL;
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->fg, &c);
 	if (mp->rc)
@@ -711,6 +711,7 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			/* XXX: if file size is already 0, don't bump */
 		} else {
 			/* partial truncate */
+			struct slash_inode_handle *ih;
 			struct {
 				sl_replica_t	iosv[SL_MAX_REPLICAS];
 				int		nios;
@@ -718,27 +719,25 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 
 			ios_list.nios = 0;
 
-			/* XXX what do we do with bmap leases that are
-			 * concurrently granted?
-			 */
-
-			FCMH_LOCK(fcmh);
-			/*
-			 * XXX this will fail a second truncate immediately.
-			 */
-			if (fcmh_2_ino(fcmh)->ino_flags &
+			ih = fcmh_2_inoh(fcmh);
+			INOH_LOCK(ih);
+			if (ih->inoh_ino.ino_flags &
 			    INOF_IN_PTRUNC) {
 				mp->rc = EAGAIN;
 				goto out;
 			}
-			fcmh_2_ino(fcmh)->ino_flags |= INOF_IN_PTRUNC;
-			fcmh_2_ino(fcmh)->ino_ptruncoff =
-			    mq->attr.sst_size;
+			ih->inoh_ino.ino_flags |= INOF_IN_PTRUNC;
+			ih->inoh_ino.ino_ptruncoff = mq->attr.sst_size;
+			ih->inoh_flags |= INOH_INO_DIRTY;
+
+			FCMH_LOCK(fcmh);
 			fcmh_2_ptruncgen(fcmh)++;
 			FCMH_ULOCK(fcmh);
 
-			to_set |= SL_SETATTRF_PTRUNCGEN;
+			INOH_ULOCK(ih);
+			mds_inode_sync(ih);
 
+			to_set |= SL_SETATTRF_PTRUNCGEN;
 
 			// bmaps write leases may not be granted
 			// for this bmap or any bmap beyond
@@ -747,10 +746,12 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			tract[BREPLST_VALID] = BREPLST_TRUNCPNDG;
 
 			i = mq->attr.sst_size / SLASH_BMAP_SIZE;
-			if (mds_bmap_load(fcmh, i, &bcm) == 0) {
-				mds_repl_bmap_walk_all(bcm, tract,
-				    NULL, 0);
-				mds_repl_bmap_rel(bcm);
+			if (mq->attr.sst_size % SLASH_BMAP_SIZE) {
+				if (mds_bmap_load(fcmh, i, &bcm) == 0) {
+					mds_repl_bmap_walk_all(bcm, tract,
+					    NULL, 0);
+					mds_repl_bmap_rel(bcm);
+				}
 			}
 
 #if 0
@@ -767,6 +768,8 @@ slm_rmc_handle_setattr(struct pscrpc_request *rq)
 			for (i++; i < fcmh_2_nbmaps(fcmh); i++) {
 				if (mds_bmap_load(fcmh, i, &bcm))
 					continue;
+
+				BHGEN_INCREMENT(bcm);
 				mds_repl_bmap_walkcb(bcm, tract,
 				    NULL, 0, ptrunc_tally_ios,
 				    &ios_list);

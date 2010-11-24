@@ -471,6 +471,14 @@ slmupschedthr_main(struct psc_thread *thr)
 			wk->uswi_flags &= ~USWIF_BUSY;
 			psc_pthread_mutex_unlock(&wk->uswi_mutex);
 
+			if (fcmh_2_ino(wk->uswi_fcmh)->ino_flags & INOF_IN_PTRUNC) {
+				/* send async request to recompute CRC
+				 * for sliced bmap to ION if not sent
+				 */
+
+				/* if this CRC has failed, try resend */
+			}
+
 			/* find a resource in our site this uswi is destined for */
 			iosidx = -1;
 			DYNARRAY_FOREACH(dst_res, j, &site->site_resources) {
