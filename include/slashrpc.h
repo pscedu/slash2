@@ -169,9 +169,10 @@ enum {
 	SRMT_BMAPCHWRMODE,		/* change read/write access mode */
 	SRMT_BMAPCRCWRT,		/* update bmap data checksums */
 	SRMT_BMAPDIO,			/* request client direct I/O on a bmap */
+	SRMT_BMAP_PTRUNC,		/* recompute CRC for ptrunc'd bmap */
 	SRMT_GETBMAP,			/* get client lease for bmap access */
-	SRMT_GETBMAPMINSEQ,
 	SRMT_GETBMAPCRCS,		/* get bmap data checksums */
+	SRMT_GETBMAPMINSEQ,
 	SRMT_RELEASEBMAP,		/* relinquish a client's bmap access lease */
 
 	/* garbage operations */
