@@ -32,7 +32,6 @@ struct fcmh_mds_info {
 	mdsio_fid_t		  fmi_mdsio_fid;	/* underlying mdsio file ID */
 	void			 *fmi_mdsio_data;	/* mdsio descriptor */
 	int			  fmi_ctor_rc;		/* constructor return code */
-	sl_bmapno_t		  fmi_ptruncbmap;	/* bmap where partial trunc is go */
 };
 
 #define fcmh_2_fmi(f)		((struct fcmh_mds_info *)fcmh_get_pri(f))
