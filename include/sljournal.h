@@ -109,7 +109,7 @@ struct slmds_jent_bmapseq {
  */
 struct slmds_jent_namespace {
 	uint64_t		sjnm_magic;			/* debugging */
-	uint32_t		sjnm_op;			/* operation type */
+	uint32_t		sjnm_op;			/* operation type (i.e., enum namespace_operation) */
 	int16_t			sjnm_reclen;
 	int16_t			sjnm__pad;
 

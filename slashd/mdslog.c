@@ -473,6 +473,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje)
 		psc_waitq_wakeall(&mds_namespace_waitq);
 		freelock(&mds_namespace_waitqlock);
 	}
+
+	if (jnamespace->sjnm_op != NS_OP_SETATTR ||
+	    jnamespace->sjnm_op != NS_OP_UNLINK) 
+		return (0);
+
 	/*
 	 * If the namespace operation needs to reclaim disk space on I/O
 	 * servers, write the information into the reclaim log.
