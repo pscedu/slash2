@@ -1139,7 +1139,7 @@ mds_bia_odtable_startup_cb(void *data, struct odtable_receipt *odtr)
 	rc = mds_bmap_load(f, bia->bia_bmapno, &b);
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "failed to load bmap %u (rc=%d)",
-			   bia->bia_bmapno, rc);
+		    bia->bia_bmapno, rc);
 		goto out;
 	}
 
@@ -1292,6 +1292,20 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid)
 	/* Call the journal and update the in-memory crc's.
 	 */
 	mds_bmap_crc_update(bmap, c);
+
+	if (mq->flags & SRM_BMAPCRCWRT_PTRUNC) {
+		struct slash_inode_handle *ih;
+
+		ih = fcmh_2_inoh(fcmh);
+		INOH_LOCK(ih);
+		ih->inoh_ino.ino_flags &= ~INOF_IN_PTRUNC;
+		ih->inoh_ino.ino_ptruncoff = 0;
+		ih->inoh_flags |= INOH_INO_DIRTY;
+		INOH_ULOCK(ih);
+		mds_inode_sync(ih);
+		fcmh_wake_locked(fcmh);
+	}
+
  out:
 	/* Mark that mds_bmap_crc_write() is done with this bmap
 	 *  - it was incref'd in fcmh_bmap_lookup().
