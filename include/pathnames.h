@@ -50,6 +50,7 @@
 #define SL_FN_IONBMAPS_ODT	"ion_bmaps.odt"
 #define SL_FN_OPJOURNAL		"op-journal"
 #define SL_FN_NAMESPACELOG	"op-namespace"
+#define SL_FN_RECLAIMLOG	"op-reclaim"
 
 #define SL_FN_HACK_FID		"hack-fid"
 

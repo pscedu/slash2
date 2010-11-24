@@ -439,7 +439,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje)
 		    SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
 		/*
 		 * Truncate the file if it already exists. Otherwise, it
-		 * can lead to an insidious * bug especially when the
+		 * can lead to an insidious bug especially when the
 		 * on-disk format of the log file changes.
 		 */
 		current_logfile = open(fn, O_CREAT | O_TRUNC | O_RDWR |

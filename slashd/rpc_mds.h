@@ -52,6 +52,10 @@ struct pscrpc_export;
  * send it out in one bulk RPC.
  */
 #define SLM_NAMESPACE_BATCH	2048
+/*
+ * Garbage collection records.
+ */
+#define SLM_RECLAIM_BATCH	2048
 
 struct slm_exp_cli {
 	struct slashrpc_cservice	*mexpc_csvc;

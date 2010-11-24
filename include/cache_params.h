@@ -35,6 +35,7 @@
 #define SLB_MIN				64
 #define SLB_MAX				128
 
+/* XXX make it 4 so that status bits of a replica do not straddle a byte boundary */
 #define SL_BITS_PER_REPLICA		3
 
 /* End hand computed */
