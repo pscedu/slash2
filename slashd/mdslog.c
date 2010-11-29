@@ -425,7 +425,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
  * 	limited number of buffers either.
  */
 int
-mds_distill_handler(struct psc_journal_enthdr *pje)
+mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 {
 	struct slmds_jent_namespace *jnamespace;
 	char fn[PATH_MAX];
@@ -439,39 +439,42 @@ mds_distill_handler(struct psc_journal_enthdr *pje)
 	jnamespace = PJE_DATA(pje);
 	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 
-	/* see if we can open a new change log file */
-	seqno = jnamespace->sjnm_seqno;
-	if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
-		psc_assert(current_logfile == -1);
-		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR,
-		    SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
-		/*
-		 * Truncate the file if it already exists. Otherwise, it
-		 * can lead to an insidious bug especially when the
-		 * on-disk format of the log file changes.
-		 */
-		current_logfile = open(fn, O_CREAT | O_TRUNC | O_RDWR |
-		    O_SYNC | O_DIRECT | O_APPEND, 0600);
-		if (current_logfile == -1)
-			psc_fatal("Fail to create change log file %s", fn);
-	} else
-		psc_assert(current_logfile != -1);
+	if (npeers) {
 
-	sz = write(current_logfile, pje, logentrysize);
-	if (sz != logentrysize)
-		psc_fatal("Fail to write change log file %s", fn);
-
-	propagate_seqno_hwm = seqno + 1;
-
-	/* see if we need to close the current change log file */
-	if (((seqno + 1) % SLM_NAMESPACE_BATCH) == 0) {
-		close(current_logfile);
-		current_logfile = -1;
-
-		/* wait up the namespace log propagator */
-		spinlock(&mds_namespace_waitqlock);
-		psc_waitq_wakeall(&mds_namespace_waitq);
-		freelock(&mds_namespace_waitqlock);
+		/* see if we can open a new change log file */
+		seqno = jnamespace->sjnm_seqno;
+		if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
+			psc_assert(current_logfile == -1);
+			xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR,
+			    SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
+			/*
+			 * Truncate the file if it already exists. Otherwise, it
+			 * can lead to an insidious bug especially when the
+			 * on-disk format of the log file changes.
+			 */
+			current_logfile = open(fn, O_CREAT | O_TRUNC | O_RDWR |
+			    O_SYNC | O_DIRECT | O_APPEND, 0600);
+			if (current_logfile == -1)
+				psc_fatal("Fail to create change log file %s", fn);
+		} else
+			psc_assert(current_logfile != -1);
+	
+		sz = write(current_logfile, pje, logentrysize);
+		if (sz != logentrysize)
+			psc_fatal("Fail to write change log file %s", fn);
+	
+		propagate_seqno_hwm = seqno + 1;
+	
+		/* see if we need to close the current change log file */
+		if (((seqno + 1) % SLM_NAMESPACE_BATCH) == 0) {
+			close(current_logfile);
+			current_logfile = -1;
+	
+			/* wait up the namespace log propagator */
+			spinlock(&mds_namespace_waitqlock);
+			psc_waitq_wakeall(&mds_namespace_waitq);
+			freelock(&mds_namespace_waitqlock);
+		}
 	}
 
 	/*
@@ -1226,7 +1229,7 @@ mds_journal_init(void)
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
-	int npeer, n;
+	int npeers, n;
 
 	/*
 	 * To be read from a log file after we replay the system journal.
@@ -1242,7 +1245,7 @@ mds_journal_init(void)
 	 * to save some run time.  It also allows us to dynamically add
 	 * or remove MDSes to/from our private list in the future.
 	 */
-	npeer = 0;
+	npeers = 0;
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources) {
@@ -1263,7 +1266,7 @@ mds_journal_init(void)
 				    "resource ID = %"PSCPRIxLNID,
 				    resm->resm_addrbuf, s->site_id, resm->resm_nid);
 			} else {
-				npeer++;
+				npeers++;
 				psc_info("Added remote MDS: addr = %s, site ID = %d, "
 				    "resource ID = %"PSCPRIxLNID,
 				    resm->resm_addrbuf, s->site_id, resm->resm_nid);
@@ -1287,6 +1290,7 @@ mds_journal_init(void)
 
 	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
 
+	mdsJournal->pj_npeers = npeers;
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_txg;
 	mdsJournal->pj_distill_xid = mds_cursor.pjc_xid;
 
@@ -1314,7 +1318,7 @@ mds_journal_init(void)
 	 * If we are a standalone MDS, there is no need to start the namespace
 	 * propagation operation.
 	 */
-	if (!npeer)
+	if (!npeers)
 		return;
 
 	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
