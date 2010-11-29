@@ -143,6 +143,15 @@ struct sl_mds_peerinfo {
 	struct sl_mds_nsstats	  sp_stats;
 };
 
+/*
+ * This structure tracks the progress of garbage collection on each I/O server.
+ */
+struct sl_mds_iosinfo {
+	psc_spinlock_t		  si_lock;
+	int			  si_flags;
+	uint64_t		  si_seqno;		/* garbage collection progress */
+};
+
 /* sml_flags values */
 #define	SP_FLAG_NONE		   0
 #define	SP_FLAG_MIA		  (1 << 0)

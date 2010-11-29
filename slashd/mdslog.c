@@ -105,9 +105,9 @@ struct sl_mds_peerinfo		*localinfo = NULL;
 struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
 psc_spinlock_t			 mds_namespace_peerlist_lock = SPINLOCK_INIT;
 
-/* list of IOSes of the MDS */
+/* list of IOSes and its lock */
 struct psc_dynarray		 mds_namespace_ioslist = DYNARRAY_INIT;
-psc_spinlock_t			 mds_namespace_ioslock = SPINLOCK_INIT;
+psc_spinlock_t			 mds_namespace_ioslist_lock = SPINLOCK_INIT;
 
 static void			*mds_cursor_handle = NULL;
 static struct psc_journal_cursor mds_cursor;
@@ -1299,36 +1299,27 @@ mds_journal_init(void)
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources) {
-			if (r->res_type != SLREST_MDS && 
-			    r->res_type != SLREST_STANDALONE_FS &&
-			    r->res_type != SLREST_ARCHIVAL_FS &&
-			    r->res_type != SLREST_CLUSTER_NOSHARE_FS &&
-			    r->res_type != SLREST_PARALLEL_FS)
+			/* collect IO servers on the local site */
+			if (s == nodeResm->resm_site && r->res_type != SLREST_MDS) {
+				psc_dynarray_add(&mds_namespace_ioslist, r);
+			}
+			if (r->res_type != SLREST_MDS)
 				continue;
 
 			/* MDS cannot have more than one member */
 			resm = psc_dynarray_getpos(&r->res_members, 0);
-
 			peerinfo = res2rpmi(r)->rpmi_peerinfo;
 			peerinfo->sp_resm = resm;
 			peerinfo->sp_siteid = s->site_id;
-
-			if (r->res_type == SLREST_MDS) {
-				psc_dynarray_add(&mds_namespace_peerlist, peerinfo);
-				if (resm == nodeResm) {
-					localinfo = peerinfo;
-					psc_info("Added  local MDS: addr = %s, site ID = %d, "
-					    "resource ID = %"PSCPRIxLNID,
-					    resm->resm_addrbuf, s->site_id, resm->resm_nid);
-				} else {
-					npeers++;
-					psc_info("Added remote MDS: addr = %s, site ID = %d, "
-					    "resource ID = %"PSCPRIxLNID,
-					    resm->resm_addrbuf, s->site_id, resm->resm_nid);
-				}
-			} else {	
-				psc_dynarray_add(&mds_namespace_ioslist, peerinfo);
-				psc_info("Added IO Server: addr = %s, site ID = %d, "
+			psc_dynarray_add(&mds_namespace_peerlist, peerinfo);
+			if (resm == nodeResm) {
+				localinfo = peerinfo;
+				psc_info("Added  local MDS: addr = %s, site ID = %d, "
+				    "resource ID = %"PSCPRIxLNID,
+				    resm->resm_addrbuf, s->site_id, resm->resm_nid);
+			} else {
+				npeers++;
+				psc_info("Added remote MDS: addr = %s, site ID = %d, "
 				    "resource ID = %"PSCPRIxLNID,
 				    resm->resm_addrbuf, s->site_id, resm->resm_nid);
 			}
