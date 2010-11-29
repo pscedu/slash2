@@ -57,7 +57,8 @@ dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
 
 #define DE_DEF 64
 	psc_poolmaster_init(&dircache_poolmaster, struct dircache_ents,
-	    de_lentry_lc, 0, DE_DEF, DE_DEF, 0, NULL, NULL, NULL, "dirent");
+	    de_lentry_lc, PPMF_AUTO, DE_DEF, DE_DEF, 0, NULL, NULL,
+	    NULL, "dircache");
 	dircache_pool = psc_poolmaster_getmgr(&dircache_poolmaster);
 }
 
