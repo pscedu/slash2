@@ -987,6 +987,17 @@ mds_open_cursor(void)
 
 	slm_set_curr_slashid(mds_cursor.pjc_fid);
 }
+/**
+ * mds_garbage_collection - Send garbage collection to I/O servers.
+ */
+void
+mds_garbage_collection(__unusedx struct psc_thread *thr)
+{
+	while (pscthr_run()) {
+
+	}
+
+}
 
 /**
  * mds_namespace_propagate - Send local namespace updates to peer MDSes.
@@ -1329,6 +1340,9 @@ mds_journal_init(void)
 	    mds_cursor.pjc_seqno_lwm);
 	psc_notify("Last bmap sequence number high water mark is %"PRId64,
 	    mds_cursor.pjc_seqno_hwm);
+
+	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_garbage_collection, NULL,
+	    0, "slmjreclaim");
 
 	/*
 	 * If we are a standalone MDS, there is no need to start the namespace

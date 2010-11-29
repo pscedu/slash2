@@ -47,6 +47,7 @@ enum {
 	SLMTHRT_CURSOR,		/* cursor update thread */
 	SLMTHRT_FSSYNC,		/* file system syncer */
 	SLMTHRT_JNAMESPACE,	/* namespace propagating thread */
+	SLMTHRT_JRECLAIM,	/* garbage reclamation thread */
 	SLMTHRT_JRNL,		/* journal distill thread */
 	SLMTHRT_LNETAC,		/* lustre net accept thr */
 	SLMTHRT_RCM,		/* CLI <- MDS msg issuer */
