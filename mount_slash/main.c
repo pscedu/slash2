@@ -1053,7 +1053,7 @@ mslfsop_readdir(struct pscfs_req *pfr, size_t size, off_t off, void *data)
 	if (mp && mp->num)
 		dircache_setfreeable_ents(e);
 	else if (e)
-		dircache_earlyrls_ents(e);
+		dircache_rls_ents(e, DCFREEF_EARLY);
 
 	if (rq)
 		pscrpc_req_finished(rq);
