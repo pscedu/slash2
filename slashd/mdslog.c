@@ -426,11 +426,11 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
  * mds_distill_handler - Distill information from the system journal and
  *	write into namespace change and garbage collection logs.
  *
- * 	Write the information to the disk so that we can reclaim the log 
- * 	space in the system log. In other words, we can't accumulate one 
- * 	batch worth of namespace updates and move them into the buffer 
- * 	directly. We also can't compete with the update propagator for 
- * 	limited number of buffers either.
+ *	Write the information to the disk so that we can reclaim the log
+ *	space in the system log. In other words, we can't accumulate one
+ *	batch worth of namespace updates and move them into the buffer
+ *	directly. We also can't compete with the update propagator for
+ *	limited number of buffers either.
  */
 int
 mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
@@ -466,18 +466,18 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 				psc_fatal("Fail to create change log file %s", fn);
 		} else
 			psc_assert(current_change_logfile != -1);
-	
+
 		sz = write(current_change_logfile, pje, logentrysize);
 		if (sz != logentrysize)
 			psc_fatal("Fail to write change log file %s", fn);
-	
+
 		propagate_seqno_hwm = seqno + 1;
-	
+
 		/* see if we need to close the current change log file */
 		if (((seqno + 1) % SLM_NAMESPACE_BATCH) == 0) {
 			close(current_change_logfile);
 			current_change_logfile = -1;
-	
+
 			/* wait up the namespace log propagator */
 			spinlock(&mds_namespace_waitqlock);
 			psc_waitq_wakeall(&mds_namespace_waitq);
@@ -490,10 +490,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 	 * servers, write the information into the reclaim log.
 	 */
 	if (jnamespace->sjnm_op != NS_OP_SETATTR ||
-	    jnamespace->sjnm_op != NS_OP_UNLINK) 
+	    jnamespace->sjnm_op != NS_OP_UNLINK)
 		return (0);
 
-	if (!(jnamespace->sjnm_flag & SJ_NAMESPACE_RECLAIM)) 
+	if (!(jnamespace->sjnm_flag & SJ_NAMESPACE_RECLAIM))
 		return (0);
 
 	seqno = pjournal_next_reclaim(mdsJournal);
@@ -1283,8 +1283,8 @@ mds_journal_init(void)
 	next_update_seqno = 0;
 
 	/*
- 	 * Next sequence number for garbage collection record.
- 	 */
+	 * Next sequence number for garbage collection record.
+	 */
 	next_garbage_seqno = 0;
 	/*
 	 * Construct a list of MDSes from the global configuration file
@@ -1361,7 +1361,7 @@ mds_journal_init(void)
 	    mds_cursor.pjc_seqno_hwm);
 
 	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_garbage_collection, NULL,
-	    0, "slmjreclaim");
+	    0, "slmjreclaimthr");
 
 	/*
 	 * If we are a standalone MDS, there is no need to start the namespace
