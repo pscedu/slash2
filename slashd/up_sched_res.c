@@ -721,7 +721,9 @@ uswi_getslfid(void)
 	return (0);
 }
 
-/* initializea an update scheduler work item (i.e., uswi) */
+/**
+ * uswi_init - Initialize an update scheduler work item (uswi).
+ */
 void
 uswi_init(struct up_sched_work_item *wk, slfid_t fid)
 {
