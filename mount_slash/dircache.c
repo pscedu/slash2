@@ -85,8 +85,6 @@ dircache_rls_ents(struct dircache_ents *e, int flags)
 		pll_remove(&i->di_list, e);
 	}
 
-	pll_remove(&i->di_list, e);
-
 	ureqlock(&m->dcm_lock, locked);
 
 	psc_dynarray_free(&e->de_dents);
