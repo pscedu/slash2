@@ -227,6 +227,7 @@ psc_ctl_thrget_t psc_ctl_thrgets[] = {
 /* CURSOR	*/ NULL,
 /* FSSYNC	*/ NULL,
 /* JNAMESPACE	*/ NULL,
+/* JRECLAIM	*/ NULL,
 /* JRNL		*/ NULL,
 /* LNETAC	*/ NULL,
 /* RCM		*/ NULL,

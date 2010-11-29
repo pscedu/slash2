@@ -91,6 +91,7 @@ psc_ctl_prthr_t psc_ctl_prthrs[] = {
 /* CURSOR	*/ NULL,
 /* FSSYNC	*/ NULL,
 /* JNAMESPACE	*/ NULL,
+/* JRECLAIM	*/ NULL,
 /* JRNL		*/ NULL,
 /* LNETAC	*/ NULL,
 /* RCM		*/ NULL,
