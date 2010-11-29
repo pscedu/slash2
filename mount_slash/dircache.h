@@ -17,6 +17,16 @@
  * %PSC_END_COPYRIGHT%
  */
 
+/*
+ * When a file directory file listing is requested, FUSE sends out a
+ * READDIR RPC on the directory to get a listing of the names, then it
+ * looks up each name for its inode, and requests attributes on each
+ * inode.  Our code brings in all the name to inode translations and
+ * attributes in one go.  This interface implements a simple,
+ * non-coherent cache to avoid lookup and getattr RPCs on each
+ * individual file.
+ */
+
 #ifndef _DIRCACHE_H_
 #define _DIRCACHE_H_
 
@@ -40,6 +50,7 @@
  * implements a simple, non-coherent cache to avoid lookup and getattr RPCs on
  * each individual files.
  */
+
 #define dirent_timeo 4
 
 struct fidc_membh;
@@ -79,7 +90,7 @@ struct dircache_ents {
 	struct psc_dynarray	 de_dents;
 	struct dircache_desc	*de_desc;	/* contains dircache_descs */
 	struct dircache_info	*de_info;
-	unsigned char		 de_base[0];	/* contains pscfs_dirents */
+	unsigned char		*de_base;	/* contains pscfs_dirents */
 };
 
 /* de_flags */
@@ -134,11 +145,14 @@ dirent_sort_cmp(const void *x, const void *y)
 
 struct dircache_ents *
 	dircache_new_ents(struct dircache_info *, size_t);
-void	dircache_earlyrls_ents(struct dircache_ents *);
+void	dircache_rls_ents(struct dircache_ents *, int);
 void	dircache_init(struct dircache_mgr *, const char *, size_t);
 slfid_t	dircache_lookup(struct dircache_info *, const char *, int);
 void	dircache_reg_ents(struct dircache_ents *, size_t);
 void	dircache_setfreeable_ents(struct dircache_ents *);
+
+#define DCFREEF_RELEASE	(1 << 0)	/* fcmh may be released */
+#define DCFREEF_EARLY	(1 << 1)	/* dircache ent not attached */
 
 extern struct dircache_mgr dircacheMgr;
 

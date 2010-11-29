@@ -35,11 +35,15 @@
 #include "psc_ds/listcache.h"
 #include "psc_util/alloc.h"
 #include "psc_util/lock.h"
+#include "psc_util/pool.h"
 
 #include "dircache.h"
 #include "fidcache.h"
 #include "sltypes.h"
 #include "slutil.h"
+
+struct psc_poolmaster	 dircache_poolmaster;
+struct psc_poolmgr	*dircache_pool;
 
 void
 dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
@@ -50,39 +54,52 @@ dircache_init(struct dircache_mgr *m, const char *name, size_t maxsz)
 	INIT_SPINLOCK(&m->dcm_lock);
 	lc_reginit(&m->dcm_lc, struct dircache_ents, de_lentry_lc, "%s",
 	    name);
+
+#define DE_DEF 64
+	psc_poolmaster_init(&dircache_poolmaster, struct dircache_ents,
+	    de_lentry_lc, 0, DE_DEF, DE_DEF, 0, NULL, NULL, NULL, "dirent");
+	dircache_pool = psc_poolmaster_getmgr(&dircache_poolmaster);
 }
 
-#define FCMH_TRYFREE 1
-#define FCMH_NOFREE 0
-
-static void
-dircache_rls_ents(struct dircache_ents *e, int fcmh_tryfree)
+void
+dircache_rls_ents(struct dircache_ents *e, int flags)
 {
 	struct dircache_info *i = e->de_info;
 	struct dircache_mgr *m = i->di_dcm;
 	int locked;
 
-	DEBUG_FCMH(PLL_DEBUG, i->di_fcmh,
-	    "rls dircache_ents %p cachesz=%zu", e, m->dcm_alloc);
+	if (flags & DCFREEF_EARLY) {
+		psc_assert(psclist_disjoint(&e->de_lentry));
+		psc_assert(psclist_disjoint(&e->de_lentry_lc));
+	} else {
+		DEBUG_FCMH(PLL_DEBUG, i->di_fcmh,
+		    "rls dircache_ents %p cachesz=%zu", e, m->dcm_alloc);
+		psc_assert(e->de_flags & DIRCE_FREEING);
+	}
 
 	locked = reqlock(&m->dcm_lock);
 	m->dcm_alloc -= e->de_sz;
-	lc_remove(&i->di_dcm->dcm_lc, e);
 
-	psc_assert(e->de_flags & DIRCE_FREEING);
+	if ((flags & DCFREEF_EARLY) == 0) {
+		lc_remove(&i->di_dcm->dcm_lc, e);
+		pll_remove(&i->di_list, e);
+	}
 
 	pll_remove(&i->di_list, e);
 
 	ureqlock(&m->dcm_lock, locked);
 
 	psc_dynarray_free(&e->de_dents);
+	PSCFREE(e->de_base);
 	PSCFREE(e->de_desc);
-	PSCFREE(e);
-	
-	if (fcmh_tryfree)
-		fcmh_op_done_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
-	else
-		fcmh_decref(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
+	psc_pool_return(dircache_pool, e);
+
+	if ((flags & DCFREEF_EARLY) == 0) {
+		if (flags & DCFREEF_RELEASE)
+			fcmh_op_done_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
+		else
+			fcmh_decref(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
+	}
 }
 
 void
@@ -94,7 +111,7 @@ dircache_setfreeable_ents(struct dircache_ents *e)
 	if (!e->de_remlookup && !(e->de_flags & DIRCE_FREEING)) {
 		e->de_flags |= DIRCE_FREEING;
 		dircache_ent_ulock(e);
-		dircache_rls_ents(e, FCMH_TRYFREE);
+		dircache_rls_ents(e, DCFREEF_RELEASE);
 	} else
 		dircache_ent_ulock(e);
 }
@@ -189,7 +206,7 @@ dircache_lookup(struct dircache_info *i, const char *name, int flag)
 	PLL_ULOCK(&i->di_list);
 
 	DYNARRAY_FOREACH(e, pos, &da)
-		dircache_rls_ents(e, FCMH_NOFREE);
+		dircache_rls_ents(e, 0);
 	psc_dynarray_free(&da);
 
 	return (ino);
@@ -216,7 +233,7 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 		    !(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
-			dircache_rls_ents(e, FCMH_TRYFREE);
+			dircache_rls_ents(e, DCFREEF_RELEASE);
 
 		} else {
 			dircache_ent_ulock(e);
@@ -237,18 +254,20 @@ dircache_new_ents(struct dircache_info *i, size_t size)
 		    !(e->de_flags & DIRCE_FREEING)) {
 			e->de_flags |= DIRCE_FREEING;
 			dircache_ent_ulock(e);
-			dircache_rls_ents(e, FCMH_TRYFREE);
+			dircache_rls_ents(e, DCFREEF_RELEASE);
 		} else
 			dircache_ent_ulock(e);
 	}
 	freelock(&m->dcm_lock);
 
-	e = PSCALLOC(sizeof(*e) + size);
+	e = psc_pool_get(dircache_pool);
+	memset(e, 0, sizeof(*e));
 	INIT_PSC_LISTENTRY(&e->de_lentry);
 	INIT_PSC_LISTENTRY(&e->de_lentry_lc);
 	psc_dynarray_init(&e->de_dents);
 	e->de_sz = size;
 	e->de_info = i;
+	e->de_base = PSCALLOC(size);
 	return (e);
 }
 
@@ -311,22 +330,4 @@ dircache_reg_ents(struct dircache_ents *e, size_t nents)
 	pll_addhead(&i->di_list, e);
 
 	fcmh_op_start_type(i->di_fcmh, FCMH_OPCNT_DIRENTBUF);
-}
-
-/**
- * dircache_release_early - Called when a dircache_ents was not registered.
- */
-void
-dircache_earlyrls_ents(struct dircache_ents *e)
-{
-	psc_assert(psclist_disjoint(&e->de_lentry));
-	psc_assert(psclist_disjoint(&e->de_lentry_lc));
-
-	spinlock(&e->de_info->di_dcm->dcm_lock);
-	e->de_info->di_dcm->dcm_alloc -= e->de_sz;
-	freelock(&e->de_info->di_dcm->dcm_lock);
-
-	psc_dynarray_free(&e->de_dents);
-	PSCFREE(e->de_desc);
-	PSCFREE(e);
 }
