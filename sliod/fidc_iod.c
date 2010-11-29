@@ -46,10 +46,9 @@ sli_fcmh_getattr(struct fidc_membh *fcmh)
 }
 
 int
-sli_fcmh_reopen(struct fidc_membh *fcmh, void *data)
+sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 {
-	struct slash_fidgen *fg = data;
-	int rc=0;
+	int rc = 0;
 
 	FCMH_LOCK_ENSURE(fcmh);
 	psc_assert(fg->fg_fid == fcmh_2_fid(fcmh));
@@ -91,8 +90,8 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, void *data)
 		 *   release their bmaps, and associated cache pages, prior to
 		 *   issuing a truncate request to the MDS.
 		 */
-		DEBUG_FCMH(PLL_WARN, fcmh, "request from old gen (%"PRId64
-			   ")", fg->fg_gen);
+		DEBUG_FCMH(PLL_WARN, fcmh, "request from old gen "
+		    "(%"SLPRI_FGEN")", fg->fg_gen);
 	}
 	return (rc);
 }

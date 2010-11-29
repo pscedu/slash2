@@ -45,7 +45,7 @@ struct sl_fcmh_ops {
 	void	(*sfop_dtor)(struct fidc_membh *);
 	int	(*sfop_getattr)(struct fidc_membh *);
 	void	(*sfop_postsetattr)(struct fidc_membh *);
-	int     (*sfop_modify)(struct fidc_membh *, void *);
+	int     (*sfop_modify)(struct fidc_membh *, const struct slash_fidgen *);
 };
 
 /**
