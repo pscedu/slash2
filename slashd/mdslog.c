@@ -74,6 +74,14 @@ static uint64_t			 propagate_seqno_lwm;
 static uint64_t			 propagate_seqno_hwm;
 
 static int			 current_change_logfile = -1;
+
+/*
+ * Low and high water marks of reclaim sequence numbers that need to be sent out.
+ * Note that the pace of each IOS is different.
+ */
+static uint64_t			 reclaim_seqno_lwm;
+static uint64_t			 reclaim_seqno_hwm;
+
 static int			 current_reclaim_logfile = -1;
 
 struct psc_waitq		 mds_namespace_waitq = PSC_WAITQ_INIT;
@@ -644,6 +652,17 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 
 	sl_csvc_decref(csvc);
 	return (0);
+}
+
+/**
+ * mds_namespace_reclaim_lwm - Find the lowest water mark of all IOSes.
+ */
+__static uint64_t
+mds_namespace_reclaim_lwm(void)
+{
+	uint64_t seqno = 0;
+	reclaim_seqno_lwm = seqno;
+	return (seqno);
 }
 
 /**
