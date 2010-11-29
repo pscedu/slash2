@@ -73,7 +73,7 @@ uint64_t			 next_garbage_seqno;
 static uint64_t			 propagate_seqno_lwm;
 static uint64_t			 propagate_seqno_hwm;
 
-static int			 current_logfile = -1;
+static int			 current_change_logfile = -1;
 static int			 current_reclaim_logfile = -1;
 
 struct psc_waitq		 mds_namespace_waitq = PSC_WAITQ_INIT;
@@ -444,7 +444,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		/* see if we can open a new change log file */
 		seqno = jnamespace->sjnm_seqno;
 		if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
-			psc_assert(current_logfile == -1);
+			psc_assert(current_change_logfile == -1);
 			xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR,
 			    SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
 			/*
@@ -452,14 +452,14 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 			 * can lead to an insidious bug especially when the
 			 * on-disk format of the log file changes.
 			 */
-			current_logfile = open(fn, O_CREAT | O_TRUNC | O_RDWR |
+			current_change_logfile = open(fn, O_CREAT | O_TRUNC | O_RDWR |
 			    O_SYNC | O_DIRECT | O_APPEND, 0600);
-			if (current_logfile == -1)
+			if (current_change_logfile == -1)
 				psc_fatal("Fail to create change log file %s", fn);
 		} else
-			psc_assert(current_logfile != -1);
+			psc_assert(current_change_logfile != -1);
 	
-		sz = write(current_logfile, pje, logentrysize);
+		sz = write(current_change_logfile, pje, logentrysize);
 		if (sz != logentrysize)
 			psc_fatal("Fail to write change log file %s", fn);
 	
@@ -467,8 +467,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 	
 		/* see if we need to close the current change log file */
 		if (((seqno + 1) % SLM_NAMESPACE_BATCH) == 0) {
-			close(current_logfile);
-			current_logfile = -1;
+			close(current_change_logfile);
+			current_change_logfile = -1;
 	
 			/* wait up the namespace log propagator */
 			spinlock(&mds_namespace_waitqlock);
@@ -501,6 +501,22 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		    O_SYNC | O_DIRECT | O_APPEND, 0600);
 		if (current_reclaim_logfile == -1)
 			psc_fatal("Fail to create reclaim log file %s", fn);
+	}
+	sz = write(current_reclaim_logfile, pje, logentrysize);
+	if (sz != logentrysize)
+		psc_fatal("Fail to write reclaim log file %s", fn);
+
+	propagate_seqno_hwm = seqno + 1;
+
+	/* see if we need to close the current change log file */
+	if (((seqno + 1) % SLM_RECLAIM_BATCH) == 0) {
+		close(current_reclaim_logfile);
+		current_reclaim_logfile = -1;
+
+		/* wait up the namespace log propagator */
+		spinlock(&mds_namespace_waitqlock);
+		psc_waitq_wakeall(&mds_namespace_waitq);
+		freelock(&mds_namespace_waitqlock);
 	}
 	return (0);
 }
