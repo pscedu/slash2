@@ -488,6 +488,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 	if (!(jnamespace->sjnm_flag & SJ_NAMESPACE_RECLAIM)) 
 		return (0);
 
+	seqno = pjournal_next_reclaim(mdsJournal);
+
 	if ((seqno % SLM_RECLAIM_BATCH) == 0) {
 		psc_assert(current_reclaim_logfile == -1);
 		xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR,
@@ -505,8 +507,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 	sz = write(current_reclaim_logfile, pje, logentrysize);
 	if (sz != logentrysize)
 		psc_fatal("Fail to write reclaim log file %s", fn);
-
-	propagate_seqno_hwm = seqno + 1;
 
 	/* see if we need to close the current change log file */
 	if (((seqno + 1) % SLM_RECLAIM_BATCH) == 0) {
