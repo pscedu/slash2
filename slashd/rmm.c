@@ -41,12 +41,6 @@
 #include "slerr.h"
 #include "sljournal.h"
 
-/* list of peer MDSes and its lock */
-extern struct psc_dynarray	 mds_namespace_peerlist;
-extern psc_spinlock_t		 mds_namespace_peerlist_lock;
-
-extern struct sl_mds_peerinfo	*localinfo;
-
 int
 slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 {

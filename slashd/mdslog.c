@@ -1303,6 +1303,8 @@ mds_journal_init(void)
 	SL_FOREACH_MDS(resm, npeers++);
 	npeers--;
 
+	localinfo = res2rpmi(nodeResProf)->rpmi_info;
+
 	r = nodeResm->resm_res;
 	if (r->res_jrnldev[0] == '\0')
 		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
