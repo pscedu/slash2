@@ -39,12 +39,16 @@ struct sl_resm *rmi_resm;
 int
 sli_rmi_getimp(struct slashrpc_cservice **csvcp)
 {
+	int wait = 1;
+
 	do {
 		*csvcp = sli_getmcsvc(rmi_resm);
-		if (*csvcp == NULL)
-			/* XXX try to connect to another MDS */
-			psc_fatalx("unable to establish MDS connection");
-	} while (*csvcp == NULL);
+#if 0
+		ctx = fuse_get_context(rq);
+		// if process doesn't want to wait
+			wait = 0
+#endif
+	} while (*csvcp == NULL && wait);
 	return (0);
 }
 
