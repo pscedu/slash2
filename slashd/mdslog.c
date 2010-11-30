@@ -568,6 +568,11 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	jnamespace->sjnm_ctime_ns = sstb->sst_ctime_ns;
 	jnamespace->sjnm_size = sstb->sst_size;
 
+	jnamespace->sjnm_flag = 0;
+	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
+ 	    (op == NS_OP_SETATTR && sstb->sst_size == 0))
+		jnamespace->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
+		
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
 	    sjnm_name);
 	ptr = jnamespace->sjnm_name;
