@@ -105,9 +105,8 @@ struct sl_mds_peerinfo		*localinfo = NULL;
 struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
 psc_spinlock_t			 mds_namespace_peerlist_lock = SPINLOCK_INIT;
 
-/* list of IOSes and its lock */
-struct psc_dynarray		 mds_namespace_ioslist = DYNARRAY_INIT;
-psc_spinlock_t			 mds_namespace_ioslist_lock = SPINLOCK_INIT;
+/* list of local IOSes and its lock */
+__static PSCLIST_HEAD(mds_namespace_ioslist);
 
 static void			*mds_cursor_handle = NULL;
 static struct psc_journal_cursor mds_cursor;
@@ -1275,6 +1274,7 @@ void
 mds_journal_init(void)
 {
 	struct sl_mds_peerinfo *peerinfo;
+	struct resprof_mds_info *rpmi;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
@@ -1298,16 +1298,15 @@ mds_journal_init(void)
 	PLL_LOCK(&globalConfig.gconf_sites);
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources) {
-			/* collect IO servers on the local site */
-			if (s == nodeResm->resm_site && r->res_type != SLREST_MDS) {
-				psc_dynarray_add(&mds_namespace_ioslist, r);
-			}
-			if (r->res_type != SLREST_MDS)
+			rpmi = res2rpmi(r);
+			if (r->res_type != SLREST_MDS) {
+				psclist_add_tail(&rpmi->rpmi_lentry, &mds_namespace_ioslist);
 				continue;
+			}
 
 			/* MDS cannot have more than one member */
 			resm = psc_dynarray_getpos(&r->res_members, 0);
-			peerinfo = res2rpmi(r)->rpmi_peerinfo;
+			peerinfo = res2rpmi(r)->rpmi_info;
 			peerinfo->sp_resm = resm;
 			peerinfo->sp_siteid = s->site_id;
 			psc_dynarray_add(&mds_namespace_peerlist, peerinfo);

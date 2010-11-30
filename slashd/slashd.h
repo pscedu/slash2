@@ -130,7 +130,6 @@ struct sl_mds_nsstats {
 struct sl_mds_peerinfo {
 	psc_spinlock_t		  sp_lock;
 	sl_siteid_t		  sp_siteid;
-	struct psclist_head	  sp_lentry;
 	struct sl_resm		 *sp_resm;
 	int			  sp_flags;		/* see SP_FLAG_* below */
 	struct sl_mds_logbuf	 *sp_logbuf;		/* the log buffer being used */
@@ -149,6 +148,7 @@ struct sl_mds_peerinfo {
 struct sl_mds_iosinfo {
 	psc_spinlock_t		  si_lock;
 	int			  si_flags;
+	struct sl_resm		 *si_resm;
 	uint64_t		  si_seqno;		/* garbage collection progress */
 };
 
@@ -176,7 +176,11 @@ struct resm_mds_info {
 struct resprof_mds_info {
 	int			  rpmi_cnt;
 	psc_spinlock_t		  rpmi_lock;
-	struct sl_mds_peerinfo	 *rpmi_peerinfo;
+
+	/* used to link all MDSes or all IOSes of local MDS depending on the resource type */
+	struct psclist_head       rpmi_lentry;		
+
+	void			 *rpmi_info;
 };
 
 int		 mds_inode_read(struct slash_inode_handle *);

@@ -30,14 +30,21 @@ void
 slcfg_init_res(struct sl_resource *res)
 {
 	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *iosinfo;
+	struct sl_mds_peerinfo *peerinfo;
 
 	rpmi = res->res_pri = PSCALLOC(sizeof(*rpmi));
 	INIT_SPINLOCK(&rpmi->rpmi_lock);
+	INIT_PSC_LISTENTRY(&rpmi->rpmi_lentry);
 
 	if (res->res_type == SLREST_MDS) {
-		rpmi->rpmi_peerinfo = PSCALLOC(sizeof(*rpmi->rpmi_peerinfo));
-		INIT_SPINLOCK(&rpmi->rpmi_peerinfo->sp_lock);
-		INIT_PSC_LISTENTRY(&rpmi->rpmi_peerinfo->sp_lentry);
+		peerinfo = PSCALLOC(sizeof(*peerinfo));
+		INIT_SPINLOCK(&peerinfo->sp_lock);
+		rpmi->rpmi_info = peerinfo;
+	} else {
+		iosinfo = PSCALLOC(sizeof(*iosinfo));
+		INIT_SPINLOCK(&iosinfo->si_lock);
+		rpmi->rpmi_info = iosinfo;
 	}
 }
 
