@@ -480,7 +480,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 	if (!(jnamespace->sjnm_flag & SJ_NAMESPACE_RECLAIM))
 		return (0);
 
-	psc_assert(jnamespace->sjnm_op == NS_OP_SETATTR || jnamespace->sjnm_op == NS_OP_UNLINK);
+	psc_assert(jnamespace->sjnm_op == NS_OP_SETATTR ||
+	    jnamespace->sjnm_op == NS_OP_UNLINK);
 
 	seqno = pjournal_next_reclaim(mdsJournal);
 
@@ -707,8 +708,8 @@ mds_namespace_update_lwm(void)
 }
 
 /**
- * mds_namespace_read - Read a batch of updates from the corresponding log file
- *	and packed them for RPC later.
+ * mds_namespace_read - Read a batch of updates from the corresponding
+ *	log file and packed them for RPC later.
  */
 struct sl_mds_logbuf *
 mds_namespace_read_batch(uint64_t seqno)
