@@ -944,8 +944,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 	struct sl_resm *resm;
 	int i, sortbypass = 0, sawnew=0;
 
-#define SORT_BYPASS_ITERS 32
-#define ITEMS_TRY_AFTER_UNEXPIRED MAX_BMAP_RELEASE
+#define SORT_BYPASS_ITERS		32
+#define ITEMS_TRY_AFTER_UNEXPIRED	MAX_BMAP_RELEASE
 
 	// just put the resm's in the dynarray. when pushing out the bid's
 	//   assume an ion unless resm == slc_rmc_resm
@@ -975,7 +975,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			if (!(b->bcm_flags & BMAP_TIMEOQ)) {
 				DEBUG_BMAP(PLL_WARN, b,
-					   "race detect, skip");
+				    "race detect, skip");
 				BMAP_ULOCK(b);
 				continue;
 			} else
@@ -983,18 +983,19 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 			if (bmpc_queued_ios(&bci->bci_bmpc)) {
 				DEBUG_BMAP(PLL_NOTIFY, b,
-					   "descheduling from timeoq");
+				    "descheduling from timeoq");
 				BMAP_ULOCK(b);
 				continue;
 			}
 
 			if (timespeccmp(&ctime, &bci->bci_etime, <)) {
 				if (!sawnew)
-					/* Set the wait time to (etime
-					 *  - ctime)
+					/*
+					 * Set the wait time to
+					 * (etime - ctime)
 					 */
 					timespecsub(&bci->bci_etime,
-						    &ctime, &wtime);
+					    &ctime, &wtime);
 
 				DEBUG_BMAP(PLL_DEBUG, b, "sawnew=%d", sawnew);
 				psc_dynarray_add(&skips, b);
@@ -1018,8 +1019,8 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 				BMAP_ULOCK(b);
 
 			} else {
-				psc_assert(psc_atomic32_read(&b->bcm_opcnt)
-					   == 1);
+				psc_assert(psc_atomic32_read(
+				    &b->bcm_opcnt) == 1);
 				/* Note that only this thread calls
 				 *   ms_bmap_release() so no reentrancy
 				 *   exist unless another rls thr is
@@ -1031,7 +1032,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					/* Setup a msg to an ION.
 					 */
 					psc_assert(bmap_2_ion(b) !=
-						   LNET_NID_ANY);
+					    LNET_NID_ANY);
 
 					resm = libsl_nid2resm(bmap_2_ion(b));
 					rmci = resm2rmci(resm);
@@ -1039,11 +1040,12 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					resm = slc_rmc_resm;
 					rmci = resm2rmci(slc_rmc_resm);
 				}
-				bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[rmci->rmci_bmaprls.nbmaps]);
+				bmap_2_bid(b, &rmci->rmci_bmaprls.bmaps[
+				    rmci->rmci_bmaprls.nbmaps]);
 				rmci->rmci_bmaprls.nbmaps++;
 
 				psc_assert(rmci->rmci_bmaprls.nbmaps <=
-					   MAX_BMAP_RELEASE);
+				    MAX_BMAP_RELEASE);
 
 				/* The bmap should be going away now, this
 				 *    will call BMAP_URLOCK().
