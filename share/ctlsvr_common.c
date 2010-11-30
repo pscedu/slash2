@@ -75,7 +75,7 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 					goto done;
 			}
  done:
-	CONF_UNLOCK();
+	CONF_ULOCK();
 
 	if (!rc)
 		return (rc);

@@ -114,22 +114,43 @@ struct sl_gconf {
 };
 
 #define GCONF_HASHTBL_SZ	63
-#define INIT_GCONF(g)								\
-	do {									\
-		memset((g), 0, sizeof(*(g)));					\
-		INIT_SPINLOCK(&(g)->gconf_lock);					\
-		pll_init(&(g)->gconf_sites, struct sl_site,			\
-		    site_lentry, &(g)->gconf_lock);				\
-		psc_hashtbl_init(&(g)->gconf_nid_hashtbl, 0, struct sl_resm,	\
-		    resm_nid, resm_hentry, GCONF_HASHTBL_SZ, NULL, "resnid");	\
+#define INIT_GCONF(g)							\
+	do {								\
+		memset((g), 0, sizeof(*(g)));				\
+		INIT_SPINLOCK(&(g)->gconf_lock);			\
+		pll_init(&(g)->gconf_sites, struct sl_site,		\
+		    site_lentry, &(g)->gconf_lock);			\
+		psc_hashtbl_init(&(g)->gconf_nid_hashtbl, 0,		\
+		    struct sl_resm, resm_nid, resm_hentry,		\
+		    GCONF_HASHTBL_SZ, NULL, "resnid");			\
 	} while (0)
 
 #define CONF_LOCK()			PLL_LOCK(&globalConfig.gconf_sites)
-#define CONF_UNLOCK()			PLL_ULOCK(&globalConfig.gconf_sites)
+#define CONF_ULOCK()			PLL_ULOCK(&globalConfig.gconf_sites)
 
 #define CONF_FOREACH_SITE(s)		PLL_FOREACH((s), &globalConfig.gconf_sites)
 #define SITE_FOREACH_RES(s, r, i)	DYNARRAY_FOREACH((r), (i), &(s)->site_resources)
 #define RES_FOREACH_MEMB(r, m, j)	DYNARRAY_FOREACH((m), (j), &(r)->res_members)
+
+#define SL_FOREACH_MDS(resm, code)					\
+	{								\
+		struct sl_site *_site;					\
+		struct sl_resource *_res;				\
+		int _siter;						\
+									\
+		CONF_LOCK();						\
+		CONF_FOREACH_SITE(_site)				\
+			SITE_FOREACH_RES(_site, _res, _siter)		\
+				if (_res->res_type == SLREST_MDS) {	\
+					(resm) = psc_dynarray_getpos(	\
+					    &_res->res_members, 0);	\
+					do {				\
+						code;			\
+					} while (0);			\
+					break;				\
+				}					\
+		CONF_ULOCK();						\
+	}
 
 void			 slcfg_init_res(struct sl_resource *);
 void			 slcfg_init_resm(struct sl_resm *);
@@ -154,6 +175,9 @@ struct sl_resm		*libsl_try_nid2resm(lnet_nid_t);
 
 extern struct sl_resm	*nodeResm;
 extern struct sl_gconf	 globalConfig;
+
+#define nodeSite	nodeResm->resm_site
+#define nodeResProf	nodeResm->resm_res
 
 /**
  * sl_global_id_build - Produce a global, unique identifier for a resource
