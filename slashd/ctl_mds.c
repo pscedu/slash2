@@ -201,7 +201,7 @@ slmctlparam_namespace_stats(int fd, struct psc_ctlmsghdr *mh,
 				break;	/* goto next site */
 			}
  out:
-	CONF_UNLOCK();
+	CONF_ULOCK();
 	return (rc);
 }
 
