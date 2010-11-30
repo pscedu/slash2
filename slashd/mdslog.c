@@ -466,7 +466,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 			close(current_change_logfile);
 			current_change_logfile = -1;
 
-			/* wait up the namespace log propagator */
+			/* wake up the namespace log propagator */
 			spinlock(&mds_namespace_waitqlock);
 			psc_waitq_wakeall(&mds_namespace_waitq);
 			freelock(&mds_namespace_waitqlock);
@@ -508,7 +508,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		close(current_reclaim_logfile);
 		current_reclaim_logfile = -1;
 
-		/* wait up the namespace log propagator */
+		/* wake up the namespace log propagator */
 		spinlock(&mds_namespace_waitqlock);
 		psc_waitq_wakeall(&mds_namespace_waitq);
 		freelock(&mds_namespace_waitqlock);
