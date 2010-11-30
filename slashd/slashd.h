@@ -178,7 +178,7 @@ struct resprof_mds_info {
 	psc_spinlock_t		  rpmi_lock;
 
 	/* used to link all MDSes or all IOSes of local MDS depending on the resource type */
-	struct psclist_head       rpmi_lentry;		
+	struct psclist_head	  rpmi_lentry;
 
 	void			 *rpmi_info;
 };

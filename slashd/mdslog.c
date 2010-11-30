@@ -567,9 +567,9 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 
 	jnamespace->sjnm_flag = 0;
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
- 	    (op == NS_OP_SETATTR && sstb->sst_size == 0))
+	    (op == NS_OP_SETATTR && sstb->sst_size == 0))
 		jnamespace->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
-		
+
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
 	    sjnm_name);
 	ptr = jnamespace->sjnm_name;
@@ -1356,7 +1356,7 @@ mds_journal_init(void)
 	    "slmjcursorthr");
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
-			mds_replay_handler, mds_distill_handler);
+	    mds_replay_handler, mds_distill_handler);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 	psc_notify("Last bmap sequence number low water mark is %"PRId64,
