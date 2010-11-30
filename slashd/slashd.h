@@ -128,9 +128,6 @@ struct sl_mds_nsstats {
  * We allow one pending request per MDS until it responds or timeouts.
  */
 struct sl_mds_peerinfo {
-	psc_spinlock_t		  sp_lock;
-	sl_siteid_t		  sp_siteid;
-	struct sl_resm		 *sp_resm;
 	int			  sp_flags;		/* see SP_FLAG_* below */
 	struct sl_mds_logbuf	 *sp_logbuf;		/* the log buffer being used */
 
@@ -142,22 +139,32 @@ struct sl_mds_peerinfo {
 	struct sl_mds_nsstats	  sp_stats;
 };
 
-/*
- * This structure tracks the progress of garbage collection on each I/O server.
- */
-struct sl_mds_iosinfo {
-	psc_spinlock_t		  si_lock;
-	int			  si_flags;
-	struct sl_resm		 *si_resm;
-	uint64_t		  si_seqno;		/* garbage collection progress */
-};
-
-/* sml_flags values */
+/* sp_flags values */
 #define	SP_FLAG_NONE		   0
 #define	SP_FLAG_MIA		  (1 << 0)
 #define	SP_FLAG_INFLIGHT	  (1 << 1)
 
-/* allocated by slcfg_init_resm(), which is tied into the lex/yacc code */
+/*
+ * This structure tracks the progress of garbage collection on each I/O server.
+ */
+struct sl_mds_iosinfo {
+	int			  si_flags;
+	uint64_t		  si_seqno;		/* garbage collection progress */
+};
+
+/* IOS round-robin counter for assigning IONs.  Attaches at res_pri. */
+struct resprof_mds_info {
+	int			  rpmi_cnt;
+	psc_spinlock_t		  rpmi_lock;
+
+	/* sl_mds_peerinfo for peer MDS or sl_mds_iosinfo for IOS */
+	void			 *rpmi_info;
+};
+
+#define RPMI_LOCK(rpmi)		spinlock(&(rpmi)->rpmi_lock)
+#define RPMI_ULOCK(rpmi)	freelock(&(rpmi)->rpmi_lock)
+
+/* attaches at resm_pri via slcfg_init_resm() */
 struct resm_mds_info {
 	pthread_mutex_t		  rmmi_mutex;
 	struct psc_multiwaitcond  rmmi_mwcond;
@@ -166,22 +173,12 @@ struct resm_mds_info {
 	atomic_t		  rmmi_refcnt;		/* #CLIs using this ion */
 };
 
-#define resm2rmmi(resm)		((struct resm_mds_info *)(resm)->resm_pri)
-#define res2rpmi(res)		((struct resprof_mds_info *)(res)->res_pri)
-
 #define RMMI_RLOCK(rmmi)	psc_pthread_mutex_reqlock(&(rmmi)->rmmi_mutex)
 #define RMMI_URLOCK(rmmi, lk)	psc_pthread_mutex_ureqlock(&(rmmi)->rmmi_mutex, (lk))
 
-/* IOS round-robin counter for assigning IONs.  Attaches at res_pri.  */
-struct resprof_mds_info {
-	int			  rpmi_cnt;
-	psc_spinlock_t		  rpmi_lock;
-
-	/* used to link all MDSes or all IOSes of local MDS depending on the resource type */
-	struct psclist_head	  rpmi_lentry;
-
-	void			 *rpmi_info;
-};
+#define resm2rmmi(resm)		((struct resm_mds_info *)(resm)->resm_pri)
+#define res2rpmi(res)		((struct resprof_mds_info *)(res)->res_pri)
+#define resm2rpmi(resm)		res2rpmi((resm)->resm_res)
 
 int		 mds_inode_read(struct slash_inode_handle *);
 int		 mds_inox_load_locked(struct slash_inode_handle *);

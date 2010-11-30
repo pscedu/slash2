@@ -48,14 +48,6 @@ extern psc_spinlock_t		 mds_namespace_peerlist_lock;
 extern struct sl_mds_peerinfo	*localinfo;
 
 int
-slm_rmm_cmp_peerinfo(const void *a, const void *b)
-{
-	const struct sl_mds_peerinfo *x = a, *y = b;
-
-	return (CMP(x->sp_siteid, y->sp_siteid));
-}
-
-int
 slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 {
 	int rc;
@@ -94,13 +86,14 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 {
 	struct slmds_jent_namespace *jnamespace;
 	struct srm_send_namespace_req *mq;
-	struct sl_mds_peerinfo *p, pi;
 	struct pscrpc_bulk_desc *desc;
 	struct srm_generic_rep *mp;
+	struct sl_mds_peerinfo *p;
+	struct sl_resource *res;
+	struct sl_site *site;
 	struct iovec iov;
-	int i, rc, count;
-	uint64_t crc;
-	uint64_t seqno;
+	uint64_t crc, seqno;
+	int i, count;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
@@ -109,9 +102,9 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
-	rc = mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
 	    SRMM_BULK_PORTAL, &iov, 1);
-	if (rc)
+	if (mp->rc)
 		goto out;
 
 	if (desc)
@@ -119,23 +112,22 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 
 	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
 	if (crc != mq->crc) {
-		rc = mp->rc = EINVAL;
+		mp->rc = EINVAL;
 		goto out;
 	}
 
 	/* Search for the peer information by the given site ID. */
-	pi.sp_siteid = mq->siteid;
-	spinlock(&mds_namespace_peerlist_lock);
-	i = psc_dynarray_bsearch(&mds_namespace_peerlist, &pi,
-	    slm_rmm_cmp_peerinfo);
-	if (i >= psc_dynarray_len(&mds_namespace_peerlist))
-		p = NULL;
-	else
-		p = psc_dynarray_getpos(&mds_namespace_peerlist, i);
-	freelock(&mds_namespace_peerlist_lock);
-	if (!p || p->sp_siteid != mq->siteid) {
+	site = libsl_siteid2site(mq->siteid);
+	p = NULL;
+	if (site)
+		SITE_FOREACH_RES(site, res, i)
+			if (res->res_type == SLREST_MDS) {
+				p = res2rpmi(res)->rpmi_info;
+				break;
+			}
+	if (p == NULL) {
 		psc_info("fail to find site ID %d", mq->siteid);
-		rc = mp->rc = EINVAL;
+		mp->rc = EINVAL;
 		goto out;
 	}
 
@@ -161,20 +153,19 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 	}
 
 	/* iterate through the namespace update buffer and apply updates */
-	jnamespace = (struct slmds_jent_namespace *) iov.iov_base;
+	jnamespace = iov.iov_base;
 	for (i = 0; i < count; i++) {
 		mp->rc = slm_rmm_apply_update(jnamespace);
 		if (mp->rc)
 			break;
-		jnamespace = (struct slmds_jent_namespace *)
-		    ((char *)jnamespace + jnamespace->sjnm_reclen);
+		jnamespace = PSC_AGP(jnamespace, jnamespace->sjnm_reclen);
 	}
 	/* Should I ask for a resend if I have trouble applying updates? */
 	p->sp_recv_seqno = seqno + count;
 
  out:
 	PSCFREE(iov.iov_base);
-	return (rc);
+	return (mp->rc);
 }
 
 /**

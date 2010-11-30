@@ -50,7 +50,7 @@
 #include "zfs-fuse/zfs_slashlib.h"
 
 #define SLM_CBARG_SLOT_CSVC	0
-#define SLM_CBARG_SLOT_PEERINFO	1
+#define SLM_CBARG_SLOT_RESPROF	1
 
 struct psc_journal		*mdsJournal;
 static struct pscrpc_nbreqset	*logPndgReqs;
@@ -99,27 +99,12 @@ static char			*stagebuf;
 /* we only have a few buffers, so a list is fine */
 __static PSCLIST_HEAD(mds_namespace_buflist);
 
-struct sl_mds_peerinfo		*localinfo = NULL;
+struct sl_mds_peerinfo		*localinfo;
 
-/* list of peer MDSes and its lock */
-struct psc_dynarray		 mds_namespace_peerlist = DYNARRAY_INIT;
-psc_spinlock_t			 mds_namespace_peerlist_lock = SPINLOCK_INIT;
-
-/* list of local IOSes and its lock */
-__static PSCLIST_HEAD(mds_namespace_ioslist);
-
-static void			*mds_cursor_handle = NULL;
+static void			*mds_cursor_handle;
 static struct psc_journal_cursor mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
-
-int
-mds_peerinfo_cmp(const void *a, const void *b)
-{
-	const struct sl_mds_peerinfo *x = a, *y = b;
-
-	return (CMP(x->sp_siteid, y->sp_siteid));
-}
 
 uint64_t
 mds_get_next_seqno(void)
@@ -165,8 +150,8 @@ mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 		psc_fatalx("mdsio_opencreate: %s", slstrerror(rc));
 
 	rc = mdsio_read(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
-		(off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
-		mdsio_data);
+	    (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
+	    mdsio_data);
 
 	/*
 	 * We allow a short read here because it is possible
@@ -180,8 +165,8 @@ mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 	/* XXX recalculate CRC!! */
 
 	rc = mdsio_write(&rootcreds, &bmap_disk, BMAP_OD_SZ, &nb,
-		 (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
-		 0, mdsio_data, NULL, NULL);
+	    (off_t)((BMAP_OD_SZ * jrpg->sjp_bmapno) + SL_BMAP_START_OFF),
+	    0, mdsio_data, NULL, NULL);
 
 	if (!rc && nb != BMAP_OD_SZ)
 		rc = EIO;
@@ -606,12 +591,14 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 	struct sl_mds_peerinfo *peerinfo;
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_logbuf *logbuf;
-	char *buf;
+	struct sl_resource *res;
+	void *buf;
 	int i, j;
 
-	peerinfo = args->pointer_arg[SLM_CBARG_SLOT_PEERINFO];
+	res = args->pointer_arg[SLM_CBARG_SLOT_RESPROF];
+	peerinfo = res2rpmi(res)->rpmi_info;
 	csvc = args->pointer_arg[SLM_CBARG_SLOT_CSVC];
-	spinlock(&peerinfo->sp_lock);
+	RPMI_LOCK(res2rpmi(res));
 	logbuf = peerinfo->sp_logbuf;
 	if (req->rq_status)
 		goto rpc_error;
@@ -623,22 +610,22 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 	i = logbuf->slb_count;
 	buf = logbuf->slb_buf;
 	do {
-		jnamespace = (struct slmds_jent_namespace *)buf;
+		jnamespace = buf;
 		if (jnamespace->sjnm_seqno == peerinfo->sp_send_seqno)
 			break;
-		buf = buf + jnamespace->sjnm_reclen;
+		buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
 		i--;
 	} while (i);
 	psc_assert(i > 0);
 	j = i;
 	do {
-		jnamespace = (struct slmds_jent_namespace *)buf;
+		jnamespace = buf;
 		if (jnamespace->sjnm_seqno >=
 		    peerinfo->sp_send_seqno + peerinfo->sp_send_count)
 			break;
 		SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
 		    jnamespace->sjnm_op, NS_SUM_PEND);
-		buf = buf + jnamespace->sjnm_reclen;
+		buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
 		j--;
 	} while (j);
 	psc_assert(i - j == peerinfo->sp_send_count);
@@ -650,51 +637,70 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 	peerinfo->sp_flags &= ~SP_FLAG_INFLIGHT;
 
 	atomic_dec(&logbuf->slb_refcnt);
-	freelock(&peerinfo->sp_lock);
+	RPMI_ULOCK(res2rpmi(res));
 
 	sl_csvc_decref(csvc);
 	return (0);
 }
 
 /**
- * mds_namespace_reclaim_lwm - Find the lowest water mark of all IOSes.
+ * mds_namespace_reclaim_lwm - Find the lowest garbage reclamation water
+ *	mark of all IOSes.
  */
 __static uint64_t
 mds_namespace_reclaim_lwm(void)
 {
-	uint64_t seqno = 0;
-	reclaim_seqno_lwm = seqno;
+	uint64_t seqno = UINT64_MAX;
+	struct sl_mds_iosinfo *iosinfo;
+	struct resprof_mds_info *rpmi;
+	struct sl_resource *res;
+	int ri;
+
+	SITE_FOREACH_RES(nodeSite, res, ri) {
+		if (res->res_type == SLREST_MDS)
+			continue;
+		rpmi = res2rpmi(res);
+		iosinfo = rpmi->rpmi_info;
+
+		RPMI_LOCK(rpmi);
+		if (iosinfo->si_seqno < seqno)
+			seqno = iosinfo->si_seqno;
+		RPMI_ULOCK(rpmi);
+	}
+
+	psc_assert(seqno != UINT64_MAX);
+
+	/* XXX purge old log files here before bumping lwm */
+//	propagate_seqno_lwm = seqno;
 	return (seqno);
 }
 
 /**
- * mds_namespace_update_lwm - Find the lowest water mark of all peer MDSes.
+ * mds_namespace_update_lwm - Find the lowest namespace change water
+ *	mark of all peer MDSes.
  */
 __static uint64_t
 mds_namespace_update_lwm(void)
 {
-	int i;
-	int first = 1;
-	uint64_t seqno = 0; /* gcc */
+	uint64_t seqno = UINT64_MAX;
 	struct sl_mds_peerinfo *peerinfo;
+	struct resprof_mds_info *rpmi;
+	struct sl_resm *resm;
 
-	spinlock(&mds_namespace_peerlist_lock);
-	for (i = 0; i < psc_dynarray_len(&mds_namespace_peerlist); i++) {
-		peerinfo = psc_dynarray_getpos(&mds_namespace_peerlist, i);
-		if (peerinfo->sp_resm == nodeResm)
+	SL_FOREACH_MDS(resm,
+		if (resm == nodeResm)
 			continue;
-		spinlock(&peerinfo->sp_lock);
-		if (first) {
-			first = 0;
+		rpmi = resm2rpmi(resm);
+		peerinfo = rpmi->rpmi_info;
+
+		RPMI_LOCK(rpmi);
+		if (peerinfo->sp_send_seqno < seqno)
 			seqno = peerinfo->sp_send_seqno;
-			freelock(&peerinfo->sp_lock);
-			continue;
-		}
-		if (seqno > peerinfo->sp_send_seqno)
-			seqno = peerinfo->sp_send_seqno;
-		freelock(&peerinfo->sp_lock);
-	}
-	freelock(&mds_namespace_peerlist_lock);
+		RPMI_ULOCK(rpmi);
+	);
+
+	psc_assert(seqno != UINT64_MAX);
+
 	/* XXX purge old log files here before bumping lwm */
 	propagate_seqno_lwm = seqno;
 	return (seqno);
@@ -703,16 +709,16 @@ mds_namespace_update_lwm(void)
 /**
  * mds_namespace_read - Read a batch of updates from the corresponding log file
  *	and packed them for RPC later.
- *
  */
 struct sl_mds_logbuf *
 mds_namespace_read_batch(uint64_t seqno)
 {
+	int i, newbuf, nitems, logfile;
 	struct slmds_jent_namespace *jnamespace;
 	struct sl_mds_logbuf *buf, *victim;
-	char fn[PATH_MAX], *ptr, *logptr;
-	int i, newbuf, nitems, logfile;
 	struct psc_thread *thr;
+	void *ptr, *logptr;
+	char fn[PATH_MAX];
 	ssize_t size;
 
 	/*
@@ -725,7 +731,7 @@ mds_namespace_read_batch(uint64_t seqno)
  restart:
 
 	i = 0;
-	buf = 0;
+	buf = NULL;
 	newbuf = 0;
 	victim = NULL;
 	psclist_for_each_entry(buf, &mds_namespace_buflist, slb_link) {
@@ -750,7 +756,7 @@ mds_namespace_read_batch(uint64_t seqno)
 		buf->slb_seqno = seqno;
 		atomic_set(&buf->slb_refcnt, 0);
 		INIT_PSC_LISTENTRY(&buf->slb_link);
-		buf->slb_buf = (char *)buf + sizeof(struct sl_mds_logbuf);
+		buf->slb_buf = PSC_AGP(buf, sizeof(struct sl_mds_logbuf));
 		goto readit;
 	}
 	/*
@@ -783,29 +789,29 @@ mds_namespace_read_batch(uint64_t seqno)
 		psc_fatal("Fail to open change log file %s", fn);
 	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
 	size = read(logfile, stagebuf,
-		   (SLM_NAMESPACE_BATCH - buf->slb_count) * logentrysize);
+	    (SLM_NAMESPACE_BATCH - buf->slb_count) * logentrysize);
 	close(logfile);
 
 	nitems = size / logentrysize;
 	psc_assert((size % logentrysize) == 0);
 	psc_assert(nitems + buf->slb_count <= SLM_NAMESPACE_BATCH);
 
-	ptr = buf->slb_buf + buf->slb_size;
+	ptr = PSC_AGP(buf->slb_buf, buf->slb_size);
 	logptr = stagebuf;
 	for (i = 0; i < nitems; i++) {
 		struct psc_journal_enthdr *pje;
 
-		pje = (struct psc_journal_enthdr *) logptr;
+		pje = logptr;
 		psc_assert(pje->pje_magic == PJE_MAGIC);
 
-		jnamespace = (struct slmds_jent_namespace *)
-			(logptr + offsetof(struct psc_journal_enthdr, pje_data));
+		jnamespace = PSC_AGP(logptr,
+		    offsetof(struct psc_journal_enthdr, pje_data));
 		psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 		psc_assert(jnamespace->sjnm_reclen <= logentrysize);
 		memcpy(ptr, jnamespace, jnamespace->sjnm_reclen);
-		ptr += jnamespace->sjnm_reclen;
+		ptr = PSC_AGP(ptr, jnamespace->sjnm_reclen);
 		buf->slb_size += jnamespace->sjnm_reclen;
-		logptr += logentrysize;
+		logptr = PSC_AGP(logptr, logentrysize);
 	}
 	buf->slb_count += nitems;
 
@@ -815,7 +821,7 @@ mds_namespace_read_batch(uint64_t seqno)
 	 * Return the loaded buffer without taking a reference.  This is
 	 * only possible because we are the only thread involved.
 	 */
-	return buf;
+	return (buf);
 }
 
 /**
@@ -832,15 +838,16 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	struct sl_mds_peerinfo *peerinfo;
 	struct srm_generic_rep *mp;
 	struct pscrpc_request *req;
+	struct sl_resm *resm;
 	struct iovec iov;
-	int rc, i, j, didwork=0;
-	char *buf;
+	int rc, j, didwork=0;
+	void *buf;
 
-	spinlock(&mds_namespace_peerlist_lock);
-	for (i = 0; i < psc_dynarray_len(&mds_namespace_peerlist); i++) {
-		peerinfo = psc_dynarray_getpos(&mds_namespace_peerlist, i);
-		if (peerinfo->sp_resm == nodeResm)
+	SL_FOREACH_MDS(resm,
+		if (resm == nodeResm)
 			continue;
+		peerinfo = resm2rpmi(resm)->rpmi_info;
+
 		/*
 		 * Skip if the MDS is busy or the current batch is out of
 		 * its windows.  Note for each MDS, we send updates in order.
@@ -857,21 +864,22 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		j = logbuf->slb_count;
 		buf = logbuf->slb_buf;
 		do {
-			jnamespace = (struct slmds_jent_namespace *)buf;
+			jnamespace = buf;
 			if (jnamespace->sjnm_seqno == peerinfo->sp_send_seqno)
 				break;
-			buf = buf + jnamespace->sjnm_reclen;
+			buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
 			j--;
 		} while (j);
 		psc_assert(j);
 
 		iov.iov_base = buf;
-		iov.iov_len = logbuf->slb_size - (buf - logbuf->slb_buf);
+		iov.iov_len = logbuf->slb_size -
+		    ((char *)buf - (char *)logbuf->slb_buf);
 
-		csvc = slm_getmcsvc(peerinfo->sp_resm);
+		csvc = slm_getmcsvc(resm);
 		if (csvc == NULL) {
 			/*
-			 * A simplistic way to avoid CPU spinning. A better
+			 * A simplistic way to avoid CPU spinning.  A better
 			 * way is to let the ping thread handle this.
 			 */
 			peerinfo->sp_flags |= SP_FLAG_MIA;
@@ -886,7 +894,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		mq->seqno = peerinfo->sp_send_seqno;
 		mq->size = iov.iov_len;
 		mq->count = j;
-		mq->siteid = localinfo->sp_siteid;
+		mq->siteid = nodeSite->site_id;
 		psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
 
 		peerinfo->sp_send_count = j;
@@ -900,21 +908,20 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 		 */
 		while (j) {
 			j--;
-			jnamespace = (struct slmds_jent_namespace *)buf;
+			jnamespace = buf;
 			SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
 			    jnamespace->sjnm_op, NS_SUM_PEND);
-			buf = buf + jnamespace->sjnm_reclen;
+			buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
 		}
 		rsx_bulkclient(req, &desc, BULK_GET_SOURCE,
 		    SRMM_BULK_PORTAL, &iov, 1);
 
 		authbuf_sign(req, PSCRPC_MSG_REQUEST);
-		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_PEERINFO] = peerinfo;
+		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_RESPROF] = resm->resm_res;
 		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = peerinfo;
 		psc_assert(pscrpc_nbreqset_add(logPndgReqs, req) == 0);
 		didwork = 1;
-	}
-	freelock(&mds_namespace_peerlist_lock);
+	);
 	return (didwork);
 }
 
@@ -1008,6 +1015,7 @@ mds_open_cursor(void)
 
 	slm_set_curr_slashid(mds_cursor.pjc_fid);
 }
+
 /**
  * mds_garbage_collection - Send garbage collection to I/O servers.
  */
@@ -1183,7 +1191,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 	memcpy(jrpg->sjp_reptbl, bmap->bcm_repls, SL_REPLICA_NBYTES);
 
 	psc_trace("jlog fid=%"PRIx64" bmapno=%u bmapgen=%u",
-		  jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
+	    jrpg->sjp_fid, jrpg->sjp_bmapno, jrpg->sjp_bgen);
 
 	pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_REPL,
 	    jrpg, sizeof(struct slmds_jent_repgen));
@@ -1192,7 +1200,7 @@ mds_bmap_repl_log(void *datap, uint64_t txg)
 }
 
 /**
- * mds_bmap_crc_log - commit bmap crc changes to the journal.
+ * mds_bmap_crc_log - Commit bmap CRC changes to the journal.
  * @bmap: the bmap (not locked).
  * @crcs: array of crc / slot pairs.
  * @n: the number of crc / slot pairs.
@@ -1273,12 +1281,9 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 void
 mds_journal_init(void)
 {
-	struct sl_mds_peerinfo *peerinfo;
-	struct resprof_mds_info *rpmi;
 	struct sl_resource *r;
 	struct sl_resm *resm;
-	struct sl_site *s;
-	int npeers, n;
+	int npeers;
 
 	/*
 	 * To be read from a log file after we replay the system journal.
@@ -1295,38 +1300,8 @@ mds_journal_init(void)
 	 * or remove MDSes to/from our private list in the future.
 	 */
 	npeers = 0;
-	PLL_LOCK(&globalConfig.gconf_sites);
-	PLL_FOREACH(s, &globalConfig.gconf_sites)
-		DYNARRAY_FOREACH(r, n, &s->site_resources) {
-			rpmi = res2rpmi(r);
-			if (r->res_type != SLREST_MDS) {
-				psclist_add_tail(&rpmi->rpmi_lentry, &mds_namespace_ioslist);
-				continue;
-			}
-
-			/* MDS cannot have more than one member */
-			resm = psc_dynarray_getpos(&r->res_members, 0);
-			peerinfo = res2rpmi(r)->rpmi_info;
-			peerinfo->sp_resm = resm;
-			peerinfo->sp_siteid = s->site_id;
-			psc_dynarray_add(&mds_namespace_peerlist, peerinfo);
-			if (resm == nodeResm) {
-				localinfo = peerinfo;
-				psc_info("Added  local MDS: addr = %s, site ID = %d, "
-				    "resource ID = %"PSCPRIxLNID,
-				    resm->resm_addrbuf, s->site_id, resm->resm_nid);
-			} else {
-				npeers++;
-				psc_info("Added remote MDS: addr = %s, site ID = %d, "
-				    "resource ID = %"PSCPRIxLNID,
-				    resm->resm_addrbuf, s->site_id, resm->resm_nid);
-			}
-		}
-
-	PLL_ULOCK(&globalConfig.gconf_sites);
-	if (localinfo == NULL)
-		psc_fatal("missing local MDS information");
-	psc_dynarray_sort(&mds_namespace_peerlist, qsort, mds_peerinfo_cmp);
+	SL_FOREACH_MDS(resm, npeers++);
+	npeers--;
 
 	r = nodeResm->resm_res;
 	if (r->res_jrnldev[0] == '\0')
@@ -1345,7 +1320,7 @@ mds_journal_init(void)
 	mdsJournal->pj_distill_xid = mds_cursor.pjc_xid;
 
 	psc_notify("Journal device is %s", r->res_jrnldev);
-	psc_notify("Last SLASH FID is %"PRId64, mds_cursor.pjc_fid);
+	psc_notify("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
 	psc_notify("Last synced ZFS transaction group number is %"PRId64,
 	    mdsJournal->pj_commit_txg);
 	psc_notify("Last distilled SLASH2 transaction number is %"PRId64,

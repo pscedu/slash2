@@ -62,11 +62,11 @@ struct sl_mds_logbuf {
 	uint64_t		 slb_seqno;			/* starting sequence number */
 	struct psclist_head	 slb_link;
 	/*
-	 * A buffer that is ready for RPC (i.e., packed). In order to deal
+	 * A buffer that is ready for RPC (i.e. packed).  In order to deal
 	 * with timeouts of log entries, we allow a buffer to be filled
 	 * gradually.
 	 */
-	char			*slb_buf;
+	void			*slb_buf;
 };
 
 /*
