@@ -87,17 +87,26 @@ static int			 current_reclaim_logfile = -1;
 struct psc_waitq		 mds_namespace_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			 mds_namespace_waitqlock = SPINLOCK_INIT;
 
-/* max # of buffers used to decrease I/O */
+/* max # of buffers used to decrease I/O in namespace updates */
 #define	SL_NAMESPACE_MAX_BUF	 8
+
+/* we only have a few buffers (SL_NAMESPACE_MAX_BUF), so a list is fine */
+__static PSCLIST_HEAD(mds_namespace_buflist);
+
+/* max # of buffers used to decrease I/O in garbage collection */
+#define	SL_RECLAIM_MAX_BUF	 4
+
+/* we only have a few buffers (SL_RECLAIM_MAX_BUF), so a list is fine */
+__static PSCLIST_HEAD(mds_reclaim_buflist);
 
 /* max # of seconds before an update is propagated */
 #define SL_NAMESPACE_MAX_AGE	 30
 
-/* a buffer used to read on-disk log file */
-static char			*stagebuf;
+/* a buffer used to read on-disk change log file */
+static char			*changebuf;
 
-/* we only have a few buffers, so a list is fine */
-__static PSCLIST_HEAD(mds_namespace_buflist);
+/* a buffer used to read on-disk reclaim log file */
+static char			*reclaimbuf;
 
 struct sl_mds_peerinfo		*localinfo;
 
@@ -437,8 +446,6 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 
 	if (npeers) {
-
-		/* see if we can open a new change log file */
 		seqno = jnamespace->sjnm_seqno;
 		if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
 			psc_assert(current_change_logfile == -1);
@@ -790,7 +797,7 @@ mds_namespace_read_batch(uint64_t seqno)
 	if (logfile == -1)
 		psc_fatal("Fail to open change log file %s", fn);
 	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
-	size = read(logfile, stagebuf,
+	size = read(logfile, changebuf,
 	    (SLM_NAMESPACE_BATCH - buf->slb_count) * logentrysize);
 	close(logfile);
 
@@ -799,7 +806,7 @@ mds_namespace_read_batch(uint64_t seqno)
 	psc_assert(nitems + buf->slb_count <= SLM_NAMESPACE_BATCH);
 
 	ptr = PSC_AGP(buf->slb_buf, buf->slb_size);
-	logptr = stagebuf;
+	logptr = changebuf;
 	for (i = 0; i < nitems; i++) {
 		struct psc_journal_enthdr *pje;
 
@@ -1343,25 +1350,23 @@ mds_journal_init(void)
 	psc_notify("Last bmap sequence number high water mark is %"PRId64,
 	    mds_cursor.pjc_seqno_hwm);
 
+	/* Always start a garbage collection thread. */
+	reclaimbuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
 	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_garbage_collection, NULL,
 	    0, "slmjreclaimthr");
 
-	/*
-	 * If we are a standalone MDS, there is no need to start the namespace
-	 * propagation operation.
-	 */
-	if (!npeers)
-		return;
+	/* Optionally start a namespace propagate thread if we have peer MDSes. */
+	if (npeers) {
+		changebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
+		logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 
-	stagebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
-	logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
-
-	/*
-	 * Start a thread to propagate local namespace updates to peers
-	 * after our MDS peer list has been all setup.
-	 */
-	pscthr_init(SLMTHRT_JNAMESPACE, 0, mds_namespace_propagate, NULL,
-	    0, "slmjnsthr");
+		/*
+		 * Start a thread to propagate local namespace updates to peers
+		 * after our MDS peer list has been all setup.
+		 */
+		pscthr_init(SLMTHRT_JNAMESPACE, 0, mds_namespace_propagate, NULL,
+		    0, "slmjnsthr");
+	}
 }
 
 void
