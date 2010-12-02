@@ -70,8 +70,8 @@ uint64_t			 next_garbage_seqno;
  * Low and high water marks of update sequence numbers that need to be propagated.
  * Note that the pace of each MDS is different.
  */
-static uint64_t			 propagate_seqno_lwm;
-static uint64_t			 propagate_seqno_hwm;
+static uint64_t			 update_seqno_lwm;
+static uint64_t			 update_seqno_hwm;
 
 static int			 current_change_logfile = -1;
 
@@ -84,14 +84,17 @@ static uint64_t			 reclaim_seqno_hwm;
 
 static int			 current_reclaim_logfile = -1;
 
-struct psc_waitq		 mds_namespace_waitq = PSC_WAITQ_INIT;
-psc_spinlock_t			 mds_namespace_waitqlock = SPINLOCK_INIT;
+struct psc_waitq		 mds_update_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t			 mds_update_waitqlock = SPINLOCK_INIT;
+
+struct psc_waitq		 mds_reclaim_waitq = PSC_WAITQ_INIT;
+psc_spinlock_t			 mds_reclaim_waitqlock = SPINLOCK_INIT;
 
 /* max # of buffers used to decrease I/O in namespace updates */
 #define	SL_NAMESPACE_MAX_BUF	 8
 
 /* we only have a few buffers (SL_NAMESPACE_MAX_BUF), so a list is fine */
-__static PSCLIST_HEAD(mds_namespace_buflist);
+__static PSCLIST_HEAD(mds_update_buflist);
 
 /* max # of buffers used to decrease I/O in garbage collection */
 #define	SL_RECLAIM_MAX_BUF	 4
@@ -100,10 +103,12 @@ __static PSCLIST_HEAD(mds_namespace_buflist);
 __static PSCLIST_HEAD(mds_reclaim_buflist);
 
 /* max # of seconds before an update is propagated */
-#define SL_NAMESPACE_MAX_AGE	 30
+#define SL_UPDATE_MAX_AGE	 30
+
+#define SL_RECLAIM_MAX_AGE	 10
 
 /* a buffer used to read on-disk change log file */
-static char			*changebuf;
+static char			*updatebuf;
 
 /* a buffer used to read on-disk reclaim log file */
 static char			*reclaimbuf;
@@ -114,6 +119,7 @@ static void			*mds_cursor_handle;
 static struct psc_journal_cursor mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
+
 
 uint64_t
 mds_get_next_seqno(void)
@@ -421,13 +427,14 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 
 /**
  * mds_distill_handler - Distill information from the system journal and
- *	write into namespace change and garbage collection logs.
+ *	write into namespace update and garbage reclaim logs.
  *
- *	Write the information to the disk so that we can reclaim the log
- *	space in the system log. In other words, we can't accumulate one
- *	batch worth of namespace updates and move them into the buffer
- *	directly. We also can't compete with the update propagator for
- *	limited number of buffers either.
+ *	Write the information to secondary logs so that we can recyle the
+ *	space in the main system log as quick as possible.  The distill 
+ *	process is continuous in order to make room for system logs.  
+ *	Once in a secondary log, we can process them as we see fit.  
+ *	Sometimes these secondary log files can hang over a long time 
+ *	because a peer MDS or an IO server is down.
  */
 int
 mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
@@ -437,6 +444,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 	static char reclaim_fn[PATH_MAX];
 	uint64_t seqno;
 	int sz;
+	struct slash_fidgen fg;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
@@ -447,10 +455,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 
 	if (npeers) {
 		seqno = jnamespace->sjnm_seqno;
-		if ((seqno % SLM_NAMESPACE_BATCH) == 0) {
+		if ((seqno % SLM_UPDATE_BATCH) == 0) {
 			psc_assert(current_change_logfile == -1);
 			xmkfn(change_fn, "%s/%s.%d", SL_PATH_DATADIR,
-			    SL_FN_NAMESPACELOG, seqno/SLM_NAMESPACE_BATCH);
+			    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH);
 			/*
 			 * Truncate the file if it already exists. Otherwise, it
 			 * can lead to an insidious bug especially when the
@@ -467,17 +475,17 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		if (sz != logentrysize)
 			psc_fatal("Fail to write change log file %s", change_fn);
 
-		propagate_seqno_hwm = seqno + 1;
+		update_seqno_hwm = seqno + 1;
 
 		/* see if we need to close the current change log file */
-		if (((seqno + 1) % SLM_NAMESPACE_BATCH) == 0) {
+		if (((seqno + 1) % SLM_UPDATE_BATCH) == 0) {
 			close(current_change_logfile);
 			current_change_logfile = -1;
 
 			/* wake up the namespace log propagator */
-			spinlock(&mds_namespace_waitqlock);
-			psc_waitq_wakeall(&mds_namespace_waitq);
-			freelock(&mds_namespace_waitqlock);
+			spinlock(&mds_update_waitqlock);
+			psc_waitq_wakeall(&mds_update_waitq);
+			freelock(&mds_update_waitqlock);
 		}
 	}
 
@@ -507,8 +515,11 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		if (current_reclaim_logfile == -1)
 			psc_fatal("Fail to create reclaim log file %s", reclaim_fn);
 	}
-	sz = write(current_reclaim_logfile, pje, logentrysize);
-	if (sz != logentrysize)
+	fg.fg_fid = jnamespace->sjnm_target_fid;
+	fg.fg_gen = jnamespace->sjnm_new_parent_fid;
+
+	sz = write(current_reclaim_logfile, &fg, sizeof(struct slash_fidgen));
+	if (sz != sizeof(struct slash_fidgen))
 		psc_fatal("Fail to write reclaim log file %s", reclaim_fn);
 
 	/* see if we need to close the current change log file */
@@ -517,9 +528,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		current_reclaim_logfile = -1;
 
 		/* wake up the namespace log propagator */
-		spinlock(&mds_namespace_waitqlock);
-		psc_waitq_wakeall(&mds_namespace_waitq);
-		freelock(&mds_namespace_waitqlock);
+		spinlock(&mds_update_waitqlock);
+		psc_waitq_wakeall(&mds_update_waitq);
+		freelock(&mds_update_waitqlock);
 	}
 	return (0);
 }
@@ -561,8 +572,10 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 
 	jnamespace->sjnm_flag = 0;
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
-	    (op == NS_OP_SETATTR && sstb->sst_size == 0))
+	    (op == NS_OP_SETATTR && sstb->sst_size == 0)) {
 		jnamespace->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
+		jnamespace->sjnm_new_parent_fid = sstb->sst_gen;
+	}
 
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
 	    sjnm_name);
@@ -677,10 +690,10 @@ mds_namespace_reclaim_lwm(void)
 		RPMI_ULOCK(rpmi);
 	}
 
-	psc_assert(seqno != UINT64_MAX);
+	//psc_assert(seqno != UINT64_MAX);
 
-	/* XXX purge old log files here before bumping lwm */
-//	propagate_seqno_lwm = seqno;
+	/* XXX purge old reclaim log files here before bumping lwm */
+	reclaim_seqno_lwm = seqno;
 	return (seqno);
 }
 
@@ -710,8 +723,8 @@ mds_namespace_update_lwm(void)
 
 	psc_assert(seqno != UINT64_MAX);
 
-	/* XXX purge old log files here before bumping lwm */
-	propagate_seqno_lwm = seqno;
+	/* XXX purge old change log files here before bumping lwm */
+	update_seqno_lwm = seqno;
 	return (seqno);
 }
 
@@ -743,7 +756,7 @@ mds_namespace_read_batch(uint64_t seqno)
 	buf = NULL;
 	newbuf = 0;
 	victim = NULL;
-	psclist_for_each_entry(buf, &mds_namespace_buflist, slb_link) {
+	psclist_for_each_entry(buf, &mds_update_buflist, slb_link) {
 		i++;
 		if (buf->slb_seqno == seqno)
 			break;
@@ -752,14 +765,14 @@ mds_namespace_read_batch(uint64_t seqno)
 			victim = buf;
 	}
 	if (buf) {
-		if (buf->slb_count == SLM_NAMESPACE_BATCH)
+		if (buf->slb_count == SLM_UPDATE_BATCH)
 			return buf;
 		goto readit;
 	}
 	if (i < SL_NAMESPACE_MAX_BUF) {
 		newbuf = 1;
 		buf = PSCALLOC(sizeof(struct sl_mds_logbuf) +
-		    SLM_NAMESPACE_BATCH * logentrysize);
+		    SLM_UPDATE_BATCH * logentrysize);
 		buf->slb_size = 0;
 		buf->slb_count = 0;
 		buf->slb_seqno = seqno;
@@ -773,8 +786,8 @@ mds_namespace_read_batch(uint64_t seqno)
 	 * wait until an RPC returns or times out.
 	 */
 	if (!victim) {
-		spinlock(&mds_namespace_waitqlock);
-		psc_waitq_wait(&mds_namespace_waitq, &mds_namespace_waitqlock);
+		spinlock(&mds_update_waitqlock);
+		psc_waitq_wait(&mds_update_waitq, &mds_update_waitqlock);
 		goto restart;
 	}
 	newbuf = 1;
@@ -791,22 +804,22 @@ mds_namespace_read_batch(uint64_t seqno)
 	 * A short read is allowed, but the returned size must be a
 	 * multiple of the log entry size (should be 512 bytes).
 	 */
-	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_NAMESPACELOG,
-	    seqno / SLM_NAMESPACE_BATCH);
+	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_UPDATELOG,
+	    seqno / SLM_UPDATE_BATCH);
 	logfile = open(fn, O_RDONLY);
 	if (logfile == -1)
 		psc_fatal("Fail to open change log file %s", fn);
 	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
-	size = read(logfile, changebuf,
-	    (SLM_NAMESPACE_BATCH - buf->slb_count) * logentrysize);
+	size = read(logfile, updatebuf,
+	    (SLM_UPDATE_BATCH - buf->slb_count) * logentrysize);
 	close(logfile);
 
 	nitems = size / logentrysize;
 	psc_assert((size % logentrysize) == 0);
-	psc_assert(nitems + buf->slb_count <= SLM_NAMESPACE_BATCH);
+	psc_assert(nitems + buf->slb_count <= SLM_UPDATE_BATCH);
 
 	ptr = PSC_AGP(buf->slb_buf, buf->slb_size);
-	logptr = changebuf;
+	logptr = updatebuf;
 	for (i = 0; i < nitems; i++) {
 		struct psc_journal_enthdr *pje;
 
@@ -825,7 +838,7 @@ mds_namespace_read_batch(uint64_t seqno)
 	buf->slb_count += nitems;
 
 	if (newbuf)
-		psclist_add_tail(&buf->slb_link, &mds_namespace_buflist);
+		psclist_add_tail(&buf->slb_link, &mds_update_buflist);
 	/*
 	 * Return the loaded buffer without taking a reference.  This is
 	 * only possible because we are the only thread involved.
@@ -1025,14 +1038,80 @@ mds_open_cursor(void)
 	slm_set_curr_slashid(mds_cursor.pjc_fid);
 }
 
+/*
+ * Send a reclaim RPC to all IOSes.
+ */
+int
+mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
+{
+	return (1);
+}
+
+int
+mds_send_batch_reclaim(uint64_t seqno)
+{
+	int i, logfile, keepfile, didwork;
+	char fn[PATH_MAX];
+	ssize_t size;
+	struct slash_fidgen *fg;
+	
+	didwork = 0;
+	keepfile = 0;
+	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_RECLAIMLOG,
+	    seqno / SLM_RECLAIM_BATCH);
+	logfile = open(fn, O_RDONLY);
+	if (logfile == -1)
+		psc_fatal("Fail to open reclaim log file %s", fn);
+	/*
+ 	 * Short read is Okay, as long as it is a multiple of the basic data structure.
+ 	 */
+	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH * sizeof(struct slash_fidgen));
+	if ((size % sizeof(struct slash_fidgen)) != 0)
+		psc_fatal("Fail to read reclaim log file %s", fn);
+
+	for (i = 0; i < (int) size / (int) sizeof(struct slash_fidgen); i++) {
+
+		fg = (struct slash_fidgen *)(reclaimbuf + i * sizeof(struct slash_fidgen));
+		didwork = mds_send_one_reclaim(fg, seqno + i);
+
+		/* all failures */
+		if (didwork == 0) {
+			keepfile = 1;
+			break;
+		}
+		/* some failures */
+		if (didwork == 1)
+			keepfile = 1;
+	}
+	close(logfile);
+	if (!keepfile) 
+		unlink(fn);
+	return didwork;
+}
+
 /**
  * mds_garbage_collection - Send garbage collection to I/O servers.
  */
 void
 mds_garbage_collection(__unusedx struct psc_thread *thr)
 {
-	while (pscthr_run()) {
+	int rv, didwork;
+	uint64_t seqno;
 
+	while (pscthr_run()) {
+		seqno = mds_namespace_reclaim_lwm();
+		/*
+		 * If reclaim_seqno_hwm is zero, then there are no reclaims.
+		 */
+		if (reclaim_seqno_hwm && seqno < reclaim_seqno_hwm) {
+			didwork = mds_send_batch_reclaim(seqno);
+			seqno += SLM_UPDATE_BATCH;
+			if (didwork)
+				continue;
+		}
+		spinlock(&mds_reclaim_waitqlock);
+		rv = psc_waitq_waitrel_s(&mds_reclaim_waitq,
+		    &mds_reclaim_waitqlock, SL_RECLAIM_MAX_AGE);
 	}
 
 }
@@ -1057,19 +1136,19 @@ mds_namespace_propagate(__unusedx struct psc_thread *thr)
 		pscrpc_nbreqset_reap(logPndgReqs);
 		seqno = mds_namespace_update_lwm();
 		/*
-		 * If propagate_seqno_hwm is zero, then there are no
+		 * If update_seqno_hwm is zero, then there are no
 		 * local updates.
 		 */
-		if (propagate_seqno_hwm && seqno < propagate_seqno_hwm) {
+		if (update_seqno_hwm && seqno < update_seqno_hwm) {
 			buf = mds_namespace_read_batch(seqno);
 			didwork = mds_namespace_propagate_batch(buf);
-			seqno += SLM_NAMESPACE_BATCH;
+			seqno += SLM_UPDATE_BATCH;
 			if (didwork)
 				continue;
 		}
-		spinlock(&mds_namespace_waitqlock);
-		rv = psc_waitq_waitrel_s(&mds_namespace_waitq,
-		    &mds_namespace_waitqlock, SL_NAMESPACE_MAX_AGE);
+		spinlock(&mds_update_waitqlock);
+		rv = psc_waitq_waitrel_s(&mds_update_waitq,
+			&mds_update_waitqlock, SL_UPDATE_MAX_AGE);
 	}
 }
 
@@ -1351,13 +1430,13 @@ mds_journal_init(void)
 	    mds_cursor.pjc_seqno_hwm);
 
 	/* Always start a garbage collection thread. */
-	reclaimbuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
+	reclaimbuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
 	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_garbage_collection, NULL,
 	    0, "slmjreclaimthr");
 
 	/* Optionally start a namespace propagate thread if we have peer MDSes. */
 	if (npeers) {
-		changebuf = PSCALLOC(SLM_NAMESPACE_BATCH * logentrysize);
+		updatebuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
 		logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
 
 		/*

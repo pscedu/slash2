@@ -105,9 +105,10 @@ struct slmds_jent_bmapseq {
 #define SJ_NAMESPACE_RECLAIM	0x01
 
 /*
- * For easy seek within a change log file, each entry has a fixed length
- * of 512 bytes.  But when we send log entries over the network, we
- * condense them to save network bandwidth.
+ * For easy seek within a system log file, each entry has a fixed length
+ * of 512 bytes (going 1024 allows us to support longer names to make some
+ * POSIX tests happy).  But when we send log entries over the network, we
+ * condense them (especially the names) to save network bandwidth.
  */
 struct slmds_jent_namespace {
 	uint64_t		sjnm_magic;			/* debugging */
@@ -119,7 +120,7 @@ struct slmds_jent_namespace {
 
 	uint64_t		sjnm_parent_fid;		/* parent dir FID */
 	uint64_t		sjnm_target_fid;
-	uint64_t		sjnm_new_parent_fid;		/* rename only */
+	uint64_t		sjnm_new_parent_fid;		/* rename only or generation number */
 
 	uint32_t		sjnm_mask;			/* attribute mask */
 

@@ -47,15 +47,16 @@ struct pscrpc_export;
 #define SLM_RMC_SVCNAME			"slmrmc"
 
 /*
- * The number of namespace operations that are recorded in the same change log.
+ * The number of namespace updates that are recorded in the same change log.
  * We make the size of each log file to be less than LNET_MTU, so that we can
  * send it out in one bulk RPC.
  */
-#define SLM_NAMESPACE_BATCH	2048
+#define SLM_UPDATE_BATCH	2048
 /*
- * Garbage collection records.
+ * The number of garbage collection records that are recorded in the same
+ * reclaim log.
  */
-#define SLM_RECLAIM_BATCH	2048
+#define SLM_RECLAIM_BATCH	2048	
 
 struct slm_exp_cli {
 	struct slashrpc_cservice	*mexpc_csvc;
