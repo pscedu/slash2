@@ -857,7 +857,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 	struct pscrpc_bulk_desc *desc;
 	struct sl_mds_peerinfo *peerinfo;
 	struct srm_generic_rep *mp;
-	struct pscrpc_request *req;
+	struct pscrpc_request *rq;
 	struct sl_resm *resm;
 	struct iovec iov;
 	int rc, j, didwork=0;
@@ -906,7 +906,7 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			continue;
 		}
 		rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
-		    SRMT_NAMESPACE_UPDATE, req, mq, mp);
+		    SRMT_NAMESPACE_UPDATE, rq, mq, mp);
 		if (rc) {
 			sl_csvc_decref(csvc);
 			continue;
@@ -933,13 +933,13 @@ mds_namespace_propagate_batch(struct sl_mds_logbuf *logbuf)
 			    jnamespace->sjnm_op, NS_SUM_PEND);
 			buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
 		}
-		rsx_bulkclient(req, &desc, BULK_GET_SOURCE,
+		rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
 		    SRMM_BULK_PORTAL, &iov, 1);
 
-		authbuf_sign(req, PSCRPC_MSG_REQUEST);
-		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_RESPROF] = resm->resm_res;
-		req->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = peerinfo;
-		psc_assert(pscrpc_nbreqset_add(logPndgReqs, req) == 0);
+		authbuf_sign(rq, PSCRPC_MSG_REQUEST);
+		rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_RESPROF] = resm->resm_res;
+		rq->rq_async_args.pointer_arg[SLM_CBARG_SLOT_CSVC] = peerinfo;
+		psc_assert(pscrpc_nbreqset_add(logPndgReqs, rq) == 0);
 		didwork = 1;
 	);
 	return (didwork);
@@ -1075,6 +1075,11 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 				sl_csvc_decref(csvc);
 				continue;
 			}
+
+			mq->seqno = seqno;
+			mq->fg.fg_fid = fg->fg_fid;
+			mq->fg.fg_gen = fg->fg_gen;
+
 			rc = SL_RSX_WAITREP(rq, mp);
 			if (rc == 0)
 				rc = mp->rc;
