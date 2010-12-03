@@ -1042,7 +1042,26 @@ mds_open_cursor(void)
 int
 mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 {
-	return (1);
+	struct sl_resource *res;
+	int ri, didwork = 0;
+	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *iosinfo;
+
+	SITE_FOREACH_RES(nodeSite, res, ri) {
+		if (res->res_type == SLREST_MDS)
+			continue;
+		rpmi = res2rpmi(res);
+		iosinfo = rpmi->rpmi_info;
+
+		RPMI_LOCK(rpmi);
+		if (iosinfo->si_seqno > seqno)
+			continue;
+		RPMI_ULOCK(rpmi);
+		/*
+ 		 * Send RPC to the IO serve and wait for it to complete.
+ 		 */
+	}
+	return (didwork);
 }
 
 int
