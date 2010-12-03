@@ -113,8 +113,6 @@ static char			*updatebuf;
 /* a buffer used to read on-disk reclaim log file */
 static char			*reclaimbuf;
 
-struct sl_mds_peerinfo		*localinfo;
-
 static void			*mds_cursor_handle;
 static struct psc_journal_cursor mds_cursor;
 
@@ -1383,6 +1381,7 @@ mds_journal_init(void)
 	 */
 	next_garbage_seqno = 0;
 
+	/* Make sure we have some IO servers to work with */
 	SITE_FOREACH_RES(nodeSite, r, i) {
 		if (r->res_type != SLREST_MDS) {
 			found = 1;
@@ -1391,16 +1390,11 @@ mds_journal_init(void)
 	}
 	if (!found)
 		psc_fatal("Missing IO servers at site %s\n", nodeSite->site_name);
-	/*
-	 * Construct a list of MDSes from the global configuration file
-	 * to save some run time.  It also allows us to dynamically add
-	 * or remove MDSes to/from our private list in the future.
-	 */
+
+	/* Count the number of peer MDSes we have */
 	npeers = 0;
 	SL_FOREACH_MDS(resm, npeers++);
 	npeers--;
-
-	localinfo = res2rpmi(nodeResProf)->rpmi_info;
 
 	r = nodeResm->resm_res;
 	if (r->res_jrnldev[0] == '\0')

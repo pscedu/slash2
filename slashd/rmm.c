@@ -45,7 +45,9 @@ int
 slm_rmm_apply_update(struct slmds_jent_namespace *jnamespace)
 {
 	int rc;
+	struct sl_mds_peerinfo *localinfo;
 
+	localinfo = res2rpmi(nodeResProf)->rpmi_info;
 	rc = mds_redo_namespace(jnamespace);
 	if (rc)
 		psc_atomic32_inc(&localinfo->sp_stats.ns_stats[NS_DIR_RECV][

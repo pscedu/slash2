@@ -57,7 +57,7 @@ enum sl_res_type {
 	SLREST_PARALLEL_FS
 };
 
-/* Resource (I/O system) */
+/* Resource (I/O system, MDS) */
 struct sl_resource {
 	char			 res_name[RES_NAME_MAX];	/* resource name */
 	char			*res_desc;
