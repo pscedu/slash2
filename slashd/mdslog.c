@@ -688,7 +688,7 @@ mds_namespace_reclaim_lwm(void)
 		RPMI_ULOCK(rpmi);
 	}
 
-	//psc_assert(seqno != UINT64_MAX);
+	psc_assert(seqno != UINT64_MAX);
 
 	/* XXX purge old reclaim log files here before bumping lwm */
 	reclaim_seqno_lwm = seqno;
