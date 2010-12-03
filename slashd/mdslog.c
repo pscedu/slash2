@@ -1043,9 +1043,14 @@ int
 mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 {
 	struct sl_resource *res;
-	int ri, didwork = 0;
+	int i, ri, rc = 0, didwork = 0;
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *iosinfo;
+	struct slashrpc_cservice *csvc;
+	struct sl_resm *dst_resm;
+	struct srm_reclaim_req *mq;
+	struct srm_generic_rep *mp;
+	struct pscrpc_request *rq;
 
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (res->res_type == SLREST_MDS)
@@ -1058,8 +1063,26 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 			continue;
 		RPMI_ULOCK(rpmi);
 		/*
- 		 * Send RPC to the IO serve and wait for it to complete.
+ 		 * Send RPC to the IO server and wait for it to complete.
  		 */
+		DYNARRAY_FOREACH(dst_resm, i, &res->res_members) {
+			csvc = slm_geticsvc_nb(dst_resm);
+			if (csvc == NULL)
+				continue;
+			rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,
+				SRMT_RECLAIM, rq, mq, mp);
+			if (rc) {
+				sl_csvc_decref(csvc);
+				continue;
+			}
+			rc = SL_RSX_WAITREP(rq, mp);
+			if (rc == 0)
+				rc = mp->rc;
+			if (rc == 0) {
+				didwork = 1;
+				break;
+			}
+		}
 	}
 	return (didwork);
 }

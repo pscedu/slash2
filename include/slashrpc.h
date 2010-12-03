@@ -176,6 +176,7 @@ enum {
 	SRMT_RELEASEBMAP,		/* relinquish a client's bmap access lease */
 
 	/* garbage operations */
+	SRMT_RECLAIM,			/* trash storage space for a given FID+GEN */
 	SRMT_GARBAGE,			/* trash storage space for a given FID+GEN */
 
 	/* replication operations */
@@ -462,6 +463,12 @@ struct srm_garbage_req {
 	sl_bmapno_t		bmapno;
 	sl_bmapgen_t		bgen;
 } __packed;
+
+struct srm_reclaim_req {
+	struct slash_fidgen	fg;
+	uint64_t		seqno;
+} __packed;
+
 
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */
 
