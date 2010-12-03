@@ -1371,7 +1371,7 @@ mds_journal_init(void)
 {
 	struct sl_resource *r;
 	struct sl_resm *resm;
-	int npeers;
+	int i, found = 0, npeers;
 
 	/*
 	 * To be read from a log file after we replay the system journal.
@@ -1382,6 +1382,15 @@ mds_journal_init(void)
 	 * Next sequence number for garbage collection record.
 	 */
 	next_garbage_seqno = 0;
+
+	SITE_FOREACH_RES(nodeSite, r, i) {
+		if (r->res_type != SLREST_MDS) {
+			found = 1;
+			break;
+		}
+	}
+	if (!found)
+		psc_fatal("Missing IO servers at site %s\n", nodeSite->site_name);
 	/*
 	 * Construct a list of MDSes from the global configuration file
 	 * to save some run time.  It also allows us to dynamically add
