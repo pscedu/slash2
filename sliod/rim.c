@@ -40,6 +40,13 @@
 #include "sliod.h"
 
 int
+sli_rim_handle_reclaim(struct pscrpc_request *rq)
+{
+	int rc = 0;
+	return (rc);
+}
+
+int
 sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 {
 	struct srm_repl_schedwk_req *mq;
@@ -87,6 +94,9 @@ sli_rim_handler(struct pscrpc_request *rq)
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_REPL_SCHEDWK:
 		rc = sli_rim_handle_repl_schedwk(rq);
+		break;
+	case SRMT_RECLAIM:
+		rc = sli_rim_handle_reclaim(rq);
 		break;
 	case SRMT_CONNECT:
 		rc = sli_rim_handle_connect(rq);

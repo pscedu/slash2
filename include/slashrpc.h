@@ -163,7 +163,7 @@ enum {
 	SRMT_PING,
 
 	/* namespace operations */
-	SRMT_NAMESPACE_UPDATE,		/* send a batch of namespace operation logs */
+	SRMT_NAMESPACE_UPDATE,		/* send a batch of namespace update logs */
 
 	/* bmap operations */
 	SRMT_BMAPCHWRMODE,		/* change read/write access mode */
