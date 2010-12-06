@@ -1043,7 +1043,7 @@ int
 mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 {
 	struct sl_resource *res;
-	int i, ri, rc = 0, didwork = 0;
+	int i, ri, rc = 0, nios = 0, didwork = 0;
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *iosinfo;
 	struct slashrpc_cservice *csvc;
@@ -1055,6 +1055,7 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (res->res_type == SLREST_MDS)
 			continue;
+		nios++;
 		rpmi = res2rpmi(res);
 		iosinfo = rpmi->rpmi_info;
 
@@ -1088,12 +1089,16 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 			if (rc == 0)
 				rc = mp->rc;
 			if (rc == 0) {
-				didwork = 1;
+				didwork++;
 				break;
 			}
 		}
 	}
-	return (didwork);
+	if (didwork == 0)
+		return 0;
+	if (didwork == nios)
+		return 1;
+	return 2;
 }
 
 int
@@ -1123,14 +1128,14 @@ mds_send_batch_reclaim(uint64_t seqno)
 		fg = (struct slash_fidgen *)(reclaimbuf + i * sizeof(struct slash_fidgen));
 		didwork = mds_send_one_reclaim(fg, seqno + i);
 
-		/* all failures */
-		if (didwork == 0) {
-			keepfile = 1;
-			break;
-		}
-		/* some failures */
+		/* if all successful, continue */
 		if (didwork == 1)
-			keepfile = 1;
+			continue;
+
+		keepfile = 1;
+		/* if non successful, break */
+		if (didwork == 0)
+			break;
 	}
 	close(logfile);
 	if (!keepfile) 
