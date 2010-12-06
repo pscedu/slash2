@@ -43,6 +43,12 @@ int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
 	int rc = 0;
+	struct srm_reclaim_req *mq;
+	struct srm_generic_rep *mp;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	psc_notify("reclaim space for fid="SLPRI_FG" seqno=%"PRId64,
+             SLPRI_FG_ARGS(&mq->fg), mq->seqno);
 	return (rc);
 }
 
