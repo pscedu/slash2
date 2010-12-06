@@ -473,7 +473,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		if (sz != logentrysize)
 			psc_fatal("Fail to write change log file %s", change_fn);
 
-		update_seqno_hwm = seqno + 1;
+		if (update_seqno_hwm < seqno + 1)
+			update_seqno_hwm = seqno + 1;
 
 		/* see if we need to close the current change log file */
 		if (((seqno + 1) % SLM_UPDATE_BATCH) == 0) {
@@ -519,6 +520,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 	sz = write(current_reclaim_logfile, &fg, sizeof(struct slash_fidgen));
 	if (sz != sizeof(struct slash_fidgen))
 		psc_fatal("Fail to write reclaim log file %s", reclaim_fn);
+
+	if (reclaim_seqno_hwm < seqno + 1)
+		reclaim_seqno_hwm = seqno + 1;
 
 	/* see if we need to close the current change log file */
 	if (((seqno + 1) % SLM_RECLAIM_BATCH) == 0) {
