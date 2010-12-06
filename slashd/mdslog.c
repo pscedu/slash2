@@ -1050,7 +1050,7 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 	struct sl_resm *dst_resm;
 	struct srm_reclaim_req *mq;
 	struct srm_generic_rep *mp;
-	struct pscrpc_request *rq;
+	struct pscrpc_request *rq = NULL;
 
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (res->res_type == SLREST_MDS)
@@ -1081,6 +1081,10 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 			mq->fg.fg_gen = fg->fg_gen;
 
 			rc = SL_RSX_WAITREP(rq, mp);
+
+			pscrpc_req_finished(rq);
+			rq = NULL;
+
 			if (rc == 0)
 				rc = mp->rc;
 			if (rc == 0) {
