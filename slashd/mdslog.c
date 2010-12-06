@@ -509,7 +509,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		 * on-disk format of the log file changes.
 		 */
 		current_reclaim_logfile = open(reclaim_fn, O_CREAT | O_TRUNC | O_RDWR |
-		    O_SYNC | O_DIRECT | O_APPEND, 0600);
+		    O_SYNC | O_APPEND, 0600);
 		if (current_reclaim_logfile == -1)
 			psc_fatal("Fail to create reclaim log file %s", reclaim_fn);
 	}
