@@ -1064,7 +1064,11 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (iosinfo->si_seqno > seqno)
+		/*
+ 		 * All reclaim requests are send to a particulare IOS in order.
+ 		 * If one IOS was slow/not responding, he has to wait for the next round.
+ 		 */
+		if (iosinfo->si_seqno != seqno)
 			continue;
 		RPMI_ULOCK(rpmi);
 		/*
@@ -1095,6 +1099,7 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 			if (rc == 0) {
 				didwork++;
 				break;
+				iosinfo->si_seqno++;
 			}
 		}
 	}
