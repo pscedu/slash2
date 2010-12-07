@@ -51,6 +51,9 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	psc_notify("reclaim space for fid="SLPRI_FG" seqno=%"PRId64,
              SLPRI_FG_ARGS(&mq->fg), mq->seqno);
 
+	oldfg.fg_fid = mq->fg.fg_fid;
+	oldfg.fg_gen = mq->fg.fg_gen;
+
 	fg_makepath(&oldfg, fidfn);
 
 	mp->rc = unlink(fidfn); 
