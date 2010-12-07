@@ -39,24 +39,32 @@
 #include "slerr.h"
 #include "sliod.h"
 
+static uint64_t reclaim_seqno = 0;
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
+	int rc = 0;
+	uint64_t seqno;
 	char fidfn[PATH_MAX];
 	struct slash_fidgen oldfg;
 	struct srm_reclaim_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_reclaim_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	psc_notify("reclaim space for fid="SLPRI_FG" seqno=%"PRId64,
              SLPRI_FG_ARGS(&mq->fg), mq->seqno);
 
-	oldfg.fg_fid = mq->fg.fg_fid;
-	oldfg.fg_gen = mq->fg.fg_gen;
-
-	fg_makepath(&oldfg, fidfn);
-
-	mp->rc = unlink(fidfn); 
+	seqno = mq->seqno;
+	if (seqno == reclaim_seqno) {
+		oldfg.fg_fid = mq->fg.fg_fid;
+		oldfg.fg_gen = mq->fg.fg_gen;
+		fg_makepath(&oldfg, fidfn);
+		rc = unlink(fidfn); 
+		psc_assert(rc == 0 || errno == ENOENT);
+		reclaim_seqno++;
+	}
+	mp->seqno = reclaim_seqno;
+	mp->rc = rc;
 	return (0);
 }
 

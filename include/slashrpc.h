@@ -469,6 +469,12 @@ struct srm_reclaim_req {
 	uint64_t		seqno;
 } __packed;
 
+struct srm_reclaim_rep {
+	uint64_t		seqno;		/* highest reclaim sequence number I have */
+	int32_t			rc;		/* return code, 0 for success or slerrno */
+	int32_t			_pad;
+} __packed;
+
 
 /* ------------------------- BEGIN CONTROL MESSAGES ------------------------- */
 
