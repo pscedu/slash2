@@ -1068,8 +1068,10 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
  		 * All reclaim requests are send to a particulare IOS in order.
  		 * If one IOS was slow/not responding, he has to wait for the next round.
  		 */
-		if (iosinfo->si_seqno != seqno)
+		if (iosinfo->si_seqno != seqno) {
+			RPMI_ULOCK(rpmi);
 			continue;
+		}
 		RPMI_ULOCK(rpmi);
 		/*
  		 * Send RPC to the IO server and wait for it to complete.
