@@ -51,8 +51,6 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	struct srm_reclaim_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	psc_notify("reclaim space for fid="SLPRI_FG" seqno=%"PRId64,
-             SLPRI_FG_ARGS(&mq->fg), mq->seqno);
 
 	seqno = mq->seqno;
 	if (seqno == reclaim_seqno) {
@@ -63,6 +61,8 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		psc_assert(rc == 0 || errno == ENOENT);
 		reclaim_seqno++;
 	}
+	psc_notify("reclaim: fid="SLPRI_FG", seqno=%"PRId64", reclaim_seqno =%"PRId64", rc = %d\n",
+             SLPRI_FG_ARGS(&mq->fg), mq->seqno, reclaim_seqno, rc);
 	mp->seqno = reclaim_seqno;
 	mp->rc = rc;
 	return (0);
