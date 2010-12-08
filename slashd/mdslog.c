@@ -425,20 +425,20 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 
 /**
  * mds_distill_handler - Distill information from the system journal and
- *	write into namespace update and garbage reclaim logs.
+ *	write into namespace update or garbage reclaim logs.
  *
- *	Write the information to secondary logs so that we can recyle the
+ *	Writing the information to secondary logs allows us to recyle the
  *	space in the main system log as quick as possible.  The distill 
  *	process is continuous in order to make room for system logs.  
  *	Once in a secondary log, we can process them as we see fit.  
  *	Sometimes these secondary log files can hang over a long time 
- *	because a peer MDS or an IO server is down.
+ *	because a peer MDS or an IO server is down or slow.
  */
 int
 mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 {
 	struct slmds_jent_namespace *jnamespace;
-	static char change_fn[PATH_MAX];
+	static char update_fn[PATH_MAX];
 	static char reclaim_fn[PATH_MAX];
 	uint64_t seqno;
 	int sz;
@@ -455,23 +455,23 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		seqno = jnamespace->sjnm_seqno;
 		if ((seqno % SLM_UPDATE_BATCH) == 0) {
 			psc_assert(current_change_logfile == -1);
-			xmkfn(change_fn, "%s/%s.%d", SL_PATH_DATADIR,
+			xmkfn(update_fn, "%s/%s.%d", SL_PATH_DATADIR,
 			    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH);
 			/*
 			 * Truncate the file if it already exists. Otherwise, it
 			 * can lead to an insidious bug especially when the
 			 * on-disk format of the log file changes.
 			 */
-			current_change_logfile = open(change_fn, O_CREAT | O_TRUNC | O_RDWR |
+			current_change_logfile = open(update_fn, O_CREAT | O_TRUNC | O_RDWR |
 			    O_SYNC | O_DIRECT | O_APPEND, 0600);
 			if (current_change_logfile == -1)
-				psc_fatal("Fail to create change log file %s", change_fn);
+				psc_fatal("Fail to create change log file %s", update_fn);
 		} else
 			psc_assert(current_change_logfile != -1);
 
 		sz = write(current_change_logfile, pje, logentrysize);
 		if (sz != logentrysize)
-			psc_fatal("Fail to write change log file %s", change_fn);
+			psc_fatal("Fail to write update log file %s", update_fn);
 
 		if (update_seqno_hwm < seqno + 1)
 			update_seqno_hwm = seqno + 1;
@@ -530,9 +530,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		current_reclaim_logfile = -1;
 
 		/* wake up the namespace log propagator */
-		spinlock(&mds_update_waitqlock);
-		psc_waitq_wakeall(&mds_update_waitq);
-		freelock(&mds_update_waitqlock);
+		spinlock(&mds_reclaim_waitqlock);
+		psc_waitq_wakeall(&mds_reclaim_waitq);
+		freelock(&mds_reclaim_waitqlock);
 	}
 	return (0);
 }
