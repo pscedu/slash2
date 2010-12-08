@@ -1115,6 +1115,7 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 int
 mds_send_batch_reclaim(uint64_t seqno)
 {
+	uint64_t start;
 	int i, count, logfile, keepfile, didwork;
 	char fn[PATH_MAX];
 	ssize_t size;
@@ -1134,11 +1135,13 @@ mds_send_batch_reclaim(uint64_t seqno)
 	if ((size % sizeof(struct slash_fidgen)) != 0)
 		psc_fatal("Fail to read reclaim log file %s", fn);
 
+	start = (seqno / SLM_RECLAIM_BATCH) * SLM_RECLAIM_BATCH;
 	count = (int) size / (int) sizeof(struct slash_fidgen);
 	for (i = 0; i < count; i++) {
-
+		if (start + i < seqno)
+			continue;
 		fg = (struct slash_fidgen *)(reclaimbuf + i * sizeof(struct slash_fidgen));
-		didwork = mds_send_one_reclaim(fg, seqno + i);
+		didwork = mds_send_one_reclaim(fg, start + i);
 
 		/* if all successful, continue */
 		if (didwork == 1)
