@@ -41,6 +41,10 @@
 #include "sliod.h"
 
 static uint64_t next_reclaim_seqno = 0;
+/*
+ * sli_rim_handle_reclaim - handle RECLAIM RPC from the MDS as a result of unlink or
+ *     truncate to zero.
+ */
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
@@ -61,7 +65,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		rc = unlink(fidfn); 
 	} else
 		errno = EINVAL;
-	psc_notify("reclaim: fid="SLPRI_FG", seqno=%"PRId64", next seqno=%"PRId64", rc = %d\n",
+	psc_notify("reclaim: fid="SLPRI_FG", seqno=%"PRId64", next seqno=%"PRId64", rc=%d\n",
              SLPRI_FG_ARGS(&mq->fg), mq->seqno, next_reclaim_seqno, rc);
 
 	if (errno == 0)
