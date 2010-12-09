@@ -1100,8 +1100,8 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 				rc = mp->rc;
 			if (rc == 0) {
 				didwork++;
-				break;
 				iosinfo->si_seqno++;
+				break;
 			}
 		}
 	}
