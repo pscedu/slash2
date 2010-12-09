@@ -575,8 +575,10 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	jnamespace->sjnm_flag = 0;
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	    (op == NS_OP_SETATTR && sstb->sst_size == 0)) {
+		/* we want to reclaim the space taken by the previous generation */
+		psc_assert(sstb->sst_gen >= 1);
 		jnamespace->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
-		jnamespace->sjnm_new_parent_fid = sstb->sst_gen;
+		jnamespace->sjnm_new_parent_fid = sstb->sst_gen - 1;
 	}
 
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
