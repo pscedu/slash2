@@ -58,6 +58,7 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	seqno = mq->seqno;
 
+	errno = 0;
 	if (seqno == next_reclaim_seqno) {
 		oldfg.fg_fid = mq->fg.fg_fid;
 		oldfg.fg_gen = mq->fg.fg_gen;
@@ -65,9 +66,12 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		rc = unlink(fidfn); 
 	} else
 		errno = EINVAL;
-	psc_notify("reclaim: fid="SLPRI_FG", seqno=%"PRId64", next seqno=%"PRId64", rc=%d\n",
-             SLPRI_FG_ARGS(&mq->fg), mq->seqno, next_reclaim_seqno, rc);
+	psc_notify("reclaim: fid="SLPRI_FG", seqno=%"PRId64", next seqno=%"PRId64", errno=%d\n",
+             SLPRI_FG_ARGS(&mq->fg), mq->seqno, next_reclaim_seqno, errno);
 
+	/* we do upfront garbage collection, so ENOENT should be fine */
+	if (errno == ENOENT)
+		errno = 0;
 	if (errno == 0)
 		next_reclaim_seqno++;
 	mp->seqno = next_reclaim_seqno;
