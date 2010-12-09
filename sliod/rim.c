@@ -22,6 +22,7 @@
  */
 
 #include <stdio.h>
+#include <errno.h>
 
 #include "pfl/str.h"
 #include "psc_rpc/rpc.h"
@@ -39,7 +40,7 @@
 #include "slerr.h"
 #include "sliod.h"
 
-static uint64_t reclaim_seqno = 0;
+static uint64_t next_reclaim_seqno = 0;
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
@@ -51,20 +52,22 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	struct srm_reclaim_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-
 	seqno = mq->seqno;
-	if (seqno == reclaim_seqno) {
+
+	if (seqno == next_reclaim_seqno) {
 		oldfg.fg_fid = mq->fg.fg_fid;
 		oldfg.fg_gen = mq->fg.fg_gen;
 		fg_makepath(&oldfg, fidfn);
 		rc = unlink(fidfn); 
-		psc_assert(rc == 0 || errno == ENOENT);
-		reclaim_seqno++;
-	}
-	psc_notify("reclaim: fid="SLPRI_FG", seqno=%"PRId64", reclaim_seqno =%"PRId64", rc = %d\n",
-             SLPRI_FG_ARGS(&mq->fg), mq->seqno, reclaim_seqno, rc);
-	mp->seqno = reclaim_seqno;
-	mp->rc = rc;
+	} else
+		errno = EINVAL;
+	psc_notify("reclaim: fid="SLPRI_FG", seqno=%"PRId64", next seqno=%"PRId64", rc = %d\n",
+             SLPRI_FG_ARGS(&mq->fg), mq->seqno, next_reclaim_seqno, rc);
+
+	if (errno == 0)
+		next_reclaim_seqno++;
+	mp->seqno = next_reclaim_seqno;
+	mp->rc = errno;
 	return (0);
 }
 
