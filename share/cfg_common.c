@@ -245,6 +245,12 @@ libsl_init(int pscnet_mode, int ismds)
 	if (setenv("USOCK_PORTPID", "0", 1) == -1)
 		err(1, "setenv");
 
+	if (getenv("LNET_NETWORKS")) {
+		psclog_notice("using LNET_NETWORKS (%s) from "
+		    "environment", getenv("LNET_NETWORKS"));
+		goto skiplnet;
+	}
+
 	pflnet_getifaddrs(&ifa);
 
 	lent = PSCALLOC(sizeof(*lent));
@@ -254,6 +260,9 @@ libsl_init(int pscnet_mode, int ismds)
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, j, &s->site_resources)
 			DYNARRAY_FOREACH(m, k, &r->res_members) {
+				if (ismds ^ (r->res_type == SLREST_MDS))
+					continue;
+
 				p = strchr(m->resm_addrbuf, ':');
 				psc_assert(p);
 				strlcpy(addrbuf, p + 1, sizeof(addrbuf));
@@ -299,6 +308,7 @@ libsl_init(int pscnet_mode, int ismds)
 
 					if (netcmp) {
 						psclist_add(&lent->lentry, &lnets_hd);
+
 						lent = PSCALLOC(sizeof(*lent));
 						INIT_PSC_LISTENTRY(&lent->lentry);
 					}
@@ -328,6 +338,8 @@ libsl_init(int pscnet_mode, int ismds)
 	}
 
 	setenv("LNET_NETWORKS", lnetstr, 0);
+
+ skiplnet:
 
 	pscrpc_init_portals(pscnet_mode);
 	pscrpc_getlocalprids(&lnet_prids);
