@@ -1098,6 +1098,7 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 			pscrpc_req_finished(rq);
 			rq = NULL;
 
+			sl_csvc_decref(csvc);
 			if (rc == 0)
 				rc = mp->rc;
 			if (rc == 0) {
