@@ -56,27 +56,32 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
 
+	errno = 0;
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	spinlock(&next_reclaim_seqno_lock);
 	if (mq->seqno == next_reclaim_seqno) {
 		oldfg.fg_fid = mq->fg.fg_fid;
 		oldfg.fg_gen = mq->fg.fg_gen;
 		fg_makepath(&oldfg, fidfn);
-		if (unlink(fidfn) == -1) {
-			/*
-			 * We do upfront garbage collection,
-			 * so ENOENT should be fine.
-			 */
-			if (errno != ENOENT)
-				mp->rc = errno;
-		} else
-			next_reclaim_seqno++;
+		unlink(fidfn);
 	} else
-		mp->rc = EINVAL;
+		errno = EINVAL;
+
 	psclog_debug("fid="SLPRI_FG", seqno=%"PRId64", "
-	    "next seqno=%"PRId64", rc=%d", SLPRI_FG_ARGS(&mq->fg),
-	    mq->seqno, next_reclaim_seqno, mp->rc);
+	    "next seqno=%"PRId64", errno=%d", SLPRI_FG_ARGS(&mq->fg),
+	    mq->seqno, next_reclaim_seqno, errno);
+
+	/*
+	 * We do upfront garbage collection,
+	 * so ENOENT should be fine.
+	 */
+	if (errno == ENOENT)
+		errno = 0;
+	if (errno == 0)
+		next_reclaim_seqno++;
+
 	mp->seqno = next_reclaim_seqno;
+	mp->rc = errno;
 	freelock(&next_reclaim_seqno_lock);
 	return (0);
 }
