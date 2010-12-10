@@ -580,9 +580,12 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		 * Note that changing the attributes of a zero-lengh file should
 		 * NOT trigger this code.
 		 */
-		psc_assert(sstb->sst_gen >= 1);
 		jnamespace->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
-		jnamespace->sjnm_new_parent_fid = sstb->sst_gen - 1;
+		jnamespace->sjnm_new_parent_fid = sstb->sst_gen;
+		if (op == NS_OP_SETSIZE) {
+			psc_assert(sstb->sst_gen >= 1);
+			jnamespace->sjnm_new_parent_fid--;
+		}
 	}
 
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
