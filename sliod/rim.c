@@ -21,8 +21,8 @@
  * Routines for handling RPC requests for ION from MDS.
  */
 
-#include <stdio.h>
 #include <errno.h>
+#include <stdio.h>
 
 #include "pfl/str.h"
 #include "psc_rpc/rpc.h"
@@ -63,11 +63,11 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		oldfg.fg_fid = mq->fg.fg_fid;
 		oldfg.fg_gen = mq->fg.fg_gen;
 		fg_makepath(&oldfg, fidfn);
-		rc = unlink(fidfn); 
+		rc = unlink(fidfn);
 	} else
 		errno = EINVAL;
 	psc_notify("reclaim: fid="SLPRI_FG", seqno=%"PRId64", next seqno=%"PRId64", errno=%d\n",
-             SLPRI_FG_ARGS(&mq->fg), mq->seqno, next_reclaim_seqno, errno);
+	     SLPRI_FG_ARGS(&mq->fg), mq->seqno, next_reclaim_seqno, errno);
 
 	/* we do upfront garbage collection, so ENOENT should be fine */
 	if (errno == ENOENT)
