@@ -336,3 +336,4 @@ truncate:
 - move inode.h into slashd
 - use pfl_memchk instead of null inode structures for memcmp
 - SRMT_GETBMAPMINSEQ is not handled by slashd
+- if slash.conf is parsed on MDS, only use MDS conf to run ION on same host
