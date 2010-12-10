@@ -269,6 +269,8 @@ main(int argc, char *argv[])
 	PRTYPE(struct srm_readdir_req);
 	PRTYPE(struct srm_readlink_rep);
 	PRTYPE(struct srm_readlink_req);
+	PRTYPE(struct srm_reclaim_rep);
+	PRTYPE(struct srm_reclaim_req);
 	PRTYPE(struct srm_rename_req);
 	PRTYPE(struct srm_repl_read_req);
 	PRTYPE(struct srm_repl_schedwk_req);
@@ -408,7 +410,6 @@ main(int argc, char *argv[])
 	PRVAL(SLJ_MDS_PJET_VOID);
 	PRVAL(SLJ_MDS_RA);
 	PRVAL(SLJ_NAMES_MAX);
-	PRVAL(SLM_NAMESPACE_BATCH);
 	PRVAL(SLM_RECLAIM_BATCH);
 	PRVAL(SLM_RMC_BUFSZ);
 	PRVAL(SLM_RMC_NBUFS);
@@ -422,6 +423,7 @@ main(int argc, char *argv[])
 	PRVAL(SLM_RMM_NBUFS);
 	PRVAL(SLM_RMM_NTHREADS);
 	PRVAL(SLM_RMM_REPSZ);
+	PRVAL(SLM_UPDATE_BATCH);
 	PRVAL(SL_BITS_PER_REPLICA);
 	PRVAL(SL_DEF_REPLICAS);
 	PRVAL(SL_DEF_SNAPSHOTS);
@@ -531,6 +533,7 @@ main(int argc, char *argv[])
 	PRVAL(NS_OP_RENAME);
 	PRVAL(NS_OP_RMDIR);
 	PRVAL(NS_OP_SETATTR);
+	PRVAL(NS_OP_SETSIZE);
 	PRVAL(NS_OP_SYMLINK);
 	PRVAL(NS_OP_UNLINK);
 	PRVAL(NS_SUM_FAIL);
@@ -611,6 +614,7 @@ main(int argc, char *argv[])
 	PRVAL(SRMT_READ);
 	PRVAL(SRMT_READDIR);
 	PRVAL(SRMT_READLINK);
+	PRVAL(SRMT_RECLAIM);
 	PRVAL(SRMT_RELEASEBMAP);
 	PRVAL(SRMT_RENAME);
 	PRVAL(SRMT_REPL_ADDRQ);
