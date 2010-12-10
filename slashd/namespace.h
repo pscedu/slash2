@@ -37,9 +37,10 @@ enum namespace_operation {
 /* 2 */	NS_OP_MKDIR,
 /* 3 */	NS_OP_RENAME,
 /* 4 */	NS_OP_RMDIR,
-/* 5 */	NS_OP_SETATTR,
-/* 6 */	NS_OP_SYMLINK,
-/* 7 */	NS_OP_UNLINK,
+/* 5 */	NS_OP_SETSIZE,		/* special case of NS_OP_SETATTR, until a better way is found */
+/* 6 */	NS_OP_SETATTR,
+/* 7 */	NS_OP_SYMLINK,
+/* 8 */	NS_OP_UNLINK,
 	NS_NOPS
 };
 

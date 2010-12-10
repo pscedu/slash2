@@ -574,8 +574,12 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 
 	jnamespace->sjnm_flag = 0;
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
-	    (op == NS_OP_SETATTR && sstb->sst_size == 0)) {
-		/* we want to reclaim the space taken by the previous generation */
+	    (op == NS_OP_SETSIZE && sstb->sst_size == 0)) {
+		/* 
+		 * We want to reclaim the space taken by the previous generation.
+		 * Note that changing the attributes of a zero-lengh file should
+		 * NOT trigger this code.
+		 */
 		psc_assert(sstb->sst_gen >= 1);
 		jnamespace->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
 		jnamespace->sjnm_new_parent_fid = sstb->sst_gen - 1;
@@ -1612,6 +1616,7 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 			jnamespace->sjnm_target_fid,
 			jnamespace->sjnm_name, &sstb);
 		break;
+	    case NS_OP_SETSIZE:
 	    case NS_OP_SETATTR:
 		rc = mdsio_redo_setattr(
 			jnamespace->sjnm_target_fid,
