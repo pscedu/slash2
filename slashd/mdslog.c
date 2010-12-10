@@ -428,10 +428,10 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
  *	write into namespace update or garbage reclaim logs.
  *
  *	Writing the information to secondary logs allows us to recyle the
- *	space in the main system log as quick as possible.  The distill 
- *	process is continuous in order to make room for system logs.  
- *	Once in a secondary log, we can process them as we see fit.  
- *	Sometimes these secondary log files can hang over a long time 
+ *	space in the main system log as quick as possible.  The distill
+ *	process is continuous in order to make room for system logs.
+ *	Once in a secondary log, we can process them as we see fit.
+ *	Sometimes these secondary log files can hang over a long time
  *	because a peer MDS or an IO server is down or slow.
  */
 int
@@ -458,12 +458,12 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 			xmkfn(update_fn, "%s/%s.%d", SL_PATH_DATADIR,
 			    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH);
 			/*
-			 * Truncate the file if it already exists. Otherwise, it
+			 * Truncate the file if it already exists.  Otherwise, it
 			 * can lead to an insidious bug especially when the
 			 * on-disk format of the log file changes.
 			 */
-			current_change_logfile = open(update_fn, O_CREAT | O_TRUNC | O_RDWR |
-			    O_SYNC | O_DIRECT | O_APPEND, 0600);
+			current_change_logfile = open(change_fn, O_CREAT |
+			    O_TRUNC | O_RDWR | O_SYNC | O_DIRECT, 0600);
 			if (current_change_logfile == -1)
 				psc_fatal("Fail to create change log file %s", update_fn);
 		} else
@@ -505,12 +505,12 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		xmkfn(reclaim_fn, "%s/%s.%d", SL_PATH_DATADIR,
 		    SL_FN_RECLAIMLOG, seqno/SLM_RECLAIM_BATCH);
 		/*
-		 * Truncate the file if it already exists. Otherwise, it
+		 * Truncate the file if it already exists.  Otherwise, it
 		 * can lead to an insidious bug especially when the
 		 * on-disk format of the log file changes.
 		 */
-		current_reclaim_logfile = open(reclaim_fn, O_CREAT | O_TRUNC | O_RDWR |
-		    O_SYNC | O_APPEND, 0600);
+		current_reclaim_logfile = open(reclaim_fn, O_CREAT |
+		    O_TRUNC | O_RDWR | O_SYNC, 0600);
 		if (current_reclaim_logfile == -1)
 			psc_fatal("Fail to create reclaim log file %s", reclaim_fn);
 	}
@@ -575,7 +575,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	jnamespace->sjnm_flag = 0;
 	if ((op == NS_OP_UNLINK && sstb->sst_nlink == 1) ||
 	    (op == NS_OP_SETSIZE && sstb->sst_size == 0)) {
-		/* 
+		/*
 		 * We want to reclaim the space taken by the previous generation.
 		 * Note that changing the attributes of a zero-lengh file should
 		 * NOT trigger this code.
@@ -1074,17 +1074,17 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 
 		RPMI_LOCK(rpmi);
 		/*
- 		 * All reclaim requests are send to a particulare IOS in order.
- 		 * If one IOS was slow/not responding, he has to wait for the next round.
- 		 */
+		 * All reclaim requests are send to a particulare IOS in order.
+		 * If one IOS was slow/not responding, he has to wait for the next round.
+		 */
 		if (iosinfo->si_seqno != seqno) {
 			RPMI_ULOCK(rpmi);
 			continue;
 		}
 		RPMI_ULOCK(rpmi);
 		/*
- 		 * Send RPC to the IO server and wait for it to complete.
- 		 */
+		 * Send RPC to the IO server and wait for it to complete.
+		 */
 		DYNARRAY_FOREACH(dst_resm, i, &res->res_members) {
 			csvc = slm_geticsvc_nb(dst_resm);
 			if (csvc == NULL)
@@ -1130,7 +1130,7 @@ mds_send_batch_reclaim(uint64_t seqno)
 	char fn[PATH_MAX];
 	ssize_t size;
 	struct slash_fidgen *fg;
-	
+
 	didwork = 0;
 	keepfile = 0;
 	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_RECLAIMLOG,
@@ -1139,8 +1139,8 @@ mds_send_batch_reclaim(uint64_t seqno)
 	if (logfile == -1)
 		psc_fatal("Fail to open reclaim log file %s", fn);
 	/*
- 	 * Short read is Okay, as long as it is a multiple of the basic data structure.
- 	 */
+	 * Short read is Okay, as long as it is a multiple of the basic data structure.
+	 */
 	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH * sizeof(struct slash_fidgen));
 	if ((size % sizeof(struct slash_fidgen)) != 0)
 		psc_fatal("Fail to read reclaim log file %s", fn);
@@ -1163,9 +1163,9 @@ mds_send_batch_reclaim(uint64_t seqno)
 			break;
 	}
 	close(logfile);
-	if (!keepfile && count == SLM_RECLAIM_BATCH) 
+	if (!keepfile && count == SLM_RECLAIM_BATCH)
 		unlink(fn);
-	return didwork;
+	return (didwork);
 }
 
 /**
