@@ -29,6 +29,7 @@
 #include "psc_rpc/rpclog.h"
 #include "psc_rpc/rsx.h"
 #include "psc_rpc/service.h"
+#include "psc_util/lock.h"
 
 #include "authbuf.h"
 #include "bmap.h"
@@ -40,42 +41,43 @@
 #include "slerr.h"
 #include "sliod.h"
 
-static uint64_t next_reclaim_seqno = 0;
-/*
- * sli_rim_handle_reclaim - handle RECLAIM RPC from the MDS as a result of unlink or
- *     truncate to zero.
+static uint64_t		next_reclaim_seqno;
+static psc_spinlock_t	next_reclaim_seqno_lock = SPINLOCK_INIT;
+
+/**
+ * sli_rim_handle_reclaim - handle RECLAIM RPC from the MDS as a result
+ *	of unlink or truncate to zero.
  */
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
-	int rc = 0;
-	uint64_t seqno;
 	char fidfn[PATH_MAX];
 	struct slash_fidgen oldfg;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	seqno = mq->seqno;
-
-	errno = 0;
-	if (seqno == next_reclaim_seqno) {
+	spinlock(&next_reclaim_seqno_lock);
+	if (mq->seqno == next_reclaim_seqno) {
 		oldfg.fg_fid = mq->fg.fg_fid;
 		oldfg.fg_gen = mq->fg.fg_gen;
 		fg_makepath(&oldfg, fidfn);
-		rc = unlink(fidfn);
+		if (unlink(fidfn) == -1) {
+			/*
+			 * We do upfront garbage collection,
+			 * so ENOENT should be fine.
+			 */
+			if (errno != ENOENT)
+				mp->rc = errno;
+		} else
+			next_reclaim_seqno++;
 	} else
-		errno = EINVAL;
-	psc_notify("reclaim: fid="SLPRI_FG", seqno=%"PRId64", next seqno=%"PRId64", errno=%d\n",
-	     SLPRI_FG_ARGS(&mq->fg), mq->seqno, next_reclaim_seqno, errno);
-
-	/* we do upfront garbage collection, so ENOENT should be fine */
-	if (errno == ENOENT)
-		errno = 0;
-	if (errno == 0)
-		next_reclaim_seqno++;
+		mp->rc = EINVAL;
+	psclog_debug("fid="SLPRI_FG", seqno=%"PRId64", "
+	    "next seqno=%"PRId64", rc=%d", SLPRI_FG_ARGS(&mq->fg),
+	    mq->seqno, next_reclaim_seqno, mp->rc);
 	mp->seqno = next_reclaim_seqno;
-	mp->rc = errno;
+	freelock(&next_reclaim_seqno_lock);
 	return (0);
 }
 
