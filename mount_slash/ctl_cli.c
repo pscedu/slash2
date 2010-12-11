@@ -33,8 +33,6 @@
 #include "psc_util/ctlsvr.h"
 #include "psc_util/net.h"
 
-#include "ulnds/socklnd/usocklnd.h"
-
 #include "ctl.h"
 #include "ctl_cli.h"
 #include "ctlsvr.h"
@@ -43,9 +41,6 @@
 #include "rpc_cli.h"
 #include "slashrpc.h"
 #include "slerr.h"
-
-int	 lnet_get_usesdp(void);
-char	*lnet_get_networks(void);
 
 struct psc_lockedlist	 psc_mlists;
 struct psc_lockedlist	 psc_odtables;
@@ -385,66 +380,10 @@ msctlhnd_set_bmapreplpol(int fd, struct psc_ctlmsghdr *mh, void *m)
 	return (rc);
 }
 
-/* XXX: add max_fs_iosz */
-int
-msctlparam_general(int fd, struct psc_ctlmsghdr *mh,
-    struct psc_ctlmsg_param *pcp, char **levels, int nlevels)
+void
+msctlparam_mountpoint_get(char buf[PCP_VALUE_MAX])
 {
-	char nbuf[30];
-	int set;
-
-	if (nlevels > 2)
-		return (psc_ctlsenderr(fd, mh, "invalid field"));
-
-	if (strcmp(pcp->pcp_thrname, PCTHRNAME_EVERYONE) != 0)
-		return (psc_ctlsenderr(fd, mh, "invalid thread field"));
-
-	levels[0] = "general";
-
-	set = (mh->mh_type == PCMT_SETPARAM);
-
-	if (set && nlevels != 2)
-		return (psc_ctlsenderr(fd, mh, "invalid operation"));
-
-	if (nlevels < 2 || strcmp(levels[1], "mountpoint") == 0) {
-		if (set)
-			goto readonly;
-		levels[1] = "mountpoint";
-		if (!psc_ctlmsg_param_send(fd, mh, pcp,
-		    PCTHRNAME_EVERYONE, levels, 2, mountpoint))
-			return (0);
-	}
-	if (nlevels < 2 || strcmp(levels[1], "lnets") == 0) {
-		if (set)
-			goto readonly;
-		levels[1] = "lnets";
-		if (!psc_ctlmsg_param_send(fd, mh, pcp,
-		    PCTHRNAME_EVERYONE, levels, 2, lnet_get_networks()))
-			return (0);
-	}
-	if (nlevels < 2 || strcmp(levels[1], "lport") == 0) {
-		if (set)
-			goto readonly;
-		levels[1] = "lport";
-		snprintf(nbuf, sizeof(nbuf), "%d", usocklnd_get_cport());
-		if (!psc_ctlmsg_param_send(fd, mh, pcp,
-		    PCTHRNAME_EVERYONE, levels, 2, nbuf))
-			return (0);
-	}
-	if (nlevels < 2 || strcmp(levels[1], "usesdp") == 0) {
-		if (set)
-			goto readonly;
-		levels[1] = "usesdp";
-		snprintf(nbuf, sizeof(nbuf), "%d", lnet_get_usesdp());
-		if (!psc_ctlmsg_param_send(fd, mh, pcp,
-		    PCTHRNAME_EVERYONE, levels, 2, nbuf))
-			return (0);
-	}
-	return (1);
-
- readonly:
-	return (psc_ctlsenderr(fd, mh,
-	    "field %s is read-only", levels[1]));
+	strlcpy(buf, mountpoint, PCP_VALUE_MAX);
 }
 
 struct psc_ctlop msctlops[] = {
@@ -518,7 +457,9 @@ msctlthr_spawn(void)
 	psc_ctlparam_register("rlim.nofile", psc_ctlparam_rlim_nofile);
 	psc_ctlparam_register("run", psc_ctlparam_run);
 
-	psc_ctlparam_register("general", msctlparam_general);
+	/* XXX: add max_fs_iosz */
+	psc_ctlparam_register_simple("mountpoint",
+	    msctlparam_mountpoint_get, NULL);
 
 	thr = pscthr_init(MSTHRT_CTL, 0, msctlthr_begin, NULL,
 	    sizeof(struct psc_ctlthr), "msctlthr");

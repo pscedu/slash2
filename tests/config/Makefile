@@ -24,9 +24,6 @@ SRCS+=		${PFL_BASE}/psc_util/thread.c
 SRCS+=		${PFL_BASE}/psc_util/usklndthr.c
 SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
-SRCS+=		${LNET_SOCKLND_SRCS}
-SRCS+=		${PSCRPC_SRCS}
-
-MODULES+=	lnet pthread l
+MODULES+=	lnet pthread l rpc
 
 include ${SLASHMK}

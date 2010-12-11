@@ -45,7 +45,6 @@ SRCS+=		${PFL_BASE}/psc_ds/vbitmap.c
 SRCS+=		${PFL_BASE}/psc_util/alloc.c
 SRCS+=		${PFL_BASE}/psc_util/base64.c
 SRCS+=		${PFL_BASE}/psc_util/crc.c
-SRCS+=		${PFL_BASE}/psc_util/ctlsvr.c
 SRCS+=		${PFL_BASE}/psc_util/init.c
 SRCS+=		${PFL_BASE}/psc_util/iostats.c
 SRCS+=		${PFL_BASE}/psc_util/list.c
@@ -65,8 +64,6 @@ SRCS+=		${PFL_BASE}/psc_util/waitq.c
 
 SRCS+=		${SETRESUID_SRC}
 
-SRCS+=		${LNET_SOCKLND_SRCS}
-
-MODULES+=	pthread lnet fuse-hdrs gcrypt rpc
+MODULES+=	pthread lnet fuse-hdrs gcrypt rpc ctl
 
 include ${SLASHMK}
