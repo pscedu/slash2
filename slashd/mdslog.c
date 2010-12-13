@@ -73,7 +73,7 @@ uint64_t			 next_garbage_seqno;
 static uint64_t			 update_seqno_lwm;
 static uint64_t			 update_seqno_hwm;
 
-static int			 current_change_logfile = -1;
+static int			 current_update_logfile = -1;
 
 /*
  * Low and high water marks of reclaim sequence numbers that need to be sent out.
@@ -107,7 +107,7 @@ __static PSCLIST_HEAD(mds_reclaim_buflist);
 
 #define SL_RECLAIM_MAX_AGE	 10
 
-/* a buffer used to read on-disk change log file */
+/* a buffer used to read on-disk update log file */
 static char			*updatebuf;
 
 /* a buffer used to read on-disk reclaim log file */
@@ -454,7 +454,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 	if (npeers) {
 		seqno = jnamespace->sjnm_seqno;
 		if ((seqno % SLM_UPDATE_BATCH) == 0) {
-			psc_assert(current_change_logfile == -1);
+			psc_assert(current_update_logfile == -1);
 			xmkfn(update_fn, "%s/%s.%d", SL_PATH_DATADIR,
 			    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH);
 			/*
@@ -462,24 +462,24 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 			 * can lead to an insidious bug especially when the
 			 * on-disk format of the log file changes.
 			 */
-			current_change_logfile = open(update_fn, O_CREAT |
+			current_update_logfile = open(update_fn, O_CREAT |
 			    O_TRUNC | O_RDWR | O_SYNC | O_DIRECT, 0600);
-			if (current_change_logfile == -1)
-				psc_fatal("Fail to create change log file %s", update_fn);
+			if (current_update_logfile == -1)
+				psc_fatal("Fail to create update log file %s", update_fn);
 		} else
-			psc_assert(current_change_logfile != -1);
+			psc_assert(current_update_logfile != -1);
 
-		sz = write(current_change_logfile, pje, logentrysize);
+		sz = write(current_update_logfile, pje, logentrysize);
 		if (sz != logentrysize)
 			psc_fatal("Fail to write update log file %s", update_fn);
 
 		if (update_seqno_hwm < seqno + 1)
 			update_seqno_hwm = seqno + 1;
 
-		/* see if we need to close the current change log file */
+		/* see if we need to close the current update log file */
 		if (((seqno + 1) % SLM_UPDATE_BATCH) == 0) {
-			close(current_change_logfile);
-			current_change_logfile = -1;
+			close(current_update_logfile);
+			current_update_logfile = -1;
 
 			/* wake up the namespace log propagator */
 			spinlock(&mds_update_waitqlock);
@@ -709,7 +709,7 @@ mds_reclaim_lwm(void)
 }
 
 /**
- * mds_update_lwm - Find the lowest namespace change water
+ * mds_update_lwm - Find the lowest namespace update water
  *	mark of all peer MDSes.
  */
 __static uint64_t
@@ -734,7 +734,7 @@ mds_update_lwm(void)
 
 	psc_assert(seqno != UINT64_MAX);
 
-	/* XXX purge old change log files here before bumping lwm */
+	/* XXX purge old update log files here before bumping lwm */
 	update_seqno_lwm = seqno;
 	return (seqno);
 }
@@ -819,7 +819,7 @@ mds_read_batch_update(uint64_t seqno)
 	    seqno / SLM_UPDATE_BATCH);
 	logfile = open(fn, O_RDONLY);
 	if (logfile == -1)
-		psc_fatal("Fail to open change log file %s", fn);
+		psc_fatal("Fail to open update log file %s", fn);
 	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
 	size = read(logfile, updatebuf,
 	    (SLM_UPDATE_BATCH - buf->slb_count) * logentrysize);
@@ -1206,7 +1206,7 @@ mds_send_update(__unusedx struct psc_thread *thr)
 	uint64_t seqno;
 
 	/*
-	 * This thread scans the batches of changes between the low and
+	 * This thread scans the batches of updates between the low and
 	 * high water marks and sends them to peer MDSes.  Although
 	 * different MDSes have different paces, we send updates in
 	 * order within one MDS.
