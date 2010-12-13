@@ -496,7 +496,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 		return (0);
 
 	psc_assert(jnamespace->sjnm_op == NS_OP_SETATTR ||
-	    jnamespace->sjnm_op == NS_OP_UNLINK);
+	    jnamespace->sjnm_op == NS_OP_UNLINK ||
+ 	    jnamespace->sjnm_op == NS_OP_SETSIZE);
 
 	seqno = pjournal_next_reclaim(mdsJournal);
 
