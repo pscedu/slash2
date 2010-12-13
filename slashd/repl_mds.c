@@ -100,7 +100,7 @@ _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios, int add,
 
 	INOH_LOCK(ih);
 
-	/* 
+	/*
 	 * Search the existing replicas to make sure the given ios is not
 	 *   already there.
 	 */
@@ -562,12 +562,12 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
 
-	wk = uswi_find(fgp, NULL);
-	if (wk == NULL)
-		return (SLERR_REPL_NOT_ACT);
+	rc = uswi_findoradd(fgp, NULL);
+	if (rc)
+		return (rc);
 
 	/* Find replica IOS indexes */
-	rc = mds_repl_iosv_lookup_add(USWI_INOH(wk),
+	rc = mds_repl_iosv_lookup(USWI_INOH(wk),
 	    iosv, iosidx, nios);
 	if (rc) {
 		uswi_unref(wk);
@@ -577,6 +577,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_INVALID;
 	tract[BREPLST_REPL_SCHED] = BREPLST_INVALID;
+	tract[BREPLST_REPL_VALID] = BREPLST_GARBAGE;
 
 	if (bmapno == (sl_bmapno_t)-1) {
 		brepls_init(retifset, 0);
@@ -610,6 +611,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	} else
 		rc = SLERR_BMAP_INVALID;
 
+	uswi_enqueue_sites(wk, iosv, nios);
 	uswi_unref(wk);
 	return (rc);
 }
