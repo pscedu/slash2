@@ -535,7 +535,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 		current_reclaim_logfile = mds_open_logfile(seqno, 0);
 
 	fg.fg_fid = jnamespace->sjnm_target_fid;
-	fg.fg_gen = jnamespace->sjnm_new_parent_fid;
+	fg.fg_gen = jnamespace->sjnm_target_gen;
 
 	if (replay)
 		lseek(current_reclaim_logfile, (seqno % SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen), SEEK_SET);
@@ -607,10 +607,10 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 		 * NOT trigger this code.
 		 */
 		jnamespace->sjnm_flag |= SJ_NAMESPACE_RECLAIM;
-		jnamespace->sjnm_new_parent_fid = sstb->sst_gen;
+		jnamespace->sjnm_target_gen = sstb->sst_gen;
 		if (op == NS_OP_SETSIZE) {
 			psc_assert(sstb->sst_gen >= 1);
-			jnamespace->sjnm_new_parent_fid--;
+			jnamespace->sjnm_target_gen--;
 		}
 	}
 

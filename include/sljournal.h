@@ -120,7 +120,10 @@ struct slmds_jent_namespace {
 
 	uint64_t		sjnm_parent_fid;		/* parent dir FID */
 	uint64_t		sjnm_target_fid;
-	uint64_t		sjnm_new_parent_fid;		/* rename only or generation number */
+	union {
+		uint64_t	sjnm_new_parent_fid;		/* rename only or generation number */
+		uint64_t	sjnm_target_gen;
+	};
 
 	uint32_t		sjnm_mask;			/* attribute mask */
 
