@@ -52,7 +52,6 @@
 #define SLM_CBARG_SLOT_CSVC	0
 #define SLM_CBARG_SLOT_RESPROF	1
 
-int				 replay_inprog;
 char				 hostname[MAXHOSTNAMELEN];
 
 struct psc_journal		*mdsJournal;
@@ -1537,10 +1536,8 @@ mds_journal_init(void)
 	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
 	    "slmjcursorthr");
 
-	replay_inprog = 1;
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
-	replay_inprog = 0;
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 	psc_notify("Last bmap sequence number low water mark is %"PRId64,
