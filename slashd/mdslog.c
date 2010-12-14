@@ -62,11 +62,11 @@ static int			 logentrysize;
 extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 
 /*
- * Eventually, we are going to retrieve the namespace update sequence number
+ * Eventually, we are going to retrieve the namespace update and reclaim sequence number
  * from the system journal.
  */
 uint64_t			 next_update_seqno;
-uint64_t			 next_garbage_seqno;
+uint64_t			 next_reclaim_seqno;
 
 /*
  * Low and high water marks of update sequence numbers that need to be propagated.
@@ -122,13 +122,25 @@ psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
 
 uint64_t
-mds_get_next_seqno(void)
+mds_next_update_seqno(void)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT;
 	uint64_t seqno;
 
 	spinlock(&lock);
 	seqno = next_update_seqno++;
+	freelock(&lock);
+	return (seqno);
+}
+
+uint64_t
+mds_next_reclaim_seqno(void)
+{
+	static psc_spinlock_t lock = SPINLOCK_INIT;
+	uint64_t seqno;
+
+	spinlock(&lock);
+	seqno = next_reclaim_seqno++;
 	freelock(&lock);
 	return (seqno);
 }
@@ -529,8 +541,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 	    jnamespace->sjnm_op == NS_OP_UNLINK ||
  	    jnamespace->sjnm_op == NS_OP_SETSIZE);
 
-	seqno = pjournal_next_reclaim(mdsJournal);
-
+	seqno = jnamespace->sjnm_reclaim_seqno;
 	if (current_reclaim_logfile == -1)
 		current_reclaim_logfile = mds_open_logfile(seqno, 0);
 
@@ -581,7 +592,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	    sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	jnamespace->sjnm_op = op;
-	jnamespace->sjnm_seqno = mds_get_next_seqno();
+	jnamespace->sjnm_seqno = mds_next_update_seqno();
 	jnamespace->sjnm_parent_fid = parent;
 	jnamespace->sjnm_target_fid = sstb->sst_fid;
 	jnamespace->sjnm_new_parent_fid = newparent;
@@ -612,6 +623,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 			psc_assert(sstb->sst_gen >= 1);
 			jnamespace->sjnm_target_gen--;
 		}
+		jnamespace->sjnm_reclaim_seqno = mds_next_reclaim_seqno();
 	}
 
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
@@ -1492,7 +1504,7 @@ mds_journal_init(void)
 	/*
 	 * Next sequence number for garbage collection record.
 	 */
-	next_garbage_seqno = 0;
+	next_reclaim_seqno = 0;
 
 	/* Make sure we have some IO servers to work with */
 	SITE_FOREACH_RES(nodeSite, r, i) {
