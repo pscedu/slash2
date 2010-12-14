@@ -284,6 +284,9 @@ struct srt_stat {
 #define sst_mtime_ns	sst_mtim.tv_nsec
 #define sst_ctime	sst_ctim.tv_sec
 #define sst_ctime_ns	sst_ctim.tv_nsec
+
+/* reappropriated fields specific to directories */
+#define sstd_freplpol	sst_ptruncgen		/* new file repl pol for dirs */
 } __packed;
 
 #define DEBUG_SSTB(level, sstb, fmt, ...)					\
@@ -522,7 +525,7 @@ struct srm_replst_slave_req {
 
 /* per-bmap header submessage, prepended before each bcs_repls content */
 struct srsm_replst_bhdr {
-	uint8_t			srsb_repl_policy;
+	uint8_t			srsb_replpol;
 } __packed;
 
 #define SL_NBITS_REPLST_BHDR	(8)

@@ -472,7 +472,7 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 				pfl_bitstr_copy(&bhdr, 0, rsb->rsb_data, nb *
 				    (SL_NBITS_REPLST_BHDR + SL_BITS_PER_REPLICA * current_mrs.mrs_nios),
 				    SL_NBITS_REPLST_BHDR);
-				putchar((bhdr.srsb_repl_policy == BRP_PERSIST ?
+				putchar((bhdr.srsb_replpol == BRP_PERSIST ?
 				    pmap : map)[SL_REPL_GET_BMAP_IOS_STAT(
 				    rsb->rsb_data, off)]);
 			}

@@ -63,14 +63,14 @@ struct bmap_core_state {
  * bmap_extra_state
  * @bes_crcs: the CRC table, one 8-byte CRC per sliver.
  * @bes_gen: current generation number.
- * @bes_repl_policy: replication policy.
+ * @bes_replpol: replication policy.
  *
  * This structure must be 64-bit aligned and padded.
  */
 struct bmap_extra_state {
 	uint64_t		bes_crcs[SLASH_CRCS_PER_BMAP];
 	sl_bmapgen_t		bes_gen;
-	uint32_t		bes_repl_policy;
+	uint32_t		bes_replpol;
 };
 
 /**
@@ -86,6 +86,7 @@ struct bmap_ondisk {
 #define bod_repls	bod_corestate.bcs_repls
 #define bod_crcstates	bod_corestate.bcs_crcstates
 #define bod_crcs	bod_extrastate.bes_crcs
+#define bod_replpol	bod_extrastate.bes_replpol
 };
 
 /**

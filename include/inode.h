@@ -66,7 +66,7 @@ struct slash_inode_od {
 	uint32_t		ino_bsz;			/* bmap size */
 	uint32_t		ino_nrepls;			/* if 0, use ino_prepl */
 //	uint32_t		ino_csnap;			/* current snapshot */
-	uint32_t		ino_newbmap_policy;		/* see BRP_* values */
+	uint32_t		ino_replpol;			/* BRP_* policies */
 	sl_replica_t		ino_repls[SL_DEF_REPLICAS];	/* embed a few replicas	*/
 	uint64_t		ino_ptruncoff;			/* partial truncate offset */
 
@@ -76,6 +76,7 @@ struct slash_inode_od {
 #define INO_OD_SZ		sizeof(struct slash_inode_od)
 #define INO_OD_CRCSZ		offsetof(struct slash_inode_od, ino_crc)
 
+/* ino_flags */
 #define INOF_IN_PTRUNC		(1 << 0)			/* awaiting partial truncation resolution */
 
 #define INO_VERSION		0x0008
