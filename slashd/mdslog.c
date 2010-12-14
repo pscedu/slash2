@@ -859,6 +859,11 @@ mds_read_batch_update(uint64_t seqno)
 	 */
 	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_UPDATELOG,
 	    seqno / SLM_UPDATE_BATCH);
+	/*
+ 	 * If this file does not exist, can we assume that no one is interested
+ 	 * in the update requests that used to be stored there?  Otherwise, we
+ 	 * will need another on-disk storage to track the progress of each MDS.
+ 	 */
 	logfile = open(fn, O_RDONLY);
 	if (logfile == -1)
 		psc_fatal("Fail to open update log file %s", fn);
@@ -1179,6 +1184,12 @@ mds_send_batch_reclaim(uint64_t seqno)
 	keepfile = 0;
 	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_RECLAIMLOG,
 	    seqno / SLM_RECLAIM_BATCH);
+	/*
+ 	 * Unless we use another on-disk file to remember the progress of each
+ 	 * I/O server, we can use the existence of this file to indicate if
+ 	 * any I/O server is still interested in the reclaim requests stored 
+ 	 * in this file.
+ 	 */
 	logfile = open(fn, O_RDONLY);
 	if (logfile == -1)
 		psc_fatal("Fail to open reclaim log file %s", fn);
