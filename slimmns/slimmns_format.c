@@ -21,12 +21,14 @@
 #include <sys/stat.h>
 
 #include <errno.h>
+#include <time.h>
 #include <fcntl.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+// #include <uuid/uuid.h>
 
 #include "pfl/pfl.h"
 #include "pfl/cdefs.h"
@@ -107,7 +109,9 @@ slimmns_create(const char *root, uint32_t depth)
 	memset(&cursor, 0, sizeof(struct psc_journal_cursor));
 	cursor.pjc_magic = PJRNL_CURSOR_MAGIC;
 	cursor.pjc_version = PJRNL_CURSOR_VERSION;
+	cursor.pjc_timestamp = time(NULL);
 	cursor.pjc_fid = SLFID_MIN;
+	// uuid_generate(cursor.pjc_uuid);
 	if (pwrite(fd, &cursor, sizeof(cursor), 0) != sizeof(cursor))
 		psc_fatal("write %s", fn);
 	close(fd);

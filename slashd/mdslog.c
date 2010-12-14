@@ -52,6 +52,9 @@
 #define SLM_CBARG_SLOT_CSVC	0
 #define SLM_CBARG_SLOT_RESPROF	1
 
+int				 replay_inprog;
+char				 hostname[MAXHOSTNAMELEN];
+
 struct psc_journal		*mdsJournal;
 static struct pscrpc_nbreqset	*logPndgReqs;
 
@@ -423,6 +426,36 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	return (rc);
 }
 
+int
+mds_open_logfile(uint64_t seqno, int update)
+{
+	int logfile, first, direct;
+	static char log_fn[PATH_MAX];
+
+	if (update) {
+		direct = O_DIRECT;
+		first = (seqno % SLM_UPDATE_BATCH) == 0 ? 1 : 0;
+		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+		    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH, hostname, 
+		    mds_cursor.pjc_timestamp);
+	} else {
+		direct = 0;
+		first = (seqno % SLM_RECLAIM_BATCH) == 0 ? 1 : 0;
+		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+		    SL_FN_RECLAIMLOG, seqno/SLM_RECLAIM_BATCH, hostname, 
+		    mds_cursor.pjc_timestamp);
+	}
+	logfile = open(log_fn, O_RDWR | O_SYNC | O_APPEND | direct); 
+	if (logfile > 0)
+		return logfile;
+	if (!first)
+		psc_fatal("Fail to open log file %s", log_fn);
+	logfile = open(log_fn, O_CREAT | O_TRUNC | O_RDWR | O_SYNC | direct, 0600);
+	if (logfile < 0)
+		psc_fatal("Fail to create log file %s", log_fn);
+	return (logfile);
+}
+
 /**
  * mds_distill_handler - Distill information from the system journal and
  *	write into namespace update or garbage reclaim logs.
@@ -433,9 +466,13 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
  *	Once in a secondary log, we can process them as we see fit.
  *	Sometimes these secondary log files can hang over a long time
  *	because a peer MDS or an IO server is down or slow.
+ *
+ *	We encode the cursor creation time and hostname into the log file
+ *	names to minimize collisions.  If undetected, these collisions
+ *	can lead to insidious bugs, especially when on-disk format changes. 
  */
 int
-mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
+mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 {
 	struct slmds_jent_namespace *jnamespace;
 	static char update_fn[PATH_MAX];
@@ -443,6 +480,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 	uint64_t seqno;
 	int sz;
 	struct slash_fidgen fg;
+	unsigned long off;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
@@ -453,22 +491,15 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 
 	if (npeers) {
 		seqno = jnamespace->sjnm_seqno;
-		if ((seqno % SLM_UPDATE_BATCH) == 0) {
-			psc_assert(current_update_logfile == -1);
-			xmkfn(update_fn, "%s/%s.%d", SL_PATH_DATADIR,
-			    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH);
-			/*
-			 * Truncate the file if it already exists.  Otherwise, it
-			 * can lead to an insidious bug especially when the
-			 * on-disk format of the log file changes.
-			 */
-			current_update_logfile = open(update_fn, O_CREAT |
-			    O_TRUNC | O_RDWR | O_SYNC | O_DIRECT, 0600);
-			if (current_update_logfile == -1)
-				psc_fatal("Fail to create update log file %s", update_fn);
-		} else
-			psc_assert(current_update_logfile != -1);
+		if (current_update_logfile == -1)
+			current_update_logfile = mds_open_logfile(seqno, 1);
 
+		if (replay)
+			lseek(current_update_logfile, (seqno % SLM_UPDATE_BATCH) * logentrysize, SEEK_SET);
+		else {
+			off = lseek(current_update_logfile, 0, SEEK_CUR);
+			psc_assert(off == (seqno % SLM_UPDATE_BATCH) * logentrysize);
+		}
 		sz = write(current_update_logfile, pje, logentrysize);
 		if (sz != logentrysize)
 			psc_fatal("Fail to write update log file %s", update_fn);
@@ -501,23 +532,18 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers)
 
 	seqno = pjournal_next_reclaim(mdsJournal);
 
-	if ((seqno % SLM_RECLAIM_BATCH) == 0) {
-		psc_assert(current_reclaim_logfile == -1);
-		xmkfn(reclaim_fn, "%s/%s.%d", SL_PATH_DATADIR,
-		    SL_FN_RECLAIMLOG, seqno/SLM_RECLAIM_BATCH);
-		/*
-		 * Truncate the file if it already exists.  Otherwise, it
-		 * can lead to an insidious bug especially when the
-		 * on-disk format of the log file changes.
-		 */
-		current_reclaim_logfile = open(reclaim_fn, O_CREAT |
-		    O_TRUNC | O_RDWR | O_SYNC, 0600);
-		if (current_reclaim_logfile == -1)
-			psc_fatal("Fail to create reclaim log file %s", reclaim_fn);
-	}
+	if (current_reclaim_logfile == -1)
+		current_reclaim_logfile = mds_open_logfile(seqno, 0);
+
 	fg.fg_fid = jnamespace->sjnm_target_fid;
 	fg.fg_gen = jnamespace->sjnm_new_parent_fid;
 
+	if (replay)
+		lseek(current_reclaim_logfile, (seqno % SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen), SEEK_SET);
+	else {
+		off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
+		psc_assert(off == (seqno % SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen));
+	}
 	sz = write(current_reclaim_logfile, &fg, sizeof(struct slash_fidgen));
 	if (sz != sizeof(struct slash_fidgen))
 		psc_fatal("Fail to write reclaim log file %s", reclaim_fn);
@@ -1048,6 +1074,8 @@ mds_open_cursor(void)
 	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
 	slm_set_curr_slashid(mds_cursor.pjc_fid);
+	psc_notify("File system was formated on %s (%lu)\n", 
+	    ctime((time_t *)&mds_cursor.pjc_timestamp), mds_cursor.pjc_timestamp);
 }
 
 /*
@@ -1451,7 +1479,11 @@ mds_journal_init(void)
 {
 	struct sl_resource *r;
 	struct sl_resm *resm;
-	int i, found = 0, npeers;
+	int i, rc, found = 0, npeers;
+
+	rc = gethostname(hostname, MAXHOSTNAMELEN);
+	if (rc < 0)
+		psc_fatal("Fail to get hostname\n");
 
 	/*
 	 * To be read from a log file after we replay the system journal.
@@ -1505,8 +1537,10 @@ mds_journal_init(void)
 	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
 	    "slmjcursorthr");
 
+	replay_inprog = 1;
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
+	replay_inprog = 0;
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 	psc_notify("Last bmap sequence number low water mark is %"PRId64,
