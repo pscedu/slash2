@@ -137,7 +137,7 @@ slmrcmthr_walk_brepls(struct slm_replst_workreq *rsw,
 		srcm->srcm_page_bitpos = 0;
 	}
 	memset(&bhdr, 0, sizeof(bhdr));
-	bhdr.srsb_repl_policy = bmap_2_replpol(bcm);
+	bhdr.srsb_replpol = bmap_2_replpol(bcm);
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos,
 	    &bhdr, 0, SL_NBITS_REPLST_BHDR);
 	pfl_bitstr_copy(srcm->srcm_page, srcm->srcm_page_bitpos +
@@ -168,7 +168,7 @@ slm_rcm_issue_getreplst(struct slm_replst_workreq *rsw,
 		mq->fg = *USWI_FG(wk);
 		mq->nbmaps = USWI_NBMAPS(wk);
 		mq->nrepls = USWI_NREPLS(wk);
-		mq->newreplpol = USWI_INO(wk)->ino_newbmap_policy;
+		mq->newreplpol = USWI_INO(wk)->ino_replpol;
 		memcpy(mq->repls, USWI_INO(wk)->ino_repls,
 		    MIN(mq->nrepls, SL_DEF_REPLICAS) * sizeof(*mq->repls));
 		if (mq->nrepls > SL_DEF_REPLICAS)

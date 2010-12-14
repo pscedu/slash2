@@ -342,14 +342,19 @@ slm_rmc_handle_lookup(struct pscrpc_request *rq)
 int
 slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 {
+	struct fidc_membh *p = NULL, *c = NULL;
 	struct srm_mkdir_req *mq;
 	struct srm_mkdir_rep *mp;
-	struct fidc_membh *p;
+	uint32_t pol;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	mp->rc = slm_fcmh_get(&mq->pfg, &p);
 	if (mp->rc)
 		goto out;
+
+	FCMH_LOCK(p);
+	pol = p->fcmh_sstb.sstd_freplpol;
+	FCMH_ULOCK(p);
 
 	mq->name[sizeof(mq->name) - 1] = '\0';
 	mds_reserve_slot();
@@ -359,9 +364,23 @@ slm_rmc_handle_mkdir(struct pscrpc_request *rq)
 	mds_unreserve_slot();
 
 	mdsio_fcmh_refreshattr(p, &mp->pattr);
+
+	/*
+	 * Set new subdir's new files' default replication policy from
+	 * parent dir.
+	 */
+	if (slm_fcmh_get(&mp->cattr.sst_fg, &c) == 0) {
+		FCMH_LOCK(c);
+		c->fcmh_sstb.sstd_freplpol = pol;
+		FCMH_ULOCK(c);
+		mdsio_fcmh_setattr(c, SL_SETATTRF_FREPLPOL);
+	}
+
  out:
 	if (p)
 		fcmh_op_done_type(p, FCMH_OPCNT_LOOKUP_FIDC);
+	if (c)
+		fcmh_op_done_type(c, FCMH_OPCNT_LOOKUP_FIDC);
 	return (0);
 }
 
@@ -399,6 +418,7 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	struct srm_create_req *mq;
 	struct bmapc_memb *bmap;
 	void *mdsio_data;
+	uint32_t pol;
 
 	p = NULL;
 
@@ -442,12 +462,21 @@ slm_rmc_handle_create(struct pscrpc_request *rq)
 	 */
 	mdsio_release(&rootcreds, mdsio_data);
 
+	DEBUG_FCMH(PLL_DEBUG, p, "mdsio_release() done for %s", mq->name);
+
 	mp->rc2 = slm_fcmh_get(&mp->cattr.sst_fg, &c);
 	if (mp->rc2)
 		goto out;
 
-	DEBUG_FCMH(PLL_DEBUG, p, "release op done for %s", mq->name);
+	FCMH_LOCK(p);
+	pol = p->fcmh_sstb.sstd_freplpol;
+	FCMH_ULOCK(p);
 
+	INOH_LOCK(fcmh_2_inoh(c));
+	fcmh_2_ino(c)->ino_replpol = pol;
+	INOH_ULOCK(fcmh_2_inoh(c));
+
+	/* obtain lease for first bmap as optimization */
 	mp->flags = mq->flags;
 
 	bmap = NULL;
@@ -823,8 +852,8 @@ slm_rmc_handle_set_newreplpol(struct pscrpc_request *rq)
 	mp->rc = mds_inox_ensure_loaded(ih);
 	if (mp->rc == 0) {
 		INOH_LOCK(ih);
-		ih->inoh_ino.ino_newbmap_policy = mq->pol;
-		ih->inoh_flags |= INOH_EXTRAS_DIRTY;
+		ih->inoh_ino.ino_replpol = mq->pol;
+		ih->inoh_flags |= INOH_INO_DIRTY;
 		INOH_ULOCK(ih);
 		mds_inode_sync(ih);
 	}

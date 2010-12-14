@@ -1321,7 +1321,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 }
 
 /**
- * mds_bmapod_initnew - Called when a read request offset exceeds the
+ * mds_bmap_initnew - Called when a read request offset exceeds the
  *	bounds of the file causing a new bmap to be created.
  * Notes:  Bmap creation race conditions are prevented because the bmap
  *	handle already exists at this time with
@@ -1333,12 +1333,21 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
  *	writes something to it.
  */
 __static void
-mds_bmapod_initnew(struct bmap_ondisk *bod)
+mds_bmap_initnew(struct bmapc_memb *b)
 {
+	struct bmap_ondisk *bod = bmap_2_ondisk(b);
+	struct fidc_membh *fcmh = b->bcm_fcmh;
+	uint32_t pol;
 	int i;
 
 	for (i = 0; i < SLASH_CRCS_PER_BMAP; i++)
 		bod->bod_crcs[i] = BMAP_NULL_CRC;
+
+	INOH_LOCK(fcmh_2_inoh(fcmh));
+	pol = fcmh_2_ino(fcmh)->ino_replpol;
+	INOH_ULOCK(fcmh_2_inoh(fcmh));
+
+	BHREPL_POLICY_SET(b, pol);
 
 	psc_crc64_calc(&bod->bod_crc, bod, BMAP_OD_CRCSZ);
 }
@@ -1368,7 +1377,7 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 		    memcmp(bmap_2_ondisk(bcm), &null_bmap_od,
 		    sizeof(null_bmap_od)) == 0) {
 			DEBUG_BMAPOD(PLL_INFO, bcm, "");
-			mds_bmapod_initnew(bmap_2_ondisk(bcm));
+			mds_bmap_initnew(bcm);
 			DEBUG_BMAPOD(PLL_INFO, bcm, "");
 			return (0);
 		}

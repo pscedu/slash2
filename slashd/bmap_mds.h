@@ -81,7 +81,7 @@ struct bmap_mds_info {
 #define bmap_2_bmdsassign(b)	bmap_2_bmdsi(b)->bmdsi_assign
 #define bmap_2_xstate(b)	(&bmap_2_bmi(b)->bmdsi_extrastate)
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen
-#define bmap_2_replpol(b)	bmap_2_xstate(b)->bes_repl_policy
+#define bmap_2_replpol(b)	bmap_2_xstate(b)->bes_replpol
 #define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
 #define bmap_2_ondisk(b)	((struct bmap_ondisk *)(&(b)->bcm_corestate))
 #define bmap_2_ondiskcrc(b)	bmap_2_bmi(b)->bmdsi_ondiskcrc
