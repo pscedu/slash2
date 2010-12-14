@@ -80,7 +80,7 @@ struct bmap_iod_minseq {
 				    */
 
 #define DEBUG_BCR(level, bcr, fmt, ...)					\
-	psc_logs((level), PSS_GEN,					\
+	psc_logs((level), SLSS_BMAP,					\
 	    "bcr@%p fid="SLPRI_FG" xid=%"PRIu64" nups=%d fl=%d "	\
 	    "age=%"PSCPRI_TIMET" "					\
 	    "bmap@%p:%u biod_bcr_xid=%"PRId64" "			\
