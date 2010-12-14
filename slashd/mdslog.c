@@ -122,31 +122,25 @@ psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
 
 uint64_t
-mds_next_update_seqno(uint64_t val)
+mds_next_update_seqno(void)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT;
 	uint64_t seqno;
 
 	spinlock(&lock);
-	if (!val)
-		seqno = next_update_seqno++;
-	else
-		next_update_seqno = val;
+	seqno = next_update_seqno++;
 	freelock(&lock);
 	return (seqno);
 }
 
 uint64_t
-mds_next_reclaim_seqno(int64_t val)
+mds_next_reclaim_seqno(void)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT;
 	uint64_t seqno;
 
 	spinlock(&lock);
-	if (!val)
-		seqno = next_reclaim_seqno++;
-	else
-		next_reclaim_seqno = val;
+	seqno = next_reclaim_seqno++;
 	freelock(&lock);
 	return (seqno);
 }
@@ -511,9 +505,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 		if (current_update_logfile == -1)
 			current_update_logfile = mds_open_logfile(seqno, 1);
 
-		if (replay)
+		if (replay) {
+			next_update_seqno = seqno + 1;
 			lseek(current_update_logfile, (seqno % SLM_UPDATE_BATCH) * logentrysize, SEEK_SET);
-		else {
+		} else {
 			off = lseek(current_update_logfile, 0, SEEK_CUR);
 			psc_assert(off == (seqno % SLM_UPDATE_BATCH) * logentrysize);
 		}
@@ -554,9 +549,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 	fg.fg_fid = jnamespace->sjnm_target_fid;
 	fg.fg_gen = jnamespace->sjnm_target_gen;
 
-	if (replay)
+	if (replay) {
+		next_reclaim_seqno = seqno + 1;
 		lseek(current_reclaim_logfile, (seqno % SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen), SEEK_SET);
-	else {
+	} else {
 		off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
 		psc_assert(off == (seqno % SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen));
 	}
@@ -598,7 +594,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	    sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	jnamespace->sjnm_op = op;
-	jnamespace->sjnm_seqno = mds_next_update_seqno(0);
+	jnamespace->sjnm_seqno = mds_next_update_seqno();
 	jnamespace->sjnm_parent_fid = parent;
 	jnamespace->sjnm_target_fid = sstb->sst_fid;
 	jnamespace->sjnm_new_parent_fid = newparent;
@@ -629,7 +625,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 			psc_assert(sstb->sst_gen >= 1);
 			jnamespace->sjnm_target_gen--;
 		}
-		jnamespace->sjnm_reclaim_seqno = mds_next_reclaim_seqno(0);
+		jnamespace->sjnm_reclaim_seqno = mds_next_reclaim_seqno();
 	}
 
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
