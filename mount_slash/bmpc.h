@@ -126,7 +126,7 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_RBWRDY 		? "R" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
-	psc_logs((level), PSS_GEN,					\
+	psc_logs((level), PSS_DEF,					\
 	    "bmpce@%p fl=%u o=%x b=%p ts="PSCPRI_TIMESPEC" "		\
 	    "wr=%hu rd=%hu "						\
 	    "lru=%d biorq=%p "BMPCE_FLAGS_FORMAT" "fmt,			\
@@ -282,7 +282,7 @@ struct bmpc_ioreq {
 	(b)->biorq_flags & BIORQ_FLUSHRDY	? "R" : ""
 
 #define DEBUG_BIORQ(level, b, fmt, ...)					\
-	psc_logs((level), PSS_GEN,					\
+	psc_logs((level), PSS_DEF,					\
 	    "biorq@%p fl=%d o=%u l=%u np=%d b=%p ts="PSCPRI_TIMESPEC" "	\
 	    BIORQ_FLAGS_FORMAT" "fmt,					\
 	    (b), (b)->biorq_flags, (b)->biorq_off, (b)->biorq_len,	\
