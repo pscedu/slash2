@@ -28,6 +28,7 @@
 #include "psc_rpc/rpc.h"
 #include "psc_rpc/rsx.h"
 #include "psc_util/crc.h"
+#include "psc_util/hostname.h"
 #include "psc_util/journal.h"
 #include "psc_util/lock.h"
 #include "psc_util/log.h"
@@ -52,8 +53,6 @@
 #define SLM_CBARG_SLOT_CSVC	0
 #define SLM_CBARG_SLOT_RESPROF	1
 
-char				 hostname[MAXHOSTNAMELEN];
-
 struct psc_journal		*mdsJournal;
 static struct pscrpc_nbreqset	*logPndgReqs;
 
@@ -62,15 +61,15 @@ static int			 logentrysize;
 extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 
 /*
- * Eventually, we are going to retrieve the namespace update and reclaim sequence number
- * from the system journal.
+ * Eventually, we are going to retrieve the namespace update and reclaim
+ * sequence number from the system journal.
  */
 uint64_t			 next_update_seqno;
 uint64_t			 next_reclaim_seqno;
 
 /*
- * Low and high water marks of update sequence numbers that need to be propagated.
- * Note that the pace of each MDS is different.
+ * Low and high water marks of update sequence numbers that need to be
+ * propagated.  Note that the pace of each MDS is different.
  */
 static uint64_t			 update_seqno_lwm;
 static uint64_t			 update_seqno_hwm;
@@ -78,8 +77,8 @@ static uint64_t			 update_seqno_hwm;
 static int			 current_update_logfile = -1;
 
 /*
- * Low and high water marks of reclaim sequence numbers that need to be sent out.
- * Note that the pace of each IOS is different.
+ * Low and high water marks of reclaim sequence numbers that need to be
+ * sent out.  Note that the pace of each IOS is different.
  */
 static uint64_t			 reclaim_seqno_lwm;
 static uint64_t			 reclaim_seqno_hwm;
@@ -326,7 +325,7 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 		memset(&inoh_extras, 0, sizeof(inoh_extras));
 
 		rc = mdsio_read(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
-			SL_EXTRAS_START_OFF, mdsio_data);
+		    SL_EXTRAS_START_OFF, mdsio_data);
 		if (rc)
 			goto out;
 
@@ -335,7 +334,7 @@ mds_redo_ino_addrepl(struct psc_journal_enthdr *pje)
 		psc_crc64_calc(&inoh_extras.inox_crc, &inoh_extras, INOX_OD_CRCSZ);
 
 		rc = mdsio_write(&rootcreds, &inoh_extras, INOX_OD_SZ, &nb,
-			SL_EXTRAS_START_OFF, 0, mdsio_data, NULL, NULL);
+		    SL_EXTRAS_START_OFF, 0, mdsio_data, NULL, NULL);
 
 		if (!rc && nb != INO_OD_SZ)
 			rc = EIO;
@@ -447,23 +446,24 @@ mds_open_logfile(uint64_t seqno, int update)
 		direct = O_DIRECT;
 		first = (seqno % SLM_UPDATE_BATCH) == 0 ? 1 : 0;
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
-		    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH, hostname, 
-		    mds_cursor.pjc_timestamp);
+		    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH,
+		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	} else {
 		direct = 0;
 		first = (seqno % SLM_RECLAIM_BATCH) == 0 ? 1 : 0;
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
-		    SL_FN_RECLAIMLOG, seqno/SLM_RECLAIM_BATCH, hostname, 
-		    mds_cursor.pjc_timestamp);
+		    SL_FN_RECLAIMLOG, seqno/SLM_RECLAIM_BATCH,
+		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	}
-	logfile = open(log_fn, O_RDWR | O_SYNC | O_APPEND | direct); 
+	logfile = open(log_fn, O_RDWR | O_SYNC | O_APPEND | direct);
 	if (logfile > 0)
 		return logfile;
 	if (!first)
-		psc_fatal("Fail to open log file %s", log_fn);
-	logfile = open(log_fn, O_CREAT | O_TRUNC | O_RDWR | O_SYNC | direct, 0600);
+		psc_fatal("Failed to open log file %s", log_fn);
+	logfile = open(log_fn, O_CREAT | O_TRUNC | O_RDWR | O_SYNC |
+	    direct, 0600);
 	if (logfile < 0)
-		psc_fatal("Fail to create log file %s", log_fn);
+		psc_fatal("Failed to create log file %s", log_fn);
 	return (logfile);
 }
 
@@ -480,7 +480,7 @@ mds_open_logfile(uint64_t seqno, int update)
  *
  *	We encode the cursor creation time and hostname into the log file
  *	names to minimize collisions.  If undetected, these collisions
- *	can lead to insidious bugs, especially when on-disk format changes. 
+ *	can lead to insidious bugs, especially when on-disk format changes.
  */
 int
 mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
@@ -488,10 +488,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 	struct slmds_jent_namespace *jnamespace;
 	static char update_fn[PATH_MAX];
 	static char reclaim_fn[PATH_MAX];
-	uint64_t seqno;
-	int sz;
 	struct slash_fidgen fg;
 	unsigned long off;
+	uint64_t seqno;
+	int sz;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
@@ -507,7 +507,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 
 		if (replay) {
 			next_update_seqno = seqno + 1;
-			lseek(current_update_logfile, (seqno % SLM_UPDATE_BATCH) * logentrysize, SEEK_SET);
+			lseek(current_update_logfile, (seqno %
+			    SLM_UPDATE_BATCH) * logentrysize, SEEK_SET);
 		} else {
 			/* make sure we write sequentially */
 			off = lseek(current_update_logfile, 0, SEEK_CUR);
@@ -541,7 +542,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 
 	psc_assert(jnamespace->sjnm_op == NS_OP_SETATTR ||
 	    jnamespace->sjnm_op == NS_OP_UNLINK ||
- 	    jnamespace->sjnm_op == NS_OP_SETSIZE);
+	    jnamespace->sjnm_op == NS_OP_SETSIZE);
 
 	seqno = jnamespace->sjnm_reclaim_seqno;
 	if (current_reclaim_logfile == -1)
@@ -552,11 +553,14 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 
 	if (replay) {
 		next_reclaim_seqno = seqno + 1;
-		lseek(current_reclaim_logfile, (seqno % SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen), SEEK_SET);
+		lseek(current_reclaim_logfile, (seqno %
+		    SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen),
+		    SEEK_SET);
 	} else {
 		/* make sure we write sequentially */
 		off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
-		psc_assert(off == (seqno % SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen));
+		psc_assert(off == (seqno % SLM_RECLAIM_BATCH) *
+		    sizeof(struct slash_fidgen));
 	}
 	sz = write(current_reclaim_logfile, &fg, sizeof(struct slash_fidgen));
 	if (sz != sizeof(struct slash_fidgen))
@@ -1006,8 +1010,8 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 }
 
 /**
- * mds_update_cursor - write some system information into our cursor file.  Note
- *     that every field must be protected by a spinlock.
+ * mds_update_cursor - write some system information into our cursor
+ *	file.  Note that every field must be protected by a spinlock.
  */
 void
 mds_update_cursor(void *buf, uint64_t txg)
@@ -1044,10 +1048,11 @@ mds_current_txg(uint64_t *txg)
 }
 
 /**
- * mds_cursor_thread - Update the cursor file in the ZFS that records the current
- *     transaction group number and other system log status.  If there is no
- *     activity in system other that this write to update the cursor, our
- *     customized ZFS will extend the lifetime of the transaction group.
+ * mds_cursor_thread - Update the cursor file in the ZFS that records
+ *	the current transaction group number and other system log
+ *	status.  If there is no activity in system other that this write
+ *	to update the cursor, our customized ZFS will extend the
+ *	lifetime of the transaction group.
  */
 void
 mds_cursor_thread(__unusedx struct psc_thread *thr)
@@ -1094,7 +1099,7 @@ mds_open_cursor(void)
 	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
 	slm_set_curr_slashid(mds_cursor.pjc_fid);
-	psc_notify("File system was formated on %s (%lu)\n", 
+	psc_notify("File system was formated on %s (%lu)",
 	    ctime((time_t *)&mds_cursor.pjc_timestamp), mds_cursor.pjc_timestamp);
 }
 
@@ -1123,8 +1128,9 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 
 		RPMI_LOCK(rpmi);
 		/*
-		 * All reclaim requests are send to a particulare IOS in order.
-		 * If one IOS was slow/not responding, he has to wait for the next round.
+		 * All reclaim requests are send to a particular IOS in order.
+		 * If one IOS was slow/not responding, he has to wait
+		 * for the next round.
 		 */
 		if (iosinfo->si_seqno != seqno) {
 			RPMI_ULOCK(rpmi);
@@ -1174,11 +1180,11 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 int
 mds_send_batch_reclaim(uint64_t seqno)
 {
-	uint64_t start;
 	int i, count, logfile, keepfile, didwork;
-	char fn[PATH_MAX];
-	ssize_t size;
 	struct slash_fidgen *fg;
+	char fn[PATH_MAX];
+	uint64_t start;
+	ssize_t size;
 
 	didwork = 0;
 	keepfile = 0;
@@ -1194,9 +1200,11 @@ mds_send_batch_reclaim(uint64_t seqno)
 	if (logfile == -1)
 		psc_fatal("Fail to open reclaim log file %s", fn);
 	/*
-	 * Short read is Okay, as long as it is a multiple of the basic data structure.
+	 * Short read is Okay, as long as it is a multiple of the basic
+	 * data structure.
 	 */
-	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH * sizeof(struct slash_fidgen));
+	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH *
+	    sizeof(struct slash_fidgen));
 	if ((size % sizeof(struct slash_fidgen)) != 0)
 		psc_fatal("Fail to read reclaim log file %s", fn);
 
@@ -1205,7 +1213,7 @@ mds_send_batch_reclaim(uint64_t seqno)
 	for (i = 0; i < count; i++) {
 		if (start + i < seqno)
 			continue;
-		fg = (struct slash_fidgen *)(reclaimbuf + i * sizeof(struct slash_fidgen));
+		fg = PSC_AGP(reclaimbuf, i * sizeof(*fg));
 		didwork = mds_send_one_reclaim(fg, start + i);
 
 		/* if all successful, continue */
@@ -1503,15 +1511,11 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 void
 mds_journal_init(void)
 {
+	int i, found = 0, npeers;
 	struct sl_resource *r;
 	struct sl_resm *resm;
-	int i, rc, found = 0, npeers;
 
-	rc = gethostname(hostname, MAXHOSTNAMELEN);
-	if (rc < 0)
-		psc_fatal("Fail to get hostname\n");
-
-	/* Make sure we have some IO servers to work with */
+	/* Make sure we have some I/O servers to work with */
 	SITE_FOREACH_RES(nodeSite, r, i) {
 		if (r->res_type != SLREST_MDS) {
 			found = 1;
@@ -1519,7 +1523,7 @@ mds_journal_init(void)
 		}
 	}
 	if (!found)
-		psc_fatal("Missing IO servers at site %s\n", nodeSite->site_name);
+		psc_fatal("Missing I/O servers at site %s", nodeSite->site_name);
 
 	/* Count the number of peer MDSes we have */
 	npeers = 0;
@@ -1572,7 +1576,10 @@ mds_journal_init(void)
 	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_send_reclaim, NULL,
 	    0, "slmjreclaimthr");
 
-	/* Optionally start a thread to send namespace updates if we have peer MDSes. */
+	/*
+	 * Optionally start a thread to send namespace updates if we
+	 * have peer MDSes.
+	 */
 	if (npeers) {
 		updatebuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
 		logPndgReqs = pscrpc_nbreqset_init(NULL, mds_namespace_rpc_cb);
@@ -1619,7 +1626,7 @@ mds_redo_namespace(struct slmds_jent_namespace *jnamespace)
 	sstb.sst_size = jnamespace->sjnm_size;
 
 	if (!sstb.sst_fid) {
-		psc_errorx("Unexpected zero slash2 ID.\n");
+		psc_errorx("Unexpected zero SLASH2 FID.");
 		return (EINVAL);
 	}
 
