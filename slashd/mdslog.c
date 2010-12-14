@@ -122,25 +122,31 @@ psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
 
 uint64_t
-mds_next_update_seqno(void)
+mds_next_update_seqno(uint64_t val)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT;
 	uint64_t seqno;
 
 	spinlock(&lock);
-	seqno = next_update_seqno++;
+	if (!val)
+		seqno = next_update_seqno++;
+	else
+		next_update_seqno = val;
 	freelock(&lock);
 	return (seqno);
 }
 
 uint64_t
-mds_next_reclaim_seqno(void)
+mds_next_reclaim_seqno(int64_t val)
 {
 	static psc_spinlock_t lock = SPINLOCK_INIT;
 	uint64_t seqno;
 
 	spinlock(&lock);
-	seqno = next_reclaim_seqno++;
+	if (!val)
+		seqno = next_reclaim_seqno++;
+	else
+		next_reclaim_seqno = val;
 	freelock(&lock);
 	return (seqno);
 }
@@ -592,7 +598,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	    sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	jnamespace->sjnm_op = op;
-	jnamespace->sjnm_seqno = mds_next_update_seqno();
+	jnamespace->sjnm_seqno = mds_next_update_seqno(0);
 	jnamespace->sjnm_parent_fid = parent;
 	jnamespace->sjnm_target_fid = sstb->sst_fid;
 	jnamespace->sjnm_new_parent_fid = newparent;
@@ -623,7 +629,7 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 			psc_assert(sstb->sst_gen >= 1);
 			jnamespace->sjnm_target_gen--;
 		}
-		jnamespace->sjnm_reclaim_seqno = mds_next_reclaim_seqno();
+		jnamespace->sjnm_reclaim_seqno = mds_next_reclaim_seqno(0);
 	}
 
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
