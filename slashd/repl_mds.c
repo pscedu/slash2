@@ -562,7 +562,7 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	if (nios < 1 || nios > SL_MAX_REPLICAS)
 		return (EINVAL);
 
-	rc = uswi_findoradd(fgp, NULL);
+	rc = uswi_findoradd(fgp, &wk);
 	if (rc)
 		return (rc);
 
