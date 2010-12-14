@@ -122,8 +122,8 @@ struct slmds_jent_namespace {
 	uint64_t		sjnm_target_fid;
 
 	union {
-		uint64_t	sjnm_new_parent_fid;		/* rename only  */
 		uint64_t	sjnm_target_gen;		/* reclaim only */
+		uint64_t	sjnm_new_parent_fid;		/* rename only  */
 	};
 
 	uint32_t		sjnm_mask;			/* attribute mask */

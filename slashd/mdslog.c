@@ -509,6 +509,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 			next_update_seqno = seqno + 1;
 			lseek(current_update_logfile, (seqno % SLM_UPDATE_BATCH) * logentrysize, SEEK_SET);
 		} else {
+			/* make sure we write sequentially */
 			off = lseek(current_update_logfile, 0, SEEK_CUR);
 			psc_assert(off == (seqno % SLM_UPDATE_BATCH) * logentrysize);
 		}
@@ -553,6 +554,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 		next_reclaim_seqno = seqno + 1;
 		lseek(current_reclaim_logfile, (seqno % SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen), SEEK_SET);
 	} else {
+		/* make sure we write sequentially */
 		off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
 		psc_assert(off == (seqno % SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen));
 	}
@@ -1498,16 +1500,6 @@ mds_journal_init(void)
 	if (rc < 0)
 		psc_fatal("Fail to get hostname\n");
 
-	/*
-	 * To be read from a log file after we replay the system journal.
-	 */
-	next_update_seqno = 0;
-
-	/*
-	 * Next sequence number for garbage collection record.
-	 */
-	next_reclaim_seqno = 0;
-
 	/* Make sure we have some IO servers to work with */
 	SITE_FOREACH_RES(nodeSite, r, i) {
 		if (r->res_type != SLREST_MDS) {
@@ -1552,6 +1544,11 @@ mds_journal_init(void)
 
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
+
+	psc_notify("The next update sequence number is %"PRId64,
+	    next_update_seqno);
+	psc_notify("The next reclaim sequence number is %"PRId64,
+	    next_reclaim_seqno);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
 	psc_notify("Last bmap sequence number low water mark is %"PRId64,
