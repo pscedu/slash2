@@ -14,7 +14,8 @@
 .\" without express or implied warranty.
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
-.Dd October 29, 2010
+.\" %PFL_MODULES rpc %
+.Dd December 14, 2010
 .Dt SLMCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -30,7 +31,6 @@ daemon runtime control
 .Op Fl h Ar table
 .Op Fl i Ar iostatspec
 .Op Fl L Ar listspec
-.Op Fl m Ar meterspec
 .Op Fl P Ar poolspec
 .Op Fl p Ar paramspec
 .Op Fl S Ar socket
@@ -44,21 +44,32 @@ behavior.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.c.mdoc {
+.\"	daemon	=> qq{slashd},
+.\"	cmds	=> {
+.\" #		reconfig => "Reload configuration"
+.\"	}
 .It Fl c Ar cmd
 Instruct
 .Xr slashd 8
 to perform one of the following actions:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
+.Bl -tag -compact -offset indent -width 10n
 .It Cm exit
-Completely terminate
-.Xr slashd 8
-execution.
+Completely terminate execution.
 .El
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.H.mdoc {
 .It Fl H
 Suppress display of headers.
-.It Fl h Ar table
-Query bucket usage statistics for the given hash table(s).
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sH.mdoc {
+.\"	tables => {
+.\"		fidc		=> qq{files\n.Po file\n.Tn ID\ncache\n.Pc},
+.\"		resnid		=> qq{network resources\n.Pq network Tn ID}
+.\"	}
+.It Fl h Ar hashtable
+Query bucket statistics on the given hash table(s).
 .Ar table
 may be one of the following:
 .Pp
@@ -77,13 +88,20 @@ network resources
 The value
 .Cm all
 may be specified to query all hash table statistics.
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.I.mdoc {
 .It Fl I
-Do not use human-readable numbers for large numerical displays,
-e.g. show
-.Li 1MB
-.Pq one megabyte
-as
-.Li 1048576.
+Do not use human-readable numbers when displaying large numerical
+values, e.g. show one megabyte as
+.Li 1048576
+instead of
+.Li 1MB .
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sI.mdoc {
+.\"	iostats => {
+.\"		qq{jrnlwr- Ns Ar fn ,\n.It Cm jrnlrd- Ns Ar fn} =>
+.\"		    qq{Data read/written to journal disk file\n.Ar fn .}
+.\"	}
 .It Fl i Ar iostatspec
 Query I/O statistics.
 .Ar iostatspec
@@ -97,6 +115,10 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width Ds
+.It Cm jrnlwr- Ns Ar fn ,
+.It Cm jrnlrd- Ns Ar fn
+Data read/written to journal disk file
+.Ar fn .
 .It Cm lni-rcv- Ns Ar if ,
 .It Cm lni-snd- Ns Ar if
 Data sent/received per
@@ -113,18 +135,24 @@ may be
 or
 .Cm aggr
 .Pq aggregate .
-.Pp
-.It Cm jrnlwr- Ns Ar fn ,
-.It Cm jrnlrd- Ns Ar fn
-Data read/written to journal disk file
-.Ar fn .
 .El
 .Pp
 The value
 .Cm all
-may be specified to query all I/O statistics.
+may be specified to query all
+.Tn I/O
+statistics.
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sL.mdoc {
+.\"	lists => {
+.\"		fcmhbusy	=> "File with pending action e.g.\\&\n.Tn I/O",
+.\"		fcmhidle	=> "Clean\n.Pq reapable\nfiles",
+.\"		inflightbml	=> "Active\n.Pq inflight\nbmap lease mode updates",
+.\"		pendingbml	=> "Pending bmap lease mode updates",
+.\"		replstwkq	=> "Replication status work buffers"
+.\"	}
 .It Fl L Ar listspec
-Query list cache information for the given list(s).
+Query information on the given list cache(s).
 .Ar listspec
 has the following format:
 .Pp
@@ -139,13 +167,13 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width 12n
+.It Cm fcmhbusy
+File with pending action e.g.\&
+.Tn I/O
 .It Cm fcmhidle
 Clean
 .Pq reapable
 files
-.It Cm fcmhbusy
-File with pending action e.g.\&
-.Tn I/O
 .It Cm inflightbml
 Active
 .Pq inflight
@@ -158,42 +186,40 @@ Replication status work buffers
 .Pp
 The value
 .Cm all
-may be specified to retrieve information about all list caches.
-.It Fl m Ar meterspec
-Report progress information in meters.
-.Ar meterspec
-has the following format:
-.Bd -unfilled -offset indent
-.Ar meter Ns Op , Ns Ar ...
-.Ed
-.Pp
-.Ar meter
-may be one of the following:
-.Pp
-.Bl -tag -compact -offset indent -width 12n
-.It Cm repl- Ns Ar nid
-Replication of inode
-.Ar fid
-metadata to server
-.Ar nid .
-.El
-.Pp
-The value
-.Cm all
-may be specified to retrieve information about all meters.
+may be specified to retrieve information on all list caches.
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sP.mdoc {
+.\"	pools => {
+.\"		bmap		=> qq{Block map structures}
+.\"	}
 .It Fl P Ar poolspec
-Report pool parameters.
+Query information on the given memory pool(s).
 .Ar poolspec
 has the following format:
 .Bd -unfilled -offset indent
 .Ar pool Ns Op , Ns Ar ...
 .Ed
 .Pp
+.Ar pool
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width 12n
+.It Cm bmap
+Block map structures
+.El
+.Pp
 The value
 .Cm all
-may be specified to retrieve information about all pools.
+may be specified to retrieve information on all pools.
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.p.mdoc {
+.\"	subsys => {
+.\"		bmap		=> "Block map structures",
+.\"		fcmh		=> ".Tn FID\ncache members",
+.\"		jrnl		=> "Journaling operations"
+.\"	}
 .It Fl p Ar paramspec
-Query/manipulate operational control parameters.
+Query/manipulate operational parameters.
 .Ar paramspec
 has the following format:
 .Pp
@@ -208,21 +234,33 @@ See
 .Sx Thread Specification
 for details on specifying
 .Ar thread-name .
+The default behavior is to apply the operation to all applicable threads.
 .Pp
 .Ar param
 may be one of the following:
 .Bl -tag -offset ind -width Ds
+.It Cm log.format
+The header prepended to server log messages.
+See
+.Xr pflenv 7
+for details on this format.
+.It Cm log.file
+File path name where log messages will be written.
+This value is write-only.
 .It Cm log.level Ns Op . Ns Ar subsystem
 The logging level of debug message output.
 .Pp
 .Ar subsystem
 may be one of the following:
 .Pp
-.Bl -tag -offset indent -width 12n -compact
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm bmap
 Block map structures
-.It Cm gen
-General/catch all
+.It Cm def
+Default
+.It Cm fcmh
+.Tn FID
+cache members
 .It Cm jrnl
 Journaling operations
 .It Cm lnet
@@ -237,22 +275,23 @@ If
 .Ar subsystem
 is left unspecified, all subsystems will be affected.
 .Pp
-The logging level value may be one of the following:
+The log level value may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
-.It Cm none
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm 0 , none
 No logging
-.It Cm error
+.It Cm 1 , error
 Recoverable failures
-.It Cm warn
+.It Cm 2 , warn
 Something wrong which requires attention
-.It Cm notify
+.Pq default
+.It Cm 3 , notice
 Something unusual which recommends attention
-.It Cm info
+.It Cm 4 , info
 Informational messages
-.It Cm debug
+.It Cm 5 , debug
 Debugging messages
-.It Cm trace , all
+.It Cm 6 , trace , all
 All messages
 .El
 .It Cm pool. Ns Ar name
@@ -260,25 +299,20 @@ Access the memory pool specified by
 .Ar name .
 The following sub-fields are available:
 .Pp
-.Bl -tag -compact -offset 2n -width 5n
-.It Cm min
-Lower bound for number of entries to which pool can shrink.
+.Bl -tag -compact -offset 3n -width 13n
 .It Cm max
-Upper bound for number of entries to which pool can grow.
-.It Cm size
+Upper bound for number of entries to which auto-sized pools can grow.
+.It Cm min
+Lower bound for number of entries to which auto-sized pools can shrink.
+.It Cm thres
+Threshold for unused items for auto-sized pools before items are freed.
+.It Cm total
 Current number of entries contained in pool.
 .El
 .El
-.Pp
-Fields applicable to all threads (i.e. global parameters) may
-be addressed by specifying
-.Dq everyone
-as the
-.Ar thread-name
-or by leaving
-.Ar thread-name
-unspecified altogether.
-.Pp
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.S.mdoc {
+.\"	sock => "/var/run/slashd. Ns Ic %h Ns Pa .sock"
 .It Fl S Ar socket
 Specify an alternative socket file.
 The following tokens are replaced in the file name specified:
@@ -294,10 +328,15 @@ character
 .Pp
 The default is
 .Pa /var/run/slashd. Ns Ic %h Ns Pa .sock .
+.\" }%
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.s.mdoc {
+.\"	show => {
+.\"		connections	=> qq{Status of\n.Tn SLASH\npeers on network},
+.\"		fidcache	=> qq{.Tn FID\n.Pq file- Ns Tn ID\ncache members},
+.\"		odtables	=> qq{Disk-backed data files.}
+.\"	}
 .It Fl s Ar showspec
-Query and show
-.Xr slashd 8
-parameter values.
+Show values.
 .Ar showspec
 has the following format:
 .Bd -unfilled -offset indent
@@ -311,24 +350,24 @@ has the following format:
 may be specified as any non-ambiguous prefix abbreviation of the
 following:
 .Pp
-.Bl -tag -offset indent -width 12n -compact
+.Bl -tag -offset indent -width 13n -compact
 .It Cm connections
 Status of
 .Tn SLASH
-peers on network.
-.It Cm fcmhs
+peers on network
+.It Cm fidcache
 .Tn FID
 .Pq file- Ns Tn ID
-cache members.
+cache members
 .It Cm loglevels
-Thread logging levels.
+Thread logging levels
 .It Cm odtables
 Disk-backed data files.
-.It Cm rpcsvcs
+.It Cm rpcsvc
 .Tn RPC
-services.
+services, if applicable
 .It Cm threads
-Thread activity statistics.
+Daemon thread activity and statistics
 .El
 .Pp
 The special value
@@ -339,9 +378,26 @@ See
 .Sx Thread Specification
 for details on specifying
 .Ar thread-name .
-.Pp
-This option may be specified multiple times.
+The default behavior is to apply the operation to all applicable threads.
+.\" }%
 .El
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.thr.mdoc {
+.\"	thrs => {
+.\"		"slmbmaptimeothr"		=> "Bmap lease timeout monitor",
+.\"		"slmcohthr"			=> "Bmap data coherency thread",
+.\"		"slmctlacthr"			=> ".Nm\nconnection acceptor",
+.\"		"slmctlthr"			=> ".Nm\nconnection processor",
+.\"		"slmjcursorthr"			=> "Journal cursor updater thread",
+.\"		"slmjthr"			=> "Master journal thread",
+.\"		"slmlnacthr- Ns Ar %s"		=> ".Tn LNET\nnetwork acceptor thread",
+.\"		"slmrcmthr"			=> "Client\n.Tn RPC\nrequest initiator thread",
+.\"		"slmrmcthr Ns Ar %02d"		=> "Client\n.Tn RPC\nrequest service thread",
+.\"		"slmrmithr Ns Ar %02d"		=> ".Tn I/O\nnode\n.Tn RPC\nrequest service thread",
+.\"		"slmrmmthr Ns Ar %02d"		=> ".No Inter- Ns Tn MDS RPC\nrequest service thread",
+.\"		"slmtiosthr"			=> "Timed\n.Tn I/O\nstats updater thread",
+.\"		"slmupschedthr- Ns Ar %s"	=> "Per-site update scheduler thread",
+.\"		"slmusklndplthr Ns Ar %d"	=> ".Tn LNET\nuserland socket poll thread"
+.\"	}
 .Ss Thread Specification
 Options which take
 .Ar thread-name
@@ -354,10 +410,10 @@ Bmap lease timeout monitor
 .It Cm slmcohthr
 Bmap data coherency thread
 .It Cm slmctlacthr
-.Xr slashd 8
+.Nm
 connection acceptor
 .It Cm slmctlthr
-.Xr slashd 8
+.Nm
 connection processor
 .It Cm slmjcursorthr
 Journal cursor updater thread
@@ -392,8 +448,10 @@ Per-site update scheduler thread
 .Tn LNET
 userland socket poll thread
 .It Cm everyone
-All threads (default, where applicable)
+All threads
+.Pq default, where applicable
 .El
+.\" }%
 .Sh FILES
 .Bl -tag -width Pa
 .It Xo
@@ -404,7 +462,6 @@ default
 control socket
 .El
 .Sh SEE ALSO
-.Xr pflctl 7 ,
 .Xr sladm 7 ,
 .Xr slashd 8 ,
 .Xr slictl 8
