@@ -122,9 +122,9 @@ struct slmds_jent_namespace {
 	uint64_t		sjnm_target_fid;
 
 	union {
-		uint64_t	sjnm_target_gen;		/* reclaim only */
-		uint64_t	sjnm_new_parent_fid;		/* rename only  */
-	};
+		uint64_t	sjnmu0_target_gen;		/* reclaim only */
+		uint64_t	sjnmu0_new_parent_fid;		/* rename only  */
+	}			sjnm_u0;
 
 	uint32_t		sjnm_mask;			/* attribute mask */
 
@@ -139,11 +139,17 @@ struct slmds_jent_namespace {
 	uint64_t		sjnm_ctime_ns;
 
 	union {
-		uint64_t	sjnm_size;			/* total size, in bytes */
-		uint64_t	sjnm_reclaim_seqno;	
-	};
+		uint64_t	sjnmu1_size;			/* total size, in bytes */
+		uint64_t	sjnmu1_reclaim_seqno;
+	}			sjnm_u1;
 
 	char			sjnm_name[SLJ_NAMES_MAX + 2];	/* one or two names */
+
+#define sjnm_target_gen		sjnm_u0.sjnmu_target_gen
+#define sjnm_new_parent_fid	sjnm_u0.sjnmu_new_parent_fid
+
+#define sjnm_size		sjnm_u1.sjnmu1_size
+#define sjnm_reclaim_seqno	sjnm_u1.sjnmu1_reclaim_seqno
 } __packed;
 
 /*
