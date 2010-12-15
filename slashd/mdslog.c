@@ -1554,6 +1554,8 @@ mds_journal_init(void)
 	static char fn[PATH_MAX];
 	struct stat sb;
 	ssize_t size;
+	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *iosinfo;
 
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
@@ -1652,8 +1654,10 @@ mds_journal_init(void)
 		if (i >= count)
 			continue;
 		found++;
+		rpmi = res2rpmi(r);
+		iosinfo = rpmi->rpmi_info;
+		iosinfo->si_seqno = reclaim_prog_buf[i].res_seqno;
 	}
-		
 
 	/* Always start a thread to send reclaim updates. */
 	reclaimbuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
