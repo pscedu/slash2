@@ -54,9 +54,9 @@ Instruct
 .Xr slashd 8
 to perform one of the following actions:
 .Pp
-.Bl -tag -compact -offset indent -width 10n
+.Bl -tag -compact -offset indent -width 12n
 .It Cm exit
-Completely terminate execution.
+Completely terminate daemon execution.
 .El
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.H.mdoc {
@@ -91,15 +91,18 @@ may be specified to query statistics on all hash tables.
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.I.mdoc {
 .It Fl I
-Do not use human-readable numbers when displaying large numerical
-values; e.g. show one megabyte as
-.Li 1048576
-instead of
-.Li 1MB .
+Display large numerical values accurately instead of rounded with
+postfixes of demonination such as
+.Sq G
+for gigabytes,
+.Sq M
+for megabytes, etc.\&
+.Pq inhuman mode .
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sI.mdoc {
 .\"	iostats => {
-.\"		qq{jrnlwr- Ns Ar fn ,\n.It Cm jrnlrd- Ns Ar fn} =>
+.\"		qq{jrnlrd- Ns Ar fn ,} => "",
+.\"		qq{jrnlwr- Ns Ar fn} =>
 .\"		    qq{Data read/written to journal disk file\n.Ar fn .\n.Pp}
 .\"	}
 .It Fl i Ar iostatspec
@@ -117,12 +120,8 @@ has the following format:
 may be one of the following:
 .Pp
 .Bl -tag -compact -offset indent -width Ds
-.It Xo
-.Sm off
-.Cm jrnlwr- Ns Ar fn ,
-.It Cm jrnlrd- Ns Ar fn
-.Sm on
-.Xc
+.It Cm jrnlrd- Ns Ar fn ,
+.It Cm jrnlwr- Ns Ar fn
 Data read/written to journal disk file
 .Ar fn .
 .Pp
@@ -142,6 +141,7 @@ may be
 or
 .Cm aggr
 .Pq aggregate .
+.Pp
 .El
 .Pp
 The value
@@ -154,7 +154,7 @@ statistics.
 .\"	lists => {
 .\"		fcmhbusy	=> "File with pending action e.g.\\&\n.Tn I/O",
 .\"		fcmhidle	=> "Clean\n.Pq reapable\nfiles",
-.\"		inflightbml	=> "Active\n.Pq inflight\nbmap lease mode updates",
+.\"		inflightbml	=> "Active bmap lease mode updates",
 .\"		pendingbml	=> "Pending bmap lease mode updates",
 .\"		replstwkq	=> "Replication status work buffers"
 .\"	}
@@ -173,7 +173,7 @@ has the following format:
 .Ar list
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
+.Bl -tag -compact -offset indent -width 18n
 .It Cm fcmhbusy
 File with pending action e.g.\&
 .Tn I/O
@@ -182,9 +182,7 @@ Clean
 .Pq reapable
 files
 .It Cm inflightbml
-Active
-.Pq inflight
-bmap lease mode updates
+Active bmap lease mode updates
 .It Cm pendingbml
 Pending bmap lease mode updates
 .It Cm replstwkq
@@ -254,20 +252,23 @@ may be one of the following:
 .Bl -tag -offset ind -width Ds
 .It Cm lnet.networks
 .Tn LNET
-network configuration
+network configuration.
 .It Cm lnet.port
 If applicable,
 .Xr tcp 7
 port to use to connect to remote
 .Tn LNET
-peers
+peers.
 .It Cm lnet.sdp
 Whether
 .Tn LNET
-is using the sockets direct protocol
+is using the sockets direct protocol.
 .It Cm log.file
 File path name where log messages will be written.
 This value is write-only.
+If the
+.Li +=
+assignment operator is used, this file will not be truncated.
 .It Cm log.format
 The header prepended to server log messages.
 See
@@ -299,7 +300,7 @@ Network remote procedure calls
 .Pp
 If
 .Ar subsystem
-is left unspecified, all subsystems will be affected.
+is left unspecified, all subsystems will be accessed.
 .Pp
 The log level value may be one of the following:
 .Pp
@@ -339,12 +340,15 @@ Current number of entries contained in pool.
 Process resource limits.
 See
 .Xr getrlimit 2
+or
+.Xr ulimit 1
 for more information.
 .Pp
 .Bl -tag -compact -offset 3n -width 13n
 .It Cm nofiles
 Corresponds to
-.Dv RLIMIT_NOFILE .
+.Dv RLIMIT_NOFILE ,
+the maximum number of open files.
 .El
 .El
 .\" }%
