@@ -134,12 +134,34 @@ mds_next_update_seqno(void)
 }
 
 uint64_t
+mds_get_next_update_seqno(void)
+{
+	uint64_t seqno;
+
+	spinlock(&update_seqno_lock);
+	seqno = next_update_seqno;
+	freelock(&update_seqno_lock);
+	return (seqno);
+}
+
+uint64_t
 mds_next_reclaim_seqno(void)
 {
 	uint64_t seqno;
 
 	spinlock(&reclaim_seqno_lock);
 	seqno = next_reclaim_seqno++;
+	freelock(&reclaim_seqno_lock);
+	return (seqno);
+}
+
+uint64_t
+mds_get_next_reclaim_seqno(void)
+{
+	uint64_t seqno;
+
+	spinlock(&reclaim_seqno_lock);
+	seqno = next_reclaim_seqno;
 	freelock(&reclaim_seqno_lock);
 	return (seqno);
 }
