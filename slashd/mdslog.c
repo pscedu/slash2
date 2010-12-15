@@ -1569,7 +1569,7 @@ void
 mds_journal_init(void)
 {
 	int i, ri, rc, nios, count, found, npeers;
-	struct sl_resource *r;
+	struct sl_resource *res;
 	struct sl_resm *resm;
 	static char fn[PATH_MAX];
 	struct stat sb;
@@ -1579,8 +1579,8 @@ mds_journal_init(void)
 
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
-	SITE_FOREACH_RES(nodeSite, r, ri) {
-		if (r->res_type != SLREST_MDS)
+	SITE_FOREACH_RES(nodeSite, res, ri) {
+		if (res->res_type != SLREST_MDS)
 			nios++;
 	}
 	if (!nios)
@@ -1591,15 +1591,15 @@ mds_journal_init(void)
 	SL_FOREACH_MDS(resm, npeers++);
 	npeers--;
 
-	r = nodeResm->resm_res;
-	if (r->res_jrnldev[0] == '\0')
-		xmkfn(r->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
+	res = nodeResm->resm_res;
+	if (res->res_jrnldev[0] == '\0')
+		xmkfn(res->res_jrnldev, "%s/%s", sl_datadir, SL_FN_OPJOURNAL);
 
 	mds_open_cursor();
 
-	mdsJournal = pjournal_open(r->res_jrnldev);
+	mdsJournal = pjournal_open(res->res_jrnldev);
 	if (mdsJournal == NULL)
-		psc_fatal("Fail to open log file %s", r->res_jrnldev);
+		psc_fatal("Fail to open log file %s", res->res_jrnldev);
 
 	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
 
@@ -1610,7 +1610,7 @@ mds_journal_init(void)
 	next_update_seqno = mds_cursor.pjc_update_seqno;
 	next_reclaim_seqno = mds_cursor.pjc_reclaim_seqno;
 
-	psc_notify("Journal device is %s", r->res_jrnldev);
+	psc_notify("Journal device is %s", res->res_jrnldev);
 	psc_notify("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
 	psc_notify("Last synced ZFS transaction group number is %"PRId64,
 	    mdsJournal->pj_commit_txg);
@@ -1659,22 +1659,22 @@ mds_journal_init(void)
 				count * sizeof(struct reclaim_prog_entry));
 	}
 	found = 0;
-	SITE_FOREACH_RES(nodeSite, r, ri) {
-		if (r->res_type == SLREST_MDS)
+	SITE_FOREACH_RES(nodeSite, res, ri) {
+		if (res->res_type == SLREST_MDS)
 			return;
 		for (i = 0; i < count; i++) {
-			if (strcmp(reclaim_prog_buf[i].res_name, r->res_name))
+			if (strcmp(reclaim_prog_buf[i].res_name, res->res_name))
 				continue;
-			if (reclaim_prog_buf[i].res_id != r->res_id)
+			if (reclaim_prog_buf[i].res_id != res->res_id)
 				continue;
-			if (reclaim_prog_buf[i].res_type != r->res_type)
+			if (reclaim_prog_buf[i].res_type != res->res_type)
 				continue;
 			break;
 		}
 		if (i >= count)
 			continue;
 		found++;
-		rpmi = res2rpmi(r);
+		rpmi = res2rpmi(res);
 		iosinfo = rpmi->rpmi_info;
 		iosinfo->si_seqno = reclaim_prog_buf[i].res_seqno;
 	}
