@@ -327,6 +327,7 @@ struct srm_send_namespace_req {
 struct srm_send_namespace_rep {
 	int32_t			rc;
 	int32_t			_pad;
+	uint64_t		seqno;		/* the last seqno I have received from you */
 } __packed;
 
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
@@ -474,9 +475,9 @@ struct srm_reclaim_req {
 } __packed;
 
 struct srm_reclaim_rep {
-	uint64_t		seqno;		/* highest reclaim sequence number I have */
 	int32_t			rc;		/* return code, 0 for success or slerrno */
 	int32_t			_pad;
+	uint64_t		seqno;		/* the last seqno I have received from you */
 } __packed;
 
 
