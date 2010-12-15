@@ -187,7 +187,7 @@ mds_update_reclaim_prog(void)
 	i = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (res->res_type == SLREST_MDS)
-			return;
+			continue;
 		strncpy(reclaim_prog_buf[i].res_name, res->res_name, RES_NAME_MAX);
 		reclaim_prog_buf[i].res_id = res->res_id;
 		reclaim_prog_buf[i].res_type = res->res_type;
