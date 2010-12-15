@@ -145,8 +145,8 @@ struct slmds_jent_namespace {
 
 	char			sjnm_name[SLJ_NAMES_MAX + 2];	/* one or two names */
 
-#define sjnm_target_gen		sjnm_u0.sjnmu_target_gen
-#define sjnm_new_parent_fid	sjnm_u0.sjnmu_new_parent_fid
+#define sjnm_target_gen		sjnm_u0.sjnmu0_target_gen
+#define sjnm_new_parent_fid	sjnm_u0.sjnmu0_new_parent_fid
 
 #define sjnm_size		sjnm_u1.sjnmu1_size
 #define sjnm_reclaim_seqno	sjnm_u1.sjnmu1_reclaim_seqno
