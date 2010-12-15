@@ -56,9 +56,9 @@ Instruct
 .Xr sliod 8
 to perform one of the following actions:
 .Pp
-.Bl -tag -compact -offset indent -width 10n
+.Bl -tag -compact -offset indent -width 12n
 .It Cm exit
-Completely terminate execution.
+Completely terminate daemon execution.
 .El
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.H.mdoc {
@@ -93,11 +93,13 @@ may be specified to query statistics on all hash tables.
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.I.mdoc {
 .It Fl I
-Do not use human-readable numbers when displaying large numerical
-values; e.g. show one megabyte as
-.Li 1048576
-instead of
-.Li 1MB .
+Display large numerical values accurately instead of rounded with
+postfixes of demonination such as
+.Sq G
+for gigabytes,
+.Sq M
+for megabytes, etc.\&
+.Pq inhuman mode .
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sI.mdoc {
 .\"	iostats => { }
@@ -132,6 +134,7 @@ may be
 or
 .Cm aggr
 .Pq aggregate .
+.Pp
 .El
 .Pp
 The value
@@ -166,7 +169,7 @@ has the following format:
 .Ar list
 may be one of the following:
 .Pp
-.Bl -tag -compact -offset indent -width 12n
+.Bl -tag -compact -offset indent -width 18n
 .It Cm bmapReapQ
 Bmaps to be processed by reaper
 .It Cm bmapRlsQ
@@ -253,20 +256,23 @@ may be one of the following:
 .Bl -tag -offset ind -width Ds
 .It Cm lnet.networks
 .Tn LNET
-network configuration
+network configuration.
 .It Cm lnet.port
 If applicable,
 .Xr tcp 7
 port to use to connect to remote
 .Tn LNET
-peers
+peers.
 .It Cm lnet.sdp
 Whether
 .Tn LNET
-is using the sockets direct protocol
+is using the sockets direct protocol.
 .It Cm log.file
 File path name where log messages will be written.
 This value is write-only.
+If the
+.Li +=
+assignment operator is used, this file will not be truncated.
 .It Cm log.format
 The header prepended to server log messages.
 See
@@ -300,7 +306,7 @@ handling
 .Pp
 If
 .Ar subsystem
-is left unspecified, all subsystems will be affected.
+is left unspecified, all subsystems will be accessed.
 .Pp
 The log level value may be one of the following:
 .Pp
@@ -340,12 +346,15 @@ Current number of entries contained in pool.
 Process resource limits.
 See
 .Xr getrlimit 2
+or
+.Xr ulimit 1
 for more information.
 .Pp
 .Bl -tag -compact -offset 3n -width 13n
 .It Cm nofiles
 Corresponds to
-.Dv RLIMIT_NOFILE .
+.Dv RLIMIT_NOFILE ,
+the maximum number of open files.
 .El
 .El
 .\" }%
