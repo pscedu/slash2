@@ -1586,12 +1586,17 @@ mds_journal_init(void)
 	pscthr_init(SLMTHRT_CURSOR, 0, mds_cursor_thread, NULL, 0,
 	    "slmjcursorthr");
 
+	psc_notify("Next update sequence number before log replay is %"PRId64,
+	    next_reclaim_seqno);
+	psc_notify("Next reclaim sequence number before log replay is %"PRId64,
+	    next_update_seqno);
+
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
 
-	psc_notify("The next update sequence number is %"PRId64,
+	psc_notify("The next update sequence number after log replay is %"PRId64,
 	    next_update_seqno);
-	psc_notify("The next reclaim sequence number is %"PRId64,
+	psc_notify("The next reclaim sequence number after log replay is %"PRId64,
 	    next_reclaim_seqno);
 
 	mds_bmap_setcurseq(mds_cursor.pjc_seqno_hwm, mds_cursor.pjc_seqno_lwm);
