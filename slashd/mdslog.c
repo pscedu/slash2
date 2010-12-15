@@ -1047,6 +1047,8 @@ mds_update_cursor(void *buf, uint64_t txg)
 
 	cursor->pjc_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_fid = slm_get_curr_slashid();
+	cursor->pjc_update_seqno = mds_get_next_update_seqno();
+	cursor->pjc_reclaim_seqno = mds_get_next_reclaim_seqno();
 
 	rc = mds_bmap_getcurseq(&cursor->pjc_seqno_hwm, &cursor->pjc_seqno_lwm);
 	if (rc) {
