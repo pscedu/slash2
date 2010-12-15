@@ -177,6 +177,26 @@ mds_get_next_reclaim_seqno(void)
 	return (seqno);
 }
 
+static void
+mds_update_reclaim_prog(void)
+{
+	int i, ri;
+	ssize_t size;
+	struct sl_resource *res;
+
+	i = 0;
+	SITE_FOREACH_RES(nodeSite, res, ri) {
+		if (res->res_type == SLREST_MDS)
+			return;
+		strncpy(reclaim_prog_buf[i].res_name, res->res_name, RES_NAME_MAX);
+		reclaim_prog_buf[i].res_id = res->res_id;
+		reclaim_prog_buf[i].res_type = res->res_type;
+		i++;
+	}
+	size = write(current_reclaim_progfile, reclaim_prog_buf,
+			i * sizeof(struct reclaim_prog_entry));
+}
+
 /**
  * mds_redo_bmap_repl - Replay a replication update on a bmap.  This has
  *	to be a read-modify-write process because we don't touch the CRC
@@ -1658,6 +1678,8 @@ mds_journal_init(void)
 		iosinfo = rpmi->rpmi_info;
 		iosinfo->si_seqno = reclaim_prog_buf[i].res_seqno;
 	}
+	if (found != nios)
+		mds_update_reclaim_prog();
 
 	/* Always start a thread to send reclaim updates. */
 	reclaimbuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
