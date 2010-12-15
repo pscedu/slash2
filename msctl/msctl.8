@@ -171,7 +171,9 @@ instead of
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sI.mdoc {
 .\"	iostats => { }
 .It Fl i Ar iostatspec
-Query I/O statistics.
+Query
+.Tn I/O
+statistics.
 .Ar iostatspec
 has the following format:
 .Pp
@@ -289,10 +291,16 @@ has the following format:
 .Pp
 .Bd -unfilled -offset indent
 .Sm off
-.Oo Ar thread-name Ns . Oc Ar param
-.Op = Ar value
+.Oo Ar thread-name Ns Li .\& Oc Ar param
+.Op Oo Li +- Oc Li = Ar value
 .Sm on
 .Ed
+.Pp
+Some parameters are read-only.
+Some support modification by the assignment operators
+.Li +=
+and
+.Li -= .
 .Pp
 See
 .Sx Thread Specification
@@ -303,14 +311,27 @@ The default behavior is to apply the operation to all applicable threads.
 .Ar param
 may be one of the following:
 .Bl -tag -offset ind -width Ds
+.It Cm lnet.networks
+.Tn LNET
+network configuration
+.It Cm lnet.port
+If applicable,
+.Xr tcp 7
+port to use to connect to remote
+.Tn LNET
+peers
+.It Cm lnet.sdp
+Whether
+.Tn LNET
+is using the sockets direct protocol
+.It Cm log.file
+File path name where log messages will be written.
+This value is write-only.
 .It Cm log.format
 The header prepended to server log messages.
 See
 .Xr pflenv 7
 for details on this format.
-.It Cm log.file
-File path name where log messages will be written.
-This value is write-only.
 .It Cm log.level Ns Op . Ns Ar subsystem
 The logging level of debug message output.
 .Pp
@@ -606,7 +627,6 @@ All threads
 .Pq default, where applicable
 .El
 .\" }%
-.El
 .Sh FILES
 .Bl -tag -width Pa
 .It Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
