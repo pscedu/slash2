@@ -15,7 +15,7 @@
 .\" -----------------------------------------------------------------------------
 .\" %PSC_END_COPYRIGHT%
 .\" %PFL_MODULES rpc %
-.Dd December 14, 2010
+.Dd December 15, 2010
 .Dt MSCTL 8
 .ds volume PSC \- SLASH Administrator's Manual
 .Os http://www.psc.edu/
@@ -158,12 +158,12 @@ network resources
 .Pp
 The value
 .Cm all
-may be specified to query all hash table statistics.
+may be specified to query statistics on all hash tables.
 .\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.I.mdoc {
 .It Fl I
 Do not use human-readable numbers when displaying large numerical
-values, e.g. show one megabyte as
+values; e.g. show one megabyte as
 .Li 1048576
 instead of
 .Li 1MB .
@@ -371,6 +371,17 @@ Threshold for unused items for auto-sized pools before items are freed.
 .It Cm total
 Current number of entries contained in pool.
 .El
+.It Cm rlim
+Process resource limits.
+See
+.Xr getrlimit 2
+for more information.
+.Pp
+.Bl -tag -compact -offset 3n -width 13n
+.It Cm nofiles
+Corresponds to
+.Dv RLIMIT_NOFILE .
+.El
 .El
 .\" }%
 .It Fl Q Ar replrqspec
@@ -506,7 +517,7 @@ cache members
 Thread logging levels
 .It Cm rpcsvc
 .Tn RPC
-services, if applicable
+services
 .It Cm threads
 Daemon thread activity and statistics
 .El
@@ -598,9 +609,7 @@ All threads
 .El
 .Sh FILES
 .Bl -tag -width Pa
-.It Xo
-.Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
-.Xc
+.It Pa /var/run/mount_slash. Ns Ic %h Ns Pa .sock
 default
 .Xr mount_slash 8
 control socket
@@ -608,4 +617,3 @@ control socket
 .Sh SEE ALSO
 .Xr sladm 7 ,
 .Xr mount_slash 8 ,
-.Xr slashd 8
