@@ -119,28 +119,28 @@ static struct psc_journal_cursor mds_cursor;
 
 psc_spinlock_t			 mds_txg_lock = SPINLOCK_INIT;
 
+static psc_spinlock_t		update_seqno_lock = SPINLOCK_INIT;
+static psc_spinlock_t		reclaim_seqno_lock = SPINLOCK_INIT;
 
 uint64_t
 mds_next_update_seqno(void)
 {
-	static psc_spinlock_t lock = SPINLOCK_INIT;
 	uint64_t seqno;
 
-	spinlock(&lock);
+	spinlock(&update_seqno_lock);
 	seqno = next_update_seqno++;
-	freelock(&lock);
+	freelock(&update_seqno_lock);
 	return (seqno);
 }
 
 uint64_t
 mds_next_reclaim_seqno(void)
 {
-	static psc_spinlock_t lock = SPINLOCK_INIT;
 	uint64_t seqno;
 
-	spinlock(&lock);
+	spinlock(&reclaim_seqno_lock);
 	seqno = next_reclaim_seqno++;
-	freelock(&lock);
+	freelock(&reclaim_seqno_lock);
 	return (seqno);
 }
 
@@ -1547,6 +1547,9 @@ mds_journal_init(void)
 	mdsJournal->pj_npeers = npeers;
 	mdsJournal->pj_commit_txg = mds_cursor.pjc_txg;
 	mdsJournal->pj_distill_xid = mds_cursor.pjc_xid;
+
+	next_update_seqno = mds_cursor.pjc_update_seqno;
+	next_reclaim_seqno = mds_cursor.pjc_reclaim_seqno;
 
 	psc_notify("Journal device is %s", r->res_jrnldev);
 	psc_notify("Last SLASH FID is "SLPRI_FID, mds_cursor.pjc_fid);
