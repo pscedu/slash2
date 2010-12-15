@@ -1155,8 +1155,8 @@ mds_open_cursor(void)
 	psc_assert(mds_cursor.pjc_fid >= SLFID_MIN);
 
 	slm_set_curr_slashid(mds_cursor.pjc_fid);
-	psc_notify("File system was formated on %lu seconds since the Epoch",
-	    mds_cursor.pjc_timestamp);
+	psc_notify("File system was formated on %"PRIu64" seconds "
+	    "since the Epoch", mds_cursor.pjc_timestamp);
 	psc_notify("File system was formated on %s",
 	    ctime((time_t *)&mds_cursor.pjc_timestamp)); 
 }
