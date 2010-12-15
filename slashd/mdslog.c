@@ -1663,7 +1663,7 @@ mds_journal_init(void)
 	found = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (res->res_type == SLREST_MDS)
-			return;
+			continue;
 		for (i = 0; i < count; i++) {
 			if (strcmp(reclaim_prog_buf[i].res_name, res->res_name))
 				continue;
