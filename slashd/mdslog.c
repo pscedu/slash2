@@ -75,6 +75,7 @@ static uint64_t			 update_seqno_lwm;
 static uint64_t			 update_seqno_hwm;
 
 static int			 current_update_logfile = -1;
+static int			 current_update_progfile = -1;
 
 /*
  * Low and high water marks of reclaim sequence numbers that need to be
@@ -84,6 +85,16 @@ static uint64_t			 reclaim_seqno_lwm;
 static uint64_t			 reclaim_seqno_hwm;
 
 static int			 current_reclaim_logfile = -1;
+static int			 current_reclaim_progfile = -1;
+
+struct reclaim_prog_entry {
+	char			 res_name[RES_NAME_MAX];
+	sl_ios_id_t		 res_id;
+	enum sl_res_type	 res_type;
+	uint64_t		 res_seqno;
+};
+
+struct reclaim_prog_entry	*reclaim_prog_buf;
 
 struct psc_waitq		 mds_update_waitq = PSC_WAITQ_INIT;
 psc_spinlock_t			 mds_update_waitqlock = SPINLOCK_INIT;
@@ -1537,18 +1548,17 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 void
 mds_journal_init(void)
 {
-	int i, found = 0, npeers;
+	int i, nios = 0, npeers;
 	struct sl_resource *r;
 	struct sl_resm *resm;
+	static char fn[PATH_MAX];
 
 	/* Make sure we have some I/O servers to work with */
 	SITE_FOREACH_RES(nodeSite, r, i) {
-		if (r->res_type != SLREST_MDS) {
-			found = 1;
-			break;
-		}
+		if (r->res_type != SLREST_MDS)
+			nios++;
 	}
-	if (!found)
+	if (!nios)
 		psc_fatal("Missing I/O servers at site %s", nodeSite->site_name);
 
 	/* Count the number of peer MDSes we have */
@@ -1604,6 +1614,12 @@ mds_journal_init(void)
 	    mds_cursor.pjc_seqno_lwm);
 	psc_notify("Last bmap sequence number high water mark is %"PRId64,
 	    mds_cursor.pjc_seqno_hwm);
+
+	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR,
+	    SL_FN_RECLAIMPROG, psc_get_hostname(), mds_cursor.pjc_timestamp);
+
+	current_reclaim_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC | O_APPEND, 0600);
+	reclaim_prog_buf = PSCALLOC(nios * sizeof(struct reclaim_prog_entry));
 
 	/* Always start a thread to send reclaim updates. */
 	reclaimbuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
