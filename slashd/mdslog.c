@@ -1548,12 +1548,14 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 void
 mds_journal_init(void)
 {
-	int i, nios = 0, npeers;
+	int i, rc, nios, count, npeers;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	static char fn[PATH_MAX];
+	struct stat sb;
 
 	/* Make sure we have some I/O servers to work with */
+	nios = 0;
 	SITE_FOREACH_RES(nodeSite, r, i) {
 		if (r->res_type != SLREST_MDS)
 			nios++;
@@ -1619,7 +1621,16 @@ mds_journal_init(void)
 	    SL_FN_RECLAIMPROG, psc_get_hostname(), mds_cursor.pjc_timestamp);
 
 	current_reclaim_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC | O_APPEND, 0600);
-	reclaim_prog_buf = PSCALLOC(nios * sizeof(struct reclaim_prog_entry));
+	rc = fstat(current_reclaim_progfile, &sb);
+	if (rc < 0)
+		psc_fatal("Fail to stat reclaim log file %s", fn);
+	psc_assert((sb.st_size % sizeof(struct reclaim_prog_entry)) == 0);
+
+	i = count = sb.st_size / sizeof(struct reclaim_prog_entry);
+	if (i < nios)
+		i = nios;
+
+	reclaim_prog_buf = PSCALLOC(i * sizeof(struct reclaim_prog_entry));
 
 	/* Always start a thread to send reclaim updates. */
 	reclaimbuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
