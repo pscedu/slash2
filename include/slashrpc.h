@@ -190,22 +190,23 @@ enum {
 	SRMT_SET_NEWREPLPOL,		/* file new bmap repl policy */
 
 	/* file system operations */
-	SRMT_CREATE,
-	SRMT_GETATTR,
-	SRMT_LINK,
+	SRMT_CREATE,			/* creat(2) */
+	SRMT_GETATTR,			/* stat(2) */
+	SRMT_LINK,			/* link(2) */
 	SRMT_LOOKUP,
-	SRMT_MKDIR,
-	SRMT_MKNOD,
-	SRMT_READ,
-	SRMT_READDIR,
-	SRMT_READLINK,
-	SRMT_RENAME,
-	SRMT_RMDIR,
-	SRMT_SETATTR,
-	SRMT_STATFS,
-	SRMT_SYMLINK,
-	SRMT_UNLINK,
-	SRMT_WRITE
+	SRMT_MKDIR,			/* mkdir(2) */
+	SRMT_MKNOD,			/* mknod(2) */
+	SRMT_READ,			/* read(2) */
+	SRMT_READDIR,			/* readdir(2) */
+	SRMT_READLINK,			/* readlink(2) */
+	SRMT_RENAME,			/* rename(2) */
+	SRMT_RMDIR,			/* rmdir(2) */
+	SRMT_SETATTR,			/* chmod(2), chown(2), utimes(2) */
+	SRMT_STATFS,			/* statvfs(2) */
+	SRMT_SYMLINK,			/* symlink(2) */
+	SRMT_UNLINK,			/* unlink(2) */
+	SRMT_WRITE,			/* write(2) */
+	SRMT_XCTL			/* ancillary operation */
 };
 
 /* ----------------------------- BEGIN MESSAGES ----------------------------- */
