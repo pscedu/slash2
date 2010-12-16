@@ -55,6 +55,11 @@ sli_rii_handle_connect(struct pscrpc_request *rq)
 	return (0);
 }
 
+/**
+ * sli_rii_handle_replread - Handle a REPL_READ request from another
+ *	I/O node.  We load the sliver for READ and attach the data
+ *	buffer to the RPC reply bulk.
+ */
 int
 sli_rii_handle_replread(struct pscrpc_request *rq)
 {
@@ -88,7 +93,7 @@ sli_rii_handle_replread(struct pscrpc_request *rq)
 
 	mp->rc = bmap_get(fcmh, mq->bmapno, SL_READ, &bcm);
 	if (mp->rc) {
-		psc_errorx("failed to load fid %"PRIx64" bmap %u: %s",
+		psc_errorx("failed to load fid "SLPRI_FID" bmap %u: %s",
 		    mq->fg.fg_fid, mq->bmapno, slstrerror(mp->rc));
 		goto out;
 	}
@@ -141,6 +146,10 @@ sli_rii_replread_release_sliver(struct sli_repl_workrq *w,
 	return (rc);
 }
 
+/**
+ * sli_rii_replread_cb - Callback triggered when an REPL_READ request
+ *	issued finishes.
+ */
 int
 sli_rii_replread_cb(struct pscrpc_request *rq,
     struct pscrpc_async_args *args)
