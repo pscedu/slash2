@@ -1278,7 +1278,7 @@ mds_send_batch_reclaim(uint64_t seqno)
 	 * Short read is Okay, as long as it is a multiple of the basic
 	 * data structure.
 	 */
-	psc_assert((size % sizeof(struct slash_fidgen)) != 0);
+	psc_assert((size % sizeof(struct slash_fidgen)) == 0);
 
 	start = (seqno / SLM_RECLAIM_BATCH) * SLM_RECLAIM_BATCH;
 	count = (int) size / (int) sizeof(struct slash_fidgen);
