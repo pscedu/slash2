@@ -1036,6 +1036,11 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 					resm = libsl_nid2resm(bmap_2_ion(b));
 					rmci = resm2rmci(resm);
+
+					psc_assert(bmap_2_ion(b) == resm->resm_nid);
+
+					DEBUG_BMAP(PLL_INFO, b, "nid=%"PRIx64, 
+					   bmap_2_ion(b));
 				} else {
 					resm = slc_rmc_resm;
 					rmci = resm2rmci(slc_rmc_resm);

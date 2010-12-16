@@ -637,6 +637,9 @@ msl_bmap_retrieve(struct bmapc_memb *bmap, enum rw rw)
 
 	msl_bmap_reap_init(bmap, &mp->sbd);
 
+	DEBUG_BMAP(PLL_INFO, bmap, "rw=%d nid=%"PRIx64" bmapnid=%"PRIx64, 
+		   rw, mp->sbd.sbd_ion_nid, bmap_2_ion(bmap));
+
 	if (getreptbl) {
 		/* XXX don't forget that on write we need to invalidate
 		 *   the local replication table..

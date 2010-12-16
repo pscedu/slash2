@@ -333,6 +333,9 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msl_bmap_reap_init(bcm, &mp->sbd);
 
+	DEBUG_BMAP(PLL_INFO, bcm, "nid=%"PRIx64" bmapnid=%"PRIx64, 
+		   mp->sbd.sbd_ion_nid, bmap_2_ion(bcm));
+
 	SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls, 0, BREPLST_VALID);
 
 	bmap_op_done_type(bcm, BMAP_OPCNT_LOOKUP);
