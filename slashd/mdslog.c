@@ -832,6 +832,8 @@ mds_reclaim_lwm(void)
 
 	/* XXX purge old reclaim log files here before bumping lwm */
 	reclaim_seqno_lwm = seqno;
+
+	seqno = (seqno / SLM_RECLAIM_BATCH) * SLM_RECLAIM_BATCH;
 	return (seqno);
 }
 
