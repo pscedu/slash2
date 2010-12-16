@@ -490,7 +490,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 	return (rc);
 }
 
-int
+void
 mds_remove_logfile(uint64_t seqno, int update)
 {
 	int first;
