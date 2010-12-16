@@ -195,7 +195,7 @@ mds_update_reclaim_prog(void)
 	}
 	size = write(current_reclaim_progfile, reclaim_prog_buf,
 			i * sizeof(struct reclaim_prog_entry));
-	psc_assert(size == (ssize_t) i * sizeof(struct reclaim_prog_entry));
+	psc_assert(size == i * (int)sizeof(struct reclaim_prog_entry));
 }
 
 /**
@@ -1679,7 +1679,7 @@ mds_journal_init(void)
 	if (count) {
 		size = read(current_reclaim_progfile, reclaim_prog_buf,
 				count * sizeof(struct reclaim_prog_entry));
-		psc_assert(size == (ssize_t) count * sizeof(struct reclaim_prog_entry));
+		psc_assert(size == count * (int)sizeof(struct reclaim_prog_entry));
 	}
 	found = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri) {
