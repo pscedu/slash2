@@ -531,6 +531,8 @@ mds_open_logfile(uint64_t seqno, int update, int readonly)
 	}
 	if (readonly) {
 		logfile = open(log_fn, O_RDONLY);
+		if (logfile < 0)
+			psc_fatal("Failed to open log file %s to read", log_fn);
 		return logfile;
 	}
 
