@@ -491,7 +491,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 }
 
 int
-mds_open_logfile(uint64_t seqno, int update)
+mds_open_logfile(uint64_t seqno, int update, int readonly)
 {
 	int logfile, first, direct;
 	static char log_fn[PATH_MAX];
@@ -509,6 +509,11 @@ mds_open_logfile(uint64_t seqno, int update)
 		    SL_FN_RECLAIMLOG, seqno/SLM_RECLAIM_BATCH,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	}
+	if (readonly) {
+		logfile = open(log_fn, O_RDONLY);
+		return logfile;
+	}
+
 	logfile = open(log_fn, O_RDWR | O_SYNC | O_APPEND | direct);
 	if (logfile > 0)
 		return logfile;
@@ -557,7 +562,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 	if (npeers) {
 		seqno = jnamespace->sjnm_seqno;
 		if (current_update_logfile == -1)
-			current_update_logfile = mds_open_logfile(seqno, 1);
+			current_update_logfile = mds_open_logfile(seqno, 1, 0);
 
 		if (replay) {
 			next_update_seqno = seqno + 1;
@@ -600,7 +605,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 
 	seqno = jnamespace->sjnm_reclaim_seqno;
 	if (current_reclaim_logfile == -1)
-		current_reclaim_logfile = mds_open_logfile(seqno, 0);
+		current_reclaim_logfile = mds_open_logfile(seqno, 0, 0);
 
 	fg.fg_fid = jnamespace->sjnm_target_fid;
 	fg.fg_gen = jnamespace->sjnm_target_gen;
