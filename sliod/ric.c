@@ -285,7 +285,7 @@ sli_ric_handle_rlsbmap(struct pscrpc_request *rq)
 		bid = &mq->bmaps[i];
 
 		fg.fg_fid = bid->fid;
-		fg.fg_gen = 0;
+		fg.fg_gen = FGEN_ANY;
 
 		rc = sli_fcmh_get(&fg, &f);
 		psc_assert(rc == 0);

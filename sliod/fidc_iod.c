@@ -53,7 +53,11 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 	FCMH_LOCK_ENSURE(fcmh);
 	psc_assert(fg->fg_fid == fcmh_2_fid(fcmh));
 
-	if (fg->fg_gen > fcmh_2_gen(fcmh)) {
+	if (fg->fg_gen == FGEN_ANY) {
+		/* Noop.  The caller's operation is generation
+		 *    number agnostic (such as rlsbmap).
+		 */
+	} else if (fg->fg_gen > fcmh_2_gen(fcmh)) {
 		char fidfn[PATH_MAX];
 		struct slash_fidgen oldfg;
 
