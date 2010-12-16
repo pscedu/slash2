@@ -1389,14 +1389,11 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 	if (rc) {
 		DEBUG_FCMH(PLL_ERROR, f, "mdsio_bmap_read: "
 		    "bmapno=%u, rc=%d", bcm->bcm_bmapno, rc);
-		rc = -EIO;
-		goto out;
+		return (-EIO);
 	}
 
-	DEBUG_BMAPOD(PLL_INFO, bcm, "");
+	DEBUG_BMAPOD(PLL_MAX, bcm, "");
 	return (0);
- out:
-	return (rc);
 }
 
 void
