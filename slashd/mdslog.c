@@ -830,7 +830,6 @@ mds_reclaim_lwm(void)
 
 	psc_assert(seqno != UINT64_MAX);
 
-	/* XXX purge old reclaim log files here before bumping lwm */
 	reclaim_seqno_lwm = seqno;
 
 	seqno = (seqno / SLM_RECLAIM_BATCH) * SLM_RECLAIM_BATCH;
@@ -949,9 +948,10 @@ mds_read_batch_update(uint64_t seqno)
 	 * multiple of the log entry size (should be 512 bytes).
 	 */
 	psc_assert((size % logentrysize) == 0);
-	psc_assert(nitems + buf->slb_count <= SLM_UPDATE_BATCH);
 
 	nitems = size / logentrysize;
+	psc_assert(nitems + buf->slb_count <= SLM_UPDATE_BATCH);
+
 	ptr = PSC_AGP(buf->slb_buf, buf->slb_size);
 	logptr = updatebuf;
 	for (i = 0; i < nitems; i++) {
@@ -1292,9 +1292,15 @@ mds_send_batch_reclaim(uint64_t seqno)
 		if (didwork == 0)
 			break;
 	}
-
-	if (!keepfile && count == SLM_RECLAIM_BATCH)
+	/*
+	 * If this log file is full and all I/O servers have applied its
+	 * contents, update our progress on the disk first and then remove 
+	 * the log file.
+	 */
+	if (!keepfile && count == SLM_RECLAIM_BATCH) {
+		mds_update_reclaim_prog();
 		mds_remove_logfile(seqno, 0);
+	}
 
 	return (didwork);
 }
