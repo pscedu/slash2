@@ -916,26 +916,17 @@ mds_read_batch_update(uint64_t seqno)
 
  readit:
 
-	/*
-	 * A short read is allowed, but the returned size must be a
-	 * multiple of the log entry size (should be 512 bytes).
-	 */
-	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_UPDATELOG,
-	    seqno / SLM_UPDATE_BATCH);
-	/*
- 	 * If this file does not exist, can we assume that no one is interested
- 	 * in the update requests that used to be stored there?  Otherwise, we
- 	 * will need another on-disk storage to track the progress of each MDS.
- 	 */
-	logfile = open(fn, O_RDONLY);
-	if (logfile == -1)
-		psc_fatal("Fail to open update log file %s", fn);
+	logfile = mds_open_logfile(seqno, 1, 1);
 	lseek(logfile, buf->slb_count * logentrysize, SEEK_SET);
 	size = read(logfile, updatebuf,
 	    (SLM_UPDATE_BATCH - buf->slb_count) * logentrysize);
 	close(logfile);
 
 	nitems = size / logentrysize;
+	/*
+	 * A short read is allowed, but the returned size must be a
+	 * multiple of the log entry size (should be 512 bytes).
+	 */
 	psc_assert((size % logentrysize) == 0);
 	psc_assert(nitems + buf->slb_count <= SLM_UPDATE_BATCH);
 
@@ -1251,23 +1242,16 @@ mds_send_batch_reclaim(uint64_t seqno)
 
 	didwork = 0;
 	keepfile = 0;
-	xmkfn(fn, "%s/%s.%d", SL_PATH_DATADIR, SL_FN_RECLAIMLOG,
-	    seqno / SLM_RECLAIM_BATCH);
-	/*
- 	 * Unless we use another on-disk file to remember the progress of each
- 	 * I/O server, we can use the existence of this file to indicate if
- 	 * any I/O server is still interested in the reclaim requests stored 
- 	 * in this file.
- 	 */
-	logfile = open(fn, O_RDONLY);
-	if (logfile == -1)
-		psc_fatal("Fail to open reclaim log file %s", fn);
+
+	logfile = mds_open_logfile(seqno, 0, 1);
+	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH *
+	    sizeof(struct slash_fidgen));
+	close(logfile);
+
 	/*
 	 * Short read is Okay, as long as it is a multiple of the basic
 	 * data structure.
 	 */
-	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH *
-	    sizeof(struct slash_fidgen));
 	if ((size % sizeof(struct slash_fidgen)) != 0)
 		psc_fatal("Fail to read reclaim log file %s", fn);
 
@@ -1288,7 +1272,6 @@ mds_send_batch_reclaim(uint64_t seqno)
 		if (didwork == 0)
 			break;
 	}
-	close(logfile);
 	if (!keepfile && count == SLM_RECLAIM_BATCH)
 		unlink(fn);
 	return (didwork);
