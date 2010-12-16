@@ -102,9 +102,12 @@ int
 mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 {
 	struct sl_mds_crc_log crclog;
+	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
 	uint32_t utimgen;
 	size_t nb;
-	int rc;
+	int rc, i;
+
+        psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
 	FCMH_LOCK(bmap->bcm_fcmh);
 	if (fcmh_2_fsz(bmap->bcm_fcmh) != crcup->fsize) {
@@ -122,6 +125,19 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 
 	crclog.scl_bmap = bmap;
 	crclog.scl_crcup = crcup;
+
+	BMAPOD_WRLOCK(bmdsi);
+	for (i = 0; i < crcup->nups; i++) {
+		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
+			crcup->crcs[i].crc;
+		
+		bmap->bcm_crcstates[crcup->crcs[i].slot] =
+			BMAP_SLVR_DATA | BMAP_SLVR_CRC;
+		
+		DEBUG_BMAP(PLL_DEBUG, bmap, "slot(%d) crc(%"PRIx64")",
+			   crcup->crcs[i].slot, crcup->crcs[i].crc);
+	}
+	BMAPOD_ULOCK(bmdsi);
 
 	mds_reserve_slot();
 	rc = zfsslash2_write(&rootcreds, bmap_2_ondisk(bmap),

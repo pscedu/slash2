@@ -215,6 +215,8 @@ mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 
 	jrpg = PJE_DATA(pje);
 
+	memset(&bmap_disk, 0, sizeof(struct bmap_ondisk));
+
 	rc = mdsio_lookup_slfid(jrpg->sjp_fid, &rootcreds, NULL, &fid);
 	if (rc) {
 		if (rc == ENOENT) {
@@ -239,6 +241,8 @@ mds_redo_bmap_repl(struct psc_journal_enthdr *pje)
 	 */
 	if (rc)
 		goto out;
+
+	psc_assert(!nb || nb == BMAP_OD_SZ);
 
 	memcpy(bmap_disk.bod_repls, jrpg->sjp_reptbl, SL_REPLICA_NBYTES);
 
@@ -273,6 +277,12 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 	size_t nb;
 
 	jcrc = PJE_DATA(pje);
+	memset(&bmap_disk, 0, sizeof(struct bmap_ondisk));
+
+	psc_info("pje_xid=%"PRIx64" pje_txg=%"PRIx64" fid=%"PRIx64
+		 " bmapno=%u ncrcs=%d 1stcrc=%"PRIx64, 
+		 pje->pje_xid, pje->pje_txg, jcrc->sjc_fid, 
+		 jcrc->sjc_bmapno, jcrc->sjc_ncrcs, jcrc->sjc_crc[0].crc);
 
 	rc = mdsio_lookup_slfid(jcrc->sjc_fid, &rootcreds, NULL, &mf);
 	if (rc == ENOENT) {
@@ -307,6 +317,8 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 	for (i = 0 ; i < jcrc->sjc_ncrcs; i++) {
 		bmap_wire = &jcrc->sjc_crc[i];
 		bmap_disk.bod_crcs[bmap_wire->slot] = bmap_wire->crc;
+		bmap_disk.bod_crcstates[bmap_wire->slot] |= 
+			BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 	}
 	psc_crc64_calc(&bmap_disk.bod_crc, &bmap_disk, BMAP_OD_CRCSZ);
 
@@ -456,6 +468,9 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 {
 	struct slmds_jent_namespace *jnamespace;
 	int rc = 0;
+       
+	psc_info("pje=%p pje_xid=%"PRIx64" pje_txg=%"PRIx64,
+		 pje, pje->pje_xid, pje->pje_txg);
 
 	switch (pje->pje_type & ~(_PJE_FLSHFT - 1)) {
 	    case MDS_LOG_BMAP_REPL:
@@ -1528,8 +1543,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	struct srm_bmap_crcup *crcup = crclog->scl_crcup;
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
 	struct slmds_jent_crc *jcrc;
-	int i, n = crcup->nups;
-	uint32_t t = 0, j = 0;
+	uint32_t n, t;
 
 	/*
 	 * No, I shouldn't need the lock.  Only this instance of this
@@ -1541,42 +1555,20 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 	jcrc->sjc_fid = fcmh_2_fid(bmap->bcm_fcmh);
 	jcrc->sjc_ion = bmdsi->bmdsi_wr_ion->rmmi_resm->resm_nid;
 	jcrc->sjc_bmapno = bmap->bcm_bmapno;
-	jcrc->sjc_ncrcs = n;
+	jcrc->sjc_ncrcs = crcup->nups;
 	jcrc->sjc_fsize = crcup->fsize;		/* largest known size */
 	jcrc->sjc_utimgen = crcup->utimgen;     /* utime generation number */
 
-	while (n) {
-		i = MIN(SLJ_MDS_NCRCS, n);
-
+	for (t = 0, n = 0; t < crcup->nups; t += n) {
+		n = MIN(SLJ_MDS_NCRCS, (crcup->nups - t));
+		
 		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
-		    i * sizeof(struct srm_bmap_crcwire));
+		    n * sizeof(struct srm_bmap_crcwire));
 
 		pjournal_add_entry(mdsJournal, txg, MDS_LOG_BMAP_CRC,
 		    jcrc, sizeof(struct slmds_jent_crc));
-
-		/*
-		 * Apply the CRC update into memory AFTER recording them
-		 *  in the journal.  The lock should not be needed since the
-		 *  BMAP_MDS_CRC_UP is protecting the CRC table from other
-		 *  threads who may like to update.  Besides at this moment,
-		 *  on the ION updating us has the real story on this bmap's
-		 *  CRCs and all I/O for this bmap is being directed to it.
-		 */
-		BMAPOD_WRLOCK(bmdsi);
-		for (t += i; j < t; j++) {
-			bmap_2_crcs(bmap, crcup->crcs[j].slot) =
-			    crcup->crcs[j].crc;
-
-			bmap->bcm_crcstates[crcup->crcs[j].slot] =
-			    BMAP_SLVR_DATA | BMAP_SLVR_CRC;
-
-			DEBUG_BMAP(PLL_DEBUG, bmap, "slot(%d) crc(%"PRIx64")",
-				   crcup->crcs[j].slot, crcup->crcs[j].crc);
-		}
-		BMAPOD_ULOCK(bmdsi);
-		n -= i;
-		psc_assert(n >= 0);
 	}
+
 	psc_assert(t == crcup->nups);
 	/* Signify that the update has occurred.
 	 */
