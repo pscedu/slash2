@@ -491,10 +491,30 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 }
 
 int
+mds_remove_logfile(uint64_t seqno, int update)
+{
+	int first;
+	char log_fn[PATH_MAX];
+
+	if (update) {
+		first = (seqno % SLM_UPDATE_BATCH) == 0 ? 1 : 0;
+		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+		    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH,
+		    psc_get_hostname(), mds_cursor.pjc_timestamp);
+	} else {
+		first = (seqno % SLM_RECLAIM_BATCH) == 0 ? 1 : 0;
+		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+		    SL_FN_RECLAIMLOG, seqno/SLM_RECLAIM_BATCH,
+		    psc_get_hostname(), mds_cursor.pjc_timestamp);
+	}
+	unlink(log_fn);
+}
+
+int
 mds_open_logfile(uint64_t seqno, int update, int readonly)
 {
+	char log_fn[PATH_MAX];
 	int logfile, first, direct;
-	static char log_fn[PATH_MAX];
 
 	if (update) {
 		direct = O_DIRECT;
@@ -856,7 +876,6 @@ mds_read_batch_update(uint64_t seqno)
 	struct sl_mds_logbuf *buf, *victim;
 	struct psc_thread *thr;
 	void *ptr, *logptr;
-	char fn[PATH_MAX];
 	ssize_t size;
 
 	/*
@@ -921,8 +940,6 @@ mds_read_batch_update(uint64_t seqno)
 	size = read(logfile, updatebuf,
 	    (SLM_UPDATE_BATCH - buf->slb_count) * logentrysize);
 	close(logfile);
-
-	nitems = size / logentrysize;
 	/*
 	 * A short read is allowed, but the returned size must be a
 	 * multiple of the log entry size (should be 512 bytes).
@@ -930,6 +947,7 @@ mds_read_batch_update(uint64_t seqno)
 	psc_assert((size % logentrysize) == 0);
 	psc_assert(nitems + buf->slb_count <= SLM_UPDATE_BATCH);
 
+	nitems = size / logentrysize;
 	ptr = PSC_AGP(buf->slb_buf, buf->slb_size);
 	logptr = updatebuf;
 	for (i = 0; i < nitems; i++) {
@@ -1236,7 +1254,6 @@ mds_send_batch_reclaim(uint64_t seqno)
 {
 	int i, count, logfile, keepfile, didwork;
 	struct slash_fidgen *fg;
-	char fn[PATH_MAX];
 	uint64_t start;
 	ssize_t size;
 
@@ -1252,8 +1269,7 @@ mds_send_batch_reclaim(uint64_t seqno)
 	 * Short read is Okay, as long as it is a multiple of the basic
 	 * data structure.
 	 */
-	if ((size % sizeof(struct slash_fidgen)) != 0)
-		psc_fatal("Fail to read reclaim log file %s", fn);
+	psc_assert((size % sizeof(struct slash_fidgen)) != 0);
 
 	start = (seqno / SLM_RECLAIM_BATCH) * SLM_RECLAIM_BATCH;
 	count = (int) size / (int) sizeof(struct slash_fidgen);
@@ -1272,8 +1288,10 @@ mds_send_batch_reclaim(uint64_t seqno)
 		if (didwork == 0)
 			break;
 	}
+
 	if (!keepfile && count == SLM_RECLAIM_BATCH)
-		unlink(fn);
+		mds_remove_logfile(seqno, 0);
+
 	return (didwork);
 }
 
