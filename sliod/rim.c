@@ -62,10 +62,11 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		oldfg.fg_fid = mq->fg.fg_fid;
 		oldfg.fg_gen = mq->fg.fg_gen;
 		fg_makepath(&oldfg, fidfn);
-
 		/*
-		 * We do upfront garbage collection,
-		 * so ENOENT should be fine.
+		 * We do upfront garbage collection, so ENOENT 
+		 * should be fine.  Also simply creating a file 
+		 * without any I/O won't create a backing file 
+		 * on the I/O server.
 		 */
 		if (unlink(fidfn) == -1 &&
 		    errno != ENOENT)
