@@ -82,7 +82,8 @@ struct fidc_membh {
 #define	FCMH_HAVE_ATTRS		(1 <<  7)	/* has valid stat info */
 #define	FCMH_GETTING_ATTRS	(1 <<  8)	/* fetching stat info */
 #define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
-#define	_FCMH_FLGSHFT		(1 << 10)
+#define FCMH_CTOR_DELAYED       (1 << 10)       /* constructor was not issued */
+#define	_FCMH_FLGSHFT		(1 << 11)
 
 /* number of seconds in which attribute times out */
 #define FCMH_ATTR_TIMEO		8
@@ -141,9 +142,10 @@ struct fidc_membh {
 	(fcmh)->fcmh_flags & FCMH_HAVE_ATTRS		? "A" : "",	\
 	(fcmh)->fcmh_flags & FCMH_GETTING_ATTRS		? "G" : "",	\
 	(fcmh)->fcmh_flags & FCMH_CTOR_FAILED		? "f" : "",	\
+	(fcmh)->fcmh_flags & FCMH_CTOR_DELAYED		? "D" : "",	\
 	fcmh_isdir(fcmh)				? "d" : ""
 
-#define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s%s%s%s%s"
+#define REQ_FCMH_FLAGS_FMT	"%s%s%s%s%s%s%s%s%s%s%s%s"
 
 #define DEBUG_FCMH(level, fcmh, fmt, ...)				\
 	psclogs((level), SLSS_FCMH,					\

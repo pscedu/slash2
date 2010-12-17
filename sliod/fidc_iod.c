@@ -28,6 +28,21 @@
 #include "fidc_iod.h"
 #include "fidcache.h"
 
+static int 
+sli_open_backing_file(struct fidc_membh *fcmh) 
+{
+	int rc = 0;
+	char fidfn[PATH_MAX];
+
+	fg_makepath(&fcmh->fcmh_fg, fidfn);
+	DEBUG_FCMH(PLL_INFO, fcmh, "before opening new backing file");
+	fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
+	if (fcmh_2_fd(fcmh) == -1)
+		rc = errno;
+
+	return (rc);
+}
+
 int
 sli_fcmh_getattr(struct fidc_membh *fcmh)
 {
@@ -53,13 +68,19 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 	FCMH_LOCK_ENSURE(fcmh);
 	psc_assert(fg->fg_fid == fcmh_2_fid(fcmh));
 
+
+	/* If our generation number is still unknown try to set it here.
+	 */
+	if (fcmh_2_gen(fcmh) == FGEN_ANY && fg->fg_gen != FGEN_ANY)
+		fcmh_2_gen(fcmh) = fg->fg_gen;	
+
 	if (fg->fg_gen == FGEN_ANY) {
 		/* Noop.  The caller's operation is generation
 		 *    number agnostic (such as rlsbmap).
 		 */
 	} else if (fg->fg_gen > fcmh_2_gen(fcmh)) {
-		char fidfn[PATH_MAX];
 		struct slash_fidgen oldfg;
+		char fidfn[PATH_MAX];
 
 		DEBUG_FCMH(PLL_INFO, fcmh, "reopening new backing file");
 		/* Need to reopen the backing file and possibly
@@ -74,19 +95,29 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 
 		fcmh_2_gen(fcmh) = fg->fg_gen;
 
-		fg_makepath(fg, fidfn);
-		fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
-		if (fcmh_2_fd(fcmh) == -1) {
-			rc = errno;
-			DEBUG_FCMH(PLL_ERROR, fcmh, "open() failed errno=%d",
-			   errno);
-		}
+		rc = sli_open_backing_file(fcmh);
+		/* Notify upper layers that open() has failed 
+		 */
+		if (rc) 
+			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
+
 		/* Do some upfront garbage collection.
 		 */
 		fg_makepath(&oldfg, fidfn);
 		if (unlink(fidfn))
 			DEBUG_FCMH(PLL_ERROR, fcmh, "unlink() failed errno=%d",
 				   errno);
+
+	} else if (fg->fg_gen == fcmh_2_gen(fcmh) &&
+		   (fcmh->fcmh_flags & FCMH_CTOR_DELAYED)) {
+		
+		rc = sli_open_backing_file(fcmh);
+		if (!rc)
+			fcmh->fcmh_flags &= 
+				~(FCMH_CTOR_FAILED | FCMH_CTOR_DELAYED);
+
+		DEBUG_FCMH(PLL_NOTIFY, fcmh, "open FCMH_CTOR_DELAYED (rc=%d)", 
+		   rc);
 
 	} else if (fg->fg_gen < fcmh_2_gen(fcmh)) {
 		/* For now, requests from old generations (i.e. old bdbufs)
@@ -104,8 +135,17 @@ int
 sli_fcmh_ctor(struct fidc_membh *fcmh)
 {
 	struct fcmh_iod_info *fii;
-	char fidfn[PATH_MAX];
 	int incr, rc = 0;
+
+	if (fcmh->fcmh_fg.fg_gen == FGEN_ANY) {		
+		fcmh->fcmh_flags |= FCMH_CTOR_DELAYED;
+		DEBUG_FCMH(PLL_WARN, fcmh, "refusing to open backing file "
+		   "with FGEN_ANY");
+		/* This is not an error, we just don't have enough info
+		 * to create the backing file.
+		 */
+		return (0);
+	}
 
 	incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
 
@@ -113,11 +153,7 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 	fii = fcmh_2_fii(fcmh);
 	memset(fii, 0, sizeof(struct fcmh_iod_info));
 
-	fg_makepath(&fcmh->fcmh_fg, fidfn);
-	DEBUG_FCMH(PLL_INFO, fcmh, "before opening new backing file");
-	fcmh_2_fd(fcmh) = open(fidfn, O_CREAT | O_RDWR, 0600);
-	if (fcmh_2_fd(fcmh) == -1)
-		rc = errno;
+	rc = sli_open_backing_file(fcmh);
 
 	/* oops, an error; if we increased the rlim, decrease it */
 	if (rc && incr)
@@ -132,7 +168,8 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 void
 sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 {
-	close(fcmh_2_fd(f));
+	if (!(f->fcmh_flags & FCMH_CTOR_DELAYED))
+		close(fcmh_2_fd(f));
 	psc_rlim_adj(RLIMIT_NOFILE, -1);
 }
 
