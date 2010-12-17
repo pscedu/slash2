@@ -305,7 +305,8 @@ void
 _log_debug_bmapodv(const struct pfl_callerinfo *pci, int level,
     struct bmapc_memb *bmap, const char *fmt, va_list ap)
 {
-	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1];
+	char mbuf[LINE_MAX], rbuf[SL_MAX_REPLICAS + 1],
+	     cbuf[SLASH_CRCS_PER_BMAP + 1];
 	unsigned char *b = bmap->bcm_repls;
 	int off, k, ch[NBREPLST];
 
@@ -325,7 +326,28 @@ _log_debug_bmapodv(const struct pfl_callerinfo *pci, int level,
 		rbuf[k] = ch[SL_REPL_GET_BMAP_IOS_STAT(b, off)];
 	rbuf[k] = '\0';
 
-	_DEBUG_BMAP(pci, level, bmap, "repls=[%s] %s", rbuf, mbuf);
+	for (k = 0; k < SLASH_CRCS_PER_BMAP; k++)
+		switch (bmap->bcm_crcstates[k]) {
+		case BMAP_SLVR_DATA:
+			cbuf[k] = 'D';
+			break;
+		case BMAP_SLVR_CRC:
+			cbuf[k] = 'C';
+			break;
+		case BMAP_SLVR_CRCDIRTY:
+			cbuf[k] = 'd';
+			break;
+		case BMAP_SLVR_WANTREPL:
+			cbuf[k] = 'R';
+			break;
+		default:
+			cbuf[k] = ' ';
+			break;
+		}
+	cbuf[k] = '\0';
+
+	_DEBUG_BMAP(pci, level, bmap, "repls=[%s] crcstates=[%s] %s",
+	    rbuf, cbuf, mbuf);
 }
 
 void

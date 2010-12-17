@@ -214,6 +214,7 @@ struct bmapc_memb {
 #define BMAP_SLVR_CRC		(1 << 1)	/* Has valid CRC */
 #define BMAP_SLVR_CRCDIRTY	(1 << 2)
 #define BMAP_SLVR_WANTREPL	(1 << 3)	/* Queued for replication */
+#define _BMAP_SLVR_LAST		4
 
 /*
  * Routines to get and fetch a bmap replica's status.
