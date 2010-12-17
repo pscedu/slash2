@@ -103,9 +103,9 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 {
 	struct sl_mds_crc_log crclog;
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(bmap);
-	uint32_t utimgen;
+	uint32_t utimgen, i;
 	size_t nb;
-	int rc, i;
+	int rc;
 
         psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 

@@ -194,7 +194,7 @@ mds_update_reclaim_prog(void)
 		i++;
 	}
 	size = write(current_reclaim_progfile, reclaim_prog_buf,
-			i * sizeof(struct reclaim_prog_entry));
+	    i * sizeof(struct reclaim_prog_entry));
 	psc_assert(size == i * (int)sizeof(struct reclaim_prog_entry));
 }
 
@@ -279,10 +279,10 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 	jcrc = PJE_DATA(pje);
 	memset(&bmap_disk, 0, sizeof(struct bmap_ondisk));
 
-	psc_info("pje_xid=%"PRIx64" pje_txg=%"PRIx64" fid=%"PRIx64
-		 " bmapno=%u ncrcs=%d 1stcrc=%"PRIx64, 
-		 pje->pje_xid, pje->pje_txg, jcrc->sjc_fid, 
-		 jcrc->sjc_bmapno, jcrc->sjc_ncrcs, jcrc->sjc_crc[0].crc);
+	psc_info("pje_xid=%"PRIx64" pje_txg=%"PRIx64" fid="SLPRI_FID" "
+	    "bmapno=%u ncrcs=%d crc[0]=%"PSCPRIxCRC64,
+	    pje->pje_xid, pje->pje_txg, jcrc->sjc_fid, jcrc->sjc_bmapno,
+	    jcrc->sjc_ncrcs, jcrc->sjc_crc[0].crc);
 
 	rc = mdsio_lookup_slfid(jcrc->sjc_fid, &rootcreds, NULL, &mf);
 	if (rc == ENOENT) {
@@ -317,7 +317,7 @@ mds_redo_bmap_crc(struct psc_journal_enthdr *pje)
 	for (i = 0 ; i < jcrc->sjc_ncrcs; i++) {
 		bmap_wire = &jcrc->sjc_crc[i];
 		bmap_disk.bod_crcs[bmap_wire->slot] = bmap_wire->crc;
-		bmap_disk.bod_crcstates[bmap_wire->slot] |= 
+		bmap_disk.bod_crcstates[bmap_wire->slot] |=
 			BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 	}
 	psc_crc64_calc(&bmap_disk.bod_crc, &bmap_disk, BMAP_OD_CRCSZ);
@@ -468,7 +468,7 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 {
 	struct slmds_jent_namespace *jnamespace;
 	int rc = 0;
-       
+
 	psc_info("pje=%p pje_xid=%"PRIx64" pje_txg=%"PRIx64,
 		 pje, pje->pje_xid, pje->pje_txg);
 
@@ -1191,7 +1191,7 @@ mds_open_cursor(void)
 	psc_notify("File system was formated on %"PRIu64" seconds "
 	    "since the Epoch", mds_cursor.pjc_timestamp);
 	psc_notify("File system was formated on %s",
-	    ctime((time_t *)&mds_cursor.pjc_timestamp)); 
+	    ctime((time_t *)&mds_cursor.pjc_timestamp));
 }
 
 /*
@@ -1200,15 +1200,15 @@ mds_open_cursor(void)
 int
 mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 {
-	struct sl_resource *res;
 	int i, ri, rc = 0, nios = 0, didwork = 0;
-	struct resprof_mds_info *rpmi;
-	struct sl_mds_iosinfo *iosinfo;
+	struct pscrpc_request *rq = NULL;
 	struct slashrpc_cservice *csvc;
-	struct sl_resm *dst_resm;
+	struct sl_mds_iosinfo *iosinfo;
+	struct resprof_mds_info *rpmi;
 	struct srm_reclaim_req *mq;
 	struct srm_generic_rep *mp;
-	struct pscrpc_request *rq = NULL;
+	struct sl_resm *dst_resm;
+	struct sl_resource *res;
 
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (res->res_type == SLREST_MDS)
@@ -1314,7 +1314,7 @@ mds_send_batch_reclaim(uint64_t seqno)
 	}
 	/*
 	 * If this log file is full and all I/O servers have applied its
-	 * contents, update our progress on the disk first and then remove 
+	 * contents, update our progress on the disk first and then remove
 	 * the log file.
 	 */
 	if (!keepfile && count == SLM_RECLAIM_BATCH) {
@@ -1384,7 +1384,7 @@ mds_send_update(__unusedx struct psc_thread *thr)
 		}
 		spinlock(&mds_update_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_update_waitq,
-			&mds_update_waitqlock, SL_UPDATE_MAX_AGE);
+		    &mds_update_waitqlock, SL_UPDATE_MAX_AGE);
 	}
 }
 
@@ -1561,7 +1561,7 @@ mds_bmap_crc_log(void *datap, uint64_t txg)
 
 	for (t = 0, n = 0; t < crcup->nups; t += n) {
 		n = MIN(SLJ_MDS_NCRCS, (crcup->nups - t));
-		
+
 		memcpy(jcrc->sjc_crc, &crcup->crcs[t],
 		    n * sizeof(struct srm_bmap_crcwire));
 
@@ -1583,20 +1583,19 @@ void
 mds_journal_init(void)
 {
 	int i, ri, rc, nios, count, found, npeers;
-	struct sl_resource *res;
-	struct sl_resm *resm;
 	static char fn[PATH_MAX];
-	struct stat sb;
-	ssize_t size;
 	struct resprof_mds_info *rpmi;
 	struct sl_mds_iosinfo *iosinfo;
+	struct sl_resource *res;
+	struct sl_resm *resm;
+	struct stat sb;
+	ssize_t size;
 
 	/* Make sure we have some I/O servers to work with */
 	nios = 0;
-	SITE_FOREACH_RES(nodeSite, res, ri) {
+	SITE_FOREACH_RES(nodeSite, res, ri)
 		if (res->res_type != SLREST_MDS)
 			nios++;
-	}
 	if (!nios)
 		psc_fatal("Missing I/O servers at site %s", nodeSite->site_name);
 
@@ -1654,10 +1653,11 @@ mds_journal_init(void)
 	psc_notify("Last bmap sequence number high water mark is %"PRId64,
 	    mds_cursor.pjc_seqno_hwm);
 
-	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR,
-	    SL_FN_RECLAIMPROG, psc_get_hostname(), mds_cursor.pjc_timestamp);
+	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR, SL_FN_RECLAIMPROG,
+	    psc_get_hostname(), mds_cursor.pjc_timestamp);
 
-	current_reclaim_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC | O_APPEND, 0600);
+	current_reclaim_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC |
+	    O_APPEND, 0600);
 	rc = fstat(current_reclaim_progfile, &sb);
 	if (rc < 0)
 		psc_fatal("Fail to stat reclaim log file %s", fn);
@@ -1670,7 +1670,7 @@ mds_journal_init(void)
 	reclaim_prog_buf = PSCALLOC(i * sizeof(struct reclaim_prog_entry));
 	if (count) {
 		size = read(current_reclaim_progfile, reclaim_prog_buf,
-				count * sizeof(struct reclaim_prog_entry));
+		    count * sizeof(struct reclaim_prog_entry));
 		psc_assert(size == count * (int)sizeof(struct reclaim_prog_entry));
 	}
 	found = 0;
