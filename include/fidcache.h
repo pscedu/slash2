@@ -239,6 +239,7 @@ _dump_fcmh_flags(int *flags, int *seq)
 	PFL_PRFLAG(FCMH_HAVE_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_GETTING_ATTRS, flags, seq);
 	PFL_PRFLAG(FCMH_CTOR_FAILED, flags, seq);
+	PFL_PRFLAG(FCMH_CTOR_DELAYED, flags, seq);
 }
 
 #endif /* _SL_FIDCACHE_H_ */
