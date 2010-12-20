@@ -324,6 +324,8 @@ _log_debug_bmapodv(const struct pfl_callerinfo *pci, int level,
 	for (k = 0, off = 0; k < SL_MAX_REPLICAS;
 	    k++, off += SL_BITS_PER_REPLICA)
 		rbuf[k] = ch[SL_REPL_GET_BMAP_IOS_STAT(b, off)];
+	while (k > 1 && rbuf[k - 1] == '-')
+		k--;
 	rbuf[k] = '\0';
 
 	for (k = 0; k < SLASH_CRCS_PER_BMAP; k++)
