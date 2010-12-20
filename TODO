@@ -326,6 +326,7 @@ API rename
 	BMAPOD_MODIFY_STOP()
 
 - change upsched to do async callbacks
+- change upsched to do multiple repls simultaneously
 - replication is currently broken
 
 truncate:
@@ -338,8 +339,6 @@ truncate:
 - csvc flags arent getting updated when sliod goes down in msl
 - use pfl_memchk instead of null inode structures for memcmp
 - SRMT_GETBMAPMINSEQ is not handled by slashd
-- use new bmap policy on dirs for default child node policy
-- crcs are currently ignored in the I/O path
+- CRCs are currently ignored in the I/O path
 - need a way to view a directori's newbmap_repl_policy
   - maybe in msctl -r view, so we can see which MDS a dir is centralized with
-
