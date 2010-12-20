@@ -561,7 +561,7 @@ mds_open_logfile(uint64_t seqno, int update, int readonly)
 		return logfile;
 	if (!first)
 		psc_fatal("Failed to open log file %s", log_fn);
-	logfile = open(log_fn, O_CREAT | O_TRUNC | O_RDWR | O_SYNC |
+	logfile = open(log_fn, O_CREAT | O_TRUNC | O_WRONLY | O_SYNC |
 	    direct, 0600);
 	if (logfile < 0)
 		psc_fatal("Failed to create log file %s", log_fn);
