@@ -552,17 +552,17 @@ mds_open_logfile(uint64_t seqno, int update, int readonly)
 		return logfile;
 	}
 
-	/* 
+	/*
 	 * Note we use different file descriptors for read and write.  Luckily,
 	 * Linux maintains the file offset independently for each open.
 	 */
 	logfile = open(log_fn, O_WRONLY | O_SYNC | direct);
 	if (logfile > 0) {
 		/*
- 		 * During replay, the offset will be determined by the seqno.
- 		 * Otherwise, we should always append at the end. This seek
- 		 * is needed in case the log file already exists.
- 		 */
+		 * During replay, the offset will be determined by the seqno.
+		 * Otherwise, we should always append at the end. This seek
+		 * is needed in case the log file already exists.
+		 */
 		lseek(logfile, 0, SEEK_END);
 		return logfile;
 	}
@@ -1249,7 +1249,7 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 		 * Send RPC to the IO server and wait for it to complete.
 		 */
 		DYNARRAY_FOREACH(dst_resm, i, &res->res_members) {
-			csvc = slm_geticsvc_nb(dst_resm);
+			csvc = slm_geticsvc_nb(dst_resm, NULL);
 			if (csvc == NULL)
 				continue;
 			rc = SL_RSX_NEWREQ(csvc->csvc_import, SRMM_VERSION,

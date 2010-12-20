@@ -47,16 +47,12 @@ struct pscrpc_export;
 #define SLM_RMC_SVCNAME			"slmrmc"
 
 /*
- * The number of namespace updates that are recorded in the same change log.
- * We make the size of each log file to be less than LNET_MTU, so that we can
- * send it out in one bulk RPC.
+ * The number of updates recorded in the same change log file.
+ * The size of any individual log file must be less than LNET_MTU so it
+ * can be transmitted in a single RPC bulk.
  */
-#define SLM_UPDATE_BATCH	2048
-/*
- * The number of garbage collection records that are recorded in the same
- * reclaim log.
- */
-#define SLM_RECLAIM_BATCH	2048	
+#define SLM_UPDATE_BATCH		2048			/* namespace updates */
+#define SLM_RECLAIM_BATCH		2048			/* garbage reclamation */
 
 struct slm_exp_cli {
 	struct slashrpc_cservice	*mexpc_csvc;
@@ -82,18 +78,18 @@ struct slm_rmi_expdata *
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT, (exp),		\
 	    (resm)->resm_nid, SRMM_REQ_PORTAL, SRMM_REP_PORTAL, SRMM_MAGIC,	\
 	    SRMM_VERSION, &resm2rmmi(resm)->rmmi_mutex,				\
-	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_MDS)
+	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_MDS, NULL)
 
-#define slm_geticsvcxf(resm, exp, fl)						\
+#define slm_geticsvcxf(resm, exp, fl, arg)					\
 	sl_csvc_get(&(resm)->resm_csvc, CSVCF_USE_MULTIWAIT | (fl), (exp),	\
 	    (resm)->resm_nid, SRIM_REQ_PORTAL, SRIM_REP_PORTAL,			\
 	    SRIM_MAGIC,	SRIM_VERSION, &resm2rmmi(resm)->rmmi_mutex,		\
-	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD)
+	    &resm2rmmi(resm)->rmmi_mwcond, SLCONNT_IOD, (arg))
 
 #define slm_getmcsvc(resm)		slm_getmcsvcx((resm), NULL)
-#define slm_geticsvcx(resm, exp)	slm_geticsvcxf((resm), (exp), 0)
-#define slm_geticsvc_nb(resm)		slm_geticsvcxf((resm), NULL, CSVCF_NONBLOCK)
-#define slm_geticsvc(resm)		slm_geticsvcxf((resm), NULL, 0)
+#define slm_geticsvcx(resm, exp)	slm_geticsvcxf((resm), (exp), 0, NULL)
+#define slm_geticsvc_nb(resm, ml)	slm_geticsvcxf((resm), NULL, CSVCF_NONBLOCK, (ml))
+#define slm_geticsvc(resm)		slm_geticsvcxf((resm), NULL, 0, NULL)
 
 static __inline struct slashrpc_cservice *
 slm_getclcsvc(struct pscrpc_export *exp)
@@ -103,7 +99,7 @@ slm_getclcsvc(struct pscrpc_export *exp)
 	mexpc = mexpc_get(exp);
 	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, LNET_NID_ANY,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
-	    &mexpc->mexpc_lock, &mexpc->mexpc_waitq, SLCONNT_CLI));
+	    &mexpc->mexpc_lock, &mexpc->mexpc_waitq, SLCONNT_CLI, NULL));
 }
 
 #endif /* _RPC_MDS_H_ */

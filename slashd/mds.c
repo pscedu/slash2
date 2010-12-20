@@ -264,7 +264,12 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	struct slashrpc_cservice *csvc;
 	struct resm_mds_info *rmmi;
 
-	csvc = slm_geticsvc(resm);
+	csvc = slm_geticsvc_nb(resm, NULL);
+	if (csvc == NULL) {
+		sl_csvc_waitevent_rel_s(resm->resm_csvc,
+		    sl_csvc_useable(resm->resm_csvc), 3);
+		csvc = slm_geticsvc_nb(resm, NULL);
+	}
 	if (csvc == NULL) {
 		/*
 		 * This can happen if the MDS finds bmap leases in
@@ -284,7 +289,7 @@ mds_bmap_ion_restart(struct bmap_mds_lease *bml)
 	bml->bml_bmdsi->bmdsi_wr_ion = rmmi;
 	bmap_op_start_type(bml_2_bmap(bml), BMAP_OPCNT_IONASSIGN);
 
-	mds_bmap_timeotbl_mdsi(bml, BTE_ADD|BTE_REATTACH);
+	mds_bmap_timeotbl_mdsi(bml, BTE_ADD | BTE_REATTACH);
 
 	bml->bml_bmdsi->bmdsi_seq = bml->bml_seq;
 
@@ -349,7 +354,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 			    res->res_name, resm->resm_addrbuf);
 
 			if (nb)
-				csvc = slm_geticsvc_nb(resm);
+				csvc = slm_geticsvc_nb(resm, NULL);
 			else
 				csvc = slm_geticsvc(resm);
 

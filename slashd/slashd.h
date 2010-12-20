@@ -128,11 +128,11 @@ struct sl_mds_nsstats {
  * We allow one pending request per MDS until it responds or timeouts.
  */
 struct sl_mds_peerinfo {
-	int			  sp_flags;		/* see SP_FLAG_* below */
 	struct sl_mds_logbuf	 *sp_logbuf;		/* the log buffer being used */
+	int			  sp_flags;		/* see SP_FLAG_* below */
 
-	uint64_t		  sp_send_seqno;	/* next log sequence number to send */
 	int			  sp_send_count;	/* # of updates in the batch */
+	uint64_t		  sp_send_seqno;	/* next log sequence number to send */
 
 	uint64_t		  sp_recv_seqno;	/* last received log sequence number */
 

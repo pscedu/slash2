@@ -223,7 +223,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		psc_multiwait_addcond(&smi->smi_mw,
 		    &dst_rmmi->rmmi_mwcond);
 
-	csvc = slm_geticsvc_nb(dst_resm);
+	csvc = slm_geticsvc_nb(dst_resm, NULL);
 	if (csvc == NULL)
 		goto fail;
 
@@ -334,7 +334,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 		psc_multiwait_addcond(&smi->smi_mw,
 		    &dst_rmmi->rmmi_mwcond);
 
-	csvc = slm_geticsvc_nb(dst_resm);
+	csvc = slm_geticsvc_nb(dst_resm, NULL);
 	if (csvc == NULL)
 		goto fail;
 
@@ -536,7 +536,7 @@ slmupschedthr_main(struct psc_thread *thr)
 								struct slashrpc_cservice *csvc;
 
 								src_resm = psc_dynarray_getpos(&src_res->res_members, rin);
-								csvc = slm_geticsvc_nb(src_resm);
+								csvc = slm_geticsvc_nb(src_resm, NULL);
 								if (csvc == NULL) {
 									if (!psc_multiwait_hascond(&smi->smi_mw,
 									    &resm2rmmi(src_resm)->rmmi_mwcond))

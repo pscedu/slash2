@@ -166,10 +166,27 @@ struct slashrpc_cservice {
 			LOCK_ENSURE((csvc)->csvc_lock);			\
 	} while (0)
 
+#define sl_csvc_waitevent_rel_s(csvc, cond, s)				\
+	do {								\
+		struct timeval _start_tm, _now_tm, _diff_tm;		\
+									\
+		PFL_GETTIMEVAL(&_start_tm);				\
+		for (;;) {						\
+			sl_csvc_reqlock(csvc);				\
+			if (cond)					\
+				break;					\
+			PFL_GETTIMEVAL(&_now_tm);			\
+			timersub(&_now_tm, &_start_tm, &_diff_tm);	\
+			if (_diff_tm.tv_sec >= (s))			\
+				break;					\
+			sl_csvc_waitrel_s((csvc), (s));			\
+		}							\
+	} while (0)
+
 struct slashrpc_cservice *
 	 sl_csvc_get(struct slashrpc_cservice **, int, struct pscrpc_export *,
 	    lnet_nid_t, uint32_t, uint32_t, uint64_t, uint32_t,
-	    void *, void *, enum slconn_type);
+	    void *, void *, enum slconn_type, void *);
 void	 sl_csvc_decref(struct slashrpc_cservice *);
 void	 sl_csvc_disconnect(struct slashrpc_cservice *);
 void	 sl_csvc_incref(struct slashrpc_cservice *);

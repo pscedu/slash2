@@ -49,12 +49,12 @@ struct sli_repl_workrq;
 #define sli_geticsvcx(resm, exp)						\
 	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,		\
 	    SRII_REQ_PORTAL, SRII_REP_PORTAL, SRII_MAGIC, SRII_VERSION,		\
-	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq, SLCONNT_IOD)
+	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq, SLCONNT_IOD, NULL)
 
 #define sli_getmcsvcx(resm, exp)						\
 	sl_csvc_get(&(resm)->resm_csvc, 0, (exp), (resm)->resm_nid,		\
 	    SRMI_REQ_PORTAL, SRMI_REP_PORTAL, SRMI_MAGIC, SRMI_VERSION,		\
-	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq, SLCONNT_MDS)
+	    &resm2rmii(resm)->rmii_lock, &resm2rmii(resm)->rmii_waitq, SLCONNT_MDS, NULL)
 
 #define sli_geticsvc(resm)		sli_geticsvcx((resm), NULL)
 #define sli_getmcsvc(resm)		sli_getmcsvcx((resm), NULL)

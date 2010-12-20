@@ -114,8 +114,15 @@ psc_multiwaitcond_wakeup(__unusedx struct psc_multiwaitcond *arg)
 }
 
 __weak int
-psc_multiwaitcond_waitrel(__unusedx struct psc_multiwaitcond *arg,
+psc_multiwaitcond_waitrel_ts(__unusedx struct psc_multiwaitcond *arg,
     __unusedx pthread_mutex_t *mutex, __unusedx const struct timespec *ts)
+{
+	psc_fatalx("unimplemented stub");
+}
+
+__weak int
+_psc_multiwait_addcond(__unusedx struct psc_multiwait *mw,
+    __unusedx struct psc_multiwaitcond *cond, __unusedx int masked)
 {
 	psc_fatalx("unimplemented stub");
 }
@@ -298,9 +305,10 @@ sl_csvc_create(uint32_t rqptl, uint32_t rpptl)
  * @lockp: point to lock for mutually exclusive access to critical
  *	sections involving this connection structure, whereever @csvcp
  *	is stored.
- * @waitinfo: waitq or multiwait argument to wait/wakeup depending on
- *	connection availability.
+ * @waitinfo: waitq or multiwaitcond argument to wait/wakeup depending
+ *	on connection availability.
  * @ctype: peer type.
+ * @arg: user data.
  *
  * If we acquire a connection successfully, this function will return
  * the same slashrpc_cservice struct pointer as referred to by its
@@ -311,7 +319,7 @@ struct slashrpc_cservice *
 sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
     struct pscrpc_export *exp, lnet_nid_t peernid, uint32_t rqptl,
     uint32_t rpptl, uint64_t magic, uint32_t version,
-    void *lockp, void *waitinfo, enum slconn_type ctype)
+    void *lockp, void *waitinfo, enum slconn_type ctype, void *arg)
 {
 	struct slashrpc_cservice *csvc;
 	struct sl_resm *resm;
@@ -390,28 +398,31 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		csvc->csvc_mtime = time(NULL);
 
 	} else if (psc_atomic32_read(&csvc->csvc_flags) & CSVCF_CONNECTING) {
-		if (flags & CSVCF_NONBLOCK) {
+
+		if ((flags & CSVCF_NONBLOCK) && arg) {
+			if (sl_csvc_usemultiwait(csvc))
+				psc_multiwait_addcond(arg,
+				    csvc->csvc_waitinfo);
 			csvc = NULL;
 			goto out;
 		}
 
-		if (sl_csvc_usemultiwait(csvc)) {
-			psc_fatalx("multiwaits not implemented");
-//			psc_multiwait_addcond(ml, wakearg);
-//			csvc = NULL;
-//			goto out;
-		} else {
+		if (sl_csvc_usemultiwait(csvc))
+			psc_multiwaitcond_wait(csvc->csvc_waitinfo,
+			    csvc->csvc_mutex);
+		else
 			psc_waitq_wait(csvc->csvc_waitinfo,
 			    csvc->csvc_lock);
-			sl_csvc_lock(csvc);
-		}
+		sl_csvc_lock(csvc);
 		goto restart;
+
 	} else if (csvc->csvc_mtime + CSVC_RECONNECT_INTV < time(NULL)) {
+
 		psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTING);
 		sl_csvc_unlock(csvc);
 
-		rc = slrpc_issue_connect(peernid,
-		    csvc->csvc_import, magic, version, flags);
+		rc = slrpc_issue_connect(peernid, csvc->csvc_import,
+		    magic, version, flags);
 
 		sl_csvc_lock(csvc);
 		psc_atomic32_clearmask(&csvc->csvc_flags,
@@ -474,7 +485,7 @@ slconnthr_main(struct psc_thread *thr)
 			    NULL, resm->resm_nid, sct->sct_rqptl, sct->sct_rpptl,
 			    sct->sct_magic, sct->sct_version,
 			    sct->sct_lockinfo.lm_ptr, sct->sct_waitinfo,
-			    sct->sct_conntype);
+			    sct->sct_conntype, NULL);
 
 			if (csvc == NULL) {
 				time_t mtime;
