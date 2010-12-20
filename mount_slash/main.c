@@ -233,8 +233,14 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int mask)
 	if (rc)
 		goto out;
 
+	rc = 0;
 	FCMH_LOCK(c);
-	rc = checkcreds(&c->fcmh_sstb, &creds, mask);
+	if (creds.uid == 0) {
+		if ((mask & X_OK) && !S_ISDIR(c->fcmh_sstb.sst_mode) &&
+		    (c->fcmh_sstb.sst_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+			rc = EACCES;
+	} else
+		rc = checkcreds(&c->fcmh_sstb, &creds, mask);
 	FCMH_ULOCK(c);
 
  out:
@@ -247,12 +253,12 @@ __static void
 mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
     const char *name, int oflags, mode_t mode)
 {
+	struct fidc_membh *c = NULL, *p = NULL;
 	struct slashrpc_cservice *csvc = NULL;
 	struct pscrpc_request *rq = NULL;
-	struct srm_create_req *mq;
 	struct srm_create_rep *mp = NULL;
+	struct srm_create_req *mq;
 	struct msl_fhent *mfh = NULL;
-	struct fidc_membh *c = NULL, *p = NULL;
 	struct fcmh_cli_info *fci;
 	struct bmapc_memb *bcm;
 	struct stat stb;
@@ -333,8 +339,8 @@ mslfsop_create(struct pscfs_req *pfr, pscfs_inum_t pinum,
 
 	msl_bmap_reap_init(bcm, &mp->sbd);
 
-	DEBUG_BMAP(PLL_INFO, bcm, "nid=%"PRIx64" bmapnid=%"PRIx64, 
-		   mp->sbd.sbd_ion_nid, bmap_2_ion(bcm));
+	DEBUG_BMAP(PLL_INFO, bcm, "nid=%"PRIx64" bmapnid=%"PRIx64,
+	    mp->sbd.sbd_ion_nid, bmap_2_ion(bcm));
 
 	SL_REPL_SET_BMAP_IOS_STAT(bcm->bcm_repls, 0, BREPLST_VALID);
 
