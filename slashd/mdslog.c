@@ -557,8 +557,15 @@ mds_open_logfile(uint64_t seqno, int update, int readonly)
 	 * Linux maintains the file offset independently for each open.
 	 */
 	logfile = open(log_fn, O_WRONLY | O_SYNC | direct);
-	if (logfile > 0)
+	if (logfile > 0) {
+		/*
+ 		 * During replay, the offset will be determined by the seqno.
+ 		 * Otherwise, we should always append at the end. This seek
+ 		 * is needed in case the log file already exists.
+ 		 */
+		lseek(logfile, 0, SEEK_END);
 		return logfile;
+	}
 	if (!first)
 		psc_fatal("Failed to open log file %s", log_fn);
 	logfile = open(log_fn, O_CREAT | O_TRUNC | O_WRONLY | O_SYNC |
