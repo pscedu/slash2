@@ -331,7 +331,7 @@ _log_debug_bmapodv(const struct pfl_callerinfo *pci, int level,
 			cbuf[k] = 'a' + bmap->bcm_crcstates[k] - 10;
 		else
 			cbuf[k] = '0' + bmap->bcm_crcstates[k];
-	while (k > 2 && cbuf[k - 1] == '0')
+	while (k > 1 && cbuf[k - 1] == '0')
 		k--;
 	cbuf[k] = '\0';
 
