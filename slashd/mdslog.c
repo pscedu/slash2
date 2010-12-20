@@ -193,6 +193,7 @@ mds_update_reclaim_prog(void)
 		reclaim_prog_buf[i].res_type = res->res_type;
 		i++;
 	}
+	lseek(current_reclaim_progfile, 0, SEEK_SET);
 	size = write(current_reclaim_progfile, reclaim_prog_buf,
 	    i * sizeof(struct reclaim_prog_entry));
 	psc_assert(size == i * (int)sizeof(struct reclaim_prog_entry));
