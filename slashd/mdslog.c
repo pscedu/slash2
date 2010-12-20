@@ -551,7 +551,11 @@ mds_open_logfile(uint64_t seqno, int update, int readonly)
 		return logfile;
 	}
 
-	logfile = open(log_fn, O_RDWR | O_SYNC | O_APPEND | direct);
+	/* 
+	 * Note we use different file descriptors for read and write.  Luckily,
+	 * Linux maintains the file offset independently for each open.
+	 */
+	logfile = open(log_fn, O_WRONLY | O_SYNC | direct);
 	if (logfile > 0)
 		return logfile;
 	if (!first)
