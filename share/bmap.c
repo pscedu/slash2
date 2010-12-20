@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -327,26 +327,15 @@ _log_debug_bmapodv(const struct pfl_callerinfo *pci, int level,
 	rbuf[k] = '\0';
 
 	for (k = 0; k < SLASH_CRCS_PER_BMAP; k++)
-		switch (bmap->bcm_crcstates[k]) {
-		case BMAP_SLVR_DATA:
-			cbuf[k] = 'D';
-			break;
-		case BMAP_SLVR_CRC:
-			cbuf[k] = 'C';
-			break;
-		case BMAP_SLVR_CRCDIRTY:
-			cbuf[k] = 'd';
-			break;
-		case BMAP_SLVR_WANTREPL:
-			cbuf[k] = 'R';
-			break;
-		default:
-			cbuf[k] = ' ';
-			break;
-		}
+		if (bmap->bcm_crcstates[k] > 9)
+			cbuf[k] = 'a' + bmap->bcm_crcstates[k] - 10;
+		else
+			cbuf[k] = '0' + bmap->bcm_crcstates[k];
+	while (k > 2 && cbuf[k - 1] == '0')
+		k--;
 	cbuf[k] = '\0';
 
-	_DEBUG_BMAP(pci, level, bmap, "repls=[%s] crcstates=[%s] %s",
+	_DEBUG_BMAP(pci, level, bmap, "repls=[%s] crcstates=[0x%s] %s",
 	    rbuf, cbuf, mbuf);
 }
 
