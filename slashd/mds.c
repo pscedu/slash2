@@ -1397,7 +1397,7 @@ mds_bmap_read(struct bmapc_memb *bcm, __unusedx enum rw rw)
 		return (-EIO);
 	}
 
-	DEBUG_BMAPOD(PLL_MAX, bcm, "");
+	DEBUG_BMAPOD(PLL_DEBUG, bcm, "");
 	return (0);
 }
 
