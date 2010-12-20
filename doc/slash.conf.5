@@ -194,9 +194,8 @@ site @sitename {
 	}
 
 	resource test {
-		mds	= yes;
 		desc	= "test network";
-		type	= archival_fs;
+		type	= mds;
 		id	= 4;
 		fsroot	= /tmp/slashfs;
 		ifs	= 10.32.5.82;
