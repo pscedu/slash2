@@ -611,7 +611,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 			lseek(current_update_logfile, (seqno %
 			    SLM_UPDATE_BATCH) * logentrysize, SEEK_SET);
 		} else {
-			/* make sure we write sequentially */
+			/* make sure we write sequentially - no holes in our log */
 			off = lseek(current_update_logfile, 0, SEEK_CUR);
 			psc_assert(off == (seqno % SLM_UPDATE_BATCH) * logentrysize);
 		}
@@ -658,7 +658,7 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 		    SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen),
 		    SEEK_SET);
 	} else {
-		/* make sure we write sequentially */
+		/* make sure we write sequentially - no holes in our log */
 		off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
 		psc_assert(off == (seqno % SLM_RECLAIM_BATCH) *
 		    sizeof(struct slash_fidgen));
@@ -1661,8 +1661,7 @@ mds_journal_init(void)
 	xmkfn(fn, "%s/%s.%s.%lu", SL_PATH_DATADIR, SL_FN_RECLAIMPROG,
 	    psc_get_hostname(), mds_cursor.pjc_timestamp);
 
-	current_reclaim_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC |
-	    O_APPEND, 0600);
+	current_reclaim_progfile = open(fn, O_CREAT | O_RDWR | O_SYNC, 0600);
 	rc = fstat(current_reclaim_progfile, &sb);
 	if (rc < 0)
 		psc_fatal("Fail to stat reclaim log file %s", fn);
