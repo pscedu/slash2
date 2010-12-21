@@ -1218,7 +1218,7 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
 	struct srm_reclaim_req *mq;
-	struct srm_generic_rep *mp;
+	struct srm_reclaim_rep *mp;
 	struct sl_resm *dst_resm;
 	struct sl_resource *res;
 
