@@ -52,7 +52,7 @@ struct slmds_jent_crc {
 	sl_ios_id_t		sjc_ion;		/* Track the ion which did the I/O */
 	int32_t			sjc_ncrcs;
 	uint64_t		sjc_fsize;
-	uint64_t                sjc_utimgen;
+	uint64_t		sjc_utimgen;
 	struct srm_bmap_crcwire	sjc_crc[SLJ_MDS_NCRCS];
 } __packed;
 

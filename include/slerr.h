@@ -43,7 +43,7 @@ char *slstrerror(int);
 #define SLERR_AUTHBUF_ABSENT		(_SLERR_START + 17)
 #define SLERR_USER_NOTFOUND		(_SLERR_START + 18)
 #define SLERR_BADCRC			(_SLERR_START + 19)
-#define SLERR_GEN_OLD		        (_SLERR_START + 20)
-#define SLERR_GEN_INVALID	        (_SLERR_START + 21)
+#define SLERR_GEN_OLD			(_SLERR_START + 20)
+#define SLERR_GEN_INVALID		(_SLERR_START + 21)
 
 #endif /* _SLERR_H_ */

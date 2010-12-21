@@ -264,8 +264,8 @@ struct srt_stat {
 	struct slash_fidgen	sst_fg;		/* file ID + truncate generation */
 	uint64_t		sst_dev;	/* ID of device containing file */
 	uint32_t		sst_ptruncgen;	/* partial truncate generation */
-	uint32_t                sst_utimgen;    /* utimes generation number */
-	uint32_t                sst__pad0;
+	uint32_t		sst_utimgen;    /* utimes generation number */
+	uint32_t		sst__pad0;
 	uint32_t		sst_mode;	/* file type & permissions (e.g., S_IFREG, S_IRWXU) */
 	uint64_t		sst_nlink;	/* number of hard links */
 	uint32_t		sst_uid;	/* user ID of owner */
@@ -406,8 +406,8 @@ struct srm_bmap_crcup {
 	uint64_t		fsize;		/* largest known size applied in mds_bmap_crc_update() */
 	uint32_t		blkno;		/* bmap block number */
 	uint32_t		nups;		/* number of CRC updates */
-	uint32_t                utimgen;
-	uint32_t                _pad;
+	uint32_t		utimgen;
+	uint32_t		_pad;
 	struct srm_bmap_crcwire	crcs[0];	/* see above, MAX_BMAP_INODE_PAIRS max */
 } __packed;
 
@@ -615,12 +615,12 @@ struct srm_getattr2_rep {
 struct srm_io_req {
 	struct srt_bmapdesc	sbd;
 	uint32_t		ptruncgen;
-	uint32_t                utimgen;
+	uint32_t		utimgen;
 	uint32_t		flags:31;
 	uint32_t		op:1;		/* read/write */
 	uint32_t		size;
 	uint32_t		offset;
-	uint32_t                _pad;
+	uint32_t		_pad;
 /* WRITE data is bulk request. */
 } __packed;
 
@@ -630,7 +630,7 @@ struct srm_io_req {
 
 /* I/O flags */
 #define SRM_IOF_APPEND		(1 << 0)
-#define SRM_IOF_DIO             (1 << 1)
+#define SRM_IOF_DIO		(1 << 1)
 
 struct srm_io_rep {
 	int32_t			rc;

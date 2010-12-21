@@ -41,10 +41,10 @@ struct psc_vbitmap;
 #define SLB_SIZE	(SLB_BLKSZ * SLB_NBLK)
 
 enum {
-	SLB_DIRTY	= 0x01, /* have dirty data          */
-	SLB_INFLIGHT	= 0x02, /* data faulting in or out  */
+	SLB_DIRTY	= 0x01, /* have dirty data		*/
+	SLB_INFLIGHT	= 0x02, /* data faulting in or out	*/
 	SLB_FREEING	= 0x04,
-	SLB_PINNED	= 0x08, /* not freeable             */
+	SLB_PINNED	= 0x08, /* not freeable			*/
 	SLB_LRU		= 0x10, /* on the lru, nothing pinned or dirty */
 	SLB_FREE	= 0x20,
 	SLB_INIT	= 0x40,
@@ -75,10 +75,10 @@ enum {
  *    the dirty list.
  */
 struct sl_buffer {
-	struct psc_vbitmap	*slb_inuse;		/* track which segments are busy   */
-	int			 slb_nblks;		/* num blocks                      */
-	uint32_t		 slb_blksz;		/* blocksize                       */
-	void			*slb_base;		/* point to the data buffer        */
+	struct psc_vbitmap	*slb_inuse;		/* track which segments are busy	*/
+	int			 slb_nblks;		/* num blocks				*/
+	uint32_t		 slb_blksz;		/* blocksize				*/
+	void			*slb_base;		/* point to the data buffer		*/
 	atomic_t		 slb_ref;
 	atomic_t		 slb_unmapd_ref;
 	atomic_t		 slb_inflight;
@@ -121,14 +121,14 @@ struct sl_buffer {
 		## __VA_ARGS__)
 
 #define DUMP_SLB(level, slb, fmt, ...)					\
-	do {                                                            \
-		int __l;						\
+	do {								\
 		struct sl_buffer_iovref *__r;				\
+		int __l;						\
 									\
 		DEBUG_SLB((level), (slb), fmt, ## __VA_ARGS__);		\
 		__l = reqlock(&(slb)->slb_lock);			\
 		psclist_for_each_entry(__r, &(slb)->slb_iov_list,	\
-				       slbir_lentry) {			\
+		    slbir_lentry) {					\
 			if (__r->slbir_pri) {				\
 				struct offtree_memb *__m;		\
 									\
@@ -136,28 +136,28 @@ struct sl_buffer {
 				DEBUG_OFT((level), __m,			\
 				    "SLB ref %p memb", __r);		\
 				DEBUG_OFFTIOV((level),			\
-					     __m->oft_norl.oft_iov,	\
-					     "iov of memb %p", __m);	\
+				    __m->oft_norl.oft_iov,		\
+				    "iov of memb %p", __m);		\
 			} else						\
 				psc_logs((level), PSS_DEF,		\
-					"--> Unmapped SLB ref %p memb " \
-					fmt, __r, ## __VA_ARGS__);	\
+				    "--> Unmapped SLB ref %p memb "	\
+				    fmt, __r, ## __VA_ARGS__);		\
 		}							\
 		ureqlock(&(slb)->slb_lock, __l);			\
 	} while (0)
 
 struct sl_buffer_iovref {
-	void			*slbir_base;		/* base pointer val (within slb) */
-	size_t			 slbir_nblks;		/* allocation size               */
-	void			*slbir_pri;		/* backpointer to oftmemb        */
+	void			*slbir_base;		/* base pointer val (within slb)	*/
+	size_t			 slbir_nblks;		/* allocation size			*/
+	void			*slbir_pri;		/* backpointer to oftmemb		*/
 	void			*slbir_pri_bmap;
 	int			 slbir_flags;
-	struct psclist_head	 slbir_lentry;		/* chain to slb                  */
+	struct psclist_head	 slbir_lentry;		/* chain to slb				*/
 };
 
 enum {
-	SLBREF_MAPPED = (1 << 0),      /* Backpointer to oftm in place */
-	SLBREF_REAP   = (1 << 1)       /* Freeing                      */
+	SLBREF_MAPPED	= (1 << 0),	/* Backpointer to oftm in place	*/
+	SLBREF_REAP	= (1 << 1)	/* Freeing			*/
 };
 
 /* Should have been done earlier

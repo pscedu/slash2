@@ -45,7 +45,7 @@ struct sl_fcmh_ops {
 	void	(*sfop_dtor)(struct fidc_membh *);
 	int	(*sfop_getattr)(struct fidc_membh *);
 	void	(*sfop_postsetattr)(struct fidc_membh *);
-	int     (*sfop_modify)(struct fidc_membh *, const struct slash_fidgen *);
+	int	(*sfop_modify)(struct fidc_membh *, const struct slash_fidgen *);
 };
 
 /**
@@ -82,7 +82,7 @@ struct fidc_membh {
 #define	FCMH_HAVE_ATTRS		(1 <<  7)	/* has valid stat info */
 #define	FCMH_GETTING_ATTRS	(1 <<  8)	/* fetching stat info */
 #define	FCMH_CTOR_FAILED	(1 <<  9)	/* constructor func failed */
-#define FCMH_CTOR_DELAYED       (1 << 10)       /* constructor was not issued */
+#define FCMH_CTOR_DELAYED	(1 << 10)	/* constructor was not issued */
 #define	_FCMH_FLGSHFT		(1 << 11)
 
 /* number of seconds in which attribute times out */
@@ -112,7 +112,7 @@ struct fidc_membh {
 		FCMH_LOCK_ENSURE(f);					\
 		while (cond) {						\
 			psc_waitq_wait(&(f)->fcmh_waitq,		\
-				       &(f)->fcmh_lock);		\
+			    &(f)->fcmh_lock);				\
 			FCMH_LOCK(f);					\
 		}							\
 	} while (0)
@@ -178,9 +178,9 @@ void	fcmh_decref(struct fidc_membh *, enum fcmh_opcnt_types);
 
 /* fidc_lookup() flags */
 #define FIDC_LOOKUP_NONE		0
-#define FIDC_LOOKUP_CREATE		(1 << 0)	/* Create if not present         */
-#define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present       */
-#define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism */
+#define FIDC_LOOKUP_CREATE		(1 << 0)	/* Create if not present		*/
+#define FIDC_LOOKUP_EXCL		(1 << 1)	/* Fail if fcmh is present		*/
+#define FIDC_LOOKUP_LOAD		(1 << 2)	/* Use external fetching mechanism	*/
 
 #define fidc_lookup(fgp, lkfl, sstb, safl, fcmhp)			\
 	_fidc_lookup(PFL_CALLERINFOSS(SLSS_FCMH), (fgp), (lkfl),	\
