@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -54,7 +54,7 @@
 #define BMPC_DEF_MINAGE		{ 0, 600000000 } /* seconds, nanoseconds */
 #define BMPC_INTERVAL		{ 0, 200000000 }
 
-struct timespec			bmapFlushDefMaxAge; 
+struct timespec			bmapFlushDefMaxAge;
 
 struct bmpc_mem_slbs {
 	atomic_t		bmms_waiters;
@@ -69,19 +69,19 @@ struct bmpc_mem_slbs {
 #define BMPCSLABS_ULOCK()	freelock(&bmpcSlabs.bmms_lock)
 
 struct bmap_pagecache_entry {
-	psc_atomic16_t		 bmpce_wrref;	/* pending write ops        */
-	psc_atomic16_t		 bmpce_rdref;	/* pending read ops         */
-	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits        */
-	uint32_t		 bmpce_off;	/* filewise, bmap relative  */
-	psc_spinlock_t		 bmpce_lock;	/* serialize                */
-	void			*bmpce_base;	/* base pointer from slb    */
-	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O */
-	struct timespec		 bmpce_laccess;	/* last page access         */
+	psc_atomic16_t		 bmpce_wrref;	/* pending write ops		*/
+	psc_atomic16_t		 bmpce_rdref;	/* pending read ops		*/
+	uint32_t		 bmpce_flags;	/* BMPCE_* flag bits		*/
+	uint32_t		 bmpce_off;	/* filewise, bmap relative	*/
+	psc_spinlock_t		 bmpce_lock;	/* serialize			*/
+	void			*bmpce_base;	/* base pointer from slb	*/
+	struct psc_waitq	*bmpce_waitq;	/* others block here on I/O	*/
+	struct timespec		 bmpce_laccess;	/* last page access		*/
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_tentry;
 #ifdef BMPC_RBTREE
 	SPLAY_ENTRY(bmap_pagecache_entry) bmpce_lru_tentry;
 #else
-	struct psc_listentry	 bmpce_lentry;	/* chain on bmap lru        */
+	struct psc_listentry	 bmpce_lentry;	/* chain on bmap lru		*/
 #endif
 };
 
@@ -98,12 +98,7 @@ struct bmap_pagecache_entry {
 #define	BMPCE_INIT		(1 << 7)
 #define	BMPCE_READPNDG		(1 << 8)
 #define	BMPCE_RBWPAGE		(1 << 9)
-#define	BMPCE_RBWRDY	        (1 << 10)
-
-/*
- * Do not blindly wait until data is ready or assume that data
- * is ready when the RPC is complete.
- */
+#define	BMPCE_RBWRDY		(1 << 10)
 #define	BMPCE_INFLIGHT		(1 << 11)	/* I/O in progress */
 #define	BMPCE_EIO		(1 << 12)	/* I/O error */
 
@@ -111,7 +106,7 @@ struct bmap_pagecache_entry {
 	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
 	 offsetof(struct bmpc_ioreq, biorq_waitq) : NULL)
 
-#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s"
+#define BMPCE_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BMPCE_FLAGS(b)						\
 	(b)->bmpce_flags & BMPCE_NEW			? "n" : "",	\
 	(b)->bmpce_flags & BMPCE_GETBUF			? "g" : "",	\
@@ -122,8 +117,10 @@ struct bmap_pagecache_entry {
 	(b)->bmpce_flags & BMPCE_FREEING		? "F" : "",	\
 	(b)->bmpce_flags & BMPCE_INIT			? "i" : "",	\
 	(b)->bmpce_flags & BMPCE_READPNDG		? "r" : "",	\
-	(b)->bmpce_flags & BMPCE_RBWPAGE		? "B" : "",     \
-	(b)->bmpce_flags & BMPCE_RBWRDY 		? "R" : ""
+	(b)->bmpce_flags & BMPCE_RBWPAGE		? "B" : "",	\
+	(b)->bmpce_flags & BMPCE_RBWRDY			? "R" : "",	\
+	(b)->bmpce_flags & BMPCE_INFLIGHT		? "L" : "",	\
+	(b)->bmpce_flags & BMPCE_EIO			? "E" : ""
 
 #define DEBUG_BMPCE(level, b, fmt, ...)					\
 	psc_logs((level), PSS_DEF,					\
@@ -211,7 +208,7 @@ struct bmap_pagecache {
 };
 
 /*
- * The following four macros are equivalent to PLL_xxx counterparts 
+ * The following four macros are equivalent to PLL_xxx counterparts
  * because of the way we initialize the locked lists in bmap_pagecache.
  */
 #define BMPC_LOCK(b)		spinlock(&(b)->bmpc_lock)
@@ -241,15 +238,15 @@ bmpc_queued_ios(struct bmap_pagecache *bmpc)
 }
 
 struct bmpc_ioreq {
-	uint32_t			 biorq_off;	/* filewise, bmap relative   */
-	uint32_t			 biorq_len;	/* non-aligned, real length  */
-	uint32_t			 biorq_flags;	/* state and op type bits    */
+	uint32_t			 biorq_off;	/* filewise, bmap relative	*/
+	uint32_t			 biorq_len;	/* non-aligned, real length	*/
+	uint32_t			 biorq_flags;	/* state and op type bits	*/
 	psc_spinlock_t			 biorq_lock;
-	struct timespec			 biorq_issue;	/* time to initiate I/O      */
-	struct psc_dynarray		 biorq_pages;	/* array of bmpce            */
-	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs */
-	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle */
-	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap   */
+	struct timespec			 biorq_issue;	/* time to initiate I/O		*/
+	struct psc_dynarray		 biorq_pages;	/* array of bmpce		*/
+	struct psclist_head		 biorq_lentry;	/* chain on bmpc_pndg_biorqs	*/
+	struct psclist_head		 biorq_mfh_lentry; /* chain on file handle	*/
+	struct bmapc_memb		*biorq_bmap;	/* backpointer to our bmap	*/
 	struct pscrpc_request_set	*biorq_rqset;
 	struct psc_waitq		 biorq_waitq;
 	void				*biorq_fhent;	/* back pointer to msl_fhent */
@@ -266,7 +263,7 @@ struct bmpc_ioreq {
 #define	BIORQ_DESTROY			(1 <<  8)
 #define	BIORQ_FLUSHRDY			(1 <<  9)
 #define	BIORQ_NOFHENT			(1 << 10)	/* release a file handle before flush is complete */
-#define BIORQ_APPEND                    (1 << 11)
+#define BIORQ_APPEND			(1 << 11)
 
 #define BIORQ_FLAGS_FORMAT "%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_BIORQ_FLAGS(b)						\
@@ -352,7 +349,8 @@ bmpce_usecheck(struct bmap_pagecache_entry *bmpce, int op, uint32_t off)
 	ureqlock(&bmpce->bmpce_lock, locked);
 }
 
-/* biorq_is_my_bmpce - informs the caller that biorq, r, owns the
+/*
+ ** biorq_is_my_bmpce - informs the caller that biorq, r, owns the
  *    the page cache entry, b.  This state implies that the thread
  *    processing 'r' is responsible for allocating a memory page
  *    and possible faulting in that page from the ION.
@@ -429,7 +427,7 @@ bmpc_ioreq_init(struct bmpc_ioreq *ioreq, uint32_t off, uint32_t len, int op,
 	ioreq->biorq_flags = op;
 	ioreq->biorq_fhent = fhent;
 	if (bmap->bcm_flags & BMAP_DIO)
-		ioreq->biorq_flags |= BIORQ_DIO;	
+		ioreq->biorq_flags |= BIORQ_DIO;
 }
 
 static __inline int
