@@ -104,8 +104,8 @@ struct bmap_pagecache_entry {
  * Do not blindly wait until data is ready or assume that data
  * is ready when the RPC is complete.
  */
-#define	BMPCE_INFLIGHT		(1 << 10)	/* I/O in progress */
-#define	BMPCE_EIO		(1 << 11)	/* I/O error */
+#define	BMPCE_INFLIGHT		(1 << 11)	/* I/O in progress */
+#define	BMPCE_EIO		(1 << 12)	/* I/O error */
 
 #define BMPCE_2_BIORQ(b)						\
 	((b)->bmpce_waitq ? (char *)(b)->bmpce_waitq -			\
