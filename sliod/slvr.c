@@ -815,12 +815,10 @@ slvr_remove(struct slvr_ref *s)
 int
 slvr_buffer_reap(struct psc_poolmgr *m)
 {
-	int			 i;
-	int			 n;
-	int                      locked;
 	struct psc_dynarray	 a;
 	struct slvr_ref		*s;
 	struct slvr_ref		*dummy;
+	int i, n, locked;
 
 	n = 0;
 	psc_dynarray_init(&a);

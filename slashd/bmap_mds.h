@@ -198,8 +198,8 @@ struct bmap_mds_lease {
 #define	BML_CHAIN		(1 << 10)
 #define	BML_UPGRADE		(1 << 11)
 #define	BML_EXPFAIL		(1 << 12)
-#define BML_FREEING             (1 << 13)
-#define BML_ASSFAIL             (1 << 14)
+#define BML_FREEING		(1 << 13)
+#define BML_ASSFAIL		(1 << 14)
 
 #define bml_2_bmap(bml)		bmi_2_bmap((bml)->bml_bmdsi)
 

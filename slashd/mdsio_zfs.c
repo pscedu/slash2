@@ -107,7 +107,7 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	size_t nb;
 	int rc;
 
-        psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
+	psc_assert(bmap->bcm_flags & BMAP_MDS_CRC_UP);
 
 	FCMH_LOCK(bmap->bcm_fcmh);
 	if (fcmh_2_fsz(bmap->bcm_fcmh) != crcup->fsize) {
@@ -130,10 +130,10 @@ mds_bmap_crc_update(struct bmapc_memb *bmap, struct srm_bmap_crcup *crcup)
 	for (i = 0; i < crcup->nups; i++) {
 		bmap_2_crcs(bmap, crcup->crcs[i].slot) =
 			crcup->crcs[i].crc;
-		
+
 		bmap->bcm_crcstates[crcup->crcs[i].slot] =
 			BMAP_SLVR_DATA | BMAP_SLVR_CRC;
-		
+
 		DEBUG_BMAP(PLL_DEBUG, bmap, "slot(%d) crc(%"PRIx64")",
 			   crcup->crcs[i].slot, crcup->crcs[i].crc);
 	}

@@ -111,10 +111,10 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		return (mp->rc);
 	}
 
-	len = (mq->ncrc_updates * sizeof(struct srm_bmap_crcup));
-	for (i=0; i < mq->ncrc_updates; i++)
-		len += (mq->ncrcs_per_update[i] *
-		    sizeof(struct srm_bmap_crcwire));
+	len = mq->ncrc_updates * sizeof(struct srm_bmap_crcup);
+	for (i = 0; i < mq->ncrc_updates; i++)
+		len += mq->ncrcs_per_update[i] *
+		    sizeof(struct srm_bmap_crcwire);
 
 	iovs = PSCALLOC(sizeof(*iovs) * mq->ncrc_updates);
 	buf = PSCALLOC(len);
@@ -147,7 +147,7 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 		goto out;
 	}
 
-	for (i=0, off=0; i < mq->ncrc_updates; i++) {
+	for (i = 0, off = 0; i < mq->ncrc_updates; i++) {
 		struct srm_bmap_crcup *c = iovs[i].iov_base;
 		uint32_t j;
 
@@ -158,12 +158,13 @@ slm_rmi_handle_bmap_crcwrt(struct pscrpc_request *rq)
 			    c->nups, mq->ncrcs_per_update[i]);
 			mp->crcup_rc[i] = -EINVAL;
 		}
+
 		/* Verify slot number validity.
 		 */
-		for (j=0; j < c->nups; j++) {
+		for (j = 0; j < c->nups; j++)
 			if (c->crcs[j].slot >= SLASH_CRCS_PER_BMAP)
 				mp->crcup_rc[i] = -ERANGE;
-		}
+
 		/* Look up the bmap in the cache and write the CRCs.
 		 */
 		mp->crcup_rc[i] = mds_bmap_crc_write(c,
