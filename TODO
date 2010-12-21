@@ -327,7 +327,7 @@ API rename
 
 - change upsched to do async callbacks
 - change upsched to do multiple repls simultaneously
-- replication is currently broken
+- does upsched get hung up in paul's repl test?
 
 truncate:
  - add a nbmaps field to the zfs_inode which is maintained separately from
@@ -337,6 +337,7 @@ truncate:
     (o) mark the CRC for this bmap as unknown (we don't do this)
 
 - csvc flags arent getting updated when sliod goes down in msl
+- clients do not show up in slictl -sc
 - use pfl_memchk instead of null inode structures for memcmp
 - SRMT_GETBMAPMINSEQ is not handled by slashd
 - CRCs are currently ignored in the I/O path
