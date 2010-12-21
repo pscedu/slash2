@@ -17,6 +17,7 @@
  * %PSC_END_COPYRIGHT%
  */
 
+#include "pfl/fs.h"
 #include "psc_ds/lockedlist.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/treeutil.h"
@@ -230,7 +231,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 
 	} else if (rw == SL_WRITE && bmdsi->bmdsi_readers) {
 		struct bmap_mds_lease *tmp;
-		int set_dio=0;
+		int set_dio = 0;
 
 		/* Writer being added amidst one or more readers.  Issue
 		 *   courtesy callbacks to the readers.
@@ -1266,7 +1267,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 		goto out;
 
 	} else {
-		/* Mark that bmap is undergoing crc updates - this is non-
+		/* Mark that bmap is undergoing CRC updates - this is non-
 		 *  reentrant so the ION must know better than to send
 		 *  multiple requests for the same bmap.
 		 */
@@ -1295,7 +1296,7 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 	 *  Schedule the bmap for writing.
 	 */
 	BMAP_ULOCK(bmap);
-	/* Call the journal and update the in-memory crc's.
+	/* Call the journal and update the in-memory CRCs.
 	 */
 	mds_bmap_crc_update(bmap, c);
 
@@ -1312,8 +1313,16 @@ mds_bmap_crc_write(struct srm_bmap_crcup *c, lnet_nid_t ion_nid,
 		fcmh_wake_locked(fcmh);
 	}
 
+	if (fcmh->fcmh_sstb.sst_mode & (S_ISGID | S_ISUID)) {
+		FCMH_LOCK(fcmh);
+		fcmh->fcmh_sstb.sst_mode &= ~(S_ISGID | S_ISUID);
+		FCMH_ULOCK(fcmh);
+		mdsio_fcmh_setattr(fcmh, PSCFS_SETATTRF_MODE);
+	}
+
  out:
-	/* Mark that mds_bmap_crc_write() is done with this bmap
+	/*
+	 * Mark that mds_bmap_crc_write() is done with this bmap
 	 *  - it was incref'd in fcmh_bmap_lookup().
 	 */
 	if (bmap)
@@ -1583,6 +1592,29 @@ dump_bmap_flags(uint32_t flags)
 	PFL_PRFLAG(BMAP_MDS_SEQWRAP, &flags, &seq);
 	if (flags)
 		printf(" unknown: %#x", flags);
+	printf("\n");
+}
+
+void
+dump_bml_flags(uint32_t flags)
+{
+	int seq = 0;
+
+	PFL_PRFLAG(BML_READ, &flags, &seq);
+	PFL_PRFLAG(BML_WRITE, &flags, &seq);
+	PFL_PRFLAG(BML_CDIO, &flags, &seq);
+	PFL_PRFLAG(BML_COHRLS, &flags, &seq);
+	PFL_PRFLAG(BML_COHDIO, &flags, &seq);
+	PFL_PRFLAG(BML_EXP, &flags, &seq);
+	PFL_PRFLAG(BML_TIMEOQ, &flags, &seq);
+	PFL_PRFLAG(BML_BMDSI, &flags, &seq);
+	PFL_PRFLAG(BML_COH, &flags, &seq);
+	PFL_PRFLAG(BML_RECOVER, &flags, &seq);
+	PFL_PRFLAG(BML_CHAIN, &flags, &seq);
+	PFL_PRFLAG(BML_UPGRADE, &flags, &seq);
+	PFL_PRFLAG(BML_EXPFAIL, &flags, &seq);
+	PFL_PRFLAG(BML_FREEING, &flags, &seq);
+	PFL_PRFLAG(BML_ASSFAIL, &flags, &seq);
 	printf("\n");
 }
 #endif
