@@ -603,7 +603,7 @@ sl_exp_hldrop_cli(struct pscrpc_export *exp)
 		return;
 
 	if (sl_expcli_ops.secop_destroy)
-		sl_expcli_ops.secop_destroy(exp);
+		sl_expcli_ops.secop_destroy(exp->exp_private);
 	sl_csvc_reqlock(csvc);
 	sl_csvc_markfree(csvc);
 	sl_csvc_decref(csvc);
