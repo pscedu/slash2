@@ -177,10 +177,10 @@ sli_rii_replread_cb(struct pscrpc_request *rq,
 		rc = EBADMSG;
 
  out:
-	for (slvridx = 0; slvridx < nitems(w->srw_slvr_refs); slvridx++)
+	for (slvridx = 0; slvridx < (int)nitems(w->srw_slvr_refs); slvridx++)
 		if (w->srw_slvr_refs[slvridx] == s)
 			break;
-	psc_assert(slvridx < nitems(w->srw_slvr_refs));
+	psc_assert(slvridx < (int)nitems(w->srw_slvr_refs));
 	rc = sli_rii_replread_release_sliver(w, slvridx, rc);
 
 	spinlock(&w->srw_lock);
