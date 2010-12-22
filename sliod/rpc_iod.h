@@ -22,6 +22,7 @@
 
 #include <sys/types.h>
 
+#include "slashrpc.h"
 #include "slconfig.h"
 #include "slconn.h"
 
@@ -44,6 +45,12 @@ struct sli_repl_workrq;
 #define SLI_RII_BUFSZ		256
 #define SLI_RII_REPSZ		256
 #define SLI_RII_SVCNAME		"slirii"
+
+struct sli_exp_cli {
+	struct slashrpc_cservice	*iexpc_csvc;
+	psc_spinlock_t			 iexpc_lock;
+	struct psc_waitq		 iexpc_waitq;
+};
 
 /* aliases for connection management */
 #define sli_geticsvcx(resm, exp)						\
@@ -74,5 +81,19 @@ int	sli_rmi_setmds(const char *);
 int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
 
 int	sli_rii_issue_repl_read(struct pscrpc_import *, int, int, struct sli_repl_workrq *);
+
+struct sli_exp_cli *
+	iexpc_get(struct pscrpc_export *);
+
+static __inline struct slashrpc_cservice *
+sli_getclcsvc(struct pscrpc_export *exp)
+{
+	struct sli_exp_cli *iexpc;
+
+	iexpc = sl_exp_getpri_cli(exp);
+	return (sl_csvc_get(&iexpc->iexpc_csvc, 0, exp, LNET_NID_ANY,
+	    SRCI_REQ_PORTAL, SRCI_REP_PORTAL, SRCI_MAGIC, SRCI_VERSION,
+	    &iexpc->iexpc_lock, &iexpc->iexpc_waitq, SLCONNT_CLI, NULL));
+}
 
 #endif /* _RPC_IOD_H_ */

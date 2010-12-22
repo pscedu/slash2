@@ -102,3 +102,5 @@ void
 sl_resm_hldrop(__unusedx struct sl_resm *resm)
 {
 }
+
+struct sl_expcli_ops sl_expcli_ops;

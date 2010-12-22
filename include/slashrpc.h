@@ -92,7 +92,7 @@ struct statvfs;
 			return ((mp)->rc);				\
 	 } while (0)
 
-/* SLASH RPC channel to MDS from client. */
+/* SLASH RPC channel to MDS from CLI. */
 #define SRMC_REQ_PORTAL		10
 #define SRMC_REP_PORTAL		11
 #define SRMC_BULK_PORTAL	12
@@ -119,7 +119,7 @@ struct statvfs;
 #define SRMI_VERSION		1
 #define SRMI_MAGIC		UINT64_C(0xaabbccddeeff0044)
 
-/* SLASH RPC channel to client from MDS. */
+/* SLASH RPC channel to CLI from MDS. */
 #define SRCM_REQ_PORTAL		25
 #define SRCM_REP_PORTAL		26
 #define SRCM_BULK_PORTAL	27
@@ -128,7 +128,7 @@ struct statvfs;
 #define SRCM_VERSION		1
 #define SRCM_MAGIC		UINT64_C(0xaabbccddeeff0055)
 
-/* SLASH RPC channel to ION from client. */
+/* SLASH RPC channel to ION from CLI. */
 #define SRIC_REQ_PORTAL		30
 #define SRIC_REP_PORTAL		31
 #define SRIC_BULK_PORTAL	32
@@ -154,6 +154,15 @@ struct statvfs;
 
 #define SRIM_VERSION		1
 #define SRIM_MAGIC		UINT64_C(0xaabbccddeeff0088)
+
+/* SLASH RPC channel to CLI from ION. */
+#define SRCI_REQ_PORTAL		45
+#define SRCI_REP_PORTAL		46
+#define SRCI_BULK_PORTAL	47
+#define SRCI_CTL_PORTAL		48
+
+#define SRCI_VERSION		1
+#define SRCI_MAGIC		UINT64_C(0xaabbccddeeff0099)
 
 /* SLASH RPC message types. */
 enum {

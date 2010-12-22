@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2008-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -38,18 +38,22 @@
 #include "rpc_iod.h"
 #include "slashrpc.h"
 #include "slconn.h"
+#include "slerr.h"
 #include "sliod.h"
 #include "slvr.h"
 
 __static int
 sli_ric_handle_connect(struct pscrpc_request *rq)
 {
+	struct pscrpc_export *e = rq->rq_export;
 	struct srm_connect_req *mq;
 	struct srm_generic_rep *mp;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 	if (mq->magic != SRIC_MAGIC || mq->version != SRIC_VERSION)
 		mp->rc = -EINVAL;
+	psc_assert(e->exp_private == NULL);
+	sl_exp_getpri_cli(e);
 	return (0);
 }
 
@@ -332,6 +336,15 @@ sli_ric_handler(struct pscrpc_request *rq)
 {
 	int rc;
 
+	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
+		EXPORT_LOCK(rq->rq_export);
+		if (rq->rq_export->exp_private == NULL)
+			rc = SLERR_NOTCONN;
+		EXPORT_ULOCK(rq->rq_export);
+		if (rc)
+			goto out;
+	}
+
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_CONNECT:
 		rc = sli_ric_handle_connect(rq);
@@ -350,7 +363,24 @@ sli_ric_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
+ out:
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }
+
+void
+iexpc_allocpri(struct pscrpc_export *exp)
+{
+	struct sli_exp_cli *iexpc;
+
+	iexpc = exp->exp_private = PSCALLOC(sizeof(*iexpc));
+	INIT_SPINLOCK(&iexpc->iexpc_lock);
+	psc_waitq_init(&iexpc->iexpc_waitq);
+	sli_getclcsvc(exp);
+}
+
+struct sl_expcli_ops sl_expcli_ops = {
+	iexpc_allocpri,
+	NULL
+};

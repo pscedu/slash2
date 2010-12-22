@@ -112,7 +112,7 @@ slm_rmc_handle_connect(struct pscrpc_request *rq)
 	if (mq->magic != SRMC_MAGIC || mq->version != SRMC_VERSION)
 		mp->rc = EINVAL;
 	psc_assert(e->exp_private == NULL);
-	mexpc_get(e);
+	sl_exp_getpri_cli(e);
 	return (0);
 }
 
@@ -1056,9 +1056,14 @@ slm_rmc_handler(struct pscrpc_request *rq)
 {
 	int rc;
 
-	// XXX move
-	//mexpc_get(e);
-	// here in case the client violates protocol and doesn't CONNECT
+	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
+		EXPORT_LOCK(rq->rq_export);
+		if (rq->rq_export->exp_private == NULL)
+			rc = SLERR_NOTCONN;
+		EXPORT_ULOCK(rq->rq_export);
+		if (rc)
+			goto out;
+	}
 
 	switch (rq->rq_reqmsg->opc) {
 	/* bmap messages */
@@ -1145,19 +1150,17 @@ slm_rmc_handler(struct pscrpc_request *rq)
 		rq->rq_status = -ENOSYS;
 		return (pscrpc_error(rq));
 	}
+ out:
 	authbuf_sign(rq, PSCRPC_MSG_REPLY);
 	pscrpc_target_send_reply_msg(rq, rc, 0);
 	return (rc);
 }
 
 void
-mexpc_destroy(struct pscrpc_export *exp)
+mexpc_destroy(void *arg)
 {
-	struct slm_exp_cli *mexpc = exp->exp_private;
 	struct bmap_mds_lease *bml, *tmp;
-
-	if (mexpc == NULL)
-		return;
+	struct slm_exp_cli *mexpc = arg;
 
 	psclist_for_each_entry_safe(bml, tmp, &mexpc->mexpc_bmlhd,
 	    bml_exp_lentry) {
@@ -1168,41 +1171,21 @@ mexpc_destroy(struct pscrpc_export *exp)
 		BML_ULOCK(bml);
 		psclist_del(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
 	}
-
-	if (mexpc->mexpc_csvc) {
-		sl_csvc_reqlock(mexpc->mexpc_csvc);
-		sl_csvc_markfree(mexpc->mexpc_csvc);
-		sl_csvc_decref(mexpc->mexpc_csvc);
-	}
-	PSCFREE(exp->exp_private);
 }
 
-/**
- * mexpc_get - Get pscrpc_export private data specific to CLI.
- * @exp: RPC export of CLI peer.
- */
-struct slm_exp_cli *
-mexpc_get(struct pscrpc_export *exp)
+void
+mexpc_allocpri(struct pscrpc_export *exp)
 {
 	struct slm_exp_cli *mexpc;
-	int locked;
 
-	locked = EXPORT_RLOCK(exp);
-	if (exp->exp_private)
-		mexpc = exp->exp_private;
-	else {
-		mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
-		INIT_PSCLIST_HEAD(&mexpc->mexpc_bmlhd);
-		INIT_SPINLOCK(&mexpc->mexpc_lock);
-		psc_waitq_init(&mexpc->mexpc_waitq);
-		exp->exp_hldropf = mexpc_destroy;
-
-		/*
-		 * This will assign mexpc_csvc and mexpc_destroy() will
-		 * drop this reference.
-		 */
-		slm_getclcsvc(exp);
-	}
-	EXPORT_URLOCK(exp, locked);
-	return (mexpc);
+	mexpc = exp->exp_private = PSCALLOC(sizeof(*mexpc));
+	INIT_PSCLIST_HEAD(&mexpc->mexpc_bmlhd);
+	INIT_SPINLOCK(&mexpc->mexpc_lock);
+	psc_waitq_init(&mexpc->mexpc_waitq);
+	slm_getclcsvc(exp);
 }
+
+struct sl_expcli_ops sl_expcli_ops = {
+	mexpc_allocpri,
+	mexpc_destroy
+};

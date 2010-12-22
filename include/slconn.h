@@ -90,6 +90,11 @@ struct slashrpc_cservice {
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
 
+struct sl_expcli_ops {
+	void	(*secop_allocpri)(struct pscrpc_export *);
+	void	(*secop_destroy)(void *);
+};
+
 #define _SL_EXP_REGISTER_RESM(exp, getcsvc)				\
 	{								\
 		struct slashrpc_cservice *_csvc = NULL;			\
@@ -114,7 +119,7 @@ struct slashrpc_cservice {
 									\
 			if ((exp)->exp_hldropf == NULL) {		\
 				EXPORT_LOCK(exp);			\
-				exp->exp_hldropf = sl_exp_hldrop;	\
+				exp->exp_hldropf = sl_exp_hldrop_resm;	\
 				EXPORT_ULOCK(exp);			\
 			}						\
 		} else							\
@@ -196,7 +201,9 @@ int	 sl_csvc_usemultiwait(struct slashrpc_cservice *);
 void	_sl_csvc_waitrelv(struct slashrpc_cservice *, long, long);
 void	 sl_csvc_wake(struct slashrpc_cservice *);
 
-void	 sl_exp_hldrop(struct pscrpc_export *);
+void	 sl_exp_hldrop_resm(struct pscrpc_export *);
+void	*sl_exp_getpri_cli(struct pscrpc_export *);
+
 void	 sl_resm_hldrop(struct sl_resm *);
 
 void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
@@ -205,5 +212,6 @@ void	 slconnthr_spawn(struct sl_resm *, uint32_t, uint32_t, uint64_t,
 
 extern struct psc_dynarray	lnet_prids;
 extern struct psc_lockedlist	client_csvcs;
+extern struct sl_expcli_ops	sl_expcli_ops;
 
 #endif /* _SLCONN_H_ */

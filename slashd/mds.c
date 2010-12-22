@@ -905,7 +905,7 @@ mds_bmap_bml_release(struct bmap_mds_lease *bml)
 		/* Take the locks in the correct order. */
 		BML_ULOCK(bml);
 		EXPORT_LOCK(bml->bml_exp);
-		mexpc_get(bml->bml_exp);
+		sl_exp_getpri_cli(bml->bml_exp);
 		BML_LOCK(bml);
 		if (bml->bml_flags & BML_EXP) {
 			psclist_del(&bml->bml_exp_lentry,
@@ -1549,7 +1549,7 @@ mds_bmap_load_cli(struct fidc_membh *f, sl_bmapno_t bmapno, int flags,
 		bml->bml_flags |= BML_CDIO;
 
 	EXPORT_LOCK(exp);
-	mexpc = mexpc_get(exp);
+	mexpc = sl_exp_getpri_cli(exp);
 	bml->bml_flags |= BML_EXP;
 	psclist_add_tail(&bml->bml_exp_lentry, &mexpc->mexpc_bmlhd);
 	EXPORT_ULOCK(exp);

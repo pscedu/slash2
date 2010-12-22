@@ -61,9 +61,6 @@ struct slm_exp_cli {
 	struct psclist_head		 mexpc_bmlhd;		/* bmap leases */
 };
 
-struct slm_exp_cli *
-	mexpc_get(struct pscrpc_export *);
-
 void	slm_rpc_initsvc(void);
 
 int	slm_rmc_handler(struct pscrpc_request *);
@@ -96,7 +93,7 @@ slm_getclcsvc(struct pscrpc_export *exp)
 {
 	struct slm_exp_cli *mexpc;
 
-	mexpc = mexpc_get(exp);
+	mexpc = sl_exp_getpri_cli(exp);
 	return (sl_csvc_get(&mexpc->mexpc_csvc, 0, exp, LNET_NID_ANY,
 	    SRCM_REQ_PORTAL, SRCM_REP_PORTAL, SRCM_MAGIC, SRCM_VERSION,
 	    &mexpc->mexpc_lock, &mexpc->mexpc_waitq, SLCONNT_CLI, NULL));
