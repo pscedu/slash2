@@ -1054,7 +1054,7 @@ slm_rmc_handle_getreplst(struct pscrpc_request *rq)
 int
 slm_rmc_handler(struct pscrpc_request *rq)
 {
-	int rc;
+	int rc = 0;
 
 	if (rq->rq_reqmsg->opc != SRMT_CONNECT) {
 		EXPORT_LOCK(rq->rq_export);
