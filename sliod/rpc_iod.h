@@ -82,9 +82,6 @@ int	sli_rmi_issue_repl_schedwk(struct sli_repl_workrq *);
 
 int	sli_rii_issue_repl_read(struct pscrpc_import *, int, int, struct sli_repl_workrq *);
 
-struct sli_exp_cli *
-	iexpc_get(struct pscrpc_export *);
-
 static __inline struct slashrpc_cservice *
 sli_getclcsvc(struct pscrpc_export *exp)
 {
