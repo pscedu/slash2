@@ -68,6 +68,7 @@ main(int argc, char *argv[])
 	printf("%4d [SLERR_BADCRC]: %s\n", SLERR_BADCRC, slstrerror(SLERR_BADCRC));
 	printf("%4d [SLERR_GEN_OLD]: %s\n", SLERR_GEN_OLD, slstrerror(SLERR_GEN_OLD));
 	printf("%4d [SLERR_GEN_INVALID]: %s\n", SLERR_GEN_INVALID, slstrerror(SLERR_GEN_INVALID));
+	printf("%4d [SLERR_NOTCONN]: %s\n", SLERR_NOTCONN, slstrerror(SLERR_NOTCONN));
 	/* end custom errnos */
 	exit(0);
 }

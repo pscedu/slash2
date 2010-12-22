@@ -575,12 +575,58 @@ slconnthr_spawn(struct sl_resm *resm, uint32_t rqptl, uint32_t rpptl,
 	pscthr_setready(thr);
 }
 
+/**
+ * sl_exp_hldrop_resm - Callback triggered when an export to a resource
+ *	member fails.
+ * @exp: export to RPC peer.
+ */
 void
-sl_exp_hldrop(struct pscrpc_export *exp)
+sl_exp_hldrop_resm(struct pscrpc_export *exp)
 {
 	struct sl_resm *resm;
 
 	resm = libsl_nid2resm(exp->exp_connection->c_peer.nid);
 	sl_csvc_disconnect(resm->resm_csvc);
 	sl_resm_hldrop(resm);
+}
+
+/**
+ * sl_exp_hldrop - Callback triggered when an export to a CLIENT fails.
+ * @exp: export to RPC CLI peer.
+ */
+void
+sl_exp_hldrop_cli(struct pscrpc_export *exp)
+{
+	struct slashrpc_cservice *csvc = exp->exp_private;
+
+	if (csvc == NULL)
+		return;
+
+	if (sl_expcli_ops.secop_destroy)
+		sl_expcli_ops.secop_destroy(exp);
+	sl_csvc_reqlock(csvc);
+	sl_csvc_markfree(csvc);
+	sl_csvc_decref(csvc);
+	PSCFREE(exp->exp_private);
+}
+
+/**
+ * sl_exp_getpri_cli - Get pscrpc_export private data specific to CLIENT
+ *	peer.
+ * @exp: RPC export to CLI peer.
+ */
+void *
+sl_exp_getpri_cli(struct pscrpc_export *exp)
+{
+	int locked;
+	void *p;
+
+	locked = EXPORT_RLOCK(exp);
+	if (exp->exp_private == NULL) {
+		sl_expcli_ops.secop_allocpri(exp);
+		exp->exp_hldropf = sl_exp_hldrop_cli;
+	}
+	p = exp->exp_private;
+	EXPORT_URLOCK(exp, locked);
+	return (p);
 }

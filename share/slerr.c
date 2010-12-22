@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -47,6 +47,7 @@ char *slash_errstrs[] = {
 /* 19 */ "Bad checksum",
 /* 20 */ "File generation old",
 /* 21 */ "File generation invalid",
+/* 22 */ "CONNECT protocol message has not been transmitted",
 	NULL
 };
 

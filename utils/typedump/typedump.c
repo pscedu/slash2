@@ -192,6 +192,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct site_progress);
 	PRTYPE(struct sl_buffer);
 	PRTYPE(struct sl_buffer_iovref);
+	PRTYPE(struct sl_expcli_ops);
 	PRTYPE(struct sl_fcmh_ops);
 	PRTYPE(struct sl_gconf);
 	PRTYPE(struct sl_mds_crc_log);
@@ -213,6 +214,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slconn_thread);
 	PRTYPE(struct slctlmsg_conn);
 	PRTYPE(struct slctlmsg_fcmh);
+	PRTYPE(struct sli_exp_cli);
 	PRTYPE(struct sli_repl_workrq);
 	PRTYPE(struct slictlmsg_replwkst);
 	PRTYPE(struct sliric_thread);
@@ -437,6 +439,11 @@ main(int argc, char *argv[])
 	PRVAL(SMCC_EXIT);
 	PRVAL(SMCC_RECONFIG);
 	PRVAL(SP_FLAG_NONE);
+	PRVAL(SRCI_BULK_PORTAL);
+	PRVAL(SRCI_CTL_PORTAL);
+	PRVAL(SRCI_REP_PORTAL);
+	PRVAL(SRCI_REQ_PORTAL);
+	PRVAL(SRCI_VERSION);
 	PRVAL(SRCM_BUFSZ);
 	PRVAL(SRCM_BULK_PORTAL);
 	PRVAL(SRCM_CTL_PORTAL);

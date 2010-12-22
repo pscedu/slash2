@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -45,5 +45,6 @@ char *slstrerror(int);
 #define SLERR_BADCRC			(_SLERR_START + 19)
 #define SLERR_GEN_OLD			(_SLERR_START + 20)
 #define SLERR_GEN_INVALID		(_SLERR_START + 21)
+#define SLERR_NOTCONN			(_SLERR_START + 22)
 
 #endif /* _SLERR_H_ */
