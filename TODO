@@ -341,5 +341,5 @@ truncate:
 - use pfl_memchk instead of null inode structures for memcmp
 - SRMT_GETBMAPMINSEQ is not handled by slashd
 - CRCs are currently ignored in the I/O path
-- need a way to view a directori's newbmap_repl_policy
+- need a way to view a directory's newbmap_repl_policy
   - maybe in msctl -r view, so we can see which MDS a dir is centralized with
