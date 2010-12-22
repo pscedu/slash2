@@ -150,8 +150,8 @@ struct sl_expcli_ops {
 
 #define sl_csvc_reqlock(csvc)						\
 	(sl_csvc_usemultiwait(csvc) ?					\
-	    psc_pthread_mutex_reqlock(csvc->csvc_mutex) :		\
-	    reqlock(csvc->csvc_lock))
+	    psc_pthread_mutex_reqlock((csvc)->csvc_mutex) :		\
+	    reqlock((csvc)->csvc_lock))
 
 #define sl_csvc_ureqlock(csvc, waslocked)				\
 	do {								\
