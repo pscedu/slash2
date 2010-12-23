@@ -29,6 +29,8 @@ to be recorded in the changelog.
 Zhihui asks "should we include replicas in the block count?".  I'm on the
 fence about this.
 
+ - i think there should be a slictl/msctl cmd to see this info
+
 pauln (11/10/2010)
 
 -----------------------------------------------------------------------
@@ -337,9 +339,12 @@ truncate:
     (o) mark the CRC for this bmap as unknown (we don't do this)
 
 - csvc flags arent getting updated when sliod goes down in msl
-- clients do not show up in slictl -sc
 - use pfl_memchk instead of null inode structures for memcmp
 - SRMT_GETBMAPMINSEQ is not handled by slashd
 - CRCs are currently ignored in the I/O path
 - need a way to view a directory's newbmap_repl_policy
-  - maybe in msctl -r view, so we can see which MDS a dir is centralized with
+    (o) maybe in msctl -r view, so we can see which MDS a dir is
+	centralized with
+- need a general mechanism to pass data between msctl/slictl/slmctl
+  so we get all the functionality everywhere and don't have to copy huge
+  chunks of code
