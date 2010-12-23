@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2007-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -67,115 +67,115 @@ peers		{ return PEERTAG; }
 ifs		{ return INTERFACETAG; }
 
 yes {
-	psc_trace("BOOL %s", yytext);
+	psclog_trace("BOOL %s", yytext);
 	yylval = psc_strdup(yytext);
 	return BOOL;
 }
 
 no {
-	psc_trace("BOOL %s", yytext);
+	psclog_trace("BOOL %s", yytext);
 	yylval = psc_strdup(yytext);
 	return BOOL;
 }
 
 {num} {
-	psc_trace("NUM %s", yytext);
+	psclog_trace("NUM %s", yytext);
 	yylval = psc_strdup(yytext);
 	return NUM;
 }
 
 parallel_fs {
-	psc_trace("Resource type string %s", yytext);
+	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
 	return RESOURCE_TYPE;
 }
 
 standalone_fs {
-	psc_trace("Resource type string %s", yytext);
+	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
 	return RESOURCE_TYPE;
 }
 
 archival_fs {
-	psc_trace("Resource type string %s", yytext);
+	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
 	return RESOURCE_TYPE;
 }
 
 mds {
-	psc_trace("Resource type string %s", yytext);
+	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
 	return RESOURCE_TYPE;
 }
 
 cluster_noshare_fs {
-	psc_trace("Resource type string %s", yytext);
+	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
 	return RESOURCE_TYPE;
 }
 
 compute {
-	psc_trace("Resource type string %s", yytext);
+	psclog_trace("Resource type string %s", yytext);
 	yylval = psc_strdup(yytext);
 	return RESOURCE_TYPE;
 }
 
 {hexnum} {
-	psc_trace("HEXNUM %s", yytext);
+	psclog_trace("HEXNUM %s", yytext);
 	yylval = psc_strdup(yytext);
 	return HEXNUM;
 }
 
 {lnettcp} {
-	psc_trace("Lnet tcp network string %s", yytext);
+	psclog_trace("LNET TCP network string %s", yytext);
 	yylval = psc_strdup(yytext);
 	return LNETTCP;
 }
 
 {name} {
-	psc_trace("NAME %s", yytext);
+	psclog_trace("NAME %s", yytext);
 	yylval = psc_strdup(yytext);
 	return NAME;
 }
 
 {pathname} {
-	psc_trace("PATHNAME %s", yytext);
+	psclog_trace("PATHNAME %s", yytext);
 	yylval = psc_strdup(yytext);
 	return PATHNAME;
 }
 
 {globpath} {
-	psc_trace("GLOBPATH %s", yytext);
+	psclog_trace("GLOBPATH %s", yytext);
 	yylval = psc_strdup(yytext);
 	return GLOBPATH;
 }
 
 {floatv} {
-	psc_trace("FLOATVAL %s", yytext);
+	psclog_trace("FLOATVAL %s", yytext);
 	yylval = psc_strdup(yytext);
 	return FLOATVAL;
 }
 
 {sizeval} {
-	psc_trace("SIZEVAL %s", yytext);
+	psclog_trace("SIZEVAL %s", yytext);
 	yylval = psc_strdup(yytext);
 	return SIZEVAL;
 }
 
 {sitename} {
-	psc_trace("SITE_NAME %s", yytext);
+	psclog_trace("SITE_NAME %s", yytext);
 	yylval = psc_strdup(yytext);
 	return SITE_NAME;
 }
 
 {resname} {
-	psc_trace("RESOURCE_NAME %s", yytext);
+	psclog_trace("RESOURCE_NAME %s", yytext);
 	yylval = psc_strdup(yytext);
 	return RESOURCE_NAME;
 }
 
 {ipquad} {
-	psc_trace("IPADRRESS %s", yytext);
+	psclog_trace("IPADRRESS %s", yytext);
 	yylval = psc_strdup(yytext);
 	return IPADDR;
 }
@@ -183,7 +183,7 @@ compute {
 {quotedstr} {
 	size_t len;
 
-	psc_trace("Quoted string %s", yytext);
+	psclog_trace("Quoted string %s", yytext);
 	len = strlen(yytext);
 	psc_assert(len > 1);
 
