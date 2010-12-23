@@ -1039,7 +1039,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 					psc_assert(bmap_2_ion(b) == resm->resm_nid);
 
-					DEBUG_BMAP(PLL_INFO, b, "nid=%"PRIx64, 
+					DEBUG_BMAP(PLL_INFO, b, "nid=%"PRIx64,
 					   bmap_2_ion(b));
 				} else {
 					resm = slc_rmc_resm;
@@ -1068,9 +1068,10 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 					psc_dynarray_add_ifdne(&rels, resm);
 			}
 		}
-		psc_trace("msbmaprlsthr_main() out of loop (arraysz=%d) wtime=%lu:%lu",
-			 psc_dynarray_len(&rels), wtime.tv_sec, wtime.tv_nsec);
-
+		psclog_trace("out of find work loop (arraysz=%d) "
+		    "wtime="PSCPRI_TIMESPEC,
+		    psc_dynarray_len(&rels),
+		    PSCPRI_TIMESPEC_ARGS(&wtime));
 
 		/* Send out partially filled release request.
 		 */
@@ -1081,7 +1082,7 @@ msbmaprlsthr_main(__unusedx struct psc_thread *thr)
 
 		DYNARRAY_FOREACH_REVERSE(b, i, &skips) {
 			BMAP_LOCK(b);
-			if (!(b->bcm_flags & (BMAP_CLI_FLUSHPROC|BMAP_TIMEOQ))) {
+			if (!(b->bcm_flags & (BMAP_CLI_FLUSHPROC | BMAP_TIMEOQ))) {
 				psc_assert(!(b->bcm_flags & BMAP_DIRTY));
 				b->bcm_flags |= BMAP_TIMEOQ;
 				lc_addstack(&bmapTimeoutQ, b);
@@ -1113,7 +1114,8 @@ msbmapflushthr_main(__unusedx struct psc_thread *thr)
 {
 	while (pscthr_run()) {
 		bmap_flush();
-		psc_waitq_waitrel(&bmapflushwaitq, NULL, &bmapFlushWaitTime);
+		psc_waitq_waitrel(&bmapflushwaitq, NULL,
+		    &bmapFlushWaitTime);
 	}
 }
 
@@ -1145,7 +1147,7 @@ msbmapflushthr_spawn(void)
 
 	for (i = 0; i < NUM_BMAP_FLUSH_THREADS; i++)
 		pscthr_init(MSTHRT_BMAPFLSH, 0, msbmapflushthr_main,
-			NULL, 0, "msbflushthr%d", i);
+		    NULL, 0, "msbflushthr%d", i);
 
 	pscthr_init(MSTHRT_BMAPFLSHRPC, 0, msbmapflushthrrpc_main,
 	    NULL, 0, "msbflushrpcthr");
