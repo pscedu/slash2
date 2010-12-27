@@ -854,12 +854,9 @@ mds_reclaim_lwm(void)
 			seqno = iosinfo->si_seqno;
 		RPMI_ULOCK(rpmi);
 	}
-
 	psc_assert(seqno != UINT64_MAX);
 
 	reclaim_seqno_lwm = seqno;
-
-	seqno = (seqno / SLM_RECLAIM_BATCH) * SLM_RECLAIM_BATCH;
 	return (seqno);
 }
 
