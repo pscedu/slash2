@@ -1119,6 +1119,10 @@ mds_update_cursor(void *buf, uint64_t txg)
 	cursor->pjc_txg = txg;
 	freelock(&mds_txg_lock);
 
+	/*
+ 	 * Distill happens outside ZFS. This means if there is no ZFS
+ 	 * activity, the following value will be stale.
+ 	 */
 	cursor->pjc_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_fid = slm_get_curr_slashid();
 	cursor->pjc_update_seqno = mds_get_next_update_seqno();
