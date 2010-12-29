@@ -501,7 +501,7 @@ slcfg_get_symbol(const char *name)
 {
 	struct slconf_symbol *e;
 
-	psc_dbg("symbol lookup '%s'", name);
+	psclog_debug("symbol lookup '%s'", name);
 
 	for (e = sym_table; e->c_name; e++)
 		if (e->c_name && !strcmp(e->c_name, name))
@@ -517,7 +517,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 	char *endp;
 	void *ptr;
 
-	psc_dbg("val %s tok %s", val, tok);
+	psclog_debug("val %s tok %s", val, tok);
 
 	e = slcfg_get_symbol(tok);
 	if (e == NULL)
@@ -545,19 +545,19 @@ slcfg_store_tok_val(const char *tok, char *val)
 		psc_fatalx("invalid structure type %d", e->c_struct);
 	}
 
-	psc_dbg("type %d ptr %p", e->c_struct, ptr);
+	psclog_debug("type %d ptr %p", e->c_struct, ptr);
 
 	switch (e->c_type) {
 	case SL_TYPE_STR:
 		if (strlcpy(ptr, val, e->c_max) >= e->c_max)
 			yyerror("field %s value too large", e->c_name);
-		psc_dbg("SL_TYPE_STR tok '%s' set to '%s'",
+		psclog_debug("SL_TYPE_STR tok '%s' set to '%s'",
 		    e->c_name, (char *)ptr);
 		break;
 
 	case SL_TYPE_STRP:
 		*(char **)ptr = psc_strdup(val);
-		psc_dbg("SL_TYPE_STRP tok '%s' set to '%s' %p",
+		psclog_debug("SL_TYPE_STRP tok '%s' set to '%s' %p",
 		    e->c_name, *(char **)ptr, ptr);
 		break;
 
@@ -567,7 +567,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 			yyerror("invalid value");
 		if (e->c_max && *(uint64_t *)ptr > e->c_max)
 			yyerror("field %s value too large", e->c_name);
-		psc_dbg("SL_TYPE_HEXU64 tok '%s' set to '%"PRIx64"'",
+		psclog_debug("SL_TYPE_HEXU64 tok '%s' set to '%"PRIx64"'",
 		    e->c_name, *(uint64_t *)ptr);
 		break;
 
@@ -585,7 +585,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 		}
 		if (e->c_max && *(int *)ptr > (int)e->c_max)
 			yyerror("field %s value too large", e->c_name);
-		psc_dbg("SL_TYPE_INT tok '%s' set to '%d'",
+		psclog_debug("SL_TYPE_INT tok '%s' set to '%d'",
 		    e->c_name, *(int *)ptr);
 		break;
 
@@ -596,7 +596,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 			*(int *)ptr = 1;
 		else
 			*(int *)ptr = 0;
-		psc_dbg("SL_TYPE_BOOL option '%s' %s", e->c_name,
+		psclog_debug("SL_TYPE_BOOL option '%s' %s", e->c_name,
 		    *(int *)ptr ? "enabled" : "disabled");
 		break;
 
@@ -604,7 +604,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 		*(float *)ptr = strtof(val, &endp);
 		if (endp == val || *endp != '\0')
 			yyerror("invalid value");
-		psc_dbg("SL_TYPE_FLOAT tok '%s' %f",
+		psclog_debug("SL_TYPE_FLOAT tok '%s' %f",
 		    e->c_name, *(float *)ptr);
 		break;
 
@@ -637,7 +637,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 		default:
 			yyerror("sizeval '%s' has invalid postfix", val);
 		}
-		psc_dbg("szval = %"PRIu64, i);
+		psclog_debug("szval = %"PRIu64, i);
 
 		*c = '\0';
 		*(uint64_t *)ptr = i * strtoull(val, &endp, 10);
@@ -648,7 +648,7 @@ slcfg_store_tok_val(const char *tok, char *val)
 		if (e->c_max && *(uint64_t *)ptr > e->c_max)
 			yyerror("field %s value too large", e->c_name);
 
-		psc_dbg("SL_TYPE_SIZET tok '%s' set to '%"PRIu64"'",
+		psclog_debug("SL_TYPE_SIZET tok '%s' set to '%"PRIu64"'",
 			e->c_name, *(uint64_t *)ptr);
 		break;
 	    }
