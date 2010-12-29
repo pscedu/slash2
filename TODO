@@ -29,7 +29,7 @@ to be recorded in the changelog.
 Zhihui asks "should we include replicas in the block count?".  I'm on the
 fence about this.
 
- - i think there should be a slictl/msctl cmd to see this info
+ - there should be a slictl/msctl cmd to see this info
 
 pauln (11/10/2010)
 
@@ -146,22 +146,6 @@ in release but I don't see good performance for 'ls -al'.
 
 	Not seeing the above on the server..
 
-* fcmh_2_gen(tmp) != FID_ANY __fidc_lookup_fg:320
-	Look at this assert.  I'm not convinced that fidc_lookup_load_inode()
-	is useful.  It occasionally lets inodes into the cache without a proper
-	generation number.  Which then causes this assert.
-
-	unique: 94876, opcode: UNLINK (10), nodeid: 379151, insize: 65
-
-	[1233209602:863246 msfsthr8:__fidc_lookup_inode:480]  fcmh@0x6f5a70 fcoo@(nil) fcooref(-66:-66) i+g:379151+281474976710655 s: CG lc:Free r:1 :: adding FID_ANY to cache
-
-	[1233209602:866275 msfsthr5:__fidc_lookup_fg:320] [assert] fcmh_2_gen(tmp) != FID_ANY
-
-
-	Look at removing load_inode altogether.  Instead, maybe do an extra
-	ref on lookup so that proceeding operations are guarenteed to have
-	their inodes cached.
-
 - ensure fidc doesn't look up beyond SYM_NLOOPS #loops
 - add some high-level aliases to the replication interface for users:
 
@@ -219,8 +203,8 @@ in release but I don't see good performance for 'ls -al'.
 
 ---------------------------------------------------------
 
-sliod import/export
-- slictl -I path
+sliod import
+- slictl -m path
     lookup path
 
     approaches:
@@ -231,7 +215,8 @@ sliod import/export
     (o) link into slfidns, flag slivers to ignore CRCs,
 	always allow access.
 
-- slictl -X path
+sliod export
+- slictl -x path
     lookup path FID and move file to destination
     if recursive, lookup recursively
 
@@ -246,7 +231,7 @@ network scheduling
 - need way to prioritize specific endpoint <-> endpoint instead of
   random to avoid scheduling slow streams over faster streams
 
-netqueued - universal interface
+netsched/libnetsch - universal interface
 - LD_PRELOAD
 - intercept for recompiling
 - API
