@@ -34,19 +34,19 @@
 #include "pathnames.h"
 
 void
-packshow_conns(__unusedx const char *thr)
+packshow_conns(__unusedx char *conn)
 {
 	psc_ctlmsg_push(SLICMT_GETCONNS, sizeof(struct slctlmsg_conn));
 }
 
 void
-packshow_replwkst(__unusedx const char *arg)
+packshow_replwkst(__unusedx char *fid)
 {
 	psc_ctlmsg_push(SLICMT_GET_REPLWKST, sizeof(struct slictlmsg_replwkst));
 }
 
 void
-packshow_fcmhs(__unusedx const char *thr)
+packshow_fcmhs(__unusedx char *fid)
 {
 	struct slctlmsg_fcmh *scf;
 
@@ -90,19 +90,15 @@ replwkst_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
+	PSC_CTLSHOW_DEFS,
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
-	{ "loglevels",		psc_ctl_packshow_loglevels },
 	{ "replwkst",		packshow_replwkst },
-	{ "rpcsvcs",		psc_ctl_packshow_rpcsvcs },
-	{ "stats",		psc_ctl_packshow_threads },
 
 	/* aliases */
 	{ "conns",		packshow_conns },
 	{ "files",		packshow_fcmhs },
-	{ "fidcache",		packshow_fcmhs },
-	{ "thrstats",		psc_ctl_packshow_threads },
-	{ "threads",		psc_ctl_packshow_threads }
+	{ "fidcache",		packshow_fcmhs }
 };
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {

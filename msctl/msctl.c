@@ -118,13 +118,13 @@ rsb_accul_replica_stats(struct replst_slave_bdata *rsb, int iosidx,
 }
 
 void
-packshow_conns(__unusedx const char *thr)
+packshow_conns(__unusedx char *conn)
 {
 	psc_ctlmsg_push(MSCMT_GETCONNS, sizeof(struct slctlmsg_conn));
 }
 
 void
-packshow_fcmhs(__unusedx const char *thr)
+packshow_fcmhs(__unusedx char *fid)
 {
 	struct slctlmsg_fcmh *scf;
 
@@ -521,18 +521,14 @@ replst_savdat(__unusedx struct psc_ctlmsghdr *mh, const void *m)
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
+	PSC_CTLSHOW_DEFS,
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
-	{ "loglevels",		psc_ctl_packshow_loglevels },
-	{ "rpcsvcs",		psc_ctl_packshow_rpcsvcs },
-	{ "threads",		psc_ctl_packshow_threads },
 
 	/* aliases */
 	{ "conns",		packshow_conns },
 	{ "fidcache",		packshow_fcmhs },
-	{ "files",		packshow_fcmhs },
-	{ "stats",		psc_ctl_packshow_threads },
-	{ "thrstats",		psc_ctl_packshow_threads },
+	{ "files",		packshow_fcmhs }
 };
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {

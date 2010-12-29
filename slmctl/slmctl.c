@@ -47,13 +47,13 @@ slmrmmthr_pr(const struct psc_ctlmsg_thread *pcst)
 }
 
 void
-packshow_conns(__unusedx const char *thr)
+packshow_conns(__unusedx char *conn)
 {
 	psc_ctlmsg_push(SLMCMT_GETCONNS, sizeof(struct slctlmsg_conn));
 }
 
 void
-packshow_fcmhs(__unusedx const char *thr)
+packshow_fcmhs(__unusedx char *fid)
 {
 	struct slctlmsg_fcmh *scf;
 
@@ -62,19 +62,14 @@ packshow_fcmhs(__unusedx const char *thr)
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
+	PSC_CTLSHOW_DEFS,
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
-	{ "loglevels",		psc_ctl_packshow_loglevels },
-	{ "odtables",		psc_ctl_packshow_odtables },
-	{ "rpcsvcs",		psc_ctl_packshow_rpcsvcs },
-	{ "threads",		psc_ctl_packshow_threads },
 
 	/* aliases */
 	{ "conns",		packshow_conns },
 	{ "fidcache",		packshow_fcmhs },
-	{ "files",		packshow_fcmhs },
-	{ "stats",		psc_ctl_packshow_threads },
-	{ "thrstats",		psc_ctl_packshow_threads }
+	{ "files",		packshow_fcmhs }
 };
 
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
