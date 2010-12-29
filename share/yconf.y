@@ -181,7 +181,7 @@ include		: INCLUDE QUOTEDS {
 				warnx("%s:%d: %s: could not glob",
 				    cfg_filename, cfg_lineno, $2);
 			else {
-				for (i = 0; i < (int)gl.gl_pathc; i++)
+				for (i = 0; i < (size_t)gl.gl_pathc; i++)
 					slcfg_add_include($2);
 				globfree(&gl);
 			}
