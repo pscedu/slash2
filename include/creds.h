@@ -30,8 +30,8 @@ struct srt_stat;
 
 /* fields must aligned and length must be multiple of wordsize */
 struct slash_creds {
-	uint32_t	uid;
-	uint32_t	gid;
+	uint32_t	scr_uid;
+	uint32_t	scr_gid;
 };
 
 void	sl_drop_privs(int);

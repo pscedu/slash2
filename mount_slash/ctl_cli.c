@@ -53,7 +53,7 @@ struct psc_lockedlist	 msctl_replsts = PLL_INIT(&msctl_replsts,
 int
 msctl_getcreds(int s, struct slash_creds *crp)
 {
-	return (pfl_socket_getpeercred(s, &crp->uid, &crp->gid));
+	return (pfl_socket_getpeercred(s, &crp->scr_uid, &crp->scr_gid));
 }
 
 int

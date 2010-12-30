@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -140,9 +140,9 @@ int
 checkcreds(const struct srt_stat *sstb, const struct slash_creds *cr,
     int xmode)
 {
-	if (cr->uid == 0)
+	if (cr->scr_uid == 0)
 		return (0);
-	if (sstb->sst_uid == cr->uid) {
+	if (sstb->sst_uid == cr->scr_uid) {
 		if (((xmode & R_OK) && (sstb->sst_mode & S_IRUSR) == 0) ||
 		    ((xmode & W_OK) && (sstb->sst_mode & S_IWUSR) == 0) ||
 		    ((xmode & X_OK) && (sstb->sst_mode & S_IXUSR) == 0))
@@ -150,7 +150,7 @@ checkcreds(const struct srt_stat *sstb, const struct slash_creds *cr,
 		return (0);
 	}
 	/* XXX check process supplementary group list */
-	if (sstb->sst_gid == cr->gid) {
+	if (sstb->sst_gid == cr->scr_gid) {
 		if (((xmode & R_OK) && (sstb->sst_mode & S_IRGRP) == 0) ||
 		    ((xmode & W_OK) && (sstb->sst_mode & S_IWGRP) == 0) ||
 		    ((xmode & X_OK) && (sstb->sst_mode & S_IXGRP) == 0))

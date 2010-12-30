@@ -215,8 +215,8 @@ mslfs_getcreds(struct pscfs_req *pfr, struct slash_creds *cr)
 	struct pscfs_cred pfc;
 
 	pscfs_getcreds(pfr, &pfc);
-	cr->uid = pfc.pfc_uid;
-	cr->gid = pfc.pfc_gid;
+	cr->scr_uid = pfc.pfc_uid;
+	cr->scr_gid = pfc.pfc_gid;
 }
 
 __static void
@@ -235,7 +235,7 @@ mslfsop_access(struct pscfs_req *pfr, pscfs_inum_t inum, int mask)
 
 	rc = 0;
 	FCMH_LOCK(c);
-	if (creds.uid == 0) {
+	if (creds.scr_uid == 0) {
 		if ((mask & X_OK) && !S_ISDIR(c->fcmh_sstb.sst_mode) &&
 		    (c->fcmh_sstb.sst_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
 			rc = EACCES;
@@ -777,8 +777,8 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 	mslfs_getcreds(pfr, &cr);
 
 	FCMH_LOCK(p);
-	if ((p->fcmh_sstb.sst_mode & S_ISVTX) && cr.uid) {
-		if (p->fcmh_sstb.sst_uid != cr.uid) {
+	if ((p->fcmh_sstb.sst_mode & S_ISVTX) && cr.scr_uid) {
+		if (p->fcmh_sstb.sst_uid != cr.scr_uid) {
 			struct srt_stat sstb;
 
 			FCMH_ULOCK(p);
@@ -788,7 +788,7 @@ msl_delete(struct pscfs_req *pfr, pscfs_inum_t pinum,
 			if (rc)
 				goto out;
 
-			if (sstb.sst_uid != cr.uid)
+			if (sstb.sst_uid != cr.scr_uid)
 				rc = EPERM;
 		} else
 			FCMH_ULOCK(p);
@@ -1592,12 +1592,12 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 		goto out;
 
 	FCMH_LOCK(c);
-	if ((to_set & PSCFS_SETATTRF_MODE) && cr.uid) {
-		if (cr.uid != c->fcmh_sstb.sst_uid) {
+	if ((to_set & PSCFS_SETATTRF_MODE) && cr.scr_uid) {
+		if (cr.scr_uid != c->fcmh_sstb.sst_uid) {
 			rc = EPERM;
 			goto out;
 		}
-		if (cr.uid)
+		if (cr.scr_uid)
 			stb->st_mode &= ~(S_ISUID | S_ISGID);
 	}
 	if (to_set & PSCFS_SETATTRF_DATASIZE) {
@@ -1606,27 +1606,27 @@ mslfsop_setattr(struct pscfs_req *pfr, pscfs_inum_t inum,
 			goto out;
 	}
 	if ((to_set & (PSCFS_SETATTRF_ATIME | PSCFS_SETATTRF_MTIME)) &&
-	    cr.uid && cr.uid != c->fcmh_sstb.sst_uid) {
+	    cr.scr_uid && cr.scr_uid != c->fcmh_sstb.sst_uid) {
 		rc = EPERM;
 		goto out;
 	}
-	if (rc == 0 && (to_set & PSCFS_SETATTRF_UID) && cr.uid) {
+	if (rc == 0 && (to_set & PSCFS_SETATTRF_UID) && cr.scr_uid) {
 		rc = EPERM;
 		goto out;
 	}
-	if (rc == 0 && (to_set & PSCFS_SETATTRF_GID) && cr.uid) {
+	if (rc == 0 && (to_set & PSCFS_SETATTRF_GID) && cr.scr_uid) {
 		struct passwd pw, *pwp;
 		gid_t *grpv = NULL;
 		char buf[LINE_MAX];
 		int ngrp = 0;
 
-		rc = getpwuid_r(cr.uid, &pw, buf, sizeof(buf), &pwp);
+		rc = getpwuid_r(cr.scr_uid, &pw, buf, sizeof(buf), &pwp);
 		if (rc)
 			goto out;
 
-		getgrouplist(pw.pw_name, cr.gid, NULL, &ngrp);
+		getgrouplist(pw.pw_name, cr.scr_gid, NULL, &ngrp);
 		grpv = psc_calloc(ngrp, sizeof(*grpv), 0);
-		rc = getgrouplist(pw.pw_name, cr.gid, grpv, &ngrp);
+		rc = getgrouplist(pw.pw_name, cr.scr_gid, grpv, &ngrp);
 		if (rc < 1) {
 			PSCFREE(grpv);
 			rc = EIO;

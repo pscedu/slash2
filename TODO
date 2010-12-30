@@ -276,7 +276,6 @@ tree
 - move inode.h into slashd
 
 API rename
-- rename slash_creds.uid -> cr_uid
 - rename FCMH_CREATE to POPULATE
 
 - upsch items are not getting removed on completion
