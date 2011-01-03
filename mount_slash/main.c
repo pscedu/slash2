@@ -1956,7 +1956,7 @@ msl_init(void)
 	msbmapflushthr_spawn();
 
 	if ((name = getenv("SLASH_MDS_NID")) == NULL)
-		psc_fatalx("please export SLASH_MDS_NID");
+		psc_fatalx("SLASH_MDS_NID not specified");
 
 	rc = slc_rmc_setmds(name);
 	if (rc)

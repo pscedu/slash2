@@ -18,7 +18,7 @@
  */
 
 /*
- * Routines for handling RPC requests for CLIENT from MDS.
+ * Routines for handling RPC requests for CLI from MDS.
  */
 
 #include "pfl/str.h"
@@ -68,7 +68,7 @@ mrsq_release(struct msctl_replstq *mrsq, int ctlrc)
 }
 
 /**
- * msrcm_handle_getreplst - handle a GETREPLST request for client from MDS,
+ * msrcm_handle_getreplst - Handle a GETREPLST request for CLI from MDS,
  *	which would have been initiated by a client request originally.
  * @rq: request.
  */
@@ -99,11 +99,11 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 		if (fcmh) {
 			/* file is in cache, try to recover filename */
 			snprintf(mrs.mrs_fn, sizeof(mrs.mrs_fn),
-			    "%"PRIx64, mq->fg.fg_fid);
+			    SLPRI_FID, mq->fg.fg_fid);
 			fcmh_op_done_type(fcmh, FCMH_OPCNT_LOOKUP_FIDC);
 		} else {
 			snprintf(mrs.mrs_fn, sizeof(mrs.mrs_fn),
-			    "%"PRIx64, mq->fg.fg_fid);
+			    SLPRI_FID, mq->fg.fg_fid);
 		}
 	}
 
@@ -133,8 +133,9 @@ msrcm_handle_getreplst(struct pscrpc_request *rq)
 }
 
 /**
- * msrcm_handle_getreplst_slave - handle a GETREPLST request for client from MDS,
- *	which would have been initiated by a client request originally.
+ * msrcm_handle_getreplst_slave - Handle a GETREPLST request for CLI
+ *	from MDS, which would have been initiated by a client request
+ *	originally.
  * @rq: request.
  */
 int
@@ -187,7 +188,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 		strlcpy(mrsl->mrsl_fn, mrsq->mrsq_fn, sizeof(mrsl->mrsl_fn));
 	else
 		/* XXX try to do a reverse lookup of pathname; check cache maybe? */
-		snprintf(mrsl->mrsl_fn, sizeof(mrsl->mrsl_fn), "%"PRIx64,
+		snprintf(mrsl->mrsl_fn, sizeof(mrsl->mrsl_fn), SLPRI_FID,
 		    mq->fg.fg_fid);
 
 	iov.iov_base = mrsl->mrsl_data;
@@ -215,7 +216,7 @@ msrcm_handle_getreplst_slave(struct pscrpc_request *rq)
 }
 
 /**
- * msrcm_handle_releasebmap - Handle a RELEASEBMAP request for client from MDS.
+ * msrcm_handle_releasebmap - Handle a RELEASEBMAP request for CLI from MDS.
  * @rq: request.
  */
 int
@@ -239,8 +240,8 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
 
-	psc_warnx("fid=%"PRId64" bmapno=%u seq=%"PRId64,
-		  mq->fid, mq->blkno, mq->seq);
+	psc_warnx("fid="SLPRI_FID" bmapno=%u seq=%"PRId64,
+	    mq->fid, mq->blkno, mq->seq);
 
 	f = fidc_lookup_fid(mq->fid);
 	if (!f) {
@@ -276,6 +277,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 
 	DEBUG_BMAP(PLL_WARN, b, "trying to dump the cache");
 	msl_bmap_cache_rls(b);
+
  out:
 	if (f)
 		fcmh_op_done_type(f, FCMH_OPCNT_LOOKUP_FIDC);
@@ -283,7 +285,7 @@ msrcm_handle_bmapdio(struct pscrpc_request *rq)
 }
 
 /**
- * msrcm_handle_connect - handle a CONNECT request for client from MDS.
+ * msrcm_handle_connect - Handle a CONNECT request for CLI from MDS.
  * @rq: request.
  */
 int
@@ -299,7 +301,7 @@ msrcm_handle_connect(struct pscrpc_request *rq)
 }
 
 /**
- * slc_rcm_handler - handle a request for CLIENT from MDS.
+ * slc_rcm_handler - Handle a request for CLI from MDS.
  * @rq: request.
  */
 int
