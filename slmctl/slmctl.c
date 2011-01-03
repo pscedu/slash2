@@ -112,8 +112,7 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HI] [-c cmd] [-h table] [-i iostat] [-L listspec]\n"
-	    "\t[-m meter] [-P pool] [-p param[=value]] [-S socket] [-s value]\n",
+	    "usage: %s [-HI] [-c cmd] [-p paramspec] [-S socket] [-s value]\n",
 	    progname);
 	exit(1);
 }
