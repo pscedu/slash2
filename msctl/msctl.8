@@ -142,94 +142,6 @@ for gigabytes,
 for megabytes, etc.\&
 .Pq inhuman mode .
 .\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/s.iostats.mdoc {
-.\"	iostats => { }
-.It Fl i Ar iostatspec
-Query
-.Tn I/O
-statistics.
-.Ar iostatspec
-has the following format:
-.Pp
-.Bd -unfilled -offset indent
-.Ar iostat Ns Op , Ns Ar ...
-.Ed
-.Pp
-.Ar iostat
-may be one of the following:
-.Pp
-.Bl -tag -compact -offset indent -width Ds
-.It Cm lni-rcv- Ns Ar if ,
-.It Cm lni-snd- Ns Ar if
-Data sent/received per
-.Tn LNET
-networking interface.
-.Pp
-.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
-.It Cm lusklnd- Ns Ar mode Ns Cm -snd
-Data sent/received over userland socket networking device.
-.Ar mode
-may be
-.Cm pasv
-.Pq passive
-or
-.Cm aggr
-.Pq aggregate .
-.Pp
-.El
-.Pp
-The value
-.Cm all
-may be specified to query all
-.Tn I/O
-statistics.
-.\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/s.listcaches.mdoc {
-.\"	lists => {
-.\"		bmapflush	=> qq{Bmaps awaiting flush completion},
-.\"		bmaptimeout	=> qq{Expired bmaps awaiting release},
-.\"		bmpcLru		=> qq{Reapable bmap structures},
-.\"		dircache	=> qq{Directory entries},
-.\"		fcmhbusy	=> qq{Files with pending activity\n.Pq e.g. Tn I/O},
-.\"		fcmhidle	=> qq{Clean\n.Pq reapable\nfiles}
-.\"	}
-.It Fl L Ar listspec
-Query information on the given list cache(s).
-.Ar listspec
-has the following format:
-.Pp
-.Bd -unfilled -offset indent
-.Sm off
-.Ar list
-.Op , Ar ...
-.Sm on
-.Ed
-.Pp
-.Ar list
-may be one of the following:
-.Pp
-.Bl -tag -compact -offset indent -width 18n
-.It Cm bmapflush
-Bmaps awaiting flush completion
-.It Cm bmaptimeout
-Expired bmaps awaiting release
-.It Cm bmpcLru
-Reapable bmap structures
-.It Cm dircache
-Directory entries
-.It Cm fcmhbusy
-Files with pending activity
-.Pq e.g. Tn I/O
-.It Cm fcmhidle
-Clean
-.Pq reapable
-files
-.El
-.Pp
-The value
-.Cm all
-may be specified to retrieve information on all list caches.
-.\" }%
 .\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
 .\"	subsys => {
 .\"		bmap		=> qq{Block map structures},
@@ -479,6 +391,14 @@ The default is
 .\"	},
 .\"	pools => {
 .\"		bmap		=> qq{Block map structures},
+.\"	},
+.\"	listcaches => {
+.\"		bmapflush	=> qq{Bmaps awaiting flush completion},
+.\"		bmaptimeout	=> qq{Expired bmaps awaiting release},
+.\"		bmpcLru		=> qq{Reapable bmap structures},
+.\"		dircache	=> qq{Directory entries},
+.\"		fcmhbusy	=> qq{Files with pending activity\n.Pq e.g. Tn I/O},
+.\"		fcmhidle	=> qq{Clean\n.Pq reapable\nfiles}
 .\"	}
 .It Fl s Ar showspec
 Show values.
@@ -530,6 +450,77 @@ network resources
 If
 .Ar subspec
 is left unspecified, all hash tables will be accessed.
+.It Cm iostats
+.Tn I/O
+statistics.
+.Ar iostatspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Ar iostats Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar iostats
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width Ds
+.It Cm lni-rcv- Ns Ar if ,
+.It Cm lni-snd- Ns Ar if
+Data sent/received per
+.Tn LNET
+networking interface.
+.Pp
+.It Cm lusklnd- Ns Ar mode Ns Cm -rcv ,
+.It Cm lusklnd- Ns Ar mode Ns Cm -snd
+Data sent/received over userland socket networking device.
+.Ar mode
+may be
+.Cm pasv
+.Pq passive
+or
+.Cm aggr
+.Pq aggregate .
+.Pp
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all
+.Tn I/O
+statistics will be accessed.
+.It Cm listcaches
+List cache statistics.
+.Ar subspec
+has the following format:
+.Pp
+.Bd -unfilled -offset indent
+.Ar list Ns Op , Ns Ar ...
+.Ed
+.Pp
+.Ar list
+may be one of the following:
+.Pp
+.Bl -tag -compact -offset indent -width 18n
+.It Cm bmapflush
+Bmaps awaiting flush completion
+.It Cm bmaptimeout
+Expired bmaps awaiting release
+.It Cm bmpcLru
+Reapable bmap structures
+.It Cm dircache
+Directory entries
+.It Cm fcmhbusy
+Files with pending activity
+.Pq e.g. Tn I/O
+.It Cm fcmhidle
+Clean
+.Pq reapable
+files
+.El
+.Pp
+If
+.Ar subspec
+is left unspecified, all list caches will be accessed.
 .It Cm loglevels
 Thread logging levels.
 .Ar subspec
