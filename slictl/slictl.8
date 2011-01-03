@@ -46,7 +46,7 @@ behavior.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.c.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/c.mdoc {
 .\"	daemon	=> qq{sliod},
 .\"	cmds	=> {
 .\" #		reconfig => "Reload configuration"
@@ -61,11 +61,11 @@ to perform one of the following actions:
 Completely terminate daemon execution.
 .El
 .\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.H.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/H.mdoc {
 .It Fl H
 Suppress display of headers.
 .\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sH.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/s.hashtables.mdoc {
 .\"	tables => {
 .\"		fidc		=> "files\n.Po file\n.Tn ID\ncache\n.Pc",
 .\"		resnid		=> "network resources\n.Pq network Tn ID"
@@ -91,7 +91,7 @@ The value
 .Cm all
 may be specified to query statistics on all hash tables.
 .\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.I.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/I.mdoc {
 .It Fl I
 Display large numerical values accurately instead of rounded with
 postfixes of demonination such as
@@ -101,7 +101,7 @@ for gigabytes,
 for megabytes, etc.\&
 .Pq inhuman mode .
 .\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sI.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/s.iostats.mdoc {
 .\"	iostats => { }
 .It Fl i Ar iostatspec
 Query
@@ -143,7 +143,7 @@ may be specified to query all
 .Tn I/O
 statistics.
 .\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sL.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/s.listcaches.mdoc {
 .\"	lists => {
 .\"		bmapReapQ	=> "Bmaps to be processed by reaper",
 .\"		bmapRlsQ	=> "Bmaps awaiting release by\n.Tn MDS\nresponse",
@@ -197,7 +197,7 @@ The value
 .Cm all
 may be specified to retrieve information on all list caches.
 .\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.sP.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/s.pools.mdoc {
 .\"	pools => {
 .\"		bmap		=> "Block map structures"
 .\"	}
@@ -221,7 +221,7 @@ The value
 .Cm all
 may be specified to retrieve information on all pools.
 .\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.p.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/p.mdoc {
 .\"	subsys => {
 .\"		bmap		=> "Block map structures",
 .\"		fcmh		=> ".Tn FID\ncache members",
@@ -358,7 +358,7 @@ the maximum number of open files.
 .El
 .El
 .\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.S.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/S.mdoc {
 .\"	sock => "/var/run/sliod. Ns Ic %h Ns Pa .sock"
 .It Fl S Ar socket
 Specify an alternative socket file.
@@ -376,7 +376,7 @@ character
 The default is
 .Pa /var/run/sliod. Ns Ic %h Ns Pa .sock .
 .\" }%
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.s.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/s.mdoc {
 .\"	show => {
 .\"		connections	=> "Status of\n.Tn SLASH\npeers on network",
 .\"		fidcache	=> ".Tn FID\n.Pq file- Ns Tn ID\ncache members",
@@ -428,7 +428,7 @@ for details on specifying
 The default behavior is to apply the operation to all applicable threads.
 .\" }%
 .El
-.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl.thr.mdoc {
+.\" %PFL_INCLUDE $PFL_BASE/doc/pflctl/thr.mdoc {
 .\"	thrs => {
 .\"		"slibmaprlsthr"			=> "Bmap releaser",
 .\"		"sliconnthr- Ns Ar %s"		=> "Remote server connection monitor",
