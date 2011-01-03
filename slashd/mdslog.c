@@ -1116,14 +1116,14 @@ mds_update_cursor(void *buf, uint64_t txg)
 	int rc;
 
 	spinlock(&mds_txg_lock);
-	cursor->pjc_txg = txg;
+	cursor->pjc_commit_txg = txg;
 	freelock(&mds_txg_lock);
 
 	/*
  	 * Distill happens outside ZFS. This means if there is no ZFS
  	 * activity, the following value will be stale.
  	 */
-	cursor->pjc_xid = pjournal_next_distill(mdsJournal);
+	cursor->pjc_distill_xid = pjournal_next_distill(mdsJournal);
 	cursor->pjc_fid = slm_get_curr_slashid();
 	cursor->pjc_update_seqno = mds_get_next_update_seqno();
 	cursor->pjc_reclaim_seqno = mds_get_next_reclaim_seqno();
@@ -1145,7 +1145,7 @@ mds_current_txg(uint64_t *txg)
 	 * is okay, we only need to take a little care at replay time.
 	 */
 	spinlock(&mds_txg_lock);
-	*txg = mds_cursor.pjc_txg;
+	*txg = mds_cursor.pjc_commit_txg;
 	freelock(&mds_txg_lock);
 }
 
@@ -1169,8 +1169,8 @@ mds_cursor_thread(__unusedx struct psc_thread *thr)
 		else
 			psc_notify("Cursor updated: txg=%"PRId64", xid=%"PRId64
 			    ", fid=0x%"PRIx64", seqno=(%"PRId64", %"PRId64")",
-			    mds_cursor.pjc_txg,
-			    mds_cursor.pjc_xid,
+			    mds_cursor.pjc_commit_txg,
+			    mds_cursor.pjc_distill_xid,
 			    mds_cursor.pjc_fid,
 			    mds_cursor.pjc_seqno_lwm,
 			    mds_cursor.pjc_seqno_hwm);
@@ -1630,8 +1630,8 @@ mds_journal_init(void)
 	logentrysize = mdsJournal->pj_hdr->pjh_entsz;
 
 	mdsJournal->pj_npeers = npeers;
-	mdsJournal->pj_commit_txg = mds_cursor.pjc_txg;
-	mdsJournal->pj_distill_xid = mds_cursor.pjc_xid;
+	mdsJournal->pj_commit_txg = mds_cursor.pjc_commit_txg;
+	mdsJournal->pj_distill_xid = mds_cursor.pjc_distill_xid;
 
 	next_update_seqno = mds_cursor.pjc_update_seqno;
 	next_reclaim_seqno = mds_cursor.pjc_reclaim_seqno;
