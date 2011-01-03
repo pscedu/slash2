@@ -574,9 +574,8 @@ __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-HIRv] [-c cmd] [-f cmd] [-h table] [-i iostat] [-L listspec] [-m meter]\n"
-	    "\t[-P pool] [-p param[=value]] [-Q replrqspec] [-r replrqspec] [-S socket]\n"
-	    "\t[-s value] [-U replrqspec]\n",
+	    "usage: %s [-HIRv] [-c cmd] [-f cmd] [-p paramspec] [-Q replrqspec]\n"
+	    "\t[-r replrqspec] [-S socket] [-s value] [-U replrqspec]\n",
 	    progname);
 	exit(1);
 }
