@@ -48,7 +48,7 @@ main(int argc, char *argv[])
 	if (ret != 1)
 		err(1, "Error writing last byte of the file.");
 	map = mmap(0, FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if (map == MAP_FAILED) {
+	if (map == MAP_FAILED)
 		err(1, "Error mmapping the file.");
 	for (i = 0; i < FILE_SIZE; i++) {
 		map[i] = (i % 10) + 0x30;
