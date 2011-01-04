@@ -240,6 +240,13 @@ tracks endpoint connections
 - if new ones are made that utilize the same link, manage and
   limit and wait until bandwidth is available
 
+- per-site network upscheduling is not enough; it has to be per link to
+  maintain network link saturation effectively
+
+- must consider multiple interfaces
+
+MDS must do this for scheduling traffic between sliods
+
 ------------------------------
 
 - rename SL_PATH_PREFIX to SL_FN_NS_RESERVED_PREFIX
@@ -294,9 +301,6 @@ API rename
   The UUID could be just a timestamp too.  This would allow admins to
   remove old backing directories at their convenience while not
   compromising data integrity.
-- per-site network upscheduling is not enough; it has to be per link to
-  maintain network link saturation effectively
-- clear S_ISUID and S_ISGID on chown(2) and WRITE
 - if INOF_IN_PTRUNC is set, do not grant leases past the ino_ptrunc offset
 - GARBAGE transition states:
     (o)	truncate should produce GARBAGE
@@ -318,11 +322,11 @@ API rename
 truncate:
  - add a nbmaps field to the zfs_inode which is maintained separately from
    sst_size.  this field should be accessible to MDS only
+    -- can this overlap with st_nblks ?
 
  - next, if the target ptrunc offset falls inside a bmap, do more stuff:
     (o) mark the CRC for this bmap as unknown (we don't do this)
 
-- csvc flags arent getting updated when sliod goes down in msl
 - use pfl_memchk instead of null inode structures for memcmp
 - SRMT_GETBMAPMINSEQ is not handled by slashd
 - CRCs are currently ignored in the I/O path
