@@ -288,10 +288,9 @@ API rename
 - upsch items are not getting removed on completion
 - investigate MooseFS, CloudStore, Sector, GlusterFS
 - display FID_ANY/FGEN_ANY as such in logs
-- clients aren't showing up under slictl -sc
-- PING happens after every client activity...
+- ensure PINGs only happen every 30 seconds
 - CREATE with mode 0755 doesnt work (check umask?)
-- GETATTR with nlinks=0 should return ENOENT in slashd
+- GETATTR should never return nlinks=0
 - replace FCMH_CTOR_FAILED with fmi_ctor_rc
 - slimmns -W should instead should rename the top-level its contents in
   the (forked) background after returning quickly to admin
@@ -323,6 +322,8 @@ truncate:
  - add a nbmaps field to the zfs_inode which is maintained separately from
    sst_size.  this field should be accessible to MDS only
     -- can this overlap with st_nblks ?
+
+    create a FSBLKS_PER_BMAP constant so nblks and nbmaps scale accordingly
 
  - next, if the target ptrunc offset falls inside a bmap, do more stuff:
     (o) mark the CRC for this bmap as unknown (we don't do this)
