@@ -64,6 +64,9 @@ slctlrep_getconns(int fd, struct psc_ctlmsghdr *mh, void *m)
 
 				csvc = resm->resm_csvc;
 				if (csvc && sl_csvc_get(&csvc,
+				    (psc_atomic32_read(
+				     &csvc->csvc_flags) &
+				     CSVCF_USE_MULTIWAIT) |
 				    CSVCF_NORECON | CSVCF_NONBLOCK,
 				    NULL, UINT64_C(0), 0, 0, 0, 0,
 				    csvc->csvc_lockinfo.lm_ptr,
