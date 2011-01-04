@@ -63,7 +63,7 @@ sli_fcmh_getattr(struct fidc_membh *fcmh)
 int
 sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 {
-	int rc = 0;
+	int rc = 0, incr;
 
 	FCMH_LOCK_ENSURE(fcmh);
 	psc_assert(fg->fg_fid == fcmh_2_fid(fcmh));
@@ -95,11 +95,16 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 
 		fcmh_2_gen(fcmh) = fg->fg_gen;
 
+		incr = psc_rlim_adj(RLIMIT_NOFILE, 1);
+
 		rc = sli_open_backing_file(fcmh);
 		/* Notify upper layers that open() has failed 
 		 */
-		if (rc) 
+		if (rc) {
 			fcmh->fcmh_flags |= FCMH_CTOR_FAILED;
+			if (incr)
+				psc_rlim_adj(RLIMIT_NOFILE, -1);
+		}
 
 		/* Do some upfront garbage collection.
 		 */
@@ -110,11 +115,14 @@ sli_fcmh_reopen(struct fidc_membh *fcmh, const struct slash_fidgen *fg)
 
 	} else if (fg->fg_gen == fcmh_2_gen(fcmh) &&
 		   (fcmh->fcmh_flags & FCMH_CTOR_DELAYED)) {
-		
+
+		incr = psc_rlim_adj(RLIMIT_NOFILE, 1);		
 		rc = sli_open_backing_file(fcmh);
 		if (!rc)
 			fcmh->fcmh_flags &= 
 				~(FCMH_CTOR_FAILED | FCMH_CTOR_DELAYED);
+		else if (rc && incr)
+			psc_rlim_adj(RLIMIT_NOFILE, -1);
 
 		DEBUG_FCMH(PLL_NOTIFY, fcmh, "open FCMH_CTOR_DELAYED (rc=%d)", 
 		   rc);
