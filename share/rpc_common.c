@@ -416,6 +416,12 @@ sl_csvc_get(struct slashrpc_cservice **csvcp, int flags,
 		sl_csvc_lock(csvc);
 		goto restart;
 
+	} else if (flags & CSVCF_NORECON) {
+
+		rc = ENOTCONN;
+		csvc = NULL;
+		goto out;
+
 	} else if (csvc->csvc_mtime + CSVC_RECONNECT_INTV < time(NULL)) {
 
 		psc_atomic32_setmask(&csvc->csvc_flags, CSVCF_CONNECTING);

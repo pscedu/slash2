@@ -79,14 +79,15 @@ struct slashrpc_cservice {
 };
 
 /* csvc_flags */
-#define CSVCF_CONNECTING	(1 << 0)
+#define CSVCF_CONNECTING	(1 << 0)		/* connection attempt in progress */
 #define CSVCF_CONNECTED		(1 << 1)
 #define CSVCF_USE_MULTIWAIT	(1 << 2)
 #define CSVCF_ABANDON		(1 << 3)		/* connection should be dropped */
 #define CSVCF_WANTFREE		(1 << 4)		/* csvc mem resources need freed */
 
 /* sl_csvc_get() flags */
-#define CSVCF_NONBLOCK		(1 << 5)
+#define CSVCF_NONBLOCK		(1 << 5)		/* don't timeout waiting for new establishment */
+#define CSVCF_NORECON		(1 << 6)		/* do not attempt reconnection if down */
 
 #define CSVC_RECONNECT_INTV	10			/* seconds */
 
