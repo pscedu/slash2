@@ -182,15 +182,20 @@ mds_update_reclaim_prog(void)
 {
 	int i, ri;
 	ssize_t size;
+	struct resprof_mds_info *rpmi;
+	struct sl_mds_iosinfo *iosinfo;
 	struct sl_resource *res;
 
 	i = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (res->res_type == SLREST_MDS)
 			continue;
+		rpmi = res2rpmi(res);
+		iosinfo = rpmi->rpmi_info;
 		strncpy(reclaim_prog_buf[i].res_name, res->res_name, RES_NAME_MAX);
 		reclaim_prog_buf[i].res_id = res->res_id;
 		reclaim_prog_buf[i].res_type = res->res_type;
+		reclaim_prog_buf[i].res_seqno = iosinfo->si_seqno;
 		i++;
 	}
 	lseek(current_reclaim_progfile, 0, SEEK_SET);
