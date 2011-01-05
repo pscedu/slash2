@@ -83,7 +83,6 @@ struct bmap_mds_info {
 #define bmap_2_bgen(b)		bmap_2_xstate(b)->bes_gen
 #define bmap_2_replpol(b)	bmap_2_xstate(b)->bes_replpol
 #define bmap_2_repl(b, i)	fcmh_2_repl((b)->bcm_fcmh, (i))
-#define bmap_2_ondisk(b)	((struct bmap_ondisk *)(&(b)->bcm_corestate))
 #define bmap_2_ondiskcrc(b)	bmap_2_bmi(b)->bmdsi_ondiskcrc
 #define bmap_2_crcs(b, n)	bmap_2_xstate(b)->bes_crcs[n]
 
@@ -92,8 +91,8 @@ struct bmap_mds_info {
 #define BMAPOD_WRLOCK(bmdsi)	psc_pthread_rwlock_wrlock(&(bmdsi)->bmdsi_rwlock)
 #define BMAPOD_ULOCK(bmdsi)	psc_pthread_rwlock_unlock(&(bmdsi)->bmdsi_rwlock)
 
-#define BMDSI_LOGCHG_SET(b)	BMAP_SETATTR(b, BMAP_MDS_LOGCHG)
-#define BMDSI_LOGCHG_CLEAR(b)	BMAP_CLEARATTR(b, BMAP_MDS_LOGCHG);
+#define BMDSI_LOGCHG_SET(b)	BMAP_SETATTR((b), BMAP_MDS_LOGCHG)
+#define BMDSI_LOGCHG_CLEAR(b)	BMAP_CLEARATTR((b), BMAP_MDS_LOGCHG);
 
 #define BMDSI_LOGCHG_CHECK(b, set)					\
 	do {								\
@@ -132,10 +131,10 @@ struct bmap_mds_info {
 		BMAPOD_MODIFY_DONE(b);					\
 	} while (0)
 
-#define BHGEN_GET(b, gen)						\
+#define BHGEN_GET(b, bgen)						\
 	do {								\
 		BMAPOD_READ_START(b);					\
-		(gen) = bmap_2_bgen(b);					\
+		(bgen) = bmap_2_bgen(b);				\
 		BMAPOD_READ_DONE(b);					\
 	} while (0)
 
@@ -251,6 +250,8 @@ int	 mds_bmap_getcurseq(uint64_t *, uint64_t *);
 void	 mds_bmap_timeotbl_init(void);
 uint64_t mds_bmap_timeotbl_getnextseq(void);
 uint64_t mds_bmap_timeotbl_mdsi(struct bmap_mds_lease *, int);
+
+int	 slm_bmap_calc_repltraffic(struct bmapc_memb *);
 
 void	 mds_bia_odtable_startup_cb(void *, struct odtable_receipt *);
 

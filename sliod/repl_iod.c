@@ -106,8 +106,8 @@ sli_repl_addwk(uint64_t nid, struct slash_fidgen *fgp,
 		BMAP_LOCK(w->srw_bcm);
 		for (i = len = 0; i < SLASH_SLVRS_PER_BMAP && len < (int)w->srw_len;
 		    i++, len += SLASH_SLVR_SIZE)
-			if (bmap_2_crcbits(w->srw_bcm, i) & BMAP_SLVR_DATA) {
-				bmap_2_crcbits(w->srw_bcm, i) |= BMAP_SLVR_WANTREPL;
+			if (w->srw_bcm->bcm_crcstates[i] & BMAP_SLVR_DATA) {
+				w->srw_bcm->bcm_crcstates[i] |= BMAP_SLVR_WANTREPL;
 				w->srw_nslvr_tot++;
 			}
 		BMAP_ULOCK(w->srw_bcm);
@@ -155,10 +155,9 @@ sli_replwkrq_decref(struct sli_repl_workrq *w, int rc)
 void
 slireplpndthr_main(__unusedx struct psc_thread *thr)
 {
-	int rc, slvridx, slvrno;
 	struct slashrpc_cservice *csvc;
 	struct sli_repl_workrq *w;
-	struct bmap_iod_info *biodi;
+	int rc, slvridx, slvrno;
 
 	while (pscthr_run()) {
 		rc = 0;
@@ -171,9 +170,8 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 
 		/* find a sliver to transmit */
 		BMAP_LOCK(w->srw_bcm);
-		biodi = bmap_2_bii(w->srw_bcm);
 		for (slvrno = 0; slvrno < SLASH_SLVRS_PER_BMAP; slvrno++)
-			if (biodi_2_crcbits(biodi, slvrno) & BMAP_SLVR_WANTREPL)
+			if (w->srw_bcm->bcm_crcstates[slvrno] & BMAP_SLVR_WANTREPL)
 				break;
 
 		if (slvrno == SLASH_SLVRS_PER_BMAP) {
@@ -191,7 +189,7 @@ slireplpndthr_main(__unusedx struct psc_thread *thr)
 			goto end;
 		}
 
-		biodi_2_crcbits(biodi, slvrno) &= ~BMAP_SLVR_WANTREPL;
+		w->srw_bcm->bcm_crcstates[slvrno] &= ~BMAP_SLVR_WANTREPL;
 		BMAP_ULOCK(w->srw_bcm);
 
 		/* mark slot as occupied */

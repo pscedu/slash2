@@ -499,7 +499,7 @@ iod_bmap_retrieve(struct bmapc_memb *b, enum rw rw)
 		goto out;
 	}
 
-	memcpy(bmap_2_wire(b), &mp->bod, sizeof(mp->bod));
+	memcpy(bmap_2_ondisk(b), &mp->bod, sizeof(mp->bod));
 
 	/* Need to copy any of our slvr CRCs into the table. */
 	spinlock(&bmap_2_biodi(b)->biod_lock);

@@ -133,8 +133,6 @@ struct bmap_iod_info {
 #define	BMAP_IOD_BCRSCHED	(_BMAP_FLSHFT << 2)
 #define	BMAP_IOD_RLSSCHED	(_BMAP_FLSHFT << 3)
 
-#define biodi_2_wire(bi)	bmap_2_wire(bii_2_bmap(bi))
-#define biodi_2_crcbits(bi, sl)	biodi_2_wire(bi)->bod_crcstates[sl]
 #define bii_2_flags(b)		bii_2_bmap(b)->bcm_flags
 
 #define bmap_2_biodi(b)		((struct bmap_iod_info *)bmap_get_pri(b))
@@ -142,9 +140,6 @@ struct bmap_iod_info {
 #define bmap_2_biodi_age(b)	bmap_2_biodi(b)->biod_age
 #define bmap_2_biodi_lentry(b)	bmap_2_biodi(b)->biod_lentry
 #define bmap_2_biodi_slvrs(b)	(&bmap_2_biodi(b)->biod_slvrs)
-#define bmap_2_wire(b)		((struct bmap_ondisk *)(&(b)->bcm_corestate))
-
-#define bmap_2_crcbits(b, sl)	biodi_2_crcbits(bmap_2_biodi(b), (sl))
 
 #define BIOD_CRCUP_MAX_AGE	2		/* in seconds */
 

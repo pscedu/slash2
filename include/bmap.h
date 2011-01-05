@@ -130,12 +130,14 @@ struct bmapc_memb {
 #define BMAP_DIRTY		(1 << 6)
 #define BMAP_MEMRLS		(1 << 7)
 #define BMAP_DIRTY2LRU		(1 << 8)
-#define BMAP_TIMEOQ		(1 << 9)	/* 0x200 */
+#define BMAP_TIMEOQ		(1 << 9)
 #define BMAP_IONASSIGN		(1 << 10)
 #define BMAP_MDCHNG		(1 << 11)
 #define BMAP_WAITERS		(1 << 12)	/* has bcm_fcmh waiters */
 #define BMAP_ORPHAN		(1 << 13)	/* removed from fcmh_bmaptree */
 #define _BMAP_FLSHFT		(1 << 14)
+
+#define bmap_2_ondisk(b)	((struct bmap_ondisk *)&(b)->bcm_corestate)
 
 #define BMAP_LOCK_ENSURE(b)	LOCK_ENSURE(&(b)->bcm_lock)
 #define BMAP_LOCK(b)		spinlock(&(b)->bcm_lock)

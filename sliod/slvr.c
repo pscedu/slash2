@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2010, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -104,19 +104,19 @@ slvr_do_crc(struct slvr_ref *s)
 		 */
 		if (!(s->slvr_flags & SLVR_REPLDST))
 			psc_assert(!psc_vbitmap_nfree(s->slvr_slab->slb_inuse));
-		psc_assert(slvr_2_biodi_wire(s));
 
 		if ((slvr_2_crcbits(s) & BMAP_SLVR_DATA) &&
 		    (slvr_2_crcbits(s) & BMAP_SLVR_CRC)) {
 			psc_assert(!s->slvr_crc_soff);
 
 			psc_crc64_calc(&crc, slvr_2_buf(s, 0),
-			       SLVR_CRCLEN(s));
+			    SLVR_CRCLEN(s));
 
 			if (crc != slvr_2_crc(s)) {
-				DEBUG_SLVR(PLL_ERROR, s, "crc failed want=%"
-				   PRIx64" got=%"PRIx64 " len=%u",
-				   slvr_2_crc(s), crc, SLVR_CRCLEN(s));
+				DEBUG_SLVR(PLL_ERROR, s, "CRC failed "
+				    "want=%"PSCPRIxCRC64" "
+				    "got=%"PSCPRIxCRC64" len=%u",
+				    slvr_2_crc(s), crc, SLVR_CRCLEN(s));
 
 				DEBUG_BMAP(PLL_ERROR, slvr_2_bmap(s),
 				   "slvrnum=%hu", s->slvr_num);
@@ -126,12 +126,13 @@ slvr_do_crc(struct slvr_ref *s)
 				s->slvr_crc_eoff = 0;
 
 				return (SLERR_BADCRC);
-			} else
-				s->slvr_crc_eoff = 0;
+			}
+			s->slvr_crc_eoff = 0;
 		} else
 			return (0);
 
 	} else if (s->slvr_flags & SLVR_CRCDIRTY) {
+
 		uint32_t soff, eoff;
 
 		SLVR_LOCK(s);
@@ -139,7 +140,7 @@ slvr_do_crc(struct slvr_ref *s)
 		   SLVR_CRCLEN(s), s->slvr_crc_soff, s->slvr_crc_loff);
 
 		psc_assert(s->slvr_crc_eoff &&
-			   (s->slvr_crc_eoff <= SLASH_BMAP_CRCSIZE));
+		    (s->slvr_crc_eoff <= SLASH_BMAP_CRCSIZE));
 
 		if (!s->slvr_crc_loff ||
 		    s->slvr_crc_soff != s->slvr_crc_loff) {
@@ -158,23 +159,22 @@ slvr_do_crc(struct slvr_ref *s)
 		SLVR_ULOCK(s);
 
 #ifdef ADLERCRC32
-		//XXX not a running crc?  double check for correctness
+		// XXX not a running CRC?  double check for correctness
 		s->slvr_crc = adler32(s->slvr_crc, slvr_2_buf(s, 0) + soff,
-			      (int)(eoff - soff));
+		    (int)(eoff - soff));
 		crc = s->slvr_crc;
 #else
-		psc_crc64_add(&s->slvr_crc,
-			      (unsigned char *)(slvr_2_buf(s, 0) + soff),
-			      (int)(eoff - soff));
+		psc_crc64_add(&s->slvr_crc, slvr_2_buf(s, 0) + soff,
+		    (int)(eoff - soff));
 		crc = s->slvr_crc;
 		PSC_CRC32_FIN(&crc);
 #endif
 
-		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PRIx64 " len=%u soff=%u",
-			   crc, SLVR_CRCLEN(s), s->slvr_crc_soff);
+		DEBUG_SLVR(PLL_NOTIFY, s, "crc=%"PSCPRIxCRC64" len=%u soff=%u",
+		    crc, SLVR_CRCLEN(s), s->slvr_crc_soff);
 
 		DEBUG_BMAP(PLL_NOTIFY, slvr_2_bmap(s),
-			   "slvrnum=%hu", s->slvr_num);
+		    "slvrnum=%hu", s->slvr_num);
 
 		SLVR_LOCK(s);
 		/* loff is only set here.
@@ -184,10 +184,8 @@ slvr_do_crc(struct slvr_ref *s)
 		if (!s->slvr_pndgwrts && !s->slvr_compwrts)
 			s->slvr_flags &= ~SLVR_CRCDIRTY;
 
-		if (slvr_2_biodi_wire(s)) {
-			slvr_2_crc(s) = crc;
-			slvr_2_crcbits(s) |= (BMAP_SLVR_DATA|BMAP_SLVR_CRC);
-		}
+		slvr_2_crc(s) = crc;
+		slvr_2_crcbits(s) |= BMAP_SLVR_DATA | BMAP_SLVR_CRC;
 		SLVR_ULOCK(s);
 	} else
 		psc_fatal("FAULTING or CRCDIRTY is not set");

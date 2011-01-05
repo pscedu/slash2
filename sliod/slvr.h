@@ -106,7 +106,7 @@ struct slvr_ref {
 #define slvr_2_fcmh(s)		slvr_2_bmap(s)->bcm_fcmh
 #define slvr_2_fii(s)		fcmh_2_fii(slvr_2_fcmh(s))
 #define slvr_2_fd(s)		slvr_2_fii(s)->fii_fd
-#define slvr_2_biodi_wire(s)	biodi_2_wire(slvr_2_biod(s))
+#define slvr_2_bmap_ondisk(s)	bmap_2_ondisk(slvr_2_bmap(s))
 
 #define slvr_2_buf(s, blk)						\
 	((void *)(((s)->slvr_slab->slb_base) + ((blk) * SLASH_SLVR_BLKSZ)))
@@ -117,24 +117,26 @@ struct slvr_ref {
 		((blk) * SLASH_SLVR_BLKSZ)))
 
 #define slvr_2_crcbits(s)						\
-	slvr_2_biodi_wire(s)->bod_crcstates[(s)->slvr_num]
+	slvr_2_bmap_ondisk(s)->bod_crcstates[(s)->slvr_num]
 
 #define slvr_2_crc(s)							\
-	slvr_2_biodi_wire(s)->bod_crcs[(s)->slvr_num]
+	slvr_2_bmap_ondisk(s)->bod_crcs[(s)->slvr_num]
 
 #define slvr_io_done(s, off, len, rw)					\
 	((rw) == SL_WRITE ? slvr_wio_done((s), (off), (len)) : slvr_rio_done(s))
 
-#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s"
+#define SLVR_FLAGS_FMT "%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 #define DEBUG_SLVR_FLAGS(s)						\
 	(s)->slvr_flags & SLVR_NEW		? "n" : "-",		\
+	(s)->slvr_flags & SLVR_SPLAYTREE	? "t" : "-",		\
 	(s)->slvr_flags & SLVR_FAULTING		? "f" : "-",		\
 	(s)->slvr_flags & SLVR_GETSLAB		? "G" : "-",		\
 	(s)->slvr_flags & SLVR_PINNED		? "p" : "-",		\
-	(s)->slvr_flags & SLVR_CRCDIRTY		? "D" : "-",		\
 	(s)->slvr_flags & SLVR_DATARDY		? "d" : "-",		\
 	(s)->slvr_flags & SLVR_DATAERR		? "E" : "-",		\
 	(s)->slvr_flags & SLVR_LRU		? "l" : "-",		\
+	(s)->slvr_flags & SLVR_CRCDIRTY		? "D" : "-",		\
+	(s)->slvr_flags & SLVR_CRCING		? "c" : "-",		\
 	(s)->slvr_flags & SLVR_FREEING		? "F" : "-",		\
 	(s)->slvr_flags & SLVR_SLBFREEING	? "b" : "-",		\
 	(s)->slvr_flags & SLVR_REPLSRC		? "S" : "-",		\
@@ -204,6 +206,7 @@ static __inline int
 slvr_lru_slab_freeable(struct slvr_ref *s)
 {
 	int freeable = 1;
+
 	SLVR_LOCK_ENSURE(s);
 
 	psc_assert(s->slvr_flags & SLVR_LRU);

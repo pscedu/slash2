@@ -174,7 +174,9 @@ struct resm_mds_info {
 };
 
 #define RMMI_RLOCK(rmmi)	psc_pthread_mutex_reqlock(&(rmmi)->rmmi_mutex)
+#define RMMI_TRYRLOCK(rmmi, lk)	psc_pthread_mutex_tryreqlock(&(rmmi)->rmmi_mutex, (lk))
 #define RMMI_URLOCK(rmmi, lk)	psc_pthread_mutex_ureqlock(&(rmmi)->rmmi_mutex, (lk))
+#define RMMI_HASLOCK(rmmi)	psc_pthread_mutex_haslock(&(rmmi)->rmmi_mutex)
 
 #define resm2rmmi(resm)		((struct resm_mds_info *)(resm)->resm_pri)
 #define res2rpmi(res)		((struct resprof_mds_info *)(res)->res_pri)
