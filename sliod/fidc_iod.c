@@ -176,9 +176,10 @@ sli_fcmh_ctor(struct fidc_membh *fcmh)
 void
 sli_fcmh_dtor(__unusedx struct fidc_membh *f)
 {
-	if (!(f->fcmh_flags & FCMH_CTOR_DELAYED))
+	if (!(f->fcmh_flags & FCMH_CTOR_DELAYED)) {
 		close(fcmh_2_fd(f));
-	psc_rlim_adj(RLIMIT_NOFILE, -1);
+		psc_rlim_adj(RLIMIT_NOFILE, -1);
+	}
 }
 
 struct sl_fcmh_ops sl_fcmh_ops = {
