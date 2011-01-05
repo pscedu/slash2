@@ -222,6 +222,7 @@ main(int argc, char *argv[])
 	PRTYPE(struct slirim_thread);
 	PRTYPE(struct slm_exp_cli);
 	PRTYPE(struct slm_replst_workreq);
+	PRTYPE(struct slm_resmlink);
 	PRTYPE(struct slmds_jent_bmapseq);
 	PRTYPE(struct slmds_jent_crc);
 	PRTYPE(struct slmds_jent_ino_addrepl);
@@ -413,6 +414,7 @@ main(int argc, char *argv[])
 	PRVAL(SLJ_MDS_RA);
 	PRVAL(SLJ_NAMES_MAX);
 	PRVAL(SLM_RECLAIM_BATCH);
+	PRVAL(SLM_RESMLINK_UNITSZ);
 	PRVAL(SLM_RMC_BUFSZ);
 	PRVAL(SLM_RMC_NBUFS);
 	PRVAL(SLM_RMC_NTHREADS);
