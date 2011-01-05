@@ -30,8 +30,26 @@ struct up_sched_work_item;
 struct slm_replst_workreq {
 	struct slashrpc_cservice	*rsw_csvc;
 	struct slash_fidgen		 rsw_fg;
-	int				 rsw_cid;	/* client-issued ID */
+	int				 rsw_cid;		/* client-issued ID */
 	struct psclist_head		 rsw_lentry;
+};
+
+#if 0
+
+struct slm_resmpair_bandwidth {
+	struct psc_lockedlist		 srb_links;
+	psc_spinlock_t			 srb_lock;
+};
+
+#endif
+
+#define SLM_RESMLINK_UNITSZ		 1024			/* 1KB */
+#define SLM_RESMLINK_DEF_NUNITS		 (1024 * 1024 / 8)	/* 1Mb * UNITSZ = 1Gb */
+
+struct slm_resmlink {
+//	struct psc_listentry		 srl_lentry;
+	int				 srl_avail;		/* units of RESMLINK_UNITSZ bytes/sec */
+	int				 srl_used;
 };
 
 typedef void (*brepl_walkcb_t)(struct bmapc_memb *, int, int, void *);
@@ -46,7 +64,7 @@ int	 mds_repl_inv_except(struct bmapc_memb *, sl_ios_id_t);
 int	_mds_repl_ios_lookup(struct slash_inode_handle *, sl_ios_id_t, int, int);
 int	 mds_repl_loadino(const struct slash_fidgen *, struct fidc_membh **);
 void	 mds_repl_node_clearallbusy(struct resm_mds_info *);
-int	_mds_repl_nodes_setbusy(struct resm_mds_info *, struct resm_mds_info *, int, int);
+int	 mds_repl_nodes_adjbusy(struct resm_mds_info *, struct resm_mds_info *, int);
 void	 mds_repl_reset_scheduled(sl_ios_id_t);
 
 /* replication state walking flags */
@@ -66,14 +84,14 @@ void	 mds_repl_reset_scheduled(sl_ios_id_t);
 #define mds_repl_bmap_apply(bcm, tract, retifset, off)			\
 	_mds_repl_bmap_apply((bcm), (tract), (retifset), 0, (off), NULL, NULL, NULL)
 
-#define mds_repl_nodes_setbusy(a, b, v)		_mds_repl_nodes_setbusy((a), (b), 1, (v))
+#define mds_repl_nodes_clearbusy(a, b)		 mds_repl_nodes_adjbusy((a), (b), INT_MIN)
 
 #define mds_repl_ios_lookup_add(ih, ios, jrnl)	_mds_repl_ios_lookup((ih), (ios), 1, (jrnl))
 #define mds_repl_ios_lookup(ih, ios)		_mds_repl_ios_lookup((ih), (ios), 0, 0)
 
 extern struct psc_listcache	 slm_replst_workq;
 
-extern struct psc_vbitmap	*repl_busytable;
+extern struct slm_resmlink	*repl_busytable;
 extern psc_spinlock_t		 repl_busytable_lock;
 
 extern sl_ino_t			 mds_upschdir_inum;

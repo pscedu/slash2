@@ -162,19 +162,45 @@ mds_bmap_exists(struct fidc_membh *f, sl_bmapno_t n)
 
 	lblk = fcmh_2_nbmaps(f);
 
-	psc_trace("fid="SLPRI_FG" lblk=%u fsz=%"PSCPRIdOFFT,
+	psclog_debug("fid="SLPRI_FG" lblk=%u fsz=%"PSCPRIdOFFT,
 	    SLPRI_FG_ARGS(&f->fcmh_fg), lblk, fcmh_2_fsz(f));
 
 	FCMH_URLOCK(f, locked);
 	return (n < lblk);
 }
 
+int
+slm_bmap_calc_repltraffic(struct bmapc_memb *b)
+{
+	struct fidc_membh *f;
+	int i, amt = 0;
+
+	f = b->bcm_fcmh;
+	FCMH_LOCK(f);
+	BMAP_LOCK(b);
+	for (i = 0; i < SLASH_SLVRS_PER_BMAP; i++) {
+		if (b->bcm_crcstates[i] & BMAP_SLVR_DATA) {
+			if (b->bcm_bmapno == fcmh_2_nbmaps(f) &&
+			    i == (int)((fcmh_2_fsz(f) % SLASH_BMAP_SIZE) /
+			    SLASH_SLVR_SIZE)) {
+				amt += fcmh_2_fsz(f) % SLASH_SLVR_SIZE;
+				break;
+			}
+			amt += SLASH_SLVR_SIZE;
+		}
+	}
+	BMAP_ULOCK(b);
+	FCMH_ULOCK(f);
+	return (amt / SLM_RESMLINK_UNITSZ);
+}
+
 /**
  * mds_bmap_directio - Called when a new read or write lease is added
  *    to the bmap.  Maintains the DIRECTIO status of the bmap based on
  *    the numbers of readers and writers present.
- * @b:   the bmap
- * @@rw: read / write op
+ * @b: the bmap
+ * @rw: read / write op
+ * @np: value-result target ION network + process ID.
  * Note: the new bml has yet to be added.
  */
 __static int
@@ -182,7 +208,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 {
 	struct bmap_mds_info *bmdsi = bmap_2_bmdsi(b);
 	struct bmap_mds_lease *bml;
-	int rc=0;
+	int rc = 0;
 
 	BMAP_LOCK_ENSURE(b);
 	psc_assert(rw == SL_WRITE || rw == SL_READ);
@@ -193,9 +219,9 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 	}
 	if (b->bcm_flags & BMAP_DIORQ) {
 		psc_assert(bmdsi->bmdsi_wr_ion);
-		/* In the process of waiting for an async rpc to complete.
+		/* In the process of waiting for an async RPC to complete.
 		 */
-		rc = (-SLERR_BMAP_DIOWAIT);
+		rc = -SLERR_BMAP_DIOWAIT;
 		goto out;
 	}
 
@@ -225,7 +251,7 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 			 *   reached DIO state or been timed out.
 			 */
 			mdscoh_req(bml, MDSCOH_NONBLOCK);
-			rc = (-SLERR_BMAP_DIOWAIT);
+			rc = -SLERR_BMAP_DIOWAIT;
 			goto out;
 		}
 
@@ -245,8 +271,8 @@ mds_bmap_directio(struct bmapc_memb *b, enum rw rw, lnet_process_id_t *np)
 				if (bml->bml_cli_nidpid.nid != np->nid) {
 					set_dio = 1;
 					if (!(bml->bml_flags & BML_CDIO))
-						(int)mdscoh_req(bml,
-							MDSCOH_NONBLOCK);
+						mdscoh_req(bml,
+						    MDSCOH_NONBLOCK);
 				}
 				tmp = tmp->bml_chain;
 			} while (tmp != bml);
@@ -351,7 +377,7 @@ mds_bmap_ion_assign(struct bmap_mds_lease *bml, sl_ios_id_t pios)
 			    slm_get_rpmi_idx(res));
 			freelock(&rpmi->rpmi_lock);
 
-			psc_trace("trying res(%s) ion(%s)",
+			psclog_debug("trying res(%s) ion(%s)",
 			    res->res_name, resm->resm_addrbuf);
 
 			if (nb)
@@ -470,14 +496,14 @@ mds_bmap_ion_update(struct bmap_mds_lease *bml)
  *     client is linked on the bmdsi->bmdsi_leases list, the rest is linked
  *     on a private chain and tagged with BML_CHAIN flag.
  */
-static inline struct bmap_mds_lease *
+static __inline struct bmap_mds_lease *
 mds_bmap_dupls_find(struct bmap_mds_info *bmdsi, lnet_process_id_t *cnp,
-	    int *wlease, int *rlease)
+    int *wlease, int *rlease)
 {
-	struct bmap_mds_lease *tmp, *bml=NULL;
+	struct bmap_mds_lease *tmp, *bml = NULL;
 
-	*rlease=0;
-	*wlease=0;
+	*rlease = 0;
+	*wlease = 0;
 
 	PLL_FOREACH(tmp, &bmdsi->bmdsi_leases) {
 		if (tmp->bml_cli_nidpid.nid != cnp->nid ||
@@ -1011,11 +1037,11 @@ mds_handle_rls_bmap(struct pscrpc_request *rq, int sliod)
 {
 	struct srm_bmap_release_req *mq;
 	struct srm_bmap_release_rep *mp;
+	struct bmap_mds_lease *bml;
+	struct srm_bmap_id *bid;
+	struct slash_fidgen fg;
 	struct fidc_membh *f;
 	struct bmapc_memb *b;
-	struct srm_bmap_id *bid;
-	struct bmap_mds_lease *bml;
-	struct slash_fidgen fg;
 	uint32_t i;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);

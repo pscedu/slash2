@@ -188,7 +188,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
     struct bmapc_memb *bcm, int off, struct sl_resm *src_resm,
     struct sl_resource *dst_res, int j)
 {
-	int tract[NBREPLST], retifset[NBREPLST], we_set_busy, rc;
+	int tract[NBREPLST], retifset[NBREPLST], amt = 0, rc;
 	struct resm_mds_info *src_rmmi, *dst_rmmi;
 	struct srm_repl_schedwk_req *mq;
 	struct slashrpc_cservice *csvc;
@@ -200,7 +200,6 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	struct psc_thread *thr;
 	struct sl_site *site;
 
-	we_set_busy = 0;
 	thr = pscthr_get();
 	smut = slmupschedthr(thr);
 	site = smut->smut_site;
@@ -213,10 +212,14 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 
 	/*
 	 * At this point, add this connection to our multiwait.
+	 *
+	 * If we schedule work here, we don't go into this multiwait;
+	 * we'll try another iteration of more scheduling.
+	 *
 	 * If a wakeup event comes while we are timing our own
-	 * establishment attempt below, we will wake up immediately
-	 * when we multiwait; otherwise, we the connection will
-	 * wake us when it becomes available.
+	 * establishment attempt below, we will wake up immediately when
+	 * we multiwait; otherwise, the connection will wake us when it
+	 * becomes available.
 	 */
 	if (!psc_multiwait_hascond(&smi->smi_mw,
 	    &dst_rmmi->rmmi_mwcond))
@@ -227,16 +230,16 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	if (csvc == NULL)
 		goto fail;
 
-	if (!mds_repl_nodes_setbusy(src_rmmi, dst_rmmi, 1)) {
-		/* add "src to become unbusy" to multiwait */
+	amt = mds_repl_nodes_adjbusy(src_rmmi, dst_rmmi,
+	    slm_bmap_calc_repltraffic(bcm));
+	if (amt == 0) {
+		/* add "src to become unbusy" condition to multiwait */
 		if (!psc_multiwait_hascond(&smi->smi_mw,
 		    &src_rmmi->rmmi_mwcond))
 			psc_multiwait_addcond(&smi->smi_mw,
 			    &src_rmmi->rmmi_mwcond);
 		goto fail;
 	}
-
-	we_set_busy = 1;
 
 	/* Issue replication work request */
 	rc = SL_RSX_NEWREQ(csvc->csvc_import, SRIM_VERSION,
@@ -249,7 +252,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 		mq->len = fcmh_2_fsz(wk->uswi_fcmh) % SLASH_BMAP_SIZE;
 	mq->fg = *USWI_FG(wk);
 	mq->bmapno = bcm->bcm_bmapno;
-	mq->bgen = bmap_2_bgen(bcm);
+	mq->bgen = bmap_2_bgen(bcm);	/* XXX lock */
 
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
@@ -291,8 +294,8 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	mds_repl_bmap_apply(bcm, tract, NULL, off);
 
  fail:
-	if (we_set_busy)
-		mds_repl_nodes_setbusy(src_rmmi, dst_rmmi, 0);
+	if (amt)
+		mds_repl_nodes_adjbusy(src_rmmi, dst_rmmi, -amt);
 	if (csvc)
 		sl_csvc_decref(csvc);
 	return (0);
@@ -652,7 +655,7 @@ uswi_access(struct up_sched_work_item *wk)
 	psc_pthread_mutex_reqlock(&wk->uswi_mutex);
 
 	/* Wait for someone else to finish processing. */
-	locked = spin_ismine(&upsched_listhd.pll_lock);
+	locked = PLL_HASLOCK(&upsched_listhd);
 	while (wk->uswi_flags & USWIF_BUSY) {
 		if (locked)
 			UPSCHED_MGR_ULOCK();

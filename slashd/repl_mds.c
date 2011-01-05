@@ -33,7 +33,6 @@
 #include "pfl/str.h"
 #include "psc_ds/tree.h"
 #include "psc_ds/treeutil.h"
-#include "psc_ds/vbitmap.h"
 #include "psc_util/alloc.h"
 #include "psc_util/crc.h"
 #include "psc_util/lock.h"
@@ -58,9 +57,9 @@
 
 struct psc_listcache	 slm_replst_workq;
 
-struct psc_vbitmap	*repl_busytable;
-psc_spinlock_t		 repl_busytable_lock = SPINLOCK_INIT;
+struct slm_resmlink	*repl_busytable;
 int			 repl_busytable_nents;
+psc_spinlock_t		 repl_busytable_lock = SPINLOCK_INIT;
 sl_ino_t		 mds_upschdir_inum;
 
 __static int
@@ -94,9 +93,9 @@ int
 _mds_repl_ios_lookup(struct slash_inode_handle *ih, sl_ios_id_t ios, int add,
 	     int journal)
 {
-	uint32_t j=0, k;
-	int rc = -ENOENT;
 	sl_replica_t *repl;
+	uint32_t j = 0, k;
+	int rc = -ENOENT;
 
 	INOH_LOCK(ih);
 
@@ -244,8 +243,8 @@ _mds_repl_bmap_apply(struct bmapc_memb *bcm, const int *tract,
 	return (rc);
 }
 
-/*
- * mds_repl_bmap_walk - walk the bmap replication bits, performing any
+/**
+ * mds_repl_bmap_walk - Walk the bmap replication bits, performing any
  *	specified translations and returning any queried states.
  * @b: bmap.
  * @tract: translation actions; for each array slot, set states of the type
@@ -311,7 +310,7 @@ _mds_repl_bmap_walk(struct bmapc_memb *bcm, const int *tract,
 	return (rc);
 }
 
-/*
+/**
  * mds_repl_inv_except - For the given bmap, change the status of
  *	all its replicas marked "valid" to "invalid" except for the
  *	replica specified.
@@ -396,7 +395,7 @@ mds_repl_inv_except(struct bmapc_memb *bcm, sl_ios_id_t ios)
 	return (0);
 }
 
-/*
+/**
  * mds_repl_bmap_rel - Release a bmap after use.
  */
 void
@@ -617,20 +616,21 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 }
 
 /*
- * The replication busy table is a bitmap to allow quick lookups of
- * communication status between arbitrary IONs.  Each resm has a unique
- * busyid:
+ * The replication busy table contains slots gauging bandwidth
+ * availability and activity to allow quick lookups of communication
+ * status between arbitrary IONs.  Each resm has a unique busyid:
  *
- *	     A    B    C    D    E    F    G		n | off (sz=6)
- *	  +----+----+----+----+----+----+----+		--+-------------
- *	A |    |  0 |  1 |  3 |  6 | 10 | 15 |		0 |  0
- *	  +----+----+----+----+----+----+----+		1 |  6
- *	B |    |    |  2 |  4 |  7 | 11 | 16 |		2 | 11
- *	  +----+----+----+----+----+----+----+		3 | 15
- *	C |    |    |    |  5 |  8 | 12 | 17 |		4 | 18
- *	  +----+----+----+----+----+----+----+		5 | 20
- *	D |    |    |    |    |  9 | 13 | 18 |		--+-------------
- *	  +----+----+----+----+----+----+----+		n | n(n+1)/2
+ *			IONs				   busytable
+ *	     A    B    C    D    E    F    G		#IONs | off (sz=6)
+ *	  +----+----+----+----+----+----+----+		------+-----------
+ *	A |    |  0 |  1 |  3 |  6 | 10 | 15 |		    0 |  0
+ *	  +----+----+----+----+----+----+----+		    1 |  6
+ *	B |    |    |  2 |  4 |  7 | 11 | 16 |		    2 | 11
+ *	  +----+----+----+----+----+----+----+		    3 | 15
+ *  I	C |    |    |    |  5 |  8 | 12 | 17 |		    4 | 18
+ *  O	  +----+----+----+----+----+----+----+		    5 | 20
+ *  N	D |    |    |    |    |  9 | 13 | 18 |		------+-----------
+ *  s	  +----+----+----+----+----+----+----+		    n | n*(n+1)/2
  *	E |    |    |    |    |    | 14 | 19 |
  *	  +----+----+----+----+----+----+----+
  *	F |    |    |    |    |    |    | 20 |
@@ -643,40 +643,48 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
  *
  *	(max - 1) * (max) / 2 + min
  */
-#define MDS_REPL_BUSYNODES(min, max)					\
-	(((max) - 1) * (max) / 2 + (min))
+#define MDS_REPL_BUSYNODES(min, max)	(((max) - 1) * (max) / 2 + (min))
 
+/**
+ * mds_repl_nodes_adjbusy - Adjust the bandwidth estimate between two
+ *	IONs.
+ * @ma: resm #1.
+ * @mb: resm #2.
+ * @amt: adjustment amount.
+ * Returns: if @amt is positive, return value is the amount that has
+ *	been reserved or zero if none could be allocated.
+ */
 int
-_mds_repl_nodes_setbusy(struct resm_mds_info *ma,
-    struct resm_mds_info *mb, int set, int busy)
+mds_repl_nodes_adjbusy(struct resm_mds_info *ma,
+    struct resm_mds_info *mb, int amt)
 {
-	const struct resm_mds_info *min, *max;
-	int rc, locked;
+	int wake = 0, minid, maxid, locked;
+	struct slm_resmlink *srl;
 
 	psc_assert(ma->rmmi_busyid != mb->rmmi_busyid);
-
-	if (ma->rmmi_busyid < mb->rmmi_busyid) {
-		min = ma;
-		max = mb;
-	} else {
-		min = mb;
-		max = ma;
-	}
+	minid = MIN(ma->rmmi_busyid, mb->rmmi_busyid);
+	maxid = MAX(ma->rmmi_busyid, mb->rmmi_busyid);
 
 	locked = reqlock(&repl_busytable_lock);
-	if (set)
-		rc = psc_vbitmap_xsetval(repl_busytable,
-		    MDS_REPL_BUSYNODES(min->rmmi_busyid, max->rmmi_busyid), busy);
-	else
-		rc = psc_vbitmap_get(repl_busytable,
-		    MDS_REPL_BUSYNODES(min->rmmi_busyid, max->rmmi_busyid));
+	srl = repl_busytable + MDS_REPL_BUSYNODES(minid, maxid);
+	if (srl->srl_used + amt > srl->srl_avail) {
+		amt = srl->srl_avail - srl->srl_used;
+		srl->srl_used = srl->srl_avail;
+	} else {
+		srl->srl_used -= amt;
+		if (srl->srl_used < 0) {
+			srl->srl_used = 0;
+			wake = 1;
+		}
+		amt = srl->srl_used;
+	}
 	ureqlock(&repl_busytable_lock, locked);
 
 	/*
-	 * If we set the status to "not busy", alert anyone
-	 * waiting to utilize the new connection slots.
+	 * If we reset the amount, alert anyone waiting to utilize the
+	 * new connection slots.
 	 */
-	if (set && busy == 0 && rc) {
+	if (wake) {
 		locked = RMMI_RLOCK(ma);
 		psc_multiwaitcond_wakeup(&ma->rmmi_mwcond);
 		RMMI_URLOCK(ma, locked);
@@ -685,35 +693,51 @@ _mds_repl_nodes_setbusy(struct resm_mds_info *ma,
 		psc_multiwaitcond_wakeup(&mb->rmmi_mwcond);
 		RMMI_URLOCK(mb, locked);
 	}
-	return (rc);
+	return (amt);
 }
 
 void
 mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 {
-	int n, j, locked, locked2;
+	int n, j, locked[3];
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
 
-	PLL_LOCK(&globalConfig.gconf_sites);
-	locked = reqlock(&repl_busytable_lock);
-	locked2 = RMMI_RLOCK(rmmi);
+	locked[0] = PLL_HASLOCK(&globalConfig.gconf_sites);
+	locked[1] = psc_spin_haslock(&repl_busytable_lock);
+	locked[2] = RMMI_HASLOCK(rmmi);
+
+ retry:
+
+	if (PLL_TRYRLOCK(&globalConfig.gconf_sites, locked))
+		goto retry;
+	if (tryreqlock(&repl_busytable_lock, locked + 1)) {
+		PLL_ULOCK(&globalConfig.gconf_sites);
+		goto retry;
+	}
+	if (RMMI_TRYRLOCK(rmmi, locked + 2)) {
+		freelock(&repl_busytable_lock);
+		PLL_ULOCK(&globalConfig.gconf_sites);
+		goto retry;
+	}
+
 	PLL_FOREACH(s, &globalConfig.gconf_sites)
 		DYNARRAY_FOREACH(r, n, &s->site_resources)
 			DYNARRAY_FOREACH(resm, j, &r->res_members)
 				if (resm->resm_pri != rmmi)
-					mds_repl_nodes_setbusy(rmmi,
-					    resm->resm_pri, 0);
-	RMMI_URLOCK(rmmi, locked2);
-	ureqlock(&repl_busytable_lock, locked);
-	PLL_ULOCK(&globalConfig.gconf_sites);
+					mds_repl_nodes_clearbusy(rmmi,
+					    resm->resm_pri);
+	RMMI_URLOCK(rmmi, locked[2]);
+	ureqlock(&repl_busytable_lock, locked[1]);
+	PLL_URLOCK(&globalConfig.gconf_sites, locked[0]);
 }
 
 void
 mds_repl_buildbusytable(void)
 {
 	struct resm_mds_info *rmmi;
+	struct slm_resmlink *srl;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
@@ -732,9 +756,14 @@ mds_repl_buildbusytable(void)
 	PLL_ULOCK(&globalConfig.gconf_sites);
 
 	if (repl_busytable)
-		psc_vbitmap_free(repl_busytable);
-	repl_busytable = psc_vbitmap_new(repl_busytable_nents *
-	    (repl_busytable_nents + 1) / 2);
+		PSCFREE(repl_busytable);
+	repl_busytable = psc_calloc(sizeof(*repl_busytable),
+	    repl_busytable_nents * (repl_busytable_nents + 1) / 2, 0);
+	for (n = 0; n < repl_busytable_nents; n++)
+		for (j = n + 1; j < repl_busytable_nents; j++) {
+			srl = repl_busytable + MDS_REPL_BUSYNODES(n, j);
+			srl->srl_avail = SLM_RESMLINK_DEF_NUNITS;
+		}
 	freelock(&repl_busytable_lock);
 }
 
