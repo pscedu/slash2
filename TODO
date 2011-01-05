@@ -260,9 +260,6 @@ MDS must do this for scheduling traffic between sliods
 - add journal I/O test mode to slashd
 - tie zfslog to psclog
 
-zfs
-- rename the zfs_init() alias, it is already a routine in ZFS
-
 ---------------
 
 - failure of connections
@@ -281,6 +278,7 @@ utime
 tree
 - rename include/buffer.h and share/buffer.c as sliod/slab.h sliod/slab.c
 - move inode.h into slashd
+- rename the zfs_init() alias, it is already a routine in ZFS
 
 API rename
 - rename FCMH_CREATE to POPULATE
