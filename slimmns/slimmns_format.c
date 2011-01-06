@@ -33,9 +33,9 @@
 
 #include "pfl/pfl.h"
 #include "pfl/cdefs.h"
-#include "psc_util/log.h"
-#include "psc_util/journal.h"
 #include "psc_util/hostname.h"
+#include "psc_util/journal.h"
+#include "psc_util/log.h"
 
 #include "creds.h"
 #include "fid.h"
