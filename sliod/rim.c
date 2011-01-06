@@ -85,22 +85,22 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	if (crc != mq->crc) {
 		mp->rc = EINVAL;
 		goto out;
-	}   
+	}
 
-	entry = (struct reclaim_log_entry *)iov.iov_base;
+	entry = iov.iov_base;
 	for (i = 0; i < count; i++) {
 		oldfg.fg_fid = entry->fid;
 		oldfg.fg_gen = entry->gen;
 		fg_makepath(&oldfg, fidfn);
 
-                /* 
-		 * We do upfront garbage collection, so ENOENT should be fine.  
- 		 * Also simply creating a file  without any I/O won't create 
- 		 * a backing file on the I/O server.
- 		 *
- 		 * Anyway, we don't report an error back to MDS because it can
- 		 * do nothing.
- 		 */
+		/*
+		 * We do upfront garbage collection, so ENOENT should be fine.
+		 * Also simply creating a file  without any I/O won't create
+		 * a backing file on the I/O server.
+		 *
+		 * Anyway, we don't report an error back to MDS because it can
+		 * do nothing.
+		 */
 		rc = unlink(fidfn);
 
 		psclog_debug("fid="SLPRI_FG", xid=%"PRId64 "rc=%d",
@@ -134,6 +134,16 @@ sli_rim_handle_repl_schedwk(struct pscrpc_request *rq)
 }
 
 int
+sli_rim_handle_garbage(struct pscrpc_request *rq)
+{
+	struct srm_garbage_req *mq;
+	struct srm_generic_rep *mp;
+
+	SL_RSX_ALLOCREP(rq, mq, mp);
+	return (0);
+}
+
+int
 sli_rim_handle_connect(struct pscrpc_request *rq)
 {
 	struct srm_connect_req *mq;
@@ -161,6 +171,9 @@ sli_rim_handler(struct pscrpc_request *rq)
 	switch (rq->rq_reqmsg->opc) {
 	case SRMT_REPL_SCHEDWK:
 		rc = sli_rim_handle_repl_schedwk(rq);
+		break;
+	case SRMT_GARBAGE:
+		rc = sli_rim_handle_garbage(rq);
 		break;
 	case SRMT_RECLAIM:
 		rc = sli_rim_handle_reclaim(rq);
