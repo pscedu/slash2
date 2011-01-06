@@ -332,6 +332,15 @@ brepls_init(int *ar, int val)
 }
 
 static __inline void
+brepls_init_idx(int *ar)
+{
+	int i;
+
+	for (i = 0; i < NBREPLST; i++)
+		ar[i] = i;
+}
+
+static __inline void
 _dump_bmap_flags(uint32_t *flags, int *seq)
 {
 	PFL_PRFLAG(BMAP_RD, flags, seq);

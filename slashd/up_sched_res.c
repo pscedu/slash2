@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2011, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2009-2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -257,15 +257,7 @@ slmupschedthr_tryrepldst(struct up_sched_work_item *wk,
 	brepls_init(tract, -1);
 	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
 
-	brepls_init(retifset, -1);
-	retifset[BREPLST_VALID] = BREPLST_VALID;
-	retifset[BREPLST_INVALID] = BREPLST_INVALID;
-	retifset[BREPLST_REPL_QUEUED] = BREPLST_REPL_QUEUED;
-	retifset[BREPLST_REPL_SCHED] = BREPLST_REPL_SCHED;
-	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
-	retifset[BREPLST_GARBAGE] = BREPLST_GARBAGE;
-	retifset[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_SCHED;
-	retifset[BREPLST_BADCRC] = BREPLST_BADCRC;
+	brepls_init_idx(retifset);
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
@@ -351,18 +343,9 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	mq->bgen = bmap_2_bgen(bcm);
 
 	brepls_init(tract, -1);
-	tract[BREPLST_REPL_QUEUED] = BREPLST_REPL_SCHED;
 	tract[BREPLST_GARBAGE] = BREPLST_GARBAGE_SCHED;
 
-	brepls_init(retifset, -1);
-	retifset[BREPLST_VALID] = BREPLST_VALID;
-	retifset[BREPLST_INVALID] = BREPLST_INVALID;
-	retifset[BREPLST_REPL_QUEUED] = BREPLST_REPL_QUEUED;
-	retifset[BREPLST_REPL_SCHED] = BREPLST_REPL_SCHED;
-	retifset[BREPLST_TRUNCPNDG] = BREPLST_TRUNCPNDG;
-	retifset[BREPLST_GARBAGE] = BREPLST_GARBAGE;
-	retifset[BREPLST_GARBAGE_SCHED] = BREPLST_GARBAGE_SCHED;
-	retifset[BREPLST_BADCRC] = BREPLST_BADCRC;
+	brepls_init_idx(retifset);
 
 	/* mark it as SCHED here in case the RPC finishes really quickly... */
 	rc = mds_repl_bmap_apply(bcm, tract, retifset, off);
@@ -371,7 +354,7 @@ slmupschedthr_trygarbage(struct up_sched_work_item *wk,
 	    rc == BREPLST_REPL_SCHED)
 		psc_fatalx("invalid bmap replica state: %d", rc);
 
-	if (rc == BREPLST_REPL_QUEUED) {
+	if (rc == BREPLST_GARBAGE) {
 		rc = SL_RSX_WAITREP(rq, mp);
 		if (rc == 0)
 			rc = mp->rc;
