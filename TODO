@@ -335,3 +335,6 @@ truncate:
 - need a general mechanism to pass data between msctl/slictl/slmctl
   so we get all the functionality everywhere and don't have to copy huge
   chunks of code
+- slmctl -s peertraffic -s replrqs
+- initialize new file repl table from parent dir to help with
+  persistence policies
