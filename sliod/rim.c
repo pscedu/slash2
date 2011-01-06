@@ -70,6 +70,10 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 
 	count = mq->count;
 	xid = mq->xid;
+
+	if (count <= 0 || count * sizeof(struct reclaim_log_entry) != mq->size)
+		return (EINVAL);
+
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
