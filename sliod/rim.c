@@ -2,7 +2,7 @@
 /*
  * %PSC_START_COPYRIGHT%
  * -----------------------------------------------------------------------------
- * Copyright (c) 2006-2010, Pittsburgh Supercomputing Center (PSC).
+ * Copyright (c) 2006-2011, Pittsburgh Supercomputing Center (PSC).
  *
  * Permission to use, copy, and modify this software and its documentation
  * without fee for personal use or non-commercial use within your organization
@@ -42,22 +42,22 @@
 #include "sliod.h"
 
 /**
- * sli_rim_handle_reclaim - handle RECLAIM RPC from the MDS as a result
- *	of unlink or truncate to zero. The MDS won't send us a new RPC
+ * sli_rim_handle_reclaim - Handle RECLAIM RPC from the MDS as a result
+ *	of unlink or truncate to zero.  The MDS won't send us a new RPC
  *	until we reply, so we should be thread-safe.
  */
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
 {
-	char fidfn[PATH_MAX];
-	struct slash_fidgen oldfg;
+	struct reclaim_log_entry *entry;
+	struct pscrpc_bulk_desc *desc;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
-	struct pscrpc_bulk_desc *desc;
+	struct slash_fidgen oldfg;
+	struct iovec iov;
+	char fidfn[PATH_MAX];
 	uint64_t crc, xid;
 	int16_t count;
-	struct iovec iov;
-	struct reclaim_log_entry *entry;
 	int i, rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
@@ -65,7 +65,8 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	count = mq->count;
 	xid = mq->xid;
 
-	if (count <= 0 || count * sizeof(struct reclaim_log_entry) != mq->size)
+	if (count <= 0 || mq->size > LNET_MTU ||
+	    count * sizeof(struct reclaim_log_entry) != mq->size)
 		return (EINVAL);
 
 	iov.iov_len = mq->size;
@@ -100,12 +101,14 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 		 * do nothing.
 		 */
 		rc = unlink(fidfn);
+		if (rc == -1)
+			rc = errno;
 
 		psclog_debug("fid="SLPRI_FG", xid=%"PRId64 "rc=%d",
 		    SLPRI_FG_ARGS(&oldfg), entry->xid, rc);
 		entry++;
 	}
-out:
+ out:
 
 	PSCFREE(iov.iov_base);
 	return (mp->rc);
