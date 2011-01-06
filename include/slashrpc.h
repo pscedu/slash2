@@ -339,6 +339,34 @@ struct srm_send_namespace_rep {
 	uint64_t		seqno;		/* the last seqno I have received from you */
 } __packed;
 
+struct srm_namespace_entry {
+	uint64_t		sjnm_xid;
+	uint32_t		sjnm_op;			/* operation type (i.e., enum namespace_operation) */
+	int16_t			sjnm_reclen;
+	int16_t			sjnm_flag;			/* need garbage collection */
+
+	uint64_t		sjnm_parent_fid;		/* parent dir FID */
+	uint64_t		sjnm_target_fid;
+
+	uint64_t		sjnm_target_gen;		/* reclaim only */
+	uint64_t		sjnm_new_parent_fid;		/* rename only  */
+
+	uint32_t		sjnm_mask;			/* attribute mask */
+
+	uint32_t		sjnm_mode;			/* file permission */
+	int32_t			sjnm_uid;			/* user ID of owner */
+	int32_t			sjnm_gid;			/* group ID of owner */
+	uint64_t		sjnm_atime;			/* time of last access */
+	uint64_t		sjnm_atime_ns;
+	uint64_t		sjnm_mtime;			/* time of last modification */
+	uint64_t		sjnm_mtime_ns;
+	uint64_t		sjnm_ctime;			/* time of last status change */
+	uint64_t		sjnm_ctime_ns;
+
+	uint64_t		sjnm_size;			/* total size, in bytes */
+	char			sjnm_name[0];			/* one or two names */
+} __packed;
+
 /* -------------------------- BEGIN BMAP MESSAGES --------------------------- */
 
 struct srm_leasebmap_req {

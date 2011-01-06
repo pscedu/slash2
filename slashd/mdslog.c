@@ -604,38 +604,40 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 	jnamespace = PJE_DATA(pje);
 	psc_assert(jnamespace->sjnm_magic == SJ_NAMESPACE_MAGIC);
 
-	if (npeers) {
-		seqno = jnamespace->sjnm_seqno;
-		if (current_update_logfile == -1)
-			current_update_logfile = mds_open_logfile(seqno, 1, 0);
+	if (!npeers)
+		goto check_reclaim;
 
-		if (replay) {
-			next_update_seqno = seqno + 1;
-			lseek(current_update_logfile, (seqno %
-			    SLM_UPDATE_BATCH) * logentrysize, SEEK_SET);
-		} else {
-			/* make sure we write sequentially - no holes in our log */
-			off = lseek(current_update_logfile, 0, SEEK_CUR);
-			psc_assert(off == (seqno % SLM_UPDATE_BATCH) * logentrysize);
-		}
-		size = write(current_update_logfile, pje, logentrysize);
-		if (size != logentrysize)
-			psc_fatal("Fail to write update log file %s", update_fn);
+	if (current_update_logfile == -1)
+		current_update_logfile = mds_open_logfile(next_update_batchno, 1, 0);
 
-		if (update_seqno_hwm < seqno + 1)
-			update_seqno_hwm = seqno + 1;
-
-		/* see if we need to close the current update log file */
-		if (((seqno + 1) % SLM_UPDATE_BATCH) == 0) {
-			close(current_update_logfile);
-			current_update_logfile = -1;
-
-			/* wake up the namespace log propagator */
-			spinlock(&mds_update_waitqlock);
-			psc_waitq_wakeall(&mds_update_waitq);
-			freelock(&mds_update_waitqlock);
-		}
+	if (replay) {
+		next_update_seqno = seqno + 1;
+		lseek(current_update_logfile, (seqno %
+		    SLM_UPDATE_BATCH) * logentrysize, SEEK_SET);
+	} else {
+		/* make sure we write sequentially - no holes in our log */
+		off = lseek(current_update_logfile, 0, SEEK_CUR);
+		psc_assert(off == (seqno % SLM_UPDATE_BATCH) * logentrysize);
 	}
+	size = write(current_update_logfile, pje, logentrysize);
+	if (size != logentrysize)
+		psc_fatal("Fail to write update log file %s", update_fn);
+
+	if (update_seqno_hwm < seqno + 1)
+		update_seqno_hwm = seqno + 1;
+
+	/* see if we need to close the current update log file */
+	if (((seqno + 1) % SLM_UPDATE_BATCH) == 0) {
+		close(current_update_logfile);
+		current_update_logfile = -1;
+
+		/* wake up the namespace log propagator */
+		spinlock(&mds_update_waitqlock);
+		psc_waitq_wakeall(&mds_update_waitq);
+		freelock(&mds_update_waitqlock);
+	}
+
+check_reclaim:
 
 	/*
 	 * If the namespace operation needs to reclaim disk space on I/O
@@ -718,7 +720,6 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 	    sizeof(struct slmds_jent_namespace));
 	jnamespace->sjnm_magic = SJ_NAMESPACE_MAGIC;
 	jnamespace->sjnm_op = op;
-	jnamespace->sjnm_seqno = mds_next_update_seqno();
 	jnamespace->sjnm_parent_fid = parent;
 	jnamespace->sjnm_target_fid = sstb->sst_fid;
 	jnamespace->sjnm_new_parent_fid = newparent;
@@ -783,7 +784,7 @@ __static int
 mds_namespace_rpc_cb(struct pscrpc_request *req,
     struct pscrpc_async_args *args)
 {
-	struct slmds_jent_namespace *jnamespace;
+	struct srm_namespace_entry *jnamespace;
 	struct sl_mds_peerinfo *peerinfo;
 	struct slashrpc_cservice *csvc;
 	struct sl_mds_logbuf *logbuf;
@@ -807,7 +808,7 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 	buf = logbuf->slb_buf;
 	do {
 		jnamespace = buf;
-		if (jnamespace->sjnm_seqno == peerinfo->sp_send_seqno)
+		if (jnamespace->sjnm_xid == peerinfo->sp_send_seqno)
 			break;
 		buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
 		i--;
@@ -816,7 +817,7 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 	j = i;
 	do {
 		jnamespace = buf;
-		if (jnamespace->sjnm_seqno >=
+		if (jnamespace->sjnm_xid >=
 		    peerinfo->sp_send_seqno + peerinfo->sp_send_count)
 			break;
 		SLM_NSSTATS_INCR(peerinfo, NS_DIR_SEND,
@@ -1042,7 +1043,7 @@ mds_read_batch_update(uint64_t seqno)
 int
 mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 {
-	struct slmds_jent_namespace *jnamespace;
+	struct srm_namespace_entry *jnamespace;
 	struct srm_send_namespace_req *mq;
 	struct slashrpc_cservice *csvc;
 	struct pscrpc_bulk_desc *desc;
@@ -1076,7 +1077,7 @@ mds_send_batch_update(struct sl_mds_logbuf *logbuf)
 		buf = logbuf->slb_buf;
 		do {
 			jnamespace = buf;
-			if (jnamespace->sjnm_seqno == peerinfo->sp_send_seqno)
+			if (jnamespace->sjnm_xid == peerinfo->sp_send_seqno)
 				break;
 			buf = PSC_AGP(buf, jnamespace->sjnm_reclen);
 			j--;
