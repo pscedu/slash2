@@ -257,9 +257,9 @@ h_fncmd_new_repl_policy(char *val, char *fn)
 	int rp;
 
 	if (val)
-		errx(1, "new-repl-policy: no policy specified");
+		errx(1, "new-bmap-repl-policy: no policy specified");
 	if (fn == NULL)
-		errx(1, "new-repl-policy: no file specified");
+		errx(1, "new-bmap-repl-policy: no file specified");
 
 	rp = lookup_repl_policy(val);
 
@@ -331,8 +331,8 @@ struct fncmd_handler {
 	const char	 *fh_name;
 	void		(*fh_handler)(char *, char *);
 } fncmds[] = {
-	{ "new-repl-policy",	h_fncmd_new_repl_policy },
-	{ "bmap-repl-policy",	h_fncmd_bmap_repl_policy }
+	{ "new-bmap-repl-policy",	h_fncmd_new_repl_policy },
+	{ "bmap-repl-policy",		h_fncmd_bmap_repl_policy }
 };
 
 void
@@ -435,14 +435,14 @@ replst_slave_prdat(__unusedx const struct psc_ctlmsghdr *mh,
 	pmap[BREPLST_GARBAGE_SCHED] = 'X';
 	pmap[BREPLST_BADCRC] = 'C';
 
-	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(" repl-policy: ") -
+	dlen = PSC_CTL_DISPLAY_WIDTH - strlen(" new-bmap-repl-policy: ") -
 	    strlen(repl_policies[BRP_ONETIME]);
 	n = printf("%s", current_mrs.mrs_fn);
 	if (n > dlen)
 		printf("\n%*s", dlen, "");
 	else
 		printf("%*s", dlen - n, "");
-	printf(" repl-policy: ");
+	printf(" new-bmap-repl-policy: ");
 	if (current_mrs.mrs_newreplpol >= NBRP)
 		printf("<unknown: %d>\n", current_mrs.mrs_newreplpol);
 	else
