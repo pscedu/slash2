@@ -509,20 +509,17 @@ mds_replay_handler(struct psc_journal_enthdr *pje)
 }
 
 void
-mds_remove_logfile(uint64_t seqno, int update)
+mds_remove_logfile(uint64_t batchno, int update)
 {
-	int first;
 	char log_fn[PATH_MAX];
 
 	if (update) {
-		first = (seqno % SLM_UPDATE_BATCH) == 0 ? 1 : 0;
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
-		    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH,
+		    SL_FN_UPDATELOG, batchno,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	} else {
-		first = (seqno % SLM_RECLAIM_BATCH) == 0 ? 1 : 0;
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
-		    SL_FN_RECLAIMLOG, seqno/SLM_RECLAIM_BATCH,
+		    SL_FN_RECLAIMLOG, batchno,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	}
 	unlink(log_fn);

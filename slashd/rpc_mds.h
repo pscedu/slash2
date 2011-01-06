@@ -47,7 +47,10 @@ struct pscrpc_export;
 #define SLM_RMC_SVCNAME			"slmrmc"
 
 /*
- * The number of updates recorded in the same change log file.
+ * The number of update or reclaim records saved in the same log file.
+ * Each log record is identified by its transaction ID (xid), which is
+ * always increasing, but not necessary contiguous.
+ *
  * The size of any individual log file must be less than LNET_MTU so it
  * can be transmitted in a single RPC bulk.
  */
