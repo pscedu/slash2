@@ -710,13 +710,13 @@ mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 
  retry:
 
-	if (PLL_TRYRLOCK(&globalConfig.gconf_sites, locked))
+	if (PLL_TRYLOCK(&globalConfig.gconf_sites))
 		goto retry;
-	if (tryreqlock(&repl_busytable_lock, locked + 1)) {
+	if (trylock(&repl_busytable_lock)) {
 		PLL_ULOCK(&globalConfig.gconf_sites);
 		goto retry;
 	}
-	if (RMMI_TRYRLOCK(rmmi, locked + 2)) {
+	if (RMMI_TRYLOCK(rmmi)) {
 		freelock(&repl_busytable_lock);
 		PLL_ULOCK(&globalConfig.gconf_sites);
 		goto retry;
