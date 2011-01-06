@@ -41,12 +41,6 @@
 #include "slerr.h"
 #include "sliod.h"
 
-struct reclaim_log_entry {
-	uint64_t		 xid;
-	slfid_t			 fid;
-	slfgen_t		 gen;
-};
-
 /**
  * sli_rim_handle_reclaim - handle RECLAIM RPC from the MDS as a result
  *	of unlink or truncate to zero. The MDS won't send us a new RPC

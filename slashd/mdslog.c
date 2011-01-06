@@ -83,12 +83,6 @@ static int			 current_update_progfile = -1;
 static int			 current_reclaim_logfile = -1;
 static int			 current_reclaim_progfile = -1;
 
-struct reclaim_log_entry {
-	uint64_t		 xid;
-	slfid_t			 fid;
-	slfgen_t		 gen;
-};
-
 struct reclaim_prog_entry {
 	char			 res_name[RES_NAME_MAX];
 	sl_ios_id_t		 res_id;
