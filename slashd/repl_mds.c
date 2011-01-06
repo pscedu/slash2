@@ -699,7 +699,7 @@ mds_repl_nodes_adjbusy(struct resm_mds_info *ma,
 void
 mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 {
-	int n, j, locked[3];
+	int n, j, locked[3], dummy;
 	struct sl_resource *r;
 	struct sl_resm *resm;
 	struct sl_site *s;
@@ -710,13 +710,13 @@ mds_repl_node_clearallbusy(struct resm_mds_info *rmmi)
 
  retry:
 
-	if (PLL_TRYLOCK(&globalConfig.gconf_sites))
+	if (PLL_TRYRLOCK(&globalConfig.gconf_sites, &dummy))
 		goto retry;
-	if (trylock(&repl_busytable_lock)) {
+	if (tryreqlock(&repl_busytable_lock, &dummy)) {
 		PLL_ULOCK(&globalConfig.gconf_sites);
 		goto retry;
 	}
-	if (RMMI_TRYLOCK(rmmi)) {
+	if (RMMI_TRYRLOCK(rmmi, &dummy)) {
 		freelock(&repl_busytable_lock);
 		PLL_ULOCK(&globalConfig.gconf_sites);
 		goto retry;
