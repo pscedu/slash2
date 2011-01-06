@@ -594,8 +594,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 	unsigned long off;
 	uint64_t seqno;
 	int size, count, total;
-	struct reclaim_log_entry entry;
-	struct reclaim_log_entry *entryp;
+	struct srm_reclaim_entry entry;
+	struct srm_reclaim_entry *entryp;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
@@ -658,11 +658,11 @@ check_reclaim:
  		 */
 		if (replay) {
 			size = read(current_reclaim_logfile, reclaimbuf, 
-			    SLM_RECLAIM_BATCH * sizeof(struct reclaim_log_entry));
-			total = size / sizeof(struct reclaim_log_entry);
+			    SLM_RECLAIM_BATCH * sizeof(struct srm_reclaim_entry));
+			total = size / sizeof(struct srm_reclaim_entry);
 
 			count = 0;
-			entryp = (struct reclaim_log_entry *)reclaimbuf;
+			entryp = (struct srm_reclaim_entry *)reclaimbuf;
 			while (count < total) {
 				if (entryp->xid == pje->pje_xid)
 					break;
@@ -675,7 +675,7 @@ check_reclaim:
 			 * fine).
 			 */
 			lseek(current_reclaim_logfile, 
-			    count * sizeof(struct reclaim_log_entry), SEEK_CUR);
+			    count * sizeof(struct srm_reclaim_entry), SEEK_CUR);
 		}
 	}
 
@@ -683,13 +683,13 @@ check_reclaim:
 	entry.fid = jnamespace->sjnm_target_fid;
 	entry.gen = jnamespace->sjnm_target_gen;
 
-	size = write(current_reclaim_logfile, &entry, sizeof(struct reclaim_log_entry));
-	if (size != sizeof(struct reclaim_log_entry))
+	size = write(current_reclaim_logfile, &entry, sizeof(struct srm_reclaim_entry));
+	if (size != sizeof(struct srm_reclaim_entry))
 		psc_fatal("Fail to write reclaim log file %s", reclaim_fn);
 
 	/* see if we need to close the current reclaim log file */
 	off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
-	if (off == SLM_RECLAIM_BATCH * sizeof(struct reclaim_log_entry)) {
+	if (off == SLM_RECLAIM_BATCH * sizeof(struct srm_reclaim_entry)) {
 		close(current_reclaim_logfile);
 		current_reclaim_logfile = -1;
 		next_reclaim_batchno++;
@@ -1249,7 +1249,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 	struct sl_resm *dst_resm;
 	struct iovec iov;
 	struct sl_mds_iosinfo *iosinfo;
-	struct reclaim_log_entry *entry;
+	struct srm_reclaim_entry *entry;
 	int i, ri, rc, count, nios, logfile, didwork;
 	struct slashrpc_cservice *csvc;
 	struct srm_reclaim_req *mq;
@@ -1261,7 +1261,7 @@ mds_send_batch_reclaim(uint64_t batchno)
 
 	logfile = mds_open_logfile(batchno, 0, 1);
 	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH *
-	    sizeof(struct reclaim_log_entry));
+	    sizeof(struct srm_reclaim_entry));
 	close(logfile);
 	if (size == 0)
 		return (didwork);
@@ -1270,14 +1270,14 @@ mds_send_batch_reclaim(uint64_t batchno)
 	 * Short read is Okay, as long as it is a multiple of the basic
 	 * data structure.
 	 */
-	psc_assert((size % sizeof(struct reclaim_log_entry)) == 0);
-	count = (int) size / (int) sizeof(struct reclaim_log_entry);
+	psc_assert((size % sizeof(struct srm_reclaim_entry)) == 0);
+	count = (int) size / (int) sizeof(struct srm_reclaim_entry);
 
 	iov.iov_len = size;
 	iov.iov_base = reclaimbuf;
 
 	/* find the xid associated with the last log entry */
-	entry = (struct reclaim_log_entry *) (reclaimbuf + (count - 1) * sizeof(struct reclaim_log_entry));
+	entry = (struct srm_reclaim_entry *) (reclaimbuf + (count - 1) * sizeof(struct srm_reclaim_entry));
 	xid = entry->xid;
 
 	nios = 0;
