@@ -479,8 +479,11 @@ struct srm_garbage_req {
 } __packed;
 
 struct srm_reclaim_req {
-	struct slash_fidgen	fg;
-	uint64_t		seqno;
+	uint64_t		xid;
+	uint64_t		crc;		/* CRC of the bulk data */
+	int32_t			size;		/* size of the bulk data to follow */
+	int16_t			count;		/* # of entries to follow */
+	int16_t			ios;		/* ID of the IOS */
 } __packed;
 
 struct srm_reclaim_rep {

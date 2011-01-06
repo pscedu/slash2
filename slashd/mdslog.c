@@ -67,6 +67,9 @@ extern struct bmap_timeo_table	 mdsBmapTimeoTbl;
 uint64_t			 next_update_seqno;
 uint64_t			 next_reclaim_seqno;
 
+uint64_t			 next_update_batchno;
+uint64_t			 next_reclaim_batchno;
+
 /*
  * Low and high water marks of update sequence numbers that need to be
  * propagated.  Note that the pace of each MDS is different.
@@ -77,21 +80,21 @@ static uint64_t			 update_seqno_hwm;
 static int			 current_update_logfile = -1;
 static int			 current_update_progfile = -1;
 
-/*
- * Low and high water marks of reclaim sequence numbers that need to be
- * sent out.  Note that the pace of each IOS is different.
- */
-static uint64_t			 reclaim_seqno_lwm;
-static uint64_t			 reclaim_seqno_hwm;
-
 static int			 current_reclaim_logfile = -1;
 static int			 current_reclaim_progfile = -1;
+
+struct reclaim_log_entry {
+	uint64_t		 xid;
+	slfid_t			 fid;
+	slfgen_t		 gen;
+};
 
 struct reclaim_prog_entry {
 	char			 res_name[RES_NAME_MAX];
 	sl_ios_id_t		 res_id;
 	enum sl_res_type	 res_type;
-	uint64_t		 res_seqno;
+	uint64_t		 res_xid;
+	uint64_t		 res_batchno;
 };
 
 struct reclaim_prog_entry	*reclaim_prog_buf;
@@ -195,7 +198,7 @@ mds_update_reclaim_prog(void)
 		strncpy(reclaim_prog_buf[i].res_name, res->res_name, RES_NAME_MAX);
 		reclaim_prog_buf[i].res_id = res->res_id;
 		reclaim_prog_buf[i].res_type = res->res_type;
-		reclaim_prog_buf[i].res_seqno = iosinfo->si_seqno;
+		reclaim_prog_buf[i].res_xid = iosinfo->si_seqno;
 		i++;
 	}
 	lseek(current_reclaim_progfile, 0, SEEK_SET);
@@ -532,22 +535,20 @@ mds_remove_logfile(uint64_t seqno, int update)
 }
 
 int
-mds_open_logfile(uint64_t seqno, int update, int readonly)
+mds_open_logfile(uint64_t batchno, int update, int readonly)
 {
 	char log_fn[PATH_MAX];
-	int logfile, first, direct;
+	int logfile, direct;
 
 	if (update) {
 		direct = O_DIRECT;
-		first = (seqno % SLM_UPDATE_BATCH) == 0 ? 1 : 0;
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
-		    SL_FN_UPDATELOG, seqno/SLM_UPDATE_BATCH,
+		    SL_FN_UPDATELOG, batchno,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	} else {
 		direct = 0;
-		first = (seqno % SLM_RECLAIM_BATCH) == 0 ? 1 : 0;
 		xmkfn(log_fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
-		    SL_FN_RECLAIMLOG, seqno/SLM_RECLAIM_BATCH,
+		    SL_FN_RECLAIMLOG, batchno,
 		    psc_get_hostname(), mds_cursor.pjc_timestamp);
 	}
 	if (readonly) {
@@ -571,8 +572,6 @@ mds_open_logfile(uint64_t seqno, int update, int readonly)
 		lseek(logfile, 0, SEEK_END);
 		return logfile;
 	}
-	if (!first)
-		psc_fatal("Failed to open log file %s", log_fn);
 	logfile = open(log_fn, O_CREAT | O_TRUNC | O_WRONLY | O_SYNC |
 	    direct, 0600);
 	if (logfile < 0)
@@ -601,10 +600,10 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 	struct slmds_jent_namespace *jnamespace;
 	static char update_fn[PATH_MAX];
 	static char reclaim_fn[PATH_MAX];
-	struct slash_fidgen fg;
 	unsigned long off;
 	uint64_t seqno;
 	int sz;
+	struct reclaim_log_entry entry;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
@@ -657,35 +656,31 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 	    jnamespace->sjnm_op == NS_OP_UNLINK ||
 	    jnamespace->sjnm_op == NS_OP_SETSIZE);
 
-	seqno = jnamespace->sjnm_reclaim_seqno;
-	if (current_reclaim_logfile == -1)
-		current_reclaim_logfile = mds_open_logfile(seqno, 0, 0);
+	if (current_reclaim_logfile == -1) {
+		current_reclaim_logfile = mds_open_logfile(next_reclaim_batchno, 0, 0);
+		/*
+ 		 * Here we do one-time seek based on the xid stored in the entry.
+ 		 */
+		if (replay) {
 
-	fg.fg_fid = jnamespace->sjnm_target_fid;
-	fg.fg_gen = jnamespace->sjnm_target_gen;
 
-	if (replay) {
-		next_reclaim_seqno = seqno + 1;
-		lseek(current_reclaim_logfile, (seqno %
-		    SLM_RECLAIM_BATCH) * sizeof(struct slash_fidgen),
-		    SEEK_SET);
-	} else {
-		/* make sure we write sequentially - no holes in our log */
-		off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
-		psc_assert(off == (seqno % SLM_RECLAIM_BATCH) *
-		    sizeof(struct slash_fidgen));
+		}
 	}
-	sz = write(current_reclaim_logfile, &fg, sizeof(struct slash_fidgen));
-	if (sz != sizeof(struct slash_fidgen))
+
+	entry.xid = pje->pje_xid;
+	entry.fid = jnamespace->sjnm_target_fid;
+	entry.gen = jnamespace->sjnm_target_gen;
+
+	sz = write(current_reclaim_logfile, &entry, sizeof(struct reclaim_log_entry));
+	if (sz != sizeof(struct reclaim_log_entry))
 		psc_fatal("Fail to write reclaim log file %s", reclaim_fn);
 
-	if (reclaim_seqno_hwm < seqno + 1)
-		reclaim_seqno_hwm = seqno + 1;
-
 	/* see if we need to close the current reclaim log file */
-	if (((seqno + 1) % SLM_RECLAIM_BATCH) == 0) {
+	off = lseek(current_reclaim_logfile, 0, SEEK_CUR);
+	if (off == SLM_RECLAIM_BATCH * sizeof(struct reclaim_log_entry)) {
 		close(current_reclaim_logfile);
 		current_reclaim_logfile = -1;
+		next_reclaim_batchno++;
 
 		/* wake up the namespace log propagator */
 		spinlock(&mds_reclaim_waitqlock);
@@ -744,7 +739,6 @@ mds_namespace_log(int op, uint64_t txg, uint64_t parent,
 			psc_assert(sstb->sst_gen >= 1);
 			jnamespace->sjnm_target_gen--;
 		}
-		jnamespace->sjnm_reclaim_seqno = mds_next_reclaim_seqno();
 	}
 
 	jnamespace->sjnm_reclen = offsetof(struct slmds_jent_namespace,
@@ -842,7 +836,7 @@ mds_namespace_rpc_cb(struct pscrpc_request *req,
 __static uint64_t
 mds_reclaim_lwm(void)
 {
-	uint64_t seqno = UINT64_MAX;
+	uint64_t batchno = UINT64_MAX;
 	struct sl_mds_iosinfo *iosinfo;
 	struct resprof_mds_info *rpmi;
 	struct sl_resource *res;
@@ -855,14 +849,36 @@ mds_reclaim_lwm(void)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (iosinfo->si_seqno < seqno)
-			seqno = iosinfo->si_seqno;
+		if (iosinfo->si_seqno < batchno)
+			batchno = iosinfo->si_seqno;
 		RPMI_ULOCK(rpmi);
 	}
-	psc_assert(seqno != UINT64_MAX);
+	psc_assert(batchno != UINT64_MAX);
 
-	reclaim_seqno_lwm = seqno;
-	return (seqno);
+	return (batchno);
+}
+
+__static uint64_t
+mds_reclaim_hwm(void)
+{
+	uint64_t batchno = 0;
+	struct sl_mds_iosinfo *iosinfo;
+	struct resprof_mds_info *rpmi;
+	struct sl_resource *res;
+	int ri;
+
+	SITE_FOREACH_RES(nodeSite, res, ri) {
+		if (res->res_type == SLREST_MDS)
+			continue;
+		rpmi = res2rpmi(res);
+		iosinfo = rpmi->rpmi_info;
+
+		RPMI_LOCK(rpmi);
+		if (iosinfo->si_seqno > batchno)
+			batchno = iosinfo->si_seqno;
+		RPMI_ULOCK(rpmi);
+	}
+	return (batchno);
 }
 
 /**
@@ -1212,22 +1228,48 @@ mds_open_cursor(void)
 	    ctime((time_t *)&mds_cursor.pjc_timestamp));
 }
 
-/*
- * Send a reclaim RPC to all IOSes.
- */
 int
-mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
+mds_send_batch_reclaim(uint64_t batchno)
 {
-	int i, ri, rc = 0, nios = 0, didwork = 0;
-	struct pscrpc_request *rq = NULL;
-	struct slashrpc_cservice *csvc;
-	struct sl_mds_iosinfo *iosinfo;
+	uint64_t xid;
+	ssize_t size;
 	struct resprof_mds_info *rpmi;
+	struct sl_resource *res;
+	struct sl_resm *dst_resm;
+	struct iovec iov;
+	struct sl_mds_iosinfo *iosinfo;
+	struct reclaim_log_entry *entry;
+	int i, ri, rc, count, nios, logfile, didwork;
+	struct slashrpc_cservice *csvc;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
-	struct sl_resm *dst_resm;
-	struct sl_resource *res;
+	struct pscrpc_request *rq = NULL;
+	struct pscrpc_bulk_desc *desc;
 
+	didwork = 0;
+
+	logfile = mds_open_logfile(batchno, 0, 1);
+	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH *
+	    sizeof(struct reclaim_log_entry));
+	close(logfile);
+	if (size == 0)
+		return (didwork);
+
+	/*
+	 * Short read is Okay, as long as it is a multiple of the basic
+	 * data structure.
+	 */
+	psc_assert((size % sizeof(struct reclaim_log_entry)) == 0);
+	count = (int) size / (int) sizeof(struct reclaim_log_entry);
+
+	iov.iov_len = size;
+	iov.iov_base = reclaimbuf;
+
+	/* find the xid associated with the last log entry */
+	entry = (struct reclaim_log_entry *) (reclaimbuf + (count - 1) * sizeof(struct reclaim_log_entry));
+	xid = entry->xid;
+
+	nios = 0;
 	SITE_FOREACH_RES(nodeSite, res, ri) {
 		if (res->res_type == SLREST_MDS)
 			continue;
@@ -1236,18 +1278,9 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 		iosinfo = rpmi->rpmi_info;
 
 		RPMI_LOCK(rpmi);
-		if (iosinfo->si_seqno > seqno) {
+		if (iosinfo->si_seqno > batchno) {
 			RPMI_ULOCK(rpmi);
 			didwork++;
-			continue;
-		}
-		/*
-		 * All reclaim requests are send to a particular IOS in order.
-		 * If one IOS was slow/not responding, he has to wait
-		 * for the next round.
-		 */
-		if (iosinfo->si_seqno != seqno) {
-			RPMI_ULOCK(rpmi);
 			continue;
 		}
 		RPMI_ULOCK(rpmi);
@@ -1265,9 +1298,13 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 				continue;
 			}
 
-			mq->seqno = seqno;
-			mq->fg.fg_fid = fg->fg_fid;
-			mq->fg.fg_gen = fg->fg_gen;
+			mq->xid = xid;
+			mq->size = iov.iov_len;
+			mq->count = count;
+			psc_crc64_calc(&mq->crc, iov.iov_base, iov.iov_len);
+			
+			rsx_bulkclient(rq, &desc, BULK_GET_SOURCE,
+			    SRMM_BULK_PORTAL, &iov, 1);
 
 			rc = SL_RSX_WAITREP(rq, mp);
 
@@ -1279,67 +1316,21 @@ mds_send_one_reclaim(struct slash_fidgen *fg, uint64_t seqno)
 				rc = mp->rc;
 			if (rc == 0) {
 				didwork++;
-				iosinfo->si_seqno++;
+				if (count == SLM_RECLAIM_BATCH)
+					iosinfo->si_seqno++;
 				break;
 			}
 		}
-	}
-	if (didwork == 0)
-		return 0;
-	if (didwork == nios)
-		return 1;
-	return 2;
-}
-
-int
-mds_send_batch_reclaim(uint64_t seqno)
-{
-	int i, count, logfile, keepfile, didwork;
-	struct slash_fidgen *fg;
-	uint64_t start;
-	ssize_t size;
-
-	didwork = 0;
-	keepfile = 0;
-
-	logfile = mds_open_logfile(seqno, 0, 1);
-	size = read(logfile, reclaimbuf, SLM_RECLAIM_BATCH *
-	    sizeof(struct slash_fidgen));
-	close(logfile);
-
-	/*
-	 * Short read is Okay, as long as it is a multiple of the basic
-	 * data structure.
-	 */
-	psc_assert((size % sizeof(struct slash_fidgen)) == 0);
-
-	start = (seqno / SLM_RECLAIM_BATCH) * SLM_RECLAIM_BATCH;
-	count = (int) size / (int) sizeof(struct slash_fidgen);
-	for (i = 0; i < count; i++) {
-		if (start + i < seqno)
-			continue;
-		fg = PSC_AGP(reclaimbuf, i * sizeof(*fg));
-		didwork = mds_send_one_reclaim(fg, start + i);
-
-		/* if all successful, continue */
-		if (didwork == 1)
-			continue;
-
-		keepfile = 1;
-		/* if non successful, break */
-		if (didwork == 0)
-			break;
 	}
 	/*
 	 * If this log file is full and all I/O servers have applied its
 	 * contents, update our progress on the disk first and then remove
 	 * the log file.
 	 */
-	if (!keepfile && count == SLM_RECLAIM_BATCH) {
+	if (didwork == nios && count == SLM_RECLAIM_BATCH) {
 		mds_update_reclaim_prog();
-		mds_remove_logfile(seqno, 0);
+		mds_remove_logfile(batchno, 0);
 	}
-
 	return (didwork);
 }
 
@@ -1350,19 +1341,21 @@ void
 mds_send_reclaim(__unusedx struct psc_thread *thr)
 {
 	int rv, didwork;
-	uint64_t seqno;
+	uint64_t batchno;
 
+	/*
+ 	 * Instead of tracking precisely which reclaim log record has been sent
+ 	 * to an I/O node, we track the batch number.  A receiving I/O node can
+ 	 * safely ignore any resent records.
+ 	 */
 	while (pscthr_run()) {
-		seqno = mds_reclaim_lwm();
-		/*
-		 * If reclaim_seqno_hwm is zero, then there are no reclaims.
-		 */
-		if (reclaim_seqno_hwm && seqno < reclaim_seqno_hwm) {
-			didwork = mds_send_batch_reclaim(seqno);
-			seqno += SLM_UPDATE_BATCH;
-			if (didwork)
-				continue;
-		}
+
+		batchno = mds_reclaim_lwm();
+		do {
+			didwork = mds_send_batch_reclaim(batchno);
+			batchno++;
+		} while (didwork && (mds_reclaim_hwm() >= batchno));
+
 		spinlock(&mds_reclaim_waitqlock);
 		rv = psc_waitq_waitrel_s(&mds_reclaim_waitq,
 		    &mds_reclaim_waitqlock, SL_RECLAIM_MAX_AGE);
@@ -1708,7 +1701,7 @@ mds_journal_init(void)
 		found++;
 		rpmi = res2rpmi(res);
 		iosinfo = rpmi->rpmi_info;
-		iosinfo->si_seqno = reclaim_prog_buf[i].res_seqno;
+		iosinfo->si_seqno = reclaim_prog_buf[i].res_xid;
 	}
 	if (found != nios)
 		mds_update_reclaim_prog();

@@ -41,12 +41,16 @@
 #include "slerr.h"
 #include "sliod.h"
 
-static uint64_t		next_reclaim_seqno;
-static psc_spinlock_t	next_reclaim_seqno_lock = SPINLOCK_INIT;
+struct reclaim_log_entry {
+	uint64_t		 xid;
+	slfid_t			 fid;
+	slfgen_t		 gen;
+};
 
 /**
  * sli_rim_handle_reclaim - handle RECLAIM RPC from the MDS as a result
- *	of unlink or truncate to zero.
+ *	of unlink or truncate to zero. The MDS won't send us a new RPC
+ *	until we reply, so we should be thread-safe.
  */
 int
 sli_rim_handle_reclaim(struct pscrpc_request *rq)
@@ -55,36 +59,58 @@ sli_rim_handle_reclaim(struct pscrpc_request *rq)
 	struct slash_fidgen oldfg;
 	struct srm_reclaim_req *mq;
 	struct srm_reclaim_rep *mp;
+	struct pscrpc_bulk_desc *desc;
+	uint64_t crc, xid;
+	int16_t count;
+	struct iovec iov;
+	struct reclaim_log_entry *entry;
+	int i, rc;
 
 	SL_RSX_ALLOCREP(rq, mq, mp);
-	spinlock(&next_reclaim_seqno_lock);
-	if (mq->seqno == next_reclaim_seqno) {
-		oldfg.fg_fid = mq->fg.fg_fid;
-		oldfg.fg_gen = mq->fg.fg_gen;
-		fg_makepath(&oldfg, fidfn);
-		/*
-		 * We do upfront garbage collection, so ENOENT 
-		 * should be fine.  Also simply creating a file 
-		 * without any I/O won't create a backing file 
-		 * on the I/O server.
-		 */
-		if (unlink(fidfn) == -1 &&
-		    errno != ENOENT)
-			mp->rc = errno;
 
-		if (mp->rc == 0)
-			next_reclaim_seqno++;
-	} else
+	count = mq->count;
+	xid = mq->xid;
+	iov.iov_len = mq->size;
+	iov.iov_base = PSCALLOC(mq->size);
+
+	mp->rc = rsx_bulkserver(rq, &desc, BULK_GET_SINK,
+	    SRMM_BULK_PORTAL, &iov, 1);
+
+	if (mp->rc)
+		goto out;
+	if (desc)
+		pscrpc_free_bulk(desc);
+
+	psc_crc64_calc(&crc, iov.iov_base, iov.iov_len);
+	if (crc != mq->crc) {
 		mp->rc = EINVAL;
+		goto out;
+	}   
 
-	psclog_debug("fid="SLPRI_FG", seqno=%"PRId64", "
-	    "next_reclaim_seqno=%"PRId64", rc=%d",
-	    SLPRI_FG_ARGS(&mq->fg), mq->seqno, next_reclaim_seqno,
-	    mp->rc);
+	entry = (struct reclaim_log_entry *)iov.iov_base;
+	for (i = 0; i < count; i++) {
+		oldfg.fg_fid = entry->fid;
+		oldfg.fg_gen = entry->gen;
+		fg_makepath(&oldfg, fidfn);
 
-	mp->seqno = next_reclaim_seqno;
-	freelock(&next_reclaim_seqno_lock);
-	return (0);
+                /* 
+		 * We do upfront garbage collection, so ENOENT should be fine.  
+ 		 * Also simply creating a file  without any I/O won't create 
+ 		 * a backing file on the I/O server.
+ 		 *
+ 		 * Anyway, we don't report an error back to MDS because it can
+ 		 * do nothing.
+ 		 */
+		rc = unlink(fidfn);
+
+		psclog_debug("fid="SLPRI_FG", xid=%"PRId64 "rc=%d",
+		    SLPRI_FG_ARGS(&oldfg), entry->xid, rc);
+		entry++;
+	}
+out:
+
+	PSCFREE(iov.iov_base);
+	return (mp->rc);
 }
 
 int

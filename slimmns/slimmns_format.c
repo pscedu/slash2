@@ -35,6 +35,7 @@
 #include "pfl/cdefs.h"
 #include "psc_util/log.h"
 #include "psc_util/journal.h"
+#include "psc_util/hostname.h"
 
 #include "creds.h"
 #include "fid.h"
@@ -115,6 +116,22 @@ slimmns_create(const char *root, uint32_t depth)
 	// uuid_generate(cursor.pjc_uuid);
 	if (pwrite(fd, &cursor, sizeof(cursor), 0) != sizeof(cursor))
 		psc_fatal("write %s", fn);
+	close(fd);
+
+	xmkfn(fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+	    SL_FN_UPDATELOG, 0,
+	    psc_get_hostname(), cursor.pjc_timestamp);
+	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+	if (fd == -1)
+		psc_fatal("open %s", fn);
+	close(fd);
+
+	xmkfn(fn, "%s/%s.%d.%s.%lu", SL_PATH_DATADIR,
+	    SL_FN_RECLAIMLOG, 0,
+	    psc_get_hostname(), cursor.pjc_timestamp);
+	fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+	if (fd == -1)
+		psc_fatal("open %s", fn);
 	close(fd);
 }
 
