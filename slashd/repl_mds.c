@@ -641,7 +641,7 @@ mds_repl_nodes_adjbusy(struct resm_mds_info *ma,
 		amt = srl->srl_avail - srl->srl_used;
 		srl->srl_used = srl->srl_avail;
 	} else {
-		srl->srl_used -= amt;
+		srl->srl_used += amt;
 		if (srl->srl_used < 0) {
 			srl->srl_used = 0;
 			wake = 1;

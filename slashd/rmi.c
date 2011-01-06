@@ -290,7 +290,7 @@ slm_rmi_handle_repl_schedwk(struct pscrpc_request *rq)
 	if (dst_resm)
 		mds_repl_nodes_adjbusy(src_resm->resm_pri,
 		    dst_resm->resm_pri,
-		    slm_bmap_calc_repltraffic(bcm));
+		    -slm_bmap_calc_repltraffic(bcm));
 	if (wk)
 		uswi_unref(wk);
 
