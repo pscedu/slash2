@@ -132,10 +132,19 @@ struct sl_gconf {
 #define SITE_FOREACH_RES(s, r, i)	DYNARRAY_FOREACH((r), (i), &(s)->site_resources)
 #define RES_FOREACH_MEMB(r, m, j)	DYNARRAY_FOREACH((m), (j), &(r)->res_members)
 
+#define CONF_FOREACH_SITE_CONT(s)	PLL_FOREACH_CONT((s), &globalConfig.gconf_sites)
+#define SITE_FOREACH_RES_CONT(s, r, i)	DYNARRAY_FOREACH_CONT((r), (i), &(s)->site_resources)
+#define RES_FOREACH_MEMB_CONT(r, m, j)	DYNARRAY_FOREACH_CONT((m), (j), &(r)->res_members)
+
+#define CONF_FOREACH_RESM(s, r, i, m, j)				\
+	CONF_FOREACH_SITE(s)						\
+		SITE_FOREACH_RES((s), (r), (i))				\
+			RES_FOREACH_MEMB((r), (m), (j))
+
 #define SL_FOREACH_MDS(resm, code)					\
-	{								\
-		struct sl_site *_site;					\
+	do {								\
 		struct sl_resource *_res;				\
+		struct sl_site *_site;					\
 		int _siter;						\
 									\
 		CONF_LOCK();						\
@@ -150,7 +159,7 @@ struct sl_gconf {
 					break;				\
 				}					\
 		CONF_ULOCK();						\
-	}
+	} while (0)
 
 void			 slcfg_init_res(struct sl_resource *);
 void			 slcfg_init_resm(struct sl_resm *);
