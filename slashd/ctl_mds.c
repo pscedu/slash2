@@ -287,6 +287,7 @@ slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
 	}
  done:
 	freelock(&repl_busytable_lock);
+	PLL_ULOCK(&globalConfig.gconf_sites);
 	return (rc);
 }
 
