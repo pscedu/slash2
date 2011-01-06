@@ -95,6 +95,9 @@ slm_rmm_handle_namespace_update(struct pscrpc_request *rq)
 
 	count = mq->count;
 	seqno = mq->seqno;
+	if (count <= 0 || mq->size > LNET_MTU)
+		return (EINVAL);
+
 	iov.iov_len = mq->size;
 	iov.iov_base = PSCALLOC(mq->size);
 
