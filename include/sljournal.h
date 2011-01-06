@@ -32,14 +32,13 @@
 #define SLJ_MDS_PJET_BMAP	2
 #define SLJ_MDS_PJET_INODE	3
 
-/*
- * slmds_jent_crc - used to log CRC updates which come from the ION's.
- * @sjc_ion: the ion who sent the request.
+/**
+ * slmds_jent_crc - Used to log CRC updates which come from IONs.
  * @sjc_fid: file ID.
  * @sjc_bmapno: which bmap region.
+ * @sjc_ion: the ion who sent the request.
  * @sjc_crc: array of slots and crcs.
- * Notes: I presume that this will be the most common operation into the
- *    journal.
+ * Notes: this is presumed to be the most common entry in the journal.
  */
 struct slmds_jent_crc {
 	/*
@@ -49,18 +48,18 @@ struct slmds_jent_crc {
 	 */
 	uint64_t		sjc_fid;
 	sl_bmapno_t		sjc_bmapno;
-	sl_ios_id_t		sjc_ion;		/* Track the ion which did the I/O */
+	sl_ios_id_t		sjc_ion;		/* Track the ION which did the I/O */
 	int32_t			sjc_ncrcs;
+	uint32_t		sjc_utimgen;
 	uint64_t		sjc_fsize;
-	uint64_t		sjc_utimgen;
 	struct srm_bmap_crcwire	sjc_crc[SLJ_MDS_NCRCS];
 } __packed;
 
 #define slion_jent_crc slmds_jent_crc
 
-/*
- * slmds_jent_repgen - log changes to the replication state of a bmap which
- *    occur upon processing a new write for a replicated bmap.
+/**
+ * slmds_jent_repgen - Log changes to the replication state of a bmap
+ *	which occur upon processing a new write for a replicated bmap.
  * @sjp_fid: what file.
  * @sjp_bmapno: which bmap region.
  * @sjp_bgen: the new bmap generation.
@@ -77,9 +76,9 @@ struct slmds_jent_repgen {
 	uint8_t				sjp_reptbl[SL_REPLICA_NBYTES];
 } __packed;
 
-/*
- * slmds_jent_ino_addrepl - add a new replica IOS to the inode or the inode
- *    extras.
+/**
+ * slmds_jent_ino_addrepl - Add a new replica IOS to the inode or the
+ *	inode extras.
  * @sjir_fid: what file.
  * @sjir_ios: the IOS being added.
  * @sjir_pos: the slot or position the replica IOS is to be added to.
@@ -162,9 +161,9 @@ struct slmds_jents {
 };
 
 /*
- * The combined size of the standard header of each log entry
- * (i.e. struct psc_journal_enthdr) and its data, if any,
- * must occupy less than this size.
+ * The combined size of the standard header of each log entry (i.e.
+ * struct psc_journal_enthdr) and its data, if any, must occupy less
+ * than this size.
  */
 #define	SLJ_MDS_ENTSIZE		512
 
