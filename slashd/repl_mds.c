@@ -615,36 +615,6 @@ mds_repl_delrq(const struct slash_fidgen *fgp, sl_bmapno_t bmapno,
 	return (rc);
 }
 
-/*
- * The replication busy table contains slots gauging bandwidth
- * availability and activity to allow quick lookups of communication
- * status between arbitrary IONs.  Each resm has a unique busyid:
- *
- *			IONs				   busytable
- *	     A    B    C    D    E    F    G		#IONs | off (sz=6)
- *	  +----+----+----+----+----+----+----+		------+-----------
- *	A |    |  0 |  1 |  3 |  6 | 10 | 15 |		    0 |  0
- *	  +----+----+----+----+----+----+----+		    1 |  6
- *	B |    |    |  2 |  4 |  7 | 11 | 16 |		    2 | 11
- *	  +----+----+----+----+----+----+----+		    3 | 15
- *  I	C |    |    |    |  5 |  8 | 12 | 17 |		    4 | 18
- *  O	  +----+----+----+----+----+----+----+		    5 | 20
- *  N	D |    |    |    |    |  9 | 13 | 18 |		------+-----------
- *  s	  +----+----+----+----+----+----+----+		    n | n*(n+1)/2
- *	E |    |    |    |    |    | 14 | 19 |
- *	  +----+----+----+----+----+----+----+
- *	F |    |    |    |    |    |    | 20 |
- *	  +----+----+----+----+----+----+----+
- *	G |    |    |    |    |    |    |    |
- *	  +----+----+----+----+----+----+----+
- *
- * For checking if communication exists between resources with busyid
- * `min' and `max', we test the bit:
- *
- *	(max - 1) * (max) / 2 + min
- */
-#define MDS_REPL_BUSYNODES(min, max)	(((max) - 1) * (max) / 2 + (min))
-
 /**
  * mds_repl_nodes_adjbusy - Adjust the bandwidth estimate between two
  *	IONs.

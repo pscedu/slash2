@@ -18,8 +18,14 @@
  */
 
 /*
- * Interface for controlling live operation of a slashd instance.
+ * Interface for controlling live operation of slashd.
  */
+
+struct slmctlmsg_replpair {
+	char			scrp_addrbuf[2][PSC_ALIGN(RESM_ADDRBUF_SZ, 8)];
+	uint32_t		scrp_avail;
+	uint32_t		scrp_used;
+};
 
 /* slrmcthr stats */
 #define pcst_nopen		pcst_u32_1
@@ -28,7 +34,8 @@
 
 /* sliod message types */
 #define SLMCMT_GETCONNS		NPCMT
-#define SLMCMT_GETFCMH		(NPCMT + 1)
+#define SLMCMT_GETFCMHS		(NPCMT + 1)
+#define SLMCMT_GETREPLPAIRS	(NPCMT + 2)
 
 /* slashd control commands */
 #define SMCC_EXIT		0

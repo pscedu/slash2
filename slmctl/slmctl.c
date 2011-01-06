@@ -25,6 +25,7 @@
 #include "pfl/cdefs.h"
 #include "psc_util/ctl.h"
 #include "psc_util/ctlcli.h"
+#include "psc_util/fmt.h"
 #include "psc_util/log.h"
 
 #include "ctl.h"
@@ -32,6 +33,7 @@
 #include "pathnames.h"
 
 #include "slashd/ctl_mds.h"
+#include "slashd/repl_mds.h"
 
 void
 slmrmcthr_pr(const struct psc_ctlmsg_thread *pcst)
@@ -57,14 +59,41 @@ packshow_fcmhs(__unusedx char *fid)
 {
 	struct slctlmsg_fcmh *scf;
 
-	scf = psc_ctlmsg_push(SLMCMT_GETFCMH, sizeof(struct slctlmsg_fcmh));
+	scf = psc_ctlmsg_push(SLMCMT_GETFCMHS, sizeof(struct slctlmsg_fcmh));
 	scf->scf_fg.fg_fid = FID_ANY;
+}
+
+void
+packshow_replpairs(__unusedx char *pair)
+{
+	psc_ctlmsg_push(SLMCMT_GETREPLPAIRS,
+	    sizeof(struct slmctlmsg_replpair));
+}
+
+void
+sl_replpair_prhdr(__unusedx struct psc_ctlmsghdr *mh, __unusedx const void *m)
+{
+	printf("%28s %28s %10s %10s\n",
+	    "repl-resm-A", "repl-resm-B", "used", "avail");
+}
+
+void
+sl_replpair_prdat(__unusedx const struct psc_ctlmsghdr *mh, const void *m)
+{
+	char abuf[PSCFMT_HUMAN_BUFSIZ], ubuf[PSCFMT_HUMAN_BUFSIZ];
+	const struct slmctlmsg_replpair *scrp = m;
+
+	psc_fmt_human(ubuf, scrp->scrp_used * SLM_RESMLINK_UNITSZ);
+	psc_fmt_human(abuf, scrp->scrp_avail * SLM_RESMLINK_UNITSZ);
+	printf("%28s %28s %10s %10s\n",
+	    scrp->scrp_addrbuf[0], scrp->scrp_addrbuf[1], ubuf, abuf);
 }
 
 struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 	PSC_CTLSHOW_DEFS,
 	{ "connections",	packshow_conns },
 	{ "fcmhs",		packshow_fcmhs },
+	{ "replpairs",		packshow_replpairs },
 
 	/* aliases */
 	{ "conns",		packshow_conns },
@@ -75,7 +104,8 @@ struct psc_ctlshow_ent psc_ctlshow_tab[] = {
 struct psc_ctlmsg_prfmt psc_ctlmsg_prfmts[] = {
 	PSC_CTLMSG_PRFMT_DEFS,
 	{ sl_conn_prhdr,	sl_conn_prdat,		sizeof(struct slctlmsg_conn),		NULL },
-	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL }
+	{ sl_fcmh_prhdr,	sl_fcmh_prdat,		sizeof(struct slctlmsg_fcmh),		NULL },
+	{ sl_replpair_prhdr,	sl_replpair_prdat,	sizeof(struct slmctlmsg_replpair),	NULL }
 };
 
 psc_ctl_prthr_t psc_ctl_prthrs[] = {

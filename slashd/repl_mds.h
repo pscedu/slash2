@@ -71,6 +71,36 @@ void	 mds_repl_reset_scheduled(sl_ios_id_t);
 #define REPL_WALKF_SCIRCUIT	(1 << 0)	/* short circuit on return value set */
 #define REPL_WALKF_MODOTH	(1 << 1)	/* modify everyone except specified IOS */
 
+/*
+ * The replication busy table contains slots gauging bandwidth
+ * availability and activity to allow quick lookups of communication
+ * status between arbitrary IONs.  Each resm has a unique busyid:
+ *
+ *			IONs				   busytable
+ *	     A    B    C    D    E    F    G		#IONs | off (sz=6)
+ *	  +----+----+----+----+----+----+----+		------+-----------
+ *	A |    |  0 |  1 |  3 |  6 | 10 | 15 |		    0 |  0
+ *	  +----+----+----+----+----+----+----+		    1 |  6
+ *	B |    |    |  2 |  4 |  7 | 11 | 16 |		    2 | 11
+ *	  +----+----+----+----+----+----+----+		    3 | 15
+ *  I	C |    |    |    |  5 |  8 | 12 | 17 |		    4 | 18
+ *  O	  +----+----+----+----+----+----+----+		    5 | 20
+ *  N	D |    |    |    |    |  9 | 13 | 18 |		------+-----------
+ *  s	  +----+----+----+----+----+----+----+		    n | n*(n+1)/2
+ *	E |    |    |    |    |    | 14 | 19 |
+ *	  +----+----+----+----+----+----+----+
+ *	F |    |    |    |    |    |    | 20 |
+ *	  +----+----+----+----+----+----+----+
+ *	G |    |    |    |    |    |    |    |
+ *	  +----+----+----+----+----+----+----+
+ *
+ * For checking if communication exists between resources with busyid
+ * `min' and `max', we test the bit:
+ *
+ *	(max - 1) * (max) / 2 + min
+ */
+#define MDS_REPL_BUSYNODES(min, max)	(((max) - 1) * (max) / 2 + (min))
+
 #define mds_repl_bmap_walk_all(b, t, r, fl)				\
 	_mds_repl_bmap_walk((b), (t), (r), (fl), NULL, 0, NULL, NULL)
 

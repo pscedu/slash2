@@ -18,7 +18,7 @@
  */
 
 /*
- * Interface for controlling live operation of a slashd instance.
+ * Interface for controlling live operation of slashd.
  */
 
 #include "pfl/cdefs.h"
@@ -30,6 +30,7 @@
 #include "ctl_mds.h"
 #include "ctlsvr.h"
 #include "mdsio.h"
+#include "repl_mds.h"
 #include "slashd.h"
 #include "slconfig.h"
 
@@ -217,10 +218,83 @@ slmctlcmd_exit(__unusedx int fd, __unusedx struct psc_ctlmsghdr *mh,
 	exit(0);
 }
 
+__static int
+slmctlrep_replpair_send(int fd, struct psc_ctlmsghdr *mh,
+    struct slmctlmsg_replpair *scrp, struct sl_resm *m0,
+    struct sl_resm *m1)
+{
+	struct resm_mds_info *rmmi0, *rmmi1;
+	struct slm_resmlink *srl;
+
+	rmmi0 = m0->resm_pri;
+	rmmi1 = m1->resm_pri;
+	srl = repl_busytable + MDS_REPL_BUSYNODES(
+	    MIN(rmmi0->rmmi_busyid, rmmi1->rmmi_busyid),
+	    MAX(rmmi0->rmmi_busyid, rmmi1->rmmi_busyid));
+
+	memset(scrp, 0, sizeof(*scrp));
+	strlcpy(scrp->scrp_addrbuf[0], m0->resm_addrbuf,
+	    sizeof(scrp->scrp_addrbuf[0]));
+	strlcpy(scrp->scrp_addrbuf[1], m1->resm_addrbuf,
+	    sizeof(scrp->scrp_addrbuf[1]));
+	scrp->scrp_avail = srl->srl_avail;
+	scrp->scrp_used = srl->srl_used;
+	return (psc_ctlmsg_sendv(fd, mh, scrp));
+}
+
+/**
+ * slmctlrep_getreplpairs - Send a response to a "GETREPLPAIRS" inquiry.
+ * @fd: client socket descriptor.
+ * @mh: already filled-in control message header.
+ * @m: control message to examine and reuse.
+ */
+int
+slmctlrep_getreplpairs(int fd, struct psc_ctlmsghdr *mh, void *m)
+{
+	struct slmctlmsg_replpair *scrp = m;
+	struct sl_resm *resm, *resm0;
+	struct sl_resource *r, *r0;
+	struct sl_site *s, *s0;
+	int i, j, i0, j0, rc = 1;
+
+	PLL_LOCK(&globalConfig.gconf_sites);
+	spinlock(&repl_busytable_lock);
+	CONF_FOREACH_RESM(s, r, i, resm, j) {
+		j0 = j + 1;
+		RES_FOREACH_MEMB_CONT(r, resm0, j0) {
+			rc = slmctlrep_replpair_send(fd, mh, scrp, resm,
+			    resm0);
+			if (!rc)
+				goto done;
+		}
+		i0 = i + 1;
+		SITE_FOREACH_RES_CONT(s, r0, i0)
+			RES_FOREACH_MEMB(r0, resm0, j0) {
+				rc = slmctlrep_replpair_send(fd, mh,
+				    scrp, resm, resm0);
+				if (!rc)
+					goto done;
+			}
+		s0 = pll_next_item(&globalConfig.gconf_sites, s);
+		CONF_FOREACH_SITE_CONT(s0)
+			SITE_FOREACH_RES(s0, r0, i0)
+				RES_FOREACH_MEMB(r0, resm0, j0) {
+					rc = slmctlrep_replpair_send(fd,
+					    mh, scrp, resm, resm0);
+					if (!rc)
+						goto done;
+				}
+	}
+ done:
+	freelock(&repl_busytable_lock);
+	return (rc);
+}
+
 struct psc_ctlop slmctlops[] = {
 	PSC_CTLDEFOPS,
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
-	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh ) }
+	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh ) },
+	{ slmctlrep_getreplpairs,	sizeof(struct slmctlmsg_replpair ) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {
