@@ -565,7 +565,7 @@ mds_open_logfile(uint64_t batchno, int update, int readonly)
 	logfile = open(log_fn, O_WRONLY | O_SYNC | direct);
 	if (logfile > 0) {
 		/*
-		 * During replay, the offset will be determined by the seqno.
+		 * During replay, the offset will be determined by the xid.
 		 * Otherwise, we should always append at the end. This seek
 		 * is needed in case the log file already exists.
 		 */
@@ -602,8 +602,9 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 	static char reclaim_fn[PATH_MAX];
 	unsigned long off;
 	uint64_t seqno;
-	int sz;
+	int size, count, total;
 	struct reclaim_log_entry entry;
+	struct reclaim_log_entry *entryp;
 
 	psc_assert(pje->pje_magic == PJE_MAGIC);
 	if (!(pje->pje_type & MDS_LOG_NAMESPACE))
@@ -626,8 +627,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 			off = lseek(current_update_logfile, 0, SEEK_CUR);
 			psc_assert(off == (seqno % SLM_UPDATE_BATCH) * logentrysize);
 		}
-		sz = write(current_update_logfile, pje, logentrysize);
-		if (sz != logentrysize)
+		size = write(current_update_logfile, pje, logentrysize);
+		if (size != logentrysize)
 			psc_fatal("Fail to write update log file %s", update_fn);
 
 		if (update_seqno_hwm < seqno + 1)
@@ -660,10 +661,28 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 		current_reclaim_logfile = mds_open_logfile(next_reclaim_batchno, 0, 0);
 		/*
  		 * Here we do one-time seek based on the xid stored in the entry.
+ 		 * Although not necessary contiguous, xids are in increasing order.
  		 */
 		if (replay) {
+			size = read(current_reclaim_logfile, reclaimbuf, 
+			    SLM_RECLAIM_BATCH * sizeof(struct reclaim_log_entry));
+			total = size / sizeof(struct reclaim_log_entry);
 
-
+			count = 0;
+			entryp = (struct reclaim_log_entry *)reclaimbuf;
+			while (count < total) {
+				if (entryp->xid == pje->pje_xid)
+					break;
+				entryp++;
+				count++;
+			}
+			/*
+			 * If we didn't find the entry, this is seek-to-end. If we
+			 * do find it, we will distill again (overwrite should be
+			 * fine).
+			 */
+			lseek(current_reclaim_logfile, 
+			    count * sizeof(struct reclaim_log_entry), SEEK_CUR);
 		}
 	}
 
@@ -671,8 +690,8 @@ mds_distill_handler(struct psc_journal_enthdr *pje, int npeers, int replay)
 	entry.fid = jnamespace->sjnm_target_fid;
 	entry.gen = jnamespace->sjnm_target_gen;
 
-	sz = write(current_reclaim_logfile, &entry, sizeof(struct reclaim_log_entry));
-	if (sz != sizeof(struct reclaim_log_entry))
+	size = write(current_reclaim_logfile, &entry, sizeof(struct reclaim_log_entry));
+	if (size != sizeof(struct reclaim_log_entry))
 		psc_fatal("Fail to write reclaim log file %s", reclaim_fn);
 
 	/* see if we need to close the current reclaim log file */
@@ -1650,6 +1669,8 @@ mds_journal_init(void)
 	psc_notify("Next reclaim sequence number before log replay is %"PRId64,
 	    next_update_seqno);
 
+	reclaimbuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
+
 	pjournal_replay(mdsJournal, SLMTHRT_JRNL, "slmjthr",
 	    mds_replay_handler, mds_distill_handler);
 
@@ -1707,7 +1728,6 @@ mds_journal_init(void)
 		mds_update_reclaim_prog();
 
 	/* Always start a thread to send reclaim updates. */
-	reclaimbuf = PSCALLOC(SLM_UPDATE_BATCH * logentrysize);
 	pscthr_init(SLMTHRT_JRECLAIM, 0, mds_send_reclaim, NULL,
 	    0, "slmjreclaimthr");
 
