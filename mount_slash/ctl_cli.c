@@ -395,7 +395,7 @@ struct psc_ctlop msctlops[] = {
 	{ msctlhnd_set_newreplpol,	sizeof(struct msctlmsg_fncmd_newreplpol) },
 	{ msctlhnd_set_bmapreplpol,	sizeof(struct msctlmsg_fncmd_bmapreplpol) },
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn) },
-	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh) }
+	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {

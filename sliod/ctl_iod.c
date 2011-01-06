@@ -78,7 +78,7 @@ struct psc_ctlop slictlops[] = {
 	PSC_CTLDEFOPS,
 	{ slictlrep_getreplwkst,	sizeof(struct slictlmsg_replwkst ) },
 	{ slctlrep_getconns,		sizeof(struct slctlmsg_conn ) },
-	{ slctlrep_getfcmh,		sizeof(struct slctlmsg_fcmh ) }
+	{ slctlrep_getfcmhs,		sizeof(struct slctlmsg_fcmh ) }
 };
 
 psc_ctl_thrget_t psc_ctl_thrgets[] = {

@@ -125,7 +125,7 @@ slctlmsg_fcmh_send(int fd, struct psc_ctlmsghdr *mh,
 }
 
 int
-slctlrep_getfcmh(int fd, struct psc_ctlmsghdr *mh, void *m)
+slctlrep_getfcmhs(int fd, struct psc_ctlmsghdr *mh, void *m)
 {
 	struct slctlmsg_fcmh *scf = m;
 	struct fidc_membh *fcmh;
